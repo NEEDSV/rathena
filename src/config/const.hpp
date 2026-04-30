@@ -7,17 +7,20 @@
 #include <common/cbasetypes.hpp>
 
 /**
- * rAthena configuration file (http://rathena.org)
- * For detailed guidance on these check http://rathena.org/wiki/SRC/config/
+ * rAthena 설정 파일 (http://rathena.org)
+ * 자세한 설정 가이드는 아래 링크 참고:
+ * http://rathena.org/wiki/SRC/config/
  **/
 
-/**
- * @INFO: This file holds constants that aims at making code smoother and more efficient
- */
+ /**
+  * @INFO: 이 파일은 코드를 더 매끄럽고 효율적으로 만들기 위한
+  * 상수들을 담고 있음
+  */
 
-/**
- * "Sane Checks" to save you from compiling with cool bugs
- **/
+  /**
+   * "정상성 검사"
+   * 이상한 버그가 있는 상태로 컴파일되는 것을 막기 위한 검사
+   **/
 #if SECURE_NPCTIMEOUT_INTERVAL <= 0
 	#error SECURE_NPCTIMEOUT_INTERVAL should be at least 1 (1s)
 #endif
@@ -32,7 +35,7 @@
 #endif
 
 /**
- * Path within the /db folder to (non-)renewal specific db files
+ * /db 폴더 안에서 리뉴얼 / 프리리뉴얼 전용 DB 파일 경로
  **/
 #ifdef RENEWAL
 	#define DBPATH "re/"
@@ -44,6 +47,7 @@
 
 /**
  * DefType
+ * 방어력 타입 정의
  **/
 #ifdef RENEWAL
 	typedef int16 defType;
@@ -56,32 +60,34 @@
 #endif
 
 /**
- * EXP definition type
+ * EXP 정의 타입
  */
 typedef uint64 t_exp;
 
-/// Max Base and Job EXP for players
+/// 플레이어의 최대 Base / Job EXP
 #if PACKETVER >= 20170830
 	const t_exp MAX_EXP = INT64_MAX;
 #else
 	const t_exp MAX_EXP = INT32_MAX;
 #endif
 
-/// Max EXP for guilds
+/// 길드 최대 EXP
 const t_exp MAX_GUILD_EXP = INT32_MAX;
-/// Max Base EXP for player on Max Base Level
+/// 최대 Base Level 상태에서의 플레이어 최대 Base EXP
 const t_exp MAX_LEVEL_BASE_EXP = 99999999;
-/// Max Job EXP for player on Max Job Level
+/// 최대 Job Level 상태에서의 플레이어 최대 Job EXP
 const t_exp MAX_LEVEL_JOB_EXP = 999999999;
 
-/* pointer size fix which fixes several gcc warnings */
+/* 포인터 크기 보정
+ * gcc 경고 여러 개를 해결하기 위한 처리
+ */
 #ifdef __64BIT__
 	#define __64BPRTSIZE(y) (intptr)y
 #else
 	#define __64BPRTSIZE(y) y
 #endif
 
-/* ATCMD_FUNC(mobinfo) HIT and FLEE calculations */
+ /* ATCMD_FUNC(mobinfo)에서 사용하는 HIT / FLEE 계산 */
 #ifdef RENEWAL
 	#define MOB_FLEE(mob) ( mob->lv + mob->status.agi + 100 )
 	#define MOB_HIT(mob)  ( mob->lv + mob->status.dex + 175 )
@@ -90,7 +96,9 @@ const t_exp MAX_LEVEL_JOB_EXP = 999999999;
 	#define MOB_HIT(mob)  ( mob->lv + mob->status.dex )
 #endif
 
-/* Renewal's dmg level modifier, used as a macro for a easy way to turn off. */
+/* 리뉴얼의 레벨 기반 데미지 보정
+ * 쉽게 끄고 켤 수 있도록 매크로로 만들어둔 것
+ */
 #ifdef RENEWAL_LVDMG
 	#define RE_LVL_DMOD(val) \
 		if( status_get_lv(src) > 99 && val > 0 ) \
@@ -108,7 +116,7 @@ const t_exp MAX_LEVEL_JOB_EXP = 999999999;
 	#define RE_LVL_TMDMOD()
 #endif
 
-// Renewal variable cast time reduction
+ // 리뉴얼 변동 캐스팅 시간 감소
 #ifdef RENEWAL_CAST
 	#define VARCAST_REDUCTION(val){ \
 		if( (varcast_r += val) != 0 && varcast_r >= 0 ) \
@@ -117,8 +125,8 @@ const t_exp MAX_LEVEL_JOB_EXP = 999999999;
 #endif
 
 /**
- * Default coordinate for new char
- * That map should be loaded by a mapserv
+ * 신규 캐릭터 기본 좌표
+ * 해당 맵은 map-server에서 로드되어 있어야 함
  **/
 #ifdef RENEWAL
     #define MAP_DEFAULT_NAME "iz_int"
@@ -130,7 +138,7 @@ const t_exp MAX_LEVEL_JOB_EXP = 999999999;
     #define MAP_DEFAULT_Y 111
 #endif
 
-/**
- * End of File
- **/
+ /**
+  * 파일 끝
+  **/
 #endif /* CONFIG_CONST_H */
