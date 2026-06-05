@@ -8884,7 +8884,7 @@ static bool atcommand_display_item_group_contents(map_session_data *sd, int32 fd
 	safesnprintf(output, sizeof(output), "Item: %s (ID: %u)", item_link.c_str(), item_data->nameid);
 	clif_messagecolor(sd, color_table[COLOR_WHITE], output, false, SELF);
 
-	safesnprintf(output, sizeof(output), "[\uC0C1\uC790 \uAD6C\uC131\uD488]");
+	safesnprintf(output, sizeof(output), msg_txt(sd, 1600));
 	clif_messagecolor(sd, color_table[COLOR_YELLOW], output, false, SELF);
 
 	size_t display_count = std::min<size_t>(contents.size(), 20);
@@ -8898,8 +8898,8 @@ static bool atcommand_display_item_group_contents(map_session_data *sd, int32 fd
 	}
 
 	if (contents.size() > display_count) {
-		clif_messagecolor(sd, color_table[COLOR_YELLOW], "\u203B \uD76C\uADC0 \uC544\uC774\uD15C \uC704\uC8FC\uB85C \uD655\uB960\uC774 \uB0AE\uC740 \uC21C\uC11C\uB300\uB85C 20\uAC1C\uB9CC \uD45C\uC2DC\uB429\uB2C8\uB2E4.", false, SELF);
-		clif_messagecolor(sd, color_table[COLOR_YELLOW], "\u203B \uC804\uCCB4 \uAD6C\uC131\uD488\uC740 NEED Wiki\uB97C \uCC38\uACE0\uD574\uC8FC\uC138\uC694.", false, SELF);
+		clif_messagecolor(sd, color_table[COLOR_YELLOW], msg_txt(sd, 1602), false, SELF);
+		clif_messagecolor(sd, color_table[COLOR_YELLOW], msg_txt(sd, 1603), false, SELF);
 	}
 
 	clif_messagecolor(sd, color_table[COLOR_YELLOW], result_separator, false, SELF);
@@ -8917,7 +8917,7 @@ static void atcommand_display_item_group_sources(map_session_data *sd, int32 fd,
 
 	char output[CHAT_SIZE_MAX];
 
-	safesnprintf(output, sizeof(output), "[\uC0C1\uC790 \uD68D\uB4DD\uCC98]");
+	safesnprintf(output, sizeof(output), msg_txt(sd, 1601));
 	clif_messagecolor(sd, color_table[COLOR_YELLOW], output, false, SELF);
 
 	for (const s_item_group_search_result &item_group : item_groups) {
