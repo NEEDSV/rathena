@@ -9,6 +9,7 @@
 #include <fstream>
 #include <iostream>
 #include <map>
+#include <set>
 #include <unordered_map>
 
 #include <common/nullpo.hpp>
@@ -1068,10 +1069,13 @@ uint64 ItemDatabase::parseBodyNode(const ryml::NodeRef& node) {
 			item->script = nullptr;
 		}
 
+		item->script_source = script;
 		item->script = parse_script(script.c_str(), this->getCurrentFile().c_str(), this->getLineNumber(node["Script"]), SCRIPT_IGNORE_EXTERNAL_BRACKETS);
 	} else {
-		if (!exists) 
+		if (!exists) {
+			item->script_source.clear();
 			item->script = nullptr;
+		}
 	}
 
 	if (this->nodeExists(node, "EquipScript")) {
@@ -1381,6 +1385,13 @@ std::string ItemDatabase::create_item_link( std::shared_ptr<item_data>& data ){
 	return this->create_item_link( it, data );
 }
 
+std::string ItemDatabase::create_item_link(t_itemid nameid) {
+	struct item it = {};
+	it.nameid = nameid;
+
+	return this->create_item_link(it);
+}
+
 std::string ItemDatabase::create_item_link(struct item& item) {
 	std::shared_ptr<item_data> data = this->find(item.nameid);
 
@@ -1498,6 +1509,67 @@ bool ItemGroupDatabase::item_exists(uint16 group_id, t_itemid nameid)
 	}
 
 	return false;
+}
+
+std::vector<s_item_group_search_result> ItemGroupDatabase::find_item_groups(t_itemid nameid, size_t limit, size_t& total_matches)
+{
+	std::vector<s_item_group_search_result> results;
+	std::set<std::string> seen_groups;
+	std::set<t_itemid> seen_box_items;
+
+	total_matches = 0;
+
+	for (const auto &group_it : *this) {
+		std::shared_ptr<s_item_group_db> group = group_it.second;
+
+		if (group == nullptr)
+			continue;
+
+		std::string group_name;
+
+		if (!group->name.empty())
+			group_name = group->name;
+		else
+			group_name = std::to_string(group->id);
+
+		t_itemid box_item_id = 0;
+		std::shared_ptr<item_data> group_item = item_db.search_aegisname(group_name.c_str());
+
+		if (group_item != nullptr)
+			box_item_id = group_item->nameid;
+
+		for (const auto &subgroup_it : group->random) {
+			std::shared_ptr<s_item_group_random> random = subgroup_it.second;
+
+			if (random == nullptr)
+				continue;
+
+			for (const auto &entry_it : random->data) {
+				std::shared_ptr<s_item_group_entry> entry = entry_it.second;
+
+				if (entry == nullptr || entry->nameid != nameid || entry->rate <= 0)
+					continue;
+
+				if (seen_groups.find(group_name) != seen_groups.end())
+					continue;
+
+				if (box_item_id > 0 && seen_box_items.find(box_item_id) != seen_box_items.end())
+					continue;
+
+				seen_groups.insert(group_name);
+
+				if (box_item_id > 0)
+					seen_box_items.insert(box_item_id);
+
+				total_matches++;
+
+				if (limit == 0 || results.size() < limit)
+					results.push_back({ group_name, box_item_id, group->id, subgroup_it.first, entry->rate });
+			}
+		}
+	}
+
+	return results;
 }
 
 /**
@@ -3388,6 +3460,7 @@ uint64 ItemGroupDatabase::parseBodyNode(const ryml::NodeRef& node) {
 		group = std::make_shared<s_item_group_db>();
 		group->id = id;
 	}
+	group->name = group_name;
 
 	if (this->nodeExists(node, "SubGroups")) {
 		const auto& subNode = node["SubGroups"];

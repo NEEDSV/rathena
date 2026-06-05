@@ -3,8 +3,11 @@
 
 #include "atcommand.hpp"
 
+#include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <cstdlib>
+#include <cstring>
 #include <set>
 #include <unordered_map>
 
@@ -8608,6 +8611,331 @@ ACMD_FUNC(homshuffle)
 	return 0;
 }
 
+struct s_item_group_content_result
+{
+	t_itemid nameid;
+	uint16 rate;
+};
+
+static std::string atcommand_trim(const std::string &value)
+{
+	size_t begin = 0;
+
+	while (begin < value.size() && std::isspace(static_cast<unsigned char>(value[begin])))
+		begin++;
+
+	size_t end = value.size();
+
+	while (end > begin && std::isspace(static_cast<unsigned char>(value[end - 1])))
+		end--;
+
+	return value.substr(begin, end - begin);
+}
+
+static bool atcommand_starts_with_ci(const std::string &value, const char *prefix)
+{
+	for (size_t i = 0; prefix[i] != '\0'; i++) {
+		if (i >= value.size())
+			return false;
+
+		if (std::tolower(static_cast<unsigned char>(value[i])) != std::tolower(static_cast<unsigned char>(prefix[i])))
+			return false;
+	}
+
+	return true;
+}
+
+static std::string atcommand_strip_script_comments(const std::string &script)
+{
+	std::string result;
+	bool in_quote = false;
+	char quote_char = '\0';
+
+	for (size_t i = 0; i < script.size(); i++) {
+		char c = script[i];
+
+		if (in_quote) {
+			result.push_back(c);
+
+			if (c == '\\' && i + 1 < script.size()) {
+				result.push_back(script[++i]);
+				continue;
+			}
+
+			if (c == quote_char)
+				in_quote = false;
+
+			continue;
+		}
+
+		if (c == '"' || c == '\'') {
+			in_quote = true;
+			quote_char = c;
+			result.push_back(c);
+			continue;
+		}
+
+		if (c == '/' && i + 1 < script.size() && script[i + 1] == '/') {
+			while (i < script.size() && script[i] != '\n')
+				i++;
+
+			if (i < script.size())
+				result.push_back('\n');
+
+			continue;
+		}
+
+		if (c == '/' && i + 1 < script.size() && script[i + 1] == '*') {
+			i += 2;
+
+			while (i + 1 < script.size() && !(script[i] == '*' && script[i + 1] == '/')) {
+				if (script[i] == '\n')
+					result.push_back('\n');
+
+				i++;
+			}
+
+			if (i + 1 < script.size())
+				i++;
+
+			continue;
+		}
+
+		result.push_back(c);
+	}
+
+	return result;
+}
+
+static std::vector<std::string> atcommand_extract_getgroupitem_groups(const std::string &script)
+{
+	std::string clean_script = atcommand_strip_script_comments(script);
+	std::string lower_script = clean_script;
+	std::vector<std::string> groups;
+
+	std::transform(lower_script.begin(), lower_script.end(), lower_script.begin(), [](unsigned char c) {
+		return static_cast<char>(std::tolower(c));
+	});
+
+	size_t pos = 0;
+
+	while ((pos = lower_script.find("getgroupitem", pos)) != std::string::npos) {
+		size_t command_end = pos + strlen("getgroupitem");
+
+		if (pos > 0 && (std::isalnum(static_cast<unsigned char>(lower_script[pos - 1])) || lower_script[pos - 1] == '_')) {
+			pos = command_end;
+			continue;
+		}
+
+		if (command_end < lower_script.size() && (std::isalnum(static_cast<unsigned char>(lower_script[command_end])) || lower_script[command_end] == '_')) {
+			pos = command_end;
+			continue;
+		}
+
+		size_t arg_pos = command_end;
+
+		while (arg_pos < clean_script.size() && std::isspace(static_cast<unsigned char>(clean_script[arg_pos])))
+			arg_pos++;
+
+		bool has_parenthesis = arg_pos < clean_script.size() && clean_script[arg_pos] == '(';
+
+		if (has_parenthesis)
+			arg_pos++;
+
+		while (arg_pos < clean_script.size() && std::isspace(static_cast<unsigned char>(clean_script[arg_pos])))
+			arg_pos++;
+
+		std::string group_name;
+
+		if (arg_pos < clean_script.size() && (clean_script[arg_pos] == '"' || clean_script[arg_pos] == '\'')) {
+			char quote = clean_script[arg_pos++];
+			size_t start = arg_pos;
+
+			while (arg_pos < clean_script.size() && clean_script[arg_pos] != quote)
+				arg_pos++;
+
+			group_name = clean_script.substr(start, arg_pos - start);
+		} else {
+			size_t start = arg_pos;
+
+			while (arg_pos < clean_script.size()) {
+				char c = clean_script[arg_pos];
+
+				if (std::isspace(static_cast<unsigned char>(c)) || c == ',' || c == ';' || (has_parenthesis && c == ')'))
+					break;
+
+				arg_pos++;
+			}
+
+			group_name = clean_script.substr(start, arg_pos - start);
+		}
+
+		group_name = atcommand_trim(group_name);
+
+		if (!group_name.empty())
+			groups.push_back(group_name);
+
+		pos = command_end;
+	}
+
+	return groups;
+}
+
+static bool atcommand_item_group_name_to_id(const std::string &group_name, uint16 &group_id)
+{
+	std::string trimmed_group_name = atcommand_trim(group_name);
+
+	if (trimmed_group_name.empty())
+		return false;
+
+	bool numeric = true;
+
+	for (char c : trimmed_group_name) {
+		if (!std::isdigit(static_cast<unsigned char>(c))) {
+			numeric = false;
+			break;
+		}
+	}
+
+	if (numeric) {
+		uint32 id = strtoul(trimmed_group_name.c_str(), nullptr, 10);
+
+		if (id > UINT16_MAX || itemdb_group.find(static_cast<uint16>(id)) == nullptr)
+			return false;
+
+		group_id = static_cast<uint16>(id);
+		return true;
+	}
+
+	int64 constant = 0;
+	std::string constant_name = atcommand_starts_with_ci(trimmed_group_name, "IG_") ? trimmed_group_name : "IG_" + trimmed_group_name;
+
+	if (!script_get_constant(constant_name.c_str(), &constant) || constant < 0 || constant > UINT16_MAX)
+		return false;
+
+	group_id = static_cast<uint16>(constant);
+
+	return itemdb_group.find(group_id) != nullptr;
+}
+
+static std::vector<s_item_group_content_result> atcommand_collect_item_group_contents(const std::vector<std::string> &group_names)
+{
+	std::vector<s_item_group_content_result> contents;
+
+	for (const std::string &group_name : group_names) {
+		uint16 group_id = 0;
+
+		if (!atcommand_item_group_name_to_id(group_name, group_id))
+			continue;
+
+		std::shared_ptr<s_item_group_db> group = itemdb_group.find(group_id);
+
+		if (group == nullptr)
+			continue;
+
+		for (const auto &subgroup_it : group->random) {
+			std::shared_ptr<s_item_group_random> random = subgroup_it.second;
+
+			if (random == nullptr)
+				continue;
+
+			for (const auto &entry_it : random->data) {
+				std::shared_ptr<s_item_group_entry> entry = entry_it.second;
+
+				if (entry == nullptr)
+					continue;
+
+				if (entry->rate <= 0)
+					continue;
+
+				contents.push_back({ entry->nameid, entry->rate });
+			}
+		}
+	}
+
+	std::stable_sort(contents.begin(), contents.end(), [](const s_item_group_content_result &left, const s_item_group_content_result &right) {
+		return left.rate < right.rate;
+	});
+
+	return contents;
+}
+
+static bool atcommand_display_item_group_contents(map_session_data *sd, int32 fd, std::shared_ptr<item_data> item_data)
+{
+	if (item_data == nullptr || item_data->type != IT_USABLE || item_data->script_source.empty())
+		return false;
+
+	std::vector<std::string> group_names = atcommand_extract_getgroupitem_groups(item_data->script_source);
+
+	if (group_names.empty())
+		return false;
+
+	std::vector<s_item_group_content_result> contents = atcommand_collect_item_group_contents(group_names);
+
+	if (contents.empty())
+		return false;
+
+	const char* result_separator = "==================================================";
+	char output[CHAT_SIZE_MAX];
+
+	clif_messagecolor(sd, color_table[COLOR_CYAN], result_separator, false, SELF);
+
+	std::string item_link = item_db.create_item_link(item_data);
+	safesnprintf(output, sizeof(output), "Item: %s (ID: %u)", item_link.c_str(), item_data->nameid);
+	clif_messagecolor(sd, color_table[COLOR_WHITE], output, false, SELF);
+
+	safesnprintf(output, sizeof(output), "[\uC0C1\uC790 \uAD6C\uC131\uD488]");
+	clif_messagecolor(sd, color_table[COLOR_YELLOW], output, false, SELF);
+
+	size_t display_count = std::min<size_t>(contents.size(), 20);
+
+	for (size_t i = 0; i < display_count; i++) {
+		const s_item_group_content_result &content = contents[i];
+		std::string content_link = item_db.create_item_link(content.nameid);
+
+		safesnprintf(output, sizeof(output), "%02.02f%% - %s (ID: %u)", content.rate / 100., content_link.c_str(), content.nameid);
+		clif_messagecolor(sd, color_table[COLOR_WHITE], output, false, SELF);
+	}
+
+	if (contents.size() > display_count) {
+		clif_messagecolor(sd, color_table[COLOR_YELLOW], "\u203B \uD76C\uADC0 \uC544\uC774\uD15C \uC704\uC8FC\uB85C \uD655\uB960\uC774 \uB0AE\uC740 \uC21C\uC11C\uB300\uB85C 20\uAC1C\uB9CC \uD45C\uC2DC\uB429\uB2C8\uB2E4.", false, SELF);
+		clif_messagecolor(sd, color_table[COLOR_YELLOW], "\u203B \uC804\uCCB4 \uAD6C\uC131\uD488\uC740 NEED Wiki\uB97C \uCC38\uACE0\uD574\uC8FC\uC138\uC694.", false, SELF);
+	}
+
+	clif_messagecolor(sd, color_table[COLOR_YELLOW], result_separator, false, SELF);
+
+	return true;
+}
+
+static void atcommand_display_item_group_sources(map_session_data *sd, int32 fd, t_itemid nameid)
+{
+	size_t total_item_groups = 0;
+	std::vector<s_item_group_search_result> item_groups = itemdb_group.find_item_groups(nameid, 20, total_item_groups);
+
+	if (item_groups.empty())
+		return;
+
+	char output[CHAT_SIZE_MAX];
+
+	safesnprintf(output, sizeof(output), "[\uC0C1\uC790 \uD68D\uB4DD\uCC98]");
+	clif_messagecolor(sd, color_table[COLOR_YELLOW], output, false, SELF);
+
+	for (const s_item_group_search_result &item_group : item_groups) {
+		std::string source_name = item_group.group_name;
+
+		if (item_group.box_item_id > 0)
+			source_name = item_db.create_item_link(item_group.box_item_id);
+
+		safesnprintf(output, sizeof(output), "%02.02f%% - %s (ID : %d)", item_group.rate / 100., source_name.c_str(), item_group.box_item_id);
+		clif_messagecolor(sd, color_table[COLOR_WHITE], output, false, SELF);
+	}
+
+	if (total_item_groups > item_groups.size()) {
+		safesnprintf(output, sizeof(output), "... and %zu more", total_item_groups - item_groups.size());
+		clif_displaymessage(fd, output);
+	}
+}
+
 /*==========================================
  * Show Items DB Info   v 1.0
  * originally by [Lupus]
@@ -8639,30 +8967,40 @@ ACMD_FUNC(iteminfo)
 		sprintf(atcmd_output, msg_txt(sd,269), MAX_SEARCH); // Displaying first %d matches
 		clif_displaymessage(fd, atcmd_output);
 	}
+
+	const char* result_separator = "==================================================";
+
 	for (const auto &result : item_array) {
 		std::shared_ptr<item_data> item_data = result.second;
+
+		if (atcommand_display_item_group_contents(sd, fd, item_data))
+			continue;
+
+		clif_messagecolor(sd, color_table[COLOR_CYAN], result_separator, false, SELF);
 
 		sprintf(atcmd_output, msg_txt(sd,1277), // Item: '%s'/'%s' (%u) Type: %s | Extra Effect: %s
 			item_data->name.c_str(), item_db.create_item_link( item_data ).c_str(),item_data->nameid,
 			(item_data->type != IT_AMMO) ? itemdb_typename((enum item_types)item_data->type) : itemdb_typename_ammo((e_ammo_type)item_data->subtype),
 			(item_data->script==nullptr)? msg_txt(sd,1278) : msg_txt(sd,1279) // None / With script
 		);
-		clif_displaymessage(fd, atcmd_output);
+		clif_messagecolor(sd, color_table[COLOR_WHITE], atcmd_output, false, SELF);
 
 		sprintf(atcmd_output, msg_txt(sd,1280), item_data->value_buy, item_data->value_sell, item_data->weight/10. ); // NPC Buy:%dz, Sell:%dz | Weight: %.1f
-		clif_displaymessage(fd, atcmd_output);
+		clif_messagecolor(sd, color_table[COLOR_WHITE], atcmd_output, false, SELF);
 
 		if (item_data->maxchance == -1) {
 			strcpy(atcmd_output, msg_txt(sd,1281)); //  - Available in the shops only.
-			clif_displaymessage(fd, atcmd_output);
+			clif_messagecolor(sd, color_table[COLOR_CYAN], atcmd_output, false, SELF);
 		}
 		else if (!battle_config.atcommand_mobinfo_type) {
 			if (item_data->maxchance)
 				sprintf(atcmd_output, msg_txt(sd,1282), (float)item_data->maxchance / 100 ); //  - Maximal monsters drop chance: %02.02f%%
 			else
 				strcpy(atcmd_output, msg_txt(sd,1283)); //  - Monsters don't drop this item.
-			clif_displaymessage(fd, atcmd_output);
+			clif_messagecolor(sd, color_table[COLOR_CYAN], atcmd_output, false, SELF);
 		}
+
+		atcommand_display_item_group_sources(sd, fd, item_data->nameid);
 	}
 	return 0;
 }
@@ -8697,18 +9035,22 @@ ACMD_FUNC(whodrops)
 		sprintf(atcmd_output, msg_txt(sd,269), MAX_SEARCH); // Displaying first %d matches
 		clif_displaymessage(fd, atcmd_output);
 	}
+	const char* result_separator = "==================================================";
+
 	for (const auto &result : item_array) {
 		std::shared_ptr<item_data> id = result.second;
 
+		clif_messagecolor(sd, color_table[COLOR_CYAN], result_separator, false, SELF);
+
 		sprintf(atcmd_output, msg_txt(sd,1285), item_db.create_item_link( id ).c_str(), id->nameid); // Item: '%s' (ID:%u)
-		clif_displaymessage(fd, atcmd_output);
+		clif_messagecolor(sd, color_table[COLOR_WHITE], atcmd_output, false, SELF);
 
 		if (id->mob[0].chance == 0) {
 			strcpy(atcmd_output, msg_txt(sd,1286)); //  - Item is not dropped by mobs.
-			clif_displaymessage(fd, atcmd_output);
+			clif_messagecolor(sd, color_table[COLOR_WHITE], atcmd_output, false, SELF);
 		} else {
 			sprintf(atcmd_output, msg_txt(sd,1287), MAX_SEARCH); //  - Common mobs with highest drop chance (only max %d are listed):
-			clif_displaymessage(fd, atcmd_output);
+			clif_messagecolor(sd, color_table[COLOR_WHITE], atcmd_output, false, SELF);
 
 			for (uint16 j=0; j < MAX_SEARCH && id->mob[j].chance > 0; j++)
 			{
@@ -8726,10 +9068,13 @@ ACMD_FUNC(whodrops)
 				if (pc_isvip(sd)) // Display item rate increase for VIP
 					dropchance += (dropchance * battle_config.vip_drop_increase) / 100;
 				sprintf(atcmd_output, "- %s (%d): %02.02f%%", mob->jname.c_str(), id->mob[j].id, dropchance/100.);
-				clif_displaymessage(fd, atcmd_output);
+				clif_messagecolor(sd, color_table[COLOR_WHITE], atcmd_output, false, SELF);
 			}
 		}
+
+		atcommand_display_item_group_sources(sd, fd, id->nameid);
 	}
+	clif_messagecolor(sd, color_table[COLOR_YELLOW], result_separator, false, SELF);
 	return 0;
 }
 

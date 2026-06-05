@@ -3444,7 +3444,17 @@ struct s_item_group_random
 struct s_item_group_db
 {
 	uint16 id; /// Item Group ID
+	std::string name; /// Item Group name from item_group_db.yml
 	std::unordered_map<uint16, std::shared_ptr<s_item_group_random>> random;	/// group ID, s_item_group_random
+};
+
+struct s_item_group_search_result
+{
+	std::string group_name;
+	t_itemid box_item_id;
+	uint16 group_id;
+	uint16 sub_group;
+	uint16 rate;
 };
 
 /// Struct of Roulette db
@@ -3492,6 +3502,7 @@ struct item_data
 		int32 chance;
 		int32 id;
 	} mob[MAX_SEARCH]; //Holds the mobs that have the highest drop rate for this item. [Skotlex]
+	std::string script_source; // Original item script text.
 	struct script_code *script;	//Default script for everything.
 	struct script_code *equip_script;	//Script executed once when equipping.
 	struct script_code *unequip_script;//Script executed once when unequipping.
@@ -3585,6 +3596,7 @@ public:
 	// Additional
 	std::shared_ptr<item_data> searchname( const char* name );
 	std::shared_ptr<item_data> search_aegisname( const char *name );
+	std::string create_item_link(t_itemid nameid);
 	std::string create_item_link(struct item& item);
 	std::string create_item_link( std::shared_ptr<item_data>& data );
 	std::string create_item_link_for_mes( std::shared_ptr<item_data>& data, bool use_brackets, const char* name );
@@ -3606,6 +3618,7 @@ public:
 	// Additional
 	bool item_exists(uint16 group_id, t_itemid nameid);
 	int16 item_exists_pc(map_session_data *sd, uint16 group_id);
+	std::vector<s_item_group_search_result> find_item_groups(t_itemid nameid, size_t limit, size_t& total_matches);
 	std::shared_ptr<s_item_group_entry> get_random_entry(uint16 group_id, uint8 sub_group, e_group_algorithm_type algorithm = GROUP_ALGORITHM_USEDB);
 	uint8 pc_get_itemgroup( uint16 group_id, bool identify, map_session_data& sd );
 
