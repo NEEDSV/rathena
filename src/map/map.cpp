@@ -44,6 +44,9 @@
 #include "mercenary.hpp"
 #include "mob.hpp"
 #include "navi.hpp"
+#ifndef MAP_GENERATOR
+#include "needwiki.hpp"
+#endif
 #include "npc.hpp"
 #include "party.hpp"
 #include "path.hpp"
@@ -5042,6 +5045,9 @@ void MapServer::finalize(){
 	do_final_atcommand();
 	do_final_battle();
 	do_final_chrif();
+#ifndef MAP_GENERATOR
+	do_final_needwiki();
+#endif
 	do_final_clan();
 #ifndef MAP_GENERATOR
 	do_final_clif();
@@ -5446,6 +5452,9 @@ bool MapServer::initialize( int32 argc, char *argv[] ){
 	do_init_duel();
 	do_init_vending();
 	do_init_buyingstore();
+#ifndef MAP_GENERATOR
+	do_init_needwiki();
+#endif
 
 	npc_event_do_oninit();	// Init npcs (OnInit)
 

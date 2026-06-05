@@ -132,6 +132,7 @@ extern bool session_isActive(int32 fd);
 // Function prototype declaration
 
 int32 make_listen_bind(uint32 ip, uint16 port);
+int32 connect_client(int32 listen_fd);
 int32 make_connection(uint32 ip, uint16 port, bool silent, int32 timeout);
 #define realloc_fifo( fd, rfifo_size, wfifo_size ) _realloc_fifo( ( fd ), ( rfifo_size ), ( wfifo_size ), ALC_MARK )
 #define realloc_writefifo( fd, addition ) _realloc_writefifo( ( fd ), ( addition ), ALC_MARK )

@@ -86,6 +86,31 @@ static bool clif_session_isValid( const map_session_data* sd );
 static void clif_loadConfirm( map_session_data *sd );
 static void clif_favorite_item( map_session_data& sd, uint16 index );
 
+//#define NEED_PACKET_DEBUG
+
+#ifdef NEED_PACKET_DEBUG
+static t_tick packet_debug_end_tick = 0;
+
+static void clif_packet_debug_log( int32 fd, map_session_data* sd, int32 cmd, int32 packet_len ){
+	t_tick tick = gettick();
+
+	if( packet_debug_end_tick == 0 ){
+		packet_debug_end_tick = tick + 10000;
+	}
+
+	if( DIFF_TICK( packet_debug_end_tick, tick ) < 0 ){
+		return;
+	}
+
+	ShowInfo( "[PACKET DEBUG] fd=%d account_id=%d char_id=%d cmd=0x%04X len=%d\n",
+		fd,
+		sd ? sd->status.account_id : 0,
+		sd ? sd->status.char_id : 0,
+		cmd,
+		packet_len );
+}
+#endif
+
 #if PACKETVER >= 20150513
 enum mail_type {
 	MAIL_TYPE_TEXT = 0x0,
@@ -2886,7 +2911,6 @@ void clif_additem( const map_session_data* sd, int32 n, int32 amount, unsigned c
 
 	clif_send( &p, sizeof( p ), sd, SELF );
 }
-
 
 /// Notifies the client, that an inventory item was deleted or dropped.
 /// 00af <index>.W <amount>.W (ZC_ITEM_THROW_ACK)
@@ -11625,10 +11649,18 @@ void clif_parse_Emotion(int32 fd, map_session_data *sd){
 		return;
 	}
 
+<<<<<<< Updated upstream
 #if PACKETVER_MAIN_NUM >= 20230705
 	emotion_type emoticon = static_cast<emotion_type>(RFIFOB(fd, packet_db[RFIFOW(fd, 0)].pos[0]));
 #else
 	const PACKET_CZ_REQ_EMOTION * p = reinterpret_cast<PACKET_CZ_REQ_EMOTION*>(RFIFOP(fd, 0));
+=======
+	//const PACKET_CZ_REQ_EMOTION* p = reinterpret_cast<PACKET_CZ_REQ_EMOTION*>( RFIFOP( fd, 0 ) );
+#if PACKETVER_MAIN_NUM >= 20230705
+		emotion_type emoticon = static_cast<emotion_type>(RFIFOB(fd, packet_db[RFIFOW(fd, 0)].pos[0]));
+#else
+		const PACKET_CZ_REQ_EMOTION * p = reinterpret_cast<PACKET_CZ_REQ_EMOTION*>(RFIFOP(fd, 0));
+>>>>>>> Stashed changes
 
 	if( p->emotion_type >= ET_MAX ){
 		return;
@@ -11636,7 +11668,10 @@ void clif_parse_Emotion(int32 fd, map_session_data *sd){
 	
 	emotion_type emoticon = static_cast<emotion_type>( p->emotion_type );
 #endif
+<<<<<<< Updated upstream
 
+=======
+>>>>>>> Stashed changes
 	if (battle_config.basic_skill_check == 0 || pc_checkskill(sd, NV_BASIC) >= 2 || pc_checkskill(sd, SU_BASIC_SKILL) >= 1) {
 		if (emoticon == ET_CHAT_PROHIBIT) {// prevent use of the mute emote [Valaris]
 			clif_skill_fail( *sd, 1, USESKILL_FAIL_LEVEL, 1 );
@@ -25769,6 +25804,9 @@ static int32 clif_parse(int32 fd)
 
 	// filter out invalid / unsupported packets
 	if (cmd > MAX_PACKET_DB || cmd < MIN_PACKET_DB || packet_db[cmd].len == 0) {
+#ifdef NEED_PACKET_DEBUG
+		clif_packet_debug_log( fd, sd, cmd, RFIFOREST( fd ) );
+#endif
 		ShowWarning("clif_parse: Received unsupported packet (packet 0x%04x, %d bytes received), disconnecting session #%d.\n", cmd, RFIFOREST(fd), fd);
 
 #ifdef DUMP_INVALID_PACKET
@@ -25826,6 +25864,10 @@ static int32 clif_parse(int32 fd)
 	RFIFOW(fd, 0) = cmd;
 	if (sd)
 		sd->cryptKey = ((sd->cryptKey * clif_cryptKey[1]) + clif_cryptKey[2]) & 0xFFFFFFFF; // Update key for the next packet
+#endif
+
+#ifdef NEED_PACKET_DEBUG
+	clif_packet_debug_log( fd, sd, cmd, packet_len );
 #endif
 
 	if( packet_db[cmd].func == clif_parse_debug )
