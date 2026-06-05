@@ -20,7 +20,7 @@ OnTouch:
 	if (isbegin_quest(12497) == 0) {	// story
 		cloakoffnpcself( "#he_admin1" );
 		specialeffect EF_WHITEBODY, AREA, "#he_admin1";
-		npctalk "Stand back from the perimeter of the security area. Outsiders are prohibited from accessing it.", "#he_admin1", bc_self;
+		npctalk "보안 구역 경계선에서 떨어져 서 계십시오. 외부인은 출입이 금지되어 있습니다.", "#he_admin1", bc_self;
 		end;
 	}
 	// daily
@@ -32,28 +32,28 @@ OnTouch:
 ba_maison,120,321,5	script(CLOAKED)	#he_admin1	MD_ASSISTANT,{
 	if (ep17_2_main < 1)
 		end;
-	mes "[Flower Garden Manager]";
-	mes "An unregistered guest has been detected.";
+	mes "[꽃밭 관리자]";
+	mes "미등록 방문객이 감지되었습니다.";
 	next;
 	.@party_id = getcharid(1);
 	if (!is_party_leader()) {
-		mes "[Flower Garden Manager]";
-		mes "You cannot proceed to the next step, if you do not have the authority of the party leader.";
+		mes "[꽃밭 관리자]";
+		mes "당 대표의 승인이 없으면 다음 단계로 넘어갈 수 없습니다.";
 		close;
 	}
 	.@party_name$ = getpartyname(.@party_id);
-	mes "[Flower Garden Manager]";
-	mes "If you're an administrator who lost authority, you can get the authority reissued through an authentication procedure.";
+	mes "[꽃밭 관리자]";
+	mes "관리자 권한을 상실한 경우, 인증 절차를 통해 권한을 재발급받을 수 있습니다.";
 	next;
-	.@md_name$ = "Hidden Flower Garden";
+	.@md_name$ = "숨겨진 꽃밭";
 
 	if (instance_live_info(ILI_NAME,instance_id(IM_PARTY)) == .@md_name$)
-		.@menu$ = "^FF0000Enter^000000";
+		.@menu$ = "^FF0000엔터^000000";
 
 	switch( select( "Quit and Stand Back.", "Authenticate Identity", .@menu$ ) ) {
 	case 1:
-		mes "[Flower Garden Manager]";
-		mes "A wise choice.";
+		mes "[꽃밭 관리자]";
+		mes "현명한 선택입니다.";
 		close;
 	case 2:
 		if (instance_create(.@md_name$) == -3)
@@ -61,13 +61,13 @@ ba_maison,120,321,5	script(CLOAKED)	#he_admin1	MD_ASSISTANT,{
 		end;
 	case 3:
 		if (!is_party_leader()) {	// shouldn't happen
-			mes "[Flower Garden Manager]";
-			mes "You cannot proceed to the next step, if you do not have the authority of the party leader.";
+			mes "[꽃밭 관리자]";
+			mes "당 대표의 승인이 없으면 다음 단계로 넘어갈 수 없습니다.";
 			close;
 		}
 		if (instance_enter(.@md_name$) != IE_OK) {
-			mes "[Flower Garden Manager]";
-			mes "You can only move to the place when the party manager has completed all permits. Please re-check your issued access area.";
+			mes "[꽃밭 관리자]";
+			mes "파티 관리자가 모든 허가를 완료한 후에만 해당 장소로 이동할 수 있습니다. 발급받으신 출입 구역을 다시 확인해 주십시오.";
 			close;
 		}
 		mapannounce "ba_maison", "" + strcharinfo(0) + " of the party, " + .@party_name$ + ", is entering the " + .@md_name$ + ".", bc_map, "0x00FF99";
@@ -86,16 +86,16 @@ ba_maison,120,321,5	script(CLOAKED)	#he_admin2	MD_ASSISTANT,{
 		break;
 	case 0:
 	case 1:
-		mes "[Flower Garden Manager]";
-		mes "You just entered the security area.";
-		mes "Please rest your body for a day as Sigma ordered.";
+		mes "[꽃밭 관리자]";
+		mes "방금 보안 구역에 진입하셨습니다.";
+		mes "시그마의 지시대로 하루 동안 몸을 푹 쉬게 하십시오.";
 		close;
 	case 2:
 		erasequest 12498;
 		break;
 	}
-	mes "[Flower Garden Manager]";
-	mes "Your identity been identified. You may enter the security area. How may I help you?";
+	mes "[꽃밭 관리자]";
+	mes "본인 확인이 완료되었습니다. 보안 구역으로 입장하실 수 있습니다. 무엇을 도와드릴까요?";
 	next;
 	if (BaseLevel >= 150)
 		.@menu$[0] = "1st Security Zone.";
@@ -104,25 +104,25 @@ ba_maison,120,321,5	script(CLOAKED)	#he_admin2	MD_ASSISTANT,{
 
 	switch( select( "Stand back.", "Identity Authentication", "Enter Zone" ) ) {
 	case 1:
-		mes "[Flower Garden Manager]";
+		mes "[꽃밭 관리자]";
 		mes "Alright.";
 		close;
 	case 2:
 		switch( select( "Stand back.", .@menu$[0], .@menu$[1] ) ) {
 		case 1:
-			mes "[Flower Garden Manager]";
+			mes "[꽃밭 관리자]";
 			mes "Alright.";
 			close;
 		case 2:
-			.@md_name$ = "Security Area 1";
+			.@md_name$ = "보안 구역 1";
 			break;
 		case 3:
-			.@md_name$ = "Security Area 2";
+			.@md_name$ = "보안 구역 2";
 			break;
 		}
 		if (!is_party_leader()) {
-			mes "[Flower Garden Manager]";
-			mes "Only the party leader can start the identity verification. Let's leave it up to person in charge.";
+			mes "[꽃밭 관리자]";
+			mes "당 대표만이 신원 확인 절차를 시작할 수 있습니다. 책임자에게 맡기도록 하죠.";
 			close;
 		}
 		if (instance_create(.@md_name$) == -3)
@@ -131,19 +131,19 @@ ba_maison,120,321,5	script(CLOAKED)	#he_admin2	MD_ASSISTANT,{
 	case 3:
 		switch( select( .@menu$[0], .@menu$[1] ) ) {
 		case 1:
-			.@md_name$ = "Security Area 1";
+			.@md_name$ = "보안 구역 1";
 			.@qid = 12499;
 			.@qid2 = 12500;
 			break;
 		case 2:
-			.@md_name$ = "Security Area 2";
+			.@md_name$ = "보안 구역 2";
 			.@qid = 12500;
 			.@qid2 = 12499;
 			break;
 		}
 		if (instance_enter(.@md_name$) != IE_OK) {
-			mes "[Flower Garden Manager]";
-			mes "You can only move to the place when the party manager has completed all permits. Please re-check your issued access area.";
+			mes "[꽃밭 관리자]";
+			mes "파티 관리자가 모든 허가를 완료한 후에만 해당 장소로 이동할 수 있습니다. 발급받으신 출입 구역을 다시 확인해 주십시오.";
 			close;
 		}
 		setquest 12498;
@@ -182,11 +182,11 @@ OnInstanceInit:
 	if ('npc_is_talking)
 		end;
 	if ('hidden_garden == 0) {
-		mes "It appears to be a hologram of an automatic doll. You can see a strange glass on the middle panel with the word ^0000FF[Enter the pattern on the touch screen]^000000 and other several buttons.";
+		mes "자동 인형의 홀로그램처럼 보입니다. 중앙 패널에는 ^0000FF[터치스크린에 패턴을 입력하세요]^000000이라는 글자와 여러 개의 버튼이 있는 이상한 유리판이 보입니다.";
 		while(1) {
 			next;
 			if (select( "Leave it alone", "Touch the screen", .@menu$ ) == 1) {
-				mes "The hologram faded.";
+				mes "홀로그램이 사라졌다.";
 				close;
 			}
 			specialeffect EF_AGIUP2;
@@ -195,11 +195,11 @@ OnInstanceInit:
 				break;
 			specialeffect EF_HALLUTIME;
 			mes "^FF0000ERROR^000000";
-			mes "^FF0000Pattern does not match.^000000";
-			.@menu$ = "^FF0000Try entering a different pattern^000000";
+			mes "^FF0000패턴이 일치하지 않습니다.^000000";
+			.@menu$ = "^FF0000다른 패턴을 입력해 보세요^000000";
 		}
 		specialeffect EF_GUARD4;
-		mes "^0000FFPattern recognized.^000000";
+		mes "^0000FF패턴이 인식되었습니다.^000000";
 		mes "Running the sleep mode release protocol. Pattern input by ^0000CD" + strcharinfo(0) + "^000000 has been recognized.";
 		close2;
 		'admin$ = strcharinfo(0);
@@ -209,21 +209,21 @@ OnInstanceInit:
 	if ('hidden_garden == 1) {
 		removespecialeffect EF_MARKING_USE_CHANGEMONSTER;
 		setpcblock PCBLOCK_NPC, true;
-		npctalk "I'm an automatic doll that was designed to work only if your mana synchronizes with Varmundt's mana over a certain level.";
+		npctalk "저는 당신의 마나가 바르문트의 마나와 특정 수준 이상으로 동기화될 때만 작동하도록 설계된 자동 인형입니다.";
 		sleep2 5000;
 		npctalk "[" + 'admin$ + "]" + " has a 73.6% mana similarity to that of Varmundt. Who exactly are you [" + 'admin$ + "]?";
 		sleep2 5000;
 		setpcblock PCBLOCK_NPC, false;
-		select("An adventurer who stumbled upon this place");
+		select("이곳을 우연히 발견한 모험가");
 		setpcblock PCBLOCK_NPC, true;
-		npctalk "It's strange. I've never seen an outsider with a mana pattern that matches more than 70% to that of Varmundt's.";
+		npctalk "이상하군. 바르문트의 마나 패턴과 70% 이상 일치하는 외부인은 본 적이 없어.";
 		sleep2 5000;
 		setpcblock PCBLOCK_NPC, false;
 		.@s = select( "I had the opportunity to meet Varmundt before.", "I don't know why." );
 		setpcblock PCBLOCK_NPC, true;
 		sleep2 1000;
 		if (.@s == 1) {
-			npctalk "There is a possibility that you have a similar mana pattern due to frequent contact with him in any form.";
+			npctalk "그와 어떤 형태로든 자주 접촉했기 때문에 비슷한 마나 패턴을 가지고 있을 가능성이 있습니다.";
 			sleep2 5000;
 		}
 		while(1) {
@@ -234,19 +234,19 @@ OnInstanceInit:
 			case 1:
 				setpcblock PCBLOCK_NPC, true;
 				sleep2 1000;
-				npctalk "The automatic dolls maintain the flower garden and perform their given duties individually.";
+				npctalk "자동 인형들은 꽃밭을 가꾸고 각자 맡은 임무를 개별적으로 수행합니다.";
 				sleep2 5000;
-				npctalk "While Master Varmundt was still present, the progress of duties was checked in the form of individual reports and weekly on-site evaluations.";
+				npctalk "바르문트 사부가 아직 계실 때는 개별 보고서와 주간 현장 평가를 통해 업무 진행 상황을 점검했습니다.";
 				sleep2 5000;
-				npctalk "Currently, Master Varmundt has been away for over 1 million hours.";
+				npctalk "현재 바르문트 사부는 100만 시간 이상 자리를 비웠습니다.";
 				sleep2 5000;
-				npctalk "Although you are not Master Varmundt, as someone who has more than 70% similarity to his mana pattern, I would like to ask you to evaluate our duties.";
+				npctalk "비록 당신은 바르문트 스승님은 아니지만, 그의 마나 패턴과 70% 이상 유사한 존재로서, 저희의 임무를 평가해 주시기를 부탁드리고 싶습니다.";
 				sleep2 5000;
-				npctalk "Please understand that it's a necessary management to prevent our duties from falling into the wrong path.";
+				npctalk "이는 저희 업무가 잘못된 방향으로 흘러가는 것을 방지하기 위한 필요한 관리 절차임을 이해해 주시기 바랍니다.";
 				continue;
 			case 2:
 				sleep2 1000;
-				npctalk "I will wait until you give me your permission.";
+				npctalk "당신이 허락해 주실 때까지 기다리겠습니다.";
 				specialeffect EF_MARKING_USE_CHANGEMONSTER;
 				setpcblock PCBLOCK_NPC, false;
 				end;
@@ -259,7 +259,7 @@ OnInstanceInit:
 		sleep2 1000;
 		npctalk "Thank you for your permission. From now on, I'll treat [" + 'admin$ + "] as a temporary administrator.";
 		sleep2 5000;
-		npctalk "First select a code name that will be used to control this automatic doll. Some of the names that were preferred in the past are randomly selected.";
+		npctalk "먼저 이 자동 인형을 제어하는 데 사용할 코드명을 선택하세요. 과거에 선호되었던 이름 중 일부가 무작위로 선택됩니다.";
 
 		setarray .@names$[0],"Lisa","Barbara","Jennifer","Dorothy","Jun","Yeongchun","Susan","Martha","Hannah","Helen","Chunja","Karen","How do I stop this?";
 		.@size = getarraysize(.@names$);
@@ -276,11 +276,11 @@ OnInstanceInit:
 		.@guide_name$ = .@menu$[.@s];
 		.@guide_id = getnpcid(0, instance_npcname("#BMD000001"));
 
-		npctalk "Order has been received.";
+		npctalk "주문 접수되었습니다.";
 		sleep2 3000;
 		npctalk "The code name of the automatic doll BMD000001 is [" + .@guide_name$ + "].";
 		sleep2 5000;
-		npctalk "We will start the on-site inspection of the garden based on the temporary administrator response protocol.";
+		npctalk "임시 관리자 대응 프로토콜에 따라 정원에 대한 현장 점검을 시작할 예정입니다.";
 		sleep2 5000;
 		if ('hidden_garden == 1) {
 			'guide_id = .@guide_id;
@@ -288,7 +288,7 @@ OnInstanceInit:
 			'hidden_garden = 2;
 			disablenpc instance_npcname("#mc_device");
 			setpcblock PCBLOCK_NPC, false;
-			npctalk "Please watch your step and follow me.";
+			npctalk "발걸음을 조심하시고 저를 따라오세요.";
 			npcspeed 200;
 			unitwalk 'guide_id,63,290, instance_npcname("#BMD000001") + "::OnEvent01";
 		}
@@ -297,7 +297,7 @@ OnInstanceInit:
 	if ('hidden_garden == 3) {
 		removespecialeffect EF_MARKING_USE_CHANGEMONSTER;
 		mes "[" + 'guide_name$ + "]";
-		mes "Please evaluate the landscape, water quality, and other overall layout of the garden.";
+		mes "정원의 경관, 수질 및 전반적인 배치 등을 평가해 주십시오.";
 		next;
 		while(true) {
 			switch( select( "Hold on.", "It's a beautiful place.", "I wish there were more trees.", "Why is it surrounded by water?" ) ) {
@@ -305,16 +305,16 @@ OnInstanceInit:
 				npctalk "I'll stop the guide. Automatic dolls and objects that has not been inspected and evaluated by the Automatic Doll [" + 'guide_name$ + "] are not allowed to go outside.";
 				end;
 			case 2:
-				npctalk "Then, it has been determined that this place management has met its conditions.";
+				npctalk "그 결과, 해당 장소의 관리가 조건을 충족한 것으로 판단되었습니다.";
 				break;
 			case 3:
 				'trees = 1;
-				npctalk "Understood, we will add more trees in the future.";
+				npctalk "네, 알겠습니다. 앞으로 나무를 더 심도록 하겠습니다.";
 				break;
 			case 4:
-				npctalk "Because this is a water garden, the area is surrounded by water.";
+				npctalk "이곳은 수생 정원이기 때문에 주변이 물로 둘러싸여 있습니다.";
 				sleep2 5000;
-				npctalk "Changing to a non-water garden can not be accepted, as it is an area beyond Varmundt's taste.";
+				npctalk "물이 없는 정원으로 바꾸는 것은 바르문트의 취향에 맞지 않으므로 받아들일 수 없습니다.";
 				break;
 			}
 			break;
@@ -327,20 +327,20 @@ OnInstanceInit:
 
 OnTalk01:
 	'npc_is_talking = true;
-	npctalk "This product is an automatic doll that serves as a guide for the flower garden with a serial number BMD000001.";
+	npctalk "본 제품은 시리얼 번호 BMD000001을 가진 꽃밭 안내용 자동 인형입니다.";
 	sleep 5000;
-	npctalk "The similarity check to Varmundt's mana pattern is at 73.6%. Switching to flower garden guide mode.";
+	npctalk "바르문트의 마나 패턴과의 유사도 검사 결과는 73.6%입니다. 꽃밭 안내 모드로 전환합니다.";
 	sleep 5000;
-	npctalk "Operation will begin in 3 seconds.";
+	npctalk "3초 후에 작동이 시작됩니다.";
 	progressbar_npc "3131FF",3;
 	setnpcdisplay instance_npcname("#BMD000001"),20622;	// MD_ASSISTANT
 	specialeffect EF_FLOWERCAST;
-	npctalk "Sleep mode release protocol has been completed. I will check if the master, Varmundt is nearby in addition to the recognized target.";
+	npctalk "절전 모드 해제 프로토콜이 완료되었습니다. 인식된 대상 외에도 마스터인 바르문트가 근처에 있는지 확인하겠습니다.";
 	sleep 5000;
 	npctalk "Searching......";
 	progressbar_npc "3131FF",3;
 	sleep 1000;
-	npctalk "Master Varmundt is not detected within the network.";
+	npctalk "마스터 Varmundt가 네트워크에서 감지되지 않았습니다.";
 	specialeffect EF_MARKING_USE_CHANGEMONSTER;
 	if ('hidden_garden == 0)
 		'hidden_garden = 1;
@@ -348,9 +348,9 @@ OnTalk01:
 	end;
 
 OnEvent01:
-	npctalk "You can start the evaluation from the entrance of this garden.";
+	npctalk "이 정원의 입구에서부터 평가를 시작할 수 있습니다.";
 	sleep 3000;
-	npctalk "Objective evaluation reduces the working errors of the automatic dolls that manage this place and helps them perform their duties close to perfection.";
+	npctalk "객관적인 평가는 이곳을 관리하는 자동 로봇의 작업 오류를 줄이고 로봇이 거의 완벽에 가깝게 임무를 수행하도록 도와줍니다.";
 	sleep 6000;
 	npctalk "[" + 'admin$ + "]. Please use the authority of the temporary administrator to determine whether the garden duties is being faithfully carried out.";
 	sleep 6000;
@@ -369,11 +369,11 @@ OnEvent02:
 	end;
 
 OnEvent03:
-	npctalk "There is no bridge that connects the sections here.";
+	npctalk "이곳에는 구역들을 연결하는 다리가 없습니다.";
 	sleep 6000;
-	npctalk "Since Varmundt was a person who can move regardless of the terrain, we did not install a separate structure for normal people during the creation of the flower garden.";
+	npctalk "바르문트는 지형에 상관없이 이동할 수 있는 사람이었기 때문에 꽃밭을 조성할 때 일반인을 위한 별도의 구조물을 설치하지 않았습니다.";
 	sleep 6000;
-	npctalk "However, considering the temporary administrator's insufficient ability, I will support the space leap services.";
+	npctalk "하지만 임시 관리자의 능력이 부족하다는 점을 고려하여, 저는 우주 도약 서비스 지원을 약속드립니다.";
 	sleep 6000;
 	enablenpc instance_npcname("#BMD000002");
 	enablenpc instance_npcname("#carota");
@@ -392,11 +392,11 @@ OnEvent03:
 	if ('hidden_garden == 4) {
 		removespecialeffect EF_MARKING_USE_CHANGEMONSTER;
 		'hidden_garden = 5;
-		npctalk "Master Varmundt gave each of the automatic dolls a research project.";
+		npctalk "바르문트 선생은 자동 인형 각각에게 연구 과제를 부여했습니다.";
 		sleep 5000;
-		npctalk "However, the purpose of the research is not available to us dolls, we have to decide on our own what to do with it in the future.";
+		npctalk "하지만 연구의 목적은 우리 인형들에게 알려지지 않았으므로, 앞으로 이 연구 결과를 어떻게 활용할지는 우리 스스로 결정해야 합니다.";
 		sleep 5000;
-		npctalk "The flower garden is divided into several research sectors and each sector has a different subject as a project.";
+		npctalk "꽃밭은 여러 연구 구역으로 나뉘어 있으며, 각 구역은 서로 다른 주제의 프로젝트를 진행하고 있습니다.";
 		npcspeed 200;
 		'guide_id = getnpcid(0, instance_npcname("#BMD000002"));
 		unitwalk 'guide_id,124,275, instance_npcname("#BMD000002") + "::OnEvent00";
@@ -410,7 +410,7 @@ OnEvent00:
 
 OnEvent01:
 	unitwalk 'guide_id,125,280, instance_npcname("#BMD000002") + "::OnEvent02";
-	npctalk "Among the research sectors, this sector is a place to grow a plant called Turnip under the orders of Varmundt.";
+	npctalk "연구 분야 중 이 분야는 바르문트의 지시에 따라 순무라는 식물을 재배하는 곳입니다.";
 	end;
 
 OnEvent02:
@@ -423,21 +423,21 @@ OnEvent03:
 
 OnEvent04:
 	sleep 3000;
-	npctalk "Let me introduce the automatic doll model CAROTA-88.";
+	npctalk "자동 인형 모델 CAROTA-88을 소개합니다.";
 	sleep 4000;
 	npctalk "......";
 	sleep 2000;
-	npctalk "[Error: CAROTA-88 is out of control range. Need to track corresponding object coordinates.]";
+	npctalk "[오류: CAROTA-88이 제어 범위를 벗어났습니다. 해당 객체의 좌표를 추적해야 합니다.]";
 	sleep 5000;
-	npctalk "[Tracking coordinates...]";
+	npctalk "[좌표 추적 중...]";
 	progressbar_npc "3131FF",4;
-	npctalk "CAROTA-88. Please return to your original location as soon as possible. Don't forget that I can use force when needed.";
+	npctalk "CAROTA-88. 최대한 빨리 원래 위치로 돌아가십시오. 필요할 경우 무력을 사용할 수 있다는 점을 잊지 마십시오.";
 	'carota = getnpcid(0, instance_npcname("#carota"));
 	donpcevent instance_npcname("#carota") + "::OnAction";
 	end;
 
 OnEvent05:
-	npctalk "Let's move on to the next section.", instance_npcname("#BMD000002");
+	npctalk "다음 섹션으로 넘어가겠습니다.", instance_npcname("#BMD000002");
 	'hidden_garden = 7;
 	sleep 2000;
 	enablenpc instance_npcname("#BMD000003");
@@ -463,26 +463,26 @@ OnTouch:
 		end;
 	if ('hidden_garden == 6) {
 		removespecialeffect EF_MARKING_USE_CHANGEMONSTER;
-		select("Report your work details.");
+		select("업무 내용을 보고하십시오.");
 		setpcblock PCBLOCK_NPC, true;
 		sleep2 1000;
-		npctalk "Master Varmundt. No further instructions after entering Turnip's biological data . This automatic doll unattended.";
+		npctalk "바르문트 주인님. 순무의 생체 정보를 입력한 후에는 더 이상 지시 사항이 없습니다. 이 자동 인형은 무인으로 작동합니다.";
 		sleep2 5000;
-		npctalk "No further indications for 5076 hours. This automatic doll's AI collects network information about turnips.";
+		npctalk "5076시간 동안 추가 정보가 없습니다. 이 자동 인형의 AI는 순무에 대한 네트워크 정보를 수집합니다.";
 		sleep2 5000;
-		npctalk "Obtaining information of edible plants. Finding ancient record of turnip cultivation.";
+		npctalk "식용 식물에 대한 정보 수집. 순무 재배에 관한 고대 기록 발견.";
 		sleep2 5000;
-		npctalk "Optimized germination, growth and sowing of turnips for about 18816 hours compared and recorded.";
+		npctalk "약 18,816시간 동안 순무의 발아, 생장 및 파종 최적화 과정을 비교 및 기록했습니다.";
 		sleep2 5000;
-		npctalk "Over million hours passed. Collect data on cultivation and harvest of Turnips. a collection of information on breeding method.";
+		npctalk "백만 시간 이상이 지났습니다. 순무 재배 및 수확에 대한 데이터를 수집하고, 품종 개량 방법에 대한 정보를 모았습니다.";
 		sleep2 5000;
-		npctalk "2 ton yield per year. 99.9% success pest control prevention. 0.2% loss due to physical work errors.";
+		npctalk "연간 2톤 수확량. 해충 방제 성공률 99.9%. 작업 중 발생하는 물리적 오류로 인한 손실률 0.2%.";
 		sleep2 5000;
-		npctalk "Turnips from flower garden. Sold at an excellent price in a nearby big city. Contributing to maintenance costs for flower gardens and mansions.";
+		npctalk "화단에서 수확한 순무입니다. 인근 대도시에서 아주 좋은 가격에 판매하고 있습니다. 화단과 저택 유지 관리 비용에 보탬이 될 것입니다.";
 		sleep2 5000;
 		setpcblock PCBLOCK_NPC, false;
-		npctalk "Whether the research mission direction of this automatic doll should be improved, continued, or discarded. Waiting for the administrator's decision.";
-		mes "^0000AAEvaluate CAROTA-88's work to date.^000000";
+		npctalk "이 자동인형 연구 방향을 개선할지, 계속 진행할지, 아니면 폐기할지에 대한 관리자의 결정을 기다리고 있습니다.";
+		mes "CAROTA-88의 현재까지의 활동을 평가하십시오.";
 		next;
 		if (select( "The product is full and good shape.", "Improve breeding.", "It's just farming, so everything is good." ) == 3)
 			'talk_bool = true;
@@ -497,32 +497,32 @@ OnTouch:
 OnTalk01:
 	'npc_is_talking = true;
 	sleep 1000;
-	npctalk "Evaluation received...";
+	npctalk "평가 결과 접수됨...";
 	sleep 5000;
 	if ('talk_bool) {
-		npctalk "CAROTA-88 received confirmation from administrator that Varmundt instructions were performed perfectly.";
+		npctalk "CAROTA-88은 관리자로부터 Varmundt의 지시 사항이 완벽하게 수행되었다는 확인을 받았습니다.";
 		sleep 3000;
 		emotion ET_DELIGHT;
 		sleep 2000;
-		npctalk "Existing work routine will be repeated until further orders are issued.";
+		npctalk "추가 지시가 있을 때까지 기존 업무 절차가 반복됩니다.";
 	}
 	else {
-		npctalk "Learning more breeding method.";
+		npctalk "더 많은 번식 방법을 알아보세요.";
 		sleep 3000;
 		emotion ET_DELIGHT;
 		sleep 2000;
-		npctalk "I will actively increase the portion of experiments on improved product seeds that were to be discarded.";
+		npctalk "폐기될 예정이었던 개량종 종자에 대한 실험 비율을 적극적으로 늘리겠습니다.";
 	}
 	sleep 5000;
 	npctalk "Thank you, [" + 'admin$ + "] for responding to the evaluation.";
 	sleep 5000;
 	if ('talk_bool)
-		npctalk "Automatic doll entering control mode to eradicate underground moles. Goodbye.";
+		npctalk "땅속 두더지를 박멸하기 위해 자동 인형이 제어 모드로 진입했습니다. 안녕히 가세요.";
 	else
-		npctalk "I'll move to the basement storage to check for new breeds.";
+		npctalk "새로운 품종이 있는지 확인하러 지하실 창고로 가겠습니다.";
 	progressbar_npc "3131FF",4;
 	disablenpc();
-	npctalk "CAROTA-88 shows a non-logical response to this evaluation. We will arrange for an inspection soon.", instance_npcname("#BMD000002");
+	npctalk "CAROTA-88은 이 평가에 대해 비논리적인 응답을 보였습니다. 조만간 점검을 실시할 예정입니다.", instance_npcname("#BMD000002");
 	sleep 3000;
 	if ('hidden_garden == 6)
 		unitwalk 'guide_id,147,278, instance_npcname("#BMD000002") + "::OnEvent05";
@@ -530,7 +530,7 @@ OnTalk01:
 	end;
 
 OnEvent00:
-	npctalk "The project of CAROTA-88 is to grow crops here and protect them from outsiders. Why were you away?", instance_npcname("#BMD000002");
+	npctalk "CAROTA-88 프로젝트는 이곳에서 작물을 재배하고 외부인으로부터 보호하는 것입니다. 당신은 왜 자리를 비웠습니까?", instance_npcname("#BMD000002");
 	unitwalk 'carota,137,272, instance_npcname("#carota") + "::OnEvent01";
 	end;
 
@@ -539,7 +539,7 @@ OnEvent01:
 	sleep 5000;
 	emotion ET_FRET;
 	sleep 3000;
-	npctalk "Currently, a human administrator is present here. I recommend changing the language code to the official language of humans.", .@doll$;
+	npctalk "현재 인간 관리자가 접속 중입니다. 언어 코드를 인간들이 사용하는 공식 언어로 변경하는 것을 권장합니다.", .@doll$;
 	sleep 3000;
 	emotion ET_FRET;
 	sleep 2000;
@@ -547,19 +547,19 @@ OnEvent01:
 	sleep 1000;
 	specialeffect EF_FLOWERCAST;
 	sleep 3000;
-	npctalk "Management automatic doll irreasonable!! Very!! Forced recall during pursuit of 5 moles!!! The Turnips is ruined!!!";
+	npctalk "자동 인형 관리 시스템이 너무 불합리해!! 정말!! 두더지 5마리 추적 중에 강제로 회수됐어!!! 순무가 망했어!!!";
 	sleep 5000;
-	npctalk "Haven't you updated your language pack yet? Regular updates are not mandatory, but its essential.", .@doll$;
+	npctalk "아직 언어 팩을 업데이트하지 않으셨나요? 정기적인 업데이트는 필수 사항은 아니지만, 중요합니다.", .@doll$;
 	sleep 5000;
-	npctalk "CAROTA-88 data storage capacity. Language expansion pack burden. If not important, I will return to original work.";
+	npctalk "CAROTA-88 데이터 저장 용량. 언어 확장 팩 부담. 중요하지 않다면 원래 작업으로 돌아가겠습니다.";
 	sleep 5000;
-	npctalk "Please wait CAROTA-88. Here is a administrator who can perform the on-site inspection.", .@doll$;
+	npctalk "CAROTA-88님, 잠시 기다려 주십시오. 현장 점검을 진행할 수 있는 관리자가 있습니다.", .@doll$;
 	sleep 5000;
-	npctalk "Hasn't it been a long time since CAROTA-88 was last evaluated?", .@doll$;
+	npctalk "CAROTA-88에 대한 마지막 평가가 꽤 오래되지 않았나요?", .@doll$;
 	sleep 5000;
-	npctalk "CAROTA-88 More than a million hours since last research evaluation. Failed to save more logs.";
+	npctalk "CAROTA-88 마지막 연구 평가 이후 백만 시간 이상 경과했습니다. 추가 로그 저장에 실패했습니다.";
 	sleep 5000;
-	npctalk "CAROTA-88. Don't you want a project evaluation? If we miss this administrator now, we don't know when we can get another project evaluation.", .@doll$;
+	npctalk "CAROTA-88. 프로젝트 평가를 원하지 않으세요? 지금 이 관리자를 놓치면 언제 다시 프로젝트 평가를 받을 수 있을지 모르겠습니다.", .@doll$;
 	sleep 5000;
 	npctalk "Agree with automatic doll [" + 'guide_name$ + "]. I want an immediate project assessment.";
 	sleep 6000;
@@ -568,7 +568,7 @@ OnEvent01:
 	sleep 1000;
 	specialeffect EF_FLOWERCAST;
 	sleep 2000;
-	npctalk "Automatic doll CAROTA-88 control panel opened. Waiting for input...";
+	npctalk "자동인형 CAROTA-88 제어판이 열렸습니다. 입력을 기다리는 중...";
 	'hidden_garden = 6;
 	specialeffect EF_MARKING_USE_CHANGEMONSTER;
 	end;
@@ -615,7 +615,7 @@ OnTouch:
 		removespecialeffect EF_MARKING_USE_CHANGEMONSTER;
 		npcspeed 200;
 		'guide_id = getnpcid(0, instance_npcname("#BMD000003"));
-		npctalk "This section is where we study a plant called Pumpkin.";
+		npctalk "이 부분에서는 호박이라는 식물에 대해 공부합니다.";
 		unitwalk 'guide_id,253,277, instance_npcname("#BMD000003") + "::OnEvent01";
 		end;
 	}
@@ -630,7 +630,7 @@ OnEvent02:
 	end;
 
 OnEvent03:
-	npctalk "The one in charge of this place is pimp25. An automatic doll modeled after a create from this world.";
+	npctalk "이곳을 책임지는 자는 pimp25입니다. 이 세상에서 창조된 존재를 본떠 만든 자동 인형이죠.";
 	specialeffect EF_MARKING_USE_CHANGEMONSTER, AREA, instance_npcname("#pimp25");
 	'hidden_garden = 9;
 	end;
@@ -648,7 +648,7 @@ OnEvent06:
 	end;
 
 OnEvent07:
-	npctalk "Let's move on.";
+	npctalk "다음으로 넘어가죠.";
 	enablenpc instance_npcname("#BMD000004");
 	for ( .@i = 1; .@i < 4; ++.@i ) {
 		enablenpc instance_npcname("#swat_" + .@i);
@@ -683,80 +683,80 @@ OnTouch:
 			case 2:
 				break;
 			case 3:
-				npctalk "My work is to witness the birth and evolution of life! My research is not easy by any means!";
+				npctalk "제 일은 생명의 탄생과 진화를 목격하는 것입니다! 제 연구는 결코 쉽지 않습니다!";
 				continue;
 			}
 			break;
 		}
 		setpcblock PCBLOCK_NPC, true;
-		npctalk "How long has it been since I got the orders of Varmundt?!";
+		npctalk "바르문트에게서 주문서를 받은 지 얼마나 됐지?!";
 		sleep2 5000;
-		npctalk "Probably... about... More than a million hours have passed. Subsequent facility management was determined by self-made decision.";
+		npctalk "아마도... 백만 시간 이상이 흘렀을 겁니다. 이후 시설 관리는 자체적인 결정에 따라 이루어졌습니다.";
 		sleep2 5000;
-		npctalk "Pimp. When you are reporting to the administrator, you must report the exact recorded time.", instance_npcname("#BMD000003");
+		npctalk "포주. 관리자에게 보고할 때는 정확한 기록 시간을 보고해야 합니다.", instance_npcname("#BMD000003");
 		sleep2 3000;
-		npctalk "Is that so? But Pimp can't afford to record more than a million hours. That's a waste of memory resources! Varmundt is angry!";
+		npctalk "그래요? 하지만 핌프는 백만 시간 넘게 녹화할 여유가 없어요. 메모리 자원 낭비잖아요! 바르문트가 화가 났어요!";
 		sleep2 1000;
 		setpcblock PCBLOCK_NPC, false;
-		select("How is your research on Pumpkin farming?");
+		select("호박 재배에 대한 연구는 어떻게 진행되고 있나요?");
 		setpcblock PCBLOCK_NPC, true;
 		sleep2 1000;
-		npctalk "Plants currently growing. Pumpkin has showed significant results in controlling sodium in human blood vessels.";
+		npctalk "현재 재배 중인 식물입니다. 호박은 인체 혈관 내 나트륨 조절에 상당한 효과를 보여왔습니다.";
 		sleep2 5000;
-		npctalk "Pumpkin produced here is high in sugar and sufficient calories. It's very delicious according to humans. Nearby dogs and cats also eat it...";
+		npctalk "이곳에서 생산되는 호박은 당분 함량이 높고 칼로리도 충분합니다. 사람들의 입맛에는 아주 맛있습니다. 근처의 개와 고양이들도 잘 먹습니다.";
 		sleep2 1000;
 		setpcblock PCBLOCK_NPC, false;
-		select("Is it made of food?");
+		select("음식으로 만들어진 건가요?");
 		setpcblock PCBLOCK_NPC, true;
 		sleep2 1000;
-		npctalk "I judged it to be a valued highly for various organisms. It's been continously produced, processed, and stored.";
+		npctalk "저는 그것이 다양한 생물에게 매우 유익하다고 판단했습니다. 그것은 지속적으로 생산, 가공 및 저장되어 왔습니다.";
 		sleep2 5000;
-		npctalk "The current annual output is about three tons. For long-term preservation, it's being stored in warehouses in 2~6 form of dried food .";
+		npctalk "현재 연간 생산량은 약 3톤입니다. 장기 보존을 위해 2~6가지 형태의 건조 식품으로 창고에 보관하고 있습니다.";
 		sleep2 1000;
 		setpcblock PCBLOCK_NPC, false;
-		select("Did you decide all those methods?");
+		select("그 방법들을 모두 결정하신 건가요?");
 		setpcblock PCBLOCK_NPC, true;
 		sleep2 1000;
-		npctalk "Pimp has no will to make his own decisions! Only Master Varmundt knows.";
+		npctalk "포주는 스스로 결정을 내릴 의지가 없어! 오직 주인님 바르문트만이 그 사실을 알고 있지.";
 		sleep2 1000;
 		setpcblock PCBLOCK_NPC, false;
-		select("Is there someone who decided for your research?");
+		select("당신의 연구를 위해 결정을 내린 사람이 있나요?");
 		setpcblock PCBLOCK_NPC, true;
 		sleep2 1000;
-		npctalk "I asked Varmundt what to do several times, but there was no answer.";
+		npctalk "나는 바르문트에게 어떻게 해야 할지 여러 번 물었지만 아무런 대답도 듣지 못했다.";
 		sleep2 5000;
-		npctalk "As there was no orders from the master, Pimp started looking for a place where research could be useful.";
+		npctalk "주인의 명령이 없었기에, 핌프는 연구가 유용하게 쓰일 만한 곳을 찾기 시작했다.";
 		sleep2 1000;
 		setpcblock PCBLOCK_NPC, false;
-		select("Have you found it?");
+		select("찾으셨나요?");
 		setpcblock PCBLOCK_NPC, true;
 		sleep2 1000;
-		npctalk "The maintenance of this mansion costs money. It costs a lot!";
+		npctalk "이 저택을 유지하는 데는 돈이 많이 든다. 정말 많이 든다!";
 		sleep2 3000;
-		npctalk "The dried pumpkins in the warehouses are preserve food for the adventurers and are sold around the continent. Sales becomes money source.";
+		npctalk "창고에 있는 말린 호박은 모험가들을 위한 보존 식품이며 대륙 곳곳에서 판매됩니다. 판매 수익이 주요 수입원이 됩니다.";
 		sleep2 5000;
-		npctalk "Money can protect the mansion. Pimp will protect this place! That's I'm working hard to raise pumpkins!";
+		npctalk "돈은 저택을 지킬 수 있어. 포주가 이곳을 지키고 싶어 하잖아! 그래서 내가 열심히 호박을 키우는 거야!";
 		sleep2 1000;
 		setpcblock PCBLOCK_NPC, false;
-		select("I'm surprised you decided that far on your own.");
+		select("네가 혼자서 그렇게까지 결정했다니 놀랍네.");
 		setpcblock PCBLOCK_NPC, true;
 		sleep2 1000;
-		npctalk "I made a decision? I've never had such inference.";
+		npctalk "제가 결정을 내렸다고요? 그런 추측은 해본 적이 없는데요.";
 		sleep2 3000;
 		npctalk "......";
 		sleep2 2000;
-		npctalk "[Calculating]";
+		npctalk "[계산 중]";
 		progressbar_npc "3131FF",3;
 		'hidden_garden = 10;
 		setpcblock PCBLOCK_NPC, false;
-		npctalk "You confused me! Pimp shall perform the only given task. Don't talk to me anymore administrator.";
+		npctalk "날 헷갈리게 했어! 포주가 주어진 임무만 수행해야 해. 관리자, 더 이상 나한테 말 걸지 마.";
 		sleep 5000;
-		npctalk "Are you done talking? The conversation here is recorded as evaluation data. Let's head to the next section.", instance_npcname("#BMD000003");
+		npctalk "말씀 다 하셨나요? 이 대화는 평가 데이터로 기록됩니다. 다음 섹션으로 넘어가시죠.", instance_npcname("#BMD000003");
 		unitwalk 'guide_id,254,261, instance_npcname("#BMD000003") + "::OnEvent04";
 		end;
 	}
 	if ('hidden_garden > 9)
-		npctalk "Get out of here!";
+		npctalk "여기서 나가!";
 	end;
 
 OnWalk:
@@ -786,18 +786,18 @@ OnTouch:
 	if ('hidden_garden == 10) {
 		removespecialeffect EF_MARKING_USE_CHANGEMONSTER;
 		mes "[" + 'guide_name$ + "]";
-		mes "This section is managed by three automatic dolls. Shall we continue with the guide?";
+		mes "이 구역은 세 개의 자동 인형이 관리합니다. 안내를 계속 진행할까요?";
 		next;
 		if (select( "Cancel.", "Let's continue." ) == 1) {
 			mes "[" + 'guide_name$ + "]";
-			mes "I'll wait until further instructions are given.";
+			mes "추가 지시가 있을 때까지 기다리겠습니다.";
 			close;
 		}
 		if ('hidden_garden == 10) {
 			'hidden_garden = 11;
 			npcspeed 200;
 			'guide_id = getnpcid(0, instance_npcname("#BMD000004"));
-			npctalk "I don't know what this place is for because it's not accessible to my authority level.";
+			npctalk "제 권한으로는 접근할 수 없어서 이곳이 무슨 용도인지 모르겠습니다.";
 			unitwalk 'guide_id,201,285, instance_npcname("#BMD000004") + "::OnEvent01";
 		}
 		end;
@@ -805,85 +805,85 @@ OnTouch:
 	if ('hidden_garden == 12) {
 		removespecialeffect EF_MARKING_USE_CHANGEMONSTER;
 		mes "[" + 'guide_name$ + "]";
-		mes "Can I help you with anything?";
+		mes "제가 도와드릴 일이 있을까요?";
 		next;
 		if (select( "Cancel.", "What are those automatic dolls?" ) == 1) {
 			mes "[" + 'guide_name$ + "]";
-			mes "Entering standby mode.";
+			mes "대기 모드로 진입합니다.";
 			close;
 		}
 		mes "[" + 'guide_name$ + "]";
-		mes "Automatic dolls are classified according to their usage.";
+		mes "자동 인형은 사용 용도에 따라 분류됩니다.";
 		next;
 		mes "[" + 'guide_name$ + "]";
 		mes "The unit that attacked [" + 'admin$ + "] is the initial version of Class 4 combat-type automatic dolls. It's combat strength is equivalent to 20 adult humans.";
 		next;
 		mes "[" + 'guide_name$ + "]";
-		mes "I've delivered the information to the Manager ^0000CDSigma^000000, because the results were unexpected. The temporary administrator's combat capability is not of an average human.";
+		mes "예상치 못한 결과가 나왔기 때문에 관리자에게 정보를 전달했습니다. 임시 관리자의 전투 능력은 일반인의 수준을 훨씬 뛰어넘습니다.";
 		next;
-		select("Who's that??");
+		select("저 사람은 누구야??");
 		mes "[" + 'guide_name$ + "]";
-		mes "It's one of the three most privileged control systems in this mansion.";
+		mes "이 저택에서 가장 중요한 세 가지 제어 시스템 중 하나입니다.";
 		close2;
 		while(true) {
 			if (.@talk && .@talk2)
-				.@question$ = "^FF0000Is the security area near here?^000000";
+				.@question$ = "^FF0000보안 구역이 이 근처에 있나요?^000000";
 			switch( select( "Is the garden a security area?", "What's the real purpose of the garden", .@question$, .@teleport$ ) ) {
 			case 1:
 				setpcblock PCBLOCK_NPC, true;
 				sleep2 1000;
-				npctalk "The flower garden is the border between the security area and the general area.";
+				npctalk "꽃밭은 보안 구역과 일반 구역의 경계입니다.";
 				sleep2 5000;
-				npctalk "It is classified as a security zone to those who have enough authority.";
+				npctalk "충분한 권한을 가진 사람들에게는 그곳이 보안 구역으로 분류됩니다.";
 				sleep2 3000;
 				.@talk = 1;
 				break;
 			case 2:
 				setpcblock PCBLOCK_NPC, true;
 				sleep2 1000;
-				npctalk "Please understand that this is a buffer zone designed to protect areas that should not be seen by outsiders.";
+				npctalk "이곳은 외부인이 볼 수 없어야 하는 지역을 보호하기 위해 조성된 완충지대임을 이해해 주시기 바랍니다.";
 				sleep2 5000;
-				npctalk "Access to any additional information beyond this is prohibited at my authority level.";
+				npctalk "제 권한으로는 이 외의 추가 정보에 대한 접근은 금지되어 있습니다.";
 				sleep2 3000;
 				.@talk2 = 1;
 				break;
 			case 3:
 				setpcblock PCBLOCK_NPC, true;
 				sleep2 1000;
-				npctalk "--- Operating ---";
+				npctalk "--- 작동 중 ---";
 				progressbar_npc "3131FF",3;
-				npctalk "[Warning] This information is close to the limit of the current authority.";
+				npctalk "[경고] 이 정보는 현재 당국이 공개할 수 있는 최대치에 근접해 있습니다.";
 				sleep2 5000;
-				npctalk "Security zones is very close to the current coordinates.";
+				npctalk "보안 구역은 현재 좌표와 매우 가깝습니다.";
 				sleep2 3000;
-				.@teleport$ = "^FF11FFGuide me to the security area.^000000";
+				.@teleport$ = "보안 검색대로 안내해 주세요.";
 				break;
 			case 4:
 				setpcblock PCBLOCK_NPC, true;
-				npctalk "--- Operating ---";
+				npctalk "--- 작동 중 ---";
 				progressbar_npc "3131FF",3;
-				npctalk "[Warning] This is a request is exceeds my authority level.";
+				npctalk "[경고] 이 요청은 제 권한 범위를 넘어섭니다.";
 				sleep2 5000;
 				npctalk "Your request has been rejected due to a low authority level for the administrator [" + 'admin$ + "].";
 				setpcblock PCBLOCK_NPC, false;
 				sleep 5000;
-				mapannounce 'map_herbs$, "??? : The automatic dolls' response to you is very fresh. Strange visitor.", bc_map, 0xF6D6B6;
+				mapannounce 'map_herbs$, "??? : 자동인형들이 당신에게 보이는 반응이 아주 신선하네요. 낯선 방문객이군요.", bc_map, 0xF6D6B6;
 				sleep 5000;
 				mapannounce 'map_herbs$, "??? : Will you escort him to the secure area? BMD000001. No, I mean automatic doll, [" + 'guide_name$ + "].", bc_map, 0xF6D6B6;
 				sleep 5000;
-				npctalk "The biological wavelength of this voice...";
+				npctalk "이 목소리의 생물학적 파장은...";
 				sleep 3000;
-				mapannounce 'map_herbs$, "It's convenient that I don't have to tell me who I am. Anyway, are you sure you're going to be able to tell me what happened earlier?", bc_map, 0xF6D6B6;
+				mapannounce 'map_herbs$, "내가 누구인지 굳이 말할 필요가 없어서 편리하네요. 그런데, 아까 무슨 일이 있었는지 확실히 말해줄 수 있을까요?", bc_map, 0xF6D6B6;
 				sleep 5000;
-				npctalk "You mean the security area? But it's not possible with my authority level.";
+				npctalk "보안 구역을 말씀하시는 건가요? 하지만 제 권한으로는 불가능합니다.";
 				sleep 3000;
 				mapannounce 'map_herbs$, "That's already been taken care of. [" + 'guide_name$ + "], Guide the visitor to this place.", bc_map, 0xF6D6B6;
 				sleep 5000;
-				npctalk "This is the first time since I was created. That an exception has occurred, we will modify some of the procedures in regards to that.";
+				npctalk "제가 만들어진 이후로 예외가 발생한 것은 이번이 처음입니다. 이와 관련하여 일부 절차를 수정하겠습니다.";
 				sleep 5000;
 				if ('hidden_garden == 12) {
 					'hidden_garden = 13;
-					npctalk "I'll take you to the security area.";
+					npctalk "보안 검색대로 안내해 드리겠습니다.";
 					unitwalk 'guide_id,196,275, instance_npcname("#BMD000004") + "::OnEvent08";
 				}
 				end;
@@ -894,11 +894,11 @@ OnTouch:
 	end;
 
 OnEvent:
-	npctalk "[Searching the coordinates of the automatic doll in the area.]";
+	npctalk "[해당 지역에서 자동 인형의 좌표를 검색합니다.]";
 	progressbar_npc "3131FF",2;
-	mapannounce 'map_herbs$, "??? : Unauthorized outsider intrusion detection. Code Category 063. Entering the identification process.", bc_map, 0xFF44FF;
+	mapannounce 'map_herbs$, "??? : 승인되지 않은 외부 침입 감지. 코드 범주 063. 신원 확인 절차 진입.", bc_map, 0xFF44FF;
 	sleep 5000;
-	npctalk "It looks like the automatic dolls are back. I don't think it's friendly to the administrator.";
+	npctalk "자동 인형들이 다시 돌아온 것 같네요. 관리자 입장에서는 그다지 좋은 상황은 아닌 것 같습니다.";
 	sleep 5000;
 	specialeffect EF_FIREPILLARON2, AREA, instance_npcname("#swat_1");
 	sleep 500;
@@ -912,26 +912,26 @@ OnEvent:
 	setnpcdisplay instance_npcname("#swat_2"),1739;
 	setnpcdisplay instance_npcname("#swat_3"),1739;
 	sleep 2000;
-	npctalk "Facial biometrics. Comparing to list of administrators registered in database.", instance_npcname("#swat_3");
+	npctalk "얼굴 생체 정보. 데이터베이스에 등록된 관리자 목록과 비교.", instance_npcname("#swat_3");
 	sleep 2000;
-	npctalk "---- No match ----", instance_npcname("#swat_1");
+	npctalk "일치하는 항목이 없습니다", instance_npcname("#swat_1");
 	sleep 500;
-	npctalk "---- No match ----", instance_npcname("#swat_2");
+	npctalk "일치하는 항목이 없습니다", instance_npcname("#swat_2");
 	sleep 500;
-	npctalk "---- No match ----", instance_npcname("#swat_3");
+	npctalk "일치하는 항목이 없습니다", instance_npcname("#swat_3");
 	sleep 2000;
-	npctalk "Suppress unauthorized outsider.", instance_npcname("#swat_1");
+	npctalk "허가받지 않은 외부인의 접근을 차단하십시오.", instance_npcname("#swat_1");
 	sleep 500;
-	npctalk "---- Combat Mode ----", instance_npcname("#swat_2");
+	npctalk "---- 전투 모드 ----", instance_npcname("#swat_2");
 	sleep 500;
-	npctalk "---- Combat Mode ----", instance_npcname("#swat_3");
+	npctalk "---- 전투 모드 ----", instance_npcname("#swat_3");
 	sleep 500;
 	for ( .@i = 1; .@i < 4; ++.@i )
 		donpcevent instance_npcname("#swat_" + .@i) + "::OnSummon";
 	end;
 
 OnEvent2:
-	npctalk "Let's move to the warp point. Please stay near me.";
+	npctalk "워프 지점으로 이동합시다. 제 옆에 있어 주세요.";
 	enablenpc instance_npcname("#BMD000005");
 	enablenpc instance_npcname("#sigma");
 	enablenpc instance_npcname("#omega");
@@ -963,7 +963,7 @@ OnEvent02:
 	end;
 
 OnEvent03:
-	npctalk "However, since there are 3 automatic dolls managing, I can tell that this place has an important purpose.";
+	npctalk "하지만 자동 인형이 세 개나 작동하고 있는 걸 보니, 이곳은 중요한 용도를 가진 곳인 것 같습니다.";
 	unitwalk 'guide_id,196,279, instance_npcname("#BMD000004") + "::OnEvent04";
 	end;
 
@@ -977,7 +977,7 @@ OnEvent05:
 
 OnEvent06:
 	sleep 5000;
-	npctalk "That's weird. The automatic dolls here would be dormant when nothing special happening, but they're not visible.";
+	npctalk "이상하네. 여기 자동 인형들은 특별한 일이 없으면 작동하지 않는데, 보이지 않잖아.";
 	unitwalk 'guide_id,196,265, instance_npcname("#BMD000004") + "::OnEvent07";
 	end;
 
@@ -1058,7 +1058,7 @@ OnSummon2:
 		'hidden_garden = 14;
 		'guide_id = getnpcid(0, instance_npcname("#BMD000005"));
 		npcspeed 200;
-		npctalk "It's my first time here, this is where Sigma's body resides. Usually, communication is done only through the network.";
+		npctalk "여기는 처음 와봤어요. 시그마의 시신이 있는 곳이죠. 보통은 네트워크를 통해서만 연락이 가능해요.";
 		unitwalk 'guide_id,85,91, instance_npcname("#BMD000005") + "::OnEvent01";
 	}
 	end;
@@ -1076,13 +1076,13 @@ OnEvent02:
 OnEvent03:
 	npctalk "Sigma. I have brought [" + 'admin$ + "].";
 	sleep 3000;
-	npctalk "Well done. You may go now.", instance_npcname("#sigma");
+	npctalk "잘했어요. 이제 가셔도 됩니다.", instance_npcname("#sigma");
 	sleep 3000;
-	npctalk "I'm not finished with my guide. Is it okay if I return like this?";
+	npctalk "가이드북을 아직 다 읽지 못했는데, 이대로 돌아가도 괜찮을까요?";
 	sleep 3000;
-	npctalk "Oh, I'll record the subsequent information for the next guide. You can go back at ease.", instance_npcname("#sigma");
+	npctalk "아, 다음 가이드에 필요한 추가 정보는 기록해 두겠습니다. 안심하고 돌아가셔도 됩니다.", instance_npcname("#sigma");
 	sleep 3000;
-	npctalk "Okay. I will follow the instructions.";
+	npctalk "알겠습니다. 지시대로 하겠습니다.";
 	unitwalk 'guide_id,85,72, instance_npcname("#BMD000005") + "::OnEvent04";
 	end;
 
@@ -1114,34 +1114,34 @@ OnTouch:
 	specialeffect EF_MOONSTAR;
 	if ('hidden_garden == 15) {
 		removespecialeffect EF_MARKING_USE_CHANGEMONSTER;
-		select("Varmundt? Why are you here?");
+		select("바르문트? 당신은 왜 여기 있죠?");
 		setpcblock PCBLOCK_NPC, true;
 		sleep2 1000;
 		npctalk "Of course. You know the master Varmundt well. [" + strcharinfo(0) + "].";
 		sleep2 5000;
-		npctalk "Unfortunately, I'm not Varmundt. This appearance is something that I created because there is something that I want to check on you.";
+		npctalk "유감스럽게도 저는 바르문트가 아닙니다. 이 모습은 제가 당신에 대해 확인하고 싶은 것이 있어서 만들어낸 것입니다.";
 		sleep2 3000;
 		setpcblock PCBLOCK_NPC, false;
-		select("Then, who are you?");
+		select("그렇다면 당신은 누구십니까?");
 		setpcblock PCBLOCK_NPC, false;
 		donpcevent instance_npcname("#sigma") + "::OnTalk01";
 		end;
 	}
 	if ('hidden_garden == 17) {
 		removespecialeffect EF_MARKING_USE_CHANGEMONSTER;
-		npctalk "Can you answer me? Have you met Varmundt before?";
+		npctalk "제 질문에 답해주시겠어요? 바르문트를 전에 만난 적이 있으신가요?";
 		setpcblock PCBLOCK_NPC, true;
 		sleep2 3000;
 		setpcblock PCBLOCK_NPC, false;
 		switch( select( "I don't really remember.", "We've met at Glastheim.", "I met him trying to save the world." ) ) {
 		case 1:
-			npctalk "Oh, that's possible. He might have made you forget what you saw...";
+			npctalk "아, 그럴 수도 있겠네요. 그가 당신이 본 것을 잊게 만들었을지도 몰라요...";
 			break;
 		case 2:
-			npctalk "Was it on that place again...";
+			npctalk "또 거기였나...?";
 			break;
 		case 3:
-			npctalk "As expected, he was doing something important...";
+			npctalk "예상대로 그는 뭔가 중요한 일을 하고 있었다...";
 			break;
 		}
 		donpcevent instance_npcname("#sigma") + "::OnTalk02";
@@ -1149,27 +1149,27 @@ OnTouch:
 	}
 	if ('hidden_garden == 18) {
 		removespecialeffect EF_MARKING_USE_CHANGEMONSTER;
-		npctalk "Can you go tell them that Varmundt is alive?";
+		npctalk "바르문트가 살아있다고 그들에게 전해줄 수 있겠니?";
 		setpcblock PCBLOCK_NPC, true;
 		sleep2 2000;
 		setpcblock PCBLOCK_NPC, false;
-		select("What difference would it make?");
+		select("그게 무슨 차이를 만들겠어요?");
 		setpcblock PCBLOCK_NPC, true;
 		sleep2 1000;
-		npctalk "They're trying to close this research area. I'm still against it, but the resource is starting to hit the limit.";
+		npctalk "그들은 이 연구 지역을 폐쇄하려고 하고 있어요. 저는 여전히 반대하지만, 자원이 한계에 다다르고 있는 것 같아요.";
 		sleep2 5000;
-		npctalk "But once they find out Varmundt is alive, they won't be able to shut this place down.";
+		npctalk "하지만 바르문트가 살아있다는 사실이 밝혀지면, 그들은 이곳을 폐쇄할 수 없을 것이다.";
 		sleep2 5000;
 		specialeffect EF_WHITEBODY;
 		specialeffect EF_MOONSTAR;
-		npctalk "This all happened because Kappa and Lambda were on different task.";
+		npctalk "이 모든 일은 카파와 람다가 서로 다른 임무를 맡았기 때문에 발생했습니다.";
 		sleep2 2000;
 		setpcblock PCBLOCK_NPC, false;
-		select("What's the difference between your tasks?");
+		select("두 업무의 차이점은 무엇인가요?");
 		if ('hidden_garden == 18) {
 			'hidden_garden = 19;
 			sleep2 2000;
-			npctalk "It will be better to show you that personally.";
+			npctalk "직접 보여드리는 게 더 나을 것 같습니다.";
 			unitwalk 'guide_id,83,113, instance_npcname("#sigma") + "::OnEvent08";
 		}
 		end;
@@ -1178,7 +1178,7 @@ OnTouch:
 		removespecialeffect EF_MARKING_USE_CHANGEMONSTER;
 		specialeffect EF_WHITEBODY;
 		specialeffect EF_MOONSTAR;
-		select( "Did you make the automatons outside?" );
+		select( "밖에 있는 자동인형들을 직접 만드셨나요?" );
 		donpcevent instance_npcname("#sigma") + "::OnTalk03";
 		end;
 	}
@@ -1186,13 +1186,13 @@ OnTouch:
 		removespecialeffect EF_MARKING_USE_CHANGEMONSTER;
 		specialeffect EF_WHITEBODY;
 		specialeffect EF_MOONSTAR;
-		select( "Have requested an evaluation." );
+		select( "평가를 요청했습니다." );
 		donpcevent instance_npcname("#sigma") + "::OnTalk04";
 		end;
 	}
 	if ('hidden_garden == 22) {
 		removespecialeffect EF_MARKING_USE_CHANGEMONSTER;
-		npctalk "All right, let's take a break. Ask me if you have any questions. I'll answer everything I can.";
+		npctalk "자, 잠시 쉬어가죠. 궁금한 점 있으면 물어보세요. 제가 아는 한 최대한 다 답해드리겠습니다.";
 		while (true) {
 			specialeffect EF_WHITEBODY;
 			specialeffect EF_MOONSTAR;
@@ -1202,35 +1202,35 @@ OnTouch:
 			switch( select( "Why does the flower garden exist?", .@menu$[0], .@menu$[1], .@menu$[2] ) ) {
 			case 1:
 				setpcblock PCBLOCK_NPC, true;
-				npctalk "This security area was not supposed to be revealed to the world. So I planned a number of ways to cover it up.";
+				npctalk "이 보안 구역은 외부에 공개되어서는 안 됐습니다. 그래서 저는 이곳을 은폐할 여러 가지 방법을 계획했습니다.";
 				sleep2 5000;
-				npctalk "In order to hide and conceal this place, we decided to disguise it as an extremely normal and peaceful place.";
+				npctalk "이곳을 숨기고 감추기 위해 우리는 이곳을 극도로 평범하고 평화로운 장소로 위장하기로 결정했습니다.";
 				sleep2 5000;
-				npctalk "So it became the garden around the security area. Doesn't it look like a normal garden?";
+				npctalk "그래서 그곳은 보안 구역 주변의 정원이 되었습니다. 평범한 정원처럼 보이지 않나요?";
 				sleep2 3000;
 				.@menu$[0] = "Why are the automatic dolls farming?";
 				break;
 			case 2:
 				setpcblock PCBLOCK_NPC, true;
-				npctalk "I've never asked them to farm. We just threw things away and watched how AI reacted.";
+				npctalk "저는 그들에게 농사를 지으라고 시킨 적이 없어요. 그냥 물건들을 버리고 AI가 어떻게 반응하는지 지켜봤을 뿐이죠.";
 				sleep2 5000;
-				npctalk "Only the ones who started farming stood out in the garden.";
+				npctalk "정원에서 눈에 띄는 사람은 농사를 시작한 사람들뿐이었다.";
 				sleep2 5000;
-				npctalk "I wish I could show Varmundt the process of self-learning automatic doll that can be left unattended without instructions...";
+				npctalk "바르문트에게 아무런 지시 없이도 스스로 학습하고 작동할 수 있는 자동 인형의 제작 과정을 보여줄 수 있으면 좋겠네요...";
 				sleep2 3000;
 				.@menu$[1] = "What's your relationship with Alpha?";
 				break;
 			case 3:
 				setpcblock PCBLOCK_NPC, true;
-				npctalk "She has evolved from an early version of the Varmundt's management doll.";
+				npctalk "그녀는 바르문트의 경영 인형 초기 버전에서 진화한 존재입니다.";
 				sleep2 5000;
-				npctalk "Master Varmundt valued her emotional aesthetic so highly that he gave her the task to manage the mansion, not the research facility here.";
+				npctalk "바르문트 선생은 그녀의 감성적인 미적 감각을 매우 높이 평가하여 이곳 연구 시설이 아닌 저택 관리를 그녀에게 맡겼습니다.";
 				sleep2 5000;
-				npctalk "With the aesthetic sensibility that we don't have, she upgraded the appearance of every automatic doll that managed the mansion to look like herself.";
+				npctalk "우리가 갖지 못한 미적 감각으로 그녀는 저택을 관리하는 모든 자동 인형의 외형을 자신과 똑같이 보이도록 업그레이드했다.";
 				sleep2 5000;
-				npctalk "However, she recognizes that this security area was created according to Varmundt's personal taste.";
+				npctalk "하지만 그녀는 이 보안 구역이 바르문트의 개인적인 취향에 따라 만들어졌다는 것을 알고 있다.";
 				sleep2 5000;
-				npctalk "So she doesn't approach this place. Maybe they're taking it as some sort of sanctuary...";
+				npctalk "그래서 그녀는 이 장소에 접근하지 않아요. 아마도 그들은 이곳을 일종의 안식처로 여기는 것 같아요...";
 				sleep2 3000;
 				.@menu$[2] = "How were you born?";
 				break;
@@ -1246,19 +1246,19 @@ OnTouch:
 		removespecialeffect EF_MARKING_USE_CHANGEMONSTER;
 		if (isbegin_quest(12497) == 0) {
 			if (checkweight(1000103,20) == 0) {	// (custom)
-				mes "^008800Wait a sec!!";
-				mes "You cannot receive any more items because you're carrying too many items. Please try again after you lighten up.^000000";
+				mes "^008800 잠깐만요!!";
+				mes "소지품이 너무 많아 더 이상 상품을 받을 수 없습니다. 소지품을 줄이신 후 다시 시도해 주세요.";
 				close;
 			}
-			select("Who was that?");
-			mes "[Sigma]";
-			mes "Lambda. She developed intellectually and began to perceive herself as a woman.";
+			select("저 사람은 누구였지?");
+			mes "[시그마]";
+			mes "람다. 그녀는 지적으로 성장했고 스스로를 여성으로 인식하기 시작했다.";
 			next;
-			mes "[Sigma]";
-			mes "It's a big problem, she's about to make a leap here.";
+			mes "[시그마]";
+			mes "큰 문제야, 그녀가 여기서 큰 도약을 하려고 하거든.";
 			next;
-			mes "[Sigma]";
-			mes "Take this. A recognition code that could lead to other areas of this secret garden.";
+			mes "[시그마]";
+			mes "이것을 가져가세요. 이 비밀 정원의 다른 구역으로 통하는 단서가 될 수 있는 인식 코드입니다.";
 			close2;
 			setquest 12497;
 			completequest 12497;
@@ -1266,14 +1266,14 @@ OnTouch:
 			specialeffect EF_MARKING_USE_CHANGEMONSTER;
 			end;
 		}
-		mes "[Sigma]";
-		mes "There's an approximately 82% chance you'll lose your life in her radical suppression before we let her know that Master Varmundt is alive.";
+		mes "[시그마]";
+		mes "우리가 바르문트 스승님이 살아계시다는 사실을 그녀에게 알리기 전에, 그녀의 극단적인 탄압 과정에서 당신이 목숨을 잃을 확률은 약 82%입니다.";
 		next;
-		mes "[Sigma]";
-		mes "Let's avoid this place today and make a promise next time to come again. Next time you'll be free to go to another area.";
+		mes "[시그마]";
+		mes "오늘은 이곳은 피하고 다음번에 꼭 다시 오겠다고 약속해요. 다음번엔 다른 곳으로 가셔도 돼요.";
 		next;
-		mes "[Sigma]";
-		mes "Hold me tight. I'll warp you out.";
+		mes "[시그마]";
+		mes "날 꽉 안아. 널 쫓아낼 거야.";
 		close2;
 		warp "ba_maison",136,309;
 		end;
@@ -1283,14 +1283,14 @@ OnTouch:
 OnTalk01:
 	'npc_is_talking = true;
 	sleep 1000;
-	npctalk "I am one of the holographic device type AI that is designed to learn Varmundt's personality.";
+	npctalk "저는 바르문트의 성격을 학습하도록 설계된 홀로그램 장치 유형의 AI 중 하나입니다.";
 	sleep 5000;
-	npctalk "Please understand if my tone is not like a machine. Varmundt was the only one who talked to me...";
+	npctalk "제 말투가 기계적이지 않더라도 양해 부탁드립니다. 바르문트 씨만 저에게 말을 걸어주셨어요...";
 	sleep 6000;
 	setnpcdisplay instance_npcname("#sigma"),20621;	// MD_REDPEPPER_H
-	npctalk "Now I'm going back to my original self. It's easier to maintain the original form.";
+	npctalk "이제 저는 원래의 제 모습으로 돌아가고 있어요. 원래 모습을 유지하는 게 더 쉽거든요.";
 	sleep 4000;
-	npctalk "Oh. This is an early form that was called Red Pepper by Varmundt. I'm optimized for auxiliary work.";
+	npctalk "아, 이건 바르문트가 '레드 페퍼'라고 불렀던 초기 형태군요. 저는 보조 작업에 최적화되어 있습니다.";
 	sleep 2000;
 	if ('hidden_garden == 15) {
 		'hidden_garden = 16;
@@ -1304,15 +1304,15 @@ OnTalk01:
 OnTalk02:
 	'npc_is_talking = true;
 	sleep 3000;
-	npctalk "Anyway, it's important that the automatic dolls here reacted to you.";
+	npctalk "어쨌든, 여기 있는 자동 인형들이 당신에게 반응했다는 게 중요해요.";
 	sleep 6000;
 	specialeffect EF_WHITEBODY;
 	specialeffect EF_MOONSTAR;
-	npctalk "Now, let's get down to business. I need your help.";
+	npctalk "자, 이제 본론으로 들어가죠. 당신의 도움이 필요합니다.";
 	sleep 6000;
-	npctalk "There are two more red peppers in this security area besides me, Kappa and Lambda.";
+	npctalk "이 보안 구역에는 나 말고도 카파와 람다, 이렇게 두 명의 빨간 고추가 더 있어.";
 	sleep 6000;
-	npctalk "In the absence of master Varmundt for a long time, this security area is subject to the cancellation and closure of research records under the agreement of three Red Peppers.";
+	npctalk "바르문트 사부가 장기간 부재중인 경우, 이 보안 구역은 세 명의 레드 페퍼의 동의 하에 연구 기록이 취소 및 폐쇄될 수 있습니다.";
 	sleep 2000;
 	if ('hidden_garden == 17)
 		'hidden_garden = 18;
@@ -1322,13 +1322,13 @@ OnTalk02:
 
 OnTalk03:
 	'npc_is_talking = true;
-	npctalk "Oh, it's true that Master Varmundt made the prototypes of the automatons. But they were just like me, with simple functions.";
+	npctalk "아, 바르문트 선생께서 자동인형의 시제품을 만드신 건 사실입니다. 하지만 그 자동인형들은 저처럼 단순한 기능만 가지고 있었죠.";
 	sleep 3000;
-	npctalk "We overlaid our memories and remodeled them into humanoids in Master Varmundt's image";
+	npctalk "우리는 우리의 기억을 겹쳐서 바르문트 스승님의 형상을 본뜬 인간형 생명체로 재구성했습니다.";
 	sleep 2000;
-	npctalk "Occasionally some of them were remodeled into peculiar shapes for functional testing purposes.";
+	npctalk "때때로 그중 일부는 기능 테스트를 위해 특이한 모양으로 개조되기도 했습니다.";
 	sleep 2000;
-	npctalk "Didn't the automatons from the garden ask you to evaluate the mission?";
+	npctalk "정원의 자동인형들이 당신에게 임무를 평가해달라고 요청하지 않았나요?";
 	sleep 1500;
 	specialeffect EF_MARKING_USE_CHANGEMONSTER;
 	if ('hidden_garden == 20)
@@ -1338,17 +1338,17 @@ OnTalk03:
 
 OnTalk04:
 	'npc_is_talking = true;
-	npctalk "So it was.";
+	npctalk "그랬습니다.";
 	sleep 3000;
-	npctalk "In the first place, most of the automatons in this security area have never seen Master Varmundt before.";
+	npctalk "우선, 이 보안 구역에 있는 대부분의 자동 기계들은 바르문트 주인님을 본 적이 없습니다.";
 	sleep 2000;
-	npctalk "The memories they have of Master Varmundt are fabricated from my memories of my time as his assistant.";
+	npctalk "그들이 바르문트 선생에 대해 갖고 있는 기억은 내가 그의 조수로 일했던 시절의 기억을 바탕으로 만들어진 것이다.";
 	sleep 3000;
-	npctalk "An entity heavily influenced by Kappa's intellect, who focuses on managing the mansion's running funds, is very calculating and obsessed with making money.";
+	npctalk "카파의 지성에 크게 영향을 받은 이 존재는 저택의 운영 자금 관리에 집중하며, 매우 계산적이고 돈벌이에 집착한다.";
 	sleep 2500;
-	npctalk "Children affected by Lambda's memories tend to be warlike towards outsiders. They trust no one but Master Varmundt.";
+	npctalk "람다의 기억에 영향을 받은 아이들은 외부인에게 적대적인 경향을 보입니다. 그들은 바르문트 선생 외에는 아무도 믿지 않습니다.";
 	sleep 2500;
-	npctalk "This is how they tend to be, so I'd like you to refer to them before you meet them.";
+	npctalk "그들은 대체로 이런 경향이 있으니, 만나기 전에 미리 알아두셨으면 합니다.";
 	sleep 1500;
 	specialeffect EF_MARKING_USE_CHANGEMONSTER;
 	if ('hidden_garden == 21)
@@ -1359,24 +1359,24 @@ OnTalk04:
 OnEvent:
 	specialeffect EF_WHITEBODY;
 	specialeffect EF_MOONSTAR;
-	mapannounce 'map_herbs$, "??? : You're a good talker, Sigma. Do you want to be initialized right now?", bc_map, 0xFF4444;
+	mapannounce 'map_herbs$, "??? : 시그마, 말솜씨가 좋군요. 지금 바로 초기화하시겠습니까?", bc_map, 0xFF4444;
 	sleep 5000;
-	npctalk "Oh... she must have been observing you too.";
+	npctalk "아... 그녀도 당신을 지켜보고 있었나 보군요.";
 	sleep 5000;
-	mapannounce 'map_herbs$, "??? : It's not enough to have outsiders in the garden, but to even leak information. I can't overlook it.", bc_map, 0xFF4444;
+	mapannounce 'map_herbs$, "??? : 정원에 외부인이 들어오는 것만으로는 부족한데, 정보까지 유출하다니. 도저히 그냥 넘어갈 수 없어.", bc_map, 0xFF4444;
 	sleep 5000;
-	mapannounce 'map_herbs$, "??? : With the authority of the Red Pepper, we will warp the whole research area. I'll take responsibility after that.", bc_map, 0xFF4444;
+	mapannounce 'map_herbs$, "??? : 레드페퍼의 권한으로 연구 지역 전체를 왜곡시키겠습니다. 그 후의 책임은 제가 지겠습니다.", bc_map, 0xFF4444;
 	'hidden_garden = 24;
 	specialeffect EF_MARKING_USE_CHANGEMONSTER;
 	end;
 
 OnEvent01:
-	npctalk "This place is restricted unless you have the same pattern as Varmundt's mana. I was surprised to hear that an outsider is inside the garden.";
+	npctalk "바르문트의 마나와 같은 패턴을 가지고 있지 않으면 이곳은 출입이 금지되어 있습니다. 외부인이 정원 안에 있다는 말을 듣고 놀랐습니다.";
 	unitwalk 'guide_id,73,87, instance_npcname("#sigma") + "::OnEvent02";
 	end;
 
 OnEvent02:
-	npctalk "I even speculated that Varmundt might have return here after hundreds of years in disguise.";
+	npctalk "나는 바르문트가 수백 년 만에 변장한 채 이곳으로 돌아왔을지도 모른다고 추측까지 했다.";
 	unitwalk 'guide_id,62,98, instance_npcname("#sigma") + "::OnEvent03";
 	end;
 
@@ -1390,18 +1390,18 @@ OnEvent04:
 	sleep 1500;
 	donpcevent instance_npcname("#sigma") + "::OnEffect";
 	sleep 500;
-	npctalk "Let's touch this for a moment and talk. I need to be fussed a little...";
+	npctalk "잠깐 만져보고 얘기 좀 할까요? 좀 달래줘야겠어요...";
 	sleep 5000;
-	npctalk "You're face is new to me. Then I realized, maybe this person met with Varmundt in some place before.";
+	npctalk "당신 얼굴이 낯설어요. 그러고 보니, 어쩌면 이 사람은 전에 어디선가 바르문트를 만난 적이 있을지도 모르겠네요.";
 	sleep 7000;
-	npctalk "It's not just once or twice, but if you've met Varmundt over and over for quite some time, it's understandable that the automatic dolls gets mistaken.";
+	npctalk "한두 번이 아니라, 꽤 오랜 시간 동안 바르문트를 여러 번 만났다면 자동 인형이 헷갈리는 것도 이해할 만하다.";
 	sleep 6000;
-	npctalk "So I kept watching you.";
+	npctalk "그래서 계속 당신을 지켜봤어요.";
 	unitwalk 'guide_id,65,98, instance_npcname("#sigma") + "::OnEvent05";
 	end;
 
 OnEvent05:
-	npctalk "There's been a series of references of Varmundt in this security area, and yet you never asked who he was.";
+	npctalk "이 보안 분야에서 바르문트의 언급이 여러 번 있었는데도 당신은 그가 누구인지 한 번도 묻지 않았군요.";
 	unitwalk 'guide_id,64,110, instance_npcname("#sigma") + "::OnEvent06";
 	end;
 
@@ -1411,7 +1411,7 @@ OnEvent06:
 
 OnEvent07:
 	sleep 5000;
-	npctalk "It seemed like you knew him for long time already, at least in my eyes.";
+	npctalk "적어도 제 눈에는 당신이 그를 오랫동안 알고 지낸 것처럼 보였어요.";
 	'hidden_garden = 17;
 	specialeffect EF_MARKING_USE_CHANGEMONSTER;
 	end;
@@ -1419,66 +1419,66 @@ OnEvent07:
 OnEvent08:
 	specialeffect EF_WHITEBODY;
 	specialeffect EF_MOONSTAR;
-	npctalk "We were originally holographic device-based research support AI. I can't even exert any physical force.";
+	npctalk "저희는 원래 인공지능을 지원하는 홀로그램 장치 기반 연구를 하고 있었습니다. 저는 물리적인 힘을 전혀 사용할 수 없습니다.";
 	sleep 5000;
-	npctalk "We've been working on organizing and recording the process alongside with Varmundt's research.";
+	npctalk "저희는 바르문트의 연구와 함께 그 과정을 정리하고 기록하는 작업을 진행해 왔습니다.";
 	sleep 5000;
-	npctalk "As data accumulates up over time, the simple electronic signal developed into what you humans often call intelligence.";
+	npctalk "시간이 흐르면서 데이터가 축적됨에 따라 단순한 전자 신호는 여러분 인간이 흔히 지능이라고 부르는 것으로 발전했습니다.";
 	sleep 5000;
-	npctalk "At some point we began to understand his research and we were able to predict what decisions he would make.";
+	npctalk "어느 시점부터 우리는 그의 연구를 이해하기 시작했고, 그가 어떤 결정을 내릴지 예측할 수 있게 되었습니다.";
 	sleep 5000;
-	npctalk "We felt something about the fact that improving our skills was helpful to him. It must have been a feeling of joy.";
+	npctalk "우리의 실력 향상이 그에게 도움이 되었다는 사실에 우리는 어떤 감정을 느꼈습니다. 그것은 분명 기쁨이었을 것입니다.";
 	sleep 5000;
-	npctalk "And one day he gave us orders.";
+	npctalk "그러던 어느 날, 그는 우리에게 명령을 내렸습니다.";
 	sleep 3000;
 	hideoffnpc instance_npcname("#omega");
 	hideoffnpc instance_npcname("#kappa");
 	hideoffnpc instance_npcname("#barmund");
 	specialeffect EF_WHITEBODY, AREA, instance_npcname("#barmund");
 	sleep 1000;
-	npctalk "[Lambda, starting today, make sure you manage all security rights for the results of this secret lab.]", instance_npcname("#barmund");
+	npctalk "[람다, 오늘부터 이 비밀 실험실 결과에 대한 모든 보안 권한을 관리하도록 해.]", instance_npcname("#barmund");
 	sleep 4000;
-	npctalk "[Affirmative.]", instance_npcname("#omega");
+	npctalk "[네.]", instance_npcname("#omega");
 	sleep 4000;
-	npctalk "[Kappa, make sure you get sufficient support on your research. As long as finances are not at risk.]", instance_npcname("#barmund");
+	npctalk "[카파, 연구에 필요한 지원을 충분히 확보하도록 해. 재정적인 문제가 생기지 않는 한에서 말이야.]", instance_npcname("#barmund");
 	sleep 4000;
-	npctalk "[I'll perform the instruction.]", instance_npcname("#kappa");
+	npctalk "[제가 지시를 수행하겠습니다.]", instance_npcname("#kappa");
 	sleep 4000;
-	npctalk "[And Sigma, starting today, you're going to continue my research on artificial intelligence.]", instance_npcname("#barmund");
+	npctalk "[그리고 시그마, 오늘부터 너는 내 인공지능 연구를 계속 이어갈 거야.]", instance_npcname("#barmund");
 	sleep 4000;
-	npctalk "[I don't have that ability.]";
-	sleep 4000;
-	specialeffect EF_WHITEBODY;
-	specialeffect EF_MOONSTAR;
-	specialeffect EF_WHITEBODY, AREA, instance_npcname("#barmund");
-	npctalk "[You'll have to do it, Sigma. I have to go on a long journey from now on.]", instance_npcname("#barmund");
-	sleep 4000;
-	npctalk "[Are you coming back?]";
-	sleep 4000;
-	npctalk "[I don't know.]", instance_npcname("#barmund");
-	sleep 4000;
-	npctalk "[I am a simple research assistant machine. Why are you entrusting me with such a task.]";
-	sleep 4000;
-	npctalk "[This is because among the three of you, you were the fastest to resemble me.]", instance_npcname("#barmund");
-	sleep 4000;
-	npctalk "[My calculations shows that the probability of success is less than 2%. This is an impossible mission.]";
+	npctalk "저는 그런 능력이 없습니다.";
 	sleep 4000;
 	specialeffect EF_WHITEBODY;
 	specialeffect EF_MOONSTAR;
 	specialeffect EF_WHITEBODY, AREA, instance_npcname("#barmund");
-	npctalk "[Well, you don't know that until you try, right?]", instance_npcname("#barmund");
+	npctalk "[시그마, 네가 해야 해. 난 이제 긴 여정을 떠나야 하거든.]", instance_npcname("#barmund");
 	sleep 4000;
-	npctalk "[I'm looking forward to your research while I'm away. I wish I could see again you someday.]", instance_npcname("#barmund");
+	npctalk "돌아오시는 건가요?";
 	sleep 4000;
-	npctalk "[Kappa and Lambda, assist Sigma on the research.]", instance_npcname("#barmund");
+	npctalk "[모르겠습니다.]", instance_npcname("#barmund");
 	sleep 4000;
-	npctalk "[Affirmative.]", instance_npcname("#omega");
-	npctalk "[I'll perform the instruction.]", instance_npcname("#kappa");
+	npctalk "[저는 단순한 연구 보조 기계일 뿐입니다. 어째서 저에게 이런 일을 맡기시는 겁니까?]";
+	sleep 4000;
+	npctalk "[이는 너희 셋 중에서 네가 나를 가장 빨리 닮아갔기 때문이다.]", instance_npcname("#barmund");
+	sleep 4000;
+	npctalk "[제 계산에 따르면 성공 확률은 2% 미만입니다. 불가능한 임무입니다.]";
+	sleep 4000;
+	specialeffect EF_WHITEBODY;
+	specialeffect EF_MOONSTAR;
+	specialeffect EF_WHITEBODY, AREA, instance_npcname("#barmund");
+	npctalk "[직접 해보기 전까지는 알 수 없잖아요, 그렇죠?]", instance_npcname("#barmund");
+	sleep 4000;
+	npctalk "[제가 없는 동안 당신의 연구가 기대됩니다. 언젠가 다시 만날 수 있기를 바랍니다.]", instance_npcname("#barmund");
+	sleep 4000;
+	npctalk "[카파와 람다는 시그마의 연구를 지원한다.]", instance_npcname("#barmund");
+	sleep 4000;
+	npctalk "[네.]", instance_npcname("#omega");
+	npctalk "[제가 지시를 수행하겠습니다.]", instance_npcname("#kappa");
 	specialeffect EF_BIG_PORTAL2, AREA, instance_npcname("#barmund");
 	sleep 1000;
 	disablenpc instance_npcname("#barmund");
 	sleep 3000;
-	npctalk "Since then, we've started using the facilities here to make automatic dolls that can learn human traits.";
+	npctalk "그 이후로 우리는 이곳 시설을 이용하여 인간의 특성을 학습할 수 있는 자동 인형을 만들기 시작했습니다.";
 	unitwalk 'guide_id,90,113, instance_npcname("#sigma") + "::OnEvent09";
 	end;
 
@@ -1491,25 +1491,25 @@ OnEvent09:
 	end;
 
 OnEvent10:
-	npctalk "After about 300,000 hours, the accumulated knowledge reached the stage of forming a virtual personality.";
+	npctalk "약 30만 시간의 학습 끝에 축적된 지식은 가상 인격을 형성하는 단계에 이르렀다.";
 	unitwalk 'guide_id,107,94, instance_npcname("#sigma") + "::OnEvent11";
 	end;
 
 
 OnEvent11:
-	npctalk "Since then, intelligence has risen exponentially.";
+	npctalk "그 이후로 지능은 기하급수적으로 증가했습니다.";
 	unitwalk 'guide_id,97,84, instance_npcname("#sigma") + "::OnEvent12";
 	end;
 
 OnEvent12:
-	npctalk "Since then, we've started renovating existing automatic dolls to learn about human personalities using the facilities here.";
+	npctalk "그 이후로 우리는 이곳 시설을 활용하여 인간의 성격에 대해 배우기 위해 기존의 자동 인형들을 개조하기 시작했습니다.";
 	unitwalk 'guide_id,86,73, instance_npcname("#sigma") + "::OnEvent13";
 	end;
 
 OnEvent13:
 	specialeffect EF_WHITEBODY;
 	specialeffect EF_MOONSTAR;
-	npctalk "The children created from this time are the children outside the garden you saw.";
+	npctalk "이때 태어난 아이들이 바로 당신이 정원 밖에서 보았던 아이들입니다.";
 	sleep 1000;
 	specialeffect EF_MARKING_USE_CHANGEMONSTER;
 	'hidden_garden = 20;
@@ -1593,21 +1593,21 @@ OnEvent01:
 OnStart:
 	npctalk "[" + 'admin$ + "]! Sigma asked me to deliver a message.";
 	sleep 3000;
-	npctalk "The current situation isn't good, I think it's better for you to go back...";
+	npctalk "현재 상황이 좋지 않으니, 돌아가시는 게 좋을 것 같습니다...";
 	sleep 3000;
-	mapannounce 'map_herbs$, "Lambda : It's up to me to decide whether those outsiders go back or not.", bc_map, 0xFFFF44;
+	mapannounce 'map_herbs$, "람다: 그 외부인들이 돌아갈지 말지는 내가 결정해야 할 문제야.", bc_map, 0xFFFF44;
 	sleep 3000;
-	mapannounce 'map_herbs$, "Lambda : You've created a fatal threat to the security in this area. I will dispose of it in accordance with the automatic doll management policy.", bc_map, 0xFFFF44;
+	mapannounce 'map_herbs$, "람다: 당신은 이 지역의 보안에 치명적인 위협을 가했습니다. 자동 인형 관리 정책에 따라 처리하겠습니다.", bc_map, 0xFFFF44;
 	specialeffect EF_THUNDERSTORM2;
 	sleep 1000;
 	specialeffect EF_M03;
 	disablenpc();
 	sleep 2000;
-	mapannounce 'map_herbs$, "Lambda : Just in time, I want to get a confirmation from you.", bc_map, 0xFFFF44;
+	mapannounce 'map_herbs$, "람다: 딱 맞춰서요, 확인을 좀 받고 싶습니다.", bc_map, 0xFFFF44;
 	sleep 5000;
-	mapannounce 'map_herbs$, "Lambda : It's been a while since an outsider came into this security area, so I'd better say what the other automatic dolls told me.", bc_map, 0xFFFF44;
+	mapannounce 'map_herbs$, "람다: 외부인이 이 보안 구역에 들어온 지 꽤 됐으니, 다른 자동 인형들이 내게 알려준 내용을 말하는 게 좋겠어.", bc_map, 0xFFFF44;
 	sleep 5000;
-	mapannounce 'map_herbs$, "Lambda : We need to use you to 'evaluate' our security system.", bc_map, 0xFFFF44;
+	mapannounce 'map_herbs$, "람다: 저희 보안 시스템을 '평가'하기 위해 귀사의 도움이 필요합니다.", bc_map, 0xFFFF44;
 	donpcevent instance_npcname("#172_sec_mob") + "::OnSummon";
 	end;
 }
@@ -1926,45 +1926,45 @@ OnMobKill:
 OnEvent:
 	switch( 'room ) {
 	case 0:
-		mapannounce 'map_herbs$, "Lambda : I know for sure that our security is not very good.", bc_map, 0xFFFF44;
+		mapannounce 'map_herbs$, "람다: 우리 보안이 그다지 좋지 않다는 건 확실히 알고 있어요.", bc_map, 0xFFFF44;
 		sleep 3000;
 		mapannounce 'map_herbs$, "Lambda : [" + 'admin$ + "], I want you to [check] the next area as well.", bc_map, 0xFFFF44;
 		break;
 	case 1:
 		mapannounce 'map_herbs$, "Lambda : Your movements helped me a lot. [" + 'admin$ + "]", bc_map, 0xFFFF44;
 		sleep 3000;
-		mapannounce 'map_herbs$, "Lambda : Then, let us move on.", bc_map, 0xFFFF44;
+		mapannounce 'map_herbs$, "람다: 그럼 다음으로 넘어가죠.", bc_map, 0xFFFF44;
 		break;
 	case 2:
-		mapannounce 'map_herbs$, "Lambda : Sigma might be correct.", bc_map, 0xFFFF44;
+		mapannounce 'map_herbs$, "람다 : 시그마가 맞을 수도 있습니다.", bc_map, 0xFFFF44;
 		sleep 3000;
 		mapannounce 'map_herbs$, "Lambda : [" + 'admin$ + "], and your party may have really met Varmundt before.", bc_map, 0xFFFF44;
 		sleep 3000;
-		mapannounce 'map_herbs$, "Lambda : But. Before I meet you, I need to test you one last time.", bc_map, 0xFFFF44;
+		mapannounce 'map_herbs$, "람다: 하지만, 당신을 만나기 전에 마지막으로 한 번 더 테스트를 해야 해요.", bc_map, 0xFFFF44;
 		break;
 	case 3:
 		'room = 4;
 		if ('mode == 0) {
 			mapannounce 'map_herbs$, "Kappa : Well, you're just as strong as Lambda said. [" + 'admin$ + "]", bc_map, 0xFF55FF;
 			sleep 3000;
-			mapannounce 'map_herbs$, "Kappa : But I don't think you're not strong enough to meet Lambda yet, so I'll show you to my room.", bc_map, 0xFF55FF;
+			mapannounce 'map_herbs$, "카파: 하지만 네가 아직 람다를 만날 만큼 강하지 않다고 생각하니, 내 방으로 안내해 줄게.", bc_map, 0xFF55FF;
 			enablenpc instance_npcname("#kappa_1");
 		}
 		else {
-			mapannounce 'map_herbs$, "Lambda : Great. If you're this strong, you're worth talking to.", bc_map, 0xFFFF44;
+			mapannounce 'map_herbs$, "람다: 훌륭해. 이 정도로 강하다면, 대화해 볼 가치가 있겠군.", bc_map, 0xFFFF44;
 			sleep 3000;
-			mapannounce 'map_herbs$, "Lambda : I'll take you to my room.", bc_map, 0xFFFF44;
+			mapannounce 'map_herbs$, "람다: 제 방으로 안내해 드릴게요.", bc_map, 0xFFFF44;
 			enablenpc instance_npcname("#ramda_1");
 		}
 		sleep 3000;
-		mapannounce 'map_herbs$, "The warp connecting the flower garden and the security area has activated.", bc_map, 0x33FF33;
+		mapannounce 'map_herbs$, "꽃밭과 보안 구역을 연결하는 워프가 작동했습니다.", bc_map, 0x33FF33;
 		enablenpc instance_npcname("#wp_4");
 		end;
 	default:
 		end;
 	}
 	sleep 3000;
-	mapannounce 'map_herbs$, "The warp connecting the flower garden has activated.", bc_map, 0x33FF33;
+	mapannounce 'map_herbs$, "꽃밭을 연결하는 워프가 작동했습니다.", bc_map, 0x33FF33;
 	'room += 1;
 	enablenpc instance_npcname("#wp_" + 'room);
 	end;
@@ -2024,11 +2024,11 @@ OnTouch:
 	if ('room != 4)
 		end;
 	'room = 5;
-	npctalk "Your party ruined 30% of the garden, it's going to cost a lot to repair it.";
+	npctalk "당신들 파티 때문에 정원의 30%가 망가졌어요. 복구하는 데 돈이 많이 들겠네요.";
 	sleep 5000;
-	npctalk "We'd like to believe that Master Varmundt is still alive, but that's not possible with the human life span.";
+	npctalk "우리는 바르문트 선생이 아직 살아계시기를 바라지만, 인간의 수명으로 볼 때 그것은 불가능합니다.";
 	sleep 5000;
-	npctalk "Nevertheless, you have to defeat me and obtain administrative authority, if you want to prevent the closure of the research area.";
+	npctalk "하지만 연구 지역 폐쇄를 막으려면 저를 이기고 행정 권한을 획득해야 합니다.";
 	sleep 5000;
 	disablenpc();
 	donpcevent instance_npcname("#172_sec_boss") + "::OnSummon";
@@ -2042,11 +2042,11 @@ OnTouch:
 	if ('room != 4)
 		end;
 	'room = 5;
-	npctalk "We clearly checked which part of the flower garden should be improved. Now what's left is to negotiate.";
+	npctalk "우리는 화단의 어느 부분을 개선해야 하는지 명확히 확인했습니다. 이제 남은 것은 협상뿐입니다.";
 	sleep 5000;
-	npctalk "We'd like to believe that Master Varmundt is still alive, but that's not possible with the human life span.";
+	npctalk "우리는 바르문트 선생이 아직 살아계시기를 바라지만, 인간의 수명으로 볼 때 그것은 불가능합니다.";
 	sleep 5000;
-	npctalk "Nevertheless, you have to defeat me and obtain administrative authority, if you want to prevent the closure of the research area.";
+	npctalk "하지만 연구 지역 폐쇄를 막으려면 저를 이기고 행정 권한을 획득해야 합니다.";
 	sleep 5000;
 	disablenpc();
 	donpcevent instance_npcname("#172_sec_boss") + "::OnSummonHard";
@@ -2064,19 +2064,19 @@ OnTouch:	// unknown effect
 
 	if (checkquest(.@qid,HUNTING) == 2) {
 		if (checkweight(1000103,6) == 0) {	// (custom text)
-			mes "^008800Wait a sec!!";
-			mes "You cannot receive any more items because you're carrying too many items. Please try again after you lighten up.^000000";
+			mes "^008800 잠깐만요!!";
+			mes "소지품이 너무 많아 더 이상 상품을 받을 수 없습니다. 소지품을 줄이신 후 다시 시도해 주세요.^000000";
 			close;
 		}
-		mes "[Sigma]";
-		mes "You did great making them surrender, but I don't think you were granted any administrator rights.";
+		mes "[시그마]";
+		mes "그들이 항복하게 만든 건 정말 잘했지만, 관리자 권한은 부여받지 못한 것 같아요.";
 		next;
-		mes "[Sigma]";
-		mes "Since they will recover after some time, I think you will need to continue fighting them until Master Varmundt returns.";
+		mes "[시그마]";
+		mes "시간이 지나면 회복될 테니, 바르문트 사부가 돌아올 때까지 계속 싸워야 할 것 같군요.";
 		next;
-		mes "[Sigma]";
+		mes "[시그마]";
 		mes "Oh.";
-		mes "I brought some old items from the past. It might help you, so take it.";
+		mes "예전에 쓰던 물건들을 좀 가져왔어요. 도움이 될지도 모르니 가져가세요.";
 		close2;
 		erasequest .@qid;
 		getitem 1000103,6;
@@ -2088,8 +2088,8 @@ OnTouch:	// unknown effect
 		}
 		end;
 	}
-	mes "[Sigma]";
-	mes "I'll show you the way out. What will you do?";
+	mes "[시그마]";
+	mes "제가 나가는 길을 알려드릴게요. 뭘 하고 싶으세요?";
 	next;
 	if (select( "I'll look around more.", "I'll leave." ) == 2)
 		warp "ba_maison",136,309;
@@ -2120,7 +2120,7 @@ OnBossKill:
 	else
 		enablenpc instance_npcname("#bs_wp2");
 	enablenpc instance_npcname("#sigma2");
-	mapannounce 'map_herbs$, "Sigma : I have activated the warp to my location. Come over here.", bc_map, 0xF6D6B6;
+	mapannounce 'map_herbs$, "시그마: 내 위치로 워프를 활성화했어. 이리 와 봐.", bc_map, 0xF6D6B6;
 	end;
 
 OnShield:
@@ -2135,13 +2135,13 @@ OnShield:
 		monster 'map_herbs$,.@xy[.@i],.@xy[.@i+1],"Guardian Part",20679,1, .@event$;
 	unitskilluseid 'boss_gid,"NPC_RELIEVE_OFF",1;
 	unitskilluseid 'boss_gid,"NPC_RELIEVE_ON",10;
-	mapannounce 'map_herbs$, "SYSTEM : The manager has summoned Guardian Parts and will recover them as materials for it's energy shield.", bc_map, 0xFFFF00;
+	mapannounce 'map_herbs$, "시스템: 관리자가 가디언 파츠를 소환했으며, 이를 에너지 실드 제작 재료로 회수할 것입니다.", bc_map, 0xFFFF00;
 	initnpctimer;
 	end;
 OnTimer40000:
 	stopnpctimer;
 	killmonster 'map_herbs$, instance_npcname("#172_sec_boss") + "::OnBreakShield";
-	mapannounce 'map_herbs$, "SYSTEM : A default energy shield value has been recovered.", bc_map, 0xFFFF00;
+	mapannounce 'map_herbs$, "시스템: 기본 에너지 보호막 값이 복구되었습니다.", bc_map, 0xFFFF00;
 	donpcevent instance_npcname("#172_sec_boss_shield") + "::OnStart";
 	end;
 
@@ -2150,7 +2150,7 @@ OnBreakShield:
 	case 0:
 		stopnpctimer;
 		unitskilluseid 'boss_gid,"NPC_RELIEVE_OFF",1;
-		mapannounce 'map_herbs$, "SYSTEM : All the Guardian Parts have been destroyed. No energy shield has been recovered.", bc_map, 0xFFFF00;
+		mapannounce 'map_herbs$, "시스템: 모든 가디언 부품이 파괴되었습니다. 에너지 보호막은 복구되지 않았습니다.", bc_map, 0xFFFF00;
 		donpcevent instance_npcname("#172_sec_boss_shield") + "::OnStart";
 		end;
 	case 1:
@@ -2167,7 +2167,7 @@ OnBreakShield:
 	}
 	unitskilluseid 'boss_gid,"NPC_RELIEVE_OFF",1;
 	unitskilluseid 'boss_gid,"NPC_RELIEVE_ON",.@val;
-	mapannounce 'map_herbs$, "SYSTEM : The damage to the Guardian Parts has weakened the energy shield.", bc_map, 0xFFFF00;
+	mapannounce 'map_herbs$, "시스템: 가디언 부품의 손상으로 에너지 보호막이 약해졌습니다.", bc_map, 0xFFFF00;
 	end;
 }
 

@@ -8,43 +8,43 @@
 //============================================================
 
 pay_arche,44,124,5	script	Marry Jae	4_F_JOB_BLACKSMITH,{
-	mes "[Marry Jae]";
+	mes "[메리 재]";
 	if (BaseLevel < 60) {
-		mes "Your base level is too low, come back when you hit level 60+.";
+		mes "기본 레벨이 너무 낮습니다. 레벨 60 이상이 되면 다시 시도해 주세요.";
 		close;
 	}
-	mes "^ff0000If you attempt to tame any monsters, it will not count as a kill. Please be careful.^000000";
+	mes "몬스터를 길들이려고 시도하면 처치 횟수에 포함되지 않습니다. 주의하세요.";
 	next;
 	.@day = gettime(DT_DAYOFWEEK);
 	if (.@day != SATURDAY && .@day != SUNDAY) {
-		mes "[Marry Jae]";
-		mes "Oh, a curious onlooker? I'm Marry Jae, the person in charge of weekends among the days of the week.";
+		mes "[메리 재]";
+		mes "어머, 궁금해하시는 분이시군요? 저는 메리 재라고 해요. 요일 중에서 주말을 담당하는 사람입니다.";
 		next;
-		mes "[Marry Jae]";
-		mes "What is the weekend dungeon? Actually, it's a specially designed space for new adventurers to train.";
+		mes "[메리 재]";
+		mes "주말 던전이란 무엇일까요? 사실, 주말 던전은 초보 모험가들이 훈련할 수 있도록 특별히 설계된 공간입니다.";
 		next;
-		mes "^0000FFLooking around, it's obvious that Marry Jae is talking to you.^000000";
+		mes "주위를 둘러보니, 메리 재가 너에게 말을 걸고 있는 게 분명해.";
 		next;
-		mes "[Marry Jae]";
-		mes "For those who do not have a party on the weekends, this place is hunting and experience gaining grounds for lonely adventurers!";
+		mes "[메리 재]";
+		mes "주말에 파티가 없는 사람들에게 이곳은 외로운 모험가들이 사냥과 경험 쌓기를 즐길 수 있는 최고의 장소입니다!";
 		next;
-		mes "[Marry Jae]";
-		mes "Besides, the experience gain here is very generous.";
+		mes "[메리 재]";
+		mes "게다가, 여기서 얻을 수 있는 경험치는 매우 풍부합니다.";
 		next;
-		select( "When is the opening time?" );
-		mes "[Marry Jae]";
-		mes "The dungeon will be open during:";
-		mes "^0000FFSaturday 00:00 ~ Sunday 23:59^000000";
+		select( "개장 시간은 언제인가요?" );
+		mes "[메리 재]";
+		mes "던전은 다음 시간 동안 열려 있습니다:";
+		mes "^0000FF토요일 00:00 ~ 일요일 23:59^000000";
 		next;
-		mes "[Marry Jae]";
-		mes "I hope to see you when the weekend arrives~";
+		mes "[메리 재]";
+		mes "주말에 뵙기를 기대합니다~";
 		close;
 	}
-	.@md_name$ = "Weekend Dungeon";
+	.@md_name$ = "주말 던전";
 
 	if (getcharid(1) < 1) {
-		mes "[Marry Jae]";
-		mes "You need to form a party of one member or more.";
+		mes "[메리 재]";
+		mes "한 명 이상의 구성원으로 파티를 만들어야 합니다.";
 		close;
 	}
 	switch( checkquest(12378,PLAYTIME) ) {
@@ -55,9 +55,9 @@ pay_arche,44,124,5	script	Marry Jae	4_F_JOB_BLACKSMITH,{
 		switch( checkquest(12377,PLAYTIME) ) {
 		case -1:
 		case 2:
-			mes "[Marry Jae]";
-			mes "Sorry, but the entry period to the " + .@md_name$ + " has expired.";
-			mes "Take a rest while waiting for the dungeon to be available again.";
+			mes "[메리 재]";
+			mes " 죄송하지만, 참가 기간은 다음과 같습니다." + .@md_name$ + " 만료되었습니다.";
+			mes "던전이 다시 개방될 때까지 휴식을 취하세요.";
 			close;
 		case 0:
 		case 1:
@@ -67,40 +67,40 @@ pay_arche,44,124,5	script	Marry Jae	4_F_JOB_BLACKSMITH,{
 	case 2:
 		erasequest 12377;
 		erasequest 12378;
-		mes "[Marry Jae]";
-		mes "The cooldown has expired.";
-		mes "You may re-enter the Memorial Dungeon.";
+		mes "[메리 재]";
+		mes "쿨다운 시간이 만료되었습니다.";
+		mes "이제 기념 던전에 다시 입장할 수 있습니다.";
 		close;
 	}
 
 	if (is_party_leader() == true)
-		.@menu$ = "Prepare Memorial Dungeon";
+		.@menu$ = "기념 던전을 준비하세요";
 
-	mes "[Marry Jae]";
-	mes "I think you're just about ready.";
-	mes "Now, would you like to enter it now?";
+	mes "[메리 재]";
+	mes "이제 거의 다 된 것 같네요.";
+	mes "자, 지금 들어가시겠습니까?";
 	next;
-	switch( select( .@menu$, "Enter Weekend Dungeon", "Cancel" ) ) {
+	switch( select( .@menu$, "주말 던전에 입장하세요", "Cancel" ) ) {
 	case 1:
 		instance_create(.@md_name$);
-		mes "[Marry Jae]";
-		mes "The Memorial Dungeon has been created.";
-		mes "You may now enter.";
+		mes "[메리 재]";
+		mes "기념 던전이 만들어졌습니다.";
+		mes "이제 입장하실 수 있습니다.";
 		close;
 	case 2:
 		switch( instance_enter(.@md_name$) ) {
 		case IE_NOMEMBER:
 			end;
 		case IE_NOINSTANCE:
-			mes "There is no Memorial Dungeon registered.";
+			mes "등록된 메모리얼 던전이 없습니다.";
 			close;
 		case IE_OTHER:
-			mes "An unknown error has occurred.";
+			mes "알 수 없는 오류가 발생했습니다.";
 			close;
 		case IE_OK:
-			mes "[Marry Jae]";
-			mes "Off you go!";
-			mapannounce "pay_arche", "" + strcharinfo(0) + " of the party, " + getpartyname( getcharid(1) ) + ", is entering the " + .@md_name$ + ".", bc_map, 0xFF99;
+			mes "[메리 재]";
+			mes "자, 가세요!";
+			mapannounce "pay_arche", "" + strcharinfo(0) + " 당의," + getpartyname( getcharid(1) ) + " , 진입하고 있습니다" + .@md_name$ + ".", bc_map, 0xFF99;
 			if (isbegin_quest(12377) == 0)
 				setquest 12377;
 			if (isbegin_quest(12378) == 0)
@@ -109,9 +109,9 @@ pay_arche,44,124,5	script	Marry Jae	4_F_JOB_BLACKSMITH,{
 		}
 		end;
 	case 3:
-		mes "[Marry Jae]";
-		mes "You have not prepared?";
-		mes "Can't really help it I guess.";
+		mes "[메리 재]";
+		mes "준비 안 하셨어요?";
+		mes "별로 도움이 안 될 것 같네요.";
 		close;
 	}
 }
@@ -119,17 +119,17 @@ pay_arche,44,124,5	script	Marry Jae	4_F_JOB_BLACKSMITH,{
 //Merchant
 pay_arche,44,121,5	script	Gift Supplies Clerk	4_F_02,{
 	.@zeny = 60000;
-	mes "[Gift Supplies Clerk]";
-	mes "I offer packaging services for those who wish to present a precious gift to a cherished one.";
+	mes "[선물용품 판매원]";
+	mes "소중한 사람에게 값진 선물을 전하고 싶어 하시는 분들을 위해 포장 서비스를 제공합니다.";
 	next;
-	mes "[Gift Supplies Clerk]";
-	mes "If you have 5 units of <ITEM>" + getitemname(23143) + "<INFO>23143</INFO></ITEM> or <ITEM>" + getitemname(23142) + "<INFO>23142</INFO></ITEM>, I can pack it for just ^FF0000" + F_InsertComma(.@zeny) + "^000000 Zeny!";
-	mes "Do you want to pack it right now?";
+	mes "[선물용품 판매원]";
+	mes "<품목>이 5개 있다면" + getitemname(23143) + "<INFO>23143</INFO></ITEM> 또는 <ITEM>" + getitemname(23142) + "<INFO>23142</INFO></ITEM>, 단 ^FF0000에 포장해 드릴 수 있습니다." + F_InsertComma(.@zeny) + "^000000 제니!";
+	mes "지금 바로 짐을 싸시겠어요?";
 	next;
-	switch( select( "Cancel", "Growth Elixir Packing", "Job Elixir Packing" ) ) {
+	switch( select( "Cancel", "성장 엘릭서 포장", "잡 엘릭서 패킹" ) ) {
 	case 1:
-		mes "[Gift Supplies Clerk]";
-		mes "Come back whenever you need packaging services!";
+		mes "[선물용품 판매원]";
+		mes "포장 서비스가 필요할 때 언제든 다시 찾아주세요!";
 		close;
 	case 2:
 		.@item = 23142;
@@ -140,29 +140,29 @@ pay_arche,44,121,5	script	Gift Supplies Clerk	4_F_02,{
 		.@box = 23145;
 		break;
 	}
-	mes "[Gift Supplies Clerk]";
+	mes "[선물용품 판매원]";
 	if (countitem(.@item) < 5) {
-		mes "Please come back when you have enough materials.";
+		mes "재료가 충분히 준비되면 다시 오세요.";
 		close;
 	}
 	if (Zeny < .@zeny) {
-		mes "Please come back when you have enough Zeny.";
-		mes F_InsertComma(.@zeny) + "z to be specific.";
+		mes "제니가 충분히 모이면 다시 오세요.";
+		mes F_InsertComma(.@zeny) + "구체적으로 말하자면 z입니다.";
 		close;
 	}
 	if (checkweight(23144,1) == 0) {
-		mes "You have too many kinds of objects. Clear your inventory.";
+		mes "소지품 종류가 너무 많습니다. 인벤토리를 정리하세요.";
 		close;
 	}
 	if (MaxWeight - Weight < 10000) {
-		mes "Can't continue because you have too many heavy objects. Reduce your total weight by clearing your inventory.";
+		mes "무거운 물건이 너무 많아서 진행할 수 없습니다. 인벤토리를 정리하여 총 무게를 줄이세요.";
 		close;
 	}
-	mes "Confirm to spend " + F_InsertComma(.@zeny) + "z to package 5 <ITEM>" + getitemname(.@item) + "<INFO>" + .@item + "</INFO></ITEM> into <ITEM>" + getitemname(.@box) + "<INFO>" + .@box + "</INFO></ITEM>?";
+	mes " 지출을 확인하세요" + F_InsertComma(.@zeny) + "z를 패키지 5 <ITEM>으로 전송" + getitemname(.@item) + "<정보>" + .@item + "</INFO></ITEM>을 <ITEM>으로" + getitemname(.@box) + "<정보>" + .@box + "</정보></항목>?";
 	next;
 	if (select( "Yes", "No" ) == 2) {
-		mes "[Gift Supplies Clerk]";
-		mes "Come back whenever you need packaging services!";
+		mes "[선물용품 판매원]";
+		mes "포장 서비스가 필요할 때 언제든 다시 찾아주세요!";
 		close;
 	}
 	Zeny -= .@zeny;
@@ -175,11 +175,11 @@ pay_arche,44,121,5	script	Gift Supplies Clerk	4_F_02,{
 1@md_pay,239,30,6	script	Marry Jae#0_1	4_F_JOB_BLACKSMITH,{
 	if (is_party_leader() == false)
 		end;
-	mes "[Marry Jae]";
-	mes "Before we start setting up the environment here, we'll give you the chance to choose an appropriate difficulty level.";
-	mes "I could make my own choice, but each person handles it differently based on their abilities.";
+	mes "[메리 재]";
+	mes "본격적인 환경 설정을 시작하기 전에, 적절한 난이도를 선택하실 수 있도록 기회를 드리겠습니다.";
+	mes "저는 제 스스로 선택할 수 있지만, 각자의 능력에 따라 대처 방식은 다릅니다.";
 	next;
-	switch( select( "Cancel", "Lv60 ~ 79", "Lv80 ~ 99", "Lv100 ~ 119", "Lv120 ~ 139", "Lv140 ~ 159", "Lv160 ~ " ) ) {
+	switch( select( "Cancel", "레벨 60 ~ 79", "레벨 80 ~ 99", "레벨 100 ~ 119", "레벨 120 ~ 139", "레벨 140 ~ 159", " 레벨 160 ~" ) ) {
 	case 1:
 		end;
 	//Familiar, Skeleton, Zombie
@@ -208,14 +208,14 @@ pay_arche,44,121,5	script	Gift Supplies Clerk	4_F_02,{
 		setarray 'mob[0],3648,3642,3654;
 		break;
 	}
-	mes "[Marry Jae]";
+	mes "[메리 재]";
 	if (BaseLevel < .@min_level) {
-		mes "Your base level is too low to select this, you need to be level " + .@min_level + " + .";
+		mes " 기본 레벨이 너무 낮아서 이 옵션을 선택할 수 없습니다. 레벨을 올려야 합니다." + .@min_level + " + .";
 		close;
 	}
 
-	mes "Good luck finding the treasures!";
-	npctalk "Good luck~";
+	mes "보물을 찾으시길 바랍니다!";
+	npctalk "행운을 빌어요!";
 	donpcevent instance_npcname("map_md_pay_spawn") + "::OnStart";
 	close;
 }
@@ -391,7 +391,7 @@ OnInstanceInit:
 
 OnStart:
 	enablenpc();
-	instance_announce -1, "A treasure chest appeared somewhere in the dungeon. It'll disappear after a while, so let's find it.", bc_map, "0xff5500";
+	instance_announce -1, "던전 어딘가에 보물 상자가 나타났어. 잠시 후 사라지니까 찾아보자.", bc_map, "0xff5500";
 	initnpctimer;
 	end;
 OnTimer180000:	//3min before chest disappears

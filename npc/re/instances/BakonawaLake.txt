@@ -21,21 +21,21 @@
 ma_scene01,174,179,4	script	Taho	541,{
 	disable_items;
 	if (checkweight(1201,1) == 0) {
-		mes "You are carrying too many items. Come back after taking off some of them.";
+		mes "소지품 종류가 너무 많습니다. 일부를 정리한 뒤 다시 와 주세요.";
 		close;
 	}
 	if (MaxWeight - Weight < 10000) {
-		mes "You are carrying too much weight. Come back after reducing the weight.";
+		mes "소지 무게가 너무 무겁습니다. 무게를 줄인 뒤 다시 와 주세요.";
 		close;
 	}
 	if (BaseLevel < 140) {
-		mes "[Taho]";
-		mes "Hey. This is too dangerous a place for you. You cannot keep yourself safe. Get out of here and go to the village right now!";
+		mes "[타호]";
+		mes "이봐. 이곳은 네게 너무 위험해. 몸을 지키기도 힘들 거야. 당장 마을로 돌아가!";
 		close;
 	}
 	if (malaya_bakona1 < 7 && malaya_bakona2 < 15) {
-		mes "[Taho]";
-		mes "We are gonna be killed all by that Bakonawa. Ah, we must slay him but unfortunately we are not prepared.";
+		mes "[타호]";
+		mes "이러다 우리 모두 바코나와에게 당하고 말 거야. 아, 놈을 쓰러뜨려야 하는데 아직 준비가 부족하군.";
 		close;
 	}
 
@@ -47,48 +47,48 @@ ma_scene01,174,179,4	script	Taho	541,{
 		if (checkquest(12279) == -1) setquest 12279;
 	}
 	if (!.@party_id) {
-		mes "[Taho]";
-		mes "Isn't there any company who can go with you? Or even if you wanna go alone, come after organizing a party.";
+		mes "[타호]";
+		mes "함께 갈 동료는 없나? 혼자 가고 싶더라도, 파티를 만든 뒤 다시 와.";
 		close;
 	}
 	if (.@baku_time == -1) {
 		if (is_party_leader() == true) {
-			mes "[Taho]";
-			mes "Are you the leader of the Bakonawa slayers? The road is not well so we have to go down the cliff with a rope, is that OK?";
+			mes "[타호]";
+			mes "네가 바코나와 토벌대의 대장인가? 길이 험해서 밧줄을 타고 절벽 아래로 내려가야 하는데, 괜찮겠나?";
 			next;
 			set .@i, select("Please weave a rope.:Now I will go down.:Cancel.");
 		} else {
-			mes "[Taho]";
-			mes "You came for slaying Bakonawa. The leader of your party has to help me weaving the rope for going down.";
+			mes "[타호]";
+			mes "바코나와를 토벌하러 온 거군. 아래로 내려가려면 파티장이 밧줄을 엮는 걸 도와줘야 해.";
 			next;
 			set .@i, select(":Now I will go down.:Cancel.");
 		}
 		switch(.@i) {
 		case 1:
 			if (instance_create(.@md_name$) < 0) {
-				mes "[Taho]";
-				mes "Oh, the rope got dropped. I have to make a new one.";
+				mes "[타호]";
+				mes "아, 밧줄을 떨어뜨리고 말았군. 새로 만들어야겠어.";
 				close;
 			}
-			mes "[Taho]";
-			mes "Now I'm weaving, so you can go down when I'm done.";
+			mes "[타호]";
+			mes "지금 밧줄을 엮고 있으니, 다 끝나면 내려갈 수 있을 거야.";
 			close;
 		case 2:
 			switch(instance_enter(.@md_name$)) {
 			case IE_OTHER:
-				mes "[Taho]";
-				mes "An unknown error occurred.";
+				mes "[타호]";
+				mes "알 수 없는 오류가 발생했습니다.";
 				close;
 			case IE_NOINSTANCE:
-				mes "[Taho]";
-				mes "The rope hasn't been weaved yet. Wait a little.";
+				mes "[타호]";
+				mes "아직 밧줄을 다 엮지 못했어. 조금만 기다려.";
 				close;
 			case IE_NOMEMBER:
-				mes "[Taho]";
-				mes "Civilians cannot enter.";
+				mes "[타호]";
+				mes "일반인은 들어갈 수 없습니다.";
 				close;
 			case IE_OK:
-				mapannounce "ma_scene01","A party member, "+strcharinfo(0)+" of the party "+getpartyname(.@party_id)+" is entering the dungeon, "+.@md_name$+".",bc_map,"0x00ff99"; //FW_NORMAL 12 0 0
+				mapannounce "ma_scene01","파티원, "+strcharinfo(0)+" of the party "+getpartyname(.@party_id)+" is entering the dungeon, "+.@md_name$+".",bc_map,"0x00ff99"; //FW_NORMAL 12 0 0
 				setquest 12278;
 				//warp "1@ma_b",64,51;
 				close;
@@ -97,12 +97,12 @@ ma_scene01,174,179,4	script	Taho	541,{
 			close;
 		}
 	} else if (.@baku_time == 0 || .@baku_time == 1) {
-		mes "[Taho]";
-		mes "The rope used for getting to the Lake is already broken. We are now cleaning up the surroundings so come back after some time.";
+		mes "[타호]";
+		mes "호수로 내려가는 데 쓰던 밧줄이 이미 끊어졌어. 지금 주변을 정리하고 있으니 잠시 후에 다시 와.";
 		close;
 	} else if (.@baku_time == 2) {
-		mes "[Taho]";
-		mes "It's all cleaned up around here. Now you can go down again after getting a rope.";
+		mes "[타호]";
+		mes "이제 주변 정리가 끝났어. 밧줄만 준비하면 다시 내려갈 수 있어.";
 		erasequest 12278;
 		close;
 	}
@@ -110,8 +110,8 @@ ma_scene01,174,179,4	script	Taho	541,{
 
 sec_in02,26,26,4	script	Bakonawa's Rage	541,{
 	callfunc "F_GM_NPC";
-	mes "[Taho]";
-	mes "My name is Minky.";
+	mes "[타호]";
+	mes "내 이름은 밍키야.";
 	if (callfunc("F_GM_NPC",1854,0) == 1) {
 		erasequest 12278;
 		erasequest 12279;
@@ -124,34 +124,34 @@ sec_in02,26,26,4	script	Bakonawa's Rage	541,{
 // Instance Scripts :: in_baku01
 //============================================================
 1@ma_b,62,52,4	script	Taho#nf	541,{
-	mes "[Taho]";
-	mes "Heehee, I could join the Bakonawa hunt, but I'd rather hide behind that rock and cheer you guys on.";
+	mes "[타호]";
+	mes "헤헤, 나도 바코나와 사냥에 참가할 수는 있지만, 차라리 저 바위 뒤에 숨어서 너희를 응원할게.";
 	next;
-	mes "[Taho]";
-	mes "Bakonawa becomes invincible at some point. When that time comes, listen to my guides carefully. Just trust me and all will be good.";
+	mes "[타호]";
+	mes "바코나와는 어느 순간 무적 상태가 돼. 그때가 오면 내 안내를 잘 들어. 나만 믿으면 다 잘될 거야.";
 	next;
 	if (is_party_leader() == true) {
-		mes "[Taho]";
-		mes "Now I will make Bakonawa spring out from the lake.";
+		mes "[타호]";
+		mes "이제 바코나와가 호수 위로 솟아오르게 해볼게.";
 		next;
 		switch(select("Hold on! I'm not ready yet!:Let's do it!")) {
 		case 1:
-			mes "[Taho]";
-			mes "Oh... alright... tell me when you are ready.";
+			mes "[타호]";
+			mes "아... 알겠어... 준비되면 말해줘.";
 			close;
 		case 2:
-			mes "[Taho]";
-			mes "Then I will drop a drop of Albopal to this lake.";
+			mes "[타호]";
+			mes "그럼 이 호수에 알보팔 한 방울을 떨어뜨리겠어.";
 			next;
-			mes "[Taho]";
-			mes "Once Bakonawa tastes this, he will surface...";
+			mes "[타호]";
+			mes "바코나와가 이 맛을 보면 수면 위로 올라올 거야...";
 			donpcevent instance_npcname("#Bakonawan1")+"::OnStart";
 			disablenpc instance_npcname("Taho#nf");
 			close;
 		}
 	} else {
-		mes "[Taho]";
-		mes "I am dropping the Alpopal to make Bakonawa mad. Bakonawa can be a good source of protein once we get him.";
+		mes "[타호]";
+		mes "바코나와를 화나게 만들려고 알보팔을 떨어뜨리고 있어. 놈을 잡으면 훌륭한 단백질 공급원이 될 수도 있겠지.";
 		close;
 	}
 }
@@ -164,7 +164,7 @@ OnInstanceInit:
 OnStart:
 	enablenpc instance_npcname("#Bakonawan1");
 	set .@map$, instance_mapname("1@ma_b");
-	mapannounce .@map$,"Taho: I can see him there on the surface! ATTACK!!!",bc_map,"0x00ffff"; //FW_NORMAL 15 0 0
+	mapannounce .@map$,"타호: 저기 수면 위로 보인다! 공격해!!!",bc_map,"0x00ffff"; //FW_NORMAL 15 0 0
 	monster .@map$,78,83,"Bakonawa",2320,1,instance_npcname("#Bakonawan1")+"::OnMyMobDead";
 	initnpctimer;
 	end;
@@ -191,12 +191,12 @@ OnTimer420000:	callsub OnAnnounce,"3 minutes";
 OnTimer480000:	callsub OnAnnounce,"2 minutes";
 OnTimer540000:	callsub OnAnnounce,"1 minute";
 OnTimer570000:
-	mapannounce instance_mapname("1@ma_b"),"Time Limit: 30 seconds",bc_map,"0xff4400"; //FW_NORMAL 18 0 0
+	mapannounce instance_mapname("1@ma_b"),"제한 시간: 30초",bc_map,"0xff4400"; //FW_NORMAL 18 0 0
 	donpcevent instance_npcname("#SummonPuppetsn1")+"::OnStart";
 	end;
 OnTimer600000:
 	set .@map$, instance_mapname("1@ma_b");
-	mapannounce .@map$,"Bakonawa has escaped deep into the lake.",bc_map,"0xffff00"; //FW_NORMAL 20 0 0
+	mapannounce .@map$,"바코나와가 호수 깊은 곳으로 도망쳤습니다.",bc_map,"0xffff00"; //FW_NORMAL 20 0 0
 	donpcevent instance_npcname("Taho#Fail")+"::OnStart";
 	donpcevent instance_npcname("#Bakonawan1")+"::OnFail";
 	killmonster .@map$,instance_npcname("#Bakonawan1")+"::OnMyMobDead";
@@ -204,7 +204,7 @@ OnTimer600000:
 	disablenpc instance_npcname("#Bakonawan1");
 	end;
 OnAnnounce:
-	mapannounce instance_mapname("1@ma_b"),"Time Limit: "+getarg(0),bc_map,"0xff4400"; //FW_NORMAL 15 0 0
+	mapannounce instance_mapname("1@ma_b"),"제한 시간: "+getarg(0),bc_map,"0xff4400"; //FW_NORMAL 15 0 0
 	donpcevent instance_npcname("#SummonPuppetsn1")+"::OnStart";
 	end;
 }
@@ -254,16 +254,16 @@ OnStart:
 	initnpctimer;
 	end;
 OnTimer100:
-	mapannounce instance_mapname("1@ma_b"),"Taho: Good! Bakonawa is hidden under water. He will now try to swallow the moon.",bc_map,"0x00ffff"; //FW_NORMAL 15 0 0
+	mapannounce instance_mapname("1@ma_b"),"타호: 좋아! 바코나와가 물속에 숨었어. 이제 놈은 달을 삼키려 할 거야.",bc_map,"0x00ffff"; //FW_NORMAL 15 0 0
 	end;
 OnTimer5000:
-	mapannounce instance_mapname("1@ma_b"),"Taho: We must make loud noises with caldron and gong so he can never concentrate on the moon!",bc_map,"0x00ffff"; //FW_NORMAL 15 0 0
+	mapannounce instance_mapname("1@ma_b"),"타호: 놈이 달에 집중하지 못하게 솥과 징을 두드려 큰 소리를 내야 해!",bc_map,"0x00ffff"; //FW_NORMAL 15 0 0
 	end;
 OnTimer10000:
-	mapannounce instance_mapname("1@ma_b"),"Taho: Do not engage on him even if he come above the surface. Just make loud noises!",bc_map,"0x00ffff"; //FW_NORMAL 15 0 0
+	mapannounce instance_mapname("1@ma_b"),"타호: 놈이 수면 위로 올라오더라도 직접 상대하지 마. 그냥 큰 소리를 내!",bc_map,"0x00ffff"; //FW_NORMAL 15 0 0
 	end;
 OnTimer15000:
-	mapannounce instance_mapname("1@ma_b"),"Mission - Destroy 2 caldrons and 2 gongs on left and right sides of the lake.",bc_map,"0xff3300"; //FW_NORMAL 15 0 0
+	mapannounce instance_mapname("1@ma_b"),"임무 - 호수 좌우에 있는 솥 2개와 징 2개를 파괴하세요.",bc_map,"0xff3300"; //FW_NORMAL 15 0 0
 	donpcevent instance_npcname("#Bakonawan2")+"::OnStart";
 	stopnpctimer;
 	disablenpc instance_npcname("#BakonawaDeadn1");
@@ -294,7 +294,7 @@ OnMyMobDead:
 		stopnpctimer;
 		disablenpc instance_npcname("#Bakonawan2");
 	} else
-		mapannounce .@map$,"Taho: Good! "+.@mob_dead_num+" left to go!",bc_map,"0x00ffff"; //FW_NORMAL 15 0 0
+		mapannounce .@map$,"타호: 좋아!"+.@mob_dead_num+" left to go!",bc_map,"0x00ffff"; //FW_NORMAL 15 0 0
 	 end;
 OnTimer1000:	callsub OnAnnounce,"5 minutes",15,1;
 OnTimer60000:	callsub OnAnnounce,"4 minutes",15,1;
@@ -311,7 +311,7 @@ OnTimer298000:	callsub OnAnnounce,"2 seconds",19,0;
 OnTimer299000:	callsub OnAnnounce,"1 second",20,0;
 OnTimer300000:
 	set .@map$, instance_mapname("1@ma_b");
-	mapannounce .@map$,"Bakonawa has escaped deep into the lake.",bc_map,"0xffff00"; //FW_NORMAL 20 0 0
+	mapannounce .@map$,"바코나와가 호수 깊은 곳으로 도망쳤습니다.",bc_map,"0xffff00"; //FW_NORMAL 20 0 0
 	donpcevent instance_npcname("Taho#Fail")+"::OnStart";
 	donpcevent instance_npcname("#Bakonawan2-1")+"::OnFail";
 	killmonster .@map$,instance_npcname("#Bakonawan2")+"::OnMyMobDead";
@@ -319,7 +319,7 @@ OnTimer300000:
 	disablenpc instance_npcname("#Bakonawan2");
 	end;
 OnAnnounce:
-	mapannounce instance_mapname("1@ma_b"),"Time Limit: "+getarg(0),bc_map,"0xff4400"; //FW_NORMAL getarg(1) 0 0
+	mapannounce instance_mapname("1@ma_b"),"제한 시간: "+getarg(0),bc_map,"0xff4400"; //FW_NORMAL getarg(1) 0 0
 	if (getarg(2)) donpcevent instance_npcname("#SummonPuppetsn1")+"::OnStart";
 	end;
 }
@@ -342,13 +342,13 @@ OnEnd:
 	initnpctimer;
 	end;
 OnTimer1000:
-	mapannounce instance_mapname("1@ma_b"),"Taho: He is back into the lake again. Is it over?",bc_map,"0x00ffff"; //FW_NORMAL 15 0 0
+	mapannounce instance_mapname("1@ma_b"),"타호: 놈이 다시 호수로 들어갔어. 끝난 건가?",bc_map,"0x00ffff"; //FW_NORMAL 15 0 0
 	end;
 OnTimer5000:
-	mapannounce instance_mapname("1@ma_b"),"Taho: UHM! Something is moving up rapidly under the water! Ba... Bakonawa is coming!!",bc_map,"0x00ffff"; //FW_NORMAL 15 0 0
+	mapannounce instance_mapname("1@ma_b"),"타호: 으음! 물속에서 뭔가 빠르게 올라오고 있어! 바... 바코나와가 온다!!",bc_map,"0x00ffff"; //FW_NORMAL 15 0 0
 	end;
 OnTimer10000:
-	mapannounce instance_mapname("1@ma_b"),"Mission - Eliminate Bakonawa who became more fierce.",bc_map,"0xff3300"; //FW_NORMAL 15 0 0
+	mapannounce instance_mapname("1@ma_b"),"임무 - 더욱 흉포해진 바코나와를 처치하세요.",bc_map,"0xff3300"; //FW_NORMAL 15 0 0
 	donpcevent instance_npcname("#Bakonawan3")+"::OnStart";
 	stopnpctimer;
 	disablenpc instance_npcname("#Bakonawan2-1");
@@ -372,7 +372,7 @@ OnMyMobDead:
 	set .@map$, instance_mapname("1@ma_b");
 	set .@mob_dead_num, mobcount(.@map$,instance_npcname("#Bakonawan3")+"::OnMyMobDead");
 	if (.@mob_dead_num < 1) {
-		mapannounce .@map$,"Taho: We got him! I can see he has threw up something that looks like a box.",bc_map,"0x00ffff"; //FW_NORMAL 15 0 0
+		mapannounce .@map$,"타호: 해냈어! 놈이 상자처럼 생긴 무언가를 토해낸 게 보여.",bc_map,"0x00ffff"; //FW_NORMAL 15 0 0
 		donpcevent instance_npcname("Taho#Completed")+"::OnStart";
 		donpcevent instance_npcname("#Bakonawan3-1")+"::OnEnd";
 		killmonster .@map$,instance_npcname("#Bakonawan3")+"::OnMyMobDead";
@@ -404,14 +404,14 @@ OnTimer598000:	callsub OnAnnounce,"2 seconds",19,0;
 OnTimer599000:	callsub OnAnnounce,"1 second",20,0;
 OnTimer600000:
 	set .@map$, instance_mapname("1@ma_b");
-	mapannounce .@map$,"Bakonawa has escaped deep into the lake.",bc_map,"0xffff00"; //FW_NORMAL 20 0 0
+	mapannounce .@map$,"바코나와가 호수 깊은 곳으로 도망쳤습니다.",bc_map,"0xffff00"; //FW_NORMAL 20 0 0
 	donpcevent instance_npcname("Taho#Fail")+"::OnStart";
 	killmonster .@map$,instance_npcname("#Bakonawan3")+"::OnMyMobDead";
 	stopnpctimer;
 	disablenpc instance_npcname("#Bakonawan3");
 	end;
 OnAnnounce:
-	mapannounce instance_mapname("1@ma_b"),"Time Limit: "+getarg(0),bc_map,"0xff4400"; //FW_NORMAL getarg(1) 0 0
+	mapannounce instance_mapname("1@ma_b"),"제한 시간: "+getarg(0),bc_map,"0xff4400"; //FW_NORMAL getarg(1) 0 0
 	if (getarg(2)) donpcevent instance_npcname("#SummonPuppetsn1")+"::OnStart";
 	end;
 }
@@ -468,17 +468,17 @@ OnMobSpawn:
 1@ma_b,62,52,4	script	Taho#Completed	541,{
 	disable_items;
 	if (checkweight(1201,1) == 0) {
-		mes "It seems you are carrying too many different kinds of items. Please try again after reducing it.";
+		mes "소지품 종류가 너무 많은 것 같습니다. 줄인 뒤 다시 시도해 주세요.";
 		close;
 	}
 	if (MaxWeight - Weight < 10000) {
-		mes "It seems you are already carrying items of too much weight. Please try again after reducing the weight.";
+		mes "이미 소지 무게가 너무 무거운 것 같습니다. 무게를 줄인 뒤 다시 시도해 주세요.";
 		close;
               }
 	if (checkquest(12279,HUNTING) == 2) {
 		erasequest 12279;
-		mes "[Taho]";
-		mes "This was found from Bakonawa's corpse. It would be better if you take this.";
+		mes "[타호]";
+		mes "이건 바코나와의 시체에서 발견한 거야. 네가 가져가는 게 좋겠어.";
 		if (!VIP_SCRIPT || vip_status(VIP_STATUS_ACTIVE))
 			getitem 6499,7; //Ancient_Grudge
 		else
@@ -486,11 +486,11 @@ OnMobSpawn:
 		getexp 0,100000;
 		next;
 	}
-	mes "[Taho]";
-	mes "We better hurry and get out of this place. This place is still dangerous even without Bakonawa...";
+	mes "[타호]";
+	mes "서둘러 이곳을 빠져나가는 게 좋겠어. 바코나와가 없어도 이곳은 아직 위험해...";
 	next;
-	mes "[Taho]";
-	mes "Then let's use to the rope to go up!";
+	mes "[타호]";
+	mes "그럼 밧줄을 이용해서 위로 올라가자!";
 	close2;
 	warp "ma_scene01",175,176;
 	end;
@@ -505,38 +505,38 @@ OnTimer1000:
 	monster instance_mapname("1@ma_b"),78,74,"Bakonawa Treasure Box",2335,1;
 	end;
 OnTimer10000:
-	mapannounce instance_mapname("1@ma_b"),"Taho: After opening the treasure box, please visit me at the top of the hill. I've got something to give to you.",bc_map,"0x00ffff"; //FW_NORMAL 15 0 0
+	mapannounce instance_mapname("1@ma_b"),"타호: 보물상자를 열어본 뒤 언덕 위에 있는 나를 찾아와. 너에게 줄 것이 있어.",bc_map,"0x00ffff"; //FW_NORMAL 15 0 0
 	stopnpctimer;
 	end;
 }
 
 1@ma_b,62,52,4	script	Taho#Fail	541,{
-	mes "[Taho]";
-	mes "HMM. We almost got him but he is one fast creature...";
+	mes "[타호]";
+	mes "흠. 거의 잡을 뻔했는데, 놈이 정말 빠르군...";
 	next;
 	if (is_party_leader() == true) {
-		mes "[Taho]";
-		mes "Are we going to try again?";
+		mes "[타호]";
+		mes "다시 시도해볼까?";
 		next;
 		switch(select("Hold on a sec!:Of course! We cannot stand back now!")) {
 		case 1:
-			mes "[Taho]";
-			mes "AWW... I almost brought him out.";
+			mes "[타호]";
+			mes "아우... 거의 끌어낼 뻔했는데.";
 			close;
 		case 2:
-			mes "[Taho]";
-			mes "Then I will use Albopal once again to the lake.";
+			mes "[타호]";
+			mes "그럼 다시 한 번 호수에 알보팔을 사용해볼게.";
 			next;
-			mes "[Taho]";
-			mes "We are about to see Bakonawa with intenser anger...";
+			mes "[타호]";
+			mes "이제 더 거세게 분노한 바코나와를 보게 될 거야...";
 			disablenpc instance_npcname("Taho#Fail");
 			donpcevent instance_npcname("#Bakonawan1")+"::OnStart";
 			close;
 		}
 		close;
 	} else {
-		mes "[Taho]";
-		mes "I am dropping Albopal like I did a while ago. I hope it pisses him off...";
+		mes "[타호]";
+		mes "조금 전처럼 알보팔을 떨어뜨리고 있어. 이번엔 제대로 화가 나면 좋겠군...";
 		close;
 	}
 

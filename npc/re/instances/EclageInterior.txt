@@ -16,70 +16,70 @@
 
 ecl_hub01,132,12,3	script	Chief of Staff#tl02	435,{
 	.@party_id = getcharid(1);
-	.@md_name$ = "Eclage Interior";
+	.@md_name$ = "에클라주 인테리어";
 
 	if (.@party_id == 0 || is_party_leader() == false){
-		mes "-! Warning !-";
-		mes "This current quest will be held at Memorial dungeon.";
-		mes "Only the party leader will enter. Please create your party.";
+		mes "-! 경고 !-";
+		mes "이번 퀘스트는 기념 던전에서 진행됩니다.";
+		mes "정당 대표만 입장할 수 있습니다. 정당을 만들어 주세요.";
 		close;
 	}
 	if (ep14_2_mylord == 29) {
-		mes "[Shenime]";
-		mes "This place is set up with lighting for Orb.";
-		mes "If you favor Mayor, you should be cautious here.";
+		mes "[셰니메]";
+		mes "이곳은 오브(Orb)를 위한 조명 시설이 설치되어 있습니다.";
+		mes "시장을 지지한다면 이 점에 유의해야 합니다.";
 		next;
 		switch (select("Enter it.:Forget it.")) {
 		case 1:
 			if (instance_create(.@md_name$) < 0) {
-				mes "[Shenime]";
-				mes "There are some soldiers dispatched by Mayor not too long ago.";
-				mes "I should sure hope that you aren't the disturbance they're looking for, right?";
+				mes "[셰니메]";
+				mes "시장님이 얼마 전에 파견한 군인들이 몇 명 있습니다.";
+				mes "당신이 그들이 찾고 있는 골칫거리가 아니길 진심으로 바라야겠죠?";
 				close;
 			}
 			ecl_interior_time = gettimetick(2) + 20 * 60;
-			mes "[Shenime]";
-			mes "Given the tight internal security, you should prepare yourself.";
-			mes "Wait here for a minute.";
+			mes "[셰니메]";
+			mes "내부 보안이 매우 엄격하므로 만반의 준비를 갖추셔야 합니다.";
+			mes "여기서 잠시만 기다려 주세요.";
 			close;
 		case 2:
-			mes "[Shenime]";
-			mes "It's not an easy task.";
+			mes "[셰니메]";
+			mes "쉬운 일이 아닙니다.";
 			close;
 		}
 	}
-	mes "[High-level Laphine's]";
-	mes "Hmm? This room?";
-	mes "Never mind. Don't worry about it.";
+	mes "[고급 라핀의]";
+	mes "음? 이 방이요?";
+	mes "괜찮아요. 걱정하지 마세요.";
 	close;
 }
 
 ecl_hub01,130,15,0	script	It is closed shut.	844,{
 	if (ep14_2_mylord == 29) {
-		mes "This door connects to the plaza's ceiling.";
-		mes "It's also a place where the lighting is set up to make Orb seem more beautiful.";
+		mes "이 문은 광장의 천장과 연결되어 있습니다.";
+		mes "이곳은 오브가 더욱 아름답게 보이도록 조명이 설치된 곳이기도 합니다.";
 		next;
 		if (select("Enter it.:Forget it.") == 1) {
 			.@party_id = getcharid(1);
-			.@md_name$ = "Eclage Interior";
+			.@md_name$ = "에클라주 인테리어";
 			if (.@party_id == 0 || is_party_leader() == false) {
-				mes "-! Warning !-";
-				mes "This current quest will be held at Memorial dungeon.";
-				mes "Only the party leader will enter. Please create your party.";
+				mes "-! 경고 !-";
+				mes "이번 퀘스트는 기념 던전에서 진행됩니다.";
+				mes "정당 대표만 입장할 수 있습니다. 정당을 만들어 주세요.";
 				close;
 			}
 			if (gettimetick(2) >= ecl_interior_time){
-				mes "[Shenime]";
-				mes "Looks like the soldiers inside are really tense.";
-				mes "It is pretty difficult to guide an outsider like you.";
+				mes "[셰니메]";
+				mes "안에 있는 군인들이 굉장히 긴장한 것 같네요.";
+				mes "당신처럼 외부인을 지도하는 건 꽤 어려운 일입니다.";
 				close;
 			}
 			switch (instance_enter(.@md_name$)) {
 			case IE_OTHER:
-				mes "An unknown error has occurred.";
+				mes "알 수 없는 오류가 발생했습니다.";
 				close;
 			case IE_NOINSTANCE:
-				mes "It is closed shut.";
+				mes "문이 닫혀 있습니다.";
 				close;
 			case IE_OK:
 				mapannounce "ecl_hub01",getpartyname(.@party_id) + " Party leader " + strcharinfo(0) + " is entering " + .@md_name$,bc_map,"0x00ff99";
@@ -89,27 +89,27 @@ ecl_hub01,130,15,0	script	It is closed shut.	844,{
 		} else
 			close;
 	}
-	mes "This door connects to the plaza's ceiling.";
-	mes "It's also a place where the lighting is set up to make Orb seem more beautiful.";
-	mes "It is closed shut.";
+	mes "이 문은 광장의 천장과 연결되어 있습니다.";
+	mes "이곳은 오브가 더욱 아름답게 보이도록 조명이 설치된 곳이기도 합니다.";
+	mes "문이 닫혀 있습니다.";
 	close;
 }
 
 1@ecl,58,69,3	script	Shenime#ecl01	435,{
-	mes "[Shenime]";
-	mes "Oh, what's going on here?";
-	mes "They destroyed additional troops that Mayor sent?";
+	mes "[셰니메]";
+	mes "어머, 여기서 무슨 일이 벌어지고 있는 거죠?";
+	mes "그들은 시장이 보낸 추가 병력을 섬멸했나요?";
 	next;
-	select("What...?:I fought monsters off!");
-	mes "[Shenime]";
-	mes "It doesn't matter.";
-	mes "Your job ends here.";
-	mes "Now you became a betrayer.";
-	mes "Farewell, then!";
+	select("무엇...?:나는 괴물들을 물리쳤어!");
+	mes "[셰니메]";
+	mes "상관없어요.";
+	mes "당신의 역할은 여기서 끝납니다.";
+	mes "이제 당신은 배신자가 되었습니다.";
+	mes "그럼 안녕히!";
 	specialeffect EF_BEGINSPELL3;
 	next;
 	mes "[" + strcharinfo(0) + "]";
-	mes "No...way!!!";
+	mes "안 돼요!!!";
 	specialeffect2 EF_LORD;
 	percentheal -99,0;
 	soundeffect "wander_man_move.wav",1;
@@ -154,9 +154,9 @@ OnInstanceInit:
 
 OnEnable:
 	sleep 1000;
-    mapannounce instance_mapname("1@ecl"),"Warning: Abnormal occurrence in the lighting room. Abnormal occurrence in the lighting room.",bc_map,"0xffff00"; //FW_NORMAL 12 0 0
+    mapannounce instance_mapname("1@ecl"),"경고: 조명실에서 이상 현상이 발생했습니다. 조명실에서 이상 현상이 발생했습니다.",bc_map,"0xffff00"; //FW_NORMAL 12 0 0
 	sleep 2000;
-    mapannounce instance_mapname("1@ecl"),"Suspicious Creature: Kerrrrr....krwahhhh!!",bc_map,"0xffff00"; //FW_NORMAL 12 0 0
+    mapannounce instance_mapname("1@ecl"),"수상한 생물: 커르르르....크르르르!!",bc_map,"0xffff00"; //FW_NORMAL 12 0 0
 	hideoffnpc instance_npcname("Suspicious Creature#5");
 	hideoffnpc instance_npcname("Suspicious Creature#6");
 	hideoffnpc instance_npcname("Suspicious Creature#7");
@@ -168,27 +168,27 @@ OnEnable:
 OnMyMobDead:
 	if (mobcount(instance_mapname("1@ecl"),instance_npcname("#sndmaster")+"::OnMyMobDead") == 0) {
 		donpcevent instance_npcname("Shenime#ecl01")+"::OnEnable";
-		mapannounce instance_mapname("1@ecl"),"Shenime: Good, I got here just in time.",bc_map,"0xffff00"; //FW_NORMAL 12 0 0
+		mapannounce instance_mapname("1@ecl"),"셰니메: 다행이다, 딱 맞춰 도착했네.",bc_map,"0xffff00"; //FW_NORMAL 12 0 0
 	}
 	end;
 
 OnTouch:
 	if ('mob_summoned > 1) end;
-    mes "Upon eliminating the intruders near the Orb, another strange-looking creatures appeared.";
+    mes "오브 근처의 침입자들을 제거하자, 또 다른 기괴한 모습의 생명체가 나타났다.";
     next;
-    mes "We couldn't communicate with them either, and one of them seemed furious after looking around and finding out that its fellows are defeated.";
+    mes "우리는 그들과 소통할 수 없었고, 그중 한 마리는 주변을 둘러보고 동족들이 패배한 것을 확인한 후 몹시 분노한 듯 보였다.";
     next;
     mes "[" + strcharinfo(0) + "]";
-    mes "They look as if they are incarnation of Morocc.";
-    mes "Is the King of Domons after the Orb?";
-    mes "Or is it just a coincidence?";
+    mes "그들은 마치 모로코인의 화신처럼 보인다.";
+    mes "도몬의 왕이 오브를 노리고 있는 걸까요?";
+    mes "아니면 단순한 우연일까요?";
     next;
-    mes "[Subordinate of the King of Demons]";
-    mes "Kyaarr...Keraahhh!!!";
-    mes "Kkwaaa!";
+    mes "[마왕의 부하]";
+    mes "캬아르...케라아아!!!";
+    mes "크콰아!";
     next;
-    mes "A battle cannot be avoided!";
-    mes "They will kill me!";
+    mes "싸움은 피할 수 없다!";
+    mes "그들이 날 죽일 거야!";
 	close2;
 	hideonnpc instance_npcname("Suspicious Creature#5");
 	hideonnpc instance_npcname("Suspicious Creature#6");
@@ -218,20 +218,20 @@ OnTouch:
 	if ('mob_summoned > 0) end;
 	.@eclmap$ = instance_mapname("1@ecl");
 	.@eventname$ = instance_npcname("#event");
-	mes "An empty room with nothing inside.";
-	mes "a light is coming out of a circular equipment in the middle of the room.";
+	mes "아무것도 없는 텅 빈 방.";
+	mes "방 중앙에 있는 원형 장치에서 빛이 나오고 있다.";
 	next;
-	mes "[Suspicious Creature]";
+	mes "[수상한 생물]";
 	mes "Keheehehehe......";
 	next;
-	mes "A group of unidentifiable creatures is approaching threateningly.";
-	mes "They seemed surprised, and although Bifrost's will still holds, it's hard to communicate.";
+	mes "정체를 알 수 없는 생명체 무리가 위협적으로 다가오고 있다.";
+	mes "그들은 놀란 듯 보였고, 비프로스트의 의지는 여전히 유효하지만, 소통하기는 어려워 보였다.";
 	next;
-	mes "[Suspicious Creature]";
-	mes "Kyaarr...Ke...Keryarya!!";
+	mes "[수상한 생물]";
+	mes "캬르...케...케랴랴!!";
 	next;
-	mes "It seems like they are going to start attacking any minute.";
-	mes "We cannot help fighting them!";
+	mes "금방이라도 공격을 시작할 것 같아요.";
+	mes "우리는 그들과 싸우지 않을 수 없어요!";
 	close2;
 	hideonnpc instance_npcname("Suspicious Creature#1");
 	hideonnpc instance_npcname("Suspicious Creature#2");
@@ -257,88 +257,88 @@ OnMyMobDead:
 }
 
 1@ecl,148,97,3	script	Avant#	618,{
-	mes "[Avant]";
-	mes "Hey, look who's here!";
-	mes "You're a friend of my son, right?";
-	mes "What a strange chance it is that has brought us together here!";
+	mes "[아방]";
+	mes "어머, 누가 왔는지 봐!";
+	mes "당신은 제 아들의 친구시죠?";
+	mes "이렇게 우리를 만나게 한 건 정말 기묘한 우연이군요!";
 	cutin "avant01",1;
 	next;
-	mes "[Avant]";
-	mes "Did something happen to you?";
-	mes "There was a subtle and magical echo to it.";
-	mes "Immediately after that, you were thrown here.";
+	mes "[아방]";
+	mes "무슨 일 있었어요?";
+	mes "그것에는 은은하고 마법 같은 메아리가 있었다.";
+	mes "그 직후에 당신은 이곳으로 던져졌습니다.";
 	next;
 	if (select("It's all because of you!:Shenime said...") == 1) {
-		mes "[Avant]";
-		mes "I don't understand a word you're saying.";
-		mes "Can't you organize your story? Don't you know 'five W's and one H' rule?";
+		mes "[아방]";
+		mes "나는 당신이 하는 말을 한 마디도 이해하지 못하겠어요.";
+		mes "이야기를 좀 정리할 수 없나요? '5W1H' 규칙을 모르세요?";
 		next;
 	}
-	mes "[Avant]";
-	mes "Ooh...so that's what happened.";
-	mes "So you're saying that Shenime was after the Orb?";
+	mes "[아방]";
+	mes "아... 그래서 그런 일이 있었군요.";
+	mes "그러니까 셰니메가 오브를 노렸다는 말씀이시죠?";
 	next;
-	mes "[Avant]";
-	mes "hehehe...hahahhaha ahahahahha";
-	mes "Well, well...did he get me, too?";
-	mes "Me, Avant, of all the people?! Hahahaha!";
+	mes "[아방]";
+	mes "헤헤헤...하 ...";
+	mes "어머나…나도 걸린 건가?";
+	mes "나, 아방트가 하필이면?! 하하하하!";
 	cutin "avant02",1;
 	next;
-	select("What do you mean?");
-	mes "[Avant]";
-	mes "I was doing a research on the power of the Orb on my own.";
-	mes "But Shenime just urged me persistently.";
+	select("무슨 뜻이에요?");
+	mes "[아방]";
+	mes "저는 오브의 힘에 대해 혼자서 연구를 하고 있었습니다.";
+	mes "하지만 셰니메는 끈질기게 나를 재촉했다.";
 	cutin "avant01",1;
 	next;
-	mes "[Avant]";
-	mes "I started from thinking about the beauty of the Orb and went on to wondering what kind of power is accumulated inside the Orb...";
-	mes "and I started questioning the principle of the Orb's power since we all benefit from it.";
+	mes "[아방]";
+	mes "오브의 아름다움에 대해 생각하는 것에서 시작해서, 오브 안에 어떤 힘이 축적되어 있을지 궁금해지기 시작했습니다...";
+	mes "그리고 저는 우리 모두가 오브의 힘으로부터 이득을 얻는다는 점에서 오브의 힘의 원리에 대해 의문을 품기 시작했습니다.";
 	next;
-	mes "[Avant]";
-	mes "All Laphines think of the Orb as something natural as air and water, but he was the first one to make me perceive it differently and investigate its origin.";
-	mes "Right...Shenime. He excited my curiosity on purpose.";
+	mes "[아방]";
+	mes "라핀 가문의 모든 사람들은 오브를 공기나 물처럼 자연스러운 것으로 생각하지만, 그는 내게 오브를 다르게 인식하고 그 기원을 탐구하도록 이끌어준 첫 번째 사람이었습니다.";
+	mes "맞아요... 셰니메. 그는 일부러 제 호기심을 자극했죠.";
 	next;
-	mes "[Avant]";
-	mes "Stimulate a person who wasn't aware of air and water, and make him recognize and carry on investigating!";
-	mes "Well, well...isn't that interesting!";
+	mes "[아방]";
+	mes "공기와 물의 존재를 알지 못하는 사람에게 자극을 주어, 그것들을 인지하고 탐구하도록 유도해 보세요!";
+	mes "오, 오... 참 흥미롭군요!";
 	cutin "avant02",1;
 	next;
-	mes "[Avant]";
+	mes "[아방]";
 	mes "Ha...hahaha...";
-	mes "...I'm so angry about the fact that I just realized how he used me, but what's even worse is that I've done something horrible to our people.";
-	mes "I think I'm pretty irritated now.";
+	mes "...그가 나를 어떻게 이용했는지 이제야 깨달았다는 사실에 너무 화가 나지만, 더 끔찍한 건 내가 우리 동족에게 끔찍한 짓을 저질렀다는 거야.";
+	mes "지금 꽤 짜증이 나네요.";
 	next;
-	select("You had a conscience?");
-	mes "[Avant]";
-	mes "What kind of a person do you think I am, seriously!";
-	mes "Is it because of my sons?";
-	mes "Well, then, I can't blame you too much.";
+	select("당신에게는 양심이 있었나요?");
+	mes "[아방]";
+	mes "당신은 내가 어떤 사람이라고 생각하는 거예요, 진심으로!";
+	mes "내 아들들 때문일까요?";
+	mes "그렇다면 당신을 너무 탓할 수는 없겠네요.";
 	cutin "avant01",1;
 	next;
-	mes "[Avant]";
+	mes "[아방]";
 	mes "...Bah.";
-	mes "It's no fun.";
-	mes "It's not fun anymore. I'm no longer interested in you.";
+	mes "재미없어.";
+	mes "더 이상 재미없어. 너에게 더 이상 관심 없어.";
 	next;
-	mes "[Avant]";
+	mes "[아방]";
 	mes "......";
-	mes "Seems like there's a visitor.";
+	mes "손님이 온 것 같네요.";
 	next;
 	cutin "minuel01",4;
-	mes "[Minuel]";
+	mes "[미누엘]";
 	mes "" + strcharinfo(0) + "Sir,";
-	mes "Although you're detained on suspicion of being responsible for the recent incident in the lighting room,";
-	mes "there are some witnesses to prove your innocence.";
+	mes "당신은 최근 조명실에서 발생한 사건의 책임자로 의심되어 구금되어 있지만,";
+	mes "당신의 무죄를 증명할 증인들이 있습니다.";
 	next;
-	mes "[Minuel]";
-	mes "I don't know the details,";
-	mes "but I also believe you're not guilty.";
-	mes "I'll move you to the treatment room since this seems like a severe wound.";
+	mes "[미누엘]";
+	mes "자세한 내용은 모르겠습니다.";
+	mes "하지만 저는 당신이 무죄라고 믿습니다.";
+	mes "상처가 심해 보이니 치료실로 옮겨드리겠습니다.";
 	next;
-	mes "[Minuel]";
-	mes "I don't think it's a big deal.";
+	mes "[미누엘]";
+	mes "저는 별일 아니라고 생각해요.";
 	mes "...hopefully.";
-	mes "Let's go. I'll guide you.";
+	mes "가자. 내가 안내해 줄게.";
 	close2;
 	cutin "",255;
 	warp "1@ecl",146,29;
@@ -346,122 +346,122 @@ OnMyMobDead:
 }
 	
 1@ecl,148,29,3	script	Loki#ecl01	512,{
-	mes "[Loki]";
-	mes "It seems like this guy next to me has a lot more to say than I do.";
-	mes "Why don't you explain to him first?";
+	mes "[로키]";
+	mes "내 옆에 있는 저 사람이 나보다 할 말이 훨씬 많은 것 같군.";
+	mes "먼저 그에게 설명해 보는 게 어때요?";
 	close;
 }	
 	
 1@ecl,147,30,3	script	Nydhog#ecl01	510,{
-	mes "[Guardian Nydhog]";
-	mes "I think you should talk to Hisie first.";
+	mes "[가디언 니도그]";
+	mes "먼저 히시에와 이야기를 나눠보는 게 좋을 것 같아요.";
 	close;
 }
 	
 1@ecl,144,27,5	script	Hisie#ecl01	623,{
 	cutin "hisie01",0;
-	mes "[Hisie]";
-	mes "Can you tell me exactly what happened?";
+	mes "[히시]";
+	mes "정확히 무슨 일이 있었는지 말씀해 주시겠어요?";
 	next;
-	select("I fought with monsters.");
+	select("나는 괴물들과 싸웠다.");
 	cutin "hisie03",0;
-	mes "[Hisie]";
-	mes "Monsters? Subordinates of Morocc?";
-	mes "What you were trying to kill were our soldiers, the Laphines!!";
-	mes "What on earth happened there?";
+	mes "[히시]";
+	mes "괴물들? 모로코의 부하들?";
+	mes "당신들이 죽이려 했던 건 바로 우리 병사들, 라핀 부대였어요!!";
+	mes "도대체 거기서 무슨 일이 있었던 거야?";
 	npcskill "AL_HEAL",9,99,80;
 	next;
 	cutin "",255;
-	mes "[Loki]";
-	mes "It's because of this.";
+	mes "[로키]";
+	mes "바로 이 때문입니다.";
 	mes "" + strcharinfo(0) + "It was inside the body of -";
-	mes "This is how powerful Shenime is.";
+	mes "이것이 바로 셰니메의 강력한 힘입니다.";
 	next;
-	mes "On Loki's palm, there rested a small, thin, and dried piece of thorn.";
+	mes "로키의 손바닥에는 작고 가늘고 말라붙은 가시 조각 하나가 놓여 있었다.";
 	next;
 	cutin "hisie03",0;
-	mes "[Hisie]";
-	mes "Shenime, the Chief of Staff?";
-	mes "Why is he related to this?";
+	mes "[히시]";
+	mes "셰니메, 비서실장 말인가요?";
+	mes "그는 이 일과 무슨 관련이 있는 거죠?";
 	npcskill "AL_HEAL",9,99,80;
 	next;
 	cutin "",255;
-	mes "[Loki]";
-	mes "Shenime is one of the subordinates of Morocc.";
-	mes "His power enbales him to control another person directly or mentally influence that person indirectly through a part of his body.";
+	mes "[로키]";
+	mes "셰니메는 모로크의 부하 중 한 명이다.";
+	mes "그의 능력은 다른 사람을 직접적으로 조종하거나 신체의 일부를 통해 간접적으로 정신적으로 영향을 미칠 수 있게 해줍니다.";
 	next;
-	select("Now that I think about it...");
+	select("이제 생각해 보니...");
 	mes "[" + strcharinfo(0) + "]";
-	mes "Right before coming here, Shenime reached his hand out to me and I felt a spark when I held his hand.";
-	mes "I thought it was just my imagination and ignored it...maybe that's when he...";
+	mes "여기 오기 직전에 셰니메가 내게 손을 내밀었는데, 그의 손을 잡는 순간 짜릿한 전율을 느꼈어.";
+	mes "난 그게 그냥 내 상상이라고 생각하고 무시했어... 아마 그때 그가...";
 	next;
-	mes "[Nydhog]";
-	mes "You're probably right.";
-	mes "They use wicked tricks.";
-	mes "This thorn here probably has clouded your judgement.";
+	mes "[니도그]";
+	mes "당신 말이 맞을 거예요.";
+	mes "그들은 교활한 속임수를 씁니다.";
+	mes "이 가시가 당신의 판단력을 흐리게 한 것 같습니다.";
 	next;
 	cutin "hisie03",0;
-	mes "[Hisie]";
-	mes "So you're saying that he deceived us all?";
-	mes "The Chief of Staff is a Laphine who stayed with us for a long time! He can't be...";
+	mes "[히시]";
+	mes "그러니까 그가 우리 모두를 속였다는 말씀이시죠?";
+	mes "참모장은 오랫동안 우리와 함께했던 라핀이에요! 그럴 리가 없어요...";
 	npcskill "AL_HEAL",9,99,80;
 	next;
 	cutin "",255;
-	mes "[Loki]";
-	mes "He might have been under the influence for a good while.";
-	mes "Anyway, this guy is not guilty.";
-	mes "I can prove it.";
+	mes "[로키]";
+	mes "그는 꽤 오랫동안 술에 취해 있었을지도 모릅니다.";
+	mes "어쨌든 이 사람은 무죄입니다.";
+	mes "제가 증명할 수 있습니다.";
 	next;
-	mes "[Nydhog]";
-	mes "I swear by the name of the guardian of Yggdrasil, too.";
+	mes "[니도그]";
+	mes "저 역시 이그드라실의 수호자의 이름으로 맹세합니다.";
 	mes "" + strcharinfo(0) + "- will by no means do such a thing.";
 	next;
 	cutin "hisie02",0;
-	mes "[Hisie]";
+	mes "[히시]";
 	mes "Hah...";
-	mes "But things got out of control.";
-	mes "I didn't expect this.";
+	mes "하지만 상황이 통제 불능이 되었습니다.";
+	mes "이런 일은 예상 못 했어요.";
 	next;
-	select("What happened to the Orb?");
-	mes "[Hisie]";
-	mes "The inner core is stolen.";
-	mes "Nobody knows that the Orb's inner core is gone,";
-	mes "and that's why Karr didn't make it here.";
+	select("오브는 어떻게 되었나요?");
+	mes "[히시]";
+	mes "내부 코어가 도난당했습니다.";
+	mes "오브의 내부 핵이 사라졌다는 사실을 아는 사람은 아무도 없다.";
+	mes "그래서 카르는 여기에 오지 못한 겁니다.";
 	npcskill "AL_HEAL",9,99,80;
 	next;
-	mes "[Hisie]";
-	mes "And what's more, several soldiers are injured because of you.";
-	mes "None of them died fortunately, but most of them are wounded severely.";
-	mes "The situation is not very good right now.";
+	mes "[히시]";
+	mes "게다가 당신 때문에 여러 명의 군인이 부상을 입었습니다.";
+	mes "다행히 사망자는 없었지만, 대부분 중상을 입었습니다.";
+	mes "현재 상황이 그다지 좋지 않습니다.";
 	next;
 	cutin "",255;
-	mes "[Loki]";
-	mes "Someone has to take the responsibility here then.";
+	mes "[로키]";
+	mes "그렇다면 누군가는 이 일에 책임을 져야 할 겁니다.";
 	mes "In all probablility," + strcharinfo(0) + "it will be you.";
 	next;
 	cutin "hisie02",0;
-	mes "[Hisie]";
-	mes "......these two gentlemen here cleared up all charges related to the Orb,";
-	mes "but both you and Karr won't be able to avoid your responsibility.";
-	mes "you'll have to catch Shenime.";
+	mes "[히시]";
+	mes "......여기 계신 두 분께서 오브와 관련된 모든 혐의를 해명해 주셨습니다.";
+	mes "하지만 당신과 카르 모두 책임을 피할 수는 없을 겁니다.";
+	mes "셰니메를 잡아야 할 거예요.";
 	npcskill "AL_HEAL",9,99,80;
 	next;
 	cutin "hisie01",0;
-	mes "[Hisie]";
-	mes "It seems like you've rested enough. Let's get going.";
-	mes "Karr is waiting for you.";
-	mes "What will you two do?";
+	mes "[히시]";
+	mes "충분히 쉬신 것 같으니, 이제 출발합시다.";
+	mes "카르가 당신을 기다리고 있습니다.";
+	mes "두 분은 무엇을 하실 건가요?";
 	next;
 	cutin "",255;
-	mes "[Loki]";
-	mes "Don't worry about us.";
-	mes "Our target is Morocc, the King of Demons.";
-	mes "It's good enough that we found an evidence here.";
+	mes "[로키]";
+	mes "저희 걱정은 하지 마세요.";
+	mes "우리의 목표는 악마의 왕 모로크입니다.";
+	mes "여기서 증거를 찾았다는 것만으로도 충분히 다행입니다.";
 	next;
 	cutin "hisie01",0;
-	mes "[Hisie]";
-	mes "Thank you for your help.";
-	mes "We will take off now.";
+	mes "[히시]";
+	mes "도와주셔서 감사합니다.";
+	mes "이제 출발하겠습니다.";
 	mes "Let's go." + strcharinfo(0) + ".";
 	ep14_2_mylord = 30;
 	changequest 7450,7451;

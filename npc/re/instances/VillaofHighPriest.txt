@@ -10,49 +10,49 @@
 // Main Quest: Step 61.
 oz_dun01,219,117,5	script(CLOAKED)	Ira#c12_01	4_M_BRZ_JACI,{
 	if (ep18_main == 54) {
-		.@md_name$ = "High Priest's Villa";
+		.@md_name$ = "대제사장의 별장";
 
-		mes "[Ira]";
-		mes "The entrance to the villa? The key is at the entrance.";
-		mes "Some sort of teleportation magic is applied there.";
-		mes "If you're ready, shall I guide you to the villa?";
+		mes "[이라]";
+		mes "빌라 입구요? 열쇠는 입구에 있습니다.";
+		mes "거기에는 일종의 순간 이동 마법이 사용된 것 같습니다.";
+		mes "준비되셨으면, 빌라로 안내해 드릴까요?";
 		next;
-		mes "[Ira]";
-		mes "And... We don't know what might happen inside.";
-		mes "If you have companions, I recommend going together.";
+		mes "[이라]";
+		mes "그리고… 안에서 무슨 일이 일어날지는 아무도 몰라요.";
+		mes "동행자가 있다면 함께 가는 것을 추천합니다.";
 		next;
 		switch( select( "Apply for '" + .@md_name$ + "'.", "Enter '" + .@md_name$ + "'." ) ) {
 		case 1:
 			if (getcharid(1) == 0 || is_party_leader() == false) {
-				mes "^4d4dff This is a memorial event.";
-				mes "Memorial dungeon requests must be made as a party leader.^000000";
+				mes "^4d4dff 이것은 추모 행사입니다.";
+				mes "기념 던전 요청은 파티 리더 자격으로만 가능합니다.";
 				close;
 			}
-			mes "[Ira]";
-			mes "Then allow me to escort you.";
+			mes "[이라]";
+			mes "그럼 제가 안내해 드리겠습니다.";
 			if (instance_create(.@md_name$) < 0) {
 				mes "Party: " + getpartyname(getcharid(1)) + "";
 				mes "Leader: " + strcharinfo(0) + "";
-				mes "^0000ff" + .@md_name$ + " ^000000- Unknown error";
+				mes "^0000ff" + .@md_name$ + " ^000000 - 알 수 없는 오류";
 				close;
 			}
 			close;
 		case 2:
 			switch( instance_enter(.@md_name$) ) {
 			case IE_OTHER:
-				mes "[Ira]";
-				mes "^ff0000An unknown error occurred.^000000";
+				mes "[이라]";
+				mes "^ff0000알 수 없는 오류가 발생했습니다.^000000";
 				close;
 			case IE_NOINSTANCE:
-				mes "[Ira]";
-				mes "Hm? Could you please check if the party leader has requested entrance to the villa?";
+				mes "[이라]";
+				mes "음? 당 대표가 별장 출입을 요청했는지 확인해 주시겠어요?";
 				close;
 			case IE_NOMEMBER:
-				mes "[Ira]";
-				mes "^ff0000Only a member of the party can enter the Memorial Dungeon.^000000";
+				mes "[이라]";
+				mes "^ff0000파티원 중 한 명만 기념 던전에 입장할 수 있습니다.^000000";
 				close;
 			case IE_OK:
-				mapannounce "oz_dun01", "" + strcharinfo(0) + " from the " + getpartyname( getcharid(1) ) + "'s party has entered the " + .@md_name$ + ".", bc_map, 0xFF99;
+				mapannounce "oz_dun01", "" + strcharinfo(0) + " ~로부터" + getpartyname( getcharid(1) ) + " 's 당이 진입했습니다" + .@md_name$ + ".", bc_map, 0xFF99;
 				// warp "1@adv",123,17;
 				end;
 			}
@@ -73,7 +73,7 @@ oz_dun01,219,117,5	script(CLOAKED)	Ira#c12_01	4_M_BRZ_JACI,{
 
 
 1@adv,122,20,5	script	Ira#aira01	4_M_BRZ_JACI,{
-	npctalk "Don't worry about me. I'll stay near the door and leave immediately if it's dangerous.", "Ira#aira01";
+	npctalk "저에 대해서는 걱정하지 마세요. 문 근처에서 기다리다가 위험하면 바로 떠날게요.", "Ira#aira01";
 	end;
 
 OnInstanceInit:
@@ -88,8 +88,8 @@ OnInstanceInit:
 
 1@adv,125,23,3	script	Miriam#miriam01	EP18_NPC_MIRIAM,{
 	if (is_party_leader() == false) {
-		mes "[Miriam]";
-		mes "Are you all gathered?";
+		mes "[미리암]";
+		mes "모두 모이셨나요?";
 		close;
 	}
 	if (ep18_main != 54)
@@ -100,61 +100,61 @@ OnInstanceInit:
 		.@ira$ = instance_npcname("Ira#aira01");
 
 		sleep 2500;
-		npctalk "Ira: Here it is. It should be okay since only users go to the first floor.", .@ira$;
+		npctalk "이라: 여기 있어요. 1층은 이용자만 올라가니까 괜찮을 거예요.", .@ira$;
 		sleep 2500;
-		npctalk "Miriam: What about the second floor?";
+		npctalk "미리엄: 2층은 어때요?";
 		sleep 2500;
-		npctalk "Ira: Bunch of priests are staying there. I don't know if they're really a priest.", .@ira$;
+		npctalk "이라: 거기 신부들이 여럿 묵고 있어. 진짜 신부들인지는 모르겠지만.", .@ira$;
 		sleep 2500;
-		npctalk "Ira: They seem to be armed.", .@ira$;
+		npctalk "이라: 그들은 무장한 것 같아.", .@ira$;
 		sleep 2500;
-		npctalk "Miriam: Okay. Thanks for the guidance. We'll do the inside search.";
+		npctalk "미리엄: 알겠습니다. 조언 감사합니다. 내부 조사를 진행하겠습니다.";
 		sleep 2500;
-		npctalk "Ira: Don't worry about me. Be careful, you two.", .@ira$;
+		npctalk "이라: 저 걱정하지 마세요. 두 분 조심하세요.", .@ira$;
 		sleep 2500;
-		npctalk "Miriam: Then let's go up carefully.";
+		npctalk "미리엄: 그럼 조심스럽게 올라가자.";
 		sleep 2500;
-		npctalk "Ira: Find the key to the 2nd floor banquet hall. There must be something beyond that!", .@ira$;
+		npctalk "이라: 2층 연회장 열쇠를 찾아봐. 그 너머에 뭔가 있을 거야!", .@ira$;
 		sleep 2500;
-		npctalk "Miriam: Adventurer, shall we all share our tasks?";
+		npctalk "미리암: 모험가님, 우리 모두 각자의 임무를 나눠 맡을까요?";
 		'adv_step = 2;
 		end;
 	}
 	if ('adv_step == 2) {
-		mes "[Miriam]";
-		mes "I think I should check to see if there are other employees and go up to the second floor.";
-		npctalk "Miriam: I think I should check to see if there are other employees and go up to the second floor.", instance_npcname("Miriam#miriam01");
+		mes "[미리암]";
+		mes "다른 직원들이 있는지 확인하고 2층으로 올라가 봐야 할 것 같아요.";
+		npctalk "미리엄: 다른 직원들이 있는지 확인하고 2층으로 올라가 봐야 할 것 같아요.", instance_npcname("Miriam#miriam01");
 		cutin "ep18_miriam_01.png",0;
 		next;
-		mes "[Miriam]";
-		mes "I feel a sharp presence beyond the central stairs.";
-		mes "Probably the Heart Hunter who fought in the temple.";
-		npctalk "Miriam: I feel a fierce presence. Probably the Heart Hunter.", instance_npcname("Miriam#miriam01");
+		mes "[미리암]";
+		mes "중앙 계단 너머에서 날카로운 기운이 느껴진다.";
+		mes "아마도 사원에서 싸웠던 심장 사냥꾼일 겁니다.";
+		npctalk "미리엄: 강렬한 기운이 느껴져. 아마도 심장 사냥꾼일 거야.", instance_npcname("Miriam#miriam01");
 		cutin "ep18_miriam_03.png",0;
 		next;
-		mes "[Miriam]";
-		mes "I'm worried about the missing piece of Ymir's heart.";
-		mes "If it's about inciting trouble, what happened at the temple is enough.";
-		npctalk "Miriam: I'm worried about the missing Ymir's heart. What happened at the temple is enough.", instance_npcname("Miriam#miriam01");
+		mes "[미리암]";
+		mes "저는 유미르의 심장에서 사라진 조각이 걱정됩니다.";
+		mes "만약 소요를 선동하는 문제라면, 사원에서 일어난 일만으로도 충분합니다.";
+		npctalk "미리암: 난 이미르의 심장이 없어진 게 걱정이야. 사원에서 일어난 일만으로도 충분해.", instance_npcname("Miriam#miriam01");
 		next;
-		mes "[Miriam]";
-		mes "What if my father has other plans...";
-		mes "If you try to go down the wrong path again, I have to stop him.";
-		npctalk "Miriam: If my father has another plan and goes down the wrong path, I have to stop him.", instance_npcname("Miriam#miriam01");
+		mes "[미리암]";
+		mes "만약 아버지가 다른 계획을 가지고 계시다면 어떡하지...?";
+		mes "네가 다시 잘못된 길로 가려고 하면, 내가 막아야겠어.";
+		npctalk "미리엄: 만약 아버지가 다른 계획을 세우고 잘못된 길로 간다면, 나는 아버지를 막아야 해.", instance_npcname("Miriam#miriam01");
 		next;
-		mes "[Miriam]";
-		mes "First, shall we get some information from the villa employees?";
-		mes "I see a male employee over there.";
-		npctalk "Miriam: First, shall we get some information from the remaining employees?", instance_npcname("Miriam#miriam01");
+		mes "[미리암]";
+		mes "먼저 빌라 직원들에게 정보를 좀 얻어볼까요?";
+		mes "저기 남자 직원이 보이네요.";
+		npctalk "미리엄: 먼저, 나머지 직원들에게서 정보를 좀 얻어볼까요?", instance_npcname("Miriam#miriam01");
 		cutin "ep18_miriam_02.png",0;
 		next;
-		mes "[Miriam]";
-		mes "I'll go to that employee.";
-		mes "Adventurer, please find another employee and ask him about the mansion.";
-		npctalk "Miriam: I'll go to that employee. Adventurer, please find another employee.", instance_npcname("Miriam#miriam01");
+		mes "[미리암]";
+		mes "제가 그 직원에게 가겠습니다.";
+		mes "모험가님, 다른 직원을 찾아 저택에 대해 물어보세요.";
+		npctalk "미리암: 제가 그 직원에게 가겠습니다. 모험가님, 다른 직원을 찾아주세요.", instance_npcname("Miriam#miriam01");
 		close2;
 		cutin "",255;
-		npctalk "Then I will go to the employee over there.", instance_npcname("Miriam#miriam01");
+		npctalk "그럼 저는 저기 계신 직원분께 가겠습니다.", instance_npcname("Miriam#miriam01");
 		if ('adv_step == 2) {
 			'adv_step = 3;
 			npcwalkto 136,46;
@@ -162,7 +162,7 @@ OnInstanceInit:
 		end;
 	}
 	if ('adv_step == 3) {
-		npctalk "Miriam: Find another employee.";
+		npctalk "미리엄: 다른 직원을 찾아보세요.";
 		end;
 	}
 	if ('adv_step == 4) {
@@ -173,26 +173,26 @@ OnInstanceInit:
 		.@rh01$ = instance_npcname("Heart Hunter#rh01");
 		.@rh02$ = instance_npcname("Heart Hunter#rh02");
 
-		npctalk "Miriam: After all, it must be a Heart Hunter disguised as a priest, right?", instance_npcname("Miriam#miriam01");
+		npctalk "미리암: 결국엔 사제로 위장한 하트 헌터일 거야, 그렇지?", instance_npcname("Miriam#miriam01");
 		specialeffect EF_SCREEN_QUAKE;
 		sleep 2000;
 		emotion ET_SURPRISE, getnpcid(0, instance_npcname("Miriam#miriam01"));
 		emotion ET_HUK, getnpcid(0, .@extra02$);
-		mapannounce 'map_adv$, "Crying Voice: Oh my! Why are you like this! Help me!", bc_map, 0xFF99;
+		mapannounce 'map_adv$, "울먹이는 목소리: 어머나! 왜 이러시는 거예요! 도와주세요!", bc_map, 0xFF99;
 		sleep 1000;
-		npctalk "Miriam: Now there's screaming! What's happening?", instance_npcname("Miriam#miriam01");
+		npctalk "미리엄: 비명 소리가 들려! 무슨 일이야?", instance_npcname("Miriam#miriam01");
 		sleep 1000;
-		mapannounce 'map_adv$, "Kyaaaaaaaaaaa-!", bc_map, 0xFF99;
+		mapannounce 'map_adv$, "꺄아아아아아아-!", bc_map, 0xFF99;
 		sleep 1000;
-		npctalk "Miriam: Ira!!", instance_npcname("Miriam#miriam01");
+		npctalk "미리암: 이라!!", instance_npcname("Miriam#miriam01");
 		sleep 2500;
-		npctalk "Miriam: I guess something happened. Let's go to Ira.", instance_npcname("Miriam#miriam01");
+		npctalk "미리엄: 무슨 일이 생긴 것 같아. 이라에게 가보자.", instance_npcname("Miriam#miriam01");
 		sleep 2500;
-		npctalk "Hans: Miss! Please take me with you!", .@extra02$;
+		npctalk "한스: 아가씨! 저도 데려가 주세요!", .@extra02$;
 		sleep 2500;
-		npctalk "Miriam: Then I will come and see if Ira and the others are safe.", instance_npcname("Miriam#miriam01");
+		npctalk "미리암: 그럼 제가 가서 아이라와 다른 사람들이 안전한지 확인해 볼게요.", instance_npcname("Miriam#miriam01");
 		sleep 2500;
-		npctalk "Miriam: Adventurer, please enter first. Mr. Hans, let's go together.", instance_npcname("Miriam#miriam01");
+		npctalk "미리암: 모험가님, 먼저 들어가세요. 한스 씨, 저희도 같이 가요.", instance_npcname("Miriam#miriam01");
 		sleep 2500;
 		disablenpc .@extra01$;
 		disablenpc .@extra02$;
@@ -200,8 +200,8 @@ OnInstanceInit:
 		enablenpc .@rh01$;
 		enablenpc .@rh02$;
 		sleep 1000;
-		npctalk "Oh, isn't it our old friend?", .@rh01$;
-		npctalk "Thank you for your work on the Wolf Village!", .@rh02$;
+		npctalk "어머, 우리 옛 친구 아니신가요?", .@rh01$;
+		npctalk "늑대 마을 작업에 참여해 주셔서 감사합니다!", .@rh02$;
 		sleep 2500;
 		disablenpc .@rh01$;
 		disablenpc .@rh02$;
@@ -216,44 +216,44 @@ OnInstanceInit:
 
 1@adv,100,24,4	script	Villa Employee#extra01	4_F_SHABBY,{
 	if ('adv_step == 3) {
-		mes "[Villa Employee]";
-		mes "This is my first time meeting you. Who are you?";
-		mes "Are you the elder's guest?";
+		mes "[빌라 직원]";
+		mes "처음 뵙는데, 누구세요?";
+		mes "당신은 장로님의 손님이십니까?";
 		next;
-		select( "Where is Amal?" );
-		mes "[Villa Employee]";
-		mes "Wouldn't he be at the chapel?";
-		mes "Whenever you come here, please look for the chapel first...";
+		select( "아말은 어디에 있나요?" );
+		mes "[빌라 직원]";
+		mes "그는 예배당에 있지 않을까요?";
+		mes "이곳에 오실 때는 언제나 먼저 예배당을 찾아주세요...";
 		next;
-		unittalk getcharid(3), "" + strcharinfo(0) + " : Is there a chapel at the villa?";
-		mes "[Villa Employee]";
-		mes "Yes. He seemed to be a man of faith, so he built a chapel inside the mansion.";
+		unittalk getcharid(3), "" + strcharinfo(0) + " 별장에 예배당이 있나요?";
+		mes "[빌라 직원]";
+		mes "네. 그는 신앙심이 깊은 사람이었던 것 같습니다. 그래서 저택 안에 예배당을 지었죠.";
 		next;
-		select( "What about other people?" );
-		mes "[Villa Employee]";
-		mes "Most were suddenly fired.";
-		mes "I also heard someone tell me to leave a little while ago. Is this a sign of mass layoff!?";
+		select( "다른 사람들은 어때요?" );
+		mes "[빌라 직원]";
+		mes "대부분은 갑자기 해고당했다.";
+		mes "조금 전에 누군가 저보고 나가라고 하는 소리를 들었어요. 혹시 대규모 해고의 전조인가요?";
 		next;
-		mes "[Villa Employee]";
-		mes "The atmosphere was so heavy that I couldn't even ask.";
-		mes "The chapel can be reached by going up the central stairs and past the banquet hall.";
-		mes "Then, go do your business.";
+		mes "[빌라 직원]";
+		mes "분위기가 너무 무거워서 감히 물어볼 수도 없었다.";
+		mes "예배당은 중앙 계단을 올라가 연회장을 지나면 도착할 수 있습니다.";
+		mes "그럼, 볼일 보러 가세요.";
 		if ('adv_step == 3)
 			'adv_step = 4;
 		close;
 	}
-	mes "[Villa Employee]";
-	mes "Sir Amal went to chapel.";
-	mes "Go up the central stairs, pass the banquet hall, and you will reach the chapel.";
+	mes "[빌라 직원]";
+	mes "아말 경은 예배당에 갔습니다.";
+	mes "중앙 계단을 올라가 연회장을 지나면 예배당에 도착합니다.";
 	close;
 }
 
 1@adv,138,49,3	script	Villa Employee#extra02	4_M_MIDDLE,{
 	if ('adv_step < 4) {
-		mes "This is the person Miriam decided to investigate. Let's find another one.";
+		mes "미리엄이 조사하기로 결정한 사람은 바로 이 사람이야. 다른 사람을 찾아보자.";
 		close;
 	}
-	npctalk "Hans: The atmosphere of the villa is unusual. All of the attendant priests were armed.", instance_npcname("Villa Employee#extra02");
+	npctalk "한스: 별장의 분위기가 특이하군. 시중드는 사제들이 모두 무장하고 있었어.", instance_npcname("Villa Employee#extra02");
 	end;
 }
 
@@ -280,7 +280,7 @@ OnMobDead:
 1@adv,124,17,7	script(DISABLED)	Miriam#miriam02	EP18_NPC_MIRIAM,{
 	if ('adv_step < 10) {
 		if (is_party_leader() == false || 'adv_step != 7) {
-			npctalk "Miriam: Leave this to me and take care of the Heart Hunter on the 2nd floor.";
+			npctalk "미리암: 이건 나한테 맡겨. 그리고 2층에 있는 하트 헌터를 처리해.";
 			end;
 		}
 		'adv_step = 8;
@@ -296,25 +296,25 @@ OnMobDead:
 		enablenpc instance_npcname("Heart Hunter#rh06");
 		enablenpc instance_npcname("Heart Hunter#rh07");
 
-		npctalk "Ha... didn't I clearly tell you to clear everything? Why are there still rats?", instance_npcname("Heart Hunter#rh05");
+		npctalk "하... 내가 분명히 다 치우라고 하지 않았어? 왜 아직도 쥐가 있는 거야?", instance_npcname("Heart Hunter#rh05");
 		sleep2 2500;
-		npctalk "Miriam: Adventurer, I will take care of this.", instance_npcname("Miriam#miriam02");
+		npctalk "미리암: 모험가님, 제가 처리하겠습니다.", instance_npcname("Miriam#miriam02");
 		sleep2 2500;
-		npctalk "Miriam: Adventurer, please break through the lobby. Let's process it separately.", instance_npcname("Miriam#miriam02");
+		npctalk "미리암: 모험가님, 로비를 뚫고 들어오세요. 따로 처리하겠습니다.", instance_npcname("Miriam#miriam02");
 		sleep2 2000;
-		npctalk "You can't just leave like that. Block the stairs!", instance_npcname("Heart Hunter#rh05");
+		npctalk "그렇게 그냥 나가면 안 돼. 계단을 막아!", instance_npcname("Heart Hunter#rh05");
 		unitwalk getnpcid(0,instance_npcname("Heart Hunter#rh03")), 124,40, .@miriam$ + "::OnMove1";
 		unitwalk getnpcid(0,instance_npcname("Heart Hunter#rh07")), 124,41, .@miriam$ + "::OnMove2";
 		sleep2 3000;
-		npctalk "Miriam: Adventurer! Please stop them! I'll take care of this and evacuate everyone!", instance_npcname("Miriam#miriam02");
+		npctalk "미리암: 모험가 여러분! 제발 저들을 막아주세요! 제가 처리하고 모두를 대피시키겠습니다!", instance_npcname("Miriam#miriam02");
 		sleep2 1500;
-		npctalk "Are you going alone?", instance_npcname("Heart Hunter#rh05");
+		npctalk "혼자 가시는 건가요?", instance_npcname("Heart Hunter#rh05");
 		sleep2 1500;
-		npctalk "You can't run away!", instance_npcname("Heart Hunter#rh06");
+		npctalk "도망칠 수 없어!", instance_npcname("Heart Hunter#rh06");
 		sleep2 1000;
-		npctalk "How dare you!", instance_npcname("Heart Hunter#rh04");
+		npctalk "어떻게 감히!", instance_npcname("Heart Hunter#rh04");
 		sleep2 1500;
-		npctalk "Miriam: Please leave this to me and deal with the Heart Hunter on the second floor.", instance_npcname("Miriam#miriam02");
+		npctalk "미리암: 이건 저에게 맡겨주시고 2층에 있는 하트 헌터를 처리해 주세요.", instance_npcname("Miriam#miriam02");
 		setpcblock PCBLOCK_NPC, false;
 
 		if ('adv_step != 8)
@@ -345,9 +345,9 @@ OnMobDead:
 	if ('adv_step == 11) {
 		'adv_step = 12;
 		setpcblock PCBLOCK_NPC, true;
-		npctalk "Miriam: The door is locked. Shall we split up and search for it?", instance_npcname("Miriam#miriam02");
+		npctalk "미리엄: 문이 잠겼어. 우리 흩어져서 찾아볼까?", instance_npcname("Miriam#miriam02");
 		sleep2 2500;
-		npctalk "Miriam: I'll go to the right hallway. Adventurer, please search the left side.", instance_npcname("Miriam#miriam02");
+		npctalk "미리암: 저는 오른쪽 복도로 가겠습니다. 모험가 여러분, 왼쪽을 수색해 주세요.", instance_npcname("Miriam#miriam02");
 		setpcblock PCBLOCK_NPC, false;
 		sleep 2500;
 		unitwalk getnpcid(0), 131,97, instance_npcname("Miriam#miriam02") + "::OnRight";
@@ -392,15 +392,15 @@ OnMobDead:
 }
 
 1@adv,119,19,5	script(DISABLED)	Heart Hunter#rh04	EP18_MD_HEARTHUNTER_R,{
-	npctalk "Your courage is imaginary!";
+	npctalk "당신의 용기는 허구일 뿐입니다!";
 	end;
 }
 1@adv,124,21,3	script(DISABLED)	Heart Hunter#rh05	EP18_MD_HEARTHUNTER_R,{
-	npctalk "Are you going to handle it yourself?";
+	npctalk "당신이 직접 처리하실 건가요?";
 	end;
 }
 1@adv,130,18,3	script(DISABLED)	Heart Hunter#rh06	EP18_MD_HEARTHUNTER_R,{
-	npctalk "You can't escape!";
+	npctalk "도망칠 수 없어!";
 	end;
 }
 
@@ -447,15 +447,15 @@ OnMobDead:
 		end;
 	'adv_step = 14;
 	disablenpc instance_npcname("Silver Key#key01");
-	unittalk getcharid(3), "" + strcharinfo(0) + " : I found a small silver key.";
+	unittalk getcharid(3), "" + strcharinfo(0) + " 나는 작은 은색 열쇠를 찾았다.";
 	end;
 }
 
 1@adv,63,142,0	script	Locked Door#key01	4_POINT_WHITE,{
 	if ('adv_step < 14) {
-		mes "Firmly Locked Door.";
-		mes "There is a Silver Key hole.";
-		unittalk getcharid(3), "" + strcharinfo(0) + " : I need a Silver Key.";
+		mes "문이 굳게 잠겼습니다.";
+		mes "은색 열쇠 구멍이 있습니다.";
+		unittalk getcharid(3), "" + strcharinfo(0) + " 실버 키가 필요해요.";
 		close;
 	}
 	progressbar "4D4DFF",2;
@@ -495,7 +495,7 @@ OnMobDead:
 		end;
 	'adv_step = 17;
 	disablenpc instance_npcname("Gold Key#key02");
-	unittalk getcharid(3), "" + strcharinfo(0) + " : I found a small golden key.";
+	unittalk getcharid(3), "" + strcharinfo(0) + "나는 작은 금색 열쇠를 찾았다.";
 	end;
 }
 
@@ -506,10 +506,10 @@ OnMobDead:
 	if ('adv_step < 17)
 		end;
 	if ('adv_step == 17) {
-		mes "[Miriam]";
-		mes "You found the key.";
-		mes "It appears that several of the Villa's employees are trapped inside.";
-		mes "I'll be on guard, so go in.";
+		mes "[미리암]";
+		mes "열쇠를 찾으셨군요.";
+		mes "빌라 직원 몇 명이 안에 갇힌 것으로 보입니다.";
+		mes "제가 경계를 설 테니 들어가세요.";
 		cutin "ep18_miriam_01.png",0;
 		close2;
 		cutin "",255;
@@ -524,20 +524,20 @@ OnMobDead:
 		end;
 	}
 	if ('adv_step == 18) {
-		npctalk "Miriam: I will guard the entrance, so please search the inside of the room.";
+		npctalk "미리암: 제가 입구를 지킬 테니, 방 안쪽을 먼저 수색해 주세요.";
 		end;
 	}
 	if ('adv_step == 19) {
-		mes "[Miriam]";
-		mes "If we leave it like this, all of these people will be disposed.";
-		mes "We need to evacuate them before more Heart Hunters come in.";
+		mes "[미리암]";
+		mes "이대로 두면 이 사람들 모두 버려질 겁니다.";
+		mes "더 많은 하트 헌터들이 들어오기 전에 그들을 대피시켜야 합니다.";
 		cutin "ep18_miriam_01.png",0;
 		next;
-		mes "[Miriam]";
-		mes "Then, I will leave the investigation of the chapel to the adventurer.";
-		mes "I will take those people and evacuate them.";
+		mes "[미리암]";
+		mes "그렇다면 예배당 조사는 모험가에게 맡기겠습니다.";
+		mes "저는 그 사람들을 데리고 대피하겠습니다.";
 		mes "Please.";
-		npctalk "Miriam: People inside. I will escort you. Let's go out.", instance_npcname("Miriam#miriam03");
+		npctalk "미리엄: 안에 사람들이 있어요. 제가 안내해 드릴게요. 나가시죠.", instance_npcname("Miriam#miriam03");
 		close2;
 		cutin "",255;
 		disablenpc instance_npcname("Miriam#miriam03");
@@ -547,55 +547,55 @@ OnMobDead:
 }
 
 1@adv,202,145,3	script(DISABLED)	Villa Employee#ex21	4_F_SHABBY,{
-	npctalk "Villa Employee: Please let me out of here...", instance_npcname("Villa Employee#ex21");
+	npctalk "빌라 직원: 제발 여기서 나가게 해주세요...", instance_npcname("Villa Employee#ex21");
 	end;
 }
 
 1@adv,204,143,3	script(DISABLED)	Villa Employee#ex22	4_M_RACHMAN2,{
 	if ('adv_step == 18) {
-		mes "[Villa Employee]";
-		mes "You're going to dispose the evidence huh! Murderer!";
-		mes "Huh?";
+		mes "[빌라 직원]";
+		mes "증거를 없애려는 거냐! 살인자!";
+		mes "뭐?";
 		next;
-		mes "[Villa Employee]";
-		mes "You! You're here to save us, right?";
-		mes "The voice I heard outside was Miriam, right?";
+		mes "[빌라 직원]";
+		mes "당신! 우리를 구하러 온 거죠?";
+		mes "밖에서 들린 목소리는 미리엄의 목소리였죠, 맞죠?";
 		next;
-		mes "[Villa Employee]";
-		mes "Investigate the chapel! Something definitely suspicious here!";
-		mes "What? Is the banquet hall closed?";
+		mes "[빌라 직원]";
+		mes "예배당을 조사해! 뭔가 수상한 점이 있어!";
+		mes "뭐라고요? 연회장이 닫혔다고요?";
 		next;
-		mes "[Villa Employee]";
-		mes "Here's the key to the side door.";
-		mes "You can leave this room and open the door right in front of you.";
-		mes "I have a spare key because this is the door I usually use to deliver food.";
+		mes "[빌라 직원]";
+		mes "여기 옆문 열쇠가 있어요.";
+		mes "이 방을 나가서 바로 앞에 있는 문을 열면 됩니다.";
+		mes "저는 음식을 배달할 때 주로 이 문을 이용하기 때문에 여분의 열쇠가 있습니다.";
 		next;
-		mes "[Villa Employee]";
-		mes "And please save us.";
-		mes "We are not guilty of anything.";
+		mes "[빌라 직원]";
+		mes "제발 저희를 구해 주세요.";
+		mes "우리는 아무런 죄도 없습니다.";
 		next;
-		mes "You got a ^4d4dffSpare Key^000000.";
+		mes "^4d4dff예비키^000000을 얻으셨습니다.";
 		if ('adv_step == 18)
 			'adv_step = 19;
 		close;
 	}
-	npctalk "Villa Employee: You can open the door with the spare key.", instance_npcname("Villa Employee#ex22");
+	npctalk "빌라 직원: 여분의 키로 문을 열 수 있습니다.", instance_npcname("Villa Employee#ex22");
 	end;
 }
 
 1@adv,210,140,6	script(DISABLED)	Villa Employee#ex23	4_M_RACHMAN1,{
-	npctalk "Villa Employee: Are we really going to die?", instance_npcname("Villa Employee#ex23");
+	npctalk "별장 직원: 우리 정말 죽는 건가요?", instance_npcname("Villa Employee#ex23");
 	end;
 }
 
 1@adv,173,142,0	script	Locked Door#key03	4_POINT_YELLOW,{
 	if ('adv_step < 19) {
-		mes "Firmly Locked Door.";
-		mes "There is a small key hole.";
-		unittalk getcharid(3), "" + strcharinfo(0) + " : I need a key.";
+		mes "문이 굳게 잠겼습니다.";
+		mes "작은 열쇠 구멍이 있습니다.";
+		unittalk getcharid(3), "" + strcharinfo(0) + " 열쇠가 필요해요.";
 		close;
 	}
-	mes "I used a spare key.";
+	mes "여분의 키를 사용했습니다.";
 	progressbar "4D4DFF",2;
 	if ('adv_step != 19)
 		close;
@@ -636,8 +636,8 @@ OnMobDead:
 	if ('adv_step < 20)
 		end;
 	if ('adv_step < 22) {
-		mes "The door won't budge.";
-		mes "It feels like a strong magical force is blocking the door.";
+		mes "문이 꼼짝도 안 해요.";
+		mes "마치 강력한 마법의 힘이 문을 막고 있는 것 같아요.";
 		close;
 	}
 	warp 'map_adv$,124,217;
@@ -655,7 +655,7 @@ OnMobDead:
 	if ('adv_step != 21)
 		end;
 	if ('Knight_left == 1)
-		npctalk "The magic of the splendid knight has already disappeared.";
+		npctalk "그 찬란한 기사의 마법은 이미 사라졌다.";
 	else {
 		'Knight_left = 1;
 		if ('Knight_left == 1 && 'Knight_righ == 1) {
@@ -678,7 +678,7 @@ OnMobDead:
 	if ('adv_step != 21)
 		end;
 	if ('Knight_righ == 1)
-		npctalk "The magic of the splendid knight has already disappeared.";
+		npctalk "그 찬란한 기사의 마법은 이미 사라졌다.";
 	else {
 		'Knight_righ = 1;
 		if ('Knight_left == 1 && 'Knight_righ == 1) {
@@ -698,10 +698,10 @@ OnMobDead:
 1@adv,159,221,3	script(DISABLED)	#flower01	4_POINT_WHITE,{
 	if ('adv_step < 22)
 		end;
-	mes "There is a flower-shaped device.";
+	mes "꽃 모양의 장치가 있습니다.";
 	next;
-	if (select( "Use it.", "Leave it." ) == 2) {
-		unittalk getcharid(3), "" + strcharinfo(0) + " : Let's find another device.";
+	if (select( "사용하세요.", "그냥 놔둬." ) == 2) {
+		unittalk getcharid(3), "" + strcharinfo(0) + " 다른 기기를 찾아보자.";
 		end;
 	}
 	progressbar "4D4DFF",5;
@@ -716,7 +716,7 @@ OnMobDead:
 		enablenpc instance_npcname("Schulang#shulang01");
 		end;
 	}
-	mes "Nothing happened.";
+	mes "아무 일도 일어나지 않았어요.";
 	close;
 }
 
@@ -729,8 +729,8 @@ OnMobDead:
 	if ('adv_step < 22)
 		end;
 	if ('adv_step == 22) {
-		mes "There is a door with an elegant ^4d4dffLily^000000 engraved on it.";
-		mes "I feel an unknown magical power.";
+		mes "우아한 ^4d4dffLily^000000이 새겨진 문이 있습니다.";
+		mes "알 수 없는 마법의 힘이 느껴져요.";
 		close;
 	}
 	// (23 or more)
@@ -743,53 +743,53 @@ OnMobDead:
 	if ('adv_step != 23)
 		end;
 	if (is_party_leader() == false) {
-		mes "[Schulang]";
-		mes "adventurer... didn't you come alone?";
-		mes "Who is your boss?";
+		mes "[학교]";
+		mes "모험가님... 혼자 오신 거 아니었나요?";
+		mes "당신의 상사는 누구입니까?";
 		close;
 	}
-	mes "[Schulang]";
-	mes "Coming this far is not normal.";
-	mes "He's a talent you don't want to miss.";
-	mes "How about joining hands with us?";
+	mes "[학교]";
+	mes "여기까지 오는 건 정상적인 일이 아니다.";
+	mes "그는 절대 놓쳐서는 안 될 재능을 가진 인물입니다.";
+	mes "저희와 함께 손을 잡으시는 건 어떠세요?";
 	cutin "ep18_shulang.png",2;
 	next;
-	switch( select( "Nonsense.", "What's in it for me?" ) ) {
+	switch( select( "Nonsense.", "나에게 돌아오는 이득은 무엇일까?" ) ) {
 	case 1:
-		unittalk getcharid(3), "" + strcharinfo(0) + " : Nonsense.";
-		mes "[Schulang]";
-		mes "I see.";
-		mes "I didn't think you were this fool.";
+		unittalk getcharid(3), "" + strcharinfo(0) + " 무의미한 말.";
+		mes "[학교]";
+		mes "알겠어요.";
+		mes "네가 이렇게 바보일 줄은 몰랐어.";
 		next;
 		break;
 	case 2:
-		unittalk getcharid(3), "" + strcharinfo(0) + " : What's in it for me?";
+		unittalk getcharid(3), "" + strcharinfo(0) + " 나에게 돌아오는 이득은 무엇일까?";
 		break;
 	}
-	mes "[Schulang]";
-	mes "Adventurers always seek strength.";
-	mes "The strength you want, we can give it to you.";
+	mes "[학교]";
+	mes "모험가들은 언제나 강인함을 추구한다.";
+	mes "당신이 원하는 힘을 우리는 당신에게 줄 수 있습니다.";
 	next;
-	select( "Why are you offering me that?" );
-	mes "[Schulang]";
-	mes "I think I can communicate better than that stubborn guy.";
+	select( "왜 저에게 그걸 제안하시는 거죠?" );
+	mes "[학교]";
+	mes "나는 저 고집 센 사람보다 의사소통을 더 잘할 수 있을 것 같아.";
 	next;
-	select( "If you're a stubborn guy, what do you mean?" );
-	mes "[Schulang]";
-	mes "It was that kind of name. A talent who can become stronger if he just changes his old-fashioned personality.";
-	mes "Unfortunately, the opportunity has passed.";
+	select( "당신이 고집 센 사람이라면, 무슨 뜻인가요?" );
+	mes "[학교]";
+	mes "그런 느낌의 이름이었다. 고루한 성격만 바꾸면 훨씬 더 강해질 수 있는 재능을 가진 사람 같은 이름.";
+	mes "아쉽게도 그 기회는 이미 지나갔습니다.";
 	next;
-	mes "[Schulang]";
-	mes "From the looks of it, it doesn't look like you'll accept our offer huh.";
-	mes "It can't be helped.";
+	mes "[학교]";
+	mes "보아하니 우리 제안을 받아들이지 않으실 것 같군요.";
+	mes "어쩔 수 없어.";
 	close2;
 	cutin "",255;
 	if ('adv_step != 23)
 		end;
 	'adv_step = 24;
-	npctalk "Schulang: You can no longer enter.", instance_npcname("Schulang#shulang01");
+	npctalk "슐랑: 더 이상 입장할 수 없습니다.", instance_npcname("Schulang#shulang01");
 	sleep 2500;
-	npctalk "Schulang: You must die here for the greater good.", instance_npcname("Schulang#shulang01");
+	npctalk "슐랑: 더 큰 선을 위해 너는 여기서 죽어야 한다.", instance_npcname("Schulang#shulang01");
 	sleep 2500;
 	disablenpc instance_npcname("Schulang#shulang01");
 	donpcevent instance_npcname("adv_middle_boss") + "::OnStart";
@@ -825,7 +825,7 @@ OnMobDead:
 
 // Boss room 1
 1@adv,127,356,3	script(DISABLED)	Illusion Bagot#bagot01	4_EP18_BAGOT,{
-	npctalk "It's fun.";
+	npctalk "재밌어요.";
 	end;
 }
 
@@ -833,9 +833,9 @@ OnMobDead:
 	if ('adv_step != 25)
 		end;
 	if (is_party_leader() == false) {
-		mes "[Youth]";
-		mes "Do not touch me! The blasphemy!";
-		npctalk "Youth: Don't touch me! Profane things!";
+		mes "[청년]";
+		mes "날 만지지 마! 신성모독이야!";
+		npctalk "청소년: 나한테 손대지 마! 불경스러운 짓이야!";
 		close;
 	}
 	.@bagot01$ = instance_npcname("Illusion Bagot#bagot01");
@@ -843,38 +843,38 @@ OnMobDead:
 	.@shulang02$ = instance_npcname("Schulang#shulang02");
 	.@miriam04$ = instance_npcname("Miriam#miriam04");
 
-	mes "[Amal]";
-	mes "These abominable heretics somehow managed to come this far.";
-	mes "But it doesn't matter.";
-	mes "You will soon kneel before the Supreme Divinity.";
-	npctalk "Amal: These abominable heretics somehow managed to come this far. But you will soon kneel before the Supreme Divinity.";
+	mes "[아말]";
+	mes "이 혐오스러운 이단자들이 어떻게 여기까지 왔는지 모르겠군.";
+	mes "하지만 상관없어요.";
+	mes "머지않아 당신은 지고한 신 앞에 무릎을 꿇게 될 것입니다.";
+	npctalk "아말: 이 혐오스러운 이단자들이 어떻게 여기까지 왔는지 모르겠지만, 너희는 머지않아 지고한 신 앞에 무릎을 꿇게 될 것이다.";
 	next;
-	mes "[Amal]";
-	mes "I will show miracles to the arrogant servants of Odin.";
-	mes "Bagot, please continue with the ritual.";
-	npctalk "Amal: I will show miracles to the arrogant servants of Odin. Bagot, please continue with the ritual.";
+	mes "[아말]";
+	mes "나는 오딘의 오만한 하인들에게 기적을 보여주겠다.";
+	mes "바곳, 의식을 계속 진행해 주십시오.";
+	npctalk "아말: 오딘의 오만한 하수인들에게 기적을 보여주겠다. 바곳, 의식을 계속 진행해라.";
 	next;
-	mes "[Amal]";
-	mes "They will personally witness Freyja's miracles.";
-	mes "Bow down at the feet of God and be reborn as a servant of God!";
-	npctalk "Amal: They will personally witness Freyja's miracles. Bow down and be reborn as a servant of God!";
+	mes "[아말]";
+	mes "그들은 프레이야의 기적을 직접 목격하게 될 것입니다.";
+	mes "하나님 발 앞에 엎드려 하나님의 종으로 거듭나십시오!";
+	npctalk "아말: 그들은 프레이야의 기적을 직접 목격하게 될 것입니다. 엎드려 경배하고 하나님의 종으로 다시 태어나십시오!";
 	next;
 	cutin "ep18_bagot_01.png",2;
-	mes "[Bagot]";
-	mes "Wow... the way you talk.. such inspiration. Anyway,";
-	mes "I made a promise, so I will keep it. Do you understand?";
-	npctalk "Bagot: Wow... the way you talk.. such inspiration. Anyway, I made a promise, so I will keep it.", .@bagot01$;
+	mes "[바곳]";
+	mes "와... 말투가 참... 영감을 얻으려는 것 같네요. 아무튼,";
+	mes "나는 약속을 했으니 지킬 거야. 알겠어?";
+	npctalk "바곳: 와... 말씀하시는 걸 보니 영감을 얻으려는 것 같네요. 어쨌든 약속했으니 지킬 겁니다.", .@bagot01$;
 	next;
 	cutin "ep18_bagot_03.png",2;
-	mes "[Bagot]";
-	mes "First of all, are you THE adventurer?";
-	mes "Would you like to take a look at my work?";
-	mes "You too can experience the feeling of taking beautifully crafted pottery out of the kiln.";
-	npctalk "Bagot: Are you THE adventurer? Would you like to take a look at my work?", .@bagot01$;
+	mes "[바곳]";
+	mes "우선, 당신은 진정한 모험가인가요?";
+	mes "제 작품 한번 보시겠어요?";
+	mes "정성껏 만들어진 도자기를 가마에서 꺼내는 그 감동을 직접 경험해 볼 수도 있습니다.";
+	npctalk "바곳: 당신이 바로 그 모험가이신가요? 제 작품을 한번 보시겠어요?", .@bagot01$;
 	close2;
 
 	setpcblock PCBLOCK_NPC, true;
-	npctalk "Bagot: It feels great to be able to check the results of the experiment right away.", .@bagot01$;
+	npctalk "바곳: 실험 결과를 바로 확인할 수 있어서 정말 좋네요.", .@bagot01$;
 	specialeffect EF_DQ9_CHARGE3, AREA, .@demigod$;
 	sleep2 500;
 	specialeffect EF_SCREEN_QUAKE, AREA, .@demigod$;
@@ -884,67 +884,67 @@ OnMobDead:
 	cloakoffnpc .@demigod$;	// cloakoffnpc to display effect on rAthena
 	setpcblock PCBLOCK_NPC, false;
 
-	mes "[Bagot]";
-	mes "Ta-da~ The essence of science and magic is right here!";
-	mes "I will descend a being in the form of a god!";
-	npctalk "Bagot: Ta-da~ The essence of science and magic is right here!", .@bagot01$;
+	mes "[바곳]";
+	mes "짜잔~ 과학과 마법의 정수가 바로 여기에!";
+	mes "나는 신의 모습으로 강림하리라!";
+	npctalk "바곳: 짜잔~ 과학과 마법의 정수가 바로 여기에 있어요!", .@bagot01$;
 	next;
-	mes "[Bagot]";
-	mes "Being a vessel for God to descend on is no problem for this bar!";
-	npctalk "Bagot: Being a vessel for God to descend on is no problem for this bar!", .@bagot01$;
+	mes "[바곳]";
+	mes "하나님이 강림하시는 도구가 되는 것은 이 술집에게는 전혀 문제가 되지 않습니다!";
+	npctalk "바곳: 신이 강림하는 도구가 되는 건 이 술집에 전혀 문제가 되지 않아요!", .@bagot01$;
 	next;
 	cutin "ep18_demifreya.png",1;
-	mes "[A Being Called God]";
+	mes "[신이라 불리는 존재]";
 	mes "....";
-	npctalk "A Being Called God: ....", .@demigod$;
+	npctalk "신이라 불리는 존재: ....", .@demigod$;
 	next;
-	mes "[Amal]";
-	mes "Oh.. .Oooh...! Beautiful Freyja... ! Are you my God?";
-	npctalk "Amal: Oh.. .Oooh...! Beautiful Freyja... ! Are you my God?";
+	mes "[아말]";
+	mes "오... 오오...! 아름다운 프레이야...! 당신은 나의 신이신가요?";
+	npctalk "아말: 오... 으으...! 아름다운 프레이야...! 당신은 나의 신이신가요?";
 	next;
-	mes "^4d4dffThe so-called divine being looks like a grown-up version of the Pope.^000000";
-	mes "^4d4dffA vessel for the goddess Freyja to descend to this world. Its essential purpose.^000000";
+	mes "^4d4dff그 소위 신적인 존재는 마치 교황의 성장한 모습처럼 보인다.^000000";
+	mes "^4d4dff프레이야 여신이 이 세상으로 강림하기 위한 그릇. 그것의 본질적인 목적이다.^000000";
 	next;
-	select( "Could it be the Pope?!" );
-	unittalk getcharid(3), "" + strcharinfo(0) + " : Could it be the Pope?!";
+	select( "설마 교황이신가요?!" );
+	unittalk getcharid(3), "" + strcharinfo(0) + " 설마 교황이신가요?!";
 	cutin "ep18_bagot_02.png",2;
-	mes "[Bagot]";
-	mes "What kind of sound is that?";
-	mes "No matter how bad Bagot was, he wasn't so mean that he would mess with the Pope!";
-	npctalk "Bagot: What kind of sound is that?", .@bagot01$;
+	mes "[바곳]";
+	mes "저 소리는 무슨 소리지?";
+	mes "바곳이 아무리 나쁜 놈이었다 해도, 교황을 건드릴 정도로 못된 놈은 아니었다!";
+	npctalk "바곳: 저건 무슨 소리지?", .@bagot01$;
 	next;
 	cutin "ep18_bagot_03.png",2;
-	mes "[Bagot]";
-	mes "How rude are you to my masterpiece?!";
-	mes "Are you afraid of my ability to even create a vessel for God to descend on?";
-	npctalk "Bagot: Are you afraid of my ability to even create a vessel for God to descend on?", .@bagot01$;
+	mes "[바곳]";
+	mes "내 걸작에 이렇게 무례하게 굴다니!";
+	mes "당신은 내가 하나님이 강림하실 그릇을 만들어낼 수 있을지조차 두려워하는 겁니까?";
+	npctalk "바곳: 내가 신이 강림할 그릇을 만들어낼 수 있다는 사실조차 두려워하는 건가?", .@bagot01$;
 	next;
 	cutin "",255;
-	mes "[Amal]";
-	mes "Oh.. .Oooh...! My beautiful Goddess Freyja... !";
-	npctalk "Amal: Oh.. .Oooh...! My beautiful Goddess Freyja... !";
+	mes "[아말]";
+	mes "오... 오오...! 나의 아름다운 여신 프레이야...!";
+	npctalk "아말: 오... 으으...! 나의 아름다운 여신 프레이야...!";
 	next;
 	cutin "ep18_bagot_02.png",2;
-	mes "[Bagot]";
-	mes "You're not listening to me. Then what is it? Oh~! Yes, a miracle. All you have to do is show me a miracle, right?";
-	npctalk "Bagot: You're not listening to me. Then what is it? Oh~! Yes, a miracle.", .@bagot01$;
+	mes "[바곳]";
+	mes "제 말을 안 듣고 계시네요. 그럼 대체 뭐죠? 아~! 네, 기적이요. 기적을 보여주기만 하면 되는 거죠?";
+	npctalk "바곳: 내 말을 안 듣고 있잖아. 그럼 대체 뭐야? 아~! 그래, 기적이야.", .@bagot01$;
 	next;
 	cutin "ep18_demifreya.png",1;
-	mes "[A Being Called God]";
+	mes "[신이라 불리는 존재]";
 	mes ".....";
-	npctalk "A Being Called God: .....", .@demigod$;
+	npctalk "신이라 불리는 존재: .....", .@demigod$;
 	next;
-	mes "[A Being Called God]";
+	mes "[신이라 불리는 존재]";
 	mes ".....";
 	sleep2 500;
 	mes "We";
-	npctalk "A Being Called God: ..We..", .@demigod$;
+	npctalk "신이라 불리는 존재: ..우리..", .@demigod$;
 	sleep2 1000;
 	mes "..a..";
-	npctalk "A Being Called God: ..a..", .@demigod$;
+	npctalk "신이라 불리는 존재: ..a..", .@demigod$;
 	sleep2 1000;
 	mes "k..";
-	npctalk "A Being Called God: k...", .@demigod$;
+	npctalk "신이라 불리는 존재: k...", .@demigod$;
 	close2;
 	cutin "",255;
 
@@ -955,86 +955,86 @@ OnMobDead:
 	specialeffect EF_BEGINSPELL_YB, AREA, .@shulang02$;
 	cloakoffnpc .@shulang02$;
 	sleep2 2500;
-	npctalk "Bagot: What? Did you save him? Did you see the priest? What did Baggot say? I said it would be possible.", .@bagot01$;
+	npctalk "바곳: 뭐라고? 그를 구했어? 신부님을 봤어? 바곳이 뭐라고 했어? 가능할 거라고 했지.", .@bagot01$;
 	sleep2 1500;
 	setpcblock PCBLOCK_NPC, false;
 
 	cutin "ep18_bagot_03.png",2;
-	mes "[Bagot]";
-	mes "Here's the proof. Miracle~";
-	mes "Old priest. Since I summoned your god as promised, I will take the ^4d4dffHeart^000000 with me.";
-	npctalk "Bagot: Since I summoned your god as promised, I will take the Heart with me.", .@bagot01$;
+	mes "[바곳]";
+	mes "여기 증거가 있습니다. 기적이에요~";
+	mes "늙은 사제여. 약속대로 당신의 신을 소환했으니, ^4d4dffHeart^000000도 함께 가져가겠습니다.";
+	npctalk "바곳: 약속대로 당신의 신을 소환했으니, 심장을 가져가겠습니다.", .@bagot01$;
 	next;
-	mes "[Bagot]";
-	mes "I hope you live forever~";
-	npctalk "Bagot: I hope you live forever~", .@bagot01$;
+	mes "[바곳]";
+	mes "영원히 사시길 바라요~";
+	npctalk "바곳: 영원히 사시길 바라요~", .@bagot01$;
 	next;
 	cutin "",255;
-	mes "[Amal]";
-	mes "A lowly servant has witnessed the miracles of God!";
-	npctalk "Amal: A lowly servant has witnessed the miracles of God!";
+	mes "[아말]";
+	mes "미천한 종이 하나님의 기적을 목격했습니다!";
+	npctalk "아말: 미천한 종이 하나님의 기적을 목격했습니다!";
 	next;
 	cutin "ep18_bagot_01.png",2;
-	mes "[Bagot]";
-	mes "Are you even listening?";
-	mes "Schulang is a bit of a waste, but that's the end of his role.";
-	npctalk "Bagot: Are you even listening? Schulang is a bit of a waste, but that's the end of his role.", .@bagot01$;
+	mes "[바곳]";
+	mes "지금 내 말 듣고 있는 거야?";
+	mes "슐랑은 좀 아쉬운 캐릭터지만, 그게 그의 역할의 전부입니다.";
+	npctalk "바곳: 내 말 듣고 있는 거야? 슐랑은 좀 쓸모없는 캐릭터지만, 그게 그의 역할의 전부야.", .@bagot01$;
 	next;
 	cutin "ep18_bagot_03.png",2;
-	mes "[Bagot]";
-	mes "In the meantime, I kept my promise because I let you live with ^4d4dffstrong taste^000000.";
-	mes "I'll go~ So adventurer? Hello~!";
-	npctalk "Bagot: I have kept my promise since I have been able to live with the 'strong taste' for a while. So adventurer? Hello~!", .@bagot01$;
+	mes "[바곳]";
+	mes "그러는 동안, 나는 네가 ^4d4dffstrong 맛^000000을 느끼며 살도록 허락했으니 약속을 지킨 셈이지.";
+	mes "저는 갈게요~ 모험가님? 안녕하세요~!";
+	npctalk "바곳: 저는 '강한 맛'에 익숙해진 이후로 약속을 지켜왔습니다. 자, 모험가님? 안녕하세요~!", .@bagot01$;
 	close2;
 	cutin "",255;
 
 	setpcblock PCBLOCK_NPC, true;
 	disablenpc .@bagot01$;
-	npctalk "Amal: Oh... Frejya! Please punish these heretics!";
+	npctalk "아말: 오... 프레이야! 부디 이단자들을 벌해 주세요!";
 	sleep2 2500;
-	npctalk "A Being Called God: kkigigig kikikig kkigigig", .@demigod$;
+	npctalk "신이라 불리는 존재: kkigig kikikig kkigig", .@demigod$;
 	sleep2 2500;
-	npctalk "Amal: ....? What's wrong my God? Your lowly servant is ready to hear the prophecy...";
+	npctalk "아말: ….? 하느님, 무슨 일이십니까? 당신의 미천한 종은 예언을 들을 준비가 되어 있습니다…";
 	sleep2 2500;
-	npctalk "A Being Called God: kkigigigi aaaaa!!!!", .@demigod$;
+	npctalk "신이라 불리는 존재:끼기기기아아아아아!!!!", .@demigod$;
 	sleep2 2500;
-	npctalk "Amal: ...I don't feel any divine power...? why...?";
+	npctalk "아말: ...나는 아무런 신의 힘도 느끼지 못하겠어...? 왜 그렇지...?";
 	sleep2 2500;
 	specialeffect EF_BEGINSPELL5, AREA, .@demigod$;
 	sleep2 1000;
 	enablenpc .@miriam04$;
 	specialeffect EF_GUARD, AREA, .@miriam04$;
 	sleep2 1000;
-	npctalk "Amal: How can God punish me, a loyal servant of Freyja?";
+	npctalk "아말: 어찌 신께서 프레이야의 충실한 종인 나를 벌하실 수 있단 말인가?";
 	sleep2 2500;
-	npctalk "Miriam: This is not the time. You must leave it! That's not God!", .@miriam04$;
+	npctalk "미리암: 지금은 때가 아니야. 떠나야 해! 저건 신의 뜻이 아니야!", .@miriam04$;
 	sleep2 2500;
-	npctalk "A Being Called God: kikikig kikikig ....", .@demigod$;
+	npctalk "신이라 불리는 존재: 키키키그 키키키그....", .@demigod$;
 	sleep2 2500;
-	npctalk "Amal: Nonsense! Miriam, get out of the way!";
+	npctalk "아말: 말도 안 돼! 미리엄, 비켜!";
 	sleep2 2500;
-	npctalk "Miriam: You just almost died. Look straight ahead. Which part of that vile being is God?", .@miriam04$;
+	npctalk "미리엄: 너 방금 죽을 뻔했잖아. 앞만 봐. 저 끔찍한 존재의 어느 부분이 신이야?", .@miriam04$;
 	sleep2 2500;
-	npctalk "Miriam: It seems like you need to open your eyes. Father.", .@miriam04$;
+	npctalk "미리암: 아버지, 눈을 좀 뜨셔야 할 것 같아요.", .@miriam04$;
 	sleep2 2000;
-	npctalk "Amal: This can't be happening! Let go of me, Miriam!";
+	npctalk "아말: 이럴 순 없어! 날 놓아줘, 미리엄!";
 	sleep2 2000;
-	npctalk "A Being Called God: kkigig...? kkigigi kkyahahahahahahaha!!", .@demigod$;
+	npctalk "신이라 불리는 존재: kkigig...? kkigigi kkyahahahahahahaha!!", .@demigod$;
 	sleep2 1000;
 	specialeffect EF_BEGINSPELL5, AREA, .@demigod$;
 	sleep2 700;
 	specialeffect EF_BEGINSPELL_YB, AREA, .@demigod$;
-	npctalk "Miriam: What are you doing!!!!", .@miriam04$;
+	npctalk "미리암: 너 지금 뭐 하는 거야!!!!", .@miriam04$;
 	sleep2 800;
 	disablenpc instance_npcname("Yus Amal#jus01");
 	disablenpc .@miriam04$;
 	sleep2 800;
-	npctalk "A Being Called God: kyahahahahahahaha!!", .@demigod$;
+	npctalk "신이라 불리는 존재: 캬하하하하하하하!!", .@demigod$;
 	sleep2 1000;
 	setpcblock PCBLOCK_NPC, false;
 
 	specialeffect EF_BEGINSPELL_YB, AREA, .@demigod$;
-	mapannounce 'map_adv$, "The chapel has been sealed off.", bc_map, 0x4D4DFF;
+	mapannounce 'map_adv$, "예배당은 폐쇄되었습니다.", bc_map, 0x4D4DFF;
 	disablenpc .@demigod$;
 	disablenpc .@shulang02$;
 	donpcevent instance_npcname("adv_demigod_boss") + "::OnStart";
@@ -1062,7 +1062,7 @@ OnMobDead:
 	if (mobcount('map_adv$, instance_npcname("adv_demigod_boss") + "::OnMobDead") < 1) {
 		'adv_step = 27;
 		killmonster 'map_adv$, instance_npcname("adv_demigod_boss") + "::OnMobDead2";
-		mapannounce 'map_adv$, "Amal's Voice: Oh God--!!!", bc_map, 0xFF0000;
+		mapannounce 'map_adv$, "아말의 목소리: 오 하나님--!!!", bc_map, 0xFF0000;
 		enablenpc instance_npcname("#boss_out");
 		enablenpc instance_npcname("Miriam#miriam05");
 		enablenpc instance_npcname("Yus Amal#jus02");
@@ -1078,57 +1078,57 @@ OnMobDead2:
 	if ('adv_step < 27)
 		end;
 	if ('adv_step == 27 && ep18_main == 54) {
-		npctalk "Miriam: Father!", instance_npcname("Miriam#miriam05");
-		mes "[Miriam]";
-		mes "What did he do? It suddenly flew out.";
-		mes "Are you alright?";
+		npctalk "미리암: 아버지!", instance_npcname("Miriam#miriam05");
+		mes "[미리암]";
+		mes "그가 뭘 했지? 갑자기 날아갔어.";
+		mes "괜찮으세요?";
 		cutin "ep18_miriam_03.png",0;
 		next;
 		cutin "",255;
-		mes "[Amal]";
-		mes "What have you done to God!!!!!!!!!!";
-		mes "You can't do that!";
-		mes "What have I been doing while waiting for this day...!";
+		mes "[아말]";
+		mes "너는 하나님께 무슨 짓을 한 거냐!!!!!!!!!!";
+		mes "그렇게 하면 안 돼요!";
+		mes "이 날을 기다리는 동안 나는 도대체 뭘 하고 있었던 걸까...!";
 		next;
 		cutin "ep18_miriam_03.png",0;
-		mes "[Miriam]";
-		mes "Do you still believe that is God?";
-		mes "Are you really saying that?";
+		mes "[미리암]";
+		mes "당신은 아직도 저분이 신이라고 믿으십니까?";
+		mes "정말 그렇게 말씀하시는 거예요?";
 		next;
-		select( "This Embryo fell out." );
-		mes "[Miriam]";
+		select( "이 배아는 떨어져 나갔습니다." );
+		mes "[미리암]";
 		mes "Indeed...";
-		mes "It was similar to the Pope's...";
-		mes "If you look at the Embryo that has fallen, it must have been something created by someone named Bagot.";
+		mes "그것은 교황의 경우와 비슷했습니다...";
+		mes "떨어진 배아를 자세히 보면, 바곳이라는 사람이 만든 무언가임이 틀림없습니다.";
 		next;
-		select( "I'll do the analysis here." );
+		select( "제가 여기서 분석하겠습니다." );
 		cutin "",255;
-		mes "[Amal]";
-		mes "Miriam! Catch that insolent fool!";
-		mes "This person deserves divine punishment!";
-		mes "You are a blasphemer!";
+		mes "[아말]";
+		mes "미리엄! 저 건방진 바보를 잡아!";
+		mes "이 사람은 신의 벌을 받아 마땅하다!";
+		mes "당신은 신성모독자입니다!";
 		next;
 		cutin "ep18_miriam_03.png",0;
-		mes "[Miriam]";
-		mes "It can't be.";
-		mes "The adventurer came this far to help us.";
+		mes "[미리암]";
+		mes "그럴 리 없어.";
+		mes "그 모험가는 우리를 돕기 위해 여기까지 왔습니다.";
 		next;
-		mes "[Miriam]";
-		mes "It was like that at the temple too.";
-		mes "It looks like they blinded my father too.";
+		mes "[미리암]";
+		mes "절에서도 마찬가지였어요.";
+		mes "그들이 우리 아버지도 실명시킨 것 같아.";
 		next;
 		cutin "",255;
-		mes "[Amal]";
-		mes "Are you trying to tell me that I fell for their trick!";
+		mes "[아말]";
+		mes "지금 내가 당신의 속임수에 넘어갔다고 말하려는 거예요?";
 		next;
 		cutin "ep18_miriam_03.png",0;
-		mes "[Miriam]";
-		mes "Let's get out of here first.";
-		mes "You can discuss the details after examining the Embryo.";
+		mes "[미리암]";
+		mes "여기서 먼저 나가자.";
+		mes "배아를 검사한 후 자세한 내용을 논의할 수 있습니다.";
 		next;
-		mes "[Miriam]";
-		mes "Adventurer, please let me know if the identity of the Twisted God is revealed after the investigation is complete.";
-		mes "I will take care of my father.";
+		mes "[미리암]";
+		mes "모험가님, 조사가 완료된 후 뒤틀린 신의 정체가 밝혀지면 알려주시기 바랍니다.";
+		mes "제가 아버지를 돌보겠습니다.";
 		ep18_main = 55;
 		erasequest 18083;
 		setquest 18084;
@@ -1137,12 +1137,12 @@ OnMobDead2:
 		close3;
 	}
 	cutin "ep18_miriam_01.png",0;
-	mes "[Miriam]";
-	mes "I need to take care of my father, so let's get out of here.";
+	mes "[미리암]";
+	mes "아버지를 돌봐야 하니, 여기서 나가자.";
 	close3;
 }
 
 1@adv,119,320,6	script(DISABLED)	Yus Amal#jus02	4_M_RACHOLD,{
-	npctalk "Amal: ...Oh my... It can't be like this...", instance_npcname("Yus Amal#jus02");
+	npctalk "아말: ...맙소사... 이럴 리가 없어...", instance_npcname("Yus Amal#jus02");
 	end;
 }

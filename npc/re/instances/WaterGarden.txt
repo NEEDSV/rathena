@@ -13,12 +13,12 @@
 ba_maison,238,44,5	script	Harad#jh_ba1	4_EP17_BASIC_B,{
 	if (ep172_watergarden < 3) {
 		cutin "ep172_beta",2;
-		mes "[Harad]";
-		mes "Hello, guest.";
-		mes "This place is the docks.";
+		mes "[하라드]";
+		mes "안녕하세요, 손님.";
+		mes "여기는 부두입니다.";
 		next;
-		mes "[Harad]";
-		mes "We don't have any ships operating right now. But the scenery is nice, feel free to take a look around for a while!";
+		mes "[하라드]";
+		mes "지금은 운항하는 배가 없습니다. 하지만 경치가 좋으니, 편하게 둘러보세요!";
 		close3;
 	}
 	switch( checkquest(16439,PLAYTIME) ) {
@@ -27,31 +27,31 @@ ba_maison,238,44,5	script	Harad#jh_ba1	4_EP17_BASIC_B,{
 	case 0:
 	case 1:
 		cutin "ep172_beta",2;
-		mes "[Harad]";
-		mes "In accordance with the Gardeners' plant cultivation and herbicide plans. Admission to the water garden is limited once per day for both the normal and hard water garden.";
+		mes "[하라드]";
+		mes "정원사의 식물 재배 및 제초제 사용 계획에 따라, 수생 정원(일반 수생 정원 및 경수 수생 정원 모두) 입장은 하루에 한 번으로 제한됩니다.";
 		next;
-		mes "[Harad]";
-		mes "Thank you for your understanding.";
-		mes "Please take enough rest and come back again after dawn!";
+		mes "[하라드]";
+		mes "이해해 주셔서 감사합니다.";
+		mes "충분히 휴식을 취하시고 새벽에 다시 오세요!";
 		close3;
 	case 2:
 		erasequest 16439;
 		break;
 	}
 	cutin "ep172_beta",2;
-	mes "[Harad]";
-	mes "Would you like to take a ride to the water garden?";
-	mes "The ship only run once a day!";
+	mes "[하라드]";
+	mes "물 정원까지 물놀이 타러 가실래요?";
+	mes "그 배는 하루에 한 번만 운항해요!";
 	next;
-	mes "^FF0000Please note that, any abnormal monster handling inside the instance such as taming, is not considered normal.^000000";
+	mes "^FF0000인스턴스 내에서 몬스터를 길들이는 등의 비정상적인 행위는 정상적인 것으로 간주되지 않으니 유의하시기 바랍니다.^000000";
 	mes "";
-	mes "^FF0000The party leader who received the quest for the 'Water Garden' or 'Water Garden Hard' must enter the instance to proceed. In the case of party leader changes, the instance will be cancelled and you may not proceed.^000000";
+	mes "'물의 정원' 또는 '물의 정원 하드' 퀘스트를 받은 파티장이 인스턴스에 입장해야 진행할 수 있습니다. 파티장이 변경될 경우 인스턴스는 취소되며 진행할 수 없습니다.";
 	next;
 	cutin "",255;
 	.@normal = is_party_leader();
 	.@hard = (.@normal && isbegin_quest(16430) == 2);
-	.@md_name$ = "Water Garden";	// default
-	switch( select( (.@normal ? "Create Water Garden" : ""), (.@hard ? "Create Water Garden Hard" : ""), "^0000CDGarden Entrance^000000" ) ) {
+	.@md_name$ = "물 정원";	// default
+	switch( select( (.@normal ? "Create Water Garden" : ""), (.@hard ? "Create Water Garden Hard" : ""), "^0000CD정원 입구^000000" ) ) {
 	case 1:
 		.@quest_given = 16437;
 		.@other_quest = 16438;
@@ -59,14 +59,14 @@ ba_maison,238,44,5	script	Harad#jh_ba1	4_EP17_BASIC_B,{
 	case 2:
 		if (BaseLevel < 180) {
 			cutin "ep172_beta",2;
-			mes "[Harad]";
-			mes "You can tell me if you want to enter the water garden.";
-			mes "But it's dangerous inside. You can't enter right now.";
+			mes "[하라드]";
+			mes "물 정원에 들어가고 싶으시면 말씀해 주세요.";
+			mes "하지만 안은 위험해요. 지금은 들어갈 수 없어요.";
 			next;
-			mes "- This MD is for level 180 or above. -";
+			mes "- 이 MD는 레벨 180 이상에게 적합합니다. -";
 			close3;
 		}
-		.@md_name$ = "Water Garden Hard";
+		.@md_name$ = "물 정원 하드";
 		.@quest_given = 16438;
 		.@other_quest = 16437;
 		break;
@@ -75,43 +75,43 @@ ba_maison,238,44,5	script	Harad#jh_ba1	4_EP17_BASIC_B,{
 			.@instance_name$ = instance_live_info(ILI_NAME, instance_id(IM_PARTY));
 			if (.@instance_name$ != "Water Garden" && .@instance_name$ != "Water Garden Hard") {
 				cutin "ep172_beta",2;
-				mes "[Harad]";
-				mes "The instance has not been created yet.";
-				mes "Please check it.";
+				mes "[하라드]";
+				mes "인스턴스가 아직 생성되지 않았습니다.";
+				mes "확인해 주세요.";
 				close3;
 			}
 			cutin "ep172_beta",2;
-			mes "[Harad]";
-			mes "Enter the ^CC0000" + .@instance_name$ + "^000000.";
+			mes "[하라드]";
+			mes "^CC0000을 입력하세요" + .@instance_name$ + "^000000.";
 			next;
 			cutin "",255;
-			if (select( "^0000CDEnter Water Garden", "Enter Water Garden Hard^000000" ) == 1)
-				.@md_name$ = "Water Garden";
+			if (select( "^0000CDEnter 워터 가든", "워터 가든 하드에 입장하세요^000000" ) == 1)
+				.@md_name$ = "물 정원";
 			else
-				.@md_name$ = "Water Garden Hard";
+				.@md_name$ = "물 정원 하드";
 		}
 		if (instance_enter(.@md_name$) != IE_OK) {
 			cutin "ep172_beta",2;
-			mes "[Harad]";
-			mes "The instance has not been created yet.";
-			mes "Please check it.";
+			mes "[하라드]";
+			mes "인스턴스가 아직 생성되지 않았습니다.";
+			mes "확인해 주세요.";
 			close2;
 			cutin "",255;
 			end;
 		}
 		setquest 16439;
-		mapannounce "ba_maison", "" + strcharinfo(0) + " of the party, " + getpartyname( getcharid(1) ) + ", is entering the " + .@md_name$ + ".", bc_map, "0x00FF99";
+		mapannounce "ba_maison", "" + strcharinfo(0) + " 당의," + getpartyname( getcharid(1) ) + " , 진입하고 있습니다" + .@md_name$ + ".", bc_map, "0x00FF99";
 		end;
 	}
 	if (instance_create(.@md_name$) == -3)
-		dispbottom "The reservation of the instance '" + .@md_name$ + "' has failed due to an active instance.";
+		dispbottom "인스턴스 예약 '" + .@md_name$ + "'활성화된 인스턴스로 인해 실패했습니다.";
 	if (isbegin_quest(.@quest_given) > 0)
 		erasequest .@quest_given;
 	if (isbegin_quest(.@other_quest) > 0)
 		erasequest .@other_quest;
 	setquest .@quest_given;
-	mes "[Harad]";
-	mes "When the " + .@md_name$ + " MD has opened, please speak to me again and select ^0000CDEnter " + .@md_name$ + "^000000.";
+	mes "[하라드]";
+	mes " 그때" + .@md_name$ + " MD 창이 열렸습니다. 다시 말씀해 주시고 ^0000CDEnter를 선택해 주세요." + .@md_name$ + "^000000.";
 	close;
 }
 
@@ -154,7 +154,7 @@ OnTouch:
 	end;
 OnTouch:
 	if ('water_garden == 0) {
-		mes "- You can enter the water garden after the party leader has entered the MD. -";
+		mes "- 당 대표가 MD에 입장한 후에 수변 정원에 입장할 수 있습니다. -";
 		close;
 	}
 	warp 'map_ghg$,208,57;
@@ -191,20 +191,20 @@ OnTouch:
 	if ('water_garden == 0)
 		end;
 	if ('water_garden == 1) {
-		mes "[Hetilla]";
-		mes " Guests, welcome to the water garden,";
-		mes "Are you going to see Papilla? Papilla's been very sensitive about the intruders lately...";
-		npctalk "Guests, welcome to the water garden. Are you going to see Papilla? Papilla's been very sensitive about the intruders lately...";
+		mes "[헤틸라]";
+		mes "손님 여러분, 수변 정원에 오신 것을 환영합니다.";
+		mes "파필라 보러 가실 거예요? 파필라가 요즘 침입자들에 대해 굉장히 예민하거든요...";
+		npctalk "손님 여러분, 수생 정원에 오신 것을 환영합니다. 파필라를 보러 가실 건가요? 파필라는 요즘 침입자들에 대해 굉장히 예민하답니다...";
 		next;
-		mes "[Hetilla]";
-		mes "Papillas are playing around here and there.";
-		mes "They use psychedelic materials from their wings to make short distance movements or use a dangerous magic over them.";
-		npctalk "Papillas are playing around here and there. They use psychedelic materials from their wings to make short distance movements or use a dangerous magic over them.";
+		mes "[헤틸라]";
+		mes "유두가 여기저기서 놀고 있어요.";
+		mes "그들은 날개에서 나오는 환각 물질을 이용하여 단거리 이동을 하거나, 위험한 마법을 사용합니다.";
+		npctalk "파필라들은 여기저기 돌아다니며 장난을 치고 있다. 그들은 날개에서 환각 물질을 사용하여 짧은 거리를 이동하거나 위험한 마법을 사용한다.";
 		next;
-		mes "[Hetilla]";
-		mes "I warned you on advanced, but be careful.";
-		mes "Pruning all overgrown plants and animals opens the door to the next area at 3 o'clock.";
-		npctalk "I warned you on advanced, but be careful. Pruning all overgrown plants and animals opens the door to the next area at 3 o'clock.";
+		mes "[헤틸라]";
+		mes "난이도가 높다고 경고했지만, 조심하세요.";
+		mes "무성하게 자란 식물과 동물을 모두 정리하면 3시 방향의 다음 구역으로 가는 문이 열립니다.";
+		npctalk "제가 미리 경고했듯이, 난이도가 높으니 조심하세요. 무성하게 자란 식물과 동물을 모두 정리하면 3시 방향에 다음 구역으로 가는 문이 열립니다.";
 		close2;
 		if ('water_garden == 1) {
 			'water_garden = 2;
@@ -214,9 +214,9 @@ OnTouch:
 		end;
 	}
 	if ('water_garden == 2)
-		npctalk "Be careful of the papila's hallucinogens.";
+		npctalk "파필라의 환각제를 조심하세요.";
 	else
-		npctalk "Guest, you can already move to the next area.";
+		npctalk "손님, 이제 다음 구역으로 이동하셔도 됩니다.";
 	end;
 }
 
@@ -281,7 +281,7 @@ OnMobDead:
 		specialeffect EF_READYPORTAL, AREA, instance_npcname("#ghg_w2");
 		donpcevent instance_npcname("#172_wg_area_1") + "::OnStop";
 		enablenpc instance_npcname("Gardener#ghg_g2");
-		mapannounce 'map_ghg$, "Cleanup is complete. Please proceed to the next area.", bc_map, 0xFFFF99;
+		mapannounce 'map_ghg$, "정리가 완료되었습니다. 다음 구역으로 이동해 주십시오.", bc_map, 0xFFFF99;
 		end;
 	}
 	end;
@@ -319,7 +319,7 @@ OnStart:
 	initnpctimer;
 	end;
 OnTimer2000:
-	mapannounce 'map_ghg$, "The magic of the Papilla's has activated. Be careful!", bc_map, 0xFFFF99;
+	mapannounce 'map_ghg$, "파필라의 마법이 발동되었습니다. 조심하세요!", bc_map, 0xFFFF99;
 	end;
 OnTimer4000:
 	callsub( S_Spawn, 240,73,20676,9 );
@@ -359,21 +359,21 @@ OnMobDead:
 // Area 2
 1@ghg,316,69,3	script(DISABLED)	Gardener#ghg_g2	4_EP17_SCISSORE,{
 	if ('water_garden == 3) {
-		mes "[Juventus]";
-		mes "Be careful, Papillas' and other type of Papillas seems to be wandering around.";
-		npctalk "Be careful, Papillas' and other type of Papillas seems to be wandering around.";
+		mes "[유벤투스]";
+		mes "조심하세요, 파필라스와 다른 종류의 파필라스들이 돌아다니는 것 같습니다.";
+		npctalk "조심하세요, 파필라스와 다른 종류의 파필라스들이 돌아다니는 것 같습니다.";
 		next;
-		mes "[Juventus]";
-		mes "The attack range varies depending on the color of the Papilla.";
-		npctalk "The attack range varies depending on the color of the Papilla.";
+		mes "[유벤투스]";
+		mes "유두의 색깔에 따라 공격 범위가 달라집니다.";
+		npctalk "유두의 색깔에 따라 공격 범위가 달라집니다.";
 		next;
-		mes "[Juventus]";
-		mes "Also some of the gardeners were destroyed by the intruders.";
-		npctalk "Also some of the gardeners were destroyed by the intruders.";
+		mes "[유벤투스]";
+		mes "또한 일부 정원사들은 침입자들에 의해 살해당했습니다.";
+		npctalk "또한 일부 정원사들은 침입자들에 의해 살해당했습니다.";
 		next;
-		mes "[Juventus]";
-		mes "If they ever attack the guest, they're all broken gardeners, so don't hesitate to take it down.";
-		npctalk "If they ever attack the guest, they're all broken gardeners, so don't hesitate to take it down.";
+		mes "[유벤투스]";
+		mes "만약 그들이 손님을 공격한다면, 그들은 모두 형편없는 정원사들이니 주저하지 말고 처치하세요.";
+		npctalk "만약 그들이 손님을 공격한다면, 그들은 모두 형편없는 정원사들이니 주저하지 말고 처치하세요.";
 		close2;
 		if ('water_garden == 3) {
 			'water_garden = 4;
@@ -383,11 +383,11 @@ OnMobDead:
 		end;
 	}
 	if ('water_garden == 4) {
-		mes "[Juventus]";
-		mes "If the gardeners ever attack the guest, they're all broken gardeners, so don't hesitate to take it down.";
+		mes "[유벤투스]";
+		mes "만약 정원사들이 손님을 공격한다면, 그들은 모두 망가진 정원사들이니 주저하지 말고 처치하세요.";
 		close;
 	}
-	npctalk "The obstructions is now gone, you can not move to the next area.";
+	npctalk "장애물이 사라졌지만, 다음 구역으로 이동할 수 없습니다.";
 	end;
 }
 
@@ -450,7 +450,7 @@ OnMobDead:
 		donpcevent instance_npcname("#172_wg_area_2") + "::OnStop";
 		enablenpc instance_npcname("Gardener#ghg_g3");
 		enablenpc instance_npcname("Gardener#gmck3");
-		mapannounce 'map_ghg$, "You have eliminated all the obstructions. Please proceed to the next area.", bc_map, 0xFFFF99;
+		mapannounce 'map_ghg$, "모든 장애물을 제거하셨습니다. 다음 구역으로 이동하십시오.", bc_map, 0xFFFF99;
 		end;
 	}
 	end;
@@ -462,7 +462,7 @@ OnStart:
 	deletearray 'gid_area_2;
 	deletearray 'type_area_2;
 
-	mapannounce 'map_ghg$, "The Papilla's has returned!", bc_map, 0xFFFF99;
+	mapannounce 'map_ghg$, "파필라가 돌아왔습니다!", bc_map, 0xFFFF99;
 
 	setarray .@xy[0],
 		320,91,325,91,330,91,335,91,340,91,345,91,
@@ -556,21 +556,21 @@ S_Skill:
 
 // Area 3
 1@ghg,341,143,3	script(DISABLED)	Gardener#ghg_g3	4_EP17_SCISSORE,5,1,{
-	mes "[Aditura]";
-	mes "The rose garden is a very beautiful place, but recently, we are having trouble maintaining it because of the swarms of animals and plants that appeared in groups.";
-	npctalk "The rose garden is a very beautiful place, but recently, we are having trouble maintaining it because of the swarms of animals and plants that appeared in groups.";
+	mes "[아디투라]";
+	mes "장미 정원은 매우 아름다운 곳이지만, 최근 들어 동물과 식물들이 무리를 지어 나타나면서 관리에 어려움을 겪고 있습니다.";
+	npctalk "장미 정원은 매우 아름다운 곳이지만, 최근 들어 동물과 식물들이 무리를 지어 나타나면서 관리에 어려움을 겪고 있습니다.";
 	next;
-	mes "[Aditura]";
-	mes "Guest, I'd like you to please prune the plants and animals.";
-	npctalk "Guest, I'd like you to please prune the plants and animals.";
+	mes "[아디투라]";
+	mes "손님, 식물과 동물들을 가지치기해 주시면 감사하겠습니다.";
+	npctalk "손님, 식물과 동물들을 가지치기해 주시면 감사하겠습니다.";
 	next;
-	mes "[Aditura]";
-	mes "At the end of the garden, there is a manager waiting to open the next area, so please speak to her when you reach there.";
-	npctalk "At the end of the garden, there is a manager waiting to open the next area, so please speak to her when you reach there.";
+	mes "[아디투라]";
+	mes "정원 끝에는 다음 구역 개장을 기다리는 관리자가 있으니, 그곳에 도착하시면 관리자에게 말씀해 주세요.";
+	npctalk "정원 끝에는 다음 구역 개장을 기다리는 관리자가 있으니, 그곳에 도착하시면 관리자에게 말씀해 주세요.";
 	next;
-	mes "[Aditura]";
-	mes "It's a little slow, so you might have to wait, but... the next area will definitely open.";
-	npctalk "It's a little slow, so you might have to wait, but... the next area will definitely open.";
+	mes "[아디투라]";
+	mes "조금 느려서 기다려야 할 수도 있지만... 다음 구역은 분명히 열릴 거예요.";
+	npctalk "조금 느려서 기다려야 할 수도 있지만... 다음 구역은 분명히 열릴 거예요.";
 	close;
 
 OnTouch_:	// note: hidden player doesn't trigger it!
@@ -760,16 +760,16 @@ OnTouch_:
 
 1@ghg,344,173,3	script(DISABLED)	Gardener#gmck3	4_EP17_SCISSORE,2,2,{
 	if ('water_garden < 6) {
-		npctalk "An error... has occurred.";
+		npctalk "오류가 발생했습니다.";
 		end;
 	}
 	progressbar_npc "00FF00",5;
-	mes "[Higel]";
-	mes "Next garden... portal creation complete... Move into the 12 o'clock direction... to use... Thank you...";
-	npctalk "Next garden... portal creation complete... Move into the 12 o'clock direction... to use... Thank you...";
+	mes "[히겔]";
+	mes "다음 정원... 포털 생성 완료... 12시 방향으로 이동하세요... 사용하시려면... 감사합니다...";
+	npctalk "다음 정원... 포털 생성 완료... 12시 방향으로 이동하세요... 사용하시려면... 감사합니다...";
 	next;
-	mes "[Higel]";
-	mes "After the move... Papilla in the maze... Please prune all of them.";
+	mes "[히겔]";
+	mes "이사 후에... 미로 속의 유두... 전부 가지치기해 주세요.";
 	close2;
 	if ('water_garden == 6) {
 		// note: mobs from traps are not killed
@@ -837,7 +837,7 @@ OnMobDead:
 		'water_garden = 8;
 		enablenpc instance_npcname("#ghg_wb");
 		specialeffect EF_READYPORTAL, AREA, instance_npcname("#ghg_wb");
-		mapannounce 'map_ghg$, "The final garden has opened. Please proceed to the next area.", bc_map, 0xFFFF99;
+		mapannounce 'map_ghg$, "마지막 정원이 개방되었습니다. 다음 구역으로 이동해 주십시오.", bc_map, 0xFFFF99;
 		enablenpc instance_npcname("Gardener#ghg_gb");
 		end;
 	}
@@ -848,23 +848,23 @@ OnMobDead:
 1@ghg,346,248,3	script(DISABLED)	Gardener#keeper1	4_EP17_SCISSORE,{
 	if (isbegin_quest(16435) == 1) {
 		if (checkweight(1000099,1) == 0) {	// (custom)
-			mes "^008800Wait a sec!!";
-			mes "You cannot receive any more items because you're carrying too many items. Please try again after you lighten up.^000000";
+			mes "^008800 잠깐만요!!";
+			mes "소지품이 너무 많아 더 이상 상품을 받을 수 없습니다. 소지품을 줄이신 후 다시 시도해 주세요.";
 			close;
 		}
 		if (countitem(1000099) == 0) {
-			npctalk "Oh, I forgot to make regular contact! I'll get in touch. Would you like a cookie while you're here?", "", bc_self;
+			npctalk "아, 제가 정기적으로 연락드리는 걸 깜빡했네요! 곧 연락드릴게요. 여기 오신 김에 쿠키 드실래요?", "", bc_self;
 			getitem 1000099,1;
 			end;
 		}
-		npctalk "Do not worry, I already contacted Alpha. Hehe.", "", bc_self;
+		npctalk "걱정 마세요, 제가 이미 알파에게 연락했어요. 헤헤.", "", bc_self;
 		end;
 	}
 	if ('water_garden == 7) {
-		npctalk "That's strange, I forgot it yesterday, but I forgot it today as well.";
+		npctalk "이상하네, 어제도 잊었는데 오늘도 잊었어.";
 		end;
 	}
-	npctalk "The final garden opened. But... I forgot what should I do...";
+	npctalk "마지막 정원이 문을 열었어요. 그런데… 뭘 해야 할지 잊어버렸네요…";
 	end;
 }
 1@ghg,334,272,3	duplicate(Gardener#keeper1)	Gardener#keeper2	4_EP17_SCISSORE
@@ -875,17 +875,17 @@ OnMobDead:
 // Area 5 (boss)
 1@ghg,186,287,3	script(DISABLED)	Gardener#ghg_gb	4_EP17_SCISSORE,{
 	if ('water_garden == 8) {
-		mes "[Velkina]";
-		mes "If a Papilla shows up during the battle, make it follow you to the pillar of the same color.";
+		mes "[벨키나]";
+		mes "전투 중에 유두가 나타나면, 같은 색깔의 기둥까지 유두를 따라오게 하세요.";
 		next;
-		mes "[Velkina]";
-		mes "If the Papilla touches the light, it will take damage and die.";
+		mes "[벨키나]";
+		mes "유두가 빛에 닿으면 손상되어 죽게 됩니다.";
 		next;
-		mes "[Velkina]";
-		mes "If you can safely stop Silva Papilla, we will handle the rest!";
+		mes "[벨키나]";
+		mes "실바 파필라를 안전하게 저지할 수만 있다면, 나머지는 저희가 알아서 하겠습니다!";
 		next;
-		mes "[Velkina]";
-		mes "Then, I'll burn the incense that calls out Silva Papilla...";
+		mes "[벨키나]";
+		mes "그런 다음, 실바 파필라를 부르는 향을 피우겠습니다...";
 		close2;
 		if ('water_garden == 8) {
 			'water_garden = 9;
@@ -1011,14 +1011,14 @@ OnTouchNPC:
 
 1@ghg,187,287,3	script(DISABLED)	Gardener#ghg_gb1	4_EP17_SCISSORE,2,2,{
 	if ('water_garden == 10) {
-		mes "[Velkina]";
-		mes "You didn't forget your request from Seiyu, and came in here, right?";
+		mes "[벨키나]";
+		mes "성우님께 부탁드린 걸 잊지 않고 여기까지 오신 거죠?";
 		next;
-		mes "[Velkina]";
-		mes "Don't forget to go out and talk to Seiyu to ^0000CDReceive your rewards^000000 from todays work.";
+		mes "[벨키나]";
+		mes "오늘 일의 보상을 받으려면 세이유에게 나가서 말을 거는 것을 잊지 마세요.";
 		next;
-		mes "[Velkina]";
-		mes "Then, I'll show you the way outside again!";
+		mes "[벨키나]";
+		mes "그럼, 제가 다시 밖으로 나가는 길을 알려드릴게요!";
 		close2;
 		warp "ba_maison",233,46;
 		end;

@@ -1,0 +1,1491 @@
+//===== rAthena Script ======================================= 
+//= Sealed Shrine
+//===== By: ================================================== 
+//= L0ne_W0lf
+//===== Current Version: ===================================== 
+//= 2.3
+//===== Compatible With: ===================================== 
+//= rAthena Project
+//===== Description: ========================================= 
+//= [Official Conversion]
+//= Seal away the Great Demon Baphomet.
+//===== Additional Comments: ================================= 
+//= 1.0 First version. [L0ne_W0lf]
+//= 1.1 Added setquest for instance cooldown. [L0ne_W0lf]
+//= 1.2 Fixed Torch#12 not being disabled. (bugreport:4044) [L0ne_w0lf]
+//= 1.3 Fixed cutins not being removed. (bugreport:4117) [L0ne_w0lf]
+//= 1.4 Fixed some typos. [Gepard]
+//= 1.5 Fixed not being able to enter dungeon for the first two hours.
+//= 1.6 Players should be able to re-take the quest after 12 hours now.
+//=     Changed quest 3046 to 3040. This is the correct quest id.
+//=     Removed checking quest 3045, unofficial check.
+//= 1.7 Fixed a checkquest condition never setting quest. [L0ne_W0lf]
+//= 1.8 Added 'instance_check_party' command to the script for proper checking if
+//=     the invoking party meets the requirements to join the Memorial Dungeon.
+//= 1.9 Fixed broken else/if chaining. [Joseph]
+//= 2.0 Some optimization. [Euphy]
+//= 2.1 Fixed quest being removed before the 12 hours cool down. [Joseph]
+//= 2.2 Removed extra setquest (quest id:3040).	[Joseph]
+//= 2.3 Instance system rewrite. [Euphy]
+//============================================================ 
+
+// Sealed Catacomb Entrance
+//============================================================
+monk_test,309,146,3	script	Friar Patrick#edq	412,{
+	cutin "ins_cata_pri_n",2;
+	mes "[패트릭 수사]";
+	mes "이 세상의 평화는 영원히 지속될 수 없다… 악의 손길이 다시 세상으로 뻗어오고 있다…";
+	next;
+	mes "[패트릭 수사]";
+	mes "이곳에 오게 된 계기는 무엇인가요?";
+	next;
+	if (countitem(6004) > 0) {
+		set .@doll,1;
+		set .@selection,select("여기는 어디죠?:참가하고 싶습니다.:저주받은 바포메트 인형에 대하여.:Cancel.");
+	}
+	else {
+		set .@selection,select("여기는 어디죠?:참가하고 싶습니다.:Cancel.");
+	}
+	switch(.@selection) {
+	case 1:
+		mes "[패트릭 수사]";
+		mes "어... 모르셨어요? 여기는 수도사가 되기를 희망하는 형제들이 훈련하고 기도하는 성 카피톨리나 수도원이에요.";
+		next;
+		mes "[패트릭 수사]";
+		mes "이곳은… 뭐라고 말해야 할까요… 네. 악마의 무덤입니다. 무덤…";
+		next;
+		mes "[패트릭 수사]";
+		mes "한때 이 세상을 파괴했던 무시무시한 악마가 잠들어 있는 바로 그곳.";
+		next;
+		switch(select("더 자세히 말씀해 주세요.:그만 말해.")) {
+		case 1:
+			cutin "ins_cata_pri_n",2;
+			mes "[패트릭 수사]";
+			mes "바포메트...는 악마의 이름입니다... 아마 당신도 그 이름을 들어봤을 겁니다.";
+			next;
+			mes "[패트릭 수사]";
+			mes "수많은 용감한 남성들과 수도사들이 이 수도원에서 훈련을 받았습니다...";
+			next;
+			mes "[패트릭 수사]";
+			mes "당신 앞에 있는 이 묘비 아래에는… 바포메트가 봉인되어 있습니다.";
+			next;
+			mes "[패트릭 수사]";
+			mes "하지만... 지금 이 순간에도 사탄 모로코는 이 대륙의 모든 생명체에 영향을 미치기 위해 강력한 마법을 동원하고 있습니다.";
+			next;
+			mes "[패트릭 수사]";
+			mes "바포메트 또한 깨어나서 사탄 모로코의 힘을 통해 봉인의 힘을 약화시켜 이 세상으로 부활할 준비를 하고 있습니다...";
+			next;
+			mes "[패트릭 수사]";
+			mes "자, 이제... 예전에 우리가 그랬던 것처럼 바포메트를 다시 신전에 봉인할 만큼 용감한 사람을 찾고 있습니다...";
+			next;
+			mes "[패트릭 수사]";
+			mes "선을 위해 싸우는 사람이라면 누구나 마음속 깊이 악이 이 세상을 정복하려 한다는 것을 알고 있을 것이다.";
+			next;
+			mes "[패트릭 수사]";
+			mes "더욱 훈련하고 기술을 활용하여 다가오는 악의 세력으로부터 세상을 지켜내세요...";
+			break;
+		case 2:
+			cutin "ins_cata_pri_n",2;
+			mes "[패트릭 수사]";
+			mes "선을 위해 싸우는 사람이라면 누구나 마음속 깊이 악이 이 세상을 정복하려 한다는 것을 알고 있을 것이다.";
+			next;
+			mes "[패트릭 수사]";
+			mes "더욱 훈련하고 기술을 활용하여 다가오는 악의 세력으로부터 세상을 지켜내세요...";
+			break;
+		}
+		break;
+	case 2:
+		if (BaseLevel >= 75) {
+
+			set .@party_id,getcharid(1);
+
+			mes "[패트릭 수사]";
+			mes "신전에 가서 바포메트를 다시 봉인하겠다는 말씀이신가요?";
+			next;
+
+			// 12 hour cooldown
+			set .@ins_bapho_check,checkquest(3040,PLAYTIME);
+			// Two hour play limit
+			//set .@ins_bapho_check2,checkquest(3045,PLAYTIME);
+
+			if (.@ins_bapho_check == -1) {
+				if (is_party_leader(.@party_id) == true && instance_check_party(.@party_id,2,75)) {
+					mes "[패트릭 수사]";
+					mes " 정당명은"+getpartyname(.@party_id)+"...";
+					mes " 지도자의 이름은"+strcharinfo(0)+"...";
+					if (instance_create("Sealed Catacomb") < 0) {
+						mes "음... 그런데 여기에 문제가 있는 것 같습니다... 잠깐 확인해 보겠습니다. 잠시만 기다려 주세요.";
+					}
+					else {
+						mes "알겠습니다... 일행분들이 입장하실 수 있도록 신사의 봉인을 조정해 드리겠습니다.";
+						next;
+						mes "[패트릭 수사]";
+						mes "봉인이 뜯어지면 표시가 나타날 것입니다. 표시가 나타날 때까지 기다려 주세요.";
+						next;
+						mes "[패트릭 수사]";
+						mes "표지판이 보이면 묘비에 손을 얹으세요... 그러면 안으로 들어갈 수 있습니다.";
+						next;
+						mes "[패트릭 수사]";
+						mes "한 가지 명심해야 할 것은... 이 신전에 들어가는 사람은 누구든지 바포메트의 저주를 받게 되며, 저주가 풀리지 않는 한 출입할 수 없다는 것입니다.";
+						next;
+						mes "[패트릭 수사]";
+						mes "그리고 한 가지 더... 이 저주받은 지역에서는 외부의 물리적 힘으로 보호받는 일부 기술들이 봉인의 효과로 인해 사용이 금지됩니다.";
+						next;
+						mes "[패트릭 수사]";
+						mes "예를 들어, ^0000FF안전벽이나 가정^000000 같은 기술들이 있죠... 그러니 신전에 들어가기 전에 미리 준비하는 게 좋을 거예요.";
+					}
+				}
+				else {
+					mes "[패트릭 수사]";
+					mes "음... 용기는 인정하지만... 아무나 이곳에 들어오도록 허락할 수는 없습니다. 일행의 리더만 먼저 들어올 수 있습니다.";
+					next;
+					mes "[패트릭 수사]";
+					mes "일행의 리더가 먼저 입장 허가를 받으면 나머지 일행도 입장할 수 있습니다. 이는 수도원의 규칙이니 부디 이해해 주시기 바랍니다.";
+				}
+			}
+			else if (.@ins_bapho_check == 0 || .@ins_bapho_check == 1) {
+				mes "[패트릭 수사]";
+				mes "최근에 이 신전에 들어오신 것 같군요... 바포메트의 저주가 아직 남아있기 때문에 다시 들어오실 수 없습니다. 바포메트의 저주는 일정 시간이 지나야 사라집니다.";
+			}
+			else if (.@ins_bapho_check == 2) {
+				mes "[패트릭 수사]";
+				mes "음... 바포메트의 저주가 약해진 것 같군. 이제 풀 수 있겠어.";
+				next;
+				mes "[패트릭 수사]";
+				mes "하아아아아아... 호커스 포커스 윙가르디움 아브라카다브라!!!!!";
+				next;
+				erasequest 3040;
+				if (checkquest(3041)>=0) erasequest 3041;
+				if (checkquest(3045)>=0) erasequest 3045;
+				mes "[패트릭 수사]";
+				mes "후... 끝났어. 바포메트의 저주를 풀었으니 이제 다시 들어올 수 있어.";
+			}
+		}
+		else {
+			mes "[패트릭 수사]";
+			mes "음... 이 위험한 곳에 들어가려면 훈련을 더 해야 할 것 같군요... 적어도 레벨 75는 되어야 들어갈 수 있을 거예요.";
+			next;
+			mes "[패트릭 수사]";
+			mes "더 열심히 훈련하시고 다시 오세요.";
+		}
+		break;
+	case 3:
+		if (.@doll == 1) {
+			mes "[패트릭 수사]";
+			mes "저건… 당신이 들고 있는 그 악당 인형이군요… 어디 한번 보여주세요.";
+			next;
+			mes "[패트릭 수사]";
+			mes "... ... ...";
+			next;
+			mes "[패트릭 수사]";
+			mes "맞아요... 바포메트의 악이 인형 안에 느껴져요... 그래서, 이 인형을 어떻게 할 건가요?";
+			next;
+			mes "[패트릭 수사]";
+			mes "그걸 활용하지 않으면 위험하고 쓸모없는 물건일 뿐이야... 도와줄 수 있는 사람을 소개해 줄게... 만나보시겠어?";
+			next;
+			mes "[패트릭 수사]";
+			mes "수도원 본관 근처에 있는 ^0000FFRust Blackhand^000000를 찾아가세요... 그가 이 인형을 당신에게 유용하게 만들어 줄 겁니다.";
+			setquest 3042;
+			break;
+		}
+	case 4:
+		mes "[패트릭 수사]";
+		mes "선을 위해 싸우는 사람이라면 누구나 마음속 깊이 악이 이 세상을 정복하려 한다는 것을 알고 있을 것이다.";
+		next;
+		mes "[패트릭 수사]";
+		mes "더욱 훈련하고 기술을 활용하여 다가오는 악의 세력으로부터 세상을 지켜내세요...";
+		break;
+	}
+	close2;
+	cutin "",255;
+	end;
+}
+
+monk_test,306,151,3	script	Grave of Baphomet#edq	111,{
+	if (countitem(6002)) delitem 6002,countitem(6002); //Token_Of_Apostle
+	mes "이 묘비에는 커다란 뿔을 가진 사악한 악마의 조각이 새겨져 있어 불길한 느낌을 자아낸다.";
+	next;
+	if(select("돌을 만져 보세요.:뒤로 물러서세요.") == 2)
+		close;
+
+	// 12 hour cooldown
+	set .@ins_bapho_check,checkquest(3040,PLAYTIME);
+	// Two hour play limit
+	//set .@ins_bapho_check2,checkquest(3045,PLAYTIME);
+
+	if (.@ins_bapho_check == -1) {
+		switch(instance_enter("Sealed Catacomb")) {
+		case IE_OTHER:
+		case IE_NOINSTANCE:
+			mes "만져보니 차갑다. 아무런 반응이 없다.";
+			close;
+		case IE_NOMEMBER:
+			mes "[패트릭 수사]";
+			mes "이 위험한 곳에 혼자 들어갈 수는 없습니다. 일행과 함께 다시 오세요.";
+			close;
+		case IE_OK:
+			mapannounce "monk_test","[" + strcharinfo(0) + "[ ]의 구성원" + getpartyname(.@party_id) + "] 일행이 봉인된 신전에 진입했습니다.",bc_map,"0x00ff99";
+			setquest 3040;
+			//warp "1@cata",100,224;
+			close;
+		}
+	} else if (.@ins_bapho_check == 0 || .@ins_bapho_check == 1) {
+		mes "[패트릭 수사]";
+		mes "당신은 최근에 이 신전에 들어온 것 같군요... 바포메트의 저주가 아직 남아 있어 다시 들어올 수 없습니다.";
+		mes "바포메트의 저주는 입장 후 일정 시간이 지나면 사라집니다.";
+		close;
+	} else if (.@ins_bapho_check == 2) {
+		mes "[패트릭 수사]";
+		mes "음... 바포메트의 저주가 약해진 것 같군. 내가 그 나쁜 저주를 풀어주겠어.";
+		next;
+		mes "[패트릭 수사]";
+		mes "하아아아아아... 윙가르디움 레비오사 엑스펙토 패트로눔!!!!!";
+		specialeffect2 EF_HOLYHIT;
+		erasequest 3040;
+		if (checkquest(3041)>=0) erasequest 3041;
+		if (checkquest(3045)>=0) erasequest 3045;
+		next;
+		mes "[패트릭 수사]";
+		mes "후... 끝났어. 이제 네게 걸린 모든 저주를 풀어줬으니, 다시 들어와도 좋아.";
+		close;
+	}
+}
+
+prt_monk,261,91,3	script	Rust Blackhand#edq	826,{
+	set .@new_maje,checkquest(3043);
+	mes "[러스트 블랙핸드]";
+	mes "당신은 누구십니까? 저에게 무엇을 원하시는 겁니까?";
+	next;
+	mes "[러스트 블랙핸드]";
+	mes "당신은 승려가 아니잖아요, 그럼 뭘 원하시는 거예요?";
+	next;
+	if (.@new_maje == 0 || .@new_maje == 1) {
+		mes "[러스트 블랙핸드]";
+		mes "재료는 다 가져오셨나요?";
+		next;
+		if ((countitem(6004) > 0) && (countitem(2256) > 0) && (countitem(7799) > 29) && (countitem(7798) > 49) && (Zeny > 990000)) {
+			mes "[러스트 블랙핸드]";
+			mes "ㅋㅋㅋ... 재료는 잘 준비했네. 그냥 거기 두고 기다려 봐.";
+			next;
+			mes "[러스트 블랙핸드]";
+			mes "음... 이 무시무시한 뿔들을 마지막으로 본 게 정말 오래됐군... ㅋㅋㅋ... 자, 시작해 볼까...";
+			next;
+			mes "...";
+			next;
+			mes "... ...";
+			next;
+			mes "... ... ...";
+			next;
+			delitem 6004,1; //Bapho_Doll
+			delitem 2256,1; //Magestic_Goat
+			delitem 7799,30; //Dark_Crystal
+			delitem 7798,50; //Dark_Debris
+			set Zeny, Zeny-990000;
+			completequest 3043;
+			getitem 5374,1; //L_Magestic_Goat
+			mes "[러스트 블랙핸드]";
+			mes "끝났습니다. 물론 기쁘시겠죠. 이해합니다...";
+			next;
+			mes "[러스트 블랙핸드]";
+			mes "저는 불만 접수나 A/S 요청을 받지 않으니 주의해서 사용하세요. 저는 가봐야 해요...";
+			close;
+		}
+		else {
+			mes "[러스트 블랙핸드]";
+			mes "후... 제 말을 이해 못 하셨네요. 이 재료들로는 아무것도 만들 수 없어요.";
+			next;
+			mes "[러스트 블랙핸드]";
+			mes "재료를 다시 한번 알려드릴 테니, 정확하게 준비해 주세요.";
+			next;
+			mes "[러스트 블랙핸드]";
+			mes "저주받은 바포메트 인형, 위엄 있는 염소, 어둠의 수정 30개, 어둠의 조각 50개, 그리고 가장 중요한 것은 제작 비용이 990000 제니라는 점입니다.";
+			close;
+		}
+	}
+	else if ((.@new_maje == -1) && (countitem(6004) > 0)) {
+		switch(select("저주받은 바포메트 인형에 대하여:그만 말해.")) {
+		case 1:
+			mes "[러스트 블랙핸드]";
+			mes "뭐라고?... 흠... 인형은 받았어? 겉모습과는 달리 꽤 솜씨가 좋네...";
+			next;
+			mes "[러스트 블랙핸드]";
+			mes "어디 보자... 말할 필요도 없이, 패트릭이 인형 문제를 처리하라고 당신을 여기로 보냈겠죠?";
+			next;
+			mes "[러스트 블랙핸드]";
+			mes "좋아... 내가 그 사악한 인형을 쓸모 있게 만드는 걸 도와줄게. 뭐라고? 내가 뭘 할 수 있는데?";
+			next;
+			mes "[러스트 블랙핸드]";
+			mes "사악한 악마 바포메트의 크고 강력한 뿔을 만들어 드릴 수 있습니다. 엄청난 힘을 지닌 투구도 만들어 드리겠습니다.";
+			next;
+			mes "[러스트 블랙핸드]";
+			mes "이것은 '거대하고 위엄 있는 염소'라고 불립니다. 여러분이 알고 있는 위엄 있는 염소는 이것에 비하면 아무것도 아니라는 것을 깨닫게 될 것입니다.";
+			next;
+			mes "[러스트 블랙핸드]";
+			mes "저주받은 바포메트 인형이 가장 중요한 재료야... 원한다면 만들어 줄게. 뭘 하고 싶어?";
+			next;
+			switch(select("나도 하나 만들고 싶어!:저는 필요 없어요.")) {
+			case 1:
+				mes "[러스트 블랙핸드]";
+				mes "ㅋㅋㅋ... 그래, 현명한 사람은 기회가 오면 잡는 법이지. 재료는 내가 알려줄게. 잊지 말고 전부 가져와.";
+				next;
+				mes "[러스트 블랙핸드]";
+				mes "저주받은 바포메트 인형, 위엄 있는 염소, 어둠의 수정 30개, 어둠의 조각 50개, 그리고 가장 중요한 것은 제작 비용이 990000 제니라는 점입니다.";
+				next;
+				mes "[러스트 블랙핸드]";
+				mes "신비로운 염소는 미궁의 숲에 있는 약한 바포메트에게서 얻을 수 있습니다. 어둠의 수정과 어둠의 조각은 모로크의 화신에게서 얻을 수 있습니다.";
+				next;
+				mes "[러스트 블랙핸드]";
+				mes "네가 진짜 바포메트를 봉인했으니 재료를 구할 수 있을 거라고 확신해. 그렇지? ㅋㅋㅋ";
+				next;
+				mes "[러스트 블랙핸드]";
+				mes "이 모자가 얼마나 좋은지는 직접 써보기 전까지는 절대 알 수 없을 거예요. 무슨 말인지 알겠으면, 가서 재료를 구해오세요.";
+				if (isbegin_quest(3042))
+					changequest 3042,3043;
+				else
+					setquest 3043;
+				close;
+			case 2:
+				mes "[러스트 블랙핸드]";
+				mes "흠... 정말요? 하고 싶은 대로 하세요... 이 기회를 정말 놓치고 싶은 건가요?";
+				next;
+				mes "[러스트 블랙핸드]";
+				mes "<binary data, 7 bytes> 그 못된 인형이 네 목숨을 항상 위협해도 난 상관없어!";
+				close;
+			}
+		case 2:
+			mes "[러스트 블랙핸드]";
+			mes "정말 따분한 녀석이군... 으흠...";
+			close;
+		}
+	}
+	else if ((.@new_maje == -1) && (countitem(6004) == 0)) {
+		mes "[러스트 블랙핸드]";
+		mes "나와 볼일이 없으면 저리 가! 보시다시피, 나는 수도원 수도사들을 위한 장비를 만드는 거지, 너 같은 모험가들을 위한 게 아니야. 알겠어?";
+		close;
+	}
+	else if ((.@new_maje == 2) && (countitem(6004) > 0)) {
+		switch(select("저주받은 바포메트 인형에 대하여:그만 말해.")) {
+		case 1:
+			mes "[러스트 블랙핸드]";
+			mes "뭐라고?...또 너야? 이번엔 또 뭘 원하는 거야?";
+			next;
+			mes "[러스트 블랙핸드]";
+			mes "뭐라고? 또 악마한테서 인형을 받았어? 음... 생각보다 훨씬 괜찮은 사람이군...";
+			next;
+			mes "[러스트 블랙핸드]";
+			mes "알았어... 다시 도와줄게.";
+			next;
+			mes "[러스트 블랙핸드]";
+			mes "만약 당신이 인형을 다시 ^4d4dff거대하고 위엄 있는 염소^000000로 만들고 싶다면, 제가 하나 더 만들어 드릴 수 있어요.";
+			next;
+			mes "[러스트 블랙핸드]";
+			mes "재료를 다시 알려드릴게요. 만들어 보실래요?";
+			next;
+			switch(select("나는 원해요.:아니요, 그러고 싶지 않아요.")) {
+			case 1:
+				mes "[러스트 블랙핸드]";
+				mes "ㅋㅋㅋ... 그래, 현명한 사람은 기회가 오면 잡는 법이지. 재료는 내가 알려줄게. 잊지 말고 전부 가져와.";
+				next;
+				mes "[러스트 블랙핸드]";
+				mes "저주받은 바포메트 인형, 위엄 있는 염소, 어둠의 수정 30개, 어둠의 조각 50개, 그리고 가장 중요한 것은 제작 비용이 990000 제니라는 점입니다.";
+				next;
+				mes "[러스트 블랙핸드]";
+				mes "신비로운 염소는 미궁의 숲에 있는 약한 바포메트에게서 얻을 수 있습니다. 어둠의 수정과 어둠의 조각은 모로크의 화신에게서 얻을 수 있습니다.";
+				next;
+				mes "[러스트 블랙핸드]";
+				mes "네가 진짜 바포메트를 봉인했으니 재료를 구할 수 있을 거라고 확신해. 그렇지? ㅋㅋㅋ";
+				next;
+				mes "[러스트 블랙핸드]";
+				mes "이 모자가 얼마나 좋은지는 직접 써보기 전까지는 절대 알 수 없을 거예요. 무슨 말인지 알겠으면, 가서 재료를 구해오세요.";
+				//recall_completequest 3043
+				if (isbegin_quest(3042))
+					changequest 3042,3043;
+				else {
+					erasequest 3043;
+					setquest 3043;
+				}
+				close;
+			case 2:
+				mes "[러스트 블랙핸드]";
+				mes "흠... 정말요? 하고 싶은 대로 하세요... 이 기회를 정말 놓치고 싶은 건가요?";
+				next;
+				mes "[러스트 블랙핸드]";
+				mes "<binary data, 7 bytes> 그 못된 인형이 네 목숨을 항상 위협해도 난 상관없어!";
+				close;
+			}
+		case 2:
+			mes "[러스트 블랙핸드]";
+			mes "정말 따분한 녀석이군... 으흠...";
+			close;
+		}
+	}
+	else if ((.@new_maje == 2) && (countitem(6004) == 0)) {
+		mes "[러스트 블랙핸드]";
+		mes "왜 여기 어슬렁거리고 있는 거야? ^4d4dff거대하고 위엄 있는 염소^000000를 원하지 않으면 그냥 가버려.";
+		close;
+	}
+}
+
+// Sealed Shrine Interior
+//============================================================
+1@cata,1,2,0	script	ins_baphomet_lotto	-1,{
+OnInstanceInit:
+	// Pick one "true" Gravestone and 12 "false" Gravestones.
+	set .@true, rand(1,13);
+	for(set .@i,1; .@i<=13; set .@i,.@i+1) {
+		disablenpc instance_npcname("Gravestone#1F_"+.@i+((.@i == .@true)?"T":"F"));
+	}
+	disablenpc instance_npcname("ins_baphomet_lotto");
+	end;
+}
+
+1@cata,3,2,0	script	ins_baphomet_lotto2	-1,{
+OnEnable:
+	for(set .@i,1; .@i<=12; set .@i,.@i+1)
+		enablenpc instance_npcname("Bobbing Torch#"+.@i);
+	end;
+}
+
+1@cata,4,2,0	script	ins_baphomet_lotto3	-1,{
+OnEnable:
+	set .@label$, instance_npcname("ins_baphomet_lotto3")+"::OnMyMobDead";
+	set .@map$, instance_mapname("1@cata");
+	monster .@map$,0,0,"Apostle of Baphomet",1869,1,.@label$;
+	monster .@map$,0,0,"Apostle of Baphomet",1291,1,.@label$;
+	monster .@map$,0,0,"Apostle of Baphomet",1869,1,.@label$;
+	monster .@map$,0,0,"Apostle of Baphomet",1291,1,.@label$;
+	monster .@map$,0,0,"Apostle of Baphomet",1869,1,.@label$;
+	monster .@map$,0,0,"Apostle of Baphomet",1291,1,.@label$;
+	monster .@map$,0,0,"Apostle of Baphomet",1869,1,.@label$;
+	monster .@map$,0,0,"Apostle of Baphomet",1132,1,.@label$;
+	monster .@map$,0,0,"Apostle of Baphomet",1117,1,.@label$;
+	monster .@map$,0,0,"Apostle of Baphomet",1132,1,.@label$;
+	monster .@map$,0,0,"Apostle of Baphomet",1117,1,.@label$;
+	monster .@map$,0,0,"Apostle of Baphomet",1132,1,.@label$;
+	monster .@map$,0,0,"Apostle of Baphomet",1291,1,.@label$;
+	monster .@map$,0,0,"Apostle of Baphomet",1117,1,.@label$;
+	monster .@map$,0,0,"Apostle of Baphomet",1869,1,.@label$;
+	end;
+
+OnDisable:
+	killmonster instance_mapname("1@cata"),instance_npcname("ins_baphomet_lotto3")+"::OnMyMobDead";
+	end;
+
+OnMyMobDead:
+	set .@map$, instance_mapname("1@cata");
+	if (mobcount(.@map$,instance_npcname("ins_baphomet_lotto3")+"::OnMyMobDead") < 1) {
+		mapannounce .@map$, "바포메트의 모든 사도들이 죽었다!",bc_map,"0x00ff99";
+	}
+	getitem 6002,1; //Token_Of_Apostle
+	end;
+}
+
+// Soul of hero near the north grave
+//============================================================
+1@cata,141,221,0	script	Gravestone#	844,3,3,{
+	set .@party_id,getcharid(1);
+	if ('ins_baphomet == 0) {
+		mes "묘비가 떨리고 있다...";
+		next;
+		mes "묘비를 만지면 목소리가 들린다.";
+		next;
+		specialeffect2 EF_CONE;
+		mes "[묘비의 목소리]";
+		mes "나는 당신처럼 용감한 모험가가 다시 이곳으로 돌아오기를 오랫동안 기다리고 또 기다렸습니다...";
+		next;
+		while(1) {
+			switch(select("누구세요?:나를 기다려주셨어?:Cancel.")) {
+			case 1:
+				mes "[묘비의 목소리]";
+				mes "저도 당신처럼 바포메트를 막아낸 전사 중 한 명이었습니다. 이제 저는 죽었고, 제 영혼만이 남았습니다...";
+				next;
+				mes "[묘비의 목소리]";
+				mes "아시다시피... 시간이 많지 않습니다. 당신 혼자서는 바포메트를 막을 수 없습니다. 악마의 힘은 세월이 흐르면서 더욱 강해졌습니다.";
+				next;
+				mes "[묘비의 목소리]";
+				mes "과거에 나와 동료들은 지하 2층에 있는 제단에 바포메트를 봉인하고 입구를 막았습니다.";
+				next;
+				mes "[묘비의 목소리]";
+				mes "나는 이 세상에 머물기 위해 내 영혼의 정수를 펜던트에 옮겼다. 그때부터 나는 이 무덤의 수호자가 되었다.";
+				next;
+				break;
+			case 2:
+				mes "[묘비의 목소리]";
+				mes "바포메트의 힘이 우리가 만든 봉인을 깨뜨리려 하고 있습니다. 만약 당신이 그들을 다시 활성화시키지 않는다면... 바포메트의 부활은 시간 문제일 뿐입니다.";
+				next;
+				mes "[묘비의 목소리]";
+				mes "입구를 열려면 내 영혼을 실체화해야 합니다. 내가 실체화된 후에 입구를 열고 약해진 봉인을 다시 활성화하겠습니다.";
+				next;
+				mes "[묘비의 목소리]";
+				mes "내 영혼을 실체화하려면 내 펜던트를 찾아야 합니다. 내 시신은 여기 무덤 근처에서 찾을 수 있습니다.";
+				next;
+				mes "[묘비의 목소리]";
+				mes "만약 당신의 ^0000FF당 대표^000000가 내게 펜던트를 가져다준다면, 내 영혼은 실체화될 수 있다. 좋아, 서둘러.";
+				set 'ins_baphomet,1;
+				close;
+			case 3:
+				mes "목소리가 점점 희미해지는 것이 느껴집니다.";
+				close;
+			}
+		}
+	}
+	else if ('ins_baphomet == 1) {
+		mes "[묘비의 목소리]";
+		mes "입구를 열려면 내 영혼을 실체화해야 합니다. 내가 실체화된 후에 입구를 열고 약해진 봉인을 다시 활성화하겠습니다.";
+		next;
+		mes "[묘비의 목소리]";
+		mes "내 영혼을 실체화하려면 내 펜던트를 찾아야 합니다. 내 시신은 여기 무덤 근처에서 찾을 수 있습니다.";
+		next;
+		mes "[묘비의 목소리]";
+		mes "만약 당신의 ^0000FF당 대표^000000가 내게 펜던트를 가져다준다면, 내 영혼은 실체화될 수 있다. 좋아, 서둘러.";
+		close;
+	}
+	else if (('ins_baphomet == 2) && is_party_leader(.@party_id) == true) {
+		mes "[묘비의 목소리]";
+		mes "펜던트를 찾으셨나요?";
+		next;
+		if (countitem(6003) > 0) {
+			specialeffect EF_MAPPILLAR;
+			mes "[묘비의 목소리]";
+			mes "네... 이건... 제 펜던트예요...";
+			next;
+			delitem 6003,1; //Soul_Pendant
+			enablenpc instance_npcname("Ancient Hero's Soul#1F");
+			disablenpc instance_npcname("Gravestone#");
+			mes "[묘비의 목소리]";
+			mes "이제 내 영혼을 실체화할 수 있겠군. 이 무덤 중앙에 있는 불의 제단 앞에서 널 기다리겠어. 거기서 만나자.";
+			next;
+			mapannounce instance_mapname("1@cata"), "고대 영웅의 영혼: 중앙에 있는 불의 제단 앞에서 기다리겠습니다.",bc_map,"0xFFFF00";
+			mes "목소리가 점점 희미해지는 것이 느껴집니다.";
+			close;
+		}
+		else {
+			mes "[묘비의 목소리]";
+			mes "아직 거기 있나요? 제 펜던트를 최대한 빨리 돌려주세요.";
+			next;
+			mes "[묘비의 목소리]";
+			mes "내 시신은 여기 무덤 근처에서 찾을 수 있을 거야. 가서 내 펜던트를 가져와.";
+			close;
+		}
+	}
+	else {
+		mes "[묘비의 목소리]";
+		mes "저는 귀당의 대표자와 이야기를 나누고 싶습니다. 나머지 분들은 여기서 기다려 주십시오.";
+		close;
+	}
+	end;
+
+OnTouch:
+	if ('ins_baphomet == 0) {
+		mes "'크르르... 크르르...'";
+		next;
+		mes "무덤가에서 뭔가 이상한 기운을 느껴요. 마치 누군가가 소리 없이 부르는 것 같아요...";
+		close;
+	}
+	end;
+
+OnInstanceInit: // Temporary fix for @reloadscript.
+	set 'ins_baphomet,0;
+	end;
+}
+
+1@cata,176,119,4	script	Ancient Hero's Soul#1F	411,{
+	set .@party_id,getcharid(1);
+	cutin "ins_cata_champ_n",2;
+	if ('ins_baphomet == 2) {
+		mes "[고대 영웅의 영혼]";
+		mes "당신의 도움으로 제 영혼이 실체를 갖출 수 있을 거예요. 더 이야기하고 싶지만 시간이 부족하네요...";
+		next;
+		mes "[고대 영웅의 영혼]";
+		mes "나는 다음 한 시간 안에 실체화되어야 한다. 지하의 주 제단에 도달하려면 각 봉인을 여는 의식을 내가 수행하는 것을 도와줘야 한다.";
+		next;
+		mes "[고대 영웅의 영혼]";
+		mes "자, 이제 여러분이 해야 할 일을 알려드리겠습니다. 먼저, 무덤 위의 횃불에서 ^0000FFEssence of Fire^000000을 모으세요...";
+		next;
+		mes "[고대 영웅의 영혼]";
+		mes "둘째, 지하조직에 입단하는 모든 구성원은 사도의 표식이라고 불리는 상징물을 소지해야 합니다.";
+		next;
+		while(1) {
+			cutin "ins_cata_champ_n",2;
+			switch(select("불의 본질은 무엇인가?:사도의 표식이란 무엇인가요?:어떻게 해야 할까요?:저는 준비됐습니다.")) {
+			case 1:
+				set .@ins_baphomet_1f_1,.@ins_baphomet_1f_1+1;
+				mes "[고대 영웅의 영혼]";
+				mes "여기저기에 횃불이 보이시죠? 이 횃불은 천둥의 신 토르의 정수를 상징합니다. 바포메트의 어둠을 막기 위해 선조들로부터 물려받은 것이죠.";
+				next;
+				mes "[고대 영웅의 영혼]";
+				mes "봉인된 지하문을 열려면 토르의 힘을 지닌 불의 정수로 정화되어야 합니다. 횃불에서 불의 정수 10개를 모으세요.";
+				next;
+				mes "[고대 영웅의 영혼]";
+				mes "한 가지 꼭 기억해야 할 것은... ^0000FFEssence of Fire^000000는 오직 신앙의 계승자만이 획득할 수 있다는 것입니다.";
+				next;
+				mes "[고대 영웅의 영혼]";
+				mes "신앙의 계승자 토큰을 파티 리더에게 드리겠습니다. 파티 리더만이 불의 정수를 획득할 수 있습니다.";
+				next;
+				break;
+			case 2:
+				set .@ins_baphomet_1f_2,.@ins_baphomet_1f_2+1;
+				mes "[고대 영웅의 영혼]";
+				mes "그 당시에는 우리 힘으로는 악마 바포메트를 없애는 것이 불가능했습니다. 수많은 영웅들이 목숨을 바친 후에야 겨우 이 수도원 아래에 그를 봉인할 수 있었습니다.";
+				next;
+				mes "[고대 영웅의 영혼]";
+				mes "하지만 바포메트는 결코 포기하지 않았습니다. 그는 끊임없이 자신의 힘을 강화했고, 그의 힘은 이 신전에 새로운 생명을 불어넣었습니다.";
+				next;
+				mes "[고대 영웅의 영혼]";
+				mes "이 괴물들 중 일부는 마법적인 힘을 가지고 있다. 바포메트는 그들을 자신의 '사도'라고 부른다.";
+				next;
+				mes "[고대 영웅의 영혼]";
+				mes "사도들은 자신들의 사악한 기운으로 신전을 가득 채우기 위해 스스로를 복제하고 있다. 그들이 바로 이 지하 묘지에 있는 괴물들이다.";
+				next;
+				mes "[고대 영웅의 영혼]";
+				mes "사도들을 처치하라. 그들은 복제체와 구별할 수 있는 유일한 방법은 그들이 '사도 토큰'을 소유하고 있다는 것이다.";
+				next;
+				mes "[고대 영웅의 영혼]";
+				mes "만약 각 파티원이 사도의 토큰을 하나씩 가지고 있다면, 바포메트는 여러분이 지하 주 제단으로 들어가는 입구를 알아차릴 수 없을 것입니다.";
+				next;
+				mes "[고대 영웅의 영혼]";
+				mes "만약 바포메트가 당신이 봉인된 문을 통과하는 것을 감지한다면, 그는 엄청난 마법의 힘을 해방시킬지도 모릅니다. 그러면 이 수도원은 파괴될 것입니다.";
+				next;
+				mes "[고대 영웅의 영혼]";
+				mes "사도들을 처치하고 사도의 토큰 ^0000FFToken^000000을 획득하세요.";
+				next;
+				break;
+			case 3:
+				set .@ins_baphomet_1f_3,.@ins_baphomet_1f_3+1;
+				if (is_party_leader(.@party_id) == true) {
+					mes "[고대 영웅의 영혼]";
+					mes "당신은 이 파티의 리더처럼 보이네요. 횃불에서 ^0000FF10 불의 정수^000000를 가져와야 해요.";
+					next;
+					mes "[고대 영웅의 영혼]";
+					mes "이제 당신이 신앙의 계승자임을 나타내는 상징을 새겨 드리겠습니다. 명심하십시오. 당신 일행 중 누구도, 오직 당신만이 불의 정수를 획득할 수 있습니다.";
+					next;
+					specialeffect2 EF_HOLYHIT;
+					mes "[고대 영웅의 영혼]";
+					mes "또한 사도의 ^0000FFToken^000000도 소지해야 하므로, 본인도 하나 구하세요.";
+					next;
+					mes "[고대 영웅의 영혼]";
+					mes "모두 준비가 되면 알려주세요. 준비가 되면 닫힌 문을 열어드리겠습니다.";
+					next;
+				}
+				else {
+					mes "[고대 영웅의 영혼]";
+					mes "파티 리더가 당신과 동료들이 해야 할 일에 대한 제 설명을 제대로 들었는지 확인하십시오.";
+					next;
+					mes "[고대 영웅의 영혼]";
+					mes "바포메트의 사도들을 처치하고 그들의 ^0000FF사도의 토큰^000000을 찾으세요.";
+					next;
+					mes "[고대 영웅의 영혼]";
+					mes "복제체와 구별할 방법이 없으니 전부 죽이는 게 나을지도 몰라.";
+					next;
+					mes "[고대 영웅의 영혼]";
+					mes "준비됐나요?";
+					mes "제가 하는 말을 전부 다 들으신 후에 준비됐다고 말씀해 주세요.";
+					next;
+				}
+				break;
+			case 4:
+				if ((.@ins_baphomet_1f_1 > 0) && (.@ins_baphomet_1f_2 > 0) && (.@ins_baphomet_1f_3 > 0)) {
+					cutin "ins_cata_champ_n",2;
+					mes "[고대 영웅의 영혼]";
+					mes "갈 준비 됐나요? 그럼 이제 이 닫힌 문을 열어드리겠습니다.";
+					next;
+					set .@exitloop,1;
+				}
+				else {
+					cutin "ins_cata_champ_a",2;
+					mes "[고대 영웅의 영혼]";
+					mes "어려울 수도 있겠지만, 이 지하묘지의 위험을 헤쳐나가는 데 행운을 빌어요.";
+					next;
+					mes "[고대 영웅의 영혼]";
+					mes "잊지 마세요, 횃불에서 ^0000FF10 불의 정수^000000를, 바포메트의 사도들에게서 ^0000FF사도의 토큰^000000을 모아야 합니다.";
+					next;
+				}
+				break;
+			}
+			if (.@exitloop) break;
+		}
+		if (is_party_leader(.@party_id) == true) {
+			mes "[고대 영웅의 영혼]";
+			mes "다시 한번 말씀드리지만, 저는 한 시간 안에 작업을 완료해야 합니다. 그러니 모두들 그 시간 안에 작업을 끝내주세요!";
+			set 'ins_baphomet,3;
+			donpcevent instance_npcname("ins_baphomet_1f_timer")+"::OnEnable";
+			donpcevent instance_npcname("ins_baphomet_lotto2")+"::OnEnable";
+			donpcevent instance_npcname("ins_baphomet_lotto3")+"::OnEnable";
+		}
+		else {
+			mes "[고대 영웅의 영혼]";
+			mes "다시 한번 말씀드리지만, 앞으로 한 시간 동안은 내용이 상당히 늘어날 수 있습니다. 그러니 모두 그 시간 안에 작업을 완료해 주세요.";
+			//set 'ins_baphomet,3;
+		}
+		close2;
+		cutin "",255;
+		end;
+	}
+	else if (('ins_baphomet == 3) && is_party_leader(.@party_id) == true) {
+		cutin "ins_cata_champ_n",2;
+		mes "[고대 영웅의 영혼]";
+		mes "^0000FFEssence of Fire^000000 10개와 ^0000FFToken of Apostle^000000을 얻으셨나요?";
+		next;
+		if ((countitem(6001) > 9) && (countitem(6002) > 0)) {
+			delitem 6001,countitem(6001); //Essence_Of_Fire
+			set 'ins_baphomet,4;
+			mes "[고대 영웅의 영혼]";
+			mes "좋아요. 당신은 할 일을 다 했습니다. 이제 동료들의 과제를 확인하고 모두 끝냈는지 알려주세요.";
+		}
+		else {
+			mes "[고대 영웅의 영혼]";
+			mes "아직 준비 안 됐나요? 그렇다면 ^0000FFEssence of Fire^000000 10개와 ^0000FFToken of Apostle^000000을 준비해야 합니다.";
+		}
+		close2;
+		cutin "",255;
+		end;
+	}
+	else if ('ins_baphomet == 3) {
+		cutin "ins_cata_champ_n",2;
+		mes "[고대 영웅의 영혼]";
+		mes "사도^000000의 ^0000FFToken을 가지고 계신가요?";
+		next;
+		if (countitem(6002) > 0) {
+			set 'ins_baphomet,4;
+			mes "[고대 영웅의 영혼]";
+			mes "좋습니다. 할 일을 다 하셨습니다. 담당자에게 동료들의 업무를 확인하고 모두 완료되면 저에게 오라고 전해주세요.";
+		}
+		else {
+			mes "[고대 영웅의 영혼]";
+			mes "아직 준비 안 됐나요? 사도의 토큰 ^0000FFToken^000000을 준비하세요.";
+		}
+		close2;
+		cutin "",255;
+		end;
+	}
+	else if (('ins_baphomet == 4) && is_party_leader(.@party_id) == true) {
+		cutin "ins_cata_champ_n",2;
+		mes "[고대 영웅의 영혼]";
+		mes "준비됐나요? 제가 봉인된 문을 열었습니다. 이 문을 통과하려면 사도 토큰을 소지해야 합니다.";
+		next;
+		set 'ins_baphomet,5;
+		specialeffect EF_TELEPORTATION;
+		enablenpc instance_npcname("ins_bapho_to_2f");
+		donpcevent instance_npcname("ins_baphomet_1f_timer")+"::OnDisable";
+		mes "[고대 영웅의 영혼]";
+		mes "이제 주 제단으로 가실 수 있습니다. 주 제단은 이 층의 오른쪽 아래 구석에 있습니다.";
+		next;
+		mes "[고대 영웅의 영혼]";
+		mes "진정한 싸움은 이제 시작될 거야... 곧 뒤따라가서 널 도울 방법을 찾을게.";
+		next;
+		mes "[고대 영웅의 영혼]";
+		mes "자, 전사들이여, 나아가라.";
+		cutin "",255;
+		mapannounce instance_mapname("1@cata"), "고대 영웅의 영혼: 이제 주 제단의 문으로 갈 수 있습니다. 문은 남동쪽에 있습니다.",bc_map,"0xFFFF00";
+		close;
+	}
+	else if ('ins_baphomet == 4) {
+		cutin "ins_cata_champ_n",2;
+		mes "[고대 영웅의 영혼]";
+		mes "준비됐나요? 제가 봉인된 문을 열었습니다. 이 문을 통과하려면 사도 토큰을 소지해야 합니다.";
+		next;
+		mes "[고대 영웅의 영혼]";
+		mes "귀하의 대리인이 준비되었다고 알려주시면 봉쇄된 문을 완전히 열겠습니다.";
+		cutin "",255;
+		close;
+	}
+	else if ('ins_baphomet == 5) {
+		cutin "ins_cata_champ_n",2;
+		mes "[고대 영웅의 영혼]";
+		mes "뭐 하는 거야? 주 제단 입구가 열렸으니, 가서 싸워! 입구는 이 층 오른쪽 아래쯤에 있어.";
+		cutin "",255;
+		close;
+	}
+	else {
+		cutin "ins_cata_champ_n",2;
+		mes "[고대 영웅의 영혼]";
+		mes "당신에게 할 말이 없습니다...";
+		cutin "",255;
+		close;
+	}
+
+OnInstanceInit:
+	disablenpc instance_npcname("Ancient Hero's Soul#1F");
+	end;
+}
+
+// To 2F Warp
+//============================================================
+1@cata,281,12,0	script	ins_bapho_to_2f	45,1,1,{
+OnTouch:
+	if (countitem(6002) > 0) {
+		delitem 6002,countitem(6002); //Token_Of_Apostle
+		set 'ins_baphomet,5;
+		warp instance_mapname("2@cata"),80,144;
+		end;
+	}
+	else {
+		mes "[고대 영웅의 영혼]";
+		mes "사도의 표식은 어디 있습니까? 이 문을 통과하려면 사도의 표식을 지참해야 한다고 말씀드렸습니다.";
+		close;
+	}
+
+OnInstanceInit:
+	disablenpc instance_npcname("ins_bapho_to_2f");
+	end;
+}
+
+// Gravestones
+//============================================================
+-	script	Gravestone#SS1	-1,{
+	if ('ins_baphomet == 1) {
+		getitem 6003,1; //Soul_Pendant
+		set 'ins_baphomet,2;
+		mes "기울어진 무덤 아래에서 작은 물체가 빛나고 있다.";
+		next;
+		mes "[" + strcharinfo(0) + "]";
+		mes "제 생각엔 이게 펜던트인 것 같아요...";
+		close;
+	}
+	else {
+		mes "이 묘비에서는 오직 우울함만이 느껴진다.";
+		close;
+	}
+}
+1@cata,86,214,0	duplicate(Gravestone#SS1)	Gravestone#1F_1T	844
+1@cata,200,209,0	duplicate(Gravestone#SS1)	Gravestone#1F_2T	844
+1@cata,230,195,0	duplicate(Gravestone#SS1)	Gravestone#1F_3T	844
+1@cata,118,182,0	duplicate(Gravestone#SS1)	Gravestone#1F_4T	844
+1@cata,193,182,0	duplicate(Gravestone#SS1)	Gravestone#1F_5T	844
+1@cata,253,156,0	duplicate(Gravestone#SS1)	Gravestone#1F_6T	844
+1@cata,88,154,0	duplicate(Gravestone#SS1)	Gravestone#1F_7T	844
+1@cata,127,116,0	duplicate(Gravestone#SS1)	Gravestone#1F_8T	844
+1@cata,90,98,0	duplicate(Gravestone#SS1)	Gravestone#1F_9T	844
+1@cata,188,84,0	duplicate(Gravestone#SS1)	Gravestone#1F_10T	844
+1@cata,244,42,0	duplicate(Gravestone#SS1)	Gravestone#1F_11T	844
+1@cata,127,32,0	duplicate(Gravestone#SS1)	Gravestone#1F_12T	844
+1@cata,267,30,0	duplicate(Gravestone#SS1)	Gravestone#1F_13T	844
+
+-	script	Gravestone#SS2	-1,{
+	mes "이 묘비에서는 오직 우울함만이 느껴진다.";
+	close;
+}
+1@cata,86,214,0	duplicate(Gravestone#SS2)	Gravestone#1F_1F	844
+1@cata,200,209,0	duplicate(Gravestone#SS2)	Gravestone#1F_2F	844
+1@cata,230,195,0	duplicate(Gravestone#SS2)	Gravestone#1F_3F	844
+1@cata,118,182,0	duplicate(Gravestone#SS2)	Gravestone#1F_4F	844
+1@cata,193,182,0	duplicate(Gravestone#SS2)	Gravestone#1F_5F	844
+1@cata,253,156,0	duplicate(Gravestone#SS2)	Gravestone#1F_6F	844
+1@cata,88,154,0	duplicate(Gravestone#SS2)	Gravestone#1F_7F	844
+1@cata,127,116,0	duplicate(Gravestone#SS2)	Gravestone#1F_8F	844
+1@cata,90,98,0	duplicate(Gravestone#SS2)	Gravestone#1F_9F	844
+1@cata,188,84,0	duplicate(Gravestone#SS2)	Gravestone#1F_10F	844
+1@cata,244,42,0	duplicate(Gravestone#SS2)	Gravestone#1F_11F	844
+1@cata,127,32,0	duplicate(Gravestone#SS2)	Gravestone#1F_12F	844
+1@cata,267,30,0	duplicate(Gravestone#SS2)	Gravestone#1F_13F	844
+
+// Bobbing Torches
+//============================================================
+-	script	Bobbing Torch#SS	-1,{
+	if (is_party_leader() == true) {
+		if (('ins_baphomet == 3) && (countitem(6001) < 11)) {
+			mes "마치 모든 것을 태워버릴 듯한 거대한 횃불이 내 앞에서 위아래로 흔들리고 있다.";
+			next;
+			mes "불길의 거대함과 열기에 나는 뒷걸음질 쳤지만… 용기를 내어 횃불을 집어 들었다.";
+			next;
+			specialeffect2 EF_HOLYHIT;
+			getitem 6001,1; //Essence_Of_Fire
+			mes "상속자의 상징이 빛난다. 그때 손전등에서 작은 수정 조각 하나가 내 손으로 떨어진다.";
+			disablenpc();
+			close;
+		}
+		else if (('ins_baphomet == 3) && (countitem(6001) > 10)) {
+			mes "이미 불의 정수 10개를 가지고 있으니 더 이상 모을 필요가 없습니다.";
+			close;
+		}
+		else {
+			mes "이제 더 이상 불의 정수를 모을 필요가 없습니다.";
+			close;
+		}
+	}
+	else {
+		mes "모든 것을 태워버릴 듯한 거대한 횃불이 내 앞에서 위아래로 흔들리고 있다.";
+		next;
+		mes "[알 수 없는 목소리]";
+		mes "당신은 신앙의 계승자가 아닙니다. 함부로 불의 정수를 더럽히지 마십시오.";
+		specialeffect2 EF_FIRESPLASHHIT;
+		percentheal -50,0;
+		close;
+	}
+
+OnInstanceInit:
+	disablenpc();
+	end;
+}
+1@cata,267,210,0	duplicate(Bobbing Torch#SS)	Bobbing Torch#1	844
+1@cata,85,182,0	duplicate(Bobbing Torch#SS)	Bobbing Torch#2	844
+1@cata,267,154,0	duplicate(Bobbing Torch#SS)	Bobbing Torch#3	844
+1@cata,157,139,0	duplicate(Bobbing Torch#SS)	Bobbing Torch#4	844
+1@cata,193,138,0	duplicate(Bobbing Torch#SS)	Bobbing Torch#5	844
+1@cata,193,102,0	duplicate(Bobbing Torch#SS)	Bobbing Torch#6	844
+1@cata,157,102,0	duplicate(Bobbing Torch#SS)	Bobbing Torch#7	844
+1@cata,113,112,0	duplicate(Bobbing Torch#SS)	Bobbing Torch#8	844
+1@cata,253,56,0	duplicate(Bobbing Torch#SS)	Bobbing Torch#9	844
+1@cata,239,56,0	duplicate(Bobbing Torch#SS)	Bobbing Torch#10	844
+1@cata,71,42,0	duplicate(Bobbing Torch#SS)	Bobbing Torch#11	844
+1@cata,155,14,0	duplicate(Bobbing Torch#SS)	Bobbing Torch#12	844
+
+1@cata,1,1,0	script	ins_baphomet_1f_timer	-1,{
+OnInstanceInit:
+	disablenpc instance_npcname("ins_baphomet_1f_timer");
+	end;
+
+OnEnable:
+	enablenpc instance_npcname("ins_baphomet_1f_timer");
+	initnpctimer;
+	end;
+
+OnDisable:
+	disablenpc instance_npcname("ins_baphomet_1f_timer");
+	stopnpctimer;
+	end;
+
+OnTimer1800000:
+	mapannounce instance_mapname("1@cata"), "고대 영웅의 영혼: 시간이 부족해! 서둘러!",bc_map,"0xFFFF00";
+	end;
+
+OnTimer2400000:
+	mapannounce instance_mapname("1@cata"), "고대 영웅의 영혼: 내 몸이 사라지고 있어... 서둘러!",bc_map,"0xFFFF00";
+	end;
+
+OnTimer3000000:
+	mapannounce instance_mapname("1@cata"), "고대 영웅의 영혼: 모든 것이 끝났다... 다음 기회를 기다리는 것 외에는 다른 길이 없다...",bc_map,"0xFFFF00";
+	end;
+
+OnTimer3050000:
+	mapannounce instance_mapname("1@cata"), "고대 영웅의 영혼: 우리는 실패했지만… 아직 기회는 남아 있습니다. 때가 올 때까지 수련을 계속하시길 바랍니다.",bc_map,"0xFFFF00";
+	end;
+
+OnTimer3100000:
+	mapannounce instance_mapname("1@cata"), "당신은 주 제단의 봉인을 여는 데 실패했습니다.",bc_map,"0xFFFF00";
+	end;
+
+OnTimer3500000:
+	instance_warpall "monk_test",310,150, instance_id();
+	stopnpctimer;
+	end;
+}
+
+2@cata,80,144,0	script	ins_2f_enter	-1,3,3,{
+OnTouch_:
+	donpcevent instance_npcname("ins_2f_enter_broad")+"::OnEnable";
+	disablenpc instance_npcname("ins_2f_enter");
+	end;
+}
+
+2@cata,1,1,0	script	ins_2f_enter_broad	-1,{
+OnInstanceInit:
+OnDisable:
+	disablenpc instance_npcname("ins_2f_enter_broad");
+	end;
+
+OnEnable:
+	enablenpc instance_npcname("ins_2f_enter_broad");
+	initnpctimer;
+	end;
+
+OnTimer10000:
+	mapannounce instance_mapname("2@cata"), "바포메트: 인간들이... 또 간섭하는군...",bc_map,"0xdb7093";
+	end;
+
+OnTimer13000:
+	mapannounce instance_mapname("2@cata"), "바포메트의 사도: 인간들이여! 인간들이 우리의 성소를 침략했구나!",bc_map,"0xFFFF00";
+	end;
+
+OnTimer16000:
+	mapannounce instance_mapname("2@cata"), "바포메트의 사도: 인간들을 죽여라! 우리 주님의 부활을 막지 마라!",bc_map,"0xFFFF00";
+	end;
+
+OnTimer18000:
+	mapannounce instance_mapname("2@cata"), "바포메트의 사도: 어서 제단의 봉인을 풀어라! 우리 주님의 재림이 임박했다!",bc_map,"0xFFFF00";
+	stopnpctimer;
+	disablenpc instance_npcname("ins_2f_enter_broad");
+	end;
+}
+
+2@cata,50,67,0	script	slave_left	-1,5,5,{
+OnTouch_:
+	set .@map$, instance_mapname("2@cata");
+	mapannounce .@map$, "바포메트의 사도: 인간들을 죽여라! 그들이 우리 주님의 부활을 방해하게 놔두지 마라!",bc_map,"0xFFFF00";
+	monster .@map$,55,67,"Apostle of Baphomet",1869,1;
+	monster .@map$,51,67,"Apostle of Baphomet",1291,1;
+	monster .@map$,58,67,"Apostle of Baphomet",1292,1;
+	monster .@map$,53,67,"Apostle of Baphomet",1291,1;
+	monster .@map$,54,67,"Apostle of Baphomet",1869,1;
+	monster .@map$,55,67,"Apostle of Baphomet",1291,1;
+	monster .@map$,56,67,"Apostle of Baphomet",1117,1;
+	monster .@map$,58,66,"Apostle of Baphomet",1869,1;
+	monster .@map$,56,66,"Apostle of Baphomet",1117,1;
+	monster .@map$,60,66,"Apostle of Baphomet",1132,1;
+	monster .@map$,59,66,"Apostle of Baphomet",1117,1;
+	monster .@map$,54,66,"Apostle of Baphomet",1132,1;
+	monster .@map$,55,66,"Apostle of Baphomet",1292,1;
+	monster .@map$,56,66,"Apostle of Baphomet",1132,1;
+	monster .@map$,50,65,"Apostle of Baphomet",1867,1;
+	monster .@map$,61,65,"Apostle of Baphomet",1292,1;
+	disablenpc instance_npcname("slave_left");
+	end;
+}
+
+2@cata,109,67,0	script	slave_right	-1,5,5,{
+OnTouch_:
+	set .@map$, instance_mapname("2@cata");
+	mapannounce .@map$, "바포메트의 사도: 인간들을 죽여라! 그들이 우리 주님의 부활을 방해하게 놔두지 마라!",bc_map,"0xFFFF00";
+	monster .@map$,105,67,"Apostle of Baphomet",1869,1;
+	monster .@map$,104,67,"Apostle of Baphomet",1291,1;
+	monster .@map$,107,67,"Apostle of Baphomet",1869,1;
+	monster .@map$,106,67,"Apostle of Baphomet",1291,1;
+	monster .@map$,102,67,"Apostle of Baphomet",1869,1;
+	monster .@map$,103,67,"Apostle of Baphomet",1291,1;
+	monster .@map$,103,67,"Apostle of Baphomet",1117,1;
+	monster .@map$,109,66,"Apostle of Baphomet",1117,1;
+	monster .@map$,108,66,"Apostle of Baphomet",1132,1;
+	monster .@map$,101,66,"Apostle of Baphomet",1117,1;
+	monster .@map$,106,66,"Apostle of Baphomet",1292,1;
+	monster .@map$,102,66,"Apostle of Baphomet",1132,1;
+	monster .@map$,104,66,"Apostle of Baphomet",1292,1;
+	monster .@map$,103,66,"Apostle of Baphomet",1132,1;
+	monster .@map$,109,65,"Apostle of Baphomet",1867,1;
+	monster .@map$,108,65,"Apostle of Baphomet",1292,1;
+	disablenpc instance_npcname("slave_right");
+	end;
+}
+
+2@cata,79,39,0	script	slave_down	-1,5,5,{
+OnTouch_:
+	set .@map$, instance_mapname("2@cata");
+	mapannounce .@map$, "바포메트의 사도: 인간들을 죽여라! 그들이 우리 주님의 부활을 방해하게 놔두지 마라!",bc_map,"0xFFFF00";
+	monster .@map$,78,41,"Apostle of Baphomet",1869,1;
+	monster .@map$,79,42,"Apostle of Baphomet",1291,1;
+	monster .@map$,78,46,"Apostle of Baphomet",1869,1;
+	monster .@map$,81,41,"Apostle of Baphomet",1291,1;
+	monster .@map$,81,42,"Apostle of Baphomet",1869,1;
+	monster .@map$,79,43,"Apostle of Baphomet",1291,1;
+	monster .@map$,77,40,"Apostle of Baphomet",1117,1;
+	monster .@map$,79,41,"Apostle of Baphomet",1132,1;
+	monster .@map$,79,42,"Apostle of Baphomet",1117,1;
+	monster .@map$,79,43,"Apostle of Baphomet",1132,1;
+	monster .@map$,79,48,"Apostle of Baphomet",1117,1;
+	monster .@map$,78,49,"Apostle of Baphomet",1132,1;
+	monster .@map$,78,41,"Apostle of Baphomet",1292,1;
+	monster .@map$,74,42,"Apostle of Baphomet",1292,1;
+	monster .@map$,72,48,"Apostle of Baphomet",1867,1;
+	monster .@map$,72,38,"Apostle of Baphomet",1292,1;
+	disablenpc instance_npcname("slave_down");
+	end;
+}
+
+// Magical Seals
+//============================================================
+-	script	Magical Seal#SS	-1,{
+	set .@seal_check,checkquest(3041,PLAYTIME);
+	if (.@seal_check == 0 || .@seal_check == 1) {
+		specialeffect2 EF_SILENCEATTACK;
+		percentheal -50,0;
+		sc_start SC_Stone,30000,0;
+		mes "당신의 SP는 아직 회복되지 않았습니다. 제단에서 SP를 잃었지만, 봉인의 힘은 돌아온 것 같습니다.";
+		close;
+	}
+	if (.@seal_check == 2) erasequest 3041;
+	specialeffect EF_LEXDIVINA;
+	disablenpc();
+	set .@map$, instance_mapname("2@cata");
+	if (strnpcinfo(2) == "0") areamobuseskill .@map$,79,81,10,1929,"NPC_INVINCIBLEOFF",1,0,0,ET_HELP,0;
+	else if (strnpcinfo(2) == "2") areamobuseskill .@map$,123,109,10,1929,"NPC_INVINCIBLEOFF",1,0,0,ET_HELP,0;
+	else if (strnpcinfo(2) == "4") areamobuseskill .@map$,123,22,10,1929,"NPC_INVINCIBLEOFF",1,0,0,ET_HELP,0;
+	else if (strnpcinfo(2) == "8") areamobuseskill .@map$,35,21,10,1929,"NPC_INVINCIBLEOFF",1,0,0,ET_HELP,0;
+	else if (strnpcinfo(2) == "10") areamobuseskill .@map$,35,109,10,1929,"NPC_INVINCIBLEOFF",1,0,0,ET_HELP,0;
+	percentheal -50,0;
+	sc_start SC_Stone,20000,0;
+	setquest 3041;
+	mapannounce .@map$, "제단에 마법의 힘을 불어넣으면 봉인이 활성화됩니다.",bc_map,"0x87ceeb";
+	mes "마법의 힘을 더하니 제단의 힘이 되살아난 것을 느낄 수 있어요.";
+	next;
+	mes "하지만 제단에 SP를 사용했기 때문에 3분 동안 마법을 사용할 수 없습니다.";
+	close;
+
+OnInstanceInit:
+	disablenpc();
+	end;
+}
+2@cata,79,81,0	duplicate(Magical Seal#SS)	Magical Seal#0	844
+2@cata,123,109,0	duplicate(Magical Seal#SS)	Magical Seal#2	844
+2@cata,123,22,0	duplicate(Magical Seal#SS)	Magical Seal#4	844
+2@cata,35,21,0	duplicate(Magical Seal#SS)	Magical Seal#8	844
+2@cata,35,109,0	duplicate(Magical Seal#SS)	Magical Seal#10	844
+
+2@cata,79,65,0	script	The Main Altar#ss	844,{
+	if (('ins_baphomet == 5) && is_party_leader() == true) {
+		mes "형언할 수 없을 만큼 끔찍한 악의 세력이 보라색을 뿜어내는 거대한 제단 아래에 도사리고 있다.";
+		next;
+		mes "복잡한 마법 문자들이 빠르게 깜빡이며, 그 안에 담긴 무시무시한 힘을 억누르려 애쓴다.";
+		next;
+		mes "주 제단의 아랫부분이 격렬하게 떨리고 있다.";
+		next;
+		specialeffect EF_METEORSTORM;
+		specialeffect EF_METEORSTORM;
+		mes "[" + strcharinfo(0) + "]";
+		mes "조심해! 무언가… 무언가가 오고 있어.";
+		set 'ins_baphomet,6;
+		donpcevent instance_npcname("ins_2f_hero_broad")+"::OnEnable";
+		disablenpc instance_npcname("The Main Altar#ss");
+		close;
+	}
+	else {
+		mes "형언할 수 없을 만큼 끔찍한 악의 세력이 보라색을 뿜어내는 거대한 제단 아래에 도사리고 있다.";
+		next;
+		mes "복잡한 마법 문자들이 빠르게 깜빡이며, 그 안에 담긴 무시무시한 힘을 억누르려 애쓴다.";
+		close;
+	}
+	end;
+}
+
+2@cata,80,63,4	script	Ancient Hero's Soul#2F	411,{
+	cutin "ins_cata_champ_s",2;
+	if (checkquest(3041)>=0) erasequest 3041;
+	mes "[고대 영웅의 영혼]";
+	mes "훌륭하구나, 내 후손들아... 너희가 나와 내 형제들이 끝내지 못했던 오랜 숙원을 완수했구나.";
+	next;
+	mes "[고대 영웅의 영혼]";
+	mes "도와주셔서 정말 감사합니다.";
+	mes "이제 우리 영혼은 비로소 평화롭게 쉴 수 있겠군요...";
+	next;
+	mes "[고대 영웅의 영혼]";
+	mes "이 세상의 평화를 위한 투쟁은 결코 끝나지 않을 것입니다. 하지만... 당신과 같은 용감한 영웅들이 있기에 제 역할은 이제 끝났습니다.";
+	next;
+	switch(select("신사를 떠나게 해 주세요.:그만 말해.")) {
+	case 1:
+		mes "[고대 영웅의 영혼]";
+		mes "알겠습니다. 당신과 일행분들이 안전하게 떠나셔도 됩니다.";
+		next;
+		mes "[고대 영웅의 영혼]";
+		mes "떠나실 때 패트릭에게 안부 전해주세요.";
+		cutin "",255;
+		set 'ins_baphomet,0;
+		warp "monk_test",310,150;
+		close;
+	case 2:
+		mes "[고대 영웅의 영혼]";
+		mes "여기서 아직 하실 일이 있으신가요? 다 끝나셨다면 안전하게 나가셔도 됩니다.";
+		cutin "",255;
+		close;
+	}
+
+OnInstanceInit:
+	disablenpc instance_npcname("Ancient Hero's Soul#2F");
+	end;
+}
+
+2@cata,1,2,0	script	ins_2f_hero_broad	-1,{
+OnEnable:
+	enablenpc instance_npcname("ins_2f_hero_broad");
+	initnpctimer;
+	end;
+
+OnDisable:
+	disablenpc instance_npcname("ins_2f_hero_broad");
+	end;
+
+OnTimer3000:
+	mapannounce instance_mapname("2@cata"), "고대 영웅의 영혼: 맙소사! 주 제단의 봉인이 약해지고 있어!",bc_map,"0xFFFF00";
+	end;
+
+OnTimer6000:
+	mapannounce instance_mapname("2@cata"), "고대 영웅의 영혼: 나의 후손들아... 내가 하는 말을 잘 들어라.",bc_map,"0xFFFF00";
+	end;
+
+OnTimer9000:
+	mapannounce instance_mapname("2@cata"), "고대 영웅의 영혼: 주 제단의 힘을 제어하는 제단은 이 방의 북동쪽, 남동쪽, 남서쪽, 북서쪽 모서리에 위치해 있습니다.",bc_map,"0xFFFF00";
+	end;
+
+OnTimer12000:
+	mapannounce instance_mapname("2@cata"), "고대 영웅의 영혼: 바포메트가 부활하기 전에 이 제단들을 찾아 봉인을 활성화하세요.",bc_map,"0xFFFF00";
+	end;
+
+OnTimer15000:
+	mapannounce instance_mapname("2@cata"), "바포메트: 너무 늦었다, 나약한 자들아... 이제 너희는 죽음의 절망을 맛보게 될 것이다!",bc_map,"0xdb7093";
+	end;
+
+OnTimer17000:
+	mapannounce instance_mapname("2@cata"), "바포메트: 이곳에서는 아무도 나를 해칠 수 없다. 너는 나의 첫 번째 희생양이 될 것이다.",bc_map,"0xdb7093";
+	donpcevent instance_npcname("control_baphomet")+"::OnEnable";
+	donpcevent instance_npcname("ins_2f_hero_broad2")+"::OnEnable";
+	stopnpctimer;
+	disablenpc instance_npcname("ins_2f_hero_broad");
+	end;
+}
+
+2@cata,3,3,0	script	control_baphomet	-1,{
+OnInstanceInit:
+OnDisable:
+	disablenpc instance_npcname("control_baphomet");
+	end;
+
+OnEnable:
+	enablenpc instance_npcname("control_baphomet");
+	donpcevent instance_npcname("2f_callmon_pattern_c")+"::OnEnable";
+	monster instance_mapname("2@cata"),79,64,"Baphomet#",1929,1,instance_npcname("control_baphomet")+"::OnMyMobDead";
+	end;
+
+OnMyMobDead:
+	set .@map$, instance_mapname("2@cata");
+	if (mobcount(.@map$,instance_npcname("control_baphomet")+"::OnMyMobDead") < 1) {
+		set 'ins_baphomet,7;
+		if (isbegin_quest(3041))
+			erasequest 3041;
+		mapannounce .@map$, "바포메트: 안 돼! 안 돼! 감히 이 약골들이 나를 패배시키다니!... 안 돼!!...",bc_map,"0xdb7093";
+		enablenpc instance_npcname("Ancient Hero's Soul#2F");
+		disablenpc instance_npcname("slave_down");
+		disablenpc instance_npcname("slave_left");
+		disablenpc instance_npcname("slave_right");
+		donpcevent instance_npcname("ins_2f_hero_broad")+"::OnDisable";
+		donpcevent instance_npcname("ins_2f_hero_broad2")+"::OnDisable";
+		donpcevent instance_npcname("ins_2f_hero_pattern_c")+"::OnDisable";
+		donpcevent instance_npcname("2f_callmon_pattern_c")+"::OnDisable";
+		donpcevent instance_npcname("2f_callmon_pattern")+"::OnDisable";
+		donpcevent instance_npcname("ins_2f_hero_pattern")+"::OnDisable";
+		donpcevent instance_npcname("ins_2f_enter_broad")+"::OnDisable";
+		donpcevent instance_npcname("control_baphomet")+"::OnDisable";
+		disablenpc instance_npcname("control_baphomet");
+	}
+	end;
+}
+
+2@cata,2,2,0	script	ins_2f_hero_broad2	-1,{
+OnInstanceInit:
+OnDisable:
+	disablenpc instance_npcname("ins_2f_hero_broad2");
+	end;
+
+OnEnable:
+	enablenpc instance_npcname("ins_2f_hero_broad2");
+	initnpctimer;
+	end;
+
+OnTimer8000:
+	mapannounce instance_mapname("2@cata"), "고대 영웅의 영혼: 낙심하지 마세요, 바포메트는 여전히 물리칠 수 있습니다!",bc_map,"0xFFFF00";
+	end;
+
+OnTimer11000:
+	mapannounce instance_mapname("2@cata"), "고대 영웅의 영혼: 제단으로 가서 봉인을 활성화하세요.",bc_map,"0xFFFF00";
+	end;
+
+OnTimer13000:
+	mapannounce instance_mapname("2@cata"), "고대 영웅의 영혼: 봉인이 힘을 되찾으면 바포메트는 무방비 상태가 될 것입니다.",bc_map,"0xFFFF00";
+	end;
+
+OnTimer16000:
+	mapannounce instance_mapname("2@cata"), "고대 영웅의 영혼: 바포메트를 봉인이 풀린 제단으로 유인해야 합니다. 그렇지 않으면 당신의 노력은 헛수고가 될 것입니다.",bc_map,"0xFFFF00";
+	end;
+
+OnTimer19000:
+	mapannounce instance_mapname("2@cata"), "고대 영웅의 영혼: 바포메트를 막을 시간은 단 1시간뿐이다. 시간이 다 되면 봉인의 힘은 아무 소용이 없을 것이다.",bc_map,"0xFFFF00";
+	end;
+
+OnTimer22000:
+	mapannounce instance_mapname("2@cata"), "바포메트: 소용없어. 봉인을 더 만들어라. 내가 모두 부숴버리겠다. 너희 중 누구도 살아남지 못할 것이다!",bc_map,"0xdb7093";
+	end;
+
+OnTimer26000:
+	mapannounce instance_mapname("2@cata"), "고대 영웅의 영혼: 중앙 봉인의 마력이 고갈되고 있습니다. 중앙 봉인으로 가서 마력을 충전하세요.",bc_map,"0xFFFF00";
+	enablenpc instance_npcname("Magical Seal#0");
+	disablenpc instance_npcname("Magical Seal#2");
+	disablenpc instance_npcname("Magical Seal#4");
+	disablenpc instance_npcname("Magical Seal#8");
+	disablenpc instance_npcname("Magical Seal#10");
+	donpcevent instance_npcname("ins_2f_hero_pattern_c")+"::OnEnable";
+	stopnpctimer;
+	disablenpc instance_npcname("ins_2f_hero_broad2");
+	end;
+}
+
+2@cata,4,1,0	script	2f_callmon_pattern_c	-1,{
+OnInstanceInit:
+	disablenpc instance_npcname("2f_callmon_pattern_c");
+	end;
+
+OnEnable:
+	enablenpc instance_npcname("2f_callmon_pattern_c");
+	initnpctimer;
+	donpcevent instance_npcname("2f_callmon_pattern_c")+"::Ongo";
+	end;
+
+OnDisable:
+	stopnpctimer;
+	disablenpc instance_npcname("2f_callmon_pattern_c");
+	end;
+
+Ongo:
+	donpcevent instance_npcname("2f_callmon_pattern")+"::OnEnable";
+	end;
+
+OnTimer3600000:
+	donpcevent instance_npcname("2f_callmon_pattern_c")+"::OnDisable";
+	end;
+}
+
+2@cata,4,2,0	script	2f_callmon_pattern	-1,{
+OnInstanceInit:
+	disablenpc instance_npcname("2f_callmon_pattern");
+	end;
+
+OnEnable:
+	enablenpc instance_npcname("2f_callmon_pattern");
+	stopnpctimer;
+	initnpctimer;
+	end;
+
+OnDisable:
+	disablenpc instance_npcname("2f_callmon_pattern");
+	stopnpctimer;
+	end;
+
+OnTimer300000:
+	enablenpc instance_npcname("slave_down");
+	enablenpc instance_npcname("slave_left");
+	enablenpc instance_npcname("slave_right");
+	donpcevent instance_npcname("2f_callmon_pattern_c")+"::Ongo";
+	end;
+}
+
+2@cata,3,1,0	script	ins_2f_hero_pattern_c	-1,{
+OnInstanceInit:
+	disablenpc instance_npcname("ins_2f_hero_pattern_c");
+	end;
+
+OnEnable:
+	enablenpc instance_npcname("ins_2f_hero_pattern_c");
+	initnpctimer;
+	donpcevent instance_npcname("ins_2f_hero_pattern_c")+"::Ongo";
+	end;
+
+Ongo:
+	donpcevent instance_npcname("ins_2f_hero_pattern")+"::OnEnable";
+	end;
+
+OnDisable:
+	stopnpctimer;
+	disablenpc instance_npcname("Magical Seal#0");
+	disablenpc instance_npcname("Magical Seal#2");
+	disablenpc instance_npcname("Magical Seal#4");
+	disablenpc instance_npcname("Magical Seal#8");
+	disablenpc instance_npcname("Magical Seal#10");
+	donpcevent instance_npcname("ins_2f_hero_pattern")+"::OnDisable";
+	disablenpc instance_npcname("ins_2f_hero_pattern_c");
+	end;
+
+OnTimer3600000:
+	mapannounce instance_mapname("2@cata"), "바포메트: 크르르... 이제 봉인으로는 날 막을 수 없어. 네가 할 수 있는 건 죽음을 기다리는 것뿐이다!",bc_map,"0xdb7093";
+	end;
+
+OnTimer3605000:
+	mapannounce instance_mapname("2@cata"), "고대 영웅의 영혼: 이제 봉인의 마법적인 힘으로는 바포메트를 막을 수 없어. 이제 모든 것은 신에게 달려있어...",bc_map,"0xFFFF00";
+	donpcevent instance_npcname("ins_2f_hero_pattern_c")+"::OnDisable";
+	end;
+}
+
+2@cata,3,2,0	script	ins_2f_hero_pattern	-1,{
+OnInstanceInit:
+	disablenpc instance_npcname("ins_2f_hero_pattern");
+	end;
+
+OnEnable:
+	enablenpc instance_npcname("ins_2f_hero_pattern");
+	initnpctimer;
+	end;
+
+OnDisable:
+	disablenpc instance_npcname("ins_2f_hero_pattern");
+	stopnpctimer;
+	end;
+
+OnTimer70000:
+	switch(rand(1,5)) {
+	case 1:
+		mapannounce instance_mapname("2@cata"), "고대 영웅의 영혼: 주 제단의 봉인이 약해지고 있습니다. 주 제단의 봉인을 강화하세요!",bc_map,"0xFFFF00";
+		enablenpc instance_npcname("Magical Seal#0");
+		disablenpc instance_npcname("Magical Seal#2");
+		disablenpc instance_npcname("Magical Seal#4");
+		disablenpc instance_npcname("Magical Seal#8");
+		disablenpc instance_npcname("Magical Seal#10");
+		break;
+	case 2:
+		mapannounce instance_mapname("2@cata"), "고대 영웅의 영혼: 2시 방향 봉인의 마법력이 고갈되고 있습니다. 2시 방향으로 가서 봉인에 마법력을 주입하세요.",bc_map,"0xFFFF00";
+		disablenpc instance_npcname("Magical Seal#0");
+		enablenpc instance_npcname("Magical Seal#2");
+		disablenpc instance_npcname("Magical Seal#4");
+		disablenpc instance_npcname("Magical Seal#8");
+		disablenpc instance_npcname("Magical Seal#10");
+		break;
+	case 3:
+		mapannounce instance_mapname("2@cata"), "고대 영웅의 영혼: 4시 방향 봉인의 마법력이 고갈되고 있습니다. 4시 방향으로 가서 봉인에 마법력을 주입하세요.",bc_map,"0xFFFF00";
+		disablenpc instance_npcname("Magical Seal#0");
+		disablenpc instance_npcname("Magical Seal#2");
+		enablenpc instance_npcname("Magical Seal#4");
+		disablenpc instance_npcname("Magical Seal#8");
+		disablenpc instance_npcname("Magical Seal#10");
+		break;
+	case 4:
+		mapannounce instance_mapname("2@cata"), "고대 영웅의 영혼: 8시 방향 봉인의 마법력이 고갈되고 있습니다. 8시 방향으로 가서 봉인에 마법력을 주입하세요.",bc_map,"0xFFFF00";
+		disablenpc instance_npcname("Magical Seal#0");
+		disablenpc instance_npcname("Magical Seal#2");
+		disablenpc instance_npcname("Magical Seal#4");
+		enablenpc instance_npcname("Magical Seal#8");
+		disablenpc instance_npcname("Magical Seal#10");
+		break;
+	case 5:
+		mapannounce instance_mapname("2@cata"), "고대 영웅의 영혼: 10시 방향 봉인의 마법력이 고갈되고 있습니다. 10시 방향으로 가서 봉인에 마법력을 주입하세요.",bc_map,"0xFFFF00";
+		disablenpc instance_npcname("Magical Seal#0");
+		disablenpc instance_npcname("Magical Seal#2");
+		disablenpc instance_npcname("Magical Seal#4");
+		disablenpc instance_npcname("Magical Seal#8");
+		enablenpc instance_npcname("Magical Seal#10");
+	}
+	stopnpctimer;
+	donpcevent instance_npcname("ins_2f_hero_pattern_c")+"::Ongo";
+	end;
+}
+
+
+1@cata,1,1,0	script	ins_1f_spawn_mobs	-1,{
+OnInstanceInit:
+	set .@map$, instance_mapname("1@cata");
+	monster .@map$,0,0,"Zombie Master",1298,10;
+	monster .@map$,0,0,"Wraith Dead",1291,10;
+	//monster .@map$,0,0,"Ancient Mimic",1699,10;
+	monster .@map$,0,0,"Flame Skull",1869,10;
+	monster .@map$,0,0,"Skeleton General",1290,10;
+	monster .@map$,0,0,"Zombie Master",1298,10;
+	monster .@map$,0,0,"Skeleton General",1290,10;
+	monster .@map$,0,0,"Flame Skull",1869,10;
+	monster .@map$,0,0,"Wraith Dead",1291,10;
+	monster .@map$,0,0,"Wraith Dead",1291,10;
+	monster .@map$,0,0,"Khalitzburg",1132,10;
+	monster .@map$,0,0,"Khalitzburg",1132,10;
+	monster .@map$,0,0,"Flame Skull",1869,10;
+	monster .@map$,0,0,"Flame Skull",1869,10;
+	monster .@map$,0,0,"Ancient Mimic",1699,10;
+	monster .@map$,0,0,"Zombie Master",1298,10;
+	monster .@map$,0,0,"Ancient Mimic",1699,10;
+	monster .@map$,0,0,"Zombie Master",1298,10;
+	monster .@map$,0,0,"Wraith Dead",1291,10;
+	monster .@map$,0,0,"Skeleton General",1290,10;
+	monster .@map$,0,0,"Skeleton General",1290,10;
+	monster .@map$,0,0,"Wind Ghost",1263,10;
+	monster .@map$,0,0,"Wind Ghost",1263,10;
+	monster .@map$,0,0,"Wind Ghost",1263,10;
+	monster .@map$,0,0,"Lude",1509,10;
+	monster .@map$,0,0,"Lude",1509,10;
+	monster .@map$,0,0,"Evil Druid",1117,10;
+	monster .@map$,0,0,"Evil Druid",1117,10;
+	monster .@map$,0,0,"Evil Druid",1117,10;
+	monster .@map$,0,0,"Banshee",1867,10;
+	monster .@map$,0,0,"Dark Illusion",1302,1;
+	disablenpc instance_npcname("ins_1f_spawn_mobs");
+	end;
+}

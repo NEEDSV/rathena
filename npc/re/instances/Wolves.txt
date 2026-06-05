@@ -14,60 +14,60 @@ rachel,167,242,7	duplicate(dummy_cloaked_npc)	Miriam#sms03	4_EP18_MIRIAM
 
 rachel,169,245,3	script	Ordinary Person#sms04	4_EP18_GW_WOMAN01,{
 	if (BaseLevel < 170) {
-		mes "[Wolf]";
-		mes "Are you here to join the protest? But you don't seem like an experienced protester.";
+		mes "[늑대]";
+		mes "시위에 참여하러 오셨나요? 하지만 경험 많은 시위자처럼 보이지는 않으시네요.";
 		next;
-		mes "- This quest is available from level 170 onward. -";
+		mes "- 이 퀘스트는 레벨 170부터 이용 가능합니다. -";
 		close;
 	}
 	if (ep18_main < 50) {
-		mes "[Ordinary Person]";
-		mes "This area is under maintenance and access is prohibited. It's dangerous. Please step back.";
+		mes "[일반인]";
+		mes "이 구역은 보수 공사 중이며 출입이 금지되어 있습니다. 위험하니 뒤로 물러나십시오.";
 		close;
 	}
 	if (ep18_main == 50 || ep18_main == 51) {
 		if (ep18_main == 50) {
-			mes "[Ordinary Person]";
-			mes "This area is under maintenance and access is prohibited.";
+			mes "[일반인]";
+			mes "해당 구역은 보수 공사 중이므로 출입이 금지되어 있습니다.";
 			next;
 			cutin "ep18_suad_01.png",2;
 			cloakoffnpcself( "Suad#sms03" );
-			mes "[Suad]";
-			mes "You don't need to be cautious. This person is an adventurer who is with us.";
+			mes "[수아드]";
+			mes "조심하실 필요 없어요. 이 사람은 우리와 함께 있는 모험가입니다.";
 			next;
 			cutin "ep18_miriam_01.png",0;
 			cloakoffnpcself( "Miriam#sms03" );
-			mes "[Miriam]";
-			mes "Are we all gathered now?";
+			mes "[미리암]";
+			mes "우리 모두 모인 건가요?";
 			next;
 			cutin "ep18_suad_01.png",2;
-			mes "[Suad]";
-			mes "Yeah, everyone's ready. We just need to signal our people scattered around and enter the temple.";
+			mes "[수아드]";
+			mes "네, 모두 준비됐습니다. 이제 흩어져 있는 우리 일행에게 신호를 보내고 사원으로 들어가기만 하면 됩니다.";
 			next;
 			cutin "ep18_miriam_01.png",0;
-			mes "[Miriam]";
-			mes "We need to move quickly.";
+			mes "[미리암]";
+			mes "우리는 신속하게 움직여야 합니다.";
 			next;
 		}
 		cutin "ep18_suad_01.png",2;
-		mes "[Suad]";
-		mes "When we enter here, we can go towards the side entrance of the temple. We'll enter when we receive a response after sending the signal over there. Adventure, can you send the signal?";
+		mes "[수아드]";
+		mes "여기로 들어오면 사원 측면 입구로 갈 수 있습니다. 저쪽으로 신호를 보낸 후 응답이 오면 안으로 들어가겠습니다. 모험가님, 신호를 보내주시겠습니까?";
 		next;
 
-		.@md_name$ = "Wolves Gathering Place";
+		.@md_name$ = "늑대들의 집결지";
 
 		if (is_party_leader()) {
 			.@menu$[0] = "Yes, go ahead and send the signal.";
 			.@menu$[1] = "Let's enter quickly.";
 		}
 
-		switch( select( .@menu$[0], .@menu$[1], "We need to be prepared." ) ) {
+		switch( select( .@menu$[0], .@menu$[1], "우리는 준비해야 합니다." ) ) {
 		case 1:
 			mes "Beep-";
 			next;
 			instance_create(.@md_name$);
-			mes "[Suad]";
-			mes "Since we've sent the signal, the emergency passage will open soon. Let us know when you're ready. We'll enter immediately.";
+			mes "[수아드]";
+			mes "신호를 보냈으니 비상 통로가 곧 열릴 겁니다. 준비되시면 알려주세요. 바로 들어가겠습니다.";
 			if (ep18_main == 50) {
 				changequest 17519,17520;
 				ep18_main = 51;
@@ -76,42 +76,42 @@ rachel,169,245,3	script	Ordinary Person#sms04	4_EP18_GW_WOMAN01,{
 		case 2:
 			switch( instance_enter(.@md_name$) ) {
 			case IE_OTHER:
-				mes "[Suad]";
-				mes "^ff0000An unknown error occurred.^000000";
+				mes "[수아드]";
+				mes "^ff0000알 수 없는 오류가 발생했습니다.^000000";
 				close3;
 			case IE_NOINSTANCE:
-				mes "[Suad]";
-				mes "We haven't sent the signal yet. Once everyone is ready, we'll send the signal immediately.";
+				mes "[수아드]";
+				mes "아직 신호를 보내지 않았습니다. 모두 준비가 되면 즉시 신호를 보내겠습니다.";
 				close3;
 			case IE_NOMEMBER:
-				mes "[Suad]";
-				mes "^ff0000Only a member of the party can enter the Memorial Dungeon.^000000";
+				mes "[수아드]";
+				mes "^ff0000파티원 중 한 명만 기념 던전에 입장할 수 있습니다.^000000";
 				close3;
 			case IE_OK:
-				mes "[Suad]";
-				mes "The signal has come, so let's move. Let's enter right away.";
+				mes "[수아드]";
+				mes "신호가 왔으니 움직이자. 바로 들어가자.";
 				if (ep18_main == 50) {	// debug
 					changequest 17519,17520;
 					ep18_main = 51;
 				}
 				cutin "",255;
-				mapannounce "rachel", "Adventurer " + strcharinfo(0) + " of the " + getpartyname( getcharid(1) ) + " party will enter " + .@md_name$ + " first. All wolves, gather sequentially.", bc_map, 0xFF99;
+				mapannounce "rachel", "Adventurer " + strcharinfo(0) + " ~의" + getpartyname( getcharid(1) ) + " 일행이 입장할 것입니다" + .@md_name$ + " 먼저, 모든 늑대들은 순서대로 모이세요.", bc_map, 0xFF99;
 				// warp "1@nyr",194,30;
 				close;
 			}
 			end;
 		case 3:
-			mes "[Suad]";
-			mes "Right. Adventurers are also essential forces, so let's wait until they're ready.";
+			mes "[수아드]";
+			mes "맞습니다. 모험가들도 필수적인 존재이니, 그들이 준비될 때까지 기다리도록 하죠.";
 			close3;
 		}
 		end;
 	}
-	mes "[Ordinary Person]";
-	mes "Hello, adventurer. An agent from a temple has been waiting for you.";
+	mes "[일반인]";
+	mes "안녕하세요, 모험가님. 사원의 요원이 당신을 기다리고 있습니다.";
 	close2;
 	cloakoffnpcself( "Priest#sms01" );
-	npctalk "Adventurer, welcome.", "Priest#sms01", bc_self;
+	npctalk "모험가 여러분, 환영합니다.", "Priest#sms01", bc_self;
 	end;
 
 OnInit:
@@ -126,24 +126,24 @@ OnInit:
 // Instance Sanctuary Purification entrance
 rachel,167,244,5	script(CLOAKED)	Priest#sms01	4_F_TRAINEE,{
 	if (checkweight(1000405,4) == 0) {
-		mes "- Wait a minute !! -";
-		mes "- Currently you're carrying -";
-		mes "- too many items with you. -";
-		mes "- Please try again -";
-		mes "- after you loose some weight. -";
+		mes "- 잠깐 기다려요!! -";
+		mes "- 현재 소지하고 있는 물품 -";
+		mes "- 너무 많은 물건을 가지고 계시네요. -";
+		mes "다시 시도해 주세요.";
+		mes "- 살을 좀 빼고 나면요. -";
 		close;
 	}
 	if (ep18_main < 52)
 		end;
 	// repeatable instance Sanctuary Purification
 	if (BaseLevel < 170) {
-		mes "[Priest]";
-		mes "You must be at least BaseLevel 170 for this instance.";
+		mes "[성직자]";
+		mes "이 인스턴스에 참여하려면 최소 기본 레벨 170 이상이어야 합니다.";
 		close;
 	}
 	if (isbegin_quest(17524) == 1 || isbegin_quest(17526) == 1) {
-		mes "[Priest]";
-		mes "Welcome, adventurer. You've been through a lot.";
+		mes "[성직자]";
+		mes "모험가 여러분, 환영합니다. 여러분은 많은 일을 겪어 오셨습니다.";
 		if (isbegin_quest(17524) == 1) {
 			erasequest 17524;
 			.@count = 2;
@@ -154,11 +154,11 @@ rachel,167,244,5	script(CLOAKED)	Priest#sms01	4_F_TRAINEE,{
 		}
 		getitem 1000405,.@count;	// Ep18_Amethyst_Fragment
 		next;
-		mes "[Priest]";
-		mes "Please take a rest from your journey now! See you again!";
+		mes "[성직자]";
+		mes "이제 여정을 잠시 쉬세요! 다음에 또 만나요!";
 		close;
 	}
-	.@md_name$ = "Sanctuary Purification";
+	.@md_name$ = "성역 정화";
 
 	switch( checkquest(17527,PLAYTIME) ) {
 	case -1:
@@ -167,47 +167,47 @@ rachel,167,244,5	script(CLOAKED)	Priest#sms01	4_F_TRAINEE,{
 		break;
 	case 0:
 	case 1:
-		mes "[Priest]";
-		mes "The plan for the next operation hasn't been completed yet. Since it's conducted only once a day, we need to be cautious. Please rest until then, adventurer.";
+		mes "[성직자]";
+		mes "다음 작전 계획은 아직 완성되지 않았습니다. 하루에 한 번만 진행되는 작전이므로 신중을 기해야 합니다. 그때까지 푹 쉬시기 바랍니다, 모험가님.";
 		close;
 	case 2:
-		mes "[Priest]";
-		mes "Hello! Did you get a good rest? I would be grateful if you could help me today. Please note that the operation can be done once a day.";
+		mes "[성직자]";
+		mes "안녕하세요! 잘 쉬셨나요? 오늘 저를 도와주시면 정말 감사하겠습니다. 참고로 이 작업은 하루에 한 번만 가능합니다.";
 		erasequest 17527;
 		if (isbegin_quest(17522) == 0 && isbegin_quest(17523) == 0)
 			callsub( S_Take, 2, "Since we're doing it, let's do both.", "Raid on the defected temple guards.", "Raid on the Heart Hunters.", "", "It's going to be tough." );
 		break;
 	}
-	mes "[Priest]";
-	mes "Are you ready? I will send the join signal.";
+	mes "[성직자]";
+	mes "준비됐나요? 참가 신호를 보내겠습니다.";
 	next;
-	switch( select( "Alright. I'll send the signal.", "I'll proceed.", "I still have a mission pending!", "More preparation is needed." ) ) {
+	switch( select( "알겠습니다. 신호를 보내겠습니다.", "계속 진행하겠습니다.", "아직 완료되지 않은 임무가 하나 남아있어요!", "더 많은 준비가 필요합니다." ) ) {
 	case 1:
-		mes "[Priest]";
-		mes "I've received the rendezvous point. You can join immediately through this emergency exit. When you're ready, proceed to enter.";
+		mes "[성직자]";
+		mes "만남 장소를 받았습니다. 이 비상구를 통해 바로 합류하실 수 있습니다. 준비가 되시면 안으로 들어오세요.";
 		if (instance_create(.@md_name$) < 0) {
 			mes "Party: " + getpartyname(getcharid(1)) + "";
 			mes "Leader: " + strcharinfo(0) + "";
-			mes "^0000ff" + .@md_name$ + " ^000000- Unknown error";
+			mes "^0000ff" + .@md_name$ + " ^000000 - 알 수 없는 오류";
 			close;
 		}
 		end;
 	case 2:
 		switch( instance_enter(.@md_name$) ) {
 		case IE_OTHER:
-			mes "^ff0000An unknown error occurred.^000000";
+			mes "^ff0000알 수 없는 오류가 발생했습니다.^000000";
 			close;
 		case IE_NOINSTANCE:
-			mes "The memorial dungeon does not exist.";
-			mes "The party leader did not generate the dungeon yet.";
+			mes "기념 감옥은 존재하지 않습니다.";
+			mes "파티장이 아직 던전을 생성하지 않았습니다.";
 			close;
 		case IE_NOMEMBER:
-			mes "^ff0000Only a member of the party can enter the Memorial Dungeon.^000000";
+			mes "^ff0000파티원 중 한 명만 기념 던전에 입장할 수 있습니다.^000000";
 			close;
 		case IE_OK:
-			mes "[Priest]";
-			mes "The signal has arrived, so let's move. Let's enter the rendezvous point right away.";
-			mapannounce "rachel", "" + strcharinfo(0) + " of the party, " + getpartyname( getcharid(1) ) + ", is entering " + .@md_name$ + ".",bc_map,"0x00ff99",FW_NORMAL,12;
+			mes "[성직자]";
+			mes "신호가 왔으니, 어서 이동합시다. 약속 장소로 바로 들어가겠습니다.";
+			mapannounce "rachel", "" + strcharinfo(0) + " 당의," + getpartyname( getcharid(1) ) + " , 진입하고 있습니다" + .@md_name$ + ".",bc_map,"0x00ff99",FW_NORMAL,12;
 			setquest 17527;
 			// warp "1@nyr",194,30;
 			end;
@@ -216,23 +216,23 @@ rachel,167,244,5	script(CLOAKED)	Priest#sms01	4_F_TRAINEE,{
 	case 3:
 		callsub( S_Take, 1, "", "Raid on the defected temple guards.", "Raid on the Heart Hunters.", "Since we're doing it, let's do both.", "It's going to be tough." );
 	case 4:
-		mes "[Priest]";
-		mes "Understood. I'll wait.";
+		mes "[성직자]";
+		mes "알겠습니다. 기다리겠습니다.";
 		close;
 	}
 	end;
 
 S_Take:
 	if (getarg(0) == 0) {
-		mes "[Priest]";
-		mes "The main forces that infiltrated the temple have escaped, but we still have trouble with the temple guards who defected to the Heart Hunters and remnants of the Heart Hunters themselves who are after the heart.";
+		mes "[성직자]";
+		mes "사원에 침투했던 주력 부대는 탈출했지만, 심장 사냥꾼에게로 전향한 사원 경비병들과 심장을 노리는 심장 사냥꾼 잔당들 때문에 여전히 어려움을 겪고 있습니다.";
 		next;
-		mes "[Priest]";
-		mes "We are conducting raids independently, but we would appreciate your assistance, adventurer. Please note that raids are conducted once a day.";
+		mes "[성직자]";
+		mes "저희는 레이드를 독자적으로 진행하고 있지만, 모험가 여러분의 도움을 주시면 감사하겠습니다. 레이드는 하루에 한 번 진행됩니다.";
 	}
 	else if (getarg(0) == 1) {
-		mes "[Priest]";
-		mes "Is that so? What mission did you miss?";
+		mes "[성직자]";
+		mes "그래요? 어떤 임무를 놓치셨나요?";
 	}
 	next;
 	switch( select( getarg(1), getarg(2), getarg(3), getarg(4), getarg(5) ) ) {
@@ -242,44 +242,44 @@ S_Take:
 			setquest 17522;
 		if (isbegin_quest(17523) == 0 && isbegin_quest(17526) == 0)
 			setquest 17523;
-		mes "[Priest]";
+		mes "[성직자]";
 		mes "Understood.";
 		next;
-		mes "[Priest]";
-		mes "Then please let me know when you're ready.";
+		mes "[성직자]";
+		mes "그럼 준비되시면 알려주세요.";
 		close;
 	case 2:
 		if (isbegin_quest(17522) == 0 && isbegin_quest(17524) == 0) {
 			setquest 17522;
-			mes "[Priest]";
-			mes "Raid on the defected temple guards.Is that so? Understood.";
+			mes "[성직자]";
+			mes "배신한 사원 경비병들을 습격하라고요? 그렇군요. 알겠습니다.";
 			next;
-			mes "[Priest]";
-			mes "Then please let me know when you're ready.";
+			mes "[성직자]";
+			mes "그럼 준비되시면 알려주세요.";
 			close;
 		}
-		mes "[Priest]";
-		mes "It seems you're already engaged in a mission. Very well, please take care of it.";
+		mes "[성직자]";
+		mes "이미 임무를 수행 중인 것 같군요. 좋습니다, 잘 처리해 주십시오.";
 		next;
-		mes "[Priest]";
-		mes "Then please let me know when you're ready.";
+		mes "[성직자]";
+		mes "그럼 준비되시면 알려주세요.";
 		close;
 	case 3:
 		if (isbegin_quest(17523) == 0 && isbegin_quest(17526) == 0) {
 			setquest 17523;
-			mes "[Priest]";
-			mes "Thank you for your cooperation. Let me know when you're ready.";
+			mes "[성직자]";
+			mes "협조해 주셔서 감사합니다. 준비되시면 알려주세요.";
 			close;
 		}
-		mes "[Priest]";
-		mes "It seems you're already engaged in a mission. Very well, please take care of it.";
+		mes "[성직자]";
+		mes "이미 임무를 수행 중인 것 같군요. 좋습니다, 잘 처리해 주십시오.";
 		next;
-		mes "[Priest]";
-		mes "Then please let me know when you're ready.";
+		mes "[성직자]";
+		mes "그럼 준비되시면 알려주세요.";
 		close;
 	case 5:
-		mes "[Priest]";
-		mes "If that's the case, then there's nothing we can do. I'll see you next time!";
+		mes "[성직자]";
+		mes "그렇다면 저희가 해드릴 수 있는 건 아무것도 없네요. 다음에 또 뵙겠습니다!";
 		close2;
 		cloakonnpcself( "Priest#sms01" );
 		end;
@@ -697,15 +697,15 @@ OnTouch:
 
 	'nyr_main_step = 1;
 	setpcblock PCBLOCK_NPC, true;
-	npctalk "Adventurer!";
+	npctalk "모험가!";
 	emotion ET_SURPRISE;
 	sleep2 1000;
 	navigateto("1@nyr",125,41);
 	setpcblock PCBLOCK_NPC, false;
-	npctalk "Up ahead is the rallying point.";
+	npctalk "저 앞에 집결지가 있습니다.";
 	unitwalk getnpcid(0), 162,31, instance_npcname("Miriam#dms101") + "::OnMove1";
 	sleep 2000;
-	npctalk "This way, please.";
+	npctalk "이쪽으로 오세요.";
 	end;
 
 OnMove1:
@@ -713,66 +713,66 @@ OnMove1:
 	end;
 OnMove2:
 	unitwalk getnpcid(0), 128,41, instance_npcname("Miriam#dms101") + "::OnMove3";
-	npctalk "It's right in front of me.";
+	npctalk "바로 내 눈앞에 있어요.";
 	end;
 OnMove3:
 	if ('nyr_main_step != 1)
 		end;
 	'nyr_main_step = 2;
 
-	npctalk "Suad, what is the situation?", instance_npcname("Miriam#dms101");
-	npctalk "No further entry is allowed!", instance_npcname("Temple Guard#dms101");
+	npctalk "수아드, 상황이 어떻게 돼가?", instance_npcname("Miriam#dms101");
+	npctalk "더 이상 입장이 허용되지 않습니다!", instance_npcname("Temple Guard#dms101");
 	sleep 1000;
-	npctalk "Miriam, Adventurer. A little further over here.", instance_npcname("Suad#dms101");
+	npctalk "미리암, 모험가입니다. 저쪽에서 조금 더 가면 있어요.", instance_npcname("Suad#dms101");
 	sleep 1000;
-	npctalk "That's too much! They're treating us like criminals!", instance_npcname("Kun#dms112");
-	npctalk "Are we in the place we're not supposed to be?", instance_npcname("Angry Crowd#dms131");
+	npctalk "이건 너무 심해! 우리를 마치 범죄자처럼 대하고 있잖아!", instance_npcname("Kun#dms112");
+	npctalk "우리가 지금 있으면 안 되는 곳에 있는 걸까요?", instance_npcname("Angry Crowd#dms131");
 	sleep 1500;
-	npctalk "Hey, that place was my great-great-grandmother's land!", instance_npcname("Angry Crowd#dms121");
-	npctalk "We have every right to be here!", instance_npcname("Angry Crowd#dms161");
+	npctalk "어머, 저기는 우리 고조할머니의 땅이었잖아!", instance_npcname("Angry Crowd#dms121");
+	npctalk "우리는 여기에 있을 권리가 충분히 있다!", instance_npcname("Angry Crowd#dms161");
 	sleep 2000;
-	npctalk "Yeah!! Get out of our way!", instance_npcname("Angry Crowd#dms191");
-	npctalk "You pushed us away!", instance_npcname("Angry Crowd#dms181");
+	npctalk "그래!! 비켜!", instance_npcname("Angry Crowd#dms191");
+	npctalk "당신들이 우리를 밀어냈잖아요!", instance_npcname("Angry Crowd#dms181");
 	sleep 2000;
-	npctalk "Is it because we don't look human?", instance_npcname("Angry Crowd#dms101");
-	npctalk "Is it because we look so easy?", instance_npcname("Angry Crowd#dms131");
+	npctalk "우리가 인간처럼 보이지 않아서 그런 걸까요?", instance_npcname("Angry Crowd#dms101");
+	npctalk "우리가 너무 쉬워 보여서 그런 걸까요?", instance_npcname("Angry Crowd#dms131");
 	sleep 2000;
-	npctalk "We're claiming our rightful place!", instance_npcname("Angry Crowd#dms121");
-	npctalk "What the hell!! Give our land back!!", instance_npcname("Angry Crowd#dms181");
+	npctalk "우리는 마땅히 누려야 할 자리를 되찾을 것이다!", instance_npcname("Angry Crowd#dms121");
+	npctalk "이게 무슨 일이야!! 우리 나라를 돌려줘!!", instance_npcname("Angry Crowd#dms181");
 	sleep 2000;
-	npctalk "We are the longtime owners of this land and have been displaced by the settlers.", instance_npcname("Angry Crowd#dms101");
-	npctalk "Who is holding us back?!", instance_npcname("Angry Crowd#dms141");
+	npctalk "우리는 오랫동안 이 땅의 소유주였으며 정착민들에 의해 쫓겨났습니다.", instance_npcname("Angry Crowd#dms101");
+	npctalk "누가 우리를 방해하고 있는 거지?!", instance_npcname("Angry Crowd#dms141");
 	sleep 2000;
-	npctalk "We have come to claim our rightful place as the longtime inhabitants of this land.", instance_npcname("Angry Crowd#dms101");
-	npctalk "Those who are illegally occupying our land should leave!", instance_npcname("Angry Crowd#dms191");
+	npctalk "우리는 이 땅의 오랜 거주자로서 마땅히 누려야 할 자리를 되찾기 위해 왔습니다.", instance_npcname("Angry Crowd#dms101");
+	npctalk "우리 땅을 불법적으로 점유하고 있는 자들은 떠나야 한다!", instance_npcname("Angry Crowd#dms191");
 	sleep 2000;
-	npctalk "No illegal protests! Disband now!", instance_npcname("Temple Guard#dms101");
-	npctalk "Who said our protest was illegal?", instance_npcname("Angry Crowd#dms151");
-	npctalk "You're just making up that it's illegal?", instance_npcname("Angry Crowd#dms171");
+	npctalk "불법 시위는 안 된다! 지금 당장 해산하라!", instance_npcname("Temple Guard#dms101");
+	npctalk "누가 우리 시위가 불법이라고 했습니까?", instance_npcname("Angry Crowd#dms151");
+	npctalk "그게 불법이라고 지어내는 거잖아요?", instance_npcname("Angry Crowd#dms171");
 	sleep 2000;
-	npctalk "Our demands are as follows!", instance_npcname("Angry Crowd#dms101");
+	npctalk "우리의 요구 사항은 다음과 같습니다!", instance_npcname("Angry Crowd#dms101");
 	sleep 2000;
-	npctalk "One! We are the owners of this land! Those who have illegally occupied it must leave!", instance_npcname("Angry Crowd#dms101");
-	npctalk "Back off!", instance_npcname("Angry Crowd#dms111");
-	npctalk "Back off!", instance_npcname("Angry Crowd#dms121");
-	npctalk "Back off!", instance_npcname("Angry Crowd#dms131");
-	npctalk "Back off!", instance_npcname("Angry Crowd#dms141");
-	npctalk "Back off!", instance_npcname("Angry Crowd#dms151");
-	npctalk "Back off!", instance_npcname("Angry Crowd#dms161");
-	npctalk "Back off!", instance_npcname("Angry Crowd#dms171");
-	npctalk "Back off!", instance_npcname("Angry Crowd#dms181");
-	npctalk "Back off!", instance_npcname("Angry Crowd#dms191");
+	npctalk "하나! 우리는 이 땅의 주인이다! 불법적으로 점유하고 있는 자들은 떠나야 한다!", instance_npcname("Angry Crowd#dms101");
+	npctalk "물러서!", instance_npcname("Angry Crowd#dms111");
+	npctalk "물러서!", instance_npcname("Angry Crowd#dms121");
+	npctalk "물러서!", instance_npcname("Angry Crowd#dms131");
+	npctalk "물러서!", instance_npcname("Angry Crowd#dms141");
+	npctalk "물러서!", instance_npcname("Angry Crowd#dms151");
+	npctalk "물러서!", instance_npcname("Angry Crowd#dms161");
+	npctalk "물러서!", instance_npcname("Angry Crowd#dms171");
+	npctalk "물러서!", instance_npcname("Angry Crowd#dms181");
+	npctalk "물러서!", instance_npcname("Angry Crowd#dms191");
 	sleep 2000;
-	npctalk "Two! Abolish unfair discriminatory policies and acknowledge our rights!", instance_npcname("Angry Crowd#dms101");
-	npctalk "Acknowledge it!", instance_npcname("Angry Crowd#dms111");
-	npctalk "Acknowledge it!", instance_npcname("Angry Crowd#dms121");
-	npctalk "Acknowledge it!", instance_npcname("Angry Crowd#dms131");
-	npctalk "Acknowledge it!", instance_npcname("Angry Crowd#dms141");
-	npctalk "Acknowledge it!", instance_npcname("Angry Crowd#dms151");
-	npctalk "Acknowledge it!", instance_npcname("Angry Crowd#dms161");
-	npctalk "Acknowledge it!", instance_npcname("Angry Crowd#dms171");
-	npctalk "Acknowledge it!", instance_npcname("Angry Crowd#dms181");
-	npctalk "Acknowledge it!", instance_npcname("Angry Crowd#dms191");
+	npctalk "두 번째! 불공정하고 차별적인 정책을 폐지하고 우리의 권리를 인정하라!", instance_npcname("Angry Crowd#dms101");
+	npctalk "인정하세요!", instance_npcname("Angry Crowd#dms111");
+	npctalk "인정하세요!", instance_npcname("Angry Crowd#dms121");
+	npctalk "인정하세요!", instance_npcname("Angry Crowd#dms131");
+	npctalk "인정하세요!", instance_npcname("Angry Crowd#dms141");
+	npctalk "인정하세요!", instance_npcname("Angry Crowd#dms151");
+	npctalk "인정하세요!", instance_npcname("Angry Crowd#dms161");
+	npctalk "인정하세요!", instance_npcname("Angry Crowd#dms171");
+	npctalk "인정하세요!", instance_npcname("Angry Crowd#dms181");
+	npctalk "인정하세요!", instance_npcname("Angry Crowd#dms191");
 	end;
 
 OnStartMove2:
@@ -797,49 +797,49 @@ OnGuy3:
 1@nyr,125,41,3	script	Suad#dms101	4_EP18_SUAD,{
 	if (is_party_leader() == false) {
 		cutin "ep18_Suad_01.png",0;
-		mes "[Suad]";
-		mes "Where's the party leader?";
+		mes "[수아드]";
+		mes "당 대표는 어디 있습니까?";
 		close3;
 	}
 	if ('nyr_main_step == 2) {
 		cutin "ep18_suad_01.png",0;
-		mes "[Suad]";
-		mes "It's not looking good right now. I think... The armed guards increasing their security..";
+		mes "[수아드]";
+		mes "지금 상황이 좋지 않아 보여요. 제 생각엔… 무장 경비원들이 보안을 강화하고 있는 것 같아요.";
 		next;
-		select( "Looks like the issue with the riot on top is a big one." );
+		select( "위층에서 발생한 폭동 문제가 심각한 것 같네요." );
 		cutin "ep18_miriam_03.png",2;
-		mes "[Miriam]";
-		mes "Or the information was leaked. Otherwise, we wouldn't have been prepared.";
+		mes "[미리암]";
+		mes "아니면 정보가 유출된 걸지도 모르죠. 그렇지 않았다면 우리는 대비하지 못했을 겁니다.";
 		next;
 		cutin "",255;
-		mes "[Temple Guard]";
-		mes "No further entry is permitted. Surrender to your arrest.";
+		mes "[사원 경비병]";
+		mes "더 이상 진입할 수 없습니다. 체포에 순순히 응하십시오.";
 		next;
-		mes "[Natives]";
-		mes "What have we done? We're not supposed to be in here!";
+		mes "[원주민]";
+		mes "우리가 무슨 짓을 한 거지? 우린 여기 있으면 안 돼!";
 		next;
-		mes "[Natives]";
-		mes "This is our land! If the owner wants to enter into their own land, why should anyone be stopping them?";
+		mes "[원주민]";
+		mes "여기는 우리 땅이야! 땅 주인이 자기 땅에 들어가고 싶어 하는데, 왜 누가 막아야 하는 거야?";
 		next;
-		mes "[Natives]";
-		mes "You're the ones who are illegally occupying it!";
+		mes "[원주민]";
+		mes "당신들이야말로 불법적으로 그곳을 점유하고 있는 거잖아요!";
 		next;
-		mes "[Natives]";
-		mes "What the hell, give it back!! Our land!!";
+		mes "[원주민]";
+		mes "이게 무슨 짓이야, 돌려줘!! 우리 땅이야!!";
 		next;
-		mes "[Native Leader]";
-		mes "We are the longtime owners of this land and have been displaced from our homes by the settlers.";
+		mes "[원주민 지도자]";
+		mes "우리는 오랫동안 이 땅의 소유주였으며, 정착민들에 의해 집에서 쫓겨났습니다.";
 		next;
-		mes "[Native Leader]";
-		mes "We have come to claim our rightful place as the longtime inhabitants of this land.";
+		mes "[원주민 지도자]";
+		mes "우리는 이 땅의 오랜 거주자로서 마땅히 누려야 할 자리를 되찾기 위해 왔습니다.";
 		next;
-		mes "[Native Leader]";
-		mes "Our demands are as follows.";
+		mes "[원주민 지도자]";
+		mes "우리의 요구 사항은 다음과 같습니다.";
 		next;
-		mes "[Native Leader]";
-		mes "One! We have...";
+		mes "[원주민 지도자]";
+		mes "하나! 우리는 가지고 있다...";
 		next;
-		npctalk "Now is the time. Follow me quietly.", instance_npcname("Lamacus#dms102");
+		npctalk "지금이 바로 그때다. 조용히 나를 따라오너라.", instance_npcname("Lamacus#dms102");
 		npcspeed( 50, instance_npcname("Lamacus#dms102") );
 		npcspeed( 50, instance_npcname("Kun#dms112") );
 		npcspeed( 50, instance_npcname("Yopi#dms122") );
@@ -848,33 +848,33 @@ OnGuy3:
 		unitwalk getnpcid(0,instance_npcname("Kun#dms112")), 145,32, instance_npcname("Miriam#dms101") + "::OnGuy2";
 		unitwalk getnpcid(0,instance_npcname("Yopi#dms122")), 145,31, instance_npcname("Miriam#dms101") + "::OnGuy3";
 		cutin "ep18_miriam_03.png",2;
-		mes "[Miriam]";
-		mes "Suad, did you give any specific instructions to the people who were rioting at the top?";
+		mes "[미리암]";
+		mes "수아드, 폭동을 일으킨 고위층 사람들에게 구체적인 지시를 내렸습니까?";
 		next;
 		cutin "ep18_suad_01.png",0;
-		mes "[Suad]";
-		mes "No? Why?";
+		mes "[수아드]";
+		mes "아니요? 왜요?";
 		next;
 		cutin "ep18_miriam_03.png",2;
-		mes "[Miriam]";
-		mes "See those guys over there? They're moving cautiously. That's the group that did the attack on the top.";
+		mes "[미리암]";
+		mes "저기 저 사람들 보여요? 조심스럽게 움직이고 있잖아요. 저 사람들이 바로 위쪽을 공격했던 무리예요.";
 		next;
 		cutin "ep18_suad_03.png",0;
-		mes "[Suad]";
-		mes "I didn't give you any instructions. Are you trying to act on your own?";
+		mes "[수아드]";
+		mes "나는 당신에게 아무런 지시도 하지 않았는데. 당신은 독자적으로 행동하려는 겁니까?";
 		next;
-		select( "Looks like they're heading for the temple." );
+		select( "사원으로 향하는 것 같네요." );
 		cutin "ep18_miriam_03.png",2;
-		mes "[Miriam]";
-		mes "It's an action that's not discussed beforehand. I already have a history, and that's not a good thing, is it? I'm going to have to tread quietly, I don't know what else I'm going to do..";
+		mes "[미리암]";
+		mes "이건 사전에 논의되지 않은 일이에요. 저는 이미 전과가 있는데, 그건 좋은 일이 아니잖아요? 조용히 행동해야 할 것 같아요. 달리 어떻게 해야 할지 모르겠어요.";
 		next;
 		cutin "ep18_suad_01.png",0;
-		mes "[Suad]";
-		mes "Are you going alone?";
+		mes "[수아드]";
+		mes "혼자 가시는 건가요?";
 		next;
 		cutin "ep18_miriam_03.png",2;
-		mes "[Miriam]";
-		mes "I'm just following behind, why do I need a group? I'm good enough on my own. You stay here, I'll signal if anything happens.";
+		mes "[미리암]";
+		mes "난 그냥 뒤따라가는 것뿐이야. 왜 그룹이 필요해? 나 혼자서도 충분히 잘해. 넌 여기 있어. 무슨 일 생기면 내가 신호 보낼게.";
 		next;
 		if ('nyr_main_step == 2) {
 			'nyr_main_step = 3;
@@ -883,12 +883,12 @@ OnGuy3:
 		}
 		donpcevent instance_npcname("Miriam#dms101") + "::OnStartMove2";
 		cutin "ep18_suad_03.png",0;
-		mes "[Suad]";
-		mes "They say that they're only following, but there's no telling what they might be doing. Even if they're unarmed, they might be hiding something...";
+		mes "[수아드]";
+		mes "그들은 그저 따라가는 중이라고 하지만, 무슨 일을 꾸미고 있는지는 알 수 없다. 비록 무장하지 않았다고 해도, 무언가를 숨기고 있을지도 모른다...";
 		next;
-		unittalk getcharid(3), "" + strcharinfo(0) + " : Let me catch up.";
-		mes "[Suad]";
-		mes "Well, that's a relief. I can't make any hasty moves here. Miriam left a trace. Now do me a favor and just follow the trace.";
+		unittalk getcharid(3), "" + strcharinfo(0) + " 제가 따라잡을게요.";
+		mes "[수아드]";
+		mes "다행이군. 여기서 성급한 행동을 할 순 없어. 미리엄이 흔적을 남겼어. 부탁인데, 그 흔적을 따라가 봐.";
 		close2;
 		navigateto("1@nyr",179,164);
 		cutin "",255;
@@ -896,8 +896,8 @@ OnGuy3:
 	}
 	if ('nyr_main_step == 3) {
 		cutin "ep18_suad_01.png",0;
-		mes "[Suad]";
-		mes "Be careful.";
+		mes "[수아드]";
+		mes "조심하세요.";
 		close2;
 		navigateto("1@nyr",179,164);
 		cutin "",255;
@@ -949,10 +949,10 @@ OnTouch:
 	if ('nyr_main_step != 3 || is_party_leader() == false)
 		end;
 	'nyr_main_step = 4;
-	npctalk "Adventurer?", instance_npcname("Miriam#dms201");
-	npctalk "Adventurer? Why are you here?", instance_npcname("Miriam#dms201");
+	npctalk "모험가?", instance_npcname("Miriam#dms201");
+	npctalk "모험가세요? 여기 왜 오셨죠?", instance_npcname("Miriam#dms201");
 	sleep 2000;
-	npctalk "I was sent by Suad. Don't worry too much about it.", instance_npcname("Miriam#dms201");
+	npctalk "수아드가 저를 보냈습니다. 너무 걱정하지 마세요.", instance_npcname("Miriam#dms201");
 	sleep 1000;
 	enablenpc instance_npcname("Temple Guard#dms201");
 	enablenpc instance_npcname("Temple Guard#dms211");
@@ -960,62 +960,62 @@ OnTouch:
 	enablenpc instance_npcname("Temple Guard#dms231");
 	enablenpc instance_npcname("Temple Guard#dms241");
 	sleep 500;
-	npctalk "Halt! Identify Yourself.", instance_npcname("Temple Guard#dms201");
-	npctalk "... It's hard to go by quietly, it seems.", instance_npcname("Miriam#dms201");
+	npctalk "멈추세요! 신분을 밝히세요.", instance_npcname("Temple Guard#dms201");
+	npctalk "조용히 지나가기는 쉽지 않은 것 같군요.", instance_npcname("Miriam#dms201");
 	end;
 }
 
 2@nyr,35,215,7	script	Temple Guard#dms201	4_M_RASWORD,{
 	if (is_party_leader() == false) {
-		npctalk "Who is the leader of the party?";
+		npctalk "그 당의 대표는 누구입니까?";
 		end;
 	}
 	if ('nyr_main_step != 4)
 		end;
-	mes "[Temple Guard]";
-	mes "This place is off-limits.";
+	mes "[사원 경비병]";
+	mes "이곳은 출입 금지 구역입니다.";
 	next;
 	cutin "ep18_miriam_01.png",2;
-	mes "[Miriam]";
-	mes "I'm Miriam, the daughter of High Priest Amal. We've been following a suspicious group of people into this area..";
+	mes "[미리암]";
+	mes "저는 대제사장 아말의 딸 미리암입니다. 저희는 수상한 사람들을 따라 이 지역으로 왔습니다.";
 	next;
 	cutin "",255;
-	mes "[Temple Guard]";
-	mes "Are you here to help the High Priest with his work?";
+	mes "[사원 경비병]";
+	mes "당신은 대제사장의 일을 돕기 위해 여기에 오셨습니까?";
 	next;
 	cutin "ep18_miriam_03.png",2;
-	mes "[Miriam]";
-	mes "Work... help...? Is my father here?";
+	mes "[미리암]";
+	mes "일...도와줘...? 아버지 여기 계세요?";
 	next;
 	cutin "",255;
-	mes "[Temple Guard]";
+	mes "[사원 경비병]";
 	mes "Ah...";
 	next;
-	mes "[Temple Guard]";
-	mes "No one here is suspicious. You may leave now.";
+	mes "[사원 경비병]";
+	mes "여기 있는 누구도 당신을 의심하지 않습니다. 이제 나가셔도 됩니다.";
 	next;
 	mapannounce 'map_2nyr$, "Slowly.", bc_map, 0xFFCC;
-	mapannounce 'map_2nyr$, "Please be careful.", bc_map, 0xFFCC;
+	mapannounce 'map_2nyr$, "조심하세요.", bc_map, 0xFFCC;
 	cutin "ep18_miriam_03.png",2;
-	mes "[Miriam]";
-	mes "Are you sure there aren't any suspicious people coming in? They've obviously gotten into this place, give me a second and I'll check it out quickly.";
+	mes "[미리암]";
+	mes "수상한 사람들이 들어오는 건 아닌지 확실해요? 분명히 누군가 들어온 것 같은데, 잠시만 기다려 주세요. 빨리 확인해 볼게요.";
 	next;
 	cutin "",255;
-	mes "[Temple Guard]";
-	mes "If you get any closer, we will take action.";
+	mes "[사원 경비병]";
+	mes "더 가까이 접근하면 조치를 취하겠습니다.";
 	next;
 	cutin "ep18_miriam_03.png",2;
-	mes "[Miriam]";
-	mes "...Can't help it, then. Can you, Adventurer?";
+	mes "[미리암]";
+	mes "...그럼 어쩔 수 없지. 모험가님, 그렇지 않으신가요?";
 	next;
-	select( "Yes. I'll handle it, you go after them." );
-	mes "[Miriam]";
-	mes "Then do me a favor, I'll leave a trail so you can find me..";
+	select( "네. 제가 처리할 테니, 당신은 그들을 쫓아가세요." );
+	mes "[미리암]";
+	mes "그럼 부탁 하나만 들어줘. 네가 날 찾을 수 있도록 흔적을 남겨둘게.";
 	next;
 	cutin "",255;
 	disablenpc instance_npcname("Miriam#dms201");
-	mes "[Temple Guard]";
-	mes "Intruder...! Argh!!!";
+	mes "[사원 경비병]";
+	mes "침입자다...! 으악!!!";
 	if ('nyr_main_step == 4) {
 		'nyr_main_step = 5;
 		donpcevent instance_npcname("nyr_step_2") + "::OnStart";
@@ -1077,7 +1077,7 @@ OnMobDead:
 		end;
 	if (mobcount('map_2nyr$, instance_npcname("nyr_step_2") + "::OnMobDead") < 1) {
 		'nyr_main_step = 6;
-		mapannounce 'map_2nyr$, "I heard a fight somewhere?", bc_map, 0xFFCC;
+		mapannounce 'map_2nyr$, "어디선가 싸움 소리가 들린 것 같은데?", bc_map, 0xFFCC;
 		enablenpc instance_npcname("#mstep01");
 		enablenpc instance_npcname("Miriam#dms301");
 		enablenpc instance_npcname("Lamacus#dms201");
@@ -1105,8 +1105,8 @@ OnTouch:
 OnTouch:
 	if ('nyr_main_step != 6)
 		end;
-	npctalk "You've come to the right place. Shhh - do you see those people over there?", instance_npcname("Miriam#dms301");
-	npctalk "The smell of books makes me sleepy.", instance_npcname("Lamacus#dms201");
+	npctalk "잘 찾아오셨어요. 쉿! 저기 있는 사람들 보이세요?", instance_npcname("Miriam#dms301");
+	npctalk "책 냄새를 맡으면 졸려요.", instance_npcname("Lamacus#dms201");
 	end;
 }
 
@@ -1116,57 +1116,57 @@ OnTouch:
 	if (is_party_leader() == false)
 		end;
 	cutin "ep18_miriam_03.png",2;
-	mes "[Miriam]";
-	mes "What are you doing here?";
+	mes "[미리암]";
+	mes "여기서 뭐 하고 있는 거야?";
 	next;
 	cutin "",255;
-	mes "[Lamacus]";
-	mes "Whoa! What the hell are you doing here, with an Adventurer?";
+	mes "[라마쿠스]";
+	mes "어이쿠! 모험가랑 같이 여기서 뭐 하는 거야?";
 	next;
 	cutin "ep18_miriam_03.png",2;
-	mes "[Miriam]";
-	mes "You shouldn't be here right now. If the Temple finds out, it will only make things more difficult for us.";
+	mes "[미리암]";
+	mes "지금 여기 있으면 안 돼요. 사원에서 알게 되면 우리 상황이 더 어려워질 뿐이에요.";
 	next;
 	cutin "",255;
-	mes "[Lamacus]";
-	mes "Don't you see? We're breaking into a library. There must be a lot of secrets of the settlers in here.";
-	npctalk "Think about it. What if we got our hands on all of this?", instance_npcname("Kun#dms211");
-	npctalk "We can take advantage of their weaknesses!", instance_npcname("Yopi#dms221");
+	mes "[라마쿠스]";
+	mes "안 보여? 우리가 도서관에 침입하고 있잖아. 여기엔 정착민들의 비밀이 가득할 거야.";
+	npctalk "한번 생각해 보세요. 만약 우리가 이 모든 것을 손에 넣게 된다면 어떨까요?", instance_npcname("Kun#dms211");
+	npctalk "우리는 그들의 약점을 이용할 수 있어!", instance_npcname("Yopi#dms221");
 	next;
 	cutin "ep18_miriam_03.png",2;
-	mes "[Miriam]";
-	mes "We can think about that later. For now. Go back. Your actions now could put us in more danger..";
+	mes "[미리암]";
+	mes "그건 나중에 생각해도 돼. 지금은 돌아가. 네 행동이 우리를 더 위험에 빠뜨릴 수 있어.";
 	next;
 	cutin "",255;
-	mes "[Yopi]";
-	mes "Go home, Miriam. I'm not going to cooperate with your stuffy behavior anymore.";
-	npctalk "Who are you to tell us what to do?", instance_npcname("Kun#dms211");
+	mes "[요피]";
+	mes "미리엄, 집에 가. 난 더 이상 네 고루한 행동에 협조하지 않을 거야.";
+	npctalk "당신이 뭔데 우리에게 이래라저래라 하는 겁니까?", instance_npcname("Kun#dms211");
 	next;
 	enablenpc instance_npcname("Temple Guard#dms301");
-	mes "[Temple Guard]";
-	mes "There, intruder!";
+	mes "[사원 경비병]";
+	mes "이리 와, 침입자!";
 	next;
 	enablenpc instance_npcname("Temple Guard#dms311");
 	enablenpc instance_npcname("Temple Guard#dms321");
 	enablenpc instance_npcname("Temple Guard#dms331");
 	enablenpc instance_npcname("Temple Guard#dms341");
-	mes "[Temple Guard]";
-	mes "Everyone lay down your weapons and raise your hands!";
+	mes "[사원 경비병]";
+	mes "모두 무기를 내려놓고 손을 드십시오!";
 	next;
-	select( "How do I do this?" );
+	select( "어떻게 하면 되나요?" );
 	cutin "ep18_miriam_03.png",2;
-	mes "[Miriam]";
-	mes "We're outnumbered, let's deal with it.";
+	mes "[미리암]";
+	mes "우리가 수적으로 열세이니, 이 상황을 헤쳐나가자.";
 	next;
 	cutin "",255;
-	mes "[Kun]";
-	mes "Good timing. Then we'll say goodbye!";
+	mes "[쿤]";
+	mes "타이밍 좋네요. 그럼 안녕히 계세요!";
 	next;
 	cutin "ep18_miriam_03.png",2;
-	mes "[Miriam]";
-	mes "Hold on, Adventurer!";
+	mes "[미리암]";
+	mes "모험가님, 잠시만 기다려 주세요!";
 	next;
-	select( "Leave this one to me!" );
+	select( "이건 저한테 맡겨주세요!" );
 	if ('nyr_main_step == 6) {
 		'nyr_main_step = 7;
 		donpcevent instance_npcname("nyr_step_3") + "::OnStart";
@@ -1202,7 +1202,7 @@ OnMobDead:
 		end;
 	if (mobcount('map_2nyr$, instance_npcname("nyr_step_3") + "::OnMobDead") < 1) {
 		'nyr_main_step = 8;
-		mapannounce 'map_2nyr$, "I feel a chill down my spine... Like someone's watching...?", bc_map, 0xFFCC;
+		mapannounce 'map_2nyr$, "등골이 오싹해지는 느낌이야... 마치 누군가 날 지켜보는 것 같아...?", bc_map, 0xFFCC;
 		disablenpc instance_npcname("#mstep01");
 		enablenpc instance_npcname("#mstep02");
 		enablenpc instance_npcname("#mstep03");
@@ -1227,8 +1227,8 @@ OnMobDead:
 2@nyr,87,47,5	script	Miriam#dms401	4_EP18_MIRIAM,5,5,{
 	end;
 OnTouch:
-	npctalk "There's a sound coming from this side.", instance_npcname("Miriam#dms401");
-	npctalk "The... heart....", instance_npcname("Lamacus#dms301");
+	npctalk "이쪽에서 소리가 들려요.", instance_npcname("Miriam#dms401");
+	npctalk "그… 심장…", instance_npcname("Lamacus#dms301");
 	end;
 }
 
@@ -1237,65 +1237,65 @@ OnTouch:
 		end;
 	if (is_party_leader() == false)
 		end;
-	mes "[Lamacus]";
-	mes "Did you find it? What kind of a place is this?";
+	mes "[라마쿠스]";
+	mes "찾았어요? 여긴 어떤 곳이에요?";
 	next;
-	mes "[Kun]";
-	mes "Not yet. I don't think it's on this side. Oh, wait... The High Priest's...?";
+	mes "[쿤]";
+	mes "아직은 아니야. 이쪽에는 없는 것 같은데. 아, 맞다... 대사제의...?";
 	next;
-	mes "[Yopi]";
-	mes "Leave the irrelevant books alone. That's not what we're looking for.";
+	mes "[요피]";
+	mes "관련 없는 책들은 그냥 두세요. 우리가 찾는 게 아니에요.";
 	next;
 	cutin "ep18_miriam_03.png",0;
-	mes "[Miriam]";
-	mes "You guys...!";
+	mes "[미리암]";
+	mes "여러분...!";
 	next;
-	select( "Shhh-hold on a second." );
+	select( "쉿, 잠깐만 기다려 봐요." );
 	cutin "",255;
-	mes "[Lamacus]";
-	mes "Even the most secretive of libraries wouldn't just leave a book like that lying around.";
+	mes "[라마쿠스]";
+	mes "아무리 비밀스러운 도서관이라도 저런 책을 아무렇게나 내버려 두지는 않을 것이다.";
 	next;
-	mes "[Kun]";
-	mes "So is there another secret library within the secret library?";
+	mes "[쿤]";
+	mes "그렇다면 비밀 도서관 안에 또 다른 비밀 도서관이 있는 걸까요?";
 	next;
-	mes "[Yopi]";
-	mes "I don't know. Let's just find it.";
+	mes "[요피]";
+	mes "모르겠어. 그냥 찾아보자.";
 	next;
-	mes "[Kun]";
-	mes "It would be nice to know the book title.";
+	mes "[쿤]";
+	mes "책 제목을 알면 좋겠네요.";
 	next;
-	mes "[Lamacus]";
-	mes "If I knew that, I wouldn't be here. I'd be like, 'Bring me anything that looks like that.' Go find it.";
+	mes "[라마쿠스]";
+	mes "내가 그걸 알았더라면 여기 오지 않았겠지. '저거랑 비슷하게 생긴 거 아무거나 가져와!'라고 했을 거야. 가서 찾아봐.";
 	next;
-	select( "Doesn't it look like they're looking for a specific book?" );
-	mes "[Miriam]";
-	mes "A specific book...? Not just a book to exploit weaknesses?";
-	next;
-	cutin "ep18_miriam_03.png",0;
-	mes "[Miriam]";
-	mes "No, you mean this? Hey! What are you looking for? For what purpose?";
-	next;
-	cutin "",255;
-	mes "[Yopi]";
-	mes "Oh, there you go again! Why are you eavesdropping? As if you have something shady to share.";
-	npctalk "Why do you keep following me? Why do you keep interrupting me?", instance_npcname("Kun#dms311");
+	select( "특정 책을 찾고 있는 것 같지 않나요?" );
+	mes "[미리암]";
+	mes "특정 책을 말씀하시는 건가요...? 단순히 약점을 이용하려는 책이 아니라요?";
 	next;
 	cutin "ep18_miriam_03.png",0;
-	mes "[Miriam]";
-	mes "You're the ones who sneaked in with the shady stuff, remember? What's the book you're looking for?";
+	mes "[미리암]";
+	mes "아니, 이거 말씀하시는 거예요? 어! 뭘 찾으시는 거예요? 무슨 용도로요?";
 	next;
 	cutin "",255;
-	mes "[Lamacus]";
-	mes "That really hurts, man. Don't you realize that we're trying to make a good thing out of this? Can't you understand that we're trying to make a better life for everyone?";
-	npctalk "Are you setting us up?", instance_npcname("Yopi#dms321");
-	npctalk "What did they say to us?", instance_npcname("Kun#dms311");
-	next;
-	mes "[Lamacus]";
-	mes "They'll never know how much we care. It's about time you showed up, by the way...";
+	mes "[요피]";
+	mes "어머, 또 그러시네요! 왜 엿듣는 거예요? 무슨 꿍꿍이라도 있는 것처럼요.";
+	npctalk "왜 자꾸 저를 따라다니세요? 왜 자꾸 제 말을 끊으세요?", instance_npcname("Kun#dms311");
 	next;
 	cutin "ep18_miriam_03.png",0;
-	mes "[Miriam]";
-	mes "You have to catch them and make them open their mouths...!";
+	mes "[미리암]";
+	mes "너희들이 그 수상한 물건들을 몰래 들여왔잖아, 기억나? 너희들이 찾는 책이 뭐야?";
+	next;
+	cutin "",255;
+	mes "[라마쿠스]";
+	mes "정말 마음이 아프네요. 우리가 이 일을 통해 좋은 결과를 만들어내려고 노력하고 있다는 걸 모르시나요? 모두의 삶을 더 나아지게 하려고 애쓰고 있다는 걸 이해 못 하시겠어요?";
+	npctalk "우리를 함정에 빠뜨리려는 건가요?", instance_npcname("Yopi#dms321");
+	npctalk "그들이 우리에게 뭐라고 말했나요?", instance_npcname("Kun#dms311");
+	next;
+	mes "[라마쿠스]";
+	mes "그들은 우리가 얼마나 그들을 아끼는지 절대 모를 거야. 그나저나, 이제야 나타나다니 다행이네...";
+	next;
+	cutin "ep18_miriam_03.png",0;
+	mes "[미리암]";
+	mes "그들을 잡아서 입을 벌리게 해야 해...!";
 	next;
 	enablenpc instance_npcname("Temple Guard#dms401");
 	enablenpc instance_npcname("Temple Guard#dms411");
@@ -1303,13 +1303,13 @@ OnTouch:
 	enablenpc instance_npcname("Temple Guard#dms431");
 	enablenpc instance_npcname("Temple Guard#dms441");
 	cutin "",255;
-	mes "[Temple Guard]";
-	mes "Here we go! The intruder is here!!!";
-	npctalk "Here we go!!! Good luck! Let's go, boys!", instance_npcname("Lamacus#dms301");
-	npctalk "I'll track them down, and you, Adventurer, take care of these guys!", instance_npcname("Miriam#dms401");
+	mes "[사원 경비병]";
+	mes "자, 시작이다! 침입자가 나타났다!!!";
+	npctalk "자, 시작한다!!! 행운을 빌어! 가자, 얘들아!", instance_npcname("Lamacus#dms301");
+	npctalk "내가 그들을 추적할 테니, 모험가님께서는 이 녀석들을 처리해 주십시오!", instance_npcname("Miriam#dms401");
 	next;
-	mes "[Temple Guard]";
-	mes "Drop your weapon!!";
+	mes "[사원 경비병]";
+	mes "무기를 내려놓으세요!!";
 	if ('nyr_main_step == 8) {
 		'nyr_main_step = 9;
 		donpcevent instance_npcname("nyr_step_4") + "::OnStart";
@@ -1350,7 +1350,7 @@ OnMobDead:
 		end;
 	if (mobcount('map_2nyr$, instance_npcname("nyr_step_4") + "::OnMobDead") < 1) {
 		'nyr_main_step = 10;
-		mapannounce 'map_2nyr$, "It's ominous. I feel as though it's still following us.", bc_map, 0xFFCC;
+		mapannounce 'map_2nyr$, "불길한 예감이 들어요. 아직도 우리를 따라다니는 것 같아요.", bc_map, 0xFFCC;
 		disablenpc instance_npcname("#mstep02");
 		disablenpc instance_npcname("#mstep03");
 		enablenpc instance_npcname("#mstep04");
@@ -1369,11 +1369,11 @@ OnMobDead:
 //------------------------------------------------------------
 2@nyr,209,98,5	script	Miriam#dms501	4_EP18_MIRIAM,5,5,{
 	if (is_party_leader() == false)
-		npctalk "Didn't the party leader decide to come?", instance_npcname("Miriam#dms501");
+		npctalk "당 대표는 오기로 결정하지 않았나요?", instance_npcname("Miriam#dms501");
 	end;
 OnTouch:
-	npctalk "See that shelf over there?", instance_npcname("Miriam#dms501");
-	npctalk "I'm going to burn out my fingers.", instance_npcname("Lamacus#dms401");
+	npctalk "저기 선반 보이시죠?", instance_npcname("Miriam#dms501");
+	npctalk "손가락이 타버릴 것 같아.", instance_npcname("Lamacus#dms401");
 	end;
 }
 
@@ -1382,41 +1382,41 @@ OnTouch:
 		end;
 	if (is_party_leader() == false)
 		end;
-	mes "[Yopi]";
-	mes "Isn't this the end of the line?";
+	mes "[요피]";
+	mes "이게 끝 아닌가요?";
 	next;
-	mes "[Lamacus]";
-	mes "I know. They must have a real secret library.";
-	npctalk "Oops, that was a waste.", instance_npcname("Yopi#dms421");
-	npctalk "You're not going to hold me responsible for failing, are you?", instance_npcname("Kun#dms411");
+	mes "[라마쿠스]";
+	mes "나도 알아. 그들은 진짜 비밀 도서관을 갖고 있을 거야.";
+	npctalk "아뿔싸, 아깝네.", instance_npcname("Yopi#dms421");
+	npctalk "제가 실패한 것에 대해 책임을 물으시려는 건 아니시죠?", instance_npcname("Kun#dms411");
 	next;
-	mes "[Lamacus]";
-	mes "I told you to find it in the first place, not just come to me because it's there.";
+	mes "[라마쿠스]";
+	mes "애초에 직접 찾아보라고 했지, 그냥 거기 있다고 해서 나한테 오라고 한 게 아니잖아.";
 	next;
-	mes "[Kun]";
-	mes "Ask if it's okay to back out.";
+	mes "[쿤]";
+	mes "취소해도 괜찮은지 물어보세요.";
 	next;
-	npctalk "This is Wolf.", instance_npcname("Lamacus#dms401");
+	npctalk "이 아이는 울프입니다.", instance_npcname("Lamacus#dms401");
 	sleep2 2000;
-	npctalk "???: Did you find the item?", instance_npcname("Lamacus#dms401");
+	npctalk "그 물건을 찾으셨나요?", instance_npcname("Lamacus#dms401");
 	sleep2 2000;
-	npctalk "This is the last library, but I don't think it's here.", instance_npcname("Lamacus#dms401");
+	npctalk "여기가 마지막 도서관인데, 여기엔 없는 것 같아요.", instance_npcname("Lamacus#dms401");
 	sleep2 2000;
-	npctalk "???: Wait.", instance_npcname("Lamacus#dms401");
-	mes "[Kun]";
-	mes "Wait, am I seeing things? That's Miriam and the Adventurer.";
-	npctalk "You're persistent. I'm surprised you beat all the guards.", instance_npcname("Yopi#dms421");
+	npctalk "???: 기다리다.", instance_npcname("Lamacus#dms401");
+	mes "[쿤]";
+	mes "잠깐, 내가 잘못 보고 있는 건가? 저건 미리엄이랑 모험가잖아.";
+	npctalk "끈기 있으시네요. 경비병들을 모두 따돌리셨다니 놀랍습니다.", instance_npcname("Yopi#dms421");
 	next;
 	cutin "ep18_miriam_03.png",2;
-	mes "[Miriam]";
-	mes "Who are you guys talking to?";
+	mes "[미리암]";
+	mes "너희들 누구랑 얘기하고 있는 거야?";
 	next;
-	select( "Are you guys paid to do this?" );
+	select( "이거 하는 데 돈 받고 하는 일이에요?" );
 	cutin "",255;
-	mes "[Lamacus]";
-	mes "Payment? We don't get that, do we?";
-	npctalk "I'm a bit of a believer.", instance_npcname("Kun#dms411");
-	npctalk "We don't betray, ever.", instance_npcname("Yopi#dms421");
+	mes "[라마쿠스]";
+	mes "지불이요? 우린 그런 거 못 받잖아요, 그렇죠?";
+	npctalk "저는 어느 정도 믿는 편이에요.", instance_npcname("Kun#dms411");
+	npctalk "우리는 절대 배신하지 않아요.", instance_npcname("Yopi#dms421");
 	next;
 	enablenpc instance_npcname("Temple Guard#dms501");
 	enablenpc instance_npcname("Temple Guard#dms511");
@@ -1430,70 +1430,70 @@ OnTouch:
 	unitwalk getnpcid(0,instance_npcname("Temple Guard#dms541")),199,92;
 
 	sleep2 500;
-	npctalk "Over here!", instance_npcname("Temple Guard#dms501");
-	npctalk "Hey! There you are!!", instance_npcname("Lamacus#dms401");
+	npctalk "이쪽이에요!", instance_npcname("Temple Guard#dms501");
+	npctalk "어이! 여기 있었구나!!", instance_npcname("Lamacus#dms401");
 	sleep2 1000;
 	enablenpc instance_npcname("Schulang#dms101");
 	unitwalk getnpcid(0,instance_npcname("Schulang#dms101")),206,96;
 	npctalk "......", instance_npcname("Schulang#dms101");
-	npctalk "You've arrived!", instance_npcname("Lamacus#dms401");
-	npctalk "You've arrived!", instance_npcname("Kun#dms411");
-	npctalk "You've arrived!", instance_npcname("Yopi#dms421");
+	npctalk "도착하셨습니다!", instance_npcname("Lamacus#dms401");
+	npctalk "도착하셨습니다!", instance_npcname("Kun#dms411");
+	npctalk "도착하셨습니다!", instance_npcname("Yopi#dms421");
 	sleep2 2000;
 
 	cutin "ep18_shulang.png",0;
 	mes "[??]";
-	mes "Is this the end of the library?";
+	mes "여기가 도서관의 끝인가요?";
 	next;
 	cutin "",255;
-	mes "[Lamacus]";
-	mes "Yes, it is.";
+	mes "[라마쿠스]";
+	mes "네, 그렇습니다.";
 	next;
 	cutin "ep18_shulang.png",0;
 	mes "[??]";
-	mes "I wish I could have found the book, but I can't. They've done their work, so we're out of here.";
+	mes "그 책을 찾았으면 좋았겠지만, 찾을 수가 없네요. 그들은 이미 할 일을 다 끝냈으니, 우린 이제 나가야겠어요.";
 	next;
 	cutin "ep18_miriam_03.png",2;
-	mes "[Miriam]";
-	mes "Who are you? What do you have to do with these people?";
+	mes "[미리암]";
+	mes "당신은 누구십니까? 이 사람들과 무슨 관계가 있습니까?";
 	next;
 	cutin "ep18_shulang.png",0;
 	mes "[??]";
-	mes "What is it? Is there something else?";
+	mes "그게 뭐죠? 다른 건 없나요?";
 	next;
 	cutin "",255;
-	mes "[Yopi]";
-	mes "Someone sniffed out the wolf and decided to follow us. We'll take care of it soon.";
+	mes "[요피]";
+	mes "누군가 늑대 냄새를 맡고 우리를 따라온 것 같군. 곧 처리하게 될 거야.";
 	next;
 	cutin "ep18_shulang.png",0;
 	mes "[??]";
-	mes "That's not necessary. You guys should get out of here and let the new guys take over.";
+	mes "그럴 필요 없어요. 당신들은 여기서 나가고 새 사람들이 맡도록 하세요.";
 	next;
 	cutin "",255;
-	mes "[Lamacus]";
-	mes "Yes!!";
+	mes "[라마쿠스]";
+	mes "예!!";
 	next;
 	disablenpc instance_npcname("Schulang#dms101");
 	cutin "ep18_miriam_03.png",2;
-	mes "[Miriam]";
-	mes "Wait!!!";
+	mes "[미리암]";
+	mes "기다리다!!!";
 	next;
 	cutin "",255;
-	mes "[Temple Guard]";
-	mes "Take care of all intruders!";
-	unittalk getcharid(3), "" + strcharinfo(0) + " : Who's the intruder?";
+	mes "[사원 경비병]";
+	mes "침입자들을 모두 처리하세요!";
+	unittalk getcharid(3), "" + strcharinfo(0) + " 침입자는 누구인가요?";
 	next;
 	cutin "ep18_miriam_03.png",2;
-	mes "[Miriam]";
-	mes "It seems like a weird twist of fate, huh? The Temple Guards have been bought off. We need to find out what's going on...";
-	unittalk getcharid(3), "" + strcharinfo(0) + " : Leave these people to me.";
+	mes "[미리암]";
+	mes "운명의 장난 같지 않나? 사원 경비병들이 매수당했어. 무슨 일이 벌어지고 있는지 알아내야 해…";
+	unittalk getcharid(3), "" + strcharinfo(0) + " 이 사람들은 내게 맡겨라.";
 	next;
 	cutin "",255;
-	mes "[Temple Guard]";
-	mes "All hands in formation!";
+	mes "[사원 경비병]";
+	mes "모두 대형을 갖춰라!";
 	next;
-	mes "[Yopi]";
-	mes "Oh, no~ I'm sorry we've crossed paths, we got dirty, so let's not meet again?";
+	mes "[요피]";
+	mes "어머, 안 돼~ 우리가 마주쳐서 미안해, 게다가 더러워지기도 했으니 다시는 만나지 말자.";
 	if ('nyr_main_step == 10) {
 		'nyr_main_step = 11;
 		donpcevent instance_npcname("nyr_step_5") + "::OnStart";
@@ -1537,7 +1537,7 @@ OnMobDead:
 		end;
 	if (mobcount('map_2nyr$, instance_npcname("nyr_step_5") + "::OnMobDead") < 1) {
 		'nyr_main_step = 12;
-		mapannounce 'map_2nyr$, "Beep - Vault unlock protocol activated", bc_map, 0xFFCC;
+		mapannounce 'map_2nyr$, "삐 - 금고 잠금 해제 프로토콜이 활성화되었습니다.", bc_map, 0xFFCC;
 		disablenpc instance_npcname("#mstep04");
 		disablenpc instance_npcname("#mstep05");
 
@@ -1564,45 +1564,45 @@ OnMobDead:
 
 2@nyr,133,109,3	script	Miriam#dms601	EP18_NPC_MIRIAM,5,5,{
 	if (is_party_leader() == false) {
-		npctalk "I don't think the party has arrived yet.";
+		npctalk "파티는 아직 시작되지 않은 것 같아요.";
 		end;
 	}
 	.@miriam$ = instance_npcname("Miriam#dms601");
 
 	if ('nyr_main_step == 12) {
 		cutin "ep18_miriam_03.png",2;
-		mes "[Miriam]";
-		mes "What are you doing? How many people are there? I can't see much from here.";
+		mes "[미리암]";
+		mes "뭐 하고 있어? 몇 명이나 있어? 여기서는 잘 안 보여.";
 		next;
-		select( "There are a few people I don't recognize." );
+		select( "제가 모르는 사람들이 몇 명 있네요." );
 		cutin "ep18_shulang.png",1;
 		mes "[???]";
-		mes "How far are we from there?";
+		mes "우리는 거기까지 얼마나 멀리 떨어져 있나요?";
 		next;
 		cutin "",255;
-		mes "[Lamacus]";
-		mes "We're almost there now.";
+		mes "[라마쿠스]";
+		mes "이제 거의 다 왔어요.";
 		next;
 		cutin "ep18_bagot_01.png",1;
 		mes "[???]";
-		mes "It's really, really, really secure. I'm just saying.";
+		mes "정말, 정말, 정말 안전해요. 그냥 하는 말이에요.";
 		next;
 		cutin "",255;
 		mes "[???]";
-		mes "... Aren't you at least this secure?";
+		mes "...당신은 적어도 이 정도는 안전하지 않나요?";
 		next;
 		cutin "ep18_bagot_02.png",1;
 		mes "[???]";
-		mes "Hey, Mr. Genius, don't you know how to make an irony?! Tight security is not synonymous with cumbersome and demanding procedures, right?";
+		mes "이봐요, 천재님, 아이러니를 어떻게 하는지 모르세요?! 철저한 보안이 번거롭고 까다로운 절차와 동의어는 아니잖아요, 그렇죠?";
 		next;
 		cutin "ep18_miriam_03.png",2;
-		mes "[Miriam]";
-		mes "This voice is...";
+		mes "[미리암]";
+		mes "이 목소리는...";
 		donpcevent .@miriam$ + "::OnEffect";
 		next;
-		select( "Do you know them?" );
-		mes "[Miriam]";
-		mes "It's obscured, so I'm not sure...";
+		select( "당신은 그들을 아시나요?" );
+		mes "[미리암]";
+		mes "가려져 있어서 잘 모르겠네요...";
 		next;
 		cutin "",255;
 		mes "[???]";
@@ -1641,10 +1641,10 @@ OnMobDead:
 		end;
 	}
 	if ('nyr_main_step == 13) {
-		npctalk "This way! Hurry up and chase him!";
+		npctalk "이쪽으로! 어서 쫓아가!";
 		cutin "ep18_miriam_03.png",2;
-		mes "[Miriam]";
-		mes "Let's go in too.";
+		mes "[미리암]";
+		mes "우리도 들어가자.";
 		sleep2 1000;
 		unitwalk getnpcid(0,instance_npcname("Temple Guard#dms601")), 118,121, .@miriam$ + "::OnMove5";
 		unitwalk getnpcid(0,instance_npcname("Temple Guard#dms611")), 118,121, .@miriam$ + "::OnMove6";
@@ -1660,7 +1660,7 @@ OnEffect:
 	enablenpc instance_npcname("#effc01");
 	specialeffect EF_MAPPILLAR2, AREA, instance_npcname("#effc01");
 	sleep 1000;
-	npctalk "Jing- Clap-", instance_npcname("#effc01");
+	npctalk "징- 박수-", instance_npcname("#effc01");
 	end;
 
 OnMove1:
@@ -1690,7 +1690,7 @@ OnMove8:
 
 OnTouch:
 	if ('nyr_main_step == 12)
-		npctalk "Hey, there are other people over there, what do they say?", instance_npcname("Miriam#dms601");
+		npctalk "저기 다른 사람들도 있는데, 뭐라고 하는지 들어봐.", instance_npcname("Miriam#dms601");
 	end;
 }
 2@nyr,125,111,3	duplicate(dummy_npc)	Lamacus#dms501	EP18_ARMED_VILLAGER01
@@ -1713,146 +1713,146 @@ OnTouch:
 
 2@nyr,118,199,1	script	Miriam#dms701	4_EP18_MIRIAM,5,5,{
 	if (is_party_leader() == false) {
-		npctalk "Who is the leader of the party?";
+		npctalk "그 당의 대표는 누구입니까?";
 		end;
 	}
 	if ('nyr_main_step == 13) {
 		mes "[???]";
-		mes "Schulang, have you secured it yet? This Bagot is about to lose patience.";
+		mes "슐랑, 확보했어? 이 바곳은 인내심을 잃는 것에 관한 거야.";
 		next;
-		mes "[Lamacus]";
-		mes "But do we have to keep this on?";
-		npctalk "It's frustrating.", instance_npcname("Yopi#dms621");
+		mes "[라마쿠스]";
+		mes "하지만 이걸 계속 켜둬야 할까요?";
+		npctalk "답답하네요.", instance_npcname("Yopi#dms621");
 		next;
 		cutin "ep18_shulang.png",0;
-		mes "[Schulang]";
-		mes "Who cares? You came this far. Do as you please.";
+		mes "[학교]";
+		mes "누가 신경 쓰겠어요? 여기까지 왔는데. 하고 싶은 대로 하세요.";
 		next;
 		setnpcdisplay( instance_npcname("Lamacus#dms601"), 21308 );	// EP18_MD_HEARTHUNTER_A
 		setnpcdisplay( instance_npcname("Kun#dms611"), 21308 );	// EP18_MD_HEARTHUNTER_A
 		setnpcdisplay( instance_npcname("Yopi#dms621"), 21308 );	// EP18_MD_HEARTHUNTER_A
 		cutin "",255;
-		mes "[Yopi]";
-		mes "Hah- now that's a life saver.";
-		npctalk "I thought it was killing me!", instance_npcname("Kun#dms611");
+		mes "[요피]";
+		mes "하하, 정말 생명의 은인이네요.";
+		npctalk "정말 죽을 것 같았어요!", instance_npcname("Kun#dms611");
 		next;
-		select( "The Heart Hunters were undercover." );
+		select( "하트 헌터스 팀은 잠복 수사를 벌였다." );
 		cutin "ep18_miriam_03.png",2;
-		mes "[Miriam]";
-		mes "Hearthunter... you're working with those mad scientists you were talking about... from the very beginning...!";
+		mes "[미리암]";
+		mes "하트헌터... 당신은 처음부터 당신이 말했던 그 미치광이 과학자들과 한패였던 거군요...!";
 		next;
 		cutin "",255;
 		mes "[" + strcharinfo(0) + "]";
-		mes "There are still a lot of Heart Hunters remodeled with Ymir's heart left, right?";
+		mes "아직도 유미르의 심장을 남겨둔 채 개조된 하트 헌터들이 많이 있죠?";
 		next;
 		cutin "ep18_shulang.png",0;
-		mes "[Schulang]";
-		mes "Was it our old face? Ah, those are the small fries that are said to be tracking you. I heard the news.";
-		npctalk "Oh, those people? They've been after us so relentlessly that we've surprised ourselves. We didn't realize we were in debt.", instance_npcname("Bagot#dms201");
+		mes "[학교]";
+		mes "우리 옛 얼굴은 뭐지? 아, 저것들이 바로 당신을 미행하고 있다고 하는 하찮은 놈들이군요. 소식 들었습니다.";
+		npctalk "아, 그 사람들 말인가요? 그 사람들이 너무 끈질기게 우리를 괴롭혀서 우리도 깜짝 놀랐어요. 우리가 빚을 지고 있다는 사실조차 몰랐거든요.", instance_npcname("Bagot#dms201");
 		next;
-		select( "That would be Illusion." );
+		select( "그건 착각일 뿐이죠." );
 		cutin "ep18_bagot_02.png",1;
-		mes "[Bagot]";
-		mes "Oh, my God, I don't want to embarrass you.";
-		npctalk "Who cares, it's going to be gone anyway.", instance_npcname("Schulang#dms301");
+		mes "[바곳]";
+		mes "맙소사, 당신을 당황하게 하고 싶진 않아요.";
+		npctalk "누가 신경 쓰겠어요, 어차피 없어질 텐데요.", instance_npcname("Schulang#dms301");
 		next;
 		enablenpc instance_npcname("High Priest#dms201");
 		enablenpc instance_npcname("Temple Guard#dms701");
 		enablenpc instance_npcname("Temple Guard#dms711");
 		cutin "",255;
 		mes "[???]";
-		mes "You're all good to go.";
+		mes "이제 다 준비되셨습니다.";
 		next;
 		cutin "ep18_miriam_03.png",2;
-		mes "[Miriam]";
-		mes "...Father??";
+		mes "[미리암]";
+		mes "...아버지??";
 		next;
 		cutin "",255;
-		mes "[Amal]";
-		mes "Miriam, You've come this far. You've done your part, now go home.";
+		mes "[아말]";
+		mes "미리엄, 여기까지 왔잖아. 할 일은 다 했으니 이제 집으로 가렴.";
 		next;
 		cutin "ep18_miriam_03.png",2;
-		mes "[Miriam]";
-		mes "What do you mean? What are you doing...?";
+		mes "[미리암]";
+		mes "무슨 말씀이세요? 지금 뭐 하시는 거예요...?";
 		next;
 		cutin "ep18_bagot_03.png",1;
-		mes "[Bagot]";
-		mes "Wow, you got praised by your dad. That's great. Compliments for good parenting, it's important.";
-		mes "I don't even remember getting my praise. Um... Ah! I don't remember because I never got it.!";
-		npctalk "Now that you've been praised, you can go home, wash off your feet, and sleep..", instance_npcname("Bagot#dms201");
+		mes "[바곳]";
+		mes "와, 아빠한테 칭찬받았구나. 정말 잘됐네. 좋은 부모 노릇에 대한 칭찬은 중요한 거지.";
+		mes "칭찬받은 기억조차 없네요. 음... 아! 기억이 안 나는 이유는 받은 적이 없기 때문이에요!";
+		npctalk "칭찬을 받았으니 이제 집에 가서 발을 씻고 잠을 자도 됩니다.", instance_npcname("Bagot#dms201");
 		next;
 		cutin "ep18_miriam_03.png",2;
-		mes "[Miriam]";
-		mes "What, what's going on? Why did my dad... What did you do?";
+		mes "[미리암]";
+		mes "뭐, 무슨 일이야? 아빠가 왜… 너 대체 무슨 짓을 한 거야?";
 		next;
 		cutin "",255;
-		mes "[Amal]";
-		mes "... Once you've got what you need, let's move on.";
+		mes "[아말]";
+		mes "...필요한 것을 모두 얻으셨으면 다음 단계로 넘어가겠습니다.";
 		next;
 		cutin "ep18_miriam_03.png",2;
-		mes "[Miriam]";
-		mes "Father! Father!!!";
+		mes "[미리암]";
+		mes "아버지! 아버지!!!";
 		next;
 		disablenpc instance_npcname("High Priest#dms201");
 		cutin "ep18_bagot_01.png",1;
-		mes "[Bagot]";
-		mes "A father who praises you but never loves you?";
+		mes "[바곳]";
+		mes "칭찬은 하지만 사랑은 전혀 해주지 않는 아버지?";
 		next;
 		cutin "ep18_miriam_03.png",2;
-		mes "[Miriam]";
-		mes "What are you doing to my father?";
+		mes "[미리암]";
+		mes "내 아버지에게 무슨 짓을 하는 거야?";
 		next;
 		cutin "ep18_bagot_03.png",1;
-		mes "[Bagot]";
-		mes "Oh, you don't know, do you? His wish is to drive all the natives out of Arunafeltz. We helped a little with that, but not for free.";
-		npctalk "You should always live your life doing whatever you want. Otherwise, you're going to be sick.", instance_npcname("Bagot#dms201");
-		npctalk "Hehe - did you like your impersonation? Give us a pat on the back.", instance_npcname("Lamacus#dms601");
+		mes "[바곳]";
+		mes "아, 모르시는군요. 그의 소원은 아루나펠츠에서 모든 원주민을 쫓아내는 겁니다. 우리가 조금 도왔지만, 공짜는 아니었어요.";
+		npctalk "당신은 항상 하고 싶은 대로 살면서 인생을 즐겨야 합니다. 그렇지 않으면 병들게 될 겁니다.", instance_npcname("Bagot#dms201");
+		npctalk "헤헤 - 성대모사 마음에 드셨나요? 칭찬 좀 해주세요.", instance_npcname("Lamacus#dms601");
 		next;
 		cutin "",255;
-		mes "[Heart Hunter]";
-		mes "Miriam, you and your friends have helped me complete this picture of the riot. Thank you so much!";
+		mes "[하트 헌터]";
+		mes "미리엄, 너와 네 친구들이 이 폭동 장면을 완성하는 데 도움을 줬어. 정말 고마워!";
 		next;
 		cutin "ep18_miriam_03.png",2;
-		mes "[Miriam]";
-		mes "Do you think that makes sense?";
+		mes "[미리암]";
+		mes "그게 말이 된다고 생각하세요?";
 		next;
 		cutin "ep18_bagot_01.png",1;
-		mes "[Bagot]";
-		mes "What are you talking about, a handful of impulsive protests to the temple?";
+		mes "[바곳]";
+		mes "무슨 소리예요? 사원에 대한 충동적인 시위 몇 건을 말하는 건가요?";
 		next;
 		cutin "ep18_bagot_03.png",1;
-		mes "[Bagot]";
-		mes "Soon the protest outside will turn into a riot, and then your wish will be granted, and then you'll make another wish, and then we'll get paid again?";
+		mes "[바곳]";
+		mes "곧 바깥 시위가 폭동으로 변할 거고, 그러면 당신의 소원이 이루어질 거고, 그러면 당신은 또 다른 소원을 빌 거고, 그러면 우리는 다시 월급을 받게 되겠죠?";
 		next;
 		cutin "ep18_shulang.png",0;
-		mes "[Schulang]";
-		mes "I'm not going to talk forever. Let's go.";
-		mes "Clean up your mess.";
+		mes "[학교]";
+		mes "더 이상 얘기할 순 없어. 가자.";
+		mes "네가 어질러 놓은 것을 치워.";
 		next;
 		cutin "",255;
-		mes "[Lamacus]";
-		mes "Four!";
+		mes "[라마쿠스]";
+		mes "넷!";
 		next;
 		disablenpc instance_npcname("Schulang#dms301");
 		disablenpc instance_npcname("Bagot#dms201");
-		mes "[Heart Hunter]";
-		mes "I wish I had Suad here with me. I wish I could've helped him out sometime.";
+		mes "[하트 헌터]";
+		mes "수아드가 여기 내 곁에 있었으면 좋았을 텐데. 언젠가 그를 도와줄 수 있었으면 좋았을 텐데.";
 		next;
-		mes "[Heart Hunter]";
-		mes "Hi, let me formally introduce ourselves. We're the Heart Hunters, and we're about to bury you here.";
-		npctalk "Not just any heart hunter. He's a really, really good Heart Hunter.", instance_npcname("Kun#dms611");
+		mes "[하트 헌터]";
+		mes "안녕하세요, 정식으로 소개드리겠습니다. 저희는 하트 헌터스이고, 이제 당신을 여기에 묻어버릴 겁니다.";
+		npctalk "그냥 평범한 하트 헌터가 아니야. 그는 정말, 정말 뛰어난 하트 헌터지.", instance_npcname("Kun#dms611");
 		next;
-		select( "Watch out, they're modified." );
+		select( "조심하세요, 개조된 것들이에요." );
 		next;
 		specialeffect EF_UNDEADBODY, AREA, instance_npcname("Lamacus#dms601");
 		specialeffect EF_NPC_STOP, AREA, instance_npcname("Lamacus#dms601");
 		cutin "ep18_miriam_03.png",2;
-		mes "[Miriam]";
-		mes "He's always been like that... Is there something ominous about that?";
+		mes "[미리암]";
+		mes "그는 항상 저랬어... 뭔가 불길한 징조가 있는 걸까?";
 		next;
-		select( "It seems to resonate with the heart of Ymir here." );
-		mes "[Miriam]";
-		mes "That's basically a quick count, right? Okay, let's make it quick and get on with it.";
+		select( "이는 유미르의 마음과 깊이 와닿는 것 같습니다." );
+		mes "[미리암]";
+		mes "간단히 세는 거죠? 좋아요, 빨리 끝내고 다음으로 넘어갑시다.";
 		if ('nyr_main_step == 13) {
 			'nyr_main_step = 14;
 			donpcevent instance_npcname("nyr_step_7") + "::OnStart";
@@ -1863,64 +1863,64 @@ OnTouch:
 	}
 	if ('nyr_main_step == 15) {
 		cutin "ep18_miriam_03.png",2;
-		mes "[Miriam]";
-		mes "Ha... Hah... Adventurer, are you all right?";
+		mes "[미리암]";
+		mes "하... 하... 모험가님, 괜찮으신가요?";
 		next;
-		select( "But where did they all go?" );
+		select( "그런데 그들은 모두 어디로 갔을까요?" );
 		enablenpc instance_npcname("Niren#dms101");
 		enablenpc instance_npcname("Temple Guard#dms751");
 		enablenpc instance_npcname("Temple Guard#dms761");
 		enablenpc instance_npcname("Temple Guard#dms771");
-		npctalk "What's this all about?", instance_npcname("Niren#dms101");
+		npctalk "이게 다 무슨 얘기야?", instance_npcname("Niren#dms101");
 		cutin "ra_gwoman.bmp",0;
-		mes "[Niren]";
-		mes "What, what's all the fuss about?";
-		mes "Adventurer...? Why are you here, Adventurer?";
+		mes "[니렌]";
+		mes "뭐, 뭐가 그렇게 난리야?";
+		mes "모험가...? 모험가님, 당신은 왜 여기에 있습니까?";
 		next;
-		select( "Here's what..." );
-		mes "[Niren]";
-		mes "You've been tracking a colleague who's been acting suspiciously, and it turns out they're actually a mole.";
+		select( "자, 이제 설명해 드릴게요..." );
+		mes "[니렌]";
+		mes "수상한 행동을 보이는 동료를 미행해 왔는데, 알고 보니 그 동료는 내부 첩자였습니다.";
 		next;
 		cutin "ep18_miriam_03.png",2;
-		mes "[Miriam]";
-		mes "You're in the same league as my father.?";
+		mes "[미리암]";
+		mes "당신은 우리 아버지와 같은 수준인가요?";
 		next;
 		cutin "ra_gwoman.bmp",0;
-		mes "[Niren]";
-		mes "High Priest?? What does that even mean?";
+		mes "[니렌]";
+		mes "대제사장?? 그게 대체 무슨 뜻이야?";
 		next;
 		cutin "ep18_miriam_03.png",2;
-		mes "[Miriam]";
-		mes "I think my father is involved in this.";
+		mes "[미리암]";
+		mes "제 생각엔 아버지가 이 일에 연루된 것 같아요.";
 		next;
 		cutin "ra_gwoman.bmp",0;
-		mes "[Niren]";
-		mes "How is that... High Priest...? We'll have to investigate.";
-		mes "I'm sure there are instigators lurking in the crowd outside, planted by the bad guys...";
+		mes "[니렌]";
+		mes "저분이 어떻게…대제사장이시지…? 조사해 봐야겠군.";
+		mes "분명히 바깥 군중 속에 나쁜 놈들이 심어놓은 선동자들이 숨어 있을 거예요...";
 		next;
-		select( "It's also among the Temple Guard." );
-		mes "[Niren]";
-		mes "We're going to need to do a major overhaul...first we need to figure out what we've been doing here, making sure there's nothing dangerous, and nothing is lost... even among the Temple Guards.";
+		select( "그 역시 성전 수호대 소속입니다." );
+		mes "[니렌]";
+		mes "대대적인 개편이 필요할 것 같습니다... 우선 우리가 여기서 무슨 일을 해왔는지 파악하고, 위험한 것은 없는지, 잃어버린 것은 없는지 확인해야 합니다... 심지어 사원 경비대원들 사이에서도 말이죠.";
 		next;
-		mes "[Niren]";
+		mes "[니렌]";
 		mes "...!!";
-		mes "No need to investigate, Ymir's heart shard is missing. It's supposed to be there.";
+		mes "조사할 필요 없어, 유미르의 심장 조각이 없어진 건 사실이야. 원래 있어야 할 자리거든.";
 		next;
-		select( "I know..." );
-		mes "[Niren]";
-		mes "What the heck they're going to do with it... I can't even imagine.";
-		mes "This is not what we should be doing, we need to tell the truth and track them down...!!";
+		select( "알아요..." );
+		mes "[니렌]";
+		mes "저걸 가지고 도대체 뭘 하려는 걸까... 상상도 안 되네.";
+		mes "이건 우리가 해서는 안 될 일이에요. 진실을 밝히고 그들을 찾아내야 해요...!!";
 		next;
-		mes "[Niren]";
-		mes "Ah...! You said there would be enemies among the Temple Guards, so we'll have to pick out the ones we trust first.";
+		mes "[니렌]";
+		mes "어...! 사원 경비병 중에도 적이 있을 거라고 하셨잖아요. 그러니까 먼저 믿을 만한 자들을 골라내야 할 것 같아요.";
 		next;
 		cutin "ep18_miriam_03.png",2;
-		mes "[Miriam]";
-		mes "I'll go. That's probably my father's, because I have a pretty good idea of where it might have gone.";
+		mes "[미리암]";
+		mes "제가 가보겠습니다. 아마 아버지 것일 거예요. 어디로 갔을지 짐작이 가거든요.";
 		next;
 		cutin "ra_gwoman.bmp",0;
-		mes "[Niren]";
-		mes "We'll talk about that when we get outside, because it's not looking good out there.";
+		mes "[니렌]";
+		mes "밖에 나가서 얘기하죠. 밖 상황이 별로 좋아 보이지 않거든요.";
 		close2;
 		cutin "",255;
 		if ('nyr_main_step == 15) {
@@ -1978,7 +1978,7 @@ OnTouch:
 
 OnTouch:
 	if ('nyr_main_step == 13)
-		npctalk "Everyone is gathered over there.";
+		npctalk "모두들 저쪽에 모여 있어요.";
 	end;
 }
 
@@ -2054,137 +2054,137 @@ OnTouch:
 	'nyr_main_step = 17;
 	donpcevent instance_npcname("Miriam#dms801") + "::OnMove1";
 	navigateto("1@nyr",129,165);
-	mapannounce 'map_2nyr$, "We're alive! Please notice us!", bc_map, 0xFFCC;
-	npctalk "I don't think this is a good situation. I need to get closer.", instance_npcname("Miriam#dms801");
+	mapannounce 'map_2nyr$, "저희 살아있어요! 제발 저희를 봐주세요!", bc_map, 0xFFCC;
+	npctalk "이 상황은 좋지 않은 것 같아요. 좀 더 가까이 가야겠어요.", instance_npcname("Miriam#dms801");
 	sleep 2000;
-	npctalk "This way.", instance_npcname("Miriam#dms801");
-	mapannounce 'map_2nyr$, "We're alive! We're alive!!", bc_map, 0xFFCC;
+	npctalk "이쪽입니다.", instance_npcname("Miriam#dms801");
+	mapannounce 'map_2nyr$, "우리가 살아있어! 우리가 살아있다고!!", bc_map, 0xFFCC;
 	sleep 3000;
-	mapannounce 'map_2nyr$, "We exist!! Exist!!", bc_map, 0xFFCC;
+	mapannounce 'map_2nyr$, "우리는 존재한다!! 우리는 존재한다!!", bc_map, 0xFFCC;
 	sleep 5000;
-	mapannounce 'map_2nyr$, "Give the right back to the owner of this land! Give it back!!", bc_map, 0xFFCC;
-	npctalk "Give it back!", instance_npcname("Angry Crowd#dms201");
-	npctalk "Give it back!", instance_npcname("Angry Crowd#dms211");
-	npctalk "Give it back!", instance_npcname("Angry Crowd#dms221");
-	npctalk "Give it back!", instance_npcname("Angry Crowd#dms231");
-	npctalk "Give it back!", instance_npcname("Angry Crowd#dms241");
-	npctalk "Give it back!", instance_npcname("Angry Crowd#dms251");
-	npctalk "Give it back!", instance_npcname("Angry Crowd#dms261");
-	npctalk "Give it back!", instance_npcname("Angry Crowd#dms271");
-	npctalk "Give it back!", instance_npcname("Angry Crowd#dms281");
-	npctalk "Give it back!", instance_npcname("Angry Crowd#dms291");
-	npctalk "Give it back!", instance_npcname("Angry Crowd#dms202");
-	npctalk "Give it back!", instance_npcname("Angry Crowd#dms212");
-	npctalk "Give it back!", instance_npcname("Angry Crowd#dms222");
-	npctalk "Give it back!", instance_npcname("Angry Crowd#dms232");
-	npctalk "Give it back!", instance_npcname("Angry Crowd#dms242");
+	mapannounce 'map_2nyr$, "이 땅의 주인에게 권리를 돌려주세요! 돌려주세요!!", bc_map, 0xFFCC;
+	npctalk "돌려줘!", instance_npcname("Angry Crowd#dms201");
+	npctalk "돌려줘!", instance_npcname("Angry Crowd#dms211");
+	npctalk "돌려줘!", instance_npcname("Angry Crowd#dms221");
+	npctalk "돌려줘!", instance_npcname("Angry Crowd#dms231");
+	npctalk "돌려줘!", instance_npcname("Angry Crowd#dms241");
+	npctalk "돌려줘!", instance_npcname("Angry Crowd#dms251");
+	npctalk "돌려줘!", instance_npcname("Angry Crowd#dms261");
+	npctalk "돌려줘!", instance_npcname("Angry Crowd#dms271");
+	npctalk "돌려줘!", instance_npcname("Angry Crowd#dms281");
+	npctalk "돌려줘!", instance_npcname("Angry Crowd#dms291");
+	npctalk "돌려줘!", instance_npcname("Angry Crowd#dms202");
+	npctalk "돌려줘!", instance_npcname("Angry Crowd#dms212");
+	npctalk "돌려줘!", instance_npcname("Angry Crowd#dms222");
+	npctalk "돌려줘!", instance_npcname("Angry Crowd#dms232");
+	npctalk "돌려줘!", instance_npcname("Angry Crowd#dms242");
 	sleep 5000;
-	mapannounce 'map_2nyr$, "We too are alive! Alive!", bc_map, 0xFFCC;
-	npctalk "We're alive!", instance_npcname("Angry Crowd#dms201");
-	npctalk "We're alive!", instance_npcname("Angry Crowd#dms211");
-	npctalk "We're alive!", instance_npcname("Angry Crowd#dms221");
-	npctalk "We're alive!", instance_npcname("Angry Crowd#dms231");
-	npctalk "We're alive!", instance_npcname("Angry Crowd#dms241");
-	npctalk "We're alive!", instance_npcname("Angry Crowd#dms251");
-	npctalk "We're alive!", instance_npcname("Angry Crowd#dms261");
-	npctalk "We're alive!", instance_npcname("Angry Crowd#dms271");
-	npctalk "We're alive!", instance_npcname("Angry Crowd#dms281");
-	npctalk "We're alive!", instance_npcname("Angry Crowd#dms291");
-	npctalk "We're alive!", instance_npcname("Angry Crowd#dms202");
-	npctalk "We're alive!", instance_npcname("Angry Crowd#dms212");
-	npctalk "We're alive!", instance_npcname("Angry Crowd#dms222");
-	npctalk "We're alive!", instance_npcname("Angry Crowd#dms232");
-	npctalk "We're alive!", instance_npcname("Angry Crowd#dms242");
+	mapannounce 'map_2nyr$, "우리도 살아있어요! 살아있어요!", bc_map, 0xFFCC;
+	npctalk "우리는 살아있어!", instance_npcname("Angry Crowd#dms201");
+	npctalk "우리는 살아있어!", instance_npcname("Angry Crowd#dms211");
+	npctalk "우리는 살아있어!", instance_npcname("Angry Crowd#dms221");
+	npctalk "우리는 살아있어!", instance_npcname("Angry Crowd#dms231");
+	npctalk "우리는 살아있어!", instance_npcname("Angry Crowd#dms241");
+	npctalk "우리는 살아있어!", instance_npcname("Angry Crowd#dms251");
+	npctalk "우리는 살아있어!", instance_npcname("Angry Crowd#dms261");
+	npctalk "우리는 살아있어!", instance_npcname("Angry Crowd#dms271");
+	npctalk "우리는 살아있어!", instance_npcname("Angry Crowd#dms281");
+	npctalk "우리는 살아있어!", instance_npcname("Angry Crowd#dms291");
+	npctalk "우리는 살아있어!", instance_npcname("Angry Crowd#dms202");
+	npctalk "우리는 살아있어!", instance_npcname("Angry Crowd#dms212");
+	npctalk "우리는 살아있어!", instance_npcname("Angry Crowd#dms222");
+	npctalk "우리는 살아있어!", instance_npcname("Angry Crowd#dms232");
+	npctalk "우리는 살아있어!", instance_npcname("Angry Crowd#dms242");
 	sleep 5000;
-	mapannounce 'map_2nyr$, "We too are exist! Exist!!", bc_map, 0xFFCC;
-	npctalk "We exist!", instance_npcname("Angry Crowd#dms201");
-	npctalk "We exist!", instance_npcname("Angry Crowd#dms211");
-	npctalk "We exist!", instance_npcname("Angry Crowd#dms221");
-	npctalk "We exist!", instance_npcname("Angry Crowd#dms231");
-	npctalk "We exist!", instance_npcname("Angry Crowd#dms241");
-	npctalk "We exist!", instance_npcname("Angry Crowd#dms251");
-	npctalk "We exist!", instance_npcname("Angry Crowd#dms261");
-	npctalk "We exist!", instance_npcname("Angry Crowd#dms271");
-	npctalk "We exist!", instance_npcname("Angry Crowd#dms281");
-	npctalk "We exist!", instance_npcname("Angry Crowd#dms291");
-	npctalk "We exist!", instance_npcname("Angry Crowd#dms202");
-	npctalk "We exist!", instance_npcname("Angry Crowd#dms212");
-	npctalk "We exist!", instance_npcname("Angry Crowd#dms222");
-	npctalk "We exist!", instance_npcname("Angry Crowd#dms232");
-	npctalk "We exist!", instance_npcname("Angry Crowd#dms242");
+	mapannounce 'map_2nyr$, "우리도 존재한다! 존재한다!!", bc_map, 0xFFCC;
+	npctalk "우리는 존재한다!", instance_npcname("Angry Crowd#dms201");
+	npctalk "우리는 존재한다!", instance_npcname("Angry Crowd#dms211");
+	npctalk "우리는 존재한다!", instance_npcname("Angry Crowd#dms221");
+	npctalk "우리는 존재한다!", instance_npcname("Angry Crowd#dms231");
+	npctalk "우리는 존재한다!", instance_npcname("Angry Crowd#dms241");
+	npctalk "우리는 존재한다!", instance_npcname("Angry Crowd#dms251");
+	npctalk "우리는 존재한다!", instance_npcname("Angry Crowd#dms261");
+	npctalk "우리는 존재한다!", instance_npcname("Angry Crowd#dms271");
+	npctalk "우리는 존재한다!", instance_npcname("Angry Crowd#dms281");
+	npctalk "우리는 존재한다!", instance_npcname("Angry Crowd#dms291");
+	npctalk "우리는 존재한다!", instance_npcname("Angry Crowd#dms202");
+	npctalk "우리는 존재한다!", instance_npcname("Angry Crowd#dms212");
+	npctalk "우리는 존재한다!", instance_npcname("Angry Crowd#dms222");
+	npctalk "우리는 존재한다!", instance_npcname("Angry Crowd#dms232");
+	npctalk "우리는 존재한다!", instance_npcname("Angry Crowd#dms242");
 	sleep 5000;
-	mapannounce 'map_2nyr$, "Give this land back to its rightful owner! Give it back!!", bc_map, 0xFFCC;
-	npctalk "Give it back!", instance_npcname("Angry Crowd#dms201");
-	npctalk "Give it back!", instance_npcname("Angry Crowd#dms211");
-	npctalk "Give it back!", instance_npcname("Angry Crowd#dms221");
-	npctalk "Give it back!", instance_npcname("Angry Crowd#dms231");
-	npctalk "Give it back!", instance_npcname("Angry Crowd#dms241");
-	npctalk "Give it back!", instance_npcname("Angry Crowd#dms251");
-	npctalk "Give it back!", instance_npcname("Angry Crowd#dms261");
-	npctalk "Give it back!", instance_npcname("Angry Crowd#dms271");
-	npctalk "Give it back!", instance_npcname("Angry Crowd#dms281");
-	npctalk "Give it back!", instance_npcname("Angry Crowd#dms291");
-	npctalk "Give it back!", instance_npcname("Angry Crowd#dms202");
-	npctalk "Give it back!", instance_npcname("Angry Crowd#dms212");
-	npctalk "Give it back!", instance_npcname("Angry Crowd#dms222");
-	npctalk "Give it back!", instance_npcname("Angry Crowd#dms232");
-	npctalk "Give it back!", instance_npcname("Angry Crowd#dms242");
+	mapannounce 'map_2nyr$, "이 땅을 정당한 주인에게 돌려주세요! 돌려주세요!!", bc_map, 0xFFCC;
+	npctalk "돌려줘!", instance_npcname("Angry Crowd#dms201");
+	npctalk "돌려줘!", instance_npcname("Angry Crowd#dms211");
+	npctalk "돌려줘!", instance_npcname("Angry Crowd#dms221");
+	npctalk "돌려줘!", instance_npcname("Angry Crowd#dms231");
+	npctalk "돌려줘!", instance_npcname("Angry Crowd#dms241");
+	npctalk "돌려줘!", instance_npcname("Angry Crowd#dms251");
+	npctalk "돌려줘!", instance_npcname("Angry Crowd#dms261");
+	npctalk "돌려줘!", instance_npcname("Angry Crowd#dms271");
+	npctalk "돌려줘!", instance_npcname("Angry Crowd#dms281");
+	npctalk "돌려줘!", instance_npcname("Angry Crowd#dms291");
+	npctalk "돌려줘!", instance_npcname("Angry Crowd#dms202");
+	npctalk "돌려줘!", instance_npcname("Angry Crowd#dms212");
+	npctalk "돌려줘!", instance_npcname("Angry Crowd#dms222");
+	npctalk "돌려줘!", instance_npcname("Angry Crowd#dms232");
+	npctalk "돌려줘!", instance_npcname("Angry Crowd#dms242");
 	end;
 }
 
 1@nyr,68,163,5	script	Miriam#dms801	EP18_NPC_MIRIAM,{
 	if (is_party_leader() == false) {
-		npctalk "Isn't the party leader arrived yet?";
+		npctalk "당 대표는 아직 도착하지 않았나요?";
 		end;
 	}
 	if ('nyr_main_step == 18) {
-		mes "[Crowd]";
-		mes "Acknowledge us!";
+		mes "[군중]";
+		mes "우리를 알아봐 주세요!";
 		next;
-		mes "[Crowd]";
-		mes "We're alive! We are here!!";
+		mes "[군중]";
+		mes "우리는 살아있어! 우리는 여기 있어!!";
 		next;
-		mes "[Crowd]";
-		mes "This is Our Land!";
+		mes "[군중]";
+		mes "이곳은 우리의 땅이다!";
 		next;
-		mes "[Crowd]";
-		mes "Return the land to the rightful owners of the land!";
+		mes "[군중]";
+		mes "땅을 정당한 주인에게 돌려주어라!";
 		next;
-		mes "[Temple Guard]";
-		mes "If you dismiss now, we will not charge you for trespassing on the temple!";
+		mes "[사원 경비병]";
+		mes "지금 나가시면 사원에 무단 침입한 혐의로 기소하지 않겠습니다!";
 		next;
-		mes "[Temple Guard]";
-		mes "I'll give you exactly 30 minutes! Go back within the time limit!";
+		mes "[사원 경비병]";
+		mes "정확히 30분을 드리겠습니다! 시간 안에 돌아오세요!";
 		next;
-		mes "[Crowd]";
-		mes "Are you threatening us now?";
+		mes "[군중]";
+		mes "지금 우리를 협박하는 겁니까?";
 		next;
-		mes "[Crowd]";
-		mes "What are you going to do?";
+		mes "[군중]";
+		mes "어떻게 하실 거예요?";
 		next;
-		mes "[Crowd]";
-		mes "You're going to arrest everyone and put them in jail, right?";
+		mes "[군중]";
+		mes "당신은 모두를 체포해서 감옥에 가둘 거죠, 그렇죠?";
 		next;
-		mes "[Crowd]";
-		mes "At this point, let's go in first!!!";
+		mes "[군중]";
+		mes "자, 그럼 우리가 먼저 시작하죠!!!";
 		next;
 		cutin "ep18_miriam_03.png",1;
-		mes "[Miriam]";
-		mes "Something's not right. People are getting too aggressive.";
+		mes "[미리암]";
+		mes "뭔가 이상해. 사람들이 너무 공격적으로 변하고 있어.";
 		next;
-		mes "[Miriam]";
-		mes "This doesn't look good. I need to get Suad, but where's the deputy?";
-		npctalk "Somebody get Suad, it's urgent!", instance_npcname("Miriam#dms801");
+		mes "[미리암]";
+		mes "상황이 좋지 않아 보이군. 수아드를 데려와야 하는데, 부관은 어디 있지?";
+		npctalk "누가 수아드 좀 불러와! 급해!", instance_npcname("Miriam#dms801");
 		next;
 		enablenpc instance_npcname("Niren#dms201");
 		enablenpc instance_npcname("Zhed#dms101");
 		cutin "ra_gwoman.bmp",2;
-		mes "[Niren]";
-		mes "There you are. I brought along Priest Zhed.";
+		mes "[니렌]";
+		mes "여기 계시네요. 제가 제드 신부님을 모시고 왔습니다.";
 		next;
 		cutin "ra_gman2.bmp",2;
-		mes "[Zhed]";
-		mes "What's going on here? Does it have something to do with the people who have flocked here? Or, is there something inside the temple that's causing this...";
+		mes "[제드]";
+		mes "여기서 무슨 일이 벌어지고 있는 거지? 이곳에 몰려든 사람들과 관련이 있는 걸까? 아니면 사원 안에 무슨 일이 벌어지고 있는 걸까?";
 		next;
 		if ('nyr_main_step == 18) {
 			'nyr_main_step = 19;
@@ -2193,22 +2193,22 @@ OnTouch:
 			disablenpc instance_npcname("#mstep11");
 			disablenpc instance_npcname("#dmswch02");
 			enablenpc instance_npcname("Suad#dms102");
-			npctalk "What's going on? You said you found it in a hurry?", instance_npcname("Suad#dms102");
+			npctalk "무슨 일이야? 급하게 찾았다고 했잖아?", instance_npcname("Suad#dms102");
 		}
 		cutin "ep18_suad_04.png",0;
-		mes "[Suad]";
-		mes "What's going on? You said it's something urgent.";
-		npctalk "What's going on? You said it's something urgent.", instance_npcname("Suad#dms102");
+		mes "[수아드]";
+		mes "무슨 일이에요? 급한 일이라고 하셨잖아요.";
+		npctalk "무슨 일이에요? 급한 일이라고 하셨잖아요.", instance_npcname("Suad#dms102");
 		close3;
 	}
 	if ('nyr_main_step == 21) {
 		'nyr_main_step = 22;
 		enablenpc instance_npcname("#dmwrp02");
 		navigateto("1@nyr",45,28);
-		npctalk "Adventurer, please be safe.", instance_npcname("Miriam#dms801");
+		npctalk "모험가여, 부디 안전하십시오.", instance_npcname("Miriam#dms801");
 		cutin "ep18_miriam_03.png",2;
-		mes "[Miriam]";
-		mes "Once you've got it covered, move fast. They're waiting for you at the safe house.";
+		mes "[미리암]";
+		mes "준비가 되면 서둘러 움직이세요. 그들이 안전가옥에서 기다리고 있습니다.";
 		disablenpc instance_npcname("Miriam#dms801");
 		close3;
 	}
@@ -2234,75 +2234,75 @@ OnMove4:
 //------------------------------------------------------------
 1@nyr,127,163,5	script	Suad#dms102	4_EP18_SUAD,{
 	if (is_party_leader() == false) {
-		npctalk "I wish the leader would tell me as a representative.";
+		npctalk "지도자가 제 대표 자격으로 직접 말해줬으면 좋겠습니다.";
 		end;
 	}
 	if ('nyr_main_step != 19)
 		end;
 	cutin "ep18_suad_04.png",0;
-	mes "[Suad]";
-	mes "What's going on?";
+	mes "[수아드]";
+	mes "무슨 일이야?";
 	next;
 	cutin "ep18_miriam_03.png",1;
-	mes "[Miriam]";
-	mes "We have a mole among us.";
+	mes "[미리암]";
+	mes "우리 조직 내에 스파이가 있다.";
 	next;
 	cutin "ep18_suad_04.png",0;
-	mes "[Suad]";
-	mes "A mole? Where?";
+	mes "[수아드]";
+	mes "스파이? 어디에?";
 	next;
 	cutin "ep18_miriam_03.png",1;
-	mes "[Miriam]";
-	mes "Suad, first of all, give us an overview of the situation here. It sounds like we're on the verge of a riot, is that right? Oh, hello, Priest Zhed.";
+	mes "[미리암]";
+	mes "수아드, 우선 여기 상황을 간략하게 설명해 주시겠어요? 폭동 직전인 것 같은데 맞나요? 아, 제드 신부님, 안녕하세요.";
 	next;
 	cutin "ep18_suad_02.png",0;
-	mes "[Suad]";
-	mes "Why is the High Priest here?";
+	mes "[수아드]";
+	mes "대제사장은 왜 여기에 있는가?";
 	next;
 	cutin "ra_gman2.bmp",2;
-	mes "[Zhed]";
-	mes "Miriam? Did Miriam have anything to do with this?";
+	mes "[제드]";
+	mes "미리엄? 미리엄이 이 일과 관련이 있나요?";
 	next;
 	cutin "ep18_miriam_03.png",1;
-	mes "[Miriam]";
-	mes "There's a reason for that, but first, let's talk about the situation, Suad?";
+	mes "[미리암]";
+	mes "그럴 만한 이유가 있지만, 우선 상황에 대해 이야기해 볼까요, 수아드?";
 	next;
 	cutin "ep18_suad_03.png",0;
-	mes "[Suad]";
-	mes "It's not good. It's spiraling out of control. The temple is coming down hard on us. They're recommending we disband. We're running out of time. We're preparing to evacuate.";
+	mes "[수아드]";
+	mes "상황이 좋지 않아요. 점점 악화되고 있어요. 사찰 측에서 우리를 강하게 압박하고 있어요. 해산을 권고하고 있어요. 시간이 얼마 남지 않았어요. 대피 준비를 하고 있어요.";
 	next;
 	cutin "ep18_suad_01.png",0;
-	mes "[Suad]";
-	mes "What happened to the people you followed?";
+	mes "[수아드]";
+	mes "당신이 팔로우하던 사람들은 어떻게 되었나요?";
 	next;
-	select( "Let me explain." );
+	select( "설명해 드리겠습니다." );
 	cutin "",255;
-	mes "- The events inside the temple. -";
+	mes "- 사원 내부에서 일어난 일들. -";
 	next;
 	cutin "ep18_miriam_03.png",1;
-	mes "[Miriam]";
-	mes "My father and a foreign power conspired to divide Arunafeltz and oppress the natives...";
+	mes "[미리암]";
+	mes "나의 아버지는 외세와 공모하여 아루나펠츠를 분할하고 원주민들을 억압하려 했다...";
 	next;
 	cutin "ep18_suad_04.png",0;
-	mes "[Suad]";
-	mes "There's a mole among us... but who's the impostor?";
+	mes "[수아드]";
+	mes "우리 중에 스파이가 있어... 하지만 그 사기꾼은 누구일까?";
 	next;
 	cutin "ep18_miriam_03.png",1;
-	mes "[Miriam]";
-	mes "It's more accurate to say they're gone into hiding than traitorous. They were never on our side to begin with.";
+	mes "[미리암]";
+	mes "배신자라기보다는 잠적했다고 하는 게 더 정확할 겁니다. 애초에 우리 편이 아니었으니까요.";
 	next;
 	cutin "ep18_suad_02.png",0;
-	mes "[Suad]";
-	mes "So we were almost in the middle of an organized riot from the start?";
+	mes "[수아드]";
+	mes "그럼 우리는 처음부터 조직적인 폭동의 한가운데에 있었던 셈인가요?";
 	next;
 	cutin "ra_gwoman.bmp",2;
-	mes "[Niren]";
-	mes "This is not the time. They've infiltrated the temple as well, so we have to take on both sides..";
+	mes "[니렌]";
+	mes "지금은 때가 아니야. 그들이 사원에도 침투했으니 양쪽 모두를 상대해야 해.";
 	next;
 	mapannounce 'map_2nyr$, "Pii-", bc_map, 0xFF0000;
 	cutin "ep18_suad_04.png",0;
-	mes "[Suad]";
-	mes "What's that whistle? It's not our signal.";
+	mes "[수아드]";
+	mes "저 호루라기 소리는 뭐지? 우리 신호는 아닌데.";
 	next;
 	setnpcdisplay( instance_npcname("Temple Guard#dms802"), 21308 );	// EP18_MD_HEARTHUNTER_A
 	setnpcdisplay( instance_npcname("Temple Guard#dms812"), 21308 );	// EP18_MD_HEARTHUNTER_A
@@ -2314,11 +2314,11 @@ OnMove4:
 	setnpcdisplay( instance_npcname("Angry Crowd#dms222"), 21308 );	// EP18_MD_HEARTHUNTER_A
 	setnpcdisplay( instance_npcname("Angry Crowd#dms232"), 21308 );	// EP18_MD_HEARTHUNTER_A
 	setnpcdisplay( instance_npcname("Angry Crowd#dms242"), 21308 );	// EP18_MD_HEARTHUNTER_A
-	npctalk "Is it now?", instance_npcname("Angry Crowd#dms202");
-	npctalk "Now!", instance_npcname("Temple Guard#dms832");
+	npctalk "지금인가요?", instance_npcname("Angry Crowd#dms202");
+	npctalk "지금!", instance_npcname("Temple Guard#dms832");
 	cutin "",255;
-	mes "[Crowd]";
-	mes "Why you're taking clothes off??";
+	mes "[군중]";
+	mes "왜 옷을 벗는 거야?";
 	next;
 	disablenpc instance_npcname("Temple Guard#dms812");
 	disablenpc instance_npcname("Temple Guard#dms832");
@@ -2335,16 +2335,16 @@ OnMove4:
 	enablenpc instance_npcname("Heart Hunter#dms171");
 	enablenpc instance_npcname("Heart Hunter#dms181");
 	enablenpc instance_npcname("Heart Hunter#dms191");
-	mes "[Temple Guard]";
-	mes "Keep your guard up!";
+	mes "[사원 경비병]";
+	mes "경계를 늦추지 마세요!";
 	next;
-	mes "[Crowd]";
-	mes "What the hell are you doing??";
+	mes "[군중]";
+	mes "도대체 뭐 하는 거야??";
 	next;
-	npctalk "Sorry. Nothing personal.", instance_npcname("Heart Hunter#dms101");
-	npctalk "I still don't understand. What's going on?", instance_npcname("Heart Hunter#dms141");
-	npctalk "What kind of a goddess is she? You should trust me!", instance_npcname("Heart Hunter#dms171");
-	npctalk "How's that for a taste of repression?", instance_npcname("Heart Hunter#dms191");
+	npctalk "죄송합니다. 개인적인 감정은 없습니다.", instance_npcname("Heart Hunter#dms101");
+	npctalk "아직도 잘 모르겠어요. 무슨 일이죠?", instance_npcname("Heart Hunter#dms141");
+	npctalk "그녀는 어떤 여신일까요? 제 말을 믿으세요!", instance_npcname("Heart Hunter#dms171");
+	npctalk "억압의 맛을 제대로 느껴보지 않으셨나요?", instance_npcname("Heart Hunter#dms191");
 	specialeffect EF_M03, AREA, instance_npcname("Heart Hunter#dms101");
 	specialeffect EF_M03, AREA, instance_npcname("Heart Hunter#dms111");
 	specialeffect EF_M02, AREA, instance_npcname("Heart Hunter#dms121");
@@ -2355,23 +2355,23 @@ OnMove4:
 	specialeffect EF_M02, AREA, instance_npcname("Heart Hunter#dms171");
 	specialeffect EF_M02, AREA, instance_npcname("Heart Hunter#dms181");
 	specialeffect EF_M03, AREA, instance_npcname("Heart Hunter#dms191");
-	mes "[Crowd]";
-	mes "Argh!!!! Argh!!! The temple guard grabs a man!!!";
+	mes "[군중]";
+	mes "아악!!!! 아악!!! 사원 경비병이 사람을 붙잡았어!!!";
 	next;
-	mes "[Temple Guard]";
-	mes "It's a riot! Put it down!";
+	mes "[사원 경비병]";
+	mes "난리 났어! 내려놔!";
 	next;
 	cutin "ep18_miriam_03.png",1;
-	mes "[Miriam]";
-	mes "Oh... I'm late...!";
+	mes "[미리암]";
+	mes "아... 늦었네...!";
 	next;
 	cutin "ep18_suad_02.png",0;
-	mes "[Suad]";
-	mes "We need to stop the brute-force attackers.";
+	mes "[수아드]";
+	mes "무차별 대입 공격을 하는 공격자들을 막아야 합니다.";
 	next;
 	cutin "ra_gwoman.bmp",2;
-	mes "[Niren]";
-	mes "I'll evacuate the people.";
+	mes "[니렌]";
+	mes "제가 사람들을 대피시키겠습니다.";
 	if ('nyr_main_step == 19) {
 		'nyr_main_step = 20;
 		donpcevent instance_npcname("nyr_step_10") + "::OnStart";
@@ -2437,7 +2437,7 @@ OnMobDead:
 		end;
 	if (mobcount('map_1nyr$, instance_npcname("nyr_step_10") + "::OnMobDead") < 1) {
 		'nyr_main_step = 21;
-		npctalk "Adventurer, are you safe?", instance_npcname("Miriam#dms801");
+		npctalk "모험가님, 무사하십니까?", instance_npcname("Miriam#dms801");
 		enablenpc instance_npcname("Miriam#dms801");
 	}
 	end;
@@ -2533,29 +2533,29 @@ OnTouch:
 	enablenpc instance_npcname("Temple Guard#qdms181");
 
 	sleep 1000;	// (player can walk)
-	npctalk "Adventurer, welcome. Thank you for joining us on this cleansing operation.", instance_npcname("Temple Guard#qdms101");
+	npctalk "모험가 여러분, 환영합니다. 이번 청소 작업에 함께해 주셔서 감사합니다.", instance_npcname("Temple Guard#qdms101");
 	sleep 1500;
-	npctalk "Is everyone assembled?", instance_npcname("Temple Guard#qdms101");
+	npctalk "모두 모였습니까?", instance_npcname("Temple Guard#qdms101");
 	sleep 1000;
-	npctalk "Yes, sir!", instance_npcname("Temple Guard#qdms111");
-	npctalk "Yes, sir!", instance_npcname("Temple Guard#qdms121");
-	npctalk "Yes, sir!", instance_npcname("Temple Guard#qdms131");
-	npctalk "Yes, sir!", instance_npcname("Temple Guard#qdms141");
-	npctalk "Yes, sir!", instance_npcname("Temple Guard#qdms151");
-	npctalk "Yes, sir!", instance_npcname("Temple Guard#qdms161");
-	npctalk "Yes, sir!", instance_npcname("Temple Guard#qdms171");
-	npctalk "Yes, sir!", instance_npcname("Temple Guard#qdms181");
+	npctalk "네, 알겠습니다!", instance_npcname("Temple Guard#qdms111");
+	npctalk "네, 알겠습니다!", instance_npcname("Temple Guard#qdms121");
+	npctalk "네, 알겠습니다!", instance_npcname("Temple Guard#qdms131");
+	npctalk "네, 알겠습니다!", instance_npcname("Temple Guard#qdms141");
+	npctalk "네, 알겠습니다!", instance_npcname("Temple Guard#qdms151");
+	npctalk "네, 알겠습니다!", instance_npcname("Temple Guard#qdms161");
+	npctalk "네, 알겠습니다!", instance_npcname("Temple Guard#qdms171");
+	npctalk "네, 알겠습니다!", instance_npcname("Temple Guard#qdms181");
 	sleep 1000;
-	npctalk "Renegades who have forsaken a life of serving the goddess and broken their oath are disturbing this place!", instance_npcname("Temple Guard#qdms101");
+	npctalk "여신을 섬기던 삶을 버리고 맹세를 어긴 배신자들이 이곳을 어지럽히고 있다!", instance_npcname("Temple Guard#qdms101");
 	sleep 1500;
-	npctalk "It is also our duty to enact the will of the goddess upon them!", instance_npcname("Temple Guard#qdms101");
+	npctalk "또한 여신의 뜻을 그들에게 실현하는 것 또한 우리의 의무입니다!", instance_npcname("Temple Guard#qdms101");
 	sleep 1500;
-	npctalk "We have blocked off four areas from this point onwards: three garden zones and one entrance to the temple. Let us purify them sequentially.", instance_npcname("Temple Guard#qdms101");
+	npctalk "우리는 지금부터 네 구역, 즉 정원 구역 세 곳과 사원 입구 한 곳을 차단했습니다. 이제 순서대로 정화 의식을 진행하겠습니다.", instance_npcname("Temple Guard#qdms101");
 	sleep 1500;
-	npctalk "Beware, allies may not be distinguishable from foes in the darkness! Exercise caution to avoid attacking our own!", instance_npcname("Temple Guard#qdms101");
+	npctalk "어둠 속에서는 아군과 적을 구분하기 어려울 수 있으니 조심하십시오! 아군을 공격하지 않도록 각별히 주의하십시오!", instance_npcname("Temple Guard#qdms101");
 	enablenpc instance_npcname("Temple Guard#qdms01");
 	sleep 1500;
-	npctalk "To your respective positions!", instance_npcname("Temple Guard#qdms101");
+	npctalk "각자의 위치로!", instance_npcname("Temple Guard#qdms101");
 
 	disablenpc instance_npcname("Temple Guard#qdms101");
 	disablenpc instance_npcname("Temple Guard#qdms111");
@@ -2644,7 +2644,7 @@ OnMobDead11:
 		end;
 	if (mobcount('map_1nyr$, instance_npcname("#qmobg101") + "::OnMobDead11") > 0)
 		end;
-	mapannounce 'map_1nyr$, "All zones cleared! Gather at the entrance of the temple!", bc_map, 0xFFCC;
+	mapannounce 'map_1nyr$, "모든 구역 소탕 완료! 사원 입구에 집결하세요!", bc_map, 0xFFCC;
 	for ( .@i = 0; .@i < 9; ++.@i )
 		enablenpc instance_npcname("Temple Guard#qdms1" + .@i + "2");
 	end;
@@ -2705,22 +2705,22 @@ OnTouch:
 		end;
 	if ('nyr_daily_step != 12)
 		end;
-	mes "[Temple Guard Captain]";
-	mes "Well done, everyone! The cleansing will continue daily! Let's disband for today and take a rest!";
-	npctalk "Yes, sir!!", instance_npcname("Temple Guard#qdms112");
-	npctalk "Yes, sir!!", instance_npcname("Temple Guard#qdms122");
-	npctalk "Yes, sir!!", instance_npcname("Temple Guard#qdms132");
-	npctalk "Yes, sir!!", instance_npcname("Temple Guard#qdms142");
-	npctalk "Yes, sir!!", instance_npcname("Temple Guard#qdms152");
-	npctalk "Yes, sir!!", instance_npcname("Temple Guard#qdms162");
-	npctalk "Yes, sir!!", instance_npcname("Temple Guard#qdms172");
-	npctalk "Yes, sir!!", instance_npcname("Temple Guard#qdms182");
+	mes "[사원 경비대장]";
+	mes "모두 수고하셨습니다! 정화 활동은 매일 계속될 것입니다! 오늘은 여기까지 하고 휴식을 취합시다!";
+	npctalk "네, 알겠습니다!", instance_npcname("Temple Guard#qdms112");
+	npctalk "네, 알겠습니다!", instance_npcname("Temple Guard#qdms122");
+	npctalk "네, 알겠습니다!", instance_npcname("Temple Guard#qdms132");
+	npctalk "네, 알겠습니다!", instance_npcname("Temple Guard#qdms142");
+	npctalk "네, 알겠습니다!", instance_npcname("Temple Guard#qdms152");
+	npctalk "네, 알겠습니다!", instance_npcname("Temple Guard#qdms162");
+	npctalk "네, 알겠습니다!", instance_npcname("Temple Guard#qdms172");
+	npctalk "네, 알겠습니다!", instance_npcname("Temple Guard#qdms182");
 	next;
-	mes "[Temple Guard Captain]";
-	mes "Adventurer, thank you for your assistance.";
+	mes "[사원 경비대장]";
+	mes "모험가님, 도와주셔서 감사합니다.";
 	next;
-	mes "[Temple Guard Captain]";
-	mes "I've heard that you'll also be joining us for a separate cleansing operation inside the temple. We'll be counting on you!";
+	mes "[사원 경비대장]";
+	mes "성전 내부 청소 작업에도 함께 참여해 주신다고 들었습니다. 꼭 도와주시기를 기대하겠습니다!";
 	close2;
 	if ('nyr_daily_step != 12)
 		end;
@@ -2772,36 +2772,36 @@ OnTouch:
 	'nyr_daily_step = 14;
 	for ( .@i = 0; .@i < 7; ++.@i )
 		enablenpc instance_npcname("Temple Guard#2dms1" + .@i + "1");
-	npctalk "Inspect all the facilities and ensure security. Anyone attempting to breach and gain power must be dealt with!", instance_npcname("Temple Guard#2dms101");
+	npctalk "모든 시설을 점검하고 보안을 확보하십시오. 침입하여 권력을 장악하려는 자는 누구든 처벌해야 합니다!", instance_npcname("Temple Guard#2dms101");
 	sleep 2000;
-	npctalk "Yes, sir!", instance_npcname("Temple Guard#2dms111");
-	npctalk "Yes, sir!", instance_npcname("Temple Guard#2dms121");
-	npctalk "Yes, sir!", instance_npcname("Temple Guard#2dms131");
-	npctalk "Yes, sir!", instance_npcname("Temple Guard#2dms141");
-	npctalk "Yes, sir!", instance_npcname("Temple Guard#2dms151");
-	npctalk "Yes, sir!", instance_npcname("Temple Guard#2dms161");
+	npctalk "네, 알겠습니다!", instance_npcname("Temple Guard#2dms111");
+	npctalk "네, 알겠습니다!", instance_npcname("Temple Guard#2dms121");
+	npctalk "네, 알겠습니다!", instance_npcname("Temple Guard#2dms131");
+	npctalk "네, 알겠습니다!", instance_npcname("Temple Guard#2dms141");
+	npctalk "네, 알겠습니다!", instance_npcname("Temple Guard#2dms151");
+	npctalk "네, 알겠습니다!", instance_npcname("Temple Guard#2dms161");
 	sleep 2000;
-	npctalk "To your respective positions!", instance_npcname("Temple Guard#2dms101");
+	npctalk "각자의 위치로!", instance_npcname("Temple Guard#2dms101");
 	sleep 2000;
 	for ( .@i = 1; .@i < 7; ++.@i )
 		disablenpc instance_npcname("Temple Guard#2dms1" + .@i + "1");
-	npctalk "Adventurer, thank you for participating in the cleansing operation!", instance_npcname("Temple Guard#2dms101");
+	npctalk "모험가님, 청소 작업에 참여해 주셔서 감사합니다!", instance_npcname("Temple Guard#2dms101");
 	sleep 2000;
-	npctalk "In addition to dealing with intruders, I have another task for you.", instance_npcname("Temple Guard#2dms101");
+	npctalk "침입자 처리 외에도 당신에게 맡길 임무가 하나 더 있습니다.", instance_npcname("Temple Guard#2dms101");
 	sleep 2000;
-	npctalk "Temporarily, I'll grant administrator privileges to the leader of the party. Please reset the security code for the changing security facilities daily.", instance_npcname("Temple Guard#2dms101");
+	npctalk "임시로 파티 리더에게 관리자 권한을 부여하겠습니다. 보안 시설의 보안 코드는 매일 재설정해 주시기 바랍니다.", instance_npcname("Temple Guard#2dms101");
 	sleep 2000;
 	'code = rand(1000,9999);
-	npctalk "Today's security code is " + 'code + ". Make sure the storage and warehouse are empty before setting it!", instance_npcname("Temple Guard#2dms101");
+	npctalk " 오늘의 보안 코드는 다음과 같습니다." + 'code + "설치하기 전에 저장 공간과 창고가 비어 있는지 확인하세요!", instance_npcname("Temple Guard#2dms101");
 	sleep 2000;
-	npctalk "Now, let's begin the mission!", instance_npcname("Temple Guard#2dms101");
+	npctalk "자, 이제 임무를 시작합시다!", instance_npcname("Temple Guard#2dms101");
 	enablenpc instance_npcname("Temple Guard#2dms10");
 	end;
 }
 
 2@nyr,35,187,7	script	Temple Guard#2dms101	4_M_RASWORD,{
 	if ('code > 0)
-		npctalk "Have you forgotten the security code? Today's security code is " + 'code + "! Hurry! I'll join you shortly!", instance_npcname("Temple Guard#2dms101");
+		npctalk " 보안 코드를 잊으셨나요? 오늘의 보안 코드는 다음과 같습니다." + 'code + "서둘러요! 저도 곧 따라갈게요!", instance_npcname("Temple Guard#2dms101");
 	end;
 }
 
@@ -2907,7 +2907,7 @@ OnFinal:
 		end;
 	if (mobcount('map_2nyr$, instance_npcname("#nyr_puri_mob_2") + "::OnFinal") > 0)
 		end;
-	mapannounce 'map_2nyr$, "Vault Security Code Reset in Progress!", bc_map, 0xFFCC;
+	mapannounce 'map_2nyr$, "금고 보안 코드 재설정 진행 중!", bc_map, 0xFFCC;
 	disablenpc instance_npcname("#2mstep07");
 	disablenpc instance_npcname("#2mstep08");
 	// enablenpc instance_npcname("#2mstep09");
@@ -2943,68 +2943,68 @@ OnTouch:
 2@nyr,115,177,3	script	Heart Hunter#2dms41	EP18_MD_HEARTHUNTER_R,5,5,{
 	end;
 OnTouch:
-	npctalk "Ah, it seems like something is coming~", instance_npcname("Heart Hunter#2dms41");
+	npctalk "아, 뭔가 다가오고 있는 것 같군요~", instance_npcname("Heart Hunter#2dms41");
 	end;
 }
 
 2@nyr,126,174,5	script	Heart Hunter#2dms42	EP18_MD_HEARTHUNTER_R,5,5,{
 	end;
 OnTouch:
-	npctalk "Thrilling!!! Incredible!!!", instance_npcname("Heart Hunter#2dms42");
+	npctalk "짜릿해!!! 믿을 수 없어!!!", instance_npcname("Heart Hunter#2dms42");
 	end;
 }
 
 2@nyr,117,207,1	script	Heart Hunter#2dms43	EP18_MD_HEARTHUNTER_R,2,2,{
 	end;
 OnTouch:
-	npctalk "I recall seeing this last time, but how did we deal with it again...", instance_npcname("Heart Hunter#2dms43");
+	npctalk "이거 예전에 본 것 같은데, 그때 어떻게 대처했었더라...", instance_npcname("Heart Hunter#2dms43");
 	end;
 }
 
 2@nyr,115,206,7	script	Heart Hunter#2dms44	EP18_MD_HEARTHUNTER_R,2,2,{
 	end;
 OnTouch:
-	npctalk "That's not how you do it.", instance_npcname("Heart Hunter#2dms44");
+	npctalk "그렇게 하는 게 아니에요.", instance_npcname("Heart Hunter#2dms44");
 	end;
 }
 
 2@nyr,119,206,1	script	Heart Hunter#2dms45	EP18_MD_HEARTHUNTER_R,2,2,{
 	end;
 OnTouch:
-	npctalk "If you can't do it, step aside. I'll handle it.", instance_npcname("Heart Hunter#2dms45");
+	npctalk "네가 할 수 없으면 비켜서. 내가 처리할게.", instance_npcname("Heart Hunter#2dms45");
 	end;
 }
 
 2@nyr,129,199,5	script	Heart Hunter#2dms46	EP18_MD_HEARTHUNTER_R,2,2,{
 	end;
 OnTouch:
-	npctalk "Oh, I'm afraid of heights.", instance_npcname("Heart Hunter#2dms46");
+	npctalk "아, 저는 고소공포증이 있어요.", instance_npcname("Heart Hunter#2dms46");
 	end;
 }
 
 2@nyr,113,194,3	script	Heart Hunter#2dms47	EP18_MD_HEARTHUNTER_R,2,2,{
 	end;
 OnTouch:
-	npctalk "There's something here!", instance_npcname("Heart Hunter#2dms47");
+	npctalk "여기 뭔가 있어!", instance_npcname("Heart Hunter#2dms47");
 	end;
 }
 
 2@nyr,111,209,5	script	Heart Hunter#2dms48	EP18_MD_HEARTHUNTER_R,2,2,{
 	end;
 OnTouch:
-	npctalk "Hey! This is exhilarating~", instance_npcname("Heart Hunter#2dms48");
+	npctalk "와! 이거 정말 신나네요~", instance_npcname("Heart Hunter#2dms48");
 	end;
 }
 
 2@nyr,112,206,5	script	Heart Hunter#2dms49	EP18_MD_HEARTHUNTER_R,2,2,{
 	end;
 OnTouch:
-	npctalk "When will this be over...", instance_npcname("Heart Hunter#2dms49");
+	npctalk "이게 언제 끝날까요...?", instance_npcname("Heart Hunter#2dms49");
 	end;
 }
 
 2@nyr,115,201,5	script	Heart Hunter#2dms50	EP17_1_BELLARE1,{
-	npctalk "What is it? Probably just your mood.", instance_npcname("Heart Hunter#2dms50");
+	npctalk "그게 뭐죠? 아마 그냥 기분일 거예요.", instance_npcname("Heart Hunter#2dms50");
 	end;
 }
 
@@ -3021,64 +3021,64 @@ OnTouch:
 	enablenpc instance_npcname("Heart Hunter#2dms50");
 	emotion ET_QUESTION, getnpcid(0,instance_npcname("Heart Hunter#2dms50"));
 	sleep 500;
-	npctalk "What's this? An uninvited guest?", instance_npcname("Heart Hunter#2dms50");
+	npctalk "이게 뭐지? 초대받지 않은 손님인가?", instance_npcname("Heart Hunter#2dms50");
 	sleep 2000;
-	npctalk "What were you all doing that you didn't notice someone entering? Snap out of it!", instance_npcname("Heart Hunter#2dms50");
+	npctalk "다들 뭘 하고 있었길래 누가 들어오는 걸 못 봤어? 정신 차려!", instance_npcname("Heart Hunter#2dms50");
 	sleep 2000;
-	npctalk "Ah~ I'm intoxicated~ Intoxicated by the magic of the heart~", instance_npcname("Heart Hunter#2dms48");
+	npctalk "아~ 취했어~ 마음의 마법에 취했어~", instance_npcname("Heart Hunter#2dms48");
 	sleep 2000;
-	npctalk "Isn't this the only magic permitted by the kingdom?", instance_npcname("Heart Hunter#2dms48");
-	npctalk "What are you talking about? This isn't permitted by the kingdom either. Have you forgotten?", instance_npcname("Heart Hunter#2dms44");
+	npctalk "왕국에서 허용된 마법은 이것뿐 아닌가요?", instance_npcname("Heart Hunter#2dms48");
+	npctalk "무슨 소리야? 이것도 왕국에서 허용되지 않는 일이야. 잊었어?", instance_npcname("Heart Hunter#2dms44");
 	sleep 2000;
-	npctalk "Oh, right. We were trespassing illegally, weren't we?", instance_npcname("Heart Hunter#2dms49");
+	npctalk "아, 맞다. 우리가 무단침입했던 거였지?", instance_npcname("Heart Hunter#2dms49");
 	sleep 200;
-	npctalk "Perhaps the thrill comes from it being illegal?", instance_npcname("Heart Hunter#2dms48");
-	npctalk "Hey! This is strange. No matter how I manipulate it, the magic of the heart isn't emitting.", instance_npcname("Heart Hunter#2dms43");
-	npctalk "Then step aside! Let me try!!", instance_npcname("Heart Hunter#2dms45");
+	npctalk "어쩌면 그 스릴은 불법이라는 사실에서 오는 것일지도 모른다.", instance_npcname("Heart Hunter#2dms48");
+	npctalk "어이! 이상하네. 어떻게 조작해도 심장의 마법이 발산되지 않아.", instance_npcname("Heart Hunter#2dms43");
+	npctalk "그럼 비켜주세요! 제가 해볼게요!!", instance_npcname("Heart Hunter#2dms45");
 	sleep 2000;
-	npctalk "What? So, what's this exhilaration flowing through my body right now?", instance_npcname("Heart Hunter#2dms48");
+	npctalk "뭐라고요? 그럼 지금 내 몸을 타고 흐르는 이 짜릿함은 대체 뭐죠?", instance_npcname("Heart Hunter#2dms48");
 	sleep 2000;
-	npctalk "Hmm, my mood feels exhilarating for once.", instance_npcname("Heart Hunter#2dms48");
-	npctalk "Examine it carefully. It could be tampered with.", instance_npcname("Heart Hunter#2dms49");
-	npctalk "You claimed to have seen the manipulation technique before? And you want us to believe only you?", instance_npcname("Heart Hunter#2dms50");
+	npctalk "음, 오늘은 기분이 정말 상쾌하네요.", instance_npcname("Heart Hunter#2dms48");
+	npctalk "자세히 살펴보세요. 조작되었을 가능성이 있습니다.", instance_npcname("Heart Hunter#2dms49");
+	npctalk "당신은 이전에도 그 조작 기법을 본 적이 있다고 주장했잖아요? 그런데 우리가 당신 말만 믿어주길 바라는 건가요?", instance_npcname("Heart Hunter#2dms50");
 	sleep 1000;
-	npctalk "That... wait a moment, it's showing a mismatch in security code?", instance_npcname("Heart Hunter#2dms43");
+	npctalk "잠깐만요, 보안 코드가 일치하지 않는다고 나오는데요?", instance_npcname("Heart Hunter#2dms43");
 	sleep 2000;
-	npctalk "Security code mismatch? Hmm... I think it might be related to the adventurer here? Right?", instance_npcname("Heart Hunter#2dms50");
+	npctalk "보안 코드 불일치인가요? 음... 혹시 여기 있는 모험가와 관련이 있는 건 아닐까요? 그렇죠?", instance_npcname("Heart Hunter#2dms50");
 	sleep 2000;
-	npctalk "Could you input the changed security code? Then we'll all be truly happy.", instance_npcname("Heart Hunter#2dms50");
+	npctalk "변경된 보안 코드를 입력해 주시겠어요? 그러면 저희 모두 정말 만족할 거예요.", instance_npcname("Heart Hunter#2dms50");
 	sleep 2000;
-	npctalk "Step aside. Sometimes machines need to be hit to listen!", instance_npcname("Heart Hunter#2dms45");
+	npctalk "비켜서세요. 기계도 가끔은 때려줘야 말을 듣잖아요!", instance_npcname("Heart Hunter#2dms45");
 	specialeffect EF_HITDARK, AREA, instance_npcname("Heart Hunter#2dms45");
 	specialeffect EF_MAGICCRASHER, AREA, instance_npcname("Heart Hunter#2dms45");
-	npctalk "Hey! Who's handling the machine like that?", instance_npcname("Heart Hunter#2dms43");
+	npctalk "어이! 누가 저렇게 기계를 다루는 거야?", instance_npcname("Heart Hunter#2dms43");
 	sleep 2000;
 	specialeffect EF_LIGHTNINGLOADER, AREA, instance_npcname("Heart Hunter#2dms48");
 	specialeffect EF_MAGICALATTHIT, AREA, instance_npcname("Heart Hunter#2dms48");
-	npctalk "Oops!!! Suddenly it got more exhilarating!! Is this also because of my mood?", instance_npcname("Heart Hunter#2dms48");
-	npctalk "Looks like it's short-circuiting! It's emitting light from it!", instance_npcname("Heart Hunter#2dms44");
+	npctalk "어머나!!! 갑자기 더 신나잖아!! 이것도 내 기분 때문일까?", instance_npcname("Heart Hunter#2dms48");
+	npctalk "합선이 일어난 것 같네요! 거기서 빛이 나오고 있어요!", instance_npcname("Heart Hunter#2dms44");
 	sleep 2000;
 	specialeffect EF_UNDEADBODY, AREA, instance_npcname("Heart Hunter#2dms48");
 	specialeffect EF_NPC_STOP, AREA, instance_npcname("Heart Hunter#2dms48");
-	npctalk "Aaahhh!!!", instance_npcname("Heart Hunter#2dms48");
-	npctalk "Hey!! This one's amazing!!!", instance_npcname("Heart Hunter#2dms44");
-	npctalk "Why only that...? Something's odd here?", instance_npcname("Heart Hunter#2dms43");
+	npctalk "아아아!!!", instance_npcname("Heart Hunter#2dms48");
+	npctalk "와!! 이거 진짜 멋지다!!!", instance_npcname("Heart Hunter#2dms44");
+	npctalk "왜 하필 그것뿐이지...? 뭔가 이상해.", instance_npcname("Heart Hunter#2dms43");
 	sleep 2000;
 	specialeffect EF_NPC_STOP, AREA, instance_npcname("Heart Hunter#2dms43");
 	specialeffect EF_NPC_STOP, AREA, instance_npcname("Heart Hunter#2dms44");
 	specialeffect EF_NPC_STOP, AREA, instance_npcname("Heart Hunter#2dms45");
-	npctalk "Huh...?", instance_npcname("Heart Hunter#2dms43");
-	npctalk "What's this?", instance_npcname("Heart Hunter#2dms44");
-	npctalk "As expected, you have to smack a malfunctioning machine!", instance_npcname("Heart Hunter#2dms45");
+	npctalk "뭐...?", instance_npcname("Heart Hunter#2dms43");
+	npctalk "이게 뭐지?", instance_npcname("Heart Hunter#2dms44");
+	npctalk "예상대로, 고장 난 기계는 후려쳐야 한다!", instance_npcname("Heart Hunter#2dms45");
 	sleep 2000;
 	specialeffect EF_UNDEADBODY, AREA, instance_npcname("Heart Hunter#2dms49");
 	specialeffect EF_NPC_STOP, AREA, instance_npcname("Heart Hunter#2dms49");
-	npctalk "Am I also getting shocked? Is there something wrong with my body too?", instance_npcname("Heart Hunter#2dms49");
+	npctalk "나도 감전되는 건가? 내 몸에도 무슨 문제가 생긴 건가?", instance_npcname("Heart Hunter#2dms49");
 	specialeffect EF_UNDEADBODY, AREA, instance_npcname("Heart Hunter#2dms43");
 	specialeffect EF_UNDEADBODY, AREA, instance_npcname("Heart Hunter#2dms44");
 	specialeffect EF_UNDEADBODY, AREA, instance_npcname("Heart Hunter#2dms45");
 	sleep 2000;
-	npctalk "That's not it, I succeeded. Look, we're all resonating with the heart, aren't we?", instance_npcname("Heart Hunter#2dms45");
+	npctalk "그게 아니에요, 저는 성공했어요. 보세요, 우리 모두 마음으로 공감하고 있잖아요, 그렇죠?", instance_npcname("Heart Hunter#2dms45");
 	sleep 200;
 	npctalk "Ah...", instance_npcname("Heart Hunter#2dms50");
 	sleep 2000;
@@ -3087,19 +3087,19 @@ OnTouch:
 	specialeffect EF_NPC_STOP, AREA, instance_npcname("Heart Hunter#2dms46");
 	specialeffect EF_NPC_STOP, AREA, instance_npcname("Heart Hunter#2dms47");
 	specialeffect EF_NPC_STOP, AREA, instance_npcname("Heart Hunter#2dms50");
-	npctalk "Whatever. Although we couldn't extract the magic of the heart, our resonance is working well. Shall we test this power then?", instance_npcname("Heart Hunter#2dms50");
-	npctalk "Luckily, there's an adventurer here. Perfect timing.", instance_npcname("Heart Hunter#2dms49");
-	npctalk "Good. It's fortunate. Otherwise, we might have quarreled among ourselves, right?", instance_npcname("Heart Hunter#2dms45");
-	npctalk "Ah! I saw something like that in Prontera. Everyone was hitting eggs there, right?", instance_npcname("Heart Hunter#2dms44");
+	npctalk "어쨌든. 심장의 마법을 끌어내지는 못했지만, 우리의 공명은 잘 작동하고 있어. 그럼 이 능력을 시험해 볼까?", instance_npcname("Heart Hunter#2dms50");
+	npctalk "다행히 모험가가 여기 있네요. 완벽한 타이밍이에요.", instance_npcname("Heart Hunter#2dms49");
+	npctalk "다행이네요. 그렇지 않았으면 우리끼리 싸웠을지도 몰라요, 그렇죠?", instance_npcname("Heart Hunter#2dms45");
+	npctalk "어! 프론테라에서 비슷한 걸 본 것 같아요. 거기서는 다들 알을 치고 있었잖아요, 그렇죠?", instance_npcname("Heart Hunter#2dms44");
 	sleep 2000;
 	specialeffect EF_UNDEADBODY, AREA, instance_npcname("Heart Hunter#2dms41");
 	specialeffect EF_UNDEADBODY, AREA, instance_npcname("Heart Hunter#2dms42");
 	specialeffect EF_UNDEADBODY, AREA, instance_npcname("Heart Hunter#2dms46");
 	specialeffect EF_UNDEADBODY, AREA, instance_npcname("Heart Hunter#2dms47");
 	specialeffect EF_UNDEADBODY, AREA, instance_npcname("Heart Hunter#2dms50");
-	npctalk "There are no personal feelings involved, but if we let this pass as it is, we'll be in trouble.", instance_npcname("Heart Hunter#2dms50");
+	npctalk "개인적인 감정은 전혀 없지만, 이 일을 그대로 두면 큰 곤경에 처할 겁니다.", instance_npcname("Heart Hunter#2dms50");
 	sleep 2000;
-	npctalk "It would've been better if you just pretended not to know and passed by. Oh well, goodbye.", instance_npcname("Heart Hunter#2dms50");
+	npctalk "모르는 척하고 지나갔으면 더 좋았을 텐데. 뭐, 어쩔 수 없지. 안녕히 가세요.", instance_npcname("Heart Hunter#2dms50");
 
 	for ( .@i = 41; .@i < 51; ++.@i ) {
 		hideonnpc instance_npcname("Heart Hunter#2dms" + .@i );
@@ -3224,20 +3224,20 @@ OnTouch:
 	switch( atoi( replacestr( strnpcinfo(2), "2dms", "" ) ) ) {
 	case 10:
 		.@step = 19;
-		.@mes$ = "Security code for Storage 1 has been reset.";
-		.@enable$ = "Heart Hunter#2dms20";
+		.@mes$ = "저장소 1의 보안 코드가 재설정되었습니다.";
+		.@enable$ = "하트 헌터#2dms20";
 		setarray .@xy[0],119,73;
 		break;
 	case 20:
 		.@step = 24;
-		.@mes$ = "Security code for Storage 2 has been reset.";
-		.@enable$ = "Heart Hunter#2dms30";
+		.@mes$ = "스토리지 2의 보안 코드가 재설정되었습니다.";
+		.@enable$ = "하트 헌터#2dms30";
 		setarray .@xy[0],183,104;
 		break;
 	case 30:
 		.@step = 29;
-		.@mes$ = "Security code for Storage 3 has been reset.";
-		.@enable$ = "Heart Hunter#2dms40";
+		.@mes$ = "저장소 3의 보안 코드가 재설정되었습니다.";
+		.@enable$ = "하트 헌터#2dms40";
 		setarray .@xy[0],120,123;
 		break;
 	default:
@@ -3245,11 +3245,11 @@ OnTouch:
 	}
 	if ('nyr_daily_step != .@step)
 		end;
-	mes "Awaiting security code reset. Please input the new security code.";
+	mes "보안 코드 재설정을 기다리고 있습니다. 새 보안 코드를 입력해 주세요.";
 	next;
 	input .@num;
 	if (.@num != 'code) {
-		mes "Cancel input";
+		mes "입력 취소";
 		close;
 	}
 	mes .@mes$;
@@ -3274,9 +3274,9 @@ OnTouch:
 		break;
 	}
 	if ('nyr_daily_step <= .@step)
-		npctalk "Awaiting security code reset";
+		npctalk "보안 코드 재설정을 기다리는 중";
 	else
-		npctalk "Security code reset completed.";
+		npctalk "보안 코드 재설정이 완료되었습니다.";
 	end;
 }
 2@nyr,115,69,5	duplicate(Security Device#2dms10)	Security Device#2dms20	4_POINT_BLUE,5,5
@@ -3287,14 +3287,14 @@ OnTouch:
 		end;
 	if ('nyr_daily_step != 33)
 		end;
-	mes "Security code reset in progress. Please enter the new security code.";
+	mes "보안 코드 재설정 중입니다. 새 보안 코드를 입력해 주세요.";
 	next;
 	input .@num;
 	if (.@num != 'code) {
-		mes "Cancel input";
+		mes "입력 취소";
 		close;
 	}
-	mes "Vault security code has been reset.";
+	mes "금고 보안 코드가 재설정되었습니다.";
 	if ('nyr_daily_step == 33) {
 		'nyr_daily_step = 34;
 		enablenpc instance_npcname("#2mstep10");
@@ -3307,18 +3307,18 @@ OnTouch:
 		enablenpc instance_npcname("Temple Guard#2dms251");
 		enablenpc instance_npcname("Temple Guard#2dms261");
 		enablenpc instance_npcname("#msnavi01");
-		mapannounce 'map_2nyr$, "Do you think we'll give up just like that? We've already tasted it. Just watch!", bc_map, 0xFFCC;
-		mapannounce 'map_2nyr$, "Do you think the crowd will give up because of the delay? The taste of baboons dried up? Leave it!", bc_map, 0xFFCC;
+		mapannounce 'map_2nyr$, "우리가 그렇게 쉽게 포기할 거라고 생각하세요? 우린 이미 맛을 봤어요. 두고 보세요!", bc_map, 0xFFCC;
+		mapannounce 'map_2nyr$, "지연 때문에 관중들이 포기할 거라고 생각하세요? 원숭이 고기 맛이 없어졌다고요? 그냥 내버려 두세요!", bc_map, 0xFFCC;
 		sleep2 1000;
-		mapannounce 'map_2nyr$, "All sectors cleared! Gather at the exit!", bc_map, 0xFFCC;
+		mapannounce 'map_2nyr$, "모든 구역 통과 완료! 출구로 모여주세요!", bc_map, 0xFFCC;
 	}
 	navigateto("2@nyr",151,131);
 	close;
 OnTouch:
 	if ('nyr_daily_step <= 33)
-		npctalk "Vault Security Code Reset in Progress";
+		npctalk "금고 보안 코드 재설정 진행 중";
 	else
-		npctalk "Vault security code has been reset.";
+		npctalk "금고 보안 코드가 재설정되었습니다.";
 	end;
 }
 
@@ -3330,19 +3330,19 @@ OnTouch:
 	if ('nyr_daily_step != 34)
 		end;
 	'nyr_daily_step = 35;
-	npctalk "Thank you all for your hard work!", instance_npcname("Temple Guard#2dms201");
+	npctalk "모두의 노고에 감사드립니다!", instance_npcname("Temple Guard#2dms201");
 	sleep 2000;
-	npctalk "We will need to cleanse the temple daily for a while!", instance_npcname("Temple Guard#2dms201");
+	npctalk "당분간 매일 사원을 정화해야 할 것입니다!", instance_npcname("Temple Guard#2dms201");
 	sleep 2000;
-	npctalk "Four!!", instance_npcname("Temple Guard#2dms211");
-	npctalk "Four!!", instance_npcname("Temple Guard#2dms221");
-	npctalk "Four!!", instance_npcname("Temple Guard#2dms231");
-	npctalk "Four!!", instance_npcname("Temple Guard#2dms241");
-	npctalk "Four!!", instance_npcname("Temple Guard#2dms251");
-	npctalk "Four!!", instance_npcname("Temple Guard#2dms261");
-	npctalk "Everyone, you may now disperse!", instance_npcname("Temple Guard#2dms201");
+	npctalk "넷!!", instance_npcname("Temple Guard#2dms211");
+	npctalk "넷!!", instance_npcname("Temple Guard#2dms221");
+	npctalk "넷!!", instance_npcname("Temple Guard#2dms231");
+	npctalk "넷!!", instance_npcname("Temple Guard#2dms241");
+	npctalk "넷!!", instance_npcname("Temple Guard#2dms251");
+	npctalk "넷!!", instance_npcname("Temple Guard#2dms261");
+	npctalk "여러분, 이제 흩어지셔도 됩니다!", instance_npcname("Temple Guard#2dms201");
 	sleep 2000;
-	npctalk "Adventurers, thank you for your hard work as well! Until we meet again!", instance_npcname("Temple Guard#2dms201");
+	npctalk "모험가 여러분, 수고 많으셨습니다! 다시 만날 때까지!", instance_npcname("Temple Guard#2dms201");
 	end;
 }
 
