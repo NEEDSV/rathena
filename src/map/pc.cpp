@@ -5997,6 +5997,7 @@ enum e_additem_result pc_additem(map_session_data *sd,struct item *item,int32 am
 	if( amount > MAX_AMOUNT )
 		return ADDITEM_OVERAMOUNT;
 
+	item->identify = 1;
 	id = itemdb_search(item->nameid);
 
 	if( id->stack.inventory && amount > id->stack.amount )
