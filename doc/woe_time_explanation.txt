@@ -1,102 +1,152 @@
-//===== rAthena Documentation ================================
-//= WoE Time Explanation
-//===== By: ==================================================
+//===== rAthena 문서 ==========================================
+//= WoE 시간 설정 설명
+//===== 작성자: ================================================
 //= erKURITA
-//===== Last Updated: ========================================
+//===== 마지막 수정일: =========================================
 //= 20161206
-//===== Description: =========================================
-//= Details on the behavior of the default WoE controller.
+//===== 설명: =================================================
+//= 기본 WoE 컨트롤러의 동작 방식 설명
 //============================================================
 
-There are 2 main commands that determine WoE times:
-OnClock<time>: and gettime(<type>).
+WoE 시간을 결정하는 주요 명령어는 2가지입니다:
+OnClock<time>: 와 gettime(<type>) 입니다.
 
-OnClock<time> triggers when <time> is reached.
-The format is HHMM, where H = hour, M = minute.
-OnClock2350: would run at 23:50, server time.
+OnClock<time> 은 지정한 <time> 시간이 되었을 때 실행됩니다.
+형식은 HHMM 이며,
+H = 시간, M = 분 입니다.
+예를 들어:
 
-gettime(<type>) is a function that checks for certain
-information regarding time. The types are:
+	OnClock2350:
 
-	DT_SECOND - Seconds (of the current minute)
-	DT_MINUTE - Minutes (of the current hour)
-	DT_HOUR - Hour (of the current day)
-	DT_DAYOFWEEK - Week day (constants for MONDAY to SUNDAY are available)
-	DT_DAYOFMONTH - Day of the current month
-	DT_MONTH - Month (constants for JANUARY to DECEMBER are available)
-	DT_YEAR - Year
-	DT_DAYOFYEAR - Day of the year
+은 서버 시간 기준 23:50 에 실행됩니다.
 
-This way, we can check for a desired minute, hour, day, month, etc.
+gettime(<type>) 은 시간 관련 정보를 확인하는 함수입니다.
+사용 가능한 타입은 다음과 같습니다:
+
+	DT_SECOND      - 현재 분의 초
+	DT_MINUTE      - 현재 시간의 분
+	DT_HOUR        - 현재 날짜의 시간
+	DT_DAYOFWEEK   - 요일 (MONDAY ~ SUNDAY 상수 사용 가능)
+	DT_DAYOFMONTH  - 현재 달의 날짜
+	DT_MONTH       - 월 (JANUARY ~ DECEMBER 상수 사용 가능)
+	DT_YEAR        - 연도
+	DT_DAYOFYEAR   - 올해의 몇 번째 날인지
+
+이렇게 원하는 분, 시간, 요일, 월 등을 확인할 수 있습니다.
 
 -------------------------------------------------------------------------------
 
-Now the structure:
+이제 기본 구조 설명:
 
-	OnClock2100:	// Start time for Tuesday and Thursday
-	OnClock2300:	// End time for Tuesday and Thursday
-	OnClock1600:	// Start time for Saturday
-	OnClock1800:	// End time for Saturday
+	OnClock2100:	// 화요일, 목요일 시작 시간
+	OnClock2300:	// 화요일, 목요일 종료 시간
+	OnClock1600:	// 토요일 시작 시간
+	OnClock1800:	// 토요일 종료 시간
 
-These 4 labels will run one after the other, reaching the next check:
+이 4개의 라벨은 순차적으로 실행되며,
+아래 조건 검사 부분으로 이동합니다:
 
 	if((gettime(DT_DAYOFWEEK)==TUESDAY) && (gettime(DT_HOUR)>=21 && gettime(DT_HOUR)<23)) goto L_Start;
 	if((gettime(DT_DAYOFWEEK)==THURSDAY) && (gettime(DT_HOUR)>=21 && gettime(DT_HOUR)<23)) goto L_Start;
 	if((gettime(DT_DAYOFWEEK)==SATURDAY) && (gettime(DT_HOUR)>=16 && gettime(DT_HOUR)<18)) goto L_Start;
 
-This part will check for the times. Since both Start and End times run
-through the same chain of commands, these are important checks to ensure
-it's the right time. Let's take the following example:
+이 부분은 현재 시간이 WoE 시간인지 확인합니다.
+
+시작 시간과 종료 시간이 동일한 명령 흐름을 타기 때문에,
+정확한 시간 체크가 매우 중요합니다.
+
+예시:
 
 	if((gettime(DT_DAYOFWEEK)==TUESDAY) && (gettime(DT_HOUR)>=21 && gettime(DT_HOUR)<23))
 
-The first gettime() is checking for a type DT_DAYOFWEEK, the day of the week, and it's
-comparing it to the one desired, which is TUESDAY. The function will
-return either true or false.
+첫 번째 gettime() 은 요일(DT_DAYOFWEEK)을 확인하며,
+TUESDAY 와 비교합니다.
 
-The second gettime is checking type DT_HOUR, the hour, and it's comparing
-it to 21. If the first part is greater than or equal to (>=) the second part,
-the comparison will return 1.
+조건이 맞으면 true,
+아니면 false 를 반환합니다.
 
-The third and last gettime is checking again for the hour, but the time has to be less
-than the specified time (in this case, 23).
+두 번째 gettime() 은 시간(DT_HOUR)을 확인하며,
+현재 시간이 21시 이상인지 검사합니다.
 
-Now, look at the parentheses. Parentheses are very important when making comparisons
-and conditions. Check the order of these. I'll place dummy characters for this example:
+즉:
+
+	gettime(DT_HOUR)>=21
+
+현재 시간이 21 이상이면 true 입니다.
+
+세 번째 gettime() 은 다시 시간을 검사하지만,
+이번에는 23시 미만인지 확인합니다.
+
+즉:
+
+	gettime(DT_HOUR)<23
+
+현재 시간이 23보다 작아야 true 입니다.
+
+-------------------------------------------------------------------------------
+
+괄호 설명
+
+조건문에서 괄호는 매우 중요합니다.
+
+예시:
 
 	if ((X && (Y && Z)) goto L_Start;
 
-It's saying, if Y and Z are true, the condition is met. Now let's use another set
-of dummy characters. We're checking if (Y && Z) = G:
+Y 와 Z 가 모두 true 이면 조건 성립.
+
+(Y && Z)를 G 라고 치환하면:
 
 	if (X && G) goto L_Start;
 
-It's saying that if X and G are true, the condition is met, thus proceeding to L_Start.
+즉,
+X 와 G 가 모두 true 일 때
+L_Start 로 이동합니다.
 
-Now, the last part of the script, regarding the end of WoE time:
+-------------------------------------------------------------------------------
+
+다음은 WoE 종료 처리 부분입니다:
 
 	if((gettime(DT_DAYOFWEEK)==TUESDAY) && (gettime(DT_HOUR)==23)) goto L_End;
 	if((gettime(DT_DAYOFWEEK)==THURSDAY) && (gettime(DT_HOUR)==23)) goto L_End;
 	if((gettime(DT_DAYOFWEEK)==SATURDAY) && (gettime(DT_HOUR)==18)) goto L_End;
 	end;
 
-This is the same as before, but it's checking for the day in the first gettime() and
-the hour on the second. If both conditions are true, WoE will end. We're checking 
-here for the end time, not the start.
+이전과 동일한 방식이지만,
+이번에는 시작 시간이 아니라 종료 시간을 검사합니다.
 
-Another important thing is "OnAgitInit:". This special label will be run as soon as the
-castle data is loaded from the char data. It will check for the above start and end times
-to see if it's in WoE time, hence why the hours have to be checked.
+첫 번째 gettime() 은 요일,
+두 번째 gettime() 은 종료 시간을 검사합니다.
+
+둘 다 true 일 경우 WoE 가 종료됩니다.
 
 -------------------------------------------------------------------------------
 
-An example of how to set the WoE so it starts on Monday, at 4 pm and ends up at 10 pm:
+추가로 중요한 라벨:
 
-	OnClock1600: // 16:00 = 4 pm
-	OnClock2200: // 22:00 = 10 pm
+	OnAgitInit:
 
-	OnAgitInit: // This can only be written once: put OnClock above and the checks below.
+이 특수 라벨은
+성 데이터가 char 서버에서 로드된 직후 자동 실행됩니다.
+
+현재 시간이 WoE 시간인지 확인하기 위해
+위의 시작/종료 시간 조건들을 검사합니다.
+
+그래서 시간 체크 코드가 반드시 필요합니다.
+
+-------------------------------------------------------------------------------
+
+예시:
+월요일 오후 4시에 시작해서
+오후 10시에 종료되는 WoE 설정
+
+	OnClock1600: // 16:00 = 오후 4시
+	OnClock2200: // 22:00 = 오후 10시
+
+	OnAgitInit: // 이 라벨은 한 번만 작성 가능
+	             // OnClock 는 위에 작성하고
+	             // 아래에 시간 체크를 작성
 
 	if ((gettime(DT_DAYOFWEEK)==MONDAY) && (gettime(DT_HOUR)>=16 && gettime(DT_HOUR)<22)) goto L_Start;
 	if ((gettime(DT_DAYOFWEEK)==MONDAY) && (gettime(DT_HOUR)==22) goto L_End;
-	end; // Don't forget this!
+	end; // 이거 잊지 말 것!
