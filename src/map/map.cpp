@@ -53,6 +53,7 @@
 #include "pc.hpp"
 #include "pet.hpp"
 #include "quest.hpp"
+#include "status.hpp"
 #include "storage.hpp"
 #include "trade.hpp"
 
@@ -4628,6 +4629,16 @@ static int32 map_mapflag_pvp_stop_sub(block_list *bl, va_list ap)
 	return 0;
 }
 
+static int32 map_mapflag_status_recalc_sub(block_list *bl, va_list ap)
+{
+	map_session_data* sd = BL_CAST(BL_PC, bl);
+
+	if (sd != nullptr)
+		status_calc_pc(sd, SCO_NONE);
+
+	return 0;
+}
+
 /**
  * Return the mapflag enum from the given name.
  * @param name: Mapflag name
@@ -4922,6 +4933,10 @@ bool map_setmapflag_sub(int16 m, enum e_mapflag mapflag, bool status, union u_ma
 				mapdata->setMapFlag(mapflag, args->flag_val);
 			} else
 				mapdata->setMapFlag(mapflag, false);
+			break;
+		case MF_BATTLE_GEAR_DISABLED:
+			mapdata->setMapFlag(mapflag, status);
+			map_foreachinmap(map_mapflag_status_recalc_sub, m, BL_PC);
 			break;
 		case MF_BATTLEGROUND:
 			if (status) {

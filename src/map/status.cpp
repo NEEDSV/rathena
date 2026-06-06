@@ -3744,6 +3744,48 @@ bool status_calc_cart_weight(map_session_data *sd, enum e_status_calc_weight_opt
 	return true;
 }
 
+static bool status_battle_gear_is_shadow_equip_index(int32 equip_idx)
+{
+	return equip_idx >= EQI_SHADOW_ARMOR && equip_idx <= EQI_SHADOW_ACC_L;
+}
+
+static bool status_battle_gear_is_costume_equip_index(int32 equip_idx)
+{
+	return equip_idx >= EQI_COSTUME_HEAD_TOP && equip_idx <= EQI_COSTUME_GARMENT;
+}
+
+static bool status_battle_gear_combo_has_card_in_pos(map_session_data* sd, const s_item_combo& item_combo, uint32 equip_pos)
+{
+	for (const t_itemid nameid : item_combo.nameid) {
+		if (itemdb_type(nameid) != IT_CARD)
+			continue;
+
+		for (int32 i = 0; i < EQI_MAX; i++) {
+			int16 index = sd->equip_index[i];
+
+			if (index < 0)
+				continue;
+			if (i == EQI_AMMO)
+				continue;
+			if (pc_is_same_equip_index(static_cast<equip_index>(i), sd->equip_index, index))
+				continue;
+			if (!sd->inventory_data[index])
+				continue;
+			if (!(sd->inventory.u.items_inventory[index].equip & equip_pos))
+				continue;
+			if (itemdb_isspecial(sd->inventory.u.items_inventory[index].card[0]))
+				continue;
+
+			for (int32 j = 0; j < MAX_SLOTS; j++) {
+				if (sd->inventory.u.items_inventory[index].card[j] == nameid)
+					return true;
+			}
+		}
+	}
+
+	return false;
+}
+
 /**
  * Calculates player data from scratch without counting SC adjustments
  * Should be invoked whenever players raise stats, learn passive skills or change equipment
@@ -3900,6 +3942,8 @@ int32 status_calc_pc_sub(map_session_data* sd, uint8 opt)
 		pet_delautobonus(*sd, sd->pd->autobonus3, true);
 	}
 
+	const bool battle_gear_disabled = map_getmapflag(sd->m, MF_BATTLE_GEAR_DISABLED) != 0;
+
 	// Parse equipment
 	for (i = 0; i < EQI_MAX; i++) {
 		current_equip_item_index = index = sd->equip_index[i]; // We pass INDEX to current_equip_item_index - for EQUIP_SCRIPT (new cards solution) [Lupus]
@@ -3911,6 +3955,8 @@ int32 status_calc_pc_sub(map_session_data* sd, uint8 opt)
 		if (pc_is_same_equip_index((enum equip_index)i, sd->equip_index, index))
 			continue;
 		if (!sd->inventory_data[index])
+			continue;
+		if (battle_gear_disabled && status_battle_gear_is_shadow_equip_index(i))
 			continue;
 
 		base_status->def += sd->inventory_data[index]->def;
@@ -4061,6 +4107,12 @@ int32 status_calc_pc_sub(map_session_data* sd, uint8 opt)
 
 			if (combo->bonus == nullptr || !(item_combo = itemdb_combo.find(combo->id)))
 				continue;
+			if (battle_gear_disabled) {
+				if (combo->pos & EQP_SHADOW_GEAR)
+					continue;
+				if ((combo->pos & EQP_COSTUME) && status_battle_gear_combo_has_card_in_pos(sd, *item_combo, EQP_COSTUME))
+					continue;
+			}
 
 			bool no_run = false;
 			size_t j = 0;
@@ -4103,6 +4155,8 @@ int32 status_calc_pc_sub(map_session_data* sd, uint8 opt)
 		if (i == EQI_AMMO)
 			continue;
 		if (pc_is_same_equip_index((enum equip_index)i, sd->equip_index, index))
+			continue;
+		if (battle_gear_disabled && (status_battle_gear_is_shadow_equip_index(i) || status_battle_gear_is_costume_equip_index(i)))
 			continue;
 
 		if (sd->inventory_data[index]) {
@@ -4154,6 +4208,8 @@ int32 status_calc_pc_sub(map_session_data* sd, uint8 opt)
 		if (i == EQI_AMMO)
 			continue;
 		if (pc_is_same_equip_index((enum equip_index)i, sd->equip_index, index))
+			continue;
+		if (battle_gear_disabled && status_battle_gear_is_shadow_equip_index(i))
 			continue;
 		
 		if (sd->inventory_data[index]) {
