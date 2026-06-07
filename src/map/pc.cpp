@@ -39,6 +39,7 @@
 #include "chrif.hpp"
 #include "clan.hpp"
 #include "clif.hpp"
+#include "costume_collection_db.hpp"
 #include "date.hpp" // is_day_of_*()
 #include "duel.hpp"
 #include "elemental.hpp"
@@ -2089,6 +2090,7 @@ bool pc_authok(map_session_data *sd, uint32 login_id2, time_t expiration_time, i
 	pc_group_pc_load(sd);
 
 	memcpy(&sd->status, st, sizeof(*st));
+	costume_collection_db_load(sd);
 
 	if (st->sex != sd->status.sex) {
 		clif_authfail_fd(sd->fd, 0);

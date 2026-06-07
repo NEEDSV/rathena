@@ -33,6 +33,8 @@
 #include "chrif.hpp"
 #include "clan.hpp"
 #include "clif.hpp"
+#include "costume_collection.hpp"
+#include "costume_collection_db.hpp"
 #include "duel.hpp"
 #include "elemental.hpp"
 #include "guild.hpp"
@@ -2224,6 +2226,8 @@ void map_deliddb(block_list *bl)
  *------------------------------------------*/
 int32 map_quit(map_session_data *sd) {
 	int32 i;
+
+	costume_collection_db_clear(sd);
 
 	if (sd->state.keepshop == false) { // Close vending/buyingstore
 		if (sd->state.vending)
@@ -5072,6 +5076,7 @@ void MapServer::finalize(){
 	do_final_achievement();
 	do_final_script();
 	do_final_instance();
+	do_final_costume_collection();
 	do_final_itemdb();
 	do_final_storage();
 	do_final_guild();
@@ -5446,6 +5451,7 @@ bool MapServer::initialize( int32 argc, char *argv[] ){
 #endif
 	do_init_script();
 	do_init_itemdb();
+	do_init_costume_collection();
 	do_init_channel();
 	do_init_cashshop();
 	do_init_skill();

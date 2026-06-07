@@ -41,6 +41,8 @@
 #include "chrif.hpp"
 #include "clan.hpp"
 #include "clif.hpp"
+#include "costume_collection.hpp"
+#include "costume_collection_db.hpp"
 #include "date.hpp" // date type enum, date_get()
 #include "elemental.hpp"
 #include "guild.hpp"
@@ -14752,6 +14754,143 @@ BUILDIN_FUNC(getitemslots)
 	return SCRIPT_CMD_SUCCESS;
 }
 
+/*==========================================
+ * Returns Costume CollectionID by ItemID.
+ *------------------------------------------*/
+BUILDIN_FUNC(getcostumecollectionid)
+{
+	const int64 item_id = script_getnum64(st, 2);
+
+	if (item_id <= 0 || item_id > UINT32_MAX) {
+		script_pushint(st, 0);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	const s_costume_collection* costume = costume_collection_search_itemid(static_cast<t_itemid>(item_id));
+
+	if (costume == nullptr || !costume->enabled) {
+		script_pushint(st, 0);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	script_pushint(st, costume->collection_id);
+	return SCRIPT_CMD_SUCCESS;
+}
+
+/*==========================================
+ * Returns ItemID by Costume CollectionID.
+ *------------------------------------------*/
+BUILDIN_FUNC(getcostumeitemid)
+{
+	const int64 collection_id = script_getnum64(st, 2);
+
+	if (collection_id <= 0 || collection_id > UINT32_MAX) {
+		script_pushint(st, 0);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	const s_costume_collection* costume = costume_collection_search_collectionid(static_cast<uint32>(collection_id));
+
+	if (costume == nullptr || !costume->enabled) {
+		script_pushint(st, 0);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	script_pushint(st, costume->item_id);
+	return SCRIPT_CMD_SUCCESS;
+}
+
+/*==========================================
+ * Returns costume display name by CollectionID.
+ *------------------------------------------*/
+BUILDIN_FUNC(getcostumename)
+{
+	const int64 collection_id = script_getnum64(st, 2);
+
+	if (collection_id <= 0 || collection_id > UINT32_MAX) {
+		script_pushconststr(st, "");
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	const s_costume_collection* costume = costume_collection_search_collectionid(static_cast<uint32>(collection_id));
+
+	if (costume == nullptr || !costume->enabled) {
+		script_pushconststr(st, "");
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	script_pushstrcopy(st, costume->name.c_str());
+	return SCRIPT_CMD_SUCCESS;
+}
+
+/*==========================================
+ * Returns Costume Collection LastCollectionID.
+ *------------------------------------------*/
+BUILDIN_FUNC(getcostumelastcollectionid)
+{
+	script_pushint(st, costume_collection_get_last_collection_id());
+	return SCRIPT_CMD_SUCCESS;
+}
+
+/*==========================================
+ * Returns the attached account's registered costume collection count.
+ *------------------------------------------*/
+BUILDIN_FUNC(getcostumeregistercount)
+{
+	map_session_data* sd;
+
+	if (!script_rid2sd(sd)) {
+		script_pushint(st, 0);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	script_pushint(st, costume_collection_get_register_count(sd));
+	return SCRIPT_CMD_SUCCESS;
+}
+
+/*==========================================
+ * Returns enabled costume collection count from the master cache.
+ *------------------------------------------*/
+BUILDIN_FUNC(getcostumeactivecount)
+{
+	script_pushint(st, costume_collection_get_active_count());
+	return SCRIPT_CMD_SUCCESS;
+}
+
+/*==========================================
+ * Returns whether the attached account has a costume collection entry.
+ *------------------------------------------*/
+BUILDIN_FUNC(iscostumeregistered)
+{
+	map_session_data* sd;
+	const int64 collection_id = script_getnum64(st, 2);
+
+	if (collection_id <= 0 || collection_id > UINT32_MAX || !script_rid2sd(sd)) {
+		script_pushint(st, 0);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	script_pushint(st, costume_collection_is_registered(sd, static_cast<uint32>(collection_id)) ? 1 : 0);
+	return SCRIPT_CMD_SUCCESS;
+}
+
+/*==========================================
+ * Registers a costume collection entry by ItemID.
+ *------------------------------------------*/
+BUILDIN_FUNC(registercostume)
+{
+	map_session_data* sd;
+	const int64 item_id = script_getnum64(st, 2);
+
+	if (item_id <= 0 || item_id > UINT32_MAX || !script_rid2sd(sd)) {
+		script_pushint(st, 0);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	script_pushint(st, costume_collection_register(sd, static_cast<t_itemid>(item_id)));
+	return SCRIPT_CMD_SUCCESS;
+}
+
 // TODO: add matk here if needed/once we get rid of RENEWAL
 
 /*==========================================
@@ -28183,6 +28322,14 @@ struct script_function buildin_func[] = {
 	BUILDIN_DEF(warppartner,"sii"),
 	BUILDIN_DEF(getitemname,"v"),
 	BUILDIN_DEF(getitemslots,"i"),
+	BUILDIN_DEF(getcostumecollectionid,"i"),
+	BUILDIN_DEF(getcostumeitemid,"i"),
+	BUILDIN_DEF(getcostumename,"i"),
+	BUILDIN_DEF(getcostumelastcollectionid,""),
+	BUILDIN_DEF(getcostumeregistercount,""),
+	BUILDIN_DEF(getcostumeactivecount,""),
+	BUILDIN_DEF(iscostumeregistered,"i"),
+	BUILDIN_DEF(registercostume,"i"),
 	BUILDIN_DEF(makepet,"i"),
 	BUILDIN_DEF(getexp,"ii?"),
 	BUILDIN_DEF(getinventorylist,"?"),

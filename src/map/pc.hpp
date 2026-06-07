@@ -6,6 +6,7 @@
 
 #include <bitset>
 #include <memory>
+#include <unordered_set>
 #include <vector>
 
 #include <common/cbasetypes.hpp>
@@ -483,6 +484,11 @@ public:
 
 	int32 langtype;
 	struct mmo_charstatus status;
+
+	struct {
+		std::unordered_set<uint32> registered_collections;
+		std::unordered_set<t_itemid> registered_items;
+	} costume_collection;
 
 	// Item Storages
 	struct s_storage storage, premiumStorage;

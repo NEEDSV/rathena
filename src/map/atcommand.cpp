@@ -33,6 +33,7 @@
 #include "chrif.hpp"
 #include "clan.hpp"
 #include "clif.hpp"
+#include "costume_collection.hpp"
 #include "duel.hpp"
 #include "elemental.hpp"
 #include "guild.hpp"
@@ -4356,6 +4357,7 @@ ACMD_FUNC(reloaditemdb){
 	nullpo_retr(-1, sd);
 
 	itemdb_reload();
+	costume_collection_reload();
 	clif_displaymessage(fd, msg_txt(sd,97)); // Item database has been reloaded.
 
 	return 0;
