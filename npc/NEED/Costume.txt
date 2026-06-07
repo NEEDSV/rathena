@@ -3,37 +3,96 @@
 // 도감 등록 / 진행도 / 코인 확인 / 확정 교환
 //============================================================
 
-prontera,150,150,4	script	NEED 의상 도감	4_F_KAFRA1,{
+lasagna,170,152,4	script	NEED 의상 도감	4_F_KAFRA1,{
 	goto L_Main;
 
 OnInit:
-	set .CostumeCoinID, 909; // TODO: 의상 코인 아이템 ID
+	set .RewardStepPoint, 100;		// 보상 단계: 100개 단위
+	set .RewardCoinAmount, 30;	// 단계 달성 시 지급할 의상 코인 개수
+	set .CostumeCoinID, 909;		// TODO: 의상 코인 아이템 ID
 	set .ExchangeCost, 300;
 	set .PageSize, 20;
+	set .ClosetDefaultSlot, 20;
+	set .ClosetExpandZeny, 10000000;
+	set .AccountClosetUnlockZeny, 100000000;
+	set .ClosetBoundType, 4;
 	end;
 
 L_Main:
-	mes "[NEED 의상 도감]";
-	mes "의상 도감 진행도";
-	mes getcostumeregistercount() + " / " + getcostumeactivecount();
-	mes " ";
-	mes "보유 의상 코인: " + countitem(.CostumeCoinID) + "개";
+	mes "[NEED 의상 시스템]";
+	mes "의상 도감, 옷장, 인챈트 스톤 기능을 이용할 수 있습니다.";
 	setdialogsize(400,500);
 	next;
 
 	switch(select(
-		"의상 등록 / 코인화",
+		"의상 도감",
+		"옷장",
+		"인챈트 스톤 / 준비 중",
+		"테스트 등록",
+		"종료"
+	)) {
+	case 1: goto L_CollectionMenu;
+	case 2: goto L_Closet;
+	case 3: goto L_StoneMenu;
+	case 4: goto L_TestRegister100;
+	default: close;
+	}
+	
+	L_TestRegister100:
+	mes "[테스트]";
+	mes "도감 1번부터 100번까지 등록합니다.";
+	next;
+
+	for (set .@cid, 200; .@cid <= 300; set .@cid, .@cid + 1) {
+		set .@item_id, getcostumeitemid(.@cid);
+
+		if (.@item_id <= 0)
+			continue;
+
+		registercostume(.@item_id);
+	}
+
+	mes "[테스트]";
+	mes "100개 등록 테스트 완료.";
+	mes "현재 등록 수: " + getcostumeregistercount();
+	close;
+	
+L_CollectionMenu:
+
+	.@registered = getcostumeregistercount();
+	.@total = getcostumeactivecount();
+	
+	if (.@total > 0)
+		.@rate = (.@registered * 10000) / .@total;
+	else
+		.@rate = 0;
+	mes "[NEED 의상 도감]";
+	mes "등록 의상: " + getcostumeregistercount() + " / " + getcostumeactivecount();
+	mes "진행도: " + (.@rate / 100) + "." + sprintf("%02d", .@rate % 100) + "%";
+	mes " ";
+	mes "보유 의상 코인: " + countitem(.CostumeCoinID) + "개";
+	mes " ";
+	mes "도감 보상:";
+	mes "^FF0000"+.RewardStepPoint + "^000000개 등록마다 의상 코인 ^FF0000" + .RewardCoinAmount + "^000000개 지급";
+	mes "보상은 계정 단위로 1회만 수령 가능합니다.";
+	mes " ";
+	mes "^FF0000※ 같은 의상의 귀속 아이템을 보유 중이면";
+	mes "   일반 의상 보호를 위해 등록 목록에서 제외됩니다.^000000";
+	setdialogsize(400,500);
+	next;
+
+	switch(select(
+		"의상 등록",
 		"도감 보기",
-		"의상 코인 확인",
-		"300코인으로 의상 교환",
-		"의상 착용 / 스톤 장착은 준비 중",
+		"도감 보상",
+		"의상 교환",
 		"종료"
 	)) {
 	case 1: goto L_Register;
 	case 2: goto L_ViewBook;
-	case 3: goto L_Exchange;
-	case 4: goto L_NotReady;
-	default: close;
+	case 3: goto L_Reward;
+	case 4: goto L_Exchange;
+	default: goto L_Main;
 	}
 
 L_Register:
@@ -41,10 +100,25 @@ L_Register:
 	deletearray .@cid_list[0], getarraysize(.@cid_list);
 
 	getinventorylist;
+	set .@bound_total, countbound(.ClosetBoundType);
 	set .@count, 0;
 
 	for (set .@i, 0; .@i < @inventorylist_count; set .@i, .@i + 1) {
 		set .@item_id, @inventorylist_id[.@i];
+
+		set .@bound_amount, 0;
+
+		for (set .@b, 0; .@b < .@bound_total; set .@b, .@b + 1) {
+			if (@bound_items[.@b] == .@item_id) {
+				set .@bound_amount, @bound_amount[.@b];
+				break;
+			}
+		}
+
+		// 귀속이 하나라도 있으면 일반 아이템 보호를 위해 제외
+		if (.@bound_amount > 0)
+			continue;
+
 		set .@cid, getcostumecollectionid(.@item_id);
 
 		if (.@cid <= 0)
@@ -85,7 +159,6 @@ L_RegisterPage:
 	mes "페이지: " + (.@page + 1) + " / " + (.@max_page + 1);
 	mes "등록 여부와 관계없이 의상 1개를 코인화할 수 있습니다.";
 	mes " ";
-
 	set .@menu$, "";
 
 	for (set .@i, .@start; .@i < .@end; set .@i, .@i + 1) {
@@ -143,9 +216,17 @@ L_RegisterPage:
 
 			mes "의상 아이템 1개를 코인으로 전환했습니다.";
 			mes "의상 코인 1개를 획득했습니다.";
+			next;
+			mes "[의상 옷장]";
+			mes "이 의상을 옷장에 넣으시겠습니까?";
+			mes "옷장 의상은 캐릭터 귀속 아이템으로 지급됩니다.";
+			next;
+			if (select("옷장에 넣는다:그냥 코인만 받는다") == 1) {
+				goto L_PutCloset;
+			}
 			close;
 		}
-
+		
 		if (.@ret == -1) {
 			mes "[의상 등록]";
 			mes "DB 오류가 발생했습니다.";
@@ -182,6 +263,64 @@ L_ViewBook:
 
 	set .@page, 0;
 	set .@max_page, (.@last - 1) / .PageSize;
+	goto L_ViewBookPage;
+		
+L_PutCloset:
+	set .@loc, getiteminfo(.@item_id, ITEMINFO_LOCATIONS);
+
+	if (.@loc & EQP_COSTUME_HEAD_TOP) {
+		set .@part, 1;
+		set .@old_cid, COSTUME_RENT_TOP;
+	} else if (.@loc & EQP_COSTUME_HEAD_MID) {
+		set .@part, 2;
+		set .@old_cid, COSTUME_RENT_MID;
+	} else if (.@loc & EQP_COSTUME_HEAD_LOW) {
+		set .@part, 3;
+		set .@old_cid, COSTUME_RENT_LOW;
+	} else if (.@loc & EQP_COSTUME_GARMENT) {
+		set .@part, 4;
+		set .@old_cid, COSTUME_RENT_GARMENT;
+	} else {
+		mes "[의상 옷장]";
+		mes "옷장에 넣을 수 없는 의상입니다.";
+		close;
+	}
+
+	if (.@old_cid > 0) {
+		set .@old_item_id, getcostumeitemid(.@old_cid);
+
+		if (.@old_item_id > 0) {
+			set .@bound_total, countbound(.ClosetBoundType);
+			set .@old_bound_amount, 0;
+
+			for (set .@i, 0; .@i < .@bound_total; set .@i, .@i + 1) {
+				if (@bound_items[.@i] == .@old_item_id) {
+					set .@old_bound_amount, @bound_amount[.@i];
+					break;
+				}
+			}
+
+			if (.@old_bound_amount > 0 && .@old_bound_amount == countitem(.@old_item_id)) {
+				delitem .@old_item_id, 1;
+			}
+		}
+	}
+
+	getitembound .@item_id, 1, Bound_Char;
+
+	if (.@part == 1)
+		set COSTUME_RENT_TOP, .@cid;
+	else if (.@part == 2)
+		set COSTUME_RENT_MID, .@cid;
+	else if (.@part == 3)
+		set COSTUME_RENT_LOW, .@cid;
+	else if (.@part == 4)
+		set COSTUME_RENT_GARMENT, .@cid;
+
+	mes "[의상 옷장]";
+	mes "옷장 의상이 지급되었습니다.";
+	mes "지급된 의상을 직접 착용해주세요.";
+	close;
 
 L_ViewBookPage:
 	set .@start, .@page * .PageSize + 1;
@@ -193,7 +332,6 @@ L_ViewBookPage:
 	mes "진행도: " + getcostumeregistercount() + " / " + getcostumeactivecount();
 	mes "페이지: " + (.@page + 1) + " / " + (.@max_page + 1);
 	mes " ";
-
 	for (set .@cid, .@start; .@cid <= .@end; set .@cid, .@cid + 1) {
 		set .@item_id, getcostumeitemid(.@cid);
 
@@ -232,11 +370,57 @@ L_ViewBookPage:
 	default:
 		goto L_Main;
 	}
+	
+L_Reward:
+	set .@registered, getcostumeregistercount();
+	set .@next_step, #COSTUME_REWARD_STEP + 1;
+	set .@need_count, .@next_step * .RewardStepPoint;
 
+	mes "[도감 보상]";
+	mes "등록 의상: " + .@registered + " / " + getcostumeactivecount();
+	mes "현재 수령 단계: " + (#COSTUME_REWARD_STEP * .RewardStepPoint) + "개";
+	mes "다음 보상 단계: " + .@need_count + "개";
+	mes " ";
+	mes "보상:";
+	mes "의상 코인 " + .RewardCoinAmount + "개";
+	next;
+
+	if (.@registered < .@need_count) {
+		mes "[도감 보상]";
+		mes "아직 보상을 받을 수 없습니다.";
+		mes "다음 보상까지 " + (.@need_count - .@registered) + "개 남았습니다.";
+		close;
+	}
+
+	if (select("보상을 받는다:취소") == 2)
+		goto L_Main;
+
+	// 재검사
+	set .@registered, getcostumeregistercount();
+	set .@next_step, #COSTUME_REWARD_STEP + 1;
+	set .@need_count, .@next_step * .RewardStepPoint;
+
+	if (.@registered < .@need_count) {
+		mes "[도감 보상]";
+		mes "보상 조건을 만족하지 않습니다.";
+		close;
+	}
+
+	set #COSTUME_REWARD_STEP, .@next_step;
+	getitem .CostumeCoinID, .RewardCoinAmount;
+
+	announce strcharinfo(0) + "님이 의상 도감 " + .@need_count + "개 수집을 달성했습니다!", bc_all;
+
+	mes "[도감 보상]";
+	mes "보상을 수령했습니다.";
+	mes "의상 코인 " + .RewardCoinAmount + "개를 획득했습니다.";
+	close;
+	
 L_Exchange:
 	mes "[의상 교환]";
 	mes "교환할 도감 번호를 입력해주세요.";
 	mes "미등록 의상의 이름은 공개되지 않습니다.";
+	next;
 	input .@cid;
 
 	set .@item_id, getcostumeitemid(.@cid);
@@ -281,4 +465,86 @@ L_NotReady:
 	mes "[NEED 의상 도감]";
 	mes "의상 착용 / 스톤 장착 기능은 준비 중입니다.";
 	close;
+	
+//==============================================
+// 옷장
+//==============================================
+L_Closet:
+	mes "[의상 옷장]";
+	mes "도감에 등록한 의상을 캐릭터 귀속 의상으로 다시 받을 수 있습니다.";
+	mes " ";
+	mes "^0055FF현재 옷장 착용 상태^000000";
+	mes "상단 : " + (COSTUME_RENT_TOP ? getcostumename(COSTUME_RENT_TOP) : "없음");
+	mes "중단 : " + (COSTUME_RENT_MID ? getcostumename(COSTUME_RENT_MID) : "없음");
+	mes "하단 : " + (COSTUME_RENT_LOW ? getcostumename(COSTUME_RENT_LOW) : "없음");
+	mes "걸칠것 : " + (COSTUME_RENT_GARMENT ? getcostumename(COSTUME_RENT_GARMENT) : "없음");
+	next;
+
+	switch(select(
+		"상단 의상",
+		"중단 의상",
+		"하단 의상",
+		"걸칠것 의상",
+		"옷장 슬롯 확장",
+		"계정 옷장 해금",
+		"종료"
+	)) {
+	case 1:
+		set .@closet_part, 1;
+		goto L_ClosetSelect;
+	case 2:
+		set .@closet_part, 2;
+		goto L_ClosetSelect;
+	case 3:
+		set .@closet_part, 3;
+		goto L_ClosetSelect;
+	case 4:
+		set .@closet_part, 4;
+		goto L_ClosetSelect;
+	case 5:
+		goto L_ClosetExpand;
+	case 6:
+		goto L_ClosetUnlock;
+	default:
+		goto L_Main;
+	}
+	
+L_ClosetSelect:
+	mes "[의상 옷장]";
+	mes "등록된 도감 의상을 부위별로 다시 지급받는 기능은 다음 단계에서 구현합니다.";
+	mes "현재는 의상 등록 직후 옷장 지급만 지원합니다.";
+	close;
+
+L_ClosetExpand:
+	mes "[옷장 슬롯 확장]";
+	mes "옷장 슬롯 확장 기능은 준비 중입니다.";
+	close;
+
+L_ClosetUnlock:
+	mes "[계정 옷장 해금]";
+	mes "계정 옷장 해금 기능은 준비 중입니다.";
+	close;
+
+L_StoneMenu:
+	mes "[인챈트 스톤]";
+	mes "인챈트 스톤 기능은 준비 중입니다.";
+	next;
+
+	switch(select(
+		"상단 스톤",
+		"중단 스톤",
+		"하단 스톤",
+		"걸칠것 스톤",
+		"프리셋 관리",
+		"종료"
+	)) {
+	case 1:
+	case 2:
+	case 3:
+	case 4:
+	case 5:
+		goto L_NotReady;
+	default:
+		goto L_Main;
+	}
 }
