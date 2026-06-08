@@ -24,11 +24,11 @@ function	Require_Level	{
 	if (BaseLevel < getarg(0) || JobLevel < getarg(1)) {
 		.@blvl = getarg(0) - BaseLevel;
 		.@jlvl = getarg(1) - JobLevel;
-		mes "Level requirement:";
+		mes "요구 레벨:";
 		mes ((getarg(0)>1)? 
 			"^bb0000"+getarg(0)+"^000000 (^bb0000Base^000000) / ":"")+"^00bb00"+
 			getarg(1)+"^000000 (^00bb00Job^000000)";
-		mes "You need " +
+		mes " 당신은 필요합니다" +
 			((.@blvl > 0) ? "^bb0000"+.@blvl+"^000000 more base levels " + 
 				((.@jlvl > 0) ? "and " : "") : "") +
 			((.@jlvl > 0) ? "^00bb00"+.@jlvl+"^000000 more job levels " : "") +
@@ -108,7 +108,7 @@ function	Check_Riding	{
 	// would make this NPC bigger just to handle with
 	// those special cases.
 	if (checkfalcon() || checkcart() || checkriding() || ismounting()) {
-		mes "Please remove your " +
+		mes " 삭제해 주세요" +
 			((checkfalcon()) ? "falcon" : "") +
 			((checkcart()) ? "cart" : "") +
 			((checkriding()) ? "Peco" : "") +
@@ -120,7 +120,7 @@ function	Check_Riding	{
 }
 function	Check_SkillPoints	{
 	if (.SkillPointCheck && SkillPoint) {
-		mes "Please use all your skill points before proceeding.";
+		mes "진행하기 전에 스킬 포인트를 모두 사용하십시오.";
 		close;
 	}
 	return;
@@ -256,7 +256,7 @@ function	Job_Options	{
 					Job_Options(.@job_opt, Job_Baby_Summoner);
 				break;
 			default:
-				mes "An error has occurred.";
+				mes "오류가 발생했습니다.";
 				close;
 		}
 	} else if( Is_First_Cls(.@eac) || 				// First Class
@@ -297,7 +297,7 @@ function	Job_Menu	{
 	while(true) {
 		.@opt_cnt =  getarraysize(getarg(0));
 		if( .@opt_cnt <= 0 ) {
-			mes "No more jobs are available.";
+			mes "더 이상 채용 공고가 없습니다.";
 			close;
 		}
 
@@ -305,7 +305,7 @@ function	Job_Menu	{
 		if (.@opt_cnt > 1) {
 			// Multiple job classes given. Select one and save it to .@class
 			// After that confirm .@class
-			mes "Select a job.";
+			mes "직업을 선택하세요.";
 			.@menu$ = "";
 			for (.@i = 0; .@i < .@opt_cnt; .@i++) {
 				if( getelementofarray(getarg(0), .@i) == Job_Novice_High)
@@ -328,7 +328,7 @@ function	Job_Menu	{
 			// Super Baby can both be selected in one of the first class
 			// changes. That's why the Level Requirement is after and not before
 			// the selection.
-			mes "A base level of " + .SNovice +
+			mes " 기본 수준" + .SNovice +
 				" is required to turn into a " + jobname(.@class) + ".";
 			return;
 		}
@@ -347,7 +347,7 @@ function	Job_Change	{
 	.@to_cls = getarg(0);
 	next;
 	mes .NPCName$;
-	mes "You are now " + callfunc("F_InsertArticle", jobname(.@to_cls)) + "!";
+	mes " 당신은 지금" + callfunc("F_InsertArticle", jobname(.@to_cls)) + "!";
 	if (.@to_cls == Job_Novice_High && .LastJob)
 		lastJob = Class; // Saves the lastJob for rebirth
 	jobchange .@to_cls;
@@ -374,11 +374,11 @@ function	Confirm_Change	{
 	.@class = getarg(0, -1);
 	.@back = getarg(1, false);
 	if( .@class < 0 || eaclass(.@class) == -1 ) {
-		mes "Unknown Class Error.";
+		mes "알 수 없는 클래스 오류입니다.";
 		close;
 	}
-	mes "Do you want to change into ^0055FF"+jobname(.@class)+"^000000 class?";
-	.@job_option$ = " ~ Change into ^0055FF"+jobname(.@class)+"^000000 class";
+	mes "^0055FF로 변경하시겠습니까?"+jobname(.@class)+"^000000 클래스?";
+	.@job_option$ = " ~ ^0055FF로 변경"+jobname(.@class)+"^000000 class";
 	if( .@class == Job_Novice_High)
 		.@job_option$ = " ~ ^0055FFRebirth^000000";
 	
@@ -500,11 +500,11 @@ function	Get_Job_Equip	{
 
 OnInit:
 	// Initialisation, do not edit these
-	.NPCName$ = "[Job Master]";
+	.NPCName$ = "[NEED]";
 	
 	// Settings
-	.FourthClass = true;				// Enable fourth classes?
-	.FourthExpanded = true;				// Enable new expanded fourth classes: Ex. Hyper Novice, Rebellion, Shinkiro/Shiranui?
+	.FourthClass = false;				// Enable fourth classes?
+	.FourthExpanded = false;				// Enable new expanded fourth classes: Ex. Hyper Novice, Rebellion, Shinkiro/Shiranui?
 	.ThirdClass = true;					// Enable third classes?
 	.RebirthClass = true;				// Enable rebirth classes?
 	.SecondExpanded = true;				// Enable new expanded second classes: Ex. Super Novice, Kagerou/Oboro, Rebellion?

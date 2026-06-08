@@ -41,25 +41,25 @@ gef_fild10,242,202,0	script	Dimensional Gorge Piece	406,{
 	set .@md_name$,"Orc's Memory";
 
 	if (!instance_check_party(.@party_id,2,30,80)) {
-		mes "Only users between Levels ^ff000030 ~ 80^000000 can enter this Dungeon.";
+		mes "레벨 ^ff000030 ~ 80^000000 사이의 유저만 이 던전에 입장할 수 있습니다.";
 		close;
 	}
 
 	set .@orctime,checkquest(12059,PLAYTIME);
 	if (.@orctime == -1) {
 		if (is_party_leader() == true) {
-			mes "Party status confirmed. Would you like to book entrance to the "+.@md_name$+"?";
+			mes " 파티 확정되었습니다. 입장 예약을 하시겠습니까?"+.@md_name$+"?";
 			next;
 			switch(select("Reserve the "+.@md_name$+":Enter the Dungeon:Cancel")) {
 			case 1:
 				if (instance_create(.@md_name$) < 0) {
-					mes "Party Name: "+ getpartyname(.@party_id);
-					mes "Party Leader: "+strcharinfo(0);
-					mes "^0000ff"+.@md_name$+" ^000000 - Reservation Failed.";
+					mes " 당사자명:"+ getpartyname(.@party_id);
+					mes " 당 대표:"+strcharinfo(0);
+					mes "^0000ff"+.@md_name$+" ^000000 - 예약 실패.";
 					close;
 				}
-				mes "^0000ff"+.@md_name$+"^000000- Attempting to book an entrance";
-				mes "After making a reservation, you have to select 'Enter the Dungeon' from the menu if you wish to enter the "+.@md_name$+".";
+				mes "^0000ff"+.@md_name$+"^000000- 입구에서 예약을 시도하는 중";
+				mes "예약을 완료하신 후, 던전에 입장하시려면 메뉴에서 '던전 입장'을 선택하셔야 합니다."+.@md_name$+".";
 				close;
 			case 2:
 				callsub L_Enter,0;
@@ -71,32 +71,32 @@ gef_fild10,242,202,0	script	Dimensional Gorge Piece	406,{
 			end;
 		callsub L_Enter,1;
 	} else if (.@orctime == 0 || .@orctime == 1) {
-		mes "You can enter the Dungeon if it has been generated.";
+		mes "던전이 생성되었다면 입장할 수 있습니다.";
 		next;
 		if(select("Enter the Dungeon "+.@md_name$+":Cancel") == 2)
 			close;
 		callsub L_Enter,0;
 	} else if (.@orctime == 2) {
-		mes "^0000ffAll records and after-effects related to the Orc's Memory Dungeon are deleted. You can now regenerate or re-enter the dungeon.^000000";
+		mes "오크의 기억 던전과 관련된 모든 기록 및 후유증이 삭제되었습니다. 이제 던전을 재생성하거나 다시 입장할 수 있습니다.";
 		erasequest 12059;
 		close;
 	}
-	mes "In order to generate a dungeon you must be the Party Leader and have at least 2 members in the party.";
+	mes "던전을 생성하려면 파티 리더여야 하며 파티에 최소 2명의 멤버가 있어야 합니다.";
 	close;
 L_Enter:
 	switch(instance_enter("Orc's Memory")) {
 	case IE_OTHER:
-		mes "An unknown error has occurred.";
+		mes "알 수 없는 오류가 발생했습니다.";
 		close;
 	case IE_NOINSTANCE:
-		mes "Memorial Dungeon Orc's Memory does not exist.";
-		mes "Memorial Dungeon has been destroyed by the Party Leader, or because of the time limit. Please try again after 2 hours.";
+		mes "오크의 기억 기념 던전은 존재하지 않습니다.";
+		mes "기념 던전이 파티 리더에 의해 파괴되었거나 시간 제한이 만료되었습니다. 2시간 후에 다시 시도해 주세요.";
 		close;
 	case IE_NOMEMBER:
-		mes "Only a member of the party can enter the Memorial Dungeon.";
+		mes "기념 던전에는 파티원 중 한 명만 입장할 수 있습니다.";
 		close;
 	case IE_OK:
-		mapannounce "gef_fild10", getpartyname( getcharid(1) ) +" party's member "+strcharinfo(0)+" has entered the Orc's Memory.",bc_map,"0x00ff99";
+		mapannounce "gef_fild10", getpartyname( getcharid(1) ) +" 당의 구성원"+strcharinfo(0)+" 오크의 기억 속으로 들어갔다.",bc_map,"0x00ff99";
 		if (checkquest(12059) == -1) setquest 12059;
 		//warp "1@orcs",179,15;
 		if (getarg(0) == 0) close;
@@ -107,56 +107,56 @@ L_Enter:
 
 gef_fild10,238,202,6	script	Mad Scientist#orc	865,{
 	if (BaseLevel < 50) {
-		mes "The Mad Scientist doesn't seem to notice you and keeps mumbling to himself...";
+		mes "미치광이 과학자는 당신을 알아채지 못하고 계속 혼잣말을 중얼거리고 있습니다...";
 		close;
 	}
 	if (mad == 0) {
-		mes "[Mad Scientist]";
-		mes "Haha, no Orcs are coming near me!";
-		mes "The power of the Dimensional Gorge is undefeatable!!";
+		mes "[미친 과학자]";
+		mes "하하, 오크들은 내 근처에도 못 올 거야!";
+		mes "차원 협곡의 위력은 무적이다!!";
 		next;
-		switch(select("Orcs don't attack you?:You wish!")) {
+		switch(select("오크들이 당신을 공격하지 않나요?:꿈 깨세요!")) {
 		case 1:
-			mes "[Mad Scientist]";
-			mes "Yeah, yeah.. I know it's hard to belive. I don't blame ya.";
-			mes "I used to study the Dimensional Gorge discovered near Morocc.";
-			mes "According to my research, the minerals found there have enormous power inside them!";
+			mes "[미친 과학자]";
+			mes "그래, 그래... 살기 힘들다는 거 알아. 널 탓하지 않아.";
+			mes "저는 모로코 근처에서 발견된 차원 협곡을 연구하곤 했습니다.";
+			mes "제 연구에 따르면, 그곳에서 발견된 광물들은 엄청난 에너지를 지니고 있다고 합니다!";
 			next;
 			break;
 		case 2:
-			mes "[Mad Scientist]";
-			mes "You are a pretty distrustful person, huh?";
+			mes "[미친 과학자]";
+			mes "당신은 꽤 의심이 많은 사람이군요, 그렇죠?";
 			next;
 			break;
 		}
-		select("Oh? Like what, travel to alternate space?");
-		mes "[Mad Scientist]";
-		mes "Very smart! I have actually just done that! See that statue over there? It's not your normal Monolith!";
+		select("오? 예를 들면, 다른 차원으로 여행이라도 가는 거야?");
+		mes "[미친 과학자]";
+		mes "정말 똑똑하네요! 저도 방금 그렇게 했어요! 저기 저 조각상 보이세요? 일반적인 석상과는 다르잖아요!";
 		next;
-		mes "[Mad Scientist]";
-		mes "I have created it with a combination of our technology and the unlimited energy I discovered from the Gorge! Want to try it?";
+		mes "[미친 과학자]";
+		mes "제가 개발한 기술과 협곡에서 발견한 무한한 에너지를 결합하여 만들어냈습니다! 한번 사용해 보시겠어요?";
 		next;
-		select("...Um, that doesn't sound legal?");
-		mes "[Mad Scientist]";
-		mes "Hey, since when did something so interesting have to be legal!? How about it! You can talk to the Orcs! C'mon!";
+		select("음, 그거 불법적인 것 같은데요?");
+		mes "[미친 과학자]";
+		mes "어이, 이렇게 재밌는 게 왜 꼭 합법적이어야 해!? 어때! 오크랑 대화도 할 수 있잖아! 어서!";
 		next;
-		mes "[Mad Scientist]";
-		mes "Chances are they'll just give you lots of instructions once they see you, so just wing it! They're always saying the same thing, to the point where I memorized them!";
+		mes "[미친 과학자]";
+		mes "아마 당신을 보면 이것저것 지시를 많이 해줄 테니 그냥 되는대로 하세요! 항상 똑같은 말만 반복해서 전 다 외웠을 정도예요!";
 		next;
-		switch(select("Alright... What do I do?:Umm, maybe not.")) {
+		switch(select("좋아... 그럼 어떻게 해야 하지?:음, 아마 아닐 거예요.")) {
 		case 1:
-			mes "[Mad Scientist]";
-			mes "Very good! Just sit in the hands of this statue! And try to act natural when you're in there!";
+			mes "[미친 과학자]";
+			mes "아주 좋아요! 이 조각상의 손 안에 앉아 보세요! 그리고 그 안에 있을 때 자연스럽게 행동하려고 노력해 보세요!";
 			set mad,1;
 			close;
 		case 2:
-			mes "[Mad Scientist]";
-			mes "Oh fine, be that way!";
+			mes "[미친 과학자]";
+			mes "그래, 그렇게 해!";
 			close;
 		}
 	} else if (mad == 1) {
-		mes "[Mad Scientist]";
-		mes "Hmm? Put your hand on that Monemus Statue if you want to experience traveling through dimensions!";
+		mes "[미친 과학자]";
+		mes "음? 차원 여행을 경험하고 싶다면 모네무스 동상에 손을 얹어 보세요!";
 		close;
 	} else {
 		set mad,1;
@@ -194,19 +194,19 @@ OnMyMobDead:
 		else if ((.@mob_ran > 28) && (.@mob_ran < 30)) {
 			monster .@map$,0,0,"High Orc",1213,.@mob_dead_num,instance_npcname("#Resurrect Monsters1")+"::OnMyMobDead";
 			if (rand(1,10) == 9) {
-				mapannounce .@map$, "High Orc: We need more defenses! Get more people here!",bc_map,"0xff4444";
+				mapannounce .@map$, "하이 오크: 방어 시설이 더 필요해! 병력을 더 불러와!",bc_map,"0xff4444";
 			}
 		}
 		else if ((.@mob_ran > 26) && (.@mob_ran < 29)) {
 			areamonster .@map$,41,91,51,81,"High Orc",1213,.@mob_dead_num,instance_npcname("#Resurrect Monsters1")+"::OnMyMobDead";
 			if (rand(1,10) == 9) {
-				mapannounce .@map$, "Where are the High Orcs!? Get them to stop the enemies!",bc_map,"0xff4444";
+				mapannounce .@map$, "하이 오크들은 어디 있지!? 그들을 불러서 적들을 막아!",bc_map,"0xff4444";
 			}
 		}
 		else {
 			areamonster .@map$,17,187,27,177,"High Orc",1213,.@mob_dead_num,instance_npcname("#Resurrect Monsters1")+"::OnMyMobDead";
 			if (rand(1,5) == 3) {
-				mapannounce .@map$, "Caution: The army's starting to concentrate at Zone No. 4.",bc_map,"0x77ff77";
+				mapannounce .@map$, "주의: 군대가 4번 구역에 집중 집결하기 시작했습니다.",bc_map,"0x77ff77";
 			}
 			if (rand(1,100) == 50) {
 				initnpctimer;
@@ -216,12 +216,12 @@ OnMyMobDead:
 	end;
 
 OnTimer10:
-	mapannounce instance_mapname("1@orcs"), "Shouts of the Chief Orc of Safeguards: Looks like this will take longer than expected. Summon the Stalactic Golems!",bc_map,"0xff4444";
+	mapannounce instance_mapname("1@orcs"), "수호대장 오크의 외침: 예상보다 시간이 오래 걸리겠군. 은하계 골렘들을 소환하라!",bc_map,"0xff4444";
 	end;
 
 OnTimer4010:
 	set .@map$, instance_mapname("1@orcs");
-	mapannounce .@map$, "Stalactic Golems are digging out of the deep underground.",bc_map,"0x77ff77";
+	mapannounce .@map$, "은하계 골렘들이 지하 깊은 곳에서 기어 나오고 있다.",bc_map,"0x77ff77";
 	areamonster .@map$,17,187,27,177,"Stalactic Golem",1278,20,instance_npcname("#Resurrect Monsters1")+"::OnMyMobDead";
 	stopnpctimer;
 	end;
@@ -288,7 +288,7 @@ OnMyMobDead:
 		if (.@mob_dead_num > 0) {
 			areamonster .@map$,43,155,47,159,"Orc Archer",1189,.@mob_dead_num,instance_npcname("#Resurrect Monsters3")+"::OnMyMobDead";
 			if (rand(1,3) == 3) {
-				mapannounce .@map$, "High Orc: Attack them from behind! Cut off their support!",bc_map,"0xff4444";
+				mapannounce .@map$, "하이 오크: 뒤에서 공격해라! 지원군을 차단해라!",bc_map,"0xff4444";
 			}
 		}
 	}
@@ -340,39 +340,39 @@ OnEnable:
 	end;
 
 OnTimer10:
-	mapannounce instance_mapname("1@orcs"), "Kruger: Damn... What took you so long!! I don't have all day!!",bc_map,"0xffff00";
+	mapannounce instance_mapname("1@orcs"), "크루거: 젠장... 왜 이렇게 늦었어!! 나 시간 없어!!",bc_map,"0xffff00";
 	end;
 
 OnTimer5710:
-	mapannounce instance_mapname("1@orcs"), "Kruger: My plan was to let our comrades open the gate, but it's all ruined since I got busted by the Orc Shaman.",bc_map,"0xffff00";
+	mapannounce instance_mapname("1@orcs"), "크루거: 원래는 동료들이 문을 열도록 할 계획이었는데, 오크 주술사에게 들켜서 계획이 완전히 망가졌어.",bc_map,"0xffff00";
 	end;
 
 OnTimer14610:
-	mapannounce instance_mapname("1@orcs"), "Shouts of the Chief Orc of Safeguards: I smell a rat.. Send some patrols to the entrance!!",bc_map,"0xff4444";
+	mapannounce instance_mapname("1@orcs"), "수호대장 오크의 외침: 수상한 냄새가 나군! 입구에 순찰대를 보내라!!",bc_map,"0xff4444";
 	end;
 
 OnTimer20210:
-	mapannounce instance_mapname("1@orcs"), "Kruger: Darn it.. They'll be here any minute. Ok. Listen to me now.",bc_map,"0xffff00";
+	mapannounce instance_mapname("1@orcs"), "크루거: 젠장... 곧 도착하겠군. 좋아. 내 말 잘 들어.",bc_map,"0xffff00";
 	end;
 
 OnTimer24910:
-	mapannounce instance_mapname("1@orcs"), "Kruger: The Orc Shaman has sealed the 1st basement by dividing it into 4 zones. Each zone has one Enchanted Orc who has the power to unseal the next zone.",bc_map,"0xffff00";
+	mapannounce instance_mapname("1@orcs"), "크루거: 오크 주술사가 지하 1층을 4개의 구역으로 나누어 봉인했습니다. 각 구역에는 다음 구역의 봉인을 풀 수 있는 힘을 가진 마법에 걸린 오크가 한 마리씩 있습니다.",bc_map,"0xffff00";
 	end;
 
 OnTimer34310:
-	mapannounce instance_mapname("1@orcs"), "Kruger: Find those Enchanted Orcs and get rid of them to move to the next zone.",bc_map,"0xffff00";
+	mapannounce instance_mapname("1@orcs"), "크루거: 마법에 걸린 오크들을 찾아서 처치하고 다음 지역으로 넘어가세요.",bc_map,"0xffff00";
 	end;
 
 OnTimer39710:
-	mapannounce instance_mapname("1@orcs"), "Kruger: Try to avoid encountering Orcs other then the Enchanted ones. Everytime you kill a normal Orc, High Orcs will gather at the last path to the 2nd floor.",bc_map,"0xffff00";
+	mapannounce instance_mapname("1@orcs"), "크루거: 마법에 걸린 오크를 제외한 다른 오크와의 마주침은 최대한 피하세요. 일반 오크를 처치할 때마다 2층으로 가는 마지막 길에 하이 오크들이 모여듭니다.",bc_map,"0xffff00";
 	end;
 
 OnTimer49210:
-	mapannounce instance_mapname("1@orcs"), "Kruger: In the worst case, the path to the 2nd floor could be completely blocked. For your own sake, you should be as sneaky as possible.",bc_map,"0xffff00";
+	mapannounce instance_mapname("1@orcs"), "크루거: 최악의 경우, 2층으로 가는 길이 완전히 막힐 수도 있습니다. 당신의 안전을 위해서라도 최대한 은밀하게 움직이는 게 좋을 겁니다.",bc_map,"0xffff00";
 	end;
 
 OnTimer56310:
-	mapannounce instance_mapname("1@orcs"), "Mission: Sneak in and get rid of the 'Enchanted Orcs'. Avoiding battles with other Orcs is the best way of getting into the 2nd floor.",bc_map,"0x44ffff";
+	mapannounce instance_mapname("1@orcs"), "임무: 몰래 잠입하여 '마법에 걸린 오크'들을 처치하세요. 다른 오크들과의 전투를 피하는 것이 2층으로 진입하는 가장 좋은 방법입니다.",bc_map,"0x44ffff";
 	donpcevent instance_npcname("#Resurrect Monsters1")+"::OnEnable";
 	donpcevent instance_npcname("#Resurrect Monsters2")+"::OnEnable";
 	donpcevent instance_npcname("#Resurrect Monsters3")+"::OnEnable";
@@ -406,11 +406,11 @@ OnContinue:
 	end;
 
 OnTimer10300:
-	mapannounce instance_mapname("1@orcs"), "Kruger's Whisper: The Orcs here used to be my companions. They just lost their will ever since the Orc Shaman started to control them with her magic.",bc_map,"0xff4499";
+	mapannounce instance_mapname("1@orcs"), "크루거의 속삭임: 여기 있는 오크들은 한때 내 동료였지. 오크 주술사가 마법으로 그들을 조종하기 시작한 이후로 의지를 잃어버렸을 뿐이야.",bc_map,"0xff4499";
 	end;
 
 OnTimer18700:
-	mapannounce instance_mapname("1@orcs"), "Kruger's Whisper: There's nothing we can do but to defeat the Orc Shaman if we want to save the remaining tribes.",bc_map,"0xff4499";
+	mapannounce instance_mapname("1@orcs"), "크루거의 속삭임: 남은 부족들을 구하려면 오크 주술사를 물리치는 것 외에는 다른 방법이 없어.",bc_map,"0xff4499";
 	stopnpctimer;
 	end;
 }
@@ -435,11 +435,11 @@ OnContinue:
 	end;
 
 OnTimer30300:
-	mapannounce instance_mapname("1@orcs"), "Kruger's Whisper: I saw the bodies of our tribe. It seems that the Orc Shaman used those Orcs for her rituals.",bc_map,"0xff4499";
+	mapannounce instance_mapname("1@orcs"), "크루거의 속삭임: 우리 부족의 시체들을 봤어. 오크 주술사가 자기 의식에 그 오크들을 사용한 것 같군.",bc_map,"0xff4499";
 	end;
 
 OnTimer37600:
-	mapannounce instance_mapname("1@orcs"), "Kruger's Whisper: ... It all has to do with me. I am responsible for this evil.",bc_map,"0xff4499";
+	mapannounce instance_mapname("1@orcs"), "크루거의 속삭임: ...이 모든 건 나와 관련이 있어. 이 악행은 내 책임이야.",bc_map,"0xff4499";
 	stopnpctimer;
 	end;
 }
@@ -464,11 +464,11 @@ OnContinue:
 	end;
 
 OnTimer30300:
-	mapannounce instance_mapname("1@orcs"), "Please, hang in there!",bc_map,"0xff4499";
+	mapannounce instance_mapname("1@orcs"), "제발, 조금만 더 힘내세요!",bc_map,"0xff4499";
 	end;
 
 OnTimer32700:
-	mapannounce instance_mapname("1@orcs"), "We'll get some rest when we get to the 2nd basement after passing through here.",bc_map,"0xff4499";
+	mapannounce instance_mapname("1@orcs"), "여기를 지나 지하 2층에 도착하면 좀 쉴 수 있을 거예요.",bc_map,"0xff4499";
 	stopnpctimer;
 	end;
 }
@@ -544,13 +544,13 @@ OnMyMobDead:
 		else if ((.@mob_ran > 26) && (.@mob_ran < 29)) {
 			areamonster .@map$,157,112,167,122,"High Orc",1213,.@mob_dead_num,instance_npcname("#2Resurrect Monsters1")+"::OnMyMobDead";
 			if (rand(1,10) == 9) {
-				mapannounce .@map$, "Warning: High Orcs are gathering near area 3.",bc_map,"0xff4444";
+				mapannounce .@map$, "경고: 하이 오크들이 3번 지역 근처에 집결하고 있습니다.",bc_map,"0xff4444";
 			}
 		}
 		else {
 			areamonster .@map$,173,13,183,23,"High Orc",1213,.@mob_dead_num,instance_npcname("#2Resurrect Monsters1")+"::OnMyMobDead";
 			if (rand(1,5) == 3) {
-				mapannounce .@map$, "Caution: The Forces have started to concentrate at the Shaman's Altar.",bc_map,"0x77ff77";
+				mapannounce .@map$, "주의: 적들이 샤먼의 제단에 집결하기 시작했습니다.",bc_map,"0x77ff77";
 			}
 			if (rand(1,70) == 50) {
 				initnpctimer;
@@ -560,12 +560,12 @@ OnMyMobDead:
 	end;
 
 OnTimer10:
-	mapannounce instance_mapname("2@orcs"), "Voice from somewhere: Foolish... Do you really think the altar would fall like that?",bc_map,"0xff4444";
+	mapannounce instance_mapname("2@orcs"), "어디선가 들려오는 목소리: 어리석은 놈이군... 제단이 그렇게 쉽게 무너질 거라고 정말 생각하는 거냐?",bc_map,"0xff4444";
 	end;
 
 OnTimer4010:
 	set .@map$, instance_mapname("2@orcs");
-	mapannounce .@map$, "[ Wraiths were summoned by an unknown power ]",bc_map,"0x77ff77";
+	mapannounce .@map$, "[알 수 없는 힘에 의해 유령들이 소환되었다]",bc_map,"0x77ff77";
 	areamonster .@map$,167,25,177,35,"Wraith",1475,30,instance_npcname("#2Resurrect Monsters1")+"::OnMyMobDead";
 	stopnpctimer;
 	end;
@@ -596,7 +596,7 @@ OnMyMobDead:
 		if (.@mob_dead_num > 0) {
 			areamonster .@map$,168,10,184,26,"Orc Archer",1189,.@mob_dead_num,instance_npcname("#2Resurrect Monsters3")+"::OnMyMobDead";
 			if (rand(1,15) == 3) {
-				mapannounce .@map$, "Warning: Orc Archer teams are gathering near the altar.",bc_map,"0xff4444";
+				mapannounce .@map$, "경고: 오크 궁수 부대가 제단 근처에 집결하고 있습니다.",bc_map,"0xff4444";
 			}
 		}
 	}
@@ -648,27 +648,27 @@ OnEnable:
 	end;
 
 OnTimer10:
-	mapannounce instance_mapname("2@orcs"), "Kruger's Whisper: I'll tell you how to get to the Shaman's altar.",bc_map,"0xffff00";
+	mapannounce instance_mapname("2@orcs"), "크루거의 속삭임: 샤먼의 제단으로 가는 길을 알려주지.",bc_map,"0xffff00";
 	end;
 
 OnTimer3510:
-	mapannounce instance_mapname("2@orcs"), "Kruger's Whisper: Do you see the braziers that light the path? Unseal the next zone by strengthening their flames.",bc_map,"0xffff00";
+	mapannounce instance_mapname("2@orcs"), "크루거의 속삭임: 길을 밝히는 화로가 보이시나요? 화로의 불꽃을 강하게 하여 다음 구역의 봉인을 해제하세요.",bc_map,"0xffff00";
 	end;
 
 OnTimer10710:
-	mapannounce instance_mapname("2@orcs"), "Kruger's Whisper: Of course those monsters won't let you touch the braziers that easily.",bc_map,"0xffff00";
+	mapannounce instance_mapname("2@orcs"), "크루거의 속삭임: 물론 저 괴물들이 네가 화로에 그렇게 쉽게 손대도록 내버려 두진 않을 거야.",bc_map,"0xffff00";
 	end;
 
 OnTimer16310:
-	mapannounce instance_mapname("2@orcs"), "Kruger's Whisper: But still, try keep the battles not too noticable so the Shaman won't guard the altar with her army squad.",bc_map,"0xffff00";
+	mapannounce instance_mapname("2@orcs"), "크루거의 속삭임: 하지만 전투가 너무 눈에 띄지 않도록 조심해. 그래야 샤먼이 자기 군대를 이끌고 제단을 지키지 않을 테니까.",bc_map,"0xffff00";
 	end;
 
 OnTimer21910:
-	mapannounce instance_mapname("2@orcs"), "Kruger's Whisper: Only the Party Leader can strengthen the flames, so protect your leader.",bc_map,"0xffff00";
+	mapannounce instance_mapname("2@orcs"), "크루거의 속삭임: 오직 당 대표만이 불길을 더욱 거세게 할 수 있으니, 당신의 대표를 보호하십시오.",bc_map,"0xffff00";
 	end;
 
 OnTimer23910:
-	mapannounce instance_mapname("2@orcs"), "Mission: Unseal the zone by lighting the braziers. They can only be lit in a certain order, so be careful.",bc_map,"0x4444ff";
+	mapannounce instance_mapname("2@orcs"), "임무: 화로에 불을 붙여 봉인된 구역을 해제하세요. 화로는 정해진 순서대로만 불을 붙일 수 있으니 주의하세요.",bc_map,"0x4444ff";
 	donpcevent instance_npcname("#2Resurrect Monsters1")+"::OnEnable";
 	donpcevent instance_npcname("#2Resurrect Monsters3")+"::OnEnable";
 	donpcevent instance_npcname("Torch#1-1")+"::OnEnable";
@@ -718,7 +718,7 @@ OnInstanceInit:
 OnEnable:
 	set .@map$, instance_mapname("2@orcs");
 	monster .@map$,109,156,"Safeguard Chief",1981,1,instance_npcname("#Mobs Control")+"::OnMyMobDead1";
-	mapannounce .@map$, "The Chief Orc of Safeguards: Oh!! Looks like I have company. Defeat me if you can!!",bc_map,"0xff8888";
+	mapannounce .@map$, "수호대장 오크: 오!! 손님이 왔군. 할 수 있으면 날 쓰러뜨려 봐라!!",bc_map,"0xff8888";
 	end;
 
 OnContinue:
@@ -749,7 +749,7 @@ OnInstanceInit:
 OnEnable:
 	set .@map$, instance_mapname("2@orcs");
 	monster .@map$,67,64,"Orc Sniper",1982,1,instance_npcname("#Mobs Control")+"::OnMyMobDead2";
-	mapannounce .@map$, "Orc Sniper: Hah! Pretty impressive that you made it this far, but your foolish little trip ends here...",bc_map,"0xff8888";
+	mapannounce .@map$, "오크 저격수: 하! 여기까지 온 건 꽤 인상적이지만, 네 어리석은 여정은 여기서 끝이다...",bc_map,"0xff8888";
 	end;
 
 OnContinue:
@@ -780,7 +780,7 @@ OnInstanceInit:
 OnEnable:
 	set .@map$, instance_mapname("2@orcs");
 	monster .@map$,152,147,"Depraved Orc Spirit",1983,1,instance_npcname("#Mobs Control")+"::OnMyMobDead3";
-	mapannounce .@map$, "Depraved Orc Spirit: I smell flesh! Hungry! Wanna try some human meat!!",bc_map,"0xff8888";
+	mapannounce .@map$, "타락한 오크 정령: 살 냄새가 나! 배고파! 사람 고기 좀 먹어보고 싶어!!",bc_map,"0xff8888";
 	end;
 
 OnContinue:
@@ -791,19 +791,19 @@ OnContinue:
 	end;
 
 OnTimer10:
-	mapannounce instance_mapname("2@orcs"), "Shaman Cargalache: Hahaha!! So, you finally made it here. The assassin you sent was just terrible. That stupid Orc is getting cold under my feet.",bc_map,"0xffff00";
+	mapannounce instance_mapname("2@orcs"), "샤먼 카르갈라체: 하하하!! 드디어 여기까지 왔군. 네가 보낸 암살자는 정말 형편없었어. 그 멍청한 오크 놈은 내 발밑에서 얼어붙어가고 있어.",bc_map,"0xffff00";
 	end;
 
 OnTimer6810:
-	mapannounce instance_mapname("2@orcs"), "Shaman Cargalache: My loyal slave, go get those intruders!",bc_map,"0xffff00";
+	mapannounce instance_mapname("2@orcs"), "샤먼 카르갈라체: 나의 충실한 노예여, 가서 저 침입자들을 잡아라!",bc_map,"0xffff00";
 	end;
 
 OnTimer10310:
-	mapannounce instance_mapname("2@orcs"), "Depraved Orc Hero: Whatever you say, my lord.",bc_map,"0xff7777";
+	mapannounce instance_mapname("2@orcs"), "타락한 오크 영웅: 폐하께서 말씀하시든지, 알겠습니다.",bc_map,"0xff7777";
 	end;
 
 OnTimer13110:
-	mapannounce instance_mapname("2@orcs"), "Caution: You have been discovered by Shaman Cargalache. Kruger's plan to assassinate the Shaman has failed. You must defeat Cargalache and find traces of Kruger.",bc_map,"0x8888ff";
+	mapannounce instance_mapname("2@orcs"), "경고: 당신은 샤먼 카르갈라체에게 발각되었습니다. 크루거의 샤먼 암살 계획은 실패했습니다. 당신은 카르갈라체를 물리치고 크루거의 흔적을 찾아야 합니다.",bc_map,"0x8888ff";
 	stopnpctimer;
 	end;
 
@@ -831,19 +831,19 @@ OnMyMobDead:
 	set .@map$, instance_mapname("2@orcs");
 	set .@mob_ran,rand(1,5);
 	if (.@mob_ran == 1) {
-		mapannounce .@map$, "Shaman Cargalache: How... How could this be... How could someone like you...!!",bc_map,"0xffff00";
+		mapannounce .@map$, "샤먼 카르갈라체: 어떻게… 어떻게 이럴 수가 있지… 어떻게 당신 같은 사람이…!!",bc_map,"0xffff00";
 	}
 	else if (.@mob_ran == 2) {
-		mapannounce .@map$, "Shaman Cargalache: How is it that I've been overpowered by mere humans!",bc_map,"0xffff00";
+		mapannounce .@map$, "샤먼 카르갈라체: 어찌 된 일인가, 내가 하찮은 인간들에게 제압당하다니!",bc_map,"0xffff00";
 	}
 	else if (.@mob_ran == 3) {
-		mapannounce .@map$, "Shaman Cargalache: This... This can't be the end...",bc_map,"0xffff00";
+		mapannounce .@map$, "샤먼 카르갈라체: 이건... 이건 끝일 리 없어...",bc_map,"0xffff00";
 	}
 	else if (.@mob_ran == 4) {
-		mapannounce .@map$, "Shaman Cargalache: I... Can't die... Yet...!",bc_map,"0xffff00";
+		mapannounce .@map$, "샤먼 카르갈라체: 난… 아직… 죽을 수 없어…!",bc_map,"0xffff00";
 	}
 	else {
-		mapannounce .@map$, "Shaman Cargalache: Defeated by these fools... It can't be happening...!",bc_map,"0xffff00";
+		mapannounce .@map$, "샤먼 카르갈라체: 이 바보들에게 패배하다니... 말도 안 돼...!",bc_map,"0xffff00";
 	}
 	donpcevent instance_npcname("#2Resurrect Monsters1")+"::OnDisable";
 	donpcevent instance_npcname("#2Resurrect Monsters3")+"::OnDisable";
@@ -867,33 +867,33 @@ OnTouch_:
 
 2@orcs,172,13,0	script	Kruger#	434,{
 	if (yong_odun < 2) {
-		mes "[Kruger]";
-		mes "*Coughing*";
-		mes ""+strcharinfo(0)+", it's you...";
+		mes "[크루거]";
+		mes "*기침*";
+		mes ""+strcharinfo(0)+"바로 당신이군요...";
 		next;
 		mes "["+strcharinfo(0)+"] ";
-		mes "Don't move! You are wounded!";
+		mes "움직이지 마세요! 부상당하셨습니다!";
 		next;
-		mes "[Kruger]";
-		mes "It's... all right.. I'm dying...";
+		mes "[크루거]";
+		mes "괜찮아요... 전 죽어가고 있어요...";
 		mes "....";
-		mes "The Shaman? What about the Shaman?";
+		mes "샤먼이요? 샤먼은 어때요?";
 		next;
 		mes "["+strcharinfo(0)+"] ";
-		mes "The Shaman's dead now. Who was that Shaman really?";
+		mes "샤먼은 이제 죽었다. 그렇다면 그 샤먼은 도대체 누구였을까?";
 		next;
-		mes "Kruger seemed to be relieved as he hears of the death of the Shaman, but you notice the bitter expression on his face.";
+		mes "크루거는 샤먼의 죽음을 듣고 안도하는 듯했지만, 그의 얼굴에는 씁쓸한 표정이 역력했다.";
 		next;
-		mes "[Kruger]";
-		mes "I.. I just couldn't kill my own daughter...";
-		mes "Thank you, I'm sure she's finally free from the nightmare that used to choke her soul.";
+		mes "[크루거]";
+		mes "난… 난 내 딸을 죽일 수 없었어…";
+		mes "감사합니다. 그녀가 마침내 영혼을 짓누르던 악몽에서 벗어났을 거라고 확신해요.";
 		next;
-		mes "Kruger was about to say something more, but he breathed his last breath before he could...";
+		mes "크루거는 뭔가 더 말하려던 참이었지만, 말을 끝내기도 전에 숨을 거두고 말았다...";
 		set yong_odun,2;
 		close;
 	}
 	else {
-		mes "You can see the dead body of Kruger, peacefully lying on the ground.";
+		mes "크루거의 시신이 땅바닥에 평온하게 누워 있는 모습을 볼 수 있습니다.";
 		close;
 	}
 

@@ -25,81 +25,81 @@ prontera,160,155,4	script	Disguise Event	795,{
 
 	if (getgmlevel()>=.@GMLevel) {
 		mes .@n$;
-		mes "Select an option.";
+		mes "옵션을 선택하세요.";
 		next;
-		switch(select("Turn ON/OFF Event:Event Settings")) {
+		switch(select("이벤트 켜기/끄기:이벤트 설정")) {
 		case 1:
 			mes .@n$;
 			if (.EventON) {
-				mes "The Event is currently: [^0000FFON^000000]";
-				mes "Would you like to turn it OFF?";
+				mes "이벤트는 현재 [^0000FFON^000000] 상태입니다.";
+				mes "끄시겠습니까?";
 			} else {
-				mes "The Event is currently: [^FF0000OFF^000000]";
-				mes "Would you like to turn it ON?";
+				mes "이벤트는 현재 [^FF0000OFF^000000] 상태입니다.";
+				mes "켜시겠습니까?";
 			}
 			if(select("Yes:No")==2) close;
 			if (.EventON) {
 				set .EventON,0; set .Timer,0;
 				setnpctimer 0; stopnpctimer;
-				announce "A GM has decided to turn the Disguise Event off. As a result no further prizes will be given.",bc_map | bc_blue;
+				announce "운영진이 변장 이벤트를 종료하기로 결정했습니다. 따라서 더 이상 상품은 지급되지 않습니다.",bc_map | bc_blue;
 				deletepset 1;
 				setnpcdisplay "Disguise Event",795;
 				close;
 			}
 			set .EventON,1; set .Timer,1; setnpctimer 0; initnpctimer;
 			set .ResetCounter,.ResetCounter+1;
-			announce "The Disguise Event will begin in 3 minutes.",bc_all | bc_blue;
-			announce "The Event is being held in Prontera.",bc_all | bc_blue;
+			announce "변장 이벤트가 3분 후에 시작됩니다.",bc_all | bc_blue;
+			announce "이 행사는 프론테라에서 개최됩니다.",bc_all | bc_blue;
 			close;
 		case 2:
 			mes .@n$;
-			mes "Pick a setting to modify.";
+			mes "수정할 설정을 선택하세요.";
 			next;
-			switch(select("Monster Display:Number of Rounds:Prize Settings")) {
+			switch(select("몬스터 디스플레이:라운드 수:상금 설정")) {
 			case 1:
 				setarray .@r$[0],"Disguise as all monsters.","Disguise as MVPs only.";
 				mes .@n$;
-				mes "Choose a disguise rule.";
+				mes "변장 규칙을 선택하세요.";
 				next;
 				set .Rule, select(implode(.@r$,":"));
 				mes .@n$;
-				mes "The Disguise Rule has been set:";
-				mes "  > ^0055FF"+.@r$[.Rule-1]+"^000000";
+				mes "변장 규칙이 정해졌습니다:";
+				mes " > ^0055FF"+.@r$[.Rule-1]+"^000000";
 				close;
 			case 2:
 				mes .@n$;
-				mes "Input the number of rounds you want the event to last.";
-				mes "Current number: [^0000FF"+.Rounds+"^000000]";
+				mes "이벤트 진행에 필요한 라운드 수를 입력하세요.";
+				mes "현재 숫자: [^0000FF"+.Rounds+"^000000]";
 				next;
 				input .@Rounds;
 				set .Rounds,.@Rounds;
 				mes .@n$;
-				mes "The number of rounds has been changed to "+.Rounds+".";
+				mes " 라운드 수가 변경되었습니다."+.Rounds+".";
 				close;
 			case 3:
 				mes .@n$;
-				mes "Input the Item ID of the prize given each round.";
-				mes "Current item: [^0000FF"+getitemname(.Prize)+"^000000] (ID #"+.Prize+")";
+				mes "각 라운드에서 지급되는 상품의 아이템 ID를 입력하세요.";
+				mes "현재 항목: [^0000FF"+getitemname(.Prize)+"^000000] (ID #"+.Prize+")";
 				next;
 				input .@Prize;
 				mes .@n$;
 				if (getitemname(.@Prize)=="" || getitemname(.@Prize)=="null") {
-					mes "That item does not exist. Please try again.";
+					mes "해당 상품이 존재하지 않습니다. 다시 시도해 주세요.";
 					close;
 				}
 				set .Prize,.@Prize;
-				mes "Input the amount to be given.";
+				mes "기부할 금액을 입력하세요.";
 				next;
 				input .@amount;
 				mes .@n$;
 				if (.@amount<=0 || .@amount>=10000) {
-					mes "That amount is invalid. Using default amount of 1.";
+					mes "해당 금액은 유효하지 않습니다. 기본값인 1을 사용합니다.";
 					set .@amount,1;
 					next;
 					mes .@n$;
 				}
 				set .PrizeAmt,.@amount;
-				mes "The Prize has been changed successfully.";
+				mes "경품 변경이 성공적으로 완료되었습니다.";
 				mes "Prize: "+.PrizeAmt+"x [^0000FF"+getitemname(.Prize)+"^000000]";
 				close;
 			}
@@ -108,19 +108,19 @@ prontera,160,155,4	script	Disguise Event	795,{
 	if (.EventON) end;
 	mes .@n$;
 	mes "Welcome.";
-	mes "How may I be of assistance?";
-	if(select("Information:Nothing, just passing through.")==2) close;
+	mes "어떻게 도와드릴까요?";
+	if(select("Information:별일 아니에요, 그냥 지나가는 길이에요.")==2) close;
 	next;
 	mes .@n$;
-	mes "This event is quite simple.";
-	mes "At the start of the event, I will";
-	mes "disguise myself as a random";
-	mes "monster. You have to shout";
-	mes "that monster's name out loud.";
+	mes "이번 행사는 아주 간단합니다.";
+	mes "행사 시작 시, 저는";
+	mes "나는 아무나로 변장한다";
+	mes "괴물이야. 소리쳐야 해.";
+	mes "저 괴물의 이름을 큰 소리로 불러봐.";
 	next;
-	mes "If you are correct, you will receive";
-	mes "a prize. If not, keep trying!";
-	mes "That's all that there is to this event.";
+	mes "정답이라면, 다음을 받게 됩니다.";
+	mes "상품을 받을 수도 있습니다. 만약 그렇지 않다면, 계속 시도해 보세요!";
+	mes "이번 행사에 대한 설명은 이게 전부입니다.";
 	close;
 
 OnInit:
@@ -163,8 +163,8 @@ OnClock2200:
 	set .EventON,1;
 	set .Timer,1;
 	set .Wait,1;
-	announce "The Disguise Event will begin in 3 minutes.",bc_all | bc_blue;
-	announce "The Event is being held in Prontera.",bc_all | bc_blue;
+	announce "변장 이벤트가 3분 후에 시작됩니다.",bc_all | bc_blue;
+	announce "이 행사는 프론테라에서 개최됩니다.",bc_all | bc_blue;
 	setnpctimer 0;
 	initnpctimer;
 	end;
@@ -177,7 +177,7 @@ OnTimer30000:
 	if (.Timer) end;
 	set .Change,0;
 	setnpcdisplay "Disguise Event",795;
-	npctalk "Disguise Event : You took too long to guess what I was. Please wait 10 seconds while I disguise again.";
+	npctalk "변장 이벤트: 제가 누구인지 맞추는 데 너무 오래 걸렸습니다. 다시 변장하는 동안 10초만 기다려 주세요.";
 	specialeffect EF_DETECT2;
 	set $MonsterName$,"";
 	deletepset 1;
@@ -187,18 +187,18 @@ OnTimer30000:
 	end;
 OnTimer60000:
 	if (.Timer!=1) end;
-	announce "The Disguise Event will begin in 2 minutes.",bc_all | bc_blue;
-	announce "The Event is being held in Prontera.",bc_all | bc_blue;
+	announce "변장 이벤트가 2분 후에 시작됩니다.",bc_all | bc_blue;
+	announce "이 행사는 프론테라에서 개최됩니다.",bc_all | bc_blue;
 	end;
 OnTimer120000:
 	if (.Timer!=1) end;
-	announce "The Disguise Event will begin 1 minute.",bc_all | bc_blue;
-	announce "The Event is being held in Prontera.",bc_all | bc_blue;
+	announce "변장 이벤트가 1분 후에 시작됩니다.",bc_all | bc_blue;
+	announce "이 행사는 프론테라에서 개최됩니다.",bc_all | bc_blue;
 	end;
 OnTimer180000:
 	if (.Timer!=1) end;
-	announce "The Disguise Event has begun!",bc_all | bc_blue;
-	announce "The Event is being held in Prontera.",bc_all | bc_blue;
+	announce "변장 이벤트가 시작되었습니다!",bc_all | bc_blue;
+	announce "이 행사는 프론테라에서 개최됩니다.",bc_all | bc_blue;
 	set .Timer,0; stopnpctimer;
 	setnpctimer 0; initnpctimer;
 iDisguise:
@@ -225,7 +225,7 @@ iDisguise:
 	end;
 iCorrect:
 	if (.Winner) {
-		dispbottom "Someone has already won this round.";
+		dispbottom "이번 라운드는 이미 누군가가 승리했습니다.";
 		end;
 	}
 	set .Winner,1;
@@ -233,12 +233,12 @@ iCorrect:
 	deletepset 1;
 	activatepset 1;
 	getitem .Prize,.PrizeAmt;
-	announce strcharinfo(0)+" is correct! I was disguised as: "+$MonsterName$+"",bc_map | bc_blue;
+	announce strcharinfo(0)+" 맞습니다! 저는 다음과 같이 변장했습니다:"+$MonsterName$+"",bc_map | bc_blue;
 	if (.RoundCount>=.Rounds) {
 		setnpcdisplay "Disguise Event",795;
 		set .RoundCount,0; set .Change,0; set .EventON,0;
 		setnpctimer 0; stopnpctimer;
-		npctalk "Disguise Event : Thank you all for playing. That was the last round of the Disguise Event. Come play again later.";
+		npctalk "변장 이벤트: 참여해주신 모든 분들께 감사드립니다. 이것으로 변장 이벤트가 종료되었습니다. 다음에 또 참여해주세요.";
 		end;
 	}
 	setnpcdisplay "Disguise Event",795;

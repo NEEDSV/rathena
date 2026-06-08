@@ -23,36 +23,48 @@ OnInit:
 end;
 
 L_Help:
-	dispbottom "Available commands:";
+	dispbottom "사용 가능한 명령어:";
 	if(.HP_Option && .SP_Option){
-		dispbottom "    @autopot <hp|sp> <item id> {<min hp|sp % [1..100]> {<delay [" + .MinDelay + ".."+.MaxDelay+"]>}}";
-		dispbottom "    @autopot <hp|sp> list";
-		dispbottom "    @autopot <hp|sp> <on|off>";
+		dispbottom " @autopot <hp|sp> <item id> {<min hp|sp % [1..100]> {<지연 [" + .MinDelay + ".."+.MaxDelay+"]>}}";
+		dispbottom " @autopot <hp|sp> 목록";
+		dispbottom " @autopot <hp|sp> <켜짐|꺼짐>";
 	}else{
-		dispbottom "    @autopot <" + (.HP_Option?"hp":"sp") + "> <item id> {<min " + (.HP_Option?"hp":"sp") + " % [1..100]> {<delay [" + .MinDelay + ".."+.MaxDelay+"]>}}";
-		dispbottom "    @autopot <" + (.HP_Option?"hp":"sp") + "> list";
-		dispbottom "    @autopot <" + (.HP_Option?"hp":"sp") + "> <on|off>";
+		dispbottom " @autopot <" + (.HP_Option?"hp":"sp") + " > <item id> {<min" + (.HP_Option?"hp":"sp") + " % [1..100]> {<지연 [" + .MinDelay + ".."+.MaxDelay+"]>}}";
+		dispbottom " @autopot <" + (.HP_Option?"hp":"sp") + "> 목록";
+		dispbottom " @autopot <" + (.HP_Option?"hp":"sp") + "> <켜짐|꺼짐>";
 	}
-	dispbottom "    @autopot info";
-	dispbottom "    @autopot help";
-	dispbottom "    @autopot blacklist";
+	dispbottom " @autopot 정보";
+	dispbottom " @autopot 도움말";
+	dispbottom " @autopot 블랙리스트";
 	return;
 
 L_Info:
-	dispbottom "----------Auto-Potion Information-----------";
+	dispbottom "----------자동 물약 정보-----------";
 	if(.HP_Option){
-		dispbottom "HP POTION:  " + getitemname(@autopot_hp_ID) + " (" + @autopot_hp_ID + ")";
-		dispbottom "MIN HP:   " + @autopot_hp_Min + " %";
+		dispbottom " HP 물약:" + getitemname(@autopot_hp_ID) + " (" + @autopot_hp_ID + ")";
+		dispbottom " 최소 마력:" + @autopot_hp_Min + " %";
 	}
 	if(.SP_Option){
-		dispbottom "SP POTION:  " + getitemname(@autopot_sp_ID) + " (" + @autopot_sp_ID + ")";
-		dispbottom "MIN SP:   " + @autopot_sp_Min + " %";
+		dispbottom " SP 포션:" + getitemname(@autopot_sp_ID) + " (" + @autopot_sp_ID + ")";
+		dispbottom " 최소 SP:" + @autopot_sp_Min + " %";
 	}
 	dispbottom "DELAY:    " + @autopot_delay + " ms";
 	dispbottom "---------------------------------------------";
 	return;
 
 L_Start:
+	.@map$ = strcharinfo(3);
+
+	if (
+		getmapflag(.@map$, mf_gvg) ||
+		getmapflag(.@map$, mf_gvg_castle) ||
+		getmapflag(.@map$, mf_battleground) ||
+		getmapflag(.@map$, mf_pvp)
+	) {
+		message strcharinfo(0), "Auto-Potion은 사냥터에서만 사용할 수 있습니다.";
+		end;
+	}
+	
 	deltimer strnpcinfo(3) + "::OnStart";
 	.@type$  = getarg(0,0);
 	.@potion = getarg(1,0);
@@ -63,15 +75,15 @@ L_Start:
 	if (@autopot_delay < .MinDelay) @autopot_delay = .MinDelay;
 	if (@autopot_delay > .MaxDelay) @autopot_delay = .MaxDelay;
 	if (getiteminfo(.@potion, ITEMINFO_TYPE) != IT_HEALING) {
-		dispbottom getitemname(.@potion) + " is not a healing item.";
+		dispbottom getitemname(.@potion) + " 이것은 회복 아이템이 아닙니다.";
 		end;
 	}
 	if(inarray(.blackList[0],.@potion) != -1){
-		message strcharinfo(0), "'" + getitemname(.@potion) + "' is black listed and cannot be used.";
+		message strcharinfo(0), "'" + getitemname(.@potion) + "'는 블랙리스트에 올라 있어 사용할 수 없습니다.";
 		end;
 	}
 	if (BaseLevel < getiteminfo(.@potion, ITEMINFO_EQUIPLEVELMIN)) {
-		message strcharinfo(0), "Your base level is too low to use '" + getitemname(.@potion) + "'.";
+		message strcharinfo(0), "기본 레벨이 너무 낮아서 '를 사용할 수 없습니다." + getitemname(.@potion) + "'.";
 		end;
 	}
 	setd "@autopot_" + .@type$ + "_ID",.@potion;
@@ -83,7 +95,7 @@ L_Start:
 
 OnCommand:
 	if (!getarraysize(.@atcmd_parameters$)) {
-		message strcharinfo(0), "Invalid syntax.";
+		message strcharinfo(0), "잘못된 구문입니다.";
 		callsub L_Help;
 		end;
 	}
@@ -92,16 +104,16 @@ OnCommand:
 	
 	if(.@command$[0] == "hp" || .@command$[0] == "sp"){
 		if((!.HP_Option && .@command$[0] == "hp") || (!.SP_Option && .@command$[0] == "sp")){
-			message strcharinfo(0), "Auto-Potion " + strtoupper(.@command$[0]) + " is Disabled from The Server.";
+			message strcharinfo(0), "Auto-Potion " + strtoupper(.@command$[0]) + " 서버에서 비활성화되어 있습니다.";
 			end;
 		}
 		if(.@command$[1] == "on"){
 			if(getd("@autopot_" + .@command$[0] + "_Active")){
-				message strcharinfo(0), "Auto-Potion " + strtoupper(.@command$[0]) + " is already on.";
+				message strcharinfo(0), "Auto-Potion " + strtoupper(.@command$[0]) + " 이미 켜져 있습니다.";
 				end;
 			}
 			if(!getd("@autopot_" + .@command$[0] + "_ID")){
-				dispbottom "You need to set a " + strtoupper(.@command$[0]) + " Potion to be used.";
+				dispbottom " 설정해야 합니다" + strtoupper(.@command$[0]) + " 사용할 물약.";
 				callsub L_Help;
 				end;
 			}
@@ -125,14 +137,14 @@ OnCommand:
 				}
 			}
 			if(.@count){
-				mes "[ Auto-Potion ]";
-				mes "Select a " + strtoupper(.@command$[0]) + " item.";
+				mes "[자동 물약]";
+				mes " 선택하세요" + strtoupper(.@command$[0]) + " item.";
 				.@select = select(.@menu$ + "   ^777777Cancel^000000") - 1;
 				if (.@select != .@count)
 					callsub L_Start,.@command$[0],.@items[.@select];
 				close2;
 			}else{
-				message strcharinfo(0), "There are no healing items in your inventory.";
+				message strcharinfo(0), "인벤토리에 회복 아이템이 없습니다.";
 			}
 			end;
 		}
@@ -143,12 +155,12 @@ OnCommand:
 			callsub L_Start,.@command$[0],.@potion,.@percent,.@delay;
 			end;
 		}
-		message strcharinfo(0), "Auto-Potion : something went wrong!";
+		message strcharinfo(0), "자동 물약: 문제가 발생했습니다!";
 		callsub L_Help;
 		end;
 	}
 	if(.@command$[0] == "blacklist"){
-		dispbottom "--------------Black Listed Items--------------";
+		dispbottom "--------------블랙리스트 품목--------------";
 		for(.@i=0;.@i<getarraysize(.blackList);.@i++){
 			dispbottom "    " + getitemname(.blackList[.@i]) + " (" + .blackList[.@i] + ")";
 		}
@@ -157,24 +169,40 @@ OnCommand:
 	}
 	if(.@command$[0] == "info"){
 		if(@autopot_hp_Active || @autopot_sp_Active){
-			message strcharinfo(0), "Auto-Potion information is displayed below.";
+			message strcharinfo(0), "자동 물약 정보가 아래에 표시됩니다.";
 			callsub L_Info;
 		}else{
-			message strcharinfo(0), "Auto-Potion is not enabled.";
+			message strcharinfo(0), "자동 물약 생성 기능이 활성화되어 있지 않습니다.";
 		}
 		end;
 	}
 	if(.@command$[0] == "help"){
-		message strcharinfo(0), "List of commands is displayed below.";
+		message strcharinfo(0), "명령어 목록은 아래에 표시됩니다.";
 		callsub L_Help;
 		end;
 	}
 	
-	message strcharinfo(0), "Invalid syntax.";
+	message strcharinfo(0), "잘못된 구문입니다.";
 	callsub L_Help;
 end;
 
 OnStart:
+	.@map$ = strcharinfo(3);
+
+	if (
+		getmapflag(.@map$, mf_gvg) ||
+		getmapflag(.@map$, mf_gvg_castle) ||
+		getmapflag(.@map$, mf_battleground) ||
+		getmapflag(.@map$, mf_pvp)
+	) {
+		if (@autopot_hp_Active || @autopot_sp_Active) {
+			message strcharinfo(0), "Auto-Potion은 사냥터에서만 사용할 수 있습니다.";
+			set @autopot_hp_Active, false;
+			set @autopot_sp_Active, false;
+		}
+		end;
+	}
+	
 	if (!getstatus(SC_BERSERK) && !getstatus(SC_SATURDAYNIGHTFEVER) && !getstatus(SC_GRAVITATION) &&
 	    !getstatus(SC_TRICKDEAD) && !getstatus(SC_HIDING) && !getstatus(SC__SHADOWFORM) && !getstatus(SC__INVISIBILITY) &&
 	    !getstatus(SC__MANHOLE) && !getstatus(SC_KAGEHUMI) && !getstatus(SC_HEAT_BARREL_AFTER) &&

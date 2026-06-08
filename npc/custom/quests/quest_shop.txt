@@ -120,10 +120,10 @@ OnMenu:
 	}
 	deletearray @i[0],getarraysize(@i);
 	if (.Shops$[@shop_index] == "") {
-		message strcharinfo(0),"An error has occurred.";
+		message strcharinfo(0),"오류가 발생했습니다.";
 		end;
 	}
-	dispbottom "Select one item at a time.";
+	dispbottom "한 번에 한 항목씩 선택하세요.";
 	callshop "qshop"+@shop_index,1;
 	npcshopattach "qshop"+@shop_index;
 	end;
@@ -134,11 +134,11 @@ OnBuyItem:
 	copyarray .@q[3],getd(".q_"+@shop_index+"_"+.@q[0]+"[0]"),getarraysize(getd(".q_"+@shop_index+"_"+.@q[0]));
 	set .@q[2],.@q[1]*.@q[3];
 	if (!.@q[2] || .@q[2] > 30000) {
-		message strcharinfo(0),"You can't purchase that many "+getitemname(.@q[0])+".";
+		message strcharinfo(0)," 그렇게 많은 양은 구매할 수 없습니다."+getitemname(.@q[0])+".";
 		end;
 	}
-	mes "[Quest Shop]";
-	mes "Reward: ^0055FF"+((.@q[2] > 1)?.@q[2]+"x ":"")+Slot(.@q[0])+"^000000";
+	mes "[퀘스트 상점]";
+	mes "보상: ^0055FF"+((.@q[2] > 1)?.@q[2]+"x ":"")+Slot(.@q[0])+"^000000";
 	mes "Requirements:";
 	disable_items;
 	if (.@q[4]) mes " > "+Chk(Zeny,.@q[4]*.@q[1])+(.@q[4]*.@q[1])+" Zeny^000000";
@@ -154,13 +154,13 @@ OnBuyItem:
 		switch(select(" ~ Purchase ^0055FF"+getitemname(.@q[0])+"^000000:"+((.@preview && !@qe[7])?" ~ Preview...":"")+": ~ ^777777Cancel^000000")) {
 		case 1:
 			if (@qe[0]) {
-				mes "[Quest Shop]";
-				mes "You're missing one or more quest requirements.";
+				mes "[퀘스트 상점]";
+				mes "퀘스트 요구 사항 중 하나 이상이 충족되지 않았습니다.";
 				close;
 			}
 			if (!checkweight(.@q[0],.@q[2])) {
-				mes "[Quest Shop]";
-				mes "^FF0000You need "+(((.@q[2]*getiteminfo(.@q[0], ITEMINFO_WEIGHT))+Weight-MaxWeight)/10)+" additional weight capacity to complete this trade.^000000";
+				mes "[퀘스트 상점]";
+				mes " ^FF0000필요합니다"+(((.@q[2]*getiteminfo(.@q[0], ITEMINFO_WEIGHT))+Weight-MaxWeight)/10)+" 이 거래를 완료하기 위한 추가 중량 용량.^000000";
 				close;
 			}
 			if (.@q[4]) set Zeny, Zeny-(.@q[4]*.@q[1]);
