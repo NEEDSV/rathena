@@ -3,16 +3,38 @@
 
 #include "costume_collection_db.hpp"
 
+#include <algorithm>
 #include <cstdlib>
+#include <vector>
 
 #include <common/showmsg.hpp>
 #include <common/sql.hpp>
 
 #include "costume_collection.hpp"
+#include "itemdb.hpp"
 #include "map.hpp"
 #include "pc.hpp"
 
 static const char* NEED_COSTUME_COLLECTION_TABLE = "need_costume_collection";
+
+static bool costume_collection_is_valid_part(uint32 part)
+{
+	return part == 0 ||
+		part == EQP_COSTUME_HEAD_TOP ||
+		part == EQP_COSTUME_HEAD_MID ||
+		part == EQP_COSTUME_HEAD_LOW ||
+		part == EQP_COSTUME_GARMENT;
+}
+
+static bool costume_collection_item_matches_part(t_itemid item_id, uint32 part)
+{
+	if (part == 0)
+		return true;
+
+	std::shared_ptr<item_data> item = item_db.find(item_id);
+
+	return item != nullptr && (item->equip & part) != 0;
+}
 
 bool costume_collection_db_load(map_session_data* sd)
 {
@@ -132,4 +154,58 @@ uint32 costume_collection_get_register_count(map_session_data* sd)
 		return 0;
 
 	return static_cast<uint32>(sd->costume_collection.registered_collections.size());
+}
+
+uint32 costume_collection_get_registered_collection_list(map_session_data* sd, uint32 part, uint32* values, uint32 max)
+{
+	if (sd == nullptr || values == nullptr || max == 0 || !costume_collection_is_valid_part(part))
+		return 0;
+
+	std::vector<uint32> collections;
+
+	collections.reserve(sd->costume_collection.registered_collections.size());
+
+	for (const uint32 collection_id : sd->costume_collection.registered_collections) {
+		const s_costume_collection* costume = costume_collection_search_collectionid(collection_id);
+
+		if (costume == nullptr || !costume_collection_item_matches_part(costume->item_id, part))
+			continue;
+
+		collections.push_back(collection_id);
+	}
+
+	std::sort(collections.begin(), collections.end());
+
+	const uint32 count = static_cast<uint32>(std::min<size_t>(collections.size(), max));
+
+	for (uint32 i = 0; i < count; ++i)
+		values[i] = collections[i];
+
+	return count;
+}
+
+uint32 costume_collection_get_registered_item_list(map_session_data* sd, uint32 part, t_itemid* values, uint32 max)
+{
+	if (sd == nullptr || values == nullptr || max == 0 || !costume_collection_is_valid_part(part))
+		return 0;
+
+	std::vector<t_itemid> items;
+
+	items.reserve(sd->costume_collection.registered_items.size());
+
+	for (const t_itemid item_id : sd->costume_collection.registered_items) {
+		if (!costume_collection_item_matches_part(item_id, part))
+			continue;
+
+		items.push_back(item_id);
+	}
+
+	std::sort(items.begin(), items.end());
+
+	const uint32 count = static_cast<uint32>(std::min<size_t>(items.size(), max));
+
+	for (uint32 i = 0; i < count; ++i)
+		values[i] = items[i];
+
+	return count;
 }

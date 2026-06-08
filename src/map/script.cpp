@@ -13,6 +13,7 @@
 #include <cmath>
 #include <csetjmp>
 #include <cstdlib> // atoi, strtol, strtoll, exit
+#include <vector>
 
 #ifdef PCRE_SUPPORT
 #include <pcre.h> // preg_match
@@ -14858,6 +14859,68 @@ BUILDIN_FUNC(getcostumeactivecount)
 }
 
 /*==========================================
+ * Returns registered costume list for the attached account.
+ *------------------------------------------*/
+BUILDIN_FUNC(getregisteredcostumelist)
+{
+	map_session_data* sd;
+	const int64 mode = script_hasdata(st, 2) ? script_getnum64(st, 2) : 0;
+	const int64 part = script_hasdata(st, 3) ? script_getnum64(st, 3) : 0;
+
+	if (!script_rid2sd(sd)) {
+		script_pushint(st, 0);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	script_cleararray_pc(sd, "@costume_collection_ids");
+	script_cleararray_pc(sd, "@costume_item_ids");
+
+	if (part < 0 || part > UINT32_MAX) {
+		script_pushint(st, 0);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	if (mode == 0) {
+		const uint32 registered_count = costume_collection_get_register_count(sd);
+
+		if (registered_count == 0) {
+			script_pushint(st, 0);
+			return SCRIPT_CMD_SUCCESS;
+		}
+
+		std::vector<uint32> values(registered_count);
+		const uint32 count = costume_collection_get_registered_collection_list(sd, static_cast<uint32>(part), values.data(), registered_count);
+
+		for (uint32 i = 0; i < count; ++i)
+			script_setarray_pc(sd, "@costume_collection_ids", i, values[i], nullptr);
+
+		script_pushint(st, count);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	if (mode == 1) {
+		const uint32 registered_count = costume_collection_get_register_count(sd);
+
+		if (registered_count == 0) {
+			script_pushint(st, 0);
+			return SCRIPT_CMD_SUCCESS;
+		}
+
+		std::vector<t_itemid> values(registered_count);
+		const uint32 count = costume_collection_get_registered_item_list(sd, static_cast<uint32>(part), values.data(), registered_count);
+
+		for (uint32 i = 0; i < count; ++i)
+			script_setarray_pc(sd, "@costume_item_ids", i, values[i], nullptr);
+
+		script_pushint(st, count);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	script_pushint(st, 0);
+	return SCRIPT_CMD_SUCCESS;
+}
+
+/*==========================================
  * Returns whether the attached account has a costume collection entry.
  *------------------------------------------*/
 BUILDIN_FUNC(iscostumeregistered)
@@ -28328,6 +28391,7 @@ struct script_function buildin_func[] = {
 	BUILDIN_DEF(getcostumelastcollectionid,""),
 	BUILDIN_DEF(getcostumeregistercount,""),
 	BUILDIN_DEF(getcostumeactivecount,""),
+	BUILDIN_DEF(getregisteredcostumelist,"??"),
 	BUILDIN_DEF(iscostumeregistered,"i"),
 	BUILDIN_DEF(registercostume,"i"),
 	BUILDIN_DEF(makepet,"i"),

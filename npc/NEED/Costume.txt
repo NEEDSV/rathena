@@ -12,8 +12,11 @@ OnInit:
 	set .CostumeCoinID, 909;		// TODO: 의상 코인 아이템 ID
 	set .ExchangeCost, 300;
 	set .PageSize, 20;
-	set .ClosetDefaultSlot, 20;
-	set .ClosetExpandZeny, 10000000;
+	set .ClosetDefaultSlot, 4;
+	set .ClosetMaxSlot, 40;
+	set .ClosetExpandBaseZeny, 1000000;
+	set .ClosetRegisterZeny, 1000000;
+	set .ClosetExpandTierSlot, 4;
 	set .AccountClosetUnlockZeny, 100000000;
 	set .ClosetBoundType, 4;
 	end;
@@ -152,6 +155,7 @@ L_RegisterPage:
 	set .@max_page, (.@count - 1) / .PageSize;
 	set .@start, .@page * .PageSize;
 	set .@end, .@start + .PageSize;
+
 	if (.@end > .@count)
 		set .@end, .@count;
 
@@ -159,6 +163,7 @@ L_RegisterPage:
 	mes "페이지: " + (.@page + 1) + " / " + (.@max_page + 1);
 	mes "등록 여부와 관계없이 의상 1개를 코인화할 수 있습니다.";
 	mes " ";
+
 	set .@menu$, "";
 
 	for (set .@i, .@start; .@i < .@end; set .@i, .@i + 1) {
@@ -167,11 +172,11 @@ L_RegisterPage:
 		set .@name$, getitemname(.@item_id);
 
 		if (iscostumeregistered(.@cid))
-			set .@menu$, .@menu$ + "[" + .@cid + "] " + .@name$ + " (등록됨):";
+			mes (.@i - .@start + 1) + ". [" + .@cid + "] " + .@name$ + " ^777777(등록됨)^000000";
 		else
-			set .@menu$, .@menu$ + "[" + .@cid + "] " + .@name$ + ":";
+			mes (.@i - .@start + 1) + ". [" + .@cid + "] " + .@name$;
 
-		mes (.@i + 1) + ". [" + .@cid + "] " + .@name$;
+		set .@menu$, .@menu$ + (.@i - .@start + 1) + "번 선택:";
 	}
 
 	set .@menu$, .@menu$ + "다음 페이지:이전 페이지:취소";
@@ -194,7 +199,7 @@ L_RegisterPage:
 		next;
 
 		if (select("진행한다:취소") == 2)
-			goto L_Main;
+			goto L_CollectionMenu;
 
 		if (countitem(.@item_id) <= 0) {
 			mes "[의상 등록]";
@@ -209,6 +214,7 @@ L_RegisterPage:
 			getitem .CostumeCoinID, 1;
 
 			mes "[의상 등록 / 코인화]";
+
 			if (.@ret == 1)
 				mes "의상 도감에 새로 등록되었습니다.";
 			else
@@ -217,16 +223,18 @@ L_RegisterPage:
 			mes "의상 아이템 1개를 코인으로 전환했습니다.";
 			mes "의상 코인 1개를 획득했습니다.";
 			next;
+
 			mes "[의상 옷장]";
 			mes "이 의상을 옷장에 넣으시겠습니까?";
 			mes "옷장 의상은 캐릭터 귀속 아이템으로 지급됩니다.";
 			next;
-			if (select("옷장에 넣는다:그냥 코인만 받는다") == 1) {
+
+			if (select("옷장에 넣는다:그냥 코인만 받는다") == 1)
 				goto L_PutCloset;
-			}
+
 			close;
 		}
-		
+
 		if (.@ret == -1) {
 			mes "[의상 등록]";
 			mes "DB 오류가 발생했습니다.";
@@ -250,7 +258,7 @@ L_RegisterPage:
 		goto L_RegisterPage;
 	}
 
-	goto L_Main;
+	goto L_CollectionMenu;
 
 L_ViewBook:
 	set .@last, getcostumelastcollectionid();
@@ -264,21 +272,99 @@ L_ViewBook:
 	set .@page, 0;
 	set .@max_page, (.@last - 1) / .PageSize;
 	goto L_ViewBookPage;
+	
+L_ClosetWear:
+	deletearray .@slot_list[0], getarraysize(.@slot_list);
+	deletearray .@cid_list[0], getarraysize(.@cid_list);
+
+	set .@slot_count, callsub(L_ClosetGetSlotCount);
+	set .@count, 0;
+
+	for (set .@slot_idx, 0; .@slot_idx < .@slot_count; set .@slot_idx, .@slot_idx + 1) {
+		set .@slot_cid, callsub(L_ClosetGetSlotValue, .@slot_idx);
+
+		if (.@slot_cid <= 0)
+			continue;
+
+		set .@item_id, getcostumeitemid(.@slot_cid);
+
+		if (.@item_id <= 0)
+			continue;
+
+		set .@item_part, callsub(L_ClosetPartCheck, .@item_id);
+
+		if (.@item_part != .@closet_part)
+			continue;
+
+		set .@slot_list[.@count], .@slot_idx;
+		set .@cid_list[.@count], .@slot_cid;
+		set .@count, .@count + 1;
+	}
+
+	if (.@count <= 0) {
+		mes "[옷장 입기]";
+		mes "착용할 수 있는 옷장 의상이 없습니다.";
+		close;
+	}
+
+	mes "[옷장 입기 - " + .@closet_part_name$ + "]";
+	mes "입을 의상을 선택해주세요.";
+	mes " ";
+
+	set .@i, 0;
+	while (.@i < .@count) {
+		set .@cid, .@cid_list[.@i];
+		mes (.@i + 1) + ". [" + .@cid + "] " + getcostumename(.@cid);
+		set .@i, .@i + 1;
+	}
+
+	next;
+
+	mes "[옷장 입기 - " + .@closet_part_name$ + "]";
+	mes "입을 번호를 입력해주세요.";
+	mes "1 ~ " + .@count + "번까지 입력 가능합니다.";
+	next;
+
+	input .@input_no;
+
+	if (.@input_no < 1 || .@input_no > .@count) {
+		mes "[옷장 입기]";
+		mes "잘못된 번호입니다.";
+		close;
+	}
+
+	set .@idx, .@input_no - 1;
+	set .@cid, .@cid_list[.@idx];
+	set .@item_id, getcostumeitemid(.@cid);
+
+	if (.@item_id <= 0) {
+		mes "[옷장 입기]";
+		mes "아이템 정보를 찾을 수 없습니다.";
+		close;
+	}
+
+	goto L_PutCloset;
 		
 L_PutCloset:
+	if (countitem(.@item_id) > 0) {
+		mes "[의상 옷장]";
+		mes "동일한 의상을 이미 보유 중입니다.";
+		mes "인벤토리 또는 장비창의 동일 의상을 정리한 후 다시 시도해주세요.";
+		close;
+	}
 	set .@loc, getiteminfo(.@item_id, ITEMINFO_LOCATIONS);
 
 	if (.@loc & EQP_COSTUME_HEAD_TOP) {
-		set .@part, 1;
+		set .@part, EQP_COSTUME_HEAD_TOP;
 		set .@old_cid, COSTUME_RENT_TOP;
 	} else if (.@loc & EQP_COSTUME_HEAD_MID) {
-		set .@part, 2;
+		set .@part, EQP_COSTUME_HEAD_MID;
 		set .@old_cid, COSTUME_RENT_MID;
 	} else if (.@loc & EQP_COSTUME_HEAD_LOW) {
-		set .@part, 3;
+		set .@part, EQP_COSTUME_HEAD_LOW;
 		set .@old_cid, COSTUME_RENT_LOW;
 	} else if (.@loc & EQP_COSTUME_GARMENT) {
-		set .@part, 4;
+		set .@part, EQP_COSTUME_GARMENT;
 		set .@old_cid, COSTUME_RENT_GARMENT;
 	} else {
 		mes "[의상 옷장]";
@@ -306,17 +392,17 @@ L_PutCloset:
 		}
 	}
 
-	getitembound .@item_id, 1, Bound_Char;
+	getitembound .@item_id, 1, .ClosetBoundType;
 
-	if (.@part == 1)
+	if (.@part == EQP_COSTUME_HEAD_TOP)
 		set COSTUME_RENT_TOP, .@cid;
-	else if (.@part == 2)
+	else if (.@part == EQP_COSTUME_HEAD_MID)
 		set COSTUME_RENT_MID, .@cid;
-	else if (.@part == 3)
+	else if (.@part == EQP_COSTUME_HEAD_LOW)
 		set COSTUME_RENT_LOW, .@cid;
-	else if (.@part == 4)
+	else if (.@part == EQP_COSTUME_GARMENT)
 		set COSTUME_RENT_GARMENT, .@cid;
-
+		
 	mes "[의상 옷장]";
 	mes "옷장 의상이 지급되었습니다.";
 	mes "지급된 의상을 직접 착용해주세요.";
@@ -473,7 +559,7 @@ L_Closet:
 	mes "[의상 옷장]";
 	mes "도감에 등록한 의상을 캐릭터 귀속 의상으로 다시 받을 수 있습니다.";
 	mes " ";
-	mes "^0055FF현재 옷장 착용 상태^000000";
+	mes "^0055FF현재 옷 착용 상태^000000";
 	mes "상단 : " + (COSTUME_RENT_TOP ? getcostumename(COSTUME_RENT_TOP) : "없음");
 	mes "중단 : " + (COSTUME_RENT_MID ? getcostumename(COSTUME_RENT_MID) : "없음");
 	mes "하단 : " + (COSTUME_RENT_LOW ? getcostumename(COSTUME_RENT_LOW) : "없음");
@@ -490,17 +576,21 @@ L_Closet:
 		"종료"
 	)) {
 	case 1:
-		set .@closet_part, 1;
-		goto L_ClosetSelect;
+		set .@closet_part, EQP_COSTUME_HEAD_TOP;
+		set .@closet_part_name$, "상단";
+		goto L_ClosetPartMenu;
 	case 2:
-		set .@closet_part, 2;
-		goto L_ClosetSelect;
+		set .@closet_part, EQP_COSTUME_HEAD_MID;
+		set .@closet_part_name$, "중단";
+		goto L_ClosetPartMenu;
 	case 3:
-		set .@closet_part, 3;
-		goto L_ClosetSelect;
+		set .@closet_part, EQP_COSTUME_HEAD_LOW;
+		set .@closet_part_name$, "하단";
+		goto L_ClosetPartMenu;
 	case 4:
-		set .@closet_part, 4;
-		goto L_ClosetSelect;
+		set .@closet_part, EQP_COSTUME_GARMENT;
+		set .@closet_part_name$, "걸칠것";
+		goto L_ClosetPartMenu;
 	case 5:
 		goto L_ClosetExpand;
 	case 6:
@@ -509,15 +599,411 @@ L_Closet:
 		goto L_Main;
 	}
 	
-L_ClosetSelect:
-	mes "[의상 옷장]";
-	mes "등록된 도감 의상을 부위별로 다시 지급받는 기능은 다음 단계에서 구현합니다.";
-	mes "현재는 의상 등록 직후 옷장 지급만 지원합니다.";
+L_ClosetPartMenu:
+	mes "[의상 옷장 - " + .@closet_part_name$ + "]";
+	mes "옷장에 등록할 의상을 관리합니다.";
+	set .@slot_count, callsub(L_ClosetGetSlotCount);
+	set .@used_total, callsub(L_ClosetGetUsedCount);
+	mes "전체 옷장 슬롯: " + .@used_total + " / " + .@slot_count;
+	next;
+
+	switch(select(
+		"옷 입기",
+		"옷장 등록",
+		"옷장 빼기",
+		"옷장 보기",
+		"뒤로"
+	)) {
+	case 1:
+		goto L_ClosetWear;
+	case 2:
+		goto L_ClosetRegister;
+	case 3:
+		goto L_ClosetRemove;
+	case 4:
+		goto L_ClosetView;
+	default:
+		goto L_Closet;
+	}
+
+L_ClosetGetSlotValue:
+	return COSTUME_CLOSET[getarg(0)];
+
+L_ClosetSetSlotValue:
+	set COSTUME_CLOSET[getarg(0)], getarg(1);
+	return;
+
+L_ClosetIsRegistered:
+	set .@check_cid, getarg(0);
+	set .@slot_count, callsub(L_ClosetGetSlotCount);
+
+	for (set .@slot_idx, 0; .@slot_idx < .@slot_count; set .@slot_idx, .@slot_idx + 1) {
+		if (callsub(L_ClosetGetSlotValue, .@slot_idx) == .@check_cid)
+			return 1;
+	}
+
+	return 0;
+
+L_ClosetFindEmptySlot:
+	set .@slot_count, callsub(L_ClosetGetSlotCount);
+
+	for (set .@i, 0; .@i < .@slot_count; set .@i, .@i + 1) {
+		if (callsub(L_ClosetGetSlotValue, .@i) <= 0)
+			return .@i;
+	}
+
+	return -1;
+
+L_ClosetPartCheck:
+	set .@check_item_id, getarg(0);
+
+	if (.@check_item_id <= 0)
+		return 0;
+
+	set .@loc, getiteminfo(.@check_item_id, ITEMINFO_LOCATIONS);
+
+	if (.@loc <= 0)
+		return 0;
+
+	if (.@loc & EQP_COSTUME_HEAD_TOP)
+		return EQP_COSTUME_HEAD_TOP;
+	else if (.@loc & EQP_COSTUME_HEAD_MID)
+		return EQP_COSTUME_HEAD_MID;
+	else if (.@loc & EQP_COSTUME_HEAD_LOW)
+		return EQP_COSTUME_HEAD_LOW;
+	else if (.@loc & EQP_COSTUME_GARMENT)
+		return EQP_COSTUME_GARMENT;
+
+	return 0;
+
+L_ClosetRegister:
+	set .@reg_count, getregisteredcostumelist(0, .@closet_part);
+	set .@page, 0;
+
+	if (.@reg_count <= 0) {
+		mes "[옷장 등록]";
+		mes "등록된 해당 부위 의상이 없습니다.";
+		close;
+	}
+
+	goto L_ClosetRegisterPage;
+
+L_ClosetRegisterPage:
+	set .@max_page, (.@reg_count - 1) / .PageSize;
+	set .@start, .@page * .PageSize;
+	set .@end, .@start + .PageSize;
+
+	if (.@end > .@reg_count)
+		set .@end, .@reg_count;
+
+	set .@page_count, .@end - .@start;
+
+	mes "[옷장 등록 - " + .@closet_part_name$ + "]";
+	mes "페이지: " + (.@page + 1) + " / " + (.@max_page + 1);
+	mes "등록할 번호를 확인 후 입력해주세요.";
+	mes " ";
+
+	set .@i, .@start;
+	while (.@i < .@end) {
+		set .@cid, @costume_collection_ids[.@i];
+		set .@line_no, .@i - .@start + 1;
+
+		mes .@line_no + ". [" + .@cid + "] " + getcostumename(.@cid);
+
+		set .@i, .@i + 1;
+	}
+
+	next;
+
+	switch(select("번호 입력:다음 페이지:이전 페이지:취소")) {
+	case 1:
+		mes "[옷장 등록 - " + .@closet_part_name$ + "]";
+		mes "등록할 번호를 입력해주세요.";
+		mes "1 ~ " + .@page_count + "번까지 입력 가능합니다.";
+		next;
+
+		input .@input_no;
+
+		if (.@input_no < 1 || .@input_no > .@page_count) {
+			mes "[옷장 등록]";
+			mes "잘못된 번호입니다.";
+			close;
+		}
+
+		set .@idx, .@start + .@input_no - 1;
+		break;
+
+	case 2:
+		if (.@page < .@max_page)
+			set .@page, .@page + 1;
+		goto L_ClosetRegisterPage;
+
+	case 3:
+		if (.@page > 0)
+			set .@page, .@page - 1;
+		goto L_ClosetRegisterPage;
+
+	default:
+		goto L_ClosetPartMenu;
+	}
+
+	set .@cid, @costume_collection_ids[.@idx];
+	set .@item_id, getcostumeitemid(.@cid);
+
+	if (.@item_id <= 0) {
+		mes "[옷장 등록]";
+		mes "아이템 정보를 찾을 수 없습니다.";
+		close;
+	}
+
+	set .@empty_slot, callsub(L_ClosetFindEmptySlot);
+
+	if (.@empty_slot < 0) {
+		set .@slot_count, callsub(L_ClosetGetSlotCount);
+
+		mes "[옷장 등록]";
+		mes "옷장 슬롯이 가득 찼습니다.";
+		mes "현재 슬롯: " + .@slot_count + " / " + .@slot_count;
+		mes "슬롯 확장이 필요합니다.";
+		close;
+	}
+
+	mes "[옷장 등록]";
+	mes "[" + .@cid + "] " + getcostumename(.@cid);
+	mes "이 의상을 옷장에 등록하시겠습니까?";
+	mes "등록 비용: " + callfunc("F_InsertComma", .ClosetRegisterZeny) + " Zeny";
+	next;
+
+	if (select("등록한다:취소") == 2)
+		goto L_ClosetPartMenu;
+
+	if (Zeny < .ClosetRegisterZeny) {
+		mes "[옷장 등록]";
+		mes "Zeny가 부족합니다.";
+		close;
+	}
+
+	if (callsub(L_ClosetIsRegistered, .@cid)) {
+		mes "[옷장 등록]";
+		mes "이미 옷장에 등록된 의상입니다.";
+		close;
+	}
+
+	set .@empty_slot, callsub(L_ClosetFindEmptySlot);
+
+	if (.@empty_slot < 0) {
+		mes "[옷장 등록]";
+		mes "옷장 슬롯이 가득 찼습니다.";
+		close;
+	}
+
+	set Zeny, Zeny - .ClosetRegisterZeny;
+	callsub L_ClosetSetSlotValue, .@empty_slot, .@cid;
+
+	mes "[옷장 등록]";
+	mes "옷장에 등록되었습니다.";
 	close;
 
+L_ClosetView:
+	mes "[옷장 보기 - " + .@closet_part_name$ + "]";
+
+	set .@used_total, 0;
+	set .@used_part, 0;
+	set .@slot_count, callsub(L_ClosetGetSlotCount);
+
+	for (set .@slot_idx, 0; .@slot_idx < .@slot_count; set .@slot_idx, .@slot_idx + 1) {
+		set .@slot_cid, callsub(L_ClosetGetSlotValue, .@slot_idx);
+
+		if (.@slot_cid <= 0)
+			continue;
+
+		set .@used_total, .@used_total + 1;
+		set .@item_id, getcostumeitemid(.@slot_cid);
+
+		if (.@item_id <= 0)
+			continue;
+
+		set .@item_part, callsub(L_ClosetPartCheck, .@item_id);
+
+		if (.@item_part != .@closet_part)
+			continue;
+
+		set .@used_part, .@used_part + 1;
+		mes (.@slot_idx + 1) + ". [" + .@slot_cid + "] " + getcostumename(.@slot_cid);
+	}
+
+	if (.@used_part <= 0)
+		mes "해당 부위에 등록된 옷장 의상이 없습니다.";
+
+	set .@slot_count, callsub(L_ClosetGetSlotCount);
+
+	mes " ";
+	mes "현재 부위 등록 수: " + .@used_part + "개";
+	mes "전체 옷장 사용: " + .@used_total + " / " + .@slot_count;
+	close;
+
+L_ClosetRemove:
+	deletearray .@slot_list[0], getarraysize(.@slot_list);
+	deletearray .@cid_list[0], getarraysize(.@cid_list);
+
+	set .@slot_count, callsub(L_ClosetGetSlotCount);
+	set .@count, 0;
+
+	for (set .@slot_idx, 0; .@slot_idx < .@slot_count; set .@slot_idx, .@slot_idx + 1) {
+		set .@slot_cid, callsub(L_ClosetGetSlotValue, .@slot_idx);
+
+		if (.@slot_cid <= 0)
+			continue;
+
+		set .@item_id, getcostumeitemid(.@slot_cid);
+
+		if (.@item_id <= 0)
+			continue;
+
+		set .@item_part, callsub(L_ClosetPartCheck, .@item_id);
+
+		if (.@item_part != .@closet_part)
+			continue;
+
+		set .@slot_list[.@count], .@slot_idx;
+		set .@cid_list[.@count], .@slot_cid;
+		set .@count, .@count + 1;
+	}
+
+	if (.@count <= 0) {
+		mes "[옷장 빼기]";
+		mes "제거할 옷장 의상이 없습니다.";
+		close;
+	}
+
+	mes "[옷장 빼기 - " + .@closet_part_name$ + "]";
+	mes "옷장에서 제거할 의상을 선택해주세요.";
+	mes " ";
+
+	set .@menu$, "";
+
+	for (set .@i, 0; .@i < .@count; set .@i, .@i + 1) {
+		set .@cid, .@cid_list[.@i];
+		set .@menu$, .@menu$ + "[" + .@cid + "] " + getcostumename(.@cid) + ":";
+		mes (.@i + 1) + ". [" + .@cid + "] " + getcostumename(.@cid);
+	}
+
+	set .@menu$, .@menu$ + "취소";
+	next;
+
+	set .@sel, select(.@menu$);
+
+	if (.@sel > .@count)
+		goto L_ClosetPartMenu;
+
+	set .@idx, .@sel - 1;
+	set .@slot_idx, .@slot_list[.@idx];
+	set .@cid, .@cid_list[.@idx];
+
+	mes "[옷장 빼기]";
+	mes "[" + .@cid + "] " + getcostumename(.@cid);
+	mes "옷장에서 제거하시겠습니까?";
+	next;
+
+	if (select("제거한다:취소") == 2)
+		goto L_ClosetPartMenu;
+
+	set .@set_cid, 0;
+	callsub L_ClosetSetSlotValue, .@slot_idx, 0;
+
+	mes "[옷장 빼기]";
+	mes "옷장에서 제거되었습니다.";
+	close;
+
+L_ClosetGetUsedCount:
+	set .@slot_count, callsub(L_ClosetGetSlotCount);
+	set .@used, 0;
+
+	for (set .@i, 0; .@i < .@slot_count; set .@i, .@i + 1) {
+		if (callsub(L_ClosetGetSlotValue, .@i) > 0)
+			set .@used, .@used + 1;
+	}
+
+	return .@used;
+
+L_ClosetGetSlotCount:
+	set .@expand, #COSTUME_CLOSET_SLOT;
+
+	if (.@expand < 0)
+		set .@expand, 0;
+
+	set .@slot_count, .ClosetDefaultSlot + .@expand;
+
+	if (.@slot_count > .ClosetMaxSlot)
+		set .@slot_count, .ClosetMaxSlot;
+
+	if (.@slot_count <= 0)
+		set .@slot_count, 20;
+
+	return .@slot_count;
+	
+L_ClosetGetExpandCost:
+	if (.ClosetExpandBaseZeny <= 0)
+		set .ClosetExpandBaseZeny, 1000000;
+
+	if (.ClosetExpandTierSlot <= 0)
+		set .ClosetExpandTierSlot, 5;
+
+	set .@expand_count, #COSTUME_CLOSET_SLOT;
+
+	if (.@expand_count < 0)
+		set .@expand_count, 0;
+
+	set .@tier, .@expand_count / .ClosetExpandTierSlot;
+	set .@expand_cost, .ClosetExpandBaseZeny;
+
+	for (set .@i, 0; .@i < .@tier; set .@i, .@i + 1)
+		set .@expand_cost, .@expand_cost * 2;
+
+	return .@expand_cost;
+
 L_ClosetExpand:
+	set .@slot_count, callsub(L_ClosetGetSlotCount);
+	set .@used_total, callsub(L_ClosetGetUsedCount);
+	set .@after_slot_count, .@slot_count + .ClosetExpandTierSlot;
+
+	if (.@after_slot_count > .ClosetMaxSlot)
+		set .@after_slot_count, .ClosetMaxSlot;
+
+	if (.@slot_count >= .ClosetMaxSlot) {
+		mes "[옷장 슬롯 확장]";
+		mes "이미 최대 슬롯까지 확장했습니다.";
+		mes "현재 슬롯: " + .@used_total + " / " + .@slot_count;
+		close;
+	}
+
+	set .@expand_cost, callsub(L_ClosetGetExpandCost);
+
 	mes "[옷장 슬롯 확장]";
-	mes "옷장 슬롯 확장 기능은 준비 중입니다.";
+	mes "현재 슬롯: " + .@used_total + " / " + .@slot_count;
+	mes "확장 후 현재 슬롯: " + .@used_total + " / " + .@after_slot_count;
+	mes " ";
+	mes "확장 비용: " + callfunc("F_InsertComma", .@expand_cost) + " Zeny";
+	mes "확장 비용은 " + .ClosetExpandTierSlot + "칸마다 2배 증가합니다.";
+	next;
+
+	if (select("확장한다:취소") == 2)
+		goto L_Closet;
+
+	if (Zeny < .@expand_cost) {
+		mes "[옷장 슬롯 확장]";
+		mes "Zeny가 부족합니다.";
+		close;
+	}
+
+	set Zeny, Zeny - .@expand_cost;
+	set #COSTUME_CLOSET_SLOT, #COSTUME_CLOSET_SLOT + (.@after_slot_count - .@slot_count);
+
+	set .@slot_count, callsub(L_ClosetGetSlotCount);
+	
+	mes "[옷장 슬롯 확장]";
+	mes "옷장 슬롯이 " + .ClosetExpandTierSlot + "칸 확장되었습니다.";
+	mes "현재 슬롯: " + .@used_total + " / " + .@slot_count;
 	close;
 
 L_ClosetUnlock:
