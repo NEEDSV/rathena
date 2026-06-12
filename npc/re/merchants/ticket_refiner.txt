@@ -61,39 +61,39 @@ prontera,184,177,6	script	Refine Master	851,{
 	}
 
 	if (.@check == 0) {
-		mes "[Refine Master]";
-		mes "Hello!";
-		mes "What's up?";
-		mes "I'm a specialist";
-		mes "for refining items,";
-		mes "but I don't work anymore.";
+		mes "[마스터 정제]";
+		mes "안녕하세요!";
+		mes "무슨 일이야?";
+		mes "저는 전문가입니다.";
+		mes "아이템을 정제하기 위해,";
+		mes "하지만 저는 더 이상 일을 하지 않아요.";
 		next;
-		switch(select("I'll go on my way.:Hmm... this makes me curious.")) {
+		switch(select("저는 제 갈 길을 가겠습니다.:음... 궁금해지네요.")) {
 		case 1:
-			mes "[Refine Master]";
-			mes "Take care, adventurer.";
+			mes "[마스터 정제]";
+			mes "조심히 가시오, 모험가여.";
 			close;
 		case 2:
-			mes "[Refine Master]";
-			mes "Actually, I sometimes provide refine services for adventurers with a ^006400Refine Ticket^000000...";
-			mes "Bye bye~!";
+			mes "[마스터 정제]";
+			mes "사실 저는 가끔 ^006400정련권^000000을 이용해 모험가들을 위한 정련 서비스를 제공하기도 합니다...";
+			mes "안녕히 가세요~!";
 			close;
 		}
 	}
 	emotion ET_SURPRISE;
-	mes "[Refine Master]";
-	mes "Greetings!";
-	mes "I can refine an item up to the ^006400same level as your ticket^000000.";
-	mes "You don't have to worry! There's no chance of breaking your item.";
+	mes "[마스터 정제]";
+	mes "인사말!";
+	mes "저는 고객님의 티켓과 동일한 레벨까지 아이템을 정제할 수 있습니다.";
+	mes "걱정하지 마세요! 물건이 깨질 가능성은 전혀 없습니다.";
 	next;
-	if(select("I'll come back later.:Refine item with ticket.") == 1) {
-		mes "[Refine Master]";
+	if(select("나중에 다시 올게요.:티켓으로 상품을 세분화하세요.") == 1) {
+		mes "[마스터 정제]";
 		mes "Okay.";
-		mes "You can come again later.";
+		mes "나중에 다시 오셔도 됩니다.";
 		close;
 	}
-	mes "[Refine Master]";
-	mes "Which equipment would you like to refine?";
+	mes "[마스터 정제]";
+	mes "어떤 장비를 개선하고 싶으신가요?";
 	next;
 	setarray .@position$[1],"Head upper","Armor","Left hand","Right hand","Robe","Shoes","Accessory 1","Accessory 2","Head middle","Head lower";
 	setarray .@indices[1], EQI_HEAD_TOP, EQI_ARMOR, EQI_HAND_L, EQI_HAND_R, EQI_GARMENT, EQI_SHOES, EQI_ACC_L, EQI_ACC_R, EQI_HEAD_MID, EQI_HEAD_LOW;
@@ -102,15 +102,15 @@ prontera,184,177,6	script	Refine Master	851,{
 
 	.@part = .@indices[ select(.@menu$) ];
 	if (!getequipisequiped(.@part)) {
-		mes "[Refine Master]";
-		mes "You have to equip the item you want to refine.";
+		mes "[마스터 정제]";
+		mes "정제하려는 아이템을 장착해야 합니다.";
 		close;
 	}
 	if (!getequipisenableref(.@part)) {
 		emotion ET_OTL;
-		mes "[Refine Master]";
-		mes "Oh, I'm sorry.";
-		mes "This item is impossible to refine.";
+		mes "[마스터 정제]";
+		mes "아, 죄송합니다.";
+		mes "이 아이템은 정제할 수 없습니다.";
 		close;
 	}
 	.@refineitemid = getequipid(.@part); // save id of the item
@@ -124,7 +124,7 @@ prontera,184,177,6	script	Refine Master	851,{
 			case 3:
 			case 4:
 				copyarray .@tickets[0], .@cert_weapon[0], .@size_cert;
-				.@type$ = "Weapon";
+				.@type$ = "무기";
 				break;
 			default:
 				// TODO:
@@ -134,7 +134,7 @@ prontera,184,177,6	script	Refine Master	851,{
 		switch( getequiparmorlv( .@part ) ){
 			case 1:
 				copyarray .@tickets[0], .@cert_armor[0], .@size_cert;
-				.@type$ = "Armor";
+				.@type$ = "갑옷";
 				break;
 			default:
 				// TODO:
@@ -153,13 +153,13 @@ prontera,184,177,6	script	Refine Master	851,{
 	}
 	if (.@check == 0) {
 		emotion ET_THINK;
-		mes "[Refine Master]";
-		mes "If you want to refine this ^006400"+.@type$+"^000000, please come along with ^006400"+.@type$+" Refine Ticket^000000.";
-		mes "See you later!";
+		mes "[마스터 정제]";
+		mes "이 ^006400을 더 다듬고 싶다면"+.@type$+"^000000님, ^006400님과 함께 오세요."+.@type$+" 티켓을 정제하세요^000000.";
+		mes "나중에 봐요!";
 		close;
 	}
-	mes "[Refine Master]";
-	mes "Please choose which ^006400"+.@type$+" Refine Ticket^000000 you want to use.";
+	mes "[마스터 정제]";
+	mes "어떤 ^006400을 선택해 주세요."+.@type$+" 사용하려는 티켓^000000을 정제하세요.";
 	next;
 	.@menu$ = "";
 	for ( .@i = 0; .@i < .@size_cert; ++.@i )
@@ -170,41 +170,41 @@ prontera,184,177,6	script	Refine Master	851,{
 
 	if (countitem(.@ticket_id) == 0) {
 		emotion ET_QUESTION;
-		mes "[Refine Master]";
-		mes getitemname(.@ticket_id)+" is not in your inventory. Did you put it in your storage?";
-		mes "Please check again.";
-		mes "See you later!";
+		mes "[마스터 정제]";
+		mes getitemname(.@ticket_id)+" 인벤토리에 없네요. 보관함에 넣으셨나요?";
+		mes "다시 한번 확인해 주세요.";
+		mes "나중에 봐요!";
 		close;
 	}
 	if (getequiprefinerycnt(.@part) >= .@ticket_lv) {
 		emotion ET_PROFUSELY_SWEAT;
-		mes "[Refine Master]";
-		mes "^8B4513This item is already refined as much as your deed.^000000";
-		mes "Please come along with an item refined less than your ticket.";
+		mes "[마스터 정제]";
+		mes "^8B4513이 아이템은 이미 당신의 행위만큼 정제되었습니다.^000000";
+		mes "티켓에 적힌 것보다 정제도가 낮은 물품을 하나 가져오시기 바랍니다.";
 		close;
 	}
-	mes "[Refine Master]";
-	mes "I'm going to refine ^006400"+getequipname(.@part)+"^8B4513 up to the +"+.@ticket_lv+" level^000000 with ^006400"+getitemname(.@ticket_id)+"^000000.";
-	mes "May I proceed?";
+	mes "[마스터 정제]";
+	mes "^006400을 정제하겠습니다."+getequipname(.@part)+"^8B4513부터 +까지"+.@ticket_lv+" 레벨^000000과 ^006400"+getitemname(.@ticket_id)+"^000000.";
+	mes "진행해도 될까요?";
 	next;
 	if(select("No.:Yes.") == 1) {
 		emotion ET_THINK;
-		mes "[Refine Master]";
-		mes "Oh, you changed your mind.";
+		mes "[마스터 정제]";
+		mes "아, 마음을 바꾸셨군요.";
 		mes "Ok.";
-		mes "You can come back later.";
+		mes "나중에 다시 오셔도 됩니다.";
 		close;
 	}
-	mes "[Refine Master]";
+	mes "[마스터 정제]";
 	mes "Great.";
-	mes "As you wish!";
-	mes "I have my own special way to refine...";
-	mes ".......ka boom!";
+	mes "원하시는 대로 해 드리겠습니다!";
+	mes "저는 저만의 특별한 방식으로 다듬습니다...";
+	mes ".......쾅!";
 	specialeffect EF_SUI_EXPLOSION;
 	if (countitem(.@ticket_id) < 1) {
 		next;
-		mes "Error!";
-		mes "Please report this.";
+		mes "오류!";
+		mes "이 사건을 신고해 주세요.";
 		close;
 	}
 	delitem .@ticket_id,1;
@@ -212,21 +212,21 @@ prontera,184,177,6	script	Refine Master	851,{
 	// anti-hack
 	if (callfunc("F_IsEquipIDHack", .@part, .@refineitemid) ||
 		callfunc("F_IsEquipRefineHack", .@part, .@refinerycnt) || callfunc("F_IsEquipCardHack", .@part, .@card[0], .@card[1], .@card[2], .@card[3])) {
-		mes "[Refine Master]";
+		mes "[마스터 정제]";
 		emotion ET_FRET;
-		mes "Wait a second...";
-		mes "Do you think I'm stupid?!";
-		mes "You switched the item while I wasn't looking! Get out of here!";
+		mes "잠깐만 기다려봐...";
+		mes "내가 바보인 줄 알아?!";
+		mes "내가 안 보는 사이에 물건을 바꿔치기했잖아! 당장 나가!";
 		close;
 	}
 	successrefitem .@part, .@ticket_lv - getequiprefinerycnt(.@part);
 	next;
 	emotion ET_DELIGHT;
-	mes "[Refine Master]";
-	mes "Alright, here it is~";
-	mes "Well, ^0000FF"+strcharinfo(0)+"^000000!";
-	mes "Congratulations on your shining "+.@type$+".";
-	mes "You look GREAT!";
-	mes "Farewell~!";
+	mes "[마스터 정제]";
+	mes "자, 여기 있습니다~";
+	mes "음, ^0000FF"+strcharinfo(0)+"^000000!";
+	mes " 빛나는 당신의 모습을 축하합니다!"+.@type$+".";
+	mes "정말 멋져 보여요!";
+	mes "안녕히 가세요~!";
 	close;
 }

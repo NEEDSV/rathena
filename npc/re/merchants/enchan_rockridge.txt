@@ -10,36 +10,36 @@
 // enchant npc
 har_in01,17,74,7	script	Contraband Processor#pa	4_DR_SOLDIER,{
 	if (checkweight(1201,1) == 0) {
-		mes "I'm carrying too many types of items. I should lighten my bag first.";
+		mes "짐이 너무 많네요. 가방부터 가볍게 해야겠어요.";
 		close;
 	}
 	if ((MaxWeight - Weight) < 10000) {
-		mes "I'm overweight. I'd better lighten my bag first.";
+		mes "저는 과체중이에요. 가방부터 가볍게 해야겠어요.";
 		close;
 	}
 	disable_items;
-	mes "[Contraband Processor]";
-	mes "Have you tried to buy some contraband items with Rock Ridge Coins? I can make your contraband items better.";
+	mes "[밀수품 처리업체]";
+	mes "록 릿지 코인으로 밀수품을 사 보셨나요? 제가 밀수품의 품질을 높여드릴 수 있습니다.";
 	next;
-	.@reset = select( "Make them better? How?", "Enchant contraband items.", "Reset contraband item Enchantment level." ) - 2;
+	.@reset = select( "그들을 더 낫게 만들 수 있을까요? 어떻게?", "밀수품에 마법을 부여하세요.", "밀수품의 마법 부여 레벨을 초기화합니다." ) - 2;
 	if (.@reset == -1) {
-		mes "[Contraband Processor]";
-		mes "Ah, have we met before? I meet so many people every day that I can't remember all of their faces. Let me catch you up to speed.";
+		mes "[밀수품 처리업체]";
+		mes "아, 전에 만난 적이 있나요? 저는 매일 너무 많은 사람들을 만나서 얼굴을 다 기억할 수는 없어요. 간단히 설명해 드릴게요.";
 		next;
-		mes "[Contraband Processor]";
-		mes "I can enchant the equipment that you can buy with Rock Ridge Coins, for up to 3 sockets for Armor and Garments and up to 2 sockets for Accessories.";
+		mes "[밀수품 처리업체]";
+		mes "저는 록 리지 코인으로 구입할 수 있는 장비에 마법을 부여하여 갑옷과 의복에는 최대 3개의 소켓, 액세서리에는 최대 2개의 소켓을 추가할 수 있습니다.";
 		next;
-		mes "[Contraband Processor]";
-		mes "I charge 2 Rock Ridge Coins per socket for both enchanting and resetting.";
+		mes "[밀수품 처리업체]";
+		mes "마법 부여와 초기화 모두 소켓당 록 리지 코인 2개를 청구합니다.";
 		next;
-		mes "[Contraband Processor]";
-		mes "Oh, and note that these contraband items are prone to destruction, especially when they are reset.";
+		mes "[밀수품 처리업체]";
+		mes "아, 그리고 이러한 밀수품은 특히 재설정할 때 파손되기 쉽다는 점에 유의하세요.";
 		close;
 	}
-	switch( select( "Cancel", "Armor", "Garment", "Accessory (Right Slot)" ) ) {
+	switch( select( "Cancel", "Armor", "Garment", "액세서리 (오른쪽 슬롯)" ) ) {
 	case 1:
-		mes "[Contraband Processor]";
-		mes "You're silly.";
+		mes "[밀수품 처리업체]";
+		mes "너 바보구나.";
 		close;
 	case 2:
 		.@part = EQI_ARMOR;
@@ -67,34 +67,34 @@ har_in01,17,74,7	script	Contraband Processor#pa	4_DR_SOLDIER,{
 	case 28442:	// Hippie_Feather
 		break;
 	case -1:
-		mes "[Contraband Processor]";
-		mes "Why are you wasting my time? Go wear your equipment first.";
+		mes "[밀수품 처리업체]";
+		mes "왜 내 시간을 낭비하는 거야? 먼저 장비부터 착용해.";
 		close;
 	default:
-		mes "[Contraband Processor]";
-		mes "I don't handle items like this.";
+		mes "[밀수품 처리업체]";
+		mes "저는 이런 종류의 물건은 취급하지 않습니다.";
 		close;
 	}
 	.@refine = getequiprefinerycnt(.@part);
 	setarray .@card[0], getequipcardid(.@part,0), getequipcardid(.@part,1), getequipcardid(.@part,2), getequipcardid(.@part,3);
 	copyarray .@tmp_card[0], .@card[0], 4;
 	if ((.@card[1] && getiteminfo(.@card[1], ITEMINFO_SUBTYPE) == CARD_NORMAL) || (.@card[2] && getiteminfo(.@card[2], ITEMINFO_SUBTYPE) == CARD_NORMAL) || (.@card[3] && getiteminfo(.@card[3], ITEMINFO_SUBTYPE) == CARD_NORMAL)) {// armor enchant system custom check
-		mes "[Contraband Processor]";
-		mes "Something wrong happened.";
+		mes "[밀수품 처리업체]";
+		mes "뭔가 잘못됐어요.";
 		close;
 	}
 	switch( .@reset ) {
 	case TRUE:
 		if (.@card[3] == 0) {
-			mes "[Contraband Processor]";
-			mes "It's not enchanted. What do you expect me to reset?";
+			mes "[밀수품 처리업체]";
+			mes "마법이 걸린 것도 아니잖아요. 제가 뭘 초기화하라는 거예요?";
 			close;
 		}
-		mes "[Contraband Processor]";
-		mes "Oh, do you really want to reset it? As I told you before, contraband Vigilante Badges are prone to destruction.";
-		if (select( "I'll come back later.", "Let's do it." ) == 1) {
-			mes "[Contraband Processor]";
-			mes "Alright, come back if you change your mind.";
+		mes "[밀수품 처리업체]";
+		mes "아, 정말로 초기화하고 싶으신가요? 전에 말씀드렸듯이, 불법으로 취득한 자경단 배지는 파괴될 위험이 있습니다.";
+		if (select( "나중에 다시 올게요.", "자, 해봅시다." ) == 1) {
+			mes "[밀수품 처리업체]";
+			mes "알았어, 마음 바뀌면 다시 와.";
 			close;
 		}
 		if (.@part == EQI_ACC_R)
@@ -108,8 +108,8 @@ har_in01,17,74,7	script	Contraband Processor#pa	4_DR_SOLDIER,{
 		case EQI_ARMOR:
 		case EQI_GARMENT:
 			if (.@card[1] > 0) {
-				mes "[Contraband Processor]";
-				mes "This has been enchanted to the maximum limit. Maybe you should reset it.";
+				mes "[밀수품 처리업체]";
+				mes "이건 마법이 최대치까지 강화된 것 같아요. 초기화하는 게 좋을 것 같습니다.";
 				close;
 			}
 			if (.@card[3] == 0)
@@ -171,8 +171,8 @@ har_in01,17,74,7	script	Contraband Processor#pa	4_DR_SOLDIER,{
 			break;
 		case EQI_ACC_R:
 			if (.@card[2] > 0) {
-				mes "[Contraband Processor]";
-				mes "This has been enchanted to the maximum limit. Maybe you should reset it.";
+				mes "[밀수품 처리업체]";
+				mes "이건 마법이 최대치까지 강화된 것 같아요. 초기화하는 게 좋을 것 같습니다.";
 				close;
 			}
 			if (.@card[3] == 0)
@@ -204,15 +204,15 @@ har_in01,17,74,7	script	Contraband Processor#pa	4_DR_SOLDIER,{
 			else .@card[.@enchant_slot] = getiteminfo("Atk_Speed1", ITEMINFO_ID);
 			break;
 		default:
-			mes "[Contraband Processor]";
-			mes "Did you just try to switch equipment?";
+			mes "[밀수품 처리업체]";
+			mes "장비를 바꾸려고 하셨나요?";
 			close;
 		}
 		break;
 	}
 	if (countitem(25250) < 2) {
-		mes "[Contraband Processor]";
-		mes "I charge 2 Rock Ridge Coins for this service. Bring them to me.";
+		mes "[밀수품 처리업체]";
+		mes "이 서비스 이용료는 록 릿지 코인 2개입니다. 코인을 제게 가져오세요.";
 		close;
 	}
 	delitem 25250,2;// Rock_Ridge_Coin
@@ -224,133 +224,133 @@ har_in01,17,74,7	script	Contraband Processor#pa	4_DR_SOLDIER,{
 	delequip .@part;
 	if (rand(100) < .@chance_of_breaking_on_reset) {
 		specialeffect2 EF_LORD;
-		mes "[Contraband Processor]";
-		mes "Ah, that didn't turn out well.";
-		mes "Well, just my luck.";
+		mes "[밀수품 처리업체]";
+		mes "아, 결과가 좋지 않았네요.";
+		mes "어휴, 정말 운도 없네.";
 		close;
 	}
 	specialeffect2 EF_REPAIRWEAPON;
 	getitem2 .@equip_id,1,1,.@refine,0,.@card[0],.@card[1],.@card[2],.@card[3];
-	mes "[Contraband Processor]";
-	mes "Done. Check it out.";
+	mes "[밀수품 처리업체]";
+	mes "완료. 확인해 보세요.";
 	close;
 }
 
 
 har_in01,24,69,3	script	Affable Lady#rockridge0	1_F_MERCHANT_02,{
 	if (checkweight(1301,3) == 0) {
-		mes "[Affable Lady]";
-		mes "You must be really strong to carry so much with you.";
+		mes "[상냥한 여인]";
+		mes "그렇게 많은 짐을 짊어지고 다니려면 정말 강해야 할 것 같아요.";
 		next;
-		mes "[Affable Lady]";
-		mes "If you want to lighten your bag, there's a Kafra employee in the direction of the sheriff's office.";
+		mes "[상냥한 여인]";
+		mes "짐을 가볍게 하고 싶으시다면, 보안관 사무실 방향에 카프라 직원이 있습니다.";
 		close;
 	}
-	mes "[Affable Lady]";
-	mes "You're an adventurer. I like people like you who have passion.";
-	mes "So, are you here because of ^0000CDit^000000?";
+	mes "[상냥한 여인]";
+	mes "당신은 모험가시군요. 저는 당신처럼 열정적인 사람들을 좋아합니다.";
+	mes "그래서, 당신은 ^0000CDit^000000 때문에 여기에 오신 건가요?";
 	next;
-	if (select( "Because of what?", "I am." ) == 1) {
-		mes "[Affable Lady]";
-		mes "Hmpf, don't act like you don't know. I'm talking about the special equipment you can buy in Rock Ridge.";
+	if (select( "무엇 때문에요?", "그래요." ) == 1) {
+		mes "[상냥한 여인]";
+		mes "흥, 모르는 척하지 마. 록 리지에서 살 수 있는 특수 장비 말이야.";
 		next;
-		mes "[Affable Lady]";
-		mes "The armor dealer brings in new stock every Friday, and it's sold almost as soon as it's in, every time.";
+		mes "[상냥한 여인]";
+		mes "갑옷 판매상은 매주 금요일마다 새 상품을 들여오는데, 들어올 때마다 거의 바로 팔려나간다.";
 		close;
 	}
-	mes "[Affable Lady]";
-	mes "*Chuckle* Which one do you want: one for your ^0000CDshoulders^000000, ^0000CDneck, or chest^000000?";
+	mes "[상냥한 여인]";
+	mes "*히히* 어떤 걸 원하세요? 어깨용, 목용, 아니면 가슴용?";
 	next;
-	switch( select( "Um, anything.", "For my shoulders", "For my neck or chest" ) ) {
+	switch( select( "음, 뭐든지요.", "내 어깨를 위해", "목이나 가슴에" ) ) {
 	case 1:
-		mes "[Affable Lady]";
-		mes "*Chuckle* Sure, young people always look good, no matter what they wear.";
-		mes "But if you want something special, go check the armor shop.";
+		mes "[상냥한 여인]";
+		mes "*히히* 물론, 젊은 사람들은 뭘 입어도 항상 멋있어 보이죠.";
+		mes "하지만 특별한 것을 원한다면 갑옷 상점을 확인해 보세요.";
 		close;
 	case 2:
-		mes "[Affable Lady]";
-		mes "Pick one you like, and I'll tell you about it.";
-		mes "All the equipment is ^0000CD3,000,000 Zeny^000000 regardless of its type.";
+		mes "[상냥한 여인]";
+		mes "마음에 드는 걸 하나 고르세요. 그럼 제가 설명해 드릴게요.";
+		mes "모든 장비는 종류에 관계없이 ^0000CD3,000,000 제니^000000입니다.";
 		next;
 		.@cost = 3000000;
 		setarray .@item_id[0],20820,20821,20822;
 		setarray .@item_name$[0], "Elemental Cape", "Golden Scarf", "Mine Worker Backpack";
-		.@s = select( "Elemental Cape", "Golden Scarf", "Mine Worker Backpack", "I have no idea what you're talking about." ) - 1;
+		.@s = select( "엘리멘탈 케이프", "골든 스카프", "광부용 배낭", "무슨 말씀이신지 전혀 모르겠습니다." ) - 1;
 		break;
 	case 3:
-		mes "[Affable Lady]";
-		mes "Pick one you like, and I'll tell you about it.";
-		mes "All the equipment is ^0000CD1,500,000 Zeny^000000 regardless of its type.";
+		mes "[상냥한 여인]";
+		mes "마음에 드는 걸 하나 고르세요. 그럼 제가 설명해 드릴게요.";
+		mes "모든 장비는 종류에 관계없이 ^0000CD1,500,000 제니^000000입니다.";
 		next;
 		.@cost = 1500000;
 		setarray .@item_id[0],28441,28442;
 		setarray .@item_name$[0], "Vigilante Badge", "Hippie Feather";
-		.@s = select( "Vigilante Badge", "Hippie Feather", "I have no idea what you're talking about." ) - 1;
+		.@s = select( "자경단 배지", "히피 페더", "무슨 말씀이신지 전혀 모르겠습니다." ) - 1;
 		break;
 	}
 	if (.@item_id[.@s] == 0) {
-		mes "[Affable Lady]";
-		mes "Oops, I guess you're too innocent to hear what I just said.";
-		mes "You should forget it, for your own good.";
+		mes "[상냥한 여인]";
+		mes "어머, 당신은 너무 순진해서 제가 방금 한 말을 못 들었나 보군요.";
+		mes "당신 자신을 위해서라도 그 일은 잊어버리는 게 좋을 거예요.";
 		close;
 	}
-	mes "[Affable Lady]";
-	mes "Ah, you're interested in the";
+	mes "[상냥한 여인]";
+	mes "아, 당신은 ~에 관심이 있으시군요.";
 	mes "[" + mesitemlink( .@item_id[.@s], false, .@item_name$[.@s] ) + "].";
-	mes "Click the name for the detailed description.";
-	mes "As I told you, it's ^0000CD"+callfunc("F_InsertComma",.@cost)+" Zeny^000000. Do you want to buy it?";
+	mes "자세한 설명을 보려면 이름을 클릭하세요.";
+	mes "제가 말씀드렸듯이, ^0000CD입니다."+callfunc("F_InsertComma",.@cost)+" 제니^000000. 구매하시겠습니까?";
 	next;
 	if (select( "Yes.", "No." ) == 2) {
-		mes "[Affable Lady]";
-		mes "Huh. So I wasted my breath on someone who doesn't want to buy.";
-		mes "Each and every piece of this equipment has a story to tell, and it might hold a grudge if you don't take it with you.";
+		mes "[상냥한 여인]";
+		mes "흠. 결국 살 의향도 없는 사람에게 말만 낭비한 거네.";
+		mes "이 장비 하나하나에는 저마다의 이야기가 담겨 있으며, 만약 당신이 이것을 가져가지 않는다면 장비가 앙심을 품을지도 모릅니다.";
 		next;
-		mes "[Affable Lady]";
-		mes "I suggest you don't tell anyone else about it,";
-		mes "and promise me you'll be back. I'll keep the equipment for you.";
+		mes "[상냥한 여인]";
+		mes "이 사실을 다른 사람에게는 말하지 않는 게 좋겠어요.";
+		mes "꼭 돌아오겠다고 약속해 줘. 장비는 내가 보관해 줄게.";
 		close;
 	}
 	if (Zeny < .@cost) {
-		mes "[Affable Lady]";
-		mes "Uh-oh, you don't have enough money to buy this.";
-		mes "Why don't you come back later? I'll always be here.";
+		mes "[상냥한 여인]";
+		mes "어머나, 이걸 살 돈이 부족하시네요.";
+		mes "나중에 다시 오세요. 저는 항상 여기 있을게요.";
 		close;
 	}
-	mes "[Affable Lady]";
-	mes "Sure. Here's your " + .@item_name$[.@s] + ".";
+	mes "[상냥한 여인]";
+	mes " 네. 여기 있습니다." + .@item_name$[.@s] + ".";
 	Zeny = Zeny - .@cost;
 	getitem .@item_id[.@s],1;
 	next;
-	mes "[Affable Lady]";
-	mes "People often let their preconceived notions fool them. Most people don't think an old woman like me would sell such special items.";
-	mes "Come back if you want more equipment. I'll always be here. *Chuckle*";
+	mes "[상냥한 여인]";
+	mes "사람들은 흔히 선입견에 속아 넘어갑니다. 대부분의 사람들은 저 같은 나이 든 여자가 그런 특별한 물건들을 팔 거라고는 생각하지 않죠.";
+	mes "장비가 더 필요하면 언제든 다시 오세요. 저는 항상 여기 있을게요. *웃음*";
 	close;
 }
 
 har_in01,34,81,5	script	Howard#rr	4_M_TATIO,{
 	if (checkweight(1301,1) == 0) {
-		mes "[Howard]";
-		mes "Err, you're carrying a lot of things.";
-		mes "Why don't you go";
-		mes "lighten your bag first?";
+		mes "[하워드]";
+		mes "어, 짐을 많이 들고 계시네요.";
+		mes "안 가보는 거야?";
+		mes "가방 무게부터 줄이는 게 어떨까요?";
 		close;
 	}
-	mes "[Howard]";
-	mes "Hello. How may I help you today?";
+	mes "[하워드]";
+	mes "안녕하세요. 무엇을 도와드릴까요?";
 	next;
 	if (countitem(25250) < 1) {
-		mes "[Howard]";
-		mes "Hm, you don't have the coins.";
-		mes "Why don't you collect them first?";
+		mes "[하워드]";
+		mes "음, 동전이 없으시군요.";
+		mes "먼저 그것들을 모으는 게 어때요?";
 		close;
 	}
-	mes "[Howard]";
-	mes "Ah, you have the coins.";
-	mes "Thank you for helping Rock Ridge.";
-	mes "Take a look around and see if there's something you want.";
+	mes "[하워드]";
+	mes "아, 동전이 있으시군요.";
+	mes "록 릿지를 도와주셔서 감사합니다.";
+	mes "주변을 둘러보고 원하는 게 있는지 찾아보세요.";
 	next;
-	mes "[Howard]";
-	mes "What would you like to have?";
+	mes "[하워드]";
+	mes "무엇을 드시고 싶으세요?";
 	next;
 	setarray .@data$[0],
 		 24, 15176, "Vigilante Suit",	// <cost>, <item ID>, <item name>
@@ -370,24 +370,24 @@ har_in01,34,81,5	script	Howard#rr	4_M_TATIO,{
 		.@menu$ += .@data$[.@i+2] + ":";
 	.@s = ( select(.@menu$) - 1 ) * 3;
 
-	mes "[Howard]";
-	mes mesitemlink( atoi( .@data$[.@s+1] ), false, .@data$[.@s+2] ) + ", got it.";
-	mes "That'll be " + .@data$[.@s] + " Rock Ridge Coins.";
-	mes "Are you certain you want this item?";
+	mes "[하워드]";
+	mes mesitemlink( atoi( .@data$[.@s+1] ), false, .@data$[.@s+2] ) + ", 알았어요.";
+	mes " 그럴 겁니다" + .@data$[.@s] + " 록 릿지 코인.";
+	mes "이 상품을 정말로 구매하시겠습니까?";
 	next;
 	if (select( "Yes.", "No." ) == 2) {
-		mes "[Howard]";
-		mes "If you have made up your mind, then please talk to me again.";
+		mes "[하워드]";
+		mes "마음을 정하셨다면 다시 한번 말씀해 주세요.";
 		close;
 	}
 	if (countitem(25250) < atoi(.@data$[.@s])) {
-		mes "[Howard]";
-		mes "You don't have enough coins.";
-		mes "Please bring more.";
+		mes "[하워드]";
+		mes "동전이 부족합니다.";
+		mes "더 가져오세요.";
 		close;
 	}
-	mes "[Howard]";
-	mes "There you go. Enjoy!";
+	mes "[하워드]";
+	mes "자, 여기 있습니다. 즐기세요!";
 	delitem 25250, atoi(.@data$[.@s]);// Rock Ridge Coin
 	getitem atoi(.@data$[.@s+1]),1;
 	close;
@@ -399,47 +399,47 @@ har_in01,34,81,5	script	Howard#rr	4_M_TATIO,{
 
 har_in01,19,86,4	script	Weapon Dealer#rockridge01	1_F_02,{
 	if (checkweight(1301,3) == 0) {
-		mes "[Weapon Dealer]";
-		mes "You're carrying too much to buy weapons.";
-		mes "Please go lighten your bag first.";
+		mes "[무기상]";
+		mes "소지품이 너무 많아서 무기를 살 수 없습니다.";
+		mes "먼저 가방 무게부터 줄이세요.";
 		close;
 	}
-	mes "[Weapon Dealer]";
-	mes "I carry shotguns, revolvers, and bullets.";
-	mes "Tell me what kind of item you want, and I'll show you a list.";
+	mes "[무기상]";
+	mes "저는 엽총, 리볼버, 그리고 총알을 소지하고 다닙니다.";
+	mes "원하시는 물건 종류를 말씀해 주시면 목록을 보여드리겠습니다.";
 	next;
-	switch( select( "Shotguns", "Revolvers", "Bullets", "Sell items.", "Cancel." ) ) {
+	switch( select( "Shotguns", "Revolvers", "Bullets", "물건을 판매하세요.", "Cancel." ) ) {
 	case 1:
-		mes "[Weapon Dealer]";
-		mes "You want to browse shotguns? I see.";
-		mes "Let me show you some good models.";
+		mes "[무기상]";
+		mes "산탄총을 둘러보고 싶으신 건가요? 알겠습니다.";
+		mes "좋은 모델 몇 가지를 보여드리겠습니다.";
 		close2;
 		callshop "shotguns_rockridge", 1;
 		end;
 	case 2:
-		mes "[Weapon Dealer]";
-		mes "You want to browse revolvers? I see.";
-		mes "I've just brought in a few good models.";
+		mes "[무기상]";
+		mes "권총을 구경하고 싶으신 건가요? 알겠습니다.";
+		mes "방금 괜찮은 모델 몇 명을 데려왔어요.";
 		close2;
 		callshop "revolvers_rockridge", 1;
 		end;
 	case 3:
-		mes "[Weapon Dealer]";
-		mes "You want bullets, I see.";
-		mes "All my bullets are of the finest quality.";
+		mes "[무기상]";
+		mes "총알을 원하시는군요.";
+		mes "내 총알은 모두 최고급 품질이다.";
 		close2;
 		callshop "bullets_rockridge", 1;
 		end;
 	case 4:
-		mes "[Weapon Dealer]";
-		mes "Sure, if you have things I can sell.";
-		mes "Show me what you've got.";
+		mes "[무기상]";
+		mes "물론, 제가 팔 수 있는 물건이 있다면요.";
+		mes "네가 가진 모든 것을 보여줘.";
 		close2;
 		callshop "bullets_rockridge", 2;
 		end;
 	case 5:
-		mes "[Weapon Dealer]";
-		mes "Come again.";
+		mes "[무기상]";
+		mes "다시 오세요.";
 		close;
 	}
 }
@@ -451,44 +451,44 @@ har_in01,19,86,4	script	Weapon Dealer#rockridge01	1_F_02,{
 
 har_in01,16,86,4	script	Armor Dealer#rockridge02	1_M_04,{
 	if (checkweight(1301,3) == 0) {
-		mes "[Armor Dealer]";
-		mes "You're carrying too much to buy anything.";
-		mes "Please go lighten your bag first.";
+		mes "[갑옷 판매상]";
+		mes "짐이 너무 많아서 아무것도 살 수 없어요.";
+		mes "먼저 가방 무게부터 줄이세요.";
 		close;
 	}
 	.@day = gettime(DT_DAYOFWEEK);
 	if (.@day == SUNDAY) {
-		mes "[Armor Dealer]";
-		mes "I'm closed today.";
-		mes "Once a week, I close my shop and spend the day being thankful for what I have.";
+		mes "[갑옷 판매상]";
+		mes "오늘은 휴무입니다.";
+		mes "저는 일주일에 한 번 가게 문을 닫고 제가 가진 것에 감사하는 시간을 갖습니다.";
 		next;
-		mes "[Armor Dealer]";
-		mes "...And it's the same day that no deliveries come.";
+		mes "[갑옷 판매상]";
+		mes "...그런데 하필 그날은 배송이 하나도 오지 않았어요.";
 		close;
 	}
 	if (.@day == MONDAY)
-		.@string$ = "Romantic Gents, Western Graces, and Feather Bonnet";
+		.@string$ = "로맨틱한 신사들, 서부의 우아함, 그리고 깃털 보닛";
 	else if (.@day == TUESDAY)
-		.@string$ = "Sombreros, Indian Headbands, and Cowboy Hats";
+		.@string$ = "솜브레로, 인디언 머리띠, 카우보이 모자";
 	else if (.@day == WEDNESDAY)
-		.@string$ = "Cigarettes, Pipes, and Grampa Beards";
+		.@string$ = "담배, 파이프, 그리고 할아버지 수염";
 	else if (.@day == THURSDAY)
-		.@string$ = "Romantic Gents, Western Graces, and Feather Bonnet";
+		.@string$ = "로맨틱한 신사들, 서부의 우아함, 그리고 깃털 보닛";
 	else if (.@day == FRIDAY)
-		.@string$ = "Sombreros, Indian Headbands, Cowboy Hats, and Indian Feather Headbands, the last of the rare costumes that are available in limited quantities every week,";
+		.@string$ = "솜브레로, 인디언 머리띠, 카우보이 모자, 인디언 깃털 머리띠는 매주 한정 수량으로만 구할 수 있는 희귀한 의상 중 마지막 남은 품목입니다.";
 	else
-		.@string$ = "Cigarettes, Pipes, and Grampa Beards";
-	mes "[Armor Dealer]";
-	mes "Hello. Welcome to the Rock Ridge Armor Shop.";
-	mes "Today," +.@string$ + "are in stock.";
+		.@string$ = "담배, 파이프, 그리고 할아버지 수염";
+	mes "[갑옷 판매상]";
+	mes "안녕하세요. 록 릿지 갑옷 상점에 오신 것을 환영합니다.";
+	mes "Today," +.@string$ + "재고가 있습니다.";
 	next;
-	mes "[Armor Dealer]";
-	mes "Armor is bulkier than weapons, so I can only have a set number of products delivered every week.";
-	mes "I'll show you the list of available items. ^0000CDIf it's blank, then everything's sold out^000000.";
+	mes "[갑옷 판매상]";
+	mes "갑옷은 무기보다 부피가 크기 때문에 매주 배송받을 수 있는 제품 수량이 제한되어 있습니다.";
+	mes "구매 가능한 상품 목록을 보여드리겠습니다. 목록이 비어 있으면 모든 상품이 매진된 것입니다.";
 	next;
-	mes "[Armor Dealer]";
-	mes "And for that same reason, I can't give ^0000CDspecial discounts^000000.";
-	mes "But ^0000CDall my products are hard to find elsewhere^000000. Why don't you take a look at them?";
+	mes "[갑옷 판매상]";
+	mes "같은 이유로 ^0000CDspecial 할인^000000을 드릴 수 없습니다.";
+	mes "하지만 제 제품들은 다른 곳에서는 찾기 어려울 거예요. 한번 살펴보시는 건 어떠세요?";
 	close2;
 	if (.@day == MONDAY || .@day == THURSDAY)
 		callshop "armor_rockridge_1", 1;

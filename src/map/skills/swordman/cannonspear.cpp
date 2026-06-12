@@ -24,11 +24,15 @@ void SkillCannonSpear::calculateSkillRatio(const Damage* wd, const block_list* s
 	const status_data* sstatus = status_get_status_data(*src);
 	const status_change* sc = status_get_sc(src);
 
+#ifdef NEED_2017_SKILL_FORMULA
+	skillratio += -100 + skill_lv * (50 + status_get_str(src));
+#else
 	skillratio += -100 + skill_lv * (120 + sstatus->str);
 
 	if (sc != nullptr && sc->getSCE(SC_SPEAR_SCAR)) {
 		skillratio += 400;
 	}
 
+#endif
 	RE_LVL_DMOD(100);
 }

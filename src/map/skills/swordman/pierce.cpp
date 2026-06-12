@@ -19,8 +19,10 @@ void SkillPierce::calculateSkillRatio(const Damage* wd, const block_list* src, c
 
 	base_skillratio += 10 * skill_lv;
 
+#ifndef NEED_2017_SKILL_FORMULA
 	if (sc && sc->getSCE(SC_CHARGINGPIERCE_COUNT) && sc->getSCE(SC_CHARGINGPIERCE_COUNT)->val1 >= 10)
 		base_skillratio *= 2;
+#endif
 }
 
 void SkillPierce::modifyHitRate(int16& hit_rate, const block_list* src, const block_list* target, uint16 skill_lv) const {

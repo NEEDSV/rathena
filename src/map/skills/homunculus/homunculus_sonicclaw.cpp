@@ -22,5 +22,10 @@ void SkillSonicClaw::castendDamageId(block_list* src, block_list* target, uint16
 }
 
 void SkillSonicClaw::calculateSkillRatio(const Damage* wd, const block_list* src, const block_list* target, uint16 skill_lv, int32& base_skillratio, int32 mflag) const {
+
+#ifdef NEED_2017_SKILL_FORMULA
+	base_skillratio += -100 + 40 * skill_lv * status_get_lv(src) / 150;
+#else
 	base_skillratio += -100 + 60 * skill_lv * status_get_lv(src) / 150;
+#endif
 }

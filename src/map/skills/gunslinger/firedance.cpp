@@ -14,10 +14,14 @@ SkillFireDance::SkillFireDance() : SkillImplRecursiveDamageSplash(RL_FIREDANCE) 
 
 void SkillFireDance::calculateSkillRatio(const Damage* wd, const block_list* src, const block_list* target, uint16 skill_lv, int32& skillratio, int32 mflag) const {
 	const map_session_data* sd = BL_CAST(BL_PC, src);
-
+#ifdef NEED_2017_SKILL_FORMULA
+	skillratio += -100 + 200 * skill_lv;
+	skillratio += (sd ? pc_checkskill(sd, GS_DESPERADO) * 50 : 0);
+#else
 	skillratio += 100 + 100 * skill_lv;
 	skillratio += (sd ? pc_checkskill(sd, GS_DESPERADO) * 20 : 0);
 	RE_LVL_DMOD(100);
+#endif
 }
 
 void SkillFireDance::castendNoDamageId(block_list *src, block_list *target, uint16 skill_lv, t_tick tick, int32& flag) const {

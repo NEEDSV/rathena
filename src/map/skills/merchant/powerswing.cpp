@@ -25,10 +25,16 @@ void SkillPowerSwing::calculateSkillRatio(const Damage *wd, const block_list *sr
 	const status_data* sstatus = status_get_status_data(*src);
 	const status_change* sc = status_get_sc(src);
 
+#ifdef NEED_2017_SKILL_FORMULA
+	skillratio += -100 + status_get_str(src) + status_get_dex(src);
+	RE_LVL_DMOD(100);
+	skillratio += 300 + 100 * skill_lv;
+#else
 	// According to current sources, only the str + dex gets modified by level [Akinari]
-	skillratio += -100 + ((sstatus->str + sstatus->dex)/ 2) + 300 + 100 * skill_lv;
+	skillratio += -100 + ((sstatus->str + sstatus->dex) / 2) + 300 + 100 * skill_lv;
 	RE_LVL_DMOD(100);
 	if (sc && sc->getSCE(SC_ABR_BATTLE_WARIOR)) {
 		skillratio *= 2;
 	}
+#endif
 }

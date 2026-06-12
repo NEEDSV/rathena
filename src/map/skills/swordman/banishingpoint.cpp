@@ -15,6 +15,10 @@ void SkillBanishingPoint::calculateSkillRatio(const Damage* wd, const block_list
 	const map_session_data* sd = BL_CAST(BL_PC, src);
 	const status_change* sc = status_get_sc(src);
 
+#ifdef NEED_2017_SKILL_FORMULA
+	skillratio += -100 + (50 * skill_lv) + ((sd) ? pc_checkskill(sd, SM_BASH) * 30 : 0);
+	RE_LVL_DMOD(100);
+#else
 	skillratio += -100 + (100 * skill_lv);
 
 	if (sd != nullptr) {
@@ -26,6 +30,7 @@ void SkillBanishingPoint::calculateSkillRatio(const Damage* wd, const block_list
 	}
 
 	RE_LVL_DMOD(100);
+#endif
 }
 
 void SkillBanishingPoint::modifyHitRate(int16& hit_rate, const block_list* src, const block_list* target, uint16 skill_lv) const {

@@ -8,33 +8,33 @@
 
 dali02,51,130,4	script	Dimension Traveler	4_F_SHABBY,{
 	if (checkweight(28100,1) == 0) {// Thanos Axe
-		mes "- You cannot proceed because you have too many items with you. -";
+		mes "- 소지품이 너무 많아 진행할 수 없습니다. -";
 		close;
 	}
 	.@item_name_req$ = getitemname(6672);// Gray_Shard
-	mes "[Dimension Traveler]";
-	mes "Adventurer friend, " + mesitemlink( 6672 ) + " is what I need. How about exchanging it with something I have?";
+	mes "[차원 여행자]";
+	mes " 모험가 친구," + mesitemlink( 6672 ) + " 제가 필요한 건 이거예요. 제가 가진 물건이랑 교환하는 건 어때요?";
 	next;
-	.@type = select( "Show me your weapon.", "Show me your armor.", "Anything special?", "I do not need." ) - 1;
-	mes "[Dimension Traveler]";
+	.@type = select( "무기를 보여줘.", "갑옷을 보여줘.", "특별한 거라도 있나요?", "저는 필요 없어요." ) - 1;
+	mes "[차원 여행자]";
 	switch(.@type) {
 	case 0:
-		mes "Oh! Are you interested in weapons? We have all the weapons we can get from the Ghost Palace. Why don't you choose one?";
+		mes "오! 무기에 관심 있으세요? 저희는 유령의 궁전에서 얻을 수 있는 모든 무기를 갖추고 있습니다. 하나 골라보시겠어요?";
 		break;
 	case 1:
-		mes "Armor? We have all the armors we can get from the Ghost Palace. Why don't you choose one?";
+		mes "갑옷이요? 유령의 궁전에서 얻을 수 있는 모든 갑옷이 다 있어요. 하나 골라보시는 게 어때요?";
 		break;
 	case 2:
-		mes "Huhh! It seems like many of them already heard that I have the best stuff. Feel free to check out my collections.";
+		mes "어라! 많은 사람들이 이미 제가 최고의 물건들을 가지고 있다는 소문을 들은 것 같네요. 제 컬렉션을 마음껏 구경해 보세요.";
 		break;
 	case 3:
-		mes "Goodbye friend~ Come again!";
+		mes "잘 가 친구~ 또 와!";
 		close;
 	}
 	next;
-	mes "[Dimension Traveler]";
-	mes "Ah! The number that is written beside " + mesitemlink( 6672 ) + " will be needed.";
-	mes "Please keep that in mind.";
+	mes "[차원 여행자]";
+	mes "아! 옆에 적힌 숫자가" + mesitemlink( 6672 ) + " 필요할 것입니다.";
+	mes "이 점을 꼭 명심해 주세요.";
 
 	switch(.@type) {
 	case 0:
@@ -78,41 +78,41 @@ dali02,51,130,4	script	Dimension Traveler	4_F_SHABBY,{
 	while(true) {
 		next;
 		.@s = (select(.@menu$) - 1) * 2;
-		mes "[Dimension Traveler]";
+		mes "[차원 여행자]";
 		if (.@type != 1)	// armor type doesn't display item info
-			mes "Do you mean " + mesitemlink( .@items[.@s] ) + "?";
-		mes "" + .@items[.@s+1] + " ^006400" + .@item_name_req$ + "^000000 are required in exchange.";
+			mes " 무슨 말씀이세요?" + mesitemlink( .@items[.@s] ) + "?";
+		mes "" + .@items[.@s+1] + " ^006400" + .@item_name_req$ + "^000000이 교환에 필요합니다.";
 		next;
-		switch( select( "Let's exchange.", "Let me see other stuff.", "I will come back later." ) ) {
+		switch( select( "서로 교환해 봅시다.", "다른 것도 좀 볼게요.", "나중에 다시 올게요." ) ) {
 		case 1:
 			break;
 		case 2:
-			mes "[Dimension Traveler]";
+			mes "[차원 여행자]";
 			switch(.@type) {
 			case 0:
-				mes "I have more than enough weapons.";
+				mes "나는 무기가 충분히 많다.";
 				break;
 			case 1:
-				mes "We have many armors for you. Why don't you pick one?";
+				mes "당신을 위한 갑옷이 많이 있습니다. 하나 골라 보시겠어요?";
 				break;
 			case 2:
-				mes "If you bring me " + .@item_name_req$ + ", I will trade it with anything you want.";
+				mes " 만약 당신이 나를 데려온다면" + .@item_name_req$ + "원하는 어떤 것과든 교환하겠습니다.";
 				break;
 			}
 			continue;
 		case 3:
-			mes "[Dimension Traveler]";
-			mes "Take care friend~ See you next time!";
+			mes "[차원 여행자]";
+			mes "잘 지내 친구~ 다음에 또 보자!";
 			close;
 		}
 		if (countitem(6672) < .@items[.@s+1]) {
-			mes "[Dimension Traveler]";
-			mes "You put me in a difficult situation, friend.";
-			mes "I am in need of " + .@item_name_req$ + ". I will exchange it for ^006400" + .@items[.@s+1] + " " + .@item_name_req$ + "^000000.";
+			mes "[차원 여행자]";
+			mes "친구, 네가 날 곤란한 상황에 빠뜨렸어.";
+			mes " 저는 필요합니다" + .@item_name_req$ + "^006400으로 교환하겠습니다." + .@items[.@s+1] + " " + .@item_name_req$ + "^000000.";
 			close;
 		}
-		mes "[Dimension Traveler]";
-		mes "Thank you. Come back if you need anything else.";
+		mes "[차원 여행자]";
+		mes "감사합니다. 다른 필요한 것이 있으면 언제든지 다시 오세요.";
 		delitem 6672, .@items[.@s+1];
 		getitem .@items[.@s], 1;
 		close;

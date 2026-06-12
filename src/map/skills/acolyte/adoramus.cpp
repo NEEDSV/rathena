@@ -19,7 +19,11 @@ void SkillAdoramus::applyAdditionalEffects(block_list *src, block_list *target, 
 }
 
 void SkillAdoramus::calculateSkillRatio(const Damage *wd, const block_list *src, const block_list *target, uint16 skill_lv, int32 &skillratio, int32 mflag) const {
-	skillratio += - 100 + 300 + 250 * skill_lv;
+#ifdef NEED_2017_SKILL_FORMULA
+	skillratio += 400 + 100 * skill_lv;
+#else
+	skillratio += -100 + 300 + 250 * skill_lv;
+#endif
 	RE_LVL_DMOD(100);
 }
 

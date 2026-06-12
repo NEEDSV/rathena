@@ -21,10 +21,15 @@ void SkillOverBrand::calculateSkillRatio(const Damage* wd, const block_list* src
 	const map_session_data* sd = BL_CAST(BL_PC, src);
 	const status_change* sc = status_get_sc(src);
 
-	if(sc && sc->getSCE(SC_OVERBRANDREADY))
+#ifdef NEED_2017_SKILL_FORMULA
+	skillratio += -100 + 400 * skill_lv + ((sd) ? pc_checkskill(sd, CR_SPEARQUICKEN) * 50 : 0);
+	RE_LVL_DMOD(100);
+#else
+	if (sc && sc->getSCE(SC_OVERBRANDREADY))
 		skillratio += -100 + 500 * skill_lv;
 	else
 		skillratio += -100 + 350 * skill_lv;
 	skillratio += ((sd) ? pc_checkskill(sd, CR_SPEARQUICKEN) * 50 : 0);
 	RE_LVL_DMOD(100);
+#endif
 }

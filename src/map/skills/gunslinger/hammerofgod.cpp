@@ -39,6 +39,17 @@ void SkillHammerOfGod::castendDamageId(block_list* src, block_list* target, uint
 void SkillHammerOfGod::calculateSkillRatio(const Damage* wd, const block_list* src, const block_list* target, uint16 skill_lv, int32& skillratio, int32 mflag) const {
 	const map_session_data* sd = BL_CAST(BL_PC, src);
 
+#ifdef NEED_2017_SKILL_FORMULA
+	const status_change* tsc = status_get_sc(target);
+
+	skillratio += -100 + 2800 + 1400 * skill_lv;
+	if (sd) {
+		if (tsc && tsc->getSCE(SC_C_MARKER))
+			skillratio += 100 * sd->spiritball_old;
+		else if (sd->spiritball_old)
+			skillratio += 10 * sd->spiritball_old;
+	}
+#else
 	skillratio += -100 + 100 * skill_lv;
 	if (sd) {
 		if (wd->miscflag & 8) {
@@ -48,4 +59,5 @@ void SkillHammerOfGod::calculateSkillRatio(const Damage* wd, const block_list* s
 		}
 	}
 	RE_LVL_DMOD(100);
+#endif
 }

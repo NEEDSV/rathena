@@ -12,8 +12,13 @@ SkillEarthStrain::SkillEarthStrain() : SkillImpl(WL_EARTHSTRAIN) {
 }
 
 void SkillEarthStrain::calculateSkillRatio(const Damage *wd, const block_list *src, const block_list *target, uint16 skill_lv, int32 &skillratio, int32 mflag) const {
+#ifdef NEED_2017_SKILL_FORMULA
+	skillratio += 1900 + 100 * skill_lv;
+	RE_LVL_DMOD(100);
+#else
 	skillratio += -100 + 1000 + 600 * skill_lv;
 	RE_LVL_DMOD(100);
+#endif
 }
 
 void SkillEarthStrain::castendPos2(block_list* src, int32 x, int32 y, uint16 skill_lv, t_tick tick, int32& flag) const {

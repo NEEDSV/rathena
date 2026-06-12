@@ -14,7 +14,7 @@ SkillShieldChain::SkillShieldChain() : WeaponSkillImpl(PA_SHIELDCHAIN) {
 void SkillShieldChain::calculateSkillRatio(const Damage *wd, const block_list *src, const block_list *target, uint16 skill_lv, int32 &skillratio, int32 mflag) const {
 	const status_change *sc = status_get_sc(src);
 
-#ifdef RENEWAL
+#ifndef NEED_2017_SKILL_FORMULA
 	const map_session_data* sd = BL_CAST( BL_PC, src );
 
 	skillratio = -100 + 300 + 200 * skill_lv;
@@ -34,9 +34,10 @@ void SkillShieldChain::calculateSkillRatio(const Damage *wd, const block_list *s
 	}
 
 	RE_LVL_DMOD(100);
+
+	if (sc && sc->getSCE(SC_SHIELD_POWER))// Whats the official increase? [Rytech]
+		skillratio += skillratio * 50 / 100;
 #else
 	skillratio += 30 * skill_lv;
 #endif
-	if (sc && sc->getSCE(SC_SHIELD_POWER))// Whats the official increase? [Rytech]
-		skillratio += skillratio * 50 / 100;
 }

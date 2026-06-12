@@ -24,7 +24,7 @@ void SkillRagingThrust::castendDamageId(block_list* src, block_list* target, uin
 }
 
 void SkillRagingThrust::calculateSkillRatio(const Damage* wd, const block_list* src, const block_list* target, uint16 skill_lv, int32& base_skillratio, int32 mflag) const {
-#ifdef RENEWAL
+#ifndef NEED_2017_SKILL_FORMULA
 	const status_data* sstatus = status_get_status_data(*src);
 
 	base_skillratio += 450 + 50 * skill_lv + sstatus->str; // !TODO: How does STR play a role?
@@ -32,6 +32,8 @@ void SkillRagingThrust::calculateSkillRatio(const Damage* wd, const block_list* 
 	base_skillratio += 140 + 60 * skill_lv;
 #endif
 
+#ifndef NEED_2017_SKILL_FORMULA
 	if (const status_change* sc = status_get_sc(src); sc != nullptr && sc->getSCE(SC_GT_ENERGYGAIN))
 		base_skillratio += base_skillratio * 50 / 100;
+#endif
 }

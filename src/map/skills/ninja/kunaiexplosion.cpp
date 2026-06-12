@@ -19,6 +19,8 @@ void SkillKunaiExplosion::calculateSkillRatio(const Damage *wd, const block_list
 	skillratio += -100 + (sd ? pc_checkskill(sd,NJ_TOBIDOUGU) : 1) * (50 + sstatus->dex / 4) * skill_lv * 4 / 10;
 	RE_LVL_DMOD(120);
 	skillratio += 10 * (sd ? sd->status.job_level : 1);
+#ifndef NEED_2017_SKILL_FORMULA
 	if (sc && sc->getSCE(SC_KAGEMUSYA))
 		skillratio += skillratio * sc->getSCE(SC_KAGEMUSYA)->val2 / 100;
+#endif
 }

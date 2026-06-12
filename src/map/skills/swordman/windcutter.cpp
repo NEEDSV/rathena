@@ -18,15 +18,17 @@ void SkillWindCutter::modifyDamageData(Damage& dmg, const block_list& src, const
 	if (sd != nullptr) {
 		if (sd->status.weapon == W_1HSPEAR || sd->status.weapon == W_2HSPEAR)
 			dmg.flag |= BF_LONG;
-
+#ifndef NEED_2017_SKILL_FORMULA
 		if (sd->weapontype1 == W_2HSWORD)
 			dmg.div_ = 2;
+#endif
 	}
 }
 
 void SkillWindCutter::calculateSkillRatio(const Damage *wd, const block_list *src, const block_list *target, uint16 skill_lv, int32 &skillratio, int32 mflag) const {
 	const map_session_data* sd = BL_CAST(BL_PC, src);
 
+#ifndef NEED_2017_SKILL_FORMULA
 	if (sd) {
 		if (sd->weapontype1 == W_2HSWORD)
 			skillratio += -100 + 250 * skill_lv;
@@ -37,6 +39,10 @@ void SkillWindCutter::calculateSkillRatio(const Damage *wd, const block_list *sr
 	} else
 		skillratio += -100 + 300 * skill_lv;
 	RE_LVL_DMOD(100);
+#else
+	skillratio += -100 + (skill_lv + 2) * 50;
+	RE_LVL_DMOD(100);
+#endif
 }
 
 void SkillWindCutter::castendNoDamageId(block_list *src, block_list *target, uint16 skill_lv, t_tick tick, int32& flag) const {

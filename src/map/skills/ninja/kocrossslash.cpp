@@ -28,12 +28,19 @@ void SkillKoCrossSlash::calculateSkillRatio(const Damage *wd, const block_list *
 	const status_change *sc = status_get_sc(src);
 	const status_change *tsc = status_get_sc(target);
 
+#ifdef NEED_2017_SKILL_FORMULA
+	skillratio += -100 + 150 * skill_lv;
+	RE_LVL_DMOD(120);
+	if (tsc && tsc->getSCE(SC_JYUMONJIKIRI))
+		skillratio += skill_lv * status_get_lv(src);
+#else
 	skillratio += -100 + 200 * skill_lv;
 	RE_LVL_DMOD(120);
-	if(tsc && tsc->getSCE(SC_JYUMONJIKIRI))
+	if (tsc && tsc->getSCE(SC_JYUMONJIKIRI))
 		skillratio += skill_lv * status_get_lv(src);
 	if (sc && sc->getSCE(SC_KAGEMUSYA))
 		skillratio += skillratio * sc->getSCE(SC_KAGEMUSYA)->val2 / 100;
+#endif
 }
 
 void SkillKoCrossSlash::castendDamageId(block_list *src, block_list *target, uint16 skill_lv, t_tick tick, int32& flag) const {

@@ -19,7 +19,7 @@ void SkillRagingPalmStrike::castendDamageId(block_list* src, block_list* target,
 }
 
 void SkillRagingPalmStrike::calculateSkillRatio(const Damage* wd, const block_list* src, const block_list* target, uint16 skill_lv, int32& skillratio, int32 mflag) const {
-#ifdef RENEWAL
+#ifndef NEED_2017_SKILL_FORMULA
 	const status_data* sstatus = status_get_status_data(*src);
 
 	skillratio += 100 + 100 * skill_lv + sstatus->str; // !TODO: How does STR play a role?

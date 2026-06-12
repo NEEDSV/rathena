@@ -11,7 +11,7 @@ SkillChainCrushCombo::SkillChainCrushCombo() : WeaponSkillImpl(CH_CHAINCRUSH) {
 }
 
 void SkillChainCrushCombo::calculateSkillRatio(const Damage* wd, const block_list* src, const block_list* target, uint16 skill_lv, int32& skillratio, int32 mflag) const {
-#ifdef RENEWAL
+#ifndef NEED_2017_SKILL_FORMULA
 	skillratio += -100 + 200 * skill_lv;
 	RE_LVL_DMOD(100);
 #else

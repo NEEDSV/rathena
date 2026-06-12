@@ -19,10 +19,20 @@ void SkillHellInferno::modifyDamageData(Damage& dmg, const block_list& src, cons
 }
 
 void SkillHellInferno::calculateSkillRatio(const Damage *wd, const block_list *src, const block_list *target, uint16 skill_lv, int32 &skillratio, int32 mflag) const {
+#ifdef NEED_2017_SKILL_FORMULA
+	skillratio += -100 + 300 * skill_lv;
+	RE_LVL_DMOD(100);
+	// Shadow: MATK [{( Skill Level x 300 ) x ( Caster Base Level / 100 ) x 4/5 }] %
+	// Fire : MATK [{( Skill Level x 300 ) x ( Caster Base Level / 100 ) /5 }] %
+	if (mflag & ELE_DARK)
+		skillratio *= 4;
+	skillratio /= 5;
+#else
 	skillratio += -100 + 400 * skill_lv;
 	if (mflag & 2) // ELE_DARK
 		skillratio += 200 * skill_lv;
 	RE_LVL_DMOD(100);
+#endif
 }
 
 void SkillHellInferno::castendDamageId(block_list *src, block_list *target, uint16 skill_lv, t_tick tick, int32& flag) const {

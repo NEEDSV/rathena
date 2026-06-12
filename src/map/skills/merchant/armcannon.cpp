@@ -19,8 +19,20 @@ void SkillArmCannon::modifyDamageData(Damage& dmg, const block_list& src, const 
 }
 
 void SkillArmCannon::calculateSkillRatio(const Damage* wd, const block_list* src, const block_list* target, uint16 skill_lv, int32& skillratio, int32 mflag) const {
+
+#ifdef NEED_2017_SKILL_FORMULA
+	const status_data* tstatus = status_get_status_data(*target);
+
+	switch (tstatus->size) {
+	case SZ_SMALL: skillratio += 200 + 400 * skill_lv; break;// Small
+	case SZ_MEDIUM: skillratio += 200 + 350 * skill_lv; break;// Medium
+	case SZ_BIG: skillratio += 200 + 300 * skill_lv; break;// Large
+	}
+	RE_LVL_DMOD(120);
+#else
 	skillratio += -100 + 400 + 350 * skill_lv;
 	RE_LVL_DMOD(100);
+#endif
 }
 
 int32 SkillArmCannon::getSplashTarget(block_list* src) const {

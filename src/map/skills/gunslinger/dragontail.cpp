@@ -32,6 +32,9 @@ void SkillDragonTail::splashSearch(block_list* src, block_list* target, uint16 s
 }
 
 void SkillDragonTail::calculateSkillRatio(const Damage* wd, const block_list* src, const block_list* target, uint16 skill_lv, int32& skillratio, int32 mflag) const {
+#ifdef NEED_2017_SKILL_FORMULA
+	skillratio += -100 + 4000 + 1000 * skill_lv;
+#else
 	skillratio += -100 + 500 + 200 * skill_lv;
 
 	if (wd->miscflag & SKILL_ALTDMG_FLAG) {
@@ -39,4 +42,5 @@ void SkillDragonTail::calculateSkillRatio(const Damage* wd, const block_list* sr
 	}
 
 	RE_LVL_DMOD(100);
+#endif
 }

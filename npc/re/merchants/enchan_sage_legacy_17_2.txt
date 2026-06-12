@@ -11,23 +11,23 @@
 
 ba_in01,87,370,3	script	Lisa#ep172_merchant	20698,{
 	if (checkweight(1201,3) == 0) {
-		mes "^ff0000It seems that the type or weight of the item you have is too much. Please organize your inventory.^000000";
+		mes "보유하신 품목의 종류나 무게가 너무 많은 것 같습니다. 재고를 정리해 주세요.";
 		close;
 	}
 	disable_items;
-	mes "[Lisa]";
-	mes "Welcome welcome~";
+	mes "[리사]";
+	mes "환영합니다~";
 	next;
-	switch( select( "Explore Devices", "Automatic Engine Wing Enhancement", "Automatic Armor Enhancement", "Automatic Leg Enhancement", "Automatic Accessories(R) Enhancement", "Automatic Accessories(L) Enhancement" ) ) {
+	switch( select( "기기 살펴보기", "자동 엔진 윙 강화", "자동 갑옷 강화", "자동 다리 강화", "자동 액세서리(R) 향상", "자동 액세서리(L) 향상" ) ) {
 	case 1:
-		mes "[Lisa]";
-		mes "If you bring automatic equipment and reinforcement modules, we can enchant the appropriate module on the equipment.";
+		mes "[리사]";
+		mes "자동화 장비와 강화 모듈을 가져오시면, 해당 장비에 적합한 모듈을 장착해 드릴 수 있습니다.";
 		next;
-		mes "[Lisa]";
-		mes "This is done according to the specification module, so the equipment will not be destroyed. However, the number of upgrades can vary depending on the module.";
+		mes "[리사]";
+		mes "이는 사양 모듈에 따라 진행되므로 장비가 파괴되지 않습니다. 다만, 업그레이드 횟수는 모듈에 따라 다를 수 있습니다.";
 		next;
-		mes "[Lisa]";
-		mes "Then please visit again when you need help~";
+		mes "[리사]";
+		mes "도움이 필요하시면 언제든 다시 찾아주세요~";
 		close;
 	case 2:
 		.@part = EQI_GARMENT;
@@ -56,17 +56,17 @@ ba_in01,87,370,3	script	Lisa#ep172_merchant	20698,{
 	for ( .@i = 0; .@i < 4; ++.@i )
 		.@card[.@i] = getequipcardid(.@part,.@i);
 
-	mes "[Lisa]";
-	mes "If you bring automatic equipment and reinforcement modules, we can enchant the appropriate module on the equipment.";
+	mes "[리사]";
+	mes "자동화 장비와 강화 모듈을 가져오시면, 해당 장비에 적합한 모듈을 장착해 드릴 수 있습니다.";
 	next;
-	mes "[Lisa]";
+	mes "[리사]";
 	mes strcharinfo(0) + ".";
-	mes "Please select the grade of module that you want to use.";
+	mes "사용하실 모듈의 학년을 선택해 주세요.";
 	next;
-	switch( select( "Cancel", "Normal Grade", "Rare Grade", "Unique Grade", "Legendary Grade", "Epic Grade 1", "Epic Grade 2", "Epic Grade 3" ) ) {
+	switch( select( "Cancel", "보통 등급", "희귀 등급", "독특한 등급", "전설적인 등급", "에픽 1등급", "에픽 2등급", "에픽 3등급" ) ) {
 	case 1:
-		mes "[Lisa]";
-		mes "Stopping conversation.";
+		mes "[리사]";
+		mes "대화를 중단합니다.";
 		close;
 	case 2:
 		setarray .@module_etc[0],1000105,1000106,1000107,1000108,1000109,1000110,1000111,1000112;
@@ -91,7 +91,7 @@ ba_in01,87,370,3	script	Lisa#ep172_merchant	20698,{
 		break;
 	}
 	.@size = getarraysize(.@module_etc);
-	.@menu$ = "Cancel:";
+	.@menu$ = "취소:";
 
 	// Build the menu according to all the modules with the given grade in inventory
 	for ( .@i = 0; .@i < .@size; ++.@i ) {
@@ -106,31 +106,31 @@ ba_in01,87,370,3	script	Lisa#ep172_merchant	20698,{
 	}
 	.@s = select(.@menu$) - 2;
 	if (.@s == -1) {
-		mes "[Lisa]";
-		mes "Stopping conversation.";
+		mes "[리사]";
+		mes "대화를 중단합니다.";
 		close;
 	}
 	.@module_id = .@module_etc[.@s];
 
 	if (countitem(.@module_id) < 1) {
-		mes "[Lisa]";
-		mes "You must possess a module in your inventory that matches the efficacy to proceed with the enhancement.";
+		mes "[리사]";
+		mes "강화 작업을 진행하려면 인벤토리에 해당 효능에 맞는 모듈을 보유하고 있어야 합니다.";
 		close;
 	}
 	if (.@equip_required[0] != .@equip_id && .@equip_required[1] != .@equip_id) {
-		mes "[Lisa]";
-		mes "Please make sure you have equipped the proper automatic equipment that you want to enhance.";
+		mes "[리사]";
+		mes "향상시키고자 하는 자동화 장비를 제대로 갖추었는지 확인해 주십시오.";
 		close;
 	}
 	if (.@card[1] > 0) {
-		mes "[Lisa]";
-		mes "This automatic equipment is already at its maximum capacity.";
-		mes "Please try another automatic equipment.";
+		mes "[리사]";
+		mes "이 자동화 장비는 이미 최대 용량에 도달했습니다.";
+		mes "다른 자동 장비를 사용해 보세요.";
 		close;
 	}
 	if (.@module_id < 1000105 || .@module_id == 1000150 || .@module_id == 1000151 || (.@module_id >= 1000203 && .@module_id != 1000207 && .@module_id != 1000208)) {
-		mes "[Lisa]";
-		mes "Unknown error has occurred.";
+		mes "[리사]";
+		mes "알 수 없는 오류가 발생했습니다.";
 		close;
 	}
 
@@ -163,8 +163,8 @@ ba_in01,87,370,3	script	Lisa#ep172_merchant	20698,{
 	.@data_index = inarray(.@module_etc_data, .@module_id);
 
 	if (.@data_index == -1) {
-		mes "[Lisa]";
-		mes "You can not enchant this module to this automatic equipment.";
+		mes "[리사]";
+		mes "이 모듈은 해당 자동 장비에 마법을 부여할 수 없습니다.";
 		close;
 	}
 	// Max number of the selected module allowed
@@ -183,22 +183,22 @@ ba_in01,87,370,3	script	Lisa#ep172_merchant	20698,{
 	// Check the count of the corresponding enchant in card slots
 	.@enchant_id = .@auto_module[.@module_id];
 	if (.@enchant_id == 0) {
-		mes "[Lisa]";
-		mes "Unknown error has occurred.";
+		mes "[리사]";
+		mes "알 수 없는 오류가 발생했습니다.";
 		close;
 	}
 	if (countinarray(.@card[0], .@enchant_id) >= .@max_module) {
-		mes "[Lisa]";
-		mes "This automatic equipment has already maximized the enhancement from this module.";
-		mes "Please try another module.";
+		mes "[리사]";
+		mes "이 자동화 장비는 이미 이 모듈을 통해 성능 향상을 극대화했습니다.";
+		mes "다른 모듈을 사용해 보세요.";
 		close;
 	}
-	mes "[Lisa]";
-	mes "Are you sure you want to enchance your ^FF0000" + .@equip_name$ + "^000000 with ^0000CD" + getitemname(.@module_id) + "^000000? This process cannot be reversed.";
+	mes "[리사]";
+	mes "^FF0000을 향상시키시겠습니까?" + .@equip_name$ + "^000000과 ^0000CD" + getitemname(.@module_id) + "^000000? 이 과정은 되돌릴 수 없습니다.";
 	next;
-	if (select( "Wait... Don't", "I'm sure. Do it." ) == 1) {
-		mes "[Lisa]";
-		mes "Stopping conversation.";
+	if (select( "잠깐... 하지 마", "확실해요. 해보세요." ) == 1) {
+		mes "[리사]";
+		mes "대화를 중단합니다.";
 		close;
 	}
 	delitem .@module_id,1;
@@ -214,8 +214,8 @@ ba_in01,87,370,3	script	Lisa#ep172_merchant	20698,{
 	}
 	delequip .@part;
 	getitem2 .@equip_id,1,1,.@refine,0,.@card[0],.@card[1],.@card[2],.@card[3];
-	mes "[Lisa]";
-	mes "Woaaaah~ I can feel the power of your automatic equipment already~!";
+	mes "[리사]";
+	mes "와아아~ 벌써부터 자동화 장비의 위력이 느껴지네요~!";
 	close;
 }
 
@@ -225,29 +225,29 @@ ba_in01,87,370,3	script	Lisa#ep172_merchant	20698,{
 ba_in01,87,386,3	script	Child Manager ß#ep172_pet	EP17_2_CHILD_ADMIN1,{
 	if (checkweight(1201,3) == 0) {
 		mes "- You have too many items.";
-		mes "Please clear your inventory and try again. -";
+		mes "인벤토리를 초기화한 후 다시 시도해 주세요.";
 		close;
 	}
 	mes "[Child Manager ß]";
-	mes "I have a whole bunch of little stuffs!";
+	mes "저는 자잘한 물건들이 아주 많아요!";
 	next;
-	switch( select( "Little Manager", "Cloud Cotton", "Little Headress", "Cancel" ) ) {
+	switch( select( "리틀 매니저", "구름솜", "작은 머리 장식", "Cancel" ) ) {
 	case 1:
 		mes "[Child Manager ß]";
-		mes "If you want to play with the little manager, it would cost you 30 Barmeal Tickets.";
+		mes "꼬마 매니저와 함께 게임을 하려면 바밀 티켓 30장이 필요합니다.";
 		next;
 		if (select( "Exchange.", "Stop." ) == 2) {
 			mes "[Child Manager ß]";
-			mes "Then, it's time for me to play!";
+			mes "그럼, 이제 제가 연주할 차례네요!";
 			close;
 		}
 		if (countitem(1000103) < 30) {
 			mes "[Child Manager ß]";
-			mes "Like I said, if you want to play with the little manager, you'll need 30 Barmeal Tickets!";
+			mes "앞서 말씀드렸듯이, 꼬마 매니저와 함께 플레이하려면 바밀 티켓 30장이 필요합니다!";
 			close;
 		}
 		mes "[Child Manager ß]";
-		mes "Have fun with your new friend!";
+		mes "새 친구와 즐거운 시간 보내세요!";
 		delitem 1000103,30;
 		getitem 9123,1;
 		close;
@@ -259,7 +259,7 @@ ba_in01,87,386,3	script	Child Manager ß#ep172_pet	EP17_2_CHILD_ADMIN1,{
 		end;
 	case 4:
 		mes "[Child Manager ß]";
-		mes "Then, it's time for me to play!";
+		mes "그럼, 이제 제가 연주할 차례네요!";
 		close;
 	}
 	end;
@@ -269,9 +269,9 @@ ba_in01,87,386,3	script	Child Manager ß#ep172_pet	EP17_2_CHILD_ADMIN1,{
 -	marketshop	ep172cubeshop00	-1,100251:10000000:-1,100252:30000000:-1
 
 ba_in01,87,376,3	script	Cube Lane#ep172cube	4_EP17_GUARD_B,{
-	mes "[Cube Lane]";
-	mes "We are offering reinforcement cubes that will refine your ^0000CD+4^000000 Illusion and Automatic Equipment to ^FF0000+7^000000 in an instant!";
-	mes "Varmundt is no doubt the best man in the world!";
+	mes "[큐브 레인]";
+	mes "저희는 여러분의 환영 및 자동 장비를 ^0000CD+4^000000으로 즉시 강화시켜 줄 강화 큐브를 제공합니다!";
+	mes "바르문트는 틀림없이 세계 최고의 남자입니다!";
 	close2;
 	callshop "ep172cubeshop00";
 	end;
@@ -287,42 +287,42 @@ ba_in01,87,373,3	script	Spiera#ep172_soapstone	MD_ASSISTANT,{
 ba_in01,87,383,3	script	Yeoncheong#equipment_exchange	4_EP17_CLEANER_W,{
 	if (checkweight(1201,3) == 0) {
 		cutin "ep172_omega.bmp",2;
-		mes "[Yeoncheong]";
-		mes "The bag is full. Please check the weight and number of items in your possession before talking again.";
+		mes "[연청]";
+		mes "가방이 꽉 찼습니다. 다시 말씀하시기 전에 소지품의 무게와 개수를 확인해 주세요.";
 		close3;
 	}
 	disable_items;
 	cutin "ep172_omega",2;
-	mes "[Yeoncheong]";
-	mes "We accept Barmeal Tickets for upgrading your Illusion Equipment into Automatic Requipments.";
-	mes "What would you like to exchange?";
+	mes "[연청]";
+	mes "저희는 바밀 티켓을 사용하여 환영 장비를 자동 장비로 업그레이드할 수 있습니다.";
+	mes "무엇을 교환하고 싶으세요?";
 	next;
-	switch( select( "Exchange Information", "Automatic Equipment Exchange", "Automatic Accessory Exchange", "Quit" ) ) {
+	switch( select( "정보 교환", "자동 장비 교환", "자동 액세서리 교환", "Quit" ) ) {
 	case 1:
-		mes "[Yeoncheong]";
-		mes "You can exchange your ^0000CD+9 Illusion Armor, Engine, or Leg and 900 Barmeal Tickets^000000 to ^FF0000Automatic Armor, Engine, or Leg^000000.";
+		mes "[연청]";
+		mes "^0000CD+9 환영 갑옷, 엔진 또는 다리 장비와 900 바밀 티켓^000000을 ^FF0000자동 갑옷, 엔진 또는 다리 장비^000000으로 교환할 수 있습니다.";
 		next;
-		mes "[Yeoncheong]";
-		mes "The ^FF0000Automatic Accessories^000000 can be exchanged for ^0000CDIllusion Accessories and 1500 Barmeal Tickets^000000.";
+		mes "[연청]";
+		mes "^FF0000자동 액세서리^000000은 ^0000CDIllusion 액세서리 및 1500 바밀 티켓^000000으로 교환할 수 있습니다.";
 		next;
-		mes "[Yeoncheong]";
-		mes "The equipment you want to exchange must be in your inventory and talk to me.";
-		mes "^FF0000Bring only one equipment that you want to exchange and proceed.^000000";
+		mes "[연청]";
+		mes "교환하고 싶은 장비가 인벤토리에 있어야 하고, 저에게 말씀해 주세요.";
+		mes "^FF0000교환을 원하시는 장비는 하나만 가져오시고 진행해 주십시오.^000000";
 		close3;
 	case 2:
-		.@shop$ = "barter_auto_equip_1";
+		.@shop$ = "물물교환_자동_장비_1";
 		break;
 	case 3:
-		.@shop$ = "barter_auto_equip_2";
+		.@shop$ = "물물교환_자동_장비_2";
 		break;
 	case 4:
-		mes "[Yeoncheong]";
-		mes "Have a nice day, dear guest~";
+		mes "[연청]";
+		mes "좋은 하루 보내세요, 손님~";
 		close3;
 	}
-	mes "[Yeoncheong]";
-	mes "^FF0000Bring only one equipment that you want to exchange and proceed.^000000";
-	mes "If there are multiple equipments in your inventory, it will be exchanged randomly if it meets the condition.";
+	mes "[연청]";
+	mes "^FF0000교환을 원하시는 장비는 하나만 가져오시고 진행해 주십시오.^000000";
+	mes "보유 장비에 여러 개의 장비가 있는 경우, 조건을 충족하면 무작위로 교환됩니다.";
 	close2;
 	cutin "",255;
 	callshop .@shop$;
@@ -333,48 +333,48 @@ ba_in01,87,383,3	script	Yeoncheong#equipment_exchange	4_EP17_CLEANER_W,{
 ba_in01,87,380,3	script	Yecheon#ep172module_trader	4_EP17_CLEANER_W,{
 	if (checkweight(1201,3) == 0) {
 		cutin "ep172_omega",2;
-		mes "[Yecheon]";
-		mes "The bag is full. Please check the weight and number of items in your possession before talking again.";
+		mes "[예천]";
+		mes "가방이 꽉 찼습니다. 다시 말씀하시기 전에 소지품의 무게와 개수를 확인해 주세요.";
 		close3;
 	}
 	disable_items;
 	cutin "ep172_omega",2;
-	mes "[Yecheon]";
-	mes "I can provide you an Automatic Module, Physical Automatic Improvement Device, and Magical Automatic Improvement Device. It will help you the improve abilites of your automatic equipments.";
+	mes "[예천]";
+	mes "자동화 모듈, 물리적 자동화 개선 장치, 마법 자동화 개선 장치를 제공해 드릴 수 있습니다. 이 장치들은 자동화 장비의 성능을 향상시키는 데 도움이 될 것입니다.";
 	next;
 	cutin "",255;
-	switch( select( "More information.", "Get Automatic Module", "Get Physical Automatic Improvement Device", "Get Magical Automatic Improvement Device", "Cancel" ) ) {
+	switch( select( "더 자세한 정보.", "자동 모듈 가져오기", "물리적 자동 개선 장치를 받으세요", "마법 같은 자동 개선 장치를 받으세요", "Cancel" ) ) {
 	case 1:
 		cutin "ep172_omega",2;
-		mes "[Yecheon]";
-		mes "You can get an ^FF0000automatic module^000000 for ^0000CD90 Barmeal Tickets^000000. I will give you a random automatic module excluding the epic grade modules.";
+		mes "[예천]";
+		mes "CD90 바밀 티켓으로 자동 모듈 FF0000개를 얻을 수 있습니다. 에픽 등급 모듈을 제외한 임의의 자동 모듈을 드립니다.";
 		next;
-		mes "[Yecheon]";
-		mes "I'm also providing ^FF0000Physical Automatic Improvement Device and Magical Automatic Improvement Device^000000. You can exchange it for ^0000CD45 Barmeal Tickets^000000, or ^0000CD1500000 Zeny^000000.";
+		mes "[예천]";
+		mes "저는 ^FF0000물리 자동 강화 장치와 마법 자동 강화 장치^000000도 드립니다. 이것들은 ^0000CD45 바밀 티켓^000000 또는 ^0000CD1500000 제니^000000으로 교환할 수 있습니다.";
 		next;
-		mes "[Yecheon]";
-		mes "Then, combat-specialized guest, do safely improve your abilities.";
+		mes "[예천]";
+		mes "그렇다면 전투 전문가이신 손님, 안전하게 실력을 향상시키십시오.";
 		close3;
 	case 2:
 		.@price = 90;
 		cutin "ep172_omega",2;
-		mes "[Yecheon]";
-		mes "I will exchange 1 random Automatic Module excluding the epic grade modules for " + .@price + " " + mesitemlink(1000103) + ".";
+		mes "[예천]";
+		mes "에픽 등급 모듈을 제외한 자동 모듈 1개를 무작위로 교환해 드리겠습니다." + .@price + " " + mesitemlink(1000103) + ".";
 		next;
 		cutin "",255;
-		if (select( "Exchange Barmeal Ticket.", "Do not exchange" ) == 2) {
-			mes "[Yecheon]";
-			mes "Transaction ended.";
+		if (select( "바밀 티켓을 교환하세요.", "교환하지 마세요" ) == 2) {
+			mes "[예천]";
+			mes "거래가 종료되었습니다.";
 			close3;
 		}
 		cutin "ep172_omega",2;
 		if (countitem(1000103) < .@price) {
-			mes "[Yecheon]";
-			mes "You don't have enough Barmeal tickets for the exchange.";
+			mes "[예천]";
+			mes "교환에 필요한 바밀 티켓이 부족합니다.";
 			close3;
 		}
-		mes "[Yecheon]";
-		mes "I exchanged it for one random Automatic Module.";
+		mes "[예천]";
+		mes "저는 그것을 임의의 자동 모듈 하나로 교환했습니다.";
 		delitem 1000103,.@price;
 		getitem rand(1000105,1000149),1;
 		close3;
@@ -382,16 +382,16 @@ ba_in01,87,380,3	script	Yecheon#ep172module_trader	4_EP17_CLEANER_W,{
 		.@price = 45;
 		.@zeny = 1500000;
 		cutin "ep172_omega",2;
-		mes "[Yecheon]";
-		mes "I will exchange ^FF00001 Physical Automatic Improvement Device^000000 for " + .@price + " " + mesitemlink(1000103) + " or " + .@zeny + " Zeny.";
+		mes "[예천]";
+		mes " 저는 ^FF00001 물리적 자동 개선 장치^000000을 다음으로 교환하겠습니다." + .@price + " " + mesitemlink(1000103) + " or " + .@zeny + " Zeny.";
 		next;
 		cutin "",255;
-		switch( select( "Exchange for Barmeal Ticket.", "Exchange for 1500000 Zeny.", "Do not exchange." ) ) {
+		switch( select( "바밀 티켓으로 교환하세요.", "1,500,000 제니로 교환하세요.", "교환하지 마십시오." ) ) {
 		case 1:
 			cutin "ep172_omega",2;
 			if (countitem(1000103) < .@price) {
-				mes "[Yecheon]";
-				mes "You don't have enough Barmeal tickets for the exchange.";
+				mes "[예천]";
+				mes "교환에 필요한 바밀 티켓이 부족합니다.";
 				close3;
 			}
 			delitem 1000103,.@price;
@@ -399,19 +399,19 @@ ba_in01,87,380,3	script	Yecheon#ep172module_trader	4_EP17_CLEANER_W,{
 		case 2:
 			cutin "ep172_omega",2;
 			if (Zeny < .@zeny) {
-				mes "[Yecheon]";
-				mes "You don't have enough Zeny for the exchange.";
+				mes "[예천]";
+				mes "환전에 필요한 제니가 부족합니다.";
 				close3;
 			}
 			Zeny -= .@zeny;
 			break;
 		case 3:
-			mes "[Yecheon]";
-			mes "Transaction ended.";
+			mes "[예천]";
+			mes "거래가 종료되었습니다.";
 			close3;
 		}
-		mes "[Yecheon]";
-		mes "I exchanged it for one random Physical Automatic Improvement Device.";
+		mes "[예천]";
+		mes "저는 그것을 무작위로 선택된 물리적 자동 개선 장치 하나로 교환했습니다.";
 		.@r = rand(100);
 		if (.@r < 50)
 			getitem 100164,1;
@@ -424,16 +424,16 @@ ba_in01,87,380,3	script	Yecheon#ep172module_trader	4_EP17_CLEANER_W,{
 		.@price = 45;
 		.@zeny = 1500000;
 		cutin "ep172_omega",2;
-		mes "[Yecheon]";
-		mes "I will exchange ^FF00001 Magical Automatic Improvement Device^000000 for " + .@price + " " + mesitemlink(1000103) + " or " + .@zeny + " Zeny.";
+		mes "[예천]";
+		mes " 저는 ^FF00001 마법 자동 개선 장치^000000을 다음으로 교환하겠습니다." + .@price + " " + mesitemlink(1000103) + " or " + .@zeny + " Zeny.";
 		next;
 		cutin "",255;
-		switch( select( "Exchange for Barmeal Ticket.", "Exchange for 1500000 Zeny.", "Do not exchange." ) ) {
+		switch( select( "바밀 티켓으로 교환하세요.", "1,500,000 제니로 교환하세요.", "교환하지 마십시오." ) ) {
 		case 1:
 			cutin "ep172_omega",2;
 			if (countitem(1000103) < .@price) {
-				mes "[Yecheon]";
-				mes "You don't have enough Barmeal tickets for the exchange.";
+				mes "[예천]";
+				mes "교환에 필요한 바밀 티켓이 부족합니다.";
 				close3;
 			}
 			delitem 1000103,.@price;
@@ -441,19 +441,19 @@ ba_in01,87,380,3	script	Yecheon#ep172module_trader	4_EP17_CLEANER_W,{
 		case 2:
 			cutin "ep172_omega",2;
 			if (Zeny < .@zeny) {
-				mes "[Yecheon]";
-				mes "You don't have enough Zeny for the exchange.";
+				mes "[예천]";
+				mes "환전에 필요한 제니가 부족합니다.";
 				close3;
 			}
 			Zeny -= .@zeny;
 			break;
 		case 3:
-			mes "[Yecheon]";
-			mes "Transaction ended.";
+			mes "[예천]";
+			mes "거래가 종료되었습니다.";
 			close3;
 		}
-		mes "[Yecheon]";
-		mes "I exchanged it for one random Magical Automatic Improvement Device.";
+		mes "[예천]";
+		mes "나는 그것을 무작위로 마법 자동 향상 장치 하나로 교환했다.";
 		.@r = rand(100);
 		if (.@r < 50)
 			getitem 100167,1;
@@ -463,8 +463,8 @@ ba_in01,87,380,3	script	Yecheon#ep172module_trader	4_EP17_CLEANER_W,{
 			getitem 100169,1;
 		close3;
 	case 5:
-		mes "[Yecheon]";
-		mes "Transaction ended.";
+		mes "[예천]";
+		mes "거래가 종료되었습니다.";
 		close3;
 	}
 	end;
@@ -472,13 +472,13 @@ ba_in01,87,380,3	script	Yecheon#ep172module_trader	4_EP17_CLEANER_W,{
 
 ba_in01,87,389,2	script	Butterfly Merchant#ba_in01	4_EP17_MASTER_A,{
 	if (ep17_2_main < 8) {
-		mes "[Butterfly Merchant]";
-		mes "Sorry. Registration is required to purchase butterflies.";
+		mes "[나비 상인]";
+		mes "죄송합니다. 나비를 구매하시려면 회원가입이 필요합니다.";
 		close;
 	}
-	mes "[Butterfly Merchant]";
+	mes "[나비 상인]";
 	mes "Welcome.";
-	mes "Do you need wings to move to Barmund Mansion?";
+	mes "바르문드 저택으로 이사하려면 날개가 필요하세요?";
 	close2;
 	callshop "barter_Teleport_Ep17_02";
 	end;
