@@ -1,0 +1,127 @@
+lasagna,166,160,6	script	버프	4_F_NYDHOG,{
+	// --- 30초 쿨타임 체크 (계정 단위) ---
+	.@now = gettimetick(2);
+	if (#BUFF_CD_END > .@now)
+	{
+		dispbottom "쿨타임 ^FF0000" + (#BUFF_CD_END - .@now) + "초^000000 남았습니다.";
+		end;
+	}
+	#BUFF_CD_END = gettimetick(2) + .CD; // 성공 사용: 30초 쿨타임 시작
+
+	if (BaseLevel < 141) {
+	sc_end SC_STUN;
+	sc_end SC_SILENCE;
+	sc_end SC_FREEZE;
+	sc_end SC_STONE;
+	sc_end SC_SLEEP;
+	sc_end SC_CURSE;
+	sc_end SC_BLIND;
+	sc_end SC_POISON;
+	sc_end SC_CONFUSION;
+	sc_end SC_BLEEDING;
+	sc_end SC_DECREASEAGI;
+	sc_end SC_STRIPWEAPON;
+	sc_end SC_STRIPSHIELD;
+	sc_end SC_STRIPARMOR;
+	sc_end SC_STRIPHELM;
+	specialeffect2 EF_INCAGILITY;
+	sc_start SC_INCREASEAGI,1800000,10;
+	specialeffect2 EF_BLESSING;
+	sc_start SC_BLESSING,1800000,10;
+	specialeffect2 EF_HEAL2;
+	sc_start SC_MAGNIFICAT,1800000,5;
+	sc_start SC_IMPOSITIO,1800000,5;
+	sc_start SC_ANGELUS,1800000,10;
+	sc_start SC_ASSUMPTIO,1800000,5;
+	sc_start SC_OVERTHRUST,1800000,5;
+	sc_start SC_CP_WEAPON, 1800000, 5;  // 무기 보호
+	sc_start SC_CP_SHIELD, 1800000, 5;  // 방패 보호
+	sc_start SC_CP_ARMOR,  1800000, 5;  // 갑옷 보호
+	sc_start SC_CP_HELM,   1800000, 5;  // 투구 보호
+	sc_start SC_STRFOOD,1800000,10;
+	sc_start SC_INTFOOD,1800000,10;
+	sc_start SC_DEXFOOD,1800000,10;
+	sc_start SC_AGIFOOD,1800000,10;
+	sc_start SC_VITFOOD,1800000,10;
+	sc_start SC_LUKFOOD,1800000,10;
+	percentheal 100,30;
+	repairall;
+	end;
+	}
+
+	//buffs for everyone
+	specialeffect2 EF_INCAGILITY;
+	sc_start SC_INCREASEAGI,1800000,10;
+	specialeffect2 EF_BLESSING;
+	sc_start SC_BLESSING,1800000,10;
+	specialeffect2 EF_HEAL2;
+	sc_start SC_MAGNIFICAT,1800000,5;
+	percentheal 100,30;
+	repairall;
+	sc_end SC_STUN;
+	sc_end SC_SILENCE;
+	sc_end SC_FREEZE;
+	sc_end SC_STONE;
+	sc_end SC_SLEEP;
+	sc_end SC_CURSE;
+	sc_end SC_BLIND;
+	sc_end SC_POISON;
+	sc_end SC_CONFUSION;
+	sc_end SC_BLEEDING;
+	sc_end SC_DECREASEAGI;
+	sc_end SC_STRIPWEAPON;
+	sc_end SC_STRIPSHIELD;
+	sc_end SC_STRIPARMOR;
+	sc_end SC_STRIPHELM;
+	
+	set .@owner_gid, getcastledata("prtg_cas03", 1);
+	if (.@owner_gid && getcharid(2) == .@owner_gid) {
+			.@dur = 1800000; // 30분(ms)
+			sc_start SC_FOOD_STR_CASH,1800000,10;
+			sc_start SC_FOOD_AGI_CASH,1800000,10;
+			sc_start SC_FOOD_INT_CASH,1800000,10;
+			sc_start SC_FOOD_DEX_CASH,1800000,10;
+			sc_start SC_FOOD_LUK_CASH,1800000,10;
+			sc_start SC_FOOD_VIT_CASH,1800000,10;
+			sc_start SC_OVERTHRUST, .@dur, 5;
+			sc_start SC_WEAPONPERFECTION, .@dur, 5;
+			sc_start SC_MAXIMIZEPOWER, .@dur, 5;
+		end;
+	}
+
+	{
+	.@p = nodappoint;
+	if (.@p < 200){
+		mes "[ 라프텔의 축복 ]";
+		mes "30초 후에 다시 버프를 받을 수 있습니다.";
+		close;
+		end;
+	}
+	// 티어: 200→1, 400→2, 600→3, 800→4, 1000→5 (최대 5)
+	.@tier = .@p / 200;
+	if (.@tier > 5) .@tier = 5;
+	.@threshold = .@tier * 200;
+	.@dur = 1800000; // 30분(ms)
+	sc_start SC_STRFOOD, .@dur, .@tier;
+	sc_start SC_AGIFOOD, .@dur, .@tier;
+	sc_start SC_VITFOOD, .@dur, .@tier;
+	sc_start SC_INTFOOD, .@dur, .@tier;
+	sc_start SC_DEXFOOD, .@dur, .@tier;
+	sc_start SC_LUKFOOD, .@dur, .@tier;
+	end;
+	}
+end;
+	OnInit:
+		.CD = 30; // 버프 쿨타임(초)
+		end;
+}
+
+//pvp_n_5-5,93,97,6	duplicate(라프텔의 축복)	라프텔의 축복#gmzone	444
+//izlude,124,151,6	duplicate(라프텔의 축복)	라프텔의 축복#아이템존1	444
+//izlude,127,162,6	duplicate(라프텔의 축복)	라프텔의 축복#아이템존2	444
+//payon,170,228,6	duplicate(라프텔의 축복)	라프텔의 축복#페이욘2	444
+//pvp_n_3-5,89,118,6	duplicate(라프텔의 축복)	라프텔의 축복#gomokzone	444
+//yuno,140,189,6	duplicate(라프텔의 축복)	라프텔의 축복#yuno01	444
+//yuno,175,189,4	duplicate(라프텔의 축복)	라프텔의 축복#yuno02	444
+//pvp_n_1-5,96,99,6	duplicate(라프텔의 축복)	라프텔의 축복#이벤트존	444
+//pvp_n_7-4,92,135,6	duplicate(라프텔의 축복)	라프텔의 축복#버프존	403

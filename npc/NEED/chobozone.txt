@@ -1,0 +1,101 @@
+//===== Nerguri Custom Script ======================================
+//= 초보존
+//===== 설명: ==================================================
+// 이 스크립트는 초보존의 몬스터 배치와 초보존 출구/입구 NPC를 담고있습니다.
+//
+//============================================================
+pvp_n_2-5	mapflag	nobranch
+
+pvp_n_2-5,0,0,0,0	monster	포링	1002,7,1000,1000
+pvp_n_2-5,0,0,0,0	monster	촌촌	1011,6,1000,1000
+pvp_n_2-5,0,0,0,0	monster	루나틱	1063,7,1000,1000
+pvp_n_2-5,0,0,0,0	monster	픽키	1049,6,1000,1000
+pvp_n_2-5,0,0,0,0	monster	푸파	1008,6,1000,1000
+pvp_n_2-5,0,0,0,0	monster	개미알	1097,3,1000,1000
+pvp_n_2-5,0,0,0,0	monster	드롭프스	1113,5,1000,1000
+pvp_n_2-5,0,0,0,0	monster	페코페코알	1047,3,1000,1000
+pvp_n_2-5,0,0,0,0	monster	로다프로그	1012,3,1000,1000
+pvp_n_2-5,0,0,0,0	monster	로커	1052,5,1000,1000
+pvp_n_2-5,0,0,0,0	monster	페코페코	1019,5,1000,1000
+
+// 마을 -> 초보존 NPC
+-	script	svbase_chobo	-1,{
+	if (BaseLevel > .limitlv) {
+		mes "[^dc143c안내^000000]";
+		mes "^dc143c"+.limitlv+"^000000까지만 입장 가능합니다.";
+		end;
+	}
+	mes "[^dc143c안내^000000]";
+	mes "입장 하시겠습니까?";
+	next;
+	if (select("입장:취소") == 2) {
+		close;
+	}
+
+	close2;
+	warp "pvp_n_2-5",99,132;
+	end;
+
+OnInit:
+	.limitlv = 39; // 1~39 입장 가능, 40 이상 입장 불가
+	end;
+}
+
+// 배치
+//============================================================
+gonryun,148,129,5	duplicate(svbase_chobo)	초보존#pay	567
+
+pvp_n_2-5,100,100,4	script	버프#hide_chobo	4_F_NYDHOG,{
+	// --- 30초 쿨타임 체크 (계정 단위) ---
+	.@now = gettimetick(2);
+	if (#BUFF_CD_END > .@now)
+	{
+		dispbottom "쿨타임 ^FF0000" + (#BUFF_CD_END - .@now) + "초^000000 남았습니다.";
+		end;
+	}
+	#BUFF_CD_END = gettimetick(2) + .CD; // 성공 사용: 30초 쿨타임 시작
+
+	sc_end SC_STUN;
+	sc_end SC_SILENCE;
+	sc_end SC_FREEZE;
+	sc_end SC_STONE;
+	sc_end SC_SLEEP;
+	sc_end SC_CURSE;
+	sc_end SC_BLIND;
+	sc_end SC_POISON;
+	sc_end SC_CONFUSION;
+	sc_end SC_BLEEDING;
+	sc_end SC_DECREASEAGI;
+	sc_end SC_STRIPWEAPON;
+	sc_end SC_STRIPSHIELD;
+	sc_end SC_STRIPARMOR;
+	sc_end SC_STRIPHELM;
+	specialeffect2 EF_INCAGILITY;
+	sc_start SC_INCREASEAGI,1800000,10;
+	specialeffect2 EF_BLESSING;
+	sc_start SC_BLESSING,1800000,10;
+	specialeffect2 EF_HEAL2;
+	sc_start SC_MAGNIFICAT,1800000,5;
+	sc_start SC_IMPOSITIO,1800000,5;
+	sc_start SC_ANGELUS,1800000,10;
+	sc_start SC_ASSUMPTIO,1800000,5;
+	sc_start SC_OVERTHRUST,1800000,5;
+	sc_start SC_CP_WEAPON, 1800000, 5;  // 무기 보호
+	sc_start SC_CP_SHIELD, 1800000, 5;  // 방패 보호
+	sc_start SC_CP_ARMOR,  1800000, 5;  // 갑옷 보호
+	sc_start SC_CP_HELM,   1800000, 5;  // 투구 보호
+	sc_start SC_STRFOOD,1800000,10;
+	sc_start SC_INTFOOD,1800000,10;
+	sc_start SC_DEXFOOD,1800000,10;
+	sc_start SC_AGIFOOD,1800000,10;
+	sc_start SC_VITFOOD,1800000,10;
+	sc_start SC_LUKFOOD,1800000,10;
+	percentheal 100,30;
+	repairall;
+	end;
+
+OnInit:
+	.CD = 30;
+	waitingroom "@로드 : 마을 이동",0;
+	end;
+}
