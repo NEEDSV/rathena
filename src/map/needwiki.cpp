@@ -10,6 +10,7 @@
 #include <common/cbasetypes.hpp>
 #include <common/showmsg.hpp>
 #include <common/socket.hpp>
+#include <common/strlib.hpp>
 #include <common/timer.hpp>
 #ifdef WIN32
 	#include <common/winapi.hpp>
@@ -80,7 +81,6 @@ static void needwiki_displaymessage(map_session_data* sd, const std::string& utf
 		return;
 
 	const std::string cp949_message = needwiki_utf8_to_cp949(utf8_message);
-
 	clif_displaymessage(sd->fd, cp949_message.c_str());
 }
 
@@ -191,8 +191,9 @@ static int32 needwiki_parse(int32 fd)
 
 		if (sd != nullptr) {
 			if (action == NEEDWIKI_ACTION_DISPBOTTOM) {
-				std::string message = "[NEED Wiki] " + payload;
-				needwiki_displaymessage(sd, message);
+				char output[CHAT_SIZE_MAX];
+				safesnprintf(output, sizeof(output), msg_txt(sd, 1609), payload.c_str());
+				needwiki_displaymessage(sd, output);
 			} else if (action == NEEDWIKI_ACTION_NAVI) {
 				std::string mapname;
 				uint16 x = 0;
@@ -200,25 +201,26 @@ static int32 needwiki_parse(int32 fd)
 				std::string name;
 
 				if (needwiki_parse_navi_payload(payload, mapname, x, y, name)) {
-					std::string message = std::string(u8"[NEED Wiki] ") + name + u8" 위치를 안내합니다.";
-					needwiki_displaymessage(sd, message);
+					char output[CHAT_SIZE_MAX];
+					safesnprintf(output, sizeof(output), msg_txt(sd, 1604), name.c_str());
+					needwiki_displaymessage(sd, output);
 
-					message = std::string(u8"위치: ") + mapname + " " + std::to_string(x) + "," + std::to_string(y);
-					needwiki_displaymessage(sd, message);
+					safesnprintf(output, sizeof(output), msg_txt(sd, 1605), mapname.c_str(), x, y);
+					needwiki_displaymessage(sd, output);
 					clif_navigateTo(sd, mapname.c_str(), x, y, NAV_KAFRA_AND_AIRSHIP, true, 0);
 				} else {
-					needwiki_displaymessage(sd, u8"[NEED Wiki] 잘못된 위치 정보입니다.");
+					needwiki_displaymessage(sd, msg_txt(sd, 1606));
 				}
 			} else if (action == NEEDWIKI_ACTION_SHOW_ITEM) {
 				uint32 item_id = 0;
 
 				if (!needwiki_parse_u32(payload, item_id)) {
-					needwiki_displaymessage(sd, u8"[NEED Wiki] 존재하지 않는 아이템입니다.");
+					needwiki_displaymessage(sd, msg_txt(sd, 1607));
 				} else {
 					std::shared_ptr<item_data> data = item_db.find(static_cast<t_itemid>(item_id));
 
 					if (data == nullptr) {
-						needwiki_displaymessage(sd, u8"[NEED Wiki] 존재하지 않는 아이템입니다.");
+						needwiki_displaymessage(sd, msg_txt(sd, 1607));
 					} else {
 						struct item link_item = {};
 
@@ -228,7 +230,7 @@ static int32 needwiki_parse(int32 fd)
 						link_item.refine = 0;
 
 						const std::string item_link = item_db.create_item_link(link_item);
-						std::string message = needwiki_utf8_to_cp949(u8"[NEED Wiki] 아이템 정보: ") + item_link;
+						std::string message = needwiki_utf8_to_cp949(msg_txt(sd, 1608)) + item_link;
 						clif_displaymessage(sd->fd, message.c_str());
 					}
 				}

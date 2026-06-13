@@ -7,6 +7,7 @@
 #include "http.hpp"
 
 HANDLER_FUNC(needwiki_test);
+HANDLER_FUNC(needwiki_auth);
 HANDLER_FUNC(needwiki_navi);
 HANDLER_FUNC(needwiki_showitem);
 

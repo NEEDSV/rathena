@@ -499,6 +499,7 @@ bool WebServer::initialize( int32 argc, char* argv[] ){
 	http_server->Post("/userconfig/save", userconfig_save);
 	http_server->Get("/api/wiki/test", needwiki_test);
 	http_server->Post("/api/wiki/test", needwiki_test);
+	http_server->Get("/api/wiki/auth", needwiki_auth);
 	http_server->Get("/api/wiki/navi", needwiki_navi);
 	http_server->Get("/api/wiki/showitem", needwiki_showitem);
 
