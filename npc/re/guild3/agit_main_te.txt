@@ -156,14 +156,14 @@ OnAgitBreak:
 			setcastledata .@map$,.@i,0;
 	}
 
-	mapannounce .@map$,"Emperium has been destroyed.",bc_map,"0x00FF00",FW_BOLD,20,0,40;
+	mapannounce .@map$,"엠페리움은 파괴되었습니다.",bc_map,"0x00FF00",FW_BOLD,20,0,40;
 	maprespawnguildid .@map$,.@guild_id,2;// Respawn all but new castle-occupants, don't remove monsters.
 
 	sleep 500;
 	if (agitcheck3())
 		donpcevent strnpcinfo(0) +"::OnEmpSpawn";
 	sleep 7000;
-	announce "The [" + getcastlename(.@map$) + "] castle has been conquered by the [" + getguildName(.@guild_id) + "] guild.",bc_all|bc_woe;
+	announce "그 [" + getcastlename(.@map$) + "] 성은 [ ]에 의해 정복되었습니다." + getguildName(.@guild_id) + "] 길드.",bc_all|bc_woe;
 	end;
 
 OnGuildBreak:
@@ -174,7 +174,7 @@ OnGuildBreak:
 	disablenpc "Kafra Employee#"+ .@tmp$;
 	setcastledata .@map$,CD_GUILD_ID,0;
 	sleep 7000;
-	announce "Guild Base [" + getcastlename(.@map$) + "] has been abandoned.",bc_all;
+	announce "길드 기지 [" + getcastlename(.@map$) + "]는 버려졌습니다.",bc_all;
 	donpcevent strnpcinfo(0) +"::OnAgitInit3";
 	end;
 
@@ -183,11 +183,11 @@ S_Message:
 	.@guild_id = getcastledata(.@map$,CD_GUILD_ID);
 	
 	if (.@guild_id)
-		announce "The [" + getcastlename(.@map$) + "] castle is occupied by the [" + getguildname(.@guild_id) + "] guild.",bc_all,"0xFF0000",FW_NORMAL,10;
+		announce "그 [" + getcastlename(.@map$) + "] 성은 [ ]에 의해 점령되었습니다." + getguildname(.@guild_id) + "] 길드.",bc_all,"0xFF0000",FW_NORMAL,10;
 	else
-		announce "The [" + getcastlename(.@map$) + "] castle is currently unoccupied.", bc_all,"0xFF0000",FW_NORMAL,10;
+		announce "그 [" + getcastlename(.@map$) + "성은 현재 비어 있습니다.", bc_all,"0xFF0000",FW_NORMAL,10;
 	if (compare( .@map$,"te_alde" ))
-		.@string$ = "alde0"+ charat( .@map$,getstrlen(.@map$)-1 );
+		.@string$ = "알데0"+ charat( .@map$,getstrlen(.@map$)-1 );
 	else
 		.@string$ = "prt0"+ charat( .@map$,getstrlen(.@map$)-1 );
 	donpcevent "#popswitch_"+ .@string$ +"::"+ getarg(0);// monsters for mission TE
@@ -215,27 +215,27 @@ OnMyMobDead:
 	.@guildname$ = getguildname(.@guild_id);
 
 	cutin "kafra_01",2;
-	mes "[Kafra Employee]";
+	mes "[카프라 직원]";
 	if (.@guild_id == getcharid(2)) {
-		mes "Welcome. ^ff0000" + .@guildname$ + "^000000 Member.";
-		mes "The Kafra Corporation will stay with you wherever you go.";
+		mes "환영합니다. ^ff0000" + .@guildname$ + "^000000 회원.";
+		mes "카프라 코퍼레이션은 당신이 어디를 가든 항상 당신과 함께할 것입니다.";
 		next;
-		switch( select( "Use Storage", "Use Teleport Service", "Rent a Pushcart", "Cancel" ) ) {
+		switch( select( "저장 공간을 사용하세요", "텔레포트 서비스를 이용하세요", "손수레를 대여하세요", "Cancel" ) ) {
 		case 1:
 			if (getskilllv("NV_BASIC") > 5) {
-				mes "[Kafra Employee]";
-				mes "Here, let me open";
-				mes "your Storage for you.";
-				mes "Thank you for using";
-				mes "the Kafra Service.";
+				mes "[카프라 직원]";
+				mes "자, 제가 열어볼게요.";
+				mes "고객님을 위한 저장 공간입니다.";
+				mes "이용해 주셔서 감사합니다.";
+				mes "카프라 서비스.";
 				close2;
 				openstorage;
 			} else {
-				mes "[Kafra Employee]";
-				mes "I'm sorry, but you";
-				mes "need the Novice's";
-				mes "Basic Skill Level 6 to";
-				mes "use the Storage Service.";
+				mes "[카프라 직원]";
+				mes "죄송하지만 당신은";
+				mes "초보자용이 필요합니다";
+				mes "기본기 레벨 6부터";
+				mes "스토리지 서비스를 이용하세요.";
 				close2;
 			}
 			break;
@@ -245,34 +245,34 @@ OnMyMobDead:
 			else
 				callsub( S_Warp, "Prontera", "prontera",278,211 );
 		case 3:
-			mes "[Kafra Employee]";
+			mes "[카프라 직원]";
 			if (BaseClass != Job_Merchant) {
-				mes "I'm sorry, but the";
-				mes "Pushcart rental service";
-				mes "is only available to Merchants,";
-				mes "Blacksmiths and Alchemists.";
+				mes "죄송하지만,";
+				mes "손수레 대여 서비스";
+				mes "상인만 이용할 수 있습니다.";
+				mes "대장장이와 연금술사.";
 				close2;
 			}
 			else if (checkcart()) {
-				mes "You already have";
-				mes "a Pushcart equipped.";
-				mes "Unfortunately, we can't";
-				mes "rent more than one to";
-				mes "each customer at a time.";
+				mes "이미 가지고 계십니다";
+				mes "손수레가 장착되어 있습니다.";
+				mes "유감스럽게도, 저희는 그렇게 할 수 없습니다.";
+				mes "하나 이상을 임대하세요";
+				mes "고객 한 분 한 분씩 응대합니다.";
 				close2;
 			}
 			else {
-				mes "The Pushcart rental";
-				mes "fee is 800 zeny. Would";
-				mes "you like to rent a Pushcart?";
+				mes "손수레 대여";
+				mes "수수료는 800 제니입니다.";
+				mes "손수레를 빌리는 것을 좋아하시나요?";
 				next;
-				if (select( "Rent a Pushcart","Cancel" ) == 1) {
+				if (select( "손수레를 대여하세요","Cancel" ) == 1) {
 					if (Zeny < 800) {
-						mes "[Kafra Employee]";
-						mes "I'm sorry, but you";
-						mes "don't have enough";
-						mes "zeny to pay the Pushcart";
-						mes "rental fee of 800 zeny.";
+						mes "[카프라 직원]";
+						mes "죄송하지만 당신은";
+						mes "충분하지 않다";
+						mes "손수레 값을 지불하려면 제니를 내야 합니다.";
+						mes "대여료는 800 제니입니다.";
 						close2;
 					}
 					else {
@@ -284,33 +284,33 @@ OnMyMobDead:
 			}
 			break;
 		case 4:
-			mes "[Kafra Employee]";
-			mes "We, here at Kafra Corporation,";
-			mes "are always endeavoring to provide you with the best services. We hope that we meet your adventuring needs and standards of excellence.";
+			mes "[카프라 직원]";
+			mes "저희 카프라 코퍼레이션은,";
+			mes "저희는 언제나 최고의 서비스를 제공하기 위해 노력하고 있습니다. 고객님의 모험에 대한 기대와 높은 기준을 충족시켜 드릴 수 있기를 바랍니다.";
 			close2;
 			break;
 		}
 	}
 	else {
-		mes "I am instructed to only offer my services to the ^ff0000"+ .@guildname$ +"^000000 Guild. Please try another Kafra Employee around here. Sorry for the inconvenience.";
+		mes "저는 ^ff0000에게만 서비스를 제공하라는 지시를 받았습니다."+ .@guildname$ +"^000000 길드입니다. 근처에 있는 다른 카프라 직원에게 문의해 보세요. 불편을 드려 죄송합니다.";
 		close2;
 	}
 	cutin "",255;
 	end;
 
 S_Warp:
-	mes "[Kafra Employee]";
-	mes "Please choose";
-	mes "your destination.";
+	mes "[카프라 직원]";
+	mes "선택해 주세요";
+	mes "목적지.";
 	next;
-	switch( select( getarg(0) + " -> 200 z", "Cancel it" ) ) {
+	switch( select( getarg(0) + " -> 200 z", "취소하세요" ) ) {
 	case 1:
 		if (Zeny < 200) {
-			mes "[Kafra Employee]";
-			mes "I'm sorry, but you don't have";
-			mes "enough zeny for the Teleport";
-			mes "Service. The fee to teleport";
-			mes "to "+getarg(0)+" is 200 zeny.";
+			mes "[카프라 직원]";
+			mes "죄송하지만, 당신은 가지고 있지 않습니다.";
+			mes "텔레포트에 필요한 제니가 충분히 있습니다.";
+			mes "서비스. 순간 이동 요금";
+			mes "to "+getarg(0)+" 200 제니입니다.";
 			close2;
 			cutin "",255;
 			end;
@@ -334,38 +334,38 @@ OnGuardianDied:
 function GuardianData;
 
 	.@map$ = strnpcinfo(4);
-	.@npc_name$ = "[ Butler "+ strnpcinfo(1) +"]";
+	.@npc_name$ = " [ 버틀러 ]"+ strnpcinfo(1) +"]";
 	.@guild_id = getcastledata(.@map$,CD_GUILD_ID);
 	.@guildmaster$ = getguildmaster(.@guild_id);
 
 	mes .@npc_name$;
 	if (.@guild_id == 0) {
-		mes "I have been waiting for a master to fulfill my destiny.";
-		mes "Brave soul... fate will guide you towards your future...";
+		mes "저는 제 운명을 이루어줄 스승을 기다려 왔습니다.";
+		mes "용감한 영혼이여... 운명이 당신을 미래로 인도할 것입니다...";
 		close;
 	}
 	if (strcharinfo(0) != .@guildmaster$) {
-		mes "No matter how much you pester me, I'll still follow my master ^ff0000"+.@guildmaster$+"^000000. Where are the Guardians?! Send these ruffians away right now!";
+		mes "네가 아무리 나를 괴롭히더라도, 나는 여전히 내 주인을 따를 거야 ^ff0000"+.@guildmaster$+"수호자들은 어디 있는 거야?! 당장 이 불량배들을 쫓아내!";
 		close;
 	}
-	mes "Welcome. My honorable master, ^ff0000"+strcharinfo(0)+"^000000...";
-	mes "Your humble servent, "+strnpcinfo(1)+", is here to serve you.";
+	mes "어서 오십시오. 존경하는 주인님, ^ff0000"+strcharinfo(0)+"^000000...";
+	mes " 당신의 보잘것없는 종,"+strnpcinfo(1)+"저희는 고객님을 위해 봉사하고자 합니다.";
 	next;
-	switch( select( "Castle briefing", "Invest in commercial growth", "Invest in Castle Defenses", "Summon Guardian", "Hire / Fire a Kafra Employee", "Go into Master's room" ) ) {
+	switch( select( "성 브리핑", "상업적 성장에 투자하세요", "성곽 방어 시설에 투자하세요", "수호자를 소환하세요", "Kafra 직원 채용/해고", "마스터의 방으로 들어가세요" ) ) {
 	case 1:
 		.@economy_today = getcastledata(.@map$,CD_INVESTED_ECONOMY);
 		.@defense_today = getcastledata(.@map$,CD_INVESTED_DEFENSE);
 		mes .@npc_name$;
-		mes "I will report the Castle briefing, Master.";
+		mes "성에서 진행된 브리핑 내용을 보고드리겠습니다, 주인님.";
 		mes " ";
-		mes "^0000ffNow, the commercial growth level is "+GetCastleData(.@map$,CD_CURRENT_ECONOMY)+".";
+		mes " ^0000ff현재 상업적 성장 수준은 다음과 같습니다."+GetCastleData(.@map$,CD_CURRENT_ECONOMY)+".";
 		if (.@economy_today > 0)
-			mes " You invested "+.@economy_today+" times in past 1 day.";
-		mes " Now, the Castle Defense level is "+GetCastleData(.@map$,CD_CURRENT_DEFENSE)+".^000000";
+			mes " 당신은 투자했습니다"+.@economy_today+" 지난 1일 동안의 횟수.";
+		mes " 현재 성 방어 레벨은 다음과 같습니다."+GetCastleData(.@map$,CD_CURRENT_DEFENSE)+".^000000";
 		if (.@defense_today > 0)
-			mes " ^0000ff- You invested "+.@defense_today+" times in past 1 day.^000000";
+			mes " ^0000ff- 투자하셨습니다"+.@defense_today+" 지난 1일 동안의 횟수.^000000";
 		mes " ";
-		mes "That's all I have to report, Master.";
+		mes "제가 보고드릴 내용은 이게 전부입니다, 스승님.";
 		close;
 
 	case 2:
@@ -386,8 +386,8 @@ function GuardianData;
 
 	case 4:
 		mes .@npc_name$;
-		mes "Will you summon a Guardian? It'll be a protector to defend us loyally.";
-		mes "Please select a guardian to defend us.";
+		mes "수호자를 소환하시겠습니까? 그 수호자는 우리를 충실히 지켜줄 보호자가 될 것입니다.";
+		mes "저희를 지켜줄 수호자를 선택해 주세요.";
 		next;
 		GuardianData( .@mob_id, .@x, .@y, .@name$ );
 		for ( .@i = 0; .@i < MAX_GUARDIANS ; .@i++ ) {
@@ -398,108 +398,108 @@ function GuardianData;
 		}
 		.@s = select(.@menu$) -1;
 		mes .@npc_name$;
-		mes "Will you summon the chosen guardian? 10,000 zeny are required to summon a Guardian.";
+		mes "선택받은 수호자를 소환하시겠습니까? 수호자를 소환하려면 10,000 제니가 필요합니다.";
 		next;
 		if (select( "Summon","Cancel" ) == 2) {
 			mes .@npc_name$;
-			mes "I did as you ordered. But please remember if you the have money to spare, it'll be better to set it up.";
+			mes "주문하신 대로 했습니다. 하지만 여유 자금이 있으시다면 설치를 하시는 게 더 좋을 거예요.";
 			close;
 		}
 		mes .@npc_name$;
 		if (getgdskilllv(.@guild_id,10002) == 0) {
-			mes "Master, we have not the resources to Summon the Guardian. If you want to accumulate them, you have to learn the Guild skill. We failed to summon the Guardian.";
+			mes "주인님, 저희는 수호자를 소환할 자원이 부족합니다. 자원을 모으려면 길드 스킬을 배워야 합니다. 저희는 수호자 소환에 실패했습니다.";
 		}
 		else if (getcastledata( .@map$,(.@s + CD_ENABLED_GUARDIAN00) ) == 1)
-			mes "Master, you already have summoned that Guardian. We cannot summon another.";
+			mes "주인님, 이미 그 수호자를 소환하셨습니다. 다른 수호자는 소환할 수 없습니다.";
 		else if (Zeny <  10000)
-			mes "Well... I'm sorry but we don't have funds to summon the Guardian. We failed to summon the Guardian.";
+			mes "음... 죄송하지만 수호자를 소환할 자금이 부족합니다. 수호자를 소환하는 데 실패했습니다.";
 		else {
 			Zeny = Zeny - 10000;
 			setcastledata .@map$,(.@s + CD_ENABLED_GUARDIAN00),1;
 			guardian .@map$, .@x[.@s], .@y[.@s], .@name$[.@s], .@mob_id[.@s], "Kafra Employee#"+ replacestr(.@map$, "cas", "") +"::OnGuardianDied", .@s;
-			mes "We completed the summoning of the Guardian. Our defenses are now increased with it in place.";
+			mes "수호자 소환을 완료했습니다. 수호자가 배치됨으로써 방어력이 강화되었습니다.";
 		}
 		close;
 
 	case 5:
 		mes .@npc_name$;
 		if (getcastledata(.@map$,CD_ENABLED_KAFRA) == 1) {
-			mes "We are currently hiring a Kafra Employee... Do you want to fire the Kafra Employee?";
+			mes "저희는 현재 카프라 직원을 채용 중입니다... 카프라 직원을 해고하시겠습니까?";
 			next;
 			if (select( "Fire","Cancel" ) == 2) {
 				mes .@npc_name$;
-				mes "She worked hard in my opinion. It was a good decision to keep her.";
+				mes "제 생각에 그녀는 열심히 일했어요. 그녀를 계속 고용한 건 좋은 결정이었어요.";
 				close;
 			}
 			cutin "kafra_01",2;
-			mes "[ Hired Kafra Employee ]";
-			mes "I worked so hard... How can you do that, Master?... Please... Please reconsider... Check it again, Master... Please...";
+			mes "[카프라 직원 채용]";
+			mes "저는 정말 열심히 노력했는데요... 어떻게 이럴 수가 있어요, 스승님?... 제발... 제발 다시 생각해 주세요... 다시 한번 확인해 주세요, 스승님... 제발...";
 			next;
 			if (select( "Fire","Cancel" ) == 2) {
-				mes "[ Hired Kafra Employee ]";
-				mes "I'll work hard for you... Thank you!";
+				mes "[카프라 직원 채용]";
+				mes "당신을 위해 열심히 일하겠습니다... 감사합니다!";
 				close3;
 			}
-			mes "[ Hired Kafra Employee ]";
-			mes "Oh, my goodness! This is nonsense!";
+			mes "[카프라 직원 채용]";
+			mes "맙소사! 이건 말도 안 돼!";
 			next;
 			cutin "",255;
 			disablenpc "Kafra Employee#" + replacestr(.@map$, "cas", "");
 			setcastledata .@map$,CD_ENABLED_KAFRA,0;
 			mes .@npc_name$;
 			mes "....";
-			mes "I have discharged the Kafra Employee... But... are you unsatisfied with something?";
+			mes "카프라 직원은 해고했습니다... 그런데... 혹시 불만족스러운 점이 있으신가요?";
 			close;
 		}
-		mes "Will you contact the kafra Main Office and Hire a Employee for our Castle?";
-		mes "^ff0000 10,000 zeny is required for their services. ";
+		mes "카프라 본사에 연락하셔서 저희 성에 근무할 직원을 채용해 주시겠습니까?";
+		mes " ^ff0000 그들의 서비스를 이용하려면 10,000 제니가 필요합니다.";
 		next;
 		if (select( "Hire.","Cancel" ) == 2) {
 			mes .@npc_name$;
-			mes "I did as you ordered, but some of our members will be unhappy. It will be better to hire a Kafra Employee quickly.";
+			mes "지시하신 대로 했지만, 일부 회원들이 불만을 가질 것 같습니다. 카프라 직원을 빨리 고용하는 게 좋겠습니다.";
 			close;
 		}
 		mes .@npc_name$;
 		if (getgdskilllv(.@guild_id,10001) == 0) {
-			mes "Master, we can't hire a Kafra Employee because we don't have a contract with the Kafra Main Office. If you want to obtain a contract with the Kafra Main Office, you will need to learn the Guild skill first.";
+			mes "주인님, 저희는 카프라 본사와 계약을 맺지 않았기 때문에 카프라 직원을 고용할 수 없습니다. 카프라 본사와 계약을 맺으려면 먼저 길드 기술을 배워야 합니다.";
 			close;
 		}
 		if (Zeny <  10000) {
-			mes "Well... I'm sorry but we don't have enough funds to hire a Kafra Employee.";
+			mes "음... 죄송하지만 저희는 카프라 직원을 고용할 만큼 충분한 자금이 없습니다.";
 			close;
 		}
 		Zeny = Zeny - 10000;
 		enablenpc "Kafra Employee#" + replacestr(.@map$, "cas", "");
 		setcastledata .@map$,CD_ENABLED_KAFRA,1;
 
-		mes "We obtained a contract with the kafra Main Office, and hired a Kafra Employee.";
+		mes "저희는 카프라 본사와 계약을 체결하고 카프라 직원을 채용했습니다.";
 		next;
 		cutin "kafra_01",2;
-		mes "[ Hired Kafra Employee ]";
-		mes "How do you do? I was dispatched from the Main Office.";
-		mes "I'll do my best to not tarnish the reputation of the Guild.";
+		mes "[카프라 직원 채용]";
+		mes "안녕하세요? 본사에서 파견되었습니다.";
+		mes "길드의 명성에 흠집을 내지 않도록 최선을 다하겠습니다.";
 		next;
 		cutin "",255;
 		mes .@npc_name$;
-		mes "The Contract terms of the hired Kafra Employee are for 1 month and after this term, you will need to pay an additional fee.";
-		mes "It will be useful for our members.";
+		mes "카프라에서 고용한 직원의 계약 기간은 1개월이며, 이 기간이 지나면 추가 요금을 지불해야 합니다.";
+		mes "회원들에게 유용할 것입니다.";
 		close;
 
 	case 6:
 		mes .@npc_name$;
-		mes "Do you want to visit the room where our valuables are stored?";
-		mes "That room is restricted to you... you are the only one with access to it.";
+		mes "귀중품이 보관된 방을 구경해 보시겠어요?";
+		mes "그 방은 당신만 출입할 수 있어요... 당신만이 들어갈 수 있는 방입니다.";
 		next;
 		mes .@npc_name$;
-		mes "If you don't open the treasure box within time limits, there is a possibility of losing it when unexpected situation occurs.";
-		mes "Please make sure to remember that always, Master.";
-		mes "So, for our guild's improvement, you must find time to collect it.";
+		mes "제한 시간 내에 보물 상자를 열지 않으면 예상치 못한 상황이 발생하여 보물을 잃을 가능성이 있습니다.";
+		mes "스승님, 이 점을 항상 기억해 주십시오.";
+		mes "그러니 우리 길드의 발전을 위해 시간을 내어 수집해 주셔야 합니다.";
 		next;
-		switch( select( "Go into Master's room.","Cancel" ) ) {
+		switch( select( "마스터의 방으로 들어가세요.","Cancel" ) ) {
 		case 1:
 			mes .@npc_name$;
-			mes "I'll show you the secret path. Follow me...please.";
-			mes "When you want to return here, please press the secret switch.";
+			mes "비밀 통로를 알려드리죠. 저를 따라오세요...부탁드립니다.";
+			mes "이곳으로 다시 돌아오시려면 비밀 스위치를 눌러주세요.";
 			close2;
 			if (.@map$ == "te_aldecas1") warp "te_aldecas1",113,223;
 			else if (.@map$ == "te_aldecas2") warp "te_aldecas2",134,225;
@@ -514,8 +514,8 @@ function GuardianData;
 			end;
 		case 2:
 			mes .@npc_name$;
-			mes "Goods are produced once a day... if you don't remove them in time, they will not be produced anymore.";
-			mes "Therefore, it will be better if you check up on them from time to time.";
+			mes "상품은 하루에 한 번 생산됩니다... 제때 제거하지 않으면 더 이상 생산되지 않습니다.";
+			mes "그러므로 주기적으로 그들의 상태를 확인하는 것이 좋을 것입니다.";
 			close;
 		}
 	}
@@ -523,42 +523,42 @@ function GuardianData;
 S_Invest:
 	.@cost_invest = getarg(1);
 	.@num_invest_today = getarg(2);
-	.@npc_name$ = "[ Butler "+ strnpcinfo(1) +"]";
+	.@npc_name$ = " [ 버틀러 ]"+ strnpcinfo(1) +"]";
 	if (.@num_invest_today)// Quadruple the cost of investing if you've already invested once.
 		.@cost_invest = .@cost_invest * 4;
 
 	mes .@npc_name$;
-	mes "If you invest in "+ getarg(3) +", the "+ getarg(4) +". Therfore, if you consider our "+ getarg(5) +", investments will be a necessity.";
+	mes " 만약 당신이 투자한다면"+ getarg(3) +" , 그"+ getarg(4) +" 그러므로, 만약 당신이 우리의 것을 고려한다면"+ getarg(5) +"따라서 투자는 필수적일 것입니다.";
 	mes " ";
-	mes "Initially, you are able to invest just once but if you pay more money, you will be able to invest twice.";
+	mes "처음에는 한 번만 투자할 수 있지만, 더 많은 금액을 투자하면 두 번 투자할 수 있습니다.";
 	mes " ";
 	if (getcastledata(strnpcinfo(4),CD_CURRENT_ECONOMY) >= 100) {
-		mes "^ff0000The "+ getarg(3) +" level of our Castle is at it's highest, 100%. No more investments are needed. Just as I have expected from a great "+ getarg(6) +" like you, Master.^000000";
+		mes " ^ff0000The"+ getarg(3) +"우리 성의 레벨은 최고 수준인 100%에 도달했습니다. 더 이상의 투자는 필요하지 않습니다. 제가 기대했던 대로 훌륭한 결과입니다."+ getarg(6) +" 당신처럼요, 스승님.^000000";
 		close;
 	}
 	if (.@num_invest_today >= 2) {
-		mes "^ff0000You have already invested twice today. You cannot invest any more.^000000 I expect the "+ getarg(7) +" of the guild to grow at a high rate.";
+		mes " ^ff0000오늘 이미 두 번 투자하셨습니다. 더 이상 투자하실 수 없습니다.^000000 저는 다음을 기대합니다"+ getarg(7) +" 길드가 높은 성장률을 보일 것이다.";
 		close;
 	}
 	if (.@num_invest_today == 0)
-		mes "The current investment amount required is ^ff0000"+.@cost_invest+"^000000 zeny. Will you invest?";
+		mes "현재 필요한 투자 금액은 ^ff0000입니다."+.@cost_invest+"^000000 제니. 투자하시겠습니까?";
 	else
-		mes "You've invested once today... if you wish to invest once more, ^ff0000"+.@cost_invest+"^000000 more zeny will be needed.";
+		mes "오늘 한 번 투자하셨습니다... 한 번 더 투자하고 싶으시면 ^ff0000을 클릭하세요."+.@cost_invest+"^000000 제니가 더 필요합니다.";
 	next;
 	switch( select( "Invest in "+ getarg(3) +".","Cancel" ) ) {
 	case 1:
 		mes .@npc_name$;
 		if (Zeny < .@cost_invest) {
-			mes "I'm sorry but there is not enough zeny to invest. You will have to try again when you have the funds, Master.";
+			mes "죄송하지만 투자할 제니가 부족합니다. 자금이 충분해지면 다시 시도해 주세요, 마스터.";
 			close;
 		}
 		Zeny = Zeny - .@cost_invest;
 		setcastledata strnpcinfo(4), getarg(0), (.@num_invest_today +1);
-		mes "We finished the investment safely. I expect that our "+ getarg(3) +" level will be increased by tomorrow.";
+		mes " 우리는 투자를 안전하게 마무리했습니다. 저는 우리의 투자가 성공적으로 마무리될 것이라고 기대합니다."+ getarg(3) +" 내일까지 수준이 올라갈 것입니다.";
 		close;
 	case 2:
 		mes .@npc_name$;
-		mes "I'll do as you bid, my master... There is no hurry. We will do our best.";
+		mes "주인님, 말씀대로 하겠습니다... 서두를 필요는 없습니다. 최선을 다하겠습니다.";
 		close;
 	}
 
@@ -699,17 +699,17 @@ OnSpawnGuardians:
 -	script	lever2_TE	-1,{
 	.@guild_id = getcastledata( strnpcinfo(4),CD_GUILD_ID );
 	if (.@guild_id == 0) {
-		mes "[Ringing Voice]";
-		mes "'Those who overcome an ordeal shows a great deal of bravery... and will find their way to another ordeal.'";
+		mes "[울리는 목소리]";
+		mes "'시련을 극복하는 사람은 큰 용기를 보여주는 것이며... 또 다른 시련을 헤쳐나갈 길을 찾을 것이다.'";
 		close;
 	}
-	mes "[Ringing Voice]";
-	mes "'Only the truly brave can take the test.'";
+	mes "[울리는 목소리]";
+	mes "'진정으로 용감한 자만이 이 시험에 도전할 수 있다.'";
 	next;
 	mes " ";
-	mes "There's a small lever. Will you pull it?";
+	mes "작은 레버가 하나 있어요. 당겨보시겠어요?";
 	next;
-	if (select( "Pull.","Don't pull." ) == 1) {
+	if (select( "Pull.","잡아당기지 마세요." ) == 1) {
 		if (.@guild_id == getcharid(2)) {
 			.@npc_map$ = strnpcinfo(4);
 			if (compare( .@npc_map$,"te_alde" )) {
@@ -732,7 +732,7 @@ OnSpawnGuardians:
 		}
 		else {
 			mes " ";
-			mes "Nothing happened.";
+			mes "아무 일도 일어나지 않았어요.";
 			close;
 		}
 	}
@@ -743,9 +743,9 @@ OnSpawnGuardians:
 //============================================================
 -	script	lever1_TE	-1,{
 	mes " ";
-	mes "There's a small lever. Will you pull it?";
+	mes "작은 레버가 하나 있어요. 당겨보시겠어요?";
 	next;
-	if ( select( "Pull.","Do not." ) == 1 ) {
+	if ( select( "Pull.","하지 마세요." ) == 1 ) {
 		.@map$ = strnpcinfo(4);
 		if (.@map$ == "te_aldecas1") setarray .@coord[0],218,176;
 		else if (.@map$ == "te_aldecas2") setarray .@coord[0],51,179;
@@ -1073,27 +1073,27 @@ function	script	F_flag_woe_TE	{
 	.@castle$ = getarg(1);
 	.@guild_id = getcastledata( .@castle$,CD_GUILD_ID );
 	if (.@guild_id == 0) {
-		mes "[ Edict of the Divine Rune-Midgarts Kingdom ]";
+		mes "[신성한 룬-미드가르트 왕국의 칙령]";
 		mes " ";
-		mes "1. Follow the ordinance of The Divine Rune-Midgarts Kingdom, ";
-		mes "We declare that";
-		mes "there is no formal master of this castle.";
+		mes " 1. 신성한 룬-미드가르트 왕국의 규율을 따르십시오.";
+		mes "우리는 다음과 같이 선언합니다.";
+		mes "이 성에는 정식으로 지정된 성주가 없습니다.";
 		mes " ";
-		mes "2. To the one who can ";
-		mes "overcome all trials";
-		mes "and destroy the Emperium,";
-		mes "the king will endow the one with";
-		mes "ownership of this castle.";
+		mes " 2. 할 수 있는 자에게";
+		mes "모든 시련을 극복하라";
+		mes "그리고 제국을 파괴하라.";
+		mes "왕은 그 사람에게 다음을 부여할 것이다";
+		mes "이 성의 소유권.";
 		close;
 	}
 	if (.@guild_id == getcharid(2) && getarg(0)) {
-		mes "[ Echoing Voice ]";
-		mes "Brave ones...";
-		mes "Do you wish to return to your honorable place?";
+		mes "[메아리치는 목소리]";
+		mes "용감한 자들이여...";
+		mes "당신은 당신의 명예로운 자리로 돌아가고 싶습니까?";
 		next;
-		if (select( "Return to the guild castle.","Quit." ) == 1) {
+		if (select( "길드 성으로 돌아가십시오.","Quit." ) == 1) {
 			if (jobcanentermap(.@castle$) == 0) {
-				mes "Tertiary job class and users with expanded levels are not allowed to participate in Training Siege Battles.";
+				mes "3차 직업군 및 레벨이 확장된 사용자는 훈련 공성전에 참여할 수 없습니다.";
 				close;
 			}
 			if (getcastledata( getarg(1),CD_GUILD_ID ) == getcharid(2))
@@ -1103,16 +1103,16 @@ function	script	F_flag_woe_TE	{
 	}
 	.@guildname$ = getguildname(.@guild_id);
 	.@guildmaster$ = getguildmaster(.@guild_id);
-	mes "[ Edict of the Divine Rune-Midgarts Kingdom ]";
+	mes "[신성한 룬-미드가르트 왕국의 칙령]";
 	mes " ";
-	mes "1. Follow the ordinance of The Divine Rune-Midgarts Kingdom, ";
-	mes "we approve that this place is in";
-	mes "the private prossession of ^ff0000"+.@guildname$+"^000000 Guild.";
+	mes " 1. 신성한 룬-미드가르트 왕국의 규율을 따르십시오.";
+	mes "우리는 이곳이 ~에 있다는 것을 승인합니다.";
+	mes "^ff0000의 개인 소송"+.@guildname$+"^000000 길드.";
 	mes " ";
-	mes "2. The guild Master of ^ff0000"+.@guildname$+"^000000 Guild is";
+	mes "2. ^ff0000의 길드 마스터"+.@guildname$+"^000000 길드는";
 	mes "^ff0000"+.@guildmaster$+"^000000";
-	mes "If there is anyone who objects to this,";
-	mes "prove your strength and honor with a steel blade in your hand.";
+	mes "이에 반대하는 분이 계시다면,";
+	mes "강철 칼을 손에 쥐고 당신의 힘과 명예를 증명하십시오.";
 	close;
 }
 
@@ -1139,24 +1139,24 @@ prt_gld,1,4,0	script	#Enterance Button prt	CLEAR_NPC,{
 	mes "password";
 	next;
 	if ( callfunc( "F_GM_NPC", 1854,0, 0,9000 ) < 1 ) {
-		mes "That's not right";
+		mes "그건 옳지 않아";
 		close;
 	}
-	mes "What do you want to do with the Gloria-bound warp?";
+	mes "글로리아 바운드 워프를 어떻게 처리하고 싶으세요?";
 	next;
-	switch( select( "Open it","Close it","Cancel","Rental item provided" ) ) {
+	switch( select( "열어보세요","닫으세요","Cancel","대여 품목 제공" ) ) {
 	case 1:
-		mes "Opening the warp.";
+		mes "워프를 풀다.";
 		enablenpc "to_gloria";
 		close;
 	case 2:
-		mes "Closing the warp.";
+		mes "워프를 닫는다.";
 		disablenpc "to_gloria";
 		close;
 	case 3:
 		end;
 	case 4:
-		mes "You have 300 seconds.";
+		mes "300초의 시간이 있습니다.";
 		rentitem 13083,300;// TE_Woe_Knife
 		close;
 	}
@@ -1166,18 +1166,18 @@ alde_gld,1,4,0	script	#Enterance Button ald	CLEAR_NPC,{
 	mes "password";
 	next;
 	if ( callfunc( "F_GM_NPC", 1854,0, 0,9000 ) < 1 ) {
-		mes "That's not right";
+		mes "그건 옳지 않아";
 		close;
 	}
-	mes "What do you want to do with the Kafragarten-bound warp?";
+	mes "카프라가르텐으로 묶인 날실을 어떻게 처리하고 싶으세요?";
 	next;
-	switch( select( "Open it","Close it","Cancel" ) ) {
+	switch( select( "열어보세요","닫으세요","Cancel" ) ) {
 	case 1:
-		mes "Opening the warp.";
+		mes "워프를 풀다.";
 		enablenpc "to_kafragarten";
 		close;
 	case 2:
-		mes "Closing the warp.";
+		mes "워프를 닫는다.";
 		disablenpc "to_kafragarten";
 		close;
 	case 3:
@@ -1187,15 +1187,15 @@ alde_gld,1,4,0	script	#Enterance Button ald	CLEAR_NPC,{
 
 // God Item Hervor & Jormungand
 sec_in02,20,20,0	script	Test Guide	CLEAR_NPC,{
-	mes "Password?";
+	mes "비밀번호?";
 	next;
 	if (callfunc( "F_GM_NPC", 18543792,0, 0,99999999 ) < 1) {
 		mes "Aww...";
 		close;
 	}
-	mes "We provide material items needed for testing TE.";
+	mes "저희는 TE 테스트에 필요한 자재를 제공합니다.";
 	next;
-	switch( select( "Materials for Hervor","Materials for Jormungand" ) ) {
+	switch( select( "헤르보르용 재료","요르문간드 재료" ) ) {
 	case 1:
 		getitem 6595,2;// Hammer_Of_Velund
 		getitem 6596,1;// Anvil_Of_Velund

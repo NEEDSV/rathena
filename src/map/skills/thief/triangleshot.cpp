@@ -13,6 +13,11 @@ SkillTriangleShot::SkillTriangleShot() : WeaponSkillImpl(SC_TRIANGLESHOT) {
 void SkillTriangleShot::calculateSkillRatio(const Damage *wd, const block_list *src, const block_list *target, uint16 skill_lv, int32 &skillratio, int32 mflag) const {
 	const status_data* sstatus = status_get_status_data(*src);
 
+#ifdef NEED_2017_SKILL_FORMULA
+	skillratio += 200 + (skill_lv - 1) * sstatus->agi / 2;
+	RE_LVL_DMOD(120);
+#else
 	skillratio += -100 + 230 * skill_lv + 3 * sstatus->agi;
 	RE_LVL_DMOD(100);
+#endif
 }

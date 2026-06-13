@@ -13,7 +13,11 @@ void SkillCrimsonFirePetal::calculateSkillRatio(const Damage *wd, const block_li
 
 	base_skillratio -= 10;
 	if(sd && sd->spiritcharm_type == CHARM_TYPE_FIRE && sd->spiritcharm > 0)
+#ifdef NEED_2017_SKILL_FORMULA
+		base_skillratio += 20 * sd->spiritcharm;
+#else
 		base_skillratio += 10 * sd->spiritcharm;
+#endif
 }
 
 void SkillCrimsonFirePetal::castendDamageId(block_list *src, block_list *target, uint16 skill_lv, t_tick tick, int32& flag) const {

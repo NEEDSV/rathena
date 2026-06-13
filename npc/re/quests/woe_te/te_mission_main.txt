@@ -126,14 +126,14 @@ S_Coord:
 
 -	script	Training_Instructor_TE	-1,{
 	if (checkweight(1201,5) == 0) {
-		mes "You have too many items to proceed with the quest.";
-		mes "Please lighten your load and try again.";
+		mes "퀘스트를 진행하기에는 아이템이 너무 많습니다.";
+		mes "부담을 줄이고 다시 시도해 주세요.";
 		close;
 	}
 	.@map$ = strnpcinfo(4);
 	if (.@map$ == "te_alde_gld") {
-		.@npc_name$ = "Mana";
-		.@fortress$ = "Kafragarten";
+		.@npc_name$ = "마나";
+		.@fortress$ = "카프라가르텐";
 		.@menu$ = callsub( S_Menu, .@quest_id,
 			7510,"1 Suspicious Poring",
 			7511,"10 Suspicious Poring",
@@ -146,8 +146,8 @@ S_Coord:
 			7515,"30 Kafra's Paychecks" );
 	}
 	else {
-		.@npc_name$ = "Rune";
-		.@fortress$ = "Gloria";
+		.@npc_name$ = "룬 문자";
+		.@fortress$ = "글로리아";
 		.@menu$ = callsub( S_Menu, .@quest_id,
 			7501,"1 Suspicious Babee",
 			7502,"10 Suspicious Babee",
@@ -161,46 +161,46 @@ S_Coord:
 	}
 	mes "["+ .@npc_name$ +"]";
 	if (jobcanentermap("te_prtcas01") == 0) {
-		mes "Ah... you...";
-		mes "based on TE rules, I won't be ordering you or asking you favors unfortunately.";
+		mes "아... 당신은...";
+		mes "TE 규정상, 죄송하지만 당신에게 주문을 하거나 부탁을 드릴 수는 없습니다.";
 		next;
 		mes "["+ .@npc_name$ +"]";
-		mes "Hey now, since this place is just for primary and secondary job classes as well as users without expanded levels, could you leave if you got nothing else to do here?";
+		mes "안녕하세요, 이곳은 기본 및 보조 직업군과 레벨이 확장되지 않은 유저들만 이용할 수 있는 곳이니, 더 이상 할 일이 없으시면 나가주시겠어요?";
 		close;
 	}
-	mes "There are missions you can complete in TE region.";
-	mes "Let's see, what do you want?";
+	mes "TE 지역에서 완료할 수 있는 임무들이 있습니다.";
+	mes "어디 보자, 뭘 원하세요?";
 	next;
-	switch( select( "Accept/Conform Missions", "What do you mean a mission?", "I don't have any." ) ) {
+	switch( select( "임무 수락/준수", "임무라니 무슨 말씀이세요?", "저는 없어요." ) ) {
 	case 1:
 		mes "["+ .@npc_name$ +"]";
 		if (BaseLevel < 70) {
-			mes "Mm, I'm sorry but missions are for users with ^4d4dff70 level^000000 or higher.";
-			mes "Honestly, it's hard to complete a mission if your level is too low.";
+			mes "음, 죄송하지만 미션은 레벨이 ^4d4dff70 이상인 유저만 이용할 수 있습니다.";
+			mes "솔직히 말해서, 레벨이 너무 낮으면 임무를 완수하기 어렵습니다.";
 			close;
 		}
 		.@time_check = WoeTETimeStart(3600);
 		.@siege_check = agitcheck3();
-		mes "You already know that you have to accept a mission in a certain period of time, right?";
+		mes "정해진 기간 내에 임무를 수락해야 한다는 건 이미 알고 계시죠?";
 		if (.@time_check == 1 || .@siege_check == 1)
-			mes "Moreover, you have to keep in mind that you can't accept both high-level and low-level missions simultaneously if they are of the same content.";
+			mes "또한, 동일한 내용의 고난이도 임무와 저난이도 임무를 동시에 수락할 수 없다는 점을 명심해야 합니다.";
 		else {
-			mes "Unfortunately, you can't accept missions right now.";
+			mes "죄송하지만 지금은 임무를 수락할 수 없습니다.";
 			next;
 			mes "["+ .@npc_name$ +"]";
 			.@playtime_check2 = checkquest(7516,PLAYTIME);// A Break for Commercial Development
 			if (.@playtime_check2 == 2) {
 				erasequest 7516;
-				mes "Mm, you were taking a break?";
-				mes "Well, it doesn't matter anymore.";
+				mes "음, 쉬고 계셨던 거예요?";
+				mes "뭐, 이제는 상관없죠.";
 			}
-			mes "You can only check the results of the missions you've already accepted.";
+			mes "이미 수락한 임무의 결과만 확인할 수 있습니다.";
 		}
 		next;
 		.@s = select( .@menu$ + "Cancel" ) -1;
 		mes "["+ .@npc_name$ +"]";
 		if (.@s == 9) {
-			mes "See you later then.";
+			mes "그럼 나중에 봐요.";
 			close;
 		}
 
@@ -238,9 +238,9 @@ S_Coord:
 			if (.@mission01 == 1) {
 				if (.@playtime_check == 0) {
 					if (.@hunting_check == 2) {
-						mes "You did it in time.";
-						mes "I don't understand why "+ .@mob_name$[0] +" appear at that time of the day.";
-						mes "Anyway, good job.";
+						mes "시간 맞춰서 해냈군요.";
+						mes " 나는 이유를 이해하지 못하겠어"+ .@mob_name$[0] +" 그 시간대에 나타납니다.";
+						mes "어쨌든, 잘했어요.";
 						if (.@num_tool_box == 0) {
 							erasequest .@main_quest;
 							getitem 11558,5;// TE_White_Slim_Potion
@@ -249,11 +249,11 @@ S_Coord:
 						}
 						next;
 						mes "["+ .@npc_name$ +"]";
-						mes "Since you've done a good job, I'll let you open my tool box " + .@num_tool_box + " times.";
-						mes "Although you won't find anything mostly...";
-						mes "It's a bonus, so don't complaint even if you don't find anything.";
+						mes " 일을 잘했으니 내 공구함을 열어보도록 허락해 줄게" + .@num_tool_box + " times.";
+						mes "비록 대부분의 것을 찾을 수는 없겠지만...";
+						mes "이건 보너스니까, 아무것도 못 찾더라도 불평하지 마세요.";
 						next;
-						mes "Just like "+ .@npc_name$ +" said, you went through the box in front, and...";
+						mes " 마치"+ .@npc_name$ +" 당신은 앞에 있는 상자를 통과했다고 말했죠...";
 						erasequest .@main_quest;
 						getitem .@reward[0],.@reward[1];
 						getexp .@exp[0],.@exp[1];
@@ -261,34 +261,34 @@ S_Coord:
 					}
 					callsub( S_Cancelquest, .@main_quest, .@npc_name$, "This mission is to eliminate "+ .@mob_name$[1] +" that secretly appear at the fortress in "+ .@fortress$ +"." );
 				}
-				mes "Time's up.";
-				mes "Unfortunately, mission failed!";
-				mes "Maybe next time!";
+				mes "시간이 다 됐습니다.";
+				mes "아쉽게도 임무는 실패했습니다!";
+				mes "다음번엔 꼭 성공하길!";
 				erasequest .@main_quest;
 				close;
 			}
 			if (.@time_check != 1 && .@siege_check != 1) {
-				mes "You're not on this mission currently.";
-				mes "Could you check again?";
+				mes "당신은 현재 이 임무에 참여하고 있지 않습니다.";
+				mes "다시 한번 확인해 주시겠어요?";
 				close;
 			}
 			if (.@mission02 == 1 || .@mission03 == 1) {
 				if (.@num_tool_box == 0) {
-					mes "You are already on a high-level mission!";
-					mes "You cannot accept a low-level mission if you're already on a high-level mission of the same content!";
+					mes "당신은 이미 매우 중요한 임무를 수행하고 있습니다!";
+					mes "이미 동일한 콘텐츠의 고레벨 임무를 수행 중인 경우 저레벨 임무를 수락할 수 없습니다!";
 				}
 				else {
-					mes "You're already on a elimination mission!";
-					mes "I would like you to take care of what you already have unless you want to cancel it.";
+					mes "당신은 이미 제거 임무에 투입됐습니다!";
+					mes "취소하고 싶지 않으시다면, 이미 가지고 계신 것을 잘 관리해 주시길 바랍니다.";
 				}
 				next;
 				mes "["+ .@npc_name$ +"]";
-				mes "It only makes sense that way, doesn't it?";
-				mes "Don't you think so?";
+				mes "그렇게 하는 게 당연하지 않나요?";
+				mes "그렇게 생각하지 않으세요?";
 				close;
 			}
-			mes "I've been told that "+ .@mob_name$[1] +" appear during the busy siege hours at the fortress in "+ .@fortress$ +".";
-			mes "I would like you to ^4d4dffeliminate "+ .@num_kill +" or more of "+ .@mob_name$[1] +"^000000.";
+			mes " 나는 다음과 같은 말을 들었다."+ .@mob_name$[1] +"요새에서 공성전이 한창인 바쁜 시간 동안 나타난다."+ .@fortress$ +".";
+			mes " ^4d4dffeliminate를 해주시길 바랍니다."+ .@num_kill +" 또는 그 이상"+ .@mob_name$[1] +"^000000.";
 			callsub( S_Acceptquest, .@main_quest, .@npc_name$ );
 		}
 		else if (.@s == 3 || .@s == 4 || .@s == 5) {// Breaking Emperiums
@@ -313,16 +313,16 @@ S_Coord:
 			if (.@mission01 == 1) {
 				if (.@playtime_check == 0) {
 					if (.@hunting_check == 2) {
-						mes "Incredible!";
-						mes "Breaking Emperiums is definitely not an easy job.";
-						mes "You must be contributing a lot to your guild. Good job!";
+						mes "믿을 수 없는!";
+						mes "제국을 무너뜨리는 것은 결코 쉬운 일이 아닙니다.";
+						mes "길드에 많은 기여를 하고 계시는군요. 훌륭합니다!";
 						next;
 						mes "["+ .@npc_name$ +"]";
-						mes "Since you've done a good job, I'll let you open my tool box "+ .@num_tool_box +" times.";
-						mes "Although you won't find anything mostly...";
-						mes "It's a bonus, so don't complaint even if you don't find anything.";
+						mes " 일을 잘했으니 내 공구함을 열어보도록 허락해 줄게"+ .@num_tool_box +" times.";
+						mes "비록 대부분의 것을 찾을 수는 없겠지만...";
+						mes "이건 보너스니까, 아무것도 못 찾더라도 불평하지 마세요.";
 						next;
-						mes "Just like "+ .@npc_name$ +" said, you went through the box in front, and...";
+						mes " 마치"+ .@npc_name$ +" 당신은 앞에 있는 상자를 통과했다고 말했죠...";
 						erasequest .@main_quest;
 						setquest 7516;
 						getitem .@reward[0],.@reward[1];
@@ -331,53 +331,53 @@ S_Coord:
 					}
 					callsub( S_Cancelquest, .@main_quest, .@npc_name$, "This mission is to ^4d4dff destroy Emperiums that exist all over Gloria and Kafragarten regions.^000000" );
 				}
-				mes "Time's up.";
-				mes "Unfortunately, mission failed!";
-				mes "Maybe next time!";
+				mes "시간이 다 됐습니다.";
+				mes "아쉽게도 임무는 실패했습니다!";
+				mes "다음번엔 꼭 성공하길!";
 				erasequest .@main_quest;
 				close;
 			}
 			if (.@time_check != 1 && .@siege_check != 1) {
-				mes "You're not on this mission currently.";
-				mes "Could you check again?";
+				mes "당신은 현재 이 임무에 참여하고 있지 않습니다.";
+				mes "다시 한번 확인해 주시겠어요?";
 				close;
 			}
 			if (.@mission02 == 1 || .@mission03 == 1) {
-				mes "You're already on a mission of the same content,";
-				mes "the level is different though";
-				mes "I would like you to take care of what you already have unless you want to cancel it.";
+				mes "당신은 이미 같은 콘텐츠를 다루는 임무를 수행하고 있습니다.";
+				mes "하지만 수준은 다르죠.";
+				mes "취소하고 싶지 않으시다면, 이미 가지고 계신 것을 잘 관리해 주시길 바랍니다.";
 				next;
 				mes "["+ .@npc_name$ +"]";
-				mes "It only makes sense that way, doesn't it?";
-				mes "Don't you think so?";
+				mes "그렇게 하는 게 당연하지 않나요?";
+				mes "그렇게 생각하지 않으세요?";
 				close;
 			}
 			.@playtime_check2 = checkquest(7516,PLAYTIME);
 			if (.@playtime_check2 == 0) {
-				mes "There is something called 'commercial development level' in each fortress.";
-				mes "It increases as much as each guild invests.";
+				mes "각 요새에는 '상업 개발 수준'이라는 것이 있습니다.";
+				mes "각 길드가 투자하는 만큼 증가합니다.";
 				next;
 				mes "["+ .@npc_name$ +"]";
-				mes "However, this is closely related to Emperiums.";
-				mes "Destroying Emperiums repeatedly staggers commercial development level.";
+				mes "하지만 이는 엠페리움과 밀접한 관련이 있습니다.";
+				mes "제국을 반복적으로 파괴하는 것은 상업 발전 수준에 큰 타격을 준다.";
 				next;
 				mes "["+ .@npc_name$ +"]";
-				mes "So, now we take a break in order to prevent an excessive decrease in commercial development level.";
-				mes "See you in a bit.";
+				mes "그래서 우리는 상업 발전 수준의 과도한 감소를 막기 위해 잠시 휴식을 취합니다.";
+				mes "조금 있다가 봐요.";
 				close;
 			}
 			else if (.@playtime_check2 == 2) {
 				erasequest 7516;
-				mes "The break for commercial development of the fortress is over now.";
-				mes "Good. Think about what kind of missions you want and come back again.";
+				mes "요새의 상업적 개발을 위한 공백기는 이제 끝났습니다.";
+				mes "좋습니다. 어떤 임무를 원하시는지 생각해보고 다시 오세요.";
 				close;
 			}
-			mes "What is the most important thing in siege battles?";
-			mes "It's destroying Emperiums! Let me give you that exact mission of destroying Emperiums!";
+			mes "공성전에서 가장 중요한 것은 무엇일까요?";
+			mes "제국을 파괴하는 임무입니다! 제국을 파괴하는 그 임무를 당신에게 맡기겠습니다!";
 			next;
 			mes "["+ .@npc_name$ +"]";
-			mes "Gloria or Kafragarten, wherever it is! Right now, at this very hour, ^4d4dffdestroy Emperiums!^000000";
-			mes "^4d4dffTarget number is "+ .@num_kill +" or more!^000000";
+			mes "글로리아든 카프라가르텐이든, 어디든 상관없어! 지금 당장, 바로 이 시간에, ^4d4dff제국을 파괴해라!^000000";
+			mes " ^4d4dffTarget 숫자는"+ .@num_kill +" 또는 그 이상!^000000";
 			callsub( S_Acceptquest, .@main_quest, .@npc_name$ );
 		}
 		else if (.@s == 6 || .@s == 7 || .@s == 8) {
@@ -411,20 +411,20 @@ S_Coord:
 			if (.@mission01 == 1) {
 				if (.@playtime_check == 0) {
 					if (countitem(.@item_quest) > 9) {
-						mes .@num_items +" or more of "+ .@string$[0] +" let's see you've done it right.";
+						mes .@num_items +" 또는 그 이상"+ .@string$[0] +" 자, 제대로 했는지 한번 봅시다.";
 						mes .@string$[1];
-						mes "Anyway, good job.";
+						mes "어쨌든, 잘했어요.";
 						next;
 						mes "["+ .@npc_name$ +"]";
-						mes "Let me take the rest of the "+ .@string$[0] +".";
-						mes "I'll return it to its original owner.";
+						mes " 나머지는 제가 맡겠습니다."+ .@string$[0] +".";
+						mes "원래 주인에게 돌려드리겠습니다.";
 						next;
 						mes "["+ .@npc_name$ +"]";
-						mes "Since you've done a good job, I'll let you open my tool box "+ .@num_tool_box +" times.";
-						mes "Although you won't find anything mostly...";
-						mes "It's a bonus, so don't complaint even if you don't find anything.";
+						mes " 일을 잘했으니 내 공구함을 열어보도록 허락해 줄게"+ .@num_tool_box +" times.";
+						mes "비록 대부분의 것을 찾을 수는 없겠지만...";
+						mes "이건 보너스니까, 아무것도 못 찾더라도 불평하지 마세요.";
 						next;
-						mes "Just like "+ .@npc_name$ +" said, you went through the box in front, and...";
+						mes " 마치"+ .@npc_name$ +" 당신은 앞에 있는 상자를 통과했다고 말했죠...";
 						delitem .@item_quest, countitem(.@item_quest);
 						erasequest .@main_quest;
 						getitem .@reward[0],.@reward[1];
@@ -433,94 +433,94 @@ S_Coord:
 					}
 					callsub( S_Cancelquest, .@main_quest, .@npc_name$, "This mission is to ^4d4dffcollect "+ .@string$[2] +"^000000 at the fortress in "+ .@fortress$ +"." );
 				}
-				mes "Time's up.";
-				mes "Unfortunately, mission failed!";
-				mes "Maybe next time!";
+				mes "시간이 다 됐습니다.";
+				mes "아쉽게도 임무는 실패했습니다!";
+				mes "다음번엔 꼭 성공하길!";
 				erasequest .@main_quest;
 				close;
 			}
 			if (.@time_check != 1 && .@siege_check != 1) {
-				mes "You're not on this mission currently.";
-				mes "Could you check again?";
+				mes "당신은 현재 이 임무에 참여하고 있지 않습니다.";
+				mes "다시 한번 확인해 주시겠어요?";
 				close;
 			}
 			if (.@mission02 == 1 || .@mission03 == 1) {
-				mes "You're already on a mission of the same content,";
-				mes "the level is different though";
-				mes "I would like you to take care of what you already have unless you want to cancel it.";
+				mes "당신은 이미 같은 콘텐츠를 다루는 임무를 수행하고 있습니다.";
+				mes "하지만 수준은 다르죠.";
+				mes "취소하고 싶지 않으시다면, 이미 가지고 계신 것을 잘 관리해 주시길 바랍니다.";
 				next;
 				mes "["+ .@npc_name$ +"]";
-				mes "It only makes sense that way, doesn't it?";
-				mes "Don't you think so?";
+				mes "그렇게 하는 게 당연하지 않나요?";
+				mes "그렇게 생각하지 않으세요?";
 				close;
 			}
-			mes "Hmm you wouldn't believe it, but this mission is related to a theft.";
-			mes "They told me a bunch of "+ .@string$[2] +" is missing from the fortress in "+ .@fortress$ +".";
+			mes "음, 믿기 어려우시겠지만, 이번 임무는 절도 사건과 관련이 있습니다.";
+			mes " 그들은 내게 여러 가지를 말해줬어."+ .@string$[2] +" 요새에서 사라졌다"+ .@fortress$ +".";
 			next;
 			mes "["+ .@npc_name$ +"]";
-			mes "The thief probably took advantage of the siege hours.";
-			mes "It's a request to find ^4d4dff"+ .@num_items +" or more of "+ .@string$[2] +"^000000.";
+			mes "도둑은 아마도 포위 공격이 진행되는 시간을 틈타 범행을 저질렀을 것이다.";
+			mes "^4d4dff를 찾아달라는 요청입니다."+ .@num_items +" 또는 그 이상"+ .@string$[2] +"^000000.";
 			callsub( S_Acceptquest, .@main_quest, .@npc_name$ );
 		}
 	case 2:
 		mes "["+ .@npc_name$ +"]";
-		mes "Since TE Region has more of a casual atmosphere,";
-		mes "it's not fun doing just siege battles, right?";
-		mes "So, I brought ^4d4dffsome works you can do during the siege hours^000000~";
+		mes "TE 지역은 좀 더 편안한 분위기를 가지고 있기 때문에,";
+		mes "공성전만 하는 건 재미없잖아요, 그렇죠?";
+		mes "그래서, 공성전 시간 동안 할 수 있는 몇 가지 일들을 가져왔어요~";
 		next;
 		mes "["+ .@npc_name$ +"]";
-		mes "You can accept missions ^4d4dffstarting from 1 hour before the beginning of the siege and until the end of the siege battle TE^000000,";
-		mes "and every mission has ^4d4dffa 4-hour time limit^000000 for completion.";
+		mes "공성전 시작 1시간 전부터 공성전 종료 TE^000000까지 임무를 수락할 수 있습니다.";
+		mes "모든 임무에는 완료하는 데 ^4d4dffa 4시간의 시간 제한이 있습니다.";
 		next;
 		mes "["+ .@npc_name$ +"]";
-		mes "Simply put, you accept a mission from me during the siege hours and";
-		mes "^4d4dffcome back to give me a report within the time limit^000000.";
+		mes "간단히 말해서, 당신은 포위 공격 시간 동안 저의 임무를 수락하는 것입니다.";
+		mes "^4d4dff제한 시간 내에 보고서를 제출하러 돌아오세요^000000.";
 		next;
 		mes "["+ .@npc_name$ +"]";
-		mes "Try it for fun.";
+		mes "재미 삼아 한번 해보세요.";
 		close;
 	case 3:
 		mes "["+ .@npc_name$ +"]";
-		mes "I see.";
-		mes "Come back anytime if you change your mind.";
-		mes "I might not be available, though. Hehehe.";
+		mes "알겠어요.";
+		mes "마음이 바뀌면 언제든 다시 오세요.";
+		mes "하지만 제가 그때 자리에 없을 수도 있어요. 헤헤헤.";
 		close;
 	}
 
 S_Cancelquest:
 	.@npc_name$ = getarg(1);
 	if (WoeTETimeStart(3600) == 1 || agitcheck3()) {
-		mes "It seems like you haven't accomplished the mission yet?";
+		mes "아직 임무를 완수하지 못하신 것 같군요?";
 		mes getarg(2);
 		next;
 		mes "["+ .@npc_name$ +"]";
-		mes "Do you want to cancel by any chance?";
+		mes "혹시 취소하시겠습니까?";
 		next;
 		switch( select( "No.","Yes." ) ) {
 		case 1:
 			mes "["+ .@npc_name$ +"]";
-			mes "Good luck!";
+			mes "행운을 빌어요!";
 			close;
 		case 2:
 			mes "["+ .@npc_name$ +"]";
-			mes "As you wanted, this mission is canceled.";
+			mes "원하시는 대로 이 임무는 취소되었습니다.";
 			erasequest getarg(0);
 			close;
 		}
 	}
 	else {
-		mes "Hmm you still have some time left, but it's not the siege hour yet";
-		mes "I don't think you should go on.";
-		mes "You should cancel this mission. I would say it's failed.";
+		mes "음, 아직 시간이 좀 남았지만, 아직 공성전 시작 시간은 아니네요.";
+		mes "더 이상 진행하지 않는 게 좋을 것 같아요.";
+		mes "이 임무는 취소해야 합니다. 실패했다고 봐야겠네요.";
 		next;
-		switch( select( "I would like to go on.","Yes, I'll cancel it." ) ) {
+		switch( select( "계속 이야기하고 싶습니다.","네, 취소하겠습니다." ) ) {
 		case 1:
 			mes "["+ .@npc_name$ +"]";
-			mes "I don't think it's worth it. Well, good luck!";
+			mes "그럴 가치가 없을 것 같네요. 그래도 행운을 빌어요!";
 			close;
 		case 2:
 			mes "["+ .@npc_name$ +"]";
-			mes "As you wanted, this mission is canceled.";
+			mes "원하시는 대로 이 임무는 취소되었습니다.";
 			erasequest getarg(0);
 			close;
 		}
@@ -529,16 +529,16 @@ S_Cancelquest:
 S_Acceptquest:
 	.@npc_name$ = getarg(1);
 	next;
-	switch( select( "Accept it.","Do not accept it." ) ) {
+	switch( select( "받아들이세요.","받아들이지 마세요." ) ) {
 	case 1:
 		mes "["+ .@npc_name$ +"]";
-		mes "^4d4dffThe time limit is 4 hours.^000000";
-		mes "Accomplish the mission with in that time and report to me.";
+		mes "제한 시간은 4시간입니다.";
+		mes "그 시간 안에 임무를 완수하고 내게 보고하라.";
 		setquest getarg(0);
 		close;
 	case 2:
 		mes "["+ .@npc_name$ +"]";
-		mes "Try another mission then.";
+		mes "그럼 다른 미션을 시도해 보세요.";
 		close;
 	}
 
@@ -547,10 +547,10 @@ S_Rentbox:
 	for ( .@count = 0; .@count < getarg(0); .@count++ ) {
 		.@miss_item01 = rand(100);
 		if (.@miss_item01 > 3)
-			mes "You didn't find anything.";
+			mes "아무것도 찾지 못하셨군요.";
 		else {
 			rentitem .@item_id[ .@miss_item01 ],86400;
-			mes "You found '"+ getitemname(.@item_id[ .@miss_item01 ]) +" !'";
+			mes "당신은 '를 찾았습니다"+ getitemname(.@item_id[ .@miss_item01 ]) +" !'";
 		}
 	}
 	close;

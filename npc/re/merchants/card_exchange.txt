@@ -20,34 +20,34 @@
 //============================================================
 comodo,148,306,4	script	Card Vendor Machine#pa08	562,{
 	if (checkweight(1201,1) == 0) {
-		mes "You have too many items, please reduce it and come back later!";
+		mes "구매하신 상품이 너무 많습니다. 상품 수를 줄이신 후 다시 시도해 주세요!";
 		close;
 	}
 	if (MaxWeight - Weight < 1000) {
-		mes "You are overweight now, please reduce it and come back later!";
+		mes "현재 체중이 과다하시니, 체중을 줄이신 후 다시 방문해 주세요!";
 		close;
 	}
-	mes "[Terminator RX1]";
-	mes "Text Explanation Begins:";
-	mes "Press 1 for Cancel,";
-	mes "Press 2 for Explanation,";
-	mes "Press 3 for Coin Exchange,";
-	mes "Press 4 for Card Exchange.";
+	mes "[터미네이터 RX1]";
+	mes "텍스트 설명 시작:";
+	mes "취소하려면 1번을 누르세요.";
+	mes "설명을 보시려면 2번을 누르세요.";
+	mes "코인 교환을 위해 3번을 누르세요.";
+	mes "카드 교환을 원하시면 4번을 누르세요.";
 	next;
-	switch(select("1.Cancel:2.Explanation:3.Change Card into Coin:4.Change Coin into Card:^ffffff5.Start Security System^000000")) {
+	switch(select("1.Cancel:2.Explanation:3. 카드를 동전으로 바꾸세요:4. 동전을 카드로 바꾸세요:^ffffff5.보안 시스템 시작^000000")) {
 	case 1:
-		mes "[Terminator RX1]";
-		mes "You are welcome!";
+		mes "[터미네이터 RX1]";
+		mes "물론이죠!";
 		close;
 	case 2:
-		mes "[Terminator RX1]";
-		mes "No.3, when you choose Coin Exchange, system will collect ONE card from your inventory randomly to exchange into ONE Coin.";
+		mes "[터미네이터 RX1]";
+		mes "3번, 코인 교환을 선택하면 시스템이 인벤토리에서 카드 한 장을 무작위로 선택하여 코인 한 장으로 교환해 드립니다.";
 		next;
-		mes "[Terminator RX1]";
-		mes "No.4, when you choose Card Excahnge, system will collect FIVE coin from your inventory to exchange into ONE Card randomly.";
+		mes "[터미네이터 RX1]";
+		mes "4번, 카드 교환을 선택하면 시스템이 인벤토리에서 코인 5개를 모아 무작위로 카드 1장으로 교환합니다.";
 		next;
-		mes "[Terminator RX1]";
-		mes "You are welcome!";
+		mes "[터미네이터 RX1]";
+		mes "물론이죠!";
 		close;
 	case 3:
 		specialeffect2 EF_COIN;
@@ -83,19 +83,19 @@ comodo,148,306,4	script	Card Vendor Machine#pa08	562,{
 			4417, 4418, 4420, 4421, 4422, 4423, 4432, 4434, 4435, 4436,
 			4437, 4438, 4439, 4442, 4443, 4444, 4445, 4447, 4448, 4449,
 			4450, 4452;
-		mes "[Terminator RX1]";
-		mes "Card searching has finished!";
+		mes "[터미네이터 RX1]";
+		mes "카드 찾기가 끝났습니다!";
 		next;
-		mes "[Terminator RX1]";
-		mes "Thank you for coming!";
+		mes "[터미네이터 RX1]";
+		mes "와주셔서 감사합니다!";
 		close;
 	case 4:
 		specialeffect2 EF_COIN;
 		specialeffect2 EF_LOUD;
 		progressbar "0xffff00",3;
 		if (countitem(6379) < 5) {
-			mes "[Terminator RX1]";
-			mes "You do not have enough coins.";
+			mes "[터미네이터 RX1]";
+			mes "코인이 부족합니다.";
 			close;
 		}
 		delitem 6379,5; //Card_Coin
@@ -464,15 +464,15 @@ comodo,148,306,4	script	Card Vendor Machine#pa08	562,{
 			else
 				getitem 4092,1; //Skel_Worker_Card
 		}
-		mes "[Terminator RX1]";
-		mes "All cards have finished.";
+		mes "[터미네이터 RX1]";
+		mes "모든 카드가 끝났습니다.";
 		next;
-		mes "[Terminator RX1]";
-		mes "Thank you for coming!";
+		mes "[터미네이터 RX1]";
+		mes "와주셔서 감사합니다!";
 		close;
 	case 5:
-		mes "[Terminator RX1]";
-		mes "Found unauthorized signal, starting security system...";
+		mes "[터미네이터 RX1]";
+		mes "무단 신호가 감지되어 보안 시스템이 가동됩니다...";
 		close2;
 		warp "comodo",263,286;
 		end;
@@ -484,15 +484,15 @@ L_Exchange:
 	.@args = getargcount();
 	for (.@i = 0; .@i < .@args; .@i++) {
 		if (countitem(getarg(.@i))) {
-			mes "Found ^980078" + getitemname(getarg(.@i)) + "^000000,";
-			mes "Do you want to exchange ONE Card into ONE Coin?";
+			mes "^980078을 찾았습니다." + getitemname(getarg(.@i)) + "^000000,";
+			mes "카드 한 장을 코인 한 개로 교환하시겠습니까?";
 			next;
 			switch(select("No:Yes")) {
 			case 1:
-				mes "^980078Do you want search for other cards?^000000";
+				mes "^980078다른 카드를 검색하시겠습니까?^000000";
 				next;
 				if(select("No:Yes") == 1) {
-					mes "^980078Card searching is interrupted^000000";
+					mes "^980078카드 검색이 중단되었습니다^000000";
 					close;
 				}
 				break;
@@ -500,10 +500,10 @@ L_Exchange:
 				if (countitem(getarg(.@i))) {
 					delitem getarg(.@i),1;
 					getitem 6379,1; //Card_Coin
-					mes "^980078" + getitemname(getarg(.@i)) + " has exchanged into Coin.^000000";
+					mes "^980078" + getitemname(getarg(.@i)) + " Coin으로 교환되었습니다.^000000";
 					next;
 				} else {
-					mes "^980078Your inventory does not contain the card for exchange.^000000";
+					mes "^980078소지품에 교환할 카드가 없습니다.^000000";
 					next;
 				}
 				break;

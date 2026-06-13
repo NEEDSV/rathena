@@ -13,59 +13,59 @@
 //============================================================
 
 prontera,164,171,3	script	MvP Ladder Warper	56,{
-	mes "[MvP Ladder Warper]";
-	mes "Say... do you want to play the MvP Ladder game?";
+	mes "[MvP 래더 워퍼]";
+	mes "저기... MVP 랭킹 게임 한 판 하실래요?";
 	next;
-	switch(select("Yes, let's get it on!:Information.:Show me the best record.:No.")) {
+	switch(select("네, 시작해 봅시다!:Information.:최고의 기록을 보여주세요.:No.")) {
 	case 1:
 		break;
 	case 2:
-		mes "[MvP Ladder Warper]";
-		mes "In this game, your party has to kill every single MvP monster in ascending order, from the weakest to strongest.";
+		mes "[MvP 래더 워퍼]";
+		mes "이 게임에서 여러분의 파티는 가장 약한 몬스터부터 가장 강한 몬스터 순으로 모든 MVP 몬스터를 처치해야 합니다.";
 		if ( .finish_item_amount )
-			mes "If your party can finish the MVP ladder game, each member will earn "+ callfunc("F_InsertPlural", .finish_item_amount, getitemname( .finish_item_id )) +".";
+			mes " 파티원들이 MVP 랭킹 게임을 완료하면 각 멤버는 보상을 받게 됩니다."+ callfunc("F_InsertPlural", .finish_item_amount, getitemname( .finish_item_id )) +".";
 		if ( .register_cost )
-			mes "But the entrance fee is "+ callfunc( "F_InsertComma", .register_cost ) +" zeny.";
+			mes " 하지만 입장료는"+ callfunc( "F_InsertComma", .register_cost ) +" zeny.";
 		next;
-		mes "[MvP Ladder Warper]";
-		mes "You lose the game if you can't finish in "+ .timeout +" minutes, or if your entire party is killed.";
-		mes "Good luck!";
+		mes "[MvP 래더 워퍼]";
+		mes " 정해진 시간 안에 끝내지 못하면 게임에서 지게 됩니다."+ .timeout +" 몇 분 안에, 또는 파티원 전원이 사망할 때까지.";
+		mes "행운을 빌어요!";
 		close;
 	case 3:
-		mes "[MvP Ladder Warper]";
+		mes "[MvP 래더 워퍼]";
 		if ( !$mvpladdderparty_time ) {
-			mes "Nobody has finished this game yet.";
+			mes "아직 이 게임을 끝낸 사람은 아무도 없습니다.";
 			close;
 		}
-		mes "The best record is";
-		mes "[ "+( $mvpladdderparty_time / 60 )+" min "+( $mvpladdderparty_time % 60 )+" sec ]";
-		mes "By the party ^FF0000"+ $mvpladdderparty_name$ +"^000000.";
+		mes "최고 기록은";
+		mes "[ "+( $mvpladdderparty_time / 60 )+" min "+( $mvpladdderparty_time % 60 )+" 초]";
+		mes "파티 ^FF0000에 의해"+ $mvpladdderparty_name$ +"^000000.";
 		.@size = getarraysize( $mvpladderparty_member$ );
 		for ( .@i = 0; .@i < .@size; .@i++ )
 			mes "^000000"+ ( .@i +1 ) +". ^0000FF"+ $mvpladderparty_member$[.@i];
 		if ( getgmlevel() < .gmlvlreset ) close;
 		next;
-		if ( select( "Close.", "Reset the record." ) == 1 ) close;
-		if ( select( "Never mind.", "I really want to reset it." ) == 1 ) close;
+		if ( select( "Close.", "기록을 초기화하세요." ) == 1 ) close;
+		if ( select( "괜찮아요.", "정말 초기화하고 싶어요." ) == 1 ) close;
 		$mvpladdderparty_time = 0;
 		$mvpladdderparty_name$ = "";
 		deletearray $mvpladderparty_member$[.@i];
-		mes "[MvP Ladder Warper]";
-		mes "Record reset successfully.";
+		mes "[MvP 래더 워퍼]";
+		mes "레코드가 성공적으로 초기화되었습니다.";
 		close;
 	case 4:
-		mes "[MvP Ladder Warper]";
-		mes "When you are strong enough to complete the game, please come back.";
+		mes "[MvP 래더 워퍼]";
+		mes "게임을 클리어할 수 있을 만큼 강해지면 다시 돌아와 주세요.";
 		close;
 	}
 	if ( !getcharid(1) ) {
-		mes "[MvP Ladder Warper]";
-		mes "You have to form a party to play.";
+		mes "[MvP 래더 워퍼]";
+		mes "게임을 하려면 파티를 구성해야 합니다.";
 		close;
 	}
 	if ( is_party_leader() == false ) {
-		mes "[MvP Ladder Warper]";
-		mes "Only the party leader can register.";
+		mes "[MvP 래더 워퍼]";
+		mes "당 대표만 등록할 수 있습니다.";
 		close;
 	}
 	.@origin = getcharid(3);
@@ -80,35 +80,35 @@ prontera,164,171,3	script	MvP Ladder Warper	56,{
 	}
 	attachrid .@origin;
 	if ( $@partymembercount != .register_min ) {
-		mes "[MvP Ladder Warper]";
-		mes "You have to form a party with exactly "+ .register_min +" members to play.";
+		mes "[MvP 래더 워퍼]";
+		mes " 정확히 같은 수의 인원으로 정당을 구성해야 합니다."+ .register_min +" 멤버들이 함께 플레이합니다.";
 		close;
 	}
 	else if ( .@online != .register_min )  {
-		mes "[MvP Ladder Warper]";
-		mes "Your party must have "+ .register_min +" members online on map '"+ strnpcinfo(4) +"'.";
+		mes "[MvP 래더 워퍼]";
+		mes " 당신의 파티는 반드시 다음을 갖춰야 합니다."+ .register_min +" 지도에서 온라인 회원 보기"+ strnpcinfo(4) +"'.";
 		close;
 	}
 	else if ( .register_cost && Zeny < .register_cost ) {
-		mes "[MvP Ladder Warper]";
-		mes "You don't have enough zeny. Please come back when you do.";
+		mes "[MvP 래더 워퍼]";
+		mes "제니가 부족합니다. 제니가 충분해지면 다시 오세요.";
 		close;
 	}
 	else if ( .party_id ) {
-		mes "[MvP Ladder Warper]";
-		mes "I'm sorry, but a party is currently playing the game. Please standby until the party is finished.";
-		mes "Thank you.";
+		mes "[MvP 래더 워퍼]";
+		mes "죄송하지만 현재 다른 그룹이 게임을 진행 중입니다. 그룹이 게임을 마칠 때까지 잠시 기다려 주시기 바랍니다.";
+		mes "감사합니다.";
 		close;
 	}
 	Zeny -= .register_cost;
-	announce "The party ["+ strcharinfo(1) +"] has started the MvP ladder game.", bc_all;
+	announce "그 당 ["+ strcharinfo(1) +"]님이 MVP 랭킹전을 시작했습니다.", bc_all;
 	set .party_id, getcharid(1);
 	set .@time_enter, gettimetick(2);
 	for ( .@i = 0; .@i < $@partymembercount; .@i++ ) {
 		if ( isloggedin( $@partymemberaid[.@i], $@partymembercid[.@i] ) ) {
 			attachrid $@partymemberaid[.@i];
 			if ( strcharinfo(3) == strnpcinfo(4) ) {
-				announce "You have "+ .timeout +" minutes to complete "+ .totalround +" rounds.", bc_self;
+				announce " 당신은 가지고 있습니다"+ .timeout +" 완료하는 데 몇 분 소요"+ .totalround +" rounds.", bc_self;
 				.@name$[.@c] = strcharinfo(0);
 				.@c++;
 			}
@@ -121,7 +121,7 @@ prontera,164,171,3	script	MvP Ladder Warper	56,{
 	if ( .round == .totalround +1 ) {
 		getpartymember .party_id, 1;
 		getpartymember .party_id, 2;
-		mapannounce .eventmap$, "Congratulations... You were able to defeat all the MVPs!", bc_map;
+		mapannounce .eventmap$, "축하합니다... 모든 MVP들을 물리치셨군요!", bc_map;
 		for ( .@i = 0; .@i < $@partymembercount; .@i++ ) {
 			if ( isloggedin( $@partymemberaid[.@i], $@partymembercid[.@i] ) ) {
 				attachrid $@partymemberaid[.@i];
@@ -131,7 +131,7 @@ prontera,164,171,3	script	MvP Ladder Warper	56,{
 		}
 		set .@timeused, gettimetick(2) - .@time_enter;
 		if ( .bonus_item_amount && .@timeused < .bonus_time * 60 ) {
-			mapannounce .eventmap$, "You are rewarded a bonus item for completing the ladder within "+ .bonus_time +" minutes.", bc_map;
+			mapannounce .eventmap$, " 사다리를 완료하면 보너스 아이템을 보상으로 받습니다."+ .bonus_time +" minutes.", bc_map;
 			for ( .@i = 0; .@i < $@partymembercount; .@i++ ) {
 				if ( isloggedin( $@partymemberaid[.@i], $@partymembercid[.@i] ) ) {
 					attachrid $@partymemberaid[.@i];
@@ -142,18 +142,18 @@ prontera,164,171,3	script	MvP Ladder Warper	56,{
 		}
 
 		if ( !$mvpladdderparty_time || .@timeused < $mvpladdderparty_time ) {
-			mapannounce .eventmap$, "And you broke the record! [ "+( .@timeused / 60 )+" min "+( .@timeused % 60 )+" sec ]", bc_map;
+			mapannounce .eventmap$, " 그리고 당신은 기록을 깼어요!"+( .@timeused / 60 )+" min "+( .@timeused % 60 )+" 초]", bc_map;
 			set $mvpladdderparty_time, .@timeused;
 			set $mvpladdderparty_name$, getpartyname( .party_id );
 			copyarray $mvpladderparty_member$, .@name$, .register_min;
 		}
 		else
-			mapannounce .eventmap$, "Time used [ "+( .@timeused / 60 )+" min "+( .@timeused % 60 )+" sec ]", bc_map;
+			mapannounce .eventmap$, " 사용 시간 ["+( .@timeused / 60 )+" min "+( .@timeused % 60 )+" 초]", bc_map;
 		sleep 10000;
-		announce "The party ["+ getpartyname( .party_id ) +"] has finished the MvP ladder game!", bc_all;
+		announce "그 당 ["+ getpartyname( .party_id ) +"]님이 MVP 래더 게임을 완료했습니다!", bc_all;
 	}
 	else
-		announce "The party ["+ getpartyname( .party_id ) +"] has failed to finish the MvP ladder game.", bc_all;
+		announce "그 당 ["+ getpartyname( .party_id ) +"]는 MVP 랭크 게임을 끝내지 못했습니다.", bc_all;
 	mapwarp .eventmap$, .map$, .x, .y;
 	killmonsterall .eventmap$;
 	.party_id = .round = 0;
@@ -177,14 +177,14 @@ OnMvpDead:
 		end;
 	}
 	else if ( .round == .totalround )
-		mapannounce .eventmap$, "The final Round will begin in "+ .delay +" seconds...", bc_map;
+		mapannounce .eventmap$, " 최종 라운드는 다음 날짜에 시작됩니다."+ .delay +" seconds...", bc_map;
 	else
-		mapannounce .eventmap$, "Starting round "+ .round +" in "+ .delay +" seconds...", bc_map;
+		mapannounce .eventmap$, " 시작 라운드"+ .round +" in "+ .delay +" seconds...", bc_map;
 	sleep .delay * 1000;
 	if ( .mvpid[.round] == 1646 )  // pick random Bio3 MVP
 		.mvpid[.round] = rand(1646,1651);
 	monster .eventmap$,0,0, "--ja--", .mvpid[.round], 1, strnpcinfo(0)+"::OnMvpDead";
-	mapannounce .eventmap$, getmonsterinfo( .mvpid[.round], MOB_NAME ) +" has spawned!", bc_map|bc_blue;
+	mapannounce .eventmap$, getmonsterinfo( .mvpid[.round], MOB_NAME ) +" 나타났습니다!", bc_map|bc_blue;
 	end;
 
 OnPCLogoutEvent:
@@ -207,7 +207,7 @@ OnPCDieEvent:
 	if ( .@less_one )
 		.@alive--;
 	if ( !.@alive ) {
-		mapannounce .eventmap$, "Party wiped!", bc_map;
+		mapannounce .eventmap$, "파티는 완전히 망했어!", bc_map;
 		sleep 10000;
 		awake strnpcinfo(0);
 	}
@@ -310,7 +310,7 @@ OnInit:
 
 //	Config Ends --------------------------------------------------------------
 
-	mapannounce .eventmap$, "An administrator has refreshed the server. Please re-register. We apologize for the inconvenience.", bc_map;
+	mapannounce .eventmap$, "관리자가 서버를 새로 고쳤습니다. 다시 등록해 주세요. 불편을 드려 죄송합니다.", bc_map;
 	getmapxy .map$, .x, .y, BL_NPC;
 	mapwarp .eventmap$, .map$, .x, .y;
 	killmonsterall .eventmap$;

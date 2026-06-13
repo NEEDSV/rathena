@@ -15,7 +15,11 @@ void SkillNeedleOfParalyze::castendDamageId(block_list *src, block_list *target,
 void SkillNeedleOfParalyze::calculateSkillRatio(const Damage *wd, const block_list *src, const block_list *target, uint16 skill_lv, int32 &base_skillratio, int32 mflag) const {
 	const status_data *sstatus = status_get_status_data(*src);
 
+#ifdef NEED_2017_SKILL_FORMULA
+	base_skillratio += 600 + 100 * skill_lv;
+#else
 	base_skillratio += -100 + 450 * skill_lv * status_get_lv(src) / 100 + sstatus->dex; // !TODO: Confirm Base Level and DEX bonus
+#endif
 }
 
 void SkillNeedleOfParalyze::applyAdditionalEffects(block_list *src, block_list *target, uint16 skill_lv, t_tick tick, int32 attack_type, enum damage_lv dmg_lv) const {

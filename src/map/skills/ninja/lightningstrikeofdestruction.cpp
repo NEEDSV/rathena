@@ -13,13 +13,17 @@ SkillLightningStrikeOfDestruction::SkillLightningStrikeOfDestruction() : SkillIm
 void SkillLightningStrikeOfDestruction::calculateSkillRatio(const Damage *wd, const block_list *src, const block_list *target, uint16 skill_lv, int32 &base_skillratio, int32 mflag) const {
 	const map_session_data* sd = BL_CAST(BL_PC, src);
 
-#ifdef RENEWAL
+#ifndef NEED_2017_SKILL_FORMULA
 	base_skillratio += 100 * skill_lv;
 #else
 	base_skillratio += 60 + 40 * skill_lv;
 #endif
 	if(sd && sd->spiritcharm_type == CHARM_TYPE_WIND && sd->spiritcharm > 0)
+#ifndef NEED_2017_SKILL_FORMULA
 		base_skillratio += 20 * sd->spiritcharm;
+#else
+		base_skillratio += 15 * sd->spiritcharm;
+#endif
 }
 
 void SkillLightningStrikeOfDestruction::castendPos2(block_list* src, int32 x, int32 y, uint16 skill_lv, t_tick tick, int32& flag) const {

@@ -25,6 +25,19 @@ void SkillEarthShaker::applyAdditionalEffects(block_list *src, block_list *targe
 void SkillEarthShaker::calculateSkillRatio(const Damage *wd, const block_list *src, const block_list *target, uint16 skill_lv, int32 &skillratio, int32 mflag) const {
 	const status_change *tsc = status_get_sc(target);
 
+#ifdef NEED_2017_SKILL_FORMULA
+	if (tsc && ((tsc->option & (OPTION_HIDE | OPTION_CLOAK | OPTION_CHASEWALK)) || tsc->getSCE(SC_CAMOUFLAGE) || tsc->getSCE(SC_STEALTHFIELD) || tsc->getSCE(SC__SHADOWFORM))) {
+		//[(Skill Level x 150) x (Caster Base Level / 100) + (Caster INT x 3)] %
+		skillratio += -100 + 150 * skill_lv;
+		RE_LVL_DMOD(100);
+		skillratio += status_get_int(src) * 3;
+	}
+	else { //[(Skill Level x 50) x (Caster Base Level / 100) + (Caster INT x 2)] %
+		skillratio += -100 + 50 * skill_lv;
+		RE_LVL_DMOD(100);
+		skillratio += status_get_int(src) * 2;
+	}
+#else
 	if (tsc && ((tsc->option&(OPTION_HIDE|OPTION_CLOAK|OPTION_CHASEWALK)) || tsc->getSCE(SC_CAMOUFLAGE) || tsc->getSCE(SC_STEALTHFIELD) || tsc->getSCE(SC__SHADOWFORM))) {
 		//[(Skill Level x 300) x (Caster Base Level / 100) + (Caster STR x 3)] %
 		skillratio += -100 + 300 * skill_lv;
@@ -35,6 +48,7 @@ void SkillEarthShaker::calculateSkillRatio(const Damage *wd, const block_list *s
 		RE_LVL_DMOD(100);
 		skillratio += status_get_str(src) * 2;
 	}
+#endif
 }
 
 void SkillEarthShaker::castendDamageId(block_list *src, block_list *target, uint16 skill_lv, t_tick tick, int32& flag) const {

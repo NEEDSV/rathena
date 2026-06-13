@@ -13,8 +13,28 @@ SkillIgnitionBreak::SkillIgnitionBreak() : SkillImplRecursiveDamageSplash(RK_IGN
 }
 
 void SkillIgnitionBreak::calculateSkillRatio(const Damage *wd, const block_list *src, const block_list *target, uint16 skill_lv, int32 &skillratio, int32 mflag) const {
+#ifdef NEED_2017_SKILL_FORMULA
+	// 3x3 cell Damage = ATK [{(Skill Level x 300) x (1 + [(Caster's Base Level - 100) / 100])}] %
+	// 7x7 cell Damage = ATK [{(Skill Level x 250) x (1 + [(Caster's Base Level - 100) / 100])}] %
+	// 11x11 cell Damage = ATK [{(Skill Level x 200) x (1 + [(Caster's Base Level - 100) / 100])}] %
+
+	const status_data* sstatus = status_get_status_data(*src);
+
+	int i = distance_bl(src, target);
+	if (i < 2)
+		skillratio += -100 + 300 * skill_lv;
+	else if (i < 4)
+		skillratio += -100 + 250 * skill_lv;
+	else
+		skillratio += -100 + 200 * skill_lv;
+	skillratio = skillratio * status_get_lv(src) / 100;
+	// Elemental check, 1.5x damage if your weapon element is fire.
+	if (sstatus && sstatus->rhw.ele == ELE_FIRE)
+		skillratio += 100 * skill_lv;
+#else
 	skillratio += -100 + 450 * skill_lv;
 	RE_LVL_DMOD(100);
+#endif
 }
 
 void SkillIgnitionBreak::castendNoDamageId(block_list *src, block_list *target, uint16 skill_lv, t_tick tick, int32& flag) const {

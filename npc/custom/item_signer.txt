@@ -19,17 +19,17 @@ prt_in,24,61,7	script	Perchik	47,{
 	setarray .@Cost[0],0,5000;	// Zeny requirements: <base price>,<price per refine>
 
 	disable_items;
-	mes "[Perchik]";
-	mes "I can ^0055FFsign your name^000000 on almost any rare item you hold.";
+	mes "[페르칙]";
+	mes "저는 당신이 가지고 있는 거의 모든 희귀 아이템에 당신의 이름을 서명해 드릴 수 있습니다.";
 	next;
-	if(select("Tell me more...:Sign my items, please!") == 1) {
-		mes "[Perchik]";
-		mes "I can put your name on any slotless equipment or weapon.";
+	if(select("더 자세히 말씀해 주세요...:제 물건에 사인해 주세요!") == 1) {
+		mes "[페르칙]";
+		mes "슬롯이 없는 장비나 무기에 당신의 이름을 새겨드릴 수 있습니다.";
 		emotion ET_AHA;
 		next;
-		mes "[Perchik]";
+		mes "[페르칙]";
 		if (getarraysize(.@Item) || getarraysize(.@Cost)) {
-			mes "For my work I accept:";
+			mes "제 업무에 대한 대가로 다음을 받습니다:";
 			if (getarraysize(.@Item)) for(set .@i,0; .@i<getarraysize(.@Item); set .@i,.@i+2)
 				mes " ~ "+.@Item[.@i+1]+"x "+getitemname(.@Item[.@i]);
 			if (.@Cost[0]) mes " ~ "+callfunc("F_InsertComma",.@Cost[0])+" Zeny";
@@ -38,18 +38,18 @@ prt_in,24,61,7	script	Perchik	47,{
 		else mes "I work for free, but...";
 		next;
 		emotion ET_CRY;
-		mes "[Perchik]";
-		mes "Alas, I have 12 hungry children";
-		mes "and a very angry wife.";
+		mes "[페르칙]";
+		mes "아쉽게도 제겐 배고픈 아이들이 열두 명이나 있습니다.";
+		mes "그리고 매우 화난 아내.";
 		next;
-		mes "[Perchik]";
-		mes "Or it was 12 angry children";
-		mes "and a very hungry wife...";
+		mes "[페르칙]";
+		mes "아니면 화난 12명의 아이들이었을지도 모르죠.";
+		mes "그리고 몹시 배고픈 아내...";
 		emotion ET_SCRATCH;
 		close;
 	}
-	mes "[Perchik]";
-	mes "Show me your items to sign...";
+	mes "[페르칙]";
+	mes "사인하실 물품을 보여주세요...";
 	next;
 	setarray .@indices[1], EQI_HEAD_TOP, EQI_ARMOR, EQI_HAND_L, EQI_HAND_R, EQI_GARMENT, EQI_SHOES, EQI_ACC_L, EQI_ACC_R, EQI_HEAD_MID, EQI_HEAD_LOW;
 	for (set .@i,1; .@i<=10; set .@i,.@i+1) {
@@ -60,64 +60,64 @@ prt_in,24,61,7	script	Perchik	47,{
 	set .@part, .@indices[ select(.@menu$) ];
 	set .@id, getequipid(.@part);
 	set .@ref, getequiprefinerycnt(.@part);
-	mes "[Perchik]";
+	mes "[페르칙]";
 	if (!getequipisequiped(.@part)) {
-		mes "Nothing is equipped there!";
+		mes "그곳에는 아무것도 갖춰져 있지 않아요!";
 		emotion ET_KEK;
 		close;
 	}
 	for(set .@i,0; .@i<4; set .@i,.@i+1)
 		set .@slot[.@i], getequipcardid(.@part,.@i);
 	if (.@slot[0]==255 || .@slot[0]==254 || .@slot[0]<0) {
-		mes "Alas, this item's already signed.";
-		mes "I would never touch a master's work.";
+		mes "아쉽게도 이 작품은 이미 서명이 되어 있네요.";
+		mes "나는 거장의 작품에 절대 손대지 않을 거야.";
 		emotion ET_SCRATCH;
 		close;
 	}
 	if (.@slot[0]>4000 && .@slot[0]<5000) {
-		mes "A card? Here?!";
-		mes "As I said before, I don't sign items with cards.";
+		mes "카드라고요? 여기?!";
+		mes "앞서 말씀드렸듯이 저는 카드로 서명하지 않습니다.";
 		emotion ET_SCRATCH;
 		close;
 	}
 	if (getiteminfo(.@id, ITEMINFO_SLOT)) {
-		mes "Sorry, I don't sign slotted items.";
+		mes "죄송하지만, 슬롯에 넣어둔 물품에는 서명하지 않습니다.";
 		emotion ET_SORRY;
 		close;
 	}
 	getinventorylist;
 	for(set .@i,0; .@i<@inventorylist_count; set .@i,.@i+1)
 		if (@inventorylist_expire[.@i] != 0) {
-			mes "Sorry, I don't sign rental items!";
+			mes "죄송하지만, 대여 물품에는 서명하지 않습니다!";
 			emotion ET_SCRATCH;
 			close;
 		}
 	set .@price, .@Cost[0]+(.@Cost[1]*.@ref);
 	if (getarraysize(.@Item) || .@price) {
-		mes "I will need:";
+		mes "필요한 것은 다음과 같습니다:";
 		if (getarraysize(.@Item)) for(set .@i,0; .@i<getarraysize(.@Item); set .@i,.@i+2) {
 			mes " ~ "+.@Item[.@i+1]+"x "+getitemname(.@Item[.@i]);
 			if (countitem(.@Item[.@i]) < .@Item[.@i+1]) set .@nr,1;
 		}
 		if (.@price) mes " ~ "+.@price+" Zeny";
 	}
-	mes "Shall I sign your ^0055FF"+getitemname(.@id)+"^000000?";
+	mes "^0055FF에 서명해도 될까요?"+getitemname(.@id)+"^000000?";
 	next;
-	if(select("Ok!:Leave")==2) {
-		mes "[Perchik]";
-		mes "See you...";
+	if(select("좋아요!:Leave")==2) {
+		mes "[페르칙]";
+		mes "또 봐요...";
 		emotion ET_SLEEPY;
 		close;
 	}
-	mes "[Perchik]";
+	mes "[페르칙]";
 	if (Zeny < .@price || .@nr) {
-		mes "I don't work for 'thanks'.";
+		mes "나는 '감사합니다'라는 말을 듣고 일하는 게 아닙니다.";
 		emotion ET_SORRY;
 		close;
 	}
 	if (!countitem2(.@id,1,.@ref,0,.@slot[0],.@slot[1],.@slot[2],.@slot[3])) {
-		mes "Where is "+getitemname(@id)+"...?";
-		npctalk "Perchik : You're a snoozy cheater!";
+		mes " 어디에"+getitemname(@id)+"...?";
+		npctalk "퍼칙: 당신은 뻔뻔한 사기꾼이군요!";
 		logmes "Hack: Tried to sign an item not having it: "+getitemname(@id);
 		emotion ET_KEK;
 		close;
@@ -126,7 +126,7 @@ prt_in,24,61,7	script	Perchik	47,{
 	if (getarraysize(.@Item))  for(set .@i,0; .@i<getarraysize(.@Item); set .@i,.@i+2)
 		delitem .@Item[.@i], .@Item[.@i+1];
 	delitem2 .@id,1,1,.@ref,0,.@slot[0],.@slot[1],.@slot[2],.@slot[3];
-	mes "Done!";
+	mes "완료!";
 	emotion ET_OK;
 	getitem2 .@id,1,1,.@ref,0,254,0,getcharid(0)&0xffff,(getcharid(0)>>16)&0xffff;
 	equip .@id;

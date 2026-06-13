@@ -16,56 +16,56 @@
 //============================================================
 -	script	::BlacksmithDister	-1,{
 	disable_items;
-	mes "[Blacksmith Dister]";
-	mes "In this highly competitive society, we must be different in order to survive!";
-	mes "I only refine equipment at the +6 ~ 12 levels.";
+	mes "[대장장이 디스터]";
+	mes "이처럼 경쟁이 치열한 사회에서 살아남기 위해서는 남들과 달라야 합니다!";
+	mes "저는 장비를 +6~12 레벨까지만 강화합니다.";
 	next;
-	mes "[Blacksmith Dister]";
-	mes "I will need ^ff9999Blessed Oridecon^000000 for weapons, and ^ff9999Blessed Elunium^000000 for armors.";
-	mes "Failed refines ^FF0000will not break or reduce the refine level^000000.";
+	mes "[대장장이 디스터]";
+	mes "무기 제작에는 ^ff9999축복받은 오리데콘^000000이, 갑옷 제작에는 ^ff9999축복받은 엘루니움^000000이 필요합니다.";
+	mes "정제 실패 ^FF0000는 정제 레벨을 떨어뜨리거나 감소시키지 않습니다^000000.";
 	next;
-	mes "[Blacksmith Dister]";
-	mes "How about it? Do you want to refine?";
+	mes "[대장장이 디스터]";
+	mes "어때요? 더 다듬고 싶으세요?";
 	next;
 	setarray .@indices[1], EQI_HEAD_TOP, EQI_ARMOR, EQI_HAND_L, EQI_HAND_R, EQI_GARMENT, EQI_SHOES, EQI_ACC_L, EQI_ACC_R, EQI_HEAD_MID, EQI_HEAD_LOW;
 	for(set .@i,1; .@i<=10; set .@i,.@i+1)
 		set .@menu$, .@menu$ + ( getequipisequiped(.@indices[.@i]) ? getequipname(.@indices[.@i]) : F_getpositionname(.@indices[.@i]) +"-[Unequipped]" ) +":";
 	set .@part, .@indices[ select(.@menu$) ];
 	if (!getequipisequiped(.@part)) {
-		mes "[Blacksmith Dister]";
+		mes "[대장장이 디스터]";
 		switch(.@part) {
 		case EQI_HEAD_TOP:
-			mes "I'm a blacksmith, not a hairstylist.";
+			mes "저는 대장장이이지 미용사가 아닙니다.";
 			break;
 		case EQI_ARMOR:
-			mes "With my hammer, I will make you a star of the sky.";
+			mes "내 망치로 너를 하늘의 별로 만들어주겠다.";
 			break;
 		case EQI_HAND_L:
 		case EQI_HAND_R:
-			mes "Making artificial hands is not my specialty.";
+			mes "인공손을 만드는 것은 제 전문 분야가 아닙니다.";
 			break;
 		case EQI_GARMENT:
-			mes "Bring out the item so I can refine it!";
+			mes "그 아이템을 꺼내주세요, 제가 정제해 볼게요!";
 			break;
 		case EQI_SHOES:
-			mes "Where is this weird smell coming from?";
+			mes "이 이상한 냄새는 어디서 나는 거지?";
 			break;
 		case EQI_ACC_L:
 		case EQI_ACC_R:
-			mes "Where is the accessory?";
+			mes "액세서리는 어디에 있나요?";
 			break;
 		case EQI_HEAD_MID:
-			mes "What do you want me to refine?";
+			mes "어떤 부분을 다듬어드리면 좋을까요?";
 			break;
 		case EQI_HEAD_LOW:
-			mes "Huh? What do you want me to do?";
+			mes "네? 제가 뭘 하길 바라세요?";
 			break;
 		}
 		close;
 	}
 	if (!getequipisenableref(.@part)) {
-		mes "[Blacksmith Dister]";
-		mes "This item cannot be refined.";
+		mes "[대장장이 디스터]";
+		mes "이 아이템은 정제할 수 없습니다.";
 		close;
 	}
 	.@equip_id = getequipid(.@part);
@@ -74,13 +74,13 @@
 	setarray .@card[0], getequipcardid(.@part,0), getequipcardid(.@part,1), getequipcardid(.@part,2), getequipcardid(.@part,3);
 
 	if (.@equip_refine < 6 || .@equip_refine > 12) {
-		mes "[Blacksmith Dister]";
-		mes "This equipment has refined to "+.@equip_refine+". I only handle items with refine levels from +6 to +12!";
+		mes "[대장장이 디스터]";
+		mes " 이 장비는 다음과 같이 개선되었습니다."+.@equip_refine+"저는 제련 레벨이 +6에서 +12 사이인 아이템만 취급합니다!";
 		close;
 	}
 	if( .@itemtype == IT_ARMOR ){
 		.@equip_lv = getequiparmorlv( .@part );
-		.@type$ = "Armor";
+		.@type$ = "갑옷";
 
 		switch(.@equip_lv) {
 			case 1:
@@ -93,7 +93,7 @@
 		}
 	}else if( .@itemtype == IT_WEAPON ){
 		.@equip_lv = getequipweaponlv( .@part );
-		.@type$ = "Weapon";
+		.@type$ = "무기";
 
 		switch( .@equip_lv ){
 			case 1:
@@ -121,32 +121,32 @@
 		close;
 	}
 	set .@ore$,"^ff9999Blessed "+.@type$+" Ore^000000";
-	mes "[Blacksmith Dister]";
-	mes "This "+.@type$+" has been refined to "+.@equip_refine+". To refine it, I need "+.@ore$+" and a "+callfunc("F_InsertComma",.@price)+" zeny refining fee.";
-	mes "Do you want to proceed?";
+	mes "[대장장이 디스터]";
+	mes "This "+.@type$+" 다음과 같이 개선되었습니다."+.@equip_refine+"그것을 다듬기 위해서는, 나는 다음이 필요합니다."+.@ore$+" 그리고"+callfunc("F_InsertComma",.@price)+" 제니 정제 수수료.";
+	mes "계속하시겠습니까?";
 	next;
 	if(select("Yes:No") == 2) {
-		mes "[Blacksmith Dister]";
-		mes "I am busy, don't joke with me!";
+		mes "[대장장이 디스터]";
+		mes "나 바쁘니까 농담하지 마!";
 		close;
 	}
 	if (getequippercentrefinery(.@part) < 100) {
-		mes "[Blacksmith Dister]";
-		mes "This "+.@type$+" has been refined many times. Although it will not disappear upon failure, the "+.@ore$+" will disappear!";
+		mes "[대장장이 디스터]";
+		mes "This "+.@type$+" 여러 차례 개선되었습니다. 실패하더라도 사라지지는 않겠지만,"+.@ore$+" 사라질 거예요!";
 		next;
-		mes "[Blacksmith Dister]";
-		mes "Of course, the refining fee will not be returned! Do you want to continue?";
+		mes "[대장장이 디스터]";
+		mes "물론 정제 수수료는 환불되지 않습니다! 계속하시겠습니까?";
 		next;
 		if(select("Yes:No") == 2) {
-			mes "[Blacksmith Dister]";
-			mes "Good. I'd be sad if it failed, too.";
+			mes "[대장장이 디스터]";
+			mes "다행이네요. 저도 실패하면 슬플 거예요.";
 			close;
 		}
 	}
 	if (countitem(.@material) == 0 || Zeny < .@price) {
-		mes "[Blacksmith Dister]";
-		mes "Materials insufficient.";
-		mes "To refine a level "+.@equip_lv+" "+.@type$+", I need "+.@ore$+" and a "+callfunc("F_InsertComma",.@price)+" zeny refining fee.";
+		mes "[대장장이 디스터]";
+		mes "자재가 부족합니다.";
+		mes " 레벨을 세분화하려면"+.@equip_lv+" "+.@type$+" 나는 필요해"+.@ore$+" 그리고"+callfunc("F_InsertComma",.@price)+" 제니 정제 수수료.";
 		close;
 	}
 	delitem .@material,1;
@@ -156,31 +156,31 @@
 	if (callfunc("F_IsEquipIDHack", .@part, .@equip_id) || callfunc("F_IsEquipCardHack", .@part, .@card[0], .@card[1], .@card[2], .@card[3]) || callfunc("F_IsEquipRefineHack", .@part, .@equip_refine))
 		close;
 
-	mes "[Blacksmith Dister]";
-	mes "Tac! Tac! Tac!";
+	mes "[대장장이 디스터]";
+	mes "탁! 탁! 탁!";
 	if (getequippercentrefinery(.@part, true) > rand(100)) {
 		specialeffect EF_BLESSING;
 		successrefitem .@part;
 		next;
-		mes "[Blacksmith Dister]";
-		mes "Hahahahahaha!!!";
+		mes "[대장장이 디스터]";
+		mes "하하하하하하!!!";
 		next;
-		mes "[Blacksmith Dister]";
-		mes "Refine was a huge success~ Hahaha!";
+		mes "[대장장이 디스터]";
+		mes "Refine은 대성공이었어요~ 하하하!";
 		close;
 	}
 	specialeffect EF_CURSEATTACK;
 	specialeffect2 EF_SUI_EXPLOSION;
 	next;
 	emotion (!rand(5))?ET_ANGER:ET_HUK;
-	mes "[Blacksmith Dister]";
-	mes "Oh my goodness!!!!";
+	mes "[대장장이 디스터]";
+	mes "세상에!!!!";
 	next;
-	mes "[Blacksmith Dister]";
-	mes "Oh! Although it was blessed by "+.@ore$+" to retain the equipment...";
+	mes "[대장장이 디스터]";
+	mes " 오! 비록 축복을 받았지만"+.@ore$+" 장비를 유지하기 위해...";
 	next;
-	mes "[Blacksmith Dister]";
-	mes "My mood is worse when I fail!!";
+	mes "[대장장이 디스터]";
+	mes "실패할 때 기분이 더 나빠져요!!";
 	close;
 }
 prt_in,52,56,3	duplicate(BlacksmithDister)	Blacksmith Dister#prt	826

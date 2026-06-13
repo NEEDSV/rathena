@@ -11,6 +11,9 @@ SkillFocusedArrowStrike::SkillFocusedArrowStrike() : SkillImplRecursiveDamageSpl
 }
 
 void SkillFocusedArrowStrike::calculateSkillRatio(const Damage *wd, const block_list *src, const block_list *target, uint16 skill_lv, int32 &skillratio, int32 mflag) const {
+#ifdef NEED_2017_SKILL_FORMULA
+	skillratio += 100 + 50 * skill_lv;
+#else
 	if (src->type == BL_MOB) { // TODO: Did these formulas change in the renewal balancing?
 		if (wd->miscflag & 2) // Splash damage bonus
 			skillratio += -100 + 140 * skill_lv;
@@ -23,6 +26,7 @@ void SkillFocusedArrowStrike::calculateSkillRatio(const Damage *wd, const block_
 	RE_LVL_DMOD(100);
 #else
 	skillratio += 100 + 50 * skill_lv;
+#endif
 #endif
 }
 

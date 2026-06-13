@@ -20,15 +20,15 @@
 //============================================================
 malangdo,220,167,5	script	Coin Exchanger CX-1	564,{
 	if (checkweight(1201,1) == 0) {
-		mes "You have too many kinds of objects. Let's try to continue after reducing those objects.";
+		mes "객체의 종류가 너무 많습니다. 객체 수를 줄인 후에 계속 진행해 보겠습니다.";
 		close;
 	}
 	if (MaxWeight - Weight < 10000) {
-		mes "Can't continue because you have too many heavy objects. Let's try to continue after reducing the weight.";
+		mes "무거운 물건이 너무 많아서 계속할 수 없습니다. 무게를 줄인 후에 다시 시도해 보겠습니다.";
 		close;
 	}
-	mes "[Coin Exchanger CX-1]";
-	mes "Welcome to CX-1. If you have coins, you can exchange them to high or low grade coins.";
+	mes "[코인교환기 CX-1]";
+	mes "CX-1에 오신 것을 환영합니다. 보유하고 계신 동전을 등급이 높거나 낮은 동전으로 교환하실 수 있습니다.";
 	next;
 	setarray .@coins[1],
 		6417, //Silvervine
@@ -37,7 +37,7 @@ malangdo,220,167,5	script	Coin Exchanger CX-1	564,{
 		6420, //Cgrade_Coin
 		6421, //Dgrade_Coin
 		6422; //Egrade_Coin
-	.@menu$ = "Stop:";
+	.@menu$ = "멈추다:";
 	for(.@i = 1; .@i<=6; .@i++) {
 		if (countitem(.@coins[.@i]))
 			.@menu$ = .@menu$ + getitemname(.@coins[.@i]) + ":";
@@ -47,8 +47,8 @@ malangdo,220,167,5	script	Coin Exchanger CX-1	564,{
 	.@i = select(.@menu$);
 	switch(.@i) {
 	case 1:
-		mes "[Coin Exchanger CX-1]";
-		mes "Thank you for coming.";
+		mes "[코인교환기 CX-1]";
+		mes "와주셔서 감사합니다.";
 		close;
 	default:
 		.@coin = .@coins[.@i-1];
@@ -56,24 +56,24 @@ malangdo,220,167,5	script	Coin Exchanger CX-1	564,{
 		break;
 	}
 	if (countitem(.@coin) == 0) {
-		mes "[Coin Exchanger CX-1]";
-		mes "You chose a coin that you don't have.";
-		mes "Thank you for coming.";
+		mes "[코인교환기 CX-1]";
+		mes "당신은 자신이 가지고 있지 않은 동전을 선택했습니다.";
+		mes "와주셔서 감사합니다.";
 		close;
 	}
-	mes "[Coin Exchanger CX-1]";
-	mes "----Rate of exchange----";
-	mes "Higher exchange - 30 to 10";
-	mes "Lower exchange - 10 to 30";
+	mes "[코인교환기 CX-1]";
+	mes "환율";
+	mes "더 높은 환율 - 30 대 10";
+	mes "환율 하락 - 10~30";
 	mes "------------------------";
-	mes "^ff3333When you exchange, we charge a fee according to the current market price.^000000";
+	mes "^ff3333교환 시 현재 시장 가격에 따라 수수료가 부과됩니다.^000000";
 	next;
 	setarray .@exchange_name$[0],"higher","lower";
 	setarray .@exchange_rate[0],30,10;
 	setarray .@exchange_loss[0],rand(1,4),rand(1,2); // Amount deducted per exchange.
 	setarray .@exchange_id[0],.@coins[.@coin_select-1],.@coins[.@coin_select+1];
 	if (.@exchange_id[0] == .@coins[1]) .@exchange_id[0] = 0; // Cannot exchange for Silvervine.
-	.@menu$ = "Stop:";
+	.@menu$ = "멈추다:";
 	for(.@i = 0; .@i<2; .@i++) {
 		if (.@exchange_id[.@i] == 0)
 			.@menu$ = .@menu$ + "^ff3333Unavailable exchange to "+.@exchange_name$[.@i]+" coin^000000:";
@@ -84,42 +84,42 @@ malangdo,220,167,5	script	Coin Exchanger CX-1	564,{
 	}
 	.@i = select(.@menu$)-2;
 	if (.@i == -1) {
-		mes "[Coin Exchanger CX-1]";
-		mes "Thank you for coming.";
+		mes "[코인교환기 CX-1]";
+		mes "와주셔서 감사합니다.";
 		close;
 	}
 	if (.@exchange_id[.@i] == 0) {
-		mes "[Coin Exchanger CX-1]";
-		mes "This coin is not available to exchange to "+.@exchange_name$[.@i]+" coin.";
-		mes "Thank you for coming.";
+		mes "[코인교환기 CX-1]";
+		mes " 이 코인은 다른 코인으로 교환할 수 없습니다."+.@exchange_name$[.@i]+" coin.";
+		mes "와주셔서 감사합니다.";
 		close;
 	}
 	if (countitem(.@coin) < .@exchange_rate[.@i]) {
-		mes "[Coin Exchanger CX-1]";
-		mes "You don't have enough coins to exchange to "+.@exchange_name$[.@i]+" coin.";
-		mes "Thank you for coming.";
+		mes "[코인교환기 CX-1]";
+		mes " 교환할 코인이 부족합니다"+.@exchange_name$[.@i]+" coin.";
+		mes "와주셔서 감사합니다.";
 		close;
 	}
 	.@exchange_total = .@exchange_rate[(!.@i)] - .@exchange_loss[(!.@i)];
 	delitem .@coin, .@exchange_rate[.@i];
 	getitem .@exchange_id[.@i], .@exchange_total;
-	mes "[Coin Exchanger CX-1]";
-	mes "^003399"+.@exchange_rate[.@i]+"^000000 unit(s) of ^003399 "+getitemname(.@coin)+"^000000 taken.";
-	mes "I exchanged them for ^003399"+.@exchange_name$[.@i]+" coins^000000, after deducting ^003399"+.@exchange_loss[(!.@i)]+"^000000 unit(s), ^003399"+.@exchange_total+"^000000 unit(s) remaining.";
+	mes "[코인교환기 CX-1]";
+	mes "^003399"+.@exchange_rate[.@i]+"^000000 단위(들)의 ^003399"+getitemname(.@coin)+"^000000 사용됨.";
+	mes "저는 그것들을 ^003399로 교환했습니다."+.@exchange_name$[.@i]+" ^000000 코인에서 ^003399를 차감한 후"+.@exchange_loss[(!.@i)]+"^000000 단위, ^003399"+.@exchange_total+"^000000개 남았습니다.";
 	close;
 }
 
 malangdo,218,165,5	script	Special Vending Machine	562,{
 	if (checkweight(1201,1) == 0) {
-		mes "You have too many kinds of objects. Let's try to continue after reducing those objects.";
+		mes "객체의 종류가 너무 많습니다. 객체 수를 줄인 후에 계속 진행해 보겠습니다.";
 		close;
 	}
 	if (MaxWeight - Weight < 10000) {
-		mes "Can't continue because you have too many heavy objects. Let's try to continue after reducing the weight.";
+		mes "무거운 물건이 너무 많아서 계속할 수 없습니다. 무게를 줄인 후에 다시 시도해 보겠습니다.";
 		close;
 	}
-	mes "[Special Vending Machine]";
-	mes "Welcome to CX-82. You have a Silvervine Fruit, so you can purchase the Malangdo Specialty that has special ability.";
+	mes "[특수 자판기]";
+	mes "CX-82에 오신 것을 환영합니다. 실버바인 열매를 얻으셨으니, 특별한 능력을 가진 말랑도 특산품을 구매하실 수 있습니다.";
 	next;
 	callsub L_AddItem, //DisplayName,ItemID,Cost
 		"Seagod's Protection [23 hours]",16740,4,
@@ -132,47 +132,47 @@ malangdo,218,165,5	script	Special Vending Machine	562,{
 		"Ordinary Lubricant",6440,36,
 		"Sillit Pong",6443,192;
 L_AddItem:
-	.@menu$ = "Explanation:";
+	.@menu$ = "설명:";
 	for(.@i = 0; .@i<getargcount(); .@i += 3)
 		.@menu$ = .@menu$ + getarg(.@i)+":";
 	.@i = select(.@menu$)-2;
 	if (.@i == -1) {
-		mes "[Special Vending Machine]";
-		mes "Seagod's Protection is an item used for entering the Culvert memorial dungeon during a certain period.";
+		mes "[특수 자판기]";
+		mes "바다신의 보호는 특정 기간 동안 배수로 기념 던전에 입장하기 위해 사용되는 아이템입니다.";
 		next;
-		mes "[Special Vending Machine]";
-		mes "Octopus Hunting Stick is an item used for entering the Culvert memorial dungeon during a certain period.";
+		mes "[특수 자판기]";
+		mes "문어 사냥 막대기는 특정 기간 동안 배수로 기념 던전에 입장하기 위해 사용되는 아이템입니다.";
 		next;
-		mes "[Special Vending Machine]";
-		mes "Premium and Ordinary Lubricant are items used for separation of equipment and cards. If you visit the specialist Jeremy with either item, he will explain more details of the effects.";
+		mes "[특수 자판기]";
+		mes "프리미엄 윤활유와 일반 윤활유는 장비와 카드를 분리하는 데 사용되는 품목입니다. 이 두 품목 중 하나를 가지고 전문가 제레미를 찾아가시면 그 효과에 대해 더 자세히 설명해 드릴 것입니다.";
 		next;
-		mes "[Special Vending Machine]";
-		mes "Sillit Pong is special item that separates sockets with MVP cards. Unable to separate MVP card by Premium and Ordinary Lubricant.";
+		mes "[특수 자판기]";
+		mes "실릿 퐁은 MVP 카드가 있는 소켓을 분리하는 특수 아이템입니다. 프리미엄 및 일반 윤활유로는 MVP 카드를 분리할 수 없습니다.";
 		close;
 	}
 	.@cost = getarg(.@i*3+2);
-	mes "[Special Vending Machine]";
-	mes "You choose ^005500"+getarg(.@i*3)+"^000000. For purchasing, you need ^005500"+.@cost+"^000000 unit(s) of Silvervine Fruit.";
+	mes "[특수 자판기]";
+	mes "당신은 ^005500을 선택합니다"+getarg(.@i*3)+"^000000. 구매하려면 ^005500이 필요합니다."+.@cost+"^000000개 실버바인 과일.";
 	next;
 	if (countitem(6417) < .@cost)
-		.@ven_menu$ = "^999999Silvervine Fruit (missing "+(.@cost - countitem(6417))+")^000000";
+		.@ven_menu$ = " ^999999은덩굴 열매 (누락됨)"+(.@cost - countitem(6417))+")^000000";
 	else
-		.@ven_menu$ = "Purchase - Silvervine Fruit (have "+countitem(6417)+")";
+		.@ven_menu$ = " 구매 - 실버바인 과일 (보유)"+countitem(6417)+")";
 	switch(select("Stop:"+.@ven_menu$)) {
 	case 1:
-		mes "[Special Vending Machine]";
-		mes "Thank you for coming.";
+		mes "[특수 자판기]";
+		mes "와주셔서 감사합니다.";
 		close;
 	case 2:
 		if (countitem(6417) < .@cost) {
-			mes "[Special Vending Machine]";
-			mes "Not enough Silvervine Fruit.";
-			mes "Closing the transaction.";
-			mes "Thank you for coming.";
+			mes "[특수 자판기]";
+			mes "실버바인 열매가 충분하지 않습니다.";
+			mes "거래를 완료합니다.";
+			mes "와주셔서 감사합니다.";
 			close;
 		}
-		mes "[Special Vending Machine]";
-		mes "The transaction is completed. Thank you for coming.";
+		mes "[특수 자판기]";
+		mes "거래가 완료되었습니다. 와주셔서 감사합니다.";
 		delitem 6417,.@cost; //Silvervine
 		getitem getarg(.@i*3+1),1;
 		close;
@@ -181,16 +181,16 @@ L_AddItem:
 
 malangdo,236,179,5	script	Dark Merchant K	554,{
 	if (checkweight(1201,1) == 0) {
-		mes "It seems you have too much in your inventory. Let's try again after getting rid of some of your belongings.";
+		mes "소지품이 너무 많은 것 같습니다. 소지품 일부를 정리하신 후 다시 시도해 보겠습니다.";
 		close;
 	}
 	if (MaxWeight - Weight < 1000) {
-		mes "Your inventory is too heavy now. Please come back after getting rid of some of your belongings.";
+		mes "현재 소지품이 너무 많습니다. 소지품 일부를 정리하고 다시 오세요.";
 		close;
 	}
-	mes "[Merchant K]";
-	mes "Thank you for the trade.";
-	mes "We exchange ^ff000010 C Grade Coin^000000 to ^3333ff1 Mora Coin^000000. Shall we begin then?";
+	mes "[상인 K]";
+	mes "거래해 주셔서 감사합니다.";
+	mes "^ff000010 C등급 동전^000000을 ^3333ff1 모라 동전^000000으로 교환하겠습니다. 그럼 시작할까요?";
 	next;
 	setarray .@coin_amount[0],10,100,500,1000;
 	while(1) {
@@ -203,41 +203,41 @@ malangdo,236,179,5	script	Dark Merchant K	554,{
 		}
 		.@i = select(.@menu$+"Quit")-1;
 		if (.@i == getarraysize(.@coin_amount)) {
-			mes "[Merchant K]";
-			mes "Let's exchange some other time.";
+			mes "[상인 K]";
+			mes "다음에 다시 이야기해요.";
 			close;
 		}
 		if (countitem(6420) < .@coin_amount[.@i]) {
-			mes "[Merchant K]";
-			mes "You need ^ff0000"+.@coin_amount[.@i]+"^000000 C Grade Coin to perform the exchange. But you don't seem to have enough now.";
+			mes "[상인 K]";
+			mes "^ff0000이 필요합니다"+.@coin_amount[.@i]+"^000000 C 등급 동전으로 교환을 진행해야 합니다. 하지만 현재 충분한 양이 없는 것 같습니다.";
 			close;
 		}
 		delitem 6420,.@coin_amount[.@i]; //Cgrade_Coin
 		getitem 6380,.@coin_amount[.@i]/10; //Mora_Coin
-		mes "[Merchant K]";
-		mes "C Grade Coin ^003399"+.@coin_amount[.@i]+"^000000 well received."; //FIXME: Dialogue.
-		mes "Exchanged to ^003399"+(.@coin_amount[.@i]/10)+"^000000 Mora Coin.";
+		mes "[상인 K]";
+		mes "C등급 동전 ^003399"+.@coin_amount[.@i]+"^000000 호평을 받았습니다."; //FIXME: Dialogue.
+		mes "^003399로 교환됨"+(.@coin_amount[.@i]/10)+"^000000 모라 코인.";
 		next;
-		mes "[Merchant K]";
-		mes "Would you like to continue?";
+		mes "[상인 K]";
+		mes "계속하시겠습니까?";
 		next;
 	}
 }
 
 malangdo,233,180,3	script	Dark MachineTX100	564,{
 	if (checkweight(1201,1) == 0) {
-		mes "It seems you have too much in your inventory. Let's try again after getting rid of some of your belongings.";
+		mes "소지품이 너무 많은 것 같습니다. 소지품 일부를 정리하신 후 다시 시도해 보겠습니다.";
 		close;
 	}
 	if (MaxWeight - Weight < 1000) {
-		mes "Your inventory is too heavy now. Please come back after getting rid of some of your belongings.";
+		mes "현재 소지품이 너무 많습니다. 소지품 일부를 정리하고 다시 오세요.";
 		close;
 	}
-	mes "[Dark Machine TX100]";
-	mes "Thank you for visiting TX100. You can exchange coins into higher or lower level coins.";
+	mes "[다크 머신 TX100]";
+	mes "TX100을 방문해 주셔서 감사합니다. 코인을 더 높은 등급 또는 더 낮은 등급의 코인으로 교환할 수 있습니다.";
 	next;
-	mes "[Dark Machine TX100]";
-	mes "For a lower level coin exchange you can do 500 as a 1 time maximum, and for higher level coin exchange you can do 99 as a 1 time maximum.";
+	mes "[다크 머신 TX100]";
+	mes "낮은 레벨의 코인 교환은 1회 최대 500개까지, 높은 레벨의 코인 교환은 1회 최대 99개까지 가능합니다.";
 	next;
 	setarray .@coins[1],
 		6417, //Silvervine
@@ -246,7 +246,7 @@ malangdo,233,180,3	script	Dark MachineTX100	564,{
 		6420, //Cgrade_Coin
 		6421, //Dgrade_Coin
 		6422; //Egrade_Coin
-	.@menu$ = "Quit:";
+	.@menu$ = "그만두다:";
 	for(.@i = 1; .@i<=6; .@i++) {
 		if (countitem(.@coins[.@i]))
 			.@menu$ = .@menu$ + getitemname(.@coins[.@i])+" (have "+countitem(.@coins[.@i])+"):";
@@ -255,8 +255,8 @@ malangdo,233,180,3	script	Dark MachineTX100	564,{
 	}
 	.@i = select(.@menu$)-1;
 	if (.@i == 0) {
-		mes "[Dark Machine TX100]";
-		mes "Thank you for coming.";
+		mes "[다크 머신 TX100]";
+		mes "와주셔서 감사합니다.";
 		close;
 	}
 	.@coin = .@coins[.@i];
@@ -264,25 +264,25 @@ malangdo,233,180,3	script	Dark MachineTX100	564,{
 	setarray .@exchange_id[0],.@coins[.@i-1],.@coins[.@i+1];
 	if (.@exchange_id[0] == .@coins[1]) .@exchange_id[0] = 0; // Cannot exchange for Silvervine.
 	if (.@i > getarraysize(.@coins)) {
-		mes "[Dark Machine TX100]";
-		mes "You've chosen abnormal menu.";
-		mes "Aborting process. Thank you for coming.";
+		mes "[다크 머신 TX100]";
+		mes "비정상적인 메뉴를 선택하셨습니다.";
+		mes "취소 절차입니다. 와주셔서 감사합니다.";
 		close;
 	}
 	if (countitem(.@coin) == 0) {
-		mes "[Dark Machine TX100]";
-		mes "You chose a coin that you don't have.";
-		mes "Aborting process. Thank you for coming.";
+		mes "[다크 머신 TX100]";
+		mes "당신은 자신이 가지고 있지 않은 동전을 선택했습니다.";
+		mes "취소 절차입니다. 와주셔서 감사합니다.";
 		close;
 	}
-	mes "[Dark Machine TX100]";
-	mes "----Exchange Rate----";
-	mes "Higher Coin - 3 to 1";
-	mes "Lower Coin - 1 to 3";
+	mes "[다크 머신 TX100]";
+	mes "----환율----";
+	mes "더 높은 코인 - 3 대 1";
+	mes "하단 코인 - 1~3";
 	mes "---------------------";
-	mes "^ff3333We take a small vendor fee from your exchanged coins.^000000";
+	mes "^ff3333교환하신 코인에서 소액의 판매자 수수료가 부과됩니다.^000000";
 	next;
-	.@menu$ = "Quit:";
+	.@menu$ = "그만두다:";
 	if (.@exchange_id[0] == 0)
 		.@menu$ = .@menu$ + "^ff3333Cannot exchange to higher level coin^000000:";
 	else {
@@ -303,93 +303,93 @@ malangdo,233,180,3	script	Dark MachineTX100	564,{
 	}
 	.@i = select(.@menu$)-2;
 	if (.@i == -1) {
-		mes "[Dark Machine TX100]";
-		mes "Thank you for coming.";
+		mes "[다크 머신 TX100]";
+		mes "와주셔서 감사합니다.";
 		close;
 	}
 	if (.@exchange_id[.@i] == 0) {
-		mes "[Dark Machine TX100]";
-		mes "This coin cannot be exchanged to a "+.@exchange_name$[.@i]+" level coin.";
-		mes "Aborting process. Thank you for coming.";
+		mes "[다크 머신 TX100]";
+		mes " 이 코인은 다른 코인으로 교환할 수 없습니다."+.@exchange_name$[.@i]+" 레벨 코인.";
+		mes "취소 절차입니다. 와주셔서 감사합니다.";
 		close;
 	}
 	if ((.@i == 0 && countitem(.@coin) < 100) || (.@i == 1 && countitem(.@coin) == 0)) {
-		mes "[Dark Machine TX100]";
-		mes "You have not enough coins for a "+.@exchange_name$[.@i]+" level coin exchange.";
-		mes "Aborting process. Thank you for coming.";
+		mes "[다크 머신 TX100]";
+		mes " 코인이 부족합니다"+.@exchange_name$[.@i]+" 레벨 코인 교환.";
+		mes "취소 절차입니다. 와주셔서 감사합니다.";
 		close;
 	}
 	if (countitem(.@exchange_id[.@i]) > 28000) {
-		mes "[Dark Machine TX100]";
-		mes "You have too many "+.@exchange_name$[.@i]+" level coins already. Please come back with less coins.";
+		mes "[다크 머신 TX100]";
+		mes " 너무 많아요"+.@exchange_name$[.@i]+" 이미 레벨 코인을 획득하셨습니다. 코인을 조금 덜 가지고 다시 오시기 바랍니다.";
 		close;
 	}
 	switch(.@i) {
 	case 0:
 		.@payment_amount = 99;
 		.@reward_amount = .@payment_amount/3;
-		.@coin_text$ = "High";
+		.@coin_text$ = "높은";
 		break;
 	case 1:
 		.@payment_amount = (((countitem(.@coin) > 500))?500:countitem(.@coin));
 		.@reward_amount = .@payment_amount*3;
-		.@coin_text$ = "Low";
+		.@coin_text$ = "낮은";
 		break;
 	}
 	.@fee = rand(1,3);
 	delitem .@coin, .@payment_amount;
 	getitem .@exchange_id[.@i], .@reward_amount - .@fee;
-	mes "[Dark Machine TX100]";
-	mes "Received ^003399"+getitemname(.@coin)+"^000000 for ^003399"+.@payment_amount+"^000000 unit(s).";
-	mes "We have exchanged your coin to ^003399"+(.@reward_amount-.@fee)+"^000000 unit(s) of ^003399"+.@coin_text$+" Level Coin^000000, deducted ^003399"+.@fee+"^000000 unit(s) as exchanging fee.";
+	mes "[다크 머신 TX100]";
+	mes "^003399를 수신했습니다."+getitemname(.@coin)+"^000000은 ^003399에 해당합니다."+.@payment_amount+"^000000 단위.";
+	mes "고객님의 코인을 ^003399로 교환해 드렸습니다."+(.@reward_amount-.@fee)+"^000000 단위(들)의 ^003399"+.@coin_text$+" 레벨 코인^000000, 차감됨 ^003399"+.@fee+"^000000 단위는 교환 수수료입니다.";
 	close;
 }
 
 malangdo,175,145,4	script	Can Agency Guard	549,{
 	if (checkweight(1201,1) == 0) {
-		mes "You seem to have too many items. Give it a try after sorting out the item kinds.";
+		mes "아이템이 너무 많은 것 같습니다. 아이템 종류를 정리하신 후 다시 시도해 보세요.";
 		close;
 	}
 	if (MaxWeight - Weight < 1000) {
-		mes "You're not likely to be able to go on due to the heavy items you've got. Give it a try after lightening the weight.";
+		mes "짐이 너무 무거워서 계속 진행하기는 어려울 것 같습니다. 짐을 좀 덜어낸 후에 다시 시도해 보세요.";
 		close;
 	}
-	mes "[Can Agency Guard]";
-	mes "Hey, you there... Have you seen any ^0000ffMalangdo Cat Can^000000s around here?";
+	mes "[캔 에이전시 가드]";
+	mes "저기요... 혹시 이 근처에서 ^0000ffMalangdo Cat Can^000000 보신 적 있어요?";
 	next;
-	switch(select("Why are you asking?:Oh, you mean these?")) {
+	switch(select("왜 물어보시는 거예요?:아, 이것들을 말씀하시는 건가요?")) {
 	case 1:
-		mes "[Can Agency Guard]";
+		mes "[캔 에이전시 가드]";
 		mes "Umm.";
-		mes "We at the Can Agency recently got some suspicious intelligence about them...";
+		mes "저희 캔 에이전시는 최근 그들에 관한 수상한 첩보를 입수했습니다...";
 		next;
-		mes "[Can Agency Guard]";
-		mes "There were faulty products in bulk on the can production line for Malangdo specialty. These products, to be discarded, seem to have fallen into a retail dealer's hands.";
+		mes "[캔 에이전시 가드]";
+		mes "말랑도 특산품 캔 생산 라인에서 불량품이 대량으로 발생했습니다. 폐기되어야 할 이 불량품들이 소매업자의 손에 들어간 것으로 보입니다.";
 		next;
-		mes "[Can Agency Guard]";
-		mes "Actually they were hard to distinguish from normal products. But it obviously says ^0000ffMalangdo Cat Can^000000 outside.";
+		mes "[캔 에이전시 가드]";
+		mes "사실 일반 제품과 구별하기 어려웠어요. 하지만 겉면에는 분명히 '말랑도 고양이 캔'이라고 적혀 있었죠.";
 		next;
-		mes "[Can Agency Guard]";
-		mes "As faulty products are moving around on the market, we've been collecting them as is our duty. Have you ever seen anyone who has things like what I'm describing?";
+		mes "[캔 에이전시 가드]";
+		mes "불량품이 시장에 유통되고 있기 때문에, 저희는 마땅히 해야 할 일로 그러한 제품들을 수거해 왔습니다. 혹시 제가 설명하는 것과 같은 물건을 가지고 있는 사람을 본 적이 있으신가요?";
 		next;
-		mes "[Can Agency Guard]";
-		mes "If you find anyone selling these products, please come and tell me.";
+		mes "[캔 에이전시 가드]";
+		mes "이런 제품을 파는 사람을 발견하시면 저에게 알려주세요.";
 		close;
 	case 2:
 		if (countitem(12633) == 0) {
-			mes "[Can Agency Guard]";
-			mes "Umm? I cannot see the ^0000ffMalangdo Cat Can^000000 from you. Don't forget to bring it to me if you've found out...";
+			mes "[캔 에이전시 가드]";
+			mes "음? 당신에게서 ^0000ffMalangdo 고양이 캔^000000이 안 보이네요. 찾으면 꼭 가져다 주세요...";
 			close;
 		}
 		break;
 	}
-	mes "[Can Agency Guard]";
-	mes "The Malangdo Cat Can is a faulty product. Let me exchange it to 3 E Grade Coins. How about that?";
+	mes "[캔 에이전시 가드]";
+	mes "말랑도 고양이 캔은 불량품입니다. E등급 동전 3개로 교환해 드리겠습니다. 어떠세요?";
 	next;
-	switch(select("I won't exchange:^0000ff1^000000 Can -> ^0000ff3^000000 E Grade Coin:^0000ff10^000000 Can -> ^0000ff30^000000 E Grade Coin:^0000ff100^000000 Can -> ^0000ff300^000000 E Grade Coin:Exchange all I've got")) {
+	switch(select("나는 교환하지 않을 거야:^0000ff1^000000 캔 -> ^0000ff3^000000 E 등급 동전:^0000ff10^000000 캔 -> ^0000ff30^000000 E 등급 동전:^0000ff100^000000 캔 -> ^0000ff300^000000 E 등급 동전:내가 가진 모든 것을 교환하세요")) {
 	case 1:
-		mes "[Can Agency Guard]";
-		mes "Umm, I'm not here forever, so come to me if you'd like to exchange while I still am.";
+		mes "[캔 에이전시 가드]";
+		mes "음, 제가 영원히 여기 있는 건 아니니까, 교환하고 싶으시면 제가 있을 때 저에게 오세요.";
 		close;
 	case 2:
 		.@check = 1;
@@ -410,19 +410,19 @@ malangdo,175,145,4	script	Can Agency Guard	549,{
 	}
 	if (countitem(12633) < .@check) {
 		if (.@check == 1) {
-			mes "[Can Agency Guard]";
-			mes "Umm? I cannot see the ^0000ffMalangdo Cat Can^000000 from you. Don't forget to bring it to me if you've found out...";
+			mes "[캔 에이전시 가드]";
+			mes "음? 당신에게서 ^0000ffMalangdo 고양이 캔^000000이 안 보이네요. 찾으면 꼭 가져다 주세요...";
 			close;
 		} else {
-			mes "[Can Agency Guard]";
-			mes "Umm? I don't think you have enough to exchange... Come to me again when the amount is exactly decided.";
+			mes "[캔 에이전시 가드]";
+			mes "음? 환전하기에 충분한 금액이 없는 것 같은데요... 정확한 금액이 정해지면 다시 오세요.";
 			close;
 		}
 	}
 	delitem 12633,.@count; //Malang_Cat_Can
 	getitem 6422,.@count*3; //Egrade_Coin
-	mes "[Can Agency Guard]";
-	mes "Exchanged "+.@count+" Malangdo Cat Can to "+(.@count*3)+" E Class Coin. Check it out.";
+	mes "[캔 에이전시 가드]";
+	mes "Exchanged "+.@count+" 말랑도 고양이 캔"+(.@count*3)+" E 클래스 코인. 한번 보세요.";
 	close;
 }
 
@@ -434,65 +434,65 @@ function	script	F_mal_coin	{
 	if (getarg(0) == 0) {
 		if (getarg(2) != 2 && BaseLevel < 50) {
 			mes .@npc_name$;
-			mes "Ahaaa~";
-			mes "If you want to buy this stuff,";
-			mes "you can talk to me";
-			mes "when you grow up a little more.";
-			mes "This stuff is too expensive";
-			mes "for a child~";
+			mes "아하아~";
+			mes "이 물건을 사고 싶으시다면,";
+			mes "저와 이야기하셔도 됩니다";
+			mes "네가 좀 더 크면.";
+			mes "이 물건은 너무 비싸요";
+			mes "아이를 위해~";
 			close;
 		}
 		mes .@npc_name$;
-		mes "Nice to meet you~~";
-		mes "I am! YES~~ That's right!";
-		mes "I'm selling special stuff";
-		mes "which you can see only here on Meow Meow Island!";
+		mes "만나서 반가워요~~";
+		mes "맞아요! 네~~ 맞아요!";
+		mes "저는 특별한 물건들을 판매합니다";
+		mes "오직 야옹야옹 섬에서만 볼 수 있는 것들이에요!";
 		next;
 		mes .@npc_name$;
-		mes "How about it? What are you waiting for?";
-		mes "Why don't you take a look at";
-		mes "what kinds of stuff I have?";
+		mes "어때요? 뭘 기다리고 계세요?";
+		mes "한번 살펴보시는 건 어떠세요?";
+		mes "내가 가진 물건들은 어떤 종류인가요?";
 		next;
 		switch(getarg(2)) {
 		case 1:
-			mes "[Wandering Merchant]";
-			mes "Oh~";
-			mes "These are rental items, so make sure you know if you have the ^0000FF1 hour^000000 or ^0000FF7 day^000000 version.";
+			mes "[떠돌이 상인]";
+			mes "오~";
+			mes "이 제품들은 대여 상품이므로, 1시간 대여 버전인지 7일 대여 버전인지 꼭 확인하세요.";
 			next;
 			break;
 		case 2:
 			break;
 		case 3:
-			mes "[Roving Merchant]";
-			mes "Just for your information,";
-			mes "Sow Bug, Starfish, Dried Squid, and Flying Fish are the items which you can use for 1 hour.";
+			mes "[떠돌이 상인]";
+			mes "참고로 알려드립니다.";
+			mes "쥐며느리, 불가사리, 말린 오징어, 날치는 1시간 동안 사용할 수 있는 아이템입니다.";
 			next;
 			break;
 		}
 		mes .@npc_name$;
-		mes "Well then, do you want to take a look at what I have now?";
+		mes "그럼, 제가 지금 가지고 있는 걸 한번 보시겠어요?";
 		next;
 		switch(select("Yes:No")) {
 		case 1:
 			if (checkweight(1201,1) == 0) {
 				mes .@npc_name$;
-				mes "It seems that there are too many items in your inventory.";
-				mes "Please make space and come back again~";
+				mes "인벤토리에 아이템이 너무 많은 것 같습니다.";
+				mes "자리 비워두시고 다시 오세요~";
 				close;
 			}
 			if (MaxWeight - Weight < 2500) {
 				mes .@npc_name$;
-				mes "It seems that you're overweight.";
-				mes "Please reduce your weight and come back again~";
+				mes "당신은 과체중인 것 같습니다.";
+				mes "체중을 줄이시고 다시 오세요~";
 				close;
 			}
 			mes .@npc_name$;
-			mes "Well, take a good look at them~~~";
+			mes "자, 잘 살펴보세요~~~";
 			next;
 			return;
 		case 2:
 			mes .@npc_name$;
-			mes "Well, then. I'll see you next time.";
+			mes "그럼 다음에 뵙겠습니다.";
 			mes "Goodbye.";
 			close;
 		}
@@ -502,28 +502,28 @@ function	script	F_mal_coin	{
 // -- callfunc "F_mal_coin",1,"[<NPC Name>]","<Display Name>",<Item ID>,<Egrade_Coin>,<Malang_Sp_Can>,<Silvervine>
 	if (getarg(0) == 1) {
 		mes .@npc_name$;
-		mes "The price of ^0000FF["+getarg(2)+"]^000000 is";
+		mes "^0000FF의 가격["+getarg(2)+"]^000000은";
 		if (getarg(4) && getarg(5)) { // Type 1: Egrade_Coin or Malang_Sp_Can
-			mes getarg(4)+" E Grade Coin or "+getarg(5)+" Malangdo Canned Specialties.";
+			mes getarg(4)+" E 등급 동전 또는"+getarg(5)+" 말랑도 통조림 특산품.";
 			.@type = 1;
-			.@menu$ = "Yes.:No, I'll purchase with cans.:I don't want to purchase any.";
+			.@menu$ = "네.:아니요, 캔으로 구매하겠습니다.:구매하고 싶지 않습니다.";
 		} else if (getarg(5)) { // Type 2: Malang_Sp_Can only
-			mes getarg(5)+" Malangdo Canned Specialties.";
+			mes getarg(5)+" 말랑도 통조림 특산품.";
 			.@type = 2;
-			.@menu$ = "Yes.::No.";
+			.@menu$ = "예.::아니요.";
 		} else { // Type 3: Silvervine only
-			mes getarg(6)+" Silvervine Fruit.";
+			mes getarg(6)+" 실버바인 과일.";
 			.@type = 3;
-			.@menu$ = "Yes.::I don't want to purchase any.";
+			.@menu$ = "네.::저는 아무것도 구매하고 싶지 않습니다.";
 		}
 		next;
 		mes .@npc_name$;
 		if (.@type == 1) {
-			mes "Would you like to purchase";
-			mes "^0000FF["+getarg(2)+"]^000000 with E Grade Coins?";
+			mes "구매하시겠습니까?";
+			mes "^0000FF["+getarg(2)+"]^000000 E 등급 동전으로?";
 		} else {
-			mes "Would you like to";
-			mes "purchase ^0000FF["+getarg(2)+"]^000000?";
+			mes "원하시나요?";
+			mes "구매 ^0000FF["+getarg(2)+"]^000000?";
 		}
 		next;
 		switch(select(.@menu$)) {
@@ -534,39 +534,39 @@ function	script	F_mal_coin	{
 			case 1:
 				.@item = 6422; //Egrade_Coin
 				.@amount = getarg(4);
-				.@str$ = "coins";
+				.@str$ = "동전";
 				break;
 			case 2:
 				.@item = 12636; //Malang_Sp_Can
 				.@amount = getarg(5);
-				.@str$ = "cans";
+				.@str$ = "캔";
 				break;
 			case 3:
 				.@item = 6417; //Silvervine
 				.@amount = getarg(6);
-				.@str$ = "Silvervine Fruit";
+				.@str$ = "실버바인 과일";
 				break;
 			}
 			if (countitem(.@item) < .@amount) {
 				mes .@npc_name$;
-				mes "I'm sorry, you need more "+.@str$+".";
+				mes " 죄송하지만, 더 필요하세요?"+.@str$+".";
 				close;
 			}
 			if (MaxWeight - Weight < getiteminfo(getarg(3), ITEMINFO_WEIGHT)) {
 				mes .@npc_name$;
-				mes "Sorry, you've purchased too many.";
-				mes "You need to make more space in your inventory. Please come back later.";
+				mes "죄송합니다. 너무 많이 구매하셨습니다.";
+				mes "인벤토리 공간을 확보해야 합니다. 나중에 다시 시도해 주세요.";
 				close;
 			}
 			mes .@npc_name$;
-			mes "Thank you.";
+			mes "감사합니다.";
 			delitem .@item,.@amount;
 			getitem getarg(3),1;
 			return;
 		case 3:
 			mes .@npc_name$;
-			mes "Always be careful";
-			mes "when you purchase items.";
+			mes "항상 조심하세요";
+			mes "상품을 구매하실 때.";
 			close;
 		}
 	}
@@ -596,100 +596,100 @@ malangdo,162,146,5	script	Wandering Merchant#mal	495,{
 			"End purchasing."
 		);
 		if (.@i == 13) {
-			mes "[Wandering Merchant]";
-			mes "Well, then. I'll see you next time.";
+			mes "[떠돌이 상인]";
+			mes "그럼 다음에 뵙겠습니다.";
 			mes "Goodbye.";
 			close;
 		}
-		mes "[Wandering Merchant]";
-		mes "Are you interested in ^0000FF["+.@names$[.@i]+"]^000000?";
+		mes "[떠돌이 상인]";
+		mes "^0000FF[에 관심 있으신가요?"+.@names$[.@i]+"]^000000?";
 		switch(.@i) {
 		case 1: //Spearfish_Box1
 		case 8: //Spearfish_Box2
-			mes "This is... a fish that moves according to the season, very tasty!";
-			mes "But this is only a food that I'm talking about, yummy~";
+			mes "이건... 계절에 따라 이동하는 생선인데, 아주 맛있어요!";
+			mes "하지만 이건 제가 얘기하는 음식일 뿐이에요, 맛있잖아요~";
 			next;
-			mes "[Wandering Merchant]";
-			mes "Of course, this is ^DC143CTwo-Handed Spear^000000.";
-			mes "It gives a high chance of";
-			mes "causing the Bleeding status";
-			mes "when you're using Pierce or Clashing Spiral~";
+			mes "[떠돌이 상인]";
+			mes "물론, 이것은 ^DC143CTwo-Handed Spear^000000입니다.";
+			mes "그것은 높은 확률을 줍니다";
+			mes "출혈 상태를 유발함";
+			mes "피어스나 클래싱 스파이럴을 사용할 때~";
 			next;
-			mes "[Wandering Merchant]";
-			mes "More details are...";
-			mes "Increase 100% of Clashing Spiral ATK and 50% of Inspiration ATK,";
-			mes "additional ATK + 30 when Base Lv. is over 100.";
-			mes "Base ATK is 220.";
+			mes "[떠돌이 상인]";
+			mes "자세한 내용은 다음과 같습니다...";
+			mes "충돌 나선 공격력 100% 증가, 영감 공격력 50% 증가";
+			mes "기본 레벨이 100을 초과하면 공격력이 30 추가됩니다.";
+			mes "기본 공격력은 220입니다.";
 			next;
 			break;
 		case 2: //Tuna_Box1
 		case 10: //Tuna_Box2
-			mes "This is a very popular fish";
-			mes "which is used in various dishes.";
-			mes "Swordman, Merchant, and Acolyte classes can use it";
-			mes "as a ^DC143CMace^000000.";
+			mes "이 생선은 매우 인기가 많습니다.";
+			mes "다양한 요리에 사용됩니다.";
+			mes "검사, 상인, 그리고 사제 직업이 사용할 수 있습니다.";
+			mes "^DC143CMace^000000처럼.";
 			next;
-			mes "[Wandering Merchant]";
-			mes "It gives a high chance of executing the Stun or Auto-Spell Bash";
-			mes "when using close-range physical attacks.";
-			mes "Base ATK is 180.";
+			mes "[떠돌이 상인]";
+			mes "기절 또는 자동 주문 강타를 실행할 확률이 높습니다.";
+			mes "근거리 물리 공격을 사용할 때.";
+			mes "기본 공격력은 180입니다.";
 			next;
-			mes "[Wandering Merchant]";
-			mes "More details are...";
-			mes "additional ATK + 20 when Base Lv. is over 100,";
-			mes "freeze self with low rate.";
+			mes "[떠돌이 상인]";
+			mes "자세한 내용은 다음과 같습니다...";
+			mes "기본 레벨이 100을 초과하면 공격력이 20 추가됩니다.";
+			mes "낮은 속도로 자체 동결합니다.";
 			next;
 			break;
 		case 3: //Hairtail_Box1
 		case 7: //Hairtail_Box2
-			mes "This fish looks like a long belt.";
+			mes "이 물고기는 긴 벨트처럼 생겼네요.";
 			next;
-			mes "[Wandering Merchant]";
-			mes "This is a ^DC143CTwo-Handed Sword^000000";
-			mes "which most swordmen can use.";
-			mes "It increases 50% of critical damage when attacking and CRI + 20.";
-			mes "Base ATK is 220.";
+			mes "[떠돌이 상인]";
+			mes "이것은 ^DC143CTwo-Handed Sword^000000입니다.";
+			mes "대부분의 검사들이 사용할 수 있는 기술입니다.";
+			mes "공격 시 치명타 피해량이 50% 증가하고, 치명타 확률(CRI)이 20 증가합니다.";
+			mes "기본 공격력은 220입니다.";
 			next;
-			mes "[Wandering Merchant]";
-			mes "More details are...";
-			mes "additional ATK + 50 when Base Lv. is over 100.";
+			mes "[떠돌이 상인]";
+			mes "자세한 내용은 다음과 같습니다...";
+			mes "기본 레벨이 100을 초과하면 공격력이 50 추가됩니다.";
 			next;
 			break;
 		case 4: //Saurel_Box1
 		case 9: //Saurel_Box2
-			mes "This is a ^DC143CDagger^000000 which gives MATK + 100";
-			mes "and ATK + 30 for 7sec at a certain rate with physical attacks.";
+			mes "이것은 MATK + 100을 제공하는 ^DC143CDagger^000000입니다.";
+			mes "또한 물리 공격 시 일정 확률로 7초 동안 공격력 +30 증가 효과가 있습니다.";
 			next;
-			mes "[Wandering Merchant]";
-			mes "More details are...";
-			mes "gives MATK + 20 for 7sec at a certain rate with magical attacks";
-			mes "and additional MATK + 10, ATK + 10 when Base Lv. is over 100.";
-			mes "Base ATK is 160.";
+			mes "[떠돌이 상인]";
+			mes "자세한 내용은 다음과 같습니다...";
+			mes "마법 공격 시 일정 확률로 7초 동안 마법 공격력 +20을 부여합니다.";
+			mes "기본 레벨이 100을 초과하면 마법 공격력 +10, 일반 공격력 +10이 추가로 증가합니다.";
+			mes "기본 공격력은 160입니다.";
 			next;
 			break;
 		case 5: //Malang_Crab_Box1
 		case 12: //Malang_Crab_Box2
-			mes "This is a ^DC143CBow^000000 which increases LUK + 3 and 50% of critical damage,";
-			mes "and increases 20% of long rage physical ATK when Base Lv. is over 100.";
-			mes "Base ATK is 120.";
+			mes "이것은 LUK +3과 치명타 피해 50% 증가 효과를 가진 ^DC143CBow^000000입니다.";
+			mes "기본 레벨이 100을 초과하면 장시간 지속되는 물리 공격력이 20% 증가합니다.";
+			mes "기본 공격력은 120입니다.";
 			next;
-			mes "[Wandering Merchant]";
-			mes "More details are...";
-			mes "can be used by Archer, Thief, and Rogue classes.";
+			mes "[떠돌이 상인]";
+			mes "자세한 내용은 다음과 같습니다...";
+			mes "궁수, 도적, 로그 클래스에서 사용할 수 있습니다.";
 			next;
 			break;
 		case 6: //Brindle_Eel_Box1
 		case 11: //Brindle_Eel_Box2
-			mes "This is a ^DC143CBow^000000.";
-			mes "Because it has elastic force,";
-			mes "we started to use it as a Bow.";
-			mes "Base ATK is 180.";
+			mes "이것은 ^DC143CBow^000000입니다.";
+			mes "탄성력을 가지고 있기 때문에,";
+			mes "우리는 그것을 활처럼 사용하기 시작했습니다.";
+			mes "기본 공격력은 180입니다.";
 			next;
-			mes "[Wandering Merchant]";
-			mes "More details are...";
-			mes "AGI + 3, and ASPD + 2 for 5sec at a certain rate with long range physical attacks.";
-			mes "Also gives additional 20% of long range physical ATK when Base Lv. is over 100.";
-			mes "Hunter, Bard, and Dancer classes can use it.";
+			mes "[떠돌이 상인]";
+			mes "자세한 내용은 다음과 같습니다...";
+			mes "장거리 물리 공격 시 일정 확률로 5초 동안 민첩성(AGI) +3, 공격 속도(ASPD) +2 증가.";
+			mes "또한 기본 레벨이 100을 초과하면 장거리 물리 공격력이 20% 추가됩니다.";
+			mes "사냥꾼, 음유시인, 무용수 직업이 사용할 수 있습니다.";
 			next;
 			break;
 		}
@@ -713,38 +713,38 @@ malangdo,173,145,4	script	Stinky Merchant	496,{
 			"End purchasing."
 		);
 		if (.@i == 3) {
-			mes "[Stinky Merchant]";
-			mes "Well, then. I'll see you next time.";
+			mes "[냄새나는 상인]";
+			mes "그럼 다음에 뵙겠습니다.";
 			mes "Goodbye.";
 			close;
 		}
-		mes "[Stinky Merchant]";
-		mes "Are you interested in ^0000FF["+.@names$[.@i]+"]^000000?";
+		mes "[냄새나는 상인]";
+		mes "^0000FF[에 관심 있으신가요?"+.@names$[.@i]+"]^000000?";
 		switch(.@i) {
 		case 1: //Cat_Hand_Glove
-			mes "This is a glove which can give happiness";
-			mes "just by wearing it.";
+			mes "이 장갑은 행복을 줄 수 있습니다.";
+			mes "착용하는 것만으로도 충분합니다.";
 			next;
-			mes "[Stinky Merchant]";
-			mes "This is an ^DC143CAccessory^000000";
-			mes "and its defense is 5.";
-			mes "It also gives";
+			mes "[냄새나는 상인]";
+			mes "이것은 ^DC143C액세서리^000000입니다.";
+			mes "그리고 수비는 5입니다.";
+			mes "또한 그것은 제공합니다";
 			mes "VIT + 1, AGI + 1, DEX + 1, LUK + 1.";
 			next;
-			mes "[Stinky Merchant]";
-			mes "More details are...";
-			mes "SLOT : 1 / Refine : Unable / Destruction : Unable";
+			mes "[냄새나는 상인]";
+			mes "자세한 내용은 다음과 같습니다...";
+			mes "슬롯: 1 / 정제: 불가능 / 파괴: 불가능";
 			next;
 			break;
 		case 2: //Cat_Club
-			mes "It looks like it wouldn't hurt, don't you think so?";
-			mes "But I'm telling you, it can hurt someone.";
+			mes "해봐도 괜찮을 것 같지 않아요, 그렇지 않나요?";
+			mes "하지만 제가 말씀드리지만, 그건 누군가를 다치게 할 수도 있어요.";
 			next;
-			mes "[Stinky Merchant]";
-			mes "This is a ^DC143CMace^000000 that increases 15% of damage to the animal type of monster.";
-			mes "Base ATK is 88.";
-			mes "The other details are";
-			mes "Weapon Lv : 1 / SLOT : 3 / Refine : Able / Destruction : Unable";
+			mes "[냄새나는 상인]";
+			mes "이것은 몬스터의 동물 유형에 대한 피해량을 15% 증가시키는 ^DC143CMace^000000입니다.";
+			mes "기본 공격력은 88입니다.";
+			mes "기타 세부 사항은 다음과 같습니다.";
+			mes "무기 레벨: 1 / 슬롯: 3 / 제련: 가능 / 파괴: 불가능";
 			next;
 			break;
 		}
@@ -766,63 +766,63 @@ malangdo,150,135,5	script	Roving Merchant	495,{
 			"End purchasing."
 		);
 		if (.@i == 5) {
-			mes "[Roving Merchant]";
-			mes "Well, then. I'll see you next time.";
+			mes "[떠돌이 상인]";
+			mes "그럼 다음에 뵙겠습니다.";
 			mes "Goodbye.";
 			close;
 		}
-		mes "[Roving Merchant]";
-		mes "Are you interested in ^0000FF["+.@names$[.@i]+"]^000000?";
+		mes "[떠돌이 상인]";
+		mes "^0000FF[에 관심 있으신가요?"+.@names$[.@i]+"]^000000?";
 		switch(.@i) {
 		case 1: //Flying_Fish_Box
-			mes "This is the one that flies";
-			mes "with a big pectoral.";
+			mes "이것이 바로 날아다니는 것입니다";
+			mes "큰 가슴 근육을 가지고 있다.";
 			next;
-			mes "[Roving Merchant]";
-			mes "This is a ^DC143CThrowing Weapon^000000.";
-			mes "Of course, it can give fatal wounds to the enemy";
-			mes "at a certain rate when attacking.";
+			mes "[떠돌이 상인]";
+			mes "이것은 ^DC143C투척무기^000000입니다.";
+			mes "물론, 그것은 적에게 치명적인 상처를 입힐 수 있습니다.";
+			mes "공격할 때 일정한 속도로.";
 			next;
-			mes "[Roving Merchant]";
-			mes "Its property is neutral and ATK is 50.";
+			mes "[떠돌이 상인]";
+			mes "속성은 중립이며 공격력은 50입니다.";
 			next;
 			break;
 		case 2: //Gong_Bug_Pocket
-			mes "In that case, I'll explain for you.";
-			mes "This is a ^DC143CBullet^000000 which stuns the enemy at a certain rate when attacking.";
+			mes "그렇다면 제가 설명해 드리겠습니다.";
+			mes "이것은 공격 시 일정 확률로 적을 기절시키는 ^DC143CBullet^000000입니다.";
 			next;
-			mes "[Roving Merchant]";
-			mes "I feel somthing bad";
-			mes "is moving in my pocket but...";
-			mes "it is neutral property and its ATK is 50.";
+			mes "[떠돌이 상인]";
+			mes "뭔가 안 좋은 기분이 들어요";
+			mes "주머니 속에서 움직이고 있는데...";
+			mes "이 속성은 중립적이며 공격력은 50입니다.";
 			next;
 			break;
 		case 3: //Dried_Squid_Box
-			mes "I'll explain about this item.";
-			mes "This is a ^DC143CThrowing Weapon^000000 which causes darkness at a certain rate.";
-			mes "It's neutral property and its ATK is 50.";
+			mes "이 제품에 대해 설명해 드리겠습니다.";
+			mes "이것은 일정 속도로 어둠을 발생시키는 ^DC143C투척 무기^000000입니다.";
+			mes "이 포켓몬은 중립적인 속성을 가지고 있으며 공격력은 50입니다.";
 			next;
-			mes "[Roving Merchant]";
-			mes "It is compressed";
-			mes "and put into a very small box,";
-			mes "so be careful when you open it.";
+			mes "[떠돌이 상인]";
+			mes "압축되어 있습니다";
+			mes "그리고 아주 작은 상자에 넣으세요.";
+			mes "그러니 열 때 조심하세요.";
 			next;
 			break;
 		case 4: //Starfish_Box
-			mes "I'll explain about this item.";
-			mes "This is a ^DC143CThrowing Weapon^000000 which stuns the enemy at a certain rate.";
+			mes "이 제품에 대해 설명해 드리겠습니다.";
+			mes "이것은 적을 일정 속도로 기절시키는 ^DC143C투척 무기^000000입니다.";
 			next;
-			mes "[Roving Merchant]";
-			mes "It is perfectly organized and packed";
-			mes "so you can't even see inside.";
-			mes "It is neutral property and its ATK is 110.";
+			mes "[떠돌이 상인]";
+			mes "완벽하게 정리되고 포장되어 있습니다.";
+			mes "그래서 안이 전혀 보이지 않아요.";
+			mes "이 속성은 중립적이며 공격력은 110입니다.";
 			next;
 			break;
 		}
-		mes "[Roving Merchant]";
-		mes "For your information,";
-		mes "one box contains";
-		mes "200 units.";
+		mes "[떠돌이 상인]";
+		mes "참고로 알려드립니다.";
+		mes "한 상자에는 다음이 들어 있습니다.";
+		mes "200개 유닛.";
 		next;
 		callfunc "F_mal_coin",1,"[Roving Merchant]",.@names$[.@i],.@items[.@i],0,200,0;
 		next;
@@ -833,196 +833,196 @@ malangdo,150,135,5	script	Roving Merchant	495,{
 //============================================================
 ecl_in01,66,95,3	script	Armor Merchant Naphara#e::glove	436,{
 	if (!checkweight(1301,3)) {
-		mes "- Stop Here!! -";
-		mes "- You have too many items. -";
-		mes "- You cannot carry any more items. -";
-		mes "- Lighten your load and -";
-		mes "- try again. -";
+		mes "- 여기서 멈추세요!! -";
+		mes "- 구매한 상품이 너무 많습니다. -";
+		mes "- 더 이상 물품을 소지할 수 없습니다. -";
+		mes "- 짐을 가볍게 하고 -";
+		mes "- 다시 시도해 보세요. -";
 		close;
 	}
-	mes "[Armor Merchant]";
-	mes "Hello, this is Naphara's store, a place of high class goods.";
-	mes "What would you need?";
+	mes "[갑옷 상인]";
+	mes "안녕하세요, 고급 상품 전문점 나파라 스토어입니다.";
+	mes "무엇이 필요하신가요?";
 	next;
-	.@choice = select("Str Glove:Int Glove:Agi Glove:Vit Glove:Dex Glove:Luk Glove") -1;
-	mes "[Armor Merchant]";
+	.@choice = select("스트링 글러브:인트 글러브:아기 글러브:비트 글러브:덱스 글러브:룩 글러브") -1;
+	mes "[갑옷 상인]";
 	switch(.@choice) {
 	case 0: // Str Glove
-		mes "^3131FFStr Glove^000000";
+		mes "^3131FFStr 장갑^000000";
 		mes "^3131FFMHP + 100, MSP + 20^000000";
-		mes "^3131FFATK+1 increases for every STR+10^000000";
-		mes "^3131FFATK +1% added above STR 110^000000";
+		mes "^3131FFATK+1은 STR+10^000000마다 증가합니다.";
+		mes "^3131FFATK +1%가 STR 110^000000 위에 추가되었습니다.";
 		break;
 	case 1:
-		mes "^3131FFInt Glove^000000";
+		mes "^3131FFInt 장갑^000000";
 		mes "^3131FFMHP + 100, MSP + 20^000000";
-		mes "^3131FFMATK+1 increases for every INT+10^000000";
-		mes "^3131FFMATK +1% added above INT 110^000000";
+		mes "^3131FFMATK+1은 INT+10^000000마다 증가합니다.";
+		mes "^3131FFMATK +1%가 INT 110^000000 위에 추가되었습니다.";
 		break;
 	case 2:
-		mes "^3131FFAgi Glove^000000";
+		mes "^3131FFAgi 장갑^000000";
 		mes "^3131FFMHP + 100, MSP + 20^000000";
-		mes "^3131FFFLEE+1 increases for every AGI+10^000000";
-		mes "^3131FFComplete Flee +1 added above AGI 110^000000";
+		mes "^3131FFFLEE+1은 AGI+10^000000마다 증가합니다.";
+		mes "^3131FF완전한 도주 +1이 AGI 110^000000 위에 추가되었습니다";
 		break;
 	case 3:
-		mes "^3131FFVit Glove^000000";
+		mes "^3131FFVit 장갑^000000";
 		mes "^3131FFMHP + 100, MSP + 20^000000";
-		mes "^3131FFMHP+50 for every VIT+10^000000";
-		mes "^3131FFMHP+1% added above VIT 110^000000";
+		mes "^3131FFMHP+50 (VIT+10^000000당)";
+		mes "^3131FFMHP+1%가 VIT 110^000000 위에 추가됨";
 		break;
 	case 4:
-		mes "^3131FFDex Glove^000000";
+		mes "^3131FFDex 장갑^000000";
 		mes "^3131FFMHP + 100, MSP + 20^000000";
-		mes "^3131FFHIT+1 increases for every DEX+10^000000";
-		mes "^3131FFRanged attack power +1% added above DEX 110^000000";
+		mes "^3131FFHIT+1은 DEX+10^000000마다 증가합니다.";
+		mes "^3131FFRanged attack power +1% DEX 110 이상 추가^000000";
 		break;
 	case 5:
-		mes "^3131FFLuk Glove^000000";
+		mes "^3131FFLuk 장갑^000000";
 		mes "^3131FFMHP + 100, MSP + 20^000000";
-		mes "^3131FFCRI+1 increases for every LUK+10^000000";
-		mes "^3131FFCritical damage +1% added above LUK 110^000000";
+		mes "^3131FFCRI+1은 LUK+10^000000마다 증가합니다.";
+		mes "^3131FF치명타 피해 +1% 추가 (LUK 110 이상)^000000";
 		break;
 	}
-	mes "^3131FFRequired Level: 100^000000";
+	mes "^3131FF필수 레벨: 100^000000";
 	mes "^3131FFSlot: 0^000000";
-	mes "^3131FFWeight: 10^000000";
-	mes "are the characteristic options.";
+	mes "^3131FF가중치: 10^000000";
+	mes "특징적인 옵션들입니다.";
 	next;
-	mes "[Armor Merchant]";
-	mes "It costs 10 Splendide Coins.";
-	mes "Would you like to buy it?";
+	mes "[갑옷 상인]";
+	mes "스플렌디드 코인 10개가 필요합니다.";
+	mes "구매하시겠습니까?";
 	next;
-	if (select("Buy it.:Don't buy it.")==1) {
+	if (select("사세요.:사지 마세요.")==1) {
 		if (countitem(6081) < 10) {
-			mes "[Armor Merchant]";
-			mes "It seems like you don't have enough coins.";
+			mes "[갑옷 상인]";
+			mes "코인이 부족한 것 같습니다.";
 			close;
 		}
 		delitem 6081,10; //Splendide_Coin
 		getitem (.@choice+2917),1;
-		mes "[Armor Merchant]";
-		mes "Great, it's yours. Thank you.";
+		mes "[갑옷 상인]";
+		mes "좋아요, 당신 거예요. 감사합니다.";
 	}
 	close;
 }
 
 ecl_in01,64,97,5	script	Slot Expert Nattuer#ecl	436,{
 	disable_items;
-	mes "[Slot Expert]";
-	mes "I am Slot Expert Nattuer.";
-	mes "If you bring me an item from my little brother Naphara along with 5 Splendide Coins, I will open up one Slot for you.";
+	mes "[슬롯 전문가]";
+	mes "저는 슬롯 전문가 Nattuer입니다.";
+	mes "내 동생 나파라의 아이템과 스플렌다이드 코인 5개를 가져다주면 슬롯 하나를 열어주겠다.";
 	next;
-	if (select("Activate a Slot.:Forget it.") == 2){
+	if (select("슬롯을 활성화하세요.:잊어버려.") == 2){
 		close;
 	}
-	mes "[Slot Expert]";
-	mes "Slot activation is an extremely difficult procedure that can fail even with heightened care and the use of a magnifying lens.";
+	mes "[슬롯 전문가]";
+	mes "슬롯 활성화는 매우 어려운 절차로, 아무리 주의를 기울이고 확대경을 사용하더라도 실패할 수 있습니다.";
 	next;
-	mes "[Slot Expert]";
-	mes "Of course, if your heart were as big as that flower-filled land, you wouldn't mind. Right? Should I go for it?";
+	mes "[슬롯 전문가]";
+	mes "물론, 당신의 마음이 저 꽃밭처럼 넓다면, 당신은 개의치 않겠죠? 그렇죠? 한번 해볼까요?";
 	next;
-	if (select("Continue.:Forget it.") == 2) {
+	if (select("Continue.:잊어버려.") == 2) {
 		close;
 	}
-	mes "[Slot Expert]";
-	mes "Which item would you like to activate with a Slot?";
+	mes "[슬롯 전문가]";
+	mes "슬롯을 이용해 어떤 아이템을 활성화하시겠습니까?";
 	next;
-	.@choice = select("Str Glove:Int Glove:Ag Glove:Vit Glove:Dex Glove:Luk Glove");
+	.@choice = select("스트링 글러브:인트 글러브:농업용 장갑:비트 글러브:덱스 글러브:룩 글러브");
 	.@choice += 2916;
-	mes "[Slot Expert]";
-	mes "Let's confirm for the last time. Is the one you want " + getitemname(.@choice) + "?";
+	mes "[슬롯 전문가]";
+	mes " 마지막으로 다시 한번 확인해 볼까요? 원하시는 게 맞나요?" + getitemname(.@choice) + "?";
 	next;
 	if (select("Yes:No")==2) {
-		mes "[Slot Expert]";
-		mes "Why don't you talk to me when you know for sure.";
+		mes "[슬롯 전문가]";
+		mes "확실히 알게 되면 왜 나한테 얘기 안 해?";
 		close;
 	}
 	if (countitem(.@choice) < 1) {
-		mes "[Slot Expert]";
-		mes "You don't have that item. Why don't you talk to me when you know for sure.";
+		mes "[슬롯 전문가]";
+		mes "당신은 그 물건을 가지고 있지 않아요. 확실히 알게 되면 저에게 말씀해 주세요.";
 		close;
 	}
 	if (countitem(6081) < 5) {
-		mes "[Slot Expert]";
-		mes "You don't have enough coins. Why don't you talk to me when you know for sure.";
+		mes "[슬롯 전문가]";
+		mes "동전이 부족하네요. 확실히 알게 되면 저한테 얘기해 주세요.";
 		close;
 	}
 	progressbar "0xFFFF00",3;
-	mes "[Slot Expert]";
+	mes "[슬롯 전문가]";
 	delitem 6081,5; //Splendide_Coin
 	.@luckyday = rand(1,100);
 	if (.@luckyday % 20){
 		emotion ET_THINK;
 		delitem .@choice,1;
-		mes "Shoot, I'm sorry. It failed.";
-		mes "But I'm sure it will work next time. I have a feeling.";
+		mes "아, 죄송합니다. 실패했어요.";
+		mes "하지만 다음번엔 분명히 될 거예요. 그런 예감이 들어요.";
 		close;
 	}
 	emotion ET_BEST;
 	delitem .@choice,1;
 	getitem (.@choice+6),1;
-	mes "My eyes feel like they're gonna pop out.";
-	mes "Nonetheless, congratulations. Slot activation was successful.";
+	mes "눈알이 튀어나올 것 같아요.";
+	mes "어쨌든 축하드립니다. 슬롯 활성화가 성공적으로 완료되었습니다.";
 	close;
 }
 
 ecl_in01,33,98,5	script	Herb Merchant Plafina#a	443,{
 	if (checkweight(1301,1)==0) {
-		mes "- Stop Here!! -";
-		mes "- You have too many items. -";
-		mes "- You cannot carry any more items. -";
-		mes "- Lighten your load and -";
-		mes "- try again. -";
+		mes "- 여기서 멈추세요!! -";
+		mes "- 구매한 상품이 너무 많습니다. -";
+		mes "- 더 이상 물품을 소지할 수 없습니다. -";
+		mes "- 짐을 가볍게 하고 -";
+		mes "- 다시 시도해 보세요. -";
 		close;
 	}
-	mes "[Herb Merchant]";
-	mes "Welcome, this is Plafina's Herb Store where only the freshest herbs are provided~!";
+	mes "[약초 상인]";
+	mes "안녕하세요! 플라피나 허브 가게에 오신 것을 환영합니다. 저희는 항상 가장 신선한 허브만을 제공합니다!";
 	next;
-	.@item = select("Snow Flip:Peony Mommy:Slapping Herb:Yggdrasil Dust:End conversation")-1;
+	.@item = select("스노우 플립:모란 엄마:허브를 때리기:이그드라실 먼지:대화 종료")-1;
 	if (.@item == 4){
-		mes "[Herb Merchant]";
-		mes "Come back anytime.";
+		mes "[약초 상인]";
+		mes "언제든 다시 오세요.";
 		close;
 	}
-	mes "[Herb Merchant]";
+	mes "[약초 상인]";
 	switch (.@item){
 	case 0:
-		mes "Snow Flip has special effects on ^3131FFBurning, Bleeding, Deep Sleep, Sleep^000000.";
+		mes "Snow Flip은 ^3131FFBurning, Bleeding, Deep Sleep, Sleep^000000에 특수 효과를 적용합니다.";
 		break;
 	case 1:
-		mes "Peony Mamy has special effects on ^3131FFFrost, Frozen, Freezing^000000";
+		mes "피오니 마미는 ^3131FFFrost, Frozen, Freezing^000000에 특수 효과를 적용합니다.";
 		break;
 	case 2:
-		mes "Slapping Herb has special effects on ^3131FFStun, Fear, Chaos, Hallucination^000000";
+		mes "허브를 때리면 기절, 공포, 혼돈, 환각에 특수 효과가 나타납니다.";
 		break;
 	case 3:
-		mes "Yggdrasil Dust has special effects on ^3131FFBlind, Curse, Decrease Agility, Reverse Orcish^000000.";
+		mes "이그드라실 먼지는 ^3131FF실명, 저주, 민첩성 감소, 오크 역효과^000000에 특수 효과를 부여합니다.";
 		break;
 	}
-	mes "Requires 5 seconds between uses.";
-	mes "It costs "+ .cost[.@item] +" Splendide Coins for each.";
+	mes "사용 사이에 5초의 간격이 필요합니다.";
+	mes " 비용이 듭니다"+ .cost[.@item] +" 각각에 해당하는 스플렌디드 코인.";
 	next;
-	.@buy = select("Buy 1.:Buy 10.:Don't buy.");
+	.@buy = select("1개 구매.:10개를 구매하세요.:사지 마세요.");
 	if (.@buy == 3){
 		close;
 	}
 	if (.@buy == 2){
 		.@buy = 10;
 	}
-	mes "[Herb Merchant]";
-	mes "Would you like to buy "+ .@buy +" "+ getitemname(.items[.@item]) +"?";
+	mes "[약초 상인]";
+	mes " 구매하시겠습니까?"+ .@buy +" "+ getitemname(.items[.@item]) +"?";
 	next;
-	if (select("Buy.:Don't buy.") == 2){
+	if (select("Buy.:사지 마세요.") == 2){
 		close;
 	}
 	if (countitem(6081) < (.cost[.@item]*.@buy) ) {
-		mes "[Herb Merchant]";
-		mes "You don't have enough coins.";
+		mes "[약초 상인]";
+		mes "동전이 부족합니다.";
 		close;
 	}
-	mes "[Herb Merchant]";
-	mes "Thank you for your business.";
+	mes "[약초 상인]";
+	mes "이용해 주셔서 감사합니다.";
 	delitem 6081,.cost[.@item]*.@buy; //Splendide_Coin
 	getitem .items[.@item],.@buy;
 	close;
@@ -1035,91 +1035,91 @@ OnInit:
 
 ecl_in01,67,39,4	script	Replication Expert Paltu	445,{
 	if (checkweight(1301,3) == 0) {
-		mes "You have too many items to continue.";
+		mes "더 이상 진행할 수 없습니다. 항목이 너무 많습니다.";
 		close;
 	}
 	emotion ET_THROB;
-	mes "[Paltu]";
-	mes "Woohoo- Greetings. What are you looking for? Lots of goods here.";
+	mes "[팔투]";
+	mes "와우! 안녕하세요. 무엇을 찾으시나요? 여기 다양한 상품이 있어요.";
 	next;
-	switch (select("No thanks.:Replication?:I know you got lots up your sleeve!")) {
+	switch (select("괜찮습니다.:복제?:네가 숨기고 있는 비장의 무기가 많다는 걸 알고 있어!")) {
 	case 1:
 		emotion ET_FRET;
-		mes "[Paltu]";
-		mes "Really? Hmm?";
+		mes "[팔투]";
+		mes "정말요? 흠?";
 		close;
 	case 2:
-		mes "[Paltu]";
-		mes "One can say that there's no one better in Eclage than I at utilizing magic resistance.";
+		mes "[팔투]";
+		mes "에클라주에서 마법 저항력을 활용하는 데 있어 나보다 뛰어난 사람은 없다고 해도 과언이 아닙니다.";
 		next;
-		mes "[Paltu]";
-		mes "I'll give you a good price whatever it is. Just trust me.";
+		mes "[팔투]";
+		mes "무엇이든 좋은 가격에 드리겠습니다. 저를 믿으세요.";
 		next;
-		select("Could you do something for me?");
+		select("저를 위해 뭔가 해주실 수 있을까요?");
 		emotion ET_BEST;
-		mes "[Paltu]";
-		mes "Hey, I like your attitude.";
+		mes "[팔투]";
+		mes "네 태도 마음에 드네.";
 		next;
-		mes "[Paltu]";
-		mes "Ah- you know the hat you're wearing?";
+		mes "[팔투]";
+		mes "아, 당신이 쓰고 있는 모자 기억하세요?";
 		next;
 		emotion ET_QUESTION;
-		mes "[Paltu]";
-		mes "Don't you have any of those hats lying around in storage that are solid but too ugly to wear? You do, right?";
+		mes "[팔투]";
+		mes "창고에 묵혀둔, 튼튼하긴 한데 너무 못생겨서 쓰기 아까운 모자들 없나요? 분명 있을 거예요, 그렇죠?";
 		next;
 		select(".........");
 		emotion ET_THINK, playerattached();
 		emotion ET_SMILE;
-		mes "[Paltu]";
-		mes "See! I knew it. I knew it from the first minute.";
+		mes "[팔투]";
+		mes "봐! 내가 그럴 줄 알았어. 처음부터 알고 있었다고.";
 		next;
-		mes "[Paltu]";
-		mes "If you bring me ^ff0000 50 Splendide Coins and the ingredients^000000, I'll make you a new hat in the same shape but worn as a ^ff0000Costume^000000.";
+		mes "[팔투]";
+		mes "스플렌디드 코인 50개와 재료를 가져다주시면, 모양은 같지만 의상으로 입을 수 있는 새로운 모자를 만들어 드리겠습니다.";
 		next;
-		mes "[Paltu]";
-		mes "Hmm, what was it...?";
-		mes "I think you adventurers call them ^0571B0Costumes^000000? right?";
+		mes "[팔투]";
+		mes "음, 뭐였더라...?";
+		mes "모험가 여러분들은 그걸 ^0571B0Costumes^000000이라고 부르는 것 같던데요? 맞죠?";
 		next;
-		select("Yes~ What do you need?");
-		mes "[Paltu]";
-		mes "I need 1 ^0571B0hat to replicate^000000 and";
-		mes "I need ^E1281E 4 Crystal Mirrors^000000 for magic resistance, ^E1281E 1 Fairy Magic Powder^000000 as the catalyst, and ^E1281E Emerald, Ruby, Sapphire, Topaz, and Zircon, 10 of each^000000, to be used for amplifying the magic power.";
+		select("네~ 무엇이 필요하세요?");
+		mes "[팔투]";
+		mes "^0571B0hat 1개를 복제해야 합니다^000000";
+		mes "마법 저항력을 위해 수정 거울 4개, 촉매로 요정 마법 가루 1개, 그리고 마법력 증폭을 위해 에메랄드, 루비, 사파이어, 토파즈, 지르콘 각각 10개씩이 필요합니다.";
 		next;
 		emotion ET_STARE_ABOUT;
-		mes "[Paltu]";
-		mes "There's quite a lot of ingredients, right? Well, I can't do anything about that. Dealing with magic power is not a joke.";
+		mes "[팔투]";
+		mes "재료가 꽤 많네요, 그렇죠? 뭐, 어쩔 수 없죠. 마법의 힘을 다루는 건 장난이 아니니까요.";
 		next;
-		select("Which hats can be replicated?");
-		mes "[Paltu]";
-		mes "Oh! You're pretty sharp!";
-		mes "Almost forgot the most important thing.";
+		select("어떤 모자를 복제할 수 있나요?");
+		mes "[팔투]";
+		mes "오! 정말 총명하시네요!";
+		mes "가장 중요한 걸 거의 잊을 뻔했네요.";
 		next;
-		mes "[Paltu]";
-		mes "Hats that I can replicate are:";
-		mes "^0571B0Frog Hat, Romantic Flower, Magestic Goat, Blush, Valkyrie Helm, Deviruchi Hat, Assassin Mask, Elven Ears, Hahoe Mask, and Boys Cap^000000 a total of 10 types.";
+		mes "[팔투]";
+		mes "제가 똑같이 만들 수 있는 모자는 다음과 같습니다.";
+		mes "^0571B0개구리 모자, 로맨틱 꽃, 위엄 있는 염소, 볼터치, 발키리 투구, 데비루치 모자, 암살자 가면, 엘프 귀, 하호 가면, 소년 모자^000000 총 10가지 종류.";
 		next;
-		mes "[Paltu]";
-		mes "What do you think? I'll make it happen as long as I have the ingredients and the compensation.";
+		mes "[팔투]";
+		mes "어떻게 생각하세요? 재료와 보상만 있다면 꼭 해낼 거예요.";
 		next;
-		if (select("I'll do it later.:Show me what you got!") == 1) {
+		if (select("나중에 할게요.:당신의 실력을 보여주세요!") == 1) {
 			emotion ET_THINK;
-			mes "[Paltu]";
-			mes "What? Are you kidding me? Please tell me you are!";
+			mes "[팔투]";
+			mes "뭐라고요? 지금 농담하시는 거죠? 제발 농담이라고 말해주세요!";
 			close;
 		}
 		break;
 	}
 	disable_items;
 	emotion ET_BIGTHROB;
-	mes "[Paltu]";
-	mes "Oh wow.";
-	mes "You made the right call. I thought I was going to starve to death because the Laphines have no interest in pretty hats.";
+	mes "[팔투]";
+	mes "와, 정말 멋지네요.";
+	mes "잘 판단하셨어요. 라핀 가족은 예쁜 모자에 관심이 없어서 굶어 죽을 뻔했거든요.";
 	next;
-	mes "[Paltu]";
-	mes "I'll make it a great deal for you. You really should know I'm giving you a good deal here.";
+	mes "[팔투]";
+	mes "제가 아주 좋은 조건으로 해드릴게요. 제가 정말 좋은 가격에 드리는 거라는 걸 알아주셨으면 좋겠어요.";
 	next;
-	mes "[Paltu]";
-	mes "Is there something you had in mind? Why don't you take a look?";
+	mes "[팔투]";
+	mes "혹시 생각하시는 게 있으신가요? 한번 살펴보시는 건 어떠세요?";
 	next;
 	setarray .@items[0], 5447, 2269, 2256, 5040, 5171, 5038, 5096, 2286, 5176, 5016;
 	setarray .@costumes[0], 19548, 19552, 19549, 19550, 19546, 19547, 19553, 19551, 19554, 19545;
@@ -1132,62 +1132,62 @@ ecl_in01,67,39,4	script	Replication Expert Paltu	445,{
 			.@menu$ = .@menu$+getitemname(.@items[.@i])+" (^777777Insufficient ingredients^000000):";
 	}
 	.@i = select(.@menu$)-1;
-	mes "[Paltu]";
-	mes "Is ^0571B0"+getitemname(.@items[.@i])+"^000000 what you wanted?";
+	mes "[팔투]";
+	mes "^0571B0입니다"+getitemname(.@items[.@i])+"^000000 뭘 원했어?";
 	next;
 	if (.@item_check == 0 || countitem(.@items[.@i]) == 0) {
 		emotion ET_CRY;
-		mes "[Paltu]";
-		mes "Ay... Credit purchases are difficult for me.";
+		mes "[팔투]";
+		mes "아... 신용카드 결제는 저한테 좀 어려워요.";
 		next;
-		mes "[Paltu]";
-		mes "^0571B0"+getitemname(.@items[.@i])+"^000000 and";
-		mes "^E1281E50 Splendide Coins, 4 Crystal Mirrors, 1 Fairy Magic Powder, 10 of each Emerald, Ruby, Sapphire, Topaz, and Zircon^000000 are necessary.";
+		mes "[팔투]";
+		mes "^0571B0"+getitemname(.@items[.@i])+"^000000 그리고";
+		mes "^E1281E50 스플렌디드 코인, 크리스탈 거울 4개, 요정 마법 가루 1개, 에메랄드, 루비, 사파이어, 토파즈, 지르콘 각각 10개씩이 필요합니다.";
 		next;
-		mes "[Paltu]";
-		mes "I'm in a tight spot myself. Please consider my situation also.";
+		mes "[팔투]";
+		mes "저도 어려운 상황에 처해 있습니다. 제 상황도 고려해 주시면 감사하겠습니다.";
 		close;
 	}
 	emotion ET_QUESTION;
-	mes "[Paltu]";
-	mes "Yes, this is more than enough. Should I make it now?";
+	mes "[팔투]";
+	mes "네, 이 정도면 충분하고도 남습니다. 지금 만들어도 될까요?";
 	next;
-	if (select("Please make it now.:Oops, I have to take care of something...") == 2) {
+	if (select("지금 바로 만들어 주세요.:아, 잠깐 처리해야 할 일이 있어서요...") == 2) {
 		emotion ET_HUK;
-		mes "[Paltu]";
-		mes "Hey.. Hey! Hey! Where you going?";
+		mes "[팔투]";
+		mes "어이.. 어이! 어이! 어디 가세요?";
 		close;
 	}
 	emotion ET_HUK;
-	mes "[Paltu]";
-	mes "I got it. Oh right! Almost forgot again.";
+	mes "[팔투]";
+	mes "알았어요. 아, 맞다! 또 잊을 뻔했네.";
 	next;
-	mes "[Paltu]";
-	mes "^FF0000In the process of replication, magic intervention phenomenon causes the hat to lose all of its refinements, cards, and hidden enchantments.^000000";
+	mes "[팔투]";
+	mes "^FF0000복제 과정에서 마법 개입 현상으로 인해 모자는 모든 장식, 카드, 숨겨진 마법 부여를 잃게 됩니다.^000000";
 	next;
-	mes "[Paltu]";
-	mes "^FF0000And if you possess multiple hats of the same type, the one you don't want can undergo the replication process, so please check to make sure.^000000";
+	mes "[팔투]";
+	mes "^FF0000같은 종류의 모자를 여러 개 가지고 계신 경우, 원하지 않는 모자는 복제 과정을 거칠 수 있으니 확인해 주세요.^000000";
 	next;
-	mes "[Paltu]";
-	mes "So any problems with that?";
+	mes "[팔투]";
+	mes "그럼 그 부분에 문제점은 없나요?";
 	next;
-	if (select("Let me go check.:Start the replication process.") == 1) {
-		mes "[Paltu]";
-		mes "Yeah, please make sure!";
+	if (select("확인해 볼게요.:복제 프로세스를 시작하세요.") == 1) {
+		mes "[팔투]";
+		mes "네, 꼭 확인해 주세요!";
 		close;
 	}
 	emotion ET_KIK;
-	mes "[Paltu]";
-	mes "Woohoo- Got it.";
-	mes "It's finally time for me to use my skills again.";
+	mes "[팔투]";
+	mes "와! 알았어.";
+	mes "드디어 내 능력을 다시 발휘할 때가 왔어.";
 	next;
 	emotion ET_PROFUSELY_SWEAT;
-	mes "[Paltu]";
-	mes "Do this thing here, and do that thing there, and then do this thing here again...";
+	mes "[팔투]";
+	mes "여기서 이걸 하고, 저기서 저걸 하고, 그리고 나서 여기서 다시 이걸 해...";
 	next;
 	emotion ET_THINK;
 	emotion ET_PROFUSELY_SWEAT;
-	mes "[Paltu]";
+	mes "[팔투]";
 	mes "... .. ...";
 	specialeffect EF_BEGINSPELL;
 	progressbar "0xFFFF00",1;
@@ -1209,8 +1209,8 @@ ecl_in01,67,39,4	script	Replication Expert Paltu	445,{
 	delitem 729,10; //Bluish_Green_Jewel
 	delitem .@items[.@i],1;
 	getitem .@costumes[.@i],1;
-	mes "[Paltu]";
-	mes "Good. This is a satisfying result.";
-	mes "I'll do even a better job next time. Please tell others about my work. Have a good day~";
+	mes "[팔투]";
+	mes "좋습니다. 만족스러운 결과입니다.";
+	mes "다음번엔 더 잘할게요. 제 작품에 대해 다른 분들께도 알려주세요. 좋은 하루 보내세요~";
 	close;
 }

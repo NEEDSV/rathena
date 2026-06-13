@@ -16,10 +16,17 @@ void SkillCrossRipperSlasher::calculateSkillRatio(const Damage *wd, const block_
 	const status_data* sstatus = status_get_status_data(*src);
 	const status_change *sc = status_get_sc(src);
 
+#ifdef NEED_2017_SKILL_FORMULA
+	skillratio += 300 + 80 * skill_lv;
+	RE_LVL_DMOD(100);
+	if (sc && sc->getSCE(SC_ROLLINGCUTTER))
+		skillratio += sc->getSCE(SC_ROLLINGCUTTER)->val1 * sstatus->agi;
+#else
 	skillratio += -100 + 80 * skill_lv + (sstatus->agi * 3);
 	RE_LVL_DMOD(100);
 	if (sc && sc->getSCE(SC_ROLLINGCUTTER))
 		skillratio += sc->getSCE(SC_ROLLINGCUTTER)->val1 * 200;
+#endif
 }
 
 void SkillCrossRipperSlasher::castendDamageId(block_list *src, block_list *target, uint16 skill_lv, t_tick tick, int32& flag) const {

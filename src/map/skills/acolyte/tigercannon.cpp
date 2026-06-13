@@ -16,6 +16,19 @@ SkillTigerCannon::SkillTigerCannon() : WeaponSkillImpl(SR_TIGERCANNON) {
 void SkillTigerCannon::calculateSkillRatio(const Damage *wd, const block_list *src, const block_list *target, uint16 skill_lv, int32 &skillratio, int32 mflag) const {
 	const status_data* sstatus = status_get_status_data(*src);
 	const status_change *sc = status_get_sc(src);
+
+#ifdef NEED_2017_SKILL_FORMULA
+	unsigned int hp = sstatus->max_hp * abs(skill_get_hp_rate(getSkillId(), skill_lv)) / 100,
+		sp = sstatus->max_sp * abs(skill_get_sp_rate(getSkillId(), skill_lv)) / 100;
+
+	if (wd->miscflag & 8)
+		// Base_Damage = [((Caster consumed HP + SP) / 2) x Caster Base Level / 100] %
+		skillratio += -100 + (hp + sp) / 2;
+	else
+		// Base_Damage = [((Caster consumed HP + SP) / 4) x Caster Base Level / 100] %
+		skillratio += -100 + (hp + sp) / 4;
+	RE_LVL_DMOD(100);
+#else
 	uint32 hp = sstatus->max_hp * (10 + (skill_lv * 2)) / 100;
 	uint32 sp = sstatus->max_sp * (5 + skill_lv) / 100;
 
@@ -29,6 +42,7 @@ void SkillTigerCannon::calculateSkillRatio(const Damage *wd, const block_list *s
 
 	if (sc != nullptr && sc->hasSCE(SC_GT_REVITALIZE))
 		skillratio += skillratio * 30 / 100;
+#endif
 }
 
 void SkillTigerCannon::castendDamageId(block_list *src, block_list *target, uint16 skill_lv, t_tick tick, int32& flag) const {

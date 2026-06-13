@@ -11,7 +11,13 @@ SkillFallenEmpire::SkillFallenEmpire() : WeaponSkillImpl(SR_FALLENEMPIRE) {
 }
 
 void SkillFallenEmpire::calculateSkillRatio(const Damage* wd, const block_list* src, const block_list* target, uint16 skill_lv, int32& skillratio, int32 mflag) const {
+
+#ifdef NEED_2017_SKILL_FORMULA
+	skillratio += 150 * skill_lv;
+	RE_LVL_DMOD(150);
+#else
 	// ATK [(Skill Level x 300 + 100) x Caster Base Level / 150] %
 	skillratio += 300 * skill_lv;
 	RE_LVL_DMOD(150);
+#endif
 }

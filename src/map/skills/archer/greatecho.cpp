@@ -13,7 +13,21 @@ SkillGreatEcho::SkillGreatEcho() : WeaponSkillImpl(WM_GREAT_ECHO) {
 }
 
 void SkillGreatEcho::calculateSkillRatio(const Damage *wd, const block_list *src, const block_list *target, uint16 skill_lv, int32 &skillratio, int32 mflag) const {
+
+#ifdef NEED_2017_SKILL_FORMULA
 	const map_session_data* sd = BL_CAST(BL_PC, src);
+
+	skillratio += 300 + 200 * skill_lv;
+	if (sd) {
+		int chorusbonus = battle_calc_chorusbonus(sd);
+
+		// Chorus bonus don't count the first 2 Minstrels/Wanderers and only increases when their are 3 or more. [Rytech]
+		if (chorusbonus >= 1 && chorusbonus <= 5)
+			skillratio += 100 << (chorusbonus - 1); // 1->100; 2->200; 3->400; 4->800; 5->1600
+	}
+	RE_LVL_DMOD(100);
+
+#else
 
 	skillratio += -100 + 250 + 500 * skill_lv;
 	if (sd) {
@@ -22,6 +36,7 @@ void SkillGreatEcho::calculateSkillRatio(const Damage *wd, const block_list *src
 			skillratio *= 2;
 	}
 	RE_LVL_DMOD(100);
+#endif
 }
 
 void SkillGreatEcho::castendPos2(block_list* src, int32 x, int32 y, uint16 skill_lv, t_tick tick, int32& flag) const {

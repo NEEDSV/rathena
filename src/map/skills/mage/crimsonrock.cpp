@@ -11,8 +11,13 @@ SkillCrimsonRock::SkillCrimsonRock() : SkillImplRecursiveDamageSplash(WL_CRIMSON
 }
 
 void SkillCrimsonRock::calculateSkillRatio(const Damage *wd, const block_list *src, const block_list *target, uint16 skill_lv, int32 &skillratio, int32 mflag) const {
+#ifdef NEED_2017_SKILL_FORMULA
+	skillratio += 1200 + 300 * skill_lv;
+	RE_LVL_DMOD(100);
+#else
 	skillratio += -100 + 700 + 600 * skill_lv;
 	RE_LVL_DMOD(100);
+#endif
 }
 
 void SkillCrimsonRock::splashSearch(block_list* src, block_list* target, uint16 skill_lv, t_tick tick, int32 flag) const {

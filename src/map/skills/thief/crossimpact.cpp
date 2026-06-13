@@ -13,8 +13,13 @@ SkillCrossImpact::SkillCrossImpact() : WeaponSkillImpl(GC_CROSSIMPACT) {
 }
 
 void SkillCrossImpact::calculateSkillRatio(const Damage *wd, const block_list *src, const block_list *target, uint16 skill_lv, int32 &skillratio, int32 mflag) const {
+#ifdef NEED_2017_SKILL_FORMULA
+	skillratio += 900 + 100 * skill_lv;
+	RE_LVL_DMOD(120);
+#else
 	skillratio += -100 + 1400 + 150 * skill_lv;
 	RE_LVL_DMOD(100);
+#endif
 }
 
 void SkillCrossImpact::castendDamageId(block_list *src, block_list *target, uint16 skill_lv, t_tick tick, int32& flag) const {

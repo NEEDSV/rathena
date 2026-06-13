@@ -17,77 +17,77 @@
 //============================================================
 
 sec_pri,36,58,1	script	Chief Warder	105,{ 
-	mes "[Saddeus]";
+	mes "[사데우스]";
 	emotion ET_QUESTION;
-	mes (Sex==SEX_MALE?"Mr.":"Ms.")+" Prisoner #"+BaseLevel+JobLevel+",";
-	mes "what's the noise over there?";
+	mes (Sex==SEX_MALE?"Mr.":"Ms.")+" 죄수 #"+BaseLevel+JobLevel+",";
+	mes "저쪽에서 무슨 소리가 나지?";
 	next;
-	menu "Let me free, I'll pay!",-, "Let me to work off my freedom!",M_Q1, "Nothing",M_NO_THANKS;
+	menu "날 풀어줘, 내가 돈 줄게!",-, "자유를 얻은 만큼 일하게 해 주세요!",M_Q1, "Nothing",M_NO_THANKS;
 
 M_PAY:
-	mes "[Saddeus]";
+	mes "[사데우스]";
 	set .@MUSTPAY,(PRISON+1)*1000000;
 	if (.@MUSTPAY<1000000) set .@MUSTPAY,1000000;
 	if (.@MUSTPAY>100000000) set .@MUSTPAY,100000000;
 	if (PRISON==0) mes "I can't remember you. Is it your 1st time?";
 	if (PRISON>0) mes "You again? Somebody hasn't grown wiser from the very first visit...";
-	mes "OK, we could release you for ^FF0000"+.@MUSTPAY+"z^000000.";
+	mes "좋습니다, ^FF0000에 석방해 드릴 수 있습니다."+.@MUSTPAY+"z^000000.";
 	next;
-	menu "I pay cash!",M_PAYCASH,"Do you accept cheques?",M_PAYBANK,"I've changed my mind.",-;
+	menu "현금으로 지불합니다!",M_PAYCASH,"수표로 결제 가능한가요?",M_PAYBANK,"생각이 바뀌었어요.",-;
 
-	mes "[Saddeus]";
-	mes "You've got some time to think about...";
+	mes "[사데우스]";
+	mes "생각할 시간이 좀 있어요...";
 	close;
 
 M_PAYCASH:
 	if (.@MUSTPAY>Zeny) goto L_NOCASH;
 	set Zeny,Zeny-.@MUSTPAY;
-	mes "[Saddeus]";
-	mes "OK, sing here and there.";
+	mes "[사데우스]";
+	mes "좋아, 여기저기서 노래 불러봐.";
 	goto L_RELEASE;
 
 L_NOCASH:
-	mes "[Saddeus]";
-	mes "What's this? It's not enough!";
+	mes "[사데우스]";
+	mes "이게 뭐지? 이것으로는 부족해!";
 	close;
 
 M_PAYBANK:
 	if (.@MUSTPAY>#kafrabank) goto L_NOBANK;
 	set #kafrabank,#kafrabank-.@MUSTPAY;
-	mes "[Saddeus]";
-	mes "OK, sign your cheque. And put down your name in my book.";
+	mes "[사데우스]";
+	mes "좋아요, 수표에 서명하세요. 그리고 제 장부에 이름도 적어주세요.";
 	goto L_RELEASE;
 
 L_NOBANK:
-	mes "[Saddeus]";
+	mes "[사데우스]";
 	if (#kafrabank==0) mes "Your case says nothing about your bank accounts.";
 	if (#kafrabank!=0) mes "Alas, there's your bank account info... ^FF0000"+#kafrabank+"z^000000... in the case. It's not enough.";
-	mes "Stop your silly games now!";
+	mes "이제 그만 장난쳐!";
 	close;
 
 L_RELEASE:
 	set PRISON,PRISON+1;
 	next;
-	mes "[Saddeus]";
-	mes "You are free now!";
+	mes "[사데우스]";
+	mes "이제 당신은 자유입니다!";
 	next;
 	savepoint "izlude",105,112;
 	warp "izlude",105,112;
 	close;
 
 M_Q1:
-	mes "[Saddeus]";
-	mes "Our stocks are short of toadstools.  Remember your morning's skilly?  What about some work at our sponsored mushroom farm?";
+	mes "[사데우스]";
+	mes "버섯 재고가 부족합니다. 오늘 아침 스킬리 수업 기억하시나요? 저희가 후원하는 버섯 농장에서 일해 보시는 건 어떠세요?";
 	next;
-	menu "OK, I'll work off!",-, "I love this prison!",M_NO_THANKS;
+	menu "좋아요, 그럼 이만 가보죠!",-, "나는 이 감옥이 너무 좋아!",M_NO_THANKS;
 
-	mes "[Saddeus]";
+	mes "[사데우스]";
 	if(checkcart() || checkfalcon() || checkriding()){
 		emotion ET_SCRATCH;
-		mes "I'm sorry, you should release your Cart, PecoPeco or Falcon!";
+		mes "죄송하지만, 카트, 페코페코 또는 팔콘을 풀어주셔야 해요!";
 		close;
 	}
-	mes "Talk to our overseer, Oliver.";
+	mes "우리 관리자인 올리버에게 이야기해 보세요.";
 	next;
 
 	nude;
@@ -118,15 +118,15 @@ L_W4:
 	close;
 
 M_NO_THANKS:
-	mes "[Saddeus]";  
+	mes "[사데우스]";  
 	if (rand(2)) mes "Is today X-Mas time, huh?";
-	mes "Now shut up and back off!";
+	mes "이제 입 다물고 꺼져!";
 	if (rand(2)) emotion ET_HUK;
 	close;  
 }
 
 sec_in02,137,57,1	script	Overseer	708,{ 
-	mes "[Oliver]";
+	mes "[올리버]";
 
 	delitem 4002,countitem(4002);//Items: Fabre_Card,
 	delitem 4009,countitem(4009);//Items: Chonchon_Card,
@@ -135,14 +135,14 @@ sec_in02,137,57,1	script	Overseer	708,{
 	
 	if (PRISON_Q <= 0 ) goto L_GET_Q;
 
-	mes "I want you to gather ^FF0000"+PRISON_Q+" Orange Net Mushroom^000000.";
+	mes "^FF0000을 모아주세요"+PRISON_Q+" 오렌지 그물버섯^000000.";
 	if ( countitem(1069)<PRISON_Q ) close;//Items: Orange_Net_Mushroom,
-	mes "OK... hand me all the shrooms...";
-	mes "Let me see... "+countitem(1069)+" of almost edible ones...";//Items: Orange_Net_Mushroom,
-	mes "And "+countitem(1070)+" useless deadly ones.";//Items: Orange_Gooey_Mushroom_,
+	mes "좋아... 버섯 전부 줘봐...";
+	mes " 어디 보자..."+countitem(1069)+" 거의 먹을 수 있는 것들...";//Items: Orange_Net_Mushroom,
+	mes "And "+countitem(1070)+" 쓸모없고 치명적인 것들.";//Items: Orange_Gooey_Mushroom_,
 	next;
-	mes "[Oliver]";
-	mes "Thank you. You are free!";
+	mes "[올리버]";
+	mes "감사합니다. 이제 자유입니다!";
 	set PRISON_Q,0;
 	delitem 1069,countitem(1069);//Items: Orange_Net_Mushroom,
 	delitem 1070,countitem(1070);//Items: Orange_Gooey_Mushroom_,
@@ -162,7 +162,7 @@ L_GET_Q:
 	set PRISON_Q, PRISON*3 + BaseLevel/3;
 	set PRISON_Q, PRISON_Q * (readparam(bAspd)/55 + 1);
 	set PRISON_Q, PRISON_Q+rand(50,60);
-	mes "OK, you must bring me ^FF0000"+PRISON_Q+"^000000 edible ^FF0000Orange Net Mushroom^000000 toadstoo.. shrooms.";
+	mes "좋아, 넌 나에게 ^FF0000을 가져다줘야 해."+PRISON_Q+"^000000 식용 ^FF0000오렌지 그물버섯^000000 두꺼비버섯.. 버섯.";
 	if(readparam(bAspd)>=100) mes "You're a fast fella! You'll have to get more shrooms, then.";
 	if (rand(10)<4) mes "And you may eat the deadly ones for breakfast.";
 	close;

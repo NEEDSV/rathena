@@ -15,11 +15,15 @@ SkillCatnipMeteor::SkillCatnipMeteor() : SkillImpl(SU_CN_METEOR) {
 void SkillCatnipMeteor::calculateSkillRatio(const Damage *wd, const block_list *src, const block_list *target, uint16 skill_lv, int32 &skillratio, int32 mflag) const {
 	const status_data* sstatus = status_get_status_data(*src);
 
+#ifdef NEED_2017_SKILL_FORMULA
+	skillratio += 100 + 100 * skill_lv;
+#else
 	skillratio += -100 + 200 + 100 * skill_lv;
 	if (status_get_lv(src) > 99) {
 		skillratio += sstatus->int_ * 5;
 	}
 	RE_LVL_DMOD(100);
+#endif
 }
 
 void SkillCatnipMeteor::castendPos2(block_list* src, int32 x, int32 y, uint16 skill_lv, t_tick tick, int32& flag) const {

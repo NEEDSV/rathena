@@ -18,11 +18,17 @@ void SkillSpearOfIce::calculateSkillRatio(const Damage *wd, const block_list *sr
 	const status_change *sc = status_get_sc(src);
 
 	base_skillratio -= 30;
+#ifdef NEED_2017_SKILL_FORMULA
+	if (sd && sd->spiritcharm_type == CHARM_TYPE_WATER && sd->spiritcharm > 0)
+		base_skillratio += 5 * sd->spiritcharm;
+#else
 	if (sc && sc->getSCE(SC_SUITON))
 		base_skillratio += 2 * skill_lv;
-#endif
-	if(sd && sd->spiritcharm_type == CHARM_TYPE_WATER && sd->spiritcharm > 0)
+
+	if (sd && sd->spiritcharm_type == CHARM_TYPE_WATER && sd->spiritcharm > 0)
 		base_skillratio += 20 * sd->spiritcharm;
+#endif
+#endif
 }
 
 void SkillSpearOfIce::castendDamageId(block_list* src, block_list* target, uint16 skill_lv, t_tick tick, int32& flag) const {

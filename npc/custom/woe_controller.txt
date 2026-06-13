@@ -173,7 +173,7 @@ OnMinute00:
 		for(set .@i,0; .@i<.Size; set .@i,.@i+4) {
 			if (gettime(DT_DAYOFWEEK) == $WOE_CONTROL[.@i] && gettime(DT_HOUR) == $WOE_CONTROL[.@i+2]) {
 			OnWOEEnd:
-				announce "The War Of Emperium is over!",bc_all|bc_woe;
+				announce "제국 전쟁이 끝났습니다!",bc_all|bc_woe;
 				AgitEnd; AgitEnd2; AgitEnd3;
 				sleep 1000;
 				for(set .@j,0; .@j<.total_castle; set .@j,.@j+1) {
@@ -323,9 +323,9 @@ OnReward:
 				if (.Options&2) {
 					if (.@online || !(.Options&16)) {
 						.@charid = .@cid[.@j];
-						.@sender$ = "no-reply";
-						.@title$ = "** Siege Reward: "+getcastlename(.Castles$[.@i])+" **";
-						.@body$ = "Brave one,\r\n \r\n Congratulations!\r\n Your guild has successfully occupied\r\n territory in the War of Emperium on\r\n "+.@str$+".\r\n \r\n \r\n \r\n \r\n [ Your reward is attached. ]";
+						.@sender$ = "답장 없음";
+						.@title$ = " ** 공성전 보상:"+getcastlename(.Castles$[.@i])+" **";
+						.@body$ = " 용감한 분이시여,\\r\\n\\r\\n 축하합니다!\\r\\n 귀하의 길드는\\r\\n 제국 전쟁에서 영토를 성공적으로 점령하셨습니다\\r\\n"+.@str$+".\r\n \r\n \r\n \r\n \r\n [ Your reward is attached. ]";
 
 						if (.reward_id_size)
 							mail .@charid, .@sender$, .@title$, .@body$, .reward_zeny, .reward_id, .reward_amount;
@@ -334,7 +334,7 @@ OnReward:
 
 						if (PACKETVER < 20150513 && !getd(".@str_"+.@cid[.@j]) && .@online) {
 							setd ".@str_"+.@cid[.@j],1;
-							message rid2name(.@aid[.@j]),"You've got mail!";
+							message rid2name(.@aid[.@j]),"우편물이 도착했습니다!";
 						}
 					}
 				}
@@ -346,10 +346,10 @@ OnReward:
 						if (checkweight(.reward_id[.@k], .reward_amount[.@k]))
 							getitem .reward_id[.@k], .reward_amount[.@k];
 						else
-							dispbottom "You can't receive x" + .reward_amount[.@k] + " " + getitemname(.reward_id[.@k]) + " for conquering " + .@castle_name$ + " because you're overweight.";
+							dispbottom "당신은 x를 받을 수 없습니다" + .reward_amount[.@k] + " " + getitemname(.reward_id[.@k]) + " 정복하기 위해" + .@castle_name$ + " 당신은 과체중이기 때문입니다.";
 					}
 					Zeny += .reward_zeny;
-					dispbottom "You have been rewarded for conquering " + .@castle_name$ + ".";
+					dispbottom " 당신은 승리에 대한 보상을 받았습니다." + .@castle_name$ + ".";
 				}
 			}
 		}
@@ -362,7 +362,7 @@ OnPCLoadMapEvent:
 		if (getcharid(2) && getcastledata(strcharinfo(3),1) == getcharid(2)) end;
 		.@castle_name$ = getcastlename(strcharinfo(3));
 		sleep2 1000;
-		message strcharinfo(0), .@castle_name$ + " is currently inactive.";
+		message strcharinfo(0), .@castle_name$ + " 현재 비활성화 상태입니다.";
 		sleep2 5000;
 		if (compare(strcharinfo(3),"g_cas")) warp "SavePoint",0,0;
 	}
@@ -370,7 +370,7 @@ OnPCLoadMapEvent:
 
 OnMenu:
 while(1) {
-	mes "[WOE Information]";
+	mes "[WOE 정보]";
 	if (agitcheck() || agitcheck2() || agitcheck3()) {
 		if (.Active[0]) {
 			for(set .@i,0; .@i<.Size; set .@i,.@i+4) {
@@ -379,12 +379,12 @@ while(1) {
 					break;
 				}
 			}
-			mes "The War of Emperium is ^0055FFactive^000000 until ^FF0000"+Add_Zero(.@i)+"^000000 in the following regions:";
+			mes "제국 전쟁은 ^FF0000까지 ^0055FF활성^000000입니다."+Add_Zero(.@i)+"다음 지역에서 ^000000";
 			mes " ";
 			for(set .@i,0; .@i < .total_region; set .@i,.@i+1)
 				if (.Active[1]&(1<<.@i)) mes " > ^777777"+.Regions$[.@i]+"^000000";
 		} else
-			mes "The War of Emperium is ^0055FFactive^000000.";
+			mes "제국 전쟁은 ^0055FF활성^000000입니다.";
 	} else {
 		for(set .@i,0; .@i<.Size; set .@i,.@i+4)
 			if ((gettime(DT_DAYOFWEEK) == $WOE_CONTROL[.@i] && gettime(DT_HOUR) <= $WOE_CONTROL[.@i+1]) || gettime(DT_DAYOFWEEK) < $WOE_CONTROL[.@i]) {
@@ -393,11 +393,11 @@ while(1) {
 			}
 		if (!getarraysize(.@time))
 			setarray .@time[0],$WOE_CONTROL[0],$WOE_CONTROL[1];
-		mes "The War of Emperium is ^777777inactive^000000.";
+		mes "제국 전쟁은 ^777777비활성^000000입니다.";
 		if (.Size) {
 			mes " ";
-			mes "The next session will begin";
-			mes "on ^0055FF"+.Days$[.@time[0]]+"^000000 at "+Add_Zero(.@time[1])+"^000000.";
+			mes "다음 회기가 시작됩니다";
+			mes "^0055FF에서"+.Days$[.@time[0]]+" ^000000에서"+Add_Zero(.@time[1])+"^000000.";
 		}
 	}
 	next;
@@ -423,7 +423,7 @@ while(1) {
 		warp .Map$[.@index],.MapX[.@index],.MapY[.@index];
 		close;
 	case 2:
-		mes "[Schedule]";
+		mes "[일정]";
 		if (.Size) {
 			freeloop(1);
 			for(set .@i,0; .@i<.Size; set .@i,.@i+4) {
@@ -434,18 +434,18 @@ while(1) {
 			}
 			freeloop(0);
 		} else
-			mes "No times are configured.";
+			mes "설정된 시간이 없습니다.";
 		next;
 		break;
 	case 3:
-		mes "[Castle Ownership]";
+		mes "[성 소유권]";
 		for(set .@i,0; .@i < .total_region; set .@i,.@i+1) {
 			set .@k, .@i*5;
 			mes "> ^FF0000"+.Regions$[.@i]+"^000000";
 			for(set .@j,0; .@j<.size_region[.@i]; set .@j,.@j+1) {
 				.@index = getd( ".castle_index_in_region_" + .@i + "[" + .@j + "]" );
 				set .@t, getcastledata(.Castles$[.@index],1);
-				mes "  ~ "+getcastlename(.Castles$[.@index])+": "+((.@t)?"^0055FF"+getguildname(.@t):"^777777unoccupied")+"^000000";
+				mes "  ~ "+getcastlename(.Castles$[.@index])+": "+((.@t)?"^0055FF"+getguildname(.@t):"^777777비점유")+"^000000";
 			}
 			if (.@i < 5) mes " ";
 		}
@@ -453,25 +453,25 @@ while(1) {
 		break;
 	case 4:
 	while(1) {
-		mes "[Session Manager]";
-		mes "There are ^0055FF"+(.Size/4)+" session(s)^000000 configured.";
-		mes "What would you like to do?";
+		mes "[세션 관리자]";
+		mes "^0055FF가 있습니다"+(.Size/4)+" 세션이 구성되었습니다.";
+		mes "무엇을 하고 싶으세요?";
 		next;
 		switch(select(" ~ Add a session...: ~ Delete a session...: ~ Reload settings...:"+((agitcheck() || agitcheck2() || agitcheck3())?" ~ End WOE session...":"")+": ~ ^777777Go back^000000")) {
 		case 1:
-			mes "[New Session]";
-			mes "Select a day.";
+			mes "[새 세션]";
+			mes "날짜를 선택하세요.";
 			next;
 			set .@Day, select(" ~ "+implode(.Days$,": ~ "))-1;
-			mes "[New Session]";
-			mes "Select a start time for ^0055FF"+.Days$[.@Day]+"^000000.";
+			mes "[새 세션]";
+			mes "^0055FF의 시작 시간을 선택하세요"+.Days$[.@Day]+"^000000.";
 			next;
 			set .@menu$,"";
 			for(set .@i,0; .@i<23; set .@i,.@i+1)
 				set .@menu$, .@menu$+" ~ "+Add_Zero(.@i,1)+":";
 			set .@Start, select(.@menu$)-1;
-			mes "[New Session]";
-			mes "Select an end time for ^0055FF"+.Days$[.@Day]+"^000000.";
+			mes "[새 세션]";
+			mes "^0055FF의 종료 시간을 선택하세요"+.Days$[.@Day]+"^000000.";
 			next;
 			set .@menu$,"";
 			for(set .@i,.@Start+1; .@i<24; set.@i,.@i+1)
@@ -482,8 +482,8 @@ while(1) {
 				   ((.@Start >= $WOE_CONTROL[.@i+1] && .@Start < $WOE_CONTROL[.@i+2]) ||
 				    (.@End > $WOE_CONTROL[.@i+1] && .@End <= $WOE_CONTROL[.@i+2]) ||
 				    (.@Start <= $WOE_CONTROL[.@i+1] && .@End >= $WOE_CONTROL[.@i+2]))) {
-					mes "[New Session]";
-					mes "The chosen times overlap with an existing session.";
+					mes "[새 세션]";
+					mes "선택한 시간이 기존 세션과 겹칩니다.";
 					next;
 					set .@d,1;
 					break;
@@ -491,11 +491,11 @@ while(1) {
 			if (.@d) { set .@d,0; break; }
 			set .@Castle,0;
 			while(1) {
-				mes "[New Session]";
+				mes "[새 세션]";
 				mes "^0055FF"+.Days$[.@Day]+" ("+Add_Zero(.@Start)+"-"+Add_Zero(.@End)+")^000000";
-				mes " > Castles:";
+				mes " > 성:";
 				if (!.@Castle)
-					mes "   ~ ^777777(none selected)^000000";
+					mes " ~ ^777777(선택된 항목 없음)^000000";
 				else {
 					for(set .@i,0; .@i<.total_castle; set .@i,.@i+1) {
 						.@string$ = ( .@Castle&(1<<.@i) ) ? "   ~ "+getcastlename(.Castles$[.@i])+" ("+.Castles$[.@i]+")" : "";
@@ -510,10 +510,10 @@ while(1) {
 				if (.@i)
 					set .@Castle, .@Castle^(1<<(.@i-1));
 				else {
-					mes "[New Session]";
-					mes "Are you sure?";
+					mes "[새 세션]";
+					mes "정말 확실해요?";
 					next;
-					switch(select(" ~ ^0055FFAdd session...^000000: ~ Continue selecting castles...: ~ ^777777Cancel^000000")) {
+					switch(select(" ~ ^0055FF세션 추가...^000000: ~ 계속해서 성을 선택하세요...: ~ ^777777취소^000000")) {
 					case 1:
 						for(set .@i,0; .@i<.Size; set .@i,.@i+4) {
 							if ((.@Day == $WOE_CONTROL[.@i] && .@End <= $WOE_CONTROL[.@i+1]) || .@Day < $WOE_CONTROL[.@i]) {
@@ -526,8 +526,8 @@ while(1) {
 						setarray $WOE_CONTROL[.@i], .@Day, .@Start, .@End, .@Castle;
 						set .Size, getarraysize($WOE_CONTROL);
 					case 3:
-						mes "[New Session]";
-						mes ((.@d)?"Session added.":"cancelled.");
+						mes "[새 세션]";
+						mes ((.@d)?"세션이 추가되었습니다.":"cancelled.");
 						next;
 						set .@d,1;
 					case 2:
@@ -538,13 +538,13 @@ while(1) {
 			}
 			break;
 		case 2:
-			mes "[Remove Session]";
+			mes "[세션 제거]";
 			if (!.Size) {
-				mes "There are no sessions configured.";
+				mes "구성된 세션이 없습니다.";
 				next;
 				break;
 			}
-			mes "Select a session to remove.";
+			mes "삭제할 세션을 선택하세요.";
 			next;
 			set .@menu$,"";
 			for(set .@i,0; .@i<.Size; set .@i,.@i+4)
@@ -552,58 +552,58 @@ while(1) {
 			set .@menu$, .@menu$+" ~ ^777777Cancel^000000";
 			set .@i, select(.@menu$)-1;
 			if (.@i == (.Size/4)) break;
-			mes "[Remove Session]";
-			mes "Delete ^0055FF"+.Days$[$WOE_CONTROL[.@i*4]]+"'s^000000 session?";
-			mes "This action cannot be undone.";
+			mes "[세션 제거]";
+			mes "^0055FF를 삭제하세요"+.Days$[$WOE_CONTROL[.@i*4]]+"'s^000000 세션?";
+			mes "이 작업은 되돌릴 수 없습니다.";
 			next;
-			set .@j, select(" ~ ^FF0000Delete session...^000000: ~ ^777777Cancel^000000");
-			mes "[Remove Session]";
+			set .@j, select(" ~ ^FF0000세션 삭제...^000000: ~ ^777777취소^000000");
+			mes "[세션 제거]";
 			if (.@j == 2)
 				mes "cancelled.";
 			else {
 				deletearray $WOE_CONTROL[.@i*4],4;
 				set .Size, getarraysize($WOE_CONTROL);
-				mes "Session deleted.";
+				mes "세션이 삭제되었습니다.";
 			}
 			next;
 			break;
 		case 3:
-			mes "[Reload Settings]";
-			mes "This will trigger all events related to new session configurations, if any.";
+			mes "[설정 새로 고침]";
+			mes "이렇게 하면 새 세션 구성과 관련된 모든 이벤트가 발생합니다(있는 경우).";
 			if (agitcheck() || agitcheck2() || agitcheck3()) {
 				mes " ";
-				mes "Be aware that this will disrupt the current WOE session.";
+				mes "이로 인해 현재 진행 중인 WOE 세션이 중단될 수 있음을 유의하십시오.";
 			}
 			next;
-			set .@i, select(" ~ ^0055FFReload settings...^000000: ~ ^777777Cancel^000000");
-			mes "[Reload Settings]";
+			set .@i, select(" ~ ^0055FF설정 새로 고침...^000000: ~ ^777777취소^000000");
+			mes "[설정 새로 고침]";
 			if (.@i == 2) mes "cancelled.";
 			else {
 				set .Init,1;
 				donpcevent "WOE_CONTROL::OnMinute00";
-				mes "Variables have been re-initialized.";
+				mes "변수들이 다시 초기화되었습니다.";
 			}
 			next;
 			break;
 		case 4:
-			mes "[Force Agit End]";
+			mes "[강제 소동 종료]";
 			if (!agitcheck() && !agitcheck2() && !agitcheck3())  {
-				mes "WOE has already ended.";
+				mes "WOE는 이미 종료되었습니다.";
 				next;
 				break;
 			}
-			mes "This command will safely execute all AgitEnd events.";
+			mes "이 명령은 모든 AgitEnd 이벤트를 안전하게 실행합니다.";
 			mes " ";
-			mes "Kill the current WOE session?";
+			mes "현재 WOE 세션을 종료하시겠습니까?";
 			next;
 			set .@i, select(" ~ ^FF0000End session...^000000:"+((.Options&1)?" ~ ^FF0000End session without rewards...^000000":"")+": ~ ^777777Cancel^000000");
-			mes "[Force Agit End]";
+			mes "[강제 소동 종료]";
 			if (.@i == 3)
 				mes "cancelled.";
 			else {
 				set .ForceEnd, .@i;
 				donpcevent "WOE_CONTROL::OnWOEEnd";
-				mes "WOE session terminated.";
+				mes "WOE 세션이 종료되었습니다.";
 			}
 			next;
 			break;

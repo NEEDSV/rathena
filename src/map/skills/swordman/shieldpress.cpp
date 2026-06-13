@@ -15,6 +15,16 @@ void SkillShieldPress::calculateSkillRatio(const Damage* wd, const block_list* s
 	const map_session_data* sd = BL_CAST(BL_PC, src);
 	const status_change* sc = status_get_sc(src);
 
+#ifdef NEED_2017_SKILL_FORMULA
+	skillratio += -100 + 150 * skill_lv + status_get_str(src);
+	if (sd) {
+		short index = sd->equip_index[EQI_HAND_L];
+
+		if (index >= 0 && sd->inventory_data[index] && sd->inventory_data[index]->type == IT_ARMOR)
+			skillratio += sd->inventory_data[index]->weight / 10;
+	}
+	RE_LVL_DMOD(100);
+#else
 	skillratio += -100 + 200 * skill_lv;
 	if (sd != nullptr) {
 		// Shield Press only considers base STR without job bonus
@@ -30,4 +40,5 @@ void SkillShieldPress::calculateSkillRatio(const Damage* wd, const block_list* s
 		}
 	}
 	RE_LVL_DMOD(100);
+#endif
 }

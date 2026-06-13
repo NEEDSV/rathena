@@ -29,11 +29,20 @@ void SkillEarthDrive::calculateSkillRatio(const Damage* wd, const block_list* sr
 	const status_change* sc = status_get_sc(src);
 	const status_data* sstatus = status_get_status_data(*src);
 
+#ifdef NEED_2017_SKILL_FORMULA
+	if (sd) {
+		short index = sd->equip_index[EQI_HAND_L];
+
+		if (index >= 0 && sd->inventory_data[index] && sd->inventory_data[index]->type == IT_ARMOR)
+			skillratio += -100 + (skill_lv + 1) * sd->inventory_data[index]->weight / 10;
+	}
+#else
 	skillratio += -100 + 380 * skill_lv + sstatus->str + sstatus->vit; // !TODO: What's the STR/VIT bonus?
 
-	if( sc != nullptr && sc->getSCE( SC_SHIELD_POWER ) ){
-		skillratio += skill_lv * 37 * pc_checkskill( sd, IG_SHIELD_MASTERY );
+	if (sc != nullptr && sc->getSCE(SC_SHIELD_POWER)) {
+		skillratio += skill_lv * 37 * pc_checkskill(sd, IG_SHIELD_MASTERY);
 	}
+#endif
 
 	RE_LVL_DMOD(100);
 }

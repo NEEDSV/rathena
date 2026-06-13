@@ -11,47 +11,47 @@
 // Charleston
 verus04,69,108,5	script	Mass Charleston#1	4_F_CHARLESTON01,{
 	if (!checkweight(1201,1) || (MaxWeight - Weight) < 1000) {
-		mes "^ff0000You have carried too many items, please reduce it and come back later.^000000";
+		mes "소지품을 너무 많이 가져가셨습니다. 소지품을 줄이고 나중에 다시 오세요.";
 		close;
 	}
 	cutin "dalle01.bmp",2;
 	if (countitem(6752) < 10) {
 		if (isbegin_quest(13186) == 0) {
-			mes "[Mass Charleston]";
-			mes "I don't know where you can find Charleston Components,";
+			mes "[매사추세츠주 찰스턴]";
+			mes "찰스턴 컴포넌트를 어디서 찾을 수 있는지 모르겠네요.";
 			next;
-			mes "[Mass Charleston]";
-			mes "but if you have 10 or more, then I can exchange them with factory products.";
+			mes "[매사추세츠주 찰스턴]";
+			mes "하지만 10개 이상 구매하시면 공장 생산품으로 교환해 드릴 수 있습니다.";
 			close3;
 		}
-		mes "[Mass Charleston]";
-		mes "A series of trials and errors was made before the mass version of Charleston was developed.";
+		mes "[매사추세츠주 찰스턴]";
+		mes "찰스턴 댄스의 대중적인 버전이 개발되기까지는 여러 차례의 시행착오가 있었습니다.";
 		next;
-		mes "[Mass Charleston]";
-		mes "I don't mean to depreciate myself, but mass versions are mass versions; they're cost-effective and practical, but never as good as the high-end versions.";
+		mes "[매사추세츠주 찰스턴]";
+		mes "제가 제 실력을 깎아내리려는 건 아니지만, 대량 생산 제품은 말 그대로 대량 생산 제품입니다. 비용 효율적이고 실용적이긴 하지만, 고급 제품만큼 좋을 수는 없죠.";
 		next;
-		mes "[Mass Charleston]";
-		mes "Some Charlestons, especially in the development stage, are equipped with more advanced features. To study them, I need more components.";
+		mes "[매사추세츠주 찰스턴]";
+		mes "일부 찰스턴 모델, 특히 개발 단계에 있는 모델들은 더욱 발전된 기능을 갖추고 있습니다. 이러한 모델들을 연구하려면 더 많은 부품이 필요합니다.";
 		next;
-		mes "[Mass Charleston]";
-		mes "If you have 10 or more Charleston Components, then I can exchange them with factory products.";
+		mes "[매사추세츠주 찰스턴]";
+		mes "찰스턴 부품을 10개 이상 가지고 계시면 공장 생산품으로 교환해 드릴 수 있습니다.";
 		close3;
 	}
-	mes "[Mass Charleston]";
-	mes "You got some nice parts on you! Would you like to exchange it with the goods produced in the factory?";
+	mes "[매사추세츠주 찰스턴]";
+	mes "멋진 부품들을 가지고 계시네요! 공장에서 생산된 제품으로 교환하시겠습니까?";
 	next;
-	mes "[Mass Charleston]";
-	mes "Is a collection of Charleston advantages in a commodity, but can not be sold separately, IF bring good parts can be exchanged for you.";
+	mes "[매사추세츠주 찰스턴]";
+	mes "찰스턴의 장점들을 모아놓은 상품이지만, 개별 판매는 불가능합니다. 다만, 품질이 좋은 부품을 가져오시면 교환해 드릴 수 있습니다.";
 	next;
-	.@s = select( "Quit.", "Exchange Reinforced parts", "Exchange Supplementary device" ) - 2;
+	.@s = select( "Quit.", "강화 부품으로 교체", "교환 보조 장치" ) - 2;
 	if (.@s == -1) {
-		mes "[Mass Charleston]";
-		mes "I'll see you next time!";
+		mes "[매사추세츠주 찰스턴]";
+		mes "다음에 또 봐요!";
 		close3;
 	}
 	setarray .@job_aft$[0], "Reinforced parts", "Supplementary device";
-	mes "[Mass Charleston]";
-	mes "Which part of " + .@job_aft$[.@s] + " do you want to select?";
+	mes "[매사추세츠주 찰스턴]";
+	mes " 어느 부분" + .@job_aft$[.@s] + " 선택하시겠습니까?";
 	next;
 	switch(.@s) {
 	case 0:
@@ -67,80 +67,80 @@ verus04,69,108,5	script	Mass Charleston#1	4_F_CHARLESTON01,{
 			2995;	// Supplement_Part_Dex
 		break;
 	default:
-		mes "[Mass Charleston]";
-		mes "I'll see you next time!";
+		mes "[매사추세츠주 찰스턴]";
+		mes "다음에 또 봐요!";
 		close;
 	}
 	// custom translation from here
 	.@index = select( "Quit.", getitemname(.@item[0]) + " (garment)", getitemname(.@item[1]) + " (Shoes)", getitemname(.@item[2]) + " (Accessory)" ) - 2;
 	if (.@index == -1) {
-		mes "[Mass Charleston]";
-		mes "I'll see you next time!";
+		mes "[매사추세츠주 찰스턴]";
+		mes "다음에 또 봐요!";
 		close3;
 	}
 	if (countitem(6752) < 10) {
-		mes "[Mass Charleston]";
-		mes "If you find enough Charleston parts, can you come to me again?";
+		mes "[매사추세츠주 찰스턴]";
+		mes "찰스턴 부품을 충분히 구하시면 다시 저에게 연락 주시겠어요?";
 		close3;
 	}
 	delitem 6752,10;	// Charleston_Parts
 	getitem .@item[.@index],1;
-	mes "[Mass Charleston]";
-	mes "Exchanged 10 " + getitemname(6752) + " for " + .@job_aft$[.@s] + ". If you find more part, come to me again!";
+	mes "[매사추세츠주 찰스턴]";
+	mes " 10을 교환했습니다" + getitemname(6752) + " for " + .@job_aft$[.@s] + "혹시 더 찾으시면 다시 연락 주세요!";
 	close3;
 }
 
 verus04,71,106,5	script	Mass Charleston#2	4_F_CHARLESTON01,{
 	disable_items;
 	if (!checkweight(1201,1)) {
-		mes "You have too many types of items. Lighten your inventory first.";
+		mes "아이템 종류가 너무 많아요. 먼저 인벤토리를 줄이세요.";
 		close;
 	}
 	if ((MaxWeight - Weight) < 10000) {
-		mes "The items in your inventory are weighing you down. Lighten your weight first.";
+		mes "소지품이 너무 무거워요. 먼저 무게를 줄이세요.";
 		close;
 	}
 	cutin "dalle01.bmp",2;
-	mes "[Mass Charleston]";
-	mes "I can upgrade the Charleston Factory products. Let me know if you're interested.";
+	mes "[매사추세츠주 찰스턴]";
+	mes "찰스턴 팩토리 제품을 업그레이드해 드릴 수 있습니다. 관심 있으시면 알려주세요.";
 	next;
-	switch( select( "More information.", "Add abilities to your product.", "Reset product." ) ) {
+	switch( select( "더 자세한 정보.", "제품에 기능을 추가하세요.", "제품을 초기화하세요." ) ) {
 	case 1:
-		mes "[Mass Charleston]";
-		mes "Each Upgrade/resetting attempt costs 100,000 zeny and 1 Charleston Component.";
+		mes "[매사추세츠주 찰스턴]";
+		mes "업그레이드/초기화 시도 1회당 100,000 제니와 찰스턴 부품 1개가 소모됩니다.";
 		next;
-		mes "[Mass Charleston]";
-		mes "I also provide a wider selection of Upgrade options for Charleston Equipment at ^ff0000+9^000000 or above.";
+		mes "[매사추세츠주 찰스턴]";
+		mes "또한 ^ff0000+9^000000 이상 가격대의 Charleston Equipment에 대해 더욱 다양한 업그레이드 옵션을 제공합니다.";
 		next;
-		mes "[Mass Charleston]";
-		mes "Rest assured, my Upgrade technology does not involve accidental damage on the item's Upgrade level or equipped cards.";
+		mes "[매사추세츠주 찰스턴]";
+		mes "안심하세요. 제 업그레이드 기술은 아이템의 업그레이드 레벨이나 장착된 카드에 우발적인 손상을 일으키지 않습니다.";
 		close3;
 	case 2:
 		.@type_action = 1;
-		.@string$ = "Upgrading";
+		.@string$ = "업그레이드";
 		break;
 	case 3:
 		.@type_action = 2;
-		.@string$ = "Resetting";
+		.@string$ = "재설정";
 		break;
 	}
 	if (Zeny < 100000 || countitem(6752) < 1) {
-		mes "[Mass Charleston]";
-		mes "" + .@string$ + " a Charleston product costs 1 Charleston Component and 100,000 zeny. Please know that all the expenses go into " + strtolower(.@string$) + " your product.";
+		mes "[매사추세츠주 찰스턴]";
+		mes "" + .@string$ + " 찰스턴 제품 하나를 만드는 데 찰스턴 부품 1개와 10만 제니가 필요합니다. 모든 비용은 다음과 같은 항목에 포함됩니다." + strtolower(.@string$) + " 귀사의 제품.";
 		close3;
 	}
-	mes "[Mass Charleston]";
-	mes "Please make sure you're equipped with the Equipment you want to upgrade.";
+	mes "[매사추세츠주 찰스턴]";
+	mes "업그레이드하려는 장비가 모두 갖춰져 있는지 확인해 주세요.";
 	next;
-	.@s = select( "Let me go equip it.", "Footgear", "Garment", "Clothes", "Accessory" ) - 2;
+	.@s = select( "제가 장착하러 갈게요.", "Footgear", "Garment", "Clothes", "Accessory" ) - 2;
 	if (.@s == -1) {
-		mes "[Mass Charleston]";
-		mes "Sure, please come back after you do.";
+		mes "[매사추세츠주 찰스턴]";
+		mes "네, 그러신 후에 다시 와주세요.";
 		close3;
 	}
 	if (Zeny < 100000 || countitem(6752) < 1) {
-		mes "[Mass Charleston]";
-		mes "Things needed for commodity upgrades seem inadequate!";
+		mes "[매사추세츠주 찰스턴]";
+		mes "상품 업그레이드에 필요한 것들이 부족한 것 같습니다!";
 		close3;
 	}
 	setarray .@eq_num[0], EQI_SHOES, EQI_GARMENT, EQI_ARMOR, EQI_ACC_R;
@@ -153,8 +153,8 @@ verus04,71,106,5	script	Mass Charleston#2	4_F_CHARLESTON01,{
 
 	switch(.@item_id) {
 	case -1:
-		mes "[Mass Charleston]";
-		mes "Because it is a customized upgrade be sure to wear equipment.";
+		mes "[매사추세츠주 찰스턴]";
+		mes "맞춤형 업그레이드이므로 반드시 보호 장비를 착용하십시오.";
 		close3;
 	case 15111:	// Upgrade_Part_Plate
 		.@en_type = 3;
@@ -197,9 +197,9 @@ verus04,71,106,5	script	Mass Charleston#2	4_F_CHARLESTON01,{
 		.@max_slot = 2;
 		break;
 	default:
-		mes "[Mass Charleston]";
+		mes "[매사추세츠주 찰스턴]";
 		mes "^990099" + getequipname(.@part) + "^000000??";
-		mes "I'm not interested in this Equipment.";
+		mes "저는 이 장비에 관심이 없습니다.";
 		close3;
 	}
 
@@ -216,49 +216,49 @@ verus04,71,106,5	script	Mass Charleston#2	4_F_CHARLESTON01,{
 				"Advanced Shoes upgrade",
 				"Accessory upgrade";
 			if (.@menu_en_type$[.@en_type] == "" || .@menu_en_type$[.@en_type_9] == "") {
-				mes "[Mass Charleston]";
-				mes "Something's not right!";
+				mes "[매사추세츠주 찰스턴]";
+				mes "뭔가 이상해!";
 				close3;
 			}
-			mes "[Mass Charleston]";
-			mes "This is a considerable level of enhanced equipment, this type can give enhanced expansion performance, choose from the following series of desirable to strengthen it!";
+			mes "[매사추세츠주 찰스턴]";
+			mes "이는 상당히 향상된 수준의 장비이며, 이러한 유형은 향상된 확장 성능을 제공할 수 있습니다. 아래 시리즈 중에서 원하는 것을 선택하여 성능을 강화하십시오!";
 			next;
 			if (select( .@menu_en_type$[.@en_type], .@menu_en_type$[.@en_type_9] ) == 2)
 				.@en_type = .@en_type_9;
 		}
 		if (.@card[3] < 1 && .@max_slot < 4) {
 			.@slot = 4;
-			mes "[Mass Charleston]";
-			mes "I'll be Upgrading the first ability. The existing Upgrade level and cards will not be damaged. Do you want to continue?";
+			mes "[매사추세츠주 찰스턴]";
+			mes "첫 번째 능력을 업그레이드하겠습니다. 기존 업그레이드 레벨과 카드는 그대로 유지됩니다. 계속하시겠습니까?";
 			next;
-			if (select( "I'll come back later.", "Continue." ) == 1) {
-				mes "[Mass Charleston]";
-				mes "No problem. Come back if you change your mind.";
+			if (select( "나중에 다시 올게요.", "Continue." ) == 1) {
+				mes "[매사추세츠주 찰스턴]";
+				mes "괜찮아요. 마음이 바뀌면 다시 오세요.";
 				close3;
 			}
 		}
 		else if (.@card[2] < 1 && .@max_slot < 3) {
 			.@slot = 3;
-			mes "[Mass Charleston]";
-			mes "I'll be Upgrading the second ability. The existing Upgrade level and cards will not be damaged.";
+			mes "[매사추세츠주 찰스턴]";
+			mes "두 번째 능력을 업그레이드하겠습니다. 기존 업그레이드 레벨과 카드는 그대로 유지됩니다.";
 			next;
-			mes "[Mass Charleston]";
-			mes "Though there is a slight chance of failure, in which case the existing Upgrade level will be reset. What would you like to do?";
+			mes "[매사추세츠주 찰스턴]";
+			mes "실패할 가능성이 약간 있지만, 그럴 경우 기존 업그레이드 레벨이 초기화됩니다. 어떻게 하시겠습니까?";
 			next;
-			if (select( "I'll come back later.", "Continue." ) == 1) {
-				mes "[Mass Charleston]";
-				mes "No problem. Come back if you change your mind.";
+			if (select( "나중에 다시 올게요.", "Continue." ) == 1) {
+				mes "[매사추세츠주 찰스턴]";
+				mes "괜찮아요. 마음이 바뀌면 다시 오세요.";
 				close3;
 			}
 		}
 		else if (.@card[1] < 1 && .@max_slot < 2) {
 			.@slot = 2;
-			mes "[Mass Charleston]";
-			mes "I'll be Upgrading the 3rd ability. This highest Upgrade stage incurs a  chance of ^990000destroying the Equipment or resetting its existing Upgrade level.^000000 Do you want to continue?";
+			mes "[매사추세츠주 찰스턴]";
+			mes "세 번째 능력을 업그레이드하겠습니다. 최고 단계 업그레이드에서는 장비가 파괴되거나 기존 업그레이드 레벨이 초기화될 확률이 ^990000%입니다.^000000 계속하시겠습니까?";
 			next;
-			if (select( "I'll come back later.", "Continue." ) == 1) {
-				mes "[Mass Charleston]";
-				mes "No problem. Come back if you change your mind.";
+			if (select( "나중에 다시 올게요.", "Continue." ) == 1) {
+				mes "[매사추세츠주 찰스턴]";
+				mes "괜찮아요. 마음이 바뀌면 다시 오세요.";
 				close3;
 			}
 		}
@@ -266,8 +266,8 @@ verus04,71,106,5	script	Mass Charleston#2	4_F_CHARLESTON01,{
 			.@slot = 1;
 		else {
 			cutin "dalle02.bmp",2;
-			mes "[Mass Charleston]";
-			mes "This Equipment is Upgraded to the maximum level. Please bring something else.";
+			mes "[매사추세츠주 찰스턴]";
+			mes "이 장비는 최고 수준으로 업그레이드되었습니다. 다른 장비를 가져오시기 바랍니다.";
 			close3;
 		}
 		switch(.@en_type) {
@@ -285,8 +285,8 @@ verus04,71,106,5	script	Mass Charleston#2	4_F_CHARLESTON01,{
 				.@en_brk2 = 300;
 			}
 			else {
-				mes "[Mass Charleston]";
-				mes "An unknown error has occurred.";
+				mes "[매사추세츠주 찰스턴]";
+				mes "알 수 없는 오류가 발생했습니다.";
 				close3;
 			}
 			.@r = rand( .@en_brk1, .@en_brk2 );
@@ -341,8 +341,8 @@ verus04,71,106,5	script	Mass Charleston#2	4_F_CHARLESTON01,{
 				.@en_brk2 = 310;
 			}
 			else {
-				mes "[Mass Charleston]";
-				mes "An unknown error has occurred.";
+				mes "[매사추세츠주 찰스턴]";
+				mes "알 수 없는 오류가 발생했습니다.";
 				close3;
 			}
 			.@r = rand( .@en_brk1, .@en_brk2 );
@@ -397,8 +397,8 @@ verus04,71,106,5	script	Mass Charleston#2	4_F_CHARLESTON01,{
 				.@en_brk2 = 310;
 			}
 			else {
-				mes "[Mass Charleston]";
-				mes "An unknown error has occurred.";
+				mes "[매사추세츠주 찰스턴]";
+				mes "알 수 없는 오류가 발생했습니다.";
 				close3;
 			}
 			.@r = rand( .@en_brk1, .@en_brk2 );
@@ -451,8 +451,8 @@ verus04,71,106,5	script	Mass Charleston#2	4_F_CHARLESTON01,{
 				.@en_brk2 = 310;
 			}
 			else {
-				mes "[Mass Charleston]";
-				mes "An unknown error has occurred.";
+				mes "[매사추세츠주 찰스턴]";
+				mes "알 수 없는 오류가 발생했습니다.";
 				close3;
 			}
 			.@r = rand( .@en_brk1, .@en_brk2 );
@@ -514,8 +514,8 @@ verus04,71,106,5	script	Mass Charleston#2	4_F_CHARLESTON01,{
 				.@en_brk2 = 310;
 			}
 			else {
-				mes "[Mass Charleston]";
-				mes "An unknown error has occurred.";
+				mes "[매사추세츠주 찰스턴]";
+				mes "알 수 없는 오류가 발생했습니다.";
 				close3;
 			}
 			.@r = rand( .@en_brk1, .@en_brk2 );
@@ -580,8 +580,8 @@ verus04,71,106,5	script	Mass Charleston#2	4_F_CHARLESTON01,{
 				.@en_brk2 = 310;
 			}
 			else {
-				mes "[Mass Charleston]";
-				mes "An unknown error has occurred.";
+				mes "[매사추세츠주 찰스턴]";
+				mes "알 수 없는 오류가 발생했습니다.";
 				close3;
 			}
 			.@r = rand( .@en_brk1, .@en_brk2 );
@@ -634,8 +634,8 @@ verus04,71,106,5	script	Mass Charleston#2	4_F_CHARLESTON01,{
 				.@en_brk2 = 310;
 			}
 			else {
-				mes "[Mass Charleston]";
-				mes "An unknown error has occurred.";
+				mes "[매사추세츠주 찰스턴]";
+				mes "알 수 없는 오류가 발생했습니다.";
 				close3;
 			}
 			.@r = rand( .@en_brk1, .@en_brk2 );
@@ -694,8 +694,8 @@ verus04,71,106,5	script	Mass Charleston#2	4_F_CHARLESTON01,{
 				.@en_brk2 = 111;
 			}
 			else {
-				mes "[Mass Charleston]";
-				mes "An unknown error has occurred.";
+				mes "[매사추세츠주 찰스턴]";
+				mes "알 수 없는 오류가 발생했습니다.";
 				close3;
 			}
 			.@r = rand( .@en_brk1, .@en_brk2 );
@@ -714,13 +714,13 @@ verus04,71,106,5	script	Mass Charleston#2	4_F_CHARLESTON01,{
 			else .@en_name = 0;
 			break;
 		default:
-			mes "[Mass Charleston]";
-			mes "An unknown error has occurred.";
+			mes "[매사추세츠주 찰스턴]";
+			mes "알 수 없는 오류가 발생했습니다.";
 			close3;
 		}
 		if (Zeny < 100000 || countitem(6752) < 1) {
-			mes "[Mass Charleston]";
-			mes "Things needed for commodity upgrades seem inadequate!";
+			mes "[매사추세츠주 찰스턴]";
+			mes "상품 업그레이드에 필요한 것들이 부족한 것 같습니다!";
 			close3;
 		}
 
@@ -728,8 +728,8 @@ verus04,71,106,5	script	Mass Charleston#2	4_F_CHARLESTON01,{
 		if (callfunc("F_IsEquipIDHack", .@part, .@item_id) ||
 				callfunc("F_IsEquipCardHack", .@part, .@card_saved[0], .@card_saved[1], .@card_saved[2], .@card_saved[3]) ||
 				callfunc("F_IsEquipRefineHack", .@part, .@refine)) {
-			mes "[Mass Charleston]";
-			mes "An unknown error has occurred.";
+			mes "[매사추세츠주 찰스턴]";
+			mes "알 수 없는 오류가 발생했습니다.";
 			close3;
 		}
 
@@ -742,21 +742,21 @@ verus04,71,106,5	script	Mass Charleston#2	4_F_CHARLESTON01,{
 		case 0:
 			cutin "dalle02.bmp",2;
 			specialeffect2 EF_SHIELDCHARGE;
-			mes "[Mass Charleston]";
-			mes "Since the balance of power does not match, the given existing ability has been destroyed. It is unfortunate but please try again next time.";// unknown text
+			mes "[매사추세츠주 찰스턴]";
+			mes "힘의 균형이 맞지 않아 기존에 부여된 능력이 파괴되었습니다. 안타깝지만 다음번에 다시 시도해 주시기 바랍니다.";// unknown text
 			getitem2 .@item_id,1,1,.@refine,0, .@card[0], .@card[1], .@card[2], .@card[3];
 			close3;
 		case 9:
 			cutin "dalle04.bmp",2;
 			specialeffect2 EF_SUI_EXPLOSION;
-			mes "[Mass Charleston]";
-			mes "This!";
-			mes "I'm sorry but the equipment has been destroyed.";// unknown text
+			mes "[매사추세츠주 찰스턴]";
+			mes "이것!";
+			mes "죄송하지만 장비가 파손되었습니다.";// unknown text
 			close3;
 		default:
 			specialeffect2 EF_REPAIRWEAPON;
-			mes "[Mass Charleston]";
-			mes "^990000Socket" + .@slot + "^000000 will be Upgrade.";
+			mes "[매사추세츠주 찰스턴]";
+			mes "^990000소켓" + .@slot + "^000000은 업그레이드입니다.";
 			getitem2 .@item_id,1,1,.@refine,0, .@card[0], .@card[1], .@card[2], .@card[3];
 			close3;
 		}
@@ -767,16 +767,16 @@ verus04,71,106,5	script	Mass Charleston#2	4_F_CHARLESTON01,{
 		if (getiteminfo(.@card[2], ITEMINFO_SUBTYPE) == CARD_ENCHANT) .@card[2] = 0;
 		if (getiteminfo(.@card[3], ITEMINFO_SUBTYPE) == CARD_ENCHANT) .@card[3] = 0;
 		specialeffect2 EF_REPAIRWEAPON;
-		mes "[Mass Charleston]";
-		mes "Reset the product's abilities.";
+		mes "[매사추세츠주 찰스턴]";
+		mes "제품의 기능을 초기화합니다.";
 		delitem 6752,1;	// Charleston_Parts
 		Zeny -= 100000;
 		delequip .@part;
 		getitem2 .@item_id,1,1,.@refine,0, .@card[0], .@card[1], .@card[2], .@card[3];
 		close3;
 	dfault:
-		mes "[Mass Charleston]";
-		mes "An unknown error has occurred.";
+		mes "[매사추세츠주 찰스턴]";
+		mes "알 수 없는 오류가 발생했습니다.";
 		close3;
 	}
 	end;
@@ -784,221 +784,221 @@ verus04,71,106,5	script	Mass Charleston#2	4_F_CHARLESTON01,{
 
 verus04,63,112,4	script	Mass Charleston#3	4_F_CHARLESTON01,{
 	if (!checkweight(1201,1) || (MaxWeight - Weight) < 1000) {
-		mes "^ff0000You have carried too many items, please reduce it and come back later.^000000";
+		mes "소지품을 너무 많이 가져가셨습니다. 소지품을 줄이고 나중에 다시 오세요.";
 		close;
 	}
 	cutin "dalle03.bmp",2;
-	mes "[Mass Charleston]";
-	mes "Eh, do I have a customer? Activating Salesman mode...";
+	mes "[매사추세츠주 찰스턴]";
+	mes "어, 손님이 있나? 영업사원 모드 발동...";
 	next;
 	cutin "dalle01.bmp",2;
-	mes "[Mass Charleston]";
-	mes "Charleston Factory's best-selling items: ^FF0000Upgrade Part Plate^000000 and ^FF0000Supplement Part Str^000000 now on sale!";
+	mes "[매사추세츠주 찰스턴]";
+	mes "찰스턴 팩토리의 베스트셀러 제품인 ^FF0000업그레이드 부품 플레이트^000000과 ^FF0000보충 부품 스트링^000000이 지금 할인 판매 중입니다!";
 	next;
-	mes "[Mass Charleston]";
-	mes "For only ^FF00003,999,999^000000 zeny! Get yourself the ultra-performance action gears!";
+	mes "[매사추세츠주 찰스턴]";
+	mes "단돈 ^FF00003,999,999^000000 제니! 최고의 성능을 자랑하는 액션 장비를 손에 넣으세요!";
 	next;
-	mes "[Mass Charleston]";
-	mes "Also available is the ^FF0000Pilebuncker^000000 ^FF0000Upgrade^000000 service!";
+	mes "[매사추세츠주 찰스턴]";
+	mes "또한 ^FF0000Pilebuncker^000000 ^FF0000Upgrade^000000 서비스도 이용 가능합니다!";
 	next;
-	switch( select( "Talk.", "Exchange Upgrade Parts.", "Exchange Supplementary devices.", "Upgrade Pilebuncker." ) ) {
+	switch( select( "Talk.", "부품 교체 업그레이드.", "보조 장치를 교환하세요.", "파일벙커를 업그레이드하세요." ) ) {
 	case 1:
 		if (isbegin_quest(13186) == 0) {
-			mes "[Mass Charleston]";
-			mes "The Charleston Factory shut down, but its technology and products remain with us.";
+			mes "[매사추세츠주 찰스턴]";
+			mes "찰스턴 공장은 문을 닫았지만, 그 기술과 제품은 여전히 우리 곁에 남아 있습니다.";
 			next;
-			mes "[Mass Charleston]";
-			mes "Oh, haven't you heard the news? Oops, my bad. Please forget I said that.";
+			mes "[매사추세츠주 찰스턴]";
+			mes "아, 소식 못 들으셨어요? 앗, 죄송해요. 제가 방금 한 말은 잊어주세요.";
 			close3;
 		}
 		cutin "dalle03.bmp",2;
-		mes "[Mass Charleston]";
-		mes "I'm a mass version Charleston. I wasn't even given a serial number. Who knows how many copies of me were made? It could be a hundred, maybe even a thousand.";
+		mes "[매사추세츠주 찰스턴]";
+		mes "저는 대량 생산된 찰스턴 동상이에요. 일련번호조차 없었죠. 저를 복제한 동상이 몇 개나 만들어졌는지 누가 알겠어요? 백 개일 수도 있고, 천 개일 수도 있죠.";
 		next;
-		mes "[Mass Charleston]";
-		mes "The original Charleston is standing over there, but...";
+		mes "[매사추세츠주 찰스턴]";
+		mes "오리지널 찰스턴 동상은 저기에 있지만...";
 		next;
-		mes "[Mass Charleston]";
-		mes "By the time Charlestons 1 and 2 escaped the factory, they're severely damaged. The battle that took place that day was incredible.";
+		mes "[매사추세츠주 찰스턴]";
+		mes "찰스턴 1호와 2호는 공장을 탈출할 때쯤 심하게 손상된 상태였습니다. 그날 벌어진 전투는 정말 엄청났습니다.";
 		next;
-		mes "[Mass Charleston]";
-		mes "I can still remember Charlestons 1 and 2 destroying Dr. Ve's numerous creatures like it was yesterday.";
+		mes "[매사추세츠주 찰스턴]";
+		mes "찰스턴 1호와 2호가 닥터 베의 수많은 괴물들을 파괴했던 일이 마치 어제 일처럼 생생하게 기억납니다.";
 		next;
-		mes "[Mass Charleston]";
-		mes "They also destroyed the mass version Charlestons modified by Dr. Ve to his bidding.";
+		mes "[매사추세츠주 찰스턴]";
+		mes "그들은 또한 베 박사가 자신의 지시에 따라 개조한 대량 생산 버전의 찰스턴 댄스도 파괴했습니다.";
 		next;
-		mes "[Mass Charleston]";
-		mes "Of course there are others--like us here working on product upgrades--that were lucky enough to escape Dr. Ve's clutches and meet Charleston 1, who saved us all.";
+		mes "[매사추세츠주 찰스턴]";
+		mes "물론 우리처럼 제품 업그레이드 작업을 하는 사람들은 운 좋게도 베 박사의 손아귀에서 벗어나 찰스턴 1호를 만나 우리 모두를 구해줬습니다.";
 		next;
-		mes "[Mass Charleston]";
-		mes "After escaping with the modified Charleston 3, we came here.";
+		mes "[매사추세츠주 찰스턴]";
+		mes "개조된 찰스턴 3호를 타고 탈출한 후, 우리는 이곳에 왔습니다.";
 		next;
-		mes "[Mass Charleston]";
-		mes "Just so you know, this place was already in shambles when we arrived. We had nothing to do with its destruction. Perhaps...";
+		mes "[매사추세츠주 찰스턴]";
+		mes "참고로 말씀드리자면, 저희가 도착했을 때 이곳은 이미 엉망진창이었어요. 저희는 이곳의 파괴와는 아무런 관련이 없습니다. 어쩌면...";
 		next;
-		mes "[Mass Charleston]";
-		mes "Sorry I sidetracked. Anyway, this is the problem.";
+		mes "[매사추세츠주 찰스턴]";
+		mes "이야기가 옆길로 샜네요. 죄송합니다. 어쨌든, 문제는 이렇습니다.";
 		next;
-		mes "[Mass Charleston]";
-		mes "Charlestons 1 and 2 were destroyed to a point of impairment. They tried to repair each other, to no avail.";
+		mes "[매사추세츠주 찰스턴]";
+		mes "찰스턴 1호와 2호는 심하게 파손되어 제 기능을 하지 못하게 되었습니다. 서로를 수리하려고 시도했지만 소용이 없었습니다.";
 		next;
-		mes "[Mass Charleston]";
-		mes "They realized they're damaged beyond repair. They salvaged however many parts they could, and built one body with one OS.";
+		mes "[매사추세츠주 찰스턴]";
+		mes "그들은 자신들이 복구 불가능할 정도로 손상되었다는 것을 깨달았습니다. 그들은 최대한 많은 부품을 수습하여 하나의 운영체제를 탑재한 본체를 조립했습니다.";
 		next;
-		mes "[Mass Charleston]";
-		mes "And that's the newly built body. They blamed themselves for the destruction of the factory, and wanted to fix it. I'm afraid their data is corrupted or missing important memory.";
+		mes "[매사추세츠주 찰스턴]";
+		mes "저게 새로 지은 본체예요. 그들은 공장 파괴에 대해 자책했고, 그걸 고치고 싶어 했죠. 그런데 데이터가 손상됐거나 중요한 메모리가 빠져 있는 것 같아요.";
 		next;
-		mes "[Mass Charleston]";
-		mes "The characteristics of the data show more traits of Charleston 2, while the access method of the OS is more similar to that of Charleston 1. Charleston 1 always was the more sentimental one.";
+		mes "[매사추세츠주 찰스턴]";
+		mes "데이터의 특성은 찰스턴 2의 특징을 더 많이 보여주지만, 운영체제의 접근 방식은 찰스턴 1과 더 유사합니다. 찰스턴 1은 언제나 더 감성적인 면이 강했습니다.";
 		next;
-		mes "[Mass Charleston]";
-		mes "I don't know if the new Charleston is Charleston 1 or 2. I can't even tell what it misses or remembers the most.";
+		mes "[매사추세츠주 찰스턴]";
+		mes "새로운 찰스턴이 찰스턴 1인지 2인지 모르겠어요. 무엇이 가장 아쉽고 무엇이 가장 기억에 남는지도 모르겠네요.";
 		next;
-		mes "[Mass Charleston]";
-		mes "She keeps blaming herself for losing her data, for letting down her friends. Every time we try to console her,";
+		mes "[매사추세츠주 찰스턴]";
+		mes "그녀는 데이터 손실과 친구들을 실망시킨 것에 대해 계속해서 자신을 탓합니다. 우리가 그녀를 위로하려고 할 때마다,";
 		next;
-		mes "[Mass Charleston]";
-		mes "she would say she doesn't have the heart or brain to remember or know. I wonder if she knows";
+		mes "[매사추세츠주 찰스턴]";
+		mes "그녀는 기억하거나 알 만큼 마음도 머리도 없다고 말하곤 했어요. 그녀가 정말 알고 있을지 궁금하네요.";
 		next;
-		mes "[Mass Charleston]";
-		mes "that the memories of Humans fade and get distorted or glorified with time.";
+		mes "[매사추세츠주 찰스턴]";
+		mes "인간의 기억은 시간이 흐르면서 희미해지고 왜곡되거나 미화된다는 것이다.";
 		next;
-		mes "[Mass Charleston]";
-		mes "And that Humans learn from their mistakes and failures. I read that from those paper memory devices called ^FF0000books^000000 in the factory.";
+		mes "[매사추세츠주 찰스턴]";
+		mes "그리고 인간은 실수와 실패로부터 배운다는 거죠. 공장에서 ^FF0000book^000000이라고 불리는 종이 기록 장치에서 읽은 내용이에요.";
 		next;
-		mes "[Mass Charleston]";
-		mes "There was a small study in the ^FF0000south wing of the factory^000000. Later, it was turned into a robot development room.";
+		mes "[매사추세츠주 찰스턴]";
+		mes "공장 남쪽 날개 부분에 작은 서재가 하나 있었는데, 나중에 로봇 개발실로 바뀌었습니다.";
 		next;
-		mes "[Mass Charleston]";
-		mes "Maybe the Charleston is more like the Humans than the rest of us. I just hope she doesn't have to be so sad.";
+		mes "[매사추세츠주 찰스턴]";
+		mes "어쩌면 찰스턴은 우리보다 인간에 더 가까운 걸지도 몰라. 그녀가 그렇게 슬퍼하지 않아도 되기를 바랄 뿐이야.";
 		next;
-		mes "[Mass Charleston]";
-		mes "I feel so congested in the OS that I ranted. Perhaps I need to defragment my memory.";
+		mes "[매사추세츠주 찰스턴]";
+		mes "운영체제가 너무 답답해서 횡설수설했네요. 메모리 조각 모음이 필요한가 봐요.";
 		close3;
 	case 2:
-		mes "[Mass Charleston]";
-		mes "Upgrade Part Plate";
-		mes "Class: Armor, indestructible.";
-		mes "-10% damage from Small and Medium monsters.";
-		mes "-10% damage from Large monsters when Upgraded to +7.";
-		mes "Additional -5% damage from Small and Medium monsters when Upgraded to +9.";
+		mes "[매사추세츠주 찰스턴]";
+		mes "업그레이드 부품 플레이트";
+		mes "분류: 갑옷, 파괴 불가능.";
+		mes "소형 및 중형 몬스터로부터 받는 피해가 10% 감소합니다.";
+		mes "+7까지 강화 시 대형 몬스터에게 받는 피해가 10% 감소합니다.";
+		mes "+9까지 강화 시 소형 및 중형 몬스터에게 받는 피해가 추가로 5% 감소합니다.";
 		next;
-		mes "[Mass Charleston]";
-		mes "Weight: 300";
-		mes "Required Level: 100";
+		mes "[매사추세츠주 찰스턴]";
+		mes "무게: 300";
+		mes "필수 레벨: 100";
 		callsub S_Buy, 15111;	// Upgrade_Part_Plate
 	case 3:
-		mes "[Mass Charleston]";
-		mes "Supplement Part Str";
-		mes "ATK+ 5%!";
-		mes "Additional ATK +1% every 4 Upgrade levels.";
-		mes "Use with Vitality/Agility/Dexterity supplementary devices for best results.";
+		mes "[매사추세츠주 찰스턴]";
+		mes "보충 파트 Str";
+		mes "공격력 5% 증가!";
+		mes "업그레이드 레벨 4마다 공격력이 1%씩 추가됩니다.";
+		mes "최상의 결과를 얻으려면 활력/민첩성/손재주 향상 보조 기기와 함께 사용하십시오.";
 		next;
-		mes "[Mass Charleston]";
-		mes "Weight: 200";
-		mes "Required Level: 100";
+		mes "[매사추세츠주 찰스턴]";
+		mes "무게: 200";
+		mes "필수 레벨: 100";
 		callsub S_Buy, 15110;	// Supplement_Part_Str
 	case 4:
-		mes "[Mass Charleston]";
-		mes "The last masterpiece of the Charleston Factory! You'll never find such fine Equipment anywhere else.";
+		mes "[매사추세츠주 찰스턴]";
+		mes "찰스턴 공장의 마지막 걸작! 이처럼 훌륭한 장비는 어디에서도 찾아볼 수 없을 겁니다.";
 		next;
-		mes "[Mass Charleston]";
-		mes "To Upgrade Pilebuncker,";
-		mes "^FF00001 Pilebuncker^000000,";
-		mes "^FF0000300 Dented Iron Plates^000000,";
-		mes "and ^FF000015 Broken Engines^000000 are required.";
+		mes "[매사추세츠주 찰스턴]";
+		mes "Pilebuncker를 업그레이드하려면,";
+		mes "^FF00001 파일벙커^000000,";
+		mes "^FF0000300 찌그러진 철판^000000,";
+		mes "그리고 ^FF000015 Broken Engines^000000이 필요합니다.";
 		next;
-		switch( select( "Pilebuncker S", "Pilebuncker P", "Pilebuncker T" ) ) {
+		switch( select( "파일벙커 S", "파일벙커 P", "파일벙커 T" ) ) {
 		case 1:
-			mes "[Mass Charleston]";
-			mes "Pilebuncker S";
-			mes "Class: Blunt Weapon";
-			mes "ATK: 400";
-			mes "Attack Speed bonus every 2 Upgrade levels.";
+			mes "[매사추세츠주 찰스턴]";
+			mes "파일벙커 S";
+			mes "분류: 둔기";
+			mes "공격력: 400";
+			mes "공격 속도 보너스는 업그레이드 레벨 2마다 추가됩니다.";
 			next;
-			mes "[Mass Charleston]";
-			mes "Weight: 300";
-			mes "Weapon Level: 4";
-			mes "Required Level: 130";
-			mes "Mechanic only. Comes with 1 Card socket.";
+			mes "[매사추세츠주 찰스턴]";
+			mes "무게: 300";
+			mes "무기 레벨: 4";
+			mes "필수 레벨: 130";
+			mes "정비공 전용. 카드 소켓 1개 포함.";
 			.@item_id = 16030;	// Pilebuncker_S
 			break;
 		case 2:
-			mes "[Mass Charleston]";
-			mes "Pilebuncker P";
-			mes "Class: Blunt Weapon";
-			mes "ATK: 450";
-			mes "ATK +5 every Upgrade level.";
+			mes "[매사추세츠주 찰스턴]";
+			mes "파일벙커 P";
+			mes "분류: 둔기";
+			mes "공격력: 450";
+			mes "업그레이드 레벨마다 공격력 +5.";
 			next;
-			mes "[Mass Charleston]";
-			mes "Weight: 400";
-			mes "Weapon Level: 4";
-			mes "Required Level: 130";
-			mes "Mechanic only.";
+			mes "[매사추세츠주 찰스턴]";
+			mes "무게: 400";
+			mes "무기 레벨: 4";
+			mes "필수 레벨: 130";
+			mes "정비공만 가능.";
 			.@item_id = 16031;	// Pilebuncker_P
 			break;
 		case 3:
-			mes "[Mass Charleston]";
-			mes "Pilebuncker T";
-			mes "Class: Blunt Weapon";
-			mes "ATK: 400";
-			mes "SP cost -1% every Upgrade level.";
+			mes "[매사추세츠주 찰스턴]";
+			mes "파일벙커 T";
+			mes "분류: 둔기";
+			mes "공격력: 400";
+			mes "SP 비용이 업그레이드 레벨마다 1%씩 감소합니다.";
 			next;
-			mes "[Mass Charleston]";
-			mes "Weight: 350";
-			mes "Weapon Level: 4";
-			mes "Required Level: 130";
-			mes "Mechanic only. Comes with 1 Card socket.";
+			mes "[매사추세츠주 찰스턴]";
+			mes "무게: 350";
+			mes "무기 레벨: 4";
+			mes "필수 레벨: 130";
+			mes "정비공 전용. 카드 소켓 1개 포함.";
 			.@item_id = 16032;	// Pilebuncker_T
 			break;
 		}
 		break;
 	}
 	next;
-	mes "[Mass Charleston]";
-	mes "Do you really want to Upgrade ^FF0000" + getitemname(.@item_id) + "^000000?";
+	mes "[매사추세츠주 찰스턴]";
+	mes "정말로 ^FF0000을 업그레이드하시겠습니까?" + getitemname(.@item_id) + "^000000?";
 	next;
-	if (select( "I suggest you reconsider.", "Buy." ) == 1) {
-		mes "[Mass Charleston]";
-		mes "It's a good buy, but you still need to make your decision carefully.";
+	if (select( "다시 생각해 보시길 권합니다.", "Buy." ) == 1) {
+		mes "[매사추세츠주 찰스턴]";
+		mes "괜찮은 제품이지만, 신중하게 결정해야 합니다.";
 		close;
 	}
 	if (countitem(6751) > 299 && countitem(6750) > 14 && countitem(1549) > 0) {
-		mes "[Mass Charleston]";
-		mes "You won't regret it! She's a Charleston factory!";
+		mes "[매사추세츠주 찰스턴]";
+		mes "후회하지 않으실 거예요! 찰스턴 공장이거든요!";
 		delitem 6751,300;	// Distorted_Iron_Plate
 		delitem 6750,15;	// Wrong_Engine
 		delitem 1549,1;		// Pilebuncker
 		getitem .@item_id,1;
 		close3;
 	}
-	mes "[Mass Charleston]";
-	mes "Not enough materials for the Upgrade.";
+	mes "[매사추세츠주 찰스턴]";
+	mes "업그레이드에 필요한 재료가 부족합니다.";
 	close3;
 
 S_Buy:
 	.@item_id = getarg(0);
-	mes "^FF0000Mechanic only^000000";
-	mes "^FF0000Price: 3,999,999 zeny^000000";
+	mes "^FF0000정비사 전용^000000";
+	mes "^FF0000가격: 3,999,999제니^000000";
 	next;
-	mes "[Mass Charleston]";
-	mes "Do you really want to buy ^FF0000" + getitemname(.@item_id) + "^000000?";
+	mes "[매사추세츠주 찰스턴]";
+	mes "^FF0000을 정말로 구매하고 싶으신가요?" + getitemname(.@item_id) + "^000000?";
 	next;
-	if (select( "I suggest you reconsider.", "Buy." ) == 1) {
-		mes "[Mass Charleston]";
-		mes "It's a good buy, but you still need to make your decision carefully.";
+	if (select( "다시 생각해 보시길 권합니다.", "Buy." ) == 1) {
+		mes "[매사추세츠주 찰스턴]";
+		mes "괜찮은 제품이지만, 신중하게 결정해야 합니다.";
 		close3;
 	}
 	//if (Zeny >= 3999998) {// typo?
 	if (Zeny >= 3999999) {
-		mes "[Mass Charleston]";
-		mes "You won't regret it! She's a Charleston factory!";
+		mes "[매사추세츠주 찰스턴]";
+		mes "후회하지 않으실 거예요! 찰스턴 공장이거든요!";
 		Zeny -= 3999999;
 		getitem .@item_id,1;
 		close3;
 	}
-	mes "[Mass Charleston]";
-	mes "Good commodity value is not uncommon, please confirm your pocket depth!";
+	mes "[매사추세츠주 찰스턴]";
+	mes "좋은 가격의 상품을 찾는 것은 드문 일이 아닙니다. 예산을 잘 확인하시기 바랍니다!";
 	close3;
 }
 
@@ -1007,19 +1007,19 @@ S_Buy:
 verus04,161,222,4	script	Grandpa picking up scrap iron	1_M_HOF,{
 	switch( isbegin_quest(12368) ) {
 	case 0:
-		mes "[Grandpa picking up scrap iron]";
-		mes "There are two pieces of scrap iron I see the value of not Fibonacci to pick up and sell to the recycling bin, the result is not willing to deal with me.";
+		mes "[할아버지가 고철을 줍고 계신다]";
+		mes "내가 가치를 알아볼 수 있는 고철 두 조각이 있는데, 피보나치 수열과는 상관없이 주워서 재활용 쓰레기통에 팔려고 했지만, 거래하려는 사람이 없었다.";
 		next;
-		mes "[Grandpa picking up scrap iron]";
-		mes "Because it's not iron? Each resource recycling are not willing to buy, is nerve-racking!";
+		mes "[할아버지가 고철을 줍고 계신다]";
+		mes "철이 아니라서요? 재활용 자원 업체들이 구매를 꺼리는 건 정말 불안하네요!";
 		close;
 	case 1:
-		mes "[Grandpa picking up scrap iron]";
-		mes "Hey! Did you just talk to that piece of junk? Or am I losing my sight?";
+		mes "[할아버지가 고철을 줍고 계신다]";
+		mes "어이! 방금 저 고물상한테 말을 건 거야? 아니면 내가 눈이 멀어가는 건가?";
 		close;
 	case 2:
-		mes "[Grandpa picking up scrap iron]";
-		mes "Oh, my God! That can't be sold to the Recycle Bin!";
+		mes "[할아버지가 고철을 줍고 계신다]";
+		mes "맙소사! 저건 재활용 쓰레기통에 버릴 수 없어!";
 		close;
 	}
 }
@@ -1027,45 +1027,45 @@ verus04,161,222,4	script	Grandpa picking up scrap iron	1_M_HOF,{
 verus04,163,219,4	script	PLUTO_09#pa0829	4_SCR_AT_ROBOTS,{
 	disable_items;
 	if (checkweight(1201,1) == 0 || (MaxWeight - Weight) < 10000) {
-		mes "^ff0000You have carried too many items, please reduce it and come back later.^000000";
+		mes "소지품을 너무 많이 가져가셨습니다. 소지품을 줄이고 나중에 다시 오세요.";
 		close;
 	}
 	if (isbegin_quest(12368) < 2) {
-		mes "^0000ffAlthough the LCD still dim, but does not seem to work anymore.^000000";
+		mes "LCD 화면은 여전히 어둡지만 더 이상 작동하지 않는 것 같습니다.";
 		close;
 	}
-	mes "^0000ffWhen the strange dinosaur pattern appears, go to the introduction screen.^000000";
+	mes "이상한 공룡 무늬가 나타나면 소개 화면으로 이동하세요.";
 	next;
-	mes "[PLUTO_09]";
+	mes "[플루토_09]";
 	mes "" + strcharinfo(0) + ",";
-	mes "Hello. How can I help you?";
+	mes "안녕하세요. 어떻게 도와드릴까요?";
 	next;
-	switch( select( "Note", "Old Fuel and Huge Metal Scrap to exchange for gear.", "Design drawings for the production of Enchantment" ) ) {
+	switch( select( "Note", "폐연료와 커다란 고철을 장비와 교환하세요.", "인챈트먼트 제작을 위한 디자인 도면" ) ) {
 	case 1:
-		mes "^0000ffDinosaur forward screen appears and a description of the cute girl voice.^000000";
+		mes "^0000ff공룡 전면 화면이 나타나고 귀여운 소녀 목소리에 대한 설명이 나옵니다.^000000";
 		next;
-		mes "[PLUTO_09]";
-		mes "This is 100 years since the genesis of the new PLUTO_09.";
+		mes "[플루토_09]";
+		mes "새로운 PLUTO_09가 탄생한 지 100년이 되는 해입니다.";
 		next;
-		mes "[PLUTO_09]";
-		mes "Bring Huge Metal Scrap and Old Fuel can help you make useful to you Equipment Oh~";
+		mes "[플루토_09]";
+		mes "커다란 고철과 폐연료를 가져오시면 장비를 유용하게 만들 수 있습니다!";
 		next;
-		mes "[PLUTO_09]";
-		mes "Do you want to make enchantment equipment? You bring the tank! I can make enchant with a design for you. Oh, good luck.";
+		mes "[플루토_09]";
+		mes "마법 부여 장비를 만들고 싶으세요? 탱크는 직접 가져오세요! 제가 디자인을 봐서 마법을 부여해 드릴게요. 행운을 빌어요.";
 		next;
-		mes "[PLUTO_09]";
-		mes "This is the Tyrannosaurus rex that appeared in the dinosaur fairy tale, very beautiful... (Continue to appear boring dinosaur story)";
+		mes "[플루토_09]";
+		mes "이것은 공룡 동화에 나오는 티라노사우루스 렉스인데, 정말 아름답네요... (지루한 공룡 이야기가 계속 나오네요)";
 		next;
-		mes "^0000ffIn this introduction to the screen, presumed that the psychological state of the robot maker is extremely unstable.^000000";
+		mes "이 화면 소개에서는 로봇 제작자의 심리 상태가 극도로 불안정하다고 가정합니다.";
 		close;
 	case 2:
 		setarray .@id[0],20773,15128; // Excelion_Wing, Excelion_Suit
-		mes "[PLUTO_09]";
-		mes "Production equipment needs ^0000ff10 Huge Metal Scrap and 5 Old Fuel^000000.";
+		mes "[플루토_09]";
+		mes "생산 설비에는 ^0000ff10개의 대형 금속 스크랩과 5개의 폐연료^000000이 필요합니다.";
 		next;
 		switch( select( "Quit.", "Making the " + getitemname(.@id[0]), "Making the " + getitemname(.@id[1]) ) ) {
 		case 1:
-			mes "^0000ffDinosaurs gazed at the picture here after staying a bit closed.^000000";
+			mes "^0000ff공룡들은 잠시 눈을 감고 있다가 여기 있는 그림을 응시했습니다.^000000";
 			close;
 		case 2:
 			.@item_id = .@id[0];
@@ -1075,30 +1075,30 @@ verus04,163,219,4	script	PLUTO_09#pa0829	4_SCR_AT_ROBOTS,{
 			break;
 		}
 		if (countitem(6961) < 10 || countitem(6962) < 5) {
-			mes "[PLUTO_09]";
-			mes "I have already talked about the production equipment needs ^0000ff10 " + getitemname(6961) + " and 5 " + getitemname(6962) + "^000000, you don't have enough.";
+			mes "[플루토_09]";
+			mes " 저는 이미 생산 설비 필요성에 대해 이야기했습니다." + getitemname(6961) + " 그리고 5" + getitemname(6962) + "^000000, 당신은 충분하지 않습니다.";
 			close;
 		}
 		specialeffect EF_SPELLBREAKER;
 		delitem 6962,5;// OldTank
 		delitem 6961,10;// LargeScrap
 		getitem .@item_id,1;
-		mes "[PLUTO_09]";
-		mes "Your equipment is ready. Let's see if it fits.";
+		mes "[플루토_09]";
+		mes "장비가 준비됐습니다. 잘 맞는지 확인해 봅시다.";
 		close;
 	case 3:
 		while(1) {
 			if (countitem(6962) < 5)
-				.@string$ = "^aaaaaaInsufficient fuel for making design drawings.^000000";
+				.@string$ = "^aaaaaa설계 도면을 제작하기에 연료가 부족합니다.^000000";
 			else
-				.@string$ = "Production design (^ff0000 success rate 30%^000000)";
-			mes "[PLUTO_09]";
-			mes "If you give me 5 " + getitemname(6962) + ", I can do the production of design drawings look!";
+				.@string$ = "생산 디자인 (성공률 30%^000000)";
+			mes "[플루토_09]";
+			mes " 5를 주시면" + getitemname(6962) + "저는 디자인 도면 제작을 할 수 있습니다!";
 			mes "----------";
-			mes "^0000ffLittle dinosaur running around on the screen.^000000";
+			mes "화면에서 작은 공룡이 뛰어다니고 있어요.";
 			next;
 			if (select( "Quit.", .@string$ ) == 1) {
-				mes "^0000ffIt's over after showing that the dinosaurs are stuffing themselves.^000000";
+				mes "공룡들이 게걸스럽게 먹는 장면을 보여준 후 이야기는 끝납니다.";
 				close;
 			}
 			.@fail = false;
@@ -1140,22 +1140,22 @@ verus04,163,219,4	script	PLUTO_09#pa0829	4_SCR_AT_ROBOTS,{
 					.@en_name = 7054;	// Brigan
 			}
 			if (countitem(6962) < 5)
-				mes "^0000ffThe picture shows the dinosaur silently looking at the empty bowl, it may be an error message when the material is insufficient!^000000";
+				mes "이 그림은 공룡이 빈 그릇을 말없이 바라보는 모습을 보여줍니다. 재료가 부족할 때 나타나는 오류 메시지일 수 있습니다!";
 			else {
 				specialeffect EF_SPELLBREAKER;
 				delitem 6962,5;// OldTank
 				getitem .@en_name,1;
-				mes "[PLUTO_09]";
+				mes "[플루토_09]";
 				if (.@fail)
-					mes "What a pity, the design failed.";
+					mes "정말 안타깝네요, 디자인이 실패했어요.";
 				else
-					mes "Great, the design was made.";
+					mes "좋아요, 디자인이 완성됐네요.";
 			}
 			next;
 		}
 		end;
 	default:
-		mes "^0000ffA screen showing howling that a dinosaur may not understand the command.^000000";
+		mes "공룡이 명령을 이해하지 못하는 듯 울부짖는 화면이 나타납니다.";
 		close;
 	}
 	end;
@@ -1164,63 +1164,63 @@ verus04,163,219,4	script	PLUTO_09#pa0829	4_SCR_AT_ROBOTS,{
 verus04,165,217,4	script	MARS_01#pa0829	4_SCR_MT_ROBOTS,{
 	disable_items;
 	if (checkweight(1201,1) == 0 || (MaxWeight - Weight) < 10000) {
-		mes "^ff0000You have carried too many items, please reduce it and come back later.^000000";
+		mes "소지품을 너무 많이 가져가셨습니다. 소지품을 줄이고 나중에 다시 오세요.";
 		close;
 	}
 	switch( isbegin_quest(12368) ) {
 	case 0:
-		mes "Blurred LCD screen may be frightened or happy and intense shaking, perhaps due to lack of power and can not complete the presentation.";
+		mes "LCD 화면이 흐릿해지거나, 놀라거나 기뻐서 심하게 떨리는 현상이 나타날 수 있으며, 이는 전원 부족으로 인해 프레젠테이션을 완료할 수 없기 때문일 수 있습니다.";
 		next;
-		if (select( "Just ignore it.", "Press every button." ) == 1) {
-			mes "It may be a pre-scrap robot that is common everywhere and doesn't require much attention.";
+		if (select( "그냥 무시하세요.", "모든 버튼을 누르세요." ) == 1) {
+			mes "그것은 아마도 어디에서나 흔히 볼 수 있고 별다른 관리가 필요 없는, 폐기 직전의 로봇일지도 모릅니다.";
 			close;
 		}
 		mes "[?????]";
-		mes "Hello! I'm MARS_01, an exploration robot. Currently, I have entered hibernation mode to save power. The related functions are set as follows.";
+		mes "안녕하세요! 저는 탐사 로봇 MARS_01입니다. 현재 전력 절약을 위해 절전 모드에 들어갔습니다. 관련 기능은 다음과 같이 설정되어 있습니다.";
 		next;
-		if (select( "Interrupt the machine", "Supply of fuel" ) == 1) {
-			mes "The robot re-enters hibernation mode after a faint sound.";
+		if (select( "기계를 중단하세요", "연료 공급" ) == 1) {
+			mes "로봇은 희미한 소리가 들리자 다시 동면 모드로 들어갑니다.";
 			close;
 		}
 		mes "[MARS_01]";
-		mes "We are super power robot, as long as the old oil 1 will let me and the companion PLUTO has more than 90% of the power.";
+		mes "우리는 초강력 로봇입니다. 오래된 오일 1만 있으면 나와 동료 플루토는 90% 이상의 동력을 유지할 수 있습니다.";
 		next;
 		mes "[MARS_01]";
-		mes "If you find Old Fuel, please insert the fuel into the mouth of the bottom of the screen, so you can lift the hibernation mode.";
+		mes "만약 오래된 연료를 발견하셨다면, 화면 하단의 연료 주입구에 연료를 넣어주세요. 그러면 절전 모드가 해제될 수 있습니다.";
 		setquest 12368;	// Operate the old robot
 		close;
 	case 1:
 		if (countitem(6962) < 1) {
 			mes "[MARS_01]";
-			mes "If you find 1 " + getitemname(6962) + ", please insert the fuel into the mouth of the bottom of the screen, so you can lift the hibernation mode.";
+			mes " 1을 찾으면" + getitemname(6962) + "화면 하단의 연료 주입구에 연료를 넣어주시면 절전 모드를 해제할 수 있습니다.";
 			close;
 		}
-		mes "Maybe we ran out of power when we went looking for fuel. should we put in the fuel?";
+		mes "연료를 찾으러 갔을 때 전력이 다 떨어진 것 같아요. 연료를 넣어야 할까요?";
 		next;
-		if (select( "Quit.", "Put in the fuel" ) == 1) {
-			mes "The old robot may be running out of power and not responding at all.";
+		if (select( "Quit.", "연료를 넣으세요" ) == 1) {
+			mes "오래된 로봇의 배터리가 방전되어 전혀 반응하지 않는 것일 수도 있습니다.";
 			close;
 		}
-		mes "When the fuel is put in, the sound screen opens.";
-		npctalk "Whoa, whoa?! It moves!!!", "Grandpa picking up scrap iron";
+		mes "연료를 넣으면 소음 차단막이 열립니다.";
+		npctalk "어머나, 어머나?! 움직인다!!!", "Grandpa picking up scrap iron";
 		next;
 		mes "[MARS_01]";
-		mes "Start the inspection system and confirm the damage of each part.";
+		mes "점검 시스템을 가동하고 각 부품의 손상 여부를 확인하십시오.";
 		next;
 		mes "[MARS_01]";
-		mes "Power meter 10%, dashboard normal, body skeleton 13%, perform mining operations well.";
+		mes "전력계 10%, 계기판 정상, 본체 골격 13%, 채굴 작업 잘 수행 중.";
 		next;
 		mes "[MARS_01]";
-		mes "Pluto_09 began to inject energy for mining auxiliary robot.";
-		npctalk "Energy response confirmed. It's working.", "PLUTO_09#pa0829";
+		mes "Pluto_09는 채굴 보조 로봇에 에너지를 주입하기 시작했습니다.";
+		npctalk "에너지 반응이 확인되었습니다. 정상적으로 작동합니다.", "PLUTO_09#pa0829";
 		next;
 		mes "[MARS_01]";
-		mes "Thank you for getting me started, I will reset the person who started me to be a manager.";
+		mes "시작을 도와주셔서 감사합니다. 저를 시작하게 해주신 분을 관리자로 재설정하겠습니다.";
 		next;
-		select("Enter a name.");
+		select("이름을 입력하세요.");
 		mes "[MARS_01]";
 		mes "" + strcharinfo(0) + ",";
-		mes "Hello! The fuel has been fully charged.";
+		mes "안녕하세요! 연료가 완전히 충전되었습니다.";
 		delitem 6962,1;// OldTank
 		completequest 12368;
 		close;
@@ -1229,23 +1229,23 @@ verus04,165,217,4	script	MARS_01#pa0829	4_SCR_MT_ROBOTS,{
 	}
 	mes "[MARS_01]";
 	mes "" + strcharinfo(0) + ",";
-	mes "Hello! Can I help you?";
+	mes "안녕하세요! 무엇을 도와드릴까요?";
 	next;
 	switch( select( "Note", "Enhanced " + getitemname(20773), "Enhanced " + getitemname(15128) ) ) {	// Excelion_Wing, Excelion_Suit
 	case 1:
-		mes "^0000ffSoon the instructions again.^000000";
+		mes "곧 다시 안내가 이어집니다.";
 		next;
 		mes "[MARS_01]";
-		mes "While waiting for the new owner, we continue to update to the latest version.";
+		mes "새 주인을 기다리는 동안, 저희는 최신 버전으로 계속 업데이트하고 있습니다.";
 		next;
 		mes "[MARS_01]";
-		mes "If you bring aak Seri Wong propulsion wing, aak Seri Wong jacket equipment and strengthen the design, I will strengthen the equipment according to the design.";
+		mes "만약 아악 세리 웡 추진 날개, 아악 세리 웡 재킷 장비, 그리고 강화 설계를 가져오신다면, 저는 그 설계에 따라 장비를 강화하겠습니다.";
 		next;
 		mes "[MARS_01]";
-		mes "According to the standard design drawings of the operation, the equipment will not be damaged during the process, but the number of maximum upgrade will change depending on the type of equipment.";
+		mes "표준 설계 도면에 따르면 장비는 작동 과정에서 손상되지 않지만, 최대 업그레이드 횟수는 장비 유형에 따라 달라집니다.";
 		next;
 		mes "[MARS_01]";
-		mes "Welcome back again~";
+		mes "다시 오신 것을 환영합니다~";
 		close;
 	case 2:
 		.@part = EQI_GARMENT;
@@ -1288,12 +1288,12 @@ verus04,165,217,4	script	MARS_01#pa0829	4_SCR_MT_ROBOTS,{
 	}
 	mes "[MARS_01]";
 	mes "" + strcharinfo(0) + ",";
-	mes "Choose the enchant you want to use!";
+	mes "사용하고 싶은 마법을 선택하세요!";
 	next;
 	.@s = select("Quit.:" + .@menu$) - 2;
 	if (.@s < 0) {
 		mes "[MARS_01]";
-		mes "So far.";
+		mes "지금까지.";
 		close;
 	}
 	.@s *= 5;
@@ -1307,7 +1307,7 @@ verus04,165,217,4	script	MARS_01#pa0829	4_SCR_MT_ROBOTS,{
 
 	if (countitem(.@item_req) < 1) {
 		mes "[MARS_01]";
-		mes "So far.";
+		mes "지금까지.";
 		close;
 	}
 	if (.@part == EQI_ARMOR)
@@ -1316,14 +1316,14 @@ verus04,165,217,4	script	MARS_01#pa0829	4_SCR_MT_ROBOTS,{
 		.@max_num_enchant = .@list[.@s+3];
 	else {
 		mes "[MARS_01]";
-		mes "Please contact the administrator.";
+		mes "관리자에게 문의해 주세요.";
 		close;
 	}
 
 	// anti-hack
 	if (callfunc("F_IsEquipIDHack", .@part, .@equip_id) || callfunc("F_IsEquipCardHack", .@part, .@card[0], .@card[1], .@card[2], .@card[3]) || callfunc("F_IsEquipRefineHack", .@part, .@equip_refine)) {
 		mes "[MARS_01]";
-		mes "Did you remove your gear?";
+		mes "장비를 벗으셨나요?";
 		close;
 	}
 
@@ -1334,29 +1334,29 @@ verus04,165,217,4	script	MARS_01#pa0829	4_SCR_MT_ROBOTS,{
 
 	if (.@max_num_enchant < 1) {
 		mes "[MARS_01]";
-		mes "The design you choose is incompatible with the equipment.";
+		mes "선택하신 디자인이 장비와 호환되지 않습니다.";
 		close;
 	}
 	if (.@first_slot_only > 0 && .@card[3] != 0) {
 		mes "[MARS_01]";
-		mes "This design is only for the first time to strengthen the use, but the equipment has other performance, please use other design to strengthen it!";
+		mes "이 디자인은 처음 사용 시 안정성을 강화하기 위한 것일 뿐이며, 장비의 성능에는 다른 요소가 있을 수 있으므로 다른 디자인을 사용하여 안정성을 강화하십시오!";
 		close;
 	}
 	if (.@slot_sum >= .@max_num_enchant) {
 		mes "[MARS_01]";
-		mes "The maximum number of enchants is " + .@max_num_enchant + ". The item has reached the upper limit.";
+		mes " 마법 부여의 최대 개수는 다음과 같습니다." + .@max_num_enchant + "해당 품목의 수량이 상한선에 도달했습니다.";
 		close;
 	}
 	if (.@card[1] != 0) {
 		mes "[MARS_01]";
-		mes "The number of equipment has reached the limit.";
+		mes "장비 수가 한도에 도달했습니다.";
 		close;
 	}
 
 	// anti-hack
 	if (callfunc("F_IsEquipIDHack", .@part, .@equip_id) || callfunc("F_IsEquipCardHack", .@part, .@card[0], .@card[1], .@card[2], .@card[3]) || callfunc("F_IsEquipRefineHack", .@part, .@equip_refine)) {
 		mes "[MARS_01]";
-		mes "Please pay special attention if the equipment will be removed.";
+		mes "장비가 철거될 경우 특히 주의해 주시기 바랍니다.";
 		close;
 	}
 
@@ -1366,17 +1366,17 @@ verus04,165,217,4	script	MARS_01#pa0829	4_SCR_MT_ROBOTS,{
 		break;
 	default:
 		mes "[MARS_01]";
-		mes "The product does not have a serial number, does not meet the specifications of the product can not be strengthened.";
+		mes "해당 제품에는 일련번호가 없으며, 제품 사양을 충족하지 못하므로 강화가 불가능합니다.";
 		close;
 	}
 	mes "[MARS_01]^0000ff";
 	mes "Choose " + getequipname(.@part) + " + " + getitemname(.@item_req) + ",";
 	mes "^000000------------------";
-	mes "Your selected design can be upgraded to the equipment limit ^0000ff" + .@max_num_enchant + " the same design, ^000000so far, enhanced ^0000ff" + .@slot_sum + " times^000000, do you want to continue?";
+	mes "선택하신 디자인은 장비 한도 ^0000ff까지 업그레이드할 수 있습니다." + .@max_num_enchant + " 지금까지와 동일한 디자인이 ^000000개 개선되었습니다 ^0000ff" + .@slot_sum + " 000000번, 계속하시겠습니까?";
 	next;
-	if (select( "I'll think about it...", "Go on." ) == 1) {
+	if (select( "생각해 볼게요...", "계속하세요." ) == 1) {
 		mes "[MARS_01]";
-		mes "Come back next time you need me~";
+		mes "다음에 제가 필요하시면 다시 오세요~";
 		close;
 	}
 
@@ -1398,15 +1398,15 @@ verus04,165,217,4	script	MARS_01#pa0829	4_SCR_MT_ROBOTS,{
 	}
 	else {
 		mes "[MARS_01]";
-		mes "The equipment has reached the upper limit of strengthening Hello!";
+		mes "장비가 강화 한계에 도달했습니다! 안녕하세요!";
 		close;
 	}
 	specialeffect2 EF_REPAIRWEAPON;
 	mes "[MARS_01]";
 	if (.@enchant_count < 5)
-		mes "The first equipment has been upgraded ^990000" + .@enchant_count + " times^000000.";
+		mes "첫 번째 장비가 업그레이드되었습니다. ^990000" + .@enchant_count + " 000000배.";
 	else
-		mes "For additional performance equipment^990000 ^000000 upgrade.";	// never displayed
+		mes "추가 성능 장비^990000 ^000000 업그레이드용.";	// never displayed
 
 	delitem .@item_req, 1;
 	delequip .@part;

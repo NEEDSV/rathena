@@ -19,12 +19,17 @@ void SkillMetallicSound::calculateSkillRatio(const Damage *wd, const block_list 
 	const status_change *tsc = status_get_sc(target);
 	const map_session_data* sd = BL_CAST(BL_PC, src);
 
+#ifdef NEED_2017_SKILL_FORMULA
+	skillratio += -100 + 120 * skill_lv + 60 * ((sd) ? pc_checkskill(sd, WM_LESSON) : 1);
+	RE_LVL_DMOD(100);
+#else
 	skillratio += -100 + 120 * skill_lv + 60 * ((sd) ? pc_checkskill(sd, WM_LESSON) : 1);
 	if (tsc && tsc->getSCE(SC_SLEEP))
 		skillratio += 100; // !TODO: Confirm target sleeping bonus
 	RE_LVL_DMOD(100);
 	if (tsc && tsc->getSCE(SC_SOUNDBLEND))
 		skillratio += skillratio * 50 / 100;
+#endif
 }
 
 void SkillMetallicSound::castendDamageId(block_list *src, block_list *target, uint16 skill_lv, t_tick tick, int32& flag) const {

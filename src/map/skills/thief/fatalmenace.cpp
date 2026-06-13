@@ -20,6 +20,10 @@ void SkillFatalMenace::modifyDamageData(Damage& dmg, const block_list& src, cons
 }
 
 void SkillFatalMenace::calculateSkillRatio(const Damage *wd, const block_list *src, const block_list *target, uint16 skill_lv, int32 &skillratio, int32 mflag) const {
+#ifdef NEED_2017_SKILL_FORMULA
+	skillratio += 100 * skill_lv;
+	RE_LVL_DMOD(100);
+#else
 	const status_data* sstatus = status_get_status_data(*src);
 	const status_change *sc = status_get_sc(src);
 
@@ -30,6 +34,7 @@ void SkillFatalMenace::calculateSkillRatio(const Damage *wd, const block_list *s
 	}
 
 	RE_LVL_DMOD(100);
+#endif
 }
 
 void SkillFatalMenace::castendDamageId(block_list *src, block_list *target, uint16 skill_lv, t_tick tick, int32& flag) const {

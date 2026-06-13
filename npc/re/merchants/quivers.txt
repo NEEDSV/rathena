@@ -24,62 +24,62 @@
 //============================================================
 mora,106,117,3	script	Quiver Maker#mora	4_M_RAFLE_GR,{
 	if (checkweight(1201,1) == 0) {
-		mes "[Quiver Maker]";
-		mes "You have too many things with you.";
-		mes "Make some space in your inventory and come back. I'll tell you something interesting.";
+		mes "[화살통 제작자]";
+		mes "당신은 너무 많은 물건을 가지고 있어요.";
+		mes "인벤토리에 공간을 좀 확보하고 다시 오세요. 흥미로운 이야기를 해드릴게요.";
 		close;
 	}
 	if (MaxWeight - Weight < 2000) {
-		mes "[Quiver Maker]";
-		mes "You seem worn out with all that stuff.";
-		mes "Make some space in your inventory and come back. I'll tell you something interesting.";
+		mes "[화살통 제작자]";
+		mes "그 모든 일 때문에 지쳐 보이시네요.";
+		mes "인벤토리에 공간을 좀 확보하고 다시 오세요. 흥미로운 이야기를 해드릴게요.";
 		close;
 	}
-	mes "[Quiver Maker]";
-	mes "Mora villagers ask what good quivers are. They just don't know how the world works.";
-	mes "No wonder they don't know a thing about quivers - spreading jam over leaves all day long.";
+	mes "[화살통 제작자]";
+	mes "모라 마을 사람들은 화살통이 왜 좋은지 묻습니다. 그들은 세상 돌아가는 이치를 전혀 모르는 거죠.";
+	mes "하루 종일 나뭇잎에 잼을 바르고 다니니, 퀴버에 대해 아무것도 모르는 것도 당연하죠.";
 	next;
 	if (getbattleflag("feature.barter")) {
-		.@menu$ = "I want arrows";
+		.@menu$ = "나는 화살을 원해";
 	}
-	switch( select("Please make me a quiver.", .@menu$, "What's a quiver?") ) {
+	switch( select("화살통을 만들어 주세요.", .@menu$, "화살통이 뭐예요?") ) {
 	case 1:
 		if (getbattleflag("feature.barter")) {
-			mes "[Quiver Maker]";
-			mes "Finally, someone has appeared who knows the true value of a quiver. I will do it for those who know its worth.";
+			mes "[화살통 제작자]";
+			mes "드디어 화살통의 진정한 가치를 아는 사람이 나타났군. 그 가치를 아는 사람들을 위해 내가 이 일을 하겠습니다.";
 			close2;
 			callshop "Quiver_Archer", 1;
 			end;
 		}
-		mes "[Quiver Maker]";
-		mes "At last someone appreciates a quiver!";
-		mes "I can make Elven Quivers and Hunting Quivers.";
-		mes "Which do you need?";
+		mes "[화살통 제작자]";
+		mes "드디어 누군가 화살통의 가치를 알아봐 주는군요!";
+		mes "저는 엘프 화살통과 사냥용 화살통을 만들 수 있습니다.";
+		mes "어떤 게 필요하세요?";
 		next;
-		switch(select("An Elven Quiver:A Hunting Quiver:I don't need a quiver.")) {
+		switch(select("엘프 화살통:사냥용 화살통:저는 화살통이 필요 없어요.")) {
 		case 1: callsub S_BuyQuiver,1773,500,500,12575; //Arrow_Of_Elf_Cntr
 		case 2: callsub S_BuyQuiver,1774,500,500,12576; //Hunting_Arrow_Cntr
 		case 3:
-			mes "[Quiver Maker]";
-			mes "You can buy arrows off the tool merchant next to me.";
+			mes "[화살통 제작자]";
+			mes "내 옆에 있는 도구 상인에게서 화살을 살 수 있습니다.";
 			close;
 		}
 		end;
 	case 2:
 		if (getbattleflag("feature.barter")) {
-			mes "[Quiver Maker]";
-			mes "I don't sell ordinary arrows. These are artisan arrows that can only be purchased here. Would you really recognize its worth, right?";
+			mes "[화살통 제작자]";
+			mes "저는 일반 화살을 팔지 않습니다. 이것들은 오직 이곳에서만 구입할 수 있는 장인의 화살입니다. 당신은 그 가치를 알아볼 수 있겠습니까?";
 			close2;
 			callshop "Catch_Arrows", 1;
 		}
 		end;
 	case 3:
-		mes "[Quiver Maker]";
-		mes "An arrow may be thin and light, but carrying hundreds and thousands of arrows is like carrying a whole log.";
+		mes "[화살통 제작자]";
+		mes "화살은 가늘고 가볍지만, 수백, 수천 개의 화살을 들고 다니는 것은 마치 통나무 한 덩이를 통째로 들고 다니는 것과 같습니다.";
 		next;
-		mes "[Quiver Maker]";
-		mes "But when you have quivers, you can put arrows in them and save weight and space.";
-		mes "If you're interested in one, I'll stitch one up for you.";
+		mes "[화살통 제작자]";
+		mes "하지만 화살통이 있으면 화살을 넣어 무게와 공간을 절약할 수 있습니다.";
+		mes "원하시면 하나 만들어 드릴게요.";
 		close;
 	}
 	end;
@@ -88,30 +88,30 @@ S_BuyQuiver:
 	.@item_req = getarg(0);
 	.@req_amount = getarg(1);
 	if (countitem(getarg(0)) < .@req_amount) {
-		mes "[Quiver Maker]";
-		mes "Bring more than "+ .@req_amount +" "+ getitemname(.@item_req) +" and I'll make you a quiver.";
+		mes "[화살통 제작자]";
+		mes " 더 많이 가져오세요"+ .@req_amount +" "+ getitemname(.@item_req) +" 그럼 내가 화살통을 만들어 줄게.";
 		close;
 	}
-	mes "[Quiver Maker]";
-	mes "Oh, I see you have "+ getitemname(.@item_req) +" in your hand!";
-	mes "Are you interested in using a quiver? It's really convenient!";
-	mes "If you're interested, I can trade "+ .@req_amount +" of those arrows for one of these quivers for ^FF3131"+getarg(2)+" zeny^000000.";
+	mes "[화살통 제작자]";
+	mes " 아, 그렇군요."+ getitemname(.@item_req) +" 당신 손에!";
+	mes "화살통 사용에 관심 있으세요? 정말 편리해요!";
+	mes " 관심 있으시면 교환 가능합니다."+ .@req_amount +" ^FF3131용 화살통 중 하나에 들어가는 화살들"+getarg(2)+" 제니^000000.";
 	next;
-	switch(select("Trade all the arrows you have:Get only one quiver:Don't trade")) {
+	switch(select("가지고 있는 화살을 모두 교환하세요:화살통은 하나만 가져가세요:거래하지 마세요")) {
 	case 1:
 		set .@arrows, countitem(.@item_req);
 		set .@quiver, .@arrows / .@req_amount;
 		set .@arrows_used, .@quiver * .@req_amount;
 		set .@arrow_zeny01, .@quiver * getarg(2);
-		mes "The number of arrows you have : ^3131FF"+.@arrows+"^000000";
-		mes "The number of quivers available : ^3131FF"+.@quiver+"^000000";
-		mes "Zeny needed for trade : ^3131FF"+.@arrow_zeny01+" zeny^000000";
+		mes "당신이 가진 화살표의 개수: ^3131FF"+.@arrows+"^000000";
+		mes "사용 가능한 화살통 수: ^3131FF"+.@quiver+"^000000";
+		mes "거래에 필요한 제니: ^3131FF"+.@arrow_zeny01+" 제니^000000";
 		next;
-		mes "Trade?";
+		mes "거래?";
 		next;
-		if(select("Trade:Don't trade") == 2) {
-			mes "[Quiver Maker]";
-			mes "Hey, you don't doubt my skills, do you?";
+		if(select("Trade:거래하지 마세요") == 2) {
+			mes "[화살통 제작자]";
+			mes "이봐, 내 실력을 의심하는 건 아니지?";
 			close;
 		}
 		break;
@@ -122,23 +122,23 @@ S_BuyQuiver:
 		set .@zeny_mes,1;
 		break;
 	case 3:
-		mes "[Quiver Maker]";
-		mes "Hey, you don't doubt my skills, do you?";
+		mes "[화살통 제작자]";
+		mes "이봐, 내 실력을 의심하는 건 아니지?";
 		close;
 	}
 	if (Zeny < .@arrow_zeny01) {
-		mes "[Quiver Maker]";
+		mes "[화살통 제작자]";
 		if (.@zeny_mes == 1)
-			mes "I said I'd accept human coins just for you, and you still don't want to spend the money?";
+			mes "당신만을 위해 인간 동전도 받겠다고 했는데, 그래도 돈을 쓰기 싫으신 거예요?";
 		else
-			mes "You really don't expect to get your hands on a masterpiece for nothing, do you?";
+			mes "명작을 공짜로 손에 넣을 거라고 기대하진 않겠죠?";
 		close;
 	}
-	mes "[Quiver Maker]";
-	mes "Hey, here you are.";
-	mes "There is ^3131FFsomething you need to know^000000 - try to remember it.";
-	mes "^FF0000You can't use quivers when your encumbrance is over 70%.^000000";
-	mes "You'd better keep that in mind, or you might be in trouble later.";
+	mes "[화살통 제작자]";
+	mes "안녕하세요, 여기 있습니다.";
+	mes "당신이 알아야 할 무언가가 있습니다. 그것을 기억해 두세요.";
+	mes "^FF0000무게 제한이 70%를 초과하면 화살통을 사용할 수 없습니다.^000000";
+	mes "그 점을 명심하는 게 좋을 거야. 안 그러면 나중에 곤란해질 수도 있어.";
 	set Zeny, Zeny-.@arrow_zeny01;
 	delitem .@item_req,.@arrows_used;
 	getitem getarg(3),.@quiver;

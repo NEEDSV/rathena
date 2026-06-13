@@ -21,12 +21,16 @@ void SkillSpiralPierce::modifyDamageData(Damage& dmg, const block_list& src, con
 
 void SkillSpiralPierce::calculateSkillRatio(const Damage *wd, const block_list *src, const block_list *target, uint16 skill_lv, int32 &skillratio, int32 mflag) const {
 #ifdef RENEWAL
-	const status_change *sc = status_get_sc(src);
+#ifdef NEED_2017_SKILL_FORMULA
+	skillratio += 50 * skill_lv;
+#else
+	const status_change* sc = status_get_sc(src);
 
 	skillratio += 50 + 50 * skill_lv;
 	RE_LVL_DMOD(100);
 	if (sc && sc->getSCE(SC_CHARGINGPIERCE_COUNT) && sc->getSCE(SC_CHARGINGPIERCE_COUNT)->val1 >= 10)
 		skillratio *= 2;
+#endif
 #endif
 }
 

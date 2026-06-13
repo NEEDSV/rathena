@@ -9,41 +9,41 @@
 
 einbech,149,257,4	script	Site manager Elmen#extdq0	4_TOWER_16,{
 	if (checkweight(25814,100) == 0 || checkweight(1201,1) == 0 || (MaxWeight - Weight) < 10000) {
-		mes "- You cannot proceed because you have too many items. -";
+		mes "- 소지품이 너무 많아 진행할 수 없습니다. -";
 		close;
 	}
-	mes "[Elmen]";
-	mes "Hello. Adventurer.";
-	mes "If you're here to purchase Dynite mining equipment or refine ore into Dynite, you've come to the right place.";
+	mes "[엘멘]";
+	mes "안녕하세요, 모험가님.";
+	mes "다이나이트 채굴 장비를 구매하거나 광석을 다이나이트로 정제하기 위해 이곳에 오셨다면 제대로 찾아오셨습니다.";
 	next;
-	switch( select( "Dynite Refinement", "Dynite Shop", "Dynite Equipment Exchange" ) ) {
+	switch( select( "다이나이트 정제", "다이나이트 샵", "다이나이트 장비 교환" ) ) {
 	case 1:
-		npctalk "Elmen: You can refine up to 100 Dynite at a time. The machine is small.", "", bc_self;
-		mes "[Elmen]";
-		mes "" + mesitemlink(25814) + " Refined Ore.";
-		mes "" + mesitemlink(25809) + " ^777777(currently " + countitem(25809) + ")^000000";
-		mes "" + mesitemlink(25810) + " ^777777(currently " + countitem(25810) + ")^000000";
-		mes "" + mesitemlink(25811) + " ^777777(currently " + countitem(25811) + ")^000000";
-		mes "" + mesitemlink(25812) + " ^777777(currently " + countitem(25812) + ")^000000";
-		mes "" + mesitemlink(25813) + " ^777777(currently " + countitem(25813) + ")^000000";
-		mes "You need one each of the five types of ore.";
+		npctalk "엘멘: 한 번에 다이나이트를 최대 100개까지 정제할 수 있어요. 기계 크기가 작거든요.", "", bc_self;
+		mes "[엘멘]";
+		mes "" + mesitemlink(25814) + " 정제된 광석.";
+		mes "" + mesitemlink(25809) + " ^777777(현재)" + countitem(25809) + ")^000000";
+		mes "" + mesitemlink(25810) + " ^777777(현재)" + countitem(25810) + ")^000000";
+		mes "" + mesitemlink(25811) + " ^777777(현재)" + countitem(25811) + ")^000000";
+		mes "" + mesitemlink(25812) + " ^777777(현재)" + countitem(25812) + ")^000000";
+		mes "" + mesitemlink(25813) + " ^777777(현재)" + countitem(25813) + ")^000000";
+		mes "다섯 종류의 광석이 각각 하나씩 필요합니다.";
 		next;
 		input .@val;
 		if (.@val > 100) {
-			mes "[Elmen]";
-			mes "I'm sorry. Adventurer.";
-			mes "Dynite Refinement can only be refined up to 100 at a time? The machine is small, so there is no help. Please understand.";
+			mes "[엘멘]";
+			mes "죄송합니다, 모험가님.";
+			mes "다이나이트 정제는 한 번에 최대 100개까지만 가능한 건가요? 기계가 작아서 도움을 드릴 수가 없습니다. 양해 부탁드립니다.";
 			close;
 		}
 		if (.@val == 0) {
-			mes "[Elmen]";
-			mes "Cancel?";
-			mes "If you need refinement of the Dynite, please find it anytime. There is no one who can do it without me.";
+			mes "[엘멘]";
+			mes "취소?";
+			mes "다이나이트 정제가 필요하시면 언제든지 찾아오세요. 저 없이는 아무도 할 수 없습니다.";
 			close;
 		}
 		if (countitem(25809) < .@val || countitem(25810) < .@val || countitem(25811) < .@val || countitem(25812) < .@val || countitem(25813) < .@val) {
-			mes "[Elmen]";
-			mes "Hey! This makes it difficult for each other, don't you run out of materials needed for refining? The materials!";
+			mes "[엘멘]";
+			mes "이봐! 이러면 서로 힘들잖아, 정제에 필요한 재료가 부족해지지 않아? 재료 말이야!";
 			close;
 		}
 		specialeffect EF_REPAIRWEAPON;
@@ -54,32 +54,32 @@ einbech,149,257,4	script	Site manager Elmen#extdq0	4_TOWER_16,{
 		delitem 25812,.@val;	// Ein_PURDIUM
 		delitem 25813,.@val;	// Ein_WHIDIUM
 		getitem 25814,.@val;	// Ein_DYNITE
-		mes "[Elmen]";
-		mes "" + .@val + " Dynite have been refined. It's perfect today!";
+		mes "[엘멘]";
+		mes "" + .@val + " 다이나이트가 개선되었습니다. 오늘날 완벽한 제품입니다!";
 		close;
 	case 2:
-		mes "[Elmen]";
-		mes "There are various accessories and modification permits. Look carefully at what you want before buying.";
+		mes "[엘멘]";
+		mes "다양한 액세서리와 개조 허가증이 있습니다. 구매하기 전에 원하는 것을 꼼꼼히 살펴보세요.";
 		close2;
 		callshop "barter_ein_dun03";
 		end;
 	case 3:
-		mes "[Elmen]";
-		mes "I can exchange the equipment with the Dynite, but it's already in a tightly sealed box.";
-		mes "Give me 50 ^4d4dffDynites^000000 and I will open a ^4d4dffweapon box^000000 for you.";
+		mes "[엘멘]";
+		mes "다이나이트 장비로 교환은 가능하지만, 이미 밀봉된 상자에 들어있습니다.";
+		mes "^4d4dff다이나이트^000000 50개를 주시면 ^4d4dff무기 상자^000000를 열어드리겠습니다.";
 		next;
-		mes "[Elmen]";
-		mes "I don't know what will come out, but the quality is good. Would you like to open it?";
+		mes "[엘멘]";
+		mes "어떤 내용물이 나올지는 모르겠지만 품질은 좋아요. 열어보시겠어요?";
 		next;
-		if (select( "Close your eyes and exchange.", "Do not exchange." ) == 2) {
-			mes "[Elmen]";
-			mes "Kee, this is a waste, it was a good deal.";
+		if (select( "눈을 감고 서로 바꿔보세요.", "교환하지 마십시오." ) == 2) {
+			mes "[엘멘]";
+			mes "키, 이건 낭비야, 좋은 거래였는데.";
 			close;
 		}
 		if (countitem(25814) < 50) {
-			mes "[Elmen]";
-			mes "You don't have enough Dynite friends.";
-			mes "I don't know what's going to come out, so it's hard to go anywhere and get this kind of equipment at this price.";
+			mes "[엘멘]";
+			mes "다이나이트 친구가 충분하지 않아요.";
+			mes "앞으로 어떤 제품이 나올지 모르기 때문에, 이 가격에 이런 장비를 구하기는 쉽지 않아요.";
 			close;
 		}
 		delitem 25814,50;

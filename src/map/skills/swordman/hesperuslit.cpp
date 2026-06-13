@@ -35,12 +35,25 @@ void SkillHesperusLit::calculateSkillRatio(const Damage* wd, const block_list* s
 	const status_change* sc = status_get_sc(src);
 	const status_data* sstatus = status_get_status_data(*src);
 
+#ifdef NEED_2017_SKILL_FORMULA
+	if (sc) {
+		if (sc->getSCE(SC_INSPIRATION))
+			skillratio += 1100;
+		if (sc->getSCE(SC_BANDING)) {
+			skillratio += -100 + 120 * skill_lv + 200 * sc->getSCE(SC_BANDING)->val2;
+			if (sc->getSCE(SC_BANDING)->val2 > 5)
+				skillratio = skillratio * 150 / 100;
+		}
+		RE_LVL_DMOD(100);
+	}
+#else
 	if (sc && sc->getSCE(SC_INSPIRATION))
 		skillratio += -100 + 450 * skill_lv;
 	else
 		skillratio += -100 + 300 * skill_lv;
 	skillratio += sstatus->vit / 6; // !TODO: What's the VIT bonus?
 	RE_LVL_DMOD(100);
+#endif
 }
 
 void SkillHesperusLit::applyAdditionalEffects(block_list* src, block_list* target, uint16 skill_lv, t_tick tick, int32 attack_type, enum damage_lv dmg_lv) const {
