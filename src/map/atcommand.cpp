@@ -4358,6 +4358,7 @@ ACMD_FUNC(reloaditemdb){
 
 	itemdb_reload();
 	costume_collection_reload();
+	needwiki_reload_item_groups();
 	clif_displaymessage(fd, msg_txt(sd,97)); // Item database has been reloaded.
 
 	return 0;
