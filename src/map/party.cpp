@@ -27,6 +27,7 @@
 #include "mob.hpp"
 #include "pc.hpp"
 #include "pc_groups.hpp"
+#include "status.hpp"
 #include "trade.hpp"
 
 static DBMap* party_db; // int32 party_id -> struct party_data* (releases data)
@@ -35,6 +36,16 @@ static unsigned long party_booking_nextid = 1;
 
 TIMER_FUNC(party_send_xy_timer);
 int32 party_create_byscript;
+
+static void party_stop_ensemble(map_session_data* sd) {
+	if (sd == nullptr)
+		return;
+
+	status_change_entry* sce = sd->sc.getSCE(SC_DANCING);
+
+	if (sce != nullptr && sce->val4 != BCT_SELF)
+		status_change_end(sd, SC_DANCING);
+}
 
 /*==========================================
  * Fills the given party_member structure according to the sd provided.
@@ -831,6 +842,7 @@ int32 party_member_withdraw(int32 party_id, uint32 account_id, uint32 char_id, c
 			pc_delitem(sd,idxlist[i],sd->inventory.u.items_inventory[idxlist[i]].amount,0,1,LOG_TYPE_BOUND_REMOVAL);
 #endif
 
+		party_stop_ensemble(sd);
 		sd->status.party_id = 0;
 		clif_name_area(sd); //Update name display [Skotlex]
 		//TODO: hp bars should be cleared too
@@ -865,6 +877,7 @@ int32 party_broken(int32 party_id)
 	for( i = 0; i < MAX_PARTY; i++ ) {
 		if( p->data[i].sd != nullptr ) {
 			clif_party_withdraw( *p->data[i].sd, p->party.member[i].account_id, p->party.member[i].name, PARTY_MEMBER_WITHDRAW_EXPEL, SELF );
+			party_stop_ensemble(p->data[i].sd);
 			p->data[i].sd->status.party_id=0;
 		}
 	}

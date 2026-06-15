@@ -8044,7 +8044,7 @@ int32 skill_check_pc_partner(map_session_data *sd, uint16 skill_id, uint16 *skil
 				if (skill_get_inf2(skill_id, INF2_ISENSEMBLE)) {
 					if (c > 0 && (tsd = map_id2sd(p_sd[0])) != nullptr) {
 #ifdef RENEWAL
-						if (sd->sc.hasSCE(SC_DANCING) && skill_id == CG_MOONLIT) {
+						if (sd->sc.hasSCE(SC_DANCING) && (skill_id == CG_MOONLIT || (skill_id >= BD_RICHMANKIM && skill_id <= BD_SIEGFRIED))) {
 #else
 						if (sd->sc.hasSCE(SC_DANCING)) {
 #endif

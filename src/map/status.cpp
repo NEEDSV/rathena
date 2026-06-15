@@ -11136,18 +11136,24 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 			val2 = 30; // Speed and ASPD penalty
 			break;
 		case SC_RICHMANKIM:
-			val2 = 10 + 10 * val1; // Exp increase bonus
+			if (val2 == 0)
+				val2 = 10 + 10 * val1; // Exp increase bonus
 			break;
 		case SC_DRUMBATTLE:
-			val2 = 15 + val1 * 5; // Atk increase
-			val3 = val1 * 15; // Def increase
+			if (val2 == 0) {
+				val2 = 15 + val1 * 5; // Atk increase
+				val3 = val1 * 15; // Def increase
+			}
 			break;
 		case SC_NIBELUNGEN:
-			val2 = rnd() % RINGNBL_MAX; // See e_nibelungen_status
+			if (val2 == 0)
+				val2 = rnd() % RINGNBL_MAX; // See e_nibelungen_status
 			break;
 		case SC_SIEGFRIED:
-			val2 = val1 * 3; // Elemental Resistance
-			val3 = val1 * 5; // Status ailment resistance
+			if (val2 == 0) {
+				val2 = val1 * 3; // Elemental Resistance
+				val3 = val1 * 5; // Status ailment resistance
+			}
 			break;
 		case SC_WHISTLE:
 			val2 = 18 + 2 * val1; // Flee increase
@@ -14472,6 +14478,21 @@ TIMER_FUNC(status_change_timer){
 			if (--sce->val3 <= 0)
 				break;
 			switch(sce->val1&0xFFFF) {
+#ifdef RENEWAL
+				case BD_RICHMANKIM:
+				case BD_DRUMBATTLEFIELD:
+				case BD_RINGNIBELUNGEN:
+				case BD_SIEGFRIED:
+					s=3;
+					break;
+				case BD_ETERNALCHAOS:
+				case BD_ROKISWEIL:
+					s=4;
+					break;
+				case BD_INTOABYSS:
+					s=5;
+					break;
+#endif
 #ifndef RENEWAL
 				case BD_RICHMANKIM:
 				case BD_DRUMBATTLEFIELD:
