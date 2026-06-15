@@ -48,6 +48,7 @@
 #include "mapreg.hpp"
 #include "mercenary.hpp"
 #include "mob.hpp"
+#include "needwiki.hpp"
 #include "npc.hpp"
 #include "party.hpp"
 #include "pc.hpp"
@@ -1324,19 +1325,33 @@ ACMD_FUNC(lkami){
 	return 0;
 }
 
-ACMD_FUNC(kamib){
+ACMD_FUNC(kamib) {
 	nullpo_retr(-1, sd);
 
 	memset(atcmd_output, '\0', sizeof(atcmd_output));
 
 	if (!message || !*message) {
-		clif_displaymessage(fd, msg_txt(sd,980)); // Please enter a message (usage: @kami <message>).
+		clif_displaymessage(fd, msg_txt(sd, 980)); // Please enter a message.
 		return -1;
 	}
 
-	sscanf(message, "%255[^\n]", atcmd_output);
+	// 캐시 부족
+	if (sd->cashPoints < 500) {
+		clif_displaymessage(fd, msg_txt(sd, 1612));
+		return -1;
+	}
 
-	intif_broadcast(atcmd_output, strlen(atcmd_output) + 1, BC_BLUE);
+	char message_buffer[512];
+	snprintf(message_buffer, sizeof(message_buffer),
+		"[%s] : %s", sd->status.name, message);
+
+	// 캐시 차감
+	pc_paycash(sd, 500, 0, LOG_TYPE_COMMAND);
+
+	// 전체 방송
+	intif_broadcast(message_buffer, strlen(message_buffer) + 1, BC_BLUE);
+
+	clif_displaymessage(fd, msg_txt(sd, 1613));
 
 	return 0;
 }
