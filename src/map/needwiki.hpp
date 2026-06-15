@@ -6,5 +6,6 @@
 
 void do_init_needwiki(void);
 void do_final_needwiki(void);
+bool needwiki_reload_item_groups(void);
 
 #endif /* NEEDWIKI_HPP */

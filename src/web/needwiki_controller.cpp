@@ -6,12 +6,18 @@
 #include <cstdlib>
 #include <cstring>
 #include <chrono>
+#include <fstream>
 #include <mutex>
+#include <sstream>
 #include <string>
 #include <tuple>
 #include <unordered_map>
 #include <utility>
 #include <vector>
+
+#include <nlohmann/json.hpp>
+#include <ryml.hpp>
+#include <ryml_std.hpp>
 
 #ifdef WIN32
 	#include <common/winapi.hpp>
@@ -34,8 +40,11 @@ static constexpr uint16 NEEDWIKI_CMD_TEST_ACTION = 0x7A01;
 static constexpr uint16 NEEDWIKI_ACTION_DISPBOTTOM = 1;
 static constexpr uint16 NEEDWIKI_ACTION_NAVI = 2;
 static constexpr uint16 NEEDWIKI_ACTION_SHOW_ITEM = 3;
+static constexpr uint16 NEEDWIKI_ACTION_SHOW_GROUP = 4;
 static constexpr uint16 NEEDWIKI_PACKET_HEADER_LEN = 14;
 static constexpr int64 NEEDWIKI_DUPLICATE_WINDOW_MS = 500;
+static constexpr const char* NEEDWIKI_ITEM_GROUP_DB_TYPE = "NEED_WIKI_ITEM_GROUP_DB";
+static constexpr uint16 NEEDWIKI_ITEM_GROUP_DB_VERSION = 1;
 
 static std::mutex needwiki_duplicate_mutex;
 static std::unordered_map<std::string, std::chrono::steady_clock::time_point> needwiki_duplicate_requests;
@@ -566,4 +575,106 @@ HANDLER_FUNC(needwiki_showitem)
 	}
 
 	res.set_content("OK", "text/plain");
+}
+
+HANDLER_FUNC(needwiki_showgroup)
+{
+	std::string account_id_str;
+	std::string char_id_str;
+	std::string group_id;
+
+	if (!needwiki_get_param(req, "account_id", account_id_str) ||
+		!needwiki_get_param(req, "char_id", char_id_str) ||
+		!needwiki_get_param(req, "group_id", group_id)) {
+		res.status = HTTP_BAD_REQUEST;
+		res.set_content("Missing account_id, char_id, or group_id", "text/plain");
+		return;
+	}
+
+	uint32 account_id = 0;
+	uint32 char_id = 0;
+	if (!needwiki_parse_u32(account_id_str, account_id) || !needwiki_parse_u32(char_id_str, char_id)) {
+		res.status = HTTP_BAD_REQUEST;
+		res.set_content("Invalid account_id or char_id", "text/plain");
+		return;
+	}
+
+	if (group_id.empty() || group_id.size() > 64 ||
+		group_id.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-") != std::string::npos) {
+		res.status = HTTP_BAD_REQUEST;
+		res.set_content("Invalid group_id", "text/plain");
+		return;
+	}
+
+	if (!needwiki_require_auth(req, res, account_id, char_id))
+		return;
+
+	if (needwiki_is_duplicate_request(char_id, NEEDWIKI_ACTION_SHOW_GROUP, group_id)) {
+		res.set_content("OK_DUPLICATE", "text/plain");
+		return;
+	}
+
+	if (!needwiki_send_packet(account_id, char_id, NEEDWIKI_ACTION_SHOW_GROUP, group_id)) {
+		res.status = HTTP_BAD_REQUEST;
+		res.set_content("Failed to send NEED Wiki showgroup packet", "text/plain");
+		return;
+	}
+
+	res.set_content("OK", "text/plain");
+}
+
+HANDLER_FUNC(needwiki_itemgroups)
+{
+	const std::string path = "db/import/wiki_item_group.yml";
+	std::ifstream input(path, std::ios::binary);
+	if (!input) {
+		res.status = HTTP_NOT_FOUND;
+		res.set_content("Item group DB not found", "text/plain");
+		return;
+	}
+
+	std::ostringstream stream;
+	stream << input.rdbuf();
+	const std::string yaml = stream.str();
+
+	try {
+		ryml::Parser parser;
+		ryml::Tree tree = parser.parse_in_arena(c4::to_csubstr(path), c4::to_csubstr(yaml));
+		const ryml::NodeRef root = tree.rootref();
+		if (!root.has_child("Header"))
+			throw std::runtime_error("Header node not found");
+
+		const ryml::NodeRef header = root["Header"];
+		if (!header.has_child("Type") || !header.has_child("Version"))
+			throw std::runtime_error("Header requires Type and Version");
+
+		std::string type;
+		uint16 version = 0;
+		header["Type"] >> type;
+		header["Version"] >> version;
+		if (type != NEEDWIKI_ITEM_GROUP_DB_TYPE || version != NEEDWIKI_ITEM_GROUP_DB_VERSION)
+			throw std::runtime_error("Unsupported item group DB header");
+
+		if (!root.has_child("Groups"))
+			throw std::runtime_error("Groups node not found");
+
+		nlohmann::json groups = nlohmann::json::object();
+		for (const ryml::NodeRef& node : root["Groups"]) {
+			if (!node.has_child("Id") || !node.has_child("Name"))
+				continue;
+
+			std::string id;
+			std::string name;
+			node["Id"] >> id;
+			node["Name"] >> name;
+			if (!id.empty() && !name.empty())
+				groups[id] = name;
+		}
+
+		res.set_content(groups.dump(), "application/json; charset=utf-8");
+	} catch (const std::exception& error) {
+		ShowError("[NeedWiki] Failed to serve item group metadata: %s\n", error.what());
+		res.status = 500;
+		res.set_content("Failed to load item group DB", "text/plain");
+	}
 }

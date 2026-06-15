@@ -502,6 +502,8 @@ bool WebServer::initialize( int32 argc, char* argv[] ){
 	http_server->Get("/api/wiki/auth", needwiki_auth);
 	http_server->Get("/api/wiki/navi", needwiki_navi);
 	http_server->Get("/api/wiki/showitem", needwiki_showitem);
+	http_server->Get("/api/wiki/showgroup", needwiki_showgroup);
+	http_server->Get("/api/wiki/itemgroups", needwiki_itemgroups);
 
 	// set up logger
 	http_server->set_logger(logger);

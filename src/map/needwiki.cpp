@@ -4,8 +4,16 @@
 #include "needwiki.hpp"
 
 #include <cstdlib>
+#include <fstream>
+#include <sstream>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
+#include <utility>
+#include <vector>
+
+#include <ryml.hpp>
+#include <ryml_std.hpp>
 
 #include <common/cbasetypes.hpp>
 #include <common/showmsg.hpp>
@@ -36,12 +44,124 @@ static constexpr uint16 NEEDWIKI_CMD_TEST_ACTION = 0x7A01;
 static constexpr uint16 NEEDWIKI_ACTION_DISPBOTTOM = 1;
 static constexpr uint16 NEEDWIKI_ACTION_NAVI = 2;
 static constexpr uint16 NEEDWIKI_ACTION_SHOW_ITEM = 3;
+static constexpr uint16 NEEDWIKI_ACTION_SHOW_GROUP = 4;
 static constexpr uint16 NEEDWIKI_PACKET_HEADER_LEN = 14;
 static constexpr int32 NEEDWIKI_DUPLICATE_WINDOW_MS = 500;
 static constexpr int32 NEEDWIKI_DUPLICATE_CLEANUP_MS = 3000;
+static constexpr const char* NEEDWIKI_ITEM_GROUP_DB_TYPE = "NEED_WIKI_ITEM_GROUP_DB";
+static constexpr uint16 NEEDWIKI_ITEM_GROUP_DB_VERSION = 1;
 
 static int32 needwiki_fd = -1;
 static std::unordered_map<std::string, t_tick> needwiki_recent_requests;
+
+struct NeedWikiItemGroup {
+	std::string name;
+	std::vector<t_itemid> items;
+};
+
+static std::unordered_map<std::string, NeedWikiItemGroup> needwiki_item_groups;
+
+static bool needwiki_valid_group_id(const std::string& id)
+{
+	if (id.empty() || id.size() > 64)
+		return false;
+
+	for (const char ch : id) {
+		if ((ch < 'a' || ch > 'z') && (ch < 'A' || ch > 'Z') &&
+			(ch < '0' || ch > '9') && ch != '_' && ch != '-')
+			return false;
+	}
+
+	return true;
+}
+
+bool needwiki_reload_item_groups(void)
+{
+	const std::string path = "db/import/wiki_item_group.yml";
+	std::ifstream input(path, std::ios::binary);
+
+	if (!input) {
+		ShowError("[NeedWiki] Failed to open item group DB '%s'.\n", path.c_str());
+		return false;
+	}
+
+	std::ostringstream stream;
+	stream << input.rdbuf();
+	const std::string yaml = stream.str();
+	ryml::Parser parser;
+	ryml::Tree tree;
+
+	try {
+		tree = parser.parse_in_arena(c4::to_csubstr(path), c4::to_csubstr(yaml));
+	} catch (const std::runtime_error& error) {
+		ShowError("[NeedWiki] Failed to parse item group DB '%s': %s\n", path.c_str(), error.what());
+		return false;
+	}
+
+	const ryml::NodeRef root = tree.rootref();
+	if (!root.has_child("Header")) {
+		ShowError("[NeedWiki] Item group DB has no Header node: '%s'.\n", path.c_str());
+		return false;
+	}
+
+	const ryml::NodeRef header = root["Header"];
+	if (!header.has_child("Type") || !header.has_child("Version")) {
+		ShowError("[NeedWiki] Item group DB Header requires Type and Version: '%s'.\n", path.c_str());
+		return false;
+	}
+
+	std::string type;
+	uint16 version = 0;
+	header["Type"] >> type;
+	header["Version"] >> version;
+
+	if (type != NEEDWIKI_ITEM_GROUP_DB_TYPE || version != NEEDWIKI_ITEM_GROUP_DB_VERSION) {
+		ShowError("[NeedWiki] Unsupported item group DB header type='%s' version=%hu.\n", type.c_str(), version);
+		return false;
+	}
+
+	if (!root.has_child("Groups")) {
+		ShowError("[NeedWiki] Item group DB has no Groups node: '%s'.\n", path.c_str());
+		return false;
+	}
+
+	std::unordered_map<std::string, NeedWikiItemGroup> loaded;
+	for (const ryml::NodeRef& node : root["Groups"]) {
+		if (!node.has_child("Id") || !node.has_child("Name") || !node.has_child("Items")) {
+			ShowWarning("[NeedWiki] Skipping item group with missing Id, Name, or Items.\n");
+			continue;
+		}
+
+		std::string id;
+		NeedWikiItemGroup group;
+		node["Id"] >> id;
+		node["Name"] >> group.name;
+
+		if (!needwiki_valid_group_id(id) || group.name.empty()) {
+			ShowWarning("[NeedWiki] Skipping invalid item group id='%s'.\n", id.c_str());
+			continue;
+		}
+
+		for (const ryml::NodeRef& item_node : node["Items"]) {
+			std::string aegis_name;
+			item_node >> aegis_name;
+			std::shared_ptr<item_data> data = item_db.search_aegisname(aegis_name.c_str());
+
+			if (data == nullptr) {
+				ShowWarning("[NeedWiki] Unknown item '%s' in group '%s'.\n", aegis_name.c_str(), id.c_str());
+				continue;
+			}
+
+			group.items.push_back(data->nameid);
+		}
+
+		loaded[id] = std::move(group);
+	}
+
+	needwiki_item_groups.swap(loaded);
+	ShowInfo("[NeedWiki] Load item group count=%zu\n", needwiki_item_groups.size());
+	return true;
+}
 
 static std::string needwiki_utf8_to_cp949(const std::string& utf8)
 {
@@ -73,15 +193,6 @@ static std::string needwiki_utf8_to_cp949(const std::string& utf8)
 #else
 	return utf8;
 #endif
-}
-
-static void needwiki_displaymessage(map_session_data* sd, const std::string& utf8_message)
-{
-	if (sd == nullptr)
-		return;
-
-	const std::string cp949_message = needwiki_utf8_to_cp949(utf8_message);
-	clif_displaymessage(sd->fd, cp949_message.c_str());
 }
 
 static std::string needwiki_duplicate_key(uint32 char_id, uint16 action, const std::string& payload)
@@ -192,8 +303,9 @@ static int32 needwiki_parse(int32 fd)
 		if (sd != nullptr) {
 			if (action == NEEDWIKI_ACTION_DISPBOTTOM) {
 				char output[CHAT_SIZE_MAX];
-				safesnprintf(output, sizeof(output), msg_txt(sd, 1609), payload.c_str());
-				needwiki_displaymessage(sd, output);
+				const std::string cp949_payload = needwiki_utf8_to_cp949(payload);
+				safesnprintf(output, sizeof(output), msg_txt(sd, 1609), cp949_payload.c_str());
+				clif_displaymessage(sd->fd, output);
 			} else if (action == NEEDWIKI_ACTION_NAVI) {
 				std::string mapname;
 				uint16 x = 0;
@@ -202,25 +314,26 @@ static int32 needwiki_parse(int32 fd)
 
 				if (needwiki_parse_navi_payload(payload, mapname, x, y, name)) {
 					char output[CHAT_SIZE_MAX];
-					safesnprintf(output, sizeof(output), msg_txt(sd, 1604), name.c_str());
-					needwiki_displaymessage(sd, output);
+					const std::string cp949_name = needwiki_utf8_to_cp949(name);
+					safesnprintf(output, sizeof(output), msg_txt(sd, 1604), cp949_name.c_str());
+					clif_displaymessage(sd->fd, output);
 
 					safesnprintf(output, sizeof(output), msg_txt(sd, 1605), mapname.c_str(), x, y);
-					needwiki_displaymessage(sd, output);
+					clif_displaymessage(sd->fd, output);
 					clif_navigateTo(sd, mapname.c_str(), x, y, NAV_KAFRA_AND_AIRSHIP, true, 0);
 				} else {
-					needwiki_displaymessage(sd, msg_txt(sd, 1606));
+					clif_displaymessage(sd->fd, msg_txt(sd, 1606));
 				}
 			} else if (action == NEEDWIKI_ACTION_SHOW_ITEM) {
 				uint32 item_id = 0;
 
 				if (!needwiki_parse_u32(payload, item_id)) {
-					needwiki_displaymessage(sd, msg_txt(sd, 1607));
+					clif_displaymessage(sd->fd, msg_txt(sd, 1607));
 				} else {
 					std::shared_ptr<item_data> data = item_db.find(static_cast<t_itemid>(item_id));
 
 					if (data == nullptr) {
-						needwiki_displaymessage(sd, msg_txt(sd, 1607));
+						clif_displaymessage(sd->fd, msg_txt(sd, 1607));
 					} else {
 						struct item link_item = {};
 
@@ -230,9 +343,36 @@ static int32 needwiki_parse(int32 fd)
 						link_item.refine = 0;
 
 						const std::string item_link = item_db.create_item_link(link_item);
-						std::string message = needwiki_utf8_to_cp949(msg_txt(sd, 1608)) + item_link;
+						std::string message = std::string(msg_txt(sd, 1608)) + item_link;
 						clif_displaymessage(sd->fd, message.c_str());
 					}
+				}
+			} else if (action == NEEDWIKI_ACTION_SHOW_GROUP) {
+				ShowInfo("[NeedWiki] ITEMGROUP click id=%s\n", payload.c_str());
+				auto group_it = needwiki_item_groups.find(payload);
+
+				if (!needwiki_valid_group_id(payload) || group_it == needwiki_item_groups.end()) {
+					clif_displaymessage(sd->fd, msg_txt(sd, 1611));
+				} else {
+					const NeedWikiItemGroup& group = group_it->second;
+					char output[CHAT_SIZE_MAX];
+					const std::string cp949_name = needwiki_utf8_to_cp949(group.name);
+					safesnprintf(output, sizeof(output), msg_txt(sd, 1610), cp949_name.c_str());
+					clif_displaymessage(sd->fd, output);
+
+					for (const t_itemid item_id : group.items) {
+						std::shared_ptr<item_data> data = item_db.find(item_id);
+						if (data == nullptr)
+							continue;
+
+						struct item link_item = {};
+						link_item.nameid = data->nameid;
+						link_item.identify = 1;
+						link_item.amount = 1;
+						clif_displaymessage(sd->fd, item_db.create_item_link(link_item).c_str());
+					}
+
+					ShowInfo("[NeedWiki] Show item group id=%s item_count=%zu\n", payload.c_str(), group.items.size());
 				}
 			} else {
 				ShowWarning("NEED Wiki: unsupported action %u from fd %d.\n", action, fd);
@@ -271,6 +411,7 @@ static int32 needwiki_accept(int32 listen_fd)
 
 void do_init_needwiki(void)
 {
+	needwiki_reload_item_groups();
 	needwiki_fd = make_listen_bind(MAKEIP(127, 0, 0, 1), NEEDWIKI_PORT);
 
 	if (needwiki_fd < 0) {
@@ -284,6 +425,7 @@ void do_init_needwiki(void)
 
 void do_final_needwiki(void)
 {
+	needwiki_item_groups.clear();
 	if (needwiki_fd >= 0) {
 		do_close(needwiki_fd);
 		needwiki_fd = -1;
