@@ -1,0 +1,2462 @@
+//주의사항 : 수정하기도 까다롭지만 굳이 수정해야 될경우에는 제작자의 동의를 얻으셨으면 좋겠습니다
+//위치수정자체도 배치를 고려하지 않으면 플레이에 지장을 줄수도 있기때문에
+//가급적 미수정으로 사용하시길 권장합니다
+//수정이후 제작자와 긴밀한 협의하에 서로 정보 교환을 했으면 좋겠네요
+//또한 재배포는 절대로 안했으면 좋겠어요 ;ㅅ;
+//
+//제작자 - 좀비모
+jawaii,188,239,5	script	타뷸라의늑대	81,{
+	function Tabula_reset
+	{
+		for(set .@i,1; .@i<=11; set .@i,.@i+1)
+		{
+			if (attachrid(.Tabula_User_account[.@i]))
+			{
+				if (.Tabula_User_Die[@Tabula_My_number])
+				{
+					atcommand "@부활";
+				}
+				atcommand "@변신해제";
+				atcommand "@크기 0";
+				atcommand "@채금해제 "+strcharinfo(0);
+				set @Tabula_My_number,0;
+				detachrid;
+			}
+		}
+		sleep 1000;
+		return;
+	}
+
+	function Tabula_End_set
+	{
+		if (getwaitingroomstate(2) != -1) delwaitingroom;
+		getmapxy .@map$,.@x,.@y,1,strnpcinfo(0); 
+		setcell .@map$,.@x-13,.@y-13,.@x+13,.@y+13,cell_walkable,1;
+		stopnpctimer;
+		setnpctimer 0;
+		set .Tabula_User_ea,0;
+		set .Tabula_Game_start,0;
+		set .Tabula_Game_rule,0;
+		deletearray .Tabula_User_name$[0],getarraysize(.Tabula_User_name$);
+		deletearray .Tabula_User_char[0],getarraysize(.Tabula_User_char);
+		deletearray .Tabula_User_account[0],getarraysize(.Tabula_User_account);
+		deletearray .Tabula_User_job$[0],getarraysize(.Tabula_User_job$);
+		deletearray .Tabula_User_memo$[0],getarraysize(.Tabula_User_memo$);
+		deletearray .Tabula_User_timer[0],getarraysize(.Tabula_User_timer);
+		deletearray .Tabula_User_vote[0],getarraysize(.Tabula_User_vote);
+		deletearray .Tabula_Game_vote[0],getarraysize(.Tabula_Game_vote);
+		deletearray .Tabula_User_die[0],getarraysize(.Tabula_User_die);
+		deletearray .Tabula_User_scan$[0],getarraysize(.Tabula_User_scan$);
+		set .Tabula_Game_wolf,0;
+		set .Tabula_Game_wnum,0;
+		set .Tabula_Game_mist,0;
+		set .Tabula_Game_body,0;
+		set .Tabula_Game_soul,0;
+		set .Tabula_Game_lost,0;
+		set .Tabula_Game_down,0;
+		set .Tabula_Game_next,0;
+		set .Tabula_Game_lier,0;
+		set .Tabula_Game_next_succes,0;
+		set .Tabula_Game_lier_succes,0;
+		set .Tabula_Game_wolf_skill1,0;
+		set .Tabula_Game_wolf_skill2,0;
+		set .Tabula_Game_wolf_skill3,0;
+		for(set .@i,1; .@i<=11; set .@i,.@i+1)
+		{
+			if (getwaitingroomstate(2,.@i+"번자리") == 0)
+				delwaitingroom .@i+"번자리";
+			if (getwaitingroomstate(2,.@i+"번자리") == -1)
+				initnpctimer .@i+"번자리";
+		}
+		return;
+	}
+
+	function namemenu
+	{
+		set .@menuline$,"";
+		for(set .@i,1; .@i<=11; set .@i,.@i+1)
+		{
+			if (!.Tabula_User_die[.@i])
+				set .@menuline$,.@menuline$ + "^008000" + "["+ .@i +"]" + .Tabula_User_name$[.@i] +":";
+			else
+				set .@menuline$,.@menuline$ + "^696969" + "["+ .@i +"]" + .Tabula_User_name$[.@i] +":";
+		}	
+		set .@selec,callfunc("SSelect",.@menuline$);
+		return .@selec;
+	}
+
+	function check
+	{
+		set .Live,0;
+		set .Wolf,0;
+		set .DDol,0;
+		set .Mouse,0;
+		set .Man,0;
+		if (.Tabula_Game_start < 3)
+		{
+			donpcevent strnpcinfo(0)+"::OnTalk8";
+			end;
+		}
+		set .Tabula_User_memo$[getarg(0)],"이탈☜☆☞사망";
+		delwaitingroom getarg(0)+"번자리";
+		//initnpctimer getarg(0)+"번자리";
+		for(set .@i,1; .@i<=11; set .@i,.@i+1)
+		{
+			if (.Tabula_User_job$[.@i] == "똘마니")
+				set .Tabula_User_scan$[.@i],.Tabula_User_scan$[.@i]+"→["+getarg(0)+"]"+.Tabula_User_job$[getarg(0)];
+		}
+		set .Tabula_User_scan$[getarg(0)],"";
+		for(set .@i,1;	.@i <= 11;	set .@i,.@i+1)
+		{
+			if (.Tabula_User_die[.@i] == 0)
+				set .Live,.Live+1;
+			if (.Tabula_User_job$[.@i] == "늑대인간1" && .Tabula_User_die[.@i] == 0)
+				set .Wolf,.Wolf+1;
+			if (.Tabula_User_job$[.@i] == "늑대인간2" && .Tabula_User_die[.@i] == 0)
+				set .Wolf,.Wolf+1;
+			if (.Tabula_User_job$[.@i] == "똘마니" && .Tabula_User_die[.@i] == 0)
+				set .DDol,.DDol+1;
+			if (.Tabula_User_job$[.@i] == "쥐인간" && .Tabula_User_die[.@i] == 0)
+				set .Mouse,.Mouse+1;
+			if (.Tabula_User_job$[.@i] == "쥐인간(후계자)" && .Tabula_User_die[.@i] == 0)
+				set .Mouse,.Mouse+1;
+		}
+
+		set .Man,.Live-(.Wolf+.DDol);
+
+		if (.Live == 0)
+			donpcevent strnpcinfo(0)+"::OnTalk6";
+		else if (.Live == 2 && .Wolf == 1 && .Mouse == 1 && .Tabula_Game_wolf_skill1 == 2 && .Tabula_Game_wolf_skill2 == 2)
+			donpcevent strnpcinfo(0)+"::OnTalk7";
+		else if (.Wolf <= 0)
+			donpcevent strnpcinfo(0)+"::OnTalk3";
+		else if (.Man <= .Wolf+.DDol)
+			donpcevent strnpcinfo(0)+"::OnTalk4";
+		if (.Live == 7 && .Tabula_Game_next_succes == 0)
+		{
+			set .Tabula_Game_next_succes, 1;
+			donpcevent strnpcinfo(0)+"::OnTalk5";
+		}
+		for(set .@i,1;	.@i <= 11;	set .@i,.@i+1)
+		{
+			if (.Live > 7 && .Tabula_User_die[.@i] == 1 && .Tabula_Game_next == 0)
+				set .Tabula_Game_next,.@i;
+			if (.Tabula_User_job$[.Tabula_Game_next] == "늑대인간1")
+				set .Tabula_Game_next,0;
+			if (.Tabula_User_job$[.Tabula_Game_next] == "늑대인간2")
+				set .Tabula_Game_next,0;
+			if (.Tabula_User_job$[.Tabula_Game_next] == "똘마니")
+				set .Tabula_Game_next,0;
+		}
+		return;
+	}
+
+	function kill
+	{
+		if (attachrid(getarg(0)))
+		{
+			if (.Tabula_User_job$[@Tabula_My_number] == "늑대인간1")
+				set .Tabula_Game_wolf_skill1,2;
+			if (.Tabula_User_job$[@Tabula_My_number] == "늑대인간2")
+				set .Tabula_Game_wolf_skill2,2;
+
+			switch(rand(8))
+			{
+				case 0: atcommand "@사운드 die_male";	break;
+				case 1: atcommand "@사운드 die_archer_female";	break;
+				case 2: atcommand "@사운드 die_acolyte_female";	break;
+				case 3: atcommand "@사운드 die_magician_female";	break;
+				case 4: atcommand "@사운드 die_merchant_female";	break;
+				case 5: atcommand "@사운드 die_novice_female";	break;
+				case 6: atcommand "@사운드 die_swordman_female";	break;
+				case 7: atcommand "@사운드 die_thief_female";	break;
+			}
+			atcommand "@변신해제";
+			atcommand "@크기 0";
+			atcommand "@채금 10 "+strcharinfo(0);
+			atcommand "@킬 "+strcharinfo(0);
+			npcwhisper strcharinfo(0),"게임상 사망처리가 되셨으므로 게임이 끝날때까지 채금상태가 됩니다";
+			npcwhisper strcharinfo(0),"게임이 종료되면 자동으로 '채금해제'와 '부활'이 되오니 기다리시고";
+			npcwhisper strcharinfo(0),"죽은이후에 살아있는사람에게 도움을 주는 행위는 하지 마시길 바랍니다";
+			addtimer 1000,strnpcinfo(0)+"::OnDeadchat";
+			detachrid;
+		}
+		return;
+	}
+
+Game_Return:
+	mes "안녕하세요 타뷸라의 늑대입니다";
+	if (.Tabula_Game_start >= 4 && .Tabula_User_name$[@Tabula_My_number] == strcharinfo(0) && .Tabula_User_die[@Tabula_My_number] == 1)
+	{
+	OnDeadchat:
+		mes "━━━━━━━━━━━━━";
+		mes "[죽은자연결 시스템]";
+		mes "연결할 메모를 입력하세요";
+		mes "('취소' 입력시 취소)";
+
+	Game_Deaded:
+		input .@memo$;
+
+		if (.@memo$ == "취소" || !.Tabula_User_die[@Tabula_My_number])
+			close;
+		else
+		{
+			for(set .@i,1; .@i<=11; set .@i,.@i+1)
+			{
+				if (.Tabula_User_die[.@i] == 1)
+					npcwhisper .Tabula_User_name$[.@i],"+["+@Tabula_My_number+"]"+.Tabula_User_name$[@Tabula_My_number]+"："+.@memo$;
+			}
+			goto Game_Deaded;
+		}
+	}
+	else if (.Tabula_Game_start >= 4 && .Tabula_User_name$[@Tabula_My_number] == strcharinfo(0) && !.Tabula_User_die[@Tabula_My_number])
+	{
+		if (.Tabula_User_job$[@Tabula_My_number] == "늑대인간1" || .Tabula_User_job$[@Tabula_My_number] == "늑대인간2" || .Tabula_User_job$[@Tabula_My_number] == "똘마니")
+		{
+			mes "━━━━━━━━━━━━━";
+			mes "[늑대연결 시스템]";
+			mes "연결할 메모를 입력하세요";
+			mes "('취소' 입력시 취소/'변신' 입력시 변신 시스템)";
+			mes "^ff0000※늑대전용^000000 '참살' ^828282밤에만가능^000000";
+			goto Game_Secrit;
+		}
+		else if (.Tabula_User_job$[@Tabula_My_number] == "귀족" || .Tabula_User_job$[@Tabula_My_number] == "귀족(후계자)" || .Tabula_User_job$[@Tabula_My_number] == "쥐인간" || .Tabula_User_job$[@Tabula_My_number] == "쥐인간(후계자)")
+		{
+			mes "━━━━━━━━━━━━━";
+			mes "[비밀결사대연결 시스템]";
+			mes "연결할 메모를 입력하세요";
+			mes "('취소' 입력시 취소/'변신' 입력시 변신 시스템)";
+			goto Game_Secrit;
+		}
+
+	Game_Secrit_Pass:
+		mes "━━━━━━━━━━━━━";
+		mes "[변신 시스템]";
+		mes "당신은 무슨직업으로 변신하고 싶습니까?";
+		switch(select("^0000ff변신해제^000000:늑대인간:예언자:보디가드:영매사:추격자:귀족:쥐인간:후계자:똘마니:감시자"))
+		{
+		case 1:
+			atcommand "@변신해제";
+			atcommand "@크기 0";
+			break;
+		case 2:
+			atcommand "@변신 하티";
+			atcommand "@크기 1";
+			break;
+		case 3:
+			atcommand "@변신 요선녀";
+			atcommand "@크기 1";
+			break;
+		case 4:
+			atcommand "@변신 칼리츠버그";
+			atcommand "@크기 1";
+			break;
+		case 5:
+			atcommand "@변신 죽은자의주인";
+			atcommand "@크기 1";
+			break;
+		case 6:
+			atcommand "@변신 에레메스가일";
+			atcommand "@크기 0";
+			break;
+		case 7:
+			atcommand "@변신 드라큘라";
+			atcommand "@크기 1";
+			break;
+		case 8:
+			atcommand "@변신 아누비스";
+			atcommand "@크기 1";
+			break;
+		case 9:
+			atcommand "@변신 경단동자";
+			atcommand "@크기 0";
+			break;
+		case 10:
+			atcommand "@변신 거대위스퍼";
+			atcommand "@크기 1";
+			break;
+		case 11:
+			atcommand "@변신 타나토스의절망";
+			atcommand "@크기 1";
+			break;
+		}
+		close;
+	}
+	else
+	{
+		mes "━━━━━━━━━━━━━";
+		mes "[명령어 시스템]";
+		mes "'-도움말'이라고 말하시면 '명령어 리스트'를 출력합니다";
+		close;
+	}	
+
+Game_Secrit:
+		input .@memo$;
+		if (.@memo$ == "취소")
+			close;
+		else if (.@memo$ == "변신")
+		{
+			next;
+			mes "안녕하세요 타뷸라의 늑대입니다";
+			goto Game_Secrit_Pass;
+		}
+		else
+		{
+			if (.@memo$ == "참살" && .Tabula_User_job$[@Tabula_My_number] == "늑대인간1")
+			{
+				if (.Tabula_Game_wolf_skill1 || .Tabula_Game_wolf_skill2 == 1)
+					npcwhisper strcharinfo(0),"이미 참살스킬을 사용하였습니다";
+				else if (.Tabula_Game_start != 6)
+					npcwhisper strcharinfo(0),"밤에만 사용가능합니다";
+				else if (.Tabula_Game_wolf_skill3)
+					npcwhisper strcharinfo(0),"연속으로 사용할수 없습니다";
+				else
+				{
+					set .Tabula_Game_wolf_skill1,1;
+					for(set .@i,1; .@i<=11; set .@i,.@i+1)
+					{
+						if (.Tabula_User_job$[.@i] == "늑대인간1")
+							npcwhisper .Tabula_User_name$[.@i],"+["+@Tabula_My_number+"]"+.Tabula_User_name$[@Tabula_My_number]+" 님께서 참살을 사용하셨습니다 (늑대 1명당 1번만 가능)";
+						else if (.Tabula_User_job$[.@i] == "늑대인간2")
+							npcwhisper .Tabula_User_name$[.@i],"+["+@Tabula_My_number+"]"+.Tabula_User_name$[@Tabula_My_number]+" 님께서 참살을 사용하셨습니다 (늑대 1명당 1번만 가능)";
+						else if (.Tabula_User_job$[.@i] == "똘마니" && .Tabula_Game_lier_succes == 1)
+							npcwhisper .Tabula_User_name$[.@i],"+["+@Tabula_My_number+"]"+.Tabula_User_name$[@Tabula_My_number]+" 님께서 참살을 사용하셨습니다 (늑대 1명당 1번만 가능)";
+					}
+				}
+			}
+			else if (.@memo$ == "참살" && .Tabula_User_job$[@Tabula_My_number] == "늑대인간2")
+			{
+				if (.Tabula_Game_wolf_skill2 || .Tabula_Game_wolf_skill1 == 1)
+					npcwhisper strcharinfo(0),"이미 참살스킬을 사용하였습니다";
+				else if (.Tabula_Game_start != 6)
+					npcwhisper strcharinfo(0),"밤에만 사용가능합니다";
+				else if (.Tabula_Game_wolf_skill3)
+					npcwhisper strcharinfo(0),"연속으로 사용할수 없습니다";
+				else
+				{
+					set .Tabula_Game_wolf_skill2,1;
+					for(set .@i,1; .@i<=11; set .@i,.@i+1)
+					{
+						if (.Tabula_User_job$[.@i] == "늑대인간1")
+							npcwhisper .Tabula_User_name$[.@i],"+["+@Tabula_My_number+"]"+.Tabula_User_name$[@Tabula_My_number]+" 님께서 참살을 사용하셨습니다 (늑대 1명당 1번만 가능)";
+						else if (.Tabula_User_job$[.@i] == "늑대인간2")
+							npcwhisper .Tabula_User_name$[.@i],"+["+@Tabula_My_number+"]"+.Tabula_User_name$[@Tabula_My_number]+" 님께서 참살을 사용하셨습니다 (늑대 1명당 1번만 가능)";
+						else if (.Tabula_User_job$[.@i] == "똘마니" && .Tabula_Game_lier_succes == 1)
+							npcwhisper .Tabula_User_name$[.@i],"+["+@Tabula_My_number+"]"+.Tabula_User_name$[@Tabula_My_number]+" 님께서 참살을 사용하셨습니다 (늑대 1명당 1번만 가능)";
+					}
+				}
+			}
+			else if (.Tabula_User_job$[@Tabula_My_number] == "늑대인간1")
+			{
+				for(set .@i,1; .@i<=11; set .@i,.@i+1)
+				{
+					if (.Tabula_User_job$[.@i] == "늑대인간1")
+						npcwhisper .Tabula_User_name$[.@i],"+["+@Tabula_My_number+"]"+.Tabula_User_name$[@Tabula_My_number]+"："+.@memo$;
+					else if (.Tabula_User_job$[.@i] == "늑대인간2")
+						npcwhisper .Tabula_User_name$[.@i],"+["+@Tabula_My_number+"]"+.Tabula_User_name$[@Tabula_My_number]+"："+.@memo$;
+					else if (.Tabula_User_job$[.@i] == "똘마니" && .Tabula_Game_lier_succes == 1)
+						npcwhisper .Tabula_User_name$[.@i],"+["+@Tabula_My_number+"]"+.Tabula_User_name$[@Tabula_My_number]+"："+.@memo$;
+				}
+			}
+			else if (.Tabula_User_job$[@Tabula_My_number] == "늑대인간2")
+			{
+				for(set .@i,1; .@i<=11; set .@i,.@i+1)
+				{
+					if (.Tabula_User_job$[.@i] == "늑대인간1")
+						npcwhisper .Tabula_User_name$[.@i],"+["+@Tabula_My_number+"]"+.Tabula_User_name$[@Tabula_My_number]+"："+.@memo$;
+					else if (.Tabula_User_job$[.@i] == "늑대인간2")
+						npcwhisper .Tabula_User_name$[.@i],"+["+@Tabula_My_number+"]"+.Tabula_User_name$[@Tabula_My_number]+"："+.@memo$;
+					else if (.Tabula_User_job$[.@i] == "똘마니" && .Tabula_Game_lier_succes == 1)
+						npcwhisper .Tabula_User_name$[.@i],"+["+@Tabula_My_number+"]"+.Tabula_User_name$[@Tabula_My_number]+"："+.@memo$;
+				}
+			}
+			else if (.Tabula_User_job$[@Tabula_My_number] == "똘마니")
+			{
+				for(set .@i,1; .@i<=11; set .@i,.@i+1)
+				{
+					if (.Tabula_User_job$[.@i] == "늑대인간1" && .Tabula_Game_lier_succes == 1)
+						npcwhisper .Tabula_User_name$[.@i],"+["+@Tabula_My_number+"]"+.Tabula_User_name$[@Tabula_My_number]+"："+.@memo$;
+					else if (.Tabula_User_job$[.@i] == "늑대인간2" && .Tabula_Game_lier_succes == 1)
+						npcwhisper .Tabula_User_name$[.@i],"+["+@Tabula_My_number+"]"+.Tabula_User_name$[@Tabula_My_number]+"："+.@memo$;
+					else if (.Tabula_User_job$[.@i] == "똘마니")
+						npcwhisper .Tabula_User_name$[.@i],"+["+@Tabula_My_number+"]"+.Tabula_User_name$[@Tabula_My_number]+"："+.@memo$;
+				}
+			}
+			else if (.Tabula_User_job$[@Tabula_My_number] == "귀족")
+			{
+				for(set .@i,1; .@i<=11; set .@i,.@i+1)
+				{
+					if (.Tabula_User_job$[.@i] == "귀족")
+						npcwhisper .Tabula_User_name$[.@i],"+["+@Tabula_My_number+"]"+.Tabula_User_name$[@Tabula_My_number]+"："+.@memo$;
+					else if (.Tabula_User_job$[.@i] == "귀족(후계자)")
+						npcwhisper .Tabula_User_name$[.@i],"+["+@Tabula_My_number+"]"+.Tabula_User_name$[@Tabula_My_number]+"："+.@memo$;
+					else if (.Tabula_User_job$[.@i] == "쥐인간")
+						npcwhisper .Tabula_User_name$[.@i],"+["+@Tabula_My_number+"]"+.Tabula_User_name$[@Tabula_My_number]+"："+.@memo$;
+					else if (.Tabula_User_job$[.@i] == "쥐인간(후계자)")
+						npcwhisper .Tabula_User_name$[.@i],"+["+@Tabula_My_number+"]"+.Tabula_User_name$[@Tabula_My_number]+"："+.@memo$;
+				}
+			}
+			else if (.Tabula_User_job$[@Tabula_My_number] == "귀족(후계자)")
+			{
+				for(set .@i,1; .@i<=11; set .@i,.@i+1)
+				{
+					if (.Tabula_User_job$[.@i] == "귀족")
+						npcwhisper .Tabula_User_name$[.@i],"+["+@Tabula_My_number+"]"+.Tabula_User_name$[@Tabula_My_number]+"："+.@memo$;
+					else if (.Tabula_User_job$[.@i] == "귀족(후계자)")
+						npcwhisper .Tabula_User_name$[.@i],"+["+@Tabula_My_number+"]"+.Tabula_User_name$[@Tabula_My_number]+"："+.@memo$;
+					else if (.Tabula_User_job$[.@i] == "쥐인간")
+						npcwhisper .Tabula_User_name$[.@i],"+["+@Tabula_My_number+"]"+.Tabula_User_name$[@Tabula_My_number]+"："+.@memo$;
+					else if (.Tabula_User_job$[.@i] == "쥐인간(후계자)")
+						npcwhisper .Tabula_User_name$[.@i],"+["+@Tabula_My_number+"]"+.Tabula_User_name$[@Tabula_My_number]+"："+.@memo$;
+				}
+			}
+			else if (.Tabula_User_job$[@Tabula_My_number] == "쥐인간")
+			{
+				for(set .@i,1; .@i<=11; set .@i,.@i+1)
+				{
+					if (.Tabula_User_job$[.@i] == "귀족")
+						npcwhisper .Tabula_User_name$[.@i],"+["+@Tabula_My_number+"]"+.Tabula_User_name$[@Tabula_My_number]+"："+.@memo$;
+					else if (.Tabula_User_job$[.@i] == "귀족(후계자)")
+						npcwhisper .Tabula_User_name$[.@i],"+["+@Tabula_My_number+"]"+.Tabula_User_name$[@Tabula_My_number]+"："+.@memo$;
+					else if (.Tabula_User_job$[.@i] == "쥐인간")
+						npcwhisper .Tabula_User_name$[.@i],"+["+@Tabula_My_number+"]"+.Tabula_User_name$[@Tabula_My_number]+"："+.@memo$;
+					else if (.Tabula_User_job$[.@i] == "쥐인간(후계자)")
+						npcwhisper .Tabula_User_name$[.@i],"+["+@Tabula_My_number+"]"+.Tabula_User_name$[@Tabula_My_number]+"："+.@memo$;
+				}
+			}
+			else if (.Tabula_User_job$[@Tabula_My_number] == "쥐인간(후계자)")
+			{
+				for(set .@i,1; .@i<=11; set .@i,.@i+1)
+				{
+					if (.Tabula_User_job$[.@i] == "귀족")
+						npcwhisper .Tabula_User_name$[.@i],"+["+@Tabula_My_number+"]"+.Tabula_User_name$[@Tabula_My_number]+"："+.@memo$;
+					else if (.Tabula_User_job$[.@i] == "귀족(후계자)")
+						npcwhisper .Tabula_User_name$[.@i],"+["+@Tabula_My_number+"]"+.Tabula_User_name$[@Tabula_My_number]+"："+.@memo$;
+					else if (.Tabula_User_job$[.@i] == "쥐인간")
+						npcwhisper .Tabula_User_name$[.@i],"+["+@Tabula_My_number+"]"+.Tabula_User_name$[@Tabula_My_number]+"："+.@memo$;
+					else if (.Tabula_User_job$[.@i] == "쥐인간(후계자)")
+						npcwhisper .Tabula_User_name$[.@i],"+["+@Tabula_My_number+"]"+.Tabula_User_name$[@Tabula_My_number]+"："+.@memo$;
+				}
+			}
+			goto Game_Secrit;
+		}
+
+Talk_pattern_End:
+	if (!getgmlevel()) end;
+	mes "안녕하세요 타뷸라의 늑대입니다";
+	mes "━━━━━━━━━━━━━";
+	mes "[강제 종료]";
+	mes "정말 강제 종료를 원하십니까?";
+	next;
+	menu "¶엔터방지위원회",Game_End," +정말로 강제 종료 합니다",-;
+
+	mes "안녕하세요 타뷸라의 늑대입니다";
+	mes "━━━━━━━━━━━━━";
+	mes "[강제 종료]";
+	mes "강제 종료가 적용됩니다";
+	close2;
+	stopnpctimer;
+	setnpctimer 350000;
+	startnpctimer;
+	end;
+
+Talk_pattern_Help:
+	message strcharinfo(0),"+━━━━━━명령어 리스트━━━━━━";
+	message strcharinfo(0),"+'-게임시작'：(게임을 등록합니다)";
+	message strcharinfo(0),"+'-게임방법'：(게임방법을 설명합니다)";
+	message strcharinfo(0),"+'↓(아래는 게임진행중인 사람만 가능한 명령어 입니다)";	
+	message strcharinfo(0),"+'-역할'：(역할을 확인합니다)";
+	message strcharinfo(0),"+'-발언'：(발언권을 가집니다)";
+	message strcharinfo(0),"+'-메모확인'／줄임말'-메확'：(낮／밤)";
+	message strcharinfo(0),"+'-메모수정'／줄임말'-메수'：(낮／밤)";
+	message strcharinfo(0),"+'-투표 (번호)-'：(낮_투표가능시간만)";
+	message strcharinfo(0),"+'-시간연장／줄임말'-시연''：(낮)";
+	if (.Tabula_Game_start >= 2) message strcharinfo(0),"+진행자：현재 게임이 진행중입니다";
+	end;
+
+Talk_pattern_How:
+	if (@Tabula_My_number) close;
+	mes "+━타뷸라의 늑대 HOW TO━";
+	mes "+^ff0000권장유저수는 11 명입니다.^000000";
+	next;
+	mes "+이중 9명의 시민과 2명의 늑대인간이 있습니다.";
+	mes "+^ff0000시민들은 늑대인간을 모두 찾아서 죽이면 승리합니다.^000000";
+	next;
+	mes "+모든 유저 11명 : 매일 아침이 되면 투표를 행사할 수 있습니다. 가장 많은 표를 받은사람은 사형당해 게임오버 됩니다.";
+	next;
+	mes "+^ff0000늑대인간 2명 : 자신의 정체를 숨겨야 합니다. 매일 밤마다 시민 1명을 골라 죽입니다. 늑대인간의 수가 남은 시민의 수와 동일해지면 승리합니다.^000000";
+	next;
+	mes "+똘마니 1명 : 시민과 똑같습니다. 그러나 똘마니는 늑대인간의 편입니다. 똘마니는 적극적으로 예언자, 영매사 등을 사칭해서 시민들을 혼란시키고";
+	mes "+^ff0000무고한 사람들에게 누명을 씌어서 죽여야합니다.^000000";
+	next;
+	mes "+예언자 1명 : 매일 밤이 되면 '살아있는 시민' 1명을 고릅니다. 그리고 다음날 아침이 되면 고른 시민이 늑대인간인지 아닌지를 구별할 수 있습니다.";
+	mes "+^ff0000가장 중요한 클래스입니다. 예언자는 자신이 예언자임을 시민들에게 밝힐 때 조심해야합니다. 늑대인간입장에선 당연히 예언자를 먼저 찾아 죽이고 싶기 때문이지요.^000000";
+	next;
+	mes "+영매사 1명 : 매일 밤이 되면 '죽은 시민' 1명을 고릅니다. 그리고 다음날 아침이 되면 고른 시민의 신분을 알 수 있습니다. 예언자는 단순히 늑대인간이냐 아니냐만";
+	mes "+^ff0000구별하는 반면 영매사는 조금 더 자세한 정보를 알 수 있습니다. 예언자 다음으로 중요한 클래스라 할 수 있습니다. 역시 늑대인간 입장에서 빨리 죽이고 싶은 존재입니다.^000000";
+	next;
+	mes "+보디가드 1명 : 매일 밤이 되면 시민 1명을 골라서 지킵니다. 그리고 그날 밤 지켜지는 시민은 늑대인간에게 지목당해도 죽지 않습니다. 하지만 보디가드는 스스로를";
+	mes "+^ff0000지킬 수 없습니다. 따라서 보디가드 역시 정체가 드러나면 바로 늑대인간에게 물려 죽습니다.^000000";
+	next;
+	mes "+쥐인간 1명 : 쥐인간은 늑대인간에게 공격당해도 죽지 않습니다. 예언자에게 지목당해야 죽는데, 쥐인간은 일부러 자신이 늑대인간에게 공격당하도록 유도해서 늑대인간이";
+	mes "+^ff00001턴을 소모하게 만드는 것이 좋습니다.^000000";
+	next;
+	mes "+귀족 1명 : 귀족은 가장 많은 투표를 당해도 면책권을 가지고 있어 죽지 않습니다. 오로지 늑대인간에게만 죽을 수 있기때문에 섯불리 정체를 밝히지 않는게 좋습니다.";
+	mes "+^ff0000감시자 1명 : 감시자는 매일 밤이 되면 시민 1명을 고릅니다. 다음날 아침이 되면 고른 시민이 '똘마니' 인지 아닌지 알아낼 수 있습니다.^000000";
+	next;
+	mes "+후계자 1명 : 시민수가 7명 이하가 되면, 가장 먼저 죽은 시민의 지위를 이어받습니다.";
+	mes "+^ff0000추격자 1명 : 추격자는 매일 밤이되면 살아있는 시민 중 하나를 선택합니다. 만일 선택한 시민이 그날 밤에 습격을 당해 '죽으면' 시민을 습격한 늑대인간 한명의^000000";
+	mes "+정체를 알아낼 수 있습니다.";
+	next;
+	mes "+※실제 플레이 예제";
+	next;
+	mes "+^0000ffA 예언자 : 예언결과 나왔습니다. D 님이 늑대입니다.^000000";
+	next;
+	mes "+D 늑대 : 잉? 무슨 소리인가요. 전 시민입니다.";
+	next;
+	mes "+^0000ff시민들 : D 가 늑대?^000000";
+	next;
+	mes "+C 똘마니 : 잠시만요 여러분, 속지마세요. A 는 예언자를 사칭하고 있습니다. 제가 예언자입니다.";
+	next;
+	mes "+^0000ffA 예언자 : 무슨소릴, C 님은 똘마니 같네요. 제가 예언자 맞습니다. 혹시 감시자 있습니까?^000000";
+	next;
+	mes "+E 감시자 : 제가 감시자입니다.";
+	next;
+	mes "+^0000ffA 예언자 : 감시자님은 오늘밤에 C 님이 똘마니인지 아닌지 봐주세요. 그럼 제가 예언자라는 걸 믿게 될겁니다.^000000";
+	next;
+	mes "+E 감시자 : 알겠습니다.";
+	next;
+	mes "+^0000ff-- 그날 밤 --^000000";
+	next;
+	mes "+D 늑대 [귓말 채팅 : 내가 보기엔 C 가 똘마니네요...... 감시자를 내버려두면 C 가 똘마니임이 밝혀질 겁니다. 감시자를 죽여서 증거를 없애죠]";
+	next;
+	mes "+^0000ffF 늑대 [귓말 채팅 : ㅇㅋ]^000000";
+	next;
+	mes "+-- 다음날 아침 --";
+	next;
+	mes "+^0000ff시스템 : E 가 시체로 발견되었습니다.^000000";
+	next;
+	mes "+A 예언자 : 이것 보세요. C 가 똘마니고, 늑대가 그것을 그 사실을 위해서 일부러 감시자인 E 님을 죽인겁니다.^";
+	next;
+	mes "+^0000ffC 똘마니 : 아닙니다. 늑대가 노리는 것이 그거입니다. 오히려 감시자 E 님을 죽여서 내가 똘마니라고 의심받게 만드려는 고단수의 플레이입니다. 가짜 예언자는 A 님입니다.^000000";
+	next;
+	mes "+다른 시민들 : 음... 누구말이 진실일까. 헷갈린다.";
+	next;
+	mes "+^0000ffG 귀족 : 잠시만요, 그럼 A 님은 자신을 예언자라고 했고, D 님이 늑대라고 예언했지요?^000000";
+	next;
+	mes "+A 예언자 : 예";
+	next;
+	mes "+^0000ffG 귀족 : 좋습니다. 그럼 D 님에게 묻겠습니다. 님이 늑대가 아니라면 님 정체는 무엇입니까?^000000";
+	next;
+	mes "+D 늑대 : 전 귀족입니다.";
+	next;
+	mes "+^0000ffG 귀족 : 귀족이라고요? 정말입니까?^000000";
+	next;
+	mes "+D 늑대 : 예";
+	next;
+	mes "+^0000ffG 귀족 : 하하하 D 님이 늑대맞네요. 귀족은 저입니다!^000000";
+	next;
+	mes "+D 늑대 : !?";
+	next;
+	mes "+^0000ffD 늑대 : 음음, 무슨소리! 제가 귀족입니다. G 님이 귀족을 사칭하는 늑대군요.^000000";
+	next;
+	mes "+G 귀족 : 제가 사칭? 그럼 이렇게 하죠. D 님이 귀족이라면 투표를 당해도 사형당하지 않겠지요? 우리 모두 D 님을 늑대로 투표해봅시다.";
+	next;
+	mes "+^0000ff만일 그래서 D 님이 귀족이면 다음날 저를 늑대라고 생각해 죽여도 됩니다.^000000";
+	next;
+	mes "+D 늑대 : 아닙니다, 저 말에 속아서 괜히 1턴을 낭비하지 마십시오. 저는 귀족이 확실합니다.";
+	next;
+	mes "+^0000ff시민들 : [그러나 대새는 기울고] -투표 D^000000";
+	next;
+	mes "+시스템 : D 가 가장 많은 표를 받아 사망하였습니다.";
+	next;
+	mes "+^0000ffG 귀족 : 귀족은 투표를 당해도 죽지 않는데, 그렇다면 D 는 역시 귀족이 아닌 늑대겠죠? 그럼 D 가 늑대라고 예언한 A 님은 예언자가 확실합니다.^000000";
+	next;
+	mes "+그렇다면 C 님은 예언자를 사칭한 똘마니겠군요. 다음 날 아침에는 C 님을 매달아 죽이죠.";
+	next;
+	mes "+^0000ffC 똘마니 : ......^000000";
+	next;
+	mes "+이해가 되셨습니까? 이런 식의 게임입니다.";
+	next;
+	mes "+^0000ff그럼 즐 타뷸라.^000000";
+	close;
+
+Game_Start:
+	if (.Tabula_Game_start >= 2)
+	{
+		mes "━━━━━━━━━━━━━";
+		mes "[진행오류]";
+		mes "현재 게임이 진행중이기 때문에 더이상 진행을 할수 없습니다";
+		next;
+		goto Game_End;
+	}
+	mes "━━━━━━━━━━━━━";
+	mes "[등록절차]";
+	mes "11명이 등록해야 게임이 시작됩니다";
+	mes "현재 참가인원 총 "+.Tabula_User_ea+"명";
+	switch(.Tabula_Game_rule)
+	{
+		case 0:	mes "현재 적용룰 ： ^00ff00기본룰^000000";	break;
+		case 1:	mes "현재 적용룰 ： ^ff0000혼란룰^000000";	break;
+		case 2:	mes "현재 적용룰 ： ^0000ff클래식룰^000000";	break;
+	}
+	mes strcharinfo(0)+"님도 등록하시겠습니까?";
+	mes "━━━━━━━━━━━━━";
+	mes "'채팅명령어 '-게임시작'을 입력해도 등록이 됩니다";
+	next;
+	menu "¶엔터방지위원회",Game_End," +등록하겠습니다",Game_Join;
+
+Talk_pattern_Start:
+	if (.Tabula_Game_start >= 2)
+	{
+		message strcharinfo(0),"+진행자：현재 게임이 진행중이기 때문에 더이상 진행을 할수 없습니다";
+		end;
+	}
+
+	switch(.Tabula_Game_rule)
+	{
+		case 0: set .@rules$, "기본룰";		break;
+		case 1:	set .@rules$, "혼란룰";		break;
+		case 2:	set .@rules$, "클래식룰";	break;
+	}
+	message strcharinfo(0),"+진행자：등록을 하겠습니다 (현재 참가인원 총 "+.Tabula_User_ea+"명 / "+.@rules$+")";
+
+	//message strcharinfo(0),"+진행자：지금은 플레이어 체크중입니다";
+	if (.Tabula_Game_start > 1)
+	{
+		message strcharinfo(0),"+진행자：지금 11명의 플레이어가 이미 게임등록을 마치셨습니다 또한 게임 진행중입니다";
+		end;
+	}
+	else if (.Tabula_User_ea == 11)
+	{
+		mes "지금 11명의 플레이어가 이미 게임등록을 마치셨습니다 또한 게임 진행중입니다";
+		next;
+		goto Game_End;
+	} 
+
+	for(set .@i,1; .@i<=11; set .@i,.@i+1)
+	{
+		if (.Tabula_User_name$[.@i] == strcharinfo(0))
+		{
+			message strcharinfo(0),"+진행자：이미 게임에 한번 참여하신 플레이어 입니다";
+			goto Game_Wait_Talk;
+		}
+	}
+
+	set .Tabula_User_ea,.Tabula_User_ea+1;
+	set @Tabula_My_number,.Tabula_User_ea;
+	set .Tabula_User_name$[@Tabula_My_number],strcharinfo(0);
+	set .Tabula_User_char[@Tabula_My_number],getcharid(0);
+	set .Tabula_User_account[@Tabula_My_number],getcharid(3);
+	if (.Tabula_User_ea == 1)
+	{
+		set .Tabula_Game_start,1;
+		initnpctimer;
+	}
+	if (.Tabula_User_ea == 11)
+	{
+		stopnpctimer;
+		setnpctimer 121000;
+		startnpctimer;
+	}
+	message strcharinfo(0),"+진행자：["+@Tabula_My_number+"]번 플레이어로 등록성공 하였습니다";
+	getmapxy .@map$,.@x,.@y,1,strnpcinfo(0);
+	soundeffectall "버튼소리.wav",0,.@map$,.@x-7,.@y-7,.@x+7,.@y+7;
+	//atcommand "@별명 ["+@Tabula_My_number+"]"+strcharinfo(0);
+	if (@Tabula_My_number == 1)
+		goto Game_Rule;
+	goto Game_Wait_Talk;
+
+
+Game_Rule:
+	mes "━━━━━━━━━━━━━";
+	mes "[룰선택]";
+	mes "당신은 [1]번 플레이어로서 룰을 선택할수있습니다";
+	mes "룰선택의 기회는 지금뿐이므로 신중하게 선택하세요! 만약 선택완료가 안되거나";
+	mes "그냥 대화창을 닫아버리는 경우는 기본룰이 적용됩니다";
+	mes "━━━━━━━━━━━━━";
+	mes " -^00ff00기본룰^000000：가장 기본적인 룰입니다";
+	mes " -^ff0000혼란룰^000000：쥐인간에겐 유리 보디가드는 불리한 룰";
+	mes " -^0000ff클래식룰^000000：투표무효일 경우 랜덤하게 한명이 죽습니다";
+	next;
+	menu "¶엔터방지위원회",Game_Rule," +^00ff00기본룰^000000",-," +^ff0000혼란룰^000000",-," +^0000ff클래식룰^000000",-;
+	mes "━━━━━━━━━━━━━";
+	mes "[룰선택]";
+	if (@menu == 2)
+		mes "기본룰이 선택되었습니다";
+	else if (@menu == 3)
+	{
+		mes "혼란룰이 선택되었습니다";
+		set .Tabula_Game_rule,1;
+	}
+	else if (@menu == 4)
+	{
+		mes "클래식룰이 선택되었습니다";
+		set .Tabula_Game_rule,2;
+	}
+	close;
+
+Game_Wait_Talk:
+	message strcharinfo(0),"+진행자：원활한 진행을 위해 대기하여 주세요";
+	end;
+
+Game_loof:
+	set .m2,0;
+	switch(rand(1,11))
+	{
+		case 1:		set .@m1$,"늑대인간1";	break;
+		case 2:		set .@m1$,"늑대인간2";	break;
+		case 3:		set .@m1$,"예언자";	break;
+		case 4:		set .@m1$,"보디가드";	break;
+		case 5:		set .@m1$,"영매사";	break;
+		case 6:		set .@m1$,"추격자";	break;
+		case 7:		set .@m1$,"귀족";	break;
+		case 8:		set .@m1$,"쥐인간";	break;
+		case 9:		set .@m1$,"후계자";	break;
+		case 10:	set .@m1$,"똘마니";	break;
+		case 11:	set .@m1$,"감시자";	break;
+	}
+
+	if (.Tabula_User_job$[1] == .@m1$) set .m2,1;
+	else if (.Tabula_User_job$[2] == .@m1$) set .m2,1;
+	else if (.Tabula_User_job$[3] == .@m1$) set .m2,1;
+	else if (.Tabula_User_job$[4] == .@m1$) set .m2,1;
+	else if (.Tabula_User_job$[5] == .@m1$) set .m2,1;
+	else if (.Tabula_User_job$[6] == .@m1$) set .m2,1;
+	else if (.Tabula_User_job$[7] == .@m1$) set .m2,1;
+	else if (.Tabula_User_job$[8] == .@m1$) set .m2,1;
+	else if (.Tabula_User_job$[9] == .@m1$) set .m2,1;
+	else if (.Tabula_User_job$[10] == .@m1$) set .m2,1;
+	else if (.Tabula_User_job$[11] == .@m1$) set .m2,1;
+	if (.m2 == 1) goto Game_loof;
+	set .Tabula_User_ea,.Tabula_User_ea+1;
+	set .Tabula_User_job$[.Tabula_User_ea],.@m1$;
+	if (.Tabula_User_ea >= 11)
+	{
+		for(set .@i,1; .@i<=11; set .@i,.@i+1)
+		{
+			if (attachrid(.Tabula_User_account[.@i]))
+			{
+				doevent strnpcinfo(0)+"::OnGame_Job";
+				detachrid;
+			}
+		}
+		getmapxy .@map$,.@x,.@y,1,strnpcinfo(0);
+		soundeffectall "welcome.wav",0,.@map$,.@x-7,.@y-7,.@x+7,.@y+7;
+		npctalk "　　　　‥메뉴 혹은 명령어를 통해 역할을 확인할수 있습니다 (정확히 10초후에 게임을 시작합니다)";
+		set .Tabula_Game_start,3;
+		stopnpctimer;
+		setnpctimer 262000;
+		startnpctimer;
+		end;
+	}
+	goto Game_loof;
+
+OnGame_Job:
+	mes "━━━━━━━━━━━━━";
+	mes "[직업체크]";
+	mes "당신의 직업은 "+.Tabula_User_job$[@Tabula_My_number]+"입니다";
+	addtimer 1,strnpcinfo(0)+"::OnCardopen";
+	close;
+
+Talk_pattern_Job:
+	if (.Tabula_Game_start >=3  && .Tabula_User_name$[@Tabula_My_number] == strcharinfo(0))
+	{
+		npcwhisper strcharinfo(0),"진행：당신의 직업은 "+.Tabula_User_job$[@Tabula_My_number]+"입니다";
+		addtimer 1,strnpcinfo(0)+"::OnCardopen";
+	}
+	end;
+
+OnCardopen:
+	if (.Tabula_User_job$[@Tabula_My_number] == "늑대인간1" || .Tabula_User_job$[@Tabula_My_number] == "늑대인간2") cutin "하티카드",1;
+	if (.Tabula_User_job$[@Tabula_My_number] == "예언자" || .Tabula_User_job$[@Tabula_My_number] == "예언자(후계자)") cutin "요선녀카드",1;
+	if (.Tabula_User_job$[@Tabula_My_number] == "보디가드" || .Tabula_User_job$[@Tabula_My_number] == "보디가드(후계자)") cutin "칼리츠버그카드",1;
+	if (.Tabula_User_job$[@Tabula_My_number] == "영매사" || .Tabula_User_job$[@Tabula_My_number] == "영매사(후계자)") cutin "죽은자의주인카드",1;
+	if (.Tabula_User_job$[@Tabula_My_number] == "추격자" || .Tabula_User_job$[@Tabula_My_number] == "추격자(후계자)") cutin "어쌔신크로스카드",1;
+	if (.Tabula_User_job$[@Tabula_My_number] == "귀족" || .Tabula_User_job$[@Tabula_My_number] == "귀족(후계자)") cutin "드라큐라카드",1;
+	if (.Tabula_User_job$[@Tabula_My_number] == "쥐인간" || .Tabula_User_job$[@Tabula_My_number] == "쥐인간(후계자)") cutin "아누비스카드",1;
+	if (.Tabula_User_job$[@Tabula_My_number] == "후계자") cutin "경단동자카드",1;
+	if (.Tabula_User_job$[@Tabula_My_number] == "똘마니") cutin "거대위스퍼카드",1;
+	if (.Tabula_User_job$[@Tabula_My_number] == "감시자" || .Tabula_User_job$[@Tabula_My_number] == "감시자(후계자)") cutin "타나토스의절망",1;
+	addtimer 3000,strnpcinfo(0)+"::OnCardclose";
+	end;
+
+OnCardclose:
+	deltimer strnpcinfo(0)+"::OnCardopen";
+	deltimer strnpcinfo(0)+"::OnCardclose";
+	cutin "",255;
+	end;
+
+
+Talk_pattern_Memo1:
+	if (.Tabula_User_name$[@Tabula_My_number] != strcharinfo(0))
+		end;
+	mes "━━━━━━━━━━━━━";
+	mes "[메모지]";
+	if (.Tabula_User_job$[@Tabula_My_number] == "늑대인간1" || .Tabula_User_job$[@Tabula_My_number] == "늑대인간2")
+	{
+		for(set .@i,1; .@i<=11; set .@i,.@i+1)
+		{
+			if (.Tabula_User_job$[.@i] == "늑대인간1" || .Tabula_User_job$[.@i] == "늑대인간2")
+				mes "^FF0000["+.@i+"]"+.Tabula_User_name$[.@i]+"："+.Tabula_User_memo$[.@i];
+			else if (.Tabula_User_job$[.@i] == "똘마니" && .Tabula_Game_lier_succes == 1)
+				mes "^FF0000["+.@i+"]"+.Tabula_User_name$[.@i]+"："+.Tabula_User_memo$[.@i];
+			else
+				mes "^000000["+.@i+"]"+.Tabula_User_name$[.@i]+"："+.Tabula_User_memo$[.@i];
+		}
+	}
+	else if (.Tabula_User_job$[@Tabula_My_number] == "똘마니")
+	{
+		for(set .@i,1; .@i<=11; set .@i,.@i+1)
+		{
+			if (.Tabula_User_job$[.@i] == "늑대인간1" && .Tabula_Game_lier_succes == 1)
+				mes "^FF0000["+.@i+"]"+.Tabula_User_name$[.@i]+"："+.Tabula_User_memo$[.@i];
+			else if (.Tabula_User_job$[.@i] == "늑대인간2" && .Tabula_Game_lier_succes == 1)
+				mes "^FF0000["+.@i+"]"+.Tabula_User_name$[.@i]+"："+.Tabula_User_memo$[.@i];
+			else if (.Tabula_User_job$[.@i] == "똘마니")
+				mes "^FF0000["+.@i+"]"+.Tabula_User_name$[.@i]+"："+.Tabula_User_memo$[.@i];
+			else
+				mes "^000000["+.@i+"]"+.Tabula_User_name$[.@i]+"："+.Tabula_User_memo$[.@i];
+		}
+	}
+	else
+	{
+		for(set .@i,1; .@i<=11; set .@i,.@i+1)
+		{
+			if (@Tabula_My_number == .@i)
+				mes "^FF0000["+.@i+"]"+.Tabula_User_name$[.@i]+"："+.Tabula_User_memo$[.@i];
+			else
+				mes "^000000["+.@i+"]"+.Tabula_User_name$[.@i]+"："+.Tabula_User_memo$[.@i];
+		}
+	}
+	mes "━━━━━━━━━━━━━";
+	mes "나의 스캔결과："+.Tabula_User_scan$[@Tabula_My_number];
+	mes "━━━━━━━━━━━━━";
+	close;
+
+Talk_pattern_Memo2:
+	if (.Tabula_User_die[@Tabula_My_number] >= 1)
+	{
+		npcwhisper strcharinfo(0),"진행：당신은 죽었습니다(비매너적인 귓플，방해는 자제해 주시기 바랍니다)";
+		end;
+	}
+
+	if (.Tabula_User_name$[@Tabula_My_number] != strcharinfo(0))
+		end;
+
+	message strcharinfo(0),"+메모： 수정할 메모를 입력하세요('취소' 입력시 취소)";
+
+	input .@memo$;
+
+	if (.@memo$ == "취소")
+		close;
+
+	set .Tabula_User_memo$[@Tabula_My_number],.@memo$;
+
+	delwaitingroom @Tabula_My_number+"번자리";
+	initnpctimer @Tabula_My_number+"번자리";
+	close;
+
+Game_Announce:
+Talk_pattern_Memo3:
+	if (.Tabula_User_name$[@Tabula_My_number] != strcharinfo(0))
+		end;
+	if (.Tabula_User_die[@Tabula_My_number] >= 1)
+	{
+		npcwhisper strcharinfo(0),"진행：당신은 죽었습니다(비매너적인 귓플，방해는 자제해 주시기 바랍니다)";
+		end;
+	}
+	else if (.Tabula_Game_start != 4)
+	{
+		npcwhisper strcharinfo(0),"진행：발언을 할수 있는 시간이 아닙니다";
+		end;
+	}
+
+	input .@memo$;
+	if (.@memo$ == "취소" || .Tabula_User_die[@Tabula_My_number] == 1 || .Tabula_Game_start != 4)
+		close;
+	else
+	{
+		getmapxy .@map$,.@x,.@y,1,strnpcinfo(0);
+		announce "["+@Tabula_My_number+"]"+.Tabula_User_name$[@Tabula_My_number]+"："+.@memo$,bc_area,0xFFFFDD;
+		soundeffectall "civil_servant_stand.wav",0,.@map$,.@x-7,.@y-7,.@x+7,.@y+7;
+		goto Game_Announce;
+	}
+
+Talk_pattern_Vote1:
+	if (!@vote) set @vote,1;
+Talk_pattern_Vote2:
+	if (!@vote) set @vote,2;
+Talk_pattern_Vote3:
+	if (!@vote) set @vote,3;
+Talk_pattern_Vote4:
+	if (!@vote) set @vote,4;
+Talk_pattern_Vote5:
+	if (!@vote) set @vote,5;
+Talk_pattern_Vote6:
+	if (!@vote) set @vote,6;
+Talk_pattern_Vote7:
+	if (!@vote) set @vote,7;
+Talk_pattern_Vote8:
+	if (!@vote) set @vote,8;
+Talk_pattern_Vote9:
+	if (!@vote) set @vote,9;
+Talk_pattern_Vote10:
+	if (!@vote) set @vote,10;
+Talk_pattern_Vote11:
+	if (!@vote) set @vote,11;
+
+	if (.Tabula_User_name$[@Tabula_My_number] != strcharinfo(0))
+	{
+		set @vote,0;
+		end;
+	}
+	else if (.Tabula_User_die[@Tabula_My_number] >= 1)
+	{
+		npcwhisper strcharinfo(0),"진행：당신은 죽었습니다(비매너적인 귓플，방해는 자제해 주시기 바랍니다)";
+		set @vote,0;
+		end;
+	}
+	else if (!.Tabula_Game_start || .Tabula_Game_start != 4 || .Tabula_Game_Timer > 10)
+	{
+		npcwhisper strcharinfo(0),"진행：투표를 할수 있는 시간이 아닙니다";
+		set @vote,0;
+		end;
+	}
+	else if (.Tabula_User_vote[@Tabula_My_number] >= 1)
+	{
+		npcwhisper strcharinfo(0),"진행：이미 투표를 하셨군요 (아침이 될때마다 한번씩만 투표가 가능합니다)";
+		end;
+	}
+	else if (@vote == @Tabula_My_number)
+	{
+		npcwhisper strcharinfo(0),"진행：자기자신은 투표를 할수 없습니다";
+		set @vote,0;
+		end;
+	}
+	else if (.Tabula_User_die[@vote] == 1)
+	{
+		npcwhisper strcharinfo(0),"진행：이탈하거나 죽은사람은 투표할수 없습니다";
+		set @vote,0;
+		end;
+	}
+	if (.Tabula_Game_Timer <= 3)
+		set .Tabula_Game_Timer,.Tabula_Game_Timer+2;
+
+	getmapxy .@map$,.@x,.@y,1,strnpcinfo(0); 
+	soundeffectall "취소.wav",0,.@map$,.@x-7,.@y-7,.@x+7,.@y+7;
+	set .Tabula_User_vote[@Tabula_My_number],1;
+	set .Tabula_Game_vote[@vote],.Tabula_Game_vote[@vote]+1;
+	npctalk "　　　　 +플레이어 ["+@Tabula_My_number+"]"+strcharinfo(0)+"님께서 → ["+@vote+"]"+.Tabula_User_name$[@vote]+"님을 늑대측으로 지목합니다";
+	//npcwhisper strcharinfo(0),"진행：당신은 ["+@vote+"]"+.Tabula_User_name$[@vote]+"님을 늑대측으로 지목합니다";
+	//message .Tabula_User_name$[@vote],"진행：["+@Tabula_My_number+"]"+strcharinfo(0)+"님께서 당신을 늑대측으로 지목합니다";
+	set @vote,0;
+	end;
+
+Talk_pattern_Day:
+	if (.Tabula_User_name$[@Tabula_My_number] != strcharinfo(0))
+		end;
+	if (.Tabula_User_die[@Tabula_My_number] >= 1)
+	{
+		npcwhisper strcharinfo(0),"진행：당신은 죽었습니다(비매너적인 귓플，방해는 자제해 주시기 바랍니다)";
+		end;
+	}
+	else if (.Tabula_Game_start != 4 || .Tabula_Game_Timer <= 10)
+	{
+		npcwhisper strcharinfo(0),"진행：시간연장을 할수 있는 시간이 아닙니다";
+		end;
+	}
+	else if (.Tabula_User_timer[@Tabula_My_number] >= 1)
+	{
+		npcwhisper strcharinfo(0),"진행：이미 시간연장을 하셨군요 (아침이 될때마다 한번씩만 시간연장이 가능합니다)";
+		end;
+	}
+	set .Tabula_User_timer[@Tabula_My_number],1;
+	set .Tabula_Game_Timer,.Tabula_Game_Timer+20;
+	npctalk "　　　　 +"+strcharinfo(0)+"님께서 시간을 연장하셨습니다";
+	end;	
+
+OnGame_Skill:
+	mes "당신은 "+.Tabula_User_job$[@Tabula_My_number]+"입니다";
+	mes "━━━━━━━━━━━━━";
+	mes "나의 스캔결과：";
+	mes .Tabula_User_scan$[@Tabula_My_number];
+	mes "━━━━━━━━━━━━━";
+	mes "[직업별 스킬]";
+	if (.Tabula_User_job$[@Tabula_My_number] == "늑대인간1" || .Tabula_User_job$[@Tabula_My_number] == "늑대인간2")
+	{
+		mes "자신의 정체를 숨겨야 합니다.";
+		mes "매일 밤마다 시민 1명을 골라 죽입니다.";
+		mes "늑대팀의 수가 남은 시민의 수와 동일해지면 승리합니다.";
+		next;
+		mes "━━━━━━━━━━━━━";
+		mes "[직업별 스킬]";
+		mes "오늘밤은 몇번 플레이어를 죽일까요?";
+		next;
+		set @Skill,namemenu();
+		mes "━━━━━━━━━━━━━";
+		mes "[직업별 스킬]";
+		if (.Tabula_Game_start != 6)
+		{
+			mes "이미 선택시간이 지났습니다";
+			close2;
+			npcwhisper strcharinfo(0),"진행：이미 선택시간이 지났습니다";
+			end;
+		}
+		else if (.Tabula_User_job$[@Skill] == "늑대인간1" || .Tabula_User_job$[@Skill] == "늑대인간2")
+		{
+			mes "늑대인간끼리는 죽일수 없습니다";
+			next;
+			goto OnGame_Skill;
+		}
+		else if (.Tabula_User_die[@Skill] == 1)
+		{
+			mes "이탈하거나 죽은사람은 사살할수 없습니다";
+			next;
+			goto OnGame_Skill;
+		}
+		else if (.Tabula_Game_wolf)
+		{
+			mes "이미 ["+.Tabula_Game_wolf+"]번 플레이어를 지목했습니다";
+			close2;
+			npcwhisper strcharinfo(0),"진행：다음날 밤에 사용하시기 바랍니다";
+			end;
+		}
+		set .Tabula_Game_wolf,@Skill;
+		set .Tabula_Game_wnum,@Tabula_My_number;
+		mes "오늘밤은 ["+.Tabula_Game_wolf+"]번 플레이어를 사살합니다";
+		close2;
+		for(set .@i,1; .@i<=11; set .@i,.@i+1)
+		{
+			if (.Tabula_User_job$[.@i] == "늑대인간1" || .Tabula_User_job$[.@i] == "늑대인간2")
+				npcwhisper .Tabula_User_name$[.@i],"진행：오늘밤은 ["+.Tabula_Game_wolf+"]번 플레이어를 사살합니다";
+			else if (.Tabula_User_job$[.@i] == "똘마니" && .Tabula_Game_lier_succes == 1)
+				npcwhisper .Tabula_User_name$[.@i],"진행：오늘밤은 ["+.Tabula_Game_wolf+"]번 플레이어를 사살합니다";
+		}
+		end;
+	}
+
+	else if (.Tabula_User_job$[@Tabula_My_number] == "예언자" || .Tabula_User_job$[@Tabula_My_number] == "예언자(후계자)")
+	{
+		mes "매일 밤이 되면 '살아있는 시민' 1명을 고릅니다.";
+		mes "그리고 다음날 아침이 되면 고른 시민이 늑대인간인지 아닌지를 구별할 수 있습니다.";
+		mes "가장 중요한 클래스입니다.";
+		mes "예언자는 자신이 예언자임을 시민들에게 밝힐 때 조심해야합니다.";
+		mes "늑대인간입장에선 당연히 예언자를 먼저 찾아 죽이고 싶기 때문이지요.";
+		next;
+		mes "━━━━━━━━━━━━━";
+		mes "[직업별 스킬]";
+		mes "몇번 플레이어가 늑대같아요?";
+		next;
+		set @Skill,namemenu();
+		mes "━━━━━━━━━━━━━";
+		mes "[직업별 스킬]";
+		if (.Tabula_Game_start != 6)
+		{
+			mes "이미 선택시간이 지났습니다";
+			close2;
+			npcwhisper strcharinfo(0),"진행：이미 선택시간이 지났습니다";
+			end;
+		}
+		else if (@Skill == @Tabula_My_number)
+		{
+			mes "자기자신은 예언할수 없습니다";
+			next;
+			goto OnGame_Skill;
+		}
+		else if (.Tabula_User_die[@Skill] == 1)
+		{
+			mes "이탈하거나 죽은사람은 예언할수 없습니다";
+			next;
+			goto OnGame_Skill;
+		}
+		else if (.Tabula_Game_mist)
+		{
+			mes "이미 ["+.Tabula_Game_mist+"]번 플레이어를 지목했습니다";
+			close2;
+			npcwhisper strcharinfo(0),"진행：다음날 밤에 사용하시기 바랍니다";
+			end;
+		}
+		set .Tabula_Game_mist,@Skill;
+		mes "오늘밤은 ["+.Tabula_Game_mist+"]번 플레이어를 예언합니다";
+		close2;
+		npcwhisper strcharinfo(0),"진행：오늘밤은 ["+.Tabula_Game_mist+"]번 플레이어를 예언합니다";
+		end;
+	}
+
+	else if (.Tabula_User_job$[@Tabula_My_number] == "보디가드" || .Tabula_User_job$[@Tabula_My_number] == "보디가드(후계자)")
+	{
+		mes "매일 밤이 되면 시민 1명을 골라서 지킵니다.";
+		mes "그리고 그날 밤 지켜지는 시민은 늑대인간에게 지목당해도 죽지 않습니다.";
+		mes "하지만 보디가드는 스스로를 지킬 수 없습니다.";
+		mes "따라서 보디가드 역시 정체가 드러나면 바로 늑대인간에게 물려 죽습니다.";
+		next;
+		mes "━━━━━━━━━━━━━";
+		mes "[직업별 스킬]";
+		mes "몇번 플레이어를 지키고 싶으세요?";
+		next;
+		set @Skill,namemenu();
+		mes "━━━━━━━━━━━━━";
+		mes "[직업별 스킬]";
+		if (.Tabula_Game_start != 6)
+		{
+			mes "이미 선택시간이 지났습니다";
+			close2;
+			npcwhisper strcharinfo(0),"진행：이미 선택시간이 지났습니다";
+			end;
+		}
+		else if (@Skill == @Tabula_My_number) {
+			mes "자기자신은 보호할수 없습니다";
+			next;
+			goto OnGame_Skill;
+		}
+		else if (.Tabula_User_die[@Skill] == 1) {
+			mes "이탈하거나 죽은사람은 보호할수 없습니다";
+			next;
+			goto OnGame_Skill;
+		}
+		else if (.Tabula_Game_body)
+		{
+			mes "이미 ["+.Tabula_Game_body+"]번 플레이어를 지목했습니다";
+			close2;
+			npcwhisper strcharinfo(0),"진행：다음날 밤에 사용하시기 바랍니다";
+			end;
+		}
+		set .Tabula_Game_body,@Skill;
+		mes "오늘밤은 ["+.Tabula_Game_body+"]번 플레이어를 보호합니다";
+		close2;
+		npcwhisper strcharinfo(0),"진행：오늘밤은 ["+.Tabula_Game_body+"]번 플레이어를 보호합니다";
+		end;
+	}
+
+	else if (.Tabula_User_job$[@Tabula_My_number] == "영매사" || .Tabula_User_job$[@Tabula_My_number] == "영매사(후계자)")
+	{
+		mes "매일 밤이 되면 '죽은 시민' 1명을 고릅니다.";
+		mes "그리고 다음날 아침이 되면 고른 시민의 신분을 알 수 있습니다.";
+		mes "예언자는 단순히 늑대인간이냐 아니냐만 구별하는 반면 영매사는 조금 더 자세한 정보를 알 수 있습니다.";
+		mes "예언자 다음으로 중요한 클래스라 할 수 있습니다.";
+		mes "역시 늑대인간 입장에서 빨리 죽이고 싶은 존재입니다.";
+		next;
+		mes "━━━━━━━━━━━━━";
+		mes "[직업별 스킬]";
+		mes "몇번 플레이어의 영혼을 불러올까요?";
+		next;
+		set @Skill,namemenu();
+		mes "━━━━━━━━━━━━━";
+		mes "[직업별 스킬]";
+		if (.Tabula_Game_start != 6)
+		{
+			mes "이미 선택시간이 지났습니다";
+			close2;
+			npcwhisper strcharinfo(0),"진행：이미 선택시간이 지났습니다";
+			end;
+		}
+		else if (@Skill == @Tabula_My_number)
+		{
+			mes "자기자신은 영매할수 없습니다";
+			next;
+			goto OnGame_Skill;
+		}
+		else if (.Tabula_User_die[@Skill] == 0)
+		{
+			mes "살아있는 자는 영매할수 없습니다";
+			next;
+			goto OnGame_Skill;
+		}
+		else if (.Tabula_Game_soul)
+		{
+			mes "이미 ["+.Tabula_Game_soul+"]번 플레이어를 지목했습니다";
+			close2;
+			npcwhisper strcharinfo(0),"진행：다음날 밤에 사용하시기 바랍니다";
+			end;
+		}
+		set .Tabula_Game_soul,@Skill;
+		mes "오늘밤은 ["+.Tabula_Game_soul+"]번 플레이어를 영매합니다";
+		close2;
+		npcwhisper strcharinfo(0),"진행：오늘밤은 ["+.Tabula_Game_soul+"]번 플레이어를 영매합니다";
+		end;
+	}
+
+	else if (.Tabula_User_job$[@Tabula_My_number] == "추격자" || .Tabula_User_job$[@Tabula_My_number] == "추격자(후계자)")
+	{
+		mes "추격자는 매일 밤이되면 살아있는 시민 중 하나를 선택합니다.";
+		mes "만일 선택한 시민이 그날 밤에 습격을 당해 '죽으면' 시민을 습격한 늑대인간 한명의 정체를 알아낼 수 있습니다.";
+		next;
+		mes "━━━━━━━━━━━━━";
+		mes "[직업별 스킬]";
+		mes "몇번 플레이어가 늑대에게 공격당할까요?";
+		next;
+		set @Skill,namemenu();
+		mes "━━━━━━━━━━━━━";
+		mes "[직업별 스킬]";
+		if (.Tabula_Game_start != 6)
+		{
+			mes "이미 선택시간이 지났습니다";
+			close2;
+			npcwhisper strcharinfo(0),"진행：이미 선택시간이 지났습니다";
+			end;
+		}
+		else if (@Skill == @Tabula_My_number)
+		{
+			mes "자기자신은 추격할수 없습니다";
+			next;
+			goto OnGame_Skill;
+		}
+		else if (.Tabula_User_die[@Skill] == 1)
+		{
+			mes "이탈하거나 죽은사람은 추격할수 없습니다";
+			next;
+			goto OnGame_Skill;
+		}
+		else if (.Tabula_Game_lost)
+		{
+			mes "이미 ["+.Tabula_Game_lost+"]번 플레이어를 지목했습니다";
+			close2;
+			npcwhisper strcharinfo(0),"진행：다음날 밤에 사용하시기 바랍니다";
+			end;
+		}
+		set .Tabula_Game_lost,@Skill;
+		mes "오늘밤은 ["+.Tabula_Game_lost+"]번 플레이어를 추격합니다";
+		close2;
+		npcwhisper strcharinfo(0),"진행：오늘밤은 ["+.Tabula_Game_lost+"]번 플레이어를 추격합니다";
+		end;
+	}
+
+	else if (.Tabula_User_job$[@Tabula_My_number] == "귀족" || .Tabula_User_job$[@Tabula_My_number] == "귀족(후계자)")
+	{
+		mes "귀족은 가장 많은 투표를 당해도 면책권을 가지고 있어 죽지 않습니다.";
+		mes "오로지 늑대인간에게만 죽을 수 있기때문에 섯불리 정체를 밝히지 않는게 좋습니다.";
+		close2;
+		npcwhisper strcharinfo(0),"진행：당신은 귀족 입니다(해당 직업스킬은 밤에 사용할수 없습니다)";
+		end;
+	}
+
+	else if (.Tabula_User_job$[@Tabula_My_number] == "쥐인간" || .Tabula_User_job$[@Tabula_My_number] == "쥐인간(후계자)")
+	{
+		mes "쥐인간은 늑대인간에게 공격당해도 죽지 않습니다.";
+		mes "예언자에게 지목당해야 죽는데,";
+		mes "쥐인간은 일부러 자신이 늑대인간에게 공격당하도록 유도해서 늑대인간이 1턴을 소모하게 만드는 것이 좋습니다.";
+		close2;
+		npcwhisper strcharinfo(0),"진행：당신은 쥐인간 입니다(해당 직업스킬은 밤에 사용할수 없습니다)";
+		end;
+	}
+
+	else if (.Tabula_User_job$[@Tabula_My_number] == "후계자")
+	{
+		mes "시민수가 7명 이하가 되면,";
+		mes "가장 먼저 죽은 시민의 지위를 이어받습니다.";
+		close2;
+		npcwhisper strcharinfo(0),"진행：당신은 후계자 입니다(해당 직업스킬은 밤에 사용할수 없습니다)";
+		end;
+	}
+
+	else if (.Tabula_User_job$[@Tabula_My_number] == "똘마니")
+	{
+		mes "시민과 똑같습니다.";
+		mes "그러나 똘마니는 늑대인간의 편입니다.";
+		mes "똘마니는 적극적으로 예언자, 영매사 등을 사칭해서 시민들을 혼란시키고 무고한 사람들에게 누명을 씌어서 죽여야합니다.";
+		if (!.Tabula_Game_lier_succes)
+		{
+			next;
+			mes "━━━━━━━━━━━━━";
+			mes "[직업별 스킬]";
+			mes "몇번 플레이어가 늑대같아요?";
+			mes "똘마니는 늑대를 찾는직업일뿐";
+			mes "스캔목록은 죽은사람의 직업입니다";
+			next;
+			set @Skill,namemenu();
+			mes "━━━━━━━━━━━━━";
+			mes "[직업별 스킬]";
+			if (.Tabula_Game_start != 6)
+			{
+				mes "이미 선택시간이 지났습니다";
+				close2;
+				npcwhisper strcharinfo(0),"진행：이미 선택시간이 지났습니다";
+				end;
+			}
+			else if (@Skill == @Tabula_My_number)
+			{
+				mes "자기자신은 똘마니할수 없습니다";
+				next;
+				goto OnGame_Skill;
+			}
+			else if (.Tabula_User_die[@Skill] == 1)
+			{
+				mes "이탈하거나 죽은사람은 지목할수 없습니다";
+				next;
+				goto OnGame_Skill;
+			}
+			else if (.Tabula_Game_lier)
+			{
+				mes "이미 ["+.Tabula_Game_lier+"]번 플레이어를 지목했습니다";
+				close2;
+				npcwhisper strcharinfo(0),"진행：다음날 밤에 사용하시기 바랍니다";
+				end;
+			}
+			set .Tabula_Game_lier,@Skill;
+			mes "오늘밤은 ["+.Tabula_Game_lier+"]번 플레이어를 확인합니다";
+			close2;
+			npcwhisper strcharinfo(0),"진행：오늘밤은 ["+.Tabula_Game_lier+"]번 플레이어를 확인합니다";
+			end;
+		}
+		close2;
+		npcwhisper strcharinfo(0),"진행：당신은 똘마니 입니다(이미 늑대를 확인하였습니다)";
+		end;
+	}
+
+	else if (.Tabula_User_job$[@Tabula_My_number] == "감시자" || .Tabula_User_job$[@Tabula_My_number] == "감시자(후계자)")
+	{
+		mes "감시자는 매일 밤이 되면 시민 1명을 고릅니다.";
+		mes "다음날 아침이 되면 고른 시민이 '똘마니' 인지 아닌지 알아낼 수 있습니다.";
+		next;
+		mes "━━━━━━━━━━━━━";
+		mes "[직업별 스킬]";
+		mes "몇번 플레이어가 똘마니 일까요?";
+		next;
+		set @Skill,namemenu();
+		mes "━━━━━━━━━━━━━";
+		mes "[직업별 스킬]";
+		if (.Tabula_Game_start != 6)
+		{
+			mes "이미 선택시간이 지났습니다";
+			close2;
+			npcwhisper strcharinfo(0),"진행：이미 선택시간이 지났습니다";
+			end;
+		}
+		else if (@Skill == @Tabula_My_number)
+		{
+			mes "자기자신은 감시할수 없습니다";
+			next;
+			goto OnGame_Skill;
+		}
+		else if (.Tabula_User_die[@Skill] == 1)
+		{
+			mes "이탈하거나 죽은사람은 감시할수 없습니다";
+			next;
+			goto OnGame_Skill;
+		}
+		else if (.Tabula_Game_down)
+		{
+			mes "이미 ["+.Tabula_Game_down+"]번 플레이어를 지목했습니다";
+			close2;
+			npcwhisper strcharinfo(0),"진행：다음날 밤에 사용하시기 바랍니다";
+			end;
+		}
+		set .Tabula_Game_down,@Skill;
+		mes "오늘밤은 ["+.Tabula_Game_down+"]번 플레이어를 감시합니다";
+		close2;
+		npcwhisper strcharinfo(0),"진행：오늘밤은 ["+.Tabula_Game_down+"]번 플레이어를 감시합니다";
+		end;
+	}
+	close;
+OnGame_Scan:
+Talk_pattern_Scan:
+	if (.Tabula_User_name$[@Tabula_My_number] != strcharinfo(0))
+		end;
+	npcwhisper strcharinfo(0),"당신의 스캔결과："+.Tabula_User_scan$[@Tabula_My_number];
+	end;
+
+Game_End:
+	mes "┌────────────┐";		//[ - 적용 하시는 여러 운영자님들께 부탁드립니다 - ]
+	mes "│     타뷸라의 늑대 v6.0      │";	//제발 요부분은 지우지 마시기 바랍니다( 부탁드려요!!!! ㅠ_ㅠ )
+	mes "└────────────┘";		//이부분은 게임을 하시는분들도 업데이트에 대한 버젼 정보를 확인하게끔 하기 위함입니다.
+	close;
+
+OnTimer30000:
+	npctalk "　　　　‥첫 게임등록자가 등록한지 30초가 지났습니다. 현재 등록인원수는 "+.Tabula_User_ea+"명";
+	end;
+OnTimer31000:
+	if (.Tabula_User_ea >= 1) npctalk "　　　　‥[1]번 플레이어 "+.Tabula_User_name$[1]+"님";
+	end;
+OnTimer32000:
+	if (.Tabula_User_ea >= 2) npctalk "　　　　‥[2]번 플레이어 "+.Tabula_User_name$[2]+"님";
+	end;
+OnTimer33000:
+	if (.Tabula_User_ea >= 3) npctalk "　　　　‥[3]번 플레이어 "+.Tabula_User_name$[3]+"님";
+	end;
+OnTimer34000:
+	if (.Tabula_User_ea >= 4) npctalk "　　　　‥[4]번 플레이어 "+.Tabula_User_name$[4]+"님";
+	end;
+OnTimer35000:
+	if (.Tabula_User_ea >= 5) npctalk "　　　　‥[5]번 플레이어 "+.Tabula_User_name$[5]+"님";
+	end;
+OnTimer36000:
+	if (.Tabula_User_ea >= 6) npctalk "　　　　‥[6]번 플레이어 "+.Tabula_User_name$[6]+"님";
+	end;
+OnTimer37000:
+	if (.Tabula_User_ea >= 7) npctalk "　　　　‥[7]번 플레이어 "+.Tabula_User_name$[7]+"님";
+	end;
+OnTimer38000:
+	if (.Tabula_User_ea >= 8) npctalk "　　　　‥[8]번 플레이어 "+.Tabula_User_name$[8]+"님";
+	end;
+OnTimer39000:
+	if (.Tabula_User_ea >= 9) npctalk "　　　　‥[9]번 플레이어 "+.Tabula_User_name$[9]+"님";
+	end;
+OnTimer40000:
+	if (.Tabula_User_ea >= 10) npctalk "　　　　‥[10]번 플레이어 "+.Tabula_User_name$[10]+"님";
+	end;
+OnTimer41000:
+	if (.Tabula_User_ea >= 11) npctalk "　　　　‥[11]번 플레이어 "+.Tabula_User_name$[11]+"님";
+	end;
+OnTimer60000:
+	npctalk "　　　　‥첫 게임등록자가 등록한지 1분이 지났습니다. 현재 등록인원수는 "+.Tabula_User_ea+"명";
+	end;
+OnTimer61000:
+	if (.Tabula_User_ea >= 1) npctalk "　　　　‥[1]번 플레이어 "+.Tabula_User_name$[1]+"님";
+	end;
+OnTimer62000:
+	if (.Tabula_User_ea >= 2) npctalk "　　　　‥[2]번 플레이어 "+.Tabula_User_name$[2]+"님";
+	end;
+OnTimer63000:
+	if (.Tabula_User_ea >= 3) npctalk "　　　　‥[3]번 플레이어 "+.Tabula_User_name$[3]+"님";
+	end;
+OnTimer64000:
+	if (.Tabula_User_ea >= 4) npctalk "　　　　‥[4]번 플레이어 "+.Tabula_User_name$[4]+"님";
+	end;
+OnTimer65000:
+	if (.Tabula_User_ea >= 5) npctalk "　　　　‥[5]번 플레이어 "+.Tabula_User_name$[5]+"님";
+	end;
+OnTimer66000:
+	if (.Tabula_User_ea >= 6) npctalk "　　　　‥[6]번 플레이어 "+.Tabula_User_name$[6]+"님";
+	end;
+OnTimer67000:
+	if (.Tabula_User_ea >= 7) npctalk "　　　　‥[7]번 플레이어 "+.Tabula_User_name$[7]+"님";
+	end;
+OnTimer68000:
+	if (.Tabula_User_ea >= 8) npctalk "　　　　‥[8]번 플레이어 "+.Tabula_User_name$[8]+"님";
+	end;
+OnTimer69000:
+	if (.Tabula_User_ea >= 9) npctalk "　　　　‥[9]번 플레이어 "+.Tabula_User_name$[9]+"님";
+	end;
+OnTimer70000:
+	if (.Tabula_User_ea >= 10) npctalk "　　　　‥[10]번 플레이어 "+.Tabula_User_name$[10]+"님";
+	end;
+OnTimer71000:
+	if (.Tabula_User_ea >= 11) npctalk "　　　　‥[11]번 플레이어 "+.Tabula_User_name$[11]+"님";
+	end;
+OnTimer90000:
+	npctalk "　　　　‥첫 게임등록자가 등록한지 1분30초가 지났습니다. 현재 등록인원수는 "+.Tabula_User_ea+"명";
+	end;
+OnTimer91000:
+	if (.Tabula_User_ea >= 1) npctalk "　　　　‥[1]번 플레이어 "+.Tabula_User_name$[1]+"님";
+	end;
+OnTimer92000:
+	if (.Tabula_User_ea >= 2) npctalk "　　　　‥[2]번 플레이어 "+.Tabula_User_name$[2]+"님";
+	end;
+OnTimer93000:
+	if (.Tabula_User_ea >= 3) npctalk "　　　　‥[3]번 플레이어 "+.Tabula_User_name$[3]+"님";
+	end;
+OnTimer94000:
+	if (.Tabula_User_ea >= 4) npctalk "　　　　‥[4]번 플레이어 "+.Tabula_User_name$[4]+"님";
+	end;
+OnTimer95000:
+	if (.Tabula_User_ea >= 5) npctalk "　　　　‥[5]번 플레이어 "+.Tabula_User_name$[5]+"님";
+	end;
+OnTimer96000:
+	if (.Tabula_User_ea >= 6) npctalk "　　　　‥[6]번 플레이어 "+.Tabula_User_name$[6]+"님";
+	end;
+OnTimer97000:
+	if (.Tabula_User_ea >= 7) npctalk "　　　　‥[7]번 플레이어 "+.Tabula_User_name$[7]+"님";
+	end;
+OnTimer98000:
+	if (.Tabula_User_ea >= 8) npctalk "　　　　‥[8]번 플레이어 "+.Tabula_User_name$[8]+"님";
+	end;
+OnTimer99000:
+	if (.Tabula_User_ea >= 9) npctalk "　　　　‥[9]번 플레이어 "+.Tabula_User_name$[9]+"님";
+	end;
+OnTimer100000:
+	if (.Tabula_User_ea >= 10) npctalk "　　　　‥[10]번 플레이어 "+.Tabula_User_name$[10]+"님";
+	end;
+OnTimer101000:
+	if (.Tabula_User_ea >= 11) npctalk "　　　　‥[11]번 플레이어 "+.Tabula_User_name$[11]+"님";
+	end;
+OnTimer109000:
+	npctalk "　　　　‥너무 많은 시간이 지났습니다. 현재 등록인원수가 모자라므로 10초후에 강제종료 시키겠습니다";
+	end;
+OnTimer110000:
+	npctalk "　　　　‥게임대기자들은 모든 절차를 처음부터 다시 등록하여 주시기 바랍니다";
+	end;
+OnTimer120000:
+	npctalk "　　　　-----GAME OVER-----";
+	stopnpctimer;
+	setnpctimer 350000;
+	startnpctimer;
+	end;
+
+OnTimer122000:
+	getmapxy .@map$,.@x,.@y,1,strnpcinfo(0);
+	soundeffectall "charge.wav",0,.@map$,.@x-7,.@y-7,.@x+7,.@y+7;
+	npctalk "　　　　‥현재 등록인원수가 "+.Tabula_User_ea+"명으로 모든 인원이 등록완료 되었습니다";
+	set .Tabula_User_ea,0;
+	set .Tabula_Game_start,2;
+	deletearray .Tabula_User_job$[0],getarraysize(.Tabula_User_job$);
+	deletearray .Tabula_User_memo$[0],getarraysize(.Tabula_User_memo$);
+	deletearray .Tabula_User_timer[0],getarraysize(.Tabula_User_timer);
+	deletearray .Tabula_User_vote[0],getarraysize(.Tabula_User_vote);
+	deletearray .Tabula_Game_vote[0],getarraysize(.Tabula_Game_vote);
+	deletearray .Tabula_User_die[0],getarraysize(.Tabula_User_die);
+	deletearray .Tabula_User_scan$[0],getarraysize(.Tabula_User_scan$);
+	set .Tabula_Game_wolf,0;
+	set .Tabula_Game_wnum,0;
+	set .Tabula_Game_mist,0;
+	set .Tabula_Game_body,0;
+	set .Tabula_Game_soul,0;
+	set .Tabula_Game_lost,0;
+	set .Tabula_Game_down,0;
+	set .Tabula_Game_next,0;
+	set .Tabula_Game_lier,0;
+	set .Tabula_Game_next_succes,0;
+	set .Tabula_Game_lier_succes,0;
+	set .Tabula_Game_wolf_skill1,0;
+	set .Tabula_Game_wolf_skill2,0;
+	set .Tabula_Game_wolf_skill3,0;
+	end;
+OnTimer123000:
+	getmapxy .@map$,.@x,.@y,1,strnpcinfo(0); 
+	areaannounce .@map$,.@x-7,.@y-7,.@x+7,.@y+7,"[타뷸라의늑대] : 최종 플레이어들을 자리배정합니다(자리 이탈방지를 위해 이지역은 움직일수 없게됩니다)",bc_yellow;
+	setcell .@map$,.@x-13,.@y-13,.@x+13,.@y+13,cell_walkable,0;
+	end;
+OnTimer124000:	
+	getmapxy .@tamap$,.@tax,.@tay,1,"1번자리";
+	warpchar .@tamap$,.@tax,.@tay,.Tabula_User_char[1];
+	npctalk "　　　　‥[1]번 플레이어 "+.Tabula_User_name$[1]+"님";
+	end;
+OnTimer125000:
+	getmapxy .@tamap$,.@tax,.@tay,1,"2번자리";
+	warpchar .@tamap$,.@tax,.@tay,.Tabula_User_char[2];
+	npctalk "　　　　‥[2]번 플레이어 "+.Tabula_User_name$[2]+"님";
+	end;
+OnTimer126000:
+	getmapxy .@tamap$,.@tax,.@tay,1,"3번자리";
+	warpchar .@tamap$,.@tax,.@tay,.Tabula_User_char[3];
+	npctalk "　　　　‥[3]번 플레이어 "+.Tabula_User_name$[3]+"님";
+	end;
+OnTimer127000:
+	getmapxy .@tamap$,.@tax,.@tay,1,"4번자리";
+	warpchar .@tamap$,.@tax,.@tay,.Tabula_User_char[4];
+	npctalk "　　　　‥[4]번 플레이어 "+.Tabula_User_name$[4]+"님";
+	end;
+OnTimer128000:
+	getmapxy .@tamap$,.@tax,.@tay,1,"5번자리";
+	warpchar .@tamap$,.@tax,.@tay,.Tabula_User_char[5];
+	npctalk "　　　　‥[5]번 플레이어 "+.Tabula_User_name$[5]+"님";
+	end;
+OnTimer129000:
+	getmapxy .@tamap$,.@tax,.@tay,1,"6번자리";
+	warpchar .@tamap$,.@tax,.@tay,.Tabula_User_char[6];
+	npctalk "　　　　‥[6]번 플레이어 "+.Tabula_User_name$[6]+"님";
+	end;
+OnTimer130000:
+	getmapxy .@tamap$,.@tax,.@tay,1,"7번자리";
+	warpchar .@tamap$,.@tax,.@tay,.Tabula_User_char[7];
+	npctalk "　　　　‥[7]번 플레이어 "+.Tabula_User_name$[7]+"님";
+	end;
+OnTimer131000:
+	getmapxy .@tamap$,.@tax,.@tay,1,"8번자리";
+	warpchar .@tamap$,.@tax,.@tay,.Tabula_User_char[8];
+	npctalk "　　　　‥[8]번 플레이어 "+.Tabula_User_name$[8]+"님";
+	end;
+OnTimer132000:
+	getmapxy .@tamap$,.@tax,.@tay,1,"9번자리";
+	warpchar .@tamap$,.@tax,.@tay,.Tabula_User_char[9];
+	npctalk "　　　　‥[9]번 플레이어 "+.Tabula_User_name$[9]+"님";
+	end;
+OnTimer133000:
+	getmapxy .@tamap$,.@tax,.@tay,1,"10번자리";
+	warpchar .@tamap$,.@tax,.@tay,.Tabula_User_char[10];
+	npctalk "　　　　‥[10]번 플레이어 "+.Tabula_User_name$[10]+"님";
+	end;
+OnTimer134000:
+	getmapxy .@tamap$,.@tax,.@tay,1,"11번자리";
+	warpchar .@tamap$,.@tax,.@tay,.Tabula_User_char[11];
+	npctalk "　　　　‥[11]번 플레이어 "+.Tabula_User_name$[11]+"님";
+	end;
+OnTimer135000:
+	npctalk "　　　　‥이제 모든 인원은 번호가 부여되었으며 앞으로 번호를 통한 게임의 진행이 있을 예정입니다";
+	end;
+OnTimer136000:
+	npctalk "　　　　‥각자 역할을 확인하시고 지금부터 플레이에 집중해주세요";
+	goto Game_loof;
+	end;
+
+OnTimer272000:
+	npctalk "　　　　(배경음은 잠시 꺼두는게 좋습니다)　　";
+	npctalk "　　　　(자리를 이탈할시 채팅이 금지됩니다)  ";
+	npctalk "　　　　(게임상에 사망시 채팅이 금지됩니다)　";
+	npctalk "　　　　＊＊＊＊＊＊＊＊＊게임이 시작되었습니다＊＊＊＊＊＊＊＊＊";
+	if (getwaitingroomstate(2) == -1)
+		waitingroom "게임스타트",0;
+	stopnpctimer;
+	setnpctimer 295000;
+	startnpctimer;
+	end;
+
+OnTimer296000:
+	if (.Tabula_Game_start == 3)
+	{
+		for(set .@i,1; .@i<=11; set .@i,.@i+1)
+		{
+			if (.Tabula_User_job$[.@i] == "늑대인간1")
+			{
+				for(set .@i2,1; .@i2<=11; set .@i2,.@i2+1)
+				{
+					if (.Tabula_User_job$[.@i2] == "늑대인간2")
+						npcwhisper .Tabula_User_name$[.@i],"당신은 늑대입니다 다른늑대는 ["+.@i2+"]"+.Tabula_User_name$[.@i2]+"(서로 연결대화를 하려면 '개'모양의 NPC를 클릭해보세요)";
+				}
+			}
+			if (.Tabula_User_job$[.@i] == "늑대인간2")
+			{
+				for(set .@i2,1; .@i2<=11; set .@i2,.@i2+1)
+				{
+					if (.Tabula_User_job$[.@i2] == "늑대인간1")
+						npcwhisper .Tabula_User_name$[.@i],"당신은 늑대입니다 다른늑대는 ["+.@i2+"]"+.Tabula_User_name$[.@i2]+"(서로 연결대화를 하려면 '개'모양의 NPC를 클릭해보세요)";
+				}
+			}
+			if (.Tabula_User_job$[.@i] == "귀족")
+			{
+				for(set .@i2,1; .@i2<=11; set .@i2,.@i2+1)
+				{
+					if (.Tabula_User_job$[.@i2] == "쥐인간")
+						npcwhisper .Tabula_User_name$[.@i],"당신은 귀족입니다 다른비밀결사대 한명은 ["+.@i2+"]"+.Tabula_User_name$[.@i2]+"(서로 연결대화를 하려면 '개'모양의 NPC를 클릭해보세요)";
+				}
+			}
+			if (.Tabula_User_job$[.@i] == "쥐인간")
+			{
+				for(set .@i2,1; .@i2<=11; set .@i2,.@i2+1)
+				{
+					if (.Tabula_User_job$[.@i2] == "귀족")
+						npcwhisper .Tabula_User_name$[.@i],"당신은 쥐인간입니다 다른비밀결사대 한명은 ["+.@i2+"]"+.Tabula_User_name$[.@i2]+"(서로 연결대화를 하려면 '개'모양의 NPC를 클릭해보세요)";
+				}
+			}
+
+		}
+	}
+	if (.Tabula_Game_start == 6)
+	{
+		for(set .@i,1; .@i<=11; set .@i,.@i+1)
+		{
+			if (!.Tabula_User_Die[.@i])
+			{
+				if (attachrid(.Tabula_User_account[.@i]))
+				{
+					atcommand "@채금해제 "+strcharinfo(0);
+					doevent strnpcinfo(0)+"::OnGame_Scan";
+					detachrid;
+				}
+			}
+		}
+	}
+	if (.Tabula_Game_start == 3 || .Tabula_Game_start == 6)
+	{
+		getmapxy .@map$,.@x,.@y,1,strnpcinfo(0); 
+		soundeffectall "se_cock_02.wav",0,.@map$,.@x-7,.@y-7,.@x+7,.@y+7;
+		areaannounce .@map$,.@x-7,.@y-7,.@x+7,.@y+7,"[타뷸라의늑대] :  서서히 밝아지며 아침이 되었습니다",bc_yellow;
+		if (getwaitingroomstate(2) != -1)
+			delwaitingroom;
+		if (getwaitingroomstate(2) == -1)
+			waitingroom "아침 (투표가능)",0;
+		set .Tabula_Game_start,4;
+		end;
+	}
+	stopnpctimer;
+	setnpctimer 350000;
+	startnpctimer;
+	end;
+OnTimer297000:
+	npctalk "　　　　 +밤이 되기전에 플레이어 여러분은 토론을 통해 누가 늑대인지 알아보시기 바랍니다";
+	end;
+OnTimer298000:
+	npctalk "　　　　 +기타 메모를 하실분들은 메뉴의 [-메수]를 이용해주세요";
+	end;
+OnTimer299000:
+	set .Tabula_Game_Timer,.Tabula_Game_Timer+24;
+	stopnpctimer;
+	setnpctimer 352000;
+	startnpctimer;
+	end;
+
+OnTalk1:
+	if (.Tabula_Game_Timer < 10) end;
+	if (.Tabula_Game_Timer == 10)
+	{
+		getmapxy .@map$,.@x,.@y,1,strnpcinfo(0); 
+		soundeffectall "se_ding3.wav",0,.@map$,.@x-7,.@y-7,.@x+7,.@y+7;
+		npctalk "　　　　 +토론이 끝나셨다면 각자 투표를 하시길 바랍니다 예 : '-투표 "+rand(1,11)+"-'";
+		if (getwaitingroomstate(2) != -1)
+			delwaitingroom;
+		if (getwaitingroomstate(2) == -1)
+			waitingroom "투표시간(약25초간)[동투가능]",0;
+		end;
+	}
+	else if (.Tabula_Game_Timer <= 14 && .Tabula_Game_Timer > 10)
+	{
+		if (getwaitingroomstate(2) != -1)
+			delwaitingroom;
+		if (getwaitingroomstate(2) == -1)
+			waitingroom (.Tabula_Game_Timer*3-30)+"초후 토론종료",0;
+		end;
+	}
+	else if ((.Tabula_Game_Timer*3-30)%9 == 0)
+	{
+		if (getwaitingroomstate(2) != -1)
+			delwaitingroom;
+		if (getwaitingroomstate(2) == -1)
+			waitingroom (.Tabula_Game_Timer*3-30)+"초후 토론종료",0;
+		end;
+	}
+	end;
+
+OnTimer355000:
+	set .Tabula_Game_Timer,.Tabula_Game_Timer-1;
+	if (.Tabula_Game_Timer <= 0)
+	{
+		if (getwaitingroomstate(2) != -1)
+			delwaitingroom;
+		if (getwaitingroomstate(2) == -1)
+			waitingroom "투표완료",0;
+		stopnpctimer;
+		donpcevent strnpcinfo(0)+"::OnTalk2";
+		end;
+	}
+	donpcevent strnpcinfo(0)+"::OnTalk1";
+	stopnpctimer;
+	setnpctimer 352000;
+	startnpctimer;
+	end;
+
+OnTalk2:
+	set .vote1,0;
+	if ((.Tabula_Game_vote[1] > .Tabula_Game_vote[2]) && (.Tabula_Game_vote[1] > .Tabula_Game_vote[3]) && (.Tabula_Game_vote[1] > .Tabula_Game_vote[4]) && (.Tabula_Game_vote[1] > .Tabula_Game_vote[5]) && (.Tabula_Game_vote[1] > .Tabula_Game_vote[6]) && (.Tabula_Game_vote[1] > .Tabula_Game_vote[7]) && (.Tabula_Game_vote[1] > .Tabula_Game_vote[8]) && (.Tabula_Game_vote[1] > .Tabula_Game_vote[9]) && (.Tabula_Game_vote[1] > .Tabula_Game_vote[10]) && (.Tabula_Game_vote[1] > .Tabula_Game_vote[11]))
+		set .vote1,1;
+	else if ((.Tabula_Game_vote[2] > .Tabula_Game_vote[1]) && (.Tabula_Game_vote[2] > .Tabula_Game_vote[3]) && (.Tabula_Game_vote[2] > .Tabula_Game_vote[4]) && (.Tabula_Game_vote[2] > .Tabula_Game_vote[5]) && (.Tabula_Game_vote[2] > .Tabula_Game_vote[6]) && (.Tabula_Game_vote[2] > .Tabula_Game_vote[7]) && (.Tabula_Game_vote[2] > .Tabula_Game_vote[8]) && (.Tabula_Game_vote[2] > .Tabula_Game_vote[9]) && (.Tabula_Game_vote[2] > .Tabula_Game_vote[10]) && (.Tabula_Game_vote[2] > .Tabula_Game_vote[11]))
+		set .vote1,2;
+	else if ((.Tabula_Game_vote[3] > .Tabula_Game_vote[1]) && (.Tabula_Game_vote[3] > .Tabula_Game_vote[2]) && (.Tabula_Game_vote[3] > .Tabula_Game_vote[4]) && (.Tabula_Game_vote[3] > .Tabula_Game_vote[5]) && (.Tabula_Game_vote[3] > .Tabula_Game_vote[6]) && (.Tabula_Game_vote[3] > .Tabula_Game_vote[7]) && (.Tabula_Game_vote[3] > .Tabula_Game_vote[8]) && (.Tabula_Game_vote[3] > .Tabula_Game_vote[9]) && (.Tabula_Game_vote[3] > .Tabula_Game_vote[10]) && (.Tabula_Game_vote[3] > .Tabula_Game_vote[11]))
+		set .vote1,3;
+	else if ((.Tabula_Game_vote[4] > .Tabula_Game_vote[1]) && (.Tabula_Game_vote[4] > .Tabula_Game_vote[2]) && (.Tabula_Game_vote[4] > .Tabula_Game_vote[3]) && (.Tabula_Game_vote[4] > .Tabula_Game_vote[5]) && (.Tabula_Game_vote[4] > .Tabula_Game_vote[6]) && (.Tabula_Game_vote[4] > .Tabula_Game_vote[7]) && (.Tabula_Game_vote[4] > .Tabula_Game_vote[8]) && (.Tabula_Game_vote[4] > .Tabula_Game_vote[9]) && (.Tabula_Game_vote[4] > .Tabula_Game_vote[10]) && (.Tabula_Game_vote[4] > .Tabula_Game_vote[11]))
+		set .vote1,4;
+	else if ((.Tabula_Game_vote[5] > .Tabula_Game_vote[1]) && (.Tabula_Game_vote[5] > .Tabula_Game_vote[2]) && (.Tabula_Game_vote[5] > .Tabula_Game_vote[3]) && (.Tabula_Game_vote[5] > .Tabula_Game_vote[4]) && (.Tabula_Game_vote[5] > .Tabula_Game_vote[6]) && (.Tabula_Game_vote[5] > .Tabula_Game_vote[7]) && (.Tabula_Game_vote[5] > .Tabula_Game_vote[8]) && (.Tabula_Game_vote[5] > .Tabula_Game_vote[9]) && (.Tabula_Game_vote[5] > .Tabula_Game_vote[10]) && (.Tabula_Game_vote[5] > .Tabula_Game_vote[11]))
+		set .vote1,5;
+	else if ((.Tabula_Game_vote[6] > .Tabula_Game_vote[1]) && (.Tabula_Game_vote[6] > .Tabula_Game_vote[2]) && (.Tabula_Game_vote[6] > .Tabula_Game_vote[3]) && (.Tabula_Game_vote[6] > .Tabula_Game_vote[4]) && (.Tabula_Game_vote[6] > .Tabula_Game_vote[5]) && (.Tabula_Game_vote[6] > .Tabula_Game_vote[7]) && (.Tabula_Game_vote[6] > .Tabula_Game_vote[8]) && (.Tabula_Game_vote[6] > .Tabula_Game_vote[9]) && (.Tabula_Game_vote[6] > .Tabula_Game_vote[10]) && (.Tabula_Game_vote[6] > .Tabula_Game_vote[11]))
+		set .vote1,6;
+	else if ((.Tabula_Game_vote[7] > .Tabula_Game_vote[1]) && (.Tabula_Game_vote[7] > .Tabula_Game_vote[2]) && (.Tabula_Game_vote[7] > .Tabula_Game_vote[3]) && (.Tabula_Game_vote[7] > .Tabula_Game_vote[4]) && (.Tabula_Game_vote[7] > .Tabula_Game_vote[5]) && (.Tabula_Game_vote[7] > .Tabula_Game_vote[6]) && (.Tabula_Game_vote[7] > .Tabula_Game_vote[8]) && (.Tabula_Game_vote[7] > .Tabula_Game_vote[9]) && (.Tabula_Game_vote[7] > .Tabula_Game_vote[10]) && (.Tabula_Game_vote[7] > .Tabula_Game_vote[11]))
+		set .vote1,7;
+	else if ((.Tabula_Game_vote[8] > .Tabula_Game_vote[1]) && (.Tabula_Game_vote[8] > .Tabula_Game_vote[2]) && (.Tabula_Game_vote[8] > .Tabula_Game_vote[3]) && (.Tabula_Game_vote[8] > .Tabula_Game_vote[4]) && (.Tabula_Game_vote[8] > .Tabula_Game_vote[5]) && (.Tabula_Game_vote[8] > .Tabula_Game_vote[6]) && (.Tabula_Game_vote[8] > .Tabula_Game_vote[7]) && (.Tabula_Game_vote[8] > .Tabula_Game_vote[9]) && (.Tabula_Game_vote[8] > .Tabula_Game_vote[10]) && (.Tabula_Game_vote[8] > .Tabula_Game_vote[11]))
+		set .vote1,8;
+	else if ((.Tabula_Game_vote[9] > .Tabula_Game_vote[1]) && (.Tabula_Game_vote[9] > .Tabula_Game_vote[2]) && (.Tabula_Game_vote[9] > .Tabula_Game_vote[3]) && (.Tabula_Game_vote[9] > .Tabula_Game_vote[4]) && (.Tabula_Game_vote[9] > .Tabula_Game_vote[5]) && (.Tabula_Game_vote[9] > .Tabula_Game_vote[6]) && (.Tabula_Game_vote[9] > .Tabula_Game_vote[7]) && (.Tabula_Game_vote[9] > .Tabula_Game_vote[8]) && (.Tabula_Game_vote[9] > .Tabula_Game_vote[10]) && (.Tabula_Game_vote[9] > .Tabula_Game_vote[11]))
+		set .vote1,9;
+	else if ((.Tabula_Game_vote[10] > .Tabula_Game_vote[1]) && (.Tabula_Game_vote[10] > .Tabula_Game_vote[2]) && (.Tabula_Game_vote[10] > .Tabula_Game_vote[3]) && (.Tabula_Game_vote[10] > .Tabula_Game_vote[4]) && (.Tabula_Game_vote[10] > .Tabula_Game_vote[5]) && (.Tabula_Game_vote[10] > .Tabula_Game_vote[6]) && (.Tabula_Game_vote[10] > .Tabula_Game_vote[7]) && (.Tabula_Game_vote[10] > .Tabula_Game_vote[8]) && (.Tabula_Game_vote[10] > .Tabula_Game_vote[9]) && (.Tabula_Game_vote[10] > .Tabula_Game_vote[11]))
+		set .vote1,10;
+	else if ((.Tabula_Game_vote[11] > .Tabula_Game_vote[1]) && (.Tabula_Game_vote[11] > .Tabula_Game_vote[2]) && (.Tabula_Game_vote[11] > .Tabula_Game_vote[3]) && (.Tabula_Game_vote[11] > .Tabula_Game_vote[4]) && (.Tabula_Game_vote[11] > .Tabula_Game_vote[5]) && (.Tabula_Game_vote[11] > .Tabula_Game_vote[6]) && (.Tabula_Game_vote[11] > .Tabula_Game_vote[7]) && (.Tabula_Game_vote[11] > .Tabula_Game_vote[8]) && (.Tabula_Game_vote[11] > .Tabula_Game_vote[9]) && (.Tabula_Game_vote[11] > .Tabula_Game_vote[10]))
+		set .vote1,11;
+
+	if (!.vote1)
+	{
+		if (.Tabula_Game_rule != 2)
+		{
+			npctalk "　　　　 +동점표나 무효표가 나왔으므로 다음에 진행을 하겠습니다( -기본／-혼란)";
+			goto Game_Check;
+		}
+		else
+		{
+			npctalk "　　　　 +동점표나 무효표가 나왔으므로 랜덤한 한명을 사형에 처하겠습니다( -클래식)";
+Randum_Vote:
+			set .vote1,rand(1,11);
+			if (.Tabula_User_die[.vote1] == 1)
+				goto Randum_Vote;
+		}
+	}
+
+	getmapxy .@map$,.@x,.@y,1,strnpcinfo(0); 
+	if (.Tabula_User_job$[.vote1] == "귀족" || .Tabula_User_job$[.vote1] == "귀족(후계자)")
+	{
+		areaannounce .@map$,.@x-7,.@y-7,.@x+7,.@y+7,"[타뷸라의늑대] :  고귀한신분인 ["+.vote1+"]"+.Tabula_User_name$[.vote1]+"님께서 투표결과에 유감을 표하시는군요",bc_blue;
+		goto Game_Check;
+	}
+
+	areaannounce .@map$,.@x-7,.@y-7,.@x+7,.@y+7,"[타뷸라의늑대] :  ["+.vote1+"]"+.Tabula_User_name$[.vote1]+"님이 최고득표 "+.Tabula_Game_vote[.vote1]+"표를 얻어 사형에 처합니다",bc_blue;
+	set .Tabula_User_die[.vote1],1;
+	kill(.Tabula_User_account[.vote1]);
+
+	check(.vote1);
+
+Game_Check:
+	deletearray .Tabula_User_timer[0],getarraysize(.Tabula_User_timer);
+	deletearray .Tabula_User_vote[0],getarraysize(.Tabula_User_vote);
+	deletearray .Tabula_Game_vote[0],getarraysize(.Tabula_Game_vote);
+	setnpctimer 300000;
+	startnpctimer;
+	end;
+
+OnTalk3:
+//시민승리
+	Tabula_reset();
+	for(set .@i,1; .@i<=11; set .@i,.@i+1)
+	{
+		npctalk "　　　　["+.@i+"]"+.Tabula_User_name$[.@i]+"："+.Tabula_User_job$[.@i];
+		if (attachrid(.Tabula_User_account[.@i]))
+		{
+			if (.Tabula_User_job$[.@i] == "늑대인간1" || .Tabula_User_job$[.@i] == "늑대인간2" || .Tabula_User_job$[.@i] == "똘마니")
+				getitem 7539,1;
+			else
+				getitem 7539,3;
+			detachrid;
+		}
+	}
+	getmapxy .@map$,.@x,.@y,1,strnpcinfo(0); 
+	areaannounce .@map$,.@x-7,.@y-7,.@x+7,.@y+7,"[타뷸라의늑대] :  시민측승리!!(모든 늑대인간이 사망하였습니다)(게임종료)",bc_blue;
+	npctalk "　　　　 -----GAME OVER-----";
+	stopnpctimer;
+	set .Tabula_Game_start,0;
+	setnpctimer 350000;
+	startnpctimer;
+	end;
+
+OnTalk4:
+//늑대승리
+	Tabula_reset();
+	for(set .@i,1; .@i<=11; set .@i,.@i+1)
+	{
+		npctalk "　　　　["+.@i+"]"+.Tabula_User_name$[.@i]+"："+.Tabula_User_job$[.@i];
+		if (attachrid(.Tabula_User_account[.@i]))
+		{
+			if (.Tabula_User_job$[.@i] == "늑대인간1" || .Tabula_User_job$[.@i] == "늑대인간2" || .Tabula_User_job$[.@i] == "똘마니")
+				getitem 7539,5;
+			else
+				getitem 7539,1;
+			detachrid;
+		}
+	}
+	getmapxy .@map$,.@x,.@y,1,strnpcinfo(0); 
+	areaannounce .@map$,.@x-7,.@y-7,.@x+7,.@y+7,"[타뷸라의늑대] :  늑대측승리!!(시민의 수가 늑대인간보다 적거나 같습니다)(게임종료)",bc_yellow;
+	npctalk "　　　　 -----GAME OVER-----";
+	stopnpctimer;
+	set .Tabula_Game_start,0;
+	setnpctimer 350000;
+	startnpctimer;
+	end;
+
+OnTalk5:
+	getmapxy .@map$,.@x,.@y,1,strnpcinfo(0); 
+	areaannounce .@map$,.@x-7,.@y-7,.@x+7,.@y+7,"[타뷸라의늑대] :  후계자직업부여(모든인원수가 7명이 되었습니다 후계자가 살아있다면 직업을 확인하시길 바랍니다)",bc_yellow;
+	for(set .@i,1; .@i<=11; set .@i,.@i+1)
+	{
+		if (.Tabula_User_job$[.@i] != "후계자")
+			continue;
+		if (.Tabula_User_job$[.Tabula_Game_next] == "예언자")
+			set .Tabula_User_job$[.@i],.Tabula_User_job$[.Tabula_Game_next]+"(후계자)";
+		else if (.Tabula_User_job$[.Tabula_Game_next] == "보디가드")
+			set .Tabula_User_job$[.@i],.Tabula_User_job$[.Tabula_Game_next]+"(후계자)";
+		else if (.Tabula_User_job$[.Tabula_Game_next] == "영매사")
+			set .Tabula_User_job$[.@i],.Tabula_User_job$[.Tabula_Game_next]+"(후계자)";
+		else if (.Tabula_User_job$[.Tabula_Game_next] == "추격자")
+			set .Tabula_User_job$[.@i],.Tabula_User_job$[.Tabula_Game_next]+"(후계자)";
+		else if (.Tabula_User_job$[.Tabula_Game_next] == "귀족")
+		{
+			set .Tabula_User_job$[.@i],.Tabula_User_job$[.Tabula_Game_next]+"(후계자)";
+			for(set .@i2,1; .@i2<=11; set .@i2,.@i2+1)
+			{
+				if (.Tabula_User_job$[.@i2] == "쥐인간" && !.Tabula_User_die[.@i])
+					npcwhisper .Tabula_User_name$[.@i2],"["+.@i+"]"+.Tabula_User_name$[.@i]+" 님이 귀족으로 후계받았습니다(서로 연결대화를 하려면 '개'모양의 NPC를 클릭해보세요)";
+			}
+		}
+		else if (.Tabula_User_job$[.Tabula_Game_next] == "쥐인간")
+		{
+			set .Tabula_User_job$[.@i],.Tabula_User_job$[.Tabula_Game_next]+"(후계자)";
+			for(set .@i2,1; .@i2<=11; set .@i2,.@i2+1)
+			{
+				if (.Tabula_User_job$[.@i2] == "귀족" && !.Tabula_User_die[.@i])
+					npcwhisper .Tabula_User_name$[.@i2],"["+.@i+"]"+.Tabula_User_name$[.@i]+" 님이 쥐인간으로 후계받았습니다(서로 연결대화를 하려면 '개'모양의 NPC를 클릭해보세요)";
+			}
+		}
+		else if (.Tabula_User_job$[.Tabula_Game_next] == "감시자")
+			set .Tabula_User_job$[.@i],.Tabula_User_job$[.Tabula_Game_next]+"(후계자)";
+		if (!.Tabula_User_die[.@i])
+			npcwhisper .Tabula_User_name$[.@i],"["+.@i+"]"+.Tabula_User_name$[.@i]+" 님은 "+.Tabula_User_job$[.@i]+" 직업을 물려받으셨습니다";
+	}
+	end;
+
+OnTalk6:
+	Tabula_reset();
+	for(set .@i,1; .@i<=11; set .@i,.@i+1)
+		npctalk "　　　　["+.@i+"]"+.Tabula_User_name$[.@i]+"："+.Tabula_User_job$[.@i];
+	getmapxy .@map$,.@x,.@y,1,strnpcinfo(0); 
+	areaannounce .@map$,.@x-7,.@y-7,.@x+7,.@y+7,"[타뷸라의늑대] :  게임 진행의 인원이 부족합니다!!(게임종료)",bc_yellow;
+	npctalk "　　　　 -----GAME OVER-----";
+	stopnpctimer;
+	set .Tabula_Game_start,0;
+	setnpctimer 350000;
+	startnpctimer;
+	end;
+
+OnTalk7:
+//쥐인간승리
+	Tabula_reset();
+	for(set .@i,1; .@i<=11; set .@i,.@i+1)
+	{
+		npctalk "　　　　["+.@i+"]"+.Tabula_User_name$[.@i]+"："+.Tabula_User_job$[.@i];
+		if (attachrid(.Tabula_User_account[.@i]))
+		{
+			if (.Tabula_User_job$[.@i] == "쥐인간" || .Tabula_User_job$[.@i] == "후계자(쥐인간)")
+				getitem 7539,10;
+			else
+				getitem 7539,1;
+			detachrid;
+		}
+	}
+	getmapxy .@map$,.@x,.@y,1,strnpcinfo(0); 
+	areaannounce .@map$,.@x-7,.@y-7,.@x+7,.@y+7,"[타뷸라의늑대] :  쥐인간의 승리!!(늑대인간과 쥐인간만이 남아있습니다.)(게임종료)",bc_yellow;
+	npctalk "　　　　 -----GAME OVER-----";
+	stopnpctimer;
+	set .Tabula_Game_start,0;
+	setnpctimer 350000;
+	startnpctimer;
+	end;
+
+OnTalk8:
+	getmapxy .@map$,.@x,.@y,1,strnpcinfo(0); 
+	areaannounce .@map$,.@x-7,.@y-7,.@x+7,.@y+7,"[타뷸라의늑대] :  등록절차가 진행중에 이탈자가 발생!!(게임종료)",0x9ACD32;
+	npctalk "　　　　 -----GAME OVER-----";
+	stopnpctimer;
+	set .Tabula_Game_start,0;
+	setnpctimer 350000;
+	startnpctimer;
+	end;
+
+OnTimer301000:
+	if (.Tabula_Game_start == 4)
+	{
+		getmapxy .@map$,.@x,.@y,1,strnpcinfo(0); 
+		soundeffectall "se_watch4.wav",0,.@map$,.@x-7,.@y-7,.@x+7,.@y+7;
+		npctalk "　　　　 +3초 후에 밤이 찾아옵니다";
+		set .Tabula_Game_start,5;
+		end;
+	}
+	stopnpctimer;
+	set .Tabula_Game_start,0;
+	setnpctimer 350000;
+	startnpctimer;
+	end;
+OnTimer304000:
+	for(set .@i,1; .@i<=11; set .@i,.@i+1)
+	{
+		if (!.Tabula_User_Die[.@i])
+		{
+			if (attachrid(.Tabula_User_account[.@i]))
+			{
+				doevent strnpcinfo(0)+"::OnGame_Skill";
+				atcommand "@채금 10 "+strcharinfo(0);
+				detachrid;
+			}
+		}
+	}
+	if (.Tabula_Game_start == 5)
+	{
+		getmapxy .@map$,.@x,.@y,1,strnpcinfo(0); 
+		soundeffectall "se_wolf1.wav",0,.@map$,.@x-7,.@y-7,.@x+7,.@y+7;
+		areaannounce .@map$,.@x-7,.@y-7,.@x+7,.@y+7,"[타뷸라의늑대] :  어둠이 깔리기 시작하고, 밤이 되었습니다",bc_yellow;
+		delwaitingroom;
+		waitingroom "밤 (30초)",0;
+		set .Tabula_Game_start,6;
+		end;
+	}
+	stopnpctimer;
+	set .Tabula_Game_start,0;
+	setnpctimer 350000;
+	startnpctimer;
+	end;
+OnTimer305000:
+	npctalk "　　　　 -밤은 늑대인간들이 활동하는 시간입니다";
+	end;
+OnTimer306000:
+	npctalk "　　　　 -자신의 직업에 맞게 밤에는 비밀스럽게 행동해주세요";
+	end;
+OnTimer307000:
+	getmapxy .@map$,.@x,.@y,1,strnpcinfo(0); 
+	soundeffectall "se_owl01.wav",0,.@map$,.@x-7,.@y-7,.@x+7,.@y+7;
+	npctalk "　　　　 -30초 동안은 각자 생각하는 시간을 가지시기 바랍니다";
+	end;
+OnTimer337000:
+	for(set .@i,1; .@i<=11; set .@i,.@i+1)
+	{
+		if (.Tabula_User_job$[.@i] == "보디가드" || .Tabula_User_job$[.@i] == "보디가드(후계자)")
+		{
+			if (.Tabula_User_die[.@i] == 0)
+			{
+				if (.Tabula_Game_body != 0 && .Tabula_Game_body == .Tabula_Game_wolf && .Tabula_Game_wolf_skill1 != 1 && .Tabula_Game_wolf_skill2 != 1)
+				{
+					set .Tabula_Game_wolf,0;
+					if (.Tabula_Game_rule != 1)
+					{
+						getmapxy .@map$,.@x,.@y,1,strnpcinfo(0); 
+						areaannounce .@map$,.@x-7,.@y-7,.@x+7,.@y+7,"[타뷸라의늑대] :  보디가드가 늑대의 공격으로 부터 누군가를 지켜 냈습니다!!(-기본／-클래식)",bc_blue;
+					}
+				}
+			}
+		}
+	}
+
+	if ((.Tabula_User_job$[.Tabula_Game_wolf] == "쥐인간" || .Tabula_User_job$[.Tabula_Game_wolf] == "쥐인간(후계자)") && .Tabula_Game_wolf_skill1 != 1 && .Tabula_Game_wolf_skill2 != 1)
+	{
+		set .Tabula_Game_wolf,0;
+		if (.Tabula_Game_rule != 1)
+		{
+			getmapxy .@map$,.@x,.@y,1,strnpcinfo(0);  
+			areaannounce .@map$,.@x-7,.@y-7,.@x+7,.@y+7,"[타뷸라의늑대] :  쥐인간이 늑대의 공격을 받았기때문에 죽지 않았습니다!!(-기본／-클래식)",bc_blue;
+		}
+	}
+
+	if (.Tabula_Game_wolf > 0)
+	{
+		npctalk "　　　　 -오늘밤은 ["+.Tabula_Game_wolf+"]"+.Tabula_User_name$[.Tabula_Game_wolf]+"님이 죽었습니다";
+		set .die,.die+1;
+		set .Tabula_User_die[.Tabula_Game_wolf],1;
+		kill(.Tabula_User_account[.Tabula_Game_wolf]);
+		check(.Tabula_Game_wolf);
+	}
+
+	if (.Tabula_User_job$[.Tabula_Game_mist] == "쥐인간" || .Tabula_User_job$[.Tabula_Game_mist] == "쥐인간(후계자)")
+	{
+		if (.Tabula_Game_rule == 1) npctalk "　　　　 -오늘밤은 ["+.Tabula_Game_mist+"]"+.Tabula_User_name$[.Tabula_Game_mist]+"님이 죽었습니다";
+		if (.Tabula_Game_rule != 1) npctalk "　　　　 -오늘밤은 (쥐인간)["+.Tabula_Game_mist+"]"+.Tabula_User_name$[.Tabula_Game_mist]+"님이 죽었습니다(-기본／-클래식)";
+		set .die,.die+2;
+		set .Tabula_User_die[.Tabula_Game_mist],1;
+		kill(.Tabula_User_account[.Tabula_Game_mist]);
+		check(.Tabula_Game_mist);
+	}
+
+	for(set .@i,1; .@i<=11; set .@i,.@i+1)
+	{
+		if (.Tabula_User_job$[.@i] == "예언자" || .Tabula_User_job$[.@i] == "예언자(후계자)")	
+		{
+			if (.Tabula_User_job$[.Tabula_Game_mist] == "늑대인간1" || .Tabula_User_job$[.Tabula_Game_mist] == "늑대인간2")
+				set .scan$,"["+.Tabula_Game_mist+"]늑대";
+			else if (!.Tabula_Game_mist)
+				set .scan$,"실패";
+			else
+				set .scan$,"["+.Tabula_Game_mist+"]시민";
+		}
+		else if (.Tabula_User_job$[.@i] == "영매사" || .Tabula_User_job$[.@i] == "영매사(후계자)")
+		{
+			if (.Tabula_User_job$[.Tabula_Game_soul] == "예언자" || .Tabula_User_job$[.Tabula_Game_soul] == "보디가드" || .Tabula_User_job$[.Tabula_Game_soul] == "예언자(후계자)" || .Tabula_User_job$[.Tabula_Game_soul] == "보디가드(후계자)")
+				set .scan$,"["+.Tabula_Game_soul+"]보예";
+			else if (.Tabula_User_job$[.Tabula_Game_soul] == "늑대인간1" || .Tabula_User_job$[.Tabula_Game_soul] == "늑대인간2")
+				set .scan$,"["+.Tabula_Game_soul+"]늑대";
+			else if (!.Tabula_Game_soul)
+				set .scan$,"실패";
+			else
+				set .scan$,"["+.Tabula_Game_soul+"]평시똘";
+		}
+		else if (.Tabula_User_job$[.@i] == "추격자" || .Tabula_User_job$[.@i] == "추격자(후계자)")
+		{
+			if (.Tabula_Game_lost == .Tabula_Game_wolf && .die >= 1 && .Tabula_Game_wolf_skill1 != 1 && .Tabula_Game_wolf_skill2 != 1)
+				set .scan$,"["+.Tabula_Game_wnum+"]늑대";
+			else
+				set .scan$,"실패";
+		}
+		else if (.Tabula_User_job$[.@i] == "감시자" || .Tabula_User_job$[.@i] == "감시자(후계자)")
+		{
+			if (.Tabula_User_job$[.Tabula_Game_down] == "똘마니")
+				set .scan$,"["+.Tabula_Game_down+"]똘마니";
+			else if (!.Tabula_Game_down)
+				set .scan$,"실패";
+			else
+				set .scan$,"["+.Tabula_Game_down+"]노똘";
+		}
+		if (.scan$ != "")
+		{
+			set .Tabula_User_scan$[.@i],.Tabula_User_scan$[.@i]+"→"+.scan$;
+			set .scan$,"";
+		}
+		if (.Tabula_User_job$[.@i] == "늑대인간1" || .Tabula_User_job$[.@i] == "늑대인간2")
+			set .Tabula_User_scan$[.@i],"늑대인간은 스캔목록이 없습니다";
+		else if (.Tabula_User_job$[.@i] == "보디가드" || .Tabula_User_job$[.@i] == "보디가드(후계자)")
+			set .Tabula_User_scan$[.@i],"보디가드는 스캔목록이 없습니다";
+		else if (.Tabula_User_job$[.@i] == "귀족" || .Tabula_User_job$[.@i] == "귀족(후계자)")
+			set .Tabula_User_scan$[.@i],"귀족은 스캔목록이 없습니다";
+		else if (.Tabula_User_job$[.@i] == "쥐인간" || .Tabula_User_job$[.@i] == "쥐인간(후계자)")
+			set .Tabula_User_scan$[.@i],"쥐인간은 스캔목록이 없습니다";
+		else if (.Tabula_User_job$[.@i] == "후계자")
+			set .Tabula_User_scan$[.@i],"후계자는 스캔목록이 없습니다";
+	}
+
+	if (.Tabula_User_job$[.Tabula_Game_lier] == "늑대인간1" || .Tabula_User_job$[.Tabula_Game_lier] == "늑대인간2")
+	{
+		for(set .@i,1; .@i<=11; set .@i,.@i+1)
+		{
+			if (.Tabula_User_job$[.@i] == "늑대인간1" || .Tabula_User_job$[.@i] == "늑대인간2")
+			{
+				for(set .@i2,1; .@i2<=11; set .@i2,.@i2+1)
+				{
+					if (.Tabula_User_job$[.@i2] == "똘마니")
+						npcwhisper .Tabula_User_name$[.@i],"똘마니가 늑대님을 찾았습니다 똘마니는 ["+.@i2+"]"+.Tabula_User_name$[.@i2]+"(서로 연결대화를 하려면 '개'모양의 NPC를 클릭해보세요)";
+				}
+			}
+			if (.Tabula_User_job$[.@i] == "똘마니")
+			{
+				for(set .@i2,1; .@i2<=11; set .@i2,.@i2+1)
+				{
+					if (.Tabula_User_job$[.@i2] == "늑대인간1")
+						npcwhisper .Tabula_User_name$[.@i],"늑대님을 드디어 찾았습니다 늑대는 ["+.@i2+"]"+.Tabula_User_name$[.@i2]+"(서로 연결대화를 하려면 '개'모양의 NPC를 클릭해보세요)";
+					if (.Tabula_User_job$[.@i2] == "늑대인간2")
+						npcwhisper .Tabula_User_name$[.@i],"늑대님을 드디어 찾았습니다 늑대는 ["+.@i2+"]"+.Tabula_User_name$[.@i2]+"(서로 연결대화를 하려면 '개'모양의 NPC를 클릭해보세요)";
+				}
+			}
+
+		}
+		set .Tabula_Game_lier_succes,1;
+	}
+
+	if (.Tabula_Game_wolf_skill3)
+		set .Tabula_Game_wolf_skill3,0;
+	if (!.die)
+	{
+		npctalk "　　　　 -오늘밤은 아무도 죽지 않았습니다";
+		if (.Tabula_Game_wolf_skill1 == 1)
+		{
+			set .Tabula_Game_wolf_skill1,0;
+			for(set .@i,1; .@i<=11; set .@i,.@i+1)
+			{
+				if (.Tabula_User_job$[.@i] == "늑대인간1")
+				{
+					for(set .@i2,1; .@i2<=11; set .@i2,.@i2+1)
+					{
+						if (.Tabula_User_job$[.@i2] == "늑대인간1" || .Tabula_User_job$[.@i2] == "늑대인간2")
+							npcwhisper .Tabula_User_name$[.@i2],"+["+.@i+"]"+.Tabula_User_name$[.@i]+" 님께서 사용한 참살은 취소되었습니다";
+						else if (.Tabula_User_job$[.@i2] == "똘마니" && .Tabula_Game_lier_succes == 1)
+							npcwhisper .Tabula_User_name$[.@i2],"+["+.@i+"]"+.Tabula_User_name$[.@i]+" 님께서 사용한 참살은 취소되었습니다";
+					}
+				}
+			}
+		}
+		if (.Tabula_Game_wolf_skill2 == 1)
+		{
+			set .Tabula_Game_wolf_skill2,0;
+			for(set .@i,1; .@i<=11; set .@i,.@i+1)
+			{
+				if (.Tabula_User_job$[.@i] == "늑대인간2")
+				{
+					for(set .@i2,1; .@i2<=11; set .@i2,.@i2+1)
+					{
+						if (.Tabula_User_job$[.@i2] == "늑대인간1" || .Tabula_User_job$[.@i2] == "늑대인간2")
+							npcwhisper .Tabula_User_name$[.@i2],"+["+.@i+"]"+.Tabula_User_name$[.@i]+" 님께서 사용한 참살은 취소되었습니다";
+						else if (.Tabula_User_job$[.@i2] == "똘마니" && .Tabula_Game_lier_succes == 1)
+							npcwhisper .Tabula_User_name$[.@i2],"+["+.@i+"]"+.Tabula_User_name$[.@i]+" 님께서 사용한 참살은 취소되었습니다";
+					}
+				}
+			}
+		}
+	}
+	else
+	{
+		if (.Tabula_Game_wolf_skill1 == 1)
+		{
+			set .Tabula_Game_wolf_skill1,2;
+			set .Tabula_Game_wolf_skill3,1;
+			getmapxy .@map$,.@x,.@y,1,strnpcinfo(0);
+			soundeffectall "_curse.wav",0,.@map$,.@x-7,.@y-7,.@x+7,.@y+7;
+			npctalk "　　　　 -늑대가 참살 스킬을 사용하였습니다(보디가드 추격자 스캔무시 쥐인간도 죽음)";
+		}
+		if (.Tabula_Game_wolf_skill2 == 1)
+		{
+			set .Tabula_Game_wolf_skill2,2;
+			set .Tabula_Game_wolf_skill3,1;
+			getmapxy .@map$,.@x,.@y,1,strnpcinfo(0);
+			soundeffectall "_curse.wav",0,.@map$,.@x-7,.@y-7,.@x+7,.@y+7;
+			npctalk "　　　　 -늑대가 참살 스킬을 사용하였습니다(보디가드 추격자 스캔무시 쥐인간도 죽음)";
+		}
+
+	}
+	set .Tabula_Game_wolf,0;
+	set .Tabula_Game_wnum,0;
+	set .Tabula_Game_mist,0;
+	set .Tabula_Game_body,0;
+	set .Tabula_Game_soul,0;
+	set .Tabula_Game_lost,0;
+	set .Tabula_Game_down,0;
+	set .Tabula_Game_lier,0;
+	set .die,0;
+	stopnpctimer;
+	setnpctimer 295000;
+	startnpctimer;
+	end;
+
+OnTimer351000:
+	Tabula_End_set();
+	end;
+
+OnPCLogoutEvent:
+	if (.Tabula_Game_start)
+	{
+		for(set .@i,1; .@i<=11; set .@i,.@i+1)
+		{
+			if (.Tabula_User_name$[.@i] == strcharinfo(0) && .Tabula_User_die[.@i] == 0)
+			{
+				if (.Tabula_User_job$[@Tabula_My_number] == "늑대인간1")
+					set .Tabula_Game_wolf_skill1,2;
+				if (.Tabula_User_job$[@Tabula_My_number] == "늑대인간2")
+					set .Tabula_Game_wolf_skill2,2;
+
+				getmapxy .@map$,.@x,.@y,1,strnpcinfo(0);
+				soundeffectall "버튼소리_.wav",0,.@map$,.@x-7,.@y-7,.@x+7,.@y+7;
+				areaannounce .@map$,.@x-7,.@y-7,.@x+7,.@y+7,"[타뷸라의늑대] :  ["+.@i+"]"+.Tabula_User_name$[.@i]+"님이 이탈했습니다",bc_yellow;
+				atcommand "@채금해제 "+strcharinfo(0);
+				set .Tabula_User_die[.@i],1;
+				check(.@i);
+			}
+			else if (.Tabula_User_name$[.@i] == strcharinfo(0) && .Tabula_User_die[.@i] == 1)
+				atcommand "@채금해제 "+strcharinfo(0);
+		}
+	}
+	end;
+
+OnPCLoadMapEvent:
+	if (.Tabula_Game_start)
+	{
+		for(set .@i,1; .@i<=11; set .@i,.@i+1)
+		{
+			if (.Tabula_User_name$[.@i] == strcharinfo(0) && .Tabula_User_die[.@i] == 0)
+			{
+				getmapxy .@mymap$,.@myx,.@myy,0,strcharinfo(0);
+				if (.@mymap$ != "jawaii")
+				{
+					if (.Tabula_User_job$[@Tabula_My_number] == "늑대인간1")
+						set .Tabula_Game_wolf_skill1,2;
+					if (.Tabula_User_job$[@Tabula_My_number] == "늑대인간2")
+						set .Tabula_Game_wolf_skill2,2;
+
+					getmapxy .@map$,.@x,.@y,1,strnpcinfo(0);
+					soundeffectall "버튼소리_.wav",0,.@map$,.@x-7,.@y-7,.@x+7,.@y+7;
+					areaannounce .@map$,.@x-7,.@y-7,.@x+7,.@y+7,"[타뷸라의늑대] :  ["+.@i+"]"+.Tabula_User_name$[.@i]+"님이 이탈했습니다",bc_yellow;
+					set .Tabula_User_die[.@i],1;
+					atcommand "@채금해제 "+strcharinfo(0);
+					atcommand "@변신해제";
+					atcommand "@크기 0";
+					check(.@i);
+				}
+			}
+			else if (.Tabula_User_name$[.@i] == strcharinfo(0) && .Tabula_User_die[.@i] == 1)
+			{
+				getmapxy .@mymap$,.@myx,.@myy,0,strcharinfo(0);
+				if (.@mymap$ != "jawaii")
+					atcommand "@채금해제 "+strcharinfo(0);
+			}
+		}
+	}
+	end;
+
+OnInit:
+	defpattern 1, "([^:]+):.*\\s+-게임시작.*","Talk_pattern_Start";
+	defpattern 1, "([^:]+):.*\\s+-강제종료.*","Talk_pattern_End";
+	defpattern 1, "([^:]+):.*\\s+-게임방법.*","Talk_pattern_How";
+	defpattern 1, "([^:]+):.*\\s+-역할.*","Talk_pattern_Job";	
+	defpattern 1, "([^:]+):.*\\s+-메모확인.*","Talk_pattern_Memo1";
+	defpattern 1, "([^:]+):.*\\s+-메확.*","Talk_pattern_Memo1";
+	defpattern 1, "([^:]+):.*\\s+-메모수정.*","Talk_pattern_Memo2";
+	defpattern 1, "([^:]+):.*\\s+-메수.*","Talk_pattern_Memo2";
+	defpattern 1, "([^:]+):.*\\s+-발언.*","Talk_pattern_Memo3";
+	defpattern 1, "([^:]+):.*\\s+-투표 1-.*","Talk_pattern_Vote1";
+	defpattern 1, "([^:]+):.*\\s+-투표 2-.*","Talk_pattern_Vote2";
+	defpattern 1, "([^:]+):.*\\s+-투표 3-.*","Talk_pattern_Vote3";
+	defpattern 1, "([^:]+):.*\\s+-투표 4-.*","Talk_pattern_Vote4";
+	defpattern 1, "([^:]+):.*\\s+-투표 5-.*","Talk_pattern_Vote5";
+	defpattern 1, "([^:]+):.*\\s+-투표 6-.*","Talk_pattern_Vote6";
+	defpattern 1, "([^:]+):.*\\s+-투표 7-.*","Talk_pattern_Vote7";
+	defpattern 1, "([^:]+):.*\\s+-투표 8-.*","Talk_pattern_Vote8";
+	defpattern 1, "([^:]+):.*\\s+-투표 9-.*","Talk_pattern_Vote9";
+	defpattern 1, "([^:]+):.*\\s+-투표 10-.*","Talk_pattern_Vote10";
+	defpattern 1, "([^:]+):.*\\s+-투표 11-.*","Talk_pattern_Vote11";
+	defpattern 1, "([^:]+):.*\\s+-시간연장.*","Talk_pattern_Day";
+	defpattern 1, "([^:]+):.*\\s+-시연.*","Talk_pattern_Day";
+	defpattern 1, "([^:]+):.*\\s+-스캔.*","Talk_pattern_Scan";
+	defpattern 1, "([^:]+):.*\\s+-도움말.*","Talk_pattern_Help";
+	activatepset 1;
+	end;
+}
+
+jawaii,184,239,4	script	1번자리	111,{
+	end;
+
+OnTimer500:
+	stopnpctimer;
+	setnpctimer 0;
+Oninit:
+	waitingroom getvariableofnpc(.Tabula_User_memo$[1],"타뷸라의늑대"),0;
+	end;
+}
+
+jawaii,184,242,4	script	2번자리	111,{
+	end;
+
+OnTimer500:
+	stopnpctimer;
+	setnpctimer 0;
+Oninit:
+	waitingroom getvariableofnpc(.Tabula_User_memo$[2],"타뷸라의늑대"),0;
+	end;
+}
+
+jawaii,186,243,4	script	3번자리	111,{
+	end;
+
+OnTimer500:
+	stopnpctimer;
+	setnpctimer 0;
+Oninit:
+	waitingroom getvariableofnpc(.Tabula_User_memo$[3],"타뷸라의늑대"),0;
+	end;
+}
+
+jawaii,190,243,4	script	4번자리	111,{
+	end;
+
+OnTimer500:
+	stopnpctimer;
+	setnpctimer 0;
+Oninit:
+	waitingroom getvariableofnpc(.Tabula_User_memo$[4],"타뷸라의늑대"),0;
+	end;
+}
+
+jawaii,192,242,4	script	5번자리	111,{
+	end;
+
+OnTimer500:
+	stopnpctimer;
+	setnpctimer 0;
+Oninit:
+	waitingroom getvariableofnpc(.Tabula_User_memo$[5],"타뷸라의늑대"),0;
+	end;
+}
+
+jawaii,192,239,4	script	6번자리	111,{
+	end;
+
+OnTimer500:
+	stopnpctimer;
+	setnpctimer 0;
+Oninit:
+	waitingroom getvariableofnpc(.Tabula_User_memo$[6],"타뷸라의늑대"),0;
+	end;
+}
+
+jawaii,192,236,4	script	7번자리	111,{
+	end;
+
+OnTimer500:
+	stopnpctimer;
+	setnpctimer 0;
+Oninit:
+	waitingroom getvariableofnpc(.Tabula_User_memo$[7],"타뷸라의늑대"),0;
+	end;
+}
+
+jawaii,191,234,4	script	8번자리	111,{
+	end;
+
+OnTimer500:
+	stopnpctimer;
+	setnpctimer 0;
+Oninit:
+	waitingroom getvariableofnpc(.Tabula_User_memo$[8],"타뷸라의늑대"),0;
+	end;
+}
+
+jawaii,188,234,4	script	9번자리	111,{
+	end;
+
+OnTimer500:
+	stopnpctimer;
+	setnpctimer 0;
+Oninit:
+	waitingroom getvariableofnpc(.Tabula_User_memo$[9],"타뷸라의늑대"),0;
+	end;
+}
+
+jawaii,185,234,4	script	10번자리	111,{
+	end;
+
+OnTimer500:
+	stopnpctimer;
+	setnpctimer 0;
+Oninit:
+	waitingroom getvariableofnpc(.Tabula_User_memo$[10],"타뷸라의늑대"),0;
+	end;
+}
+
+jawaii,184,236,4	script	11번자리	111,{
+	end;
+
+OnTimer500:
+	stopnpctimer;
+	setnpctimer 0;
+Oninit:
+	waitingroom getvariableofnpc(.Tabula_User_memo$[11],"타뷸라의늑대"),0;
+	end;
+}
+
+//jawaii,213,239,4	script	포링코인교환소	909,{
+//	set @buytype, 1;
+//	callshop "poringcoin_shop1", 1;
+//	end;
+//
+//Oninit:
+//	waitingroom "포링코인 교환",0;
+//	end;
+//}
+
+jawaii,198,242,4	script	타뷸라의늑대안내#1	857,{
+	end;
+OnTimer30000:
+Oninit:
+	if (getwaitingroomstate(2) != -1)
+		delwaitingroom;
+	switch(rand(2))
+	{
+	case 0:
+		waitingroom "관전자는 조용히 관전만!",0;
+		break;
+	case 1:
+		waitingroom "게임진행에 끼어들거나 방해금물!",0;
+		break;
+	}
+	initnpctimer;
+	end;
+}
+
+jawaii,184,250,5	script	타뷸라의늑대안내#2	857,{
+	end;
+OnTimer30000:
+Oninit:
+	if (getwaitingroomstate(2) != -1)
+		delwaitingroom;
+	switch(rand(2))
+	{
+	case 0:
+		waitingroom "변신후에는 '/앉기' 사용으로 조용히!",0;
+		break;
+	case 1:
+		waitingroom "확성기 전쳇메뉴로 모두끄면 편리!",0;
+		break;
+	}
+	initnpctimer;
+	end;
+}
+
+jawaii,182,228,5	script	타뷸라의늑대안내#3	857,{
+	end;
+OnTimer30000:
+Oninit:
+	if (getwaitingroomstate(2) != -1)
+		delwaitingroom;
+	switch(rand(2))
+	{
+	case 0:
+		waitingroom "시민은 거짓말을 하면 안되요!",0;
+		break;
+	case 1:
+		waitingroom "죽고 나면 리스하지말고 제자리에!",0;
+		break;
+	}
+	initnpctimer;
+	end;
+}
