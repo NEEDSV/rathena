@@ -9,3 +9,11 @@
  **/
 
 //BUILDIN_DEF(example,""),
+
+BUILDIN_DEF(skillselectmenu,"*"),
+BUILDIN_DEF(skillselectmenuarray,"r"),
+BUILDIN_DEF(getskillname,"v"),
+BUILDIN_DEF(getskilldesc,"v"),
+BUILDIN_DEF(getplagiarizedskill,"?"),
+BUILDIN_DEF(getplagiarizedskilllv,"?"),
+BUILDIN_DEF(getskillid,"s"),
