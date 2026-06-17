@@ -7040,7 +7040,7 @@ ACMD_FUNC(autolootitem)
 			message++;
 			action = 2;
 		}
-		else if (!strcmp(message,"reset"))
+		else if (!strcmp(message,"리셋"))
 			action = 4;
 	}
 
