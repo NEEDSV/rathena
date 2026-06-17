@@ -1,0 +1,234 @@
+// 카프라이동
+lasagna,174,160,4	script	카프라	861,{
+
+M_Enter:
+S_Menu:
+	// 여기 한 줄이 뜨면 "새 메뉴가 적용된 NPC"가 맞다는 뜻
+
+
+	// 고정 메뉴 + 대여 메뉴(스킬 없어도 항상 표시)
+	.@opt$ = "엔터방지:위치저장 서비스"
+		+ ":카트/탈것 대여"
+		+ ":종료";
+
+	.@sel = select(.@opt$);
+
+	switch (.@sel) {
+		case 1: goto M_Enter;
+		case 2: goto S_01;
+		case 3: goto All;
+
+		default: goto EXIT;   // 종료
+	}
+
+
+S_01: //세이브
+	// 현재 위치 저장
+	getmapxy(.@map$, .@x, .@y);
+	savepoint .@map$, .@x, .@y;
+	mes "[카프라 직원]";
+	mes "^FF0000현재 위치로 저장했습니다.^000000";
+	mes "이용해주셔서 감사합니다.";
+	goto M_Exit;
+
+EXIT:
+	mes "[카프라 직원]";
+	mes "저희 카프라 서비스는 보다 완벽한";
+	mes "서비스와 관리 업무를 목표로 하여";
+	mes "안심하고 이용 하실 수 있도록";
+	mes "언제나 최선을 다하고 있습니다.";
+	mes "(주)카프라 서비스를 이용해주셔서";
+	mes "감사합니다.";
+	goto M_Exit;
+	
+All:
+		if (ismounting()) {
+		message strcharinfo(0),"탑승을 제거 해야합니다.";
+		end;
+	}
+	else if (((eaclass()&EAJ_THIRDMASK)==EAJ_RANGER) && !countitem(6124))
+	{
+		if (!checkfalcon() && getskilllv("HT_FALCON") && !checkwug())
+		{
+			if(select(" ~ 팔콘: ~ 워그")==1)
+				setfalcon;
+			else
+				getitem 6124,1; //Wolf's_Flute
+		}
+		else
+			getitem 6124,1; //Wolf's_Flute
+	}
+	else if (((eaclass()&EAJ_THIRDMASK)==EAJ_MECHANIC) && !checkcart() && getskilllv("MC_PUSHCART")) {
+		if (!checkmadogear() && getskilllv("NC_MADOLICENCE")) {
+			if(select(" ~ 카트: ~ 마도")==1) setcart;
+			else setmadogear;
+		} else setcart;
+	} else if (!checkcart() && getskilllv("MC_PUSHCART")) setcart;
+	else if (!checkfalcon() && getskilllv("HT_FALCON") && !checkwug()) setfalcon;
+	else if (!checkriding() && !checkdragon() && getskilllv("KN_RIDING")) {
+		if ((eaclass()&EAJ_THIRDMASK)==EAJ_RUNE_KNIGHT) setdragon;
+		else setriding;
+	} else if (!checkmadogear() && getskilllv("NC_MADOLICENCE")) setmadogear;
+	else {
+		message strcharinfo(0),"대여 요건을 충족하지 못합니다.";
+		end;
+	}
+	specialeffect2 EF_TEIHIT3;
+	end;
+
+Cart: //카트
+	set @servName$, "카트";
+	set @earnName$, "푸쉬 카트";
+	set @setPrice, 800;
+	set @setServ, 0;
+	set @checkSkill, 39;
+	goto Check_Option;
+
+Peco: //페코
+	set @servName$, "페코페코";
+	set @earnName$, "라이딩";
+	set @setPrice, 0;
+	set @setServ, 1;
+	set @checkSkill, 63;
+	goto Check_Option;
+
+GPeco: //그랜드 페코
+	set @servName$, "그랜드 페코";
+	set @earnName$, "라이딩";
+	set @setPrice, 0;
+	set @setServ, 1;
+	set @checkSkill, 63;
+	goto Check_Option;
+
+Dragon: //드래곤
+	set @servName$, "드래곤";
+	set @earnName$, "드래곤 트레이닝";
+	set @setPrice, 0;
+	set @setServ, 3;
+	set @checkSkill, 2007;
+	goto Check_Option;
+
+mado: //마도 기어
+	set @servName$, "마도 기어";
+	set @earnName$, "마도 기어 라이센스";
+	set @setPrice, 2500;
+	set @setServ, 4;
+	set @checkSkill, 2255;	
+	goto Check_Option;	
+
+Falcon: //팔콘
+	set @servName$, "팔콘";
+	set @earnName$, "팔콘리 마스터리";
+	set @setPrice, 2500;
+	set @setServ, 2;
+	set @checkSkill, 127;
+
+Check_Option: //체크
+	if (zeny < @setPrice) goto No_Zeny;
+	if (getskilllv(@checkSkill) == 0) goto W_Needskill;
+
+	mes "[카프라 직원]";
+	mes "선택하신 서비스는 ^ff0000" + @servName$ + "^000000 서비스 입니다.";
+	mes "이용해주셔서 감사합니다.";
+	if (@setServ == 0) setcart;
+	if (@setServ == 1) setriding;
+	if (@setServ == 2) setfalcon;
+	if (@setServ == 3) setriding;
+	if (@setServ == 4) setriding;	
+	emotion 15;
+	set Zeny, Zeny - @setPrice;
+	goto M_Exit;
+
+No_Zeny: //제니 체크
+	mes "[카프라 직원]";
+	mes "죄송합니다. ^FF3300제니^000000가 부족합니다.";
+	emotion 23;
+	goto M_Exit;
+
+W_Needskill: //스킬 체크
+	mes "[카프라 직원]";
+	mes "^FF3300" + @earnName$ + "^000000 스킬을 배우고 오세요.";
+	emotion 23;
+	goto M_Exit;
+
+
+QPlat: // 퀘스트 스킬 배우기
+	mes "[카프라 직원]";
+	mes "현재 직업에 맞는 퀘스트 스킬을 지급합니다.";
+	next;
+	callfunc "F_GetPlatinumSkills"; // rAthena 전역 함수 호출
+	mes "퀘스트 스킬이 지급되었습니다.";
+	goto M_Exit;
+
+S_OS:
+	mes "[Kafra]";
+	mes "어느 창고를 여시겠어요?";
+	switch(select(" - 1번 창고"," - 2번 창고"," - 3번 창고")) {
+	case 1: close2; openstorage; end;              // ID 0
+	case 2: close2; openstorage2(1, STOR_MODE_GET|STOR_MODE_PUT); end; // ID 1
+	case 3: close2; openstorage2(2, STOR_MODE_GET|STOR_MODE_PUT); end; // ID 2
+}
+	
+S_GOS:
+	if (!getcharid(2)) {
+		mes "[카프라 직원]";
+		mes "길드 가입이 필요합니다.";
+		goto M_Exit;
+	}
+
+	// 2) 권한 체크(길드원 권한에 '창고 사용'이 있어야 함)
+	if (!guild_has_permission(GUILD_PERM_STORAGE)) {
+		mes "[카프라 직원]";
+		mes "길드 창고 사용 권한이 없습니다.";
+		mes "길드 마스터에게 권한을 요청하세요.";
+		goto M_Exit;
+	}
+
+	// 3) 열기 전 안내 -> 대화창 닫고 시도
+	mes "[카프라 직원]";
+	mes "길드 창고를 열어 드리겠습니다.";
+	close2;
+
+	// 4) 길드창고 오픈 시도 + 실패 사유별 메시지(대화창 닫힌 상태이므로 dispbottom 사용)
+	.@r = guildopenstorage();
+	if (.@r != GSTORAGE_OPEN) {
+		if (.@r == GSTORAGE_NO_STORAGE) {
+			dispbottom "길드 스킬 'Guild Storage Expansion'이 필요합니다.";
+		} else if (.@r == GSTORAGE_NO_PERMISSION) {
+			dispbottom "길드 창고 사용 권한이 없습니다.";
+		} else if (.@r == GSTORAGE_ALREADY_OPEN) {
+			dispbottom "이미 길드 창고가 열려 있습니다.";
+		} else if (.@r == GSTORAGE_STORAGE_ALREADY_OPEN) {
+			dispbottom "개인 창고가 열린 상태에서는 길드 창고를 열 수 없습니다.";
+		} else if (.@r == GSTORAGE_NO_GUILD) {
+			dispbottom "길드에 가입되어 있지 않습니다.";
+		} else {
+			dispbottom "길드 창고를 열 수 없습니다. 코드: " + .@r;
+		}
+		end;
+	}
+	guildopenstorage;
+	end;  // 성공 시 종료
+
+M_Exit: //종료
+	cutin "kafra_09",255;
+	close;
+}
+
+
+//pvp_n_5-5,99,97,6	duplicate(카프라직원)	카프라직원#gmzone	117
+//payon,164,224,6	duplicate(카프라직원)	카프라직원#payo2	117
+//izlude,116,158,4	duplicate(카프라직원)	카프라직원#iz1	117
+//izlude,139,165,6	duplicate(카프라직원)	카프라직원#iz2	117
+//izlude_in,71,113,2	duplicate(카프라직원)	카프라직원#iz3	117
+////pvp_n_3-5,86,118,6	duplicate(카프라직원)	카프라직원#gomokzone	117
+//yuno,136,185,6	duplicate(카프라직원)	카프라직원#yuno01	117
+//yuno,179,185,4	duplicate(카프라직원)	카프라직원#yuno02	117
+//pvp_n_7-4,86,129,6	duplicate(카프라직원)	카프라직원#buffzone	117
+
+//new_zone01,123,119,4	duplicate(카프라직원)	카프라직원#zone	117
+//new_zone02,23,182,4	duplicate(카프라직원)	카프라직원#zone2	117
+//new_zone03,90,174,4	duplicate(카프라직원)	카프라직원#zone3	117
+//new_zone04,49,68,4	duplicate(카프라직원)	카프라직원#zone4	117
+//guild_vs5,24,55,4	duplicate(카프라직원)	카프라직원#zone5	117
+//job_sage,36,112,4	duplicate(카프라직원)	카프라직원#zone6	117

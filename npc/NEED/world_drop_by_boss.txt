@@ -1,0 +1,47 @@
+//===== rAthena Script =======================================
+//= Field/Dungeon MVP Drop ONLY (NOT Instance)
+//= killedrid is treated as MobID (ClassID) in this server.
+//= - Exclude instance maps (1@~9@)
+//= - Only MVP mobs (MOB_MVPEXP > 0)
+//= Drops to inventory:
+//=   677 : 20%
+//=   6703: 10%
+//============================================================
+
+-	script	FieldMvpDropOnly	-1,{
+
+OnInit:
+//	debugmes "[WorldDrop] FieldMvpDropOnly LOADED";
+	end;
+
+OnNPCKillEvent:
+	.@map$ = strcharinfo(3);
+
+	// 이 서버는 killedrid = 몬스터 클래스ID(MobID)
+	.@mobid = killedrid;
+	if (.@mobid <= 0) end;
+
+	if (.@mobid == 2483 || .@mobid == 3473)
+		end;
+
+	if (.@map$ == "bossnia_01" || .@map$ == "bossnia_02" || .@map$ == "bossnia_03")
+		end;
+
+	if (getmonsterinfo(.@mobid, MOB_MVPEXP) <= 0) end;
+
+	// 드랍(독립 확률)
+	if (rand(10000) < 2000) getitem 677, 1;   // 20%
+	if (rand(10000) < 1000) getitem 6703, 1;  // 10%
+
+	end;
+}
+
+function	script	F_InstanceMvpDropOnly	{
+	if (rand(10000) < 2000)
+		getitem 677, 1;
+
+	if (rand(10000) < 1000)
+		getitem 6703, 1;
+
+	return;
+}

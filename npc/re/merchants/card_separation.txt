@@ -27,7 +27,7 @@
 	if (strnpcinfo(1) == "Jeremy") {
 		set .@Jeremy,1;
 		set .@n$, "[Jeremy]";
-		setarray .@equip_name$[0],  "Armor",  "Shoes",  "Garment", "Upper Hat";
+		setarray .@equip_name$[0],  "갑옷",  "신발",  "걸칠것", "투구";
 		setarray .@equip_slot[0], EQI_ARMOR,EQI_SHOES,EQI_GARMENT,EQI_HEAD_TOP;
 
 		mes .@n$;
@@ -36,7 +36,7 @@
 	} else {
 		set .@Jeremy,0;
 		set .@n$, "[Richard]";
-		setarray .@equip_name$[0], "Left hand", "Right hand";
+		setarray .@equip_name$[0], "왼손", "오른손";
 		setarray .@equip_slot[0],   EQI_HAND_L,   EQI_HAND_R;
 
 		mes .@n$;
@@ -57,7 +57,7 @@
 			set .@menu$, .@menu$+"^999999"+.@equip_name$[.@i]+" (empty)^000000:";
 	}
 
-	set .@i, select("Stop the work:"+((.@Jeremy)?"How is it possible?":"")+":"+.@menu$);
+	set .@i, select("중단:"+((.@Jeremy)?"방법을 알려주세요.":"")+":"+.@menu$);
 	switch(.@i) {
 	case 1:
 		mes .@n$;
@@ -84,10 +84,10 @@
 		mes "하지만 정제 과정을 거치면서 이 어유는 오래된 장비 관리 및 산업용 윤활유로 사용될 만큼 가치 있는 물질이 되었습니다.";
 		next;
 		mes .@n$;
-		mes "게다가 이 오일은 장착된 무기에서 유물을 분리하는 데 매우 유용하기 때문에 프리미엄 윤활유와 일반 윤활유는 제니로 구매할 수 없습니다.";
+		mes "게다가 이 오일은 장착된 무기에서 유물을 분리하는 데 매우 유용하기 때문에 고급 윤활유와 일반 윤활유는 제니로 구매할 수 없습니다.";
 		next;
 		mes .@n$;
-		mes "음, 돈은 걱정하지 마세요. 프리미엄 윤활유가 비싼 건 당연하죠. 제니를 좀 내시면 더 저렴한 윤활유를 드릴 수 있어요.";
+		mes "음, 돈은 걱정하지 마세요. 고급 윤활유가 비싼 건 당연하죠. 제니를 좀 내시면 더 저렴한 윤활유를 드릴 수 있어요.";
 		next;
 		mes .@n$;
 		mes "성공의 질에 대해서는 확신이 안 서네요. 어쨌든, 이거 정말 싸잖아요, 그렇죠?";
@@ -179,9 +179,9 @@
 		next;
 		set .@menu$,
 			"Next time...:"+
-			((Zeny >= 1000000)?"Use 1,000,000z (Do not use special item):":"^999999Use 1,000,000z (Insufficient)^000000:")+
-			((countitem(6441))?"Use Premium Lubricant:":"^999999Premium Lubricant (Insufficient)^000000:")+
-			((countitem(6440))?"Use Ordinary Lubricant":"^999999Ordinary Lubricant (Insufficient)^000000");
+			((Zeny >= 1000000)?"1,000,000z (아이템 미사용):":"^9999991,000,000z (부족)^000000:")+
+			((countitem(6441))?"고급 윤활유:":"^999999고급 윤활유 (부족)^000000:")+
+			((countitem(6440))?"일반 윤활유":"^999999일반 윤활유 (부족)^000000");
 		switch(select(.@menu$)) {
 		case 1:
 			mes .@n$;
@@ -196,7 +196,7 @@
 			mes .@n$;
 			mes "이 장비는 상당히 오래된 장비입니다. 작업 중에 카드나 장비가 파손될 확률이 높습니다. 계속 진행하시겠습니까?";
 			next;
-			if(select("다음번...:Continue") == 1) {
+			if(select("다음에...:진행") == 1) {
 				mes .@n$;
 				mes "일거리가 필요하시면 언제든 여기로 오세요.";
 				close;
@@ -209,13 +209,13 @@
 		case 3:
 			if (countitem(6441) == 0) {
 				mes .@n$;
-				mes "프리미엄 윤활유가 없습니다.";
+				mes "고급 윤활유가 없습니다.";
 				close;
 			}
 			mes .@n$;
-			mes "프리미엄 윤활유를 사용하시면 파손 속도가 크게 줄어들겠지만, 100% 보장해 드릴 수는 없습니다. 계속 진행하시겠습니까?";
+			mes "고급 윤활유를 사용하시면 파손 속도가 크게 줄어들겠지만, 100% 보장해 드릴 수는 없습니다. 계속 진행하시겠습니까?";
 			next;
-			if(select("다음번...:Continue") == 1) {
+			if(select("다음에...:계속") == 1) {
 				mes .@n$;
 				mes "일거리가 필요하시면 언제든 여기로 오세요.";
 				close;
@@ -234,7 +234,7 @@
 			mes .@n$;
 			mes "일반 윤활유를 사용하시면 파손 속도가 크게 줄어들겠지만, 100% 보장해 드릴 수는 없습니다. 계속 진행하시겠습니까?";
 			next;
-			if(select("다음번...:Continue") == 1) {
+			if(select("다음에...:계속") == 1) {
 				mes .@n$;
 				mes "일거리가 필요하시면 언제든 여기로 오세요.";
 				close;
@@ -247,9 +247,9 @@
 		}
 	} else if (.@boss_chk == 1) {
 		mes .@n$;
-		mes "이 장비에는 귀중한 MVP 카드가 들어 있습니다. 이 카드는 윤활유로 분리할 수 없습니다. 초강력 계면활성제 ^0000ffSillit Pong^000000을 가져오시면 작동시킬 수 있습니다.";
+		mes "이 장비에는 귀중한 MVP 카드가 들어 있습니다. 이 카드는 윤활유로 분리할 수 없습니다. 초강력 계면활성제 ^0000ff실릿 퐁^000000을 가져오시면 작동시킬 수 있습니다.";
 		next;
-		switch(select("다음번...:저는 실릿 퐁을 가지고 있어요.")) {
+		switch(select("다음에...:저는 실릿 퐁을 가지고 있어요.")) {
 		case 1:
 			mes .@n$;
 			mes "일거리가 필요하시면 언제든 여기로 오세요.";
@@ -362,6 +362,14 @@
 	mes .@n$;
 	mes "카드 분리 결과는 여기까지입니다. 또 오세요.";
 	close;
+	
+OnInit:
+	if (strnpcinfo(1) == "Jeremy") {
+		waitingroom "갑옷 카드 분리",0;
+	} else {
+		waitingroom "무기/방패 카드 분리",0;
+	}
+		end;
 }
-malangdo,215,166,4	duplicate(CardSeparation_mal)	Jeremy#pa0829	553	// Armors :: mal_yong
-malangdo,208,166,6	duplicate(CardSeparation_mal)	Richard#pa0829	559	// Weapons :: soc_weapon
+lasa_in01,161,54,6	duplicate(CardSeparation_mal)	Jeremy#pa0829	553	// Armors :: mal_yong
+lasa_in01,161,52,6	duplicate(CardSeparation_mal)	Richard#pa0829	559	// Weapons :: soc_weapon

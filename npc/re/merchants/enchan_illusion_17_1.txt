@@ -9,16 +9,7 @@
 //= 1.2 iRO conversion for 2 NPCs [Capuche, Everade]
 //============================================================
 
-sp_cor,152,158,4	script	Butterfly Merchant#sp_cor	4_M_ORIENT01,{
-	mes "[나비 상인]";
-	mes "안녕하세요, 만나서 반갑습니다.";
-	mes " 저는 판매하고 있습니다" + getitemname(100903) + "구매하시겠습니까?";	// Teleport_Ep17_01
-	close2;
-	callshop "shop_sp_cor";
-	end;
-}
-
-sp_cor,136,156,3	script	Grace Operator#ext162	4_M_REPAIR,{
+lasagna,164,129,6	script	그레이스 관리자#ext162	4_M_REPAIR,{
 	mes "[은혜로운 운영자]";
 	mes "Hello.";
 	mes " 저희는 ^4d4dffGrace^000000 장비를 보유하고 있으며, 이 장비는 다른 장비로 교환할 수 있습니다." + mesitemlink( 25723 ) + ".";
@@ -106,10 +97,14 @@ sp_cor,136,156,3	script	Grace Operator#ext162	4_M_REPAIR,{
 	}
 	callshop "shop_ext171_" + .@str$;
 	end;
+	
+OnInit:
+	waitingroom "그레이스 장비 교환",0;
+	end;
 }
 
 // Enchanting Supply Exchange NPC - Official iRO Conversion
-sp_cor,108,130,5	script	Rebellion#rm171_7	4_F_REBELLION3,{
+lasa_in01,188,70,3	script	Rebellion#rm171_7	4_F_REBELLION3,{
 	if (isbegin_quest(17019) == 0) {
 		mes "[반항]";
 		mes "반란군은 현재 이 건물을 사용하고 있습니다.";
@@ -256,11 +251,12 @@ sp_cor,108,130,5	script	Rebellion#rm171_7	4_F_REBELLION3,{
 
 OnInit:
 	questinfo (QTYPE_QUEST, QMARK_YELLOW, " isbegin_quest(17019) == 1 && isbegin_quest(16352) == 0 ");
+	waitingroom "개조장치 상자 교환",0;
 	end;
 }
 
 // Equipment Exchange NPC - Official iRO Conversion
-sp_cor,111,130,3	script	Elyumina#rm171_4	4_EP17_ELYUMINA,{
+lasa_in01,188,68,3	script	Elyumina#rm171_4	4_EP17_ELYUMINA,{
 	if (isbegin_quest(16360) < 2) {
 		cutin "ep171_elyumina02",0;
 		mes "[엘류미나]";
@@ -294,7 +290,7 @@ sp_cor,111,130,3	script	Elyumina#rm171_4	4_EP17_ELYUMINA,{
 		if (select("OS 무기를 교환하세요.", "사용 가능한 목록을 확인하세요.") == 2) {
 			cutin "ep171_elyumina03",0;
 			mes "[엘류미나]";
-			mes "쯯쯯. 내가 만드는 건 다 맛있다고 했잖아. 꼭 하나만 골라야 해? 좋아, 그럼 잘 들어봐.";
+			mes "??. 내가 만드는 건 다 맛있다고 했잖아. 꼭 하나만 골라야 해? 좋아, 그럼 잘 들어봐.";
 			next;
 			mes "[엘류미나]";
 			mes "Sword: " + mesitemlink( 13493 );
@@ -400,11 +396,12 @@ sp_cor,111,130,3	script	Elyumina#rm171_4	4_EP17_ELYUMINA,{
 
 OnInit:
 	cloakonnpc();
+	waitingroom "일루시온/OS 장비 교환",0;
 	end;
 }
 
 // Illusion Enchanter - Walkthrough Conversion
-sp_cor,106,136,3	script	RS26#illusion_enchant	4_SYS_MSG,{
+lasa_in01,188,66,3	script	RS26#illusion_enchant	4_SYS_MSG,{
 	if(!checkweight(1201,1) || (MaxWeight - Weight) < 1000){
 		mes "아이템이 너무 많아서 대화를 진행할 수 없습니다.";
 		mes "물품들을 정리하신 후 다시 시도해 주세요.";
@@ -566,6 +563,7 @@ sp_cor,106,136,3	script	RS26#illusion_enchant	4_SYS_MSG,{
 	}
 	
 OnInit:
+	waitingroom "일루시온/OS 인챈트",0;
 	setarray .module$,
 	"25670:29527:3,25671:29528:3,25687:29534:2,25688:29535:2,25689:29536:2,25693:29540:1",
 	"25670:29527:3,25671:29528:3,25690:29537:2,25691:29538:2,25692:29539:2,25695:29542:1",

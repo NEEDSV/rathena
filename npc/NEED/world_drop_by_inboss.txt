@@ -1,0 +1,42 @@
+//===== rAthena Script =======================================
+//= Instance Boss/MVP Drop ONLY (NOT field/dungeon)
+//= - ONLY instance maps (x@... e.g. 1@,2@,...)
+//= - ONLY Boss-type monsters (MOB_MODE & 0x20)
+//= Drops to inventory:
+//=   677 : 20%
+//=   6704: 10%   (원하면 테스트로 30%도 가능)
+//============================================================
+
+-	script	InstanceBossDropOnly	-1,{
+
+OnInit:
+	debugmes "[WorldDrop] InstanceBossDropOnly LOADED";
+	end;
+
+OnNPCKillEvent:
+
+	.@mobid = killedrid;
+	if (.@mobid <= 0) end;
+
+	.@map$ = strcharinfo(3);
+
+	// -----------------------------
+	// 인스턴스 맵만 허용
+	// 1@xxx / 2@xxx ... 처럼 "두번째 글자"가 '@'
+	// -----------------------------
+	if (substr(.@map$, 1, 1) != "@") end;
+
+	// -----------------------------
+	// 보스(MVP 포함)만: MOB_MODE 0x20
+	// -----------------------------
+	.@mode = getmonsterinfo(.@mobid, MOB_MODE);
+	if (!(.@mode & 0x20)) end;
+
+	// -----------------------------
+	// 드랍(인벤 지급) - 독립 확률
+	// -----------------------------
+	if (rand(10000) < 2000) getitem 677, 1;   // 20%
+	if (rand(10000) < 1000) getitem 6704, 1;  // 10%
+
+	end;
+}

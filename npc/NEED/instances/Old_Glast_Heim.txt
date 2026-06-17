@@ -1,0 +1,4482 @@
+//===== rAthena Script =======================================
+//= Old Glast Heim
+//===== Description: =========================================
+//= Discover the history of events that took place in the
+//= Glast Heim castle and how it ended up in ruins.
+//===== Changelogs: =================================
+//= 1.0 First version. [Euphy, Ziu, Heris]
+//=     This is a custom version, and may contain bugs.
+//= 1.1 Bug fixes; removed redundant OnInstanceInit scripts.
+//= 1.2 Add NPC Hugin's Follower [exneval]
+//=     NPC that give access to Glast Heim Nightmare Mode.
+//= 1.3 Add some NPCs placeholder. [exneval]
+//= 1.4 Update to its official text. [exneval]
+//=     Support merchant, enchant, socket features.
+//= 1.5 idAthena merge. Removed Hugin's Follower NPCs. [Secretdataz]
+//=     Changed `set` calls to direct assignments.
+//=     Cleaned up the script.
+//=     TODO: Confirm Hugin NPC's code flow.
+//= 1.6 Cleaned up the dialogue. [Aleos]
+//= 1.7 Added Hard Mode/Portal Cleanup/New Enchanter [crazyarashi services]
+//= 한글화 [차붕차]
+//= 간소화 추가 [차붕차]
+//============================================================
+
+glast_01,204,273,5	script	후긴#ogh	4_M_SAGE_C,{
+//운영자는 무한 재입장
+if (getgroupid() == 99) {
+	if (isbegin_quest(12317) == 1) {
+		erasequest 12317;
+	}
+}
+
+	mes "^FF0000던전 안에서 몬스터 테이밍 등의 임의의 몬스터 처리를 하실 경우 정상적인 진행으로 간주하지 않습니다. 이 점 유의하시기 바랍니다.^000000"; 
+	next;
+	if(BaseLevel < 130){
+		mes "[후긴]";
+		mes "더 강해진 후에 돌아오지 않겠나?";
+		mes "예를 들자면 130레벨쯤 되고나서 말일세.";
+		close;
+	}
+	if(isbegin_quest(12316) == 0){
+		mes "[후긴]";
+		mes "아주 오래전. 이 글래스트 헤임은 지금과 같은 모습은 아니었지";
+		next;
+		mes "[후긴]";
+		mes "아, 이거 낯선 여행객을 앞에 두고 내가 또 혼잣말처럼 중얼거렸군.";
+		next;
+		mes "[후긴]";
+		mes "내 이름은 후긴일세. 시간과 차원의 틈을 연구하는 학자··· 정도라고 해두지.";
+		next;
+		select("학자분이 이런곳엔 어째서···");
+		mes "[후긴]";
+		mes "자네는 이 글래스트 헤임의 과거가 궁금했던 적이 없나?";
+		next;
+		mes "[후긴]";
+		mes "난 시간과 차원의 틈을 연구하며 가장 먼저 이곳에 관심을 갖게 되었네.";
+		next;
+		mes "[후긴]";
+		mes "과연 슈미츠 왕은 룬미드가츠의 역사서대로 폭군이었는가. 아니면 우리가 모르는 뭔가의 역사왜곡이 있었는가.";
+		next;
+		mes "[후긴]";
+		mes "진실을 알고있는 과거의 시간은 과연 내게 어떤 답을 내려줄것인가 뭐 그런 것 말일세.";
+		next;
+		if (select("제가 관심가질 주제는 아니군요","흥미롭군요. 뭔가 성과가 있었습니까?") == 1) {
+			mes "[후긴]";
+			mes "그런가? 안타깝군. 다음에 흥미가 생기면 언제든 찾아주게";
+			close;
+		}
+		mes "[후긴]";
+		mes "그게, 차원간 여행은 가능해졌는데 말이지. 도무지 내 힘으로 그곳을 여행할 엄두는 나지 않아서 말야.";
+		next;
+		mes "[후긴]";
+		mes "그래! 자네라면 가능할지도 몰라.";
+		next;
+		mes "[후긴]";
+		mes "자네 한번 시간여행을 해 볼 생각없나?";
+		next;
+		if (select("관심없다","좋다") == 1) {
+			mes "[후긴]";
+			mes "그런가? 안타깝군. 다음에 흥미가 생기면 언제든 찾아주게";
+			close;
+		}
+		mes "[후긴]";
+		mes "좋아 말이 통하는 친구일줄 알았지. 그럼 어떻게 할지 결정해주게.";
+		setquest 12316;
+		completequest 12316;		
+	} else {
+		mes "[후긴]";
+		mes "음? 날 다른장소에서 본적이 있는 것 같다고? 기분탓일걸세. 이번엔 어떻게 할텐가?";
+		if (isbegin_quest(12322) == 1)
+			erasequest 12322;
+	}
+	next;
+	.@cooldown = 12317;
+	.@root_hunt = 12318;
+	.@md_name$ = "옛 글래스트헤임";
+	switch(checkquest(.@cooldown,PLAYTIME)){
+		case -1:
+			break;
+			
+		case 0:
+		case 1:
+			mes "[후긴]";
+			mes "아, 이런.";
+			mes "자네의 몸에 시간여행의 후유증이 남아있군. 이 상태로는 다시 여행을 할 수가 없네.";
+			next;
+			mes "[후긴]";
+			mes "건강이 최고 아닌가, 몸을 좀 추스른 뒤에 다시 찾아오도록 하게";
+			close;
+			
+		case 2:
+			mes "^0000CD옛 글래스트 헤임을 출입한 모든 흔적이 지워졌습니다. 후긴과 대화가 가능해 질 것 같습니다.^000000";
+			if(isbegin_quest(.@root_hunt) > 0)
+				erasequest .@root_hunt;
+			erasequest .@cooldown	;
+			close;			
+	}
+	.@party_id = getcharid(1);
+	.@party_name$ = getpartyname(.@party_id);	
+	if(!.@party_id){
+		mes "[후긴]";
+		mes "1인 이상의 파티를 구성하시거나 파티에 가입한 뒤 내게 말을 걸어주겠나?";
+		close;
+	}
+	mes "[후긴]";
+	mes "음? 날 다른장소에서 본적이 있는 것 같다고? 기분탓일걸세. 이번엔 어떻게 할텐가?";
+	next;
+	switch(select("시간의 틈 생성", .@md_name$ + "으로 입장", "취소")) {
+		case 1:
+			if (!is_party_leader()) {
+				mes "[후긴]";
+				mes "파티 리더만 시간의 틈을 생성할 수 있다네.";
+				close;
+			}
+			if (instance_id(IM_PARTY)) {
+				dispbottom "메모리얼던전 '" + .@md_name$ + "'의 예약이 예약중복으로 실패 하였습니다.",0xFF0000;
+					end;
+			}
+			switch(instance_create(.@md_name$)){
+				case -3:
+					dispbottom "메모리얼던전 '" + .@md_name$ + "'의 예약이 예약중복으로 실패 하였습니다.",0xFF0000;
+					end;
+					
+				case -4:
+				case -2:
+				case -1:
+					mes "파티명: " + getpartyname( getcharid(1) );
+					mes "파티 리더: " + strcharinfo(0);
+					mes "^0000ff" + .@md_name$ + "^000000 - 시간의 틈 생성 실패.";
+					end;
+			}
+			mes "[후긴]";
+			mes "시간의 틈이 열리고 나면 잠시 숨을 고른후 내게 다시 말을 걸어주게.";
+			end;
+			
+		case 2:
+			switch(instance_enter(.@md_name$)){
+				case IE_OTHER:
+					mes "[후긴]";
+					mes "알 수 없는 오류가 발생했군.";
+					close;
+				case IE_NOINSTANCE:
+					mes "[후긴]";
+					mes "아직 시간의 틈이 생성되지 않은 상태로군.";
+					close;
+				case IE_NOMEMBER:
+					mes "[후긴]";
+					mes "혼자서는 시간의 틈을 견딜수 없다네. 파티를 하고 다시 와주게.";
+					close;
+				case IE_OK:
+					mapannounce "glast_01", "" + getpartyname( getcharid(1) ) + " 파티의 " + strcharinfo(0) + " 파티원이 " + .@md_name$ + "에 입장합니다", bc_map,0x00FF99;
+					if(isbegin_quest(.@root_hunt) == 0)
+						setquest .@root_hunt;
+					setquest .@cooldown;
+					end;
+			}
+			end;
+			
+		case 3:
+			end;
+	}
+}
+
+glast_01,179,283,5	script	또다른 후긴#ogh_hard	4_M_SAGE_C,{
+
+//운영자는 무한 재입장
+if (getgroupid() == 99) {
+	if (isbegin_quest(12334) == 1) {
+		erasequest 12334;
+	}
+}
+
+	mes "^FF0000던전 안에서 몬스터 테이밍 등의 임의의 몬스터 처리를 하실 경우 정상적인 진행으로 간주하지 않습니다. 이 점 유의하시기 바랍니다.^000000"; 
+	next;
+	if(BaseLevel < 160){
+		mes "[또다른 후긴]";
+		mes "더 강해진 후에 돌아오지 않겠나?";
+		mes "예를 들자면 160레벨쯤 되고나서 말일세.";
+		close;
+	}
+	if(isbegin_quest(12321) != 2){
+		mes "[또다른 후긴]";
+		mes "...";
+		next;
+		mes "^0000CD후긴과 똑같은 모습을 한 남자입니다. 하지만 당신에 대해 아무런 관심이 없어 보이는군요.^000000";
+		end;
+	}
+	next;
+	.@cooldown = 12334;
+	.@root_hunt = 12336;
+	.@md_name$ = "옛 글래스트헤임(상급)";
+	switch(checkquest(.@cooldown,PLAYTIME)){
+		case -1:
+			break;
+			
+		case 0:
+		case 1:
+			mes "[또다른 후긴]";
+			mes "아, 이런.";
+			mes "자네의 몸에 시간여행의 후유증이 남아있군. 이 상태로는 다시 여행을 할 수가 없네.";
+			next;
+			mes "[후긴]";
+			mes "건강이 최고 아닌가, 몸을 좀 추스른 뒤에 다시 찾아오도록 하게";
+			close;
+			
+		case 2:
+			mes "^0000CD옛 글래스트 헤임을 출입한 모든 흔적이 지워졌습니다. 후긴과 대화가 가능해 질 것 같습니다.^000000";
+			if(isbegin_quest(.@root_hunt) > 0)
+				erasequest .@root_hunt;
+			if(isbegin_quest(12335) > 0)
+				erasequest 12335;
+			erasequest .@cooldown;
+			close;			
+	}
+	.@party_id = getcharid(1);
+	.@party_name$ = getpartyname(.@party_id);	
+	if(!.@party_id){
+		mes "[또다른 후긴]";
+		mes "1인 이상의 파티를 구성하시거나 파티에 가입한 뒤 내게 말을 걸어주겠나?";
+		close;
+	}
+	mes "[또다른 후긴]";
+	mes "자네가 보고있는 것은 또다른 차원의 나 일세. 이번엔 한층 위험할거라 말 해둬야겠군. 준비는 되었나?";
+	next;
+	switch(select("시간의 틈 생성", .@md_name$ + "으로 입장", "취소")) {
+		case 1:
+			if (!is_party_leader()) {
+				mes "[후긴]";
+				mes "파티 리더만 시간의 틈을 생성할 수 있다네.";
+				close;
+			}
+			if (instance_id(IM_PARTY)) {
+				dispbottom "메모리얼던전 '" + .@md_name$ + "'의 예약이 예약중복으로 실패 하였습니다.",0xFF0000;
+					end;
+			}
+			switch(instance_create(.@md_name$)){
+				case -3:
+					dispbottom "메모리얼던전 '" + .@md_name$ + "'의 예약이 예약중복으로 실패 하였습니다.",0xFF0000;
+					end;
+					
+				case -4:
+				case -2:
+				case -1:
+					mes "파티명: " + getpartyname( getcharid(1) );
+					mes "파티 리더: " + strcharinfo(0);
+					mes "^0000ff" + .@md_name$ + "^000000 - 시간의 틈 생성 실패.";
+					end;
+			}
+			mes "[또다른 후긴]";
+			mes "시간의 틈이 열리고 나면 잠시 숨을 고른후 내게 다시 말을 걸어주게.";
+			end;
+			
+		case 2:
+			switch(instance_enter(.@md_name$)){
+				case IE_OTHER:
+					mes "[또다른 후긴]";
+					mes "알 수 없는 오류가 발생했군.";
+					close;
+				case IE_NOINSTANCE:
+					mes "[또다른 후긴]";
+					mes "아직 시간의 틈이 생성되지 않은 상태로군.";
+					close;
+				case IE_NOMEMBER:
+					mes "[또다른 후긴]";
+					mes "혼자서는 시간의 틈을 견딜수 없다네. 파티를 하고 다시 와주게.";
+					close;
+				case IE_OK:
+					mapannounce "glast_01", "" + getpartyname( getcharid(1) ) + " 파티의 " + strcharinfo(0) + " 파티원이 " + .@md_name$ + "에 입장합니다", bc_map,0x00FF99;
+					if(isbegin_quest(.@root_hunt) == 0)
+						setquest .@root_hunt;
+					setquest .@cooldown;
+					end;
+			}
+			end;
+			
+		case 3:
+			end;
+	}
+}
+
+// Warps
+1@gl_k,96,80,0	warp	#2Control	2,2,1@gl_k,80,80
+1@gl_k,90,80,0	warp	#2Control2	2,2,1@gl_k,105,80
+1@gl_k,202,79,0	warp	#3Control	2,2,1@gl_k,215,79
+1@gl_k,206,79,0	warp	#3Control2	2,2,1@gl_k,195,79
+1@gl_k,227,216,0	warp	#4Control	2,2,1@gl_k,215,216
+1@gl_k,222,216,0	warp	#4Control2	2,2,1@gl_k,233,216
+1@gl_k,150,284,0	warp	#2F Entrance	2,2,2@gl_k,150,46
+2@gl_k,149,32,0	warp	#1 Control	2,2,1@gl_k,150,270
+2@gl_k,145,123,0	warp	#22 Control	2,2,2@gl_k,126,123
+2@gl_k,136,122,0	warp	#22 Control2	2,2,2@gl_k,150,116
+2@gl_k,154,101,0	warp	#23 Control	2,2,2@gl_k,174,101
+2@gl_k,165,101,0	warp	#23 Control2	2,2,2@gl_k,150,111
+2@gl_k,150,163,0	warp	#24 Control	2,2,2@gl_k,150,179
+2@gl_k,150,167,0	warp	#24 Control2	2,2,2@gl_k,150,149
+1@gl_k,69,168,0	warp	#Secret Room Exit	2,2,1@gl_k,48,168
+
+// Floor 1
+//============================================================
+1@gl_k,149,41,5	script	바르문트#0	4_M_BARMUND,{
+	if (is_party_leader() == false) {
+		mes "[바르문트]";
+		mes "파티장은 어디있나? 파티장의 도움이 필요하다네.";
+		cutin "gl_barmund2",2;
+		close3;
+	}
+	if (#glast_clear) {
+		mes "이전에 클리어 한 기록이 있습니다.";
+		mes "시나리오를 적당히 생략하고 진행할 수 있습니다.";
+		next;
+		.@sel = select("적당히 생략한다.:모두 감상한다.");
+		if (.@sel == 1) {
+			cutin "GL_BARMUND1.bmp", 2;
+			mes "[바르문트]";
+			mes "그대를 본 적이 있소 " + strcharinfo(0) + ".";
+			mes "당신이라면 믿을 만 하겠지. 바로 출발 합시다";
+			close2;
+			cutin "",255;
+			disablenpc instance_npcname("바르문트#0");
+			enablenpc instance_npcname("하인리히#1");
+			enablenpc instance_npcname("바르문트#1");
+			set 'glast_cut, 1;
+			end;
+		}
+	}
+		set 'glast_cut, 0;
+		set #glast_clear, 0;
+		'party_id = getcharid(1);
+		.@account_id = getcharid(3);
+		.@player_name$ = strcharinfo(0);
+		mes "[바르문트]";
+		mes "날 돕기위해 ^0000ff헤리코^000000가 보낸 친구들이 당신인가?";
+		npctalk "바르문트: 날 돕기위해 헤리코가 보낸 친구들이 당신인가?";
+		cutin "gl_barmund1",2;
+		next;
+		select("아. 네 뭐 ...");
+		mes "[" + .@player_name$ + "]";
+		mes "아 네, 하하하, 헤리코님이 현자 바르문트님을 만나보라 하더군요.";
+		unittalk .@account_id, .@player_name$ + " : 아 네, 하하하, 헤리코님이 현자 바르문트님을 만나보라 하더군요.";
+		next;
+		mes "[바르문트]";
+		mes "시간이 없어. 하인리히 경 에게 히멜메즈의 침략에 대해 말해야 한다.";
+		npctalk "바르문트: 시간이 없어. 하인리히 경 에게 히멜메즈의 침략에 대해 말해야 한다.";
+		cutin "gl_barmund2",2;
+		next;
+		select("히멜메즈라니...");
+		mes "[" + .@player_name$ + "]";
+		mes "히멜메즈가 누굽니까?";
+		unittalk .@account_id, .@player_name$ + " : 히멜메즈가 누굽니까?";
+		next;
+		mes "[바르문트]";
+		mes "헤리코가 기본적인 정보도 주지않았나?";
+		npctalk "바르문트: 헤리코가 기본적인 정보도 주지않았나?";
+		cutin "gl_barmund3",2;
+		next;
+		mes "[바르문트]";
+		mes "죽은자를 다스리는 이, 망자의 발키리. 그녀는 지금 이곳에 숨겨진 이미르의 심장을 취할 예정이야.";
+		npctalk "바르문트: 죽은자를 다스리는 이, 망자의 발키리. 그녀는 지금 이곳에 숨겨진 이미르의 심장을 취할 예정이야.";
+		cutin "gl_barmund2",2;
+		next;
+		mes "[바르문트]";
+		mes "아마도 목적을 위해 이 성 전체를 초토화 시킬지도 모르지.";
+		npctalk "바르문트: 아마도 목적을 위해 이 성 전체를 초토화 시킬지도 모르지.";
+		next;
+		mes "[바르문트]";
+		mes "서둘러! 어서 하인리히경에게 가서 히멜메즈에 대해 알려라. 난 잠시 이곳의 결계를 살펴볼 것이다!";
+		npctalk "바르문트: 서둘러! 어서 하인리히경에게 가서 히멜메즈에 대해 알려라. 난 잠시 이곳의 결계를 살펴볼 것이다!";
+		close2;
+		cutin "",255;
+		disablenpc instance_npcname("바르문트#0");
+		enablenpc instance_npcname("하인리히#1");
+		enablenpc instance_npcname("바르문트#1");
+		end;
+}
+
+
+1@gl_k,145,104,6	script	칼리츠버그기사단#1	4_F_KHALITZBURG,{
+	mes "[칼리츠버그기사단]";
+	mes "곧 근무교대 시간인데 무슨일이 생긴건지 교대자들이 오지 않는군요.";
+	close;
+}
+
+1@gl_k,154,104,3	script	칼리츠버그기사단#2	4_F_KHALITZBURG,{
+	mes "[칼리츠버그기사단]";
+	mes "제게 하실 말씀이라도 있으신가요?";
+	close;
+}
+
+1@gl_k,145,99,6	script	백색의 기사#3	4_WHITEKNIGHT,{
+	mes "[백색의 기사]";
+	mes "바르문트님과 함께 오신 분입니까? 사령관님꼐서 기다리고 계십니다.";
+	close;
+}
+
+1@gl_k,154,99,3	duplicate(칼리츠버그기사단#1)	백색의 기사#4	4_WHITEKNIGHT
+
+1@gl_k,145,94,6	script	칼리츠버그기사단#5	4_F_KHALITZBURG,{
+	mes "[칼리츠버그기사단]";
+	mes "어젯밤 꿈이 심상치 않았어요.";
+	mes "어머니가 꿈에 나오셨는데 무슨 일이 있는건 아닌지...";
+	close;
+}
+
+1@gl_k,154,94,3	duplicate(백색의 기사#3)	칼리츠버그기사단#6	4_F_KHALITZBURG
+
+1@gl_k,145,89,6	script	백색의 기사#7	4_WHITEKNIGHT,{
+	mes "[백색의 기사]";
+	mes "이곳에서 소란을 떠시는건 곤란합니다.";
+	close;
+}
+1@gl_k,154,89,3	duplicate(백색의 기사#7)	백색의 기사#8	4_WHITEKNIGHT
+
+1@gl_k,145,84,6	script	칼리츠버그기사단#9	4_F_KHALITZBURG,{
+	mes "[칼리츠버그기사단]";
+	mes "정숙해 주십시오.";
+	close;
+}
+1@gl_k,154,84,3	duplicate(칼리츠버그기사단#9)	칼리츠버그기사단#10	4_F_KHALITZBURG
+
+1@gl_k,145,79,6	script	백색의 기사#11	4_WHITEKNIGHT,{
+	mes "[백색의 기사]";
+	mes "바르문트님과는 무슨 관계이신가요. 사람을 멀리 하는 분이라 들었는데...";
+	close;
+}
+1@gl_k,154,79,3	duplicate(백색의 기사#11)	백색의 기사#12	4_WHITEKNIGHT
+
+1@gl_k,145,74,6	script	칼리츠버그기사단#13	4_F_KHALITZBURG,{
+	mes "[칼리츠버그기사단]";
+	mes "뭔가 성 안의 기운이 이상하지 않습니까? 조금 전 부터 뭔가 기척이 사라진것 같은데요.";
+	close;
+}
+1@gl_k,154,74,3	duplicate(칼리츠버그기사단#13)	칼리츠버그기사단#14	4_F_KHALITZBURG
+
+1@gl_k,145,69,6	script	백색의 기사#15	4_WHITEKNIGHT,{
+	mes "[백색의 기사]";
+	mes "저는 근무중에 잡담을 하는것을 좋아하지 않습니다.";
+	close;
+}
+1@gl_k,154,69,3	duplicate(백색의 기사#15)	백색의 기사#16	4_WHITEKNIGHT
+
+1@gl_k,145,64,6	script	칼리츠버그기사단#17	4_F_KHALITZBURG,{
+	mes "[칼리츠버그기사단]";
+	mes "...";
+	close;
+}
+1@gl_k,154,64,3	duplicate(칼리츠버그기사단#17)	칼리츠버그기사단#18	4_F_KHALITZBURG
+
+1@gl_k,145,59,6	script	백색의 기사#19	4_WHITEKNIGHT,{
+	mes "[백색의 기사]";
+	mes "제게 무슨 용건이십니까?";
+	close;
+}
+1@gl_k,154,59,3	duplicate(백색의 기사#19)	백색의 기사#20	4_WHITEKNIGHT
+
+1@gl_k,145,54,6	script	칼리츠버그기사단#21	4_F_KHALITZBURG,{
+	mes "[칼리츠버그기사단]";
+	mes "필요한 것이 있으십니까?";
+	close;
+}
+1@gl_k,154,54,3	duplicate(칼리츠버그기사단#21)	칼리츠버그기사단#22	4_F_KHALITZBURG
+
+
+//스킵용 워프
+1@gl_k,149,96,1	script	#cut01	GATE_SKYBLUE,{
+	instance_warpall "1@gl_k",151,232;
+	enablenpc instance_npcname("#Mimelon_cut");
+	enablenpc instance_npcname("히멜메즈#2");
+	enablenpc instance_npcname("바르문트#2");
+	enablenpc instance_npcname("하인리히#4");
+	end;
+}
+
+1@gl_k,149,100,6	script	하인리히#1	4_M_HEINRICH,{
+	if (is_party_leader() == false) {
+		mes "[하인리히]";
+		mes "리더는 어디있나요? 그의 도움이 필요합니다.";
+		cutin "gl_heinrich2",2;
+		close3;
+	}
+	.@account_id = getcharid(3);
+	.@player_name$ = strcharinfo(0);
+	cutin "gl_heinrich2",2;
+	select("하인리히님 지금 성 안에 ...");
+	if ('glast_cut) {
+		mes "[하인리히]";
+		mes "오오 " + strcharinfo(0) + ".";
+		mes "그대라면 믿을 만 하겠지. 바로 출발 합시다";
+		close2;
+		disablenpc instance_npcname("하인리히#1");
+		enablenpc instance_npcname("하인리히#2");
+		enablenpc instance_npcname("히멜메즈#1");
+		donpcevent instance_npcname("#talkinstance1_cut") + "::OnEnableCut";
+		cutin "",255;
+		end;
+	} else {
+	mes "[" + .@player_name$ + "]";
+	mes "하인리히님 지금 성 안에 무슨 일이 벌어지고 있는지 알고 계십니까?";
+	unittalk .@account_id, .@player_name$ + " : 하인리히님 지금 성 안에 무슨 일이 벌어지고 있는지 알고 계십니까?";
+	next;
+	mes "[하인리히]";
+	mes "그대는 바르문트님과 함께 온 모험가가 아닙니까?";
+	npctalk "하인리히: 그대는 바르문트님과 함께 온 모험가가 아닙니까?";
+	next;
+	mes "[하인리히]";
+	mes "무슨일입니까? 이 성 안에 뭔가 문제라도?";
+	npctalk "하인리히: 무슨일입니까? 이 성 안에 뭔가 문제라도?";
+	next;
+	select("히멜메즈가 숨겨진 이미르의...");
+	mes "[" + .@player_name$ + "]";
+	mes "망자의 발키리 히멜메즈가 이 성안에 숨겨진 이미르의 심장 조각을 노리고 있습니다!";
+	unittalk .@account_id, .@player_name$ + " : 망자의 발키리 히멜메즈가 이 성안에 숨겨진 이미르의 심장 조각을 노리고 있습니다!";
+	next;
+	mes "[하인리히]";
+	mes "하하, 농담도 잘 하시는군요. 그런게 이곳에 있을리가 없잖습니까.";
+	npctalk "하인리히: 하하, 농담도 잘 하시는군요. 그런게 이곳에 있을리가 없잖습니까.";
+	cutin "gl_heinrich1",2;
+	next;
+	mes "[바르문트]";
+	mes "농담이 아니오 하인리히경. 내 판단이 정확하다면 이제 곧 그녀가 이곳으로 찾아올 것이오";
+	npctalk "바르문트: 농담이 아니오 하인리히경. 내 판단이 정확하다면 이제 곧 그녀가 이곳으로 찾아올 것이오", instance_npcname("바르문트#1");
+	cutin "gl_barmund2",2;
+	next;
+	mes "[바르문트]";
+	mes "날 따라온 이 자는 믿어도 좋소. 히멜메즈가 이곳의 이미르 심장조각을 탈취하기 전에 안전한 곳으로 숨겨야 하오!";
+	npctalk "바르문트: 날 따라온 이 자는 믿어도 좋소. 히멜메즈가 이곳의 이미르 심장조각을 탈취하기 전에 안전한 곳으로 숨겨야 하오!", instance_npcname("바르문트#1");
+	next;
+	select("설령 믿지 않으셔도...");
+	mes "[" + .@player_name$ + "]";
+	mes "설령 믿지 않으셔도 어쩔 수 없습니다만, 시간이 없습니다!";
+	unittalk .@account_id, .@player_name$ + " : 설령 믿지 않으셔도 어쩔 수 없습니다만, 시간이 없습니다!";
+	cutin "",255;
+	next;
+	mes "[하인리히]";
+	mes "두 분의 호의는 고맙군요. 하지만 지금 저희의 국왕께선 먼곳으로 떠나 계십니다.";
+	npctalk "하인리히: 두 분의 호의는 고맙군요. 하지만 지금 저희의 국왕께선 먼곳으로 떠나 계십니다.";
+	cutin "gl_heinrich1",2;
+	next;
+	mes "[하인리히]";
+	mes "단지 추측만으로 그런 중요한 안건을 마음대로 처리 할 수는 없습니다.";
+	npctalk "하인리히: 단지 추측만으로 그런 중요한 안건을 마음대로 처리 할 수는 없습니다.";
+	close2;
+	disablenpc instance_npcname("하인리히#1");
+	enablenpc instance_npcname("하인리히#2");
+	enablenpc instance_npcname("히멜메즈#1");
+	donpcevent instance_npcname("#talkinstance1") + "::OnEnable";
+	cutin "",255;
+	end;
+	}
+}
+
+	
+1@gl_k,152,97,3	script	바르문트#1	4_M_BARMUND,{ end; }
+1@gl_k,149,97,5	duplicate(바르문트#1)	하인리히#2	4_M_HEINRICH
+1@gl_k,149,100,5	duplicate(바르문트#1)	하인리히#3	4_M_HEINRICH
+1@gl_k,149,89,1	duplicate(바르문트#1)	히멜메즈#1	4_F_HIMEL
+
+// Control Timer
+//============================================================
+1@gl_k,2,2,0	script	#talkinstance1_cut	HIDDEN_WARP_NPC,{
+	end;
+
+OnEnableCut:
+	mapannounce 'map_name$[0], "????의 외침: 오호호호호~!", bc_map,0xFFFF00,FW_NORMAL,18;
+	initnpctimer;
+	'npc_himelmez1$ = instance_npcname("히멜메즈#1");
+	'npc_varmundt1$ = instance_npcname("바르문트#1");
+	'npc_heinrich2$ = instance_npcname("하인리히#2");
+	'npc_heinrich3$ = instance_npcname("하인리히#3");
+	end;
+OnTimer800:
+	npctalk "하인리히: 누구냐!.", 'npc_heinrich2$;
+	end;
+OnTimer1800:
+	npctalk "히멜메즈: 이런~ 내가 대화를 방해한건가? 손님이 찾아온지 한참 지났는데도 아무도 못알아보기에 조금 서글퍼져서 말이지...", 'npc_himelmez1$;
+	end;
+OnTimer3800:
+	npctalk "히멜메즈: 일단 내 할일을 하러 가봐야겠어. 그동안 새로운 부하들과 친해져보는건 어때? 호호호", 'npc_himelmez1$;
+	end;
+OnTimer5800:
+	npctalk "하인리히: 이런 제길! 그녀가 이미르의 심장조각이 담긴 위치를 간파하고 있었군.", 'npc_heinrich2$;
+	disablenpc 'npc_himelmez1$;
+	end;
+OnTimer7800:
+	for (.@i = 1; .@i <= 20; .@i += 4) {
+		hideonnpc instance_npcname("칼리츠버그기사단#" + .@i);
+		hideonnpc instance_npcname("칼리츠버그기사단#" + (.@i+1));
+		hideonnpc instance_npcname("백색의 기사#" + (.@i+2));
+		hideonnpc instance_npcname("백색의 기사#" + (.@i+3));
+	}
+	hideonnpc instance_npcname("칼리츠버그기사단#21");
+	hideonnpc instance_npcname("칼리츠버그기사단#22");
+
+		.@label$ = instance_npcname("#talkinstance1") + "::OnMyMobDead";
+		monster 'map_name$[0],145,59,"심연의기사",2470,1,.@label$;// MG_KNIGHT_OF_ABYSS
+		monster 'map_name$[0],154,59,"심연의기사",2470,1,.@label$;
+		monster 'map_name$[0],145,69,"심연의기사",2470,1,.@label$;
+		monster 'map_name$[0],154,69,"심연의기사",2470,1,.@label$;
+		monster 'map_name$[0],145,79,"심연의기사",2470,1,.@label$;
+		monster 'map_name$[0],154,79,"심연의기사",2470,1,.@label$;
+		monster 'map_name$[0],145,89,"심연의기사",2470,1,.@label$;
+		monster 'map_name$[0],154,89,"심연의기사",2470,1,.@label$;
+		monster 'map_name$[0],145,99,"심연의기사",2470,1,.@label$;
+		monster 'map_name$[0],154,99,"심연의기사",2470,1,.@label$;
+
+		monster 'map_name$[0],145,54,"칼리츠버그",2471,1,.@label$;// G_MG_KHALITZBURG
+		unittalk $@mobid[0],"물... 누가 물 좀 줘...";
+		monster 'map_name$[0],154,54,"칼리츠버그",2471,1,.@label$;
+		unittalk $@mobid[0],"크으으르르르으으...";
+		monster 'map_name$[0],145,64,"칼리츠버그",2471,1,.@label$;
+		unittalk $@mobid[0],"하인리히 경... 저를 구해주세요...";
+		monster 'map_name$[0],154,64,"칼리츠버그",2471,1,.@label$;
+		unittalk $@mobid[0],"누나가 그리워...";
+		monster 'map_name$[0],145,74,"칼리츠버그",2471,1,.@label$;
+		unittalk $@mobid[0],"혼자 두지 마... 도와줘...";
+		monster 'map_name$[0],154,74,"칼리츠버그",2471,1,.@label$;
+		unittalk $@mobid[0],"아아아아아르르르르흐";
+		monster 'map_name$[0],145,84,"칼리츠버그",2471,1,.@label$;
+		unittalk $@mobid[0],"갈증이 난다.";
+		monster 'map_name$[0],154,84,"칼리츠버그",2471,1,.@label$;
+		unittalk $@mobid[0],"아... 안돼... 난 죽을 수 없어...";
+		monster 'map_name$[0],145,94,"칼리츠버그",2471,1,.@label$;
+		unittalk $@mobid[0],"속이 거북해. 으으으";
+		monster 'map_name$[0],154,94,"칼리츠버그",2471,1,.@label$;
+		unittalk $@mobid[0],"누가 날 좀...";
+		monster 'map_name$[0],145,104,"칼리츠버그",2471,1,.@label$;
+		unittalk $@mobid[0],"으윽... 내 몸이";
+		monster 'map_name$[0],154,104,"칼리츠버그",2471,1,.@label$;
+		unittalk $@mobid[0],"목이 타들어간다!";
+		end;
+OnTimer9800:
+	npctalk "하인리히: 죽은자는 죽은자가 있어야 할 곳으로! 모두 돌아갈지어다!", 'npc_heinrich2$;
+	end;	
+OnTimer12800:
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("칼리츠버그기사단#1");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("칼리츠버그기사단#2");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("칼리츠버그기사단#1");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("칼리츠버그기사단#2");
+	end;
+OnTimer13100:
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("백색의 기사#3");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("백색의 기사#4");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("칼리츠버그기사단#5");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("칼리츠버그기사단#6");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("백색의 기사#3");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("백색의 기사#4");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("칼리츠버그기사단#5");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("칼리츠버그기사단#6");
+	end;
+OnTimer13400:
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("백색의 기사#7");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("백색의 기사#8");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("칼리츠버그기사단#9");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("칼리츠버그기사단#10");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("백색의 기사#7");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("백색의 기사#8");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("칼리츠버그기사단#9");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("칼리츠버그기사단#10");
+	end;
+OnTimer13700:
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("백색의 기사#11");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("백색의 기사#12");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("칼리츠버그기사단#13");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("칼리츠버그기사단#14");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("백색의 기사#11");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("백색의 기사#12");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("칼리츠버그기사단#13");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("칼리츠버그기사단#14");
+	end;
+OnTimer14000:
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("백색의 기사#15");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("백색의 기사#16");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("칼리츠버그기사단#17");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("칼리츠버그기사단#18");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("백색의 기사#15");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("백색의 기사#16");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("칼리츠버그기사단#17");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("칼리츠버그기사단#18");
+	end;
+OnTimer14300:
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("백색의 기사#19");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("백색의 기사#20");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("칼리츠버그기사단#21");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("칼리츠버그기사단#22");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("백색의 기사#19");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("백색의 기사#20");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("칼리츠버그기사단#21");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("칼리츠버그기사단#22");
+	disablenpc 'npc_heinrich2$;
+	enablenpc 'npc_heinrich3$;
+	killmonster 'map_name$[0], instance_npcname("#talkinstance1") + "::OnMyMobDead";
+	end;		
+OnTimer17300:	
+	npctalk "하인리히: 그럼 바르문트님 서둘러 히멜메즈의 뒤를 추적합시다.", 'npc_heinrich3$;
+	end;
+OnTimer18300:
+	npctalk "바르문트: 잠깐, 성 안을 돌아다니며 길을 뚫을 시간이 없소. 최대한 빠르게 추적 가능한 차원문을 열겠소.", 'npc_varmundt1$;
+	end;
+OnTimer19300:
+	specialeffect 842, AREA, 'npc_varmundt1$;
+	end;
+OnTimer21300:	
+	enablenpc instance_npcname("#cut01");
+	disablenpc instance_npcname("하인리히#3");
+	disablenpc instance_npcname("바르문트#1");	
+	end;
+OnTimer22300:
+	stopnpctimer;
+	disablenpc instance_npcname("#talkinstance1_cut");
+	'npc_himelmez1$ = 'npc_varmundt1$ = 'npc_heinrich2$ = 'npc_heinrich3$ = "";
+	end;
+}
+	
+1@gl_k,1,1,0	script	#talkinstance1	HIDDEN_WARP_NPC,{
+	end;
+
+OnEnable:
+	mapannounce 'map_name$[0], "????의 외침: 오호호호호~!", bc_map,0xFFFF00,FW_NORMAL,18;
+	initnpctimer;
+	'npc_himelmez1$ = instance_npcname("히멜메즈#1");
+	'npc_varmundt1$ = instance_npcname("바르문트#1");
+	'npc_heinrich2$ = instance_npcname("하인리히#2");
+	'npc_heinrich3$ = instance_npcname("하인리히#3");
+	end;
+OnTimer1500:
+	npctalk "하인리히: 누구냐!.", 'npc_heinrich2$;
+	end;
+OnTimer4500:
+	npctalk "히멜메즈: 이런~ 내가 대화를 방해한건가? 손님이 찾아온지 한참 지났는데도 아무도 못알아보기에 조금 서글퍼져서 말이지...", 'npc_himelmez1$;
+	end;
+OnTimer10000:
+	npctalk "바르문트: 히멜메즈!! 어느 틈에!", 'npc_varmundt1$;
+	end;
+OnTimer17500:
+	npctalk "히멜메즈: 내 이름은 리사 칸 히멜메즈. 듀라한의 주인, 망자의 발키리, 뭐 그렇게들 부르더군.", 'npc_himelmez1$;
+	end;
+OnTimer22000:
+	npctalk "하인리히: 죽은자를 다스린다고? 그런것 치곤 손이 곱군. 안타깝지만 여기 숙녀에게 대접할 차 같은건 없는데...", 'npc_heinrich2$;
+	end;
+OnTimer28500:
+	npctalk "히멜메즈: 그렇게 여유로운척 할 필요 없어. 네 주군의 행방을 알게 된다면 그렇게 허세를 부릴 틈이 없을테니까.", 'npc_himelmez1$;
+	end;
+OnTimer36000:
+	npctalk "하인리히: 뭐라고?", 'npc_heinrich2$;
+	end;
+OnTimer41000:
+	npctalk "히멜메즈: 호호호, 이제야 겨우 궁금증이 생긴 모양이지? 참 신기한 남자란 말야.", 'npc_himelmez1$;
+	end;
+OnTimer47000:
+	npctalk "히멜메즈: 비어있는 왕의 자리를 탐내지도 않고, 오로지 왕의 귀환을 기다리는 바보같은 남자. 난 그런 당신의 순수함이 참 맘에들어.", 'npc_himelmez1$;
+	end;
+OnTimer54000:
+	npctalk "히멜메즈: 이런 상황에서 만나지 않았더라면 더 좋았을텐데. 아쉽군.", 'npc_himelmez1$;
+	end;
+OnTimer59000:
+	npctalk "하인리히: 나의 왕께선 룬 미드가츠 왕가의 초대에 응한 것 뿐이다. 아직 돌아오지 않으셨을 뿐이지.", 'npc_heinrich2$;
+	end;
+OnTimer66500:
+	npctalk "하인리히: 헌데 방금전 너의 말은 묵과할 수 없군. 왕께 무슨일이 생긴 것이냐!", 'npc_heinrich2$;
+	end;
+OnTimer71500:
+	npctalk "히멜메즈: 글쎄~ 찬찬히 설명해 주고 싶지만 오늘은 그런 용무로 온게 아니라서 말이지~.", 'npc_himelmez1$;
+	end;
+OnTimer78000:
+	npctalk "히멜메즈: 일단 내 할일을 하러 가봐야겠어. 그동안 새로운 부하들과 친해져보는건 어때? 호호호", 'npc_himelmez1$;
+	end;
+OnTimer84500:
+	npctalk "하인리히: 이런 제길! 그녀가 이미르의 심장조각이 담긴 위치를 간파하고 있었군.", 'npc_heinrich2$;
+	disablenpc 'npc_himelmez1$;
+	end;
+OnTimer90500:
+	npctalk "하인리히: 칼리츠버그기사단과 백의의 기사단은 지금 즉시 나를 따라...", 'npc_heinrich2$;
+	end;
+OnTimer92000:
+	for (.@i = 1; .@i <= 20; .@i += 4) {
+		hideonnpc instance_npcname("칼리츠버그기사단#" + .@i);
+		hideonnpc instance_npcname("칼리츠버그기사단#" + (.@i+1));
+		hideonnpc instance_npcname("백색의 기사#" + (.@i+2));
+		hideonnpc instance_npcname("백색의 기사#" + (.@i+3));
+	}
+	hideonnpc instance_npcname("칼리츠버그기사단#21");
+	hideonnpc instance_npcname("칼리츠버그기사단#22");
+
+	.@label$ = instance_npcname("#talkinstance1") + "::OnMyMobDead";
+	monster 'map_name$[0],145,59,"심연의기사",2470,1,.@label$;// MG_KNIGHT_OF_ABYSS
+	monster 'map_name$[0],154,59,"심연의기사",2470,1,.@label$;
+	monster 'map_name$[0],145,69,"심연의기사",2470,1,.@label$;
+	monster 'map_name$[0],154,69,"심연의기사",2470,1,.@label$;
+	monster 'map_name$[0],145,79,"심연의기사",2470,1,.@label$;
+	monster 'map_name$[0],154,79,"심연의기사",2470,1,.@label$;
+	monster 'map_name$[0],145,89,"심연의기사",2470,1,.@label$;
+	monster 'map_name$[0],154,89,"심연의기사",2470,1,.@label$;
+	monster 'map_name$[0],145,99,"심연의기사",2470,1,.@label$;
+	monster 'map_name$[0],154,99,"심연의기사",2470,1,.@label$;
+
+	monster 'map_name$[0],145,54,"칼리츠버그",2471,1,.@label$;// G_MG_KHALITZBURG
+	unittalk $@mobid[0],"물... 누가 물 좀 줘...";
+	monster 'map_name$[0],154,54,"칼리츠버그",2471,1,.@label$;
+	unittalk $@mobid[0],"크으으르르르으으...";
+	monster 'map_name$[0],145,64,"칼리츠버그",2471,1,.@label$;
+	unittalk $@mobid[0],"하인리히 경... 저를 구해주세요...";
+	monster 'map_name$[0],154,64,"칼리츠버그",2471,1,.@label$;
+	unittalk $@mobid[0],"누나가 그리워...";
+	monster 'map_name$[0],145,74,"칼리츠버그",2471,1,.@label$;
+	unittalk $@mobid[0],"혼자 두지 마... 도와줘...";
+	monster 'map_name$[0],154,74,"칼리츠버그",2471,1,.@label$;
+	unittalk $@mobid[0],"아아아아아르르르르흐";
+	monster 'map_name$[0],145,84,"칼리츠버그",2471,1,.@label$;
+	unittalk $@mobid[0],"갈증이 난다.";
+	monster 'map_name$[0],154,84,"칼리츠버그",2471,1,.@label$;
+	unittalk $@mobid[0],"아... 안돼... 난 죽을 수 없어...";
+	monster 'map_name$[0],145,94,"칼리츠버그",2471,1,.@label$;
+	unittalk $@mobid[0],"속이 거북해. 으으으";
+	monster 'map_name$[0],154,94,"칼리츠버그",2471,1,.@label$;
+	unittalk $@mobid[0],"누가 날 좀...";
+	monster 'map_name$[0],145,104,"칼리츠버그",2471,1,.@label$;
+	unittalk $@mobid[0],"으윽... 내 몸이";
+	monster 'map_name$[0],154,104,"칼리츠버그",2471,1,.@label$;
+	unittalk $@mobid[0],"목이 타들어간다!";
+	end;
+OnTimer94000:
+	npctalk "하인리히: 이럴수가. 내 부하들이...이런 일은 있을 수가 없어!", 'npc_heinrich2$;
+	end;
+OnTimer96500:
+	npctalk "바르문트: 하인리히경 그들은 이미 마물화 되었소. 어서 그들에게 안식을 되찾아 주시오!", 'npc_varmundt1$;
+	end;
+OnTimer100000:
+	npctalk "하인리히: 미안하다...", 'npc_heinrich2$;
+	end;
+OnTimer103000:
+	npctalk "하인리히: 미안하다 나의 부하들아! 나를 영원히 용서하지 마라.", 'npc_heinrich2$;
+	end;
+OnTimer104500:
+	npctalk "하인리히: 죽은자는 죽은자가 있어야 할 곳으로! 모두 돌아갈지어다!", 'npc_heinrich2$;
+	end;	
+OnTimer105000:
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("칼리츠버그기사단#1");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("칼리츠버그기사단#2");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("칼리츠버그기사단#1");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("칼리츠버그기사단#2");
+	end;
+OnTimer106000:
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("백색의 기사#3");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("백색의 기사#4");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("칼리츠버그기사단#5");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("칼리츠버그기사단#6");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("백색의 기사#3");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("백색의 기사#4");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("칼리츠버그기사단#5");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("칼리츠버그기사단#6");
+	end;
+OnTimer106500:
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("백색의 기사#7");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("백색의 기사#8");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("칼리츠버그기사단#9");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("칼리츠버그기사단#10");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("백색의 기사#7");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("백색의 기사#8");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("칼리츠버그기사단#9");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("칼리츠버그기사단#10");
+	end;
+OnTimer107000:
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("백색의 기사#11");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("백색의 기사#12");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("칼리츠버그기사단#13");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("칼리츠버그기사단#14");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("백색의 기사#11");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("백색의 기사#12");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("칼리츠버그기사단#13");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("칼리츠버그기사단#14");
+	end;
+OnTimer107500:
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("백색의 기사#15");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("백색의 기사#16");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("칼리츠버그기사단#17");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("칼리츠버그기사단#18");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("백색의 기사#15");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("백색의 기사#16");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("칼리츠버그기사단#17");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("칼리츠버그기사단#18");
+	end;
+OnTimer108000:
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("백색의 기사#19");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("백색의 기사#20");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("칼리츠버그기사단#21");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("칼리츠버그기사단#22");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("백색의 기사#19");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("백색의 기사#20");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("칼리츠버그기사단#21");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("칼리츠버그기사단#22");
+	disablenpc 'npc_heinrich2$;
+	enablenpc 'npc_heinrich3$;
+	killmonster 'map_name$[0], instance_npcname("#talkinstance1") + "::OnMyMobDead";
+	end;
+OnTimer112500:
+	npctalk "하인리히: 내 손으로 나의 부하들을 죽이게 되다니···", 'npc_heinrich3$;
+	end;
+OnTimer115500:
+	npctalk "바르문트: 하인리히경! 빠른 결단이 필요하오.", 'npc_varmundt1$;
+	end;
+OnTimer118500:
+	npctalk "바르문트: 지금이라도 쫓아가면 그녀를 막을 수 있소!", 'npc_varmundt1$;
+	end;
+OnTimer121500:
+	npctalk "하인리히: 바르문트님의 말이 맞습니다. 지금은 이럴때가 아니지요.", 'npc_heinrich3$;
+	end;
+OnTimer124500:
+	npctalk "하인리히: 함께오신 분들에게 부탁 하나 하겠소.", 'npc_heinrich3$;
+	end;
+OnTimer127500:
+	npctalk "하인리히: 히멜메즈는 산 사람을 마물로 변화시키는 능력자요.", 'npc_heinrich3$;
+	end;
+OnTimer130500:
+	npctalk "하인리히: 하지만 아직 이곳 주변엔 살아남은 생존자가 있을지 모르오.", 'npc_heinrich3$;
+	end;
+OnTimer134500:
+	npctalk "하인리히: 마물들은 처치하고, 생존자가 있다면 부디 구해주시오.", 'npc_heinrich3$;
+	end;
+OnTimer138500:
+	npctalk "하인리히: 난 바르문트님과 함께 히멜메즈의 뒤를 쫓겠소.", 'npc_heinrich3$;
+	end;
+OnTimer143500:
+	npctalk "하인리히: 자 바르문트님 히멜메즈를 찾으러 갑시다.", 'npc_heinrich3$;
+	end;
+OnTimer147500:
+	disablenpc 'npc_heinrich3$;
+	end;
+OnTimer148500:
+	stopnpctimer;
+	donpcevent instance_npcname("#ghmemorialmob01") + "::OnStart";
+
+	disablenpc 'npc_varmundt1$;
+	disablenpc instance_npcname("#talkinstance1");
+	'npc_himelmez1$ = 'npc_varmundt1$ = 'npc_heinrich2$ = 'npc_heinrich3$ = "";
+	end;
+OnMyMobDead:
+	end;
+}
+
+// Sector 1 Mobs
+//============================================================
+1@gl_k,1,1,0	script	#ghmemorialmob01	HIDDEN_WARP_NPC,{
+	end;
+OnStart:
+	enablenpc instance_npcname("#ghmemorialmob01");
+	enablenpc instance_npcname("#2Control");
+	enablenpc instance_npcname("#2Control2");
+	mapannounce 'map_name$[0], "9시 방향 2구역으로 통하는 출구가 열렸습니다.", bc_map,0xFFFF00;
+
+	// note: x17 MG_GHOUL / x17 MG_ZOMBIE / x17 MG_WRAITH
+	.@label$ = instance_npcname("#ghmemorialmob01") + "::OnMyMobDead";
+	areamonster 'map_name$[0],76,99,87,10,"고통받는 시종장",2466,14,.@label$;
+	areamonster 'map_name$[0],67,39,12, 6,"타락한 수도사",2465,17,.@label$;
+	areamonster 'map_name$[0],67,39,12, 6,"고통받는 시종장",2466,3,.@label$;
+	areamonster 'map_name$[0],32,75,51,58,"부패한 집사",2464,5,.@label$;
+	areamonster 'map_name$[0],45,84,6,137,"부패한 집사",2464,12,.@label$;
+	end;
+OnMyMobDead:
+	.@label$ = instance_npcname("#ghmemorialmob01") + "::OnMyMobDead";
+	.@mob_dead_num = 51 - mobcount('map_name$[0],.@label$);
+	if (.@mob_dead_num > 35) {
+		mapannounce 'map_name$[0], "히멜메즈의 마력에서 벗어난 듯 죽은자들이 소멸해 갑니다.", bc_map,0xFFFFFF;
+		killmonster 'map_name$[0], .@label$;
+		enablenpc instance_npcname("복사지망생 도문#1");
+		disablenpc instance_npcname("#ghmemorialmob01");
+		donpcevent instance_npcname("#ghmemorialmob02") + "::OnStart";
+	}
+	end;
+}
+
+1@gl_k,17,51,3	script	복사지망생 도문#1	4_M_KID1,{
+	if (is_party_leader() == false) {
+		mes "[복사지망생 도문]";
+		mes "살려주세요, 제발 살려주세요...";
+		close;
+	}
+	.@account_id = getcharid(3);
+	.@player_name$ = strcharinfo(0);
+	mes "[복사지망생 도문]";
+	mes "살려주세요! 살려주세요!!!";
+	npctalk "복사지망생 도문: 살려주세요! 살려주세요!!!";
+	next;
+	select("이봐 정신차려! 생존자는 너 혼자인가?");
+	mes "[" + .@player_name$ + "]";
+	mes "이봐 정신차려! 생존자는 너 혼자인가?";
+	unittalk .@account_id, .@player_name$ + " : 이봐 정신차려! 생존자는 너 혼자인가?";
+	next;
+	mes "[복사지망생 도문]";
+	mes "시종장님이... 수도사님이... 모두 괴물로 변해버렸어. 난 아무것도 할 수 없었어요.";
+	npctalk "복사지망생 도문: 시종장님이... 수도사님이... 모두 괴물로 변해버렸어. 난 아무것도 할 수 없었어요.";
+	next;
+	mes "[복사지망생 도문]";
+	mes "그냥 여기에 이렇게 숨어 있는것 밖에... 아무것도, 아무것도 할 수 없었어...";
+	npctalk "복사지망생 도문: 그냥 여기에 이렇게 숨어 있는것 밖에... 아무것도, 아무것도 할 수 없었어...";
+	next;
+	select("정신차려!");
+	mes "[" + .@player_name$ + "]";
+	mes "정신차려 꼬마야! 동쪽으로 나가서 중앙 통로를 따라 바깥으로 나가거라! 그 경로는 안전해!";
+	unittalk .@account_id, .@player_name$ + " : 정신차려 꼬마야! 동쪽으로 나가서 중앙 통로를 따라 바깥으로 나가거라! 그 경로는 안전해!";
+	next;
+	mes "[복사지망생 도문]";
+	mes "동쪽 통로로요? 혼자서? 어떻게?";
+	npctalk "복사지망생 도문: 동쪽 통로로요? 혼자서? 어떻게?";
+	next;
+	select("내가 쓰지 않는 둔기를 주마");
+	mes "[" + .@player_name$ + "]";
+	mes "내가 쓰지 않는 둔기를 주마. 아마도 도움이 될거야. 도저히 못하겠다면 눈을 감고 치고 베면 된단다.";
+	unittalk .@account_id, .@player_name$ + " : 내가 쓰지 않는 둔기를 주마. 아마도 도움이 될거야. 도저히 못하겠다면 눈을 감고 치고 베면 된단다.";
+	next;
+	mes "[복사지망생 도문]";
+	mes "알겠어요, 해... 해볼게요.";
+	npctalk "복사지망생 도문: 알겠어요, 해... 해볼게요.";
+	disablenpc instance_npcname("복사지망생 도문#1");
+	close;
+}
+
+// Sector 2 Mobs
+//============================================================
+1@gl_k,1,1,0	script	#ghmemorialmob02	HIDDEN_WARP_NPC,{
+	end;
+OnStart:
+	enablenpc instance_npcname("#ghmemorialmob02");
+	enablenpc instance_npcname("#3Control");
+	enablenpc instance_npcname("#3Control2");
+	for ( .@i = 1; .@i <= 26; .@i++ )
+		enablenpc instance_npcname("숨이멎은 남자#" + .@i);
+	mapannounce 'map_name$[0], "3시 방향 3구역으로 통하는 출구가 열렸습니다.", bc_map,0xFFFF00;
+
+	// note: x34 MG_ZOMBIE / x35 MG_GHOUL
+	.@label$ = instance_npcname("#ghmemorialmob02") + "::OnMyMobDead";
+	areamonster 'map_name$[0],236,12,288,52,"흉포해진 제련장인",2466,18,.@label$;// MG_GHOUL
+	areamonster 'map_name$[0],236,12,288,52,"썩어가는 대장장이",2464,17,.@label$;// MG_ZOMBIE
+	areamonster 'map_name$[0],242,71,286,145,"흉포해진 제련장인",2466,17,.@label$;
+	areamonster 'map_name$[0],242,71,286,145,"썩어가는 대장장이",2464,17,.@label$;
+	end;
+OnMyMobDead:
+	.@label$ = instance_npcname("#ghmemorialmob02") + "::OnMyMobDead";
+	.@mob_dead_num = 69 - mobcount('map_name$[0],.@label$);
+	if (.@mob_dead_num > 56) {
+		mapannounce 'map_name$[0], "히멜메즈의 마력에서 벗어난 듯 죽은자들이 소멸해 갑니다.", bc_map,0xFFFFFF;
+		killmonster 'map_name$[0],.@label$;
+		enablenpc instance_npcname("홀그렌 디스트로이어#1");
+		disablenpc instance_npcname("#ghmemorialmob02");
+		donpcevent instance_npcname("#ghmemorialmob03") + "::OnEnable";
+	}
+	end;
+}
+
+1@gl_k,291,145,3	script	홀그렌 디스트로이어#1	4_F_JOB_BLACKSMITH,{
+	if (is_party_leader() == false) {
+		mes "[홀그렌 디스트로이어]";
+		mes "사람인가요?";
+		close;
+	}
+	.@account_id = getcharid(3);
+	.@player_name$ = strcharinfo(0);
+	mes "[홀그렌 디스트로이어]";
+	mes "이야압!! 죽어라!!!";
+	npctalk "홀그렌 디스트로이어: 이야압!! 죽어라!!!";
+	specialeffect EF_CRASHEARTH;
+	next;
+	select("안심하세요!");
+	mes "[" + .@player_name$ + "]";
+	mes "안심하세요! 사람입니다. 혼자십니까? 다른 생존자는 없어요?";
+	unittalk .@account_id, .@player_name$ + " : 안심하세요! 사람입니다. 혼자십니까? 다른 생존자는 없어요?";
+	next;
+	mes "[홀그렌 디스트로이어]";
+	mes "살아남은건 저 혼자예요";
+	npctalk "홀그렌 디스트로이어: 살아남은건 저 혼자예요";
+	next;
+	select("여긴 위험합니다");
+	mes "[" + .@player_name$ + "]";
+	mes "여긴 위험합니다. 중앙 통로로 가는길은 아시죠? 홀몸이 아닌 것 같은데... 움직일 수 있겠습니까?";
+	unittalk .@account_id, .@player_name$ + " : 여긴 위험합니다. 중앙 통로로 가는길은 아시죠? 홀몸이 아닌 것 같은데... 움직일 수 있겠습니까?";
+	next;
+	mes "[홀그렌 디스트로이어]";
+	mes "네, 움직일 수 있어요. 움직여야죠 제 아기를 위해서라도.";
+	npctalk "홀그렌 디스트로이어: 네, 움직일 수 있어요. 움직여야죠 제 아기를 위해서라도.";
+	next;
+	select("꼭 살아남으시길...");
+	mes "[" + .@player_name$ + "]";
+	mes "꼭 아기와 함께 무사히 이곳을 빠져나가시길 기원하겠습니다. 같이 가 드리지 못해 미안합니다.";
+	unittalk .@account_id, .@player_name$ + " : 꼭 아기와 함께 무사히 이곳을 빠져나가시길 기원하겠습니다. 같이 가 드리지 못해 미안합니다.";
+	next;
+	mes "[홀그렌 디스트로이어]";
+	mes "아녜요. 구해주신 것만으로도 고맙습니다. 혼자 갈 수 있어요. 그쪽도 행운을 빌어요.";
+	npctalk "홀그렌 디스트로이어: 아녜요. 구해주신 것만으로도 고맙습니다. 혼자 갈 수 있어요. 그쪽도 행운을 빌어요.";
+	disablenpc instance_npcname("홀그렌 디스트로이어#1");
+	close;
+}
+
+// Tramp Mobs
+//============================================================
+1@gl_k,221,82,3	script	숨이멎은 남자#1	4_M_DIEMAN,5,5,{
+	end;
+OnTouch_:
+	.@i = rand(1,10);
+	if (.@i == 1) .@mobs = 3;
+	else if (.@i == 2) .@mobs = 4;
+	else if (.@i == 3) .@mobs = 5;
+	else if (.@i < 7) .@mobs = 6;
+	else .@mobs = 7;
+	getmapxy .@map$,.@x,.@y, BL_NPC;
+	specialeffect EF_VENOMDUST;
+	monster .@map$,.@x,.@y,"구더기",2467,.@mobs;
+	disablenpc instance_npcname( strnpcinfo(0) );
+	end;
+}
+1@gl_k,233,123,4	duplicate(숨이멎은 남자#1)	숨이멎은 남자#2	4_M_DIEMAN,5,5
+1@gl_k,258,150,2	duplicate(숨이멎은 남자#1)	숨이멎은 남자#3	4_M_DIEMAN,5,5
+1@gl_k,255,157,5	duplicate(숨이멎은 남자#1)	숨이멎은 남자#4	4_M_DIEMAN,5,5
+1@gl_k,280,167,4	duplicate(숨이멎은 남자#1)	숨이멎은 남자#5	4_M_DIEMAN,5,5
+1@gl_k,293,161,2	duplicate(숨이멎은 남자#1)	숨이멎은 남자#6	4_M_DIEMAN,5,5
+1@gl_k,249,101,3	duplicate(숨이멎은 남자#1)	숨이멎은 남자#7	4_M_DIEMAN,5,5
+1@gl_k,241,86,6	duplicate(숨이멎은 남자#1)	숨이멎은 남자#8	4_M_DIEMAN,5,5
+1@gl_k,246,62,0	duplicate(숨이멎은 남자#1)	숨이멎은 남자#9	4_M_DIEMAN,5,5
+1@gl_k,240,43,7	duplicate(숨이멎은 남자#1)	숨이멎은 남자#10	4_M_DIEMAN,5,5
+1@gl_k,271,19,1	duplicate(숨이멎은 남자#1)	숨이멎은 남자#11	4_M_DIEMAN,5,5
+1@gl_k,282,48,5	duplicate(숨이멎은 남자#1)	숨이멎은 남자#12	4_M_DIEMAN,5,5
+1@gl_k,285,81,7	duplicate(숨이멎은 남자#1)	숨이멎은 남자#13	4_M_DIEMAN,5,5
+1@gl_k,276,106,0	duplicate(숨이멎은 남자#1)	숨이멎은 남자#14	4_M_DIEMAN,5,5
+1@gl_k,261,164,0	duplicate(숨이멎은 남자#1)	숨이멎은 남자#15	4_M_DIEMAN,5,5
+1@gl_k,269,173,0	duplicate(숨이멎은 남자#1)	숨이멎은 남자#16	4_M_DIEMAN,5,5
+1@gl_k,252,120,0	duplicate(숨이멎은 남자#1)	숨이멎은 남자#17	4_M_DIEMAN,5,5
+1@gl_k,213,63,0	duplicate(숨이멎은 남자#1)	숨이멎은 남자#18	4_M_DIEMAN,5,5
+1@gl_k,222,39,0	duplicate(숨이멎은 남자#1)	숨이멎은 남자#19	4_M_DIEMAN,5,5
+1@gl_k,214,27,0	duplicate(숨이멎은 남자#1)	숨이멎은 남자#20	4_M_DIEMAN,5,5
+1@gl_k,223,17,1	duplicate(숨이멎은 남자#1)	숨이멎은 남자#21	4_M_DIEMAN,5,5
+1@gl_k,230,50,2	duplicate(숨이멎은 남자#1)	숨이멎은 남자#22	4_M_DIEMAN,5,5
+1@gl_k,235,16,3	duplicate(숨이멎은 남자#1)	숨이멎은 남자#23	4_M_DIEMAN,5,5
+1@gl_k,226,96,4	duplicate(숨이멎은 남자#1)	숨이멎은 남자#24	4_M_DIEMAN,5,5
+1@gl_k,222,119,5	duplicate(숨이멎은 남자#1)	숨이멎은 남자#25	4_M_DIEMAN,5,5
+1@gl_k,251,20,6	duplicate(숨이멎은 남자#1)	숨이멎은 남자#26	4_M_DIEMAN,5,5
+
+// Sector 3 Mobs
+//============================================================
+1@gl_k,1,1,0	script	#ghmemorialmob03	HIDDEN_WARP_NPC,{
+	end;
+OnEnable:
+	enablenpc instance_npcname("#ghmemorialmob03");
+	enablenpc instance_npcname("#4Control");
+	enablenpc instance_npcname("#4Control2");
+	mapannounce 'map_name$[0], "12시 방향 4구역으로 통하는 출구가 열렸습니다.", bc_map,0xFFFF00;
+
+	// note: x50 MG_RAYDRIC / x50 MG_RAYDRIC_ARCHER
+	.@label$ = instance_npcname("#ghmemorialmob03") + "::OnMyMobDead";
+	areamonster 'map_name$[0],16,186,43,280,"광폭해진 명사수",2469,25,.@label$;
+	areamonster 'map_name$[0],44,191,89,225,"허기진 근위병",2468,25,.@label$;
+	areamonster 'map_name$[0],115,215,188,273,"부패한 근위병",2468,20,.@label$;
+	areamonster 'map_name$[0],108,232,193,281,"부패한 근위병",2468,5,.@label$;
+	areamonster 'map_name$[0],158,236,230,250,"배회하는 명사수",2469,12,.@label$;
+	areamonster 'map_name$[0],65,231,155,256,"배회하는 명사수",2469,13,.@label$;
+	end;
+OnMyMobDead:
+	.@label$ = instance_npcname("#ghmemorialmob03") + "::OnMyMobDead";
+	.@mob_dead_num = 100 - mobcount('map_name$[0],.@label$);
+	if (.@mob_dead_num > 85) {
+		killmonster 'map_name$[0],.@label$;
+		enablenpc instance_npcname("#Mimelon");
+		enablenpc instance_npcname("히멜메즈#2");
+		enablenpc instance_npcname("바르문트#2");
+		enablenpc instance_npcname("하인리히#4");
+		disablenpc instance_npcname("#ghmemorialmob03");
+		mapannounce 'map_name$[0], "히멜메즈: 제법이구나. 망자들에 둘러싸여 서서히 죽어갈 줄 알았는데~", bc_map,0xFFFFFF;
+		initnpctimer;
+	}
+	end;
+OnTimer5000:
+	mapannounce 'map_name$[0], "히멜메즈: 날 잡고 싶겠지, 2층으로 가는 입구로 오너라, 너희의 운이 어디까지인지 궁금하구나.", bc_map,0xFFFFFF;
+	stopnpctimer;
+	end;
+}
+
+// 1st MVP
+//============================================================
+1@gl_k,144,258,6	script	하인리히#4	4_M_HEINRICH,{
+	mes "[하인리히]";
+	mes "히멜메즈... 내 부하들을 죽이게 만든 행위는 영원히 잊지 않을 것이다.";
+	cutin "gl_heinrich1",2;
+	close3;
+}
+
+// note: never hidden
+1@gl_k,156,258,3	script	바르문트#2	4_M_BARMUND,{
+	cutin "gl_barmund1",2;
+	mes "[바르문트]";
+	if (checkquest(12318,HUNTING) != 2) {
+		mes "결국 이렇게 되고 마는군, 시간 초월자들의 의지를 막는 것은 불가능한 것인가.";
+		close3;
+	}
+	erasequest 12318;
+	if (isbegin_quest(12319) == 0)
+		setquest 12319;// 암다라이스 퇴치
+	if (isbegin_quest(12320) == 0) {
+		setquest 12320;// Time Traveler
+		completequest 12320;
+		getexp 250000,250000;
+	}
+	mes "이 물건은 심상치 않은 기운을 뿜고있군. 언젠가 이것을 다룰 수 있는 누군가를 만난다면 요긴하게 쓰일지도 모르네.";
+	getitem 6607,1;// 시간의 결정
+	getitem 6608,1;// 응고된 마력
+	close3;
+}
+
+1@gl_k,150,257,3	script	히멜메즈#2	4_F_HIMEL,{
+	cutin "gl_himel2",2;
+	mes "[히멜메즈]";
+	mes "그렇게 긴장한 얼굴로 쳐다볼 필요없어. 곧 끝날거니까.";
+	close3;
+}
+
+1@gl_k,150,257,0	script	#Mimelon_cut	HIDDEN_WARP_NPC,7,7,{
+	end;
+OnTouch_:
+	disablenpc instance_npcname("#Mimelon_cut");
+	initnpctimer;
+	'npc_himelmez2$ = instance_npcname("히멜메즈#2");
+	'npc_heinrich4$ = instance_npcname("하인리히#4");
+	end;
+OnTimer200:
+	npctalk "히멜메즈: 여기까지 찾아온건 지독하게 운이 좋거나, 그만한 능력이 있거나 둘중 하나겠지.", 'npc_himelmez2$;
+	end;
+OnTimer3200:
+	disablenpc 'npc_himelmez2$;
+	end;
+OnTimer6200:
+	npctalk "하인리히: 바르문트경! 모험가분들을 도와주십시오 저는 히멜메즈를 쫓겠습니다!", 'npc_heinrich4$;
+	end;
+OnTimer9200:
+	disablenpc 'npc_heinrich4$;
+	end;
+OnTimer12200:
+	mapannounce 'map_name$[0], "기사단의 깊숙한 곳에서 기분나쁜 메아리가 가까이 다가옵니다.", bc_map,0xFFFFFF;
+	end;
+OnTimer15200:
+	donpcevent instance_npcname("#ghmemorialmob04_cut") + "::OnStart";
+	stopnpctimer;
+	'npc_himelmez2$ = 'npc_heinrich4$ = "";
+	end;
+}
+
+1@gl_k,1,1,0	script	#ghmemorialmob04_cut	HIDDEN_WARP_NPC,{
+	end;
+OnStart:
+	enablenpc instance_npcname("#ghmemorialmob04_cut");
+	monster 'map_name$[0],150,259,"타락한뿌리",2475,1, instance_npcname("#ghmemorialmob04_cut") + "::OnMyMobDead";// MG_CORRUPTION_ROOT
+	unittalk $@mobid[0],"그르르르르르르~~~";
+	end;
+OnMyMobDead:
+	if (mobcount('map_name$[0], instance_npcname("#ghmemorialmob04_cut") + "::OnMyMobDead") < 1) {
+		mapannounce 'map_name$[0], "12시 방향 기사단 2층으로 통하는 출구가 열렸습니다.", bc_map,0xFFFF00;
+		npctalk "바르문트: 녀석의 몸에서 떨어진 물건을 주워 두었네. 갖고싶은 사람은 내게서 받아가게.", instance_npcname("바르문트#2");
+		enablenpc instance_npcname("#2F Entrance");
+		enablenpc instance_npcname("#1 Control");
+		enablenpc instance_npcname("#Servanton_cut");
+		enablenpc instance_npcname("하인리히#21");
+		enablenpc instance_npcname("바르문트#21");
+		donpcevent instance_npcname("#ghmemorialmob05") + "::OnStart";
+		disablenpc instance_npcname("#ghmemorialmob04_cut");
+	}
+	end;
+}
+	
+1@gl_k,150,257,0	script	#Mimelon	HIDDEN_WARP_NPC,7,7,{
+	end;
+OnTouch_:
+	disablenpc instance_npcname("#Mimelon");
+	initnpctimer;
+	'npc_himelmez2$ = instance_npcname("히멜메즈#2");
+	'npc_heinrich4$ = instance_npcname("하인리히#4");
+	end;
+	
+OnTimer3000:
+	npctalk "히멜메즈: 여기까지 찾아온건 지독하게 운이 좋거나, 그만한 능력이 있거나 둘중 하나겠지.", 'npc_himelmez2$;
+	end;
+OnTimer6000:
+	npctalk "히멜메즈: 하지만 아무래도 상관없어.", 'npc_himelmez2$;
+	end;
+OnTimer9000:
+	npctalk "히멜메즈: 이제 이 자리에서 너희 모두 죽을 것이다.", 'npc_himelmez2$;
+	end;
+OnTimer12000:
+	npctalk "하인리히: 히멜메즈! 넌 이곳에서 단 한발짝도 움직일 수 없을 것이다.", 'npc_heinrich4$;
+	end;
+OnTimer15000:
+	npctalk "히멜메즈: 하하핫, 그렇게 되는건 너희들이겠지. 내가 혼자 왔을거라 생각했나?", 'npc_himelmez2$;
+	end;
+OnTimer18000:
+	npctalk "바르문트: 하인리히경! 뭔가 알수없는 강력한 기운이 밀려들고 있소!", instance_npcname("바르문트#2");
+	end;
+OnTimer21000:
+	npctalk "하인리히: 이.. 이건!", 'npc_heinrich4$;
+	end;
+OnTimer24000:
+	npctalk "히멜메즈: 내 새 장난감이 너희의 발을 묶어둘 동안 난 즐겁게 놀아보도록 하지.", 'npc_himelmez2$;
+	end;
+OnTimer27000:
+	npctalk "히멜메즈: 그럼 이만~, 기회가 되면 하인리히 당신과는 다시 만나고 싶군.", 'npc_himelmez2$;
+	end;
+OnTimer28000:
+	disablenpc 'npc_himelmez2$;
+	end;
+OnTimer31000:
+	npctalk "하인리히: 바르문트경! 모험가분들을 도와주십시오 저는 히멜메즈를 쫓겠습니다!", 'npc_heinrich4$;
+	end;
+OnTimer32000:
+	disablenpc 'npc_heinrich4$;
+	end;
+OnTimer35000:
+	mapannounce 'map_name$[0], "기사단의 깊숙한 곳에서 기분나쁜 메아리가 가까이 다가옵니다.", bc_map,0xFFFFFF;
+	end;
+OnTimer38000:
+	donpcevent instance_npcname("#ghmemorialmob04") + "::OnStart";
+	stopnpctimer;
+	'npc_himelmez2$ = 'npc_heinrich4$ = "";
+	end;
+}
+
+1@gl_k,1,1,0	script	#ghmemorialmob04	HIDDEN_WARP_NPC,{
+	end;
+OnStart:
+	enablenpc instance_npcname("#ghmemorialmob04");
+	monster 'map_name$[0],150,259,"타락한뿌리",2475,1, instance_npcname("#ghmemorialmob04") + "::OnMyMobDead";// MG_CORRUPTION_ROOT
+	unittalk $@mobid[0],"그르르르르르르~~~";
+	end;
+OnMyMobDead:
+	if (mobcount('map_name$[0], instance_npcname("#ghmemorialmob04") + "::OnMyMobDead") < 1) {
+		mapannounce 'map_name$[0], "12시 방향 기사단 2층으로 통하는 출구가 열렸습니다.", bc_map,0xFFFF00;
+		npctalk "바르문트: 녀석의 몸에서 떨어진 물건을 주워 두었네. 갖고싶은 사람은 내게서 받아가게.", instance_npcname("바르문트#2");
+		enablenpc instance_npcname("#2F Entrance");
+		enablenpc instance_npcname("#1 Control");
+		enablenpc instance_npcname("#Servanton");
+		enablenpc instance_npcname("하인리히#21");
+		enablenpc instance_npcname("바르문트#21");
+		donpcevent instance_npcname("#ghmemorialmob05") + "::OnStart";
+		disablenpc instance_npcname("#ghmemorialmob04");
+	}
+	end;
+}
+
+// Floor 2
+//============================================================
+2@gl_k,148,67,1	script	하인리히#21	4_M_HEINRICH,{
+	mes "[하인리히]";
+	mes "사방이 히멜메즈의 결계로 막혀있군...";
+	cutin "gl_heinrich1",2;
+	close3;
+}
+
+2@gl_k,151,71,7	script	바르문트#21	4_M_BARMUND,{
+	mes "[바르문트]";
+	mes "대체, 나는 이 일을 몇 번째 해 왔던 것일까. 꿈속에서 수십번은 반복해서 본 것 같은 이 장소. 이 느낌...";
+	cutin "gl_barmund2",2;
+	close3;
+}
+
+2@gl_k,150,66,0	script	#Servanton_effect	HIDDEN_WARP_NPC,{
+	end;
+OnEffect:
+	specialeffect EF_LORD;
+	end;
+}
+
+// note: this part can be skipped
+2@gl_k,150,66,0	script	#Servanton_cut	HIDDEN_WARP_NPC,7,7,{
+	end;
+OnTouch_:
+	disablenpc instance_npcname("#Servanton_cut");
+	initnpctimer;
+	'npc_heinrich$ = instance_npcname("하인리히#21");
+	'npc_varmundt$ = instance_npcname("바르문트#21");
+	end;
+OnTimer3000:
+	npctalk "하인리히: 이런 구조물은 성 안에 없었는데!", 'npc_heinrich$;
+	end;	
+OnTimer6000:
+	npctalk "바르문트: 자. 출발할 시간이오 하인리히경.", 'npc_varmundt$;
+	end;
+OnTimer9000:
+	mapannounce 'map_name$[1], "9시 방향 1구역으로 통하는 출구가 열렸습니다. 중앙 통로쪽에서 이동 가능합니다.", bc_map,0xFFFF00;
+	enablenpc instance_npcname("#22 Control");
+	enablenpc instance_npcname("#22 Control2");
+	disablenpc 'npc_varmundt$;
+	disablenpc 'npc_heinrich$;
+	stopnpctimer;
+	'npc_varmundt$ = 'npc_heinrich$ = "";
+	end;
+}	
+2@gl_k,150,66,0	script	#Servanton	HIDDEN_WARP_NPC,7,7,{
+	end;
+OnTouch_:
+	disablenpc instance_npcname("#Servanton");
+	initnpctimer;
+	'npc_heinrich$ = instance_npcname("하인리히#21");
+	'npc_varmundt$ = instance_npcname("바르문트#21");
+	end;
+	
+OnTimer3000:
+	npctalk "하인리히: 이런 구조물은 성 안에 없었는데!", 'npc_heinrich$;
+	end;
+OnTimer6000:
+	npctalk "바르문트: 히멜메즈의 결계요. 통로와 각 구역을 완전히 봉쇄해버렸소.", 'npc_varmundt$;
+	end;
+OnTimer9000:
+	npctalk "하인리히: 힘으로 무너뜨려 보려 했지만 칼날은 먹히지 않는군.", 'npc_heinrich$;
+	end;
+OnTimer12000:
+	npctalk "바르문트: 잠시 물러나시오. 마법의 힘으로 어떻게든 해볼테니", 'npc_varmundt$;
+	end;
+OnTimer15000:
+	specialeffect EF_LORD,AREA, instance_npcname("#Servanton_effect");
+	disablenpc instance_npcname("#Servanton_effect");
+	end;
+OnTimer18000:
+	npctalk "바르문트: 결계 한쪽이 무너진 것 같군.", 'npc_varmundt$;
+	end;
+OnTimer21000:
+	npctalk "바르문트: 이런 결계는 예전에 본 적이 있소.", 'npc_varmundt$;
+	end;
+OnTimer24000:
+	npctalk "바르문트: 히멜메즈는 언데드화 된 사람의 몸에 결계석을 심어두곤 하지.", 'npc_varmundt$;
+	end;
+OnTimer27000:
+	npctalk "바르문트: 아마도 이 결계도 그런 식으로 유지되고 있을 것이오.", 'npc_varmundt$;
+	end;
+OnTimer30000:
+	npctalk "바르문트: 결계를 깨려면 그들중 결계석을 가진자를 죽여야 하오.", 'npc_varmundt$;
+	end;
+OnTimer33000:
+	npctalk "바르문트: 하지만 그런 식별은 우리가 할 수 없지. 닥치는대로 정화할 수 밖에.", 'npc_varmundt$;
+	end;
+OnTimer36000:
+	npctalk "하인리히: 용서받지 못할 짓이군요.", 'npc_heinrich$;
+	end;
+OnTimer39000:
+	npctalk "하인리히: 저는 이미 부하였던 자들을 몰살시켰습니다. 앞으로 얼마나 더...", 'npc_heinrich$;
+	end;
+OnTimer42000:
+	npctalk "바르문트: 사령관...", 'npc_varmundt$;
+	end;
+OnTimer45000:
+	npctalk "바르문트: 사령관은 너무 무른것 같소.", 'npc_varmundt$;
+	end;
+OnTimer48000:
+	npctalk "바르문트: 우리가 상대할 존재는 이미 사람이 아니라오.", 'npc_varmundt$;
+	end;
+OnTimer51000:
+	npctalk "바르문트: 그것을 부정한다고 해서 그들이 다시 사람이 되진 않소.", 'npc_varmundt$;
+	end;
+OnTimer54000:
+	npctalk "하인리히: ...", 'npc_heinrich$;
+	end;
+OnTimer57000:
+	npctalk "바르문트: 그럼, 가봅시다.", 'npc_varmundt$;
+	end;
+OnTimer60000:
+	npctalk "바르문트: 그리고 너흰 잠시 전력을 추스른 뒤에 우릴 따르도록 해라.", 'npc_varmundt$;
+	end;
+OnTimer63000:
+	npctalk "바르문트: 힘든 싸움이 될지도 모르니 마음 단단히 먹는게 좋을 것이다.", 'npc_varmundt$;
+	end;
+OnTimer66000:
+	npctalk "바르문트: 자. 출발할 시간이오 하인리히경.", 'npc_varmundt$;
+	end;
+OnTimer69000:
+	mapannounce 'map_name$[1], "9시 방향 1구역으로 통하는 출구가 열렸습니다. 중앙 통로쪽에서 이동 가능합니다.", bc_map,0xFFFF00;
+	enablenpc instance_npcname("#22 Control");
+	enablenpc instance_npcname("#22 Control2");
+	disablenpc 'npc_varmundt$;
+	disablenpc 'npc_heinrich$;
+	stopnpctimer;
+	'npc_varmundt$ = 'npc_heinrich$ = "";
+	end;
+}
+
+// Spots
+// Note: timer is the only condition for them to respawn
+
+2@gl_k,118,141,0	script	#ogh_2-1	HIDDEN_WARP_NPC,20,20,{
+	end;
+OnTouch_:
+OnSpawn:
+	disablenpc instance_npcname( strnpcinfo(0) );
+	.@hidden_name$ = strnpcinfo(2);
+	.@event_type = atoi( charat(.@hidden_name$,4) );
+	if (.@event_type == 2)
+		.@label$ = instance_npcname("#ghmemorialmob05") + "::OnMyMobDead";
+	else
+		.@label$ = instance_npcname("#ghmemorialmob06") + "::OnMyMobDead";
+	getmapxy .@map$,.@x,.@y, BL_NPC;
+	monster .@map$,.@x,.@y, "부패한 근위병", 2468,1, .@label$;
+	monster .@map$,.@x,.@y, "죽음의 궁수", 2469,1, .@label$;
+	monster .@map$,.@x,.@y, "타락한 심연의 기사", 2470,1, .@label$;
+	monster .@map$,.@x,.@y, "고통받는 칼리츠버그", 2471,1, .@label$;
+	monster .@map$,.@x,.@y, "부풀어오른 기사", 2472,1, .@label$;
+	initnpctimer;
+	end;
+OnTimer30000:
+	enablenpc instance_npcname( strnpcinfo(0) );
+	stopnpctimer;
+	end;
+OnStop:
+	disablenpc instance_npcname( strnpcinfo(0) );
+	stopnpctimer;
+	end;
+}
+2@gl_k,128,81,0	duplicate(#ogh_2-1)	#ogh_2-2	HIDDEN_WARP_NPC,20,20
+2@gl_k,131,54,0	duplicate(#ogh_2-1)	#ogh_2-3	HIDDEN_WARP_NPC,20,20
+2@gl_k,89,48,0	duplicate(#ogh_2-1)	#ogh_2-4	HIDDEN_WARP_NPC,20,20
+2@gl_k,64,117,0	duplicate(#ogh_2-1)	#ogh_2-5	HIDDEN_WARP_NPC,20,20
+2@gl_k,62,82,0	duplicate(#ogh_2-1)	#ogh_2-6	HIDDEN_WARP_NPC,20,20
+2@gl_k,38,138,0	duplicate(#ogh_2-1)	#ogh_2-7	HIDDEN_WARP_NPC,20,20
+
+2@gl_k,171,120,0	duplicate(#ogh_2-1)	#ogh_3-1	HIDDEN_WARP_NPC,20,20
+2@gl_k,232,133,0	duplicate(#ogh_2-1)	#ogh_3-2	HIDDEN_WARP_NPC,20,20
+2@gl_k,256,149,0	duplicate(#ogh_2-1)	#ogh_3-3	HIDDEN_WARP_NPC,20,20
+2@gl_k,212,106,0	duplicate(#ogh_2-1)	#ogh_3-4	HIDDEN_WARP_NPC,20,20
+2@gl_k,243,73,0	duplicate(#ogh_2-1)	#ogh_3-5	HIDDEN_WARP_NPC,20,20
+2@gl_k,229,26,0	duplicate(#ogh_2-1)	#ogh_3-6	HIDDEN_WARP_NPC,20,20
+2@gl_k,181,34,0	duplicate(#ogh_2-1)	#ogh_3-7	HIDDEN_WARP_NPC,20,20
+
+// Commander 1
+2@gl_k,1,1,0	script	#ghmemorialmob05	HIDDEN_WARP_NPC,{
+	end;
+OnStart:
+	enablenpc instance_npcname("#ghmemorialmob05");
+	for ( .@i = 1; .@i <= 7; .@i++ )
+		enablenpc instance_npcname("#ogh_2-" + .@i);
+	end;
+
+OnMyMobDead:
+	if (rand(10) == 0) {// can re-spawn
+		mapannounce 'map_name$[1], "사악한 기운을 가진 어떤 존재가 이 지역안에 나타난 것 같습니다.", bc_map,0xFFFF44,FW_NORMAL,15;
+		killmonster 'map_name$[1], instance_npcname("#ghmemorialmob05") + "::OnBossDead";
+
+		.@r = rand(4) * 2;
+		setarray .@coord[0], 41,146, 58,44, 122,148, 131,64;
+		monster 'map_name$[1],.@coord[.@r],.@coord[.@r+1], "파멸의 제1기사단장",2473,1, instance_npcname("#ghmemorialmob05") + "::OnBossDead", 0, "OnBossAura";
+		'ogh_com_h1 = 1;
+	}
+	end;
+OnBossAura:
+	sc_start SC_BERSERK, 10000, 1;
+	specialeffect EF_RED_AURA;
+	end;
+	
+OnBossDead:
+	mapannounce 'map_name$[1], "3시 방향 2구역으로 통하는 출구가 열렸습니다. 중앙 통로쪽에서 이동 가능합니다.", bc_map,0xFFFF00;
+	enablenpc instance_npcname("#23 Control");
+	enablenpc instance_npcname("#23 Control2");
+	donpcevent instance_npcname("#ghmemorialmob06") + "::OnStart";
+
+	disablenpc instance_npcname("#ghmemorialmob05");
+	for ( .@i = 1; .@i <= 7; .@i++ )
+		donpcevent instance_npcname("#ogh_2-" + .@i) + "::OnStop";
+	end;
+}
+
+// Commander 2
+2@gl_k,1,1,0	script	#ghmemorialmob06	HIDDEN_WARP_NPC,{
+	end;
+OnStart:
+	enablenpc instance_npcname("#ghmemorialmob06");
+	for ( .@i = 1; .@i <= 7; .@i++ )
+		enablenpc instance_npcname("#ogh_3-" + .@i);
+
+	// Fix spawn
+	.@label$ = instance_npcname("#ghmemorialmob06") + "::OnMyMobDead";
+	monster 'map_name$[1],252, 75, "부패한 근위병",2468,1, .@label$;
+	monster 'map_name$[1],253, 76, "부패한 근위병",2468,1, .@label$;
+	monster 'map_name$[1],247, 77, "부패한 근위병",2468,1, .@label$;
+	monster 'map_name$[1],248, 80, "부패한 근위병",2468,1, .@label$;
+	monster 'map_name$[1],236,100, "부패한 근위병",2468,1, .@label$;
+	monster 'map_name$[1],240,100, "부패한 근위병",2468,1, .@label$;
+	monster 'map_name$[1],242,100, "부패한 근위병",2468,1, .@label$;
+	monster 'map_name$[1],244,100, "부패한 근위병",2468,1, .@label$;
+	monster 'map_name$[1],199,111, "부패한 근위병",2468,1, .@label$;
+	monster 'map_name$[1],181,107, "죽음의 사수",2469,1, .@label$;
+	monster 'map_name$[1],177,110, "죽음의 사수",2469,1, .@label$;
+	monster 'map_name$[1],236, 27, "죽음의 사수",2469,1, .@label$;
+	monster 'map_name$[1],242, 27, "죽음의 사수",2469,1, .@label$;
+	monster 'map_name$[1],252, 26, "죽음의 사수",2469,1, .@label$;
+	monster 'map_name$[1],172,130, "죽음의 사수",2469,1, .@label$;
+	monster 'map_name$[1],171,127, "죽음의 사수",2469,1, .@label$;
+	monster 'map_name$[1],173,127, "죽음의 사수",2469,1, .@label$;
+	monster 'map_name$[1],177, 69, "타락한 심연의 기사",2470,1, .@label$;
+	monster 'map_name$[1],186, 66, "타락한 심연의 기사",2470,1, .@label$;
+	monster 'map_name$[1],189, 67, "타락한 심연의 기사",2470,1, .@label$;
+	monster 'map_name$[1],190, 68, "타락한 심연의 기사",2470,1, .@label$;
+	monster 'map_name$[1],257,157, "타락한 심연의 기사",2470,1, .@label$;
+	monster 'map_name$[1],246,159, "타락한 심연의 기사",2470,1, .@label$;
+	monster 'map_name$[1],237,158, "타락한 심연의 기사",2470,1, .@label$;
+	monster 'map_name$[1],206,159, "타락한 심연의 기사",2470,1, .@label$;
+	monster 'map_name$[1],172,120, "타락한 심연의 기사",2470,1, .@label$;
+	monster 'map_name$[1],226, 30, "고통받는 칼리츠버그",2471,1, .@label$;
+	monster 'map_name$[1],226, 38, "고통받는 칼리츠버그",2471,1, .@label$;
+	monster 'map_name$[1],228, 29, "고통받는 칼리츠버그",2471,1, .@label$;
+	monster 'map_name$[1],226, 63, "고통받는 칼리츠버그",2471,1, .@label$;
+	monster 'map_name$[1],268,137, "고통받는 칼리츠버그",2471,1, .@label$;
+	monster 'map_name$[1],263,138, "고통받는 칼리츠버그",2471,1, .@label$;
+	monster 'map_name$[1],259,138, "고통받는 칼리츠버그",2471,1, .@label$;
+	monster 'map_name$[1],259,138, "고통받는 칼리츠버그",2471,1, .@label$;
+	monster 'map_name$[1],187,121, "고통받는 칼리츠버그",2471,1, .@label$;
+	monster 'map_name$[1],265, 52, "부풀어오른 기사",2472,1, .@label$;
+	monster 'map_name$[1],265, 55, "부풀어오른 기사",2472,1, .@label$; 
+	monster 'map_name$[1],264, 79, "부풀어오른 기사",2472,1, .@label$; 
+	monster 'map_name$[1],225, 92, "부풀어오른 기사",2472,1, .@label$; 
+	monster 'map_name$[1],237, 92, "부풀어오른 기사",2472,1, .@label$; 
+	monster 'map_name$[1],249, 92, "부풀어오른 기사",2472,1, .@label$; 
+	monster 'map_name$[1],256, 93, "부풀어오른 기사",2472,1, .@label$; 
+	monster 'map_name$[1],264,100, "부풀어오른 기사",2472,1, .@label$;
+	monster 'map_name$[1],181,120, "부풀어오른 기사",2472,1, .@label$;
+	end;
+
+OnMyMobDead:
+	if (rand(10) == 0) {// can re-spawn
+		mapannounce 'map_name$[1], "사악한 기운을 가진 어떤 존재가 이 지역안에 나타난 것 같습니다.", bc_map,0xFFFF44,FW_NORMAL,15;
+		killmonster 'map_name$[1], instance_npcname("#ghmemorialmob06") + "::OnBossDead";
+
+		.@r = rand(4) * 2;
+		setarray .@coord[0], 166,119, 211,45, 227,139, 245,74;
+		monster 'map_name$[1],.@coord[.@r],.@coord[.@r+1], "파멸의 제2기사단장",2474,1, instance_npcname("#ghmemorialmob06") + "::OnBossDead", 0, "OnBossAura";
+		'ogh_com_h2 = 1;
+	}
+	end;
+
+OnBossDead:
+	mapannounce 'map_name$[1], "12시 방향 3구역으로 통하는 출구가 열렸습니다. 중앙 통로쪽에서 이동 가능합니다.", bc_map,0xFFFF00;
+	enablenpc instance_npcname("#24 Control");
+	enablenpc instance_npcname("#24 Control2");
+	enablenpc instance_npcname("#Geron");
+	for ( .@i = 1; .@i <= 35; .@i++ )
+		disablenpc instance_npcname("부패한 시체#" + .@i);
+
+	disablenpc instance_npcname("#ghmemorialmob06");
+	for ( .@i = 1; .@i <= 7; .@i++ )
+		donpcevent instance_npcname("#ogh_3-" + .@i) + "::OnStop";
+
+	// Hidden mobs
+	setarray .@coord[0],
+		 37,265, 57,265, 77,265, 97,265, 117,265, 188,264, 208,264,
+		 50,172, 70,172, 90,172, 110,172, 170,172, 210,172, 230,172,
+		 88,214, 108,214, 128,214, 180,219, 200,219, 220,219, 240,219;
+	.@size = getarraysize(.@coord);
+	for ( .@i = 0; .@i < .@size; .@i += 2 )
+		monster 'map_name$[1], .@coord[.@i], .@coord[.@i+1], "파괴의 불꽃",2337,1;// HIDDEN_MOB
+	end;
+}
+
+// Amdarais Room Entrance
+2@gl_k,150,180,0	script	#Geron	HIDDEN_WARP_NPC,7,7,{
+	end;
+OnTouch_:
+	disablenpc instance_npcname("#Geron");
+	mapannounce 'map_name$[1], "???: 오지마시오! 이곳은 사방이 함정... 크아아아악!!!!", bc_map,0xFF7777,FW_NORMAL,15;
+	if('glast_cut){
+		enablenpc instance_npcname("히멜메즈#22_cut");
+		disablenpc instance_npcname("히멜메즈#22");
+	} else {
+	disablenpc instance_npcname("히멜메즈#22_cut");
+	enablenpc instance_npcname("히멜메즈#22");
+	}
+	enablenpc instance_npcname("바르문트#23");
+	enablenpc instance_npcname("하인리히#23");
+	enablenpc instance_npcname("게르할트#23");
+	end;
+}
+
+2@gl_k,143,260,4	script	부패한 시체#1	4_M_DIEMAN,5,5,{
+	end;
+OnTouch_:
+	disablenpc instance_npcname( strnpcinfo(0) );
+	.@i = rand(1,10);
+	if (.@i == 1) .@mobs = 3;
+	else if (.@i == 2) .@mobs = 4;
+	else if (.@i == 3) .@mobs = 5;
+	else if (.@i < 7) .@mobs = 6;
+	else .@mobs = 7;
+	getmapxy .@map$,.@x,.@y, BL_NPC;
+	specialeffect EF_VENOMDUST;
+	monster .@map$,.@x,.@y,"구더기",2467,.@mobs;
+	initnpctimer;
+	end;
+OnTimer45000:
+	enablenpc instance_npcname( strnpcinfo(0) );
+	stopnpctimer;
+	end;
+}
+2@gl_k,145,236,4	duplicate(부패한 시체#1)	부패한 시체#2	4_M_DIEMAN,5,5
+2@gl_k,141,222,2	duplicate(부패한 시체#1)	부패한 시체#3	4_M_DIEMAN,5,5
+2@gl_k,147,203,5	duplicate(부패한 시체#1)	부패한 시체#4	4_M_DIEMAN,5,5
+2@gl_k,167,225,4	duplicate(부패한 시체#1)	부패한 시체#5	4_M_DIEMAN,5,5
+2@gl_k,172,233,2	duplicate(부패한 시체#1)	부패한 시체#6	4_M_DIEMAN,5,5
+2@gl_k,176,244,3	duplicate(부패한 시체#1)	부패한 시체#7	4_M_DIEMAN,5,5
+2@gl_k,184,248,6	duplicate(부패한 시체#1)	부패한 시체#8	4_M_DIEMAN,5,5
+2@gl_k,193,228,0	duplicate(부패한 시체#1)	부패한 시체#9	4_M_DIEMAN,5,5
+2@gl_k,206,250,7	duplicate(부패한 시체#1)	부패한 시체#10	4_M_DIEMAN,5,5
+2@gl_k,130,249,1	duplicate(부패한 시체#1)	부패한 시체#11	4_M_DIEMAN,5,5
+2@gl_k,122,236,5	duplicate(부패한 시체#1)	부패한 시체#12	4_M_DIEMAN,5,5
+2@gl_k,130,228,7	duplicate(부패한 시체#1)	부패한 시체#13	4_M_DIEMAN,5,5
+2@gl_k,106,226,0	duplicate(부패한 시체#1)	부패한 시체#14	4_M_DIEMAN,5,5
+2@gl_k,104,245,0	duplicate(부패한 시체#1)	부패한 시체#15	4_M_DIEMAN,5,5
+2@gl_k,131,187,0	duplicate(부패한 시체#1)	부패한 시체#16	4_M_DIEMAN,5,5
+2@gl_k,121,197,0	duplicate(부패한 시체#1)	부패한 시체#17	4_M_DIEMAN,5,5
+2@gl_k,107,194,0	duplicate(부패한 시체#1)	부패한 시체#18	4_M_DIEMAN,5,5
+2@gl_k,92,187,0	duplicate(부패한 시체#1)	부패한 시체#19	4_M_DIEMAN,5,5
+2@gl_k,153,214,3	duplicate(부패한 시체#1)	부패한 시체#20	4_M_DIEMAN,5,5
+2@gl_k,155,195,4	duplicate(부패한 시체#1)	부패한 시체#21	4_M_DIEMAN,5,5
+2@gl_k,154,188,2	duplicate(부패한 시체#1)	부패한 시체#22	4_M_DIEMAN,5,5
+2@gl_k,143,195,5	duplicate(부패한 시체#1)	부패한 시체#23	4_M_DIEMAN,5,5
+2@gl_k,132,214,4	duplicate(부패한 시체#1)	부패한 시체#24	4_M_DIEMAN,5,5
+2@gl_k,125,208,2	duplicate(부패한 시체#1)	부패한 시체#25	4_M_DIEMAN,5,5
+2@gl_k,114,210,3	duplicate(부패한 시체#1)	부패한 시체#26	4_M_DIEMAN,5,5
+2@gl_k,137,182,6	duplicate(부패한 시체#1)	부패한 시체#27	4_M_DIEMAN,5,5
+2@gl_k,138,246,0	duplicate(부패한 시체#1)	부패한 시체#28	4_M_DIEMAN,5,5
+2@gl_k,132,260,7	duplicate(부패한 시체#1)	부패한 시체#29	4_M_DIEMAN,5,5
+2@gl_k,128,251,1	duplicate(부패한 시체#1)	부패한 시체#30	4_M_DIEMAN,5,5
+2@gl_k,179,260,3	duplicate(부패한 시체#1)	부패한 시체#31	4_M_DIEMAN,5,5
+2@gl_k,170,261,4	duplicate(부패한 시체#1)	부패한 시체#32	4_M_DIEMAN,5,5
+2@gl_k,177,219,2	duplicate(부패한 시체#1)	부패한 시체#33	4_M_DIEMAN,5,5
+2@gl_k,190,214,5	duplicate(부패한 시체#1)	부패한 시체#34	4_M_DIEMAN,5,5
+2@gl_k,201,214,4	duplicate(부패한 시체#1)	부패한 시체#35	4_M_DIEMAN,5,5
+
+// Amdarais Spawn
+2@gl_k,153,250,8	script	하인리히#23	4_M_HEINRICH,{
+	cutin "gl_heinrich1",2;
+	mes "[하인리히]";
+	mes "무엇을 꾸미는것이냐 히멜메즈!";
+	close3;
+}
+
+2@gl_k,162,250,1	script	바르문트#23	4_M_BARMUND,{
+	mes "[바르문트]";
+	mes "이 굴레는 영원히 벗어날 수 없는 것인가...";
+	cutin "gl_barmund2",2;
+	close3;
+}
+
+2@gl_k,158,255,1	script	게르할트#23	4_LEVITATEMAN,{
+	mes "[게르할트]";
+	mes "으으으... 크으윽! 사령관을 끌고...어서 도망치시오.";
+	close;
+}
+2@gl_k,158,252,1	script	히멜메즈#22_cut	4_F_HIMEL,3,3,{
+	cutin "gl_himel2",2;
+	mes "[히멜메즈]";
+	mes "대단해~ 여기까지 오다니. 이정도면 경의를 표해야 할 지경인걸?";
+	close3;
+	
+OnTouch:
+	end;
+OnTouch_:
+	disablenpc instance_npcname("히멜메즈#22_cut");
+	enablenpc instance_npcname("히멜메즈#23");
+	initnpctimer;
+	'party_id = getcharid(1);
+	'npc_himelmez$ = instance_npcname("히멜메즈#23");
+	'npc_gerhalt$ = instance_npcname("게르할트#23");
+	'npc_heinrich$ = instance_npcname("하인리히#23");
+	'npc_varmundt$ = instance_npcname("바르문트#23");
+	end;
+OnTimer200:
+	npctalk "히멜메즈: 대단해~ 근처도 못오고 끝날 줄 알았는데...", 'npc_himelmez$;
+	end;
+OnTimer2200:
+	specialeffect EF_BARRIER, AREA, 'npc_gerhalt$;
+	end;
+OnTimer4200:
+	disablenpc 'npc_himelmez$;
+	end;
+OnTimer6200:
+	specialeffect EF_CHAINCOMBO, AREA, 'npc_gerhalt$;
+	end;
+OnTimer9000:
+	npctalk "하인리히: 도망치게 내버려둘 것 같으냐 히멜메즈!!", 'npc_heinrich$;
+	specialeffect EF_MAPPILLAR, AREA, 'npc_gerhalt$;
+	end;
+OnTimer12000:
+	specialeffect EF_MAPPILLAR2, AREA, 'npc_gerhalt$;
+	specialeffect EF_MAPPILLAR, AREA, 'npc_gerhalt$;
+	disablenpc 'npc_heinrich$;
+	npctalk "바르문트: 이런, 어쩔 수 없다. 남은 우리의 힘 만으로 암다라이스를 막아야한다!", 'npc_varmundt$;
+	end;
+OnTimer15000:
+	mapannounce 'map_name$[1], "게르할트의 몸이 변해갑니다.", bc_map,0xFFFFFF;
+	end;
+OnTimer18000:
+	specialeffect EF_LORD, AREA, 'npc_gerhalt$;
+	disablenpc 'npc_varmundt$;
+	mapannounce 'map_name$[1], "바르문트: 나의 환영들로 전투를 돕도록 하겠다! 환영의 지시를 따르도록 해라.", bc_map,0xFFFF00;
+	end;
+OnTimer21000:
+	disablenpc 'npc_gerhalt$;
+	donpcevent instance_npcname("#ghmemorialmob07") + "::OnStart";
+	stopnpctimer;
+	'npc_himelmez$ = 'npc_gerhalt$ = 'npc_heinrich$ = 'npc_varmundt$ = "";
+	end;	
+}	
+
+2@gl_k,158,252,1	script	히멜메즈#22	4_F_HIMEL,3,3,{
+	cutin "gl_himel2",2;
+	mes "[히멜메즈]";
+	mes "대단해~ 여기까지 오다니. 이정도면 경의를 표해야 할 지경인걸?";
+	close3;
+
+OnTouch:
+	end;
+OnTouch_:
+	disablenpc instance_npcname("히멜메즈#22");
+	enablenpc instance_npcname("히멜메즈#23");
+	initnpctimer;
+	'party_id = getcharid(1);
+	'npc_himelmez$ = instance_npcname("히멜메즈#23");
+	'npc_gerhalt$ = instance_npcname("게르할트#23");
+	'npc_heinrich$ = instance_npcname("하인리히#23");
+	'npc_varmundt$ = instance_npcname("바르문트#23");
+	end;
+	
+OnTimer3000:
+	npctalk "히멜메즈: 대단해~ 근처도 못오고 끝날 줄 알았는데...", 'npc_himelmez$;
+	end;
+OnTimer6000:
+	npctalk "게르할트: 크으윽! 도망치세요! 더는 제가 버티지 못합니다!", 'npc_gerhalt$;
+	end;
+OnTimer9000:
+	npctalk "하인리히: 게르할트!", 'npc_heinrich$;
+	end;
+OnTimer15000:
+	npctalk "게르할트: 사령관...님... 어서 이곳에서 도망치셔야... 합니다. 크윽", 'npc_gerhalt$;
+	end;
+OnTimer18000:
+	npctalk "하인리히: 내 부하에게 무슨짓이냐 히멜메즈!", 'npc_heinrich$;
+	end;
+OnTimer21000:
+	npctalk "히멜메즈: 후후, 이미르의 심장조각은 이미 찾았다 하인리히.", 'npc_himelmez$;
+	end;
+OnTimer24000:
+	npctalk "히멜메즈: 저 녀석의 방해만 없었더라면 더 빨랐겠지만 말야.", 'npc_himelmez$;
+	end;
+OnTimer27000:
+	npctalk "게르할트: 내 몸을 더럽힐 순 있어도 내 영혼은 가져가지 못할 것이다 히멜메즈!", 'npc_gerhalt$;
+	end;
+OnTimer30000:
+	npctalk "히멜메즈: 과연 그럴까? 하여간 큰소리 치는데는 왕이고 병사고 다를게 없다니까 이 동네 사람들은...", 'npc_himelmez$;
+	end;
+OnTimer33000:
+	npctalk "하인리히: 히멜메즈! 목적을 이루었다면 더 이상의 희생은 필요없지 않나!", 'npc_heinrich$;
+	end;
+OnTimer36000:
+	npctalk "하인리히: 그를 놓아줘라! 난 더 이상의 희생은 바라지 않는다!", 'npc_heinrich$;
+	end;
+OnTimer39000:
+	npctalk "히멜메즈: 싫은데?", 'npc_himelmez$;
+	end;
+OnTimer42000:
+	npctalk "히멜메즈: 어차피 이녀석이 하인리히 당신의 마지막 부하야.", 'npc_himelmez$;
+	end;
+OnTimer45000:
+	npctalk "히멜메즈: 나를 막는 솜씨가 보통은 넘더군.", 'npc_himelmez$;
+	end;
+OnTimer48000:
+	npctalk "히멜메즈: 내 새로운 암다라이스 제작에 딱 적합한 인물인것 같아.", 'npc_heinrich$;
+	end;
+OnTimer51000:
+	npctalk "하인리히: 널 영원히 용서하지 않겠다.", 'npc_heinrich$;
+	end;
+OnTimer54000:
+	npctalk "히멜메즈: 어머~ 무서워라.", 'npc_himelmez$;
+	end;
+OnTimer57000:
+	npctalk "히멜메즈: 어차피 당신과는 할 이야기도 더 있으니 다음에 다시 만날 기회가 있을거야.", 'npc_himelmez$;
+	end;
+OnTimer60000:
+	npctalk "히멜메즈: 그럼. 이제 새로운 당신의 부하와 이야기를 나눠보도록 해.", 'npc_himelmez$;
+	end;
+OnTimer63000:
+	specialeffect EF_BARRIER, AREA, 'npc_gerhalt$;
+	end;
+OnTimer65000:
+	disablenpc 'npc_himelmez$;
+	end;
+OnTimer66000:
+	specialeffect EF_CHAINCOMBO, AREA, 'npc_gerhalt$;
+	end;
+OnTimer67000:
+	npctalk "하인리히: 도망치게 내버려둘 것 같으냐 히멜메즈!!", 'npc_heinrich$;
+	specialeffect EF_MAPPILLAR, AREA, 'npc_gerhalt$;
+	end;
+OnTimer70000:
+	specialeffect EF_MAPPILLAR2, AREA, 'npc_gerhalt$;
+	specialeffect EF_MAPPILLAR, AREA, 'npc_gerhalt$;
+	disablenpc 'npc_heinrich$;
+	npctalk "바르문트: 이런, 어쩔 수 없다. 남은 우리의 힘 만으로 암다라이스를 막아야한다!", 'npc_varmundt$;
+	end;
+OnTimer73000:
+	mapannounce 'map_name$[1], "게르할트의 몸이 변해갑니다.", bc_map,0xFFFFFF;
+	end;
+OnTimer76000:
+	specialeffect EF_LORD, AREA, 'npc_gerhalt$;
+	disablenpc 'npc_varmundt$;
+	mapannounce 'map_name$[1], "바르문트: 나의 환영들로 전투를 돕도록 하겠다! 환영의 지시를 따르도록 해라.", bc_map,0xFFFF00;
+	end;
+OnTimer80000:
+	disablenpc 'npc_gerhalt$;
+	donpcevent instance_npcname("#ghmemorialmob07") + "::OnStart";
+	stopnpctimer;
+	'npc_himelmez$ = 'npc_gerhalt$ = 'npc_heinrich$ = 'npc_varmundt$ = "";
+	end;
+}
+
+2@gl_k,158,252,4	script	히멜메즈#23	4_F_HIMEL,{
+	cutin "gl_himel2",2;
+	mes "[히멜메즈]";
+	mes "대단해~ 여기까지 오다니. 이정도면 경의를 표해야 할 지경인걸?";
+	close3;
+}
+
+2@gl_k,1,1,0	script	#ghmemorialmob07	HIDDEN_WARP_NPC,{
+	end;
+OnStart:
+	enablenpc instance_npcname("#ghmemorialmob07");
+	monster 'map_name$[1],158,255,"암다라이스",2476,1,instance_npcname("#ghmemorialmob07") + "::OnMyMobDead";// MG_AMDARAIS
+	'boss_id = $@mobid[0];
+	unittalk 'boss_id, "도망쳐... 내게서 도망...";
+	initnpctimer;
+	end;
+OnTimer5000:
+	unittalk 'boss_id, "아무도.. 아무도 죽이고 싶지 않아!! 으아아아악!!!!";
+	end;
+OnTimer10000:
+	unittalk 'boss_id, "날 죽여줘! 제발!";
+	end;
+OnTimer16000:
+	unittalk 'boss_id, "으으으으...으으으...죽어... 죽어...";
+	end;
+OnTimer22000:
+	unittalk 'boss_id, "파괴... 죽음!...";
+	end;
+OnTimer55000:
+	donpcevent instance_npcname("#ghmemorialmob08") + "::OnStart";// Varmundt buffs and additionnal monsters
+	stopnpctimer;
+	end;
+
+OnMyMobDead:
+	if (mobcount('map_name$[1], instance_npcname("#ghmemorialmob07") + "::OnMyMobDead") < 1) {
+		stopnpctimer;
+		enablenpc instance_npcname("후긴#21");
+		enablenpc instance_npcname("#Secret Room Exit");
+
+		stopnpctimer;
+		disablenpc instance_npcname("#ghmemorialmob07");
+		// note: monsters from #ghmemorialmob08 still alive on Amdarais's dead
+	}
+	end;
+}
+
+// Varmundt Buffs
+2@gl_k,1,1,0	script	#ghmemorialmob08	HIDDEN_WARP_NPC,{
+	end;
+OnStart:
+	enablenpc instance_npcname("#ghmemorialmob08");
+	initnpctimer;
+	end;
+OnTimer5000:
+	if (unitexists('boss_id) == 0) {
+		disablenpc instance_npcname("#ghmemorialmob08");
+		stopnpctimer;
+		end;
+	}
+	getunitdata 'boss_id, .@data;
+	.@percent_hp = (.@data[UMOB_HP] * 100) / .@data[UMOB_MAXHP];
+	mapannounce 'map_name$[1], "Amdarais HP " + .@percent_hp + "% reach!", bc_map,0x70DBDB;
+
+	// event type every 10%
+	switch( .@percent_hp / 10 ) {
+	case 10:
+		break;
+	case 9:
+		donpcevent instance_npcname("바르문트의 유령#Buff2") + "::OnEvent";
+		break;
+	case 8:
+		donpcevent instance_npcname("바르문트의 유령#Buff3") + "::OnEvent";
+		areamonster 'map_name$[1],140,220,175,255,"고통받는 칼리츠버그",2471,6, instance_npcname("#ghmemorialmob08") + "::OnMobDead";
+		break;
+	case 7:
+		donpcevent instance_npcname("바르문트의 유령#Buff3") + "::OnEvent";
+		areamonster 'map_name$[1],140,220,175,255,"심연의기사",2470,6, instance_npcname("#ghmemorialmob08") + "::OnMobDead";
+		break;
+	case 6:
+		donpcevent instance_npcname("바르문트의 유령#Buff3") + "::OnEvent";
+		areamonster 'map_name$[1],140,220,175,255,"부풀어오른 기사",2472,6, instance_npcname("#ghmemorialmob08") + "::OnMobDead";
+		break;
+	case 5:
+		donpcevent instance_npcname("바르문트의 유령#Buff2") + "::OnEvent";
+		break;
+	case 4:
+		donpcevent instance_npcname("바르문트의 유령#Buff3") + "::OnEvent";
+		areamonster 'map_name$[1],140,220,175,255,"배회하는 명사수",2469,6, instance_npcname("#ghmemorialmob08") + "::OnMobDead";
+		break;
+	case 3:
+		donpcevent instance_npcname("바르문트의 유령#Buff1") + "::OnEvent";
+		donpcevent instance_npcname("바르문트의 유령#Buff3") + "::OnEvent";
+		areamonster 'map_name$[1],140,220,175,255,"부풀어오른 기사",2472,6, instance_npcname("#ghmemorialmob08") + "::OnMobDead";
+		break;
+	case 2:
+		donpcevent instance_npcname("바르문트의 유령#Buff1") + "::OnEvent";
+		donpcevent instance_npcname("바르문트의 유령#Buff3") + "::OnEvent";
+		areamonster 'map_name$[1],140,220,175,255,"심연의기사",2470,6, instance_npcname("#ghmemorialmob08") + "::OnMobDead";
+		break;
+	case 1:
+	case 0:
+		donpcevent instance_npcname("바르문트의 유령#Buff1") + "::OnEvent";
+		donpcevent instance_npcname("바르문트의 유령#Buff4") + "::OnEvent";
+		areamonster 'map_name$[1],140,220,175,255,"배회하는 명사수",2469,6, instance_npcname("#ghmemorialmob08") + "::OnMobDead";
+		break;
+	}
+	end;
+OnTimer30000:
+	killmonster 'map_name$[1], instance_npcname("#ghmemorialmob08") + "::OnMobDead";
+	initnpctimer;
+	end;
+OnMobDead:
+	end;
+}
+
+2@gl_k,150,247,5	script	바르문트의 유령#Buff1	4_M_BARMUND,2,2,{
+	end;
+OnTouch:
+	specialeffect2 EF_ENHANCE;
+	.@num = atoi( replacestr(strnpcinfo(2), "Buff", "") );
+	if (.@num == 1)
+		sc_start SC_GLASTHEIM_HIDDEN,30000,1,10000,SCSTART_NOTICKDEF;
+	else if (.@num == 2)
+		sc_start SC_GLASTHEIM_STATE,30000,1,10000,SCSTART_NOTICKDEF;
+	else if (.@num == 3) {
+		sc_start SC_GLASTHEIM_HEAL,30000,1,10000,SCSTART_NOTICKDEF;
+		sc_start SC_GLASTHEIM_HPSP,30000,1,10000,SCSTART_NOTICKDEF;
+	}
+	else {
+		sc_start SC_GLASTHEIM_DEF,30000,1,10000,SCSTART_NOTICKDEF;
+		sc_start SC_GLASTHEIM_ITEMDEF,30000,1,10000,SCSTART_NOTICKDEF;
+	}
+	end;
+OnEvent:
+	initnpctimer;
+	enablenpc instance_npcname( strnpcinfo(0) );
+	.@num = atoi( replacestr(strnpcinfo(2), "Buff", "") );
+	if (.@num == 1)
+		npctalk "바르문트의 유령: 암다라이즈가 강력한 마법 보호막을 펼칠 수 있다! 내 곁으로 오게, 내가 지켜주지!";
+	else if (.@num == 2)
+		npctalk "바르문트의 유령: 지금이 공격할 기회다! 내게 가까이 오게, 함께 적을 쓰러뜨리세!";
+	else if (.@num == 3)
+		npctalk "바르문트의 유령: 암다라이즈의 좀비에게 당하고 싶지 않다면, 내게 와서 힘을 얻게!";
+	else
+		npctalk "바르문트의 유령: 암다라이즈의 힘에 당하고 싶지 않다면, 어서 내게 와서 힘을 얻게!";
+	end;
+OnTimer10000:
+	stopnpctimer;
+	disablenpc instance_npcname( strnpcinfo(0) );
+	end;
+}
+2@gl_k,165,247,3	duplicate(바르문트의 유령#Buff1)	바르문트의 유령#Buff2	4_M_BARMUND,2,2
+2@gl_k,150,232,8	duplicate(바르문트의 유령#Buff1)	바르문트의 유령#Buff3	4_M_BARMUND,2,2
+2@gl_k,165,232,2	duplicate(바르문트의 유령#Buff1)	바르문트의 유령#Buff4	4_M_BARMUND,2,2
+
+
+2@gl_k,158,241,1	script	후긴#21	4_M_SAGE_C,{
+	if (checkquest(12319,HUNTING) == 2) {// note: complete hunting 'Corrupted Soul Hunt' prerequis
+		mes "[후긴]";
+		mes "흠, 초보자 치곤 꽤 하는군. 일단 암다라이스에게서 나온 전리품은 갖게 해 주지.";
+		erasequest 12319;
+		setquest 12322;// Space Distortion
+		if (isbegin_quest(12321) == 0) {
+			setquest 12321;// Time Conqueror
+			completequest 12321;
+			getitem 6607,5;// Temporal_Crystal
+			getitem 6608,5;// Coagulated_Spell
+			getexp 350000,350000;
+		}
+		else {
+			getitem 6607,1;// Temporal_Crystal
+			getitem 6608,1;// Coagulated_Spell
+		}
+		next;
+		mes "[후긴]";
+		mes "바르문트의 시간은 내가 임의로 멈춰버렸다. 그리고 이제 곧 너희의 시간도 왜곡될 것이다.";
+		specialeffect2 EF_BLIND;
+		soundeffect "_blind.wav",0;
+		next;
+		mes "[후긴]";
+		mes "아마 저 가련한 시간의 여행자는 끝없이 이 글래스트헤임의 비극을 막으려 다시 시도하겠지.";
+		next;
+		mes "[후긴]";
+		mes "하지만 우리 시간의 초월자들은 그의 행동을 묵과하지 않을 것이다. 앞으로도 영원히...";
+		next;
+		mes "[후긴]";
+		mes "이제 너의 기억도 지워버리겠다. 다시 날 보더라도 아마 새로운 모습으로 대하게 될것이야.";
+		specialeffect2 EF_FREEZE;
+		close2;
+		warp 'map_name$[1],158,244;
+		end;
+	}
+	mes "[후긴]";
+	mes "하마터면 시간의 틈이 왜곡될 뻔 했군. 이리로 오게. 어서 나가야하네!";
+	next;
+	select("바...방금전에 저와...");
+	mes "[후긴]";
+	mes "방금전에 뭐 말인가? 어쨌든 그게 중요한게 아니라, 곧 시간의 틈이 닫힐테니 어서 여기서 나가야하네.";
+	next;
+	if (select("난 이곳을 더 둘러보겠습니다:밖으로 보내주십시오") == 1) {
+		mes "[후긴]";
+		mes "그런가? 여긴 곧 무너질텐데, 빨리 둘러보고 돌아오게.";
+		close;
+	}
+	close2;
+	set #glast_clear, 1;
+	set 'glast_cut, 0;
+	warp "glast_01",204,270;
+	end;
+}
+
+// Treasure Room 본섭에 없음
+//============================================================
+1@gl_k,165,136,3	script	수상한 균열#2	CLEAR_NPC,{
+	if (isbegin_quest(12322) == 0) {// Space Distortion
+		mes "균열이 의심스러워 보이지만 더 이상 알아볼것은 없다.";
+		close;
+	}
+	specialeffect EF_SPELLBREAKER;
+
+	.@random = rand(1,4);
+	switch( atoi(strnpcinfo(2)) ) {
+	case 2:
+		for ( .@i = 1; .@i <= .@random; ++.@i )
+			makeitem 719,1,"this",165,138;
+		makeitem 7925,1,"this",165,138;
+		break;
+	case 3:
+		for ( .@i = 1; .@i <= .@random; ++.@i )
+			makeitem 720,1,"this",159,138;
+		if (rand(1,4) == 4)
+			makeitem2 15066,1,"this",159,138,0,0,0,0,0,0,0;
+		makeitem 6608,1,"this",159,138;
+		makeitem 7229,1,"this",159,138;
+		break;
+	case 4:
+		for ( .@i = 1; .@i <= .@random; ++.@i )
+			makeitem 721,1,"this",153,138;
+		if (rand(1,4) == 4)
+			makeitem2 13086,1,"this",153,138,0,0,0,0,0,0,0;
+		makeitem 6608,1,"this",153,138;
+		makeitem 7230,1,"this",153,138;
+		break;
+	case 5:
+		for ( .@i = 1; .@i <= .@random; ++.@i )
+			makeitem 722,1,"this",147,138;
+		if (rand(1,4) == 4)
+			makeitem2 2949,1,"this",147,138,0,0,0,0,0,0,0;
+		makeitem 6612,1,"this",147,138;
+		makeitem 6613,1,"this",147,138;
+		makeitem 6608,1,"this",147,138;
+		break;
+	case 6:
+		for ( .@i = 1; .@i <= .@random; ++.@i )
+			makeitem 725,1,"this",141,138;
+		makeitem 7228,1,"this",141,138;
+		if (rand(1,4) == 4)
+			makeitem2 13440,1,"this",141,138,0,0,0,0,0,0,0;
+		makeitem 6608,1,"this",141,138;
+		break;
+	case 7:
+		for ( .@i = 1; .@i <= .@random; ++.@i )
+			makeitem 726,1,"this",135,138;
+		if (rand(1,4) == 4)
+			makeitem2 2022,1,"this",135,138,0,0,0,0,0,0,0;
+		makeitem 6608,1,"this",135,138;
+		break;
+	case 8:
+		for ( .@i = 1; .@i <= .@random; ++.@i )
+			makeitem 727,1,"this",129,138;
+		if (rand(1,4) == 4)
+			makeitem2 21007,1,"this",129,138,0,0,0,0,0,0,0;
+		makeitem 6608,1,"this",129,138;
+		break;
+	}
+	disablenpc instance_npcname( strnpcinfo(0) );
+	end;
+}
+1@gl_k,159,136,3	duplicate(수상한 균열#2)	수상한 균열#3	CLEAR_NPC
+1@gl_k,153,136,3	duplicate(수상한 균열#2)	수상한 균열#4	CLEAR_NPC
+1@gl_k,147,136,3	duplicate(수상한 균열#2)	수상한 균열#5	CLEAR_NPC
+1@gl_k,141,136,3	duplicate(수상한 균열#2)	수상한 균열#6	CLEAR_NPC
+1@gl_k,135,136,3	duplicate(수상한 균열#2)	수상한 균열#7	CLEAR_NPC
+1@gl_k,129,136,3	duplicate(수상한 균열#2)	수상한 균열#8	CLEAR_NPC
+
+1@gl_k,269,267,3	script	수상한 균열#1	CLEAR_NPC,{
+	if (isbegin_quest(12322) == 0) {// Space Distortion
+		mes "균열이 의심스러워 보이지만 더 이상 알아볼것은 없다.";
+		close;
+	}
+	warp 'map_name$[0],149,198;
+	end;
+
+
+OnInstanceInit:
+	'map_name$[0] = instance_mapname("1@gl_k");
+	'map_name$[1] = instance_mapname("2@gl_k");
+	
+	//스킵용 워프
+	disablenpc instance_npcname("#cut01");
+	
+	// Entrance
+	disablenpc instance_npcname("히멜메즈#1");
+	disablenpc instance_npcname("바르문트#1");
+	disablenpc instance_npcname("하인리히#1");
+	disablenpc instance_npcname("하인리히#2");
+	disablenpc instance_npcname("하인리히#3");
+
+	// Rescue 1
+	disablenpc instance_npcname("#ghmemorialmob01");
+	disablenpc instance_npcname("복사지망생 도문#1");
+
+	// Rescue 2
+	disablenpc instance_npcname("#ghmemorialmob02");
+	disablenpc instance_npcname("홀그렌 디스트로이어#1");
+	for ( .@i = 1; .@i <= 26; .@i++ )
+		disablenpc instance_npcname("숨이멎은 남자#" + .@i);
+
+	// Sector 3
+	disablenpc instance_npcname("#ghmemorialmob03");
+
+	// Root of Corruption
+	disablenpc instance_npcname("히멜메즈#2");
+	disablenpc instance_npcname("바르문트#2");
+	disablenpc instance_npcname("하인리히#4");
+	disablenpc instance_npcname("#Mimelon");
+	disablenpc instance_npcname("#Mimelon_cut");
+	disablenpc instance_npcname("#ghmemorialmob04");
+	disablenpc instance_npcname("#ghmemorialmob04_cut");
+
+	// Entrance 2nd map
+	disablenpc instance_npcname("바르문트#21");
+	disablenpc instance_npcname("하인리히#21");
+	disablenpc instance_npcname("#Servanton");
+	disablenpc instance_npcname("#Servanton_cut");
+	hideonnpc instance_npcname("#Servanton_effect");
+
+	// Commanders
+	disablenpc instance_npcname("#ghmemorialmob05");
+	disablenpc instance_npcname("#ghmemorialmob04_cut");
+	disablenpc instance_npcname("#ghmemorialmob06");
+	for ( .@i = 1; .@i <= 7; .@i++ ) {
+		disablenpc instance_npcname("#ogh_2-" + .@i);
+		disablenpc instance_npcname("#ogh_3-" + .@i);
+	}
+
+	// Amdarais Room Entrance
+	disablenpc instance_npcname("#Geron");
+	for ( .@i = 1; .@i <= 35; .@i++ )
+		disablenpc instance_npcname("부패한 시체#" + .@i);
+
+	// Amdarais Spawn
+	disablenpc instance_npcname("게르할트#23");
+	disablenpc instance_npcname("히멜메즈#22");
+	disablenpc instance_npcname("히멜메즈#22_cut");
+	disablenpc instance_npcname("히멜메즈#23");
+	disablenpc instance_npcname("바르문트#23");
+	disablenpc instance_npcname("하인리히#23");
+	disablenpc instance_npcname("#ghmemorialmob07");
+
+	// Varmundt Buffs
+	disablenpc instance_npcname("#ghmemorialmob08");
+	disablenpc instance_npcname("바르문트의 유령#Buff1");
+	disablenpc instance_npcname("바르문트의 유령#Buff2");
+	disablenpc instance_npcname("바르문트의 유령#Buff3");
+	disablenpc instance_npcname("바르문트의 유령#Buff4");
+	disablenpc instance_npcname("후긴#21");
+
+	// Warps
+	disablenpc instance_npcname("#2Control");
+	disablenpc instance_npcname("#2Control2");
+	disablenpc instance_npcname("#3Control");
+	disablenpc instance_npcname("#3Control2");
+	disablenpc instance_npcname("#4Control");
+	disablenpc instance_npcname("#4Control2");
+	disablenpc instance_npcname("#2F Entrance");
+	disablenpc instance_npcname("#1 Control");
+	disablenpc instance_npcname("#22 Control");
+	disablenpc instance_npcname("#22 Control2");
+	disablenpc instance_npcname("#23 Control");
+	disablenpc instance_npcname("#23 Control2");
+	disablenpc instance_npcname("#24 Control");
+	disablenpc instance_npcname("#24 Control2");
+	disablenpc instance_npcname("#Secret Room Exit");
+	end;
+}
+
+// Warps
+1@gl_k2,96,80,0	warp	#2Control_h	2,2,1@gl_k2,80,80
+1@gl_k2,90,80,0	warp	#2Control2_h	2,2,1@gl_k2,105,80
+1@gl_k2,202,79,0	warp	#3Control_h	2,2,1@gl_k2,215,79
+1@gl_k2,206,79,0	warp	#3Control2_h	2,2,1@gl_k2,195,79
+1@gl_k2,227,216,0	warp	#4Control_h	2,2,1@gl_k2,215,216
+1@gl_k2,222,216,0	warp	#4Control2_h	2,2,1@gl_k2,233,216
+1@gl_k2,150,284,0	warp	#2F Entrance_h	2,2,2@gl_k2,150,46
+2@gl_k2,149,32,0	warp	#1 Control_h	2,2,1@gl_k2,150,270
+2@gl_k2,145,123,0	warp	#22 Control_h	2,2,2@gl_k2,126,123
+2@gl_k2,136,122,0	warp	#22 Control2_h	2,2,2@gl_k2,150,116
+2@gl_k2,154,101,0	warp	#23 Control_h	2,2,2@gl_k2,174,101
+2@gl_k2,165,101,0	warp	#23 Control2_h	2,2,2@gl_k2,150,111
+2@gl_k2,150,163,0	warp	#24 Control_h	2,2,2@gl_k2,150,179
+2@gl_k2,150,167,0	warp	#24 Control2_h	2,2,2@gl_k2,150,149
+1@gl_k2,69,168,0	warp	#Secret Room Exit_h	2,2,1@gl_k2,48,168
+
+// Floor 1
+//============================================================
+1@gl_k2,149,41,5	script	바르문트#0_h	4_M_BARMUND,{
+	if (is_party_leader() == false) {
+		mes "[바르문트]";
+		mes "파티장은 어디있나? 파티장의 도움이 필요하다네.";
+		cutin "gl_barmund2",2;
+		close3;
+	}
+	if (#glast_h_clear) {
+		mes "이전에 클리어 한 기록이 있습니다.";
+		mes "시나리오를 적당히 생략하고 진행할 수 있습니다.";
+		next;
+		.@sel = select("적당히 생략한다.:모두 감상한다.");
+		if (.@sel == 1) {
+			cutin "GL_BARMUND1.bmp", 2;
+			mes "[바르문트]";
+			mes "그대를 본 적이 있소 " + strcharinfo(0) + ".";
+			mes "당신이라면 믿을 만 하겠지. 바로 출발 합시다";
+			close2;
+			cutin "",255;
+			disablenpc instance_npcname("바르문트#0_h");
+			enablenpc instance_npcname("하인리히#1_h");
+			enablenpc instance_npcname("바르문트#1_h");
+			set 'glast_h_cut, 1;
+			end;
+		}
+	}
+	set 'glast_h_cut, 0;
+	set #glast_h_clear, 0;
+	'party_id = getcharid(1);
+	.@account_id = getcharid(3);
+	.@player_name$ = strcharinfo(0);
+	mes "[바르문트]";
+	mes "날 돕기위해 ^0000ff헤리코^000000가 보낸 친구들이 당신인가?";
+	npctalk "바르문트: 날 돕기위해 헤리코가 보낸 친구들이 당신인가?";
+	cutin "gl_barmund1",2;
+	next;
+	select("아. 네 뭐 ...");
+	mes "[" + .@player_name$ + "]";
+	mes "아 네, 하하하, 헤리코님이 현자 바르문트님을 만나보라 하더군요.";
+	unittalk .@account_id, .@player_name$ + " : 아 네, 하하하, 헤리코님이 현자 바르문트님을 만나보라 하더군요.";
+	next;
+	mes "[바르문트]";
+	mes "시간이 없어. 하인리히 경 에게 히멜메즈의 침략에 대해 말해야 한다.";
+	npctalk "바르문트: 시간이 없어. 하인리히 경 에게 히멜메즈의 침략에 대해 말해야 한다.";
+	cutin "gl_barmund2",2;
+	next;
+	select("히멜메즈라니...");
+	mes "[" + .@player_name$ + "]";
+	mes "히멜메즈가 누굽니까?";
+	unittalk .@account_id, .@player_name$ + " : 히멜메즈가 누굽니까?";
+	next;
+	mes "[바르문트]";
+	mes "헤리코가 기본적인 정보도 주지않았나?";
+	npctalk "바르문트: 헤리코가 기본적인 정보도 주지않았나?";
+	cutin "gl_barmund3",2;
+	next;
+	mes "[바르문트]";
+	mes "죽은자를 다스리는 이, 망자의 발키리. 그녀는 지금 이곳에 숨겨진 이미르의 심장을 취할 예정이야.";
+	npctalk "바르문트: 죽은자를 다스리는 이, 망자의 발키리. 그녀는 지금 이곳에 숨겨진 이미르의 심장을 취할 예정이야.";
+	cutin "gl_barmund2",2;
+	next;
+	mes "[바르문트]";
+	mes "아마도 목적을 위해 이 성 전체를 초토화 시킬지도 모르지.";
+	npctalk "바르문트: 아마도 목적을 위해 이 성 전체를 초토화 시킬지도 모르지.";
+	next;
+	mes "[바르문트]";
+	mes "서둘러! 어서 하인리히경에게 가서 히멜메즈에 대해 알려라. 난 잠시 이곳의 결계를 살펴볼 것이다!";
+	npctalk "바르문트: 서둘러! 어서 하인리히경에게 가서 히멜메즈에 대해 알려라. 난 잠시 이곳의 결계를 살펴볼 것이다!";
+	close2;
+	cutin "",255;
+	disablenpc instance_npcname("바르문트#0_h");
+	enablenpc instance_npcname("하인리히#1_h");
+	enablenpc instance_npcname("바르문트#1_h");
+	end;
+}
+
+
+1@gl_k2,145,104,6	script	칼리츠버그기사단#1_h	4_F_KHALITZBURG,{
+	mes "[칼리츠버그기사단]";
+	mes "곧 근무교대 시간인데 무슨일이 생긴건지 교대자들이 오지 않는군요.";
+	close;
+}
+
+1@gl_k2,154,104,3	script	칼리츠버그기사단#2_h	4_F_KHALITZBURG,{
+	mes "[칼리츠버그기사단]";
+	mes "제게 하실 말씀이라도 있으신가요?";
+	close;
+}
+
+1@gl_k2,145,99,6	script	백색의 기사#3_h	4_WHITEKNIGHT,{
+	mes "[백색의 기사]";
+	mes "바르문트님과 함께 오신 분입니까? 사령관님꼐서 기다리고 계십니다.";
+	close;
+}
+
+1@gl_k2,154,99,3	duplicate(칼리츠버그기사단#1_h)	백색의 기사#4_h	4_WHITEKNIGHT
+
+1@gl_k2,145,94,6	script	칼리츠버그기사단#5_h	4_F_KHALITZBURG,{
+	mes "[칼리츠버그기사단]";
+	mes "어젯밤 꿈이 심상치 않았어요.";
+	mes "어머니가 꿈에 나오셨는데 무슨 일이 있는건 아닌지...";
+	close;
+}
+
+1@gl_k2,154,94,3	duplicate(백색의 기사#3_h)	칼리츠버그기사단#6_h	4_F_KHALITZBURG
+
+1@gl_k2,145,89,6	script	백색의 기사#7_h	4_WHITEKNIGHT,{
+	mes "[백색의 기사]";
+	mes "이곳에서 소란을 떠시는건 곤란합니다.";
+	close;
+}
+1@gl_k2,154,89,3	duplicate(백색의 기사#7_h)	백색의 기사#8_h	4_WHITEKNIGHT
+
+1@gl_k2,145,84,6	script	칼리츠버그기사단#9_h	4_F_KHALITZBURG,{
+	mes "[칼리츠버그기사단]";
+	mes "정숙해 주십시오.";
+	close;
+}
+1@gl_k2,154,84,3	duplicate(칼리츠버그기사단#9_h)	칼리츠버그기사단#10_h	4_F_KHALITZBURG
+
+1@gl_k2,145,79,6	script	백색의 기사#11_h	4_WHITEKNIGHT,{
+	mes "[백색의 기사]";
+	mes "바르문트님과는 무슨 관계이신가요. 사람을 멀리 하는 분이라 들었는데...";
+	close;
+}
+1@gl_k2,154,79,3	duplicate(백색의 기사#11_h)	백색의 기사#12_h	4_WHITEKNIGHT
+
+1@gl_k2,145,74,6	script	칼리츠버그기사단#13_h	4_F_KHALITZBURG,{
+	mes "[칼리츠버그기사단]";
+	mes "뭔가 성 안의 기운이 이상하지 않습니까? 조금 전 부터 뭔가 기척이 사라진것 같은데요.";
+	close;
+}
+1@gl_k2,154,74,3	duplicate(칼리츠버그기사단#13_h)	칼리츠버그기사단#14_h	4_F_KHALITZBURG
+
+1@gl_k2,145,69,6	script	백색의 기사#15_h	4_WHITEKNIGHT,{
+	mes "[백색의 기사]";
+	mes "저는 근무중에 잡담을 하는것을 좋아하지 않습니다.";
+	close;
+}
+1@gl_k2,154,69,3	duplicate(백색의 기사#15_h)	백색의 기사#16_h	4_WHITEKNIGHT
+
+1@gl_k2,145,64,6	script	칼리츠버그기사단#17_h	4_F_KHALITZBURG,{
+	mes "[칼리츠버그기사단]";
+	mes "...";
+	close;
+}
+1@gl_k2,154,64,3	duplicate(칼리츠버그기사단#17_h)	칼리츠버그기사단#18_h	4_F_KHALITZBURG
+
+1@gl_k2,145,59,6	script	백색의 기사#19_h	4_WHITEKNIGHT,{
+	mes "[백색의 기사]";
+	mes "제게 무슨 용건이십니까?";
+	close;
+}
+1@gl_k2,154,59,3	duplicate(백색의 기사#19_h)	백색의 기사#20_h	4_WHITEKNIGHT
+
+1@gl_k2,145,54,6	script	칼리츠버그기사단#21_h	4_F_KHALITZBURG,{
+	mes "[칼리츠버그기사단]";
+	mes "필요한 것이 있으십니까?";
+	close;
+}
+1@gl_k2,154,54,3	duplicate(칼리츠버그기사단#21_h)	칼리츠버그기사단#22_h	4_F_KHALITZBURG
+
+
+//스킵용 워프
+1@gl_k2,149,96,1	script	#cut01_h	GATE_SKYBLUE,{
+	instance_warpall "1@gl_k2",151,232;
+	enablenpc instance_npcname("#Mimelon_cut_h");
+	enablenpc instance_npcname("히멜메즈#2_h");
+	enablenpc instance_npcname("바르문트#2_h");
+	enablenpc instance_npcname("하인리히#4_h");
+	end;
+}
+
+1@gl_k2,149,100,6	script	하인리히#1_h	4_M_HEINRICH,{
+	if (is_party_leader() == false) {
+		mes "[하인리히]";
+		mes "리더는 어디있나요? 그의 도움이 필요합니다.";
+		cutin "gl_heinrich2",2;
+		close3;
+	}
+	.@account_id = getcharid(3);
+	.@player_name$ = strcharinfo(0);
+	cutin "gl_heinrich2",2;
+	select("하인리히님 지금 성 안에 ...");
+	if ('glast_h_cut) {
+		mes "[하인리히]";
+		mes "오오 " + strcharinfo(0) + ".";
+		mes "그대라면 믿을 만 하겠지. 바로 출발 합시다";
+		close2;
+		disablenpc instance_npcname("하인리히#1_h");
+		enablenpc instance_npcname("하인리히#2_h");
+		enablenpc instance_npcname("히멜메즈#1_h");
+		donpcevent instance_npcname("#talkinstance1_cut_h") + "::OnEnableCut";
+		cutin "",255;
+		end;
+	} else {
+	mes "[" + .@player_name$ + "]";
+	mes "하인리히님 지금 성 안에 무슨 일이 벌어지고 있는지 알고 계십니까?";
+	unittalk .@account_id, .@player_name$ + " : 하인리히님 지금 성 안에 무슨 일이 벌어지고 있는지 알고 계십니까?";
+	next;
+	mes "[하인리히]";
+	mes "그대는 바르문트님과 함께 온 모험가가 아닙니까?";
+	npctalk "하인리히: 그대는 바르문트님과 함께 온 모험가가 아닙니까?";
+	next;
+	mes "[하인리히]";
+	mes "무슨일입니까? 이 성 안에 뭔가 문제라도?";
+	npctalk "하인리히: 무슨일입니까? 이 성 안에 뭔가 문제라도?";
+	next;
+	select("히멜메즈가 숨겨진 이미르의...");
+	mes "[" + .@player_name$ + "]";
+	mes "망자의 발키리 히멜메즈가 이 성안에 숨겨진 이미르의 심장 조각을 노리고 있습니다!";
+	unittalk .@account_id, .@player_name$ + " : 망자의 발키리 히멜메즈가 이 성안에 숨겨진 이미르의 심장 조각을 노리고 있습니다!";
+	next;
+	mes "[하인리히]";
+	mes "하하, 농담도 잘 하시는군요. 그런게 이곳에 있을리가 없잖습니까.";
+	npctalk "하인리히: 하하, 농담도 잘 하시는군요. 그런게 이곳에 있을리가 없잖습니까.";
+	cutin "gl_heinrich1",2;
+	next;
+	mes "[바르문트]";
+	mes "농담이 아니오 하인리히경. 내 판단이 정확하다면 이제 곧 그녀가 이곳으로 찾아올 것이오";
+	npctalk "바르문트: 농담이 아니오 하인리히경. 내 판단이 정확하다면 이제 곧 그녀가 이곳으로 찾아올 것이오", instance_npcname("바르문트#1");
+	cutin "gl_barmund2",2;
+	next;
+	mes "[바르문트]";
+	mes "날 따라온 이 자는 믿어도 좋소. 히멜메즈가 이곳의 이미르 심장조각을 탈취하기 전에 안전한 곳으로 숨겨야 하오!";
+	npctalk "바르문트: 날 따라온 이 자는 믿어도 좋소. 히멜메즈가 이곳의 이미르 심장조각을 탈취하기 전에 안전한 곳으로 숨겨야 하오!", instance_npcname("바르문트#1");
+	next;
+	select("설령 믿지 않으셔도...");
+	mes "[" + .@player_name$ + "]";
+	mes "설령 믿지 않으셔도 어쩔 수 없습니다만, 시간이 없습니다!";
+	unittalk .@account_id, .@player_name$ + " : 설령 믿지 않으셔도 어쩔 수 없습니다만, 시간이 없습니다!";
+	cutin "",255;
+	next;
+	mes "[하인리히]";
+	mes "두 분의 호의는 고맙군요. 하지만 지금 저희의 국왕께선 먼곳으로 떠나 계십니다.";
+	npctalk "하인리히: 두 분의 호의는 고맙군요. 하지만 지금 저희의 국왕께선 먼곳으로 떠나 계십니다.";
+	cutin "gl_heinrich1",2;
+	next;
+	mes "[하인리히]";
+	mes "단지 추측만으로 그런 중요한 안건을 마음대로 처리 할 수는 없습니다.";
+	npctalk "하인리히: 단지 추측만으로 그런 중요한 안건을 마음대로 처리 할 수는 없습니다.";
+	close2;
+	disablenpc instance_npcname("하인리히#1_h");
+	enablenpc instance_npcname("하인리히#2_h");
+	enablenpc instance_npcname("히멜메즈#1_h");
+	donpcevent instance_npcname("#talkinstance1_h") + "::OnEnable";
+	cutin "",255;
+	end;
+	}
+}
+
+1@gl_k2,152,97,3	script	바르문트#1_h	4_M_BARMUND,{ end; }
+1@gl_k2,149,97,5	duplicate(바르문트#1_h)	하인리히#2_h	4_M_HEINRICH
+1@gl_k2,149,100,5	duplicate(바르문트#1_h)	하인리히#3_h	4_M_HEINRICH
+1@gl_k2,149,89,1	duplicate(바르문트#1_h)	히멜메즈#1_h	4_F_HIMEL
+
+// Control Timer
+//============================================================
+1@gl_k2,2,2,0	script	#talkinstance1_cut_h	HIDDEN_WARP_NPC,{
+	end;
+
+OnEnableCut:
+	mapannounce 'map_name$[0], "????의 외침: 오호호호호~!", bc_map,0xFFFF00,FW_NORMAL,18;
+	initnpctimer;
+	'npc_himelmez1$ = instance_npcname("히멜메즈#1_h");
+	'npc_varmundt1$ = instance_npcname("바르문트#1_h");
+	'npc_heinrich2$ = instance_npcname("하인리히#2_h");
+	'npc_heinrich3$ = instance_npcname("하인리히#3_h");
+	end;
+OnTimer800:
+	npctalk "하인리히: 누구냐!.", 'npc_heinrich2$;
+	end;
+OnTimer1800:
+	npctalk "히멜메즈: 이런~ 내가 대화를 방해한건가? 손님이 찾아온지 한참 지났는데도 아무도 못알아보기에 조금 서글퍼져서 말이지...", 'npc_himelmez1$;
+	end;
+OnTimer3800:
+	npctalk "히멜메즈: 일단 내 할일을 하러 가봐야겠어. 그동안 새로운 부하들과 친해져보는건 어때? 호호호", 'npc_himelmez1$;
+	end;
+OnTimer5800:
+	npctalk "하인리히: 이런 제길! 그녀가 이미르의 심장조각이 담긴 위치를 간파하고 있었군.", 'npc_heinrich2$;
+	disablenpc 'npc_himelmez1$;
+	end;
+OnTimer7800:
+	for (.@i = 1; .@i <= 20; .@i += 4) {
+		hideonnpc instance_npcname("칼리츠버그기사단#" + .@i + "_h");
+		hideonnpc instance_npcname("칼리츠버그기사단#" + (.@i+1) + "_h");
+		hideonnpc instance_npcname("백색의 기사#" + (.@i+2) + "_h");
+		hideonnpc instance_npcname("백색의 기사#" + (.@i+3) + "_h");
+	}
+	hideonnpc instance_npcname("칼리츠버그기사단#21_h");
+	hideonnpc instance_npcname("칼리츠버그기사단#22_h");
+
+	.@label$ = instance_npcname("#talkinstance1_h") + "::OnMyMobDead";
+	monster 'map_name$[0],145,59,"심연의기사",3145,1,.@label$;// MG_KNIGHT_OF_ABYSS
+	monster 'map_name$[0],154,59,"심연의기사",3145,1,.@label$;
+	monster 'map_name$[0],145,69,"심연의기사",3145,1,.@label$;
+	monster 'map_name$[0],154,69,"심연의기사",3145,1,.@label$;
+	monster 'map_name$[0],145,79,"심연의기사",3145,1,.@label$;
+	monster 'map_name$[0],154,79,"심연의기사",3145,1,.@label$;
+	monster 'map_name$[0],145,89,"심연의기사",3145,1,.@label$;
+	monster 'map_name$[0],154,89,"심연의기사",3145,1,.@label$;
+	monster 'map_name$[0],145,99,"심연의기사",3145,1,.@label$;
+	monster 'map_name$[0],154,99,"심연의기사",3145,1,.@label$;
+
+	monster 'map_name$[0],145,54,"칼리츠버그",3146,1,.@label$;// G_MG_KHALITZBURG
+	unittalk $@mobid[0],"물... 누가 물 좀 줘...";
+	monster 'map_name$[0],154,54,"칼리츠버그",3146,1,.@label$;
+	unittalk $@mobid[0],"크으으르르르으으...";
+	monster 'map_name$[0],145,64,"칼리츠버그",3146,1,.@label$;
+	unittalk $@mobid[0],"하인리히 경... 저를 구해주세요...";
+	monster 'map_name$[0],154,64,"칼리츠버그",3146,1,.@label$;
+	unittalk $@mobid[0],"누나가 그리워...";
+	monster 'map_name$[0],145,74,"칼리츠버그",3146,1,.@label$;
+	unittalk $@mobid[0],"혼자 두지 마... 도와줘...";
+	monster 'map_name$[0],154,74,"칼리츠버그",3146,1,.@label$;
+	unittalk $@mobid[0],"아아아아아르르르르흐";
+	monster 'map_name$[0],145,84,"칼리츠버그",3146,1,.@label$;
+	unittalk $@mobid[0],"갈증이 난다.";
+	monster 'map_name$[0],154,84,"칼리츠버그",3146,1,.@label$;
+	unittalk $@mobid[0],"아... 안돼... 난 죽을 수 없어...";
+	monster 'map_name$[0],145,94,"칼리츠버그",3146,1,.@label$;
+	unittalk $@mobid[0],"속이 거북해. 으으으";
+	monster 'map_name$[0],154,94,"칼리츠버그",3146,1,.@label$;
+	unittalk $@mobid[0],"누가 날 좀...";
+	monster 'map_name$[0],145,104,"칼리츠버그",3146,1,.@label$;
+	unittalk $@mobid[0],"으윽... 내 몸이";
+	monster 'map_name$[0],154,104,"칼리츠버그",3146,1,.@label$;
+	unittalk $@mobid[0],"목이 타들어간다!";
+	end;
+OnTimer9800:
+	npctalk "하인리히: 죽은자는 죽은자가 있어야 할 곳으로! 모두 돌아갈지어다!", 'npc_heinrich2$;
+	end;	
+OnTimer12800:
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("칼리츠버그기사단#1_h");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("칼리츠버그기사단#2_h");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("칼리츠버그기사단#1_h");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("칼리츠버그기사단#2_h");
+	end;
+OnTimer13100:
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("백색의 기사#3_h");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("백색의 기사#4_h");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("칼리츠버그기사단#5_h");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("칼리츠버그기사단#6_h");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("백색의 기사#3_h");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("백색의 기사#4_h");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("칼리츠버그기사단#5_h");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("칼리츠버그기사단#6_h");
+	end;
+OnTimer13400:
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("백색의 기사#7_h");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("백색의 기사#8_h");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("칼리츠버그기사단#9_h");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("칼리츠버그기사단#10_h");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("백색의 기사#7_h");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("백색의 기사#8_h");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("칼리츠버그기사단#9_h");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("칼리츠버그기사단#10_h");
+	end;
+OnTimer13700:
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("백색의 기사#11_h");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("백색의 기사#12_h");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("칼리츠버그기사단#13_h");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("칼리츠버그기사단#14_h");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("백색의 기사#11_h");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("백색의 기사#12_h");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("칼리츠버그기사단#13_h");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("칼리츠버그기사단#14_h");
+	end;
+OnTimer14000:
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("백색의 기사#15_h");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("백색의 기사#16_h");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("칼리츠버그기사단#17_h");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("칼리츠버그기사단#18_h");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("백색의 기사#15_h");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("백색의 기사#16_h");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("칼리츠버그기사단#17_h");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("칼리츠버그기사단#18_h");
+	end;
+OnTimer14300:
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("백색의 기사#19_h");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("백색의 기사#20_h");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("칼리츠버그기사단#21_h");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("칼리츠버그기사단#22_h");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("백색의 기사#19_h");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("백색의 기사#20_h");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("칼리츠버그기사단#21_h");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("칼리츠버그기사단#22_h");
+	disablenpc 'npc_heinrich2$;
+	enablenpc 'npc_heinrich3$;
+	killmonster 'map_name$[0], instance_npcname("#talkinstance1_h") + "::OnMyMobDead";
+	end;		
+OnTimer17300:	
+	npctalk "하인리히: 그럼 바르문트님 서둘러 히멜메즈의 뒤를 추적합시다.", 'npc_heinrich3$;
+	end;
+OnTimer18300:
+	npctalk "바르문트: 잠깐, 성 안을 돌아다니며 길을 뚫을 시간이 없소. 최대한 빠르게 추적 가능한 차원문을 열겠소.", 'npc_varmundt1$;
+	end;
+OnTimer19300:
+	specialeffect 842, AREA, 'npc_varmundt1$;
+	end;
+OnTimer21300:	
+	enablenpc instance_npcname("#cut01_h");
+	disablenpc instance_npcname("하인리히#3_h");
+	disablenpc instance_npcname("바르문트#1_h");	
+	end;
+OnTimer22300:
+	stopnpctimer;
+	disablenpc instance_npcname("#talkinstance1_cut_h");
+	'npc_himelmez1$ = 'npc_varmundt1$ = 'npc_heinrich2$ = 'npc_heinrich3$ = "";
+	end;
+}
+
+1@gl_k2,1,1,0	script	#talkinstance1_h	HIDDEN_WARP_NPC,{
+	end;
+OnEnable:
+	mapannounce 'map_name$[0], "????의 외침: 오호호호호~!", bc_map,0xFFFF00,FW_NORMAL,18;
+	initnpctimer;
+	'npc_himelmez1$ = instance_npcname("히멜메즈#1_h");
+	'npc_varmundt1$ = instance_npcname("바르문트#1_h");
+	'npc_heinrich2$ = instance_npcname("하인리히#2_h");
+	'npc_heinrich3$ = instance_npcname("하인리히#3_h");
+	end;
+	
+OnTimer1500:
+	npctalk "하인리히: 누구냐!.", 'npc_heinrich2$;
+	end;
+OnTimer4500:
+	npctalk "히멜메즈: 이런~ 내가 대화를 방해한건가? 손님이 찾아온지 한참 지났는데도 아무도 못알아보기에 조금 서글퍼져서 말이지...", 'npc_himelmez1$;
+	end;
+OnTimer10000:
+	npctalk "바르문트: 히멜메즈!! 어느 틈에!", 'npc_varmundt1$;
+	end;
+OnTimer17500:
+	npctalk "히멜메즈: 내 이름은 리사 칸 히멜메즈. 듀라한의 주인, 망자의 발키리, 뭐 그렇게들 부르더군.", 'npc_himelmez1$;
+	end;
+OnTimer22000:
+	npctalk "하인리히: 죽은자를 다스린다고? 그런것 치곤 손이 곱군. 안타깝지만 여기 숙녀에게 대접할 차 같은건 없는데...", 'npc_heinrich2$;
+	end;
+OnTimer28500:
+	npctalk "히멜메즈: 그렇게 여유로운척 할 필요 없어. 네 주군의 행방을 알게 된다면 그렇게 허세를 부릴 틈이 없을테니까.", 'npc_himelmez1$;
+	end;
+OnTimer36000:
+	npctalk "하인리히: 뭐라고?", 'npc_heinrich2$;
+	end;
+OnTimer41000:
+	npctalk "히멜메즈: 호호호, 이제야 겨우 궁금증이 생긴 모양이지? 참 신기한 남자란 말야.", 'npc_himelmez1$;
+	end;
+OnTimer47000:
+	npctalk "히멜메즈: 비어있는 왕의 자리를 탐내지도 않고, 오로지 왕의 귀환을 기다리는 바보같은 남자. 난 그런 당신의 순수함이 참 맘에들어.", 'npc_himelmez1$;
+	end;
+OnTimer54000:
+	npctalk "히멜메즈: 이런 상황에서 만나지 않았더라면 더 좋았을텐데. 아쉽군.", 'npc_himelmez1$;
+	end;
+OnTimer59000:
+	npctalk "하인리히: 나의 왕께선 룬 미드가츠 왕가의 초대에 응한 것 뿐이다. 아직 돌아오지 않으셨을 뿐이지.", 'npc_heinrich2$;
+	end;
+OnTimer66500:
+	npctalk "하인리히: 헌데 방금전 너의 말은 묵과할 수 없군. 왕께 무슨일이 생긴 것이냐!", 'npc_heinrich2$;
+	end;
+OnTimer71500:
+	npctalk "히멜메즈: 글쎄~ 찬찬히 설명해 주고 싶지만 오늘은 그런 용무로 온게 아니라서 말이지~.", 'npc_himelmez1$;
+	end;
+OnTimer78000:
+	npctalk "히멜메즈: 일단 내 할일을 하러 가봐야겠어. 그동안 새로운 부하들과 친해져보는건 어때? 호호호", 'npc_himelmez1$;
+	end;
+OnTimer84500:
+	npctalk "하인리히: 이런 제길! 그녀가 이미르의 심장조각이 담긴 위치를 간파하고 있었군.", 'npc_heinrich2$;
+	disablenpc 'npc_himelmez1$;
+	end;
+OnTimer90500:
+	npctalk "하인리히: 칼리츠버그기사단과 백의의 기사단은 지금 즉시 나를 따라...", 'npc_heinrich2$;
+	end;
+OnTimer92000:
+	for (.@i = 1; .@i <= 20; .@i += 4) {
+		hideonnpc instance_npcname("칼리츠버그기사단#" + .@i + "_h");
+		hideonnpc instance_npcname("칼리츠버그기사단#" + (.@i+1) + "_h");
+		hideonnpc instance_npcname("백색의 기사#" + (.@i+2) + "_h");
+		hideonnpc instance_npcname("백색의 기사#" + (.@i+3) + "_h");
+	}
+	hideonnpc instance_npcname("칼리츠버그기사단#21_h");
+	hideonnpc instance_npcname("칼리츠버그기사단#22_h");
+
+	.@label$ = instance_npcname("#talkinstance1_h") + "::OnMyMobDead";
+	monster 'map_name$[0],145,59,"심연의기사",3145,1,.@label$;// MG_KNIGHT_OF_ABYSS
+	monster 'map_name$[0],154,59,"심연의기사",3145,1,.@label$;
+	monster 'map_name$[0],145,69,"심연의기사",3145,1,.@label$;
+	monster 'map_name$[0],154,69,"심연의기사",3145,1,.@label$;
+	monster 'map_name$[0],145,79,"심연의기사",3145,1,.@label$;
+	monster 'map_name$[0],154,79,"심연의기사",3145,1,.@label$;
+	monster 'map_name$[0],145,89,"심연의기사",3145,1,.@label$;
+	monster 'map_name$[0],154,89,"심연의기사",3145,1,.@label$;
+	monster 'map_name$[0],145,99,"심연의기사",3145,1,.@label$;
+	monster 'map_name$[0],154,99,"심연의기사",3145,1,.@label$;
+
+	monster 'map_name$[0],145,54,"칼리츠버그",3146,1,.@label$;// G_MG_KHALITZBURG
+	unittalk $@mobid[0],"물... 누가 물 좀 줘...";
+	monster 'map_name$[0],154,54,"칼리츠버그",3146,1,.@label$;
+	unittalk $@mobid[0],"크으으르르르으으...";
+	monster 'map_name$[0],145,64,"칼리츠버그",3146,1,.@label$;
+	unittalk $@mobid[0],"하인리히 경... 저를 구해주세요...";
+	monster 'map_name$[0],154,64,"칼리츠버그",3146,1,.@label$;
+	unittalk $@mobid[0],"누나가 그리워...";
+	monster 'map_name$[0],145,74,"칼리츠버그",3146,1,.@label$;
+	unittalk $@mobid[0],"혼자 두지 마... 도와줘...";
+	monster 'map_name$[0],154,74,"칼리츠버그",3146,1,.@label$;
+	unittalk $@mobid[0],"아아아아아르르르르흐";
+	monster 'map_name$[0],145,84,"칼리츠버그",3146,1,.@label$;
+	unittalk $@mobid[0],"갈증이 난다.";
+	monster 'map_name$[0],154,84,"칼리츠버그",3146,1,.@label$;
+	unittalk $@mobid[0],"아... 안돼... 난 죽을 수 없어...";
+	monster 'map_name$[0],145,94,"칼리츠버그",3146,1,.@label$;
+	unittalk $@mobid[0],"속이 거북해. 으으으";
+	monster 'map_name$[0],154,94,"칼리츠버그",3146,1,.@label$;
+	unittalk $@mobid[0],"누가 날 좀...";
+	monster 'map_name$[0],145,104,"칼리츠버그",3146,1,.@label$;
+	unittalk $@mobid[0],"으윽... 내 몸이";
+	monster 'map_name$[0],154,104,"칼리츠버그",3146,1,.@label$;
+	unittalk $@mobid[0],"목이 타들어간다!";
+	end;
+OnTimer94000:
+	npctalk "하인리히: 이럴수가. 내 부하들이...이런 일은 있을 수가 없어!", 'npc_heinrich2$;
+	end;
+OnTimer96500:
+	npctalk "바르문트: 하인리히경 그들은 이미 마물화 되었소. 어서 그들에게 안식을 되찾아 주시오!", 'npc_varmundt1$;
+	end;
+OnTimer100000:
+	npctalk "하인리히: 미안하다...", 'npc_heinrich2$;
+	end;
+OnTimer103000:
+	npctalk "하인리히: 미안하다 나의 부하들아! 나를 영원히 용서하지 마라.", 'npc_heinrich2$;
+	end;
+OnTimer104500:
+	npctalk "하인리히: 죽은자는 죽은자가 있어야 할 곳으로! 모두 돌아갈지어다!", 'npc_heinrich2$;
+	end;	
+OnTimer105000:
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("칼리츠버그기사단#1_h");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("칼리츠버그기사단#2_h");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("칼리츠버그기사단#1_h");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("칼리츠버그기사단#2_h");
+	end;
+OnTimer105500:
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("백색의 기사#3_h");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("백색의 기사#4_h");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("칼리츠버그기사단#5_h");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("칼리츠버그기사단#6_h");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("백색의 기사#3_h");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("백색의 기사#4_h");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("칼리츠버그기사단#5_h");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("칼리츠버그기사단#6_h");
+	end;
+OnTimer106000:
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("백색의 기사#7_h");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("백색의 기사#8_h");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("칼리츠버그기사단#9_h");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("칼리츠버그기사단#10_h");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("백색의 기사#7_h");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("백색의 기사#8_h");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("칼리츠버그기사단#9_h");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("칼리츠버그기사단#10_h");
+	end;
+OnTimer106500:
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("백색의 기사#11_h");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("백색의 기사#12_h");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("칼리츠버그기사단#13_h");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("칼리츠버그기사단#14_h");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("백색의 기사#11_h");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("백색의 기사#12_h");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("칼리츠버그기사단#13_h");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("칼리츠버그기사단#14_h");
+	end;
+OnTimer107000:
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("백색의 기사#15_h");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("백색의 기사#16_h");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("칼리츠버그기사단#17_h");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("칼리츠버그기사단#18_h");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("백색의 기사#15_h");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("백색의 기사#16_h");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("칼리츠버그기사단#17_h");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("칼리츠버그기사단#18_h");
+	end;
+OnTimer107500:
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("백색의 기사#19_h");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("백색의 기사#20_h");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("칼리츠버그기사단#21_h");
+	specialeffect EF_GRANDCROSS,AREA, instance_npcname("칼리츠버그기사단#22_h");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("백색의 기사#19_h");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("백색의 기사#20_h");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("칼리츠버그기사단#21_h");
+	specialeffect EF_LEXAETERNA,AREA, instance_npcname("칼리츠버그기사단#22_h");
+	disablenpc 'npc_heinrich2$;
+	enablenpc 'npc_heinrich3$;
+	killmonster 'map_name$[0], instance_npcname("#talkinstance1_h") + "::OnMyMobDead";
+	end;
+OnTimer112500:
+	npctalk "하인리히: 내 손으로 나의 부하들을 죽이게 되다니···", 'npc_heinrich3$;
+	end;
+OnTimer115500:
+	npctalk "바르문트: 하인리히경! 빠른 결단이 필요하오.", 'npc_varmundt1$;
+	end;
+OnTimer118500:
+	npctalk "바르문트: 지금이라도 쫓아가면 그녀를 막을 수 있소!", 'npc_varmundt1$;
+	end;
+OnTimer121500:
+	npctalk "하인리히: 바르문트님의 말이 맞습니다. 지금은 이럴때가 아니지요.", 'npc_heinrich3$;
+	end;
+OnTimer124500:
+	npctalk "하인리히: 함께오신 분들에게 부탁 하나 하겠소.", 'npc_heinrich3$;
+	end;
+OnTimer127500:
+	npctalk "하인리히: 히멜메즈는 산 사람을 마물로 변화시키는 능력자요.", 'npc_heinrich3$;
+	end;
+OnTimer130500:
+	npctalk "하인리히: 하지만 아직 이곳 주변엔 살아남은 생존자가 있을지 모르오.", 'npc_heinrich3$;
+	end;
+OnTimer134500:
+	npctalk "하인리히: 마물들은 처치하고, 생존자가 있다면 부디 구해주시오.", 'npc_heinrich3$;
+	end;
+OnTimer138500:
+	npctalk "하인리히: 난 바르문트님과 함께 히멜메즈의 뒤를 쫓겠소.", 'npc_heinrich3$;
+	end;
+OnTimer143500:
+	npctalk "하인리히: 자 바르문트님 히멜메즈를 찾으러 갑시다.", 'npc_heinrich3$;
+	end;
+OnTimer147500:
+	disablenpc 'npc_heinrich3$;
+	end;
+OnTimer148500:
+	stopnpctimer;
+	donpcevent instance_npcname("#ghmemorialmob01_h") + "::OnStart";
+	disablenpc 'npc_varmundt1$;
+	disablenpc instance_npcname("#talkinstance1_h");
+	'npc_himelmez1$ = 'npc_varmundt1$ = 'npc_heinrich2$ = 'npc_heinrich3$ = "";
+	end;
+OnMyMobDead:
+	end;
+}
+
+// Sector 1 Mobs
+//============================================================
+1@gl_k2,1,1,0	script	#ghmemorialmob01_h	HIDDEN_WARP_NPC,{
+	end;
+OnStart:
+	enablenpc instance_npcname("#ghmemorialmob01_h");
+	enablenpc instance_npcname("#2Control_h");
+	enablenpc instance_npcname("#2Control2_h");
+	mapannounce 'map_name$[0], "9시 방향 2구역으로 통하는 출구가 열렸습니다.", bc_map,0xFFFF00;
+
+	// note: x17 MG_GHOUL / x17 MG_ZOMBIE / x17 MG_WRAITH
+	.@label$ = instance_npcname("#ghmemorialmob01_h") + "::OnMyMobDead";
+	areamonster 'map_name$[0],76,99,87,10,"고통받는 시종장",3141,14,.@label$;
+	areamonster 'map_name$[0],67,39,12, 6,"타락한 수도사",3140,17,.@label$;
+	areamonster 'map_name$[0],67,39,12, 6,"고통받는 시종장",3141,3,.@label$;
+	areamonster 'map_name$[0],32,75,51,58,"부패한 집사",3139,5,.@label$;
+	areamonster 'map_name$[0],45,84,6,137,"부패한 집사",3139,12,.@label$;
+	end;
+OnMyMobDead:
+	.@label$ = instance_npcname("#ghmemorialmob01_h") + "::OnMyMobDead";
+	.@mob_dead_num = 51 - mobcount('map_name$[0],.@label$);
+	if (.@mob_dead_num > 35) {
+		mapannounce 'map_name$[0], "히멜메즈의 마력에서 벗어난 듯 죽은자들이 소멸해 갑니다.", bc_map,0xFFFFFF;
+		killmonster 'map_name$[0], .@label$;
+		enablenpc instance_npcname("복사지망생 도문#1_h");
+		disablenpc instance_npcname("#ghmemorialmob01_h");
+		donpcevent instance_npcname("#ghmemorialmob02_h") + "::OnStart";
+	}
+	end;
+}
+
+1@gl_k2,17,51,3	script	복사지망생 도문#1_h	4_M_KID1,{
+	if (is_party_leader() == false) {
+		mes "[복사지망생 도문]";
+		mes "살려주세요, 제발 살려주세요...";
+		close;
+	}
+	.@account_id = getcharid(3);
+	.@player_name$ = strcharinfo(0);
+	mes "[복사지망생 도문]";
+	mes "살려주세요! 살려주세요!!!";
+	npctalk "복사지망생 도문: 살려주세요! 살려주세요!!!";
+	next;
+	select("이봐 정신차려! 생존자는 너 혼자인가?");
+	mes "[" + .@player_name$ + "]";
+	mes "이봐 정신차려! 생존자는 너 혼자인가?";
+	unittalk .@account_id, .@player_name$ + " : 이봐 정신차려! 생존자는 너 혼자인가?";
+	next;
+	mes "[복사지망생 도문]";
+	mes "시종장님이... 수도사님이... 모두 괴물로 변해버렸어. 난 아무것도 할 수 없었어요.";
+	npctalk "복사지망생 도문: 시종장님이... 수도사님이... 모두 괴물로 변해버렸어. 난 아무것도 할 수 없었어요.";
+	next;
+	mes "[복사지망생 도문]";
+	mes "그냥 여기에 이렇게 숨어 있는것 밖에... 아무것도, 아무것도 할 수 없었어...";
+	npctalk "복사지망생 도문: 그냥 여기에 이렇게 숨어 있는것 밖에... 아무것도, 아무것도 할 수 없었어...";
+	next;
+	select("정신차려!");
+	mes "[" + .@player_name$ + "]";
+	mes "정신차려 꼬마야! 동쪽으로 나가서 중앙 통로를 따라 바깥으로 나가거라! 그 경로는 안전해!";
+	unittalk .@account_id, .@player_name$ + " : 정신차려 꼬마야! 동쪽으로 나가서 중앙 통로를 따라 바깥으로 나가거라! 그 경로는 안전해!";
+	next;
+	mes "[복사지망생 도문]";
+	mes "동쪽 통로로요? 혼자서? 어떻게?";
+	npctalk "복사지망생 도문: 동쪽 통로로요? 혼자서? 어떻게?";
+	next;
+	select("내가 쓰지 않는 둔기를 주마");
+	mes "[" + .@player_name$ + "]";
+	mes "내가 쓰지 않는 둔기를 주마. 아마도 도움이 될거야. 도저히 못하겠다면 눈을 감고 치고 베면 된단다.";
+	unittalk .@account_id, .@player_name$ + " : 내가 쓰지 않는 둔기를 주마. 아마도 도움이 될거야. 도저히 못하겠다면 눈을 감고 치고 베면 된단다.";
+	next;
+	mes "[복사지망생 도문]";
+	mes "알겠어요, 해... 해볼게요.";
+	npctalk "복사지망생 도문: 알겠어요, 해... 해볼게요.";
+	disablenpc instance_npcname("복사지망생 도문#1_h");
+	close;
+}
+
+// Sector 2 Mobs
+//============================================================
+1@gl_k2,1,1,0	script	#ghmemorialmob02_h	HIDDEN_WARP_NPC,{
+	end;
+OnStart:
+	enablenpc instance_npcname("#ghmemorialmob02_h");
+	enablenpc instance_npcname("#3Control_h");
+	enablenpc instance_npcname("#3Control2_h");
+	for ( .@i = 1; .@i <= 26; .@i++ )
+		enablenpc instance_npcname("숨이멎은 남자#" + .@i + "_h");
+	mapannounce 'map_name$[0], "3시 방향 3구역으로 통하는 출구가 열렸습니다.", bc_map,0xFFFF00;
+
+	// note: x34 MG_ZOMBIE / x35 MG_GHOUL
+	.@label$ = instance_npcname("#ghmemorialmob02_h") + "::OnMyMobDead";
+	areamonster 'map_name$[0],236,12,288,52,"흉포해진 제련장인",3141,18,.@label$;// MG_GHOUL
+	areamonster 'map_name$[0],236,12,288,52,"썩어가는 대장장이",3139,17,.@label$;// MG_ZOMBIE
+	areamonster 'map_name$[0],242,71,286,145,"흉포해진 제련장인",3141,17,.@label$;
+	areamonster 'map_name$[0],242,71,286,145,"썩어가는 대장장이",3139,17,.@label$;
+	end;
+OnMyMobDead:
+	.@label$ = instance_npcname("#ghmemorialmob02_h") + "::OnMyMobDead";
+	.@mob_dead_num = 69 - mobcount('map_name$[0],.@label$);
+	if (.@mob_dead_num > 56) {
+		mapannounce 'map_name$[0], "히멜메즈의 마력에서 벗어난 듯 죽은자들이 소멸해 갑니다.", bc_map,0xFFFFFF;
+		killmonster 'map_name$[0],.@label$;
+		enablenpc instance_npcname("홀그렌 디스트로이어#1_h");
+		disablenpc instance_npcname("#ghmemorialmob02_h");
+		donpcevent instance_npcname("#ghmemorialmob03_h") + "::OnEnable";
+	}
+	end;
+}
+
+1@gl_k2,291,145,3	script	홀그렌 디스트로이어#1_h	4_F_JOB_BLACKSMITH,{
+	if (is_party_leader() == false) {
+		mes "[홀그렌 디스트로이어]";
+		mes "사람인가요?";
+		close;
+	}
+	.@account_id = getcharid(3);
+	.@player_name$ = strcharinfo(0);
+	mes "[홀그렌 디스트로이어]";
+	mes "이야압!! 죽어라!!!";
+	npctalk "홀그렌 디스트로이어: 이야압!! 죽어라!!!";
+	specialeffect EF_CRASHEARTH;
+	next;
+	select("안심하세요!");
+	mes "[" + .@player_name$ + "]";
+	mes "안심하세요! 사람입니다. 혼자십니까? 다른 생존자는 없어요?";
+	unittalk .@account_id, .@player_name$ + " : 안심하세요! 사람입니다. 혼자십니까? 다른 생존자는 없어요?";
+	next;
+	mes "[홀그렌 디스트로이어]";
+	mes "살아남은건 저 혼자예요";
+	npctalk "홀그렌 디스트로이어: 살아남은건 저 혼자예요";
+	next;
+	select("여긴 위험합니다");
+	mes "[" + .@player_name$ + "]";
+	mes "여긴 위험합니다. 중앙 통로로 가는길은 아시죠? 홀몸이 아닌 것 같은데... 움직일 수 있겠습니까?";
+	unittalk .@account_id, .@player_name$ + " : 여긴 위험합니다. 중앙 통로로 가는길은 아시죠? 홀몸이 아닌 것 같은데... 움직일 수 있겠습니까?";
+	next;
+	mes "[홀그렌 디스트로이어]";
+	mes "네, 움직일 수 있어요. 움직여야죠 제 아기를 위해서라도.";
+	npctalk "홀그렌 디스트로이어: 네, 움직일 수 있어요. 움직여야죠 제 아기를 위해서라도.";
+	next;
+	select("꼭 살아남으시길...");
+	mes "[" + .@player_name$ + "]";
+	mes "꼭 아기와 함께 무사히 이곳을 빠져나가시길 기원하겠습니다. 같이 가 드리지 못해 미안합니다.";
+	unittalk .@account_id, .@player_name$ + " : 꼭 아기와 함께 무사히 이곳을 빠져나가시길 기원하겠습니다. 같이 가 드리지 못해 미안합니다.";
+	next;
+	mes "[홀그렌 디스트로이어]";
+	mes "아녜요. 구해주신 것만으로도 고맙습니다. 혼자 갈 수 있어요. 그쪽도 행운을 빌어요.";
+	npctalk "홀그렌 디스트로이어: 아녜요. 구해주신 것만으로도 고맙습니다. 혼자 갈 수 있어요. 그쪽도 행운을 빌어요.";
+	disablenpc instance_npcname("홀그렌 디스트로이어#1_h");
+	close;
+}
+
+// Tramp Mobs
+//============================================================
+1@gl_k2,221,82,3	script	숨이멎은 남자#1_h	4_M_DIEMAN,5,5,{
+	end;
+OnTouch_:
+	.@i = rand(1,10);
+	if (.@i == 1) .@mobs = 3;
+	else if (.@i == 2) .@mobs = 4;
+	else if (.@i == 3) .@mobs = 5;
+	else if (.@i < 7) .@mobs = 6;
+	else .@mobs = 7;
+	getmapxy .@map$,.@x,.@y, BL_NPC;
+	specialeffect EF_VENOMDUST;
+	monster .@map$,.@x,.@y,"구더기",3142,.@mobs;
+	disablenpc instance_npcname( strnpcinfo(0) );
+	end;
+}
+1@gl_k2,233,123,4	duplicate(숨이멎은 남자#1_h)	숨이멎은 남자#2_h	4_M_DIEMAN,5,5
+1@gl_k2,258,150,2	duplicate(숨이멎은 남자#1_h)	숨이멎은 남자#3_h	4_M_DIEMAN,5,5
+1@gl_k2,255,157,5	duplicate(숨이멎은 남자#1_h)	숨이멎은 남자#4_h	4_M_DIEMAN,5,5
+1@gl_k2,280,167,4	duplicate(숨이멎은 남자#1_h)	숨이멎은 남자#5_h	4_M_DIEMAN,5,5
+1@gl_k2,293,161,2	duplicate(숨이멎은 남자#1_h)	숨이멎은 남자#6_h	4_M_DIEMAN,5,5
+1@gl_k2,249,101,3	duplicate(숨이멎은 남자#1_h)	숨이멎은 남자#7_h	4_M_DIEMAN,5,5
+1@gl_k2,241,86,6	duplicate(숨이멎은 남자#1_h)	숨이멎은 남자#8_h	4_M_DIEMAN,5,5
+1@gl_k2,246,62,0	duplicate(숨이멎은 남자#1_h)	숨이멎은 남자#9_h	4_M_DIEMAN,5,5
+1@gl_k2,240,43,7	duplicate(숨이멎은 남자#1_h)	숨이멎은 남자#10_h	4_M_DIEMAN,5,5
+1@gl_k2,271,19,1	duplicate(숨이멎은 남자#1_h)	숨이멎은 남자#11_h	4_M_DIEMAN,5,5
+1@gl_k2,282,48,5	duplicate(숨이멎은 남자#1_h)	숨이멎은 남자#12_h	4_M_DIEMAN,5,5
+1@gl_k2,285,81,7	duplicate(숨이멎은 남자#1_h)	숨이멎은 남자#13_h	4_M_DIEMAN,5,5
+1@gl_k2,276,106,0	duplicate(숨이멎은 남자#1_h)	숨이멎은 남자#14_h	4_M_DIEMAN,5,5
+1@gl_k2,261,164,0	duplicate(숨이멎은 남자#1_h)	숨이멎은 남자#15_h	4_M_DIEMAN,5,5
+1@gl_k2,269,173,0	duplicate(숨이멎은 남자#1_h)	숨이멎은 남자#16_h	4_M_DIEMAN,5,5
+1@gl_k2,252,120,0	duplicate(숨이멎은 남자#1_h)	숨이멎은 남자#17_h	4_M_DIEMAN,5,5
+1@gl_k2,213,63,0	duplicate(숨이멎은 남자#1_h)	숨이멎은 남자#18_h	4_M_DIEMAN,5,5
+1@gl_k2,222,39,0	duplicate(숨이멎은 남자#1_h)	숨이멎은 남자#19_h	4_M_DIEMAN,5,5
+1@gl_k2,214,27,0	duplicate(숨이멎은 남자#1_h)	숨이멎은 남자#20_h	4_M_DIEMAN,5,5
+1@gl_k2,223,17,1	duplicate(숨이멎은 남자#1_h)	숨이멎은 남자#21_h	4_M_DIEMAN,5,5
+1@gl_k2,230,50,2	duplicate(숨이멎은 남자#1_h)	숨이멎은 남자#22_h	4_M_DIEMAN,5,5
+1@gl_k2,235,16,3	duplicate(숨이멎은 남자#1_h)	숨이멎은 남자#23_h	4_M_DIEMAN,5,5
+1@gl_k2,226,96,4	duplicate(숨이멎은 남자#1_h)	숨이멎은 남자#24_h	4_M_DIEMAN,5,5
+1@gl_k2,222,119,5	duplicate(숨이멎은 남자#1_h)	숨이멎은 남자#25_h	4_M_DIEMAN,5,5
+1@gl_k2,251,20,6	duplicate(숨이멎은 남자#1_h)	숨이멎은 남자#26_h	4_M_DIEMAN,5,5
+
+// Sector 3 Mobs
+//============================================================
+1@gl_k2,1,1,0	script	#ghmemorialmob03_h	HIDDEN_WARP_NPC,{
+	end;
+OnEnable:
+	enablenpc instance_npcname("#ghmemorialmob03_h");
+	enablenpc instance_npcname("#4Control_h");
+	enablenpc instance_npcname("#4Control2_h");
+	mapannounce 'map_name$[0], "12시 방향 4구역으로 통하는 출구가 열렸습니다.", bc_map,0xFFFF00;
+
+	// note: x50 MG_RAYDRIC / x50 MG_RAYDRIC_ARCHER
+	.@label$ = instance_npcname("#ghmemorialmob03_h") + "::OnMyMobDead";
+	areamonster 'map_name$[0],16,186,43,280,"광폭해진 명사수",3144,25,.@label$;
+	areamonster 'map_name$[0],44,191,89,225,"허기진 근위병",3143,25,.@label$;
+	areamonster 'map_name$[0],115,215,188,273,"부패한 근위병",3143,20,.@label$;
+	areamonster 'map_name$[0],108,232,193,281,"부패한 근위병",3143,5,.@label$;
+	areamonster 'map_name$[0],158,236,230,250,"배회하는 명사수",3144,12,.@label$;
+	areamonster 'map_name$[0],65,231,155,256,"배회하는 명사수",3144,13,.@label$;
+	end;
+OnMyMobDead:
+	.@label$ = instance_npcname("#ghmemorialmob03_h") + "::OnMyMobDead";
+	.@mob_dead_num = 100 - mobcount('map_name$[0],.@label$);
+	if (.@mob_dead_num > 85) {
+		killmonster 'map_name$[0],.@label$;
+		enablenpc instance_npcname("#Mimelon_h");
+		enablenpc instance_npcname("히멜메즈#2_h");
+		enablenpc instance_npcname("바르문트#2_h");
+		enablenpc instance_npcname("하인리히#4_h");
+		disablenpc instance_npcname("#ghmemorialmob03_h");
+		mapannounce 'map_name$[0], "히멜메즈: 제법이구나. 망자들에 둘러싸여 서서히 죽어갈 줄 알았는데~", bc_map,0xFFFFFF;
+		initnpctimer;
+	}
+	end;
+OnTimer5000:
+	mapannounce 'map_name$[0], "히멜메즈: 날 잡고 싶겠지, 2층으로 가는 입구로 오너라, 너희의 운이 어디까지인지 궁금하구나.", bc_map,0xFFFFFF;
+	stopnpctimer;
+	end;
+}
+
+// 1st MVP
+//============================================================
+1@gl_k2,144,258,6	script	하인리히#4_h	4_M_HEINRICH,{
+	mes "[하인리히]";
+	mes "히멜메즈... 내 부하들을 죽이게 만든 행위는 영원히 잊지 않을 것이다.";
+	cutin "gl_heinrich1",2;
+	close3;
+}
+
+// note: never hidden
+1@gl_k2,156,258,3	script	바르문트#2_h	4_M_BARMUND,{
+	cutin "gl_barmund1",2;
+	mes "[바르문트]";
+	if (checkquest(12336,HUNTING) != 2) {
+		mes "결국 이렇게 되고 마는군, 시간 초월자들의 의지를 막는 것은 불가능한 것인가.";
+		close3;
+	}
+	erasequest 12336;
+	if (isbegin_quest(12337) == 0)
+		setquest 12337;// Amdarais Hunt
+	if (isbegin_quest(12338) == 0) {
+		setquest 12338;// Time Traveler
+		completequest 12338;
+		getexp 750000,750000;
+	}
+	mes "이 물건은 심상치 않은 기운을 뿜고있군. 언젠가 이것을 다룰 수 있는 누군가를 만난다면 요긴하게 쓰일지도 모르네.";
+	getitem 6607,1;// 시간의 결정
+	getitem 6755,1;// 오염된 마력
+	close3;
+}
+
+1@gl_k2,150,257,3	script	히멜메즈#2_h	4_F_HIMEL,{
+	cutin "gl_himel2",2;
+	mes "[히멜메즈]";
+	mes "그렇게 긴장한 얼굴로 쳐다볼 필요없어. 곧 끝날거니까.";
+	close3;
+}
+
+1@gl_k2,150,257,0	script	#Mimelon_cut_h	HIDDEN_WARP_NPC,7,7,{
+	end;
+OnTouch_:
+	disablenpc instance_npcname("#Mimelon_cut_h");
+	initnpctimer;
+	'npc_himelmez2$ = instance_npcname("히멜메즈#2_h");
+	'npc_heinrich4$ = instance_npcname("하인리히#4_h");
+	end;
+OnTimer200:
+	npctalk "히멜메즈: 여기까지 찾아온건 지독하게 운이 좋거나, 그만한 능력이 있거나 둘중 하나겠지.", 'npc_himelmez2$;
+	end;
+OnTimer3200:
+	disablenpc 'npc_himelmez2$;
+	end;
+OnTimer6200:
+	npctalk "하인리히: 바르문트경! 모험가분들을 도와주십시오 저는 히멜메즈를 쫓겠습니다!", 'npc_heinrich4$;
+	end;
+OnTimer9200:
+	disablenpc 'npc_heinrich4$;
+	end;
+OnTimer12200:
+	mapannounce 'map_name$[0], "기사단의 깊숙한 곳에서 기분나쁜 메아리가 가까이 다가옵니다.", bc_map,0xFFFFFF;
+	end;
+OnTimer15200:
+	donpcevent instance_npcname("#ghmemorialmob04_cut_h") + "::OnStart";
+	stopnpctimer;
+	'npc_himelmez2$ = 'npc_heinrich4$ = "";
+	end;
+}
+
+1@gl_k2,1,1,0	script	#ghmemorialmob04_cut_h	HIDDEN_WARP_NPC,{
+	end;
+OnStart:
+	enablenpc instance_npcname("#ghmemorialmob04_cut_h");
+	monster 'map_name$[0],150,259,"타락한뿌리",3151,1, instance_npcname("#ghmemorialmob04_cut_h") + "::OnMyMobDead";// MG_CORRUPTION_ROOT
+	'boss_gid = $@mobid[0];
+	unittalk $@mobid[0],"그르르르르르르~~~";
+	initnpctimer;
+	donpcevent instance_npcname(strnpcinfo(0)) + "::OnSummonUnit";
+	end;
+	
+OnMyMobDead:
+	if (mobcount('map_name$[0], instance_npcname("#ghmemorialmob04_h") + "::OnMyMobDead") < 1) {
+		killmonster 'map_name$[0],instance_npcname(strnpcinfo(0)) + "::OnUnitDead";
+		killmonster 'map_name$[0],instance_npcname(strnpcinfo(0)) + "::OnUnitDead2";
+		mapannounce 'map_name$[0], "12시 방향 기사단 2층으로 통하는 출구가 열렸습니다.", bc_map,0xFFFF00;
+		npctalk "바르문트: 녀석의 몸에서 떨어진 물건을 주워 두었네. 갖고싶은 사람은 내게서 받아가게.", instance_npcname("바르문트#2_h");
+		enablenpc instance_npcname("#2F Entrance_h");
+		enablenpc instance_npcname("#1 Control_h");
+		enablenpc instance_npcname("#Servanton_cut_h");
+		enablenpc instance_npcname("하인리히#21_h");
+		enablenpc instance_npcname("바르문트#21_h");
+		donpcevent instance_npcname("#ghmemorialmob05_h") + "::OnStart";
+		disablenpc instance_npcname("#ghmemorialmob04_cut_h");
+
+	}
+end;
+
+OnSummonUnit:
+	sleep 500;
+	.@event$ = instance_npcname(strnpcinfo(0)) + "::OnUnitDead";
+	setarray .@one,
+	154,263,
+	154,255,
+	146,263,
+	146,255;
+	if(unitexists('boss_gid)){
+		for(.@i = 0; .@i < getarraysize(.@one); .@i += 2){
+			sleep 500;
+			if(unitexists('boss_gid))
+				monster 'map_name$[0],.@one[.@i],.@one[.@i+1],"",2536,1,.@event$;
+		}
+	}
+	while(unitexists('boss_gid)){
+		if(unitexists('boss_gid)){
+			getunitdata 'boss_gid,.@boss_data;
+			.@HP = .@boss_data[UMOB_HP];
+			.@MAX_HP = .@boss_data[UMOB_MAXHP];
+			.@trigger = (.@MAX_HP/10)*7;
+		}
+		if(.@HP <= .@trigger)
+			break;
+		sleep 1000;
+	}
+	killmonster 'map_name$[0],.@event$;
+	.@event$ = instance_npcname(strnpcinfo(0)) + "::OnUnitDead2";
+	setarray .@two,
+	147,259,
+	146,267,
+	159,251,
+	141,251,
+	152,258,
+	160,267,
+	147,265,
+	150,253,
+	152,255,
+	154,254,
+	145,256,
+	158,257;
+	if(unitexists('boss_gid)){
+		for(.@i = 0; .@i < getarraysize(.@two); .@i += 2){
+			sleep 500;
+			if(unitexists('boss_gid))
+				monster 'map_name$[0],.@two[.@i],.@two[.@i+1],"",2536,1,.@event$;
+		}
+	}
+OnUnitDead:
+OnUnitDead2:
+end;
+}
+
+1@gl_k2,150,257,0	script	#Mimelon_h	HIDDEN_WARP_NPC,7,7,{
+	end;
+OnTouch_:
+	disablenpc instance_npcname("#Mimelon_h");
+	initnpctimer;
+	'npc_himelmez2$ = instance_npcname("히멜메즈#2_h");
+	'npc_heinrich4$ = instance_npcname("하인리히#4_h");
+	end;
+
+OnTimer3000:
+	npctalk "히멜메즈: 여기까지 찾아온건 지독하게 운이 좋거나, 그만한 능력이 있거나 둘중 하나겠지.", 'npc_himelmez2$;
+	end;
+OnTimer6000:
+	npctalk "히멜메즈: 하지만 아무래도 상관없어.", 'npc_himelmez2$;
+	end;
+OnTimer9000:
+	npctalk "히멜메즈: 이제 이 자리에서 너희 모두 죽을 것이다.", 'npc_himelmez2$;
+	end;
+OnTimer12000:
+	npctalk "하인리히: 히멜메즈! 넌 이곳에서 단 한발짝도 움직일 수 없을 것이다.", 'npc_heinrich4$;
+	end;
+OnTimer15000:
+	npctalk "히멜메즈: 하하핫, 그렇게 되는건 너희들이겠지. 내가 혼자 왔을거라 생각했나?", 'npc_himelmez2$;
+	end;
+OnTimer18000:
+	npctalk "바르문트: 하인리히경! 뭔가 알수없는 강력한 기운이 밀려들고 있소!", instance_npcname("바르문트#2_h");
+	end;
+OnTimer21000:
+	npctalk "하인리히: 이.. 이건!", 'npc_heinrich4$;
+	end;
+OnTimer24000:
+	npctalk "히멜메즈: 내 새 장난감이 너희의 발을 묶어둘 동안 난 즐겁게 놀아보도록 하지.", 'npc_himelmez2$;
+	end;
+OnTimer27000:
+	npctalk "히멜메즈: 그럼 이만~, 기회가 되면 하인리히 당신과는 다시 만나고 싶군.", 'npc_himelmez2$;
+	end;
+OnTimer28000:
+	disablenpc 'npc_himelmez2$;
+	end;
+OnTimer31000:
+	npctalk "하인리히: 바르문트경! 모험가분들을 도와주십시오 저는 히멜메즈를 쫓겠습니다!", 'npc_heinrich4$;
+	end;
+OnTimer32000:
+	disablenpc 'npc_heinrich4$;
+	end;
+OnTimer35000:
+	mapannounce 'map_name$[0], "기사단의 깊숙한 곳에서 기분나쁜 메아리가 가까이 다가옵니다.", bc_map,0xFFFFFF;
+	end;
+OnTimer38000:
+	donpcevent instance_npcname("#ghmemorialmob04_h") + "::OnStart";
+	stopnpctimer;
+	'npc_himelmez2$ = 'npc_heinrich4$ = "";
+	end;
+}
+
+1@gl_k2,1,1,0	script	#ghmemorialmob04_h	HIDDEN_WARP_NPC,{
+	end;
+OnStart:
+	enablenpc instance_npcname("#ghmemorialmob04_h");
+	monster 'map_name$[0],150,259,"타락한뿌리",3151,1, instance_npcname("#ghmemorialmob04_h") + "::OnMyMobDead";// MG_CORRUPTION_ROOT
+	'boss_gid = $@mobid[0];
+	unittalk $@mobid[0],"그르르르르르르~~~";
+	initnpctimer;
+	donpcevent instance_npcname(strnpcinfo(0)) + "::OnSummonUnit";
+	end;
+	
+OnMyMobDead:
+	if (mobcount('map_name$[0], instance_npcname("#ghmemorialmob04_h") + "::OnMyMobDead") < 1) {
+		killmonster 'map_name$[0],instance_npcname(strnpcinfo(0)) + "::OnUnitDead";
+		killmonster 'map_name$[0],instance_npcname(strnpcinfo(0)) + "::OnUnitDead2";
+		mapannounce 'map_name$[0], "12시 방향 기사단 2층으로 통하는 출구가 열렸습니다.", bc_map,0xFFFF00;
+		npctalk "바르문트: 녀석의 몸에서 떨어진 물건을 주워 두었네. 갖고싶은 사람은 내게서 받아가게.", instance_npcname("바르문트#2_h");
+		enablenpc instance_npcname("#2F Entrance_h");
+		enablenpc instance_npcname("#1 Control_h");
+		enablenpc instance_npcname("#Servanton_h");
+		enablenpc instance_npcname("하인리히#21_h");
+		enablenpc instance_npcname("바르문트#21_h");
+		donpcevent instance_npcname("#ghmemorialmob05_h") + "::OnStart";
+		disablenpc instance_npcname("#ghmemorialmob04_h");
+
+	}
+end;
+
+OnSummonUnit:
+	sleep 500;
+	.@event$ = instance_npcname(strnpcinfo(0)) + "::OnUnitDead";
+	setarray .@one,
+	154,263,
+	154,255,
+	146,263,
+	146,255;
+	if(unitexists('boss_gid)){
+		for(.@i = 0; .@i < getarraysize(.@one); .@i += 2){
+			sleep 500;
+			if(unitexists('boss_gid))
+				monster 'map_name$[0],.@one[.@i],.@one[.@i+1],"",2536,1,.@event$;
+		}
+	}
+	while(unitexists('boss_gid)){
+		if(unitexists('boss_gid)){
+			getunitdata 'boss_gid,.@boss_data;
+			.@HP = .@boss_data[UMOB_HP];
+			.@MAX_HP = .@boss_data[UMOB_MAXHP];
+			.@trigger = (.@MAX_HP/10)*7;
+		}
+		if(.@HP <= .@trigger)
+			break;
+		sleep 1000;
+	}
+	killmonster 'map_name$[0],.@event$;
+	.@event$ = instance_npcname(strnpcinfo(0)) + "::OnUnitDead2";
+	setarray .@two,
+	147,259,
+	146,267,
+	159,251,
+	141,251,
+	152,258,
+	160,267,
+	147,265,
+	150,253,
+	152,255,
+	154,254,
+	145,256,
+	158,257;
+	if(unitexists('boss_gid)){
+		for(.@i = 0; .@i < getarraysize(.@two); .@i += 2){
+			sleep 500;
+			if(unitexists('boss_gid))
+				monster 'map_name$[0],.@two[.@i],.@two[.@i+1],"",2536,1,.@event$;
+		}
+	}
+OnUnitDead:
+OnUnitDead2:
+end;
+}
+
+// Floor 2
+//============================================================
+2@gl_k2,148,67,1	script	하인리히#21_h	4_M_HEINRICH,{
+	mes "[하인리히]";
+	mes "사방이 히멜메즈의 결계로 막혀있군...";
+	cutin "gl_heinrich1",2;
+	close3;
+}
+
+2@gl_k2,151,71,7	script	바르문트#21_h	4_M_BARMUND,{
+	mes "[바르문트]";
+	mes "대체, 나는 이 일을 몇 번째 해 왔던 것일까. 꿈속에서 수십번은 반복해서 본 것 같은 이 장소. 이 느낌...";
+	cutin "gl_barmund2",2;
+	close3;
+}
+
+2@gl_k2,150,66,0	script	#Servanton_effect_h	HIDDEN_WARP_NPC,{
+	end;
+OnEffect:
+	specialeffect EF_LORD;
+	end;
+}
+
+// note: this part can be skipped
+2@gl_k2,150,66,0	script	#Servanton_cut_h	HIDDEN_WARP_NPC,7,7,{
+	end;
+OnTouch_:
+	disablenpc instance_npcname("#Servanton_cut_h");
+	initnpctimer;
+	'npc_heinrich$ = instance_npcname("하인리히#21_h");
+	'npc_varmundt$ = instance_npcname("바르문트#21_h");
+	end;
+OnTimer3000:
+	npctalk "하인리히: 이런 구조물은 성 안에 없었는데!", 'npc_heinrich$;
+	end;	
+OnTimer6000:
+	npctalk "바르문트: 자. 출발할 시간이오 하인리히경.", 'npc_varmundt$;
+	end;
+OnTimer9000:
+	mapannounce 'map_name$[1], "9시 방향 1구역으로 통하는 출구가 열렸습니다. 중앙 통로쪽에서 이동 가능합니다.", bc_map,0xFFFF00;
+	enablenpc instance_npcname("#22 Control_h");
+	enablenpc instance_npcname("#22 Control2_h");
+	disablenpc 'npc_varmundt$;
+	disablenpc 'npc_heinrich$;
+	stopnpctimer;
+	'npc_varmundt$ = 'npc_heinrich$ = "";
+	end;
+}	
+
+2@gl_k2,150,66,0	script	#Servanton_h	HIDDEN_WARP_NPC,7,7,{
+	end;
+OnTouch_:
+	disablenpc instance_npcname("#Servanton_h");
+	initnpctimer;
+	'npc_heinrich$ = instance_npcname("하인리히#21_h");
+	'npc_varmundt$ = instance_npcname("바르문트#21_h");
+	end;
+
+OnTimer3000:
+	npctalk "하인리히: 이런 구조물은 성 안에 없었는데!", 'npc_heinrich$;
+	end;
+OnTimer6000:
+	npctalk "바르문트: 히멜메즈의 결계요. 통로와 각 구역을 완전히 봉쇄해버렸소.", 'npc_varmundt$;
+	end;
+OnTimer9000:
+	npctalk "하인리히: 힘으로 무너뜨려 보려 했지만 칼날은 먹히지 않는군.", 'npc_heinrich$;
+	end;
+OnTimer12000:
+	npctalk "바르문트: 잠시 물러나시오. 마법의 힘으로 어떻게든 해볼테니", 'npc_varmundt$;
+	end;
+OnTimer15000:
+	specialeffect EF_LORD,AREA, instance_npcname("#Servanton_effect_h");
+	disablenpc instance_npcname("#Servanton_effect_h");
+	end;
+OnTimer18000:
+	npctalk "바르문트: 결계 한쪽이 무너진 것 같군.", 'npc_varmundt$;
+	end;
+OnTimer21000:
+	npctalk "바르문트: 이런 결계는 예전에 본 적이 있소.", 'npc_varmundt$;
+	end;
+OnTimer24000:
+	npctalk "바르문트: 히멜메즈는 언데드화 된 사람의 몸에 결계석을 심어두곤 하지.", 'npc_varmundt$;
+	end;
+OnTimer27000:
+	npctalk "바르문트: 아마도 이 결계도 그런 식으로 유지되고 있을 것이오.", 'npc_varmundt$;
+	end;
+OnTimer30000:
+	npctalk "바르문트: 결계를 깨려면 그들중 결계석을 가진자를 죽여야 하오.", 'npc_varmundt$;
+	end;
+OnTimer33000:
+	npctalk "바르문트: 하지만 그런 식별은 우리가 할 수 없지. 닥치는대로 정화할 수 밖에.", 'npc_varmundt$;
+	end;
+OnTimer36000:
+	npctalk "하인리히: 용서받지 못할 짓이군요.", 'npc_heinrich$;
+	end;
+OnTimer39000:
+	npctalk "하인리히: 저는 이미 부하였던 자들을 몰살시켰습니다. 앞으로 얼마나 더...", 'npc_heinrich$;
+	end;
+OnTimer42000:
+	npctalk "바르문트: 사령관...", 'npc_varmundt$;
+	end;
+OnTimer45000:
+	npctalk "바르문트: 사령관은 너무 무른것 같소.", 'npc_varmundt$;
+	end;
+OnTimer48000:
+	npctalk "바르문트: 우리가 상대할 존재는 이미 사람이 아니라오.", 'npc_varmundt$;
+	end;
+OnTimer51000:
+	npctalk "바르문트: 그것을 부정한다고 해서 그들이 다시 사람이 되진 않소.", 'npc_varmundt$;
+	end;
+OnTimer54000:
+	npctalk "하인리히: ...", 'npc_heinrich$;
+	end;
+OnTimer57000:
+	npctalk "바르문트: 그럼, 가봅시다.", 'npc_varmundt$;
+	end;
+OnTimer60000:
+	npctalk "바르문트: 그리고 너흰 잠시 전력을 추스른 뒤에 우릴 따르도록 해라.", 'npc_varmundt$;
+	end;
+OnTimer63000:
+	npctalk "바르문트: 힘든 싸움이 될지도 모르니 마음 단단히 먹는게 좋을 것이다.", 'npc_varmundt$;
+	end;
+OnTimer66000:
+	npctalk "바르문트: 자. 출발할 시간이오 하인리히경.", 'npc_varmundt$;
+	end;
+OnTimer69000:
+	mapannounce 'map_name$[1], "9시 방향 1구역으로 통하는 출구가 열렸습니다. 중앙 통로쪽에서 이동 가능합니다.", bc_map,0xFFFF00;
+	enablenpc instance_npcname("#22 Control_h");
+	enablenpc instance_npcname("#22 Control2_h");
+	disablenpc 'npc_varmundt$;
+	disablenpc 'npc_heinrich$;
+	stopnpctimer;
+	'npc_varmundt$ = 'npc_heinrich$ = "";
+	end;
+}
+
+// Spots
+// Note: timer is the only condition for them to respawn
+
+2@gl_k2,118,141,0	script	#ogh_2-1_h	HIDDEN_WARP_NPC,20,20,{
+	end;
+OnTouch_:
+OnSpawn:
+	disablenpc instance_npcname( strnpcinfo(0) );
+	.@hidden_name$ = strnpcinfo(2);
+	.@event_type = atoi( charat(.@hidden_name$,4) );
+	if (.@event_type == 2)
+		.@label$ = instance_npcname("#ghmemorialmob05_h") + "::OnMyMobDead";
+	else
+		.@label$ = instance_npcname("#ghmemorialmob06_h") + "::OnMyMobDead";
+	getmapxy .@map$,.@x,.@y, BL_NPC;
+	monster .@map$,.@x,.@y, "부패한 근위병", 3143,1, .@label$;
+	monster .@map$,.@x,.@y, "죽음의 궁수", 3144,1, .@label$;
+	monster .@map$,.@x,.@y, "타락한 심연의 기사", 3145,1, .@label$;
+	monster .@map$,.@x,.@y, "고통받는 칼리츠버그", 3146,1, .@label$;
+	monster .@map$,.@x,.@y, "부풀어오른 기사", 3147,1, .@label$;
+	initnpctimer;
+	end;
+	
+OnTimer30000:
+	enablenpc instance_npcname( strnpcinfo(0) );
+	stopnpctimer;
+	end;
+OnStop:
+	disablenpc instance_npcname( strnpcinfo(0) );
+	stopnpctimer;
+	end;
+}
+
+2@gl_k2,128,81,0	duplicate(#ogh_2-1_h)	#ogh_2-2_h	HIDDEN_WARP_NPC,20,20
+2@gl_k2,131,54,0	duplicate(#ogh_2-1_h)	#ogh_2-3_h	HIDDEN_WARP_NPC,20,20
+2@gl_k2,89,48,0	duplicate(#ogh_2-1_h)	#ogh_2-4_h	HIDDEN_WARP_NPC,20,20
+2@gl_k2,64,117,0	duplicate(#ogh_2-1_h)	#ogh_2-5_h	HIDDEN_WARP_NPC,20,20
+2@gl_k2,62,82,0	duplicate(#ogh_2-1_h)	#ogh_2-6_h	HIDDEN_WARP_NPC,20,20
+2@gl_k2,38,138,0	duplicate(#ogh_2-1_h)	#ogh_2-7_h	HIDDEN_WARP_NPC,20,20
+
+2@gl_k2,171,120,0	duplicate(#ogh_2-1_h)	#ogh_3-1_h	HIDDEN_WARP_NPC,20,20
+2@gl_k2,232,133,0	duplicate(#ogh_2-1_h)	#ogh_3-2_h	HIDDEN_WARP_NPC,20,20
+2@gl_k2,256,149,0	duplicate(#ogh_2-1_h)	#ogh_3-3_h	HIDDEN_WARP_NPC,20,20
+2@gl_k2,212,106,0	duplicate(#ogh_2-1_h)	#ogh_3-4_h	HIDDEN_WARP_NPC,20,20
+2@gl_k2,243,73,0	duplicate(#ogh_2-1_h)	#ogh_3-5_h	HIDDEN_WARP_NPC,20,20
+2@gl_k2,229,26,0	duplicate(#ogh_2-1_h)	#ogh_3-6_h	HIDDEN_WARP_NPC,20,20
+2@gl_k2,181,34,0	duplicate(#ogh_2-1_h)	#ogh_3-7_h	HIDDEN_WARP_NPC,20,20
+
+// Commander 1
+2@gl_k2,1,1,0	script	#ghmemorialmob05_h	HIDDEN_WARP_NPC,{
+	end;
+OnStart:
+	enablenpc instance_npcname("#ghmemorialmob05_h");
+	for ( .@i = 1; .@i <= 7; .@i++ )
+		enablenpc instance_npcname("#ogh_2-" + .@i + "_h");
+	end;
+
+OnMyMobDead:
+	if (rand(10) == 0) {// can re-spawn
+		mapannounce 'map_name$[1], "사악한 기운을 가진 어떤 존재가 이 지역안에 나타난 것 같습니다.", bc_map,0xFFFF44,FW_NORMAL,15;
+		killmonster 'map_name$[1], instance_npcname("#ghmemorialmob05_h") + "::OnBossDead";
+		.@r = rand(4) * 2;
+		setarray .@coord[0], 41,146, 58,44, 122,148, 131,64;
+		monster 'map_name$[1],.@coord[.@r],.@coord[.@r+1], "파멸의 제1기사단장",3148,1, instance_npcname("#ghmemorialmob05_h") + "::OnBossDead";
+		'ogh_com_h1 = 1;
+	}
+	end;
+
+OnBossDead:
+	mapannounce 'map_name$[1], "3시 방향 2구역으로 통하는 출구가 열렸습니다. 중앙 통로쪽에서 이동 가능합니다.", bc_map,0xFFFF00;
+	enablenpc instance_npcname("#23 Control_h");
+	enablenpc instance_npcname("#23 Control2_h");
+	donpcevent instance_npcname("#ghmemorialmob06_h") + "::OnStart";
+
+	disablenpc instance_npcname("#ghmemorialmob05_h");
+	for ( .@i = 1; .@i <= 7; .@i++ )
+		donpcevent instance_npcname("#ogh_2-" + .@i + "_h") + "::OnStop";
+	end;
+}
+
+// Commander 2
+2@gl_k2,1,1,0	script	#ghmemorialmob06_h	HIDDEN_WARP_NPC,{
+	end;
+OnStart:
+	enablenpc instance_npcname("#ghmemorialmob06_h");
+	for ( .@i = 1; .@i <= 7; .@i++ )
+		enablenpc instance_npcname("#ogh_3-" + .@i + "_h");
+
+	// Fix spawn
+	.@label$ = instance_npcname("#ghmemorialmob06_h") + "::OnMyMobDead";
+	monster 'map_name$[1],252, 75, "부패한 근위병",3143,1, .@label$;
+	monster 'map_name$[1],253, 76, "부패한 근위병",3143,1, .@label$;
+	monster 'map_name$[1],247, 77, "부패한 근위병",3143,1, .@label$;
+	monster 'map_name$[1],248, 80, "부패한 근위병",3143,1, .@label$;
+	monster 'map_name$[1],236,100, "부패한 근위병",3143,1, .@label$;
+	monster 'map_name$[1],240,100, "부패한 근위병",3143,1, .@label$;
+	monster 'map_name$[1],242,100, "부패한 근위병",3143,1, .@label$;
+	monster 'map_name$[1],244,100, "부패한 근위병",3143,1, .@label$;
+	monster 'map_name$[1],199,111, "부패한 근위병",3143,1, .@label$;
+	monster 'map_name$[1],181,107, "죽음의 사수",3144,1, .@label$;
+	monster 'map_name$[1],177,110, "죽음의 사수",3144,1, .@label$;
+	monster 'map_name$[1],236, 27, "죽음의 사수",3144,1, .@label$;
+	monster 'map_name$[1],242, 27, "죽음의 사수",3144,1, .@label$;
+	monster 'map_name$[1],252, 26, "죽음의 사수",3144,1, .@label$;
+	monster 'map_name$[1],172,130, "죽음의 사수",3144,1, .@label$;
+	monster 'map_name$[1],171,127, "죽음의 사수",3144,1, .@label$;
+	monster 'map_name$[1],173,127, "죽음의 사수",3144,1, .@label$;
+	monster 'map_name$[1],177, 69, "타락한 심연의 기사",3145,1, .@label$;
+	monster 'map_name$[1],186, 66, "타락한 심연의 기사",3145,1, .@label$;
+	monster 'map_name$[1],189, 67, "타락한 심연의 기사",3145,1, .@label$;
+	monster 'map_name$[1],190, 68, "타락한 심연의 기사",3145,1, .@label$;
+	monster 'map_name$[1],257,157, "타락한 심연의 기사",3145,1, .@label$;
+	monster 'map_name$[1],246,159, "타락한 심연의 기사",3145,1, .@label$;
+	monster 'map_name$[1],237,158, "타락한 심연의 기사",3145,1, .@label$;
+	monster 'map_name$[1],206,159, "타락한 심연의 기사",3145,1, .@label$;
+	monster 'map_name$[1],172,120, "타락한 심연의 기사",3145,1, .@label$;
+	monster 'map_name$[1],226, 30, "고통받는 칼리츠버그",3146,1, .@label$;
+	monster 'map_name$[1],226, 38, "고통받는 칼리츠버그",3146,1, .@label$;
+	monster 'map_name$[1],228, 29, "고통받는 칼리츠버그",3146,1, .@label$;
+	monster 'map_name$[1],226, 63, "고통받는 칼리츠버그",3146,1, .@label$;
+	monster 'map_name$[1],268,137, "고통받는 칼리츠버그",3146,1, .@label$;
+	monster 'map_name$[1],263,138, "고통받는 칼리츠버그",3146,1, .@label$;
+	monster 'map_name$[1],259,138, "고통받는 칼리츠버그",3146,1, .@label$;
+	monster 'map_name$[1],259,138, "고통받는 칼리츠버그",3146,1, .@label$;
+	monster 'map_name$[1],187,121, "고통받는 칼리츠버그",3146,1, .@label$;
+	monster 'map_name$[1],265, 52, "부풀어오른 기사",3147,1, .@label$;
+	monster 'map_name$[1],265, 55, "부풀어오른 기사",3147,1, .@label$; 
+	monster 'map_name$[1],264, 79, "부풀어오른 기사",3147,1, .@label$; 
+	monster 'map_name$[1],225, 92, "부풀어오른 기사",3147,1, .@label$; 
+	monster 'map_name$[1],237, 92, "부풀어오른 기사",3147,1, .@label$; 
+	monster 'map_name$[1],249, 92, "부풀어오른 기사",3147,1, .@label$; 
+	monster 'map_name$[1],256, 93, "부풀어오른 기사",3147,1, .@label$; 
+	monster 'map_name$[1],264,100, "부풀어오른 기사",3147,1, .@label$;
+	monster 'map_name$[1],181,120, "부풀어오른 기사",3147,1, .@label$;
+	end;
+
+OnMyMobDead:
+	if (rand(10) == 0) {// can re-spawn
+		mapannounce 'map_name$[1], "사악한 기운을 가진 어떤 존재가 이 지역안에 나타난 것 같습니다.", bc_map,0xFFFF44,FW_NORMAL,15;
+		killmonster 'map_name$[1], instance_npcname("#ghmemorialmob06_h") + "::OnBossDead";
+
+		.@r = rand(4) * 2;
+		setarray .@coord[0], 166,119, 211,45, 227,139, 245,74;
+		monster 'map_name$[1],.@coord[.@r],.@coord[.@r+1], "파멸의 제2기사단장",3149,1, instance_npcname("#ghmemorialmob06_h") + "::OnBossDead";
+		'ogh_com_h2 = 1;
+	}
+	end;
+
+OnBossDead:
+	mapannounce 'map_name$[1], "12시 방향 3구역으로 통하는 출구가 열렸습니다. 중앙 통로쪽에서 이동 가능합니다.", bc_map,0xFFFF00;
+	enablenpc instance_npcname("#24 Control_h");
+	enablenpc instance_npcname("#24 Control2_h");
+	enablenpc instance_npcname("#Geron_h");
+	for ( .@i = 1; .@i <= 35; .@i++ )
+		enablenpc instance_npcname("부패한 시체#" + .@i + "_h");
+
+	disablenpc instance_npcname("#ghmemorialmob06_h");
+	for ( .@i = 1; .@i <= 7; .@i++ )
+		donpcevent instance_npcname("#ogh_3-" + .@i + "_h") + "::OnStop";
+
+	// Hidden mobs
+	setarray .@coord[0],
+		 37,265, 57,265, 77,265, 97,265, 117,265, 188,264, 208,264,
+		 50,172, 70,172, 90,172, 110,172, 170,172, 210,172, 230,172,
+		 88,214, 108,214, 128,214, 180,219, 200,219, 220,219, 240,219;
+	.@size = getarraysize(.@coord);
+	for ( .@i = 0; .@i < .@size; .@i += 2 )
+		monster 'map_name$[1], .@coord[.@i], .@coord[.@i+1], "파괴의 불꽃",2337,1;// HIDDEN_MOB
+	end;
+}
+
+// Amdarais Room Entrance
+2@gl_k2,150,180,0	script	#Geron_h	HIDDEN_WARP_NPC,7,7,{
+	end;
+OnTouch_:
+	disablenpc instance_npcname("#Geron_h");
+	mapannounce 'map_name$[1], "???: 오지마시오! 이곳은 사방이 함정... 크아아아악!!!!", bc_map,0xFF7777,FW_NORMAL,15;
+	if('glast_h_cut){
+		enablenpc instance_npcname("히멜메즈#22_cut_h");
+		disablenpc instance_npcname("히멜메즈#22_h");
+	} else {
+		disablenpc instance_npcname("히멜메즈#22_cut_h");
+		enablenpc instance_npcname("히멜메즈#22_h");
+	}
+	enablenpc instance_npcname("바르문트#23_h");
+	enablenpc instance_npcname("하인리히#23_h");
+	enablenpc instance_npcname("게르할트#23_h");
+	end;
+}
+
+2@gl_k2,143,260,4	script	부패한 시체#1_h	4_M_DIEMAN,5,5,{
+	end;
+OnTouch_:
+	disablenpc instance_npcname( strnpcinfo(0) );
+	.@i = rand(1,10);
+	if (.@i == 1) .@mobs = 3;
+	else if (.@i == 2) .@mobs = 4;
+	else if (.@i == 3) .@mobs = 5;
+	else if (.@i < 7) .@mobs = 6;
+	else .@mobs = 7;
+	getmapxy .@map$,.@x,.@y, BL_NPC;
+	specialeffect EF_VENOMDUST;
+	monster .@map$,.@x,.@y,"구더기",3142,.@mobs;
+	initnpctimer;
+	end;
+OnTimer45000:
+	enablenpc instance_npcname( strnpcinfo(0) );
+	stopnpctimer;
+	end;
+}
+2@gl_k2,145,236,4	duplicate(부패한 시체#1_h)	부패한 시체#2_h	4_M_DIEMAN,5,5
+2@gl_k2,141,222,2	duplicate(부패한 시체#1_h)	부패한 시체#3_h	4_M_DIEMAN,5,5
+2@gl_k2,147,203,5	duplicate(부패한 시체#1_h)	부패한 시체#4_h	4_M_DIEMAN,5,5
+2@gl_k2,167,225,4	duplicate(부패한 시체#1_h)	부패한 시체#5_h	4_M_DIEMAN,5,5
+2@gl_k2,172,233,2	duplicate(부패한 시체#1_h)	부패한 시체#6_h	4_M_DIEMAN,5,5
+2@gl_k2,176,244,3	duplicate(부패한 시체#1_h)	부패한 시체#7_h	4_M_DIEMAN,5,5
+2@gl_k2,184,248,6	duplicate(부패한 시체#1_h)	부패한 시체#8_h	4_M_DIEMAN,5,5
+2@gl_k2,193,228,0	duplicate(부패한 시체#1_h)	부패한 시체#9_h	4_M_DIEMAN,5,5
+2@gl_k2,206,250,7	duplicate(부패한 시체#1_h)	부패한 시체#10_h	4_M_DIEMAN,5,5
+2@gl_k2,130,249,1	duplicate(부패한 시체#1_h)	부패한 시체#11_h	4_M_DIEMAN,5,5
+2@gl_k2,122,236,5	duplicate(부패한 시체#1_h)	부패한 시체#12_h	4_M_DIEMAN,5,5
+2@gl_k2,130,228,7	duplicate(부패한 시체#1_h)	부패한 시체#13_h	4_M_DIEMAN,5,5
+2@gl_k2,106,226,0	duplicate(부패한 시체#1_h)	부패한 시체#14_h	4_M_DIEMAN,5,5
+2@gl_k2,104,245,0	duplicate(부패한 시체#1_h)	부패한 시체#15_h	4_M_DIEMAN,5,5
+2@gl_k2,131,187,0	duplicate(부패한 시체#1_h)	부패한 시체#16_h	4_M_DIEMAN,5,5
+2@gl_k2,121,197,0	duplicate(부패한 시체#1_h)	부패한 시체#17_h	4_M_DIEMAN,5,5
+2@gl_k2,107,194,0	duplicate(부패한 시체#1_h)	부패한 시체#18_h	4_M_DIEMAN,5,5
+2@gl_k2,92,187,0	duplicate(부패한 시체#1_h)	부패한 시체#19_h	4_M_DIEMAN,5,5
+2@gl_k2,153,214,3	duplicate(부패한 시체#1_h)	부패한 시체#20_h	4_M_DIEMAN,5,5
+2@gl_k2,155,195,4	duplicate(부패한 시체#1_h)	부패한 시체#21_h	4_M_DIEMAN,5,5
+2@gl_k2,154,188,2	duplicate(부패한 시체#1_h)	부패한 시체#22_h	4_M_DIEMAN,5,5
+2@gl_k2,143,195,5	duplicate(부패한 시체#1_h)	부패한 시체#23_h	4_M_DIEMAN,5,5
+2@gl_k2,132,214,4	duplicate(부패한 시체#1_h)	부패한 시체#24_h	4_M_DIEMAN,5,5
+2@gl_k2,125,208,2	duplicate(부패한 시체#1_h)	부패한 시체#25_h	4_M_DIEMAN,5,5
+2@gl_k2,114,210,3	duplicate(부패한 시체#1_h)	부패한 시체#26_h	4_M_DIEMAN,5,5
+2@gl_k2,137,182,6	duplicate(부패한 시체#1_h)	부패한 시체#27_h	4_M_DIEMAN,5,5
+2@gl_k2,138,246,0	duplicate(부패한 시체#1_h)	부패한 시체#28_h	4_M_DIEMAN,5,5
+2@gl_k2,132,260,7	duplicate(부패한 시체#1_h)	부패한 시체#29_h	4_M_DIEMAN,5,5
+2@gl_k2,128,251,1	duplicate(부패한 시체#1_h)	부패한 시체#30_h	4_M_DIEMAN,5,5
+2@gl_k2,179,260,3	duplicate(부패한 시체#1_h)	부패한 시체#31_h	4_M_DIEMAN,5,5
+2@gl_k2,170,261,4	duplicate(부패한 시체#1_h)	부패한 시체#32_h	4_M_DIEMAN,5,5
+2@gl_k2,177,219,2	duplicate(부패한 시체#1_h)	부패한 시체#33_h	4_M_DIEMAN,5,5
+2@gl_k2,190,214,5	duplicate(부패한 시체#1_h)	부패한 시체#34_h	4_M_DIEMAN,5,5
+2@gl_k2,201,214,4	duplicate(부패한 시체#1_h)	부패한 시체#35_h	4_M_DIEMAN,5,5
+
+// Amdarais Spawn
+2@gl_k2,153,250,8	script	하인리히#23_h	4_M_HEINRICH,{
+	cutin "gl_heinrich1",2;
+	mes "[하인리히]";
+	mes "무엇을 꾸미는것이냐 히멜메즈!";
+	close3;
+}
+
+2@gl_k2,162,250,1	script	바르문트#23_h	4_M_BARMUND,{
+	mes "[바르문트]";
+	mes "이 굴레는 영원히 벗어날 수 없는 것인가...";
+	cutin "gl_barmund2",2;
+	close3;
+}
+
+2@gl_k2,158,255,1	script	게르할트#23_h	4_LEVITATEMAN,{
+	mes "[게르할트]";
+	mes "으으으... 크으윽! 사령관을 끌고...어서 도망치시오.";
+	close;
+}
+
+2@gl_k2,158,252,1	script	히멜메즈#22_cut_h	4_F_HIMEL,3,3,{
+	cutin "gl_himel2",2;
+	mes "[히멜메즈]";
+	mes "대단해~ 여기까지 오다니. 이정도면 경의를 표해야 할 지경인걸?";
+	close3;
+	
+OnTouch:
+	end;
+OnTouch_:
+	disablenpc instance_npcname("히멜메즈#22_cut_h");
+	enablenpc instance_npcname("히멜메즈#23_h");
+	initnpctimer;
+	'party_id = getcharid(1);
+	'npc_himelmez$ = instance_npcname("히멜메즈#23_h");
+	'npc_gerhalt$ = instance_npcname("게르할트#23_h");
+	'npc_heinrich$ = instance_npcname("하인리히#23_h");
+	'npc_varmundt$ = instance_npcname("바르문트#23_h");
+	end;
+OnTimer200:
+	npctalk "히멜메즈: 대단해~ 근처도 못오고 끝날 줄 알았는데...", 'npc_himelmez$;
+	end;
+OnTimer2200:
+	specialeffect EF_BARRIER, AREA, 'npc_gerhalt$;
+	end;
+OnTimer4200:
+	disablenpc 'npc_himelmez$;
+	end;
+OnTimer6200:
+	specialeffect EF_CHAINCOMBO, AREA, 'npc_gerhalt$;
+	end;
+OnTimer9000:
+	npctalk "하인리히: 도망치게 내버려둘 것 같으냐 히멜메즈!!", 'npc_heinrich$;
+	specialeffect EF_MAPPILLAR, AREA, 'npc_gerhalt$;
+	end;
+OnTimer12000:
+	specialeffect EF_MAPPILLAR2, AREA, 'npc_gerhalt$;
+	specialeffect EF_MAPPILLAR, AREA, 'npc_gerhalt$;
+	disablenpc 'npc_heinrich$;
+	npctalk "바르문트: 이런, 어쩔 수 없다. 남은 우리의 힘 만으로 암다라이스를 막아야한다!", 'npc_varmundt$;
+	end;
+OnTimer15000:
+	mapannounce 'map_name$[1], "게르할트의 몸이 변해갑니다.", bc_map,0xFFFFFF;
+	end;
+OnTimer18000:
+	specialeffect EF_LORD, AREA, 'npc_gerhalt$;
+	disablenpc 'npc_varmundt$;
+	mapannounce 'map_name$[1], "바르문트: 나의 환영들로 전투를 돕도록 하겠다! 환영의 지시를 따르도록 해라.", bc_map,0xFFFF00;
+	end;
+OnTimer21000:
+	disablenpc 'npc_gerhalt$;
+	donpcevent instance_npcname("#ghmemorialmob07_h") + "::OnStart";
+	stopnpctimer;
+	'npc_himelmez$ = 'npc_gerhalt$ = 'npc_heinrich$ = 'npc_varmundt$ = "";
+	end;	
+}
+
+2@gl_k2,158,252,1	script	히멜메즈#22_h	4_F_HIMEL,3,3,{
+	cutin "gl_himel2",2;
+	mes "[히멜메즈]";
+	mes "대단해~ 여기까지 오다니. 이정도면 경의를 표해야 할 지경인걸?";
+	close3;
+
+OnTouch:
+	end;
+OnTouch_:
+	disablenpc instance_npcname("히멜메즈#22_h");
+	enablenpc instance_npcname("히멜메즈#23_h");
+	initnpctimer;
+	'npc_himelmez$ = instance_npcname("히멜메즈#23_h");
+	'npc_gerhalt$ = instance_npcname("게르할트#23_h");
+	'npc_heinrich$ = instance_npcname("하인리히#23_h");
+	'npc_varmundt$ = instance_npcname("바르문트#23_h");
+	end;
+
+OnTimer3000:
+	npctalk "히멜메즈: 대단해~ 근처도 못오고 끝날 줄 알았는데...", 'npc_himelmez$;
+	end;
+OnTimer6000:
+	npctalk "게르할트: 크으윽! 도망치세요! 더는 제가 버티지 못합니다!", 'npc_gerhalt$;
+	end;
+OnTimer9000:
+	npctalk "하인리히: 게르할트!", 'npc_heinrich$;
+	end;
+OnTimer15000:
+	npctalk "게르할트: 사령관...님... 어서 이곳에서 도망치셔야... 합니다. 크윽", 'npc_gerhalt$;
+	end;
+OnTimer18000:
+	npctalk "하인리히: 내 부하에게 무슨짓이냐 히멜메즈!", 'npc_heinrich$;
+	end;
+OnTimer21000:
+	npctalk "히멜메즈: 후후, 이미르의 심장조각은 이미 찾았다 하인리히.", 'npc_himelmez$;
+	end;
+OnTimer24000:
+	npctalk "히멜메즈: 저 녀석의 방해만 없었더라면 더 빨랐겠지만 말야.", 'npc_himelmez$;
+	end;
+OnTimer27000:
+	npctalk "게르할트: 내 몸을 더럽힐 순 있어도 내 영혼은 가져가지 못할 것이다 히멜메즈!", 'npc_gerhalt$;
+	end;
+OnTimer30000:
+	npctalk "히멜메즈: 과연 그럴까? 하여간 큰소리 치는데는 왕이고 병사고 다를게 없다니까 이 동네 사람들은...", 'npc_himelmez$;
+	end;
+OnTimer33000:
+	npctalk "하인리히: 히멜메즈! 목적을 이루었다면 더 이상의 희생은 필요없지 않나!", 'npc_heinrich$;
+	end;
+OnTimer36000:
+	npctalk "하인리히: 그를 놓아줘라! 난 더 이상의 희생은 바라지 않는다!", 'npc_heinrich$;
+	end;
+OnTimer39000:
+	npctalk "히멜메즈: 싫은데?", 'npc_himelmez$;
+	end;
+OnTimer42000:
+	npctalk "히멜메즈: 어차피 이녀석이 하인리히 당신의 마지막 부하야.", 'npc_himelmez$;
+	end;
+OnTimer45000:
+	npctalk "히멜메즈: 나를 막는 솜씨가 보통은 넘더군.", 'npc_himelmez$;
+	end;
+OnTimer48000:
+	npctalk "히멜메즈: 내 새로운 암다라이스 제작에 딱 적합한 인물인것 같아.", 'npc_heinrich$;
+	end;
+OnTimer51000:
+	npctalk "하인리히: 널 영원히 용서하지 않겠다.", 'npc_heinrich$;
+	end;
+OnTimer54000:
+	npctalk "히멜메즈: 어머~ 무서워라.", 'npc_himelmez$;
+	end;
+OnTimer57000:
+	npctalk "히멜메즈: 어차피 당신과는 할 이야기도 더 있으니 다음에 다시 만날 기회가 있을거야.", 'npc_himelmez$;
+	end;
+OnTimer60000:
+	npctalk "히멜메즈: 그럼. 이제 새로운 당신의 부하와 이야기를 나눠보도록 해.", 'npc_himelmez$;
+	end;
+OnTimer63000:
+	specialeffect EF_BARRIER, AREA, 'npc_gerhalt$;
+	end;
+OnTimer65000:
+	disablenpc 'npc_himelmez$;
+	end;
+OnTimer66000:
+	specialeffect EF_CHAINCOMBO, AREA, 'npc_gerhalt$;
+	end;
+OnTimer67000:
+	npctalk "하인리히: 도망치게 내버려둘 것 같으냐 히멜메즈!!", 'npc_heinrich$;
+	specialeffect EF_MAPPILLAR, AREA, 'npc_gerhalt$;
+	end;
+OnTimer70000:
+	specialeffect EF_MAPPILLAR2, AREA, 'npc_gerhalt$;
+	specialeffect EF_MAPPILLAR, AREA, 'npc_gerhalt$;
+	disablenpc 'npc_heinrich$;
+	npctalk "바르문트: 이런, 어쩔 수 없다. 남은 우리의 힘 만으로 암다라이스를 막아야한다!", 'npc_varmundt$;
+	end;
+OnTimer73000:
+	mapannounce 'map_name$[1], "게르할트의 몸이 변해갑니다.", bc_map,0xFFFFFF;
+	end;
+OnTimer76000:
+	specialeffect EF_LORD, AREA, 'npc_gerhalt$;
+	disablenpc 'npc_varmundt$;
+	mapannounce 'map_name$[1], "바르문트: 나의 환영들로 전투를 돕도록 하겠다! 환영의 지시를 따르도록 해라.", bc_map,0xFFFF00;
+	end;
+OnTimer80000:
+	disablenpc 'npc_gerhalt$;
+	donpcevent instance_npcname("#ghmemorialmob07_h") + "::OnStart";
+	stopnpctimer;
+	'npc_himelmez$ = 'npc_gerhalt$ = 'npc_heinrich$ = 'npc_varmundt$ = "";
+	end;
+}
+
+2@gl_k2,158,252,4	script	히멜메즈#23_h	4_F_HIMEL,{
+	cutin "gl_himel2",2;
+	mes "[히멜메즈]";
+	mes "대단해~ 여기까지 오다니. 이정도면 경의를 표해야 할 지경인걸?";
+	close3;
+}
+
+2@gl_k2,1,1,0	script	#ghmemorialmob07_h	HIDDEN_WARP_NPC,{
+	end;
+OnStart:
+	enablenpc instance_npcname("#ghmemorialmob07_h");
+	monster 'map_name$[1],158,255,"각성 암다라이스",3150,1,instance_npcname("#ghmemorialmob07_h") + "::OnMyMobDead";// MG_AMDARAIS_H
+	'boss_id = $@mobid[0];
+	unittalk 'boss_id, "Run away... run away from me...";
+	donpcevent instance_npcname(strnpcinfo(0)) + "::OnSummonUnit";
+	initnpctimer;
+	end;
+
+OnTimer5000:
+	unittalk 'boss_id, "아무도.. 아무도 죽이고 싶지 않아!! 으아아아악!!!!";
+	end;
+OnTimer10000:
+	unittalk 'boss_id, "날 죽여줘! 제발!";
+	end;
+OnTimer16000:
+	unittalk 'boss_id, "으으으으...으으으...죽어... 죽어...";
+	end;
+OnTimer22000:
+	unittalk 'boss_id, "파괴... 죽음!...";
+	end;
+OnTimer55000:
+	donpcevent instance_npcname("#ghmemorialmob08_h") + "::OnStart";// Varmundt buffs and additionnal monsters
+	stopnpctimer;
+	end;
+	
+OnSummonUnit:
+	sleep 5000;
+	while(unitexists('boss_id)){
+		if(unitexists('boss_id)){
+			getunitdata 'boss_id,.@boss_data;
+			.@HP = .@boss_data[UMOB_HP];
+			.@MAX_HP = .@boss_data[UMOB_MAXHP];
+			.@trigger = (.@MAX_HP/10)*7;
+		}
+		if(.@HP <= .@trigger)
+			break;
+		sleep 1000;
+	}
+	while(unitexists('boss_id)){
+		getunitdata 'boss_id,.@boss_data;
+		.@x = .@boss_data[UMOB_X];
+		.@y = .@boss_data[UMOB_Y];
+		.@event$ = instance_npcname(strnpcinfo(0)) + "::OnUnitDead";
+		if(unitexists('boss_id)){
+			monster 'map_name$[1],.@x + 5,.@y + 5,"",2495,1,.@event$;
+			monster 'map_name$[1],.@x + 5,.@y - 5,"",2495,1,.@event$;
+			monster 'map_name$[1],.@x - 5,.@y + 5,"",2495,1,.@event$;
+			monster 'map_name$[1],.@x - 5,.@y - 5,"",2495,1,.@event$;
+		}
+		sleep 15000;
+		killmonster 'map_name$[1],.@event$;
+	}
+OnUnitDead:
+end;
+
+OnMyMobDead:
+	if (mobcount('map_name$[1], instance_npcname("#ghmemorialmob07_h") + "::OnMyMobDead") < 1) {
+		stopnpctimer;
+		.@event$ = instance_npcname(strnpcinfo(0)) + "::OnUnitDead";
+		killmonster 'map_name$[1],.@event$;
+		enablenpc instance_npcname("후긴#21_h");
+		enablenpc instance_npcname("#Secret Room Exit_h");
+
+		stopnpctimer;
+		disablenpc instance_npcname("#ghmemorialmob07_h");
+		// note: monsters from #ghmemorialmob08_h still alive on Amdarais's dead
+	}
+	end;
+}
+
+// Varmundt Buffs
+2@gl_k2,1,1,0	script	#ghmemorialmob08_h	HIDDEN_WARP_NPC,{
+	end;
+OnStart:
+	enablenpc instance_npcname("#ghmemorialmob08_h");
+	initnpctimer;
+	end;
+OnTimer5000:
+	if (unitexists('boss_id) == 0) {
+		disablenpc instance_npcname("#ghmemorialmob08_h");
+		stopnpctimer;
+		end;
+	}
+	getunitdata 'boss_id, .@data;
+	.@percent_hp = (.@data[UMOB_HP] * 100) / .@data[UMOB_MAXHP];
+	mapannounce 'map_name$[1], "Amdarais HP " + .@percent_hp + "% reach!", bc_map,0x70DBDB;
+
+	// event type every 10%
+	switch( .@percent_hp / 10 ) {
+	case 10:
+		break;
+	case 9:
+		donpcevent instance_npcname("바르문트의 유령#Buff2_h") + "::OnEvent";
+		break;
+	case 8:
+		donpcevent instance_npcname("바르문트의 유령#Buff3_h") + "::OnEvent";
+		areamonster 'map_name$[1],140,220,175,255,"고통받는 칼리츠버그",3146,6, instance_npcname("#ghmemorialmob08_h") + "::OnMobDead";
+		break;
+	case 7:
+		donpcevent instance_npcname("바르문트의 유령#Buff3_h") + "::OnEvent";
+		areamonster 'map_name$[1],140,220,175,255,"심연의기사",3145,6, instance_npcname("#ghmemorialmob08_h") + "::OnMobDead";
+		break;
+	case 6:
+		donpcevent instance_npcname("바르문트의 유령#Buff3_h") + "::OnEvent";
+		areamonster 'map_name$[1],140,220,175,255,"부풀어오른 기사",3147,6, instance_npcname("#ghmemorialmob08_h") + "::OnMobDead";
+		break;
+	case 5:
+		donpcevent instance_npcname("바르문트의 유령#Buff2_h") + "::OnEvent";
+		break;
+	case 4:
+		donpcevent instance_npcname("바르문트의 유령#Buff3_h") + "::OnEvent";
+		areamonster 'map_name$[1],140,220,175,255,"죽음의 사수",3144,6, instance_npcname("#ghmemorialmob08_h") + "::OnMobDead";
+		break;
+	case 3:
+		donpcevent instance_npcname("바르문트의 유령#Buff1_h") + "::OnEvent";
+		donpcevent instance_npcname("바르문트의 유령#Buff3_h") + "::OnEvent";
+		areamonster 'map_name$[1],140,220,175,255,"부풀어오른 기사",3147,6, instance_npcname("#ghmemorialmob08_h") + "::OnMobDead";
+		break;
+	case 2:
+		donpcevent instance_npcname("바르문트의 유령#Buff1_h") + "::OnEvent";
+		donpcevent instance_npcname("바르문트의 유령#Buff3_h") + "::OnEvent";
+		areamonster 'map_name$[1],140,220,175,255,"심연의기사",3145,6, instance_npcname("#ghmemorialmob08_h") + "::OnMobDead";
+		break;
+	case 1:
+	case 0:
+		donpcevent instance_npcname("바르문트의 유령#Buff1_h") + "::OnEvent";
+		donpcevent instance_npcname("바르문트의 유령#Buff4_h") + "::OnEvent";
+		areamonster 'map_name$[1],140,220,175,255,"죽음의 사수",3144,6, instance_npcname("#ghmemorialmob08_h") + "::OnMobDead";
+		break;
+	}
+	end;
+OnTimer30000:
+	killmonster 'map_name$[1], instance_npcname("#ghmemorialmob08_h") + "::OnMobDead";
+	initnpctimer;
+	end;
+OnMobDead:
+	end;
+}
+
+2@gl_k2,150,247,5	script	바르문트의 유령#Buff1_h	4_M_BARMUND,2,2,{
+	end;
+OnTouch:
+	specialeffect2 EF_ENHANCE;
+	.@num$ = replacestr(strnpcinfo(2), "Buff", "");
+	.@num = atoi(replacestr(.@num$, "_h", ""));
+	if (.@num == 1)
+		sc_start SC_GLASTHEIM_HIDDEN,30000,1,10000,SCSTART_NOTICKDEF;
+	else if (.@num == 2)
+		sc_start SC_GLASTHEIM_STATE,30000,1,10000,SCSTART_NOTICKDEF;
+	else if (.@num == 3) {
+		sc_start SC_GLASTHEIM_HEAL,30000,1,10000,SCSTART_NOTICKDEF;
+		sc_start SC_GLASTHEIM_HPSP,30000,1,10000,SCSTART_NOTICKDEF;
+	}
+	else {
+		sc_start SC_GLASTHEIM_DEF,30000,1,10000,SCSTART_NOTICKDEF;
+		sc_start SC_GLASTHEIM_ITEMDEF,30000,1,10000,SCSTART_NOTICKDEF;
+	}
+	end;
+OnEvent:
+	initnpctimer;
+	enablenpc instance_npcname( strnpcinfo(0) );
+	.@num$ = replacestr(strnpcinfo(2), "Buff", "");
+	.@num = atoi(replacestr(.@num$, "_h", ""));
+	if (.@num == 1)
+		npctalk "바르문트의 유령: 암다라이즈가 강력한 마법 보호막을 펼칠 수 있다! 내 곁으로 오게, 내가 지켜주지!";
+	else if (.@num == 2)
+		npctalk "바르문트의 유령: 지금이 공격할 기회다! 내게 가까이 오게, 함께 적을 쓰러뜨리세!";
+	else if (.@num == 3)
+		npctalk "바르문트의 유령: 암다라이즈의 좀비에게 당하고 싶지 않다면, 내게 와서 힘을 얻게!";
+	else
+		npctalk "바르문트의 유령: 암다라이즈의 힘에 당하고 싶지 않다면, 어서 내게 와서 힘을 얻게!";
+		end;
+OnTimer10000:
+	stopnpctimer;
+	disablenpc instance_npcname( strnpcinfo(0) );
+	end;
+}
+2@gl_k2,165,247,3	duplicate(바르문트의 유령#Buff1_h)	바르문트의 유령#Buff2_h	4_M_BARMUND,2,2
+2@gl_k2,150,232,8	duplicate(바르문트의 유령#Buff1_h)	바르문트의 유령#Buff3_h	4_M_BARMUND,2,2
+2@gl_k2,165,232,2	duplicate(바르문트의 유령#Buff1_h)	바르문트의 유령#Buff4_h	4_M_BARMUND,2,2
+
+
+2@gl_k2,158,241,1	script	후긴#21_h	4_M_SAGE_C,{
+	if (checkquest(12337,HUNTING) == 2) {// note: complete hunting 'Corrupted Soul Hunt' prerequis
+		mes "[후긴]";
+		mes "흠, 초보자 치곤 꽤 하는군. 일단 암다라이스에게서 나온 전리품은 갖게 해 주지.";
+		erasequest 12337;
+		setquest 12335;// Space Distortion
+		if (isbegin_quest(12339) == 0) {
+			setquest 12339;// Time Conqueror
+			completequest 12339;
+			getitem 6607,5;// Temporal_Crystal
+			getitem 6755,1;// Contaminated_Magic
+			getexp 700000,700000;
+		}
+		else {
+			getitem 6607,1;// Temporal_Crystal
+			getitem 6755,1;// Contaminated_Magic
+		}
+		next;
+		mes "[후긴]";
+		mes "바르문트의 시간은 내가 임의로 멈춰버렸다. 그리고 이제 곧 너희의 시간도 왜곡될 것이다.";
+		specialeffect2 EF_BLIND;
+		soundeffect "_blind.wav",0;
+		next;
+		mes "[후긴]";
+		mes "아마 저 가련한 시간의 여행자는 끝없이 이 글래스트헤임의 비극을 막으려 다시 시도하겠지.";
+		next;
+		mes "[후긴]";
+		mes "하지만 우리 시간의 초월자들은 그의 행동을 묵과하지 않을 것이다. 앞으로도 영원히...";
+		next;
+		mes "[후긴]";
+		mes "이제 너의 기억도 지워버리겠다. 다시 날 보더라도 아마 새로운 모습으로 대하게 될것이야.";
+		specialeffect2 EF_FREEZE;
+		close2;
+		warp 'map_name$[1],158,244;
+		end;
+	}
+	mes "[후긴]";
+	mes "하마터면 시간의 틈이 왜곡될 뻔 했군. 이리로 오게. 어서 나가야하네!";
+	next;
+	select("바...방금전에 저와...");
+	mes "[후긴]";
+	mes "방금전에 뭐 말인가? 어쨌든 그게 중요한게 아니라, 곧 시간의 틈이 닫힐테니 어서 여기서 나가야하네.";
+	next;
+	if (select("난 이곳을 더 둘러보겠습니다:밖으로 보내주십시오") == 1) {
+		mes "[후긴]";
+		mes "그런가? 여긴 곧 무너질텐데, 빨리 둘러보고 돌아오게.";
+		close;
+	}
+	close2;
+	set #glast_h_cut, 0;
+	set #glast_h_clear, 1;
+	warp "glast_01",181,281;
+	end;
+}
+
+// Treasure Room
+//============================================================
+1@gl_k2,165,136,3	script	수상한 균열#2_h	CLEAR_NPC,{
+	if (isbegin_quest(12322) == 0) {// Space Distortion
+		mes "The crack looks suspicious but nothing more to check.";
+		close;
+	}
+	specialeffect EF_SPELLBREAKER;
+	.@random = rand(1,4);
+	switch( atoi(strnpcinfo(2)) ) {
+	case 2:
+		for ( .@i = 1; .@i <= .@random; ++.@i )
+			makeitem 719,1,"this",165,138;
+		makeitem 6608,1,"this",165,138;
+		break;
+	case 3:
+		for ( .@i = 1; .@i <= .@random; ++.@i )
+			makeitem 720,1,"this",159,138;
+		if (rand(1,4) == 4)
+			makeitem2 15066,1,"this",159,138,0,0,0,0,0,0,0;
+		makeitem 6608,1,"this",159,138;
+		makeitem 7229,1,"this",159,138;
+		break;
+	case 4:
+		for ( .@i = 1; .@i <= .@random; ++.@i )
+			makeitem 721,1,"this",153,138;
+		if (rand(1,4) == 4)
+			makeitem2 13086,1,"this",153,138,0,0,0,0,0,0,0;
+		makeitem 6608,1,"this",153,138;
+		makeitem 7230,1,"this",153,138;
+		break;
+	case 5:
+		for ( .@i = 1; .@i <= .@random; ++.@i )
+			makeitem 722,1,"this",147,138;
+		if (rand(1,4) == 4)
+			makeitem2 2949,1,"this",147,138,0,0,0,0,0,0,0;
+		makeitem 6612,1,"this",147,138;
+		makeitem 6613,1,"this",147,138;
+		makeitem 6608,1,"this",147,138;
+		break;
+	case 6:
+		for ( .@i = 1; .@i <= .@random; ++.@i )
+			makeitem 725,1,"this",141,138;
+		makeitem 7228,1,"this",141,138;
+		if (rand(1,4) == 4)
+			makeitem2 13440,1,"this",141,138,0,0,0,0,0,0,0;
+		makeitem 6608,1,"this",141,138;
+		break;
+	case 7:
+		for ( .@i = 1; .@i <= .@random; ++.@i )
+			makeitem 726,1,"this",135,138;
+		if (rand(1,4) == 4)
+			makeitem2 2022,1,"this",135,138,0,0,0,0,0,0,0;
+		makeitem 6608,1,"this",135,138;
+		break;
+	case 8:
+		for ( .@i = 1; .@i <= .@random; ++.@i )
+			makeitem 727,1,"this",129,138;
+		if (rand(1,4) == 4)
+			makeitem2 21007,1,"this",129,138,0,0,0,0,0,0,0;
+		makeitem 6608,1,"this",129,138;
+		break;
+	}
+	disablenpc instance_npcname( strnpcinfo(0) );
+	end;
+}
+
+1@gl_k2,159,136,3	duplicate(수상한 균열#2_h)	수상한 균열#3_h	CLEAR_NPC
+1@gl_k2,153,136,3	duplicate(수상한 균열#2_h)	수상한 균열#4_h	CLEAR_NPC
+1@gl_k2,147,136,3	duplicate(수상한 균열#2_h)	수상한 균열#5_h	CLEAR_NPC
+1@gl_k2,141,136,3	duplicate(수상한 균열#2_h)	수상한 균열#6_h	CLEAR_NPC
+1@gl_k2,135,136,3	duplicate(수상한 균열#2_h)	수상한 균열#7_h	CLEAR_NPC
+1@gl_k2,129,136,3	duplicate(수상한 균열#2_h)	수상한 균열#8_h	CLEAR_NPC
+
+1@gl_k2,269,267,3	script	수상한 균열#1_h	CLEAR_NPC,{
+	if (isbegin_quest(12322) == 0) {// Space Distortion
+		mes "균열이 의심스러워 보이지만 더 이상 알아볼것은 없다.";
+		close;
+	}
+	warp 'map_name$[0],149,198;
+	end;
+
+OnInstanceInit:
+	'map_name$[0] = instance_mapname("1@gl_k2");
+	'map_name$[1] = instance_mapname("2@gl_k2");
+	
+	//스킵용 워프
+	disablenpc instance_npcname("#cut01_h");
+	
+	// Entrance
+	disablenpc instance_npcname("히멜메즈#1_h");
+	disablenpc instance_npcname("바르문트#1_h");
+	disablenpc instance_npcname("하인리히#1_h");
+	disablenpc instance_npcname("하인리히#2_h");
+	disablenpc instance_npcname("하인리히#3_h");
+
+	// Rescue 1
+	disablenpc instance_npcname("#ghmemorialmob01_h");
+	disablenpc instance_npcname("복사지망생 도문#1_h");
+
+	// Rescue 2
+	disablenpc instance_npcname("#ghmemorialmob02_h");
+	disablenpc instance_npcname("홀그렌 디스트로이어#1_h");
+	for ( .@i = 1; .@i <= 26; .@i++ )
+		disablenpc instance_npcname("숨이멎은 남자#" + .@i + "_h");
+
+	// Sector 3
+	disablenpc instance_npcname("#ghmemorialmob03_h");
+
+	// Root of Corruption
+	disablenpc instance_npcname("히멜메즈#2_h");
+	disablenpc instance_npcname("바르문트#2_h");
+	disablenpc instance_npcname("하인리히#4_h");
+	disablenpc instance_npcname("#Mimelon_h");
+	disablenpc instance_npcname("#Mimelon_cut_h");
+	disablenpc instance_npcname("#ghmemorialmob04_h");
+	disablenpc instance_npcname("#ghmemorialmob04_cut_h");
+
+	// Entrance 2nd map
+	disablenpc instance_npcname("바르문트#21_h");
+	disablenpc instance_npcname("하인리히#21_h");
+	disablenpc instance_npcname("#Servanton_h");
+	disablenpc instance_npcname("#Servanton_cut_h");
+	hideonnpc instance_npcname("#Servanton_effect_h");
+
+	// Commanders
+	disablenpc instance_npcname("#ghmemorialmob05_h");
+	disablenpc instance_npcname("#ghmemorialmob04_cut_h");
+	disablenpc instance_npcname("#ghmemorialmob06_h");
+	for ( .@i = 1; .@i <= 7; .@i++ ) {
+		disablenpc instance_npcname("#ogh_2-" + .@i + "_h");
+		disablenpc instance_npcname("#ogh_3-" + .@i + "_h");
+	}
+
+	// Amdarais Room Entrance
+	disablenpc instance_npcname("#Geron_h");
+	for ( .@i = 1; .@i <= 35; .@i++ )
+		disablenpc instance_npcname("부패한 시체#" + .@i + "_h");
+
+	// Amdarais Spawn
+	disablenpc instance_npcname("게르할트#23_h");
+	disablenpc instance_npcname("히멜메즈#22_h");
+	disablenpc instance_npcname("히멜메즈#22_cut_h");
+	disablenpc instance_npcname("히멜메즈#23_h");
+	disablenpc instance_npcname("바르문트#23_h");
+	disablenpc instance_npcname("하인리히#23_h");
+	disablenpc instance_npcname("#ghmemorialmob07_h");
+
+	// Varmundt Buffs
+	disablenpc instance_npcname("#ghmemorialmob08_h");
+	disablenpc instance_npcname("바르문트의 유령#Buff1_h");
+	disablenpc instance_npcname("바르문트의 유령#Buff2_h");
+	disablenpc instance_npcname("바르문트의 유령#Buff3_h");
+	disablenpc instance_npcname("바르문트의 유령#Buff4_h");
+	disablenpc instance_npcname("후긴#21_h");
+
+	// Warps
+	disablenpc instance_npcname("#2Control_h");
+	disablenpc instance_npcname("#2Control2_h");
+	disablenpc instance_npcname("#3Control_h");
+	disablenpc instance_npcname("#3Control2_h");
+	disablenpc instance_npcname("#4Control_h");
+	disablenpc instance_npcname("#4Control2_h");
+	disablenpc instance_npcname("#2F Entrance_h");
+	disablenpc instance_npcname("#1 Control_h");
+	disablenpc instance_npcname("#22 Control_h");
+	disablenpc instance_npcname("#22 Control2_h");
+	disablenpc instance_npcname("#23 Control_h");
+	disablenpc instance_npcname("#23 Control2_h");
+	disablenpc instance_npcname("#24 Control_h");
+	disablenpc instance_npcname("#24 Control2_h");
+	disablenpc instance_npcname("#Secret Room Exit_h");
+	end;
+}
+
+

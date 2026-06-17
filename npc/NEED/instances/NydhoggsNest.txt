@@ -1,0 +1,905 @@
+//===== rAthena Script ======================================= 
+//= Nidhoggr's Nest
+//===== By: ================================================== 
+//= L0ne_W0lf, various sources
+//===== Current Version: ===================================== 
+//= 1.6
+//===== Compatible With: ===================================== 
+//= rAthena Project
+//===== Description: ========================================= 
+//= [Official Conversion]
+//= Nidhoggr's Nest Instance
+//===== Additional Comments: ================================= 
+//= 1.0 First version.
+//= 1.1 Minor dialog updates.
+//= 1.2 No longer glitches when anyone but party leader talks to the first NPC.
+//= 1.3 Added 'instance_check_party' command to the script for proper checking if
+//=     the invoking party meets the requirements to join the Memorial Dungeon.
+//= 1.4 Cleaning. [Euphy]
+//= 1.5 Instance system rewrite. [Euphy]
+//= 1.6 Added GM management NPCs. [Euphy]
+//============================================================ 
+
+nyd_dun02,100,201,3	script	이그드라실의 문지기	111,8,8,{
+		mes "당신 앞에는 거대한 돌문이 서 있습니다. 무시무시한 용의 조각상이 위풍당당한 날개를 펼치고 있습니다.";
+		next;
+		mes "성문 아래쪽에는 라핀 부족 여인들의 모습이 돌로 변해 마치 거대한 문의 일부처럼 보입니다.";
+		next;
+		if(select("더 가까이 가서 자세히 살펴보세요.:뒤로 물러서세요.") == 2) {
+			close;
+		}
+
+		set .@party_id,getcharid(1);
+		set .@md_name$,"니드호그의 둥지";
+
+		set .@ins_nyd_check,checkquest(3135,PLAYTIME); // 3 Day cooldown
+		set .@ins_nyd_check2,checkquest(3136,PLAYTIME); // 4 Hour play limit
+		
+		mes "내가 돌문에 손을 얹자, 내 마음 깊은 곳에서 목소리가 울려 퍼졌다.";
+		next;
+		if (.@ins_nyd_check == -1 && .@ins_nyd_check2 == -1) {
+			if (!instance_check_party(.@party_id,2,70)) {
+				mes "[이그드라실의 문지기]";
+				mes "다른 하인들은 어디 있나요? 함께 일해야 하는데... 하인들은 한 명씩 따로 들어올 수 없어요.";
+				next;
+				mes "[이그드라실의 문지기]";
+				mes "최소 한 명 이상의 하인을 데리고 오십시오... 니드호구르의 둥지에는 당의 지도자만 입장을 허가할 수 있습니다.";
+				next;
+				mes "[이그드라실의 문지기]";
+				mes "그리고 당신 측에서 저와 이야기할 사람은 단 한 명뿐이니, 저를 귀찮게 하지 마세요...";
+				close;
+			}
+			if (is_party_leader(.@party_id) == true) {
+				mes "[이그드라실의 문지기]";
+				mes "수호자의 충실한 하인들이여... 무엇을 도와드릴까요?";
+				next;
+				switch(select("입장시켜 주십시오.:들어가고 싶어요.:떠나고 싶어요.")) {
+				case 1:
+					if (instance_create(.@md_name$) < 0) {
+						mes "[이그드라실의 문지기]";
+						mes "가디언 씨는 혼자 있고 싶어하는 것 같습니다. 제가 들어가서 확인해 보겠습니다. 여기서 기다려 주십시오.";
+						close;
+					}
+					mes "[이그드라실의 문지기]";
+					mes "요청하신 내용을 녹음했습니다. 안으로 들어가실 준비 되셨나요?";
+					next;
+					mes "[이그드라실의 문지기]";
+					mes "준비되셨다면 입장시켜 드리겠습니다.";
+					close;
+				case 2:
+					goto L_Enter;
+				case 3:
+					close;
+				}
+			}
+			mes "[이그드라실의 문지기]";
+			mes "던전이 이미 생성되었다면 입장할 수 있습니다.";
+			next;
+			if(select("들어가고 싶어요.:떠나고 싶어요.") == 2)
+				close;
+			goto L_Enter;
+		} else {
+			if (.@ins_nyd_check == 0 || .@ins_nyd_check == 1) {
+				mes "[이그드라실의 문지기]";
+				mes "던전이 이미 생성되었다면 입장할 수 있습니다.";
+				next;
+				if(select("들어가고 싶어요.:떠나고 싶어요.") == 2)
+					close;
+				goto L_Enter;
+			} else if (.@ins_nyd_check == 2) {
+				if (.@ins_nyd_check2 == 0 || .@ins_nyd_check2 == 1) {
+					mes "[이그드라실의 문지기]";
+					mes "던전 입장 제한 시간이 만료되었습니다. 세계수가 에너지를 안정시킬 때까지 기다린 후 다시 입장하십시오.";
+					close;
+				} else if (.@ins_nyd_check2 == 2) {
+					mes "[이그드라실의 문지기]";
+					mes "세계수 이그드라실이 안정화되었습니다. 니드호구르의 둥지에 다시 들어가시겠습니까?";
+					next;
+					mes "[이그드라실의 문지기]";
+					mes "다시 참가하고 싶으시면 저에게 등록해 주세요.";
+					erasequest 3135;
+					erasequest 3136;
+					close;
+				}
+			}
+		}
+L_Enter:
+	switch(instance_enter("니드호그의 둥지")) {
+	case IE_OTHER:
+		mes "[이그드라실의 문지기]";
+		mes "알 수 없는 오류가 발생했습니다.";
+		close;
+	case IE_NOINSTANCE:
+		mes "[이그드라실의 문지기]";
+		mes "당신은 입학을 신청하지 않았잖아요... 입장하기 전에 먼저 입학 허가를 수락해야 합니다.";
+		close;
+	case IE_NOMEMBER:
+		mes "[이그드라실의 문지기]";
+		mes "다른 하인들은 어디 있나요? 함께 일해야 하는데... 하인들은 한 명씩 따로 들어올 수 없어요.";
+		close;
+	case IE_OK:
+		mapannounce "nyd_dun02", getpartyname(getcharid(1))+" '당원'"+strcharinfo(0)+" 니드호구르의 둥지에 들어갔습니다.",bc_map,"0x00ff99";
+		if (checkquest(3135) == -1) setquest 3135;
+		if (checkquest(3136) == -1) setquest 3136;
+		//warp "1@nyd",32,36;
+		close;
+	}
+
+OnTouch_:
+	if (ins_nyd == 0) {
+		specialeffect2 EF_CHANGECOLD;
+		specialeffect EF_CHANGECOLD;
+	}
+	end;
+}
+
+// First floor
+//============================================================
+1@nyd,213,277,5	script	세계수 이그드라실#1F	437,5,5,{
+	if ('ins_nyd2 == 0) {
+		mes "희미한 빛이 당신의 마음에 스며들 때, 당신의 머릿속에서 목소리가 들립니다.";
+		next;
+		mes "[세계수 이그드라실]";
+		mes "모든 게 끝났어... 수호자의 하수인들이여... 어서 이곳을 떠나라.";
+		next;
+		while(1) {
+			switch(select("누구세요?:무슨 뜻이에요?")) {
+			case 1:
+				mes "[세계수 이그드라실]";
+				mes "나는… 나는 니드호구르의 수호자의 종이자 라핀 부족을 이끄는 대사제인 세계수 이그드라실이다.";
+				next;
+				mes "[세계수 이그드라실]";
+				mes "그러니까 당신은 라핀 부족의 여사제가 아니군요... 어떻게 들어온 거죠? 아니, 지금은 대답할 시간이 없어요.";
+				next;
+				mes "[세계수 이그드라실]";
+				mes "서둘러... 떠나... 너무 늦기 전에 이곳을 떠나.";
+				next;
+				break;
+			case 2:
+				mes "[세계수 이그드라실]";
+				mes "수호자에게 뭔가 문제가 생겼어. 왜 이렇게 됐는지 모르겠어.";
+				next;
+				mes "[세계수 이그드라실]";
+				mes "이곳은... 이곳은 더 이상 세계수 이그드라실의 수호자의 둥지가 아닙니다.";
+				next;
+				mes "[세계수 이그드라실]";
+				mes "어둠이 수호자를 집어삼키고 모든 생명체를 파괴했습니다... 이제 이곳은 저주받은 괴물들의 소굴이 되었습니다.";
+				next;
+				mes "[세계수 이그드라실]";
+				mes "지금 사악한 니드호그의 그림자가 이곳을 휩쓸고 있다...";
+				next;
+				mes "[세계수 이그드라실]";
+				mes "아직 늦지 않았어, 서둘러 나가... 라핀 부족에게 이 사실을 알리고... 알프하임의 지휘관들에게도 알려야 해...";
+				next;
+				mes "[세계수 이그드라실]";
+				mes "내 영혼이… 여기에 갇혔어. 이제 내가 믿을 수 있는 사람은 너희뿐이야.";
+				next;
+				set .@exit,1;
+			}
+			if (.@exit) break;
+		}
+		select("니드호그의 그림자?");
+		mes "[세계수 이그드라실]";
+		mes "가디언 니드호구르... 그는 둥지에 없어요.";
+		next;
+		mes "[세계수 이그드라실]";
+		mes "그는... 무슨 이유에서인지 자신의 그림자를 버리고 떠났다.";
+		next;
+		mes "[세계수 이그드라실]";
+		mes "이제 남은 건 니드호구르 수호자의 흉측한 그림자뿐... 미쳐가는 그 그림자뿐이다.";
+		next;
+		mes "[세계수 이그드라실]";
+		mes "그림자는 세계수 이그드라실의 모든 양분을 빨아들였고, 더 이상 얻을 것이 없자 미쳐버렸다. 이제 그는 이 땅을 원한다.";
+		next;
+		mes "[세계수 이그드라실]";
+		mes "추악한 그림자가 이곳을 떠나 다른 세계의 이그드라실 나무들로부터 힘을 훔치려 한다면, 큰 파괴가 일어날 것이다. 이 세계는 지옥이 될 것이다.";
+		next;
+		mes "[세계수 이그드라실]";
+		mes "당신은 반드시 알프하임의 지휘관들에게 이 사실을 알리고 대책을 세워야 합니다. 오직 그들만이…";
+		next;
+		select("우리가 할 수 있는 일은 정말 아무것도 없는 건가요?");
+		mes "[세계수 이그드라실]";
+		mes "현재 우리의 능력으로는 수호자를 물리치는 것은 불가능합니다.";
+		next;
+		mes "[세계수 이그드라실]";
+		mes "하지만 미쳐가는 건 수호자가 아니라 그의 어둠의 그림자야... 어쩌면 여기서 그를 가둘 수 있을지도 몰라...";
+		next;
+		mes "[세계수 이그드라실]";
+		mes "당신은 이 임무를 받아들일 용의가 있습니까? 설령 목숨을 걸어야 한다 하더라도 말입니다.";
+		next;
+		if(select("저희에게 맡겨주세요.:우리는 그걸 할 수 없어.") == 2)
+			close;
+		mes "[세계수 이그드라실]";
+		mes "당신의 결정에 진심으로 감사드립니다. 남은 힘을 다해 수호자의 둥지로 가는 길을 열겠습니다.";
+		next;
+		mes "[세계수 이그드라실]";
+		if (is_party_leader() == true) {
+			mes "수호자의 둥지로 가는 길은 북쪽의 거대한 세계수 이그드라실 옆 폭포 바로 지나서 있습니다. 성역의 방어 시스템이 즉시 작동하기 시작합니다.";
+			next;
+			mes "[세계수 이그드라실]";
+			mes "니드호구르의 수호자들을 모두 물리치고 폭포를 지나 둥지로 들어가세요... 그리고 그곳에서 니드호그의 그림자를 막으세요.";
+			next;
+			mes "[세계수 이그드라실]";
+			mes "곧 문이 열릴 거야. 가서 모든 수호자들을 물리쳐야 해... 문이 열리기 전 30분 안에 모두 처치해야 한다고...";
+			next;
+			mes "[세계수 이그드라실]";
+			mes "30분... 제가 감당할 수 있는 최대 시간이에요. 제발 서둘러 주세요.";
+			next;
+			mes "[세계수 이그드라실]";
+			mes "그리고... 조심해... 그림자의 힘을 조심해.";
+			'ins_nyd2 = ins_nyd2 = 1;
+			donpcevent instance_npcname("ins_nyd_1f_timer")+"::OnEnable";
+			donpcevent instance_npcname("nyd_call_mon_1")+"::OnEnable";
+			close;
+		} else {
+			mes "수호자의 둥지로 가는 길은 북쪽의 거대한 세계수 이그드라실 옆 폭포 바로 지나서 있습니다. 방어 장치가 즉시 작동하기 시작합니다.";
+			next;
+			mes "[세계수 이그드라실]";
+			mes "니드호구르의 수호자들을 모두 물리치고 폭포를 지나 둥지로 들어가세요... 그리고 그곳에서 니드호그의 그림자를 막으세요.";
+			next;
+			mes "[세계수 이그드라실]";
+			mes "곧 문이 열릴 거야. 가서 모든 수호자들을 물리쳐야 해... 문이 열리기 전 30분 안에 모두 처치해야 한다고...";
+			next;
+			mes "[세계수 이그드라실]";
+			mes "30분... 제가 감당할 수 있는 최대 시간이에요. 제발 서둘러 주세요.";
+			next;
+			mes "[세계수 이그드라실]";
+			mes "그리고... 조심해... 그림자의 힘을 조심해.";
+			close;
+		}
+	} else if ('ins_nyd2 == 1) {
+		mes "[세계수 이그드라실]";
+		mes "수호자의 둥지로 가는 길은 북쪽의 거대한 세계수 이그드라실 옆 폭포 바로 지나서 있습니다. 방어 장치가 즉시 작동하기 시작합니다.";
+		next;
+		mes "[세계수 이그드라실]";
+		mes "니드호구르의 수호자들을 모두 물리치고 폭포를 지나 둥지로 들어가세요... 그리고 그곳에서 니드호그의 그림자를 막으세요.";
+		next;
+		mes "[세계수 이그드라실]";
+		mes "곧 문이 열릴 겁니다. 가서 모든 수호자들을 물리치세요.";
+		close;
+	} else if ('ins_nyd2 == 2) {
+		mes "[세계수 이그드라실]";
+		mes "수호자의 둥지로 가는 길은 북쪽의 거대한 세계수 이그드라실 옆 폭포를 지나면 바로 있습니다.";
+		next;
+		mes "[세계수 이그드라실]";
+		mes "당신의 힘을 사용하여... 사악한 그림자를 파괴하십시오...";
+		next;
+		mes "[세계수 이그드라실]";
+		mes "이게 제가 당신을 위해 해드릴 수 있는 전부입니다...";
+		close;
+	} else {
+		mes "[세계수 이그드라실]";
+		mes "수호자의 신성한 성역을 더럽히려는 자들은... 나가라.";
+		warp "mid_camp",100,100;
+	}
+	end;
+
+OnTouch:
+	if ('ins_nyd2 == 0) {
+		mes "라핀 부족 출신의 여성이 여기서 뭘 하고 있는 거지...?";
+		next;
+		mes "무슨 일이야? 가서 확인해 보자.";
+		close;
+	}
+	end;
+
+OnInstanceInit: // Temporary fix for @reloadscript.
+	set 'ins_nyd2,0;
+	end;
+}
+
+1@nyd,1,1,0	script	nyd_call_mon_1	-1,{
+OnInstanceInit:
+	enablenpc instance_npcname("nyd_call_mon_1");
+	end;
+
+OnEnable:
+	set .@map$, instance_mapname("1@nyd");
+	monster .@map$,220,250,"Nidhoggur's Guardian#1",2020,1,instance_npcname("nyd_call_mon_1")+"::OnMyMobDead";
+	monster .@map$,220,252,"Nidhoggur's Guardian#2",2020,1,instance_npcname("nyd_call_mon_1")+"::OnMyMobDead";
+	monster .@map$,240,270,"Nidhoggur's Guardian#3",2020,1,instance_npcname("nyd_call_mon_1")+"::OnMyMobDead";
+	monster .@map$,240,272,"Nidhoggur's Guardian#4",2020,1,instance_npcname("nyd_call_mon_1")+"::OnMyMobDead";
+	monster .@map$,200,200,"Nidhoggur's Guardian#5",2020,1,instance_npcname("nyd_call_mon_1")+"::OnMyMobDead";
+	monster .@map$,210,210,"Nidhoggur's Guardian#6",2020,1,instance_npcname("nyd_call_mon_1")+"::OnMyMobDead";
+	monster .@map$,225,265,"Nidhoggur's Guardian#7",2021,1,instance_npcname("nyd_call_mon_1")+"::OnMyMobDead";
+	monster .@map$,225,270,"Nidhoggur's Guardian#8",2021,1,instance_npcname("nyd_call_mon_1")+"::OnMyMobDead";
+	monster .@map$,245,235,"Nidhoggur's Guardian#9",2021,1,instance_npcname("nyd_call_mon_1")+"::OnMyMobDead";
+	monster .@map$,255,255,"Nidhoggur's Guardian#10",2021,1,instance_npcname("nyd_call_mon_1")+"::OnMyMobDead";
+	monster .@map$,225,245,"Nidhoggur's Guardian#11",2021,1,instance_npcname("nyd_call_mon_1")+"::OnMyMobDead";
+	monster .@map$,230,280,"Nidhoggur's Guardian#12",2021,1,instance_npcname("nyd_call_mon_1")+"::OnMyMobDead";
+	mapannounce .@map$, "니드호구르의 수호자: 수호자의 성소를 보호하고 침입자들을 제거하세요.",bc_map,"0x00ff99";
+	end;
+
+OnDisable:
+	killmonster instance_mapname("1@nyd"),instance_npcname("nyd_call_mon_1")+"::OnMyMobDead";
+	disablenpc instance_npcname("nyd_call_mon_1");
+	end;
+
+OnMyMobDead:
+	set .@map$, instance_mapname("1@nyd");
+	set .@mob_dead_num,mobcount(.@map$, instance_npcname("nyd_call_mon_1")+"::OnMyMobDead");
+	if (.@mob_dead_num < 1) {
+		mapannounce .@map$, "니드호구르의 수호자들이 모두 패배했습니다!",bc_map,"0x00ff99";
+		donpcevent instance_npcname("ins_nyd_1f_timer")+"::OnDisable";
+		donpcevent instance_npcname("nyd_to2f_warp")+"::OnEnable";
+		'ins_nyd2 = ins_nyd2 = 2;
+	}
+	end;
+}
+
+1@nyd,1,2,0	script	ins_nyd_1f_timer	-1,{
+OnInstanceInit:
+	disablenpc instance_npcname("ins_nyd_1f_timer");
+	end;
+
+OnEnable:
+	enablenpc instance_npcname("ins_nyd_1f_timer");
+	initnpctimer;
+	end;
+
+OnDisable:
+	disablenpc instance_npcname("ins_nyd_1f_timer");
+	stopnpctimer;
+	killmonsterall instance_mapname("1@nyd");
+	end;
+
+OnTimer900000:
+	mapannounce instance_mapname("1@nyd"), "세계수 이그드라실: 시간이 얼마 남지 않았습니다. 서둘러 주세요.",bc_map,"0xFFFF00";
+	end;
+
+OnTimer1200000:
+	mapannounce instance_mapname("1@nyd"), "세계수 이그드라실: 내 힘이 서서히 사라지고 있어. 제발 서둘러 줘.",bc_map,"0xFFFF00";
+	end;
+
+OnTimer1500000:
+	mapannounce instance_mapname("1@nyd"), "세계수 이그드라실: 난… 거의 한계에 다다랐어… 제발 서둘러 줘.",bc_map,"0xFFFF00";
+	end;
+
+OnTimer1800000:
+	mapannounce instance_mapname("1@nyd"), "세계수 이그드라실: 네놈은 실패했다... 하지만 내게 남은 힘을 다해 너를 이곳에서 내쫓겠다.",bc_map,"0xFFFF00";
+	end;
+
+OnTimer1830000:
+	mapannounce instance_mapname("1@nyd"), "문을 여는 시도는 실패했습니다.",bc_map,"0xFFFF00";
+	end;
+
+OnTimer1850000:
+	donpcevent instance_npcname("ins_nyd_1f_timer")+"::OnDisable";
+	donpcevent instance_npcname("nyd_call_mon_1")+"::OnDisable";
+	instance_warpall "mid_camp",310,150, instance_id();
+	stopnpctimer;
+	end;
+}
+
+1@nyd,195,320,0	script	nyd_to2f_warp	45,5,5,{
+OnInstanceInit:
+OnDisable:
+	disablenpc instance_npcname("nyd_to2f_warp");
+	end;
+
+OnEnable:
+	enablenpc instance_npcname("nyd_to2f_warp");
+	end;
+
+OnTouch:
+	'ins_nyd2 = ins_nyd2 = 3;
+	warp instance_mapname("2@nyd"),200,10;
+	end;
+}
+
+1@nyd,1,1,0	script	ins_nyd1_spawn_mobs	-1,{
+OnInstanceInit:
+	set .@map$, instance_mapname("1@nyd");
+	monster .@map$,0,0,"Ancient Tree",2019,40,instance_npcname("ins_nyd1_spawn_mobs")+"::OnMyTreeDead";
+	monster .@map$,0,0,"Rhyncho",2020,30,instance_npcname("ins_nyd1_spawn_mobs")+"::OnMyRhynDead";
+	monster .@map$,0,0,"Phylla",2021,30,instance_npcname("ins_nyd1_spawn_mobs")+"::OnMyPhyDead";
+	monster .@map$,0,0,"Aqua Elemental",2016,30,instance_npcname("ins_nyd1_spawn_mobs")+"::OnMyAquaDead";
+	monster .@map$,0,0,"Dark Pinguicula",2015,30,instance_npcname("ins_nyd1_spawn_mobs")+"::OnMyPingDead";
+	end;
+
+OnMyTreeDead:
+	monster instance_mapname("1@nyd"),0,0,"Ancient Tree",2019,1,instance_npcname("ins_nyd1_spawn_mobs")+"::OnMyTreeDead";
+	end;
+
+OnMyRhynDead:
+	monster instance_mapname("1@nyd"),0,0,"Rhyncho",2020,1,instance_npcname("ins_nyd1_spawn_mobs")+"::OnMyRhynDead";
+	end;
+
+OnMyPhyDead:
+	monster instance_mapname("1@nyd"),0,0,"Phylla",2021,1,instance_npcname("ins_nyd1_spawn_mobs")+"::OnMyPhyDead";
+	end;
+
+OnMyAquaDead:
+	monster instance_mapname("1@nyd"),0,0,"Aqua Elemental",2016,1,instance_npcname("ins_nyd1_spawn_mobs")+"::OnMyAquaDead";
+	end;
+
+OnMyPingDead:
+	monster instance_mapname("1@nyd"),0,0,"Dark Pinguicula",2015,1,instance_npcname("ins_nyd1_spawn_mobs")+"::OnMyPingDead";
+	end;
+}
+
+// Second Floor
+//============================================================
+2@nyd,200,14,0	script	nyd_2f_enter	-1,6,6,{
+OnTouch_:
+	donpcevent instance_npcname("nyd_2f_enter_broad")+"::OnEnable";
+	disablenpc instance_npcname("nyd_2f_enter");
+	end;
+}
+
+2@nyd,1,1,0	script	nyd_2f_enter_broad	-1,{
+OnInstanceInit:
+OnDisable:
+	disablenpc instance_npcname("nyd_2f_enter_broad");
+	end;
+
+OnEnable:
+	enablenpc instance_npcname("nyd_2f_enter_broad");
+	initnpctimer;
+	end;
+
+OnTimer12000:
+	mapannounce instance_mapname("2@nyd"), "니드호그의 그림자: 더 이상은 안 돼... 더 이상 견딜 수 없어...",bc_map,"0xFFFF00";
+	end;
+
+OnTimer15000:
+	mapannounce instance_mapname("2@nyd"), "니드호그의 그림자: 난... 난 세계수 이그드라실의 힘이 필요해...",bc_map,"0xFFFF00";
+	end;
+
+OnTimer18000:
+	mapannounce instance_mapname("2@nyd"), "니드호그의 그림자: 모든 것을 파괴하라...",bc_map,"0xFFFF00";
+	stopnpctimer;
+	disablenpc instance_npcname("nyd_2f_enter_broad");
+	end;
+}
+
+2@nyd,199,178,0	script	nyd_2f_ddr_control	-1,6,6,{
+OnTouch:
+	specialeffect2 EF_HOLYHIT;
+	mes "아름다운 돌 아래에서 기묘한 바람이 불어오고 있다.";
+	next;
+	mes "기묘한 힘이 서서히 당신의 몸을 감싸고, 차원이 변하기 시작합니다.";
+	close2;
+	warp instance_mapname("2@nyd"),199,255;
+	end;
+}
+
+2@nyd,199,268,0	script	nyd_2f_boss_enter	-1,8,8,{
+OnTouch:	// !Fix me: official script uses OnTouch_
+	if (is_party_leader() == true) {
+		donpcevent instance_npcname("nyd_2f_boss_enter_call")+"::OnEnable";
+		disablenpc instance_npcname("nyd_2f_boss_enter");
+		end;
+	}
+	end;
+}
+
+2@nyd,2,2,0	script	nyd_2f_boss_enter_call	-1,{
+OnInstanceInit:
+	disablenpc instance_npcname("nyd_2f_boss_enter_call");
+	end;
+
+OnEnable:
+	enablenpc instance_npcname("nyd_2f_boss_enter_call");
+	set .@map$, instance_mapname("2@nyd");
+	monster .@map$,199,327,"니드호그의 그림자",2022,1,instance_npcname("nyd_2f_boss_enter_call")+"::OnMyMobDead";
+	mapannounce .@map$, "니드호그의 그림자: 너희 모두를 잡아먹겠다... 너와 세계수 이그드라실까지도.",bc_map,"0x00ff99";
+	//donpcevent instance_npcname("nyd_2f_boss_enter_call")+"::Ongo";
+	initnpctimer;
+	end;
+
+OnDisable:
+	killmonster instance_mapname("2@nyd"),instance_npcname("nyd_2f_boss_enter_call")+"::OnMyMobDead";
+	disablenpc instance_npcname("nyd_2f_boss_enter_call");
+	end;
+
+OnTimer180000:
+	stopnpctimer;
+OnWarpColor:
+	set .@map$, instance_mapname("2@nyd");
+	switch(rand(1,4)) {
+	case 1:
+		mapannounce .@map$, "니드호그의 그림자: 이 혼돈 속에서... 네 피야말로 내게 필요한 것이다.",bc_map,"0xFFFF00";
+		donpcevent instance_npcname("nyd_2f_white")+"::OnDisable";
+		donpcevent instance_npcname("nyd_2f_yellow")+"::OnDisable";
+		donpcevent instance_npcname("nyd_2f_green")+"::OnDisable";
+		donpcevent instance_npcname("nyd_2f_red")+"::OnEnable";
+		instance_warpall .@map$,115,278, instance_id();
+		end;
+	case 2:
+		mapannounce .@map$, "니드호그의 그림자: 네 피 한 방울도 남김없이 얼려버리겠다.",bc_map,"0xFFFF00";
+		donpcevent instance_npcname("nyd_2f_red")+"::OnDisable";
+		donpcevent instance_npcname("nyd_2f_yellow")+"::OnDisable";
+		donpcevent instance_npcname("nyd_2f_green")+"::OnDisable";
+		donpcevent instance_npcname("nyd_2f_white")+"::OnEnable";
+		instance_warpall .@map$,115,373, instance_id();
+		end;
+	case 3:
+		mapannounce .@map$, "니드호그의 그림자: 텅 빈 환상 속에서 영원한 잠에 빠지다.",bc_map,"0xFFFF00";
+		donpcevent instance_npcname("nyd_2f_red")+"::OnDisable";
+		donpcevent instance_npcname("nyd_2f_white")+"::OnDisable";
+		donpcevent instance_npcname("nyd_2f_green")+"::OnDisable";
+		donpcevent instance_npcname("nyd_2f_yellow")+"::OnEnable";
+		instance_warpall .@map$,284,278, instance_id();
+		end;
+	case 4:
+		mapannounce .@map$, "니드호그의 그림자: 네가 천천히 죽어가는 고통을 즐기게 해주지.",bc_map,"0xFFFF00";
+		donpcevent instance_npcname("nyd_2f_red")+"::OnDisable";
+		donpcevent instance_npcname("nyd_2f_white")+"::OnDisable";
+		donpcevent instance_npcname("nyd_2f_yellow")+"::OnDisable";
+		donpcevent instance_npcname("nyd_2f_green")+"::OnEnable";
+		instance_warpall .@map$,284,374, instance_id();
+		end;
+	}
+	end;
+
+OnMyMobDead:
+	set .@map$, instance_mapname("2@nyd");
+	if (mobcount(.@map$,instance_npcname("nyd_2f_boss_enter_call")+"::OnMyMobDead") < 1) {
+		mapannounce .@map$, "니드호그의 그림자: 세계수 이그드라실의 수호자... 그의 힘이 사라지고 있다...",bc_map,"0x00ff99";
+		donpcevent instance_npcname("세계수 이그드라실#2F")+"::OnEnable";
+		donpcevent instance_npcname("nyd_2f_boss_enter_call")+"::OnDisable";
+		donpcevent instance_npcname("nyd_2f_boss_enter_logic")+"::OnDisable";
+		donpcevent instance_npcname("nyd_2f_red_c")+"::OnDisable";
+		donpcevent instance_npcname("nyd_2f_white_c")+"::OnDisable";
+		donpcevent instance_npcname("nyd_2f_yellow_c")+"::OnDisable";
+		donpcevent instance_npcname("nyd_2f_green_c")+"::OnDisable";
+		'ins_nyd2 = ins_nyd2 = 4;
+		end;
+	}
+	end;
+}
+
+2@nyd,2,4,0	script	nyd_2f_boss_enter_logic	-1,{
+OnInstanceInit:
+	disablenpc instance_npcname("nyd_2f_boss_enter_logic");
+	end;
+
+OnEnable:
+	stopnpctimer;
+	initnpctimer;
+	end;
+
+OnDisable:
+	stopnpctimer;
+	disablenpc instance_npcname("nyd_2f_boss_enter_logic");
+	end;
+
+OnTimer180000:
+	stopnpctimer;
+	donpcevent instance_npcname("nyd_2f_boss_enter_call")+"::OnWarpColor";
+	end;
+}
+
+2@nyd,202,324,5	script	세계수 이그드라실#2F	437,3,3,{
+	mes "[세계수 이그드라실]";
+	mes "감사합니다. 당신은 인류와 라핀 부족의 구세주입니다.";
+	next;
+	mes "[세계수 이그드라실]";
+	mes "당신은 니드호그의 그림자를 물리쳤습니다. 하지만… 완전히 사라진 것은 아닙니다. 그 힘이 잠시 잠재워졌을 뿐입니다.";
+	next;
+	mes "[세계수 이그드라실]";
+	mes "하지만 덕분에 시간을 충분히 벌었네요. 정말 훌륭합니다.";
+	next;
+	mes "[세계수 이그드라실]";
+	mes "스플렌디드와 마누크 담당자에게 이 사실을 보고해 주십시오.";
+	next;
+	mes "[세계수 이그드라실]";
+	mes "보시다시피, 세계수가 약해진 것은 사파족이나 라핀족의 잘못이 아닙니다. 모든 것은 수호자의 그림자 때문입니다...";
+	next;
+	mes "[세계수 이그드라실]";
+	mes "가디언의 광기는...우리가 알지 못하는 힘에 의해 발생한 것이다...이 사실을 모두에게 알려야 한다.";
+	next;
+	mes "[세계수 이그드라실]";
+	mes "자, 이제 제가 저주받은 둥지에서 당신을 모시고 나가겠습니다.";
+	next;
+	switch(select("제발 저 좀 내보내 주세요.:나는 잠시 주변을 둘러보고 싶어.")) {
+	case 1:
+		'ins_nyd2 = 0;
+		// ins_nyd2 = 0;
+		set ins_nyd,203;
+		//setquest 3135;
+		warp "nyd_dun02",98,196;
+		end;
+	case 2:
+		mes "[세계수 이그드라실]";
+		mes "그렇군요... 떠나고 싶으시면 제가 옆에 있을게요.";
+		close;
+	}
+
+OnInstanceInit:
+OnDisable:
+	disablenpc instance_npcname("세계수 이그드라실#2F");
+	end;
+
+OnEnable:
+	enablenpc instance_npcname("세계수 이그드라실#2F");
+	mapannounce instance_mapname("2@nyd"), "세계수 이그드라실: 잘했어. 모두 가운데 마법진으로 모여 둥지 파괴를 준비해.",bc_map,"0x00ff99";
+	end;
+}
+
+2@nyd,115,278,0	script	nyd_2f_red	-1,5,5,{
+OnInstanceInit:
+	disablenpc();
+	end;
+
+OnEnable:
+	enablenpc();
+	donpcevent instance_npcname(strnpcinfo(0)+"_warp1")+"::OnEnable";
+	donpcevent instance_npcname(strnpcinfo(0)+"_warp2")+"::OnEnable";
+	donpcevent instance_npcname(strnpcinfo(0)+"_warp3")+"::OnEnable";
+	donpcevent instance_npcname(strnpcinfo(0)+"_c")+"::OnEnable";
+	initnpctimer;
+	end;
+
+OnDisable:
+	donpcevent instance_npcname(strnpcinfo(0)+"_warp1")+"::OnDisable";
+	donpcevent instance_npcname(strnpcinfo(0)+"_warp2")+"::OnDisable";
+	donpcevent instance_npcname(strnpcinfo(0)+"_warp3")+"::OnDisable";
+	disablenpc();
+	end;
+
+OnTouch:
+	if (compare(strnpcinfo(0),"red")) {
+		percentheal -50,0;
+		percentheal -30,0;
+		sc_start SC_BLEEDING,60000,0;
+	} else if (compare(strnpcinfo(0),"white")) {
+		percentheal -50,0;
+		sc_start SC_FREEZE,20000,0;
+	} else if (compare(strnpcinfo(0),"yellow")) {
+		percentheal 0,-50;
+		sc_start SC_SLEEP,20000,0;
+		sc_start SC_CONFUSION,60000,0;
+	} else if (compare(strnpcinfo(0),"green")) {
+		percentheal -50,-50;
+		sc_start SC_POISON,60000,0;
+	}
+	end;
+
+OnTimer10000:
+	disablenpc();
+	stopnpctimer;
+	end;
+}
+
+2@nyd,6,6,0	script	nyd_2f_red_c	-1,{
+OnInstanceInit:
+	disablenpc();
+	end;
+
+OnEnable:
+	enablenpc();
+	initnpctimer;
+	set .@map$, instance_mapname("2@nyd");
+	set .@label$, instance_npcname(strnpcinfo(0))+"::OnMyMobDead";
+	if (compare(strnpcinfo(0),"red")) {
+		monster .@map$,120,285,"Nidhoggur's Guardian#1",2020,1,.@label$;
+		monster .@map$,119,286,"Nidhoggur's Guardian#2",2020,1,.@label$;
+		monster .@map$,120,270,"Nidhoggur's Guardian#3",2020,1,.@label$;
+		monster .@map$,119,269,"Nidhoggur's Guardian#4",2021,1,.@label$;
+		monster .@map$,118,270,"Nidhoggur's Guardian#5",2021,1,.@label$;
+	} else if (compare(strnpcinfo(0),"white")) {
+		monster .@map$,120,380,"Nidhoggur's Guardian#1",2020,1,.@label$;
+		monster .@map$,119,381,"Nidhoggur's Guardian#2",2020,1,.@label$;
+		monster .@map$,120,367,"Nidhoggur's Guardian#3",2020,1,.@label$;
+		monster .@map$,119,366,"Nidhoggur's Guardian#4",2021,1,.@label$;
+		monster .@map$,118,365,"Nidhoggur's Guardian#5",2021,1,.@label$;
+	} else if (compare(strnpcinfo(0),"yellow")) {
+		monster .@map$,282,284,"Nidhoggur's Guardian#1",2020,1,.@label$;
+		monster .@map$,283,283,"Nidhoggur's Guardian#2",2020,1,.@label$;
+		monster .@map$,280,275,"Nidhoggur's Guardian#3",2020,1,.@label$;
+		monster .@map$,281,276,"Nidhoggur's Guardian#4",2021,1,.@label$;
+		monster .@map$,281,277,"Nidhoggur's Guardian#5",2021,1,.@label$;
+	} else if (compare(strnpcinfo(0),"green")) {
+		monster .@map$,282,378,"Nidhoggur's Guardian#1",2020,1,.@label$;
+		monster .@map$,283,377,"Nidhoggur's Guardian#2",2020,1,.@label$;
+		monster .@map$,280,368,"Nidhoggur's Guardian#3",2020,1,.@label$;
+		monster .@map$,281,368,"Nidhoggur's Guardian#4",2021,1,.@label$;
+		monster .@map$,281,367,"Nidhoggur's Guardian#5",2021,1,.@label$;
+	}
+	end;
+
+OnMyMobDead:
+	set .@map$, instance_mapname("2@nyd");
+	if (mobcount(.@map$,instance_npcname(strnpcinfo(0))+"::OnMyMobDead") < 1) {
+		mapannounce .@map$, "니드호그의 그림자: 나쁘지는 않지만... 이번에는 내가 네 상대가 되겠다.",bc_map,"0x00ff99";
+		donpcevent instance_npcname("nyd_2f_boss_enter_logic")+"::OnEnable";
+		donpcevent instance_npcname(strnpcinfo(0))+"::OnDisable";
+		end;
+	}
+	end;
+
+/*
+OnReset:	// Label not called.
+	killmonster instance_mapname("2@nyd"),instance_npcname(strnpcinfo(0))+"::OnMyMobDead";
+	donpcevent instance_npcname(strnpcinfo(0))+"::OnDisable";
+	end;
+*/
+
+OnDisable:
+	stopnpctimer;
+	killmonster instance_mapname("2@nyd"),instance_npcname(strnpcinfo(0))+"::OnMyMobDead"; //custom
+	donpcevent instance_npcname(substr(strnpcinfo(0),0,getstrlen(strnpcinfo(0))-3))+"::OnDisable";
+	disablenpc();
+	end;
+
+OnTimer180000:
+	killmonster instance_mapname("2@nyd"),instance_npcname(strnpcinfo(0))+"::OnMyMobDead";
+	stopnpctimer;
+	donpcevent instance_npcname("nyd_2f_boss_enter_call")+"::OnWarpColor";
+	end;
+}
+
+2@nyd,130,298,0	script	nyd_2f_red_warp1	-1,6,6,{
+OnInstanceInit:
+OnDisable:
+	disablenpc();
+	end;
+
+OnEnable:
+	enablenpc();
+	end;
+
+OnTouch:
+	if (compare(strnpcinfo(0),"red"))
+		warp instance_mapname("2@nyd"),115,278;
+	else if (compare(strnpcinfo(0),"white"))
+		warp instance_mapname("2@nyd"),115,373;
+	else if (compare(strnpcinfo(0),"yellow"))
+		warp instance_mapname("2@nyd"),284,278;
+	else if (compare(strnpcinfo(0),"green"))
+		warp instance_mapname("2@nyd"),284,374;
+	end;
+}
+2@nyd,142,296,0	duplicate(nyd_2f_red_warp1)	nyd_2f_red_warp2	-1,6,6
+2@nyd,145,283,0	duplicate(nyd_2f_red_warp1)	nyd_2f_red_warp3	-1,6,6
+
+2@nyd,115,373,0	duplicate(nyd_2f_red)	nyd_2f_white	-1,5,5
+2@nyd,6,7,0	duplicate(nyd_2f_red_c)	nyd_2f_white_c	-1
+2@nyd,127,354,0	duplicate(nyd_2f_red_warp1)	nyd_2f_white_warp1	-1,6,6,
+2@nyd,140,357,0	duplicate(nyd_2f_red_warp1)	nyd_2f_white_warp2	-1,6,6
+2@nyd,145,367,0	duplicate(nyd_2f_red_warp1)	nyd_2f_white_warp3	-1,6,6
+
+2@nyd,284,278,0	duplicate(nyd_2f_red)	nyd_2f_yellow	-1,5,5
+2@nyd,6,8,0	duplicate(nyd_2f_red_c)	nyd_2f_yellow_c	-1
+2@nyd,255,285,0	duplicate(nyd_2f_red_warp1)	nyd_2f_yellow_warp1	-1,6,6
+2@nyd,257,296,0	duplicate(nyd_2f_red_warp1)	nyd_2f_yellow_warp2	-1,6,6
+2@nyd,268,300,0	duplicate(nyd_2f_red_warp1)	nyd_2f_yellow_warp3	-1,6,6
+
+2@nyd,284,374,0	duplicate(nyd_2f_red)	nyd_2f_green	-1,5,5
+2@nyd,6,9,0	duplicate(nyd_2f_red_c)	nyd_2f_green_c	-1
+2@nyd,274,356,0	duplicate(nyd_2f_red_warp1)	nyd_2f_green_warp1	-1,6,6
+2@nyd,260,356,0	duplicate(nyd_2f_red_warp1)	nyd_2f_green_warp2	-1,6,6
+2@nyd,258,368,0	duplicate(nyd_2f_red_warp1)	nyd_2f_green_warp3	-1,6,6
+
+2@nyd,1,1,0	script	ins_nyd2_spawn_mobs	-1,{
+OnInstanceInit:
+	set .@map$, instance_mapname("2@nyd");
+	areamonster .@map$,20,12,380,172,"Rhyncho",2020,40,instance_npcname("ins_nyd2_spawn_mobs")+"::OnMyRhynDead";
+	areamonster .@map$,20,12,380,172,"Phylla",2021,40,instance_npcname("ins_nyd2_spawn_mobs")+"::OnMyPhyDead";
+	areamonster .@map$,20,12,380,172,"Dark Shadow",2023,40,instance_npcname("ins_nyd2_spawn_mobs")+"::OnMyDarkshaDead";
+	areamonster .@map$,20,12,380,172,"Dark Pinguicula",2015,40,instance_npcname("ins_nyd2_spawn_mobs")+"::OnMyPingDead";
+	end;
+
+OnMyRhynDead:
+	areamonster instance_mapname("2@nyd"),20,12,380,172,"Rhyncho",2020,1,instance_npcname("ins_nyd2_spawn_mobs")+"::OnMyRhynDead";
+	end;
+
+OnMyPhyDead:
+	areamonster instance_mapname("2@nyd"),20,12,380,172,"Phylla",2021,1,instance_npcname("ins_nyd2_spawn_mobs")+"::OnMyPhyDead";
+	end;
+
+OnMyDarkshaDead:
+	areamonster instance_mapname("2@nyd"),20,12,380,172,"Dark Shadow",2023,1,instance_npcname("ins_nyd2_spawn_mobs")+"::OnMyDarkshaDead";
+	end;
+
+OnMyPingDead:
+	areamonster instance_mapname("2@nyd"),20,12,380,172,"Dark Pinguicula",2015,1,instance_npcname("ins_nyd2_spawn_mobs")+"::OnMyPingDead";
+	end;
+}
+
+// GM Management NPCs
+//============================================================
+sec_in02,36,167,3	script	Nidhoggur Manager	447,1,1,{
+	callfunc "F_GM_NPC";
+	mes "비밀번호를 입력하세요.";
+	next;
+	if (callfunc("F_GM_NPC","1854",1) == 0) {
+		mes "비밀번호가 잘못되었습니다.";
+		close;
+	}
+	mes "무엇을 해야 하나요?";
+	next;
+	switch(select("니드호구르에 입장할 수 있도록 변수를 재설정하세요.:변수 'ins_nyd'를 변경하세요:3일 타이머 3135를 제거하세요:변수 번호를 확인하세요")) {
+	case 1:
+		set ins_nyd,200;
+		set ins_nyd2,0;
+		erasequest 3135;
+		mes "ins_nyd를 200으로 설정하고 ins_nyd2를 0으로 설정했습니다.";
+		mes "퀘스트 3135가 삭제되었습니다.";
+		close;
+	case 2:
+		mes "어떤 변수를 변경하시겠습니까?";
+		next;
+		switch(select("ins_nyd:ins_nyd2")) {
+			case 1: set .@var$,"ins_nyd"; break;
+			case 2: set .@var$,"ins_nyd2"; break;
+		}
+		mes "변수 번호를 입력하세요";
+		next;
+		input .@input;
+		setd .@var$, .@input;
+		mes .@var$+" 설정되었습니다"+.@input+" .";
+		close;
+	case 3:
+		mes "이 대화 상자를 닫으면 3일 타이머가 사라집니다.";
+		next;
+		erasequest 3135;
+		mes "퀘스트 타이머 제거 작업을 완료했습니다.";
+		close;
+	case 4:
+		mes " ins_nyd는 여기에 있습니다."+ins_nyd+".";
+		mes " ins_nyd2는 여기에 있습니다."+ins_nyd2+".";
+		close;
+	}
+}
+
+nyd_dun02,7,7,2	script	Purification Admin#nyd2	844,2,0,{
+	callfunc "F_GM_NPC";
+	mes "비밀번호를 입력하세요";
+	set .@i, callfunc("F_GM_NPC","dragonslayer",1);
+	next;
+	if (.@i == 0) {
+		mes "비밀번호를 정확하게 입력하세요.";
+		close;
+	}
+	switch(select("정화석 생성:정화석을 제거하세요:입구 NPC 끄기:입구 NPC 켜기:Cancel")) {
+	case 1:
+		mes "정화석이 만들어졌으며 30분 동안 올려놓겠습니다.";
+		donpcevent "Purification Stone#nyd2::OnEnable";
+		close;
+	case 2:
+		mes "정화석이 파괴되었습니다.";
+		donpcevent "Purification Stone#nyd2::OnDisable";
+		close;
+	case 3:
+		mes "nyd_dun02 100 201에 있는 이그드라실 문지기가 현재 꺼져 있습니다.";
+		disablenpc "Yggdrasil Gatekeeper";
+		close;
+	case 4:
+		mes "nyd_dun02 100 201에 있는 이그드라실 문지기가 현재 작동 중입니다.";
+		enablenpc "Yggdrasil Gatekeeper";
+		close;
+	case 5:
+		close;
+	}
+}
+
+nyd_dun02,88,195,4	script	Purification Stone#nyd2	406,{
+	erasequest 3135;
+	erasequest 3136;
+	set ins_nyd,200;
+	set ins_nyd2,0;
+	mes "니드호구르의 둥지와 관련된 기록 및 후유증이 제거되었습니다. 이제 던전을 생성하고 입장할 수 있습니다.";
+	close;
+OnInit:
+	disablenpc "Purification Stone#nyd2";
+	end;
+OnEnable:
+	initnpctimer;
+	end;
+OnDisable:
+	stopnpctimer;
+	disablenpc "Purification Stone#nyd2";
+	end;
+OnTimer1000:
+	enablenpc "Purification Stone#nyd2";
+	end;
+OnTimer1740000:
+	mapannounce "nyd_dun02","정화석은 1분 안에 파괴될 것입니다.",bc_map,"0x00FF99",FW_NORMAL,12;
+	end;
+OnTimer1800000:
+	disablenpc "Purification Stone#nyd2";
+	end;
+}

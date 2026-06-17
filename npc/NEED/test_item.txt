@@ -1,0 +1,31 @@
+lasagna,164,155,6	script	아이템 생성 NPC	871,{
+	mes "[아이템 생성 테스트]";
+	mes "생성할 아이템 번호를 입력하세요.";
+	input .@item_id;
+
+	if (.@item_id <= 0 || getitemname(.@item_id) == "null") {
+		mes "존재하지 않는 아이템 번호입니다.";
+		close;
+	}
+
+	next;
+	mes "[아이템 생성 테스트]";
+	mes "아이템: " + getitemname(.@item_id);
+	mes "생성할 개수를 입력하세요.";
+	input .@amount;
+
+	if (.@amount <= 0) {
+		mes "개수는 1개 이상 입력해야 합니다.";
+		close;
+	}
+
+	getitem .@item_id, .@amount;
+
+	mes "지급 완료:";
+	mes getitemname(.@item_id) + " " + .@amount + "개";
+	close;
+	
+OnInit:
+		waitingroom "테스트용 아이템 생성 NPC",0;
+		end;
+}

@@ -20,24 +20,30 @@ pvp_n_2-5,0,0,0,0	monster	페코페코	1019,5,1000,1000
 
 // 마을 -> 초보존 NPC
 -	script	svbase_chobo	-1,{
-	if (BaseLevel > .limitlv) {
-		mes "[^dc143c안내^000000]";
-		mes "^dc143c"+.limitlv+"^000000까지만 입장 가능합니다.";
+	switch( select( "- 초보존","- 노점존","- 허수아비(데미지 테스트)", "- PVP","- GVG" ) ){
+	case 1:
+		if (BaseLevel > .limitlv) {
+			message strcharinfo(0),""+.limitlv+"레벨 까지만 입장 가능합니다.";
+			end;
+		}
+		warp "pvp_n_2-5",99,132;
+		end;
+	case 2:
+		warp "payon.gat",137,232;
+		end;
+	case 3:
+		warp "hero_tra",70,150;
+		end;
+	case 4:
+		warp "guild_vs1",0,0;
+		end;
+	case 5:
+		warp "guild_vs2",0,0;
 		end;
 	}
-	mes "[^dc143c안내^000000]";
-	mes "입장 하시겠습니까?";
-	next;
-	if (select("입장:취소") == 2) {
-		close;
-	}
-
-	close2;
-	warp "pvp_n_2-5",99,132;
-	end;
 
 OnInit:
-	.limitlv = 39; // 1~39 입장 가능, 40 이상 입장 불가
+	.limitlv = 40; // 1~39 입장 가능, 40 이상 입장 불가
 	end;
 }
 

@@ -1,0 +1,69 @@
+-	script	NEED_Storage_Command	-1,{
+OnInit:
+	bindatcmd "창고2", strnpcinfo(3)+"::OnStorage2";
+	bindatcmd "창고3", strnpcinfo(3)+"::OnStorage3";
+	bindatcmd "노점검색", strnpcinfo(3)+"::OnStore";
+	end;
+
+OnStore:
+	searchstores 10, SEARCHSTORE_EFFECT_REMOTE;
+	end;
+		
+OnStorage2:
+	if (#NEED_STORAGE2_UNLOCK) {
+		openstorage2 1;
+		end;
+	}
+
+	mes "[창고 관리]";
+	mes "2번 창고는 캐시로 해금 후 사용할 수 있습니다.";
+	mes "해금 비용 : 100,000 Cash";
+	next;
+
+	if (select("해금한다:취소") == 2)
+		close;
+
+	if (#CASHPOINTS < 100000) {
+		mes "[창고 관리]";
+		mes "캐시가 부족합니다.";
+		close;
+	}
+
+	#CASHPOINTS -= 100000;
+	#NEED_STORAGE2_UNLOCK = 1;
+
+	mes "[창고 관리]";
+	mes "2번 창고가 해금되었습니다.";
+	close2;
+	openstorage2 1;
+	end;
+
+OnStorage3:
+	if (#NEED_STORAGE3_UNLOCK) {
+		openstorage2 2;
+		end;
+	}
+
+	mes "[창고 관리]";
+	mes "3번 창고는 캐시로 해금 후 사용할 수 있습니다.";
+	mes "해금 비용 : 100,000 Cash";
+	next;
+
+	if (select("해금한다:취소") == 2)
+		close;
+
+	if (#CASHPOINTS < 100000) {
+		mes "[창고 관리]";
+		mes "캐시가 부족합니다.";
+		close;
+	}
+
+	#CASHPOINTS -= 100000;
+	#NEED_STORAGE3_UNLOCK = 1;
+
+	mes "[창고 관리]";
+	mes "3번 창고가 해금되었습니다.";
+	close2;
+	openstorage2 2;
+	end;
+}
