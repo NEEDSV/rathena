@@ -17,68 +17,71 @@
 
 // Main NPC :: 201105_luk_enc
 //============================================================
-itemmall,29,71,3	script	Devil Enchant Master#prq	63,{
-	disable_items;
-	if (checkweight(1201,1) == 0) {
-		mes "소지품이 너무 많습니다. 짐을 줄이고 다시 오세요!";
+itemmall,29,71,3	script	마성의강화사#prq	63,{
+ 	disable_items;
+ 	if (checkweight(1201,1) == 0) {
+		mes "너무 많은 아이템을 들고 있군, 줄이고 다시 오게나.";
 		close;
 	}
 	if (MaxWeight - Weight < 10000) {
-		mes "몸무게 제한을 초과하셨습니다. 몸무게를 줄이고 다시 방문해 주세요!";
+		mes "무게 한도를 초과 했네. 줄이고 다시 오게.";
 		close;
 	}
-	mes "[악마 마법의 달인]";
-	mes "예?";
-	mes "저를 찾으시는 건가요?";
+	mes "[마성의강화사]";
+	mes "음?";
+	mes "나한테 무슨 볼일이라도 있나?";
 	next;
-	switch(select("오늘 처음 뵙네요!:당신이 최고라고 들었어요!:마법 부여를 초기화해 주세요.")) {
+	switch(select("처음 보는 분이네요:최고라고 들었습니다:강화 초기화를 부탁합니다.","인챈트 리스트를 확인한다")) {
+	case 4:
+		callfunc "F_ShowOldEnchantList";
+		end;
 	case 1:
-		mes "[악마 마법의 달인]";
-		mes "하하하~ 물론이죠, 저는 단순히 사람들과 어울리는 그런 사람이 아닙니다.";
+		mes "[마성의강화사]";
+		mes "후후후, 당연하지 난 아무하고나 거래를 하는 사람은 아니니까.";
 		next;
-		mes "[악마 마법의 달인]";
-		mes "당신도 포함해서요! 아무리 많은 돈을 준다고 해도, 당신을 위해 마법을 부리지는 않을 거예요!!";
+		mes "[마성의강화사]";
+		mes "물론 너도 마찬가지! 네가 아무리 큰 돈을 짊어지고 내게 부탁해도 난 너에게 어떤 강화도 해 주지 않을것이야.";
 		next;
-		mes "[악마 마법의 달인]";
-		mes "제 직함 보셨어요? 이 직함을 가진 사람이 극히 드문 데에는 이유가 있습니다!";
+		mes "[마성의강화사]";
+		mes "내 이름이 보이나? 이건 아무에게나 붙는 이름이 아니야. 이 대륙 전체에서 손꼽는 몇몇의 장비 강화사들에게만 붙는 명칭이지.";
 		next;
-		mes "[악마 마법의 달인]";
-		mes "마법 부여 책을 가져오셔야만 마법을 걸어드리겠습니다!";
+		mes "[마성의강화사]";
+		mes "우린 지정된 거래처가 아니면 거래를 하지 않아. 만약 네가 나와 거래를 하고싶다면 아마도 ^0000FF인챈트 소개장^000000을 들고 와야 할거야";
 		next;
-		mes "[악마 마법의 달인]";
-		mes "그렇지 않으면, 당신을 위해 마법을 걸어주지 않겠습니다....";
+		mes "[마성의강화사]";
+		mes "그렇지 않다면 어떤 댓가를 지불한다 하더라도 네게 강화를 해주는 일은 없을테지. 난 아직 널 못믿으니까...";
 		close;
 	case 2:
 		if (!countitem(6484)) {
-			mes "[악마 마법의 달인]";
-			mes "내 말 듣고 있니? 네가 마법책을 가져오면 그때서야 널 도와줄게!";
+			mes "[마성의강화사]";
+			mes "말했지 않나? 내게 강화를 부탁하려면 소개장을 들고 오라고... 혹시 이전에 내가 한 설명을 귓등으로 들은 건 아닌가?";
 			close;
 		}
 		set .@select,1;
 		break;
 	case 3:
-		mes "[악마 마법의 달인]";
+		mes "[마성의강화사]";
 		if (Zeny < 100000) {
-			mes "초기화에 100,000 제니가 소모됩니다. 제니가 부족한 것 같습니다...";
+			mes "초기화에는 10만제니가 필요해. 그런데 자네 돈이 좀 모자란 것 같군...";
 			close;
 		}
-		mes "초기화에는 100,000 제니가 소모되며, 무기에 마법이 부여되었는지 확인하는 데에도 비용이 발생합니다!";
+		mes "초기화에는 10만제니가 필요하다네. 그리고 쓸만한 강화치가 부여되어 있는건 아닌지 다시 확인해보게나";
 		next;
-		if (select("잠시 생각해 볼게요.:지금 초기화하세요!") == 1) {
-			mes "[악마 마법의 달인]";
-			mes "확인 후 다시 오세요!";
-			close;
-		}
-		set .@select,2;
+		if (select("다시 생각해보겠습니다:그냥 초기화 해주세요") == 1) {
+			mes "[마성의강화사]";
+			mes "마음이 약한 친구구만.";
+ 			close;
+ 		}
+ 		set .@select,2;
 		break;
 	}
 	set .@part, EQI_HAND_R;
 
-	mes "[악마 마법의 달인]";
-	if (!getequipisequiped(.@part)) {
-		mes "마법이 걸린 장비를 제거하려고 하시는 건가요?";
-		close;
-	}
+	mes "[마성의강화사]";
+ 	if (!getequipisequiped(.@part)) {
+		mes "인챈트 된 장비를 제거 할려고 하는거야?";
+ 		close;
+ 	}
 	setarray .@equip_card[0], getequipcardid(.@part,0), getequipcardid(.@part,1), getequipcardid(.@part,2), getequipcardid(.@part,3);
 	// if (!getequipisequiped(.@part)) {
 	// 	mes "It is dangerous to remove equipment during enchant process!";
@@ -88,21 +91,21 @@ itemmall,29,71,3	script	Devil Enchant Master#prq	63,{
 	.@equip_refine = getequiprefinerycnt(.@part);
 	set .@item$, "|1292|1394|1491|1585|2015|13071|13115|16019|18112|21000|";
 	if (!compare(.@item$,"|"+.@equip_id+"|")) {
-		mes "지금은 당신의 장비를 만지고 싶지 않아요!";
+		mes "지금 자네가 장착한 장비는 내가 건드리고 싶은 물건은 아니군.";
 		close;
 	}
 
 	if (.@select == 1) {
 		if (!countitem(6484)) {
-			mes "내 말 듣고 있니? 네가 마법책을 가져오면 그때서야 널 도와줄게!";
+			mes "말했지 않나? 내게 강화를 부탁하려면 소개장을 들고 오라고... 혹시 이전에 내가 한 설명을 귓등으로 들은 건 아닌가?";
 			close;
 		}
-		mes "어떤 효과를 부여하고 싶으신가요?";
+		mes "그래 좋아 어떤 능력치를 강화하고 싶은거지?";
 		next;
-		switch(select("잠시 생각해 볼게요.:물리 시리즈:마법 시리즈")) {
+		switch(select("잠시 생각좀 해보고요:물리계열:마법계열")) {
 		case 1:
-			mes "[악마 마법의 달인]";
-			mes "생각이 바뀌시면 다시 오세요!";
+			mes "[마성의강화사]";
+			mes "흥, 마음이 바뀌면 다시 찾아오게";
 			close;
 		case 2:
 			set .@enc_type,1;
@@ -111,23 +114,23 @@ itemmall,29,71,3	script	Devil Enchant Master#prq	63,{
 			set .@enc_type,2;
 			break;
 		}
-		mes "[악마 마법의 달인]";
+		mes "[마성의강화사]";
 		if (.@equip_card[3]) {
-			mes "이 장비는 마법이 부여되었습니다! 다시 마법을 부여하려면 먼저 초기화해야 합니다.";
+			mes "이 장비는 이미 인챈트 되어 있군. 다시 인챈트를 할려면 먼저 초기화 부터 하고 와.";
 			close;
 		}
-		mes "강화 과정이 실패하여 부분 제련 레벨이 감소할 수 있지만, 장착된 카드와 무기는 파손되지 않습니다! 계속하시겠습니까?";
+		mes "인챈트 과정이 실패할 수도 있고, ^ff0000일부 제련 레벨이 감소할^000000 수 있지만, 카드와 무기는 깨지지 않는다네. 그래도 계속하겠나?";
 		next;
-		if (select("다음번!:지금 시작하세요!") == 1) {
-			mes "[악마 마법의 달인]";
-			mes "결정하신 후에 다시 오세요!";
+		if (select("다음에 할께요:지금 해주세요") == 1) {
+			mes "[마성의강화사]";
+			mes "결정이 되면 다시 찾아오게.";
 			close;
 		}
 		if (.@equip_card[3]) {
-			mes "[악마 마법의 달인]";
-			mes "문제가 생긴 것 같네요. 제가 한번 살펴보겠습니다.";
-			close;
-		}
+			mes "[마성의강화사]";
+			mes "뭔가 문제가 있는거 같군.";
+ 			close;
+ 		}
 
 		if (.@enc_type == 1) { // Physical Series
 			set .@i, rand(1,1300);
@@ -206,27 +209,27 @@ itemmall,29,71,3	script	Devil Enchant Master#prq	63,{
 			else if (.@i < 1124)  set .@enchant,4806; //Matk3
 			else set .@enchant,0;
 		} else {
-			mes "[악마 마법의 달인]";
-			mes "흠! 이 상품에 문제가 생긴 것 같습니다. 다시 한번 확인해 주세요!";
+			mes "[마성의강화사]";
+			mes "흠, 뭔가 문제가 있어. 다시 한번 확인을 해봐.";
 			close;
 		}
-		mes "[악마 마법의 달인]";
+		mes "[마성의강화사]";
 		if (.@equip_card[3]) {
-			mes "이 아이템에 마법이 걸렸습니다!";
+			mes "인챈트가 되었네.";
 			close;
 		}
 		if (!countitem(6484)) {
-			mes "내 말 듣고 있니? 네가 마법책을 가져오면 그때서야 널 도와줄게!";
+			mes "말했지 않나? 내게 강화를 부탁하려면 소개장을 들고 오라고... 혹시 이전에 내가 한 설명을 귓등으로 들은 건 아닌가?";
 			close;
 		}
 		if (.@enchant == 0) {
 			specialeffect EF_SHIELDCHARGE;
-			mes "어머! 믿을 수 없어!! 실패했어!! 제발 다시 와줘!";
+			mes "오! 믿을 수 없군!! 실패 했어!! 다시 오게나!";
 			set .@lost_refine, rand(0,.@equip_refine);
 			set .@equip_refine, .@equip_refine - .@lost_refine;
 		} else {
 			specialeffect EF_REPAIRWEAPON;
-			mes "슬롯 ^9900004^000000에 마법이 걸렸습니다!";
+			mes "슬롯 ^9900004^000000에 인챈트 되었네!";
 		}
 		delitem 6484,1; //Enchant_Book
 
@@ -242,25 +245,26 @@ itemmall,29,71,3	script	Devil Enchant Master#prq	63,{
 
 		if (.@lost_refine) {
 			next;
-			mes "[악마 마법의 달인]";
-			mes " 그 실패로 인해 정제량이 감소했습니다."+callfunc("F_InsertPlural",.@lost_refine,"level")+"우울해하지 마세요!";
+			mes "[마성의강화사]";
+			mes "인챈트 실패로 제련수치 "+callfunc("F_InsertPlural",.@lost_refine,"level")+"가 감소되었다네. 너무 우울해 하지 말게.";
 		}
 		close;
 	} else if (.@select == 2) {
 		if (Zeny < 100000) {
-			mes "초기화하려면 약간의 돈이 필요합니다!!";
+			mes "초기화에는 10만제니가 필요하다네.";
+			mes "그리고 쓸만한 강화치가 부여되어 있는건 아닌지 다시 확인해보게나";
 			close;
 		}
 		if (getiteminfo(.@equip_card[3], ITEMINFO_SUBTYPE) != CARD_ENCHANT) {
-			mes "이 아이템은 마법이 걸려 있지 않습니다!";
+			mes "아이템이 인챈트되어 있지 않군.";
 			close;
 		}
 		if (!getequipisequiped(.@part)) {
-			mes "지금 장비를 해제하시겠습니까?";
+			mes "자네 혹시 지금 아이템 착용을 해제 했나?";
 			close;
 		}
 		specialeffect EF_REPAIRWEAPON;
-		mes "마법 부여 효과를 초기화했습니다.";
+		mes "인첸트 초기화를 하겠네.";
 		set Zeny, Zeny - 100000;
 
 		// anti-hack
@@ -275,7 +279,7 @@ itemmall,29,71,3	script	Devil Enchant Master#prq	63,{
 
 		close;
 	} else {
-		mes "직업을 잘못 선택하신 것 같네요?";
+		mes "자네 직업을 잘 못 선택한거 같군.";
 		close;
 	}
 	
