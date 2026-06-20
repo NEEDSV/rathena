@@ -4919,10 +4919,12 @@ int32 status_calc_pc_sub(map_session_data* sd, uint8 opt)
 		if (sc->getSCE(SC_FORTUNE))
 			sd->bonus.crit_atk_rate += 2 * sc->getSCE(SC_FORTUNE)->val1;
 #endif
+#ifndef NEED_2017_SKILL_FORMULA
 		if (sc->getSCE(SC_SYMPHONYOFLOVER)) {
 			sd->indexed_bonus.subele[ELE_GHOST] += sc->getSCE(SC_SYMPHONYOFLOVER)->val1 * 3;
 			sd->indexed_bonus.subele[ELE_HOLY] += sc->getSCE(SC_SYMPHONYOFLOVER)->val1 * 3;
 		}
+#endif
 		if (sc->getSCE(SC_PYREXIA) && sc->getSCE(SC_PYREXIA)->val3 == 0)
 			sd->bonus.crit_atk_rate += sc->getSCE(SC_PYREXIA)->val2;
 		if (sc->getSCE(SC_LUXANIMA)) {

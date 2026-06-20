@@ -10353,8 +10353,10 @@ int32 skill_vfcastfix(block_list *bl, double time, uint16 skill_id, uint16 skill
 			fixcast_r = max(fixcast_r, sc->getSCE(SC_HEAT_BARREL)->val2);
 		if (sc->getSCE(SC_FREEZING))
 			fixcast_r -= 50;
+#ifndef NEED_2017_SKILL_FORMULA
 		if (sc->getSCE(SC_SWINGDANCE))
 			fixcast_r = max(fixcast_r, skill_lv * 6);
+#endif
 		// Additive Fixed CastTime values
 		if (sc->getSCE(SC_MANDRAGORA))
 			fixed += sc->getSCE(SC_MANDRAGORA)->val1 * 500;
@@ -10362,8 +10364,10 @@ int32 skill_vfcastfix(block_list *bl, double time, uint16 skill_id, uint16 skill
 			fixed -= 1000;
 		if (sc->getSCE(SC_IZAYOI))
 			fixed = 0;
+#ifndef NEED_2017_SKILL_FORMULA
 		if (sc->getSCE(SC_GLOOMYDAY))
 			fixed += skill_lv * 500;
+#endif
 	}
 	if (sc && sc->getSCE(SC_SECRAMENT) && skill_id == HW_MAGICPOWER && (flag&2)) // Sacrament lowers Mystical Amplification cast time
 		fixcast_r = max(fixcast_r, sc->getSCE(SC_SECRAMENT)->val2);
