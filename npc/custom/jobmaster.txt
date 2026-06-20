@@ -15,6 +15,17 @@
 //= 1.9 Migrate/Integrate to Global Functions Platinum Skills. [mazvi]
 //= 2.0 Added 4th class [Lemongrass]
 //============================================================
+function	script	Get_Item	{
+	.@eac = eaclass();
+	if( .@eac&EAJL_THIRD )
+	{
+		getitem 23583,1;
+		getitem 23584,1;
+		SUPPORT_ITEM = 1;
+	}
+	
+	close;
+}
 
 lasagna,167,149,6	script	전직도우미	640,{
 function Get_Job_Equip;
@@ -28,11 +39,11 @@ function	Require_Level	{
 		mes ((getarg(0)>1)? 
 			"^bb0000"+getarg(0)+"^000000 (^bb0000Base^000000) / ":"")+"^00bb00"+
 			getarg(1)+"^000000 (^00bb00Job^000000)";
-		mes "필요 레벨" +
+		mes "필요 레벨 " +
 			((.@blvl > 0) ? "^bb0000"+.@blvl+"^000000" + 
 				((.@jlvl > 0) ? "and " : "") : "") +
 			((.@jlvl > 0) ? "^00bb00"+.@jlvl+"^000000" : "") +
-			"to continue.";
+			" 부족합니다.";
 		close;
 	}
 	return;
@@ -347,7 +358,7 @@ function	Job_Change	{
 	.@to_cls = getarg(0);
 	next;
 	mes .NPCName$;
-	mes " 당신은 지금" + callfunc("F_InsertArticle", jobname(.@to_cls)) + "!";
+	mes "" + callfunc("F_InsertArticle", jobname(.@to_cls)) + "로 전직하셨습니다!";
 	if (.@to_cls == Job_Novice_High && .LastJob)
 		lastJob = Class; // Saves the lastJob for rebirth
 	jobchange .@to_cls;
@@ -365,6 +376,8 @@ function	Job_Change	{
 			callfunc "F_GetPlatinumSkills";
 		if (.GetJobEquip)
 			Get_Job_Equip();
+		if (SUPPORT_ITEM == 0)
+			callfunc "Get_Item";
 	}
 	close; // Always closes after the change
 }
@@ -377,13 +390,13 @@ function	Confirm_Change	{
 		mes "알 수 없는 클래스 오류입니다.";
 		close;
 	}
-	mes "^0055FF로 변경하시겠습니까?"+jobname(.@class)+"^000000 클래스?";
-	.@job_option$ = " ~ ^0055FF로 변경"+jobname(.@class)+"^000000 class";
+	mes "^0055FF"+jobname(.@class)+"^000000 로 전직하시겠습니까?";
+	.@job_option$ = " ~ ^0055FF"+jobname(.@class)+"^000000 로 전직";
 	if( .@class == Job_Novice_High)
 		.@job_option$ = " ~ ^0055FFRebirth^000000";
 	
 	if (select(.@job_option$+": ~ ^777777" + 
-			((.@back) ?"Go back" : "Cancel") + "^000000") == 1) {
+			((.@back) ?"Go back" : "취소") + "^000000") == 1) {
 		Job_Change(.@class);
 	}
 	if (!.@back)
@@ -393,6 +406,7 @@ function	Confirm_Change	{
 
 // Function which gives a job related item to the player
 // the items are the rewards from the original job change quests
+
 function	Get_Job_Equip	{
 	// Note: The item is dropping, when the player can't hold it.
 	// But that's better than not giving the item at all.
