@@ -22,37 +22,54 @@
 lasa_in01,161,48,4	script	마요마요#mal	555,{
 	disable_items;
 	if (checkweight(1201,1) == 0) {
-		mes "객체의 종류가 너무 많습니다. 객체 수를 줄인 후에 계속 진행해 보겠습니다.";
+		mes "너무나 많은 종류의 아이템을 가지고 있습니다. 아이템을 줄여 주세요.";
 		close;
 	}
 	if (MaxWeight - Weight < 10000) {
-		mes "무거운 물건이 너무 많아서 계속할 수 없습니다. 무게를 줄인 후에 다시 시도해 보겠습니다.";
+		mes "소지 아이템 무게가 무거워 더이상 진행이 안됩니다. 무게를 줄인 다음 다시 시도해 주세요.";
 		close;
 	}
 	mes "[마요마요]";
-	mes "와, 반갑습니다! 새로운 마요마요 제련 상점이에요~ 4레벨 무기를 포함한 고급 무기들을 마법 부여해 드립니다.";
+	mes "어서오세요. 새롭게 단장한 마요마요";
+	mes "강화점입니다. 대부분의 무기를";
+	mes "포함한 일부 고급무기들에 각종";
+	mes "인챈트를 해 드리고 있죠";
 	next;
-	switch( select( "매장 정책에 변경 사항이 있나요?", "고랭크 무기에 마법 부여", "마법 부여 초기화 (은덩굴 열매 필요)" ) ) {
+	switch( select("영업방침이 바뀐건가?","고급 무기에 능력치 부여", "강화능력치 초기화(개다래열매 필수") ) {
 	case 1:
 		mes "[마요마요]";
-		mes "무기에 마법을 부여할 때, 장착한 카드나 제련 레벨이 가끔씩 사라지는 게 정말 싫었어요. 그런데 어느 날, 사라지지 않게 마법을 부여하는 방법을 알아냈답니다.";
+		mes "그간 저는 무기에 인챈트를 해드릴때";
+		mes "카드와 제련도가 소멸되는것에 저의";
+		mes "한계를 느껴왔었어요. 그러던 어느날";
+		mes "저에게 돌파구가 생겨났죠.";
 		next;
 		mes "[마요마요]";
-		mes "혹시 강화 능력 협회 건물을 본 적이 있으신가요?";
+		mes "혹시 이곳 근방에 있는 강화능력자";
+		mes "협회 건물을 보셨나요?";
 		next;
-		if (select( "전에 본 적 있어요.", "저는 그걸 본 적이 없어요." ) == 2) {
+		if (select( "본적있다", "본적없다" ) == 2) {
 			mes "[마요마요]";
-			mes "저 건물은 제가 있는 곳에서 남동쪽에 있어요. 그곳으로 현장 학습을 가보는 건 어때요?";
+			mes "제 자리에서 동남쪽에 있는";
+			mes "건물이에요. 한번 견학하고 오시는 것";
+			mes "도 좋을 것 같내요";
 			close;
 		}
 		mes "[마요마요]";
-		mes "그곳에 가면 대천사의 날개에 마법을 거는 사람이 있어요. 당시에는 정말 놀라운 일이었죠. 제 능력으로는 불가능한 일이었거든요.";
+		mes "그곳에 가면 대천사의 날개를 강화해";
+		mes "주는 신과같은 분이 있어요. 당시로선";
+		mes "정말 굉장했죠. 제가 가진 기술로는";
+		mes "불가능한 능력이었으니까...";
 		next;
 		mes "[마요마요]";
-		mes "매일 밤 나는 그의 집사가 되어 잡일을 했다. 그렇게 해서 나는 사람을 매혹하는 법을 배웠다.";
+		mes "그래서 밤마다 그분의 집사가 되어";
+		mes "온갖 허드렛일을 해드리며 간신히";
+		mes "카드와 제련도를 지키면서 강화하는";
+		mes "법을 배우게 되었답니다.";
 		next;
 		mes "[마요마요]";
-		mes "몇 가지 규칙이 바뀌었습니다. 그러니 경험이 풍부한 게 좋을 겁니다.";
+		mes "그런 관계로, 여라가지 룰이";
+		mes "바뀌었어요. 뭐 그건 직접 해 보시면서";
+		mes "경험해보는게 좋을것 같내요.";
 		close;
 	case 2:
 		@mal_enchant_select = 1;
@@ -64,7 +81,7 @@ lasa_in01,161,48,4	script	마요마요#mal	555,{
 
 	if (!getequipisequiped(EQI_HAND_R)) {
 		mes "[마요마요]";
-		mes "장비를 벗으셨나요?";
+		mes "장비는 착용을 해주세요";
 		@mal_enchant_select = 0;
 		close;
 	}
@@ -335,9 +352,9 @@ lasa_in01,161,48,4	script	마요마요#mal	555,{
 	}
 	mes "[마요마요]";
 	if (@mal_enchant_select == 1)
-		mes "이건 마법 부여에 적합한 장비가 아닙니다. 저희는 4레벨 무기를 포함한 최고급 무기만 취급한다는 점을 잊지 마세요~";
+		mes "인챈트에 적합한 무기가 아닙니다. 4레벨 무기를 비롯한 고급 무기만 취급한다는 사실을 잊지 마세요~";
 	else
-		mes "이 장비는 초기화할 수 없습니다. 저희는 4레벨 무기를 포함한 일부 고급 무기만 취급한다는 점을 잊지 마세요.";
+		mes "이 장비는 초기화 할 수 없습니다. 4레벨 무기를 포함한 일부 고급 무기만 취급합니다~";
 	@mal_equip_id = 0;
 	@mal_enchant_select = 0;
 	close;
@@ -353,7 +370,7 @@ L_Socket:
 
 	if (.@select == 1) {
 		mes "[마요마요]";
-		mes "^0000ff" + .@equip_name$ + "^000000! 이 장비에 마법을 부여하시겠습니까? 비용은 어떻게 지불하시겠습니까?";
+		mes "^0000ff" + .@equip_name$ + "^000000! 이 장비에 인챈트를 하시겠습니까? 비용은 어떻게 지불하시겠습니까?";
 		next;
 
 		.@enccost = getarg(0);
@@ -361,24 +378,24 @@ L_Socket:
 		setarray .@coin[0],6422,6421,6420,6419,6418,6423;	//  Payment ID
 		setarray .@cost[0],  15,  10,   6,   3,   2,   1;	//  Payment multiplier
 
-		.@menu$ = "멈추다:";
+		.@menu$ = "Stop:";
 		.@size_coin = getarraysize(.@coin);
 		for ( .@i = 0; .@i < .@size_coin; ++.@i) {
 			.@count[.@i] = countitem(.@coin[.@i]);
 			.@total[.@i] = .@enccost * .@cost[.@i];
 			if (.@count[.@i] < .@total[.@i])
-				.@menu$ += "^999999" + getitemname(.@coin[.@i]) + " (missing " + (.@total[.@i]-.@count[.@i]) + ")^000000:";
+				.@menu$ += "^999999" + getitemname(.@coin[.@i]) + " (" + (.@total[.@i]-.@count[.@i]) + " 부족)^000000:";
 			else
-				.@menu$ += getitemname(.@coin[.@i]) + " (have " + .@count[.@i] + ", need " + .@total[.@i] + "):";
+				.@menu$ += getitemname(.@coin[.@i]) + " (" + .@count[.@i] + " 보유, " + .@total[.@i] + " 필요):";
 		}
 		.@coin_select = select(.@menu$) - 2;
 		if (.@coin_select == -1) {
 			mes "[마요마요]";
-			mes "마음이 바뀌면 다시 오세요.";
+			mes "마음이 바뀌면 다시 오세요";
 			close;
 		} else if (.@count[.@coin_select] < .@total[.@coin_select]) {
 			mes "[마요마요]";
-			mes "잔액이 부족합니다. 다시 확인하시겠습니까?";
+			mes "코인이 부족합니다. 다시 확인하시겠습니까?";
 			close;
 		}
 		switch(.@coin_select) {
@@ -397,42 +414,41 @@ L_Socket:
 		case 4:	// Agrade_Coin
 		case 5:	// Anger_Seagod
 			mes "[마요마요]";
-			mes " 사용할 때" + getitemname(.@coin[.@coin_select]) + "마법 부여 유형을 선택할 수 있습니다.";
+			mes getitemname(.@coin[.@coin_select]) + " 를 사용해 인챈트를 합니다. 인챈트 타입을 선택해 주세요.";
 			next;
-			switch( select( "Stop", "단거리형", "장거리형", "캐스터 타입") ) {
+			switch( select("근접", "원거리", "캐스팅","인챈트 리스트를 확인한다") ) {
 			case 1:
-				mes "[마요마요]";
-				mes "알겠습니다. 생각이 바뀌시면 알려주세요.";
-				close;
-			case 2:
 				.@enchant_type = ((.@coin_select == 4) ? 4 : 1);
 				break;
-			case 3:
+			case 2:
 				.@enchant_type = ((.@coin_select == 4) ? 5 : 2);
 				break;
-			case 4:
+			case 3:
 				.@enchant_type = ((.@coin_select == 4) ? 6 : 3);
 				break;
+			case 4:
+				callfunc "F_ShowMalangdoWeaponEnchant";
+				end;
 			}
 			break;
 		}
 		if (.@equip_card[3] == 0 && .@enclimit < 4) {
 			.@socket = 4;
-			.@str$ = "1위";
+			.@str$ = "4번소켓";
 		} else if (.@equip_card[2] == 0 && .@enclimit < 3) {
 			.@socket = 3;
-			.@str$ = "2번째";
+			.@str$ = "3번소켓";
 		} else {
 			mes "[마요마요]";
-			mes "이 장비는 마법 부여가 완료된 상태입니다. 마법 부여를 초기화하시면 다시 마법 부여를 진행하거나, 다른 무기를 사용하세요.";
+			mes "이 무기는 인챈트가 끝난 상태입니다. 인챈트를 초기화하고 다시하거나 다른 무기를 가져오세요.";
 			close;
 		}
 		mes "[마요마요]";
-		mes " 저는 다음을 시도하고 있습니다" + .@str$ + " 마법 부여. ^ff0000이전의 정제나 카드에는 영향을 주지 않습니다. 또한 장비도 파괴되지 않습니다.^000000 계속해도 될까요?";
+		mes .@str$ + "에 인챈트를 시도합니다. ^ff0000이전 제련수치나 카드는 건드리지 않습니다. 또한 무기는 파괴되지 않아요. 계속 진행 할까요?";
 		next;
-		if (select( "나중에 다시 올게요.", "계속해 주세요." ) == 1) {
+		if (select( "나중에 다시 할래요.", "계속 진행 해주세요." ) == 1) {
 			mes "[마요마요]";
-			mes "알겠습니다. 마음이 바뀌시면 다시 오세요.";
+			mes "오케이. 마음이 바뀌면 다시 시도해주세요.";
 			close;
 		}
 		switch(.@enchant_type) {
@@ -640,31 +656,31 @@ L_Socket:
 		close;
 	} else if (.@select == 2) {
 		mes "[마요마요]";
-		mes "저는 이전 정제 레벨과 카드에는 손대지 않고 마법 부여 효과만 초기화할 것입니다.";
+		mes "기존에 제련된 레벨과 카드는 건드리지 않고 인챈트만 초기화 하겠습니다.";
 		next;
-		if (select( "Stop", "Continue" ) == 1) {
+		if (select( "중지", "진행" ) == 1) {
 			mes "[마요마요]";
-			mes "마음이 바뀌시면 언제든 다시 오세요.";
+			mes "마음이 바뀌면 언제라도 다시 오세요.";
 			close;
 		}
 		if (countitem(6417) == 0) {
 			mes "[마요마요]";
-			mes "죄송합니다. 실버바인 열매가 없습니다. 인벤토리를 다시 확인해 주시겠습니까?";
+			mes "죄송합니다. 개다래열매 아이템이 없습니다. 인벤토리를 확인해주세요?";
 			close;
 		}
 		if (!getequipisequiped(EQI_HAND_R)) {
 			mes "[마요마요]";
-			mes "장비를 벗으셨나요?";
+			mes "무기 착용을 해제 했습니까?";
 			close;
 		}
 		if (.@equip_card[3] == 0) {
 			mes "[마요마요]";
-			mes "이 장비에는 초기화할 항목이 없습니다. 다시 확인해 주세요.";
+			mes "이 무기는 초기화 할 것이 없습니다. 다시 확인 해주세요.";
 			close;
 		}
 		specialeffect2 EF_REPAIRWEAPON;
 		mes "[마요마요]";
-		mes "장비의 마법 부여 효과를 초기화합니다.";
+		mes "무기의 인챈트 효과를 초기화 합니다.";
 		delitem 6417,1;	// Silvervine
 
 		// anti-hack
@@ -687,4 +703,40 @@ L_Socket:
 Oninit:
 	waitingroom "4렙 무기 인챈트",0;
 	end;
+}
+
+
+
+
+function	script	F_ShowMalangdoWeaponEnchant	{
+	setdialogsize(250,250);
+
+	switch(select("근접:원거리:캐스팅")) {
+
+	case 1:
+		mes "[말랑도 무기 인챈트 - 근접]";
+		callfunc "F_ShowEnchantGroup","AGI",4732,4733,4734,4735;
+		callfunc "F_ShowEnchantGroup","투지",4820,4821,4822,4823;
+		callfunc "F_ShowEnchantGroup","치명",4843,4844;
+		callfunc "F_ShowEnchantGroup","공격속도",4807;
+		break;
+
+	case 2:
+		mes "[말랑도 무기 인챈트 - 원거리]";
+		callfunc "F_ShowEnchantGroup","AGI",4732,4733,4734,4735;
+		callfunc "F_ShowEnchantGroup","명궁",4834,4835,4836,4837;
+		callfunc "F_ShowEnchantGroup","치명",4843,4844;
+		callfunc "F_ShowEnchantGroup","공격속도",4807;
+		break;
+
+	case 3:
+		mes "[말랑도 무기 인챈트 - 캐스팅]";
+		callfunc "F_ShowEnchantGroup","INT",4712,4713,4714,4715;
+		callfunc "F_ShowEnchantGroup","DEX",4722;
+		callfunc "F_ShowEnchantGroup","마력",4813,4812,4826,4827;
+		callfunc "F_ShowEnchantGroup","MATK",4760,4761;
+		break;
+	}
+	
+	close;
 }

@@ -20,6 +20,18 @@ OnNPCKillEvent:
 	.@mobid = killedrid;
 	if (.@mobid <= 0) end;
 
+	if (getmonsterinfo(.@mobid, MOB_MVPEXP) > 0)
+	{
+			if (.@map$ == "bossnia_01" || .@map$ == "bossnia_02" || .@map$ == "bossnia_03")
+				end;
+				
+		if (rand(10000) < 5000);
+		{
+			getitem 677, 1;
+			end;
+		}
+	}
+
 	// 보스/MVP 제외: MOB_MODE의 0x20 (대부분 공통)
 	if (getmonsterinfo(.@mobid, MOB_MODE) & 0x20) end;
 
@@ -31,17 +43,21 @@ OnNPCKillEvent:
 	// [기존 월드드랍] 코인 3종
 	// -------------------------------------------------
 	.@item = 0;
+	
+	if (.@lv > 99)
+	{
+		if (rand(10000) < 100)
+			getitem 9530, 1;
+	}
 
 	// 99~154 금화 3%
 	if (.@lv > 99 && .@lv <= 154) {
 		if (rand(10000) < 100) .@item = 399990;
 	}
-	
 	// 155~169 : 미스릴화 3%
 	else if (.@lv <= 169) {
 		if (rand(10000) < 100) .@item = 674;
 	}
-
 	// 170+ : 미스릴화 2%
 	else {
 		if (rand(10000) < 200) .@item = 674;
