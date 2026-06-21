@@ -12012,6 +12012,8 @@ bool pc_equipitem(map_session_data *sd,int16 n,int32 req_pos,bool equipswitch)
 	int32 i, pos, flag = 0, iflag;
 	struct item_data *id;
 	int16* equip_index;
+	int16 previous_right_hand_index = -1;
+	int16 previous_right_hand_type = W_FIST;
 
 	nullpo_retr(false,sd);
 
@@ -12127,6 +12129,11 @@ bool pc_equipitem(map_session_data *sd,int16 n,int32 req_pos,bool equipswitch)
 			flag = id->range != sd->inventory_data[i]->range;
 	}
 
+	if (!equipswitch && (pos&EQP_HAND_R)) {
+		previous_right_hand_index = sd->equip_index[EQI_HAND_R];
+		previous_right_hand_type = sd->weapontype1;
+	}
+
 	if( equipswitch ){
 		for( i = 0; i < EQI_MAX; i++ ){
 			if( pos&equip_bitmask[i] ){
@@ -12172,6 +12179,11 @@ bool pc_equipitem(map_session_data *sd,int16 n,int32 req_pos,bool equipswitch)
 			sd->weapontype1 = W_FIST;
 		pc_calcweapontype(sd);
 		clif_changelook(sd,LOOK_WEAPON,sd->status.weapon);
+
+		if (previous_right_hand_index >= 0 && previous_right_hand_index != n &&
+			((previous_right_hand_type == W_MUSICAL && id->subtype == W_MUSICAL) ||
+			(previous_right_hand_type == W_WHIP && id->subtype == W_WHIP)))
+			status_change_end(sd, SC_DANCING);
 	}
 	if(pos & EQP_HAND_L) {
 		if(id) {
