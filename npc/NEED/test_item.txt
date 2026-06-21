@@ -1,31 +1,47 @@
-lasagna,164,155,6	script	아이템 생성 NPC	871,{
-	mes "[아이템 생성 테스트]";
-	mes "생성할 아이템 번호를 입력하세요.";
-	input .@item_id;
-
-	if (.@item_id <= 0 || getitemname(.@item_id) == "null") {
-		mes "존재하지 않는 아이템 번호입니다.";
-		close;
-	}
-
-	next;
-	mes "[아이템 생성 테스트]";
-	mes "아이템: " + getitemname(.@item_id);
-	mes "생성할 개수를 입력하세요.";
-	input .@amount;
-
-	if (.@amount <= 0) {
-		mes "개수는 1개 이상 입력해야 합니다.";
-		close;
-	}
-
-	getitem .@item_id, .@amount;
-
-	mes "지급 완료:";
-	mes getitemname(.@item_id) + " " + .@amount + "개";
-	close;
+lasagna,164,155,6	script	테스트 지원	871,{
+	switch(select(
+		"레벨업 하기",
+		"제니 받기",
+		"캐시 받기",
+		"아이템 받기",
+		"취소"
+	)) {
 	
+	case 4:
+		getitem 6607,100;
+		getitem 6608,1000;
+		getitem 6755,1000;
+		close;
+
+	case 3:
+		Zeny += 100000000;
+		mes "[테스트 지원 NPC]";
+		mes "1억 제니를 지급했습니다.";
+		close;
+
+	case 2:
+		#CASHPOINTS += 1000000;
+		mes "[테스트 지원 NPC]";
+		mes "100만 캐시를 지급했습니다.";
+		close;
+
+	case 1:
+		if (BaseLevel < 150) {	
+			atcommand "@lvup 149";
+		}
+
+		if (JobLevel < 99) {
+			atcommand "@joblvup 98";
+		}
+
+		mes "[테스트 지원 NPC]";
+		mes "레벨업이 완료되었습니다.";
+		close;
+
+	default:
+		close;
+	}
 OnInit:
-		waitingroom "테스트용 아이템 생성 NPC",0;
+		waitingroom "테스트 지원",0;
 		end;
 }

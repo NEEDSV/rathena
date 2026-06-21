@@ -3,6 +3,50 @@
 // 도감 등록 / 진행도 / 코인 확인 / 확정 교환
 //============================================================
 
+//lasagna,175,133,4	script	도감 테스트 지급	4_F_KAFRA1,{
+//	mes "[도감 테스트]";
+//	mes "번호를 입력하세요.";
+//	mes "1 입력 = 1~100";
+//	mes "2 입력 = 101~200";
+//	mes "28 입력 = 2801~끝";
+//	next;
+//
+//	input .@page;
+//
+//	if (.@page < 1) {
+//		mes "1 이상 입력해주세요.";
+//		close;
+//	}
+//
+//	.@start = ((.@page - 1) * 100) + 1;
+//	.@end = .@start + 99;
+//
+//	.@last = getcostumelastcollectionid();
+//
+//	if (.@start > .@last) {
+//		mes "존재하지 않는 구간입니다.";
+//		close;
+//	}
+//
+//	if (.@end > .@last)
+//		.@end = .@last;
+//
+//	mes "도감 번호 "+.@start+" ~ "+.@end+" 지급";
+//	next;
+//
+//	for (.@i = .@start; .@i <= .@end; .@i++) {
+//		.@itemid = getcostumeitemid(.@i);
+//
+//		if (.@itemid > 0)
+//			getitem .@itemid,1;
+//	}
+//
+//	mes "완료.";
+//	close;
+//}
+
+
+
 lasagna,175,131,4	script	NEED 의상 도감	624,{
 	goto L_Main;
 
@@ -10,7 +54,7 @@ OnInit:
 	waitingroom "NEED 의상 도감",0;
 	set .RewardStepPoint, 100;		// 보상 단계: 100개 단위
 	set .RewardCoinAmount, 30;	// 단계 달성 시 지급할 의상 코인 개수
-	set .CostumeCoinID, 909;		// TODO: 의상 코인 아이템 ID
+	set .CostumeCoinID, 399991;		// TODO: 의상 코인 아이템 ID
 	set .ExchangeCost, 300;
 	set .PageSize, 20;
 	set .ClosetDefaultSlot, 4;
@@ -380,7 +424,7 @@ L_Main:
 		"의상 도감",
 		"옷장",
 		"인챈트 스톤",
-		"테스트 등록",
+//		"테스트 등록",
 		"종료"
 	)) {
 	case 1: goto L_CollectionMenu;
@@ -455,20 +499,22 @@ L_Register:
 	set .@bound_total, countbound(.ClosetBoundType);
 	set .@count, 0;
 
+	freeloop(1);
+
 	for (set .@i, 0; .@i < @inventorylist_count; set .@i, .@i + 1) {
 		set .@item_id, @inventorylist_id[.@i];
 
-		set .@bound_amount, 0;
+		set .@bound_amount_check, 0;
 
 		for (set .@b, 0; .@b < .@bound_total; set .@b, .@b + 1) {
 			if (@bound_items[.@b] == .@item_id) {
-				set .@bound_amount, @bound_amount[.@b];
+				set .@bound_amount_check, @bound_amount[.@b];
 				break;
 			}
 		}
 
 		// 귀속이 하나라도 있으면 일반 아이템 보호를 위해 제외
-		if (.@bound_amount > 0)
+		if (.@bound_amount_check > 0)
 			continue;
 
 		set .@cid, getcostumecollectionid(.@item_id);
@@ -492,6 +538,8 @@ L_Register:
 		set .@count, .@count + 1;
 	}
 
+	freeloop(0);
+
 	if (.@count <= 0) {
 		mes "[의상 등록]";
 		mes "등록 가능한 의상이 없습니다.";
@@ -513,99 +561,109 @@ L_RegisterPage:
 	mes "등록 여부와 관계없이 의상 1개를 코인화할 수 있습니다.";
 	mes " ";
 
-	set .@menu$, "";
-
 	for (set .@i, .@start; .@i < .@end; set .@i, .@i + 1) {
 		set .@cid, .@cid_list[.@i];
 		set .@item_id, .@item_list[.@i];
 		set .@name$, getitemname(.@item_id);
 
 		if (iscostumeregistered(.@cid))
-			mes (.@i - .@start + 1) + ". [" + .@cid + "] " + .@name$ + " ^777777(등록됨)^000000";
+			mes (.@i - .@start + 1) + ". [" + .@cid + "] " + .@name$ + " ^ff8c00(등록됨)^000000";
 		else
 			mes (.@i - .@start + 1) + ". [" + .@cid + "] " + .@name$;
-
-		set .@menu$, .@menu$ + (.@i - .@start + 1) + "번 선택:";
 	}
 
-	set .@menu$, .@menu$ + "다음 페이지:이전 페이지:취소";
 	next;
 
-	set .@sel, select(.@menu$);
+	switch(select("입력하기:다음 페이지:이전 페이지:취소")) {
+	case 1:
+		mes "[의상 등록 / 코인화]";
+		mes "선택할 번호를 입력해주세요.";
+		mes "^777777입력 가능 번호: 1 ~ " + (.@end - .@start) + "^000000";
+		next;
 
-	if (.@sel <= (.@end - .@start)) {
-		set .@idx, .@start + .@sel - 1;
+		input .@input;
+
+		if (.@input < 1 || .@input > (.@end - .@start)) {
+			mes "[의상 등록 / 코인화]";
+			mes "잘못 입력했습니다.";
+			next;
+			goto L_RegisterPage;
+		}
+
+		set .@idx, .@start + .@input - 1;
 		set .@item_id, .@item_list[.@idx];
 		set .@cid, .@cid_list[.@idx];
 		set .@name$, getitemname(.@item_id);
+		break;
 
-		mes "[의상 등록 / 코인화]";
-		mes "선택한 의상:";
-		mes "[" + .@cid + "] " + .@name$;
-		mes " ";
-		mes "진행 시 의상 아이템 1개가 삭제됩니다.";
-		mes "의상 코인 1개를 획득합니다.";
-		next;
-
-		if (select("진행한다:취소") == 2)
-			goto L_CollectionMenu;
-
-		if (countitem(.@item_id) <= 0) {
-			mes "[의상 등록]";
-			mes "선택한 의상을 보유하고 있지 않습니다.";
-			close;
-		}
-
-		set .@ret, registercostume(.@item_id);
-
-		if (.@ret == 1 || .@ret == 2) {
-			delitem .@item_id, 1;
-			getitem .CostumeCoinID, 1;
-
-			mes "[의상 등록 / 코인화]";
-
-			if (.@ret == 1)
-				mes "의상 도감에 새로 등록되었습니다.";
-			else
-				mes "이미 등록된 의상입니다.";
-
-			mes "의상 아이템 1개를 코인으로 전환했습니다.";
-			mes "의상 코인 1개를 획득했습니다.";
-			next;
-
-			mes "[의상 옷장]";
-			mes "이 의상을 즉시 착용하시겠습니까?";
-			mes "등록된 의상은 캐릭터 귀속 아이템으로 지급됩니다.";
-			next;
-
-			if (select("착용한다:그냥 코인만 받는다") == 1)
-				goto L_PutCloset;
-
-			close;
-		}
-
-		if (.@ret == -1) {
-			mes "[의상 등록]";
-			mes "DB 오류가 발생했습니다.";
-			close;
-		}
-
-		mes "[의상 등록]";
-		mes "등록할 수 없는 의상입니다.";
-		close;
-	}
-
-	if (.@sel == (.@end - .@start) + 1) {
+	case 2:
 		if (.@page < .@max_page)
 			set .@page, .@page + 1;
 		goto L_RegisterPage;
-	}
 
-	if (.@sel == (.@end - .@start) + 2) {
+	case 3:
 		if (.@page > 0)
 			set .@page, .@page - 1;
 		goto L_RegisterPage;
+
+	default:
+		goto L_CollectionMenu;
 	}
+
+	mes "[의상 등록 / 코인화]";
+	mes "선택한 의상:";
+	mes "[" + .@cid + "] " + .@name$;
+	mes " ";
+	mes "진행 시 의상 아이템 1개가 삭제됩니다.";
+	mes "의상 코인 1개를 획득합니다.";
+	next;
+
+	if (select("진행한다:취소") == 2)
+		goto L_CollectionMenu;
+
+	if (countitem(.@item_id) <= 0) {
+		mes "[의상 등록]";
+		mes "선택한 의상을 보유하고 있지 않습니다.";
+		close;
+	}
+
+	set .@ret, registercostume(.@item_id);
+
+	if (.@ret == 1 || .@ret == 2) {
+		delitem .@item_id, 1;
+		getitem .CostumeCoinID, 1;
+
+		mes "[의상 등록 / 코인화]";
+
+		if (.@ret == 1)
+			mes "의상 도감에 새로 등록되었습니다.";
+		else
+			mes "이미 등록된 의상입니다.";
+
+		mes "의상 아이템 1개를 코인으로 전환했습니다.";
+		mes "의상 코인 1개를 획득했습니다.";
+		next;
+
+		mes "[의상 옷장]";
+		mes "이 의상을 즉시 착용하시겠습니까?";
+		mes "등록된 의상은 캐릭터 귀속 아이템으로 지급됩니다.";
+		next;
+
+		if (select("착용한다:그냥 코인만 받는다") == 1)
+			goto L_PutCloset;
+
+		close;
+	}
+
+	if (.@ret == -1) {
+		mes "[의상 등록]";
+		mes "DB 오류가 발생했습니다.";
+		close;
+	}
+
+	mes "[의상 등록]";
+	mes "등록할 수 없는 의상입니다.";
+	close;
 
 	goto L_CollectionMenu;
 
