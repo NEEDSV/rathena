@@ -9,6 +9,7 @@
 #include <map>
 #include <unordered_map>
 #include <vector>
+#include <set>
 
 #include <common/cbasetypes.hpp>
 #include <common/db.hpp>
@@ -2927,6 +2928,11 @@ map_session_data* mob_data::get_mvp_player(map_session_data* first_sd) {
 	return mvp_sd;
 }
 
+// 특정 아이템 드롭 제외
+static const std::set<t_itemid> no_drop_items = {
+	4576,27221,4302,4493,4441,4539,4403,4480,4610,4580
+};
+
 /*==========================================
  * Signals death of mob.
  * type&1 -> no drops, type&2 -> no exp
@@ -3320,9 +3326,14 @@ int32 mob_dead(mob_data *md, block_list *src, int32 type)
 		}
 
 		// Regular mob drops drop after script-granted drops
-		for( const std::shared_ptr<s_mob_drop>& entry : md->db->dropitem ){
+		for (const std::shared_ptr<s_mob_drop>& entry : md->db->dropitem) {
 			if (entry->nameid == 0)
 				continue;
+
+			if (no_drop_items.count(entry->nameid))
+			{
+				continue;
+			}
 
 			std::shared_ptr<item_data> it = item_db.find(entry->nameid);
 
@@ -3343,9 +3354,10 @@ int32 mob_dead(mob_data *md, block_list *src, int32 type)
 			std::shared_ptr<s_item_drop> ditem = mob_setdropitem(entry, 1, md->mob_id);
 
 			//A Rare Drop Global Announce by Lupus
-			if (first_sd != nullptr && entry->rate <= battle_config.rare_drop_announce) {
+			if (first_sd != nullptr && entry->rate <= battle_config.rare_drop_announce && md->get_bosstype() == BOSSTYPE_MVP)
+			{
 				char message[128];
-				sprintf(message, msg_txt(nullptr, 541), first_sd->status.name, md->name, it->ename.c_str(), (float)drop_rate / 100);
+				sprintf(message, msg_txt(nullptr, 541), first_sd->status.name, md->name, it->ename.c_str());
 				//MSG: "'%s' won %s's %s (chance: %0.02f%%)"
 				intif_broadcast(message, strlen(message) + 1, BC_DEFAULT);
 			}
@@ -3483,6 +3495,11 @@ int32 mob_dead(mob_data *md, block_list *src, int32 type)
 				if(entry->nameid == 0)
 					continue;
 
+				if (no_drop_items.count(entry->nameid))
+				{
+					continue;
+				}
+
 				std::shared_ptr<item_data> i_data = item_db.find(entry->nameid);
 
 				if (i_data == nullptr)
@@ -3508,7 +3525,8 @@ int32 mob_dead(mob_data *md, block_list *src, int32 type)
 				log_mvp_nameid = item.nameid;
 
 				//A Rare MVP Drop Global Announce by Lupus
-				if(temp<=battle_config.rare_drop_announce) {
+				if(temp<=battle_config.rare_drop_announce)
+				{
 					char message[128];
 					sprintf (message, msg_txt(nullptr,541), mvp_sd->status.name, md->name, i_data->ename.c_str(), temp/100.);
 					//MSG: "'%s' won %s's %s (chance: %0.02f%%)"
@@ -6929,7 +6947,7 @@ static void mob_drop_ratio_adjust(void){
 				}
 			}
 
-			entry->rate = rate;
+				entry->rate = rate;
 			it++;
 		}
 	}
