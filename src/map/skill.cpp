@@ -2682,6 +2682,39 @@ void skill_attack_blow(block_list *src, block_list *dsrc, block_list *target, ui
 	clif_fixpos( *target );
 }
 
+static int32 skill_is_landprotector_cell_sub(block_list* bl, va_list ap)
+{
+	skill_unit* unit = (skill_unit*)bl;
+
+	if (bl->prev == nullptr || bl->type != BL_SKILL)
+		return 0;
+
+	if (!unit->alive)
+		return 0;
+
+	if (unit->group == nullptr)
+		return 0;
+
+	if (unit->group->skill_id != SA_LANDPROTECTOR)
+		return 0;
+
+	return 1;
+}
+
+static bool skill_is_landprotector_cell(block_list* bl)
+{
+	if (bl == nullptr || bl->prev == nullptr)
+		return false;
+
+	return map_foreachinallarea(
+		skill_is_landprotector_cell_sub,
+		bl->m,
+		bl->x, bl->y,
+		bl->x, bl->y,
+		BL_SKILL
+	) > 0;
+}
+
 /*
  * =========================================================================
  * Does a skill attack with the given properties.
@@ -2723,6 +2756,15 @@ int64 skill_attack (int32 attack_type, block_list* src, block_list *dsrc, block_
 
 	if (status_bl_has_mode(bl,MD_SKILLIMMUNE) || (status_get_class(bl) == MOBID_EMPERIUM && !skill_get_inf2(skill_id, INF2_TARGETEMPERIUM)))
 		return 0;
+
+	if (skill_id > 0
+		&& bl->type == BL_PC
+		&& attack_type == BF_MAGIC
+		&& !skill_get_inf2(skill_id, INF2_IGNORELANDPROTECTOR)
+		&& skill_is_landprotector_cell(bl))
+	{
+		return 0;
+	}
 
 	if (src != dsrc) {
 		//When caster is not the src of attack, this is a ground skill, and as such, do the relevant target checking. [Skotlex]
