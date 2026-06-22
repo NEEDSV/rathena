@@ -11162,27 +11162,55 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 			val3 = ((val1 + 1) / 2) * 10; // Perfect dodge increase
 			break;
 		case SC_ASSNCROS:
+#ifdef NEED_2017_BARD_STAT_BONUS
+			if (val2 != 0)
+				break;
+#endif
 			val2 = val1 < 10 ? val1 * 2 - 1 : 20; // ASPD increase
 			break;
 		case SC_POEMBRAGI:
+#ifdef NEED_2017_BARD_STAT_BONUS
+			if (val2 != 0 || val3 != 0)
+				break;
+#endif
 			val2 = 2 * val1; // Cast time reduction
 			val3 = 3 * val1; // After-cast delay reduction
 			break;
 		case SC_APPLEIDUN:
+#ifdef NEED_2017_BARD_STAT_BONUS
+			if (val2 != 0 || val3 != 0)
+				break;
+#endif
 			val2 = val1 < 10 ? 9 + val1 : 20; // HP rate increase
 			val3 = 2 * val1; // Potion recovery rate
 			break;
 		case SC_HUMMING:
+#ifdef NEED_2017_BARD_STAT_BONUS
+			if (val2 != 0)
+				break;
+#endif
 			val2 = 4 * val1; // Hit increase
 			break;
 		case SC_DONTFORGETME:
+#ifdef NEED_2017_BARD_STAT_BONUS
+			if (val2 != 0 || val3 != 0)
+				break;
+#endif
 			val2 = 1 + 30 * val1; // ASPD decrease
 			val3 = 5 + 2 * val1; // Movement speed adjustment.
 			break;
 		case SC_FORTUNE:
+#ifdef NEED_2017_BARD_STAT_BONUS
+			if (val2 != 0)
+				break;
+#endif
 			val2 = val1 * 10; // Critical increase
 			break;
 		case SC_SERVICE4U:
+#ifdef NEED_2017_BARD_STAT_BONUS
+			if (val2 != 0 || val3 != 0)
+				break;
+#endif
 			val2 = val1 < 10 ? 9 + val1 : 20; // MaxSP percent increase
 			val3 = 5 + val1; // SP cost reduction
 			break;

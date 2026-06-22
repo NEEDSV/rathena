@@ -529,7 +529,7 @@ int32 skill_calc_heal(block_list *src, block_list *target, uint16 skill_id, uint
 	tsc = status_get_sc(target);
 
 	switch( skill_id ) {
-#ifndef RENEWAL
+#if !defined(RENEWAL) || defined(NEED_2017_BARD_STAT_BONUS)
 		case BA_APPLEIDUN:
 			hp = 30 + 5 * skill_lv + (status_get_vit(src) / 2); // HP recovery
 			if (sd)
@@ -768,7 +768,11 @@ int32 skill_calc_heal(block_list *src, block_list *target, uint16 skill_id, uint
 
 	// Final heal increased by HPlus.
 	// Is this the right place for this??? [Rytech]
-	if ( sd && status_get_hplus(src) > 0 && skill_id != SOA_TALISMAN_OF_PROTECTION)
+	if ( sd && status_get_hplus(src) > 0 && skill_id != SOA_TALISMAN_OF_PROTECTION
+#ifdef NEED_2017_BARD_STAT_BONUS
+		&& skill_id != BA_APPLEIDUN
+#endif
+	)
 		hp += hp * status_get_hplus(src) / 100;
 
 	return (heal) ? max(1, hp) : hp;
@@ -5930,7 +5934,7 @@ std::shared_ptr<s_skill_unit_group> skill_unitsetting(block_list *src, uint16 sk
 		}
 		break;
 	case DC_DONTFORGETME:
-#ifdef RENEWAL
+#if defined(RENEWAL) && !defined(NEED_2017_BARD_STAT_BONUS)
 		val1 = 3 * skill_lv + status->dex / 15; // ASPD decrease
 		val2 = 2 * skill_lv + status->agi / 20; // Movement speed adjustment.
 #else
@@ -5939,7 +5943,7 @@ std::shared_ptr<s_skill_unit_group> skill_unitsetting(block_list *src, uint16 sk
 #endif		
 		if (sd) {
 			val1 += pc_checkskill(sd, DC_DANCINGLESSON);
-#ifdef RENEWAL
+#if defined(RENEWAL) && !defined(NEED_2017_BARD_STAT_BONUS)
 			val2 += pc_checkskill(sd, DC_DANCINGLESSON) / 2;
 #else
 			val2 += pc_checkskill(sd, DC_DANCINGLESSON);
@@ -5961,6 +5965,14 @@ std::shared_ptr<s_skill_unit_group> skill_unitsetting(block_list *src, uint16 sk
 		val1 += 5 + skill_lv + (status->agi / 20);
 		val1 *= 10; // ASPD works with 1000 as 100%
 		break;
+#ifdef NEED_2017_BARD_STAT_BONUS
+	case BA_APPLEIDUN:
+		val1 = 5 + 2 * skill_lv + status->vit / 10; // MaxHP rate increase
+		if (sd)
+			val1 += pc_checkskill(sd, BA_MUSICALLESSON) / 2;
+		val2 = 0; // Pre-Renewal/2017 uses the field tick heal formula instead.
+		break;
+#endif
 	case DC_FORTUNEKISS:
 		val1 = 10 + skill_lv + (status->luk / 10); // Critical increase
 		val1 *= 10; //Because every 10 crit is an actual cri point.
@@ -6576,6 +6588,17 @@ static int32 skill_unit_onplace(skill_unit *unit, block_list *bl, t_tick tick)
 			// This is to ensure the skill unit is removed before the status change ends
 			if (!sce)
 				sc_start4(ss, bl, type, 100, sg->skill_lv, sg->val1, sg->val2, 0, sg->limit + SKILLUNITTIMER_INTERVAL);
+#ifdef NEED_2017_BARD_STATUS_ICON_REFRESH
+			else if (sce->val4 == 1 && (type == SC_POEMBRAGI || type == SC_ASSNCROS || type == SC_APPLEIDUN ||
+				type == SC_DONTFORGETME || type == SC_SERVICE4U || type == SC_FORTUNE || type == SC_HUMMING)) {
+				t_tick duration = sg->limit + SKILLUNITTIMER_INTERVAL;
+				sce->val4 = 0; // Back inside the field; restore the field-owned timer.
+				delete_timer(sce->timer, status_change_timer);
+				sce->timer = add_timer(tick + duration, status_change_timer, bl->id, type);
+				if (auto scdb = status_db.find(type); scdb != nullptr)
+					clif_status_change(bl, static_cast<int32>(scdb->icon), 1, duration, 1, 0, 0);
+			}
+#endif
 			else if (battle_config.refresh_song == 1 && sce->val4 == 1) { //Readjust timers since the effect will not last long.
 				sce->val4 = 0; //remove the mark that we stepped out
 				delete_timer(sce->timer, status_change_timer);
