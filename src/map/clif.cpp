@@ -19870,6 +19870,23 @@ void clif_parse_SkillSelectMenu(int32 fd, map_session_data *sd) {
 
 	const PACKET_CZ_SKILL_SELECT_RESPONSE* p = reinterpret_cast<PACKET_CZ_SKILL_SELECT_RESPONSE*>( RFIFOP( fd, 0 ) );
 
+	// Handle NPC skillselectmenu()/skillselectmenuarray()
+	if (sd->state.menu_or_input) {
+#ifdef SECURE_NPCTIMEOUT
+		if ((sd->npc_idle_timer == INVALID_TIMER) && !sd->state.ignoretimeout) {
+			return;
+		}
+#endif
+		// Store the selected skill ID (0 if canceled)
+		int16 selected_skill = p->selectedSkillId;
+		sd->npc_amount = (selected_skill > 0) ? selected_skill : 0;
+		if (battle_config.idletime_option & IDLE_NPC_INPUT) {
+			sd->idletime = last_tick;
+		}
+		npc_scriptcont(sd, sd->menuskill_val2, false);
+		return;
+	}
+
 	if (sd->menuskill_id == SA_AUTOSPELL) {
 		sd->state.workinprogress = WIP_DISABLE_NONE;
 		skill_autospell(sd, p->selectedSkillId);
