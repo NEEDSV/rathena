@@ -3458,6 +3458,22 @@ struct s_item_group_search_result
 	uint16 rate;
 };
 
+struct s_need_lucky_egg {
+	t_itemid item_id;
+	std::string name;
+	bool show_rate;
+};
+
+class NeedLuckyEggDatabase : public TypesafeYamlDatabase<t_itemid, s_need_lucky_egg> {
+public:
+	NeedLuckyEggDatabase() : TypesafeYamlDatabase("NEED_LUCKY_EGG_DB", 1) {
+
+	}
+
+	const std::string getDefaultLocation() override;
+	uint64 parseBodyNode(const ryml::NodeRef& node) override;
+};
+
 /// Struct of Roulette db
 struct s_roulette_db {
 	t_itemid *nameid[MAX_ROULETTE_LEVEL]; /// Item ID
@@ -3466,6 +3482,7 @@ struct s_roulette_db {
 	int32 items[MAX_ROULETTE_LEVEL]; /// Number of items in the list for each
 };
 extern struct s_roulette_db rd;
+extern NeedLuckyEggDatabase need_lucky_egg_db;
 
 ///Main item data struct
 struct item_data
@@ -3873,6 +3890,8 @@ bool itemdb_isstackable2( const item_data *id );
 bool itemdb_isNoEquip( const item_data *id, uint16 m);
 
 bool itemdb_parse_roulette_db(void);
+bool lucky_egg_exists(uint32 item_id);
+bool lucky_egg_show_rate(uint32 item_id);
 
 void itemdb_gen_itemmoveinfo();
 

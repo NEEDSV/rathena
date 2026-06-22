@@ -8902,6 +8902,13 @@ static bool atcommand_display_item_group_contents(map_session_data *sd, int32 fd
 	safesnprintf(output, sizeof(output), "Item: %s (ID: %u)", item_link.c_str(), item_data->nameid);
 	clif_messagecolor(sd, color_table[COLOR_WHITE], output, false, SELF);
 
+	if (lucky_egg_exists(item_data->nameid) && !lucky_egg_show_rate(item_data->nameid)) {
+		safesnprintf(output, sizeof(output), "Lucky Egg rates are not available for this item.");
+		clif_messagecolor(sd, color_table[COLOR_YELLOW], output, false, SELF);
+		clif_messagecolor(sd, color_table[COLOR_YELLOW], result_separator, false, SELF);
+		return true;
+	}
+
 	safesnprintf(output, sizeof(output), msg_txt(sd, 1600));
 	clif_messagecolor(sd, color_table[COLOR_YELLOW], output, false, SELF);
 
@@ -8928,7 +8935,14 @@ static bool atcommand_display_item_group_contents(map_session_data *sd, int32 fd
 static void atcommand_display_item_group_sources(map_session_data *sd, int32 fd, t_itemid nameid)
 {
 	size_t total_item_groups = 0;
-	std::vector<s_item_group_search_result> item_groups = itemdb_group.find_item_groups(nameid, 20, total_item_groups);
+	std::vector<s_item_group_search_result> item_groups = itemdb_group.find_item_groups(nameid, 0, total_item_groups);
+
+	if (item_groups.empty())
+		return;
+
+	item_groups.erase(std::remove_if(item_groups.begin(), item_groups.end(), [](const s_item_group_search_result &item_group) {
+		return item_group.box_item_id > 0 && lucky_egg_exists(item_group.box_item_id) && !lucky_egg_show_rate(item_group.box_item_id);
+	}), item_groups.end());
 
 	if (item_groups.empty())
 		return;
@@ -8938,7 +8952,10 @@ static void atcommand_display_item_group_sources(map_session_data *sd, int32 fd,
 	safesnprintf(output, sizeof(output), msg_txt(sd, 1601));
 	clif_messagecolor(sd, color_table[COLOR_YELLOW], output, false, SELF);
 
-	for (const s_item_group_search_result &item_group : item_groups) {
+	size_t display_count = std::min<size_t>(item_groups.size(), 20);
+
+	for (size_t i = 0; i < display_count; i++) {
+		const s_item_group_search_result &item_group = item_groups[i];
 		std::string source_name = item_group.group_name;
 
 		if (item_group.box_item_id > 0)
@@ -8948,8 +8965,8 @@ static void atcommand_display_item_group_sources(map_session_data *sd, int32 fd,
 		clif_messagecolor(sd, color_table[COLOR_WHITE], output, false, SELF);
 	}
 
-	if (total_item_groups > item_groups.size()) {
-		safesnprintf(output, sizeof(output), "... and %zu more", total_item_groups - item_groups.size());
+	if (item_groups.size() > display_count) {
+		safesnprintf(output, sizeof(output), "... and more");
 		clif_displaymessage(fd, output);
 	}
 }

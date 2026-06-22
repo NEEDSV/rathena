@@ -33,6 +33,7 @@ using namespace rathena;
 
 ComboDatabase itemdb_combo;
 ItemGroupDatabase itemdb_group;
+NeedLuckyEggDatabase need_lucky_egg_db;
 
 struct s_roulette_db rd;
 
@@ -40,6 +41,39 @@ static void itemdb_jobid2mapid(uint64 bclass[3], e_mapid jobmask, bool active);
 
 const std::string ItemDatabase::getDefaultLocation() {
 	return std::string(db_path) + "/item_db.yml";
+}
+
+const std::string NeedLuckyEggDatabase::getDefaultLocation() {
+	return std::string(db_path) + "/need/lucky_egg_db.yml";
+}
+
+uint64 NeedLuckyEggDatabase::parseBodyNode(const ryml::NodeRef& node) {
+	t_itemid item_id;
+
+	if (!this->asUInt32(node, "ItemID", item_id))
+		return 0;
+
+	std::shared_ptr<s_need_lucky_egg> entry = std::make_shared<s_need_lucky_egg>();
+	entry->item_id = item_id;
+
+	if (!this->asString(node, "Name", entry->name))
+		return 0;
+
+	if (!this->asBool(node, "ShowRate", entry->show_rate))
+		return 0;
+
+	this->put(item_id, entry);
+	return 1;
+}
+
+bool lucky_egg_exists(uint32 item_id) {
+	return need_lucky_egg_db.exists(static_cast<t_itemid>(item_id));
+}
+
+bool lucky_egg_show_rate(uint32 item_id) {
+	std::shared_ptr<s_need_lucky_egg> entry = need_lucky_egg_db.find(static_cast<t_itemid>(item_id));
+
+	return entry == nullptr || entry->show_rate;
 }
 
 /**
@@ -4987,6 +5021,7 @@ static void itemdb_read(void) {
 	random_option_db.load();
 	random_option_group.load();
 	itemdb_group.load();
+	need_lucky_egg_db.load();
 	itemdb_combo.load();
 	laphine_synthesis_db.load();
 	laphine_upgrade_db.load();
@@ -5080,6 +5115,7 @@ void do_final_itemdb(void) {
 	item_db.clear();
 	itemdb_combo.clear();
 	itemdb_group.clear();
+	need_lucky_egg_db.clear();
 	random_option_db.clear();
 	random_option_group.clear();
 	laphine_synthesis_db.clear();

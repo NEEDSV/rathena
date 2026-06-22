@@ -11,6 +11,7 @@
 #include <common/showmsg.hpp> // ShowWarning, ShowStatus
 
 #include "clif.hpp"
+#include "itemdb.hpp"
 #include "log.hpp"
 #include "pc.hpp" // s_map_session_data
 #include "pet.hpp" // pet_create_egg
@@ -629,6 +630,7 @@ bool cashshop_buylist( map_session_data* sd, uint32 kafrapoints, int32 n, const 
 void cashshop_reloaddb( void ){
 	do_final_cashshop();
 	do_init_cashshop();
+	need_lucky_egg_db.reload();
 }
 
 /*
