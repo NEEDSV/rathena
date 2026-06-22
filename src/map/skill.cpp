@@ -5963,7 +5963,12 @@ std::shared_ptr<s_skill_unit_group> skill_unitsetting(block_list *src, uint16 sk
 		if (sd)
 			val1 = pc_checkskill(sd, BA_MUSICALLESSON) / 2;
 		val1 += 5 + skill_lv + (status->agi / 20);
+#ifdef RENEWAL_ASPD
+		// RENEWAL_ASPD consumes SC_ASSNCROS::val2 as a fixed ASPD bonus.
+		// Pre-Renewal ASPD consumes it as aspd_rate where 10 means 1%.
+#else
 		val1 *= 10; // ASPD works with 1000 as 100%
+#endif
 		break;
 #ifdef NEED_2017_BARD_STAT_BONUS
 	case BA_APPLEIDUN:
