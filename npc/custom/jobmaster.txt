@@ -16,14 +16,9 @@
 //= 2.0 Added 4th class [Lemongrass]
 //============================================================
 function	script	Get_Item	{
-	.@eac = eaclass();
-	if( .@eac&EAJL_THIRD )
-	{
-		getitem 23583,1;
-		getitem 23584,1;
-		SUPPORT_ITEM = 1;
-	}
-	
+	getitem 23583,1;
+	getitem 23584,1;
+	SUPPORT_ITEM = 1;
 	close;
 }
 
@@ -119,12 +114,12 @@ function	Check_Riding	{
 	// would make this NPC bigger just to handle with
 	// those special cases.
 	if (checkfalcon() || checkcart() || checkriding() || ismounting()) {
-		mes " 삭제해 주세요" +
-			((checkfalcon()) ? "falcon" : "") +
-			((checkcart()) ? "cart" : "") +
-			((checkriding()) ? "Peco" : "") +
-			((ismounting()) ? "mount" : "") +
-			" before proceeding.";
+		mes "" +
+			((checkfalcon()) ? "팔콘을" : "") +
+			((checkcart()) ? "카트를" : "") +
+			((checkriding()) ? "페코를" : "") +
+			((ismounting()) ? "탈것을" : "") +
+			" 제거하고 오세요.";
 		close;
 	}
 	return;
@@ -135,6 +130,29 @@ function	Check_SkillPoints	{
 		close;
 	}
 	return;
+}
+
+
+function	F_IsBlockedNeedJob	{
+	.@job = getarg(0);
+	
+	switch (.@job) {
+		// 태권 계열 4차 이전 직업 차단
+		case Job_Star_Emperor:		// 천제 전 단계
+		case Job_Soul_Reaper:		// 영도사 전 단계
+
+		// 닌자 / 건슬 / 도람 상위 전직 차단
+		case Job_Kagerou:			// 신키로 전 단계
+		case Job_Oboro:				// 시라누이 전 단계
+		case Job_Rebellion:			// 나이트 워치 전 단계
+		case Job_Summoner:			// 혼령사 전 단계
+
+		// 하이퍼 노비스 막을 거면 추가
+		case Job_Super_Novice_E:
+			return 1;
+	}
+
+	return 0;
 }
 
 // addJobOptions is essentially the same like
@@ -168,6 +186,11 @@ function	Job_Options	{
 	// From here on the jobmaster checks the current class
 	// and fills the array `.@job_opt` with possible
 	// job options for the player.
+	
+	if (F_IsBlockedNeedJob(Class)) {
+		mes "해당 직업은 더 이상 전직할 수 없습니다.";
+		close;
+	}
 	
 	if( .@rebirth_possible ) {
 		// Rebirth option (displayed on the top of the menu)
@@ -350,7 +373,6 @@ function	Job_Menu	{
 	}
 	return;
 }
-
 
 // Executes the actual jobchange and closes.
 function	Job_Change	{
