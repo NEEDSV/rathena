@@ -8867,6 +8867,7 @@ static const struct _battle_data {
 	{ "broadcast_hide_name",                &battle_config.broadcast_hide_name,             2,      0,      NAME_LENGTH,    },
 	{ "skill_drop_items_full",              &battle_config.skill_drop_items_full,           0,      0,      1,              },
 	{ "switch_remove_edp",                  &battle_config.switch_remove_edp,               2,      0,      3,              },
+	{ "edp_keep_on_weapon_switch",          &battle_config.edp_keep_on_weapon_switch,       0,      0,      1,              },
 	{ "feature.homunculus_autofeed",        &battle_config.feature_homunculus_autofeed,     1,      0,      1,              },
 	{ "feature.homunculus_autofeed_rate",   &battle_config.feature_homunculus_autofeed_rate,30,     0,    100,              },
 	{ "summoner_race",                      &battle_config.summoner_race,                   RC_PLAYER_DORAM,      RC_FORMLESS,      RC_PLAYER_DORAM,              },
