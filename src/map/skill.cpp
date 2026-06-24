@@ -674,15 +674,19 @@ int32 skill_calc_heal(block_list *src, block_list *target, uint16 skill_id, uint
 #else
 				hp += hp * tsc->getSCE(SC_INCHEALRATE)->val1 / 100;
 #endif
+#ifndef NEED_2017_SKILL_BEHAVIOR
 			if (tsc->getSCE(SC_ANCILLA))
 #ifdef RENEWAL
 				hp_bonus += tsc->getSCE(SC_ANCILLA)->val1;
 #else
 				hp += hp * tsc->getSCE(SC_ANCILLA)->val1 / 100;
+#endif
+#endif
+#ifndef RENEWAL
 			if (tsc->getSCE(SC_WATER_INSIGNIA) && tsc->getSCE(SC_WATER_INSIGNIA)->val1 == 2)
 				hp += hp / 10;
 #endif
-#ifdef RENEWAL
+#if defined(RENEWAL) && !defined(NEED_2017_SKILL_BEHAVIOR)
 			if (tsc->getSCE(SC_ASSUMPTIO))
 				hp_bonus += tsc->getSCE(SC_ASSUMPTIO)->val1 * 2;
 #endif
