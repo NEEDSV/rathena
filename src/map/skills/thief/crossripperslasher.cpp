@@ -38,5 +38,8 @@ void SkillCrossRipperSlasher::castendDamageId(block_list *src, block_list *targe
 	else
 	{
 		WeaponSkillImpl::castendDamageId(src, target, skill_lv, tick, flag);
+#ifdef NEED_2017_SKILL_BEHAVIOR
+		status_change_end(src, SC_ROLLINGCUTTER);
+#endif
 	}
 }
