@@ -7426,7 +7426,13 @@ int32 skill_unit_onplace_timer(skill_unit *unit, block_list *bl, t_tick tick)
 			break;
 
 		case UNT_POISONSMOKE:
-			if( battle_check_target(ss,bl,BCT_ENEMY) > 0 && !(tsc && tsc->getSCE(sg->val2)) && rnd()%100 < 50 )
+			if( battle_check_target(ss,bl,BCT_ENEMY) > 0 && !(tsc && tsc->getSCE(sg->val2)) && rnd()%100 <
+#ifdef NEED_2017_SKILL_BEHAVIOR
+				20
+#else
+				50
+#endif
+			)
 				sc_start4(ss,bl,(sc_type)sg->val2,100,sg->val3,0,1,0,skill_get_time2(GC_POISONINGWEAPON, 1));
 			break;
 
@@ -13729,7 +13735,9 @@ void skill_poisoningweapon( map_session_data& sd, t_itemid nameid ){
 	chance = 2 + 2 * sd.menuskill_val; // 2 + 2 * skill_lv
 	sc_start4(&sd,&sd, SC_POISONINGWEAPON, 100, pc_checkskill(&sd, GC_RESEARCHNEWPOISON), //in Aegis it store the level of GC_RESEARCHNEWPOISON in val1
 		type, chance, 0, skill_get_time(GC_POISONINGWEAPON, sd.menuskill_val));
+#ifndef NEED_2017_SKILL_BEHAVIOR
 	status_change_start(&sd, &sd, type, 10000, sd.menuskill_val, 0, 0, 0, skill_get_time(GC_POISONINGWEAPON, sd.menuskill_val), SCSTART_NOAVOID | SCSTART_NOICON); // Apply bonus to caster
+#endif
 
 	sprintf(output, msg_txt(&sd,721), msg);
 	clif_messagecolor(&sd,color_table[COLOR_WHITE],output,false,SELF);

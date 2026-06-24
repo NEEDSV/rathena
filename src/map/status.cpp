@@ -10963,8 +10963,12 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 				uint16 poison_level = pc_checkskill(sd, GC_RESEARCHNEWPOISON);
 
 				if (poison_level > 0) {
+#ifdef NEED_2017_SKILL_BEHAVIOR
+					tick += poison_level * 3 * 1000;
+#else
 					tick += 30000; // Base of 30 seconds
 					tick += poison_level * 15 * 1000; // Additional 15 seconds per level
+#endif
 				}
 			}
 			break;
@@ -13066,8 +13070,12 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 				uint16 poison_level = pc_checkskill(sd, GC_RESEARCHNEWPOISON);
 
 				if (poison_level > 0) {
+#ifdef NEED_2017_SKILL_BEHAVIOR
+					tick += poison_level * 3 * 1000;
+#else
 					tick += 30000; // Base of 30 seconds
 					tick += poison_level * 15 * 1000; // Additional 15 seconds per level
+#endif
 				}
 			}
 			break;

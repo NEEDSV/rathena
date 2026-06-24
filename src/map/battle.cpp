@@ -1993,10 +1993,17 @@ int64 battle_calc_damage(block_list *src,block_list *bl,struct Damage *d,int64 d
 		if (flag&BF_MAGIC && bl->type == BL_PC && sc->getSCE(SC_GVG_GIANT) && sc->getSCE(SC_GVG_GIANT)->val4)
 			damage += damage * sc->getSCE(SC_GVG_GIANT)->val4 / 100;
 
-		if (sc->getSCE(SC_POISONINGWEAPON) && flag&BF_SHORT && damage > 0) {
-			damage += damage * 10 / 100;
-			if (rnd() % 100 < sc->getSCE(SC_POISONINGWEAPON)->val3)
-				sc_start4(src, bl, (sc_type)sc->getSCE(SC_POISONINGWEAPON)->val2, 100, sc->getSCE(SC_POISONINGWEAPON)->val1, 0, 1, 0, (sc->getSCE(SC_POISONINGWEAPON)->val2 == SC_VENOMBLEED ? skill_get_time2(GC_POISONINGWEAPON, 1) : skill_get_time2(GC_POISONINGWEAPON, 2)));
+		if (sc->getSCE(SC_POISONINGWEAPON) && damage > 0) {
+#ifdef NEED_2017_SKILL_BEHAVIOR
+			if ((flag & BF_WEAPON) && (!skill_id || skill_id == GC_VENOMPRESSURE) && rnd() % 100 < sc->getSCE(SC_POISONINGWEAPON)->val3)
+				sc_start4(src, bl, (sc_type)sc->getSCE(SC_POISONINGWEAPON)->val2, 100, sc->getSCE(SC_POISONINGWEAPON)->val1, 0, 1, 0, skill_get_time2(GC_POISONINGWEAPON, 1));
+#else
+			if (flag & BF_SHORT) {
+				damage += damage * 10 / 100;
+				if (rnd() % 100 < sc->getSCE(SC_POISONINGWEAPON)->val3)
+					sc_start4(src, bl, (sc_type)sc->getSCE(SC_POISONINGWEAPON)->val2, 100, sc->getSCE(SC_POISONINGWEAPON)->val1, 0, 1, 0, (sc->getSCE(SC_POISONINGWEAPON)->val2 == SC_VENOMBLEED ? skill_get_time2(GC_POISONINGWEAPON, 1) : skill_get_time2(GC_POISONINGWEAPON, 2)));
+			}
+#endif
 		}
 
 		if( sc->getSCE(SC__DEADLYINFECT) && (flag&(BF_SHORT|BF_MAGIC)) == BF_SHORT && damage > 0 && rnd()%100 < 30 + 10 * sc->getSCE(SC__DEADLYINFECT)->val1 )
