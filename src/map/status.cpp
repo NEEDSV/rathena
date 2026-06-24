@@ -5480,7 +5480,11 @@ void status_calc_regen_rate(block_list *bl, struct regen_data *regen, status_cha
 		(bl->type == BL_PC && (((TBL_PC*)bl)->class_&MAPID_SECONDMASK) == MAPID_MONK &&
 		sc->getSCE(SC_EXTREMITYFIST) && (!sc->getSCE(SC_SPIRIT) || sc->getSCE(SC_SPIRIT)->val2 != SL_MONK)) ||
 #endif
-		(sc->getSCE(SC_OBLIVIONCURSE) && sc->getSCE(SC_OBLIVIONCURSE)->val3 == 1))
+		(sc->getSCE(SC_OBLIVIONCURSE) && sc->getSCE(SC_OBLIVIONCURSE)->val3 == 1)
+#ifdef NEED_2017_SKILL_BEHAVIOR
+		|| sc->getSCE(SC_VITALITYACTIVATION)
+#endif
+		)
 		regen->flag &= ~RGN_SP;
 
 	if (sc->getSCE(SC_TENSIONRELAX)) {
