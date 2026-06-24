@@ -2996,7 +2996,9 @@ int64 skill_attack (int32 attack_type, block_list* src, block_list *dsrc, block_
 			break;
 		case KN_PIERCE:
 		case LK_SPIRALPIERCE:
+#ifndef NEED_2017_SKILL_BEHAVIOR
 		case RK_HUNDREDSPEAR:
+#endif
 		case DK_MADNESS_CRUSHER:
 			if (sc && sc->getSCE(SC_CHARGINGPIERCE)) {
 				if (sc->getSCE(SC_CHARGINGPIERCE_COUNT)) {
@@ -3143,6 +3145,12 @@ int64 skill_attack (int32 attack_type, block_list* src, block_list *dsrc, block_
 			if (!(flag&SD_ANIMATION))
 				clif_skill_nodamage(dsrc, *bl, skill_id, skill_lv);
 			[[fallthrough]];
+#ifdef NEED_2017_SKILL_BEHAVIOR
+		case WM_REVERBERATION_MELEE:
+		case WM_REVERBERATION_MAGIC:
+			clif_skill_damage( *dsrc, *bl, tick, dmg.amotion, dmg.dmotion, damage, dmg.div_, WM_REVERBERATION, -2, dmg_type );
+			break;
+#endif
 		case WM_REVERBERATION:
 			clif_skill_damage( *dsrc, *bl, tick, dmg.amotion, dmg.dmotion, damage, dmg.div_, skill_id, -2, dmg_type );
 			break;
@@ -6333,6 +6341,9 @@ std::shared_ptr<s_skill_unit_group> skill_unitsetting(block_list *src, uint16 sk
 				unit_val2 = 0;
 				break;
 			case NPC_REVERBERATION:
+#ifdef NEED_2017_SKILL_BEHAVIOR
+			case WM_REVERBERATION:
+#endif
 				unit_val1 = 1 + skill_lv;
 				break;
 			case WM_POEMOFNETHERWORLD:
@@ -11490,6 +11501,13 @@ int32 skill_trap_splash(block_list *bl, va_list ap)
 			}
 			break;
 		case UNT_REVERBERATION: // For proper skill delay animation when used with Dominion Impulse
+#ifdef NEED_2017_SKILL_BEHAVIOR
+			if (sg->skill_id == WM_REVERBERATION) {
+				// TODO(NEED_2017_SKILL_BEHAVIOR): Re-check Dominion Impulse interaction after the first WM_REVERBERATION rollback pass.
+				skill_addtimerskill(ss, tick + status_get_amotion(ss), bl->id, 0, 0, WM_REVERBERATION_MELEE, sg->skill_lv, BF_WEAPON, 0);
+				skill_addtimerskill(ss, tick + status_get_amotion(ss) * 2, bl->id, 0, 0, WM_REVERBERATION_MAGIC, sg->skill_lv, BF_MAGIC, 0);
+			} else
+#endif
 			skill_addtimerskill(ss, tick + 50, bl->id, 0, 0, NPC_REVERBERATION_ATK, sg->skill_lv, BF_WEAPON, 0);
 			break;
 		case UNT_FIRINGTRAP:

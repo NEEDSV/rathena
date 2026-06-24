@@ -6,6 +6,7 @@
 #include <config/core.hpp>
 
 #include "map/pc.hpp"
+#include "map/skill.hpp"
 #include "map/status.hpp"
 
 SkillHundredSpear::SkillHundredSpear() : SkillImplRecursiveDamageSplash(RK_HUNDREDSPEAR) {
@@ -38,5 +39,21 @@ void SkillHundredSpear::calculateSkillRatio(const Damage *wd, const block_list *
 			skillratio *= 2;
 	}
 	RE_LVL_DMOD(100);
+#endif
+}
+
+void SkillHundredSpear::castendDamageId(block_list* src, block_list* target, uint16 skill_lv, t_tick tick, int32& flag) const {
+	SkillImplRecursiveDamageSplash::castendDamageId(src, target, skill_lv, tick, flag);
+
+#ifdef NEED_2017_SKILL_BEHAVIOR
+	if (!(flag & 1) && rnd() % 100 < 10 + 3 * skill_lv) {
+		const map_session_data* sd = BL_CAST(BL_PC, src);
+		const uint16 skill_req = sd ? pc_checkskill(sd, KN_SPEARBOOMERANG) : skill_get_max(KN_SPEARBOOMERANG);
+
+		if (skill_req > 0) {
+			skill_blown(src, target, 6, -1, BLOWN_NONE);
+			skill_castend_damage_id(src, target, KN_SPEARBOOMERANG, skill_req, tick, 0);
+		}
+	}
 #endif
 }
