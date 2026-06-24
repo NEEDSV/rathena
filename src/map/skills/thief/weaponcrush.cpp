@@ -26,3 +26,10 @@ void SkillWeaponCrush::castendNoDamageId(block_list *src, block_list *target, ui
 void SkillWeaponCrush::applyAdditionalEffects(block_list *src, block_list *target, uint16 skill_lv, t_tick tick, int32 attack_type, enum damage_lv dmg_lv) const {
 	skill_castend_nodamage_id(src,target,getSkillId(),skill_lv,tick,BCT_ENEMY);
 }
+
+void SkillWeaponCrush::castendDamageId(block_list *src, block_list *target, uint16 skill_lv, t_tick tick, int32& flag) const {
+	WeaponSkillImpl::castendDamageId(src, target, skill_lv, tick, flag);
+#ifdef NEED_2017_SKILL_BEHAVIOR
+	status_change_end(src, SC_WEAPONBLOCK_ON);
+#endif
+}

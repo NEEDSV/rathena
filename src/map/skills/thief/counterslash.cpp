@@ -25,11 +25,23 @@ void SkillCounterSlash::calculateSkillRatio(const Damage *wd, const block_list *
 #endif
 	RE_LVL_DMOD(120);
 	skillratio += sstatus->agi * 2;
+#ifdef NEED_2017_SKILL_FORMULA
+	skillratio += (sd ? sd->status.job_level * 4 : 0);
+#else
 	// If 4th job, job level of your 3rd job counts
 	skillratio += (sd ? (sd->class_&JOBL_FOURTH ? sd->change_level_4th : sd->status.job_level) * 4 : 0);
+#endif
 }
 
 void SkillCounterSlash::castendNoDamageId(block_list *src, block_list *target, uint16 skill_lv, t_tick tick, int32& flag) const {
 	clif_skill_nodamage(src,*target,getSkillId(),skill_lv);
 	skill_castend_damage_id(src, target, getSkillId(), skill_lv, tick, flag);
+}
+
+int64 SkillCounterSlash::splashDamage(block_list* src, block_list* target, uint16 skill_lv, t_tick tick, int32 flag) const {
+	int64 damage = SkillImplRecursiveDamageSplash::splashDamage(src, target, skill_lv, tick, flag);
+#ifdef NEED_2017_SKILL_BEHAVIOR
+	status_change_end(src, SC_WEAPONBLOCK_ON);
+#endif
+	return damage;
 }

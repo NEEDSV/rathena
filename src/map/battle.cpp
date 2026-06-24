@@ -6804,6 +6804,7 @@ struct Damage battle_calc_attack(int32 attack_type,block_list *bl,block_list *ta
 		status_change *tsc = status_get_sc(target);
 
 		// Weapon Blocking has the ability to trigger on ATK_MISS as well.
+#ifndef NEED_2017_SKILL_BEHAVIOR
 		if (tsc != nullptr && tsc->getSCE(SC_WEAPONBLOCKING)) {
 			status_change_entry *tsce = tsc->getSCE(SC_WEAPONBLOCKING);
 
@@ -6812,6 +6813,7 @@ struct Damage battle_calc_attack(int32 attack_type,block_list *bl,block_list *ta
 				sc_start(bl, target, SC_WEAPONBLOCK_ON, 100, bl->id, skill_get_time2(GC_WEAPONBLOCKING, tsce->val1));
 			}
 		}
+#endif
 	}
 	else // Some skills like Weaponry Research will cause damage even if attack is dodged
 		d.dmg_lv = ATK_DEF;

@@ -2101,6 +2101,14 @@ bool skill_strip_equip(block_list *src, block_list *target, uint16 skill_id, uin
 		case RG_STRIPSHIELD:
 		case RG_STRIPHELM:
 		case GC_WEAPONCRUSH:
+#ifdef NEED_2017_SKILL_BEHAVIOR
+			if (skill_id == GC_WEAPONCRUSH) {
+				rate = (5 + 5 * skill_lv + (sstatus->dex - tstatus->dex) / 5) * 10;
+				rate = max(rate, 50);
+				mod = 1000;
+				break;
+			}
+#endif
 			rate = 50 * (skill_lv + 1) + 2 * (sstatus->dex - tstatus->dex);
 			mod = 1000;
 			break;
@@ -2151,6 +2159,17 @@ bool skill_strip_equip(block_list *src, block_list *target, uint16 skill_id, uin
 		case GC_WEAPONCRUSH:
 		case ST_FULLSTRIP:
 		case ABC_STRIP_SHADOW:
+#ifdef NEED_2017_SKILL_BEHAVIOR
+			if (skill_id == GC_WEAPONCRUSH) {
+				time = skill_get_time(skill_id, skill_lv);
+				if (target->type == BL_PC)
+					time += skill_lv * 15 + (sstatus->dex - tstatus->dex);
+				else
+					time += skill_lv * 30 + (sstatus->dex - tstatus->dex) / 2;
+				time = max(time, 0);
+				break;
+			}
+#endif
 			if (skill_id == WL_EARTHSTRAIN)
 				time = skill_get_time2(skill_id, skill_lv);
 			else
