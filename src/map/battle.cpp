@@ -7439,6 +7439,13 @@ enum damage_lv battle_weapon_attack(block_list* src, block_list* target, t_tick 
 	damage = wd.damage + wd.damage2;
 	if( damage > 0 && src != target )
 	{
+#ifdef NEED_2017_SKILL_BEHAVIOR
+		// 2017: Duple Light fires only ONE of melee/magic chosen at random (택1 발동)
+		if (sc && sc->getSCE(SC_DUPLELIGHT) && (wd.flag & BF_SHORT) && rnd() % 100 <= 10 + 2 * sc->getSCE(SC_DUPLELIGHT)->val1) {
+			uint16 sub_skill_id = (rnd() % 2 == 1) ? AB_DUPLELIGHT_MELEE : AB_DUPLELIGHT_MAGIC;
+			skill_castend_damage_id(src, target, sub_skill_id, sc->getSCE(SC_DUPLELIGHT)->val1, tick, flag | SD_LEVEL);
+		}
+#else
 		if (sc && sc->getSCE(SC_DUPLELIGHT) && (wd.flag & BF_SHORT)) { // Activates only from regular melee damage. Success chance is separate for both duple light attacks.
 			uint16 duple_rate = 10 + 2 * sc->getSCE(SC_DUPLELIGHT)->val1;
 
@@ -7448,6 +7455,7 @@ enum damage_lv battle_weapon_attack(block_list* src, block_list* target, t_tick 
 			if (rand() % 100 < duple_rate)
 				skill_castend_damage_id(src, target, AB_DUPLELIGHT_MAGIC, sc->getSCE(SC_DUPLELIGHT)->val1, tick, flag | SD_LEVEL);
 		}
+#endif
 	}
 
 	clif_damage(*src, *target, tick, wd.amotion, wd.dmotion, wd.damage, wd.div_, wd.type, wd.damage2, wd.isspdamage);

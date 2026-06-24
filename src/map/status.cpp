@@ -4749,10 +4749,15 @@ int32 status_calc_pc_sub(map_session_data* sd, uint8 opt)
 	if ((skill = pc_checkskill(sd, AB_EUCHARISTICA)) > 0) {
 		sd->right_weapon.addrace[RC_DEMON] += skill;
 		sd->right_weapon.addele[ELE_DARK] += skill;
+#ifdef NEED_2017_SKILL_BEHAVIOR
+		sd->left_weapon.addrace[RC_DEMON] += skill;
+		sd->left_weapon.addele[ELE_DARK] += skill;
+#else
 		if( !battle_config.left_cardfix_to_right ){
 			sd->left_weapon.addrace[RC_DEMON] += skill;
 			sd->left_weapon.addele[ELE_DARK] += skill;
 		}
+#endif
 		sd->indexed_bonus.magic_addrace[RC_DEMON] += skill;
 		sd->indexed_bonus.magic_addele[ELE_DARK] += skill;
 		sd->indexed_bonus.subrace[RC_DEMON] += skill;
@@ -10782,6 +10787,9 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 				status_change_end(bl, SC_SPIRIT);
 			break;
 		case SC_INCREASEAGI:
+#ifdef NEED_2017_SKILL_BEHAVIOR
+			status_change_end(bl, SC_DECREASEAGI);
+#endif
 			if(sc->getSCE(SC_SPIRIT) && sc->getSCE(SC_SPIRIT)->val2 == SL_HIGH)
 				status_change_end(bl, SC_SPIRIT);
 			break;
@@ -10983,6 +10991,11 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 		case SC_MAGICROD:
 			val2 = val1*20; // SP gained
 			break;
+#ifdef NEED_2017_SKILL_BEHAVIOR
+		case SC_MAGNIFICAT:
+			status_change_end(bl, SC_OFFERTORIUM);
+			break;
+#endif
 		case SC_KYRIE:
 #ifdef NEED_2017_SKILL_BEHAVIOR
 			status_change_end(bl, SC_ASSUMPTIO);
@@ -12593,6 +12606,25 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 			val3 = 40 * val1; // magic dmg bonus
 			break;
 		case SC_OFFERTORIUM:
+#ifdef NEED_2017_SKILL_BEHAVIOR
+			status_change_end(bl, SC_MAGNIFICAT);
+			status_change_end(bl, SC_BLIND);
+			status_change_end(bl, SC_CURSE);
+			status_change_end(bl, SC_POISON);
+			status_change_end(bl, SC_HALLUCINATION);
+			status_change_end(bl, SC_CONFUSION);
+			status_change_end(bl, SC_BLEEDING);
+			status_change_end(bl, SC_BURNING);
+			status_change_end(bl, SC_FREEZING);
+			status_change_end(bl, SC_MANDRAGORA);
+			status_change_end(bl, SC_PARALYSE);
+			status_change_end(bl, SC_PYREXIA);
+			status_change_end(bl, SC_DEATHHURT);
+			status_change_end(bl, SC_LEECHESEND);
+			status_change_end(bl, SC_VENOMBLEED);
+			status_change_end(bl, SC_TOXIN);
+			status_change_end(bl, SC_MAGICMUSHROOM);
+#endif
 			val2 = 30 * val1; // heal power bonus
 			val3 = 100 + 20 * val1; // sp cost inc
 			break;

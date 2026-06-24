@@ -6,6 +6,7 @@
 #define CONFIG_RENEWAL_HPP
 
 #define NEED_2017_SKILL_FORMULA
+#define NEED_2017_SKILL_BEHAVIOR
 
 // 모든 리뉴얼 옵션을 비활성화하는 빠른 옵션 (./configure에서 사용)
 //#define PRERE

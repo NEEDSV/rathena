@@ -23,7 +23,12 @@ void SkillClearance::castendNoDamageId(block_list *src, block_list *target, uint
 
 		clif_skill_nodamage(src,*target,getSkillId(),skill_lv);
 
+#ifdef NEED_2017_SKILL_BEHAVIOR
+		// 2017: Soul Linker is immune to Clearance
+		if ((dstsd && (dstsd->class_ & MAPID_SECONDMASK) == MAPID_SOUL_LINKER) || rnd()%100 >= 60 + 8 * skill_lv) {
+#else
 		if(rnd()%100 >= 60 + 8 * skill_lv) {
+#endif
 			if (sd)
 				clif_skill_fail( *sd, getSkillId() );
 			return;

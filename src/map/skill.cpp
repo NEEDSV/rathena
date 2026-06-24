@@ -653,8 +653,11 @@ int32 skill_calc_heal(block_list *src, block_list *target, uint16 skill_id, uint
 #endif
 
 	if (sc != nullptr && !sc->empty()) {
-		if (sc->getSCE(SC_OFFERTORIUM) && (skill_id == AB_HIGHNESSHEAL || skill_id == AB_CHEAL || skill_id == NPC_CHEAL || skill_id == PR_SANCTUARY || skill_id == AL_HEAL ||
-			skill_id == CD_DILECTIO_HEAL || skill_id == CD_MEDIALE_VOTUM ))
+		if (sc->getSCE(SC_OFFERTORIUM) && (skill_id == AB_HIGHNESSHEAL || skill_id == AB_CHEAL || skill_id == NPC_CHEAL || skill_id == PR_SANCTUARY || skill_id == AL_HEAL
+#ifndef NEED_2017_SKILL_BEHAVIOR
+			|| skill_id == CD_DILECTIO_HEAL || skill_id == CD_MEDIALE_VOTUM
+#endif
+		))
 #ifdef RENEWAL
 			hp_bonus += sc->getSCE(SC_OFFERTORIUM)->val2;
 #else
@@ -7467,7 +7470,9 @@ int32 skill_unit_onplace_timer(skill_unit *unit, block_list *bl, t_tick tick)
 					status_change_end(bl,SC_CLOAKING);
 					status_change_end(bl,SC_CLOAKINGEXCEED);
 					status_change_end(bl,SC_CAMOUFLAGE);
+#ifndef NEED_2017_SKILL_BEHAVIOR
 					status_change_end(bl,SC_NEWMOON);
+#endif
 					if (tsc && tsc->getSCE(SC__SHADOWFORM) && rnd() % 100 < 100 - tsc->getSCE(SC__SHADOWFORM)->val1 * 10) // [100 - (Skill Level x 10)] %
 						status_change_end(bl, SC__SHADOWFORM);
 				}
