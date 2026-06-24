@@ -685,6 +685,7 @@ struct Battle_Config
 	int32 broadcast_hide_name;
 	int32 skill_drop_items_full;
 	int32 switch_remove_edp;
+	int32 edp_keep_on_weapon_switch;
 	int32 feature_homunculus_autofeed;
 	int32 feature_homunculus_autofeed_rate;
 	int32 summoner_race;

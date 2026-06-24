@@ -12447,7 +12447,8 @@ bool pc_unequipitem(map_session_data *sd, int32 n, int32 flag) {
 #else
 		if (battle_config.switch_remove_edp&1) {
 #endif
-			status_change_end(sd, SC_EDP);
+			if (!battle_config.edp_keep_on_weapon_switch)
+				status_change_end(sd, SC_EDP);
 		}
 	}
 	if(pos & EQP_HAND_L) {
