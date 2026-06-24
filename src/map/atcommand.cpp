@@ -8903,7 +8903,7 @@ static bool atcommand_display_item_group_contents(map_session_data *sd, int32 fd
 	clif_messagecolor(sd, color_table[COLOR_WHITE], output, false, SELF);
 
 	if (lucky_egg_exists(item_data->nameid) && !lucky_egg_show_rate(item_data->nameid)) {
-		safesnprintf(output, sizeof(output), "Lucky Egg rates are not available for this item.");
+		safesnprintf(output, sizeof(output), msg_txt(sd, 1614));
 		clif_messagecolor(sd, color_table[COLOR_YELLOW], output, false, SELF);
 		clif_messagecolor(sd, color_table[COLOR_YELLOW], result_separator, false, SELF);
 		return true;
