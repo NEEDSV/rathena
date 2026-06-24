@@ -10915,6 +10915,9 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 				sc_start(src, bl, SC_BLIND, 1000, val1, skill_get_time(scdb->skill_id, val1));
 				if (sc->getSCE(SC_ADORAMUS))
 					return false; //Adoramus can't refresh itself, but it can cause blind again
+#ifdef NEED_2017_SKILL_BEHAVIOR
+				status_change_end(bl, SC_DECREASEAGI);
+#endif
 			}
 			val2 = 2 + val1; // Agi change
 			break;
@@ -10981,6 +10984,9 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 			val2 = val1*20; // SP gained
 			break;
 		case SC_KYRIE:
+#ifdef NEED_2017_SKILL_BEHAVIOR
+			status_change_end(bl, SC_ASSUMPTIO);
+#endif
 			if( val4 ) { // Formulas for Praefatio
 				val2 = (status->max_hp * (val1 * 2 + 10) / 100) + val4 * 2; //%Max HP to absorb
 				val3 = 6 + val1; //Hits
@@ -14743,7 +14749,11 @@ TIMER_FUNC(status_change_timer){
 
 	case SC_RENOVATIO:
 		if( --(sce->val4) >= 0 ) {
+#ifdef NEED_2017_SKILL_BEHAVIOR
+			int32 heal = status->max_hp * 3 / 100;
+#else
 			int32 heal = status->max_hp * (sce->val1 + 4) / 100;
+#endif
 			if( sc && sc->getSCE(SC_AKAITSUKI) && heal )
 				heal = ~heal + 1;
 			status_heal(bl, heal, 0, 3);
