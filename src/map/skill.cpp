@@ -13107,7 +13107,11 @@ bool skill_produce_mix(map_session_data *sd, uint16 skill_id, t_itemid nameid, i
 				break;
 
 			case RK_RUNEMASTERY: {
+#ifdef NEED_2017_SKILL_BEHAVIOR
+					int32 A = 100 * (51 + 2 * pc_checkskill(sd, skill_id));
+#else
 					int32 A = 100 * (30 + 2 * pc_checkskill(sd, skill_id));
+#endif
 					int32 B = 100 * status->dex / 30 + 10 * (status->luk + sd->status.job_level);
 					int32 C = 100 * cap_value(sd->itemid,0,100); //itemid depend on makerune()
 					int32 D = 0;
@@ -13138,12 +13142,21 @@ bool skill_produce_mix(map_session_data *sd, uint16 skill_id, t_itemid nameid, i
 
 					uint8 runemastery_skill_lv = pc_checkskill(sd,skill_id);
 
+#ifdef NEED_2017_SKILL_BEHAVIOR
+					if (runemastery_skill_lv >= 10)
+						qty = 1 + rnd() % 3;
+					else if (runemastery_skill_lv > 5)
+						qty = 1 + rnd() % 2;
+					else
+						qty = 1;
+#else
 					if (runemastery_skill_lv > 9)
 						qty = 2 + rnd() % 5; // 2~6
 					else if (runemastery_skill_lv > 4)
 						qty = 2 + rnd() % 3; // 2~4
 					else
 						qty = 2;
+#endif
 				}
 				break;
 

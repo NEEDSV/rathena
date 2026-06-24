@@ -6848,7 +6848,11 @@ static uint16 status_calc_str(block_list *bl, status_change *sc, int32 str)
 	if(sc->getSCE(SC_SPIRIT) && sc->getSCE(SC_SPIRIT)->val2 == SL_HIGH)
 		str += ((sc->getSCE(SC_SPIRIT)->val3)>>16)&0xFF;
 	if(sc->getSCE(SC_GIANTGROWTH))
+#ifdef NEED_2017_SKILL_BEHAVIOR
+		str += 30;
+#else
 		str += sc->getSCE(SC_GIANTGROWTH)->val2;
+#endif
 	if(sc->getSCE(SC_BEYONDOFWARCRY))
 		str -= sc->getSCE(SC_BEYONDOFWARCRY)->val2;
 	if(sc->getSCE(SC_INSPIRATION))
@@ -11929,10 +11933,17 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 			val2 = 500 + 100 * val1;
 			break;
 		case SC_STONEHARDSKIN:
-			if (!status_charge(bl, status->hp / 5, 0)) // 20% of HP
-				return false;
-			if (sd)
-				val1 = sd->status.job_level * pc_checkskill(sd, RK_RUNEMASTERY) / 4; // DEF/MDEF Increase
+			{
+				int32 hp = status->hp / 5; // 20% of HP
+
+				if (!status_charge(bl, hp, 0))
+					return false;
+				if (sd)
+					val1 = sd->status.job_level * pc_checkskill(sd, RK_RUNEMASTERY) / 4; // DEF/MDEF Increase
+#ifdef NEED_2017_SKILL_BEHAVIOR
+				val2 = hp; // 2017: damage durability of the status.
+#endif
+			}
 			break;
 		case SC_REFRESH:
 			status_heal(bl, status_get_max_hp(bl) * 25 / 100, 0, 1);
@@ -11952,7 +11963,11 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 			tick_time = 10000; // [GodLesZ] tick time
 			break;
 		case SC_GIANTGROWTH:
+#ifdef NEED_2017_SKILL_BEHAVIOR
+			val2 = 15; // 2017 double damage success rate.
+#else
 			val2 = 30; // Damage success rate and STR increase
+#endif
 			break;
 		case SC_LUXANIMA:
 			val2 = 15; // Storm Blast success %

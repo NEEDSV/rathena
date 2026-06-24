@@ -10757,6 +10757,10 @@ int32 pc_itemheal(map_session_data *sd, t_itemid itemid, int32 hp, int32 sp)
 
 		if (sd->sc.getSCE(SC_VITALITYACTIVATION))
 			hp += hp / 2; // 1.5 times
+#ifdef NEED_2017_SKILL_BEHAVIOR
+		if (sd->sc.getSCE(SC_VITALITYACTIVATION))
+			sp -= sp / 2;
+#endif
 
 		if (sd->sc.getSCE(SC_WATER_INSIGNIA) && sd->sc.getSCE(SC_WATER_INSIGNIA)->val1 == 2) {
 			hp += hp / 10;

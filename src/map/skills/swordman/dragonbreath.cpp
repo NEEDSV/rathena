@@ -3,6 +3,8 @@
 
 #include "dragonbreath.hpp"
 
+#include <config/core.hpp>
+
 #include "map/clif.hpp"
 #include "map/status.hpp"
 
@@ -25,6 +27,7 @@ void SkillDragonBreath::castendDamageId(block_list *src, block_list *target, uin
 }
 
 void SkillDragonBreath::modifyElement(const Damage& dmg, const block_list& src, const block_list& target, uint16 skill_lv, int32& element, int32 flag) const {
+#ifndef NEED_2017_SKILL_BEHAVIOR
 	const status_change* sc = status_get_sc(&src);
 
 	if (sc != nullptr) {
@@ -33,6 +36,7 @@ void SkillDragonBreath::modifyElement(const Damage& dmg, const block_list& src, 
 		else if (sc->hasSCE(SC_GIANTGROWTH))
 			element = ELE_HOLY;
 	}
+#endif
 }
 
 
@@ -55,6 +59,7 @@ void SkillDragonBreathWater::castendDamageId(block_list *src, block_list *target
 }
 
 void SkillDragonBreathWater::modifyElement(const Damage& dmg, const block_list& src, const block_list& target, uint16 skill_lv, int32& element, int32 flag) const {
+#ifndef NEED_2017_SKILL_BEHAVIOR
 	const status_change* sc = status_get_sc(&src);
 
 	if (sc != nullptr) {
@@ -63,4 +68,5 @@ void SkillDragonBreathWater::modifyElement(const Damage& dmg, const block_list& 
 		else if (sc->hasSCE(SC_FIGHTINGSPIRIT))
 			element = ELE_GHOST;
 	}
+#endif
 }

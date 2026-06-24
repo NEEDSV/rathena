@@ -25,6 +25,8 @@ void SkillStormSlash::calculateSkillRatio(const Damage* wd, const block_list* sr
 	skillratio += -100 + 300 + 750 * skill_lv;
 	skillratio += 5 * sstatus->pow;
 	RE_LVL_DMOD(100);
+#ifndef NEED_2017_SKILL_BEHAVIOR
 	if (sc && sc->getSCE(SC_GIANTGROWTH) && rnd_chance(60, 100))
 		skillratio *= 2;
+#endif
 }

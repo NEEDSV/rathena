@@ -1905,10 +1905,17 @@ int64 battle_calc_damage(block_list *src,block_list *bl,struct Damage *d,int64 d
 			skill_castend_damage_id(bl,src,MH_MAGMA_FLOW,sce->val1,gettick(),0);
 
 		if( damage > 0 && (sce = tsc->getSCE(SC_STONEHARDSKIN)) ) {
+#ifdef NEED_2017_SKILL_BEHAVIOR
+			sce->val2 -= static_cast<int32>(cap_value(damage, INT_MIN, INT_MAX));
+#endif
 			if( src->type == BL_MOB ) //using explicit call instead break_equip for duration
 				sc_start(src,src, SC_STRIPWEAPON, 30, 0, skill_get_time2(RK_STONEHARDSKIN, sce->val1));
 			else if (flag&(BF_WEAPON|BF_SHORT))
 				skill_break_equip(src,src, EQP_WEAPON, 3000, BCT_SELF);
+#ifdef NEED_2017_SKILL_BEHAVIOR
+			if (sce->val2 <= 0)
+				status_change_end(bl, SC_STONEHARDSKIN);
+#endif
 		}
 
 		if (src->type == BL_PC && tsc->getSCE(SC_GVG_GOLEM)) {
@@ -3210,8 +3217,16 @@ static std::bitset<NK_MAX> battle_skill_get_damage_properties(uint16 skill_id, i
 			return tmp_nk;
 		} else
 			return 0;
-	} else
-		return skill_db.find(skill_id)->nk;
+	} else {
+		std::bitset<NK_MAX> nk = skill_db.find(skill_id)->nk;
+#ifdef NEED_2017_SKILL_BEHAVIOR
+		if (skill_id == RK_DRAGONBREATH || skill_id == RK_DRAGONBREATH_WATER) {
+			nk.set(NK_IGNOREATKCARD);
+			nk.reset(NK_SIMPLEDEFENSE);
+		}
+#endif
+		return nk;
+	}
 }
 
 /*=============================
@@ -3339,11 +3354,13 @@ static bool attack_ignores_def(Damage* wd, block_list *src, const block_list *ta
 
 	if( sd != nullptr ){
 		switch( skill_id ){
+#ifndef NEED_2017_SKILL_BEHAVIOR
 			case RK_WINDCUTTER:
 				if( sd->status.weapon == W_2HSWORD ){
 					return true;
 				}
 				break;
+#endif
 			case NW_THE_VIGILANTE_AT_NIGHT:
 				if( sd->status.weapon == W_GATLING ){
 					return true;
@@ -4076,6 +4093,12 @@ static void battle_calc_skill_base_damage(struct Damage* wd, block_list *src,blo
 		case RK_DRAGONBREATH_WATER:
 			{
 				int32 damagevalue = (sstatus->hp / 50 + status_get_max_sp(src) / 4) * skill_lv;
+#ifdef NEED_2017_SKILL_FORMULA
+				if(status_get_lv(src) > 100)
+					damagevalue = damagevalue * status_get_lv(src) / 150;
+				if(sd)
+					damagevalue = damagevalue * (100 + 5 * (pc_checkskill(sd, RK_DRAGONTRAINING) - 1)) / 100;
+#else
 				if(status_get_lv(src) > 100)
 					damagevalue = damagevalue * status_get_lv(src) / 100;
 				if(sd) {
@@ -4087,6 +4110,7 @@ static void battle_calc_skill_base_damage(struct Damage* wd, block_list *src,blo
 				}
 				if (sc && sc->getSCE(SC_DRAGONIC_AURA))
 					damagevalue += damagevalue * sc->getSCE(SC_DRAGONIC_AURA)->val1 * 10 / 100;
+#endif
 				ATK_ADD(wd->damage, wd->damage2, damagevalue);
 #ifdef RENEWAL
 				ATK_ADD(wd->weaponAtk, wd->weaponAtk2, damagevalue);
@@ -5525,7 +5549,11 @@ static struct Damage battle_calc_weapon_attack(block_list *src, block_list *targ
 			}
 			// Apply P.ATK mod
 			// But for Dragonbreaths it only applies if Dragonic Aura is skilled
+#ifdef NEED_2017_SKILL_FORMULA
+			if (skill_id != RK_DRAGONBREATH && skill_id != RK_DRAGONBREATH_WATER) {
+#else
 			if( ( skill_id != RK_DRAGONBREATH && skill_id != RK_DRAGONBREATH_WATER ) || pc_checkskill( sd, DK_DRAGONIC_AURA ) > 0 ){
+#endif
 				wd.damage = (int64)floor( (float)( wd.damage * ( 100 + sstatus->patk ) / 100 ) );
 				if( is_attack_left_handed( src, skill_id ) ){
 					wd.damage2 = (int64)floor( (float)( wd.damage2 * ( 100 + sstatus->patk ) / 100 ) );
@@ -5626,7 +5654,11 @@ static struct Damage battle_calc_weapon_attack(block_list *src, block_list *targ
 
 #ifdef RENEWAL
 		// add any miscellaneous player ATK bonuses
-		if( sd && skill_id && (i = pc_skillatk_bonus(sd, skill_id))) {
+		if( sd && skill_id
+#ifdef NEED_2017_SKILL_BEHAVIOR
+			&& skill_id != RK_DRAGONBREATH && skill_id != RK_DRAGONBREATH_WATER
+#endif
+			&& (i = pc_skillatk_bonus(sd, skill_id))) {
 			ATK_ADDRATE(wd.damage, wd.damage2, i);
 			RE_ALLATK_ADDRATE(&wd, i);
 		}
@@ -7356,8 +7388,14 @@ enum damage_lv battle_weapon_attack(block_list* src, block_list* target, t_tick 
 			} else
 				status_change_end(src,SC_SPELLFIST);
 		}
-		if (sc->getSCE(SC_GIANTGROWTH) && (wd.flag&BF_SHORT) && rnd()%100 < sc->getSCE(SC_GIANTGROWTH)->val2 && !is_infinite_defense(target, wd.flag) && !vellum_damage)
+		if (sc->getSCE(SC_GIANTGROWTH) && (wd.flag&BF_SHORT) && rnd()%100 < sc->getSCE(SC_GIANTGROWTH)->val2 && !is_infinite_defense(target, wd.flag) && !vellum_damage) {
+#ifdef NEED_2017_SKILL_BEHAVIOR
+			wd.damage <<= 1; // 2017: double damage.
+			skill_break_equip(src, src, EQP_WEAPON, 10, BCT_SELF);
+#else
 			wd.damage += wd.damage * 150 / 100; // 2.5 times damage
+#endif
+		}
 
 		if( sc->getSCE( SC_VIGOR ) && ( wd.flag&BF_SHORT ) && !is_infinite_defense( target, wd.flag ) && !vellum_damage ){
 			int32 mod = 100 + sc->getSCE(SC_VIGOR)->val1 * 15;
@@ -7948,6 +7986,9 @@ int32 battle_check_target( const block_list* src, const block_list* target, int3
 					switch (skill_id) {
 						case RK_DRAGONBREATH:
 						case RK_DRAGONBREATH_WATER:
+#ifdef NEED_2017_SKILL_BEHAVIOR
+							return 0;
+#else
 						case NC_SELFDESTRUCTION:
 						case NC_AXETORNADO:
 						case SR_SKYNETBLOW:
@@ -7955,6 +7996,7 @@ int32 battle_check_target( const block_list* src, const block_list* target, int3
 							if (!mapdata->getMapFlag(MF_PVP) && !mapdata->getMapFlag(MF_GVG))
 								return 0;
 							break;
+#endif
 					}
 				}
 				else
@@ -7965,6 +8007,9 @@ int32 battle_check_target( const block_list* src, const block_list* target, int3
 				switch (skill_id) {
 					case RK_DRAGONBREATH:
 					case RK_DRAGONBREATH_WATER:
+#ifdef NEED_2017_SKILL_BEHAVIOR
+						return 0;
+#else
 					case NC_SELFDESTRUCTION:
 					case NC_AXETORNADO:
 					case SR_SKYNETBLOW:
@@ -7972,6 +8017,7 @@ int32 battle_check_target( const block_list* src, const block_list* target, int3
 						if (!mapdata->getMapFlag(MF_PVP) && !mapdata->getMapFlag(MF_GVG))
 							return 0;
 						break;
+#endif
 					case HT_CLAYMORETRAP:
 						// Can't hit icewall
 						return 0;
