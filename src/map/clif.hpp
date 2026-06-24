@@ -1510,4 +1510,7 @@ void clif_noask_sub( const map_session_data& sd, const map_session_data& tsd, in
 
 void clif_specialpopup(const map_session_data& sd, int32 id);
 
+void clif_send_animation_motion(const block_list* bl, int target_id, int motion_speed);
+void clif_send_animation_dir(const block_list* src, int target_id, int dir);
+
 #endif /* CLIF_HPP */
