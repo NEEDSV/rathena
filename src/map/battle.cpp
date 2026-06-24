@@ -1799,8 +1799,10 @@ int64 battle_calc_damage(block_list *src,block_list *bl,struct Damage *d,int64 d
 		if( tsc->getSCE(SC_BURNT) && status_get_element(src) == ELE_FIRE )
 			damage += damage * 666 / 100; //Custom value
 
+#ifndef NEED_2017_SKILL_BEHAVIOR
 			if (status_get_class_(bl) == CLASS_BOSS)
 				bonus /= 2;
+#endif
 
 			damage += damage * bonus / 100;
 		}
@@ -5378,7 +5380,11 @@ void battle_do_reflect(int32 attack_type, struct Damage *wd, block_list* src, bl
 		auto * sce = tsc->getSCE(SC_MAXPAIN);
 		if (sce) {
 			sce->val2 = (int32)damage;
-			if (!tsc->getSCE(SC_KYOMU) && !(tsc->getSCE(SC_DARKCROW) && (wd->flag&BF_SHORT))) //SC_KYOMU invalidates reflecting ability. SC_DARKCROW also does, but only for short weapon attack.
+			if (!tsc->getSCE(SC_KYOMU)
+#ifndef NEED_2017_SKILL_BEHAVIOR
+				&& !(tsc->getSCE(SC_DARKCROW) && (wd->flag&BF_SHORT)) // SC_DARKCROW also invalidates short weapon reflection in current behavior.
+#endif
+			)
 				skill_castend_damage_id(target, src, NPC_MAXPAIN_ATK, sce->val1, tick, ((wd->flag & 1) ? wd->flag - 1 : wd->flag));
 		}
 		
@@ -6845,7 +6851,11 @@ int64 battle_calc_return_damage(block_list* tbl, block_list *src, int64 *dmg, in
 	status_change *tsc = status_get_sc(tbl);
 
 	if (tsc) { // These statuses do not reflect any damage (off the target)
-		if (tsc->getSCE(SC_WHITEIMPRISON) || tsc->getSCE(SC_DARKCROW) || tsc->getSCE(SC_KYOMU))
+		if (tsc->getSCE(SC_WHITEIMPRISON) || tsc->getSCE(SC_KYOMU)
+#ifndef NEED_2017_SKILL_BEHAVIOR
+			|| tsc->getSCE(SC_DARKCROW)
+#endif
+		)
 			return 0;
 	}
 
