@@ -778,11 +778,11 @@ L_Socket:
 			mes "두 번째 강화 조치를 시도합니다. 이전 조치는 영향을 받지 않습니다.";
 			next;
 			mes "[유물 연구원]";
-			mes "이번 시도는 실패할 가능성이 있습니다. 계속하시겠습니까?";
+			mes "이번 시도는 안전하게 진행됩니다. 기존 인챈트는 유지됩니다. 계속하시겠습니까?";
 		} else if (.@equip_card[1] == 0 && .@allowed_slot < 2) {
 			set .@slot,2;
 			mes "[유물 연구원]";
-			mes "세 번째 강화를 시작해 볼까요? 이 단계에서는 최고의 능력치를 제공할 수 있지만, 명심하세요. 유물이 파괴될 가능성이 있으며, 이전 강화 내용이 모두 지워질 수 있습니다. 계속하시겠습니까?";
+			mes "세 번째 강화를 시작해 볼까요? 이 단계에서는 최고의 능력치를 제공할 수 있으며, 기존 인챈트는 유지됩니다. 계속하시겠습니까?";
 		} else {
 			mes "[유물 연구원]";
 			mes "이 유물은 한계까지 강화되었습니다. 현재 상태로는 더 이상의 강화는 불가능합니다.";
@@ -1098,6 +1098,12 @@ L_Socket:
 			close;
 		}
 
+		// NEED: remove Mora artifact enchant failure penalties.
+		// 0 = reset previous enchants, 9 = destroy item in the original table.
+		// Convert those outcomes into a valid enchant before applying the socket result.
+		if (.@enchant == 0 || .@enchant == 9)
+			callsub L_SafeMoraEnchant,.@enchant_type;
+
 		// anti-hack
 		if (callfunc("F_IsEquipIDHack", .@part, .@equip_id) ||
 		    callfunc("F_IsEquipRefineHack", .@part, .@equip_refine) ||
@@ -1130,44 +1136,52 @@ L_Socket:
 		delitem 6380,1; //Mora_Coin
 		set Zeny, Zeny-100000;
 		delequip .@part;
-		if (.@enchant == 9) {
-			specialeffect2 EF_SUI_EXPLOSION;
-			mes "[유물 연구원]";
-			mes "이것!";
- 			mes "죄송하지만 장비가 파손되었습니다.";
-			close;
-		}
-		if (.@enchant == 0) {
-			specialeffect2 EF_SHIELDCHARGE;
-			mes "[유물 연구원]";
-			mes "힘의 균형이 맞지 않아 기존에 부여된 능력이 파괴되었습니다. 안타깝지만 다음번에 다시 시도해 주시기 바랍니다.";
-		} else {
-			specialeffect2 EF_REPAIRWEAPON;
-			mes "[유물 연구원]";
-			// Replacing original dialogue since it doesn't make sense.
-			//mes "The artifact ^990000"+.@slot+" will have the first enhancement retained.";
-			mes "저는 아티팩트 ^990000을 성공적으로 향상시켰습니다."+.@equip_name$+" 소켓의 ^000000"+.@slot+".";
-		}
+
+		// Safety guard: failure values must never destroy/reset the artifact.
+		if (.@enchant == 0 || .@enchant == 9)
+			callsub L_SafeMoraEnchant,.@enchant_type;
+
+		specialeffect2 EF_REPAIRWEAPON;
+		mes "[유물 연구원]";
+		// Replacing original dialogue since it doesn't make sense.
+		//mes "The artifact ^990000"+.@slot+" will have the first enhancement retained.";
+		mes "저는 아티팩트 ^990000을 성공적으로 향상시켰습니다."+.@equip_name$+" 소켓의 ^000000"+.@slot+".";
 
 //		GetNonSlotItemSock2 .@equip_refine .@equip_id .@equip_card[0] .@equip_card[1] .@equip_card[2] .@equip_card[3]
 		getitem2 .@equip_id,1,1,.@equip_refine,0,.@equip_card[0],.@equip_card[1],.@equip_card[2],.@equip_card[3];
 
 		close;
 	} else if (.@select == 2) {
+		// anti-hack: cost must not be consumed before validation.
+		if (callfunc("F_IsEquipIDHack", .@part, .@equip_id) || callfunc("F_IsEquipCardHack", .@part, .@equip_card[0], .@equip_card[1], .@equip_card[2], .@equip_card[3]) || callfunc("F_IsEquipRefineHack", .@part, .@equip_refine))
+			close;
+
+		set .@has_enchant,0;
+		for ( .@i = getiteminfo(.@equip_id, ITEMINFO_SLOT); .@i < MAX_SLOTS; .@i++ ) {
+			if (getiteminfo(.@equip_card[.@i], ITEMINFO_SUBTYPE) == CARD_ENCHANT) {
+				set .@has_enchant,1;
+				break;
+			}
+		}
+
+		if (!.@has_enchant) {
+			mes "[유물 연구원]";
+			mes "이 유물에는 초기화할 인챈트가 없습니다.";
+			mes "모라 코인과 제니는 소모되지 않습니다.";
+			close;
+		}
+
 		if (Zeny < 100000 || countitem(6380) == 0) {
 			mes "[유물 연구원]";
 			mes "서비스를 이용하려면 비용을 지불해야 합니다.";
 			close;
 		}
+
 		specialeffect2 EF_REPAIRWEAPON;
 		mes "[유물 연구원]";
-		mes "향상 능력은 여전히 남아 있습니다.";
+		mes "유물에 부여된 인챈트를 초기화하겠습니다.";
 		delitem 6380,1; //Mora_Coin
 		set Zeny, Zeny-100000;
-
-		// anti-hack
-		if (callfunc("F_IsEquipIDHack", .@part, .@equip_id) || callfunc("F_IsEquipCardHack", .@part, .@equip_card[0], .@equip_card[1], .@equip_card[2], .@equip_card[3]) || callfunc("F_IsEquipRefineHack", .@part, .@equip_refine))
-			close;
 
 		delequip .@part;
 
@@ -1180,6 +1194,49 @@ L_Socket:
 
 		close;
 	}
+
+L_SafeMoraEnchant:
+	deletearray .@safe_enchants[0],getarraysize(.@safe_enchants);
+	switch(getarg(0)) {
+	case 1: // Attack
+		setarray .@safe_enchants[0],4700,4811,4819,4701,4810,4766,4702,4809,4767,4703,4808,4704,4820,4705,4821;
+		break;
+	case 2: // Critical
+		setarray .@safe_enchants[0],4750,4700,4751,4701,4752,4702,4764,4818,4753,4754,4765,4817,4703,4816;
+		break;
+	case 3: // Evasion
+		setarray .@safe_enchants[0],4859,4750,4730,4860,4751,4731,4752,4732,4762,4753,4733,4763,4754,4734;
+		break;
+	case 4: // Healer
+		setarray .@safe_enchants[0],4710,4720,4711,4721,4805,4712,4722,4760,4850,4713,4723,4761,4851,4806,4852;
+		break;
+	case 5: // Spell 1
+		setarray .@safe_enchants[0],4710,4720,4795,4815,4711,4721,4796,4814,4712,4722,4797,4813,4713,4723,4812;
+		break;
+	case 6: // Assist 1
+		setarray .@safe_enchants[0],4792,4787,4801,4796,4700,4720,4730,4740,4793,4788,4802,4797,4701,4721,4731;
+		break;
+	case 7: // Assist 2
+		setarray .@safe_enchants[0],4792,4787,4801,4796,4710,4720,4730,4740,4793,4788,4802,4797,4711,4721,4741;
+		break;
+	case 8: // Strength
+		setarray .@safe_enchants[0],4740,4797,4791,4741,4798,4792,4742,4793,4799,4743,4794,4744;
+		break;
+	case 9: // Range
+		setarray .@safe_enchants[0],4750,4720,4751,4721,4752,4722,4764,4832,4753,4723,4833,4765,4834,4724,4835;
+		break;
+	case 10: // Physical
+		setarray .@safe_enchants[0],4791,4730,4750,4795,4792,4731,4751,4796,4793,4732,4752,4797,4733,4753,4807;
+		break;
+	case 11: // Spell 2
+		setarray .@safe_enchants[0],4711,4721,4796,4814,4712,4722,4760,4813,4713,4723,4761,4812,4714,4724,4806;
+		break;
+	default:
+		setarray .@safe_enchants[0],4700;
+		break;
+	}
+	set .@enchant,.@safe_enchants[rand(getarraysize(.@safe_enchants))];
+	return;
 	
 Oninit:
 	waitingroom "길/렌/룬 모라 유물 인챈트",0;
