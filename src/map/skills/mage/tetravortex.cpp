@@ -78,7 +78,11 @@ SkillTetraVortexEarth::SkillTetraVortexEarth() : SkillImpl(WL_TETRAVORTEX_GROUND
 }
 
 void SkillTetraVortexEarth::calculateSkillRatio(const Damage *wd, const block_list *src, const block_list *target, uint16 skill_lv, int32 &base_skillratio, int32 mflag) const {
+#ifdef NEED_2017_SKILL_FORMULA
+	base_skillratio += 400 + 500 * skill_lv;
+#else
 	base_skillratio += -100 + 800 + 400 * skill_lv;
+#endif
 }
 
 void SkillTetraVortexEarth::castendDamageId(block_list *src, block_list *target, uint16 skill_lv, t_tick tick, int32& flag) const {
@@ -108,7 +112,11 @@ SkillTetraVortexWater::SkillTetraVortexWater() : SkillImpl(WL_TETRAVORTEX_WATER)
 }
 
 void SkillTetraVortexWater::calculateSkillRatio(const Damage *wd, const block_list *src, const block_list *target, uint16 skill_lv, int32 &base_skillratio, int32 mflag) const {
+#ifdef NEED_2017_SKILL_FORMULA
+	base_skillratio += 400 + 500 * skill_lv;
+#else
 	base_skillratio += -100 + 800 + 400 * skill_lv;
+#endif
 }
 
 void SkillTetraVortexWater::castendDamageId(block_list *src, block_list *target, uint16 skill_lv, t_tick tick, int32& flag) const {
@@ -121,7 +129,11 @@ SkillTetraVortexWind::SkillTetraVortexWind() : SkillImpl(WL_TETRAVORTEX_WIND) {
 }
 
 void SkillTetraVortexWind::calculateSkillRatio(const Damage *wd, const block_list *src, const block_list *target, uint16 skill_lv, int32 &base_skillratio, int32 mflag) const {
+#ifdef NEED_2017_SKILL_FORMULA
+	base_skillratio += 400 + 500 * skill_lv;
+#else
 	base_skillratio += -100 + 800 + 400 * skill_lv;
+#endif
 }
 
 void SkillTetraVortexWind::castendDamageId(block_list *src, block_list *target, uint16 skill_lv, t_tick tick, int32& flag) const {
