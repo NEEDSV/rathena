@@ -8230,7 +8230,10 @@ int32 battle_check_target( const block_list* src, const block_list* target, int3
 		{
 			int32 s_guild = status_get_guild_id(s_bl);
 			int32 t_guild = status_get_guild_id(t_bl);
-			if( !(mapdata->getMapFlag(MF_PVP) && mapdata->getMapFlag(MF_PVP_NOGUILD)) && s_guild && t_guild && (s_guild == t_guild || (!(flag&BCT_SAMEGUILD) && guild_isallied(s_guild, t_guild))) && (!mapdata->getMapFlag(MF_BATTLEGROUND) || sbg_id == tbg_id) )
+			if( !(mapdata->getMapFlag(MF_PVP) && mapdata->getMapFlag(MF_PVP_NOGUILD)) &&
+				!(mapdata_flag_gvg(mapdata) && mapdata->getMapFlag(MF_GVG_NOGUILD)) &&
+				s_guild && t_guild && (s_guild == t_guild || (!(flag&BCT_SAMEGUILD) && guild_isallied(s_guild, t_guild))) &&
+				(!mapdata->getMapFlag(MF_BATTLEGROUND) || sbg_id == tbg_id) )
 				state |= BCT_GUILD;
 			else
 				state |= BCT_ENEMY;

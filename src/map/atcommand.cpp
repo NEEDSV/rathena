@@ -4816,6 +4816,8 @@ ACMD_FUNC(mapinfo) {
 		strcat(atcmd_output, " GvG TE Castle |");
 	if (map_getmapflag(m_id, MF_GVG_NOPARTY))
 		strcat(atcmd_output, " NoParty |");
+	if (map_getmapflag(m_id, MF_GVG_NOGUILD))
+		strcat(atcmd_output, " NoGuild |");
 	clif_displaymessage(fd, atcmd_output);
 
 	strcpy(atcmd_output,msg_txt(sd,1048)); // Teleport Flags:
