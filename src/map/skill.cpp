@@ -7650,9 +7650,13 @@ int32 skill_unit_onplace_timer(skill_unit *unit, block_list *bl, t_tick tick)
 
 		case UNT_MAGMA_ERUPTION:
 			skill_attack(skill_get_type(NC_MAGMA_ERUPTION_DOTDAMAGE), ss, unit, bl, NC_MAGMA_ERUPTION_DOTDAMAGE, sg->skill_lv, tick, 0);
-			if (sg->skill_id == NC_MAGMA_ERUPTION)
+			if (sg->skill_id == NC_MAGMA_ERUPTION) {
+#ifndef NEED_2017_SKILL_BEHAVIOR
+				// 2026 deals the eruption DoT twice per tick for the player skill.
+				// 2017 dealt it once; skip the extra hit on the 2017 regression path.
 				skill_attack(skill_get_type(NC_MAGMA_ERUPTION_DOTDAMAGE), ss, unit, bl, NC_MAGMA_ERUPTION_DOTDAMAGE, sg->skill_lv, tick, 0);
-			else
+#endif
+			} else
 				skill_attack(skill_get_type(NPC_MAGMA_ERUPTION_DOTDAMAGE), ss, unit, bl, NPC_MAGMA_ERUPTION_DOTDAMAGE, sg->skill_lv, tick, 0);
 			break;
 

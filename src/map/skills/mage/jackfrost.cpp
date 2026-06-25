@@ -31,3 +31,28 @@ void SkillJackFrost::calculateSkillRatio(const Damage *wd, const block_list *src
 	RE_LVL_DMOD(100);
 #endif
 }
+
+void SkillJackFrost::splashSearch(block_list* src, block_list* target, uint16 skill_lv, t_tick tick, int32 flag) const {
+#ifdef NEED_2017_SKILL_BEHAVIOR
+	// 2017: Jack Frost is a self-targeted skill - AoE centers on the caster.
+	SkillImplRecursiveDamageSplash::splashSearch(src, src, skill_lv, tick, flag);
+#else
+	SkillImplRecursiveDamageSplash::splashSearch(src, target, skill_lv, tick, flag);
+#endif
+}
+
+int16 SkillJackFrost::getSplashSearchSize(block_list* src, uint16 skill_lv) const {
+#ifdef NEED_2017_SKILL_BEHAVIOR
+	// 2017 splash radius: 5:6:7:8:9 (4 + skill level).
+	return 4 + skill_lv;
+#else
+	return SkillImplRecursiveDamageSplash::getSplashSearchSize(src, skill_lv);
+#endif
+}
+
+void SkillJackFrost::applyAdditionalEffects(block_list* src, block_list* target, uint16 skill_lv, t_tick tick, int32 attack_type, enum damage_lv dmg_lv) const {
+#ifdef NEED_2017_SKILL_BEHAVIOR
+	// 2017: Jack Frost applies SC_FREEZE (200% chance) for skill_get_time (Duration1).
+	sc_start(src, target, SC_FREEZE, 200, skill_lv, skill_get_time(getSkillId(), skill_lv));
+#endif
+}

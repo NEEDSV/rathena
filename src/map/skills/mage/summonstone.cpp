@@ -57,6 +57,13 @@ SkillSummonAttackEarth::SkillSummonAttackEarth() : SkillImpl(WL_SUMMON_ATK_GROUN
 }
 
 void SkillSummonAttackEarth::calculateSkillRatio(const Damage *wd, const block_list *src, const block_list *target, uint16 skill_lv, int32 &skillratio, int32 mflag) const {
+#ifdef NEED_2017_SKILL_FORMULA
+	const map_session_data* sd = BL_CAST(BL_PC, src);
+
+	skillratio += -100 + (1 + skill_lv) / 2 * (status_get_lv(src) + (sd ? sd->status.job_level : 0));
+	RE_LVL_DMOD(100);
+#else
 	skillratio += 200;
 	RE_LVL_DMOD(100);
+#endif
 }

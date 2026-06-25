@@ -3915,6 +3915,7 @@ int32 status_calc_pc_sub(map_session_data* sd, uint8 opt)
 	sd->itemsphealrate.clear();
 	sd->itemgroupsphealrate.clear();
 
+	sd->hp_loss.clear();
 	sd->sp_loss.clear();
 	sd->hp_regen.clear();
 	sd->sp_regen.clear();
@@ -12642,6 +12643,11 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 			break;
 		case SC_UNLIMIT:
 			val2 = 50 * val1;
+#ifdef NEED_2017_SKILL_BEHAVIOR
+			// 2017: Unlimit also locks the caster's DEF/MDEF to 1 for the duration.
+			status_change_start(bl, bl, SC_DEFSET, 10000, 1, 0, 0, 0, tick, SCSTART_NOTICKDEF);
+			status_change_start(bl, bl, SC_MDEFSET, 10000, 1, 0, 0, 0, tick, SCSTART_NOTICKDEF);
+#endif
 			break;
 		case SC_MONSTER_TRANSFORM:
 		case SC_ACTIVE_MONSTER_TRANSFORM:

@@ -26,3 +26,9 @@ void SkillCrimsonRock::splashSearch(block_list* src, block_list* target, uint16 
 
 	SkillImplRecursiveDamageSplash::splashSearch(src, target, skill_lv, tick, flag);
 }
+
+void SkillCrimsonRock::applyAdditionalEffects(block_list* src, block_list* target, uint16 skill_lv, t_tick tick, int32 attack_type, enum damage_lv dmg_lv) const {
+#ifdef NEED_2017_SKILL_BEHAVIOR
+	sc_start(src, target, SC_STUN, 40, skill_lv, skill_get_time(getSkillId(), skill_lv));
+#endif
+}

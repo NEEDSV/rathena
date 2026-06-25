@@ -11,7 +11,12 @@ SkillComet::SkillComet() : SkillImpl(WL_COMET) {
 }
 
 void SkillComet::applyAdditionalEffects(block_list *src, block_list *target, uint16 skill_lv, t_tick tick, int32 attack_type, enum damage_lv dmg_lv) const {
+#ifdef NEED_2017_SKILL_BEHAVIOR
+	// 2017: Comet inflicts SC_BURNING (100%), not SC_MAGIC_POISON.
+	sc_start4(src, target, SC_BURNING, 100, skill_lv, 1000, src->id, 0, skill_get_time(getSkillId(), skill_lv));
+#else
 	sc_start(src, target, SC_MAGIC_POISON, 100, skill_lv, 20000);
+#endif
 }
 
 void SkillComet::calculateSkillRatio(const Damage *wd, const block_list *src, const block_list *target, uint16 skill_lv, int32 &skillratio, int32 mflag) const {
