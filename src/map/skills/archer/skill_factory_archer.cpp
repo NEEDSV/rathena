@@ -388,6 +388,10 @@ std::unique_ptr<const SkillImpl> SkillFactoryArcher::create(const e_skill skill_
 			return std::make_unique<SkillImprovisedSong>();
 		case WM_REVERBERATION:
 			return std::make_unique<SkillReverberation>();
+		case WM_REVERBERATION_MELEE:
+			return std::make_unique<SkillReverberationMelee>();
+		case WM_REVERBERATION_MAGIC:
+			return std::make_unique<SkillReverberationMagic>();
 		case WM_SATURDAY_NIGHT_FEVER:
 			return std::make_unique<SkillSaturdayNightFever>();
 		case WM_SEVERE_RAINSTORM:
