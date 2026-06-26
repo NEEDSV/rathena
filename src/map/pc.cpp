@@ -16010,7 +16010,7 @@ void pc_macro_detector_disconnect(map_session_data &sd) {
 
 	const int32 disconnect_count = pc_macro_detector_add_disconnect(sd);
 
-	pc_macro_detect_log(sd, "disconnect_during_captcha", sd.macro_detect.retry);
+	pc_macro_detect_log(sd, "disconnect", sd.macro_detect.retry);
 
 	// Keep official behavior when enabled, otherwise punish only after repeated unresolved disconnects.
 	if (battle_config.macro_detection_punish_disconnect != 0 ||

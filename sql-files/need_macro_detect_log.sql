@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS `need_macro_detect_log` (
   `x` smallint(5) unsigned NOT NULL DEFAULT '0',
   `y` smallint(5) unsigned NOT NULL DEFAULT '0',
   `captcha_id` smallint(5) unsigned NOT NULL DEFAULT '0',
-  `event` varchar(16) NOT NULL DEFAULT '',
+  `event` varchar(32) NOT NULL DEFAULT '',
   `retry_left` int(11) NOT NULL DEFAULT '0',
   `punishment` varchar(16) NOT NULL DEFAULT '',
   `punishment_time` int(11) unsigned NOT NULL DEFAULT '0',
@@ -22,3 +22,6 @@ CREATE TABLE IF NOT EXISTS `need_macro_detect_log` (
   KEY `event` (`event`),
   KEY `created_at` (`created_at`)
 ) ENGINE=MyISAM;
+
+ALTER TABLE `need_macro_detect_log`
+  MODIFY `event` varchar(32) NOT NULL DEFAULT '';
