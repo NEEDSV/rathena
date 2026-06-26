@@ -1,0 +1,54 @@
+// 테스트용 NPC
+// 파일 예: npc/custom/need_captcha_test.txt
+// 등록 예: npc: npc/custom/need_captcha_test.txt
+// /reloadscript 후 lasagna 180,180에서 테스트
+
+// npc/custom/need_macro_checker.txt
+// conf/import/npc_conf.txt 또는 scripts_custom.conf 등에 등록해서 사용
+
+-	script	NEED_MacroChecker	-1,{
+
+OnInit:
+	// 캡차 발동 대상 맵
+	setarray .check_maps$[0],
+		"gef_fild10",
+		"moc_fild17",
+		"pay_dun03";
+
+	// 확률: 10000 기준
+	// 5 = 0.05%, 10 = 0.1%, 50 = 0.5%, 100 = 1%
+	.check_rate = 10;
+
+	// 개인별 재발동 쿨타임, 초 단위
+	// 3600 = 1시간
+	.player_delay = 3600;
+
+	// GM 레벨 몇 이상 제외할지
+	.gm_exclude_level = 1;
+	end;
+
+OnNPCKillEvent:
+	// GM 제외
+//	if (getgmlevel() >= .gm_exclude_level)
+//		end;
+
+	// 대상 맵이 아니면 제외
+//	if (inarray(.check_maps$, strcharinfo(3)) == -1)
+//		end;
+
+	// 개인별 쿨타임
+	.@now = gettimetick(2);
+	if (NEED_MACRO_CHECK_NEXT > .@now)
+		end;
+
+	// 확률 체크
+	if (rand(10000) >= .check_rate)
+		end;
+
+	// 다음 체크 가능 시간 저장
+	NEED_MACRO_CHECK_NEXT = .@now + .player_delay;
+
+	// 현재 캐릭터에게 캡차 발동
+	macro_detector(strcharinfo(0));
+	end;
+}
