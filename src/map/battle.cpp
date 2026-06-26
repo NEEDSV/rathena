@@ -6906,6 +6906,16 @@ int64 battle_calc_return_damage(block_list* tbl, block_list *src, int64 *dmg, in
 					rdamage += rd1 * 70 / 100; // Target receives 70% of the amplified damage. [Rytech]
 				}
 			}
+#ifdef NEED_2017_SKILL_BEHAVIOR
+			// 2017: Reflect Damage bounces back a % of the melee damage to the attacker, limited by a reflect count.
+			if (tsc->getSCE(SC_REFLECTDAMAGE) && !skill_get_inf2(skill_id, INF2_ISTRAP)) {
+				if (rnd() % 100 <= tsc->getSCE(SC_REFLECTDAMAGE)->val1 * 10 + 30) {
+					rdamage += damage * tsc->getSCE(SC_REFLECTDAMAGE)->val2 / 100;
+					if (--(tsc->getSCE(SC_REFLECTDAMAGE)->val3) < 1)
+						status_change_end(tbl, SC_REFLECTDAMAGE);
+				}
+			}
+#endif
 		}
 	} else {
 		if (!status_reflect && tsd && tsd->bonus.long_weapon_damage_return) {
@@ -6938,9 +6948,11 @@ int64 battle_calc_return_damage(block_list* tbl, block_list *src, int64 *dmg, in
 	}
 
 	if (sc) {
+#ifndef NEED_2017_SKILL_BEHAVIOR
 		if (status_reflect && sc->getSCE(SC_REFLECTDAMAGE)) {
 			reduce += sc->getSCE(SC_REFLECTDAMAGE)->val2;
 		}
+#endif
 		if (sc->getSCE(SC_VENOMBLEED) && sc->getSCE(SC_VENOMBLEED)->val3 == 0) {
 			reduce += sc->getSCE(SC_VENOMBLEED)->val2;
 		}
