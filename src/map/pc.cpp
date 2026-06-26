@@ -74,6 +74,7 @@ const char *macro_allowed_answer_chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKL
 
 int32 pc_split_atoui(char* str, uint32* val, char sep, int32 max);
 static inline bool pc_attendance_rewarded_today( map_session_data* sd );
+static void pc_macro_detect_log(map_session_data &sd, const char *event, int32 retry_left, const char *punishment = "", int32 punishment_time = 0);
 
 #define PVP_CALCRANK_INTERVAL 1000	// PVP calculation interval
 
@@ -15716,6 +15717,39 @@ void pc_jail(map_session_data &sd, int32 duration) {
 }
 
 /**
+ * Records macro detector events to the main SQL database.
+ * Logging failures must never interrupt the macro detector flow.
+ */
+static void pc_macro_detect_log(map_session_data &sd, const char *event, int32 retry_left, const char *punishment, int32 punishment_time) {
+	nullpo_retv(event);
+	nullpo_retv(punishment);
+
+	if (mmysql_handle == nullptr)
+		return;
+
+	char esc_char_name[NAME_LENGTH * 2 + 1];
+	char esc_map[MAP_NAME_LENGTH_EXT * 2 + 1];
+	char esc_event[32 * 2 + 1];
+	char esc_punishment[32 * 2 + 1];
+	const map_data *mapdata = map_getmapdata(sd.m);
+	const char *map_name = mapdata != nullptr ? mapdata->name : "";
+	const uint16 captcha_id = sd.macro_detect.cd != nullptr ? sd.macro_detect.cd->index : 0;
+
+	Sql_EscapeString(mmysql_handle, esc_char_name, sd.status.name);
+	Sql_EscapeString(mmysql_handle, esc_map, map_name);
+	Sql_EscapeString(mmysql_handle, esc_event, event);
+	Sql_EscapeString(mmysql_handle, esc_punishment, punishment);
+
+	if (SQL_ERROR == Sql_Query(mmysql_handle,
+		"INSERT INTO `need_macro_detect_log` "
+		"(`account_id`, `char_id`, `char_name`, `map`, `x`, `y`, `captcha_id`, `event`, `retry_left`, `punishment`, `punishment_time`, `reporter_aid`, `created_at`) "
+		"VALUES ('%d', '%d', '%s', '%s', '%d', '%d', '%hu', '%s', '%d', '%s', '%d', '%d', NOW())",
+		sd.status.account_id, sd.status.char_id, esc_char_name, esc_map, sd.x, sd.y, captcha_id, esc_event, retry_left, esc_punishment, punishment_time, sd.macro_detect.reporter_aid)) {
+		Sql_ShowDebug(mmysql_handle);
+	}
+}
+
+/**
  * Determine the punishment type when failing macro checks.
  * @param sd: Player data
  * @param stype: Macro detection status type (for banning)
@@ -15736,6 +15770,8 @@ static void pc_macro_punishment(map_session_data &sd, e_macro_detect_status styp
 		delete_timer(sd.macro_detect.timer, pc_macro_detector_timeout);
 
 	int32 reporter_aid = sd.macro_detect.reporter_aid;
+	pc_macro_detect_log(sd, "punishment", sd.macro_detect.retry, (battle_config.macro_detection_punishment == 0 ? "ban" : "jail"), duration);
+
 	// Clear the macro detect data
 	sd.macro_detect = {};
 	sd.macro_detect.timer = INVALID_TIMER;
@@ -15838,6 +15874,7 @@ TIMER_FUNC(pc_macro_detector_timeout) {
 
 	// Deduct an answering attempt
 	sd->macro_detect.retry -= 1;
+	pc_macro_detect_log(*sd, "timeout", sd->macro_detect.retry);
 
 	if (sd->macro_detect.retry == 0) {
 		// All attempts have been exhausted, punish the user
@@ -15869,8 +15906,11 @@ void pc_macro_detector_process_answer(map_session_data &sd, const char captcha_a
 
 	// Correct answer
 	if (strcmp(captcha_answer, cd->captcha_answer) == 0) {
+		const int32 retry_left = sd.macro_detect.retry;
+
 		// Delete the timer
 		delete_timer(sd.macro_detect.timer, pc_macro_detector_timeout);
+		pc_macro_detect_log(sd, "success", retry_left);
 
 		// Clear the macro detect data
 		sd.macro_detect = {};
@@ -15893,6 +15933,7 @@ void pc_macro_detector_process_answer(map_session_data &sd, const char captcha_a
 	} else {
 		// Deduct an answering attempt
 		sd.macro_detect.retry -= 1;
+		pc_macro_detect_log(sd, "incorrect", sd.macro_detect.retry);
 
 		// All attempts have been exhausted, punish the user
 		if (sd.macro_detect.retry <= 0) {
@@ -15972,6 +16013,7 @@ void pc_macro_reporter_process(map_session_data &sd, int32 reporter_account_id) 
 	sd.macro_detect.cd = cd;
 	sd.macro_detect.reporter_aid = reporter_account_id;
 	sd.macro_detect.retry = battle_config.macro_detection_retry;
+	pc_macro_detect_log(sd, "trigger", sd.macro_detect.retry);
 
 	// Block all actions for the target player.
 	sd.state.block_action |= (PCBLOCK_ALL | PCBLOCK_IMMUNE);
