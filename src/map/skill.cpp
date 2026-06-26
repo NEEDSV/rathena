@@ -2140,7 +2140,12 @@ bool skill_strip_equip(block_list *src, block_list *target, uint16 skill_id, uin
 			break;
 		}
 		case SC_STRIPACCESSARY:
+#ifdef NEED_2017_SKILL_BEHAVIOR
+			rate = 12 + 2 * skill_lv + (sstatus->dex - tstatus->dex) / 5;
+			rate = max(rate, 5);
+#else
 			rate = 12 + 2 * skill_lv;
+#endif
 			break;
 		case ABC_STRIP_SHADOW:
 			rate = 50 * (skill_lv + 3) + 2 * (sstatus->dex - tstatus->dex);
@@ -2155,6 +2160,11 @@ bool skill_strip_equip(block_list *src, block_list *target, uint16 skill_id, uin
 
 	switch (skill_id) { // Duration
 		case SC_STRIPACCESSARY:
+#ifdef NEED_2017_SKILL_BEHAVIOR
+			time = skill_get_time(skill_id, skill_lv) + (sstatus->dex - tstatus->dex) * 500;
+			time = max(time, 0);
+			break;
+#endif
 		case GS_DISARM:
 			time = skill_get_time(skill_id, skill_lv);
 			break;
@@ -3808,6 +3818,11 @@ TIMER_FUNC(skill_timerskill){
 				case KN_AUTOCOUNTER:
 					clif_skill_nodamage(src,*target,skl->skill_id,skl->skill_lv);
 					break;
+#ifdef NEED_2017_SKILL_BEHAVIOR
+				case SC_FATALMENACE:
+					unit_warp(src, -1, skl->x, skl->y, CLR_TELEPORT);
+					break;
+#endif
 				case RG_INTIMIDATE:
 					if (unit_warp(src,-1,-1,-1,CLR_TELEPORT) == 0) {
 						int16 x,y;
