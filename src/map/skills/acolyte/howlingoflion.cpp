@@ -23,6 +23,13 @@ void SkillHowlingOfLion::calculateSkillRatio(const Damage *wd, const block_list 
 #endif
 }
 
+void SkillHowlingOfLion::applyAdditionalEffects(block_list* src, block_list* target, uint16 skill_lv, t_tick tick, int32 attack_type, enum damage_lv dmg_lv) const {
+#ifdef NEED_2017_SKILL_BEHAVIOR
+	// 2017: Howling of Lion has a chance to inflict Fear on each hit target.
+	sc_start(src, target, SC_FEAR, 5 + 5 * skill_lv, skill_lv, skill_get_time(getSkillId(), skill_lv));
+#endif
+}
+
 int64 SkillHowlingOfLion::splashDamage(block_list* src, block_list* target, uint16 skill_lv, t_tick tick, int32 flag) const {
 	status_change_end(target, SC_SWINGDANCE);
 	status_change_end(target, SC_SYMPHONYOFLOVER);

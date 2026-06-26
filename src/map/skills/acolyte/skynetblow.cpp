@@ -30,6 +30,13 @@ void SkillSkyNetBlow::calculateSkillRatio(const Damage *wd, const block_list *sr
 }
 
 void SkillSkyNetBlow::castendNoDamageId(block_list *src, block_list *target, uint16 skill_lv, t_tick tick, int32& flag) const {
+#ifdef NEED_2017_SKILL_BEHAVIOR
+	// 2017: while in the Dragon Combo chain, Sky Net Blow gets the combo damage bonus (miscflag & 8).
+	status_change* sc = status_get_sc(src);
+
+	if (sc != nullptr && sc->getSCE(SC_COMBO) && sc->getSCE(SC_COMBO)->val1 == SR_DRAGONCOMBO)
+		flag |= 8;
+#endif
 	clif_skill_nodamage(src,*target,getSkillId(),skill_lv);
 	skill_castend_damage_id(src, target, getSkillId(), skill_lv, tick, flag);
 
