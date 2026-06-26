@@ -24,7 +24,11 @@ void SkillSummonStone::castendNoDamageId(block_list *src, block_list *target, ui
 	// Set val2. The SC element for this ball
 	e_wl_spheres element = WLS_STONE;
 
-	if (skill_lv == 1) {
+	bool single = (skill_lv == 1);
+#ifdef NEED_2017_SKILL_BEHAVIOR
+	single = true; // 2017: summon adds only 1 sphere per cast regardless of skill level
+#endif
+	if (single) {
 		sc_type sphere = SC_NONE;
 
 		for (i = SC_SPHERE_1; i <= SC_SPHERE_5; i++) {
