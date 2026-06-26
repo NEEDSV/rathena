@@ -8957,6 +8957,8 @@ static const struct _battle_data {
 	{ "macro_detection_timeout",            &battle_config.macro_detection_timeout,         60000,  0,      INT_MAX,        },
 	{ "macro_detection_punishment",         &battle_config.macro_detection_punishment,      0,      0,      1,              },
 	{ "macro_detection_punishment_time",    &battle_config.macro_detection_punishment_time, 0,      0,      INT_MAX,        },
+	{ "macro_detection_punish_disconnect",  &battle_config.macro_detection_punish_disconnect, 1,    0,      1,              },
+	{ "macro_detection_disconnect_retry",   &battle_config.macro_detection_disconnect_retry, 3,     0,      INT_MAX,        },
 	{ "macrochecker_delay",                 &battle_config.macrochecker_delay,              600000, 0,      INT_MAX,        },
 
 	{ "feature.dynamicnpc_timeout",         &battle_config.feature_dynamicnpc_timeout,      1000,   60000,  INT_MAX,        },

@@ -71,10 +71,14 @@ JobDatabase job_db;
 
 CaptchaDatabase captcha_db;
 const char *macro_allowed_answer_chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
+static const char need_macro_detect_pending_var[] = "NeedMacroDetectPending";
+static const char need_macro_detect_disconnects_var[] = "NeedMacroDetectDisconnects";
+static const char need_macro_detect_reporter_var[] = "NeedMacroDetectReporterAid";
 
 int32 pc_split_atoui(char* str, uint32* val, char sep, int32 max);
 static inline bool pc_attendance_rewarded_today( map_session_data* sd );
 static void pc_macro_detect_log(map_session_data &sd, const char *event, int32 retry_left, const char *punishment = "", int32 punishment_time = 0);
+static TIMER_FUNC(pc_macro_detector_pending_timer);
 
 #define PVP_CALCRANK_INTERVAL 1000	// PVP calculation interval
 
@@ -2390,6 +2394,9 @@ void pc_reg_received(map_session_data *sd)
 		sd->roulette_point.gold = static_cast<int32>(pc_readreg2(sd, ROULETTE_GOLD_VAR));
 	}
 	sd->roulette.prizeIdx = -1;
+
+	if (pc_readglobalreg(sd, add_str(need_macro_detect_pending_var)) > 0)
+		add_timer(gettick() + 1000, pc_macro_detector_pending_timer, sd->id, 0);
 
 	//SG map and mob read [Komurka]
 	for(i=0;i<MAX_PC_FEELHATE;i++) { //for now - someone need to make reading from txt/sql
@@ -15717,6 +15724,42 @@ void pc_jail(map_session_data &sd, int32 duration) {
 }
 
 /**
+ * Clear the persistent macro detector pending state for this character.
+ * @param sd: Player data
+ */
+static void pc_macro_detector_clear_pending(map_session_data &sd) {
+	pc_setglobalreg(&sd, add_str(need_macro_detect_pending_var), 0);
+	pc_setglobalreg(&sd, add_str(need_macro_detect_disconnects_var), 0);
+	pc_setglobalreg(&sd, add_str(need_macro_detect_reporter_var), 0);
+}
+
+/**
+ * Mark this character as still needing to solve a macro detector captcha.
+ * @param sd: Player data
+ */
+static void pc_macro_detector_set_pending(map_session_data &sd) {
+	if (pc_readglobalreg(&sd, add_str(need_macro_detect_pending_var)) <= 0)
+		pc_setglobalreg(&sd, add_str(need_macro_detect_disconnects_var), 0);
+
+	pc_setglobalreg(&sd, add_str(need_macro_detect_pending_var), 1);
+	pc_setglobalreg(&sd, add_str(need_macro_detect_reporter_var), sd.macro_detect.reporter_aid);
+}
+
+/**
+ * Increase the unresolved disconnect counter for this character.
+ * @param sd: Player data
+ * @return Current unresolved disconnect count
+ */
+static int32 pc_macro_detector_add_disconnect(map_session_data &sd) {
+	const int32 count = static_cast<int32>(pc_readglobalreg(&sd, add_str(need_macro_detect_disconnects_var))) + 1;
+
+	pc_setglobalreg(&sd, add_str(need_macro_detect_pending_var), 1);
+	pc_setglobalreg(&sd, add_str(need_macro_detect_disconnects_var), count);
+	pc_setglobalreg(&sd, add_str(need_macro_detect_reporter_var), sd.macro_detect.reporter_aid);
+	return count;
+}
+
+/**
  * Records macro detector events to the main SQL database.
  * Logging failures must never interrupt the macro detector flow.
  */
@@ -15771,6 +15814,7 @@ static void pc_macro_punishment(map_session_data &sd, e_macro_detect_status styp
 
 	int32 reporter_aid = sd.macro_detect.reporter_aid;
 	pc_macro_detect_log(sd, "punishment", sd.macro_detect.retry, (battle_config.macro_detection_punishment == 0 ? "ban" : "jail"), duration);
+	pc_macro_detector_clear_pending(sd);
 
 	// Clear the macro detect data
 	sd.macro_detect = {};
@@ -15911,6 +15955,7 @@ void pc_macro_detector_process_answer(map_session_data &sd, const char captcha_a
 		// Delete the timer
 		delete_timer(sd.macro_detect.timer, pc_macro_detector_timeout);
 		pc_macro_detect_log(sd, "success", retry_left);
+		pc_macro_detector_clear_pending(sd);
 
 		// Clear the macro detect data
 		sd.macro_detect = {};
@@ -15921,7 +15966,7 @@ void pc_macro_detector_process_answer(map_session_data &sd, const char captcha_a
 		sd.state.block_action &= ~PCBLOCK_IMMUNE;
 
 		// Assign temporary macro variable to check failures
-		pc_setreg(&sd, add_str("@captcha_retries"), battle_config.macro_detection_retry - sd.macro_detect.retry);
+		pc_setreg(&sd, add_str("@captcha_retries"), battle_config.macro_detection_retry - retry_left);
 
 		// Grant bonuses via script
 		if( cd->bonus_script != nullptr ){
@@ -15933,7 +15978,7 @@ void pc_macro_detector_process_answer(map_session_data &sd, const char captcha_a
 	} else {
 		// Deduct an answering attempt
 		sd.macro_detect.retry -= 1;
-		pc_macro_detect_log(sd, "incorrect", sd.macro_detect.retry);
+		pc_macro_detect_log(sd, "wrong_answer", sd.macro_detect.retry);
 
 		// All attempts have been exhausted, punish the user
 		if (sd.macro_detect.retry <= 0) {
@@ -15960,9 +16005,18 @@ void pc_macro_detector_disconnect(map_session_data &sd) {
 		sd.macro_detect.timer = INVALID_TIMER;
 	}
 
-	// If the player disconnects before clearing the challenge the player is punished.
-	if (sd.macro_detect.retry != 0)
+	if (sd.macro_detect.cd == nullptr || sd.macro_detect.retry == 0)
+		return;
+
+	const int32 disconnect_count = pc_macro_detector_add_disconnect(sd);
+
+	pc_macro_detect_log(sd, "disconnect_during_captcha", sd.macro_detect.retry);
+
+	// Keep official behavior when enabled, otherwise punish only after repeated unresolved disconnects.
+	if (battle_config.macro_detection_punish_disconnect != 0 ||
+		(battle_config.macro_detection_disconnect_retry > 0 && disconnect_count >= battle_config.macro_detection_disconnect_retry)) {
 		pc_macro_punishment(sd, MCD_TIMEOUT);
+	}
 }
 
 /**
@@ -16013,7 +16067,8 @@ void pc_macro_reporter_process(map_session_data &sd, int32 reporter_account_id) 
 	sd.macro_detect.cd = cd;
 	sd.macro_detect.reporter_aid = reporter_account_id;
 	sd.macro_detect.retry = battle_config.macro_detection_retry;
-	pc_macro_detect_log(sd, "trigger", sd.macro_detect.retry);
+	pc_macro_detector_set_pending(sd);
+	pc_macro_detect_log(sd, "captcha_start", sd.macro_detect.retry);
 
 	// Block all actions for the target player.
 	sd.state.block_action |= (PCBLOCK_ALL | PCBLOCK_IMMUNE);
@@ -16023,6 +16078,29 @@ void pc_macro_reporter_process(map_session_data &sd, int32 reporter_account_id) 
 
 	// Start the timeout timer.
 	sd.macro_detect.timer = add_timer(gettick() + battle_config.macro_detection_timeout, pc_macro_detector_timeout, sd.id, 0);
+}
+
+/**
+ * Reissue a pending macro detector captcha after reconnect.
+ */
+static TIMER_FUNC(pc_macro_detector_pending_timer) {
+	map_session_data *sd = map_id2sd(id);
+
+	nullpo_ret(sd);
+
+	if (pc_readglobalreg(sd, add_str(need_macro_detect_pending_var)) <= 0)
+		return 0;
+
+	if (sd->macro_detect.cd != nullptr)
+		return 0;
+
+	int32 reporter_aid = static_cast<int32>(pc_readglobalreg(sd, add_str(need_macro_detect_reporter_var)));
+
+	if (reporter_aid == 0)
+		reporter_aid = -1;
+
+	pc_macro_reporter_process(*sd, reporter_aid);
+	return 0;
 }
 
 /**
@@ -16197,6 +16275,7 @@ void do_init_pc(void) {
 	add_timer_func_list(pc_autotrade_timer, "pc_autotrade_timer");
 	add_timer_func_list(pc_on_expire_active, "pc_on_expire_active");
 	add_timer_func_list(pc_macro_detector_timeout, "pc_macro_detector_timeout");
+	add_timer_func_list(pc_macro_detector_pending_timer, "pc_macro_detector_pending_timer");
 
 	add_timer(gettick() + autosave_interval, pc_autosave, 0, 0);
 
