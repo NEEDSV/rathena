@@ -1,0 +1,82 @@
+// NEED Grace period buff.
+// Stores expiration per character in NeedGraceUntil as a Unix timestamp.
+
+prontera,150,180,4	script	NEED의 은총	4_F_KAFRA1,{
+	mes "[NEED의 은총]";
+	mes "골드코인으로 캐릭터 단위 기간제 버프를 활성화하거나 연장할 수 있습니다.";
+	next;
+
+	set .@now, gettimetick(2);
+	if (NeedGraceUntil > .@now) {
+		set .@left, NeedGraceUntil - .@now;
+		set .@days, .@left / 86400;
+		set .@hours, (.@left % 86400) / 3600;
+		set .@minutes, (.@left % 3600) / 60;
+
+		mes "[NEED의 은총]";
+		mes "현재 남은 시간: " + .@days + "일 " + .@hours + "시간 " + .@minutes + "분";
+		next;
+	}
+
+	switch(select("1일 연장 - 골드코인 1개:7일 연장 - 골드코인 7개:30일 연장 - 골드코인 30개:취소")) {
+	case 1:
+		callfunc "NeedGrace_Apply", 1, 1;
+		end;
+	case 2:
+		callfunc "NeedGrace_Apply", 7, 7;
+		end;
+	case 3:
+		callfunc "NeedGrace_Apply", 30, 30;
+		end;
+	default:
+		close;
+	}
+
+OnInit:
+	end;
+}
+
+-	script	NeedGrace_Login	-1,{
+OnPCLoginEvent:
+	set .@now, gettimetick(2);
+	if (NeedGraceUntil <= .@now) {
+		if (NeedGraceUntil > 0)
+			NeedGraceUntil = 0;
+		end;
+	}
+
+	sc_start SC_NEED_GRACE, (NeedGraceUntil - .@now) * 1000, 1;
+	end;
+}
+
+function	script	NeedGrace_Apply	{
+	set .@days, getarg(0);
+	set .@cost, getarg(1);
+	set .@coin, 399990; // Gold_Coin__
+	set .@now, gettimetick(2);
+
+	if (countitem(.@coin) < .@cost) {
+		mes "[NEED의 은총]";
+		mes "골드코인이 부족합니다.";
+		close;
+	}
+
+	delitem .@coin, .@cost;
+
+	if (NeedGraceUntil > .@now)
+		NeedGraceUntil += .@days * 86400;
+	else
+		NeedGraceUntil = .@now + (.@days * 86400);
+
+	sc_start SC_NEED_GRACE, (NeedGraceUntil - .@now) * 1000, 1;
+
+	set .@left, NeedGraceUntil - .@now;
+	set .@left_days, .@left / 86400;
+	set .@left_hours, (.@left % 86400) / 3600;
+	set .@left_minutes, (.@left % 3600) / 60;
+
+	mes "[NEED의 은총]";
+	mes "NEED의 은총이 적용되었습니다.";
+	mes "남은 시간: " + .@left_days + "일 " + .@left_hours + "시간 " + .@left_minutes + "분";
+	close;
+}

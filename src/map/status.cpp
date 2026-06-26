@@ -73,6 +73,16 @@ int32 current_equip_card_id; /// To prevent card-stacking (from jA) [Skotlex]
 int16 current_equip_opt_index; /// Contains random option index of an equipped item. [Secret]
 
 uint16 SCDisabled[SC_MAX]; ///< List of disabled SC on map zones. [Cydh]
+efst_type StatusIconChangeTable[SC_MAX]; ///< Compatibility status icon table.
+
+struct s_status_icon_change_table_init {
+	s_status_icon_change_table_init() {
+		for (int32 i = 0; i < SC_MAX; i++)
+			StatusIconChangeTable[i] = EFST_BLANK;
+
+		StatusIconChangeTable[SC_NEED_GRACE] = EFST_NEED_GRACE;
+	}
+} status_icon_change_table_init;
 
 static uint16 status_calc_str(block_list *,status_change *,int32);
 static uint16 status_calc_agi(block_list *,status_change *,int32);
@@ -1012,7 +1022,11 @@ EnchantgradeDatabase enchantgrade_db;
 efst_type StatusDatabase::getIcon(sc_type type) {
 	std::shared_ptr<s_status_change_db> status = status_db.find(type);
 
-	return status ? status->icon : EFST_BLANK;
+	if (status)
+		return status->icon;
+	if (type > SC_NONE && type < SC_MAX)
+		return StatusIconChangeTable[type];
+	return EFST_BLANK;
 }
 
 /**
@@ -12256,7 +12270,12 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 			val3 = 4 * val1 + min(3 * val2, 15); // !TODO: What's the Lesson bonus?
 			break;
 		case SC_REFLECTDAMAGE:
+#ifdef NEED_2017_SKILL_BEHAVIOR
+			val2 = 15 + 5 * val1; // Reflect amount
+			val3 = val1 * 5 + 25; // Number of reflects
+#else
 			val2 = 10 * val1; // Reflect reduction amount
+#endif
 			val4 = tick/1000; // Number of SP cycles (duration)
 			tick_time = 1000; // [GodLesZ] tick time
 			break;
