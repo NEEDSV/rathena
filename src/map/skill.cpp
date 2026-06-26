@@ -3940,6 +3940,9 @@ TIMER_FUNC(skill_timerskill){
 				case NPC_FATALMENACE:
 					unit_warp(src, -1, skl->x, skl->y, CLR_TELEPORT);
 					break;
+#ifdef NEED_2017_SKILL_BEHAVIOR
+				case LG_MOONSLASHER: // 2017: forces PC targets to sit (delayed ~500ms to avoid packet overlap).
+#endif
 				case SR_WINDMILL:
 					if( target->type == BL_PC ) {
 						map_session_data *tsd = nullptr;

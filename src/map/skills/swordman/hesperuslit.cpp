@@ -60,6 +60,12 @@ void SkillHesperusLit::applyAdditionalEffects(block_list* src, block_list* targe
 	map_session_data* sd = BL_CAST(BL_PC, src);
 	status_change* sc = status_get_sc(src);
 
+#ifdef NEED_2017_SKILL_BEHAVIOR
+	// 2017: with Banding (more than 3 stacked) the target is stunned for 4-8 seconds.
+	if (sc && sc->getSCE(SC_BANDING) && sc->getSCE(SC_BANDING)->val2 > 3)
+		status_change_start(src, target, SC_STUN, 10000, skill_lv, 0, 0, 0, rnd_value<t_tick>(4000, 8000), SCSTART_NOTICKDEF);
+#endif
+
 	if( pc_checkskill(sd,LG_PINPOINTATTACK) > 0 && sc && sc->getSCE(SC_BANDING) && sc->getSCE(SC_BANDING)->val2 > 5 )
 		skill_castend_damage_id(src,target,LG_PINPOINTATTACK, rnd_value<uint16>(1, pc_checkskill(sd,LG_PINPOINTATTACK)),tick,0);
 }

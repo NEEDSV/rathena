@@ -42,3 +42,12 @@ void SkillShieldPress::calculateSkillRatio(const Damage* wd, const block_list* s
 	RE_LVL_DMOD(100);
 #endif
 }
+
+#ifdef NEED_2017_SKILL_BEHAVIOR
+void SkillShieldPress::applyAdditionalEffects(block_list* src, block_list* target, uint16 skill_lv, t_tick tick, int32 attack_type, enum damage_lv dmg_lv) const {
+	// 2017: Shield Press has a chance to stun the target on hit.
+	int32 rate = 30 + 8 * skill_lv + (status_get_dex(src) / 10) + (status_get_lv(src) / 4);
+
+	sc_start(src, target, SC_STUN, rate, skill_lv, skill_get_time(getSkillId(), skill_lv));
+}
+#endif

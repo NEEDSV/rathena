@@ -18,10 +18,8 @@ void SkillRayOfGenesis::castendNoDamageId(block_list* src, block_list* target, u
 }
 
 void SkillRayOfGenesis::calculateSkillRatio(const Damage* wd, const block_list* src, const block_list* target, uint16 skill_lv, int32& skillratio, int32 mflag) const {
-	const map_session_data* sd = BL_CAST(BL_PC, src);
-
 #ifdef NEED_2017_SKILL_FORMULA
-	skillratio += -100 + 400 * skill_lv + ((sd) ? pc_checkskill(sd, CR_SPEARQUICKEN) * 50 : 0);
+	skillratio += 200 + 300 * skill_lv;
 	RE_LVL_DMOD(100);
 #else
 	const status_data* sstatus = status_get_status_data(*src);

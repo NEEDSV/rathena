@@ -3230,7 +3230,11 @@ static int32 status_get_hpbonus(block_list *bl, enum e_status_bonus type) {
 			if(sc->getSCE(SC_FORCEOFVANGUARD))
 				bonus += (3 * sc->getSCE(SC_FORCEOFVANGUARD)->val1);
 			if(sc->getSCE(SC_INSPIRATION))
+#ifdef NEED_2017_SKILL_BEHAVIOR
+				bonus += (600 * sc->getSCE(SC_INSPIRATION)->val1);
+#else
 				bonus += (4 * sc->getSCE(SC_INSPIRATION)->val1);
+#endif
 			if(sc->getSCE(SC_RAISINGDRAGON))
 				bonus += sc->getSCE(SC_RAISINGDRAGON)->val1;
 			if(sc->getSCE(SC_GT_REVITALIZE))
@@ -7640,7 +7644,11 @@ static int16 status_calc_hit(block_list *bl, status_change *sc, int32 hit)
 	if(sc->getSCE(SC_CONCENTRATION))
 		hit += sc->getSCE(SC_CONCENTRATION)->val3;
 	if(sc->getSCE(SC_INSPIRATION))
+#ifdef NEED_2017_SKILL_BEHAVIOR
+		hit += 5 * sc->getSCE(SC_INSPIRATION)->val1;
+#else
 		hit += 12 * sc->getSCE(SC_INSPIRATION)->val1;
+#endif
 	if(sc->getSCE(SC_ADJUSTMENT))
 		hit -= 30;
 	if(sc->getSCE(SC_INCREASING))
@@ -12321,11 +12329,20 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 			val4 = tick / tick_time;
 			break;
 		case SC_INSPIRATION:
+#ifdef NEED_2017_SKILL_BEHAVIOR
+			val2 = (sd ? sd->status.job_level : 50); // 2017: WATK bonus = Job Level
+			val3 = status_get_lv(bl) / 10 + val2 / 5; // All stat bonus
+#else
 			val2 = 40 * val1; // ATK/MATK
 			val3 = 6 * val1; //All stat bonus
+#endif
 			val4 = tick / 5000;
 			tick_time = 5000; // [GodLesZ] tick time
+#ifdef NEED_2017_SKILL_BEHAVIOR
+			status_change_clear_buffs(bl, SCCB_BUFFS|SCCB_DEBUFFS); // 2017: remove buffs and debuffs
+#else
 			status_change_clear_buffs(bl, SCCB_DEBUFFS); // Remove debuffs
+#endif
 			break;
 		case SC_CRESCENTELBOW:
 			val2 = (sd?sd->status.job_level:50) / 2 + (50 + 5 * val1);

@@ -46,3 +46,16 @@ void SkillEarthDrive::calculateSkillRatio(const Damage* wd, const block_list* sr
 
 	RE_LVL_DMOD(100);
 }
+
+#ifdef NEED_2017_SKILL_BEHAVIOR
+void SkillEarthDrive::applyAdditionalEffects(block_list* src, block_list* target, uint16 skill_lv, t_tick tick, int32 attack_type, enum damage_lv dmg_lv) const {
+	// 2017: caster's own shield is damaged and the target gets Earth Drive (DEF/MDEF down).
+	skill_break_equip(src, src, EQP_SHIELD, 100 * skill_lv, BCT_SELF);
+	sc_start(src, target, SC_EARTHDRIVE, 100, skill_lv, skill_get_time(getSkillId(), skill_lv));
+}
+
+void SkillEarthDrive::modifyElement(const Damage& dmg, const block_list& src, const block_list& target, uint16 skill_lv, int32& element, int32 flag) const {
+	// 2017: Earth Drive is fixed Earth element (2026 uses the weapon element).
+	element = ELE_EARTH;
+}
+#endif
