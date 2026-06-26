@@ -18,8 +18,11 @@ void SkillTigerCannon::calculateSkillRatio(const Damage *wd, const block_list *s
 	const status_change *sc = status_get_sc(src);
 
 #ifdef NEED_2017_SKILL_FORMULA
-	unsigned int hp = sstatus->max_hp * abs(skill_get_hp_rate(getSkillId(), skill_lv)) / 100,
-		sp = sstatus->max_sp * abs(skill_get_sp_rate(getSkillId(), skill_lv)) / 100;
+	// 2017: HP/SP factor = abs(hp_rate)/abs(sp_rate), which equals (10 + 2*lv) / (5 + lv).
+	// 2026 skill_db has no HpRateCost/SpRateCost for Tiger Cannon, so skill_get_hp_rate/sp_rate
+	// return 0 here; use the explicit 2017 rate formula instead. No SC_GT_REVITALIZE bonus in 2017.
+	unsigned int hp = sstatus->max_hp * (10 + (skill_lv * 2)) / 100,
+		sp = sstatus->max_sp * (5 + skill_lv) / 100;
 
 	if (wd->miscflag & 8)
 		// Base_Damage = [((Caster consumed HP + SP) / 2) x Caster Base Level / 100] %

@@ -3803,6 +3803,9 @@ TIMER_FUNC(skill_timerskill){
 					case SR_DRAGONCOMBO:
 					case SR_FALLENEMPIRE:
 					case SR_TIGERCANNON:
+#ifdef NEED_2017_SKILL_BEHAVIOR
+					case SR_SKYNETBLOW:
+#endif
 					case NPC_DANCINGBLADE_ATK:
 						if (src->type != BL_PC)
 							continue;
@@ -3987,6 +3990,9 @@ TIMER_FUNC(skill_timerskill){
 				case SR_DRAGONCOMBO:
 				case SR_FALLENEMPIRE:
 				case SR_TIGERCANNON:
+#ifdef NEED_2017_SKILL_BEHAVIOR
+				case SR_SKYNETBLOW:
+#endif
 					if( src->type == BL_PC ) {
 						if( distance_xy(src->x, src->y, target->x, target->y) >= 3 )
 							break;
@@ -4161,6 +4167,9 @@ int32 skill_cleartimerskill (block_list *src)
 				case SR_DRAGONCOMBO:
 				case SR_FALLENEMPIRE:
 				case SR_TIGERCANNON:
+#ifdef NEED_2017_SKILL_BEHAVIOR
+				case SR_SKYNETBLOW:
+#endif
 					if (src->type != BL_PC)
 						break;
 					continue;
