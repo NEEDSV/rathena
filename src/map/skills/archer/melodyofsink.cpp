@@ -3,6 +3,8 @@
 
 #include "melodyofsink.hpp"
 
+#include <config/core.hpp>
+
 #include <common/random.hpp>
 
 #include "map/clif.hpp"
@@ -24,9 +26,17 @@ void SkillMelodyOfSink::castendNoDamageId(block_list *src, block_list *target, u
 		sc_start(src,target,type,100,skill_lv,skill_get_time(getSkillId(),skill_lv));
 #endif
 	} else {	// These affect to all targets around the caster.
+#ifdef NEED_2017_SKILL_FORMULA
+		// 2017: success chance = 15 + 5 * skill_lv * 5 * chorus bonus.
+		if( rnd()%100 < 15 + 5 * skill_lv * 5 * battle_calc_chorusbonus(sd) ) {
+			map_foreachinallrange(skill_area_sub, src, skill_get_splash(getSkillId(),skill_lv),BL_PC, src, getSkillId(), skill_lv, tick, flag|BCT_ENEMY|1, skill_castend_nodamage_id);
+			clif_skill_nodamage(src,*target,getSkillId(),skill_lv);
+		}
+#else
 		if( rnd()%100 < 5 + 5 * skill_lv + pc_checkskill(sd, WM_LESSON) ) { // !TODO: What's the Lesson bonus?
 			map_foreachinallrange(skill_area_sub, src, skill_get_splash(getSkillId(),skill_lv),BL_PC, src, getSkillId(), skill_lv, tick, flag|BCT_ENEMY|1, skill_castend_nodamage_id);
 			clif_skill_nodamage(src,*target,getSkillId(),skill_lv);
 		}
+#endif
 	}
 }

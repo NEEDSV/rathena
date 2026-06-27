@@ -57,7 +57,6 @@
 #include "mapreg.hpp"
 #include "mercenary.hpp"
 #include "mob.hpp"
-#include "needwiki.hpp"
 #include "npc.hpp"
 #include "party.hpp"
 #include "path.hpp"
@@ -6971,18 +6970,6 @@ BUILDIN_FUNC(cutin)
 		return SCRIPT_CMD_SUCCESS;
 
 	clif_cutin( *sd, script_getstr( st, 2 ), script_getnum( st, 3 ) );
-
-	return SCRIPT_CMD_SUCCESS;
-}
-
-BUILDIN_FUNC(needwiki)
-{
-	TBL_PC* sd;
-
-	if( !script_rid2sd(sd) )
-		return SCRIPT_CMD_SUCCESS;
-
-	clif_needwiki_open(sd, script_getstr(st, 2));
 
 	return SCRIPT_CMD_SUCCESS;
 }
@@ -28197,7 +28184,6 @@ struct script_function buildin_func[] = {
 	BUILDIN_DEF2(enableitemuse,"enable_items",""),
 	BUILDIN_DEF2(disableitemuse,"disable_items",""),
 	BUILDIN_DEF(cutin,"si"),
-	BUILDIN_DEF(needwiki,"s"),
 	BUILDIN_DEF(viewpoint,"iiiii?"),
 	BUILDIN_DEF(viewpointmap, "siiiii"),
 	BUILDIN_DEF(heal,"ii?"),
