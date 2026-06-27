@@ -4,7 +4,6 @@
 #include "needwiki.hpp"
 
 #include <cstdlib>
-#include <cstring>
 #include <fstream>
 #include <sstream>
 #include <stdexcept>
@@ -17,7 +16,6 @@
 #include <ryml_std.hpp>
 
 #include <common/cbasetypes.hpp>
-#include <common/nullpo.hpp>
 #include <common/showmsg.hpp>
 #include <common/socket.hpp>
 #include <common/strlib.hpp>
@@ -43,7 +41,6 @@
 
 static constexpr uint16 NEEDWIKI_PORT = 6905;
 static constexpr uint16 NEEDWIKI_CMD_TEST_ACTION = 0x7A01;
-static constexpr uint16 NEEDWIKI_PACKET_OPEN_ARTICLE = 0x7A02;
 static constexpr uint16 NEEDWIKI_ACTION_DISPBOTTOM = 1;
 static constexpr uint16 NEEDWIKI_ACTION_NAVI = 2;
 static constexpr uint16 NEEDWIKI_ACTION_SHOW_ITEM = 3;
@@ -76,47 +73,6 @@ static bool needwiki_valid_group_id(const std::string& id)
 	}
 
 	return true;
-}
-
-static bool needwiki_valid_article_id(const char* article_id)
-{
-	if (article_id == nullptr || article_id[0] == '\0')
-		return false;
-
-	size_t len = 0;
-	for (const char* p = article_id; *p != '\0'; ++p) {
-		if (++len > 128)
-			return false;
-
-		const char ch = *p;
-		if ((ch < 'a' || ch > 'z') && (ch < 'A' || ch > 'Z') &&
-			(ch < '0' || ch > '9') && ch != '_' && ch != '-')
-			return false;
-	}
-
-	return true;
-}
-
-void clif_needwiki_open(map_session_data* sd, const char* article_id)
-{
-	nullpo_retv(sd);
-
-	if (!needwiki_valid_article_id(article_id)) {
-		ShowWarning("[NeedWiki] Invalid article id for CID=%u.\n", sd->status.char_id);
-		return;
-	}
-
-	const size_t article_len = strlen(article_id);
-	const uint16 packet_len = static_cast<uint16>(4 + article_len);
-	int32 fd = sd->fd;
-
-	WFIFOHEAD(fd, packet_len);
-	WFIFOW(fd, 0) = NEEDWIKI_PACKET_OPEN_ARTICLE;
-	WFIFOW(fd, 2) = packet_len;
-	memcpy(WFIFOP(fd, 4), article_id, article_len);
-	WFIFOSET(fd, packet_len);
-
-	ShowInfo("[NeedWiki] Send article=%s\n", article_id);
 }
 
 bool needwiki_reload_item_groups(void)
