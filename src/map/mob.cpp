@@ -1391,23 +1391,6 @@ static int32 mob_ai_sub_hard_changechase(block_list *bl,va_list ap)
 }
 
 /*==========================================
- * finds nearby bg ally for guardians looking for users to follow.
- *------------------------------------------*/
-static int32 mob_ai_sub_hard_bg_ally(block_list *bl,va_list ap) {
-	mob_data *md;
-	block_list **target;
-
-	nullpo_ret(bl);
-	md=va_arg(ap,mob_data *);
-	target= va_arg(ap,block_list**);
-
-	if( status_check_skilluse(md, bl, 0, 0) && battle_check_target(md,bl,BCT_ENEMY)<=0 ) {
-		(*target) = bl;
-	}
-	return 1;
-}
-
-/*==========================================
  * loot monster item search
  *------------------------------------------*/
 static int32 mob_ai_sub_hard_lootsearch(block_list *bl,va_list ap)
@@ -2042,17 +2025,6 @@ static bool mob_ai_sub_hard(mob_data *md, t_tick tick)
 	}
 
 	if (!tbl) { //No targets available.
-		/* bg guardians follow allies when no targets nearby */
-		if( md->bg_id && mode&MD_CANATTACK ) {
-			if( md->ud.walktimer != INVALID_TIMER )
-				return true;/* we are already moving */
-			map_foreachinallrange (mob_ai_sub_hard_bg_ally, md, view_range, BL_PC, md, &tbl, mode);
-			if( tbl ) {
-				if( distance_blxy(md, tbl->x, tbl->y) <= 3 || unit_walktobl(md, tbl, 1, 1) )
-					return true;/* we're moving or close enough don't unlock the target. */
-			}
-		}
-
 		// Make sure target is unlocked
 		mob_unlocktarget(md, tick);
 

@@ -1,53 +1,139 @@
-//===== rAthena Script =======================================
-//= BattleGround System - Tierra Gorge
-//===== Description: =========================================
-//= [Official Conversion]
-//= Tierra Gorge Battleground.
-//= - Winning Team: 3 badges (5 if VIP)
-//= - Losing Team: 1 badge (3 if VIP)
-//===== Changelogs: ==========================================
-//= 1.0 First Version. [L0ne_W0lf]
-//= 1.1 Corrected setwalls for barricades. [L0ne_W0lf]
-//= 1.2 Updated 'waitingroom' to support required zeny/lvl. [Kisuka]
-//= 1.3 Removed MaxLvl check in waitingrooms.
-//= 1.4 Label standardization. [Euphy]
-//= 1.5 Added GM management function. [Euphy]
-//= 1.6 Added VIP features and created a reward function. [Euphy]
-//= 1.7 Added battle_config checks to allow this script to use the new queue interface or the previous method. [Aleos]
+//===== NEED Script ==========================================
+//= 전장 시스템 - 티에라 협곡
+//===== 설명 ==================================================
+//= 티에라 협곡 전장.
+//= bgqueue 사용을 제거하고, 대기방(waitingroom) 기반으로 동작합니다.
+//= 시작 인원은 $BG_User_Count 기준으로 설정됩니다.
+//= 부족 인원 완화 승인 시 팀별 필요 인원 변수:
+//=   $BG_Guillaume_Count
+//=   $BG_Croix_Count
+//= 를 사용합니다.
 //============================================================
 
-// Waiting Room NPCs
 //============================================================
-bat_room,57,227,5	script	Lieutenant Kalos	418,{
+// 티에라 전장 공통 함수
+//============================================================
+
+function	script	F_Tierra_NormalizeCount	{
+	if ($BG_User_Count <= 0)
+		$BG_User_Count = 10;
+
+	if ($BG_Guillaume_Count <= 0)
+		$BG_Guillaume_Count = $BG_User_Count;
+
+	if ($BG_Croix_Count <= 0)
+		$BG_Croix_Count = $BG_User_Count;
+
+	if ($BG_Guillaume_Count < 1)
+		$BG_Guillaume_Count = 1;
+
+	if ($BG_Croix_Count < 1)
+		$BG_Croix_Count = 1;
+
+	return;
+}
+
+function	script	F_Tierra_GetGuillaumeNeed	{
+	callfunc "F_Tierra_NormalizeCount";
+	return $BG_Guillaume_Count;
+}
+
+function	script	F_Tierra_GetCroixNeed	{
+	callfunc "F_Tierra_NormalizeCount";
+	return $BG_Croix_Count;
+}
+
+function	script	F_Tierra_ResetTeamNeed	{
+	callfunc "F_Tierra_NormalizeCount";
+	$BG_Guillaume_Count = $BG_User_Count;
+	$BG_Croix_Count = $BG_User_Count;
+	return;
+}
+
+function	script	F_Tierra_AnnounceWaitingRoom	{
+	.@team$ = getarg(0);
+
+	callfunc "F_Tierra_NormalizeCount";
+
+	.@GuillaumeReady = getwaitingroomstate(0,"기욤 대기실#bat_a01");
+	.@CroixReady = getwaitingroomstate(0,"크루아 대기실#bat_a01");
+	.@GuillaumeNeed = callfunc("F_Tierra_GetGuillaumeNeed");
+	.@CroixNeed = callfunc("F_Tierra_GetCroixNeed");
+
+	.@msg$ = "[티에라 협곡] 현재 대기 인원 - 기욤 "+.@GuillaumeReady+"/"+.@GuillaumeNeed+"명, 크루아 "+.@CroixReady+"/"+.@CroixNeed+"명";
+
+	// 해당 대기실 안에서만 보이도록 대기실 주변 범위에만 안내합니다.
+	if (.@team$ == "기욤")
+		mapannounce "bat_room",.@msg$,bc_map,"0x99CCFF";
+	else if (.@team$ == "크루아")
+		mapannounce "bat_room",.@msg$,bc_map,"0xFFCCFF";
+	return;
+}
+
+
+//============================================================
+// 대기방 NPC
+//============================================================
+
+bat_room,58,227,5	script	기욤 대기실#bat_a01	418,{
 	end;
 
 OnInit:
-	waitingroom "Battle Station",11,"start#bat_a01::OnReadyCheck",1,0,80;
+	callfunc "F_Tierra_NormalizeCount";
+	waitingroom "기욤 ",callfunc("F_Tierra_GetGuillaumeNeed") + 1,"기욤 대기실#bat_a01::OnRoomChanged",1,0,80;
+	end;
+
+OnRefresh:
+	delwaitingroom;
+	callfunc "F_Tierra_NormalizeCount";
+	waitingroom "기욤 ",callfunc("F_Tierra_GetGuillaumeNeed") + 1,"기욤 대기실#bat_a01::OnRoomChanged",1,0,80;
+	end;
+
+OnRoomChanged:
+	callfunc "F_Tierra_AnnounceWaitingRoom", "기욤";
+	donpcevent "티에라 진행#bat_a01::OnReadyCheck";
 	end;
 
 OnEnterBG:
-	set $@TierraBG1_id1, waitingroom2bg("bat_a01",50,374,"start#bat_a01::OnGuillaumeQuit","");
+	$@TierraBG1_id1 = waitingroom2bg("bat_a01",50,374,"티에라 진행#bat_a01::OnGuillaumeQuit","");
 	end;
 }
 
-bat_room,58,204,1	script	Lieutenant Eyor	414,{
+bat_room,58,204,1	script	크루아 대기실#bat_a01	414,{
 	end;
 
 OnInit:
-	waitingroom "Battle Station",11,"start#bat_a01::OnReadyCheck",1,0,80;
+	callfunc "F_Tierra_NormalizeCount";
+	waitingroom "크루아 ",callfunc("F_Tierra_GetCroixNeed") + 1,"크루아 대기실#bat_a01::OnRoomChanged",1,0,80;
+	end;
+
+OnRefresh:
+	delwaitingroom;
+	callfunc "F_Tierra_NormalizeCount";
+	waitingroom "크루아 ",callfunc("F_Tierra_GetCroixNeed") + 1,"크루아 대기실#bat_a01::OnRoomChanged",1,0,80;
+	end;
+
+OnRoomChanged:
+	callfunc "F_Tierra_AnnounceWaitingRoom", "크루아";
+	donpcevent "티에라 진행#bat_a01::OnReadyCheck";
 	end;
 
 OnEnterBG:
-	set $@TierraBG1_id2, waitingroom2bg("bat_a01",42,16,"start#bat_a01::OnCroixQuit","");
+	$@TierraBG1_id2 = waitingroom2bg("bat_a01",42,16,"티에라 진행#bat_a01::OnCroixQuit","");
 	end;
 }
 
-bat_room,1,151,3	script	#bat_a01_timer	844,{
+//============================================================
+// 빈 전장 정리 타이머
+//============================================================
+
+bat_room,1,151,3	script	티에라 정리 타이머#bat_a01	844,{
 	end;
 
 OnInit:
-	if (getbattleflag("feature.bgqueue"))
-		end;
+	stopnpctimer;
+	end;
+
 OnEnable:
 	initnpctimer;
 	end;
@@ -58,71 +144,82 @@ OnStop:
 
 OnTimer1000:
 	stopnpctimer;
-	if (bg_get_data($@TierraBG1_id1, 0) == 0 && bg_get_data($@TierraBG1_id2, 0) == 0) {
-		donpcevent "countdown#bat_a01::OnStop";
-		if (getbattleflag("feature.bgqueue"))
-			bg_reserve "bat_a01", true;
-		$@TierraBG1 = 0; $@TierraBG1_Victory = 0;
-		if( $@TierraBG1_id1 ) { bg_destroy $@TierraBG1_id1; $@TierraBG1_id1 = 0; }
-		if( $@TierraBG1_id2 ) { bg_destroy $@TierraBG1_id2; $@TierraBG1_id2 = 0; }
-		if (getbattleflag("feature.bgqueue"))
-			bg_unbook "bat_a01";
+
+	if (bg_get_data($@TierraBG1_id1,0) == 0 && bg_get_data($@TierraBG1_id2,0) == 0) {
+		donpcevent "티에라 카운트다운#bat_a01::OnStop";
+
+		$@TierraBG1 = 0;
+		$@TierraBG1_Victory = 0;
+
+		if ($@TierraBG1_id1) {
+			bg_destroy $@TierraBG1_id1;
+			$@TierraBG1_id1 = 0;
+		}
+
+		if ($@TierraBG1_id2) {
+			bg_destroy $@TierraBG1_id2;
+			$@TierraBG1_id2 = 0;
+		}
+
+		callfunc "F_Tierra_ResetTeamNeed";
+		donpcevent "기욤 대기실#bat_a01::OnRefresh";
+		donpcevent "크루아 대기실#bat_a01::OnRefresh";
 		end;
 	}
+
 	initnpctimer;
 	end;
 }
 
-bat_a01,352,342,0	script	#bat_a01_quest_a	-1,5,5,{
+
+
+-	script	티에라 대기실 갱신#bat_a01	-1,{
 	end;
 
-OnTouch:
-	if (checkquest(2069) < 0)
-		setquest 2069;
-	end;
-}
-
-bat_a01,353,52,0	script	#bat_a01_quest_b	-1,5,5,{
-	end;
-
-OnTouch:
-	if (checkquest(2069) < 0)
-		setquest 2069;
+OnRefresh:
+	callfunc "F_Tierra_NormalizeCount";
+	donpcevent "기욤 대기실#bat_a01::OnRefresh";
+	donpcevent "크루아 대기실#bat_a01::OnRefresh";
 	end;
 }
 
-bat_room,57,220,0	warp	back_bgrooma01a	1,1,bat_room,154,150
-bat_room,57,211,0	warp	back_bgrooma01b	1,1,bat_room,154,150
-
-// Tierra Gorge Battleground Engine
 //============================================================
-bat_a01,15,15,3	script	start#bat_a01	844,{
+// 티에라 협곡 전장 엔진
+//============================================================
+
+bat_a01,15,15,3	script	티에라 진행#bat_a01	844,{
 OnInit:
-	if (getbattleflag("feature.bgqueue"))
-		bg_unbook "bat_a01";
+	callfunc "F_Tierra_NormalizeCount";
 	mapwarp "bat_a01","bat_room",154,150;
 	end;
 
 OnEnable:
-	donpcevent "OBJ#bat_a01_a::OnKill";
-	donpcevent "OBJ#bat_a01_a::OnEnable";
-	donpcevent "OBJ#bat_a01_b::OnKill";
-	donpcevent "OBJ#bat_a01_b::OnEnable";
-	donpcevent "barricade#bat_a01_a::OnKill";
-	donpcevent "barricade#bat_a01_a::OnEnable";
-	donpcevent "barricade#bat_a01_b::OnKill";
-	donpcevent "barricade#bat_a01_b::OnEnable";
-	donpcevent "OBJ#bat_a01_n::OnKill";
-	donpcevent "OBJ#bat_a01_n::OnEnable";
-	donpcevent "NOBJ_mob#bat_a01_a::OnKill";
-	donpcevent "NOBJ_mob#bat_a01_b::OnKill";
-	donpcevent "Battle Therapist#a01_a::OnEnable";
-	donpcevent "Battle Therapist#a01_b::OnEnable";
-	donpcevent "countdown#bat_a01::OnEnable";
-	disablenpc "Guillaume Blacksmith#a01";
-	disablenpc "Croix Blacksmith#bat_a01";
-	disablenpc "Guillaume Vintenar#a01_a";
-	disablenpc "Croix Vintenar#a01_b";
+	donpcevent "기욤 식량창고#bat_a01::OnKill";
+	donpcevent "기욤 식량창고#bat_a01::OnEnable";
+
+	donpcevent "크루아 식량창고#bat_a01::OnKill";
+	donpcevent "크루아 식량창고#bat_a01::OnEnable";
+
+	donpcevent "기욤 바리케이드#bat_a01::OnKill";
+	donpcevent "기욤 바리케이드#bat_a01::OnEnable";
+
+	donpcevent "크루아 바리케이드#bat_a01::OnKill";
+	donpcevent "크루아 바리케이드#bat_a01::OnEnable";
+
+	donpcevent "중립 깃발#bat_a01::OnKill";
+	donpcevent "중립 깃발#bat_a01::OnEnable";
+
+	donpcevent "기욤 수호병#bat_a01::OnKill";
+	donpcevent "크루아 수호병#bat_a01::OnKill";
+
+	donpcevent "전투 치료사#a01_a::OnEnable";
+	donpcevent "전투 치료사#a01_b::OnEnable";
+	donpcevent "티에라 카운트다운#bat_a01::OnEnable";
+
+	disablenpc "기욤 대장장이#a01";
+	disablenpc "크루아 대장장이#bat_a01";
+	disablenpc "기욤 보상관#a01_a";
+	disablenpc "크루아 보상관#a01_b";
 	end;
 
 OnGuillaumeActive:
@@ -135,442 +232,410 @@ OnCroixActive:
 
 OnGuillaumeQuit:
 OnCroixQuit:
-	if (getbattleflag("feature.bgqueue"))
-		bg_desert;
-	else
-		bg_leave;
+	bg_leave;
 	end;
 
 OnReadyCheck:
-	if( $@TierraBG1 )
+	if ($@TierraBG1)
 		end;
-	if (!getbattleflag("feature.bgqueue")) {
-		set .@Guillaume, getwaitingroomstate(0,"Lieutenant Kalos");
-		set .@Croix, getwaitingroomstate(0,"Lieutenant Eyor");
-		if( !.@Guillaume && !.@Croix ) {
-			donpcevent "#bat_a01_timer::OnStop";
-			end;
-		}
-		else if( .@Guillaume < 10 || .@Croix < 10 )
-			end;
+
+	callfunc "F_Tierra_NormalizeCount";
+
+	.@GuillaumeNeed = callfunc("F_Tierra_GetGuillaumeNeed");
+	.@CroixNeed = callfunc("F_Tierra_GetCroixNeed");
+
+	.@GuillaumeReady = getwaitingroomstate(0,"기욤 대기실#bat_a01");
+	.@CroixReady = getwaitingroomstate(0,"크루아 대기실#bat_a01");
+
+	if (!.@GuillaumeReady && !.@CroixReady) {
+		donpcevent "티에라 정리 타이머#bat_a01::OnStop";
+		end;
 	}
-	set $@TierraBG1,1;
-	if (!getbattleflag("feature.bgqueue")) {
-		donpcevent "Lieutenant Kalos::OnEnterBG";
-		donpcevent "Lieutenant Eyor::OnEnterBG";
-	}
-	donpcevent "start#bat_a01::OnEnable";
+
+	if (.@GuillaumeReady < .@GuillaumeNeed || .@CroixReady < .@CroixNeed)
+		end;
+
+	$@TierraBG1 = 1;
+
+	announce "[티에라 협곡] 기욤 "+.@GuillaumeReady+"명 vs 크루아 "+.@CroixReady+"명으로 전장이 시작됩니다.",bc_all,"0x33CCFF";
+
+	donpcevent "기욤 대기실#bat_a01::OnEnterBG";
+	donpcevent "크루아 대기실#bat_a01::OnEnterBG";
+
+	donpcevent "티에라 진행#bat_a01::OnEnable";
+
 	bg_warp $@TierraBG1_id1,"bat_a01",352,342;
 	bg_warp $@TierraBG1_id2,"bat_a01",353,52;
+
 	initnpctimer;
 	end;
 
 OnTimer10000:
 	stopnpctimer;
-	donpcevent "#bat_a01_timer::OnEnable";
+	donpcevent "티에라 정리 타이머#bat_a01::OnEnable";
 	end;
 }
 
-bat_a01,15,16,3	script	OBJ#bat_a01_a	844,{
+
+//============================================================
+// 승리 조건 오브젝트
+//============================================================
+
+bat_a01,15,16,3	script	기욤 식량창고#bat_a01	844,{
 OnEnable:
-	bg_monster $@TierraBG1_id1,"bat_a01",177,345,"Food Storage",1909,"OBJ#bat_a01_a::OnMyMobDead";
+	bg_monster $@TierraBG1_id1,"bat_a01",177,345,"기욤 식량 창고",1909,"기욤 식량창고#bat_a01::OnMyMobDead";
 	end;
 
 OnKill:
-	killmonster "bat_a01","OBJ#bat_a01_a::OnMyMobDead";
+	killmonster "bat_a01","기욤 식량창고#bat_a01::OnMyMobDead";
 	end;
 
 OnMyMobDead:
-	if (mobcount("bat_a01","OBJ#bat_a01_a::OnMyMobDead") < 1) {
-		donpcevent "Battle Therapist#a01_a::OnStop";
-		donpcevent "Battle Therapist#a01_b::OnStop";
-		set $@TierraBG1_Victory, 2;
-		enablenpc "Guillaume Vintenar#a01_a";
-		enablenpc "Croix Vintenar#a01_b";
-		mapannounce "bat_a01", "크루아 빈트나르 스완더리: 기욤의 식량 창고를 파괴했어요! 우리가 이겼어요! 와!",bc_map,"0xFFCE00";
+	if (mobcount("bat_a01","기욤 식량창고#bat_a01::OnMyMobDead") < 1) {
+		donpcevent "전투 치료사#a01_a::OnStop";
+		donpcevent "전투 치료사#a01_b::OnStop";
+
+		$@TierraBG1_Victory = 2;
+
+		enablenpc "기욤 보상관#a01_a";
+		enablenpc "크루아 보상관#a01_b";
+
+		announce "크루아 빈트나르 스완더리: 기욤의 식량 창고를 파괴했습니다! 우리가 승리했습니다!","0xFFCE00";
+
 		bg_warp $@TierraBG1_id1,"bat_a01",50,374;
 		bg_warp $@TierraBG1_id2,"bat_a01",42,16;
-		if (getbattleflag("feature.bgqueue"))
-			bg_reserve "bat_a01", true;
 	}
 	end;
 }
 
-bat_a01,15,17,3	script	OBJ#bat_a01_b	844,{
+bat_a01,15,17,3	script	크루아 식량창고#bat_a01	844,{
 OnEnable:
-	bg_monster $@TierraBG1_id2,"bat_a01",167,50,"Food Depot",1910,"OBJ#bat_a01_b::OnMyMobDead";
+	bg_monster $@TierraBG1_id2,"bat_a01",167,50,"크루아 식량 창고",1910,"크루아 식량창고#bat_a01::OnMyMobDead";
 	end;
 
 OnKill:
-	killmonster "bat_a01","OBJ#bat_a01_b::OnMyMobDead";
+	killmonster "bat_a01","크루아 식량창고#bat_a01::OnMyMobDead";
 	end;
 
 OnMyMobDead:
-	if (mobcount("bat_a01","OBJ#bat_a01_b::OnMyMobDead") < 1) {
-		donpcevent "Battle Therapist#a01_a::OnStop";
-		donpcevent "Battle Therapist#a01_b::OnStop";
-		set $@TierraBG1_Victory, 1;
-		enablenpc "Guillaume Vintenar#a01_a";
-		enablenpc "Croix Vintenar#a01_b";
-		mapannounce "bat_a01", "기욤 빈테나르 액슬 로즈: 우리가 크루아의 식량 창고를 파괴했어! 우리가 이겼어! 와!",bc_map,"0xFFCE00";
+	if (mobcount("bat_a01","크루아 식량창고#bat_a01::OnMyMobDead") < 1) {
+		donpcevent "전투 치료사#a01_a::OnStop";
+		donpcevent "전투 치료사#a01_b::OnStop";
+
+		$@TierraBG1_Victory = 1;
+
+		enablenpc "기욤 보상관#a01_a";
+		enablenpc "크루아 보상관#a01_b";
+
+		announce "기욤 빈테나르 액슬 로즈: 크루아의 식량 창고를 파괴했다! 우리가 승리했다!","0xFFCE00";
+
 		bg_warp $@TierraBG1_id1,"bat_a01",50,374;
 		bg_warp $@TierraBG1_id2,"bat_a01",42,16;
-		if (getbattleflag("feature.bgqueue"))
-			bg_reserve "bat_a01", true;
 	}
 	end;
 }
 
-bat_a01,15,18,3	script	barricade#bat_a01_a	844,{
+
+//============================================================
+// 바리케이드
+//============================================================
+
+bat_a01,15,18,3	script	기욤 바리케이드#bat_a01	844,{
 OnEnable:
-	for( set .@i,185; .@i < 202; set .@i,.@i+1 )
-		bg_monster $@TierraBG1_id1,"bat_a01",.@i,266,"Barricade",1906,"barricade#bat_a01_a::OnMyMobDead";
+	for (.@i = 185; .@i < 202; .@i++)
+		bg_monster $@TierraBG1_id1,"bat_a01",.@i,266,"기욤 바리케이드",1906,"기욤 바리케이드#bat_a01::OnMyMobDead";
+
 	setwall "bat_a01",186,266,16,6,1,"bat_a01_c1";
 	end;
 
 OnKill:
-	killmonster "bat_a01","barricade#bat_a01_a::OnMyMobDead";
+	killmonster "bat_a01","기욤 바리케이드#bat_a01::OnMyMobDead";
 	if (checkwall("bat_a01_c1") == true)
 		delwall "bat_a01_c1";
 	end;
 
 OnMyMobDead:
-	if (mobcount("bat_a01","barricade#bat_a01_a::OnMyMobDead") < 17) {
-		killmonster "bat_a01","barricade#bat_a01_a::OnMyMobDead";
-		delwall "bat_a01_c1";
-		enablenpc "Guillaume Blacksmith#a01";
-		mapannounce "bat_a01", "기욤 빈테나르, 액슬 로즈: 계곡의 바리케이드가 파괴됐어! 대장장이는 어디 있지? 바리케이드를 재건해야 해!",bc_map,"0xFFCE00";
+	if (mobcount("bat_a01","기욤 바리케이드#bat_a01::OnMyMobDead") < 17) {
+		killmonster "bat_a01","기욤 바리케이드#bat_a01::OnMyMobDead";
+		if (checkwall("bat_a01_c1") == true)
+			delwall "bat_a01_c1";
+
+		enablenpc "기욤 대장장이#a01";
+		mapannounce "bat_a01","기욤 빈테나르 액슬 로즈: 협곡의 바리케이드가 파괴됐다! 대장장이를 불러 바리케이드를 다시 세워야 한다!",bc_map,"0xFFCE00";
 	}
 	end;
 }
 
-bat_a01,15,19,3	script	barricade#bat_a01_b	844,{
+bat_a01,15,19,3	script	크루아 바리케이드#bat_a01	844,{
 OnEnable:
-	for( set .@i,169; .@i < 186; set .@i,.@i+1 )
-		bg_monster $@TierraBG1_id2,"bat_a01",.@i,129,"Barricade",1906,"barricade#bat_a01_b::OnMyMobDead";
+	for (.@i = 169; .@i < 186; .@i++)
+		bg_monster $@TierraBG1_id2,"bat_a01",.@i,129,"크루아 바리케이드",1906,"크루아 바리케이드#bat_a01::OnMyMobDead";
+
 	setwall "bat_a01",170,129,16,6,1,"bat_a01_g1";
 	end;
 
 OnKill:
-	killmonster "bat_a01","barricade#bat_a01_b::OnMyMobDead";
+	killmonster "bat_a01","크루아 바리케이드#bat_a01::OnMyMobDead";
 	if (checkwall("bat_a01_g1") == true)
 		delwall "bat_a01_g1";
 	end;
 
 OnMyMobDead:
-	if (mobcount("bat_a01","barricade#bat_a01_b::OnMyMobDead") < 17) {
-		killmonster "bat_a01","barricade#bat_a01_b::OnMyMobDead";
-		delwall "bat_a01_g1";
-		enablenpc "Croix Blacksmith#bat_a01";
-		mapannounce "bat_a01", "크루아 빈테나르 스완더리: 계곡의 바리케이드가 파괴됐어! 대장장이는 어디 있지? 바리케이드를 다시 세워야 해!",bc_map,"0xFFCE00";
+	if (mobcount("bat_a01","크루아 바리케이드#bat_a01::OnMyMobDead") < 17) {
+		killmonster "bat_a01","크루아 바리케이드#bat_a01::OnMyMobDead";
+		if (checkwall("bat_a01_g1") == true)
+			delwall "bat_a01_g1";
+
+		enablenpc "크루아 대장장이#bat_a01";
+		mapannounce "bat_a01","크루아 빈테나르 스완더리: 협곡의 바리케이드가 파괴됐습니다! 대장장이를 불러 바리케이드를 다시 세워야 합니다!",bc_map,"0xFFCE00";
 	}
 	end;
 }
 
-bat_a01,15,20,3	script	OBJ#bat_a01_n	844,{
+
+//============================================================
+// 중립 깃발
+//============================================================
+
+bat_a01,15,20,3	script	중립 깃발#bat_a01	844,{
 OnEnable:
-	monster "bat_a01",273,203,"Neutrality Flag",1911,1,"OBJ#bat_a01_n::OnMyMobDead";
+	monster "bat_a01",273,203,"중립 깃발",1911,1,"중립 깃발#bat_a01::OnMyMobDead";
 	end;
 
 OnKill:
-	killmonster "bat_a01","OBJ#bat_a01_n::OnMyMobDead";
+	killmonster "bat_a01","중립 깃발#bat_a01::OnMyMobDead";
 	end;
 
 OnMyMobDead:
-	if (mobcount("bat_a01","OBJ#bat_a01_n::OnMyMobDead") < 17) {
+	if (mobcount("bat_a01","중립 깃발#bat_a01::OnMyMobDead") < 1) {
 		bg_team_setxy getcharid(4),56,212;
+
 		if (getcharid(4) == $@TierraBG1_id1) {
-			donpcevent "NOBJ_mob#bat_a01_a::OnEnable";
-			mapannounce "bat_a01", "기욤이 중립 깃발을 획득했으므로, 그들은 유리한 위치에 있습니다.",bc_map,"0xFFCE00";
+			donpcevent "기욤 수호병#bat_a01::OnEnable";
+			mapannounce "bat_a01","기욤 진영이 중립 깃발을 점령했습니다. 기욤 진영이 유리한 위치를 확보했습니다.",bc_map,"0xFFCE00";
 		}
 		else {
-			donpcevent "NOBJ_mob#bat_a01_b::OnEnable";
-			mapannounce "bat_a01", "크루아가 중립 깃발을 점령했으므로 유리한 위치에 있습니다.",bc_map,"0xFFCE00";
+			donpcevent "크루아 수호병#bat_a01::OnEnable";
+			mapannounce "bat_a01","크루아 진영이 중립 깃발을 점령했습니다. 크루아 진영이 유리한 위치를 확보했습니다.",bc_map,"0xFFCE00";
 		}
 	}
 	end;
 }
 
-bat_a01,15,21,3	script	NOBJ_mob#bat_a01_a	844,{
+bat_a01,15,21,3	script	기욤 수호병#bat_a01	844,{
 OnEnable:
-	donpcevent "NOBJ_mob#bat_a01_b::OnKill";
-	bg_monster $@TierraBG1_id1,"bat_a01",272,204,"Guillaume Camp Guardian",1949,"NOBJ_mob#bat_a01_a::OnMyMobDead";
-	bg_monster $@TierraBG1_id1,"bat_a01",272,213,"Guillaume Camp Guardian",1949,"NOBJ_mob#bat_a01_a::OnMyMobDead";
-	bg_monster $@TierraBG1_id1,"bat_a01",273,197,"Guillaume Camp Guardian",1950,"NOBJ_mob#bat_a01_a::OnMyMobDead";
+	donpcevent "크루아 수호병#bat_a01::OnKill";
+
+	bg_monster $@TierraBG1_id1,"bat_a01",272,204,"기욤 진영 수호병",1949,"기욤 수호병#bat_a01::OnMyMobDead";
+	bg_monster $@TierraBG1_id1,"bat_a01",272,213,"기욤 진영 수호병",1949,"기욤 수호병#bat_a01::OnMyMobDead";
+	bg_monster $@TierraBG1_id1,"bat_a01",273,197,"기욤 진영 수호병",1950,"기욤 수호병#bat_a01::OnMyMobDead";
 	end;
 
 OnKill:
-	killmonster "bat_a01","NOBJ_mob#bat_a01_a::OnMyMobDead";
+	killmonster "bat_a01","기욤 수호병#bat_a01::OnMyMobDead";
 	end;
 
 OnMyMobDead:
 	end;
 }
 
-bat_a01,15,22,3	script	NOBJ_mob#bat_a01_b	844,{
+bat_a01,15,22,3	script	크루아 수호병#bat_a01	844,{
 OnEnable:
-	donpcevent "NOBJ_mob#bat_a01_a::OnKill";
-	bg_monster $@TierraBG1_id2,"bat_a01",272,204,"Croix Camp Guardian",1949,"NOBJ_mob#bat_a01_a::OnMyMobDead";
-	bg_monster $@TierraBG1_id2,"bat_a01",272,213,"Croix Camp Guardian",1949,"NOBJ_mob#bat_a01_a::OnMyMobDead";
-	bg_monster $@TierraBG1_id2,"bat_a01",273,197,"Croix Camp Guardian",1950,"NOBJ_mob#bat_a01_a::OnMyMobDead";
+	donpcevent "기욤 수호병#bat_a01::OnKill";
+
+	bg_monster $@TierraBG1_id2,"bat_a01",272,204,"크루아 진영 수호병",1949,"크루아 수호병#bat_a01::OnMyMobDead";
+	bg_monster $@TierraBG1_id2,"bat_a01",272,213,"크루아 진영 수호병",1949,"크루아 수호병#bat_a01::OnMyMobDead";
+	bg_monster $@TierraBG1_id2,"bat_a01",273,197,"크루아 진영 수호병",1950,"크루아 수호병#bat_a01::OnMyMobDead";
 	end;
 
 OnKill:
-	killmonster "bat_a01","NOBJ_mob#bat_a01_b::OnMyMobDead";
+	killmonster "bat_a01","크루아 수호병#bat_a01::OnMyMobDead";
 	end;
 
 OnMyMobDead:
 	end;
 }
 
-bat_a01,185,270,1	script	Guillaume Blacksmith#a01	851,{
+
+//============================================================
+// 바리케이드 수리 NPC
+//============================================================
+
+bat_a01,185,270,1	script	기욤 대장장이#a01	851,{
 	if (getcharid(4) == $@TierraBG1_id1) {
 		mes "[기욤 대장장이]";
-		mes "긴급 상황입니다! 바리케이드가 파괴되었습니다!";
-		mes "바리케이드를 수리하려면 돌 3131FF50개, 곰 힘줄 3개, 금속 조각 500개, 거친 엘루늄 30개, 금 100개가 필요합니다.";
-		mes "50개의 돌만 빼고는 다 갖췄어요!";
+		mes "긴급 상황입니다!";
+		mes "바리케이드가 파괴되었습니다!";
+		mes "수리에는 돌 50개가 필요합니다.";
 		next;
-		switch(select("Repair.:그냥 놔둬.")) {
+
+		switch(select("수리한다.:그냥 둔다.")) {
 		case 1:
-			if (countitem(7049) > 49) {
+			if (countitem(7049) < 50) {
 				mes "[기욤 대장장이]";
-				mes "돌을 충분히 가져왔잖아! 가서 수리하자.";
-				next;
-				mes "..";
-				next;
-				mes "....";
-				next;
-				mes "......";
-				next;
-				mes "........";
-				next;
-				mes "..........";
-				next;
-				mes "............";
-				next;
-				mes "..............";
-				next;
-				mes "[기욤 대장장이]";
-				mes "보석과 금을 적절한 비율로 조합하세요.";
-				next;
-				mes "[기욤 대장장이]";
-				mes "돌과 금을 적절한 비율로 조합하여 바리케이드를 만드세요.";
-				next;
-				mes "[기욤 대장장이]";
-				mes "돌과 금을 적절한 비율로 조합하여 바리케이드를 만들고, 거친 엘루늄을 추가하여 강도를 높이세요.";
-				next;
-				mes "[기욤 대장장이]";
-				mes "돌과 금을 적절한 비율로 조합하여 바리케이드를 만들고, 거친 엘루늄을 추가하여 더 강하게 만드세요. 마지막으로 금속 조각으로 장식하면 됩니다.";
-				next;
-				mes "[기욤 대장장이]";
-				mes "돌과 금을 적절한 비율로 조합하여 바리케이드를 만들고, 거친 엘루늄을 추가하여 더욱 단단하게 만드세요. 금속 조각으로 장식하고, 곰의 힘줄로 돌을 엮으세요!";
-				next;
-				mes "..............";
-				mes "..............";
-				mes "..............";
-				mes "..............";
-				mes "..............";
-				next;
-				specialeffect EF_REPAIRWEAPON;
-				mes "[기욤 대장장이]";
-				mes "와! 드디어 완성됐네요.";
-				mes "안도감이 듭니다.";
-				if (mobcount("bat_a01","barricade#bat_a01_a::OnMyMobDead") < 17) {
-					delitem 7049,50; //Stone
-					donpcevent "barricade#bat_a01_a::OnEnable";
-				}
-				close2;
-				disablenpc "Guillaume Blacksmith#a01";
-				end;
-			}
-			else {
-				mes "[기욤 대장장이]";
-				mes "돌이 부족해요!";
-				next;
-				mes "[기욤 대장장이]";
-				mes "^3131FF돌 50개가 필요해요.^000000";
-				mes "저희는 바쁘니 서둘러 주세요.";
+				mes "돌이 부족합니다.";
+				mes "^3131FF돌 50개^000000를 가져와 주세요.";
 				close;
 			}
+
+			mes "[기욤 대장장이]";
+			mes "좋습니다. 바로 수리하겠습니다.";
+			next;
+
+			mes "......";
+			next;
+			mes "............";
+			next;
+			mes "..................";
+			next;
+
+			specialeffect EF_REPAIRWEAPON;
+
+			if (mobcount("bat_a01","기욤 바리케이드#bat_a01::OnMyMobDead") < 17) {
+				delitem 7049,50;
+				donpcevent "기욤 바리케이드#bat_a01::OnEnable";
+			}
+
+			mes "[기욤 대장장이]";
+			mes "바리케이드 수리가 완료되었습니다.";
+			close2;
+			disablenpc "기욤 대장장이#a01";
+			end;
+
 		case 2:
 			mes "[기욤 대장장이]";
-			mes "적들이 오고 있어요! 여기서 대피합시다!";
+			mes "적들이 몰려오고 있습니다. 서둘러야 합니다!";
 			close;
 		}
 	}
 	else {
 		mes "[기욤 대장장이]";
-		mes "적이 오고 있다!";
+		mes "적이다! 물러가라!";
 		close;
 	}
 
 OnInit:
-	disablenpc "Guillaume Blacksmith#a01";
+	disablenpc "기욤 대장장이#a01";
 	end;
 }
 
-bat_a01,170,121,5	script	Croix Blacksmith#bat_a01	851,{
+bat_a01,170,121,5	script	크루아 대장장이#bat_a01	851,{
 	if (getcharid(4) == $@TierraBG1_id2) {
 		mes "[크루아 대장장이]";
-		mes "긴급 상황입니다! 바리케이드가 파괴되었습니다!";
-		mes "바리케이드를 수리하려면 돌 3131FF50개, 곰 힘줄 3개, 금속 조각 500개, 거친 엘루늄 30개, 금 100개가 필요합니다.";
-		mes "50개의 돌만 빼고는 다 갖췄어요!";
+		mes "긴급 상황입니다!";
+		mes "바리케이드가 파괴되었습니다!";
+		mes "수리에는 돌 50개가 필요합니다.";
 		next;
-		switch(select("Repair.:그냥 놔둬.")) {
+
+		switch(select("수리한다.:그냥 둔다.")) {
 		case 1:
-			if (countitem(7049) > 49) {
+			if (countitem(7049) < 50) {
 				mes "[크루아 대장장이]";
-				mes "돌을 충분히 가져왔잖아! 가서 수리하자.";
-				next;
-				mes "..";
-				next;
-				mes "....";
-				next;
-				mes "......";
-				next;
-				mes "........";
-				next;
-				mes "..........";
-				next;
-				mes "............";
-				next;
-				mes "..............";
-				next;
-				mes "[크루아 대장장이]";
-				mes "보석과 금을 적절한 비율로 조합하세요.";
-				next;
-				mes "[크루아 대장장이]";
-				mes "돌과 금을 적절한 비율로 조합하여 바리케이드를 만드세요.";
-				next;
-				mes "[크루아 대장장이]";
-				mes "돌과 금을 적절한 비율로 조합하여 바리케이드를 만들고, 거친 엘루늄을 추가하여 강도를 높이세요.";
-				next;
-				mes "[크루아 대장장이]";
-				mes "돌과 금을 적절한 비율로 조합하여 바리케이드를 만들고, 거친 엘루늄을 추가하여 더 강하게 만드세요. 마지막으로 금속 조각으로 장식하면 됩니다.";
-				next;
-				mes "[크루아 대장장이]";
-				mes "돌과 금을 적절한 비율로 조합하여 바리케이드를 만들고, 거친 엘루늄을 추가하여 더욱 단단하게 만드세요. 금속 조각으로 장식하고, 곰의 힘줄로 돌을 엮으세요!";
-				next;
-				mes "..............";
-				mes "..............";
-				mes "..............";
-				mes "..............";
-				mes "..............";
-				next;
-				specialeffect EF_REPAIRWEAPON;
-				mes "[크루아 대장장이]";
-				mes "와! 드디어 완성됐네요.";
-				mes "안도감이 듭니다.";
-				if (mobcount("bat_a01","barricade#bat_a01_b::OnMyMobDead") < 17) {
-					delitem 7049,50; //Stone
-					donpcevent "barricade#bat_a01_b::OnEnable";
-				}
-				close2;
-				disablenpc "Croix Blacksmith#bat_a01";
-				end;
-			}
-			else {
-				mes "[크루아 대장장이]";
-				mes "돌이 부족해요!";
-				next;
-				mes "[크루아 대장장이]";
-				mes "우리는 50스톤이 필요해요.";
-				mes "저희는 바쁘니 서둘러 주세요.";
+				mes "돌이 부족합니다.";
+				mes "^3131FF돌 50개^000000를 가져와 주세요.";
 				close;
 			}
+
+			mes "[크루아 대장장이]";
+			mes "좋습니다. 바로 수리하겠습니다.";
+			next;
+
+			mes "......";
+			next;
+			mes "............";
+			next;
+			mes "..................";
+			next;
+
+			specialeffect EF_REPAIRWEAPON;
+
+			if (mobcount("bat_a01","크루아 바리케이드#bat_a01::OnMyMobDead") < 17) {
+				delitem 7049,50;
+				donpcevent "크루아 바리케이드#bat_a01::OnEnable";
+			}
+
+			mes "[크루아 대장장이]";
+			mes "바리케이드 수리가 완료되었습니다.";
+			close2;
+			disablenpc "크루아 대장장이#bat_a01";
+			end;
+
 		case 2:
 			mes "[크루아 대장장이]";
-			mes "적들이 오고 있어요! 여기서 대피합시다!";
+			mes "적들이 몰려오고 있습니다. 서둘러야 합니다!";
 			close;
 		}
 	}
 	else {
 		mes "[크루아 대장장이]";
-		mes "저기, 적이 오고 있다!";
+		mes "적이다! 물러가라!";
 		close;
 	}
 
 OnInit:
-	disablenpc "Croix Blacksmith#bat_a01";
+	disablenpc "크루아 대장장이#bat_a01";
 	end;
 }
 
-bat_a01,53,377,3	script	Battle Therapist#a01_a	95,{
+
+//============================================================
+// 부활 지점 치료사
+//============================================================
+
+bat_a01,53,377,3	script	전투 치료사#a01_a	95,{
 	specialeffect2 EF_HEAL;
 	mes "[전투 치료사]";
-	mes "눈을 감으세요.";
-	mes "그리고 심호흡을 하세요.";
-	mes "당신은 고통에서 벗어날 수 있습니다.";
+	mes "눈을 감고 깊게 숨을 쉬세요.";
+	mes "곧 다시 전장으로 복귀할 수 있습니다.";
 	close;
-	end;
 
 OnInit:
-	initnpctimer;
+	disablenpc "전투 치료사#a01_a";
+	stopnpctimer;
 	end;
 
 OnEnable:
 	stopnpctimer;
 	initnpctimer;
-	enablenpc "Battle Therapist#a01_a";
+	enablenpc "전투 치료사#a01_a";
 	end;
 
 OnStop:
-	// disablenpc "bat_a01_rp1_a_warp";
-	disablenpc "Battle Therapist#a01_a";
+	disablenpc "전투 치료사#a01_a";
 	stopnpctimer;
 	end;
 
 OnTimer25000:
 	specialeffect EF_SANCTUARY;
-	// enablenpc "bat_a01_rp1_a_warp";
 	areapercentheal "bat_a01",41,365,61,385,100,100;
 	areawarp "bat_a01",41,365,61,385,"bat_a01",352,342;
 	end;
 
-// OnTimer26000:
-	// disablenpc "bat_a01_rp1_a_warp";
-	// end;
-
 OnTimer26500:
-	donpcevent "Battle Therapist#a01_a::OnEnable";
+	donpcevent "전투 치료사#a01_a::OnEnable";
 	end;
 }
 
-/*
-bat_a01,51,375,0	script	bat_a01_rp1_a_warp	-1,10,10,{
-OnInit:
-	disablenpc "bat_a01_rp1_a_warp";
-	end;
-
-OnTouch:
-	percentheal 100,100;
-	warp "bat_a01",352,342;
-	end;
-}
-*/
-
-bat_a01,45,19,3	script	Battle Therapist#a01_b	95,{
+bat_a01,45,19,3	script	전투 치료사#a01_b	95,{
 	specialeffect2 EF_HEAL;
 	mes "[전투 치료사]";
-	mes "눈을 감으세요.";
-	mes "그리고 심호흡을 하세요.";
-	mes "당신은 고통에서 벗어날 수 있습니다.";
+	mes "눈을 감고 깊게 숨을 쉬세요.";
+	mes "곧 다시 전장으로 복귀할 수 있습니다.";
 	close;
-	end;
 
 OnInit:
-	initnpctimer;
+	disablenpc "전투 치료사#a01_b";
+	stopnpctimer;
 	end;
 
 OnEnable:
 	stopnpctimer;
 	initnpctimer;
-	enablenpc "Battle Therapist#a01_b";
+	enablenpc "전투 치료사#a01_b";
 	end;
 
 OnStop:
-	// disablenpc "bat_a01_rp1_b_warp";
-	disablenpc "Battle Therapist#a01_b";
+	disablenpc "전투 치료사#a01_b";
 	stopnpctimer;
 	end;
 
@@ -578,39 +643,21 @@ OnTimer25000:
 	specialeffect EF_SANCTUARY;
 	areapercentheal "bat_a01",33,7,53,27,100,100;
 	areawarp "bat_a01",33,7,53,27,"bat_a01",353,52;
-	// enablenpc "bat_a01_rp1_b_warp";
 	end;
-
-// OnTimer26000:
-	// disablenpc "bat_a01_rp1_b_warp";
-	// end;
 
 OnTimer26500:
-	donpcevent "Battle Therapist#a01_b::OnEnable";
+	donpcevent "전투 치료사#a01_b::OnEnable";
 	end;
 }
 
-/*
-bat_a01,43,17,0	script	bat_a01_rp1_b_warp	-1,10,10,{
-OnInit:
-	disablenpc "bat_a01_rp1_b_warp";
-	end;
-
-OnTouch:
-	percentheal 100,100;
-	warp "bat_a01",353,52;
-	end;
-}
-*/
-
-bat_a01,60,216,3	script	Valley Ghost#bat_a01_n	950,{
+bat_a01,60,216,3	script	협곡의 유령#bat_a01_n	950,{
 	specialeffect2 EF_HEAL;
-	mes "[밸리 고스트]";
-	mes "Boo...Boo...";
+	mes "[협곡의 유령]";
+	mes "부우... 부우...";
 	close;
 
 OnInit:
-	initnpctimer;
+	stopnpctimer;
 	end;
 
 OnEnable:
@@ -622,99 +669,106 @@ OnTimer25000:
 	specialeffect EF_SANCTUARY;
 	areapercentheal "bat_a01",45,203,65,223,100,100;
 	areawarp "bat_a01",45,203,65,223,"bat_a01",301,209;
-	// enablenpc "bat_a01_rp1_n_warp";
 	end;
-
-// OnTimer26000:
-	// disablenpc "bat_a01_rp1_n_warp";
-	// end;
 
 OnTimer26500:
-	donpcevent "Valley Ghost#bat_a01_n::OnEnable";
+	donpcevent "협곡의 유령#bat_a01_n::OnEnable";
 	end;
 }
 
-/*
-bat_a01,55,213,0	script	bat_a01_rp1_n_warp	-1,10,10,{
-OnInit:
-	disablenpc "bat_a01_rp1_n_warp";
-	end;
 
-OnTouch:
-	percentheal 100,100;
-	warp "bat_a01",301,209;
-	end;
-}
-*/
+//============================================================
+// 바리케이드 통과 워프
+//============================================================
 
-bat_a01,194,267,0	script	barri_warp_up#bat_a01_a	-1,7,0,{
+bat_a01,194,267,0	script	기욤바리케이드통로상#bat_a01	-1,7,0,{
 OnTouch:
 	if (getcharid(4) == $@TierraBG1_id1)
 		warp "bat_a01",194,261;
 	end;
 }
 
-bat_a01,194,265,0	script	barri_warp_down#bat_a01a	-1,7,0,{
+bat_a01,194,265,0	script	기욤바리케이드통로하#bat_a01	-1,7,0,{
 OnTouch:
-	if (getcharid(4) == $@TierraBG1_id1) 
+	if (getcharid(4) == $@TierraBG1_id1)
 		warp "bat_a01",194,270;
 	end;
 }
 
-bat_a01,177,130,0	script	barri_warp_up#bat_a01_b	-1,7,0,{
+bat_a01,177,130,0	script	크루아바리케이드통로상#bat_a01	-1,7,0,{
 OnTouch:
 	if (getcharid(4) == $@TierraBG1_id2)
 		warp "bat_a01",178,125;
 	end;
 }
 
-bat_a01,177,128,0	script	barri_warp_down#bat_a01b	-1,7,0,{
+bat_a01,177,128,0	script	크루아바리케이드통로하#bat_a01	-1,7,0,{
 OnTouch:
 	if (getcharid(4) == $@TierraBG1_id2)
 		warp "bat_a01",178,134;
 	end;
 }
 
-bat_a01,352,342,0	script	A_CODE#bat_a01	-1,5,5,{
+
+//============================================================
+// 시작 지점 퀘스트 체크
+//============================================================
+
+bat_a01,352,342,0	script	기욤 시작체크#bat_a01	-1,5,5,{
 OnTouch:
-	set .@chk_bfquest,checkquest(2069);
+	.@chk_bfquest = checkquest(2069);
 	if ((.@chk_bfquest == 0) || (.@chk_bfquest == 1))
 		setquest 2069;
 	end;
 }
 
-bat_a01,353,52,0	script	B_CODE#bat_a01	-1,5,5,{
+bat_a01,353,52,0	script	크루아 시작체크#bat_a01	-1,5,5,{
 OnTouch:
-	set .@chk_bfquest,checkquest(2069);
+	.@chk_bfquest = checkquest(2069);
 	if ((.@chk_bfquest == 0) || (.@chk_bfquest == 1))
 		setquest 2069;
 	end;
 }
 
-bat_a01,169,227,0	warp	underladd#bat_a01_1	1,1,bat_a01,178,228
-bat_a01,208,164,0	warp	underladd#bat_a01_2	1,1,bat_a01,200,171
 
-bat_a01,171,309,3	script	Guillaume Camp#flag1	973,{ end; }
-bat_a01,149,310,3	script	Guillaume Camp#flag2	973,{ end; }
-bat_a01,119,336,3	script	Guillaume Camp#flag3	973,{ end; }
-bat_a01,118,357,3	script	Guillaume Camp#flag4	973,{ end; }
-bat_a01,150,380,3	script	Guillaume Camp#flag5	973,{ end; }
-bat_a01,173,380,3	script	Guillaume Camp#flag6	973,{ end; }
-bat_a01,210,344,3	script	Guillaume Camp#flag7	973,{ end; }
-bat_a01,350,325,3	script	Guillaume Camp#flag8	973,{ end; }
-bat_a01,358,325,3	script	Guillaume Camp#flag9	973,{ end; }
+//============================================================
+// 맵 내부 이동 워프
+//============================================================
 
-bat_a01,138,12,3	script	Croix Camp#flag1	974,{ end; }
-bat_a01,108,36,3	script	Croix Camp#flag2	974,{ end; }
-bat_a01,108,63,3	script	Croix Camp#flag3	974,{ end; }
-bat_a01,136,87,3	script	Croix Camp#flag4	974,{ end; }
-bat_a01,167,86,3	script	Croix Camp#flag5	974,{ end; }
-bat_a01,199,49,3	script	Croix Camp#flag6	974,{ end; }
-bat_a01,168,16,3	script	Croix Camp#flag7	974,{ end; }
-bat_a01,357,74,3	script	Croix Camp#flag8	974,{ end; }
-bat_a01,348,74,3	script	Croix Camp#flag9	974,{ end; }
+bat_a01,169,227,0	warp	티에라사다리_1	1,1,bat_a01,178,228
+bat_a01,208,164,0	warp	티에라사다리_2	1,1,bat_a01,200,171
 
-bat_a01,53,377,3	script	Guillaume Vintenar#a01_a	419,{
+
+//============================================================
+// 장식 깃발
+//============================================================
+
+bat_a01,171,309,3	script	기욤 진영 깃발#1	973,{ end; }
+bat_a01,149,310,3	script	기욤 진영 깃발#2	973,{ end; }
+bat_a01,119,336,3	script	기욤 진영 깃발#3	973,{ end; }
+bat_a01,118,357,3	script	기욤 진영 깃발#4	973,{ end; }
+bat_a01,150,380,3	script	기욤 진영 깃발#5	973,{ end; }
+bat_a01,173,380,3	script	기욤 진영 깃발#6	973,{ end; }
+bat_a01,210,344,3	script	기욤 진영 깃발#7	973,{ end; }
+bat_a01,350,325,3	script	기욤 진영 깃발#8	973,{ end; }
+bat_a01,358,325,3	script	기욤 진영 깃발#9	973,{ end; }
+
+bat_a01,138,12,3	script	크루아 진영 깃발#1	974,{ end; }
+bat_a01,108,36,3	script	크루아 진영 깃발#2	974,{ end; }
+bat_a01,108,63,3	script	크루아 진영 깃발#3	974,{ end; }
+bat_a01,136,87,3	script	크루아 진영 깃발#4	974,{ end; }
+bat_a01,167,86,3	script	크루아 진영 깃발#5	974,{ end; }
+bat_a01,199,49,3	script	크루아 진영 깃발#6	974,{ end; }
+bat_a01,168,16,3	script	크루아 진영 깃발#7	974,{ end; }
+bat_a01,357,74,3	script	크루아 진영 깃발#8	974,{ end; }
+bat_a01,348,74,3	script	크루아 진영 깃발#9	974,{ end; }
+
+
+//============================================================
+// 보상 NPC
+//============================================================
+
+bat_a01,53,377,3	script	기욤 보상관#a01_a	419,{
 	if (getcharid(4) == $@TierraBG1_id1) {
 		if ($@TierraBG1_Victory == 1)
 			callfunc "F_BG_Badge",1,"Guillaume","Tierra";
@@ -727,17 +781,17 @@ bat_a01,53,377,3	script	Guillaume Vintenar#a01_a	419,{
 		else
 			callfunc "F_BG_Badge",1,"Guillaume","Tierra";
 	}
+
 	bg_leave;
-	if (!getbattleflag("feature.bgqueue"))
-		warp "bat_room",154,150;
+	warp "bat_room",154,150;
 	end;
 
 OnInit:
-	disablenpc "Guillaume Vintenar#a01_a";
+	disablenpc "기욤 보상관#a01_a";
 	end;
 }
 
-bat_a01,45,19,3	script	Croix Vintenar#a01_b	415,{
+bat_a01,45,19,3	script	크루아 보상관#a01_b	415,{
 	if (getcharid(4) == $@TierraBG1_id2) {
 		if ($@TierraBG1_Victory == 2)
 			callfunc "F_BG_Badge",1,"Croix","Tierra";
@@ -750,17 +804,22 @@ bat_a01,45,19,3	script	Croix Vintenar#a01_b	415,{
 		else
 			callfunc "F_BG_Badge",1,"Croix","Tierra";
 	}
+
 	bg_leave;
-	if (!getbattleflag("feature.bgqueue"))
-		warp "bat_room",154,150;
+	warp "bat_room",154,150;
 	end;
 
 OnInit:
-	disablenpc "Croix Vintenar#a01_b";
+	disablenpc "크루아 보상관#a01_b";
 	end;
 }
 
-bat_a01,1,5,3	script	countdown#bat_a01	844,{
+
+//============================================================
+// 카운트다운 / 제한 시간
+//============================================================
+
+bat_a01,1,5,3	script	티에라 카운트다운#bat_a01	844,{
 OnEnable:
 	initnpctimer;
 	end;
@@ -770,88 +829,52 @@ OnStop:
 	end;
 
 OnTimer7000:
-	mapannounce "bat_a01", "기욤 빈테나르 액슬 로즈: 크루아의 식량 창고를 불태워버리자!",bc_map,"0xFF9900";
+	mapannounce "bat_a01","기욤 빈테나르 액슬 로즈: 크루아의 식량 창고를 불태워버리자!",bc_map,"0xFF9900";
 	end;
 
 OnTimer8000:
-	mapannounce "bat_a01", "크루아 빈테나르 스완더리: 발할라의 주인이시여! 저희에게 흔들리지 않는 믿음과 용기를 주소서!",bc_map,"0xFF99CC";
+	mapannounce "bat_a01","크루아 빈테나르 스완더리: 발할라의 주인이시여, 저희에게 흔들리지 않는 믿음과 용기를 주소서!",bc_map,"0xFF99CC";
 	end;
 
 OnTimer1800000:
-	mapannounce "bat_a01", "마롤로 7세 : 기욤 마롤로, 크루아 마롤로! 마롤로 팔로워 여러분!",bc_map,"0x99CC00";
+	mapannounce "bat_a01","마롤로 7세: 기욤 마롤로, 크루아 마롤로, 그리고 마롤로 왕국의 전사들이여!",bc_map,"0x99CC00";
 	end;
 
 OnTimer1803000:
-	mapannounce "bat_a01", "마롤로 7세: 두 진영 모두 경쟁적이어서 어느 진영도 쉽게 무너지지 않을 것이다. 즉, 마롤로 왕국은 절대 패배하지 않을 것이다!",bc_map,"0x99CC00";
+	mapannounce "bat_a01","마롤로 7세: 두 진영 모두 물러서지 않는군. 이대로라면 어느 쪽도 쉽게 무너지지 않을 것이다.",bc_map,"0x99CC00";
 	end;
 
 OnTimer1808000:
-	mapannounce "bat_a01", "마롤로 7세: 전투를 종료하고 무승부로 처리하는 게 좋겠소.",bc_map,"0x99CC00";
+	mapannounce "bat_a01","마롤로 7세: 전투를 종료하고 무승부로 처리하는 것이 좋겠소.",bc_map,"0x99CC00";
 	end;
 
 OnTimer1822000:
-	mapannounce "bat_a01", "마롤로 7세: 왕족으로서의 존엄과 신념은 잠시 접어두고, 티에라 협곡 전투의 승부를 결정짓자.",bc_map,"0x99CC00";
+	mapannounce "bat_a01","마롤로 7세: 왕족으로서의 자존심은 잠시 접어두고, 티에라 협곡 전투를 마무리하자.",bc_map,"0x99CC00";
 	end;
 
 OnTimer1825000:
-	mapannounce "bat_a01", "액슬 로즈, 스완더리: 네, 그렇습니다.",bc_map,"0x99CC00";
+	mapannounce "bat_a01","액슬 로즈, 스완더리: 예, 알겠습니다.",bc_map,"0x99CC00";
 	end;
 
 OnTimer1830000:
+	mapannounce "bat_a01","티에라 협곡 전투가 시간 초과로 종료되었습니다.",bc_map,"0x99CC00";
 	mapwarp "bat_a01","bat_room",154,150;
-	donpcevent "countdown#bat_a01::OnStop";
-	end;
-}
 
-/*
-bat_a01,351,75,3	script	Croix Camp Soldier#bat_a01_guide	934,{
-	mes "Loading...";
-	close;
-}
-
-bat_a01,356,326,3	script	Guillaume Camp Soldier#bat_a01_guide	934,{
-	mes "Loading...";
-	close;
-}
-*/
-
-bat_a01,1,1,3	script	Release all#a01	81,{
-	set .@i, callfunc("F_GM_NPC",1854,0);
-	if (.@i == -1) {
-		mes "Cancelled.";
-		close;
-	} else if (.@i == 0) {
-		end;
-	} else {
-		mes "도와드릴까요?";
-		next;
-		switch(select("모두 풀어주세요.:Cancel.")) {
-		case 1:
-			mes "Bye.";
-			close2;
-			mapwarp "bat_a01","bat_room",154,150;
-			end;
-		case 2:
-			mes "Cancelled.";
-			close;
-		}
+	if ($@TierraBG1_id1) {
+		bg_destroy $@TierraBG1_id1;
+		$@TierraBG1_id1 = 0;
 	}
-}
 
-// BG Queue makes these scripts useless
--	script	BGQueueInit#tierra01	-1,{
-	end;
-
-OnInit:
-	if (getbattleflag("feature.bgqueue")) {
-		unloadnpc "Lieutenant Kalos";
-		unloadnpc "Lieutenant Eyor";
-		unloadnpc "#bat_a01_quest_a";
-		unloadnpc "#bat_a01_quest_b";
-		unloadnpc "back_bgrooma01a";
-		unloadnpc "back_bgrooma01b";
-		unloadnpc "A_CODE#bat_a01";
-		unloadnpc "B_CODE#bat_a01";
+	if ($@TierraBG1_id2) {
+		bg_destroy $@TierraBG1_id2;
+		$@TierraBG1_id2 = 0;
 	}
+
+	$@TierraBG1 = 0;
+	$@TierraBG1_Victory = 0;
+
+	callfunc "F_Tierra_ResetTeamNeed";
+	donpcevent "티에라 대기실 갱신#bat_a01::OnRefresh";
+	donpcevent "티에라 카운트다운#bat_a01::OnStop";
 	end;
 }
