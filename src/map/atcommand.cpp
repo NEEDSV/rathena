@@ -8183,7 +8183,7 @@ ACMD_FUNC(mobinfo)
 				if (id == nullptr)
 					continue;
 
-				int32 droprate = mob_getdroprate( sd, mob, entry->rate, drop_modifier );
+				int32 droprate = battle_config.atcommand_mobinfo_type ? mob_getdroprate( sd, mob, entry->rate, drop_modifier ) : entry->rate;
 
 				sprintf(atcmd_output2, " - %s  %02.02f%%", item_db.create_item_link( id ).c_str(), (float)droprate / 100);
 				strcat(atcmd_output, atcmd_output2);

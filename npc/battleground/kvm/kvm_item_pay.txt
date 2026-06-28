@@ -12,300 +12,129 @@
 //= 1.0 First Version. [L0ne_W0lf]
 //============================================================
 
-bat_room,151,144,3	script	KVM Logistic Officer#a	734,{
-	if (countitem(6376)) {// KVM_Badge
-		set .@pointstoadd,countitem(6376);
-		delitem 6376,.@pointstoadd;
-		set kvm_point,kvm_point+.@pointstoadd;
-		mes "[기호 논리학]";
-		mes " 저것들이요?"+getitemname(6376)+"제가 보기에 그렇군요?";
-		mes "저희는 더 이상 해당 통화를 받지 않습니다.";
-		mes "하지만 제가 다른 걸로 바꿔드릴 수 있어요.";
-		mes " 그래서 당신은 가지고 있습니다"+.@pointstoadd+" "+getitemname(6376)+"에스?";
-		mes "좋습니다, 이제 다 됐습니다. ^580080을 가지게 되셨습니다."+ kvm_point +"^000000 KVM 포인트.";
-		next;
-	}
-	if (checkweight(1201,1) == 0) {
-		mes "- 잠깐 기다려요 !! -";
-		mes "- 현재 소지하고 있는 물품 -";
-		mes "- 너무 많은 물건을 가지고 계시네요. -";
-		mes "- 다시 시도해 주세요 -";
-		mes "- 살을 좀 빼고 나면요. -";
-		close;
-	}
-	mes "[기호 논리학]";
-	mes "안녕하세요?";
-	mes "저는 배포를 담당하고 있습니다.";
-	mes "KVM 포인트로 획득할 수 있는 보상 아이템. 어떤 것이든 상관없습니다.";
-	mes "품목을 잘못 선택해도 문제가 없습니다.";
-	mes "반대로 되어 있을 수 있습니다. 주의해 주세요.";
-	mes "다음 단계를 선택해 주세요.";
-	next;
-	set .@name$,strcharinfo(0);
-	switch(select("KVM 카탈로그를 읽어보세요.:KVM 제품을 구매하세요.:KVM 포인트를 확인하십시오.:KVM 보상에 대한 설명입니다.:KVM 포인트에 대한 설명입니다.")) {
+
+-	itemshop	KVM#kvm_weapon_pay	89,7773,13416:1000,13417:1000,13418:1000,1187:1000,1426:1000,1486:1000,2002:1000,1640:1000,1641:1000,1546:1000,1310:1000,1382:1000,13307:1000,1281:1000,1282:1000,1927:1000,1981:1000,1576:1000,1577:1000,1826:1000,1827:1000,13110:1000,13176:1000,13177:1000,13178:1000,13179:1000,2394:2000,2549:600,2444:600,2772:1200
+-	itemshop	BB	-1,7828,13036:200,13411:200,1183:200,1425:200,1632:200,1634:200,1543:200,1380:200,13305:200,1739:200,1279:200,1924:200,1978:200,1574:200,1824:200,13108:200,13172:200,2538:100,2539:100,2540:100,2435:100,2436:100,2437:100,2376:160,2377:160,2378:160,2379:160,2380:160,2381:160,2382:160,2733:1000,2720:1000,2721:1000,2722:1000,2723:1000,2724:1000,2725:1000
+-	itemshop	VB	-1,7829,13037:200,13410:200,1184:200,1482:200,1633:200,1635:200,1542:200,1379:200,13306:200,1738:200,1280:200,1923:200,1977:200,1575:200,1823:200,13171:200,13173:200,13174:200,2538:100,2539:100,2540:100,2435:100,2436:100,2437:100,2376:160,2377:160,2378:160,2379:160,2380:160,2381:160,2382:160,2733:1000,2720:1000,2721:1000,2722:1000,2723:1000,2724:1000,2725:1000
+
+-	shop	USE	-1,399994:100,399993:100,399998:100,399999:100,399900:100,399996:100,399995:100,399997:100
+
+-	pointshop	POINT	-1,BATTLEGROUND_POINT,31433:1000,410458:1000,420177:1000,20571:1000,31978:1000,410278:1000,480609:1000,25225:1000,1001650:1000
+
+
+bat_room,160,146,3	script	전장 장비 담당관#a	734,{
+	switch( select( "용맹휘장","특공휘장","전투휘장") ){
 	case 1:
-		mes "[기호 논리학]";
-		mes "다음은 KVM 제품 목록입니다.";
-		mes "각 무기를 얻으려면 2,000점이 필요합니다.";
-		mes "각 갑옷은 10에서 1,200까지 다양합니다.";
-		mes "점수입니다. 그러니 조심하세요.";
-		mes "보상을 선택하세요.";
-		close2;
-		readbook 11017,1;
+		callshop "BB";
 		end;
 	case 2:
-		mes "[기호 논리학]";
-		mes "어떤 항목들을 보고 싶으신가요?";
-		mes "상세 사양은 다음과 같습니다.";
-		mes "해당 품목에 대해서는 다음을 참조하십시오.";
-		mes "^3131FF카탈로그^000000.";
-		next;
-		switch(select("Weapon:Armor/Accessory:대량 생산 갑옷/액세서리:대중화된 갑옷/액세서리")) {
-		case 1:
-			mes "[기호 논리학]";
-			mes "무기 카테고리를 선택하셨습니다.";
-			mes "하위 카테고리를 선택해 주세요.";
-			next;
-			switch(select("Dagger/Sword/Spear:Staff/Mace/Axe/Shuriken:Bow/Katar/Instrument/Whip:Book/Knuckle:리볼버/소총/총/유탄발사기")) {
-			case 1:
-				mes "[기호 논리학]";
-				mes "단검/검/창 카테고리를 선택하셨습니다.";
-				mes "하위 카테고리를 선택해 주세요.";
-				next;
-				switch(select("Dagger:한손검:양손검:한손 창:양손 창")) {
-				case 1: callsub PurchaseItem,13042,0,1; //Krieger_Dagger1 
-				case 2:
-					mes "[기호 논리학]";
-					mes "'한손검' 카테고리를 선택하셨습니다.";
-					mes "한손검은 세 종류가 있습니다. 영광스러운 플람베르주, 영광스러운 레이피어, 그리고 영광스러운 성스러운 복수자입니다.";
-					mes "자세한 내용을 원하시면 KVM 카탈로그를 참조하십시오.";
-					mes "둘 중 하나를 선택해 주세요.";
-					next;
-					switch(select("영광스러운 플람베르주:영광스러운 레이피어:영광스러운 성스러운 복수자")) {
-					case 1: callsub PurchaseItem,13416,0,0; //Krieger_Onehand_Sword1
-					case 2: callsub PurchaseItem,13417,0,0; //Krieger_Onehand_Sword2
-					case 3: callsub PurchaseItem,13418,0,0; //Krieger_Onehand_Sword3
-					}
-				case 3: callsub PurchaseItem,1187,0,1; //Krieger_Twohand_Sword1
-				case 4: callsub PurchaseItem,1426,0,1; //Krieger_Onehand_Spear1
-				case 5: callsub PurchaseItem,1486,0,1; //Krieger_Twohand_Spear1
-				}
-			case 2:
-				mes "[기호 논리학]";
-				mes "'지팡이/철퇴/도끼/수리검' 카테고리를 선택하셨습니다.";
-				mes "하위 카테고리를 선택해 주세요.";
-				next;
-				switch(select("Staff:Mace:한손 도끼:양손 도끼:Shuriken")) {
-				case 1:
-					mes "[기호 논리학]";
-					mes "'직원' 카테고리를 선택하셨습니다.";
-					mes "지팡이는 총 세 종류가 있습니다. 양손 무기인 영광스러운 파괴의 지팡이, 한손 무기인 영광스러운 아크 완드, 그리고 영광스러운 치유의 지팡이입니다.";
-					mes "자세한 내용을 원하시면 KVM 카탈로그를 참조하십시오.";
-					mes "둘 중 하나를 선택해 주세요.";
-					next;
-					switch(select("영광스러운 파괴 스태프:영광스러운 아크 지팡이:영광스러운 치유 지팡이")) {
-					case 1: callsub PurchaseItem,2002,0,0; //Krieger_Twohand_Staff1
-					case 2: callsub PurchaseItem,1640,0,0; //Krieger_Onehand_Staff1
-					case 3: callsub PurchaseItem,1641,0,0; //Krieger_Onehand_Staff2
-					}
-				case 2: callsub PurchaseItem,1546,0,1; //Krieger_Onehand_Mace1
-				case 3: callsub PurchaseItem,1310,0,1; //Krieger_Onehand_Axe1
-				case 4: callsub PurchaseItem,1382,0,1; //Krieger_Twohand_Axe1
-				case 5: callsub PurchaseItem,13307,0,1; //Krieger_Huuma_Shuriken1
-				}
-			case 3:
-				mes "[기호 논리학]";
-				mes "활/카타르/악기/채찍 카테고리를 선택하셨습니다.";
-				mes "하위 카테고리를 선택해 주세요.";
-				next;
-				switch(select("Bow:Katar:Instrument:Whip")) {
-				case 1: callsub PurchaseItem,1743,0,1; //Krieger_Bow1
-				case 2:
-					mes "[기호 논리학]";
-					mes "'카타르' 카테고리를 선택하셨습니다.";
-					mes "카타르는 두 종류가 있습니다. 영광스러운 피의 포효와 영광스러운 자마다르입니다.";
-					mes "자세한 내용을 원하시면 KVM 카탈로그를 참조하십시오.";
-					mes "둘 중 하나를 선택해 주세요.";
-					next;
-					switch(select("영광스러운 피의 포효:영광스러운 자마다르")) {
-					case 1: callsub PurchaseItem,1281,0,0; //Krieger_Katar1
-					case 2: callsub PurchaseItem,1282,0,0; //Krieger_Katar2
-					}
-				case 3: callsub PurchaseItem,1927,0,1; //Krieger_Instrument1
-				case 4: callsub PurchaseItem,1981,0,1; //Krieger_Whip1
-				}
-			case 4:
-				mes "[기호 논리학]";
-				mes "책/너클 카테고리를 선택하셨습니다.";
-				mes "하위 카테고리를 선택해 주세요.";
-				next;
-				switch(select("Book:Knuckle")) {
-				case 1:
-					mes "[기호 논리학]";
-					mes "'예약'을 선택하셨습니다.";
-					mes "책은 총 두 권입니다. 하나는 영광스러운 석판이고 다른 하나는 영광스러운 묵시록입니다.";
-					mes "자세한 내용을 원하시면 KVM 카탈로그를 참조하십시오.";
-					mes "둘 중 하나를 선택해 주세요.";
-					next;
-					switch(select("영광스러운 석판:영광스러운 종말")) {
-					case 1: callsub PurchaseItem,1576,0,0; //Krieger_Book1
-					case 2: callsub PurchaseItem,1577,0,0; //Krieger_Book2
-					}
-				case 2:
-					mes "[기호 논리학]";
-					mes "'손가락 관절' 카테고리를 선택하셨습니다.";
-					mes "너클은 두 종류가 있습니다: 글로리어스 클로와 글로리어스 피스트.";
-					mes "자세한 내용을 원하시면 KVM 카탈로그를 참조하십시오.";
-					mes "둘 중 하나를 선택해 주세요.";
-					next;
-					switch(select("영광스러운 발톱:영광스러운 주먹")) {
-					case 1: callsub PurchaseItem,1826,0,0; //Krieger_Knuckle1
-					case 2: callsub PurchaseItem,1827,0,0; //Krieger_Knuckle2
-					}
-				}
-			case 5:
-				mes "[기호 논리학]";
-				mes "'리볼버/소총/총/유탄발사기' 카테고리를 선택하셨습니다.";
-				mes "하위 카테고리를 선택해 주세요.";
-				next;
-				switch(select("Revolver:Rifle:개틀링 기관총:Shotgun:유탄 발사기")) {
-				case 1: callsub PurchaseItem,13110,0,1; //Krieger_Pistol1
-				case 2: callsub PurchaseItem,13176,0,1; //Krieger_Rifle1
-				case 3: callsub PurchaseItem,13177,0,1; //Krieger_Gatling1
-				case 4: callsub PurchaseItem,13178,0,1; //Krieger_Shotgun1
-				case 5: callsub PurchaseItem,13179,0,1; //Krieger_Launcher1
-				}
-			}
-		case 2:
-			mes "[기호 논리학]";
-			mes "'갑옷/액세서리' 카테고리를 선택하셨습니다.";
-			mes "하위 카테고리를 선택해 주세요.";
-			next;
-			switch(select("Armor:Cloak:Shoes:Accessory")) {
-			case 1: callsub PurchaseItem,2394,1,2; //Krieger_Suit1
-			case 2: callsub PurchaseItem,2549,2,2; //Krieger_Muffler1
-			case 3: callsub PurchaseItem,2444,3,2; //Krieger_Shoes1
-			case 4: callsub PurchaseItem,2772,4,2; //Krieger_Ring1
-			}
-		case 3:
-			mes "[기호 논리학]";
-			mes "'양산형 갑옷/액세서리' 카테고리를 선택하셨습니다.";
-			mes "하위 카테고리를 선택해 주세요.";
-			next;
-			switch(select("대량 생산 갑옷:대량 생산 신발:대량 생산 액세서리")) {
-			case 1: callsub PurchaseItem,2395,5,3; //Krieger_Suit2
-			case 2: callsub PurchaseItem,2445,6,3; //Krieger_Shoes2
-			case 3: callsub PurchaseItem,2773,7,3; //Krieger_Ring2
-			}
-		case 4:
-			mes "[기호 논리학]";
-			mes "'인기 있는 갑옷/액세서리' 카테고리를 선택하셨습니다.";
-			mes "하위 카테고리를 선택해 주세요.";
-			next;
-			switch(select("대중화된 갑옷:인기 있는 신발:대중화된 액세서리")) {
-			case 1: callsub PurchaseItem,2396,8,4; //Krieger_Suit3
-			case 2: callsub PurchaseItem,2446,9,4; //Krieger_Shoes3
-			case 3: callsub PurchaseItem,2774,10,4; //Krieger_Ring3
-			}
-		}
+		callshop "VB";
+		end;
 	case 3:
-		mes "[기호 논리학]";
-		mes ""+ .@name$ +"현재 보유 포인트는 ^580080입니다."+ kvm_point +"^000000 KVM 포인트.";
-		close;
-	case 4:
-		mes "[기호 논리학]";
-		mes "KVM 보상에는 무기/방어구, 액세서리 이렇게 세 가지 카테고리가 있습니다.";
-		next;
-		mes "[기호 논리학]";
-		mes "무기 보상을 받으려면 각 무기당 2,000 KVM 포인트가 필요합니다.";
-		mes "방어구 보상은 총 3가지 종류가 있으며, 각 종류마다 840/630/580 KVM 포인트가 필요합니다.";
-		mes "액세서리 보상을 받으려면 각 액세서리당 1,200 KVM 포인트가 필요합니다.";
-		next;
-		mes "[기호 논리학]";
-		mes "크리거 무기는 레벨 4 무기이며, 업그레이드를 통해 학살, 파괴, 축복과 같은 특수 효과를 얻을 수 있습니다.";
-		next;
-		mes "[기호 논리학]";
-		mes "세 가지 갑옷을 모두 착용할 수 있게 되면 특별한 옵션들을 활용할 수 있습니다.";
-		mes "또한, 크리거 액세서리 보상을 메달과 함께 착용하면 특별 세트 보상을 획득할 수 있습니다.";
-		next;
-		mes "[기호 논리학]";
-		mes "마지막으로, 대량 생산 갑옷과 액세서리 보상이 있습니다.";
-		mes "레벨이 60 이상인 플레이어는 양산형 갑옷을 장착할 수 있으며, 보급형 갑옷에도 레벨 제한이 있습니다.";
-		close;
-	case 5:
-		mes "[기호 논리학]";
-		mes "KVM 포인트는 크리거 폰 미드가르드(KVM)에서 승리, 패배 또는 무승부 시 지급됩니다.";
-		mes "이 포인트를 사용하시면 특별한 혜택을 받으실 수 있습니다.";
-		close;
+		callshop "KVM#kvm_weapon_pay";
+		end;
 	}
+}
 
-PurchaseItem:
-	// Pricing for Weapon, Suit1, Muffler1, Shoes1, Ring1m Suit2, Shoes2, Ring2, Suit3, Shoes3, Ring3
-	setarray .@prices[0],2000,840,630,580,1200,120,70,200,15,10,30;
 
-	.@item_id = getarg(0);
-	.@req_setting = getarg(1);
-	.@item_type = getarg(2);
+bat_room,160,153,3	script	전장 소비 담당관#a	749,{
+		callshop "USE";
+		end;
+}
 
-	mes "[기호 논리학]";
+bat_room,160,150,3	script	전장 교환 담당관#a	-1,{
+		mes "[전장 교환 담당관]";
+		mes "전장 포인트는 전장에 참여하거나,";
+		mes "전장 팀 리더로 선발되어 전장을 진행할 경우 획득할 수 있습니다.";
+		next;
+		mes "[전장 교환 담당관]";
+		mes "획득한 전장 포인트는 이곳에서";
+		mes "다양한 전장 보상 아이템으로 교환할 수 있습니다.";
+		mes "현재 보유 전장 포인트: ^0055FF" + BATTLEGROUND_POINT + "^000000점";
+		close2;
+		callshop "POINT";
+		end;
+		
+		
+OnInit:
+	.@npc_id = getnpcid(0);
+	setunitdata .@npc_id, UNPC_CLASS, JOB_PRIEST;
+	setunitdata .@npc_id, UNPC_SEX, SEX_FEMALE;
+	setunitdata .@npc_id, UNPC_HEADTOP, 1073;
+	setunitdata .@npc_id, UNPC_HEADMIDDLE, 2730;
+	setunitdata .@npc_id, UNPC_HEADBOTTOM, 2311;
+	setunitdata .@npc_id, UNPC_ROBE, 48;
+	setunitdata .@npc_id, UNPC_HAIRSTYLE, 27;
+	setunitdata .@npc_id, UNPC_HAIRCOLOR, 6;
+	setunitdata .@npc_id, UNPC_CLOTHCOLOR, 2;
+	
+	.@npc_id = getnpcid(0);
+	hateffect HAT_EF_C_VALKYRIE_WING, true, .@npc_id;
+	hateffect HAT_EF_DOUBLEGUMGANG, true, .@npc_id;
+	
+	.CostumeIndex = 0;
+	
+	// ============================================================
+	// 1번 의상 View ID
+	// 필요 없는 부위는 0
+	// ============================================================
+	.Costume1_HeadTop = 1073;
+	.Costume1_HeadMiddle = 2730;
+	.Costume1_HeadBottom = 2311;
+	.Costume1_Robe = 48;
 
-	if (!.@item_type)
-		mes "^ff0000을 선택하셨습니다."+ getitemname(.@item_id) +"^000000.";
-	else if (.@item_type == 1)
-		mes "단 하나뿐입니다"+ callfunc("F_GetWeaponType",.@item_id) +": "+ getitemname(.@item_id) +".";
-	else if (.@item_type == 2) {
-		mes "'를 선택하셨습니다'"+ callfunc("F_GetArmorType",.@item_id) +"'.";
-		mes "레벨이 80 이상인 캐릭터의 갑옷은 다음과 같습니다: ^ff0000"+ getitemname(.@item_id) +"^000000.";
-	}
-	else if (.@item_type == 3) {
-		mes " '대량 생산'을 선택하셨습니다."+ callfunc("F_GetArmorType",.@item_id) +"'.";
-		mes " 대량 생산 제품은 단 하나뿐입니다."+ callfunc("F_GetArmorType",.@item_id) +": ^ff0000"+ getitemname(.@item_id) +"^000000.";
-	}
-	else if (.@item_type == 4) {
-		mes " '인기 있는'을 선택하셨습니다."+ callfunc("F_GetArmorType",.@item_id) +"'.";
-		mes " 대중화된 것은 하나뿐입니다."+ callfunc("F_GetArmorType",.@item_id) +": ^ff0000"+ getitemname(.@item_id) +"^000000.";
-	}
+	// ============================================================
+	// 2번 의상 View ID
+	// 필요 없는 부위는 0
+	// ============================================================
+	.Costume2_HeadTop = 2308;
+	.Costume2_HeadMiddle = 2437;
+	.Costume2_HeadBottom = 0;
+	.Costume2_Robe = 273;
+	
+	callsub S_ApplyCostume;
 
-	if (!.@req_setting)
-		mes " 이를 위해서는 ^0000ff2,000^000000 KVM 포인트가 필요합니다."+ .@name$ +"당신의 점수는 ^580080입니다."+ kvm_point +"^000000.";
-	else if (.@req_setting == 4)
-		mes " 이를 위해서는 ^0000ff1,200^000000 KVM 포인트가 필요합니다."+ .@name$ +"당신의 점수는 ^580080입니다."+ kvm_point +"^000000.";
+	initnpctimer;
+	end;
+	
+OnTimer300000:
+	stopnpctimer;
+
+	if (.CostumeIndex == 0)
+		.CostumeIndex = 1;
 	else
-		mes "^0000ff가 필요합니다"+ .@prices[.@req_setting] +" ^000000 KVM 포인트, 그리고"+ .@name$ +"당신의 점수는 ^580080입니다."+ kvm_point +"^000000.";
+		.CostumeIndex = 0;
 
-	mes "이 상품을 정말로 구매하시겠습니까?";
-	next;
-	switch(select("아니요, 구매하지 않겠습니다.:네, 구매하겠습니다.")) {
-	case 1:
-		mes "[기호 논리학]";
-		mes "'구매하지 않겠습니다'를 선택하셨습니다.";
-		mes "상품 구매 시 환불이 불가하니 유의하시기 바랍니다.";
-		break;
-	case 2:
-		if (kvm_point >= .@prices[.@req_setting]) {
-			kvm_point = kvm_point -.@prices[.@req_setting];
-			getitem .@item_id,1;
-			mes "[기호 논리학]";
-			mes " 구매하셨습니다"+ getitemname(.@item_id) +".";
-			if (!.@req_setting)
-				mes "KVM 포인트가 ^0000ff만큼 감소했습니다."+ .@req_setting +"^000000 포인트, 귀하의 KVM 포인트는 이제 ^580080입니다."+kvm_point+"^000000.";
-			if (.@req_setting == 4)
-				mes "귀하의 KVM 포인트가 ^0000ff1,200^000000 포인트 감소했습니다. 귀하의 KVM 포인트는 이제 ^580080 포인트입니다."+kvm_point+"^000000.";
-			else
-				mes "KVM 포인트가 ^0000ff만큼 감소했습니다."+ .@prices[.@req_setting] +"^000000 포인트, 귀하의 KVM 포인트는 이제 ^580080입니다."+kvm_point+"^000000.";
-		}
-		else {
-			mes "[기호 논리학]";
-			if (!.@req_setting)
-				mes "이 아이템을 구매하려면 ^0000ff2,000^000000 KVM 포인트가 필요합니다.";
-			else if (.@req_setting == 4)
-				mes "이 아이템을 구매하려면 ^0000ff1,200^000000 KVM 포인트가 필요합니다.";
-			else
-				mes "^0000ff가 필요합니다"+ .@prices[.@req_setting] +"이 상품을 구매하려면 ^000000 KVM 포인트가 필요합니다.";
-			mes "하지만 현재 귀하의 KVM 포인트는 ^580080입니다."+ kvm_point +"^000000.";
-			mes "그것으로는 구매하기에 충분하지 않습니다.";
-			mes "충분한 포인트를 얻으시면 다시 방문해 주세요.";
-		}
+	callsub S_ApplyCostume;
+
+	initnpctimer;
+	end;
+	
+S_ApplyCostume:
+	.@npc_id = getnpcid(0);
+
+	// 기존 의상 제거
+	setunitdata .@npc_id, UNPC_HEADTOP, 0;
+	setunitdata .@npc_id, UNPC_HEADMIDDLE, 0;
+	setunitdata .@npc_id, UNPC_HEADBOTTOM, 0;
+	setunitdata .@npc_id, UNPC_ROBE, 0;
+
+	if (.CostumeIndex == 0) {
+		setunitdata .@npc_id, UNPC_HEADTOP, .Costume1_HeadTop;
+		setunitdata .@npc_id, UNPC_HEADMIDDLE, .Costume1_HeadMiddle;
+		setunitdata .@npc_id, UNPC_HEADBOTTOM, .Costume1_HeadBottom;
+		setunitdata .@npc_id, UNPC_ROBE, .Costume1_Robe;
+		hateffect HAT_EF_C_VALKYRIE_WING, true, .@npc_id;
+		npctalk  "1번 의상으로 변경되었습니다.";
+		
+	} else {
+		setunitdata .@npc_id, UNPC_HEADTOP, .Costume2_HeadTop;
+		setunitdata .@npc_id, UNPC_HEADMIDDLE, .Costume2_HeadMiddle;
+		setunitdata .@npc_id, UNPC_HEADBOTTOM, .Costume2_HeadBottom;
+		setunitdata .@npc_id, UNPC_ROBE, .Costume2_Robe;
+		hateffect HAT_EF_C_VALKYRIE_WING, false, .@npc_id;
+		npctalk  "2번 의상으로 변경되었습니다.";
 	}
-	close;
+
+	return;
 }

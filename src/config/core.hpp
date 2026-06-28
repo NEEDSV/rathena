@@ -104,7 +104,7 @@
 //#define ENABLE_CASHSHOP_PREVIEW_PATCH
 
 /// Nemo 패치 ExtendOldCashShopPreview 사용 시 활성화
-//#define ENABLE_OLD_CASHSHOP_PREVIEW_PATCH
+#define ENABLE_OLD_CASHSHOP_PREVIEW_PATCH
 
 #if defined(_DEBUG) || defined(DEBUG)
 #define DETAILED_LOADING_OUTPUT

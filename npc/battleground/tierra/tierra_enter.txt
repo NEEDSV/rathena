@@ -11,9 +11,7 @@
 
 // First Tierra Gorge Officers - Guillaume
 //============================================================
-bat_room,124,178,5	script	Tierra Gorge Officer#01a	418,{
-	if (getbattleflag("feature.bgqueue"))
-		end;
+bat_room,150,164,5	script	기욤 티에라#01a	418,{
 	if (checkweight(1201,1) == 0) {
 		mes "- 잠깐 기다려요 !! -";
 		mes "- 현재 소지하고 있는 물품 -";
@@ -37,19 +35,10 @@ bat_room,124,178,5	script	Tierra Gorge Officer#01a	418,{
 				mes "크루아 군에 맞서 싸우기 위해 우리와 함께하겠다는 당신의 의지는 매우 기쁘지만, 유감스럽게도 당신처럼 경험이 부족한 신병을 잔혹한 전장으로 보낼 수는 없습니다.";
 			}
 			else {
-				set .@chk_urtime,checkquest(2069,PLAYTIME);
-				if ((.@chk_urtime == 0)|| (.@chk_urtime == 1)) {
-					mes "[기욤 육군 장교]";
-					mes "당신은 방금 전장에서 돌아온 것 같군요.";
-					mes "아직 돌아가기엔 너무 이르다. 가서 쉬어라. 적들은 우리에게 맡기고.";
-				}
-				else {
-					if (.@chk_urtime == 2)
-						erasequest 2069;
 					set .@mapcount,getmapusers("bat_a01");
 					if (.@mapcount > 0) {
 						mes "[기욤 육군 장교]";
-						mes "크루아즈와 싸우는 전장에 정예 부대가 이미 파견되었다는 보고를 받았습니다.";
+						mes "크루아와 싸우는 전장에 정예 부대가 이미 파견되었다는 보고를 받았습니다.";
 						mes "잠시 기다리시는 게 어떠세요? 그동안 무기를 갈고 필요한 물품을 준비해 두시는 게 좋겠습니다.";
 					}
 					else {
@@ -70,7 +59,6 @@ bat_room,124,178,5	script	Tierra Gorge Officer#01a	418,{
 					}
 				}
 			}
-		}
 		break;
 	case 2:
 		mes "[기욤 육군 장교]";
@@ -79,147 +67,10 @@ bat_room,124,178,5	script	Tierra Gorge Officer#01a	418,{
 	}
 	close;
 }
-
-bat_room,140,178,5	script	Tierra Gorge Officer#02a	418,{
-	if (getbattleflag("feature.bgqueue"))
-		end;
-	if (checkweight(1201,1) == 0) {
-		mes "- 잠깐 기다려요 !! -";
-		mes "- 현재 소지하고 있는 물품 -";
-		mes "- 너무 많은 물건을 가지고 계시네요. -";
-		mes "- 다시 시도해 주세요 -";
-		mes "- 살을 좀 빼고 나면요. -";
-		close;
-	}
-	mes "[기욤 육군 장교]";
-	mes "냄새나는 크루아 놈들에게 기욤 군대의 위력을 보여주자!";
-	next;
-	switch(select("저는 당신의 군대에 합류하고 싶습니다!:대화 종료")) {
-	case 1:
-		if ((BaseJob == Job_Novice) || (BaseJob == Job_Super_Novice)) {
-			mes "[기욤 육군 장교]";
-			mes "크루아 군에 맞서 싸우기 위해 우리와 함께하겠다는 당신의 의지는 매우 기쁘지만, 유감스럽게도 당신처럼 경험이 부족한 신병을 잔혹한 전장으로 보낼 수는 없습니다.";
-		}
-		else {
-			if (BaseLevel < 80) {
-				mes "[기욤 육군 장교]";
-				mes "크루아 군에 맞서 싸우기 위해 우리와 함께하겠다는 당신의 의지는 매우 기쁘지만, 유감스럽게도 당신처럼 경험이 부족한 신병을 잔혹한 전장으로 보낼 수는 없습니다.";
-			}
-			else {
-				set .@chk_urtime,checkquest(2069,PLAYTIME);
-				if (.@chk_urtime == 1) {
-					mes "[기욤 육군 장교]";
-					mes "당신은 방금 전장에서 돌아온 것 같군요.";
-					mes "아직 돌아가기엔 너무 이르다. 가서 쉬어라. 적들은 우리에게 맡기고.";
-				}
-				else {
-					if (.@chk_urtime == 2)
-						erasequest 2069;
-					set .@mapcount,getmapusers("bat_a02");
-					if (.@mapcount > 0) {
-						mes "[기욤 육군 장교]";
-						mes "크루아즈와 싸우는 전장에 정예 부대가 이미 파견되었다는 보고를 받았습니다.";
-						mes "잠시 기다리시는 게 어떠세요? 그동안 무기를 갈고 필요한 물품을 준비해 두시는 게 좋겠습니다.";
-					}
-					else {
-						if ($@TierraBG2) {
-							mes "[기욤 육군 장교]";
-							mes "정예 부대가 이미 전장으로 파견될 준비를 마쳤습니다.";
-							mes "잠시 기다리시는 게 어떠세요? 그동안 무기를 갈고 필요한 물품을 준비해 두시는 게 좋겠습니다.";
-						}
-						else {
-							mes "[기욤 육군 장교]";
-							mes "당신은 확실히 전투 준비가 된 것 같군요!";
-							mes "가서 크루아들에게 진정한 공포가 무엇인지 보여줘!";
-							mes "오늘, 우리의 승리의 함성이 전장 곳곳에 울려 퍼질 것이다!";
-							close2;
-							warp "bat_room",114,223;
-							end;
-						}
-					}
-				}
-			}
-		}
-		break;
-	case 2:
-		mes "[기욤 육군 장교]";
-		mes "오늘 우리는 승리할 것이다!";
-		break;
-	}
-	close;
-}
-
-bat_room,127,178,5	script	Guillaume Knight#1	417,{
-	mes "[기욤 나이트]";
-	mes "티에라 협곡은 수직으로 솟아오른 두 개의 가파른 절벽으로 이루어져 있으며, 11시와 7시 방향에 기욤과 크루아 군대를 위한 식량 보급소가 있습니다.";
-	next;
-	mes "[기욤 나이트]";
-	mes "전투는 아군 함선에서 시작되며, 목표는 적의 식량 보급소를 아군보다 먼저 파괴하는 것입니다.";
-	next;
-	mes "[기욤 나이트]";
-	mes "전장의 치료사는 25초마다 한 번씩 병사들을 부활시켜 전투에 다시 참여할 수 있도록 합니다.";
-	mes "전장 중앙에 있는 중립 깃발을 점령하는 군대는 추가 재생 포인트를 보상으로 받게 되어, 상대편보다 더 많은 병사들을 부활시킬 수 있으므로 유리한 고지를 점하게 됩니다.";
-	next;
-	mes "[기욤 나이트]";
-	mes "그 두 식량 보급소는 짧고 좁은 길로 서로 연결되어 있지만, 출입문은 바리케이드로 막혀 있습니다.";
-	mes "생각하고 최대한 빨리 움직이십시오. 군대의 승리는 당신의 활약에 달려 있습니다.";
-	next;
-	mes "[기욤 나이트]";
-	if (getbattleflag("feature.bgqueue"))
-		mes "준비가 되셨다면 인터페이스에서 ^0000FFbattle 버튼을 클릭하여 시작하세요.";
-	else {
-		mes "다음 사항을 유의해 주세요: 전투에 참여하면 일정 기간 동안 동일한 유형의 전투에 참여할 수 없음을 나타내는 토큰을 받게 됩니다.";
-		mes "Alt+U 키를 누르면 지속 시간을 확인할 수 있습니다.";
-	}
-	next;
-	mes "[기욤 나이트]";
-	if (getbattleflag("feature.bgqueue"))
-		mes "취소하시면 1분 동안 재신청이 불가능하다는 점 유의해 주세요!";
-	else
-		mes "전투에 나설 준비가 되셨습니까? 그렇다면 제 옆에 있는 모집관에게 지원하세요!";
-	close;
-}
-
-bat_room,143,178,5	duplicate(Guillaume Knight#1)	Guillaume Knight#2	417
-
-bat_room,127,121,1	script	Croix Knight#1	413,{
-	mes "[크루아 나이트]";
-	mes "티에라 협곡은 수직으로 솟아오른 두 개의 가파른 절벽으로 이루어져 있으며, 11시와 7시 방향에 기욤과 크루아 군대를 위한 식량 보급소가 있습니다.";
-	next;
-	mes "[크루아 나이트]";
-	mes "전투는 아군 함선에서 시작되며, 목표는 적의 식량 보급소를 아군보다 먼저 파괴하는 것입니다.";
-	next;
-	mes "[크루아 나이트]";
-	mes "전장의 치료사는 25초마다 한 번씩 병사들을 부활시켜 전투에 다시 참여할 수 있도록 합니다.";
-	mes "전장 중앙에 있는 중립 깃발을 점령하는 군대는 추가 재생 포인트를 보상으로 받게 되어, 상대편보다 더 많은 병사들을 부활시킬 수 있으므로 유리한 고지를 점하게 됩니다.";
-	next;
-	mes "[크루아 나이트]";
-	mes "그 두 식량 보급소는 짧고 좁은 길로 서로 연결되어 있지만, 출입문은 바리케이드로 막혀 있습니다.";
-	mes "생각하고 최대한 빨리 움직이십시오. 군대의 승리는 당신의 활약에 달려 있습니다.";
-	next;
-	mes "[크루아 나이트]";
-	if (getbattleflag("feature.bgqueue"))
-		mes "준비가 되셨다면 인터페이스에서 ^0000FFbattle 버튼을 클릭하여 시작하세요.";
-	else {
-		mes "다음 사항을 유의해 주세요: 전투에 참여하면 일정 기간 동안 동일한 유형의 전투에 참여할 수 없음을 나타내는 토큰을 받게 됩니다.";
-		mes "Alt+U 키를 누르면 지속 시간을 확인할 수 있습니다.";
-	}
-	next;
-	mes "[크루아 나이트]";
-	if (getbattleflag("feature.bgqueue"))
-		mes "취소하시면 1분 동안 재신청이 불가능하다는 점 유의해 주세요!";
-	else
-		mes "전투에 나설 준비가 되셨습니까? 그렇다면 제 옆에 있는 모집관에게 지원하세요!";
-	close;
-}
-
-bat_room,143,121,1	duplicate(Croix Knight#1)	Croix Knight#2	413
 
 // Second Tierra Gorge Officers - Croix
 //============================================================
-bat_room,125,121,1	script	Tierra Gorge Officer#01b	414,{
-	if (getbattleflag("feature.bgqueue"))
-		end;
+bat_room,150,136,1	script	크루아 티에라#01b	414,{
 	if (checkweight(1201,1) == 0) {
 		mes "- 잠깐 기다려요 !! -";
 		mes "- 현재 소지하고 있는 물품 -";
@@ -243,15 +94,6 @@ bat_room,125,121,1	script	Tierra Gorge Officer#01b	414,{
 				mes "기욤 군대에 맞서 싸우기 위해 우리와 함께하겠다는 당신의 의지는 매우 기쁘지만, 유감스럽게도 당신처럼 경험이 부족한 신병을 잔혹한 전장으로 보낼 수는 없습니다.";
 			}
 			else {
-				set .@chk_urtime,checkquest(2069,PLAYTIME);
-				if ((.@chk_urtime == 0)|| (.@chk_urtime == 1)) {
-					mes "[크루아 군 장교]";
-					mes "당신은 방금 전장에서 돌아온 것 같군요.";
-					mes "아직 돌아가기엔 너무 이르다. 가서 쉬어라. 적들은 우리에게 맡기고.";
-				}
-				else {
-					if (.@chk_urtime == 2)
-						erasequest 2069;
 					set .@mapcount,getmapusers("bat_a02");
 					if (.@mapcount > 0) {
 						mes "[크루아 군 장교]";
@@ -276,7 +118,6 @@ bat_room,125,121,1	script	Tierra Gorge Officer#01b	414,{
 					}
 				}
 			}
-		}
 		break;
 	case 2:
 		mes "[크루아 군 장교]";
@@ -286,71 +127,3 @@ bat_room,125,121,1	script	Tierra Gorge Officer#01b	414,{
 	close;
 }
 
-bat_room,140,121,1	script	Tierra Gorge Officer#02b	414,{
-	if (getbattleflag("feature.bgqueue"))
-		end;
-	if (checkweight(1201,1) == 0) {
-		mes "- 잠깐 기다려요 !! -";
-		mes "- 현재 소지하고 있는 물품 -";
-		mes "- 너무 많은 물건을 가지고 계시네요. -";
-		mes "- 다시 시도해 주세요 -";
-		mes "- 살을 좀 빼고 나면요. -";
-		close;
-	}
-	mes "[크루아 군 장교]";
-	mes "크루아 군대의 위력을 저 고약한 기욤들에게 보여주자!";
-	next;
-	switch(select("저는 당신의 군대에 합류하고 싶습니다!:대화 종료")) {
-	case 1:
-		if ((BaseJob == Job_Novice) || (BaseJob == Job_Super_Novice)) {
-			mes "[크루아 군 장교]";
-			mes "기욤 군대에 맞서 싸우기 위해 우리와 함께하겠다는 당신의 의지는 매우 기쁘지만, 유감스럽게도 당신처럼 경험이 부족한 신병을 잔혹한 전장으로 보낼 수는 없습니다.";
-		}
-		else {
-			if (BaseLevel < 80) {
-				mes "[크루아 군 장교]";
-				mes "기욤 군대에 맞서 싸우기 위해 우리와 함께하겠다는 당신의 의지는 매우 기쁘지만, 유감스럽게도 당신처럼 경험이 부족한 신병을 잔혹한 전장으로 보낼 수는 없습니다.";
-			}
-			else {
-				set .@chk_urtime,checkquest(2069,PLAYTIME);
-				if (.@chk_urtime == 1) {
-					mes "[크루아 군 장교]";
-					mes "당신은 방금 전장에서 돌아온 것 같군요.";
-					mes "아직 돌아가기엔 너무 이르다. 가서 쉬어라. 적들은 우리에게 맡기고.";
-				}
-				else {
-					if (.@chk_urtime == 2)
-						erasequest 2069;
-					set .@mapcount,getmapusers("bat_a02");
-					if (.@mapcount > 0) {
-						mes "[크루아 군 장교]";
-						mes "이미 정예 부대가 기욤과 싸우는 전장에 파견되었다는 보고를 받았습니다.";
-						mes "잠시 기다리시는 게 어떠세요? 그동안 무기를 갈고 필요한 물품을 준비해 두시는 게 좋겠습니다.";
-					}
-					else {
-						if ($@TierraBG2) {
-							mes "[크루아 군 장교]";
-							mes "정예 부대가 이미 전장으로 파견될 준비를 마쳤습니다.";
-							mes "잠시 기다리시는 게 어떠세요? 그동안 무기를 갈고 필요한 물품을 준비해 두시는 게 좋겠습니다.";
-						}
-						else {
-							mes "[크루아 군 장교]";
-							mes "당신은 확실히 전투 준비가 된 것 같군요!";
-							mes "기욤 형제에게 진정한 공포가 무엇인지 보여주러 가라!";
-							mes "오늘, 우리의 승리의 함성이 전장 곳곳에 울려 퍼질 것이다!";
-							close2;
-							warp "bat_room",114,207;
-							end;
-						}
-					}
-				}
-			}
-		}
-		break;
-	case 2:
-		mes "[크루아 군 장교]";
-		mes "오늘 우리는 승리할 것이다!";
-		break;
-	}
-	close;
-}
