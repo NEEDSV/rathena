@@ -13,7 +13,6 @@ SkillLuxAnima::SkillLuxAnima() : SkillImpl(RK_LUXANIMA) {
 }
 
 void SkillLuxAnima::castendNoDamageId(block_list* src, block_list* target, uint16 skill_lv, t_tick tick, int32& flag) const {
-#ifdef NEED_2017_SKILL_BEHAVIOR
 	static constexpr sc_type runes[] = {
 		SC_MILLENNIUMSHIELD,
 		SC_REFRESH,
@@ -55,11 +54,4 @@ void SkillLuxAnima::castendNoDamageId(block_list* src, block_list* target, uint1
 			clif_skill_nodamage(src, *src, getSkillId(), skill_lv);
 		}
 	}
-#else
-	sc_type type = skill_get_sc(getSkillId());
-
-	status_change_clear_buffs(target, SCCB_LUXANIMA); // For bonus_script
-	sc_start(src, target, type, 100, skill_lv, skill_get_time(getSkillId(), skill_lv));
-	clif_skill_nodamage(src, *target, getSkillId(), skill_lv);
-#endif
 }

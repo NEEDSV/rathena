@@ -19,7 +19,7 @@ void SkillSpellFist::castendNoDamageId(block_list *src, block_list *target, uint
 
 	if (sd) {
 		if (sd->skill_id_old != 0 && sd->skill_lv_old != 0) {
-			sc_start4(src, src, skill_get_sc(getSkillId()), 100, skill_lv, sd->skill_id_old, sd->skill_lv_old, 0, skill_get_time(getSkillId(), skill_lv));
+			sc_start4(src, src, skill_get_sc(getSkillId()), 100, skill_lv + 1, skill_lv, sd->skill_id_old, sd->skill_lv_old, skill_get_time(getSkillId(), skill_lv));
 		}
 		sd->skill_id_old = sd->skill_lv_old = 0;
 	}

@@ -15,9 +15,7 @@ SkillTigerCannon::SkillTigerCannon() : WeaponSkillImpl(SR_TIGERCANNON) {
 
 void SkillTigerCannon::calculateSkillRatio(const Damage *wd, const block_list *src, const block_list *target, uint16 skill_lv, int32 &skillratio, int32 mflag) const {
 	const status_data* sstatus = status_get_status_data(*src);
-	const status_change *sc = status_get_sc(src);
 
-#ifdef NEED_2017_SKILL_FORMULA
 	// 2017: HP/SP factor = abs(hp_rate)/abs(sp_rate), which equals (10 + 2*lv) / (5 + lv).
 	// 2026 skill_db has no HpRateCost/SpRateCost for Tiger Cannon, so skill_get_hp_rate/sp_rate
 	// return 0 here; use the explicit 2017 rate formula instead. No SC_GT_REVITALIZE bonus in 2017.
@@ -31,21 +29,6 @@ void SkillTigerCannon::calculateSkillRatio(const Damage *wd, const block_list *s
 		// Base_Damage = [((Caster consumed HP + SP) / 4) x Caster Base Level / 100] %
 		skillratio += -100 + (hp + sp) / 4;
 	RE_LVL_DMOD(100);
-#else
-	uint32 hp = sstatus->max_hp * (10 + (skill_lv * 2)) / 100;
-	uint32 sp = sstatus->max_sp * (5 + skill_lv) / 100;
-
-	if (wd->miscflag&8)
-		// Base_Damage = [((Caster consumed HP + SP) / 2) x Caster Base Level / 100] %
-		skillratio += -100 + (hp + sp) / 2;
-	else
-		// Base_Damage = [((Caster consumed HP + SP) / 4) x Caster Base Level / 100] %
-		skillratio += -100 + (hp + sp) / 4;
-	RE_LVL_DMOD(100);
-
-	if (sc != nullptr && sc->hasSCE(SC_GT_REVITALIZE))
-		skillratio += skillratio * 30 / 100;
-#endif
 }
 
 void SkillTigerCannon::castendDamageId(block_list *src, block_list *target, uint16 skill_lv, t_tick tick, int32& flag) const {

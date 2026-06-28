@@ -1907,17 +1907,13 @@ int64 battle_calc_damage(block_list *src,block_list *bl,struct Damage *d,int64 d
 			skill_castend_damage_id(bl,src,MH_MAGMA_FLOW,sce->val1,gettick(),0);
 
 		if( damage > 0 && (sce = tsc->getSCE(SC_STONEHARDSKIN)) ) {
-#ifdef NEED_2017_SKILL_BEHAVIOR
 			sce->val2 -= static_cast<int32>(cap_value(damage, INT_MIN, INT_MAX));
-#endif
 			if( src->type == BL_MOB ) //using explicit call instead break_equip for duration
 				sc_start(src,src, SC_STRIPWEAPON, 30, 0, skill_get_time2(RK_STONEHARDSKIN, sce->val1));
 			else if (flag&(BF_WEAPON|BF_SHORT))
 				skill_break_equip(src,src, EQP_WEAPON, 3000, BCT_SELF);
-#ifdef NEED_2017_SKILL_BEHAVIOR
 			if (sce->val2 <= 0)
 				status_change_end(bl, SC_STONEHARDSKIN);
-#endif
 		}
 
 		if (src->type == BL_PC && tsc->getSCE(SC_GVG_GOLEM)) {
@@ -1989,23 +1985,19 @@ int64 battle_calc_damage(block_list *src,block_list *bl,struct Damage *d,int64 d
 		if ((sce = sc->getSCE(SC_BLOODLUST)) && flag & BF_WEAPON && damage > 0 && rnd_chance(sce->val3, 100))
 			status_heal(src, damage * sce->val4 / 100, 0, 1);
 
-		if ((sce = sc->getSCE(SC_BLOODSUCKER)) && flag & BF_WEAPON && damage > 0 && rnd() % 100 < (2 * sce->val1 - 1))
-			status_heal(src, damage * sce->val1 / 100, 0, 3);
-
 		if (flag&BF_MAGIC && bl->type == BL_PC && sc->getSCE(SC_GVG_GIANT) && sc->getSCE(SC_GVG_GIANT)->val4)
 			damage += damage * sc->getSCE(SC_GVG_GIANT)->val4 / 100;
 
+		/* Self Buff that destroys the armor of any target hit with melee or ranged physical attacks */
+		if (flag&BF_WEAPON && (sce = sc->getSCE(SC_SHIELDSPELL_REF)) && sce->val1 == 1) {
+			skill_break_equip(src, bl, EQP_ARMOR, 10000, BCT_ENEMY); // 100% chance
+			status_change_end(src, SC_SHIELDSPELL_REF);
+		}
+
 		if (sc->getSCE(SC_POISONINGWEAPON) && damage > 0) {
-#ifdef NEED_2017_SKILL_BEHAVIOR
+			// 2017: Poisoning Weapon applies the stored poison on normal attacks and Venom Pressure (no BF_SHORT +10% bonus).
 			if ((flag & BF_WEAPON) && (!skill_id || skill_id == GC_VENOMPRESSURE) && rnd() % 100 < sc->getSCE(SC_POISONINGWEAPON)->val3)
 				sc_start4(src, bl, (sc_type)sc->getSCE(SC_POISONINGWEAPON)->val2, 100, sc->getSCE(SC_POISONINGWEAPON)->val1, 0, 1, 0, skill_get_time2(GC_POISONINGWEAPON, 1));
-#else
-			if (flag & BF_SHORT) {
-				damage += damage * 10 / 100;
-				if (rnd() % 100 < sc->getSCE(SC_POISONINGWEAPON)->val3)
-					sc_start4(src, bl, (sc_type)sc->getSCE(SC_POISONINGWEAPON)->val2, 100, sc->getSCE(SC_POISONINGWEAPON)->val1, 0, 1, 0, (sc->getSCE(SC_POISONINGWEAPON)->val2 == SC_VENOMBLEED ? skill_get_time2(GC_POISONINGWEAPON, 1) : skill_get_time2(GC_POISONINGWEAPON, 2)));
-			}
-#endif
 		}
 
 		if( sc->getSCE(SC__DEADLYINFECT) && (flag&(BF_SHORT|BF_MAGIC)) == BF_SHORT && damage > 0 && rnd()%100 < 30 + 10 * sc->getSCE(SC__DEADLYINFECT)->val1 )
@@ -3228,12 +3220,10 @@ static std::bitset<NK_MAX> battle_skill_get_damage_properties(uint16 skill_id, i
 			return 0;
 	} else {
 		std::bitset<NK_MAX> nk = skill_db.find(skill_id)->nk;
-#ifdef NEED_2017_SKILL_BEHAVIOR
 		if (skill_id == RK_DRAGONBREATH || skill_id == RK_DRAGONBREATH_WATER) {
 			nk.set(NK_IGNOREATKCARD);
 			nk.reset(NK_SIMPLEDEFENSE);
 		}
-#endif
 		return nk;
 	}
 }
@@ -3363,13 +3353,6 @@ static bool attack_ignores_def(Damage* wd, block_list *src, const block_list *ta
 
 	if( sd != nullptr ){
 		switch( skill_id ){
-#ifndef NEED_2017_SKILL_BEHAVIOR
-			case RK_WINDCUTTER:
-				if( sd->status.weapon == W_2HSWORD ){
-					return true;
-				}
-				break;
-#endif
 			case NW_THE_VIGILANTE_AT_NIGHT:
 				if( sd->status.weapon == W_GATLING ){
 					return true;
@@ -4102,24 +4085,10 @@ static void battle_calc_skill_base_damage(struct Damage* wd, block_list *src,blo
 		case RK_DRAGONBREATH_WATER:
 			{
 				int32 damagevalue = (sstatus->hp / 50 + status_get_max_sp(src) / 4) * skill_lv;
-#ifdef NEED_2017_SKILL_FORMULA
 				if(status_get_lv(src) > 100)
 					damagevalue = damagevalue * status_get_lv(src) / 150;
 				if(sd)
 					damagevalue = damagevalue * (100 + 5 * (pc_checkskill(sd, RK_DRAGONTRAINING) - 1)) / 100;
-#else
-				if(status_get_lv(src) > 100)
-					damagevalue = damagevalue * status_get_lv(src) / 100;
-				if(sd) {
-					if (pc_checkskill( sd, DK_DRAGONIC_AURA ) >= 1) {
-						damagevalue = damagevalue * (90 + 10 * pc_checkskill( sd, RK_DRAGONTRAINING ) + sstatus->pow / 5 ) / 100;
-					} else {
-						damagevalue = damagevalue * (90 + 10 * pc_checkskill( sd, RK_DRAGONTRAINING )) / 100;
-					}
-				}
-				if (sc && sc->getSCE(SC_DRAGONIC_AURA))
-					damagevalue += damagevalue * sc->getSCE(SC_DRAGONIC_AURA)->val1 * 10 / 100;
-#endif
 				ATK_ADD(wd->damage, wd->damage2, damagevalue);
 #ifdef RENEWAL
 				ATK_ADD(wd->weaponAtk, wd->weaponAtk2, damagevalue);
@@ -4693,10 +4662,6 @@ static void battle_attack_sc_bonus(struct Damage* wd, block_list *src, block_lis
 			RE_ALLATK_ADDRATE(wd, sc->getSCE(SC_GVG_GIANT)->val3);
 		}
 
-		if (skill_id == 0 && sc->getSCE(SC_EXEEDBREAK)) {
-			ATK_ADDRATE(wd->damage, wd->damage2, sc->getSCE(SC_EXEEDBREAK)->val2);
-			RE_ALLATK_ADDRATE(wd, sc->getSCE(SC_EXEEDBREAK)->val2);
-		}
 		if (sc->getSCE(SC_PYREXIA) && sc->getSCE(SC_PYREXIA)->val3 == 0 && skill_id == 0) {
 			ATK_ADDRATE(wd->damage, wd->damage2, sc->getSCE(SC_PYREXIA)->val2);
 			RE_ALLATK_ADDRATE(wd, sc->getSCE(SC_PYREXIA)->val2);
@@ -5283,6 +5248,13 @@ static void battle_calc_weapon_final_atk_modifiers(struct Damage* wd, block_list
 			status_change_end(src, SC_CAMOUFLAGE);
 	}
 
+	// 2017: Ray of Genesis adds magic attack damage on top of the weapon hit.
+	if (skill_id == LG_RAYOFGENESIS) {
+		struct Damage md = battle_calc_magic_attack(src, target, skill_id, skill_lv, wd->miscflag);
+
+		wd->damage += md.damage;
+	}
+
 #ifndef RENEWAL
 	if (skill_id == ASC_BREAKER) { //Breaker's int-based damage (a misc attack?)
 		struct Damage md = battle_calc_misc_attack(src, target, skill_id, skill_lv, wd->miscflag);
@@ -5562,11 +5534,7 @@ static struct Damage battle_calc_weapon_attack(block_list *src, block_list *targ
 			}
 			// Apply P.ATK mod
 			// But for Dragonbreaths it only applies if Dragonic Aura is skilled
-#ifdef NEED_2017_SKILL_FORMULA
 			if (skill_id != RK_DRAGONBREATH && skill_id != RK_DRAGONBREATH_WATER) {
-#else
-			if( ( skill_id != RK_DRAGONBREATH && skill_id != RK_DRAGONBREATH_WATER ) || pc_checkskill( sd, DK_DRAGONIC_AURA ) > 0 ){
-#endif
 				wd.damage = (int64)floor( (float)( wd.damage * ( 100 + sstatus->patk ) / 100 ) );
 				if( is_attack_left_handed( src, skill_id ) ){
 					wd.damage2 = (int64)floor( (float)( wd.damage2 * ( 100 + sstatus->patk ) / 100 ) );
@@ -5668,9 +5636,7 @@ static struct Damage battle_calc_weapon_attack(block_list *src, block_list *targ
 #ifdef RENEWAL
 		// add any miscellaneous player ATK bonuses
 		if( sd && skill_id
-#ifdef NEED_2017_SKILL_BEHAVIOR
 			&& skill_id != RK_DRAGONBREATH && skill_id != RK_DRAGONBREATH_WATER
-#endif
 			&& (i = pc_skillatk_bonus(sd, skill_id))) {
 			ATK_ADDRATE(wd.damage, wd.damage2, i);
 			RE_ALLATK_ADDRATE(&wd, i);
@@ -6603,6 +6569,10 @@ struct Damage battle_calc_misc_attack(block_list *src,block_list *target,uint16 
 		case GN_THORNS_TRAP:
 			md.damage = 100 + 200 * skill_lv + status_get_int(src);
 			break;
+		case GN_HELLS_PLANT_ATK:
+			// 2017: [{( Hell Plant Lv x Caster Base Level ) x 10 } + {( Caster INT x 7 ) / 2 } x { 18 + ( Caster Job Level / 4 )] x ( 5 / ( 10 - Cannibalize Level ))
+			md.damage = skill_lv * status_get_lv(src) * 10 + status_get_int(src) * 7 / 2 * (18 + (sd ? sd->status.job_level : 0) / 4) * 5 / (10 - (sd ? pc_checkskill(sd, AM_CANNIBALIZE) : 0));
+			break;
 		case RL_B_TRAP:
 			// kRO 2014-02-12: Damage: Caster's DEX, Target's current HP, Skill Level
 			md.damage = status_get_dex(src) * 10 + (skill_lv * 3 * status_get_hp(target)) / 100;
@@ -6906,7 +6876,12 @@ int64 battle_calc_return_damage(block_list* tbl, block_list *src, int64 *dmg, in
 					rdamage += rd1 * 70 / 100; // Target receives 70% of the amplified damage. [Rytech]
 				}
 			}
-#ifdef NEED_2017_SKILL_BEHAVIOR
+
+			status_change_entry *sce_ss = tsc->getSCE(SC_SHIELDSPELL_DEF);
+			if( sce_ss && sce_ss->val1 == 2 && !status_bl_has_mode(src,MD_STATUSIMMUNE) ){
+				rdamage += damage * sce_ss->val2 / 100;
+				if (rdamage < 1) rdamage = 1;
+			}
 			// 2017: Reflect Damage bounces back a % of the melee damage to the attacker, limited by a reflect count.
 			if (tsc->getSCE(SC_REFLECTDAMAGE) && !skill_get_inf2(skill_id, INF2_ISTRAP)) {
 				if (rnd() % 100 <= tsc->getSCE(SC_REFLECTDAMAGE)->val1 * 10 + 30) {
@@ -6915,7 +6890,6 @@ int64 battle_calc_return_damage(block_list* tbl, block_list *src, int64 *dmg, in
 						status_change_end(tbl, SC_REFLECTDAMAGE);
 				}
 			}
-#endif
 		}
 	} else {
 		if (!status_reflect && tsd && tsd->bonus.long_weapon_damage_return) {
@@ -6948,11 +6922,6 @@ int64 battle_calc_return_damage(block_list* tbl, block_list *src, int64 *dmg, in
 	}
 
 	if (sc) {
-#ifndef NEED_2017_SKILL_BEHAVIOR
-		if (status_reflect && sc->getSCE(SC_REFLECTDAMAGE)) {
-			reduce += sc->getSCE(SC_REFLECTDAMAGE)->val2;
-		}
-#endif
 		if (sc->getSCE(SC_VENOMBLEED) && sc->getSCE(SC_VENOMBLEED)->val3 == 0) {
 			reduce += sc->getSCE(SC_VENOMBLEED)->val2;
 		}
@@ -7403,12 +7372,16 @@ enum damage_lv battle_weapon_attack(block_list* src, block_list* target, t_tick 
 		vellum_damage = true;
 
 	if( sc != nullptr && !sc->empty() ) {
-		if (sc->getSCE(SC_EXEEDBREAK))
+		if (sc->getSCE(SC_EXEEDBREAK)) {
+			// 2017: next normal attack deals val2% of final physical damage, then consume.
+			if (!is_infinite_defense(target, wd.flag) && !vellum_damage)
+				wd.damage = wd.damage * sc->getSCE(SC_EXEEDBREAK)->val2 / 100;
 			status_change_end(src, SC_EXEEDBREAK);
+		}
 		if( sc->getSCE(SC_SPELLFIST) && !vellum_damage ){
-			if (status_charge(src, 0, 20)) {
+			if (--(sc->getSCE(SC_SPELLFIST)->val1) >= 0) {
 				if (!is_infinite_defense(target, wd.flag)) {
-					struct Damage ad = battle_calc_attack(BF_MAGIC, src, target, sc->getSCE(SC_SPELLFIST)->val2, sc->getSCE(SC_SPELLFIST)->val3, flag | BF_SHORT);
+					struct Damage ad = battle_calc_attack(BF_MAGIC, src, target, sc->getSCE(SC_SPELLFIST)->val3, sc->getSCE(SC_SPELLFIST)->val4, flag | BF_SHORT);
 
 					wd.damage = ad.damage;
 					DAMAGE_DIV_FIX(wd.damage, wd.div_); // Double the damage for multiple hits.
@@ -7420,12 +7393,8 @@ enum damage_lv battle_weapon_attack(block_list* src, block_list* target, t_tick 
 				status_change_end(src,SC_SPELLFIST);
 		}
 		if (sc->getSCE(SC_GIANTGROWTH) && (wd.flag&BF_SHORT) && rnd()%100 < sc->getSCE(SC_GIANTGROWTH)->val2 && !is_infinite_defense(target, wd.flag) && !vellum_damage) {
-#ifdef NEED_2017_SKILL_BEHAVIOR
 			wd.damage <<= 1; // 2017: double damage.
 			skill_break_equip(src, src, EQP_WEAPON, 10, BCT_SELF);
-#else
-			wd.damage += wd.damage * 150 / 100; // 2.5 times damage
-#endif
 		}
 
 		if( sc->getSCE( SC_VIGOR ) && ( wd.flag&BF_SHORT ) && !is_infinite_defense( target, wd.flag ) && !vellum_damage ){
@@ -7451,23 +7420,11 @@ enum damage_lv battle_weapon_attack(block_list* src, block_list* target, t_tick 
 	damage = wd.damage + wd.damage2;
 	if( damage > 0 && src != target )
 	{
-#ifdef NEED_2017_SKILL_BEHAVIOR
 		// 2017: Duple Light fires only ONE of melee/magic chosen at random (택1 발동)
 		if (sc && sc->getSCE(SC_DUPLELIGHT) && (wd.flag & BF_SHORT) && rnd() % 100 <= 10 + 2 * sc->getSCE(SC_DUPLELIGHT)->val1) {
 			uint16 sub_skill_id = (rnd() % 2 == 1) ? AB_DUPLELIGHT_MELEE : AB_DUPLELIGHT_MAGIC;
 			skill_castend_damage_id(src, target, sub_skill_id, sc->getSCE(SC_DUPLELIGHT)->val1, tick, flag | SD_LEVEL);
 		}
-#else
-		if (sc && sc->getSCE(SC_DUPLELIGHT) && (wd.flag & BF_SHORT)) { // Activates only from regular melee damage. Success chance is separate for both duple light attacks.
-			uint16 duple_rate = 10 + 2 * sc->getSCE(SC_DUPLELIGHT)->val1;
-
-			if (rand() % 100 < duple_rate)
-				skill_castend_damage_id(src, target, AB_DUPLELIGHT_MELEE, sc->getSCE(SC_DUPLELIGHT)->val1, tick, flag | SD_LEVEL);
-
-			if (rand() % 100 < duple_rate)
-				skill_castend_damage_id(src, target, AB_DUPLELIGHT_MAGIC, sc->getSCE(SC_DUPLELIGHT)->val1, tick, flag | SD_LEVEL);
-		}
-#endif
 	}
 
 	clif_damage(*src, *target, tick, wd.amotion, wd.dmotion, wd.damage, wd.div_, wd.type, wd.damage2, wd.isspdamage);
@@ -7601,7 +7558,7 @@ enum damage_lv battle_weapon_attack(block_list* src, block_list* target, t_tick 
 	}
 	if (sd) {
 		uint16 r_skill = 0, sk_idx = 0;
-		if( wd.flag&BF_WEAPON && sc && sc->getSCE(SC__AUTOSHADOWSPELL) && rnd()%100 < sc->getSCE(SC__AUTOSHADOWSPELL)->val3 &&
+		if( wd.flag&BF_SHORT && sc && sc->getSCE(SC__AUTOSHADOWSPELL) && rnd()%100 < sc->getSCE(SC__AUTOSHADOWSPELL)->val3 &&
 			(r_skill = (uint16)sc->getSCE(SC__AUTOSHADOWSPELL)->val1) && (sk_idx = skill_get_index(r_skill)) &&
 			sd->status.skill[sk_idx].id != 0 && sd->status.skill[sk_idx].flag == SKILL_FLAG_PLAGIARIZED )
 		{
@@ -8025,17 +7982,7 @@ int32 battle_check_target( const block_list* src, const block_list* target, int3
 					switch (skill_id) {
 						case RK_DRAGONBREATH:
 						case RK_DRAGONBREATH_WATER:
-#ifdef NEED_2017_SKILL_BEHAVIOR
 							return 0;
-#else
-						case NC_SELFDESTRUCTION:
-						case NC_AXETORNADO:
-						case SR_SKYNETBLOW:
-							// Can only hit traps in PVP/GVG maps
-							if (!mapdata->getMapFlag(MF_PVP) && !mapdata->getMapFlag(MF_GVG))
-								return 0;
-							break;
-#endif
 					}
 				}
 				else
@@ -8046,17 +7993,7 @@ int32 battle_check_target( const block_list* src, const block_list* target, int3
 				switch (skill_id) {
 					case RK_DRAGONBREATH:
 					case RK_DRAGONBREATH_WATER:
-#ifdef NEED_2017_SKILL_BEHAVIOR
 						return 0;
-#else
-					case NC_SELFDESTRUCTION:
-					case NC_AXETORNADO:
-					case SR_SKYNETBLOW:
-						// Can only hit icewall in PVP/GVG maps
-						if (!mapdata->getMapFlag(MF_PVP) && !mapdata->getMapFlag(MF_GVG))
-							return 0;
-						break;
-#endif
 					case HT_CLAYMORETRAP:
 						// Can't hit icewall
 						return 0;
@@ -8644,6 +8581,7 @@ static const struct _battle_data {
 	{ "skill_steal_random_options",         &battle_config.skill_steal_random_options,      0,      0,      1,              },
 	{ "motd_type",                          &battle_config.motd_type,                       0,      0,      1,              },
 	{ "exp_calc_type",                      &battle_config.exp_calc_type,                   0,      0,      2,              },
+	{ "exp_cost_inspiration",               &battle_config.exp_cost_inspiration,            1,      0,      100,            },
 	{ "exp_bonus_attacker",                 &battle_config.exp_bonus_attacker,              25,     0,      INT_MAX,        },
 	{ "exp_bonus_max_attacker",             &battle_config.exp_bonus_max_attacker,          12,     2,      INT_MAX,        },
 	{ "exp_bonus_nodamage_attacker",        &battle_config.exp_bonus_nodamage_attacker,     0,      0,      1,              },

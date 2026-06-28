@@ -20,11 +20,7 @@ void SkillLaudaAgnus::castendNoDamageId(block_list *src, block_list *target, uin
 		if( tsc && (tsc->getSCE(SC_FREEZE) || tsc->getSCE(SC_STONE) || tsc->getSCE(SC_BLIND) ||
 			tsc->getSCE(SC_BURNING) || tsc->getSCE(SC_FREEZING) || tsc->getSCE(SC_CRYSTALIZE))) {
 			// Success Chance: 2017 uses 40 + 10 * Skill Level.
-#ifdef NEED_2017_SKILL_BEHAVIOR
 			if( rnd()%100 > 40+10*skill_lv ) return;
-#else
-			if( rnd()%100 > 60+10*skill_lv ) return;
-#endif
 			status_change_end(target, SC_FREEZE);
 			status_change_end(target, SC_STONE);
 			status_change_end(target, SC_BLIND);

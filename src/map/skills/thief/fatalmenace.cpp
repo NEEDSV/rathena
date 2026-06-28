@@ -20,45 +20,27 @@ void SkillFatalMenace::modifyDamageData(Damage& dmg, const block_list& src, cons
 }
 
 void SkillFatalMenace::calculateSkillRatio(const Damage *wd, const block_list *src, const block_list *target, uint16 skill_lv, int32 &skillratio, int32 mflag) const {
-#ifdef NEED_2017_SKILL_FORMULA
 	skillratio += 100 * skill_lv;
 	RE_LVL_DMOD(100);
-#else
-	const status_data* sstatus = status_get_status_data(*src);
-	const status_change *sc = status_get_sc(src);
-
-	skillratio += 120 * skill_lv + sstatus->agi; // !TODO: What's the AGI bonus?
-
-	if( sc != nullptr && sc->getSCE( SC_ABYSS_DAGGER ) ){
-		skillratio += 30 * skill_lv;
-	}
-
-	RE_LVL_DMOD(100);
-#endif
 }
 
 void SkillFatalMenace::castendDamageId(block_list *src, block_list *target, uint16 skill_lv, t_tick tick, int32& flag) const {
 	if( flag&1 )
 		WeaponSkillImpl::castendDamageId(src, target, skill_lv, tick, flag);
 	else {
-#ifdef NEED_2017_SKILL_BEHAVIOR
 		int16 x, y;
 
 		// 2017: pick a random destination cell for the caster; targets are warped near it (applyAdditionalEffects).
 		map_search_freecell(src, 0, &x, &y, -1, -1, 0);
 		skill_area_temp[4] = x;
 		skill_area_temp[5] = y;
-#endif
 		map_foreachinrange(skill_area_sub, target, skill_get_splash(getSkillId(), skill_lv), splash_target(src), src, getSkillId(), skill_lv, tick, flag|BCT_ENEMY|1, skill_castend_damage_id);
-#ifdef NEED_2017_SKILL_BEHAVIOR
 		skill_addtimerskill(src, tick + 800, src->id, x, y, getSkillId(), skill_lv, 0, flag); // 2017: teleport the caster itself
-#endif
 		clif_skill_damage( *src, *src, tick, status_get_amotion(src), 0, DMGVAL_IGNORE, 1, getSkillId(), skill_lv, DMG_SINGLE );
 	}
 }
 
 void SkillFatalMenace::applyAdditionalEffects(block_list* src, block_list* target, uint16 skill_lv, t_tick tick, int32 attack_type, enum damage_lv dmg_lv) const {
-#ifdef NEED_2017_SKILL_BEHAVIOR
 	// 2017: each enemy that takes damage (non status-immune) is warped near the caster's destination cell.
 	// applyAdditionalEffects is only reached when dmg_lv >= ATK_DEF (damage > 0), matching the 2017 gate.
 	const status_data* tstatus = status_get_status_data(*target);
@@ -69,7 +51,6 @@ void SkillFatalMenace::applyAdditionalEffects(block_list* src, block_list* targe
 		map_search_freecell(nullptr, target->m, &x, &y, 2, 2, 1);
 		skill_addtimerskill(target, tick + 800, target->id, x, y, getSkillId(), skill_lv, 0, 0);
 	}
-#endif
 }
 
 void SkillFatalMenace::modifyHitRate(int16& hit_rate, const block_list* src, const block_list* target, uint16 skill_lv) const {

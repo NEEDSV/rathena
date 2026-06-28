@@ -15,11 +15,6 @@ void SkillDragonCombo::applyAdditionalEffects(block_list *src, block_list *targe
 }
 
 void SkillDragonCombo::calculateSkillRatio(const Damage *wd, const block_list *src, const block_list *target, uint16 skill_lv, int32 &skillratio, int32 mflag) const {
-#ifdef NEED_2017_SKILL_FORMULA
 	skillratio += 40 * skill_lv;
 	RE_LVL_DMOD(100);
-#else
-	skillratio += 100 + 80 * skill_lv;
-	RE_LVL_DMOD(100);
-#endif
 }

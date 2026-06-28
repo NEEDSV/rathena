@@ -26,11 +26,7 @@ void SkillDarkIllusion::castendDamageId(block_list *src, block_list *target, uin
 		WeaponSkillImpl::castendDamageId(src, target, skill_lv, tick, flag);
 
 		if( rnd()%100 < 4 * skill_lv ) {
-#ifdef NEED_2017_SKILL_BEHAVIOR
 			skill_attack(BF_WEAPON, src, src, target, GC_CROSSIMPACT, skill_lv, tick, flag);
-#else
-			skill_castend_damage_id(src,target,GC_CROSSIMPACT,skill_lv,tick,flag);
-#endif
 		}
 	}
 }

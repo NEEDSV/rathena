@@ -16,8 +16,8 @@ void SkillColdBolt::calculateSkillRatio(const Damage *wd, const block_list *src,
 			base_skillratio *= 5;
 
 		if (sc->getSCE(SC_SPELLFIST) && mflag & BF_SHORT) {
-			base_skillratio += (sc->getSCE(SC_SPELLFIST)->val3 * 100) + (sc->getSCE(SC_SPELLFIST)->val1 * 50 - 50) - 100;
-			// val3 = used bolt level, val1 = used spellfist level. [Rytech]
+			base_skillratio += (sc->getSCE(SC_SPELLFIST)->val4 * 100) + (sc->getSCE(SC_SPELLFIST)->val1 * 50) - 100;
+			// 2017: val4 = used bolt level, val1 = remaining hit counter.
 		}
 	}
 }

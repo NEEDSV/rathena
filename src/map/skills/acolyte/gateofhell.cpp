@@ -18,8 +18,4 @@ void SkillGateOfHell::calculateSkillRatio(const Damage *wd, const block_list *sr
 	else
 		skillratio += -100 + 500 * skill_lv;
 	RE_LVL_DMOD(100);
-#ifndef NEED_2017_SKILL_FORMULA
-		if (sc->getSCE(SC_GT_REVITALIZE))
-		skillratio += skillratio * 30 / 100;
-#endif
 }

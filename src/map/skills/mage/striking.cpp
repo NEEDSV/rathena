@@ -3,6 +3,8 @@
 
 #include "striking.hpp"
 
+#include <config/core.hpp>
+
 #include "map/battle.hpp"
 #include "map/clif.hpp"
 #include "map/pc.hpp"
@@ -23,8 +25,12 @@ void SkillStriking::castendNoDamageId(block_list *src, block_list *target, uint1
 			int16 index = dstsd->equip_index[EQI_HAND_R];
 
 			if (index >= 0 && dstsd->inventory_data[index] && dstsd->inventory_data[index]->type == IT_WEAPON)
-				bonus = (20 * skill_lv) * dstsd->inventory_data[index]->weapon_level;
+				bonus = (8 + 2 * skill_lv) * dstsd->inventory_data[index]->weapon_level;
 		}
+
+		// 2017: Striking also adds a flat ATK bonus from the caster's endow skill levels.
+		if (sd)
+			bonus += (pc_checkskill(sd, SA_FLAMELAUNCHER) + pc_checkskill(sd, SA_FROSTWEAPON) + pc_checkskill(sd, SA_LIGHTNINGLOADER) + pc_checkskill(sd, SA_SEISMICWEAPON)) * 5;
 
 		clif_skill_nodamage(src, *target, getSkillId(), skill_lv, sc_start2(src,target, type, 100, skill_lv, bonus, skill_get_time(getSkillId(), skill_lv)));
 	} else if (sd)

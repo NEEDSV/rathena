@@ -11,7 +11,6 @@ SkillFiringTrap::SkillFiringTrap() : SkillImpl(RA_FIRINGTRAP) {
 }
 
 void SkillFiringTrap::applyAdditionalEffects(block_list *src, block_list *target, uint16 skill_lv, t_tick tick, int32 attack_type, enum damage_lv dmg_lv) const {
-#ifdef NEED_2017_SKILL_BEHAVIOR
 	// 2017: Burning is mutually exclusive with Freezing. status_change_start
 	// rejected the Burning application while the target was already Freezing.
 	// 2026 dropped that cross-block (status_db Fail no longer lists it), so
@@ -19,7 +18,6 @@ void SkillFiringTrap::applyAdditionalEffects(block_list *src, block_list *target
 	const status_change* tsc = status_get_sc(target);
 	if (tsc && tsc->getSCE(SC_FREEZING))
 		return;
-#endif
 	sc_start4(src, target, SC_BURNING, 50 + skill_lv * 10, skill_lv, 1000, src->id, 0, skill_get_time2(getSkillId(), skill_lv));
 }
 

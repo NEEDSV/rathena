@@ -17,8 +17,9 @@ SkillHellsPlantAttack::SkillHellsPlantAttack() : SkillImplRecursiveDamageSplash(
 }
 
 void SkillHellsPlantAttack::applyAdditionalEffects(block_list *src, block_list *target, uint16 skill_lv, t_tick tick, int32 attack_type, enum damage_lv dmg_lv) const {
-	sc_start(src,target, SC_STUN,  20 + 10 * skill_lv, skill_lv, skill_get_time(getSkillId(), skill_lv));
-	sc_start2(src,target, SC_BLEEDING, 5 + 5 * skill_lv, skill_lv, src->id,skill_get_time(getSkillId(), skill_lv));
+	// 2017: stun/bleeding duration uses Duration2 (skill_get_time2).
+	sc_start(src,target, SC_STUN,  20 + 10 * skill_lv, skill_lv, skill_get_time2(getSkillId(), skill_lv));
+	sc_start2(src,target, SC_BLEEDING, 5 + 5 * skill_lv, skill_lv, src->id,skill_get_time2(getSkillId(), skill_lv));
 }
 
 void SkillHellsPlantAttack::calculateSkillRatio(const Damage *wd, const block_list *src, const block_list *target, uint16 skill_lv, int32 &skillratio, int32 mflag) const {

@@ -24,7 +24,6 @@ void SkillSoundOfDestruction::castendPos2(block_list *src, int32 x, int32 y, uin
 }
 
 void SkillSoundOfDestruction::castendDamageId(block_list *src, block_list *target, uint16 skill_lv, t_tick tick, int32& flag) const {
-#ifdef NEED_2017_SKILL_BEHAVIOR
 	// 2017: chance to stun the target and strip all performance (song/dance/chorus) states.
 	status_change *tsc = status_get_sc(target);
 	map_session_data* sd = BL_CAST(BL_PC, src);
@@ -66,8 +65,4 @@ void SkillSoundOfDestruction::castendDamageId(block_list *src, block_list *targe
 		status_change_end(target, SC_BEYONDOFWARCRY);
 		status_change_end(target, SC_UNLIMITEDHUMMINGVOICE);
 	}
-#else
-	sc_type type = skill_get_sc(getSkillId());
-	sc_start(src, target, type, 100, skill_lv, skill_get_time(getSkillId(), skill_lv));
-#endif
 }

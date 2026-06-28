@@ -19,28 +19,14 @@ void SkillAdoramus::applyAdditionalEffects(block_list *src, block_list *target, 
 }
 
 void SkillAdoramus::calculateSkillRatio(const Damage *wd, const block_list *src, const block_list *target, uint16 skill_lv, int32 &skillratio, int32 mflag) const {
-#ifdef NEED_2017_SKILL_FORMULA
 	skillratio += 400 + 100 * skill_lv;
-#else
-	skillratio += -100 + 300 + 250 * skill_lv;
-#endif
 	RE_LVL_DMOD(100);
 }
 
 int64 SkillAdoramus::splashDamage(block_list* src, block_list* target, uint16 skill_lv, t_tick tick, int32 flag) const {
-#ifndef NEED_2017_SKILL_BEHAVIOR
-	if (map_getcell(target->m, target->x, target->y, CELL_CHKLANDPROTECTOR))
-		return 0; // No damage should happen if the target is on Land Protector
-#endif
 
 	return SkillImplRecursiveDamageSplash::splashDamage(src, target, skill_lv, tick, flag);
 }
 
 void SkillAdoramus::modifyElement(const Damage& dmg, const block_list& src, const block_list& target, uint16 skill_lv, int32& element, int32 flag) const {
-#ifndef NEED_2017_SKILL_BEHAVIOR
-	const status_change* sc = status_get_sc(&src);
-
-	if (sc != nullptr && sc->hasSCE(SC_ANCILLA))
-		element = ELE_NEUTRAL;
-#endif
 }

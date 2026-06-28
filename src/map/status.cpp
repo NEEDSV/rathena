@@ -3230,11 +3230,7 @@ static int32 status_get_hpbonus(block_list *bl, enum e_status_bonus type) {
 			if(sc->getSCE(SC_FORCEOFVANGUARD))
 				bonus += (3 * sc->getSCE(SC_FORCEOFVANGUARD)->val1);
 			if(sc->getSCE(SC_INSPIRATION))
-#ifdef NEED_2017_SKILL_BEHAVIOR
 				bonus += (600 * sc->getSCE(SC_INSPIRATION)->val1);
-#else
-				bonus += (4 * sc->getSCE(SC_INSPIRATION)->val1);
-#endif
 			if(sc->getSCE(SC_RAISINGDRAGON))
 				bonus += sc->getSCE(SC_RAISINGDRAGON)->val1;
 			if(sc->getSCE(SC_GT_REVITALIZE))
@@ -4768,15 +4764,8 @@ int32 status_calc_pc_sub(map_session_data* sd, uint8 opt)
 	if ((skill = pc_checkskill(sd, AB_EUCHARISTICA)) > 0) {
 		sd->right_weapon.addrace[RC_DEMON] += skill;
 		sd->right_weapon.addele[ELE_DARK] += skill;
-#ifdef NEED_2017_SKILL_BEHAVIOR
 		sd->left_weapon.addrace[RC_DEMON] += skill;
 		sd->left_weapon.addele[ELE_DARK] += skill;
-#else
-		if( !battle_config.left_cardfix_to_right ){
-			sd->left_weapon.addrace[RC_DEMON] += skill;
-			sd->left_weapon.addele[ELE_DARK] += skill;
-		}
-#endif
 		sd->indexed_bonus.magic_addrace[RC_DEMON] += skill;
 		sd->indexed_bonus.magic_addele[ELE_DARK] += skill;
 		sd->indexed_bonus.subrace[RC_DEMON] += skill;
@@ -5505,9 +5494,7 @@ void status_calc_regen_rate(block_list *bl, struct regen_data *regen, status_cha
 		sc->getSCE(SC_EXTREMITYFIST) && (!sc->getSCE(SC_SPIRIT) || sc->getSCE(SC_SPIRIT)->val2 != SL_MONK)) ||
 #endif
 		(sc->getSCE(SC_OBLIVIONCURSE) && sc->getSCE(SC_OBLIVIONCURSE)->val3 == 1)
-#ifdef NEED_2017_SKILL_BEHAVIOR
 		|| sc->getSCE(SC_VITALITYACTIVATION)
-#endif
 		)
 		regen->flag &= ~RGN_SP;
 
@@ -6872,11 +6859,7 @@ static uint16 status_calc_str(block_list *bl, status_change *sc, int32 str)
 	if(sc->getSCE(SC_SPIRIT) && sc->getSCE(SC_SPIRIT)->val2 == SL_HIGH)
 		str += ((sc->getSCE(SC_SPIRIT)->val3)>>16)&0xFF;
 	if(sc->getSCE(SC_GIANTGROWTH))
-#ifdef NEED_2017_SKILL_BEHAVIOR
 		str += 30;
-#else
-		str += sc->getSCE(SC_GIANTGROWTH)->val2;
-#endif
 	if(sc->getSCE(SC_BEYONDOFWARCRY))
 		str -= sc->getSCE(SC_BEYONDOFWARCRY)->val2;
 	if(sc->getSCE(SC_INSPIRATION))
@@ -7461,6 +7444,10 @@ static uint16 status_calc_watk(block_list *bl, status_change *sc, int32 watk)
 		watk += sc->getSCE(SC_FIGHTINGSPIRIT)->val1;
 	if (sc->getSCE(SC_SHIELDSPELL_ATK))
 		watk += sc->getSCE(SC_SHIELDSPELL_ATK)->val2;
+	if (sc->getSCE(SC_SHIELDSPELL_DEF) && sc->getSCE(SC_SHIELDSPELL_DEF)->val1 == 3)
+		watk += sc->getSCE(SC_SHIELDSPELL_DEF)->val2;
+	if(sc->getSCE(SC_BANDING) && sc->getSCE(SC_BANDING)->val2 > 1)
+		watk += (10 + 10 * sc->getSCE(SC_BANDING)->val1) * sc->getSCE(SC_BANDING)->val2;
 	if(sc->getSCE(SC_INSPIRATION))
 		watk += sc->getSCE(SC_INSPIRATION)->val2;
 	if(sc->getSCE(SC_GT_CHANGE))
@@ -7610,7 +7597,7 @@ static int16 status_calc_critical(block_list *bl, status_change *sc, int32 criti
 		critical += (2 + sc->getSCE(SC_TWOHANDQUICKEN)->val1) * 10;
 #endif
 	if (sc->getSCE(SC__INVISIBILITY))
-		critical += sc->getSCE(SC__INVISIBILITY)->val3 * 10;
+		critical += critical * sc->getSCE(SC__INVISIBILITY)->val3 / 100;
 	if (sc->getSCE(SC__UNLUCKY))
 		critical -= sc->getSCE(SC__UNLUCKY)->val2;
 	if (sc->getSCE(SC_SOULSHADOW))
@@ -7908,8 +7895,10 @@ static defType status_calc_def(block_list *bl, status_change *sc, int32 def)
 		def += def * sc->getSCE(SC_NEUTRALBARRIER)->val2 / 100;
 	if( sc->getSCE(SC_PRESTIGE) )
 		def += sc->getSCE(SC_PRESTIGE)->val3;
+	if( sc->getSCE(SC_SHIELDSPELL_REF) && sc->getSCE(SC_SHIELDSPELL_REF)->val1 == 2 )
+		def += sc->getSCE(SC_SHIELDSPELL_REF)->val2;
 	if( sc->getSCE(SC_BANDING) && sc->getSCE(SC_BANDING)->val2 > 1 )
-		def += 6 * sc->getSCE(SC_BANDING)->val1;
+		def += (5 + sc->getSCE(SC_BANDING)->val1) * sc->getSCE(SC_BANDING)->val2 / 10;
 	if( sc->getSCE(SC_ECHOSONG) )
 		def += sc->getSCE(SC_ECHOSONG)->val3;
 	if( sc->getSCE(SC_CAMOUFLAGE) )
@@ -7965,6 +7954,8 @@ static int16 status_calc_def2(block_list *bl, status_change *sc, int32 def2)
 
 	if(sc->getSCE(SC_SUN_COMFORT))
 		def2 += sc->getSCE(SC_SUN_COMFORT)->val2;
+	if( sc->getSCE(SC_BANDING) && sc->getSCE(SC_BANDING)->val2 > 1 )
+		def2 += (5 + sc->getSCE(SC_BANDING)->val1) * sc->getSCE(SC_BANDING)->val2;
 #ifdef RENEWAL
 	if (sc->getSCE(SC_SKA))
 		def2 += 80;
@@ -9999,6 +9990,8 @@ t_tick status_get_sc_def(const block_list* src, const block_list* bl, sc_type ty
 		else if (sc->getSCE(SC_SIEGFRIED))
 			sc_def += sc->getSCE(SC_SIEGFRIED)->val3*100; // Status resistance.
 #endif
+		else if (sc->getSCE(SC_SHIELDSPELL_REF) && sc->getSCE(SC_SHIELDSPELL_REF)->val1 == 2)
+			sc_def += sc->getSCE(SC_SHIELDSPELL_REF)->val3*100; // Status resistance.
 		else if (sc->getSCE(SC_LEECHESEND) && sc->getSCE(SC_LEECHESEND)->val3 == 0) {
 			switch (type) {
 				case SC_BLIND:
@@ -10810,9 +10803,7 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 				status_change_end(bl, SC_SPIRIT);
 			break;
 		case SC_INCREASEAGI:
-#ifdef NEED_2017_SKILL_BEHAVIOR
 			status_change_end(bl, SC_DECREASEAGI);
-#endif
 			if(sc->getSCE(SC_SPIRIT) && sc->getSCE(SC_SPIRIT)->val2 == SL_HIGH)
 				status_change_end(bl, SC_SPIRIT);
 			break;
@@ -10946,9 +10937,7 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 				sc_start(src, bl, SC_BLIND, 1000, val1, skill_get_time(scdb->skill_id, val1));
 				if (sc->getSCE(SC_ADORAMUS))
 					return false; //Adoramus can't refresh itself, but it can cause blind again
-#ifdef NEED_2017_SKILL_BEHAVIOR
 				status_change_end(bl, SC_DECREASEAGI);
-#endif
 			}
 			val2 = 2 + val1; // Agi change
 			break;
@@ -11014,15 +11003,11 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 		case SC_MAGICROD:
 			val2 = val1*20; // SP gained
 			break;
-#ifdef NEED_2017_SKILL_BEHAVIOR
 		case SC_MAGNIFICAT:
 			status_change_end(bl, SC_OFFERTORIUM);
 			break;
-#endif
 		case SC_KYRIE:
-#ifdef NEED_2017_SKILL_BEHAVIOR
 			status_change_end(bl, SC_ASSUMPTIO);
-#endif
 			if( val4 ) { // Formulas for Praefatio
 				val2 = (status->max_hp * (val1 * 2 + 10) / 100) + val4 * 2; //%Max HP to absorb
 				val3 = 6 + val1; //Hits
@@ -11310,6 +11295,10 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 		case SC_WINKCHARM:
 		case SC_VOICEOFSIREN:
 			tick_time = status_get_sc_interval(type);
+			val4 = tick - tick_time; // Remaining time
+			break;
+		case SC_BLOODSUCKER:
+			tick_time = 1000; // 2017: HP is drained every second
 			val4 = tick - tick_time; // Remaining time
 			break;
 		case SC_TOXIN:
@@ -11986,9 +11975,7 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 					return false;
 				if (sd)
 					val1 = sd->status.job_level * pc_checkskill(sd, RK_RUNEMASTERY) / 4; // DEF/MDEF Increase
-#ifdef NEED_2017_SKILL_BEHAVIOR
 				val2 = hp; // 2017: damage durability of the status.
-#endif
 			}
 			break;
 		case SC_REFRESH:
@@ -12009,11 +11996,7 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 			tick_time = 10000; // [GodLesZ] tick time
 			break;
 		case SC_GIANTGROWTH:
-#ifdef NEED_2017_SKILL_BEHAVIOR
 			val2 = 15; // 2017 double damage success rate.
-#else
-			val2 = 30; // Damage success rate and STR increase
-#endif
 			break;
 		case SC_LUXANIMA:
 			val2 = 15; // Storm Blast success %
@@ -12278,12 +12261,8 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 			val3 = 4 * val1 + min(3 * val2, 15); // !TODO: What's the Lesson bonus?
 			break;
 		case SC_REFLECTDAMAGE:
-#ifdef NEED_2017_SKILL_BEHAVIOR
 			val2 = 15 + 5 * val1; // Reflect amount
 			val3 = val1 * 5 + 25; // Number of reflects
-#else
-			val2 = 10 * val1; // Reflect reduction amount
-#endif
 			val4 = tick/1000; // Number of SP cycles (duration)
 			tick_time = 1000; // [GodLesZ] tick time
 			break;
@@ -12643,7 +12622,6 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 			val3 = 40 * val1; // magic dmg bonus
 			break;
 		case SC_OFFERTORIUM:
-#ifdef NEED_2017_SKILL_BEHAVIOR
 			status_change_end(bl, SC_MAGNIFICAT);
 			status_change_end(bl, SC_BLIND);
 			status_change_end(bl, SC_CURSE);
@@ -12661,7 +12639,6 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 			status_change_end(bl, SC_VENOMBLEED);
 			status_change_end(bl, SC_TOXIN);
 			status_change_end(bl, SC_MAGICMUSHROOM);
-#endif
 			val2 = 30 * val1; // heal power bonus
 			val3 = 100 + 20 * val1; // sp cost inc
 			break;
@@ -12679,11 +12656,9 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 			break;
 		case SC_UNLIMIT:
 			val2 = 50 * val1;
-#ifdef NEED_2017_SKILL_BEHAVIOR
 			// 2017: Unlimit also locks the caster's DEF/MDEF to 1 for the duration.
 			status_change_start(bl, bl, SC_DEFSET, 10000, 1, 0, 0, 0, tick, SCSTART_NOTICKDEF);
 			status_change_start(bl, bl, SC_MDEFSET, 10000, 1, 0, 0, 0, tick, SCSTART_NOTICKDEF);
-#endif
 			break;
 		case SC_MONSTER_TRANSFORM:
 		case SC_ACTIVE_MONSTER_TRANSFORM:
@@ -13240,6 +13215,16 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 				clif_changelook(bl,LOOK_SHIELD,0);
 				clif_changelook(bl,LOOK_CLOTHES_COLOR,vd->look[LOOK_CLOTHES_COLOR]);
 				clif_changelook(bl,LOOK_BODY2,vd->look[LOOK_BODY2]);
+				break;
+			case SC_BLOODSUCKER:
+				if (sce->val2) {
+					block_list *bsrc = map_id2bl(sce->val2);
+					if (bsrc) {
+						status_change *bsc = status_get_sc(bsrc);
+						if (bsc)
+							(bsc->bs_counter)--;
+					}
+				}
 				break;
 			case SC_STONE:
 			case SC_STONEWAIT:
@@ -14454,6 +14439,20 @@ TIMER_FUNC(status_change_timer){
 		}
 		break;
 
+	case SC_BLOODSUCKER:
+		if (sce->val4 >= 0) {
+			block_list *bsrc = map_id2bl(sce->val2); // caster
+			if (!bsrc || status_isdead(*bsrc) || bsrc->m != bl->m || distance_bl(bsrc, bl) >= 12)
+				break;
+			int64 bsdmg = is_infinite_defense(bl, BF_MISC) ? 1 : (200 + 100 * sce->val1 + status_get_int(bsrc));
+			freeLock.lock();
+			clif_damage(*bl, *bl, tick, status->amotion, status->dmotion + 200, bsdmg, 1, DMG_NORMAL, 0, false);
+			status_fix_damage(bsrc, bl, bsdmg, status->dmotion + 200, GN_BLOOD_SUCKER);
+			unit_skillcastcancel(bl, 1);
+			status_heal(bsrc, bsdmg * (5 + 5 * sce->val1) / 100, 0, 0); // 2017: caster heals 5 + 5% per level
+		}
+		break;
+
 	case SC_BLEEDING:
 		if (sce->val4 >= 0) {
 			int64 damage = rnd() % 600 + 200;
@@ -14823,11 +14822,7 @@ TIMER_FUNC(status_change_timer){
 
 	case SC_RENOVATIO:
 		if( --(sce->val4) >= 0 ) {
-#ifdef NEED_2017_SKILL_BEHAVIOR
 			int32 heal = status->max_hp * 3 / 100;
-#else
-			int32 heal = status->max_hp * (sce->val1 + 4) / 100;
-#endif
 			if( sc && sc->getSCE(SC_AKAITSUKI) && heal )
 				heal = ~heal + 1;
 			status_heal(bl, heal, 0, 3);

@@ -38,6 +38,7 @@
 #include "bomb.cpp"
 #include "boostknuckle.cpp"
 #include "callhomunculus.cpp"
+#include "bloodsucker.cpp"
 #include "cartcannon.cpp"
 #include "cartrevolution.cpp"
 #include "carttermination.cpp"
@@ -220,7 +221,7 @@ std::unique_ptr<const SkillImpl> SkillFactoryMerchant::create(const e_skill skil
 		case CR_SLIMPITCHER:
 			return std::make_unique<SkillAidCondensedPotion>();
 		case GN_BLOOD_SUCKER:
-			return std::make_unique<StatusSkillImpl>(skill_id);
+			return std::make_unique<SkillBloodSucker>();
 		case GN_CARTBOOST:
 			return std::make_unique<StatusSkillImpl>(skill_id);
 		case GN_CARTCANNON:
