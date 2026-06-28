@@ -1,7 +1,8 @@
-lasagna,175,136,4	script	환생 관리자	811,{
+lasagna,175,131,4	script	환생 관리자	811,{
 	mes "[환생 관리자]";
 	mes "환생을 통해 특별한 보상을 획득할 수 있습니다.";
 	mes "환생은 장기 성장과 수집을 위한 콘텐츠입니다.";
+	setdialogsize(300,200);
 	next;
 
 	while (true) {
@@ -12,7 +13,7 @@ lasagna,175,136,4	script	환생 관리자	811,{
 		mes "환생 조건: Base Lv." + .NeedBaseLv + " / Job Lv." + .NeedJobLv;
 		mes "소모 아이템: " + callsub(S_ItemName, .TicketItemID) + " " + .TicketAmount + "개";
 		next;
-
+		
 		.@menu = select(
 			"환생하기",
 			"환생 보상 보기",
@@ -36,9 +37,9 @@ lasagna,175,136,4	script	환생 관리자	811,{
 				close;
 
 			case 4:
-				callsub S_PreviewMenu;
-				next;
-				break;
+				mes "[환생 관리자]";
+				mes "환생 의상 미리보기는 우측 NPC를 확인해주세요.";
+				close;
 
 			case 5:
 				close;
@@ -97,6 +98,22 @@ S_DoRebirth:
 	mes "[환생 관리자]";
 	mes "환생이 완료되었습니다.";
 	mes "현재 환생 횟수: ^0055FF" + .@new_count + "회^000000";
+		if (.@new_count == .Cnt_EffectStone ||
+		.@new_count == .Cnt_UpperCostume ||
+		.@new_count == .Cnt_FootprintStone ||
+		.@new_count == .Cnt_MiddleCostume ||
+		.@new_count == .Cnt_EffectStoneTicket ||
+		.@new_count == .Cnt_LowerCostume ||
+		.@new_count == .Cnt_FootprintTicket ||
+		.@new_count == .Cnt_GarmentCostume ||
+		.@new_count == .Cnt_Aura ||
+		.@new_count == .Cnt_Title ||
+		.@new_count == .Cnt_FinalEffect) {
+
+		announce .AnnouncePrefix$ + " 축하합니다! " + strcharinfo(0) + "님이 " + .@new_count + "회 환생 구간 보상을 달성했습니다!", bc_all;
+	} else {
+		announce .AnnouncePrefix$ + " " + strcharinfo(0) + "님이 " + .@new_count + "회 환생을 달성했습니다!", bc_all;
+	}
 	next;
 
 	callsub S_GiveEveryReward, .@new_count;
@@ -411,62 +428,10 @@ S_LoadCostumeChoice:
 
 	return;
 
-S_PreviewMenu:
-	while (true) {
-		mes "[의상 미리보기]";
-		mes "각 부위별 3종 중 1종을 선택할 수 있습니다.";
-		next;
-
-		.@menu = select(
-			"100회 보상 - 상단",
-			"200회 보상 - 중단",
-			"300회 보상 - 하단",
-			"400회 보상 - 걸칠것",
-			"뒤로"
-		);
-
-		if (.@menu == 5) {
-			cutin "", 255;
-			return;
-		}
-
-		callsub S_LoadCostumeChoice, .@menu;
-
-		while (true) {
-			mes "[의상 미리보기]";
-			mes .ChoiceTitle$;
-			mes "확인할 미리보기를 선택해주세요.";
-			next;
-
-			.@sub = select(
-				"미리보기 1",
-				"미리보기 2",
-				"미리보기 3",
-				"뒤로"
-			);
-
-			if (.@sub == 4) {
-				cutin "", 255;
-				break;
-			}
-
-			.@idx = .@sub - 1;
-
-			if (.UsePreviewCutin && .ChoicePreview$[.@idx] != "") {
-				cutin .ChoicePreview$[.@idx], 2;
-			}
-
-			mes "[의상 미리보기]";
-			mes .ChoiceName$[.@idx];
-			mes "아이템: " + callsub(S_ItemName, .ChoiceItem[.@idx]);
-			next;
-		}
-	}
-
 S_ShowRewardInfo:
 	mes "[환생 보상]";
-	mes "1회마다: 의상 상자, 환생 코인, 300% 교범";
-	mes .EveryN_Count + "회마다: 3배 풍선껌";
+	mes "1회마다: 의상 상자 10개, 300% 교범 1개";
+	mes .EveryN_Count + "회마다: 3배 풍선껌 1개";
 	mes " ";
 	mes .Cnt_EffectStone + "회: 환생 전용 이펙트 스톤";
 	mes .Cnt_UpperCostume + "회: 환생 전용 희귀 의상 (상단)";
@@ -479,6 +444,7 @@ S_ShowRewardInfo:
 	mes .Cnt_Aura + "회: 환생 전용 오라";
 	mes .Cnt_Title + "회: 환생 전용 칭호";
 	mes .Cnt_FinalEffect + "회: 환생 전용 이펙트";
+	setdialogsize(300,350);
 	next;
 
 	mes "[세트 보너스]";
@@ -518,7 +484,7 @@ OnInit:
 	// 계정 단위 환생 횟수: #변수
 	// 캐릭터 단위로 변경하려면 "#NEED_REBIRTH_COUNT" -> "NEED_REBIRTH_COUNT"
 	.CountVar$ = "NEED_REBIRTH_COUNT";
-
+	.AnnouncePrefix$ = "[NEED 환생]";
 	// 구간 보상 수령 체크 변수 prefix
 	// 계정 단위: "#NEED_REBIRTH_CLAIM_"
 	// 캐릭터 단위: "NEED_REBIRTH_CLAIM_"
@@ -546,7 +512,7 @@ OnInit:
 	// ============================================================
 
 	.Every_CostumeBox_ID = 9530;       // 의상 상자 아이템 ID
-	.Every_CostumeBox_Amount = 1;
+	.Every_CostumeBox_Amount = 10;
 
 	.Every_RebirthCoin_ID = 0;      // 환생 코인 아이템 ID
 	.Every_RebirthCoin_Amount = 1;
@@ -595,10 +561,10 @@ OnInit:
 	// 고정 구간 보상 아이템
 	// ============================================================
 
-	.Item_EffectStone = 0;          // 50회 환생 전용 이펙트 스톤
+	.Item_EffectStone = 25136;          // 50회 환생 전용 이펙트 스톤
 	.Amount_EffectStone = 1;
 
-	.Item_FootprintStone = 0;       // 150회 환생 전용 발자국 이펙트 스톤
+	.Item_FootprintStone = 1001909;       // 150회 환생 전용 발자국 이펙트 스톤
 	.Amount_FootprintStone = 1;
 
 	.Item_EffectStoneTicket = 0;    // 250회 이펙트 스톤 선택권
@@ -621,14 +587,14 @@ OnInit:
 	// ============================================================
 
 	setarray .Upper_Item[0],
-		0, // 상단 의상 1 아이템 ID
-		0, // 상단 의상 2 아이템 ID
-		0; // 상단 의상 3 아이템 ID
+		20401, // 상단 의상 1 아이템 ID
+		31783, // 상단 의상 2 아이템 ID
+		31979; // 상단 의상 3 아이템 ID
 
 	setarray .Upper_Name$[0],
-		"상단 의상 1",
-		"상단 의상 2",
-		"상단 의상 3";
+		"의상 천사의 인도",
+		"의상 도람 풍선",
+		"의상 금빛 화염의 거인";
 
 	// cutin 이미지 파일명
 	// 예: rebirth_upper_01
@@ -643,14 +609,14 @@ OnInit:
 	// ============================================================
 
 	setarray .Middle_Item[0],
-		0,
-		0,
-		0;
+		420016,
+		31047,
+		410081;
 
 	setarray .Middle_Name$[0],
-		"중단 의상 1",
-		"중단 의상 2",
-		"중단 의상 3";
+		"의상 액막이 종이인형",
+		"의상 첫사랑 볼",
+		"의상 해방된 대지";
 
 	setarray .Middle_Preview$[0],
 		"rebirth_middle_01",
@@ -662,14 +628,14 @@ OnInit:
 	// ============================================================
 
 	setarray .Lower_Item[0],
-		0,
-		0,
-		0;
+		480069,
+		20522,
+		480107;
 
 	setarray .Lower_Name$[0],
-		"하단 의상 1",
-		"하단 의상 2",
-		"하단 의상 3";
+		"의상 신성한 하늘로의 초대",
+		"의상 고양이 입",
+		"의상 화염의 마스터";
 
 	setarray .Lower_Preview$[0],
 		"rebirth_lower_01",
@@ -681,14 +647,14 @@ OnInit:
 	// ============================================================
 
 	setarray .Garment_Item[0],
-		0,
-		0,
-		0;
+		480069,
+		20522,
+		480107;
 
 	setarray .Garment_Name$[0],
-		"걸칠것 의상 1",
-		"걸칠것 의상 2",
-		"걸칠것 의상 3";
+		"의상 하늘하늘한 천사의 날개",
+		"의상 영혼의 축복",
+		"의상 영광과 파멸의 쌍검";
 
 	setarray .Garment_Preview$[0],
 		"rebirth_garment_01",
@@ -696,5 +662,197 @@ OnInit:
 		"rebirth_garment_03";
 
 	waitingroom "환생 NPC",0;
+	end;
+}
+function	script	F_NEED_Rebirth_ResetCharacter	{
+	resetlvl 1;
+	StatusPoint = 0;
+	jobchange Job_Novice;
+	specialeffect2 EF_ANGEL2;
+	return;
+}
+
+
+lasagna,180,131,4	script	환생 의상 미리보기 1#rb_preview	-1,{
+	mes "[환생 의상 미리보기]";
+	mes "1번 의상 미리보기입니다.";
+	mes " ";
+	mes "상단 : ^i[" + 20401 + "] " + mesitemlink(20401);
+	mes "중단 : ^i[" + 420016 + "] " + mesitemlink(420016);
+	mes "하단 : ^i[" + 420552 + "] " + mesitemlink(420552);
+	mes "걸칠것 : ^i[" + 480069 + "] " + mesitemlink(480069);
+	setdialogsize(320,250);
+	close;
+
+OnInit:
+	.@npc_id = getnpcid(0);
+	setunitdata .@npc_id, UNPC_CLASS, JOB_ACOLYTE;
+	setunitdata .@npc_id, UNPC_SEX, SEX_FEMALE;
+	setunitdata .@npc_id, UNPC_HEADTOP, 1188;
+	setunitdata .@npc_id, UNPC_HEADMIDDLE, 2025;
+	setunitdata .@npc_id, UNPC_HEADBOTTOM, 0;
+	setunitdata .@npc_id, UNPC_ROBE, 61;
+	setunitdata .@npc_id, UNPC_HAIRSTYLE, 27;
+	setunitdata .@npc_id, UNPC_HAIRCOLOR, 6;
+	
+	.@npc_id = getnpcid(0);
+	hateffect HAT_EF_DIVINE_SKY_INVITE, true, .@npc_id;
+	end;
+}
+
+lasagna,181,131,4	script	환생 의상 미리보기 1#rb_preview2	-1,{
+	mes "[환생 의상 미리보기]";
+	mes "1번 의상 미리보기입니다.";
+	mes " ";
+	mes "상단 : ^i[" + 20401 + "] " + mesitemlink(20401);
+	mes "중단 : ^i[" + 420016 + "] " + mesitemlink(420016);
+	mes "하단 : ^i[" + 420552 + "] " + mesitemlink(420552);
+	mes "걸칠것 : ^i[" + 480069 + "] " + mesitemlink(480069);
+	setdialogsize(320,250);
+	close;
+
+OnInit:
+	.@npc_id = getnpcid(0);
+	setunitdata .@npc_id, UNPC_CLASS, JOB_ACOLYTE;
+	setunitdata .@npc_id, UNPC_SEX, SEX_MALE;
+	setunitdata .@npc_id, UNPC_HEADTOP, 1188;
+	setunitdata .@npc_id, UNPC_HEADMIDDLE, 2025;
+	setunitdata .@npc_id, UNPC_HEADBOTTOM, 0;
+	setunitdata .@npc_id, UNPC_ROBE, 61;
+	setunitdata .@npc_id, UNPC_HAIRSTYLE, 27;
+	setunitdata .@npc_id, UNPC_HAIRCOLOR, 6;
+	
+	.@npc_id = getnpcid(0);
+	hateffect HAT_EF_DIVINE_SKY_INVITE, true, .@npc_id;
+	end;
+}
+
+lasagna,189,131,4	script	환생 의상 미리보기 2#rb_preview3	-1,{
+	mes "[환생 의상 미리보기]";
+	mes "2번 의상 미리보기입니다.";
+	mes " ";
+	mes "상단 : ^i[" + 31783 + "] " + mesitemlink(31783);
+	mes "중단 : ^i[" + 31047 + "] " + mesitemlink(31047);
+	mes "하단 : ^i[" + 31251 + "] " + mesitemlink(31251);
+	mes "걸칠것 : ^i[" + 20522 + "] " + mesitemlink(20522);
+	setdialogsize(320,250);
+	close;
+
+OnInit:
+	.@npc_id = getnpcid(0);
+	setunitdata .@npc_id, UNPC_CLASS, JOB_ACOLYTE;
+	setunitdata .@npc_id, UNPC_SEX, SEX_FEMALE;
+	setunitdata .@npc_id, UNPC_HEADTOP, 1595;
+	setunitdata .@npc_id, UNPC_HEADMIDDLE, 1494;
+	setunitdata .@npc_id, UNPC_HEADBOTTOM, 1637;
+	setunitdata .@npc_id, UNPC_ROBE, 0;
+	setunitdata .@npc_id, UNPC_HAIRSTYLE, 27;
+	setunitdata .@npc_id, UNPC_HAIRCOLOR, 6;
+	
+	.@npc_id = getnpcid(0);
+	hateffect HAT_EF_C_BLESSINGS_OF_SOUL, true, .@npc_id;
+	end;
+}
+
+lasagna,190,131,4	script	환생 의상 미리보기 2#rb_preview4	-1,{
+	mes "[환생 의상 미리보기]";
+	mes "2번 의상 미리보기입니다.";
+	mes " ";
+	mes "상단 : ^i[" + 31783 + "] " + mesitemlink(31783);
+	mes "중단 : ^i[" + 31047 + "] " + mesitemlink(31047);
+	mes "하단 : ^i[" + 31251 + "] " + mesitemlink(31251);
+	mes "걸칠것 : ^i[" + 20522 + "] " + mesitemlink(20522);
+	setdialogsize(320,250);
+	close;
+
+OnInit:
+	.@npc_id = getnpcid(0);
+	setunitdata .@npc_id, UNPC_CLASS, JOB_ACOLYTE;
+	setunitdata .@npc_id, UNPC_SEX, SEX_MALE;
+	setunitdata .@npc_id, UNPC_HEADTOP, 1595;
+	setunitdata .@npc_id, UNPC_HEADMIDDLE, 1494;
+	setunitdata .@npc_id, UNPC_HEADBOTTOM, 1637;
+	setunitdata .@npc_id, UNPC_ROBE, 0;
+	setunitdata .@npc_id, UNPC_HAIRSTYLE, 27;
+	setunitdata .@npc_id, UNPC_HAIRCOLOR, 6;
+	
+	.@npc_id = getnpcid(0);
+	hateffect HAT_EF_C_BLESSINGS_OF_SOUL, true, .@npc_id;
+	end;
+}
+
+lasagna,185,131,4	script	환생 의상 미리보기 3#rb_preview6	-1,{
+	mes "[환생 의상 미리보기]";
+	mes "3번 의상 미리보기입니다.";
+	mes " ";
+	mes "상단 : ^i[" + 31979 + "] " + mesitemlink(31979);
+	mes "중단 : ^i[" + 410081 + "] " + mesitemlink(410081);
+	mes "하단 : ^i[" + 31719 + "] " + mesitemlink(31719);
+	mes "걸칠것 : ^i[" + 480107 + "] " + mesitemlink(480107);
+	setdialogsize(320,250);
+	close;
+
+OnInit:
+	.@npc_id = getnpcid(0);
+	setunitdata .@npc_id, UNPC_CLASS, JOB_KNIGHT;
+	setunitdata .@npc_id, UNPC_SEX, SEX_MALE;
+	setunitdata .@npc_id, UNPC_HEADTOP, 2309;
+	setunitdata .@npc_id, UNPC_HEADMIDDLE, 0;
+	setunitdata .@npc_id, UNPC_HEADBOTTOM, 1890;
+	setunitdata .@npc_id, UNPC_ROBE, 104;
+	setunitdata .@npc_id, UNPC_HAIRSTYLE, 27;
+	setunitdata .@npc_id, UNPC_HAIRCOLOR, 6;
+	
+	.@npc_id = getnpcid(0);
+	hateffect HAT_EF_C_Released_Ground, true, .@npc_id;
+	end;
+}
+
+lasagna,179,128,4	script	환생 이펙트/발자국#foot_test2	-1,{
+	mes "[환생 이펙트/발자국 미리보기]";
+	mes "이펙트/발자국 미리보기입니다.";
+	mes " ";
+	mes "이펙트 : ^i[" + 25136 + "] " + mesitemlink(25136);
+	mes "발자국 : ^i[" + 1001909 + "] " + mesitemlink(1001909);
+	setdialogsize(320,250);
+	close;
+
+OnInit:
+	.@npc_id = getnpcid(0);
+	setunitdata .@npc_id, UNPC_CLASS, JOB_ACOLYTE;
+	setunitdata .@npc_id, UNPC_SEX, SEX_MALE;
+	setunitdata .@npc_id, UNPC_HEADTOP, 0;
+	setunitdata .@npc_id, UNPC_HEADMIDDLE, 0;
+	setunitdata .@npc_id, UNPC_HEADBOTTOM, 0;
+	setunitdata .@npc_id, UNPC_ROBE, 0;
+	setunitdata .@npc_id, UNPC_HAIRSTYLE, 27;
+	setunitdata .@npc_id, UNPC_HAIRCOLOR, 6;
+	
+	hateffect HAT_EF_ELECTRIC, true, .@npc_id;
+	hateffect FOOTPRINT_EF_PANDA_COLOR, true, .@npc_id;
+	end;
+}
+
+lasagna,180,128,4	script	환생 이펙트/발자국#foot_test	-1,{
+OnInit:
+	.@npc_id = getnpcid(0);
+
+	setunitdata .@npc_id, UNPC_CLASS, JOB_ACOLYTE;
+	setunitdata .@npc_id, UNPC_SEX, SEX_FEMALE;
+	setunitdata .@npc_id, UNPC_HAIRSTYLE, 27;
+	setunitdata .@npc_id, UNPC_HAIRCOLOR, 6;
+
+	hateffect HAT_EF_ELECTRIC, true, .@npc_id;
+	hateffect FOOTPRINT_EF_PANDA_COLOR, true, .@npc_id;
+
+	getmapxy .@map$, .x, .y, BL_NPC, strnpcinfo(0);
+
+	npcspeed 200;
+	unitwalk .@npc_id, .x + 9, .y, strnpcinfo(0) + "::OnBack";
+	end;
+
+OnBack:
+	.@npc_id = getnpcid(0);
+	unitwalk .@npc_id, .x, .y, strnpcinfo(0) + "::OnInit";
 	end;
 }
