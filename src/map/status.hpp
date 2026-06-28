@@ -1448,6 +1448,10 @@ enum sc_type : int16 {
 
 	SC_NEED_GRACE,
 
+	SC_SHIELDSPELL_DEF,
+	SC_SHIELDSPELL_MDEF,
+	SC_SHIELDSPELL_REF,
+
 	SC_MAX, //Automatically updated max, used in for's to check we are within bounds.
 };
 
@@ -3504,6 +3508,7 @@ public:
 	} cant;/* status change state flags */
 	//int32 sg_id; //ID of the previous Storm gust that hit you
 	int16 comet_x, comet_y; // Point where src casted Comet - required to calculate damage from this point
+	int16 bs_counter = 0; // GN_BLOOD_SUCKER: number of active Blood Suckers maintained by this caster
 /**
  * The Storm Gust counter was dropped in renewal
  **/

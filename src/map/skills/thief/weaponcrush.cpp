@@ -29,7 +29,5 @@ void SkillWeaponCrush::applyAdditionalEffects(block_list *src, block_list *targe
 
 void SkillWeaponCrush::castendDamageId(block_list *src, block_list *target, uint16 skill_lv, t_tick tick, int32& flag) const {
 	WeaponSkillImpl::castendDamageId(src, target, skill_lv, tick, flag);
-#ifdef NEED_2017_SKILL_BEHAVIOR
 	status_change_end(src, SC_WEAPONBLOCK_ON);
-#endif
 }

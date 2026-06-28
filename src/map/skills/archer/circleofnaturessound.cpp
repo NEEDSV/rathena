@@ -18,7 +18,6 @@ SkillCircleOfNaturesSound::SkillCircleOfNaturesSound() : SkillImpl(WM_SIRCLEOFNA
 void SkillCircleOfNaturesSound::castendNoDamageId(block_list *src, block_list *target, uint16 skill_lv, t_tick tick, int32& flag) const {
 	sc_type type = skill_get_sc(getSkillId());
 
-#ifdef NEED_2017_SKILL_BEHAVIOR
 	// 2017: affects all PCs in splash range (BCT_ALL) and starts SC_SIRCLEOFNATURE without the Voice Lesson val2.
 	if( flag&1 )
 		sc_start(src,target,type,100,skill_lv,skill_get_time(getSkillId(),skill_lv));
@@ -26,18 +25,4 @@ void SkillCircleOfNaturesSound::castendNoDamageId(block_list *src, block_list *t
 		map_foreachinallrange(skill_area_sub,src,skill_get_splash(getSkillId(),skill_lv),BL_PC,src,getSkillId(),skill_lv,tick,flag|BCT_ALL|1,skill_castend_nodamage_id);
 		clif_skill_nodamage(src,*target,getSkillId(),skill_lv);
 	}
-#else
-	status_change *sc = status_get_sc(src);
-	map_session_data* sd = BL_CAST(BL_PC, src);
-
-	if( flag&1 ) {	// These affect all party members near the caster.
-		if( sc && sc->getSCE(type) ) {
-			sc_start2(src,target,type,100,skill_lv,pc_checkskill(sd, WM_LESSON),skill_get_time(getSkillId(),skill_lv));
-		}
-	} else if( sd ) {
-		if( sc_start2(src,target,type,100,skill_lv,pc_checkskill(sd, WM_LESSON),skill_get_time(getSkillId(),skill_lv)) )
-			party_foreachsamemap(skill_area_sub,sd,skill_get_splash(getSkillId(),skill_lv),src,getSkillId(),skill_lv,tick,flag|BCT_PARTY|1,skill_castend_nodamage_id);
-		clif_skill_nodamage(src,*target,getSkillId(),skill_lv);
-	}
-#endif
 }

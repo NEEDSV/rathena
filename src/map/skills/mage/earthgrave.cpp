@@ -20,17 +20,10 @@ void SkillEarthGrave::calculateSkillRatio(const Damage *wd, const block_list *sr
 	const status_change* sc = status_get_sc(src);
 	const status_data* sstatus = status_get_status_data(*src);
 
-#ifdef NEED_2017_SKILL_FORMULA
 	skillratio += -100 + sstatus->int_ * skill_lv + ((sd) ? pc_checkskill(sd, SA_SEISMICWEAPON) * 200 : 0);
 	RE_LVL_DMOD(100);
 	if (sc && sc->getSCE(SC_CURSED_SOIL_OPTION))
 		skillratio += (sd ? sd->status.job_level * 5 : 0);
-#else
-	skillratio += -100 + 2 * sstatus->int_ + 300 * pc_checkskill(sd, SA_SEISMICWEAPON) + sstatus->int_ * skill_lv;
-	RE_LVL_DMOD(100);
-	if( sc && sc->getSCE(SC_CURSED_SOIL_OPTION) )
-		skillratio += (sd ? sd->status.job_level * 5 : 0);
-#endif
 }
 
 void SkillEarthGrave::castendPos2(block_list* src, int32 x, int32 y, uint16 skill_lv, t_tick tick, int32& flag) const {

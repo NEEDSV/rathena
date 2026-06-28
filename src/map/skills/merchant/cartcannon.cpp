@@ -23,13 +23,8 @@ void SkillCartCannon::calculateSkillRatio(const Damage *wd, const block_list *sr
 	const status_data* sstatus = status_get_status_data(*src);
 	const map_session_data* sd = BL_CAST(BL_PC, src);
 
-#ifdef NEED_2017_SKILL_FORMULA
 	// ATK [{( Cart Remodeling Skill Level x 50 ) x ( INT / 40 )} + ( Cart Cannon Skill Level x 60 )] %
 	skillratio += -100 + 60 * skill_lv + ((sd) ? pc_checkskill(sd, GN_REMODELING_CART) : 1) * 50 * sstatus->int_ / 40;
-#else
-	skillratio += -100 + (250 + 20 * pc_checkskill(sd, GN_REMODELING_CART)) * skill_lv + 2 * sstatus->int_ / (6 - pc_checkskill(sd, GN_REMODELING_CART));
-	RE_LVL_DMOD(100);
-#endif
 }
 
 void SkillCartCannon::modifyHitRate(int16& hit_rate, const block_list* src, const block_list* target, uint16 skill_lv) const {

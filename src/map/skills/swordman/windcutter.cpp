@@ -12,40 +12,11 @@
 SkillWindCutter::SkillWindCutter() : SkillImplRecursiveDamageSplash(RK_WINDCUTTER) {
 }
 
-void SkillWindCutter::modifyDamageData(Damage& dmg, const block_list& src, const block_list& target, uint16 skill_lv) const {
-	const map_session_data* sd = BL_CAST(BL_PC, &src);
-
-#ifndef NEED_2017_SKILL_BEHAVIOR
-	if (sd != nullptr) {
-		if (sd->status.weapon == W_1HSPEAR || sd->status.weapon == W_2HSPEAR)
-			dmg.flag |= BF_LONG;
-		if (sd->weapontype1 == W_2HSWORD)
-			dmg.div_ = 2;
-	}
-#endif
-}
-
 void SkillWindCutter::calculateSkillRatio(const Damage *wd, const block_list *src, const block_list *target, uint16 skill_lv, int32 &skillratio, int32 mflag) const {
-	const map_session_data* sd = BL_CAST(BL_PC, src);
-
-#ifndef NEED_2017_SKILL_FORMULA
-	if (sd) {
-		if (sd->weapontype1 == W_2HSWORD)
-			skillratio += -100 + 250 * skill_lv;
-		else if (sd->weapontype1 == W_1HSPEAR || sd->weapontype1 == W_2HSPEAR)
-			skillratio += -100 + 400 * skill_lv;
-		else
-			skillratio += -100 + 300 * skill_lv;
-	} else
-		skillratio += -100 + 300 * skill_lv;
-	RE_LVL_DMOD(100);
-#else
 	skillratio += -100 + (skill_lv + 2) * 50;
 	RE_LVL_DMOD(100);
-#endif
 }
 
-#ifdef NEED_2017_SKILL_BEHAVIOR
 void SkillWindCutter::applyAdditionalEffects(block_list* src, block_list* target, uint16 skill_lv, t_tick tick, int32 attack_type, enum damage_lv dmg_lv) const {
 	sc_start(src, target, SC_FEAR, 3 + 2 * skill_lv, skill_lv, skill_get_time(getSkillId(), skill_lv));
 }
@@ -54,13 +25,3 @@ void SkillWindCutter::castendPos2(block_list* src, int32 x, int32 y, uint16 skil
 	clif_skill_damage(*src, *src, tick, status_get_amotion(src), 0, DMGVAL_IGNORE, 1, getSkillId(), skill_lv, DMG_SINGLE);
 	SkillImplRecursiveDamageSplash::castendPos2(src, x, y, skill_lv, tick, flag);
 }
-#else
-void SkillWindCutter::castendNoDamageId(block_list *src, block_list *target, uint16 skill_lv, t_tick tick, int32& flag) const {
-	clif_skill_nodamage(src,*target,getSkillId(),skill_lv);
-	skill_castend_damage_id(src, target, getSkillId(), skill_lv, tick, flag);
-
-	if (skill_area_temp[2] == 0) {
-		clif_skill_damage( *src, *src, tick, status_get_amotion(src), 0, DMGVAL_IGNORE, 1, getSkillId(), skill_lv, DMG_SINGLE );
-	}
-}
-#endif

@@ -12,11 +12,7 @@ SkillRollingCutter::SkillRollingCutter() : SkillImplRecursiveDamageSplash(GC_ROL
 }
 
 void SkillRollingCutter::calculateSkillRatio(const Damage *wd, const block_list *src, const block_list *target, uint16 skill_lv, int32 &skillratio, int32 mflag) const {
-#ifdef NEED_2017_SKILL_FORMULA
 	skillratio += -50 + 50 * skill_lv;
-#else
-	skillratio += -100 + 50 + 80 * skill_lv;
-#endif
 	RE_LVL_DMOD(100);
 }
 

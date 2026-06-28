@@ -24,7 +24,6 @@ void SkillRideInLightening::modifyDamageData(Damage& dmg, const block_list& src,
 
 void SkillRideInLightening::calculateSkillRatio(const Damage *wd, const block_list *src, const block_list *target, uint16 skill_lv, int32 &skillratio, int32 mflag) const {
 
-#ifdef NEED_2017_SKILL_FORMULA
 	const status_data* sstatus = status_get_status_data(*src);
 
 	// ATK [{(Skill Level x 200) + Additional Damage} x Caster Base Level / 100] %
@@ -32,14 +31,6 @@ void SkillRideInLightening::calculateSkillRatio(const Damage *wd, const block_li
 	if ((sstatus->rhw.ele) == ELE_WIND || (sstatus->lhw.ele) == ELE_WIND)
 		skillratio += skill_lv * 50;
 	RE_LVL_DMOD(100);
-#else
-	const map_session_data* sd = BL_CAST(BL_PC, src);
-
-	skillratio += -100 + 40 * skill_lv;
-	if (sd && sd->status.weapon == W_KNUCKLE)
-		skillratio += 50 * skill_lv;
-	RE_LVL_DMOD(100);
-#endif
 }
 
 void SkillRideInLightening::castendPos2(block_list* src, int32 x, int32 y, uint16 skill_lv, t_tick tick, int32& flag) const {

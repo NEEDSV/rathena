@@ -14,10 +14,7 @@ SkillEarthShaker::SkillEarthShaker() : WeaponSkillImpl(SR_EARTHSHAKER) {
 }
 
 void SkillEarthShaker::applyAdditionalEffects(block_list *src, block_list *target, uint16 skill_lv, t_tick tick, int32 attack_type, enum damage_lv dmg_lv) const {
-	mob_data* dstmd = BL_CAST(BL_MOB, target);
-
-	if (dstmd != nullptr && dstmd->guardian_data == nullptr) // Target is a mob (boss included) and not a guardian type. [Atemo]
-		sc_start(src, target, SC_EARTHSHAKER, 100, skill_lv, skill_get_time2(getSkillId(), skill_lv));
+	// 2017: Earth Shaker only stuns the target and clears Root Twist (no persistent marker status in 2017).
 	sc_start(src,target,SC_STUN, 25 + 5 * skill_lv,skill_lv,skill_get_time(getSkillId(),skill_lv));
 	status_change_end(target, SC_SV_ROOTTWIST);
 }
@@ -25,7 +22,6 @@ void SkillEarthShaker::applyAdditionalEffects(block_list *src, block_list *targe
 void SkillEarthShaker::calculateSkillRatio(const Damage *wd, const block_list *src, const block_list *target, uint16 skill_lv, int32 &skillratio, int32 mflag) const {
 	const status_change *tsc = status_get_sc(target);
 
-#ifdef NEED_2017_SKILL_FORMULA
 	if (tsc && ((tsc->option & (OPTION_HIDE | OPTION_CLOAK | OPTION_CHASEWALK)) || tsc->getSCE(SC_CAMOUFLAGE) || tsc->getSCE(SC_STEALTHFIELD) || tsc->getSCE(SC__SHADOWFORM))) {
 		//[(Skill Level x 150) x (Caster Base Level / 100) + (Caster INT x 3)] %
 		skillratio += -100 + 150 * skill_lv;
@@ -37,18 +33,6 @@ void SkillEarthShaker::calculateSkillRatio(const Damage *wd, const block_list *s
 		RE_LVL_DMOD(100);
 		skillratio += status_get_int(src) * 2;
 	}
-#else
-	if (tsc && ((tsc->option&(OPTION_HIDE|OPTION_CLOAK|OPTION_CHASEWALK)) || tsc->getSCE(SC_CAMOUFLAGE) || tsc->getSCE(SC_STEALTHFIELD) || tsc->getSCE(SC__SHADOWFORM))) {
-		//[(Skill Level x 300) x (Caster Base Level / 100) + (Caster STR x 3)] %
-		skillratio += -100 + 300 * skill_lv;
-		RE_LVL_DMOD(100);
-		skillratio += status_get_str(src) * 3;
-	} else { //[(Skill Level x 400) x (Caster Base Level / 100) + (Caster STR x 2)] %
-		skillratio += -100 + 400 * skill_lv;
-		RE_LVL_DMOD(100);
-		skillratio += status_get_str(src) * 2;
-	}
-#endif
 }
 
 void SkillEarthShaker::castendDamageId(block_list *src, block_list *target, uint16 skill_lv, t_tick tick, int32& flag) const {

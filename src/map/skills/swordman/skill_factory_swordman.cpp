@@ -41,6 +41,7 @@
 #include "ignitionbreak.cpp"
 #include "imperialcross.cpp"
 #include "imperialpressure.cpp"
+#include "inspiration.cpp"
 #include "judgementcross.cpp"
 #include "kingsgrace.cpp"
 #include "luxanima.cpp"
@@ -202,13 +203,17 @@ std::unique_ptr<const SkillImpl> SkillFactorySwordman::create(const e_skill skil
 		case LG_HESPERUSLIT:
 			return std::make_unique<SkillHesperusLit>();
 		case LG_INSPIRATION:
-			return std::make_unique<StatusSkillImpl>(skill_id);
+			return std::make_unique<SkillInspiration>();
 		case LG_KINGS_GRACE:
 			return std::make_unique<SkillKingsGrace>();
 		case LG_MOONSLASHER:
 			return std::make_unique<SkillMoonSlasher>();
 		case LG_OVERBRAND:
 			return std::make_unique<SkillOverBrand>();
+		case LG_OVERBRAND_BRANDISH:
+			return std::make_unique<SkillOverBrandBrandish>();
+		case LG_OVERBRAND_PLUSATK:
+			return std::make_unique<SkillOverBrandPlusAtk>();
 		case LG_PIETY:
 			return std::make_unique<SkillPiety>();
 		case LG_PINPOINTATTACK:

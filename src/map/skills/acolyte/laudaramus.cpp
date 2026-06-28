@@ -19,11 +19,7 @@ void SkillLaudaRamus::castendNoDamageId(block_list *src, block_list *target, uin
 	if( flag&1 || !sd || !sd->status.party_id ) {
 		if( tsc && (tsc->getSCE(SC_SLEEP) || tsc->getSCE(SC_STUN) || tsc->getSCE(SC_MANDRAGORA) || tsc->getSCE(SC_SILENCE) || tsc->getSCE(SC_DEEPSLEEP)) ){
 			// Success Chance: 2017 uses 40 + 10 * Skill Level.
-#ifdef NEED_2017_SKILL_BEHAVIOR
 			if( rnd()%100 > 40+10*skill_lv ) return;
-#else
-			if( rnd()%100 > 60+10*skill_lv ) return;
-#endif
 			status_change_end(target, SC_SLEEP);
 			status_change_end(target, SC_STUN);
 			status_change_end(target, SC_MANDRAGORA);

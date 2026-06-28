@@ -24,11 +24,7 @@ void SkillDeepSleepLullaby::castendNoDamageId(block_list *src, block_list *targe
 		sc_start(src, target, type, rate, skill_lv, duration);
 	} else {
 		clif_skill_nodamage(src, *target, getSkillId(), skill_lv);
-#ifdef NEED_2017_SKILL_BEHAVIOR
 		// 2017: affects all nearby targets except the caster (BCT_ALL|BCT_WOS), not only enemies.
 		map_foreachinallrange(skill_area_sub, target, skill_get_splash(getSkillId(), skill_lv), BL_CHAR, src, getSkillId(), skill_lv, tick, flag|BCT_ALL|BCT_WOS|1, skill_castend_nodamage_id);
-#else
-		map_foreachinallrange(skill_area_sub, target, skill_get_splash(getSkillId(), skill_lv), BL_CHAR, src, getSkillId(), skill_lv, tick, flag|BCT_ENEMY|1, skill_castend_nodamage_id);
-#endif
 	}
 }

@@ -35,11 +35,6 @@ void SkillFeintBomb::castendPos2(block_list* src, int32 x, int32 y, uint16 skill
 	}
 	map_foreachinallrange(unit_changetarget, src, AREA_SIZE, BL_MOB, src, group->unit); // Release all targets against the caster
 	skill_blown(src, src, skill_get_blewcount(getSkillId(), skill_lv), unit_getdir(src), BLOWN_IGNORE_NO_KNOCKBACK); // Don't stop the caster from backsliding if special_state.no_knockback is active
-#ifdef NEED_2017_SKILL_BEHAVIOR
 	// 2017: SC__FEINTBOMB uses Duration2 (skill_get_time2) and the no-damage packet carries the sc_start result.
 	clif_skill_nodamage(src, *src, getSkillId(), skill_lv, sc_start(src, src, skill_get_sc(getSkillId()), 100, skill_lv, skill_get_time2(getSkillId(), skill_lv)));
-#else
-	clif_skill_nodamage(src, *src, getSkillId(), skill_lv, false);
-	sc_start(src, src, skill_get_sc(getSkillId()), 100, skill_lv, skill_get_time(getSkillId(), skill_lv));
-#endif
 }

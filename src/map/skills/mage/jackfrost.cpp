@@ -11,9 +11,9 @@ SkillJackFrost::SkillJackFrost() : SkillImplRecursiveDamageSplash(WL_JACKFROST) 
 }
 
 void SkillJackFrost::calculateSkillRatio(const Damage *wd, const block_list *src, const block_list *target, uint16 skill_lv, int32 &skillratio, int32 mflag) const {
-#ifdef NEED_2017_SKILL_FORMULA
 	const status_change* tsc = status_get_sc(target);
 
+#ifdef NEED_2017_SKILL_FORMULA
 	if (tsc && tsc->getSCE(SC_FREEZING)) {
 		skillratio += 900 + 300 * skill_lv;
 		RE_LVL_DMOD(100);

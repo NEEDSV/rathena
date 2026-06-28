@@ -21,21 +21,12 @@ void SkillDanceWithAWarg::castendNoDamageId(block_list *src, block_list *target,
 
 	if( flag&1 ) {	// These affect all party members near the caster.
 		if( sc && sc->getSCE(type) ) {
-#ifdef NEED_2017_SKILL_FORMULA
 			// 2017: val2 carries the chorus bonus, not the Voice Lesson level.
 			sc_start2(src,target,type,100,skill_lv,battle_calc_chorusbonus(sd),skill_get_time(getSkillId(),skill_lv));
-#else
-			sc_start2(src,target,type,100,skill_lv,pc_checkskill(sd, WM_LESSON),skill_get_time(getSkillId(),skill_lv));
-#endif
 		}
 	} else if( sd ) {
-#ifdef NEED_2017_SKILL_FORMULA
 		if( sc_start2(src,target,type,100,skill_lv,battle_calc_chorusbonus(sd),skill_get_time(getSkillId(),skill_lv)) )
 			party_foreachsamemap(skill_area_sub,sd,skill_get_splash(getSkillId(),skill_lv),src,getSkillId(),skill_lv,tick,flag|BCT_PARTY|1,skill_castend_nodamage_id);
-#else
-		if( sc_start2(src,target,type,100,skill_lv,pc_checkskill(sd, WM_LESSON),skill_get_time(getSkillId(),skill_lv)) )
-			party_foreachsamemap(skill_area_sub,sd,skill_get_splash(getSkillId(),skill_lv),src,getSkillId(),skill_lv,tick,flag|BCT_PARTY|1,skill_castend_nodamage_id);
-#endif
 		clif_skill_nodamage(src,*target,getSkillId(),skill_lv);
 	}
 }

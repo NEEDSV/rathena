@@ -21,11 +21,9 @@ void SkillValleyOfDeath::castendNoDamageId(block_list *src, block_list *target, 
 		if( !status_isdead(*target) )
 			return;
 
-#ifdef NEED_2017_SKILL_BEHAVIOR
 		// 2017: Valley of Death revives with chance 88 + 2 * skill_lv %.
 		if( rnd()%100 >= 88 + 2 * skill_lv )
 			return;
-#endif
 
 		tstatus->hp = max(tstatus->sp, 1);
 		tstatus->sp -= tstatus->sp * ( 60 - 10 * skill_lv ) / 100;

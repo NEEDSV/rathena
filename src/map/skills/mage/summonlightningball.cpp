@@ -24,29 +24,23 @@ void SkillSummonLightningBall::castendNoDamageId(block_list *src, block_list *ta
 	// Set val2. The SC element for this ball
 	e_wl_spheres element = WLS_WIND;
 
-	if (skill_lv == 1) {
-		sc_type sphere = SC_NONE;
+	sc_type sphere = SC_NONE;
 
-		for (i = SC_SPHERE_1; i <= SC_SPHERE_5; i++) {
-			if (sc->getSCE(i) == nullptr) {
-				sphere = static_cast<sc_type>(i); // Take the free SC
-				break;
-			}
-		}
-
-		if (sphere == SC_NONE) {
-			if (sd) // No free slots to put SC
-				clif_skill_fail( *sd, getSkillId(), USESKILL_FAIL_SUMMON );
-			return;
-		}
-
-		sc_start2(src, src, sphere, 100, element, skill_lv, skill_get_time(getSkillId(), skill_lv));
-	} else {
-		for (i = SC_SPHERE_1; i <= SC_SPHERE_5; i++) {
-			status_change_end(src, static_cast<sc_type>(i)); // Removes previous type
-			sc_start2(src, src, static_cast<sc_type>(i), 100, element, skill_lv, skill_get_time(getSkillId(), skill_lv));
+	// 2017: always adds only 1 sphere per cast, into the first free SC_SPHERE slot.
+	for (i = SC_SPHERE_1; i <= SC_SPHERE_5; i++) {
+		if (sc->getSCE(i) == nullptr) {
+			sphere = static_cast<sc_type>(i); // Take the free SC
+			break;
 		}
 	}
+
+	if (sphere == SC_NONE) {
+		if (sd) // No free slots to put SC
+			clif_skill_fail( *sd, getSkillId(), USESKILL_FAIL_SUMMON );
+		return;
+	}
+
+	sc_start2(src, src, sphere, 100, element, skill_lv, skill_get_time(getSkillId(), skill_lv));
 
 	clif_skill_nodamage(src, *target, getSkillId(), 0, false);
 }

@@ -24,7 +24,6 @@ void SkillMoonSlasher::calculateSkillRatio(const Damage* wd, const block_list* s
 }
 
 void SkillMoonSlasher::applyAdditionalEffects(block_list* src, block_list* target, uint16 skill_lv, t_tick tick, int32 attack_type, enum damage_lv dmg_lv) const {
-#ifdef NEED_2017_SKILL_BEHAVIOR
 	// 2017: PC targets are forced to sit (delayed ~500ms via timer), monsters get SC_STOP.
 	map_session_data* dstsd = BL_CAST(BL_PC, target);
 	int32 rate = 32 + 8 * skill_lv;
@@ -33,9 +32,6 @@ void SkillMoonSlasher::applyAdditionalEffects(block_list* src, block_list* targe
 		skill_addtimerskill(src, tick + 500, target->id, 0, 0, getSkillId(), skill_lv, BF_WEAPON, 0);
 	else if (target->type == BL_MOB)
 		sc_start(src, target, SC_STOP, 100, skill_lv, skill_get_time(getSkillId(), skill_lv) + 1000 * (rnd() % 3));
-#else
-	sc_start(src, src, SC_OVERBRANDREADY, 100, skill_lv, skill_get_time2(getSkillId(), skill_lv));
-#endif
 }
 
 void SkillMoonSlasher::splashSearch(block_list* src, block_list* target, uint16 skill_lv, t_tick tick, int32 flag) const {

@@ -11,18 +11,9 @@ SkillArrowStorm::SkillArrowStorm() : SkillImplRecursiveDamageSplash(RA_ARROWSTOR
 }
 
 void SkillArrowStorm::calculateSkillRatio(const Damage *wd, const block_list *src, const block_list *target, uint16 skill_lv, int32 &skillratio, int32 mflag) const {
-	const status_change *sc = status_get_sc(src);
 
-#ifdef NEED_2017_SKILL_FORMULA
 	skillratio += 900 + 80 * skill_lv;
 	RE_LVL_DMOD(100);
-#else
-	if (sc && sc->getSCE(SC_FEARBREEZE))
-		skillratio += -100 + 200 + 250 * skill_lv;
-	else
-		skillratio += -100 + 200 + 180 * skill_lv;
-	RE_LVL_DMOD(100);
-#endif
 }
 
 void SkillArrowStorm::splashSearch(block_list* src, block_list* target, uint16 skill_lv, t_tick tick, int32 flag) const {

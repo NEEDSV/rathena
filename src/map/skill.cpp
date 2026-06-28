@@ -94,6 +94,8 @@ int32 icewall_unit_pos;
 int32 earthstrain_unit_pos;
 int32 firerain_unit_pos;
 int32 wallofthorn_unit_pos;
+int32 overbrand_nounit_pos;
+int32 overbrand_brandish_nounit_pos;
 
 struct s_skill_nounit_layout skill_nounit_layout[MAX_SKILL_UNIT_LAYOUT2];
 
@@ -654,9 +656,6 @@ int32 skill_calc_heal(block_list *src, block_list *target, uint16 skill_id, uint
 
 	if (sc != nullptr && !sc->empty()) {
 		if (sc->getSCE(SC_OFFERTORIUM) && (skill_id == AB_HIGHNESSHEAL || skill_id == AB_CHEAL || skill_id == NPC_CHEAL || skill_id == PR_SANCTUARY || skill_id == AL_HEAL
-#ifndef NEED_2017_SKILL_BEHAVIOR
-			|| skill_id == CD_DILECTIO_HEAL || skill_id == CD_MEDIALE_VOTUM
-#endif
 		))
 #ifdef RENEWAL
 			hp_bonus += sc->getSCE(SC_OFFERTORIUM)->val2;
@@ -677,21 +676,9 @@ int32 skill_calc_heal(block_list *src, block_list *target, uint16 skill_id, uint
 #else
 				hp += hp * tsc->getSCE(SC_INCHEALRATE)->val1 / 100;
 #endif
-#ifndef NEED_2017_SKILL_BEHAVIOR
-			if (tsc->getSCE(SC_ANCILLA))
-#ifdef RENEWAL
-				hp_bonus += tsc->getSCE(SC_ANCILLA)->val1;
-#else
-				hp += hp * tsc->getSCE(SC_ANCILLA)->val1 / 100;
-#endif
-#endif
 #ifndef RENEWAL
 			if (tsc->getSCE(SC_WATER_INSIGNIA) && tsc->getSCE(SC_WATER_INSIGNIA)->val1 == 2)
 				hp += hp / 10;
-#endif
-#if defined(RENEWAL) && !defined(NEED_2017_SKILL_BEHAVIOR)
-			if (tsc->getSCE(SC_ASSUMPTIO))
-				hp_bonus += tsc->getSCE(SC_ASSUMPTIO)->val1 * 2;
 #endif
 		}
 	}
@@ -2108,14 +2095,12 @@ bool skill_strip_equip(block_list *src, block_list *target, uint16 skill_id, uin
 		case RG_STRIPSHIELD:
 		case RG_STRIPHELM:
 		case GC_WEAPONCRUSH:
-#ifdef NEED_2017_SKILL_BEHAVIOR
 			if (skill_id == GC_WEAPONCRUSH) {
 				rate = (5 + 5 * skill_lv + (sstatus->dex - tstatus->dex) / 5) * 10;
 				rate = max(rate, 50);
 				mod = 1000;
 				break;
 			}
-#endif
 			rate = 50 * (skill_lv + 1) + 2 * (sstatus->dex - tstatus->dex);
 			mod = 1000;
 			break;
@@ -2140,12 +2125,8 @@ bool skill_strip_equip(block_list *src, block_list *target, uint16 skill_id, uin
 			break;
 		}
 		case SC_STRIPACCESSARY:
-#ifdef NEED_2017_SKILL_BEHAVIOR
 			rate = 12 + 2 * skill_lv + (sstatus->dex - tstatus->dex) / 5;
 			rate = max(rate, 5);
-#else
-			rate = 12 + 2 * skill_lv;
-#endif
 			break;
 		case ABC_STRIP_SHADOW:
 			rate = 50 * (skill_lv + 3) + 2 * (sstatus->dex - tstatus->dex);
@@ -2160,11 +2141,9 @@ bool skill_strip_equip(block_list *src, block_list *target, uint16 skill_id, uin
 
 	switch (skill_id) { // Duration
 		case SC_STRIPACCESSARY:
-#ifdef NEED_2017_SKILL_BEHAVIOR
 			time = skill_get_time(skill_id, skill_lv) + (sstatus->dex - tstatus->dex) * 500;
 			time = max(time, 0);
 			break;
-#endif
 		case GS_DISARM:
 			time = skill_get_time(skill_id, skill_lv);
 			break;
@@ -2176,7 +2155,6 @@ bool skill_strip_equip(block_list *src, block_list *target, uint16 skill_id, uin
 		case GC_WEAPONCRUSH:
 		case ST_FULLSTRIP:
 		case ABC_STRIP_SHADOW:
-#ifdef NEED_2017_SKILL_BEHAVIOR
 			if (skill_id == GC_WEAPONCRUSH) {
 				time = skill_get_time(skill_id, skill_lv);
 				if (target->type == BL_PC)
@@ -2186,7 +2164,6 @@ bool skill_strip_equip(block_list *src, block_list *target, uint16 skill_id, uin
 				time = max(time, 0);
 				break;
 			}
-#endif
 			if (skill_id == WL_EARTHSTRAIN)
 				time = skill_get_time2(skill_id, skill_lv);
 			else
@@ -2701,6 +2678,11 @@ void skill_attack_blow(block_list *src, block_list *dsrc, block_list *target, ui
 				skill_addtimerskill(src, tick + 300 * ((flag&2) ? 1 : 2), target->id, 0, 0, skill_id, skill_lv, BF_WEAPON, flag|4);
 			dir_ka = -1;
 			break;
+		case LG_OVERBRAND_BRANDISH:
+			// 2017: knockback damage bonus (PLUSATK) only when the target can't be knocked back the full distance (wall).
+			if (skill_blown(dsrc, target, blewcount, dir, (enum e_skill_blown)(BLOWN_NO_KNOCKBACK_MAP|BLOWN_MD_KNOCKBACK_IMMUNE|BLOWN_TARGET_NO_KNOCKBACK|BLOWN_TARGET_BASILICA)) < blewcount)
+				skill_addtimerskill(src, tick + status_get_amotion(src), target->id, 0, 0, LG_OVERBRAND_PLUSATK, skill_lv, BF_WEAPON, flag|SD_ANIMATION);
+			break;
 		case RL_R_TRIP:
 			if (skill_blown(dsrc,target,blewcount,dir,BLOWN_NONE) < blewcount)
 				skill_addtimerskill(src, tick + status_get_amotion(src), target->id, 0, 0, RL_R_TRIP_PLUSATK, skill_lv, BF_WEAPON, flag|SD_ANIMATION);
@@ -3032,9 +3014,6 @@ int64 skill_attack (int32 attack_type, block_list* src, block_list *dsrc, block_
 			break;
 		case KN_PIERCE:
 		case LK_SPIRALPIERCE:
-#ifndef NEED_2017_SKILL_BEHAVIOR
-		case RK_HUNDREDSPEAR:
-#endif
 		case DK_MADNESS_CRUSHER:
 			if (sc && sc->getSCE(SC_CHARGINGPIERCE)) {
 				if (sc->getSCE(SC_CHARGINGPIERCE_COUNT)) {
@@ -4026,6 +4005,15 @@ TIMER_FUNC(skill_timerskill){
 				break;
 			switch( skl->skill_id )
 			{
+				case LG_OVERBRAND_BRANDISH: {
+						int32 i, dir = map_calc_dir(src, skl->x, skl->y);
+						int32 x = src->x, y = src->y;
+						struct s_skill_nounit_layout *layout = skill_get_nounit_layout(skl->skill_id, skl->skill_lv, src, x, y, dir);
+
+						for( i = 0; i < layout->count; i++ )
+							map_foreachincell(skill_area_sub, src->m, x + layout->dx[i], y + layout->dy[i], BL_CHAR, src, skl->skill_id, skl->skill_lv, tick, skl->flag|BCT_ENEMY|SD_ANIMATION|1, skill_castend_damage_id);
+					}
+					break;
 				case GN_CRAZYWEED_ATK:
 					{
 						int32 dummy = 1, i = skill_get_unit_range(skl->skill_id,skl->skill_lv);
@@ -5081,6 +5069,7 @@ TIMER_FUNC(skill_castend_id){
 			case GN_WALLOFTHORN:
 			case SC_ESCAPE:
 			case WL_FROSTMISTY:
+			case WL_JACKFROST:
 			case SU_CN_POWDERING:
 			case AG_RAIN_OF_CRYSTAL:
 				ud->skillx = target->x;
@@ -13172,11 +13161,7 @@ bool skill_produce_mix(map_session_data *sd, uint16 skill_id, t_itemid nameid, i
 				break;
 
 			case RK_RUNEMASTERY: {
-#ifdef NEED_2017_SKILL_BEHAVIOR
 					int32 A = 100 * (51 + 2 * pc_checkskill(sd, skill_id));
-#else
-					int32 A = 100 * (30 + 2 * pc_checkskill(sd, skill_id));
-#endif
 					int32 B = 100 * status->dex / 30 + 10 * (status->luk + sd->status.job_level);
 					int32 C = 100 * cap_value(sd->itemid,0,100); //itemid depend on makerune()
 					int32 D = 0;
@@ -13207,21 +13192,12 @@ bool skill_produce_mix(map_session_data *sd, uint16 skill_id, t_itemid nameid, i
 
 					uint8 runemastery_skill_lv = pc_checkskill(sd,skill_id);
 
-#ifdef NEED_2017_SKILL_BEHAVIOR
 					if (runemastery_skill_lv >= 10)
 						qty = 1 + rnd() % 3;
 					else if (runemastery_skill_lv > 5)
 						qty = 1 + rnd() % 2;
 					else
 						qty = 1;
-#else
-					if (runemastery_skill_lv > 9)
-						qty = 2 + rnd() % 5; // 2~6
-					else if (runemastery_skill_lv > 4)
-						qty = 2 + rnd() % 3; // 2~4
-					else
-						qty = 2;
-#endif
 				}
 				break;
 
@@ -13939,10 +13915,10 @@ void skill_select_menu( map_session_data& sd, uint16 skill_id ){
 		return;
 	}
 
-	lv = (aslvl + 5) / 2; // The level the skill will be autocasted
+	lv = (aslvl + 1) / 2; // The level the skill will be autocasted
 	lv = min(lv,sd.status.skill[sk_idx].lv);
 	prob = (aslvl >= 10) ? 15 : (30 - 2 * aslvl); // Probability at level 10 was increased to 15.
-	sc_start4(&sd,&sd,SC__AUTOSHADOWSPELL,100,id,lv,prob,(aslvl*5),skill_get_time(SC_AUTOSHADOWSPELL,aslvl));
+	sc_start4(&sd,&sd,SC__AUTOSHADOWSPELL,100,id,lv,prob,0,skill_get_time(SC_AUTOSHADOWSPELL,aslvl));
 }
 
 int32 skill_elementalanalysis( map_session_data& sd, int32 n, uint16 skill_lv, uint16* item_list ){
@@ -14599,10 +14575,22 @@ void skill_init_unit_layout (void) {
 		ShowError("skill_init_unit_layout: The skill_unit_layout has met the limit or overflowed (pos=%d)\n", pos);
 }
 
+struct s_skill_nounit_layout* skill_get_nounit_layout(uint16 skill_id, uint16 skill_lv, block_list* src, int32 x, int32 y, int32 dir) {
+	if( skill_id == LG_OVERBRAND )
+		return &skill_nounit_layout[overbrand_nounit_pos + dir];
+	else if( skill_id == LG_OVERBRAND_BRANDISH )
+		return &skill_nounit_layout[overbrand_brandish_nounit_pos + dir];
+
+	ShowError("skill_get_nounit_layout: unknown no-unit layout for skill %d (level %d)\n", skill_id, skill_lv);
+	return &skill_nounit_layout[0];
+}
+
 void skill_init_nounit_layout (void) {
 	int32 i, pos = 0;
 
 	memset(skill_nounit_layout,0,sizeof(skill_nounit_layout));
+
+	overbrand_nounit_pos = pos;
 
 	for( i = 0; i < 8; i++ ) {
 		if( i&1 ) {
@@ -14670,6 +14658,8 @@ void skill_init_nounit_layout (void) {
 		}
 		pos++;
 	}
+
+	overbrand_brandish_nounit_pos = pos;
 
 	for( i = 0; i < 8; i++ ) {
 		if( i&1 ) {

@@ -16,27 +16,13 @@ void SkillCloudKill::applyAdditionalEffects(block_list *src, block_list *target,
 }
 
 void SkillCloudKill::calculateSkillRatio(const Damage *wd, const block_list *src, const block_list *target, uint16 skill_lv, int32 &skillratio, int32 mflag) const {
-	const status_data* sstatus = status_get_status_data(*src);
 	const status_change *sc = status_get_sc(src);
 	const map_session_data* sd = BL_CAST(BL_PC, src);
 
-#ifdef NEED_2017_SKILL_FORMULA
 	skillratio += -100 + 40 * skill_lv;
 	RE_LVL_DMOD(100);
 	if (sc && sc->getSCE(SC_CURSED_SOIL_OPTION))
 		skillratio += (sd ? sd->status.job_level : 0);
-#else
-	skillratio += -100 + 40 * skill_lv;
-	skillratio += sstatus->int_ * 3;
-	RE_LVL_DMOD(100);
-	if (sc) {
-		if (sc->getSCE(SC_CURSED_SOIL_OPTION))
-			skillratio += (sd ? sd->status.job_level : 0);
-
-		if (sc->getSCE(SC_DEEP_POISONING_OPTION))
-			skillratio += skillratio * 1500 / 100;
-	}
-#endif
 }
 
 void SkillCloudKill::castendPos2(block_list* src, int32 x, int32 y, uint16 skill_lv, t_tick tick, int32& flag) const {

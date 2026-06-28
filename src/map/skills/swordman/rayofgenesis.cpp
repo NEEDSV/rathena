@@ -7,27 +7,43 @@
 
 #include "map/battle.hpp"
 #include "map/clif.hpp"
+#include "map/pc.hpp"
 #include "map/status.hpp"
 
 SkillRayOfGenesis::SkillRayOfGenesis() : SkillImplRecursiveDamageSplash(LG_RAYOFGENESIS) {
 }
 
-void SkillRayOfGenesis::castendNoDamageId(block_list* src, block_list* target, uint16 skill_lv, t_tick tick, int32& flag) const {
-	clif_skill_nodamage(src,*target,getSkillId(),skill_lv);
-	skill_castend_damage_id(src, target, getSkillId(), skill_lv, tick, flag);
+void SkillRayOfGenesis::castendPos2(block_list* src, int32 x, int32 y, uint16 skill_lv, t_tick tick, int32& flag) const {
+	map_session_data* sd = BL_CAST(BL_PC, src);
+
+	// 2017: ground-targeted; consumes 3% * skill level of max HP, fails if not enough.
+	if (!status_charge(src, status_get_max_hp(src) * 3 * skill_lv / 100, 0)) {
+		if (sd)
+			clif_skill_fail(*sd, getSkillId());
+		return;
+	}
+
+	SkillImplRecursiveDamageSplash::castendPos2(src, x, y, skill_lv, tick, flag);
 }
 
 void SkillRayOfGenesis::calculateSkillRatio(const Damage* wd, const block_list* src, const block_list* target, uint16 skill_lv, int32& skillratio, int32 mflag) const {
-#ifdef NEED_2017_SKILL_FORMULA
-	skillratio += 200 + 300 * skill_lv;
-	RE_LVL_DMOD(100);
-#else
-	const status_data* sstatus = status_get_status_data(*src);
+	if (wd != nullptr && (wd->flag & BF_MAGIC)) {
+		// 2017: magic-side ratio for the magic damage added on top of the weapon hit.
+		const status_change* sc = status_get_sc(src);
+		const map_session_data* sd = BL_CAST(BL_PC, src);
 
-	skillratio += -100 + 350 * skill_lv;
-	skillratio += sstatus->int_ * 3;
-	RE_LVL_DMOD(100);
-#endif
+		if (sc) {
+			if (sc->getSCE(SC_INSPIRATION))
+				skillratio += 1400;
+			if (sc->getSCE(SC_BANDING))
+				skillratio += -100 + 300 * skill_lv + 200 * sc->getSCE(SC_BANDING)->val2;
+			skillratio = skillratio * (sd ? sd->status.job_level / 25 : 1);
+		}
+	} else {
+		// 2017: weapon-side ratio.
+		skillratio += 200 + 300 * skill_lv;
+		RE_LVL_DMOD(100);
+	}
 }
 
 void SkillRayOfGenesis::applyAdditionalEffects(block_list* src, block_list* target, uint16 skill_lv, t_tick tick, int32 attack_type, enum damage_lv dmg_lv) const {

@@ -14,7 +14,6 @@ SkillGreatEcho::SkillGreatEcho() : WeaponSkillImpl(WM_GREAT_ECHO) {
 
 void SkillGreatEcho::calculateSkillRatio(const Damage *wd, const block_list *src, const block_list *target, uint16 skill_lv, int32 &skillratio, int32 mflag) const {
 
-#ifdef NEED_2017_SKILL_FORMULA
 	const map_session_data* sd = BL_CAST(BL_PC, src);
 
 	skillratio += 300 + 200 * skill_lv;
@@ -27,16 +26,6 @@ void SkillGreatEcho::calculateSkillRatio(const Damage *wd, const block_list *src
 	}
 	RE_LVL_DMOD(100);
 
-#else
-
-	skillratio += -100 + 250 + 500 * skill_lv;
-	if (sd) {
-		skillratio += pc_checkskill(sd, WM_LESSON) * 50; // !TODO: Confirm bonus
-		if (skill_check_pc_partner(const_cast<map_session_data*>(sd), getSkillId(), &skill_lv, AREA_SIZE, 0) > 0)
-			skillratio *= 2;
-	}
-	RE_LVL_DMOD(100);
-#endif
 }
 
 void SkillGreatEcho::castendPos2(block_list* src, int32 x, int32 y, uint16 skill_lv, t_tick tick, int32& flag) const {
