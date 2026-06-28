@@ -19,7 +19,7 @@
 
 -	shop	USE	-1,399994:100,399993:100,399998:100,399999:100,399900:100,399996:100,399995:100,399997:100
 
--	pointshop	POINT	-1,BATTLEGROUND_POINT,31433:1000,410458:1000,420177:1000,20571:1000,31978:1000,480609:1000
+-	pointshop	POINT	-1,BATTLEGROUND_POINT,31433:1000,410458:1000,420177:1000,20571:1000,31978:1000,410278:1000,480609:1000,25225:1000,1001650:1000
 
 
 bat_room,160,146,3	script	전장 장비 담당관#a	734,{
@@ -42,7 +42,7 @@ bat_room,160,153,3	script	전장 소비 담당관#a	749,{
 		end;
 }
 
-bat_room,160,150,3	script	전장 교환 담당관#a	900,{
+bat_room,160,150,3	script	전장 교환 담당관#a	-1,{
 		mes "[전장 교환 담당관]";
 		mes "전장 포인트는 전장에 참여하거나,";
 		mes "전장 팀 리더로 선발되어 전장을 진행할 경우 획득할 수 있습니다.";
@@ -54,4 +54,87 @@ bat_room,160,150,3	script	전장 교환 담당관#a	900,{
 		close2;
 		callshop "POINT";
 		end;
+		
+		
+OnInit:
+	.@npc_id = getnpcid(0);
+	setunitdata .@npc_id, UNPC_CLASS, JOB_PRIEST;
+	setunitdata .@npc_id, UNPC_SEX, SEX_FEMALE;
+	setunitdata .@npc_id, UNPC_HEADTOP, 1073;
+	setunitdata .@npc_id, UNPC_HEADMIDDLE, 2730;
+	setunitdata .@npc_id, UNPC_HEADBOTTOM, 2311;
+	setunitdata .@npc_id, UNPC_ROBE, 48;
+	setunitdata .@npc_id, UNPC_HAIRSTYLE, 27;
+	setunitdata .@npc_id, UNPC_HAIRCOLOR, 6;
+	setunitdata .@npc_id, UNPC_CLOTHCOLOR, 2;
+	
+	.@npc_id = getnpcid(0);
+	hateffect HAT_EF_C_VALKYRIE_WING, true, .@npc_id;
+	hateffect HAT_EF_DOUBLEGUMGANG, true, .@npc_id;
+	
+	.CostumeIndex = 0;
+	
+	// ============================================================
+	// 1번 의상 View ID
+	// 필요 없는 부위는 0
+	// ============================================================
+	.Costume1_HeadTop = 1073;
+	.Costume1_HeadMiddle = 2730;
+	.Costume1_HeadBottom = 2311;
+	.Costume1_Robe = 48;
+
+	// ============================================================
+	// 2번 의상 View ID
+	// 필요 없는 부위는 0
+	// ============================================================
+	.Costume2_HeadTop = 2308;
+	.Costume2_HeadMiddle = 2437;
+	.Costume2_HeadBottom = 0;
+	.Costume2_Robe = 273;
+	
+	callsub S_ApplyCostume;
+
+	initnpctimer;
+	end;
+	
+OnTimer300000:
+	stopnpctimer;
+
+	if (.CostumeIndex == 0)
+		.CostumeIndex = 1;
+	else
+		.CostumeIndex = 0;
+
+	callsub S_ApplyCostume;
+
+	initnpctimer;
+	end;
+	
+S_ApplyCostume:
+	.@npc_id = getnpcid(0);
+
+	// 기존 의상 제거
+	setunitdata .@npc_id, UNPC_HEADTOP, 0;
+	setunitdata .@npc_id, UNPC_HEADMIDDLE, 0;
+	setunitdata .@npc_id, UNPC_HEADBOTTOM, 0;
+	setunitdata .@npc_id, UNPC_ROBE, 0;
+
+	if (.CostumeIndex == 0) {
+		setunitdata .@npc_id, UNPC_HEADTOP, .Costume1_HeadTop;
+		setunitdata .@npc_id, UNPC_HEADMIDDLE, .Costume1_HeadMiddle;
+		setunitdata .@npc_id, UNPC_HEADBOTTOM, .Costume1_HeadBottom;
+		setunitdata .@npc_id, UNPC_ROBE, .Costume1_Robe;
+		hateffect HAT_EF_C_VALKYRIE_WING, true, .@npc_id;
+		npctalk  "1번 의상으로 변경되었습니다.";
+		
+	} else {
+		setunitdata .@npc_id, UNPC_HEADTOP, .Costume2_HeadTop;
+		setunitdata .@npc_id, UNPC_HEADMIDDLE, .Costume2_HeadMiddle;
+		setunitdata .@npc_id, UNPC_HEADBOTTOM, .Costume2_HeadBottom;
+		setunitdata .@npc_id, UNPC_ROBE, .Costume2_Robe;
+		hateffect HAT_EF_C_VALKYRIE_WING, false, .@npc_id;
+		npctalk  "2번 의상으로 변경되었습니다.";
+	}
+
+	return;
 }
