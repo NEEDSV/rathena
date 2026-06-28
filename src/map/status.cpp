@@ -13216,16 +13216,16 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 				clif_changelook(bl,LOOK_CLOTHES_COLOR,vd->look[LOOK_CLOTHES_COLOR]);
 				clif_changelook(bl,LOOK_BODY2,vd->look[LOOK_BODY2]);
 				break;
-			case SC_BLOODSUCKER:
-				if (sce->val2) {
-					block_list *bsrc = map_id2bl(sce->val2);
-					if (bsrc) {
-						status_change *bsc = status_get_sc(bsrc);
-						if (bsc)
-							(bsc->bs_counter)--;
-					}
-				}
-				break;
+			//case SC_BLOODSUCKER:
+			//	if (sc->val2) {
+			//		block_list *bsrc = map_id2bl(sc->val2);
+			//		if (bsrc) {
+			//			status_change *bsc = status_get_sc(bsrc);
+			//			if (bsc)
+			//				(bsc->bs_counter)--;
+			//		}
+			//	}
+			//	break;
 			case SC_STONE:
 			case SC_STONEWAIT:
 			case SC_POISON:

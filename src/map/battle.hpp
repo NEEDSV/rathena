@@ -431,6 +431,7 @@ struct Battle_Config
 	int32 skill_steal_random_options;
 	int32 motd_type; // [celest]
 	int32 exp_calc_type;
+	int32 exp_cost_inspiration;
 	int32 exp_bonus_attacker;
 	int32 exp_bonus_max_attacker;
 	int32 exp_bonus_nodamage_attacker;
