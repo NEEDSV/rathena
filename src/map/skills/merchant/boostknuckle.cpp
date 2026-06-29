@@ -18,13 +18,7 @@ void SkillBoostKnuckle::modifyDamageData(Damage& dmg, const block_list& src, con
 }
 
 void SkillBoostKnuckle::calculateSkillRatio(const Damage* wd, const block_list* src, const block_list* target, uint16 skill_lv, int32& skillratio, int32 mflag) const {
-	const status_data* sstatus = status_get_status_data(*src);
 
-#ifdef NEED_2017_SKILL_FORMULA
 	skillratio += 100 + 100 * skill_lv + status_get_dex(src);
 	RE_LVL_DMOD(120);
-#else
-	skillratio += -100 + 260 * skill_lv + sstatus->dex; // !TODO: What's the DEX bonus?
-	RE_LVL_DMOD(100);
-#endif
 }

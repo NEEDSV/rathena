@@ -3185,6 +3185,10 @@ static int32 status_get_hpbonus(block_list *bl, enum e_status_bonus type) {
 				bonus += 500;
 			if (sc->getSCE(SC_PROMOTE_HEALTH_RESERCH))
 				bonus += sc->getSCE(SC_PROMOTE_HEALTH_RESERCH)->val3;
+			if(sc->getSCE(SC_LERADSDEW))
+				bonus += sc->getSCE(SC_LERADSDEW)->val3;
+			if(sc->getSCE(SC_INSPIRATION))
+				bonus += (600 * sc->getSCE(SC_INSPIRATION)->val1);
 			if(sc->getSCE(SC_SOLID_SKIN_OPTION))
 				bonus += 2000;
 			if(sc->getSCE(SC_MARIONETTE))
@@ -3225,12 +3229,10 @@ static int32 status_get_hpbonus(block_list *bl, enum e_status_bonus type) {
 				bonus += sc->getSCE(SC_EPICLESIS)->val2;
 			if(sc->getSCE(SC_FRIGG_SONG))
 				bonus += sc->getSCE(SC_FRIGG_SONG)->val2;
-			if(sc->getSCE(SC_LERADSDEW))
-				bonus += sc->getSCE(SC_LERADSDEW)->val3;
 			if(sc->getSCE(SC_FORCEOFVANGUARD))
 				bonus += (3 * sc->getSCE(SC_FORCEOFVANGUARD)->val1);
 			if(sc->getSCE(SC_INSPIRATION))
-				bonus += (600 * sc->getSCE(SC_INSPIRATION)->val1);
+				bonus += (5 * sc->getSCE(SC_INSPIRATION)->val1);
 			if(sc->getSCE(SC_RAISINGDRAGON))
 				bonus += sc->getSCE(SC_RAISINGDRAGON)->val1;
 			if(sc->getSCE(SC_GT_REVITALIZE))
@@ -7449,7 +7451,7 @@ static uint16 status_calc_watk(block_list *bl, status_change *sc, int32 watk)
 	if(sc->getSCE(SC_BANDING) && sc->getSCE(SC_BANDING)->val2 > 1)
 		watk += (10 + 10 * sc->getSCE(SC_BANDING)->val1) * sc->getSCE(SC_BANDING)->val2;
 	if(sc->getSCE(SC_INSPIRATION))
-		watk += sc->getSCE(SC_INSPIRATION)->val2;
+		watk += 40 * sc->getSCE(SC_INSPIRATION)->val1 + 3 * sc->getSCE(SC_INSPIRATION)->val2;
 	if(sc->getSCE(SC_GT_CHANGE))
 		watk += sc->getSCE(SC_GT_CHANGE)->val2;
 	if(sc->getSCE(SC__ENERVATION))
@@ -7532,8 +7534,6 @@ uint16 status_calc_pseudobuff_matk( map_session_data* sd, status_change *sc, int
 	if (sce = sc->getSCE(SC_COOLER_OPTION))
 		matk += sce->val2;
 	if (sce = sc->getSCE(SC_SOULFAIRY))
-		matk += sce->val2;
-	if (sce = sc->getSCE(SC_INSPIRATION))
 		matk += sce->val2;
 	if (sce = sc->getSCE(SC_SHIELDSPELL_ATK))
 		matk += sce->val2;
@@ -7631,11 +7631,7 @@ static int16 status_calc_hit(block_list *bl, status_change *sc, int32 hit)
 	if(sc->getSCE(SC_CONCENTRATION))
 		hit += sc->getSCE(SC_CONCENTRATION)->val3;
 	if(sc->getSCE(SC_INSPIRATION))
-#ifdef NEED_2017_SKILL_BEHAVIOR
-		hit += 5 * sc->getSCE(SC_INSPIRATION)->val1;
-#else
-		hit += 12 * sc->getSCE(SC_INSPIRATION)->val1;
-#endif
+		hit += 5 * sc->getSCE(SC_INSPIRATION)->val1 + sc->getSCE(SC_INSPIRATION)->val2 / 2;
 	if(sc->getSCE(SC_ADJUSTMENT))
 		hit -= 30;
 	if(sc->getSCE(SC_INCREASING))
@@ -12212,8 +12208,7 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 			val2 = 50 * val1; // HP recovery rate
 			break;
 		case SC_SONGOFMANA:
-			status_heal(bl, 0, status->max_sp * (val1 <= 2 ? 10 : val1 <= 4 ? 15 : 20) / 100, 1);
-			val3 = 50 * val1;
+			val3 = 10 + min(5 * val2, 35); // 2017: SP regen rate (chorus-scaled), no instant heal
 			break;
 		case SC_SATURDAYNIGHTFEVER:
 			if (!val4) val4 = skill_get_time2(scdb->skill_id,val1);
@@ -12243,11 +12238,11 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 			}
 			break;
 		case SC_DANCEWITHWUG:
-			val3 = 5 * val1; // ASPD Increase
-			val4 = 20 + 10 * val1; // Fixed Cast Time Reduction
+			val3 = 5 + 5 * val2; // 2017: ASPD increase (chorus-scaled)
+			val4 = 20 + 10 * val2; // 2017: fixed cast reduction (chorus-scaled)
 			break;
 		case SC_LERADSDEW:
-			val3 = 2 + 3 * val1 + min(3 * val2, 25); // MaxHP Increase
+			val3 = 200 * val1 + min(300 * val2, 2500); // 2017: flat MaxHP increase
 			break;
 		case SC_MELODYOFSINK:
 			val2 = 10 * val1; // INT Reduction.
@@ -12308,20 +12303,11 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 			val4 = tick / tick_time;
 			break;
 		case SC_INSPIRATION:
-#ifdef NEED_2017_SKILL_BEHAVIOR
 			val2 = (sd ? sd->status.job_level : 50); // 2017: WATK bonus = Job Level
 			val3 = status_get_lv(bl) / 10 + val2 / 5; // All stat bonus
-#else
-			val2 = 40 * val1; // ATK/MATK
-			val3 = 6 * val1; //All stat bonus
-#endif
 			val4 = tick / 5000;
 			tick_time = 5000; // [GodLesZ] tick time
-#ifdef NEED_2017_SKILL_BEHAVIOR
 			status_change_clear_buffs(bl, SCCB_BUFFS|SCCB_DEBUFFS); // 2017: remove buffs and debuffs
-#else
-			status_change_clear_buffs(bl, SCCB_DEBUFFS); // Remove debuffs
-#endif
 			break;
 		case SC_CRESCENTELBOW:
 			val2 = (sd?sd->status.job_level:50) / 2 + (50 + 5 * val1);
@@ -13704,6 +13690,16 @@ int32 status_change_end( block_list* bl, enum sc_type type, int32 tid ){
 	status_data* status = status_get_status_data(*bl);
 
 	switch(type) {
+		case SC_BLOODSUCKER:
+			if (val2) {
+				block_list *bsrc = map_id2bl(val2);
+				if (bsrc) {
+					status_change *bsc = status_get_sc(bsrc);
+					if (bsc)
+						(bsc->bs_counter)--;
+				}
+			}
+			break;
 		case SC_KEEPING:
 		case SC_BARRIER:
 			if (unit_data* ud = unit_bl2ud(bl); ud != nullptr) {

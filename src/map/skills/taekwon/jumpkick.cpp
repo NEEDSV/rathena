@@ -36,13 +36,6 @@ void SkillJumpKick::applyAdditionalEffects(block_list *src, block_list *target, 
 		status_change_end(target, SC_KAAHI);
 		status_change_end(target, SC_ONEHAND);
 		status_change_end(target, SC_ASPDPOTION2);
-		// New soul links confirmed to not dispell with this skill
-		// but thats likely a bug since soul links can't stack and
-		// soul cutter skill works on them. So ill add this here for now. [Rytech]
-		status_change_end(target, SC_SOULGOLEM);
-		status_change_end(target, SC_SOULSHADOW);
-		status_change_end(target, SC_SOULFALCON);
-		status_change_end(target, SC_SOULFAIRY);
 	}
 }
 

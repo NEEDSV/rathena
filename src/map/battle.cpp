@@ -1560,9 +1560,7 @@ bool battle_status_block_damage(block_list *src, block_list *target, status_chan
 	}
 
 	if (sc->getSCE(SC_NEUTRALBARRIER) && ((flag&(BF_LONG|BF_MAGIC)) == BF_LONG
-#ifndef RENEWAL
 		|| skill_id == CR_ACIDDEMONSTRATION
-#endif
 		)) {
 		d->dmg_lv = ATK_MISS;
 		return false;
@@ -1699,10 +1697,8 @@ int64 battle_calc_damage(block_list *src,block_list *bl,struct Damage *d,int64 d
 	}
 
 	switch (skill_id) {
-#ifndef RENEWAL
 		case PA_PRESSURE:
 		case HW_GRAVITATION:
-#endif
 		case SP_SOULEXPLOSION:
 			// Adjust these based on any possible PK damage rates.
 			if (battle_config.pk_mode == 1 && map_getmapflag(bl->m, MF_PVP) > 0)
@@ -1834,7 +1830,7 @@ int64 battle_calc_damage(block_list *src,block_list *bl,struct Damage *d,int64 d
 		if (tsc->getSCE(SC_DEFENDER) &&
 			skill_id != NJ_ZENYNAGE && skill_id != KO_MUCHANAGE &&
 #ifdef RENEWAL
-			((flag&(BF_LONG|BF_WEAPON)) == (BF_LONG|BF_WEAPON) || skill_id == GN_FIRE_EXPANSION_ACID))
+			((flag&(BF_LONG|BF_WEAPON)) == (BF_LONG|BF_WEAPON) || skill_id == GN_FIRE_EXPANSION_ACID || skill_id == CR_ACIDDEMONSTRATION))
 #else
 			(flag&(BF_LONG|BF_WEAPON)) == (BF_LONG|BF_WEAPON))
 #endif
@@ -3700,6 +3696,9 @@ static void battle_calc_element_damage(struct Damage* wd, block_list *src, block
 			case SR_FALLENEMPIRE:
 			case SR_CRESCENTELBOW_AUTOSPELL:
 			case SR_GATEOFHELL:
+#ifdef RENEWAL
+			case CR_ACIDDEMONSTRATION:
+#endif
 			case GN_FIRE_EXPANSION_ACID:
 				wd->damage = battle_attr_fix(src, target, wd->damage, ELE_NEUTRAL, tstatus->def_ele, tstatus->ele_lv, 1);
 				if (is_attack_left_handed(src, skill_id))
@@ -4931,6 +4930,10 @@ static void battle_calc_attack_post_defense(struct Damage* wd, block_list *src,b
 			if(sd && pc_checkskill(sd,AS_SONICACCEL)>0)
 				ATK_ADDRATE(wd->damage, wd->damage2, 90);
 			break;
+		case NC_AXETORNADO:
+			if (sstatus->rhw.ele == ELE_WIND || sstatus->lhw.ele == ELE_WIND)
+				ATK_ADDRATE(wd->damage, wd->damage2, 25);
+			break;
 	}
 #endif
 }
@@ -5508,7 +5511,7 @@ static struct Damage battle_calc_weapon_attack(block_list *src, block_list *targ
 		}
 
 		//Card Fix for target (tsd), 2 is not added to the "left" flag meaning "target cards only"
-		if (tsd && skill_id != NJ_ISSEN && skill_id != GN_FIRE_EXPANSION_ACID) { // These skills will do a card fix later
+		if (tsd && skill_id != NJ_ISSEN && skill_id != GN_FIRE_EXPANSION_ACID && skill_id != CR_ACIDDEMONSTRATION && skill_id != ASC_BREAKER) { // These skills will do a card fix later
 			std::bitset<NK_MAX> ignoreele_nk = nk;
 
 			ignoreele_nk.set(NK_IGNOREELEMENT);
@@ -5780,7 +5783,9 @@ static struct Damage battle_calc_weapon_attack(block_list *src, block_list *targ
 #ifdef RENEWAL
 	switch (skill_id) {
 		case NJ_ISSEN:
+			case ASC_BREAKER:
 			case GN_FIRE_EXPANSION_ACID:
+			case CR_ACIDDEMONSTRATION:
 			return wd; //These skills will do a GVG fix later
 		default:
 #endif
@@ -6417,14 +6422,31 @@ struct Damage battle_calc_misc_attack(block_list *src,block_list *target,uint16 
 		case NPC_EVILLAND:
 			md.damage = skill_calc_heal(src,target,skill_id,skill_lv,false);
 			break;
-#ifndef RENEWAL
 		case ASC_BREAKER:
+#ifdef RENEWAL
+			// 2017 Renewal Soul Breaker: ((atk + matk) * (3 + 0.5*skill_lv)) - (def + def2 + mdef + mdef2)
+			// atk part takes weapon element, matk part is non-elemental
+			{
+				struct Damage atk = battle_calc_weapon_attack(src, target, skill_id, skill_lv, 0);
+				nk.set(NK_IGNOREELEMENT); // final damage is not re-element-fixed (atk already elemented, matk neutral)
+				struct Damage matk = battle_calc_magic_attack(src, target, skill_id, skill_lv, 0);
+				md.damage = ((30 + 5 * skill_lv) * (atk.damage + matk.damage)) / 10;
+				int32 totaldef = tstatus->def2 + (int32)status_get_def(target);
+				int32 totalmdef = tstatus->mdef + tstatus->mdef2;
+				md.damage -= totaldef + totalmdef;
+			}
+#else
 			md.damage = 500 + rnd()%500 + 5 * skill_lv * sstatus->int_;
 			nk.set(NK_IGNOREFLEE);
 			nk.set(NK_IGNOREELEMENT); //These two are not properties of the weapon based part.
+#endif
 			break;
 		case HW_GRAVITATION:
+#ifdef RENEWAL
+			md.damage = 500 + 100 * skill_lv;
+#else
 			md.damage = 200 + 200 * skill_lv;
+#endif
 			md.dmotion = 0; //No flinch animation
 			if (target->type == BL_MOB) {
 				mob_data& mob = *reinterpret_cast<mob_data*>(target);
@@ -6436,7 +6458,6 @@ struct Damage battle_calc_misc_attack(block_list *src,block_list *target,uint16 
 		case PA_PRESSURE:
 			md.damage = 500 + 300 * skill_lv;
 			break;
-#endif
 		case PA_GOSPEL:
 			if (mflag > 0)
 				md.damage = (rnd() % 4000) + 1500;
@@ -6452,6 +6473,9 @@ struct Damage battle_calc_misc_attack(block_list *src,block_list *target,uint16 
 					md.damage = 0;
 			}
 			break;
+#ifdef RENEWAL
+		case CR_ACIDDEMONSTRATION:
+#endif
 		case GN_FIRE_EXPANSION_ACID:
 #ifdef RENEWAL
 			// Official Renewal formula [helvetica]

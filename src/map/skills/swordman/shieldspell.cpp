@@ -45,6 +45,9 @@ void SkillShieldSpell::castendNoDamageId(block_list* src, block_list* target, ui
 
 	switch (skill_lv) {
 		case 1: { // DEF Based
+				status_change_end(target, SC_SHIELDSPELL_MDEF);
+				status_change_end(target, SC_SHIELDSPELL_REF);
+				status_change_end(target, SC_MAGNIFICAT);
 				int32 splashrange = 0;
 
 				if (shield_def >= 0 && shield_def <= 40)
@@ -71,6 +74,9 @@ void SkillShieldSpell::castendNoDamageId(block_list* src, block_list* target, ui
 			break;
 
 		case 2: { // MDEF Based
+				status_change_end(target, SC_SHIELDSPELL_DEF);
+				status_change_end(target, SC_SHIELDSPELL_REF);
+				status_change_end(target, SC_MAGNIFICAT);
 				int32 splashrange = 0;
 
 				if (shield_mdef >= 1 && shield_mdef <= 3)
@@ -101,6 +107,9 @@ void SkillShieldSpell::castendNoDamageId(block_list* src, block_list* target, ui
 			break;
 
 		case 3: // Refine Based
+				status_change_end(target, SC_SHIELDSPELL_DEF);
+				status_change_end(target, SC_SHIELDSPELL_MDEF);
+				status_change_end(target, SC_MAGNIFICAT);
 			switch (opt) {
 				case 1: // Allows you to break armor at a 100% rate when you do damage.
 					sc_start(src, target, SC_SHIELDSPELL_REF, 100, opt, shield_refine * 30000);

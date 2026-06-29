@@ -57,11 +57,6 @@ void SkillBrandishSpear::castendDamageId(block_list* src, block_list* target, ui
 }
 
 void SkillBrandishSpear::calculateSkillRatio(const Damage* wd, const block_list* src, const block_list* target, uint16 skill_lv, int32& base_skillratio, int32 mflag) const {
-#ifndef NEED_2017_SKILL_FORMULA
-	const status_data* sstatus = status_get_status_data(*src);
-
-	base_skillratio += -100 + 400 + 100 * skill_lv + sstatus->str * 3;
-#else
 	int32 ratio = 100 + 20 * skill_lv;
 
 	base_skillratio += -100 + ratio;
@@ -77,5 +72,4 @@ void SkillBrandishSpear::calculateSkillRatio(const Damage* wd, const block_list*
 		base_skillratio += ratio / 4;
 	if (skill_lv > 9 && wd->miscflag == 2)
 		base_skillratio += ratio / 2;
-#endif
 }

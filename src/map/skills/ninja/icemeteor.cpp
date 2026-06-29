@@ -18,11 +18,7 @@ void SkillIceMeteor::calculateSkillRatio(const Damage *wd, const block_list *src
 
 	base_skillratio += 50 * skill_lv;
 	if(sd && sd->spiritcharm_type == CHARM_TYPE_WATER && sd->spiritcharm > 0)
-#ifdef NEED_2017_SKILL_FORMULA
 		base_skillratio += 25 * sd->spiritcharm;
-#else
-		base_skillratio += 100 * sd->spiritcharm;
-#endif
 }
 
 void SkillIceMeteor::castendPos2(block_list* src, int32 x, int32 y, uint16 skill_lv, t_tick tick, int32& flag) const {

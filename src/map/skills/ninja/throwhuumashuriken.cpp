@@ -3,24 +3,14 @@
 
 #include "throwhuumashuriken.hpp"
 
-#include <config/core.hpp>
-
-#include "map/clif.hpp"
-
-SkillThrowHuumaShuriken::SkillThrowHuumaShuriken() : SkillImplRecursiveDamageSplash(NJ_HUUMA) {
+SkillThrowHuumaShuriken::SkillThrowHuumaShuriken() : SkillImpl(NJ_HUUMA) {
 }
 
 void SkillThrowHuumaShuriken::calculateSkillRatio(const Damage *wd, const block_list *src, const block_list *target, uint16 skill_lv, int32 &base_skillratio, int32 mflag) const {
-#ifndef NEED_2017_SKILL_FORMULA
-	base_skillratio += -150 + 250 * skill_lv;
-#else
 	base_skillratio += 50 + 150 * skill_lv;
-#endif
 }
 
-void SkillThrowHuumaShuriken::splashSearch(block_list* src, block_list* target, uint16 skill_lv, t_tick tick, int32 flag) const {
-#ifdef RENEWAL
-	clif_skill_damage( *src, *target,tick, status_get_amotion(src), 0, DMGVAL_IGNORE, 1, getSkillId(), skill_lv, DMG_SINGLE );
-#endif
-	SkillImplRecursiveDamageSplash::splashSearch(src, target, skill_lv, tick, flag);
+void SkillThrowHuumaShuriken::castendPos2(block_list* src, int32 x, int32 y, uint16 skill_lv, t_tick tick, int32& flag) const {
+	flag |= 1; // Set flag to 1 to prevent deleting ammo (it will be deleted on group-delete).
+	skill_unitsetting(src, getSkillId(), skill_lv, x, y, 0);
 }

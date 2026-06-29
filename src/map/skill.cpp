@@ -2808,11 +2808,9 @@ int64 skill_attack (int32 attack_type, block_list* src, block_list *dsrc, block_
 	if (tsc && tsc->getSCE(SC_TRICKDEAD))
 		return 0;
 
-#ifndef RENEWAL
 	//When Gravitational Field is active, damage can only be dealt by Gravitational Field and Autospells
 	if(sd && sc && sc->getSCE(SC_GRAVITATION) && sc->getSCE(SC_GRAVITATION)->val3 == BCT_SELF && skill_id != HW_GRAVITATION && !sd->state.autocast)
 		return 0;
-#endif
 
 	dmg = battle_calc_attack(attack_type,src,bl,skill_id,skill_lv,flag&0xFFF);
 
@@ -3231,9 +3229,7 @@ int64 skill_attack (int32 attack_type, block_list* src, block_list *dsrc, block_
 	if( !dmg.amotion ) {
 		//Deal damage before knockback to allow stuff like firewall+storm gust combo.
 		if( (!tsc || (!tsc->getSCE(SC_DEVOTION) && skill_id != CR_REFLECTSHIELD && !tsc->getSCE(SC_WATER_SCREEN_OPTION))
-#ifndef RENEWAL
 			|| skill_id == HW_GRAVITATION
-#endif
 			|| skill_id == NPC_EVILLAND) && !shadow_flag )
 			battle_damage(src, bl, damage, dmg.div_, skill_lv, skill_id, dmg.dmg_lv, dmg.flag, false, tick, false);
 		if( !status_isdead(*bl) && additional_effects )
@@ -3258,9 +3254,7 @@ int64 skill_attack (int32 attack_type, block_list* src, block_list *dsrc, block_
 	}
 
 	if (tsc  && skill_id != NPC_EVILLAND && skill_id != SP_SOULEXPLOSION && skill_id != SJ_NOVAEXPLOSING
-#ifndef RENEWAL
 		&& skill_id != PA_PRESSURE && skill_id != HW_GRAVITATION
-#endif
 		) {
 		if (tsc->getSCE(SC_DEVOTION)) {
 			struct status_change_entry *sce = tsc->getSCE(SC_DEVOTION);
@@ -6219,12 +6213,10 @@ std::shared_ptr<s_skill_unit_group> skill_unitsetting(block_list *src, uint16 sk
 			pc_delspiritcharm(sd,sd->spiritcharm,sd->spiritcharm_type);
 		}
 		break;
-#ifndef RENEWAL
 	case HW_GRAVITATION:
 		if(sc && sc->getSCE(SC_GRAVITATION) && sc->getSCE(SC_GRAVITATION)->val3 == BCT_SELF)
 			link_group_id = sc->getSCE(SC_GRAVITATION)->val4;
 		break;
-#endif
 	case SO_VACUUM_EXTREME:
 		// Coordinates
 		val1 = x;
@@ -6912,9 +6904,7 @@ int32 skill_unit_onplace_timer(skill_unit *unit, block_list *bl, t_tick tick)
 
 	switch (sg->unit_id) {
 		// Units that deals simple attack
-#ifndef RENEWAL
- 		case UNT_GRAVITATION:
-#endif
+		case UNT_GRAVITATION:
 		case UNT_EARTHSTRAIN:
 		case UNT_FIREWALK:
 		case UNT_ELECTRICWALK:
@@ -6947,9 +6937,6 @@ int32 skill_unit_onplace_timer(skill_unit *unit, block_list *bl, t_tick tick)
 		case UNT_KUNAIKAITEN:
 			skill_attack(skill_get_type(sg->skill_id),ss,unit,bl,sg->skill_id,sg->skill_lv,tick,0);
 			break;
-#ifdef RENEWAL
- 		case UNT_GRAVITATION:
-#endif
 		case UNT_GROUND_GRAVITATION:
 		case UNT_JACK_FROST_NOVA:
 			skill_attack( skill_get_type(sg->skill_id), ss, ss, bl, sg->skill_id, sg->skill_lv, tick, 0 );
@@ -7125,11 +7112,9 @@ int32 skill_unit_onplace_timer(skill_unit *unit, block_list *bl, t_tick tick)
 				t_tick sec = skill_get_time2(sg->skill_id,sg->skill_lv);
 				if (sg->unit_id == UNT_ANKLESNARE) {
 					t_tick mintime = 30 * (status_get_lv(ss) + 100);
-#ifndef RENEWAL
-					// Bosses cannot activate Ankle Snare in renewal so we don't need this code
+					// Bosses are snared briefly (1/5 duration) to match 2017 behavior
 					if (status_bl_has_mode(bl, MD_STATUSIMMUNE))
 						sec /= 5;
-#endif
 					sec = std::max((sec * status_get_agi(bl)) / -200 + sec, mintime);
 				}
 
@@ -7169,6 +7154,8 @@ int32 skill_unit_onplace_timer(skill_unit *unit, block_list *bl, t_tick tick)
 
 		case UNT_ELECTRICSHOCKER:
 			if( bl->id != ss->id ) {
+				if( status_bl_has_mode(bl,MD_STATUSIMMUNE) )
+					break;
 				if( status_change_start(ss, bl,type,10000,sg->skill_lv,sg->group_id,0,0,skill_get_time2(sg->skill_id, sg->skill_lv), SCSTART_NORATEDEF) ) {
 					map_moveblock(bl, unit->x, unit->y, tick);
 					clif_fixpos( *bl );
@@ -7486,9 +7473,6 @@ int32 skill_unit_onplace_timer(skill_unit *unit, block_list *bl, t_tick tick)
 					status_change_end(bl,SC_CLOAKING);
 					status_change_end(bl,SC_CLOAKINGEXCEED);
 					status_change_end(bl,SC_CAMOUFLAGE);
-#ifndef NEED_2017_SKILL_BEHAVIOR
-					status_change_end(bl,SC_NEWMOON);
-#endif
 					if (tsc && tsc->getSCE(SC__SHADOWFORM) && rnd() % 100 < 100 - tsc->getSCE(SC__SHADOWFORM)->val1 * 10) // [100 - (Skill Level x 10)] %
 						status_change_end(bl, SC__SHADOWFORM);
 				}
@@ -7666,13 +7650,7 @@ int32 skill_unit_onplace_timer(skill_unit *unit, block_list *bl, t_tick tick)
 
 		case UNT_MAGMA_ERUPTION:
 			skill_attack(skill_get_type(NC_MAGMA_ERUPTION_DOTDAMAGE), ss, unit, bl, NC_MAGMA_ERUPTION_DOTDAMAGE, sg->skill_lv, tick, 0);
-			if (sg->skill_id == NC_MAGMA_ERUPTION) {
-#ifndef NEED_2017_SKILL_BEHAVIOR
-				// 2026 deals the eruption DoT twice per tick for the player skill.
-				// 2017 dealt it once; skip the extra hit on the 2017 regression path.
-				skill_attack(skill_get_type(NC_MAGMA_ERUPTION_DOTDAMAGE), ss, unit, bl, NC_MAGMA_ERUPTION_DOTDAMAGE, sg->skill_lv, tick, 0);
-#endif
-			} else
+			if (sg->skill_id != NC_MAGMA_ERUPTION)
 				skill_attack(skill_get_type(NPC_MAGMA_ERUPTION_DOTDAMAGE), ss, unit, bl, NPC_MAGMA_ERUPTION_DOTDAMAGE, sg->skill_lv, tick, 0);
 			break;
 
@@ -7863,8 +7841,8 @@ int32 skill_unit_onleft(uint16 skill_id, block_list *bl, t_tick tick)
 		case SA_DELUGE:
 		case SA_VIOLENTGALE:
 		case CG_HERMODE:
-#ifndef RENEWAL
 		case HW_GRAVITATION:
+#ifndef RENEWAL
 		case HP_BASILICA:
 #endif
 		case NJ_SUITON:
@@ -11435,8 +11413,8 @@ int32 skill_cell_overlap(block_list *bl, va_list ap)
 		case WZ_ICEWALL:
 #ifndef RENEWAL
 		case HP_BASILICA:
-		case HW_GRAVITATION:
 #endif
+		case HW_GRAVITATION:
 			//These can't be placed on top of themselves (duration can't be refreshed)
 			if (unit->group->skill_id == skill_id)
 			{

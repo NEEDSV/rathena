@@ -25,13 +25,5 @@ void SkillRagingQuadrupleBlow::castendDamageId(block_list* src, block_list* targ
 }
 
 void SkillRagingQuadrupleBlow::calculateSkillRatio(const Damage* wd, const block_list* src, const block_list* target, uint16 skill_lv, int32& base_skillratio, int32 mflag) const {
-#ifndef NEED_2017_SKILL_FORMULA
-	const map_session_data* sd = BL_CAST(BL_PC, src);
-
-	base_skillratio += 150 + 50 * skill_lv;
-	if (sd && sd->status.weapon == W_KNUCKLE)
-		base_skillratio *= 2;
-#else
 	base_skillratio += 50 + 50 * skill_lv;
-#endif
 }
