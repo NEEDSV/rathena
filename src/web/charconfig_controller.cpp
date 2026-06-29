@@ -62,12 +62,22 @@ HANDLER_FUNC(charconfig_save) {
 			return;
 		}
 
-		auto db_data = nlohmann::json::parse(databuf);
+		std::string db_data_str;
+		if (!decodeConfigDataFromDb(databuf, db_data_str)) {
+			ShowError("[CharConfig] Failed to decode stored config data: account_id=%d char_id=%d world_name=\"%s\"\n", account_id, char_id, world_name.c_str());
+			sl.unlock();
+			res.status = HTTP_BAD_REQUEST;
+			res.set_content("Error", "text/plain");
+			return;
+		}
+
+		auto db_data = nlohmann::json::parse(db_data_str);
 		mergeData(db_data, data, false);
 		data = std::move(db_data);
 	}
 
 	auto data_str = data.dump();
+	auto db_data_str = encodeConfigDataForDb(data_str);
 
 	if (SQL_SUCCESS != stmt.Prepare(
 			"REPLACE INTO `%s` (`account_id`, `char_id`, `world_name`, `data`) VALUES (?, ?, ?, ?)",
@@ -75,10 +85,11 @@ HANDLER_FUNC(charconfig_save) {
 		|| SQL_SUCCESS != stmt.BindParam( 0, SQLDT_INT32, &account_id, sizeof(account_id))
 		|| SQL_SUCCESS != stmt.BindParam( 1, SQLDT_INT32, &char_id, sizeof(char_id))
 		|| SQL_SUCCESS != stmt.BindParam( 2, SQLDT_STRING, (void *)world_name.c_str(), world_name.length())
-		|| SQL_SUCCESS != stmt.BindParam( 3, SQLDT_STRING, (void *)data_str.c_str(), data_str.length())
+		|| SQL_SUCCESS != stmt.BindParam( 3, SQLDT_STRING, (void *)db_data_str.c_str(), db_data_str.length())
 		|| SQL_SUCCESS != stmt.Execute()
 	) {
 		SqlStmt_ShowDebug(stmt);
+		logConfigDataSaveFailure("CharConfig", account_id, char_id, world_name, data_str);
 		sl.unlock();
 		res.status = HTTP_BAD_REQUEST;
 		res.set_content("Error", "text/plain");
@@ -129,14 +140,16 @@ HANDLER_FUNC(charconfig_load) {
 
 	if (stmt.NumRows() <= 0) {
 		std::string data = "{\"Type\": 1}";
+		auto db_data = encodeConfigDataForDb(data);
 
 		if( SQL_SUCCESS != stmt.Prepare( "INSERT INTO `%s` (`account_id`, `char_id`, `world_name`, `data`) VALUES (?, ?, ?, ?)", char_configs_table ) ||
 			SQL_SUCCESS != stmt.BindParam( 0, SQLDT_INT32, &account_id, sizeof( account_id ) ) ||
 			SQL_SUCCESS != stmt.BindParam( 1, SQLDT_INT32, &char_id, sizeof( char_id ) ) ||
 			SQL_SUCCESS != stmt.BindParam( 2, SQLDT_STRING, (void*)world_name, strlen( world_name ) ) ||
-			SQL_SUCCESS != stmt.BindParam( 3, SQLDT_STRING, (void*)data.c_str(), strlen( data.c_str() ) ) ||
+			SQL_SUCCESS != stmt.BindParam( 3, SQLDT_STRING, (void*)db_data.c_str(), db_data.length() ) ||
 			SQL_SUCCESS != stmt.Execute() ){
 			SqlStmt_ShowDebug( stmt );
+			logConfigDataSaveFailure("CharConfig", account_id, char_id, world_name_str, data);
 			sl.unlock();
 			res.status = HTTP_BAD_REQUEST;
 			res.set_content( "Error", "text/plain" );
@@ -164,7 +177,15 @@ HANDLER_FUNC(charconfig_load) {
 
 	databuf[sizeof(databuf) - 1] = 0;
 
-	auto response = nlohmann::json::parse(databuf);
+	std::string data;
+	if (!decodeConfigDataFromDb(databuf, data)) {
+		ShowError("[CharConfig] Failed to decode stored config data: account_id=%d char_id=%d world_name=\"%s\"\n", account_id, char_id, world_name);
+		res.status = HTTP_BAD_REQUEST;
+		res.set_content("Error", "text/plain");
+		return;
+	}
+
+	auto response = nlohmann::json::parse(data);
 	response["Type"] = 1;
 	res.set_content(response.dump(), "application/json");
 }
