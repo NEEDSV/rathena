@@ -33,11 +33,7 @@ void SkillKiExplosion::castendDamageId(block_list* src, block_list* target, uint
 }
 
 void SkillKiExplosion::calculateSkillRatio(const Damage* wd, const block_list* src, const block_list* target, uint16 skill_lv, int32& base_skillratio, int32 mflag) const {
-#ifndef NEED_2017_SKILL_FORMULA
-	base_skillratio += 700;
-#else
 	base_skillratio += 200;
-#endif
 }
 
 void SkillKiExplosion::applyAdditionalEffects(block_list* src, block_list* target, uint16 skill_lv, t_tick tick, int32 attack_type, enum damage_lv dmg_lv) const {

@@ -11,12 +11,8 @@ SkillEstun::SkillEstun() : SkillImpl(SL_STUN) {
 }
 
 void SkillEstun::calculateSkillRatio(const Damage *wd, const block_list *src, const block_list *target, uint16 skill_lv, int32 &base_skillratio, int32 mflag) const {
-#ifdef NEED_2017_SKILL_FORMULA
 	const status_data* tstatus = status_get_status_data(*target);
 	base_skillratio += (tstatus->size != SZ_BIG ? 5 * skill_lv : -99);
-#else
-	base_skillratio += 5 * skill_lv;
-#endif
 }
 
 void SkillEstun::castendDamageId(block_list *src, block_list *target, uint16 skill_lv, t_tick tick, int32& flag) const {

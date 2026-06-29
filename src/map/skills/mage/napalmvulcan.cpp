@@ -11,12 +11,7 @@ SkillNapalmVulcan::SkillNapalmVulcan() : SkillImplRecursiveDamageSplash(HW_NAPAL
 }
 
 void SkillNapalmVulcan::calculateSkillRatio(const Damage *wd, const block_list *src, const block_list *target, uint16 skill_lv, int32 &skillratio, int32 mflag) const {
-#ifndef NEED_2017_SKILL_FORMULA
-	skillratio += -100 + 70 * skill_lv;
-	RE_LVL_DMOD(100);
-#else
 	skillratio += 25;
-#endif
 }
 
 void SkillNapalmVulcan::applyAdditionalEffects(block_list *src, block_list *target, uint16 skill_lv, t_tick tick, int32 attack_type, enum damage_lv dmg_lv) const {

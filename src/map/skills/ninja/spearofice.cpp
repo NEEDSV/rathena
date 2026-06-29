@@ -15,19 +15,10 @@ void SkillSpearOfIce::calculateSkillRatio(const Damage *wd, const block_list *sr
 	const map_session_data* sd = BL_CAST( BL_PC, src );
 
 #ifdef RENEWAL
-	const status_change *sc = status_get_sc(src);
 
 	base_skillratio -= 30;
-#ifdef NEED_2017_SKILL_FORMULA
 	if (sd && sd->spiritcharm_type == CHARM_TYPE_WATER && sd->spiritcharm > 0)
 		base_skillratio += 5 * sd->spiritcharm;
-#else
-	if (sc && sc->getSCE(SC_SUITON))
-		base_skillratio += 2 * skill_lv;
-
-	if (sd && sd->spiritcharm_type == CHARM_TYPE_WATER && sd->spiritcharm > 0)
-		base_skillratio += 20 * sd->spiritcharm;
-#endif
 #endif
 }
 

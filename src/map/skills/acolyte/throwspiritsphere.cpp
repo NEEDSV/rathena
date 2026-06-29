@@ -37,13 +37,5 @@ void SkillThrowSpiritSphere::castendDamageId(block_list* src, block_list* target
 }
 
 void SkillThrowSpiritSphere::calculateSkillRatio(const Damage* wd, const block_list* src, const block_list* target, uint16 skill_lv, int32& base_skillratio, int32 mflag) const {
-#ifndef NEED_2017_SKILL_FORMULA
-	const status_change* tsc = status_get_sc(target);
-
-	base_skillratio += 500 + skill_lv * 200;
-	if (tsc && tsc->getSCE(SC_BLADESTOP))
-		base_skillratio += base_skillratio / 2;
-#else
 	base_skillratio += 50 * skill_lv;
-#endif
 }

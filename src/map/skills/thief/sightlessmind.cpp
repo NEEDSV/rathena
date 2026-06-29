@@ -12,11 +12,7 @@ SkillSightlessMind::SkillSightlessMind() : SkillImplRecursiveDamageSplash(RG_RAI
 }
 
 void SkillSightlessMind::calculateSkillRatio(const Damage *wd, const block_list *src, const block_list *target, uint16 skill_lv, int32 &base_skillratio, int32 mflag) const {
-#ifndef NEED_2017_SKILL_FORMULA
-	base_skillratio += -100 + 50 + skill_lv * 150;
-#else
 	base_skillratio += 40 * skill_lv;
-#endif
 }
 
 void SkillSightlessMind::castendNoDamageId(block_list *src, block_list *target, uint16 skill_lv, t_tick tick, int32& flag) const {

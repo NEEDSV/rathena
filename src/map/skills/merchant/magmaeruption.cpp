@@ -16,25 +16,17 @@ SkillMagmaEruption::SkillMagmaEruption() : WeaponSkillImpl(NC_MAGMA_ERUPTION) {
 
 void SkillMagmaEruption::applyAdditionalEffects(block_list *src, block_list *target, uint16 skill_lv, t_tick tick, int32 attack_type, enum damage_lv dmg_lv) const {
 	// Stun effect from 'slam'
-#ifdef NEED_2017_SKILL_BEHAVIOR
 	// 2017: the slam Stun uses Duration1 (skill_get_time). 2026 switched it to
 	// Duration2 (skill_get_time2), which is the much longer eruption-field timer.
 	sc_start(src, target, SC_STUN, 90, skill_lv, skill_get_time(getSkillId(), skill_lv));
-#else
-	sc_start(src, target, SC_STUN, 90, skill_lv, skill_get_time2(getSkillId(), skill_lv));
-#endif
 }
 
 void SkillMagmaEruption::calculateSkillRatio(const Damage *wd, const block_list *src, const block_list *target, uint16 skill_lv, int32 &base_skillratio, int32 mflag) const {
 	// 'Slam' damage
-#ifdef NEED_2017_SKILL_FORMULA
 	int32 skillratio = base_skillratio;
 	skillratio += 450 + 50 * skill_lv;
 	RE_LVL_DMOD(100);
 	base_skillratio = skillratio;
-#else
-	base_skillratio += 350 + 50 * skill_lv;
-#endif
 }
 
 void SkillMagmaEruption::castendPos2(block_list* src, int32 x, int32 y, uint16 skill_lv, t_tick tick, int32& flag) const {

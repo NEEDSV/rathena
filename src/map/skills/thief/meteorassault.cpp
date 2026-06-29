@@ -13,12 +13,7 @@ SkillMeteorAssault::SkillMeteorAssault() : SkillImplRecursiveDamageSplash(ASC_ME
 
 void SkillMeteorAssault::calculateSkillRatio(const Damage *wd, const block_list *src, const block_list *target, uint16 skill_lv, int32 &skillratio, int32 mflag) const {
 #ifdef RENEWAL
-	#ifdef NEED_2017_SKILL_FORMULA
 		skillratio += -60 + 40 * skill_lv;
-	#else
-		skillratio += 100 + 120 * skill_lv;
-		RE_LVL_DMOD(100);
-	#endif
 #else
 	skillratio += -60 + 40 * skill_lv;
 #endif
