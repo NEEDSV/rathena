@@ -3185,6 +3185,8 @@ static int32 status_get_hpbonus(block_list *bl, enum e_status_bonus type) {
 				bonus += 500;
 			if (sc->getSCE(SC_PROMOTE_HEALTH_RESERCH))
 				bonus += sc->getSCE(SC_PROMOTE_HEALTH_RESERCH)->val3;
+			if(sc->getSCE(SC_LERADSDEW))
+				bonus += sc->getSCE(SC_LERADSDEW)->val3;
 			if(sc->getSCE(SC_INSPIRATION))
 				bonus += (600 * sc->getSCE(SC_INSPIRATION)->val1);
 			if(sc->getSCE(SC_SOLID_SKIN_OPTION))
@@ -3227,8 +3229,6 @@ static int32 status_get_hpbonus(block_list *bl, enum e_status_bonus type) {
 				bonus += sc->getSCE(SC_EPICLESIS)->val2;
 			if(sc->getSCE(SC_FRIGG_SONG))
 				bonus += sc->getSCE(SC_FRIGG_SONG)->val2;
-			if(sc->getSCE(SC_LERADSDEW))
-				bonus += sc->getSCE(SC_LERADSDEW)->val3;
 			if(sc->getSCE(SC_FORCEOFVANGUARD))
 				bonus += (3 * sc->getSCE(SC_FORCEOFVANGUARD)->val1);
 			if(sc->getSCE(SC_INSPIRATION))
@@ -12208,8 +12208,7 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 			val2 = 50 * val1; // HP recovery rate
 			break;
 		case SC_SONGOFMANA:
-			status_heal(bl, 0, status->max_sp * (val1 <= 2 ? 10 : val1 <= 4 ? 15 : 20) / 100, 1);
-			val3 = 50 * val1;
+			val3 = 10 + min(5 * val2, 35); // 2017: SP regen rate (chorus-scaled), no instant heal
 			break;
 		case SC_SATURDAYNIGHTFEVER:
 			if (!val4) val4 = skill_get_time2(scdb->skill_id,val1);
@@ -12239,11 +12238,11 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 			}
 			break;
 		case SC_DANCEWITHWUG:
-			val3 = 5 * val1; // ASPD Increase
-			val4 = 20 + 10 * val1; // Fixed Cast Time Reduction
+			val3 = 5 + 5 * val2; // 2017: ASPD increase (chorus-scaled)
+			val4 = 20 + 10 * val2; // 2017: fixed cast reduction (chorus-scaled)
 			break;
 		case SC_LERADSDEW:
-			val3 = 2 + 3 * val1 + min(3 * val2, 25); // MaxHP Increase
+			val3 = 200 * val1 + min(300 * val2, 2500); // 2017: flat MaxHP increase
 			break;
 		case SC_MELODYOFSINK:
 			val2 = 10 * val1; // INT Reduction.
