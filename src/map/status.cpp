@@ -6402,7 +6402,7 @@ void status_calc_bl_main(block_list& bl, std::bitset<SCB_MAX> flag)
 		}
 
 		// Apply MATK % from skill Mystical Amplification
-		if (sc && sc->getSCE(SC_MAGICPOWER)) {
+		if (sc && sc->getSCE(SC_MAGICPOWER) && sc->getSCE(SC_MAGICPOWER)->val4) {
 			matk_min += matk_min * sc->getSCE(SC_MAGICPOWER)->val3 / 100;
 			matk_max += matk_max * sc->getSCE(SC_MAGICPOWER)->val3 / 100;
 		}
