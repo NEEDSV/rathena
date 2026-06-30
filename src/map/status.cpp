@@ -13202,16 +13202,6 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 				clif_changelook(bl,LOOK_CLOTHES_COLOR,vd->look[LOOK_CLOTHES_COLOR]);
 				clif_changelook(bl,LOOK_BODY2,vd->look[LOOK_BODY2]);
 				break;
-			//case SC_BLOODSUCKER:
-			//	if (sc->val2) {
-			//		block_list *bsrc = map_id2bl(sc->val2);
-			//		if (bsrc) {
-			//			status_change *bsc = status_get_sc(bsrc);
-			//			if (bsc)
-			//				(bsc->bs_counter)--;
-			//		}
-			//	}
-			//	break;
 			case SC_STONE:
 			case SC_STONEWAIT:
 			case SC_POISON:
@@ -14976,19 +14966,8 @@ TIMER_FUNC(status_change_timer){
 		break;
 
 	case SC_OVERHEAT_LIMITPOINT:
-		if (--(sce->val1) >= 0) { // Cooling
-			if (sce->val2 == 0) { // Flag the overheat limit once it has been met.
-				static std::vector<int16> limit = { 150, 200, 280, 360, 450 };
-				uint16 skill_lv = (sd ? cap_value(pc_checkskill(sd, NC_MAINFRAME), 0, (uint16)(limit.size() - 1)) : 0);
-
-				if (sce->val1 > limit[skill_lv])
-					sce->val2 = 1;
-			} else {
-				status_change_end(bl, SC_OVERHEAT);
-				if (sce->val2 > 0)
-					sc_start(bl, bl, SC_OVERHEAT, 100, sce->val1, 975);
-			}
-			sc_timer_next(1000 + tick);
+		if (--(sce->val1) > 0) { // Cooling (2017: 1 Heat decays per 30s while idle)
+			sc_timer_next(30000 + tick);
 			return 0;
 		}
 		break;
