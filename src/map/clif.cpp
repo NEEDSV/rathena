@@ -1207,7 +1207,7 @@ static void clif_set_unit_idle( const block_list* bl, bool walking, send_target 
 #if PACKETVER >= 20231220 && !defined(PACKETVER_ZERO)
 	p.body = vd->look[LOOK_BODY2];
 #elif PACKETVER >= 20150513
-	if( vd->look[LOOK_BODY2] > JOB_SECOND_JOB_START && vd->look[LOOK_BODY2] < JOB_SECOND_JOB_END ){
+	if( vd->look[LOOK_BODY2] != 0 ){
 		p.body = 1;
 	}else{
 		p.body = 0;
@@ -1354,7 +1354,7 @@ static void clif_spawn_unit( const block_list* bl, enum send_target target ){
 #if PACKETVER >= 20231220 && !defined(PACKETVER_ZERO)
 	p.body = vd->look[LOOK_BODY2];
 #elif PACKETVER >= 20150513
-	if( vd->look[LOOK_BODY2] > JOB_SECOND_JOB_START && vd->look[LOOK_BODY2] < JOB_SECOND_JOB_END ){
+	if( vd->look[LOOK_BODY2] != 0){
 		p.body = 1;
 	}else{
 		p.body = 0;
@@ -1462,7 +1462,7 @@ static void clif_set_unit_walking( const block_list& bl, const map_session_data*
 #if PACKETVER >= 20231220 && !defined(PACKETVER_ZERO)
 	p.body = vd->look[LOOK_BODY2];
 #elif PACKETVER >= 20150513
-	if( vd->look[LOOK_BODY2] > JOB_SECOND_JOB_START && vd->look[LOOK_BODY2] < JOB_SECOND_JOB_END ){
+	if( vd->look[LOOK_BODY2] != 0 ){
 		p.body = 1;
 	}else{
 		p.body = 0;
@@ -3965,7 +3965,7 @@ void clif_sprite_change( const block_list* bl, int32 id, int32 type, int32 val, 
 	switch( type ){
 		case LOOK_BODY2:
 #if PACKETVER < 20231220
-			if( val > JOB_SECOND_JOB_START && val < JOB_SECOND_JOB_END ){
+			if( val != 0 ){
 				val = 1;
 			}else{
 				val = 0;
@@ -10403,7 +10403,7 @@ void clif_viewequip_ack( const map_session_data& sd, const map_session_data& tsd
 #if PACKETVER >= 20231220 && !defined(PACKETVER_ZERO)
 	p->body2 = tsd.vd.look[LOOK_BODY2];
 #elif PACKETVER_MAIN_NUM >= 20180801 || PACKETVER_RE_NUM >= 20180801 || PACKETVER_ZERO_NUM >= 20180808
-	if( tsd.vd.look[LOOK_BODY2] > JOB_SECOND_JOB_START && tsd.vd.look[LOOK_BODY2] < JOB_SECOND_JOB_END ){
+	if( tsd.vd.look[LOOK_BODY2] != 0 ){
 		p->body2 = 1;
 	}else{
 		p->body2 = 0;
