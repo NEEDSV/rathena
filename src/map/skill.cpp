@@ -1360,9 +1360,6 @@ int32 skill_additional_effect( block_list* src, block_list *bl, uint16 skill_id,
 					if (pc_iswug(sd) && (skill = pc_checkskill(sd, RA_WUGSTRIKE)) > 0) {
 						int32 rate = sstatus->luk * 10 / 3 + 1;
 
-						if (pc_isfalcon(sd))
-							rate = rate / 3;
-
 						if (rnd() % 1000 <= rate)
 							skill_castend_damage_id(src, bl, RA_WUGSTRIKE, skill, tick, 0);
 					}

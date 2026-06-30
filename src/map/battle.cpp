@@ -1795,11 +1795,6 @@ int64 battle_calc_damage(block_list *src,block_list *bl,struct Damage *d,int64 d
 		if( tsc->getSCE(SC_BURNT) && status_get_element(src) == ELE_FIRE )
 			damage += damage * 666 / 100; //Custom value
 
-#ifndef NEED_2017_SKILL_BEHAVIOR
-			if (status_get_class_(bl) == CLASS_BOSS)
-				bonus /= 2;
-#endif
-
 			damage += damage * bonus / 100;
 		}
 		if (tsc->getSCE(SC_HOLY_OIL) && (flag&(BF_LONG|BF_WEAPON)) == (BF_LONG|BF_WEAPON))
@@ -2035,7 +2030,7 @@ int64 battle_calc_damage(block_list *src,block_list *bl,struct Damage *d,int64 d
 	}
 
 	if (sd && pc_ismadogear(sd)) {
-		pc_overheat(*sd, (battle_get_weapon_element(*d, *src, *bl, skill_id, skill_lv, EQI_HAND_R, false) == ELE_FIRE ? 3 : 1));
+		pc_overheat(*sd, 1); // 2017: +1 Heat per Mado action (no fire-element bonus)
 	}
 
 	// Target status (again), required for RELIEVE
@@ -3992,37 +3987,29 @@ static void battle_calc_skill_base_damage(struct Damage* wd, block_list *src,blo
 		case LK_SPIRALPIERCE:
 		case ML_SPIRALPIERCE:
 			if (sd) {
-				battle_calc_damage_parts(wd, src, target, skill_id, skill_lv);
-
-				// Officially statusAtk + weaponAtk + equipAtk make base attack
-				// We simulate this here by adding them all into equip attack
-				ATK_ADD2(wd->equipAtk, wd->equipAtk2, wd->statusAtk + wd->weaponAtk, wd->statusAtk2 + wd->weaponAtk2);
-				// Set statusAtk and weaponAtk to 0
-				ATK_RATE(wd->statusAtk, wd->statusAtk2, 0);
-				ATK_RATE(wd->weaponAtk, wd->weaponAtk2, 0);
-
-				// Add weight
 				int16 index = sd->equip_index[EQI_HAND_R];
+
 				if (index >= 0 &&
 					sd->inventory_data[index] &&
 					sd->inventory_data[index]->type == IT_WEAPON)
-					wd->equipAtk += sd->inventory_data[index]->weight / 10;
+					wd->equipAtk += sd->inventory_data[index]->weight / 20; // weight from spear is treated as equipment ATK on official [helvetica]
 
-				// 70% damage modifier is applied to base attack + weight
-				ATK_RATE(wd->equipAtk, wd->equipAtk2, 70);
-
-				// Additional skill-specific size fix
-				switch (tstatus->size) {
-					case SZ_SMALL: //Small: 130%
-						ATK_RATE(wd->equipAtk, wd->equipAtk2, 130);
-						break;
-					case SZ_MEDIUM: //Medium: 115%
-						ATK_RATE(wd->equipAtk, wd->equipAtk2, 115);
-						break;
-					//case SZ_BIG: //Large: 100%
-				}
+				battle_calc_damage_parts(wd, src, target, skill_id, skill_lv);
+				wd->masteryAtk = 0; // weapon mastery is ignored for spiral
 			} else {
 				wd->damage = battle_calc_base_damage(src, sstatus, &sstatus->rhw, sc, tstatus->size, 0); //Monsters have no weight and use ATK instead
+			}
+
+			switch (tstatus->size) { //Size-fix. Is this modified by weapon perfection?
+				case SZ_SMALL: //Small: 125%
+					ATK_RATE(wd->damage, wd->damage2, 125);
+					RE_ALLATK_RATE(wd, 125);
+					break;
+				//case SZ_MEDIUM: //Medium: 100%
+				case SZ_BIG: //Large: 75%
+					ATK_RATE(wd->damage, wd->damage2, 75);
+					RE_ALLATK_RATE(wd, 75);
+					break;
 			}
 #else
 		case NJ_ISSEN:
@@ -4664,6 +4651,23 @@ static void battle_attack_sc_bonus(struct Damage* wd, block_list *src, block_lis
 		if (sc->getSCE(SC_PYREXIA) && sc->getSCE(SC_PYREXIA)->val3 == 0 && skill_id == 0) {
 			ATK_ADDRATE(wd->damage, wd->damage2, sc->getSCE(SC_PYREXIA)->val2);
 			RE_ALLATK_ADDRATE(wd, sc->getSCE(SC_PYREXIA)->val2);
+		}
+
+		// SC_GLOOMYDAY_SK: 2017 behavior. The 2017 INF3_SC_GLOOMYDAY_SK flag was dropped
+		// in the data-driven skill DB, so the affected skills are restored via skill id list.
+		if (sc->getSCE(SC_GLOOMYDAY_SK)) {
+			switch (skill_id) {
+				case KN_BRANDISHSPEAR:
+				case CR_SHIELDBOOMERANG:
+				case LK_SPIRALPIERCE:
+				case PA_SHIELDCHAIN:
+				case RK_HUNDREDSPEAR:
+				case ML_BRANDISH:
+				case ML_SPIRALPIERCE:
+					ATK_ADDRATE(wd->damage, wd->damage2, sc->getSCE(SC_GLOOMYDAY_SK)->val2);
+					RE_ALLATK_ADDRATE(wd, sc->getSCE(SC_GLOOMYDAY_SK)->val2);
+					break;
+			}
 		}
 
 		if (sc->getSCE(SC_MIRACLE))

@@ -13147,18 +13147,33 @@ bool pc_setstand(map_session_data *sd, bool force){
  * @param heat: Amount of Heat to adjust
  **/
 void pc_overheat(map_session_data &sd, int16 heat) {
+	static const int16 limit[] = { 10, 20, 28, 46, 66 };
+
+	if (!pc_ismadogear(&sd))
+		return;
+
+	if (heat < 0) { // Cooling device used (2017: emergency cool resets Heat).
+		status_change_end(&sd, SC_OVERHEAT_LIMITPOINT);
+		status_change_end(&sd, SC_OVERHEAT);
+		return;
+	}
+
+	if (sd.sc.getSCE(SC_OVERHEAT))
+		return; // Already burning.
+
+	uint16 skill_lv = cap_value(pc_checkskill(&sd, NC_MAINFRAME), 0, 4);
+
 	status_change_entry *sce = sd.sc.getSCE(SC_OVERHEAT_LIMITPOINT);
+	if (sce != nullptr) {
+		heat += sce->val1;
+		status_change_end(&sd, SC_OVERHEAT_LIMITPOINT);
+	}
 
-	if (sce) {
-		sce->val1 += heat;
-		sce->val1 = cap_value(sce->val1, 0, 1000);
-
-		if (heat < 0 && sce->val1 == 0) { // Cooling device used.
-			status_change_end(&sd, SC_OVERHEAT_LIMITPOINT);
-			status_change_end(&sd, SC_OVERHEAT);
-		}
-	} else if (heat > 0)
-		sc_start(&sd, &sd, SC_OVERHEAT_LIMITPOINT, 100, heat, 1000);
+	heat = cap_value(heat, (int16)0, (int16)1000);
+	if (heat >= limit[skill_lv])
+		sc_start(&sd, &sd, SC_OVERHEAT, 100, 0, 1000);
+	else
+		sc_start(&sd, &sd, SC_OVERHEAT_LIMITPOINT, 100, heat, 30000);
 }
 
 /**
