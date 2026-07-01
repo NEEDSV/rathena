@@ -5,11 +5,16 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cerrno>
+#include <cstdint>
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
 #include <set>
+#include <string>
 #include <unordered_map>
+#include <unordered_set>
+#include <vector>
 
 #include <common/cbasetypes.hpp>
 #include <common/database.hpp>
@@ -6374,6 +6379,346 @@ ACMD_FUNC(storeall)
 	return 0;
 }
 
+// NEED custom option.
+// true: @storematch is only available on town maps.
+// false: @storematch is available anywhere storage can be used.
+static constexpr bool NEED_STORE_MATCH_TOWN_ONLY = true;
+static constexpr size_t NEED_STORE_EXCLUDE_MAX = 50;
+static constexpr const char* NEED_STORE_EXCLUDE_VAR = "#NEED_STORE_EXCLUDE_LIST$";
+
+static bool need_storematch_item_type(enum item_types type)
+{
+	return type == IT_HEALING || type == IT_USABLE || type == IT_ETC || type == IT_CARD || type == IT_DELAYCONSUME;
+}
+
+static bool need_storage_has_itemid(struct s_storage& stor, t_itemid nameid)
+{
+	for (int32 i = 0; i < stor.max_amount; i++) {
+		if (stor.u.items_storage[i].nameid == nameid)
+			return true;
+	}
+
+	return false;
+}
+
+// NEED: per-account exclude list for @storematch / Korean @창고넣기 alias
+static std::vector<t_itemid> need_store_exclude_load(map_session_data* sd)
+{
+	std::vector<t_itemid> nameids;
+	std::unordered_set<t_itemid> seen;
+	char* saved = pc_readaccountregstr(sd, add_str(NEED_STORE_EXCLUDE_VAR));
+
+	if (saved == nullptr || saved[0] == '\0')
+		return nameids;
+
+	char* cursor = saved;
+
+	while (*cursor != '\0' && nameids.size() < NEED_STORE_EXCLUDE_MAX) {
+		char* end = nullptr;
+		unsigned long value;
+
+		while (*cursor == ',' || std::isspace(static_cast<unsigned char>(*cursor)) != 0)
+			cursor++;
+
+		if (*cursor == '\0')
+			break;
+
+		errno = 0;
+		value = std::strtoul(cursor, &end, 10);
+
+		if (cursor != end && errno == 0 && value > 0 && value <= UINT32_MAX) {
+			t_itemid nameid = static_cast<t_itemid>(value);
+
+			if (seen.insert(nameid).second)
+				nameids.push_back(nameid);
+		}
+
+		cursor = end;
+		while (*cursor != '\0' && *cursor != ',')
+			cursor++;
+	}
+
+	return nameids;
+}
+
+static bool need_store_exclude_save(map_session_data* sd, const std::vector<t_itemid>& nameids)
+{
+	std::string value;
+
+	for (size_t i = 0; i < nameids.size(); i++) {
+		if (i > 0)
+			value += ",";
+
+		value += std::to_string(nameids[i]);
+	}
+
+	return pc_setaccountregstr(sd, add_str(NEED_STORE_EXCLUDE_VAR), value.c_str());
+}
+
+static bool need_store_exclude_contains(const std::vector<t_itemid>& nameids, t_itemid nameid)
+{
+	return std::find(nameids.begin(), nameids.end(), nameid) != nameids.end();
+}
+
+static bool need_store_parse_itemid(const char* message, t_itemid& nameid)
+{
+	char itemid_text[CHAT_SIZE_MAX];
+	char extra[CHAT_SIZE_MAX];
+	char* end = nullptr;
+	unsigned long value;
+
+	if (message == nullptr || sscanf(message, "%255s %255s", itemid_text, extra) != 1)
+		return false;
+
+	for (char* p = itemid_text; *p != '\0'; p++) {
+		if (std::isdigit(static_cast<unsigned char>(*p)) == 0)
+			return false;
+	}
+
+	errno = 0;
+	value = std::strtoul(itemid_text, &end, 10);
+
+	if (errno != 0 || end == itemid_text || *end != '\0' || value == 0 || value > UINT32_MAX)
+		return false;
+
+	nameid = static_cast<t_itemid>(value);
+	return true;
+}
+
+/*==========================================
+ * @storematch / @storestack / Korean alias in conf/atcommands.yml
+ * NEED: store only stack-matching consumable/etc/card items to storage
+ *------------------------------------------*/
+ACMD_FUNC(storematch)
+{
+	nullpo_retr(-1, sd);
+
+	if (NEED_STORE_MATCH_TOWN_ONLY && (sd->m < 0 || !map_getmapflag(sd->m, MF_TOWN))) {
+		clif_displaymessage(fd, "[창고 정리] 이 명령어는 마을에서만 사용할 수 있습니다.");
+		return 0;
+	}
+
+	if (pc_isdead(sd)) {
+		clif_displaymessage(fd, "[창고 정리] 사망 상태에서는 사용할 수 없습니다.");
+		return 0;
+	}
+
+	if (sd->state.trading || sd->state.vending || sd->state.buyingstore || sd->state.prevend || sd->state.autotrade ||
+		sd->npc_id || sd->npc_shopid || (sd->state.storage_flag != 0 && sd->state.storage_flag != 1)) {
+		clif_displaymessage(fd, "[창고 정리] 현재 상태에서는 사용할 수 없습니다.");
+		return 0;
+	}
+
+	if (sd->state.storage_flag != 1) {
+		if (storage_storageopen(sd) == 1) {
+			clif_displaymessage(fd, "[창고 정리] 현재 창고를 사용할 수 없습니다.");
+			return -1;
+		}
+	}
+
+	std::unordered_set<t_itemid> moved_nameids;
+	std::unordered_set<t_itemid> no_match_nameids;
+	std::unordered_set<t_itemid> type_skip_nameids;
+	std::unordered_set<t_itemid> excluded_nameids;
+	std::unordered_set<t_itemid> failed_nameids;
+	std::vector<t_itemid> exclude_list = need_store_exclude_load(sd);
+	int32 moved_amount = 0;
+
+	for (int32 i = MAX_INVENTORY - 1; i >= 0; i--) {
+		struct item& inv_item = sd->inventory.u.items_inventory[i];
+
+		if (inv_item.amount <= 0)
+			continue;
+
+		std::shared_ptr<item_data> id = item_db.find(inv_item.nameid);
+
+		if (id == nullptr) {
+			ShowDebug("NEED storematch: Non-existent item %u in inventory (account_id: %d, char_id: %d)\n", inv_item.nameid, sd->status.account_id, sd->status.char_id);
+			continue;
+		}
+
+		if (inv_item.equip != 0 || inv_item.equipSwitch != 0 || !need_storematch_item_type(id->type)) {
+			type_skip_nameids.insert(inv_item.nameid);
+			continue;
+		}
+
+		if (need_store_exclude_contains(exclude_list, inv_item.nameid)) {
+			excluded_nameids.insert(inv_item.nameid);
+			continue;
+		}
+
+		if (!need_storage_has_itemid(sd->storage, inv_item.nameid)) {
+			no_match_nameids.insert(inv_item.nameid);
+			continue;
+		}
+
+		const t_itemid nameid = inv_item.nameid;
+		const int32 before_amount = inv_item.amount;
+
+		storage_storageadd(sd, &sd->storage, i, before_amount);
+
+		const int32 after_amount = sd->inventory.u.items_inventory[i].nameid == nameid ? sd->inventory.u.items_inventory[i].amount : 0;
+		const int32 stored_amount = before_amount - after_amount;
+
+		if (stored_amount > 0) {
+			moved_nameids.insert(nameid);
+			moved_amount += stored_amount;
+		} else {
+			failed_nameids.insert(nameid);
+		}
+	}
+
+	ShowDebug("NEED storematch: moved_types=%" PRIuPTR ", moved_amount=%d, excluded_types=%" PRIuPTR ", no_match_types=%" PRIuPTR ", type_skip_types=%" PRIuPTR ", failed_types=%" PRIuPTR " (account_id: %d, char_id: %d)\n",
+		moved_nameids.size(), moved_amount, excluded_nameids.size(), no_match_nameids.size(), type_skip_nameids.size(), failed_nameids.size(), sd->status.account_id, sd->status.char_id);
+
+	storage_storageclose(sd);
+
+	if (moved_amount > 0) {
+		char output[CHAT_SIZE_MAX];
+
+		safesnprintf(output, sizeof(output), "[창고 정리] 소모품/기타/카드 %" PRIuPTR "종, 총 %d개를 창고에 보관했습니다.", moved_nameids.size(), moved_amount);
+		clif_displaymessage(fd, output);
+		clif_displaymessage(fd, "[창고 정리] 창고에 같은 아이템이 없는 물품은 제외되었습니다.");
+	} else {
+		clif_displaymessage(fd, "[창고 정리] 보관할 수 있는 아이템이 없습니다.");
+		clif_displaymessage(fd, "[창고 정리] 조건: 소모품/기타/카드 + 창고에 이미 같은 아이템이 있는 경우");
+	}
+
+	if (!excluded_nameids.empty()) {
+		char output[CHAT_SIZE_MAX];
+
+		safesnprintf(output, sizeof(output), "[창고 정리] 제외 목록에 등록된 아이템 %" PRIuPTR "종은 보관하지 않았습니다.", excluded_nameids.size());
+		clif_displaymessage(fd, output);
+	}
+
+	if (!failed_nameids.empty())
+		clif_displaymessage(fd, "[창고 정리] 일부 아이템은 창고 공간 부족 또는 보관 제한으로 이동하지 못했습니다.");
+
+	return 0;
+}
+
+/*==========================================
+ * @storeexclude / Korean alias in conf/atcommands.yml
+ * NEED: add item to per-account @storematch exclude list
+ *------------------------------------------*/
+ACMD_FUNC(storeexclude)
+{
+	t_itemid nameid;
+	nullpo_retr(-1, sd);
+
+	if (!need_store_parse_itemid(message, nameid)) {
+		clif_displaymessage(fd, "[창고 정리] 사용법: @창고제외 <아이템ID>");
+		return 0;
+	}
+
+	std::shared_ptr<item_data> id = item_db.find(nameid);
+
+	if (id == nullptr) {
+		clif_displaymessage(fd, "[창고 정리] 존재하지 않는 아이템ID입니다.");
+		return 0;
+	}
+
+	std::vector<t_itemid> exclude_list = need_store_exclude_load(sd);
+	char output[CHAT_SIZE_MAX];
+
+	if (need_store_exclude_contains(exclude_list, nameid)) {
+		safesnprintf(output, sizeof(output), "[창고 정리] %s(%u)은 이미 제외 목록에 등록되어 있습니다.", id->ename.c_str(), nameid);
+		clif_displaymessage(fd, output);
+		return 0;
+	}
+
+	if (exclude_list.size() >= NEED_STORE_EXCLUDE_MAX) {
+		clif_displaymessage(fd, "[창고 정리] 제외 목록은 최대 50개까지 등록할 수 있습니다.");
+		return 0;
+	}
+
+	exclude_list.push_back(nameid);
+
+	if (!need_store_exclude_save(sd, exclude_list)) {
+		clif_displaymessage(fd, "[창고 정리] 제외 목록을 저장하지 못했습니다.");
+		return -1;
+	}
+
+	safesnprintf(output, sizeof(output), "[창고 정리] %s(%u)을 자동 보관 제외 목록에 추가했습니다.", id->ename.c_str(), nameid);
+	clif_displaymessage(fd, output);
+	return 0;
+}
+
+/*==========================================
+ * @storeexcludelist / Korean alias in conf/atcommands.yml
+ * NEED: show per-account @storematch exclude list
+ *------------------------------------------*/
+ACMD_FUNC(storeexcludelist)
+{
+	nullpo_retr(-1, sd);
+
+	std::vector<t_itemid> exclude_list = need_store_exclude_load(sd);
+
+	if (exclude_list.empty()) {
+		clif_displaymessage(fd, "[창고 정리] 자동 보관 제외 목록이 비어 있습니다.");
+		return 0;
+	}
+
+	clif_displaymessage(fd, "[창고 정리] 자동 보관 제외 목록");
+
+	for (t_itemid nameid : exclude_list) {
+		std::shared_ptr<item_data> id = item_db.find(nameid);
+		char output[CHAT_SIZE_MAX];
+
+		if (id == nullptr)
+			safesnprintf(output, sizeof(output), "[창고 정리] %u - 존재하지 않는 아이템ID", nameid);
+		else
+			safesnprintf(output, sizeof(output), "[창고 정리] %u - %s", nameid, id->ename.c_str());
+
+		clif_displaymessage(fd, output);
+	}
+
+	return 0;
+}
+
+/*==========================================
+ * @storeexcludeoff / Korean alias in conf/atcommands.yml
+ * NEED: remove item from per-account @storematch exclude list
+ *------------------------------------------*/
+ACMD_FUNC(storeexcludeoff)
+{
+	t_itemid nameid;
+	nullpo_retr(-1, sd);
+
+	if (!need_store_parse_itemid(message, nameid)) {
+		clif_displaymessage(fd, "[창고 정리] 사용법: @창고제외해제 <아이템ID>");
+		return 0;
+	}
+
+	std::shared_ptr<item_data> id = item_db.find(nameid);
+
+	if (id == nullptr) {
+		clif_displaymessage(fd, "[창고 정리] 존재하지 않는 아이템ID입니다.");
+		return 0;
+	}
+
+	std::vector<t_itemid> exclude_list = need_store_exclude_load(sd);
+	auto it = std::find(exclude_list.begin(), exclude_list.end(), nameid);
+	char output[CHAT_SIZE_MAX];
+
+	if (it == exclude_list.end()) {
+		safesnprintf(output, sizeof(output), "[창고 정리] %s(%u)은 제외 목록에 등록되어 있지 않습니다.", id->ename.c_str(), nameid);
+		clif_displaymessage(fd, output);
+		return 0;
+	}
+
+	exclude_list.erase(it);
+
+	if (!need_store_exclude_save(sd, exclude_list)) {
+		clif_displaymessage(fd, "[창고 정리] 제외 목록을 저장하지 못했습니다.");
+		return -1;
+	}
+
+	safesnprintf(output, sizeof(output), "[창고 정리] %s(%u)을 자동 보관 제외 목록에서 제거했습니다.", id->ename.c_str(), nameid);
+	clif_displaymessage(fd, output);
+	return 0;
+}
+
 ACMD_FUNC(clearstorage)
 {
 	int32 i, j;
@@ -12028,6 +12373,11 @@ void atcommand_basecommands(void) {
 		ACMD_DEF(dropall),
 		ACMD_DEF(stockall),
 		ACMD_DEF(storeall),
+		ACMD_DEF2("storestack", storematch),
+		ACMD_DEF(storematch),
+		ACMD_DEF(storeexclude),
+		ACMD_DEF(storeexcludelist),
+		ACMD_DEF(storeexcludeoff),
 		ACMD_DEF(skillid),
 		ACMD_DEF(useskill),
 		ACMD_DEF(displayskill),
