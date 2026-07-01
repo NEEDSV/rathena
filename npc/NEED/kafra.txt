@@ -17,6 +17,7 @@ S_Menu:
 		case 1: goto M_Enter;
 		case 2: goto S_01;
 		case 3: goto All;
+		case 4: goto Exchange;
 
 		default: goto EXIT;   // 종료
 	}
@@ -75,7 +76,68 @@ All:
 	}
 	specialeffect2 EF_TEIHIT3;
 	end;
+	
+Exchange:
+	mes "[카프라 직원]";
+	mes "보유 캐시: ^0055FF" + #CASHPOINTS + "^000000";
+	mes "환전할 주화를 선택해주세요.";
+	next;
 
+	.@item_id = 399990;
+	.@cash = 100;
+	.@name$ = "금화";
+
+	.@max = #CASHPOINTS / .@cash;
+
+	if (.@max <= 0) {
+		mes "[카프라 직원]";
+		mes "보유 캐시가 부족합니다.";
+		mes .@name$ + " 1개 환전에 필요한 캐시: ^FF0000" + .@cash + "^000000";
+		close;
+	}
+
+	mes "[카프라 직원]";
+	mes .@name$ + " 1개 = ^0055FF" + .@cash + " 캐시^000000";
+	mes "현재 최대 환전 가능 수량: ^0055FF" + .@max + "개^000000";
+	mes "환전할 수량을 입력해주세요.";
+	next;
+
+	input .@amount, 1, .@max;
+
+	.@total_cash = .@amount * .@cash;
+
+	if (#CASHPOINTS < .@total_cash) {
+		mes "[카프라 직원]";
+		mes "캐시가 부족합니다.";
+		close;
+	}
+
+	if (!checkweight(.@item_id, .@amount)) {
+		mes "[카프라 직원]";
+		mes "인벤토리 무게가 부족합니다.";
+		mes "소지 무게를 비운 후 다시 이용해주세요.";
+		close;
+	}
+
+	mes "[카프라 직원]";
+	mes .@name$ + " ^0055FF" + .@amount + "개^000000로 환전합니다.";
+	mes "소모 캐시: ^FF0000" + .@total_cash + "^000000";
+	mes "진행하시겠습니까?";
+	next;
+
+	if (select("환전한다:취소") == 2)
+		close;
+
+	#CASHPOINTS -= .@total_cash;
+	getitem .@item_id, .@amount;
+
+	mes "[카프라 직원]";
+	mes "환전이 완료되었습니다.";
+	mes "획득: ^0055FF" + .@name$ + " " + .@amount + "개^000000";
+	mes "남은 캐시: ^0055FF" + #CASHPOINTS + "^000000";
+	dispbottom .@name$ + " " + .@amount + "개를 획득했습니다. 남은 캐시: " + #CASHPOINTS;
+	close;
+	
 Cart: //카트
 	set @servName$, "카트";
 	set @earnName$, "푸쉬 카트";
