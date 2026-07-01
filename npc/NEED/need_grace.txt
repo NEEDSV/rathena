@@ -1,58 +1,205 @@
-// NEED Grace period buff.
-// Stores expiration per character in NeedGraceUntil as a Unix timestamp.
+// NEED Grace manager.
+// Existing NEED Grace buff:
+// - Stores expiration per character in NeedGraceUntil as a Unix timestamp.
+//
+// Added weekly convenience tickets:
+// - 거래 은총 이용권: Overcharge / Discount convenience
+// - 속성 은총 이용권: element endow convenience
+// - 보관 은총 이용권: @창고보관 convenience
+// - 종합 은총 이용권: enables all three convenience categories
+//
+// IMPORTANT:
+// 1) Replace ticket item IDs in OnInit with real item_db IDs.
+// 2) The rental ticket item is used as visible proof of period.
+// 3) @창고보관 / 속부 / 거래 기능 source or NPC should check either:
+//    - remaining timestamp variables below, or
+//    - active rental ticket item existence.
+// 4) The trade skill grant uses temporary skill flag. Verify the flag behavior
+//    on your rAthena revision before live use.
 
 lasagna,164,163,6	script	NEED의 은총 관리인	4_F_ARUNA_POP,{
-	mes "[NEED의 은총]";
-	mes "골드코인으로 캐릭터 단위 기간제 버프를 활성화하거나 연장할 수 있습니다.";
-	next;
-
-	set .@now, gettimetick(2);
-	if (NeedGraceUntil > .@now) {
-		set .@left, NeedGraceUntil - .@now;
-		set .@days, .@left / 86400;
-		set .@hours, (.@left % 86400) / 3600;
-		set .@minutes, (.@left % 3600) / 60;
-
-		mes "[NEED의 은총]";
-		mes "현재 남은 시간: " + .@days + "일 " + .@hours + "시간 " + .@minutes + "분";
+	while (1) {
+		mes "[NEED의 은총 관리인]";
+		mes "NEED의 은총과 주간 편의 이용권을 관리합니다.";
+		mes "원하시는 메뉴를 선택해주세요.";
 		next;
-	}
 
-	switch(select("1일 연장 - 골드코인 1개:7일 연장 - 골드코인 6개:30일 연장 - 골드코인 25개:취소")) {
-	case 1:
-		callfunc "NeedGrace_Apply", 1, 1;
-		end;
-	case 2:
-		callfunc "NeedGrace_Apply", 7, 6;
-		end;
-	case 3:
-		callfunc "NeedGrace_Apply", 30, 25;
-		end;
-	default:
-		close;
+		switch(select("NEED의 은총 버프:주간 은총 이용권 구매:보유 은총 확인:이용권 안내:취소")) {
+		case 1:
+			callfunc "NeedGrace_BuffMenu";
+			break;
+		case 2:
+			callfunc "NeedGrace_TicketMenu";
+			break;
+		case 3:
+			callfunc "NeedGrace_StatusMenu";
+			break;
+		case 4:
+			callfunc "NeedGrace_InfoMenu";
+			break;
+		default:
+			close;
+		}
 	}
 
 OnInit:
+	// ============================================================
+	// NEED custom config
+	// ============================================================
+
+	// 기존 NEED의 은총 버프 비용 아이템
+	set $@NeedGraceCoin, 7720; // Gold_Coin__
+
+	// 주간 은총 이용권 아이템 ID
+	// TODO: item_db.yml에 실제 아이템을 추가한 뒤 ID를 맞춰주세요.
+	set $@NeedGraceTradeTicket,   399901; // 거래 은총 이용권
+	set $@NeedGraceElementTicket, 399902; // 속성 은총 이용권
+	set $@NeedGraceStorageTicket, 399903; // 보관 은총 이용권
+	set $@NeedGracePackageTicket, 399904; // 종합 은총 이용권
+
+	// 이용권 기간
+	set $@NeedGraceWeeklySeconds, 604800; // 7일
+
+	// 이용권 가격
+	set $@NeedGraceTradeCost,    10000000; // 거래 은총 1,000만 제니
+	set $@NeedGraceElementCost,  10000000; // 속성 은총 1,000만 제니
+	set $@NeedGraceStorageCost,  10000000; // 보관 은총 1,000만 제니
+	set $@NeedGracePackageCost,  25000000; // 종합 은총 3,000만 제니
+
+	// 거래 은총 스킬 지급 여부
+	// 1: 로그인/구매 시 MC_OVERCHARGE, MC_DISCOUNT Lv.10 지급 시도
+	// 0: 티켓/변수만 발급하고 스킬 처리는 소스 또는 별도 NPC에서 처리
+	set $@NeedGraceApplyTradeSkill, 1;
+
 	end;
 }
 
 -	script	NeedGrace_Login	-1,{
 OnPCLoginEvent:
-	set .@now, gettimetick(2);
-	if (NeedGraceUntil <= .@now) {
-		if (NeedGraceUntil > 0)
-			NeedGraceUntil = 0;
-		end;
+	// 거래 은총 이용 중이면 임시 거래 스킬 적용
+	if ($@NeedGraceApplyTradeSkill) {
+		if (callfunc("NeedGrace_HasTrade"))
+			callfunc "NeedGrace_ApplyTradeSkills";
 	}
 
-	sc_start SC_NEED_GRACE, (NeedGraceUntil - .@now) * 1000, 1;
 	end;
 }
 
-function	script	NeedGrace_Apply	{
+// ============================================================
+// Main menus
+// ============================================================
+
+function	script	NeedGrace_BuffMenu	{
+	set .@now, gettimetick(2);
+
+	mes "[NEED의 은총]";
+	mes "골드코인으로 캐릭터 단위 기간제 버프를 활성화하거나 연장할 수 있습니다.";
+	next;
+
+	if (NeedGraceUntil > .@now) {
+		mes "[NEED의 은총]";
+		mes "현재 남은 시간:";
+		callfunc "NeedGrace_ShowRemainLine", "NEED의 은총 버프", NeedGraceUntil;
+		next;
+	}
+
+	switch(select("1일 연장 - 골드코인 1개:7일 연장 - 골드코인 6개:30일 연장 - 골드코인 25개:뒤로가기")) {
+	case 1:
+		callfunc "NeedGrace_ApplyBuff", 1, 1;
+		close;
+	case 2:
+		callfunc "NeedGrace_ApplyBuff", 7, 6;
+		close;
+	case 3:
+		callfunc "NeedGrace_ApplyBuff", 30, 25;
+		close;
+	default:
+		return;
+	}
+}
+
+function	script	NeedGrace_TicketMenu	{
+	mes "[주간 은총 이용권]";
+	mes "주간 은총 이용권은 캐릭터 단위 임대 티켓으로 지급됩니다.";
+	mes "티켓을 우클릭하면 남은 기간을 확인할 수 있습니다.";
+	next;
+
+	mes "[주간 은총 이용권]";
+	mes "1개 이용권: 10,000,000 제니 / 7일";
+	mes "종합 이용권: 25,000,000 제니 / 7일";
+	next;
+
+	switch(select("거래 은총 이용권:속성 은총 이용권:보관 은총 이용권:종합 은총 이용권:뒤로가기")) {
+	case 1:
+		callfunc "NeedGrace_BuyTicket", 1;
+		close;
+	case 2:
+		callfunc "NeedGrace_BuyTicket", 2;
+		close;
+	case 3:
+		callfunc "NeedGrace_BuyTicket", 3;
+		close;
+	case 4:
+		callfunc "NeedGrace_BuyTicket", 4;
+		close;
+	default:
+		return;
+	}
+}
+
+function	script	NeedGrace_StatusMenu	{
+	mes "[보유 은총 확인]";
+	mes "현재 캐릭터의 은총 상태입니다.";
+	next;
+
+	mes "[보유 은총 확인]";
+	callfunc "NeedGrace_ShowRemainLine", "NEED의 은총 버프", NeedGraceUntil;
+	callfunc "NeedGrace_ShowRemainLine", "거래 은총", callfunc("NeedGrace_GetEffectiveUntil", 1);
+	callfunc "NeedGrace_ShowRemainLine", "속성 은총", callfunc("NeedGrace_GetEffectiveUntil", 2);
+	callfunc "NeedGrace_ShowRemainLine", "보관 은총", callfunc("NeedGrace_GetEffectiveUntil", 3);
+	callfunc "NeedGrace_ShowRemainLine", "종합 은총", NeedGracePackageUntil;
+	close;
+}
+
+function	script	NeedGrace_InfoMenu	{
+	mes "[은총 이용권 안내]";
+	mes "거래 은총 이용권";
+	mes "- 오버챠지 / 디스카운트 편의 기능 이용";
+	next;
+
+	mes "[은총 이용권 안내]";
+	mes "속성 은총 이용권";
+	mes "- 속성 부여 기능 이용";
+	mes "- 마을에서 @속부 입력";
+	next;
+
+	mes "[은총 이용권 안내]";
+	mes "보관 은총 이용권";
+	mes "- @창고보관 기능 이용";
+	mes "- 소모품/기타/카드 중 창고에 이미 같은 아이템이 있는 경우 자동 보관";
+	next;
+
+	mes "[은총 이용권 안내]";
+	mes "종합 은총 이용권";
+	mes "- 거래 / 속성 / 보관 은총을 모두 이용할 수 있습니다.";
+	next;
+
+	mes "[은총 이용권 안내]";
+	mes "자동 창고 보관 제외 명령어";
+	mes "- @창고제외 <아이템ID>";
+	mes "- @창고제외목록";
+	mes "- @창고제외해제 <아이템ID>";
+	close;
+}
+
+// ============================================================
+// Existing NEED Grace buff
+// ============================================================
+
+function	script	NeedGrace_ApplyBuff	{
 	set .@days, getarg(0);
 	set .@cost, getarg(1);
-	set .@coin, 7720; // Gold_Coin__
+	set .@coin, $@NeedGraceCoin;
 	set .@now, gettimetick(2);
 
 	if (countitem(.@coin) < .@cost) {
@@ -60,6 +207,14 @@ function	script	NeedGrace_Apply	{
 		mes "골드코인이 부족합니다.";
 		close;
 	}
+
+	mes "[NEED의 은총]";
+	mes .@days + "일 연장에는 골드코인 " + .@cost + "개가 필요합니다.";
+	mes "진행하시겠습니까?";
+	next;
+
+	if (select("연장한다:취소") == 2)
+		close;
 
 	delitem .@coin, .@cost;
 
@@ -70,13 +225,223 @@ function	script	NeedGrace_Apply	{
 
 	sc_start SC_NEED_GRACE, (NeedGraceUntil - .@now) * 1000, 1;
 
-	set .@left, NeedGraceUntil - .@now;
-	set .@left_days, .@left / 86400;
-	set .@left_hours, (.@left % 86400) / 3600;
-	set .@left_minutes, (.@left % 3600) / 60;
-
 	mes "[NEED의 은총]";
 	mes "NEED의 은총이 적용되었습니다.";
-	mes "남은 시간: " + .@left_days + "일 " + .@left_hours + "시간 " + .@left_minutes + "분";
+	callfunc "NeedGrace_ShowRemainLine", "남은 시간", NeedGraceUntil;
 	close;
+}
+
+// ============================================================
+// Weekly rental tickets
+// Type:
+// 1 = Trade
+// 2 = Element
+// 3 = Storage
+// 4 = Package
+// ============================================================
+
+function	script	NeedGrace_BuyTicket	{
+	set .@type, getarg(0);
+	set .@now, gettimetick(2);
+	set .@seconds, $@NeedGraceWeeklySeconds;
+
+	switch(.@type) {
+	case 1:
+		set .@item, $@NeedGraceTradeTicket;
+		set .@cost, $@NeedGraceTradeCost;
+		set .@label$, "거래 은총 이용권";
+		set .@effect$, "오버챠지 / 디스카운트 편의 기능";
+		set .@old_until, NeedGraceTradeUntil;
+		break;
+	case 2:
+		set .@item, $@NeedGraceElementTicket;
+		set .@cost, $@NeedGraceElementCost;
+		set .@label$, "속성 은총 이용권";
+		set .@effect$, "속성 부여 기능";
+		set .@old_until, NeedGraceElementUntil;
+		break;
+	case 3:
+		set .@item, $@NeedGraceStorageTicket;
+		set .@cost, $@NeedGraceStorageCost;
+		set .@label$, "보관 은총 이용권";
+		set .@effect$, "@창고보관 기능";
+		set .@old_until, NeedGraceStorageUntil;
+		break;
+	case 4:
+		set .@item, $@NeedGracePackageTicket;
+		set .@cost, $@NeedGracePackageCost;
+		set .@label$, "종합 은총 이용권";
+		set .@effect$, "거래 / 속성 / 보관 은총 전체";
+		set .@old_until, NeedGracePackageUntil;
+		break;
+	default:
+		mes "[주간 은총 이용권]";
+		mes "잘못된 이용권입니다.";
+		close;
+	}
+
+	if (.@item <= 0) {
+		mes "[주간 은총 이용권]";
+		mes "이용권 아이템 ID가 설정되지 않았습니다.";
+		mes "스크립트 OnInit의 티켓 아이템 ID를 확인해주세요.";
+		close;
+	}
+
+	mes "[주간 은총 이용권]";
+	mes .@label$ + "을 구매하시겠습니까?";
+	mes "효과: " + .@effect$;
+	mes "기간: 7일";
+	mes "비용: " + .@cost + " 제니";
+	next;
+
+	if (select("구매한다:취소") == 2)
+		close;
+
+	if (Zeny < .@cost) {
+		mes "[주간 은총 이용권]";
+		mes "제니가 부족합니다.";
+		close;
+	}
+
+	Zeny -= .@cost;
+
+	if (.@old_until > .@now)
+		set .@new_until, .@old_until + .@seconds;
+	else
+		set .@new_until, .@now + .@seconds;
+
+	switch(.@type) {
+	case 1:
+		NeedGraceTradeUntil = .@new_until;
+		break;
+	case 2:
+		NeedGraceElementUntil = .@new_until;
+		break;
+	case 3:
+		NeedGraceStorageUntil = .@new_until;
+		break;
+	case 4:
+		NeedGracePackageUntil = .@new_until;
+		break;
+	}
+
+	callfunc "NeedGrace_RefreshRentalTicket", .@item, .@new_until;
+
+	if (.@type == 1 && $@NeedGraceApplyTradeSkill)
+		callfunc "NeedGrace_ApplyTradeSkills";
+
+	mes "[주간 은총 이용권]";
+	mes .@label$ + "이 지급되었습니다.";
+	mes "기존 이용 기간이 남아있다면 남은 기간에 7일이 추가됩니다.";
+	callfunc "NeedGrace_ShowRemainLine", "남은 시간", .@new_until;
+	close;
+}
+
+function	script	NeedGrace_RefreshRentalTicket	{
+	set .@item, getarg(0);
+	set .@until, getarg(1);
+	set .@now, gettimetick(2);
+	set .@left, .@until - .@now;
+
+	// 기존 동일 티켓을 제거하고, 새 남은 기간으로 임대 티켓을 다시 지급한다.
+	// 이렇게 해야 우클릭 시 표시되는 만료 시간이 현재 변수와 맞는다.
+	while (countitem(.@item) > 0)
+		delitem .@item, 1;
+
+	if (.@left > 0)
+		rentitem .@item, .@left;
+
+	return;
+}
+
+function	script	NeedGrace_GetEffectiveUntil	{
+	set .@type, getarg(0);
+
+	switch(.@type) {
+	case 1:
+		set .@until, NeedGraceTradeUntil;
+		break;
+	case 2:
+		set .@until, NeedGraceElementUntil;
+		break;
+	case 3:
+		set .@until, NeedGraceStorageUntil;
+		break;
+	default:
+		set .@until, 0;
+		break;
+	}
+
+	if (NeedGracePackageUntil > .@until)
+		set .@until, NeedGracePackageUntil;
+
+	return .@until;
+}
+
+function	script	NeedGrace_HasTrade	{
+	set .@now, gettimetick(2);
+
+	if (NeedGraceTradeUntil > .@now)
+		return 1;
+
+	if (NeedGracePackageUntil > .@now)
+		return 1;
+
+	return 0;
+}
+
+function	script	NeedGrace_HasElement	{
+	set .@now, gettimetick(2);
+
+	if (NeedGraceElementUntil > .@now)
+		return 1;
+
+	if (NeedGracePackageUntil > .@now)
+		return 1;
+
+	return 0;
+}
+
+function	script	NeedGrace_HasStorage	{
+	set .@now, gettimetick(2);
+
+	if (NeedGraceStorageUntil > .@now)
+		return 1;
+
+	if (NeedGracePackageUntil > .@now)
+		return 1;
+
+	return 0;
+}
+
+function	script	NeedGrace_ApplyTradeSkills	{
+	// NEED: 거래 은총 활성화 시 오버챠지/디스카운트 지급
+	// 주의: rAthena revision에 따라 skill 명령어의 flag 동작이 다를 수 있습니다.
+	// 라이브 적용 전, flag 1이 저장되지 않는 임시/추가 스킬로 동작하는지 확인하세요.
+	skill "MC_OVERCHARGE", 10, 1;
+	skill "MC_DISCOUNT", 10, 1;
+	return;
+}
+
+// ============================================================
+// Display helper
+// ============================================================
+
+function	script	NeedGrace_ShowRemainLine	{
+	set .@label$, getarg(0);
+	set .@until, getarg(1);
+	set .@now, gettimetick(2);
+
+	if (.@until <= .@now) {
+		mes .@label$ + ": 이용 중 아님";
+		return;
+	}
+
+	set .@left, .@until - .@now;
+	set .@days, .@left / 86400;
+	set .@hours, (.@left % 86400) / 3600;
+	set .@minutes, (.@left % 3600) / 60;
+
+	mes .@label$ + ": " + .@days + "일 " + .@hours + "시간 " + .@minutes + "분";
+	return;
 }
