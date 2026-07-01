@@ -1059,6 +1059,8 @@ ACMD_FUNC(storage)
 /*==========================================
  *
  *------------------------------------------*/
+static constexpr int32 NEED_GUILD_STORAGE_OPEN_COST = 10000;
+
 ACMD_FUNC(guildstorage)
 {
 	nullpo_retr(-1, sd);
@@ -1066,9 +1068,9 @@ ACMD_FUNC(guildstorage)
 	if (sd->npc_id || sd->state.vending || sd->state.buyingstore || sd->state.trading)
 		return -1;
 
-	switch (storage_guild_storageopen(sd)) {
+	switch (storage_guild_storageopen(sd, NEED_GUILD_STORAGE_OPEN_COST)) {
 		case GSTORAGE_OPEN:
-			clif_displaymessage(fd, msg_txt(sd, 920)); // Guild storage opened.
+			clif_displaymessage(fd, msg_txt(sd, 1640)); // Guild storage opened.
 			break;
 		case GSTORAGE_STORAGE_ALREADY_OPEN:
 			clif_displaymessage(fd, msg_txt(sd, 250)); // You have already opened your storage. Close it first.
@@ -1084,6 +1086,9 @@ ACMD_FUNC(guildstorage)
 			return -1;
 		case GSTORAGE_NO_PERMISSION:
 			clif_displaymessage(fd, msg_txt(sd, 787)); // You do not have permission to use the guild storage.
+			return -1;
+		case GSTORAGE_NO_ZENY:
+			clif_displaymessage(fd, msg_txt(sd, 1641));
 			return -1;
 	}
 	return 0;
@@ -6494,24 +6499,24 @@ ACMD_FUNC(storematch)
 	nullpo_retr(-1, sd);
 
 	if (NEED_STORE_MATCH_TOWN_ONLY && (sd->m < 0 || !map_getmapflag(sd->m, MF_TOWN))) {
-		clif_displaymessage(fd, "[창고 정리] 이 명령어는 마을에서만 사용할 수 있습니다.");
+		clif_displaymessage(fd, msg_txt(sd,1615));
 		return 0;
 	}
 
 	if (pc_isdead(sd)) {
-		clif_displaymessage(fd, "[창고 정리] 사망 상태에서는 사용할 수 없습니다.");
+		clif_displaymessage(fd, msg_txt(sd,1616));
 		return 0;
 	}
 
 	if (sd->state.trading || sd->state.vending || sd->state.buyingstore || sd->state.prevend || sd->state.autotrade ||
 		sd->npc_id || sd->npc_shopid || (sd->state.storage_flag != 0 && sd->state.storage_flag != 1)) {
-		clif_displaymessage(fd, "[창고 정리] 현재 상태에서는 사용할 수 없습니다.");
+		clif_displaymessage(fd, msg_txt(sd,1617));
 		return 0;
 	}
 
 	if (sd->state.storage_flag != 1) {
 		if (storage_storageopen(sd) == 1) {
-			clif_displaymessage(fd, "[창고 정리] 현재 창고를 사용할 수 없습니다.");
+			clif_displaymessage(fd, msg_txt(sd,1618));
 			return -1;
 		}
 	}
@@ -6576,23 +6581,23 @@ ACMD_FUNC(storematch)
 	if (moved_amount > 0) {
 		char output[CHAT_SIZE_MAX];
 
-		safesnprintf(output, sizeof(output), "[창고 정리] 소모품/기타/카드 %" PRIuPTR "종, 총 %d개를 창고에 보관했습니다.", moved_nameids.size(), moved_amount);
+		safesnprintf(output, sizeof(output), msg_txt(sd,1619), moved_nameids.size(), moved_amount);
 		clif_displaymessage(fd, output);
-		clif_displaymessage(fd, "[창고 정리] 창고에 같은 아이템이 없는 물품은 제외되었습니다.");
+		clif_displaymessage(fd, msg_txt(sd,1620));
 	} else {
-		clif_displaymessage(fd, "[창고 정리] 보관할 수 있는 아이템이 없습니다.");
-		clif_displaymessage(fd, "[창고 정리] 조건: 소모품/기타/카드 + 창고에 이미 같은 아이템이 있는 경우");
+		clif_displaymessage(fd, msg_txt(sd,1621));
+		clif_displaymessage(fd, msg_txt(sd,1622));
 	}
 
 	if (!excluded_nameids.empty()) {
 		char output[CHAT_SIZE_MAX];
 
-		safesnprintf(output, sizeof(output), "[창고 정리] 제외 목록에 등록된 아이템 %" PRIuPTR "종은 보관하지 않았습니다.", excluded_nameids.size());
+		safesnprintf(output, sizeof(output), msg_txt(sd,1623), excluded_nameids.size());
 		clif_displaymessage(fd, output);
 	}
 
 	if (!failed_nameids.empty())
-		clif_displaymessage(fd, "[창고 정리] 일부 아이템은 창고 공간 부족 또는 보관 제한으로 이동하지 못했습니다.");
+		clif_displaymessage(fd, msg_txt(sd,1624));
 
 	return 0;
 }
@@ -6607,14 +6612,14 @@ ACMD_FUNC(storeexclude)
 	nullpo_retr(-1, sd);
 
 	if (!need_store_parse_itemid(message, nameid)) {
-		clif_displaymessage(fd, "[창고 정리] 사용법: @창고제외 <아이템ID>");
+		clif_displaymessage(fd, msg_txt(sd,1625));
 		return 0;
 	}
 
 	std::shared_ptr<item_data> id = item_db.find(nameid);
 
 	if (id == nullptr) {
-		clif_displaymessage(fd, "[창고 정리] 존재하지 않는 아이템ID입니다.");
+		clif_displaymessage(fd, msg_txt(sd,1626));
 		return 0;
 	}
 
@@ -6622,24 +6627,24 @@ ACMD_FUNC(storeexclude)
 	char output[CHAT_SIZE_MAX];
 
 	if (need_store_exclude_contains(exclude_list, nameid)) {
-		safesnprintf(output, sizeof(output), "[창고 정리] %s(%u)은 이미 제외 목록에 등록되어 있습니다.", id->ename.c_str(), nameid);
+		safesnprintf(output, sizeof(output), msg_txt(sd,1627), id->ename.c_str(), nameid);
 		clif_displaymessage(fd, output);
 		return 0;
 	}
 
 	if (exclude_list.size() >= NEED_STORE_EXCLUDE_MAX) {
-		clif_displaymessage(fd, "[창고 정리] 제외 목록은 최대 50개까지 등록할 수 있습니다.");
+		clif_displaymessage(fd, msg_txt(sd,1628));
 		return 0;
 	}
 
 	exclude_list.push_back(nameid);
 
 	if (!need_store_exclude_save(sd, exclude_list)) {
-		clif_displaymessage(fd, "[창고 정리] 제외 목록을 저장하지 못했습니다.");
+		clif_displaymessage(fd, msg_txt(sd,1629));
 		return -1;
 	}
 
-	safesnprintf(output, sizeof(output), "[창고 정리] %s(%u)을 자동 보관 제외 목록에 추가했습니다.", id->ename.c_str(), nameid);
+	safesnprintf(output, sizeof(output), msg_txt(sd,1630), id->ename.c_str(), nameid);
 	clif_displaymessage(fd, output);
 	return 0;
 }
@@ -6655,20 +6660,20 @@ ACMD_FUNC(storeexcludelist)
 	std::vector<t_itemid> exclude_list = need_store_exclude_load(sd);
 
 	if (exclude_list.empty()) {
-		clif_displaymessage(fd, "[창고 정리] 자동 보관 제외 목록이 비어 있습니다.");
+		clif_displaymessage(fd, msg_txt(sd,1631));
 		return 0;
 	}
 
-	clif_displaymessage(fd, "[창고 정리] 자동 보관 제외 목록");
+	clif_displaymessage(fd, msg_txt(sd,1632));
 
 	for (t_itemid nameid : exclude_list) {
 		std::shared_ptr<item_data> id = item_db.find(nameid);
 		char output[CHAT_SIZE_MAX];
 
 		if (id == nullptr)
-			safesnprintf(output, sizeof(output), "[창고 정리] %u - 존재하지 않는 아이템ID", nameid);
+			safesnprintf(output, sizeof(output), msg_txt(sd,1633), nameid);
 		else
-			safesnprintf(output, sizeof(output), "[창고 정리] %u - %s", nameid, id->ename.c_str());
+			safesnprintf(output, sizeof(output), msg_txt(sd,1634), nameid, id->ename.c_str());
 
 		clif_displaymessage(fd, output);
 	}
@@ -6686,14 +6691,14 @@ ACMD_FUNC(storeexcludeoff)
 	nullpo_retr(-1, sd);
 
 	if (!need_store_parse_itemid(message, nameid)) {
-		clif_displaymessage(fd, "[창고 정리] 사용법: @창고제외해제 <아이템ID>");
+		clif_displaymessage(fd, msg_txt(sd,1635));
 		return 0;
 	}
 
 	std::shared_ptr<item_data> id = item_db.find(nameid);
 
 	if (id == nullptr) {
-		clif_displaymessage(fd, "[창고 정리] 존재하지 않는 아이템ID입니다.");
+		clif_displaymessage(fd, msg_txt(sd,1636));
 		return 0;
 	}
 
@@ -6702,7 +6707,7 @@ ACMD_FUNC(storeexcludeoff)
 	char output[CHAT_SIZE_MAX];
 
 	if (it == exclude_list.end()) {
-		safesnprintf(output, sizeof(output), "[창고 정리] %s(%u)은 제외 목록에 등록되어 있지 않습니다.", id->ename.c_str(), nameid);
+		safesnprintf(output, sizeof(output), msg_txt(sd,1637), id->ename.c_str(), nameid);
 		clif_displaymessage(fd, output);
 		return 0;
 	}
@@ -6710,11 +6715,11 @@ ACMD_FUNC(storeexcludeoff)
 	exclude_list.erase(it);
 
 	if (!need_store_exclude_save(sd, exclude_list)) {
-		clif_displaymessage(fd, "[창고 정리] 제외 목록을 저장하지 못했습니다.");
+		clif_displaymessage(fd, msg_txt(sd,1638));
 		return -1;
 	}
 
-	safesnprintf(output, sizeof(output), "[창고 정리] %s(%u)을 자동 보관 제외 목록에서 제거했습니다.", id->ename.c_str(), nameid);
+	safesnprintf(output, sizeof(output), msg_txt(sd,1639), id->ename.c_str(), nameid);
 	clif_displaymessage(fd, output);
 	return 0;
 }

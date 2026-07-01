@@ -553,7 +553,7 @@ void storage_guild_delete(int32 guild_id)
  * @param sd : player
  * @return 0 : success, 1 : fail, 2 : no guild found
  */
-char storage_guild_storageopen(map_session_data* sd)
+char storage_guild_storageopen(map_session_data* sd, int32 zeny_cost)
 {
 	struct s_storage *gstor;
 
@@ -593,6 +593,10 @@ char storage_guild_storageopen(map_session_data* sd)
 		|| (gstor->max_amount != max)
 #endif
 	) {
+		// NEED: optional Zeny cost for @guildstorage, charged only after all open checks pass.
+		if (zeny_cost > 0 && pc_payzeny(sd, zeny_cost, LOG_TYPE_COMMAND) != 0)
+			return GSTORAGE_NO_ZENY;
+
 		intif_request_guild_storage(sd->status.account_id,sd->status.guild_id);
 		return GSTORAGE_OPEN;
 	}
@@ -602,6 +606,10 @@ char storage_guild_storageopen(map_session_data* sd)
 
 	if( gstor->lock )
 		return GSTORAGE_ALREADY_OPEN;
+
+	// NEED: optional Zeny cost for @guildstorage, charged only after all open checks pass.
+	if (zeny_cost > 0 && pc_payzeny(sd, zeny_cost, LOG_TYPE_COMMAND) != 0)
+		return GSTORAGE_NO_ZENY;
 
 	gstor->status = true;
 	sd->state.storage_flag = 2;

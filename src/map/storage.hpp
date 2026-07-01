@@ -31,7 +31,8 @@ enum e_guild_storage_flags : uint8 {
 	GSTORAGE_ALREADY_OPEN,
 	GSTORAGE_NO_GUILD,
 	GSTORAGE_NO_STORAGE,
-	GSTORAGE_NO_PERMISSION
+	GSTORAGE_NO_PERMISSION,
+	GSTORAGE_NO_ZENY
 };
 
 enum e_guild_storage_log : uint16 {
@@ -69,7 +70,7 @@ void storage_storage_quit(map_session_data *sd, int32 flag);
 struct s_storage* guild2storage(int32 guild_id);
 struct s_storage* guild2storage2(int32 guild_id);
 void storage_guild_delete(int32 guild_id);
-char storage_guild_storageopen(map_session_data *sd);
+char storage_guild_storageopen(map_session_data *sd, int32 zeny_cost = 0);
 enum e_guild_storage_log storage_guild_log_read( map_session_data* sd );
 bool storage_guild_additem(map_session_data *sd,struct s_storage *stor,struct item *item_data,int32 amount);
 bool storage_guild_additem2(struct s_storage* stor, struct item* item, int32 amount);
