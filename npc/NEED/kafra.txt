@@ -9,6 +9,7 @@ S_Menu:
 	// 고정 메뉴 + 대여 메뉴(스킬 없어도 항상 표시)
 	.@opt$ = "엔터방지:위치저장 서비스"
 		+ ":카트/탈것 대여"
+		+ ":환전 서비스"
 		+ ":종료";
 
 	.@sel = select(.@opt$);
@@ -106,7 +107,7 @@ All:
 	
 Exchange:
 	mes "[카프라 직원]";
-	mes "보유 캐시: ^0055FF" + #CASHPOINTS + "^000000";
+	mes "보유 캐시: ^0055FF" + callfunc("F_InsertComma", #CASHPOINTS) + "^000000";
 	mes "환전할 주화를 선택해주세요.";
 	next;
 
@@ -125,7 +126,7 @@ Exchange:
 
 	mes "[카프라 직원]";
 	mes .@name$ + " 1개 = ^0055FF" + .@cash + " 캐시^000000";
-	mes "현재 최대 환전 가능 수량: ^0055FF" + .@max + "개^000000";
+	mes "현재 최대 환전 가능 수량: ^0055FF" + callfunc("F_InsertComma", .@max) + "개^000000";
 	mes "환전할 수량을 입력해주세요.";
 	next;
 
@@ -147,8 +148,8 @@ Exchange:
 	}
 
 	mes "[카프라 직원]";
-	mes .@name$ + " ^0055FF" + .@amount + "개^000000로 환전합니다.";
-	mes "소모 캐시: ^FF0000" + .@total_cash + "^000000";
+	mes .@name$ + " ^0055FF" + callfunc("F_InsertComma", .@amount) + "개^000000로 환전합니다.";
+	mes "소모 캐시: ^FF0000" + callfunc("F_InsertComma", .@total_cash) + "^000000";
 	mes "진행하시겠습니까?";
 	next;
 
@@ -160,9 +161,9 @@ Exchange:
 
 	mes "[카프라 직원]";
 	mes "환전이 완료되었습니다.";
-	mes "획득: ^0055FF" + .@name$ + " " + .@amount + "개^000000";
-	mes "남은 캐시: ^0055FF" + #CASHPOINTS + "^000000";
-	dispbottom .@name$ + " " + .@amount + "개를 획득했습니다. 남은 캐시: " + #CASHPOINTS;
+	mes "획득: ^0055FF" + .@name$ + " " + callfunc("F_InsertComma", .@amount) + "개^000000";
+	mes "남은 캐시: ^0055FF" + callfunc("F_InsertComma", #CASHPOINTS) + "^000000";
+	dispbottom .@name$ + " " + callfunc("F_InsertComma", .@amount) + "개를 획득했습니다. 남은 캐시: " + callfunc("F_InsertComma", #CASHPOINTS) + "";
 	close;
 	
 Cart: //카트
@@ -304,7 +305,7 @@ M_Exit: //종료
 	close;
 	
 OnInit:
-		waitingroom "저장/탈것 대여",0;
+		waitingroom "저장/탈것 대여/캐시 환전",0;
 		end;
 }
 
