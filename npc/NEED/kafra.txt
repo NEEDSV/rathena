@@ -43,7 +43,15 @@ EXIT:
 	goto M_Exit;
 	
 All:
-		if (ismounting()) {
+	.@body2 = getlook(LOOK_BODY2);
+
+	// 직업 코스튬이 블랙스미스 / 화이트스미스 외형이면 마도기어 대여 차단
+	.@block_mado_body2 = (
+		.@body2 == Job_Blacksmith ||
+		.@body2 == Job_Whitesmith
+	);
+
+	if (ismounting()) {
 		message strcharinfo(0),"탑승을 제거 해야합니다.";
 		end;
 	}
@@ -60,20 +68,39 @@ All:
 			getitem 6124,1; //Wolf's_Flute
 	}
 	else if (((eaclass()&EAJ_THIRDMASK)==EAJ_MECHANIC) && !checkcart() && getskilllv("MC_PUSHCART")) {
-		if (!checkmadogear() && getskilllv("NC_MADOLICENCE")) {
-			if(select(" ~ 카트: ~ 마도")==1) setcart;
-			else setmadogear;
-		} else setcart;
-	} else if (!checkcart() && getskilllv("MC_PUSHCART")) setcart;
-	else if (!checkfalcon() && getskilllv("HT_FALCON") && !checkwug()) setfalcon;
+		if (!checkmadogear() && getskilllv("NC_MADOLICENCE") && !.@block_mado_body2) {
+			if(select(" ~ 카트: ~ 마도")==1)
+				setcart;
+			else
+				setmadogear;
+		} else {
+			setcart;
+		}
+	}
+	else if (!checkcart() && getskilllv("MC_PUSHCART")) {
+		setcart;
+	}
+	else if (!checkfalcon() && getskilllv("HT_FALCON") && !checkwug()) {
+		setfalcon;
+	}
 	else if (!checkriding() && !checkdragon() && getskilllv("KN_RIDING")) {
-		if ((eaclass()&EAJ_THIRDMASK)==EAJ_RUNE_KNIGHT) setdragon;
-		else setriding;
-	} else if (!checkmadogear() && getskilllv("NC_MADOLICENCE")) setmadogear;
+		if ((eaclass()&EAJ_THIRDMASK)==EAJ_RUNE_KNIGHT)
+			setdragon;
+		else
+			setriding;
+	}
+	else if (!checkmadogear() && getskilllv("NC_MADOLICENCE") && !.@block_mado_body2) {
+		setmadogear;
+	}
 	else {
-		message strcharinfo(0),"대여 요건을 충족하지 못합니다.";
+		if (.@block_mado_body2 && getskilllv("NC_MADOLICENCE")) {
+			message strcharinfo(0),"블랙스미스 또는 화이트스미스 직업 코스튬 상태에서는 마도기어를 대여할 수 없습니다.";
+		} else {
+			message strcharinfo(0),"대여 요건을 충족하지 못합니다.";
+		}
 		end;
 	}
+
 	specialeffect2 EF_TEIHIT3;
 	end;
 	
