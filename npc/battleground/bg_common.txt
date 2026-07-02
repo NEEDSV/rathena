@@ -850,17 +850,22 @@ function	script	F_BG_Badge	{
 
 	if (.@bg_type$ == "Tierra") {
 		set .@badge,7828; //BF_Badge1
-		set .@amount_win,2;
+		set .@amount_win, 2;
 		set .@amount_lose,1;
+		set .@amount_win_cash, 10;
+		set .@amount_lose_cash, 5;
 	} else if (.@bg_type$ == "Flavius") {
 		set .@badge,7829; //BF_Badge2
 		set .@amount_win,3;
 		set .@amount_lose,1;
+		set .@amount_win_cash, 20;
+		set .@amount_lose_cash, 10;
 	} else
 		return;
 
 	if (getarg(0) == 1) {
 		set .@amount, .@amount_win;
+		set .@cashamount, .@amount_win_cash;
 		if (.@team$ == "Guillaume") {
 			mes "[액슬 로즈]";
 			mes "복되신 기욤이시여!";
@@ -872,6 +877,7 @@ function	script	F_BG_Badge	{
 		mes strcharinfo(0)+"그것은 승리를 나타내는 표시입니다.";
 	} else {
 		set .@amount, .@amount_lose;
+		set .@cashamount, .@amount_lose_cash;
 		if (.@team$ == "Guillaume") {
 			mes "[액슬 로즈]";
 			mes "당신은 졌지만, 이 싸움에 대한 당신의 헌신은 훌륭합니다.";
@@ -888,6 +894,7 @@ function	script	F_BG_Badge	{
 
 	// If the VIP system is enabled, VIP players receive an extra 2 badges.
 	getitem .@badge,.@amount;
+	getitem 399990, .@cashamount;
 	return;
 }
 
