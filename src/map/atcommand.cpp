@@ -6508,8 +6508,20 @@ ACMD_FUNC(storematch)
 		return 0;
 	}
 
+	int64 storeput_auth = pc_readglobalreg(sd, add_str("NEED_STOREPUT_AUTH"));
+
+	if (storeput_auth)
+	{
+		pc_setglobalreg(sd, add_str("NEED_STOREPUT_AUTH"), 0);
+	}
+
+	if (sd->npc_id && !storeput_auth) {
+		clif_displaymessage(fd, msg_txt(sd, 1617));
+		return -1;
+	}
+
 	if (sd->state.trading || sd->state.vending || sd->state.buyingstore || sd->state.prevend || sd->state.autotrade ||
-		sd->npc_id || sd->npc_shopid || (sd->state.storage_flag != 0 && sd->state.storage_flag != 1)) {
+		sd->npc_shopid || (sd->state.storage_flag != 0 && sd->state.storage_flag != 1)) {
 		clif_displaymessage(fd, msg_txt(sd,1617));
 		return 0;
 	}
@@ -6581,7 +6593,7 @@ ACMD_FUNC(storematch)
 	if (moved_amount > 0) {
 		char output[CHAT_SIZE_MAX];
 
-		safesnprintf(output, sizeof(output), msg_txt(sd,1619), moved_nameids.size(), moved_amount);
+		safesnprintf(output, sizeof(output), msg_txt(sd,1619), static_cast<unsigned int>(moved_nameids.size()), moved_amount);
 		clif_displaymessage(fd, output);
 		clif_displaymessage(fd, msg_txt(sd,1620));
 	} else {
