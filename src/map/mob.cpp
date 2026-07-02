@@ -2904,7 +2904,7 @@ map_session_data* mob_data::get_mvp_player(map_session_data* first_sd) {
 
 // 특정 아이템 드롭 제외
 static const std::set<t_itemid> no_drop_items = {
-	4576,27221,4302,4493,4441,4539,4403,4480,4610,4580
+	4576,27221,4302,4493,4441,4539,4403,4480,4610,4580,4399
 };
 
 /*==========================================
