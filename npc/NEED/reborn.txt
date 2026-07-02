@@ -665,13 +665,155 @@ OnInit:
 	end;
 }
 function	script	F_NEED_Rebirth_ResetCharacter	{
+	// 환생 전 직업 저장
+	.@old_class = Class;
+
+	// 기존 직업 계열에 맞는 1차 직업 확인
+	.@first_job = callfunc("F_NEED_Rebirth_GetFirstJob", .@old_class);
+
+	if (.@first_job == 0) {
+		mes "[환생]";
+		mes "현재 직업은 환생을 진행할 수 없는 직업입니다.";
+		close;
+	}
+
+	// 기존 스탯/스킬 초기화
+	resetstatus;
 	resetskill;
+
+	// 기존 계열 1차 직업으로 변경
+	jobchange .@first_job;
+
+	// 레벨 초기화
 	resetlvl 1;
-	jobchange Job_Novice;
+	set JobLevel, 1;
+	set JobExp, 0;
+
+	// 포인트 정리
+	set StatusPoint, 48;
+	set SkillPoint, 0;
+	
+	// 기본 기능 스킬 지급
+	skill "NV_BASIC",9,0;
+
+	percentheal 100,100;
 	specialeffect2 EF_ANGEL2;
 	return;
 }
 
+function	script	F_NEED_Rebirth_GetFirstJob	{
+	.@class = getarg(0);
+
+	switch (.@class) {
+		// 검사 계열
+		case Job_Swordman:
+		case Job_Knight:
+		case Job_Knight2:
+		case Job_Crusader:
+		case Job_Crusader2:
+		case Job_Lord_Knight:
+		case Job_Paladin:
+		case Job_Rune_Knight:
+		case Job_Rune_Knight_T:
+		case Job_Royal_Guard:
+		case Job_Royal_Guard_T:
+			return Job_Swordman;
+
+		// 마법사 계열
+		case Job_Mage:
+		case Job_Wizard:
+		case Job_Sage:
+		case Job_High_Wizard:
+		case Job_Professor:
+		case Job_Warlock:
+		case Job_Warlock_T:
+		case Job_Sorcerer:
+		case Job_Sorcerer_T:
+			return Job_Mage;
+
+		// 궁수 계열
+		case Job_Archer:
+		case Job_Hunter:
+		case Job_Bard:
+		case Job_Dancer:
+		case Job_Sniper:
+		case Job_Clown:
+		case Job_Gypsy:
+		case Job_Ranger:
+		case Job_Ranger_T:
+		case Job_Minstrel:
+		case Job_Minstrel_T:
+		case Job_Wanderer:
+		case Job_Wanderer_T:
+			return Job_Archer;
+
+		// 복사 계열
+		case Job_Acolyte:
+		case Job_Priest:
+		case Job_Monk:
+		case Job_High_Priest:
+		case Job_Champion:
+		case Job_Arch_Bishop:
+		case Job_Arch_Bishop_T:
+		case Job_Sura:
+		case Job_Sura_T:
+			return Job_Acolyte;
+
+		// 상인 계열
+		case Job_Merchant:
+		case Job_Blacksmith:
+		case Job_Alchemist:
+		case Job_Whitesmith:
+		case Job_Creator:
+		case Job_Mechanic:
+		case Job_Mechanic_T:
+		case Job_Genetic:
+		case Job_Genetic_T:
+			return Job_Merchant;
+
+		// 도둑 계열
+		case Job_Thief:
+		case Job_Assassin:
+		case Job_Rogue:
+		case Job_Assassin_Cross:
+		case Job_Stalker:
+		case Job_Guillotine_Cross:
+		case Job_Guillotine_Cross_T:
+		case Job_Shadow_Chaser:
+		case Job_Shadow_Chaser_T:
+			return Job_Thief;
+			
+		// 슈퍼 노비스 계열
+		case Job_Super_Novice:
+		case Job_Super_Novice_E:
+			return Job_Super_Novice;
+
+		// 태권 계열
+		case Job_Taekwon:
+		case Job_Star_Gladiator:
+		case Job_Soul_Linker:
+		case Job_Star_Emperor:
+		case Job_Soul_Reaper:
+			return Job_Taekwon;
+
+		// 닌자 계열
+		case Job_Ninja:
+		case Job_Kagerou:
+		case Job_Oboro:
+			return Job_Ninja;
+
+		// 건슬링거 계열
+		case Job_Gunslinger:
+		case Job_Rebellion:
+			return Job_Gunslinger;
+
+		// 도람 계열
+		case Job_Summoner:
+			return Job_Summoner;
+	}
+
+	return 0;
+}
 
 lasagna,180,131,4	script	환생 의상 미리보기 1#rb_preview	-1,{
 	mes "[환생 의상 미리보기]";
