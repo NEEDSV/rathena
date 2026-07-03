@@ -80,9 +80,12 @@ OnInit:
 
 function	script	NeedGrace_BuffMenu	{
 	set .@now, gettimetick(2);
+	set .@coin, $@NeedGraceCoin;
 
 	mes "[NEED의 은총]";
 	mes "골드코인으로 캐릭터 단위 기간제 버프를 활성화하거나 연장할 수 있습니다.";
+	mes "골드코인 ^FF00001개당 1시간^000000이 적용됩니다.";
+	mes "보유 골드코인: ^FF0000" + countitem(.@coin) + "개^000000";
 	next;
 
 	if (NeedGraceUntil > .@now) {
@@ -92,15 +95,16 @@ function	script	NeedGrace_BuffMenu	{
 		next;
 	}
 
-	switch(select("1일 연장 - 골드코인 1개:7일 연장 - 골드코인 6개:30일 연장 - 골드코인 25개:뒤로가기")) {
+	switch(select("골드코인 사용하기:뒤로가기")) {
 	case 1:
-		callfunc "NeedGrace_ApplyBuff", 1, 1;
-		close;
-	case 2:
-		callfunc "NeedGrace_ApplyBuff", 7, 6;
-		close;
-	case 3:
-		callfunc "NeedGrace_ApplyBuff", 30, 25;
+		mes "[NEED의 은총]";
+		mes "사용할 골드코인 개수를 입력해주세요.";
+		mes "1개 = 1시간";
+		next;
+
+		input .@amount;
+
+		callfunc "NeedGrace_ApplyBuff", .@amount;
 		close;
 	default:
 		return;
@@ -186,31 +190,45 @@ function	script	NeedGrace_InfoMenu	{
 // ============================================================
 
 function	script	NeedGrace_ApplyBuff	{
-	set .@days, getarg(0);
-	set .@cost, getarg(1);
+	set .@amount, getarg(0);
 	set .@coin, $@NeedGraceCoin;
 	set .@now, gettimetick(2);
 
-	if (countitem(.@coin) < .@cost) {
+	if (.@amount <= 0) {
 		mes "[NEED의 은총]";
-		mes "골드코인이 부족합니다.";
+		mes "1개 이상 입력해주세요.";
 		close;
 	}
 
+	if (countitem(.@coin) < .@amount) {
+		mes "[NEED의 은총]";
+		mes "골드코인이 부족합니다.";
+		mes "보유 골드코인: ^FF0000" + countitem(.@coin) + "개^000000";
+		close;
+	}
+
+	set .@days, .@amount / 24;
+	set .@hours, .@amount % 24;
+
 	mes "[NEED의 은총]";
-	mes .@days + "일 연장에는 골드코인 " + .@cost + "개가 필요합니다.";
+	mes "골드코인 ^FF0000" + .@amount + "개^000000를 사용하시겠습니까?";
+	mes "연장 시간: ^FF0000" + .@amount + "시간^000000";
+
+	if (.@days > 0)
+		mes "환산 시간: " + .@days + "일 " + .@hours + "시간";
+
 	mes "진행하시겠습니까?";
 	next;
 
 	if (select("연장한다:취소") == 2)
 		close;
 
-	delitem .@coin, .@cost;
+	delitem .@coin, .@amount;
 
 	if (NeedGraceUntil > .@now)
-		NeedGraceUntil += .@days * 86400;
+		NeedGraceUntil += .@amount * 3600;
 	else
-		NeedGraceUntil = .@now + (.@days * 86400);
+		NeedGraceUntil = .@now + (.@amount * 3600);
 
 	sc_start SC_NEED_GRACE, (NeedGraceUntil - .@now) * 1000, 1;
 
