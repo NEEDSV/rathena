@@ -2478,9 +2478,7 @@ int32 unit_skilluse_id2(block_list *src, int32 target_id, uint16 skill_id, uint1
 	}
 
 	// SC_MAGICPOWER needs to switch states at start of cast
-#ifndef RENEWAL
 	skill_toggle_magicpower(src, skill_id);
-#endif
 
 	// In official this is triggered even if no cast time.
 	clif_skillcasting(*src, target, 0,0, skill_id, skill_lv, static_cast<e_element>(skill_get_ele(skill_id, skill_lv)), casttime);
@@ -2750,9 +2748,7 @@ int32 unit_skilluse_pos2( block_list *src, int16 skill_x, int16 skill_y, uint16 
 	unit_stop_walking( src, USW_FIXPOS );
 
 	// SC_MAGICPOWER needs to switch states at start of cast
-#ifndef RENEWAL
 	skill_toggle_magicpower(src, skill_id);
-#endif
 
 	// In official this is triggered even if no cast time.
 	clif_skillcasting(*src, nullptr, skill_x, skill_y, skill_id, skill_lv, static_cast<e_element>(skill_get_ele(skill_id, skill_lv)), casttime);
