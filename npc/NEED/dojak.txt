@@ -47,8 +47,12 @@ lasagna,182,146,4	script	도작 도우미	648,{
 
 				if( .@id1 > 0 ) {
 					mes("^0000FF[도작 슬롯]^000000");
-					mes(sprintf("<b>%s</b> ^AA0000Lv.%d^000000",
-						getskilldesc(.@id1), .@lv1));
+
+					.@skill_name$ = getskilldesc(.@id1);
+					if( .@skill_name$ == "" )
+						.@skill_name$ = "알 수 없는 스킬 ID " + .@id1;
+
+					mes("<b>" + .@skill_name$ + "</b> ^AA0000Lv." + .@lv1 + "^000000");
 				}
 				else {
 					mes("^0000FF[도작 슬롯]^000000");
@@ -70,8 +74,12 @@ lasagna,182,146,4	script	도작 도우미	648,{
 
 				if( .@id2 > 0 ) {
 					mes("^00AA00[리프로듀스 슬롯]^000000");
-					mes(sprintf("<b>%s</b> ^AA0000Lv.%d^000000",
-						getskilldesc(.@id2), .@lv2));
+
+					.@skill_name$ = getskilldesc(.@id2);
+					if( .@skill_name$ == "" )
+						.@skill_name$ = "알 수 없는 스킬 ID " + .@id2;
+
+					mes("<b>" + .@skill_name$ + "</b> ^AA0000Lv." + .@lv2 + "^000000");
 				}
 				else {
 					mes("^00AA00[리프로듀스 슬롯]^000000");
@@ -232,6 +240,19 @@ lasagna,182,146,4	script	도작 도우미	648,{
 		//--------------------------------
 		if(.@selected > 0) {
 
+			if( Zeny < .skill_zeny ) {
+				mes(.npc_name$);
+				mes("^FF0000제니가 부족합니다.^000000");
+				mes(" ");
+				mes("필요 제니 : " + callfunc("F_InsertComma", .skill_zeny) + " z");
+				mes("보유 제니 : " + callfunc("F_InsertComma", Zeny) + " z");
+				close;
+			}
+
+			.@selected_name$ = getskilldesc(.@selected);
+			if( .@selected_name$ == "" )
+				.@selected_name$ = "알 수 없는 스킬 ID " + .@selected;
+
 			if( getstatus(SC_PRESERVE) ) {
 				mes("^FF0000프리저브(Preserve)^000000 상태가 활성화되어 있습니다.");
 				mes("스킬을 복사하기 전에 해당 상태를 제거합니다.");
@@ -256,12 +277,20 @@ lasagna,182,146,4	script	도작 도우미	648,{
 
 				// 복사 방식 확인
 				if(getplagiarizedskill(2) == .@selected)
-					mes sprintf("%s 를 리프로듀스 스킬로 복사 했습니다.", getskilldesc(.@selected));
+					mes(.@selected_name$ + " 를 리프로듀스 스킬로 복사 했습니다.");
 
 				else if(getplagiarizedskill(1) == .@selected)
-					mes sprintf("%s 를 도작 스킬로 복사 했습니다.", getskilldesc(.@selected));
-					
+					mes(.@selected_name$ + " 를 도작 스킬로 복사 했습니다.");
+				else
+					mes(.@selected_name$ + " 스킬을 복사 했습니다.");
+
 				close();
+			}
+			else {
+				mes(.npc_name$);
+				mes("^FF0000스킬 복사에 실패했습니다.^000000");
+				mes("잠시 후 다시 시도해 주세요.");
+				close;
 			}
 
 		}
