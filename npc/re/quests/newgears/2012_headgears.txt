@@ -325,11 +325,20 @@ lasagna,178,162,3	script	리노#2012hat::Reno#2012hat	64,{
 		}
 		set .@crystal_count, countitem(.@crystal);
 		set .@crystal_get, .@crystal_count / .@rate;
+		
+		.@crystal_name$ = getitemname(.@crystal);
+		.@crystal_pack_name$ = getitemname(.@crystal_);
+
+		if (.@crystal_name$ == "")
+			.@crystal_name$ = "알 수 없는 아이템";
+
+		if (.@crystal_pack_name$ == "")
+			.@crystal_pack_name$ = "알 수 없는 아이템";
 		mes "[리노]";
-		mes sprintf("^FF0000%d개의 %s^000000를 사용하여 ^FF00001개의 %s^000000를 만듭니다.",.@rate,getitemname(.@crystal),getitemname(.@crystal_));
+		mes "^FF0000" + .@rate + "개의 " + .@crystal_name$ + "^000000를 사용하여 ^FF00001개의 " + .@crystal_pack_name$ + "^000000를 만듭니다.";
 		next;
 		mes "[리노]";
-		mes sprintf("가지고 계신 %s %d개를 압축하여 %s %d개로 교환합니다.",.@crystal_count,getitemname(.@crystal),.@crystal_get,getitemname(.@crystal_));
+		mes "가지고 계신 " + .@crystal_count + "개의 " + .@crystal_name$ + "를 압축하여 " + .@crystal_get + "개의 " + .@crystal_pack_name$ + "로 교환합니다.";
 		mes "지금 바로 압축 공정을 시작할까요?";
 		next;
 		if(select("계속 압축하기:그만하기") == 2) {
@@ -408,7 +417,10 @@ lasagna,178,162,3	script	리노#2012hat::Reno#2012hat	64,{
 		set .@menu$,"";
 		for (set .@i,0; .@i<getarraysize(.@materials); set .@i,.@i+1) {
 			set .@item_name$, getitemname(.@materials[.@i]) + ((.@showslot[.@i] > -1)?"["+.@showslot[.@i]+"]":"");
-			set .@menu$, .@menu$ + sprintf("%s (보유: %d / 필요: %d):",.@item_name$,.@crystal_count,.@costs[.@i]);
+			if (.@item_name$ == "")
+				.@item_name$ = "알 수 없는 아이템";
+
+			set .@menu$, .@menu$ + .@item_name$ + " (보유: " + .@crystal_count + " / 필요: " + .@costs[.@i] + "):";
 		}
 		set .@index, select(.@menu$) - 1;
 		set .@material, .@materials[.@index];

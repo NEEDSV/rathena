@@ -10,6 +10,7 @@ S_Menu:
 	.@opt$ = "엔터방지:위치저장 서비스"
 		+ ":카트/탈것 대여"
 		+ ":환전 서비스"
+		+ ":스텟/스킬 초기화 서비스"
 		+ ":종료";
 
 	.@sel = select(.@opt$);
@@ -19,10 +20,77 @@ S_Menu:
 		case 2: goto S_01;
 		case 3: goto All;
 		case 4: goto Exchange;
+		case 5: goto Reset;
 
 		default: goto EXIT;   // 종료
 	}
 
+Reset:
+	mes "[카프라]";
+	mes "149레벨 이하 모험가님께";
+	mes "스텟/스킬 초기화를 무료로 도와드리고 있습니다.";
+	next;
+
+	if (BaseLevel > .MaxFreeBaseLv) {
+		mes "[카프라]";
+		mes "죄송합니다.";
+		mes "무료 초기화는 ^FF0000" + .MaxFreeBaseLv + "레벨 이하^000000까지만 이용할 수 있습니다.";
+		mes "현재 레벨: ^FF0000" + BaseLevel + "^000000";
+		close;
+	}
+
+	mes "[카프라]";
+	mes "무엇을 초기화하시겠습니까?";
+	mes "현재 레벨: ^0000FF" + BaseLevel + "^000000";
+	next;
+
+	switch (select("스텟 초기화:스킬 초기화:스텟 + 스킬 초기화:취소")) {
+	case 1:
+		mes "[카프라]";
+		mes "스텟을 초기화하시겠습니까?";
+		next;
+		if (select("초기화한다:취소") == 2)
+			close;
+
+		resetstatus;
+		specialeffect2 EF_ANGEL2;
+
+		mes "[카프라]";
+		mes "스텟 초기화가 완료되었습니다.";
+		close;
+
+	case 2:
+		mes "[카프라]";
+		mes "스킬을 초기화하시겠습니까?";
+		next;
+		if (select("초기화한다:취소") == 2)
+			close;
+
+		resetskill;
+		specialeffect2 EF_ANGEL2;
+
+		mes "[카프라]";
+		mes "스킬 초기화가 완료되었습니다.";
+		close;
+
+	case 3:
+		mes "[카프라]";
+		mes "스텟과 스킬을 모두 초기화하시겠습니까?";
+		next;
+		if (select("초기화한다:취소") == 2)
+			close;
+
+		resetstatus;
+		resetskill;
+		specialeffect2 EF_ANGEL2;
+
+		mes "[카프라]";
+		mes "스텟과 스킬 초기화가 완료되었습니다.";
+		close;
+
+	case 4:
+		close;
+	}
 
 S_01: //세이브
 	// 현재 위치 저장
@@ -308,7 +376,8 @@ M_Exit: //종료
 	close;
 	
 OnInit:
-		waitingroom "저장/탈것 대여/캐시 환전",0;
+		waitingroom "초기화/저장/탈것 대여/캐시 환전",0;
+		.MaxFreeBaseLv = 149;
 		end;
 }
 
