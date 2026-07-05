@@ -48,7 +48,40 @@ OnInit:
 		end;
 }
 
+// 제련권 사용 시 목표 제련 수치별 제니 비용 설정
+// 예: +9 제련권을 사용하면 F_NeedRefineTicketFee(9)의 값을 비용으로 받습니다.
+// 비용을 받지 않을 제련 수치는 0으로 두면 됩니다.
+function	script	F_NeedRefineTicketFee	{
+	.@refine_lv = getarg(0);
 
+	setarray .@fee[0],
+		0, // +0
+		0, // +1
+		0, // +2
+		0, // +3
+		0, // +4
+		1000000, // +5
+		2000000, // +6
+		4000000, // +7
+		8000000, // +8
+		12000000, // +9
+		24000000, // +10
+		48000000, // +11
+		96000000, // +12
+		0, // +13
+		0, // +14
+		0, // +15
+		0, // +16
+		0, // +17
+		0, // +18
+		0, // +19
+		0; // +20
+
+	if (.@refine_lv < 0 || .@refine_lv >= getarraysize(.@fee))
+		return 0;
+
+	return .@fee[.@refine_lv];
+}
 
 function	script	F_RefineTime	{
 	setarray .@cert_weapon[0],
@@ -183,6 +216,7 @@ function	script	F_RefineTime	{
 	.@select = select(.@menu$)-1;
 	.@ticket_lv = .@cert_level[.@select];
 	.@ticket_id = .@tickets[.@select];
+	.@ticket_fee = callfunc("F_NeedRefineTicketFee", .@ticket_lv);
 
 	if (countitem(.@ticket_id) == 0) {
 		emotion ET_QUESTION;
@@ -200,7 +234,9 @@ function	script	F_RefineTime	{
 		close;
 	}
 	mes "[홀그렌]";
-	mes "^006400"+getequipname(.@part)+"^8B4513을(를) ^006400"+getitemname(.@ticket_id)+"^000000으로 제련합니다. 진행해도 괜찮나요?";
+	mes "^006400"+getequipname(.@part)+"^8B4513을(를) ^006400"+getitemname(.@ticket_id)+"^000000으로 제련합니다.";
+	mes "목표 제련 수치: ^006400+"+.@ticket_lv+"^000000";
+	mes "필요 비용: ^FF0000"+callfunc("F_InsertComma", .@ticket_fee)+" 제니^000000";
 	mes "진행해도 될까요??";
 	next;
 	if(select("아뇨.:예.") == 1) {
@@ -209,6 +245,13 @@ function	script	F_RefineTime	{
 		mes "아, 마음을 바꾸었군요.";
 		mes "오케이.";
 		mes "다음에 다시 오세요.";
+		close;
+	}
+	if (Zeny < .@ticket_fee) {
+		emotion ET_MONEY;
+		mes "[홀그렌]";
+		mes "제련 비용이 부족합니다.";
+		mes "필요 비용: ^FF0000"+callfunc("F_InsertComma",.@ticket_fee)+" 제니^000000";
 		close;
 	}
 	mes "[홀그렌]";
@@ -222,7 +265,14 @@ function	script	F_RefineTime	{
 		mes "이것을 보고헤주세요.";
 		close;
 	}
+	if (Zeny < .@ticket_fee) {
+		next;
+		mes "에러!";
+		mes "제련 비용이 부족합니다.";
+		close;
+	}
 	delitem .@ticket_id,1;
+	Zeny = Zeny - .@ticket_fee;
 
 	// anti-hack
 	if (callfunc("F_IsEquipIDHack", .@part, .@refineitemid) ||
