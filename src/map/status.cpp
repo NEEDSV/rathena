@@ -8335,9 +8335,6 @@ static int16 status_calc_aspd(block_list *bl, status_change *sc, bool fixed)
 		}
 
 		if (sc->getSCE(SC_ASSNCROS) && bonus < sc->getSCE(SC_ASSNCROS)->val2) {
-#ifdef RENEWAL
-			bonus += sc->getSCE(SC_ASSNCROS)->val2;
-#else
 			if (bl->type != BL_PC)
 				bonus += sc->getSCE(SC_ASSNCROS)->val2;
 			else {
@@ -8354,7 +8351,6 @@ static int16 status_calc_aspd(block_list *bl, status_change *sc, bool fixed)
 						break;
 				}
 			}
-#endif
 		}
 
 		if (bonus < 20 && sc->getSCE(SC_MADNESSCANCEL))
@@ -11859,6 +11855,10 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 		case SC_CHANGE:
 			val2= 30*val1; // Vit increase
 			val3= 20*val1; // Int increase
+			break;
+		case SC_ANKLE:
+			if(status_has_mode(status,MD_STATUSIMMUNE))
+				tick /= 5; // Lasts 5 times less on bosses (2017)
 			break;
 		case SC_SWOO:
 			if(status_has_mode(status,MD_STATUSIMMUNE))

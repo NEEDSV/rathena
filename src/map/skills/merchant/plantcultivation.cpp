@@ -29,22 +29,8 @@ void SkillPlantCultivation::castendPos2(block_list* src, int32 x, int32 y, uint1
 
 			if (skill_lv == 1)
 				mob_id = MOBID_BLACK_MUSHROOM + rnd() % 2;
-			else {
-				int32 rand_val = rnd() % 100;
-
-				if (rand_val < 30)
-					mob_id = MOBID_GREEN_PLANT;
-				else if (rand_val < 55)
-					mob_id = MOBID_RED_PLANT;
-				else if (rand_val < 80)
-					mob_id = MOBID_YELLOW_PLANT;
-				else if (rand_val < 90)
-					mob_id = MOBID_WHITE_PLANT;
-				else if (rand_val < 98)
-					mob_id = MOBID_BLUE_PLANT;
-				else
-					mob_id = MOBID_SHINING_PLANT;
-			}
+			else
+				mob_id = MOBID_RED_PLANT + rnd() % 6;
 
 			md = mob_once_spawn_sub(src, src->m, x, y, "--ja--", mob_id, "", SZ_SMALL, AI_NONE);
 			if (!md)
