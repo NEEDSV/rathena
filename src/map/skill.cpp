@@ -137,7 +137,14 @@ uint16 skill_name2id(const char* name) {
  * @return AEGIS Skill name
  **/
 const char* skill_get_name( uint16 skill_id ) {
-	return skill_db.find(skill_id)->name;
+	std::shared_ptr<s_skill_db> skill = skill_db.find(skill_id);
+
+	if (skill == nullptr) {
+		ShowWarning("skill_get_name: Invalid skill id %hu, defaulting to an empty name.\n", skill_id);
+		return "";
+	}
+
+	return skill->name;
 }
 
 /**
@@ -146,7 +153,14 @@ const char* skill_get_name( uint16 skill_id ) {
  * @return English Skill name
  **/
 const char* skill_get_desc( uint16 skill_id ) {
-	return skill_db.find(skill_id)->desc;
+	std::shared_ptr<s_skill_db> skill = skill_db.find(skill_id);
+
+	if (skill == nullptr) {
+		ShowWarning("skill_get_desc: Invalid skill id %hu, defaulting to an empty description.\n", skill_id);
+		return "";
+	}
+
+	return skill->desc;
 }
 
 static bool skill_check(uint16 id) {
@@ -7527,7 +7541,7 @@ int32 skill_unit_onplace_timer(skill_unit *unit, block_list *bl, t_tick tick)
 			break;
 		case UNT_HELLS_PLANT:
 			// 2017: hell plant unit attacks enemies in range from the unit's position (not the caster).
-			skill_attack(skill_get_type(GN_HELLS_PLANT_ATK), ss, &unit->bl, bl, GN_HELLS_PLANT_ATK, sg->skill_lv, tick, SD_LEVEL|SD_ANIMATION);
+			skill_attack(skill_get_type(GN_HELLS_PLANT_ATK), ss, unit, bl, GN_HELLS_PLANT_ATK, sg->skill_lv, tick, SD_LEVEL|SD_ANIMATION);
 			break;
 
 

@@ -13,6 +13,7 @@
 #include <cmath>
 #include <csetjmp>
 #include <cstdlib> // atoi, strtol, strtoll, exit
+#include <string>
 #include <vector>
 
 #ifdef PCRE_SUPPORT
@@ -3347,6 +3348,13 @@ const char* conv_str_(struct script_state* st, struct script_data* data, map_ses
 	get_val_(st, data, sd);
 	if( data_isstring(data) )
 	{// nothing to convert
+		if( data->u.str == nullptr ){
+			ShowWarning("script:conv_str: null string value, defaulting to \"\"\n");
+			script_reportdata(data);
+			script_reportsrc(st);
+			data->type = C_CONSTSTR;
+			data->u.str = const_cast<char *>("");
+		}
 	}
 	else if( data_isint(data) )
 	{// int32 -> string
@@ -17614,6 +17622,97 @@ BUILDIN_FUNC(implode)
 // Implements C sprintf, except format %n. The resulting string is
 // returned, instead of being saved in variable by reference.
 //-------------------------------------------------------
+static const char* buildin_sprintf_npc_name(struct script_state* st)
+{
+	npc_data* nd = map_id2nd(st->oid);
+
+	return nd != nullptr ? nd->name : "Unknown";
+}
+
+static char buildin_sprintf_format_specifier(const char* fmt, bool* has_dynamic_width)
+{
+	const char* p = fmt;
+
+	if( has_dynamic_width != nullptr )
+		*has_dynamic_width = false;
+
+	if( p == nullptr || *p++ != '%' )
+		return '\0';
+
+	while( *p == '-' || *p == '+' || *p == ' ' || *p == '#' || *p == '0' || *p == '\'' )
+		p++;
+
+	if( *p == '*' ){
+		if( has_dynamic_width != nullptr )
+			*has_dynamic_width = true;
+		p++;
+	}else{
+		while( *p >= '0' && *p <= '9' )
+			p++;
+	}
+
+	if( *p == '.' ){
+		p++;
+		if( *p == '*' ){
+			if( has_dynamic_width != nullptr )
+				*has_dynamic_width = true;
+			p++;
+		}else{
+			while( *p >= '0' && *p <= '9' )
+				p++;
+		}
+	}
+
+	while( *p == 'h' || *p == 'l' || *p == 'j' || *p == 'z' || *p == 't' || *p == 'L' )
+		p++;
+
+	return *p;
+}
+
+static std::string buildin_sprintf_safe_format(const char* fmt, char specifier)
+{
+	std::string safe_format;
+	const char* p = fmt;
+
+	if( p == nullptr || *p++ != '%' )
+		return safe_format;
+
+	safe_format.push_back('%');
+
+	while( *p == '-' || *p == '+' || *p == ' ' || *p == '#' || *p == '0' || *p == '\'' )
+		safe_format.push_back(*p++);
+
+	while( *p >= '0' && *p <= '9' )
+		safe_format.push_back(*p++);
+
+	if( *p == '.' ){
+		safe_format.push_back(*p++);
+		while( *p >= '0' && *p <= '9' )
+			safe_format.push_back(*p++);
+	}
+
+	while( *p == 'h' || *p == 'l' || *p == 'j' || *p == 'z' || *p == 't' || *p == 'L' )
+		p++;
+
+	safe_format.push_back(specifier);
+
+	return safe_format;
+}
+
+static const char* buildin_sprintf_safe_str(struct script_state* st, uint32 script_arg, const char* format, uint32 format_arg)
+{
+	const char* value = script_getstr(st, script_arg);
+
+	if( value == nullptr ){
+		ShowWarning("buildin_sprintf: NPC '%s' format '%s' argument %u is a null string. Defaulting to \"\".\n",
+			buildin_sprintf_npc_name(st), format != nullptr ? format : "", format_arg);
+		script_reportsrc(st);
+		return "";
+	}
+
+	return value;
+}
+
 BUILDIN_FUNC(sprintf)
 {
 	uint32 argc = 0, arg = 0;
@@ -17623,11 +17722,16 @@ BUILDIN_FUNC(sprintf)
 	char* q;
 	char* buf  = nullptr;
 	char* buf2 = nullptr;
-	struct script_data* data;
 	StringBuf final_buf;
 
 	// Fetch init data
 	format = script_getstr(st, 2);
+	if( format == nullptr ){
+		ShowWarning("buildin_sprintf: NPC '%s' passed a null format string. Defaulting to \"\".\n", buildin_sprintf_npc_name(st));
+		script_reportsrc(st);
+		script_pushconststr(st,"");
+		return SCRIPT_CMD_SUCCESS;
+	}
 	argc = script_lastdata(st)-2;
 	size_t len = strlen( format );
 
@@ -17703,30 +17807,52 @@ BUILDIN_FUNC(sprintf)
 		safestrncpy(buf2, q, len);
 		q = p;
 
-		// Note: This assumes the passed value being the correct
-		// type to the current format specifier. If not, the server
-		// probably crashes or returns anything else, than expected,
-		// but it would behave in normal code the same way so it's
-		// the scripter's responsibility.
-		data = script_getdata(st, arg+3);
+		bool has_dynamic_width = false;
+		char specifier = buildin_sprintf_format_specifier(buf2, &has_dynamic_width);
 
-		if(data_isstring(data))  // String
-			StringBuf_Printf(&final_buf, buf2, script_getstr(st, arg+3));
-		else if(data_isint(data))  // Number
-			StringBuf_Printf(&final_buf, buf2, script_getnum(st, arg+3));
-		else if(data_isreference(data)) {  // Variable
-			char* name = reference_getname(data);
+		if( has_dynamic_width ){
+			ShowWarning("buildin_sprintf: NPC '%s' format '%s' argument %u uses dynamic width/precision, which is not supported. Skipping.\n",
+				buildin_sprintf_npc_name(st), format, arg + 1);
+			script_reportsrc(st);
+			arg++;
+			continue;
+		}
 
-			if(name[strlen(name)-1]=='$')  // var Str
-				StringBuf_Printf(&final_buf, buf2, script_getstr(st, arg+3));
-			else  // var Int
-				StringBuf_Printf(&final_buf, buf2, script_getnum(st, arg+3));
-		} else {  // Unsupported type
-			ShowError("buildin_sprintf: Unknown argument type!\n");
-			if(buf) aFree(buf);
-			if(buf2) aFree(buf2);
-			script_pushconststr(st,"");
-			return SCRIPT_CMD_FAILURE;
+		if( specifier == 'n' ){
+			ShowWarning("buildin_sprintf: Format %%n not supported! Skipping...\n");
+			script_reportsrc(st);
+			arg++;
+			continue;
+		}
+
+		std::string safe_format;
+
+		switch( specifier ){
+			case 's':
+				safe_format = buildin_sprintf_safe_format(buf2, specifier);
+				StringBuf_Printf(&final_buf, safe_format.c_str(), buildin_sprintf_safe_str(st, arg + 3, format, arg + 1));
+				break;
+			case 'c':
+				safe_format = buildin_sprintf_safe_format(buf2, specifier);
+				StringBuf_Printf(&final_buf, safe_format.c_str(), script_getnum(st, arg+3));
+				break;
+			case 'd':
+			case 'i':
+				safe_format = buildin_sprintf_safe_format(buf2, specifier);
+				StringBuf_Printf(&final_buf, safe_format.c_str(), script_getnum(st, arg+3));
+				break;
+			case 'u':
+			case 'o':
+			case 'x':
+			case 'X':
+				safe_format = buildin_sprintf_safe_format(buf2, specifier);
+				StringBuf_Printf(&final_buf, safe_format.c_str(), static_cast<uint32>(script_getnum(st, arg+3)));
+				break;
+			default:
+				ShowWarning("buildin_sprintf: NPC '%s' format '%s' argument %u has unsupported or invalid format '%%%c'. Skipping.\n",
+					buildin_sprintf_npc_name(st), format, arg + 1, specifier != '\0' ? specifier : '?');
+				script_reportsrc(st);
+				break;
 		}
 
 		arg++;
