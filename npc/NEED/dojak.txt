@@ -19,7 +19,11 @@ lasagna,182,146,4	script	도작 도우미	648,{
 		mes(sprintf("안녕하세요 ^0055FF%s^000000 님.", strcharinfo(PC_NAME)));
 		mes("저는 <b>^FF0000도작 마스터^000000</b> 입니다.");
 		mes("\n");
-		mes(sprintf("%sz를 지불하면 원하는 스킬을 복사할 수 있게 도와드립니다.", callfunc("F_InsertComma", .skill_zeny)));
+		.@zeny_text$ = callfunc("F_InsertComma", .skill_zeny);
+		if (.@zeny_text$ == "")
+			.@zeny_text$ = sprintf("%d", .skill_zeny);
+
+		mes(.@zeny_text$ + "z를 지불하면 원하는 스킬을 복사할 수 있게 도와드립니다.");
 		next();
 
 		.@main = select(
