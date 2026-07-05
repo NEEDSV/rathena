@@ -37,6 +37,11 @@ void SkillOverBrand::calculateSkillRatio(const Damage* wd, const block_list* src
 	RE_LVL_DMOD(100);
 }
 
+void SkillOverBrand::castendDamageId(block_list* src, block_list* target, uint16 skill_lv, t_tick tick, int32& flag) const {
+	// 2017: skill_castend_damage_id case LG_OVERBRAND -> skill_attack(BF_WEAPON,...). Restore per-target damage.
+	skill_attack(BF_WEAPON, src, src, target, getSkillId(), skill_lv, tick, flag);
+}
+
 // LG_OVERBRAND_BRANDISH
 SkillOverBrandBrandish::SkillOverBrandBrandish() : SkillImpl(LG_OVERBRAND_BRANDISH) {
 }
@@ -44,6 +49,11 @@ SkillOverBrandBrandish::SkillOverBrandBrandish() : SkillImpl(LG_OVERBRAND_BRANDI
 void SkillOverBrandBrandish::calculateSkillRatio(const Damage* wd, const block_list* src, const block_list* target, uint16 skill_lv, int32& skillratio, int32 mflag) const {
 	skillratio += -100 + 300 * skill_lv + status_get_str(src) + status_get_dex(src);
 	RE_LVL_DMOD(100);
+}
+
+void SkillOverBrandBrandish::castendDamageId(block_list* src, block_list* target, uint16 skill_lv, t_tick tick, int32& flag) const {
+	// 2017: skill_castend_damage_id case LG_OVERBRAND_BRANDISH -> skill_attack(BF_WEAPON,...).
+	skill_attack(BF_WEAPON, src, src, target, getSkillId(), skill_lv, tick, flag);
 }
 
 // LG_OVERBRAND_PLUSATK
