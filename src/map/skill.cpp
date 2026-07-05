@@ -7525,6 +7525,11 @@ int32 skill_unit_onplace_timer(skill_unit *unit, block_list *bl, t_tick tick)
 					skill_attack(skill_get_type(GN_THORNS_TRAP), ss, ss, bl, sg->skill_id, sg->skill_lv, tick, SD_LEVEL|SD_ANIMATION);
 			}
 			break;
+		case UNT_HELLS_PLANT:
+			// 2017: hell plant unit attacks enemies in range from the unit's position (not the caster).
+			skill_attack(skill_get_type(GN_HELLS_PLANT_ATK), ss, &unit->bl, bl, GN_HELLS_PLANT_ATK, sg->skill_lv, tick, SD_LEVEL|SD_ANIMATION);
+			break;
+
 
 		case UNT_WALLOFTHORN:
 			if (unit->val2-- <= 0) // Max hit reached
@@ -8639,7 +8644,6 @@ bool skill_check_condition_castbegin( map_session_data& sd, uint16 skill_id, uin
 				return false;
 			}
 			break; //Combo ready.
-#ifndef RENEWAL
 		case BD_ADAPTATION:
 			{
 				int32 time;
@@ -8658,7 +8662,6 @@ bool skill_check_condition_castbegin( map_session_data& sd, uint16 skill_id, uin
 				}
 			}
 			break;
-#endif
 		case PR_BENEDICTIO:
 			if (skill_check_pc_partner(&sd, skill_id, &skill_lv, 1, 0) < 2) {
 				clif_skill_fail( sd, skill_id );
@@ -12304,11 +12307,6 @@ int32 skill_unit_timer_sub_onplace(block_list* bl, va_list ap)
 	if( !(skill->inf2[INF2_ISSONG] || skill->inf2[INF2_ISTRAP]) && !skill->inf2[INF2_IGNORELANDPROTECTOR] && group->skill_id != NC_NEUTRALBARRIER && (battle_config.land_protector_behavior ? map_getcell(bl->m, bl->x, bl->y, CELL_CHKLANDPROTECTOR) : map_getcell(unit->m, unit->x, unit->y, CELL_CHKLANDPROTECTOR)) )
 		return 0; //AoE skills are ineffective. [Skotlex]
 
-#ifdef RENEWAL
-	// Ankle Snare and Skid Trap can no longer trap bosses in renewal
-	if ((group->unit_id == UNT_ANKLESNARE || group->unit_id == UNT_SKIDTRAP) && status_bl_has_mode(bl, MD_STATUSIMMUNE))
-		return 0;
-#endif
 
 	if( battle_check_target(unit,bl,group->target_flag) <= 0 )
 		return 0;
