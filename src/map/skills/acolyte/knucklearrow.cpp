@@ -29,6 +29,9 @@ void SkillKnuckleArrow::calculateSkillRatio(const Damage *wd, const block_list *
 }
 
 void SkillKnuckleArrow::castendDamageId(block_list *src, block_list *target, uint16 skill_lv, t_tick tick, int32& flag) const {
+	// Cursed Circle release is handled generically for any skill: skill_castend_damage_id ends
+	// SC_CURSEDCIRCLE_ATKER after the cast, and that end now releases targets by caster id (map-wide),
+	// so no Knuckle Arrow specific handling is needed here.
 	// Holds current direction of bl/target to src/attacker before the src is moved to bl location
 	dir_ka = map_calc_dir(target, src->x, src->y);
 	// Has slide effect
