@@ -137,14 +137,7 @@ uint16 skill_name2id(const char* name) {
  * @return AEGIS Skill name
  **/
 const char* skill_get_name( uint16 skill_id ) {
-	std::shared_ptr<s_skill_db> skill = skill_db.find(skill_id);
-
-	if (skill == nullptr) {
-		ShowWarning("skill_get_name: Invalid skill id %hu, defaulting to an empty name.\n", skill_id);
-		return "";
-	}
-
-	return skill->name;
+	return skill_db.find(skill_id)->name;
 }
 
 /**
@@ -153,14 +146,7 @@ const char* skill_get_name( uint16 skill_id ) {
  * @return English Skill name
  **/
 const char* skill_get_desc( uint16 skill_id ) {
-	std::shared_ptr<s_skill_db> skill = skill_db.find(skill_id);
-
-	if (skill == nullptr) {
-		ShowWarning("skill_get_desc: Invalid skill id %hu, defaulting to an empty description.\n", skill_id);
-		return "";
-	}
-
-	return skill->desc;
+	return skill_db.find(skill_id)->desc;
 }
 
 static bool skill_check(uint16 id) {
@@ -7121,13 +7107,6 @@ int32 skill_unit_onplace_timer(skill_unit *unit, block_list *bl, t_tick tick)
 		case UNT_MANHOLE:
 			if( sg->val2 == 0 && tsc && ((sg->unit_id == UNT_ANKLESNARE && skill_id != SC_ESCAPE) || bl->id != sg->src_id) ) {
 				t_tick sec = skill_get_time2(sg->skill_id,sg->skill_lv);
-				if (sg->unit_id == UNT_ANKLESNARE) {
-					t_tick mintime = 30 * (status_get_lv(ss) + 100);
-					// Bosses are snared briefly (1/5 duration) to match 2017 behavior
-					if (status_bl_has_mode(bl, MD_STATUSIMMUNE))
-						sec /= 5;
-					sec = std::max((sec * status_get_agi(bl)) / -200 + sec, mintime);
-				}
 
 				if( status_change_start(ss, bl,type,10000,sg->skill_lv,sg->group_id,0,0,sec, SCSTART_NORATEDEF) ) {
 					const struct TimerData* td = tsc->getSCE(type)?get_timer(tsc->getSCE(type)->timer):nullptr;
@@ -7541,7 +7520,7 @@ int32 skill_unit_onplace_timer(skill_unit *unit, block_list *bl, t_tick tick)
 			break;
 		case UNT_HELLS_PLANT:
 			// 2017: hell plant unit attacks enemies in range from the unit's position (not the caster).
-			skill_attack(skill_get_type(GN_HELLS_PLANT_ATK), ss, unit, bl, GN_HELLS_PLANT_ATK, sg->skill_lv, tick, SD_LEVEL|SD_ANIMATION);
+			skill_attack(skill_get_type(GN_HELLS_PLANT_ATK), ss, &unit->bl, bl, GN_HELLS_PLANT_ATK, sg->skill_lv, tick, SD_LEVEL|SD_ANIMATION);
 			break;
 
 

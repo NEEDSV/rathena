@@ -522,6 +522,38 @@ static void script_reportsrc(struct script_state *st)
 	}
 }
 
+static void need_log_getitem_failure( struct script_state* st, const char* command, map_session_data* sd, const struct item* item, const item_data* id, int32 amount, int32 result, int32 rental_time = -1 )
+{
+	const t_itemid item_id = item != nullptr ? item->nameid : 0;
+	const char* aegis_name = id != nullptr ? id->name.c_str() : "(null)";
+	const char* display_name = id != nullptr ? id->ename.c_str() : "(null)";
+	const char* char_name = sd != nullptr ? sd->status.name : "(null)";
+	const uint32 char_id = sd != nullptr ? sd->status.char_id : 0;
+	const uint32 account_id = sd != nullptr ? sd->status.account_id : 0;
+	const char* map_name = ( sd != nullptr && sd->m >= 0 ) ? map_mapid2mapname( sd->m ) : "(null)";
+	const int16 x = sd != nullptr ? sd->x : 0;
+	const int16 y = sd != nullptr ? sd->y : 0;
+	const uint32 weight = sd != nullptr ? sd->weight : 0;
+	const uint32 max_weight = sd != nullptr ? sd->max_weight : 0;
+	const int32 oid = st != nullptr ? st->oid : 0;
+	const int32 rid = st != nullptr ? st->rid : 0;
+	npc_data* nd = ( st != nullptr && st->oid != 0 ) ? map_id2nd( st->oid ) : nullptr;
+	const char* npc_name = st == nullptr ? "(null)" : ( st->oid == 0 ? "FAKE_NPC" : ( nd != nullptr ? nd->name : "(null)" ) );
+
+	ShowError( "[NEED][getitem] failed cmd=%s result=%d item_id=%u aegis=%s name=%s amount=%d identify=%d refine=%d attribute=%d bound=%d rental_time=%d expire_time=%u grade=%u cards=%u,%u,%u,%u\n",
+		command != nullptr ? command : "(null)", result, static_cast<unsigned int>( item_id ), aegis_name, display_name, amount,
+		item != nullptr ? item->identify : 0, item != nullptr ? item->refine : 0, item != nullptr ? item->attribute : 0, item != nullptr ? item->bound : 0,
+		rental_time, item != nullptr ? static_cast<unsigned int>( item->expire_time ) : 0, item != nullptr ? static_cast<unsigned int>( item->enchantgrade ) : 0,
+		item != nullptr ? static_cast<unsigned int>( item->card[0] ) : 0, item != nullptr ? static_cast<unsigned int>( item->card[1] ) : 0,
+		item != nullptr ? static_cast<unsigned int>( item->card[2] ) : 0, item != nullptr ? static_cast<unsigned int>( item->card[3] ) : 0 );
+	ShowError( "[NEED][getitem] target char=%s char_id=%u account_id=%u map=%s,%d,%d weight=%u/%u\n",
+		char_name, static_cast<unsigned int>( char_id ), static_cast<unsigned int>( account_id ), map_name, x, y, static_cast<unsigned int>( weight ), static_cast<unsigned int>( max_weight ) );
+	ShowError( "[NEED][getitem] source npc=%s oid=%d rid=%d\n", npc_name, oid, rid );
+
+	if( st != nullptr )
+		script_reportsrc( st );
+}
+
 /// Reports on the console information about the script data.
 static void script_reportdata(struct script_data* data)
 {
@@ -7749,6 +7781,7 @@ BUILDIN_FUNC(getitem)
 
 			if( flag != ADDITEM_SUCCESS ){
 				clif_additem(sd, 0, 0, flag);
+				need_log_getitem_failure( st, command, sd, &it, id.get(), get_count, flag );
 				ShowError( "buildin_getitem: Failed to add the item to player.\n" );
 				return SCRIPT_CMD_FAILURE;
 			}
@@ -7917,6 +7950,7 @@ BUILDIN_FUNC(getitem2)
 
 				if( flag != ADDITEM_SUCCESS ){
 					clif_additem(sd, 0, 0, flag);
+					need_log_getitem_failure( st, command, sd, &item_tmp, item_data.get(), get_count, flag );
 					ShowError( "buildin_getitem2: Failed to add the item to player.\n" );
 					return SCRIPT_CMD_FAILURE;
 				}
@@ -7934,6 +7968,7 @@ BUILDIN_FUNC(rentitem) {
 	map_session_data *sd;
 	t_itemid nameid = 0;
 	unsigned char flag = 0;
+	std::shared_ptr<item_data> item_data;
 
 	if (!script_accid2sd(4,sd))
 		return SCRIPT_CMD_FAILURE;
@@ -7941,18 +7976,19 @@ BUILDIN_FUNC(rentitem) {
 	if( script_isstring(st, 2) )
 	{
 		const char *name = script_getstr(st, 2);
-		std::shared_ptr<item_data> itd = item_db.searchname( name );
+		item_data = item_db.searchname( name );
 
-		if( itd == nullptr ){
+		if( item_data == nullptr ){
 			ShowError("buildin_rentitem: Nonexistant item %s requested.\n", name);
 			return SCRIPT_CMD_FAILURE;
 		}
-		nameid = itd->nameid;
+		nameid = item_data->nameid;
 	}
 	else
 	{
 		nameid = script_getnum(st, 2);
-		if( !item_db.exists(nameid) )
+		item_data = item_db.find( nameid );
+		if( item_data == nullptr )
 		{
 			ShowError("buildin_rentitem: Nonexistant item %u requested.\n", nameid);
 			return SCRIPT_CMD_FAILURE;
@@ -7970,6 +8006,7 @@ BUILDIN_FUNC(rentitem) {
 	if( (flag = pc_additem(sd, &it, 1, LOG_TYPE_SCRIPT)) )
 	{
 		clif_additem(sd, 0, 0, flag);
+		need_log_getitem_failure( st, script_getfuncname( st ), sd, &it, item_data.get(), 1, flag, seconds );
 		return SCRIPT_CMD_FAILURE;
 	}
 	return SCRIPT_CMD_SUCCESS;
@@ -8081,6 +8118,7 @@ BUILDIN_FUNC(rentitem2) {
 
 	if( (flag = pc_additem(sd, &it, 1, LOG_TYPE_SCRIPT)) ) {
 		clif_additem(sd, 0, 0, flag);
+		need_log_getitem_failure( st, funcname, sd, &it, id.get(), 1, flag, seconds );
 		return SCRIPT_CMD_FAILURE;
 	}
 
