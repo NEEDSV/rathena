@@ -4938,6 +4938,19 @@ TIMER_FUNC( skill_keep_using ){
  * @param tick
  * @param data
  **/
+// NEED custom: when a caster under SC_CURSEDCIRCLE_ATKER uses any skill (except Cursed Circle
+// itself), release the Cursed Circle. Ending SC_CURSEDCIRCLE_ATKER frees every bound
+// SC_CURSEDCIRCLE_TARGET by caster id (see status_change_end case SC_CURSEDCIRCLE_ATKER).
+static void skill_release_cursedcircle_on_skilluse( block_list* src, uint16 skill_id ){
+	if( src == nullptr )
+		return;
+	if( skill_id == SR_CURSEDCIRCLE || skill_id == NPC_SR_CURSEDCIRCLE )
+		return; // Casting Cursed Circle itself must not self-release.
+	status_change* sc = status_get_sc( src );
+	if( sc != nullptr && sc->getSCE( SC_CURSEDCIRCLE_ATKER ) )
+		status_change_end( src, SC_CURSEDCIRCLE_ATKER );
+}
+
 TIMER_FUNC(skill_castend_id){
 	block_list *target, *src;
 	map_session_data *sd;
@@ -5242,6 +5255,8 @@ TIMER_FUNC(skill_castend_id){
 
 		FreeBlockLock freeLock;
 
+		// NEED custom: any skill use releases the caster's Cursed Circle before the skill runs.
+		skill_release_cursedcircle_on_skilluse(src, ud->skill_id);
 		if (skill_get_casttype(ud->skill_id) == CAST_NODAMAGE)
 			skill_castend_nodamage_id(src,target,ud->skill_id,ud->skill_lv,tick,flag);
 		else
@@ -5448,6 +5463,8 @@ TIMER_FUNC(skill_castend_pos){
 		else
 			unit_set_walkdelay(src, tick, battle_config.default_walk_delay + skill_get_walkdelay(ud->skill_id, ud->skill_lv), 1);
 		FreeBlockLock freeLock;
+		// NEED custom: any ground skill use releases the caster's Cursed Circle before the skill runs.
+		skill_release_cursedcircle_on_skilluse(src, ud->skill_id);
 		skill_castend_pos2(src,ud->skillx,ud->skilly,ud->skill_id,ud->skill_lv,tick,0);
 
 		if (ud->skill_id != RA_CAMOUFLAGE)
