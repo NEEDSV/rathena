@@ -13298,6 +13298,10 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 					status_change_end(bl, SC_DANCING);
 				}
 				break;
+			case SC_ANKLE:
+				// NEED custom: Ankle Snare halts movement even for knockback-immune targets (e.g. bosses)
+				unit_stop_walking( bl, USW_FIXPOS );
+				break;
 			default:
 				if (!unit_blown_immune(bl,0x1))
 					unit_stop_walking( bl, USW_FIXPOS );
