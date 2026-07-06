@@ -7520,7 +7520,7 @@ int32 skill_unit_onplace_timer(skill_unit *unit, block_list *bl, t_tick tick)
 			break;
 		case UNT_HELLS_PLANT:
 			// 2017: hell plant unit attacks enemies in range from the unit's position (not the caster).
-			skill_attack(skill_get_type(GN_HELLS_PLANT_ATK), ss, &unit->bl, bl, GN_HELLS_PLANT_ATK, sg->skill_lv, tick, SD_LEVEL|SD_ANIMATION);
+			skill_attack(skill_get_type(GN_HELLS_PLANT_ATK), ss, unit, bl, GN_HELLS_PLANT_ATK, sg->skill_lv, tick, SD_LEVEL|SD_ANIMATION);
 			break;
 
 
