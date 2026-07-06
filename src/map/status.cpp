@@ -14040,8 +14040,10 @@ int32 status_change_end( block_list* bl, enum sc_type type, int32 tid ){
 			}
 			break;
 		case SC_CURSEDCIRCLE_ATKER:
-			if( val2 ) // Used the default area size cause there is a chance the caster could knock back and can't clear the target.
-				map_foreachinallrange(status_change_timer_sub, bl, AREA_SIZE + 3, BL_CHAR, bl, nullptr, SC_CURSEDCIRCLE_TARGET, gettick());
+			// NEED custom: release bound targets by caster id across the whole map (not position/range based),
+			// so they are freed even if the caster moved away or used any skill before ATKER ended.
+			if( val2 ) // val2 = bound target count
+				map_foreachinmap(status_change_timer_sub, bl->m, BL_CHAR, bl, nullptr, SC_CURSEDCIRCLE_TARGET, gettick());
 			break;
 		case SC_RAISINGDRAGON:
 			if( sd && !pc_isdead(sd) ) {
