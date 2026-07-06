@@ -14040,10 +14040,11 @@ int32 status_change_end( block_list* bl, enum sc_type type, int32 tid ){
 			}
 			break;
 		case SC_CURSEDCIRCLE_ATKER:
-			// NEED custom: release bound targets by caster id across the whole map (not position/range based),
-			// so they are freed even if the caster moved away or used any skill before ATKER ended.
-			if( val2 ) // val2 = bound target count
-				map_foreachinmap(status_change_timer_sub, bl->m, BL_CHAR, bl, nullptr, SC_CURSEDCIRCLE_TARGET, gettick());
+			// NEED custom: always release bound targets by caster id across the whole map. Do NOT gate on
+			// val2 (bound-target count) - it can desync to 0 while SC_CURSEDCIRCLE_TARGET still remains on
+			// targets. status_change_timer_sub only ends targets whose val2 == this caster id, so other
+			// Suras' Cursed Circle targets are left intact.
+			map_foreachinmap(status_change_timer_sub, bl->m, BL_CHAR, bl, nullptr, SC_CURSEDCIRCLE_TARGET, gettick());
 			break;
 		case SC_RAISINGDRAGON:
 			if( sd && !pc_isdead(sd) ) {
