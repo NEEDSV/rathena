@@ -510,10 +510,12 @@ L_CollectionMenu:
 L_Register:
 	deletearray .@item_list[0], getarraysize(.@item_list);
 	deletearray .@cid_list[0], getarraysize(.@cid_list);
+	deletearray .@amount_list[0], getarraysize(.@amount_list);
 
 	getinventorylist;
 	set .@bound_total, countbound(.ClosetBoundType);
 	set .@count, 0;
+	set .@total_amount, 0;
 
 	freeloop(1);
 
@@ -549,8 +551,15 @@ L_Register:
 		if (.@dup)
 			continue;
 
+		set .@amount, countitem(.@item_id);
+
+		if (.@amount <= 0)
+			continue;
+
 		set .@item_list[.@count], .@item_id;
 		set .@cid_list[.@count], .@cid;
+		set .@amount_list[.@count], .@amount;
+		set .@total_amount, .@total_amount + .@amount;
 		set .@count, .@count + 1;
 	}
 
@@ -562,126 +571,119 @@ L_Register:
 		close;
 	}
 
-	set .@page, 0;
-
-L_RegisterPage:
-	set .@max_page, (.@count - 1) / .PageSize;
-	set .@start, .@page * .PageSize;
-	set .@end, .@start + .PageSize;
-
-	if (.@end > .@count)
-		set .@end, .@count;
-
-	mes "[의상 등록 / 코인화]";
-	mes "페이지: " + (.@page + 1) + " / " + (.@max_page + 1);
-	mes "등록 여부와 관계없이 의상 1개를 코인화할 수 있습니다.";
+	mes "[의상 등록 / 일괄 코인화]";
+	mes "등록 대상: ^FF8000" + .@count + "^000000종 / ^FF8000" + .@total_amount + "^000000개";
+	mes " ";
+	mes "아래 의상은 승인 시";
+	mes "^FF0000보유 수량 전체가 삭제^000000되고";
+	mes "삭제 수량만큼 의상 코인이 지급됩니다.";
+	mes " ";
+	mes "^FF0000※ 이미 등록된 의상도 코인화 대상입니다.^000000";
+	mes "^FF0000※ 같은 의상의 귀속 아이템을 보유 중이면 제외됩니다.^000000";
+	mes "^FF0000※ 장착 중인 의상도 포함됩니다.^000000";
 	mes " ";
 
-	for (set .@i, .@start; .@i < .@end; set .@i, .@i + 1) {
+	for (set .@i, 0; .@i < .@count; set .@i, .@i + 1) {
 		set .@cid, .@cid_list[.@i];
 		set .@item_id, .@item_list[.@i];
 		set .@name$, getitemname(.@item_id);
 
 		if (iscostumeregistered(.@cid))
-			mes (.@i - .@start + 1) + ". [" + .@cid + "] " + .@name$ + " ^ff8c00(등록됨)^000000";
+			mes (.@i + 1) + ". [" + .@cid + "] " + .@name$ + " x" + .@amount_list[.@i] + " ^ff8c00(등록됨)^000000";
 		else
-			mes (.@i - .@start + 1) + ". [" + .@cid + "] " + .@name$;
+			mes (.@i + 1) + ". [" + .@cid + "] " + .@name$ + " x" + .@amount_list[.@i];
 	}
 
 	next;
 
-	switch(select("입력하기:다음 페이지:이전 페이지:취소")) {
-	case 1:
-		mes "[의상 등록 / 코인화]";
-		mes "선택할 번호를 입력해주세요.";
-		mes "^777777입력 가능 번호: 1 ~ " + (.@end - .@start) + "^000000";
-		next;
+	mes "[의상 등록 / 일괄 코인화]";
+	mes "위 목록의 의상을 모두 등록/코인화합니다.";
+	mes " ";
+	mes "획득 예정 의상 코인:";
+	mes "^FF8000" + .@total_amount + "^000000개";
+	mes " ";
+	mes "^FF0000진행 후 의상 아이템은 복구할 수 없습니다.^000000";
+	next;
 
-		input .@input;
+	if (select("일괄 등록한다:취소") == 2)
+		goto L_CollectionMenu;
 
-		if (.@input < 1 || .@input > (.@end - .@start)) {
-			mes "[의상 등록 / 코인화]";
-			mes "잘못 입력했습니다.";
-			next;
-			goto L_RegisterPage;
+	set .@new_count, 0;
+	set .@already_count, 0;
+	set .@coin_count, 0;
+	set .@skip_count, 0;
+	set .@fail_count, 0;
+
+	freeloop(1);
+
+	for (set .@i, 0; .@i < .@count; set .@i, .@i + 1) {
+		set .@item_id, .@item_list[.@i];
+		set .@cid, .@cid_list[.@i];
+		set .@amount, .@amount_list[.@i];
+
+		// 진행 직전 귀속 보유 여부 재검사
+		set .@bound_total, countbound(.ClosetBoundType);
+		set .@bound_amount_check, 0;
+
+		for (set .@b, 0; .@b < .@bound_total; set .@b, .@b + 1) {
+			if (@bound_items[.@b] == .@item_id) {
+				set .@bound_amount_check, @bound_amount[.@b];
+				break;
+			}
 		}
 
-		set .@idx, .@start + .@input - 1;
-		set .@item_id, .@item_list[.@idx];
-		set .@cid, .@cid_list[.@idx];
-		set .@name$, getitemname(.@item_id);
-		break;
+		if (.@bound_amount_check > 0) {
+			set .@skip_count, .@skip_count + 1;
+			continue;
+		}
 
-	case 2:
-		if (.@page < .@max_page)
-			set .@page, .@page + 1;
-		goto L_RegisterPage;
+		if (countitem(.@item_id) <= 0) {
+			set .@skip_count, .@skip_count + 1;
+			continue;
+		}
 
-	case 3:
-		if (.@page > 0)
-			set .@page, .@page - 1;
-		goto L_RegisterPage;
+		if (countitem(.@item_id) < .@amount)
+			set .@amount, countitem(.@item_id);
 
-	default:
-		goto L_CollectionMenu;
+		if (.@amount <= 0) {
+			set .@skip_count, .@skip_count + 1;
+			continue;
+		}
+
+		set .@ret, registercostume(.@item_id);
+
+		if (.@ret == 1 || .@ret == 2) {
+			delitem .@item_id, .@amount;
+			getitem .CostumeCoinID, .@amount;
+
+			if (.@ret == 1)
+				set .@new_count, .@new_count + 1;
+			else
+				set .@already_count, .@already_count + 1;
+
+			set .@coin_count, .@coin_count + .@amount;
+			continue;
+		}
+
+		set .@fail_count, .@fail_count + 1;
 	}
 
-	mes "[의상 등록 / 코인화]";
-	mes "선택한 의상:";
-	mes "[" + .@cid + "] " + .@name$;
+	freeloop(0);
+
+	mes "[의상 등록 / 일괄 코인화]";
+	mes "처리가 완료되었습니다.";
 	mes " ";
-	mes "진행 시 의상 아이템 1개가 삭제됩니다.";
-	mes "의상 코인 1개를 획득합니다.";
-	next;
+	mes "신규 도감 등록: ^00AAFF" + .@new_count + "^000000종";
+	mes "이미 등록된 의상: ^FF8000" + .@already_count + "^000000종";
+	mes "획득 의상 코인: ^FF8000" + .@coin_count + "^000000개";
 
-	if (select("진행한다:취소") == 2)
-		goto L_CollectionMenu;
+	if (.@skip_count > 0)
+		mes "스킵: ^777777" + .@skip_count + "^000000종";
 
-	if (countitem(.@item_id) <= 0) {
-		mes "[의상 등록]";
-		mes "선택한 의상을 보유하고 있지 않습니다.";
-		close;
-	}
+	if (.@fail_count > 0)
+		mes "실패: ^FF0000" + .@fail_count + "^000000종";
 
-	set .@ret, registercostume(.@item_id);
-
-	if (.@ret == 1 || .@ret == 2) {
-		delitem .@item_id, 1;
-		getitem .CostumeCoinID, 1;
-
-		mes "[의상 등록 / 코인화]";
-
-		if (.@ret == 1)
-			mes "의상 도감에 새로 등록되었습니다.";
-		else
-			mes "이미 등록된 의상입니다.";
-
-		mes "의상 아이템 1개를 코인으로 전환했습니다.";
-		mes "의상 코인 1개를 획득했습니다.";
-		next;
-
-		mes "[의상 옷장]";
-		mes "이 의상을 즉시 착용하시겠습니까?";
-		mes "등록된 의상은 캐릭터 귀속 아이템으로 지급됩니다.";
-		next;
-
-		if (select("착용한다:그냥 코인만 받는다") == 1)
-			goto L_PutCloset;
-
-		close;
-	}
-
-	if (.@ret == -1) {
-		mes "[의상 등록]";
-		mes "DB 오류가 발생했습니다.";
-		close;
-	}
-
-	mes "[의상 등록]";
-	mes "등록할 수 없는 의상입니다.";
 	close;
-
-	goto L_CollectionMenu;
 
 L_ViewBook:
 	set .@last, getcostumelastcollectionid();
