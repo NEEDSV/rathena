@@ -1898,13 +1898,15 @@ int64 battle_calc_damage(block_list *src,block_list *bl,struct Damage *d,int64 d
 			skill_castend_damage_id(bl,src,MH_MAGMA_FLOW,sce->val1,gettick(),0);
 
 		if( damage > 0 && (sce = tsc->getSCE(SC_STONEHARDSKIN)) ) {
-			sce->val2 -= static_cast<int32>(cap_value(damage, INT_MIN, INT_MAX));
+			sce->val2 = i32max(0, sce->val2 - static_cast<int32>(cap_value(damage, INT_MIN, INT_MAX))); // NEED custom: durability tracked but clamped at 0 (buff persists, no end)
 			if( src->type == BL_MOB ) //using explicit call instead break_equip for duration
 				sc_start(src,src, SC_STRIPWEAPON, 30, 0, skill_get_time2(RK_STONEHARDSKIN, sce->val1));
 			else if (flag&(BF_WEAPON|BF_SHORT))
 				skill_break_equip(src,src, EQP_WEAPON, 3000, BCT_SELF);
-			if (sce->val2 <= 0)
-				status_change_end(bl, SC_STONEHARDSKIN);
+			// NEED custom (official 2017 kRO per rAthena issue #3693): Stone Hard Skin (Hagalaz Rune)
+			// remains active until its time limit regardless of damage taken. The durability (val2) is
+			// still tracked/decremented, but no longer ends the buff (rAthena's durability<=0 end was a
+			// non-official implementation; see issue #3693). DEF/MDEF and weapon-break stay for the duration.
 		}
 
 		if (src->type == BL_PC && tsc->getSCE(SC_GVG_GOLEM)) {
