@@ -1158,10 +1158,6 @@ bool hom_call(map_session_data *sd)
 		skill_blockhomun_start(*hd, entry.first, entry.second);
 	}
 
-#ifdef RENEWAL
-	sc_start(sd, sd, SC_HOMUN_TIME, 100, 1, skill_get_time(AM_CALLHOMUN, 1));
-#endif
-
 	return true;
 }
 
@@ -1220,9 +1216,6 @@ int32 hom_recv_data(uint32 account_id, struct s_homunculus *sh, int32 flag)
 		clif_homskillinfoblock( *hd );
 		hom_init_timers(hd);
 
-#ifdef RENEWAL
-		sc_start(sd, sd, SC_HOMUN_TIME, 100, 1, skill_get_time(AM_CALLHOMUN, 1));
-#endif
 	}
 
 	// Apply any active skill cooldowns.
@@ -1322,10 +1315,6 @@ int32 hom_ressurect(map_session_data* sd, unsigned char per, int16 x, int16 y)
 	for (const auto &entry : hd->scd) {
 		skill_blockhomun_start(*hd, entry.first, entry.second);
 	}
-
-#ifdef RENEWAL
-	sc_start(sd, sd, SC_HOMUN_TIME, 100, 1, skill_get_time(AM_CALLHOMUN, 1));
-#endif
 
 	return status_revive(hd, per, 0);
 }
