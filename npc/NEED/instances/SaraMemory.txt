@@ -1,0 +1,1496 @@
+//===== rAthena Script =======================================
+//= Heroes' Trail Part 1 - Sara's Memories
+//===== Description: =========================================
+//= Sara's Memories Instance in the Dimensional Gap.
+//===== Changelogs: ==========================================
+//= 1.0 First version. [Chilly]
+//= 1.1 Clean-up and monster position fix. [RagnarokNova]
+//============================================================
+
+//= NPCs
+dali,130,107,6	script	모험가 레온	945,{
+	if (BaseLevel < 99) {
+		mes "[모험가 레온]";
+		mes "음... 여기는 당신이 오기엔 아직 위험해 보이네요. 적어도 ^0000FF99레벨^000000 이상이 되면 다시 저를 찾아와 주세요.";
+		close;
+	}
+	if (saramemory == 1) {
+		mes "[모험가 레온]";
+		mes "균열 내부 조사가 아직 덜 끝난 모양이군요. 안쪽으로 더 들어가서 확인해보세요.";
+		close;
+	}
+	if (saramemory == 2) {
+		mes "[모험가 레온]";
+		mes "대체 그 안에서 무슨 일이 있었던 거죠?!";
+		next;
+		mes "[모험가 레온]";
+		mes "사라 아이린이라고요?! 전설적인 12 발키리 중 한 명인 그녀에게 그런 가슴 아픈 과거가 있었군요...";
+		next;
+		mes "[모험가 레온]";
+		mes "결과적으로 당신 때문에 그녀와 아버지 사이의 오해가 걷잡을 수 없이 커져 버렸네요.";
+		next;
+		mes "[모험가 레온]";
+		mes "이미 벌어진 일이나 비극에 대해 너무 마음 쓰지 마세요. 그날의 사건은 누가 있었어도 일어날 수밖에 없었던 숙명이었을 겁니다.";
+		next;
+		mes "[모험가 레온]";
+		mes "이 시간 여행 이야기는 우리끼리만 알고 있기로 하죠. 당신이 나보다 유명해지면 곤란하니까요. 뭐, 어차피 너무 황당해서 아무도 안 믿겠지만 말이에요.";
+		next;
+		set saramemory,3;
+		erasequest 15003;
+		getexp_multi 770000,1000000;
+		mes "[모험가 레온]";
+		mes "다음 탐험을 위해서는 균열이 안정될 때까지 마지막 입장 후 약 20시간 정도의 시간이 필요합니다.";
+		close;
+	}
+	if (saramemory == 3) {
+		if ((checkquest(15002,PLAYTIME) == 0) || (checkquest(15002,PLAYTIME) == 1)) {
+			mes "[모험가 레온]";
+			mes "다음 탐험을 위해서는 균열이 안정될 때까지 마지막 입장 후 약 20시간 정도의 시간이 필요합니다.";
+			close;
+		}
+		if (checkquest(15002,PLAYTIME) == 2) {
+			erasequest 15002;
+			mes "^0000FF[ 사라의 기억 ] 대기 시간이 해제되었습니다. 이제 차원 이동 장치를 다시 사용할 수 있습니다.^000000";
+			next;
+		}
+		mes "[모험가 레온]";
+		mes "다시 한번 과거의 기억 속으로 들어가시겠습니까?";
+		next;
+		switch(select("예:아니오")) {
+		case 1:
+			mes "[모험가 레온]";
+			mes "차원 이동 장치를 타고 저 너머로 가서 무엇이 있는지 조사하고 제게 알려주세요.";
+			next;
+			set saramemory,4;
+			setquest 15003;
+			mes "[모험가 레온]";
+			mes "경고하는데, 차원이 불안정할 수 있으니 가능한 한 빨리 입장하는 것이 좋습니다.";
+			close;
+		case 2:
+			mes "[모험가 레온]";
+			mes "흠... 강요하진 않겠습니다만, 마음의 준비가 되면 다시 저를 찾아오세요.";
+			close;
+		}
+	}
+	if (saramemory == 4) {
+		if ((checkquest(15002,PLAYTIME) == 0) || (checkquest(15002,PLAYTIME) == 1)) {
+			mes "[모험가 레온]";
+			mes "균열 내부 조사가 아직 덜 끝난 모양이군요. 안쪽으로 더 들어가서 확인해보세요.";
+			close;
+		}
+		if (checkquest(15002,PLAYTIME) == 2) {
+			erasequest 15002;
+			mes "^0000FF[ 사라의 기억 ] 대기 시간이 해제되었습니다. 이제 차원 이동 장치를 다시 사용할 수 있습니다.^000000";
+			next;
+		}
+		mes "[모험가 레온]";
+		mes "균열 내부 조사가 아직 덜 끝난 모양이군요. 안쪽으로 더 들어가서 확인해보세요.";
+		next;
+		switch(select("알겠습니다:포기합니다")) {
+		case 1:
+			mes "[모험가 레온]";
+			mes "다행이군요! 언젠가 당신도 이 '사자 레온'만큼 용감해질 수 있을 겁니다!";
+			close;
+		case 2:
+			set saramemory,3;
+			erasequest 15003;
+			mes "[모험가 레온]";
+			mes "흠... 강요하진 않겠습니다만, 마음의 준비가 되면 다시 저를 찾아오세요.";
+			close;
+		}
+	}
+	if (saramemory == 5) {
+		mes "[모험가 레온]";
+		mes "대체 그 안에서 무슨 일이 있었던 거죠?!";
+		next;
+		mes "[모험가 레온]";
+		mes "사라 아이린이라고요?! 전설적인 12 발키리 중 한 명인 그녀에게 그런 가슴 아픈 과거가 있었군요...";
+		next;
+		mes "[모험가 레온]";
+		mes "결과적으로 당신 때문에 그녀와 아버지 사이의 오해가 걷잡을 수 없이 커져 버렸네요.";
+		next;
+		mes "[모험가 레온]";
+		mes "이미 벌어진 일이나 비극에 대해 너무 마음 쓰지 마세요. 그날의 사건은 누가 있었어도 일어날 수밖에 없었던 숙명이었을 겁니다.";
+		next;
+		mes "[모험가 레온]";
+		mes "이 시간 여행 이야기는 우리끼리만 알고 있기로 하죠. 당신이 나보다 유명해지면 곤란하니까요. 뭐, 어차피 너무 황당해서 아무도 안 믿겠지만 말이에요.";
+		next;
+		set saramemory,3;
+		erasequest 15003;
+		getexp_multi 550000,550000;
+		mes "[모험가 레온]";
+		mes "다음 탐험을 위해서는 균열이 안정될 때까지 마지막 입장 후 약 20시간 정도의 시간이 필요합니다.";
+		close;
+	}
+	mes "[모험가 레온]";
+	mes "통성명이 늦었군요! 저는 전설적인 모험가, 폰 데 레온이라고 합니다!";
+	next;
+	mes "[모험가 레온]";
+	mes "친구들은 저를 '사자 레온'이라고 부르죠! 거친 외모와 성격 때문이기도 하지만, 제 실력 또한 사자처럼 매서우니까요!";
+	next;
+	mes "[모험가 레온]";
+	mes "여기는 참 묘한 곳이에요, 그렇지 않나요?";
+	next;
+	mes "[모험가 레온]";
+	mes "주변을 탐험하다 보면 시공간의 균열들을 보게 될 겁니다. 지금은 각각의 차원 장치들이 그 균열을 덮고 있죠.";
+	next;
+	mes "[모험가 레온]";
+	mes "예를 들어, 가장 가까운 장치 너머로 페이욘의 모습이 살짝 보였는데... 뭔가 이상했어요. 마치 아주 먼 과거의 페이욘을 보는 것 같았거든요.";
+	next;
+	mes "[모험가 레온]";
+	mes "직접 들어가 조사해보고 싶지만, 이놈의 나이와 시큰거리는 무릎 때문에 도저히 엄두가 안 나는군요.";
+	next;
+	mes "[모험가 레온]";
+	mes "그래서 말인데, 당신에게 부탁 하나만 해도 될까요?";
+	next;
+	mes "[모험가 레온]";
+	mes "차원 이동 장치를 타고 저 너머로 가서 무엇이 있는지 조사하고 제게 알려주세요.";
+	next;
+	set saramemory,1;
+	setquest 15003;
+	mes "[모험가 레온]";
+	mes "미리 경고해두겠는데, 장치가 불안정할 수도 있으니 문이 열리면 지체 말고 들어가야 합니다.";
+	close;
+}
+
+dali,139,118,4	script	차원 이동 장치#sara	10007,{
+	if (BaseLevel < 99) {
+		mes "[모험가 레온]";
+		mes "이봐요! 아직 풋내기가 건드릴 물건이 아니에요! 적어도 ^0000FF99레벨^000000은 찍고 다시 오라고요!";
+		close;
+	}
+	if ((saramemory < 1) || (saramemory == 2) || (saramemory == 3) || (saramemory == 5)) {
+		mes "[모험가 레온]";
+		mes "함부로 만지기 전에, 일단 이리로 와서 저랑 이야기 좀 나누는 게 어때요?";
+		close;
+	}
+
+	// 20 hour cooldown
+	set .@ins_sara_time,checkquest(15002,PLAYTIME);
+	if (.@ins_sara_time == -1) {
+
+		set .@party_id,getcharid(1);
+		set .@p_name$,getpartyname(.@party_id);
+		set .@md_name$,"사라의 기억";
+
+		if (!.@party_id) {
+			mes "[모험가 레온]";
+			mes "입장하려면 먼저 파티를 맺어야 해요! 방법을 모르나요? 채팅창에 '/파티설정 파티이름'을 입력해 보세요.";
+			close;
+		}
+
+		if (is_party_leader() == true)
+			set .@menu$, "차원 이동 장치를 가동한다.:차원 이동 장치를 사용한다.:취소.";
+		else
+			set .@menu$, ":차원 이동 장치를 사용한다.:취소.";
+
+		switch(select(.@menu$)) {
+		case 1:
+			if (instance_create(.@md_name$) < 0) {
+				mes "파티명: "+.@p_name$;
+				mes "파티장: "+strcharinfo(0);
+				mes "^0000ff"+.@md_name$+" ^000000- 생성 예약 실패!";
+				close;
+			}
+			mes "^FF0000차원 이동 장치가 정상적으로 가동되었습니다. 장치를 사용하여 시공간의 균열로 입장하십시오.^000000";
+			close;
+		case 2:
+			switch(instance_enter(.@md_name$)) {
+			case IE_OTHER:
+				mes "알 수 없는 오류가 발생했습니다.";
+				close;
+			case IE_NOINSTANCE:
+				mes "해당 메모리얼 던전이 "+.@md_name$+" 존재하지 않습니다.";
+				mes "파티장이 아직 던전을 생성하지 않았습니다.";
+				close;
+			case IE_NOMEMBER:
+				mes "등록된 파티원만 인스턴스 던전에 입장할 수 있습니다. "+.@md_name$+".";
+				close;
+			case IE_OK:
+				mapannounce "dali",strcharinfo(0)+" 파티원이 "+.@p_name$+" 인스턴스에 입장했습니다. "+.@md_name$+".",bc_map,"0x00ff99";
+				setquest 15002;
+				end;
+			}
+		case 3:
+			mes "^FF0000파티장이 아직 차원 이동 장치를 가동하지 않았습니다.^000000";
+			close;
+		}
+	} else if (.@ins_sara_time == 0 || .@ins_sara_time == 1) {
+		mes "[모험가 레온]";
+		mes "다음 탐험을 위해서는 균열이 안정될 때까지 마지막 입장 후 약 20시간 정도의 시간이 필요합니다.";
+		close;
+	}
+	else {
+		erasequest 15002;
+		mes "^0000FF[ 사라의 기억 ] 대기 시간이 해제되었습니다. 이제 차원 이동 장치를 다시 사용할 수 있습니다.^000000";
+		close;
+	}
+}
+
+1@sara,260,156,6	script	어떤 소녀#01	668,{
+	if (is_party_leader() == true) {
+		unittalk getcharid(3),"여기가 어디인가요?";
+		mes "["+strcharinfo(0)+"]";
+		mes "여기가 어디인가요?";
+		next;
+		cutin "sara_9sara1",2;
+		npctalk "안녕하세요! 여기는 페이욘 마을이에요. 당신은 여기 분이 아니신 것 같네요...";
+		mes "[어떤 소녀]";
+		mes "안녕하세요! 여기는 페이욘 마을이에요. 당신은 여기 분이 아니신 것 같네요...";
+		next;
+		unittalk getcharid(3),"그럼 넌 여기 사니? 너도 이 마을 사람들과는 분위기가 좀 달라 보여서.";
+		mes "["+strcharinfo(0)+"]";
+		mes "그럼 넌 여기 사니? 너도 이 마을 사람들과는 분위기가 좀 달라 보여서.";
+		next;
+		npctalk "네! 전 여기서 태어났어요! 제 이름은 사라, 사라 아이린이라고 해요!";
+		mes "[어떤 소녀]";
+		mes "네! 전 여기서 태어났어요! 제 이름은 사라, 사라 아이린이라고 해요!";
+		next;
+		setnpcdisplay(instance_npcname("어떤 소녀#01"),"사라 아이린");
+		npctalk "저희 아버지는 이 마을의 촌장님이세요! 전 그냥 어머니를 많이 닮은 거고요.";
+		mes "[사라 아이린]";
+		mes "저희 아버지는 이 마을의 촌장님이세요! 전 그냥 어머니를 많이 닮은 거고요.";
+		next;
+		unittalk getcharid(3),"아, 실례했네. 그나저나... 왜 여기서 혼자 서 있는 거니?";
+		mes "["+strcharinfo(0)+"]";
+		mes "아, 실례했네. 그나저나... 왜 여기서 혼자 서 있는 거니?";
+		next;
+		npctalk "아버지를 기다리고 있어요. 금방 오겠다고 하셨거든요.";
+		mes "[사라 아이린]";
+		mes "아버지를 기다리고 있어요. 금방 오겠다고 하셨거든요.";
+		next;
+		donpcevent instance_npcname("아이린 촌장#01", instance_id())+"::OnEnable";
+		mapannounce instance_mapname("1@sara"), "집에서 한 노인이 나오자, 그를 본 사라의 얼굴이 환하게 피어오릅니다.",bc_area,"0xffffff";
+		mes "^FF0000집에서 한 노인이 나오자, 그를 본 사라의 얼굴이 환하게 피어오릅니다.^000000";
+		next;
+		npctalk "아빠, 오셨어요!";
+		mes "[사라 아이린]";
+		mes "아빠, 오셨어요!";
+		next;
+		cutin "sara_elder_irine1",2;
+		npctalk "우리 딸, 뭐가 그렇게 기분이 좋을까?", instance_npcname("아이린 촌장#01", instance_id());
+		mes "[아이린 촌장]";
+		mes "우리 딸, 뭐가 그렇게 기분이 좋을까?";
+		next;
+		cutin "sara_9sara1",2;
+		npctalk "금방 오신다고 해놓고선! 아빠 거짓말쟁이, 내가 얼마나 기다렸다구요!";
+		mes "[사라 아이린]";
+		mes "금방 오신다고 해놓고선! 아빠 거짓말쟁이, 내가 얼마나 기다렸다구요!";
+		next;
+		cutin "sara_elder_irine1",2;
+		npctalk "미안하구나 아가야, 너무 오래 기다렸지? 장로님들과의 회의가 생각보다 길어졌단다.", instance_npcname("아이린 촌장#01", instance_id());
+		mes "[아이린 촌장]";
+		mes "미안하구나 아가야, 너무 오래 기다렸지? 장로님들과의 회의가 생각보다 길어졌단다.";
+		next;
+		cutin "sara_9sara1",2;
+		npctalk "그 영감님들 정말 미워.";
+		mes "[사라 아이린]";
+		mes "그 영감님들 정말 미워.";
+		next;
+		cutin "sara_elder_irine1",2;
+		npctalk "에이, 그런 말 하면 못써... 그런데 옆에 계신 이분은 누구시니?", instance_npcname("아이린 촌장#01", instance_id());
+		mes "[아이린 촌장]";
+		mes "에이, 그런 말 하면 못써... 그런데 옆에 계신 이분은 누구시니?";
+		next;
+		mapannounce instance_mapname("1@sara"), "아이린 촌장이 마치 꿰뚫어 볼 듯 강렬한 눈빛으로 당신을 노려봅니다.",bc_area,"0xffffff";
+		mes "^FF0000아이린 촌장이 마치 꿰뚫어 볼 듯 강렬한 눈빛으로 당신을 노려봅니다.^000000";
+		next;
+		mapannounce instance_mapname("1@sara"), "사라가 콧노래를 부르며 들꽃을 꺾어 촌장에게 건넵니다.",bc_area,"0xffffff";
+		mes "^FF0000사라가 콧노래를 부르며 들꽃을 꺾어 촌장에게 건넵니다.^000000";
+		next;
+		cutin "sara_9sara1",2;
+		npctalk "아빠, 이거 선물!";
+		mes "[사라 아이린]";
+		mes "아빠, 이거 선물!";
+		next;
+		cutin "sara_elder_irine1",2;
+		npctalk "오, 우리 사라가 아빠한테 주는 거니?", instance_npcname("아이린 촌장#01", instance_id());
+		mes "[아이린 촌장]";
+		mes "오, 우리 사라가 아빠한테 주는 거니?";
+		next;
+		cutin "sara_9sara1",2;
+		npctalk "당연하지, 바보 아빠!";
+		mes "[사라 아이린]";
+		mes "당연하지, 바보 아빠!";
+		next;
+		mapannounce instance_mapname("1@sara"), "꽃을 받은 촌장의 기분이 한결 나아진 것 같습니다.",bc_area,"0xffffff";
+		mes "^FF0000꽃을 받은 촌장의 기분이 한결 나아진 것 같습니다.^000000";
+		next;
+		cutin "sara_elder_irine1",2;
+		npctalk "좋아, 우리 공주님. 이제 어디로 가볼까?", instance_npcname("아이린 촌장#01", instance_id());
+		mes "[아이린 촌장]";
+		mes "좋아, 우리 공주님. 이제 어디로 가볼까?";
+		next;
+		cutin "sara_9sara1",2;
+		npctalk "와! 아빠, 저기 언덕 위로 가자!";
+		mes "[사라 아이린]";
+		mes "와! 아빠, 저기 언덕 위로 가자!";
+		next;
+		cutin "sara_elder_irine1",2;
+		npctalk "하하! 그래, 떨어지지 않게 꽉 잡으렴!", instance_npcname("아이린 촌장#01", instance_id());
+		mes "[아이린 촌장]";
+		mes "하하! 그래, 떨어지지 않게 꽉 잡으렴!";
+		next;
+		cutin "sara_elder_irine1",255;
+		donpcevent instance_npcname("어떤 소녀#01", instance_id())+"::OnDisable";
+		donpcevent instance_npcname("아이린 촌장#01", instance_id())+"::OnDisable";
+		donpcevent instance_npcname("기이한 노인#01", instance_id())+"::OnEnable";
+		donpcevent instance_npcname("의문의 노인#02", instance_id())+"::OnEnable";
+		mapannounce instance_mapname("1@sara"), "그들이 자리를 뜨자 모퉁이 뒤에서 이상한 목소리가 들려옵니다...",bc_area,"0xffffff";
+		mes "^FF0000그들이 자리를 뜨자 모퉁이 뒤에서 이상한 목소리가 들려옵니다...^000000";
+		next;
+		npctalk "사라의 힘이 점점 강해지고 있군. 그 아이가 진정한 힘을 각성하게 내버려 둬서는 안 돼!", instance_npcname("기이한 노인#01", instance_id());
+		mes "[기이한 노인]";
+		mes "사라의 힘이 점점 강해지고 있군. 그 아이가 진정한 힘을 각성하게 내버려 둬서는 안 돼!";
+		next;
+		npctalk "불길한 별자리 아래 태어난 데다, 그 애 에미는 우리 일족도 아니지 않은가!", instance_npcname("의문의 노인#02", instance_id());
+		mes "[의문의 노인]";
+		mes "불길한 별자리 아래 태어난 데다, 그 애 에미는 우리 일족도 아니지 않은가!";
+		next;
+		npctalk "언젠가 그 아이가 우리 마을을 피바다로 만들고 말 거야.", instance_npcname("의문의 노인#02", instance_id());
+		mes "[의문의 노인]";
+		mes "언젠가 그 아이가 우리 마을을 피바다로 만들고 말 거야.";
+		next;
+		npctalk "성물에 선택받기 전에 어떻게든 끝내야 하네. 이미 '그'에게 일을 맡겨 두었으니 곧 소식이 올 걸세.", instance_npcname("기이한 노인#01", instance_id());
+		mes "[기이한 노인]";
+		mes "성물에 선택받기 전에 어떻게든 끝내야 하네. 이미 '그'에게 일을 맡겨 두었으니 곧 소식이 올 걸세.";
+		next;
+		npctalk "어디 한번 보지... 그 아이에게 어떤 비극이 닥쳤을지 벌써 기대되는군...", instance_npcname("의문의 노인#02", instance_id());
+		mes "[의문의 노인]";
+		mes "어디 한번 보지... 그 아이에게 어떤 비극이 닥쳤을지 벌써 기대되는군...";
+		next;
+		donpcevent instance_npcname("기이한 노인#01", instance_id())+"::OnDisable";
+		donpcevent instance_npcname("의문의 노인#02", instance_id())+"::OnDisable";
+		enablenpc instance_npcname("#sara_warp01");
+		donpcevent instance_npcname("사라 아이린#01", instance_id())+"::OnEnable";
+		donpcevent instance_npcname("사라의 어머니", instance_id())+"::OnEnable";
+		donpcevent instance_npcname("아이린 촌장#02", instance_id())+"::OnEnable";
+		mapannounce instance_mapname("1@sara"), "노인들이 자리를 떠납니다. 사라가 위험에 처한 것 같습니다. 어떻게든 해야 합니다!",bc_area,"0xffffff";
+		mes "^FF0000노인들이 자리를 떠납니다. 사라가 위험에 처한 것 같습니다. 어떻게든 해야 합니다!^000000";
+		close;
+	}
+	else {
+		end;
+	}
+
+OnInstanceInit:
+OnEnable:
+	enablenpc instance_npcname("어떤 소녀#01");
+	end;
+OnDisable:
+	disablenpc instance_npcname("어떤 소녀#01");
+	end;
+}
+
+1@sara,268,158,4	script	아이린 촌장#01	684,{
+	end;
+
+OnInstanceInit:
+OnDisable:
+	disablenpc instance_npcname("아이린 촌장#01");
+	end;
+OnEnable:
+	enablenpc instance_npcname("아이린 촌장#01");
+	end;
+}
+
+1@sara,260,156,4	script	기이한 노인#01	-1,{
+	end;
+
+OnInstanceInit:
+OnDisable:
+	disablenpc instance_npcname("기이한 노인#01");
+	end;
+OnEnable:
+	enablenpc instance_npcname("기이한 노인#01");
+	end;
+}
+
+1@sara,260,156,4	script	의문의 노인#02	-1,{
+	end;
+
+OnInstanceInit:
+OnDisable:
+	disablenpc instance_npcname("의문의 노인#02");
+	end;
+OnEnable:
+	enablenpc instance_npcname("의문의 노인#02");
+	end;
+}
+
+1@sara,107,325,6	script	사라 아이린#01	668,{
+	if (is_party_leader() == true) {
+		cutin "sara_9sara1",2;
+		npctalk "어! 또 보네! 당신 기억나, 무슨 일이야?";
+		mes "[사라 아이린]";
+		mes "어! 또 보네! 당신 기억나, 무슨 일이야?";
+		next;
+		npctalk "엄마한테 꽃을 선물하려고 왔어!";
+		mes "[사라 아이린]";
+		mes "엄마한테 꽃을 선물하려고 왔어!";
+		next;
+		mapannounce instance_mapname("1@sara"), "사라가 꽃을 들고 문을 열기 위해 앞으로 뛰어갑니다.",bc_area,"0xffffff";
+		mes "^FF0000사라가 꽃을 들고 문을 열기 위해 앞으로 뛰어갑니다.^000000";
+		next;
+		npctalk "엄마! 아빠! 이것 좀 보세요!";
+		mes "[사라 아이린]";
+		mes "엄마! 아빠! 이것 좀 보세요!";
+		next;
+		playBGMall "37",instance_mapname("1@sara");
+		cutin "sara_9sara1",255;
+		cutin "sara_momdie",4;
+		mapannounce instance_mapname("1@sara"), "문이 열리고 쓰러진 여인과 피 묻은 검을 든 아이린 촌장의 모습이 보입니다.",bc_area,"0xffffff";
+		mes "^FF0000문이 열리고 쓰러진 여인과 피 묻은 검을 든 아이린 촌장의 모습이 보입니다.^000000";
+		next;
+		npctalk "...";
+		mes "[사라 아이린]";
+		mes "...";
+		next;
+		npctalk "사라야... 어...어서 도망치렴...", instance_npcname("사라의 어머니", instance_id());
+		mes "[사라의 어머니]";
+		mes "사라야... 어...어서 도망치렴...";
+		next;
+		npctalk "...";
+		mes "[사라 아이린]";
+		mes "...";
+		next;
+		mapannounce instance_mapname("1@sara"), "여인의 손에서 보석이 굴러나와 사라 앞에 멈춥니다. 무의식적으로 사라는 보석을 집어듭니다.",bc_area,"0xffffff";
+		mes "^FF0000여인의 손에서 보석이 굴러나와 사라 앞에 멈춥니다. 무의식적으로 사라는 보석을 집어듭니다.^000000";
+		next;
+		mapannounce instance_mapname("1@sara"), "아이린 촌장이 돌아서서 사라를 발견합니다.",bc_area,"0xffffff";
+		mes "^FF0000아이린 촌장이 돌아서서 사라를 발견합니다.^000000";
+		next;
+		cutin "sara_momdie",255;
+		cutin "sara_elder_irine4",2;
+		npctalk "오, 사라야! 마침 널 찾으려던 참이었는데...", instance_npcname("아이린 촌장#02", instance_id());
+		mes "[아이린 촌장]";
+		mes "오, 사라야! 마침 널 찾으려던 참이었는데...";
+		next;
+		cutin "sara_9sara2",2;
+		npctalk "...";
+		mes "[사라 아이린]";
+		mes "...";
+		next;
+		switch(select("사라를 데리고 도망친다.")) {}
+		cutin "sara_elder_irine3",2;
+		npctalk "경비병! 경비병들은 들어라!! 여기 살인범이 있다! 어서 저놈을 잡아라!", instance_npcname("아이린 촌장#02", instance_id());
+		mes "[아이린 촌장]";
+		mes "경비병! 경비병들은 들어라!! 여기 살인범이 있다! 어서 저놈을 잡아라!";
+		next;
+		mapannounce instance_mapname("1@sara"), "밖에서 수많은 군화 발소리가 달려오는 것이 들립니다!",bc_area,"0xffffff";
+		mes "^FF0000밖에서 수많은 군화 발소리가 달려오는 것이 들립니다!^000000";
+		next;
+		cutin "sara_9sara3",2;
+		npctalk "엄마, 안돼!!!!!!!!!!";
+		mes "[사라 아이린]";
+		mes "엄마, 안돼!!!!!!!!!!";
+		next;
+		donpcevent instance_npcname("사라 아이린#01", instance_id())+"::OnDisable";
+		donpcevent instance_npcname("사라의 어머니", instance_id())+"::OnDisable";
+		donpcevent instance_npcname("아이린 촌장#02", instance_id())+"::OnDisable";
+		mapannounce instance_mapname("1@sara"), "사라가 도망치고 경비병들의 발소리가 점점 가까워집니다...",bc_area,"0xffffff";
+		mes "^FF0000사라가 도망치고 경비병들의 발소리가 점점 가까워집니다...^000000";
+		close2;
+		cutin "sara_9sara3",255;
+		donpcevent instance_npcname("#MobsSara01", instance_id())+"::OnEnable";
+		donpcevent instance_npcname("사라 아이린#talk01", instance_id())+"::OnEnable";
+		donpcevent instance_npcname("사라 아이린#talk02", instance_id())+"::OnEnable";
+		donpcevent instance_npcname("사라 아이린#talk03", instance_id())+"::OnEnable";
+		donpcevent instance_npcname("사라 아이린#talk04", instance_id())+"::OnEnable";
+		donpcevent instance_npcname("사라 아이린#talk05", instance_id())+"::OnEnable";
+		donpcevent instance_npcname("사라 아이린#talk06", instance_id())+"::OnEnable";
+		donpcevent instance_npcname("사라 아이린#talk07", instance_id())+"::OnEnable";
+		donpcevent instance_npcname("사라 아이린#talk08", instance_id())+"::OnEnable";
+		donpcevent instance_npcname("사라 아이린#talk09", instance_id())+"::OnEnable";
+		donpcevent instance_npcname("사라 아이린#talk10", instance_id())+"::OnEnable";
+		donpcevent instance_npcname("사라 아이린#talk11", instance_id())+"::OnEnable";
+		donpcevent instance_npcname("사라 아이린#talk12", instance_id())+"::OnEnable";
+		donpcevent instance_npcname("사라 아이린#talk13", instance_id())+"::OnEnable";
+		end;
+	}
+	else {
+		end;
+	}
+
+OnInstanceInit:
+OnDisable:
+	disablenpc instance_npcname("사라 아이린#01");
+	end;
+OnEnable:
+	enablenpc instance_npcname("사라 아이린#01");
+	end;
+}
+
+1@sara,107,325,4	script	사라의 어머니	-1,{
+	end;
+
+OnInstanceInit:
+OnDisable:
+	disablenpc instance_npcname("사라의 어머니");
+	end;
+OnEnable:
+	enablenpc instance_npcname("사라의 어머니");
+	end;
+}
+
+1@sara,107,325,4	script	아이린 촌장#02	-1,{
+	end;
+
+OnInstanceInit:
+OnDisable:
+	disablenpc instance_npcname("아이린 촌장#02");
+	end;
+OnEnable:
+	enablenpc instance_npcname("아이린 촌장#02");
+	end;
+}
+
+1@sara,152,233,6	script	사라 아이린#02	668,{
+	if (is_party_leader() == true) {
+		cutin "sara_9sara2",2;
+		npctalk "엄마!";
+		mes "[사라 아이린]";
+		mes "엄마!";
+		next;
+		cutin "sara_elder_irine4",2;
+		npctalk "사라야...", instance_npcname("아이린 촌장#03", instance_id());
+		mes "[아이린 촌장]";
+		mes "사라야...";
+		next;
+		cutin "sara_9sara2",2;
+		npctalk "싫어!";
+		mes "[사라 아이린]";
+		mes "싫어!";
+		next;
+		cutin "sara_elder_irine4",2;
+		npctalk "사라야, 널 구하러 왔단다. 어서 아빠 손을 잡아, 여긴 너무 위험하구나!", instance_npcname("아이린 촌장#03", instance_id());
+		mes "[아이린 촌장]";
+		mes "사라야, 널 구하러 왔단다. 어서 아빠 손을 잡아, 여긴 너무 위험하구나!";
+		next;
+		unittalk getcharid(3),"당신 같은 사람에게 사라를 맡길 순 없어!";
+		mes "["+strcharinfo(0)+"]";
+		mes "당신 같은 사람에게 사라를 맡길 순 없어!";
+		next;
+		cutin "sara_elder_irine3",2;
+		npctalk "간악한 살인범이 여기 있다! 여봐라, 당장 저놈을 처단하여 이 모든 비극을 끝내자!", instance_npcname("아이린 촌장#03", instance_id());
+		mes "[아이린 촌장]";
+		mes "간악한 살인범이 여기 있다! 여봐라, 당장 저놈을 처단하여 이 모든 비극을 끝내자!";
+		next;
+		unittalk getcharid(3),"사라야... 어서 뛰어! 여긴 내가 막을 테니 넌 도망쳐!";
+		mes "["+strcharinfo(0)+"]";
+		mes "사라야... 어서 뛰어! 여긴 내가 막을 테니 넌 도망쳐!";
+		next;
+		cutin "sara_9sara2",2;
+		npctalk "...알겠어요.";
+		mes "[사라 아이린]";
+		mes "...알겠어요.";
+		close2;
+		cutin "sara_9sara3",255;
+		donpcevent instance_npcname("사라 아이린#02", instance_id())+"::OnDisable";
+		donpcevent instance_npcname("아이린 촌장#03", instance_id())+"::OnDisable";
+		donpcevent instance_npcname("#BossSara01", instance_id())+"::OnEnable";
+		end;
+	}
+	else {
+		end;
+	}
+
+OnInstanceInit:
+OnDisable:
+	disablenpc instance_npcname("사라 아이린#02");
+	end;
+OnEnable:
+	enablenpc instance_npcname("사라 아이린#02");
+	end;
+}
+
+1@sara,152,233,4	script	아이린 촌장#03	-1,{
+	end;
+
+OnInstanceInit:
+OnDisable:
+	disablenpc instance_npcname("아이린 촌장#03");
+	end;
+OnEnable:
+	enablenpc instance_npcname("아이린 촌장#03");
+	end;
+}
+
+1@sara,156,236,4	script	아이린 촌장#04	684,{
+	if (is_party_leader() == true) {
+		cutin "sara_elder_irine4",2;
+		npctalk "커헉... 당신 같은 실력자를 내가 이길 순 없었나 보군.";
+		mes "[아이린 촌장]";
+		mes "커헉... 당신 같은 실력자를 내가 이길 순 없었나 보군.";
+		next;
+		npctalk "어째서... 어째서 내 처자식을 죽이려 하는 것이오?";
+		mes "[아이린 촌장]";
+		mes "어째서... 어째서 내 처자식을 죽이려 하는 것이오?";
+		next;
+		unittalk getcharid(3),"당신이야말로 무슨 수작이야? 피가 뚝뚝 떨어지는 검을 들고 사라 어머님을 죽이려던 건 바로 당신이었잖아!";
+		mes "["+strcharinfo(0)+"]";
+		mes "당신이야말로 무슨 수작이야? 피가 뚝뚝 떨어지는 검을 들고 사라 어머님을 죽이려던 건 바로 당신이었잖아!";
+		next;
+		npctalk "당신... 내가 내 아내를 죽였다고 생각하는 거요?";
+		mes "[아이린 촌장]";
+		mes "당신... 내가 내 아내를 죽였다고 생각하는 거요?";
+		next;
+		npctalk "아내는... 이미 자객에게 당한 상태였소. 난 그놈을 처단했을 뿐이오. 그래서 칼에 피가 묻었던 건데...";
+		mes "[아이린 촌장]";
+		mes "아내는... 이미 자객에게 당한 상태였소. 난 그놈을 처단했을 뿐이오. 그래서 칼에 피가 묻었던 건데...";
+		next;
+		cutin "sara_elder_irine4",255;
+		cutin "sara_momdie",4;
+		mapannounce instance_mapname("1@sara"), "생각해보니, 방 왼쪽 구석에 쓰러져 있던 또 다른 시체가 떠오릅니다. 촌장이 말한 자객일지도 모릅니다.",bc_area,"0xffffff";
+		mes "^FF0000생각해보니, 방 왼쪽 구석에 쓰러져 있던 또 다른 시체가 떠오릅니다. 촌장이 말한 자객일지도 모릅니다.^000000";
+		next;
+		cutin "sara_momdie",255;
+		cutin "sara_elder_irine4",2;
+		npctalk "그렇다면... 당신이 우리 가족을 죽이러 온 자객이 아니라면, 대체 정체가 뭐요?";
+		mes "[아이린 촌장]";
+		mes "그렇다면... 당신이 우리 가족을 죽이러 온 자객이 아니라면, 대체 정체가 뭐요?";
+		next;
+		unittalk getcharid(3),"그저 운 좋게 길을 지나던 모험가입니다. 어떤 노인들이 당신 가족을 해치려는 걸 알고 도와드리려 했던 것뿐입니다.";
+		mes "["+strcharinfo(0)+"]";
+		mes "그저 운 좋게 길을 지나던 모험가입니다. 어떤 노인들이 당신 가족을 해치려는 걸 알고 도와드리려 했던 것뿐입니다.";
+		next;
+		npctalk "만약... 그게 사실이라면 나를 용서해주시오. 난 당신이 그놈들과 한패인 줄로만 알았소.";
+		mes "[아이린 촌장]";
+		mes "만약... 그게 사실이라면 나를 용서해주시오. 난 당신이 그놈들과 한패인 줄로만 알았소.";
+		next;
+		npctalk "수상한 남자들? ...분명 마을 장로들이겠지. 으윽...";
+		mes "[아이린 촌장]";
+		mes "수상한 남자들? ...분명 마을 장로들이겠지. 으윽...";
+		next;
+		npctalk "자객들이 더 있을지 모르니 어서 사라를 찾아야 하오!";
+		mes "[아이린 촌장]";
+		mes "자객들이 더 있을지 모르니 어서 사라를 찾아야 하오!";
+		next;
+		unittalk getcharid(3),"사라는 아버지가 어머니를 죽였다고 단단히 오해하고 있어요. 진실을 알려야 합니다!";
+		mes "["+strcharinfo(0)+"]";
+		mes "사라는 아버지가 어머니를 죽였다고 단단히 오해하고 있어요. 진실을 알려야 합니다!";
+		next;
+		npctalk "수단과 방법을 가리지 말고 사라를 찾아야 하오. 나누어서 찾아봅시다. 제발 내 딸을 찾아 진실을 전해주시오.";
+		mes "[아이린 촌장]";
+		mes "수단과 방법을 가리지 말고 사라를 찾아야 하오. 나누어서 찾아봅시다. 제발 내 딸을 찾아 진실을 전해주시오.";
+		close2;
+		cutin "sara_elder_irine4",255;
+		mapannounce instance_mapname("1@sara"), "사라를 찾아야 합니다. 8시 방향으로 도망친 것이 기억납니다.",bc_map,"0xffff00";
+		viewpoint 1,88,188,1,0x00FF00;
+		donpcevent instance_npcname("아이린 촌장#04", instance_id())+"::OnDisable";
+		enablenpc instance_npcname("#sara_warp06");
+		donpcevent instance_npcname("사라 아이린#03", instance_id())+"::OnEnable";
+		donpcevent instance_npcname("?????#01", instance_id())+"::OnEnable";
+		end;
+	}
+	else {
+		end;
+	}
+
+OnInstanceInit:
+OnDisable:
+	disablenpc instance_npcname("아이린 촌장#04");
+	end;
+OnEnable:
+	enablenpc instance_npcname("아이린 촌장#04");
+	end;
+}
+
+1@sara,39,142,4	script	사라 아이린#03	668,{
+	if (is_party_leader() == true) {
+		mapannounce instance_mapname("1@sara"), "사라를 부르려는 찰나, 뒤에서 갑작스런 일격을 맞고 쓰러집니다.",bc_area,"0xffffff";
+		mes "^FF0000사라를 부르려는 찰나, 뒤에서 갑작스런 일격을 맞고 쓰러집니다.^000000";
+		next;
+		cutin "sara_beholder",2;
+		npctalk "시간의 방랑자여, 더 이상의 참견은 사양하마. 너 따위가 사라를 향한 우리의 계획을 막을 순 없다.", instance_npcname("?????#01", instance_id());
+		mes "[?????]";
+		mes "시간의 방랑자여, 더 이상의 참견은 사양하마. 너 따위가 사라를 향한 우리의 계획을 막을 순 없다.";
+		next;
+		npctalk "당장 네가 속한 시간대로 꺼져버려.", instance_npcname("?????#01", instance_id());
+		mes "[?????]";
+		mes "당장 네가 속한 시간대로 꺼져버려.";
+		next;
+		mapannounce instance_mapname("1@sara"), "당신이 쓰러지자 검은 망토를 쓴 두 인물이 사라에게 다가갑니다.",bc_area,"0xffffff";
+		mes "^FF0000당신이 쓰러지자 검은 망토를 쓴 두 인물이 사라에게 다가갑니다.^000000";
+		next;
+		npctalk "배신당하고 버림받은 소녀여, 너의 마음속 증오를 우리가 진정한 힘으로 이끌어주겠다.", instance_npcname("?????#01", instance_id());
+		mes "[?????]";
+		mes "배신당하고 버림받은 소녀여, 너의 마음속 증오를 우리가 진정한 힘으로 이끌어주겠다.";
+		next;
+		cutin "sara_9sara2",2;
+		npctalk "...";
+		mes "[사라 아이린]";
+		mes "...";
+		next;
+		cutin "sara_beholder",2;
+		npctalk "사라 아이린, '그'와 함께라면 넌 네가 바라는 모든 것을 이룰 수 있다.", instance_npcname("?????#01", instance_id());
+		mes "[?????]";
+		mes "사라 아이린, '그'와 함께라면 넌 네가 바라는 모든 것을 이룰 수 있다.";
+		next;
+		cutin "sara_beholder",255;
+		mapannounce instance_mapname("1@sara"), "망토를 쓴 이방인 중 하나가 사라를 망토로 감싸자 세 사람 모두 모습을 감춥니다.",bc_area,"0xffffff";
+		mes "^FF0000망토를 쓴 이방인 중 하나가 사라를 망토로 감싸자 세 사람 모두 모습을 감춥니다.^000000";
+		close2;
+		viewpoint 1,16,143,1,0x00FF00;
+		donpcevent instance_npcname("사라 아이린#03", instance_id())+"::OnDisable";
+		donpcevent instance_npcname("?????#01", instance_id())+"::OnDisable";
+		donpcevent instance_npcname("#sara_warp07", instance_id())+"::OnEnable";
+		end;
+	}
+	else {
+		end;
+	}
+
+OnInstanceInit:
+OnDisable:
+	disablenpc instance_npcname("사라 아이린#03");
+	end;
+OnEnable:
+	enablenpc instance_npcname("사라 아이린#03");
+	end;
+}
+
+1@sara,39,142,4	script	?????#01	-1,{
+	end;
+
+OnInstanceInit:
+OnDisable:
+	disablenpc instance_npcname("?????#01");
+	end;
+OnEnable:
+	enablenpc instance_npcname("?????#01");
+	end;
+}
+
+1@sara,97,304,6	script	사라 아이린#talk01	668,5,5,{
+	end;
+
+OnTouch:
+	npctalk "아빠, 왜 그랬어?";
+	sleep2 1000;
+	initnpctimer;
+	donpcevent instance_npcname("사라 아이린#talk01", instance_id())+"::OnDisable";
+	end;
+
+OnTimer30000:
+	donpcevent instance_npcname("사라 아이린#talk01", instance_id())+"::OnEnable";
+	stopnpctimer;
+	end;
+
+OnInstanceInit:
+OnDisable:
+	disablenpc instance_npcname("사라 아이린#talk01");
+	end;
+OnEnable:
+	enablenpc instance_npcname("사라 아이린#talk01");
+	end;
+}   
+
+1@sara,128,296,6	script	사라 아이린#talk02	668,5,5,{
+	end;
+
+OnTouch:
+	npctalk "우리 엄마를 왜!";
+	sleep2 1000;
+	initnpctimer;
+	donpcevent instance_npcname("사라 아이린#talk02", instance_id())+"::OnDisable";
+	end;
+
+OnTimer30000:
+	donpcevent instance_npcname("사라 아이린#talk02", instance_id())+"::OnEnable";
+	stopnpctimer;
+	end;
+
+OnInstanceInit:
+OnDisable:
+	disablenpc instance_npcname("사라 아이린#talk02");
+	end;
+OnEnable:
+	enablenpc instance_npcname("사라 아이린#talk02");
+	end;
+}   
+
+1@sara,124,230,6	script	사라 아이린#talk03	668,5,5,{
+	end;
+
+OnTouch:
+	npctalk "대체... 왜 그랬냐고!";
+	sleep2 1000;
+	initnpctimer;
+	donpcevent instance_npcname("사라 아이린#talk03", instance_id())+"::OnDisable";
+	end;
+
+OnTimer30000:
+	donpcevent instance_npcname("사라 아이린#talk03", instance_id())+"::OnEnable";
+	stopnpctimer;
+	end;
+
+OnInstanceInit:
+OnDisable:
+	disablenpc instance_npcname("사라 아이린#talk03");
+	end;
+OnEnable:
+	enablenpc instance_npcname("사라 아이린#talk03");
+	end;
+}   
+
+1@sara,174,227,6	script	사라 아이린#talk04	668,5,5,{
+	end;
+
+OnTouch:
+	npctalk "안돼... 거짓말이야...";
+	sleep2 1000;
+	initnpctimer;
+	donpcevent instance_npcname("사라 아이린#talk04", instance_id())+"::OnDisable";
+	end;
+
+OnTimer30000:
+	donpcevent instance_npcname("사라 아이린#talk04", instance_id())+"::OnEnable";
+	stopnpctimer;
+	end;
+
+OnInstanceInit:
+OnDisable:
+	disablenpc instance_npcname("사라 아이린#talk04");
+	end;
+OnEnable:
+	enablenpc instance_npcname("사라 아이린#talk04");
+	end;
+}   
+
+1@sara,203,259,6	script	사라 아이린#talk05	668,5,5,{
+	end;
+
+OnTouch:
+	npctalk "...";
+	sleep2 1000;
+	initnpctimer;
+	donpcevent instance_npcname("사라 아이린#talk05", instance_id())+"::OnDisable";
+	end;
+
+OnTimer30000:
+	donpcevent instance_npcname("사라 아이린#talk05", instance_id())+"::OnEnable";
+	stopnpctimer;
+	end;
+
+OnInstanceInit:
+OnDisable:
+	disablenpc instance_npcname("사라 아이린#talk05");
+	end;
+OnEnable:
+	enablenpc instance_npcname("사라 아이린#talk05");
+	end;
+}   
+
+1@sara,256,279,4	script	사라 아이린#talk06	668,5,5,{
+	end;
+
+OnTouch:
+	npctalk "...엄마...";
+	sleep2 1000;
+	initnpctimer;
+	donpcevent instance_npcname("사라 아이린#talk06", instance_id())+"::OnDisable";
+	end;
+
+OnTimer30000:
+	donpcevent instance_npcname("사라 아이린#talk06", instance_id())+"::OnEnable";
+	stopnpctimer;
+	end;
+
+OnInstanceInit:
+OnDisable:
+	disablenpc instance_npcname("사라 아이린#talk06");
+	end;
+OnEnable:
+	enablenpc instance_npcname("사라 아이린#talk06");
+	end;
+}   
+
+1@sara,228,282,6	script	사라 아이린#talk07	668,5,5,{
+	end;
+
+OnTouch:
+	npctalk "가슴이... 너무 아파.";
+	sleep2 1000;
+	initnpctimer;
+	donpcevent instance_npcname("사라 아이린#talk07", instance_id())+"::OnDisable";
+	end;
+
+OnTimer30000:
+	donpcevent instance_npcname("사라 아이린#talk07", instance_id())+"::OnEnable";
+	stopnpctimer;
+	end;
+
+OnInstanceInit:
+OnDisable:
+	disablenpc instance_npcname("사라 아이린#talk07");
+	end;
+OnEnable:
+	enablenpc instance_npcname("사라 아이린#talk07");
+	end;
+}
+
+1@sara,265,253,4	script	사라 아이린#talk08	668,5,5,{
+	end;
+
+OnTouch:
+	npctalk ".........";
+	sleep2 1000;
+	initnpctimer;
+	donpcevent instance_npcname("사라 아이린#talk08", instance_id())+"::OnDisable";
+	end;
+
+OnTimer30000:
+	donpcevent instance_npcname("사라 아이린#talk08", instance_id())+"::OnEnable";
+	stopnpctimer;
+	end;
+
+OnInstanceInit:
+OnDisable:
+	disablenpc instance_npcname("사라 아이린#talk08");
+	end;
+OnEnable:
+	enablenpc instance_npcname("사라 아이린#talk08");
+	end;
+}
+
+1@sara,230,95,6	script	사라 아이린#talk09	668,5,5,{
+	end;
+
+OnTouch:
+	npctalk ".........";
+	sleep2 1000;
+	initnpctimer;
+	donpcevent instance_npcname("사라 아이린#talk09", instance_id())+"::OnDisable";
+	end;
+
+OnTimer30000:
+	donpcevent instance_npcname("사라 아이린#talk09", instance_id())+"::OnEnable";
+	stopnpctimer;
+	end;
+
+OnInstanceInit:
+OnDisable:
+	disablenpc instance_npcname("사라 아이린#talk09");
+	end;
+OnEnable:
+	enablenpc instance_npcname("사라 아이린#talk09");
+	end;
+}
+
+1@sara,150,60,6	script	사라 아이린#talk10	668,5,5,{
+	end;
+
+OnTouch:
+	npctalk "안돼... 거짓말이야...";
+	sleep2 1000;
+	initnpctimer;
+	donpcevent instance_npcname("사라 아이린#talk10", instance_id())+"::OnDisable";
+	end;
+
+OnTimer30000:
+	donpcevent instance_npcname("사라 아이린#talk10", instance_id())+"::OnEnable";
+	stopnpctimer;
+	end;
+
+OnInstanceInit:
+OnDisable:
+	disablenpc instance_npcname("사라 아이린#talk10");
+	end;
+OnEnable:
+	enablenpc instance_npcname("사라 아이린#talk10");
+	end;
+}
+
+1@sara,105,63,6	script	사라 아이린#talk11	668,5,5,{
+	end;
+
+OnTouch:
+	npctalk ".........";
+	sleep2 1000;
+	initnpctimer;
+	donpcevent instance_npcname("사라 아이린#talk11", instance_id())+"::OnDisable";
+	end;
+
+OnTimer30000:
+	donpcevent instance_npcname("사라 아이린#talk11", instance_id())+"::OnEnable";
+	stopnpctimer;
+	end;
+
+OnInstanceInit:
+OnDisable:
+	disablenpc instance_npcname("사라 아이린#talk11");
+	end;
+OnEnable:
+	enablenpc instance_npcname("사라 아이린#talk11");
+	end;
+}
+
+1@sara,184,106,6	script	사라 아이린#talk12	668,5,5,{
+	end;
+
+OnTouch:
+	npctalk "아빠!";
+	sleep2 1000;
+	initnpctimer;
+	donpcevent instance_npcname("사라 아이린#talk12", instance_id())+"::OnDisable";
+	end;
+
+OnTimer30000:
+	donpcevent instance_npcname("사라 아이린#talk12", instance_id())+"::OnEnable";
+	stopnpctimer;
+	end;
+
+OnInstanceInit:
+OnDisable:
+	disablenpc instance_npcname("사라 아이린#talk12");
+	end;
+OnEnable:
+	enablenpc instance_npcname("사라 아이린#talk12");
+	end;
+}
+
+1@sara,164,175,4	script	사라 아이린#talk13	668,5,5,{
+	end;
+
+OnTouch:
+	npctalk "아빠, 대체 왜 그랬던 거야?!";
+	sleep2 1000;
+	initnpctimer;
+	donpcevent instance_npcname("사라 아이린#talk13", instance_id())+"::OnDisable";
+	end;
+
+OnTimer30000:
+	donpcevent instance_npcname("사라 아이린#talk13", instance_id())+"::OnEnable";
+	stopnpctimer;
+	end;
+
+OnInstanceInit:
+OnDisable:
+	disablenpc instance_npcname("사라 아이린#talk13");
+	end;
+OnEnable:
+	enablenpc instance_npcname("사라 아이린#talk13");
+	end;
+}
+
+//= Mobs
+1@sara,1,1,4	script	#MobsSara01	-1,{
+OnInstanceInit:
+OnDisable:
+	disablenpc instance_npcname("#MobsSara01", instance_id());
+	end;
+OnEnable:
+	enablenpc instance_npcname("#MobsSara01", instance_id());
+	set .@map$, instance_mapname("1@sara");
+	.@event$ = instance_npcname("#MobsSara01")+"::OnMyMobDead";
+	killmonster .@map$, .@event$;
+	monster .@map$,107,325,"페이욘 병사",2543,1, .@event$;
+	monster .@map$,115,325,"페이욘 병사",2543,1, .@event$;
+	monster .@map$,116,317,"페이욘 병사",2543,1, .@event$;
+	monster .@map$,108,317,"페이욘 병사",2543,1, .@event$;
+	monster .@map$,116,311,"페이욘 병사",2543,1, .@event$;
+	monster .@map$,108,311,"페이욘 병사",2543,1, .@event$;
+
+	monster .@map$,101,295,"페이욘 병사",2543,1, .@event$;
+	monster .@map$,105,295,"페이욘 병사",2543,1, .@event$;
+	monster .@map$,109,295,"페이욘 병사",2543,1, .@event$;
+	monster .@map$,113,295,"페이욘 병사",2543,1, .@event$;
+	monster .@map$,117,295,"페이욘 병사",2543,1, .@event$;
+	monster .@map$,121,295,"페이욘 병사",2543,1, .@event$;
+
+	monster .@map$,122,227,"페이욘 병사",2543,1, .@event$;
+	monster .@map$,122,225,"페이욘 병사",2543,1, .@event$;
+	monster .@map$,122,223,"페이욘 병사",2543,1, .@event$;
+	monster .@map$,122,221,"페이욘 병사",2543,1, .@event$;
+	monster .@map$,122,219,"페이욘 병사",2543,1, .@event$;
+	monster .@map$,122,217,"페이욘 병사",2543,1, .@event$;
+	monster .@map$,121,227,"경비견",2545,1, .@event$;
+	monster .@map$,121,225,"경비견",2545,1, .@event$;
+	monster .@map$,121,223,"경비견",2545,1, .@event$;
+	monster .@map$,121,221,"경비견",2545,1, .@event$;
+	monster .@map$,121,219,"경비견",2545,1, .@event$;
+	monster .@map$,121,217,"경비견",2545,1, .@event$;
+
+	monster .@map$,151,231,"페이욘 병사",2543,1, .@event$;
+	monster .@map$,153,231,"페이욘 병사",2543,1, .@event$;
+	monster .@map$,155,231,"페이욘 병사",2543,1, .@event$;
+	monster .@map$,157,231,"페이욘 병사",2543,1, .@event$;
+	monster .@map$,159,231,"페이욘 병사",2543,1, .@event$;
+	monster .@map$,161,231,"페이욘 병사",2543,1, .@event$;
+
+	monster .@map$,187,215,"경비견",2545,1, .@event$;
+	monster .@map$,187,217,"경비견",2545,1, .@event$;
+	monster .@map$,187,219,"경비견",2545,1, .@event$;
+	monster .@map$,187,221,"경비견",2545,1, .@event$;
+	monster .@map$,187,223,"경비견",2545,1, .@event$;
+	monster .@map$,187,225,"경비견",2545,1, .@event$;
+	monster .@map$,188,215,"페이욘 병사",2543,1, .@event$;
+	monster .@map$,188,217,"페이욘 병사",2543,1, .@event$;
+	monster .@map$,188,219,"페이욘 병사",2543,1, .@event$;
+	monster .@map$,188,221,"페이욘 병사",2543,1, .@event$;
+	monster .@map$,188,223,"페이욘 병사",2543,1, .@event$;
+	monster .@map$,188,225,"페이욘 병사",2543,1, .@event$;
+
+	monster .@map$,192,250,"페이욘 병사",2543,1, .@event$;
+	monster .@map$,194,250,"경비견",2545,1, .@event$;
+	monster .@map$,196,250,"페이욘 병사",2543,1, .@event$;
+	monster .@map$,198,250,"경비견",2545,1, .@event$;
+
+	monster .@map$,196,254,"경비견",2545,1, .@event$;
+	monster .@map$,196,256,"경비견",2545,1, .@event$;
+	monster .@map$,196,258,"경비견",2545,1, .@event$;
+	monster .@map$,199,254,"페이욘 병사",2543,1, .@event$;
+	monster .@map$,199,256,"페이욘 병사",2543,1, .@event$;
+	monster .@map$,199,258,"페이욘 병사",2543,1, .@event$;
+
+	monster .@map$,204,246,"페이욘 병사",2543,1, .@event$;
+	monster .@map$,204,248,"페이욘 병사",2543,1, .@event$;
+	monster .@map$,204,250,"페이욘 병사",2543,1, .@event$;
+	monster .@map$,204,252,"페이욘 병사",2543,1, .@event$;
+	monster .@map$,204,254,"페이욘 병사",2543,1, .@event$;
+	monster .@map$,206,251,"경비견",2545,1, .@event$;
+	set 'Sara_Mobs,58;
+	initnpctimer;
+	end;
+
+OnTimer1000:
+	mapannounce instance_mapname("1@sara"), "다음 구역으로 가려면 경비병들을 물리쳐야 합니다.",bc_map,"0xffff00";
+	end;
+
+OnTimer5000:
+	mapannounce instance_mapname("1@sara"), "여러 무리의 경비병들이 당신을 공격하기 위해 진형을 갖췄습니다!",bc_map,"0xffff00";
+	stopnpctimer;
+	end;
+
+OnMyMobDead:
+	set 'Sara_Mobs,'Sara_Mobs-1;
+	if ('Sara_Mobs < 1) {
+		set 'Sara_Mobs,0;
+		mapannounce instance_mapname("1@sara"), "사라가 다시 도망쳤습니다! 2시 방향으로 간 것 같습니다!",bc_map,"0xffff00";
+		if (playerattached() > 0)
+			viewpoint 1,208,250,1,0x00FF00;
+		enablenpc instance_npcname("#sara_warp02");
+		donpcevent instance_npcname("#MobsSara02", instance_id())+"::OnEnable";
+		donpcevent instance_npcname("#MobsSara01", instance_id())+"::OnDisable";
+	}
+	end;
+}
+
+1@sara,1,1,4	script	#MobsSara02	-1,{
+OnInstanceInit:
+OnDisable:
+	disablenpc instance_npcname("#MobsSara02", instance_id());
+	end;
+OnEnable:
+	enablenpc instance_npcname("#MobsSara02", instance_id());
+	set .@map$, instance_mapname("1@sara");
+	.@event$ = instance_npcname("#MobsSara02")+"::OnMyMobDead";
+	killmonster .@map$, .@event$;
+	monster .@map$,228,312,"경비견",2546,1, .@event$;
+	monster .@map$,227,312,"경비견",2546,1, .@event$;
+	monster .@map$,229,315,"경비견",2546,1, .@event$;
+
+	monster .@map$,247,290,"페이욘 병사",2544,1, .@event$;
+	monster .@map$,248,290,"페이욘 병사",2544,1, .@event$;
+	monster .@map$,249,290,"페이욘 병사",2544,1, .@event$;
+
+	monster .@map$,223,264,"페이욘 병사",2544,1, .@event$;
+	monster .@map$,230,248,"페이욘 병사",2544,1, .@event$;
+	monster .@map$,227,248,"페이욘 병사",2544,1, .@event$;
+
+	monster .@map$,238,229,"페이욘 병사",2544,1, .@event$;
+	monster .@map$,225,220,"페이욘 병사",2544,1, .@event$;
+	monster .@map$,228,220,"페이욘 병사",2544,1, .@event$;
+
+	monster .@map$,220,212,"페이욘 병사",2544,1, .@event$;
+	monster .@map$,223,212,"페이욘 병사",2544,1, .@event$;
+
+	monster .@map$,219,203,"경비견",2546,1, .@event$;
+	monster .@map$,222,203,"경비견",2546,1, .@event$;
+	set 'Sara_Mobs,16;
+	end;
+
+OnMyMobDead:
+	set 'Sara_Mobs,'Sara_Mobs-1;
+	if ('Sara_Mobs < 1) {
+		set 'Sara_Mobs,0;
+		mapannounce instance_mapname("1@sara"), "사라가 또다시 도망쳤습니다! 5시 방향으로 간 것 같습니다!",bc_map,"0xffff00";
+		if (playerattached() > 0)
+			viewpoint 1,226,190,1,0x00FF00;
+		enablenpc instance_npcname("#sara_warp03");
+		donpcevent instance_npcname("#MobsSara03", instance_id())+"::OnEnable";
+		donpcevent instance_npcname("#MobsSara02", instance_id())+"::OnDisable";
+	}
+	end;
+}
+
+1@sara,1,1,4	script	#MobsSara03	-1,{
+OnInstanceInit:
+OnDisable:
+	disablenpc instance_npcname("#MobsSara03", instance_id());
+	end;
+OnEnable:
+	enablenpc instance_npcname("#MobsSara03", instance_id());
+	set .@map$, instance_mapname("1@sara");
+	.@event$ = instance_npcname("#MobsSara03")+"::OnMyMobDead";
+	killmonster .@map$, .@event$;
+	monster .@map$,255,91,"경비견",2545,1, .@event$;
+	monster .@map$,255,92,"경비견",2545,1, .@event$;
+	monster .@map$,255,93,"경비견",2545,1, .@event$;
+	monster .@map$,255,94,"경비견",2545,1, .@event$;
+	monster .@map$,254,91,"경비견",2545,1, .@event$;
+	monster .@map$,254,92,"경비견",2545,1, .@event$;
+	monster .@map$,254,93,"경비견",2545,1, .@event$;
+	monster .@map$,254,94,"경비견",2545,1, .@event$;
+
+	monster .@map$,228,65,"페이욘 병사",2543,1, .@event$;  
+	monster .@map$,228,64,"페이욘 병사",2543,1, .@event$;  
+	monster .@map$,228,63,"페이욘 병사",2543,1, .@event$;
+	monster .@map$,228,62,"페이욘 병사",2543,1, .@event$;
+
+	monster .@map$,198,62,"경비견",2546,1, .@event$;
+	monster .@map$,195,56,"경비견",2546,1, .@event$;
+	monster .@map$,195,60,"경비견",2546,1, .@event$;
+	monster .@map$,195,62,"경비견",2546,1, .@event$;
+	monster .@map$,192,56,"경비견",2546,1, .@event$;
+	monster .@map$,192,60,"경비견",2546,1, .@event$;
+	monster .@map$,192,62,"경비견",2546,1, .@event$;
+
+	monster .@map$,187,68,"경비견",2546,1, .@event$;
+	monster .@map$,188,63,"경비견",2546,1, .@event$;
+
+	monster .@map$,120,39,"페이욘 병사",2543,1, .@event$;
+	monster .@map$,121,39,"페이욘 병사",2543,1, .@event$;
+	monster .@map$,121,39,"페이욘 병사",2543,1, .@event$;
+
+	monster .@map$,93,64,"경비견",2545,1, .@event$;
+	monster .@map$,93,68,"경비견",2545,1, .@event$;
+	monster .@map$,93,72,"경비견",2545,1, .@event$;
+	monster .@map$,93,76,"경비견",2545,1, .@event$;
+	monster .@map$,90,64,"경비견",2545,1, .@event$;
+	monster .@map$,90,68,"경비견",2545,1, .@event$;
+	monster .@map$,90,72,"경비견",2545,1, .@event$;
+	monster .@map$,90,76,"경비견",2545,1, .@event$;
+
+	monster .@map$,87,67,"페이욘 병사",2543,1, .@event$;
+	monster .@map$,87,63,"페이욘 병사",2543,1, .@event$;
+	monster .@map$,87,59,"페이욘 병사",2543,1, .@event$;
+	monster .@map$,87,55,"페이욘 병사",2543,1, .@event$;
+
+	monster .@map$,84,67,"경비견",2546,1, .@event$;
+	monster .@map$,84,63,"경비견",2546,1, .@event$;
+	monster .@map$,84,59,"경비견",2546,1, .@event$;
+	monster .@map$,84,55,"경비견",2546,1, .@event$;
+
+	monster .@map$,81,67,"경비견",2546,1, .@event$;
+	monster .@map$,81,63,"경비견",2546,1, .@event$;
+	monster .@map$,81,59,"경비견",2546,1, .@event$;
+	monster .@map$,81,55,"경비견",2546,1, .@event$;
+	monster .@map$,81,51,"경비견",2546,1, .@event$;
+	set 'Sara_Mobs,45;
+	end;
+
+OnMyMobDead:
+	set 'Sara_Mobs,'Sara_Mobs-1;
+	if ('Sara_Mobs < 1) {
+		set 'Sara_Mobs,0;
+		mapannounce instance_mapname("1@sara"), "사라가 또다시 도망쳤습니다! 하아... 12시 방향으로 간 것 같습니다!",bc_map,"0xffff00";
+		if (playerattached() > 0)
+			viewpoint 1,166,67,1,0x00FF00;
+		enablenpc instance_npcname("#sara_warp04");
+		donpcevent instance_npcname("#MobsSara04", instance_id())+"::OnEnable";
+		donpcevent instance_npcname("#MobsSara03", instance_id())+"::OnDisable";
+	}
+	end;
+}
+
+1@sara,1,1,4	script	#MobsSara04	-1,{
+OnInstanceInit:
+OnDisable:
+	disablenpc instance_npcname("#MobsSara04", instance_id());
+	end;
+OnEnable:
+	enablenpc instance_npcname("#MobsSara04", instance_id());
+	set .@map$, instance_mapname("1@sara");
+	.@event$ = instance_npcname("#MobsSara04")+"::OnMyMobDead";
+	killmonster .@map$, .@event$;
+	monster .@map$,155,97,"페이욘 병사",2543,1, .@event$;
+	monster .@map$,157,97,"페이욘 병사",2543,1, .@event$;
+	monster .@map$,159,97,"페이욘 병사",2543,1, .@event$;
+	monster .@map$,161,97,"페이욘 병사",2543,1, .@event$;
+
+	monster .@map$,201,113,"페이욘 병사",2544,1, .@event$;
+	monster .@map$,204,113,"페이욘 병사",2544,1, .@event$;
+	monster .@map$,207,113,"페이욘 병사",2544,1, .@event$;
+	monster .@map$,210,113,"페이욘 병사",2544,1, .@event$;
+	monster .@map$,213,113,"페이욘 병사",2544,1, .@event$;
+
+	monster .@map$,201,117,"페이욘 병사",2544,1, .@event$;
+	monster .@map$,204,117,"페이욘 병사",2544,1, .@event$;
+	monster .@map$,207,117,"페이욘 병사",2544,1, .@event$;
+	monster .@map$,210,117,"페이욘 병사",2544,1, .@event$;
+	monster .@map$,213,117,"페이욘 병사",2544,1, .@event$;
+
+	monster .@map$,223,152,"페이욘 병사",2544,1, .@event$;
+	monster .@map$,223,148,"페이욘 병사",2544,1, .@event$;
+	monster .@map$,223,144,"페이욘 병사",2544,1, .@event$;
+
+	monster .@map$,221,152,"페이욘 병사",2544,1, .@event$;
+	monster .@map$,221,148,"페이욘 병사",2544,1, .@event$;
+	monster .@map$,221,144,"페이욘 병사",2544,1, .@event$;
+
+	monster .@map$,151,174,"페이욘 병사",2543,1, .@event$;
+	monster .@map$,153,174,"페이욘 병사",2543,1, .@event$;
+	monster .@map$,155,174,"페이욘 병사",2543,1, .@event$;
+	monster .@map$,157,174,"페이욘 병사",2543,1, .@event$;
+	monster .@map$,159,174,"페이욘 병사",2543,1, .@event$;
+
+	monster .@map$,151,177,"페이욘 병사",2543,1, .@event$;
+	monster .@map$,153,177,"페이욘 병사",2543,1, .@event$;
+	monster .@map$,155,177,"페이욘 병사",2543,1, .@event$;
+	monster .@map$,157,177,"페이욘 병사",2543,1, .@event$;
+	monster .@map$,159,177,"페이욘 병사",2543,1, .@event$;
+
+	monster .@map$,151,180,"페이욘 병사",2544,1, .@event$;
+	monster .@map$,153,180,"페이욘 병사",2544,1, .@event$;
+	monster .@map$,155,180,"페이욘 병사",2544,1, .@event$;
+	monster .@map$,157,180,"페이욘 병사",2544,1, .@event$;
+	monster .@map$,159,180,"페이욘 병사",2544,1, .@event$;
+
+	monster .@map$,173,139,"페이욘 병사",2543,1, .@event$;
+	monster .@map$,170,139,"페이욘 병사",2543,1, .@event$;
+	monster .@map$,167,139,"페이욘 병사",2543,1, .@event$;
+	monster .@map$,164,139,"페이욘 병사",2543,1, .@event$;
+
+	monster .@map$,173,137,"페이욘 병사",2543,1, .@event$;
+	monster .@map$,170,137,"페이욘 병사",2543,1, .@event$;
+	monster .@map$,167,137,"페이욘 병사",2543,1, .@event$;
+	monster .@map$,164,137,"페이욘 병사",2543,1, .@event$;
+	set 'Sara_Mobs,43;
+	end;
+
+OnMyMobDead:
+	set 'Sara_Mobs,'Sara_Mobs-1;
+	if ('Sara_Mobs < 1) {
+		set 'Sara_Mobs,0;
+		mapannounce instance_mapname("1@sara"), "사라가 계속 도망칩니다! 12시 방향으로 간 것 같습니다!",bc_map,"0xffff00";
+		if (playerattached() > 0)
+			viewpoint 1,155,180,1,0x00FF00;
+		enablenpc instance_npcname("#sara_warp05");
+		donpcevent instance_npcname("사라 아이린#02", instance_id())+"::OnEnable";
+		donpcevent instance_npcname("아이린 촌장#03", instance_id())+"::OnEnable";
+		donpcevent instance_npcname("사라 아이린#talk01", instance_id())+"::OnDisable";
+		donpcevent instance_npcname("사라 아이린#talk02", instance_id())+"::OnDisable";
+		donpcevent instance_npcname("사라 아이린#talk03", instance_id())+"::OnDisable";
+		donpcevent instance_npcname("사라 아이린#talk04", instance_id())+"::OnDisable";
+		donpcevent instance_npcname("사라 아이린#talk05", instance_id())+"::OnDisable";
+		donpcevent instance_npcname("사라 아이린#talk06", instance_id())+"::OnDisable";
+		donpcevent instance_npcname("사라 아이린#talk07", instance_id())+"::OnDisable";
+		donpcevent instance_npcname("사라 아이린#talk08", instance_id())+"::OnDisable";
+		donpcevent instance_npcname("사라 아이린#talk09", instance_id())+"::OnDisable";
+		donpcevent instance_npcname("사라 아이린#talk10", instance_id())+"::OnDisable";
+		donpcevent instance_npcname("사라 아이린#talk11", instance_id())+"::OnDisable";
+		donpcevent instance_npcname("사라 아이린#talk12", instance_id())+"::OnDisable";
+		donpcevent instance_npcname("사라 아이린#talk13", instance_id())+"::OnDisable";
+		donpcevent instance_npcname("#MobsSara04", instance_id())+"::OnDisable";
+	}
+	end;
+}
+
+1@sara,1,1,4	script	#BossSara01	-1,{
+OnInstanceInit:
+OnDisable:
+	disablenpc instance_npcname("#BossSara01", instance_id());
+	end;
+OnEnable:
+	enablenpc instance_npcname("#BossSara01", instance_id());
+	set .@map$, instance_mapname("1@sara");
+	.@event$ = instance_npcname("#BossSara01")+"::OnMyMobDead";
+	killmonster .@map$, .@event$;
+	monster .@map$,150,232,"페이욘 병사",2544,1, .@event$;
+	unittalk $@mobid[0],"이런 젠장, 나도 이제 늙었나 보군...";
+	monster .@map$,150,227,"페이욘 병사",2544,1, .@event$;
+	unittalk $@mobid[0],"페이욘을 위하여!!";
+	monster .@map$,150,222,"페이욘 병사",2544,1, .@event$;
+	unittalk $@mobid[0],"페이욘을 위하여!!";
+	monster .@map$,150,217,"페이욘 병사",2544,1, .@event$;
+	unittalk $@mobid[0],"페이욘을 위하여!!";
+	monster .@map$,161,232,"페이욘 병사",2544,1, .@event$;
+	unittalk $@mobid[0],"페이욘을 위하여!!";
+	monster .@map$,161,227,"페이욘 병사",2544,1, .@event$;
+	unittalk $@mobid[0],"페이욘을 위하여!!";
+	monster .@map$,161,222,"페이욘 병사",2544,1, .@event$;
+	unittalk $@mobid[0],"페이욘을 위하여!!";
+	monster .@map$,161,217,"페이욘 병사",2544,1, .@event$;
+	unittalk $@mobid[0],"페이욘을 위하여!!";
+	areamobuseskill .@map$,155,225,10,2544,"NPC_EMOTION",1,0,0,ET_GO,0;
+	areamobuseskill .@map$,159,236,1,2543,"NPC_EMOTION",1,0,0,ET_SWEAT,0;
+	set 'Sara_Mobs,8;
+	end;
+
+OnMyMobDead:
+	set 'Sara_Mobs,'Sara_Mobs-1;
+	if ('Sara_Mobs < 1) {
+		set 'Sara_Mobs,0;
+	mapannounce instance_mapname("1@sara"), "아이린 촌장이 검을 뽑아 듭니다!",bc_map,"0xffff00";
+		donpcevent instance_npcname("#BossSara02", instance_id())+"::OnEnable";
+	}
+	end;
+}
+
+1@sara,1,1,4	script	#BossSara02	-1,{
+OnInstanceInit:
+OnDisable:
+	disablenpc instance_npcname("#BossSara02", instance_id());
+	end;
+OnEnable:
+	enablenpc instance_npcname("#BossSara02", instance_id());
+	set .@map$, instance_mapname("1@sara");
+	.@event$ = instance_npcname("#BossSara02")+"::OnMyMobDead";
+	killmonster .@map$, .@event$;
+	monster .@map$,155,226,"아이린 촌장",2542,1, .@event$;
+	unittalk $@mobid[0],"내 반드시 아내의 원수를 갚고야 말겠다!!";
+	end;
+
+OnMyMobDead:
+	mapannounce instance_mapname("1@sara"), "아이린 촌장이 쓰러졌습니다.",bc_map,"0xffff00";
+	donpcevent instance_npcname("아이린 촌장#04", instance_id())+"::OnEnable";
+	end;
+}
+
+//= Warps
+1@sara,240,145,0	warp2	#sara_warp01	2,2,1@sara,94,320
+1@sara,208,250,0	warp2	#sara_warp02	2,2,1@sara,230,311
+1@sara,226,190,0	warp2	#sara_warp03	2,2,1@sara,263,94
+1@sara,166,67,0	warp2	#sara_warp04	2,2,1@sara,164,81
+1@sara,155,180,0	warp2	#sara_warp05	2,2,1@sara,155,196
+1@sara,88,188,0	warp2	#sara_warp06	2,2,1@sara,89,175
+
+1@sara,16,143,4	script	#sara_warp07	45,2,2,{
+	end;
+
+OnTouch:
+	if (saramemory == 1) {
+		set saramemory,2;
+	}
+	if (saramemory == 4) {
+		set saramemory,5;
+	}
+	warp "dali",134,111;
+	end;
+
+OnInstanceInit:
+	disablenpc instance_npcname("#sara_warp01");
+	disablenpc instance_npcname("#sara_warp02");
+	disablenpc instance_npcname("#sara_warp03");
+	disablenpc instance_npcname("#sara_warp04");
+	disablenpc instance_npcname("#sara_warp05");
+	disablenpc instance_npcname("#sara_warp06");
+OnDisable:
+	disablenpc instance_npcname("#sara_warp07");
+	end;
+OnEnable:
+	enablenpc instance_npcname("#sara_warp07");
+	end;
+}
