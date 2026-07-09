@@ -429,6 +429,8 @@ public:
 		t_itemid autolootid[AUTOLOOTITEM_SIZE]; // [Zephyrus]
 		uint16 autoloottype;
 		uint32 autolooting : 1; //performance-saver, autolooting state for @alootid
+		uint16 noloot_count;
+		t_itemid noloot_itemid[NEED_NOLOOT_MAX];
 		uint32 gmaster_flag : 1;
 		uint32 prevend : 1;//used to flag wheather you've spent 40sp to open the vending or not.
 		bool pending_vending_ui; // flag whether the vending packet should still be sent to this player or not
@@ -1705,6 +1707,7 @@ void pc_inventory_rental_add(map_session_data *sd, uint32 seconds);
 int32 pc_read_motd(void); // [Valaris]
 int32 pc_disguise(map_session_data *sd, int32 class_);
 bool pc_isautolooting(map_session_data *sd, t_itemid nameid);
+bool pc_is_noloot(const map_session_data *sd, t_itemid nameid);
 
 void pc_overheat(map_session_data &sd, int16 heat);
 

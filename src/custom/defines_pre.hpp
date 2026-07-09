@@ -10,5 +10,8 @@
  **/
 #define PACKETVER 20250604
 
+#ifndef NEED_NOLOOT_MAX
+#define NEED_NOLOOT_MAX 30
+#endif
 
 #endif /* CONFIG_CUSTOM_DEFINES_PRE_HPP */

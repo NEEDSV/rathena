@@ -13196,6 +13196,24 @@ bool pc_isautolooting(map_session_data *sd, t_itemid nameid)
 }
 
 /**
+ * Check if an item is excluded from automatic looting for this session.
+ */
+bool pc_is_noloot(const map_session_data *sd, t_itemid nameid)
+{
+	uint16 i = 0;
+
+	if (sd == nullptr)
+		return false;
+
+	for (i = 0; i < sd->state.noloot_count && i < NEED_NOLOOT_MAX; i++) {
+		if (sd->state.noloot_itemid[i] == nameid)
+			return true;
+	}
+
+	return false;
+}
+
+/**
  * Checks if player can use @/#command
  * @param sd Player map session data
  * @param command Command name without @/# and params
