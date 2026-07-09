@@ -11231,6 +11231,53 @@ BUILDIN_FUNC(getexp){
 	return SCRIPT_CMD_SUCCESS;
 }
 
+/**
+ * Give player exp base,job * quest_exp_rate/100 and allow multiple level-ups.
+ * getexp_multi <base xp>,<job xp>{,<char_id>};
+ **/
+BUILDIN_FUNC(getexp_multi){
+	map_session_data* sd;
+
+	if( !script_charid2sd( 4, sd ) ){
+		return SCRIPT_CMD_FAILURE;
+	}
+
+	int64 base = script_getnum64( st, 2 );
+
+	if( base < 0 ){
+		ShowError( "buildin_getexp_multi: Called with negative base exp.\n" );
+		return SCRIPT_CMD_FAILURE;
+	}
+
+	int64 job = script_getnum64( st, 3 );
+
+	if( job < 0 ){
+		ShowError( "buildin_getexp_multi: Called with negative job exp.\n" );
+		return SCRIPT_CMD_FAILURE;
+	}
+
+	if( base == 0 && job == 0 ){
+		ShowError( "buildin_getexp_multi: Called with base and job exp 0.\n" );
+		return SCRIPT_CMD_FAILURE;
+	}
+
+	// bonus for npc-given exp
+	double bonus = battle_config.quest_exp_rate / 100.;
+
+	if (base)
+		base = (int64) cap_value(base * bonus, 0, MAX_EXP);
+	if (job)
+		job = (int64) cap_value(job * bonus, 0, MAX_EXP);
+
+	pc_gainexp(sd, nullptr, base, job, 1, true);
+#ifdef RENEWAL
+	if (base && sd->hd)
+		hom_gainexp(sd->hd, base * battle_config.homunculus_exp_gain / 100); // Homunculus only receive 10% of EXP
+#endif
+
+	return SCRIPT_CMD_SUCCESS;
+}
+
 /*==========================================
  * Gain guild exp [Celest]
  *------------------------------------------*/
@@ -28560,6 +28607,7 @@ struct script_function buildin_func[] = {
 	BUILDIN_DEF(registercostume,"i"),
 	BUILDIN_DEF(makepet,"i"),
 	BUILDIN_DEF(getexp,"ii?"),
+	BUILDIN_DEF(getexp_multi,"ii?"),
 	BUILDIN_DEF(getinventorylist,"?"),
 	BUILDIN_DEF(getskilllist,"?"),
 	BUILDIN_DEF(clearitem,"?"),
