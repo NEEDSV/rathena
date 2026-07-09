@@ -85,10 +85,18 @@ S_WorldDrop:
 
 	// 99~154 금화 3%
 	if (.@lv > 29 && .@lv <= 98) {
-		if (rand(10000) < 50 + .@lv) .@item = 399990;
+		.@rate = 50 + .@lv;
+		.@rate = callfunc("F_NEED_GoldEvent_HuntRate", .@rate);
+
+		if (rand(10000) < .@rate)
+			.@item = 399990;
 	}
 	else if (.@lv > 99 && .@lv <= 154) {
-		if (rand(10000) < 100 + .@lv) .@item = 399990;
+		.@rate = 100 + .@lv;
+		.@rate = callfunc("F_NEED_GoldEvent_HuntRate", .@rate);
+
+		if (rand(10000) < .@rate)
+			.@item = 399990;
 	}
 	// 155~169 : 미스릴화 3%
 	else if (.@lv > 155 && .@lv <= 169) {
@@ -100,6 +108,10 @@ S_WorldDrop:
 	}
 
 	if (.@item <= 0) return;
+	
+	if (.@item == 399990 && getgmlevel() >= 60) {
+		dispbottom "[금화 이벤트 디버그] Lv " + .@lv + " / 이벤트 " + (($NEED_EVENT_HUNT_GOLD_ON) ? "ON" : "OFF") + " / 금화 지급";
+	}
 
 	// 캐시주화는 자동지급
 	getitem .@item, 1;

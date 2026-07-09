@@ -893,9 +893,12 @@ function	script	F_BG_Badge	{
 	close2;
 
 	.@bonusmount = ($BG_User_Count - 5) * 2;
-	// If the VIP system is enabled, VIP players receive an extra 2 badges.
 	getitem .@badge,.@amount;
-	getitem 399990, .@cashamount + .@bonusmount;
+
+	.@gold_amount = .@cashamount + .@bonusmount;
+	.@gold_amount = callfunc("F_NEED_GoldEvent_BGAmount", .@gold_amount);
+	getitem 399990, .@gold_amount;
+
 	return;
 }
 
@@ -904,7 +907,14 @@ bat_room,154,149,0	script	전장 이용 동의#batroom	HIDDEN_WARP_NPC,3,3,{
 OnTouch:
 	if (#NEED_BG_RULE_AGREE)
 		end;
-
+		
+	mes "[전장 이용 안내]";
+	mes "NEED 서버는 전장의 밸런스를 위해 다음 아이템은 전장에서 제한 됩니다.";
+	mes " ";
+	mes "^FF00001. 보스 카드";
+	mes "2. 장비 쉐도우";
+	mes "3. 인챈트 스톤^000000";
+	next;
 	mes "[전장 이용 안내]";
 	mes "전장 콘텐츠 이용 전";
 	mes "아래 내용을 반드시 확인해주세요.";
