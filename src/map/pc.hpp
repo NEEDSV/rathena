@@ -777,6 +777,7 @@ public:
 	uint16 change_level_2nd; // job level when changing from 1st to 2nd class [jobchange_level in global_reg_value]
 	uint16 change_level_3rd; // job level when changing from 2nd to 3rd class [jobchange_level_3rd in global_reg_value]
 	uint16 change_level_4th; // job level when changing from 3rd to 4th class [jobchange_level_4rd in global_reg_value]
+	uint8 overheat_warn_level = 0; // NEED QoL: Mechanic overheat warning stage (0=<50%,1=>=50%,2=>=80%,3=overheat); reset on relog
 
 	char fakename[NAME_LENGTH]; // fake names [Valaris]
 

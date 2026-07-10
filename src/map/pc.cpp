@@ -13152,16 +13152,25 @@ void pc_overheat(map_session_data &sd, int16 heat) {
 	if (!pc_ismadogear(&sd))
 		return;
 
+	uint16 skill_lv = cap_value(pc_checkskill(&sd, NC_MAINFRAME), 0, 4);
+	int32 heat_limit = limit[skill_lv];
+
 	if (heat < 0) { // Cooling device used (2017: emergency cool resets Heat).
+		// NEED QoL: notify current Heat on successful cooling (Heat is reset to 0).
+		bool had_heat = (sd.sc.getSCE(SC_OVERHEAT_LIMITPOINT) != nullptr) || (sd.sc.getSCE(SC_OVERHEAT) != nullptr);
 		status_change_end(&sd, SC_OVERHEAT_LIMITPOINT);
 		status_change_end(&sd, SC_OVERHEAT);
+		if (had_heat) {
+			char output[CHAT_SIZE_MAX];
+			safesnprintf(output, sizeof(output), msg_txt(&sd, 1646), 0, heat_limit);
+			clif_displaymessage(sd.fd, output);
+		}
+		sd.overheat_warn_level = 0;
 		return;
 	}
 
 	if (sd.sc.getSCE(SC_OVERHEAT))
 		return; // Already burning.
-
-	uint16 skill_lv = cap_value(pc_checkskill(&sd, NC_MAINFRAME), 0, 4);
 
 	status_change_entry *sce = sd.sc.getSCE(SC_OVERHEAT_LIMITPOINT);
 	if (sce != nullptr) {
@@ -13170,7 +13179,37 @@ void pc_overheat(map_session_data &sd, int16 heat) {
 	}
 
 	heat = cap_value(heat, (int16)0, (int16)1000);
-	if (heat >= limit[skill_lv])
+
+	// NEED QoL: staged overheat warning (self only, one message per stage; no spam).
+	int32 cur = heat;
+	int32 stage;
+	if (cur >= heat_limit)
+		stage = 3;
+	else if (heat_limit > 0 && cur * 100 >= heat_limit * 80)
+		stage = 2;
+	else if (heat_limit > 0 && cur * 100 >= heat_limit * 50)
+		stage = 1;
+	else
+		stage = 0;
+
+	if (stage > sd.overheat_warn_level) {
+		char output[CHAT_SIZE_MAX];
+		switch (stage) {
+			case 1:
+				safesnprintf(output, sizeof(output), msg_txt(&sd, 1643), cur, heat_limit);
+				break;
+			case 2:
+				safesnprintf(output, sizeof(output), msg_txt(&sd, 1644), cur, heat_limit);
+				break;
+			default:
+				safesnprintf(output, sizeof(output), msg_txt(&sd, 1645), cur, heat_limit);
+				break;
+		}
+		clif_displaymessage(sd.fd, output);
+	}
+	sd.overheat_warn_level = (uint8)stage;
+
+	if (heat >= heat_limit)
 		sc_start(&sd, &sd, SC_OVERHEAT, 100, 0, 1000);
 	else
 		sc_start(&sd, &sd, SC_OVERHEAT_LIMITPOINT, 100, heat, 30000);
