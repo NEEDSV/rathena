@@ -429,6 +429,8 @@ public:
 		t_itemid autolootid[AUTOLOOTITEM_SIZE]; // [Zephyrus]
 		uint16 autoloottype;
 		uint32 autolooting : 1; //performance-saver, autolooting state for @alootid
+		uint16 noloot_count;
+		t_itemid noloot_itemid[NEED_NOLOOT_MAX];
 		uint32 gmaster_flag : 1;
 		uint32 prevend : 1;//used to flag wheather you've spent 40sp to open the vending or not.
 		bool pending_vending_ui; // flag whether the vending packet should still be sent to this player or not
@@ -1518,9 +1520,9 @@ uint32 pc_maxbaselv( const map_session_data* sd );
 uint32 pc_maxjoblv( const map_session_data* sd );
 bool pc_is_maxbaselv( const map_session_data* sd );
 bool pc_is_maxjoblv( const map_session_data* sd );
-int32 pc_checkbaselevelup(map_session_data *sd);
-int32 pc_checkjoblevelup(map_session_data *sd);
-void pc_gainexp(map_session_data *sd, block_list *src, t_exp base_exp, t_exp job_exp, uint8 exp_flag);
+int32 pc_checkbaselevelup(map_session_data *sd, bool force_multi_levelup = false);
+int32 pc_checkjoblevelup(map_session_data *sd, bool force_multi_levelup = false);
+void pc_gainexp(map_session_data *sd, block_list *src, t_exp base_exp, t_exp job_exp, uint8 exp_flag, bool force_multi_levelup = false);
 void pc_gainexp_disp(map_session_data *sd, t_exp base_exp, t_exp next_base_exp, t_exp job_exp, t_exp next_job_exp, bool lost);
 void pc_lostexp(map_session_data *sd, t_exp base_exp, t_exp job_exp);
 t_exp pc_nextbaseexp( const map_session_data* sd );
@@ -1705,6 +1707,7 @@ void pc_inventory_rental_add(map_session_data *sd, uint32 seconds);
 int32 pc_read_motd(void); // [Valaris]
 int32 pc_disguise(map_session_data *sd, int32 class_);
 bool pc_isautolooting(map_session_data *sd, t_itemid nameid);
+bool pc_is_noloot(const map_session_data *sd, t_itemid nameid);
 
 void pc_overheat(map_session_data &sd, int16 heat);
 

@@ -6585,8 +6585,8 @@ ACMD_FUNC(storematch)
 		}
 	}
 
-	ShowDebug("NEED storematch: moved_types=%" PRIuPTR ", moved_amount=%d, excluded_types=%" PRIuPTR ", no_match_types=%" PRIuPTR ", type_skip_types=%" PRIuPTR ", failed_types=%" PRIuPTR " (account_id: %d, char_id: %d)\n",
-		moved_nameids.size(), moved_amount, excluded_nameids.size(), no_match_nameids.size(), type_skip_nameids.size(), failed_nameids.size(), sd->status.account_id, sd->status.char_id);
+		//ShowDebug("NEED storematch: moved_types=%" PRIuPTR ", moved_amount=%d, excluded_types=%" PRIuPTR ", no_match_types=%" PRIuPTR ", type_skip_types=%" PRIuPTR ", failed_types=%" PRIuPTR " (account_id: %d, char_id: %d)\n",
+		//	moved_nameids.size(), moved_amount, excluded_nameids.size(), no_match_nameids.size(), type_skip_nameids.size(), failed_nameids.size(), sd->status.account_id, sd->status.char_id);
 
 	storage_storageclose(sd);
 

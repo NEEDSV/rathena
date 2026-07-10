@@ -8251,7 +8251,7 @@ int32 pc_follow(map_session_data *sd,int32 target_id)
 	return 0;
 }
 
-int32 pc_checkbaselevelup(map_session_data *sd) {
+int32 pc_checkbaselevelup(map_session_data *sd, bool force_multi_levelup) {
 	t_exp next = pc_nextbaseexp(sd);
 
 	if (!next || sd->status.base_exp < next || pc_is_maxbaselv(sd))
@@ -8262,7 +8262,7 @@ int32 pc_checkbaselevelup(map_session_data *sd) {
 	do {
 		sd->status.base_exp -= next;
 		//Kyoki pointed out that the max overcarry exp is the exp needed for the previous level -1. [Skotlex]
-		if( ( !battle_config.multi_level_up || ( battle_config.multi_level_up_base > 0 && sd->status.base_level >= battle_config.multi_level_up_base ) ) && sd->status.base_exp > next-1 )
+		if( !force_multi_levelup && ( !battle_config.multi_level_up || ( battle_config.multi_level_up_base > 0 && sd->status.base_level >= battle_config.multi_level_up_base ) ) && sd->status.base_exp > next-1 )
 			sd->status.base_exp = next-1;
 
 		sd->status.status_point += statpoint_db.pc_gets_status_point(sd->status.base_level);
@@ -8324,7 +8324,7 @@ void pc_baselevelchanged(map_session_data *sd) {
 	pc_show_questinfo(sd);
 }
 
-int32 pc_checkjoblevelup(map_session_data *sd)
+int32 pc_checkjoblevelup(map_session_data *sd, bool force_multi_levelup)
 {
 	t_exp next = pc_nextjobexp(sd);
 
@@ -8337,7 +8337,7 @@ int32 pc_checkjoblevelup(map_session_data *sd)
 	do {
 		sd->status.job_exp -= next;
 		//Kyoki pointed out that the max overcarry exp is the exp needed for the previous level -1. [Skotlex]
-		if( ( !battle_config.multi_level_up || ( battle_config.multi_level_up_job > 0 && sd->status.job_level >= battle_config.multi_level_up_job ) ) && sd->status.job_exp > next-1 )
+		if( !force_multi_levelup && ( !battle_config.multi_level_up || ( battle_config.multi_level_up_job > 0 && sd->status.job_level >= battle_config.multi_level_up_job ) ) && sd->status.job_exp > next-1 )
 			sd->status.job_exp = next-1;
 
 		sd->status.job_level ++;
@@ -8459,7 +8459,7 @@ void pc_gainexp_disp(map_session_data *sd, t_exp base_exp, t_exp next_base_exp, 
  * @param exp_flag 1: Quest EXP; 2: Param Exp (Ignore Guild EXP tax, EXP adjustments)
  * @return
  **/
-void pc_gainexp(map_session_data *sd, block_list *src, t_exp base_exp, t_exp job_exp, uint8 exp_flag)
+void pc_gainexp(map_session_data *sd, block_list *src, t_exp base_exp, t_exp job_exp, uint8 exp_flag, bool force_multi_levelup)
 {
 	t_exp nextb = 0, nextj = 0;
 	uint8 flag = 0; ///< 1: Base EXP given, 2: Job EXP given, 4: Max Base level, 8: Max Job Level
@@ -8521,7 +8521,7 @@ void pc_gainexp(map_session_data *sd, block_list *src, t_exp base_exp, t_exp job
 	if (base_exp) {
 		sd->status.base_exp = util::safe_addition_cap(sd->status.base_exp, base_exp, MAX_EXP);
 
-		if (!pc_checkbaselevelup(sd))
+		if (!pc_checkbaselevelup(sd, force_multi_levelup))
 			clif_updatestatus(*sd,SP_BASEEXP);
 	}
 
@@ -8529,7 +8529,7 @@ void pc_gainexp(map_session_data *sd, block_list *src, t_exp base_exp, t_exp job
 	if (job_exp) {
 		sd->status.job_exp = util::safe_addition_cap(sd->status.job_exp, job_exp, MAX_EXP);
 
-		if (!pc_checkjoblevelup(sd))
+		if (!pc_checkjoblevelup(sd, force_multi_levelup))
 			clif_updatestatus(*sd,SP_JOBEXP);
 	}
 
@@ -13193,6 +13193,24 @@ bool pc_isautolooting(map_session_data *sd, t_itemid nameid)
 		ARR_FIND(0, AUTOLOOTITEM_SIZE, i, sd->state.autolootid[i] == nameid);
 
 	return (i != AUTOLOOTITEM_SIZE);
+}
+
+/**
+ * Check if an item is excluded from automatic looting for this session.
+ */
+bool pc_is_noloot(const map_session_data *sd, t_itemid nameid)
+{
+	uint16 i = 0;
+
+	if (sd == nullptr)
+		return false;
+
+	for (i = 0; i < sd->state.noloot_count && i < NEED_NOLOOT_MAX; i++) {
+		if (sd->state.noloot_itemid[i] == nameid)
+			return true;
+	}
+
+	return false;
 }
 
 /**

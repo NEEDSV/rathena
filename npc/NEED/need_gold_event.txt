@@ -1,0 +1,384 @@
+//===== NEED Script ==========================================
+//= NEED 금화 이벤트 컨트롤러
+//= 2026-07-11 12:00 ~ 18:00 사냥 금화 드랍률 1.3배
+//= 2026-07-11 18:00 ~ 2026-07-12 00:00 전장 금화 보상 2배
+//= GM 명령어: @goldevent
+//============================================================
+
+// ------------------------------------------------------------
+// 사냥 금화 드랍률 보정
+// getarg(0) = 기존 확률, 10000 기준
+// return = 이벤트 적용 후 확률
+// ------------------------------------------------------------
+function	script	F_NEED_GoldEvent_HuntRate	{
+	.@rate = getarg(0);
+
+	if ($NEED_EVENT_HUNT_GOLD_ON) {
+		if ($NEED_EVENT_HUNT_GOLD_RATE <= 0)
+			$NEED_EVENT_HUNT_GOLD_RATE = 120;
+
+		.@rate = .@rate * $NEED_EVENT_HUNT_GOLD_RATE / 100;
+	}
+
+	if (.@rate > 10000)
+		.@rate = 10000;
+
+	if (.@rate < 0)
+		.@rate = 0;
+
+	return .@rate;
+}
+
+// ------------------------------------------------------------
+// 전장 금화 보상 수량 보정
+// getarg(0) = 기존 지급 수량
+// return = 이벤트 적용 후 지급 수량
+// ------------------------------------------------------------
+function	script	F_NEED_GoldEvent_BGAmount	{
+	.@amount = getarg(0);
+
+	if ($NEED_EVENT_BG_GOLD_ON) {
+		if ($NEED_EVENT_BG_GOLD_RATE <= 0)
+			$NEED_EVENT_BG_GOLD_RATE = 200;
+
+		.@amount = .@amount * $NEED_EVENT_BG_GOLD_RATE / 100;
+	}
+
+	if (.@amount < 0)
+		.@amount = 0;
+
+	return .@amount;
+}
+
+function	script	F_NEED_GoldEvent_IsHuntOn	{
+	return $NEED_EVENT_HUNT_GOLD_ON;
+}
+
+function	script	F_NEED_GoldEvent_IsBGOn	{
+	return $NEED_EVENT_BG_GOLD_ON;
+}
+
+// ------------------------------------------------------------
+// 이벤트 자동 스케줄 / GM 수동 제어
+// ------------------------------------------------------------
+-	script	NEED_GoldEvent_Controller	-1,{
+
+OnInit:
+	if ($NEED_EVENT_HUNT_GOLD_RATE <= 0)
+		$NEED_EVENT_HUNT_GOLD_RATE = 120;
+
+	if ($NEED_EVENT_BG_GOLD_RATE <= 0)
+		$NEED_EVENT_BG_GOLD_RATE = 200;
+
+	// GM 60 이상만 사용 가능
+	bindatcmd "goldevent", strnpcinfo(3) + "::OnCommand", 60, 60;
+	bindatcmd "마을", strnpcinfo(3) + "::OnTown", 60, 60;
+
+	// 스크립트 리로드/서버 재시작 시 현재 시간 기준으로 상태 복구
+	callsub S_SyncSchedule, 0;
+	end;
+
+// 7월 11일 12:00 사냥 금화 이벤트 시작
+OnClock1200:
+	if (gettimestr("%Y%m%d", 9) == "20260711" || gettimestr("%Y%m%d", 9) == "20260712") {
+		callsub S_SetHuntOn, "[이벤트] 사냥 금화 드랍률 상승 이벤트가 시작되었습니다! 18:00까지 몬스터 처치 시 금화 획득 확률이 증가합니다.";
+	}
+	end;
+
+// 7월 11일 18:00 사냥 종료 + 전장 시작
+OnClock1800:
+	if (gettimestr("%Y%m%d", 9) == "20260711" || gettimestr("%Y%m%d", 9) == "20260712") {
+		callsub S_SetHuntOff, "[이벤트] 사냥 금화 드랍률 상승 이벤트가 종료되었습니다.";
+		callsub S_SetBGOn, "[이벤트] 전장 금화 보상 상승 이벤트가 시작되었습니다! 00:00까지 전장 금화 보상이 2배로 지급됩니다.";
+	}
+	end;
+
+// 7월 12일 00:00 전장 종료
+OnClock0000:
+	if (gettimestr("%Y%m%d", 9) == "20260712" || gettimestr("%Y%m%d", 9) == "20260713") {
+		callsub S_SetBGOff, "[이벤트] 전장 금화 보상 증가 이벤트가 종료되었습니다.";
+	}
+	end;
+	
+OnTown:
+	warp "lasagna",169,162;
+	end;
+
+OnCommand:
+	if (getgmlevel() < 60)
+		end;
+
+	mes "[금화 이벤트 관리]";
+	mes "사냥 금화 이벤트: " + (($NEED_EVENT_HUNT_GOLD_ON) ? "^00AA00ON^000000" : "^777777OFF^000000");
+	mes "사냥 배율: " + $NEED_EVENT_HUNT_GOLD_RATE + "%";
+	mes "";
+	mes "전장 금화 이벤트: " + (($NEED_EVENT_BG_GOLD_ON) ? "^00AA00ON^000000" : "^777777OFF^000000");
+	mes "전장 배율: " + $NEED_EVENT_BG_GOLD_RATE + "%";
+	mes "";
+	mes "자동 일정:";
+	mes "2026-07-11 12:00 ~ 18:00 사냥 1.2배";
+	mes "2026-07-11 18:00 ~ 2026-07-12 00:00 전장 2배";
+	next;
+
+	switch(select(
+		"사냥 이벤트 ON",
+		"사냥 이벤트 OFF",
+		"전장 이벤트 ON",
+		"전장 이벤트 OFF",
+		"전체 OFF",
+		"현재 시간 기준 자동 동기화",
+		"배율 변경",
+		"취소"
+	)) {
+	case 1:
+		callsub S_SetHuntOn, "[이벤트] 사냥 금화 드랍률 상승 이벤트가 시작되었습니다.";
+		mes "[금화 이벤트 관리]";
+		mes "사냥 금화 이벤트를 ON 처리했습니다.";
+		close;
+
+	case 2:
+		callsub S_SetHuntOff, "[이벤트] 사냥 금화 드랍률 상승 이벤트가 종료되었습니다.";
+		mes "[금화 이벤트 관리]";
+		mes "사냥 금화 이벤트를 OFF 처리했습니다.";
+		close;
+
+	case 3:
+		callsub S_SetBGOn, "[이벤트] 전장 금화 보상 증가 이벤트가 시작되었습니다.";
+		mes "[금화 이벤트 관리]";
+		mes "전장 금화 이벤트를 ON 처리했습니다.";
+		close;
+
+	case 4:
+		callsub S_SetBGOff, "[이벤트] 전장 금화 보상 증가 이벤트가 종료되었습니다.";
+		mes "[금화 이벤트 관리]";
+		mes "전장 금화 이벤트를 OFF 처리했습니다.";
+		close;
+
+	case 5:
+		callsub S_SetHuntOff, "[이벤트] 사냥 금화 드랍률 증가 이벤트가 종료되었습니다.";
+		callsub S_SetBGOff, "[이벤트] 전장 금화 보상 증가 이벤트가 종료되었습니다.";
+		mes "[금화 이벤트 관리]";
+		mes "전체 이벤트를 OFF 처리했습니다.";
+		close;
+
+	case 6:
+		callsub S_SyncSchedule, 1;
+		mes "[금화 이벤트 관리]";
+		mes "현재 시간 기준으로 이벤트 상태를 다시 동기화했습니다.";
+		close;
+
+	case 7:
+		mes "[금화 이벤트 관리]";
+		mes "사냥 배율을 입력해주세요.";
+		mes "예: 130 = 1.3배";
+		next;
+		input .@hunt_rate;
+
+		if (.@hunt_rate < 100 || .@hunt_rate > 1000) {
+			mes "[금화 이벤트 관리]";
+			mes "사냥 배율은 100~1000 사이로 입력해주세요.";
+			close;
+		}
+
+		mes "[금화 이벤트 관리]";
+		mes "전장 배율을 입력해주세요.";
+		mes "예: 200 = 2배";
+		next;
+		input .@bg_rate;
+
+		if (.@bg_rate < 100 || .@bg_rate > 1000) {
+			mes "[금화 이벤트 관리]";
+			mes "전장 배율은 100~1000 사이로 입력해주세요.";
+			close;
+		}
+
+		$NEED_EVENT_HUNT_GOLD_RATE = .@hunt_rate;
+		$NEED_EVENT_BG_GOLD_RATE = .@bg_rate;
+
+		mes "[금화 이벤트 관리]";
+		mes "배율이 변경되었습니다.";
+		mes "사냥: " + $NEED_EVENT_HUNT_GOLD_RATE + "%";
+		mes "전장: " + $NEED_EVENT_BG_GOLD_RATE + "%";
+		close;
+
+	case 8:
+		close;
+	}
+	end;
+
+// ------------------------------------------------------------
+// 현재 시간 기준 자동 상태 복구
+// announce_flag = 1이면 상태 변경 시 전체 알림 출력
+// ------------------------------------------------------------
+S_SyncSchedule:
+	.@announce_flag = getarg(0);
+	.@ymd$ = gettimestr("%Y%m%d", 9);
+	.@hour = gettime(3);
+
+	.@hunt_should_on = 0;
+	.@bg_should_on = 0;
+
+	if (.@ymd$ == "20260711" && .@hour >= 12 && .@hour < 18)
+		.@hunt_should_on = 1;
+
+	if (.@ymd$ == "20260711" && .@hour >= 18)
+		.@bg_should_on = 1;
+
+	if (.@hunt_should_on) {
+		if (.@announce_flag)
+			callsub S_SetHuntOn, "[이벤트] 사냥 금화 드랍률 상승 이벤트가 활성화되었습니다.";
+		else
+			$NEED_EVENT_HUNT_GOLD_ON = 1;
+	}
+	else {
+		if (.@announce_flag && $NEED_EVENT_HUNT_GOLD_ON)
+			callsub S_SetHuntOff, "[이벤트] 사냥 금화 드랍률 상승 이벤트가 비활성화되었습니다.";
+		else
+			$NEED_EVENT_HUNT_GOLD_ON = 0;
+	}
+
+	if (.@bg_should_on) {
+		if (.@announce_flag)
+			callsub S_SetBGOn, "[이벤트] 전장 금화 보상 증가 이벤트가 활성화되었습니다.";
+		else
+			$NEED_EVENT_BG_GOLD_ON = 1;
+	}
+	else {
+		if (.@announce_flag && $NEED_EVENT_BG_GOLD_ON)
+			callsub S_SetBGOff, "[이벤트] 전장 금화 보상 증가 이벤트가 비활성화되었습니다.";
+		else
+			$NEED_EVENT_BG_GOLD_ON = 0;
+	}
+
+	return;
+
+S_SetHuntOn:
+	$NEED_EVENT_HUNT_GOLD_ON = 1;
+
+	if ($NEED_EVENT_HUNT_GOLD_RATE <= 0)
+		$NEED_EVENT_HUNT_GOLD_RATE = 120;
+
+	announce getarg(0), bc_all, "0xFFD700";
+	return;
+
+S_SetHuntOff:
+	if ($NEED_EVENT_HUNT_GOLD_ON)
+		announce getarg(0), bc_all, "0xFFD700";
+
+	$NEED_EVENT_HUNT_GOLD_ON = 0;
+	return;
+
+S_SetBGOn:
+	$NEED_EVENT_BG_GOLD_ON = 1;
+
+	if ($NEED_EVENT_BG_GOLD_RATE <= 0)
+		$NEED_EVENT_BG_GOLD_RATE = 200;
+
+	announce getarg(0), bc_all, "0xFFD700";
+	return;
+
+S_SetBGOff:
+	if ($NEED_EVENT_BG_GOLD_ON)
+		announce getarg(0), bc_all, "0xFFD700";
+
+	$NEED_EVENT_BG_GOLD_ON = 0;
+	return;
+}
+
+// ------------------------------------------------------------
+// 금화 사냥 이벤트 확률 검증용 GM 명령어
+// GM 명령어: @goldtest
+// ------------------------------------------------------------
+-	script	NEED_GoldEvent_Test	-1,{
+
+OnInit:
+	bindatcmd "goldtest", strnpcinfo(3) + "::OnCommand", 60, 60;
+	end;
+
+OnCommand:
+	mes "[금화 이벤트 검증]";
+	mes "몬스터 레벨을 입력해주세요.";
+	mes "금화 드랍 구간:";
+	mes "Lv 30~98, Lv 100~154";
+	next;
+
+	input .@lv;
+
+	if (.@lv <= 0) {
+		mes "[금화 이벤트 검증]";
+		mes "몬스터 레벨이 올바르지 않습니다.";
+		close;
+	}
+
+	.@base_rate = callsub(S_GetBaseGoldRate, .@lv);
+
+	if (.@base_rate <= 0) {
+		mes "[금화 이벤트 검증]";
+		mes "해당 레벨은 금화 드랍 구간이 아닙니다.";
+		mes "현재 금화 이벤트 적용 대상:";
+		mes "Lv 30~98, Lv 100~154";
+		close;
+	}
+
+	.@applied_rate = callfunc("F_NEED_GoldEvent_HuntRate", .@base_rate);
+
+	mes "[금화 이벤트 검증]";
+	mes "몬스터 레벨: ^0055FF" + .@lv + "^000000";
+	mes "사냥 이벤트 상태: " + (($NEED_EVENT_HUNT_GOLD_ON) ? "^00AA00ON^000000" : "^777777OFF^000000");
+	mes "사냥 이벤트 배율: ^0055FF" + $NEED_EVENT_HUNT_GOLD_RATE + "%^000000";
+	mes "";
+	mes "기본 확률값: ^0055FF" + .@base_rate + " / 10000^000000";
+	mes "기본 확률: ^0055FF" + (.@base_rate / 100) + "." + sprintf("%02d", .@base_rate % 100) + "%^000000";
+	mes "";
+	mes "적용 확률값: ^FF8000" + .@applied_rate + " / 10000^000000";
+	mes "적용 확률: ^FF8000" + (.@applied_rate / 100) + "." + sprintf("%02d", .@applied_rate % 100) + "%^000000";
+	next;
+
+	mes "[금화 이벤트 검증]";
+	mes "시뮬레이션 횟수를 입력해주세요.";
+	mes "권장: 100000";
+	mes "너무 크게 입력하면 서버가 잠시 멈출 수 있습니다.";
+	next;
+
+	input .@try_count;
+
+	if (.@try_count < 1000)
+		.@try_count = 1000;
+
+	if (.@try_count > 1000000)
+		.@try_count = 1000000;
+
+	.@hit = 0;
+
+	freeloop(1);
+
+	for (.@i = 0; .@i < .@try_count; .@i++) {
+		if (rand(10000) < .@applied_rate)
+			.@hit++;
+	}
+
+	freeloop(0);
+
+	.@sim_rate = (.@hit * 10000) / .@try_count;
+
+	mes "[금화 이벤트 검증 결과]";
+	mes "테스트 횟수: ^0055FF" + .@try_count + "^000000회";
+	mes "성공 횟수: ^0055FF" + .@hit + "^000000회";
+	mes "";
+	mes "기대 확률: ^FF8000" + (.@applied_rate / 100) + "." + sprintf("%02d", .@applied_rate % 100) + "%^000000";
+	mes "실측 확률: ^00AA00" + (.@sim_rate / 100) + "." + sprintf("%02d", .@sim_rate % 100) + "%^000000";
+	mes "";
+	mes "실측 확률은 난수 때문에 약간 흔들릴 수 있습니다.";
+	close;
+
+S_GetBaseGoldRate:
+	.@lv = getarg(0);
+
+	if (.@lv > 29 && .@lv <= 98)
+		return 50 + .@lv;
+
+	if (.@lv > 99 && .@lv <= 154)
+		return 100 + .@lv;
+
+	return 0;
+}

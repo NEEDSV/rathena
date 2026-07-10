@@ -25,6 +25,259 @@
 //= 1.5 Added Marriage Covenant item and VIP features. [Euphy]
 //============================================================
 
+
+//============================================================
+// NEED Wedding Objection Event
+// - 결혼 무효 처리 없음
+// - 결혼 성공 후 3분 안에 @이결혼반댈세 가능
+// - @찬성 = 이 결혼 반대 / @반대 = 결혼 진행
+// - 조건 달성 시 전체 방송, 신랑/신부 10분 개그 이펙트, 반대 찬성자 폭죽 이펙트
+//============================================================
+function	script	NEED_WeddingObjection_Start	{
+	// getarg(0): groom account_id
+	// getarg(1): groom char_id
+	// getarg(2): groom name
+	// getarg(3): bride account_id
+	// getarg(4): bride char_id
+	// getarg(5): bride name
+
+	if ($@NEED_Wedding_Objection_Voting)
+		return;
+
+	if (getarg(0) <= 0 || getarg(1) <= 0 || getarg(3) <= 0 || getarg(4) <= 0)
+		return;
+
+	$@NEED_Wedding_GroomAid = getarg(0);
+	$@NEED_Wedding_GroomCid = getarg(1);
+	$@NEED_Wedding_GroomName$ = getarg(2);
+	$@NEED_Wedding_BrideAid = getarg(3);
+	$@NEED_Wedding_BrideCid = getarg(4);
+	$@NEED_Wedding_BrideName$ = getarg(5);
+
+	$@NEED_Wedding_Objection_Ready = 1;
+	$@NEED_Wedding_Objection_EndTick = gettimetick(2) + 180;
+	$@NEED_Wedding_Objection_Voting = 0;
+
+	$@NEED_Wedding_Yes = 0;
+	$@NEED_Wedding_No = 0;
+	$@NEED_Wedding_VoteCount = 0;
+
+	deletearray $@NEED_Wedding_VoteAid[0], getarraysize($@NEED_Wedding_VoteAid);
+	deletearray $@NEED_Wedding_VoteCid[0], getarraysize($@NEED_Wedding_VoteCid);
+	deletearray $@NEED_Wedding_VoteValue[0], getarraysize($@NEED_Wedding_VoteValue);
+
+	announce "[결혼식] 이 결혼에 이의가 있다면 3분 안에 결혼식장에서 @이결혼반댈세 를 외쳐주세요.",bc_all;
+	return;
+}
+
+-	script	NEED_WeddingObjection	-1,{
+	end;
+
+OnInit:
+	.Enabled = 1;
+	.MinYes = 1;              // 반대 찬성 최소 표 수
+	.ShameTicks = 20;          // 30초 x 20회 = 10분
+	.ShameInterval = 30000;
+
+	// 서버에 해당 이펙트 상수가 없으면, 사용 중인 다른 specialeffect 상수/숫자로 교체하세요.
+	.FireworkEffect = 709;
+	.ShameEffect = 12;
+
+	bindatcmd "이결혼반댈세",strnpcinfo(3)+"::OnObjection",0,0;
+	bindatcmd "결혼반대",strnpcinfo(3)+"::OnObjection",0,0;
+	bindatcmd "찬성",strnpcinfo(3)+"::OnVoteYes",0,0;
+	bindatcmd "반대",strnpcinfo(3)+"::OnVoteNo",0,0;
+	end;
+
+OnObjection:
+	if (!.Enabled) {
+		dispbottom "현재 결혼 반대 이벤트가 비활성화되어 있습니다.";
+		end;
+	}
+
+	if (strcharinfo(3) != "prt_church") {
+		dispbottom "결혼식장 안에서만 외칠 수 있습니다.";
+		end;
+	}
+
+	if (!$@NEED_Wedding_Objection_Ready) {
+		dispbottom "현재 반대할 결혼식이 없습니다.";
+		end;
+	}
+
+	if (gettimetick(2) > $@NEED_Wedding_Objection_EndTick) {
+		dispbottom "이미 결혼 반대 가능 시간이 지났습니다.";
+		end;
+	}
+
+	if ($@NEED_Wedding_Objection_Voting) {
+		dispbottom "이미 찬반투표가 진행 중입니다. @찬성 또는 @반대 로 투표해주세요.";
+		end;
+	}
+
+	if (getcharid(3) == $@NEED_Wedding_GroomAid || getcharid(3) == $@NEED_Wedding_BrideAid) {
+		dispbottom "결혼 당사자는 반대투표를 열 수 없습니다.";
+		end;
+	}
+
+	$@NEED_Wedding_Objection_Voting = 1;
+	$@NEED_WD_Objection_VoteEndTick = gettimetick(2) + 60;
+
+	$@NEED_Wedding_Yes = 0;
+	$@NEED_Wedding_No = 0;
+	$@NEED_Wedding_VoteCount = 0;
+
+	deletearray $@NEED_Wedding_VoteAid[0], getarraysize($@NEED_Wedding_VoteAid);
+	deletearray $@NEED_Wedding_VoteCid[0], getarraysize($@NEED_Wedding_VoteCid);
+	deletearray $@NEED_Wedding_VoteValue[0], getarraysize($@NEED_Wedding_VoteValue);
+
+	announce "[긴급] "+strcharinfo(0)+" 님이 외쳤습니다. '이 결혼 반댈세!'",bc_all;
+	announce "[결혼 찬반투표] 60초 동안 @찬성 / @반대 로 투표해주세요.",bc_all;
+	announce "[안내] @찬성 = 이 결혼 반대 / @반대 = 결혼 진행",bc_all;
+
+	stopnpctimer;
+	setnpctimer 0;
+	initnpctimer;
+	end;
+
+OnTimer60000:
+	stopnpctimer;
+	donpcevent strnpcinfo(3)+"::OnVoteEnd";
+	end;
+
+OnVoteYes:
+	callsub S_Vote,1;
+	end;
+
+OnVoteNo:
+	callsub S_Vote,0;
+	end;
+
+S_Vote:
+	if (!$@NEED_Wedding_Objection_Voting) {
+		dispbottom "현재 진행 중인 결혼 찬반투표가 없습니다.";
+		end;
+	}
+
+	if (gettimetick(2) > $@NEED_WD_Objection_VoteEndTick) {
+		dispbottom "투표 시간이 종료되었습니다.";
+		end;
+	}
+
+	if (getcharid(3) == $@NEED_Wedding_GroomAid || getcharid(3) == $@NEED_Wedding_BrideAid) {
+		dispbottom "결혼 당사자는 투표할 수 없습니다.";
+		end;
+	}
+
+	.@aid = getcharid(3);
+	.@cid = getcharid(0);
+
+	for (.@i = 0; .@i < $@NEED_Wedding_VoteCount; .@i++) {
+		if ($@NEED_Wedding_VoteAid[.@i] == .@aid) {
+			dispbottom "이미 투표했습니다.";
+			end;
+		}
+	}
+
+	$@NEED_Wedding_VoteAid[$@NEED_Wedding_VoteCount] = .@aid;
+	$@NEED_Wedding_VoteCid[$@NEED_Wedding_VoteCount] = .@cid;
+	$@NEED_Wedding_VoteValue[$@NEED_Wedding_VoteCount] = getarg(0);
+	$@NEED_Wedding_VoteCount++;
+
+	if (getarg(0)) {
+		$@NEED_Wedding_Yes++;
+		dispbottom "이 결혼 반대에 찬성했습니다. 현재 반대 찬성 "+$@NEED_Wedding_Yes+" / 결혼 진행 "+$@NEED_Wedding_No;
+	} else {
+		$@NEED_Wedding_No++;
+		dispbottom "결혼 진행에 투표했습니다. 현재 반대 찬성 "+$@NEED_Wedding_Yes+" / 결혼 진행 "+$@NEED_Wedding_No;
+	}
+	end;
+
+OnVoteEnd:
+	if (!$@NEED_Wedding_Objection_Voting)
+		end;
+
+	$@NEED_Wedding_Objection_Voting = 0;
+	$@NEED_Wedding_Objection_Ready = 0;
+
+	announce "[결혼 찬반투표 종료] 이 결혼 반대 "+$@NEED_Wedding_Yes+"표 / 결혼 진행 "+$@NEED_Wedding_No+"표",bc_all;
+
+	if ($@NEED_Wedding_Yes >= .MinYes && $@NEED_Wedding_Yes > $@NEED_Wedding_No) {
+		announce "[결혼식] 많은 반대가 있었지만, 이 결혼은 강행되었습니다.",bc_all;
+		announce "[결혼식] "+$@NEED_Wedding_GroomName$+" 님과 "+$@NEED_Wedding_BrideName$+" 님은 앞으로 10분간 시선집중 상태가 됩니다.",bc_all;
+
+		callsub S_StartShameEffect,$@NEED_Wedding_GroomAid,$@NEED_Wedding_GroomCid;
+		callsub S_StartShameEffect,$@NEED_Wedding_BrideAid,$@NEED_Wedding_BrideCid;
+		callsub S_FireworkForObjectors;
+	} else {
+		announce "[결혼식] 반대 의견은 있었지만 큰 여론은 형성되지 않았습니다. 결혼은 평화롭게 진행됩니다.",bc_all;
+	}
+	end;
+
+S_StartShameEffect:
+	.@aid = getarg(0);
+	.@cid = getarg(1);
+
+	if (!isloggedin(.@aid,.@cid))
+		return;
+
+	attachrid .@aid;
+	@NEED_Wedding_ShameRemain = .ShameTicks;
+	@NEED_Wedding_ShameEffect = .ShameEffect;
+	@NEED_Wedding_ShameInterval = .ShameInterval;
+
+	dispbottom "[결혼식] 수많은 반대를 뚫고 결혼을 강행한 주인공이 되었습니다.";
+	dispbottom "[결혼식] 10분 동안 주기적으로 축하 이펙트가 출력됩니다.";
+	specialeffect2 @NEED_Wedding_ShameEffect;
+	addtimer @NEED_Wedding_ShameInterval,"NEED_WeddingObjection::OnShameTick";
+
+	detachrid;
+	return;
+
+OnShameTick:
+	if (@NEED_Wedding_ShameRemain <= 0) {
+		@NEED_Wedding_ShameRemain = 0;
+		@NEED_Wedding_ShameEffect = 0;
+		@NEED_Wedding_ShameInterval = 0;
+		end;
+	}
+
+	@NEED_Wedding_ShameRemain--;
+	specialeffect2 @NEED_Wedding_ShameEffect;
+
+	if (@NEED_Wedding_ShameRemain % 2 == 0)
+		dispbottom "[결혼식] 이 결혼은 많은 반대를 뚫고 강행되었습니다.";
+
+	if (@NEED_Wedding_ShameRemain <= 0) {
+		dispbottom "[결혼식] 시선집중 상태가 종료되었습니다.";
+		@NEED_Wedding_ShameRemain = 0;
+		@NEED_Wedding_ShameEffect = 0;
+		@NEED_Wedding_ShameInterval = 0;
+		end;
+	}
+
+	addtimer @NEED_Wedding_ShameInterval,"NEED_WeddingObjection::OnShameTick";
+	end;
+
+S_FireworkForObjectors:
+	for (.@i = 0; .@i < $@NEED_Wedding_VoteCount; .@i++) {
+		if (!$@NEED_Wedding_VoteValue[.@i])
+			continue;
+
+		.@aid = $@NEED_Wedding_VoteAid[.@i];
+		.@cid = $@NEED_Wedding_VoteCid[.@i];
+
+		if (!isloggedin(.@aid,.@cid))
+			continue;
+
+		attachrid .@aid;
+		specialeffect2 .FireworkEffect;
+		dispbottom "[결혼식] 당신의 반대 의견은 받아들여지지 않았지만, 폭죽은 지급되었습니다.";
+		detachrid;
+	}
+	return;
+}
+
 prt_church,97,100,4	script	메리 해피f#w	71,{
 	cutin "wedding_marry01",2;
 	if (countitem(6026) == 0) {
@@ -732,6 +985,7 @@ prt_church,100,128,4	script	보마스#w	60,{
 										attachrid(getcharid(3,$@wed_bride$));
 										cutin "wedding_bomars02",2;
 										mapannounce "prt_church","이제 "+$@wed_groom$+" 님과 "+$@wed_bride$+" 님을 부부로 선포합니다.",bc_map;
+										callfunc "NEED_WeddingObjection_Start",getcharid(3,$@wed_groom$),getcharid(0,$@wed_groom$),$@wed_groom$,getcharid(3,$@wed_bride$),getcharid(0,$@wed_bride$),$@wed_bride$;
 										mes "[보마스]";
 										mes "룬 미드가츠 왕국의";
 										mes "왕실 주교로서";
@@ -844,7 +1098,7 @@ OnReset:
 
 OnTimer180000:
 	mapannounce "prt_church","응답이 너무 늦었습니다... 다음 커플은 앞으로 나와 주십시오.",bc_map;
-	donpcevent "Bishop#w::OnReset";
+	donpcevent "보마스#w::OnReset";
 	stopnpctimer;
 	end;
 }
@@ -882,8 +1136,8 @@ prt_church,28,178,4	script	The King of Rune-Midgarts	108,{
 		mes "초기화하는 것이 좋습니다.";
 		close;
 	case 2:
-		donpcevent "Bishop#w::OnStop";
-		donpcevent "Bishop#w::OnReset";
+		donpcevent "보마스#w::OnStop";
+		donpcevent "보마스#w::OnReset";
 		mapannounce "prt_church","응답이 너무 늦었습니다... 다음 커플은 앞으로 나와 주십시오.",bc_map;
 		mes "[결혼식 스위치]";
 		mes "보마스 주교 NPC가";
