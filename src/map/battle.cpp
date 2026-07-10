@@ -2197,7 +2197,8 @@ int64 battle_calc_gvg_damage(block_list *src,block_list *bl,int64 damage,uint16 
 			damage = damage * battle_config.gvg_weapon_damage_rate / 100;
 		if (flag&BF_MAGIC)
 			damage = damage * battle_config.gvg_magic_damage_rate / 100;
-		if (flag&BF_MISC)
+		// NEED custom balance: NJ_ISSEN (Issen) skips the extra BF_MISC GVG reduction; BF_WEAPON reduction above still applies.
+		if ((flag&BF_MISC) && skill_id != NJ_ISSEN)
 			damage = damage * battle_config.gvg_misc_damage_rate / 100;
 	} else { //Normal attacks get reductions based on range.
 		if (flag & BF_SHORT)
