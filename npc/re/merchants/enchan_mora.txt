@@ -329,6 +329,9 @@ Oninit:
 
 // Warlock Enchants :: coin_warrock
 //============================================================
+// Warlock Enchants :: coin_warrock
+// NEED Custom: 워록 모라 유물 랜덤 지급 -> 선택 지급
+//============================================================
 lasa_in01,167,45,4	script	유물 수호자#p	495,{
 	if (checkweight(1201,1) == 0) {
 		mes "물건을 너무 많이 가지고 계시네요. 일부를 버리고 다시 시도해 주세요.";
@@ -357,12 +360,13 @@ lasa_in01,167,45,4	script	유물 수호자#p	495,{
 	mes "지팡이, 오브, 신발, 그리고 로브.";
 	next;
 	mes "[유물 수호자]";
-	mes "각 유형별로 네 가지 옵션이 준비되어 있지만, 제공되는 아이템은 제 기분에 따라 매일 바뀝니다.";
+	mes "각 유형별로 네 가지 유물이 준비되어 있으며,";
+	mes "원하는 유물을 직접 선택할 수 있습니다.";
 	next;
 	mes "[유물 수호자]";
-	mes "모라 주화로 유물을 구매하시겠습니까?";
+	mes "모라 주화 10개로 유물을 구매하시겠습니까?";
 	next;
-	if(select("나중에 하죠... 할 일이 좀 있어서요.:네, 그렇습니다.") == 1) {
+	if (select("나중에 하죠... 할 일이 좀 있어서요.:네, 그렇습니다.") == 1) {
 		mes "[유물 수호자]";
 		mes "알겠습니다, 그럼 나중에 봐요.";
 		close;
@@ -375,31 +379,78 @@ lasa_in01,167,45,4	script	유물 수호자#p	495,{
 		mes "[유물 수호자]";
 		mes "알겠습니다, 그럼 나중에 봐요.";
 		close;
- 	case 2:
+	case 2:
 		setarray .@items[0],2467,2468,2469,2470; //Golden_Rod_Shoes,Aqua_Shoes,Crimson_Shoes,Forest_Shoes
-		set .@plural,1;
+		set .@type$, "신발";
 		break;
 	case 3:
 		setarray .@items[0],2859,2860,2861,2862; //Golden_Rod_Orb,Aqua_Orb,Crimson_Orb,Forest_Orb
+		set .@type$, "오브";
 		break;
 	case 4:
 		setarray .@items[0],15025,15026,15027,15028; //Golden_Rod_Robe,Aqua_Robe,Crimson_Robe,Forest_Robe
+		set .@type$, "로브";
 		break;
 	case 5:
 		setarray .@items[0],2007,2008,2009,2010; //Golden_Rod_Staff,Aqua_Staff,Crimson_Staff,Forest_Staff
+		set .@type$, "지팡이";
 		break;
 	}
+
+	mes "[유물 수호자]";
+	mes "선택하신 유형은 ^0055FF"+.@type$+"^000000입니다.";
+	mes "받고 싶은 유물을 선택해 주세요.";
+	next;
+
+	set .@menu$, "취소";
+	for (set .@i,0; .@i < getarraysize(.@items); set .@i,.@i+1)
+		set .@menu$, .@menu$+":"+getitemname(.@items[.@i]);
+
+	set .@select, select(.@menu$);
+	if (.@select == 1) {
+		mes "[유물 수호자]";
+		mes "알겠습니다, 그럼 나중에 봐요.";
+		close;
+	}
+
+	set .@item, .@items[.@select - 2];
+
+	mes "[유물 수호자]";
+	mes "선택한 유물:";
+	mes "^aa00aa"+getitemname(.@item)+"^000000";
+	mes " ";
+	mes "모라 주화 10개를 사용하여 이 유물을 받으시겠습니까?";
+	next;
+	if (select("취소:교환한다") == 1) {
+		mes "[유물 수호자]";
+		mes "알겠습니다, 그럼 나중에 봐요.";
+		close;
+	}
+
 	if (countitem(6380) < 10) {
 		mes "[유물 수호자]";
 		mes "주화가 충분해지면 다시 방문해 주시겠어요?";
 		close;
 	}
-	set .@item, .@items[rand(getarraysize(.@items))];
+	if (checkweight(.@item,1) == 0) {
+		mes "[유물 수호자]";
+		mes "물건을 너무 많이 가지고 계시네요. 일부를 버리고 다시 시도해 주세요.";
+		close;
+	}
+	if (MaxWeight - Weight < 1000) {
+		mes "[유물 수호자]";
+		mes "그러기엔 무게가 너무 많이 나갑니다. 무게를 줄이고 다시 시도하세요.";
+		close;
+	}
+
 	delitem 6380,10; //Mora_Coin
 	getitem .@item,1;
+
 	mes "[유물 수호자]";
-	mes "저는 ^aa00aa를 가지고 있어요"+getitemname(.@item)+"오늘 ^000000을 이용하실 수 있습니다. "+((.@plural)?"그들":"그것")+" 유용하게 쓰이겠지...";
+	mes "^aa00aa"+getitemname(.@item)+"^000000을 지급해 드렸습니다.";
+	mes "유용하게 사용하시길 바랍니다.";
 	close;
+
 Oninit:
 	waitingroom "워록 모라 유물 교환",0;
 	end;
