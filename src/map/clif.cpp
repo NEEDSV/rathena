@@ -25936,12 +25936,12 @@ void clif_setinfo_rune( map_session_data* sd, uint16 tagID ){
 			setlist_rune->runesetid = static_cast<uint32>(set_data.setId);
 			setlist_rune->upgrade = set_data.upgrade;
 			setlist_rune->failcount = set_data.failcount;
-		}
 
-		p->set_amount++;
+			p->set_amount++;
+		}
 	}
 
-	p->packetLength = sizeof( struct PACKET_ZC_BOOK_INFO_RUNE ) + ( sizeof( struct PACKET_SET_LIST_RUNE_sub ) * p->set_amount );
+	p->packetLength = sizeof( struct PACKET_ZC_SET_INFO_RUNE ) + ( sizeof( struct PACKET_SET_LIST_RUNE_sub ) * p->set_amount );
 	p->unknown = 0;
 	p->tagID = tagID;
 
@@ -26158,82 +26158,113 @@ void clif_parse_decompo_rune( int32 fd, map_session_data* sd ){
 	}
 
 	uint32 amount;
-	if(p->type == 1)
+	if( p->type == 1 )
 		amount = 1;
-	else
+	else if( p->type == 2 )
 		amount = 30;
+	else {
+		clif_runedecompowindow_result(sd, ZC_RUNEDECOMPO_INVALID, material_item_list);
+		return;
+	}
 
-	uint8 runeEntryit = 0;
-	for (const auto& runeEntry : id->decompoRune) {
-		runeEntryit++;
+	std::string typeName = "Type" + std::to_string(p->type);
+	auto runeEntry = id->decompoRune.find(typeName);
 
-		//ShowError("runeEntryit %d runeEntry.Second %d p->type %d \n",runeEntryit,runeEntry.second, p->type);
+	if( runeEntry == id->decompoRune.end() ){
+		clif_runedecompowindow_result(sd, ZC_RUNEDECOMPO_INVALID, material_item_list);
+		return;
+	}
 
-		if(runeEntryit != p->type)
+	std::shared_ptr<s_runedecompo_db> runedecompo_data = runedecompo_db.find( runeEntry->second );
+	if(runedecompo_data == nullptr){
+		//ShowError("runedecompo_data not found in db \n");
+		clif_runedecompowindow_result(sd, ZC_RUNEDECOMPO_INVALID, material_item_list);
+		return;
+	}
+
+	if( sd->inventory.u.items_inventory[index].amount < amount ){
+		clif_runedecompowindow_result(sd, ZC_RUNEDECOMPO_NOTENOUGHITEMS, material_item_list);
+		return;
+	}
+
+	uint32 material_weight = 0;
+
+	//ShowError("runedecompo_data size %d \n",runedecompo_data->materials.size());
+	for( const auto &materialEntry : runedecompo_data->materials ){
+		struct s_runedecompo_material_data material_data = materialEntry.second;
+		//ShowError("Material list itemid %d, amountmin %d amountmax %d \n",material_data.material,material_data.amountmin,material_data.amountmax);
+
+		uint32 chance = material_data.chance;
+		if( chance == 0 ){
+			clif_runedecompowindow_result(sd, ZC_RUNEDECOMPO_INVALID, material_item_list);
+			return;
+		}
+		if( chance < 100000 && rnd_value( 0, 100000 ) > chance )
 			continue;
 
-		std::shared_ptr<s_runedecompo_db> runedecompo_data = runedecompo_db.find( runeEntry.second );
-		if(runedecompo_data == nullptr){
-			//ShowError("runedecompo_data not found in db \n");
+		std::shared_ptr<item_data> item = item_db.find(material_data.material);
+		if( item == nullptr ){
 			clif_runedecompowindow_result(sd, ZC_RUNEDECOMPO_INVALID, material_item_list);
 			return;
 		}
 
-		std::unordered_map<uint16, uint16> materials;
+		uint32 random_amount = rnd_value( material_data.amountmin, material_data.amountmax );
+		if( random_amount == 0 )
+			continue;
 
-		if( sd->inventory.u.items_inventory[index].amount < amount ){
-			clif_runedecompowindow_result(sd, ZC_RUNEDECOMPO_NOTENOUGHITEMS, material_item_list);
-			return;
-		}
+		material_weight += item->weight * random_amount;
+		material_item_list[material_data.material] += random_amount;
+		//ShowError("random_amount %d \n", random_amount);
+	}
 
-		uint32 material_weight = 0;
+	if(sd->weight + material_weight > sd->max_weight){
+		clif_runedecompowindow_result(sd, ZC_RUNEDECOMPO_WEIGHT, material_item_list);
+		return;
+	}
 
-		//ShowError("runedecompo_data size %d \n",runedecompo_data->materials.size());
-		for( const auto &materialEntry : runedecompo_data->materials ){
-			struct s_runedecompo_material_data material_data = materialEntry.second;
-			//ShowError("Material list itemid %d, amountmin %d amountmax %d \n",material_data.material,material_data.amountmin,material_data.amountmax);
-
-			uint32 chance = material_data.chance;
-			if( chance == 0 ){
-				clif_runedecompowindow_result(sd, ZC_RUNEDECOMPO_INVALID, material_item_list);
+	uint8 required_slots = 0;
+	for( const auto& materialEntry : material_item_list ){
+		switch( pc_checkadditem(sd, materialEntry.first, materialEntry.second) ){
+			case CHKADDITEM_EXIST:
+				break;
+			case CHKADDITEM_NEW:
+				required_slots++;
+				break;
+			case CHKADDITEM_OVERAMOUNT:
+			default:
+				clif_runedecompowindow_result(sd, ZC_RUNEDECOMPO_MAXITEMS, material_item_list);
 				return;
-			}
-			if( chance < 100000 && rnd_value( 0, 100000 ) > chance )
-				continue;
-
-			std::shared_ptr<item_data> item = item_db.find(material_data.material);
-			material_weight += item->weight;
-
-			uint32 random_amount = rnd_value( material_data.amountmin, material_data.amountmax );
-			material_item_list[material_data.material] = random_amount;
-			//ShowError("random_amount %d \n", random_amount);
-		}
-
-		if(sd->weight + material_weight > sd->max_weight){
-			clif_runedecompowindow_result(sd, ZC_RUNEDECOMPO_WEIGHT, material_item_list);
-			return;
-		}
-
-		for( const auto& materialEntry : materials ){
-			if( pc_delitem( sd, materialEntry.first, materialEntry.second, 0, 0, LOG_TYPE_OTHER )  != 0 ){
-				clif_runedecompowindow_result(sd, ZC_RUNEDECOMPO_UNKNOWN, material_item_list);
-				return;
-			}
-		}
-
-		for( const auto& materialEntry : material_item_list ){
-			struct item item_material = {};
-
-			item_material.nameid = materialEntry.first;
-			item_material.identify = 1;
-
-			pc_additem( sd, &item_material, materialEntry.second, LOG_TYPE_OTHER );
 		}
 	}
+
+	uint8 free_slots = pc_inventoryblank(sd);
+	if( sd->inventory.u.items_inventory[index].amount == amount )
+		free_slots++;
+
+	if( free_slots < required_slots ){
+		clif_runedecompowindow_result(sd, ZC_RUNEDECOMPO_INVENTORYSPACE, material_item_list);
+		return;
+	}
+
+	struct item original_item = selected_item;
 
 	if (pc_delitem(sd, index, amount, 0, 0, LOG_TYPE_OTHER) != 0){
 		clif_runedecompowindow_result(sd, ZC_RUNEDECOMPO_INVALID, material_item_list);
 		return;
+	}
+
+	for( const auto& materialEntry : material_item_list ){
+		struct item item_material = {};
+
+		item_material.nameid = materialEntry.first;
+		item_material.identify = 1;
+
+		enum e_additem_result flag = pc_additem( sd, &item_material, materialEntry.second, LOG_TYPE_OTHER );
+		if( flag != ADDITEM_SUCCESS ){
+			pc_additem(sd, &original_item, amount, LOG_TYPE_OTHER);
+			clif_runedecompowindow_result(sd, flag == ADDITEM_OVERWEIGHT ? ZC_RUNEDECOMPO_WEIGHT : ZC_RUNEDECOMPO_UNKNOWN, material_item_list);
+			return;
+		}
 	}
 
 	clif_runedecompowindow_result( sd, ZC_RUNEDECOMPO_SUCCESS, material_item_list );
@@ -26255,14 +26286,14 @@ void clif_runedecompowindow_result (map_session_data* sd, enum e_runedecompo_res
 			p.amountlistdecompo_rune[material_number] = materialEntry.second;
 
 			material_number++;
-			if (material_number > MAX_RUNEDECOMPO)
+			if (material_number >= MAX_RUNEDECOMPO)
 				break;
 		}
 	}
 
 	for(int32 i = material_number; i < MAX_RUNEDECOMPO; i++){
-		p.itemlistdecompo_rune[material_number] = 0;
-		p.amountlistdecompo_rune[material_number] = 0;
+		p.itemlistdecompo_rune[i] = 0;
+		p.amountlistdecompo_rune[i] = 0;
 	}
 
 	clif_send( &p, sizeof( p ), sd, SELF );

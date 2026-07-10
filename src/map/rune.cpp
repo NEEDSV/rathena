@@ -456,7 +456,7 @@ uint64 RuneDatabase::parseBodyNode( const ryml::NodeRef &node ){
 							return 0;
 
 						if (set->scripts[amount] && set->scripts[amount]->script) {
-							aFree(set->scripts[amount]->script);
+							script_free_code(set->scripts[amount]->script);
 							set->scripts[amount]->script = nullptr;
 						}
 
@@ -650,11 +650,13 @@ void rune_load(map_session_data* sd) {
 			// Datas invalids sd->runeSets
 			continue;
 		}
-		if (set_data.selected) {
+		if (set_data.selected && !isSelected) {
 			isSelected = true;
 			sd->runeactivated_data.tagID = set_data.tagId;
 			sd->runeactivated_data.runesetid = set_data.setId;
 			sd->runeactivated_data.upgrade = set_data.upgrade;
+		} else if (set_data.selected) {
+			set_data.selected = false;
 		}
 		sd->runeSets.push_back(set_data);
 	}
@@ -981,9 +983,15 @@ std::tuple<uint8, uint16, uint16> rune_setupgrade(map_session_data* sd, uint16 t
 	std::shared_ptr<s_upgrade_rune> runeupgrade_data = util::umap_find( runeset_data->upgrades, upgrade );
 
 	if( runeupgrade_data == nullptr )
-		return std::make_tuple(ZC_RUNESET_TABLET_INVALID, 0, 0);
+		return std::make_tuple(ZC_RUNESET_TABLET_MAXUPGRADE, upgrade, failcount);
 
 	//ShowError("Upgrade and Set exist \n");
+
+	uint32 chance = runeupgrade_data->chance + (runeupgrade_data->chanceperfail * failcount);
+
+	if( chance == 0 ){
+		return std::make_tuple(ZC_RUNESET_TABLET_MAXUPGRADE, upgrade, failcount);
+	}
 
 	// Check upgrade material
 	std::unordered_map<t_itemid, uint16> materials;
@@ -1012,13 +1020,8 @@ std::tuple<uint8, uint16, uint16> rune_setupgrade(map_session_data* sd, uint16 t
 	//ShowError("Materials done \n");
 
 	// Chance
-	uint32 chance = runeupgrade_data->chance + (runeupgrade_data->chanceperfail * failcount);
 	//uint32 rdm_chance = rnd_value( 0, 100000 );
 	//ShowError("chance %d, random chance %d, runeupgrade_data->chance %d, runeupgrade_data->chanceperfail %d, failcount %d \n",chance,rdm_chance,runeupgrade_data->chance,runeupgrade_data->chanceperfail,failcount);
-
-	if( chance == 0 ){
-		return std::make_tuple(ZC_RUNESET_TABLET_INVALID, 0, 0);
-	}
 
 	//if( chance < 100000 && rdm_chance > chance )
 	if( chance < 100000 && rnd_value( 0, 100000 ) > chance )
@@ -1047,28 +1050,46 @@ bool rune_changestate(map_session_data* sd, uint16 tagID, uint32 runesetid){
 
 	//ShowError("0 - rune_changestate - tagID %d runesetid %d \n",tagID,runesetid);
 
-	for (auto& set_data : sd->runeSets) {
-		if(set_data.tagId == tagID && runesetid && set_data.setId == runesetid) {
-			sd->runeactivated_data.tagID = set_data.tagId;
-			sd->runeactivated_data.runesetid = set_data.setId;
-			sd->runeactivated_data.upgrade = set_data.upgrade;
-			rune_count_bookactivated(sd, tagID, runesetid);
-			set_data.selected = true;
-			status_calc_pc(sd, SCO_FORCE);
-			return true;
-		}
-		if(set_data.tagId == tagID && !runesetid && set_data.selected){
-			sd->runeactivated_data.tagID = 0;
-			sd->runeactivated_data.runesetid = 0;
-			sd->runeactivated_data.upgrade = 0;
-			sd->runeactivated_data.bookNumber = 0;
+	if( !runesetid ){
+		for( auto& set_data : sd->runeSets ){
 			set_data.selected = false;
-			status_calc_pc(sd, SCO_FORCE);
-			return false;
+		}
+
+		sd->runeactivated_data.tagID = 0;
+		sd->runeactivated_data.runesetid = 0;
+		sd->runeactivated_data.upgrade = 0;
+		sd->runeactivated_data.bookNumber = 0;
+		status_calc_pc(sd, SCO_FORCE);
+		return false;
+	}
+
+	s_runeset_data* selected_set = nullptr;
+
+	for (auto& set_data : sd->runeSets) {
+		set_data.selected = false;
+
+		if( set_data.tagId == tagID && set_data.setId == runesetid ){
+			selected_set = &set_data;
 		}
 	}
 
-	return false;
+	if( selected_set == nullptr ){
+		sd->runeactivated_data.tagID = 0;
+		sd->runeactivated_data.runesetid = 0;
+		sd->runeactivated_data.upgrade = 0;
+		sd->runeactivated_data.bookNumber = 0;
+		status_calc_pc(sd, SCO_FORCE);
+		return false;
+	}
+
+	selected_set->selected = true;
+	sd->runeactivated_data.tagID = selected_set->tagId;
+	sd->runeactivated_data.runesetid = selected_set->setId;
+	sd->runeactivated_data.upgrade = selected_set->upgrade;
+	rune_count_bookactivated(sd, tagID, runesetid);
+	status_calc_pc(sd, SCO_FORCE);
+
+	return true;
 }
 
 void rune_count_bookactivated(map_session_data* sd, uint16 tagID, uint32 runesetid){

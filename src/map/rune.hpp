@@ -15,6 +15,8 @@
 #include "../common/db.hpp"
 #include "../common/mmo.hpp"
 
+class map_session_data;
+
 enum e_runebook_result : uint16_t{
 	ZC_RUNEBOOK_SUCCESS = 0,
 	ZC_RUNEBOOK_ALRDYACTIVATED = 1,
@@ -117,7 +119,7 @@ struct s_upgrade_rune {
 
 struct s_script_rune {
 	uint16 amount = 0;
-	script_code *script;
+	script_code *script = nullptr;
 
 	~s_script_rune() {
 		if (this->script) {
