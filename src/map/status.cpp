@@ -33,6 +33,7 @@
 #include "path.hpp"
 #include "pc.hpp"
 #include "pc_groups.hpp"
+#include "rune.hpp"
 #include "pet.hpp"
 #include "script.hpp"
 
@@ -4273,6 +4274,9 @@ int32 status_calc_pc_sub(map_session_data* sd, uint8 opt)
 	}
 
 	pc_bonus_script(sd);
+
+	if(sd->runeactivated_data.tagID)
+		rune_active_bonus(sd);
 
 	if( sd->pd ) { // Pet Bonus
 		pet_data *pd = sd->pd;

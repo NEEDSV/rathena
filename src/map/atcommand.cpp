@@ -60,6 +60,7 @@
 #include "pc_groups.hpp"
 #include "pet.hpp"
 #include "quest.hpp"
+#include "rune.hpp"
 #include "script.hpp"
 #include "storage.hpp"
 #include "trade.hpp"
@@ -12208,6 +12209,17 @@ ACMD_FUNC(macrochecker){
 	return 0;
 }
 
+
+ACMD_FUNC(reloadrunedb)
+{
+	nullpo_retr(-1, sd);
+
+	rune_db_reload();
+	clif_displaymessage(fd, "Rune system has been reloaded");
+
+	return 0;
+}
+
 #include <custom/atcommand.inc>
 
 /**
@@ -12543,6 +12555,7 @@ void atcommand_basecommands(void) {
 		ACMD_DEFR(roulette, ATCMD_NOCONSOLE|ATCMD_NOAUTOTRADE),
 		ACMD_DEF(setcard),
 		ACMD_DEF(macrochecker),
+		ACMD_DEF(reloadrunedb),
 	};
 	AtCommandInfo* atcommand;
 	int32 i;

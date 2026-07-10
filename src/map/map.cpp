@@ -56,6 +56,7 @@
 #include "pet.hpp"
 #include "quest.hpp"
 #include "status.hpp"
+#include "rune.hpp"
 #include "storage.hpp"
 #include "trade.hpp"
 
@@ -5098,6 +5099,7 @@ void MapServer::finalize(){
 	do_final_vending();
 	do_final_buyingstore();
 	do_final_path();
+	do_final_rune();
 
 	map_db->destroy(map_db, map_db_final);
 
@@ -5476,6 +5478,7 @@ bool MapServer::initialize( int32 argc, char *argv[] ){
 #ifndef MAP_GENERATOR
 	do_init_needwiki();
 #endif
+	do_init_rune();
 
 	npc_event_do_oninit();	// Init npcs (OnInit)
 

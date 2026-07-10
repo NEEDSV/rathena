@@ -57,6 +57,7 @@
 #include "pc_groups.hpp"
 #include "pet.hpp" // pet_unlocktarget()
 #include "quest.hpp"
+#include "rune.hpp"
 #include "skill.hpp" // skill_isCopyable()
 #include "script.hpp" // struct script_reg, struct script_regstr
 #include "searchstore.hpp"  // struct s_search_store_info
@@ -2306,6 +2307,8 @@ bool pc_authok(map_session_data *sd, uint32 login_id2, time_t expiration_time, i
 		clif_updatestatus(*sd, SP_JOBEXP);
 	}
 
+	rune_load(sd);
+
 	// Request all registries (auth is considered completed whence they arrive)
 	intif_request_registry(sd,7);
 	return true;
@@ -2522,6 +2525,7 @@ void pc_reg_received(map_session_data *sd)
 	}
 
 	channel_autojoin(sd);
+	clif_onlogenable_rune(sd);
 }
 
 static int32 pc_calc_skillpoint(map_session_data* sd)
