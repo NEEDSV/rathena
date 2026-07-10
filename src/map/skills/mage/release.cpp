@@ -21,9 +21,8 @@ void SkillRelease::castendDamageId(block_list *src, block_list *target, uint16 s
 	if (sd) {
 		int32 i;
 
-#ifndef RENEWAL
+		// NEED 2017: end SC_MAGICPOWER at Release castend (unconditional in 2017) so the released spell is NOT amplified and the buff icon is removed. This was compiled out under RENEWAL.
 		skill_toggle_magicpower(src, getSkillId()); // No hit will be amplified
-#endif
 		if (skill_lv == 1) { // SpellBook
 			if (sc->getSCE(SC_FREEZE_SP) == nullptr)
 				return;
