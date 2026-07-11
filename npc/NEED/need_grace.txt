@@ -84,7 +84,7 @@ function	script	NeedGrace_BuffMenu	{
 
 	mes "[NEED의 은총]";
 	mes "골드코인으로 캐릭터 단위 기간제 버프를 활성화하거나 연장할 수 있습니다.";
-	mes "골드코인 ^FF00001개당 1시간^000000이 적용됩니다.";
+	mes "골드코인 ^FF00001개당 6시간^000000이 적용됩니다.";
 	mes "보유 골드코인: ^FF0000" + countitem(.@coin) + "개^000000";
 	next;
 
@@ -99,7 +99,7 @@ function	script	NeedGrace_BuffMenu	{
 	case 1:
 		mes "[NEED의 은총]";
 		mes "사용할 골드코인 개수를 입력해주세요.";
-		mes "1개 = 1시간";
+		mes "1개 = 6시간";
 		next;
 
 		input .@amount;
@@ -207,12 +207,13 @@ function	script	NeedGrace_ApplyBuff	{
 		close;
 	}
 
-	set .@days, .@amount / 24;
-	set .@hours, .@amount % 24;
+	set .@total_hours, .@amount * 6;
+	set .@days, .@total_hours / 24;
+	set .@hours, .@total_hours % 24;
 
 	mes "[NEED의 은총]";
 	mes "골드코인 ^FF0000" + .@amount + "개^000000를 사용하시겠습니까?";
-	mes "연장 시간: ^FF0000" + .@amount + "시간^000000";
+	mes "연장 시간: ^FF0000" + .@total_hours + "시간^000000";
 
 	if (.@days > 0)
 		mes "환산 시간: " + .@days + "일 " + .@hours + "시간";
@@ -226,9 +227,9 @@ function	script	NeedGrace_ApplyBuff	{
 	delitem .@coin, .@amount;
 
 	if (NeedGraceUntil > .@now)
-		NeedGraceUntil += .@amount * 3600;
+		NeedGraceUntil += .@amount * 21600;
 	else
-		NeedGraceUntil = .@now + (.@amount * 3600);
+		NeedGraceUntil = .@now + (.@amount * 21600);
 
 	sc_start SC_NEED_GRACE, (NeedGraceUntil - .@now) * 1000, 1;
 
