@@ -852,7 +852,7 @@ std::tuple<e_runereward_result, uint8> rune_askreward(map_session_data* sd, uint
 	uint8 bookNumber = 0;
 	enum e_additem_result flag;
 	t_itemid item_id;
-	int32 max_reward = 0;
+	size_t max_reward = 0;
 
 	//ShowError("rune_askreward tagID %d runesetid %d reward %d \n", tagID, runesetid, reward);
 	auto it_setrune_data = std::find_if(sd->runeSets.begin(), sd->runeSets.end(), [tagID, runesetid](const s_runeset_data& runeSet) {
