@@ -4912,7 +4912,11 @@ static int8 skill_castend_id_check(block_list *src, block_list *target, uint16 s
 			} break;
 	}
 
-	if (inf&INF_ATTACK_SKILL ||
+	if (skill_id == AB_CLEARANCE && src == target)
+		inf = BCT_SELF;
+	else if (skill_id == AB_CLEARANCE)
+		inf = BCT_ENEMY;
+	else if (inf&INF_ATTACK_SKILL ||
 		(inf&INF_SELF_SKILL && skill->inf2[INF2_NOTARGETSELF]) //Combo skills
 		) // Casted through combo.
 		inf = BCT_ENEMY; //Offensive skill.
@@ -4920,11 +4924,6 @@ static int8 skill_castend_id_check(block_list *src, block_list *target, uint16 s
 		inf = BCT_NOENEMY;
 	else
 		inf = 0;
-
-	// Clearance is an attack-target skill so it can still affect monsters, but it is also
-	// allowed to target its caster. Do not broaden the relation rules for other targets.
-	if (skill_id == AB_CLEARANCE && src == target)
-		inf = BCT_SELF;
 
 	if ((skill->inf2[INF2_PARTYONLY] || skill->inf2[INF2_GUILDONLY]) && src != target) {
 		inf |=
