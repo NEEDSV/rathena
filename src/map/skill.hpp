@@ -655,6 +655,7 @@ bool skill_isNotOk_hom(homun_data *hd, uint16 skill_id, uint16 skill_lv);
 bool skill_isNotOk_mercenary( uint16 skill_id, s_mercenary_data& md);
 
 bool skill_isNotOk_npcRange(block_list *src, uint16 skill_id, uint16 skill_lv, int32 pos_x, int32 pos_y);
+bool skill_is_battleground_objective_protected(block_list* src, uint16 skill_id, uint16 skill_lv, int16 x, int16 y, bool display_failure);
 
 // Item creation
 int16 skill_can_produce_mix( map_session_data *sd, t_itemid nameid, int32 trigger, int32 qty);

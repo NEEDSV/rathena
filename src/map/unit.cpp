@@ -910,6 +910,9 @@ int32 unit_walktoxy( block_list *bl, int16 x, int16 y, unsigned char flag)
 			unit_check_start_teleport_timer(sd->hd);
 		if (sd->pd != nullptr)
 			unit_check_start_teleport_timer(sd->pd);
+
+		if (flag&4)
+			pc_need_macro_hunt_record_walk(*sd);
 	}
 
 	return unit_walktoxy_sub(bl);
@@ -2639,6 +2642,8 @@ int32 unit_skilluse_pos2( block_list *src, int16 skill_x, int16 skill_y, uint16 
 
 	if( sd ) {
 		if( skill_isNotOk(skill_id, *sd) || !skill_check_condition_castbegin(*sd, skill_id, skill_lv) )
+			return 0;
+		if (skill_is_battleground_objective_protected(src, skill_id, skill_lv, skill_x, skill_y, true))
 			return 0;
 		if (skill_id == MG_FIREWALL && !skill_pos_maxcount_check(src, skill_x, skill_y, skill_id, skill_lv, BL_PC, true))
 			return 0; // Special check for Firewall only

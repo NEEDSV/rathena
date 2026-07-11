@@ -1191,6 +1191,45 @@ struct s_skill_unit_layout *skill_get_unit_layout(uint16 skill_id, uint16 skill_
 	return &skill_unit_layout[0]; // default 1x1 layout
 }
 
+static int32 skill_battleground_objective_sub(block_list* bl, va_list) {
+	mob_data* md = BL_CAST(BL_MOB, bl);
+
+	if (md == nullptr)
+		return 0;
+
+	switch (md->mob_id) {
+		case 1909: // OBJ_A - Food Storage
+		case 1910: // OBJ_B - Food Depot
+		case 1914: // OBJ_A2 - Blue Crystal
+		case 1915: // OBJ_B2 - Pink Crystal
+			return 1;
+	}
+
+	return 0;
+}
+
+bool skill_is_battleground_objective_protected(block_list* src, uint16 skill_id, uint16 skill_lv, int16 x, int16 y, bool display_failure) {
+	if (src == nullptr || (skill_id != MG_SAFETYWALL && skill_id != AL_PNEUMA) || !map_getmapflag(src->m, MF_BATTLEGROUND))
+		return false;
+
+	s_skill_unit_layout* layout = skill_get_unit_layout(skill_id, skill_lv, src, x, y);
+
+	for (int32 i = 0; i < layout->count; ++i) {
+		if (map_foreachincell(skill_battleground_objective_sub, src->m, x + layout->dx[i], y + layout->dy[i], BL_MOB) == 0)
+			continue;
+
+		if (display_failure) {
+			if (map_session_data* sd = BL_CAST(BL_PC, src); sd != nullptr) {
+				clif_displaymessage(sd->fd, "This skill cannot be used near a battleground objective.");
+				clif_skill_fail(*sd, skill_id);
+			}
+		}
+		return true;
+	}
+
+	return false;
+}
+
 /** Stores temporary values.
  * Common usages:
  * [0] holds number of targets in area
@@ -5381,6 +5420,8 @@ TIMER_FUNC(skill_castend_pos){
 
 	do {
 		if( status_isdead(*src) )
+			break;
+		if (skill_is_battleground_objective_protected(src, ud->skill_id, ud->skill_lv, ud->skillx, ud->skilly, true))
 			break;
 
 		// These actions happen even if the skill fails except when the caster is already dead
