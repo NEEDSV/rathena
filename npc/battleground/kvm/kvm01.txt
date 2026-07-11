@@ -548,6 +548,8 @@ OnCroixJoin:
 //============================================================
 bat_c01,51,130,5	script	KVM 담당관#KVM01A	419,{
 	.@bonusmount = ($BG_User_Count - 5) * 2;
+	if ($BG_CROIX_LEADER_CID == .@char_id || $BG_GUILLAUME_LEADER_CID == .@char_id)
+		.@partyleaderbonus = 3;
 	
 	if ($@KvM01BG_Victory) {
 		mes "[KVM 담당관]";
@@ -556,8 +558,10 @@ bat_c01,51,130,5	script	KVM 담당관#KVM01A	419,{
 			mes "멋진 경기였습니다.";
 			mes "KVM의 영광이 함께하길 바랍니다.";
 			mes "승리 보상으로 전투휘장 3개를 획득했습니다.";
+			if (.@partyleaderbonus > 0)
+				mes "파티장 보너스로 3개를 추가 획득했습니다.";
 			close2;
-			getitem 7773,3;
+			getitem 7773,3 + .@partyleaderbonus;
 			.@gold_amount = 20 + .@bonusmount;
 			.@gold_amount = callfunc("F_NEED_GoldEvent_BGAmount", .@gold_amount);
 			getitem 399990, .@gold_amount;
@@ -565,24 +569,31 @@ bat_c01,51,130,5	script	KVM 담당관#KVM01A	419,{
 		else if ($@KvM01BG_Victory == 3) {
 			mes "이번 경기는 무승부로 종료되었습니다.";
 			mes "참여 보상으로 전투휘장 3개를 획득했습니다.";
+			if (.@partyleaderbonus > 0)
+				mes "파티장 보너스로 3개를 추가 획득했습니다.";
 			close2;
-			getitem 7773,3;
+			getitem 7773,3 + .@partyleaderbonus;
 			.@gold_amount = 20 + .@bonusmount;
 			.@gold_amount = callfunc("F_NEED_GoldEvent_BGAmount", .@gold_amount);
 			getitem 399990, .@gold_amount;
 		}
 		else {
 			mes "아쉽지만 다음 전투에서는 더 좋은 결과가 있기를 바랍니다.";
-			mes "패배 보상으로 전투휘장 1개를 획득했습니다.";
+			mes "패배 보상으로 전투휘장 2개를 획득했습니다.";
+			if (.@partyleaderbonus > 0)
+				mes "파티장 보너스로 3개를 추가 획득했습니다.";
 			close2;
-			getitem 7773,1;
-			.@gold_amount = 10 + .@bonusmount;
+			getitem 7773,2 + .@partyleaderbonus;
+			.@gold_amount = 15 + .@bonusmount;
 			.@gold_amount = callfunc("F_NEED_GoldEvent_BGAmount", .@gold_amount);
 			getitem 399990, .@gold_amount;
 		}
 
 		bg_leave;
 		Bat_Team = 0;
+		set BATTLEGROUND_POINT, BATTLEGROUND_POINT + 3;
+		if ($BG_CROIX_LEADER_CID == .@char_id || $BG_GUILLAUME_LEADER_CID == .@char_id)
+			set BATTLEGROUND_POINT, BATTLEGROUND_POINT + 5;
 		warp "bat_room",154,150;
 		// 현재 캐릭터가 파티장인지 확인
 		if (getcharid(1)) {
