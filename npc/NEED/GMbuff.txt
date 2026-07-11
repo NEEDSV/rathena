@@ -15,7 +15,9 @@ new_zone01,134,113,4	script	BUFF	4_F_KAFRA1,{
 	announce "[NEED 안내] 모든 모험가에게 NEED의 축복이 지급되었습니다.", bc_all, 0xFFD700;
 
 	.@count = getunits(BL_PC, .@aid);
-
+	.@give_time = 1800000; // 30분
+	.@remain_time = getstatus(SC_NEED_GRACE, 5);
+	
 	for (.@i = 0; .@i < .@count; .@i++) {
 		if (!attachrid(.@aid[.@i]))
 			continue;
@@ -32,7 +34,11 @@ new_zone01,134,113,4	script	BUFF	4_F_KAFRA1,{
 		sc_start SC_ASSUMPTIO,1800000,5;
 		sc_start SC_KYRIE,1800000,10;
 		sc_start SC_SECRAMENT,1800000,5;
-		sc_start SC_NEED_GRACE,1800000,1;
+		
+		if (.@remain_time < .@give_time) {
+			sc_start SC_NEED_GRACE,1800000,1;
+			end;
+		}
 
 		// 올마이티(12883) 효과
 		sc_start SC_ALMIGHTY,1800000,30;
