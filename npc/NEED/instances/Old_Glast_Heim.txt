@@ -484,11 +484,15 @@ if (getgroupid() == 99) {
 
 //스킵용 워프
 1@gl_k,149,96,1	script	#cut01	GATE_SKYBLUE,{
-	instance_warpall "1@gl_k",151,232;
-	enablenpc instance_npcname("#Mimelon_cut");
-	enablenpc instance_npcname("히멜메즈#2");
-	enablenpc instance_npcname("바르문트#2");
-	enablenpc instance_npcname("하인리히#4");
+	// 늦게 입장한 파티원은 개인 이동만 허용한다.
+	// 보스 연출 NPC는 인스턴스당 최초 1회만 활성화한다.
+	if ('ogh_root_state == 0) {
+		enablenpc instance_npcname("#Mimelon_cut");
+		enablenpc instance_npcname("히멜메즈#2");
+		enablenpc instance_npcname("바르문트#2");
+		enablenpc instance_npcname("하인리히#4");
+	}
+	warp 'map_name$[0],151,232;
 	end;
 }
 
@@ -1233,7 +1237,12 @@ OnTimer5000:
 1@gl_k,150,257,0	script	#Mimelon_cut	HIDDEN_WARP_NPC,7,7,{
 	end;
 OnTouch_:
+	// 0: 시작 전 / 1: 연출 중 / 2: 보스 소환 / 3: 처치 완료
+	if ('ogh_root_state != 0)
+		end;
+	'ogh_root_state = 1;
 	disablenpc instance_npcname("#Mimelon_cut");
+	disablenpc instance_npcname("#Mimelon");
 	initnpctimer;
 	'npc_himelmez2$ = instance_npcname("히멜메즈#2");
 	'npc_heinrich4$ = instance_npcname("하인리히#4");
@@ -1263,12 +1272,18 @@ OnTimer15200:
 1@gl_k,1,1,0	script	#ghmemorialmob04_cut	HIDDEN_WARP_NPC,{
 	end;
 OnStart:
+	if ('ogh_root_state != 1)
+		end;
+	'ogh_root_state = 2;
 	enablenpc instance_npcname("#ghmemorialmob04_cut");
 	monster 'map_name$[0],150,259,"타락한뿌리",2475,1, instance_npcname("#ghmemorialmob04_cut") + "::OnMyMobDead";// MG_CORRUPTION_ROOT
 	unittalk $@mobid[0],"그르르르르르르~~~";
 	end;
 OnMyMobDead:
+	if ('ogh_root_state != 2)
+		end;
 	if (mobcount('map_name$[0], instance_npcname("#ghmemorialmob04_cut") + "::OnMyMobDead") < 1) {
+		'ogh_root_state = 3;
 		mapannounce 'map_name$[0], "12시 방향 기사단 2층으로 통하는 출구가 열렸습니다.", bc_map,0xFFFF00;
 		npctalk "바르문트: 녀석의 몸에서 떨어진 물건을 주워 두었네. 갖고싶은 사람은 내게서 받아가게.", instance_npcname("바르문트#2");
 		enablenpc instance_npcname("#2F Entrance");
@@ -1285,7 +1300,12 @@ OnMyMobDead:
 1@gl_k,150,257,0	script	#Mimelon	HIDDEN_WARP_NPC,7,7,{
 	end;
 OnTouch_:
+	// 일반/간소화 연출 중 하나만 인스턴스당 1회 실행한다.
+	if ('ogh_root_state != 0)
+		end;
+	'ogh_root_state = 1;
 	disablenpc instance_npcname("#Mimelon");
+	disablenpc instance_npcname("#Mimelon_cut");
 	initnpctimer;
 	'npc_himelmez2$ = instance_npcname("히멜메즈#2");
 	'npc_heinrich4$ = instance_npcname("하인리히#4");
@@ -1340,12 +1360,18 @@ OnTimer38000:
 1@gl_k,1,1,0	script	#ghmemorialmob04	HIDDEN_WARP_NPC,{
 	end;
 OnStart:
+	if ('ogh_root_state != 1)
+		end;
+	'ogh_root_state = 2;
 	enablenpc instance_npcname("#ghmemorialmob04");
 	monster 'map_name$[0],150,259,"타락한뿌리",2475,1, instance_npcname("#ghmemorialmob04") + "::OnMyMobDead";// MG_CORRUPTION_ROOT
 	unittalk $@mobid[0],"그르르르르르르~~~";
 	end;
 OnMyMobDead:
+	if ('ogh_root_state != 2)
+		end;
 	if (mobcount('map_name$[0], instance_npcname("#ghmemorialmob04") + "::OnMyMobDead") < 1) {
+		'ogh_root_state = 3;
 		mapannounce 'map_name$[0], "12시 방향 기사단 2층으로 통하는 출구가 열렸습니다.", bc_map,0xFFFF00;
 		npctalk "바르문트: 녀석의 몸에서 떨어진 물건을 주워 두었네. 갖고싶은 사람은 내게서 받아가게.", instance_npcname("바르문트#2");
 		enablenpc instance_npcname("#2F Entrance");
@@ -2226,6 +2252,7 @@ OnTimer10000:
 OnInstanceInit:
 	'map_name$[0] = instance_mapname("1@gl_k");
 	'map_name$[1] = instance_mapname("2@gl_k");
+	'ogh_root_state = 0; // 0: 시작 전, 1: 연출 중, 2: 소환됨, 3: 처치 완료
 	
 	//스킵용 워프
 	disablenpc instance_npcname("#cut01");
@@ -2500,11 +2527,15 @@ OnInstanceInit:
 
 //스킵용 워프
 1@gl_k2,149,96,1	script	#cut01_h	GATE_SKYBLUE,{
-	instance_warpall "1@gl_k2",151,232;
-	enablenpc instance_npcname("#Mimelon_cut_h");
-	enablenpc instance_npcname("히멜메즈#2_h");
-	enablenpc instance_npcname("바르문트#2_h");
-	enablenpc instance_npcname("하인리히#4_h");
+	// 늦게 입장한 파티원은 개인 이동만 허용한다.
+	// 보스 연출 NPC는 인스턴스당 최초 1회만 활성화한다.
+	if ('ogh_root_state_h == 0) {
+		enablenpc instance_npcname("#Mimelon_cut_h");
+		enablenpc instance_npcname("히멜메즈#2_h");
+		enablenpc instance_npcname("바르문트#2_h");
+		enablenpc instance_npcname("하인리히#4_h");
+	}
+	warp 'map_name$[0],151,232;
 	end;
 }
 
@@ -3247,7 +3278,12 @@ OnTimer5000:
 1@gl_k2,150,257,0	script	#Mimelon_cut_h	HIDDEN_WARP_NPC,7,7,{
 	end;
 OnTouch_:
+	// 0: 시작 전 / 1: 연출 중 / 2: 보스 소환 / 3: 처치 완료
+	if ('ogh_root_state_h != 0)
+		end;
+	'ogh_root_state_h = 1;
 	disablenpc instance_npcname("#Mimelon_cut_h");
+	disablenpc instance_npcname("#Mimelon_h");
 	initnpctimer;
 	'npc_himelmez2$ = instance_npcname("히멜메즈#2_h");
 	'npc_heinrich4$ = instance_npcname("하인리히#4_h");
@@ -3277,6 +3313,9 @@ OnTimer15200:
 1@gl_k2,1,1,0	script	#ghmemorialmob04_cut_h	HIDDEN_WARP_NPC,{
 	end;
 OnStart:
+	if ('ogh_root_state_h != 1)
+		end;
+	'ogh_root_state_h = 2;
 	enablenpc instance_npcname("#ghmemorialmob04_cut_h");
 	monster 'map_name$[0],150,259,"타락한뿌리",3151,1, instance_npcname("#ghmemorialmob04_cut_h") + "::OnMyMobDead";// MG_CORRUPTION_ROOT
 	'boss_gid = $@mobid[0];
@@ -3286,7 +3325,10 @@ OnStart:
 	end;
 	
 OnMyMobDead:
-	if (mobcount('map_name$[0], instance_npcname("#ghmemorialmob04_h") + "::OnMyMobDead") < 1) {
+	if ('ogh_root_state_h != 2)
+		end;
+	if (mobcount('map_name$[0], instance_npcname("#ghmemorialmob04_cut_h") + "::OnMyMobDead") < 1) {
+		'ogh_root_state_h = 3;
 		killmonster 'map_name$[0],instance_npcname(strnpcinfo(0)) + "::OnUnitDead";
 		killmonster 'map_name$[0],instance_npcname(strnpcinfo(0)) + "::OnUnitDead2";
 		mapannounce 'map_name$[0], "12시 방향 기사단 2층으로 통하는 출구가 열렸습니다.", bc_map,0xFFFF00;
@@ -3358,7 +3400,12 @@ end;
 1@gl_k2,150,257,0	script	#Mimelon_h	HIDDEN_WARP_NPC,7,7,{
 	end;
 OnTouch_:
+	// 일반/간소화 연출 중 하나만 인스턴스당 1회 실행한다.
+	if ('ogh_root_state_h != 0)
+		end;
+	'ogh_root_state_h = 1;
 	disablenpc instance_npcname("#Mimelon_h");
+	disablenpc instance_npcname("#Mimelon_cut_h");
 	initnpctimer;
 	'npc_himelmez2$ = instance_npcname("히멜메즈#2_h");
 	'npc_heinrich4$ = instance_npcname("하인리히#4_h");
@@ -3413,6 +3460,9 @@ OnTimer38000:
 1@gl_k2,1,1,0	script	#ghmemorialmob04_h	HIDDEN_WARP_NPC,{
 	end;
 OnStart:
+	if ('ogh_root_state_h != 1)
+		end;
+	'ogh_root_state_h = 2;
 	enablenpc instance_npcname("#ghmemorialmob04_h");
 	monster 'map_name$[0],150,259,"타락한뿌리",3151,1, instance_npcname("#ghmemorialmob04_h") + "::OnMyMobDead";// MG_CORRUPTION_ROOT
 	'boss_gid = $@mobid[0];
@@ -3422,7 +3472,10 @@ OnStart:
 	end;
 	
 OnMyMobDead:
+	if ('ogh_root_state_h != 2)
+		end;
 	if (mobcount('map_name$[0], instance_npcname("#ghmemorialmob04_h") + "::OnMyMobDead") < 1) {
+		'ogh_root_state_h = 3;
 		killmonster 'map_name$[0],instance_npcname(strnpcinfo(0)) + "::OnUnitDead";
 		killmonster 'map_name$[0],instance_npcname(strnpcinfo(0)) + "::OnUnitDead2";
 		mapannounce 'map_name$[0], "12시 방향 기사단 2층으로 통하는 출구가 열렸습니다.", bc_map,0xFFFF00;
@@ -4391,6 +4444,7 @@ OnTimer10000:
 OnInstanceInit:
 	'map_name$[0] = instance_mapname("1@gl_k2");
 	'map_name$[1] = instance_mapname("2@gl_k2");
+	'ogh_root_state_h = 0; // 0: 시작 전, 1: 연출 중, 2: 소환됨, 3: 처치 완료
 	
 	//스킵용 워프
 	disablenpc instance_npcname("#cut01_h");
