@@ -5,6 +5,8 @@
 #define BATTLE_HPP
 
 #include <bitset>
+#include <string>
+#include <vector>
 
 #include <common/cbasetypes.hpp>
 #include <common/mmo.hpp>
@@ -814,8 +816,6 @@ struct Battle_Config
 	int32 need_world_drop_event_target_item_id;
 	int32 need_world_drop_event_debug_message;
 	int32 need_world_drop_event_debug_gm_level;
-	char need_world_drop_mvp_excluded_maps[256];
-
 	int32 feature_dynamicnpc_timeout;
 	int32 feature_dynamicnpc_rangex;
 	int32 feature_dynamicnpc_rangey;
@@ -847,6 +847,7 @@ struct Battle_Config
 };
 
 extern struct Battle_Config battle_config;
+extern std::vector<std::string> need_world_drop_mvp_excluded_maps;
 
 void do_init_battle(void);
 void do_final_battle(void);

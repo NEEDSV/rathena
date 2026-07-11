@@ -2961,27 +2961,16 @@ static int32 need_world_drop_eventqueue_used(const map_session_data& sd) {
 	return used;
 }
 
-static bool need_world_drop_map_in_csv(const char *csv, const char *map_name) {
-	char buf[sizeof(battle_config.need_world_drop_mvp_excluded_maps)];
+static const std::string *need_world_drop_find_excluded_map(const char *map_name) {
+	if (map_name == nullptr)
+		return nullptr;
 
-	nullpo_retr(false, csv);
-	nullpo_retr(false, map_name);
-
-	safestrncpy(buf, csv, sizeof(buf));
-
-	for (char *token = strtok(buf, ","); token != nullptr; token = strtok(nullptr, ",")) {
-		while (*token == ' ' || *token == '\t')
-			++token;
-
-		char *end = token + strlen(token);
-		while (end > token && (end[-1] == ' ' || end[-1] == '\t' || end[-1] == '\r' || end[-1] == '\n'))
-			*--end = '\0';
-
-		if (strcmpi(token, map_name) == 0)
-			return true;
+	for (const std::string& excluded_map : need_world_drop_mvp_excluded_maps) {
+		if (strcmpi(excluded_map.c_str(), map_name) == 0)
+			return &excluded_map;
 	}
 
-	return false;
+	return nullptr;
 }
 
 static int32 need_world_drop_clamp_rate(int64 rate) {
@@ -3138,14 +3127,16 @@ static void need_world_drop_on_kill(const need_world_drop_owner& owner, mob_data
 		return;
 	}
 
-	const map_data *mapdata = map_getmapdata(sd->m);
+	const map_data *mapdata = map_getmapdata(md->m);
 	const char *map_name = mapdata != nullptr ? mapdata->name : "";
 
 	if (md->db->mexp > 0) {
 		if (battle_config.need_world_drop_mvp_enable == 0) {
 			need_world_drop_debug_log(owner, md, "mvp", 0, 0, 0, 0, 0, -1, battle_config.need_world_drop_mvp_item_id, battle_config.need_world_drop_mvp_amount, "skip", "mvp_disabled");
-		} else if (need_world_drop_map_in_csv(battle_config.need_world_drop_mvp_excluded_maps, map_name)) {
+		} else if (const std::string *excluded_map = need_world_drop_find_excluded_map(map_name); excluded_map != nullptr) {
 			need_world_drop_debug_log(owner, md, "mvp", 0, 0, 0, 0, 0, -1, battle_config.need_world_drop_mvp_item_id, battle_config.need_world_drop_mvp_amount, "skip", "mvp_excluded_map");
+			if (battle_config.need_world_drop_debug != 0)
+				ShowInfo("NeedWorldDrop: exclude_reason=mvp_excluded_map map=%s configured_map=%s\n", map_name, excluded_map->c_str());
 		} else {
 			need_world_drop_try_reward(owner, md, "mvp", battle_config.need_world_drop_mvp_item_id, battle_config.need_world_drop_mvp_amount, battle_config.need_world_drop_mvp_rate, 0, battle_config.need_world_drop_mvp_rate, false);
 		}

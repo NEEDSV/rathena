@@ -39,6 +39,7 @@
 using namespace rathena;
 
 struct Battle_Config battle_config;
+std::vector<std::string> need_world_drop_mvp_excluded_maps;
 static struct eri *delay_damage_ers; //For battle delay damage structures.
 
 #ifndef MAX_ENEMY_SEARCH_COUNT
@@ -9069,7 +9070,7 @@ void battle_set_defaults()
 	for (i = 0; i < ARRAYLENGTH(battle_data); i++)
 		*battle_data[i].val = battle_data[i].defval;
 
-	safestrncpy(battle_config.need_world_drop_mvp_excluded_maps, "bossnia_01,bossnia_02,bossnia_03", sizeof(battle_config.need_world_drop_mvp_excluded_maps));
+	need_world_drop_mvp_excluded_maps = { "bossnia_01", "bossnia_02", "bossnia_03" };
 }
 
 static bool battle_need_world_drop_range_invalid(const char *name, int32 min_level, int32 max_level) {
@@ -9088,24 +9089,32 @@ static bool battle_need_world_drop_ranges_overlap(int32 a_min, int32 a_max, int3
 	return a_min <= b_hi && b_min <= a_hi;
 }
 
-static void battle_need_world_drop_validate_excluded_maps(void) {
-	char buf[sizeof(battle_config.need_world_drop_mvp_excluded_maps)];
+static void battle_need_world_drop_parse_excluded_maps(const char *value) {
+	need_world_drop_mvp_excluded_maps.clear();
 
-	safestrncpy(buf, battle_config.need_world_drop_mvp_excluded_maps, sizeof(buf));
+	if (value == nullptr)
+		return;
 
-	for (char *token = strtok(buf, ","); token != nullptr; token = strtok(nullptr, ",")) {
-		while (*token == ' ' || *token == '\t')
-			++token;
+	const std::string maps(value);
+	size_t begin = 0;
 
-		char *end = token + strlen(token);
-		while (end > token && (end[-1] == ' ' || end[-1] == '\t' || end[-1] == '\r' || end[-1] == '\n'))
-			*--end = '\0';
+	while (begin <= maps.length()) {
+		const size_t comma = maps.find(',', begin);
+		const size_t end = comma == std::string::npos ? maps.length() : comma;
+		size_t first = begin;
+		size_t last = end;
 
-		if (*token == '\0')
-			continue;
+		while (first < last && (maps[first] == ' ' || maps[first] == '\t' || maps[first] == '\r' || maps[first] == '\n'))
+			++first;
+		while (last > first && (maps[last - 1] == ' ' || maps[last - 1] == '\t' || maps[last - 1] == '\r' || maps[last - 1] == '\n'))
+			--last;
 
-		if (mapindex_name2id(token) == 0)
-			ShowWarning("NeedWorldDrop: mvp excluded map '%s' was not found in map_index. Please check need_world_drop_mvp_excluded_maps.\n", token);
+		if (first < last)
+			need_world_drop_mvp_excluded_maps.emplace_back(maps.substr(first, last - first));
+
+		if (comma == std::string::npos)
+			break;
+		begin = comma + 1;
 	}
 }
 
@@ -9142,7 +9151,6 @@ static void battle_need_world_drop_validate_conf(void) {
 		}
 	}
 
-	battle_need_world_drop_validate_excluded_maps();
 }
 
 /*==================================
@@ -9364,13 +9372,28 @@ int32 battle_config_read(const char* cfgName)
 		while(fgets(line, sizeof(line), fp)) {
 			if (line[0] == '/' && line[1] == '/')
 				continue;
+
+			char *colon = strchr(line, ':');
+			if (colon != nullptr) {
+				char *key_begin = line;
+				while (*key_begin == ' ' || *key_begin == '\t')
+					++key_begin;
+
+				char *key_end = colon;
+				while (key_end > key_begin && (key_end[-1] == ' ' || key_end[-1] == '\t'))
+					--key_end;
+
+				if (static_cast<size_t>(key_end - key_begin) == strlen("need_world_drop_mvp_excluded_maps") &&
+					strncasecmp(key_begin, "need_world_drop_mvp_excluded_maps", key_end - key_begin) == 0) {
+					battle_need_world_drop_parse_excluded_maps(colon + 1);
+					continue;
+				}
+			}
+
 			if (sscanf(line, "%1023[^:]:%1023s", w1, w2) != 2)
 				continue;
 			if (strcmpi(w1, "import") == 0)
 				battle_config_read(w2);
-			else if( strcmpi( w1, "need_world_drop_mvp_excluded_maps" ) == 0 ){
-				safestrncpy(battle_config.need_world_drop_mvp_excluded_maps, w2, sizeof(battle_config.need_world_drop_mvp_excluded_maps));
-			}
 			else if( strcmpi( w1, "atcommand_symbol" ) == 0 ){
 				const char* symbol = &w2[0];
 
