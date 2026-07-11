@@ -2108,7 +2108,7 @@ OnTouch_:
 		set .hide, .hide | (1<<.@seal);
 		delitem .@i[0],1;
 		specialeffect .@i[4];
-		monster "thana_boss",.@i[2],.@i[3],.@j$,.@i[1],1,strnpcinfo(0)+"::OnMyMobDead";
+		monster "thana_boss",.@i[2],.@i[3],.@j$,.@i[1],1,strnpcinfo(3)+"::OnMyMobDead";
 		switch($@thana_summon2) {
 			case 0: set .@str$,"...대체...누가...의...기억을...깨운...것이냐... "+.@j$+"...?"; break;
 			case 1: set .@str$,"...어찌하여...의...기억을...해방시킨...게냐... "+.@j$+"...?"; break;
@@ -2124,9 +2124,12 @@ OnTouch_:
 	close;
 
 OnMyMobDead:
-	set $@thana_summon2, $@thana_summon2+1;
-	if ($@thana_summon2 == 4)
+	$@thana_summon2++;
+
+	if ($@thana_summon2 >= 4) {
+		$@thana_summon2 = 4;
 		mapwarp "thana_boss","thana_boss",141,228;
+	}
 	end;
 }
 thana_boss,202,75,3	duplicate(Memory Seal#tt1)	기억의 봉인#tt2::Memory Seal#tt2	1712,3,3
