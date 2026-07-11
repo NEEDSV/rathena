@@ -13166,7 +13166,7 @@ void pc_overheat(map_session_data &sd, int16 heat) {
 		status_change_end(&sd, SC_OVERHEAT);
 		if (had_heat) {
 			char output[CHAT_SIZE_MAX];
-			safesnprintf(output, sizeof(output), msg_txt(&sd, 1646), 0, heat_limit);
+			safesnprintf(output, sizeof(output), msg_txt(&sd, 1646), 0, heat_limit * 10); // NEED QoL: display in client tooltip unit (x10)
 			clif_displaymessage(sd.fd, output);
 		}
 		sd.overheat_warn_level = 0;
@@ -13200,13 +13200,13 @@ void pc_overheat(map_session_data &sd, int16 heat) {
 		char output[CHAT_SIZE_MAX];
 		switch (stage) {
 			case 1:
-				safesnprintf(output, sizeof(output), msg_txt(&sd, 1643), cur, heat_limit);
+				safesnprintf(output, sizeof(output), msg_txt(&sd, 1643), cur * 10, heat_limit * 10);
 				break;
 			case 2:
-				safesnprintf(output, sizeof(output), msg_txt(&sd, 1644), cur, heat_limit);
+				safesnprintf(output, sizeof(output), msg_txt(&sd, 1644), cur * 10, heat_limit * 10);
 				break;
 			default:
-				safesnprintf(output, sizeof(output), msg_txt(&sd, 1645), cur, heat_limit);
+				safesnprintf(output, sizeof(output), msg_txt(&sd, 1645), cur * 10, heat_limit * 10);
 				break;
 		}
 		clif_displaymessage(sd.fd, output);
