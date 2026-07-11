@@ -13679,6 +13679,21 @@ int32 status_change_end( block_list* bl, enum sc_type type, int32 tid ){
 		status_calc_state( *bl, *sc, scdb, false );
 	}
 
+	// Deep Sleep controls several independent action restrictions. Rebuild the cached
+	// restriction state when it ends so an interrupted/timer-driven removal cannot leave
+	// only cast, item, or equipment restrictions behind. Restrictions from other active
+	// statuses are restored by the loop below.
+	if (type == SC_DEEPSLEEP) {
+		sc->cant = {};
+
+		for (const auto& active : *sc) {
+			std::shared_ptr<s_status_change_db> active_db = status_db.find(active.first);
+
+			if (active_db != nullptr && active_db->state.any())
+				status_calc_state(*bl, *sc, active_db, true);
+		}
+	}
+
 	if (scdb->flag[SCF_DISPLAYPC] || scdb->flag[SCF_DISPLAYNPC])
 		status_display_remove(bl,type);
 

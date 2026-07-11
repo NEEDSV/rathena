@@ -10,6 +10,26 @@
 SkillClearance::SkillClearance() : SkillImpl(AB_CLEARANCE) {
 }
 
+static bool clearance_removes_strip_or_mask(sc_type status) {
+	switch (status) {
+		case SC_STRIPWEAPON:
+		case SC_STRIPSHIELD:
+		case SC_STRIPARMOR:
+		case SC_STRIPHELM:
+		case SC__STRIPACCESSORY:
+		case SC_SHADOW_STRIP:
+		case SC__ENERVATION:
+		case SC__GROOMY:
+		case SC__IGNORANCE:
+		case SC__LAZINESS:
+		case SC__UNLUCKY:
+		case SC__WEAKNESS:
+			return true;
+		default:
+			return false;
+	}
+}
+
 void SkillClearance::castendNoDamageId(block_list *src, block_list *target, uint16 skill_lv, t_tick tick, int32& flag) const {
 	status_change *tsc = status_get_sc(target);
 	map_session_data* sd = BL_CAST( BL_PC, src );
@@ -47,7 +67,7 @@ void SkillClearance::castendNoDamageId(block_list *src, block_list *target, uint
 			if (!tsc->getSCE(status))
 				continue;
 
-			if (it.second->flag[SCF_NOCLEARANCE])
+			if (it.second->flag[SCF_NOCLEARANCE] && !clearance_removes_strip_or_mask(status))
 				continue;
 
 			switch (status) {

@@ -4921,6 +4921,11 @@ static int8 skill_castend_id_check(block_list *src, block_list *target, uint16 s
 	else
 		inf = 0;
 
+	// Clearance is an attack-target skill so it can still affect monsters, but it is also
+	// allowed to target its caster. Do not broaden the relation rules for other targets.
+	if (skill_id == AB_CLEARANCE && src == target)
+		inf = BCT_SELF;
+
 	if ((skill->inf2[INF2_PARTYONLY] || skill->inf2[INF2_GUILDONLY]) && src != target) {
 		inf |=
 			(skill->inf2[INF2_PARTYONLY]?BCT_PARTY:0)|
