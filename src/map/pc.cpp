@@ -5,6 +5,7 @@
 
 #include <cmath>
 #include <cstdlib>
+#include <cstring>
 #include <map>
 
 #ifdef MAP_GENERATOR
@@ -7198,6 +7199,9 @@ enum e_setpos pc_setpos(map_session_data* sd, uint16 mapindex, int32 x, int32 y,
 		vending_update(*sd);
 	if (sd->state.buyingstore)
 		buyingstore_update(*sd);
+
+	if (clrtype == CLR_TELEPORT)
+		pc_need_macro_hunt_record_teleport(*sd);
 	
 	return SETPOS_OK;
 }
@@ -15866,6 +15870,121 @@ static void pc_macro_detect_log(map_session_data &sd, const char *event, int32 r
 		sd.status.account_id, sd.status.char_id, esc_char_name, esc_map, sd.x, sd.y, captcha_id, esc_event, retry_left, esc_punishment, punishment_time, sd.macro_detect.reporter_aid)) {
 		Sql_ShowDebug(mmysql_handle);
 	}
+}
+
+static int32 pc_need_macro_eventqueue_used(const map_session_data &sd) {
+	int32 used = 0;
+
+	for (int32 i = 0; i < MAX_EVENTQUEUE; ++i) {
+		if (sd.eventqueue[i][0] != '\0')
+			++used;
+	}
+
+	return used;
+}
+
+static void pc_need_macro_hunt_reset(map_session_data &sd) {
+	sd.need_macro_hunt.kill_count = 0;
+	sd.need_macro_hunt.check_count = 0;
+	sd.need_macro_hunt.first_kill_tick = 0;
+	sd.need_macro_hunt.last_kill_tick = 0;
+}
+
+static void pc_need_macro_hunt_debug_log(map_session_data &sd, const mob_data *md, const char *result, const char *reason, int32 roll) {
+	if (battle_config.need_macro_hunt_debug == 0)
+		return;
+
+	const t_tick now = gettick();
+	const map_data *mapdata = map_getmapdata(sd.m);
+	const char *map_name = mapdata != nullptr ? mapdata->name : "";
+	const t_tick last_walk_ms = sd.need_macro_hunt.last_walk_tick != 0 ? DIFF_TICK(now, sd.need_macro_hunt.last_walk_tick) : -1;
+	const t_tick last_teleport_ms = sd.need_macro_hunt.last_teleport_tick != 0 ? DIFF_TICK(now, sd.need_macro_hunt.last_teleport_tick) : -1;
+	const t_tick next_check_ms = sd.need_macro_hunt.next_check_tick != 0 ? DIFF_TICK(sd.need_macro_hunt.next_check_tick, now) : 0;
+	const t_tick hunt_time_ms = sd.need_macro_hunt.first_kill_tick != 0 ? DIFF_TICK(now, sd.need_macro_hunt.first_kill_tick) : 0;
+
+	ShowInfo("NeedMacroHunt: aid=%d cid=%d map=%s x=%d y=%d mob_id=%d direct_walk_count=%u last_walk_ms=%lld teleport_count=%u last_teleport_ms=%lld kill_count=%u check_count=%u hunt_time_ms=%lld next_check_ms=%lld included=%s reason=%s roll=%d rate=%d forced_kill=%d forced_time=%d eventqueue=%d/%d\n",
+		sd.status.account_id, sd.status.char_id, map_name, sd.x, sd.y, md != nullptr ? md->mob_id : 0,
+		sd.need_macro_hunt.walk_count, static_cast<long long>(last_walk_ms), sd.need_macro_hunt.teleport_count, static_cast<long long>(last_teleport_ms),
+		sd.need_macro_hunt.kill_count, sd.need_macro_hunt.check_count, static_cast<long long>(hunt_time_ms), static_cast<long long>(next_check_ms),
+		strcmp(result, "skip") == 0 ? "no" : "yes", reason, roll, battle_config.need_macro_hunt_check_rate,
+		battle_config.need_macro_hunt_force_kill_count, battle_config.need_macro_hunt_force_time,
+		pc_need_macro_eventqueue_used(sd), MAX_EVENTQUEUE);
+}
+
+void pc_need_macro_hunt_record_walk(map_session_data &sd) {
+	const t_tick now = gettick();
+
+	sd.need_macro_hunt.walk_count++;
+	sd.need_macro_hunt.last_walk_tick = now;
+}
+
+void pc_need_macro_hunt_record_teleport(map_session_data &sd) {
+	const t_tick now = gettick();
+
+	sd.need_macro_hunt.teleport_count++;
+	sd.need_macro_hunt.last_teleport_tick = now;
+}
+
+void pc_need_macro_hunt_on_mob_kill(map_session_data &sd, const mob_data &md) {
+	const t_tick now = gettick();
+	int32 roll = -1;
+	const char *reason = "random_not_hit";
+	bool trigger = false;
+
+	sd.need_macro_hunt.kill_count++;
+	sd.need_macro_hunt.check_count++;
+	sd.need_macro_hunt.last_kill_tick = now;
+
+	if (sd.need_macro_hunt.first_kill_tick == 0)
+		sd.need_macro_hunt.first_kill_tick = now;
+
+	if (sd.macro_detect.cd != nullptr || sd.macro_detect.retry > 0) {
+		pc_need_macro_hunt_debug_log(sd, &md, "skip", "captcha_active", roll);
+		return;
+	}
+
+	if (captcha_db.empty()) {
+		pc_need_macro_hunt_debug_log(sd, &md, "skip", "captcha_db_empty", roll);
+		return;
+	}
+
+	if (sd.need_macro_hunt.next_check_tick != 0 && DIFF_TICK(sd.need_macro_hunt.next_check_tick, now) > 0) {
+		pc_need_macro_hunt_debug_log(sd, &md, "skip", "cooldown", roll);
+		return;
+	}
+
+	if (battle_config.need_macro_hunt_min_kill_count > 0 && sd.need_macro_hunt.kill_count < static_cast<uint32>(battle_config.need_macro_hunt_min_kill_count)) {
+		pc_need_macro_hunt_debug_log(sd, &md, "skip", "min_kill", roll);
+		return;
+	}
+
+	if (battle_config.need_macro_hunt_force_kill_count > 0 && sd.need_macro_hunt.kill_count >= static_cast<uint32>(battle_config.need_macro_hunt_force_kill_count)) {
+		trigger = true;
+		reason = "force_kill";
+	} else if (battle_config.need_macro_hunt_force_time > 0 && sd.need_macro_hunt.first_kill_tick != 0 && DIFF_TICK(now, sd.need_macro_hunt.first_kill_tick) >= battle_config.need_macro_hunt_force_time) {
+		trigger = true;
+		reason = "force_time";
+	} else if (battle_config.need_macro_hunt_check_rate > 0) {
+		roll = rnd() % 10000;
+		if (roll < battle_config.need_macro_hunt_check_rate) {
+			trigger = true;
+			reason = "random_hit";
+		}
+	} else {
+		reason = "rate_disabled";
+	}
+
+	if (!trigger) {
+		pc_need_macro_hunt_debug_log(sd, &md, "skip", reason, roll);
+		return;
+	}
+
+	if (battle_config.need_macro_hunt_delay > 0)
+		sd.need_macro_hunt.next_check_tick = now + battle_config.need_macro_hunt_delay;
+
+	pc_need_macro_hunt_debug_log(sd, &md, "trigger", reason, roll);
+	pc_macro_reporter_process(sd);
+	pc_need_macro_hunt_reset(sd);
 }
 
 /**

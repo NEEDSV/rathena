@@ -5,6 +5,7 @@
 
 #include <cerrno>
 #include <cstdlib>
+#include <cstring>
 #include <map>
 #include <vector>
 
@@ -1790,9 +1791,13 @@ int32 npc_event_sub(map_session_data* sd, struct event_data* ev, const char* eve
 		if( i < MAX_EVENTQUEUE )
 		{
 			safestrncpy(sd->eventqueue[i],eventname,EVENT_NAME_LENGTH); //Event enqueued.
+			if (battle_config.need_macro_hunt_debug != 0 && strstr(eventname, script_config.kill_mob_event_name) != nullptr)
+				ShowInfo("NeedMacroEventQueue: aid=%d cid=%d event=%s result=queued slot=%d/%d\n", sd->status.account_id, sd->status.char_id, eventname, i + 1, MAX_EVENTQUEUE);
 			return 0;
 		}
 
+		if (battle_config.need_macro_hunt_debug != 0 && strstr(eventname, script_config.kill_mob_event_name) != nullptr)
+			ShowInfo("NeedMacroEventQueue: aid=%d cid=%d event=%s result=full slots=%d/%d\n", sd->status.account_id, sd->status.char_id, eventname, MAX_EVENTQUEUE, MAX_EVENTQUEUE);
 		ShowWarning("npc_event: player's event queue is full, can't add event '%s' !\n", eventname);
 		return 1;
 	}

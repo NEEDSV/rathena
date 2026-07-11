@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
+#include <cstring>
 #include <map>
 #include <unordered_map>
 #include <vector>
@@ -34,11 +35,13 @@
 #include "itemdb.hpp"
 #include "log.hpp"
 #include "map.hpp"
+#include "mapreg.hpp"
 #include "mercenary.hpp"
 #include "npc.hpp"
 #include "party.hpp"
 #include "path.hpp"
 #include "pc.hpp"
+#include "pc_groups.hpp"
 #include "pet.hpp"
 #include "quest.hpp"
 
@@ -2908,6 +2911,279 @@ static const std::set<t_itemid> no_drop_items = {
 	4576,27221,4302,4493,4441,4539,4403,4480,4610,4580,4399
 };
 
+struct need_world_drop_tier {
+	const char *name;
+	int32 enable;
+	int32 min_level;
+	int32 max_level;
+	int32 item_id;
+	int32 base_rate;
+	int32 rate_per_level;
+	int32 amount;
+};
+
+struct need_world_drop_owner {
+	map_session_data *selected;
+	map_session_data *direct;
+	map_session_data *first;
+	const char *reason;
+};
+
+static int32 need_world_drop_event_uid = 0;
+
+static int32 need_world_drop_event_active(void) {
+	switch (battle_config.need_world_drop_event_mode) {
+		case 0:
+			return 0;
+		case 1:
+			return 1;
+		case 2:
+			if (need_world_drop_event_uid == 0)
+				need_world_drop_event_uid = add_str("$NEED_EVENT_HUNT_GOLD_ON");
+			return mapreg_readreg(need_world_drop_event_uid) > 0 ? 1 : 0;
+		default:
+			return 0;
+	}
+}
+
+static bool need_world_drop_level_match(int32 lv, int32 min_level, int32 max_level) {
+	return lv >= min_level && (max_level == 0 || lv <= max_level);
+}
+
+static int32 need_world_drop_eventqueue_used(const map_session_data& sd) {
+	int32 used = 0;
+
+	for (int32 i = 0; i < MAX_EVENTQUEUE; ++i) {
+		if (sd.eventqueue[i][0] != '\0')
+			++used;
+	}
+
+	return used;
+}
+
+static bool need_world_drop_map_in_csv(const char *csv, const char *map_name) {
+	char buf[sizeof(battle_config.need_world_drop_mvp_excluded_maps)];
+
+	nullpo_retr(false, csv);
+	nullpo_retr(false, map_name);
+
+	safestrncpy(buf, csv, sizeof(buf));
+
+	for (char *token = strtok(buf, ","); token != nullptr; token = strtok(nullptr, ",")) {
+		while (*token == ' ' || *token == '\t')
+			++token;
+
+		char *end = token + strlen(token);
+		while (end > token && (end[-1] == ' ' || end[-1] == '\t' || end[-1] == '\r' || end[-1] == '\n'))
+			*--end = '\0';
+
+		if (strcmpi(token, map_name) == 0)
+			return true;
+	}
+
+	return false;
+}
+
+static int32 need_world_drop_clamp_rate(int64 rate) {
+	return static_cast<int32>(cap_value(rate, 0, battle_config.need_world_drop_rate_scale));
+}
+
+static void need_world_drop_debug_log(const need_world_drop_owner& owner, mob_data *md, const char *tier, int32 base_rate, int32 level_rate, int32 rate_before_event, int32 event_active, int32 final_rate, int32 roll, int32 item_id, int32 amount, const char *result, const char *exclude_reason) {
+	if (battle_config.need_world_drop_debug == 0)
+		return;
+
+	map_session_data *sd = owner.selected;
+	const map_data *mapdata = sd != nullptr ? map_getmapdata(sd->m) : nullptr;
+	const char *map_name = mapdata != nullptr ? mapdata->name : "";
+
+	ShowInfo("NeedWorldDrop: account_id=%d char_id=%d map=%s player_x=%d player_y=%d mob_id=%d mob_class=%d mob_level=%d mob_mode=%u mvp_exp=%llu kill_owner_type=player direct_killer_char_id=%d first_attacker_char_id=%d selected_char_id=%d selected_reason=%s selected_tier=%s base_rate=%d level_rate=%d rate_before_event=%d event_mode=%d event_active=%d event_multiplier=%d final_rate=%d roll=%d reward_item_id=%d reward_amount=%d result=%s exclude_reason=%s npc_event_queue_used=%d/%d\n",
+		sd != nullptr ? sd->status.account_id : 0,
+		sd != nullptr ? sd->status.char_id : 0,
+		map_name,
+		sd != nullptr ? sd->x : 0,
+		sd != nullptr ? sd->y : 0,
+		md != nullptr ? md->mob_id : 0,
+		md != nullptr ? md->vd->look[LOOK_BASE] : 0,
+		md != nullptr ? md->level : 0,
+		md != nullptr ? md->status.mode : 0,
+		md != nullptr && md->db != nullptr ? static_cast<unsigned long long>(md->db->mexp) : 0,
+		owner.direct != nullptr ? owner.direct->status.char_id : 0,
+		owner.first != nullptr ? owner.first->status.char_id : 0,
+		owner.selected != nullptr ? owner.selected->status.char_id : 0,
+		owner.reason != nullptr ? owner.reason : "no_valid_owner",
+		tier != nullptr ? tier : "none",
+		base_rate,
+		level_rate,
+		rate_before_event,
+		battle_config.need_world_drop_event_mode,
+		event_active,
+		battle_config.need_world_drop_event_rate_multiplier,
+		final_rate,
+		roll,
+		item_id,
+		amount,
+		result != nullptr ? result : "skip",
+		exclude_reason != nullptr ? exclude_reason : "",
+		sd != nullptr ? need_world_drop_eventqueue_used(*sd) : 0,
+		MAX_EVENTQUEUE);
+}
+
+static bool need_world_drop_give_item(const need_world_drop_owner& owner, mob_data *md, int32 item_id, int32 amount, const char *tier, int32 final_rate, int32 roll) {
+	map_session_data *sd = owner.selected;
+	std::shared_ptr<item_data> id = item_db.find(static_cast<t_itemid>(item_id));
+
+	if (id == nullptr) {
+		ShowError("NeedWorldDrop: invalid item_id %d for tier %s.\n", item_id, tier != nullptr ? tier : "unknown");
+		need_world_drop_debug_log(owner, md, tier, 0, 0, 0, need_world_drop_event_active(), final_rate, roll, item_id, amount, "skip", "invalid_item");
+		return false;
+	}
+
+	item it = {};
+	it.nameid = static_cast<t_itemid>(item_id);
+	it.identify = 1;
+	it.bound = BOUND_NONE;
+
+	int32 get_count = itemdb_isstackable2(id.get()) ? amount : 1;
+
+	for (int32 i = 0; i < amount; i += get_count) {
+		e_additem_result flag = pc_additem(sd, &it, get_count, LOG_TYPE_SCRIPT);
+
+		if (flag != ADDITEM_SUCCESS) {
+			clif_additem(sd, 0, 0, flag);
+			ShowWarning("NeedWorldDrop: failed to add item. result=%d aid=%d cid=%d item_id=%d amount=%d tier=%s map=%s,%d,%d weight=%u/%u\n",
+				flag, sd->status.account_id, sd->status.char_id, item_id, get_count, tier != nullptr ? tier : "unknown",
+				map_getmapdata(sd->m)->name, sd->x, sd->y, sd->weight, sd->max_weight);
+			need_world_drop_debug_log(owner, md, tier, 0, 0, 0, need_world_drop_event_active(), final_rate, roll, item_id, get_count, "fail", flag == ADDITEM_OVERWEIGHT || flag == ADDITEM_OVERAMOUNT || flag == ADDITEM_OVERITEM ? "inventory_full" : "reward_failed");
+			return false;
+		}
+	}
+
+	need_world_drop_debug_log(owner, md, tier, 0, 0, 0, need_world_drop_event_active(), final_rate, roll, item_id, amount, "success", "reward_success");
+	return true;
+}
+
+static void need_world_drop_try_reward(const need_world_drop_owner& owner, mob_data *md, const char *tier, int32 item_id, int32 amount, int32 base_rate, int32 level_rate, int32 rate_before_event, bool allow_event) {
+	map_session_data *sd = owner.selected;
+	int32 event_active = 0;
+	int32 final_rate = rate_before_event;
+	int32 roll = -1;
+
+	if (allow_event && item_id == battle_config.need_world_drop_event_target_item_id) {
+		event_active = need_world_drop_event_active();
+		if (event_active)
+			final_rate = need_world_drop_clamp_rate(static_cast<int64>(rate_before_event) * battle_config.need_world_drop_event_rate_multiplier / 10000);
+	}
+
+	final_rate = need_world_drop_clamp_rate(final_rate);
+
+	if (final_rate <= 0) {
+		need_world_drop_debug_log(owner, md, tier, base_rate, level_rate, rate_before_event, event_active, final_rate, roll, item_id, amount, "skip", "rate_zero");
+		return;
+	}
+
+	roll = rnd() % battle_config.need_world_drop_rate_scale;
+
+	if (roll >= final_rate) {
+		need_world_drop_debug_log(owner, md, tier, base_rate, level_rate, rate_before_event, event_active, final_rate, roll, item_id, amount, "skip", "roll_failed");
+		return;
+	}
+
+	if (battle_config.need_world_drop_event_debug_message != 0 && item_id == battle_config.need_world_drop_event_target_item_id && pc_get_group_level(sd) >= battle_config.need_world_drop_event_debug_gm_level) {
+		char msg[CHAT_SIZE_MAX];
+		safesnprintf(msg, sizeof(msg), "[NeedWorldDrop] Lv %d / base %d / event_mode %d / event %s / mult %d / final %d / roll %d / item %d",
+			md->level, rate_before_event, battle_config.need_world_drop_event_mode, event_active ? "ON" : "OFF", battle_config.need_world_drop_event_rate_multiplier, final_rate, roll, item_id);
+		clif_displaymessage(sd->fd, msg);
+	}
+
+	need_world_drop_debug_log(owner, md, tier, base_rate, level_rate, rate_before_event, event_active, final_rate, roll, item_id, amount, "hit", "reward_pending");
+	need_world_drop_give_item(owner, md, item_id, amount, tier, final_rate, roll);
+}
+
+static const need_world_drop_tier *need_world_drop_select_tier(int32 lv, need_world_drop_tier (&tiers)[4]) {
+	for (const need_world_drop_tier& tier : tiers) {
+		if (tier.enable != 0 && need_world_drop_level_match(lv, tier.min_level, tier.max_level))
+			return &tier;
+	}
+
+	return nullptr;
+}
+
+static void need_world_drop_on_kill(const need_world_drop_owner& owner, mob_data *md, int32 type) {
+	nullpo_retv(md);
+
+	if (battle_config.need_world_drop_enable == 0) {
+		need_world_drop_debug_log(owner, md, "none", 0, 0, 0, 0, 0, -1, 0, 0, "skip", "disabled");
+		return;
+	}
+
+	map_session_data *sd = owner.selected;
+
+	if (sd == nullptr) {
+		need_world_drop_debug_log(owner, md, "none", 0, 0, 0, 0, 0, -1, 0, 0, "skip", "no_player_owner");
+		return;
+	}
+
+	if (type&1) {
+		need_world_drop_debug_log(owner, md, "none", 0, 0, 0, 0, 0, -1, 0, 0, "skip", "no_drop_death");
+		return;
+	}
+
+	if (battle_config.need_world_drop_allow_gm == 0 && pc_get_group_level(sd) >= battle_config.need_world_drop_gm_exclude_level) {
+		need_world_drop_debug_log(owner, md, "none", 0, 0, 0, 0, 0, -1, 0, 0, "skip", "gm_excluded");
+		return;
+	}
+
+	if (md->db == nullptr || md->mob_id <= 0 || md->level <= 0) {
+		need_world_drop_debug_log(owner, md, "none", 0, 0, 0, 0, 0, -1, 0, 0, "skip", "invalid_mob");
+		return;
+	}
+
+	const map_data *mapdata = map_getmapdata(sd->m);
+	const char *map_name = mapdata != nullptr ? mapdata->name : "";
+
+	if (md->db->mexp > 0) {
+		if (battle_config.need_world_drop_mvp_enable == 0) {
+			need_world_drop_debug_log(owner, md, "mvp", 0, 0, 0, 0, 0, -1, battle_config.need_world_drop_mvp_item_id, battle_config.need_world_drop_mvp_amount, "skip", "mvp_disabled");
+		} else if (need_world_drop_map_in_csv(battle_config.need_world_drop_mvp_excluded_maps, map_name)) {
+			need_world_drop_debug_log(owner, md, "mvp", 0, 0, 0, 0, 0, -1, battle_config.need_world_drop_mvp_item_id, battle_config.need_world_drop_mvp_amount, "skip", "mvp_excluded_map");
+		} else {
+			need_world_drop_try_reward(owner, md, "mvp", battle_config.need_world_drop_mvp_item_id, battle_config.need_world_drop_mvp_amount, battle_config.need_world_drop_mvp_rate, 0, battle_config.need_world_drop_mvp_rate, false);
+		}
+
+		if (battle_config.need_world_drop_mvp_allow_normal_drop == 0)
+			return;
+	}
+
+	if (battle_config.need_world_drop_exclude_boss_mode != 0 && status_has_mode(&md->status, MD_STATUSIMMUNE)) {
+		need_world_drop_debug_log(owner, md, "none", 0, 0, 0, 0, 0, -1, 0, 0, "skip", "boss_excluded");
+		return;
+	}
+
+	const int32 lv = md->level;
+
+	if (battle_config.need_world_drop_bonus_enable != 0 && need_world_drop_level_match(lv, battle_config.need_world_drop_bonus_min_level, battle_config.need_world_drop_bonus_max_level)) {
+		need_world_drop_try_reward(owner, md, "bonus", battle_config.need_world_drop_bonus_item_id, battle_config.need_world_drop_bonus_amount, battle_config.need_world_drop_bonus_rate, 0, battle_config.need_world_drop_bonus_rate, false);
+	}
+
+	need_world_drop_tier tiers[4] = {
+		{ "tier1", battle_config.need_world_drop_tier1_enable, battle_config.need_world_drop_tier1_min_level, battle_config.need_world_drop_tier1_max_level, battle_config.need_world_drop_tier1_item_id, battle_config.need_world_drop_tier1_base_rate, battle_config.need_world_drop_tier1_rate_per_level, battle_config.need_world_drop_tier1_amount },
+		{ "tier2", battle_config.need_world_drop_tier2_enable, battle_config.need_world_drop_tier2_min_level, battle_config.need_world_drop_tier2_max_level, battle_config.need_world_drop_tier2_item_id, battle_config.need_world_drop_tier2_base_rate, battle_config.need_world_drop_tier2_rate_per_level, battle_config.need_world_drop_tier2_amount },
+		{ "tier3", battle_config.need_world_drop_tier3_enable, battle_config.need_world_drop_tier3_min_level, battle_config.need_world_drop_tier3_max_level, battle_config.need_world_drop_tier3_item_id, battle_config.need_world_drop_tier3_base_rate, battle_config.need_world_drop_tier3_rate_per_level, battle_config.need_world_drop_tier3_amount },
+		{ "tier4", battle_config.need_world_drop_tier4_enable, battle_config.need_world_drop_tier4_min_level, battle_config.need_world_drop_tier4_max_level, battle_config.need_world_drop_tier4_item_id, battle_config.need_world_drop_tier4_base_rate, battle_config.need_world_drop_tier4_rate_per_level, battle_config.need_world_drop_tier4_amount },
+	};
+	const need_world_drop_tier *tier = need_world_drop_select_tier(lv, tiers);
+
+	if (tier == nullptr) {
+		need_world_drop_debug_log(owner, md, "none", 0, 0, 0, 0, 0, -1, 0, 0, "skip", "level_out_of_range");
+		return;
+	}
+
+	const int32 level_rate = lv * tier->rate_per_level;
+	const int32 rate_before_event = need_world_drop_clamp_rate(static_cast<int64>(tier->base_rate) + level_rate);
+
+	need_world_drop_try_reward(owner, md, tier->name, tier->item_id, tier->amount, tier->base_rate, level_rate, rate_before_event, true);
+}
+
 /*==========================================
  * Signals death of mob.
  * type&1 -> no drops, type&2 -> no exp
@@ -3580,6 +3856,47 @@ int32 mob_dead(mob_data *md, block_list *src, int32 type)
 			// The master or Mercenary can increase the kill count, if the monster level is greater or equal than half the baselevel of the master
 			if (sd->md && src && (src->type == BL_PC || src->type == BL_MER) && mob->lv >= sd->status.base_level / 2)
 				mercenary_kills(sd->md);
+		}
+
+		need_world_drop_owner need_owner = {};
+		need_owner.direct = sd;
+		need_owner.first = first_sd;
+
+		if (md->npc_event[0]) {
+			if (sd != nullptr && battle_config.mob_npc_event_type) {
+				need_owner.selected = sd;
+				need_owner.reason = "direct_killer";
+				if (src != nullptr) {
+					switch (src->type) {
+						case BL_HOM:
+							need_owner.reason = "homunculus_owner";
+							break;
+						case BL_MER:
+							need_owner.reason = "mercenary_owner";
+							break;
+						case BL_PET:
+							need_owner.reason = "pet_owner";
+							break;
+						case BL_ELEM:
+						case BL_MOB:
+							need_owner.reason = "summon_owner";
+							break;
+						default:
+							break;
+					}
+				}
+			} else if (first_sd != nullptr) {
+				need_owner.selected = first_sd;
+				need_owner.reason = "first_attacker";
+			}
+		} else if (first_sd != nullptr) {
+			need_owner.selected = first_sd;
+			need_owner.reason = "first_attacker";
+		}
+
+		if (need_owner.selected != nullptr && src != nullptr && !md->state.npc_killmonster) {
+			need_world_drop_on_kill(need_owner, md, type);
+			pc_need_macro_hunt_on_mob_kill(*need_owner.selected, *md);
 		}
 
 		if( md->npc_event[0] && !md->state.npc_killmonster ) {

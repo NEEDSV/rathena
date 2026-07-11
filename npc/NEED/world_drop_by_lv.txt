@@ -34,10 +34,15 @@ OnNPCKillEvent:
 	// 죽인 몬스터/플레이어 RID가 붙어있는 상태에서 실행됨
 
 	// 월드 드랍
-	callsub S_WorldDrop;
+	// NEED world drop is handled directly from the common monster death path.
+	// Do not restore the OnNPCKillEvent call.
+	// Player NPC event queue overflow can drop kill events and cause reward loss.
+	// callsub S_WorldDrop;
 
 	// 매크로 체크
-	callsub S_MacroCheck;
+	// NEED macro check is handled in source from mob_dead().
+	// This avoids losing captcha checks when the player's NPC event queue is full.
+	// callsub S_MacroCheck;
 
 	end;
 
@@ -45,6 +50,10 @@ OnNPCKillEvent:
 // 월드 드랍 처리
 // ==================================================
 S_WorldDrop:
+	// Disabled: NEED world drop now runs in C++ from mob_dead().
+	// Keep this guard so restoring the OnNPCKillEvent call cannot duplicate rewards.
+	return;
+
 	.@mobid = killedrid;
 	if (.@mobid <= 0)
 		return;
@@ -122,6 +131,10 @@ S_WorldDrop:
 // 매크로 체크 처리
 // ==================================================
 S_MacroCheck:
+	// Disabled: NEED macro hunting check now runs in C++ from mob_dead().
+	// Keep this guard so NPC event queue overflow cannot be reintroduced accidentally.
+	return;
+
 	// GM 제외
 //	if (getgmlevel() >= .gm_exclude_level)
 //		return;

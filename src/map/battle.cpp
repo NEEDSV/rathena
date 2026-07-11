@@ -5,6 +5,7 @@
 
 #include <cmath>
 #include <cstdlib>
+#include <cstring>
 
 #include <common/cbasetypes.hpp>
 #include <common/ers.hpp>
@@ -8929,6 +8930,62 @@ static const struct _battle_data {
 	{ "macro_detection_punish_disconnect",  &battle_config.macro_detection_punish_disconnect, 1,    0,      1,              },
 	{ "macro_detection_disconnect_retry",   &battle_config.macro_detection_disconnect_retry, 3,     0,      INT_MAX,        },
 	{ "macrochecker_delay",                 &battle_config.macrochecker_delay,              600000, 0,      INT_MAX,        },
+	{ "need_macro_hunt_check_rate",         &battle_config.need_macro_hunt_check_rate,      10,     0,      10000,          },
+	{ "need_macro_hunt_delay",              &battle_config.need_macro_hunt_delay,           3600000, 0,      INT_MAX,        },
+	{ "need_macro_hunt_min_kill_count",     &battle_config.need_macro_hunt_min_kill_count,  0,      0,      INT_MAX,        },
+	{ "need_macro_hunt_force_kill_count",   &battle_config.need_macro_hunt_force_kill_count, 0,     0,      INT_MAX,        },
+	{ "need_macro_hunt_force_time",         &battle_config.need_macro_hunt_force_time,      0,      0,      INT_MAX,        },
+	{ "need_macro_hunt_debug",              &battle_config.need_macro_hunt_debug,           0,      0,      1,              },
+	{ "need_world_drop_enable",             &battle_config.need_world_drop_enable,          1,      0,      1,              },
+	{ "need_world_drop_debug",              &battle_config.need_world_drop_debug,           0,      0,      1,              },
+	{ "need_world_drop_allow_gm",           &battle_config.need_world_drop_allow_gm,        1,      0,      1,              },
+	{ "need_world_drop_gm_exclude_level",   &battle_config.need_world_drop_gm_exclude_level, 60,    0,      INT_MAX,        },
+	{ "need_world_drop_rate_scale",         &battle_config.need_world_drop_rate_scale,      10000,  10000,  10000,          },
+	{ "need_world_drop_tier1_enable",       &battle_config.need_world_drop_tier1_enable,    1,      0,      1,              },
+	{ "need_world_drop_tier1_min_level",    &battle_config.need_world_drop_tier1_min_level, 30,     0,      INT_MAX,        },
+	{ "need_world_drop_tier1_max_level",    &battle_config.need_world_drop_tier1_max_level, 98,     0,      INT_MAX,        },
+	{ "need_world_drop_tier1_item_id",      &battle_config.need_world_drop_tier1_item_id,   399990, 0,      INT_MAX,        },
+	{ "need_world_drop_tier1_base_rate",    &battle_config.need_world_drop_tier1_base_rate, 50,     0,      10000,          },
+	{ "need_world_drop_tier1_rate_per_level", &battle_config.need_world_drop_tier1_rate_per_level, 1, 0,     10000,          },
+	{ "need_world_drop_tier1_amount",       &battle_config.need_world_drop_tier1_amount,    1,      1,      INT_MAX,        },
+	{ "need_world_drop_tier2_enable",       &battle_config.need_world_drop_tier2_enable,    1,      0,      1,              },
+	{ "need_world_drop_tier2_min_level",    &battle_config.need_world_drop_tier2_min_level, 99,     0,      INT_MAX,        },
+	{ "need_world_drop_tier2_max_level",    &battle_config.need_world_drop_tier2_max_level, 154,    0,      INT_MAX,        },
+	{ "need_world_drop_tier2_item_id",      &battle_config.need_world_drop_tier2_item_id,   399990, 0,      INT_MAX,        },
+	{ "need_world_drop_tier2_base_rate",    &battle_config.need_world_drop_tier2_base_rate, 100,    0,      10000,          },
+	{ "need_world_drop_tier2_rate_per_level", &battle_config.need_world_drop_tier2_rate_per_level, 1, 0,     10000,          },
+	{ "need_world_drop_tier2_amount",       &battle_config.need_world_drop_tier2_amount,    1,      1,      INT_MAX,        },
+	{ "need_world_drop_tier3_enable",       &battle_config.need_world_drop_tier3_enable,    1,      0,      1,              },
+	{ "need_world_drop_tier3_min_level",    &battle_config.need_world_drop_tier3_min_level, 155,    0,      INT_MAX,        },
+	{ "need_world_drop_tier3_max_level",    &battle_config.need_world_drop_tier3_max_level, 169,    0,      INT_MAX,        },
+	{ "need_world_drop_tier3_item_id",      &battle_config.need_world_drop_tier3_item_id,   674,    0,      INT_MAX,        },
+	{ "need_world_drop_tier3_base_rate",    &battle_config.need_world_drop_tier3_base_rate, 100,    0,      10000,          },
+	{ "need_world_drop_tier3_rate_per_level", &battle_config.need_world_drop_tier3_rate_per_level, 1, 0,     10000,          },
+	{ "need_world_drop_tier3_amount",       &battle_config.need_world_drop_tier3_amount,    1,      1,      INT_MAX,        },
+	{ "need_world_drop_tier4_enable",       &battle_config.need_world_drop_tier4_enable,    1,      0,      1,              },
+	{ "need_world_drop_tier4_min_level",    &battle_config.need_world_drop_tier4_min_level, 170,    0,      INT_MAX,        },
+	{ "need_world_drop_tier4_max_level",    &battle_config.need_world_drop_tier4_max_level, 0,      0,      INT_MAX,        },
+	{ "need_world_drop_tier4_item_id",      &battle_config.need_world_drop_tier4_item_id,   674,    0,      INT_MAX,        },
+	{ "need_world_drop_tier4_base_rate",    &battle_config.need_world_drop_tier4_base_rate, 200,    0,      10000,          },
+	{ "need_world_drop_tier4_rate_per_level", &battle_config.need_world_drop_tier4_rate_per_level, 1, 0,     10000,          },
+	{ "need_world_drop_tier4_amount",       &battle_config.need_world_drop_tier4_amount,    1,      1,      INT_MAX,        },
+	{ "need_world_drop_bonus_enable",       &battle_config.need_world_drop_bonus_enable,    1,      0,      1,              },
+	{ "need_world_drop_bonus_min_level",    &battle_config.need_world_drop_bonus_min_level, 100,    0,      INT_MAX,        },
+	{ "need_world_drop_bonus_max_level",    &battle_config.need_world_drop_bonus_max_level, 0,      0,      INT_MAX,        },
+	{ "need_world_drop_bonus_item_id",      &battle_config.need_world_drop_bonus_item_id,   9530,   0,      INT_MAX,        },
+	{ "need_world_drop_bonus_rate",         &battle_config.need_world_drop_bonus_rate,      100,    0,      10000,          },
+	{ "need_world_drop_bonus_amount",       &battle_config.need_world_drop_bonus_amount,    1,      1,      INT_MAX,        },
+	{ "need_world_drop_mvp_enable",         &battle_config.need_world_drop_mvp_enable,      1,      0,      1,              },
+	{ "need_world_drop_mvp_item_id",        &battle_config.need_world_drop_mvp_item_id,     677,    0,      INT_MAX,        },
+	{ "need_world_drop_mvp_rate",           &battle_config.need_world_drop_mvp_rate,        5000,   0,      10000,          },
+	{ "need_world_drop_mvp_amount",         &battle_config.need_world_drop_mvp_amount,      1,      1,      INT_MAX,        },
+	{ "need_world_drop_mvp_allow_normal_drop", &battle_config.need_world_drop_mvp_allow_normal_drop, 0, 0,   1,              },
+	{ "need_world_drop_exclude_boss_mode",  &battle_config.need_world_drop_exclude_boss_mode, 1,    0,      1,              },
+	{ "need_world_drop_event_mode",         &battle_config.need_world_drop_event_mode,      2,      0,      2,              },
+	{ "need_world_drop_event_rate_multiplier", &battle_config.need_world_drop_event_rate_multiplier, 12000, 0, INT_MAX,      },
+	{ "need_world_drop_event_target_item_id", &battle_config.need_world_drop_event_target_item_id, 399990, 0, INT_MAX,       },
+	{ "need_world_drop_event_debug_message", &battle_config.need_world_drop_event_debug_message, 0, 0,      1,              },
+	{ "need_world_drop_event_debug_gm_level", &battle_config.need_world_drop_event_debug_gm_level, 60, 0,   INT_MAX,        },
 
 	{ "feature.dynamicnpc_timeout",         &battle_config.feature_dynamicnpc_timeout,      1000,   60000,  INT_MAX,        },
 	{ "feature.dynamicnpc_rangex",          &battle_config.feature_dynamicnpc_rangex,       2,      0,      INT_MAX,        },
@@ -9011,6 +9068,81 @@ void battle_set_defaults()
 	int32 i;
 	for (i = 0; i < ARRAYLENGTH(battle_data); i++)
 		*battle_data[i].val = battle_data[i].defval;
+
+	safestrncpy(battle_config.need_world_drop_mvp_excluded_maps, "bossnia_01,bossnia_02,bossnia_03", sizeof(battle_config.need_world_drop_mvp_excluded_maps));
+}
+
+static bool battle_need_world_drop_range_invalid(const char *name, int32 min_level, int32 max_level) {
+	if (max_level != 0 && max_level < min_level) {
+		ShowWarning("NeedWorldDrop: %s has invalid level range min=%d max=%d. max_level 0 means unlimited.\n", name, min_level, max_level);
+		return true;
+	}
+
+	return false;
+}
+
+static bool battle_need_world_drop_ranges_overlap(int32 a_min, int32 a_max, int32 b_min, int32 b_max) {
+	const int32 a_hi = a_max == 0 ? INT_MAX : a_max;
+	const int32 b_hi = b_max == 0 ? INT_MAX : b_max;
+
+	return a_min <= b_hi && b_min <= a_hi;
+}
+
+static void battle_need_world_drop_validate_excluded_maps(void) {
+	char buf[sizeof(battle_config.need_world_drop_mvp_excluded_maps)];
+
+	safestrncpy(buf, battle_config.need_world_drop_mvp_excluded_maps, sizeof(buf));
+
+	for (char *token = strtok(buf, ","); token != nullptr; token = strtok(nullptr, ",")) {
+		while (*token == ' ' || *token == '\t')
+			++token;
+
+		char *end = token + strlen(token);
+		while (end > token && (end[-1] == ' ' || end[-1] == '\t' || end[-1] == '\r' || end[-1] == '\n'))
+			*--end = '\0';
+
+		if (*token == '\0')
+			continue;
+
+		if (mapindex_name2id(token) == 0)
+			ShowWarning("NeedWorldDrop: mvp excluded map '%s' was not found in map_index. Please check need_world_drop_mvp_excluded_maps.\n", token);
+	}
+}
+
+static void battle_need_world_drop_validate_conf(void) {
+	struct range_conf {
+		const char *name;
+		int32 enable;
+		int32 min_level;
+		int32 max_level;
+	};
+
+	range_conf tiers[] = {
+		{ "tier1", battle_config.need_world_drop_tier1_enable, battle_config.need_world_drop_tier1_min_level, battle_config.need_world_drop_tier1_max_level },
+		{ "tier2", battle_config.need_world_drop_tier2_enable, battle_config.need_world_drop_tier2_min_level, battle_config.need_world_drop_tier2_max_level },
+		{ "tier3", battle_config.need_world_drop_tier3_enable, battle_config.need_world_drop_tier3_min_level, battle_config.need_world_drop_tier3_max_level },
+		{ "tier4", battle_config.need_world_drop_tier4_enable, battle_config.need_world_drop_tier4_min_level, battle_config.need_world_drop_tier4_max_level },
+	};
+
+	for (const range_conf& tier : tiers)
+		battle_need_world_drop_range_invalid(tier.name, tier.min_level, tier.max_level);
+
+	battle_need_world_drop_range_invalid("bonus", battle_config.need_world_drop_bonus_min_level, battle_config.need_world_drop_bonus_max_level);
+
+	for (int32 i = 0; i < ARRAYLENGTH(tiers); ++i) {
+		if (tiers[i].enable == 0)
+			continue;
+
+		for (int32 j = i + 1; j < ARRAYLENGTH(tiers); ++j) {
+			if (tiers[j].enable == 0)
+				continue;
+
+			if (battle_need_world_drop_ranges_overlap(tiers[i].min_level, tiers[i].max_level, tiers[j].min_level, tiers[j].max_level))
+				ShowWarning("NeedWorldDrop: %s and %s level ranges overlap. The first matching tier will be used.\n", tiers[i].name, tiers[j].name);
+		}
+	}
+
+	battle_need_world_drop_validate_excluded_maps();
 }
 
 /*==================================
@@ -9025,6 +9157,7 @@ void battle_adjust_conf()
 	battle_config.max_extended_aspd = (AMOTION_ZERO_ASPD - battle_config.max_extended_aspd * AMOTION_INTERVAL) * AMOTION_DIVIDER_PC;
 	battle_config.max_walk_speed = 100 * DEFAULT_WALK_SPEED / battle_config.max_walk_speed;
 	battle_config.max_cart_weight *= 10;
+	battle_need_world_drop_validate_conf();
 
 	if (battle_config.max_def > 100 && !battle_config.weapon_defense_type) // added by [Skotlex]
 		battle_config.max_def = 100;
@@ -9235,6 +9368,9 @@ int32 battle_config_read(const char* cfgName)
 				continue;
 			if (strcmpi(w1, "import") == 0)
 				battle_config_read(w2);
+			else if( strcmpi( w1, "need_world_drop_mvp_excluded_maps" ) == 0 ){
+				safestrncpy(battle_config.need_world_drop_mvp_excluded_maps, w2, sizeof(battle_config.need_world_drop_mvp_excluded_maps));
+			}
 			else if( strcmpi( w1, "atcommand_symbol" ) == 0 ){
 				const char* symbol = &w2[0];
 

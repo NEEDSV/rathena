@@ -162,6 +162,18 @@ struct s_macro_detect {
 	int32 timer;
 };
 
+struct s_need_macro_hunt {
+	uint32 kill_count;
+	uint32 check_count;
+	uint32 walk_count;
+	uint32 teleport_count;
+	t_tick first_kill_tick;
+	t_tick last_kill_tick;
+	t_tick last_walk_tick;
+	t_tick last_teleport_tick;
+	t_tick next_check_tick;
+};
+
 enum e_macro_detect_status : uint8 {
 	MCD_TIMEOUT = 0,
 	MCD_INCORRECT = 1,
@@ -979,6 +991,7 @@ public:
 	} captcha_upload;
 
 	s_macro_detect macro_detect;
+	s_need_macro_hunt need_macro_hunt;
 
 	std::vector<uint32> party_booking_requests;
 
@@ -1831,6 +1844,9 @@ void pc_macro_detector_disconnect(map_session_data &sd);
 // Macro Reporter
 void pc_macro_reporter_area_select(map_session_data &sd, const int16 x, const int16 y, const int8 radius);
 void pc_macro_reporter_process(map_session_data &sd, int32 reporter_account_id = -1);
+void pc_need_macro_hunt_on_mob_kill(map_session_data &sd, const mob_data &md);
+void pc_need_macro_hunt_record_walk(map_session_data &sd);
+void pc_need_macro_hunt_record_teleport(map_session_data &sd);
 
 #ifdef MAP_GENERATOR
 void pc_reputation_generate();
