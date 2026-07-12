@@ -24,7 +24,7 @@
 //============================================================
 
 bat_room,184,164,4	script	전장 관리인	953,{
-	switch(select("주사위 굴리기:전장 파티장 등록:전장 홍보하기:전장 인원 조정:인원 부족 완화 신청")) {
+	switch(select("주사위 굴리기:전장 파티장 등록:전장 홍보하기:전장 인원 조정:인원 부족 완화 신청:전장 보상 설명")) {
 	case 1:
 		callfunc "F_BG_Menu_DiceRoll";
 		close;
@@ -43,9 +43,31 @@ bat_room,184,164,4	script	전장 관리인	953,{
 	case 5:
 		callfunc "F_BG_Menu_ShortStart";
 		close;
+		
+	case 6:
+		callfunc "F_BG_Reward";
+		close;
 	}
 }
-
+		
+function	script	F_BG_Reward	{
+	mes "[전장 관리인]";
+	mes "티에라/플라비우스/KvM 참여 시 전장 포인트 + 9";
+	mes " ";
+	mes "티에라 승 : 금화 10개, 용맹휘장 2개";
+	mes "티에라 패 : 금화 7개, 용맹휘장 1개";
+	mes " ";
+	mes "플라비우스 승 : 금화 20개, 특공휘장 3개";
+	mes "플라비우스 패 : 금화 15개, 특공휘장 2개";
+	mes " ";
+	mes "KvM 승 : 금화 20개, 전투휘장 3개";
+	mes "KvM 패 : 금화 15개, 전투휘장 2개";
+	mes " ";
+	mes "6명부터는 1명당 금화 2개씩 추가 지급.";
+	mes "^FF0000파티장이 되어 진행할 경우 모든 휘장 3개, 전장 포인트 +5 추가 지급^000000";
+	setdialogsize(400,400);
+	close;
+}
 //============================================================
 // 전장 관리 메뉴 - 주사위 굴리기
 // 기욤 / 크루아에 등록된 현재 파티장만 가능
@@ -64,8 +86,8 @@ function	script	F_BG_Menu_DiceRoll	{
 	.@dice = rand(1, 6);
 
 	mapannounce "bat_room",
-		"[전장 주사위] " + .@my_team$ + " 팀 파티장 " + strcharinfo(0) + "님이 주사위를 굴려 " + .@dice + "이(가) 나왔습니다!",
-		bc_map, 0xFFFF00;
+		"[전장 주사위] " + .@my_team$ + " 팀 파티장 " + strcharinfo(0) + "님 주사위 [" + .@dice + "]",
+		bc_map, 0x00FFFF;
 
 	mes "[전장 관리인]";
 	mes "주사위를 굴렸습니다.";
@@ -875,6 +897,7 @@ bat_room,1,151,3	script	Switch#batgnd	81,{
 // Badge Reward Function
 //============================================================
 function	script	F_BG_Badge	{
+	.@char_id = getcharid(0);
 	.@team$ = getarg(1);
 	.@bg_type$ = getarg(2);
 	if ($BG_CROIX_LEADER_CID == .@char_id || $BG_GUILLAUME_LEADER_CID == .@char_id)
