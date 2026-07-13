@@ -31,5 +31,5 @@ void SkillDragonTail::castendDamageId(block_list* src, block_list* target, uint1
 }
 
 void SkillDragonTail::calculateSkillRatio(const Damage* wd, const block_list* src, const block_list* target, uint16 skill_lv, int32& skillratio, int32 mflag) const {
-	skillratio += -100 + 4000 + 1000 * skill_lv;
+	skillratio += -100 + 2500 + 500 * skill_lv; // NEED balance: early Dragon Tail formula (2500 + 500 * skill_lv, Lv5 5000%)
 }
