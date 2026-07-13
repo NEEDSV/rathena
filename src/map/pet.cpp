@@ -267,7 +267,7 @@ uint64 PetDatabase::parseBodyNode( const ryml::NodeRef& node ){
 		pet->die = die;
 	}else{
 		if( !exists ){
-			pet->die = -20;
+			pet->die = 0;
 		}
 	}
 
