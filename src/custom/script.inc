@@ -315,3 +315,96 @@ BUILDIN_FUNC(getskillid)
 	script_pushint(st,-1);
 	return SCRIPT_CMD_SUCCESS;
 }
+
+// 1  = 성공
+// 0  = 일반 실패
+// -1 = 창고 미로드/접근 불가
+int32 storage_storageget_script(map_session_data *sd, struct s_storage *stor, int32 index, int32 amount, bool favorite)
+{
+	unsigned char flag = 0;
+
+	if (sd == nullptr || stor == nullptr)
+		return 0;
+
+	if (!stor->state.get)
+		return -1;
+
+	if (index < 0 || index >= stor->max_amount)
+		return 0;
+
+	if (stor->u.items_storage[index].nameid <= 0)
+		return 0;
+
+	if (amount < 1 || amount > stor->u.items_storage[index].amount)
+		return 0;
+
+	flag = pc_additem(sd, &stor->u.items_storage[index], amount, LOG_TYPE_STORAGE, favorite);
+
+	if (flag != ADDITEM_SUCCESS) {
+		clif_storageitemremoved(*sd, index, 0);
+		clif_additem(sd, 0, 0, flag);
+		return 0;
+	}
+
+	storage_delitem(sd, stor, index, amount);
+	return 1;
+}
+
+BUILDIN_FUNC(storagegetitem)
+{
+	map_session_data* sd = nullptr;
+
+	if (!script_rid2sd(sd)) {
+		script_pushint(st, 0);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	t_itemid nameid = script_getnum(st, 2);
+	int32 amount = script_getnum(st, 3);
+
+	if (nameid <= 0 || amount <= 0) {
+		script_pushint(st, 0);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	struct item_data* id = itemdb_search(nameid);
+
+	if (id == nullptr) {
+		script_pushint(st, 0);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	// 1차 안전 제한: 겹쳐지는 아이템만 허용
+	if (!itemdb_isstackable2(id) || id->type == IT_CARD || id->type == IT_PETEGG) {
+		script_pushint(st, 0);
+		return SCRIPT_CMD_SUCCESS;
+	}
+	
+	// 장비는 막되, 탄약은 예외 허용
+	if (itemdb_isequip2(id) && id->type != IT_AMMO) {
+		script_pushint(st, 0);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	s_storage* stor = &sd->storage;
+
+	int32 index = -1;
+
+	for (int32 i = 0; i < stor->max_amount; i++) {
+		if (stor->u.items_storage[i].nameid == nameid &&
+			stor->u.items_storage[i].amount >= amount) {
+			index = i;
+			break;
+		}
+	}
+
+	if (index < 0) {
+		script_pushint(st, 0);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	int32 result = storage_storageget_script(sd, stor, index, amount, false);
+
+	script_pushint(st, result);
+	return SCRIPT_CMD_SUCCESS;
+}
