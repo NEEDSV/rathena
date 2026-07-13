@@ -1,0 +1,2209 @@
+//===== rAthena Script =======================================
+//= Devil Tower
+//===== Description: =========================================
+//= [Walkthrough Conversion]
+//= Devil Tower Instance
+//===== Changelogs: ==========================================
+//= 1.0 First version. [Capuche]
+//============================================================
+
+dali02,134,119,5	script	역사학자 쉡#tnm01	4_F_NOVICE,{
+	if (BaseLevel < 130) {
+		mes "[쉡]";
+		mes "악마의탑 탐사에 자원하러 오신 건가요?";
+		mes "무척 위험한 곳이니 적어도 ^4d4dff레벨 130^000000은 되어야 합니다.";
+		next;
+		mes "[쉡]";
+		mes "나중에 실력을 더 쌓고 다시 와주시겠어요?";
+		mes "무슨 뜻인지 이해하시죠?";
+		close;
+	}
+	switch( checkquest(7577,PLAYTIME) ) {// daily timer
+	case -1:
+		break;
+	case 0:
+	case 1:
+		mes "[쉡]";
+		mes "벌써 다시 탐사를 시작하시려는 건가요?";
+		mes "시간 여행의 여파에서 몸을 회복할 시간이 필요합니다.";
+		next;
+		mes "[쉡]";
+		mes "오늘은 푹 쉬고 내일 다시 방문해 주세요!";
+		mes "이해하셨나요?";
+		close;
+	case 2:
+		mes "[쉡]";
+		mes "충분히 휴식을 취하셨나요?";
+		mes "오늘은 탐사 일정이 잡혀 있습니다!";
+		mes "탐사대원분을 간절히 기다리고 있었습니다!";
+		erasequest 7577;// Space distortion
+		devil_tower_can_reenter = 0;
+		devil_tower_enter = 0;
+		next;
+		mes "!- 알림 -!";
+		mes "이제 악마의탑에 재입장할 수 있습니다.";
+		close;
+	}
+	if (isbegin_quest(7576) > 0) {// instance completed
+		mes "[쉡]";
+		mes "그곳에서 시공간이 뒤틀려 수렴하고 있다는 거군요?";
+		mes "시간 여행이 실제로 가능하다니 정말 놀랍습니다.";
+		next;
+		mes "[쉡]";
+		mes "이게 확인된 정보의 전부군요.";
+		mes "정말 훌륭한 일을 해내셨습니다.";
+		mes "더 많은 단서를 찾을 수 있기를 기대합니다!";
+		setquest 7577;// Space distortion
+		erasequest 7568;// Explore the tower
+		erasequest 7571;// Tower Expedition
+		erasequest 7574;// Thanatos Tower
+		erasequest 7576;// Morocc castle seal
+		getexp 450000,450000;
+		devil_tower_can_reenter = 0;
+		devil_tower_enter = 0;
+		mes "내일 다시 방문해 주십시오!";
+		close;
+	}
+	if (isbegin_quest(7574) > 0) {// failed after seal
+		mes "[쉡]";
+		mes "오, 생각보다 빨리 돌아오셨군요...";
+		mes "알겠습니다, 어떤 상황인지 파악되네요.";
+		next;
+		mes "[쉡]";
+		mes "이게 확인된 정보의 전부군요.";
+		mes "정말 훌륭한 일을 해내셨습니다.";
+		mes "더 많은 단서를 찾을 수 있기를 기대합니다!";
+		setquest 7577;// Space distortion
+		erasequest 7568;// Explore the tower
+		erasequest 7571;// Tower Expedition
+		erasequest 7574;// Thanatos Tower
+		getexp 300000,300000;
+		devil_tower_can_reenter = 0;
+		devil_tower_enter = 0;
+		mes "내일 다시 방문해 주십시오!";
+		close;
+	}
+	if (isbegin_quest(7571) > 0) {// failed at stair 2 tnm1
+		mes "[쉡]";
+		mes "아, 돌아오셨군요.";
+		mes "어디 봅시다... 이 탑이 마계와 연결된 통로라는 말씀이시죠?";
+		next;
+		mes "[쉡]";
+		mes "이게 확인된 정보의 전부군요.";
+		mes "정말 훌륭한 일을 해내셨습니다.";
+		mes "더 많은 단서를 찾을 수 있기를 기대합니다!";
+		setquest 7577;// Space distortion
+		erasequest 7568;// Explore the tower
+		erasequest 7571;// Tower Expedition
+		if (isbegin_quest(7572)) erasequest 7572;// Lucile...?
+		if (isbegin_quest(7573)) erasequest 7573;// Magic Swordman Thanatos
+		getexp 200000,200000;
+		devil_tower_can_reenter = 0;
+		devil_tower_enter = 0;
+		mes "내일 다시 방문해 주십시오!";
+		close;
+	}
+	switch( checkquest(7568,PLAYTIME) ) {// entrance timer - 1h30 to enter
+	case -1:
+		mes "[쉡]";
+		mes "악마의탑 탐사에 자원하시겠습니까? 당신 같은 분을 기다리고 있었습니다!";
+		next;
+		mes "[쉡]";
+		mes "드디어 탑의 비밀을 함께 파헤칠 분을 만났군요.";
+		mes "아무도 자원하지 않아서 무척 걱정하고 있었답니다.";
+		next;
+		mes "[쉡]";
+		mes "탑에서 발견한 모든 것을 저에게 보고해 주세요.";
+		mes "정보가 가치 있을수록~ 더 많은 제니를 보상으로 드리죠!";
+		next;
+		mes "[쉡]";
+		mes "저기 있는 라피네 학자가 시간 장치로 차원의 틈새를 열어줄 겁니다.";
+		mes "아직 불안정한 상태라 탐사 시간이 제한적일 수밖에 없어요.";
+		next;
+		mes "[쉡]";
+		mes "혹시 예상치 못하게 튕겨 나온다면 즉시 복귀를 시도하십시오.";
+		mes "얼마나 빨리 돌아오느냐에 따라 재입장 가능 여부가 결정됩니다.";
+		next;
+		mes "[쉡]";
+		mes "제한 시간이 모두 지나면 탑으로 통하는 길이 닫혀버립니다.";
+		mes "그럼, 정식으로 자원하시겠습니까?";
+		next;
+		if (select( "자원한다", "거절한다" ) == 2) {
+			mes "[쉡]";
+			mes "아, 그거 정말 안타깝네요.";
+			mes "제가 어쩔 수 있는 부분은 아니니까요.";
+			mes "다른 분을 찾아보는 수밖에 없겠네요...";
+			close;
+		}
+		mes "[쉡]";
+		mes "정말 감사합니다.";
+		mes "파티원들을 모으세요. 발견한 것은 잊지 말고 꼭 보고해 주십시오.";
+		next;
+		mes "[쉡]";
+		mes "^4d4dff탐사 시간 제한은 당신의 안전을 위한 조치입니다^000000!";
+		setquest 7568;// Explore the tower
+		close;
+	case 0:
+	case 1:
+		if (devil_tower_can_reenter == 0)// player can re-enter
+			break;
+		// fall through
+	case 2:
+		mes "[쉡]";
+		mes "조금 늦으신 것 같군요.";
+		mes "탐사 시간이 너무 오래 지체되었습니다.";
+		mes ".....";
+		mes "지금 가져오신 정보는 더 이상 유효하지 않아요.";
+		next;
+		mes "[쉡]";
+		mes "지금으로선 방법이 없군요.";
+		mes "다음 탐사 기회는 언제든 다시 올 겁니다.";
+		setquest 7577;// Space distortion
+		erasequest 7568;
+		if (isbegin_quest(7569)) erasequest 7569;// Treat the injured
+		if (isbegin_quest(7570)) erasequest 7570;// Destroy the demons
+		devil_tower_can_reenter = 0;
+		devil_tower_enter = 0;
+		close;
+	}
+	mes "[쉡]";
+	mes "우선, 입구에서 탐사 대기 예약을 신청해야 합니다.";
+	mes "라피네 학자 아르티가 예약을 도와줄 거예요.";
+	next;
+	mes "[쉡]";
+	mes "차원의 틈새가 불안정해서 탐사 시간이 넉넉하지 않습니다.";
+	mes "핵심만 신속하게 조사하고 돌아오세요.";
+	next;
+	mes "[쉡]";
+	mes "소요된 시간에 따라 보상이 차등 지급될 예정입니다.";
+	mes "행운을 빕니다!";
+	next;
+	if (select( "믿어주세요!", "예약 취소" ) == 1) {
+		mes "[쉡]";
+		mes "이런 제약 조건 속에서도 충분히 해낼 거라 믿습니다.";
+		mes "당신의 실력을 믿어요!";
+		close;
+	}
+	if (devil_tower_enter == 1) {
+		mes "[쉡]";
+		mes "탐사가 조금 버거워지신 모양이군요.";
+		mes "^4d4dff지금 취소하면 하루가 지나야 다시 도전할 수 있습니다.^000000";
+		mes "정말 취소하시겠습니까?";
+		next;
+		if (select( "네, 취소합니다.", "잠깐, 취소하지 마세요!" ) == 2) {
+			mes "[쉡]";
+			mes "알겠습니다. 예약은 유지해 둘게요.";
+			close;
+		}
+		mes "[쉡]";
+		mes "정말이신가요?";
+		mes "그럼 내일 다시 뵙도록 하죠.";
+		setquest 7577;// Space distortion
+		erasequest 7568;
+		if (isbegin_quest(7569)) erasequest 7569;// Treat the injured
+		if (isbegin_quest(7570)) erasequest 7570;// Destroy the demons
+		devil_tower_enter = 0;
+		devil_tower_can_reenter = 0;
+		close;
+	}
+	mes "[쉡]";
+	mes "진심인가요?";
+	mes "그 설명을 다 듣고도 포기하시겠다고요?";
+	erasequest 7568;// Explore the tower
+	close;
+}
+
+dali02,137,121,3	script	마법 학자 아르티#tnm	4_M_FAIRYKID6,{
+	.@party_id = getcharid(1);
+	if (.@party_id == 0) {
+		mes "[아르티]";
+		mes "비프로스트에서 막 왔으니 좀 즐겨보는 게 어때?";
+		mes "싫어?";
+		mes "그럼 탐사대에 지원이라도 하겠다는 거야?";
+		mes "이번 탐사는 파티를 제대로 꾸려오는 게 좋을걸.";
+		next;
+		mes "[아르티]";
+		mes "괜히 무모한 위험에 뛰어들지는 마, 알았지?";
+		close;
+	}
+	if (is_party_leader() == false) {
+		mes "[아르티]";
+		mes "탐사 대장을 데려와.";
+		mes "악마의탑은 너 혼자 올 만한 곳이 아니거든.";
+		mes "책임자를 동행시키라고.";
+		close;
+	}
+	if (devil_tower_enter == 1) {
+		mes "[아르티]";
+		mes "이미 연결 통로를 통해 입장한 상태잖아.";
+		mes "공간을 또 연결해달라고? 그건 나도 못 해.";
+		close;
+	}
+	switch( checkquest(7568,PLAYTIME) ) {
+	case 0:
+	case 1:
+		break;
+	case -1:
+	case 2:
+		mes "[아르티]";
+		mes "흠... 정해진 탐사 시간이 아니면 연결하기가 꽤 까다로워.";
+		mes "물론 그만큼 위험하기도 하고 말이야.";
+		close;
+	}
+	mes "[아르티]";
+	mes "네가 악마의탑을 조사하겠다는 그 자원자야?";
+	mes "차원 장치를 지금 바로 가동시켜 줄까?";
+	next;
+	mes "[아르티]";
+	mes "안에서의 시간은 한정되어 있으니까 빨리 결정하는 게 좋아.";
+	next;
+	if (select( "네, 장치를 가동해 주세요.", "잠시만 기다려 주세요." ) == 2) {
+		mes "[아르티]";
+		mes "탐사할 수 있는 시간이 계속 줄어들고 있어.";
+		mes "시간 관리가 제일 중요하다니까.";
+		mes "뭘 그렇게 망설이고 있어?";
+		close;
+	}
+	mes "[아르티]";
+	mes "차원 장치가 활성화됐어.";
+	mes "운만 좋으면 아주 금방 끝낼 수도 있을 거야.";
+	mes "좋은 소식이 들려오길 기대하고 있을게.";
+	instance_create("마신의 탑");
+	close;
+}
+
+dali02,141,120,3	script	차원 이동 장치#tnm0	PORTAL,{
+	if (devil_tower_can_reenter == 1) {// can't re-enter
+		mes "[아르티]";
+		mes "저기, 이봐!";
+		mes "지금 장치를 통해 널 보내는 건 좀 무리야.";
+		mes "오늘은 탐사를 멈추고 다음에 다시 도전하는 게 어때?";
+		close;
+	}
+	switch( checkquest(7568,PLAYTIME) ) {
+	case 0:
+	case 1:
+		break;
+	case -1:
+	case 2:
+		mes "[아르티]";
+		mes "미안하지만 허가된 시간 외엔 들어갈 수 없어. 악마의탑은 정말 위험하거든.";
+		close;
+	}
+	mes "[아르티]";
+	mes "그래, 이게 바로 그 차원 장치라는 거야.";
+	mes "시간 여행을 가능하게 해주는 물건이지.";
+	mes "한 번 나오면 다시 들어가기 힘드니까 조심해.";
+	next;
+	mes "[아르티]";
+	mes "뭐, 이 천재 학자님만 믿으면 걱정할 거 없지만~";
+	mes "그나저나, 입장 준비는 다 됐어?";
+	next;
+	if (select( "장치에 들어간다.", "멈춘다." ) == 2) {
+		mes "[아르티]";
+		mes "맞아.";
+		mes "장치를 가동시킨 지 꽤 시간이 흐른 것 같은데, 내 말이 맞지?";
+		close;
+	}
+	.@md_name$ = "마신의 탑";
+	switch( instance_enter(.@md_name$) ) {
+	case IE_OTHER:
+		mes "알 수 없는 오류가 발생했습니다.";
+		close;
+	case IE_NOINSTANCE:
+		mes "[쉡]";
+		mes "입장하기 전에 먼저 차원 장치를 활성화해야 합니다.";
+		mes "아직 장치가 가동되지 않은 것 같군요.";
+		next;
+		mes "[쉡]";
+		mes "마법 학자 아르티에게 말해서 가동 허가를 받으세요.";
+		close;
+	case IE_NOMEMBER:
+		mes "[아르티]";
+		mes "악마의탑 탐사는 파티를 맺은 탐사대에게만 허용됩니다.";
+		mes "모든 준비를 완벽히 마치고 오세요.";
+		close;
+	case IE_OK:
+		mapannounce "dali02", "파티원 " + strcharinfo(0) + " 파티의 " + getpartyname( getcharid(1) ) + " 방 입장 " + .@md_name$ + "", bc_map,0xFF99;
+		devil_tower_enter = 1;
+		end;
+	}
+}
+
+dali02,134,112,3	script	#tnmtks01	HIDDEN_WARP_NPC,3,3,{
+	end;
+OnTouch_:
+	disablenpc "#tnmtks01";
+	initnpctimer;
+	end;
+OnTimer1000:
+	npctalk "아르티: 이봐요, 당신! 연구는 잘 돼가고 있나요?", instance_npcname("마법 학자 아르티#tnm");
+	end;
+OnTimer3000:
+	npctalk "쉡: 누구보고 이봐라는 거야? 먼지나 풀풀 날리는 꼬마 요정 주제에!", instance_npcname("역사학자 쉡#tnm01");
+	end;
+OnTimer6000:
+	npctalk "아르티: 뭐라고? 우리 종족은 너희 같은 영장류보다 훨씬 우월한 유전자를 가졌단 말이야!", instance_npcname("마법 학자 아르티#tnm");
+	end;
+OnTimer9000:
+	npctalk "쉡: 누가 그런 소릴 믿어? 우리 동네 꼬마들도 너희 요정들보단 덩치가 크겠네!", instance_npcname("역사학자 쉡#tnm01");
+	end;
+OnTimer12000:
+	npctalk "쉡: 마법 학자라고 어깨에 힘주고 다니는 꼴이라니, 참 나!", instance_npcname("역사학자 쉡#tnm01");
+	end;
+OnTimer14000:
+	npctalk "아르티: 무지한 인간 같으니. 이 탑의 입구를 누가 찾아냈는지 잊은 거야?", instance_npcname("마법 학자 아르티#tnm");
+	end;
+OnTimer18000:
+	npctalk "쉡: *하아*... 네, 네... 당신이 그랬죠.", instance_npcname("역사학자 쉡#tnm01");
+	end;
+OnTimer21000:
+	npctalk "아르티: 네? 지금 대답이 왜 그래? 탑과 연결된 차원의 틈새 공식을 푼 건 또 누구고?", instance_npcname("마법 학자 아르티#tnm");
+	end;
+OnTimer24000:
+	npctalk "쉡: 그래요, 그래! 다 당신이 했다고요!", instance_npcname("역사학자 쉡#tnm01");
+	end;
+OnTimer27000:
+	npctalk "아르티: 이제 내 천재성에 대해 더 이상 토 달지 않겠지?", instance_npcname("마법 학자 아르티#tnm");
+	end;
+OnTimer30000:
+	npctalk "쉡: 알았으니까 그만해요. 우릴 대신해 탐사해 줄 모험가를 구해야 한다고요.", instance_npcname("역사학자 쉡#tnm01");
+	end;
+OnTimer33000:
+	npctalk "쉡: 다들 너무 위험하다고만 하니 자원자가 나타나질 않네요!", instance_npcname("역사학자 쉡#tnm01");
+	end;
+OnTimer36000:
+	npctalk "아르티: 자원자가 없어? 참 나, 말솜씨를 좀 발휘해서라도 어떻게든 찾아봐.", instance_npcname("마법 학자 아르티#tnm");
+	end;
+OnTimer37000:
+	emotion ET_KIK, getnpcid(0, instance_npcname("마법 학자 아르티#tnm"));
+	end;
+OnTimer39000:
+	npctalk "쉡: 아아, 마이크 테스트! 악마의탑을 탐사할 용기 있는 대원을 모집합니다!", instance_npcname("역사학자 쉡#tnm01");
+	end;
+OnTimer42000:
+	npctalk "쉡: 지금 바로 지원하세요! 그 악명 높은 마왕 모로크의 부하들과 맞설 기회입니다!", instance_npcname("역사학자 쉡#tnm01");
+	end;
+OnTimer45000:
+	npctalk "아르티: 홍보 멘트가 좀 이상한 거 아냐? 전략을 좀 다시 짜봐야겠는데...", instance_npcname("마법 학자 아르티#tnm");
+	stopnpctimer;
+	enablenpc "#tnmtks01";
+	end;
+}
+
+// Entrance
+1@tnm1,50,104,0	script	#event01	HIDDEN_WARP_NPC,1,1,{
+	end;
+OnTouch:
+	disablenpc instance_npcname("#event01");
+	initnpctimer;
+	end;
+OnTimer2000:
+	npctalk "하임 장교: 비상 상황이다.. 상황이 어떻게 돌아가고 있지?", instance_npcname("장교 하임#heim0");
+	end;
+OnTimer5000:
+	npctalk "저격병: 다음 층이 최상층입니다만... 마물들이 너무 많습니다...", instance_npcname("보병#tnm01");
+	end;
+OnTimer6000:
+	emotion ET_THINK, getnpcid(0, instance_npcname("장교 하임#heim0"));
+	end;
+OnTimer8000:
+	npctalk "저격병: 현재 우리 인원만으로는 돌파가 불가능해 보입니다.", instance_npcname("보병#tnm01");
+	emotion ET_PROFUSELY_SWEAT, getnpcid(0, instance_npcname("보병#tnm01"));
+	end;
+OnTimer11000:
+	npctalk "하임 장교: 살아남은 병력은 얼마나 되나? 지원팀은 언제쯤 도착하는 거지?", instance_npcname("장교 하임#heim0");
+	end;
+OnTimer12000:
+	emotion ET_THINK, getnpcid(0, instance_npcname("부관#tnm02"));
+	end;
+OnTimer16000:
+	npctalk "부관: 부를 수 있는 병력이 얼마 남지 않았습니다...", instance_npcname("부관#tnm02");
+	end;
+OnTimer17000:
+	npctalk "부관: 불행 중 다행으로 마물들의 공격은 일단 멈춘 상태입니다.", instance_npcname("부관#tnm02");
+	end;
+OnTimer21000:
+	npctalk "하임 장교: 여기서 마냥 지체하고 있을 수는 없다. 그런데 왜 공격이 멈춘 거지?", instance_npcname("장교 하임#heim0");
+	end;
+OnTimer24000:
+	npctalk "저격병: 위쪽에서 뭔가 심상치 않은 일이 벌어지고 있는 것 같습니다...", instance_npcname("보병#tnm01");
+	end;
+OnTimer26000:
+	disablenpc instance_npcname("장교 하임#heim0");
+	enablenpc instance_npcname("장교 하임#heim");
+	npctalk "하임 장교: 넌 누구냐?", instance_npcname("장교 하임#heim");
+	stopnpctimer;
+	end;
+}
+1@tnm1,57,112,5	script	장교 하임#heim0	4_TOWER_05,{ end; }
+
+1@tnm1,56,110,3	script	장교 하임#heim	4_TOWER_05,{
+	if (is_party_leader() == false) {
+		mes "[장교 하임]";
+		mes "대체 누가 당신들을 여기까지 데려온 거지?";
+		mes "책임자하고 대화하도록 하겠네.";
+		close;
+	}
+	switch('devil_tower) {
+	case 0:
+		mes "[장교 하임]";
+		mes "지원군이 온 건가? 그런데 왜 다들 가만히 보고만 있는 거야!";
+		npctalk "장교 하임: 지원군이 온 건가? 그런데 왜 다들 가만히 보고만 있는 거야!";
+		next;
+		select("지금 바로 말인가요?");
+		if (is_party_leader() == true && 'devil_tower == 0) {
+			enablenpc instance_npcname("치료사 파마#feima");
+			'devil_tower = 1;
+		}
+		mes "[치료사 파마]";
+		mes "부탁이에요, 사령관님! 혼자서는 도저히 무리라구요~!";
+		npctalk "치료사 파마: 사령관님, 제발 도와주세요. 저 혼자서는 도저히 무리예요~!", instance_npcname("치료사 파마#feima");
+		next;
+		mes "[장교 하임]";
+		mes "들리지 않는 건가?";
+		mes "어서 가서 부상당한 군인들을 도와주라고.";
+		mes "파마가 구급 상자를 줄 테니, 그걸로 부상자들을 치료해 줘.";
+		close2;
+		setpcblock PCBLOCK_NPC, true;
+		npctalk "장교 하임: 들리지 않는 건가?";
+		sleep2 2000;
+		npctalk "장교 하임: 어서 가서 부상당한 군인들을 도와주라고.";
+		sleep2 2000;
+		npctalk "치료사 파마: 좋아요~ 절 도와주시는 거죠? 이쪽으로 와서 구급 상자 받으세요~!";
+		setpcblock PCBLOCK_NPC, false;
+		end;
+	case 1:
+		mes "[장교 하임]";
+		mes "파마를 도와 부상병들을 치료하는 게 지금 가장 시급한 일이네.";
+		mes "상황이 좋지 않겠지만, 부디 최선을 다해 주게.";
+		close;
+	default:
+		mes "[장교 하임]";
+		mes "불행 중 다행으로 아직 전사자는 없네.";
+		mes "내 병사들이 죽어 나가는 꼴은 절대 보고 싶지 않아.";
+		close;
+	}
+}
+
+1@tnm1,47,109,3	script	치료사 파마#feima	4_TOWER_10,{
+	if ('devil_tower == 1) {
+		if (countitem(7641) < 1) {
+			mes "[치료사 파마]";
+			mes "이 구급 상자를 사용해서 부상자들을 치료해 주세요.";
+			mes "어렵지 않아요. 제가 알려드리는 대로만 하시면 돼요.";
+			next;
+			mes "[치료사 파마]";
+			mes "물자가 넉넉하지 않아서, 한 번에 하나씩만 드릴 수 있어요.";
+			mes "죄송하지만, 다 쓰시면 다시 와서 요청해 주세요.";
+			if ('devil_tower == 1)
+				getitem 7641,1;// Medical_Cure_Box
+			close;
+		}
+		mes "[치료사 파마]";
+		mes "미안해요... 보급 상황이 너무 안 좋아서 하나씩밖에 못 드려요.";
+		mes "부족하면 언제든 다시 말씀해 주시고요.";
+		close;
+	}
+	mes "[치료사 파마]";
+	mes "후우... 좋아요, 이제 고비는 넘긴 것 같네요.";
+	mes "정말 큰 도움이 됐어요. 고마워요!";
+	close;
+}
+
+1@tnm1,39,114,3	script	부상당한 병사#1_1	4_TOWER_01,3,3,{
+	if ('devil_tower != 1)
+		end;
+	if (countitem(7641) < 1) {
+		mes "병사를 치료하려면 구급 상자 1개가 필요합니다.";
+		close;
+	}
+	mes "병사가 신음하며 의식을 잃어가고 있습니다.";
+	mes "구급 상자를 사용하시겠습니까?";
+	next;
+	if (select( "구급 상자를 사용한다", "상태를 지켜본다" ) == 2) {
+		mes "일단 병사의 상태를 조금 더 지켜보기로 했습니다.";
+		close;
+	}
+	mes "병사에게 정성껏 구급 상자를 사용했습니다.";
+	next;
+	specialeffect EF_SPHERE;
+	progressbar "000000",10;
+	if ('devil_tower == 1) {
+		delitem 7641,1;
+		specialeffect EF_ENTRY;
+		disablenpc();
+		enablenpc instance_npcname( strnpcinfo(1) + "#" + replacestr( strnpcinfo(2), "_1", "" ) );
+		specialeffect EF_ENTRY,AREA, instance_npcname( strnpcinfo(1) + "#" + replacestr( strnpcinfo(2), "_1", "" ) );
+		mes "다행히 효과가 있는 듯합니다.";
+		'heal_count++;
+		if ('heal_count == 7) {
+			'devil_tower = 2;
+			npctalk "치료사 파마: 암살자들?!", instance_npcname("치료사 파마#feima");
+			enablenpc instance_npcname("루실#tnm01");
+			enablenpc instance_npcname("마법 검사#tnm01");
+			enablenpc instance_npcname("어쌔신 휴이#tnm01");
+			enablenpc instance_npcname("어쌔신 루이#tnm01");
+		}
+	}
+	close;
+
+OnTouch:
+	.@num = atoi( replacestr( strnpcinfo(2), "_1", "" ) );
+	if (.@num == 1)
+		npctalk "부상당한 병사: 으으으...";
+	else if (.@num == 2)
+		npctalk "부상당한 병사: 으윽...";
+	else if (.@num == 3)
+		npctalk "부상당한 병사: ... 아... 아으...";
+	else if (.@num == 4)
+		npctalk "부상당한 병사: 으윽...";
+	else if (.@num == 5)
+		npctalk "부상당한 병사: 제발, 죽고 싶지 않아...";
+	else if (.@num == 6)
+		npctalk "부상당한 병사: 아아아~";
+	else
+		npctalk "부상당한 병사: 괴로운 신음 소리...";
+	end;
+}
+
+1@tnm1,30,120,3	duplicate(부상당한 병사#1_1)	부상당한 병사#2_1	4_TOWER_03,3,3
+1@tnm1,25,117,5	duplicate(부상당한 병사#1_1)	부상당한 병사#3_1	4_TOWER_06,3,3
+1@tnm1,19,118,4	duplicate(부상당한 병사#1_1)	부상당한 병사#4_1	4_TOWER_08,3,3
+1@tnm1,18,110,4	duplicate(부상당한 병사#1_1)	부상당한 병사#5_1	4_TOWER_11,3,3
+1@tnm1,24,104,7	duplicate(부상당한 병사#1_1)	부상당한 병사#6_1	4_TOWER_13,3,3
+1@tnm1,31,110,3	duplicate(부상당한 병사#1_1)	부상당한 병사#7_1	4_TOWER_03,3,3
+
+1@tnm1,39,114,3	script	부상당한 병사#1	4_TOWER_02,{
+	mes "[부상당한 병사들]";
+	mes "후우... 이제야 살 것 같네요.";
+	mes "정말 감사합니다.";
+	close;
+}
+
+1@tnm1,30,120,3	script	부상당한 병사#2	4_TOWER_04,{
+	mes "[부상당한 병사들]";
+	mes "차라리... 날 죽게 내버려 둬...";
+	mes "너무 아파서 견딜 수가 없어...";
+	close;
+}
+
+1@tnm1,25,117,5	script	부상당한 병사#3	4_TOWER_07,{
+	mes "[부상당한 병사들]";
+	mes "아직 의식이 온전하지 않은 것 같습니다.";
+	mes "안정을 취할 수 있게 자리를 비켜줍시다.";
+	close;
+}
+
+1@tnm1,19,118,4	script	부상당한 병사#4	4_TOWER_09,{
+	mes "[부상당한 병사들]";
+	mes "이렇게 그냥 죽는 줄로만 알았는데.";
+	mes "제가 살아있군요! 감사합니다!";
+	close;
+}
+
+1@tnm1,18,110,4	script	부상당한 병사#5	4_TOWER_12,{
+	mes "[부상당한 병사들]";
+	mes "아직 죽을 순 없어. 고향에 있는 그녀에게 청혼해야 하거든.";
+	mes "우린 분명 행복해질 수 있겠지?";
+	close;
+}
+
+1@tnm1,24,104,7	script	부상당한 병사#6	4_TOWER_14,{
+	mes "[부상당한 병사들]";
+	mes "훨씬 나아졌지만 아직 몸이 움직이질 않네요.";
+	mes "그래도 살아있어서 다행입니다.";
+	close;
+}
+
+1@tnm1,31,110,3	script	부상당한 병사#7	4_TOWER_04,{
+	mes "[부상당한 병사들]";
+	mes "고맙습니다... 정말 고맙습니다...";
+	close;
+}
+
+1@tnm1,61,110,3	script	부관#tnm02	4_M_MOCASS2,{
+	mes "[부관]";
+	mes "수백 년 전의 그 대재앙이 다시 일어나는 건 아니겠죠?";
+	mes "대체 왜 마물들이 이토록 갑자기 나타난 걸까요?";
+	close;
+}
+
+1@tnm1,61,113,3	script	보병#tnm01	4_M_MOCASS1,{
+	mes "[보병]";
+	mes "당신들이 이번에 온다는 지원군입니까?";
+	mes "다행이네요. 이곳 상황이 점점 더 나빠지고 있거든요.";
+	mes "도와주러 오셔서 정말 든든합니다.";
+	close;
+}
+
+1@tnm1,46,105,5	script	루실#tnm01	4_F_LUCILE,{
+	if (is_party_leader() == false) {
+		cutin "tnm_lucile01.bmp",2;
+		mes "[루실]";
+		mes "누가 이 지원팀의 책임자지?";
+		close3;
+	}
+	if ('devil_tower == 2) {
+		.@lucile$ = instance_npcname("루실#tnm01");
+		.@heim$ = instance_npcname("장교 하임#heim");
+		'devil_tower = 3;
+		setpcblock PCBLOCK_NPC, true;
+		cutin "tnm_lucile01.bmp",2;
+		sleep2 1500;
+		npctalk "루실: 암살자 길드에서 온 루실이라고 한다.", .@lucile$;
+		sleep2 2000;
+		npctalk "장교 하임: 암살자 길드에서 지원을? 제시간에 맞춰 와줘서 고맙군.", .@heim$;
+		sleep2 3000;
+		npctalk "루실: 보기보다 상황이 훨씬 심각해 보이는데.", .@lucile$;
+		sleep2 3000;
+		npctalk "루실: 그 용맹하다던 프론테라 기사단은 다 어디 간 거지?", .@lucile$;
+		sleep2 3000;
+		npctalk "장교 하임: 지금 나를 비꼬는 건가?", .@heim$;
+		sleep2 3000;
+		npctalk "루실: 그럴 리가. 진심으로 궁금해서 그래. 위층은 지금 어떤 상태지?", .@lucile$;
+		sleep2 2500;
+		emotion ET_OHNO, getnpcid(0, .@heim$);
+		sleep2 1000;
+		npctalk "장교 하임: 어떻게 안 거지? 그래, 위층에서 내려오던 마물들의 파상공세가 멎었네.", .@heim$;
+		sleep2 3000;
+		emotion ET_SMILE, getnpcid(0, .@lucile$);
+		npctalk "루실: 마법 검사, 자네가 보기엔 이 상황이 어때 보이나?", .@lucile$;
+		cutin "tnm_lucile01.bmp",0;
+		sleep2 3000;
+		npctalk "마검사: 흠, 내가 가서 조사해 보겠네.", instance_npcname("마법 검사#tnm01");
+		cutin "tnm_loki.bmp",2;
+		sleep2 2000;
+		cutin "",255;
+		disablenpc instance_npcname("마법 검사#tnm01");
+		sleep2 1000;
+		npctalk "루실: 그렇게 서두를 필요까진 없을 텐데.", .@lucile$;
+		cutin "tnm_lucile01.bmp",2;
+		sleep2 2000;
+		npctalk "장교 하임: 제정신인가? 혼자 갔다간 목숨을 부지하기 어려울 걸세!", .@heim$;
+		sleep2 3000;
+		npctalk "루실: 혼자는 아냐. 아직 멀쩡한 병사들이 꽤 남아있으니까!", .@lucile$;
+		sleep2 2500;
+		npctalk "루실: 좋아, 자네에게 지원을 부탁하지. 하하하, 그렇지 듀이?", .@lucile$;
+		sleep2 500;
+		enablenpc instance_npcname("어쌔신 듀이#tnm01");
+		enablenpc instance_npcname("#tnm1stepmob");
+		npctalk "듀이: 알겠습니다.", instance_npcname("어쌔신 듀이#tnm01");
+		'devil_tower = 4;
+		sleep2 500;
+		cutin "",255;
+		disablenpc .@lucile$;
+		disablenpc instance_npcname("어쌔신 휴이#tnm01");
+		disablenpc instance_npcname("어쌔신 루이#tnm01");
+		sleep2 2000;
+		npctalk "장교 하임: 정말 종잡을 수 없는 자들이군. 상황은 알고 있겠지? 가서 그들을 지원해 주게.", .@heim$;
+		sleep2 2500;
+		npctalk "장교 하임: 위에서 쏟아져 내려오는 마물들을 처리하는 걸 도와주게나.", .@heim$;
+		setpcblock PCBLOCK_NPC, false;
+		end;
+	}
+}
+
+1@tnm1,52,104,2	duplicate(장교 하임#heim0)	마법 검사#tnm01	4_M_ROKI
+1@tnm1,42,104,4	duplicate(장교 하임#heim0)	어쌔신 휴이#tnm01	4_TOWER_15
+1@tnm1,44,101,5	duplicate(장교 하임#heim0)	어쌔신 루이#tnm01	4_M_ACROSS
+
+1@tnm1,70,108,3	script	어쌔신 듀이#tnm01	4_M_ACROSS,{
+	if ('devil_tower < 4)
+		end;
+	if (isbegin_quest(7569) == 0)
+		setquest 7569;// Treat the injured
+	if (isbegin_quest(7570) == 0)
+		setquest 7570;// Destroy the demons
+	mes "[듀이]";
+	mes "위층까지 길을 안내해 드리지요.";
+	mes "가는 길에 마주치는 마물들은 남김없이 처리해야 합니다.";
+	next;
+	if (select( "지금 이동한다", "정비할 시간이 더 필요하다" ) == 2) {
+		mes "[듀이]";
+		mes "어떤 상황이 닥쳐도 대응할 수 있게 준비하세요.";
+		close;
+	}
+	mes "[듀이]";
+	mes "매사에 주의하며 움직이십시오.";
+	close2;
+	warp 'map_tnm1$,91,23;
+	devil_tower_can_reenter = 1;// nb. different from official (condition overcomplicated)
+	end;
+}
+
+// Stairs tnm1
+// spawn inaccurate
+1@tnm1,91,23,0	script	#tnm1stepmob	HIDDEN_WARP_NPC,1,1,{
+	end;
+OnTouch:
+	if ('devil_tower != 4)
+		end;
+	disablenpc instance_npcname("#tnm1stepmob");
+	enablenpc instance_npcname("어쌔신 루이#tnm02");
+	enablenpc instance_npcname("루실#tnm02");
+	initnpctimer;
+	monster 'map_tnm1$,99,24,"Evil Shadow",2939,1, instance_npcname("#tnm1stepmob") + "::OnMobDead";	// MM_EVIL_SHADOW1
+	'mob_id = $@mobid[0];
+	end;
+OnTimer2000:
+	if (unitexists('mob_id) == true)
+		unittalk 'mob_id, "이게 뭐야? 고작 인간이라니? 죽으려고 환장했구나!";
+	end;
+OnTimer5000:
+	monster 'map_tnm1$,103,21,"Evil Shadow",2940,1, instance_npcname("#tnm1stepmob") + "::OnMobDead";	// MM_EVIL_SHADOW2
+	unittalk $@mobid[0], "죽을 각오는 되어 있겠지?";
+	monster 'map_tnm1$,103,26,"Evil Shadow",2941,1, instance_npcname("#tnm1stepmob") + "::OnMobDead";	// MM_EVIL_SHADOW3
+	unittalk $@mobid[0], "하하하하... 어디 한번 놀아보자고...!!!";
+	end;
+OnTimer11000:
+	monster 'map_tnm1$,106,25,"Evil Shadow",2939,1, instance_npcname("#tnm1stepmob") + "::OnMobDead";	// MM_EVIL_SHADOW1
+	monster 'map_tnm1$,106,27,"Evil Shadow",2939,1, instance_npcname("#tnm1stepmob") + "::OnMobDead";	// MM_EVIL_SHADOW1
+	monster 'map_tnm1$,110,20,"Evil Shadow",2940,1, instance_npcname("#tnm1stepmob") + "::OnMobDead";	// MM_EVIL_SHADOW2
+	monster 'map_tnm1$,112,24,"Evil Shadow",2940,1, instance_npcname("#tnm1stepmob") + "::OnMobDead";	// MM_EVIL_SHADOW2
+	monster 'map_tnm1$,107,22,"Evil Shadow",2941,1, instance_npcname("#tnm1stepmob") + "::OnMobDead";	// MM_EVIL_SHADOW3
+	monster 'map_tnm1$,114,24,"Evil Shadow",2941,1, instance_npcname("#tnm1stepmob") + "::OnMobDead";	// MM_EVIL_SHADOW3
+	end;
+OnTimer17000:
+	monster 'map_tnm1$,120,20,"Evil Shadow",2939,1, instance_npcname("#tnm1stepmob") + "::OnMobDead";	// MM_EVIL_SHADOW1
+	monster 'map_tnm1$,122,23,"Evil Shadow",2939,1, instance_npcname("#tnm1stepmob") + "::OnMobDead";	// MM_EVIL_SHADOW1
+	end;
+OnTimer23000:
+	monster 'map_tnm1$,116,25,"Evil Shadow",2940,1, instance_npcname("#tnm1stepmob") + "::OnMobDead";	// MM_EVIL_SHADOW2
+	monster 'map_tnm1$,116,21,"Evil Shadow",2940,1, instance_npcname("#tnm1stepmob") + "::OnMobDead";	// MM_EVIL_SHADOW2
+	end;
+OnTimer29000:
+	monster 'map_tnm1$,134,21,"Evil Shadow",2939,1, instance_npcname("#tnm1stepmob") + "::OnMobDead";	// MM_EVIL_SHADOW1
+	monster 'map_tnm1$,130,25,"Evil Shadow",2939,1, instance_npcname("#tnm1stepmob") + "::OnMobDead";	// MM_EVIL_SHADOW1
+	monster 'map_tnm1$,129,27,"Evil Shadow",2940,1, instance_npcname("#tnm1stepmob") + "::OnMobDead";	// MM_EVIL_SHADOW2
+	monster 'map_tnm1$,120,27,"Evil Shadow",2941,1, instance_npcname("#tnm1stepmob") + "::OnMobDead";	// MM_EVIL_SHADOW3
+	monster 'map_tnm1$,118,22,"Evil Shadow",2941,1, instance_npcname("#tnm1stepmob") + "::OnMobDead";	// MM_EVIL_SHADOW3
+	end;
+OnTimer35000:
+	monster 'map_tnm1$,138,27,"Evil Shadow",2939,1, instance_npcname("#tnm1stepmob") + "::OnMobDead";	// MM_EVIL_SHADOW1
+	monster 'map_tnm1$,144,23,"Evil Shadow",2939,1, instance_npcname("#tnm1stepmob") + "::OnMobDead";	// MM_EVIL_SHADOW1
+	monster 'map_tnm1$,129,20,"Evil Shadow",2940,1, instance_npcname("#tnm1stepmob") + "::OnMobDead";	// MM_EVIL_SHADOW2
+	end;
+OnTimer41000:
+	monster 'map_tnm1$,140,24,"Evil Shadow",2940,1, instance_npcname("#tnm1stepmob") + "::OnMobDead";	// MM_EVIL_SHADOW2
+	monster 'map_tnm1$,144,20,"Evil Shadow",2940,1, instance_npcname("#tnm1stepmob") + "::OnMobDead";	// MM_EVIL_SHADOW2
+	monster 'map_tnm1$,130,27,"Evil Shadow",2941,1, instance_npcname("#tnm1stepmob") + "::OnMobDead";	// MM_EVIL_SHADOW3
+	monster 'map_tnm1$,127,24,"Evil Shadow",2941,1, instance_npcname("#tnm1stepmob") + "::OnMobDead";	// MM_EVIL_SHADOW3
+	monster 'map_tnm1$,142,27,"Evil Shadow",2941,1, instance_npcname("#tnm1stepmob") + "::OnMobDead";	// MM_EVIL_SHADOW3
+	monster 'map_tnm1$,140,22,"Evil Shadow",2941,1, instance_npcname("#tnm1stepmob") + "::OnMobDead";	// MM_EVIL_SHADOW3
+	stopnpctimer;
+	end;
+OnMobDead:
+	end;
+}
+
+1@tnm1,158,24,3	script	어쌔신 루이#tnm02	4_M_ACROSS,{
+	if ('devil_tower < 4)
+		end;
+	if (checkquest(7570,HUNTING) != 2) {
+		mes "[루이]";
+		mes "대장님이 마물들을 전부 소탕해야";
+		mes "한다고 하셨어. 어서 시작하자.";
+		close;
+	}
+	mes "[루이]";
+	mes "습격 속에서도 다행히 많은";
+	mes "병사들이 살아남아 마물을 처리했어.";
+	next;
+	mes "[루이]";
+	mes "또 다른 일이 터질까 봐, 아무도 위층으로 올라가지 못하게 감시하고 있었지.";
+	next;
+	mes "[루이]";
+	mes "네가 나를 도와줬으면 좋겠어.";
+	mes "내가 길을 안내해 줄게.";
+	if (isbegin_quest(7571) == 0) {
+		erasequest 7569;// Treat the injured
+		erasequest 7570;// Destroy the demons
+		setquest 7571;// Tower Expedition
+	}
+	next;
+	mes "난 꽤 오랫동안 이 탑의 통로를 조사해 왔거든.";
+	close2;
+	warp 'map_tnm1$,124,86;
+	end;
+}
+
+// Stairs 2 tnm1
+1@tnm1,138,96,3	script	루실#tnm02	4_F_LUCILE,{
+	if (isbegin_quest(7571) == 0)
+		end;
+	if (is_party_leader() == false) {
+		mes "그녀의 앞에서 손을 흔들어 보았지만 아무런 반응이 없다.";
+		close;
+	}
+	if ('devil_tower < 4)
+		end;
+	if ('devil_tower < 6) {
+		if ('devil_tower == 4) {
+			mes "[루실]";
+			mes "불친절하게 느껴졌다면 사과할게요. 몸이 고정되어 버렸거든요.";
+			npctalk "루실: 불친절하게 느껴졌다면 사과할게요. 몸이 고정되어 버렸거든요.";
+			cutin "tnm_lucile02.bmp",2;
+			next;
+			select("도와드릴까요?");
+			mes "[루실]";
+			mes "자가 수복 기능이 있긴 하지만, 지금은 그럴 시간적 여유가 없어요.";
+			mes "당신의 힘을 제게 조금 나눠주시겠어요?";
+			npctalk "루실: 스스로 회복할 순 있지만 시간이 너무 걸려요. 당신의 힘을 빌려줄 수 있나요?";
+			next;
+			mes "[루실]";
+			mes "시스템을 재가동하기 위해 당신의 에너지가 필요합니다.";
+			mes "흔들릴 수 있으니 꽉 잡으세요.";
+			npctalk "루실: 시스템을 재가동하기 위해 당신의 에너지가 필요합니다.";
+			next;
+			sleep2 750;
+			npctalk "루실: 흔들릴 수 있으니 꽉 잡으세요.";
+			if (is_party_leader() == true && 'devil_tower == 4) {
+				donpcevent instance_npcname("휴이#hui02") + "::OnEnable";
+				'devil_tower = 5;
+			}
+			percentheal -30,0;
+		}
+		cutin "tnm_lucile03.bmp",2;
+		mes "루실은 평범한 인간이 아니라 기계인 것 같다.";
+		mes "갑자기 그녀의 몸에서 기계 장치가 돌아가는 소리가 들려온다.";
+		specialeffect EF_LEVEL99_3;
+		progressbar "000000",40;
+		if (is_party_leader() == true && 'devil_tower == 5) {
+			if (isbegin_quest(7572) == 0)
+				setquest 7572;// Lucile...?
+			'devil_tower = 6;
+		}
+		mes "시스템이 복구되었습니다.";
+		next;
+		mes "[루실]";
+		mes "와! 생각보다 훨씬 빨리 고쳐주셨네요.";
+		mes "방금 소리에 놀라셨나요?";
+		mes "전 일반적인 육체가 아니라서, 가끔은 이렇게 정비가 필요하답니다.";
+		cutin "tnm_lucile02.bmp",2;
+		next;
+		mes "[루실]";
+		mes "이 몸은 신께서 내려주신 선물과도 같죠.";
+		mes "중앙에 있는 문이 보이시나요?";
+		cutin "tnm_lucile01.bmp",2;
+		next;
+		mes "[루실]";
+		mes "서둘러야 해요. 그렇지 않으면 이 세상이 위험에 빠질 거예요.";
+		close2;
+		cutin "",255;
+		// continue
+	}
+	if ('devil_tower == 6) {
+		sleep 1500;
+		npctalk "루실: 그럼 전 먼저 실례할게요. 세상을 구하고 싶다면 절 따라오세요.";
+		sleep 2000;
+		npctalk "휴이: 누나...", instance_npcname("휴이#hui02");
+		if ('devil_tower == 6) {
+			disablenpc instance_npcname("루실#tnm02");
+			enablenpc instance_npcname("루실#tnm03");
+			enablenpc instance_npcname("마법 검사#tnm02");
+			enablenpc instance_npcname("마왕 모로크#tnm01");
+			'devil_tower = 7;
+		}
+	}
+	end;
+}
+	
+1@tnm1,135,99,5	script	휴이#hui02	4_TOWER_15,{
+	if ('devil_tower < 5)
+		end;
+	if ('devil_tower == 5 || 'devil_tower == 6) {
+		mes "[휴이]";
+		mes "누나가 너무 걱정돼요.";
+		mes "부상을 입을 때마다 저런 상태가 되어버리거든요.";
+		mes "몸의 대부분이 기계로 되어 있어서...";
+		close;
+	}
+	if ('mob_count > 0) {
+		mes "[휴이]";
+		mes "위층으로 올라가는 길은 제가 알아요...";
+		mes "하지만 그전에, 이 마물들부터 처리해야 해요!";
+		close;
+	}
+	mes "[휴이]";
+	mes "다른 분들은 어떻게 지내고 계실지...";
+	mes "위층은 타나토스 님과 루실 누나만 가본 곳이라서요...";
+	next;
+	mes "[휴이]";
+	mes "그분들을 돕고 싶다면, 서두르는 게 좋겠어요.";
+	mes "제가 길을 안내해 드릴게요.";
+	next;
+	if (select( "즉시 이동하십시오.", "따라오지 마세요." ) == 2) {
+		mes "[휴이]";
+		mes "...알겠습니다.";
+		close;
+	}
+	mes "[휴이]";
+	mes "이쪽입니다.";
+	mes "조심하세요.";
+	close2;
+	warp 'map_tnm2$,152,130;
+	end;
+
+OnEnable:
+	enablenpc instance_npcname("휴이#hui02");
+	initnpctimer;
+	end;
+OnTimer3000:
+	npctalk "휴이: 안 돼, 누나 조심해! 마물들이 갑자기 나타났어!";
+	'mob_count = 16;
+	monster 'map_tnm1$,142,90,"Evil Shadow",2939,1, instance_npcname("휴이#hui02") + "::OnMobDead";	// MM_EVIL_SHADOW1
+	monster 'map_tnm1$,139,91,"Evil Shadow",2940,1, instance_npcname("휴이#hui02") + "::OnMobDead";	// MM_EVIL_SHADOW2
+	monster 'map_tnm1$,130,86,"Evil Shadow",2940,1, instance_npcname("휴이#hui02") + "::OnMobDead";
+	monster 'map_tnm1$,143,95,"Evil Shadow",2941,1, instance_npcname("휴이#hui02") + "::OnMobDead";	// MM_EVIL_SHADOW3
+	monster 'map_tnm1$,134,90,"Evil Shadow",2941,1, instance_npcname("휴이#hui02") + "::OnMobDead";
+	end;
+OnTimer6000:
+	npctalk "휴이: 대체 어디서 나오는 거지? 또 마물들이야......";
+	end;
+OnTimer8000:
+	monster 'map_tnm1$,137,103,"Evil Shadow",2939,1, instance_npcname("휴이#hui02") + "::OnMobDead";	// MM_EVIL_SHADOW1
+	monster 'map_tnm1$,140,102,"Evil Shadow",2939,1, instance_npcname("휴이#hui02") + "::OnMobDead";
+	monster 'map_tnm1$,132,103,"Evil Shadow",2940,1, instance_npcname("휴이#hui02") + "::OnMobDead";	// MM_EVIL_SHADOW2
+	monster 'map_tnm1$,146,100,"Evil Shadow",2940,1, instance_npcname("휴이#hui02") + "::OnMobDead";
+	monster 'map_tnm1$,142,105,"Evil Shadow",2940,1, instance_npcname("휴이#hui02") + "::OnMobDead";
+	monster 'map_tnm1$,135,107,"Evil Shadow",2941,1, instance_npcname("휴이#hui02") + "::OnMobDead";	// MM_EVIL_SHADOW3
+	end;
+OnTimer11000:
+	npctalk "휴이: 이럴 수가...";
+	end;
+OnTimer12000:
+	monster 'map_tnm1$,135,107,"Evil Shadow",2939,1, instance_npcname("휴이#hui02") + "::OnMobDead";	// MM_EVIL_SHADOW1
+	monster 'map_tnm1$,146,100,"Evil Shadow",2939,1, instance_npcname("휴이#hui02") + "::OnMobDead";
+	monster 'map_tnm1$,130,86,"Evil Shadow",2940,1, instance_npcname("휴이#hui02") + "::OnMobDead";		// MM_EVIL_SHADOW2
+	monster 'map_tnm1$,137,103,"Evil Shadow",2940,1, instance_npcname("휴이#hui02") + "::OnMobDead";
+	monster 'map_tnm1$,143,95,"Evil Shadow",2941,1, instance_npcname("휴이#hui02") + "::OnMobDead";		// MM_EVIL_SHADOW3
+	stopnpctimer;
+	end;
+OnMobDead:
+	'mob_count--;
+	if ('mob_count == 0)
+		npctalk "휴이: 이쪽이에요! 마물들이 쏟아져 나온 틈을 이용해 위로 올라갈 수 있어요!";
+	end;
+}
+
+// Morocc - Thanatos Battle
+1@tnm2,136,139,3	script	마법 검사#tnm02	THANATOS_KEEP,{
+	mes "[마검사 타나토스]";
+	mes "미안하지만, 꽤나 고전하고 있었네...";
+	close;
+}
+
+1@tnm2,133,139,5	duplicate(장교 하임#heim0)	마왕 모로크#tnm01	1916
+
+1@tnm2,144,137,3	script	루실#tnm03	4_F_LUCILE,{
+	if (is_party_leader() == false) {
+		mes "[루실]";
+		mes "지금 당신들의 대장과 대화 중이니, 잠시만 뒤로 물러나 주시겠어요?";
+		cutin "tnm_lucile01.bmp",2;
+		close3;
+	}
+	if ('devil_tower == 7) {
+		mes "[루실]";
+		mes "아, 마침 제시간에 잘 도착했군요.";
+		mes "저쪽 상황을 한번 보시겠어요?";
+		cutin "tnm_lucile01.bmp",2;
+		next;
+		mes "[루실]";
+		mes "우린 저 마왕을 막아야만 해요...";
+		mes "도와줄 수 있나요?";
+		npctalk "루실: 마왕을 저지해야 합니다... 가능하시겠습니까?";
+		if (is_party_leader() == true && 'devil_tower == 7) {
+			if (isbegin_quest(7573) == 0)
+				setquest 7573;// Magic Swordman Thanatos
+			'demon$ = instance_npcname("마왕 모로크#tnm01");
+			'thanatos$ = instance_npcname("마법 검사#tnm02");
+			initnpctimer;
+			'devil_tower = 8;
+		}
+		close3;
+	}
+	mes "[루실]";
+	mes "마검사님께서 함정을 완성하실 때까지 이곳을 사수해야 해요.";
+	cutin "tnm_lucile01.bmp",2;
+	close3;
+
+OnTimer2000:
+	npctalk "마왕 모로크: 어리석은 인간들 같으니. 고작 이 정도로 나를 얼마나 묶어둘 수 있을 것 같으냐!", 'demon$;
+	end;
+OnTimer5000:
+	npctalk "마왕 모로크: 그림자들이여! 나타나서 어둠의 앞길을 막는 자들을 몰살하라!", 'demon$;
+	end;
+OnTimer6000:
+	donpcevent instance_npcname("#devil_seal_timer") + "::OnStart";
+	end;
+OnTimer8000:
+	npctalk "타나토스: 살려달라고 애원하는 꼴이 참으로 절박해 보이는군.", 'thanatos$;
+	end;
+OnTimer11500:
+	npctalk "루실: 타나토스 님, 그런 허풍을 떨 상황인가요?";
+	end;
+OnTimer12000:
+	npctalk "마왕 모로크: 내가 해방되는 순간 펼쳐질 파멸을 두려워하며 기다려라!", 'demon$;
+	end;
+OnTimer15000:
+	npctalk "타나토스: 닥쳐라! 내 손에 죽기 전까지는 결코 이곳을 나가지 못할 것이다!", 'thanatos$;
+	end;
+OnTimer16500:
+	npctalk "타나토스: 루실! 내가 놈을 가둘 결계를 소환하는 동안 내 뒤를 지켜라!", 'thanatos$;
+	end;
+OnTimer19500:
+	npctalk "루실: 알겠습니다.";
+	end;
+OnTimer22500:
+	npctalk "루실: 좋아요, 이제 할 일을 알겠죠? 마법의 인장이 이곳에 닿지 못하게 막아야 해요!";
+	stopnpctimer;
+	end;
+}
+
+1@tnm2,1,1,0	script	#devil_flamecross	HIDDEN_WARP_NPC,{
+	end;
+OnStart:
+	npctalk "마왕 모로크: 네놈들이 감히 내 계획을!!", instance_npcname("마왕 모로크#tnm01");
+	mapannounce 'map_tnm2$, "마왕 모로크: 네놈들이 감히 내 계획을!!", bc_map,0xFF0000;
+	initnpctimer;
+	end;
+OnTimer1000:
+	setarray .@north[0], 138,151, 138,160, 140,165, 140,176, 140,170, 140,181, 140,186, 140,191;
+	setarray .@north_west[0], 126,149, 122,151, 118,153, 113,154, 107,156, 101,158, 96,160, 91,161, 86,162, 81,163;
+	setarray .@south_west[0], 128,130, 125,127, 122,124, 118,121, 115,118, 112,115, 109,114, 106,106, 102,102, 99,98;
+	setarray .@south_east[0], 145,130, 148,126, 151,122, 156,120, 160,117, 164,113, 168,109, 172,105, 176,101, 180,97;
+	setarray .@north_east[0], 146,149, 148,149, 150,151, 155,152, 162,153, 167,154, 173,156, 179,158, 185,160, 191,161;
+	.@label$ = instance_npcname("#devil_flamecross") + "::OnFlameDead";
+	for ( .@i = 0; .@i < 20; .@i += 2 ) {
+		if (.@north[.@i] > 0)	// 8 mobs for north
+			monster 'map_tnm2$,.@north[.@i],.@north[.@i+1], "",2960,1, .@label$;
+		monster 'map_tnm2$,.@north_west[.@i],.@north_west[.@i+1], "",2960,1, .@label$;
+		monster 'map_tnm2$,.@south_west[.@i],.@south_west[.@i+1], "",2960,1, .@label$;	
+		monster 'map_tnm2$,.@south_east[.@i],.@south_east[.@i+1], "",2960,1, .@label$;	
+		monster 'map_tnm2$,.@north_east[.@i],.@north_east[.@i+1], "",2960,1, .@label$;	
+		sleep 200;
+	}
+	end;
+OnTimer6000:
+	killmonster 'map_tnm2$, instance_npcname("#devil_flamecross") + "::OnFlameDead";
+	end;
+OnTimer20000:
+	stopnpctimer;
+	donpcevent instance_npcname("#devil_flamecross") + "::OnStart";
+	end;
+OnStop:
+	stopnpctimer;
+	killmonster 'map_tnm2$, instance_npcname("#devil_flamecross") + "::OnFlameDead";
+	end;
+OnFlameDead:
+	end;
+}
+
+1@tnm2,1,1,0	script	#devil_seal_timer	HIDDEN_WARP_NPC,{
+	end;
+OnStart:
+	enablenpc instance_npcname("#devil_seal_timer");
+	enablenpc instance_npcname("#devil_flamecross");
+	setarray .@direction$[0], "북서쪽", "남서쪽", "남동쪽", "북동쪽", "북쪽";
+	for ( .@i = 0; .@i < 5; .@i++ ) {
+		enablenpc instance_npcname("마왕의 인장 소환#" + .@direction$[.@i]);
+		enablenpc instance_npcname("인장 중앙 도달#" + .@direction$[.@i]);
+	}
+	enablenpc instance_npcname("#devil_seal_dead");
+	donpcevent instance_npcname("#devil_seal_spawn_global") + "::OnCoord";
+	initnpctimer;
+	end;
+OnTimer5000:
+	mapannounce 'map_tnm2$, "탑의 남동쪽 방향에서 마법의 인장이 나타났습니다.", bc_map,0xFFFFFF;
+	donpcevent instance_npcname("#devil_seal_spawn_global") + "::OnFirstSpawn";
+	end;
+OnTimer10000:
+	donpcevent instance_npcname("#devil_flamecross") + "::OnStart";
+	end;
+OnTimer25000:
+	mapannounce 'map_tnm2$, "루실: 인장이 다시 움직이기 시작하기 전에 반드시 저지해야 해요.", bc_map,0xFFFFFF;
+	end;
+OnTimer65000:
+	mapannounce 'map_tnm2$, "루실: 인장이 중앙에 도달하기 전에 막아주세요!", bc_map,0xFFFFFF;
+	end;
+OnTimer95000:
+	mapannounce 'map_tnm2$, "루실: 마법의 인장이 다시 이동하기 시작했습니다.", bc_map,0xFFFFFF;
+	end;
+OnTimer125000:
+	mapannounce 'map_tnm2$, "루실: 점점 더 가까워지고 있어요... 안 돼, 너무 위험해요!", bc_map,0xFFFFFF;
+	end;
+OnTimer155000:
+	mapannounce 'map_tnm2$, "루실: 인장이 거의 중앙까지 다 왔어요!!", bc_map,0xFFFFFF;
+	end;
+OnTimer180000:
+	donpcevent instance_npcname("#devil_flamecross") + "::OnStop";
+	end;
+OnTimer185000:
+	mapannounce 'map_tnm2$, "루실: 지금 당장 멈춰야 해요!", bc_map,0xFFFFFF;
+	end;
+OnTimer191000:
+	npctalk "타나토스: 정신 똑바로 차려라! 시간이 없다!", instance_npcname("마법 검사#tnm02");
+	mapannounce 'map_tnm2$, "타나토스: 정신 똑바로 차려라! 시간이 없다!", bc_map,0xFF00;
+	end;
+OnTimer193000:
+	specialeffect EF_MAGNUMBREAK,AREA, instance_npcname("마법 검사#tnm02");
+	specialeffect EF_LORD,AREA, instance_npcname("마법 검사#tnm02");
+	setarray .@direction$[0], "북서쪽", "남서쪽", "남동쪽", "북동쪽", "북쪽";
+	for ( .@i = 0; .@i < 5; .@i++ )
+		donpcevent instance_npcname("마왕의 인장 소환#" + .@direction$[.@i]) + "::OnStop";
+	end;
+OnTimer195000:
+	npctalk "마왕 모로크: 감히 이 몸을 방해하다니!!", instance_npcname("마왕 모로크#tnm01");
+	mapannounce 'map_tnm2$, "마왕 모로크: 감히 이 몸을 방해하다니!!", bc_map,0xFF0000;
+	end;
+OnTimer198000:
+	npctalk "마왕 모로크: 누가 최후에 웃게 될지 확인해 주마!", instance_npcname("마왕 모로크#tnm01");
+	mapannounce 'map_tnm2$, "마왕 모로크: 누가 최후에 웃게 될지 확인해 주마!", bc_map,0xFF0000;
+	end;
+OnTimer201000:
+	npctalk "타나토스: 네놈의 야욕은 여기서 끝이다!", instance_npcname("마법 검사#tnm02");
+	mapannounce 'map_tnm2$, "타나토스: 네놈의 야욕은 여기서 끝이다!", bc_map,0xFF00;
+	initnpctimer;
+	end;
+OnStop:
+	stopnpctimer;
+	donpcevent instance_npcname("#devil_flamecross") + "::OnStop";
+	disablenpc instance_npcname("#devil_flamecross");
+	disablenpc instance_npcname("#devil_seal_timer");
+	end;
+}
+
+1@tnm2,1,1,0	script	#devil_seal_spawn_global	HIDDEN_WARP_NPC,{
+	end;
+OnCoord:
+	enablenpc instance_npcname("#devil_seal_spawn_global");
+	setarray 'coord_seal_DIR_NORTHWEST[0],	68,167,	78,165,	88,163,	98,160,	108,156,	118,152,	118,152;// officially
+	setarray 'coord_seal_DIR_SOUTHWEST[0],	90, 86,	96, 95,	103,103,	110,110,	116,116,	122,122,	129,130;
+	setarray 'coord_seal_DIR_SOUTHEAST[0], 191,86,	183, 94,	174,103,	165,112,	156,120,	147,128,	143,131;
+	setarray 'coord_seal_DIR_NORTHEAST[0], 197,162,	188,161,	179,158,	170,155,	161,152,	152,149,	144,148;
+	setarray 'coord_seal_DIR_NORTH[0], 142,214,	140,205,	140,195,	140,185,	140,173,	139,161,	138,150;
+	end;
+OnFirstSpawn:
+	'round[DIR_NORTHWEST] = 'round[DIR_SOUTHWEST] = 'round[DIR_SOUTHEAST] = 'round[DIR_NORTHEAST] = 'round[DIR_NORTH] = 0;
+	donpcevent instance_npcname("마왕의 인장 소환#북서쪽") + "::OnFirstSpawn";
+	donpcevent instance_npcname("마왕의 인장 소환#남서쪽") + "::OnFirstSpawn";
+	donpcevent instance_npcname("마왕의 인장 소환#남동쪽") + "::OnFirstSpawn";
+	donpcevent instance_npcname("마왕의 인장 소환#북동쪽") + "::OnFirstSpawn";
+	donpcevent instance_npcname("마왕의 인장 소환#북쪽") + "::OnFirstSpawn";
+	initnpctimer;
+	end;
+OnTimer2000:
+	donpcevent instance_npcname("마왕의 인장 소환#북서쪽") + "::OnSlaves";
+	donpcevent instance_npcname("마왕의 인장 소환#남서쪽") + "::OnSlaves";
+	donpcevent instance_npcname("마왕의 인장 소환#남동쪽") + "::OnSlaves";
+	donpcevent instance_npcname("마왕의 인장 소환#북동쪽") + "::OnSlaves";
+	donpcevent instance_npcname("마왕의 인장 소환#북쪽") + "::OnSlaves";
+	end;
+OnTimer20000:
+	donpcevent instance_npcname("마왕의 인장 소환#북서쪽") + "::OnStart";
+	donpcevent instance_npcname("마왕의 인장 소환#남동쪽") + "::OnStart";
+	donpcevent instance_npcname("마왕의 인장 소환#북쪽") + "::OnStart";
+	end;
+OnTimer30000:
+	donpcevent instance_npcname("마왕의 인장 소환#남서쪽") + "::OnStart";
+	donpcevent instance_npcname("마왕의 인장 소환#북동쪽") + "::OnStart";
+	end;
+OnStop:
+	stopnpctimer;
+	disablenpc instance_npcname("#devil_seal_spawn_global");
+	end;
+}
+
+1@tnm2,1,1,0	script	마왕의 인장 소환#북서쪽	HIDDEN_WARP_NPC,{
+	end;
+OnStart:
+	.@num = getd( strnpcinfo(2) );
+	if ('seal_id[.@num] == 0 || unitexists('seal_id[.@num]) == 0)
+		stopnpctimer;
+	else {
+		getunitdata 'seal_id[.@num], .@data;
+		'seal_hp[.@num] = .@data[UMOB_HP];
+		killmonster 'map_tnm2$, instance_npcname("#devil_seal_dead") + "::OnSeal_" + strnpcinfo(2);
+		initnpctimer;
+	}
+	end;
+OnFirstSpawn:
+OnTimer5000:
+	.@num = getd( strnpcinfo(2) );
+	.@index = 'round[.@num] * 2;
+	if (.@index == 0 || 'seal_id[.@num]) {
+		.@direction$ = strnpcinfo(2);
+		.@x = getd( "인장 좌표" + .@direction$ + "[" + .@index + "]" );
+		.@y = getd( "인장 좌표" + .@direction$ + "[" + (.@index+1) + "]" );
+
+		monster 'map_tnm2$,.@x,.@y,"Magic Seal",2938,1, instance_npcname("#devil_seal_dead") + "::OnSeal_" + .@direction$;	// MM_MAGIC_SEAL
+		'seal_id[.@num] = $@mobid[0];
+		if (.@index == 0)
+			setunitdata 'seal_id[.@num], UMOB_HP, 3000000;
+		else if ('seal_hp[.@num] > 0)
+			setunitdata 'seal_id[.@num], UMOB_HP, 'seal_hp[.@num];
+		else
+			stopnpctimer;
+		'round[.@num]++;
+		if ('round[.@num] == 7)
+			donpcevent instance_npcname("인장 중앙 도달#" + .@direction$) + "::OnStart";
+	}
+	end;
+OnSlaves:
+OnTimer7000:
+	killmonster 'map_tnm2$, instance_npcname(strnpcinfo(0)) + "::OnMobDead";
+	.@num = getd( strnpcinfo(2) );
+	if ('seal_id[.@num] && unitexists('seal_id[.@num])) {
+		.@direction$ = strnpcinfo(2);
+		.@index = ('round[.@num] - 1) * 2;
+		.@x = getd( "인장 좌표" + .@direction$ + "[" + .@index + "]" );
+		.@y = getd( "인장 좌표" + .@direction$ + "[" + (.@index+1) + "]" );
+		areamonster 'map_tnm2$,(.@x-1),(.@y-1),(.@x+1),(.@y+1),"Evil Shadow",2939,2, instance_npcname(strnpcinfo(0)) + "::OnMobDead";	// MM_EVIL_SHADOW1
+		areamonster 'map_tnm2$,(.@x-1),(.@y-1),(.@x+1),(.@y+1),"Evil Shadow",2940,2, instance_npcname(strnpcinfo(0)) + "::OnMobDead";	// MM_EVIL_SHADOW2
+		if ('round[.@num] == 7)
+			stopnpctimer;
+	}
+	end;
+OnTimer30000:
+	donpcevent instance_npcname("마왕의 인장 소환#" + strnpcinfo(2)) + "::OnStart";
+	end;
+
+OnDisable:
+	stopnpctimer;
+	killmonster 'map_tnm2$, instance_npcname(strnpcinfo(0)) + "::OnMobDead";	// note : officially still alive
+	killmonster 'map_tnm2$, instance_npcname("#devil_seal_dead") + "::OnSeal_" + strnpcinfo(2);	// note : officially still alive
+	disablenpc();
+	end;
+OnStop:
+	stopnpctimer;
+	killmonster 'map_tnm2$, instance_npcname(strnpcinfo(0)) + "::OnMobDead";
+	killmonster 'map_tnm2$, instance_npcname("#devil_seal_dead") + "::OnSeal_" + strnpcinfo(2);
+	end;
+OnMobDead:
+	end;
+}
+1@tnm2,1,1,0	duplicate(마왕의 인장 소환#북서쪽)	마왕의 인장 소환#남서쪽	HIDDEN_WARP_NPC
+1@tnm2,1,1,0	duplicate(마왕의 인장 소환#북서쪽)	마왕의 인장 소환#남동쪽	HIDDEN_WARP_NPC
+1@tnm2,1,1,0	duplicate(마왕의 인장 소환#북서쪽)	마왕의 인장 소환#북동쪽	HIDDEN_WARP_NPC
+1@tnm2,1,1,0	duplicate(마왕의 인장 소환#북서쪽)	마왕의 인장 소환#북쪽	HIDDEN_WARP_NPC
+
+1@tnm2,1,1,0	script	인장 중앙 도달#북서쪽	HIDDEN_WARP_NPC,{
+	end;
+OnStart:
+	enablenpc();
+	initnpctimer;
+	end;
+OnTimer2000:
+	npctalk "마왕 모로크: 진정한 힘이 되살아난다!!", instance_npcname("마왕 모로크#tnm01");
+	mapannounce 'map_tnm2$, "마왕 모로크: 진정한 힘이 되살아난다!!", bc_map,0xFF0000;
+	end;
+OnTimer4000:
+	npctalk "타나토스: 수단과 방법을 가리지 말고 막아라!", instance_npcname("마법 검사#tnm02");
+	mapannounce 'map_tnm2$, "타나토스: 수단과 방법을 가리지 말고 막아라!", bc_map,0xFF00;
+	stopnpctimer;
+	disablenpc();
+	end;
+}
+1@tnm2,1,1,0	duplicate(인장 중앙 도달#북서쪽)	인장 중앙 도달#남서쪽	HIDDEN_WARP_NPC
+1@tnm2,1,1,0	duplicate(인장 중앙 도달#북서쪽)	인장 중앙 도달#남동쪽	HIDDEN_WARP_NPC
+1@tnm2,1,1,0	duplicate(인장 중앙 도달#북서쪽)	인장 중앙 도달#북동쪽	HIDDEN_WARP_NPC
+1@tnm2,1,1,0	duplicate(인장 중앙 도달#북서쪽)	인장 중앙 도달#북쪽	HIDDEN_WARP_NPC
+
+1@tnm2,1,1,0	script	#devil_seal_dead	HIDDEN_WARP_NPC,{
+	end;
+OnSeal_DIR_NORTHWEST: callsub( S_Sealdead, DIR_NORTHWEST );
+OnSeal_DIR_SOUTHWEST: callsub( S_Sealdead, DIR_SOUTHWEST );
+OnSeal_DIR_SOUTHEAST: callsub( S_Sealdead, DIR_SOUTHEAST );
+OnSeal_DIR_NORTHEAST: callsub( S_Sealdead, DIR_NORTHEAST );
+OnSeal_DIR_NORTH: callsub( S_Sealdead, DIR_NORTH );
+
+S_Sealdead:
+	'seal_id[ getarg(0) ] = 0;
+	'seal_dead[ getarg(0) ] = 1;
+	.@total_seal = 'seal_dead[DIR_NORTHWEST] + 'seal_dead[DIR_SOUTHWEST] + 'seal_dead[DIR_SOUTHEAST] + 'seal_dead[DIR_NORTHEAST] + 'seal_dead[DIR_NORTH];
+	if (.@total_seal != 5) {
+		if (getarg(0) == DIR_NORTHWEST)
+			mapannounce 'map_tnm2$, "루실: 아직 안심하긴 일러요! 파괴되지 않은 마법의 인장들이 남아있거든요.", bc_map,0xFF00;
+		else
+			mapannounce 'map_tnm2$, "남은 인장들을 마저 처리해야 해요.", bc_map,0xFF00;
+	}
+	else {
+		donpcevent instance_npcname("#devil_seal_spawn_global") + "::OnStop";
+		donpcevent instance_npcname("#devil_seal_timer") + "::OnStop";	// stop timer of npc #devil_flamecross as well
+		donpcevent instance_npcname("마왕의 인장 소환#북서쪽") + "::OnDisable";// note: on official seals and slaves are alive
+		donpcevent instance_npcname("마왕의 인장 소환#남서쪽") + "::OnDisable";
+		donpcevent instance_npcname("마왕의 인장 소환#남동쪽") + "::OnDisable";
+		donpcevent instance_npcname("마왕의 인장 소환#북동쪽") + "::OnDisable";
+		donpcevent instance_npcname("마왕의 인장 소환#북쪽") + "::OnDisable";
+		mapannounce 'map_tnm2$, "마왕 모로크: 내가 고작 이런 인간들에게..!", bc_map,0xFF0000;
+		npctalk "마왕 모로크: 내가 고작 이런 인간들에게..!", instance_npcname("마왕 모로크#tnm01");
+		initnpctimer;
+	}
+	end;
+OnTimer3000:
+	mapannounce 'map_tnm2$, "타나토스: 영원한 어둠 속으로 꺼져라!", bc_map,0xFF0000;
+	npctalk "타나토스: 영원한 어둠 속으로 꺼져라!", instance_npcname("마법 검사#tnm02");
+	end;
+OnTimer5000:
+	specialeffect EF_LORD,AREA, instance_npcname("마법 검사#tnm02");
+	end;
+OnTimer7000:
+	stopnpctimer;
+	disablenpc instance_npcname("마왕 모로크#tnm01");
+	disablenpc instance_npcname("마법 검사#tnm02");
+	disablenpc instance_npcname("루실#tnm03");
+	enablenpc instance_npcname("루실#tnm04");
+	enablenpc instance_npcname("#tnm3event01");
+	enablenpc instance_npcname("어린 소녀#tnm01");
+	'devil_tower = 9;
+
+	'demon$ = 'thanatos$ = "";
+	'round[DIR_NORTHWEST] = 'round[DIR_SOUTHWEST] = 'round[DIR_SOUTHEAST] = 'round[DIR_NORTHEAST] = 'round[DIR_NORTH] = 0;
+	'seal_id[DIR_NORTHWEST] = 'seal_id[DIR_SOUTHWEST] = 'seal_id[DIR_SOUTHEAST] = 'seal_id[DIR_NORTHEAST] = 'seal_id[DIR_NORTH] = 0;
+	'seal_hp[DIR_NORTHWEST] = 'seal_hp[DIR_SOUTHWEST] = 'seal_hp[DIR_SOUTHEAST] = 'seal_hp[DIR_NORTHEAST] = 'seal_hp[DIR_NORTH] = 0;
+	'seal_dead[DIR_NORTHWEST] = 'seal_dead[DIR_SOUTHWEST] = 'seal_dead[DIR_SOUTHEAST] = 'seal_dead[DIR_NORTHEAST] = 'seal_dead[DIR_NORTH] = 0;
+	deletearray 'coord_seal_DIR_NORTHWEST[0],14;
+	deletearray 'coord_seal_DIR_SOUTHWEST[0],14;
+	deletearray 'coord_seal_DIR_SOUTHEAST[0],14;
+	deletearray 'coord_seal_DIR_NORTHEAST[0],14;
+	deletearray 'coord_seal_DIR_NORTH[0],14;
+	end;
+}
+
+1@tnm3,144,137,3	script	루실#tnm04	4_F_LUCILE,{
+	if ('devil_tower < 9)
+		end;
+	if (isbegin_quest(7574) == 0) {
+		if (isbegin_quest(7572) == 1)
+			erasequest 7572;// Lucile...?
+		if (isbegin_quest(7573) == 1)	// leader
+			erasequest 7573;// Magic Swordman Thanatos
+		setquest 7574;// Thanatos Tower
+		mes "[루실]";
+		mes "결계를 부수려던 모로크의 힘과 타나토스 님의 힘이 정면으로 충돌한 것 같군요.";
+		cutin "tnm_lucile01.bmp",2;
+		next;
+		mes "[루실]";
+		mes "여파가 저 남쪽 어딘가까지 휩쓸고 지나갔어요.";
+		mes "그곳으로 가보시겠어요?";
+	}
+	else {
+		mes "[루실]";
+		mes "두 거대한 힘이 부딪힌 에너지는 감당하기 힘들 정도예요.";
+		mes "룬 미드가르드 남쪽 지역까지 큰 영향을 끼쳤을지도 몰라요.";
+	}
+	next;
+	if (select( "따라간다.", "멈춘다." ) == 2) {
+		mes "[루실]";
+		mes "...이것이 당신이 할 수 있는 전부인가요?";
+		cutin "tnm_lucile02.bmp",2;
+		close3;
+	}
+	mes "[루실]";
+	mes "행운을 빌게요.";
+	close2;
+	warp 'map_tnm3$,21,171;
+	end;
+}
+
+// tnm3 Stairs 1
+1@tnm3,21,171,0	script	#tnm3event01	HIDDEN_NPC,1,1,{
+	end;
+OnTouch:
+	if ('devil_tower != 9)
+		end;
+	setpcblock PCBLOCK_NPC, true;
+	disablenpc instance_npcname("#tnm3event01");
+	enablenpc instance_npcname("어린 소녀#tnm01");
+	sleep2 4000;
+	mapannounce 'map_tnm3$, "어린 소녀: 오딘이시여 절 돌보소서! 마물이에요!! 도와주세요!", bc_map,0xFF00;
+	'mob_count = 12;
+	initnpctimer;
+	setpcblock PCBLOCK_NPC, false;
+	end;
+OnTimer1000:
+	monster 'map_tnm3$,33,171,"Evil Shadow",2939,1, instance_npcname("어린 소녀#tnm01") + "::OnMobDead";// MM_EVIL_SHADOW1
+	end;
+OnTimer2000:
+	monster 'map_tnm3$,39,172,"Evil Shadow",2939,1, instance_npcname("어린 소녀#tnm01") + "::OnMobDead";// MM_EVIL_SHADOW1
+	end;
+OnTimer3000:
+	monster 'map_tnm3$,34,177,"Evil Shadow",2940,1, instance_npcname("어린 소녀#tnm01") + "::OnMobDead";// MM_EVIL_SHADOW2
+	end;
+OnTimer4000:
+	monster 'map_tnm3$,36,176,"Evil Shadow",2940,1, instance_npcname("어린 소녀#tnm01") + "::OnMobDead";// MM_EVIL_SHADOW2
+	end;
+OnTimer5000:
+	monster 'map_tnm3$,37,175,"Evil Shadow",2940,1, instance_npcname("어린 소녀#tnm01") + "::OnMobDead";// MM_EVIL_SHADOW2
+	end;
+OnTimer6000:
+	monster 'map_tnm3$,37,173,"Evil Shadow",2941,1, instance_npcname("어린 소녀#tnm01") + "::OnMobDead";// MM_EVIL_SHADOW3
+	monster 'map_tnm3$,36,172,"Evil Shadow",2941,1, instance_npcname("어린 소녀#tnm01") + "::OnMobDead";// MM_EVIL_SHADOW3
+	end;
+OnTimer7000:
+	monster 'map_tnm3$,29,178,"Evil Shadow",2941,1, instance_npcname("어린 소녀#tnm01") + "::OnMobDead";// MM_EVIL_SHADOW3
+	monster 'map_tnm3$,35,172,"Evil Shadow",2941,1, instance_npcname("어린 소녀#tnm01") + "::OnMobDead";// MM_EVIL_SHADOW3
+	end;
+OnTimer8000:
+	monster 'map_tnm3$,34,173,"Evil Shadow",2941,1, instance_npcname("어린 소녀#tnm01") + "::OnMobDead";// MM_EVIL_SHADOW3
+	monster 'map_tnm3$,35,172,"Evil Shadow",2939,1, instance_npcname("어린 소녀#tnm01") + "::OnMobDead";// MM_EVIL_SHADOW1
+	end;
+OnTimer9000:
+	monster 'map_tnm3$,34,173,"Evil Shadow",2941,1, instance_npcname("어린 소녀#tnm01") + "::OnMobDead";// MM_EVIL_SHADOW3
+	stopnpctimer;
+	end;
+}
+
+1@tnm3,43,175,3	script	어린 소녀#tnm01	4_F_DST_CHILD,{
+	if ('devil_tower < 9)
+		end;
+	if ('devil_tower == 9) {
+		mes "[어린 소녀]";
+		mes "왜 성 안에 마물들이 나타난 거죠?!";
+		mes "살려주세요!";
+		close;
+	}
+	if ('devil_tower == 10) {
+		if (is_party_leader() == false) {
+			mes "[어린 소녀]";
+			mes "*훌쩍이며* 마물들이 너무 무서워요.";
+			close;
+		}
+		mes "[어린 소녀]";
+		mes "어째서 갑자기 마물들이 쳐들어와서,";
+		mes "경비병분들을 다치게 하는 건가요?";
+		npctalk "어린 소녀: 마물들 때문에 경비병 아저씨들이 많이 다쳤어요. 어떡하죠?", instance_npcname("어린 소녀#tnm01");
+		next;
+		select("어디로 가면 되죠?");
+		unittalk getcharid(3), "" + strcharinfo(0) + " : 어디로 가면 되죠?";
+		mes "[어린 소녀]";
+		mes "아빠가 성에서 싸우고 계세요. 제발 도와주세요.";
+		npctalk "아빠가 성에서 싸우고 계세요. 제발 도와주세요.", instance_npcname("어린 소녀#tnm01");
+		next;
+		mes "[어린 소녀]";
+		mes "아래쪽에서 계속 기분 나쁜 소리가 올라오고 있어요.";
+		npctalk "어린 소녀: 아래쪽에서 계속 기분 나쁜 소리가 올라오고 있어요.", instance_npcname("어린 소녀#tnm01");
+		next;
+		mes "[어린 소녀]";
+		mes "검은 무리들이 성 안으로 잠입했어요. 아빠가 위험할지도 몰라요.";
+		npctalk "어린 소녀: 검은 무리들이 성 안으로 잠입했어요. 아빠가 위험할지도 몰라요.", instance_npcname("어린 소녀#tnm01");
+		next;
+		mes "[어린 소녀]";
+		mes "아빠.. 아빠 제발 무사해야 해. *흐느낌*";
+		mes "선반 뒤 비밀 통로를 통해서 절 따라와 주세요!";
+		npctalk "어린 소녀: 선반 뒤 비밀 통로를 통해서 절 따라와 주세요!", instance_npcname("어린 소녀#tnm01");
+		close2;
+		if (is_party_leader() == true && 'devil_tower == 10) {
+			enablenpc instance_npcname("#tnm3gate01");
+			enablenpc instance_npcname("#tnm3event02ect");
+			'devil_tower = 11;
+		}
+		end;
+	}
+	if ('devil_tower == 11) {
+		mes "[어린 소녀]";
+		mes "그 선반 뒤에는 지하로 연결된 비밀 통로가 숨겨져 있어요!";
+		mes "우리 아빠가 무사한지 꼭 확인해야 해요. 부탁이에요.";
+		close;
+	}
+	end;
+
+OnMobDead:
+	'mob_count--;
+	if ('mob_count == 0) {
+		'devil_tower = 10;
+		npctalk "어린 소녀: 구해줘서 고마워요... 그런데 왜 이런 곳에 마물이 있는 거죠?", instance_npcname("어린 소녀#tnm01");
+	}
+	end;
+}
+
+1@tnm3,52,176,0	warp	#tnm3gate01	2,2,1@tnm3,85,178
+
+// tnm3 Stairs 2
+1@tnm3,85,178,0	script	#tnm3event02ect	HIDDEN_NPC,1,1,{
+	end;
+OnTouch:
+	if ('devil_tower != 11)
+		end;
+	disablenpc instance_npcname("#tnm3event02ect");
+	enablenpc instance_npcname("어린 소녀#tnm02");
+	npctalk "어린 소녀: 보세요! 마물들이에요, 곧 성을 점령할 거예요!", instance_npcname("어린 소녀#tnm02");
+	'mob_count = 18;
+	initnpctimer;
+	end;
+OnTimer1000:
+	.@label$ = instance_npcname("어린 소녀#tnm02") + "::OnMobDead";
+	monster 'map_tnm3$,97,174,"악의 그림자",2939,1, .@label$;
+	monster 'map_tnm3$,98,175,"악의 그림자",2939,1, .@label$;
+	monster 'map_tnm3$,100,166,"악의 그림자",2939,1, .@label$;
+	monster 'map_tnm3$,108,171,"악의 그림자",2940,1, .@label$;
+	monster 'map_tnm3$,104,172,"악의 그림자",2940,1, .@label$;
+	end;
+OnTimer3000:
+	.@label$ = instance_npcname("어린 소녀#tnm02") + "::OnMobDead";
+	monster 'map_tnm3$,109,169,"악의 그림자",2941,1, .@label$;
+	monster 'map_tnm3$,111,173,"악의 그림자",2941,1, .@label$;
+	monster 'map_tnm3$,113,167,"악의 그림자",2941,1, .@label$;
+	monster 'map_tnm3$,101,176,"악의 그림자",2939,1, .@label$;
+	monster 'map_tnm3$,116,170,"악의 그림자",2941,1, .@label$;
+	end;
+OnTimer5000:
+	.@label$ = instance_npcname("어린 소녀#tnm02") + "::OnMobDead";
+	monster 'map_tnm3$,107,175,"악의 그림자",2940,1, .@label$;
+	monster 'map_tnm3$,106,174,"악의 그림자",2940,1, .@label$;
+	monster 'map_tnm3$,106,169,"악의 그림자",2939,1, .@label$;
+	monster 'map_tnm3$,103,177,"악의 그림자",2940,1, .@label$;
+	end;
+OnTimer7000:
+	stopnpctimer;
+	.@label$ = instance_npcname("어린 소녀#tnm02") + "::OnMobDead";
+	monster 'map_tnm3$,121,171,"악의 그림자",2941,1, .@label$;
+	monster 'map_tnm3$,119,173,"악의 그림자",2941,1, .@label$;
+	monster 'map_tnm3$,127,166,"악의 그림자",2941,1, .@label$;
+	monster 'map_tnm3$,125,166,"악의 그림자",2941,1, .@label$;
+	end;
+}
+
+1@tnm3,89,179,4	script	어린 소녀#tnm02	4_F_DST_CHILD,{
+	end;
+OnMobDead:
+	'mob_count--;
+	if ('mob_count == 0) {
+		mapannounce 'map_tnm3$, "어린 소녀: 이 통로 끝에 지하로 이어지는 계단이 있어요!", bc_map,0xFF00;
+		disablenpc instance_npcname("어린 소녀#tnm02");
+		enablenpc instance_npcname("어린 소녀#tnm03");
+		npctalk "어린 소녀: 지하로 가는 길은 이 통로를 따라가면 돼요!", instance_npcname("어린 소녀#tnm03");
+		enablenpc instance_npcname("#tnm3gate02");
+		enablenpc instance_npcname("사악한 그림자#tnm3mob01");
+	}
+	end;
+}
+
+1@tnm3,128,164,3	script	어린 소녀#tnm03	4_F_DST_CHILD,{
+	mes "[어린 소녀]";
+	mes "여기서부턴.. 저도 잘 모르겠어요...";
+	mes "계단이 너무 많아서 헷갈려요...";
+	mes "저기 마물들이 잔뜩 있어요. 우리 아빠가 정말 위험할 거예요!";
+	mes "제발 아빠를 구해주세요.";
+	close;
+}
+
+1@tnm3,134,156,0	warp	#tnm3gate02	1,1,1@tnm3,169,165
+
+// tnm3 Stairs 3
+1@tnm3,179,172,3	script	사악한 그림자#tnm3mob01	2941,4,4,{
+	end;
+OnTouch_:
+	if ('devil_tower == 11) {
+		'devil_tower = 12;
+		setpcblock PCBLOCK_NPC, true;
+		sleep2 1000;
+		npctalk "악의 그림자: 어디서 쥐새끼들이 기어 들어오는 냄새가 난다 했더니, 역시나였군!!";
+		sleep2 3000;
+		npctalk "악의 그림자: 네놈들은 그 쓸데없는 호기심과 참견을 후회하게 될 거다. 자, 만찬의 시간이다!";
+		sleep2 3000;
+		npctalk "악의 그림자: 심연의 어둠이여, 명하노니 나타나라!!";
+		disablenpc instance_npcname("사악한 그림자#tnm3mob01");
+		donpcevent instance_npcname("악의 그림자 처치#tnm3mob01") + "::OnSummon";
+		setpcblock PCBLOCK_NPC, false;
+	}
+	end;
+}
+
+1@tnm3,1,1,0	script	악의 그림자 처치#tnm3mob01	HIDDEN_WARP_NPC,{
+	end;
+OnSummon:
+	enablenpc instance_npcname("악의 그림자 처치#tnm3mob01");
+	'mob_count = 5;
+	initnpctimer;
+	monster 'map_tnm3$,179,172, "Evil Shadow",2941,1, instance_npcname("악의 그림자 처치#tnm3mob01") + "::OnMobDead";// MM_EVIL_SHADOW3
+	end;
+OnTimer1000:
+	monster 'map_tnm3$,181,172, "Evil Shadow",2940,1, instance_npcname("악의 그림자 처치#tnm3mob01") + "::OnMobDead";// MM_EVIL_SHADOW2
+	monster 'map_tnm3$,178,172, "Evil Shadow",2940,1, instance_npcname("악의 그림자 처치#tnm3mob01") + "::OnMobDead";
+	end;
+OnTimer2000:
+	monster 'map_tnm3$,179,172, "Evil Shadow",2939,1, instance_npcname("악의 그림자 처치#tnm3mob01") + "::OnMobDead";// MM_EVIL_SHADOW1
+	monster 'map_tnm3$,176,173, "Evil Shadow",2939,1, instance_npcname("악의 그림자 처치#tnm3mob01") + "::OnMobDead";
+	stopnpctimer;
+	end;
+OnMobDead:
+	'mob_count--;
+	if ('mob_count == 0) {
+		enablenpc instance_npcname("#tnm3gate03");
+		enablenpc instance_npcname("마물 그림자#mobmaster");
+		enablenpc instance_npcname("모로크 로드나이트#mocl");
+		enablenpc instance_npcname("로키#tnmloki01");
+	}
+	end;
+}
+
+1@tnm3,183,177,0	warp	#tnm3gate03	1,1,1@tnm3,97,6
+
+// Demonic Shade (Boss room)
+1@tnm3,97,18,3	script	마물 그림자#mobmaster	2939,5,5,{
+	end;
+OnTouch_:// possibility to skip this step
+	if ('devil_tower < 12)
+		end;
+	if ('shade == 0) {
+		'shade = 1;
+		setpcblock PCBLOCK_NPC, true;
+		sleep2 1000;
+		npctalk "마물 그림자: 네놈들이 바로 그 성가신 방해꾼들이냐!";
+		sleep2 2000;
+		npctalk "마물 그림자: 쳇, 지키는 것 하나 제대로 못 하는 것들이.. 뭐 됐다, 여기서 전부 죽여주마.";
+		sleep2 3000;
+		npctalk "마물 그림자: 네놈들의 심장 피를 제물 삼아, 죽음을 마왕의 생명으로 바꿔주겠다!!!";
+		disablenpc instance_npcname("마물 그림자#mobmaster");
+		donpcevent instance_npcname("#mobmaster_kill") + "::OnSummon";
+		setpcblock PCBLOCK_NPC, false;
+	}
+	end;
+}
+
+1@tnm3,1,1,0	script	#mobmaster_kill	HIDDEN_WARP_NPC,{
+	end;
+OnSummon:
+	enablenpc instance_npcname("#mobmaster_kill");
+	initnpctimer;
+	monster 'map_tnm3$,97,18, "Demonic Shade",2939,1, instance_npcname("#mobmaster_kill") + "::OnMobDead";
+	end;
+OnTimer1000:
+	.@label$ = instance_npcname("#mobmaster_kill") + "::OnMobDead";
+	stopnpctimer;
+	monster 'map_tnm3$,94,18, "마물 그림자",2940,1, .@label$;
+	monster 'map_tnm3$,96,18, "마물 그림자",2940,1, .@label$;
+	monster 'map_tnm3$,113,18, "마물 그림자",2939,1, .@label$;
+	monster 'map_tnm3$,119,22, "마물 그림자",2939,1, .@label$;
+	monster 'map_tnm3$,116,18, "마물 그림자",2940,1, .@label$;
+	monster 'map_tnm3$,116,18, "마물 그림자",2941,1, .@label$;
+	monster 'map_tnm3$,114,12, "마물 그림자",2941,1, .@label$;
+	monster 'map_tnm3$,116,21, "마물 그림자",2940,1, .@label$;
+	monster 'map_tnm3$,74,18, "마물 그림자",2939,1, .@label$;
+	monster 'map_tnm3$,75,12, "마물 그림자",2940,1, .@label$;
+	monster 'map_tnm3$,76,21, "마물 그림자",2940,1, .@label$;
+	monster 'map_tnm3$,69,16, "마물 그림자",2941,1, .@label$;
+	monster 'map_tnm3$,57,43, "마물 그림자",2941,1, .@label$;
+	monster 'map_tnm3$,58,44, "마물 그림자",2939,1, .@label$;
+	monster 'map_tnm3$,59,46, "마물 그림자",2939,1, .@label$;
+	monster 'map_tnm3$,60,48, "마물 그림자",2941,1, .@label$;
+	monster 'map_tnm3$,56,45, "마물 그림자",2940,1, .@label$;
+	monster 'map_tnm3$,57,44, "마물 그림자",2940,1, .@label$;
+	monster 'map_tnm3$,80,71, "마물 그림자",2940,1, .@label$;
+	monster 'map_tnm3$,59,77, "마물 그림자",2940,1, .@label$;
+	monster 'map_tnm3$,77,73, "마물 그림자",2941,1, .@label$;
+	monster 'map_tnm3$,77,72, "마물 그림자",2940,1, .@label$;
+	monster 'map_tnm3$,59,70, "마물 그림자",2939,1, .@label$;
+	monster 'map_tnm3$,81,66, "마물 그림자",2941,1, .@label$;
+	monster 'map_tnm3$,60,69, "마물 그림자",2939,1, .@label$;
+	monster 'map_tnm3$,57,73, "마물 그림자",2940,1, .@label$;
+	monster 'map_tnm3$,62,74, "마물 그림자",2941,1, .@label$;
+	monster 'map_tnm3$,78,67, "마물 그림자",2939,1, .@label$;
+	monster 'map_tnm3$,75,22, "마물 그림자",2941,1, .@label$;
+	monster 'map_tnm3$,81,69, "마물 그림자",2939,1, .@label$;
+	monster 'map_tnm3$,77,11, "마물 그림자",2939,1, .@label$;
+	monster 'map_tnm3$,58,74, "마물 그림자",2941,1, .@label$;
+	end;
+
+OnMobDead:
+	end;
+}
+
+1@tnm3,93,52,4	script	모로크 로드나이트#mocl	1_M_MOC_LORD,{
+	mes "[모로크 로드나이트]";
+	mes "이곳저곳 들쑤시고 다니던 쥐새끼가 바로 네놈들이었군!";
+	close;
+}
+
+1@tnm3,97,48,3	script	로키#tnmloki01	4_M_ROKI2,{
+	if ('devil_tower == 12) {
+		'devil_tower = 13;
+		donpcevent instance_npcname("#morocc_lord_talk") + "::OnStart";
+		end;
+	}
+	mes "[로키]";
+	mes "넌 여기서 더 이상 아무런 힘도 쓰지 못한다.";
+	close;
+}
+
+1@tnm3,94,51,4	duplicate(장교 하임#heim0)	어린 소녀#tnm04	4_F_DST_CHILD
+
+1@tnm2,1,1,0	script	#morocc_lord_talk	HIDDEN_WARP_NPC,{
+	end;
+OnStart:
+	enablenpc instance_npcname("#morocc_lord_talk");
+	'Morocc$ = instance_npcname("모로크 로드나이트#mocl");
+	'loki$ = instance_npcname("로키#tnmloki01");
+	npctalk "모로크 로드나이트: 그래.. 그 쥐새끼가 어쌔신이었나? 죽음을 자초하러 온 게냐?", 'Morocc$;
+	initnpctimer;
+	end;
+OnTimer3000:
+	npctalk "로키: 벽 속에 잠든 마왕을 깨워서 대체 무엇을 얻으려는 거지?", 'loki$;
+	end;
+OnTimer6000:
+	npctalk "로키: 나는 놈을 다시 영원히 매장하라는 임무를 띠고 이곳에 왔다.", 'loki$;
+	end;
+OnTimer9000:
+	npctalk "모로크 로드나이트: 흥.. 세상의 균형을 유지한다던 어쌔신 길드 녀석들이 정작 이런 짓을.", 'Morocc$;
+	end;
+OnTimer12000:
+	npctalk "모로크 로드나이트: 마왕의 부활이야말로 진정한 균형이다! 강자조차 신의 노예가 되는 세상에서 말이지..", 'Morocc$;
+	end;
+OnTimer15000:
+	npctalk "모로크 로드나이트: 신들에겐 그들만의 계획이 있다. 그 계획에 우리 자리가 있을 것 같나?", 'Morocc$;
+	end;
+OnTimer18000:
+	npctalk "모로크 로드나이트: 그들은 오직 자신들만을 위한 세상을 원할 뿐이다. 우린 그저 소모품이지!", 'Morocc$;
+	end;
+OnTimer20000:
+	npctalk "로키: 입 닥쳐라!", 'loki$;
+	end;
+OnTimer22000:
+	npctalk "로키: 신이나 마왕, 그딴 계획 따위엔 관심 없다. 내게 중요한 건 오직 네놈을 죽이는 것뿐.", 'loki$;
+	end;
+OnTimer25000:
+	npctalk "로키: 그것만이 내가 부여받은 임무다!", 'loki$;
+	end;
+OnTimer28000:
+	npctalk "모로크 로드나이트: 결국 네놈에겐 그 잘난 임무를 끝내는 게 전부라는 거냐?..", 'Morocc$;
+	end;
+OnTimer31000:
+	npctalk "로키: *씨익 웃으며* 당연한 소릴!!", 'loki$;
+	specialeffect EF_BEGINSPELL3,AREA, 'loki$;
+	end;
+OnTimer33000:
+	npctalk "로키: 마인드 블래스터-!!!", 'loki$;
+	end;
+OnTimer34000:
+	enablenpc instance_npcname("어린 소녀#tnm04");
+	npctalk "어린 소녀: 아니..!! 우리 아빠를 해치지 마세요!!!", instance_npcname("어린 소녀#tnm04");
+	specialeffect EF_HIT3,AREA, instance_npcname("어린 소녀#tnm04");
+	end;
+OnTimer34500:
+	specialeffect EF_HIT2,AREA, instance_npcname("어린 소녀#tnm04");
+	end;
+OnTimer35500:
+	specialeffect EF_ICECRASH,AREA, instance_npcname("어린 소녀#tnm04");
+	end;
+OnTimer36500:
+	npctalk "!!!", 'loki$;
+	end;
+OnTimer38500:
+	npctalk "모로크 로드나이트: 이런.. 이런 중요한 임무에 고작 네놈 같은 수준을 보내다니, 실망스럽군.", 'Morocc$;
+	end;
+OnTimer41500:
+	npctalk "어린 소녀: 뭔가 이상해요....", instance_npcname("어린 소녀#tnm04");
+	end;
+OnTimer44500:
+	npctalk "어린 소녀: 우리 아빠가 이럴 리 없단 말이에요.. 으윽..", instance_npcname("어린 소녀#tnm04");
+	end;
+OnTimer47500:
+	npctalk "모로크 로드나이트: 인간이란.. 고작 제물이 되기 위해 이런 멍청한 짓을 하다니.", 'Morocc$;
+	end;
+OnTimer50500:
+	npctalk "모로크 로드나이트: 말해두겠지만, 그 모든 발버둥은 결국 헛수고일 뿐이다.", 'Morocc$;
+	end;
+OnTimer53500:
+	npctalk "모로크 로드나이트: 그와아아아 하하하하! 어리석은 인간들아, 네놈들 모두 마왕을 위한 제물로 삼아주마!!", 'Morocc$;
+	specialeffect EF_COUPLECASTING,AREA, 'Morocc$;
+	specialeffect EF_VOLCANO,AREA, 'Morocc$;
+	end;
+OnTimer54500:
+	npctalk "로키:... 쳇! 정말 성가시게 됐군....!", 'loki$;
+	end;
+OnTimer55500:
+	enablenpc instance_npcname("로키#tnmloki02");
+	mapwarp 'map_tnm3$, 'map_tnm3$,136,62;// todo area 1x1
+	'devil_tower = 13;
+	stopnpctimer;
+	disablenpc instance_npcname("#morocc_lord_talk");
+	disablenpc instance_npcname("모로크 로드나이트#mocl");
+	disablenpc instance_npcname("로키#tnmloki01");
+	disablenpc instance_npcname("어린 소녀#tnm04");
+	end;
+}
+
+1@tnm3,137,65,3	script	로키#tnmloki02	4_M_ROKI2,{
+	if ('devil_tower != 13)
+		end;
+	if (is_party_leader() == false) {
+		mes "[로키]";
+		mes "난 지금 네놈들의 우두머리와 대화 중이다.";
+		close;
+	}
+	if (getmercinfo(0) > 0) {
+		mes "[로키]";
+		mes "...정말 꼴불견이군.";
+		mes "내 임무를 돕고 싶다면, 지금 당장 ^4d4dff용병 계약을 해지^000000해 주어야겠다.";
+		close;
+	}
+	mes "[로키]";
+	mes "넌 대체 어디서 나타난 녀석이냐?";
+	mes "뭐, 마침 도움이 필요하긴 했지만.";
+	npctalk "로키: 당신은 어디서 나타난 거지? 이곳에 도움이 좀 필요하겠군.", instance_npcname("로키#tnmloki02");
+	next;
+	mes "[로키]";
+	mes "저 로드나이트는 더 이상 인간이 아니다. 마물을 따르는 대가로 영원한 안식을 주어야지.";
+	npctalk "로키: 저 로드나이트는 더 이상 인간이 아니다. 영원한 안식을 주어야겠군.", instance_npcname("로키#tnmloki02");
+	next;
+	mes "[로키]";
+	mes "^4d4dff마왕의 축복을 받은 자들은 무적이다. 하지만 마인드 블래스터라면 그 가호를 끊어낼 수 있지.^000000";
+	npctalk "로키: 마왕의 가호를 받은 자들은 무적이지만, 마인드 블래스터라면 그 가호를 끊을 수 있다.", instance_npcname("로키#tnmloki02");
+	next;
+	mes "[로키]";
+	mes "좋아, 타이밍에 맞춰 마인드 블래스터를 가동해라.";
+	npctalk "로키: 좋아, 타이밍에 맞춰 마인드 블래스터를 가동해라.", instance_npcname("로키#tnmloki02");
+	next;
+	if (is_party_leader() == true && 'devil_tower == 13) {
+		disablenpc instance_npcname("로키#tnmloki02");
+		mes "^4d4dff어쌔신 길드의 길로틴 크로스, '로키'가 파티에 합류했습니다.";
+		mes "로키의 기술인 마인드 블래스터를 사용하여 마력에 물든 로드나이트를 처치하십시오.^000000";
+		'devil_tower = 14;
+		mercenary_create 2937,1800000;// M_LOKI
+		mapannounce 'map_tnm3$, "마왕 숭배자의 목소리: 하찮은 것들! 대체 어디에 숨어 있었던 거냐?", bc_map,0xFF00;
+		initnpctimer;
+	}
+	close;
+OnTimer500:
+	enablenpc instance_npcname("#boss_skills_timer");
+	monster 'map_tnm3$,93,52,"Evil Believer",2942,1, instance_npcname("#boss_skills_timer") + "::OnBossDead";// MM_EVIL_FANATICS
+	'boss_id = $@mobid[0];
+	end;
+OnTimer2000:
+	mapannounce 'map_tnm3$, "마왕 숭배자의 목소리: 네놈들은 모두 위대한 마왕님을 깨우기 위한 제물이 될 것이다!!!", bc_map,0xFF00;
+	end;
+OnTimer12000:
+	donpcevent instance_npcname("#boss_skills_timer") + "::OnStart";
+	stopnpctimer;
+	end;
+}
+
+1@tnm3,1,1,0	script	#boss_skills_timer	HIDDEN_WARP_NPC,{
+	end;
+OnStart:
+	'label$ = instance_npcname("#boss_skills_timer") + "::OnMobDead";
+	initnpctimer;
+	end;
+OnTimer1000:// + form
+	getunitdata 'boss_id, .@data;
+	'x_boss = .@data[UMOB_X];
+	'y_boss = .@data[UMOB_Y];
+	monster 'map_tnm3$, 'x_boss, 'y_boss, "",2943,1, 'label$;// MM_ICE_MINE
+	monster 'map_tnm3$, ('x_boss-5), 'y_boss, "",2943,1, 'label$;
+	monster 'map_tnm3$, ('x_boss+5), 'y_boss, "",2943,1, 'label$;
+	monster 'map_tnm3$, 'x_boss, ('y_boss-5), "",2943,1, 'label$;
+	monster 'map_tnm3$, 'x_boss, ('y_boss+5), "",2943,1, 'label$;
+	end;
+OnTimer3000:
+	monster 'map_tnm3$, ('x_boss-10), 'y_boss, "",2943,1, 'label$;// MM_ICE_MINE
+	monster 'map_tnm3$, ('x_boss+10), 'y_boss, "",2943,1, 'label$;
+	monster 'map_tnm3$, 'x_boss, ('y_boss-10), "",2943,1, 'label$;
+	monster 'map_tnm3$, 'x_boss, ('y_boss+10), "",2943,1, 'label$;
+	end;
+OnTimer6000:
+	killmonster 'map_tnm3$, 'label$;
+	end;
+OnTimer21000:// X form
+	getunitdata 'boss_id, .@data;
+	'x_boss = .@data[UMOB_X];
+	'y_boss = .@data[UMOB_Y];
+	monster 'map_tnm3$, ('x_boss+3), ('y_boss+3), "",2960,1, 'label$;// MM_FLAMECROSS
+	monster 'map_tnm3$, ('x_boss+3), ('y_boss-3), "",2960,1, 'label$;
+	monster 'map_tnm3$, ('x_boss-3), ('y_boss+3), "",2960,1, 'label$;
+	monster 'map_tnm3$, ('x_boss-3), ('y_boss-3), "",2960,1, 'label$;
+	end;
+OnTimer21350:
+	monster 'map_tnm3$, ('x_boss+6), ('y_boss+6), "",2960,1, 'label$;// MM_FLAMECROSS
+	monster 'map_tnm3$, ('x_boss+6), ('y_boss-6), "",2960,1, 'label$;
+	monster 'map_tnm3$, ('x_boss-6), ('y_boss+6), "",2960,1, 'label$;
+	monster 'map_tnm3$, ('x_boss-6), ('y_boss-6), "",2960,1, 'label$;
+	end;
+OnTimer21700:
+	monster 'map_tnm3$, ('x_boss+9), ('y_boss+9), "",2960,1, 'label$;// MM_FLAMECROSS
+	monster 'map_tnm3$, ('x_boss+9), ('y_boss-9), "",2960,1, 'label$;
+	monster 'map_tnm3$, ('x_boss-9), ('y_boss+9), "",2960,1, 'label$;
+	monster 'map_tnm3$, ('x_boss-9), ('y_boss-9), "",2960,1, 'label$;
+	end;
+OnTimer22050:
+	monster 'map_tnm3$, ('x_boss+13), ('y_boss+13), "",2960,1, 'label$;// MM_FLAMECROSS
+	monster 'map_tnm3$, ('x_boss+13), ('y_boss-13), "",2960,1, 'label$;
+	monster 'map_tnm3$, ('x_boss-13), ('y_boss+13), "",2960,1, 'label$;
+	monster 'map_tnm3$, ('x_boss-13), ('y_boss-13), "",2960,1, 'label$;
+	end;
+OnTimer30000:
+	killmonster 'map_tnm3$, 'label$;
+	end;
+OnTimer51000:// X form
+	getunitdata 'boss_id, .@data;
+	'x_boss = .@data[UMOB_X];
+	'y_boss = .@data[UMOB_Y];
+	monster 'map_tnm3$, 'x_boss, 'y_boss, "",2943,1, 'label$;// MM_ICE_MINE
+	monster 'map_tnm3$, ('x_boss+5), ('y_boss+5), "",2943,1, 'label$;
+	monster 'map_tnm3$, ('x_boss-5), ('y_boss-5), "",2943,1, 'label$;
+	monster 'map_tnm3$, ('x_boss+10), ('y_boss+10), "",2943,1, 'label$;
+	monster 'map_tnm3$, ('x_boss-10), ('y_boss-10), "",2943,1, 'label$;
+	end;
+OnTimer53000:
+	monster 'map_tnm3$, ('x_boss-5), ('y_boss+5), "",2943,1, 'label$;// MM_ICE_MINE
+	monster 'map_tnm3$, ('x_boss+5), ('y_boss-5), "",2943,1, 'label$;
+	monster 'map_tnm3$, ('x_boss-10), ('y_boss+10), "",2943,1, 'label$;
+	monster 'map_tnm3$, ('x_boss+10), ('y_boss-10), "",2943,1, 'label$;
+	end;
+OnTimer56000:
+	killmonster 'map_tnm3$, 'label$;
+	end;
+OnTimer81000:// S form
+	getunitdata 'boss_id, .@data;
+	'x_boss = .@data[UMOB_X];
+	'y_boss = .@data[UMOB_Y];
+	monster 'map_tnm3$, ('x_boss-2), ('y_boss+5), "",2960,1, 'label$;// MM_FLAMECROSS
+	end;
+OnTimer81300:
+	monster 'map_tnm3$, ('x_boss+4), ('y_boss+8), "",2960,1, 'label$;
+	end;
+OnTimer81600:
+	monster 'map_tnm3$, ('x_boss+10), ('y_boss+2), "",2960,1, 'label$;
+	end;
+OnTimer82000:
+	monster 'map_tnm3$, ('x_boss+10), ('y_boss-1), "",2960,1, 'label$;
+	end;
+OnTimer82300:
+	monster 'map_tnm3$, ('x_boss+7), ('y_boss-7), "",2960,1, 'label$;
+	end;
+OnTimer82600:
+	monster 'map_tnm3$, ('x_boss+1), ('y_boss-10), "",2960,1, 'label$;
+	end;
+OnTimer83000:
+	monster 'map_tnm3$, ('x_boss-11), ('y_boss-1), "",2960,1, 'label$;
+	end;
+OnTimer83300:
+	monster 'map_tnm3$, ('x_boss-11), ('y_boss+5), "",2960,1, 'label$;
+	end;
+OnTimer83600:
+	monster 'map_tnm3$, ('x_boss-8), ('y_boss+11), "",2960,1, 'label$;
+	end;
+OnTimer84000:
+	monster 'map_tnm3$, ('x_boss-2), ('y_boss+17), "",2960,1, 'label$;
+	end;
+OnTimer84300:
+	monster 'map_tnm3$, ('x_boss+7), ('y_boss+20), "",2960,1, 'label$;
+	end;
+OnTimer90000:
+	killmonster 'map_tnm3$, 'label$;
+	initnpctimer;
+	end;
+OnMobDead:
+	end;
+OnBossDead:
+	stopnpctimer;
+	killmonster 'map_tnm3$, 'label$;
+	'x_boss = 'y_boss = 'boss_id = 0;
+	'label$ = "";
+	mapannounce 'map_tnm3$, "마왕 숭배자의 목소리: 아니, 말도 안 돼. 이럴 수가.. 이 기운은.. 이 힘은.. 혹시 네놈.. 정체가..", bc_map,0xFF0000;
+	sleep2 1000;
+	warpparty 'map_tnm3$,71,70, getcharid(1), 'map_tnm3$,1,1;
+	enablenpc instance_npcname("로키#tnmloki03");
+	enablenpc instance_npcname("상자#tnmbosang");
+	disablenpc instance_npcname("#boss_skills_timer");
+	'devil_tower = 15;
+	end;
+}
+
+1@tnm3,69,70,3	script	상자#tnmbosang	4_TREASURE_BOX,{
+	if ('devil_tower != 15)
+		end;
+	specialeffect EF_COIN;
+	disablenpc instance_npcname("상자#tnmbosang");
+	makeitem 7293,1, 'map_tnm3$, (69 + rand(-5,5)), (70 + rand(-5,5));	// Rose Quartz
+	makeitem 749,1, 'map_tnm3$, (69 + rand(-5,5)), (70 + rand(-5,5));	// Frozen Rose
+	makeitem 7511,1, 'map_tnm3$, (69 + rand(-5,5)), (70 + rand(-5,5));	// Rune of Darkness
+	if (rand(100) < 75)
+		makeitem 616,1, 'map_tnm3$, (69 + rand(-5,5)), (70 + rand(-5,5));	// Old Card Album
+	if (rand(100) < 50)
+		makeitem 748,1, 'map_tnm3$, (69 + rand(-5,5)), (70 + rand(-5,5));	// Witherless_Rose
+
+	setarray .@item_id_list[0],
+		1671,	// Devil_Won_Staff
+		13094,	// Devil_Pierced_Dagger
+		16027,	// Hammer_Of_Evil_Slayer
+		18120,	// Bow_Of_Evil_Slayer
+		21010,	// Tw_Sword_Of_Evil_Slayer
+		28001;	// Katar_Of_Evil_Slayer
+	setarray .@bonus_list1[0],
+		4800,	// SP50
+		4811,	// Fighting_Spirit1
+		4810,	// Fighting_Spirit2
+		4809,	// Fighting_Spirit3
+		4808,	// Fighting_Spirit4
+		4820,	// Fighting_Spirit5
+		4821,	// Fighting_Spirit6
+		4815,	// Spell1
+		4814,	// Spell2
+		4813,	// Spell3
+		4812,	// Spell4
+		4786;	// Mdef2
+	setarray .@bonus_list2[0],
+		4815,	// Spell1
+		4814,	// Spell2
+		4813,	// Spell3
+		4812,	// Spell4
+		4826,	// Spell5
+		4811,	// Fighting_Spirit1
+		4810,	// Fighting_Spirit2
+		4809,	// Fighting_Spirit3
+		4808,	// Fighting_Spirit4
+		4820,	// Fighting_Spirit5
+		4786;	// Mdef2
+	setarray .@bonus_list3[0],
+		4815,	// Spell1
+		4814,	// Spell2
+		4813,	// Spell3
+		4812,	// Spell4
+		4811,	// Fighting_Spirit1
+		4810,	// Fighting_Spirit2
+		4809,	// Fighting_Spirit3
+		4808,	// Fighting_Spirit4
+		4820,	// Fighting_Spirit5
+		4821,	// Fighting_Spirit6
+		4791,	// DEF+3
+		4786;	// Mdef2
+	.@item_id = .@item_id_list[ rand( getarraysize(.@item_id_list) ) ];
+	.@refine = rand(1,6);
+	.@bonus1 = .@bonus_list1[ rand( getarraysize(.@bonus_list1) ) ];
+	.@bonus2 = .@bonus_list1[ rand( getarraysize(.@bonus_list2) ) ];
+	.@bonus3 = .@bonus_list1[ rand( getarraysize(.@bonus_list3) ) ];
+
+	makeitem2 .@item_id,1, 'map_tnm3$, (69 + rand(-5,5)), (70 + rand(-5,5)), 0, .@refine,0, 0,.@bonus1,.@bonus2,.@bonus3;
+	end;
+}
+
+1@tnm3,69,72,3	script	로키#tnmloki03	4_M_ROKI2,{
+	if ('devil_tower != 15)
+		end;
+	if (isbegin_quest(7576) == 0) {
+		mes "[로키]";
+		mes "..정말 귀찮게 됐군.";
+		mes "부활 의식이 끝나기도 전에 마왕의 그릇이 파괴되어 버렸어.";
+		mes "당분간은 조용해지겠군.";
+		setquest 7576;// Morocc castle seal
+		next;
+		mes "탑을 조사하던 중에 뜻밖의 정보를 손에 넣었거든.";
+		next;
+		mes "[로키]";
+		mes "난 조금만 더 나의 양심을 뒤로 미뤄두기로 했다.";
+		mes "언젠가 감정을 되찾는 날이 오면, 오늘 일을 떠올리게 되겠지..";
+		close;
+	}
+	mes "[로키]";
+	mes "흥미롭군.. 딸이 있었다니..";
+	mes "이제 어떻게 처리해야 할까?";
+	mes "다음에 무엇을 해야 할지 아직 확실치 않군..";
+	next;
+	mes "[로키]";
+	mes "어찌 됐든, 너 같은 녀석이 지금 여기 있으면 곤란해.";
+	mes "여기에 더 머물 생각인가?";
+	mes "원한다면 네가 원래 있어야 할 시간과 장소로 보내줄 수 있다.";
+	next;
+	if (select( "이곳을 나간다.", "주변을 둘러본다." ) == 2) {
+		mes "[로키]";
+		mes "시간이 뒤틀린 곳에 오래 머무는 건 현명하지 못한 짓이야.";
+		close;
+	}
+	mes "[로키]";
+	mes "임무를 수행하다 보면, 미래에 다시 만날 일이 생길지도 모르겠군..";
+	close2;
+	warp "dali02",134,112;
+	end;
+
+OnInstanceInit:
+	'heal_count = 0;
+	'devil_tower = 0;
+	'mob_count = 0;
+	'shade = 0;
+
+	'map_tnm1$ = instance_mapname("1@tnm1");
+	'map_tnm2$ = instance_mapname("1@tnm2");
+	'map_tnm3$ = instance_mapname("1@tnm3");
+
+	// Entrance
+	disablenpc instance_npcname("장교 하임#heim");
+	disablenpc instance_npcname("치료사 파마#feima");
+	for ( .@i = 1; .@i < 8; .@i++ )
+		disablenpc instance_npcname( "부상당한 병사#" + .@i + "_1" );
+	disablenpc instance_npcname("루실#tnm01");
+	disablenpc instance_npcname("마법 검사#tnm01");
+	disablenpc instance_npcname("어쌔신 휴이#tnm01");
+	disablenpc instance_npcname("어쌔신 루이#tnm01");
+	disablenpc instance_npcname("어쌔신 듀이#tnm01");
+
+	// Stairs tnm1
+	disablenpc instance_npcname("#tnm1stepmob");
+	disablenpc instance_npcname("어쌔신 루이#tnm02");
+
+	// Stairs 2 tnm1
+	disablenpc instance_npcname("루실#tnm02");
+	disablenpc instance_npcname("휴이#hui02");
+
+	// Morocc - Thanatos Battle
+	disablenpc instance_npcname("마법 검사#tnm02");
+	disablenpc instance_npcname("마왕 모로크#tnm01");
+	disablenpc instance_npcname("루실#tnm03");
+	disablenpc instance_npcname("루실#tnm04");
+	disablenpc instance_npcname("#devil_flamecross");
+	disablenpc instance_npcname("#devil_seal_timer");
+	disablenpc instance_npcname("#devil_seal_spawn_global");
+	setarray .@direction$[0], "북서쪽", "남서쪽", "남동쪽", "북동쪽", "북쪽";
+	for ( .@i = 0; .@i < 5; .@i++ ) {
+		disablenpc instance_npcname("마왕의 인장 소환#" + .@direction$[.@i]);
+		disablenpc instance_npcname("인장 중앙 도달#" + .@direction$[.@i]);
+	}
+	disablenpc instance_npcname("#devil_seal_dead");
+
+	'demon$ = 'thanatos$ = "";
+	'round[DIR_NORTHWEST] = 'round[DIR_SOUTHWEST] = 'round[DIR_SOUTHEAST] = 'round[DIR_NORTHEAST] = 'round[DIR_NORTH] = 0;
+	'seal_id[DIR_NORTHWEST] = 'seal_id[DIR_SOUTHWEST] = 'seal_id[DIR_SOUTHEAST] = 'seal_id[DIR_NORTHEAST] = 'seal_id[DIR_NORTH] = 0;
+	'seal_hp[DIR_NORTHWEST] = 'seal_hp[DIR_SOUTHWEST] = 'seal_hp[DIR_SOUTHEAST] = 'seal_hp[DIR_NORTHEAST] = 'seal_hp[DIR_NORTH] = 0;
+	'seal_dead[DIR_NORTHWEST] = 'seal_dead[DIR_SOUTHWEST] = 'seal_dead[DIR_SOUTHEAST] = 'seal_dead[DIR_NORTHEAST] = 'seal_dead[DIR_NORTH] = 0;
+	deletearray 'coord_seal_DIR_NORTHWEST[0],14;
+	deletearray 'coord_seal_DIR_SOUTHWEST[0],14;
+	deletearray 'coord_seal_DIR_SOUTHEAST[0],14;
+	deletearray 'coord_seal_DIR_NORTHEAST[0],14;
+	deletearray 'coord_seal_DIR_NORTH[0],14;
+
+	// tnm3 Stairs 1
+	disablenpc instance_npcname("#tnm3event01");
+	disablenpc instance_npcname("어린 소녀#tnm01");
+	disablenpc instance_npcname("#tnm3gate01");
+
+	// tnm3 Stairs 2
+	disablenpc instance_npcname("#tnm3event02ect");
+	disablenpc instance_npcname("어린 소녀#tnm02");
+	disablenpc instance_npcname("어린 소녀#tnm03");
+	disablenpc instance_npcname("#tnm3gate02");
+
+	// tnm3 Stairs 3
+	disablenpc instance_npcname("사악한 그림자#tnm3mob01");
+	disablenpc instance_npcname("악의 그림자 처치#tnm3mob01");
+	disablenpc instance_npcname("#tnm3gate03");
+
+	// Demonic Shade (Boss room)
+	disablenpc instance_npcname("마물 그림자#mobmaster");
+	disablenpc instance_npcname("#mobmaster_kill");
+
+	// Boss
+	disablenpc instance_npcname("모로크 로드나이트#mocl");
+	disablenpc instance_npcname("#morocc_lord_talk");
+	disablenpc instance_npcname("로키#tnmloki01");
+	disablenpc instance_npcname("어린 소녀#tnm04");
+	disablenpc instance_npcname("로키#tnmloki02");
+	disablenpc instance_npcname("#boss_skills_timer");
+	'x_boss = 'y_boss = 'boss_id = 0;
+	'label$ = "";
+
+	// Final
+	disablenpc instance_npcname("로키#tnmloki03");
+	disablenpc instance_npcname("상자#tnmbosang");
+	end;
+}
