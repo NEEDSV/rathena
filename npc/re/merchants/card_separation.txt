@@ -128,73 +128,33 @@
 		"|31026|300007|300145|300151|300217"+
 		"|300227|300228|300239";
 
-	if (.@Jeremy) {
-		set .@has_card,0;
-		for ( .@i = 0; .@i < MAX_SLOTS; .@i++ ) {
-			if (getiteminfo(.@equip_card[.@i], ITEMINFO_SUBTYPE) == CARD_ENCHANT)
-				.@equip_card[.@i] = 0;// Armor Enchant System
-			if (.@equip_card[.@i])
-				set .@has_card,1;
+	set .@has_card,0;
+	set .@boss_chk,0;
+	for ( .@i = 0; .@i < MAX_SLOTS; .@i++ ) {
+		// 인챈트 카드는 제외하고 실제 일반 카드만 분리 대상으로 판정합니다.
+		if (.@equip_card[.@i] && getiteminfo(.@equip_card[.@i], ITEMINFO_SUBTYPE) == CARD_NORMAL) {
+			set .@has_card,1;
+			if (compare(.@mvp_list$,"|"+.@equip_card[.@i]+"|"))
+				set .@boss_chk,1;
 		}
-		if (!.@has_card) {
-			mes .@n$;
-			mes "카드가 장착되어 있지 않습니다. 다시 확인하시겠습니까?";
-			close;
-		}
-		if ((.@equip_card[0] && compare(.@mvp_list$,"|"+.@equip_card[0]+"|")) ||
-			(.@equip_card[1] && compare(.@mvp_list$,"|"+.@equip_card[1]+"|")) ||
-			(.@equip_card[2] && compare(.@mvp_list$,"|"+.@equip_card[2]+"|")) ||
-			(.@equip_card[3] && compare(.@mvp_list$,"|"+.@equip_card[3]+"|")))
-			set .@boss_chk,1;
-	} else {
-		// Official "Richard" script uses a hardcoded list including every possible item.
-		//if (!getequipisequiped(.@equip_num)) {
-		//	mes "[Richard]";
-		//	mes "I'm sorry. We don't provide that equipment yet.";
-		//	close;
-		//}
-
-		mes "[리처드]";
-		mes "몇 번 소켓의 카드를 분리하시겠습니까? 왼쪽 소켓부터 순서대로 1, 2, 3, 4번입니다.";
-		next;
-		set .@menu$,"";
-		for ( .@i = 0; .@i < MAX_SLOTS; .@i++ ) {
-			if (.@equip_card[.@i] && getiteminfo(.@equip_card[.@i], ITEMINFO_SUBTYPE) == CARD_NORMAL) // Armor Enchant System
-				.@menu$ = .@menu$ + "소켓 " + (.@i+1) + " - " + getitemname(.@equip_card[.@i])+":";
-			else {
-				.@menu$ = .@menu$ + "^777777소켓 " + (.@i+1) + " - 카드 없음^000000:";
-			}
-		}
-		set .@i, select("작업 중단:"+.@menu$);
-		switch(.@i) {
-		case 1:
-			mes .@n$;
-			mes "작업이 필요할 때면 언제든 찾아주세요.";
-			close;
-		default:
-			set .@slot, .@i-2;
-			if (.@equip_card[.@slot] == 0 || getiteminfo(.@equip_card[.@slot], ITEMINFO_SUBTYPE) == CARD_ENCHANT) {
-				mes .@n$;
-				mes "이 소켓에는 장착된 카드가 없습니다. 다시 확인해 보시겠어요?";
-				close;
-			}
-			break;
-		}
-		if (compare(.@mvp_list$,"|"+.@equip_card[.@slot]+"|"))
-			set .@boss_chk,1;
 	}
+
+	if (!.@has_card) {
+		mes .@n$;
+		mes "분리할 일반 카드가 장착되어 있지 않습니다.";
+		close;
+	}
+
 	if (.@boss_chk == 0) {
 		mes .@n$;
-		if (.@Jeremy)
-			mes "카드를 제외한 ^ff0000모든 인챈트 효과는 사라집니다.^000000 이에 동의하신다면 작업 유형을 선택해 주세요.:";
-		else
-			mes "작업 수수료를 선택해 주세요.";
+		mes "장착된 ^0000ff모든 일반 카드^000000를 한 번에 분리합니다.";
+		mes "장비의 ^0000ff제련도와 인챈트 효과는 유지^000000됩니다.";
 		next;
 		set .@menu$,
 			"다음에...:"+
-			((Zeny >= 1000000)?"1,000,000z 사용 (특수 아이템 미사용):":"^9999991,000,000z 사용 (잔액 부족)^000000:")+
-			((countitem(6441))?"고급 윤활유 사용:":"^999999고급 윤활유 (부족)^000000:")+
-			((countitem(6440))?"일반 윤활유 사용":"^999999일반 윤활유 (부족)^000000");
+			((Zeny >= 1000000)?"1,000,000z 사용 (성공률 40%):":"^9999991,000,000z 사용 (잔액 부족)^000000:")+
+			((countitem(6441))?"고급 윤활유 사용 (성공률 90%):":"^999999고급 윤활유 (부족)^000000:")+
+			((countitem(6440))?"일반 윤활유 사용 (성공률 70%)":"^999999일반 윤활유 (부족)^000000");
 		switch(select(.@menu$)) {
 		case 1:
 			mes .@n$;
@@ -214,9 +174,7 @@
 				mes "작업이 필요하면 여기로 저를 찾아오세요.";
 				close;
 			}
-			set .@sf_c_num,150;
-			set .@sf_r_num,150;
-			set .@sf_w_num,150;
+			set .@success_rate,40;
 			set Zeny, Zeny - 1000000;
 			break;
 		case 3:
@@ -233,9 +191,7 @@
 				mes "작업이 필요하면 여기로 저를 찾아오세요.";
 				close;
 			}
-			set .@sf_c_num,75;
-			set .@sf_r_num,75;
-			set .@sf_w_num,75;
+			set .@success_rate,90;
 			delitem 6441,1; //High_RankLubricant
 			break;
 		case 4:
@@ -252,9 +208,7 @@
 				mes "작업이 필요하면 여기로 저를 찾아오세요.";
 				close;
 			}
-			set .@sf_c_num,75;
-			set .@sf_r_num,150;
-			set .@sf_w_num,150;
+			set .@success_rate,70;
 			delitem 6440,1; //General_Lubricant
 			break;
 		}
@@ -276,39 +230,28 @@
 			break;
 		}
 		mes .@n$;
-		if (.@Jeremy) {
-			mes "카드를 제외한 ^ff0000모든 인챈트 효과는 사라집니다.^000000 이에 동의하신다면 작업 유형을 선택해 주세요.:";
-			set .@menu$,"좋아요, 해봅시다!";
-		} else {
-			mes "계속할까요?";
-			set .@menu$,"알겠어요. 그냥 빨리 좀 해주세요!";
-		}
+		mes "실릿퐁을 사용하면 장착된 ^0000ff모든 일반 카드^000000를 한 번에 분리합니다.";
+		mes "장비의 ^0000ff제련도와 인챈트 효과는 유지^000000되며, 성공률은 100%입니다.";
 		next;
-		switch(select("다음에...:"+.@menu$)) {
+		switch(select("다음에...:좋아요, 해봅시다!")) {
 		case 1:
 			mes .@n$;
 			mes "작업이 필요하면 여기로 저를 찾아오세요.";
 			close;
 		case 2:
-			set .@sf_c_num,60;
-			set .@sf_r_num,60;
-			set .@sf_w_num,60;
+			set .@success_rate,100;
 			delitem 6443,1; //Sillit_Pong_Bottle
 			break;
 		}
 	}
 
-	set .@equip_id, getequipid(.@equip_num);
-	set .@equip_refine, getequiprefinerycnt(.@equip_num);
-
 	// anti-hack
 	if (callfunc("F_IsEquipCardHack", .@equip_num, .@check_equip_card[0], .@check_equip_card[1], .@check_equip_card[2], .@check_equip_card[3]))
 		close;
 
-	// 기존 구조는 delequip 후 장비/카드를 각각 확률로 재지급했기 때문에
-	// 실패 시 장비 파괴 또는 카드 소실이 발생했습니다.
-	// 변경 후에는 먼저 성공 여부만 판정하고, 실패하면 장비는 건드리지 않습니다.
-	if (rand(1,.@sf_c_num) >= 61) {
+	// 성공 여부를 먼저 판정합니다.
+	// 실패 시 재화만 소모되고 장비와 카드는 그대로 유지됩니다.
+	if (rand(100) >= .@success_rate) {
 		specialeffect2 EF_SUI_EXPLOSION;
 
 		mes "-- 카드 분리 결과 --";
@@ -321,14 +264,16 @@
 		close;
 	}
 
-	delequip .@equip_num;
+	// 장비를 착용한 상태에서 호출해야 합니다.
+	// item_db.yml의 Slots 범위에 있는 일반 카드를 모두 분리합니다.
 	successremovecards .@equip_num;
 
 	specialeffect2 EF_MAXPOWER;
 
 	mes "-- 카드 분리 결과 --";
 	mes "^0000ff카드 분리에 성공했습니다.^000000";
-	mes "^0000ff장비와 카드는 정상적으로 분리되었습니다.^000000";
+	mes "^0000ff장착된 모든 일반 카드가 정상적으로 분리되었습니다.^000000";
+	mes "^0000ff장비의 제련도와 인챈트 효과는 유지되었습니다.^000000";
 	next;
 	mes .@n$;
 	mes "카드 분리 결과는 여기까지입니다. 다음에 또 이용해 주세요.";
