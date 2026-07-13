@@ -322,25 +322,7 @@
 	}
 
 	delequip .@equip_num;
-
-	if (.@Jeremy) {
-		// 성공 시 장비는 카드가 제거된 상태로 반환됩니다.
-		// 카드가 아닌 인챈트 슬롯은 기존 공식 스크립트 흐름처럼 제거됩니다.
-		getitem2 .@equip_id,1,1,.@equip_refine,0,0,0,0,0;
-
-		// 성공 시 장착되어 있던 일반 카드는 모두 반환됩니다.
-		for(set .@i,0; .@i<4; set .@i,.@i+1) {
-			if (.@equip_card[.@i])
-				getitem .@equip_card[.@i],1;
-		}
-	} else {
-		set .@card, .@equip_card[.@slot];
-		set .@check_equip_card[.@slot],0;
-
-		// 성공 시 선택한 카드만 분리하고, 나머지 카드/인챈트는 유지합니다.
-		getitem2 .@equip_id,1,1,.@equip_refine,0,.@check_equip_card[0],.@check_equip_card[1],.@check_equip_card[2],.@check_equip_card[3];
-		getitem .@card,1;
-	}
+	successremovecards .@equip_num;
 
 	specialeffect2 EF_MAXPOWER;
 
