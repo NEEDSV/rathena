@@ -7160,7 +7160,7 @@ Body:
   - Id: 12221
     AegisName: Megaphone_
     Name: 확성기
-    Type: Usable
+    Type: DelayConsume
     Buy: 2
     Weight: 10
     Trade:
@@ -7168,12 +7168,20 @@ Body:
       NoTrade: true
       NoSell: true
       NoCart: true
+      NoStorage: true
       NoGuildStorage: true
       NoMail: true
       NoAuction: true
     Script: |
-      input .@megaphone$;
-      announce strcharinfo(0) + ": " + .@megaphone$,bc_all,0xFF0000;
+      .@remain = #MEGA_CD - gettimetick(2);
+
+      if (.@remain > 0) {
+        dispbottom "확성기는 " + .@remain + "초 후에 다시 사용할 수 있습니다.";
+        end;
+      }
+
+      #MEGA_CD = gettimetick(2) + 30;
+      doevent "MegaphoneNPC::OnUse";
   - Id: 12223
     AegisName: Sweets_Macacake
     Name: 스위트 마카롱 케이크
