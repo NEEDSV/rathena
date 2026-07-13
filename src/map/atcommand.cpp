@@ -1347,7 +1347,7 @@ ACMD_FUNC(kamib) {
 	}
 
 	// 캐시 부족
-	if (sd->cashPoints < 500) {
+	if (sd->cashPoints < 50) {
 		clif_displaymessage(fd, msg_txt(sd, 1612));
 		return -1;
 	}
@@ -1357,7 +1357,7 @@ ACMD_FUNC(kamib) {
 		"[%s] : %s", sd->status.name, message);
 
 	// 캐시 차감
-	pc_paycash(sd, 500, 0, LOG_TYPE_COMMAND);
+	pc_paycash(sd, 50, 0, LOG_TYPE_COMMAND);
 
 	// 전체 방송
 	intif_broadcast(message_buffer, strlen(message_buffer) + 1, BC_BLUE);
