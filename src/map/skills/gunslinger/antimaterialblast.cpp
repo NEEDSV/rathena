@@ -13,5 +13,5 @@ void SkillAntiMaterialBlast::applyAdditionalEffects(block_list* src, block_list*
 }
 
 void SkillAntiMaterialBlast::calculateSkillRatio(const Damage* wd, const block_list* src, const block_list* target, uint16 skill_lv, int32& skillratio, int32 mflag) const {
-	skillratio += -100 + 3500 + 300 * skill_lv;
+	skillratio += -100 + 1500 + 300 * skill_lv; // NEED balance Phase2-2: operational nerf (1500 + 300 * skill_lv, Lv5 3000%)
 }

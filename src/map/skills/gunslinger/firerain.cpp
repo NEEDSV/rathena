@@ -42,5 +42,5 @@ void SkillFireRain::castendPos2(block_list* src, int32 x, int32 y, uint16 skill_
 }
 
 void SkillFireRain::calculateSkillRatio(const Damage* wd, const block_list* src, const block_list* target, uint16 skill_lv, int32& skillratio, int32 mflag) const {
-	skillratio += -100 + 3500 + 300 * skill_lv;
+	skillratio += -100 + 1500 + 300 * skill_lv; // NEED balance Phase2-1: operational nerf (1500 + 300 * skill_lv, Lv5 3000%)
 }

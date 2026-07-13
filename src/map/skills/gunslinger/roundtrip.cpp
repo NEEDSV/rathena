@@ -14,7 +14,7 @@ SkillRoundTrip::SkillRoundTrip() : SkillImplRecursiveDamageSplash(RL_R_TRIP) {
 
 void SkillRoundTrip::calculateSkillRatio(const Damage *wd, const block_list *src, const block_list *target, uint16 skill_lv, int32 &skillratio, int32 mflag) const {
 
-	skillratio += -100 + 150 * skill_lv;
+	skillratio += -100 + 1000 + 300 * skill_lv;
 }
 
 void SkillRoundTrip::castendNoDamageId(block_list *src, block_list *target, uint16 skill_lv, t_tick tick, int32& flag) const {
@@ -28,5 +28,5 @@ SkillRoundTripPlusAttack::SkillRoundTripPlusAttack() : SkillImpl(RL_R_TRIP_PLUSA
 }
 
 void SkillRoundTripPlusAttack::calculateSkillRatio(const Damage *wd, const block_list *src, const block_list *target, uint16 skill_lv, int32 &base_skillratio, int32 mflag) const {
-	base_skillratio += -100 + 50 * skill_lv;
+	base_skillratio += -100 + 300 + 300 * skill_lv;
 }

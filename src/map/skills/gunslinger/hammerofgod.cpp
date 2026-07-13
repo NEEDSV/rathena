@@ -41,7 +41,7 @@ void SkillHammerOfGod::calculateSkillRatio(const Damage* wd, const block_list* s
 
 	const status_change* tsc = status_get_sc(target);
 
-	skillratio += -100 + 2800 + 1400 * skill_lv;
+	skillratio += -100 + 1600 + 800 * skill_lv; // NEED balance Phase2-2: early Hammer of God formula (1600 + 800 * skill_lv, Lv5 5600%)
 	if (sd) {
 		if (tsc && tsc->getSCE(SC_C_MARKER))
 			skillratio += 100 * sd->spiritball_old;

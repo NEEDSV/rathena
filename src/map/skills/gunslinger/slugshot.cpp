@@ -14,14 +14,12 @@ void SkillSlugShot::applyAdditionalEffects(block_list* src, block_list* target, 
 }
 
 void SkillSlugShot::calculateSkillRatio(const Damage* wd, const block_list* src, const block_list* target, uint16 skill_lv, int32& skillratio, int32 mflag) const {
-	const status_data* tstatus = status_get_status_data(*target);
-
+	// NEED balance Phase2-3: removed size multiplier (was 'skillratio *= 2 + size') not present in 2017; restore 2017 base (mob 1200*lv / pc 2000*lv). 2017 slug-weight additive not ported (ITEMID_SLUG_AMMUNITION absent in this tree).
 	if (target->type == BL_MOB) {
 		skillratio += -100 + 1200 * skill_lv;
 	} else {
 		skillratio += -100 + 2000 * skill_lv;
 	}
-	skillratio *= 2 + tstatus->size;
 }
 
 void SkillSlugShot::modifyHitRate(int16& hit_rate, const block_list* src, const block_list* target, uint16 skill_lv) const {
