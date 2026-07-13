@@ -316,32 +316,44 @@ BUILDIN_FUNC(getskillid)
 	return SCRIPT_CMD_SUCCESS;
 }
 
-// 1  = 성공
-// 0  = 일반 실패
-// -1 = 창고 미로드/접근 불가
-int32 storage_storageget_script(map_session_data *sd, struct s_storage *stor, int32 index, int32 amount, bool favorite)
-{
-	unsigned char flag = 0;
-
+// 반환값
+//  1 : 성공
+//  0 : 수량 부족, 무게 초과, 인벤토리 공간 부족 또는 잘못된 요청
+// -1 : 창고 인출 권한 없음
+// -2 : 다른 창고 창이 열려 있음
+int32 storage_storageget_script(
+	map_session_data* sd,
+	struct s_storage* stor,
+	int32 index,
+	int32 amount,
+	bool favorite
+) {
 	if (sd == nullptr || stor == nullptr)
 		return 0;
 
 	if (!stor->state.get)
 		return -1;
 
-	if (index < 0 || index >= stor->max_amount)
+	if (index < 0 || index >= ARRAYLENGTH(stor->u.items_storage))
 		return 0;
 
-	if (stor->u.items_storage[index].nameid <= 0)
+	struct item& storage_item = stor->u.items_storage[index];
+
+	if (storage_item.nameid <= 0)
 		return 0;
 
-	if (amount < 1 || amount > stor->u.items_storage[index].amount)
+	if (amount < 1 || amount > storage_item.amount)
 		return 0;
 
-	flag = pc_additem(sd, &stor->u.items_storage[index], amount, LOG_TYPE_STORAGE, favorite);
+	unsigned char flag = pc_additem(
+		sd,
+		&storage_item,
+		amount,
+		LOG_TYPE_STORAGE,
+		favorite
+	);
 
 	if (flag != ADDITEM_SUCCESS) {
-		clif_storageitemremoved(*sd, index, 0);
 		clif_additem(sd, 0, 0, flag);
 		return 0;
 	}
@@ -374,28 +386,54 @@ BUILDIN_FUNC(storagegetitem)
 		return SCRIPT_CMD_SUCCESS;
 	}
 
-	// 1차 안전 제한: 겹쳐지는 아이템만 허용
-	if (!itemdb_isstackable2(id) || id->type == IT_CARD || id->type == IT_PETEGG) {
+	// 자동 보충에서 허용하는 아이템 종류와 동일하게 제한
+	switch (id->type) {
+	case IT_HEALING:
+	case IT_USABLE:
+	case IT_ETC:
+	case IT_AMMO:
+		break;
+
+	default:
 		script_pushint(st, 0);
 		return SCRIPT_CMD_SUCCESS;
 	}
-	
-	// 장비는 막되, 탄약은 예외 허용
-	if (itemdb_isequip2(id) && id->type != IT_AMMO) {
+
+	if (!itemdb_isstackable2(id)) {
 		script_pushint(st, 0);
 		return SCRIPT_CMD_SUCCESS;
 	}
 
 	s_storage* stor = &sd->storage;
 
+	// 창고 인출 권한 확인
+	if (!stor->state.get) {
+		script_pushint(st, -1);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	// 다른 창고 UI가 열린 상태에서 기본 창고를 조작하지 않음
+	if (sd->state.storage_flag != 0) {
+		script_pushint(st, -2);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
 	int32 index = -1;
 
-	for (int32 i = 0; i < stor->max_amount; i++) {
-		if (stor->u.items_storage[i].nameid == nameid &&
-			stor->u.items_storage[i].amount >= amount) {
-			index = i;
-			break;
-		}
+	for (int32 i = 0;
+		i < ARRAYLENGTH(stor->u.items_storage);
+		i++
+	) {
+		const struct item& storage_item = stor->u.items_storage[i];
+
+		if (storage_item.nameid != nameid)
+			continue;
+
+		if (storage_item.amount < amount)
+			continue;
+
+		index = i;
+		break;
 	}
 
 	if (index < 0) {
@@ -403,7 +441,13 @@ BUILDIN_FUNC(storagegetitem)
 		return SCRIPT_CMD_SUCCESS;
 	}
 
-	int32 result = storage_storageget_script(sd, stor, index, amount, false);
+	int32 result = storage_storageget_script(
+		sd,
+		stor,
+		index,
+		amount,
+		false
+	);
 
 	script_pushint(st, result);
 	return SCRIPT_CMD_SUCCESS;
