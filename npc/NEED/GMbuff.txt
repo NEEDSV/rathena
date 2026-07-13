@@ -16,7 +16,6 @@ new_zone01,134,113,4	script	BUFF	4_F_KAFRA1,{
 
 	.@count = getunits(BL_PC, .@aid);
 	.@give_time = 1800000; // 30분
-	.@remain_time = getstatus(SC_NEED_GRACE, 5);
 	
 	for (.@i = 0; .@i < .@count; .@i++) {
 		if (!attachrid(.@aid[.@i]))
@@ -35,9 +34,11 @@ new_zone01,134,113,4	script	BUFF	4_F_KAFRA1,{
 		sc_start SC_KYRIE,1800000,10;
 		sc_start SC_SECRAMENT,1800000,5;
 		
-		if (.@remain_time < .@give_time) {
-			sc_start SC_NEED_GRACE,1800000,1;
-		}
+		// attachrid 이후 현재 유저의 남은 시간을 개별 확인합니다.
+		// 기존 시간이 30분 이상이면 유지하고, 30분 미만일 때만 갱신합니다.
+		.@remain_time = getstatus(SC_NEED_GRACE, 5);
+		if (.@remain_time < .@give_time)
+			sc_start SC_NEED_GRACE,.@give_time,1;
 
 		// 올마이티(12883) 효과
 		sc_start SC_ALMIGHTY,1800000,30;
