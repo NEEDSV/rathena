@@ -10892,6 +10892,24 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 	std::bitset<SCB_MAX> calc_flag = scdb->calc_flag;
 	int32 tick_time = 0;
 
+	// NEED: Hide cash food icons applied by Almighty item.
+	// val4 == 12883 marks statuses started by item 12883 (Almighty).
+	if (val4 == 12883) {
+		switch (type) {
+		case SC_FOOD_STR_CASH:
+		case SC_FOOD_AGI_CASH:
+		case SC_FOOD_VIT_CASH:
+		case SC_FOOD_INT_CASH:
+		case SC_FOOD_DEX_CASH:
+		case SC_FOOD_LUK_CASH:
+			flag |= SCSTART_NOICON;
+			break;
+
+		default:
+			break;
+		}
+	}
+
 	if(!(flag&SCSTART_LOADED)) // &4 - Do not parse val settings when loading SCs
 	switch(type)
 	{
