@@ -19,6 +19,12 @@ function	script	Get_Item	{
 	getitem 23583,1;
 	getitem 23584,1;
 	SUPPORT_ITEM = 1;
+	
+	if(#Megaphone == 0)
+	{
+		#Megaphone = 1;
+		getitem 12221,3;
+	}
 	close;
 }
 
@@ -579,3 +585,18 @@ OnInit:
 	end;
 }
 
+-	script	MegaphoneNPC	-1,{
+
+OnUse:
+    input @msg$;
+
+    if (@msg$ == "")
+   {
+        mes "입력값이 없습니다.";
+        close;
+    }
+
+	delitem 12221,1;
+    announce "["+strcharinfo(0) + "] : " + @msg$, bc_all, 0x00ffff;
+    end;
+}
