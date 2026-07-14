@@ -8998,6 +8998,7 @@ struct s_item_group_content_result
 {
 	t_itemid nameid;
 	uint16 rate;
+	uint32 total_rate; // Total rate of the Group + SubGroup draw pool this entry belongs to.
 };
 
 static std::string atcommand_trim(const std::string &value)
@@ -9231,7 +9232,7 @@ static std::vector<s_item_group_content_result> atcommand_collect_item_group_con
 				if (entry->rate <= 0)
 					continue;
 
-				contents.push_back({ entry->nameid, entry->rate });
+				contents.push_back({ entry->nameid, entry->rate, random->total_rate });
 			}
 		}
 	}
@@ -9282,8 +9283,13 @@ static bool atcommand_display_item_group_contents(map_session_data *sd, int32 fd
 	for (size_t i = 0; i < display_count; i++) {
 		const s_item_group_content_result &content = contents[i];
 		std::string content_link = item_db.create_item_link(content.nameid);
+		double display_rate = 0.0;
 
-		safesnprintf(output, sizeof(output), "%02.02f%% - %s (ID: %u)", content.rate / 100., content_link.c_str(), content.nameid);
+		if (content.total_rate > 0) {
+			display_rate = static_cast<double>(content.rate) * 100.0 / static_cast<double>(content.total_rate);
+		}
+
+		safesnprintf(output, sizeof(output), "%.2f%% - %s (ID: %u)", display_rate, content_link.c_str(), content.nameid);
 		clif_messagecolor(sd, color_table[COLOR_WHITE], output, false, SELF);
 	}
 
