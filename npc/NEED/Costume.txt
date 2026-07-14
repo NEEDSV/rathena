@@ -73,6 +73,8 @@ OnInit:
 	set .CostumeCoinID, 399991;		// TODO: 의상 코인 아이템 ID
 	set .ExchangeCost, 300;
 	set .PageSize, 20;
+	set .SearchMaxResults, 200;
+	set .PreviewDuration, 30000; // 의상 미리보기 유지 시간 (30초)
 	set .ClosetDefaultSlot, 4;
 	set .ClosetMaxSlot, 40;
 	set .ClosetExpandBaseZeny, 1000000;
@@ -428,6 +430,13 @@ EQP_COSTUME_GARMENT,29362,25302,
 5,1000675,311014,
 5,1000676,311015,
 5,1000855,311354;
+	end;
+
+OnCostumePreviewEnd:
+	if (@NEED_CLOSET_PREVIEW_ACTIVE) {
+		callsub L_ClosetPreviewRestore;
+		dispbottom "의상 미리보기가 종료되었습니다.";
+	}
 	end;
 
 L_Main:
@@ -1023,6 +1032,7 @@ L_Closet:
 	next;
 
 	switch(select(
+		"의상 검색 / 미리보기",
 		"상단 의상",
 		"중단 의상",
 		"하단 의상",
@@ -1031,22 +1041,24 @@ L_Closet:
 		"뒤로"
 	)) {
 	case 1:
+		goto L_ClosetSearch;
+	case 2:
 		set .@closet_part, EQP_COSTUME_HEAD_TOP;
 		set .@closet_part_name$, "상단";
 		goto L_ClosetPartMenu;
-	case 2:
+	case 3:
 		set .@closet_part, EQP_COSTUME_HEAD_MID;
 		set .@closet_part_name$, "중단";
 		goto L_ClosetPartMenu;
-	case 3:
+	case 4:
 		set .@closet_part, EQP_COSTUME_HEAD_LOW;
 		set .@closet_part_name$, "하단";
 		goto L_ClosetPartMenu;
-	case 4:
+	case 5:
 		set .@closet_part, EQP_COSTUME_GARMENT;
 		set .@closet_part_name$, "걸칠것";
 		goto L_ClosetPartMenu;
-	case 5:
+	case 6:
 		goto L_ClosetExpand;
 	default:
 		goto L_Main;
@@ -1078,6 +1090,321 @@ L_ClosetPartMenu:
 	default:
 		goto L_Closet;
 	}
+
+//==============================================
+// 등록 의상 검색 / 미리보기
+//==============================================
+L_ClosetSearch:
+	// 이전 미리보기가 남아 있으면 검색 시작 전에 복원
+	if (@NEED_CLOSET_PREVIEW_ACTIVE)
+		callsub L_ClosetPreviewRestore;
+
+	mes "[의상 검색 / 미리보기]";
+	mes "도감에 등록한 의상을 검색합니다.";
+	mes " ";
+	mes "검색 가능한 항목:";
+	mes "- 의상 이름 일부";
+	mes "- 아이템 번호";
+	mes "- 도감 번호";
+	mes " ";
+	mes "예) 대천사 / 20765 / 120";
+	next;
+
+	input .@search_word$;
+
+	if (.@search_word$ == "") {
+		mes "[의상 검색]";
+		mes "검색어를 입력해주세요.";
+		close;
+	}
+
+	deletearray .@search_cid_list[0], getarraysize(.@search_cid_list);
+	deletearray .@search_item_list[0], getarraysize(.@search_item_list);
+
+	set .@search_count, 0;
+	set .@search_truncated, 0;
+	set .@search_number, atoi(.@search_word$);
+	set .@search_lower$, strtolower(.@search_word$);
+	set .@last_cid, getcostumelastcollectionid();
+
+	freeloop(1);
+
+	for (set .@search_cid, 1; .@search_cid <= .@last_cid; set .@search_cid, .@search_cid + 1) {
+		if (!iscostumeregistered(.@search_cid))
+			continue;
+
+		set .@search_item_id, getcostumeitemid(.@search_cid);
+
+		if (.@search_item_id <= 0)
+			continue;
+
+		// 옷장에서 사용할 수 있는 의상 부위만 검색
+		if (callsub(L_ClosetPartCheck, .@search_item_id) <= 0)
+			continue;
+
+		set .@search_name$, getcostumename(.@search_cid);
+		set .@search_match, 0;
+
+		if (strpos(strtolower(.@search_name$), .@search_lower$) >= 0)
+			set .@search_match, 1;
+
+		if (.@search_number > 0) {
+			if (.@search_cid == .@search_number || .@search_item_id == .@search_number)
+				set .@search_match, 1;
+		}
+
+		if (!.@search_match)
+			continue;
+
+		set .@search_cid_list[.@search_count], .@search_cid;
+		set .@search_item_list[.@search_count], .@search_item_id;
+		set .@search_count, .@search_count + 1;
+
+		if (.@search_count >= .SearchMaxResults) {
+			set .@search_truncated, 1;
+			break;
+		}
+	}
+
+	freeloop(0);
+
+	if (.@search_count <= 0) {
+		mes "[의상 검색]";
+		mes "검색 결과가 없습니다.";
+		mes " ";
+		mes "도감에 등록한 의상만 검색됩니다.";
+		next;
+
+		if (select("다시 검색:뒤로") == 1)
+			goto L_ClosetSearch;
+
+		goto L_Closet;
+	}
+
+	set .@search_page, 0;
+	goto L_ClosetSearchPage;
+
+L_ClosetSearchPage:
+	set .@search_max_page, (.@search_count - 1) / .PageSize;
+	set .@search_start, .@search_page * .PageSize;
+	set .@search_end, .@search_start + .PageSize;
+
+	if (.@search_end > .@search_count)
+		set .@search_end, .@search_count;
+
+	set .@search_page_count, .@search_end - .@search_start;
+
+	mes "[의상 검색 결과]";
+	mes "검색어: ^0055FF" + .@search_word$ + "^000000";
+	mes "검색 결과: ^FF8000" + .@search_count + "^000000개";
+	mes "페이지: " + (.@search_page + 1) + " / " + (.@search_max_page + 1);
+
+	if (.@search_truncated)
+		mes "^FF0000※ 결과가 많아 " + .SearchMaxResults + "개까지만 표시합니다.^000000";
+
+	mes " ";
+
+	for (set .@search_i, .@search_start; .@search_i < .@search_end; set .@search_i, .@search_i + 1) {
+		set .@search_line_no, .@search_i - .@search_start + 1;
+		set .@search_cid, .@search_cid_list[.@search_i];
+		set .@search_item_id, .@search_item_list[.@search_i];
+		set .@search_closet_mark$, "";
+
+		if (callsub(L_ClosetIsRegistered, .@search_cid))
+			set .@search_closet_mark$, " ^00AA00[옷장 등록]^000000";
+
+		mes .@search_line_no + ". [" + .@search_cid + "/" + .@search_item_id + "] " + getcostumename(.@search_cid) + .@search_closet_mark$;
+	}
+
+	next;
+
+	switch(select("번호 선택:다음 페이지:이전 페이지:다시 검색:뒤로")) {
+	case 1:
+		mes "[의상 검색 결과]";
+		mes "확인할 번호를 입력해주세요.";
+		mes "1 ~ " + .@search_page_count + "번까지 입력 가능합니다.";
+		next;
+
+		input .@search_input_no;
+
+		if (.@search_input_no < 1 || .@search_input_no > .@search_page_count) {
+			mes "[의상 검색]";
+			mes "잘못된 번호입니다.";
+			close;
+		}
+
+		set .@search_selected_idx, .@search_start + .@search_input_no - 1;
+		set .@cid, .@search_cid_list[.@search_selected_idx];
+		set .@item_id, .@search_item_list[.@search_selected_idx];
+		goto L_ClosetSearchResult;
+
+	case 2:
+		if (.@search_page < .@search_max_page)
+			set .@search_page, .@search_page + 1;
+		goto L_ClosetSearchPage;
+
+	case 3:
+		if (.@search_page > 0)
+			set .@search_page, .@search_page - 1;
+		goto L_ClosetSearchPage;
+
+	case 4:
+		goto L_ClosetSearch;
+
+	default:
+		goto L_Closet;
+	}
+
+L_ClosetSearchResult:
+	set .@item_id, getcostumeitemid(.@cid);
+
+	if (.@item_id <= 0 || !iscostumeregistered(.@cid)) {
+		if (@NEED_CLOSET_PREVIEW_ACTIVE)
+			callsub L_ClosetPreviewRestore;
+
+		mes "[의상 검색]";
+		mes "의상 정보를 다시 확인할 수 없습니다.";
+		close;
+	}
+
+	set .@closet_part, callsub(L_ClosetPartCheck, .@item_id);
+
+	if (.@closet_part == EQP_COSTUME_HEAD_TOP)
+		set .@closet_part_name$, "상단";
+	else if (.@closet_part == EQP_COSTUME_HEAD_MID)
+		set .@closet_part_name$, "중단";
+	else if (.@closet_part == EQP_COSTUME_HEAD_LOW)
+		set .@closet_part_name$, "하단";
+	else if (.@closet_part == EQP_COSTUME_GARMENT)
+		set .@closet_part_name$, "걸칠것";
+	else
+		set .@closet_part_name$, "확인 불가";
+
+	set .@is_in_closet, callsub(L_ClosetIsRegistered, .@cid);
+
+	mes "[의상 검색 결과]";
+	mes "^FF8000[" + .@cid + "] " + getcostumename(.@cid) + "^000000";
+	mes "아이템 번호: " + .@item_id;
+	mes "부위: " + .@closet_part_name$;
+	mes "옷장 등록: " + (.@is_in_closet ? "^00AA00등록됨^000000" : "^777777미등록^000000");
+
+	if (@NEED_CLOSET_PREVIEW_ACTIVE)
+		mes "^0055FF현재 이 의상을 미리보기 중입니다.^000000";
+
+	next;
+
+	set .@search_action_menu$, "미리보기:";
+
+	if (.@is_in_closet)
+		set .@search_action_menu$, .@search_action_menu$ + "옷 입기:";
+	else
+		set .@search_action_menu$, .@search_action_menu$ + "옷장 등록:";
+
+	set .@search_action_menu$, .@search_action_menu$ + "검색 결과로:다시 검색:뒤로";
+	set .@search_action, select(.@search_action_menu$);
+
+	switch(.@search_action) {
+	case 1:
+		set .@preview_result, callsub(L_ClosetPreviewApply, .@cid);
+
+		mes "[의상 미리보기]";
+
+		if (.@preview_result <= 0) {
+			mes "이 의상은 미리보기를 적용할 수 없습니다.";
+			mes "아이템 View 또는 착용 부위 설정을 확인해주세요.";
+			next;
+			goto L_ClosetSearchResult;
+		}
+
+		mes getcostumename(.@cid) + " 미리보기를 적용했습니다.";
+		mes " ";
+		mes "^0055FF" + (.PreviewDuration / 1000) + "초 후 자동으로 원래 모습으로 돌아갑니다.^000000";
+		mes "다른 메뉴를 선택하면 즉시 복원됩니다.";
+		next;
+		goto L_ClosetSearchResult;
+
+	case 2:
+		if (@NEED_CLOSET_PREVIEW_ACTIVE)
+			callsub L_ClosetPreviewRestore;
+
+		if (.@is_in_closet)
+			goto L_PutCloset;
+
+		set .@closet_register_from_search, 1;
+		goto L_ClosetRegisterSelected;
+
+	case 3:
+		if (@NEED_CLOSET_PREVIEW_ACTIVE)
+			callsub L_ClosetPreviewRestore;
+		goto L_ClosetSearchPage;
+
+	case 4:
+		if (@NEED_CLOSET_PREVIEW_ACTIVE)
+			callsub L_ClosetPreviewRestore;
+		goto L_ClosetSearch;
+
+	default:
+		if (@NEED_CLOSET_PREVIEW_ACTIVE)
+			callsub L_ClosetPreviewRestore;
+		goto L_Closet;
+	}
+
+L_ClosetPreviewApply:
+	set .@pv_cid, getarg(0);
+	set .@pv_item_id, getcostumeitemid(.@pv_cid);
+
+	if (.@pv_item_id <= 0)
+		return 0;
+
+	set .@pv_view, getiteminfo(.@pv_item_id, ITEMINFO_VIEW);
+	set .@pv_loc, getiteminfo(.@pv_item_id, ITEMINFO_LOCATIONS);
+	set .@pv_look_type, -1;
+
+	if (.@pv_view <= 0)
+		return 0;
+
+	// rAthena 기본 미리보기 방식과 동일한 우선순위
+	if (.@pv_loc & EQP_COSTUME_HEAD_LOW)
+		set .@pv_look_type, LOOK_HEAD_BOTTOM;
+	else if (.@pv_loc & EQP_COSTUME_HEAD_TOP)
+		set .@pv_look_type, LOOK_HEAD_TOP;
+	else if (.@pv_loc & EQP_COSTUME_HEAD_MID)
+		set .@pv_look_type, LOOK_HEAD_MID;
+	else if (.@pv_loc & EQP_COSTUME_GARMENT)
+		set .@pv_look_type, LOOK_ROBE;
+
+	if (.@pv_look_type < 0)
+		return 0;
+
+	// 기존 미리보기가 있으면 먼저 원상복구
+	if (@NEED_CLOSET_PREVIEW_ACTIVE)
+		callsub L_ClosetPreviewRestore;
+
+	set @NEED_CLOSET_PREVIEW_ACTIVE, 1;
+	set @NEED_CLOSET_PREVIEW_LOOK_TYPE, .@pv_look_type;
+	set @NEED_CLOSET_PREVIEW_OLD_VIEW, getlook(.@pv_look_type);
+	set @NEED_CLOSET_PREVIEW_NEW_VIEW, .@pv_view;
+
+	changelook .@pv_look_type, .@pv_view;
+
+	deltimer strnpcinfo(3) + "::OnCostumePreviewEnd";
+	addtimer .PreviewDuration, strnpcinfo(3) + "::OnCostumePreviewEnd";
+
+	return 1;
+
+L_ClosetPreviewRestore:
+	if (!@NEED_CLOSET_PREVIEW_ACTIVE)
+		return;
+
+	deltimer strnpcinfo(3) + "::OnCostumePreviewEnd";
+
+	changelook @NEED_CLOSET_PREVIEW_LOOK_TYPE, @NEED_CLOSET_PREVIEW_OLD_VIEW;
+
+	set @NEED_CLOSET_PREVIEW_ACTIVE, 0;
+	set @NEED_CLOSET_PREVIEW_LOOK_TYPE, 0;
+	set @NEED_CLOSET_PREVIEW_OLD_VIEW, 0;
+	set @NEED_CLOSET_PREVIEW_NEW_VIEW, 0;
+	return;
 
 L_ClosetGetSlotValue:
 	return #NEED_CLOSET[getarg(0)];
@@ -1209,6 +1536,18 @@ L_ClosetRegisterPage:
 		close;
 	}
 
+	set .@closet_register_from_search, 0;
+	goto L_ClosetRegisterSelected;
+
+L_ClosetRegisterSelected:
+	set .@item_id, getcostumeitemid(.@cid);
+
+	if (.@item_id <= 0 || !iscostumeregistered(.@cid)) {
+		mes "[옷장 등록]";
+		mes "도감에 등록된 의상 정보를 찾을 수 없습니다.";
+		close;
+	}
+
 	set .@empty_slot, callsub(L_ClosetFindEmptySlot);
 
 	if (.@empty_slot < 0) {
@@ -1227,8 +1566,12 @@ L_ClosetRegisterPage:
 	mes "등록 비용: " + callfunc("F_InsertComma", .ClosetRegisterZeny) + " Zeny";
 	next;
 
-	if (select("등록한다:취소") == 2)
+	if (select("등록한다:취소") == 2) {
+		if (.@closet_register_from_search)
+			goto L_ClosetSearchResult;
+
 		goto L_ClosetPartMenu;
+	}
 
 	if (Zeny < .ClosetRegisterZeny) {
 		mes "[옷장 등록]";
