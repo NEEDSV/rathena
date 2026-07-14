@@ -32,6 +32,7 @@
 #include "guild.hpp"
 #include "homunculus.hpp"
 #include "intif.hpp"
+#include "instance.hpp"
 #include "itemdb.hpp"
 #include "log.hpp"
 #include "map.hpp"
@@ -3478,6 +3479,29 @@ int32 mob_dead(mob_data *md, block_list *src, int32 type)
 
 	} //End EXP giving.
 
+	// NEED: Memorial dungeon IP daily reward limit. Check after loot ownership is
+	// resolved, but before regular and MVP reward items are generated.
+	bool instance_ip_drop_allowed = true;
+	int32 reward_instance_id = 0;
+	if (!(type & 1) && instance_ip_reward_monster_enabled(md->m, md->mob_id, reward_instance_id)) {
+		int32 reward_result = first_sd != nullptr ?
+			instance_ip_reward_complete(first_sd, IP_REWARD_MONSTER, reward_instance_id, md->id, md->mob_id) : -1;
+		instance_ip_drop_allowed = reward_result == 1;
+		if (first_sd != nullptr && reward_result == 1) {
+			uint16 daily_limit = 0;
+			int32 remaining = instance_ip_reward_remaining(first_sd, reward_instance_id, &daily_limit);
+			if (remaining >= 0) {
+				char message[128];
+				clif_displaymessage(first_sd->fd, "This dungeon's reward count has been used.");
+				snprintf(message, sizeof(message), "Rewards remaining today: %d / %hu", remaining, daily_limit);
+				clif_displaymessage(first_sd->fd, message);
+			}
+		} else if (first_sd != nullptr && reward_result == 0)
+			clif_displaymessage(first_sd->fd, "This IP has reached today's reward limit for this instance.");
+		else if (first_sd != nullptr && reward_result < 0)
+			clif_displaymessage(first_sd->fd, "The instance reward could not be processed.");
+	}
+
 	// Looted items have an independent drop position and also don't show special effects when dropped
 	// So we need put them into a separate list
 	std::shared_ptr<s_item_drop_list> lootlist = std::make_shared<s_item_drop_list>();
@@ -3496,7 +3520,7 @@ int32 mob_dead(mob_data *md, block_list *src, int32 type)
 		}
 	}
 
-	if( !(type&1) && !map_getmapflag(m, MF_NOMOBLOOT) && !md->state.rebirth && (
+	if( instance_ip_drop_allowed && !(type&1) && !map_getmapflag(m, MF_NOMOBLOOT) && !md->state.rebirth && (
 		!md->special_state.ai || //Non special mob
 		battle_config.alchemist_summon_reward == 2 || //All summoned give drops
 		(md->special_state.ai==AI_SPHERE && battle_config.alchemist_summon_reward == 1) //Marine Sphere Drops items.
@@ -3719,7 +3743,7 @@ int32 mob_dead(mob_data *md, block_list *src, int32 type)
 			pc_gainexp( mvp_sd, md, log_mvp_exp, 0, 0 );
 		}
 
-		if( !(map_getmapflag(m, MF_NOMVPLOOT) || type&1) ) {
+		if( instance_ip_drop_allowed && !(map_getmapflag(m, MF_NOMVPLOOT) || type&1) ) {
 			// Create a copy of the MVP drops vector
 			std::vector<std::shared_ptr<s_mob_drop>> mdrop = md->db->mvpitem;
 

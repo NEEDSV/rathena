@@ -10,6 +10,10 @@
 
 //BUILDIN_DEF(example,""),
 
+BUILDIN_DEF(instance_ip_complete,"i"),
+BUILDIN_DEF(instance_ip_reward_remaining,"?"),
+BUILDIN_DEF(instance_ip_reward_limit,"?"),
+
 BUILDIN_DEF(skillselectmenu,"*"),
 BUILDIN_DEF(skillselectmenuarray,"r"),
 BUILDIN_DEF(getskillname,"v"),

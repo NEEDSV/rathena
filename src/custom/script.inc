@@ -18,6 +18,76 @@
 //	return 0;
 //}
 
+// NEED: Memorial dungeon IP daily reward limit
+BUILDIN_FUNC(instance_ip_complete)
+{
+	map_session_data* sd = nullptr;
+	if (!script_rid2sd(sd)) {
+		script_pushint(st, -1);
+		return SCRIPT_CMD_SUCCESS;
+	}
+	int32 type = script_getnum(st, 2);
+	if (type != IP_REWARD_PERSONAL) {
+		ShowWarning("buildin_instance_ip_complete: Only IP_REWARD_PERSONAL may be called by scripts. Monster rewards are checked before core drops.\n");
+		script_pushint(st, -1);
+		return SCRIPT_CMD_SUCCESS;
+	}
+	script_pushint(st, instance_ip_reward_complete(sd, static_cast<e_instance_ip_reward_type>(type)));
+	return SCRIPT_CMD_SUCCESS;
+}
+
+BUILDIN_FUNC(instance_ip_reward_remaining)
+{
+	map_session_data* sd = nullptr;
+	if (!script_rid2sd(sd)) {
+		script_pushint(st, -1);
+		return SCRIPT_CMD_SUCCESS;
+	}
+	if (script_hasdata(st, 2)) {
+		if (script_isstring(st, 2)) {
+			ShowError("buildin_instance_ip_reward_remaining: Instance DB ID must be numeric.\n");
+			script_pushint(st, -1);
+			return SCRIPT_CMD_SUCCESS;
+		}
+		int64 instance_db_id = script_getnum64(st, 2);
+		if (instance_db_id <= 0 || instance_db_id > INT32_MAX) {
+			ShowError("buildin_instance_ip_reward_remaining: Invalid instance DB ID %" PRId64 ".\n", instance_db_id);
+			script_pushint(st, -1);
+			return SCRIPT_CMD_SUCCESS;
+		}
+		script_pushint(st, instance_ip_reward_remaining_by_db_id(sd, static_cast<int32>(instance_db_id)));
+	} else {
+		script_pushint(st, instance_ip_reward_remaining(sd));
+	}
+	return SCRIPT_CMD_SUCCESS;
+}
+
+BUILDIN_FUNC(instance_ip_reward_limit)
+{
+	map_session_data* sd = nullptr;
+	if (!script_rid2sd(sd)) {
+		script_pushint(st, -1);
+		return SCRIPT_CMD_SUCCESS;
+	}
+	if (script_hasdata(st, 2)) {
+		if (script_isstring(st, 2)) {
+			ShowError("buildin_instance_ip_reward_limit: Instance DB ID must be numeric.\n");
+			script_pushint(st, -1);
+			return SCRIPT_CMD_SUCCESS;
+		}
+		int64 instance_db_id = script_getnum64(st, 2);
+		if (instance_db_id <= 0 || instance_db_id > INT32_MAX) {
+			ShowError("buildin_instance_ip_reward_limit: Invalid instance DB ID %" PRId64 ".\n", instance_db_id);
+			script_pushint(st, -1);
+			return SCRIPT_CMD_SUCCESS;
+		}
+		script_pushint(st, instance_ip_reward_limit_by_db_id(sd, static_cast<int32>(instance_db_id)));
+	} else {
+		script_pushint(st, instance_ip_reward_limit(sd));
+	}
+	return SCRIPT_CMD_SUCCESS;
+}
+
 /**
  * Author: [royrdev]
  * skillselectmenu(<skill_id1>{,<skill_id2>,...})

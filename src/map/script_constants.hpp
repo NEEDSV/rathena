@@ -4304,6 +4304,8 @@
 	export_constant(IM_NONE);
 	export_constant(IM_CHAR);
 	export_constant(IM_PARTY);
+	export_constant(IP_REWARD_PERSONAL);
+	export_constant(IP_REWARD_MONSTER);
 	export_constant(IM_GUILD);
 	export_constant(IM_CLAN);
 
