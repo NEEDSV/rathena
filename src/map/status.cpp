@@ -9658,6 +9658,8 @@ static int32 status_get_sc_interval(enum sc_type type)
 		case SC_GRADUAL_GRAVITY:
 		case SC_KILLING_AURA:
 		case SC_BOSSMAPINFO:
+		case SC_BLOODSUCKER: // NEED bugfix: 2017 drains HP every 1s; the refactored status_change_timer only
+		                     // reschedules when this interval > 0, so a missing entry made it end after 1 tick.
 			return 1000;
 		case SC_WINKCHARM:
 		case SC_VOICEOFSIREN:
