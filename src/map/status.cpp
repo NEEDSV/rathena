@@ -10233,6 +10233,22 @@ TIMER_FUNC(status_change_start_timer) {
  * @param delay: Delay in milliseconds before the SC is applied
  * @return Whether the status change was resisted (false) or will be applied (true)
  */
+// NEED battleground strip-duration override: true only for equipment-strip statuses (weapon/shield/armor/
+// helm/accessory + shadow gear). Used to force a 10s duration on battleground maps; excludes look-alike SCs.
+static bool need_is_equipment_strip_status(sc_type type) {
+	switch (type) {
+		case SC_STRIPWEAPON:
+		case SC_STRIPSHIELD:
+		case SC_STRIPARMOR:
+		case SC_STRIPHELM:
+		case SC__STRIPACCESSORY:
+		case SC_SHADOW_STRIP:
+			return true;
+		default:
+			return false;
+	}
+}
+
 bool status_change_start(block_list* src, block_list* bl, sc_type type, int32 rate, int32 val1, int32 val2, int32 val3, int32 val4, t_tick duration, uint8 flag, int32 delay) {
 	std::shared_ptr<s_status_change_db> scdb = status_db.find(type);
 
@@ -13370,6 +13386,12 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 		}
 		calc_flag.reset(SCB_DYE);
 	}
+
+	// NEED: on battleground maps every equipment-strip status lasts exactly 10s (players only, target's map).
+	// Applied after the normal duration/DEX calculation and before the icon packet + timer, so the client icon
+	// and the server timer both use 10s. Strip statuses set no tick_time, so the tick_time swap below preserves it.
+	if (bl->type == BL_PC && need_is_equipment_strip_status(type) && map_getmapflag(bl->m, MF_BATTLEGROUND))
+		tick = 10000;
 
 	if (!(flag&SCSTART_NOICON) && !(flag&SCSTART_LOADED && scdb->flag[SCF_DISPLAYPC] || scdb->flag[SCF_DISPLAYNPC])) {
 		int32 status_icon = scdb->icon;
