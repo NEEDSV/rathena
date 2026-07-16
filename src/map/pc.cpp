@@ -9895,6 +9895,10 @@ int32 pc_dead(map_session_data *sd,block_list *src)
 
 	pc_setdead(sd);
 
+	// NEED balance: death is confirmed here (super novice death-avoidance returns earlier), so drop this
+	// id from KO_ZENKAI wind fields' judged records - a corpse left on the map must not keep its record.
+	skill_zenkai_wind_forget_target(sd->id);
+
 	clif_party_dead( *sd );
 
 	pc_setparam(sd, SP_PCDIECOUNTER, sd->die_counter+1);

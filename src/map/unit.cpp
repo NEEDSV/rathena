@@ -3588,6 +3588,12 @@ int32 unit_remove_map_(block_list *bl, clr_type clrtype, const char* file, int32
 	if(bl->prev == nullptr)
 		return 0; // Already removed?
 
+	// NEED balance: on removal (death/warp/logout) drop this id from KO_ZENKAI wind fields' judged
+	// records so a revived / re-entering target is judged once more per still-alive field (id-based).
+	// Only players and monsters are ever judged targets, so skip the scan for other bl types.
+	if (bl->type == BL_PC || bl->type == BL_MOB)
+		skill_zenkai_wind_forget_target(bl->id);
+
 	FreeBlockLock freeLock;
 
 	if (ud->walktimer != INVALID_TIMER)

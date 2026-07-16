@@ -9,6 +9,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
+#include <unordered_set>
 
 #include <common/cbasetypes.hpp>
 #include <common/ers.hpp>
@@ -6887,6 +6888,10 @@ static int32 skill_unit_onplace(skill_unit *unit, block_list *bl, t_tick tick)
  * @param bl Valid 'target' above the unit, that has been check in skill_unit_timer_sub_onplace
  * @param tick
  */
+// Forward declaration: skill_zenkai_wind_mark is defined further below (it references the file-static
+// zenkai_wind_judged_targets), but skill_unit_onplace_timer calls it, so declare it here first.
+static bool skill_zenkai_wind_mark(int32 group_id, int32 target_id);
+
 int32 skill_unit_onplace_timer(skill_unit *unit, block_list *bl, t_tick tick)
 {
 	block_list *ss;
@@ -7582,7 +7587,15 @@ int32 skill_unit_onplace_timer(skill_unit *unit, block_list *bl, t_tick tick)
 			break;
 		case UNT_HELLS_PLANT:
 			// 2017: hell plant unit attacks enemies in range from the unit's position (not the caster).
-			skill_attack(skill_get_type(GN_HELLS_PLANT_ATK), ss, unit, bl, GN_HELLS_PLANT_ATK, sg->skill_lv, tick, SD_LEVEL|SD_ANIMATION);
+			// 2017 skill_unit_onplace_timer restores: skip manhole/immune targets, re-check BCT_ENEMY, and
+			// shorten the group lifetime on non-caster contact so the plant triggers and is removed via the
+			// normal group-timer cleanup (no direct delete during unit/target iteration).
+			if ((tsc && tsc->getSCE(SC__MANHOLE)) || status_isimmune(bl))
+				break;
+			if (battle_check_target(unit, bl, BCT_ENEMY) > 0)
+				skill_attack(skill_get_type(GN_HELLS_PLANT_ATK), ss, unit, bl, GN_HELLS_PLANT_ATK, sg->skill_lv, tick, SD_LEVEL|SD_ANIMATION);
+			if (ss != bl) // The caster is the only one who can step on the Plants without destroying them
+				sg->limit = DIFF_TICK(tick, sg->tick) + 100;
 			break;
 
 
@@ -7664,6 +7677,12 @@ int32 skill_unit_onplace_timer(skill_unit *unit, block_list *bl, t_tick tick)
 						sc_start4(ss, bl, SC_BURNING, sg->val1*5, sg->skill_lv, 1000, ss->id, 0, skill_get_time2(sg->skill_id, sg->skill_lv));
 						break;
 					case UNT_ZENKAI_WIND:
+						// NEED balance: judge each target only once per wind field (skill_unit_group). Record BEFORE the
+						// roll so probability failure / resistance / immunity / boss-immunity all count as judged (no 500ms
+						// repeat). Wind element only; water/land/fire and the ally SC_ZENKAI buff (else branch) are unchanged.
+						// Base rate (val1*5%) and the 1/3 SLEEP/SILENCE/DEEPSLEEP selection are unchanged.
+						if (!skill_zenkai_wind_mark(sg->group_id, bl->id))
+							break;
 						switch (rnd()%3 + 1) {
 							case 1:
 								sc_start(ss, bl, SC_SLEEP, sg->val1*5, sg->skill_lv, skill_get_time2(sg->skill_id, sg->skill_lv));
@@ -12022,6 +12041,27 @@ int32 skill_delunit(skill_unit* unit)
 
 static std::unordered_map<int32, std::shared_ptr<s_skill_unit_group>> skillunit_group_db; /// Skill unit group DB. Key int32 group_id -> struct s_skill_unit_group*
 
+// NEED balance (KO_ZENKAI wind field): per-group set of target block ids already judged for
+// SLEEP/SILENCE/DEEPSLEEP, so each wind field (skill_unit_group) judges a given target only once
+// (no 500ms repeat). Entries exist only for UNT_ZENKAI_WIND groups -> zero cost to other skills.
+// Cleaned on group delete, target removal (death/warp/logout, id-based), and server shutdown.
+static std::unordered_map<int32, std::unordered_set<int32>> zenkai_wind_judged_targets;
+
+// Records (group_id, target_id) as judged. Returns true on the FIRST judgment, false if already judged.
+static bool skill_zenkai_wind_mark(int32 group_id, int32 target_id) {
+	return zenkai_wind_judged_targets[group_id].insert(target_id).second;
+}
+
+// Drops a target id from every active KO_ZENKAI wind field's judged record (called on target death/warp/
+// logout so a revived or re-entering target is judged once more per still-alive field). Id-based -> no
+// dangling pointer, and clears before a dead mob's id can be reused.
+void skill_zenkai_wind_forget_target(int32 target_id) {
+	if (zenkai_wind_judged_targets.empty())
+		return;
+	for (auto &entry : zenkai_wind_judged_targets)
+		entry.second.erase(target_id);
+}
+
 /// Returns the target s_skill_unit_group or nullptr if not found.
 std::shared_ptr<s_skill_unit_group> skill_id2group(int32 group_id) {
 	return util::umap_find(skillunit_group_db, group_id);
@@ -12123,6 +12163,9 @@ int32 skill_delunitgroup_(std::shared_ptr<s_skill_unit_group> group, const char*
 		ShowDebug("skill_delunitgroup: group is nullptr (source=%s:%d, %s)! Please report this! (#3504)\n", file, line, func);
 		return 0;
 	}
+
+	// NEED balance: drop this group's KO_ZENKAI wind-field judged record (no-op for other groups).
+	zenkai_wind_judged_targets.erase(group->group_id);
 
 	src = map_id2bl(group->src_id);
 	ud = unit_bl2ud(src);
@@ -16667,6 +16710,7 @@ void do_init_skill(void)
 
 void do_final_skill(void)
 {
+	zenkai_wind_judged_targets.clear();
 	skill_db.clear();
 	abra_db.clear();
 	magic_mushroom_db.clear();

@@ -9,7 +9,15 @@
 #include "map/status.hpp"
 
 // GN_HELLS_PLANT
-SkillHellsPlant::SkillHellsPlant() : StatusSkillImpl(GN_HELLS_PLANT) {
+SkillHellsPlant::SkillHellsPlant() : SkillImpl(GN_HELLS_PLANT) {
+}
+
+void SkillHellsPlant::castendPos2(block_list* src, int32 x, int32 y, uint16 skill_lv, t_tick tick, int32& flag) const {
+	// NEED 2017 fix: GN_HELLS_PLANT is a ground-unit skill. It was wrongly bound to StatusSkillImpl, whose
+	// base castendPos2 is a no-op, so skill_unitsetting was never called - the plant unit was never created
+	// even though the plant bottle was still consumed at castend. Restore the 2017 behavior by creating the
+	// ground unit; the UNT_HELLS_PLANT onplace timer then triggers GN_HELLS_PLANT_ATK on approaching enemies.
+	skill_unitsetting(src, getSkillId(), skill_lv, x, y, 0);
 }
 
 // GN_HELLS_PLANT_ATK
