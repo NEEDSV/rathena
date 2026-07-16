@@ -43,6 +43,12 @@ void SkillDispell::castendNoDamageId(block_list *src, block_list *target, uint16
 		if(tsc == nullptr || tsc->empty())
 			return;
 
+		// NEED: A successful Dispell must remove Deep Sleep as one complete status.
+		// End it before the generic pass so its timer, icon, action restrictions and
+		// OPT1_SLEEP are all cleared together by the normal status teardown path.
+		if (tsc->getSCE(SC_DEEPSLEEP))
+			status_change_end(target, SC_DEEPSLEEP);
+
 		//Statuses that can't be Dispelled
 		for (const auto &it : status_db) {
 			sc_type status = static_cast<sc_type>(it.first);
