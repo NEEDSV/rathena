@@ -5,6 +5,7 @@
 
 #include <cstdlib>
 #include <cmath>
+#include <ctime>
 
 #include <common/cbasetypes.hpp>
 #include <common/db.hpp>
@@ -13,6 +14,7 @@
 #include <common/nullpo.hpp>
 #include <common/showmsg.hpp>
 #include <common/socket.hpp>
+#include <common/sql.hpp>
 #include <common/strlib.hpp>
 #include <common/timer.hpp>
 #include <common/utilities.hpp>
@@ -21,6 +23,7 @@
 #include "clif.hpp"
 #include "guild.hpp"
 #include "map.hpp"
+#include "mob.hpp"
 #include "npc.hpp"
 #include "party.hpp"
 #include "pc.hpp"
@@ -159,6 +162,35 @@ uint64 InstanceDatabase::parseBodyNode(const ryml::NodeRef& node) {
 			instance->destroyable = true;
 	}
 
+	// NEED: Memorial dungeon IP daily reward limit
+	if (this->nodeExists(node, "IpDailyRewardLimit")) {
+		uint16 limit;
+		if (!this->asUInt16(node, "IpDailyRewardLimit", limit))
+			return 0;
+		instance->ip_daily_reward_limit = limit;
+	} else if (!exists) {
+		instance->ip_daily_reward_limit = 0;
+	}
+
+	if (this->nodeExists(node, "IpRewardMonsters")) {
+		const auto& monsterNode = node["IpRewardMonsters"];
+		for (const auto& monsterIt : monsterNode) {
+			uint16 monster_id = 0;
+			c4::from_chars(monsterIt.key(), &monster_id);
+			if (monster_id == 0) {
+				this->invalidWarning(monsterIt, "IpRewardMonsters contains an invalid monster ID, skipping entry.\n");
+				continue;
+			}
+			bool active;
+			if (!this->asBool(monsterNode, std::to_string(monster_id), active))
+				return 0;
+			if (active)
+				instance->ip_reward_monsters.insert(monster_id);
+			else
+				instance->ip_reward_monsters.erase(monster_id);
+		}
+	}
+
 	if (this->nodeExists(node, "Enter")) {
 		const auto& enterNode = node["Enter"];
 
@@ -269,6 +301,270 @@ uint64 InstanceDatabase::parseBodyNode(const ryml::NodeRef& node) {
 }
 
 InstanceDatabase instance_db;
+
+// NEED: Memorial dungeon IP daily reward limit
+static const uint64 instance_ip_server_boot = static_cast<uint64>(time(nullptr));
+
+static bool instance_ip_reward_date(char (&date)[11]) {
+	time_t reward_time = time(nullptr) - (4 * 60 * 60);
+	struct tm* local = localtime(&reward_time);
+	return local != nullptr && strftime(date, sizeof(date), "%Y-%m-%d", local) == 10;
+}
+
+bool instance_ip_reward_monster_enabled(int16 map_id, uint16 monster_id, int32& instance_id) {
+	instance_id = 0;
+	map_data* mapdata = map_getmapdata(map_id);
+	if (mapdata == nullptr || mapdata->instance_id <= 0)
+		return false;
+	std::shared_ptr<s_instance_data> idata = util::umap_find(instances, mapdata->instance_id);
+	if (idata == nullptr)
+		return false;
+	std::shared_ptr<s_instance_db> db = instance_db.find(idata->id);
+	if (db == nullptr || db->ip_daily_reward_limit == 0 || !db->ip_reward_monsters.count(monster_id))
+		return false;
+	instance_id = mapdata->instance_id;
+	return true;
+}
+
+static int32 instance_ip_reward_remaining_for_db(map_session_data* sd, const std::shared_ptr<s_instance_db>& db, uint16* daily_limit) {
+	if (daily_limit != nullptr)
+		*daily_limit = 0;
+	if (sd == nullptr || sd->fd <= 0 || !session_isActive(sd->fd) || session[sd->fd]->client_addr == 0)
+		return -1;
+	if (db == nullptr)
+		return -1;
+	if (db->ip_daily_reward_limit == 0)
+		return -2;
+	if (daily_limit != nullptr)
+		*daily_limit = db->ip_daily_reward_limit;
+
+	char reward_date[11];
+	if (!instance_ip_reward_date(reward_date))
+		return -1;
+	char ip[16];
+	snprintf(ip, sizeof(ip), "%u.%u.%u.%u", CONVIP(session[sd->fd]->client_addr));
+	if (SQL_ERROR == Sql_Query(mmysql_handle,
+		"SELECT `use_count` FROM `instance_ip_reward` WHERE `reward_date`='%s' AND `instance_db_id`='%d' "
+		"AND `ip`=INET6_ATON('%s') LIMIT 1", reward_date, db->id, ip)) {
+		ShowError("instance_ip_reward_remaining: SQL query failed for instance_db=%d, char_id=%d.\n",
+			db->id, sd->status.char_id);
+		Sql_ShowDebug(mmysql_handle);
+		return -1;
+	}
+
+	uint32 used = 0;
+	if (Sql_NumRows(mmysql_handle) > 0) {
+		if (SQL_SUCCESS != Sql_NextRow(mmysql_handle)) {
+			ShowError("instance_ip_reward_remaining: Failed to read SQL result for instance_db=%d, char_id=%d.\n",
+				db->id, sd->status.char_id);
+			Sql_FreeResult(mmysql_handle);
+			return -1;
+		}
+		char* data = nullptr;
+		if (SQL_SUCCESS != Sql_GetData(mmysql_handle, 0, &data, nullptr) || data == nullptr) {
+			ShowError("instance_ip_reward_remaining: Invalid SQL result for instance_db=%d, char_id=%d.\n",
+				db->id, sd->status.char_id);
+			Sql_FreeResult(mmysql_handle);
+			return -1;
+		}
+		used = static_cast<uint32>(strtoul(data, nullptr, 10));
+	}
+	Sql_FreeResult(mmysql_handle);
+	return used >= db->ip_daily_reward_limit ? 0 : db->ip_daily_reward_limit - used;
+}
+
+int32 instance_ip_reward_remaining(map_session_data* sd, int32 instance_id, uint16* daily_limit) {
+	if (sd == nullptr)
+		return -1;
+	if (instance_id <= 0) {
+		map_data* mapdata = map_getmapdata(sd->m);
+		if (mapdata == nullptr)
+			return -1;
+		instance_id = mapdata->instance_id;
+	}
+	std::shared_ptr<s_instance_data> idata = util::umap_find(instances, instance_id);
+	if (idata == nullptr)
+		return -1;
+	std::shared_ptr<s_instance_db> db = instance_db.find(idata->id);
+	return instance_ip_reward_remaining_for_db(sd, db, daily_limit);
+}
+
+int32 instance_ip_reward_remaining_by_db_id(map_session_data* sd, int32 instance_db_id, uint16* daily_limit) {
+	if (instance_db_id <= 0) {
+		ShowError("instance_ip_reward_remaining_by_db_id: Invalid instance DB ID %d.\n", instance_db_id);
+		return -1;
+	}
+	std::shared_ptr<s_instance_db> db = instance_db.find(instance_db_id);
+	if (db == nullptr) {
+		ShowError("instance_ip_reward_remaining_by_db_id: Unknown instance DB ID %d.\n", instance_db_id);
+		return -1;
+	}
+	return instance_ip_reward_remaining_for_db(sd, db, daily_limit);
+}
+
+static int32 instance_ip_reward_limit_for_db(const std::shared_ptr<s_instance_db>& db) {
+	if (db == nullptr)
+		return -1;
+	return db->ip_daily_reward_limit == 0 ? -2 : db->ip_daily_reward_limit;
+
+}
+
+int32 instance_ip_reward_limit(map_session_data* sd, int32 instance_id) {
+	if (sd == nullptr)
+		return -1;
+	if (instance_id <= 0) {
+		map_data* mapdata = map_getmapdata(sd->m);
+		if (mapdata == nullptr)
+			return -1;
+		instance_id = mapdata->instance_id;
+	}
+	std::shared_ptr<s_instance_data> idata = util::umap_find(instances, instance_id);
+	if (idata == nullptr)
+		return -1;
+	return instance_ip_reward_limit_for_db(instance_db.find(idata->id));
+
+}
+
+int32 instance_ip_reward_limit_by_db_id(map_session_data* sd, int32 instance_db_id) {
+	if (sd == nullptr || instance_db_id <= 0) {
+		ShowError("instance_ip_reward_limit_by_db_id: Invalid player or instance DB ID %d.\n", instance_db_id);
+		return -1;
+	}
+	std::shared_ptr<s_instance_db> db = instance_db.find(instance_db_id);
+	if (db == nullptr) {
+		ShowError("instance_ip_reward_limit_by_db_id: Unknown instance DB ID %d.\n", instance_db_id);
+		return -1;
+	}
+	return instance_ip_reward_limit_for_db(db);
+}
+
+static void instance_ip_reward_entry_message(map_session_data* sd, int32 remaining, uint16 daily_limit) {
+	clif_displaymessage(sd->fd, "[Memorial Dungeon Reward Information]");
+	if (remaining > 0) {
+		char message[128];
+		snprintf(message, sizeof(message), "Rewards remaining today: %d / %hu", remaining, daily_limit);
+		clif_displaymessage(sd->fd, message);
+	} else {
+		clif_displaymessage(sd->fd, "This IP has used all rewards for this dungeon today.");
+		clif_displaymessage(sd->fd, "You may continue the dungeon, but limited rewards cannot be obtained.");
+	}
+	clif_displaymessage(sd->fd, "Reset time: 04:00 every day");
+}
+
+int32 instance_ip_reward_complete(map_session_data* sd, e_instance_ip_reward_type reward_type, int32 instance_id, int32 monster_gid, uint16 monster_id) {
+	if (sd == nullptr || reward_type < IP_REWARD_PERSONAL || reward_type > IP_REWARD_MONSTER ||
+		sd->fd <= 0 || !session_isActive(sd->fd) || session[sd->fd]->client_addr == 0)
+		return -1;
+	if (instance_id <= 0) {
+		map_data* mapdata = map_getmapdata(sd->m);
+		if (mapdata == nullptr)
+			return -1;
+		instance_id = mapdata->instance_id;
+	}
+	std::shared_ptr<s_instance_data> idata = util::umap_find(instances, instance_id);
+	if (idata == nullptr)
+		return -1;
+	std::shared_ptr<s_instance_db> db = instance_db.find(idata->id);
+	if (db == nullptr || db->ip_daily_reward_limit == 0)
+		return -1;
+	if (reward_type == IP_REWARD_MONSTER &&
+		(monster_gid <= 0 || monster_id == 0 || !db->ip_reward_monsters.count(monster_id)))
+		return -1;
+
+	char reward_date[11];
+	if (!instance_ip_reward_date(reward_date))
+		return -1;
+	char ip[16];
+	snprintf(ip, sizeof(ip), "%u.%u.%u.%u", CONVIP(session[sd->fd]->client_addr));
+	char escaped_name[NAME_LENGTH * 2 + 1];
+	Sql_EscapeString(mmysql_handle, escaped_name, sd->status.name);
+
+	bool transaction = false;
+	auto rollback = [&]() {
+		if (transaction)
+			Sql_QueryStr(mmysql_handle, "ROLLBACK");
+	};
+	if (SQL_ERROR == Sql_QueryStr(mmysql_handle, "START TRANSACTION")) {
+		Sql_ShowDebug(mmysql_handle);
+		return -1;
+	}
+	transaction = true;
+
+	if (reward_type == IP_REWARD_MONSTER) {
+		if (SQL_ERROR == Sql_Query(mmysql_handle,
+			"INSERT IGNORE INTO `instance_ip_reward_event` "
+			"(`reward_date`,`instance_db_id`,`ip`,`server_boot`,`runtime_instance_id`,`monster_gid`,`monster_id`,`reward_type`,`allowed`) "
+			"VALUES ('%s','%d',INET6_ATON('%s'),'%" PRIu64 "','%d','%d','%hu','%u','-1')",
+			reward_date, idata->id, ip, instance_ip_server_boot, instance_id, monster_gid, monster_id, reward_type)) {
+			Sql_ShowDebug(mmysql_handle);
+			rollback();
+			return -1;
+		}
+		if (Sql_NumRowsAffected(mmysql_handle) == 0) {
+			if (SQL_ERROR == Sql_Query(mmysql_handle,
+				"SELECT `allowed` FROM `instance_ip_reward_event` WHERE `reward_date`='%s' AND `instance_db_id`='%d' "
+				"AND `ip`=INET6_ATON('%s') AND `server_boot`='%" PRIu64 "' AND `runtime_instance_id`='%d' "
+				"AND `monster_gid`='%d' AND `reward_type`='%u' LIMIT 1",
+				reward_date, idata->id, ip, instance_ip_server_boot, instance_id, monster_gid, reward_type) ||
+				SQL_ERROR == Sql_NextRow(mmysql_handle)) {
+				Sql_ShowDebug(mmysql_handle);
+				rollback();
+				return -1;
+			}
+			char* data = nullptr;
+			Sql_GetData(mmysql_handle, 0, &data, nullptr);
+			int32 previous = data != nullptr ? atoi(data) : -1;
+			if (SQL_ERROR == Sql_QueryStr(mmysql_handle, "COMMIT")) {
+				Sql_ShowDebug(mmysql_handle);
+				rollback();
+				return -1;
+			}
+			return previous;
+		}
+	}
+
+	if (SQL_ERROR == Sql_Query(mmysql_handle,
+		"INSERT INTO `instance_ip_reward` "
+		"(`reward_date`,`instance_db_id`,`ip`,`use_count`,`last_account_id`,`last_char_id`,`last_char_name`,`last_used_at`,`reward_type`,`runtime_instance_id`,`monster_id`) "
+		"VALUES ('%s','%d',INET6_ATON('%s'),'1','%d','%d','%s',NOW(),'%u','%d','%hu') "
+		"ON DUPLICATE KEY UPDATE "
+		"`last_account_id`=IF(`use_count`<'%hu',VALUES(`last_account_id`),`last_account_id`),"
+		"`last_char_id`=IF(`use_count`<'%hu',VALUES(`last_char_id`),`last_char_id`),"
+		"`last_char_name`=IF(`use_count`<'%hu',VALUES(`last_char_name`),`last_char_name`),"
+		"`last_used_at`=IF(`use_count`<'%hu',VALUES(`last_used_at`),`last_used_at`),"
+		"`reward_type`=IF(`use_count`<'%hu',VALUES(`reward_type`),`reward_type`),"
+		"`runtime_instance_id`=IF(`use_count`<'%hu',VALUES(`runtime_instance_id`),`runtime_instance_id`),"
+		"`monster_id`=IF(`use_count`<'%hu',VALUES(`monster_id`),`monster_id`),"
+		"`use_count`=IF(`use_count`<'%hu',`use_count`+1,`use_count`)",
+		reward_date, idata->id, ip, sd->status.account_id, sd->status.char_id, escaped_name,
+		reward_type, instance_id, monster_id, db->ip_daily_reward_limit, db->ip_daily_reward_limit,
+		db->ip_daily_reward_limit, db->ip_daily_reward_limit, db->ip_daily_reward_limit,
+		db->ip_daily_reward_limit, db->ip_daily_reward_limit, db->ip_daily_reward_limit)) {
+		Sql_ShowDebug(mmysql_handle);
+		rollback();
+		return -1;
+	}
+	int32 result = Sql_NumRowsAffected(mmysql_handle) > 0 ? 1 : 0;
+	if (reward_type == IP_REWARD_MONSTER && SQL_ERROR == Sql_Query(mmysql_handle,
+		"UPDATE `instance_ip_reward_event` SET `allowed`='%d' WHERE `reward_date`='%s' AND `instance_db_id`='%d' "
+		"AND `ip`=INET6_ATON('%s') AND `server_boot`='%" PRIu64 "' AND `runtime_instance_id`='%d' "
+		"AND `monster_gid`='%d' AND `reward_type`='%u'",
+		result, reward_date, idata->id, ip, instance_ip_server_boot, instance_id, monster_gid, reward_type)) {
+		Sql_ShowDebug(mmysql_handle);
+		rollback();
+		return -1;
+	}
+	if (SQL_ERROR == Sql_QueryStr(mmysql_handle, "COMMIT")) {
+		Sql_ShowDebug(mmysql_handle);
+		rollback();
+		return -1;
+	}
+	transaction = false;
+	ShowInfo("[Instance IP Reward] date=%s instance_db=%d runtime=%d type=%u result=%d ip=%s account=%d char=%d name=%s monster=%hu gid=%d\n",
+		reward_date, idata->id, instance_id, reward_type, result, ip, sd->status.account_id,
+		sd->status.char_id, sd->status.name, monster_id, monster_gid);
+	return result;
+}
 
 /**
  * Searches for an instance name in the database
@@ -1131,8 +1427,18 @@ e_instance_enter instance_enter(map_session_data *sd, int32 instance_id, const c
 	if ((m = instance_mapid(db->enter.map, instance_id)) < 0)
 		return IE_OTHER;
 
+	map_data* source_map = map_getmapdata(sd->m);
+	bool entering_from_outside = source_map == nullptr || source_map->instance_id != instance_id;
+
 	if (pc_setpos(sd, map_id2index(m), x, y, CLR_OUTSIGHT))
 		return IE_OTHER;
+
+	if (entering_from_outside && db->ip_daily_reward_limit > 0) {
+		uint16 daily_limit = 0;
+		int32 remaining = instance_ip_reward_remaining(sd, instance_id, &daily_limit);
+		if (remaining >= 0)
+			instance_ip_reward_entry_message(sd, remaining, daily_limit);
+	}
 
 	return IE_OK;
 }
