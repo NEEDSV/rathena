@@ -185,7 +185,7 @@ xmas,240,294,3	script	검은 수염 죠#pa0829::Black Beard Joe#pa0829	4_M_05,{
 	mes "[검은 수염 죠]";
 	mes "후후, 인간의 욕심은 끝이 없죠. 제가 무엇을 해드릴까요?";
 	next;
-	switch( select( "절 위해 무엇을 해주실 수 있나요?", "장난감 공장 액세서리 인챈트", "장난감 공장 무기 인챈트", "장난감 공장 투구 인챈트", "장난감 공장 신발 인챈트" ) ) {
+	switch( select( "절 위해 무엇을 해주실 수 있나요?", "장난감 공장 액세서리 인챈트", "장난감 공장 무기 인챈트", "장난감 공장 투구 인챈트", "장난감 공장 신발 인챈트", "인챈트 리스트 확인" ) ) {
 	case 1:
 		mes "[검은 수염 죠]";
 		mes "제가 뭘 하냐고요? 아주 간단합니다. 피묻은 코인을 가져오시면 제가 그것들을 받고 액세서리에 인챈트를 해드리는 거죠.";
@@ -208,6 +208,9 @@ xmas,240,294,3	script	검은 수염 죠#pa0829::Black Beard Joe#pa0829	4_M_05,{
 	case 5:
 		.@eq_num = EQI_SHOES;
 		break;
+	case 6:
+		callfunc "F_ShowHorrorEnchantList";
+		end;
 	}
 	.@item_id = getequipid(.@eq_num);
 	.@refine = getequiprefinerycnt(.@eq_num);
@@ -478,4 +481,69 @@ xmas,240,294,3	script	검은 수염 죠#pa0829::Black Beard Joe#pa0829	4_M_05,{
 	}
 	mes "흠.. 그나저나 피묻은 코인을 채워 오셔야겠어요. 수수료도 못 낼 정도니까요.";
 	close;
+}
+
+function	script	F_ShowHorrorEnchantList	{
+	mes "[검은 수염 죠]";
+	mes "성공했을 때 부여될 수 있는 인챈트 목록입니다.";
+	mes "^FF0000액세서리는 인챈트 단계에 따라 장비가 파괴될 수 있습니다.^000000";
+	next;
+
+	while (true) {
+		switch(select(
+			"액세서리 - STR/AGI/DEX 유형",
+			"액세서리 - INT/VIT/DEX 유형",
+			"무기",
+			"투구/신발 - 첫 번째 인챈트",
+			"투구/신발 - 두 번째 인챈트",
+			"닫기"
+			)) {
+
+		case 1:
+			setdialogsize(200,250);
+			callfunc "F_ShowEnchantGroup","STR",4700,4701,4702,4703;
+			callfunc "F_ShowEnchantGroup","AGI",4730,4731,4732,4733;
+			callfunc "F_ShowEnchantGroup","DEX",4720,4721,4722,4723;
+			break;
+
+		case 2:
+			setdialogsize(200,250);
+			callfunc "F_ShowEnchantGroup","INT",4710,4711,4712,4713;
+			callfunc "F_ShowEnchantGroup","VIT",4740,4741,4742,4743;
+			callfunc "F_ShowEnchantGroup","DEX",4720,4721,4722,4723;
+			break;
+
+		case 3:
+			setdialogsize(200,250);
+			callfunc "F_ShowEnchantGroup","투지",4820,4821,4822,4823,4824,4825;
+			callfunc "F_ShowEnchantGroup","치명",4816,4843,4844;
+			callfunc "F_ShowEnchantGroup","MATK",4760,4761,4806;
+			callfunc "F_ShowEnchantGroup","공격 후 딜레이",4872,4873,4881;
+			callfunc "F_ShowEnchantGroup","공격속도",4807;
+			callfunc "F_ShowEnchantGroup","마력",4827,4828,4829,4830;
+			break;
+
+		case 4:
+			setdialogsize(200,250);
+			callfunc "F_ShowEnchantGroup","투지",4810,4809,4808,4820;
+			callfunc "F_ShowEnchantGroup","치명",4818,4817,4816;
+			callfunc "F_ShowEnchantGroup","MATK",4760,4761;
+			callfunc "F_ShowEnchantGroup","공격 후 딜레이",4869,4872,4873,4881;
+			callfunc "F_ShowEnchantGroup","마력",4813,4812,4826,4827;
+			break;
+
+		case 5:
+			setdialogsize(200,250);
+			callfunc "F_ShowEnchantGroup","STR",4700,4701,4702;
+			callfunc "F_ShowEnchantGroup","AGI",4730,4731,4732;
+			callfunc "F_ShowEnchantGroup","INT",4710,4711,4712;
+			callfunc "F_ShowEnchantGroup","DEX",4720,4721,4722;
+			callfunc "F_ShowEnchantGroup","VIT",4740,4741,4742;
+			callfunc "F_ShowEnchantGroup","LUK",4750,4751,4752;
+			break;
+
+		case 6:
+			close;
+		}
+	}
 }
