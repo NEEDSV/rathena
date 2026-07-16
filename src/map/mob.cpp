@@ -3492,14 +3492,23 @@ int32 mob_dead(mob_data *md, block_list *src, int32 type)
 			int32 remaining = instance_ip_reward_remaining(first_sd, reward_instance_id, &daily_limit);
 			if (remaining >= 0) {
 				char message[128];
-				clif_displaymessage(first_sd->fd, "This dungeon's reward count has been used.");
-				snprintf(message, sizeof(message), "Rewards remaining today: %d / %hu", remaining, daily_limit);
-				clif_displaymessage(first_sd->fd, message);
+				if (first_sd != nullptr && reward_result > 0)
+				{
+					clif_displaymessage(first_sd->fd, msg_txt(first_sd, 1647));
+
+					snprintf(message, sizeof(message), msg_txt(first_sd, 1648), remaining, daily_limit);
+					clif_displaymessage(first_sd->fd, message);
+				}
+				else if (first_sd != nullptr && reward_result == 0)
+				{
+					clif_displaymessage(first_sd->fd, msg_txt(first_sd, 1649));
+				}
+				else if (first_sd != nullptr && reward_result < 0)
+				{
+					clif_displaymessage(first_sd->fd, msg_txt(first_sd, 1650));
+				}
 			}
-		} else if (first_sd != nullptr && reward_result == 0)
-			clif_displaymessage(first_sd->fd, "This IP has reached today's reward limit for this instance.");
-		else if (first_sd != nullptr && reward_result < 0)
-			clif_displaymessage(first_sd->fd, "The instance reward could not be processed.");
+		}
 	}
 
 	// Looted items have an independent drop position and also don't show special effects when dropped

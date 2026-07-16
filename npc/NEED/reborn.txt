@@ -665,8 +665,9 @@ OnInit:
 	end;
 }
 function	script	F_NEED_Rebirth_ResetCharacter	{
-	// 환생 전 직업 저장
+	// 환생 전 직업 및 세컨드 코스튬 상태 저장
 	.@old_class = Class;
+	.@old_body_style = getlook(LOOK_BODY2);
 
 	// 기존 직업 계열에 맞는 1차 직업 확인
 	.@first_job = callfunc("F_NEED_Rebirth_GetFirstJob", .@old_class);
@@ -692,9 +693,15 @@ function	script	F_NEED_Rebirth_ResetCharacter	{
 	// 포인트 정리
 	set StatusPoint, 48;
 	set SkillPoint, 0;
-	
+
 	// 기본 기능 스킬 지급
 	skill "NV_BASIC",9,0;
+
+	// 환생 전 세컨드 코스튬 상태였다면 외형 초기화 후 티켓 반환
+	if (.@old_body_style != .@old_class) {
+		getitem 6959, 1;
+		dispbottom "[환생] 세컨드 코스튬 티켓 1개가 지급되었습니다.";
+	}
 
 	percentheal 100,100;
 	specialeffect2 EF_ANGEL2;
