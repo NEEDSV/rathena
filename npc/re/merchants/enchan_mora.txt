@@ -48,7 +48,7 @@ lasa_in01,163,45,5	script	비밀의 수호자#pa082	495,{
 	mes "지급받을 여섯 종류의 유물 중 하나를 선택하세요.";
 	next;
 	mes "[제작소]";
-	mes "날씨와 제 기분에 따라 두 종류의 장비 중 하나를 무작위로 드릴게요.";
+	mes "각 종류에 해당하는 유물 중 원하는 장비를 직접 선택할 수 있습니다.";
 	next;
 	mes "[제작소]";
 	mes "유물을 드리기 위해 필요한 건 당신의 모라 주화 10개뿐입니다!";
@@ -99,11 +99,43 @@ lasa_in01,163,45,5	script	비밀의 수호자#pa082	495,{
 			setarray .@items[0],1657,16013; //Wand_Of_Affection,Mace_Of_Judgement
 			break;
 		}
-		set .@item, .@items[rand(getarraysize(.@items))];
+		mes "[제작소]";
+		mes "원하시는 유물을 직접 선택해 주세요.";
+		next;
+
+		set .@item_menu$, "교환하지 않습니다";
+		for (set .@i,0; .@i < getarraysize(.@items); set .@i,.@i+1) {
+			set .@item_menu$, .@item_menu$ + ":" + getitemname(.@items[.@i]);
+		}
+
+		set .@item_select, select(.@item_menu$);
+		if (.@item_select == 1) {
+			mes "[제작소]";
+			mes "생각이 바뀌시면 다시 들러주세요.";
+			close;
+		}
+
+		set .@item, .@items[.@item_select - 2];
+		mes "[제작소]";
+		mes "^aa00aa"+getitemname(.@item)+"^000000을 선택하셨습니다.";
+		mes "모라 주화 10개와 교환하시겠습니까?";
+		next;
+		if (select("교환하지 않습니다:교환합니다") == 1) {
+			mes "[제작소]";
+			mes "생각이 바뀌시면 다시 들러주세요.";
+			close;
+		}
+
+		if (countitem(6380) < 10) {
+			mes "[제작소]";
+			mes "모라 주화가 부족합니다. 모라 주화 10개를 준비해 주세요.";
+			close;
+		}
+
 		delitem 6380,10; //Mora_Coin
 		getitem .@item,1;
 		mes "[제작소]";
-		mes "^aa00aa를 획득했습니다."+getitemname(.@item)+"^000000. 빛의 가호가 함께하기를.";
+		mes "^aa00aa"+getitemname(.@item)+"^000000을 획득했습니다. 빛의 가호가 함께하기를.";
 		close;
 	case 3:
 		if (Class == Job_Arch_Bishop || Class == Job_Arch_Bishop_T || Class == Job_Baby_Arch_Bishop) {
@@ -643,15 +675,15 @@ lasa_in01,171,45,5	script	힘의 수호자#pa082	515,{
 	switch(.@job) {
 	case 0: // Rune Knight
 		setarray .@items[0],2475,2476,2574,2575;
-		set .@i, select("취소:우르의 그리브(신발):페오즈의 그리브 (신발):우르의 망토 (걸칠것):페오즈의 망토 (걸칠것)")-2;
+		set .@i, select("취소:우르의 부츠 (신발):퓨즈의 부츠 (신발):우르의 플레이트 (걸칠것):퓨즈의 플레이트 (걸칠것)")-2;
 		break;
 	case 1: // Guillotine Cross
 		setarray .@items[0],2477,2478,2577,2578;
-		set .@i, select("취소:사바흐의 (신발):나브의 슈즈 (신발):사바흐의 후드 (걸칠것):나브의 후드 (걸칠것)")-2;
+		set .@i, select("취소:사파의 신발 (신발):나브의 신발 (신발):사파의 보선 (걸칠것):나브의 보선 (걸칠것)")-2;
 		break;
 	case 2: // Ranger
 		setarray .@items[0],2479,2480,2580,2581;
-		set .@i, select("취소:흰날개의 부츠 (신발):검은날개의 부츠 (신발):흰날개의 망토 (걸칠것):검은날개의 망토 (걸칠것)")-2;
+		set .@i, select("취소:화이트윙 부츠 (신발):블랙윙 부츠 (신발):화이트윙 슈츠 (걸칠것):블랙윙 슈츠 (걸칠것)")-2;
 		break;
 	}
 	if (.@i == -1) {
