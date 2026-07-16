@@ -1482,6 +1482,40 @@ ACMD_FUNC(healap)
  * @item command (usage: @item <itemdid1:itemid2:itemname:..> <quantity>) (modified by [Yor] for pet_egg)
  * @itembound command (usage: @itembound <name/id_of_item> <quantity> <bound_type>)
  *------------------------------------------*/
+static std::string atcommand_item_trim(std::string value) {
+	size_t begin = 0;
+
+	while (begin < value.size() && std::isspace(static_cast<unsigned char>(value[begin])))
+		++begin;
+
+	size_t end = value.size();
+
+	while (end > begin && std::isspace(static_cast<unsigned char>(value[end - 1])))
+		--end;
+
+	return value.substr(begin, end - begin);
+}
+
+static bool atcommand_item_pop_number(std::string& arguments, int32& value) {
+	arguments = atcommand_item_trim(arguments);
+	size_t separator = arguments.find_last_of(" \t\r\n");
+
+	if (separator == std::string::npos)
+		return false;
+
+	std::string token = arguments.substr(separator + 1);
+	char* end = nullptr;
+	errno = 0;
+	long parsed = strtol(token.c_str(), &end, 10);
+
+	if (errno == ERANGE || end == token.c_str() || *end != '\0' || parsed < INT32_MIN || parsed > INT32_MAX)
+		return false;
+
+	arguments = atcommand_item_trim(arguments.substr(0, separator));
+	value = static_cast<int32>(parsed);
+	return !arguments.empty();
+}
+
 ACMD_FUNC(item)
 {
 	char item_name[100];
@@ -1495,9 +1529,19 @@ ACMD_FUNC(item)
 	parent_cmd = atcommand_alias_db.checkAlias(command+1);
 
 	if (!strcmpi(parent_cmd,"itembound")) {
-		if (!message || !*message || (
-			sscanf(message, "\"%99[^\"]\" %11d %11d", item_name, &number, &bound) < 3 &&
-			sscanf(message, "%99s %11d %11d", item_name, &number, &bound) < 3))
+		std::string arguments = message ? atcommand_item_trim(message) : "";
+		bool parsed = false;
+
+		if (!arguments.empty() && arguments.front() == '"') {
+			parsed = sscanf(arguments.c_str(), "\"%99[^\"]\" %11d %11d", item_name, &number, &bound) == 3;
+		} else if (!arguments.empty()) {
+			parsed = atcommand_item_pop_number(arguments, bound) && atcommand_item_pop_number(arguments, number);
+
+			if (parsed)
+				safestrncpy(item_name, arguments.c_str(), sizeof(item_name));
+		}
+
+		if (!parsed)
 		{
 			clif_displaymessage(fd, msg_txt(sd,295)); // Please enter an item name or ID (usage: @item <item name/ID> <quantity> <bound_type>).
 			clif_displaymessage(fd, msg_txt(sd,298)); // Invalid bound type
@@ -1507,22 +1551,45 @@ ACMD_FUNC(item)
 			clif_displaymessage(fd, msg_txt(sd,298)); // Invalid bound type
 			return -1;
 		}
-	} else if (!message || !*message || (
-		sscanf(message, "\"%99[^\"]\" %11d", item_name, &number) < 1 &&
-		sscanf(message, "%99s %11d", item_name, &number) < 1
-	)) {
-		clif_displaymessage(fd, msg_txt(sd,983)); // Please enter an item name or ID (usage: @item <item name/ID> <quantity>).
-		return -1;
+	} else {
+		std::string arguments = message ? atcommand_item_trim(message) : "";
+
+		if (arguments.empty()) {
+			clif_displaymessage(fd, msg_txt(sd,983)); // Please enter an item name or ID (usage: @item <item name/ID> <quantity>).
+			return -1;
+		}
+
+		if (arguments.front() == '"') {
+			if (sscanf(arguments.c_str(), "\"%99[^\"]\" %11d", item_name, &number) < 1) {
+				clif_displaymessage(fd, msg_txt(sd,983));
+				return -1;
+			}
+		} else {
+			// Prefer an exact full-name match so an item whose name ends in a number
+			// is not mistaken for an item name followed by a quantity.
+			if (item_db.searchname(arguments.c_str()) == nullptr) {
+				std::string item_arguments = arguments;
+				int32 parsed_number = 0;
+
+				if (atcommand_item_pop_number(item_arguments, parsed_number)) {
+					arguments = item_arguments;
+					number = parsed_number;
+				}
+			}
+
+			safestrncpy(item_name, arguments.c_str(), sizeof(item_name));
+		}
 	}
 
 	std::vector<std::shared_ptr<item_data>> items;
 	itemlist = strtok(item_name, ":");
 
 	while( itemlist != nullptr ){
-		std::shared_ptr<item_data> item = item_db.searchname( itemlist );
+		std::string item_argument = atcommand_item_trim(itemlist);
+		std::shared_ptr<item_data> item = item_db.searchname(item_argument.c_str());
 
 		if( item == nullptr ){
-			item = item_db.find( strtoul( itemlist, nullptr, 10 ) );
+			item = item_db.find(strtoul(item_argument.c_str(), nullptr, 10));
 		}
 
 		if( item == nullptr ){
