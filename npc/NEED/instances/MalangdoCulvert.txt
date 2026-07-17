@@ -39,7 +39,7 @@ mal_in01,172,28,2	script	알보#mal	561,{
 	setarray .@quests[0],12271,12272,12273,12274;
 	setarray .@names$[0],
 		"일반 수로 일일 퀘스트","^990000상급 수로 일일 퀘스트^000000",
-		"일반 수로 주간 퀘스트","^990000상급 수로 주간 퀘스트^000000";
+		"일반 수로 일일 퀘스트","^990000상급 수로 일일 퀘스트^000000";
 	set .@menu$,"왜 이런 일을 하고 계시죠?:";
 	for(set .@i,0; .@i<4; set .@i,.@i+1) {
 		if (checkquest(.@quests[.@i],PLAYTIME) > -1) {
@@ -260,6 +260,30 @@ L_CheckQuest:
 }
 
 mal_in01,160,34,4	script	청소부 미싱	545,{
+	.@instance_db_id = 6;
+	.@remaining = instance_ip_reward_remaining(.@instance_db_id);
+	.@limit = instance_ip_reward_limit(.@instance_db_id);
+
+	if (.@remaining == -1 || .@limit == -1) {
+		mes "보상 이용 횟수를 확인하지 못했습니다.";
+		mes "잠시 후 다시 시도해 주세요.";
+		end;
+	}
+
+	if (.@remaining != -2 && .@limit > 0) {
+		if (.@remaining <= 0) {
+			mes "오늘 해당 던전의 보상 이용 횟수를";
+			mes "모두 사용했습니다.";
+			mes "남은 보상 횟수: ^FF00000회 / " + .@limit + "회^000000";
+			mes "초기화 시간: 매일 오전 4시";
+			end;
+		}
+
+		mes "오늘 남은 보상 횟수:";
+		mes "^3355FF" + .@remaining + "회 / " + .@limit + "회^000000";
+		next;
+	}
+	
 	if (BaseLevel < 90) {
 		mes "[청소부 미싱]";
 		mes "나, 나한테 말 거는 거야?!";
