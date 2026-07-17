@@ -19,8 +19,10 @@ void SkillLaudaAgnus::castendNoDamageId(block_list *src, block_list *target, uin
 	if( flag&1 || !sd || !sd->status.party_id ) {
 		if( tsc && (tsc->getSCE(SC_FREEZE) || tsc->getSCE(SC_STONE) || tsc->getSCE(SC_BLIND) ||
 			tsc->getSCE(SC_BURNING) || tsc->getSCE(SC_FREEZING) || tsc->getSCE(SC_CRYSTALIZE))) {
-			// Success Chance: 2017 uses 40 + 10 * Skill Level.
-			if( rnd()%100 > 40+10*skill_lv ) return;
+			// Success Chance: levels 1-3 use the existing 40 + 10 * Skill Level rate.
+			// Level 4 is guaranteed to remove the negative status.
+			const int32 success_chance = ( skill_lv >= 4 ) ? 100 : 40 + 10 * skill_lv;
+			if( rnd()%100 > success_chance ) return;
 			status_change_end(target, SC_FREEZE);
 			status_change_end(target, SC_STONE);
 			status_change_end(target, SC_BLIND);
