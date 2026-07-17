@@ -76,6 +76,8 @@ const char *macro_allowed_answer_chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKL
 static const char need_macro_detect_pending_var[] = "NeedMacroDetectPending";
 static const char need_macro_detect_disconnects_var[] = "NeedMacroDetectDisconnects";
 static const char need_macro_detect_reporter_var[] = "NeedMacroDetectReporterAid";
+static constexpr t_itemid need_trade_grace_ticket = 399901;
+static constexpr t_itemid need_package_grace_ticket = 399904;
 
 int32 pc_split_atoui(char* str, uint32* val, char sep, int32 max);
 static inline bool pc_attendance_rewarded_today( map_session_data* sd );
@@ -5697,6 +5699,35 @@ int32 pc_identifyall(map_session_data *sd, bool identify_item)
 // Items
 //
 
+/**
+ * Checks whether a player carries a valid NEED trade grace ticket.
+ * Only the character inventory is considered.
+ * @param sd: Player data
+ * @return True if a valid trade or package grace ticket is present
+ */
+bool need_has_trade_grace( const map_session_data* sd )
+{
+	if( sd == nullptr )
+		return false;
+
+	const time_t now = time( nullptr );
+
+	for( int32 i = 0; i < MAX_INVENTORY; i++ ) {
+		const item& inventory_item = sd->inventory.u.items_inventory[i];
+
+		if( inventory_item.amount <= 0 )
+			continue;
+		if( inventory_item.nameid != need_trade_grace_ticket && inventory_item.nameid != need_package_grace_ticket )
+			continue;
+		if( inventory_item.expire_time != 0 && inventory_item.expire_time <= now )
+			continue;
+
+		return true;
+	}
+
+	return false;
+}
+
 /*==========================================
  * Update buying value by skills
  *------------------------------------------*/
@@ -5708,6 +5739,8 @@ int32 pc_modifybuyvalue(const map_session_data* sd, int32 orig_value )
 	if((skill=pc_checkskill(sd,RG_COMPULSION))>0)	 // rogue discount
 		rate2 = 5+skill*4;
 	if(rate1 < rate2) rate1 = rate2;
+	if( need_has_trade_grace( sd ) && rate1 < 24 )
+		rate1 = 24;
 	if(rate1)
 		val = (int32)((double)orig_value*(double)(100-rate1)/100.);
 	if(val < battle_config.min_shop_buy)
@@ -5724,6 +5757,8 @@ int32 pc_modifysellvalue( const map_session_data* sd, int32 orig_value )
 	int32 skill,val = orig_value,rate = 0;
 	if((skill=pc_checkskill(sd,MC_OVERCHARGE))>0)	//OverCharge
 		rate = 5+skill*2-((skill==10)? 1:0);
+	if( need_has_trade_grace( sd ) && rate < 24 )
+		rate = 24;
 	if(rate)
 		val = (int32)((double)orig_value*(double)(100+rate)/100.);
 	if (val < battle_config.min_shop_sell)
