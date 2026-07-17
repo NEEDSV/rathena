@@ -1,0 +1,695 @@
+//===== rAthena Script ======================================= 
+//= Octopus Cave
+//===== By: ================================================== 
+//= Muad_Dib
+//===== Current Version: ===================================== 
+//= 1.1
+//===== Compatible With: ===================================== 
+//= rAthena Project
+//===== Description: ========================================= 
+//= [Official Conversion]
+//= Defeat the Disgusting Octopus.
+//===== Additional Comments: ================================= 
+//= 1.0 First version. [Euphy]
+//= 1.1 Instance system rewrite. [Euphy]
+//============================================================ 
+
+// Instance Creation :: oct
+//============================================================
+mal_dun01,151,235,5	script	불가사리#Starfish	551,{
+
+	set .@party_id,getcharid(1);
+	set .@md_name$,"문어 동굴";
+
+	if (!.@party_id) {
+		mes "[불가사리]";
+		mes "혼자서는 아무것도 못 할걸, 히히!";
+		mes "도와줄 동료를 데려오는 게 좋을 거야.";
+		mes "파티를 맺고 나중에 다시 오라구.";
+		close;
+	}
+	if (is_party_leader() == false) {
+		mes "[불가사리]";
+		mes "너희 대장은 어디 갔어, 히히.";
+		mes "난 아무하고나 대화하지 않아.";
+		mes "너희 파티장을 데려오라구.";
+		close;
+	}
+	mes "[불가사리]";
+	mes "내가 여기를 지키고 있지, 히히!";
+	mes "지금은 그냥 대충 막아둔 상태지만,";
+	mes "언젠가 이 동굴은 영원히 봉인될 거야, 히히!";
+	next;
+	while(1) {
+		switch(select("무슨 일인지 물어본다.:문을 열어달라고 한다.:다른 곳으로 이동한다.")) {
+		case 1:
+			mes "[불가사리]";
+			mes "요즘 우리 불가사리 아가씨가";
+			mes "고민 때문에 힘들어하고 있어, 우우.";
+			mes "이 평화로운 곳에 아주";
+			mes "나쁜 일이 생겼다구, 히히!";
+			next;
+			mes "[불가사리]";
+			mes "저기 구멍에서 이상하게";
+			mes "생긴 발들이 튀어나와서,";
+			mes "우리 아가씨를 납치하려고 했어.";
+			mes "우우...";
+			next;
+			mes "[불가사리]";
+			mes "아무래도 그 흉측한 문어 녀석의";
+			mes "발인 것 같아.";
+			mes "그 괴물을 처리해야 하는데,";
+			mes "우리 힘만으로는 역부족이란 말이지, 히히.";
+			next;
+			mes "[불가사리]";
+			mes "누가 좀 나타나서 저 못생긴";
+			mes "문어 녀석을 혼내줬으면 좋겠어.";
+			mes "그 문어가 다시는 우리 아가씨를";
+			mes "괴롭히지 못하게 말이야, 히히.";
+			next;
+			mes "[불가사리]";
+			mes "그 문어를 잡아서 이 꼬챙이에 꽂아버리라구.";
+			mes "그 꼬챙이를 다시 가져오면 내가";
+			mes "잠시 동안 이 문을 열어줄게.";
+			mes "관심 있다면 도전해 보라구, 히히.";
+			next;
+			break;
+		case 2:
+			set .@playtime, checkquest(4197,PLAYTIME);
+			if (.@playtime == 0 || .@playtime == 1) {
+				mes "[불가사리]";
+				mes "지금은 문어가 근처에 없어, 히히.";
+				mes "나중에 다시 오라구.";
+				close;
+			}
+			if (.@playtime == 2) erasequest 4197;
+			if (rentalcountitem(6442)) {
+				if (instance_create(.@md_name$) < 0) {
+					mes "[불가사리]";
+					mes "파티 이름은... "+getpartyname(.@party_id)+".";
+					mes "파티 리더는... "+strcharinfo(0)+".";
+					mes "^0000ff"+.@md_name$+"^000000, 지금은 열어줄 수 없어, 히히.";
+					mes "아직 때가 아니야, 좀 더 기다려.";
+					close;
+				}
+				mes "[불가사리]";
+				mes "^0000ff"+.@md_name$+"^000000를 위해 잠시 동안.";
+				mes "문을 열어줄게. 그 변태 문어를";
+				mes "잡아서 꼬챙이에 꽂아 돌아오라구, 히히.";
+				close;
+			}
+			mes "[불가사리]";
+			mes "우선 꼬챙이를 준비해.";
+			mes "그래야 그 문어를 꼬챙이에";
+			mes "꿰어버릴 수 있을 거 아냐.";
+			mes "그럼 잠깐 들여보내 줄게, 히히.";
+			close;
+		case 3:
+			mes "[불가사리]";
+			mes "여긴 위치가 안 좋아, 다른 곳을 확인해 봐.";
+			close;
+		}
+	}
+}
+
+mal_dun01,153,237,5	script	수상한 입구#WeirdEntrance	844,{
+	mes "판자들로 대충 막아둔";
+	mes "이상한 입구가 있다.";
+	next;
+	switch(select("들어간다.:멈춘다.")) {
+	case 1:
+		if (rentalcountitem(6442)) {
+			switch(instance_enter("문어 동굴")) {
+			case IE_OTHER:
+				mes "[불가사리]";
+				mes "아, 지금은 때가 아니야...";
+				mes "나중에 다시 와줄래? 히히.";
+				close;
+			case IE_NOINSTANCE:
+			case IE_NOMEMBER:
+				mes "[불가사리]";
+				mes "그 입구에는 비밀이 숨겨져 있어.";
+				mes "그러니 주의하는 게 좋을 거야, 알았지? 히히.";
+				close;
+			case IE_OK:
+				mapannounce "mal_dun01", getpartyname(getcharid(1))+" 파티의 "+strcharinfo(0)+" 멤버가 문어 사냥을 시작했습니다!",bc_map,"0x00ff99";
+				if (checkquest(4197) == -1) setquest 4197;
+				//warp instance_mapname("1@cash"),199,99;
+				close;
+			default:
+				mes "[불가사리]";
+				mes "쉬잇... 저 입구에서";
+				mes "이상한 기운이 흘러나오고 있어.";
+				mes "지금 들어가면 큰 화를 당하게 될 거야.";
+				close;
+			}
+		}
+		mes "[불가사리]";
+		mes "저 문어를 응징하고 싶다면";
+		mes "사냥용 꼬챙이를 반드시";
+		mes "준비해 오라구.";
+		mes "안 그러면 안 들여보내 줄 거야! 히히.";
+		close;
+	case 2:
+		mes "[불가사리]";
+		mes "그래 그래, 포기하는 게 상책이지.";
+		close;
+	}
+}
+
+// Instance Scripts :: oct_in
+//============================================================
+1@cash,199,99,0	script	oct_enter	139,4,4,{
+	end;
+OnTouch_:
+	donpcevent instance_npcname("oct_enter_broad")+"::OnEnable";
+	specialeffect EF_BASH;
+	disablenpc instance_npcname("oct_enter");
+	end;
+}
+
+1@cash,1,1,0	script	oct_enter_broad	-1,{
+	end;
+OnInstanceInit:
+	disablenpc instance_npcname("oct_foot_exit1");
+	disablenpc instance_npcname("oct_foot_exit2");
+	disablenpc instance_npcname("oct_foot_exit3");
+	disablenpc instance_npcname("oct_foot_exit4");
+	disablenpc instance_npcname("oct_boss_warp");
+	donpcevent instance_npcname("oct_enter_broad")+"::OnDisable";
+	end;
+OnEnable:
+	enablenpc instance_npcname("oct_enter_broad");
+	donpcevent instance_npcname("oct_foot_4")+"::OnEnable";
+	donpcevent instance_npcname("oct_mob_con")+"::OnEnable";
+	initnpctimer;
+	end;
+OnDisable:
+	disablenpc instance_npcname("oct_enter_broad");
+	end;
+OnTimer1000:
+	mapannounce instance_mapname("1@cash"),"변태 문어 : 감히 내 구역에 들어오다니!",bc_map,"0xFFFF00";
+	end;
+OnTimer4000:
+	mapannounce instance_mapname("1@cash"),"변태 문어 : 하지만 동굴 입구를 다 막아놨지!! 너희가 할 수 있는 건 아무것도 없다!",bc_map,"0xFFFF00";
+	end;
+OnTimer7000:
+	mapannounce instance_mapname("1@cash"),"변태 문어 : 얘들아~ 장난감이다! 가지고 놀아라~ 캬캬캬",bc_map,"0xFFFF00";
+	stopnpctimer;
+	donpcevent instance_npcname("oct_enter_broad")+"::OnDisable";
+	end;
+}
+
+1@cash,3,3,0	script	oct_foot_4	-1,{
+	end;
+OnInstanceInit:
+	donpcevent instance_npcname("oct_foot_4")+"::OnDisable";
+	end;
+OnEnable:
+	enablenpc instance_npcname("oct_foot_4");
+	donpcevent instance_npcname("oct_foot1")+"::OnEnable";
+	donpcevent instance_npcname("oct_foot2")+"::OnEnable";
+	donpcevent instance_npcname("oct_foot3")+"::OnEnable";
+	donpcevent instance_npcname("oct_foot4")+"::OnEnable";
+	set .@map$, instance_mapname("1@cash");
+	monster .@map$,20,114,"문어 다리#1",2193,1,instance_npcname("oct_foot_4")+"::OnMyMobDead";
+	monster .@map$,88,190,"문어 다리#2",2193,1,instance_npcname("oct_foot_4")+"::OnMyMobDead";
+	monster .@map$,307,215,"문어 다리#3",2193,1,instance_npcname("oct_foot_4")+"::OnMyMobDead";
+	monster .@map$,372,131,"문어 다리#4",2193,1,instance_npcname("oct_foot_4")+"::OnMyMobDead";
+	end;
+OnDisable:
+	disablenpc instance_npcname("oct_foot_4");
+	end;
+OnMyMobDead:
+	set .@map$, instance_mapname("1@cash");
+	if (mobcount(.@map$,instance_npcname("oct_foot_4")+"::OnMyMobDead") < 1) {
+		donpcevent instance_npcname("oct_boss_con")+"::OnEnable";
+		mapannounce .@map$,"이봐!! 내가 직접 상대해 주지! 어디 한번 덤벼봐라!",bc_map,"0x00ff99";
+		enablenpc instance_npcname("oct_boss_warp");
+		instance_warpall .@map$,199,99, instance_id();
+		end;
+	}
+	mapannounce .@map$,"으아악!! 아프잖아!!! 다른 전략이 필요하겠군...",bc_map,"0x00ff99";
+	end;
+}
+
+1@cash,20,114,0	script	oct_foot1	139,6,6,{
+	end;
+OnInstanceInit:
+	donpcevent instance_npcname(strnpcinfo(0))+"::OnDisable";
+	end;
+OnEnable:
+	enablenpc();
+	set .@label$, instance_npcname(strnpcinfo(0))+"::OnMyMobDead";
+	set .@i, atoi(charat(strnpcinfo(0),8));
+	set .@map$, instance_mapname("1@cash");
+	switch(.@i) {
+	case 1:
+		areamonster .@map$,34,96,38,100,"문어의 부하",2192,3,.@label$;
+		areamonster .@map$,39,90,41,92,"문어의 부하",2192,2,.@label$;
+		areamonster .@map$,38,76,40,78,"문어의 부하",2192,2,.@label$;
+		areamonster .@map$,39,58,41,60,"문어의 부하",2192,2,.@label$;
+		areamonster .@map$,50,38,56,44,"문어의 부하",2192,5,.@label$;
+		areamonster .@map$,68,32,72,36,"문어의 부하",2192,5,.@label$;
+		areamonster .@map$,83,26,85,28,"문어의 부하",2192,2,.@label$;
+		areamonster .@map$,107,28,109,30,"문어의 부하",2192,1,.@label$;
+		areamonster .@map$,123,28,125,30,"문어의 부하",2192,2,.@label$;
+		areamonster .@map$,134,31,138,35,"문어의 부하",2192,5,.@label$;
+		areamonster .@map$,142,39,146,43,"문어의 부하",2192,2,.@label$;
+		break;
+	case 2:
+		areamonster .@map$,139,113,143,117,"문어의 부하",2192,5,.@label$;
+		areamonster .@map$,135,104,137,106,"문어의 부하",2192,2,.@label$;
+		areamonster .@map$,123,93,127,97,"문어의 부하",2192,3,.@label$;
+		areamonster .@map$,113,90,115,92,"문어의 부하",2192,2,.@label$;
+		areamonster .@map$,103,89,105,91,"문어의 부하",2192,2,.@label$;
+		areamonster .@map$,89,90,91,92,"문어의 부하",2192,2,.@label$;
+		areamonster .@map$,74,104,76,106,"문어의 부하",2192,2,.@label$;
+		areamonster .@map$,74,120,76,122,"문어의 부하",2192,2,.@label$;
+		areamonster .@map$,83,131,87,135,"문어의 부하",2192,3,.@label$;
+		areamonster .@map$,92,142,94,144,"문어의 부하",2192,2,.@label$;
+		areamonster .@map$,98,159,100,161,"문어의 부하",2192,2,.@label$;
+		areamonster .@map$,94,180,98,184,"문어의 부하",2192,5,.@label$;
+		break;
+	case 3:
+		areamonster .@map$,299,209,303,213,"문어의 부하",2192,3,.@label$;
+		areamonster .@map$,292,203,296,207,"문어의 부하",2192,3,.@label$;
+		areamonster .@map$,291,186,293,188,"문어의 부하",2192,2,.@label$;
+		areamonster .@map$,292,166,294,168,"문어의 부하",2192,2,.@label$;
+		areamonster .@map$,293,151,295,153,"문어의 부하",2192,2,.@label$;
+		areamonster .@map$,299,137,303,141,"문어의 부하",2192,2,.@label$;
+		areamonster .@map$,300,123,304,127,"문어의 부하",2192,2,.@label$;
+		areamonster .@map$,300,104,304,108,"문어의 부하",2192,3,.@label$;
+		areamonster .@map$,279,101,281,103,"문어의 부하",2192,2,.@label$;
+		monster .@map$,260,103,"문어의 부하",2192,1,.@label$;
+		break;
+	case 4:
+		areamonster .@map$,363,123,367,127,"문어의 부하",2192,2,.@label$;
+		areamonster .@map$,364,108,368,112,"문어의 부하",2192,5,.@label$;
+		areamonster .@map$,363,93,367,97,"문어의 부하",2192,3,.@label$;
+		areamonster .@map$,364,72,366,74,"문어의 부하",2192,2,.@label$;
+		areamonster .@map$,364,58,366,60,"문어의 부하",2192,2,.@label$;
+		areamonster .@map$,355,44,359,48,"문어의 부하",2192,3,.@label$;
+		areamonster .@map$,346,36,350,40,"문어의 부하",2192,3,.@label$;
+		areamonster .@map$,319,28,325,34,"문어의 부하",2192,5,.@label$;
+		areamonster .@map$,305,27,307,29,"문어의 부하",2192,2,.@label$;
+		areamonster .@map$,276,29,280,33,"문어의 부하",2192,5,.@label$;
+		areamonster .@map$,258,37,262,41,"문어의 부하",2192,2,.@label$;
+		break;
+	}
+	end;
+OnDisable:
+	killmonster instance_mapname("1@cash"),instance_npcname(strnpcinfo(0))+"::OnMyMobDead"; // Not in official script.
+	disablenpc();
+	end;
+OnTouch_:
+	if (getd("."+strnpcinfo(0)+instance_id())) end;
+	setd "."+strnpcinfo(0)+instance_id(),1;
+	hideonnpc instance_npcname(strnpcinfo(0));
+	mapannounce instance_mapname("1@cash"),"모두 나와서 나를 도와라, 내 새끼들아!",bc_map,"0xFFFF00";
+	initnpctimer;
+	end;
+OnTimer5000:
+	set .@map$, instance_mapname("1@cash");
+	mapannounce .@map$,"본때를 보여주자구!",bc_map,"0xFFFF00";
+	set .@label$, instance_npcname(strnpcinfo(0))+"::OnMyMobDead";
+	set .@i, atoi(charat(strnpcinfo(0),8));
+	switch(.@i) {
+	case 1:
+		areamonster .@map$,18,112,22,116,"문어의 부하",2192,3,.@label$;
+		areamonster .@map$,18,112,22,116,"문어의 부하",2192,3,.@label$;
+		break;
+	case 2:
+		areamonster .@map$,86,188,90,192,"문어의 부하",2192,3,.@label$;
+		areamonster .@map$,96,98,100,102,"문어의 부하",2192,3,.@label$;
+		break;
+	case 3:
+		areamonster .@map$,305,213,309,217,"문어의 부하",2192,3,.@label$;
+		areamonster .@map$,305,213,309,217,"문어의 부하",2192,3,.@label$;
+		break;
+	case 4:
+		areamonster .@map$,370,129,374,133,"문어의 부하",2192,3,.@label$;
+		areamonster .@map$,370,129,374,133,"문어의 부하",2192,3,.@label$;
+		break;
+	}
+	end;
+OnTimer30000:
+	setd "."+strnpcinfo(0)+instance_id(),0;
+	stopnpctimer;
+	set .@i, atoi(charat(strnpcinfo(0),8));
+	enablenpc instance_npcname("oct_foot_exit"+.@i);
+	donpcevent instance_npcname(strnpcinfo(0))+"::OnDisable";
+	end;
+OnMyMobDead:
+	set .@map$, instance_mapname("1@cash");
+	if (mobcount(.@map$,instance_npcname(strnpcinfo(0))+"::OnMyMobDead") < 1) {
+		mapannounce .@map$,"내 자식들을 다치게 하다니!!? 대가를 치르게 해주마!!!",bc_map,"0x00ff99";
+		setd "."+strnpcinfo(0)+instance_id(),0;
+		stopnpctimer;
+		set .@i, atoi(charat(strnpcinfo(0),8));
+		enablenpc instance_npcname("oct_foot_exit"+.@i);
+		donpcevent instance_npcname(strnpcinfo(0))+"::OnDisable";
+		end;
+	}
+	end;
+}
+1@cash,88,190,0	duplicate(oct_foot1)	oct_foot2	139,6,6
+1@cash,307,215,0	duplicate(oct_foot1)	oct_foot3	139,6,6
+1@cash,372,131,0	duplicate(oct_foot1)	oct_foot4	139,6,6
+
+1@cash,15,15,0	script	oct_mob_con	-1,{
+	end;
+OnInstanceInit:
+	donpcevent instance_npcname("oct_mob_con")+"::OnDisable";
+	end;
+OnEnable:
+	set .@map$, instance_mapname("1@cash");
+	enablenpc instance_npcname("oct_mob_con");
+	monster .@map$,32,94,"히드라",1068,1;
+	monster .@map$,41,101,"히드라",1068,1;
+	monster .@map$,35,78,"히드라",1068,1;
+	monster .@map$,35,62,"히드라",1068,1;
+	monster .@map$,49,54,"히드라",1068,1;
+	monster .@map$,70,28,"히드라",1068,1;
+	monster .@map$,83,22,"히드라",1068,1;
+	monster .@map$,99,23,"히드라",1068,1;
+	monster .@map$,115,23,"히드라",1068,1;
+	monster .@map$,132,25,"히드라",1068,1;
+	monster .@map$,100,185,"히드라",1068,1;
+	monster .@map$,92,178,"히드라",1068,1;
+	monster .@map$,92,162,"히드라",1068,1;
+	monster .@map$,70,121,"히드라",1068,1;
+	monster .@map$,70,105,"히드라",1068,1;
+	monster .@map$,105,85,"히드라",1068,1;
+	monster .@map$,121,84,"히드라",1068,1;
+	monster .@map$,292,209,"히드라",1068,1;
+	monster .@map$,303,206,"히드라",1068,1;
+	monster .@map$,290,163,"히드라",1068,1;
+	monster .@map$,299,150,"히드라",1068,1;
+	monster .@map$,308,141,"히드라",1068,1;
+	monster .@map$,308,125,"히드라",1068,1;
+	monster .@map$,295,97,"히드라",1068,1;
+	monster .@map$,279,97,"히드라",1068,1;
+	monster .@map$,370,111,"히드라",1068,1;
+	monster .@map$,370,110,"히드라",1068,1;
+	monster .@map$,371,96,"히드라",1068,1;
+	monster .@map$,371,80,"히드라",1068,1;
+	monster .@map$,367,55,"히드라",1068,1;
+	monster .@map$,343,29,"히드라",1068,1;
+	monster .@map$,327,24,"히드라",1068,1;
+	monster .@map$,311,22,"히드라",1068,1;
+	monster .@map$,295,22,"히드라",1068,1;
+	monster .@map$,279,22,"히드라",1068,1;
+	areamonster .@map$,30,67,50,87,"스타포",1784,1;
+	areamonster .@map$,102,19,122,39,"스타포",1784,1;
+	areamonster .@map$,89,138,109,158,"스타포",1784,1;
+	areamonster .@map$,112,83,132,103,"스타포",1784,1;
+	areamonster .@map$,283,168,303,188,"스타포",1784,1;
+	areamonster .@map$,292,97,312,117,"스타포",1784,1;
+	areamonster .@map$,355,64,375,84,"스타포",1784,1;
+	areamonster .@map$,317,17,337,37,"스타포",1784,1;
+	donpcevent instance_npcname("oct_backattack1")+"::OnEnable";
+	donpcevent instance_npcname("oct_backattack2")+"::OnEnable";
+	donpcevent instance_npcname("oct_backattack3")+"::OnEnable";
+	donpcevent instance_npcname("oct_backattack4")+"::OnEnable";
+	donpcevent instance_npcname("oct_mob_con")+"::OnDisable";
+	end;
+OnDisable:
+	disablenpc instance_npcname("oct_mob_con");
+	end;
+}
+
+1@cash,45,53,0	script	oct_backattack1	139,3,3,{
+	end;
+OnInstanceInit:
+	disablenpc instance_npcname("oct_backattack1");
+	end;
+OnTouch_:
+	set .@map$, instance_mapname("1@cash");
+	monster .@map$,39,59,"히드라",1068,1;
+	monster .@map$,40,59,"히드라",1068,1;
+	monster .@map$,41,59,"히드라",1068,1;
+	monster .@map$,47,50,"히드라",1068,1;
+	monster .@map$,48,50,"히드라",1068,1;
+	monster .@map$,49,50,"히드라",1068,1;
+	monster .@map$,41,53,"문어의 부하",2192,1;
+	mapannounce .@map$,"뚫리게 두지 마라, 어서 막아라!!!",bc_map,"0x00ff99";
+	specialeffect EF_BASH;
+	disablenpc instance_npcname("oct_backattack1");
+	end;
+OnEnable:
+	enablenpc instance_npcname("oct_backattack1");
+	end;
+}
+
+1@cash,78,99,0	script	oct_backattack2	139,3,3,{
+	end;
+OnInstanceInit:
+	disablenpc instance_npcname("oct_backattack2");
+	end;
+OnTouch_:
+	if (getd("."+instance_id())) end;
+	setd "."+instance_id(),1;
+	initnpctimer;
+	set .@map$, instance_mapname("1@cash");
+	monster .@map$,71,105,"문어의 부하 ",2192,1;
+	mapannounce .@map$,"본거지가 비었다, 가자!!!",bc_map,"0x00ff99";
+	hideonnpc instance_npcname("oct_backattack2");
+	end;
+OnTimer2000:
+	set .@map$, instance_mapname("1@cash");
+	monster .@map$,71,105,"문어의 부하 ",2192,1;
+	mapannounce .@map$,"뛰어, 뛰어! 가자, 가자!!!",bc_map,"0x00ff99";
+	end;
+OnTimer4000:
+	set .@map$, instance_mapname("1@cash");
+	monster .@map$,71,105,"문어의 부하 ",2192,1;
+	mapannounce .@map$,"시간이 없다, 빨리 나와!",bc_map,"0x00ff99";
+	end;
+OnTimer6000:
+	set .@map$, instance_mapname("1@cash");
+	monster .@map$,71,105,"문어의 부하 ",2192,3;
+	mapannounce .@map$,"본거지를 점령하자!!!",bc_map,"0x00ff99";
+	end;
+OnTimer8000:
+	set .@map$, instance_mapname("1@cash");
+	monster .@map$,71,105,"문어의 부하 ",2192,1;
+	mapannounce .@map$,"지체할 시간이 없어, 서둘러!!!",bc_map,"0x00ff99";
+	stopnpctimer;
+	end;
+OnEnable:
+	enablenpc instance_npcname("oct_backattack2");
+	end;
+}
+
+1@cash,299,144,0	script	oct_backattack3	139,3,3,{
+	end;
+OnInstanceInit:
+	disablenpc instance_npcname("oct_backattack3");
+	end;
+OnTouch_:
+	if (getd("."+instance_id())) end;
+	setd "."+instance_id(),1;
+	set .@map$, instance_mapname("1@cash");
+	monster .@map$,293,153,"문어의 부하 ",2192,1;
+	monster .@map$,294,152,"문어의 부하 ",2192,1;
+	monster .@map$,292,153,"문어의 부하 ",2192,1;
+	monster .@map$,293,151,"문어의 부하 ",2192,1;
+	monster .@map$,293,152,"문어의 부하?",2175,1;
+	mapannounce .@map$,"캬캬캬! 놀랐냐??!!",bc_map,"0x00ff99";
+	initnpctimer;
+	hideonnpc instance_npcname("oct_backattack3");
+	end;
+OnTimer5000:
+	mapannounce instance_mapname("1@cash"),"... 아무래도 우리 중에 스파이가 있는 것 같군.",bc_map,"0x00ff99";
+	stopnpctimer;
+	end;
+OnEnable:
+	enablenpc instance_npcname("oct_backattack3");
+	end;
+}
+
+1@cash,336,36,0	script	oct_backattack4	139,3,3,{
+	end;
+OnInstanceInit:
+	disablenpc instance_npcname("oct_backattack4");
+	end;
+OnTouch_:
+	if (getd("."+instance_id())) end;
+	setd "."+instance_id(),1;
+	set .@map$, instance_mapname("1@cash");
+	monster .@map$,332,37,"문어의 부하 ",2192,1;
+	monster .@map$,332,36,"문어의 부하 ",2192,1;
+	monster .@map$,332,35,"문어의 부하 ",2192,1;
+	monster .@map$,332,34,"문어의 부하 ",2192,1;
+	monster .@map$,341,37,"문어의 부하 ",2192,1;
+	monster .@map$,341,36,"문어의 부하 ",2192,1;
+	monster .@map$,341,35,"문어의 부하 ",2192,1;
+	monster .@map$,341,34,"문어의 부하 ",2192,1;
+	monster .@map$,260,40,"용병 오징어",2175,1;
+	monster .@map$,260,41,"용병 오징어",2175,1;
+	monster .@map$,260,39,"용병 오징어",2175,1;
+	monster .@map$,259,40,"용병 오징어",2175,1;
+	monster .@map$,261,40,"용병 오징어",2175,1;
+	mapannounce .@map$,"협공 전술이 아주 성공적이군! 적이 강하다! 정신 바짝 차려라! 그나저나 용병들은 다 어디 간 거야??",bc_map,"0x00ff99";
+	initnpctimer;
+	hideonnpc instance_npcname("oct_backattack4");
+	end;
+OnTimer5000:
+	mapannounce instance_mapname("1@cash"),"용병 오징어 : 어...어... 방향이 틀렸습니다. 이쪽에는 적이 보이지 않는데요.",bc_map,"0x00ff99";
+	end;
+OnTimer7000:
+	mapannounce instance_mapname("1@cash"),"변태 문어 : 멍청이들! 지도도 볼 줄 모르냐??!! 쓸모없는 녀석들!!",bc_map,"0x00ff99";
+	stopnpctimer;
+	end;
+OnEnable:
+	enablenpc instance_npcname("oct_backattack4");
+	end;
+}
+
+1@cash,2,2,0	script	oct_boss_con	-1,{
+	end;
+OnInstanceInit:
+	donpcevent instance_npcname("oct_boss_con")+"::OnDisable";
+	end;
+OnDisable:
+	disablenpc instance_npcname("oct_boss_con");
+	end;
+OnEnable:
+	enablenpc instance_npcname("oct_boss_con");
+	donpcevent instance_npcname("oct_boss_foot")+"::OnEnable";
+	monster instance_mapname("1@cash"),199,188,"역겨운 문어",2194,1,instance_npcname("oct_boss_con")+"::OnMyMobDead";
+	initnpctimer;
+	end;
+OnTimer7000:
+	callsub OnAnnounce,
+		"혼자 있는 남자를 공격하진 않겠지.",
+		"난 지난주에 먹물 공장에서 잘렸단 말이야.",
+		"아아아악, 제발!";
+	end;
+OnTimer14000:
+	callsub OnAnnounce,
+		"왜... 왜 내 진심을 몰라주는 거야!",
+		"요즘 신규 모험가들이 줄어서 먹고살기 얼마나 힘든지 알아?",
+		"너희들.. 모두 부숴버리겠어...!";
+	end;
+OnTimer21000:
+	callsub OnAnnounce,
+		"뭐? 내가 역겨운 문어라고? 너희는 정말 가학적이야.",
+		"이러지 말고 우리 좀 더 평화로운 해결책을 찾아보는 게 어때??",
+		"내가 여기서 실패하더라도, 나는 영원히 계속해서 돌아올 것이다!!!";
+	end;
+OnTimer28000:
+	callsub OnAnnounce,
+		"짝짓기 본능은 수컷의 숙명인데, 내가 대체 뭘 잘못했냐?",
+		"너희는 정말 폭력으로 문제를 해결하고 싶은 거냐?? 아, 난 문어였지...",
+		"이제 충분해! 물러서라!";
+	end;
+OnTimer35000:
+	callsub OnAnnounce,
+		"이번 크리스마스도 또 혼자 보내야 하는 건가...",
+		"요즘 청년 실업이 큰 문제라는데... 여기서 나랑 놀고만 있으면 취업 못 한다구.",
+		"내 인내심은 여기까지다!";
+	end;
+OnTimer42000:
+	callsub OnAnnounce,
+		"가슴에 손을 얹고 누구한테나 수작 부린 건 아닌지 생각해 봐...",
+		"여기서 이러지 말고 법대로 하자구!",
+		"끝까지 해보겠다는 거지, 어?";
+	end;
+OnTimer49000:
+	callsub OnAnnounce,
+		"에에에에에에... 콜록! 콜록!",
+		"어떤 경우에도 폭력은 정당화될 수 없어.",
+		"여긴 내 구역이야!!!";
+	stopnpctimer;
+	initnpctimer;
+	end;
+OnAnnounce:
+	mapannounce instance_mapname("1@cash"),"역겨운 문어 : "+getarg(rand(3)),bc_map,"0xFFFF00";
+	return;
+OnMyMobDead:
+	set .@map$, instance_mapname("1@cash");
+	if (mobcount(.@map$,instance_npcname("oct_boss_con")+"::OnMyMobDead") < 1) {
+		mapannounce .@map$,"역겨운 문어 : 오늘은 여기까지다! 다음번엔 너희를 아주 처참하게 만들어주마!",bc_map,"0xFFFF00";
+		enablenpc instance_npcname("oct_exit_1");
+		enablenpc instance_npcname("oct_exit_2");
+		donpcevent instance_npcname("oct_boss_foot")+"::OnDisable";
+		stopnpctimer;
+		donpcevent instance_npcname("oct_boss_con")+"::OnDisable";
+		end;
+	}
+	end;
+}
+
+1@cash,4,4,0	script	oct_boss_foot	-1,{
+	end;
+OnInstanceInit:
+	donpcevent instance_npcname("oct_boss_foot")+"::OnDisable";
+	end;
+OnEnable:
+	enablenpc instance_npcname("oct_boss_foot");
+	initnpctimer;
+	end;
+OnCall:
+	set .@map$, instance_mapname("1@cash");
+	if (mobcount(.@map$,instance_npcname("oct_boss_foot")+"::OnMyMobDead") < 100) {
+		switch(rand(2)) {
+		case 0:
+			mapannounce .@map$,"역겨운 문어 : 문어 다리가 몇 개인지 알아? 상관없어, 난 다리가 무제한이니까!!",bc_map,"0xFFFF00";
+			areamonster .@map$,192,181,206,195,"문어 다리",2193,1,instance_npcname("oct_boss_foot")+"::OnMyMobDead";
+			break;
+		case 1:
+			mapannounce .@map$,"역겨운 문어 : 나... 더 이상 못 버티겠어, 내 자식들아~ 제발 나와서 싸워줘!",bc_map,"0xFFFF00";
+			areamonster .@map$,192,181,206,195,"문어의 부하 ",2192,5,instance_npcname("oct_boss_foot")+"::OnMyMobDead";
+			break;
+		}
+	}
+	initnpctimer;
+	end;
+OnTimer10000:
+	stopnpctimer;
+	donpcevent instance_npcname("oct_boss_foot")+"::OnCall";
+	end;
+OnDisable:
+	stopnpctimer;
+	killmonster instance_mapname("1@cash"),instance_npcname("oct_boss_foot")+"::OnMyMobDead"; // Not in official script.
+	disablenpc instance_npcname("oct_boss_foot");
+	end;
+OnMyMobDead:
+	end;
+}
+
+
+1@cash,190,208,0	script	oct_exit_1	45,2,2,{
+	end;
+OnInstanceInit:
+	disablenpc();
+	end;
+OnTouch:
+	mes "문어 던전에서 나가시겠습니까?";
+	next;
+	if(select("아니요!:네!") == 2)
+		warp "mal_dun01",153,233;
+	close;
+}
+1@cash,198,82,0	duplicate(oct_exit_1)	oct_exit_2	45,2,2
+// This is never enabled in the official script.
+//1@cash,200,161,0	duplicate(oct_exit_1)	oct_exit_3	45,2,2
+
+// Warp Portals
+//============================================================
+1@cash,16,117,0	warp2	oct_foot_exit1	2,2,1@cash,198,99
+1@cash,77,193,0	warp2	oct_foot_exit2	2,2,1@cash,198,99
+1@cash,312,214,0	warp2	oct_foot_exit3	2,2,1@cash,198,99
+1@cash,370,139,0	warp2	oct_foot_exit4	2,2,1@cash,198,99
+1@cash,198,116,0	warp2	oct_boss_warp	2,2,1@cash,210,172
+
+1@cash,193,82,0	warp2	oct_door1	2,2,1@cash,151,48
+1@cash,154,53,0	warp2	oct_door2	2,2,1@cash,197,87
+1@cash,187,99,0	warp2	oct_door3	2,2,1@cash,148,128
+1@cash,153,133,0	warp2	oct_door4	2,2,1@cash,197,99
+1@cash,209,100,0	warp2	oct_door5	2,2,1@cash,250,111
+1@cash,244,118,0	warp2	oct_door6	2,2,1@cash,199,100
+1@cash,209,83,0	warp2	oct_door7	2,2,1@cash,252,46
+1@cash,246,53,0	warp2	oct_door8	2,2,1@cash,203,83

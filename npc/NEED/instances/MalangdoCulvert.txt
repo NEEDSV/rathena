@@ -1,0 +1,1027 @@
+//===== rAthena Script ======================================= 
+//= Malangdo Culvert
+//===== By: ================================================== 
+//= Euphy
+//===== Current Version: ===================================== 
+//= 1.1
+//===== Compatible With: ===================================== 
+//= rAthena Project
+//===== Description: ========================================= 
+//= [Official Conversion]
+//= Clean the culverts and defeat the Coelacanth.
+//= Daily and weekly quests are available.
+//= Contains a normal mode and hard mode.
+//===== Additional Comments: ================================= 
+//= 1.0 First version. [Euphy]
+//=     Letters "n" and "h" in NPC names indicate difficulty.
+//= 1.0a There is no minimum party size on official servers.
+//= 1.0b Fixed incorrect use of 'close'. [Joseph]
+//= 1.1 Instance system rewrite. [Euphy]
+//============================================================ 
+
+// Quest NPCs :: mal_yong
+//============================================================
+mal_in01,172,28,2	script	알보#mal	561,{
+	if (checkweight(1201,1) == 0) {
+		mes "아이템 종류가 너무 많습니다. 소지품을 정리한 뒤에 다시 말을 걸어주세요.";
+		close;
+	}
+	if (MaxWeight - Weight < 1000) {
+		mes "무게가 너무 무겁습니다. 소지품 무게를 줄인 뒤에 다시 시도해 주세요.";
+		close;
+	}
+	if (BaseLevel < 90) {
+		mes "[알보]";
+		mes "당신은 누구입니까?";
+		mes "우리에게 약해빠진 녀석은 필요 없습니다!!";
+		close;
+	}
+	setarray .@quests[0],12271,12272,12273,12274;
+	setarray .@names$[0],
+		"일반 수로 일일 퀘스트","^990000상급 수로 일일 퀘스트^000000",
+		"일반 수로 주간 퀘스트","^990000상급 수로 주간 퀘스트^000000";
+	set .@menu$,"왜 이런 일을 하고 계시죠?:";
+	for(set .@i,0; .@i<4; set .@i,.@i+1) {
+		if (checkquest(.@quests[.@i],PLAYTIME) > -1) {
+			set .@status[.@i],2;
+			set .@menu$, .@menu$+"^aaaaaa- 새로운 임무가 없습니다 -^000000:";
+		} else if (.@i%2 && BaseLevel < 140) {
+			set .@status[.@i],0;
+			set .@menu$, .@menu$+"^aaaaaa레벨이 너무 낮아 임무를 맡을 수 없습니다^000000:";
+		} else {
+			set .@status[.@i],1;
+			set .@menu$, .@menu$+.@names$[.@i]+":";
+		}
+	}
+	mes "[알보]";
+	mes "우리는 바다를 건너왔습니다!";
+	mes "우리는 수로의 위대한 영웅들입니다! 수로를 노리는 해산물 녀석들은 절대 용서치 않아요!";
+	next;
+	set .@i, select(.@menu$)-1;
+	if (.@i == 0) {
+		mes "[알보]";
+		mes "우리는 미싱 님의 부하였습니다! 이런 유서 깊은 장소의 경비병이 될 뻔했었죠.";
+		next;
+		mes "[알보]";
+		mes "하지만 바닷물이 들이닥쳐 소중한 자원들이 모두 잠겨버렸을 때, 제 꿈도... 모든 꿈이 물거품처럼 사라졌습니다...";
+		next;
+		mes "[알보]";
+		mes "우리 영역을 침범한 해산물 녀석들을 용서할 수 없군요. 고추장에 푹 찍어서 다 먹어버릴 겁니다!!!";
+		next;
+		mes "^0000ff알보의 목소리가 분노로 떨립니다. 고추장 이야기에 입맛을 다시는 것 같기도 합니다.^000000";
+		close;
+	}
+	switch(.@status[.@i-1]) {
+	case 0:
+		mes "[알보]";
+		mes "이 임무는 당신에게 너무 벅차 보입니다. 그러니 알려줄 수 없군요. 다른 일을 찾아보는 건 어떻습니까?";
+		close;
+	case 1:
+		break;
+	case 2:
+		mes "[알보]";
+		mes "죄송합니다. 아직 새로운 임무가 없네요! 소식이 들어오면 바로 말씀드리겠습니다!";
+		close;
+	}
+	switch(.@i) {
+	case 1: // General Culvert Daily Service
+		switch(rand(1,6)) {
+			case 1: callsub L_GiveQuest,.@i,12255,12271,"심해의 크랩";
+			case 2: callsub L_GiveQuest,.@i,12256,12271,"심해의 마르스";
+			case 3: callsub L_GiveQuest,.@i,12257,12271,"심해의 바돈";
+			case 4: callsub L_GiveQuest,.@i,12258,12271,"심해의 셀피쉬";
+			case 5: callsub L_GiveQuest,.@i,12259,12271,"심해의 쿠크레";
+			case 6: callsub L_GiveQuest,.@i,12260,12271,"심해의 커너투스";
+		}
+	case 2: // Hard Culvert Daily Service
+		switch(rand(1,6)) {
+			case 1: callsub L_GiveQuest,.@i,12261,12272,"심해의 마르크";
+			case 2: callsub L_GiveQuest,.@i,12262,12272,"심해의 소드 피쉬";
+			case 3: callsub L_GiveQuest,.@i,12263,12272,"심해의 스트라우프";
+			case 4: callsub L_GiveQuest,.@i,12264,12272,"심해의 아노리안";
+			case 5: callsub L_GiveQuest,.@i,12265,12272,"심해의 오본느";
+			case 6: callsub L_GiveQuest,.@i,12266,12272,"심해의 카파";
+		}
+	case 3: // General Culvert Weekly Service
+		switch(rand(1,2)) {
+			case 1: callsub L_GiveQuest,.@i,12267,12273,"기괴한 실러캔스";
+			case 2: callsub L_GiveQuest,.@i,12268,12273,"우울한 실러캔스";
+		}
+	case 4: // Hard Culvert Weekly Service
+		switch(rand(1,2)) {
+			case 1: callsub L_GiveQuest,.@i,12269,12274,"난폭한 실러캔스";
+			case 2: callsub L_GiveQuest,.@i,12270,12274,"변이된 실러캔스";
+		}
+	default:
+		mes "[알보]";
+		mes "어라!? 임무가 어디 갔지? 얼른 찾아볼게요. 마데카에게도 가서 말을 걸어보세요!";
+		close;
+	}
+	end;
+
+L_GiveQuest:
+	setquest getarg(1);
+	setquest getarg(2);
+	mes "[알보]";
+	mes "오늘이야말로 수로의 영웅이 될 시간입니다!";
+	mes "목소리를 높여 토벌의 날을 선포합시다! 대상은 ^0000ff"+getarg(3)+"^000000!";
+	next;
+	mes "[알보]";
+	switch(getarg(0)) {
+	case 1:
+	case 2:
+		mes "자, 영웅들이여! 겁먹지 마세요! 단 하루면 끝나는 임무이니 어서 출발하십시오!";
+		break;
+	case 3:
+		mes "일주일의 시간을 드리지요! 수로 던전 일반 모드의 적들을 모조리 소탕해 주십시오!";
+		break;
+	case 4:
+		mes "일주일의 시간을 드리지요! 수로 던전 상급 모드의 적들을 모조리 소탕해 주십시오!";
+		break;
+	}
+	next;
+	mes "^005500 토벌 요청을"+getarg(3)+"^000000 수락했습니다. 자세한 내용은 퀘스트 창에서 확인해 주세요.";
+	close;
+}
+
+mal_in01,172,26,2	script	마데카#mal	544,{
+	if (checkweight(1201,1) == 0) {
+		mes "아이템 종류가 너무 많습니다. 소지품을 정리한 뒤에 다시 말을 걸어주세요.";
+		close;
+	}
+	if (MaxWeight - Weight < 1000) {
+		mes "무게가 너무 무겁습니다. 소지품 무게를 줄인 뒤에 다시 시도해 주세요.";
+		close;
+	}
+	if (BaseLevel < 90) {
+		mes "[마데카]";
+		mes "캬하아아악!!";
+		mes "삶아 먹든 구워 먹든, 나쁜 해산물 녀석들을 싹 다 해치워 버리자고요!";
+		next;
+		mes "[마데카]";
+		mes "넌 누구냐? 비실비실해 보이는 게 미역 줄기한테만 맞아도 죽겠는걸!";
+		close;
+	}
+	mes "[마데카]";
+	mes "오호?";
+	mes "우리 알보 형님의 부탁을 들어준 녀석이구나. 꽤나 힘든 일이었을 텐데 고생했어!";
+	next;
+	set .@i, select("여기서 뭘 하고 계시죠?:일반 수로 일일 임무 보상:상급 수로 일일 임무 보상:일반 수로 주간 임무 보상:상급 수로 주간 임무 보상")-1;
+	if (.@i == 0) {
+		mes "[마데카]";
+		mes "난 우리 형님인 알보를 도와주러 여기 있는 거야!";
+		next;
+		mes "[마데카]";
+		mes "수로에 있는 나쁜 해산물들을 반죽으로 만들어버리는 인간들에게 귀한 재료를 나눠주고 있지!";
+		next;
+		mes "[마데카]";
+		mes "일일 임무 보상으로는 A~B급 코인을 주고, 주간 임무 보상으로는 아주 귀한 '바다신의 분노'를 주고 있어.";
+		next;
+		mes "[마데카]";
+		mes "알보 형님의 부탁을 계속 들어준다면 우린 자주 보게 될 거야. 그러니까 친하게 지내자고!";
+		close;
+	}
+	mes "[마데카]";
+	mes "기간이 지난 임무에는 보상을 줄 수 없어. 네가 가진 것 중에 기간이 끝난 게 있는지 확인해 볼게.";
+	next;
+	specialeffect2 EF_SPHERE;
+	progressbar "0xFFFF00",3;
+	specialeffect2 EF_STEAL;
+	switch(.@i) {
+	case 1: // General Culvert Daily Service
+		if (checkquest(12271,PLAYTIME) == 2)
+			callsub L_EraseQuest,12255,12256,12257,12258,12259,12260,12271;
+		else {
+			callsub L_CheckQuest,12255,"심해의 크랩",6419,2;
+			callsub L_CheckQuest,12256,"심해의 마르스",6419,2;
+			callsub L_CheckQuest,12257,"심해의 바돈",6419,2;
+			callsub L_CheckQuest,12258,"심해의 셀피쉬",6419,2;
+			callsub L_CheckQuest,12259,"심해의 쿠크레",6419,2;
+			callsub L_CheckQuest,12260,"심해의 커너투스",6419,2;
+		}
+		break;
+	case 2: // Hard Culvert Daily Service
+		if (checkquest(12272,PLAYTIME) == 2)
+			callsub L_EraseQuest,12261,12262,12263,12264,12265,12266,12272;
+		else {
+			callsub L_CheckQuest,12261,"심해의 마르크",6418,1;
+			callsub L_CheckQuest,12262,"심해의 소드 피쉬",6418,1;
+			callsub L_CheckQuest,12263,"심해의 스트라우프",6418,1;
+			callsub L_CheckQuest,12264,"심해의 아노리안",6418,1;
+			callsub L_CheckQuest,12265,"심해의 오본느",6418,1;
+			callsub L_CheckQuest,12266,"심해의 카파",6418,1;
+		}
+		break;
+	case 3: // General Culvert Weekly Service
+		if (checkquest(12273,PLAYTIME) == 2)
+			callsub L_EraseQuest,12267,12268,12273;
+		else {
+			callsub L_CheckQuest,12267,"기괴한 실러캔스",6423,1;
+			callsub L_CheckQuest,12268,"우울한 실러캔스",6423,1;
+		}
+		break;
+	case 4: // Hard Culvert Weekly Service
+		if (checkquest(12274,PLAYTIME) == 2)
+			callsub L_EraseQuest,12269,12270,12274;
+		else {
+			callsub L_CheckQuest,12269,"난폭한 실러캔스",6423,5;
+			callsub L_CheckQuest,12270,"변이된 실러캔스",6423,5;
+		}
+		break;
+	default:
+		mes "[마데카]";
+		mes "뭔가 잘못됐는걸. 다시 한번 확인해 봐!";
+		close;
+	}
+	mes "[마데카]";
+	mes "완료된 임무가 하나도 안 보이는데!";
+	close;
+
+L_EraseQuest:
+	for(set .@j,0; .@j<getargcount(); set .@j,.@j+1) {
+		if (checkquest(getarg(.@j)) > -1)
+			erasequest getarg(.@j);
+	}
+	mes "[마데카]";
+	mes "음, 미안하게 됐어. 제한 시간을 넘겨버려서 보상을 줄 수가 없네.";
+	close;
+
+L_CheckQuest:
+	if (checkquest(getarg(0),HUNTING) == 2) {
+		mes "[마데카]";
+		mes "^0000ff 녀석들을 아주 잘"+getarg(1)+"^000000!";
+		mes "손봐줬구나! 자, 여기 약속한 보상이야!";
+		erasequest getarg(0);
+		specialeffect2 EF_STEAL;
+		getitem getarg(2),getarg(3);
+		close;
+	}
+	return;
+}
+
+mal_in01,160,34,4	script	청소부 미싱	545,{
+	if (BaseLevel < 90) {
+		mes "[청소부 미싱]";
+		mes "나, 나한테 말 거는 거야?!";
+		next;
+		mes "[청소부 미싱]";
+		mes "무슨 일로 여기까지 왔는지는 모르겠지만, 여긴 들어갈 수 없어!";
+		mes "토마스 님의 명령이거든...";
+		next;
+		mes "^770099베이스 레벨 90 이상만 입장할 수 있습니다.^000000";
+		close;
+	}
+	if (in_canal_n == 0) {
+		mes "[청소부 미싱]";
+		mes "(부들부들 떨고 있다)";
+		next;
+		mes "^660066고양이의 상태가 좋아 보이지 않습니다. 몸을 가늘게 떨고 있습니다.^000000";
+		next;
+		if(select("고양이를 쓰다듬는다:괜찮니?") == 1) {
+			mes "[청소부 미싱]";
+			mes "나, 나한테 말 거는 거야?!";
+			next;
+			mes "^660066떨고 있는 고양이가 당신을 올려다봅니다.^000000";
+			close;
+		}
+		mes "[청소부 미싱]";
+		mes "에취!";
+		next;
+		mes "[청소부 미싱]";
+		mes "수로를 청소하는 동안 정말";
+		mes "많은 일이 있었어. 하지만";
+		mes "고양이라면 해야만 하는 일이지...";
+		next;
+		select("어떤 수로를 청소하고 있는 거야?");
+		mes "[청소부 미싱]";
+		mes "외부인 눈에는 낯설어 보이겠지만,";
+		mes "사실 이곳은 기념품이나 아주";
+		mes "귀하고 사치스러운 물건들을";
+		mes "보관하기 위해 만들어진 곳이야.";
+		next;
+		mes "[청소부 미싱]";
+		mes "이 섬에 큰 진동이 있은 뒤로,";
+		mes "이 주변에 물이 새기 시작했어.";
+		mes "그래서 원래 관리인이었던 내가";
+		mes "지금은 여기서 청소부 일을";
+		mes "하고 있는 신세지.";
+		next;
+		mes "^660066고양이가 방금 전까지 울었던 것 같습니다...^000000";
+		next;
+		mes "[청소부 미싱]";
+		mes "이 길을 따라가면 지하 수로가";
+		mes "나와. 거기엔 날 괴롭히는 나쁜";
+		mes "녀석들이 잔뜩 있어. 하루에도";
+		mes "몇 번씩이나 그놈들이랑 싸우는";
+		mes "것도 이제 지긋지긋해!";
+		next;
+		mes "[청소부 미싱]";
+		mes "앗! 내 털을 만졌구나!";
+		mes "자꾸 털이 빠져서 속상해... 이게";
+		mes "다 그 녀석들 때문이라고~";
+		next;
+		mes "^660066이제 보니 고양이의 털이 군데군데 빠져 있는 것이 보입니다.^000000";
+		next;
+		select("그냥 그만두는 게 어때?");
+		mes "[청소부 미싱]";
+		mes "나도 먹고살아야 할 거 아니야, 그치?";
+		next;
+		mes "[청소부 미싱]";
+		mes "가끔 운 좋게 상자를 줍기도 하고,";
+		mes "더 운이 좋으면 캔을 얻을 수도 있거든...";
+		next;
+		if(select("그래, 힘내!:도와줄 수 있는 게 있다면 도울게...") == 1) {
+			mes "[청소부 미싱]";
+			mes "고마워. 난 이제 다시 물을 퍼내러 가야겠어!";
+			close;
+		}
+		mes "[청소부 미싱]";
+		mes "(목소리를 낮추며)";
+		mes "정말로 도와주고 싶으면, 조금 더 가까이 와봐!";
+		next;
+		select("(가까이 다가간다)");
+		mes "[청소부 미싱]";
+		mes "아무나 조수가 될 수 있는 건";
+		mes "아니지만, 지금은 찬밥 더운밥";
+		mes "가릴 처지가 아니니까...";
+		next;
+		mes "[청소부 미싱]";
+		mes "이 아래로 내려가고 싶으면, 내가 알려주는 코드를 잘 기억해.";
+		next;
+		mes "^660066고양이가 암호가 적힌 메모를 끄적여서 건네줍니다.^000000";
+		next;
+		select("메모를 열어본다.");
+		mes "^660000아라감은 나를 모욕했어.^000000";
+		next;
+		mes "[청소부 미싱]";
+		mes "혼자서는 절대 들어갈 수 없으니";
+		mes "꼭 친구들과 함께 와야 해! 그리고";
+		mes "암호 코드는 파티장이 직접";
+		mes "말해야 한다구!";
+		next;
+		mes "[청소부 미싱]";
+		mes "또 한 가지 중요한 건, 반드시";
+		mes "'바다신의 가호'를 가지고 있어야 해.";
+		next;
+		mes "[청소부 미싱]";
+		mes "잊지 마! 바다신의 가호가";
+		mes "없으면 문을 절대 열어주지 않을 거야!";
+		set in_canal_n,1;
+		close;
+	}
+	if (rentalcountitem(6436) == 0) {
+		mes "[청소부 미싱]";
+		mes "바다신의 가호를 가지고 있지 않은 것 같네. 지금은 문을 열어줄 수 없어!";
+		close;
+	}
+	set .@party_id,getcharid(1);
+	set .@md_name$,"지하 배수로";
+	if (!.@party_id) {
+		mes "^0000ff 2인 이상의 파티를 구성하거나";
+		mes "파티에 가입한 상태로";
+		mes "다시 와주시기 바랍니다.^000000";
+		close;
+	}
+	set .@playtime, checkquest(12254,PLAYTIME);
+	if (.@playtime == -1) {
+		if (is_party_leader() == true) {
+			mes "[청소부 미싱]";
+			mes "음? 무슨 일이야? 파티장이라면 암호를 말해줘!";
+			next;
+			switch(select("아니... 아무것도 아니야.:아라감은 나를 모욕했어.:수로에 입장한다.")) {
+			case 1:
+				mes "[청소부 미싱]";
+				mes "완전 풋내기구만.";
+				close;
+			case 2:
+				if (instance_create(.@md_name$) < 0) {
+					mes "파티명: "+getpartyname(.@party_id);
+					mes "파티장: "+strcharinfo(0);
+					mes "^0000ff"+.@md_name$+"^000000 - 예약 실패!";
+					close;
+				}
+				mes "^3333FF"+.@md_name$+"^000000 - 예약 중";
+				mes "예약을 마친 후에는";
+				mes "'수로 입장'을 선택해야 합니다.";
+				close;
+			case 3:
+				callsub L_Enter,0;
+			}
+		}
+		if(select("수로 입장:취소") == 2)
+			end;
+		callsub L_Enter,1;
+	} else if (.@playtime == 0 || .@playtime == 1) {
+		mes "수로의 문이 열리면 입장할 수 있습니다.";
+		next;
+		if(select("수로 입장:취소") == 2)
+			close;
+		callsub L_Enter,0;
+	} else if (.@playtime == 2) {
+		mes "^0000ff수로로 통하는 문이 다시 열렸습니다.^000000";
+		erasequest 12254;
+		close;
+	}
+	end;
+L_Enter:
+	switch(instance_enter("지하 배수로")) {
+	case IE_OTHER:
+		mes "알 수 없는 오류가 발생했습니다.";
+		close;
+	case IE_NOINSTANCE:
+		mes "수로의 문이 아직 닫혀 있습니다.";
+		mes "입장이 가능할 때까지 기다리거나, 인스턴스를 생성할 수 있는 파티장을 찾으십시오.";
+		close;
+	case IE_NOMEMBER:
+		mes "파티원만 참여할 수 있습니다.";
+		close;
+	case IE_OK:
+		mapannounce "mal_in01", strcharinfo(0)+" 파티의 "+getpartyname(getcharid(1))+" 님이 수로에 입장합니다.",bc_map,"0x00ff99";
+		if (checkquest(12254) == -1) setquest 12254;
+		if (getarg(0) == 0) close;
+		else end;
+	}
+}
+
+// Instance: Common Scripts
+//============================================================
+1@pump,63,100,4	script	청소부 미싱#0	545,{
+	if (is_party_leader() == false) {
+		mes "[청소부 미싱]";
+		mes "지금 파티장과 이야기 중이야. 방해하지 말고 잠시만 기다려 줘!";
+		close;
+	}
+	mes "[청소부 미싱]";
+	mes "이곳이 바로 네 친구들과 함께 청소하게 될 지하 수로야!";
+	next;
+	mes "[청소부 미싱]";
+	mes "우선 문부터 열어줄게. 그런데, 너희 싸울 줄은 아는 거지?";
+	next;
+	switch(select("빵 배달 하나는 자신 있습니다.:싸움이라면 자신 있습니다.:^ffffff다이아몬드를 내놔.^000000")) {
+	case 1:
+		mes "[청소부 미싱]";
+		mes "좋아, 평소처럼 여기서 수로 청소를 시작해 보자구! 난 오른쪽 구석에서 준비할 테니 따라와!";
+		next;
+		if(select("잠깐! 마음이 바뀌었어!:원하는 대로~") == 1) {
+			mes "[청소부 미싱]";
+			mes "응? 아직 준비가 안 된 거야? 준비되면 다시 말해 줘.";
+			close;
+		}
+		set 'party_id,getcharid(1);
+		mapannounce instance_mapname("1@pump"),"미싱: 3시 방향으로 이동하여 다음 지시를 기다려라!",bc_map,"0xff88ff",FW_NORMAL,15;
+		disablenpc instance_npcname("청소부 미싱#0");
+		enablenpc instance_npcname("청소부 미싱#n");
+		close;
+	case 2:
+		if (BaseLevel < 140) {
+			mes "[청소부 미싱]";
+			mes "음... 내가 보기엔 넌 너무 약해 보여! 솔직히 말해봐!!";
+			close;
+		}
+		mes "[청소부 미싱]";
+		mes "오? 싸움 좀 한다고? 그럼 내가 도저히 손을 못 댔던 곳이 한군데 있는데... 거기 한번 가볼래?!";
+		next;
+		mes "[청소부 미싱]";
+		mes "거긴 청소 안 한 지 너~~무 오래돼서, 140레벨 이하는 발도 못 붙이는 곳이야! 정말 가볼 자신 있어?";
+		next;
+		if(select("잠깐! 마음이 바뀌었어!:물론이지, 벌써 준비 끝났어~") == 1) {
+			mes "[청소부 미싱]";
+			mes "응? 준비되면 다시 나한테 말을 걸어줘.";
+			close;
+		}
+		set 'party_id,getcharid(1);
+		mapannounce instance_mapname("1@pump"),"미싱:내가 먼저 들어갈 테니 따라와! 3시 방향에 입구를 열어둘게!",bc_map,"0xff88ff",FW_NORMAL,15;
+		disablenpc instance_npcname("청소부 미싱#0");
+		enablenpc instance_npcname("수로 입구#i");
+		close;
+	case 3:
+		mes "[청소부 미싱]";
+		mes "나랑 장난치지 말라고 했지~!";
+		close;
+	}
+	end;
+}
+
+1@pump,84,105,0	script	수로 입구#i	45,3,3,{
+	end;
+OnInstanceInit:
+	disablenpc instance_npcname("수로 입구#i");
+	disablenpc instance_npcname("수로 입구#n");
+	end;
+OnTouch:
+	if (BaseLevel >= 140)
+		warp instance_mapname("2@pump"),38,88;
+	else
+		warp instance_mapname("1@pump"),74,105;
+	end;
+}
+
+function	script	F_mal_missing	{
+	mes "[청소부 미싱]";
+	mes "이제 청소하는 법을 알려줄게. 주변에 있는 수로들이 보이니?";
+	next;
+	if(select("어떤 수로 말이야??:응, 보여.") == 1) {
+		mes "[청소부 미싱]";
+		mes "어라? 수로를 처음 보는 거야? 땅에 묻힌 기계들이 많이 보일 거야. 한번 쭉 둘러보고 다시 와!";
+		close;
+	}
+	mes "[청소부 미싱]";
+	mes "그렇지! 이 수로들은 정말 중요해! 해초가 수로를 막지 못하게 청소하는 게 우리 청소부들의 임무야!";
+	next;
+	mes "[청소부 미싱]";
+	mes "조심해! 청소하는 동안 몬스터들이 널 노릴 거야! 하지만 절대 굴하지 마!";
+	next;
+	mes "[청소부 미싱]";
+	mes "그리고... 해초가 6개 쌓이게 두지 마! 5개까지는 괜찮지만, 6개가 되면 널 당장 여기서 끌어낼 거야!!";
+	next;
+	mes "[청소부 미싱]";
+	mes "친구들 도움을 받든 말든 상관없어. 난 네가 모든 수로를 깨끗이 청소하길 바랄 뿐이야! 잊지 마, 내가 지켜보며 지시할 테니 시키는 대로만 하라구!!";
+	next;
+	if (is_party_leader() == false) {
+		mes "[청소부 미싱]";
+		mes "파티장이 준비를 마치면 바로 시작될 거야. 마음 단단히 먹으라구!!";
+		close;
+	}
+	mes "[청소부 미싱]";
+	mes "자, 이제 청소할 준비가 됐니?";
+	next;
+	switch(select("잠깐만! 아직 아니야!:시작하자!")) {
+	case 1:
+		mes "[청소부 미싱]";
+		mes "응? 아직이야? 그럼 준비되면 다시 말해줘.";
+		close;
+	case 2:
+		mes "[청소부 미싱]";
+		mes "좋아! 이제 시작한다!";
+		return;
+	}
+}
+
+// Instance: Normal Mode :: in_pump1
+//============================================================
+1@pump,84,105,4	script	청소부 미싱#nf	545,{
+	mes "[청소부 미싱]";
+	mes "내가 40년 동안 청소 일을 했지만, 너희같이 엉망진창인 팀은 처음 본다!!";
+	next;
+	mes "[청소부 미싱]";
+	mes "너희가 꾸물거리는 사이에 해초가 사방에 널렸잖아! 수로가 해초로 꽉 막혀버리겠어!";
+	next;
+	if (is_party_leader() == false) {
+		mes "[청소부 미싱]";
+		mes "파티장이 준비를 마치면 정산이 시작될 거야. 결과가 어떻게 나올지 마음 단단히 먹어!!";
+		close;
+	}
+	mes "[청소부 미싱]";
+	mes "다시 도전할 배짱이 있다면 한 번 더 기회를 주지! 어떻게 할래!?";
+	next;
+	switch(select("잠깐만! 아직 아니야!:좋아, 다시 시작하자!")) {
+	case 1:
+		mes "[청소부 미싱]";
+		mes "여전히 느려 터졌구만! 준비되면 언제든 다시 말해.";
+		close;
+	case 2:
+		mes "[청소부 미싱]";
+		mes "좋아! 지금 바로 시작한다!";
+		set .@i$, charat(strnpcinfo(2),0);
+		enablenpc instance_npcname("청소부 미싱#"+.@i$);
+		donpcevent instance_npcname("청소부 미싱#"+.@i$)+"::OnStart";
+		disablenpc instance_npcname("수로 입구#"+.@i$);
+		disablenpc instance_npcname("청소부 미싱#"+.@i$+"o");
+		donpcevent instance_npcname("몬스터 구멍#"+.@i$)+"::OnClear";
+		disablenpc();
+		close;
+	}
+	close;
+OnInstanceInit:
+	disablenpc();
+	end;
+}
+
+1@pump,84,105,4	script	청소부 미싱#n	545,{
+	callfunc "F_mal_missing";
+	donpcevent instance_npcname("청소부 미싱#n")+"::OnStart";
+	close;
+OnInstanceInit:
+	disablenpc instance_npcname("청소부 미싱#n");
+	end;
+OnStart:
+	killmonster instance_mapname("1@pump"),instance_npcname("청소부 미싱#n")+"::OnMyMobDead";
+	disablenpc instance_npcname("청소부 미싱#n");
+	initnpctimer;
+	end;
+OnAddSeaweed:
+	set .@map$, instance_mapname("1@pump");
+	areamonster .@map$,55,99,61,105,"오염된 해초",2191,1,instance_npcname("청소부 미싱#n")+"::OnMyMobDead";
+	set .@mob_dead_num, mobcount(.@map$,instance_npcname("청소부 미싱#n")+"::OnMyMobDead");
+	if (.@mob_dead_num >= 6)
+		donpcevent instance_npcname("청소부 미싱#n")+"::OnFail";
+	else
+		mapannounce .@map$,"오염된 해초: "+.@mob_dead_num+" 줄기",bc_map,"0xff3333",FW_NORMAL,20;
+	end;
+OnMyMobDead:
+	end;
+OnFail:
+	stopnpctimer;
+	donpcevent instance_npcname("몬스터 구멍#n")+"::OnClear";
+	set .@map$, instance_mapname("1@pump");
+	killmonster .@map$,instance_npcname("청소부 미싱#n")+"::OnMyMobDead";
+	enablenpc instance_npcname("청소부 미싱#nf");
+	mapannounce .@map$,"이게 대체 뭐야!! 수로 전체가 해초로 뒤덮였잖아! 청소는 끝났으니 당장 나가!!",bc_map,"0xff88ff",FW_NORMAL,15;
+	disablenpc instance_npcname("청소부 미싱#n");
+	end;
+OnTimer100:
+	mapannounce instance_mapname("1@pump"),"첫 번째 하수도가 5초 뒤 개방됩니다. 개방된 배수구를 클릭하면 청소를 시작할 수 있습니다.",bc_map,"0x00ffcc",FW_NORMAL,15;
+	end;
+OnTimer5500:
+	mapannounce instance_mapname("1@pump"),"하수관 청소를 담당하는 플레이어는 캐스팅이 끝날 때까지 이동할 수 없으며, 공격받지 않는 상태가 됩니다.",bc_map,"0x00ffcc",FW_NORMAL,15;
+	donpcevent instance_npcname("몬스터 구멍#n")+"::OnSpawn";
+	end;
+OnTimer45000:
+OnTimer95000:
+OnTimer145000:
+OnTimer195000:
+OnTimer245000:
+OnTimer295000:
+OnTimer345000:
+OnTimer395000:
+OnTimer445000:
+	mapannounce instance_mapname("1@pump"),"5초 후에 다음 도수관이 열립니다. 서둘러서 다음 도수관의 위치를 확인해 주십시오.",bc_map,"0x00ffcc",FW_NORMAL,15;
+	end;
+OnTimer50000:
+OnTimer100000:
+OnTimer150000:
+	donpcevent instance_npcname("몬스터 구멍#n")+"::OnSpawn";
+	end;
+OnTimer200000:
+OnTimer250000:
+OnTimer300000:
+OnTimer350000:
+OnTimer400000:
+OnTimer450000:
+	set .@mob_dead_num, mobcount(instance_mapname("1@pump"),instance_npcname("청소부 미싱#n")+"::OnMyMobDead");
+	if (.@mob_dead_num >= 6)
+		donpcevent instance_npcname("청소부 미싱#n")+"::OnFail";
+	else
+		donpcevent instance_npcname("몬스터 구멍#n")+"::OnSpawn";
+	end;
+OnTimer515000:
+	set .@map$, instance_mapname("1@pump");
+	set .@mob_dead_num, mobcount(.@map$,instance_npcname("청소부 미싱#n")+"::OnMyMobDead");
+	mapannounce .@map$,"오염된 해초 제거: .@mob_dead_num 개. 곧 미싱이 도착하여 청소 결과를 확인할 예정입니다.",bc_map,"0xff3333",FW_NORMAL,20;
+	end;
+OnTimer520000:
+	stopnpctimer;
+	set .@mob_dead_num, mobcount(instance_mapname("1@pump"),instance_npcname("청소부 미싱#n")+"::OnMyMobDead");
+	if (.@mob_dead_num >= 6)
+		donpcevent instance_npcname("청소부 미싱#n")+"::OnFail";
+	else
+		donpcevent instance_npcname("보스 출현#n")+"::OnEnable";
+	end;
+}
+
+1@pump,1,1,4	script	몬스터 구멍#n	-1,{
+	end;
+OnSpawn:
+	set .@i$, charat(strnpcinfo(2),0);
+	if (.@i$ == "n")
+		set .@n,6;
+	else if (.@i$ == "h")
+		set .@n,10;
+	donpcevent instance_npcname("#Culvert_"+.@i$+rand(1,.@n))+"::OnEnable";
+	end;
+OnClear:
+	set .@i$, charat(strnpcinfo(2),0);
+	if (.@i$ == "n")
+		set .@n,6;
+	else if (.@i$ == "h")
+		set .@n,10;
+	for(set .@i,1; .@i<=.@n; set .@i,.@i+1)
+		donpcevent instance_npcname("#Culvert_"+.@i$+.@n)+"::OnClear";
+	end;
+}
+
+1@pump,36,111,4	script	#Culvert_n1	844,14,14,{
+	progressbar "0xFFFF00",10;
+	stopnpctimer;
+	disablenpc();
+	end;
+OnInstanceInit:
+	disablenpc();
+	end;
+OnEnable:
+	enablenpc();
+	set .@label$, instance_npcname(strnpcinfo(0))+"::OnMyMobDead";
+	set .@map$, instance_mapname("1@pump");
+	set .@index, atoi(charat(strnpcinfo(2),9));
+	switch(.@index) {
+		case 1: setarray .@c[0],32,107,40,115; break;
+		case 2: setarray .@c[0],64,120,72,128; break;
+		case 3: setarray .@c[0],76,110,84,118; break;
+		case 4: setarray .@c[0],36,76,44,84; break;
+		case 5: setarray .@c[0],71,76,79,84; break;
+		case 6: setarray .@c[0],54,97,62,105; break;
+	}
+	areamonster .@map$,.@c[0],.@c[1],.@c[2],.@c[3],"심연의 크랩",2176,rand(1,3),.@label$;
+	areamonster .@map$,.@c[0],.@c[1],.@c[2],.@c[3],"심연의 마르스",2175,rand(1,3),.@label$;
+	areamonster .@map$,.@c[0],.@c[1],.@c[2],.@c[3],"고대의 바돈",2174,rand(1,3),.@label$;
+	areamonster .@map$,.@c[0],.@c[1],.@c[2],.@c[3],"심연의 셀피쉬",2178,rand(1,3),.@label$;
+	areamonster .@map$,.@c[0],.@c[1],.@c[2],.@c[3],"고대의 쿠크레",2179,rand(1,3),.@label$;
+	areamonster .@map$,.@c[0],.@c[1],.@c[2],.@c[3],"심연의 커너투스",2177,rand(1,3),.@label$;
+	specialeffect EF_MAPPILLAR2,ALL_SAMEMAP;
+	getmapxy(.@map$,.@x,.@y,BL_NPC);
+	getpartymember 'party_id,2;
+	copyarray .@partymemberaid[0],$@partymemberaid[0],$@partymembercount;
+	for(set .@i,0; .@i<$@partymembercount; set .@i,.@i+1) {
+		if (attachrid(.@partymemberaid[.@i])) {
+			if (strcharinfo(3) == .@map$)
+				viewpoint 0,.@x,.@y,.@index,0xFFFF00;
+			detachrid;
+		}
+	}
+	initnpctimer;
+	end;
+OnMyMobDead:
+	end;
+OnClear:
+	stopnpctimer;
+	killmonster instance_mapname("1@pump"),instance_npcname(strnpcinfo(0))+"::OnMyMobDead";
+	end;
+OnTimer49500:
+	donpcevent instance_npcname("청소부 미싱#n")+"::OnAddSeaweed";
+	donpcevent instance_npcname(strnpcinfo(0))+"::OnClear";
+	disablenpc();
+	end;
+OnTouch:
+	specialeffect EF_MAPPILLAR2;
+	end;
+}
+1@pump,68,124,4	duplicate(#Culvert_n1)	#Culvert_n2	844,14,14
+1@pump,80,114,4	duplicate(#Culvert_n1)	#Culvert_n3	844,14,14
+1@pump,40,80,4	duplicate(#Culvert_n1)	#Culvert_n4	844,14,14
+1@pump,75,80,4	duplicate(#Culvert_n1)	#Culvert_n5	844,14,14
+1@pump,58,101,4	duplicate(#Culvert_n1)	#Culvert_n6	844,14,14
+
+1@pump,1,1,4	script	보스 출현#n	-1,{
+	end;
+OnInstanceInit:
+	disablenpc();
+	end;
+OnEnable:
+	enablenpc();
+	initnpctimer;
+	end;
+OnTimer100:
+	set .@i$, charat(strnpcinfo(2),0);
+	if (.@i$ == "n")
+		mapannounce instance_mapname("1@pump"),"음! 너희들 실력이 제법이구나!!",bc_map,"0xff88ff",FW_NORMAL,15;
+	else if (.@i$ == "h")
+		mapannounce instance_mapname("2@pump"),"흠! 생각보다 괜찮았어!",bc_map,"0xff88ff",FW_NORMAL,15;
+	end;
+OnTimer5000:
+	mapannounce strnpcinfo(4),"자, 이제 대충 챙겨서... 뭐, 뭐야!!?",bc_map,"0xff88ff",FW_NORMAL,15;
+	end;
+OnTimer10000:
+	mapannounce strnpcinfo(4),"뭔가 이상한 기운이 느껴져!! 방심하지 마-- 전투 준비!!",bc_map,"0xff88ff",FW_NORMAL,15;
+	end;
+OnTimer20000:
+	stopnpctimer;
+	set .@i$, charat(strnpcinfo(2),0);
+	set .@label$, instance_npcname(strnpcinfo(0))+"::OnMyMobDead";
+	if (rand(1,100) > 50) {
+		if (.@i$ == "n")
+			monster instance_mapname("1@pump"),0,0,"이상한 실러캔스",2188,1,.@label$;
+		else if (.@i$ == "h")
+			monster instance_mapname("2@pump"),0,0,"변이된 실러캔스",2189,1,.@label$;
+		mapannounce strnpcinfo(4),"심연 속에서 거대한 굉음과 함께 무언가 커다란 것이 나타납니다.",bc_map,"0x00ffcc",FW_NORMAL,15;
+	} else {
+		if (.@i$ == "n")
+			monster instance_mapname("1@pump"),0,0,"우울한 실러캔스",2187,1,.@label$;
+		else if (.@i$ == "h")
+			monster instance_mapname("2@pump"),0,0,"난폭한 실러캔스",2190,1,.@label$;
+		mapannounce strnpcinfo(4),"심연 속에서 거친 굉음과 함께 흉포한 무언가가 나타납니다.",bc_map,"0x00ffcc",FW_NORMAL,15;
+	}
+	end;
+OnMyMobDead:
+	if (mobcount(strnpcinfo(4),instance_npcname(strnpcinfo(0))+"::OnMyMobDead") < 1) {
+		mapannounce strnpcinfo(4),"수로 안의 모든 몬스터를 소탕했습니다. 바닥에 전리품이 떨어져 있으니 확인해 보세요.",bc_map,"0xffff00",FW_NORMAL,15;
+		set .@i$, charat(strnpcinfo(2),0);
+		set .@map$, strnpcinfo(4);
+		enablenpc instance_npcname("수로 입구#"+.@i$);
+		enablenpc instance_npcname("청소부 미싱#"+.@i$+"o");
+		if (.@i$ == "n") {
+			for(set .@i,0; .@i<10; set .@i,.@i+1) {
+				set .@j, rand(1,6401);
+					   if (.@j < 5001) set .@item,12636;
+				else if (.@j < 5501) set .@item,12615;
+				else if (.@j < 6001) set .@item,12621;
+				else if (.@j < 6201) set .@item,12620;
+				else if (.@j < 6401) set .@item,12623;
+				else continue;
+				makeitem .@item,1,.@map$,rand(40,77),rand(87,120);
+			}
+		} else if (.@i$ == "h") {
+			for(set .@i,0; .@i<10; set .@i,.@i+1) {
+				set .@j, rand(1,5001);
+					   if (.@j < 2001) set .@item,12615;
+				else if (.@j < 3001) set .@item,12621;
+				else if (.@j < 4001) set .@item,12620;
+				else if (.@j < 4501) set .@item,12619;
+				else if (.@j < 5001) set .@item,12623;
+				else continue;
+				makeitem .@item,1,.@map$,rand(40,77),rand(87,120);
+			}
+		}
+	} else
+		mapannounce strnpcinfo(4),"아직 살아남은 몬스터가 있습니다.",bc_map,"0x00ff99",FW_NORMAL,20;
+	end;
+}
+
+1@pump,84,105,4	script	청소부 미싱#no	545,{
+	set .@i$, charat(strnpcinfo(2),0);
+	if (.@i$ == "n") {
+		mes "[청소부 미싱]";
+		mes "정말 깜짝 놀랐어!!";
+		next;
+		mes "[청소부 미싱]";
+		mes "저 웃기게 생긴 물고기는 이 근처에 사는 실러캔스 중 하나인 것 같네. 혼자 여기까지 오는 건 처음 봐!";
+		next;
+		mes "[청소부 미싱]";
+		mes "뒷정리는 내가 할 테니, 짐 챙겨서 나가봐! 출구는 반대편에 있으니 잘 찾아보고!";
+		next;
+	} else if (.@i$ == "h") {
+		mes "[청소부 미싱]";
+		mes "정말 거대한 괴물을 쓰러뜨렸구나!";
+		next;
+		mes "[청소부 미싱]";
+		mes "네가 해치운 건 실러캔스의 변종 중 하나야. 다른 사람들도 도전했지만 다들 실패했었지.";
+		next;
+		mes "[청소부 미싱]";
+		mes "뒷정리는 맡겨줘. 어서 전리품을 챙겨서 여기서 나가!";
+		next;
+	}
+	mes "[청소부 미싱]";
+	mes "그리고 한 가지 더! 오늘 여기서 본 일은 누구에게도 절대로 말하지 마!!";
+	next;
+	mes "[청소부 미싱]";
+	mes "만약 토마스 님이 여기를 폐쇄하면, 우린 일자리를 잃고 말 거라구!";
+	close;
+OnInstanceInit:
+	disablenpc();
+	end;
+}
+
+1@pump,32,100,0	warp2	수로 입구#n	3,3,mal_in01,161,32
+
+1@pump,1,1,4	script	히드라#n	-1,{
+OnInstanceInit:
+	monster strnpcinfo(4),0,0,"히드라",1068,20;
+	end;
+}
+
+// Instance: Hard Mode :: in_pump2
+//============================================================
+2@pump,39,88,4	duplicate(청소부 미싱#nf)	청소부 미싱#hf	545
+
+2@pump,39,88,4	script	청소부 미싱#h	545,{
+	callfunc "F_mal_missing";
+	donpcevent instance_npcname("청소부 미싱#h")+"::OnStart";
+	close;
+OnStart:
+	killmonster instance_mapname("2@pump"),instance_npcname("청소부 미싱#h")+"::OnMyMobDead";
+	disablenpc instance_npcname("청소부 미싱#h");
+	initnpctimer;
+	end;
+OnAddSeaweed:
+	set .@map$, instance_mapname("2@pump");
+	areamonster .@map$,75,78,85,88,"번식하는 오염된 해초",2191,1,instance_npcname("청소부 미싱#h")+"::OnMyMobDead";
+	set .@mob_dead_num, mobcount(.@map$,instance_npcname("청소부 미싱#h")+"::OnMyMobDead");
+	if (.@mob_dead_num >= 6)
+		donpcevent instance_npcname("청소부 미싱#h")+"::OnFail";
+	else
+		mapannounce .@map$,"번식하는 오염된 해초: "+.@mob_dead_num+" 줄기",bc_map,"0xff3333",FW_NORMAL,20;
+	end;
+OnMyMobDead:
+	end;
+OnFail:
+	stopnpctimer;
+	donpcevent instance_npcname("몬스터 구멍#h")+"::OnClear";
+	set .@map$, instance_mapname("2@pump");
+	killmonster .@map$, instance_npcname("청소부 미싱#h")+"::OnMyMobDead";
+	enablenpc instance_npcname("청소부 미싱#hf");
+	mapannounce .@map$,"이게 대체 뭐야!! 수로 전체가 해초로 뒤덮였잖아! 청소는 끝났으니 당장 나가!!",bc_map,"0xff88ff",FW_NORMAL,15;
+	disablenpc instance_npcname("청소부 미싱#h");
+	end;
+OnTimer100:
+	mapannounce instance_mapname("2@pump"),"5초 후에 첫 번째 도수관이 열립니다. 청소 담당자는 열린 배수구를 찾아 클릭하여 청소를 시작해 주세요.",bc_map,"0x00ffcc",FW_NORMAL,15;
+	end;
+OnTimer5500:
+	mapannounce instance_mapname("2@pump"),"하수관 청소를 담당하는 플레이어는 캐스팅이 끝날 때까지 이동할 수 없으며, 적에게 공격받지 않습니다.",bc_map,"0x00ffcc",FW_NORMAL,15;
+	donpcevent instance_npcname("몬스터 구멍#h")+"::OnSpawn";
+	end;
+OnTimer35000:
+OnTimer75000:
+OnTimer115000:
+OnTimer155000:
+OnTimer195000:
+OnTimer235000:
+OnTimer275000:
+OnTimer315000:
+OnTimer355000:
+	mapannounce instance_mapname("2@pump"),"5초 후에 다음 도수관이 열립니다. 서둘러서 다음 도수관의 위치를 확인해 주세요!",bc_map,"0x00ffcc",FW_NORMAL,15;
+	end;
+OnTimer40000:
+OnTimer80000:
+OnTimer120000:
+	donpcevent instance_npcname("몬스터 구멍#h")+"::OnSpawn";
+	end;
+OnTimer160000:
+OnTimer200000:
+OnTimer240000:
+OnTimer280000:
+OnTimer320000:
+OnTimer360000:
+	set .@mob_dead_num, mobcount(instance_mapname("2@pump"),instance_npcname("청소부 미싱#h")+"::OnMyMobDead");
+	if (.@mob_dead_num >= 6)
+		donpcevent instance_npcname("청소부 미싱#h")+"::OnFail";
+	else
+		donpcevent instance_npcname("몬스터 구멍#h")+"::OnSpawn";
+	end;
+OnTimer420000:
+	mapannounce instance_mapname("2@pump"),"미싱이 곧 도착해 청소 상태를 점검할 예정입니다. 이 근처의 난장판도 같이 정리해 두는 게 좋겠어요.",bc_map,"0xff3333",FW_NORMAL,20;
+	end;
+OnTimer425000:
+	stopnpctimer;
+	set .@mob_dead_num, mobcount(instance_mapname("2@pump"),instance_npcname("청소부 미싱#h")+"::OnMyMobDead");
+	if (.@mob_dead_num >= 6)
+		donpcevent instance_npcname("청소부 미싱#h")+"::OnFail";
+	else
+		donpcevent instance_npcname("보스 출현#h")+"::OnEnable";
+	end;
+}
+
+2@pump,53,114,4	script	#Culvert_h1	844,14,14,{
+	progressbar "0xFFFF00",15;
+	stopnpctimer;
+	disablenpc();
+	end;
+OnInstanceInit:
+	disablenpc();
+	end;
+OnEnable:
+	enablenpc();
+	set .@label$, instance_npcname(strnpcinfo(0))+"::OnMyMobDead";
+	set .@map$, instance_mapname("2@pump");
+	set .@index, atoi(substr(strnpcinfo(2),9,getstrlen(strnpcinfo(2))-1));
+	switch(.@index) {
+		case 1: setarray .@c[0],49,110,57,118; break;
+		case 2: setarray .@c[0],75,105,83,113; break;
+		case 3: setarray .@c[0],110,110,118,118; break;
+		case 4: setarray .@c[0],94,94,102,102; break;
+		case 5: setarray .@c[0],58,92,66,100; break;
+		case 6: setarray .@c[0],53,66,61,74; break;
+		case 7: setarray .@c[0],43,45,51,53; break;
+		case 8: setarray .@c[0],77,59,85,67; break;
+		case 9: setarray .@c[0],96,70,104,78; break;
+		case 10: setarray .@c[0],111,46,119,54; break;
+	}
+	areamonster .@map$,.@c[0],.@c[1],.@c[2],.@c[3],"고대의 마르크",2182,rand(2,3),.@label$;
+	areamonster .@map$,.@c[0],.@c[1],.@c[2],.@c[3],"고대의 소드 피쉬",2181,rand(2,3),.@label$;
+	areamonster .@map$,.@c[0],.@c[1],.@c[2],.@c[3],"고대의 스트라우프",2180,rand(2,3),.@label$;
+	areamonster .@map$,.@c[0],.@c[1],.@c[2],.@c[3],"변이된 아노리안",2183,rand(2,3),.@label$;
+	areamonster .@map$,.@c[0],.@c[1],.@c[2],.@c[3],"심연의 오본느",2184,rand(2,3),.@label$;
+	areamonster .@map$,.@c[0],.@c[1],.@c[2],.@c[3],"변형된 카파",2185,rand(2,3),.@label$;
+	specialeffect EF_MAPPILLAR2,ALL_SAMEMAP;
+	initnpctimer;
+	end;
+OnMyMobDead:
+	end;
+OnClear:
+	stopnpctimer;
+	killmonster instance_mapname("2@pump"),instance_npcname(strnpcinfo(0))+"::OnMyMobDead";
+	end;
+OnTimer39500:
+	donpcevent instance_npcname("청소부 미싱#h")+"::OnAddSeaweed";
+	donpcevent instance_npcname(strnpcinfo(0))+"::OnClear";
+	disablenpc();
+	end;
+OnTouch:
+	specialeffect EF_MAPPILLAR2;
+	end;
+}
+2@pump,79,109,4	duplicate(#Culvert_h1)	#Culvert_h2	844,14,14
+2@pump,114,114,4	duplicate(#Culvert_h1)	#Culvert_h3	844,14,14
+2@pump,98,98,4	duplicate(#Culvert_h1)	#Culvert_h4	844,14,14
+2@pump,62,96,4	duplicate(#Culvert_h1)	#Culvert_h5	844,14,14
+2@pump,57,70,4	duplicate(#Culvert_h1)	#Culvert_h6	844,14,14
+2@pump,47,49,4	duplicate(#Culvert_h1)	#Culvert_h7	844,14,14
+2@pump,81,63,4	duplicate(#Culvert_h1)	#Culvert_h8	844,14,14
+2@pump,100,74,4	duplicate(#Culvert_h1)	#Culvert_h9	844,14,14
+2@pump,115,50,4	duplicate(#Culvert_h1)	#Culvert_h10	844,14,14
+
+2@pump,1,1,4	duplicate(몬스터 구멍#n)	몬스터 구멍#h	-1
+2@pump,1,1,4	duplicate(보스 출현#n)	보스 출현#h	-1
+2@pump,39,88,4	duplicate(청소부 미싱#no)	청소부 미싱#ho	545
+2@pump,38,100,0	duplicate(수로 입구#n)	수로 입구#h	3,3
+
+//MD_Putmob "2@pump" 0 0 0 0 20 HYDRA 0 0 2
+2@pump,1,1,4	duplicate(히드라#n)	히드라#h	-1
