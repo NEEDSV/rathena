@@ -2,8 +2,7 @@
 //= 전장 시스템 - 티에라 협곡
 //===== 설명 ==================================================
 //= 티에라 협곡 전장.
-//= 기존 대기열 및 대기실 방식을 사용하지 않습니다.
-//= 등록된 양 팀 파티장이 전장 관리인에게 입장 준비를 완료하면 시작합니다.
+//= bgqueue 사용을 제거하고, 대기방(waitingroom) 기반으로 동작합니다.
 //= 시작 인원은 $BG_User_Count 기준으로 설정됩니다.
 //= 부족 인원 완화 승인 시 팀별 필요 인원 변수:
 //=   $BG_Guillaume_Count
@@ -51,6 +50,79 @@ function	script	F_Tierra_ResetTeamNeed	{
 	return;
 }
 
+function	script	F_Tierra_AnnounceWaitingRoom	{
+	.@team$ = getarg(0);
+
+	callfunc "F_Tierra_NormalizeCount";
+
+	.@GuillaumeReady = getwaitingroomstate(0,"기욤 대기실#bat_a01");
+	.@CroixReady = getwaitingroomstate(0,"크루아 대기실#bat_a01");
+	.@GuillaumeNeed = callfunc("F_Tierra_GetGuillaumeNeed");
+	.@CroixNeed = callfunc("F_Tierra_GetCroixNeed");
+
+	.@msg$ = "[티에라 협곡] 현재 대기 인원 - 기욤 "+.@GuillaumeReady+"/"+.@GuillaumeNeed+"명, 크루아 "+.@CroixReady+"/"+.@CroixNeed+"명";
+
+	// 해당 대기실 안에서만 보이도록 대기실 주변 범위에만 안내합니다.
+	if (.@team$ == "기욤")
+		mapannounce "bat_room",.@msg$,bc_map,"0x99CCFF";
+	else if (.@team$ == "크루아")
+		mapannounce "bat_room",.@msg$,bc_map,"0xFFCCFF";
+	return;
+}
+
+
+//============================================================
+// 대기방 NPC
+//============================================================
+
+bat_room,58,227,5	script	기욤 대기실#bat_a01	418,{
+	end;
+
+OnInit:
+	callfunc "F_Tierra_NormalizeCount";
+	waitingroom "기욤 ",callfunc("F_Tierra_GetGuillaumeNeed") + 1,"기욤 대기실#bat_a01::OnRoomChanged",1,0,80;
+	end;
+
+OnRefresh:
+	delwaitingroom;
+	callfunc "F_Tierra_NormalizeCount";
+	waitingroom "기욤 ",callfunc("F_Tierra_GetGuillaumeNeed") + 1,"기욤 대기실#bat_a01::OnRoomChanged",1,0,80;
+	end;
+
+OnRoomChanged:
+	callfunc "F_Tierra_AnnounceWaitingRoom", "기욤";
+	donpcevent "티에라 진행#bat_a01::OnReadyCheck";
+	end;
+
+OnEnterBG:
+	$@TierraBG1_id1 = waitingroom2bg("bat_a01",50,374,"티에라 진행#bat_a01::OnGuillaumeQuit","");
+	end;
+}
+
+bat_room,58,204,1	script	크루아 대기실#bat_a01	414,{
+	end;
+
+OnInit:
+	callfunc "F_Tierra_NormalizeCount";
+	waitingroom "크루아 ",callfunc("F_Tierra_GetCroixNeed") + 1,"크루아 대기실#bat_a01::OnRoomChanged",1,0,80;
+	end;
+
+OnRefresh:
+	delwaitingroom;
+	callfunc "F_Tierra_NormalizeCount";
+	waitingroom "크루아 ",callfunc("F_Tierra_GetCroixNeed") + 1,"크루아 대기실#bat_a01::OnRoomChanged",1,0,80;
+	end;
+
+OnRoomChanged:
+	callfunc "F_Tierra_AnnounceWaitingRoom", "크루아";
+	donpcevent "티에라 진행#bat_a01::OnReadyCheck";
+	end;
+
+OnEnterBG:
+	$@TierraBG1_id2 = waitingroom2bg("bat_a01",42,16,"티에라 진행#bat_a01::OnCroixQuit","");
+	end;
+}
+
 //============================================================
 // 빈 전장 정리 타이머
 //============================================================
@@ -74,8 +146,6 @@ OnTimer1000:
 	stopnpctimer;
 
 	if (bg_get_data($@TierraBG1_id1,0) == 0 && bg_get_data($@TierraBG1_id2,0) == 0) {
-		.@completed = ($@TierraBG1_Victory > 0);
-
 		donpcevent "티에라 카운트다운#bat_a01::OnStop";
 
 		$@TierraBG1 = 0;
@@ -91,12 +161,22 @@ OnTimer1000:
 			$@TierraBG1_id2 = 0;
 		}
 
-		if (.@completed)
-			callfunc "F_BG_AdvanceRotation",1;
+		donpcevent "기욤 대기실#bat_a01::OnRefresh";
+		donpcevent "크루아 대기실#bat_a01::OnRefresh";
 		end;
 	}
 
 	initnpctimer;
+	end;
+}
+
+-	script	티에라 대기실 갱신#bat_a01	-1,{
+	end;
+
+OnRefresh:
+	callfunc "F_Tierra_NormalizeCount";
+	donpcevent "기욤 대기실#bat_a01::OnRefresh";
+	donpcevent "크루아 대기실#bat_a01::OnRefresh";
 	end;
 }
 
@@ -149,158 +229,45 @@ OnCroixActive:
 
 OnGuillaumeQuit:
 OnCroixQuit:
-	Bat_Team = 0;
 	bg_leave;
 	end;
 
-OnPartyReady:
-	// 공용 준비 처리에서 전달된 상태를 단계별로 검사하고 실패 사유를 전장방에 알립니다.
-	if ($@TierraBG1) {
-		mapannounce "bat_room","[전장 입장 실패] 티에라 협곡이 이미 진행 중이거나 입장 처리 상태입니다. 현재 상태값: " + $@TierraBG1,bc_map,"0xFF7777";
-		callfunc "F_BG_ClearEntryReady";
+OnReadyCheck:
+	if ($@TierraBG1)
 		end;
-	}
-
-	if (!$@BG_ENTRY_STARTING) {
-		mapannounce "bat_room","[전장 입장 실패] 티에라 협곡 입장 시작 잠금값이 초기화되어 있습니다. 다시 준비해주세요.",bc_map,"0xFF7777";
-		callfunc "F_BG_ClearEntryReady";
-		end;
-	}
-
-	if ($@BG_ENTRY_TYPE != 1) {
-		mapannounce "bat_room","[전장 입장 실패] 티에라 협곡 입장 요청과 현재 전장 순서가 일치하지 않습니다. 요청값: " + $@BG_ENTRY_TYPE,bc_map,"0xFF7777";
-		callfunc "F_BG_ClearEntryReady";
-		end;
-	}
-
-	$@BG_ENTRY_STAGE = 2;
 
 	callfunc "F_Tierra_NormalizeCount";
 
-	.@g_valid = callfunc("F_BG_IsRegisterValid","기욤");
-	.@c_valid = callfunc("F_BG_IsRegisterValid","크루아");
-	if (!.@g_valid || !.@c_valid) {
-		mapannounce "bat_room","[전장 입장 실패] 티에라 협곡 파티 등록 정보가 변경되었습니다. 기욤: " + (.@g_valid ? "정상" : "확인 필요") + ", 크루아: " + (.@c_valid ? "정상" : "확인 필요"),bc_map,"0xFF7777";
-		callfunc "F_BG_ClearEntryReady";
+	.@GuillaumeNeed = callfunc("F_Tierra_GetGuillaumeNeed");
+	.@CroixNeed = callfunc("F_Tierra_GetCroixNeed");
+
+	.@GuillaumeReady = getwaitingroomstate(0,"기욤 대기실#bat_a01");
+	.@CroixReady = getwaitingroomstate(0,"크루아 대기실#bat_a01");
+
+	if (!.@GuillaumeReady && !.@CroixReady) {
+		donpcevent "티에라 정리 타이머#bat_a01::OnStop";
 		end;
 	}
 
-	.@Guillaume = callfunc("F_BG_CountEligibleParty",$BG_GUILLAUME_PARTY_ID);
-	.@Croix = callfunc("F_BG_CountEligibleParty",$BG_CROIX_PARTY_ID);
-
-	if (.@Guillaume != $BG_Guillaume_Count || .@Croix != $BG_Croix_Count) {
-		mapannounce "bat_room","[전장 입장 실패] 티에라 협곡 참가 가능 인원이 설정과 다릅니다. 기욤 " + .@Guillaume + "/" + $BG_Guillaume_Count + "명, 크루아 " + .@Croix + "/" + $BG_Croix_Count + "명",bc_map,"0xFF7777";
-		mapannounce "bat_room","[전장 안내] 온라인·생존 상태이며 전장방에 있고 다른 BG에 참가하지 않은 파티원만 계산됩니다.",bc_map,"0xFFCC66";
-		callfunc "F_BG_ClearEntryReady";
+	if (.@GuillaumeReady < .@GuillaumeNeed || .@CroixReady < .@CroixNeed)
 		end;
-	}
-
-	$@TierraBG1_id1 = bg_create("bat_a01",50,374,"티에라 진행#bat_a01::OnGuillaumeQuit");
-	$@TierraBG1_id2 = bg_create("bat_a01",42,16,"티에라 진행#bat_a01::OnCroixQuit");
-
-	if (!$@TierraBG1_id1 || !$@TierraBG1_id2) {
-		if ($@TierraBG1_id1) bg_destroy $@TierraBG1_id1;
-		if ($@TierraBG1_id2) bg_destroy $@TierraBG1_id2;
-		$@TierraBG1_id1 = 0;
-		$@TierraBG1_id2 = 0;
-		mapannounce "bat_room","[전장 안내] 티에라 협곡 팀 생성에 실패해 입장이 취소되었습니다.",bc_map,"0xFF7777";
-		callfunc "F_BG_ClearEntryReady";
-		end;
-	}
-
-	$@BG_ENTRY_STAGE = 3;
 
 	$@TierraBG1 = 1;
-	$@TierraBG1_Victory = 0;
 
-	$@BG_ENTRY_STAGE = 4;
+	announce "[티에라 협곡] 기욤 "+.@GuillaumeReady+"명 vs 크루아 "+.@CroixReady+"명으로 전장이 시작됩니다.",bc_all,"0x33CCFF";
 
-	.@GuillaumeJoined = callfunc("F_BG_JoinPartyMembers",$BG_GUILLAUME_PARTY_ID,$@TierraBG1_id1,"bat_a01",50,374,1,$BG_Guillaume_Count);
-	.@CroixJoined = callfunc("F_BG_JoinPartyMembers",$BG_CROIX_PARTY_ID,$@TierraBG1_id2,"bat_a01",42,16,2,$BG_Croix_Count);
+	donpcevent "기욤 대기실#bat_a01::OnEnterBG";
+	donpcevent "크루아 대기실#bat_a01::OnEnterBG";
 
-	if (.@GuillaumeJoined != $BG_Guillaume_Count || .@CroixJoined != $BG_Croix_Count) {
-		if ($@TierraBG1_id1) bg_warp $@TierraBG1_id1,"bat_room",154,150;
-		if ($@TierraBG1_id2) bg_warp $@TierraBG1_id2,"bat_room",154,150;
-		if ($@TierraBG1_id1) bg_destroy $@TierraBG1_id1;
-		if ($@TierraBG1_id2) bg_destroy $@TierraBG1_id2;
-		$@TierraBG1_id1 = 0;
-		$@TierraBG1_id2 = 0;
-		$@TierraBG1 = 0;
-		mapannounce "bat_room","[전장 입장 실패] 티에라 협곡 파티원 입장 처리에 실패했습니다. 기욤 " + .@GuillaumeJoined + "/" + $BG_Guillaume_Count + "명, 크루아 " + .@CroixJoined + "/" + $BG_Croix_Count + "명",bc_map,"0xFF7777";
-		mapannounce "bat_room","[전장 안내] 입장 도중 위치 이동, 접속 종료, 사망 또는 다른 BG 참가 상태가 된 파티원이 있는지 확인해주세요.",bc_map,"0xFFCC66";
-		callfunc "F_BG_ClearEntryReady";
-		end;
-	}
-
-	announce "[티에라 협곡] 기욤 " + .@GuillaumeJoined + "명 vs 크루아 " + .@CroixJoined + "명으로 전장 입장이 시작됩니다.",bc_all,"0x33CCFF";
-	callfunc "F_BG_ClearEntryReady";
-	initnpctimer;
-	end;
-
-OnCancel:
-	stopnpctimer;
-
-	mapannounce "bat_a01","전투 시작 전에 인원이 부족해져 티에라 협곡 전장이 취소되었습니다.",bc_map,"0x696969";
-	mapwarp "bat_a01","bat_room",154,150;
-
-	if ($@TierraBG1_id1) {
-		bg_destroy $@TierraBG1_id1;
-		$@TierraBG1_id1 = 0;
-	}
-
-	if ($@TierraBG1_id2) {
-		bg_destroy $@TierraBG1_id2;
-		$@TierraBG1_id2 = 0;
-	}
-
-	$@TierraBG1 = 0;
-	$@TierraBG1_Victory = 0;
-	callfunc "F_BG_ClearEntryReady";
-	end;
-
-OnTimer1000:
-	mapannounce "bat_a01","티에라 협곡 전투 준비 시간이 30초 주어집니다.",bc_map,"0x33CCFF";
-	mapannounce "bat_a01","전투 시작 전까지 진영 준비 구역에서 아군을 강화해주세요.",bc_map,"0x33CCFF";
-	end;
-
-OnTimer15000:
-	mapannounce "bat_a01","티에라 협곡 전투 시작까지 15초 남았습니다.",bc_map,"0x33CCFF";
-	end;
-
-OnTimer20000:
-	mapannounce "bat_a01","티에라 협곡 전투 시작까지 10초 남았습니다.",bc_map,"0x33CCFF";
-	end;
-
-OnTimer25000:
-	mapannounce "bat_a01","티에라 협곡 전투 시작까지 5초 남았습니다.",bc_map,"0x33CCFF";
-	end;
-
-OnTimer29000:
-	mapannounce "bat_a01","티에라 협곡 전투가 곧 시작됩니다.",bc_map,"0x33CCFF";
-	end;
-
-OnTimer30000:
-	callfunc "F_Tierra_NormalizeCount";
-
-	.@GuillaumeCount = bg_get_data($@TierraBG1_id1,0);
-	.@CroixCount = bg_get_data($@TierraBG1_id2,0);
-
-	if (.@GuillaumeCount < $BG_Guillaume_Count || .@CroixCount < $BG_Croix_Count) {
-		donpcevent "티에라 진행#bat_a01::OnCancel";
-		end;
-	}
-
-	mapannounce "bat_a01","티에라 협곡 전투가 시작되었습니다!",bc_map,"0x33CCFF";
-	announce "[티에라 협곡] 기욤 "+.@GuillaumeCount+"명 vs 크루아 "+.@CroixCount+"명으로 전장이 시작되었습니다.",bc_all,"0x33CCFF";
-
-	// 전투 오브젝트와 제한시간은 실제 전투 시작 시점부터 가동합니다.
 	donpcevent "티에라 진행#bat_a01::OnEnable";
 
 	bg_warp $@TierraBG1_id1,"bat_a01",352,342;
 	bg_warp $@TierraBG1_id2,"bat_a01",353,52;
+
+	initnpctimer;
 	end;
 
-OnTimer40000:
+OnTimer10000:
 	stopnpctimer;
 	donpcevent "티에라 정리 타이머#bat_a01::OnEnable";
 	end;
@@ -330,7 +297,7 @@ OnMyMobDead:
 		enablenpc "기욤 보상관#a01_a";
 		enablenpc "크루아 보상관#a01_b";
 
-		announce "크루아 빈트나르 스완더리: 기욤의 식량 창고를 파괴했습니다! 우리가 승리했습니다!",bc_map,"0xFFCE00";
+		announce "크루아 빈트나르 스완더리: 기욤의 식량 창고를 파괴했습니다! 우리가 승리했습니다!","0xFFCE00";
 
 		bg_warp $@TierraBG1_id1,"bat_a01",50,374;
 		bg_warp $@TierraBG1_id2,"bat_a01",42,16;
@@ -357,7 +324,7 @@ OnMyMobDead:
 		enablenpc "기욤 보상관#a01_a";
 		enablenpc "크루아 보상관#a01_b";
 
-		announce "기욤 빈테나르 액슬 로즈: 크루아의 식량 창고를 파괴했다! 우리가 승리했다!",bc_map,"0xFFCE00";
+		announce "기욤 빈테나르 액슬 로즈: 크루아의 식량 창고를 파괴했다! 우리가 승리했다!","0xFFCE00";
 
 		bg_warp $@TierraBG1_id1,"bat_a01",50,374;
 		bg_warp $@TierraBG1_id2,"bat_a01",42,16;
@@ -812,7 +779,6 @@ bat_a01,53,377,3	script	기욤 보상관#a01_a	419,{
 			callfunc "F_BG_Badge",1,"Guillaume","Tierra";
 	}
 
-	Bat_Team = 0;
 	bg_leave;
 	warp "bat_room",154,150;
 	end;
@@ -836,7 +802,6 @@ bat_a01,45,19,3	script	크루아 보상관#a01_b	415,{
 			callfunc "F_BG_Badge",1,"Croix","Tierra";
 	}
 
-	Bat_Team = 0;
 	bg_leave;
 	warp "bat_room",154,150;
 	end;
@@ -904,7 +869,8 @@ OnTimer1830000:
 
 	$@TierraBG1 = 0;
 	$@TierraBG1_Victory = 0;
+
+	donpcevent "티에라 대기실 갱신#bat_a01::OnRefresh";
 	donpcevent "티에라 카운트다운#bat_a01::OnStop";
-	callfunc "F_BG_AdvanceRotation",1;
 	end;
 }

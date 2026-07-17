@@ -2,7 +2,7 @@
 //= 전장 시스템 - KVM
 //===== 설명: ================================================
 //= KVM 전장.
-//= 티에라/플라비우스와 동일하게 양 팀 파티장 준비 방식으로 시작합니다.
+//= 티에라/플라비우스와 동일하게 waitingroom 방식으로 시작합니다.
 //= $BG_User_Count 기준으로 기욤/크루아 필요 인원을 설정합니다.
 //= 부족 인원 완화가 적용된 경우 $BG_Guillaume_Count / $BG_Croix_Count를 따릅니다.
 //= 기존 전멸/생존자 수 방식이 아니라 제한시간 킬카운트 방식으로 진행합니다.
@@ -39,6 +39,79 @@ function	script	F_KvM_GetCroixNeed	{
 	callfunc "F_KvM_NormalizeCount";
 	return $BG_Croix_Count;
 }
+
+function	script	F_KvM_AnnounceWaitingRoom	{
+	callfunc "F_KvM_NormalizeCount";
+
+	.@g = getwaitingroomstate(0,"KvM01R_Guillaume");
+	.@c = getwaitingroomstate(0,"KvM01R_Croix");
+
+	areaannounce "bat_room",159,219,179,233,
+		"[KVM] 현재 대기 인원 - 기욤 " + .@g + "/" + $BG_Guillaume_Count + "명, 크루아 " + .@c + "/" + $BG_Croix_Count + "명",
+		bc_area,"0x99CCFF";
+
+	areaannounce "bat_room",159,198,179,212,
+		"[KVM] 현재 대기 인원 - 기욤 " + .@g + "/" + $BG_Guillaume_Count + "명, 크루아 " + .@c + "/" + $BG_Croix_Count + "명",
+		bc_area,"0x99CCFF";
+
+	return;
+}
+
+//============================================================
+// 대기방 NPC
+//============================================================
+bat_room,169,226,5	script	KVM 기욤 대기실::KvM01R_Guillaume	418,{
+	end;
+
+OnInit:
+	callfunc "F_KvM_NormalizeCount";
+	waitingroom "기욤 ",callfunc("F_KvM_GetGuillaumeNeed") + 1,"KvM01_BG_Out::OnGuillaumeJoin",1;
+	end;
+
+OnRefresh:
+	delwaitingroom;
+	callfunc "F_KvM_NormalizeCount";
+	waitingroom "기욤 ",callfunc("F_KvM_GetGuillaumeNeed") + 1,"KvM01_BG_Out::OnGuillaumeJoin",1;
+	donpcevent "KvM01_BG_Out::OnRoomNotice";
+	end;
+
+OnEnterBG:
+	$@KvM01BG_id1 = waitingroom2bg("bat_c01",52,129,"KvM01_BG::OnGuillaumeQuit","KvM01_BG::OnGuillaumeDie");
+	end;
+}
+
+bat_room,169,205,3	script	KVM 크루아 대기실::KvM01R_Croix	414,{
+	end;
+
+OnInit:
+	callfunc "F_KvM_NormalizeCount";
+	waitingroom "크루아 ",callfunc("F_KvM_GetCroixNeed") + 1,"KvM01_BG_Out::OnCroixJoin",1;
+	end;
+
+OnRefresh:
+	delwaitingroom;
+	callfunc "F_KvM_NormalizeCount";
+	waitingroom "크루아 ",callfunc("F_KvM_GetCroixNeed") + 1,"KvM01_BG_Out::OnCroixJoin",1;
+	donpcevent "KvM01_BG_Out::OnRoomNotice";
+	end;
+
+OnEnterBG:
+	$@KvM01BG_id2 = waitingroom2bg("bat_c01",147,55,"KvM01_BG::OnCroixQuit","KvM01_BG::OnCroixDie");
+	end;
+}
+
+-	script	KVM 대기실 갱신#bat_c01	-1,{
+	end;
+
+OnRefresh:
+	callfunc "F_KvM_NormalizeCount";
+	donpcevent "KvM01R_Guillaume::OnRefresh";
+	donpcevent "KvM01R_Croix::OnRefresh";
+	end;
+}
+
+bat_room,169,220,0	warp2	#kvm801	2,2,bat_room,154,150
+bat_room,169,211,0	warp2	#kvm802	2,2,bat_room,154,150
 
 //============================================================
 // 시작선 효과
@@ -134,7 +207,6 @@ OnGuillaumeQuit:
 		bg_updatescore "bat_c01",.Guillaume_Kill,.Croix_Kill;
 		mapannounce "bat_c01","기욤 팀원이 전장을 이탈했습니다. 크루아가 1킬을 획득합니다. 현재 점수 - 기욤 " + .Guillaume_Kill + "킬, 크루아 " + .Croix_Kill + "킬",bc_map,"0x00ff00";
 	}
-	Bat_Team = 0;
 	bg_leave;
 	end;
 
@@ -165,7 +237,6 @@ OnCroixQuit:
 		bg_updatescore "bat_c01",.Guillaume_Kill,.Croix_Kill;
 		mapannounce "bat_c01","크루아 팀원이 전장을 이탈했습니다. 기욤이 1킬을 획득합니다. 현재 점수 - 기욤 " + .Guillaume_Kill + "킬, 크루아 " + .Croix_Kill + "킬",bc_map,"0x00ff00";
 	}
-	Bat_Team = 0;
 	bg_leave;
 	end;
 
@@ -195,63 +266,6 @@ OnGuillaumeActive:
 
 OnCroixActive:
 	warp "bat_c01",138,63;
-	end;
-
-OnPartyReady:
-	if ($@KvM01BG || !$@BG_ENTRY_STARTING || $@BG_ENTRY_TYPE != 3)
-		end;
-
-	callfunc "F_KvM_NormalizeCount";
-
-	if (!callfunc("F_BG_IsRegisterValid","기욤") || !callfunc("F_BG_IsRegisterValid","크루아")) {
-		mapannounce "bat_room","[전장 안내] 파티 등록 정보가 변경되어 KVM 입장이 취소되었습니다.",bc_map,"0xFF7777";
-		callfunc "F_BG_ClearEntryReady";
-		end;
-	}
-
-	.@Guillaume = callfunc("F_BG_CountEligibleParty",$BG_GUILLAUME_PARTY_ID);
-	.@Croix = callfunc("F_BG_CountEligibleParty",$BG_CROIX_PARTY_ID);
-
-	if (.@Guillaume != $BG_Guillaume_Count || .@Croix != $BG_Croix_Count) {
-		mapannounce "bat_room","[전장 안내] 참가 인원이 설정과 달라 KVM 입장이 취소되었습니다.",bc_map,"0xFF7777";
-		callfunc "F_BG_ClearEntryReady";
-		end;
-	}
-
-	$@KvM01BG_id1 = bg_create("bat_c01",52,129,"KvM01_BG::OnGuillaumeQuit","KvM01_BG::OnGuillaumeDie");
-	$@KvM01BG_id2 = bg_create("bat_c01",147,55,"KvM01_BG::OnCroixQuit","KvM01_BG::OnCroixDie");
-
-	if (!$@KvM01BG_id1 || !$@KvM01BG_id2) {
-		if ($@KvM01BG_id1) bg_destroy $@KvM01BG_id1;
-		if ($@KvM01BG_id2) bg_destroy $@KvM01BG_id2;
-		$@KvM01BG_id1 = 0;
-		$@KvM01BG_id2 = 0;
-		mapannounce "bat_room","[전장 안내] KVM 팀 생성에 실패해 입장이 취소되었습니다.",bc_map,"0xFF7777";
-		callfunc "F_BG_ClearEntryReady";
-		end;
-	}
-
-	$@KvM01BG = 1;
-
-	.@GuillaumeJoined = callfunc("F_BG_JoinPartyMembers",$BG_GUILLAUME_PARTY_ID,$@KvM01BG_id1,"bat_c01",52,129,1,$BG_Guillaume_Count);
-	.@CroixJoined = callfunc("F_BG_JoinPartyMembers",$BG_CROIX_PARTY_ID,$@KvM01BG_id2,"bat_c01",147,55,2,$BG_Croix_Count);
-
-	if (.@GuillaumeJoined != $BG_Guillaume_Count || .@CroixJoined != $BG_Croix_Count) {
-		if ($@KvM01BG_id1) bg_warp $@KvM01BG_id1,"bat_room",154,150;
-		if ($@KvM01BG_id2) bg_warp $@KvM01BG_id2,"bat_room",154,150;
-		if ($@KvM01BG_id1) bg_destroy $@KvM01BG_id1;
-		if ($@KvM01BG_id2) bg_destroy $@KvM01BG_id2;
-		$@KvM01BG_id1 = 0;
-		$@KvM01BG_id2 = 0;
-		$@KvM01BG = 0;
-		mapannounce "bat_room","[전장 안내] 일부 파티원의 입장 처리에 실패해 KVM이 취소되었습니다.",bc_map,"0xFF7777";
-		callfunc "F_BG_ClearEntryReady";
-		end;
-	}
-
-	announce "[전장 안내] KVM 전장이 기욤 " + .@GuillaumeJoined + "명 vs 크루아 " + .@CroixJoined + "명으로 입장을 시작합니다.",bc_all;
-	callfunc "F_BG_ClearEntryReady";
-	donpcevent "KvM01_BG::OnStart";
 	end;
 
 OnStart:
@@ -289,11 +303,12 @@ OnCancel:
 		bg_destroy $@KvM01BG_id2;
 		$@KvM01BG_id2 = 0;
 	}
-	callfunc "F_BG_ClearEntryReady";
+
+	donpcevent "KVM 대기실 갱신#bat_c01::OnRefresh";
 	end;
 
 OnTimer1000:
-	mapannounce "bat_c01","KVM 전투 준비 시간이 30초 주어집니다.",bc_map,"0x00ff00";
+	mapannounce "bat_c01","1분 후 KVM 전투가 시작됩니다.",bc_map,"0x00ff00";
 	end;
 
 OnTimer3000:
@@ -312,27 +327,31 @@ OnTimer13000:
 	donpcevent "#B_camp_start01::OnDisable";
 	end;
 
-OnTimer15000:
+OnTimer30000:
+	mapannounce "bat_c01","KVM 전투 시작까지 30초 남았습니다.",bc_map,"0x00ff00";
+	end;
+
+OnTimer45000:
 	mapannounce "bat_c01","KVM 전투 시작까지 15초 남았습니다.",bc_map,"0x00ff00";
 	donpcevent "::OnKvM01One";
 	end;
 
-OnTimer20000:
+OnTimer50000:
 	mapannounce "bat_c01","KVM 전투 시작까지 10초 남았습니다.",bc_map,"0x00ff00";
 	donpcevent "::OnKvM01Two";
 	end;
 
-OnTimer25000:
+OnTimer55000:
 	mapannounce "bat_c01","KVM 전투 시작까지 5초 남았습니다.",bc_map,"0x00ff00";
 	donpcevent "::OnKvM01One";
 	end;
 
-OnTimer29000:
+OnTimer59000:
 	mapannounce "bat_c01","KVM 전투가 곧 시작됩니다.",bc_map,"0x00ff00";
 	donpcevent "::OnKvM01Two";
 	end;
 
-OnTimer30000:
+OnTimer61000:
 	callfunc "F_KvM_NormalizeCount";
 
 	// 시작 가능 여부는 실제 입장 인원으로 확인합니다.
@@ -359,27 +378,27 @@ OnTimer30000:
 	bg_warp $@KvM01BG_id2,"bat_c01",138,63;
 	end;
 
-OnTimer270000:
+OnTimer300000:
 	mapannounce "bat_c01","KVM 전투 종료까지 1분 남았습니다.",bc_map,"0x00ff00";
 	end;
 
-OnTimer300000:
+OnTimer330000:
 	mapannounce "bat_c01","KVM 전투 종료까지 30초 남았습니다.",bc_map,"0x00ff00";
 	end;
 
-OnTimer315000:
+OnTimer345000:
 	mapannounce "bat_c01","KVM 전투 종료까지 15초 남았습니다.",bc_map,"0x00ff00";
 	end;
 
-OnTimer320000:
+OnTimer350000:
 	mapannounce "bat_c01","KVM 전투 종료까지 10초 남았습니다.",bc_map,"0x00ff00";
 	end;
 
-OnTimer325000:
+OnTimer355000:
 	mapannounce "bat_c01","KVM 전투 종료까지 5초 남았습니다.",bc_map,"0x00ff00";
 	end;
 
-OnTimer330000:
+OnTimer360000:
 	mapannounce "bat_c01","KVM 전투 시간이 종료되었습니다.",bc_map,"0x00ff00";
 	mapannounce "bat_c01","최종 킬 점수 - 기욤 " + .Guillaume_Kill + "킬, 크루아 " + .Croix_Kill + "킬",bc_map,"0x00ff00";
 
@@ -442,6 +461,10 @@ OnStop:
 -	script	KvM01_BG_Out	-1,{
 	end;
 
+OnRoomNotice:
+	callfunc "F_KvM_AnnounceWaitingRoom";
+	end;
+
 OnBegin:
 	initnpctimer;
 	end;
@@ -452,7 +475,7 @@ OnTimer1000:
 
 OnTimer3000:
 	mapannounce "bat_c01","담당관은 30초 동안만 보상을 지급합니다.",bc_map,"0x00ff00";
-	mapannounce "bat_c01","시간이 지나면 전장 공용 맵으로 이동됩니다.",bc_map,"0x00ff00";
+	mapannounce "bat_c01","시간이 지나면 전장 대기실로 이동됩니다.",bc_map,"0x00ff00";
 	end;
 
 OnTimer5000:
@@ -461,7 +484,7 @@ OnTimer5000:
 	end;
 
 OnTimer55000:
-	mapannounce "bat_c01","잠시 후 전장 공용 맵으로 이동됩니다.",bc_map,"0x00ff00";
+	mapannounce "bat_c01","잠시 후 전장 대기실로 이동됩니다.",bc_map,"0x00ff00";
 	end;
 
 OnTimer60000:
@@ -490,9 +513,33 @@ OnTimer60000:
 	disablenpc "KVM 담당관#KVM01B";
 
 	$@KvM01BG = 0;
-
-	callfunc "F_BG_AdvanceRotation",3;
+	
 	callfunc "F_BG_ClearAllRegisterAfterKVM";
+
+	donpcevent "KVM 대기실 갱신#bat_c01::OnRefresh";
+	end;
+
+OnGuillaumeJoin:
+OnCroixJoin:
+	if ($@KvM01BG)
+		end;
+
+	callfunc "F_KvM_NormalizeCount";
+	callfunc "F_KvM_AnnounceWaitingRoom";
+
+	.@Guillaume = getwaitingroomstate(0,"KvM01R_Guillaume");
+	.@Croix = getwaitingroomstate(0,"KvM01R_Croix");
+
+	if (.@Guillaume < $BG_Guillaume_Count || .@Croix < $BG_Croix_Count)
+		end;
+
+	$@KvM01BG = 1;
+
+	announce "[전장 안내] KVM 전장이 기욤 " + .@Guillaume + "명 vs 크루아 " + .@Croix + "명으로 시작됩니다.",bc_all;
+
+	donpcevent "KvM01R_Croix::OnEnterBG";
+	donpcevent "KvM01R_Guillaume::OnEnterBG";
+	donpcevent "KvM01_BG::OnStart";
 	end;
 }
 
@@ -568,8 +615,6 @@ OnInit:
 bat_c01,148,53,1	duplicate(KVM 담당관#KVM01A)	KVM 담당관#KVM01B	415
 
 function	script	F_BG_ClearAllRegisterAfterKVM	{
-	callfunc "F_BG_ClearEntryReady";
-
 	// 파티장 등록 초기화
 	$BG_GUILLAUME_LEADER_CID = 0;
 	$BG_GUILLAUME_LEADER_AID = 0;
