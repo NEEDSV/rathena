@@ -66,6 +66,11 @@ OnInit:
 	set $@NeedGraceStorageCost,  10000000; // 보관 은총 1,000만 제니
 	set $@NeedGracePackageCost,  25000000; // 종합 은총 3,000만 제니
 
+	// 거래 은총 스킬 지급 여부
+	// 1: 로그인/구매 시 MC_OVERCHARGE, MC_DISCOUNT Lv.10 지급 시도
+	// 0: 티켓/변수만 발급하고 스킬 처리는 소스 또는 별도 NPC에서 처리
+	set $@NeedGraceApplyTradeSkill, 1;
+
 	end;
 }
 
@@ -329,6 +334,9 @@ function	script	NeedGrace_BuyTicket	{
 	}
 
 	callfunc "NeedGrace_RefreshRentalTicket", .@item, .@new_until;
+
+	if (.@type == 1 && $@NeedGraceApplyTradeSkill)
+		callfunc "F_NEED_ApplyTradeGrace";
 
 	mes "[주간 은총 이용권]";
 	mes .@label$ + "이 지급되었습니다.";
@@ -637,3 +645,67 @@ function	script	NeedGrace_EndowApply	{
 	close;
 }
 
+function	script	F_NEED_ApplyTradeGrace	{
+	// 거래 은총은 렌탈 아이템 countitem()으로 체크하지 않고
+	// 구매 시 저장한 기간 변수 기준으로 체크한다.
+	// NeedGraceTradeUntil   = 거래 은총 만료 시간
+	// NeedGracePackageUntil = 종합 은총 만료 시간
+
+	.@now = gettimetick(2);
+
+	if (NeedGraceTradeUntil > .@now || NeedGracePackageUntil > .@now) {
+		if (!NEED_TRADE_GRACE_ACTIVE) {
+			NEED_TRADE_GRACE_ACTIVE = 1;
+			NEED_TRADE_GRACE_TEMP_DISCOUNT = 0;
+			NEED_TRADE_GRACE_TEMP_OVERCHARGE = 0;
+		}
+
+		// MC_DISCOUNT = 디스카운트
+		// 이미 10레벨 이상이면 건드리지 않음
+		if (getskilllv(38) < 10) {		
+			skill 38, 10, 1;
+			NEED_TRADE_GRACE_TEMP_DISCOUNT = 1;
+			dispbottom "[거래 은총] 디스카운트, 오버챠지 스킬이 적용되었습니다.";
+		}
+
+		// MC_OVERCHARGE = 오버챠지
+		// 이미 10레벨 이상이면 건드리지 않음
+		if (getskilllv(37) < 10) {
+			skill 37, 10, 1;
+			NEED_TRADE_GRACE_TEMP_OVERCHARGE = 1;
+		}
+
+		return;
+	}
+
+	// 거래 은총 기간이 끝난 경우
+	if (NEED_TRADE_GRACE_ACTIVE) {
+
+		// 은총으로 임시 지급했던 스킬만 제거
+		if (NEED_TRADE_GRACE_TEMP_DISCOUNT)
+			skill "MC_DISCOUNT", 0, 1;
+
+		if (NEED_TRADE_GRACE_TEMP_OVERCHARGE)
+			skill "MC_OVERCHARGE", 0, 1;
+
+		NEED_TRADE_GRACE_ACTIVE = 0;
+		NEED_TRADE_GRACE_TEMP_DISCOUNT = 0;
+		NEED_TRADE_GRACE_TEMP_OVERCHARGE = 0;
+
+		dispbottom "[거래 은총] 거래 은총 이용 기간이 만료되어 스킬 효과가 제거되었습니다.";
+	}
+
+	return;
+}
+
+-	script	NeedGrace_Login	-1,{
+OnPCLoginEvent:
+	// 로그인 직후에는 스킬 지급이 씹힐 수 있으므로 5초 뒤 적용
+	addtimer 5000, strnpcinfo(3) + "::OnLoginDelay";
+	end;
+
+OnLoginDelay:
+	// 거래 은총 스킬 적용/제거
+	callfunc "F_NEED_ApplyTradeGrace";
+	end;
+}
