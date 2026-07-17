@@ -1550,6 +1550,7 @@ int32 pc_identifyall(map_session_data *sd, bool identify_item);
 
 bool pc_steal_item(map_session_data *sd,block_list *bl, uint16 skill_lv);
 
+bool need_has_trade_grace( const map_session_data* sd );
 int32 pc_modifybuyvalue( const map_session_data*, int32 orig_value );
 int32 pc_modifysellvalue( const map_session_data*,int32 orig_value );
 
