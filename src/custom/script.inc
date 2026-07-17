@@ -18,6 +18,39 @@
 //	return 0;
 //}
 
+static int32 buildin_clearmapskillunits_sub(block_list* bl, va_list ap)
+{
+	if (bl == nullptr)
+		return 0;
+
+	// 해당 캐릭터가 설치한 모든 스킬 유닛 제거
+	skill_clear_unitgroup(bl);
+	return 0;
+}
+
+BUILDIN_FUNC(clearmapskillunits)
+{
+	const char* mapname = script_getstr(st, 2);
+	int16 m = map_mapname2mapid(mapname);
+
+	if (m < 0) {
+		ShowWarning(
+			"buildin_clearmapskillunits: Unknown map '%s'.\n",
+			mapname
+		);
+		return SCRIPT_CMD_FAILURE;
+	}
+
+	// 맵에 있는 플레이어들이 설치한 지형 스킬만 제거
+	map_foreachinmap(
+		buildin_clearmapskillunits_sub,
+		m,
+		BL_PC
+	);
+
+	return SCRIPT_CMD_SUCCESS;
+}
+
 // NEED: Memorial dungeon IP daily reward limit
 BUILDIN_FUNC(instance_ip_complete)
 {

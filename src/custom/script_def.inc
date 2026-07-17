@@ -10,6 +10,8 @@
 
 //BUILDIN_DEF(example,""),
 
+BUILDIN_DEF(clearmapskillunits, "s"),
+
 BUILDIN_DEF(instance_ip_complete,"i"),
 BUILDIN_DEF(instance_ip_reward_remaining,"?"),
 BUILDIN_DEF(instance_ip_reward_limit,"?"),
