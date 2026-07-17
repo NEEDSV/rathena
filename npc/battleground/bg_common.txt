@@ -23,28 +23,34 @@
 //= 1.5 Added VIP features and created a reward function. [Euphy]
 //============================================================
 
+//============================================================
+// 전장 공용 맵에서는 스킬 사용을 금지합니다.
+// 등록된 양 팀 파티장이 입장 준비를 완료하면
+// bat_room에 있는 파티원만 전장 내부 준비 구역으로 이동합니다.
+//============================================================
+bat_room	mapflag	noskill
+
 bat_room,184,164,4	script	전장 관리인	953,{
-	switch(select("주사위 굴리기:전장 파티장 등록:전장 홍보하기:전장 인원 조정:인원 부족 완화 신청:전장 보상 설명")) {
+	switch(select("주사위 굴리기:전장 파티장 등록:전장 입장 준비:전장 홍보하기:전장 인원 조정:인원 부족 완화 신청:전장 보상 설명")) {
 	case 1:
 		callfunc "F_BG_Menu_DiceRoll";
 		close;
 	case 2:
 		callfunc "F_BG_Menu_RegisterLeader";
 		close;
-	
 	case 3:
+		callfunc "F_BG_Menu_EntryReady";
+		close;
+	case 4:
 		callfunc "F_BG_Menu_Promotion";
 		close;
-	
-	case 4:
+	case 5:
 		callfunc "F_BG_Menu_CountAdjust";
 		close;
-	
-	case 5:
+	case 6:
 		callfunc "F_BG_Menu_ShortStart";
 		close;
-		
-	case 6:
+	case 7:
 		callfunc "F_BG_Reward";
 		close;
 	}
@@ -68,6 +74,383 @@ function	script	F_BG_Reward	{
 	setdialogsize(400,400);
 	close;
 }
+//============================================================
+// 파티장 입장 준비 방식
+// - 별도의 대기실을 사용하지 않습니다.
+// - 양 팀 준비 완료 시 bat_room에 있는 참가 가능 파티원만 입장합니다.
+// - bat_room의 참가 가능 인원이 팀별 설정 인원과 일치할 때 전원 입장합니다.
+//============================================================
+function	script	F_BG_ClearEntryReady	{
+	$@BG_ENTRY_TYPE = 0;
+	$@BG_ENTRY_G_READY = 0;
+	$@BG_ENTRY_C_READY = 0;
+	$@BG_ENTRY_EXPIRE = 0;
+	$@BG_ENTRY_STARTING = 0;
+	$@BG_ENTRY_STAGE = 0;
+	return;
+}
+
+function	script	F_BG_GetBattleName$	{
+	switch(getarg(0)) {
+	case 1: return "티에라 협곡";
+	case 2: return "플라비우스";
+	case 3: return "KVM";
+	}
+	return "알 수 없는 전장";
+}
+
+//============================================================
+// 전장 자동 순환
+// 1: 티에라 협곡 -> 2: 플라비우스 -> 3: KVM -> 1 반복
+// 취소된 전장은 순서를 넘기지 않고, 정상 종료된 경우에만 다음으로 진행합니다.
+//============================================================
+function	script	F_BG_GetRotationType	{
+	if ($BG_ROTATION_TYPE < 1 || $BG_ROTATION_TYPE > 3)
+		$BG_ROTATION_TYPE = 1;
+
+	return $BG_ROTATION_TYPE;
+}
+
+function	script	F_BG_AdvanceRotation	{
+	.@completed_type = getarg(0);
+	.@current_type = callfunc("F_BG_GetRotationType");
+
+	// 이미 순서가 변경되었거나 중복 호출된 경우 무시합니다.
+	if (.@completed_type != .@current_type)
+		return;
+
+	if (.@completed_type == 1)
+		$BG_ROTATION_TYPE = 2;
+	else if (.@completed_type == 2)
+		$BG_ROTATION_TYPE = 3;
+	else
+		$BG_ROTATION_TYPE = 1;
+
+	callfunc "F_BG_ClearEntryReady";
+
+	if ($BG_ROTATION_TYPE != 1)
+	{
+		.@next_name$ = callfunc("F_BG_GetBattleName$",$BG_ROTATION_TYPE);
+		announce "[전장 안내] 다음 전장은 " + .@next_name$ + "입니다. 양 팀 파티장은 전장 관리인에게 입장 준비를 진행해주세요.",bc_all,"0x66CCFF";
+	}
+	return;
+}
+
+function	script	F_BG_IsRegisterValid	{
+	.@team$ = getarg(0);
+
+	if (.@team$ == "기욤") {
+		if ($BG_GUILLAUME_PARTY_ID <= 0 || $BG_GUILLAUME_LEADER_CID <= 0)
+			return 0;
+		if (getpartyleader($BG_GUILLAUME_PARTY_ID,2) != $BG_GUILLAUME_LEADER_CID)
+			return 0;
+		return 1;
+	}
+
+	if (.@team$ == "크루아") {
+		if ($BG_CROIX_PARTY_ID <= 0 || $BG_CROIX_LEADER_CID <= 0)
+			return 0;
+		if (getpartyleader($BG_CROIX_PARTY_ID,2) != $BG_CROIX_LEADER_CID)
+			return 0;
+		return 1;
+	}
+
+	return 0;
+}
+
+function	script	F_BG_CountEligibleParty	{
+	.@party_id = getarg(0);
+	.@original_rid = getattachedrid();
+	.@eligible = 0;
+
+	if (.@party_id <= 0)
+		return 0;
+
+	getpartymember .@party_id,1;
+	.@member_count = $@partymembercount;
+	copyarray .@cid[0],$@partymembercid[0],.@member_count;
+
+	getpartymember .@party_id,2;
+	copyarray .@aid[0],$@partymemberaid[0],.@member_count;
+
+	for (.@i = 0; .@i < .@member_count; .@i++) {
+		detachrid;
+
+		if (isloggedin(.@aid[.@i],.@cid[.@i]) && attachrid(.@aid[.@i])) {
+			if (getcharid(0) == .@cid[.@i] && strcharinfo(3) == "bat_room" && getcharid(4) == 0 && HP > 0)
+				.@eligible++;
+		}
+	}
+
+	detachrid;
+	if (.@original_rid)
+		attachrid .@original_rid;
+
+	return .@eligible;
+}
+
+function	script	F_BG_JoinPartyMembers	{
+	.@party_id = getarg(0);
+	.@bg_id = getarg(1);
+	.@map$ = getarg(2);
+	.@x = getarg(3);
+	.@y = getarg(4);
+	.@team = getarg(5);
+	.@limit = getarg(6);
+	.@original_rid = getattachedrid();
+	.@joined = 0;
+
+	if (.@party_id <= 0 || .@bg_id <= 0 || .@limit <= 0)
+		return 0;
+
+	getpartymember .@party_id,1;
+	.@member_count = $@partymembercount;
+	copyarray .@cid[0],$@partymembercid[0],.@member_count;
+
+	getpartymember .@party_id,2;
+	copyarray .@aid[0],$@partymemberaid[0],.@member_count;
+
+	.@leader_cid = getpartyleader(.@party_id,2);
+
+	// 첫 번째 순회에서 파티장을, 두 번째 순회에서 나머지 파티원을 입장시킵니다.
+	for (.@pass = 0; .@pass < 2 && .@joined < .@limit; .@pass++) {
+		for (.@i = 0; .@i < .@member_count && .@joined < .@limit; .@i++) {
+			.@target = 0;
+
+			if (.@pass == 0 && .@cid[.@i] == .@leader_cid)
+				.@target = 1;
+			else if (.@pass == 1 && .@cid[.@i] != .@leader_cid)
+				.@target = 1;
+
+			if (.@target) {
+				detachrid;
+
+				if (isloggedin(.@aid[.@i],.@cid[.@i]) && attachrid(.@aid[.@i])) {
+					if (getcharid(0) == .@cid[.@i] && strcharinfo(3) == "bat_room" && getcharid(4) == 0 && HP > 0) {
+						Bat_Team = .@team;
+
+						if (bg_join(.@bg_id,.@map$,.@x,.@y,.@cid[.@i]))
+							.@joined++;
+						else
+							Bat_Team = 0;
+					}
+				}
+			}
+		}
+	}
+
+	detachrid;
+	if (.@original_rid)
+		attachrid .@original_rid;
+
+	return .@joined;
+}
+
+function	script	F_BG_Menu_EntryReady	{
+	.@my_team$ = callfunc("F_BG_GetMyRegisteredTeam$");
+
+	if (.@my_team$ == "") {
+		mes "[전장 관리인]";
+		mes "등록된 기욤 또는 크루아 팀 파티장만 입장 준비를 할 수 있습니다.";
+		close;
+	}
+
+	if ($@TierraBG1 || $@FlaviusBG1 || $@KvM01BG || $@BG_ENTRY_STARTING) {
+		mes "[전장 관리인]";
+		mes "현재 전장이 진행 중이거나 입장 처리 중입니다.";
+		close;
+	}
+
+	.@now = gettimetick(2);
+	if ($@BG_ENTRY_TYPE && $@BG_ENTRY_EXPIRE > 0 && $@BG_ENTRY_EXPIRE < .@now) {
+		mapannounce "bat_room","[전장 안내] 입장 준비 제한시간이 지나 준비 상태가 취소되었습니다.",bc_map,"0xAAAAAA";
+		callfunc "F_BG_ClearEntryReady";
+	}
+
+	.@type = callfunc("F_BG_GetRotationType");
+	.@battle_name$ = callfunc("F_BG_GetBattleName$",.@type);
+
+	// 스크립트 리로드 등으로 이전 준비 정보가 남아 있으면 현재 순서에 맞게 초기화합니다.
+	if ($@BG_ENTRY_TYPE && $@BG_ENTRY_TYPE != .@type)
+		callfunc "F_BG_ClearEntryReady";
+
+	.@own_ready = ((.@my_team$ == "기욤") ? $@BG_ENTRY_G_READY : $@BG_ENTRY_C_READY);
+
+	mes "[전장 관리인]";
+	mes "현재 진행할 전장: ^0055FF" + .@battle_name$ + "^000000";
+	mes "전장은 티에라 → 플라비우스 → KVM 순서로 자동 진행됩니다.";
+	mes " ";
+	mes "기욤: " + ($@BG_ENTRY_G_READY ? "^00AA00준비 완료^000000" : "^777777대기 중^000000");
+	mes "크루아: " + ($@BG_ENTRY_C_READY ? "^00AA00준비 완료^000000" : "^777777대기 중^000000");
+	if ($@BG_ENTRY_TYPE)
+		mes "준비 제한시간은 최초 신청부터 120초입니다.";
+	next;
+
+	if (.@own_ready) {
+		if (select("내 준비 취소:돌아가기") == 2)
+			close;
+
+		mapannounce "bat_room","[전장 안내] " + .@my_team$ + " 팀이 입장 준비를 취소해 양 팀 준비 상태가 초기화되었습니다.",bc_map,"0xFF7777";
+		callfunc "F_BG_ClearEntryReady";
+		mes "[전장 관리인]";
+		mes "입장 준비를 취소했습니다.";
+		close;
+	}
+
+	if (select("입장 준비:돌아가기") == 2)
+		close;
+
+	switch(.@type) {
+	case 1: callfunc "F_Tierra_NormalizeCount"; break;
+	case 2: callfunc "F_Flavius_NormalizeCount"; break;
+	case 3: callfunc "F_KvM_NormalizeCount"; break;
+	}
+
+	if (.@my_team$ == "기욤") {
+		.@party_id = $BG_GUILLAUME_PARTY_ID;
+		.@need = $BG_Guillaume_Count;
+	}
+	else {
+		.@party_id = $BG_CROIX_PARTY_ID;
+		.@need = $BG_Croix_Count;
+	}
+
+	if (.@need <= 0)
+		.@need = $BG_User_Count;
+	if (.@need <= 0)
+		.@need = 10;
+
+	.@eligible = callfunc("F_BG_CountEligibleParty",.@party_id);
+
+	if (.@eligible != .@need) {
+		mes "[전장 관리인]";
+		mes "현재 전장 대기실의 참가 가능 파티원 수가 설정 인원과 일치하지 않습니다.";
+		mes "필요 인원: ^FF0000" + .@need + "명^000000";
+		mes "참가 가능: ^0055FF" + .@eligible + "명^000000";
+		mes "온라인·생존 상태이며 bat_room에 있는 파티원만 계산됩니다.";
+		close;
+	}
+
+	if (!$@BG_ENTRY_TYPE) {
+		$@BG_ENTRY_TYPE = .@type;
+		$@BG_ENTRY_EXPIRE = .@now + 120;
+	}
+
+	if (.@my_team$ == "기욤")
+		$@BG_ENTRY_G_READY = 1;
+	else
+		$@BG_ENTRY_C_READY = 1;
+
+	mapannounce "bat_room","[전장 안내] " + .@my_team$ + " 팀이 " + .@battle_name$ + " 입장 준비를 완료했습니다.",bc_map,"0x66CCFF";
+
+	if (!$@BG_ENTRY_G_READY || !$@BG_ENTRY_C_READY) {
+		mes "[전장 관리인]";
+		mes "^0055FF" + .@battle_name$ + "^000000 입장 준비가 완료되었습니다.";
+		mes "상대 팀 파티장의 준비를 기다립니다.";
+		close;
+	}
+
+	// 양쪽 준비 완료 직전에 현재 순서, 등록 상태와 실제 참가 인원을 다시 검사합니다.
+	if (callfunc("F_BG_GetRotationType") != .@type) {
+		mapannounce "bat_room","[전장 입장 실패] 전장 진행 순서가 변경되어 양 팀 준비가 취소되었습니다.",bc_map,"0xFF7777";
+		callfunc "F_BG_ClearEntryReady";
+		mes "[전장 관리인]";
+		mes "전장 진행 순서가 변경되어 준비가 취소되었습니다.";
+		close;
+	}
+
+	.@g_valid = callfunc("F_BG_IsRegisterValid","기욤");
+	.@c_valid = callfunc("F_BG_IsRegisterValid","크루아");
+	if (!.@g_valid || !.@c_valid) {
+		mapannounce "bat_room","[전장 입장 실패] 파티장 또는 파티 등록 정보가 변경되었습니다. 기욤: " + (.@g_valid ? "정상" : "확인 필요") + ", 크루아: " + (.@c_valid ? "정상" : "확인 필요"),bc_map,"0xFF7777";
+		callfunc "F_BG_ClearEntryReady";
+		mes "[전장 관리인]";
+		mes "파티장 또는 파티 등록 정보가 변경되어 준비가 취소되었습니다.";
+		close;
+	}
+
+	.@g_count = callfunc("F_BG_CountEligibleParty",$BG_GUILLAUME_PARTY_ID);
+	.@c_count = callfunc("F_BG_CountEligibleParty",$BG_CROIX_PARTY_ID);
+
+	if (.@g_count != $BG_Guillaume_Count || .@c_count != $BG_Croix_Count) {
+		mapannounce "bat_room","[전장 입장 실패] 참가 가능 인원이 설정과 다릅니다. 기욤 " + .@g_count + "/" + $BG_Guillaume_Count + "명, 크루아 " + .@c_count + "/" + $BG_Croix_Count + "명",bc_map,"0xFF7777";
+		mapannounce "bat_room","[전장 안내] 온라인 상태이며 전장 대기실에 있는 파티원만 입장 인원으로 계산됩니다.",bc_map,"0xFFCC66";
+		callfunc "F_BG_ClearEntryReady";
+		mes "[전장 관리인]";
+		mes "양 팀 준비 완료 직전에 참가 인원이 설정과 달라져 준비가 취소되었습니다.";
+		mes "기욤: " + .@g_count + "/" + $BG_Guillaume_Count + "명";
+		mes "크루아: " + .@c_count + "/" + $BG_Croix_Count + "명";
+		close;
+	}
+
+	$@BG_ENTRY_STARTING = 1;
+	$@BG_ENTRY_STAGE = 1;
+	mapannounce "bat_room","[전장 안내] 양 팀의 " + .@battle_name$ + " 입장 준비가 완료되었습니다. 참가 파티원을 전장으로 이동합니다.",bc_map,"0x00FF99";
+
+	mes "[전장 관리인]";
+	mes "양 팀의 입장 준비가 완료되었습니다.";
+	mes "전장 대기실에 있는 참가 파티원을 이동합니다.";
+	close2;
+
+	switch(.@type) {
+	case 1: donpcevent "티에라 진행#bat_a01::OnPartyReady"; break;
+	case 2: donpcevent "start#bat_b01::OnPartyReady"; break;
+	case 3: donpcevent "KvM01_BG::OnPartyReady"; break;
+	default:
+		mapannounce "bat_room","[전장 입장 실패] 알 수 없는 전장 순서값입니다. 관리자에게 문의해주세요.",bc_map,"0xFF7777";
+		callfunc "F_BG_ClearEntryReady";
+		break;
+	}
+
+	// 이벤트 이름 불일치나 예기치 않은 조기 종료로 입장 처리가 멈추는 경우를 감시합니다.
+	if ($@BG_ENTRY_STARTING)
+		donpcevent "전장 입장 처리 감시#batroom::OnCheck";
+	end;
+}
+
+-	script	전장 입장 처리 감시#batroom	-1,{
+	end;
+
+OnCheck:
+	stopnpctimer;
+	initnpctimer;
+	end;
+
+OnTimer10000:
+	stopnpctimer;
+
+	if (!$@BG_ENTRY_STARTING)
+		end;
+
+	.@type = $@BG_ENTRY_TYPE;
+	.@battle_name$ = callfunc("F_BG_GetBattleName$",.@type);
+	switch($@BG_ENTRY_STAGE) {
+	case 1: .@stage$ = "전장 이벤트 호출"; break;
+	case 2: .@stage$ = "파티 등록 및 참가 인원 재검사"; break;
+	case 3: .@stage$ = "BG 팀 생성"; break;
+	case 4: .@stage$ = "파티원 BG 가입 및 이동"; break;
+	default: .@stage$ = "알 수 없는 단계"; break;
+	}
+	mapannounce "bat_room","[전장 입장 실패] " + .@battle_name$ + " 입장 처리가 완료되지 않았습니다. 중단 위치: " + .@stage$ + " (" + $@BG_ENTRY_STAGE + ")",bc_map,"0xFF7777";
+	mapannounce "bat_room","[전장 안내] 준비 상태를 초기화했습니다. 양 팀 파티장은 인원과 등록 상태를 확인한 뒤 다시 준비해주세요.",bc_map,"0xFFCC66";
+
+	// 부분적으로 생성된 전장 팀까지 안전하게 정리합니다.
+	switch(.@type) {
+	case 1: donpcevent "티에라 진행#bat_a01::OnCancel"; break;
+	case 2: donpcevent "start#bat_b01::OnCancel"; break;
+	case 3: donpcevent "KvM01_BG::OnCancel"; break;
+	default: callfunc "F_BG_ClearEntryReady"; break;
+	}
+	end;
+}
+
+-	script	전장 입장 준비 초기화#batroom	-1,{
+OnInit:
+	callfunc "F_BG_ClearEntryReady";
+	callfunc "F_BG_GetRotationType";
+	end;
+}
+
 //============================================================
 // 전장 관리 메뉴 - 주사위 굴리기
 // 기욤 / 크루아에 등록된 현재 파티장만 가능
@@ -274,6 +657,9 @@ function	script	F_BG_UnregisterMyLeader	{
 		.@removed = 1;
 	}
 
+	if (.@removed)
+		callfunc "F_BG_ClearEntryReady";
+
 	if (!.@removed) {
 		mes "[전장 관리인]";
 		mes "현재 등록된 전장 파티장 정보가 없습니다.";
@@ -291,6 +677,8 @@ function	script	F_BG_UnregisterMyLeader	{
 // 전장 파티장 등록 전체 초기화
 //============================================================
 function	script	F_BG_ClearLeaderRegister	{
+	callfunc "F_BG_ClearEntryReady";
+
 	$BG_GUILLAUME_LEADER_CID = 0;
 	$BG_GUILLAUME_LEADER_AID = 0;
 	$BG_GUILLAUME_PARTY_ID = 0;
@@ -432,6 +820,7 @@ function	script	F_BG_Menu_CountAdjust	{
 	}
 
 	$BG_User_Count = .@count;
+	callfunc "F_BG_ClearEntryReady";
 
 	// 팀별 실제 요구 인원 초기화
 	$BG_Guillaume_Count = $BG_User_Count;
@@ -445,9 +834,6 @@ function	script	F_BG_Menu_CountAdjust	{
 	$BG_SHORT_REQ_TIME = 0;
 
 	announce "[전장 안내] 전장 시작 인원이 " + $BG_User_Count + " vs " + $BG_User_Count + " 으로 조정되었습니다.", bc_map;
-	donpcevent "티에라 대기실 갱신#bat_a01::OnRefresh";
-	donpcevent "플라비우스 대기실 갱신#bat_b01::OnRefresh";
-	donpcevent "KVM 대기실 갱신#bat_c01::OnRefresh";
 	mes "[전장 관리인]";
 	mes "전장 시작 인원이 조정되었습니다.";
 	mes "기본 필요 인원: ^0055FF" + $BG_User_Count + "^000000명";
@@ -529,6 +915,8 @@ function	script	F_BG_Menu_ShortStart	{
 				close;
 			}
 
+			callfunc "F_BG_ClearEntryReady";
+
 			announce "[전장 안내] " + $BG_SHORT_TARGET_TEAM$ + " 팀 파티장이 인원 부족 완화 시작을 승인했습니다.", bc_map;
 			announce "[전장 안내] " + $BG_SHORT_REQ_TEAM$ + " 팀은 필요 인원이 1명 완화됩니다.", bc_map;
 
@@ -537,10 +925,6 @@ function	script	F_BG_Menu_ShortStart	{
 			$BG_SHORT_TARGET_TEAM$ = "";
 			$BG_SHORT_REQ_NAME$ = "";
 			$BG_SHORT_REQ_TIME = 0;
-			
-			donpcevent "티에라 대기실 갱신#bat_a01::OnRefresh";
-			donpcevent "플라비우스 대기실 갱신#bat_b01::OnRefresh";
-			donpcevent "KVM 대기실 갱신#bat_c01::OnRefresh";
 
 			mes "[전장 관리인]";
 			mes "인원 부족 완화 신청을 승인했습니다.";
@@ -1011,6 +1395,6 @@ OnTouch:
 	mes "[전장 이용 안내]";
 	mes "동의가 완료되었습니다.";
 	mes "";
-	mes "이제 전장 대기실을 이용할 수 있습니다.";
+	mes "이제 전장 공용 맵에서 파티장 입장 준비 기능을 이용할 수 있습니다.";
 	close;
 }
