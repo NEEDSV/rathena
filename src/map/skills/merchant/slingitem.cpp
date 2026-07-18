@@ -81,6 +81,7 @@ SkillSlingItemAttack::SkillSlingItemAttack() : WeaponSkillImpl(GN_SLINGITEM_RANG
 void SkillSlingItemAttack::applyAdditionalEffects(block_list *src, block_list *target, uint16 skill_lv, t_tick tick, int32 attack_type, enum damage_lv dmg_lv) const {
 	status_data* sstatus = status_get_status_data(*src);
 	status_data* tstatus = status_get_status_data(*target);
+	status_change* tsc = status_get_sc(target);
 	map_session_data* sd = BL_CAST(BL_PC, src);
 
 	if( sd ) {
@@ -96,7 +97,8 @@ void SkillSlingItemAttack::applyAdditionalEffects(block_list *src, block_list *t
 				{
 					uint16 duration = (battle_config.banana_bomb_duration ? battle_config.banana_bomb_duration : 1000 * sd->status.job_level / 4);
 
-					sc_start(src,target, SC_BANANA_BOMB_SITDOWN, status_get_lv(src) + sd->status.job_level + sstatus->dex / 6 - status_get_lv(target) - tstatus->agi / 4 - tstatus->luk / 5, skill_lv, duration);
+					if( !tsc || !tsc->getSCE(SC_BANANA_BOMB_SITDOWN) )
+						sc_start(src,target, SC_BANANA_BOMB_SITDOWN, status_get_lv(src) + sd->status.job_level + sstatus->dex / 6 - status_get_lv(target) - tstatus->agi / 4 - tstatus->luk / 5, skill_lv, duration);
 					sc_start(src,target, SC_BANANA_BOMB, 100, skill_lv, 30000);
 					break;
 				}
