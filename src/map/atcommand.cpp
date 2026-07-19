@@ -6612,7 +6612,8 @@ ACMD_FUNC(storematch)
 	for (int32 i = MAX_INVENTORY - 1; i >= 0; i--) {
 		struct item& inv_item = sd->inventory.u.items_inventory[i];
 
-		if (inv_item.amount <= 0)
+		// Items in the personal (favorite) inventory tab must only be moved manually.
+		if (inv_item.amount <= 0 || inv_item.favorite != 0)
 			continue;
 
 		std::shared_ptr<item_data> id = item_db.find(inv_item.nameid);
