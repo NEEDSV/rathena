@@ -14001,7 +14001,7 @@ int32 skill_elementalanalysis( map_session_data& sd, int32 n, uint16 skill_lv, u
 	for( int32 i = 0; i < n; i++ ) {
 		t_itemid nameid, product;
 		int32 add_amount, del_amount, idx;
-		struct item tmp_item;
+		struct item source_item, tmp_item;
 
 		idx = item_list[i*2+0]-2;
 
@@ -14014,11 +14014,17 @@ int32 skill_elementalanalysis( map_session_data& sd, int32 n, uint16 skill_lv, u
 		if( skill_lv == 2 )
 			del_amount -= (del_amount % 10);
 		add_amount = (skill_lv == 1) ? del_amount * (5 + rnd()%5) : del_amount / 10 ;
+		if( del_amount <= 0 || add_amount <= 0 ) {
+			clif_skill_fail( sd, SO_EL_ANALYSIS );
+			return 1;
+		}
 
 		if( (nameid = sd.inventory.u.items_inventory[idx].nameid) <= 0 || del_amount > sd.inventory.u.items_inventory[idx].amount ) {
 			clif_skill_fail( sd, SO_EL_ANALYSIS );
 			return 1;
 		}
+
+		source_item = sd.inventory.u.items_inventory[idx];
 
 		switch( nameid ) {
 			// Level 1
@@ -14036,12 +14042,12 @@ int32 skill_elementalanalysis( map_session_data& sd, int32 n, uint16 skill_lv, u
 				return 1;
 		}
 
-		if( pc_delitem(&sd,idx,del_amount,0,1,LOG_TYPE_CONSUME) ) {
-			clif_skill_fail( sd, SO_EL_ANALYSIS );
-			return 1;
-		}
-
 		if( skill_lv == 2 && rnd()%100 < 25 ) {	// At level 2 have a fail chance. You loose your items if it fails.
+			if( pc_delitem(&sd,idx,del_amount,0,1,LOG_TYPE_CONSUME) ) {
+				clif_skill_fail( sd, SO_EL_ANALYSIS );
+				return 1;
+			}
+
 			clif_skill_fail( sd, SO_EL_ANALYSIS );
 			return 1;
 		}
@@ -14052,11 +14058,73 @@ int32 skill_elementalanalysis( map_session_data& sd, int32 n, uint16 skill_lv, u
 		tmp_item.identify = 1;
 
 		if( tmp_item.amount ) {
-			unsigned char flag = pc_additem(&sd,&tmp_item,tmp_item.amount,LOG_TYPE_CONSUME);
-			if( flag != 0 ) {
-				clif_additem(&sd,0,0,flag);
-				if( battle_config.skill_drop_items_full )
-					map_addflooritem(&tmp_item,tmp_item.amount,sd.m,sd.x,sd.y,0,0,0,4,0);
+			const std::shared_ptr<item_data> product_data = item_db.find(product);
+			const item_data* source_data = sd.inventory_data[idx];
+			e_additem_result add_result = ADDITEM_SUCCESS;
+			int32 free_slots = pc_inventoryblank(&sd);
+			bool stacks = false;
+
+			if( product_data == nullptr || source_data == nullptr || add_amount > MAX_AMOUNT ) {
+				add_result = ADDITEM_OVERAMOUNT;
+			} else if( product_data->stack.inventory && add_amount > product_data->stack.amount ) {
+				add_result = ADDITEM_STACKLIMIT;
+			} else {
+				const int64 resulting_weight = static_cast<int64>(sd.weight)
+					- static_cast<int64>(source_data->weight) * del_amount
+					+ static_cast<int64>(product_data->weight) * add_amount;
+
+				if( resulting_weight > sd.max_weight ) {
+					add_result = ADDITEM_OVERWEIGHT;
+				} else if( itemdb_isstackable2(product_data.get()) && !product_data->flag.guid ) {
+					for( int32 j = 0; j < MAX_INVENTORY; j++ ) {
+						const item& inventory_item = sd.inventory.u.items_inventory[j];
+
+						if( inventory_item.nameid == product && inventory_item.bound == tmp_item.bound &&
+							inventory_item.expire_time == 0 && inventory_item.unique_id == tmp_item.unique_id &&
+							memcmp(&inventory_item.card, &tmp_item.card, sizeof(tmp_item.card)) == 0 ) {
+							stacks = true;
+							if( j >= sd.status.inventory_slots || add_amount > MAX_AMOUNT - inventory_item.amount ||
+								(product_data->stack.inventory && add_amount > product_data->stack.amount - inventory_item.amount) ) {
+								add_result = ADDITEM_OVERAMOUNT;
+							}
+							break;
+						}
+					}
+				}
+
+				if( add_result == ADDITEM_SUCCESS && !stacks ) {
+					if( source_item.amount == del_amount && idx < sd.status.inventory_slots )
+						free_slots++;
+
+					if( free_slots < product_data->inventorySlotNeeded(add_amount) )
+						add_result = ADDITEM_OVERITEM;
+				}
+			}
+
+			if( add_result != ADDITEM_SUCCESS ) {
+				clif_additem(&sd,0,0,add_result);
+				clif_skill_fail( sd, SO_EL_ANALYSIS );
+				return 1;
+			}
+
+			if( pc_delitem(&sd,idx,del_amount,0,1,LOG_TYPE_CONSUME) ) {
+				clif_skill_fail( sd, SO_EL_ANALYSIS );
+				return 1;
+			}
+
+			add_result = pc_additem(&sd,&tmp_item,tmp_item.amount,LOG_TYPE_CONSUME);
+			if( add_result != ADDITEM_SUCCESS ) {
+				const e_additem_result restore_result = pc_additem(&sd,&source_item,del_amount,LOG_TYPE_CONSUME);
+
+				if( restore_result != ADDITEM_SUCCESS ) {
+					ShowError("%s: Failed to restore item %u x%d to character %d after elemental analysis add failure (%d, restore %d).\n",
+						__func__, source_item.nameid, del_amount, sd.status.char_id, add_result, restore_result);
+					map_addflooritem(&source_item,del_amount,sd.m,sd.x,sd.y,0,0,0,4,0);
+				}
+
+				clif_additem(&sd,0,0,add_result);
+				clif_skill_fail( sd, SO_EL_ANALYSIS );
+				return 1;
 			}
 		}
 
