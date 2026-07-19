@@ -25438,10 +25438,14 @@ void clif_parse_macro_detector_download_ack(int32 fd, map_session_data *sd) {
 #if PACKETVER >= 20160316
 	nullpo_retv(sd);
 
-	if (sd->macro_detect.retry != 0) {
+	if (sd->macro_detect.retry != 0 && sd->macro_detect.phase == s_macro_detect::e_macro_detect_phase::ACTIVE &&
+		!sd->macro_detect.answer_window_shown) {
 		//const PACKET_CZ_COMPLETE_APPLY_MACRO_DETECTOR_CAPTCHA* p = reinterpret_cast<PACKET_CZ_COMPLETE_APPLY_MACRO_DETECTOR_CAPTCHA*>( RFIFOP( fd, 0 ) );
 
 		clif_macro_detector_request_show(*sd);
+		sd->macro_detect.answer_window_shown = true;
+		if (sd->macro_detect.timer != INVALID_TIMER)
+			addtick_timer(sd->macro_detect.timer, gettick() + battle_config.macro_detection_timeout);
 	}
 #endif
 }

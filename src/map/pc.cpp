@@ -82,6 +82,7 @@ static constexpr t_itemid need_package_grace_ticket = 399904;
 int32 pc_split_atoui(char* str, uint32* val, char sep, int32 max);
 static inline bool pc_attendance_rewarded_today( map_session_data* sd );
 static void pc_macro_detect_log(map_session_data &sd, const char *event, int32 retry_left, const char *punishment = "", int32 punishment_time = 0);
+static TIMER_FUNC(pc_macro_detector_display_timer);
 static TIMER_FUNC(pc_macro_detector_pending_timer);
 
 #define PVP_CALCRANK_INTERVAL 1000	// PVP calculation interval
@@ -2134,6 +2135,7 @@ bool pc_authok(map_session_data *sd, uint32 login_id2, time_t expiration_time, i
 	sd->respawn_tid = INVALID_TIMER;
 	sd->tid_queue_active = INVALID_TIMER;
 	sd->macro_detect.timer = INVALID_TIMER;
+	sd->macro_detect.display_timer = INVALID_TIMER;
 
 	sd->skill_keep_using.tid = INVALID_TIMER;
 	sd->skill_keep_using.skill_id = 0;
@@ -15864,6 +15866,53 @@ static void pc_macro_detector_set_pending(map_session_data &sd) {
 	pc_setglobalreg(&sd, add_str(need_macro_detect_reporter_var), sd.macro_detect.reporter_aid);
 }
 
+static constexpr uint16 macro_detector_block_actions = PCBLOCK_ALL & ~PCBLOCK_IMMUNE;
+
+static void pc_macro_detector_restore_actions(map_session_data &sd) {
+	sd.state.block_action &= ~sd.macro_detect.blocked_actions;
+	sd.macro_detect.blocked_actions = 0;
+}
+
+static void pc_macro_detector_reset_runtime(map_session_data &sd) {
+	pc_macro_detector_restore_actions(sd);
+	sd.macro_detect = {};
+	sd.macro_detect.timer = INVALID_TIMER;
+	sd.macro_detect.display_timer = INVALID_TIMER;
+}
+
+static void pc_macro_detector_cancel(map_session_data &sd, const char *reason, bool clear_persistent) {
+	if (sd.macro_detect.display_timer != INVALID_TIMER)
+		delete_timer(sd.macro_detect.display_timer, pc_macro_detector_display_timer);
+	if (sd.macro_detect.timer != INVALID_TIMER)
+		delete_timer(sd.macro_detect.timer, pc_macro_detector_timeout);
+
+	pc_macro_detect_log(sd, "captcha_cancelled", sd.macro_detect.retry, reason);
+	if (clear_persistent)
+		pc_macro_detector_clear_pending(sd);
+	pc_macro_detector_reset_runtime(sd);
+}
+
+static void pc_macro_detector_cancel_and_requeue(map_session_data &sd, const char *reason) {
+	const int32 id = sd.id;
+
+	// Keep the persistent unresolved flag, but release this map/session-specific state.
+	pc_macro_detector_cancel(sd, reason, false);
+	add_timer(gettick() + 1000, pc_macro_detector_pending_timer, id, 0);
+}
+
+static bool pc_macro_detector_session_ready(const map_session_data &sd) {
+	return sd.state.active && sd.prev != nullptr && !sd.state.connect_new && !sd.state.warping &&
+		!sd.state.changemap && session_isActive(sd.fd);
+}
+
+static void pc_macro_detector_stop_actions(map_session_data &sd) {
+	sd.macro_detect.blocked_actions |= macro_detector_block_actions & ~sd.state.block_action;
+	sd.state.block_action |= macro_detector_block_actions;
+	unit_stop_attack(&sd);
+	unit_stop_walking(&sd, USW_FIXPOS | USW_RELEASE_TARGET);
+	unit_skillcastcancel(&sd, 0);
+}
+
 /**
  * Increase the unresolved disconnect counter for this character.
  * @param sd: Player data
@@ -16045,18 +16094,14 @@ static void pc_macro_punishment(map_session_data &sd, e_macro_detect_status styp
 	// Delete the timer
 	if (sd.macro_detect.timer != INVALID_TIMER)
 		delete_timer(sd.macro_detect.timer, pc_macro_detector_timeout);
+	if (sd.macro_detect.display_timer != INVALID_TIMER)
+		delete_timer(sd.macro_detect.display_timer, pc_macro_detector_display_timer);
 
 	int32 reporter_aid = sd.macro_detect.reporter_aid;
 	pc_macro_detect_log(sd, "punishment", sd.macro_detect.retry, (battle_config.macro_detection_punishment == 0 ? "ban" : "jail"), duration);
 	pc_macro_detector_clear_pending(sd);
 
-	// Clear the macro detect data
-	sd.macro_detect = {};
-	sd.macro_detect.timer = INVALID_TIMER;
-
-	// Unblock all actions for the player
-	sd.state.block_action &= ~PCBLOCK_ALL;
-	sd.state.block_action &= ~PCBLOCK_IMMUNE;
+	pc_macro_detector_reset_runtime(sd);
 
 	if (battle_config.macro_detection_punishment == 0) { // Ban
 		clif_macro_detector_status(sd, stype);
@@ -16140,12 +16185,73 @@ void pc_macro_captcha_register_upload(map_session_data &sd, uint16 upload_size, 
 }
 
 /**
+ * Display a pending captcha after combat packets have had time to settle.
+ * The timer stores only the player's object id and resolves the session again.
+ */
+static TIMER_FUNC(pc_macro_detector_display_timer) {
+	map_session_data *sd = map_id2sd(id);
+
+	if (sd == nullptr)
+		return 0;
+	if (sd->macro_detect.display_timer != tid || sd->macro_detect.phase != s_macro_detect::e_macro_detect_phase::PENDING)
+		return 0;
+
+	sd->macro_detect.display_timer = INVALID_TIMER;
+
+	if (!pc_macro_detector_session_ready(*sd)) {
+		pc_macro_detector_cancel_and_requeue(*sd, "session_not_ready");
+		return 0;
+	}
+	if (pc_isdead(sd)) {
+		pc_macro_detector_cancel_and_requeue(*sd, "dead");
+		return 0;
+	}
+	if (sd->mapindex != sd->macro_detect.mapindex) {
+		pc_macro_detector_cancel_and_requeue(*sd, "map_changed");
+		return 0;
+	}
+	if (sd->macro_detect.cd == nullptr || sd->macro_detect.retry <= 0) {
+		pc_macro_detector_cancel(*sd, "invalid_state", true);
+		return 0;
+	}
+
+	const t_tick now = gettick();
+	const t_tick quiet_window = battle_config.macro_checker_display_delay;
+	const bool recently_damaged = sd->ud.dmg_tick != 0 && sd->ud.dmg_tick != sd->macro_detect.last_damage_tick &&
+		DIFF_TICK(now, sd->ud.dmg_tick) <= quiet_window;
+
+	if (recently_damaged && sd->macro_detect.display_retry < battle_config.macro_checker_damage_retry_count) {
+		sd->macro_detect.last_damage_tick = sd->ud.dmg_tick;
+		++sd->macro_detect.display_retry;
+		sd->macro_detect.display_timer = add_timer(now + battle_config.macro_checker_display_delay,
+			pc_macro_detector_display_timer, sd->id, 0);
+		return 0;
+	}
+
+	// Damage can cancel casts and adjust movement. Normalize once more immediately before the UI packets.
+	pc_macro_detector_stop_actions(*sd);
+	sd->macro_detect.phase = s_macro_detect::e_macro_detect_phase::ACTIVE;
+	sd->macro_detect.display_tick = now;
+	sd->macro_detect.answer_window_shown = false;
+
+	clif_macro_detector_request(*sd);
+	// This also acts as a download-ack watchdog. The first ACK resets it so the
+	// complete answer timeout starts when the input window is actually sent.
+	sd->macro_detect.timer = add_timer(now + battle_config.macro_detection_timeout,
+		pc_macro_detector_timeout, sd->id, 0);
+	pc_macro_detect_log(*sd, "captcha_display", sd->macro_detect.retry);
+	return 0;
+}
+
+/**
  * Timer attached to target player with attempts to confirm captcha.
  */
 TIMER_FUNC(pc_macro_detector_timeout) {
 	map_session_data *sd = map_id2sd(id);
 
 	nullpo_ret(sd);
+	if (sd->macro_detect.timer != tid || sd->macro_detect.phase != s_macro_detect::e_macro_detect_phase::ACTIVE)
+		return 0;
 
 	// Remove the current timer
 	sd->macro_detect.timer = INVALID_TIMER;
@@ -16160,6 +16266,7 @@ TIMER_FUNC(pc_macro_detector_timeout) {
 	} else {
 		// Update the client
 		clif_macro_detector_request_show(*sd);
+		sd->macro_detect.answer_window_shown = true;
 
 		// Start a new timer
 		sd->macro_detect.timer = add_timer(gettick() + battle_config.macro_detection_timeout, pc_macro_detector_timeout, sd->id, 0);
@@ -16178,7 +16285,8 @@ void pc_macro_detector_process_answer(map_session_data &sd, const char captcha_a
 	const std::shared_ptr<s_captcha_data> cd = sd.macro_detect.cd;
 
 	// Has no captcha request
-	if (cd == nullptr) {
+	if (cd == nullptr || sd.macro_detect.phase != s_macro_detect::e_macro_detect_phase::ACTIVE ||
+		!sd.macro_detect.answer_window_shown) {
 		return;
 	}
 
@@ -16191,13 +16299,7 @@ void pc_macro_detector_process_answer(map_session_data &sd, const char captcha_a
 		pc_macro_detect_log(sd, "success", retry_left);
 		pc_macro_detector_clear_pending(sd);
 
-		// Clear the macro detect data
-		sd.macro_detect = {};
-		sd.macro_detect.timer = INVALID_TIMER;
-
-		// Unblock all actions for the player
-		sd.state.block_action &= ~PCBLOCK_ALL;
-		sd.state.block_action &= ~PCBLOCK_IMMUNE;
+		pc_macro_detector_reset_runtime(sd);
 
 		// Assign temporary macro variable to check failures
 		pc_setreg(&sd, add_str("@captcha_retries"), battle_config.macro_detection_retry - retry_left);
@@ -16233,6 +16335,12 @@ void pc_macro_detector_process_answer(map_session_data &sd, const char captcha_a
  * @param sd: Player data
  */
 void pc_macro_detector_disconnect(map_session_data &sd) {
+	// Delete a pending display timer as well as an active answer timer.
+	if (sd.macro_detect.display_timer != INVALID_TIMER) {
+		delete_timer(sd.macro_detect.display_timer, pc_macro_detector_display_timer);
+		sd.macro_detect.display_timer = INVALID_TIMER;
+	}
+
 	// Delete the timeout timer
 	if (sd.macro_detect.timer != INVALID_TIMER) {
 		delete_timer(sd.macro_detect.timer, pc_macro_detector_timeout);
@@ -16293,25 +16401,36 @@ void pc_macro_reporter_area_select(map_session_data &sd, const int16 x, const in
 void pc_macro_reporter_process(map_session_data &sd, int32 reporter_account_id) {
 	if (captcha_db.empty())
 		return;
+	if (sd.macro_detect.phase != s_macro_detect::e_macro_detect_phase::NONE || sd.macro_detect.cd != nullptr ||
+		sd.macro_detect.timer != INVALID_TIMER || sd.macro_detect.display_timer != INVALID_TIMER)
+		return;
+	if (!pc_macro_detector_session_ready(sd))
+		return;
 
 	// Pick a random image from the database.
 	const std::shared_ptr<s_captcha_data> cd = captcha_db.random();
+	if (cd == nullptr)
+		return;
 
-	// Set macro detection data.
+	// Set pending data before stopping actions so concurrent triggers cannot create a second timer.
 	sd.macro_detect.cd = cd;
 	sd.macro_detect.reporter_aid = reporter_account_id;
 	sd.macro_detect.retry = battle_config.macro_detection_retry;
+	sd.macro_detect.phase = s_macro_detect::e_macro_detect_phase::PENDING;
+	sd.macro_detect.trigger_tick = gettick();
+	sd.macro_detect.display_tick = 0;
+	sd.macro_detect.last_damage_tick = sd.ud.dmg_tick;
+	sd.macro_detect.mapindex = sd.mapindex;
+	sd.macro_detect.display_retry = 0;
+	sd.macro_detect.answer_window_shown = false;
 	pc_macro_detector_set_pending(sd);
 	pc_macro_detect_log(sd, "captcha_start", sd.macro_detect.retry);
 
-	// Block all actions for the target player.
-	sd.state.block_action |= (PCBLOCK_ALL | PCBLOCK_IMMUNE);
+	pc_macro_detector_stop_actions(sd);
 
-	// Open macro detect client side.
-	clif_macro_detector_request(sd);
-
-	// Start the timeout timer.
-	sd.macro_detect.timer = add_timer(gettick() + battle_config.macro_detection_timeout, pc_macro_detector_timeout, sd.id, 0);
+	// Do not send combat/movement cancellation and captcha UI packets in the same tick.
+	sd.macro_detect.display_timer = add_timer(sd.macro_detect.trigger_tick + battle_config.macro_checker_display_delay,
+		pc_macro_detector_display_timer, sd.id, 0);
 }
 
 /**
@@ -16325,8 +16444,12 @@ static TIMER_FUNC(pc_macro_detector_pending_timer) {
 	if (pc_readglobalreg(sd, add_str(need_macro_detect_pending_var)) <= 0)
 		return 0;
 
-	if (sd->macro_detect.cd != nullptr)
+	if (sd->macro_detect.cd != nullptr || sd->macro_detect.phase != s_macro_detect::e_macro_detect_phase::NONE)
 		return 0;
+	if (!pc_macro_detector_session_ready(*sd) || pc_isdead(sd)) {
+		add_timer(gettick() + 1000, pc_macro_detector_pending_timer, sd->id, 0);
+		return 0;
+	}
 
 	int32 reporter_aid = static_cast<int32>(pc_readglobalreg(sd, add_str(need_macro_detect_reporter_var)));
 
@@ -16372,7 +16495,10 @@ bool pc_macro_read_captcha_db_loadbmp(const std::string &filepath, std::shared_p
 	// Compress the data into the destination
 	unsigned long com_size = sizeof(cd->image_data);
 
-	encode_zip(cd->image_data, &com_size, bmp_data, CAPTCHA_BMP_SIZE);
+	if (encode_zip(cd->image_data, &com_size, bmp_data, CAPTCHA_BMP_SIZE) != 0 || com_size == 0 || com_size > sizeof(cd->image_data)) {
+		ShowError("%s: Failed to compress captcha BMP \"%s\"\n", __func__, filepath.c_str());
+		return false;
+	}
 	cd->image_size = static_cast<int16>(com_size);
 
 	return true;

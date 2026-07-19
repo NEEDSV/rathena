@@ -8930,6 +8930,8 @@ static const struct _battle_data {
 	{ "macro_detection_punishment_time",    &battle_config.macro_detection_punishment_time, 0,      0,      INT_MAX,        },
 	{ "macro_detection_punish_disconnect",  &battle_config.macro_detection_punish_disconnect, 1,    0,      1,              },
 	{ "macro_detection_disconnect_retry",   &battle_config.macro_detection_disconnect_retry, 3,     0,      INT_MAX,        },
+	{ "macro_checker_display_delay",         &battle_config.macro_checker_display_delay,      300,   0,      5000,           },
+	{ "macro_checker_damage_retry_count",    &battle_config.macro_checker_damage_retry_count, 3,     0,      20,             },
 	{ "macrochecker_delay",                 &battle_config.macrochecker_delay,              600000, 0,      INT_MAX,        },
 	{ "need_macro_hunt_check_rate",         &battle_config.need_macro_hunt_check_rate,      10,     0,      10000,          },
 	{ "need_macro_hunt_delay",              &battle_config.need_macro_hunt_delay,           3600000, 0,      INT_MAX,        },

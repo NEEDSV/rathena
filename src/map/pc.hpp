@@ -159,7 +159,20 @@ struct s_macro_detect {
 	std::shared_ptr<s_captcha_data> cd;
 	int32 reporter_aid;
 	int32 retry;
-	int32 timer;
+	int32 timer; ///< Answer timeout timer (ACTIVE only)
+	int32 display_timer; ///< Delayed captcha display timer (PENDING only)
+	t_tick trigger_tick;
+	t_tick display_tick;
+	t_tick last_damage_tick;
+	uint16 mapindex;
+	uint16 blocked_actions; ///< Action bits added by the macro detector
+	uint8 display_retry;
+	bool answer_window_shown;
+	enum class e_macro_detect_phase : uint8 {
+		NONE = 0,
+		PENDING,
+		ACTIVE,
+	} phase;
 };
 
 struct s_need_macro_hunt {
