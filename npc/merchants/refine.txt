@@ -22,30 +22,284 @@
 // Weapon/Armor Refiners
 //============================================================
 lasa_in01,161,67,6	script	홀그렌	4_M_03,{
-	if( getbattleflag( "feature.refineui" ) ){
-		mes "[홀그렌]";
-		mes "저는 무기와 장비를 제련할 수 있는 대장장이입니다.";
-		mes "더 다듬고 싶은 항목이 있으신가요?";
-		next;
-		switch(select("제련","제련권 사용"))
-		{
-			case 1:
-					close2;
-					refineui();
-					end;
-			case 2:
-					callfunc "F_RefineTime";
-		}
-		
+	mes "[홀그렌]";
+	mes "저는 무기와 장비를 제련할 수 있는 대장장이입니다.";
+	mes "어떤 제련 서비스를 이용하시겠습니까?";
+	next;
 
-	}else{
-		callfunc "refinemain","Hollgrehenn",0;
-		end;
+	switch(select("일반 제련","안전 제련","제련권 사용","취소"))
+	{
+		case 1:
+			if (getbattleflag("feature.refineui")) {
+				close2;
+				refineui();
+				end;
+			}
+
+			callfunc "refinemain","Hollgrehenn",0;
+			end;
+
+		case 2:
+			callfunc "F_NeedSafeRefine";
+			end;
+
+		case 3:
+			callfunc "F_RefineTime";
+			end;
+
+		default:
+			close;
 	}
-	
+
 OnInit:
-		waitingroom "제련",0;
-		end;
+	waitingroom "제련",0;
+	end;
+}
+
+//============================================================
+// 안전 제련
+// - 방어구: +4까지, 에르늄 1개 / 1회, 20,000 제니 / 1회
+// - 무기 Lv.1: +7까지, 프라콘 1개 / 1회, 50 제니 / 1회
+// - 무기 Lv.2: +6까지, 엠베르타콘 1개 / 1회, 200 제니 / 1회
+// - 무기 Lv.3: +5까지, 오리데오콘 1개 / 1회, 5,000 제니 / 1회
+// - 무기 Lv.4: +4까지, 오리데오콘 1개 / 1회, 20,000 제니 / 1회
+//============================================================
+function	script	F_NeedSafeRefine	{
+	disable_items;
+
+	setarray .@position$[0],
+		"상단",
+		"갑옷",
+		"왼손",
+		"오른손",
+		"걸칠것",
+		"신발",
+		"악세사리(L)",
+		"악세사리(R)",
+		"중단",
+		"하단";
+
+	setarray .@indices[0],
+		EQI_HEAD_TOP,
+		EQI_ARMOR,
+		EQI_HAND_L,
+		EQI_HAND_R,
+		EQI_GARMENT,
+		EQI_SHOES,
+		EQI_ACC_L,
+		EQI_ACC_R,
+		EQI_HEAD_MID,
+		EQI_HEAD_LOW;
+
+	.@count = 0;
+	.@menu$ = "";
+
+	for (.@i = 0; .@i < getarraysize(.@indices); ++.@i) {
+		.@part = .@indices[.@i];
+
+		if (!getequipisequiped(.@part))
+			continue;
+
+		if (!getequipisenableref(.@part))
+			continue;
+
+		.@item_id = getequipid(.@part);
+		.@item_type = getiteminfo(.@item_id, ITEMINFO_TYPE);
+		.@current_refine = getequiprefinerycnt(.@part);
+		.@safe_refine = 0;
+
+		if (.@item_type == IT_WEAPON) {
+			switch (getequipweaponlv(.@part)) {
+				case 1: .@safe_refine = 7; break;
+				case 2: .@safe_refine = 6; break;
+				case 3: .@safe_refine = 5; break;
+				case 4: .@safe_refine = 4; break;
+				default: continue;
+			}
+		}
+		else if (.@item_type == IT_ARMOR) {
+			.@safe_refine = 4;
+		}
+		else {
+			continue;
+		}
+
+		// 이미 안전 제련 한계에 도달한 장비는 목록에서 제외
+		if (.@current_refine >= .@safe_refine)
+			continue;
+
+		.@part_list[.@count] = .@part;
+		.@target_list[.@count] = .@safe_refine;
+		.@menu$ += "+" + .@current_refine + " " + getequipname(.@part)
+			+ "  →  +" + .@safe_refine + ":";
+		++.@count;
+	}
+
+	if (.@count <= 0) {
+		mes "[홀그렌]";
+		mes "현재 장착 중인 장비 중";
+		mes "안전 제련이 가능한 장비가 없습니다.";
+		mes " ";
+		mes "제련 가능한 장비를 장착하거나,";
+		mes "이미 안전 제련 한계에 도달했는지 확인해주세요.";
+		close;
+	}
+
+	.@menu$ += "취소";
+
+	mes "[홀그렌]";
+	mes "안전 제련할 장비를 선택해주세요.";
+	mes " ";
+	mes "현재 제련도에서 안전 제련 한계까지";
+	mes "필요한 재료와 제니를 한 번에 사용합니다.";
+	next;
+
+	.@select = select(.@menu$) - 1;
+
+	if (.@select < 0 || .@select >= .@count)
+		close;
+
+	.@part = .@part_list[.@select];
+	.@safe_refine = .@target_list[.@select];
+
+	if (!getequipisequiped(.@part) || !getequipisenableref(.@part)) {
+		mes "[홀그렌]";
+		mes "선택한 장비의 착용 상태가 변경되었습니다.";
+		mes "다시 시도해주세요.";
+		close;
+	}
+
+	.@item_id = getequipid(.@part);
+	.@current_refine = getequiprefinerycnt(.@part);
+	.@item_type = getiteminfo(.@item_id, ITEMINFO_TYPE);
+	.@material_id = 0;
+	.@zeny_per_refine = 0;
+
+	if (.@item_type == IT_WEAPON) {
+		switch (getequipweaponlv(.@part)) {
+			case 1:
+				.@safe_refine = 7;
+				.@material_id = 1010; // Phracon
+				.@zeny_per_refine = 50;
+				break;
+
+			case 2:
+				.@safe_refine = 6;
+				.@material_id = 1011; // Emveretarcon
+				.@zeny_per_refine = 200;
+				break;
+
+			case 3:
+				.@safe_refine = 5;
+				.@material_id = 984; // Oridecon
+				.@zeny_per_refine = 5000;
+				break;
+
+			case 4:
+				.@safe_refine = 4;
+				.@material_id = 984; // Oridecon
+				.@zeny_per_refine = 20000;
+				break;
+
+			default:
+				mes "[홀그렌]";
+				mes "지원하지 않는 무기 레벨입니다.";
+				close;
+		}
+	}
+	else if (.@item_type == IT_ARMOR) {
+		.@safe_refine = 4;
+		.@material_id = 985; // Elunium
+		.@zeny_per_refine = 20000;
+	}
+	else {
+		mes "[홀그렌]";
+		mes "안전 제련을 지원하지 않는 장비입니다.";
+		close;
+	}
+
+	if (.@current_refine >= .@safe_refine) {
+		mes "[홀그렌]";
+		mes "이 장비는 이미 안전 제련 한계에 도달했습니다.";
+		mes "현재 제련도: ^0055FF+" + .@current_refine + "^000000";
+		close;
+	}
+
+	.@refine_count = .@safe_refine - .@current_refine;
+	.@total_zeny = .@zeny_per_refine * .@refine_count;
+
+	// 진행 전 장비 상태 저장
+	.@saved_item_id = .@item_id;
+	.@saved_refine = .@current_refine;
+	setarray .@saved_card[0],
+		getequipcardid(.@part, 0),
+		getequipcardid(.@part, 1),
+		getequipcardid(.@part, 2),
+		getequipcardid(.@part, 3);
+
+	mes "[홀그렌]";
+	mes "선택 장비: ^0055FF" + getequipname(.@part) + "^000000";
+	mes "현재 제련도: ^FF8000+" + .@current_refine + "^000000";
+	mes "목표 제련도: ^00AAFF+" + .@safe_refine + "^000000";
+	mes " ";
+	mes "필요 제련 횟수: ^FF8000" + .@refine_count + "회^000000";
+	mes "필요 재료: ^FF8000" + getitemname(.@material_id) + " " + .@refine_count + "개^000000";
+	mes "필요 제니: ^FF8000" + callfunc("F_InsertComma", .@total_zeny) + " 제니^000000";
+	mes " ";
+	mes "^00AA00실패 없이 안전 한계까지 한 번에 제련됩니다.^000000";
+	next;
+
+	if (select("안전 제련한다:취소") == 2)
+		close;
+
+	// 결제 및 제련 직전 재검사
+	if (!getequipisequiped(.@part) || !getequipisenableref(.@part)) {
+		mes "[홀그렌]";
+		mes "장비의 착용 상태가 변경되었습니다.";
+		close;
+	}
+
+	if (callfunc("F_IsEquipIDHack", .@part, .@saved_item_id) ||
+		callfunc("F_IsEquipRefineHack", .@part, .@saved_refine) ||
+		callfunc("F_IsEquipCardHack", .@part,
+			.@saved_card[0], .@saved_card[1], .@saved_card[2], .@saved_card[3])) {
+		mes "[홀그렌]";
+		emotion ET_FRET;
+		mes "잠시만요...";
+		mes "제련을 진행하는 사이 장비가 변경되었습니다.";
+		mes "처음부터 다시 시도해주세요.";
+		close;
+	}
+
+	if (countitem(.@material_id) < .@refine_count) {
+		mes "[홀그렌]";
+		mes "제련 재료가 부족합니다.";
+		mes "필요: ^FF0000" + getitemname(.@material_id) + " " + .@refine_count + "개^000000";
+		mes "보유: ^0055FF" + countitem(.@material_id) + "개^000000";
+		close;
+	}
+
+	if (Zeny < .@total_zeny) {
+		mes "[홀그렌]";
+		mes "제련 비용이 부족합니다.";
+		mes "필요: ^FF0000" + callfunc("F_InsertComma", .@total_zeny) + " 제니^000000";
+		mes "보유: ^0055FF" + callfunc("F_InsertComma", Zeny) + " 제니^000000";
+		close;
+	}
+
+	delitem .@material_id, .@refine_count;
+	Zeny = Zeny - .@total_zeny;
+
+	specialeffect EF_HOLYHIT;
+	successrefitem .@part, .@refine_count;
+
+	next;
+	emotion ET_DELIGHT;
+	mes "[홀그렌]";
+	mes "안전 제련이 완료되었습니다!";
+	mes "^0055FF" + getequipname(.@part) + "^000000";
+	mes "제련 결과: ^00AAFF+" + getequiprefinerycnt(.@part) + "^000000";
+	close;
 }
 
 // 제련권 사용 시 목표 제련 수치별 제니 비용 설정
