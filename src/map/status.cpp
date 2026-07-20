@@ -82,6 +82,7 @@ struct s_status_icon_change_table_init {
 			StatusIconChangeTable[i] = EFST_BLANK;
 
 		StatusIconChangeTable[SC_NEED_GRACE] = EFST_NEED_GRACE;
+		StatusIconChangeTable[SC_NEED_GOLDPC] = EFST_NEED_GOLDPC;
 	}
 } status_icon_change_table_init;
 
