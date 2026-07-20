@@ -522,8 +522,29 @@ static void script_reportsrc(struct script_state *st)
 	}
 }
 
+static bool need_is_expected_getitem_failure(int32 result)
+{
+	switch (static_cast<e_additem_result>(result)) {
+	case ADDITEM_OVERWEIGHT:
+	case ADDITEM_OVERITEM:
+	case ADDITEM_OVERAMOUNT:
+	case ADDITEM_REFUSED_TIME:
+	case ADDITEM_STACKLIMIT:
+		return true;
+
+	case ADDITEM_SUCCESS:
+	case ADDITEM_INVALID:
+	case ADDITEM_ITEM:
+	default:
+		return false;
+	}
+}
+
 static void need_log_getitem_failure( struct script_state* st, const char* command, map_session_data* sd, const struct item* item, const item_data* id, int32 amount, int32 result, int32 rental_time = -1 )
 {
+	if (need_is_expected_getitem_failure(result))
+		return;
+
 	const t_itemid item_id = item != nullptr ? item->nameid : 0;
 	const char* aegis_name = id != nullptr ? id->name.c_str() : "(null)";
 	const char* display_name = id != nullptr ? id->ename.c_str() : "(null)";
@@ -21764,6 +21785,147 @@ BUILDIN_FUNC(bg_create) {
 	return SCRIPT_CMD_SUCCESS;
 }
 
+static bool party2bg_event_exists(const char *event_name) {
+	if (event_name == nullptr || event_name[0] == '\0')
+		return true;
+
+	const char *separator = strstr(event_name, "::");
+
+	if (separator == nullptr || separator == event_name || strncmp(separator + 2, "On", 2) != 0)
+		return false;
+
+	std::string npc_name(event_name, separator - event_name);
+	npc_data *nd = npc_name2id(npc_name.c_str());
+
+	if (nd == nullptr || nd->subtype != NPCTYPE_SCRIPT)
+		return false;
+
+	const char *label_name = separator + 2;
+
+	for (int32 i = 0; i < nd->u.scr.label_list_num; ++i) {
+		if (strcmpi(nd->u.scr.label_list[i].name, label_name) == 0)
+			return true;
+	}
+
+	return false;
+}
+
+/// Creates a battleground team from every member of a party atomically.
+/// party2bg(<party id>,"<map name>",<x>,<y>{,"<On Quit Event>","<On Death Event>"});
+BUILDIN_FUNC(party2bg) {
+	int32 party_id = script_getnum(st, 2);
+	const char *map_name = script_getstr(st, 3);
+	int32 x = script_getnum(st, 4);
+	int32 y = script_getnum(st, 5);
+	const char *quit_event = script_hasdata(st, 6) ? script_getstr(st, 6) : "";
+	const char *death_event = script_hasdata(st, 7) ? script_getstr(st, 7) : "";
+	party_data *party = party_search(party_id);
+	uint16 mapindex = mapindex_name2id(map_name);
+	int16 m = mapindex ? map_mapindex2mapid(mapindex) : -1;
+	std::vector<map_session_data *> members;
+
+	auto fail = [&]() {
+		script_pushint(st, 0);
+		return SCRIPT_CMD_SUCCESS;
+	};
+
+	if (party == nullptr) {
+		ShowWarning("buildin_party2bg: Invalid party ID %d.\n", party_id);
+		return fail();
+	}
+
+	if (m < 0) {
+		ShowWarning("buildin_party2bg: Invalid or remote destination map '%s'.\n", map_name);
+		return fail();
+	}
+
+	map_data *mapdata = map_getmapdata(m);
+
+	if (mapdata == nullptr || x < 0 || x >= mapdata->xs || y < 0 || y >= mapdata->ys || !map_getcell(m, x, y, CELL_CHKPASS)) {
+		ShowWarning("buildin_party2bg: Invalid destination coordinates %s (%d,%d).\n", map_name, x, y);
+		return fail();
+	}
+
+	if (!mapdata->getMapFlag(MF_BATTLEGROUND)) {
+		ShowWarning("buildin_party2bg: Map %s requires the mapflag MF_BATTLEGROUND.\n", map_name);
+		return fail();
+	}
+
+	if (!party2bg_event_exists(quit_event) || !party2bg_event_exists(death_event)) {
+		ShowWarning("buildin_party2bg: Invalid quit or death event label ('%s', '%s').\n", quit_event, death_event);
+		return fail();
+	}
+
+	for (int32 i = 0; i < MAX_PARTY; ++i) {
+		const party_member &party_member = party->party.member[i];
+
+		if (party_member.char_id == 0)
+			continue;
+
+		map_session_data *sd = party->data[i].sd;
+
+		if (!party_member.online || sd == nullptr || map_charid2sd(party_member.char_id) != sd ||
+			sd->status.account_id != party_member.account_id || sd->status.party_id != party_id ||
+			!sd->state.active || !session_isActive(sd->fd)) {
+			ShowWarning("buildin_party2bg: Party member '%s' (CID %u) is not fully online on this map-server.\n", party_member.name, party_member.char_id);
+			return fail();
+		}
+
+		if (sd->bg_id != 0) {
+			ShowWarning("buildin_party2bg: Party member '%s' (CID %u) already belongs to battleground team %d.\n", sd->status.name, sd->status.char_id, sd->bg_id);
+			return fail();
+		}
+
+		members.push_back(sd);
+	}
+
+	if (members.empty() || members.size() > MAX_BG_MEMBERS) {
+		ShowWarning("buildin_party2bg: Party %d has no members or exceeds the battleground member limit.\n", party_id);
+		return fail();
+	}
+
+	s_battleground_team team = {};
+	team.warp_x = static_cast<uint16>(x);
+	team.warp_y = static_cast<uint16>(y);
+	team.quit_event = quit_event;
+	team.death_event = death_event;
+	int32 bg_id = bg_create(mapindex, &team);
+
+	if (bg_id == 0)
+		return fail();
+
+	auto rollback = [&]() {
+		bg_team_delete(bg_id);
+		for (map_session_data *sd : members)
+			if (sd != nullptr && sd->bg_id == bg_id)
+				sd->bg_id = 0;
+	};
+
+	for (map_session_data *sd : members) {
+		if (!bg_team_join(bg_id, sd, false)) {
+			rollback();
+			return fail();
+		}
+	}
+
+	std::shared_ptr<s_battleground_data> bg = util::umap_find(bg_team_db, bg_id);
+
+	if (bg == nullptr || bg->members.size() != members.size()) {
+		rollback();
+		return fail();
+	}
+
+	for (map_session_data *sd : members) {
+		if (sd->bg_id != bg_id) {
+			rollback();
+			return fail();
+		}
+	}
+
+	script_pushint(st, bg_id);
+	return SCRIPT_CMD_SUCCESS;
+}
+
 /// Adds attached player or <char id> (if specified) to an existing 
 /// battleground group and warps it to the specified coordinates on
 /// the given map.
@@ -28866,6 +29028,7 @@ struct script_function buildin_func[] = {
 	BUILDIN_DEF(bg_updatescore,"sii"),
 	BUILDIN_DEF(bg_join,"i????"),
 	BUILDIN_DEF(bg_create,"sii??"),
+	BUILDIN_DEF(party2bg,"isii??"),
 	BUILDIN_DEF(bg_reserve,"s?"),
 	BUILDIN_DEF(bg_unbook,"s"),
 	BUILDIN_DEF(bg_info,"si"),

@@ -10426,6 +10426,28 @@ Returns battle group ID on success. Returns 0 on failure.
 
 ---------------------------------------
 
+*party2bg(<party ID>,"<map name>",<x>,<y>{,"<On Quit Event>","<On Death Event>"});
+
+Creates a battleground group from every member of the specified party. The command validates the
+complete party before creating a group: the party must exist and contain at least one member, every
+member must be online with a valid local session and must not already belong to another battleground,
+and the destination must be a valid, walkable cell on a map with the battleground mapflag. Supplied
+quit and death event labels must exist.
+
+All members are added to the battleground group without moving them, matching waitingroom2bg. After
+every membership has been verified, the new battle group ID is returned. Use bg_updatescore and
+bg_warp separately when the battleground is ready to initialize its score and move the team. If
+joining any member fails, all joined members are removed and the newly-created group is destroyed.
+No member is moved by this command, including during rollback.
+
+Returns the new battle group ID on success. Returns 0 on failure and leaves no newly-created group.
+
+Example:
+	$@KvM01BG_id1 = party2bg($BG_GUILLAUME_PARTY_ID,"bat_c01",52,129,
+		"KvM01_BG::OnGuillaumeQuit","KvM01_BG::OnGuillaumeDie");
+
+---------------------------------------
+
 *bg_join(<battle group>,{"<map name>",{<x>,<y>{,<char id>}});
 
 Adds an attached player or <char id> if specified to an existing battleground group. The player will also be warped

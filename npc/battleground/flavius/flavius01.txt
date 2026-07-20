@@ -59,59 +59,120 @@ function	script	F_Flavius_AnnounceRooms	{
 
 
 //============================================================
-// Waiting Room NPCs
+// 기존 플라비우스 waitingroom NPC 비활성화
+// 파티장 통합 입장 준비 메뉴를 사용합니다.
 //============================================================
 bat_room,86,227,4	script	기욤 대기실#bat_b01	418,{
-	end;
-
+	mes "[플라비우스]";
+	mes "전장 관리인의 '전장 입장 준비' 메뉴를 이용해주세요.";
+	close;
 OnInit:
-	callfunc "F_Flavius_NormalizeCount";
-	waitingroom "기욤 ",callfunc("F_Flavius_GetGuillaumeNeed") + 1,"start#bat_b01::OnReadyCheck",1,0,80;
-	end;
-
 OnRefresh:
-	delwaitingroom;
-	callfunc "F_Flavius_NormalizeCount";
-	waitingroom "기욤 ",callfunc("F_Flavius_GetGuillaumeNeed") + 1,"start#bat_b01::OnReadyCheck",1,0,80;
-	end;
-
-OnEnterBG:
-	set $@FlaviusBG1_id1, waitingroom2bg("bat_b01",10,290,"start#bat_b01::OnGuillaumeQuit","");
+	disablenpc "기욤 대기실#bat_b01";
 	end;
 }
 
 bat_room,85,204,0	script	크루아 대기실#bat_b01	414,{
-	end;
-
+	mes "[플라비우스]";
+	mes "전장 관리인의 '전장 입장 준비' 메뉴를 이용해주세요.";
+	close;
 OnInit:
-	callfunc "F_Flavius_NormalizeCount";
-	waitingroom "크루아 ",callfunc("F_Flavius_GetCroixNeed") + 1,"start#bat_b01::OnReadyCheck",1,0,80;
-	end;
-
 OnRefresh:
-	delwaitingroom;
-	callfunc "F_Flavius_NormalizeCount";
-	waitingroom "크루아 ",callfunc("F_Flavius_GetCroixNeed") + 1,"start#bat_b01::OnReadyCheck",1,0,80;
-	end;
-
-OnEnterBG:
-	set $@FlaviusBG1_id2, waitingroom2bg("bat_b01",390,10,"start#bat_b01::OnCroixQuit","");
+	disablenpc "크루아 대기실#bat_b01";
 	end;
 }
 
 -	script	플라비우스 대기실 갱신#bat_b01	-1,{
 	end;
-
 OnRefresh:
-	if ($@FlaviusBG1)
-		end;
-
-	donpcevent "기욤 대기실#bat_b01::OnRefresh";
-	donpcevent "크루아 대기실#bat_b01::OnRefresh";
-	callfunc "F_Flavius_AnnounceRooms";
+	disablenpc "기욤 대기실#bat_b01";
+	disablenpc "크루아 대기실#bat_b01";
 	end;
 }
 
+//============================================================
+// 플라비우스 자동 입장용 BG 직접 가입 함수
+//============================================================
+function	script	F_Flavius_JoinPartyToBG	{
+	.@party_id = getarg(0);
+	.@bg_id = getarg(1);
+	.@team = getarg(2);
+	.@map$ = getarg(3);
+	.@x = getarg(4);
+	.@y = getarg(5);
+
+	getpartymember .@party_id, 0;
+	.@count = $@partymembercount;
+	copyarray .@name$[0], $@partymembername$[0], .@count;
+	getpartymember .@party_id, 1;
+	copyarray .@cid[0], $@partymembercid[0], .@count;
+	getpartymember .@party_id, 2;
+	copyarray .@aid[0], $@partymemberaid[0], .@count;
+
+	for (.@i = 0; .@i < .@count; .@i++) {
+		// 준비 잠금은 자동 입장 직전에 해제합니다.
+		setpcblock PCBLOCK_MOVE|PCBLOCK_USEITEM|PCBLOCK_COMMANDS|PCBLOCK_NPCCLICK, false, .@aid[.@i];
+
+		if (!isloggedin(.@aid[.@i], .@cid[.@i])) {
+			$@FlaviusJoin_FailName$ = .@name$[.@i];
+			$@FlaviusJoin_FailReason$ = "입장 직전에 접속이 종료되었습니다.";
+			return 0;
+		}
+
+		if (!bg_join(.@bg_id, .@map$, .@x, .@y, .@cid[.@i])) {
+			$@FlaviusJoin_FailName$ = .@name$[.@i];
+			$@FlaviusJoin_FailReason$ = "BG 팀 가입 명령이 실패했습니다.";
+			return 0;
+		}
+
+		if (!attachrid(.@aid[.@i]) || getcharid(0) != .@cid[.@i]) {
+			$@FlaviusJoin_FailName$ = .@name$[.@i];
+			$@FlaviusJoin_FailReason$ = "가입 후 캐릭터 정보를 확인할 수 없습니다.";
+			return 0;
+		}
+
+		if (getcharid(4) != .@bg_id) {
+			$@FlaviusJoin_FailName$ = strcharinfo(0);
+			$@FlaviusJoin_FailReason$ = "가입된 BG 팀 ID가 일치하지 않습니다.";
+			detachrid;
+			return 0;
+		}
+
+		Bat_Team = .@team;
+		percentheal 100,100;
+		detachrid;
+	}
+
+	return .@count;
+}
+
+function	script	F_Flavius_RollbackPartyBG	{
+	.@party_id = getarg(0);
+	.@bg_id = getarg(1);
+
+	if (.@party_id <= 0)
+		return;
+
+	getpartymember .@party_id, 1;
+	.@count = $@partymembercount;
+	copyarray .@cid[0], $@partymembercid[0], .@count;
+	getpartymember .@party_id, 2;
+	copyarray .@aid[0], $@partymemberaid[0], .@count;
+
+	for (.@i = 0; .@i < .@count; .@i++) {
+		setpcblock PCBLOCK_MOVE|PCBLOCK_USEITEM|PCBLOCK_COMMANDS|PCBLOCK_NPCCLICK, false, .@aid[.@i];
+		if (!isloggedin(.@aid[.@i], .@cid[.@i]))
+			continue;
+		if (!attachrid(.@aid[.@i]) || getcharid(0) != .@cid[.@i])
+			continue;
+		if (.@bg_id && getcharid(4) == .@bg_id)
+			bg_leave;
+		Bat_Team = 0;
+		warp "bat_room",154,150;
+		detachrid;
+	}
+	return;
+}
 
 //============================================================
 // 플라비우스 전장 이탈 감시
@@ -162,6 +223,7 @@ OnTimer1000:
 //============================================================
 bat_b01,15,15,3	script	start#bat_b01	844,{
 OnInit:
+	stopnpctimer;
 	mapwarp "bat_b01","bat_room",154,150;
 	$@FlaviusBG1 = 0;
 	$@FlaviusBG1_Victory = 0;
@@ -170,40 +232,170 @@ OnInit:
 	end;
 
 OnReadyCheck:
-	if ($@FlaviusBG1)
-		end;
+	// 기존 waitingroom 경로는 사용하지 않습니다.
+	end;
 
-	callfunc "F_Flavius_NormalizeCount";
-	callfunc "F_Flavius_AnnounceRooms";
-
-	.@Guillaume = getwaitingroomstate(0,"기욤 대기실#bat_b01");
-	.@Croix = getwaitingroomstate(0,"크루아 대기실#bat_b01");
-
-	if (!.@Guillaume && !.@Croix) {
-		donpcevent "#bat_b01_timer::OnStop";
+OnPartyReady:
+	if ($@FlaviusBG1) {
+		mapannounce "bat_room", "[플라비우스] 이미 전장 상태가 활성화되어 자동 입장을 중단합니다.", bc_map, "0xFF6666";
+		callfunc "F_Flavius_ClearReadyState";
 		end;
 	}
 
-	if (.@Guillaume < $BG_Guillaume_Count || .@Croix < $BG_Croix_Count)
+	callfunc "F_Flavius_NormalizeCount";
+	if (!callfunc("F_Flavius_CheckRegisteredParty", $BG_GUILLAUME_PARTY_ID, $BG_Guillaume_Count, $BG_GUILLAUME_LEADER_CID, $BG_GUILLAUME_LEADER_NAME$)) {
+		mapannounce "bat_room", "[플라비우스] 기욤 팀 입장 직전 검사 실패: " + $@FlaviusCheck_Reason$ + (($@FlaviusCheck_Name$ == "") ? "" : " (" + $@FlaviusCheck_Name$ + ")"), bc_map, "0xFF6666";
+		callfunc "F_Flavius_ClearReadyState";
 		end;
+	}
+	if (!callfunc("F_Flavius_CheckRegisteredParty", $BG_CROIX_PARTY_ID, $BG_Croix_Count, $BG_CROIX_LEADER_CID, $BG_CROIX_LEADER_NAME$)) {
+		mapannounce "bat_room", "[플라비우스] 크루아 팀 입장 직전 검사 실패: " + $@FlaviusCheck_Reason$ + (($@FlaviusCheck_Name$ == "") ? "" : " (" + $@FlaviusCheck_Name$ + ")"), bc_map, "0xFF6666";
+		callfunc "F_Flavius_ClearReadyState";
+		end;
+	}
 
 	$@FlaviusBG1 = 1;
 	$@FlaviusBG1_Victory = 0;
 	$@Croix_ScoreBG1 = 0;
 	$@Guill_ScoreBG1 = 0;
-	bg_updatescore "bat_b01",$@Guill_ScoreBG1,$@Croix_ScoreBG1;
+	$@FlaviusJoin_FailName$ = "";
+	$@FlaviusJoin_FailReason$ = "";
+	bg_updatescore "bat_b01",0,0;
 
-	donpcevent "기욤 대기실#bat_b01::OnEnterBG";
-	donpcevent "크루아 대기실#bat_b01::OnEnterBG";
+	$@FlaviusBG1_id1 = bg_create("bat_b01",10,290,"start#bat_b01::OnGuillaumeQuit","");
+	$@FlaviusBG1_id2 = bg_create("bat_b01",390,10,"start#bat_b01::OnCroixQuit","");
+	if (!$@FlaviusBG1_id1 || !$@FlaviusBG1_id2) {
+		mapannounce "bat_room", "[플라비우스] BG 팀 생성에 실패하여 자동 입장을 취소했습니다.", bc_map, "0xFF6666";
+		donpcevent "start#bat_b01::OnPartyEntryFail";
+		end;
+	}
 
-	announce "[플라비우스] 기욤 " + .@Guillaume + "명 vs 크루아 " + .@Croix + "명으로 전장이 시작됩니다.",bc_all;
+	.@joined_g = callfunc("F_Flavius_JoinPartyToBG", $BG_GUILLAUME_PARTY_ID, $@FlaviusBG1_id1, 1, "bat_b01", 10, 290);
+	if (.@joined_g != $BG_Guillaume_Count) {
+		mapannounce "bat_room", "[플라비우스] 기욤 팀 자동 입장 실패: " + $@FlaviusJoin_FailReason$ + (($@FlaviusJoin_FailName$ == "") ? "" : " (" + $@FlaviusJoin_FailName$ + ")"), bc_map, "0xFF6666";
+		donpcevent "start#bat_b01::OnPartyEntryFail";
+		end;
+	}
+	.@joined_c = callfunc("F_Flavius_JoinPartyToBG", $BG_CROIX_PARTY_ID, $@FlaviusBG1_id2, 2, "bat_b01", 390, 10);
+	if (.@joined_c != $BG_Croix_Count) {
+		mapannounce "bat_room", "[플라비우스] 크루아 팀 자동 입장 실패: " + $@FlaviusJoin_FailReason$ + (($@FlaviusJoin_FailName$ == "") ? "" : " (" + $@FlaviusJoin_FailName$ + ")"), bc_map, "0xFF6666";
+		donpcevent "start#bat_b01::OnPartyEntryFail";
+		end;
+	}
+
+	if (bg_get_data($@FlaviusBG1_id1,0) != $BG_Guillaume_Count || bg_get_data($@FlaviusBG1_id2,0) != $BG_Croix_Count) {
+		mapannounce "bat_room", "[플라비우스] BG 가입 인원 검증에 실패하여 자동 입장을 취소했습니다.", bc_map, "0xFF6666";
+		donpcevent "start#bat_b01::OnPartyEntryFail";
+		end;
+	}
+
+	callfunc "F_Flavius_ClearReadyState";
+	$@FlaviusReady_Starting = 0;
+	announce "[플라비우스] 기욤 " + .@joined_g + "명 vs 크루아 " + .@joined_c + "명이 내부 준비 구역에 입장했습니다.", bc_all;
+	stopnpctimer;
+	initnpctimer;
+	end;
+
+OnPartyEntryFail:
+	stopnpctimer;
+	callfunc "F_Flavius_RollbackPartyBG", $BG_GUILLAUME_PARTY_ID, $@FlaviusBG1_id1;
+	callfunc "F_Flavius_RollbackPartyBG", $BG_CROIX_PARTY_ID, $@FlaviusBG1_id2;
+	if ($@FlaviusBG1_id1) {
+		bg_destroy $@FlaviusBG1_id1;
+		$@FlaviusBG1_id1 = 0;
+	}
+	if ($@FlaviusBG1_id2) {
+		bg_destroy $@FlaviusBG1_id2;
+		$@FlaviusBG1_id2 = 0;
+	}
+	$@FlaviusBG1 = 0;
+	$@FlaviusBG1_Victory = 0;
+	$@Croix_ScoreBG1 = 0;
+	$@Guill_ScoreBG1 = 0;
+	callfunc "F_Flavius_ClearReadyState";
+	mapannounce "bat_room", "[플라비우스] 자동 입장이 취소되었습니다. 파티 상태를 확인한 뒤 다시 준비해주세요.", bc_map, "0xFF6666";
+	end;
+
+OnCancel:
+	stopnpctimer;
+	callfunc "F_Flavius_ClearReadyState";
+	$@FlaviusBG1 = 0;
+	$@FlaviusBG1_Victory = 0;
+	$@Croix_ScoreBG1 = 0;
+	$@Guill_ScoreBG1 = 0;
+
+	mapannounce "bat_b01","준비시간 중 참가 인원이 부족해 플라비우스 전장이 취소되었습니다.",bc_map,"0x696969";
+	mapwarp "bat_b01","bat_room",154,150;
+
+	if ($@FlaviusBG1_id1) {
+		bg_destroy $@FlaviusBG1_id1;
+		$@FlaviusBG1_id1 = 0;
+	}
+
+	if ($@FlaviusBG1_id2) {
+		bg_destroy $@FlaviusBG1_id2;
+		$@FlaviusBG1_id2 = 0;
+	}
+
+	donpcevent "플라비우스 대기실 갱신#bat_b01::OnRefresh";
+	end;
+
+OnTimer1000:
+	callfunc "F_Flavius_NormalizeCount";
+
+	if (!$@FlaviusBG1_id1 || !$@FlaviusBG1_id2) {
+		mapannounce "bat_room","[플라비우스] 전장 내부 준비 구역 입장에 실패했습니다. 잠시 후 다시 시도해주세요.",bc_map,"0xFF6666";
+		donpcevent "start#bat_b01::OnCancel";
+		end;
+	}
+
+	.@EnteredGuillaume = bg_get_data($@FlaviusBG1_id1,0);
+	.@EnteredCroix = bg_get_data($@FlaviusBG1_id2,0);
+
+	if (.@EnteredGuillaume < $BG_Guillaume_Count || .@EnteredCroix < $BG_Croix_Count) {
+		mapannounce "bat_room","[플라비우스] 입장 인원이 부족합니다. 기욤 " + .@EnteredGuillaume + "/" + $BG_Guillaume_Count + "명, 크루아 " + .@EnteredCroix + "/" + $BG_Croix_Count + "명",bc_map,"0xFF6666";
+		donpcevent "start#bat_b01::OnCancel";
+		end;
+	}
+
+	mapannounce "bat_b01","플라비우스 전장 내부 준비 구역에 입장했습니다. 잠시 후 전투가 시작됩니다.",bc_map,"0x66CCFF";
+	end;
+
+OnTimer15000:
+	mapannounce "bat_b01","플라비우스 전투 시작까지 15초 남았습니다.",bc_map,"0x66CCFF";
+	end;
+
+OnTimer20000:
+	mapannounce "bat_b01","플라비우스 전투 시작까지 10초 남았습니다.",bc_map,"0x66CCFF";
+	end;
+
+OnTimer25000:
+	mapannounce "bat_b01","플라비우스 전투 시작까지 5초 남았습니다.",bc_map,"0x66CCFF";
+	end;
+
+OnTimer29000:
+	mapannounce "bat_b01","플라비우스 전투가 곧 시작됩니다.",bc_map,"0x66CCFF";
+	end;
+
+OnTimer30000:
+	stopnpctimer;
+	callfunc "F_Flavius_NormalizeCount";
+
+	.@GuillaumeCount = bg_get_data($@FlaviusBG1_id1,0);
+	.@CroixCount = bg_get_data($@FlaviusBG1_id2,0);
+
+	if (.@GuillaumeCount < $BG_Guillaume_Count || .@CroixCount < $BG_Croix_Count) {
+		donpcevent "start#bat_b01::OnCancel";
+		end;
+	}
 
 	donpcevent "start#bat_b01::OnEnable";
 	bg_warp $@FlaviusBG1_id1,"bat_b01",87,75;
 	bg_warp $@FlaviusBG1_id2,"bat_b01",311,224;
 
+	mapannounce "bat_b01","플라비우스 전투가 시작되었습니다!",bc_map,"0x66CCFF";
 	donpcevent "countdown#bat_b01::OnEnable";
-	initnpctimer;
+	donpcevent "#bat_b01_timer::OnEnable";
 	end;
 
 OnEnable:
@@ -226,8 +418,6 @@ OnEnable:
 	end;
 
 OnReset:
-	clearmapskillunits "bat_b01";
-	
 	donpcevent "OBJ#bat_b01_a::OnKill";
 	donpcevent "OBJ#bat_b01_a::OnEnable";
 	donpcevent "OBJ#bat_b01_b::OnKill";
@@ -270,10 +460,6 @@ OnCroixQuit:
 	bg_leave;
 	end;
 
-OnTimer10000:
-	stopnpctimer;
-	donpcevent "#bat_b01_timer::OnEnable";
-	end;
 }
 
 
