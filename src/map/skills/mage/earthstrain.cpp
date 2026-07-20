@@ -98,10 +98,10 @@ int32 earthstrain_strip_one(block_list* src, map_session_data& target, const ear
 	if (index < 0 || !pc_unequipitem(&target, index, 3))
 		return 0;
 
-	// No icon is registered in the DB and SCSTART_NOICON also suppresses the packet explicitly.
+	// The dedicated state reuses SC__STRIPACCESSORY's client icon but keeps its one-slot server effect.
 	status_change_start(src, &target, SC_NEED_EARTHSTRAIN_STRIPACC, earthstrain_rate_scale,
 		static_cast<int32>(position), 0, 0, 0, earthstrain_strip_duration,
-		SCSTART_NOAVOID | SCSTART_NOTICKDEF | SCSTART_NORATEDEF | SCSTART_NOICON);
+		SCSTART_NOAVOID | SCSTART_NOTICKDEF | SCSTART_NORATEDEF);
 	return 1;
 }
 }

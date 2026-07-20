@@ -10617,17 +10617,18 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 		case SC__STRIPACCESSORY:
 			if( sd ) {
 				int16 i = -1;
+				bool accessory_stripped = false;
 				if( !(sd->bonus.unstripable_equip&EQP_ACC_L) ) {
 					i = sd->equip_index[EQI_ACC_L];
 					if( i >= 0 && sd->inventory_data[i] && sd->inventory_data[i]->type == IT_ARMOR )
-						pc_unequipitem(sd,i,3); // Left-Accessory
+						accessory_stripped |= pc_unequipitem(sd,i,3); // Left-Accessory
 				}
 				if( !(sd->bonus.unstripable_equip&EQP_ACC_R) ) {
 					i = sd->equip_index[EQI_ACC_R];
 					if( i >= 0 && sd->inventory_data[i] && sd->inventory_data[i]->type == IT_ARMOR )
-						pc_unequipitem(sd,i,3); // Right-Accessory
+						accessory_stripped |= pc_unequipitem(sd,i,3); // Right-Accessory
 				}
-				if( i < 0 )
+				if( !accessory_stripped )
 					return false;
 			}
 			if (tick == 1) return true; // Minimal duration: Only strip without causing the SC
@@ -13429,6 +13430,11 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 	else
 		sce->timer = INVALID_TIMER; // Infinite duration
 
+	// NEED: The full accessory strip supersedes Earth Strain's one-slot state. Create/send the full
+	// strip first, then end the dedicated state so its shared icon is never turned off in between.
+	if (type == SC__STRIPACCESSORY && sc->getSCE(SC_NEED_EARTHSTRAIN_STRIPACC))
+		status_change_end(bl, SC_NEED_EARTHSTRAIN_STRIPACC);
+
 	if (calc_flag.any()) {
 		if (sd != nullptr) {
 			switch(type) {
@@ -14322,7 +14328,13 @@ int32 status_change_end( block_list* bl, enum sc_type type, int32 tid ){
 		status_icon = EFST_ATTACK_PROPERTY_NOTHING + val1; // Assign status icon for older clients
 #endif
 
-	clif_status_change(bl,status_icon,0,0,0,0,0);
+	// NEED: Both accessory-strip states intentionally share EFST_STRIPACCESSARY. Ending either one must
+	// not clear the icon while the other state still owns it.
+	bool keep_accessory_strip_icon =
+		(type == SC_NEED_EARTHSTRAIN_STRIPACC && sc->getSCE(SC__STRIPACCESSORY)) ||
+		(type == SC__STRIPACCESSORY && sc->getSCE(SC_NEED_EARTHSTRAIN_STRIPACC));
+	if (!keep_accessory_strip_icon)
+		clif_status_change(bl,status_icon,0,0,0,0,0);
 
 	if( opt_flag[SCF_NONPLAYER] ) // bugreport:681
 		clif_changeoption2( *bl );
