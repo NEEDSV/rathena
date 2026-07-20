@@ -2,6 +2,11 @@
 // Existing NEED Grace buff:
 // - Stores expiration per character in NeedGraceUntil as a Unix timestamp.
 //
+// Added Gold PC room grace:
+// - 5,000,000 Zeny per 30 minutes
+// - Can be accumulated up to 24 hours
+// - Uses SC_NEED_GOLDPC and decreases only while the character is online
+//
 // Added weekly convenience tickets:
 // - 거래 은총 이용권: Overcharge / Discount convenience
 // - 속성 은총 이용권: element endow convenience
@@ -20,21 +25,24 @@
 lasagna,164,163,6	script	NEED의 은총 관리인	4_F_ARUNA_POP,{
 	while (1) {
 		mes "[NEED의 은총 관리인]";
-		mes "NEED의 은총과 주간 편의 이용권을 관리합니다.";
+		mes "NEED의 은총, 골드 PC방 은총과 주간 편의 이용권을 관리합니다.";
 		mes "원하시는 메뉴를 선택해주세요.";
 		next;
 
-		switch(select("NEED의 은총 버프:주간 은총 이용권 구매:보유 은총 확인:이용권 안내:취소")) {
+		switch(select("NEED의 은총 버프:골드 PC방 은총:주간 은총 이용권 구매:보유 은총 확인:이용권 안내:취소")) {
 		case 1:
 			callfunc "NeedGrace_BuffMenu";
 			break;
 		case 2:
-			callfunc "NeedGrace_TicketMenu";
+			callfunc "NeedGrace_GoldPCMenu";
 			break;
 		case 3:
-			callfunc "NeedGrace_StatusMenu";
+			callfunc "NeedGrace_TicketMenu";
 			break;
 		case 4:
+			callfunc "NeedGrace_StatusMenu";
+			break;
+		case 5:
 			callfunc "NeedGrace_InfoMenu";
 			break;
 		default:
@@ -49,6 +57,11 @@ OnInit:
 
 	// 기존 NEED의 은총 버프 비용 아이템
 	set $@NeedGraceCoin, 7720; // Gold_Coin__
+
+	// 골드 PC방 은총
+	set $@NeedGraceGoldPCUnitSeconds, 1800;    // 30분
+	set $@NeedGraceGoldPCUnitCost,    5000000; // 30분당 500만 제니
+	set $@NeedGraceGoldPCMaxSeconds,  86400;   // 최대 24시간
 
 	// 주간 은총 이용권 아이템 ID
 	// TODO: item_db.yml에 실제 아이템을 추가한 뒤 ID를 맞춰주세요.
@@ -106,6 +119,108 @@ function	script	NeedGrace_BuffMenu	{
 	}
 }
 
+function	script	NeedGrace_GoldPCMenu	{
+	set .@unit_seconds, $@NeedGraceGoldPCUnitSeconds;
+	set .@unit_cost, $@NeedGraceGoldPCUnitCost;
+	set .@max_seconds, $@NeedGraceGoldPCMaxSeconds;
+	set .@remain_ms, getstatus(SC_NEED_GOLDPC, 5);
+
+	if (.@remain_ms < 0)
+		set .@remain_ms, 0;
+
+	set .@remain_seconds, (.@remain_ms + 999) / 1000;
+	if (.@remain_seconds > .@max_seconds)
+		set .@remain_seconds, .@max_seconds;
+
+	set .@available_units, (.@max_seconds - .@remain_seconds) / .@unit_seconds;
+
+	mes "[골드 PC방 은총]";
+	mes "일부 장비의 골드 PC방 전용 옵션을 활성화합니다.";
+	mes "^FF000030분당 " + callfunc("F_InsertComma", .@unit_cost) + " 제니^000000";
+	mes "최대 ^FF000024시간^000000까지 누적할 수 있습니다.";
+	mes "로그아웃 중에는 이용 시간이 감소하지 않습니다.";
+	next;
+
+	mes "[골드 PC방 은총]";
+	callfunc "NeedGrace_ShowStatusRemainLine", "현재 남은 시간", .@remain_ms;
+
+	if (.@available_units <= 0) {
+		mes "이미 최대 이용 시간인 24시간이 적용되어 있습니다.";
+		return;
+	}
+
+	mes "현재 추가 구매 가능: ^FF0000" + (.@available_units * 30) + "분^000000";
+	next;
+
+	switch(select("이용 시간 구매:뒤로가기")) {
+	case 1:
+		mes "[골드 PC방 은총]";
+		mes "구매할 30분 단위 횟수를 입력해주세요.";
+		mes "1회 = 30분 / 5,000,000 제니";
+		mes "입력 가능 범위: 1 ~ " + .@available_units + "회";
+		next;
+
+		input .@amount;
+
+		if (.@amount <= 0 || .@amount > 48) {
+			mes "[골드 PC방 은총]";
+			mes "1회 이상, 최대 48회까지만 입력할 수 있습니다.";
+			close;
+		}
+
+		if (.@amount > .@available_units) {
+			mes "[골드 PC방 은총]";
+			mes "현재 남은 시간을 포함하여 최대 24시간까지만 구매할 수 있습니다.";
+			mes "현재 추가 구매 가능: ^FF0000" + .@available_units + "회 (" + (.@available_units * 30) + "분)^000000";
+			close;
+		}
+
+		set .@add_seconds, .@amount * .@unit_seconds;
+		set .@add_ms, .@add_seconds * 1000;
+		set .@cost, .@amount * .@unit_cost;
+
+		mes "[골드 PC방 은총]";
+		mes "구매 시간: ^FF0000" + (.@amount * 30) + "분^000000";
+		mes "필요 제니: ^FF0000" + callfunc("F_InsertComma", .@cost) + " z^000000";
+		mes "구매하시겠습니까?";
+		next;
+
+		if (select("구매한다:취소") == 2)
+			close;
+
+		if (Zeny < .@cost) {
+			mes "[골드 PC방 은총]";
+			mes "제니가 부족합니다.";
+			mes "필요 제니: ^FF0000" + callfunc("F_InsertComma", .@cost) + " z^000000";
+			close;
+		}
+
+		// 대화 도중 경과한 시간을 반영해 현재 남은 시간을 다시 조회한다.
+		set .@remain_ms, getstatus(SC_NEED_GOLDPC, 5);
+		if (.@remain_ms < 0)
+			set .@remain_ms, 0;
+
+		set .@new_ms, .@remain_ms + .@add_ms;
+		set .@max_ms, .@max_seconds * 1000;
+
+		if (.@new_ms > .@max_ms) {
+			mes "[골드 PC방 은총]";
+			mes "현재 남은 시간을 포함하여 최대 24시간까지만 구매할 수 있습니다.";
+			close;
+		}
+
+		Zeny -= .@cost;
+		sc_start SC_NEED_GOLDPC, .@new_ms, 1;
+
+		mes "[골드 PC방 은총]";
+		mes "골드 PC방 은총이 적용되었습니다.";
+		callfunc "NeedGrace_ShowStatusRemainLine", "남은 시간", .@new_ms;
+		close;
+	default:
+		return;
+	}
+}
+
 function	script	NeedGrace_TicketMenu	{
 	mes "[주간 은총 이용권]";
 	mes "주간 은총 이용권은 캐릭터 단위 임대 티켓으로 지급됩니다.";
@@ -142,6 +257,7 @@ function	script	NeedGrace_StatusMenu	{
 
 	mes "[보유 은총 확인]";
 	callfunc "NeedGrace_ShowRemainLine", "NEED의 은총 버프", NeedGraceUntil;
+	callfunc "NeedGrace_ShowStatusRemainLine", "골드 PC방 은총", getstatus(SC_NEED_GOLDPC, 5);
 	callfunc "NeedGrace_ShowRemainLine", "거래 은총", callfunc("NeedGrace_GetEffectiveUntil", 1);
 	callfunc "NeedGrace_ShowRemainLine", "속성 은총", callfunc("NeedGrace_GetEffectiveUntil", 2);
 	callfunc "NeedGrace_ShowRemainLine", "보관 은총", callfunc("NeedGrace_GetEffectiveUntil", 3);
@@ -150,6 +266,14 @@ function	script	NeedGrace_StatusMenu	{
 }
 
 function	script	NeedGrace_InfoMenu	{
+	mes "[은총 이용권 안내]";
+	mes "골드 PC방 은총";
+	mes "- 일부 장비의 골드 PC방 전용 옵션 활성화";
+	mes "- 30분당 5,000,000 제니";
+	mes "- 최대 24시간까지 누적 가능";
+	mes "- 로그아웃 중에는 이용 시간 미감소";
+	next;
+
 	mes "[은총 이용권 안내]";
 	mes "거래 은총 이용권";
 	mes "- 오버챠지 / 디스카운트 편의 기능 이용";
@@ -428,6 +552,32 @@ function	script	NeedGrace_HasStorage	{
 // ============================================================
 // Display helper
 // ============================================================
+
+function	script	NeedGrace_ShowStatusRemainLine	{
+	set .@label$, getarg(0);
+	set .@remain_ms, getarg(1);
+
+	if (.@remain_ms <= 0) {
+		mes .@label$ + ": 이용 중 아님";
+		return;
+	}
+
+	set .@left, (.@remain_ms + 999) / 1000;
+	set .@days, .@left / 86400;
+	set .@hours, (.@left % 86400) / 3600;
+	set .@minutes, (.@left % 3600) / 60;
+
+	if (.@days > 0)
+		mes .@label$ + ": " + .@days + "일 " + .@hours + "시간 " + .@minutes + "분";
+	else if (.@hours > 0)
+		mes .@label$ + ": " + .@hours + "시간 " + .@minutes + "분";
+	else if (.@minutes > 0)
+		mes .@label$ + ": " + .@minutes + "분";
+	else
+		mes .@label$ + ": 1분 미만";
+
+	return;
+}
 
 function	script	NeedGrace_ShowRemainLine	{
 	set .@label$, getarg(0);
