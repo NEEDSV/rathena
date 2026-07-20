@@ -2011,6 +2011,7 @@
 	export_constant(SC_GROUND_CHARM_POWER);
 	export_constant(SC_NEED_GRACE);
 	export_constant(SC_NEED_GOLDPC);
+	export_constant(SC_NEED_EARTHSTRAIN_STRIPACC);
 
 /// Do not modify code below this, until the end of the API hook, since it will be automatically generated again
 /// @APIHOOK_START(EFST_CONST)

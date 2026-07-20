@@ -544,6 +544,8 @@ public:
 	int32 cart_weight,cart_num,cart_weight_max;
 	int32 fd;
 	uint16 mapindex;
+	// NEED: Runtime-only resistance shared by all WL_EARTHSTRAIN casters. Reset on death/login.
+	uint8 earthstrain_strip_resist = 0;
 	unsigned char head_dir; //0: Look forward. 1: Look right, 2: Look left.
 	t_tick client_tick;
 	int32 npc_id,npc_shopid; //for script follow scriptoid;   ,npcid

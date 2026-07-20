@@ -1452,6 +1452,7 @@ enum sc_type : int16 {
 	SC_SHIELDSPELL_MDEF,
 	SC_SHIELDSPELL_REF,
 	SC_NEED_GOLDPC,
+	SC_NEED_EARTHSTRAIN_STRIPACC,
 
 	SC_MAX, //Automatically updated max, used in for's to check we are within bounds.
 };

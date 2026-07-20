@@ -9847,6 +9847,10 @@ int32 pc_dead(map_session_data *sd,block_list *src)
 		}
 	}
 
+	// NEED: The Super Novice rescue above is not a real death. Every path continuing from here is.
+	// Reset here so immediate resurrection/respawn paths cannot retain Earth Strain resistance.
+	sd->earthstrain_strip_resist = 0;
+
 	for(k = 0; k < MAX_DEVOTION; k++) {
 		if (sd->devotion[k]){
 			map_session_data *devsd = map_id2sd(sd->devotion[k]);
@@ -12182,6 +12186,16 @@ bool pc_equipitem(map_session_data *sd,int16 n,int32 req_pos,bool equipswitch)
 		pos = (req_pos&EQP_SHADOW_ARMS);
 		if( pos == EQP_SHADOW_ARMS )
 			pos = (equip_index[EQI_SHADOW_WEAPON] >= 0 ? EQP_SHADOW_SHIELD : EQP_SHADOW_WEAPON);
+	}
+
+	// NEED: Check the resolved accessory side, not the item's dual-slot equip mask. Regular, script and
+	// equipment-switch equips all pass through this common function.
+	if (status_change_entry* sce = sd->sc.getSCE(SC_NEED_EARTHSTRAIN_STRIPACC); sce != nullptr && (pos & static_cast<uint32>(sce->val1))) {
+		if( equipswitch )
+			clif_equipswitch_add( sd, n, req_pos, ITEM_EQUIP_ACK_FAIL );
+		else
+			clif_equipitemack( *sd, ITEM_EQUIP_ACK_FAIL, n );
+		return false;
 	}
 
 	if (pos&EQP_HAND_R && battle_config.use_weapon_skill_range&BL_PC) {
