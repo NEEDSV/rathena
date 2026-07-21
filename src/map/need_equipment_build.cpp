@@ -27,6 +27,7 @@
 
 namespace {
 
+constexpr int32 NEED_BUILD_CATEGORY_ALL = 0;
 constexpr int32 NEED_BUILD_CATEGORY_MIN = 1;
 constexpr int32 NEED_BUILD_CATEGORY_MAX = 6;
 constexpr size_t NEED_BUILD_TITLE_MAX_CHARS = 30;
@@ -685,17 +686,28 @@ int64 need_equipment_build_public_jobs(int32 family, std::vector<need_equipment_
 int64 need_equipment_build_public_list(int32 job_id, int32 category, int32 sort_type, int32 page, need_equipment_build_page& result)
 {
 	result = {};
-	if (job_db.find(job_id) == nullptr || category < NEED_BUILD_CATEGORY_MIN || category > NEED_BUILD_CATEGORY_MAX || page < 0)
+	if (job_db.find(job_id) == nullptr || category < NEED_BUILD_CATEGORY_ALL || category > NEED_BUILD_CATEGORY_MAX || page < 0)
 		return NEED_BUILD_ERROR_INPUT;
 	if (sort_type != 1 && sort_type != 2)
 		sort_type = 1;
 	if (mmysql_handle == nullptr)
 		return NEED_BUILD_ERROR_DATABASE;
+
+	const char* order = sort_type == 1
+		? "`like_count` DESC,`approved_at` DESC,`build_id` DESC"
+		: "`approved_at` DESC,`build_id` DESC";
+	int32 query_result = SQL_ERROR;
 	// Privacy boundary: this query intentionally selects no owner identifiers.
-	if (SQL_ERROR == Sql_Query(mmysql_handle,
-		"SELECT `build_id`,`job_id`,`category`,`status`,`title`,`like_count` FROM `need_equipment_build` WHERE `status`=1 AND `job_id`='%d' AND `category`='%d' ORDER BY %s LIMIT %d OFFSET %d",
-		job_id, category, sort_type == 1 ? "`like_count` DESC,`approved_at` DESC,`build_id` DESC" : "`approved_at` DESC,`build_id` DESC",
-		NEED_BUILD_PAGE_SIZE + 1, page * NEED_BUILD_PAGE_SIZE)) {
+	if (category == NEED_BUILD_CATEGORY_ALL) {
+		query_result = Sql_Query(mmysql_handle,
+			"SELECT `build_id`,`job_id`,`category`,`status`,`title`,`like_count` FROM `need_equipment_build` WHERE `status`=1 AND `job_id`='%d' ORDER BY %s LIMIT %d OFFSET %d",
+			job_id, order, NEED_BUILD_PAGE_SIZE + 1, page * NEED_BUILD_PAGE_SIZE);
+	} else {
+		query_result = Sql_Query(mmysql_handle,
+			"SELECT `build_id`,`job_id`,`category`,`status`,`title`,`like_count` FROM `need_equipment_build` WHERE `status`=1 AND `job_id`='%d' AND `category`='%d' ORDER BY %s LIMIT %d OFFSET %d",
+			job_id, category, order, NEED_BUILD_PAGE_SIZE + 1, page * NEED_BUILD_PAGE_SIZE);
+	}
+	if (SQL_ERROR == query_result) {
 		Sql_ShowDebug(mmysql_handle);
 		return NEED_BUILD_ERROR_DATABASE;
 	}
