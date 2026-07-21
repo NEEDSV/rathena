@@ -1037,34 +1037,66 @@ OnTouch:
 // Magical Seals
 //============================================================
 -	script	봉인 마법#SS	-1,{
-	set .@seal_check,checkquest(3041,PLAYTIME);
-	if (.@seal_check == 0 || .@seal_check == 1) {
-		specialeffect2 EF_SILENCEATTACK;
-		percentheal -50,0;
-		sc_start Eff_Stone,30000,0;
-		//mes "Your SP has not recovered yet. You lost your SP on the altar, but it seems the power of the seal has returned.";
-		mes "SP가 회복되지 않았습니다. 당신의 SP를 제단이 흡수하였으나, 봉인의 힘이 돌아온 것으로 보입니다.";
+	set .@map$,instance_mapname("2@cata");
+
+	// 현재 봉인진의 중심 좌표를 설정한다.
+	if (strnpcinfo(2) == "0") {
+		set .@seal_x,79;
+		set .@seal_y,81;
+	}
+	else if (strnpcinfo(2) == "2") {
+		set .@seal_x,123;
+		set .@seal_y,109;
+	}
+	else if (strnpcinfo(2) == "4") {
+		set .@seal_x,123;
+		set .@seal_y,22;
+	}
+	else if (strnpcinfo(2) == "8") {
+		set .@seal_x,35;
+		set .@seal_y,21;
+	}
+	else if (strnpcinfo(2) == "10") {
+		set .@seal_x,35;
+		set .@seal_y,109;
+	}
+	else {
+		mes "봉인진 정보를 확인할 수 없습니다.";
 		close;
 	}
-	if (.@seal_check == 2) erasequest 3041;
+
+	// 봉인진 중심 10셀 범위 안에 바포메트가 있는지 먼저 확인한다.
+	set .@unit_count,getareaunits(BL_MOB,.@map$,.@seal_x-10,.@seal_y-10,.@seal_x+10,.@seal_y+10,.@mob_gid[0]);
+	set .@baphomet_gid,0;
+
+	for (set .@i,0; .@i<.@unit_count; set .@i,.@i+1) {
+		getunitdata .@mob_gid[.@i],.@mob_data;
+
+		if (.@mob_data[UMOB_CLASS] == 1929) {
+			set .@baphomet_gid,.@mob_gid[.@i];
+			break;
+		}
+	}
+
+	// 범위 밖이면 봉인진을 소모하지 않고 다시 유인할 수 있게 한다.
+	if (.@baphomet_gid == 0) {
+		mes "바포메트가 봉인진의 영향 범위 안에 없습니다.";
+		mes "바포메트를 봉인진 가까이 유인한 뒤 다시 활성화해 주세요.";
+		close;
+	}
+
+	// 바포메트가 범위 안에 있을 때만 무적 해제 및 봉인진 소모를 처리한다.
 	specialeffect EF_LEXDIVINA;
+	areamobuseskill .@map$,.@seal_x,.@seal_y,10,1929,"NPC_INVINCIBLEOFF",1,0,0,ET_HELP,0;
 	disablenpc instance_npcname(strnpcinfo(0));
-	set .@map$, instance_mapname("2@cata");
-	if (strnpcinfo(2) == "0") areamobuseskill .@map$,79,81,10,1929,"NPC_INVINCIBLEOFF",1,0,0,ET_HELP,0;
-	else if (strnpcinfo(2) == "2") areamobuseskill .@map$,123,109,10,1929,"NPC_INVINCIBLEOFF",1,0,0,ET_HELP,0;
-	else if (strnpcinfo(2) == "4") areamobuseskill .@map$,123,22,10,1929,"NPC_INVINCIBLEOFF",1,0,0,ET_HELP,0;
-	else if (strnpcinfo(2) == "8") areamobuseskill .@map$,35,21,10,1929,"NPC_INVINCIBLEOFF",1,0,0,ET_HELP,0;
-	else if (strnpcinfo(2) == "10") areamobuseskill .@map$,35,109,10,1929,"NPC_INVINCIBLEOFF",1,0,0,ET_HELP,0;
-	percentheal -50,0;
+
+	// 제단 활성화 비용: SP 50% 감소, 20초 석화.
+	percentheal 0,-50;
 	sc_start Eff_Stone,20000,0;
-	setquest 3041;
-	//mapannounce .@map$, "The seal activated by putting magical power into the altar.",bc_map,"0x87ceeb";
-	mapannounce .@map$, "제단에 마력을 불어넣어 봉인을 활성화시켰습니다.",bc_map,"0x87ceeb";
-	//mes "I can feel the power of the altar came back by adding magical power.";
-	mes "마법의 힘이 제단에서 느껴집니다.";
-	next;
-	//mes "But you can't use your magic for 3 minutes because you used your SP on the altar.";
-	mes "하지만 제단에 당신의 SP를 주입함으로 3분간 마법을 사용할 수 없습니다.";
+
+	mapannounce .@map$,"제단의 봉인이 활성화되어 바포메트의 광폭화가 해제되었습니다.",bc_map,"0x87ceeb";
+	mes "봉인의 힘이 바포메트에게 적용되었습니다.";
+	mes "SP의 50%가 소모되었습니다.";
 	close;
 
 OnInstanceInit:
