@@ -30,6 +30,7 @@
 #include "map.hpp"
 #include "mercenary.hpp"
 #include "mob.hpp"
+#include "need_equipment_build.hpp"
 #include "npc.hpp"
 #include "party.hpp"
 #include "path.hpp"
@@ -3934,6 +3935,7 @@ int32 unit_free(block_list *bl, clr_type clrtype)
 		case BL_PC: {
 			map_session_data *sd = (map_session_data*)bl;
 			int32 i;
+			need_equipment_build_view_session_cleanup(sd);
 
 			if( status_isdead(*bl) )
 				pc_setrestartvalue(sd,2);

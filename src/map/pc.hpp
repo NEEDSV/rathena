@@ -600,6 +600,12 @@ public:
 	t_tick need_equipment_build_register_tick = 0;
 	t_tick need_equipment_build_like_tick = 0;
 	t_tick need_equipment_build_reward_tick = 0;
+	t_tick need_equipment_build_view_tick = 0;
+	int32 need_equipment_build_view_timer = INVALID_TIMER;
+	uint64 need_equipment_build_view_pending_id = 0;
+	int32 need_equipment_build_view_pending_mode = 0;
+	uint32 need_equipment_build_view_generation = 0;
+	bool need_equipment_build_view_assumed_open = false;
 
 	struct s_item_delay {
 		t_itemid nameid;

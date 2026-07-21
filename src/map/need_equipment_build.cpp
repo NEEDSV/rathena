@@ -38,6 +38,7 @@ constexpr uint32 NEED_BUILD_REWARD_AMOUNT_MAX = 100;
 constexpr t_tick NEED_BUILD_REGISTER_COOLDOWN_MS = 2000;
 constexpr t_tick NEED_BUILD_LIKE_COOLDOWN_MS = 1000;
 constexpr t_tick NEED_BUILD_REWARD_COOLDOWN_MS = 2000;
+constexpr t_tick NEED_BUILD_VIEW_COOLDOWN_MS = 750;
 
 const char* const need_build_category_names[] = {
 	"Unknown", "General hunting", "Boss hunting", "Material / Zeny farming",
@@ -274,27 +275,6 @@ static bool need_build_reason_valid(const char* reason)
 	return reason != nullptr && need_build_text_length(reason, length) && length > 0 && length <= NEED_BUILD_DESCRIPTION_MAX_CHARS;
 }
 
-static const char* need_build_position_name(map_session_data* sd, uint32 position)
-{
-	if (position & EQP_HEAD_TOP) return msg_txt(sd, NEED_BUILD_MSG_POSITION_HEAD_TOP);
-	if (position & EQP_HEAD_MID) return msg_txt(sd, NEED_BUILD_MSG_POSITION_HEAD_MID);
-	if (position & EQP_HEAD_LOW) return msg_txt(sd, NEED_BUILD_MSG_POSITION_HEAD_LOW);
-	if (position & EQP_ARMOR) return msg_txt(sd, NEED_BUILD_MSG_POSITION_ARMOR);
-	if (position & EQP_HAND_R) return msg_txt(sd, NEED_BUILD_MSG_POSITION_RIGHT_HAND);
-	if (position & EQP_HAND_L) return msg_txt(sd, NEED_BUILD_MSG_POSITION_LEFT_HAND);
-	if (position & EQP_GARMENT) return msg_txt(sd, NEED_BUILD_MSG_POSITION_GARMENT);
-	if (position & EQP_SHOES) return msg_txt(sd, NEED_BUILD_MSG_POSITION_SHOES);
-	if (position & EQP_ACC_L) return msg_txt(sd, NEED_BUILD_MSG_POSITION_ACC_LEFT);
-	if (position & EQP_ACC_R) return msg_txt(sd, NEED_BUILD_MSG_POSITION_ACC_RIGHT);
-	if (position & EQP_SHADOW_ARMOR) return msg_txt(sd, NEED_BUILD_MSG_POSITION_SHADOW_ARMOR);
-	if (position & EQP_SHADOW_WEAPON) return msg_txt(sd, NEED_BUILD_MSG_POSITION_SHADOW_WEAPON);
-	if (position & EQP_SHADOW_SHIELD) return msg_txt(sd, NEED_BUILD_MSG_POSITION_SHADOW_SHIELD);
-	if (position & EQP_SHADOW_SHOES) return msg_txt(sd, NEED_BUILD_MSG_POSITION_SHADOW_SHOES);
-	if (position & EQP_SHADOW_ACC_R) return msg_txt(sd, NEED_BUILD_MSG_POSITION_SHADOW_EARRING);
-	if (position & EQP_SHADOW_ACC_L) return msg_txt(sd, NEED_BUILD_MSG_POSITION_SHADOW_PENDANT);
-	return msg_txt(sd, NEED_BUILD_MSG_POSITION_UNKNOWN);
-}
-
 static int32 need_build_position_order(uint32 position)
 {
 	const uint32 order[] = { EQP_HEAD_TOP, EQP_HEAD_MID, EQP_HEAD_LOW, EQP_ARMOR, EQP_HAND_R, EQP_HAND_L,
@@ -364,93 +344,59 @@ static bool need_build_load_items(uint64 build_id, std::vector<need_build_stored
 	return true;
 }
 
-static std::string need_build_random_option_name(const std::string& database_name)
+static int64 need_build_prepare_view_items(uint64 build_id, std::vector<s_clif_viewequip_snapshot_item>& result)
 {
-	std::string result = database_name;
-	if (result.compare(0, 4, "VAR_") == 0)
-		result.erase(0, 4);
-	const std::string amount_suffix = "AMOUNT";
-	if (result.size() > amount_suffix.size() && result.compare(result.size() - amount_suffix.size(), amount_suffix.size(), amount_suffix) == 0)
-		result.erase(result.size() - amount_suffix.size());
-	if (result == "MAXHP") return "MaxHP";
-	if (result == "MAXSP") return "MaxSP";
-	return result;
-}
+	std::vector<need_build_stored_item> stored_items;
+	if (!need_build_load_items(build_id, stored_items))
+		return NEED_BUILD_VIEW_FAILED;
+	if (stored_items.empty())
+		return NEED_BUILD_VIEW_SUCCESS;
 
-static bool need_build_display_items(map_session_data* sd, uint64 build_id, bool admin_detail)
-{
-	std::vector<need_build_stored_item> items;
-	if (!need_build_load_items(build_id, items))
-		return false;
-	if (items.empty()) {
-		clif_displaymessage(sd->fd, msg_txt(sd, NEED_BUILD_MSG_NO_ITEMS));
-		ShowWarning("NEED equipment build: build_id=%" PRIu64 " has no item snapshot rows.\n", build_id);
-		return true;
-	}
-	char output[CHAT_SIZE_MAX] = {};
-	clif_displaymessage(sd->fd, msg_txt(sd, NEED_BUILD_MSG_ITEM_HEADER));
-	for (need_build_stored_item& stored : items) {
+	constexpr uint32 supported_positions = EQP_HEAD_TOP | EQP_HEAD_MID | EQP_HEAD_LOW | EQP_ARMOR | EQP_HAND_R | EQP_HAND_L |
+		EQP_GARMENT | EQP_SHOES | EQP_ACC_L | EQP_ACC_R | EQP_SHADOW_ARMOR | EQP_SHADOW_WEAPON |
+		EQP_SHADOW_SHIELD | EQP_SHADOW_SHOES | EQP_SHADOW_ACC_R | EQP_SHADOW_ACC_L;
+	uint32 occupied_positions = 0;
+	result.clear();
+	result.reserve(stored_items.size());
+
+	for (const need_build_stored_item& stored : stored_items) {
+		if (stored.equip_position == 0 || (stored.equip_position & ~supported_positions) != 0 ||
+			(stored.equip_position & occupied_positions) != 0) {
+			ShowWarning("NEED equipment build view: build_id=%" PRIu64 " has invalid or duplicate equip_position=%u.\n", build_id, stored.equip_position);
+			return NEED_BUILD_VIEW_INVALID_DATA;
+		}
+
 		std::shared_ptr<item_data> data = item_db.find(stored.data.nameid);
-		const std::string item_text = data != nullptr ? item_db.create_item_link(stored.data) : msg_txt(sd, NEED_BUILD_MSG_UNKNOWN_ITEM);
-		if (admin_detail) {
-			safesnprintf(output, sizeof(output), msg_txt(sd, NEED_BUILD_MSG_ITEM_ADMIN), need_build_position_name(sd, stored.equip_position),
-				item_text.c_str(), stored.data.nameid, static_cast<uint32>(stored.data.refine), static_cast<uint32>(stored.data.enchantgrade),
-				static_cast<int32>(stored.data.attribute), static_cast<int32>(stored.data.identify));
-		} else if (stored.data.refine > 0) {
-			safesnprintf(output, sizeof(output), msg_txt(sd, NEED_BUILD_MSG_ITEM_REFINED), need_build_position_name(sd, stored.equip_position),
-				item_text.c_str(), static_cast<uint32>(stored.data.refine));
-		} else {
-			safesnprintf(output, sizeof(output), msg_txt(sd, NEED_BUILD_MSG_ITEM), need_build_position_name(sd, stored.equip_position), item_text.c_str());
+		if (data == nullptr || !itemdb_isequip2(data.get())) {
+			ShowWarning("NEED equipment build view: build_id=%" PRIu64 " has invalid item_id=%u.\n", build_id, stored.data.nameid);
+			return NEED_BUILD_VIEW_INVALID_DATA;
 		}
-		clif_displaymessage(sd->fd, output);
-		const bool special_card_data = itemdb_isspecial(stored.data.card[0]);
-		if (special_card_data) {
-			if (admin_detail) {
-				safesnprintf(output, sizeof(output), msg_txt(sd, NEED_BUILD_MSG_SPECIAL_CARD_ADMIN), stored.data.card[0], stored.data.card[1],
-					stored.data.card[2], stored.data.card[3]);
-				clif_displaymessage(sd->fd, output);
+
+		s_clif_viewequip_snapshot_item snapshot;
+		snapshot.data = stored.data;
+		snapshot.data.equip = stored.equip_position;
+		snapshot.equip_position = static_cast<int32>(stored.equip_position);
+		if (!itemdb_isspecial(snapshot.data.card[0])) {
+			for (size_t slot = 0; slot < MAX_SLOTS; ++slot) {
+				std::shared_ptr<item_data> card = item_db.find(snapshot.data.card[slot]);
+				if (snapshot.data.card[slot] != 0 && (card == nullptr || card->type != IT_CARD)) {
+					ShowWarning("NEED equipment build view: build_id=%" PRIu64 " ignored invalid card_id=%u.\n", build_id, snapshot.data.card[slot]);
+					snapshot.data.card[slot] = 0;
+				}
 			}
 		}
-		uint32 displayed_cards = 0;
-		for (size_t slot = 0; !special_card_data && slot < MAX_SLOTS; ++slot) {
-			const t_itemid card_id = stored.data.card[slot];
-			if (card_id == 0)
-				continue;
-			std::shared_ptr<item_data> card_data = item_db.find(card_id);
-			char card_name[CHAT_SIZE_MAX] = {};
-			if (card_data != nullptr && card_data->type == IT_CARD)
-				safesnprintf(card_name, sizeof(card_name), "%s", item_db.create_item_link(card_id).c_str());
-			else
-				safesnprintf(card_name, sizeof(card_name), msg_txt(sd, NEED_BUILD_MSG_UNKNOWN_CARD), card_id);
-			++displayed_cards;
-			if (admin_detail)
-				safesnprintf(output, sizeof(output), msg_txt(sd, NEED_BUILD_MSG_CARD_ADMIN), displayed_cards, card_name, card_id);
-			else
-				safesnprintf(output, sizeof(output), msg_txt(sd, NEED_BUILD_MSG_CARD), displayed_cards, card_name);
-			clif_displaymessage(sd->fd, output);
-		}
-		for (size_t index = 0; index < MAX_ITEM_RDM_OPT; ++index) {
-			if (stored.data.option[index].id == 0)
-				continue;
-			const int16 option_id = stored.data.option[index].id;
-			std::shared_ptr<s_random_opt_data> option_data = random_option_db.find(static_cast<uint16>(option_id));
-			char option_name[CHAT_SIZE_MAX] = {};
-			if (option_data != nullptr) {
-				const std::string display_name = need_build_random_option_name(option_data->name);
-				safesnprintf(option_name, sizeof(option_name), "%s", display_name.c_str());
-				if (admin_detail)
-					safesnprintf(output, sizeof(output), msg_txt(sd, NEED_BUILD_MSG_OPTION_ADMIN), static_cast<uint32>(index + 1), option_name,
-						option_id, stored.data.option[index].value, static_cast<int32>(stored.data.option[index].param));
-				else
-					safesnprintf(output, sizeof(output), msg_txt(sd, NEED_BUILD_MSG_OPTION), static_cast<uint32>(index + 1), option_name,
-						stored.data.option[index].value);
-			} else {
-				safesnprintf(output, sizeof(output), msg_txt(sd, NEED_BUILD_MSG_UNKNOWN_OPTION), option_id, stored.data.option[index].value);
+		for (size_t option = 0; option < MAX_ITEM_RDM_OPT; ++option) {
+			const int16 option_id = snapshot.data.option[option].id;
+			if (option_id != 0 && (option_id < 0 || random_option_db.find(static_cast<uint16>(option_id)) == nullptr)) {
+				ShowWarning("NEED equipment build view: build_id=%" PRIu64 " ignored invalid random option id=%d.\n", build_id, option_id);
+				snapshot.data.option[option] = {};
 			}
-			clif_displaymessage(sd->fd, output);
 		}
+
+		occupied_positions |= stored.equip_position;
+		result.push_back(snapshot);
 	}
-	return true;
+	return NEED_BUILD_VIEW_SUCCESS;
 }
 
 static void need_build_state_log(const map_session_data* sd, uint64 build_id, const char* action, int32 previous_status, int32 target_status, int64 result, const char* stage)
@@ -845,8 +791,6 @@ int64 need_equipment_build_admin_detail(map_session_data* sd, uint64 build_id)
 		safesnprintf(output, sizeof(output), msg_txt(sd, NEED_BUILD_MSG_REWARD_NONE));
 	}
 	clif_displaymessage(sd->fd, output);
-	if (!need_build_display_items(sd, build_id, true))
-		return NEED_BUILD_ERROR_DATABASE;
 	if (SQL_ERROR == Sql_Query(mmysql_handle,
 		"SELECT `admin_account_id`,`admin_char_id`,`action`,`reason`,`created_at` FROM `need_equipment_build_admin_log` WHERE `build_id`='%" PRIu64 "' ORDER BY `log_id`", build_id)) {
 		Sql_ShowDebug(mmysql_handle);
@@ -912,8 +856,6 @@ int64 need_equipment_build_public_detail(map_session_data* sd, uint64 build_id, 
 	clif_displaymessage(sd->fd, output);
 	safesnprintf(output, sizeof(output), msg_txt(sd, NEED_BUILD_MSG_ACCOUNT_LIKED), atoi(value[15].c_str()) ? msg_txt(sd, NEED_BUILD_MSG_YES) : msg_txt(sd, NEED_BUILD_MSG_NO));
 	clif_displaymessage(sd->fd, output);
-	if (!need_build_display_items(sd, build_id, false))
-		return NEED_BUILD_ERROR_DATABASE;
 	clif_displaymessage(sd->fd, msg_txt(sd, NEED_BUILD_MSG_SNAPSHOT_NOTICE_1));
 	clif_displaymessage(sd->fd, msg_txt(sd, NEED_BUILD_MSG_SNAPSHOT_NOTICE_2));
 	return 1;
@@ -982,7 +924,171 @@ int64 need_equipment_build_owner_detail(map_session_data* sd, uint64 build_id)
 		safesnprintf(output, sizeof(output), msg_txt(sd, NEED_BUILD_MSG_REWARD_NONE));
 	}
 	clif_displaymessage(sd->fd, output);
-	return need_build_display_items(sd, build_id, false) ? 1 : NEED_BUILD_ERROR_DATABASE;
+	return 1;
+}
+
+static int64 need_build_process_view_window(map_session_data* sd, uint64 build_id, int32 view_mode, bool send_packet, bool notify)
+{
+	if (sd == nullptr || sd->fd <= 0 || !session_isActive(sd->fd))
+		return NEED_BUILD_VIEW_UNAVAILABLE;
+	if (build_id == 0 || view_mode < NEED_BUILD_VIEW_PUBLIC || view_mode > NEED_BUILD_VIEW_ADMIN || mmysql_handle == nullptr) {
+		if (notify)
+			clif_displaymessage(sd->fd, msg_txt(sd, NEED_BUILD_MSG_VIEW_FAILED));
+		return NEED_BUILD_VIEW_FAILED;
+	}
+
+	if (SQL_ERROR == Sql_Query(mmysql_handle,
+		"SELECT `account_id`,`char_id`,`job_id`,`status` FROM `need_equipment_build` WHERE `build_id`='%" PRIu64 "' LIMIT 1", build_id)) {
+		Sql_ShowDebug(mmysql_handle);
+		if (notify)
+			clif_displaymessage(sd->fd, msg_txt(sd, NEED_BUILD_MSG_VIEW_FAILED));
+		return NEED_BUILD_VIEW_FAILED;
+	}
+	if (SQL_SUCCESS != Sql_NextRow(mmysql_handle)) {
+		Sql_FreeResult(mmysql_handle);
+		if (notify)
+			clif_displaymessage(sd->fd, msg_txt(sd, NEED_BUILD_MSG_NOT_FOUND));
+		return NEED_BUILD_VIEW_NOT_FOUND;
+	}
+	const uint32 owner_account_id = static_cast<uint32>(need_build_column_uint64(mmysql_handle, 0));
+	const uint32 owner_char_id = static_cast<uint32>(need_build_column_uint64(mmysql_handle, 1));
+	const int32 job_id = need_build_column_int(mmysql_handle, 2);
+	const int32 status = need_build_column_int(mmysql_handle, 3);
+	Sql_FreeResult(mmysql_handle);
+
+	if (view_mode == NEED_BUILD_VIEW_PUBLIC && status != 1) {
+		if (notify)
+			clif_displaymessage(sd->fd, msg_txt(sd, NEED_BUILD_MSG_VIEW_NOT_PUBLIC));
+		return NEED_BUILD_VIEW_NOT_PUBLIC;
+	}
+	if (view_mode == NEED_BUILD_VIEW_OWNER &&
+		(owner_account_id != sd->status.account_id || owner_char_id != sd->status.char_id)) {
+		if (notify)
+			clif_displaymessage(sd->fd, msg_txt(sd, NEED_BUILD_MSG_NO_PERMISSION));
+		return NEED_BUILD_VIEW_NOT_OWNER;
+	}
+	if (view_mode == NEED_BUILD_VIEW_ADMIN && !need_equipment_build_is_admin(sd)) {
+		if (notify)
+			clif_displaymessage(sd->fd, msg_txt(sd, NEED_BUILD_MSG_NO_PERMISSION));
+		return NEED_BUILD_VIEW_NOT_ADMIN;
+	}
+	if (job_db.find(job_id) == nullptr || pc_jobid2mapid(static_cast<uint16>(job_id)) == MAPID_ALL) {
+		ShowWarning("NEED equipment build view: build_id=%" PRIu64 " has invalid job_id=%d.\n", build_id, job_id);
+		if (notify)
+			clif_displaymessage(sd->fd, msg_txt(sd, NEED_BUILD_MSG_VIEW_FAILED));
+		return NEED_BUILD_VIEW_INVALID_DATA;
+	}
+
+	std::vector<s_clif_viewequip_snapshot_item> items;
+	const int64 prepare_result = need_build_prepare_view_items(build_id, items);
+	if (prepare_result != NEED_BUILD_VIEW_SUCCESS) {
+		if (notify)
+			clif_displaymessage(sd->fd, msg_txt(sd, NEED_BUILD_MSG_VIEW_FAILED));
+		return prepare_result;
+	}
+	if (items.empty()) {
+		if (notify)
+			clif_displaymessage(sd->fd, msg_txt(sd, NEED_BUILD_MSG_VIEW_NO_ITEMS));
+		return NEED_BUILD_VIEW_NO_ITEMS;
+	}
+	if (!send_packet)
+		return NEED_BUILD_VIEW_SUCCESS;
+	if (sd->fd <= 0 || !session_isActive(sd->fd))
+		return NEED_BUILD_VIEW_UNAVAILABLE;
+
+	char display_name[NAME_LENGTH] = {};
+	if (safesnprintf(display_name, sizeof(display_name), msg_txt(sd, NEED_BUILD_MSG_VIEW_NAME), static_cast<unsigned long long>(build_id)) >= static_cast<int32>(sizeof(display_name)))
+		safesnprintf(display_name, sizeof(display_name), "#%llu", static_cast<unsigned long long>(build_id));
+	if (!clif_viewequip_snapshot(*sd, display_name, job_id, items)) {
+		if (notify)
+			clif_displaymessage(sd->fd, msg_txt(sd, NEED_BUILD_MSG_VIEW_FAILED));
+		return NEED_BUILD_VIEW_UNAVAILABLE;
+	}
+	if (notify)
+		clif_displaymessage(sd->fd, msg_txt(sd, NEED_BUILD_MSG_VIEW_OPENED));
+	return NEED_BUILD_VIEW_SUCCESS;
+}
+
+static TIMER_FUNC(need_build_view_window_timer)
+{
+	map_session_data* sd = map_id2sd(id);
+	const uint32 generation = static_cast<uint32>(data);
+	if (sd == nullptr || sd->need_equipment_build_view_timer != tid || sd->need_equipment_build_view_generation != generation)
+		return 0;
+
+	const uint64 build_id = sd->need_equipment_build_view_pending_id;
+	const int32 view_mode = sd->need_equipment_build_view_pending_mode;
+	sd->need_equipment_build_view_timer = INVALID_TIMER;
+	sd->need_equipment_build_view_pending_id = 0;
+	sd->need_equipment_build_view_pending_mode = 0;
+	const int64 result = need_build_process_view_window(sd, build_id, view_mode, true, true);
+	sd->need_equipment_build_view_assumed_open = result == NEED_BUILD_VIEW_SUCCESS;
+	return 0;
+}
+
+void need_equipment_build_view_cancel_pending(map_session_data* sd)
+{
+	if (sd == nullptr)
+		return;
+	if (sd->need_equipment_build_view_timer != INVALID_TIMER)
+		delete_timer(sd->need_equipment_build_view_timer, need_build_view_window_timer);
+	sd->need_equipment_build_view_timer = INVALID_TIMER;
+	sd->need_equipment_build_view_pending_id = 0;
+	sd->need_equipment_build_view_pending_mode = 0;
+	if (++sd->need_equipment_build_view_generation == 0)
+		++sd->need_equipment_build_view_generation;
+}
+
+void need_equipment_build_view_session_cleanup(map_session_data* sd)
+{
+	need_equipment_build_view_cancel_pending(sd);
+	if (sd != nullptr)
+		sd->need_equipment_build_view_assumed_open = false;
+}
+
+void need_equipment_build_view_mark_external_open(map_session_data* sd)
+{
+	need_equipment_build_view_cancel_pending(sd);
+	if (sd != nullptr)
+		sd->need_equipment_build_view_assumed_open = true;
+}
+
+int64 need_equipment_build_open_window(map_session_data* sd, uint64 build_id, int32 view_mode)
+{
+	if (sd == nullptr || sd->fd <= 0 || !session_isActive(sd->fd))
+		return NEED_BUILD_VIEW_UNAVAILABLE;
+	if (!need_build_request_allowed(sd->need_equipment_build_view_tick, NEED_BUILD_VIEW_COOLDOWN_MS)) {
+		clif_displaymessage(sd->fd, msg_txt(sd, NEED_BUILD_MSG_VIEW_COOLDOWN));
+		return NEED_BUILD_VIEW_COOLDOWN;
+	}
+
+	const int64 validation_result = need_build_process_view_window(sd, build_id, view_mode, false, true);
+	if (validation_result != NEED_BUILD_VIEW_SUCCESS)
+		return validation_result;
+
+	need_equipment_build_view_cancel_pending(sd);
+	if (sd->need_equipment_build_view_assumed_open) {
+		// The client protocol has no dedicated equipment-view close packet. A valid
+		// microscope response closes the currently open view; the delayed response
+		// below opens the requested snapshot after the close has been processed.
+		const int64 close_result = need_build_process_view_window(sd, build_id, view_mode, true, false);
+		if (close_result != NEED_BUILD_VIEW_SUCCESS)
+			return close_result;
+		sd->need_equipment_build_view_assumed_open = false;
+	}
+
+	sd->need_equipment_build_view_pending_id = build_id;
+	sd->need_equipment_build_view_pending_mode = view_mode;
+	sd->need_equipment_build_view_timer = add_timer(gettick() + 100, need_build_view_window_timer, sd->id,
+		static_cast<intptr_t>(sd->need_equipment_build_view_generation));
+	if (sd->need_equipment_build_view_timer == INVALID_TIMER) {
+		sd->need_equipment_build_view_pending_id = 0;
+		sd->need_equipment_build_view_pending_mode = 0;
+		const int64 result = need_build_process_view_window(sd, build_id, view_mode, true, true);
+		sd->need_equipment_build_view_assumed_open = result == NEED_BUILD_VIEW_SUCCESS;
+		return result;
+	}
+	return NEED_BUILD_VIEW_SUCCESS;
 }
 
 static int64 need_build_row_count()

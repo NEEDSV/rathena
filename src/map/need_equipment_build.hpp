@@ -65,6 +65,25 @@ enum e_need_equipment_build_review_action : int32 {
 	NEED_BUILD_REVIEW_DELETE = 3,
 };
 
+enum e_need_equipment_build_view_mode : int32 {
+	NEED_BUILD_VIEW_PUBLIC = 1,
+	NEED_BUILD_VIEW_OWNER = 2,
+	NEED_BUILD_VIEW_ADMIN = 3,
+};
+
+enum e_need_equipment_build_view_result : int64 {
+	NEED_BUILD_VIEW_SUCCESS = 1,
+	NEED_BUILD_VIEW_FAILED = 0,
+	NEED_BUILD_VIEW_NOT_FOUND = -1,
+	NEED_BUILD_VIEW_NOT_PUBLIC = -2,
+	NEED_BUILD_VIEW_NOT_OWNER = -3,
+	NEED_BUILD_VIEW_NOT_ADMIN = -4,
+	NEED_BUILD_VIEW_NO_ITEMS = -5,
+	NEED_BUILD_VIEW_INVALID_DATA = -6,
+	NEED_BUILD_VIEW_UNAVAILABLE = -7,
+	NEED_BUILD_VIEW_COOLDOWN = -8,
+};
+
 enum e_need_equipment_build_message : int32 {
 	NEED_BUILD_MSG_DETAIL_HEADER = 1651,
 	NEED_BUILD_MSG_JOB,
@@ -192,6 +211,12 @@ enum e_need_equipment_build_message : int32 {
 	NEED_BUILD_MSG_CARD_ADMIN,
 	NEED_BUILD_MSG_OPTION_ADMIN,
 	NEED_BUILD_MSG_SPECIAL_CARD_ADMIN,
+	NEED_BUILD_MSG_VIEW_OPENED,
+	NEED_BUILD_MSG_VIEW_FAILED,
+	NEED_BUILD_MSG_VIEW_NOT_PUBLIC,
+	NEED_BUILD_MSG_VIEW_NO_ITEMS,
+	NEED_BUILD_MSG_VIEW_NAME,
+	NEED_BUILD_MSG_VIEW_COOLDOWN,
 };
 
 struct need_equipment_build_list_entry {
@@ -241,6 +266,10 @@ int64 need_equipment_build_owner_list(map_session_data* sd, int32 page, need_equ
 int64 need_equipment_build_admin_detail(map_session_data* sd, uint64 build_id);
 int64 need_equipment_build_public_detail(map_session_data* sd, uint64 build_id, uint32* like_count = nullptr, bool* liked = nullptr, bool* is_owner = nullptr);
 int64 need_equipment_build_owner_detail(map_session_data* sd, uint64 build_id);
+int64 need_equipment_build_open_window(map_session_data* sd, uint64 build_id, int32 view_mode);
+void need_equipment_build_view_cancel_pending(map_session_data* sd);
+void need_equipment_build_view_session_cleanup(map_session_data* sd);
+void need_equipment_build_view_mark_external_open(map_session_data* sd);
 int64 need_equipment_build_review(map_session_data* sd, uint64 build_id, int32 action, const char* reason);
 int64 need_equipment_build_approve(map_session_data* sd, uint64 build_id, uint32 reward_item_id, uint32 reward_amount);
 int64 need_equipment_build_cancel(map_session_data* sd, uint64 build_id);

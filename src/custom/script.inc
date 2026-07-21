@@ -227,6 +227,13 @@ BUILDIN_FUNC(need_show_my_equipment_build)
 	return SCRIPT_CMD_SUCCESS;
 }
 
+BUILDIN_FUNC(need_open_equipment_build_window)
+{
+	map_session_data* sd = nullptr;
+	script_pushint(st, script_rid2sd(sd) ? need_equipment_build_open_window(sd, script_getnum64(st, 2), script_getnum(st, 3)) : NEED_BUILD_VIEW_UNAVAILABLE);
+	return SCRIPT_CMD_SUCCESS;
+}
+
 BUILDIN_FUNC(need_review_equipment_build)
 {
 	map_session_data* sd = nullptr;
