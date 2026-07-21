@@ -18,6 +18,307 @@
 //	return 0;
 //}
 
+BUILDIN_FUNC(need_register_equipment_build)
+{
+	map_session_data* sd = nullptr;
+	if (!script_rid2sd(sd)) {
+		script_pushint(st, NEED_BUILD_ERROR_NO_PLAYER);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	script_pushint(st, need_equipment_build_register(sd, script_getnum(st, 2), script_getstr(st, 3), script_getstr(st, 4)));
+	return SCRIPT_CMD_SUCCESS;
+}
+
+BUILDIN_FUNC(need_get_equipment_build_count)
+{
+	map_session_data* sd = nullptr;
+	if (!script_rid2sd(sd)) {
+		script_pushint(st, NEED_BUILD_ERROR_NO_PLAYER);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	script_pushint(st, need_equipment_build_count(sd->status.account_id));
+	return SCRIPT_CMD_SUCCESS;
+}
+
+BUILDIN_FUNC(need_show_last_equipment_build)
+{
+	map_session_data* sd = nullptr;
+	if (!script_rid2sd(sd)) {
+		script_pushint(st, NEED_BUILD_ERROR_NO_PLAYER);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	need_equipment_build_page page;
+	const int64 count = need_equipment_build_owner_list(sd, 0, page);
+	if (count <= 0) {
+		script_pushint(st, count);
+		return SCRIPT_CMD_SUCCESS;
+	}
+	const uint64 build_id = page.entries.front().build_id;
+
+	script_pushint(st, need_equipment_build_owner_detail(sd, build_id) > 0 ? static_cast<int64>(build_id) : NEED_BUILD_ERROR_DATABASE);
+	return SCRIPT_CMD_SUCCESS;
+}
+
+static void need_build_script_clear_page(map_session_data* sd)
+{
+	for (const char* name : { "@need_build_ids", "@need_build_job_ids", "@need_build_categories", "@need_build_statuses", "@need_build_like_counts",
+		"@need_build_titles$", "@need_build_job_names$", "@need_build_owners$", "@need_build_has_more" })
+		script_cleararray_pc(sd, name);
+	script_setarray_pc(sd, "@need_build_has_more", 0, 0, nullptr);
+}
+
+static void need_build_script_set_page(map_session_data* sd, const need_equipment_build_page& page)
+{
+	for (size_t index = 0; index < page.entries.size(); ++index) {
+		const need_equipment_build_list_entry& entry = page.entries[index];
+		script_setarray_pc(sd, "@need_build_ids", static_cast<uint32>(index), entry.build_id, nullptr);
+		script_setarray_pc(sd, "@need_build_job_ids", static_cast<uint32>(index), entry.job_id, nullptr);
+		script_setarray_pc(sd, "@need_build_categories", static_cast<uint32>(index), entry.category, nullptr);
+		script_setarray_pc(sd, "@need_build_statuses", static_cast<uint32>(index), entry.status, nullptr);
+		script_setarray_pc(sd, "@need_build_like_counts", static_cast<uint32>(index), entry.like_count, nullptr);
+		setd_sub_str(nullptr, sd, "@need_build_titles$", static_cast<int32>(index), entry.title.c_str(), nullptr);
+		setd_sub_str(nullptr, sd, "@need_build_job_names$", static_cast<int32>(index), entry.job_name.c_str(), nullptr);
+		setd_sub_str(nullptr, sd, "@need_build_owners$", static_cast<int32>(index), entry.owner_name.c_str(), nullptr);
+	}
+	script_setarray_pc(sd, "@need_build_has_more", 0, page.has_more ? 1 : 0, nullptr);
+}
+
+BUILDIN_FUNC(need_equipment_build_category_name)
+{
+	map_session_data* sd = nullptr;
+	script_rid2sd(sd);
+	script_pushstrcopy(st, need_equipment_build_category_name(script_getnum(st, 2), sd));
+	return SCRIPT_CMD_SUCCESS;
+}
+
+BUILDIN_FUNC(need_equipment_build_status_name)
+{
+	map_session_data* sd = nullptr;
+	script_rid2sd(sd);
+	script_pushstrcopy(st, need_equipment_build_status_name(script_getnum(st, 2), sd));
+	return SCRIPT_CMD_SUCCESS;
+}
+
+BUILDIN_FUNC(need_equipment_build_is_admin)
+{
+	map_session_data* sd = nullptr;
+	script_pushint(st, script_rid2sd(sd) && need_equipment_build_is_admin(sd) ? 1 : 0);
+	return SCRIPT_CMD_SUCCESS;
+}
+
+BUILDIN_FUNC(need_get_admin_equipment_build_list)
+{
+	map_session_data* sd = nullptr;
+	if (!script_rid2sd(sd)) {
+		script_pushint(st, NEED_BUILD_ERROR_NO_PLAYER);
+		return SCRIPT_CMD_SUCCESS;
+	}
+	need_equipment_build_page page;
+	need_build_script_clear_page(sd);
+	const int64 result = need_equipment_build_admin_list(sd, script_getnum(st, 2), script_getnum(st, 3), page);
+	if (result >= 0) need_build_script_set_page(sd, page);
+	script_pushint(st, result);
+	return SCRIPT_CMD_SUCCESS;
+}
+
+BUILDIN_FUNC(need_search_admin_equipment_builds)
+{
+	map_session_data* sd = nullptr;
+	if (!script_rid2sd(sd)) {
+		script_pushint(st, NEED_BUILD_ERROR_NO_PLAYER);
+		return SCRIPT_CMD_SUCCESS;
+	}
+	need_equipment_build_page page;
+	need_build_script_clear_page(sd);
+	const int64 result = need_equipment_build_admin_search(sd, script_getnum(st, 2), script_getstr(st, 3), script_getnum(st, 4), page);
+	if (result >= 0) need_build_script_set_page(sd, page);
+	script_pushint(st, result);
+	return SCRIPT_CMD_SUCCESS;
+}
+
+BUILDIN_FUNC(need_get_public_equipment_build_jobs)
+{
+	map_session_data* sd = nullptr;
+	if (!script_rid2sd(sd)) {
+		script_pushint(st, NEED_BUILD_ERROR_NO_PLAYER);
+		return SCRIPT_CMD_SUCCESS;
+	}
+	std::vector<need_equipment_build_job_entry> jobs;
+	need_build_script_clear_page(sd);
+	const int64 result = need_equipment_build_public_jobs(script_getnum(st, 2), jobs);
+	if (result >= 0) {
+		for (size_t index = 0; index < jobs.size(); ++index) {
+			script_setarray_pc(sd, "@need_build_job_ids", static_cast<uint32>(index), jobs[index].job_id, nullptr);
+			setd_sub_str(nullptr, sd, "@need_build_job_names$", static_cast<int32>(index), jobs[index].name.c_str(), nullptr);
+		}
+	}
+	script_pushint(st, result);
+	return SCRIPT_CMD_SUCCESS;
+}
+
+BUILDIN_FUNC(need_get_public_equipment_build_list)
+{
+	map_session_data* sd = nullptr;
+	if (!script_rid2sd(sd)) {
+		script_pushint(st, NEED_BUILD_ERROR_NO_PLAYER);
+		return SCRIPT_CMD_SUCCESS;
+	}
+	need_equipment_build_page page;
+	need_build_script_clear_page(sd);
+	const int64 result = need_equipment_build_public_list(script_getnum(st, 2), script_getnum(st, 3), script_getnum(st, 4), script_getnum(st, 5), page);
+	if (result >= 0) need_build_script_set_page(sd, page);
+	script_pushint(st, result);
+	return SCRIPT_CMD_SUCCESS;
+}
+
+BUILDIN_FUNC(need_get_my_equipment_build_list)
+{
+	map_session_data* sd = nullptr;
+	if (!script_rid2sd(sd)) {
+		script_pushint(st, NEED_BUILD_ERROR_NO_PLAYER);
+		return SCRIPT_CMD_SUCCESS;
+	}
+	need_equipment_build_page page;
+	need_build_script_clear_page(sd);
+	const int64 result = need_equipment_build_owner_list(sd, script_getnum(st, 2), page);
+	if (result >= 0) need_build_script_set_page(sd, page);
+	script_pushint(st, result);
+	return SCRIPT_CMD_SUCCESS;
+}
+
+BUILDIN_FUNC(need_show_admin_equipment_build)
+{
+	map_session_data* sd = nullptr;
+	script_pushint(st, script_rid2sd(sd) ? need_equipment_build_admin_detail(sd, script_getnum64(st, 2)) : NEED_BUILD_ERROR_NO_PLAYER);
+	return SCRIPT_CMD_SUCCESS;
+}
+
+BUILDIN_FUNC(need_show_public_equipment_build)
+{
+	map_session_data* sd = nullptr;
+	if (!script_rid2sd(sd)) {
+		script_pushint(st, NEED_BUILD_ERROR_NO_PLAYER);
+		return SCRIPT_CMD_SUCCESS;
+	}
+	uint32 like_count = 0;
+	bool liked = false;
+	bool is_owner = false;
+	script_cleararray_pc(sd, "@need_build_detail_like_count");
+	script_cleararray_pc(sd, "@need_build_detail_liked");
+	script_cleararray_pc(sd, "@need_build_detail_is_owner");
+	script_setarray_pc(sd, "@need_build_detail_like_count", 0, 0, nullptr);
+	script_setarray_pc(sd, "@need_build_detail_liked", 0, 0, nullptr);
+	script_setarray_pc(sd, "@need_build_detail_is_owner", 0, 0, nullptr);
+	const int64 result = need_equipment_build_public_detail(sd, script_getnum64(st, 2), &like_count, &liked, &is_owner);
+	script_setarray_pc(sd, "@need_build_detail_like_count", 0, like_count, nullptr);
+	script_setarray_pc(sd, "@need_build_detail_liked", 0, liked ? 1 : 0, nullptr);
+	script_setarray_pc(sd, "@need_build_detail_is_owner", 0, is_owner ? 1 : 0, nullptr);
+	script_pushint(st, result);
+	return SCRIPT_CMD_SUCCESS;
+}
+
+BUILDIN_FUNC(need_show_my_equipment_build)
+{
+	map_session_data* sd = nullptr;
+	script_pushint(st, script_rid2sd(sd) ? need_equipment_build_owner_detail(sd, script_getnum64(st, 2)) : NEED_BUILD_ERROR_NO_PLAYER);
+	return SCRIPT_CMD_SUCCESS;
+}
+
+BUILDIN_FUNC(need_open_equipment_build_window)
+{
+	map_session_data* sd = nullptr;
+	script_pushint(st, script_rid2sd(sd) ? need_equipment_build_open_window(sd, script_getnum64(st, 2), script_getnum(st, 3)) : NEED_BUILD_VIEW_UNAVAILABLE);
+	return SCRIPT_CMD_SUCCESS;
+}
+
+BUILDIN_FUNC(need_review_equipment_build)
+{
+	map_session_data* sd = nullptr;
+	script_pushint(st, script_rid2sd(sd) ? need_equipment_build_review(sd, script_getnum64(st, 2), script_getnum(st, 3), script_getstr(st, 4)) : NEED_BUILD_ERROR_NO_PLAYER);
+	return SCRIPT_CMD_SUCCESS;
+}
+
+BUILDIN_FUNC(need_approve_equipment_build)
+{
+	map_session_data* sd = nullptr;
+	script_pushint(st, script_rid2sd(sd) ? need_equipment_build_approve(sd, script_getnum64(st, 2), script_getnum(st, 3), script_getnum(st, 4)) : NEED_BUILD_ERROR_NO_PLAYER);
+	return SCRIPT_CMD_SUCCESS;
+}
+
+BUILDIN_FUNC(need_cancel_equipment_build)
+{
+	map_session_data* sd = nullptr;
+	script_pushint(st, script_rid2sd(sd) ? need_equipment_build_cancel(sd, script_getnum64(st, 2)) : NEED_BUILD_ERROR_NO_PLAYER);
+	return SCRIPT_CMD_SUCCESS;
+}
+
+BUILDIN_FUNC(need_toggle_equipment_build_like)
+{
+	map_session_data* sd = nullptr;
+	script_pushint(st, script_rid2sd(sd) ? need_equipment_build_toggle_like(sd, script_getnum64(st, 2)) : NEED_BUILD_LIKE_FAILED);
+	return SCRIPT_CMD_SUCCESS;
+}
+
+BUILDIN_FUNC(need_get_my_equipment_build_reward_list)
+{
+	map_session_data* sd = nullptr;
+	if (!script_rid2sd(sd)) {
+		script_pushint(st, NEED_BUILD_REWARD_NO_PLAYER);
+		return SCRIPT_CMD_SUCCESS;
+	}
+	need_equipment_build_reward_page page;
+	for (const char* name : { "@need_reward_build_ids", "@need_reward_item_ids", "@need_reward_amounts", "@need_reward_titles$", "@need_reward_has_more" })
+		script_cleararray_pc(sd, name);
+	script_setarray_pc(sd, "@need_reward_has_more", 0, 0, nullptr);
+	const int64 result = need_equipment_build_reward_list(sd, script_getnum(st, 2), page);
+	if (result >= 0) {
+		for (size_t index = 0; index < page.entries.size(); ++index) {
+			const need_equipment_build_reward_entry& entry = page.entries[index];
+			script_setarray_pc(sd, "@need_reward_build_ids", static_cast<uint32>(index), entry.build_id, nullptr);
+			script_setarray_pc(sd, "@need_reward_item_ids", static_cast<uint32>(index), entry.reward_item_id, nullptr);
+			script_setarray_pc(sd, "@need_reward_amounts", static_cast<uint32>(index), entry.reward_amount, nullptr);
+			setd_sub_str(nullptr, sd, "@need_reward_titles$", static_cast<int32>(index), entry.title.c_str(), nullptr);
+		}
+		script_setarray_pc(sd, "@need_reward_has_more", 0, page.has_more ? 1 : 0, nullptr);
+	}
+	script_pushint(st, result);
+	return SCRIPT_CMD_SUCCESS;
+}
+
+BUILDIN_FUNC(need_show_my_equipment_build_reward)
+{
+	map_session_data* sd = nullptr;
+	if (!script_rid2sd(sd)) {
+		script_pushint(st, NEED_BUILD_REWARD_NO_PLAYER);
+		return SCRIPT_CMD_SUCCESS;
+	}
+	need_equipment_build_reward_entry entry;
+	script_cleararray_pc(sd, "@need_reward_detail_item_id");
+	script_cleararray_pc(sd, "@need_reward_detail_amount");
+	script_cleararray_pc(sd, "@need_reward_detail_title$");
+	script_setarray_pc(sd, "@need_reward_detail_item_id", 0, 0, nullptr);
+	script_setarray_pc(sd, "@need_reward_detail_amount", 0, 0, nullptr);
+	setd_sub_str(nullptr, sd, "@need_reward_detail_title$", 0, "", nullptr);
+	const int64 result = need_equipment_build_reward_detail(sd, script_getnum64(st, 2), entry);
+	if (result > 0) {
+		script_setarray_pc(sd, "@need_reward_detail_item_id", 0, entry.reward_item_id, nullptr);
+		script_setarray_pc(sd, "@need_reward_detail_amount", 0, entry.reward_amount, nullptr);
+		setd_sub_str(nullptr, sd, "@need_reward_detail_title$", 0, entry.title.c_str(), nullptr);
+	}
+	script_pushint(st, result);
+	return SCRIPT_CMD_SUCCESS;
+}
+
+BUILDIN_FUNC(need_claim_equipment_build_reward)
+{
+	map_session_data* sd = nullptr;
+	script_pushint(st, script_rid2sd(sd) ? need_equipment_build_claim_reward(sd, script_getnum64(st, 2)) : NEED_BUILD_REWARD_NO_PLAYER);
+	return SCRIPT_CMD_SUCCESS;
+}
+
 static int32 buildin_clearmapskillunits_sub(block_list* bl, va_list ap)
 {
 	if (bl == nullptr)

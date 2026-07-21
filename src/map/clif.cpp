@@ -10382,37 +10382,55 @@ void clif_equipcheckbox( const map_session_data& sd ){
 /// 0859 <packet len>.W <name>.24B <class>.W <hairstyle>.W <bottom-viewid>.W <mid-viewid>.W <up-viewid>.W <robe>.W <haircolor>.W <cloth-dye>.W <gender>.B {equip item}.28B* (ZC_EQUIPWIN_MICROSCOPE2, PACKETVER >= 20110111)
 /// 0997 <packet len>.W <name>.24B <class>.W <hairstyle>.W <bottom-viewid>.W <mid-viewid>.W <up-viewid>.W <robe>.W <haircolor>.W <cloth-dye>.W <gender>.B {equip item}.31B* (ZC_EQUIPWIN_MICROSCOPE_V5, PACKETVER >= 20120925)
 /// 0a2d <packet len>.W <name>.24B <class>.W <hairstyle>.W <bottom-viewid>.W <mid-viewid>.W <up-viewid>.W <robe>.W <haircolor>.W <cloth-dye>.W <gender>.B {equip item}.57B* (ZC_EQUIPWIN_MICROSCOPE_V6, PACKETVER >= 20150225)
-void clif_viewequip_ack( const map_session_data& sd, const map_session_data& tsd ){
 #if PACKETVER_AD_NUM >= 20071211 || PACKETVER_SAK_NUM >= 20071127 || PACKETVER_MAIN_NUM >= 20071211 || defined(PACKETVER_RE)
+static PACKET_ZC_EQUIPWIN_MICROSCOPE* clif_viewequip_start( const char* display_name, int32 job_id, int16 head, int16 accessory, int16 accessory2, int16 accessory3,
+	int16 robe, int16 headpalette, int16 bodypalette, int16 body2, uint8 sex ){
 	PACKET_ZC_EQUIPWIN_MICROSCOPE* p = reinterpret_cast<PACKET_ZC_EQUIPWIN_MICROSCOPE*>( packet_buffer );
+	memset( p, 0, sizeof( *p ) );
 
 	p->PacketType = HEADER_ZC_EQUIPWIN_MICROSCOPE;
 	p->PacketLength = sizeof( *p );
 
-	safestrncpy( p->characterName, tsd.status.name, NAME_LENGTH );
+	safestrncpy( p->characterName, display_name, NAME_LENGTH );
 
-	p->job = tsd.vd.look[LOOK_BASE];
-	p->head = tsd.vd.look[LOOK_HAIR];
-	p->accessory = tsd.vd.look[LOOK_HEAD_BOTTOM];
-	p->accessory2 = tsd.vd.look[LOOK_HEAD_MID];
-	p->accessory3 = tsd.vd.look[LOOK_HEAD_TOP];
+	p->job = static_cast<int16>( job_id );
+	p->head = head;
+	p->accessory = accessory;
+	p->accessory2 = accessory2;
+	p->accessory3 = accessory3;
 #if PACKETVER >= 20110111
-	p->robe = tsd.vd.look[LOOK_ROBE];
+	p->robe = robe;
 #endif
-	p->headpalette = tsd.vd.look[LOOK_HAIR_COLOR];
-	p->bodypalette = tsd.vd.look[LOOK_CLOTHES_COLOR];
+	p->headpalette = headpalette;
+	p->bodypalette = bodypalette;
 #if PACKETVER >= 20231220 && !defined(PACKETVER_ZERO)
-	p->body2 = tsd.vd.look[LOOK_BODY2];
+	p->body2 = body2;
 #elif PACKETVER_MAIN_NUM >= 20180801 || PACKETVER_RE_NUM >= 20180801 || PACKETVER_ZERO_NUM >= 20180808
-	if( tsd.vd.look[LOOK_BODY2] != 0 ){
-		p->body2 = 1;
-	}else{
-		p->body2 = 0;
-	}
+	p->body2 = body2 != 0 ? 1 : 0;
 #endif
-	p->sex = tsd.vd.sex;
+	p->sex = sex;
+	return p;
+}
 
-	for( int32 i = 0, equip = 0; i < EQI_MAX; i++ ){
+static bool clif_viewequip_add_item( PACKET_ZC_EQUIPWIN_MICROSCOPE* p, int16 index, const item& equipped_item, const item_data& id, int32 equip_position ){
+	if( p == nullptr || static_cast<size_t>( p->PacketLength ) + sizeof( p->list[0] ) > INT16_MAX )
+		return false;
+
+	const size_t equip = ( static_cast<size_t>( p->PacketLength ) - sizeof( *p ) ) / sizeof( p->list[0] );
+	memset( &p->list[equip], 0, sizeof( p->list[equip] ) );
+	clif_item_equip( index, &p->list[equip], &equipped_item, &id, equip_position );
+	p->PacketLength += static_cast<decltype(p->PacketLength)>( sizeof( p->list[0] ) );
+	return true;
+}
+#endif
+
+void clif_viewequip_ack( const map_session_data& sd, const map_session_data& tsd ){
+#if PACKETVER_AD_NUM >= 20071211 || PACKETVER_SAK_NUM >= 20071127 || PACKETVER_MAIN_NUM >= 20071211 || defined(PACKETVER_RE)
+	PACKET_ZC_EQUIPWIN_MICROSCOPE* p = clif_viewequip_start( tsd.status.name, tsd.vd.look[LOOK_BASE], tsd.vd.look[LOOK_HAIR], tsd.vd.look[LOOK_HEAD_BOTTOM],
+		tsd.vd.look[LOOK_HEAD_MID], tsd.vd.look[LOOK_HEAD_TOP], tsd.vd.look[LOOK_ROBE], tsd.vd.look[LOOK_HAIR_COLOR], tsd.vd.look[LOOK_CLOTHES_COLOR],
+		tsd.vd.look[LOOK_BODY2], tsd.vd.sex );
+
+	for( int32 i = 0; i < EQI_MAX; i++ ){
 		int32 k = tsd.equip_index[i];
 
 		if( k >= 0 ){
@@ -10428,14 +10446,51 @@ void clif_viewequip_ack( const map_session_data& sd, const map_session_data& tsd
 				continue;
 			}
 
-			clif_item_equip( client_index( k ), &p->list[equip], &tsd.inventory.u.items_inventory[k], tsd.inventory_data[k], pc_equippoint( &tsd, k ) );
-
-			p->PacketLength += static_cast<decltype(p->PacketLength)>( sizeof( p->list[0] ) );
-			equip++;
+			if( !clif_viewequip_add_item( p, client_index( k ), tsd.inventory.u.items_inventory[k], *tsd.inventory_data[k], pc_equippoint( &tsd, k ) ) )
+				break;
 		}
 	}
 
 	clif_send( p, p->PacketLength, &sd, SELF );
+#endif
+}
+
+bool clif_viewequip_snapshot( const map_session_data& sd, const char* display_name, int32 job_id, const std::vector<s_clif_viewequip_snapshot_item>& items ){
+#if PACKETVER_AD_NUM >= 20071211 || PACKETVER_SAK_NUM >= 20071127 || PACKETVER_MAIN_NUM >= 20071211 || defined(PACKETVER_RE)
+	if( display_name == nullptr || *display_name == '\0' )
+		return false;
+
+	int16 accessory = 0;
+	int16 accessory2 = 0;
+	int16 accessory3 = 0;
+	int16 robe = 0;
+	for( const s_clif_viewequip_snapshot_item& snapshot : items ){
+		std::shared_ptr<item_data> id = item_db.find( snapshot.data.nameid );
+		if( id == nullptr || !itemdb_isequip2( id.get() ) )
+			return false;
+		if( ( snapshot.equip_position & EQP_HEAD_LOW ) != 0 && ( id->equip & ( EQP_HEAD_MID | EQP_HEAD_TOP ) ) == 0 )
+			accessory = static_cast<int16>( id->look );
+		if( ( snapshot.equip_position & EQP_HEAD_MID ) != 0 && ( id->equip & EQP_HEAD_TOP ) == 0 )
+			accessory2 = static_cast<int16>( id->look );
+		if( ( snapshot.equip_position & EQP_HEAD_TOP ) != 0 )
+			accessory3 = static_cast<int16>( id->look );
+		if( ( snapshot.equip_position & EQP_GARMENT ) != 0 )
+			robe = static_cast<int16>( id->look );
+	}
+
+	PACKET_ZC_EQUIPWIN_MICROSCOPE* p = clif_viewequip_start( display_name, job_id, 0, accessory, accessory2, accessory3, robe, 0, 0, 0, SEX_MALE );
+	for( size_t index = 0; index < items.size(); ++index ){
+		const s_clif_viewequip_snapshot_item& snapshot = items[index];
+		std::shared_ptr<item_data> id = item_db.find( snapshot.data.nameid );
+		if( id == nullptr || !itemdb_isequip2( id.get() ) ||
+			!clif_viewequip_add_item( p, client_index( static_cast<int32>( index ) ), snapshot.data, *id, snapshot.equip_position ) )
+			return false;
+	}
+
+	clif_send( p, p->PacketLength, &sd, SELF );
+	return true;
+#else
+	return false;
 #endif
 }
 
@@ -17772,8 +17827,9 @@ void clif_parse_ViewPlayerEquip(int32 fd, map_session_data* sd)
 
 	if (sd->m != tsd->m)
 		return;
-	else if( tsd->status.show_equip || pc_has_permission(sd, PC_PERM_VIEW_EQUIPMENT) )
+	else if( tsd->status.show_equip || pc_has_permission(sd, PC_PERM_VIEW_EQUIPMENT) ) {
 		clif_viewequip_ack( *sd, *tsd );
+	}
 	else
 		clif_msg( *sd, MSI_OPEN_EQUIPEDITEM_REFUSED );
 }

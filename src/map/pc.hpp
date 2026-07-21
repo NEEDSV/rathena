@@ -597,6 +597,10 @@ public:
 	t_tick cansendmail_tick; // [Mail System Flood Protection]
 	t_tick ks_floodprotect_tick; // [Kill Steal Protection]
 	t_tick equipswitch_tick; // Equip switch
+	t_tick need_equipment_build_register_tick = 0;
+	t_tick need_equipment_build_like_tick = 0;
+	t_tick need_equipment_build_reward_tick = 0;
+	t_tick need_equipment_build_view_tick = 0;
 
 	struct s_item_delay {
 		t_itemid nameid;

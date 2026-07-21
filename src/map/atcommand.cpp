@@ -11,6 +11,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <set>
+#include <sstream>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -53,6 +54,7 @@
 #include "mapreg.hpp"
 #include "mercenary.hpp"
 #include "mob.hpp"
+#include "need_equipment_build.hpp"
 #include "needwiki.hpp"
 #include "npc.hpp"
 #include "party.hpp"
