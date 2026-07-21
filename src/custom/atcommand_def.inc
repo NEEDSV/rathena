@@ -9,4 +9,8 @@
  **/
 
 //ACMD_DEF(newcommand),
+ACMD_DEF(needbuildcheck),
+ACMD_DEF(needbuildlikesync),
+ACMD_DEF(needbuildreward),
+ACMD_DEF(needbuildaudit),
 ACMD_DEF(noloot),

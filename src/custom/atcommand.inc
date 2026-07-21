@@ -18,6 +18,149 @@
 //	return 0;
 //}
 
+ACMD_FUNC(needbuildcheck)
+{
+	nullpo_retr(-1, sd);
+	if (message == nullptr || *message == '\0') {
+		clif_displaymessage(fd, msg_txt(sd, NEED_BUILD_MSG_USAGE_CHECK));
+		return -1;
+	}
+
+	char* end = nullptr;
+	const uint64 build_id = strtoull(message, &end, 10);
+	while (end != nullptr && *end != '\0' && std::isspace(static_cast<unsigned char>(*end)))
+		++end;
+	if (build_id == 0 || end == message || (end != nullptr && *end != '\0')) {
+		clif_displaymessage(fd, msg_txt(sd, NEED_BUILD_MSG_INVALID_ID));
+		return -1;
+	}
+
+	return need_equipment_build_admin_detail(sd, build_id) > 0 ? 0 : -1;
+}
+
+ACMD_FUNC(needbuildlikesync)
+{
+	nullpo_retr(-1, sd);
+	if (message == nullptr || *message == '\0') {
+		clif_displaymessage(fd, msg_txt(sd, NEED_BUILD_MSG_USAGE_LIKE_SYNC));
+		return -1;
+	}
+	char* end = nullptr;
+	const uint64 build_id = strtoull(message, &end, 10);
+	while (end != nullptr && *end != '\0' && std::isspace(static_cast<unsigned char>(*end)))
+		++end;
+	if (build_id == 0 || end == message || (end != nullptr && *end != '\0')) {
+		clif_displaymessage(fd, msg_txt(sd, NEED_BUILD_MSG_INVALID_SYNC_ID));
+		return -1;
+	}
+	uint32 like_count = 0;
+	const int64 result = need_equipment_build_sync_likes(sd, build_id, like_count);
+	if (result > 0) {
+		char output[CHAT_SIZE_MAX] = {};
+		safesnprintf(output, sizeof(output), msg_txt(sd, NEED_BUILD_MSG_LIKE_SYNCED), static_cast<unsigned long long>(build_id), like_count);
+		clif_displaymessage(fd, output);
+		return 0;
+	}
+	clif_displaymessage(fd, result == NEED_BUILD_ERROR_UNAUTHORIZED ? msg_txt(sd, NEED_BUILD_MSG_NO_PERMISSION) :
+		result == NEED_BUILD_ERROR_NOT_FOUND ? msg_txt(sd, NEED_BUILD_MSG_NOT_FOUND) : msg_txt(sd, NEED_BUILD_MSG_LIKE_SYNC_FAILED));
+	return -1;
+}
+
+ACMD_FUNC(needbuildreward)
+{
+	nullpo_retr(-1, sd);
+	if (message == nullptr || *message == '\0') {
+		clif_displaymessage(fd, msg_txt(sd, NEED_BUILD_MSG_USAGE_REWARD));
+		return -1;
+	}
+	std::istringstream input(message);
+	std::string first;
+	input >> first;
+	if (first == "processing") {
+		std::string extra;
+		if (input >> extra) {
+			clif_displaymessage(fd, msg_txt(sd, NEED_BUILD_MSG_USAGE_REWARD_PROCESSING));
+			return -1;
+		}
+		const int64 result = need_equipment_build_reward_processing(sd);
+		if (result >= 0) return 0;
+		clif_displaymessage(fd, result == NEED_BUILD_ERROR_UNAUTHORIZED ? msg_txt(sd, NEED_BUILD_MSG_NO_PERMISSION) : msg_txt(sd, NEED_BUILD_MSG_REWARD_PROCESSING_FAILED));
+		return -1;
+	}
+	char* end = nullptr;
+	const uint64 build_id = strtoull(first.c_str(), &end, 10);
+	if (first.empty() || first.front() == '-' || build_id == 0 || end == first.c_str() || *end != '\0') {
+		clif_displaymessage(fd, msg_txt(sd, NEED_BUILD_MSG_INVALID_ID));
+		return -1;
+	}
+	std::string action = "check";
+	std::string confirmation;
+	std::string extra;
+	input >> action;
+	input >> confirmation;
+	if (input >> extra) {
+		clif_displaymessage(fd, msg_txt(sd, NEED_BUILD_MSG_TOO_MANY_PARAMS));
+		return -1;
+	}
+	if (action == "check") {
+		if (!confirmation.empty()) {
+			clif_displaymessage(fd, msg_txt(sd, NEED_BUILD_MSG_USAGE_REWARD_CHECK));
+			return -1;
+		}
+		const int64 result = need_equipment_build_reward_check(sd, build_id);
+		if (result > 0)
+			return 0;
+		clif_displaymessage(fd, result == NEED_BUILD_ERROR_UNAUTHORIZED ? msg_txt(sd, NEED_BUILD_MSG_NO_PERMISSION) :
+			result == NEED_BUILD_ERROR_NOT_FOUND ? msg_txt(sd, NEED_BUILD_MSG_NOT_FOUND) : msg_txt(sd, NEED_BUILD_MSG_REWARD_CHECK_FAILED));
+		return -1;
+	}
+	if (action != "complete" && action != "retry") {
+		clif_displaymessage(fd, msg_txt(sd, NEED_BUILD_MSG_USAGE_REWARD));
+		return -1;
+	}
+	if (confirmation != "CONFIRM") {
+		need_equipment_build_reward_check(sd, build_id);
+		clif_displaymessage(fd, action == "complete" ? msg_txt(sd, NEED_BUILD_MSG_REWARD_COMPLETE_WARNING) : msg_txt(sd, NEED_BUILD_MSG_REWARD_RETRY_WARNING));
+		char usage[CHAT_SIZE_MAX] = {};
+		safesnprintf(usage, sizeof(usage), msg_txt(sd, NEED_BUILD_MSG_REWARD_CONFIRM_USAGE), static_cast<unsigned long long>(build_id), action.c_str());
+		clif_displaymessage(fd, usage);
+		return -1;
+	}
+	const int32 recovery_action = action == "complete" ? NEED_BUILD_REWARD_RECOVERY_COMPLETE : NEED_BUILD_REWARD_RECOVERY_RETRY;
+	const int64 result = need_equipment_build_reward_recover(sd, build_id, recovery_action);
+	if (result > 0)
+	{
+		clif_displaymessage(fd, action == "complete" ? msg_txt(sd, NEED_BUILD_MSG_REWARD_COMPLETED) : msg_txt(sd, NEED_BUILD_MSG_REWARD_RETRIED));
+		return 0;
+	}
+	clif_displaymessage(fd, result == NEED_BUILD_ERROR_UNAUTHORIZED ? msg_txt(sd, NEED_BUILD_MSG_NO_PERMISSION) :
+		result == NEED_BUILD_ERROR_NOT_FOUND ? msg_txt(sd, NEED_BUILD_MSG_NOT_FOUND) :
+		result == NEED_BUILD_ERROR_STATE_CONFLICT ? msg_txt(sd, NEED_BUILD_MSG_RECOVERY_CONFLICT) : msg_txt(sd, NEED_BUILD_MSG_RECOVERY_FAILED));
+	return -1;
+}
+
+ACMD_FUNC(needbuildaudit)
+{
+	nullpo_retr(-1, sd);
+	if (message == nullptr || *message == '\0') {
+		clif_displaymessage(fd, msg_txt(sd, NEED_BUILD_MSG_USAGE_AUDIT));
+		return -1;
+	}
+	char* end = nullptr;
+	const uint64 build_id = strtoull(message, &end, 10);
+	while (end != nullptr && *end != '\0' && std::isspace(static_cast<unsigned char>(*end))) ++end;
+	if (*message == '-' || build_id == 0 || end == message || (end != nullptr && *end != '\0')) {
+		clif_displaymessage(fd, msg_txt(sd, NEED_BUILD_MSG_INVALID_ID));
+		return -1;
+	}
+	const int64 result = need_equipment_build_reward_audit(sd, build_id);
+	if (result >= 0)
+		return 0;
+	clif_displaymessage(fd, result == NEED_BUILD_ERROR_UNAUTHORIZED ? msg_txt(sd, NEED_BUILD_MSG_NO_PERMISSION) :
+		result == NEED_BUILD_ERROR_NOT_FOUND ? msg_txt(sd, NEED_BUILD_MSG_NOT_FOUND) : msg_txt(sd, NEED_BUILD_MSG_AUDIT_FAILED));
+	return -1;
+}
+
 static bool need_noloot_token_equals(const std::string& token, const char* value)
 {
 	return token == value;

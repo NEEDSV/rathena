@@ -1,0 +1,497 @@
+// NEED 장비 세팅 공유소 NPC
+// 위치와 표시 이름은 아래 NPC 선언부에서 변경할 수 있습니다.
+
+prontera,160,190,4	script	장비 세팅 공유소#need	4_F_KAFRA1,{
+	while (true) {
+		clear;
+		mes "[장비 세팅 공유소]";
+		.@menu$ = "현재 장비 세팅 등록:승인된 세팅 열람:내 등록 내역:보상 수령:시스템 안내";
+		if (need_equipment_build_is_admin())
+			.@menu$ += ":운영자 관리";
+		switch (select(.@menu$)) {
+		case 1:
+			callsub S_Register;
+			break;
+		case 2:
+			callsub S_PublicBrowse;
+			break;
+		case 3:
+			callsub S_MyBuilds;
+			break;
+		case 4:
+			callsub S_Rewards;
+			break;
+		case 5:
+			clear;
+			mes "[시스템 안내 - 등록 및 공개]";
+			mes "현재 착용 장비와 기본 스테이터스를 저장합니다.";
+			mes "운영자가 승인한 세팅만 공개됩니다.";
+			mes "공개 화면에는 등록자 정보가 표시되지 않습니다.";
+			next;
+			clear;
+			mes "[시스템 안내 - 취소 및 좋아요]";
+			mes "검수 대기 중에는 등록을 취소할 수 있습니다.";
+			mes "승인 이후에는 등록자가 직접 취소할 수 없습니다.";
+			mes "다른 유저의 공개 세팅에 좋아요를 표시할 수 있습니다.";
+			next;
+			clear;
+			mes "[시스템 안내 - 보상]";
+			mes "승인된 모든 세팅에 보상이 지급되는 것은 아닙니다.";
+			mes "운영자가 보상 여부와 수량을 결정합니다.";
+			mes "보상은 등록한 계정과 캐릭터로만 수령할 수 있습니다.";
+			next;
+			break;
+		case 6:
+			if (need_equipment_build_is_admin())
+				callsub S_Admin;
+			break;
+		}
+	}
+
+S_Register:
+	clear;
+	mes "[장비 세팅 등록]";
+	mes "현재 착용 중인 장비와 기본 스테이터스를 등록합니다.";
+	mes "사용 목적을 선택해 주세요.";
+	.@category = select("일반 사냥:보스 사냥:재료 / 제니 노가다:인스턴스 던전:전장 / 공성:기타");
+	next;
+	clear;
+	mes "[장비 세팅 등록]";
+	mes "세팅 제목을 입력해 주세요.";
+	mes "1~30자, 줄바꿈 및 콜론(:) 사용 불가";
+	input .@title$;
+	// ':'는 select() 메뉴 구분자로 사용되므로 제목에서 차단합니다.
+	if (compare(.@title$, ":")) {
+		mes "제목에는 콜론(:)을 사용할 수 없습니다.";
+		next;
+		return;
+	}
+	next;
+	clear;
+	mes "[장비 세팅 등록]";
+	mes "세팅 설명을 입력해 주세요.";
+	mes "최대 200자";
+	mes "설명을 생략하려면 공백 한 칸을 입력해 주세요.";
+	input .@description$;
+	if (.@description$ == " ")
+		.@description$ = "";
+	next;
+	clear;
+	mes "[등록 내용 확인]";
+	mes "목적: " + need_equipment_build_category_name(.@category);
+	mes "제목: " + .@title$;
+	mes "설명: " + (.@description$ == "" ? "(생략)" : .@description$);
+	mes "검수 대기 중에는 취소할 수 있습니다.";
+	mes "승인 이후에는 직접 취소할 수 없습니다.";
+	if (select("등록:돌아가기") == 2)
+		return;
+	.@result = need_register_equipment_build(.@category, .@title$, .@description$);
+	clear;
+	mes "[장비 세팅 등록]";
+	if (.@result > 0)
+		mes "등록이 완료되었습니다. 세팅 번호 #" + .@result;
+	else {
+		mes "장비 세팅을 등록하지 못했습니다.";
+		switch (.@result) {
+		case -2: mes "분류, 제목 및 설명을 확인해 주세요."; break;
+		case -3: mes "캐릭터 또는 계정의 등록 가능 개수를 초과했습니다."; break;
+		case -4: mes "동일한 활성 장비 세팅이 이미 등록되어 있습니다."; break;
+		case -5: mes "지원되는 장비를 한 부위 이상 착용한 후 등록해 주세요."; break;
+		case -16: mes "잠시 후 다시 시도해 주세요."; break;
+		default: mes "잠시 후 다시 시도하거나 운영자에게 문의해 주세요."; break;
+		}
+	}
+	next;
+	return;
+
+S_PublicBrowse:
+	clear;
+	mes "[승인된 장비 세팅]";
+	mes "직업 계열을 선택해 주세요.";
+	.@family = select("노비스 계열:검사 계열:마법사 계열:궁수 계열:복사 계열:상인 계열:도둑 계열:확장 직업");
+	.@count = need_get_public_equipment_build_jobs(.@family);
+	if (.@count < 0) {
+		mes "직업 목록을 불러오지 못했습니다.";
+		next;
+		return;
+	}
+	if (.@count == 0) {
+		mes "해당 직업 계열에 승인된 세팅이 없습니다.";
+		next;
+		return;
+	}
+	.@menu$ = "";
+	for (.@i = 0; .@i < .@count; ++.@i)
+		.@menu$ += replacestr(@need_build_job_names$[.@i], ":", " - ") + ":";
+	.@choice = select(.@menu$) - 1;
+	.@job_id = @need_build_job_ids[.@choice];
+	clear;
+	mes "사용 목적을 선택해 주세요.";
+	.@category = select("일반 사냥:보스 사냥:재료 / 제니 노가다:인스턴스 던전:전장 / 공성:기타");
+	clear;
+	mes "정렬 방식을 선택해 주세요.";
+	.@sort_type = select("좋아요순:최신순");
+	callsub S_PublicPage, .@job_id, .@category, .@sort_type;
+	return;
+
+S_PublicPage:
+	.@job_id = getarg(0);
+	.@category = getarg(1);
+	.@sort_type = getarg(2);
+	.@page = 0;
+	while (true) {
+		clear;
+		.@count = need_get_public_equipment_build_list(.@job_id, .@category, .@sort_type, .@page);
+		mes "[승인된 장비 세팅]";
+		mes "페이지 " + (.@page + 1) + " / " + need_equipment_build_category_name(.@category) + " / " + (.@sort_type == 1 ? "좋아요순" : "최신순");
+		if (.@count < 0) {
+			mes "목록을 불러오지 못했습니다.";
+			next;
+			return;
+		}
+		if (.@count == 0)
+			mes "이 페이지에 표시할 세팅이 없습니다.";
+		.@menu$ = "";
+		for (.@i = 0; .@i < .@count; ++.@i)
+			.@menu$ += "[#" + @need_build_ids[.@i] + "] 좋아요 " + @need_build_like_counts[.@i] + " / " + replacestr(@need_build_titles$[.@i], ":", " - ") + ":";
+		if (.@page > 0) .@menu$ += "이전 페이지:";
+		if (@need_build_has_more) .@menu$ += "다음 페이지:";
+		.@menu$ += "검색 조건으로 돌아가기:닫기";
+		.@choice = select(.@menu$);
+		if (.@choice <= .@count) {
+			.@build_id = @need_build_ids[.@choice - 1];
+			.@result = need_show_public_equipment_build(.@build_id);
+			if (.@result <= 0) {
+				mes "현재 공개되지 않는 세팅입니다.";
+				next;
+				continue;
+			}
+			mes "세팅 상세 정보가 채팅창에 출력되었습니다.";
+			mes "좋아요: " + @need_build_detail_like_count;
+			if (@need_build_detail_is_owner) {
+				mes "본인 계정이 등록한 장비 세팅에는 좋아요를 누를 수 없습니다.";
+				next;
+				continue;
+			}
+			.@detail_choice = select((@need_build_detail_liked ? "좋아요 취소" : "좋아요") + ":목록으로 돌아가기:닫기");
+			if (.@detail_choice == 3)
+				close;
+			if (.@detail_choice == 1) {
+				.@like_result = need_toggle_equipment_build_like(.@build_id);
+				if (.@like_result == 1) mes "좋아요를 표시했습니다.";
+				else if (.@like_result == 2) mes "좋아요를 취소했습니다.";
+				else if (.@like_result == -2) mes "현재 공개 중인 세팅에만 좋아요를 표시할 수 있습니다.";
+				else if (.@like_result == -3) mes "본인 계정이 등록한 장비 세팅에는 좋아요를 누를 수 없습니다.";
+				else if (.@like_result == -1) mes "해당 세팅이 존재하지 않습니다.";
+				else if (.@like_result == -5) mes "잠시 후 다시 시도해 주세요.";
+				else mes "좋아요 요청을 처리하지 못했습니다.";
+			}
+			next;
+			continue;
+		}
+		.@nav = .@count + 1;
+		if (.@page > 0) {
+			if (.@choice == .@nav) { --.@page; continue; }
+			++.@nav;
+		}
+		if (@need_build_has_more) {
+			if (.@choice == .@nav) { ++.@page; continue; }
+			++.@nav;
+		}
+		if (.@choice == .@nav)
+			return;
+		close;
+	}
+
+S_MyBuilds:
+	.@page = 0;
+	while (true) {
+		clear;
+		.@count = need_get_my_equipment_build_list(.@page);
+		mes "[내 등록 내역]";
+		mes "현재 캐릭터가 등록한 세팅만 표시됩니다. 페이지 " + (.@page + 1) + ".";
+		if (.@count < 0) {
+			mes "목록을 불러오지 못했습니다.";
+			next;
+			return;
+		}
+		if (.@count == 0)
+			mes "이 페이지에 등록 내역이 없습니다.";
+		.@menu$ = "";
+		for (.@i = 0; .@i < .@count; ++.@i)
+			.@menu$ += "[#" + @need_build_ids[.@i] + "] " + replacestr(@need_build_titles$[.@i], ":", " - ") + ":";
+		if (.@page > 0) .@menu$ += "이전 페이지:";
+		if (@need_build_has_more) .@menu$ += "다음 페이지:";
+		.@menu$ += "돌아가기:닫기";
+		.@choice = select(.@menu$);
+		if (.@choice <= .@count) {
+			.@index = .@choice - 1;
+			.@build_id = @need_build_ids[.@index];
+			.@status = @need_build_statuses[.@index];
+			.@result = need_show_my_equipment_build(.@build_id);
+			mes .@result > 0 ? "상세 정보가 채팅창에 출력되었습니다." : "해당 등록 정보를 열 수 없습니다.";
+			if (.@result > 0 && .@status == 0) {
+				mes "이 세팅 등록을 취소하시겠습니까?";
+				if (select("유지:등록 취소") == 2) {
+					mes "등록을 취소하면 공개 대상에서 제외되며, 취소된 세팅은 다시 공개할 수 없습니다.";
+					mes "정말 등록을 취소하시겠습니까?";
+					if (select("아니오:예, 취소합니다") == 2) {
+						.@cancel = need_cancel_equipment_build(.@build_id);
+						if (.@cancel > 0) mes "세팅 등록을 취소했습니다.";
+						else if (.@cancel == -13) mes "이미 다른 운영자 또는 요청에 의해 처리되어 취소할 수 없습니다.";
+						else if (.@cancel == -15) mes "본인이 등록한 세팅이 아닙니다.";
+						else mes "등록 취소를 처리하지 못했습니다.";
+					}
+				}
+			} else if (.@result > 0 && .@status == 1) {
+				mes "운영자가 승인한 세팅은 등록자가 직접 취소할 수 없습니다.";
+				mes "수정 또는 삭제가 필요하면 운영자에게 문의해 주세요.";
+			}
+			next;
+			continue;
+		}
+		.@nav = .@count + 1;
+		if (.@page > 0) {
+			if (.@choice == .@nav) { --.@page; continue; }
+			++.@nav;
+		}
+		if (@need_build_has_more) {
+			if (.@choice == .@nav) { ++.@page; continue; }
+			++.@nav;
+		}
+		if (.@choice == .@nav) return;
+		close;
+	}
+
+S_Rewards:
+	// 수령 시에는 현재 NPC 설정이 아니라 승인 당시 SQL에 저장된
+	// reward_item_id와 reward_amount를 C++ 처리 계층에서 검증합니다.
+	.@page = 0;
+	while (true) {
+		clear;
+		.@count = need_get_my_equipment_build_reward_list(.@page);
+		mes "[보상 수령]";
+		mes "현재 계정과 캐릭터가 등록한 승인 세팅의 수령 가능한 보상만 표시됩니다.";
+		mes "페이지 " + (.@page + 1) + ".";
+		if (.@count < 0) {
+			mes "보상 목록을 불러오지 못했습니다.";
+			next;
+			return;
+		}
+		if (.@count == 0)
+			mes "이 페이지에 수령 가능한 보상이 없습니다.";
+		.@menu$ = "";
+		for (.@i = 0; .@i < .@count; ++.@i)
+			.@menu$ += "[#" + @need_reward_build_ids[.@i] + "] " + replacestr(@need_reward_titles$[.@i], ":", " - ") + ":";
+		if (.@page > 0) .@menu$ += "이전 페이지:";
+		if (@need_reward_has_more) .@menu$ += "다음 페이지:";
+		.@menu$ += "돌아가기:닫기";
+		.@choice = select(.@menu$);
+		if (.@choice <= .@count) {
+			.@build_id = @need_reward_build_ids[.@choice - 1];
+			.@detail = need_show_my_equipment_build_reward(.@build_id);
+			if (.@detail <= 0) {
+				mes "현재 수령할 수 없는 보상입니다.";
+				next;
+				continue;
+			}
+			mes "세팅 번호: #" + .@build_id;
+			mes "세팅 제목: " + @need_reward_detail_title$;
+			mes "상태: 승인 / 공개";
+			mes "보상 아이템: " + getitemname(@need_reward_detail_item_id);
+			mes "보상 수량: " + @need_reward_detail_amount;
+			mes "이 보상을 수령하시겠습니까?";
+			if (select("수령:목록으로 돌아가기") == 1) {
+				.@claim = need_claim_equipment_build_reward(.@build_id);
+				if (.@claim == 1) mes "보상이 인벤토리에 지급되었습니다.";
+				else if (.@claim == -2) mes "해당 세팅을 등록한 계정과 캐릭터만 보상을 수령할 수 있습니다.";
+				else if (.@claim == -3) mes "현재 보상 수령 대상이 아닌 세팅입니다.";
+				else if (.@claim == -4) mes "이미 수령한 보상이거나 운영자가 지급 상태를 확인 중입니다.";
+				else if (.@claim == -6) {
+					mes "인벤토리 공간 또는 소지 무게가 부족합니다.";
+					mes "인벤토리를 정리한 후 다시 수령해 주세요.";
+				} else if (.@claim == -5) mes "현재 보상을 지급할 수 없습니다. 운영자에게 문의해 주세요.";
+				else if (.@claim == -9) mes "잠시 후 다시 시도해 주세요.";
+				else mes "보상 지급을 완료하지 못했습니다. 반복해서 시도하지 말고 운영자에게 문의해 주세요.";
+			}
+			next;
+			continue;
+		}
+		.@nav = .@count + 1;
+		if (.@page > 0) {
+			if (.@choice == .@nav) { --.@page; continue; }
+			++.@nav;
+		}
+		if (@need_reward_has_more) {
+			if (.@choice == .@nav) { ++.@page; continue; }
+			++.@nav;
+		}
+		if (.@choice == .@nav) return;
+		close;
+	}
+
+S_Admin:
+	clear;
+	if (!need_equipment_build_is_admin()) {
+		mes "운영자 권한이 없습니다.";
+		next;
+		return;
+	}
+	mes "[장비 세팅 운영 관리]";
+	.@choice = select("검수 대기:공개 중인 세팅:반려된 세팅:삭제된 세팅:세팅 번호 검색:캐릭터명 검색:계정 ID 검색:돌아가기");
+	if (.@choice <= 4) {
+		callsub S_AdminPage, .@choice - 1, 0, "";
+		return;
+	}
+	if (.@choice == 8)
+		return;
+	if (.@choice == 5) {
+		mes "세팅 번호를 입력해 주세요.";
+		input .@value;
+		.@value$ = "" + .@value;
+		.@type = 1;
+	} else if (.@choice == 6) {
+		mes "정확한 캐릭터명을 입력해 주세요.";
+		input .@value$;
+		.@type = 2;
+	} else {
+		mes "계정 ID를 입력해 주세요.";
+		input .@value;
+		.@value$ = "" + .@value;
+		.@type = 3;
+	}
+	callsub S_AdminPage, 0, .@type, .@value$;
+	return;
+
+S_AdminPage:
+	.@status_filter = getarg(0);
+	.@search_type = getarg(1);
+	.@search_value$ = getarg(2);
+	.@page = 0;
+	while (true) {
+		clear;
+		if (!need_equipment_build_is_admin()) {
+			mes "운영자 권한을 더 이상 확인할 수 없습니다.";
+			next;
+			return;
+		}
+		if (.@search_type)
+			.@count = need_search_admin_equipment_builds(.@search_type, .@search_value$, .@page);
+		else
+			.@count = need_get_admin_equipment_build_list(.@status_filter, .@page);
+		mes "[장비 세팅 운영 관리]";
+		mes "페이지 " + (.@page + 1) + ".";
+		if (.@count < 0) {
+			mes .@count == -11 ? "운영자 권한이 없습니다." : "목록을 불러오지 못했습니다.";
+			next;
+			return;
+		}
+		if (.@count == 0)
+			mes "조건에 맞는 세팅이 없습니다.";
+		.@menu$ = "";
+		for (.@i = 0; .@i < .@count; ++.@i)
+			.@menu$ += "[#" + @need_build_ids[.@i] + "] " + replacestr(@need_build_owners$[.@i], ":", " - ") + " / " + replacestr(@need_build_titles$[.@i], ":", " - ") + ":";
+		if (.@page > 0) .@menu$ += "이전 페이지:";
+		if (@need_build_has_more) .@menu$ += "다음 페이지:";
+		.@menu$ += "관리 메뉴로 돌아가기:닫기";
+		.@choice = select(.@menu$);
+		if (.@choice <= .@count) {
+			.@index = .@choice - 1;
+			.@build_id = @need_build_ids[.@index];
+			.@status = @need_build_statuses[.@index];
+			.@detail = need_show_admin_equipment_build(.@build_id);
+			mes .@detail > 0 ? "비공개 검수 정보와 운영 기록이 채팅창에 출력되었습니다." : "해당 세팅을 열 수 없습니다.";
+			if (.@detail > 0)
+				callsub S_AdminAction, .@build_id, .@status;
+			next;
+			continue;
+		}
+		.@nav = .@count + 1;
+		if (.@page > 0) {
+			if (.@choice == .@nav) { --.@page; continue; }
+			++.@nav;
+		}
+		if (@need_build_has_more) {
+			if (.@choice == .@nav) { ++.@page; continue; }
+			++.@nav;
+		}
+		if (.@choice == .@nav) return;
+		close;
+	}
+
+S_AdminAction:
+	.@build_id = getarg(0);
+	.@status = getarg(1);
+	if (.@status == 0) {
+		.@choice = select("보상 포함 승인:보상 없이 승인:반려:삭제:돌아가기");
+		if (.@choice == 5)
+			return;
+		if (.@choice == 1 || .@choice == 2) {
+			.@reward_item_id = .@choice == 1 ? .RewardItemId : 0;
+			.@reward_amount = 0;
+			if (.@choice == 1) {
+				if (.RewardItemId <= 0 || getiteminfo(.RewardItemId, ITEMINFO_ID) != .RewardItemId) {
+					mes "장비 세팅 보상 아이템이 설정되지 않아 보상 포함 승인을 진행할 수 없습니다.";
+					return;
+				}
+				mes "보상 아이템: " + getitemname(.RewardItemId);
+				mes "보상 수량을 입력해 주세요. (" + .RewardAmountMin + "-" + .RewardAmountMax + ").";
+				input .@reward_amount;
+				if (.@reward_amount < .RewardAmountMin || .@reward_amount > .RewardAmountMax) {
+					mes "보상 수량이 설정 범위를 벗어났습니다.";
+					return;
+				}
+				mes "세팅 번호: #" + .@build_id;
+				mes "처리: 보상 포함 승인";
+				mes "보상 아이템: " + getitemname(.RewardItemId);
+				mes "보상 수량: " + .@reward_amount;
+			} else {
+				mes "세팅 번호: #" + .@build_id;
+				mes "처리: 보상 없이 승인";
+			}
+			mes "이 세팅을 승인하시겠습니까?";
+			if (select("승인:돌아가기") == 2)
+				return;
+			.@result = need_approve_equipment_build(.@build_id, .@reward_item_id, .@reward_amount);
+			if (.@result > 0) mes "세팅 승인과 보상 지급 여부를 저장했습니다.";
+			else if (.@result == -11) mes "운영자 권한이 없습니다.";
+			else if (.@result == -13) mes "이미 다른 운영자가 처리한 세팅입니다.";
+			else if (.@result == -2) mes "보상 설정이 올바르지 않습니다. 아이템과 수량을 확인해 주세요.";
+			else mes "승인 처리에 실패했으며 일부 상태는 저장되지 않았습니다.";
+			return;
+		}
+		.@action = .@choice == 3 ? 2 : 3;
+	} else if (.@status != 3) {
+		if (select("삭제:돌아가기") == 2)
+			return;
+		.@action = 3;
+	} else {
+		return;
+	}
+	.@reason$ = "";
+	mes .@action == 2 ? "반려 사유를 입력해 주세요. (필수, 최대 200자)" : "삭제 사유를 입력해 주세요. (필수, 최대 200자)";
+	input .@reason$;
+	mes "세팅 #" + .@build_id + "에 이 운영자 처리를 적용하시겠습니까?";
+	if (select("처리:돌아가기") == 2)
+		return;
+	.@result = need_review_equipment_build(.@build_id, .@action, .@reason$);
+	if (.@result > 0)
+		mes "운영자 처리를 완료하고 관리 로그에 기록했습니다.";
+	else if (.@result == -11)
+		mes "운영자 권한이 없습니다.";
+	else if (.@result == -12)
+		mes "해당 세팅이 존재하지 않습니다.";
+	else if (.@result == -13)
+		mes "이미 다른 운영자가 처리한 세팅입니다.";
+	else if (.@result == -14)
+		mes "사유는 1~200자로 입력해야 하며 제어 문자를 사용할 수 없습니다.";
+	else
+		mes "운영자 처리에 실패했으며 일부 상태는 저장되지 않았습니다.";
+	return;
+
+OnInit:
+	.RewardItemId = 1002; // TODO: 운영에서 사용할 장비 세팅 보상 아이템 ID를 입력하세요.
+	.RewardAmountMin = 1;
+	.RewardAmountMax = 100;
+	end;
+}

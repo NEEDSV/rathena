@@ -58,6 +58,7 @@
 #include "mapreg.hpp"
 #include "mercenary.hpp"
 #include "mob.hpp"
+#include "need_equipment_build.hpp"
 #include "npc.hpp"
 #include "party.hpp"
 #include "path.hpp"
