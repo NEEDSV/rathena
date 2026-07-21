@@ -185,7 +185,11 @@ S_PublicPage:
 			}
 			mes "세팅 요약은 채팅창에서 확인할 수 있습니다.";
 			.@view_result = need_open_equipment_build_window(.@build_id, 1);
-			mes .@view_result > 0 ? "장비 보기 창을 준비하고 있습니다." : "장비 보기 창을 열 수 없습니다.";
+			if (.@view_result > 0) {
+				mes "장비 보기 창을 열었습니다.";
+				mes "다른 세팅을 확인하려면 현재 열려 있는 장비창을 닫은 후 선택해 주세요.";
+			} else
+				mes "장비 보기 창을 열 수 없습니다.";
 			mes "좋아요: " + @need_build_detail_like_count;
 			if (@need_build_detail_is_owner) {
 				mes "본인 계정으로 등록한 세팅에는 좋아요를 표시할 수 없습니다.";
@@ -254,7 +258,11 @@ S_MyBuilds:
 			mes .@result > 0 ? "등록 정보는 채팅창에서 확인할 수 있습니다." : "해당 세팅 정보를 불러올 수 없습니다.";
 			if (.@result > 0) {
 				.@view_result = need_open_equipment_build_window(.@build_id, 2);
-				mes .@view_result > 0 ? "장비 보기 창을 준비하고 있습니다." : "장비 보기 창을 열 수 없습니다.";
+				if (.@view_result > 0) {
+					mes "장비 보기 창을 열었습니다.";
+					mes "다른 세팅을 확인하려면 현재 열려 있는 장비창을 닫은 후 선택해 주세요.";
+				} else
+					mes "장비 보기 창을 열 수 없습니다.";
 			}
 			if (.@result > 0 && .@status == 0) {
 				mes "이 장비 세팅의 등록을 취소하시겠습니까?";
@@ -433,7 +441,11 @@ S_AdminPage:
 			mes .@detail > 0 ? "검수 정보와 처리 내역은 채팅창에서 확인할 수 있습니다." : "해당 세팅 정보를 불러올 수 없습니다.";
 			if (.@detail > 0) {
 				.@view_result = need_open_equipment_build_window(.@build_id, 3);
-				mes .@view_result > 0 ? "장비 보기 창을 준비하고 있습니다." : "장비 보기 창을 열 수 없습니다.";
+				if (.@view_result > 0) {
+					mes "장비 보기 창을 열었습니다.";
+					mes "다른 세팅을 확인하려면 현재 열려 있는 장비창을 닫은 후 선택해 주세요.";
+				} else
+					mes "장비 보기 창을 열 수 없습니다.";
 			}
 			if (.@detail > 0)
 				callsub S_AdminAction, .@build_id, .@status;

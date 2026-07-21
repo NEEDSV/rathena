@@ -46,7 +46,6 @@
 #include "map.hpp"
 #include "mercenary.hpp"
 #include "mob.hpp"
-#include "need_equipment_build.hpp"
 #include "npc.hpp"
 #include "party.hpp"
 #include "pc.hpp"
@@ -13457,8 +13456,6 @@ void clif_parse_NpcSelectMenu(int32 fd,map_session_data *sd){
 	}
 
 	sd->npc_menu = select;
-	if( select == 0xff )
-		need_equipment_build_view_cancel_pending(sd);
 
 	if( battle_config.idletime_option&IDLE_NPC_MENU ){
 		sd->idletime = last_tick;
@@ -13543,7 +13540,6 @@ void clif_parse_NpcCloseClicked(int32 fd,map_session_data *sd)
 
 	const PACKET_CZ_CLOSE_DIALOG* p = reinterpret_cast<PACKET_CZ_CLOSE_DIALOG*>( RFIFOP( fd, 0 ) );
 
-	need_equipment_build_view_cancel_pending(sd);
 	npc_scriptcont( sd, p->GID, true );
 }
 
@@ -17833,7 +17829,6 @@ void clif_parse_ViewPlayerEquip(int32 fd, map_session_data* sd)
 		return;
 	else if( tsd->status.show_equip || pc_has_permission(sd, PC_PERM_VIEW_EQUIPMENT) ) {
 		clif_viewequip_ack( *sd, *tsd );
-		need_equipment_build_view_mark_external_open(sd);
 	}
 	else
 		clif_msg( *sd, MSI_OPEN_EQUIPEDITEM_REFUSED );
