@@ -27,8 +27,8 @@
 	if (strnpcinfo(1) == "제레미") {
 		set .@Jeremy,1;
 		set .@n$, "[제레미]";
-		setarray .@equip_name$[0],  "갑옷",  "신발",  "걸칠것", "투구 상단","악세서리(오른쪽)","악세서리(왼쪽)";
-		setarray .@equip_slot[0], EQI_ARMOR,EQI_SHOES,EQI_GARMENT,EQI_HEAD_TOP, EQI_ACC_L, EQI_ACC_R;
+		setarray .@equip_name$[0],  "갑옷",  "신발",  "걸칠것", "투구 상단", "투구 중단", "악세서리(오른쪽)", "악세서리(왼쪽)";
+		setarray .@equip_slot[0], EQI_ARMOR, EQI_SHOES, EQI_GARMENT, EQI_HEAD_TOP, EQI_HEAD_MID, EQI_ACC_L, EQI_ACC_R;
 
 		mes .@n$;
 		mes "오랜만이네요~";
@@ -45,6 +45,7 @@
 	next;
 	mes .@n$;
 	mes "일반적으로 수수료는 1,000,000 제니입니다. 카드 분리 시 ^990000분리 성공률을 높여주는 특별한 아이템^000000을 사용할 수 있습니다. 이에 대한 추가 제니는 받지 않아요.";
+	mes "단, ^ff0000투구 중단은 제니와 모든 분리 재화를 2배 소모^000000합니다.";
 	next;
 	mes .@n$;
 	mes "특수 아이템을 사용하더라도 실패할 가능성은 있습니다. 실패 시 ^ff0000사용한 재화만 소모^000000되며, 장비와 카드는 그대로 유지됩니다. 분리할 장비가 있으신가요?";
@@ -105,6 +106,19 @@
 		break;
 	}
 
+	// 투구 중단은 제니와 분리 재화를 모두 2배 소모합니다.
+	set .@cost_amount, (.@equip_num == EQI_HEAD_MID) ? 2 : 1;
+	set .@zeny_cost, 1000000 * .@cost_amount;
+	set .@zeny_text$, (.@cost_amount == 2) ? "2,000,000z" : "1,000,000z";
+	set .@item_text$, (.@cost_amount == 2) ? " 2개" : " 1개";
+
+	if (.@cost_amount == 2) {
+		mes .@n$;
+		mes "투구 중단 카드 분리는 일반 장비보다 작업 난도가 높습니다.";
+		mes "^ff0000선택한 분리 방식의 재화를 2배 소모^000000합니다.";
+		next;
+	}
+
 	setarray .@check_equip_card[0], getequipcardid(.@equip_num,0),getequipcardid(.@equip_num,1),getequipcardid(.@equip_num,2),getequipcardid(.@equip_num,3);
 	setarray .@equip_card[0], .@check_equip_card[0], .@check_equip_card[1], .@check_equip_card[2], .@check_equip_card[3];
 	set .@mvp_list$,
@@ -152,16 +166,16 @@
 		next;
 		set .@menu$,
 			"다음에...:"+
-			((Zeny >= 1000000)?"1,000,000z 사용 (성공률 20%):":"^9999991,000,000z 사용 (잔액 부족)^000000:")+
-			((countitem(6441))?"고급 윤활유 사용 (성공률 90%):":"^999999고급 윤활유 (부족)^000000:")+
-			((countitem(6440))?"일반 윤활유 사용 (성공률 70%)":"^999999일반 윤활유 (부족)^000000");
+			((Zeny >= .@zeny_cost)?(.@zeny_text$+" 사용 (성공률 20%):"):("^999999"+.@zeny_text$+" 사용 (잔액 부족)^000000:"))+
+			((countitem(6441) >= .@cost_amount)?("고급 윤활유"+.@item_text$+" 사용 (성공률 90%):"):("^999999고급 윤활유"+.@item_text$+" (부족)^000000:"))+
+			((countitem(6440) >= .@cost_amount)?("일반 윤활유"+.@item_text$+" 사용 (성공률 70%)"):("^999999일반 윤활유"+.@item_text$+" (부족)^000000"));
 		switch(select(.@menu$)) {
 		case 1:
 			mes .@n$;
 			mes "작업이 필요하면 여기로 저를 찾아오세요.";
 			close;
 		case 2:
-			if (Zeny < 1000000) {
+			if (Zeny < .@zeny_cost) {
 				mes .@n$;
 				mes "제니가 부족합니다. 수수료를 충분히 챙겨서 다시 와주세요.";
 				close;
@@ -175,12 +189,12 @@
 				close;
 			}
 			set .@success_rate,20;
-			set Zeny, Zeny - 1000000;
+			set Zeny, Zeny - .@zeny_cost;
 			break;
 		case 3:
-			if (countitem(6441) == 0) {
+			if (countitem(6441) < .@cost_amount) {
 				mes .@n$;
-				mes "고급 윤활유가 없습니다.";
+				mes "고급 윤활유가 부족합니다. 필요한 수량: "+.@cost_amount+"개";
 				close;
 			}
 			mes .@n$;
@@ -192,12 +206,12 @@
 				close;
 			}
 			set .@success_rate,90;
-			delitem 6441,1; //High_RankLubricant
+			delitem 6441,.@cost_amount; //High_RankLubricant
 			break;
 		case 4:
-			if (countitem(6440) == 0) {
+			if (countitem(6440) < .@cost_amount) {
 				mes .@n$;
-				mes "일반 윤활유가 없습니다.";
+				mes "일반 윤활유가 부족합니다. 필요한 수량: "+.@cost_amount+"개";
 				close;
 			}
 			mes .@n$;
@@ -209,22 +223,23 @@
 				close;
 			}
 			set .@success_rate,70;
-			delitem 6440,1; //General_Lubricant
+			delitem 6440,.@cost_amount; //General_Lubricant
 			break;
 		}
 	} else if (.@boss_chk == 1) {
 		mes .@n$;
-		mes "이 장비에는 귀중한 MVP 카드가 박혀 있군요. 이 카드는 윤활유만으로는 분리할 수 없습니다. 강력한 계면활성제인 ^0000ff실릿퐁^000000을 가져오시면 작업해 드릴 수 있어요.";
+		mes "이 장비에는 귀중한 MVP 카드가 박혀 있군요. 이 카드는 윤활유만으로는 분리할 수 없습니다.";
+		mes "강력한 계면활성제인 ^0000ff실릿퐁"+.@item_text$+"^000000을 가져오시면 작업해 드릴 수 있어요.";
 		next;
-		switch(select("다음에...:실릿퐁을 가지고 있습니다.")) {
+		switch(select("다음에...:필요한 실릿퐁을 가지고 있습니다.")) {
 		case 1:
 			mes .@n$;
 			mes "작업이 필요하면 여기로 저를 찾아오세요.";
 			close;
 		case 2:
-			if (countitem(6443) == 0) {
+			if (countitem(6443) < .@cost_amount) {
 				mes .@n$;
-				mes "실릿퐁이 없습니다.";
+				mes "실릿퐁이 부족합니다. 필요한 수량: "+.@cost_amount+"개";
 				close;
 			}
 			break;
@@ -240,7 +255,7 @@
 			close;
 		case 2:
 			set .@success_rate,100;
-			delitem 6443,1; //Sillit_Pong_Bottle
+			delitem 6443,.@cost_amount; //Sillit_Pong_Bottle
 			break;
 		}
 	}
@@ -283,7 +298,7 @@ OnInit:
 	if (strnpcinfo(1) == "제레미") {
 		waitingroom "방어구/악세 카드분리",0;
 	} else {
-		waitingroom "무기 카드분리",0;
+		waitingroom "무기/방패 카드분리",0;
 	}
 		end;
 }
