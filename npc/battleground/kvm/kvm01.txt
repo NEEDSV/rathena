@@ -652,7 +652,8 @@ OnCroixJoin:
 bat_c01,51,130,5	script	KVM 담당관#KVM01A	419,{
 	.@char_id = getcharid(0);
 	.@bonusmount = ($BG_User_Count - 5) * 2;
-	if ($BG_CROIX_LEADER_CID == .@char_id || $BG_GUILLAUME_LEADER_CID == .@char_id)
+	// 랜덤 매칭의 자동 파티장은 직접 모집한 파티장이 아니므로 추가 보상에서 제외합니다.
+	if (!$@BG_RM_CYCLE_ACTIVE && ($BG_CROIX_LEADER_CID == .@char_id || $BG_GUILLAUME_LEADER_CID == .@char_id))
 		.@partyleaderbonus = 3;
 	
 	if ($@KvM01BG_Victory) {
@@ -696,11 +697,12 @@ bat_c01,51,130,5	script	KVM 담당관#KVM01A	419,{
 		bg_leave;
 		Bat_Team = 0;
 		set BATTLEGROUND_POINT, BATTLEGROUND_POINT + 3;
-		if ($BG_CROIX_LEADER_CID == .@char_id || $BG_GUILLAUME_LEADER_CID == .@char_id)
+		if (!$@BG_RM_CYCLE_ACTIVE && ($BG_CROIX_LEADER_CID == .@char_id || $BG_GUILLAUME_LEADER_CID == .@char_id))
 			set BATTLEGROUND_POINT, BATTLEGROUND_POINT + 5;
 		warp "bat_room",154,150;
-		// 현재 캐릭터가 파티장인지 확인
-		if (getcharid(1)) {
+		// 수동 파티는 기존처럼 파티장이 해체합니다.
+		// 랜덤 매칭 파티는 KVM 전체 정리 완료 후 애드온에서 양 팀을 함께 해체합니다.
+		if (!$@BG_RM_CYCLE_ACTIVE && getcharid(1)) {
 			if (getcharid(0) == getpartyleader(getcharid(1), 2)) {
 				if (party_destroy(getcharid(1))) {
 					dispbottom "파티가 해체되었습니다.";
@@ -718,6 +720,10 @@ OnInit:
 bat_c01,148,53,1	duplicate(KVM 담당관#KVM01A)	KVM 담당관#KVM01B	415
 
 function	script	F_BG_ClearAllRegisterAfterKVM	{
+	// 랜덤 매칭 풀사이클은 애드온 종료 감시에서 파티/등록/인원 설정을 함께 정리합니다.
+	if ($@BG_RM_CYCLE_ACTIVE)
+		return;
+
 	// 파티장 등록 초기화
 	$BG_GUILLAUME_LEADER_CID = 0;
 	$BG_GUILLAUME_LEADER_AID = 0;

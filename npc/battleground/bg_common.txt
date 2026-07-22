@@ -112,6 +112,12 @@ function	script	F_BG_Menu_DiceRoll	{
 function	script	F_BG_Menu_RegisterLeader	{
 	.@party_id = getcharid(1);
 
+	if ($@BG_RM_CYCLE_ACTIVE) {
+		mes "[전장 관리인]";
+		mes "랜덤 매칭 풀사이클 진행 중에는 파티장 등록을 변경할 수 없습니다.";
+		close;
+	}
+
 	if ($@BG_READY_TYPE) {
 		mes "[전장 관리인]";
 		mes "전장 입장 준비가 진행 중이라 등록 정보를 변경할 수 없습니다.";
@@ -269,6 +275,12 @@ function	script	F_BG_RegisterLeader	{
 // 내 전장 파티장 등록 해제
 //============================================================
 function	script	F_BG_UnregisterMyLeader	{
+	if ($@BG_RM_CYCLE_ACTIVE) {
+		mes "[전장 관리인]";
+		mes "랜덤 매칭 풀사이클 진행 중에는 자동 파티장 등록을 해제할 수 없습니다.";
+		close;
+	}
+
 	callfunc "F_BG_ClearAllReadyState";
 
 	.@char_id = getcharid(0);
@@ -308,6 +320,9 @@ function	script	F_BG_UnregisterMyLeader	{
 // 전장 파티장 등록 전체 초기화
 //============================================================
 function	script	F_BG_ClearLeaderRegister	{
+	if ($@BG_RM_CYCLE_ACTIVE)
+		return;
+
 	callfunc "F_BG_ClearAllReadyState";
 
 	$BG_GUILLAUME_LEADER_CID = 0;
@@ -383,6 +398,22 @@ function	script	F_BG_Menu_BattleReady	{
 	if ($@TierraBG1 || $@FlaviusBG1 || $@KvM01BG) {
 		mes "[전장 관리인]";
 		mes "현재 전장이 진행 중입니다.";
+		close;
+	}
+
+	// 랜덤 매칭 풀사이클에서는 다음 순서의 전장만 준비할 수 있습니다.
+	if ($@BG_RM_CYCLE_ACTIVE) {
+		if ($@BG_RM_CYCLE_STAGE == 2) {
+			callfunc "F_BG_Menu_FlaviusReady";
+			return;
+		}
+		if ($@BG_RM_CYCLE_STAGE == 3) {
+			callfunc "F_BG_Menu_KvMReady";
+			return;
+		}
+
+		mes "[전장 관리인]";
+		mes "현재 랜덤 매칭 전장이 진행 중이거나 다음 단계 전환을 기다리고 있습니다.";
 		close;
 	}
 
@@ -1541,6 +1572,12 @@ function	script	F_BG_Menu_Promotion	{
 // 티에라 / 플라비우스 / KVM 통합 인원 변수
 //============================================================
 function	script	F_BG_Menu_CountAdjust	{
+	if ($@BG_RM_CYCLE_ACTIVE) {
+		mes "[전장 관리인]";
+		mes "랜덤 매칭 풀사이클 진행 중에는 전장 인원을 변경할 수 없습니다.";
+		close;
+	}
+
 	if ($@BG_READY_TYPE) {
 		mes "[전장 관리인]";
 		mes "전장 입장 준비 중에는 전장 인원을 변경할 수 없습니다.";
@@ -1612,6 +1649,12 @@ function	script	F_BG_Menu_CountAdjust	{
 // 승낙 시 신청한 팀 필요 인원만 -1
 //============================================================
 function	script	F_BG_Menu_ShortStart	{
+	if ($@BG_RM_CYCLE_ACTIVE) {
+		mes "[전장 관리인]";
+		mes "랜덤 매칭 풀사이클 진행 중에는 인원 부족 완화 설정을 변경할 수 없습니다.";
+		close;
+	}
+
 	if ($@BG_READY_TYPE) {
 		mes "[전장 관리인]";
 		mes "전장 입장 준비 중에는 인원 부족 완화 신청을 변경할 수 없습니다.";
@@ -2054,7 +2097,8 @@ function	script	F_BG_Badge	{
 	.@char_id = getcharid(0);
 	.@team$ = getarg(1);
 	.@bg_type$ = getarg(2);
-	if ($BG_CROIX_LEADER_CID == .@char_id || $BG_GUILLAUME_LEADER_CID == .@char_id)
+	// 랜덤 매칭의 자동 파티장은 직접 모집한 파티장이 아니므로 추가 보상에서 제외합니다.
+	if (!$@BG_RM_CYCLE_ACTIVE && ($BG_CROIX_LEADER_CID == .@char_id || $BG_GUILLAUME_LEADER_CID == .@char_id))
 		.@partyleaderbonus = 3;
 		
 	if (.@bg_type$ == "Tierra") {
