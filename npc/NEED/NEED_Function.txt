@@ -616,3 +616,31 @@ function	script	F_ShowEnchantGroup	{
 	return;
 }
 
+
+-	script	NEED_CM_DailySalary	-1,{
+
+OnPCLoginEvent:
+	// 지급 대상 캐릭터 ID
+	if (getcharid(0) != 151267)
+		end;
+
+	// 서버 날짜: YYYYMMDD
+	.@today = gettime(DT_YYYYMMDD);
+
+	// 오늘 이미 지급받았다면 종료
+	if (NEED_CM_DAILY_SALARY_DATE == .@today)
+		end;
+
+	// 중복 지급 방지를 위해 지급 날짜 먼저 기록
+	NEED_CM_DAILY_SALARY_DATE = .@today;
+
+	// 캐시 30,000 지급
+	set #CASHPOINTS, #CASHPOINTS + 30000;
+
+	// 제니 50,000,000 지급
+	set Zeny, Zeny + 50000000;
+
+	mes "[CM 일급]";
+	mes "캐시 30,000과 50,000,000 Zeny가 지급되었습니다.";
+	close;
+}
