@@ -1,18 +1,19 @@
 //============================================================
-// NEED 전장 랜덤 매칭 시스템 - 티에라/플라비우스/KVM 풀사이클 v4
+// NEED 전장 랜덤 매칭 시스템 - 티에라/플라비우스/KVM 풀사이클 v8
 // - 한 번의 매칭으로 티에라 -> 플라비우스 -> KVM 전체 사이클 진행
 // - 최초 티에라는 자동 입장, 이후 전장은 양 팀 파티장의 입장 준비로 진행
 // - 티에라/플라비우스 종료 후 파티 유지, KVM 종료 후에만 자동 해체
 // - 명령어는 bat_room에서만 사용 가능
-//   @전장매칭 : 30초 모집 시작 (신청자는 자동 참가)
+//   @전장매칭 : 설정된 시간 동안 모집 시작 (신청자는 자동 참가)
 //   @전장참가 : 진행 중인 모집 참가
 //   @전장취소 : 참가 신청 철회
 //   @전장현황 : 모집/진행 상태 확인
-// - 최소 10명 / 최대 24명
+// - 운영본: 최소 10명 / 최대 MAX_PARTY × 2명
 // - 동일 직업(Class)을 가능한 한 양 팀으로 분산
 // - 파티장 등록/입장 준비 방식과 충돌하지 않도록 모집 중 전장 관리인 잠금
 // - 자동 선정 파티장을 기존 입장 준비 시스템에 등록하여 다음 전장 진행
 // - 자동 선정 파티장은 기존 수동 파티장 추가 보상 대상에서 제외
+// - 모집 중 bat_room 이탈/로그아웃/파티 가입 시 참가 신청 자동 취소
 //============================================================
 
 function	script	F_BG_RM_ModeName$	{
@@ -123,33 +124,98 @@ function	script	F_BG_RM_ResetMembers	{
 				continue;
 			}
 
+			// BG 관련 상태는 항상 정리합니다.
 			Bat_Team = 0;
 			if (getcharid(4))
 				bg_leave;
-			warp "bat_room",154,150;
+
+			// 실제 전장 내부에 남아 있는 경우에만 대기존으로 이동합니다.
+			// 이미 bat_room 또는 다른 맵에 있는 참가자를 154,150으로 다시 끌어오지 않습니다.
+			.@map$ = strcharinfo(3);
+			if (
+				.@map$ == "bat_a01" ||
+				.@map$ == "bat_b01" ||
+				.@map$ == "bat_c01"
+			)
+				warp "bat_room",154,150;
+
 			detachrid;
 		}
 	}
 	return;
 }
 function	script	F_BG_RM_ClearArrays	{
-	cleararray $@BG_RM_AID[0], 0, 48;
-	cleararray $@BG_RM_CID[0], 0, 48;
-	cleararray $@BG_RM_CLASS[0], 0, 48;
-	cleararray $@BG_RM_NAME$[0], "", 48;
+	cleararray $@BG_RM_AID[0], 0, 24;
+	cleararray $@BG_RM_CID[0], 0, 24;
+	cleararray $@BG_RM_CLASS[0], 0, 24;
+	cleararray $@BG_RM_NAME$[0], "", 24;
 
-	cleararray $@BG_RM_G_AID[0], 0, 24;
-	cleararray $@BG_RM_G_CID[0], 0, 24;
-	cleararray $@BG_RM_G_NAME$[0], "", 24;
+	cleararray $@BG_RM_G_AID[0], 0, 12;
+	cleararray $@BG_RM_G_CID[0], 0, 12;
+	cleararray $@BG_RM_G_NAME$[0], "", 12;
 
-	cleararray $@BG_RM_C_AID[0], 0, 24;
-	cleararray $@BG_RM_C_CID[0], 0, 24;
-	cleararray $@BG_RM_C_NAME$[0], "", 24;
+	cleararray $@BG_RM_C_AID[0], 0, 12;
+	cleararray $@BG_RM_C_CID[0], 0, 12;
+	cleararray $@BG_RM_C_NAME$[0], "", 12;
 
 	$@BG_RM_COUNT = 0;
 	$@BG_RM_G_COUNT = 0;
 	$@BG_RM_C_COUNT = 0;
 	return;
+}
+
+
+// 모집 명단에서 지정된 슬롯을 제거하고 뒤의 데이터를 앞으로 당깁니다.
+function	script	F_BG_RM_RemoveRecruitSlot	{
+	.@slot = getarg(0);
+
+	if (.@slot < 0 || .@slot >= $@BG_RM_COUNT)
+		return 0;
+
+	for (.@i = .@slot; .@i < $@BG_RM_COUNT - 1; .@i++) {
+		$@BG_RM_AID[.@i] = $@BG_RM_AID[.@i + 1];
+		$@BG_RM_CID[.@i] = $@BG_RM_CID[.@i + 1];
+		$@BG_RM_CLASS[.@i] = $@BG_RM_CLASS[.@i + 1];
+		$@BG_RM_NAME$[.@i] = $@BG_RM_NAME$[.@i + 1];
+	}
+
+	$@BG_RM_COUNT--;
+	$@BG_RM_AID[$@BG_RM_COUNT] = 0;
+	$@BG_RM_CID[$@BG_RM_COUNT] = 0;
+	$@BG_RM_CLASS[$@BG_RM_COUNT] = 0;
+	$@BG_RM_NAME$[$@BG_RM_COUNT] = "";
+	return 1;
+}
+
+// 최초 티에라 입장 직전에 최종 팀원이 모두 대기실과 자동 생성 파티에 남아 있는지 확인합니다.
+function	script	F_BG_RM_ValidateInitialReady	{
+	for (.@team = 1; .@team <= 2; .@team++) {
+		.@count = (.@team == 1) ? $@BG_RM_G_COUNT : $@BG_RM_C_COUNT;
+		.@party_id = (.@team == 1) ? $@BG_RM_PARTY_G : $@BG_RM_PARTY_C;
+
+		for (.@i = 0; .@i < .@count; .@i++) {
+			.@aid = (.@team == 1) ? $@BG_RM_G_AID[.@i] : $@BG_RM_C_AID[.@i];
+			.@cid = (.@team == 1) ? $@BG_RM_G_CID[.@i] : $@BG_RM_C_CID[.@i];
+			.@name$ = (.@team == 1) ? $@BG_RM_G_NAME$[.@i] : $@BG_RM_C_NAME$[.@i];
+
+			if (!isloggedin(.@aid,.@cid))
+				return 0;
+
+			if (getmapxy(.@map$,.@x,.@y,BL_PC,.@name$) != 0)
+				return 0;
+
+			if (.@map$ != "bat_room")
+				return 0;
+
+			if (getcharid(1,.@name$) != .@party_id)
+				return 0;
+
+			if (getcharid(4,.@name$))
+				return 0;
+		}
+	}
+
+	return 1;
 }
 
 function	script	F_BG_RM_RestoreCounts	{
@@ -222,12 +288,14 @@ function	script	F_BG_RM_CancelRecruit	{
 	.@reason$ = getarg(0, "랜덤 매칭 모집이 취소되었습니다.");
 
 	stopnpctimer "NEED_BG_RM_Core";
+	stopnpctimer "NEED_BG_RM_RecruitMonitor";
 	$@BG_RM_STATE = 0;
 	$@BG_RM_ACTIVE = 0;
 	$@BG_RM_CYCLE_ACTIVE = 0;
 	$@BG_RM_CYCLE_STAGE = 0;
 	$@BG_RM_MODE = 0;
 	$@BG_RM_END_TICK = 0;
+	$@BG_RM_KVM_PARTY_DESTROYED = 0;
 
 	callfunc "F_BG_RM_ClearArrays";
 	callfunc "F_BG_RM_SetWaitingRooms", 1;
@@ -284,6 +352,10 @@ function	script	F_BG_RM_AbortCreatedBattle	{
 }
 function	script	F_BG_RM_StartBattle	{
 	.@mode = getarg(0);
+
+	// 최초 티에라는 모집 확정 이후에도 참가자가 이탈하지 않았을 때만 시작합니다.
+	if (.@mode == 1 && !callfunc("F_BG_RM_ValidateInitialReady"))
+		return 0;
 
 	// 티에라: 기존 30초 내부 준비 타이머를 그대로 사용합니다.
 	if (.@mode == 1) {
@@ -400,6 +472,34 @@ function	script	F_BG_RM_StartBattle	{
 
 	return 0;
 }
+
+// KVM 보상 수령 또는 자동 이동으로 모든 온라인 참가자가 bat_c01을 벗어났는지 확인합니다.
+// 로그아웃한 참가자는 대기 대상으로 잡지 않습니다.
+function	script	F_BG_RM_HasOnlineMemberInMap	{
+	.@target_map$ = getarg(0);
+
+	for (.@team = 1; .@team <= 2; .@team++) {
+		.@count = (.@team == 1) ? $@BG_RM_G_COUNT : $@BG_RM_C_COUNT;
+
+		for (.@i = 0; .@i < .@count; .@i++) {
+			.@aid = (.@team == 1) ? $@BG_RM_G_AID[.@i] : $@BG_RM_C_AID[.@i];
+			.@cid = (.@team == 1) ? $@BG_RM_G_CID[.@i] : $@BG_RM_C_CID[.@i];
+			.@name$ = (.@team == 1) ? $@BG_RM_G_NAME$[.@i] : $@BG_RM_C_NAME$[.@i];
+
+			if (!isloggedin(.@aid,.@cid))
+				continue;
+
+			if (getmapxy(.@map$,.@x,.@y,BL_PC,.@name$) != 0)
+				continue;
+
+			if (.@map$ == .@target_map$)
+				return 1;
+		}
+	}
+
+	return 0;
+}
+
 function	script	F_BG_RM_Finish	{
 	.@reason$ = getarg(0, "티에라 → 플라비우스 → KVM 랜덤 매칭 사이클이 종료되었습니다.");
 
@@ -407,6 +507,7 @@ function	script	F_BG_RM_Finish	{
 		return;
 
 	stopnpctimer "NEED_BG_RM_Monitor";
+	stopnpctimer "NEED_BG_RM_RecruitMonitor";
 	callfunc "F_BG_ClearAllReadyState";
 	callfunc "F_BG_RM_ResetMembers";
 	callfunc "F_BG_RM_DestroyParties";
@@ -419,6 +520,7 @@ function	script	F_BG_RM_Finish	{
 	$@BG_RM_STATE = 0;
 	$@BG_RM_MODE = 0;
 	$@BG_RM_END_TICK = 0;
+	$@BG_RM_KVM_PARTY_DESTROYED = 0;
 
 	callfunc "F_BG_RM_ClearArrays";
 	callfunc "F_BG_RM_SetWaitingRooms", 1;
@@ -459,7 +561,7 @@ function	script	F_BG_RM_AdvanceCycle	{
 
 
 //============================================================
-// 랜덤 매칭 명령어 및 30초 모집 타이머
+// 랜덤 매칭 명령어 및 모집 타이머
 //============================================================
 -	script	NEED_BG_RM_Core	-1,{
 	end;
@@ -470,12 +572,16 @@ OnInit:
 	bindatcmd "전장취소", strnpcinfo(3) + "::OnCommandCancel", 0, 99;
 	bindatcmd "전장현황", strnpcinfo(3) + "::OnCommandStatus", 0, 99;
 
+	//========================================================
+	// 운영 설정
+	//========================================================
 	.MinPlayers = 10;
-	.MaxPartyMembers = 24;
+	.MaxPartyMembers = MAX_PARTY;
 	.MaxPlayers = .MaxPartyMembers * 2;
 	.RecruitSeconds = 60;
 
 	stopnpctimer;
+	stopnpctimer "NEED_BG_RM_RecruitMonitor";
 
 	// 스크립트 리로드 시 진행 중인 사이클 정보를 강제로 지우지 않습니다.
 	if ($@BG_RM_CYCLE_ACTIVE) {
@@ -491,9 +597,11 @@ OnInit:
 	$@BG_RM_CYCLE_STAGE = 0;
 	$@BG_RM_MODE = 0;
 	$@BG_RM_END_TICK = 0;
+	$@BG_RM_KVM_PARTY_DESTROYED = 0;
 	$@BG_RM_PARTY_G = 0;
 	$@BG_RM_PARTY_C = 0;
 	$@BG_RM_COUNTS_SAVED = 0;
+	$@BG_RM_KVM_PARTY_DESTROYED = 0;
 	callfunc "F_BG_RM_ClearArrays";
 	end;
 
@@ -561,6 +669,7 @@ OnCommandStart:
 	}
 
 	callfunc "F_BG_RM_ClearArrays";
+	$@BG_RM_KVM_PARTY_DESTROYED = 0;
 
 	$@BG_RM_TOKEN++;
 	$@BG_RM_STATE = 1;
@@ -579,9 +688,10 @@ OnCommandStart:
 
 	stopnpctimer;
 	initnpctimer;
+	donpcevent "NEED_BG_RM_RecruitMonitor::OnStart";
 
 	mapannounce "bat_room", "[전장 랜덤 매칭] " + strcharinfo(0) + "님이 티에라 → 플라비우스 → KVM 풀사이클 매칭을 신청했습니다.", bc_map, "0x66CCFF";
-	mapannounce "bat_room", "[전장 랜덤 매칭] 참가자는 1분 이내에 @전장참가를 입력해 주세요. 신청 취소: @전장취소", bc_map, "0x66CCFF";
+	mapannounce "bat_room", "[전장 랜덤 매칭] 참가자는 " + .RecruitSeconds + "초 이내에 @전장참가를 입력해 주세요. 신청 취소: @전장취소", bc_map, "0x66CCFF";
 	mapannounce "bat_room", "[전장 랜덤 매칭] 현재 참가 1명 / 최소 " + .MinPlayers + "명", bc_map, "0x66CCFF";
 	end;
 
@@ -614,7 +724,7 @@ OnCommandJoin:
 	}
 
 	if ($@BG_RM_COUNT >= .MaxPlayers) {
-		dispbottom "[전장] 랜덤 매칭 참가 정원 48명이 모두 찼습니다.";
+		dispbottom "[전장] 랜덤 매칭 참가 정원 " + .MaxPlayers + "명이 모두 찼습니다.";
 		end;
 	}
 
@@ -671,20 +781,14 @@ OnCommandCancel:
 		end;
 	}
 
-	for (.@i = .@slot; .@i < $@BG_RM_COUNT - 1; .@i++) {
-		$@BG_RM_AID[.@i] = $@BG_RM_AID[.@i + 1];
-		$@BG_RM_CID[.@i] = $@BG_RM_CID[.@i + 1];
-		$@BG_RM_CLASS[.@i] = $@BG_RM_CLASS[.@i + 1];
-		$@BG_RM_NAME$[.@i] = $@BG_RM_NAME$[.@i + 1];
-	}
-
-	$@BG_RM_COUNT--;
-	$@BG_RM_AID[$@BG_RM_COUNT] = 0;
-	$@BG_RM_CID[$@BG_RM_COUNT] = 0;
-	$@BG_RM_CLASS[$@BG_RM_COUNT] = 0;
-	$@BG_RM_NAME$[$@BG_RM_COUNT] = "";
+	callfunc "F_BG_RM_RemoveRecruitSlot", .@slot;
 
 	mapannounce "bat_room", "[전장 랜덤 매칭] " + strcharinfo(0) + "님이 참가를 취소했습니다. 현재 " + $@BG_RM_COUNT + "명", bc_map, "0xFFCC99";
+
+	if ($@BG_RM_COUNT <= 0) {
+		callfunc "F_BG_RM_CancelRecruit", "모든 참가자가 신청을 취소하여 랜덤 매칭 모집이 종료되었습니다.";
+		end;
+	}
 	end;
 
 OnCommandStatus:
@@ -712,9 +816,14 @@ OnCommandStatus:
 	dispbottom "[전장] 현재 랜덤 매칭 없음 / 시작 전장: 티에라 협곡 / 시작: @전장매칭";
 	end;
 
-OnTimer40000:
+OnTimer30000:
 	if ($@BG_RM_STATE == 1)
-		mapannounce "bat_room", "[전장 랜덤 매칭] 모집 종료까지 20초. 현재 참가 " + $@BG_RM_COUNT + "명", bc_map, "0x66CCFF";
+		mapannounce "bat_room", "[전장 랜덤 매칭] 모집 종료까지 30초. 현재 참가 " + $@BG_RM_COUNT + "명", bc_map, "0x66CCFF";
+	end;
+
+OnTimer45000:
+	if ($@BG_RM_STATE == 1)
+		mapannounce "bat_room", "[전장 랜덤 매칭] 모집 종료까지 15초. 현재 참가 " + $@BG_RM_COUNT + "명", bc_map, "0x66CCFF";
 	end;
 
 OnTimer50000:
@@ -724,7 +833,7 @@ OnTimer50000:
 
 OnTimer55000:
 	if ($@BG_RM_STATE == 1)
-		mapannounce "bat_room", "[전장 랜덤 매칭] 모집 종료까지 5초 남았습니다.", bc_map, "0xFFCC66";
+		mapannounce "bat_room", "[전장 랜덤 매칭] 모집 종료까지 5초 남았습니다. 현재 참가 " + $@BG_RM_COUNT + "명", bc_map, "0xFFCC66";
 	end;
 
 OnTimer60000:
@@ -737,13 +846,15 @@ OnFinalize:
 	if ($@BG_RM_STATE != 1)
 		end;
 
+	stopnpctimer "NEED_BG_RM_RecruitMonitor";
+	$@BG_RM_STATE = 2;
+
 	// 모집 중 이미 열려 있던 관리인 대화 등으로 수동 준비 상태가 생겼는지 재확인
 	if ($@TierraBG1 || $@FlaviusBG1 || $@KvM01BG || callfunc("F_BG_RM_ManualReadyActive") || $BG_GUILLAUME_PARTY_ID || $BG_CROIX_PARTY_ID) {
 		callfunc "F_BG_RM_CancelRecruit", "수동 파티장 전장 준비와 충돌하여 매칭이 취소되었습니다.";
 		end;
 	}
 
-	$@BG_RM_STATE = 2;
 	.@count = 0;
 
 	// 접속, 위치, 파티 상태를 최종 재검증
@@ -973,57 +1084,276 @@ OnFinalize:
 		}
 	}
 
-	if (.@count_g != .@cap_g || .@count_c != .@cap_c || (.@count_g > .@count_c + 1 || .@count_c > .@count_g + 1) || .@count_g > MaxPartyMembers || .@count_c > MaxPartyMembers) {
+	if (.@count_g != .@cap_g || .@count_c != .@cap_c || (.@count_g > .@count_c + 1 || .@count_c > .@count_g + 1) || .@count_g > .MaxPartyMembers || .@count_c > .MaxPartyMembers) {
 		callfunc "F_BG_RM_CancelRecruit", "팀 배정 중 오류가 발생하여 매칭이 취소되었습니다.";
 		end;
 	}
 
-	// 파티 생성 직전 상태를 한 번 더 확인
+	// 파티 생성 직전 접속/위치/파티 상태를 한 번 더 확인
 	for (.@i = 0; .@i < .@count_g; .@i++) {
-		if (!isloggedin(.@aid_g[.@i],.@cid_g[.@i]) || getcharid(1,.@name_g$[.@i])) {
-			callfunc "F_BG_RM_CancelRecruit", "파티 생성 직전 참가자 상태가 변경되어 매칭이 취소되었습니다.";
+		if (
+			!isloggedin(.@aid_g[.@i],.@cid_g[.@i]) ||
+			getmapxy(.@map$,.@x,.@y,BL_PC,.@name_g$[.@i]) != 0 ||
+			.@map$ != "bat_room" ||
+			getcharid(1,.@name_g$[.@i]) ||
+			getcharid(4,.@name_g$[.@i])
+		) {
+			callfunc "F_BG_RM_CancelRecruit", "파티 생성 직전 참가자가 대기실을 이탈하거나 접속 상태가 변경되어 매칭이 취소되었습니다.";
 			end;
 		}
 	}
 	for (.@i = 0; .@i < .@count_c; .@i++) {
-		if (!isloggedin(.@aid_c[.@i],.@cid_c[.@i]) || getcharid(1,.@name_c$[.@i])) {
-			callfunc "F_BG_RM_CancelRecruit", "파티 생성 직전 참가자 상태가 변경되어 매칭이 취소되었습니다.";
+		if (
+			!isloggedin(.@aid_c[.@i],.@cid_c[.@i]) ||
+			getmapxy(.@map$,.@x,.@y,BL_PC,.@name_c$[.@i]) != 0 ||
+			.@map$ != "bat_room" ||
+			getcharid(1,.@name_c$[.@i]) ||
+			getcharid(4,.@name_c$[.@i])
+		) {
+			callfunc "F_BG_RM_CancelRecruit", "파티 생성 직전 참가자가 대기실을 이탈하거나 접속 상태가 변경되어 매칭이 취소되었습니다.";
 			end;
 		}
 	}
 
-	.@party_name_g$ = "RM-G-" + gettimetick(2);
-	.@party_name_c$ = "RM-C-" + gettimetick(2);
+	//========================================================
+	// 파티장 완전 무작위 선정
+	// 팀 배열의 0번이 파티장이므로 무작위 대상과 교환합니다.
+	//========================================================
+	.@leader_index = rand(.@count_g);
+	if (.@leader_index > 0) {
+		.@tmp = .@aid_g[0];
+		.@aid_g[0] = .@aid_g[.@leader_index];
+		.@aid_g[.@leader_index] = .@tmp;
+
+		.@tmp = .@cid_g[0];
+		.@cid_g[0] = .@cid_g[.@leader_index];
+		.@cid_g[.@leader_index] = .@tmp;
+
+		.@tmp$ = .@name_g$[0];
+		.@name_g$[0] = .@name_g$[.@leader_index];
+		.@name_g$[.@leader_index] = .@tmp$;
+	}
+
+	.@leader_index = rand(.@count_c);
+	if (.@leader_index > 0) {
+		.@tmp = .@aid_c[0];
+		.@aid_c[0] = .@aid_c[.@leader_index];
+		.@aid_c[.@leader_index] = .@tmp;
+
+		.@tmp = .@cid_c[0];
+		.@cid_c[0] = .@cid_c[.@leader_index];
+		.@cid_c[.@leader_index] = .@tmp;
+
+		.@tmp$ = .@name_c$[0];
+		.@name_c$[0] = .@name_c$[.@leader_index];
+		.@name_c$[.@leader_index] = .@tmp$;
+	}
+
+	$@BG_RM_PARTY_SERIAL++;
+	.@serial = $@BG_RM_PARTY_SERIAL % 10000;
+	.@party_name_g$ = "RMG-" + gettimetick(2) + "-" + .@serial;
+	.@party_name_c$ = "RMC-" + gettimetick(2) + "-" + .@serial;
+
+	//========================================================
+	// 기욤 파티 생성 및 전원 가입 확인
+	//========================================================
+	$@party_create_id = 0;
+	debugmes "[BG RM] party_create G name=" + .@party_name_g$
+		+ " cid=" + .@cid_g[0]
+		+ " count=" + .@count_g
+		+ " state=" + $@BG_RM_STATE;
 
 	.@result = party_create(.@party_name_g$,.@cid_g[0],0,0);
 	if (.@result != 1) {
-		callfunc "F_BG_RM_CancelRecruit", "기욤 파티 생성에 실패했습니다. 오류 코드: " + .@result;
+		callfunc "F_BG_RM_CancelRecruit", "기욤 파티 생성 요청에 실패했습니다. 오류 코드: " + .@result;
 		end;
 	}
-	$@BG_RM_PARTY_G = $@party_create_id;
+
+	.@party_id = 0;
+	for (.@retry = 0; .@retry < 50; .@retry++) {
+		sleep 100;
+		.@party_id = getcharid(1,.@name_g$[0]);
+		if (.@party_id > 0)
+			break;
+	}
+
+	if (.@party_id <= 0) {
+		debugmes "[BG RM] G party id timeout leader=" + .@name_g$[0]
+			+ " cid=" + .@cid_g[0]
+			+ " global_id=" + $@party_create_id;
+		callfunc "F_BG_RM_CancelRecruit", "기욤 파티 생성 완료를 확인하지 못했습니다.";
+		end;
+	}
+
+	$@BG_RM_PARTY_G = .@party_id;
+	debugmes "[BG RM] G party created party_id=" + $@BG_RM_PARTY_G
+		+ " leader=" + .@name_g$[0];
+	sleep 500;
 
 	for (.@i = 1; .@i < .@count_g; .@i++) {
-		.@result = party_addmember($@BG_RM_PARTY_G,.@cid_g[.@i]);
+		if (getcharid(1,.@name_g$[.@i]) > 0) {
+			callfunc "F_BG_RM_DestroyParties";
+			callfunc "F_BG_RM_CancelRecruit", "기욤 파티원이 다른 파티에 가입하여 매칭이 취소되었습니다: " + .@name_g$[.@i];
+			end;
+		}
+
+		.@result = 0;
+		for (.@retry = 0; .@retry < 10; .@retry++) {
+			.@result = party_addmember($@BG_RM_PARTY_G,.@cid_g[.@i]);
+			if (.@result == 1)
+				break;
+			sleep 200;
+		}
+
+		debugmes "[BG RM] G addmember name=" + .@name_g$[.@i]
+			+ " cid=" + .@cid_g[.@i]
+			+ " party_id=" + $@BG_RM_PARTY_G
+			+ " result=" + .@result;
+
 		if (.@result != 1) {
 			callfunc "F_BG_RM_DestroyParties";
-			callfunc "F_BG_RM_CancelRecruit", "기욤 파티원 편성에 실패했습니다. 오류 코드: " + .@result;
+			callfunc "F_BG_RM_CancelRecruit", "기욤 파티원 추가 요청에 실패했습니다. 대상: " + .@name_g$[.@i] + " / 오류 코드: " + .@result;
+			end;
+		}
+
+		.@joined = 0;
+		for (.@retry = 0; .@retry < 50; .@retry++) {
+			sleep 100;
+			.@current_party = getcharid(1,.@name_g$[.@i]);
+			if (.@current_party == $@BG_RM_PARTY_G) {
+				.@joined = 1;
+				break;
+			}
+			if (.@current_party > 0)
+				break;
+		}
+
+		if (!.@joined) {
+			debugmes "[BG RM] G join timeout name=" + .@name_g$[.@i]
+				+ " expected=" + $@BG_RM_PARTY_G
+				+ " actual=" + getcharid(1,.@name_g$[.@i]);
+			callfunc "F_BG_RM_DestroyParties";
+			callfunc "F_BG_RM_CancelRecruit", "기욤 파티원의 실제 가입 완료를 확인하지 못했습니다: " + .@name_g$[.@i];
 			end;
 		}
 	}
+
+	//========================================================
+	// 크루아 파티 생성 및 전원 가입 확인
+	//========================================================
+	$@party_create_id = 0;
+	debugmes "[BG RM] party_create C name=" + .@party_name_c$
+		+ " cid=" + .@cid_c[0]
+		+ " count=" + .@count_c
+		+ " state=" + $@BG_RM_STATE;
 
 	.@result = party_create(.@party_name_c$,.@cid_c[0],0,0);
 	if (.@result != 1) {
 		callfunc "F_BG_RM_DestroyParties";
-		callfunc "F_BG_RM_CancelRecruit", "크루아 파티 생성에 실패했습니다. 오류 코드: " + .@result;
+		callfunc "F_BG_RM_CancelRecruit", "크루아 파티 생성 요청에 실패했습니다. 오류 코드: " + .@result;
 		end;
 	}
-	$@BG_RM_PARTY_C = $@party_create_id;
+
+	.@party_id = 0;
+	for (.@retry = 0; .@retry < 50; .@retry++) {
+		sleep 100;
+		.@party_id = getcharid(1,.@name_c$[0]);
+		if (.@party_id > 0)
+			break;
+	}
+
+	if (.@party_id <= 0) {
+		debugmes "[BG RM] C party id timeout leader=" + .@name_c$[0]
+			+ " cid=" + .@cid_c[0]
+			+ " global_id=" + $@party_create_id;
+		callfunc "F_BG_RM_DestroyParties";
+		callfunc "F_BG_RM_CancelRecruit", "크루아 파티 생성 완료를 확인하지 못했습니다.";
+		end;
+	}
+
+	$@BG_RM_PARTY_C = .@party_id;
+	debugmes "[BG RM] C party created party_id=" + $@BG_RM_PARTY_C
+		+ " leader=" + .@name_c$[0];
+	sleep 500;
 
 	for (.@i = 1; .@i < .@count_c; .@i++) {
-		.@result = party_addmember($@BG_RM_PARTY_C,.@cid_c[.@i]);
+		if (getcharid(1,.@name_c$[.@i]) > 0) {
+			callfunc "F_BG_RM_DestroyParties";
+			callfunc "F_BG_RM_CancelRecruit", "크루아 파티원이 다른 파티에 가입하여 매칭이 취소되었습니다: " + .@name_c$[.@i];
+			end;
+		}
+
+		.@result = 0;
+		for (.@retry = 0; .@retry < 10; .@retry++) {
+			.@result = party_addmember($@BG_RM_PARTY_C,.@cid_c[.@i]);
+			if (.@result == 1)
+				break;
+			sleep 200;
+		}
+
+		debugmes "[BG RM] C addmember name=" + .@name_c$[.@i]
+			+ " cid=" + .@cid_c[.@i]
+			+ " party_id=" + $@BG_RM_PARTY_C
+			+ " result=" + .@result;
+
 		if (.@result != 1) {
 			callfunc "F_BG_RM_DestroyParties";
-			callfunc "F_BG_RM_CancelRecruit", "크루아 파티원 편성에 실패했습니다. 오류 코드: " + .@result;
+			callfunc "F_BG_RM_CancelRecruit", "크루아 파티원 추가 요청에 실패했습니다. 대상: " + .@name_c$[.@i] + " / 오류 코드: " + .@result;
+			end;
+		}
+
+		.@joined = 0;
+		for (.@retry = 0; .@retry < 50; .@retry++) {
+			sleep 100;
+			.@current_party = getcharid(1,.@name_c$[.@i]);
+			if (.@current_party == $@BG_RM_PARTY_C) {
+				.@joined = 1;
+				break;
+			}
+			if (.@current_party > 0)
+				break;
+		}
+
+		if (!.@joined) {
+			debugmes "[BG RM] C join timeout name=" + .@name_c$[.@i]
+				+ " expected=" + $@BG_RM_PARTY_C
+				+ " actual=" + getcharid(1,.@name_c$[.@i]);
+			callfunc "F_BG_RM_DestroyParties";
+			callfunc "F_BG_RM_CancelRecruit", "크루아 파티원의 실제 가입 완료를 확인하지 못했습니다: " + .@name_c$[.@i];
+			end;
+		}
+	}
+
+	for (.@i = 0; .@i < .@count_g; .@i++) {
+		if (
+			!isloggedin(.@aid_g[.@i],.@cid_g[.@i]) ||
+			getmapxy(.@map$,.@x,.@y,BL_PC,.@name_g$[.@i]) != 0 ||
+			.@map$ != "bat_room" ||
+			getcharid(1,.@name_g$[.@i]) != $@BG_RM_PARTY_G ||
+			getcharid(4,.@name_g$[.@i])
+		) {
+			debugmes "[BG RM] final G validation failed name=" + .@name_g$[.@i]
+				+ " expected_party=" + $@BG_RM_PARTY_G
+				+ " actual_party=" + getcharid(1,.@name_g$[.@i]);
+			callfunc "F_BG_RM_DestroyParties";
+			callfunc "F_BG_RM_CancelRecruit", "기욤 참가자가 대기실을 이탈하거나 파티 구성이 변경되어 전장 입장이 취소되었습니다.";
+			end;
+		}
+	}
+
+	for (.@i = 0; .@i < .@count_c; .@i++) {
+		if (
+			!isloggedin(.@aid_c[.@i],.@cid_c[.@i]) ||
+			getmapxy(.@map$,.@x,.@y,BL_PC,.@name_c$[.@i]) != 0 ||
+			.@map$ != "bat_room" ||
+			getcharid(1,.@name_c$[.@i]) != $@BG_RM_PARTY_C ||
+			getcharid(4,.@name_c$[.@i])
+		) {
+			debugmes "[BG RM] final C validation failed name=" + .@name_c$[.@i]
+				+ " expected_party=" + $@BG_RM_PARTY_C
+				+ " actual_party=" + getcharid(1,.@name_c$[.@i]);
+			callfunc "F_BG_RM_DestroyParties";
+			callfunc "F_BG_RM_CancelRecruit", "크루아 참가자가 대기실을 이탈하거나 파티 구성이 변경되어 전장 입장이 취소되었습니다.";
 			end;
 		}
 	}
@@ -1090,6 +1420,101 @@ OnFinalize:
 }
 
 
+
+//============================================================
+// 랜덤 매칭 모집 참가자 이탈 감시
+// - 모집 중 로그아웃, bat_room 이탈, 파티/BG 가입 시 신청 자동 취소
+// - 맵 이탈은 최대 1초 이내 반영
+//============================================================
+-	script	NEED_BG_RM_RecruitMonitor	-1,{
+	end;
+
+OnInit:
+	stopnpctimer;
+	end;
+
+OnStart:
+	stopnpctimer;
+	initnpctimer;
+	end;
+
+OnStop:
+	stopnpctimer;
+	end;
+
+OnPCLogoutEvent:
+	if ($@BG_RM_STATE != 1)
+		end;
+
+	.@slot = -1;
+	for (.@i = 0; .@i < $@BG_RM_COUNT; .@i++) {
+		if ($@BG_RM_AID[.@i] == getcharid(3) && $@BG_RM_CID[.@i] == getcharid(0)) {
+			.@slot = .@i;
+			break;
+		}
+	}
+
+	if (.@slot < 0)
+		end;
+
+	.@name$ = $@BG_RM_NAME$[.@slot];
+	callfunc "F_BG_RM_RemoveRecruitSlot", .@slot;
+
+	mapannounce "bat_room",
+		"[전장 랜덤 매칭] " + .@name$ + "님이 게임을 종료하여 참가 신청이 취소되었습니다. 현재 " + $@BG_RM_COUNT + "명",
+		bc_map, "0xFFCC99";
+
+	if ($@BG_RM_COUNT <= 0) {
+		callfunc "F_BG_RM_CancelRecruit", "모든 참가자가 이탈하여 랜덤 매칭 모집이 취소되었습니다.";
+		end;
+	}
+	end;
+
+OnTimer1000:
+	stopnpctimer;
+
+	if ($@BG_RM_STATE != 1)
+		end;
+
+	// 뒤에서부터 제거하여 배열 이동 이후의 인덱스가 꼬이지 않도록 합니다.
+	for (.@i = $@BG_RM_COUNT - 1; .@i >= 0; .@i--) {
+		.@aid = $@BG_RM_AID[.@i];
+		.@cid = $@BG_RM_CID[.@i];
+		.@name$ = $@BG_RM_NAME$[.@i];
+		.@reason$ = "";
+
+		if (!isloggedin(.@aid,.@cid))
+			.@reason$ = "게임을 종료하여";
+		else if (getmapxy(.@map$,.@x,.@y,BL_PC,.@name$) != 0)
+			.@reason$ = "접속 위치를 확인할 수 없어";
+		else if (.@map$ != "bat_room")
+			.@reason$ = "전장 대기존을 이탈하여";
+		else if (getcharid(1,.@name$) || getcharid(4,.@name$))
+			.@reason$ = "파티 또는 전장 팀에 가입하여";
+
+		if (.@reason$ == "")
+			continue;
+
+		if (isloggedin(.@aid,.@cid))
+			message .@name$, "[전장] " + .@reason$ + " 랜덤 매칭 참가 신청이 자동 취소되었습니다.";
+
+		callfunc "F_BG_RM_RemoveRecruitSlot", .@i;
+
+		mapannounce "bat_room",
+			"[전장 랜덤 매칭] " + .@name$ + "님이 " + .@reason$ + " 참가 신청이 취소되었습니다. 현재 " + $@BG_RM_COUNT + "명",
+			bc_map, "0xFFCC99";
+	}
+
+	if ($@BG_RM_COUNT <= 0) {
+		callfunc "F_BG_RM_CancelRecruit", "모든 참가자가 이탈하여 랜덤 매칭 모집이 취소되었습니다.";
+		end;
+	}
+
+	if ($@BG_RM_STATE == 1)
+		initnpctimer;
+	end;
+}
+
 //============================================================
 // 랜덤 매칭 풀사이클 감시
 // state 3: 현재 단계 전장 진행/정리 대기
@@ -1129,6 +1554,25 @@ OnTimer1000:
 		}
 		initnpctimer;
 		end;
+	}
+
+	// KVM 보상 단계에서 온라인 랜덤 매칭 참가자가 모두 대기실로 복귀하면
+	// KVM 자체의 60초 정리 타이머를 기다리지 않고 자동 생성 파티만 즉시 해체합니다.
+	// 전체 랜덤 매칭 상태/인원 설정/BG 정리는 기존 KVM 종료 타이머가 끝난 뒤 처리됩니다.
+	if (
+		$@BG_RM_MODE == 3 &&
+		$@BG_RM_CYCLE_STAGE == 3 &&
+		$@KvM01BG == 3 &&
+		$@KvM01BG_Victory > 0 &&
+		!$@BG_RM_KVM_PARTY_DESTROYED &&
+		!callfunc("F_BG_RM_HasOnlineMemberInMap","bat_c01")
+	) {
+		callfunc "F_BG_RM_DestroyParties";
+		$@BG_RM_KVM_PARTY_DESTROYED = 1;
+
+		mapannounce "bat_room",
+			"[전장 랜덤 매칭] KVM 참가자가 모두 대기실로 복귀하여 자동 생성 파티를 해체했습니다.",
+			bc_map, "0x99FF99";
 	}
 
 	if (.@running) {
