@@ -34,6 +34,15 @@ OnInIt:
 		end;
 }
 bat_room,184,164,4	script	전장 관리인	953,{
+	// 랜덤 매칭 모집/편성 중에는 NPC를 숨기지 않고 전장 홍보 메뉴만 제공합니다.
+	if ($@BG_RM_MANAGER_MENU_LOCK) {
+		switch(select("전장 홍보하기")) {
+		case 1:
+			callfunc "F_BG_Menu_Promotion";
+			close;
+		}
+	}
+
 	switch(select("주사위 굴리기:전장 파티장 등록:전장 입장 준비:전장 홍보하기:전장 인원 조정:인원 부족 완화 신청:전장 보상 설명")) {
 	case 1:
 		callfunc "F_BG_Menu_DiceRoll";
