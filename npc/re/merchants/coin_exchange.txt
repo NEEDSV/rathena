@@ -70,7 +70,6 @@ lasa_in01,160,45,5	script	코인 교환기 CX-1	564,{
 	next;
 	setarray .@exchange_name$[0],"상위","하위";
 	setarray .@exchange_rate[0],30,10;
-	setarray .@exchange_loss[0],rand(1,4),rand(1,2); // Amount deducted per exchange.
 	setarray .@exchange_id[0],.@coins[.@coin_select-1],.@coins[.@coin_select+1];
 	if (.@exchange_id[0] == .@coins[1]) .@exchange_id[0] = 0; // Cannot exchange for Silvervine.
 	.@menu$ = "중단:";
@@ -96,16 +95,63 @@ lasa_in01,160,45,5	script	코인 교환기 CX-1	564,{
 	}
 	if (countitem(.@coin) < .@exchange_rate[.@i]) {
 		mes "[코인교환기 CX-1]";
-		mes " 교환할 코인이 부족합니다"+.@exchange_name$[.@i]+" coin.";
+		mes "교환에 필요한 코인이 부족합니다.";
 		mes "와주셔서 감사합니다.";
 		close;
 	}
-	.@exchange_total = .@exchange_rate[(!.@i)] - .@exchange_loss[(!.@i)];
-	delitem .@coin, .@exchange_rate[.@i];
+
+	.@max_exchange = countitem(.@coin) / .@exchange_rate[.@i];
+	mes "[코인교환기 CX-1]";
+	mes "몇 회 교환하시겠습니까?";
+	mes "1회당 ^003399"+.@exchange_rate[.@i]+"^000000개의 ^003399"+getitemname(.@coin)+"^000000이 필요합니다.";
+	mes "현재 최대 ^003399"+.@max_exchange+"회^000000까지 교환할 수 있습니다.";
+	input .@exchange_count;
+
+	if (.@exchange_count <= 0) {
+		mes "[코인교환기 CX-1]";
+		mes "교환을 취소했습니다.";
+		close;
+	}
+	if (.@exchange_count > .@max_exchange) {
+		mes "[코인교환기 CX-1]";
+		mes "보유한 코인으로는 최대 ^003399"+.@max_exchange+"회^000000까지만 교환할 수 있습니다.";
+		close;
+	}
+
+	.@exchange_cost = .@exchange_rate[.@i] * .@exchange_count;
+	.@exchange_base_total = .@exchange_rate[!.@i] * .@exchange_count;
+	.@exchange_total = 0;
+
+	// 기존 1회 교환과 동일하게, 교환 횟수마다 수수료를 개별 계산합니다.
+	for (.@j = 0; .@j < .@exchange_count; .@j++) {
+		if (.@i == 0)
+			.@exchange_total += 10 - rand(1,2);
+		else
+			.@exchange_total += 30 - rand(1,4);
+	}
+	.@exchange_loss_total = .@exchange_base_total - .@exchange_total;
+
+	if (checkweight(.@exchange_id[.@i], .@exchange_total) == 0) {
+		mes "[코인교환기 CX-1]";
+		mes "교환 결과물을 받을 수 없습니다.";
+		mes "소지 무게나 인벤토리 공간을 확보한 후 다시 시도해 주세요.";
+		close;
+	}
+
+	// 입력 이후 아이템 수량이 변했을 가능성까지 다시 확인합니다.
+	if (countitem(.@coin) < .@exchange_cost) {
+		mes "[코인교환기 CX-1]";
+		mes "교환에 필요한 코인이 부족합니다.";
+		close;
+	}
+
+	delitem .@coin, .@exchange_cost;
 	getitem .@exchange_id[.@i], .@exchange_total;
 	mes "[코인교환기 CX-1]";
-	mes "^003399"+.@exchange_rate[.@i]+"^000000 단위(들)의 ^003399"+getitemname(.@coin)+"^000000 사용됨.";
-	mes "저는 그것들을 ^003399로 교환했습니다."+.@exchange_name$[.@i]+" ^000000 코인에서 ^003399를 차감한 후"+.@exchange_loss[(!.@i)]+"^000000 단위, ^003399"+.@exchange_total+"^000000개 남았습니다.";
+	mes "^003399"+getitemname(.@coin)+"^000000 "+.@exchange_cost+"개를 사용하여";
+	mes "^003399"+.@exchange_count+"회^000000 교환을 완료했습니다.";
+	mes "^003399"+getitemname(.@exchange_id[.@i])+"^000000 "+.@exchange_total+"개를 획득했습니다.";
+	mes "총 수수료 차감량: ^ff3333"+.@exchange_loss_total+"개^000000";
 	close;
 	
 OnInit:
