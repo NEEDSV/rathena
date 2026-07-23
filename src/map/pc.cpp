@@ -15925,6 +15925,31 @@ static bool pc_macro_detector_image_valid(const std::shared_ptr<s_captcha_data> 
 		cd->image_size > 0 && cd->image_size <= sizeof(cd->image_data);
 }
 
+static bool pc_macro_detector_map_allowed(const map_session_data &sd, const char **reason = nullptr) {
+	const char *reject_reason = nullptr;
+	const map_data *mapdata = sd.m >= 0 ? map_getmapdata(sd.m) : nullptr;
+
+	if (mapdata == nullptr)
+		reject_reason = "invalid_map";
+	else if (battle_config.macro_checker_allow_instance == 0 && mapdata->instance_id > 0)
+		reject_reason = "instance_map";
+	else if (mapdata->getMapFlag(MF_NOMACROCHECKER))
+		reject_reason = "nomacrochecker";
+
+	if (reason != nullptr)
+		*reason = reject_reason;
+	return reject_reason == nullptr;
+}
+
+static void pc_macro_detector_map_skip_log(const map_session_data &sd, const char *reason) {
+	if (battle_config.macro_checker_debug == 0)
+		return;
+	const map_data *mapdata = sd.m >= 0 ? map_getmapdata(sd.m) : nullptr;
+	ShowInfo("MacroCaptcha: aid=%d cid=%d map=%s x=%d y=%d result=skipped reason=%s\n",
+		sd.status.account_id, sd.status.char_id, mapdata != nullptr ? mapdata->name : "",
+		sd.x, sd.y, reason != nullptr ? reason : "unknown");
+}
+
 static void pc_macro_detector_restore_actions(map_session_data &sd) {
 	sd.state.block_action &= ~sd.macro_detect.blocked_actions;
 	sd.macro_detect.blocked_actions = 0;
@@ -16088,6 +16113,12 @@ void pc_need_macro_hunt_record_teleport(map_session_data &sd) {
 }
 
 void pc_need_macro_hunt_on_mob_kill(map_session_data &sd, const mob_data &md) {
+	const char *map_reject_reason = nullptr;
+	if (!pc_macro_detector_map_allowed(sd, &map_reject_reason)) {
+		pc_macro_detector_map_skip_log(sd, map_reject_reason);
+		return;
+	}
+
 	const t_tick now = gettick();
 	int32 roll = -1;
 	const char *reason = "random_not_hit";
@@ -16302,6 +16333,11 @@ static TIMER_FUNC(pc_macro_detector_display_timer) {
 		pc_macro_detector_cancel_and_requeue(*sd, "dead");
 		return 0;
 	}
+	const char *map_reject_reason = nullptr;
+	if (!pc_macro_detector_map_allowed(*sd, &map_reject_reason)) {
+		pc_macro_detector_cancel_and_requeue(*sd, map_reject_reason);
+		return 0;
+	}
 	if (sd->mapindex != sd->macro_detect.mapindex) {
 		pc_macro_detector_cancel_and_requeue(*sd, "map_changed");
 		return 0;
@@ -16336,6 +16372,11 @@ static TIMER_FUNC(pc_macro_detector_display_timer) {
 
 	// Damage can cancel casts and adjust movement. Normalize once more immediately before the UI packets.
 	pc_macro_detector_stop_actions(*sd);
+	if (!pc_macro_detector_map_allowed(*sd, &map_reject_reason)) {
+		pc_macro_detector_cancel_and_requeue(*sd,
+			strcmp(map_reject_reason, "instance_map") == 0 ? "instance_before_send" : map_reject_reason);
+		return 0;
+	}
 	sd->macro_detect.display_tick = now;
 	sd->macro_detect.phase = s_macro_detect::e_macro_detect_phase::IMAGE_SENT;
 	sd->macro_detect.image_packet_sent = false;
@@ -16362,8 +16403,18 @@ void pc_macro_detector_process_ack(map_session_data &sd) {
 		!sd.macro_detect.image_packet_sent || sd.macro_detect.ack_received)
 		return;
 
-	if (!pc_macro_detector_session_ready(sd) || pc_isdead(&sd) || sd.mapindex != sd.macro_detect.mapindex) {
+	if (!pc_macro_detector_session_ready(sd) || pc_isdead(&sd)) {
 		pc_macro_detector_cancel_and_requeue(sd, "invalid_ack_state");
+		return;
+	}
+	const char *map_reject_reason = nullptr;
+	if (!pc_macro_detector_map_allowed(sd, &map_reject_reason)) {
+		pc_macro_detector_cancel_and_requeue(sd,
+			strcmp(map_reject_reason, "instance_map") == 0 ? "instance_before_active" : map_reject_reason);
+		return;
+	}
+	if (sd.mapindex != sd.macro_detect.mapindex) {
+		pc_macro_detector_cancel_and_requeue(sd, "map_changed_before_active");
 		return;
 	}
 	if (!pc_macro_detector_image_valid(sd.macro_detect.cd) || sd.macro_detect.retry <= 0 ||
@@ -16397,8 +16448,17 @@ TIMER_FUNC(pc_macro_detector_timeout) {
 	// Remove the current timer
 	sd->macro_detect.timer = INVALID_TIMER;
 
-	if (!pc_macro_detector_session_ready(*sd) || pc_isdead(sd) || sd->mapindex != sd->macro_detect.mapindex) {
+	if (!pc_macro_detector_session_ready(*sd) || pc_isdead(sd)) {
 		pc_macro_detector_cancel_and_requeue(*sd, "invalid_timeout_state");
+		return 0;
+	}
+	const char *map_reject_reason = nullptr;
+	if (!pc_macro_detector_map_allowed(*sd, &map_reject_reason)) {
+		pc_macro_detector_cancel_and_requeue(*sd, map_reject_reason);
+		return 0;
+	}
+	if (sd->mapindex != sd->macro_detect.mapindex) {
+		pc_macro_detector_cancel_and_requeue(*sd, "map_changed_timeout");
 		return 0;
 	}
 	if (sd->macro_detect.phase == s_macro_detect::e_macro_detect_phase::IMAGE_SENT) {
@@ -16442,8 +16502,17 @@ void pc_macro_detector_process_answer(map_session_data &sd, const char captcha_a
 		!sd.macro_detect.answer_window_shown) {
 		return;
 	}
-	if (!pc_macro_detector_session_ready(sd) || pc_isdead(&sd) || sd.mapindex != sd.macro_detect.mapindex) {
+	if (!pc_macro_detector_session_ready(sd) || pc_isdead(&sd)) {
 		pc_macro_detector_cancel_and_requeue(sd, "invalid_answer_state");
+		return;
+	}
+	const char *map_reject_reason = nullptr;
+	if (!pc_macro_detector_map_allowed(sd, &map_reject_reason)) {
+		pc_macro_detector_cancel_and_requeue(sd, map_reject_reason);
+		return;
+	}
+	if (sd.mapindex != sd.macro_detect.mapindex) {
+		pc_macro_detector_cancel_and_requeue(sd, "map_changed_answer");
 		return;
 	}
 
@@ -16556,12 +16625,17 @@ void pc_macro_reporter_area_select(map_session_data &sd, const int16 x, const in
  * @param reporter_account_id: Account ID of reporter
  */
 void pc_macro_reporter_process(map_session_data &sd, int32 reporter_account_id) {
-	if (captcha_db.empty())
+	if (!pc_macro_detector_session_ready(sd))
 		return;
+	const char *map_reject_reason = nullptr;
+	if (!pc_macro_detector_map_allowed(sd, &map_reject_reason)) {
+		pc_macro_detector_map_skip_log(sd, map_reject_reason);
+		return;
+	}
 	if (sd.macro_detect.phase != s_macro_detect::e_macro_detect_phase::NONE || sd.macro_detect.cd != nullptr ||
 		sd.macro_detect.timer != INVALID_TIMER || sd.macro_detect.display_timer != INVALID_TIMER)
 		return;
-	if (!pc_macro_detector_session_ready(sd))
+	if (captcha_db.empty())
 		return;
 
 	// Pick a random image from the database.
@@ -16610,6 +16684,11 @@ static TIMER_FUNC(pc_macro_detector_pending_timer) {
 	if (sd->macro_detect.cd != nullptr || sd->macro_detect.phase != s_macro_detect::e_macro_detect_phase::NONE)
 		return 0;
 	if (!pc_macro_detector_session_ready(*sd) || pc_isdead(sd)) {
+		add_timer(gettick() + 1000, pc_macro_detector_pending_timer, sd->id, 0);
+		return 0;
+	}
+	if (!pc_macro_detector_map_allowed(*sd)) {
+		// Keep only the lightweight persistent-pending poll while inside an excluded map.
 		add_timer(gettick() + 1000, pc_macro_detector_pending_timer, sd->id, 0);
 		return 0;
 	}
