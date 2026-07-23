@@ -145,6 +145,8 @@ enum e_lr_flag : uint8 {
 struct s_captcha_data {
 	uint16 index;
 	uint16 image_size;
+	uint32 raw_image_size;
+	bool image_valid;
 	char image_data[CAPTCHA_BMP_SIZE];
 	char captcha_answer[CAPTCHA_ANSWER_SIZE_MAX];
 	script_code *bonus_script;
@@ -159,18 +161,23 @@ struct s_macro_detect {
 	std::shared_ptr<s_captcha_data> cd;
 	int32 reporter_aid;
 	int32 retry;
-	int32 timer; ///< Answer timeout timer (ACTIVE only)
+	int32 timer; ///< ACK watchdog (IMAGE_SENT) or answer timeout (ACTIVE)
 	int32 display_timer; ///< Delayed captcha display timer (PENDING only)
 	t_tick trigger_tick;
+	t_tick scheduled_display_tick;
 	t_tick display_tick;
 	t_tick last_damage_tick;
+	uint32 generation;
 	uint16 mapindex;
 	uint16 blocked_actions; ///< Action bits added by the macro detector
-	uint8 display_retry;
+	uint16 display_retry; ///< Diagnostic count only; it never forces image transmission
+	bool image_packet_sent;
+	bool ack_received;
 	bool answer_window_shown;
 	enum class e_macro_detect_phase : uint8 {
 		NONE = 0,
 		PENDING,
+		IMAGE_SENT,
 		ACTIVE,
 	} phase;
 };
@@ -1858,6 +1865,7 @@ void pc_macro_captcha_register_upload(map_session_data & sd, uint16 upload_size,
 
 // Macro Detector
 TIMER_FUNC(pc_macro_detector_timeout);
+void pc_macro_detector_process_ack(map_session_data &sd);
 void pc_macro_detector_process_answer(map_session_data &sd, const char captcha_answer[CAPTCHA_ANSWER_SIZE_MAX]);
 void pc_macro_detector_disconnect(map_session_data &sd);
 

@@ -1489,7 +1489,7 @@ void clif_captcha_upload_end(const map_session_data &sd);
 void clif_captcha_preview_response(const map_session_data &sd, const std::shared_ptr<const s_captcha_data> cd);
 
 // Macro Detector
-void clif_macro_detector_request(const map_session_data &sd);
+bool clif_macro_detector_request(const map_session_data &sd);
 void clif_macro_detector_request_show(const map_session_data &sd);
 void clif_macro_detector_status(const map_session_data &sd, e_macro_detect_status stype);
 

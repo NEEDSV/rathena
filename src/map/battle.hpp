@@ -760,7 +760,7 @@ struct Battle_Config
 	int32 macro_detection_punish_disconnect;
 	int32 macro_detection_disconnect_retry;
 	int32 macro_checker_display_delay;
-	int32 macro_checker_damage_retry_count;
+	int32 macro_checker_debug;
 	int32 macrochecker_delay;
 	int32 need_macro_hunt_check_rate;
 	int32 need_macro_hunt_delay;

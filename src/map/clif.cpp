@@ -25376,6 +25376,8 @@ void clif_parse_captcha_upload(int32 fd, map_session_data *sd) {
 
 	if (upload_size < 1 || upload_size > MAX_CAPTCHA_CHUNK_SIZE)
 		return;
+	if (sd->captcha_upload.cd == nullptr)
+		return;
 
 	if (sd->captcha_upload.upload_size + upload_size > sd->captcha_upload.cd->image_size)
 		return;
@@ -25444,12 +25446,14 @@ void clif_captcha_preview_response(const map_session_data &sd, const std::shared
 #endif
 }
 
-void clif_macro_detector_request(const map_session_data &sd) {
+bool clif_macro_detector_request(const map_session_data &sd) {
 #if PACKETVER >= 20160330
 	std::shared_ptr<const s_captcha_data> cd = sd.macro_detect.cd;
 
-	if (cd == nullptr) {
-		return;
+	if (cd == nullptr || !cd->image_valid || cd->raw_image_size != CAPTCHA_BMP_SIZE ||
+		cd->image_size == 0 || cd->image_size > sizeof(cd->image_data) ||
+		sizeof(PACKET_ZC_APPLY_MACRO_DETECTOR_CAPTCHA) + MAX_CAPTCHA_CHUNK_SIZE > INT16_MAX) {
+		return false;
 	}
 
 	// Send preview initialization request to the client.
@@ -25463,6 +25467,10 @@ void clif_macro_detector_request(const map_session_data &sd) {
 
 	for (uint16 offset = 0; offset < cd->image_size;) {
 		uint16 chunk_size = min(cd->image_size - offset, MAX_CAPTCHA_CHUNK_SIZE);
+		const size_t packet_length = sizeof(PACKET_ZC_APPLY_MACRO_DETECTOR_CAPTCHA) + chunk_size;
+
+		if (packet_length > INT16_MAX)
+			return false;
 		PACKET_ZC_APPLY_MACRO_DETECTOR_CAPTCHA* p2 = reinterpret_cast<PACKET_ZC_APPLY_MACRO_DETECTOR_CAPTCHA*>( packet_buffer );
 
 		p2->PacketType = HEADER_ZC_APPLY_MACRO_DETECTOR_CAPTCHA;
@@ -25475,6 +25483,9 @@ void clif_macro_detector_request(const map_session_data &sd) {
 
 		offset += chunk_size;
 	}
+	return true;
+#else
+	return false;
 #endif
 }
 
@@ -25494,15 +25505,7 @@ void clif_parse_macro_detector_download_ack(int32 fd, map_session_data *sd) {
 #if PACKETVER >= 20160316
 	nullpo_retv(sd);
 
-	if (sd->macro_detect.retry != 0 && sd->macro_detect.phase == s_macro_detect::e_macro_detect_phase::ACTIVE &&
-		!sd->macro_detect.answer_window_shown) {
-		//const PACKET_CZ_COMPLETE_APPLY_MACRO_DETECTOR_CAPTCHA* p = reinterpret_cast<PACKET_CZ_COMPLETE_APPLY_MACRO_DETECTOR_CAPTCHA*>( RFIFOP( fd, 0 ) );
-
-		clif_macro_detector_request_show(*sd);
-		sd->macro_detect.answer_window_shown = true;
-		if (sd->macro_detect.timer != INVALID_TIMER)
-			addtick_timer(sd->macro_detect.timer, gettick() + battle_config.macro_detection_timeout);
-	}
+	pc_macro_detector_process_ack(*sd);
 #endif
 }
 
