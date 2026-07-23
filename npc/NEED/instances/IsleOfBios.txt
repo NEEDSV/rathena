@@ -1,0 +1,771 @@
+//===== rAthena Script =======================================
+//= 비오스의 섬
+//===== 설명: ================================================
+//= [공략 변환]
+//= 비오스의 섬 인스턴스
+//===== 변경 이력: ============================================
+//= 1.0 최초 버전. [Capuche]
+//============================================================
+
+moro_cav,50,64,5	script	노란 씨앗#bios	CLEAR_NPC,{
+	if (BaseLevel < 160) {
+		mes "^ff0000Base 레벨 160 미만인 캐릭터는 이 던전에 입장할 수 없습니다.^000000";
+		close;
+	}
+	if (isbegin_quest(15006) == 0) {
+		mes "^ff0000먼저 방황하는 노인을 만나야 이 던전에 입장할 수 있습니다.^000000";
+		close;
+	}
+	.@party_id = getcharid(1);
+	if (.@party_id < 1) {
+		mes "^ff0000이 던전에 입장하려면 1명 이상의 파티를 생성하거나 가입해야 합니다.^000000";
+		close;
+	}
+	switch( checkquest(15005,PLAYTIME) ) {
+	case -1:
+		break;
+	case 0:
+	case 1:
+		if (checkquest(15007,PLAYTIME) == 2) {// 재입장 유예 시간 5분
+			mes "^ff0000마지막 입장 후 23시간 동안 이 메모리얼 던전에 입장할 수 없습니다.^000000";
+			close;
+		}
+		switch( checkquest(15008,PLAYTIME) ) {
+		case -1:
+			break;
+		case 0:
+		case 1:
+			mes "^0000ff마지막 입장 후 23시간 동안 이 메모리얼 던전에 입장할 수 없습니다.^000000";
+			close;
+		case 2:
+			break;
+		}
+		break;
+	case 2:
+		erasequest 15005;// 메모리얼 던전: 비오스의 섬
+		erasequest 15007;// 메모리얼 던전: 비오스의 섬
+		if (isbegin_quest(15008) > 0)
+			erasequest 15008;// 메모리얼 던전: 비오스의 섬
+		break;
+	}
+	if (is_party_leader() == true)
+		.@create$ = "메모리얼 던전 생성";
+	switch( select( .@create$, "비오스의 섬 입장", "취소" ) ) {
+	case 1:
+		instance_create("비오스의 섬");
+		mes "^ff0000메모리얼 던전을 생성했습니다.^000000";
+		mes "^ff0000다시 말을 걸어 입장해 주세요.^000000";
+		close;
+	case 2:
+		switch( instance_enter("비오스의 섬") ) {
+		case IE_NOMEMBER:
+		case IE_NOINSTANCE:
+		case IE_OTHER:
+			if (is_party_leader(.@party_id) == false) {
+				mes "^ff0000마지막 입장 후 23시간 동안 이 메모리얼 던전에 입장할 수 없습니다.^000000";
+				next;
+			}
+			mes "^ff0000파티장이 아직 차원의 균열을 생성하지 않았습니다.^000000";
+			close;
+		case IE_OK:
+			mapannounce "moro_cav", getpartyname( getcharid(1) ) + " 파티의 " + strcharinfo(0) + " 님이 비오스의 섬에 입장합니다.",bc_map,"0x00FF99";
+			if (isbegin_quest(15005) == 0) {
+				setquest 15005;// 메모리얼 던전: 비오스의 섬
+				setquest 15007;// 메모리얼 던전: 비오스의 섬
+			}
+			end;
+		}
+	case 3:
+		end;
+	}
+	end;
+
+OnInit:
+	while(true) {
+		sleep 500;
+		specialeffect EF_ENHANCE;
+	}
+	end;
+}
+
+moro_cav,45,60,5	script	방황 노인#sara	4_M_EINOLD,{
+	if (BaseLevel < 160) {
+		mes "[방황하는 노인]";
+		mes "...";
+		mes "아직은 이곳에 들어갈 준비가 되지 않은 것 같군.";
+		mes "Base 레벨 160 이상이 되어야 하네.";
+		close;
+	}
+	if (isbegin_quest(15006) == 0) {
+		mes "[방황하는 노인]";
+		mes "...여긴 어디지?";
+		next;
+		mes "[방황하는 노인]";
+		mes "언제부터였는지는 모르겠네...";
+		mes "오랫동안 같은 악몽이 나를 괴롭히고 있다네.";
+		next;
+		mes "[방황하는 노인]";
+		mes "꿈속에서 마왕 모로크는 백 년의 잠에서 깨어나 세상을 어둠과 공포로 뒤덮었지.";
+		next;
+		mes "[방황하는 노인]";
+		mes "그 악몽에서 본 선명한 광경을 떨쳐낼 수 없었네. 미친 사람처럼 정처 없이 헤매다 결국 이곳에 도착했지.";
+		next;
+		mes "[방황하는 노인]";
+		mes "꿈에서 이곳을 보았네. 마신 모로크가 잠에서 깨어나는 장소였지. 내 꿈은 앞으로 일어날지도 모르는 미래를 보여 준 것 같네.";
+		next;
+		mes "[방황하는 노인]";
+		mes "내 꿈이 정말 예지몽이라면, 저 노란 씨앗 안에는 마신 모로크의 세력이 도사리고 있을 걸세.";
+		next;
+		mes "[방황하는 노인]";
+		mes "나도 씨앗 안으로 들어가 보려 했지만 소용없었네. 이 늙고 약한 몸으로는 무리였지. 하지만 자네라면 가능할지도 모르겠군.";
+		next;
+		mes "[방황하는 노인]";
+		mes "부디 저 노란 씨앗을 조사해 주게.";
+		mes "혼자 가기에는 너무 위험하니, 반드시 동료와 함께 가게.";
+		setquest 15006;// 비오스의 섬 탐사
+		completequest 15006;// 비오스의 섬 탐사
+		close;
+	}
+	mes "[방황하는 노인]";
+	mes "부디 저 노란 씨앗을 조사해 주게.";
+	mes "혼자 가기에는 너무 위험하니, 반드시 동료와 함께 가게.";
+	close;
+}
+
+// 워프
+1@dth1,291,102,0	warp2	warp1#bios1	2,2,1@dth2,17,93
+1@dth2,291,102,0	warp2	warp1#bios2	2,2,1@dth3,45,68
+
+// 구역 1
+1@dth1,74,94,3	script	사신 안쿠#bios1	3029,{ end; }
+1@dth1,71,97,3	duplicate(사신 안쿠#bios1)	제이스#bios1	4_M_GUILLOTINE
+1@dth1,67,97,5	duplicate(사신 안쿠#bios1)	브리드#bios1	4_M_KNIGHT_BLACK
+// 1@dth1,67,97,5	script	브리드#bios1	4_M_KNIGHT_BLACK,5,7,{// 공식
+
+// 1@dth1,67,97,5	script	start1#bios1	HIDDEN_WARP_NPC,{// 공식
+1@dth1,67,97,5	script	start1#bios1	HIDDEN_WARP_NPC,5,7,{
+	end;
+OnTouch_:
+	disablenpc instance_npcname("start1#bios1");
+	'zeith$ = instance_npcname("제이스#bios1");
+	'vrid$ = instance_npcname("브리드#bios1");
+	'reaper$ = instance_npcname("사신 안쿠#bios1");
+	initnpctimer;
+	npctalk "브리드: 오, 또 누군가가 왔군.", 'vrid$;
+	end;
+OnTimer2500:
+	npctalk "브리드: 당신도 모로크의 부활을 막으러 온 건가?", 'vrid$;
+	end;
+OnTimer5000:
+	npctalk "브리드: 나는 브리드, 이쪽은 제이스야. 프론테라에서 왔고, 정의를 위해 세계 곳곳을 여행하고 있지.", 'vrid$;
+	end;
+OnTimer7500:
+	npctalk "브리드: 이봐, 제이스. 뭐라도 말해 봐.", 'vrid$;
+	end;
+OnTimer10000:
+	npctalk "제이스: ...", 'zeith$;
+	end;
+OnTimer12500:
+	npctalk "제이스: 나는 제이스다.", 'zeith$;
+	end;
+OnTimer15000:
+	npctalk "제이스: ...", 'zeith$;
+	end;
+OnTimer17500:
+	npctalk "브리드: 신경 쓰지 마. 둘만 있을 때는 이렇게 조용한 녀석이 아니야.", 'vrid$;
+	end;
+OnTimer19500:
+	npctalk "제이스: ...네가 두 사람 몫까지 떠들고 있으니까.", 'zeith$;
+	end;
+OnTimer21000:
+	npctalk "브리드: 아래에 있던 노인이 모로크가 부활한다며 계속 중얼거리기에 여기까지 온 거야.", 'vrid$;
+	end;
+OnTimer23500:
+	npctalk "브리드: 어라, 여긴 어디지? 씨앗에 손을 댔을 뿐인데 갑자기 풍경이 바뀌었어.", 'vrid$;
+	end;
+OnTimer26000:
+	npctalk "브리드: 세상에, 우리 지금 하늘을 날고 있는 거야?!", 'vrid$;
+	end;
+OnTimer28500:
+	npctalk "???: 후후후... 여기가 어디인지 궁금한가?", 'reaper$;
+	end;
+OnTimer31000:
+	npctalk "제이스: 누구냐?!", 'zeith$;
+	end;
+OnTimer33500:
+	enablenpc 'reaper$;
+	npctalk "사신 안쿠: 후후후... 이곳은 내가 마음속으로 만들어 낸 환상의 공간, 비오스의 섬이다.", 'reaper$;
+	end;
+OnTimer36000:
+	npctalk "사신 안쿠: 스스로 함정에 걸어 들어와 모로크 님을 위한 제물이 되다니. 죽음이 두렵지도 않은가?", 'reaper$;
+	end;
+OnTimer38500:
+	npctalk "브리드: 흥! 죽음이 두려웠다면 애초에 제 발로 오지도 않았겠지!", 'vrid$;
+	end;
+OnTimer41000:
+	npctalk "브리드: 네가 누구든, 우리를 해치기 전에 먼저 쓰러뜨려 주겠어!", 'vrid$;
+	end;
+OnTimer43500:
+	npctalk "사신 안쿠: 나를 자극하지 마라, 인간.", 'reaper$;
+	end;
+OnTimer46000:
+	npctalk "사신 안쿠: 천천히 고통받으며 죽어 가는 모습을 지켜봐 주마. 후후후...", 'reaper$;
+	end;
+OnTimer48500:
+	disablenpc 'reaper$;
+	end;
+OnTimer51000:
+	npctalk "브리드: 저 녀석은 누구지? 정말 모로크를 부활시키려는 건가?", 'vrid$;
+	end;
+OnTimer53500:
+	npctalk "브리드: 뒤쫓자! 제이스, 서둘러!", 'vrid$;
+	end;
+OnTimer54000:
+	disablenpc 'vrid$;
+	end;
+OnTimer56000:
+	npctalk "제이스: ...알았어.", 'zeith$;
+	end;
+OnTimer58500:
+	npctalk "제이스: 뛰는 건 질색인데.", 'zeith$;
+	end;
+OnTimer61000:
+	disablenpc 'zeith$;
+	end;
+OnTimer66000:
+	stopnpctimer;
+	mapannounce 'map_dth1$, "시스템: 섬의 모든 적을 처치한 뒤 반대편 출구를 통해 다음 구역으로 이동하세요.",bc_map,"0xFFFF00";
+	'zeith$ = 'vrid$ = 'reaper$ = "";
+	end;
+}
+
+1@dth1,1,1,0	script	mobs#bios1	HIDDEN_WARP_NPC,{
+	end;
+OnStart:
+	.@label$ = instance_npcname("mobs#bios1") + "::OnMyMobDead";
+	for ( .@mob_id = 3010; .@mob_id < 3013; .@mob_id++ ) {
+		switch(.@mob_id) {
+		case 3010:		// 타락한 오크 베이비
+			setarray .@coord[0],
+				90,94, 153,76, 121,53, 135,50, 145,107, 132,126, 101,125, 119,144, 124,164, 192,145, 194,116,
+				203,131, 214,142, 196,156, 217,129, 227,150, 215,109, 240,130, 252,105, 249,144, 249,155, 232,87,
+				316,103, 245,71, 246,71, 210,62, 214,53, 211,88;
+			break;
+		case 3011:		// 타락한 데저트 울프 베이비
+			setarray .@coord[0],
+				90,94, 121,69, 153,76, 166,80, 131,101, 145,107, 108,156, 141,143, 165,130, 203,151,
+				203,162, 219,151, 203,162, 206,169, 219,171, 227,150, 238,117, 240,140, 274,104, 306,103,
+				237,80, 224,62, 233,57;
+			break;
+		case 3012:		// 타락한 퍼밀리어
+			setarray .@coord[0],
+				143,49, 156,46, 170,67, 170,67, 131,101, 144,125, 101,125, 108,156, 135,152, 144,164,
+				184,130, 204,112, 227,150, 205,98, 225,103, 228,124, 243,106, 225,89, 297,103, 223,72,
+				232,69, 225,54, 211,73;
+			break;
+		}
+		.@size = getarraysize(.@coord);
+		for ( .@i = 0; .@i < .@size; .@i += 2 )
+			monster 'map_dth1$, .@coord[.@i], .@coord[.@i+1], "--ja--", .@mob_id,1, .@label$;
+	}
+	end;
+
+OnMyMobDead:
+	.@count = mobcount( 'map_dth1$,instance_npcname("mobs#bios1") + "::OnMyMobDead" );
+	if (.@count == 10 || .@count == 5)
+		mapannounce 'map_dth1$, "시스템: 섬에 몬스터 " + .@count + "마리가 남았습니다.",bc_map,"0xFFFF00";
+	else if (.@count == 1)
+		mapannounce 'map_dth1$, "시스템: 섬에 마지막 몬스터 1마리가 남았습니다.",bc_map,"0xFFFF00";
+	else if (.@count == 0) {
+		mapannounce 'map_dth1$, "시스템: 모든 몬스터를 처치했습니다. 3시 방향의 출구를 이용해 다음 구역으로 이동하세요.",bc_map,"0xFFFF00";
+		disablenpc instance_npcname("mobs#bios1");
+		enablenpc instance_npcname("warp1#bios1");
+		enablenpc instance_npcname("start1#bios2");
+		donpcevent instance_npcname("mobs#bios2") + "::OnStart";	// 입구에 몬스터 소환
+	}
+	end;
+}
+
+// 구역 2
+1@dth2,67,97,0	script	start1#bios2	HIDDEN_WARP_NPC,5,5,{
+	end;
+OnTouch_:
+	disablenpc instance_npcname("start1#bios2");
+	mapannounce 'map_dth2$, "시스템: 섬의 모든 적을 처치한 뒤 반대편 출구를 통해 다음 구역으로 이동하세요.",bc_map,"0xFFFF00";
+	end;
+}
+
+1@dth2,1,1,0	script	mobs#bios2	HIDDEN_WARP_NPC,{
+	end;
+OnStart:
+	enablenpc instance_npcname("mobs#bios2");
+	.@label$ = instance_npcname("mobs#bios2") + "::OnMyMobDead";
+	for ( .@mob_id = 3013; .@mob_id < 3016; ++.@mob_id ) {
+		switch(.@mob_id) {
+		case 3013:		// 타락한 오크 워리어
+			setarray .@coord[0],
+				90,94, 153,76, 116,66, 133,47, 145,107, 137,134, 101,125, 119,144, 124,164, 194,116,
+				203,131, 211,88, 215,109, 214,142, 192,145, 196,156, 217,129, 227,150, 230,89, 210,62,
+				214,53, 246,71, 248,81, 252,105, 246,126, 249,144, 249,155, 316,103;
+			break;
+		case 3014:		// 타락한 데저트 울프
+			setarray .@coord[0],
+				90,94, 121,69, 153,76, 165,84, 145,107, 131,101, 108,156, 138,140, 165,130, 203,151,
+				203,162, 219,151, 206,169, 203,162, 227,150, 222,164, 238,117, 237,80, 224,62, 233,57,
+				236,138, 274,104, 306,103;
+			break;
+		case 3015:		// 타락한 휀
+			setarray .@coord[0],
+				142,54, 156,46, 170,67, 170,67, 131,101, 101,125, 108,156, 135,152, 144,164, 135,131,
+				184,130, 204,112, 205,98, 225,103, 225,89, 227,150, 232,69, 223,72, 212,75, 225,54,
+				247,110, 232,126, 297,103;
+			break;
+		}
+		.@size = getarraysize(.@coord);
+		for ( .@i = 0; .@i < .@size; .@i += 2 )
+			monster 'map_dth2$, .@coord[.@i], .@coord[.@i+1], "--ja--", .@mob_id,1, .@label$;
+	}
+	end;
+
+OnMyMobDead:
+	.@count = mobcount( 'map_dth2$,instance_npcname("mobs#bios2") + "::OnMyMobDead" );
+	if (.@count == 10 || .@count == 5)
+		mapannounce 'map_dth2$, "시스템: 섬에 몬스터 " + .@count + "마리가 남았습니다.",bc_map,"0xFFFF00";
+	else if (.@count == 1)
+		mapannounce 'map_dth2$, "시스템: 섬에 마지막 몬스터 1마리가 남았습니다.",bc_map,"0xFFFF00";
+	else if (.@count == 0) {
+		mapannounce 'map_dth2$, "시스템: 모든 몬스터를 처치했습니다. 3시 방향의 출구를 이용해 다음 구역으로 이동하세요.",bc_map,"0xFFFF00";
+		disablenpc instance_npcname("mobs#bios2");
+		enablenpc instance_npcname("warp1#bios2");
+		enablenpc instance_npcname("제이스#bios3");
+		enablenpc instance_npcname("브리드#bios3");
+		enablenpc instance_npcname("event_boss#bios3");
+	}
+	end;
+}
+
+// 구역 3
+// 1@dth3,64,74,5	script	브리드#bios3	4_M_KNIGHT_BLACK,5,7,{// 공식
+1@dth3,64,74,5	script	브리드#bios3	4_M_KNIGHT_BLACK,{
+	if ('reward == 1) {
+		mes "[브리드]";
+		mes "우연히 " + getitemname(6684) + " 하나를 얻게 되었어.";
+		mes "당신이라면 받을 자격이 충분하니 선물하고 싶어.";
+		next;
+		mes "[브리드]";
+		mes "이 으스스한 곳에서 어서 나가자!";
+		close2;
+		getitem 6684,1;// 영웅의 증표
+		if (ep14_3_isle == 0)
+			ep14_3_isle = 1;
+		if (checkquest(15007,PLAYTIME) == 0 || checkquest(15007,PLAYTIME) == 1)
+			setquest 15008;// 메모리얼 던전: 비오스의 섬
+		warp "moro_cav",45,63;
+	}
+	end;
+}
+
+1@dth3,64,74,5	script	event_boss#bios3	HIDDEN_WARP_NPC,5,7,{
+	end;
+OnTouch_:
+	disablenpc instance_npcname("event_boss#bios3");
+	'party_id = getcharid(1);
+	donpcevent instance_npcname("freeze#bios3") + "::OnStart";
+	end;
+}
+
+// 1@dth3,69,67,0	script	freeze#bios3	HIDDEN_WARP_NPC,30,30,{// 공식
+1@dth3,1,1,0	script	freeze#bios3	HIDDEN_WARP_NPC,{
+	end;
+OnStart:
+	enablenpc instance_npcname("freeze#bios3");
+	'reaper3$ = instance_npcname("사신 안쿠#bios3");
+	'zeith3$ = instance_npcname("제이스#bios3");
+	'vrid3$ = instance_npcname("브리드#bios3");
+	initnpctimer;
+	npctalk "브리드: 여기까지 무사히 왔군. 나는 미로에 들어가자마자 완전히 길을 잃었어.", 'vrid3$;
+	end;
+OnTimer2500:
+	npctalk "브리드: 제이스가 아니었다면 아직도 그 안을 헤매고 있었을 거야. 고맙다, 제이스.", 'vrid3$;
+	end;
+OnTimer5000:
+	npctalk "제이스: ...계속 마음에 걸리는 게 있어.", 'zeith3$;
+	end;
+OnTimer7500:
+	npctalk "브리드: 무슨 일인데?", 'vrid3$;
+	end;
+OnTimer10000:
+	npctalk "제이스: 시간이 흐를수록 몬스터들이 점점 강해지고 있다는 느낌이 들어.", 'zeith3$;
+	end;
+OnTimer12500:
+	npctalk "제이스: 마치 아이가 자라 어른이 되는 것처럼.", 'zeith3$;
+	end;
+OnTimer15000:
+	npctalk "브리드: 음, 듣고 보니 그런 것 같네.", 'vrid3$;
+	end;
+OnTimer17500:
+	npctalk "브리드: 처음에는 모두 작았는데, 갈수록 더 크고 강한 녀석들이 나타났지.", 'vrid3$;
+	end;
+OnTimer20000:
+	npctalk "브리드: 그건 자연스러운 일처럼 들리는데, 뭐가 걱정인 거야?", 'vrid3$;
+	end;
+OnTimer22500:
+	npctalk "제이스: 지금부터 상대하게 될 몬스터가 궁금해.", 'zeith3$;
+	end;
+OnTimer25000:
+	npctalk "제이스: 기존 모습에서 더 강해진 존재일지, 아니면 전혀 다른 무언가일지 말이야.", 'zeith3$;
+	end;
+OnTimer27000:
+	enablenpc 'reaper3$;
+	end;
+OnTimer27500:
+	npctalk "사신 안쿠: 후후후... 그래도 그중 한 명은 머리가 제법 돌아가는군.", 'reaper3$;
+	end;
+OnTimer30000:
+	npctalk "브리드: 또 너냐?", 'vrid3$;
+	end;
+OnTimer32500:
+	npctalk "사신 안쿠: 다음에 상대할 적이 궁금한가?", 'reaper3$;
+	end;
+OnTimer35000:
+	npctalk "사신 안쿠: 너희 앞에는 불사의 군대가 기다리고 있다.", 'reaper3$;
+	end;
+OnTimer37500:
+	npctalk "사신 안쿠: 후후후... 나와라, 나의 병사들이여!", 'reaper3$;
+	end;
+OnTimer37700:
+	specialeffect EF_READYPORTAL,AREA,'reaper3$;
+	end;
+OnTimer40000:
+	for ( .@i = 1; .@i <= 3; ++.@i ) {
+		for ( .@j = 1; .@j <= 8; ++.@j )
+			enablenpc instance_npcname( "타락 오크좀비#" + .@j + .@i );
+	}
+	end;
+OnTimer42000:
+	npctalk "브리드: 닥쳐, 이 악당아! 네 졸개들과 놀아 줄 시간은 없어!", 'vrid3$;
+	end;
+OnTimer45000:
+	npctalk "브리드: 내가 직접 널 해치워 주겠어!", 'vrid3$;
+	end;
+OnTimer47500:
+	npctalk "사신 안쿠: 그 말 그대로 돌려주마, 허풍쟁이.", 'reaper3$;
+	end;
+OnTimer50000:
+	npctalk "사신 안쿠: 공포 앞에서 아무것도 할 수 없는 무력감이 얼마나 끔찍한지 가르쳐 주마!", 'reaper3$;
+	end;
+OnTimer52500:
+	specialeffect EF_STORMGUST,AREA,'reaper3$;
+	end;
+OnTimer52700:
+	specialeffect EF_FREEZED,AREA,'zeith3$;
+	specialeffect EF_FREEZED,AREA,'vrid3$;
+	specialeffect EF_FIREHIT,AREA,'zeith3$;
+	specialeffect EF_FIREHIT,AREA,'vrid3$;
+	setnpcdisplay( 'vrid3$, 4_M_FROZEN_KN );
+	setnpcdisplay( 'zeith3$, 4_M_FROZEN_GC );
+
+	getpartymember 'party_id, 0, .@player_name$;
+	getpartymember 'party_id, 1, .@char_id;
+	getpartymember 'party_id, 2, .@account_id;
+	for ( .@i = 0; .@i < $@partymembercount; .@i++ ) {
+		if (isloggedin(.@account_id[.@i],.@char_id[.@i]) == true) {
+			getmapxy .@map$,.@x,.@y, BL_PC, .@player_name$[.@i];
+			if (.@map$ == 'map_dth3$ && distance(.@x,.@y,69,67) < 30)
+				sc_start SC_FREEZE,17500,0,10000, (SCSTART_NOAVOID|SCSTART_NOTICKDEF|SCSTART_NORATEDEF), .@account_id[.@i];
+		}
+	}
+	end;
+OnTimer55000:
+	npctalk "브리드: 윽! 무, 무슨 일이야?! 모, 몸이 움직이지 않아!", 'vrid3$;
+	end;
+OnTimer57500:
+	npctalk "제이스: 나, 나도 그래! 발이 움직이지 않아!", 'zeith3$;
+	end;
+OnTimer60000:
+	npctalk "사신 안쿠: 비오스의 섬에서는 하루가 곧 하나의 생애다.", 'reaper3$;
+	end;
+OnTimer62500:
+	npctalk "사신 안쿠: 해가 지기도 전에 내 병사들이 성장했다는 사실을 눈치챘겠지.", 'reaper3$;
+	end;
+OnTimer65000:
+	npctalk "사신 안쿠: 밤이 찾아오면 녀석들은 성장의 마지막 단계, 죽음을 넘어선 삶에 도달한다.", 'reaper3$;
+	end;
+OnTimer67500:
+	npctalk "사신 안쿠: 그렇다. 이제 너희가 죽음을 경험할 차례다.", 'reaper3$;
+	end;
+OnTimer70000:
+	npctalk "사신 안쿠: 죽음의 공포를 느낄 준비를 해라! 후후후...", 'reaper3$;
+	// 참고: 플레이어 빙결 해제
+	end;
+OnTimer72000:
+	disablenpc 'reaper3$;
+	end;
+OnTimer72500:
+	npctalk "브리드: 젠장, 언데드들이 몰려오는데 발이 움직이지 않아 싸울 수가 없어!", 'vrid3$;
+	end;
+OnTimer75000:
+	npctalk "브리드: 으악, 죽고 싶지 않아!", 'vrid3$;
+	end;
+OnTimer77500:
+	npctalk "제이스: ...윽...", 'zeith3$;
+	end;
+OnTimer80000:
+	stopnpctimer;
+	for ( .@i = 1; .@i <= 3; ++.@i ) {
+		for ( .@j = 1; .@j <= 8; ++.@j )
+			disablenpc instance_npcname( "타락 오크좀비#" + .@j + .@i );
+	}
+	.@label$ = instance_npcname("freeze#bios3") + "::OnMyMobDead";
+	for ( .@y = 80; .@y <= 92; .@y += 6 )
+		for ( .@x = 62; .@x <= 78; .@x += 2 )
+			monster 'map_dth3$,.@x,.@y,"타락한 오크 좀비",3016,1, .@label$;// EP14_3_DEATH_C_MOB1
+	end;
+
+OnMyMobDead:
+	if (mobcount( 'map_dth3$,instance_npcname("freeze#bios3") + "::OnMyMobDead" ) == 0) {
+		disablenpc instance_npcname("freeze#bios3");
+		donpcevent instance_npcname("verit#bios3") + "::OnStart";
+	}
+	end;
+}
+
+1@dth3,1,1,0	script	verit#bios3	HIDDEN_WARP_NPC,{
+	end;
+OnStart:
+	enablenpc instance_npcname("verit#bios3");
+	initnpctimer;
+	npctalk "브리드: 와, 정말 대단해! 전부 처치한 거야?", 'vrid3$;
+	end;
+OnTimer2500:
+	npctalk "제이스: 아직이야. 더 오고 있어!", 'zeith3$;
+	end;
+OnTimer5000:
+	stopnpctimer;
+	.@label$ = instance_npcname("verit#bios3") + "::OnMyMobDead";
+	for ( .@y = 80; .@y <= 92; .@y += 6 )
+		for ( .@x = 62; .@x <= 78; .@x += 2 )
+			monster 'map_dth3$,.@x,.@y,"타락한 베릿",3017,1, .@label$;// EP14_3_DEATH_C_MOB2
+	end;
+
+OnMyMobDead:
+	if (mobcount( 'map_dth3$,instance_npcname("verit#bios3") + "::OnMyMobDead" ) == 0) {
+		disablenpc instance_npcname("verit#bios3");
+		donpcevent instance_npcname("megalodon#bios3") + "::OnStart";
+	}
+	end;
+}
+
+1@dth3,1,1,0	script	megalodon#bios3	HIDDEN_WARP_NPC,{
+	end;
+OnStart:
+	enablenpc instance_npcname("megalodon#bios3");
+	initnpctimer;
+	npctalk "브리드: 이번에는 정말 마지막이었으면 좋겠는데.", 'vrid3$;
+	end;
+OnTimer2500:
+	npctalk "제이스: 아니, 운이 그렇게 좋지는 않은 모양이야. 또 오고 있어!", 'zeith3$;
+	end;
+OnTimer5000:
+	stopnpctimer;
+	.@label$ = instance_npcname("megalodon#bios3") + "::OnMyMobDead";
+	for ( .@y = 80; .@y <= 92; .@y += 6 )
+		for ( .@x = 62; .@x <= 78; .@x += 2 )
+			monster 'map_dth3$,.@x,.@y,"타락한 메갈로돈",3018,1, .@label$;// EP14_3_DEATH_C_MOB3
+	end;
+
+OnMyMobDead:
+	if (mobcount( 'map_dth3$,instance_npcname("megalodon#bios3") + "::OnMyMobDead" ) == 0) {
+		disablenpc instance_npcname("megalodon#bios3");
+		donpcevent instance_npcname("boss_prelude#bios3") + "::OnStart";
+	}
+	end;
+}
+
+1@dth3,1,1,0	script	boss_prelude#bios3	HIDDEN_WARP_NPC,{
+	end;
+OnStart:
+	enablenpc 'reaper3$;
+	initnpctimer;
+	end;
+OnTimer500:
+	npctalk "사신 안쿠: 너희를 과소평가했거나, 내 병사들이 생각보다 약했던 모양이군.", 'reaper3$;
+	end;
+OnTimer3000:
+	npctalk "브리드: 비겁하잖아! 우리를 풀어 주고 정정당당하게 싸워!", 'vrid3$;
+	end;
+OnTimer5500:
+	npctalk "사신 안쿠: 아직도 입을 놀리는군. 내가 직접 죽여서 끝내 주마!", 'reaper3$;
+	end;
+OnTimer7500:
+	disablenpc 'reaper3$;
+	end;
+OnTimer8000:
+	stopnpctimer;
+	donpcevent instance_npcname("boss#bios3") + "::OnStart";
+	end;
+}
+
+1@dth3,1,1,0	script	boss#bios3	HIDDEN_WARP_NPC,{
+	end;
+OnStart:
+	enablenpc instance_npcname("boss#bios3");
+	monster 'map_dth3$,70,67,"사신 안쿠",3029,1, instance_npcname("boss#bios3") + "::OnMyBossDead";
+	'boss_id = $@mobid[0];
+	donpcevent instance_npcname("talk_friends#bios3") + "::OnStart";
+	donpcevent instance_npcname("talk_boss#bios3") + "::OnStart";
+	end;
+OnMyBossDead:
+	'boss_id = 0;
+	donpcevent instance_npcname("talk_friends#bios3") + "::OnStop";
+	donpcevent instance_npcname("talk_boss#bios3") + "::OnStop";
+	enablenpc 'reaper3$;
+	enablenpc 'zeith3$;
+	enablenpc 'vrid3$;
+	initnpctimer;
+	end;
+OnTimer3000:
+	npctalk "사신 안쿠: 강하군...", 'reaper3$;
+	end;
+OnTimer6500:
+	npctalk "사신 안쿠: 하지만 내 목적은 이미 이루어졌다... 이걸로 끝이라고 생각하지 마라.", 'reaper3$;
+	end;
+OnTimer8000:
+	npctalk "사신 안쿠: 곧 모로크 님께서 돌아오신다. 후후후... 죽음의 공포는 어디까지나 너희를 따라다닐 것이다.", 'reaper3$;
+	end;
+OnTimer10500:
+	disablenpc 'reaper3$;
+	specialeffect EF_ICECRASH,AREA,'vrid3$;
+	specialeffect EF_ICECRASH,AREA,'zeith3$;
+	setnpcdisplay( 'vrid3$, 4_M_KNIGHT_BLACK );
+	setnpcdisplay( 'zeith3$, 4_M_GUILLOTINE );
+	end;
+OnTimer13000:
+	npctalk "브리드: 아, 드디어 움직일 수 있어!", 'vrid3$;
+	end;
+OnTimer16500:
+	npctalk "제이스: 흠... 이렇게 무력한 모습을 보이다니 부끄럽군...", 'zeith3$;
+	end;
+OnTimer18000:
+	npctalk "브리드: 휴, 저 사신은 나와 제이스를 합친 것보다 훨씬 강했어.", 'vrid3$;
+	end;
+OnTimer20500:
+	npctalk "브리드: 당신이 아니었다면 우리는 죽었을 거야.", 'vrid3$;
+	end;
+OnTimer23000:
+	stopnpctimer;
+	npctalk "브리드: 우리 목숨을 구해 준 답례로 주고 싶은 게 있어. 받을 준비가 되면 다시 말을 걸어 줘.", 'vrid3$;
+	'reward = 1;
+	disablenpc instance_npcname("boss#bios3");
+	end;
+}
+
+1@dth3,1,1,0	script	talk_friends#bios3	HIDDEN_WARP_NPC,{
+	end;
+OnStart:
+	initnpctimer;
+	end;
+OnTimer15000:
+	.@r = rand(7);
+	if (.@r == 0)
+		npctalk "제이스: 윽... 이렇게 무력할 수가...", 'zeith3$;
+	else if (.@r == 1)
+		npctalk "제이스: 안쿠에게서 위험한 기운이 느껴져. 녀석이 스킬을 사용하기 시작하면 바로 움직이는 게 좋겠어.", 'zeith3$;
+	else if (.@r == 2)
+		npctalk "브리드: 윽, 도와주지 못해서 미안해.", 'vrid3$;
+	else if (.@r == 3)
+		npctalk "브리드: 비겁한 녀석, 정정당당하게 싸워!", 'vrid3$;
+	else if (.@r == 4)
+		npctalk "브리드: 젠장, 움직일 수가 없어...", 'vrid3$;
+	initnpctimer;
+	end;
+OnStop:
+	stopnpctimer;
+	end;
+}
+
+1@dth3,1,1,0	script	talk_boss#bios3	HIDDEN_WARP_NPC,{
+	end;
+OnStart:
+	initnpctimer;
+	end;
+OnTimer13000:
+	.@r = rand(6);
+	if (.@r == 0)
+		unittalk 'boss_id, "사신 안쿠: 후후후...";
+	else if (.@r == 1)
+		unittalk 'boss_id, "사신 안쿠: 죽음의 공포를 느껴라!";
+	else if (.@r == 2)
+		unittalk 'boss_id, "사신 안쿠: 곧 모로크 님께서 돌아오신다.";
+	else if (.@r == 3)
+		unittalk 'boss_id, "사신 안쿠: 고작 이 정도인가? 인간이란 참으로 나약한 존재로군.";
+	initnpctimer;
+	end;;
+OnStop:
+	stopnpctimer;
+	end;
+
+OnInstanceInit:
+	'reward = 'boss_id = 0;
+	'map_dth1$ = instance_mapname("1@dth1");
+	'map_dth2$ = instance_mapname("1@dth2");
+	'map_dth3$ = instance_mapname("1@dth3");
+
+	// 워프
+	disablenpc instance_npcname("warp1#bios1");
+	disablenpc instance_npcname("warp1#bios2");
+
+	// 구역 1
+	disablenpc instance_npcname("사신 안쿠#bios1");
+	donpcevent instance_npcname("mobs#bios1") + "::OnStart";	// 입구에 몬스터 소환
+
+	// 구역 2
+	disablenpc instance_npcname("start1#bios2");
+	disablenpc instance_npcname("mobs#bios2");
+
+	// 구역 3
+	disablenpc instance_npcname("event_boss#bios3");
+	disablenpc instance_npcname("freeze#bios3");
+	disablenpc instance_npcname("verit#bios3");
+	disablenpc instance_npcname("megalodon#bios3");
+	disablenpc instance_npcname("boss_prelude#bios3");
+	disablenpc instance_npcname("boss#bios3");
+	disablenpc instance_npcname("talk_friends#bios3");
+	disablenpc instance_npcname("talk_boss#bios3");
+	disablenpc instance_npcname("브리드#bios3");
+	disablenpc instance_npcname("제이스#bios3");
+	disablenpc instance_npcname("사신 안쿠#bios3");
+	for ( .@i = 1; .@i <= 3; ++.@i ) {
+		for ( .@j = 1; .@j <= 8; ++.@j )
+			disablenpc instance_npcname( "타락 오크좀비#" + .@j + .@i );
+	}
+	end;
+}
+
+1@dth3,72,74,3	duplicate(사신 안쿠#bios1)	제이스#bios3	4_M_GUILLOTINE
+1@dth3,70,67,3	duplicate(사신 안쿠#bios1)	사신 안쿠#bios3	3029
+
+1@dth3,62,80,3	duplicate(사신 안쿠#bios1)	타락 오크좀비#11	3016
+1@dth3,64,80,3	duplicate(사신 안쿠#bios1)	타락 오크좀비#21	3016
+1@dth3,66,80,3	duplicate(사신 안쿠#bios1)	타락 오크좀비#31	3016
+1@dth3,68,80,3	duplicate(사신 안쿠#bios1)	타락 오크좀비#41	3016
+1@dth3,72,80,3	duplicate(사신 안쿠#bios1)	타락 오크좀비#51	3016
+1@dth3,74,80,3	duplicate(사신 안쿠#bios1)	타락 오크좀비#61	3016
+1@dth3,76,80,3	duplicate(사신 안쿠#bios1)	타락 오크좀비#71	3016
+1@dth3,78,80,3	duplicate(사신 안쿠#bios1)	타락 오크좀비#81	3016
+1@dth3,62,86,3	duplicate(사신 안쿠#bios1)	타락 오크좀비#12	3016
+1@dth3,64,86,3	duplicate(사신 안쿠#bios1)	타락 오크좀비#22	3016
+1@dth3,66,86,3	duplicate(사신 안쿠#bios1)	타락 오크좀비#32	3016
+1@dth3,68,86,3	duplicate(사신 안쿠#bios1)	타락 오크좀비#42	3016
+1@dth3,72,86,3	duplicate(사신 안쿠#bios1)	타락 오크좀비#52	3016
+1@dth3,74,86,3	duplicate(사신 안쿠#bios1)	타락 오크좀비#62	3016
+1@dth3,76,86,3	duplicate(사신 안쿠#bios1)	타락 오크좀비#72	3016
+1@dth3,78,86,3	duplicate(사신 안쿠#bios1)	타락 오크좀비#82	3016
+1@dth3,62,92,3	duplicate(사신 안쿠#bios1)	타락 오크좀비#13	3016
+1@dth3,64,92,3	duplicate(사신 안쿠#bios1)	타락 오크좀비#23	3016
+1@dth3,66,92,3	duplicate(사신 안쿠#bios1)	타락 오크좀비#33	3016
+1@dth3,68,92,3	duplicate(사신 안쿠#bios1)	타락 오크좀비#43	3016
+1@dth3,72,92,3	duplicate(사신 안쿠#bios1)	타락 오크좀비#53	3016
+1@dth3,74,92,3	duplicate(사신 안쿠#bios1)	타락 오크좀비#63	3016
+1@dth3,76,92,3	duplicate(사신 안쿠#bios1)	타락 오크좀비#73	3016
+1@dth3,78,92,3	duplicate(사신 안쿠#bios1)	타락 오크좀비#83	3016

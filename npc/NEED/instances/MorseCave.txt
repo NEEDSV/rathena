@@ -1,0 +1,1442 @@
+//===== rAthena Script =======================================
+//= 모르스의 동굴
+//===== 설명: =================================================
+//= [공식 스크립트 변환]
+//= 모르스의 동굴 인스턴스
+//===== 변경 이력: ============================================
+//= 1.0 최초 버전. [Capuche]
+//= 1.1 공식 스크립트에 맞게 수정. [Capuche]
+//============================================================
+
+moro_cav,61,69,3	script	선임추적자#a1	4_M_JOB_ASSASSIN,{
+	if (checkweight(2104,2) == 0) {
+		mes "소지품이 너무 많습니다.";
+		mes "인벤토리를 정리한 뒤 다시 말을 걸어주세요!";
+		close;
+	}
+	if (BaseLevel < 160) {
+		mes "붉은 꽃에 들어가려면";
+		mes "먼저 Base 레벨 160을 달성해야 합니다!";
+		close;
+	}
+	switch( checkquest(9319,PLAYTIME) ) {
+	case -1:
+		break;
+	case 0:
+	case 1:
+		mes "[선임 추적자]";
+		mes "아직 모로크의 부활을";
+		mes "저지하기에는 갈 길이 멉니다.";
+		mes "모로크가 힘을 되찾기 위해";
+		mes "무슨 짓이든 하고 있다고 생각하면";
+		mes "밤에도 마음 편히 잠들 수가 없습니다.";
+		mes "내일 다시 와주시겠습니까?";
+		close;
+	case 2:
+		mes "[선임 추적자]";
+		mes "돌아오실 줄 알았습니다.";
+		mes "푹 쉬고 오신 것 같군요.";
+		next;
+		mes "[선임 추적자]";
+		mes "제가 입수한 정보에 따르면,";
+		mes "모로크는 이곳에 숨어";
+		mes "힘을 회복하고 있습니다.";
+		next;
+		mes "[선임 추적자]";
+		mes "아무리 강한 전사라도";
+		mes "소수만으로 모로크와 싸우는 것은 무리입니다.";
+		mes "가능한 한 많은 동료와";
+		mes "힘을 합치는 것을 권합니다.";
+		mes "모로크가 숨어 있다고 추정되는";
+		mes "붉은 꽃에 들어갈 준비가 되었습니까?";
+		if (getcharid(1) < 1 || is_party_leader() == false)
+			close;
+		next;
+		if (select( "아니요.", "예." ) == 1) {
+			mes "[선임 추적자]";
+			mes "마음이 바뀌면";
+			mes "다시 찾아와 주십시오.";
+			close;
+		}
+		if (instance_create("모르스의 동굴") < 1) {
+			mes "[선임 추적자]";
+			mes "붉은 꽃의 입구가";
+			mes "아직 열리지 않았습니다.";
+			mes "잠시 후 다시 찾아와";
+			mes "시도해 주십시오.";
+			close;
+		}
+		mes "[선임 추적자]";
+		mes "붉은 꽃의 입구가";
+		mes "열렸습니다.";
+		mes "입구는 잠시 동안만 유지됩니다.";
+		mes "닫히기 전에";
+		mes "서둘러 입장하십시오.";
+		close;
+	}
+	.@hunting_9318 = checkquest(9318,HUNTING);
+	if (.@hunting_9318 == -1) {
+		mes "[선임 추적자]";
+		mes "이곳은 모로크를 저지하기 위한";
+		mes "우리의 전진 기지입니다.";
+		mes "저는 병력을 이끌고";
+		mes "모로크의 은신처를 추적하는";
+		mes "추적자입니다.";
+		next;
+		mes "[선임 추적자]";
+		mes "오랜 추적 끝에";
+		mes "모로크가 숨어 있을 가능성이";
+		mes "가장 높은 장소를";
+		mes "찾아냈습니다.";
+		next;
+		mes "[선임 추적자]";
+		mes "제가 입수한 정보에 따르면,";
+		mes "모로크는 이곳에 숨어";
+		mes "완전한 힘을";
+		mes "되찾으려 하고 있습니다.";
+		next;
+		mes "[선임 추적자]";
+		mes "제가 직접 이곳을 찾아냈지만,";
+		mes "혼자 내부를 조사하기에는";
+		mes "역부족이라는 사실을";
+		mes "인정할 수밖에 없습니다.";
+		mes "저는 전사가 아니라 추적자니까요.";
+		next;
+		mes "[선임 추적자]";
+		mes "당신은 모로크와";
+		mes "한바탕 싸움을 벌이고 싶어 하는";
+		mes "전사처럼 보이는군요.";
+		mes "당신이라면";
+		mes "승산이 있다고 생각합니다.";
+		next;
+		mes "[선임 추적자]";
+		mes "모로크의 은신처에 들어가";
+		mes "그를 쓰러뜨리고,";
+		mes "세상을 악으로부터 구한";
+		mes "영웅이 되어보는 것은";
+		mes "어떻겠습니까?";
+		next;
+		if (getcharid(1) < 1 || is_party_leader() == false) {
+			mes "[선임 추적자]";
+			mes "제 제안에 관심이 있다면";
+			mes "파티장과 이야기하게 해주십시오.";
+			mes "자세한 내용은 파티장과 상의하겠습니다.";
+			close;
+		}
+		mes "[선임 추적자]";
+		mes "모로크가 아직 완전한 힘을 되찾지 못했더라도,";
+		mes "소수만으로 모로크와 싸우는 것은 무리입니다.";
+		mes "가능한 한 많은 동료와";
+		mes "힘을 합치는 것을 권합니다.";
+		mes "모로크가 숨어 있다고 추정되는";
+		mes "붉은 꽃에 들어갈 준비가 되었습니까?";
+		next;
+		if (select( "아니요.", "예." ) == 1) {
+			mes "[선임 추적자]";
+			mes "마음이 바뀌면";
+			mes "다시 찾아와 주십시오.";
+			close;
+		}
+		if (instance_create("모르스의 동굴") < 1) {
+			mes "[선임 추적자]";
+			mes "붉은 꽃의 입구가";
+			mes "아직 열리지 않았습니다.";
+			mes "잠시 후 다시 찾아와";
+			mes "시도해 주십시오.";
+			close;
+		}
+		mes "[선임 추적자]";
+		mes "붉은 꽃의 입구가";
+		mes "열렸습니다.";
+		mes "입구는 잠시 동안만 유지됩니다.";
+		mes "닫히기 전에";
+		mes "서둘러 입장하십시오.";
+		close;
+	}
+	else {
+		mes "[선임 추적자]";
+		mes "드디어 돌아오셨군요!";
+		mes "안에서 무슨 일이 있었습니까?";
+		next;
+		mes "- 붉은 꽃 안에서 겪은 일을";
+		mes "선임 추적자에게 설명했다. -";
+		next;
+		mes "[선임 추적자]";
+		mes "결국 모로크를 놓쳤군요.";
+		mes "안타깝습니다.";
+		next;
+		if (checkquest(9318,HUNTING) == 2) {
+			mes "[선임 추적자]";
+			mes "그래도";
+			mes "그의 군대를";
+			mes "모두 쓰러뜨렸군요.";
+			mes "그것만으로도 큰 성과입니다.";
+			next;
+		}
+		mes "[선임 추적자]";
+		mes "적어도 모로크가";
+		mes "어디에 있는지는 알아냈습니다.";
+		mes "내일 다시 찾아와";
+		mes "모로크를 추적하는 일을";
+		mes "도와주시겠습니까?";
+		mes "이곳에서 기다리겠습니다.";
+		if (checkquest(9318,HUNTING) == 2) {
+			mes "토벌에 대한 보상으로 " + getitemname(6684) + " 1개를 드리겠습니다.";
+			getitem 6684,1;	// 영웅의 증표
+		}
+		erasequest 9318;// 숨어 있는 모로크 추적
+		setquest 9319;// 숨어 있는 모로크 추적 계속
+		ep14_3_mors01 = 1;
+		close;
+	}
+}
+
+moro_cav,57,69,3	script	붉은꽃#a1	CLEAR_NPC,{
+	if (BaseLevel < 160) {
+		mes "붉은 꽃에 들어가려면";
+		mes "먼저 Base 레벨 160을 달성해야 합니다!";
+		close;
+	}
+	if (isbegin_quest(9318) > 0) {
+		mes "- 붉은 꽃은 닫혀 있다.";
+		mes "아직은 들어갈 수 없다. -";
+		close;
+	}
+	switch( checkquest(9319,PLAYTIME) ) {
+	case -1:
+		break;
+	case 0:
+	case 1:
+		mes "- 붉은 꽃은 닫혀 있다.";
+		mes "아직은 들어갈 수 없다. -";
+		close;
+	case 2:
+		break;
+	}
+	if (select( "붉은 꽃에 들어가지 않는다.", "붉은 꽃에 들어간다." ) == 1) {
+		mes "- 불길한 기운이 느껴진다. -";
+		close;
+	}
+	switch( instance_enter("모르스의 동굴") ) {
+	case IE_OTHER:
+		mes "알 수 없는 오류가 발생했습니다.";
+		close;
+	case IE_NOINSTANCE:
+		mes "메모리얼 던전 모르스의 동굴이 생성되지 않았습니다.";
+		mes "파티장이 아직 메모리얼 던전을 생성하지 않았습니다.";
+		close;
+	case IE_NOMEMBER:
+		mes "파티원만 이 메모리얼 던전에 입장할 수 있습니다.";
+		close;
+	case IE_OK:
+		mapannounce "moro_cav", getpartyname( getcharid(1) ) + " 파티의 " + strcharinfo(0) + " 님이 모르스의 동굴에 입장합니다.", bc_map,0xFF99;
+		if (isbegin_quest(9319) > 0)
+			erasequest 9319;// 숨어 있는 모로크 추적 계속
+		if (isbegin_quest(9318) > 0)
+			erasequest 9318;
+		setquest 9318;// 숨어 있는 모로크 추적
+		// warp "1@rev",26,181;
+		end;
+	}
+	end;
+
+OnInit:
+	initnpctimer;
+	end;
+OnTimer3000:
+	specialeffect EF_BOTTOM_VO;
+	end;
+OnTimer15000:
+	initnpctimer;
+	end;
+}
+
+1@rev,33,117,0	script	#Pause Effect RZ1	HIDDEN_WARP_NPC,1,1,{
+	end;
+OnTouch:
+	if (getnpctimer(0) > 0)
+		end;
+	initnpctimer;
+	//disablenpc();
+	hideonnpc instance_npcname( strnpcinfo(0) );
+	specialeffect EF_ICEWALL;
+	end;
+OnTimer30000:
+	specialeffect EF_ICEWALL;
+	end;
+OnTimer60000:
+	specialeffect EF_ICEWALL;
+	initnpctimer;
+	end;
+}
+1@rev,36,118,0	duplicate(#Pause Effect RZ1)	#Pause Effect RZ2	HIDDEN_WARP_NPC,1,1
+1@rev,36,121,0	duplicate(#Pause Effect RZ1)	#Pause Effect RZ3	HIDDEN_WARP_NPC,1,1
+1@rev,34,122,0	duplicate(#Pause Effect RZ1)	#Pause Effect RZ4	HIDDEN_WARP_NPC,1,1
+1@rev,31,121,0	duplicate(#Pause Effect RZ1)	#Pause Effect RZ5	HIDDEN_WARP_NPC,1,1
+1@rev,31,118,0	duplicate(#Pause Effect RZ1)	#Pause Effect RZ6	HIDDEN_WARP_NPC,1,1
+1@rev,112,116,0	duplicate(#Pause Effect RZ1)	#Pause Effect RZ7	HIDDEN_WARP_NPC,1,1
+1@rev,114,117,0	duplicate(#Pause Effect RZ1)	#Pause Effect RZ8	HIDDEN_WARP_NPC,1,1
+1@rev,114,120,0	duplicate(#Pause Effect RZ1)	#Pause Effect RZ9	HIDDEN_WARP_NPC,1,1
+1@rev,111,121,0	duplicate(#Pause Effect RZ1)	#Pause Effect RZ10	HIDDEN_WARP_NPC,1,1
+1@rev,109,120,0	duplicate(#Pause Effect RZ1)	#Pause Effect RZ11	HIDDEN_WARP_NPC,1,1
+1@rev,109,117,0	duplicate(#Pause Effect RZ1)	#Pause Effect RZ12	HIDDEN_WARP_NPC,1,1
+
+1@rev,31,50,0	duplicate(#Pause Effect RZ1)	#Pause Effect RZ1_	HIDDEN_WARP_NPC,1,1
+1@rev,36,49,0	duplicate(#Pause Effect RZ1)	#Pause Effect RZ2_	HIDDEN_WARP_NPC,1,1
+1@rev,37,45,0	duplicate(#Pause Effect RZ1)	#Pause Effect RZ3_	HIDDEN_WARP_NPC,1,1
+1@rev,30,45,0	duplicate(#Pause Effect RZ1)	#Pause Effect RZ4_	HIDDEN_WARP_NPC,1,1
+1@rev,29,47,0	duplicate(#Pause Effect RZ1)	#Pause Effect RZ5_	HIDDEN_WARP_NPC,1,1
+1@rev,33,51,0	duplicate(#Pause Effect RZ1)	#Pause Effect RZ6_	HIDDEN_WARP_NPC,1,1
+1@rev,38,49,0	duplicate(#Pause Effect RZ1)	#Pause Effect RZ7_	HIDDEN_WARP_NPC,1,1
+1@rev,34,44,0	duplicate(#Pause Effect RZ1)	#Pause Effect RZ8_	HIDDEN_WARP_NPC,1,1
+1@rev,32,44,0	duplicate(#Pause Effect RZ1)	#Pause Effect RZ9_	HIDDEN_WARP_NPC,1,1
+1@rev,29,49,0	duplicate(#Pause Effect RZ1)	#Pause Effect RZ10_	HIDDEN_WARP_NPC,1,1
+1@rev,35,51,0	duplicate(#Pause Effect RZ1)	#Pause Effect RZ11_	HIDDEN_WARP_NPC,1,1
+1@rev,37,47,0	duplicate(#Pause Effect RZ1)	#Pause Effect RZ12_	HIDDEN_WARP_NPC,1,1
+
+
+// 이벤트 A
+1@rev,27,181,0	script	#RZ Memorial Start	HIDDEN_WARP_NPC,4,4,{
+	end;
+OnTouch:
+	disablenpc instance_npcname("#RZ Memorial Start");
+	enablenpc instance_npcname("#RZ Event_1");
+	.@mob_name$ = strcharinfo(0) + "의 영혼";
+	.@label$ = instance_npcname("#RZ Memorial Start") + "::OnSoulDead";
+	monster 'map_rev$, 34,120, .@mob_name$, 3007,1, .@label$;	// EP14_MORS_DUMMY
+	monster 'map_rev$,112,118, .@mob_name$, 3007,1, .@label$;
+	monster 'map_rev$, 34, 48, .@mob_name$, 3007,1, .@label$;
+	monster 'map_rev$,112, 48, .@mob_name$, 3007,1, .@label$;
+	end;
+OnSoulDead:
+	end;
+
+OnInstanceInit:
+	'map_rev$ = instance_mapname("1@rev");
+	'event_right = false;
+	'event_ended = false;
+	'boss_id = 0;
+	'monster_id[4] = 0;
+	'monster_id[5] = 0;
+	'monster_id[6] = 0;
+	'monster_id[7] = 0;
+
+	disablenpc instance_npcname("#RZ Event_1");
+	disablenpc instance_npcname("#RZ Event_3");
+	
+	disablenpc instance_npcname("사신안쿠#RZ2");
+	disablenpc instance_npcname("사신안쿠#RZ3");
+	disablenpc instance_npcname("사신안쿠#RZ4");
+	disablenpc instance_npcname("사신안쿠#RZ5");
+	disablenpc instance_npcname("사신안쿠#RZ6");
+
+	disablenpc instance_npcname("#RZ Debuff Recovery_1");
+	disablenpc instance_npcname("#RZ Debuff Recovery_2");
+	disablenpc instance_npcname("#RZ Debuff Recovery_3");
+	disablenpc instance_npcname("#RZ Debuff Recovery_4");
+
+	for ( .@i = 5; .@i < 18; ++.@i )
+		disablenpc instance_npcname("#RZ Move_" + .@i + "a");
+	for ( .@i = 1; .@i < 13; ++.@i )
+		disablenpc instance_npcname("#RZ Debuff_" + .@i);
+
+	for ( .@i = 1; .@i < 17; ++.@i )
+		disablenpc instance_npcname("#RZ Move_" + .@i);
+	disablenpc instance_npcname("#RZ Move_30");
+	disablenpc instance_npcname("#RZ Move_31");
+	disablenpc instance_npcname("#RZ Move_32");
+
+	disablenpc instance_npcname("#Battle_1RZ1");
+	disablenpc instance_npcname("#Battle_1RZ2");
+	disablenpc instance_npcname("#Battle_2RZ1");
+	disablenpc instance_npcname("#Battle_3RZ2");
+	disablenpc instance_npcname("#Battle_3RZ3");
+	disablenpc instance_npcname("#Battle_3RZ4");
+	disablenpc instance_npcname("#Battle_3RZ5");
+	disablenpc instance_npcname("#Battle_3RZ6");
+	disablenpc instance_npcname("#Battle_3RZ7");
+
+	disablenpc instance_npcname("약화모로크#RZ1");
+	disablenpc instance_npcname("모르스사령술사#RZ1");
+	end;
+}
+
+1@rev,34,120,0	script	#RZ Memorial Effect 1	HIDDEN_WARP_NPC,4,4,{
+	end;
+OnInstanceInit:
+	//disablenpc();
+	hideonnpc instance_npcname( strnpcinfo(0) );
+	initnpctimer;
+	end;
+OnTimer1000:
+	specialeffect EF_CURSEATTACK;
+	end;
+OnTimer2000:
+	initnpctimer;
+	end;
+}
+1@rev,112,118,0	duplicate(#RZ Memorial Effect 1)	#RZ Memorial Effect 2	HIDDEN_WARP_NPC,4,4
+1@rev,34,48,0	duplicate(#RZ Memorial Effect 1)	#RZ Memorial Effect 3	HIDDEN_WARP_NPC,4,4
+
+1@rev,31,181,0	script	#RZ Event_1	HIDDEN_WARP_NPC,5,5,{
+	end;
+OnTouch:
+	disablenpc instance_npcname("#RZ Event_1");
+	// specialeffect EF_HIT2, AREA, "";	// NPC 대상이 정의되지 않아 비활성화
+	mapannounce 'map_rev$, "모로크: 감히 누가 나의 잠을 방해하느냐?!", bc_map,00EBFF;
+	.@account_id = getcharid(3);
+	.@name$ = strcharinfo(0);
+	unittalk .@account_id, "" + .@name$ + " : 제대로 찾아온 것 같군!";
+	setpcblock PCBLOCK_NPC, true;
+	sleep2 3000;
+	unittalk .@account_id, "" + .@name$ + " : 잠깐! 앞에 무언가 있어!";
+	sleep2 3000;
+	setpcblock PCBLOCK_NPC, false;
+
+	// 스크립트 리로드 상황을 위한 보정
+	getpartymember getcharid(1), 1, .@char_id;
+	getpartymember getcharid(1), 2, .@account_id;
+
+	for ( .@i = 0; .@i < $@partymembercount; .@i++ ) {
+		if (isloggedin(.@account_id[.@i],.@char_id[.@i]) == false)
+			continue;
+		if (strcharinfo(3,.@char_id[.@i]) == 'map_rev$)
+			setpcblock PCBLOCK_MOVE, false, .@account_id[.@i];
+	}
+
+	specialeffect2 EF_LOCKON;
+	.@label$ = instance_npcname("#RZ Event_1") + "::OnMobDead";
+	monster 'map_rev$,38,180,"모로크 구울",3001,1, .@label$;	// EP14_MORS_MOB1
+	monster 'map_rev$,38,181,"모로크 구울",3001,1, .@label$;
+	monster 'map_rev$,38,182,"모로크 구울",3001,1, .@label$;
+	monster 'map_rev$,54,180,"모로크 구울",3001,1, .@label$;
+	monster 'map_rev$,54,181,"모로크 구울",3001,1, .@label$;
+	monster 'map_rev$,54,182,"모로크 구울",3001,1, .@label$;
+	monster 'map_rev$,70,180,"모로크 구울",3001,1, .@label$;
+	monster 'map_rev$,70,181,"모로크 구울",3001,1, .@label$;
+	monster 'map_rev$,70,182,"모로크 구울",3001,1, .@label$;
+	unittalk .@account_id, "" + .@name$ + " : 이 흉측한 괴물들이 모로크의 부하인가?";
+	initnpctimer;
+	end;
+OnTimer2000:
+	if (mobcount( 'map_rev$, instance_npcname("#RZ Event_1") + "::OnMobDead" ) < 1) {
+		stopnpctimer;
+		donpcevent instance_npcname("사신안쿠#RZ2") + "::OnStart";
+	}
+	end;
+OnTimer4000:
+	initnpctimer;
+	end;
+OnMobDead:
+	end;
+}
+
+1@rev,64,181,4	script	사신안쿠#RZ2	3029,{
+	end;
+OnStart:
+	enablenpc instance_npcname("사신안쿠#RZ2");
+	enablenpc instance_npcname("#RZ Event_3");
+	npctalk "사신 안쿠: 후후후... 또 만났군!";
+	sleep 3000;
+	npctalk "사신 안쿠: 오지 말았어야 했다. 너희는 모로크 님께서 힘을 회복하시는 것을 방해하고 있다.";
+	sleep 3000;
+	npctalk "사신 안쿠: 이 세계는 모로크 님의 정신 속에 존재한다.";
+	sleep 3000;
+	npctalk "사신 안쿠: 그분의 의지에 거슬러 너희가 할 수 있는 일은 아무것도 없다. 후후후...";
+	sleep 3000;
+	npctalk "사신 안쿠: 모로크 님께서 너희를 기다리고 계신다. 그분께 데려다주지. 후후후...";
+	sleep 3000;
+	disablenpc instance_npcname("사신안쿠#RZ2");
+	sleep 3000;
+	enablenpc instance_npcname("#RZ Move_30");
+	enablenpc instance_npcname("#RZ Move_31");
+	enablenpc instance_npcname("#RZ Move_32");
+	end;
+}
+
+// 실패 시 외부로 이동
+1@rev,34,126,4	script	사신안쿠#RZ3	3029,{
+	end;
+OnEnd:
+	.@ankou_3$ = instance_npcname("사신안쿠#RZ3");
+	.@ankou_4$ = instance_npcname("사신안쿠#RZ4");
+	enablenpc .@ankou_3$;
+	enablenpc .@ankou_4$;
+	npctalk "사신 안쿠: 한심하군.", .@ankou_3$;
+	npctalk "사신 안쿠: 한심하군.", .@ankou_4$;
+	sleep 3000;
+	npctalk "사신 안쿠: 너희 같은 약골은 모로크 님께서", .@ankou_3$;
+	npctalk "사신 안쿠: 너희 같은 약골은 모로크 님께서", .@ankou_4$;
+	sleep 3000;
+	npctalk "사신 안쿠: 완전히 회복하는 데 필요한 양식조차 되지 못한다.", .@ankou_3$;
+	npctalk "사신 안쿠: 완전히 회복하는 데 필요한 양식조차 되지 못한다.", .@ankou_4$;
+	sleep 3000;
+	npctalk "사신 안쿠: 떠날 기회를 한 번만 주겠다. 당장 꺼져라!", .@ankou_3$;
+	npctalk "사신 안쿠: 떠날 기회를 한 번만 주겠다. 당장 꺼져라!", .@ankou_4$;
+	sleep 3000;
+	disablenpc .@ankou_3$;
+	disablenpc .@ankou_4$;
+	sleep 5000;
+	enablenpc instance_npcname("#RZ Move_5a");
+	enablenpc instance_npcname("#RZ Move_6a");
+	enablenpc instance_npcname("#RZ Move_7a");
+	enablenpc instance_npcname("#RZ Move_8a");
+	enablenpc instance_npcname("#RZ Move_9a");
+	enablenpc instance_npcname("#RZ Move_10a");
+	enablenpc instance_npcname("#RZ Move_11a");
+	enablenpc instance_npcname("#RZ Move_12a");
+	end;
+}
+1@rev,112,126,4	script	사신안쿠#RZ4	3029,{ end; }
+
+1@rev,34,55,4	script	사신안쿠#RZ5	3029,{
+	end;
+OnEnd:
+	enablenpc instance_npcname("사신안쿠#RZ5");
+	npctalk "사신 안쿠: 한심하군.";
+	sleep 3000;
+	npctalk "사신 안쿠: 너희 같은 약골은 모로크 님께서";
+	sleep 3000;
+	npctalk "사신 안쿠: 완전히 회복하는 데 필요한 양식조차 되지 못한다.";
+	sleep 3000;
+	npctalk "사신 안쿠: 떠날 기회를 한 번만 주겠다. 당장 꺼져라!!";
+	sleep 3000;
+	disablenpc instance_npcname("사신안쿠#RZ5");
+	sleep 5000;
+	enablenpc instance_npcname("#RZ Move_13a");
+	enablenpc instance_npcname("#RZ Move_14a");
+	enablenpc instance_npcname("#RZ Move_15a");
+	enablenpc instance_npcname("#RZ Move_16a");
+	end;
+}
+
+
+// 이벤트 B
+1@rev,104,176,0	script	#RZ Event_3	HIDDEN_WARP_NPC,4,4,{
+	end;
+OnTouch:
+	disablenpc instance_npcname("#RZ Event_3");
+	enablenpc instance_npcname("약화모로크#RZ1");
+	unittalk getcharid(3), "" + strcharinfo(0) + " : 드디어 찾았다, 모로크.";
+	setpcblock PCBLOCK_NPC, true;
+	sleep2 3000;
+	unittalk getcharid(3), "" + strcharinfo(0) + " : 생각보다 너무 쉽게 찾아왔지만,";
+	sleep2 3000;
+	unittalk getcharid(3), "" + strcharinfo(0) + " : 상관없다. 오늘이 네 제삿날이다!";
+	sleep2 3000;
+	setpcblock PCBLOCK_NPC, false;
+	specialeffect2 EF_LOCKON;
+	donpcevent instance_npcname("약화모로크#RZ1") + "::OnTalk1";
+	end;
+}
+
+1@rev,111,178,4	script	약화모로크#RZ1	1916,{
+	end;
+OnTalk1:
+	npctalk "약화된 모로크: 나의 잠을 방해한 대가를 치르게 해주마.";
+	sleep 3000;
+	npctalk "약화된 모로크: 정말로 나를 막을 수 있다고 생각하느냐?";
+	sleep 3000;
+	npctalk "약화된 모로크: 이곳에 온 것을 후회하게 해주마.";
+	sleep 3000;
+	npctalk "약화된 모로크: 아직 완전한 힘을 되찾지는 못했지만,";
+	specialeffect EF_ENERGYCOAT;
+	sleep 3000;
+	npctalk "약화된 모로크: 너희 정도는 손쉽게 처리할 수 있다.";
+	sleep 3000;
+	npctalk "약화된 모로크: 죽음만이 너희의 유일한 탈출구다!";
+	specialeffect EF_VOLCANO;
+	sleep 3000;
+	disablenpc instance_npcname("약화모로크#RZ1");
+	initnpctimer;
+	monster 'map_rev$,111,178,"약화된 모로크",2998,1, instance_npcname("약화모로크#RZ1") + "::OnMobDead";	// EP14_MORS_EVENT
+	end;
+OnTalk2:
+	npctalk "약화된 모로크: 아쉽지만 아직 완전한 힘을 회복하지 못했다.";
+	sleep 3000;
+	npctalk "약화된 모로크: 지금은 내 병사들에게 너희를 맡겨야겠군.";
+	sleep 3000;
+	npctalk "약화된 모로크: 내 세계에서 빠져나가고 싶다면 발버둥 쳐보아라!";
+	sleep 3000;
+	npctalk "약화된 모로크: 결국 가장 고통스러운 방법으로 무력함이 무엇인지 깨닫게 될 것이다!";
+	sleep 3000;
+	npctalk "약화된 모로크: 그리고 너희 영혼은 내 것이 되리라! 크하하하!";
+	sleep 3000;
+	disablenpc instance_npcname("약화모로크#RZ1");
+	sleep 3000;
+	enablenpc instance_npcname("#RZ Move_1");
+	enablenpc instance_npcname("#RZ Move_2");
+	enablenpc instance_npcname("#RZ Move_3");
+	enablenpc instance_npcname("#RZ Move_4");
+	enablenpc instance_npcname("#Battle_1RZ1");
+	enablenpc instance_npcname("#Battle_1RZ2");
+	end;
+OnTimer2000:
+	if (mobcount( 'map_rev$, instance_npcname("약화모로크#RZ1") + "::OnMobDead" ) < 1) {
+		stopnpctimer;
+		enablenpc instance_npcname("약화모로크#RZ1");
+		donpcevent instance_npcname("약화모로크#RZ1") + "::OnTalk2";
+	}
+	end;
+OnTimer4000:
+	initnpctimer;
+	end;
+OnMobDead:
+	end;
+}
+
+
+// 이벤트 C1 - 왼쪽 구역
+1@rev,35,119,0	script	#Battle_1RZ1	HIDDEN_WARP_NPC,10,10,{
+	end;
+OnTouch:
+	disablenpc instance_npcname("#Battle_1RZ1");
+	disablenpc instance_npcname("#RZ Move_30");
+	disablenpc instance_npcname("#RZ Move_31");
+	disablenpc instance_npcname("#RZ Move_32");
+	specialeffect EF_STORMGUST, AREA, instance_npcname("#RZ Memorial Effect 1");
+	mapannounce 'map_rev$, "모로크: 서로 떨어진 채 몸과 마음까지 속박당한 기분이 어떠냐?", bc_map,0x00EBFF;
+	setpcblock PCBLOCK_MOVE, true;
+	sleep2 3000;
+	mapannounce 'map_rev$, "모로크: 이곳은 너희 같은 하찮은 것들이 함부로 들어올 곳이 아니다!", bc_map,0x00EBFF;
+	sleep2 3000;
+	mapannounce 'map_rev$, "모로크: 너희의 육체는 내 지배 아래 있다!", bc_map,0x00EBFF;
+	sleep2 3000;
+	mapannounce 'map_rev$, "모로크: 너희 영혼은 나의 부활을 위한 양식이다!", bc_map,0x00EBFF;
+	sleep2 3000;
+	setpcblock (PCBLOCK_NPC ^ PCBLOCK_MOVE), false;
+	mapannounce 'map_rev$, "모로크: 병사들이여, 저들의 몸을 찢고 영혼을 내게 가져오라!", bc_map,0x00EBFF;
+	initnpctimer;
+	end;
+
+OnTimer4000:
+	callsub( S_Spawn );
+OnTimer25000:
+	callsub( S_Spawn );
+OnTimer45000:
+	if ('event_right == false)
+		mapannounce 'map_rev$, "모로크: 병사들이여, 저들을 고통스럽게 하라! 육체와 영혼을 탐하라!", bc_map,0x00EBFF;
+	callsub( S_Spawn );
+OnTimer65000:
+	callsub( S_Spawn );
+OnTimer85000:
+	if ('event_right == false)
+		mapannounce 'map_rev$, "모로크: 부족하다. 더 큰 공포를 느끼게 하라!", bc_map,0x00EBFF;
+	callsub( S_Spawn );
+OnTimer105000:
+	callsub( S_Spawn );
+OnTimer125000:
+	if ('event_right == false)
+		mapannounce 'map_rev$, "모로크: 저항해 보아라! 죽을 때까지 싸워라!", bc_map,0x00EBFF;
+	callsub( S_Spawn );
+OnTimer145000:
+	callsub( S_Spawn );
+OnTimer160000:
+	if ('event_right == false)
+		mapannounce 'map_rev$, "모로크: 크하하하! 힘이 돌아오는 것이 느껴진다!", bc_map,0x00EBFF;
+	monster 'map_rev$,33,111,"모로크 궁수",3003,1, instance_npcname("#Battle_1RZ1") + "::OnMobDead";// EP14_MORS_MOB3
+	callsub( S_Spawn );
+OnTimer170000:
+	monster 'map_rev$,32,128,"모로크 궁수",3003,1, instance_npcname("#Battle_1RZ1") + "::OnMobDead";
+	callsub( S_Spawn );
+OnTimer180000:
+	if (mobcount( 'map_rev$, instance_npcname("#Battle_1RZ1") + "::OnMobDead") > 19) {
+		stopnpctimer;
+		stopnpctimer instance_npcname("#Battle_1RZ2");
+		donpcevent instance_npcname("사신안쿠#RZ3") + "::OnEnd";
+	}
+	end;
+OnTimer186000:
+	killmonster 'map_rev$, instance_npcname("#Battle_1RZ1") + "::OnMobDead";
+	end;
+OnTimer187000:
+	enablenpc instance_npcname("#Battle_2RZ1");
+	mapannounce 'map_rev$, "모로크: 생각보다 끈질기군.", bc_map,0x00EBFF;
+	sleep 2000;
+	mapannounce 'map_rev$, "모로크: 하지만 이제 끝이다.", bc_map,0x00EBFF;
+	end;
+OnTimer193000:
+	enablenpc instance_npcname("#RZ Move_5");
+	enablenpc instance_npcname("#RZ Move_6");
+	enablenpc instance_npcname("#RZ Move_7");
+	enablenpc instance_npcname("#RZ Move_8");
+	enablenpc instance_npcname("#RZ Move_9");
+	enablenpc instance_npcname("#RZ Move_10");
+	enablenpc instance_npcname("#RZ Move_11");
+	enablenpc instance_npcname("#RZ Move_12");
+	stopnpctimer;
+	end;
+OnMobDead:
+	end;
+
+S_Spawn:
+	.@label$ = instance_npcname("#Battle_1RZ1") + "::OnMobDead";
+	monster 'map_rev$,33,128,"모로크 구울",3001,1, .@label$;// EP14_MORS_MOB1
+	monster 'map_rev$,42,120,"모로크 구울",3001,1, .@label$;
+	monster 'map_rev$,34,111,"모로크 구울",3001,1, .@label$;
+	monster 'map_rev$,25,119,"모로크 구울",3001,1, .@label$;
+	end;
+}
+
+// 이벤트 C2 - 오른쪽 구역
+1@rev,112,126,0	script	#Battle_1RZ2	HIDDEN_WARP_NPC,10,10,{
+	end;
+OnTouch:
+	disablenpc instance_npcname("#RZ Move_30");
+	disablenpc instance_npcname("#RZ Move_31");
+	disablenpc instance_npcname("#RZ Move_32");
+	disablenpc instance_npcname("#Battle_1RZ2");
+	specialeffect EF_STORMGUST, AREA, instance_npcname("#RZ Memorial Effect 2");
+	setpcblock PCBLOCK_NPC, true;
+	sleep2 6000;
+	'event_right = true;
+	setpcblock (PCBLOCK_NPC ^ PCBLOCK_MOVE), false;
+	initnpctimer;
+	end;
+OnTimer4000:
+	callsub( S_Spawn );
+OnTimer25000:
+	mapannounce 'map_rev$, "모로크: 병사들이여, 저들을 고통스럽게 하라! 육체와 영혼을 탐하라!", bc_map,0x00EBFF;
+	callsub( S_Spawn );
+OnTimer45000:
+	callsub( S_Spawn );
+OnTimer65000:
+	mapannounce 'map_rev$, "모로크: 부족하다. 더 큰 공포를 느끼게 하라!", bc_map,0x00EBFF;
+	callsub( S_Spawn );
+OnTimer85000:
+	callsub( S_Spawn );
+OnTimer105000:
+	mapannounce 'map_rev$, "모로크: 저항해 보아라! 죽을 때까지 싸워라!", bc_map,0x00EBFF;
+	callsub( S_Spawn );
+OnTimer125000:
+	callsub( S_Spawn );
+OnTimer145000:
+	mapannounce 'map_rev$, "모로크: 크하하하! 힘이 돌아오는 것이 느껴진다!", bc_map,0x00EBFF;
+	callsub( S_Spawn );
+OnTimer160000:
+	monster 'map_rev$,103,118, "모로크 궁수", 3003,1, instance_npcname("#Battle_1RZ2") + "::OnMobDead";	// EP14_MORS_MOB3
+	callsub( S_Spawn );
+OnTimer170000:
+	monster 'map_rev$,120,117, "모로크 궁수", 3003,1, instance_npcname("#Battle_1RZ2") + "::OnMobDead";
+	callsub( S_Spawn );
+OnTimer182000:
+	//if (mobcount( 'map_rev$, instance_npcname("#Battle_1RZ1") + "::OnMobDead") > 19) {	// 공식 스크립트는 Battle_1RZ1을 확인함
+	if (mobcount( 'map_rev$, instance_npcname("#Battle_1RZ2") + "::OnMobDead") > 19) {
+		stopnpctimer;
+		stopnpctimer instance_npcname("#Battle_1RZ1");
+		donpcevent instance_npcname("사신안쿠#RZ3") + "::OnEnd";
+	}
+	end;
+OnTimer186000:
+	enablenpc instance_npcname("#Battle_2RZ1");
+	killmonster 'map_rev$, instance_npcname("#Battle_1RZ2") + "::OnMobDead";
+	end;
+OnTimer194000:
+	enablenpc instance_npcname("#RZ Move_5");
+	enablenpc instance_npcname("#RZ Move_6");
+	enablenpc instance_npcname("#RZ Move_7");
+	enablenpc instance_npcname("#RZ Move_8");
+	enablenpc instance_npcname("#RZ Move_9");
+	enablenpc instance_npcname("#RZ Move_10");
+	enablenpc instance_npcname("#RZ Move_11");
+	enablenpc instance_npcname("#RZ Move_12");
+	stopnpctimer;
+	end;
+OnMobDead:
+	end;
+
+S_Spawn:
+	.@label$ = instance_npcname("#Battle_1RZ2") + "::OnMobDead";
+	monster 'map_rev$,112,126, "모로크 구울", 3001,1, .@label$;	// EP14_MORS_MOB1
+	monster 'map_rev$,120,118, "모로크 구울", 3001,1, .@label$;
+	monster 'map_rev$,112,109, "모로크 구울", 3001,1, .@label$;
+	monster 'map_rev$,103,117, "모로크 구울", 3001,1, .@label$;
+	end;
+}
+
+// 이벤트 D
+1@rev,34,47,0	script	#Battle_2RZ1	HIDDEN_WARP_NPC,10,10,{
+	end;
+OnTouch:
+	disablenpc instance_npcname("#Battle_2RZ1");
+	specialeffect EF_STORMGUST, AREA, instance_npcname("#RZ Memorial Effect 3");
+	mapannounce 'map_rev$, "모로크: 나의 세계가 진화하고 있다.", bc_map,0x00EBFF;
+	setpcblock PCBLOCK_NPC, true;
+	sleep2 3000;
+	mapannounce 'map_rev$, "모로크: 나의 힘이 돌아오고 있다!", bc_map,0x00EBFF;
+	sleep2 3000;
+	mapannounce 'map_rev$, "모로크: 너희의 몸과 영혼은 내 지배 아래 있다!", bc_map,0x00EBFF;
+	sleep2 3000;
+	setpcblock (PCBLOCK_NPC ^ PCBLOCK_MOVE), false;
+	mapannounce 'map_rev$, "모로크: 병사들이여, 저들의 몸을 찢고 영혼을 내게 가져오라!", bc_map,0x00EBFF;
+	initnpctimer;
+	end;
+OnTimer4000:
+	.@label$ = callsub(S_Spawn);
+	monster 'map_rev$,27,53, "모로크 궁수", 3003,1, .@label$;	// EP14_MORS_MOB3
+	monster 'map_rev$,27,41, "모로크 궁수", 3003,1, .@label$;
+	mapannounce 'map_rev$, "모로크: 이 힘! 더없이 훌륭하구나! 크하하하!", bc_map,0x00EBFF;
+	end;
+OnTimer30000:
+	.@label$ = callsub(S_Spawn);
+	monster 'map_rev$,40,41, "모로크 궁수", 3003,1, .@label$;
+	monster 'map_rev$,40,54, "모로크 궁수", 3003,1, .@label$;
+	mapannounce 'map_rev$, "모로크: 자신의 몸조차 뜻대로 움직이지 못하는 기분이 어떠냐? 후후후...", bc_map,0x00EBFF;
+	end;
+OnTimer55000:
+	.@label$ = callsub(S_Spawn);
+	monster 'map_rev$,40,41, "모로크 궁수", 3003,1, .@label$;
+	monster 'map_rev$,40,54, "모로크 궁수", 3003,1, .@label$;
+	monster 'map_rev$,27,53, "모로크 베릿", 3005,1, .@label$;	// EP14_MORS_MOB5
+	end;
+OnTimer80000:
+	.@label$ = callsub(S_Spawn);
+	monster 'map_rev$,40,41, "모로크 궁수", 3003,1, .@label$;
+	monster 'map_rev$,40,54, "모로크 궁수", 3003,1, .@label$;
+	monster 'map_rev$,27,53, "모로크 베릿", 3005,1, .@label$;
+	mapannounce 'map_rev$, "모로크: 더! 더 많은 힘이 필요하다!", bc_map,0x00EBFF;
+	end;
+OnTimer105000:
+	.@label$ = callsub(S_Spawn);
+	monster 'map_rev$,40,41, "모로크 궁수", 3003,1, .@label$;
+	monster 'map_rev$,40,54, "모로크 궁수", 3003,1, .@label$;
+	monster 'map_rev$,27,53, "모로크 베릿", 3005,1, .@label$;
+	mapannounce 'map_rev$, "모로크: 크하하하! 나의 군대를 두려워하라! 더 처절하게 발버둥 쳐라!", bc_map,0x00EBFF;
+	end;
+OnTimer130000:
+	.@label$ = callsub(S_Spawn);
+	monster 'map_rev$,40,41, "모로크 궁수", 3003,1, .@label$;
+	monster 'map_rev$,40,54, "모로크 궁수", 3003,1, .@label$;
+	monster 'map_rev$,27,53, "모로크 베릿", 3005,1, .@label$;
+	end;
+OnTimer155000:
+	.@label$ = callsub(S_Spawn);
+	monster 'map_rev$,27,53, "모로크 궁수", 3003,1, .@label$;
+	monster 'map_rev$,27,41, "모로크 궁수", 3003,1, .@label$;
+	monster 'map_rev$,40,41, "모로크 베릿", 3005,1, .@label$;
+	monster 'map_rev$,40,54, "모로크 베릿", 3005,1, .@label$;
+	mapannounce 'map_rev$, "모로크: 살아남으려고 발버둥 치는 꼴이 한심하구나!", bc_map,0x00EBFF;
+	end;
+OnTimer170000:
+	.@label$ = callsub(S_Spawn);
+	monster 'map_rev$,40,41, "모로크 궁수", 3003,1, .@label$;
+	monster 'map_rev$,40,54, "모로크 궁수", 3003,1, .@label$;
+	monster 'map_rev$,27,53, "모로크 베릿", 3005,1, .@label$;
+	monster 'map_rev$,27,41, "모로크 베릿", 3005,1, .@label$;
+	end;
+OnTimer180000:
+	if (mobcount( 'map_rev$, instance_npcname("#Battle_2RZ1") + "::OnMobDead" ) > 19) {
+		stopnpctimer;
+		donpcevent instance_npcname("사신안쿠#RZ5") + "::OnEnd";
+	}
+	end;
+OnTimer185000:
+	killmonster 'map_rev$, instance_npcname("#Battle_2RZ1") + "::OnMobDead";
+	disablenpc instance_npcname("#RZ Debuff_9");
+	disablenpc instance_npcname("#RZ Debuff_10");
+	disablenpc instance_npcname("#RZ Debuff_11");
+	disablenpc instance_npcname("#RZ Debuff_12");
+	end;
+OnTimer186000:
+	mapannounce 'map_rev$, "모로크: 이토록 오래 버틸 줄은 몰랐군. 내 힘을 대부분 회복하도록 도와줘서 고맙다.", bc_map,0x00EBFF;
+	end;
+OnTimer190000:
+	mapannounce 'map_rev$, "모로크: 좋아. 힘이 되살아나는군.", bc_map,0x00EBFF;
+	end;
+OnTimer192500:
+	enablenpc instance_npcname("#RZ Debuff Recovery_1");
+	enablenpc instance_npcname("#RZ Debuff Recovery_2");
+	enablenpc instance_npcname("#RZ Debuff Recovery_3");
+	enablenpc instance_npcname("#RZ Debuff Recovery_4");
+	end;
+OnTimer193000:
+	enablenpc instance_npcname("#RZ Move_13");
+	enablenpc instance_npcname("#RZ Move_14");
+	enablenpc instance_npcname("#RZ Move_15");
+	enablenpc instance_npcname("#RZ Move_16");
+	stopnpctimer;
+	end;
+S_Spawn:
+	.@label$ = instance_npcname("#Battle_2RZ1") + "::OnMobDead";
+	monster 'map_rev$,34,57, "모로크 구울", 3001,1, .@label$;	// EP14_MORS_MOB1
+	monster 'map_rev$,43,48, "모로크 구울", 3001,1, .@label$;
+	monster 'map_rev$,33,38, "모로크 구울", 3001,1, .@label$;
+	monster 'map_rev$,24,48, "모로크 구울", 3001,1, .@label$;
+	return .@label$;
+OnMobDead:
+	end;
+}
+
+// 이벤트 E - 최종전
+1@rev,112,48,4	script	모르스사령술사#RZ1	4_GHOST_STAND,{
+	end;
+OnFinal:
+	.@ankou$ = instance_npcname("사신안쿠#RZ6");
+	'event_ended = true;
+	sleep 3000;
+	enablenpc .@ankou$;
+	npctalk "사신 안쿠: 쯧, 사령술사여. 어째서 이렇게 빨리 죽은 것이냐?", .@ankou$;
+	sleep 3000;
+	npctalk "사신 안쿠: 너무 기뻐하지 마라!", .@ankou$;
+	sleep 3000;
+	npctalk "사신 안쿠: 모로크 님께서 완전한 힘을 되찾으셨으니 너희는 이미 죽은 목숨이다!", .@ankou$;
+	sleep 3000;
+	npctalk "사신 안쿠: 다시 만나게 될 것이다. 후후후...", .@ankou$;
+	sleep 3000;
+	disablenpc .@ankou$;
+	enablenpc instance_npcname("#RZ Move_17a");
+	specialeffect EF_THUNDERSTORM, AREA, instance_npcname("#morocc_necromancer_dummy");
+	sleep 1000;
+	specialeffect EF_LORD, AREA, instance_npcname("#morocc_necromancer_dummy");
+	end;
+}
+1@rev,112,48,4	script	사신안쿠#RZ6	3029,{ end; }
+
+// 플레이어를 방해하지 않고 모르스 사령술사 위치에 이펙트를 표시하기 위한 추가 NPC
+1@rev,112,48,4	script	#morocc_necromancer_dummy	HIDDEN_WARP_NPC,{ end; }
+
+
+1@rev,104,47,0	script	#Battle_3RZ1	HIDDEN_WARP_NPC,5,5,{
+	end;
+OnTouch:
+	disablenpc instance_npcname("#Battle_3RZ1");
+	mapannounce 'map_rev$, "모로크: 너희를 멀쩡히 돌려보낼 수는 없다!", bc_map,0x00EBFF;
+	sleep2 3000;
+	mapannounce 'map_rev$, "모로크: 하하하, 나의 사령술사여. 저들을 네게 맡기겠다.", bc_map,0x00EBFF;
+	sleep2 3000;
+	mapannounce 'map_rev$, "모로크: 충직한 병사여, 저들의 죽음을 네게 맡기마!", bc_map,0x00EBFF;
+	sleep2 3000;
+	killmonster 'map_rev$, instance_npcname("#RZ Memorial Start") + "::OnSoulDead";
+	.@necromancer$ = instance_npcname("모르스사령술사#RZ1");
+	enablenpc .@necromancer$;
+	sleep2 3000;
+	specialeffect EF_TWOHANDQUICKEN, AREA, .@necromancer$;
+	npctalk "모르스 사령술사: 분부대로 하겠습니다, 주군이시여!", .@necromancer$;
+	sleep2 3000;
+	npctalk "모르스 사령술사: 후후후... 아직도 아무것도 모르는군.", .@necromancer$;
+	sleep2 3000;
+	npctalk "모르스 사령술사: 내가 너희 영혼 속에 숨어 있는 동안 나를 지키기 위해 만들어낸 힘은", .@necromancer$;
+	sleep2 3000;
+	npctalk "모르스 사령술사: 이 세계에 들어온 순간 모로크 님을 치유하는 힘으로 바뀌었다!", .@necromancer$;
+	sleep2 3000;
+	npctalk "모르스 사령술사: 후후후... 너희의 어리석음은 우리에게 축복이었다. 이제 너희는 필요 없다. 죽어라!", .@necromancer$;
+	specialeffect EF_BEGINSPELL2, AREA, .@necromancer$;
+	sleep2 3000;
+	disablenpc .@necromancer$;
+	monster 'map_rev$,112,48, "모르스 사령술사", 2999,1, instance_npcname("#Battle_3RZ1") + "::OnMobDead";	// EP14_MORS_BOSSA
+	'boss_id = $@mobid[0];
+	initnpctimer;
+	end;
+OnTimer2000:
+	if (unitexists('boss_id) == false || mobcount( 'map_rev$, instance_npcname("#Battle_3RZ1") + "::OnMobDead" ) < 1) {
+		stopnpctimer;
+		donpcevent instance_npcname("#Battle_3RZ2") + "::OnStart";
+	}
+	end;
+OnTimer4000:
+	initnpctimer;
+	end;
+OnMobDead:
+	end;
+}
+
+1@rev,106,57,0	script	#Battle_3RZ2	HIDDEN_WARP_NPC,{
+	end;
+OnStart:
+	.@necromancer$ = instance_npcname("모르스사령술사#RZ1");
+	enablenpc .@necromancer$;
+	sleep 3000;
+	npctalk "모르스 사령술사: 보기보다 강하군.", .@necromancer$;
+	sleep 3000;
+	npctalk "모르스 사령술사: 후후후... 나의 진정한 힘을 보여주마.", .@necromancer$;
+	sleep 3000;
+	npctalk "모르스 사령술사: 살려달라고 애원해 보아라!", .@necromancer$;
+	sleep 3000;
+	npctalk "모르스 사령술사: 후후후...", .@necromancer$;
+	sleep 3000;
+	disablenpc .@necromancer$;
+	monster 'map_rev$,112,48, "모르스 사령술사", 3000,1, instance_npcname("#Battle_3RZ2") + "::OnMobDead";	// EP14_MORS_BOSSB
+	'boss_id = $@mobid[0];
+	initnpctimer instance_npcname("#Battle_3RZ3");	// 몬스터 소환 타이머 시작
+	initnpctimer;
+	end;
+OnTimer1000:
+	if (mobcount( 'map_rev$, instance_npcname("#Battle_3RZ2") + "::OnMobDead" ) < 1 || unitexists('boss_id) == false) {
+		donpcevent instance_npcname("#Battle_3RZ3") + "::OnStop";
+		donpcevent instance_npcname("모르스사령술사#RZ1") + "::OnFinal";
+		donpcevent instance_npcname("#Battle_3RZ4") + "::OnStop";
+		donpcevent instance_npcname("#Battle_3RZ5") + "::OnStop";
+		donpcevent instance_npcname("#Battle_3RZ6") + "::OnStop";
+		donpcevent instance_npcname("#Battle_3RZ7") + "::OnStop";
+		stopnpctimer;
+		end;
+	}
+	'timer++;
+	if ('timer == 30) {
+		getunitdata 'boss_id, .@data;
+		if (.@data[UMOB_HP] < 3000000 && .@data[UMOB_HP] > 1) {
+			.@necromancer$ = instance_npcname("#morocc_necromancer_dummy");
+			setunitdata 'boss_id, UMOB_HP, 3000000;
+			specialeffect EF_HEAL, AREA, .@necromancer$;
+			specialeffect EF_HEAL2, AREA, .@necromancer$;
+			specialeffect EF_HEAL4, AREA, .@necromancer$;
+			specialeffect EF_HEAL3, AREA, .@necromancer$;
+			unittalk 'boss_id, "모르스 사령술사: 너희는 나를 죽일 수 없다!";
+		}
+		'timer = 0;
+	}
+	initnpctimer;
+	end;
+OnMobDead:
+	end;
+}
+
+1@rev,120,54,0	script	#Battle_3RZ3	HIDDEN_WARP_NPC,{
+	end;
+OnStop:
+	stopnpctimer;
+	killmonster 'map_rev$, instance_npcname("#Battle_3RZ3") + "::OnMobDead";
+	end;
+OnTimer4500:
+	if ('event_ended == true) {
+		stopnpctimer;
+		end;
+	}
+	end;
+OnTimer7000:
+	if ('event_ended == true) {
+		stopnpctimer;
+		end;
+	}
+	.@count = mobcount( 'map_rev$, instance_npcname("#Battle_3RZ3") + "::OnMobDead" );
+	if (.@count > 39) {
+		if (unitexists('boss_id) == true)
+			unittalk 'boss_id, "모르스 사령술사: 이미 수많은 병사에게 포위되었다! 빠져나갈 수 없을 것이다!";
+		end;
+	}
+	donpcevent instance_npcname("#Battle_3RZ4") + "::OnStop";
+	donpcevent instance_npcname("#Battle_3RZ5") + "::OnStop";
+	donpcevent instance_npcname("#Battle_3RZ6") + "::OnStop";
+	donpcevent instance_npcname("#Battle_3RZ7") + "::OnStop";
+	.@label$ = instance_npcname("#Battle_3RZ3") + "::OnMobDead";
+	if (.@count < 10) {
+		.@wRand = rand(1,100);
+		if (.@wRand < 11) {
+			.@string$ = "모르스 사령술사: 모로크의 병사에게 자비란 없다!";
+			monster 'map_rev$,121,47, "모로크 구울", 3001,1, .@label$;			// EP14_MORS_MOB1
+			monster 'map_rev$,112,38, "모로크 구울", 3001,1, .@label$;
+			monster 'map_rev$,102,48, "모로크 구울", 3001,1, .@label$;
+			monster 'map_rev$,120,54, "모로크 궁수", 3003,1, .@label$;	// EP14_MORS_MOB3
+			monster 'map_rev$,119,40, "모로크 베릿", 3005,1, .@label$;			// EP14_MORS_MOB5
+			monster 'map_rev$,104,40, "모로크 레이스", 3004,1, .@label$;			// EP14_MORS_MOB4
+			donpcevent instance_npcname("#Battle_3RZ4") + "::OnStart";
+		}
+		else if (.@wRand < 21) {
+			.@string$ = "모르스 사령술사: 제법 잘 버티는군. 후후후...";
+			monster 'map_rev$,112,57, "모로크 구울", 3001,1, .@label$;
+			monster 'map_rev$,112,38, "모로크 구울", 3001,1, .@label$;
+			monster 'map_rev$,102,48, "모로크 구울", 3001,1, .@label$;
+			monster 'map_rev$,120,54, "모로크 궁수", 3003,1, .@label$;
+			monster 'map_rev$,119,40, "모로크 베릿", 3005,1, .@label$;
+			monster 'map_rev$,104,40, "모로크 레이스", 3004,1, .@label$;
+			donpcevent instance_npcname("#Battle_3RZ5") + "::OnStart";
+		}
+		else if (.@wRand < 31) {
+			.@string$ = "모르스 사령술사: 하지만 점점 약해지고 있구나.";
+			monster 'map_rev$,112,57, "모로크 구울", 3001,1, .@label$;
+			monster 'map_rev$,121,47, "모로크 구울", 3001,1, .@label$;
+			monster 'map_rev$,102,48, "모로크 구울", 3001,1, .@label$;
+			monster 'map_rev$,120,54, "모로크 궁수", 3003,1, .@label$;
+			monster 'map_rev$,119,40, "모로크 베릿", 3005,1, .@label$;
+			monster 'map_rev$,104,40, "모로크 레이스", 3004,1, .@label$;
+			donpcevent instance_npcname("#Battle_3RZ6") + "::OnStart";
+		}
+		else if (.@wRand < 41) {
+			.@string$ = "모르스 사령술사: 모로크 군대의 힘을 느껴보아라!";
+			monster 'map_rev$,112,57, "모로크 구울", 3001,1, .@label$;
+			monster 'map_rev$,121,47, "모로크 구울", 3001,1, .@label$;
+			monster 'map_rev$,112,38, "모로크 구울", 3001,1, .@label$;
+			monster 'map_rev$,120,54, "모로크 궁수", 3003,1, .@label$;
+			monster 'map_rev$,119,40, "모로크 베릿", 3005,1, .@label$;
+			monster 'map_rev$,104,40, "모로크 레이스", 3004,1, .@label$;
+			donpcevent instance_npcname("#Battle_3RZ7") + "::OnStart";
+		}
+		else if (.@wRand < 51) {
+			.@string$ = "모르스 사령술사: 모로크 군대의 힘을 느껴보아라!";
+			monster 'map_rev$,121,47, "모로크 구울", 3001,1, .@label$;
+			monster 'map_rev$,112,38, "모로크 구울", 3001,1, .@label$;
+			monster 'map_rev$,102,48, "모로크 구울", 3001,1, .@label$;
+			monster 'map_rev$,120,54, "모로크 궁수", 3003,1, .@label$;
+			monster 'map_rev$,119,40, "모로크 궁수", 3003,1, .@label$;
+			monster 'map_rev$,104,40, "모로크 레이스", 3004,1, .@label$;
+			donpcevent instance_npcname("#Battle_3RZ4") + "::OnStart";
+		}
+		else if (.@wRand < 61) {
+			.@string$ = "모르스 사령술사: 하지만 점점 약해지고 있구나.";
+			monster 'map_rev$,121,47, "모로크 구울", 3001,1, .@label$;
+			monster 'map_rev$,112,38, "모로크 구울", 3001,1, .@label$;
+			monster 'map_rev$,102,48, "모로크 구울", 3001,1, .@label$;
+			monster 'map_rev$,120,54, "모로크 궁수", 3003,1, .@label$;
+			monster 'map_rev$,119,40, "모로크 레이스", 3004,1, .@label$;
+			monster 'map_rev$,104,40, "모로크 베릿", 3005,1, .@label$;
+			donpcevent instance_npcname("#Battle_3RZ4") + "::OnStart";
+		}
+		else if (.@wRand < 71) {
+			.@string$ = "모르스 사령술사: 제법 잘 버티는군. 후후후...";
+			monster 'map_rev$,112,57, "모로크 구울", 3001,1, .@label$;
+			monster 'map_rev$,112,38, "모로크 구울", 3001,1, .@label$;
+			monster 'map_rev$,102,48, "모로크 구울", 3001,1, .@label$;
+			monster 'map_rev$,120,54, "모로크 궁수", 3003,1, .@label$;
+			monster 'map_rev$,119,40, "모로크 레이스", 3004,1, .@label$;
+			monster 'map_rev$,104,40, "모로크 베릿", 3005,1, .@label$;
+			donpcevent instance_npcname("#Battle_3RZ5") + "::OnStart";
+		}
+		else if (.@wRand < 81) {
+			.@string$ = "모르스 사령술사: 모로크의 병사에게 자비란 없다!";
+			monster 'map_rev$,112,57, "모로크 구울", 3001,1, .@label$;
+			monster 'map_rev$,121,47, "모로크 구울", 3001,1, .@label$;
+			monster 'map_rev$,102,48, "모로크 구울", 3001,1, .@label$;
+			monster 'map_rev$,120,54, "모로크 레이스", 3004,1, .@label$;
+			monster 'map_rev$,119,40, "모로크 궁수", 3003,1, .@label$;
+			monster 'map_rev$,104,40, "모로크 베릿", 3005,1, .@label$;
+			donpcevent instance_npcname("#Battle_3RZ6") + "::OnStart";
+		}
+		else if (.@wRand < 91) {
+			.@string$ = "모르스 사령술사: 모로크 군대의 힘을 느껴보아라!";
+			monster 'map_rev$,112,57, "모로크 구울", 3001,1, .@label$;
+			monster 'map_rev$,121,47, "모로크 구울", 3001,1, .@label$;
+			monster 'map_rev$,112,38, "모로크 구울", 3001,1, .@label$;
+			monster 'map_rev$,120,54, "모로크 베릿", 3005,1, .@label$;
+			monster 'map_rev$,119,40, "모로크 베릿", 3005,1, .@label$;
+			monster 'map_rev$,104,40, "모로크 레이스", 3004,1, .@label$;
+			donpcevent instance_npcname("#Battle_3RZ7") + "::OnStart";
+		}
+		else if (.@wRand < 101) {
+			.@string$ = "모르스 사령술사: 하지만 점점 약해지고 있구나.";
+			monster 'map_rev$,121,47, "모로크 구울", 3001,1, .@label$;
+			monster 'map_rev$,112,38, "모로크 구울", 3001,1, .@label$;
+			monster 'map_rev$,102,48, "모로크 구울", 3001,1, .@label$;
+			monster 'map_rev$,120,54, "모로크 궁수", 3003,1, .@label$;
+			monster 'map_rev$,119,40, "모로크 궁수", 3003,1, .@label$;
+			monster 'map_rev$,104,40, "모로크 레이스", 3004,1, .@label$;
+			donpcevent instance_npcname("#Battle_3RZ4") + "::OnStart";
+		}
+	}
+	else if (.@count < 15) {
+		.@wRand = rand(1,60);
+		if (.@wRand < 11) {
+			monster 'map_rev$,102,48, "모로크 구울", 3001,1, .@label$;
+			monster 'map_rev$,120,54, "모로크 궁수", 3003,1, .@label$;
+			monster 'map_rev$,119,40, "모로크 베릿", 3005,1, .@label$;
+			monster 'map_rev$,104,40, "모로크 레이스", 3004,1, .@label$;
+			donpcevent instance_npcname("#Battle_3RZ4") + "::OnStart";
+			donpcevent instance_npcname("#Battle_3RZ5") + "::OnStart";
+			.@string$ = "모르스 사령술사: 지옥으로 보내주마! 저들을 지옥으로 끌고 가라!";
+		}
+		else if (.@wRand < 21) {
+			monster 'map_rev$,102,48, "모로크 구울", 3001,1, .@label$;
+			monster 'map_rev$,120,54, "모로크 베릿", 3005,1, .@label$;
+			monster 'map_rev$,119,40, "모로크 궁수", 3003,1, .@label$;
+			monster 'map_rev$,104,40, "모로크 레이스", 3004,1, .@label$;
+			donpcevent instance_npcname("#Battle_3RZ4") + "::OnStart";
+			donpcevent instance_npcname("#Battle_3RZ6") + "::OnStart";
+			.@string$ = "모르스 사령술사: 모로크의 군대는 두려움을 모른다!";
+		}
+		else if (.@wRand < 31) {
+			monster 'map_rev$,112,38, "모로크 구울", 3001,1, .@label$;
+			monster 'map_rev$,120,54, "모로크 레이스", 3004,1, .@label$;
+			monster 'map_rev$,119,40, "모로크 베릿", 3005,1, .@label$;
+			monster 'map_rev$,104,40, "모로크 궁수", 3003,1, .@label$;
+			donpcevent instance_npcname("#Battle_3RZ4") + "::OnStart";
+			donpcevent instance_npcname("#Battle_3RZ7") + "::OnStart";
+			.@string$ = "모르스 사령술사: 충직한 병사들이여, 이리 오라!";
+		}
+		else if (.@wRand < 41) {
+			monster 'map_rev$,102,48, "모로크 구울", 3001,1, .@label$;
+			monster 'map_rev$,120,54, "모로크 궁수", 3003,1, .@label$;
+			monster 'map_rev$,119,40, "모로크 베릿", 3005,1, .@label$;
+			monster 'map_rev$,104,40, "모로크 레이스", 3004,1, .@label$;
+			donpcevent instance_npcname("#Battle_3RZ5") + "::OnStart";
+			donpcevent instance_npcname("#Battle_3RZ6") + "::OnStart";
+			.@string$ = "모르스 사령술사: 모로크 님을 위하여!!";
+		}
+		else if (.@wRand < 51) {
+			monster 'map_rev$,112,57, "모로크 구울", 3001,1, .@label$;
+			monster 'map_rev$,120,54, "모로크 베릿", 3005,1, .@label$;
+			monster 'map_rev$,119,40, "모로크 궁수", 3003,1, .@label$;
+			monster 'map_rev$,104,40, "모로크 레이스", 3004,1, .@label$;
+			donpcevent instance_npcname("#Battle_3RZ5") + "::OnStart";
+			donpcevent instance_npcname("#Battle_3RZ7") + "::OnStart";
+			.@string$ = "모르스 사령술사: 모로크 님을 위하여!!";
+		}
+		else {
+			monster 'map_rev$,121,47, "모로크 구울", 3001,1, .@label$;
+			monster 'map_rev$,120,54, "모로크 레이스", 3004,1, .@label$;
+			monster 'map_rev$,119,40, "모로크 베릿", 3005,1, .@label$;
+			monster 'map_rev$,104,40, "모로크 궁수", 3003,1, .@label$;
+			donpcevent instance_npcname("#Battle_3RZ6") + "::OnStart";
+			donpcevent instance_npcname("#Battle_3RZ7") + "::OnStart";
+			.@string$ = "모르스 사령술사: 충직한 병사들이여, 이리 오라!";
+		}
+	}
+	else if (.@count < 20) {
+		.@wRand = rand(1,40);
+		monster 'map_rev$,102,48, "모로크 구울", 3001,1, .@label$;
+		if (.@wRand < 11) {
+			monster 'map_rev$,120,54, "모로크 호박령", 3006,1, .@label$;
+			donpcevent instance_npcname("#Battle_3RZ6") + "::OnStart";
+			.@string$ = "모르스 사령술사: 살아서는 돌아갈 수 없다!";
+		}
+		else if (.@wRand < 21) {
+			monster 'map_rev$,119,40, "모로크 호박령", 3006,1, .@label$;
+			donpcevent instance_npcname("#Battle_3RZ7") + "::OnStart";
+			.@string$ = "모르스 사령술사: 살아서는 돌아갈 수 없다!";
+		}
+		else if (.@wRand < 31) {
+			monster 'map_rev$,104,40, "모로크 호박령", 3006,1, .@label$;
+			donpcevent instance_npcname("#Battle_3RZ7") + "::OnStart";
+			.@string$ = "모르스 사령술사: 너희는 서서히 죽음으로 들어서고 있다!";
+		}
+		else {
+			monster 'map_rev$,104,54, "모로크 호박령", 3006,1, .@label$;
+			donpcevent instance_npcname("#Battle_3RZ7") + "::OnStart";
+			.@string$ = "모르스 사령술사: 다가오는 너희의 죽음을 위해 기도해주마!";
+		}
+	}
+	else {
+		.@wRand = rand(1,100);
+		if (.@wRand < 21) {
+			monster 'map_rev$,120,54, "모로크 레이스", 3004,1, .@label$;
+			monster 'map_rev$,104,40, "모로크 레이스", 3004,1, .@label$;
+			if (.@wRand < 11)
+				.@string$ = "모르스 사령술사: 너희는 걸어 다니는 시체와 다를 바 없다!";
+			else
+				.@string$ = "모르스 사령술사: 지금까지 버틴 것만으로도 운이 좋았다고 생각해라!";
+		}
+		else if (.@wRand < 31) {
+			monster 'map_rev$,120,54, "모로크 레이스", 3004,1, .@label$;
+			monster 'map_rev$,119,40, "모로크 레이스", 3004,1, .@label$;
+			.@string$ = "모르스 사령술사: 고작 이 정도가 너희의 한계인가!";
+		}
+		else if (.@wRand < 51) {
+			monster 'map_rev$,119,40, "모로크 레이스", 3004,1, .@label$;
+			monster 'map_rev$,104,40, "모로크 레이스", 3004,1, .@label$;
+			.@string$ = "모르스 사령술사: 나조차 감당하지 못하면서 감히 모로크 님께 맞서려 하다니!";
+		}
+		else {
+			monster 'map_rev$,119,40, "모로크 호박령", 3006,1, .@label$;	// EP14_MORS_MOB6
+			monster 'map_rev$,104,40, "모로크 레이스", 3004,1, .@label$;
+			monster 'map_rev$,104,54, "모로크 레이스", 3004,1, .@label$;
+			if (.@wRand < 61)
+				.@string$ = "모르스 사령술사: 고작 이 정도가 너희의 한계인가!";
+			else
+				.@string$ = "모르스 사령술사: 지금까지 버틴 것만으로도 운이 좋았다고 생각해라!";
+		}
+	}
+	if (unitexists('boss_id) == true)
+		unittalk 'boss_id, .@string$;
+	end;
+OnTimer24000:
+OnTimer24500:
+	if ('event_ended == true)
+		stopnpctimer;
+	end;
+OnTimer25000:
+	if ('event_ended == true) {
+		stopnpctimer;
+		end;
+	}
+	initnpctimer;
+	end;
+OnMobDead:
+	end;
+}
+
+1@rev,120,55,0	script	#Battle_3RZ4	HIDDEN_WARP_NPC,{
+	end;
+OnStart:
+	sscanf( strnpcinfo(2), "Battle_3RZ%d", .@num );
+	if (.@num == 4) setarray .@xy[0],112,57;
+	else if (.@num == 5) setarray .@xy[0],121,47;
+	else if (.@num == 6) setarray .@xy[0],112,38;
+	else setarray .@xy[0],102,48;
+	monster 'map_rev$, .@xy[0], .@xy[1], "모로크 오시리스", 3002,1, instance_npcname( strnpcinfo(0) ) + "::OnMobDead";	// EP14_MORS_MOB2
+	'monster_id[.@num] = $@mobid[0];
+	initnpctimer;
+	end;
+OnStop:
+	stopnpctimer;
+	killmonster 'map_rev$, instance_npcname( strnpcinfo(0) ) + "::OnMobDead";
+	end;
+OnTimer4500:
+	callsub S_Spawn;
+	end;
+OnTimer9000:
+	callsub S_Spawn;
+	initnpctimer;
+	end;
+OnMobDead:
+	end;
+S_Spawn:
+	if ('event_ended == true) {
+		donpcevent instance_npcname( strnpcinfo(0) ) + "::OnStop";
+		end;
+	}
+	sscanf( strnpcinfo(2), "Battle_3RZ%d", .@num );
+	if (unitexists('monster_id[.@num]) == true && mobcount( 'map_rev$, instance_npcname( strnpcinfo(0) ) + "::OnMobDead" ) > 0) {
+		getunitdata 'monster_id[.@num], .@data;
+		monster 'map_rev$, .@data[UMOB_X], .@data[UMOB_Y], "#Poison", 3008,1, instance_npcname( strnpcinfo(0) ) + "::OnMobDead";	// EP14_MORS_HIDDEN
+	}
+	return;
+}
+1@rev,120,56,0	duplicate(#Battle_3RZ4)	#Battle_3RZ5	HIDDEN_WARP_NPC
+1@rev,120,57,0	duplicate(#Battle_3RZ4)	#Battle_3RZ6	HIDDEN_WARP_NPC
+1@rev,120,58,0	duplicate(#Battle_3RZ4)	#Battle_3RZ7	HIDDEN_WARP_NPC
+
+
+// 워프
+// 입구 -> 약화된 모로크
+1@rev,63,181,0	warp2	#RZ Move_30	10,10,1@rev,103,177
+1@rev,47,181,0	warp2	#RZ Move_31	10,10,1@rev,103,177
+1@rev,31,181,0	warp2	#RZ Move_32	10,10,1@rev,103,177
+
+1@rev,106,183,0	script	#RZ Move_1	WARPNPC,10,10,{
+	end;
+OnTouch:
+	if (is_party_leader() == false)
+		end;
+	sscanf( strnpcinfo(2), "RZ Move_%d", .@num );
+
+	if (.@num < 5) {
+		setarray .@x[0],  33, 112,  36, 114,  36, 114,  34, 111,  31, 109,  31, 109;
+		setarray .@y[0], 117, 116, 118, 117, 121, 120, 122, 121, 121, 120, 118, 117;
+	}
+	else if (.@num < 13) {
+		setarray .@x[0], 31, 36, 37, 30, 29, 33, 38, 34, 32, 29, 35, 37;
+		setarray .@y[0], 50, 49, 45, 45, 47, 51, 49, 44, 44, 49, 51, 47;
+	}
+	else {
+		setarray .@x[0], 104, 104, 104, 104, 103, 103, 103, 103, 102, 102, 102, 102;
+		setarray .@y[0],  48,  47,  46,  49,  49,  48,  47,  46,  46,  47,  48,  49;
+	}
+	.@size = getarraysize(.@x);
+
+	getpartymember getcharid(1), 1, .@char_id;
+	getpartymember getcharid(1), 2, .@account_id;
+
+	for ( .@i = 0; .@i < $@partymembercount; .@i++ ) {
+		if (isloggedin(.@account_id[.@i],.@char_id[.@i]) == false)
+			continue;
+		if (strcharinfo(3,.@char_id[.@i]) == 'map_rev$) {
+			.@n = (.@index % .@size);
+			warp 'map_rev$, .@x[.@n], .@y[.@n], .@char_id[.@i];
+		}
+		.@index++;
+	}
+	end;
+}
+1@rev,106,172,0	duplicate(#RZ Move_1)	#RZ Move_2	WARPNPC,10,10
+1@rev,117,172,0	duplicate(#RZ Move_1)	#RZ Move_3	WARPNPC,10,10
+1@rev,117,183,0	duplicate(#RZ Move_1)	#RZ Move_4	WARPNPC,10,10
+1@rev,28,125,0	duplicate(#RZ Move_1)	#RZ Move_5	WARPNPC,10,10
+1@rev,28,114,0	duplicate(#RZ Move_1)	#RZ Move_6	WARPNPC,10,10
+1@rev,39,114,0	duplicate(#RZ Move_1)	#RZ Move_7	WARPNPC,10,10
+1@rev,39,125,0	duplicate(#RZ Move_1)	#RZ Move_8	WARPNPC,10,10
+1@rev,106,123,0	duplicate(#RZ Move_1)	#RZ Move_9	WARPNPC,10,10
+1@rev,106,112,0	duplicate(#RZ Move_1)	#RZ Move_10	WARPNPC,10,10
+1@rev,117,112,0	duplicate(#RZ Move_1)	#RZ Move_11	WARPNPC,10,10
+1@rev,117,123,0	duplicate(#RZ Move_1)	#RZ Move_12	WARPNPC,10,10
+1@rev,28,53,0	duplicate(#RZ Move_1)	#RZ Move_13	WARPNPC,10,10
+1@rev,28,42,0	duplicate(#RZ Move_1)	#RZ Move_14	WARPNPC,10,10
+1@rev,39,42,0	duplicate(#RZ Move_1)	#RZ Move_15	WARPNPC,10,10
+1@rev,39,53,0	duplicate(#RZ Move_1)	#RZ Move_16	WARPNPC,10,10
+
+1@rev,28,125,0	script	#RZ Move_5a	WARPNPC,10,10,{
+	end;
+OnTouch:
+	setpcblock PCBLOCK_MOVE, false;
+	warp "prontera",97,167;
+	end;
+}
+1@rev,28,114,0	duplicate(#RZ Move_5a)	#RZ Move_6a	WARPNPC,10,10
+1@rev,39,114,0	duplicate(#RZ Move_5a)	#RZ Move_7a	WARPNPC,10,10
+1@rev,39,125,0	duplicate(#RZ Move_5a)	#RZ Move_8a	WARPNPC,10,10
+1@rev,106,123,0	duplicate(#RZ Move_5a)	#RZ Move_9a	WARPNPC,10,10
+1@rev,106,112,0	duplicate(#RZ Move_5a)	#RZ Move_10a	WARPNPC,10,10
+1@rev,117,112,0	duplicate(#RZ Move_5a)	#RZ Move_11a	WARPNPC,10,10
+1@rev,117,123,0	duplicate(#RZ Move_5a)	#RZ Move_12a	WARPNPC,10,10
+1@rev,28,53,0	duplicate(#RZ Move_5a)	#RZ Move_13a	WARPNPC,10,10
+1@rev,28,42,0	duplicate(#RZ Move_5a)	#RZ Move_14a	WARPNPC,10,10
+1@rev,39,42,0	duplicate(#RZ Move_5a)	#RZ Move_15a	WARPNPC,10,10
+1@rev,39,53,0	duplicate(#RZ Move_5a)	#RZ Move_16a	WARPNPC,10,10
+
+1@rev,112,56,3	script	#RZ Move_17a	PORTAL,{
+	mes "포탈을 통해 밖으로 나가시겠습니까?";
+	next;
+	if (select( "아니요.", "예." ) == 1)
+		close;
+	mes "- 이동합니다... -";
+	close2;
+	warp "moro_cav",59,63;
+	end;
+}
+
+// 더미 NPC
+// 1@rev,10,10,0	script	#RZ Move_18	WARPNPC,{ end; }
+
+1@rev,28,125,0	script	#RZ Debuff_1	HIDDEN_WARP_NPC,10,10,{
+	end;
+OnTouch:
+	setpcblock PCBLOCK_MOVE, true;
+	end;
+}
+1@rev,28,114,0	duplicate(#RZ Debuff_1)	#RZ Debuff_2	HIDDEN_WARP_NPC,10,10
+1@rev,39,114,0	duplicate(#RZ Debuff_1)	#RZ Debuff_3	HIDDEN_WARP_NPC,10,10
+1@rev,39,125,0	duplicate(#RZ Debuff_1)	#RZ Debuff_4	HIDDEN_WARP_NPC,10,10
+1@rev,106,123,0	duplicate(#RZ Debuff_1)	#RZ Debuff_5	HIDDEN_WARP_NPC,10,10
+1@rev,106,112,0	duplicate(#RZ Debuff_1)	#RZ Debuff_6	HIDDEN_WARP_NPC,10,10
+1@rev,117,112,0	duplicate(#RZ Debuff_1)	#RZ Debuff_7	HIDDEN_WARP_NPC,10,10
+1@rev,117,123,0	duplicate(#RZ Debuff_1)	#RZ Debuff_8	HIDDEN_WARP_NPC,10,10
+1@rev,28,53,0	duplicate(#RZ Debuff_1)	#RZ Debuff_9	HIDDEN_WARP_NPC,10,10
+1@rev,28,42,0	duplicate(#RZ Debuff_1)	#RZ Debuff_10	HIDDEN_WARP_NPC,10,10
+1@rev,39,42,0	duplicate(#RZ Debuff_1)	#RZ Debuff_11	HIDDEN_WARP_NPC,10,10
+1@rev,39,53,0	duplicate(#RZ Debuff_1)	#RZ Debuff_12	HIDDEN_WARP_NPC,10,10
+
+
+1@rev,28,53,0	script	#RZ Debuff Recovery_1	HIDDEN_WARP_NPC,10,10,{
+	end;
+OnTouch:
+	setpcblock PCBLOCK_MOVE, false;
+	end;
+}
+1@rev,28,42,0	duplicate(#RZ Debuff Recovery_1)	#RZ Debuff Recovery_2	HIDDEN_WARP_NPC,10,10
+1@rev,39,42,0	duplicate(#RZ Debuff Recovery_1)	#RZ Debuff Recovery_3	HIDDEN_WARP_NPC,10,10
+1@rev,39,53,0	duplicate(#RZ Debuff Recovery_1)	#RZ Debuff Recovery_4	HIDDEN_WARP_NPC,10,10
+
+// GM 전용 NPC
+sec_in02,20,20,6	script	죽음동굴#a2	4_M_KHKYEL,{
+	if (callfunc("F_GM_NPC",1854,0,1,9999) < 1)
+		end;
+	switch( select( "죽음의 동굴 초기화", "진행 변수 설정", "취소" ) ) {
+	case 1:
+		mes "[죽음의 동굴]";
+		mes "예. 초기화합니다.";
+		next;
+		if (isbegin_quest(9318) > 0)
+			erasequest 9318;
+		if (isbegin_quest(9319) > 0)
+			erasequest 9319;
+		mes "[죽음의 동굴]";
+		mes "완료되었습니다!";
+		close;
+	case 2:
+		ep14_3_bios01 = 1;
+		mes "[죽음의 동굴]";
+		mes "감사합니다!";
+		close;
+	case 3:
+		mes "[죽음의 동굴]";
+		mes "감사합니다!";
+		close;
+	}
+}
