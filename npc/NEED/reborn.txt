@@ -3,19 +3,30 @@ lasagna,175,131,4	script	환생 관리자	811,{
 	mes "환생을 통해 특별한 보상을 획득할 수 있습니다.";
 	mes "환생은 장기 성장과 수집을 위한 콘텐츠입니다.";
 	setdialogsize(300,200);
+
+	// 업데이트 이전 환생 횟수에 대한 포인트를 최초 1회 자동 소급 지급
+	callsub S_ApplyRetroactivePoints;
+
+	// 주간 상점 구매 횟수 갱신
+	callsub S_ResetRebirthShopWeek;
 	next;
 
 	while (true) {
+		callsub S_ResetRebirthShopWeek;
+
 		.@count = getd(.CountVar$);
+		.@point = getd(.PointVar$);
 
 		mes "[환생 관리자]";
 		mes "현재 환생 횟수: ^0055FF" + .@count + "회^000000";
+		mes "보유 환생 포인트: ^00AA00" + .@point + "점^000000";
 		mes "환생 조건: Base Lv." + .NeedBaseLv + " / Job Lv." + .NeedJobLv;
 		mes "소모 아이템: " + callsub(S_ItemName, .TicketItemID) + " " + .TicketAmount + "개";
 		next;
 		
 		.@menu = select(
 			"환생하기",
+			"환생 상점",
 			"환생 보상 보기",
 			"미수령 구간 보상 확인",
 			"의상 미리보기",
@@ -28,20 +39,24 @@ lasagna,175,131,4	script	환생 관리자	811,{
 				close;
 
 			case 2:
+				callsub S_OpenRebirthShop;
+				break;
+
+			case 3:
 				callsub S_ShowRewardInfo;
 				next;
 				break;
 
-			case 3:
+			case 4:
 				callsub S_GiveUnclaimedMiles;
 				close;
 
-			case 4:
+			case 5:
 				mes "[환생 관리자]";
 				mes "환생 의상 미리보기는 우측 NPC를 확인해주세요.";
 				close;
 
-			case 5:
+			case 6:
 				close;
 		}
 	}
@@ -95,9 +110,19 @@ S_DoRebirth:
 	.@new_count = .@count + 1;
 	setd .CountVar$, .@new_count;
 
+	// 환생 1회당 캐릭터 단위 환생 포인트 지급
+	if (.PointPerRebirth > 0) {
+		setd .PointVar$, getd(.PointVar$) + .PointPerRebirth;
+	}
+
 	mes "[환생 관리자]";
 	mes "환생이 완료되었습니다.";
 	mes "현재 환생 횟수: ^0055FF" + .@new_count + "회^000000";
+
+	if (.PointPerRebirth > 0) {
+		mes "환생 포인트: ^00AA00+" + .PointPerRebirth + "점^000000";
+		mes "보유 포인트: ^00AA00" + getd(.PointVar$) + "점^000000";
+	}
 		if (.@new_count == .Cnt_EffectStone ||
 		.@new_count == .Cnt_UpperCostume ||
 		.@new_count == .Cnt_FootprintStone ||
@@ -124,6 +149,163 @@ S_DoRebirth:
 		callfunc "F_NEED_Rebirth_ResetCharacter";
 	}
 
+	return;
+
+S_ApplyRetroactivePoints:
+	// 캐릭터별 최초 1회만 기존 환생 횟수를 기준으로 소급 지급
+	if (getd(.PointRetroactiveDoneVar$))
+		return;
+
+	.@count = getd(.CountVar$);
+	.@retroactive_point = .@count * .RetroactivePointPerRebirth;
+
+	if (.@retroactive_point > 0) {
+		setd .PointVar$, getd(.PointVar$) + .@retroactive_point;
+
+		mes " ";
+		mes "^00AA00[환생 포인트 소급 지급]^000000";
+		mes "기존 환생 " + .@count + "회를 기준으로";
+		mes "환생 포인트 " + .@retroactive_point + "점이 지급되었습니다.";
+	}
+
+	// 환생 횟수가 0이어도 최초 확인 완료 처리하여 이후 중복 소급 방지
+	setd .PointRetroactiveDoneVar$, 1;
+	return;
+
+S_ResetRebirthShopWeek:
+	// 서버 시간 기준 매주 월요일 00:00에 캐릭터별 구매 횟수 초기화
+	// gettime(4): 요일(0=일요일), gettime(3/2/1): 시/분/초
+	.@day_of_week = gettime(4);
+	.@days_from_monday = (.@day_of_week + 6) % 7;
+	.@week_start = gettimetick(2)
+		- (.@days_from_monday * 86400)
+		- (gettime(3) * 3600)
+		- (gettime(2) * 60)
+		- gettime(1);
+
+	if (getd(.ShopWeekVar$) != .@week_start) {
+		setd .ShopWeekVar$, .@week_start;
+		setd .ShopBlessingCountVar$, 0;
+	}
+
+	return;
+
+S_OpenRebirthShop:
+	while (true) {
+		callsub S_ResetRebirthShopWeek;
+
+		.@point = getd(.PointVar$);
+		.@used = getd(.ShopBlessingCountVar$);
+		.@remaining = .Shop_Blessing_WeeklyLimit - .@used;
+
+		if (.@remaining < 0)
+			.@remaining = 0;
+
+		mes "[환생 상점]";
+		mes "보유 환생 포인트: ^00AA00" + .@point + "점^000000";
+		mes "구매할 상품을 선택해주세요.";
+		next;
+
+		.@shop_menu = select(
+			"대장장이의 축복 (주 " + .@remaining + "회 남음)",
+			"뒤로"
+		);
+
+		switch (.@shop_menu) {
+			case 1:
+				callsub S_BuyRebirthShopBlessing;
+				break;
+
+			case 2:
+				return;
+		}
+	}
+
+S_BuyRebirthShopBlessing:
+	callsub S_ResetRebirthShopWeek;
+
+	.@point = getd(.PointVar$);
+	.@used = getd(.ShopBlessingCountVar$);
+	.@remaining = .Shop_Blessing_WeeklyLimit - .@used;
+
+	if (.@remaining < 0)
+		.@remaining = 0;
+
+	mes "[환생 상점]";
+	mes "판매 상품: " + callsub(S_ItemName, .Shop_Blessing_ItemID);
+	mes " ";
+	mes "필요 환생 포인트: ^00AA00" + .Shop_Blessing_PointCost + "점^000000";
+	mes "필요 제니: ^FF8800" + .Shop_Blessing_ZenyCost + " Zeny^000000";
+	mes " ";
+	mes "보유 환생 포인트: " + .@point + "점";
+	mes "이번 주 구매 가능: " + .@remaining + "회";
+	next;
+
+	if (select("구매한다", "상품 목록으로") == 2)
+		return;
+
+	if (.Shop_Blessing_ItemID <= 0) {
+		mes "[환생 상점]";
+		mes "^FF0000대장장이의 축복 아이템 ID가 설정되지 않았습니다.^000000";
+		next;
+		return;
+	}
+
+	if (.@remaining <= 0) {
+		mes "[환생 상점]";
+		mes "이번 주 구매 가능 횟수를 모두 사용했습니다.";
+		next;
+		return;
+	}
+
+	if (.Shop_Blessing_PointCost < 0 || .Shop_Blessing_ZenyCost < 0) {
+		mes "[환생 상점]";
+		mes "^FF0000상점 가격 설정이 올바르지 않습니다.^000000";
+		next;
+		return;
+	}
+
+	if (getd(.PointVar$) < .Shop_Blessing_PointCost) {
+		mes "[환생 상점]";
+		mes "환생 포인트가 부족합니다.";
+		mes "필요 포인트: " + .Shop_Blessing_PointCost + "점";
+		mes "보유 포인트: " + getd(.PointVar$) + "점";
+		next;
+		return;
+	}
+
+	if (Zeny < .Shop_Blessing_ZenyCost) {
+		mes "[환생 상점]";
+		mes "제니가 부족합니다.";
+		mes "필요 제니: " + .Shop_Blessing_ZenyCost + " Zeny";
+		next;
+		return;
+	}
+
+	if (!checkweight(.Shop_Blessing_ItemID, 1)) {
+		mes "[환생 상점]";
+		mes "소지 무게 또는 인벤토리 공간을 확인해주세요.";
+		next;
+		return;
+	}
+
+	// 조건 확인 후 재화 차감 및 상품 지급
+	setd .PointVar$, getd(.PointVar$) - .Shop_Blessing_PointCost;
+	Zeny -= .Shop_Blessing_ZenyCost;
+	getitem .Shop_Blessing_ItemID, 1;
+	setd .ShopBlessingCountVar$, getd(.ShopBlessingCountVar$) + 1;
+
+	.@remaining = .Shop_Blessing_WeeklyLimit - getd(.ShopBlessingCountVar$);
+
+	if (.@remaining < 0)
+		.@remaining = 0;
+
+	mes "[환생 상점]";
+	mes callsub(S_ItemName, .Shop_Blessing_ItemID) + " 1개를 구매했습니다.";
+	mes " ";
+	mes "남은 환생 포인트: ^00AA00" + getd(.PointVar$) + "점^000000";
+	mes "이번 주 남은 구매 횟수: ^0055FF" + .@remaining + "회^000000";
+	next;
 	return;
 
 S_GiveEveryReward:
@@ -430,6 +612,7 @@ S_LoadCostumeChoice:
 
 S_ShowRewardInfo:
 	mes "[환생 보상]";
+	mes "1회마다: 환생 포인트 " + .PointPerRebirth + "점";
 	mes "1회마다: 의상 상자 10개, 300% 교범 1개";
 	mes .EveryN_Count + "회마다: 3배 풍선껌 1개";
 	mes " ";
@@ -484,6 +667,15 @@ OnInit:
 	// 계정 단위 환생 횟수: #변수
 	// 캐릭터 단위로 변경하려면 "#NEED_REBIRTH_COUNT" -> "NEED_REBIRTH_COUNT"
 	.CountVar$ = "NEED_REBIRTH_COUNT";
+
+	// 캐릭터 단위 환생 포인트
+	.PointVar$ = "NEED_REBIRTH_POINT";
+	.PointPerRebirth = 1;                 // 업데이트 이후 환생 1회당 지급 포인트
+
+	// 기존 환생 횟수 소급 지급 설정
+	.PointRetroactiveDoneVar$ = "NEED_REBIRTH_POINT_RETROACTIVE_DONE";
+	.RetroactivePointPerRebirth = 1;      // 기존 환생 1회당 소급 지급 포인트
+
 	.AnnouncePrefix$ = "[NEED 환생]";
 	// 구간 보상 수령 체크 변수 prefix
 	// 계정 단위: "#NEED_REBIRTH_CLAIM_"
@@ -506,6 +698,20 @@ OnInit:
 
 	.TicketItemID = 399992;      // 환생 티켓 아이템 ID 입력
 	.TicketAmount = 1;
+
+	// ============================================================
+	// 환생 포인트 상점 설정
+	// ============================================================
+
+	// 아래 변수들은 서로 독립적으로 조정 가능
+	.Shop_Blessing_ItemID = 6635;         // 대장장이의 축복
+	.Shop_Blessing_PointCost = 3;         // 필요 환생 포인트
+	.Shop_Blessing_ZenyCost = 100000000;   // 필요 제니
+	.Shop_Blessing_WeeklyLimit = 5;       // 캐릭터당 주간 구매 제한
+
+	// 캐릭터 단위 주간 구매 기록 변수
+	.ShopWeekVar$ = "NEED_REBIRTH_SHOP_WEEK";
+	.ShopBlessingCountVar$ = "NEED_REBIRTH_BLESSING_WEEK_COUNT";
 
 	// ============================================================
 	// 1회마다 지급 보상
