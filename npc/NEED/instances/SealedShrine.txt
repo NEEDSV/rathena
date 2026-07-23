@@ -1090,6 +1090,10 @@ OnTouch:
 	areamobuseskill .@map$,.@seal_x,.@seal_y,10,1929,"NPC_INVINCIBLEOFF",1,0,0,ET_HELP,0;
 	disablenpc instance_npcname(strnpcinfo(0));
 
+	// 봉인 성공 시점부터 70초를 계산한다.
+	// 70초 후 바포메트가 다시 무적 상태가 되고 다음 봉인진이 활성화된다.
+	donpcevent instance_npcname("ins_2f_hero_pattern")+"::OnEnable";
+
 	// 제단 활성화 비용: SP 50% 감소, 20초 석화.
 	percentheal 0,-50;
 	sc_start Eff_Stone,20000,0;
@@ -1238,9 +1242,13 @@ OnDisable:
 	end;
 
 OnEnable:
+	set .@map$,instance_mapname("2@cata");
 	enablenpc instance_npcname("control_baphomet");
 	donpcevent instance_npcname("2f_callmon_pattern_c")+"::OnEnable";
-	monster instance_mapname("2@cata"),79,64,"바포메트#",1929,1,instance_npcname("control_baphomet")+"::OnMyMobDead";
+	monster .@map$,79,64,"바포메트#",1929,1,instance_npcname("control_baphomet")+"::OnMyMobDead";
+
+	// mob_skill_db에서 자동 NPC_INVINCIBLE을 제거하므로 등장 시 스크립트가 직접 무적을 적용한다.
+	areamobuseskill .@map$,79,64,10,1929,"NPC_INVINCIBLE",1,0,0,ET_HELP,0;
 	end;
 
 OnMyMobDead:
@@ -1378,12 +1386,8 @@ OnInstanceInit:
 
 OnEnable:
 	enablenpc instance_npcname("ins_2f_hero_pattern_c");
+	stopnpctimer;
 	initnpctimer;
-	donpcevent instance_npcname("ins_2f_hero_pattern_c")+"::Ongo";
-	end;
-
-Ongo:
-	donpcevent instance_npcname("ins_2f_hero_pattern")+"::OnEnable";
 	end;
 
 OnDisable:
@@ -1416,6 +1420,7 @@ OnInstanceInit:
 
 OnEnable:
 	enablenpc instance_npcname("ins_2f_hero_pattern");
+	stopnpctimer;
 	initnpctimer;
 	end;
 
@@ -1425,6 +1430,12 @@ OnDisable:
 	end;
 
 OnTimer70000:
+	set .@map$,instance_mapname("2@cata");
+
+	// 봉인 성공 후 70초가 지나면 다시 무적 상태로 전환한다.
+	// 중심 좌표에서 150셀 범위를 사용해 방 전체의 바포메트를 대상으로 한다.
+	areamobuseskill .@map$,79,64,150,1929,"NPC_INVINCIBLE",1,0,0,ET_HELP,0;
+
 	switch(rand(1,5)) {
 	case 1:
 		//mapannounce instance_mapname("2@cata"), "선대 영웅의 넋 : The seal of the Main Altar is running out. Strengthen the Main Altar's seal!",bc_map,"0xFFFF00";
@@ -1471,8 +1482,8 @@ OnTimer70000:
 		disablenpc instance_npcname("봉인 마법#8");
 		enablenpc instance_npcname("봉인 마법#10");
 	}
+	// 다음 70초 타이머는 새 봉인진이 실제로 성공했을 때 다시 시작한다.
 	stopnpctimer;
-	donpcevent instance_npcname("ins_2f_hero_pattern_c")+"::Ongo";
 	end;
 }
 
