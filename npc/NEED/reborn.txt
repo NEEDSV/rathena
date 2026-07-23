@@ -153,7 +153,7 @@ S_DoRebirth:
 
 S_ApplyRetroactivePoints:
 	// 캐릭터별 최초 1회만 기존 환생 횟수를 기준으로 소급 지급
-	if (getd(.PointRetroactiveDoneVar$))
+	if (PointRetroactiveDoneVar)
 		return;
 
 	.@count = getd(.CountVar$);
@@ -161,7 +161,7 @@ S_ApplyRetroactivePoints:
 
 	if (.@retroactive_point > 0) {
 		setd .PointVar$, getd(.PointVar$) + .@retroactive_point;
-
+		next;
 		mes " ";
 		mes "^00AA00[환생 포인트 소급 지급]^000000";
 		mes "기존 환생 " + .@count + "회를 기준으로";
@@ -169,7 +169,7 @@ S_ApplyRetroactivePoints:
 	}
 
 	// 환생 횟수가 0이어도 최초 확인 완료 처리하여 이후 중복 소급 방지
-	setd .PointRetroactiveDoneVar$, 1;
+	PointRetroactiveDoneVar = 1;
 	return;
 
 S_ResetRebirthShopWeek:
@@ -235,7 +235,7 @@ S_BuyRebirthShopBlessing:
 	mes "판매 상품: " + callsub(S_ItemName, .Shop_Blessing_ItemID);
 	mes " ";
 	mes "필요 환생 포인트: ^00AA00" + .Shop_Blessing_PointCost + "점^000000";
-	mes "필요 제니: ^FF8800" + .Shop_Blessing_ZenyCost + " Zeny^000000";
+	mes "필요 제니: ^FF8800" + callfunc("F_InsertComma", .Shop_Blessing_ZenyCost) + " Zeny^000000";
 	mes " ";
 	mes "보유 환생 포인트: " + .@point + "점";
 	mes "이번 주 구매 가능: " + .@remaining + "회";
