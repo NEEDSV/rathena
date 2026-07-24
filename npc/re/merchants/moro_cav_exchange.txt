@@ -8,119 +8,32 @@
 //= 1.1 Slight change to match official script. [Capuche]
 //============================================================
 
-moro_cav,32,73,5	script	Hero Token Exchanger#1	4_F_SHADOWCHASER,{
+lasa_in01,187,49,5	script	인챈터 번즈::Expert Enchanter Byrnes	1_M_03,{
 	disable_items;
-	mes "[히어로 토큰 교환기]";
-	mes "만약 당신이 모로코와 싸웠다면";
-	mes "그리고 수집되었습니다";
-	mes "영웅 토큰,";
-	mes "제가 특별한 반지로 교환해 드릴 수 있습니다.";
-	mes "제 반지 좀 보실래요?";
-	while(true) {
-		next;
-		if (checkweight(2163,2) == 0) {
-			mes "[히어로 토큰 교환기]";
-			mes "배낭에 물건이 많네요.";
-			mes "일정을 조정하신 후 다시 방문해 주세요!";
-			close;
-		}
-		switch( select( "반지 설명", "반지를 교환하세요.", "대화를 종료하세요." ) ) {
-		case 1:
-			mes "[히어로 토큰 교환기]";
-			mes "이 영웅 반지";
-			mes "아닐 수도 있습니다";
-			mes "look";
-			mes "impressive,";
-			next;
-			mes "[히어로 토큰 교환기]";
-			mes "하지만 그것을 가져가세요";
-			mes "전문 마법사 번스,";
-			mes "그리고 그는 마법을 걸 수 있다";
-			mes "그 안에 있는 4개의 소켓 모두";
-			mes "그리고 꺼내다";
-			mes "그것의 잠재적 능력.";
-			next;
-			mes "[히어로 토큰 교환기]";
-			mes "히어로 링";
-			mes "도움을 드릴 수 있습니다";
-			mes "정복하는 데 있어서";
-			mes "Morocc.";
-			mes "더 궁금한 점 있으신가요?";
-			continue;
-		case 2:
-			mes "- 히어로 링 -";
-			mes "전사들을 위해 만들어진 반지^006400";
-			mes "모로코를 물리치기 위한 여정에서..^000000";
-			mes "^006400마법에 걸렸을 때,^000000";
-			mes "^006400그것은 소유자에게 빌려줍니다^000000";
-			mes "^006400모로코에 맞설 수 있는 힘.^000000";
-			mes "^006400Clas: 액세서리/DEF: 0^000000";
-			mes "^006400가중치: 20/필요 레벨: 160^000000";
-			mes "^006400슬롯: 0/장착 가능 직업: 모든 직업^000000";
-			next;
-			mes "[히어로 토큰 교환기]";
-			mes "영웅 반지 필요 조건";
-			mes "영웅 토큰 30개";
-			mes "환전을 위해서요.";
-			mes "교환하시겠습니까?";
-			next;
-			if (select( "이전 메뉴.", "영웅 토큰 30개를 교환하세요." ) == 1) {
-				mes "[히어로 토큰 교환기]";
-				mes "Think";
-				mes "again.";
-				continue;
-			}
-			if (countitem(6684) < 30) {
-				mes "[히어로 토큰 교환기]";
-				mes "^006400히어로 토큰^000000";
-				mes "주어진다";
-				mes "모로코와 용감하게 싸운 사람들.";
-				mes "당신은 가지고 있지 않습니다";
-				mes "30 ^006400히어로 토큰^000000,";
-				mes "그러므로 저는 당신을 도와드릴 수 없습니다.";
-				continue;
-			}
-			mes "[히어로 토큰 교환기]";
-			mes "교환할게요";
-			mes "30 ^006400히어로 토큰^000000";
-			mes "1개의 ^006400히어로 링^000000과 함께.";
-			mes "또 다른 질문 있으신가요?";
-			delitem 6684,30;	// TokenOfHero
-			getitem 2981,1;		// RingOfHero
-			continue;
-		case 3:
-			mes "[히어로 토큰 교환기]";
-			mes "어느 날";
-			mes "당신은 자신을 발견하게 될 것입니다";
-			mes "영웅의 반지가 필요합니다.";
-			close;
-		}
-	}
-}
-
-moro_cav,34,65,5	script	Expert Enchanter Byrnes	1_M_03,{
-	disable_items;
-	mes "[번스]";
-	mes "히어로 링에 대해 들어보셨나요? 진정한 영웅만이 그 찬란한 반지를 가질 자격이 있죠. 저는 그 반지를 오랫동안 기다려왔습니다.";
-	mes "제가 무엇을 도와드릴까요?";
+	mes "[번즈]";
+	mes "진정한 영웅만이 가질 자격이 있다는 " + getitemname(2981) + "에 대해 들어보셨습니까?";
+	mes "저는 그 반지의 주인이 나타나기를 기다리고 있었습니다.";
+	mes "무엇을 도와드릴까요?";
 	next;
-	switch( select( "영웅 반지 마법 부여.", "영웅 반지 마법 부여를 초기화하세요.", "Cancel." ) ) {
+	switch(select(getitemname(2981) + " 인챈트", getitemname(2981) + " 인챈트 초기화", "인챈트 리스트 확인", "대화 종료")) {
 	case 1:
-		mes "[번스]";
-		mes "저는 장착한 반지에만 마법을 부여할 수 있습니다. 장착한 반지 중 어떤 반지에 마법을 부여하시겠습니까?";
+		mes "[번즈]";
+		mes "장착 중인 반지만 인챈트할 수 있습니다.";
+		mes "어느 쪽에 장착한 반지를 인챈트하시겠습니까?";
 		next;
 		setarray .@eqi_slot[0], EQI_ACC_L, EQI_ACC_R;
-		.@s = select( "Left", "Right" ) - 1;
+		.@s = select("왼쪽 액세서리", "오른쪽 액세서리") - 1;
 		switch( getequipid(.@eqi_slot[.@s]) ) {
 		case -1:
-			mes "[번스]";
-			mes "마법 부여를 원하는 영웅 반지를 장착하세요.";
+			mes "[번즈]";
+			mes "인챈트할 " + getitemname(2981) + "을 먼저 장착해 주세요.";
 			close;
 		case 2981:
 			break;
 		default:
-			mes "[번스]";
-			mes "영웅 반지를 장착해 주세요. 다른 아이템에는 마법 부여를 할 수 없습니다.";
+			mes "[번즈]";
+			mes getitemname(2981) + "을 장착해 주세요.";
+			mes "다른 장비에는 인챈트할 수 없습니다.";
 			close;
 		}
 		// custom at this point
@@ -131,8 +44,8 @@ moro_cav,34,65,5	script	Expert Enchanter Byrnes	1_M_03,{
 			getequipcardid(.@eqi_slot[.@s],3);
 
 		if (.@card[0] > 0) {
-			mes "[번스]";
-			mes "완전히 마법이 부여된 영웅 반지는 더 이상 마법을 부여할 수 없습니다.";
+			mes "[번즈]";
+			mes "모든 슬롯에 인챈트가 부여된 " + getitemname(2981) + "에는 더 이상 인챈트할 수 없습니다.";
 			close;
 		}
 		if (.@card[3] == 0) {
@@ -140,19 +53,19 @@ moro_cav,34,65,5	script	Expert Enchanter Byrnes	1_M_03,{
 			.@slot = 4;
 		}
 		else if (.@card[2] == 0) {
-			setarray .@enchant_list$[0], "Max HP", "Max SP";
+			setarray .@enchant_list$[0], "최대 HP", "최대 SP";
 			.@slot = 3;
 		}
 		else if (.@card[1] == 0) {
-			setarray .@enchant_list$[0], "Atk", "MAtk";
+			setarray .@enchant_list$[0], "ATK", "MATK";
 			.@slot = 2;
 		}
 		else {
 			setarray .@enchant_list$[0], "STR", "INT", "AGI", "VIT", "DEX", "LUK";
 			.@slot = 1;
 		}
-		mes "[번스]";
-		mes " 슬롯에 어떤 능력을 부여하고 싶으신가요?" + .@slot + "?";
+		mes "[번즈]";
+		mes "슬롯 " + .@slot + "에 부여할 인챈트 계열을 선택해 주세요.";
 		next;
 		.@enchant_list_size = getarraysize(.@enchant_list$);
 		for ( .@i = 0; .@i < .@enchant_list_size; ++.@i )
@@ -172,20 +85,20 @@ moro_cav,34,65,5	script	Expert Enchanter Byrnes	1_M_03,{
 			break;
 		case 3:
 			switch(.@type) {
-			case 0:	// Max HP
+			case 0:	// 최대 HP
 				setarray .@bonus[0], 4861, 4862, 4867, 4868, 4900;
 				break;
-			default:	// Max SP
+			default:	// 최대 SP
 				setarray .@bonus[0], 4800, 4870, 4871, 4801, 4802;
 				break;
 			}
 			break;
 		case 2:
 			switch(.@type) {
-			case 0:	// Atk
+			case 0:	// ATK
 				setarray .@bonus[0], 4882, 4766, 4767, 4894, 4895;
 				break;
-			default:	// Matk
+			default:	// MATK
 				setarray .@bonus[0], 4883, 4896, 4897, 4898, 4899;
 				break;
 			}
@@ -221,41 +134,43 @@ moro_cav,34,65,5	script	Expert Enchanter Byrnes	1_M_03,{
 		.@bonus_size = getarraysize(.@bonus);
 		.@card[.@slot-1] = .@bonus[ rand(.@bonus_size) ];	// unknown rates
 		specialeffect2 EF_ANGEL2;
-		mes "[번스]";
-		mes "마법이 완성되었습니다!";
+		mes "[번즈]";
+		mes "인챈트가 완료되었습니다!";
 		delequip .@eqi_slot[.@s];
 		getitem2 2981,1,1,0,0,.@card[0],.@card[1],.@card[2],.@card[3];
 		close;
 	case 2:
-		mes "[번스]";
-		mes "영웅 반지 마법 부여를 초기화하려면 영웅 토큰 3개가 필요합니다.";
+		mes "[번즈]";
+		mes getitemname(2981) + "의 인챈트를 초기화하려면 " + getitemname(6684) + " 3개가 필요합니다.";
 		next;
 		if (countitem(6684) < 3) {
-			mes "[번스]";
-			mes "영웅 토큰이 부족합니다. 영웅 반지를 초기화할 수 없습니다.";
+			mes "[번즈]";
+			mes getitemname(6684) + "이 부족하여 인챈트를 초기화할 수 없습니다.";
 			close;
 		}
-		mes "[번스]";
-		mes "장착한 반지만 초기화할 수 있습니다. 장착한 반지 중 어떤 반지를 초기화하시겠습니까?";
+		mes "[번즈]";
+		mes "장착 중인 반지만 초기화할 수 있습니다.";
+		mes "어느 쪽에 장착한 반지를 초기화하시겠습니까?";
 		next;
 		setarray .@eqi_slot[0], EQI_ACC_L, EQI_ACC_R;
-		.@s = select( "Left", "Right" ) - 1;
+		.@s = select("왼쪽 액세서리", "오른쪽 액세서리") - 1;
 		switch( getequipid(.@eqi_slot[.@s]) ) {
 		case -1:
-			mes "[번스]";
-			mes "마법 부여 상태를 초기화하려면 먼저 아이템을 장착해야 합니다.";
+			mes "[번즈]";
+			mes "초기화할 " + getitemname(2981) + "을 먼저 장착해 주세요.";
 			close;
 		case 2981:
 			break;
 		default:
-			mes "[번스]";
-			mes "영웅 반지를 장착해 주세요. 다른 건 초기화할 수 없어요.";
+			mes "[번즈]";
+			mes getitemname(2981) + "을 장착해 주세요.";
+			mes "다른 장비는 초기화할 수 없습니다.";
 			close;
 		}
 		// custom at this point
 		if (countitem(6684) < 3) {
-			mes "[번스]";
-			mes "영웅 토큰이 부족합니다. 영웅 반지를 초기화할 수 없습니다.";
+			mes "[번즈]";
+			mes getitemname(6684) + "이 부족하여 인챈트를 초기화할 수 없습니다.";
 			close;
 		}
 		setarray .@card[0],
@@ -265,8 +180,8 @@ moro_cav,34,65,5	script	Expert Enchanter Byrnes	1_M_03,{
 			getequipcardid(.@eqi_slot[.@s],3);
 
 		if (.@card[3] == 0) {
-			mes "[번스]";
-			mes "현재 영웅 반지에는 마법 부여가 되어 있지 않습니다.";
+			mes "[번즈]";
+			mes "현재 장착한 " + getitemname(2981) + "에는 초기화할 인챈트가 없습니다.";
 			close;
 		}
 
@@ -275,13 +190,71 @@ moro_cav,34,65,5	script	Expert Enchanter Byrnes	1_M_03,{
 			close;
 
 		specialeffect2 EF_ANGEL2;
-		mes "[번스]";
-		mes "초기화가 완료되었습니다.";
+		mes "[번즈]";
+		mes "인챈트 초기화가 완료되었습니다.";
 		delitem 6684,3;
 		delequip .@eqi_slot[.@s];
 		getitem 2981,1;
 		close;
 	case 3:
+		callfunc "F_ShowMoroEnchantList";
+		end;
+	case 4:
 		close;
+	}
+
+OnInit:
+	waitingroom "용사의 반지 인챈트",0;
+	end;
+}
+
+// 공통 함수 F_ShowEnchantGroup은 다른 공통 스크립트에 선언되어 있어야 합니다.
+// 이 파일에서는 중복 선언하지 않고 호출만 합니다.
+function	script	F_ShowMoroEnchantList	{
+	mes "[번즈]";
+	mes getitemname(2981) + "에 부여할 수 있는 인챈트 목록입니다.";
+	mes "인챈트는 ^FF00004번 → 3번 → 2번 → 1번 슬롯^000000 순서로 진행됩니다.";
+	mes "선택한 계열의 목록 중 하나가 동일 확률로 부여됩니다.";
+	next;
+
+	while (true) {
+		switch(select(
+			"4번 슬롯 - DEF / MDEF",
+			"3번 슬롯 - 최대 HP / 최대 SP",
+			"2번 슬롯 - ATK / MATK",
+			"1번 슬롯 - 기본 능력치",
+			"닫기"
+		)) {
+		case 1:
+			setdialogsize(220,300);
+			callfunc "F_ShowEnchantGroup","DEF",4791,4792,4793,4794,4893;
+			callfunc "F_ShowEnchantGroup","MDEF",4890,4786,4891,4787,4892;
+			break;
+
+		case 2:
+			setdialogsize(220,300);
+			callfunc "F_ShowEnchantGroup","최대 HP",4861,4862,4867,4868,4900;
+			callfunc "F_ShowEnchantGroup","최대 SP",4800,4870,4871,4801,4802;
+			break;
+
+		case 3:
+			setdialogsize(220,300);
+			callfunc "F_ShowEnchantGroup","ATK",4882,4766,4767,4894,4895;
+			callfunc "F_ShowEnchantGroup","MATK",4883,4896,4897,4898,4899;
+			break;
+
+		case 4:
+			setdialogsize(220,300);
+			callfunc "F_ShowEnchantGroup","STR",4700,4701,4702,4703,4704;
+			callfunc "F_ShowEnchantGroup","INT",4710,4711,4712,4713,4714;
+			callfunc "F_ShowEnchantGroup","AGI",4730,4731,4732,4733,4734;
+			callfunc "F_ShowEnchantGroup","VIT",4740,4741,4742,4743,4744;
+			callfunc "F_ShowEnchantGroup","DEX",4720,4721,4722,4723,4724;
+			callfunc "F_ShowEnchantGroup","LUK",4750,4751,4752,4753,4754;
+			break;
+
+		case 5:
+			close;
+		}
 	}
 }
