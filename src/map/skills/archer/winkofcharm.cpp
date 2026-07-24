@@ -21,9 +21,9 @@ void SkillWinkofCharm::castendNoDamageId(block_list *src, block_list *target, ui
 
 	if( dstsd ) {
 #ifdef RENEWAL
-		// In Renewal it causes Confusion and Hallucination to 100% base chance
+		// NEED 2017: Hallucination was added to Wink of Charm only in the 2019-10-16 official patch.
+		// NEED targets 2017 behavior, so the 2019 Hallucination is removed; Confusion is kept unchanged.
 		sc_start(src, target, SC_CONFUSION, 100, skill_lv, skill_get_time(getSkillId(), skill_lv));
-		sc_start(src, target, SC_HALLUCINATION, 100, skill_lv, skill_get_time2(getSkillId(), skill_lv));
 #else
 		// In Pre-Renewal it only causes Wink Charm, if Confusion was successfully started
 		if (sc_start(src, target, SC_CONFUSION, 10, skill_lv, skill_get_time(getSkillId(), skill_lv)))
