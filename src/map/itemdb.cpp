@@ -3061,7 +3061,7 @@ uint16 itemdb_searchname_array(std::map<t_itemid, std::shared_ptr<item_data>> &d
 }
 
 std::shared_ptr<s_item_group_entry> ItemGroupDatabase::get_random_itemsubgroup(std::shared_ptr<s_item_group_random> random, e_group_algorithm_type algorithm) {
-	if (random == nullptr)
+	if (random == nullptr || random->data.empty() || random->total_rate == 0)
 		return nullptr;
 
 	// Use algorithm defined for the sub group
