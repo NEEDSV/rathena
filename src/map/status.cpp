@@ -10482,12 +10482,16 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 				i = sd->equip_index[EQI_HAND_L];
 				if (i>=0 && sd->inventory_data[i] && sd->inventory_data[i]->type == IT_WEAPON) {
 					successFlag|=1;
+					if (tick != 1)
+						pc_bg_strip_save_equipment(sd, EQP_HAND_L);
 					pc_unequipitem(sd,i,3); // Left-hand weapon
 				}
 	
 				i = sd->equip_index[EQI_HAND_R];
 				if (i>=0 && sd->inventory_data[i] && sd->inventory_data[i]->type == IT_WEAPON) {
 					successFlag|=2;
+					if (tick != 1)
+						pc_bg_strip_save_equipment(sd, EQP_HAND_R);
 					pc_unequipitem(sd,i,3);
 				}
 				if (!successFlag) return false;
@@ -10504,6 +10508,8 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 				i = sd->equip_index[EQI_HAND_L];
 				if ( i < 0 || !sd->inventory_data[i] || sd->inventory_data[i]->type != IT_ARMOR )
 					return false;
+				if (tick != 1)
+					pc_bg_strip_save_equipment(sd, EQP_SHIELD);
 				pc_unequipitem(sd,i,3);
 			}
 			if (tick == 1) return true; // Minimal duration: Only strip without causing the SC
@@ -10516,6 +10522,8 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 				i = sd->equip_index[EQI_ARMOR];
 				if ( i < 0 || !sd->inventory_data[i] )
 					return false;
+				if (tick != 1)
+					pc_bg_strip_save_equipment(sd, EQP_ARMOR);
 				pc_unequipitem(sd,i,3);
 			}
 			if (tick == 1) return true; // Minimal duration: Only strip without causing the SC
@@ -10528,6 +10536,8 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 				i = sd->equip_index[EQI_HEAD_TOP];
 				if ( i < 0 || !sd->inventory_data[i] )
 					return false;
+				if (tick != 1)
+					pc_bg_strip_save_equipment(sd, EQP_HEAD_TOP);
 				pc_unequipitem(sd,i,3);
 			}
 			if (tick == 1) return true; // Minimal duration: Only strip without causing the SC
@@ -10539,6 +10549,8 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 
 				bool successFlag = false;
 
+				if (tick != 1)
+					pc_bg_strip_save_equipment(sd, EQP_SHADOW_GEAR);
 				for( int32 i = EQI_SHADOW_ARMOR; i <= EQI_SHADOW_ACC_L; i++ ){
 					int32 index = sd->equip_index[i];
 
@@ -10620,13 +10632,19 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 				bool accessory_stripped = false;
 				if( !(sd->bonus.unstripable_equip&EQP_ACC_L) ) {
 					i = sd->equip_index[EQI_ACC_L];
-					if( i >= 0 && sd->inventory_data[i] && sd->inventory_data[i]->type == IT_ARMOR )
+					if( i >= 0 && sd->inventory_data[i] && sd->inventory_data[i]->type == IT_ARMOR ) {
+						if (tick != 1)
+							pc_bg_strip_save_equipment(sd, EQP_ACC_L);
 						accessory_stripped |= pc_unequipitem(sd,i,3); // Left-Accessory
+					}
 				}
 				if( !(sd->bonus.unstripable_equip&EQP_ACC_R) ) {
 					i = sd->equip_index[EQI_ACC_R];
-					if( i >= 0 && sd->inventory_data[i] && sd->inventory_data[i]->type == IT_ARMOR )
+					if( i >= 0 && sd->inventory_data[i] && sd->inventory_data[i]->type == IT_ARMOR ) {
+						if (tick != 1)
+							pc_bg_strip_save_equipment(sd, EQP_ACC_R);
 						accessory_stripped |= pc_unequipitem(sd,i,3); // Right-Accessory
+					}
 				}
 				if( !accessory_stripped )
 					return false;
@@ -14369,6 +14387,34 @@ int32 status_change_end( block_list* bl, enum sc_type type, int32 tid ){
 	// Needed to be here to make sure OPT1_STONEWAIT has been cleared from the target (only on natural expiration of the stone wait timer)
 	if (type == SC_STONEWAIT && tid != INVALID_TIMER)
 		status_change_start(bl, bl, SC_STONE, 100, val1, val2, 0, 0, val3, SCSTART_NOAVOID);
+
+	if (sd != nullptr) {
+		switch (type) {
+			case SC_STRIPWEAPON:
+				pc_bg_strip_try_reequip(sd, EQP_ARMS);
+				break;
+			case SC_STRIPSHIELD:
+				pc_bg_strip_try_reequip(sd, EQP_SHIELD);
+				break;
+			case SC_STRIPARMOR:
+				pc_bg_strip_try_reequip(sd, EQP_ARMOR);
+				break;
+			case SC_STRIPHELM:
+				pc_bg_strip_try_reequip(sd, EQP_HEAD_TOP);
+				break;
+			case SC__STRIPACCESSORY:
+				pc_bg_strip_try_reequip(sd, EQP_ACC);
+				break;
+			case SC_NEED_EARTHSTRAIN_STRIPACC:
+				pc_bg_strip_try_reequip(sd, static_cast<uint32>(val1));
+				break;
+			case SC_SHADOW_STRIP:
+				pc_bg_strip_try_reequip(sd, EQP_SHADOW_GEAR);
+				break;
+			default:
+				break;
+		}
+	}
 
 	return 1;
 }

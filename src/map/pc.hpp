@@ -425,6 +425,15 @@ struct s_runeset_data {
 	uint8 reward;
 };
 
+// Runtime-only snapshot of equipment removed by a strip status in a battleground.
+// The complete item snapshot is retained as a fallback for legacy items without a unique ID.
+struct s_bg_strip_requip_item {
+	bool active = false;
+	int16 inventory_index = -1;
+	uint32 equip_position = 0;
+	struct item item = {};
+};
+
 class map_session_data : public block_list {
 public:
 	struct unit_data ud;
@@ -547,6 +556,10 @@ public:
 	struct item_data* inventory_data[MAX_INVENTORY]; // direct pointers to itemdb entries (faster than doing item_id lookups)
 	int16 equip_index[EQI_MAX];
 	int16 equip_switch_index[EQI_MAX];
+	s_bg_strip_requip_item bg_strip_requip[EQI_MAX];
+	bool bg_strip_requip_pending = false;
+	int16 bg_strip_requip_inventory_index = -1;
+	uint32 bg_strip_requip_position = 0;
 	uint32 weight,max_weight,add_max_weight;
 	int32 cart_weight,cart_num,cart_weight_max;
 	int32 fd;
@@ -1613,6 +1626,12 @@ int32 pc_resetfeel(map_session_data*);
 int32 pc_resethate(map_session_data*);
 bool pc_equipitem(map_session_data *sd, int16 n, int32 req_pos, bool equipswitch=false);
 bool pc_unequipitem(map_session_data*,int32,int32);
+void pc_bg_strip_save_equipment(map_session_data* sd, uint32 equip_mask);
+void pc_bg_strip_try_reequip(map_session_data* sd, uint32 equip_mask);
+void pc_bg_strip_try_reequip_all(map_session_data* sd);
+void pc_bg_strip_clear_saved_equipment(map_session_data* sd);
+void pc_bg_strip_cancel_saved_equipment(map_session_data* sd, uint32 equip_mask);
+bool pc_bg_strip_has_saved_equipment(const map_session_data* sd);
 int32 pc_equipswitch( map_session_data* sd, int32 index );
 void pc_equipswitch_remove( map_session_data* sd, int32 index );
 void pc_checkitem(map_session_data*);

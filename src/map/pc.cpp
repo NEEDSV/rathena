@@ -7032,6 +7032,8 @@ enum e_setpos pc_setpos(map_session_data* sd, uint16 mapindex, int32 x, int32 y,
 
 		if (sd->bg_id && mapdata && !mapdata->getMapFlag(MF_BATTLEGROUND)) // Moving to a map that isn't a Battlegrounds
 			bg_team_leave(sd, false, true);
+		else if (mapdata && !mapdata->getMapFlag(MF_BATTLEGROUND))
+			pc_bg_strip_clear_saved_equipment(sd);
 
 		sd->state.pmap = sd->m;
 		if (sc != nullptr && !sc->empty()) { // Cancel some map related stuff.
@@ -7240,6 +7242,10 @@ enum e_setpos pc_setpos(map_session_data* sd, uint16 mapindex, int32 x, int32 y,
 
 	if (clrtype == CLR_TELEPORT)
 		pc_need_macro_hunt_record_teleport(*sd);
+
+	// Covers restart-value based resurrection paths that do not call status_revive()/pc_revive().
+	if (sd->bg_strip_requip_pending && !pc_isdead(sd))
+		pc_bg_strip_try_reequip_all(sd);
 	
 	return SETPOS_OK;
 }
@@ -9851,6 +9857,8 @@ int32 pc_dead(map_session_data *sd,block_list *src)
 	// NEED: The Super Novice rescue above is not a real death. Every path continuing from here is.
 	// Reset here so immediate resurrection/respawn paths cannot retain Earth Strain resistance.
 	sd->earthstrain_strip_resist = 0;
+	if (pc_bg_strip_has_saved_equipment(sd))
+		sd->bg_strip_requip_pending = true;
 
 	for(k = 0; k < MAX_DEVOTION; k++) {
 		if (sd->devotion[k]){
@@ -10224,6 +10232,9 @@ void pc_revive(map_session_data *sd,uint32 hp, uint32 sp, uint32 ap) {
 		guild_guildaura_refresh(sd,GD_SOULCOLD,guild_checkskill(sd->guild->guild,GD_SOULCOLD));
 		guild_guildaura_refresh(sd,GD_HAWKEYES,guild_checkskill(sd->guild->guild,GD_HAWKEYES));
 	}
+
+	if (sd->bg_strip_requip_pending)
+		pc_bg_strip_try_reequip_all(sd);
 }
 
 bool pc_revive_item(map_session_data *sd) {
@@ -12369,7 +12380,257 @@ bool pc_equipitem(map_session_data *sd,int16 n,int32 req_pos,bool equipswitch)
 	}
 	sd->npc_item_flag = iflag;
 
+	bool is_bg_strip_requip_target =
+		sd->bg_strip_requip_position != 0 &&
+		sd->bg_strip_requip_inventory_index == n &&
+		sd->bg_strip_requip_position == static_cast<uint32>(pos);
+	if (!is_bg_strip_requip_target)
+		pc_bg_strip_cancel_saved_equipment(sd, pos);
+
 	return true;
+}
+
+/**
+ * Whether this session is currently eligible for battleground strip re-equipping.
+ */
+static bool pc_bg_strip_is_active(const map_session_data* sd) {
+	return sd != nullptr && sd->bg_id > 0 && sd->m >= 0 && map_getmapflag(sd->m, MF_BATTLEGROUND);
+}
+
+/**
+ * Compare the identity-bearing fields of an inventory item.
+ * Used only when an old item has no unique ID.
+ */
+static bool pc_bg_strip_item_matches(const struct item& current, const struct item& saved) {
+	if (current.nameid != saved.nameid || current.identify != saved.identify ||
+		current.refine != saved.refine || current.attribute != saved.attribute ||
+		current.expire_time != saved.expire_time || current.bound != saved.bound ||
+		current.enchantgrade != saved.enchantgrade)
+		return false;
+
+	if (memcmp(current.card, saved.card, sizeof(current.card)) != 0)
+		return false;
+	if (memcmp(current.option, saved.option, sizeof(current.option)) != 0)
+		return false;
+	return true;
+}
+
+static bool pc_bg_strip_saved_item_matches(const s_bg_strip_requip_item& left, const s_bg_strip_requip_item& right) {
+	if (left.equip_position != right.equip_position)
+		return false;
+	if (left.item.unique_id || right.item.unique_id)
+		return left.item.unique_id != 0 && left.item.unique_id == right.item.unique_id;
+	return left.inventory_index == right.inventory_index && pc_bg_strip_item_matches(left.item, right.item);
+}
+
+bool pc_bg_strip_has_saved_equipment(const map_session_data* sd) {
+	if (sd == nullptr)
+		return false;
+
+	for (const s_bg_strip_requip_item& saved : sd->bg_strip_requip) {
+		if (saved.active)
+			return true;
+	}
+	return false;
+}
+
+void pc_bg_strip_clear_saved_equipment(map_session_data* sd) {
+	if (sd == nullptr)
+		return;
+
+	for (s_bg_strip_requip_item& saved : sd->bg_strip_requip)
+		saved = {};
+	sd->bg_strip_requip_pending = false;
+}
+
+void pc_bg_strip_cancel_saved_equipment(map_session_data* sd, uint32 equip_mask) {
+	if (sd == nullptr || equip_mask == 0)
+		return;
+
+	for (s_bg_strip_requip_item& saved : sd->bg_strip_requip) {
+		if (saved.active && (saved.equip_position & equip_mask))
+			saved = {};
+	}
+
+	if (!pc_bg_strip_has_saved_equipment(sd))
+		sd->bg_strip_requip_pending = false;
+}
+
+/**
+ * Save each distinct equipped inventory item covered by equip_mask.
+ * Existing entries are never overwritten, preserving the original item across status refreshes.
+ */
+void pc_bg_strip_save_equipment(map_session_data* sd, uint32 equip_mask) {
+	if (!pc_bg_strip_is_active(sd))
+		return;
+
+	int16 visited[EQI_MAX];
+	int32 visited_count = 0;
+
+	for (int32 i = 0; i < EQI_MAX; ++i) {
+		int16 index = sd->equip_index[i];
+
+		if (!(equip_bitmask[i] & equip_mask) || index < 0 || index >= MAX_INVENTORY ||
+			sd->inventory_data[index] == nullptr ||
+			!(sd->inventory.u.items_inventory[index].equip & equip_mask))
+			continue;
+		if (std::find(visited, visited + visited_count, index) != visited + visited_count)
+			continue;
+		visited[visited_count++] = index;
+
+		const struct item& equipped = sd->inventory.u.items_inventory[index];
+		bool already_saved = false;
+
+		for (const s_bg_strip_requip_item& saved : sd->bg_strip_requip) {
+			if (!saved.active)
+				continue;
+			if (equipped.unique_id != 0 && saved.item.unique_id == equipped.unique_id) {
+				already_saved = true;
+				break;
+			}
+			if (equipped.unique_id == 0 && saved.inventory_index == index &&
+				pc_bg_strip_item_matches(equipped, saved.item)) {
+				already_saved = true;
+				break;
+			}
+		}
+		if (already_saved)
+			continue;
+
+		for (s_bg_strip_requip_item& saved : sd->bg_strip_requip) {
+			if (saved.active)
+				continue;
+			saved.active = true;
+			saved.inventory_index = index;
+			saved.equip_position = equipped.equip;
+			saved.item = equipped;
+			break;
+		}
+	}
+}
+
+static int16 pc_bg_strip_find_inventory_item(map_session_data* sd, const s_bg_strip_requip_item& saved) {
+	if (saved.item.unique_id != 0) {
+		for (int16 i = 0; i < MAX_INVENTORY; ++i) {
+			const struct item& item = sd->inventory.u.items_inventory[i];
+
+			if (item.nameid != 0 && item.unique_id == saved.item.unique_id)
+				return i;
+		}
+		return -1;
+	}
+
+	// Prefer the original slot when it still contains the same legacy item, then scan after sorting.
+	if (saved.inventory_index >= 0 && saved.inventory_index < MAX_INVENTORY &&
+		sd->inventory.u.items_inventory[saved.inventory_index].equip == 0 &&
+		pc_bg_strip_item_matches(sd->inventory.u.items_inventory[saved.inventory_index], saved.item))
+		return saved.inventory_index;
+
+	for (int16 i = 0; i < MAX_INVENTORY; ++i) {
+		if (sd->inventory.u.items_inventory[i].equip == 0 &&
+			pc_bg_strip_item_matches(sd->inventory.u.items_inventory[i], saved.item))
+			return i;
+	}
+	return -1;
+}
+
+static bool pc_bg_strip_position_blocked(const map_session_data* sd, uint32 position) {
+	if ((position & EQP_ARMS) && sd->sc.getSCE(SC_STRIPWEAPON))
+		return true;
+	if ((position & EQP_SHIELD) && sd->sc.getSCE(SC_STRIPSHIELD))
+		return true;
+	if ((position & EQP_ARMOR) && sd->sc.getSCE(SC_STRIPARMOR))
+		return true;
+	if ((position & EQP_HEAD_TOP) && sd->sc.getSCE(SC_STRIPHELM))
+		return true;
+	if ((position & EQP_ACC) && sd->sc.getSCE(SC__STRIPACCESSORY))
+		return true;
+	if ((position & EQP_SHADOW_GEAR) && sd->sc.getSCE(SC_SHADOW_STRIP))
+		return true;
+	if (const status_change_entry* sce = sd->sc.getSCE(SC_NEED_EARTHSTRAIN_STRIPACC);
+		sce != nullptr && (position & static_cast<uint32>(sce->val1)))
+		return true;
+	return false;
+}
+
+static bool pc_bg_strip_item_is_equipped(const map_session_data* sd, int16 inventory_index, uint32 expected_position) {
+	if (inventory_index < 0 || inventory_index >= MAX_INVENTORY ||
+		(sd->inventory.u.items_inventory[inventory_index].equip & expected_position) != expected_position)
+		return false;
+
+	for (int32 i = 0; i < EQI_MAX; ++i) {
+		if ((expected_position & equip_bitmask[i]) && sd->equip_index[i] != inventory_index)
+			return false;
+	}
+	return true;
+}
+
+/**
+ * Re-equip saved items covered by equip_mask without ever displacing current equipment.
+ */
+void pc_bg_strip_try_reequip(map_session_data* sd, uint32 equip_mask) {
+	if (sd == nullptr)
+		return;
+	if (!pc_bg_strip_is_active(sd)) {
+		pc_bg_strip_clear_saved_equipment(sd);
+		return;
+	}
+	if (pc_isdead(sd)) {
+		if (pc_bg_strip_has_saved_equipment(sd))
+			sd->bg_strip_requip_pending = true;
+		return;
+	}
+
+	for (int32 saved_index = 0; saved_index < EQI_MAX; ++saved_index) {
+		s_bg_strip_requip_item saved = sd->bg_strip_requip[saved_index];
+
+		if (!saved.active || !(saved.equip_position & equip_mask))
+			continue;
+
+		// A second strip state may still own this position. Keep the snapshot for its end callback.
+		if (pc_bg_strip_position_blocked(sd, saved.equip_position))
+			continue;
+
+		int16 inventory_index = pc_bg_strip_find_inventory_item(sd, saved);
+		bool slots_empty = true;
+		bool equipped = false;
+
+		for (int32 i = 0; i < EQI_MAX; ++i) {
+			if ((saved.equip_position & equip_bitmask[i]) && sd->equip_index[i] >= 0) {
+				slots_empty = false;
+				break;
+			}
+		}
+
+		if (inventory_index >= 0 && slots_empty &&
+			sd->inventory.u.items_inventory[inventory_index].equip == 0 &&
+			pc_isequip(sd, inventory_index) == ITEM_EQUIP_ACK_OK) {
+			int16 previous_requip_index = sd->bg_strip_requip_inventory_index;
+			uint32 previous_requip_position = sd->bg_strip_requip_position;
+
+			sd->bg_strip_requip_inventory_index = inventory_index;
+			sd->bg_strip_requip_position = saved.equip_position;
+			pc_equipitem(sd, inventory_index, saved.equip_position);
+			sd->bg_strip_requip_inventory_index = previous_requip_index;
+			sd->bg_strip_requip_position = previous_requip_position;
+			equipped = pc_bg_strip_item_is_equipped(sd, inventory_index, saved.equip_position);
+		}
+
+		// Keep the snapshot on any failure so another status-end or resurrection path can retry it.
+		if (equipped) {
+			for (s_bg_strip_requip_item& entry : sd->bg_strip_requip) {
+				if (entry.active && pc_bg_strip_saved_item_matches(entry, saved))
+					entry = {};
+			}
+		}
+	}
+
+	if (!pc_bg_strip_has_saved_equipment(sd))
+		sd->bg_strip_requip_pending = false;
+}
+
+void pc_bg_strip_try_reequip_all(map_session_data* sd) {
+	pc_bg_strip_try_reequip(sd, UINT32_MAX);
 }
 
 static void pc_deleteautobonus( std::vector<std::shared_ptr<s_autobonus>>& bonus, int32 position ){

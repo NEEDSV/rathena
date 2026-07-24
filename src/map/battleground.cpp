@@ -467,6 +467,7 @@ bool bg_team_delete(int32 bg_id)
 	if (bgteam) {
 		for (const auto &pl_sd : bgteam->members) {
 			bg_send_dot_remove(pl_sd.sd);
+			pc_bg_strip_clear_saved_equipment(pl_sd.sd);
 			pl_sd.sd->bg_id = 0;
 		}
 
@@ -576,6 +577,7 @@ int32 bg_team_leave(map_session_data *sd, bool quit, bool deserter)
 	int32 bg_id = sd->bg_id;
 	std::shared_ptr<s_battleground_data> bgteam = util::umap_find(bg_team_db, bg_id);
 
+	pc_bg_strip_clear_saved_equipment(sd);
 	sd->bg_id = 0;
 
 	if (bgteam) {

@@ -95,6 +95,7 @@ int32 earthstrain_strip_one(block_list* src, map_session_data& target, const ear
 	uint32 position = positions[rnd_value<size_t>(0, positions.size() - 1)];
 	int16 index = pc_checkequip(&target, position);
 
+	pc_bg_strip_save_equipment(&target, position);
 	if (index < 0 || !pc_unequipitem(&target, index, 3))
 		return 0;
 

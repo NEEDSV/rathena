@@ -2228,6 +2228,7 @@ void map_deliddb(block_list *bl)
 int32 map_quit(map_session_data *sd) {
 	int32 i;
 
+	pc_bg_strip_clear_saved_equipment(sd);
 	costume_collection_db_clear(sd);
 
 	if (sd->state.keepshop == false) { // Close vending/buyingstore
