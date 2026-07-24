@@ -1,150 +1,67 @@
 //===== rAthena Script =======================================
-//= Enchants and exchange NPCs.
+//= 인챈트 및 교환 NPC
 //===== Description: ========================================= 
 //= [Official Conversion]
-//= Exchangers and enchanters NPCs on Verus.
+//= 베루스 지역 교환 및 인챈트 NPC
 //===== Additional Comments: =================================
 //= 1.0 Added NPCs coming along Charleston instance. [Capuche]
 //= 1.1 Added Excellion Wing/Suit trader and enchant NPCs. [Capuche]
 //============================================================
 
-// Charleston
-lasagna,164,122,3	script	Mass Charleston#1	4_F_CHARLESTON01,{
-	if (!checkweight(1201,1) || (MaxWeight - Weight) < 1000) {
-		mes "소지품을 너무 많이 가져가셨습니다. 소지품을 줄이고 나중에 다시 오세요.";
-		close;
-	}
-	cutin "dalle01.bmp",2;
-	if (countitem(6752) < 10) {
-		if (isbegin_quest(13186) == 0) {
-			mes "[매사추세츠주 찰스턴]";
-			mes "찰스턴 컴포넌트를 어디서 찾을 수 있는지 모르겠네요.";
-			next;
-			mes "[매사추세츠주 찰스턴]";
-			mes "하지만 10개 이상 구매하시면 공장 생산품으로 교환해 드릴 수 있습니다.";
-			close3;
-		}
-		mes "[매사추세츠주 찰스턴]";
-		mes "찰스턴 댄스의 대중적인 버전이 개발되기까지는 여러 차례의 시행착오가 있었습니다.";
-		next;
-		mes "[매사추세츠주 찰스턴]";
-		mes "제가 제 실력을 깎아내리려는 건 아니지만, 대량 생산 제품은 말 그대로 대량 생산 제품입니다. 비용 효율적이고 실용적이긴 하지만, 고급 제품만큼 좋을 수는 없죠.";
-		next;
-		mes "[매사추세츠주 찰스턴]";
-		mes "일부 찰스턴 모델, 특히 개발 단계에 있는 모델들은 더욱 발전된 기능을 갖추고 있습니다. 이러한 모델들을 연구하려면 더 많은 부품이 필요합니다.";
-		next;
-		mes "[매사추세츠주 찰스턴]";
-		mes "찰스턴 부품을 10개 이상 가지고 계시면 공장 생산품으로 교환해 드릴 수 있습니다.";
-		close3;
-	}
-	mes "[매사추세츠주 찰스턴]";
-	mes "멋진 부품들을 가지고 계시네요! 공장에서 생산된 제품으로 교환하시겠습니까?";
-	next;
-	mes "[매사추세츠주 찰스턴]";
-	mes "찰스턴의 장점들을 모아놓은 상품이지만, 개별 판매는 불가능합니다. 다만, 품질이 좋은 부품을 가져오시면 교환해 드릴 수 있습니다.";
-	next;
-	.@s = select( "Quit.", "강화 부품으로 교체", "교환 보조 장치" ) - 2;
-	if (.@s == -1) {
-		mes "[매사추세츠주 찰스턴]";
-		mes "다음에 또 봐요!";
-		close3;
-	}
-	setarray .@job_aft$[0], "Reinforced parts", "Supplementary device";
-	mes "[매사추세츠주 찰스턴]";
-	mes " 어느 부분" + .@job_aft$[.@s] + " 선택하시겠습니까?";
-	next;
-	switch(.@s) {
-	case 0:
-		setarray .@item[0],
-			20733,	// Upgrade_Part_Engine
-			22044,	// Upgrade_Part_Booster
-			2996;	// Upgrade_Part_Gun_Barrel
-		break;
-	case 1:
-		setarray .@item[0],
-			20732,	// Supplement_Part_Con
-			22043,	// Supplement_Part_Agi
-			2995;	// Supplement_Part_Dex
-		break;
-	default:
-		mes "[매사추세츠주 찰스턴]";
-		mes "다음에 또 봐요!";
-		close;
-	}
-	// custom translation from here
-	.@index = select( "Quit.", getitemname(.@item[0]) + " (garment)", getitemname(.@item[1]) + " (Shoes)", getitemname(.@item[2]) + " (Accessory)" ) - 2;
-	if (.@index == -1) {
-		mes "[매사추세츠주 찰스턴]";
-		mes "다음에 또 봐요!";
-		close3;
-	}
-	if (countitem(6752) < 10) {
-		mes "[매사추세츠주 찰스턴]";
-		mes "찰스턴 부품을 충분히 구하시면 다시 저에게 연락 주시겠어요?";
-		close3;
-	}
-	delitem 6752,10;	// Charleston_Parts
-	getitem .@item[.@index],1;
-	mes "[매사추세츠주 찰스턴]";
-	mes " 10을 교환했습니다" + getitemname(6752) + " for " + .@job_aft$[.@s] + "혹시 더 찾으시면 다시 연락 주세요!";
-	close3;
-
-Oninit:
-	waitingroom "찰스턴 장비 교환",0;
-	end;
-}
-
-lasa_in01,188,54,5	script	Mass Charleston#2	4_F_CHARLESTON01,{
+lasa_in01,187,47,5	script	양산형 찰스턴#2::Mass Charleston#2	4_F_CHARLESTON01,{
 	disable_items;
 	if (!checkweight(1201,1)) {
-		mes "아이템 종류가 너무 많아요. 먼저 인벤토리를 줄이세요.";
+		mes "소지한 아이템 종류가 너무 많습니다. 인벤토리를 정리한 뒤 다시 이용해 주세요.";
 		close;
 	}
 	if ((MaxWeight - Weight) < 10000) {
-		mes "소지품이 너무 무거워요. 먼저 무게를 줄이세요.";
+		mes "소지 무게가 너무 무겁습니다. 무게를 줄인 뒤 다시 이용해 주세요.";
 		close;
 	}
 	cutin "dalle01.bmp",2;
-	mes "[매사추세츠주 찰스턴]";
-	mes "찰스턴 팩토리 제품을 업그레이드해 드릴 수 있습니다. 관심 있으시면 알려주세요.";
+	mes "[양산형 찰스턴]";
+	mes "찰스턴 공장에서 생산된 장비를 인챈트할 수 있습니다. 필요한 작업을 선택해 주세요.";
 	next;
-	switch( select( "더 자세한 정보.", "제품에 기능을 추가하세요.", "제품을 초기화하세요." ) ) {
+	switch( select( "이용 방법 확인", "장비에 능력 부여", "장비 인챈트 초기화", "인챈트 리스트 확인" ) ) {
 	case 1:
-		mes "[매사추세츠주 찰스턴]";
-		mes "업그레이드/초기화 시도 1회당 100,000 제니와 찰스턴 부품 1개가 소모됩니다.";
+		mes "[양산형 찰스턴]";
+		mes "능력 부여 또는 초기화 1회당 100,000 제니와 " + getitemname(6752) + " 1개가 필요합니다.";
 		next;
-		mes "[매사추세츠주 찰스턴]";
-		mes "또한 ^ff0000+9^000000 이상 가격대의 Charleston Equipment에 대해 더욱 다양한 업그레이드 옵션을 제공합니다.";
+		mes "[양산형 찰스턴]";
+		mes "^ff0000+9 이상^000000 제련된 찰스턴 장비는 더욱 강력한 인챈트 계열을 선택할 수 있습니다.";
 		next;
-		mes "[매사추세츠주 찰스턴]";
-		mes "안심하세요. 제 업그레이드 기술은 아이템의 업그레이드 레벨이나 장착된 카드에 우발적인 손상을 일으키지 않습니다.";
+		mes "[양산형 찰스턴]";
+		mes "인챈트 과정에서 장비의 제련도와 장착된 카드는 유지됩니다.";
 		close3;
 	case 2:
 		.@type_action = 1;
-		.@string$ = "업그레이드";
+		.@string$ = "인챈트";
 		break;
 	case 3:
 		.@type_action = 2;
-		.@string$ = "재설정";
+		.@string$ = "초기화";
 		break;
+	case 4:
+		callfunc "F_ShowCharlestonEnchantList";
+		end;
 	}
 	if (Zeny < 100000 || countitem(6752) < 1) {
-		mes "[매사추세츠주 찰스턴]";
-		mes "" + .@string$ + " 찰스턴 제품 하나를 만드는 데 찰스턴 부품 1개와 10만 제니가 필요합니다. 모든 비용은 다음과 같은 항목에 포함됩니다." + strtolower(.@string$) + " 귀사의 제품.";
+		mes "[양산형 찰스턴]";
+		mes .@string$ + " 작업에는 " + getitemname(6752) + " 1개와 100,000 제니가 필요합니다.";
 		close3;
 	}
-	mes "[매사추세츠주 찰스턴]";
-	mes "업그레이드하려는 장비가 모두 갖춰져 있는지 확인해 주세요.";
+	mes "[양산형 찰스턴]";
+	mes "인챈트할 장비를 착용한 상태에서 부위를 선택해 주세요.";
 	next;
-	.@s = select( "제가 장착하러 갈게요.", "Footgear", "Garment", "Clothes", "Accessory" ) - 2;
+	.@s = select( "장비를 착용하고 오기", "신발", "걸칠것", "갑옷", "액세서리" ) - 2;
 	if (.@s == -1) {
-		mes "[매사추세츠주 찰스턴]";
-		mes "네, 그러신 후에 다시 와주세요.";
+		mes "[양산형 찰스턴]";
+		mes "장비를 착용한 뒤 다시 찾아와 주세요.";
 		close3;
 	}
 	if (Zeny < 100000 || countitem(6752) < 1) {
-		mes "[매사추세츠주 찰스턴]";
-		mes "상품 업그레이드에 필요한 것들이 부족한 것 같습니다!";
+		mes "[양산형 찰스턴]";
+		mes "인챈트에 필요한 재료 또는 제니가 부족합니다.";
 		close3;
 	}
 	setarray .@eq_num[0], EQI_SHOES, EQI_GARMENT, EQI_ARMOR, EQI_ACC_R;
@@ -157,8 +74,8 @@ lasa_in01,188,54,5	script	Mass Charleston#2	4_F_CHARLESTON01,{
 
 	switch(.@item_id) {
 	case -1:
-		mes "[매사추세츠주 찰스턴]";
-		mes "맞춤형 업그레이드이므로 반드시 보호 장비를 착용하십시오.";
+		mes "[양산형 찰스턴]";
+		mes "인챈트할 장비가 장착되어 있지 않습니다.";
 		close3;
 	case 15111:	// Upgrade_Part_Plate
 		.@en_type = 3;
@@ -201,9 +118,9 @@ lasa_in01,188,54,5	script	Mass Charleston#2	4_F_CHARLESTON01,{
 		.@max_slot = 2;
 		break;
 	default:
-		mes "[매사추세츠주 찰스턴]";
+		mes "[양산형 찰스턴]";
 		mes "^990099" + getequipname(.@part) + "^000000??";
-		mes "저는 이 장비에 관심이 없습니다.";
+		mes "이 장비에는 인챈트할 수 없습니다.";
 		close3;
 	}
 
@@ -211,58 +128,58 @@ lasa_in01,188,54,5	script	Mass Charleston#2	4_F_CHARLESTON01,{
 	case 1:	// Add abilities
 		if (.@refine >= 9) {
 			setarray .@menu_en_type$[1],
-				"Attack enhancement",
-				"Defense enhancement",
-				"Acceleration enhancements",
-				"Garment upgrade",
-				"Advanced Garment upgrade",
-				"Shoes upgrade",
-				"Advanced Shoes upgrade",
-				"Accessory upgrade";
+				"공격 강화",
+				"방어 강화",
+				"가속 강화",
+				"걸칠것 강화",
+				"고급 걸칠것 강화",
+				"신발 강화",
+				"고급 신발 강화",
+				"액세서리 강화";
 			if (.@menu_en_type$[.@en_type] == "" || .@menu_en_type$[.@en_type_9] == "") {
-				mes "[매사추세츠주 찰스턴]";
-				mes "뭔가 이상해!";
+				mes "[양산형 찰스턴]";
+				mes "인챈트 설정에 문제가 발생했습니다.";
 				close3;
 			}
-			mes "[매사추세츠주 찰스턴]";
-			mes "이는 상당히 향상된 수준의 장비이며, 이러한 유형은 향상된 확장 성능을 제공할 수 있습니다. 아래 시리즈 중에서 원하는 것을 선택하여 성능을 강화하십시오!";
+			mes "[양산형 찰스턴]";
+			mes "이 장비는 +9 이상 제련되어 고급 인챈트 계열을 선택할 수 있습니다. 원하는 계열을 선택해 주세요.";
 			next;
 			if (select( .@menu_en_type$[.@en_type], .@menu_en_type$[.@en_type_9] ) == 2)
 				.@en_type = .@en_type_9;
 		}
 		if (.@card[3] < 1 && .@max_slot < 4) {
 			.@slot = 4;
-			mes "[매사추세츠주 찰스턴]";
-			mes "첫 번째 능력을 업그레이드하겠습니다. 기존 업그레이드 레벨과 카드는 그대로 유지됩니다. 계속하시겠습니까?";
+			mes "[양산형 찰스턴]";
+			mes "첫 번째 인챈트를 부여합니다. 장비의 제련도와 장착된 카드는 유지됩니다. 계속하시겠습니까?";
 			next;
-			if (select( "나중에 다시 올게요.", "Continue." ) == 1) {
-				mes "[매사추세츠주 찰스턴]";
-				mes "괜찮아요. 마음이 바뀌면 다시 오세요.";
+			if (select( "나중에 다시 오기", "계속 진행" ) == 1) {
+				mes "[양산형 찰스턴]";
+				mes "마음이 바뀌면 다시 찾아와 주세요.";
 				close3;
 			}
 		}
 		else if (.@card[2] < 1 && .@max_slot < 3) {
 			.@slot = 3;
-			mes "[매사추세츠주 찰스턴]";
-			mes "두 번째 능력을 업그레이드하겠습니다. 기존 업그레이드 레벨과 카드는 그대로 유지됩니다.";
+			mes "[양산형 찰스턴]";
+			mes "두 번째 인챈트를 부여합니다. 장비의 제련도와 장착된 카드는 유지됩니다.";
 			next;
-			mes "[매사추세츠주 찰스턴]";
-			mes "실패할 가능성이 약간 있지만, 그럴 경우 기존 업그레이드 레벨이 초기화됩니다. 어떻게 하시겠습니까?";
+			mes "[양산형 찰스턴]";
+			mes "실패할 경우 이번에 시도한 슬롯의 인챈트가 부여되지 않을 수 있습니다. 계속하시겠습니까?";
 			next;
-			if (select( "나중에 다시 올게요.", "Continue." ) == 1) {
-				mes "[매사추세츠주 찰스턴]";
-				mes "괜찮아요. 마음이 바뀌면 다시 오세요.";
+			if (select( "나중에 다시 오기", "계속 진행" ) == 1) {
+				mes "[양산형 찰스턴]";
+				mes "마음이 바뀌면 다시 찾아와 주세요.";
 				close3;
 			}
 		}
 		else if (.@card[1] < 1 && .@max_slot < 2) {
 			.@slot = 2;
-			mes "[매사추세츠주 찰스턴]";
-			mes "세 번째 능력을 업그레이드하겠습니다. 최고 단계 업그레이드에서는 장비가 파괴되거나 기존 업그레이드 레벨이 초기화될 확률이 ^990000%입니다.^000000 계속하시겠습니까?";
+			mes "[양산형 찰스턴]";
+			mes "세 번째 인챈트를 부여합니다. 이 단계에서는 ^990000장비가 파괴되거나 이번 슬롯의 인챈트가 실패할 수 있습니다.^000000 계속하시겠습니까?";
 			next;
-			if (select( "나중에 다시 올게요.", "Continue." ) == 1) {
-				mes "[매사추세츠주 찰스턴]";
-				mes "괜찮아요. 마음이 바뀌면 다시 오세요.";
+			if (select( "나중에 다시 오기", "계속 진행" ) == 1) {
+				mes "[양산형 찰스턴]";
+				mes "마음이 바뀌면 다시 찾아와 주세요.";
 				close3;
 			}
 		}
@@ -270,8 +187,8 @@ lasa_in01,188,54,5	script	Mass Charleston#2	4_F_CHARLESTON01,{
 			.@slot = 1;
 		else {
 			cutin "dalle02.bmp",2;
-			mes "[매사추세츠주 찰스턴]";
-			mes "이 장비는 최고 수준으로 업그레이드되었습니다. 다른 장비를 가져오시기 바랍니다.";
+			mes "[양산형 찰스턴]";
+			mes "이 장비는 더 이상 인챈트할 수 없습니다. 다른 장비를 준비해 주세요.";
 			close3;
 		}
 		switch(.@en_type) {
@@ -289,7 +206,7 @@ lasa_in01,188,54,5	script	Mass Charleston#2	4_F_CHARLESTON01,{
 				.@en_brk2 = 300;
 			}
 			else {
-				mes "[매사추세츠주 찰스턴]";
+				mes "[양산형 찰스턴]";
 				mes "알 수 없는 오류가 발생했습니다.";
 				close3;
 			}
@@ -345,7 +262,7 @@ lasa_in01,188,54,5	script	Mass Charleston#2	4_F_CHARLESTON01,{
 				.@en_brk2 = 310;
 			}
 			else {
-				mes "[매사추세츠주 찰스턴]";
+				mes "[양산형 찰스턴]";
 				mes "알 수 없는 오류가 발생했습니다.";
 				close3;
 			}
@@ -401,7 +318,7 @@ lasa_in01,188,54,5	script	Mass Charleston#2	4_F_CHARLESTON01,{
 				.@en_brk2 = 310;
 			}
 			else {
-				mes "[매사추세츠주 찰스턴]";
+				mes "[양산형 찰스턴]";
 				mes "알 수 없는 오류가 발생했습니다.";
 				close3;
 			}
@@ -455,7 +372,7 @@ lasa_in01,188,54,5	script	Mass Charleston#2	4_F_CHARLESTON01,{
 				.@en_brk2 = 310;
 			}
 			else {
-				mes "[매사추세츠주 찰스턴]";
+				mes "[양산형 찰스턴]";
 				mes "알 수 없는 오류가 발생했습니다.";
 				close3;
 			}
@@ -518,7 +435,7 @@ lasa_in01,188,54,5	script	Mass Charleston#2	4_F_CHARLESTON01,{
 				.@en_brk2 = 310;
 			}
 			else {
-				mes "[매사추세츠주 찰스턴]";
+				mes "[양산형 찰스턴]";
 				mes "알 수 없는 오류가 발생했습니다.";
 				close3;
 			}
@@ -584,7 +501,7 @@ lasa_in01,188,54,5	script	Mass Charleston#2	4_F_CHARLESTON01,{
 				.@en_brk2 = 310;
 			}
 			else {
-				mes "[매사추세츠주 찰스턴]";
+				mes "[양산형 찰스턴]";
 				mes "알 수 없는 오류가 발생했습니다.";
 				close3;
 			}
@@ -638,7 +555,7 @@ lasa_in01,188,54,5	script	Mass Charleston#2	4_F_CHARLESTON01,{
 				.@en_brk2 = 310;
 			}
 			else {
-				mes "[매사추세츠주 찰스턴]";
+				mes "[양산형 찰스턴]";
 				mes "알 수 없는 오류가 발생했습니다.";
 				close3;
 			}
@@ -698,7 +615,7 @@ lasa_in01,188,54,5	script	Mass Charleston#2	4_F_CHARLESTON01,{
 				.@en_brk2 = 111;
 			}
 			else {
-				mes "[매사추세츠주 찰스턴]";
+				mes "[양산형 찰스턴]";
 				mes "알 수 없는 오류가 발생했습니다.";
 				close3;
 			}
@@ -718,13 +635,13 @@ lasa_in01,188,54,5	script	Mass Charleston#2	4_F_CHARLESTON01,{
 			else .@en_name = 0;
 			break;
 		default:
-			mes "[매사추세츠주 찰스턴]";
+			mes "[양산형 찰스턴]";
 			mes "알 수 없는 오류가 발생했습니다.";
 			close3;
 		}
 		if (Zeny < 100000 || countitem(6752) < 1) {
-			mes "[매사추세츠주 찰스턴]";
-			mes "상품 업그레이드에 필요한 것들이 부족한 것 같습니다!";
+			mes "[양산형 찰스턴]";
+			mes "인챈트에 필요한 재료 또는 제니가 부족합니다.";
 			close3;
 		}
 
@@ -732,7 +649,7 @@ lasa_in01,188,54,5	script	Mass Charleston#2	4_F_CHARLESTON01,{
 		if (callfunc("F_IsEquipIDHack", .@part, .@item_id) ||
 				callfunc("F_IsEquipCardHack", .@part, .@card_saved[0], .@card_saved[1], .@card_saved[2], .@card_saved[3]) ||
 				callfunc("F_IsEquipRefineHack", .@part, .@refine)) {
-			mes "[매사추세츠주 찰스턴]";
+			mes "[양산형 찰스턴]";
 			mes "알 수 없는 오류가 발생했습니다.";
 			close3;
 		}
@@ -746,21 +663,21 @@ lasa_in01,188,54,5	script	Mass Charleston#2	4_F_CHARLESTON01,{
 		case 0:
 			cutin "dalle02.bmp",2;
 			specialeffect2 EF_SHIELDCHARGE;
-			mes "[매사추세츠주 찰스턴]";
-			mes "힘의 균형이 맞지 않아 기존에 부여된 능력이 파괴되었습니다. 안타깝지만 다음번에 다시 시도해 주시기 바랍니다.";// unknown text
+			mes "[양산형 찰스턴]";
+			mes "인챈트에 실패했습니다. 이번 슬롯에는 능력이 부여되지 않았습니다. 다음에 다시 시도해 주세요.";// unknown text
 			getitem2 .@item_id,1,1,.@refine,0, .@card[0], .@card[1], .@card[2], .@card[3];
 			close3;
 		case 9:
 			cutin "dalle04.bmp",2;
 			specialeffect2 EF_SUI_EXPLOSION;
-			mes "[매사추세츠주 찰스턴]";
-			mes "이것!";
-			mes "죄송하지만 장비가 파손되었습니다.";// unknown text
+			mes "[양산형 찰스턴]";
+			mes "이런!";
+			mes "죄송하지만 인챈트 도중 장비가 파괴되었습니다.";// unknown text
 			close3;
 		default:
 			specialeffect2 EF_REPAIRWEAPON;
-			mes "[매사추세츠주 찰스턴]";
-			mes "^990000소켓" + .@slot + "^000000은 업그레이드입니다.";
+			mes "[양산형 찰스턴]";
+			mes "^990000슬롯 " + .@slot + "^000000에 인챈트가 부여되었습니다.";
 			getitem2 .@item_id,1,1,.@refine,0, .@card[0], .@card[1], .@card[2], .@card[3];
 			close3;
 		}
@@ -771,632 +688,521 @@ lasa_in01,188,54,5	script	Mass Charleston#2	4_F_CHARLESTON01,{
 		if (getiteminfo(.@card[2], ITEMINFO_SUBTYPE) == CARD_ENCHANT) .@card[2] = 0;
 		if (getiteminfo(.@card[3], ITEMINFO_SUBTYPE) == CARD_ENCHANT) .@card[3] = 0;
 		specialeffect2 EF_REPAIRWEAPON;
-		mes "[매사추세츠주 찰스턴]";
-		mes "제품의 기능을 초기화합니다.";
+		mes "[양산형 찰스턴]";
+		mes "장비에 부여된 인챈트를 초기화했습니다.";
 		delitem 6752,1;	// Charleston_Parts
 		Zeny -= 100000;
 		delequip .@part;
 		getitem2 .@item_id,1,1,.@refine,0, .@card[0], .@card[1], .@card[2], .@card[3];
 		close3;
-	dfault:
-		mes "[매사추세츠주 찰스턴]";
+	default:
+		mes "[양산형 찰스턴]";
 		mes "알 수 없는 오류가 발생했습니다.";
 		close3;
 	}
 	end;
 	
-	
-Oninit:
-	waitingroom "찰스턴 장비 인챈트",0;
+
+OnInit:
+	waitingroom "찰스턴 인챈트",0;
 	end;
 }
 
-verus04,63,112,4	script	Mass Charleston#3	4_F_CHARLESTON01,{
-	if (!checkweight(1201,1) || (MaxWeight - Weight) < 1000) {
-		mes "소지품을 너무 많이 가져가셨습니다. 소지품을 줄이고 나중에 다시 오세요.";
-		close;
-	}
-	cutin "dalle03.bmp",2;
-	mes "[매사추세츠주 찰스턴]";
-	mes "어, 손님이 있나? 영업사원 모드 발동...";
+//============================================================
+// 찰스턴 장비 인챈트 목록 확인
+// 실제 인챈트 추첨 코드에 포함된 성공 결과만 표시합니다.
+// 실패(0) 및 장비 파괴(9)는 목록에서 제외합니다.
+//============================================================
+function	script	F_ShowCharlestonEnchantList	{
+	mes "[양산형 찰스턴]";
+	mes "찰스턴 장비에 부여될 수 있는 인챈트 목록입니다.";
+	mes "^FF0000+9 이상 장비는 기본 계열과 고급 계열 중 하나를 선택할 수 있습니다.^000000";
+	mes "인챈트 단계에 따라 실패하거나 장비가 파괴될 수 있습니다.";
 	next;
-	cutin "dalle01.bmp",2;
-	mes "[매사추세츠주 찰스턴]";
-	mes "찰스턴 팩토리의 베스트셀러 제품인 ^FF0000업그레이드 부품 플레이트^000000과 ^FF0000보충 부품 스트링^000000이 지금 할인 판매 중입니다!";
-	next;
-	mes "[매사추세츠주 찰스턴]";
-	mes "단돈 ^FF00003,999,999^000000 제니! 최고의 성능을 자랑하는 액션 장비를 손에 넣으세요!";
-	next;
-	mes "[매사추세츠주 찰스턴]";
-	mes "또한 ^FF0000Pilebuncker^000000 ^FF0000Upgrade^000000 서비스도 이용 가능합니다!";
-	next;
-	switch( select( "Talk.", "부품 교체 업그레이드.", "보조 장치를 교환하세요.", "파일벙커를 업그레이드하세요." ) ) {
-	case 1:
-		if (isbegin_quest(13186) == 0) {
-			mes "[매사추세츠주 찰스턴]";
-			mes "찰스턴 공장은 문을 닫았지만, 그 기술과 제품은 여전히 우리 곁에 남아 있습니다.";
-			next;
-			mes "[매사추세츠주 찰스턴]";
-			mes "아, 소식 못 들으셨어요? 앗, 죄송해요. 제가 방금 한 말은 잊어주세요.";
-			close3;
-		}
-		cutin "dalle03.bmp",2;
-		mes "[매사추세츠주 찰스턴]";
-		mes "저는 대량 생산된 찰스턴 동상이에요. 일련번호조차 없었죠. 저를 복제한 동상이 몇 개나 만들어졌는지 누가 알겠어요? 백 개일 수도 있고, 천 개일 수도 있죠.";
-		next;
-		mes "[매사추세츠주 찰스턴]";
-		mes "오리지널 찰스턴 동상은 저기에 있지만...";
-		next;
-		mes "[매사추세츠주 찰스턴]";
-		mes "찰스턴 1호와 2호는 공장을 탈출할 때쯤 심하게 손상된 상태였습니다. 그날 벌어진 전투는 정말 엄청났습니다.";
-		next;
-		mes "[매사추세츠주 찰스턴]";
-		mes "찰스턴 1호와 2호가 닥터 베의 수많은 괴물들을 파괴했던 일이 마치 어제 일처럼 생생하게 기억납니다.";
-		next;
-		mes "[매사추세츠주 찰스턴]";
-		mes "그들은 또한 베 박사가 자신의 지시에 따라 개조한 대량 생산 버전의 찰스턴 댄스도 파괴했습니다.";
-		next;
-		mes "[매사추세츠주 찰스턴]";
-		mes "물론 우리처럼 제품 업그레이드 작업을 하는 사람들은 운 좋게도 베 박사의 손아귀에서 벗어나 찰스턴 1호를 만나 우리 모두를 구해줬습니다.";
-		next;
-		mes "[매사추세츠주 찰스턴]";
-		mes "개조된 찰스턴 3호를 타고 탈출한 후, 우리는 이곳에 왔습니다.";
-		next;
-		mes "[매사추세츠주 찰스턴]";
-		mes "참고로 말씀드리자면, 저희가 도착했을 때 이곳은 이미 엉망진창이었어요. 저희는 이곳의 파괴와는 아무런 관련이 없습니다. 어쩌면...";
-		next;
-		mes "[매사추세츠주 찰스턴]";
-		mes "이야기가 옆길로 샜네요. 죄송합니다. 어쨌든, 문제는 이렇습니다.";
-		next;
-		mes "[매사추세츠주 찰스턴]";
-		mes "찰스턴 1호와 2호는 심하게 파손되어 제 기능을 하지 못하게 되었습니다. 서로를 수리하려고 시도했지만 소용이 없었습니다.";
-		next;
-		mes "[매사추세츠주 찰스턴]";
-		mes "그들은 자신들이 복구 불가능할 정도로 손상되었다는 것을 깨달았습니다. 그들은 최대한 많은 부품을 수습하여 하나의 운영체제를 탑재한 본체를 조립했습니다.";
-		next;
-		mes "[매사추세츠주 찰스턴]";
-		mes "저게 새로 지은 본체예요. 그들은 공장 파괴에 대해 자책했고, 그걸 고치고 싶어 했죠. 그런데 데이터가 손상됐거나 중요한 메모리가 빠져 있는 것 같아요.";
-		next;
-		mes "[매사추세츠주 찰스턴]";
-		mes "데이터의 특성은 찰스턴 2의 특징을 더 많이 보여주지만, 운영체제의 접근 방식은 찰스턴 1과 더 유사합니다. 찰스턴 1은 언제나 더 감성적인 면이 강했습니다.";
-		next;
-		mes "[매사추세츠주 찰스턴]";
-		mes "새로운 찰스턴이 찰스턴 1인지 2인지 모르겠어요. 무엇이 가장 아쉽고 무엇이 가장 기억에 남는지도 모르겠네요.";
-		next;
-		mes "[매사추세츠주 찰스턴]";
-		mes "그녀는 데이터 손실과 친구들을 실망시킨 것에 대해 계속해서 자신을 탓합니다. 우리가 그녀를 위로하려고 할 때마다,";
-		next;
-		mes "[매사추세츠주 찰스턴]";
-		mes "그녀는 기억하거나 알 만큼 마음도 머리도 없다고 말하곤 했어요. 그녀가 정말 알고 있을지 궁금하네요.";
-		next;
-		mes "[매사추세츠주 찰스턴]";
-		mes "인간의 기억은 시간이 흐르면서 희미해지고 왜곡되거나 미화된다는 것이다.";
-		next;
-		mes "[매사추세츠주 찰스턴]";
-		mes "그리고 인간은 실수와 실패로부터 배운다는 거죠. 공장에서 ^FF0000book^000000이라고 불리는 종이 기록 장치에서 읽은 내용이에요.";
-		next;
-		mes "[매사추세츠주 찰스턴]";
-		mes "공장 남쪽 날개 부분에 작은 서재가 하나 있었는데, 나중에 로봇 개발실로 바뀌었습니다.";
-		next;
-		mes "[매사추세츠주 찰스턴]";
-		mes "어쩌면 찰스턴은 우리보다 인간에 더 가까운 걸지도 몰라. 그녀가 그렇게 슬퍼하지 않아도 되기를 바랄 뿐이야.";
-		next;
-		mes "[매사추세츠주 찰스턴]";
-		mes "운영체제가 너무 답답해서 횡설수설했네요. 메모리 조각 모음이 필요한가 봐요.";
-		close3;
-	case 2:
-		mes "[매사추세츠주 찰스턴]";
-		mes "업그레이드 부품 플레이트";
-		mes "분류: 갑옷, 파괴 불가능.";
-		mes "소형 및 중형 몬스터로부터 받는 피해가 10% 감소합니다.";
-		mes "+7까지 강화 시 대형 몬스터에게 받는 피해가 10% 감소합니다.";
-		mes "+9까지 강화 시 소형 및 중형 몬스터에게 받는 피해가 추가로 5% 감소합니다.";
-		next;
-		mes "[매사추세츠주 찰스턴]";
-		mes "무게: 300";
-		mes "필수 레벨: 100";
-		callsub S_Buy, 15111;	// Upgrade_Part_Plate
-	case 3:
-		mes "[매사추세츠주 찰스턴]";
-		mes "보충 파트 Str";
-		mes "공격력 5% 증가!";
-		mes "업그레이드 레벨 4마다 공격력이 1%씩 추가됩니다.";
-		mes "최상의 결과를 얻으려면 활력/민첩성/손재주 향상 보조 기기와 함께 사용하십시오.";
-		next;
-		mes "[매사추세츠주 찰스턴]";
-		mes "무게: 200";
-		mes "필수 레벨: 100";
-		callsub S_Buy, 15110;	// Supplement_Part_Str
-	case 4:
-		mes "[매사추세츠주 찰스턴]";
-		mes "찰스턴 공장의 마지막 걸작! 이처럼 훌륭한 장비는 어디에서도 찾아볼 수 없을 겁니다.";
-		next;
-		mes "[매사추세츠주 찰스턴]";
-		mes "Pilebuncker를 업그레이드하려면,";
-		mes "^FF00001 파일벙커^000000,";
-		mes "^FF0000300 찌그러진 철판^000000,";
-		mes "그리고 ^FF000015 Broken Engines^000000이 필요합니다.";
-		next;
-		switch( select( "파일벙커 S", "파일벙커 P", "파일벙커 T" ) ) {
+
+	while (true) {
+		switch(select(
+			"공격 강화 (+9 플레이트)",
+			"방어 강화 (+9 보조 파츠 STR)",
+			"가속 강화 (플레이트/보조 파츠 STR)",
+			"걸칠것 강화",
+			"고급 걸칠것 강화 (+9)",
+			"신발 강화",
+			"고급 신발 강화 (+9)",
+			"액세서리 강화",
+			"닫기"
+			)) {
+
 		case 1:
-			mes "[매사추세츠주 찰스턴]";
-			mes "파일벙커 S";
-			mes "분류: 둔기";
-			mes "공격력: 400";
-			mes "공격 속도 보너스는 업그레이드 레벨 2마다 추가됩니다.";
-			next;
-			mes "[매사추세츠주 찰스턴]";
-			mes "무게: 300";
-			mes "무기 레벨: 4";
-			mes "필수 레벨: 130";
-			mes "정비공 전용. 카드 소켓 1개 포함.";
-			.@item_id = 16030;	// Pilebuncker_S
+			setdialogsize(220,300);
+			callfunc "F_ShowEnchantGroup","STR",4700,4701,4702;
+			callfunc "F_ShowEnchantGroup","DEX",4720,4721,4722;
+			callfunc "F_ShowEnchantGroup","명궁",4832,4833,4834;
+			callfunc "F_ShowEnchantGroup","투지",4811,4810,4809;
 			break;
+
 		case 2:
-			mes "[매사추세츠주 찰스턴]";
-			mes "파일벙커 P";
-			mes "분류: 둔기";
-			mes "공격력: 450";
-			mes "업그레이드 레벨마다 공격력 +5.";
-			next;
-			mes "[매사추세츠주 찰스턴]";
-			mes "무게: 400";
-			mes "무기 레벨: 4";
-			mes "필수 레벨: 130";
-			mes "정비공만 가능.";
-			.@item_id = 16031;	// Pilebuncker_P
+			setdialogsize(220,300);
+			callfunc "F_ShowEnchantGroup","VIT",4740,4741,4742;
+			callfunc "F_ShowEnchantGroup","DEF",4791,4792,4793;
+			callfunc "F_ShowEnchantGroup","무속성 내성",4933,4934,4935;
+			callfunc "F_ShowEnchantGroup","최대 HP",4861,4862,4867;
 			break;
+
 		case 3:
-			mes "[매사추세츠주 찰스턴]";
-			mes "파일벙커 T";
-			mes "분류: 둔기";
-			mes "공격력: 400";
-			mes "SP 비용이 업그레이드 레벨마다 1%씩 감소합니다.";
-			next;
-			mes "[매사추세츠주 찰스턴]";
-			mes "무게: 350";
-			mes "무기 레벨: 4";
-			mes "필수 레벨: 130";
-			mes "정비공 전용. 카드 소켓 1개 포함.";
-			.@item_id = 16032;	// Pilebuncker_T
+			setdialogsize(220,300);
+			callfunc "F_ShowEnchantGroup","회피",4860,4762,4763;
+			callfunc "F_ShowEnchantGroup","LUK",4750,4751,4752;
+			callfunc "F_ShowEnchantGroup","공격 후 딜레이",4869,4872;
+			callfunc "F_ShowEnchantGroup","AGI",4730,4731,4732;
 			break;
-		}
-		break;
-	}
-	next;
-	mes "[매사추세츠주 찰스턴]";
-	mes "정말로 ^FF0000을 업그레이드하시겠습니까?" + getitemname(.@item_id) + "^000000?";
-	next;
-	if (select( "다시 생각해 보시길 권합니다.", "Buy." ) == 1) {
-		mes "[매사추세츠주 찰스턴]";
-		mes "괜찮은 제품이지만, 신중하게 결정해야 합니다.";
-		close;
-	}
-	if (countitem(6751) > 299 && countitem(6750) > 14 && countitem(1549) > 0) {
-		mes "[매사추세츠주 찰스턴]";
-		mes "후회하지 않으실 거예요! 찰스턴 공장이거든요!";
-		delitem 6751,300;	// Distorted_Iron_Plate
-		delitem 6750,15;	// Wrong_Engine
-		delitem 1549,1;		// Pilebuncker
-		getitem .@item_id,1;
-		close3;
-	}
-	mes "[매사추세츠주 찰스턴]";
-	mes "업그레이드에 필요한 재료가 부족합니다.";
-	close3;
 
-S_Buy:
-	.@item_id = getarg(0);
-	mes "^FF0000정비사 전용^000000";
-	mes "^FF0000가격: 3,999,999제니^000000";
-	next;
-	mes "[매사추세츠주 찰스턴]";
-	mes "^FF0000을 정말로 구매하고 싶으신가요?" + getitemname(.@item_id) + "^000000?";
-	next;
-	if (select( "다시 생각해 보시길 권합니다.", "Buy." ) == 1) {
-		mes "[매사추세츠주 찰스턴]";
-		mes "괜찮은 제품이지만, 신중하게 결정해야 합니다.";
-		close3;
+		case 4:
+			setdialogsize(220,320);
+			callfunc "F_ShowEnchantGroup","STR",4700,4701;
+			callfunc "F_ShowEnchantGroup","DEX",4720,4721;
+			callfunc "F_ShowEnchantGroup","AGI",4730,4731;
+			callfunc "F_ShowEnchantGroup","VIT",4740,4741;
+			callfunc "F_ShowEnchantGroup","LUK",4750,4751;
+			callfunc "F_ShowEnchantGroup","INT",4710,4711;
+			callfunc "F_ShowEnchantGroup","명궁",4832;
+			break;
+
+		case 5:
+			setdialogsize(220,320);
+			callfunc "F_ShowEnchantGroup","STR",4701,4702;
+			callfunc "F_ShowEnchantGroup","DEX",4721,4722;
+			callfunc "F_ShowEnchantGroup","AGI",4731,4732;
+			callfunc "F_ShowEnchantGroup","VIT",4741,4742;
+			callfunc "F_ShowEnchantGroup","LUK",4751,4752;
+			callfunc "F_ShowEnchantGroup","INT",4711,4712;
+			callfunc "F_ShowEnchantGroup","명궁",4832,4833,4834;
+			break;
+
+		case 6:
+			setdialogsize(220,300);
+			callfunc "F_ShowEnchantGroup","STR",4700,4701;
+			callfunc "F_ShowEnchantGroup","DEX",4720,4721;
+			callfunc "F_ShowEnchantGroup","AGI",4730,4731;
+			callfunc "F_ShowEnchantGroup","VIT",4740,4741;
+			callfunc "F_ShowEnchantGroup","공격 후 딜레이",4869;
+			callfunc "F_ShowEnchantGroup","마력",4815;
+			break;
+
+		case 7:
+			setdialogsize(220,300);
+			callfunc "F_ShowEnchantGroup","STR",4701,4702;
+			callfunc "F_ShowEnchantGroup","DEX",4721,4722;
+			callfunc "F_ShowEnchantGroup","AGI",4731,4732;
+			callfunc "F_ShowEnchantGroup","VIT",4741,4742;
+			callfunc "F_ShowEnchantGroup","공격 후 딜레이",4869,4872;
+			callfunc "F_ShowEnchantGroup","마력",4815,4814;
+			break;
+
+		case 8:
+			setdialogsize(220,320);
+			callfunc "F_ShowEnchantGroup","STR",4700,4701;
+			callfunc "F_ShowEnchantGroup","DEX",4720,4721;
+			callfunc "F_ShowEnchantGroup","AGI",4730,4731;
+			callfunc "F_ShowEnchantGroup","VIT",4740,4741;
+			callfunc "F_ShowEnchantGroup","INT",4710,4711;
+			callfunc "F_ShowEnchantGroup","공격 후 딜레이",4869;
+			callfunc "F_ShowEnchantGroup","마력",4815;
+			break;
+
+		case 9:
+			cutin "",255;
+			close;
+		}
 	}
-	//if (Zeny >= 3999998) {// typo?
-	if (Zeny >= 3999999) {
-		mes "[매사추세츠주 찰스턴]";
-		mes "후회하지 않으실 거예요! 찰스턴 공장이거든요!";
-		Zeny -= 3999999;
-		getitem .@item_id,1;
-		close3;
-	}
-	mes "[매사추세츠주 찰스턴]";
-	mes "좋은 가격의 상품을 찾는 것은 드문 일이 아닙니다. 예산을 잘 확인하시기 바랍니다!";
-	close3;
 }
 
-lasa_in01,188,52,4	script	PLUTO_09#pa0829	4_SCR_AT_ROBOTS,{
-	disable_items;
-	if (checkweight(1201,1) == 0 || (MaxWeight - Weight) < 10000) {
-		mes "소지품을 너무 많이 가져가셨습니다. 소지품을 줄이고 나중에 다시 오세요.";
-		close;
-	}
-	if (isbegin_quest(12368) < 2) {
-		mes "LCD 화면은 여전히 어둡지만 더 이상 작동하지 않는 것 같습니다.";
-		close;
-	}
-	mes "이상한 공룡 무늬가 나타나면 소개 화면으로 이동하세요.";
-	next;
-	mes "[플루토_09]";
-	mes "" + strcharinfo(0) + ",";
-	mes "안녕하세요. 어떻게 도와드릴까요?";
-	next;
-	switch( select( "Note", "폐연료와 커다란 고철을 장비와 교환하세요.", "인챈트먼트 제작을 위한 디자인 도면" ) ) {
-	case 1:
-		mes "^0000ff공룡 전면 화면이 나타나고 귀여운 소녀 목소리에 대한 설명이 나옵니다.^000000";
-		next;
-		mes "[플루토_09]";
-		mes "새로운 PLUTO_09가 탄생한 지 100년이 되는 해입니다.";
-		next;
-		mes "[플루토_09]";
-		mes "커다란 고철과 폐연료를 가져오시면 장비를 유용하게 만들 수 있습니다!";
-		next;
-		mes "[플루토_09]";
-		mes "마법 부여 장비를 만들고 싶으세요? 탱크는 직접 가져오세요! 제가 디자인을 봐서 마법을 부여해 드릴게요. 행운을 빌어요.";
-		next;
-		mes "[플루토_09]";
-		mes "이것은 공룡 동화에 나오는 티라노사우루스 렉스인데, 정말 아름답네요... (지루한 공룡 이야기가 계속 나오네요)";
-		next;
-		mes "이 화면 소개에서는 로봇 제작자의 심리 상태가 극도로 불안정하다고 가정합니다.";
-		close;
-	case 2:
-		setarray .@id[0],20773,15128; // Excelion_Wing, Excelion_Suit
-		mes "[플루토_09]";
-		mes "생산 설비에는 ^0000ff10개의 대형 금속 스크랩과 5개의 폐연료^000000이 필요합니다.";
-		next;
-		switch( select( "Quit.", "Making the " + getitemname(.@id[0]), "Making the " + getitemname(.@id[1]) ) ) {
-		case 1:
-			mes "^0000ff공룡들은 잠시 눈을 감고 있다가 여기 있는 그림을 응시했습니다.^000000";
-			close;
-		case 2:
-			.@item_id = .@id[0];
-			break;
-		case 3:
-			.@item_id = .@id[1];
-			break;
-		}
-		if (countitem(6961) < 10 || countitem(6962) < 5) {
-			mes "[플루토_09]";
-			mes " 저는 이미 생산 설비 필요성에 대해 이야기했습니다." + getitemname(6961) + " 그리고 5" + getitemname(6962) + "^000000, 당신은 충분하지 않습니다.";
-			close;
-		}
-		specialeffect EF_SPELLBREAKER;
-		delitem 6962,5;// OldTank
-		delitem 6961,10;// LargeScrap
-		getitem .@item_id,1;
-		mes "[플루토_09]";
-		mes "장비가 준비됐습니다. 잘 맞는지 확인해 봅시다.";
-		close;
-	case 3:
-		while(1) {
-			if (countitem(6962) < 5)
-				.@string$ = "^aaaaaa설계 도면을 제작하기에 연료가 부족합니다.^000000";
-			else
-				.@string$ = "생산 디자인 (성공률 30%^000000)";
-			mes "[플루토_09]";
-			mes " 5를 주시면" + getitemname(6962) + "저는 디자인 도면 제작을 할 수 있습니다!";
-			mes "----------";
-			mes "화면에서 작은 공룡이 뛰어다니고 있어요.";
-			next;
-			if (select( "Quit.", .@string$ ) == 1) {
-				mes "공룡들이 게걸스럽게 먹는 장면을 보여준 후 이야기는 끝납니다.";
-				close;
-			}
-			.@fail = false;
-			.@reac_rnd = rand(1,10000);
-			if (.@reac_rnd < 26)		.@en_name = 6977;	// Reactor_A_STR_
-			else if (.@reac_rnd < 51)	.@en_name = 6978;	// Reactor_A_INT_
-			else if (.@reac_rnd < 251)	.@en_name = 6979;	// Reactor_A_DEF_
-			else if (.@reac_rnd < 326)	.@en_name = 6981;	// Reactor_A_ATK_
-			else if (.@reac_rnd < 401)	.@en_name = 6982;	// Reactor_A_MATK_
-			else if (.@reac_rnd < 601)	.@en_name = 6980;	// Reactor_A_AVOI_
-			else if (.@reac_rnd < 801)	.@en_name = 6983;	// Reactor_A_MHP_
-			else if (.@reac_rnd < 1001)	.@en_name = 6984;	// Reactor_A_MSP_
-			else if (.@reac_rnd < 1151)	.@en_name = 6986;	// Reactor_A_ASPD_
-			else if (.@reac_rnd < 1401)	.@en_name = 6975;	// Reactor_Cure_201_
-			else if (.@reac_rnd < 1551)	.@en_name = 6976;	// Reactor_Cure_202_
-			else if (.@reac_rnd < 1751)	.@en_name = 6973;	// Reactor_Cure_101_
-			else if (.@reac_rnd < 1851)	.@en_name = 6974;	// Reactor_Cure_102_
-			else if (.@reac_rnd < 1901)	.@en_name = 6985;	// Reactor_A_FROZ_
-			else if (.@reac_rnd < 2101)	.@en_name = 6970;	// Reactor_T_WATER_
-			else if (.@reac_rnd < 2301)	.@en_name = 6971;	// Reactor_T_GROUND_
-			else if (.@reac_rnd < 2501)	.@en_name = 6969;	// Reactor_T_FIRE_
-			else if (.@reac_rnd < 2701)	.@en_name = 6972;	// Reactor_T_WIND_
-			else if (.@reac_rnd < 2776)	.@en_name = 6966;	// Reactor_P_WATER_
-			else if (.@reac_rnd < 2851)	.@en_name = 6967;	// Reactor_P_GROUND_
-			else if (.@reac_rnd < 2926)	.@en_name = 6965;	// Reactor_P_FIRE_
-			else if (.@reac_rnd < 3001)	.@en_name = 6968;	// Reactor_P_WIND_
-			else {
-				.@fail = true;
-				.@reac_rnd2 = rand(1,13000);
-				if (.@reac_rnd2 < 2)
-					.@en_name = 969;	// Gold
-				else if (.@reac_rnd2 < 1002)
-					.@en_name = 999;	// Steel
-				else if (.@reac_rnd2 < 3002)
-					.@en_name = 998;	// Iron
-				else if (.@reac_rnd2 < 8002)
-					.@en_name = 1002;	// Iron_Ore
-				else
-					.@en_name = 7054;	// Brigan
-			}
-			if (countitem(6962) < 5)
-				mes "이 그림은 공룡이 빈 그릇을 말없이 바라보는 모습을 보여줍니다. 재료가 부족할 때 나타나는 오류 메시지일 수 있습니다!";
-			else {
-				specialeffect EF_SPELLBREAKER;
-				delitem 6962,5;// OldTank
-				getitem .@en_name,1;
-				mes "[플루토_09]";
-				if (.@fail)
-					mes "정말 안타깝네요, 디자인이 실패했어요.";
-				else
-					mes "좋아요, 디자인이 완성됐네요.";
-			}
-			next;
-		}
-		end;
-	default:
-		mes "공룡이 명령을 이해하지 못하는 듯 울부짖는 화면이 나타납니다.";
-		close;
-	}
-	end;
-}
-
-lasa_in01,188,50,4	script	MARS_01#pa0829	4_SCR_MT_ROBOTS,{
-	disable_items;
-	if (checkweight(1201,1) == 0 || (MaxWeight - Weight) < 10000) {
-		mes "소지품을 너무 많이 가져가셨습니다. 소지품을 줄이고 나중에 다시 오세요.";
-		close;
-	}
-	switch( isbegin_quest(12368) ) {
-	case 0:
-		mes "LCD 화면이 흐릿해지거나, 놀라거나 기뻐서 심하게 떨리는 현상이 나타날 수 있으며, 이는 전원 부족으로 인해 프레젠테이션을 완료할 수 없기 때문일 수 있습니다.";
-		next;
-		if (select( "그냥 무시하세요.", "모든 버튼을 누르세요." ) == 1) {
-			mes "그것은 아마도 어디에서나 흔히 볼 수 있고 별다른 관리가 필요 없는, 폐기 직전의 로봇일지도 모릅니다.";
-			close;
-		}
-		mes "[?????]";
-		mes "안녕하세요! 저는 탐사 로봇 MARS_01입니다. 현재 전력 절약을 위해 절전 모드에 들어갔습니다. 관련 기능은 다음과 같이 설정되어 있습니다.";
-		next;
-		if (select( "기계를 중단하세요", "연료 공급" ) == 1) {
-			mes "로봇은 희미한 소리가 들리자 다시 동면 모드로 들어갑니다.";
-			close;
-		}
-		mes "[MARS_01]";
-		mes "우리는 초강력 로봇입니다. 오래된 오일 1만 있으면 나와 동료 플루토는 90% 이상의 동력을 유지할 수 있습니다.";
-		next;
-		mes "[MARS_01]";
-		mes "만약 오래된 연료를 발견하셨다면, 화면 하단의 연료 주입구에 연료를 넣어주세요. 그러면 절전 모드가 해제될 수 있습니다.";
-		setquest 12368;	// Operate the old robot
-		close;
-	case 1:
-		if (countitem(6962) < 1) {
-			mes "[MARS_01]";
-			mes " 1을 찾으면" + getitemname(6962) + "화면 하단의 연료 주입구에 연료를 넣어주시면 절전 모드를 해제할 수 있습니다.";
-			close;
-		}
-		mes "연료를 찾으러 갔을 때 전력이 다 떨어진 것 같아요. 연료를 넣어야 할까요?";
-		next;
-		if (select( "Quit.", "연료를 넣으세요" ) == 1) {
-			mes "오래된 로봇의 배터리가 방전되어 전혀 반응하지 않는 것일 수도 있습니다.";
-			close;
-		}
-		mes "연료를 넣으면 소음 차단막이 열립니다.";
-		npctalk "어머나, 어머나?! 움직인다!!!", "Grandpa picking up scrap iron";
-		next;
-		mes "[MARS_01]";
-		mes "점검 시스템을 가동하고 각 부품의 손상 여부를 확인하십시오.";
-		next;
-		mes "[MARS_01]";
-		mes "전력계 10%, 계기판 정상, 본체 골격 13%, 채굴 작업 잘 수행 중.";
-		next;
-		mes "[MARS_01]";
-		mes "Pluto_09는 채굴 보조 로봇에 에너지를 주입하기 시작했습니다.";
-		npctalk "에너지 반응이 확인되었습니다. 정상적으로 작동합니다.", "PLUTO_09#pa0829";
-		next;
-		mes "[MARS_01]";
-		mes "시작을 도와주셔서 감사합니다. 저를 시작하게 해주신 분을 관리자로 재설정하겠습니다.";
-		next;
-		select("이름을 입력하세요.");
-		mes "[MARS_01]";
-		mes "" + strcharinfo(0) + ",";
-		mes "안녕하세요! 연료가 완전히 충전되었습니다.";
-		delitem 6962,1;// OldTank
-		completequest 12368;
-		close;
-	case 2:
-		break;
-	}
-	mes "[MARS_01]";
-	mes "" + strcharinfo(0) + ",";
-	mes "안녕하세요! 무엇을 도와드릴까요?";
-	next;
-	switch( select( "Note", "Enhanced " + getitemname(20773), "Enhanced " + getitemname(15128) ) ) {	// Excelion_Wing, Excelion_Suit
-	case 1:
-		mes "곧 다시 안내가 이어집니다.";
-		next;
-		mes "[MARS_01]";
-		mes "새 주인을 기다리는 동안, 저희는 최신 버전으로 계속 업데이트하고 있습니다.";
-		next;
-		mes "[MARS_01]";
-		mes "만약 아악 세리 웡 추진 날개, 아악 세리 웡 재킷 장비, 그리고 강화 설계를 가져오신다면, 저는 그 설계에 따라 장비를 강화하겠습니다.";
-		next;
-		mes "[MARS_01]";
-		mes "표준 설계 도면에 따르면 장비는 작동 과정에서 손상되지 않지만, 최대 업그레이드 횟수는 장비 유형에 따라 달라집니다.";
-		next;
-		mes "[MARS_01]";
-		mes "다시 오신 것을 환영합니다~";
-		close;
-	case 2:
-		.@part = EQI_GARMENT;
-		break;
-	case 3:
-		.@part = EQI_ARMOR;
-		break;
-	}
-	// <item ID required>, <item enchant ID>, <max number of this enchant on armor>, <max number of this enchant on garment>, <enchant on first slot only>
-	setarray .@list[0],
-		6965, 4970, 1,0,3,	// Reactor_P_FIRE_		Reactor_P_FIRE
-		6966, 4971, 1,0,3,	// Reactor_P_WATER_		Reactor_P_WATER
-		6967, 4972, 1,0,3,	// Reactor_P_GROUND_	Reactor_P_GROUND
-		6968, 4973, 1,0,3,	// Reactor_P_WIND_		Reactor_P_WIND
-		6969, 4974, 0,3,0,	// Reactor_T_FIRE_		Reactor_T_FIRE
-		6970, 4975, 0,3,0,	// Reactor_T_WATER_		Reactor_T_WATER
-		6971, 4976, 0,3,0,	// Reactor_T_GROUND_	Reactor_T_GROUND
-		6972, 4977, 0,3,0,	// Reactor_T_WIND_		Reactor_T_WIND
-		6973, 4978, 3,3,0,	// Reactor_Cure_101_	Reactor_Cure_101
-		6974, 4979, 3,3,0,	// Reactor_Cure_102_	Reactor_Cure_102
-		6975, 4980, 3,3,0,	// Reactor_Cure_201_	Reactor_Cure_201
-		6976, 4981, 3,3,0,	// Reactor_Cure_202_	Reactor_Cure_202
-		6977, 4982, 1,0,0,	// Reactor_A_STR_		Reactor_A_STR
-		6978, 4983, 1,0,0,	// Reactor_A_INT_		Reactor_A_INT
-		6979, 4984, 3,3,0,	// Reactor_A_DEF_		Reactor_A_DEF
-		6980, 4985, 1,1,0,	// Reactor_A_AVOI_		Reactor_A_AVOI
-		6981, 4986, 3,3,0,	// Reactor_A_ATK_		Reactor_A_ATK
-		6982, 4987, 3,3,0,	// Reactor_A_MATK_		Reactor_A_MATK
-		6983, 4988, 3,3,0,	// Reactor_A_MHP_		Reactor_A_MHP
-		6984, 4989, 3,3,0,	// Reactor_A_MSP_		Reactor_A_MSP
-		6985, 4990, 1,0,0,	// Reactor_A_FROZ_		Reactor_A_FROZ
-		6986, 4991, 1,1,0;	// Reactor_A_ASPD_		Reactor_A_ASPD
-	.@size = getarraysize(.@list);
-
-	for ( .@i = 0; .@i < .@size; .@i += 5 ) {
-		if (countitem(.@list[.@i]) < 1)
-			.@menu$ += sprintf( "^aaaaaa%s (Missing)^000000:", getitemname(.@list[.@i]) );
-		else
-			.@menu$ += sprintf( "%s:", getitemname(.@list[.@i]) );
-	}
-	mes "[MARS_01]";
-	mes "" + strcharinfo(0) + ",";
-	mes "사용하고 싶은 마법을 선택하세요!";
-	next;
-	.@s = select("Quit.:" + .@menu$) - 2;
-	if (.@s < 0) {
-		mes "[MARS_01]";
-		mes "지금까지.";
-		close;
-	}
-	.@s *= 5;
-	.@item_req = .@list[.@s];
-	.@item_enchant_id = .@list[.@s+1];
-	.@first_slot_only = .@list[.@s+4];
-
-	.@equip_id = getequipid(.@part);
-	.@equip_refine = getequiprefinerycnt(.@part);
-	setarray .@card[0], getequipcardid(.@part,0), getequipcardid(.@part,1), getequipcardid(.@part,2), getequipcardid(.@part,3);
-
-	if (countitem(.@item_req) < 1) {
-		mes "[MARS_01]";
-		mes "지금까지.";
-		close;
-	}
-	if (.@part == EQI_ARMOR)
-		.@max_num_enchant = .@list[.@s+2];
-	else if (.@part == EQI_GARMENT)
-		.@max_num_enchant = .@list[.@s+3];
-	else {
-		mes "[MARS_01]";
-		mes "관리자에게 문의해 주세요.";
-		close;
-	}
-
-	// anti-hack
-	if (callfunc("F_IsEquipIDHack", .@part, .@equip_id) || callfunc("F_IsEquipCardHack", .@part, .@card[0], .@card[1], .@card[2], .@card[3]) || callfunc("F_IsEquipRefineHack", .@part, .@equip_refine)) {
-		mes "[MARS_01]";
-		mes "장비를 벗으셨나요?";
-		close;
-	}
-
-	if (.@card[0] > 0 && .@item_enchant_id == .@card[0]) { .@slot_sum++; }
-	if (.@card[1] > 0 && .@item_enchant_id == .@card[1]) { .@slot_sum++; }
-	if (.@card[2] > 0 && .@item_enchant_id == .@card[2]) { .@slot_sum++; }
-	if (.@card[3] > 0 && .@item_enchant_id == .@card[3]) { .@slot_sum++; }
-
-	if (.@max_num_enchant < 1) {
-		mes "[MARS_01]";
-		mes "선택하신 디자인이 장비와 호환되지 않습니다.";
-		close;
-	}
-	if (.@first_slot_only > 0 && .@card[3] != 0) {
-		mes "[MARS_01]";
-		mes "이 디자인은 처음 사용 시 안정성을 강화하기 위한 것일 뿐이며, 장비의 성능에는 다른 요소가 있을 수 있으므로 다른 디자인을 사용하여 안정성을 강화하십시오!";
-		close;
-	}
-	if (.@slot_sum >= .@max_num_enchant) {
-		mes "[MARS_01]";
-		mes " 마법 부여의 최대 개수는 다음과 같습니다." + .@max_num_enchant + "해당 품목의 수량이 상한선에 도달했습니다.";
-		close;
-	}
-	if (.@card[1] != 0) {
-		mes "[MARS_01]";
-		mes "장비 수가 한도에 도달했습니다.";
-		close;
-	}
-
-	// anti-hack
-	if (callfunc("F_IsEquipIDHack", .@part, .@equip_id) || callfunc("F_IsEquipCardHack", .@part, .@card[0], .@card[1], .@card[2], .@card[3]) || callfunc("F_IsEquipRefineHack", .@part, .@equip_refine)) {
-		mes "[MARS_01]";
-		mes "장비가 철거될 경우 특히 주의해 주시기 바랍니다.";
-		close;
-	}
-
-	switch( .@equip_id ) {
-	case 20773:	// Excelion_Wing
-	case 15128:	// Excelion_Suit
-		break;
-	default:
-		mes "[MARS_01]";
-		mes "해당 제품에는 일련번호가 없으며, 제품 사양을 충족하지 못하므로 강화가 불가능합니다.";
-		close;
-	}
-	mes "[MARS_01]^0000ff";
-	mes "Choose " + getequipname(.@part) + " + " + getitemname(.@item_req) + ",";
-	mes "^000000------------------";
-	mes "선택하신 디자인은 장비 한도 ^0000ff까지 업그레이드할 수 있습니다." + .@max_num_enchant + " 지금까지와 동일한 디자인이 ^000000개 개선되었습니다 ^0000ff" + .@slot_sum + " 000000번, 계속하시겠습니까?";
-	next;
-	if (select( "생각해 볼게요...", "계속하세요." ) == 1) {
-		mes "[MARS_01]";
-		mes "다음에 제가 필요하시면 다시 오세요~";
-		close;
-	}
-
-	// anti-hack
-	if (callfunc("F_IsEquipIDHack", .@part, .@equip_id) || callfunc("F_IsEquipCardHack", .@part, .@card[0], .@card[1], .@card[2], .@card[3]) || callfunc("F_IsEquipRefineHack", .@part, .@equip_refine))
-		close;
-
-	if (.@card[3] == 0) {
-		.@enchant_count = 1;
-		.@card[3] = .@item_enchant_id;
-	}
-	else if (.@card[2] == 0) {
-		.@enchant_count = 2;
-		.@card[2] = .@item_enchant_id;
-	}
-	else if (.@card[1] == 0) {
-		.@enchant_count = 3;
-		.@card[1] = .@item_enchant_id;
-	}
-	else {
-		mes "[MARS_01]";
-		mes "장비가 강화 한계에 도달했습니다! 안녕하세요!";
-		close;
-	}
-	specialeffect2 EF_REPAIRWEAPON;
-	mes "[MARS_01]";
-	if (.@enchant_count < 5)
-		mes "첫 번째 장비가 업그레이드되었습니다. ^990000" + .@enchant_count + " 000000배.";
-	else
-		mes "추가 성능 장비^990000 ^000000 업그레이드용.";	// never displayed
-
-	delitem .@item_req, 1;
-	delequip .@part;
-	getitem2 .@equip_id,1,1,.@equip_refine,0,.@card[0],.@card[1],.@card[2],.@card[3];
-	close;
-}
+//verus04,163,219,4	script	PLUTO_09#pa0829	4_SCR_AT_ROBOTS,{
+//	disable_items;
+//	if (checkweight(1201,1) == 0 || (MaxWeight - Weight) < 10000) {
+//		mes "^ff0000소지품이 너무 많거나 남은 무게가 부족합니다. 소지품을 정리한 뒤 다시 이용해 주세요.^000000";
+//		close;
+//	}
+//	if (isbegin_quest(12368) < 2) {
+//		mes "^0000ffLCD 화면은 여전히 어둡고, 아무런 반응도 없습니다.^000000";
+//		close;
+//	}
+//	mes "^0000ff화면에 이상한 공룡 그림과 함께 안내 화면이 나타납니다.^000000";
+//	next;
+//	mes "[PLUTO_09]";
+//	mes strcharinfo(0) + " 님,";
+//	mes "안녕하세요. 무엇을 도와드릴까요?";
+//	next;
+//	switch( select( "안내 확인", "장비 제작", "인챈트 설계도 제작" ) ) {
+//	case 1:
+//		mes "^0000ff화면에 공룡 그림이 나타나고 귀여운 소녀의 음성이 흘러나옵니다.^000000";
+//		next;
+//		mes "[PLUTO_09]";
+//		mes "신형 PLUTO_09가 제작된 지 100년이 되었습니다.";
+//		next;
+//		mes "[PLUTO_09]";
+//		mes getitemname(6961) + "과(와) " + getitemname(6962) + "을(를) 가져오시면 유용한 장비를 제작해 드립니다~";
+//		next;
+//		mes "[PLUTO_09]";
+//		mes "인챈트 장비가 필요하신가요? " + getitemname(6962) + "을(를) 가져오시면 인챈트 설계도 제작을 시도해 드립니다. 행운을 빌어요!";
+//		next;
+//		mes "[PLUTO_09]";
+//		mes "이 공룡은 동화에 등장하는 티라노사우루스입니다. 정말 멋지죠... (지루한 공룡 이야기가 계속됩니다.)";
+//		next;
+//		mes "^0000ff안내 내용을 보니 이 로봇을 만든 사람은 공룡을 무척 좋아했던 모양입니다.^000000";
+//		close;
+//	case 2:
+//		setarray .@id[0],20773,15128; // Excelion_Wing, Excelion_Suit
+//		mes "[PLUTO_09]";
+//		mes "장비 제작에는 " + getitemname(6961) + " 10개와 " + getitemname(6962) + " 5개가 필요합니다.";
+//		next;
+//		switch( select( "그만두기", "제작: " + getitemname(.@id[0]), "제작: " + getitemname(.@id[1]) ) ) {
+//		case 1:
+//			mes "^0000ff화면 속 공룡이 잠시 눈을 감은 뒤 이쪽을 바라봅니다.^000000";
+//			close;
+//		case 2:
+//			.@item_id = .@id[0];
+//			break;
+//		case 3:
+//			.@item_id = .@id[1];
+//			break;
+//		}
+//		if (countitem(6961) < 10 || countitem(6962) < 5) {
+//			mes "[PLUTO_09]";
+//			mes "장비 제작에는 ^0000ff" + getitemname(6961) + " 10개와 " + getitemname(6962) + " 5개^000000가 필요합니다. 재료가 부족합니다.";
+//			close;
+//		}
+//		specialeffect EF_SPELLBREAKER;
+//		delitem 6962,5;// OldTank
+//		delitem 6961,10;// LargeScrap
+//		getitem .@item_id,1;
+//		mes "[PLUTO_09]";
+//		mes "장비 제작이 완료되었습니다. 인벤토리를 확인해 주세요.";
+//		close;
+//	case 3:
+//		while(1) {
+//			if (countitem(6962) < 5)
+//				.@string$ = "^aaaaaa설계도 제작에 필요한 연료가 부족합니다.^000000";
+//			else
+//				.@string$ = "설계도 제작 (^ff0000성공률 30%^000000)";
+//			mes "[PLUTO_09]";
+//			mes getitemname(6962) + " 5개를 사용해 인챈트 설계도 제작을 시도할 수 있습니다!";
+//			mes "----------";
+//			mes "^0000ff화면 속 작은 공룡이 이리저리 뛰어다닙니다.^000000";
+//			next;
+//			if (select( "그만두기", .@string$ ) == 1) {
+//				mes "^0000ff공룡들이 배불리 먹는 장면이 나타난 뒤 화면이 종료됩니다.^000000";
+//				close;
+//			}
+//			.@fail = false;
+//			.@reac_rnd = rand(1,10000);
+//			if (.@reac_rnd < 26)		.@en_name = 6977;	// Reactor_A_STR_
+//			else if (.@reac_rnd < 51)	.@en_name = 6978;	// Reactor_A_INT_
+//			else if (.@reac_rnd < 251)	.@en_name = 6979;	// Reactor_A_DEF_
+//			else if (.@reac_rnd < 326)	.@en_name = 6981;	// Reactor_A_ATK_
+//			else if (.@reac_rnd < 401)	.@en_name = 6982;	// Reactor_A_MATK_
+//			else if (.@reac_rnd < 601)	.@en_name = 6980;	// Reactor_A_AVOI_
+//			else if (.@reac_rnd < 801)	.@en_name = 6983;	// Reactor_A_MHP_
+//			else if (.@reac_rnd < 1001)	.@en_name = 6984;	// Reactor_A_MSP_
+//			else if (.@reac_rnd < 1151)	.@en_name = 6986;	// Reactor_A_ASPD_
+//			else if (.@reac_rnd < 1401)	.@en_name = 6975;	// Reactor_Cure_201_
+//			else if (.@reac_rnd < 1551)	.@en_name = 6976;	// Reactor_Cure_202_
+//			else if (.@reac_rnd < 1751)	.@en_name = 6973;	// Reactor_Cure_101_
+//			else if (.@reac_rnd < 1851)	.@en_name = 6974;	// Reactor_Cure_102_
+//			else if (.@reac_rnd < 1901)	.@en_name = 6985;	// Reactor_A_FROZ_
+//			else if (.@reac_rnd < 2101)	.@en_name = 6970;	// Reactor_T_WATER_
+//			else if (.@reac_rnd < 2301)	.@en_name = 6971;	// Reactor_T_GROUND_
+//			else if (.@reac_rnd < 2501)	.@en_name = 6969;	// Reactor_T_FIRE_
+//			else if (.@reac_rnd < 2701)	.@en_name = 6972;	// Reactor_T_WIND_
+//			else if (.@reac_rnd < 2776)	.@en_name = 6966;	// Reactor_P_WATER_
+//			else if (.@reac_rnd < 2851)	.@en_name = 6967;	// Reactor_P_GROUND_
+//			else if (.@reac_rnd < 2926)	.@en_name = 6965;	// Reactor_P_FIRE_
+//			else if (.@reac_rnd < 3001)	.@en_name = 6968;	// Reactor_P_WIND_
+//			else {
+//				.@fail = true;
+//				.@reac_rnd2 = rand(1,13000);
+//				if (.@reac_rnd2 < 2)
+//					.@en_name = 969;	// Gold
+//				else if (.@reac_rnd2 < 1002)
+//					.@en_name = 999;	// Steel
+//				else if (.@reac_rnd2 < 3002)
+//					.@en_name = 998;	// Iron
+//				else if (.@reac_rnd2 < 8002)
+//					.@en_name = 1002;	// Iron_Ore
+//				else
+//					.@en_name = 7054;	// Brigan
+//			}
+//			if (countitem(6962) < 5)
+//				mes "^0000ff화면 속 공룡이 빈 그릇을 바라봅니다. 재료가 부족한 것 같습니다.^000000";
+//			else {
+//				specialeffect EF_SPELLBREAKER;
+//				delitem 6962,5;// OldTank
+//				getitem .@en_name,1;
+//				mes "[PLUTO_09]";
+//				if (.@fail)
+//					mes "아쉽지만 설계도 제작에 실패했습니다.";
+//				else
+//					mes "설계도 제작이 완료되었습니다.";
+//			}
+//			next;
+//		}
+//		end;
+//	default:
+//		mes "^0000ff공룡이 명령을 이해하지 못한 듯 울부짖는 화면이 나타납니다.^000000";
+//		close;
+//	}
+//	end;
+//}
+//
+//verus04,165,217,4	script	MARS_01#pa0829	4_SCR_MT_ROBOTS,{
+//	disable_items;
+//	if (checkweight(1201,1) == 0 || (MaxWeight - Weight) < 10000) {
+//		mes "^ff0000소지품이 너무 많거나 남은 무게가 부족합니다. 소지품을 정리한 뒤 다시 이용해 주세요.^000000";
+//		close;
+//	}
+//	switch( isbegin_quest(12368) ) {
+//	case 0:
+//		mes "흐릿한 LCD 화면이 심하게 흔들립니다. 전력이 부족해 정상적으로 작동하지 않는 것 같습니다.";
+//		next;
+//		if (select( "무시한다", "버튼을 모두 눌러본다" ) == 1) {
+//			mes "곧 폐기될 낡은 로봇처럼 보입니다. 굳이 신경 쓸 필요는 없을 것 같습니다.";
+//			close;
+//		}
+//		mes "[?????]";
+//		mes "안녕하세요! 탐사 로봇 MARS_01입니다. 전력 절약을 위해 현재 휴면 모드로 전환되어 있습니다.";
+//		next;
+//		if (select( "작동 중단", "연료 공급" ) == 1) {
+//			mes "희미한 소리와 함께 로봇이 다시 휴면 모드로 들어갑니다.";
+//			close;
+//		}
+//		mes "[MARS_01]";
+//		mes "저와 동료 PLUTO_09는 " + getitemname(6962) + " 1개만 있으면 필요한 전력을 확보할 수 있습니다.";
+//		next;
+//		mes "[MARS_01]";
+//		mes getitemname(6962) + "을(를) 구하셨다면 화면 아래쪽의 연료 주입구에 넣어주세요. 휴면 모드를 해제할 수 있습니다.";
+//		setquest 12368;	// Operate the old robot
+//		close;
+//	case 1:
+//		if (countitem(6962) < 1) {
+//			mes "[MARS_01]";
+//			mes getitemname(6962) + " 1개를 구하셨다면 화면 아래쪽의 연료 주입구에 넣어주세요.";
+//			close;
+//		}
+//		mes "연료를 찾는 동안 전력이 완전히 소진된 것 같습니다. 연료를 넣으시겠습니까?";
+//		next;
+//		if (select( "그만두기", "연료를 넣는다" ) == 1) {
+//			mes "로봇의 전력이 완전히 소진되어 아무런 반응도 없습니다.";
+//			close;
+//		}
+//		mes "연료를 넣자 차단판이 열리고 기계음이 들려옵니다.";
+//		npctalk "뭐, 뭐야?! 움직이잖아!!!", "Grandpa picking up scrap iron";
+//		next;
+//		mes "[MARS_01]";
+//		mes "점검 시스템을 가동하여 각 부품의 손상 상태를 확인합니다.";
+//		next;
+//		mes "[MARS_01]";
+//		mes "전력계 10%, 계기판 정상, 본체 골격 손상 13%. 채굴 작업 수행에 문제없습니다.";
+//		next;
+//		mes "[MARS_01]";
+//		mes "채굴 보조 로봇 PLUTO_09에 에너지 공급을 시작합니다.";
+//		npctalk "에너지 반응을 확인했습니다. 정상적으로 작동합니다.", "PLUTO_09#pa0829";
+//		next;
+//		mes "[MARS_01]";
+//		mes "시스템을 재가동해 주셔서 감사합니다. 재가동한 사용자를 관리자로 등록합니다.";
+//		next;
+//		select("이름을 입력한다.");
+//		mes "[MARS_01]";
+//		mes strcharinfo(0) + " 님,";
+//		mes "안녕하세요! 연료 충전이 완료되었습니다.";
+//		delitem 6962,1;// OldTank
+//		completequest 12368;
+//		close;
+//	case 2:
+//		break;
+//	}
+//	mes "[MARS_01]";
+//	mes strcharinfo(0) + " 님,";
+//	mes "안녕하세요! 무엇을 도와드릴까요?";
+//	next;
+//	switch( select( "안내 확인", "인챈트: " + getitemname(20773), "인챈트: " + getitemname(15128) ) ) {	// Excelion_Wing, Excelion_Suit
+//	case 1:
+//		mes "^0000ff곧 안내가 시작됩니다.^000000";
+//		next;
+//		mes "[MARS_01]";
+//		mes "새로운 관리자를 기다리는 동안 최신 기능으로 계속 업데이트해 왔습니다.";
+//		next;
+//		mes "[MARS_01]";
+//		mes getitemname(20773) + " 또는 " + getitemname(15128) + "과(와) 인챈트 설계도를 가져오시면 설계 내용에 따라 장비를 인챈트해 드립니다.";
+//		next;
+//		mes "[MARS_01]";
+//		mes "인챈트 과정에서 장비는 파괴되지 않지만, 장비와 설계도 종류에 따라 부여 가능한 최대 횟수가 다릅니다.";
+//		next;
+//		mes "[MARS_01]";
+//		mes "필요하실 때 다시 찾아와 주세요~";
+//		close;
+//	case 2:
+//		.@part = EQI_GARMENT;
+//		break;
+//	case 3:
+//		.@part = EQI_ARMOR;
+//		break;
+//	}
+//	// <item ID required>, <item enchant ID>, <max number of this enchant on armor>, <max number of this enchant on garment>, <enchant on first slot only>
+//	setarray .@list[0],
+//		6965, 4970, 1,0,3,	// Reactor_P_FIRE_		Reactor_P_FIRE
+//		6966, 4971, 1,0,3,	// Reactor_P_WATER_		Reactor_P_WATER
+//		6967, 4972, 1,0,3,	// Reactor_P_GROUND_	Reactor_P_GROUND
+//		6968, 4973, 1,0,3,	// Reactor_P_WIND_		Reactor_P_WIND
+//		6969, 4974, 0,3,0,	// Reactor_T_FIRE_		Reactor_T_FIRE
+//		6970, 4975, 0,3,0,	// Reactor_T_WATER_		Reactor_T_WATER
+//		6971, 4976, 0,3,0,	// Reactor_T_GROUND_	Reactor_T_GROUND
+//		6972, 4977, 0,3,0,	// Reactor_T_WIND_		Reactor_T_WIND
+//		6973, 4978, 3,3,0,	// Reactor_Cure_101_	Reactor_Cure_101
+//		6974, 4979, 3,3,0,	// Reactor_Cure_102_	Reactor_Cure_102
+//		6975, 4980, 3,3,0,	// Reactor_Cure_201_	Reactor_Cure_201
+//		6976, 4981, 3,3,0,	// Reactor_Cure_202_	Reactor_Cure_202
+//		6977, 4982, 1,0,0,	// Reactor_A_STR_		Reactor_A_STR
+//		6978, 4983, 1,0,0,	// Reactor_A_INT_		Reactor_A_INT
+//		6979, 4984, 3,3,0,	// Reactor_A_DEF_		Reactor_A_DEF
+//		6980, 4985, 1,1,0,	// Reactor_A_AVOI_		Reactor_A_AVOI
+//		6981, 4986, 3,3,0,	// Reactor_A_ATK_		Reactor_A_ATK
+//		6982, 4987, 3,3,0,	// Reactor_A_MATK_		Reactor_A_MATK
+//		6983, 4988, 3,3,0,	// Reactor_A_MHP_		Reactor_A_MHP
+//		6984, 4989, 3,3,0,	// Reactor_A_MSP_		Reactor_A_MSP
+//		6985, 4990, 1,0,0,	// Reactor_A_FROZ_		Reactor_A_FROZ
+//		6986, 4991, 1,1,0;	// Reactor_A_ASPD_		Reactor_A_ASPD
+//	.@size = getarraysize(.@list);
+//
+//	for ( .@i = 0; .@i < .@size; .@i += 5 ) {
+//		if (countitem(.@list[.@i]) < 1)
+//			.@menu$ += sprintf( "^aaaaaa%s (미소지)^000000:", getitemname(.@list[.@i]) );
+//		else
+//			.@menu$ += sprintf( "%s:", getitemname(.@list[.@i]) );
+//	}
+//	mes "[MARS_01]";
+//	mes strcharinfo(0) + " 님,";
+//	mes "사용할 인챈트 설계도를 선택해 주세요!";
+//	next;
+//	.@s = select("그만두기:" + .@menu$) - 2;
+//	if (.@s < 0) {
+//		mes "[MARS_01]";
+//		mes "다음에 다시 이용해 주세요.";
+//		close;
+//	}
+//	.@s *= 5;
+//	.@item_req = .@list[.@s];
+//	.@item_enchant_id = .@list[.@s+1];
+//	.@first_slot_only = .@list[.@s+4];
+//
+//	.@equip_id = getequipid(.@part);
+//	.@equip_refine = getequiprefinerycnt(.@part);
+//	setarray .@card[0], getequipcardid(.@part,0), getequipcardid(.@part,1), getequipcardid(.@part,2), getequipcardid(.@part,3);
+//
+//	if (countitem(.@item_req) < 1) {
+//		mes "[MARS_01]";
+//		mes "다음에 다시 이용해 주세요.";
+//		close;
+//	}
+//	if (.@part == EQI_ARMOR)
+//		.@max_num_enchant = .@list[.@s+2];
+//	else if (.@part == EQI_GARMENT)
+//		.@max_num_enchant = .@list[.@s+3];
+//	else {
+//		mes "[MARS_01]";
+//		mes "관리자에게 문의해 주세요.";
+//		close;
+//	}
+//
+//	// anti-hack
+//	if (callfunc("F_IsEquipIDHack", .@part, .@equip_id) || callfunc("F_IsEquipCardHack", .@part, .@card[0], .@card[1], .@card[2], .@card[3]) || callfunc("F_IsEquipRefineHack", .@part, .@equip_refine)) {
+//		mes "[MARS_01]";
+//		mes "진행 도중 장비 상태가 변경되었습니다.";
+//		close;
+//	}
+//
+//	if (.@card[0] > 0 && .@item_enchant_id == .@card[0]) { .@slot_sum++; }
+//	if (.@card[1] > 0 && .@item_enchant_id == .@card[1]) { .@slot_sum++; }
+//	if (.@card[2] > 0 && .@item_enchant_id == .@card[2]) { .@slot_sum++; }
+//	if (.@card[3] > 0 && .@item_enchant_id == .@card[3]) { .@slot_sum++; }
+//
+//	if (.@max_num_enchant < 1) {
+//		mes "[MARS_01]";
+//		mes "선택한 설계도는 해당 장비에 사용할 수 없습니다.";
+//		close;
+//	}
+//	if (.@first_slot_only > 0 && .@card[3] != 0) {
+//		mes "[MARS_01]";
+//		mes "이 설계도는 첫 번째 인챈트 슬롯에만 사용할 수 있습니다. 다른 설계도를 선택해 주세요.";
+//		close;
+//	}
+//	if (.@slot_sum >= .@max_num_enchant) {
+//		mes "[MARS_01]";
+//		mes "동일한 인챈트의 최대 부여 횟수는 " + .@max_num_enchant + "회입니다. 이미 최대치에 도달했습니다.";
+//		close;
+//	}
+//	if (.@card[1] != 0) {
+//		mes "[MARS_01]";
+//		mes "장비의 인챈트 슬롯이 모두 사용되었습니다.";
+//		close;
+//	}
+//
+//	// anti-hack
+//	if (callfunc("F_IsEquipIDHack", .@part, .@equip_id) || callfunc("F_IsEquipCardHack", .@part, .@card[0], .@card[1], .@card[2], .@card[3]) || callfunc("F_IsEquipRefineHack", .@part, .@equip_refine)) {
+//		mes "[MARS_01]";
+//		mes "진행 도중 장비 상태가 변경되었습니다.";
+//		close;
+//	}
+//
+//	switch( .@equip_id ) {
+//	case 20773:	// Excelion_Wing
+//	case 15128:	// Excelion_Suit
+//		break;
+//	default:
+//		mes "[MARS_01]";
+//		mes "이 장비는 엑셀리온 장비가 아니므로 인챈트할 수 없습니다.";
+//		close;
+//	}
+//	mes "[MARS_01]^0000ff";
+//	mes "선택한 장비: " + getequipname(.@part) + " / 설계도: " + getitemname(.@item_req);
+//	mes "^000000------------------";
+//	mes "선택한 설계도는 이 장비에 최대 ^0000ff" + .@max_num_enchant + "회^000000까지 부여할 수 있습니다. 현재 동일 인챈트 부여 횟수는 ^0000ff" + .@slot_sum + "회^000000입니다. 계속하시겠습니까?";
+//	next;
+//	if (select( "취소", "계속 진행" ) == 1) {
+//		mes "[MARS_01]";
+//		mes "필요하실 때 다시 찾아와 주세요~";
+//		close;
+//	}
+//
+//	// anti-hack
+//	if (callfunc("F_IsEquipIDHack", .@part, .@equip_id) || callfunc("F_IsEquipCardHack", .@part, .@card[0], .@card[1], .@card[2], .@card[3]) || callfunc("F_IsEquipRefineHack", .@part, .@equip_refine))
+//		close;
+//
+//	if (.@card[3] == 0) {
+//		.@enchant_count = 1;
+//		.@card[3] = .@item_enchant_id;
+//	}
+//	else if (.@card[2] == 0) {
+//		.@enchant_count = 2;
+//		.@card[2] = .@item_enchant_id;
+//	}
+//	else if (.@card[1] == 0) {
+//		.@enchant_count = 3;
+//		.@card[1] = .@item_enchant_id;
+//	}
+//	else {
+//		mes "[MARS_01]";
+//		mes "장비의 인챈트 슬롯이 모두 사용되었습니다.";
+//		close;
+//	}
+//	specialeffect2 EF_REPAIRWEAPON;
+//	mes "[MARS_01]";
+//	if (.@enchant_count < 5)
+//		mes "장비에 ^990000" + .@enchant_count + "번째 인챈트가 부여되었습니다.^000000";
+//	else
+//		mes "장비 인챈트가 완료되었습니다.";	// never displayed
+//
+//	delitem .@item_req, 1;
+//	delequip .@part;
+//	getitem2 .@equip_id,1,1,.@equip_refine,0,.@card[0],.@card[1],.@card[2],.@card[3];
+//	close;
+//}
