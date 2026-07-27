@@ -517,8 +517,6 @@ function	script	F_NEED_FaceUnlock	{
 	'NEED_FACE_PARTY_ID = getcharid(1);
 
 	if (!'NEED_FACE_MODE_SET) {
-		'NEED_FACE_MODE_SET = 1;
-
 		if (#NEED_MD_FACEWORM_CLEAR) {
 			if (callfunc("F_NEED_FaceFastOK")) {
 				mes "[케이야스]";
@@ -526,22 +524,43 @@ function	script	F_NEED_FaceUnlock	{
 				mes "이번에는 설명과 연출을 빠르게 진행할 수 있네.";
 				next;
 
-				if (select("빠른 진행으로 시작한다.:전체 대화를 확인한다.") == 1) {
+				.@mode = select(
+					"빠른 진행으로 시작한다.",
+					"전체 대화를 확인한다."
+				);
+
+				// 실제로 메뉴를 선택한 뒤에만 확정
+				'NEED_FACE_MODE_SET = 1;
+
+				if (.@mode == 1) {
 					'NEED_FACE_FAST = 1;
+
 					mes "[케이야스]";
 					mes "좋아. 설명은 줄이고 바로 사냥을 시작하지.";
 					close2;
 					cutin "",255;
+
 					donpcevent instance_npcname("케이야스#01") + "::OnStart";
 					end;
 				}
+
+				// 2번 선택 시 일반 진행으로 확정
+				'NEED_FACE_FAST = 0;
 			}
 			else {
+				'NEED_FACE_MODE_SET = 1;
+				'NEED_FACE_FAST = 0;
+
 				mes "[케이야스]";
 				mes "파티원 중 아직 둥지를 끝까지 공략하지 않은 사람이 있군.";
 				mes "이번에는 기존 이야기와 진행을 그대로 따라가겠네.";
 				next;
 			}
+		}
+		else {
+			// 최초 진행자는 일반 모드로 확정
+			'NEED_FACE_MODE_SET = 1;
+			'NEED_FACE_FAST = 0;
 		}
 	}
 
