@@ -1,5 +1,5 @@
 //============================================================
-// NEED 전장 랜덤 매칭 시스템 - 티에라/플라비우스/KVM 풀사이클 v12.1
+// NEED 전장 랜덤 매칭 시스템 - 티에라/플라비우스/KVM 풀사이클 v13.1
 // - 한 번의 매칭으로 티에라 -> 플라비우스 -> KVM 전체 사이클 진행
 // - 최초 티에라는 자동 입장, 이후 전장은 양 팀 파티장의 입장 준비로 진행
 // - 티에라/플라비우스 종료 후 파티 유지, KVM 종료 후에만 자동 해체
@@ -8,7 +8,7 @@
 //   @전장참가 : 진행 중인 모집 참가
 //   @전장취소 : 참가 신청 철회
 //   @전장현황 : 모집/진행 상태 확인
-// - 테스트본: 최소 4명 / 최대 4명 (2 vs 2)
+// - 운영본: 최소 10명 / 최대 MAX_PARTY × 2명
 // - 동일 직업(Class)을 가능한 한 양 팀으로 분산
 // - 모집 중 전장 관리인은 유지하고 홍보 외 메뉴만 잠금
 // - 자동 선정 파티장을 기존 입장 준비 시스템에 등록하여 다음 전장 진행
@@ -362,27 +362,221 @@ function	script	F_BG_RM_AnnounceMissingApplicants	{
 	return;
 }
 
-function	script	F_BG_RM_PerformerFamily	{
+//============================================================
+// 직업 밸런스 계열
+//
+// 계열 번호는 OnInit의 $@BG_RM_BALANCE_NAME$ / WEIGHT 설정과 연결됩니다.
+// 일반/전승/탑승/베이비 3차 직업을 같은 계열로 취급합니다.
+// 설정되지 않은 직업은 계열 0, 기본 가중치를 사용합니다.
+//============================================================
+function	script	F_BG_RM_GetBalanceFamily	{
 	.@class = getarg(0);
 
+	// 1. 룬 나이트
 	if (
-		.@class == JOB_BARD ||
-		.@class == JOB_CLOWN ||
-		.@class == JOB_MINSTREL ||
-		.@class == JOB_MINSTREL_T
+		.@class == JOB_RUNE_KNIGHT ||
+		.@class == JOB_RUNE_KNIGHT_T ||
+		.@class == JOB_RUNE_KNIGHT2 ||
+		.@class == JOB_RUNE_KNIGHT_T2 ||
+		.@class == JOB_BABY_RUNE_KNIGHT ||
+		.@class == JOB_BABY_RUNE_KNIGHT2
 	)
 		return 1;
 
+	// 2. 로얄가드
 	if (
-		.@class == JOB_DANCER ||
-		.@class == JOB_GYPSY ||
-		.@class == JOB_WANDERER ||
-		.@class == JOB_WANDERER_T
+		.@class == JOB_ROYAL_GUARD ||
+		.@class == JOB_ROYAL_GUARD_T ||
+		.@class == JOB_ROYAL_GUARD2 ||
+		.@class == JOB_ROYAL_GUARD_T2 ||
+		.@class == JOB_BABY_ROYAL_GUARD ||
+		.@class == JOB_BABY_ROYAL_GUARD2
 	)
 		return 2;
 
+	// 3. 워록
+	if (
+		.@class == JOB_WARLOCK ||
+		.@class == JOB_WARLOCK_T ||
+		.@class == JOB_BABY_WARLOCK
+	)
+		return 3;
+
+	// 4. 소서러
+	if (
+		.@class == JOB_SORCERER ||
+		.@class == JOB_SORCERER_T ||
+		.@class == JOB_BABY_SORCERER
+	)
+		return 4;
+
+	// 5. 레인저
+	if (
+		.@class == JOB_RANGER ||
+		.@class == JOB_RANGER_T ||
+		.@class == JOB_RANGER2 ||
+		.@class == JOB_RANGER_T2 ||
+		.@class == JOB_BABY_RANGER ||
+		.@class == JOB_BABY_RANGER2
+	)
+		return 5;
+
+	// 6. 민스트럴
+	if (
+		.@class == JOB_MINSTREL ||
+		.@class == JOB_MINSTREL_T ||
+		.@class == JOB_BABY_MINSTREL
+	)
+		return 6;
+
+	// 7. 원더러
+	if (
+		.@class == JOB_WANDERER ||
+		.@class == JOB_WANDERER_T ||
+		.@class == JOB_BABY_WANDERER
+	)
+		return 7;
+
+	// 8. 미케닉
+	if (
+		.@class == JOB_MECHANIC ||
+		.@class == JOB_MECHANIC_T ||
+		.@class == JOB_MECHANIC2 ||
+		.@class == JOB_MECHANIC_T2 ||
+		.@class == JOB_BABY_MECHANIC ||
+		.@class == JOB_BABY_MECHANIC2
+	)
+		return 8;
+
+	// 9. 제네릭
+	if (
+		.@class == JOB_GENETIC ||
+		.@class == JOB_GENETIC_T ||
+		.@class == JOB_BABY_GENETIC
+	)
+		return 9;
+
+	// 10. 길로틴 크로스
+	if (
+		.@class == JOB_GUILLOTINE_CROSS ||
+		.@class == JOB_GUILLOTINE_CROSS_T ||
+		.@class == JOB_BABY_GUILLOTINE_CROSS
+	)
+		return 10;
+
+	// 11. 쉐도우 체이서
+	if (
+		.@class == JOB_SHADOW_CHASER ||
+		.@class == JOB_SHADOW_CHASER_T ||
+		.@class == JOB_BABY_SHADOW_CHASER
+	)
+		return 11;
+
+	// 12. 아크비숍
+	if (
+		.@class == JOB_ARCH_BISHOP ||
+		.@class == JOB_ARCH_BISHOP_T ||
+		.@class == JOB_BABY_ARCH_BISHOP
+	)
+		return 12;
+
+	// 13. 수라
+	if (
+		.@class == JOB_SURA ||
+		.@class == JOB_SURA_T ||
+		.@class == JOB_BABY_SURA
+	)
+		return 13;
+
 	return 0;
 }
+
+function	script	F_BG_RM_GetBalanceWeight	{
+	.@family = callfunc("F_BG_RM_GetBalanceFamily", getarg(0));
+
+	if (.@family > 0 && .@family <= $@BG_RM_BALANCE_FAMILY_COUNT)
+		return $@BG_RM_BALANCE_WEIGHT[.@family];
+
+	return $@BG_RM_BALANCE_DEFAULT_WEIGHT;
+}
+
+function	script	F_BG_RM_GetBalanceName$	{
+	.@family = getarg(0);
+
+	if (.@family > 0 && .@family <= $@BG_RM_BALANCE_FAMILY_COUNT)
+		return $@BG_RM_BALANCE_NAME$[.@family];
+
+	return "기타 직업";
+}
+
+//============================================================
+// 랜덤 매칭 진영별 직업 구성 안내
+//
+// 기본값은 티에라/플라비우스/KVM 입장 때마다 출력합니다.
+// $@BG_RM_TEAM_NOTICE_EACH_STAGE를 0으로 바꾸면 최초 티에라에서만 출력합니다.
+//============================================================
+function	script	F_BG_RM_AnnounceTeamComposition	{
+	.@mode = getarg(0);
+
+	if (.@mode < 1 || .@mode > 3)
+		return;
+
+	if (.@mode > 1 && !$@BG_RM_TEAM_NOTICE_EACH_STAGE)
+		return;
+
+	if (.@mode == 1)
+		.@map$ = "bat_a01";
+	else if (.@mode == 2)
+		.@map$ = "bat_b01";
+	else
+		.@map$ = "bat_c01";
+
+	for (.@team = 1; .@team <= 2; .@team++) {
+		cleararray .@family_count[0], 0, $@BG_RM_BALANCE_FAMILY_COUNT + 1;
+		.@other_count = 0;
+		.@count = (.@team == 1) ? $@BG_RM_G_COUNT : $@BG_RM_C_COUNT;
+
+		for (.@i = 0; .@i < .@count; .@i++) {
+			.@cid = (.@team == 1) ? $@BG_RM_G_CID[.@i] : $@BG_RM_C_CID[.@i];
+			.@class = readparam(Class,.@cid);
+			.@family = callfunc("F_BG_RM_GetBalanceFamily",.@class);
+
+			if (.@family > 0 && .@family <= $@BG_RM_BALANCE_FAMILY_COUNT)
+				.@family_count[.@family]++;
+			else
+				.@other_count++;
+		}
+
+		.@list$ = "";
+		for (.@family = 1; .@family <= $@BG_RM_BALANCE_FAMILY_COUNT; .@family++) {
+			if (.@family_count[.@family] <= 0)
+				continue;
+
+			if (.@list$ != "")
+				.@list$ += " / ";
+
+			.@list$ += callfunc("F_BG_RM_GetBalanceName$",.@family)
+				+ "-" + .@family_count[.@family];
+		}
+
+		if (.@other_count > 0) {
+			if (.@list$ != "")
+				.@list$ += " / ";
+			.@list$ += "기타 직업-" + .@other_count;
+		}
+
+		if (.@list$ == "")
+			.@list$ = "배정 인원 없음";
+
+		if (.@team == 1)
+			mapannounce .@map$, "[기욤 진영] : " + .@list$, bc_map, "0x66CCFF";
+		else
+			mapannounce .@map$, "[크루아 진영] : " + .@list$, bc_map, "0xFF7777";
+	}
+
+	return;
+}
+
 
 function	script	F_BG_RM_RestoreCounts	{
 	if ($@BG_RM_COUNTS_SAVED) {
@@ -556,6 +750,7 @@ function	script	F_BG_RM_StartBattle	{
 		$@TierraBG1_Victory = 0;
 
 		announce "[전장 안내] 랜덤 매칭 티에라 협곡이 기욤 " + $@BG_RM_G_COUNT + "명 vs 크루아 " + $@BG_RM_C_COUNT + "명으로 내부 준비를 시작합니다.", bc_all, "0x33CCFF";
+		callfunc "F_BG_RM_AnnounceTeamComposition", .@mode;
 		stopnpctimer "티에라 진행#bat_a01";
 		initnpctimer "티에라 진행#bat_a01";
 		return 1;
@@ -595,6 +790,7 @@ function	script	F_BG_RM_StartBattle	{
 		bg_updatescore "bat_b01",0,0;
 
 		announce "[전장 안내] 랜덤 매칭 플라비우스가 기욤 " + $@BG_RM_G_COUNT + "명 vs 크루아 " + $@BG_RM_C_COUNT + "명으로 내부 준비를 시작합니다.", bc_all;
+		callfunc "F_BG_RM_AnnounceTeamComposition", .@mode;
 		stopnpctimer "start#bat_b01";
 		initnpctimer "start#bat_b01";
 		return 1;
@@ -634,6 +830,7 @@ function	script	F_BG_RM_StartBattle	{
 		bg_warp $@KvM01BG_id2,"bat_c01",146,55;
 
 		announce "[전장 안내] 랜덤 매칭 KVM이 기욤 " + $@BG_RM_G_COUNT + "명 vs 크루아 " + $@BG_RM_C_COUNT + "명으로 내부 준비를 시작합니다.", bc_all;
+		callfunc "F_BG_RM_AnnounceTeamComposition", .@mode;
 		donpcevent "KvM01_BG::OnStart";
 		return 1;
 	}
@@ -741,13 +938,91 @@ OnInit:
 	bindatcmd "전장현황", strnpcinfo(3) + "::OnCommandStatus", 0, 99;
 
 	//========================================================
-	// 내부 테스트 설정: 총 4명 모집 = 2 vs 2
-	// 운영 전환 시 아래 두 값을 10 / (.MaxPartyMembers * 2)로 복구
+	// 운영 설정
 	//========================================================
 	.MinPlayers = 10;
 	.MaxPartyMembers = MAX_PARTY;
-	.MaxPlayers = 48;
+	.MaxPlayers = .MaxPartyMembers * 2;
 	.RecruitSeconds = 300;
+
+	//========================================================
+	// 직업 밸런스 설정
+	//
+	// 가중치는 숫자가 높을수록 팀 전력 점수가 높은 직업으로 봅니다.
+	// 기본값은 임의의 우열을 만들지 않도록 모든 3차 직업을 100으로 설정했습니다.
+	// 이후 운영 데이터에 맞춰 WEIGHT 숫자만 조정하면 배정 본체는 수정할 필요가 없습니다.
+	//
+	// 계열 번호:
+	//  1 룬 나이트       2 로얄가드
+	//  3 워록            4 소서러
+	//  5 레인저          6 민스트럴
+	//  7 원더러          8 미케닉
+	//  9 제네릭         10 길로틴 크로스
+	// 11 쉐도우 체이서  12 아크비숍
+	// 13 수라
+	//========================================================
+	$@BG_RM_BALANCE_DEFAULT_WEIGHT = 100;
+	$@BG_RM_BALANCE_FAMILY_COUNT = 13;
+
+	// 1: 티에라/플라비우스/KVM 입장 때마다 직업 구성 안내
+	// 0: 최초 티에라 입장 때만 안내
+	$@BG_RM_TEAM_NOTICE_EACH_STAGE = 1;
+
+	setarray $@BG_RM_BALANCE_NAME$[1],
+		"룬 나이트",
+		"로얄가드",
+		"워록",
+		"소서러",
+		"레인저",
+		"민스트럴",
+		"원더러",
+		"미케닉",
+		"제네릭",
+		"길로틴 크로스",
+		"쉐도우 체이서",
+		"아크비숍",
+		"수라";
+
+	setarray $@BG_RM_BALANCE_WEIGHT[1],
+		100, // 1  룬 나이트
+		100, // 2  로얄가드
+		100, // 3  워록
+		100, // 4  소서러
+		100, // 5  레인저
+		100, // 6  민스트럴
+		100, // 7  원더러
+		100, // 8  미케닉
+		100, // 9  제네릭
+		100, // 10 길로틴 크로스
+		100, // 11 쉐도우 체이서
+		100, // 12 아크비숍
+		100; // 13 수라
+
+	//========================================================
+	// 강제 분리 규칙
+	//
+	// A/B 계열이 각각 정확히 1명일 때 두 사람을 반드시 다른 팀에 배정합니다.
+	// 규칙을 추가하려면 A와 B 배열의 같은 인덱스에 계열 번호를 추가하고
+	// SplitRuleCount를 실제 규칙 개수로 변경합니다.
+	//
+	// 기본 규칙:
+	// 민스트럴(6) 1명 + 원더러(7) 1명 → 무조건 서로 다른 팀
+	//========================================================
+	cleararray $@BG_RM_SPLIT_RULE_A[0], 0, 32;
+	cleararray $@BG_RM_SPLIT_RULE_B[0], 0, 32;
+
+	$@BG_RM_SPLIT_RULE_COUNT = 4;
+	$@BG_RM_SPLIT_RULE_A[0] = 6;
+	$@BG_RM_SPLIT_RULE_B[0] = 7;
+	
+	$@BG_RM_SPLIT_RULE_A[1] = 9;
+	$@BG_RM_SPLIT_RULE_B[1] = 12;
+
+	$@BG_RM_SPLIT_RULE_A[2] = 4;
+	$@BG_RM_SPLIT_RULE_B[2] = 12;
+
+	$@BG_RM_SPLIT_RULE_A[3] = 11;
+	$@BG_RM_SPLIT_RULE_B[3] = 12;
 
 	stopnpctimer;
 	stopnpctimer "NEED_BG_RM_RecruitMonitor";
@@ -1173,79 +1448,166 @@ OnFinalize:
 	.@count_c = 0;
 	.@single_count = 0;
 
-	// 우선 분리 규칙:
-	// 민스트럴 계열과 원더러 계열이 전체 참가자 중 각각 정확히 1명이라면
-	// 일반 단독 직업 무작위 배정보다 먼저 서로 다른 팀에 고정 배정합니다.
-	.@minstrel_count = 0;
-	.@wanderer_count = 0;
+	//========================================================
+	// 직업 밸런스 기반 팀 배정
+	//
+	// 1) 강제 분리 규칙
+	// 2) 같은 직업 계열 다수 인원 교차 배정
+	// 3) 남은 단독 직업을 가중치 기준으로 배정
+	//========================================================
+	.@weight_g = 0;
+	.@weight_c = 0;
 
 	for (.@i = 0; .@i < .@count; .@i++) {
-		.@family = callfunc("F_BG_RM_PerformerFamily", .@class_list[.@i]);
-
-		if (.@family == 1) {
-			.@minstrel_index = .@i;
-			.@minstrel_count++;
-		}
-		else if (.@family == 2) {
-			.@wanderer_index = .@i;
-			.@wanderer_count++;
-		}
+		.@family_list[.@i] = callfunc("F_BG_RM_GetBalanceFamily", .@class_list[.@i]);
+		.@weight_list[.@i] = callfunc("F_BG_RM_GetBalanceWeight", .@class_list[.@i]);
 	}
 
-	if (.@minstrel_count == 1 && .@wanderer_count == 1) {
-		// 어느 직업군이 기욤/크루아로 갈지는 무작위지만 두 직업군은 반드시 분리됩니다.
-		.@minstrel_team = rand(2);
+	// -------------------------------------------------------
+	// 1단계: 강제 분리 규칙
+	//
+	// 각 규칙의 A/B 계열이 전체 참가자 중 각각 정확히 1명이고,
+	// 두 참가자가 아직 배정되지 않았을 때 반드시 서로 다른 팀으로 배정합니다.
+	// 여러 규칙이 같은 직업을 중복 참조하면 먼저 등록된 규칙이 우선됩니다.
+	// -------------------------------------------------------
+	for (.@rule = 0; .@rule < $@BG_RM_SPLIT_RULE_COUNT; .@rule++) {
+		.@family_a = $@BG_RM_SPLIT_RULE_A[.@rule];
+		.@family_b = $@BG_RM_SPLIT_RULE_B[.@rule];
 
-		if (.@minstrel_team == 0) {
-			.@aid_g[.@count_g] = .@aid_list[.@minstrel_index];
-			.@cid_g[.@count_g] = .@cid_list[.@minstrel_index];
-			.@name_g$[.@count_g] = .@name_list$[.@minstrel_index];
+		if (
+			.@family_a <= 0 ||
+			.@family_b <= 0 ||
+			.@family_a == .@family_b
+		)
+			continue;
+
+		.@family_a_count = 0;
+		.@family_b_count = 0;
+		.@family_a_index = -1;
+		.@family_b_index = -1;
+
+		for (.@i = 0; .@i < .@count; .@i++) {
+			if (.@family_list[.@i] == .@family_a) {
+				.@family_a_count++;
+				.@family_a_index = .@i;
+			}
+			if (.@family_list[.@i] == .@family_b) {
+				.@family_b_count++;
+				.@family_b_index = .@i;
+			}
+		}
+
+		if (.@family_a_count != 1 || .@family_b_count != 1)
+			continue;
+
+		if (
+			.@family_a_index < 0 ||
+			.@family_b_index < 0 ||
+			.@used[.@family_a_index] ||
+			.@used[.@family_b_index]
+		) {
+			debugmes "[BG RM] split rule skipped by conflict"
+				+ " rule=" + .@rule
+				+ " A=" + callfunc("F_BG_RM_GetBalanceName$",.@family_a)
+				+ " B=" + callfunc("F_BG_RM_GetBalanceName$",.@family_b);
+			continue;
+		}
+
+		if (.@count_g >= .@cap_g || .@count_c >= .@cap_c) {
+			debugmes "[BG RM] split rule skipped by capacity"
+				+ " rule=" + .@rule;
+			continue;
+		}
+
+		.@weight_a = .@weight_list[.@family_a_index];
+		.@weight_b = .@weight_list[.@family_b_index];
+
+		// A를 기욤, B를 크루아에 넣었을 때의 가중치 차이
+		.@diff_a_g = (.@weight_g + .@weight_a) - (.@weight_c + .@weight_b);
+		if (.@diff_a_g < 0)
+			.@diff_a_g = -.@diff_a_g;
+
+		// A를 크루아, B를 기욤에 넣었을 때의 가중치 차이
+		.@diff_a_c = (.@weight_g + .@weight_b) - (.@weight_c + .@weight_a);
+		if (.@diff_a_c < 0)
+			.@diff_a_c = -.@diff_a_c;
+
+		if (.@diff_a_g < .@diff_a_c)
+			.@family_a_team = 0;
+		else if (.@diff_a_c < .@diff_a_g)
+			.@family_a_team = 1;
+		else
+			.@family_a_team = rand(2);
+
+		if (.@family_a_team == 0) {
+			.@aid_g[.@count_g] = .@aid_list[.@family_a_index];
+			.@cid_g[.@count_g] = .@cid_list[.@family_a_index];
+			.@name_g$[.@count_g] = .@name_list$[.@family_a_index];
 			.@count_g++;
+			.@weight_g += .@weight_a;
 
-			.@aid_c[.@count_c] = .@aid_list[.@wanderer_index];
-			.@cid_c[.@count_c] = .@cid_list[.@wanderer_index];
-			.@name_c$[.@count_c] = .@name_list$[.@wanderer_index];
+			.@aid_c[.@count_c] = .@aid_list[.@family_b_index];
+			.@cid_c[.@count_c] = .@cid_list[.@family_b_index];
+			.@name_c$[.@count_c] = .@name_list$[.@family_b_index];
 			.@count_c++;
+			.@weight_c += .@weight_b;
 		}
 		else {
-			.@aid_c[.@count_c] = .@aid_list[.@minstrel_index];
-			.@cid_c[.@count_c] = .@cid_list[.@minstrel_index];
-			.@name_c$[.@count_c] = .@name_list$[.@minstrel_index];
+			.@aid_c[.@count_c] = .@aid_list[.@family_a_index];
+			.@cid_c[.@count_c] = .@cid_list[.@family_a_index];
+			.@name_c$[.@count_c] = .@name_list$[.@family_a_index];
 			.@count_c++;
+			.@weight_c += .@weight_a;
 
-			.@aid_g[.@count_g] = .@aid_list[.@wanderer_index];
-			.@cid_g[.@count_g] = .@cid_list[.@wanderer_index];
-			.@name_g$[.@count_g] = .@name_list$[.@wanderer_index];
+			.@aid_g[.@count_g] = .@aid_list[.@family_b_index];
+			.@cid_g[.@count_g] = .@cid_list[.@family_b_index];
+			.@name_g$[.@count_g] = .@name_list$[.@family_b_index];
 			.@count_g++;
+			.@weight_g += .@weight_b;
 		}
 
-		.@used[.@minstrel_index] = 1;
-		.@used[.@wanderer_index] = 1;
+		.@used[.@family_a_index] = 1;
+		.@used[.@family_b_index] = 1;
 
-		debugmes "[BG RM] priority split performer"
-			+ " minstrel=" + .@name_list$[.@minstrel_index]
-			+ " wanderer=" + .@name_list$[.@wanderer_index]
-			+ " minstrel_team=" + ((.@minstrel_team == 0) ? "G" : "C");
+		debugmes "[BG RM] split rule applied"
+			+ " rule=" + .@rule
+			+ " A=" + callfunc("F_BG_RM_GetBalanceName$",.@family_a)
+			+ " B=" + callfunc("F_BG_RM_GetBalanceName$",.@family_b)
+			+ " A_team=" + ((.@family_a_team == 0) ? "G" : "C");
 	}
 
-	// 1단계: 동일 직업이 2명 이상인 그룹을 기욤/크루아에 교차 배정
-	// 1명뿐인 직업은 즉시 배정하지 않고 단독 직업 목록에 보관합니다.
+	// -------------------------------------------------------
+	// 2단계: 같은 계열이 2명 이상이면 양 팀에 교차 배정
+	//
+	// 3차 직업은 일반/전승/탑승/베이비 형태를 같은 계열로 봅니다.
+	// 계열 설정이 없는 직업은 기존처럼 실제 Class 값이 같은 경우만 묶습니다.
+	// -------------------------------------------------------
 	for (.@i = 0; .@i < .@count; .@i++) {
 		if (.@used[.@i])
 			continue;
 
 		.@group_count = 0;
+		.@target_family = .@family_list[.@i];
 		.@target_class = .@class_list[.@i];
 
 		for (.@j = 0; .@j < .@count; .@j++) {
-			if (!.@used[.@j] && .@class_list[.@j] == .@target_class) {
+			if (.@used[.@j])
+				continue;
+
+			.@same_group = 0;
+			if (.@target_family > 0 && .@family_list[.@j] == .@target_family)
+				.@same_group = 1;
+			else if (.@target_family == 0 && .@class_list[.@j] == .@target_class)
+				.@same_group = 1;
+
+			if (.@same_group) {
 				.@group_index[.@group_count] = .@j;
 				.@used[.@j] = 1;
 				.@group_count++;
 			}
 		}
 
-		// 동일 직업 그룹 내부 순서 무작위화
+		// 그룹 내부 순서 무작위화
 		for (.@j = .@group_count - 1; .@j > 0; .@j--) {
 			.@k = rand(.@j + 1);
 			.@tmp = .@group_index[.@j];
@@ -1253,16 +1615,21 @@ OnFinalize:
 			.@group_index[.@k] = .@tmp;
 		}
 
-		// 한 명뿐인 직업은 2단계에서 서로 다른 팀으로 분산합니다.
+		// 한 명뿐인 계열/직업은 3단계 가중치 배정 대상으로 보관
 		if (.@group_count == 1) {
 			.@single_index[.@single_count] = .@group_index[0];
 			.@single_count++;
 			continue;
 		}
 
+		// 홀수 그룹의 한 명이 어느 팀으로 더 들어갈지 결정
 		if (.@count_g < .@count_c)
 			.@start_team = 0;
 		else if (.@count_c < .@count_g)
+			.@start_team = 1;
+		else if (.@weight_g < .@weight_c)
+			.@start_team = 0;
+		else if (.@weight_c < .@weight_g)
 			.@start_team = 1;
 		else
 			.@start_team = rand(2);
@@ -1281,17 +1648,27 @@ OnFinalize:
 				.@cid_g[.@count_g] = .@cid_list[.@index];
 				.@name_g$[.@count_g] = .@name_list$[.@index];
 				.@count_g++;
+				.@weight_g += .@weight_list[.@index];
 			}
 			else {
 				.@aid_c[.@count_c] = .@aid_list[.@index];
 				.@cid_c[.@count_c] = .@cid_list[.@index];
 				.@name_c$[.@count_c] = .@name_list$[.@index];
 				.@count_c++;
+				.@weight_c += .@weight_list[.@index];
 			}
 		}
 	}
 
-	// 2단계: 1명뿐인 직업 목록을 무작위로 섞은 뒤 2명씩 양 팀에 한 명씩 배정
+	// -------------------------------------------------------
+	// 3단계: 남은 단독 직업을 높은 가중치부터 배정
+	//
+	// 각 참가자를 기욤/크루아에 넣었을 때의 최종 가중치 차이를 비교하여
+	// 차이가 더 작아지는 팀에 넣습니다.
+	// 가중치 결과가 같으면 인원이 적은 팀, 그래도 같으면 무작위입니다.
+	// -------------------------------------------------------
+
+	// 같은 가중치끼리 매번 같은 순서가 되지 않도록 먼저 무작위화
 	for (.@i = .@single_count - 1; .@i > 0; .@i--) {
 		.@j = rand(.@i + 1);
 		.@tmp = .@single_index[.@i];
@@ -1299,90 +1676,79 @@ OnFinalize:
 		.@single_index[.@j] = .@tmp;
 	}
 
-	// 같은 팀부터 계속 시작하지 않도록 쌍마다 시작 팀을 교대합니다.
-	.@pair_start_team = rand(2);
+	// 가중치가 높은 단독 직업부터 배정
+	for (.@i = 0; .@i < .@single_count - 1; .@i++) {
+		.@best = .@i;
 
-	for (.@i = 0; .@i < .@single_count; .@i += 2) {
-		.@remain_g = .@cap_g - .@count_g;
-		.@remain_c = .@cap_c - .@count_c;
-
-		// 두 명이 남았고 양 팀 모두 자리가 있으면 반드시 한 명씩 나눕니다.
-		if (.@i + 1 < .@single_count && .@remain_g > 0 && .@remain_c > 0) {
-			if (.@remain_g > .@remain_c)
-				.@first_team = 0;
-			else if (.@remain_c > .@remain_g)
-				.@first_team = 1;
-			else
-				.@first_team = .@pair_start_team;
-
-			.@index = .@single_index[.@i];
-			if (.@first_team == 0) {
-				.@aid_g[.@count_g] = .@aid_list[.@index];
-				.@cid_g[.@count_g] = .@cid_list[.@index];
-				.@name_g$[.@count_g] = .@name_list$[.@index];
-				.@count_g++;
-			}
-			else {
-				.@aid_c[.@count_c] = .@aid_list[.@index];
-				.@cid_c[.@count_c] = .@cid_list[.@index];
-				.@name_c$[.@count_c] = .@name_list$[.@index];
-				.@count_c++;
-			}
-
-			// 같은 쌍의 두 번째 단독 직업은 반대 팀으로 배정합니다.
-			.@index = .@single_index[.@i + 1];
-			if (.@first_team == 0) {
-				.@aid_c[.@count_c] = .@aid_list[.@index];
-				.@cid_c[.@count_c] = .@cid_list[.@index];
-				.@name_c$[.@count_c] = .@name_list$[.@index];
-				.@count_c++;
-			}
-			else {
-				.@aid_g[.@count_g] = .@aid_list[.@index];
-				.@cid_g[.@count_g] = .@cid_list[.@index];
-				.@name_g$[.@count_g] = .@name_list$[.@index];
-				.@count_g++;
-			}
-
-			.@pair_start_team = 1 - .@pair_start_team;
-			continue;
+		for (.@j = .@i + 1; .@j < .@single_count; .@j++) {
+			if (
+				.@weight_list[.@single_index[.@j]]
+				> .@weight_list[.@single_index[.@best]]
+			)
+				.@best = .@j;
 		}
 
-		// 한 명만 남았거나 한쪽 팀 정원이 찬 경우 남은 정원에 맞춰 배정합니다.
-		for (.@j = .@i; .@j < .@single_count && .@j < .@i + 2; .@j++) {
-			.@index = .@single_index[.@j];
-			.@remain_g = .@cap_g - .@count_g;
-			.@remain_c = .@cap_c - .@count_c;
+		if (.@best != .@i) {
+			.@tmp = .@single_index[.@i];
+			.@single_index[.@i] = .@single_index[.@best];
+			.@single_index[.@best] = .@tmp;
+		}
+	}
 
-			if (.@remain_g <= 0)
-				.@team = 1;
-			else if (.@remain_c <= 0)
+	for (.@i = 0; .@i < .@single_count; .@i++) {
+		.@index = .@single_index[.@i];
+		.@weight = .@weight_list[.@index];
+
+		if (.@count_g >= .@cap_g)
+			.@team = 1;
+		else if (.@count_c >= .@cap_c)
+			.@team = 0;
+		else {
+			.@diff_g = (.@weight_g + .@weight) - .@weight_c;
+			if (.@diff_g < 0)
+				.@diff_g = -.@diff_g;
+
+			.@diff_c = .@weight_g - (.@weight_c + .@weight);
+			if (.@diff_c < 0)
+				.@diff_c = -.@diff_c;
+
+			if (.@diff_g < .@diff_c)
 				.@team = 0;
-			else if (.@remain_g > .@remain_c)
-				.@team = 0;
-			else if (.@remain_c > .@remain_g)
+			else if (.@diff_c < .@diff_g)
 				.@team = 1;
 			else if (.@count_g < .@count_c)
 				.@team = 0;
 			else if (.@count_c < .@count_g)
 				.@team = 1;
+			else if (.@weight_g < .@weight_c)
+				.@team = 0;
+			else if (.@weight_c < .@weight_g)
+				.@team = 1;
 			else
 				.@team = rand(2);
+		}
 
-			if (.@team == 0) {
-				.@aid_g[.@count_g] = .@aid_list[.@index];
-				.@cid_g[.@count_g] = .@cid_list[.@index];
-				.@name_g$[.@count_g] = .@name_list$[.@index];
-				.@count_g++;
-			}
-			else {
-				.@aid_c[.@count_c] = .@aid_list[.@index];
-				.@cid_c[.@count_c] = .@cid_list[.@index];
-				.@name_c$[.@count_c] = .@name_list$[.@index];
-				.@count_c++;
-			}
+		if (.@team == 0) {
+			.@aid_g[.@count_g] = .@aid_list[.@index];
+			.@cid_g[.@count_g] = .@cid_list[.@index];
+			.@name_g$[.@count_g] = .@name_list$[.@index];
+			.@count_g++;
+			.@weight_g += .@weight;
+		}
+		else {
+			.@aid_c[.@count_c] = .@aid_list[.@index];
+			.@cid_c[.@count_c] = .@cid_list[.@index];
+			.@name_c$[.@count_c] = .@name_list$[.@index];
+			.@count_c++;
+			.@weight_c += .@weight;
 		}
 	}
+
+	debugmes "[BG RM] balance result"
+		+ " G_count=" + .@count_g
+		+ " C_count=" + .@count_c
+		+ " G_weight=" + .@weight_g
+		+ " C_weight=" + .@weight_c;
 
 	if (.@count_g != .@cap_g || .@count_c != .@cap_c || (.@count_g > .@count_c + 1 || .@count_c > .@count_g + 1) || .@count_g > .MaxPartyMembers || .@count_c > .MaxPartyMembers) {
 		callfunc "F_BG_RM_CancelRecruit", "팀 배정 중 오류가 발생하여 매칭이 취소되었습니다.";
