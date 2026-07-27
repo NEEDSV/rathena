@@ -45,6 +45,7 @@ dali02,134,119,5	script	역사학자 쉡#tnm01	4_F_NOVICE,{
 		close;
 	}
 	if (isbegin_quest(7576) > 0) {// instance completed
+		#NEED_MD_DEVIL_TOWER_CLEAR = 1;
 		mes "[쉡]";
 		mes "그곳에서 시공간이 뒤틀려 수렴하고 있다는 거군요?";
 		mes "시간 여행이 실제로 가능하다니 정말 놀랍습니다.";
@@ -105,6 +106,18 @@ dali02,134,119,5	script	역사학자 쉡#tnm01	4_F_NOVICE,{
 	}
 	switch( checkquest(7568,PLAYTIME) ) {// entrance timer - 1h30 to enter
 	case -1:
+		if (#NEED_MD_DEVIL_TOWER_CLEAR) {
+			mes "[쉡]";
+			mes "다시 마신의 탑을 조사하실 건가요?";
+			mes "탐사 등록을 바로 진행할 수 있습니다.";
+			next;
+			if (select("탐사에 지원한다.:나중에 다시 온다.") == 2)
+				close;
+			setquest 7568;// Explore the tower
+			mes "[쉡]";
+			mes "등록이 완료되었습니다. 아르티에게 장치 가동을 요청해 주세요.";
+			close;
+		}
 		mes "[쉡]";
 		mes "악마의탑 탐사에 자원하시겠습니까? 당신 같은 분을 기다리고 있었습니다!";
 		next;
@@ -278,24 +291,44 @@ dali02,137,121,3	script	마법 학자 아르티#tnm	4_M_FAIRYKID6,{
 		close;
 	}
 	mes "[아르티]";
-	mes "네가 악마의탑을 조사하겠다는 그 자원자야?";
-	mes "차원 장치를 지금 바로 가동시켜 줄까?";
-	next;
-	mes "[아르티]";
-	mes "안에서의 시간은 한정되어 있으니까 빨리 결정하는 게 좋아.";
+	mes "차원 장치를 지금 바로 가동할까요?";
 	next;
 	if (select( "네, 장치를 가동해 주세요.", "잠시만 기다려 주세요." ) == 2) {
 		mes "[아르티]";
-		mes "탐사할 수 있는 시간이 계속 줄어들고 있어.";
-		mes "시간 관리가 제일 중요하다니까.";
-		mes "뭘 그렇게 망설이고 있어?";
+		mes "준비가 끝나면 다시 말해 주세요.";
+		close;
+	}
+
+	.@fast_mode = 0;
+	callfunc("F_NEED_DevilTowerPartyMode", .@party_id, 0);
+	if (#NEED_MD_DEVIL_TOWER_CLEAR) {
+		mes "[아르티]";
+		mes "이전에 탐사를 완료한 기록이 확인됐어요.";
+		mes "이번 탐사의 진행 방식을 선택해 주세요.";
+		next;
+		if (select("빠른 진행으로 시작한다.:전체 이야기와 연출을 확인한다.") == 1) {
+			if (!callfunc("F_NEED_DevilTowerPartyMode", .@party_id, 1)) {
+				mes "[아르티]";
+				mes "빠른 진행은 온라인 상태인 파티원 전원이";
+				mes "마신의 탑을 한 번 이상 완료해야 사용할 수 있어요.";
+				close;
+			}
+			.@fast_mode = 1;
+		}
+	}
+	.@instance_id = instance_create("마신의 탑");
+	if (.@instance_id < 0) {
+		callfunc("F_NEED_DevilTowerPartyMode", .@party_id, 0);
+		mes "[아르티]";
+		mes "차원 장치를 활성화하지 못했습니다.";
+		mes "잠시 후 다시 시도해 주세요.";
 		close;
 	}
 	mes "[아르티]";
-	mes "차원 장치가 활성화됐어.";
-	mes "운만 좋으면 아주 금방 끝낼 수도 있을 거야.";
-	mes "좋은 소식이 들려오길 기대하고 있을게.";
-	instance_create("마신의 탑");
+	mes "차원 장치가 활성화됐어요.";
+	if (.@fast_mode)
+		mes "빠른 진행이 적용되었습니다.";
+	mes "입구의 이동 장치를 이용해 주세요.";
 	close;
 }
 
@@ -450,6 +483,14 @@ OnTimer45000:
 	end;
 OnTouch:
 	disablenpc instance_npcname("#event01");
+	if (@NEED_DT_FAST_PARTY == getcharid(1) && #NEED_MD_DEVIL_TOWER_CLEAR) {
+		'need_fast = 1;
+		@NEED_DT_FAST_PARTY = 0;
+		disablenpc instance_npcname("장교 하임#heim0");
+		enablenpc instance_npcname("장교 하임#heim");
+		mapannounce 'map_tnm1$, "빠른 진행이 적용되었습니다. 장교 하임과 대화해 탐사를 시작하세요.", bc_map,0x33CCFF;
+		end;
+	}
 	initnpctimer;
 	end;
 OnTimer2000:
@@ -501,6 +542,13 @@ OnTimer26000:
 	}
 	switch('devil_tower) {
 	case 0:
+		if ('need_fast) {
+			mes "[장교 하임]";
+			mes "부상병을 치료한 뒤 위층의 마물들을 정리해 주게.";
+			enablenpc instance_npcname("치료사 파마#feima");
+			'devil_tower = 1;
+			close;
+		}
 		mes "[장교 하임]";
 		mes "지원군이 온 건가? 그런데 왜 다들 가만히 보고만 있는 거야!";
 		npctalk "장교 하임: 지원군이 온 건가? 그런데 왜 다들 가만히 보고만 있는 거야!";
@@ -541,6 +589,27 @@ OnTimer26000:
 }
 
 1@tnm1,47,109,3	script	치료사 파마#feima	4_TOWER_10,{
+	if ('devil_tower == 1 && 'need_fast) {
+		mes "[치료사 파마]";
+		mes "부상병 치료를 한 번에 진행할 수 있어요.";
+		next;
+		if (select("부상병 7명을 일괄 치료한다.:직접 한 명씩 치료한다.") == 1) {
+			if (countitem(7641))
+				delitem 7641,countitem(7641);
+			for (.@i = 1; .@i <= 7; .@i++) {
+				disablenpc instance_npcname("부상당한 병사#" + .@i + "_1");
+				enablenpc instance_npcname("부상당한 병사#" + .@i);
+			}
+			'heal_count = 7;
+			'devil_tower = 2;
+			enablenpc instance_npcname("루실#tnm01");
+			enablenpc instance_npcname("마법 검사#tnm01");
+			enablenpc instance_npcname("어쌔신 휴이#tnm01");
+			enablenpc instance_npcname("어쌔신 루이#tnm01");
+			mapannounce 'map_tnm1$, "부상병 치료가 완료되었습니다. 루실과 대화하세요.", bc_map,0x33CCFF;
+			close;
+		}
+	}
 	if ('devil_tower == 1) {
 		if (countitem(7641) < 1) {
 			mes "[치료사 파마]";
@@ -701,6 +770,19 @@ OnTouch:
 	if ('devil_tower == 2) {
 		.@lucile$ = instance_npcname("루실#tnm01");
 		.@heim$ = instance_npcname("장교 하임#heim");
+		if ('need_fast) {
+			mes "[루실]";
+			mes "위층의 마물들을 처리하며 타나토스를 지원해 주세요.";
+			close2;
+			enablenpc instance_npcname("어쌔신 듀이#tnm01");
+			enablenpc instance_npcname("#tnm1stepmob");
+			disablenpc instance_npcname("마법 검사#tnm01");
+			disablenpc .@lucile$;
+			disablenpc instance_npcname("어쌔신 휴이#tnm01");
+			disablenpc instance_npcname("어쌔신 루이#tnm01");
+			'devil_tower = 4;
+			end;
+		}
 		'devil_tower = 3;
 		setpcblock PCBLOCK_NPC, true;
 		cutin "tnm_lucile01.bmp",2;
@@ -769,6 +851,17 @@ OnTouch:
 		setquest 7569;// Treat the injured
 	if (isbegin_quest(7570) == 0)
 		setquest 7570;// Destroy the demons
+	if ('need_fast) {
+		mes "[듀이]";
+		mes "위층의 마물들을 모두 처치해 주세요.";
+		next;
+		if (select("즉시 이동한다.:조금 더 준비한다.") == 2)
+			close;
+		close2;
+		warp 'map_tnm1$,91,23;
+		devil_tower_can_reenter = 1;
+		end;
+	}
 	mes "[듀이]";
 	mes "위층까지 길을 안내해 드리지요.";
 	mes "가는 길에 마주치는 마물들은 남김없이 처리해야 합니다.";
@@ -796,9 +889,40 @@ OnTouch:
 	disablenpc instance_npcname("#tnm1stepmob");
 	enablenpc instance_npcname("어쌔신 루이#tnm02");
 	enablenpc instance_npcname("루실#tnm02");
-	initnpctimer;
-	monster 'map_tnm1$,99,24,"마신의 그림자",2939,1, instance_npcname("#tnm1stepmob") + "::OnMobDead";	// MM_EVIL_SHADOW1
+	.@label$ = instance_npcname("#tnm1stepmob") + "::OnMobDead";
+	monster 'map_tnm1$,99,24,"마신의 그림자",2939,1,.@label$;
 	'mob_id = $@mobid[0];
+	if ('need_fast) {
+		monster 'map_tnm1$,103,21,"마신의 그림자",2940,1,.@label$;
+		monster 'map_tnm1$,103,26,"마신의 그림자",2941,1,.@label$;
+		monster 'map_tnm1$,106,25,"마신의 그림자",2939,1,.@label$;
+		monster 'map_tnm1$,106,27,"마신의 그림자",2939,1,.@label$;
+		monster 'map_tnm1$,110,20,"마신의 그림자",2940,1,.@label$;
+		monster 'map_tnm1$,112,24,"마신의 그림자",2940,1,.@label$;
+		monster 'map_tnm1$,107,22,"마신의 그림자",2941,1,.@label$;
+		monster 'map_tnm1$,114,24,"마신의 그림자",2941,1,.@label$;
+		monster 'map_tnm1$,120,20,"마신의 그림자",2939,1,.@label$;
+		monster 'map_tnm1$,122,23,"마신의 그림자",2939,1,.@label$;
+		monster 'map_tnm1$,116,25,"마신의 그림자",2940,1,.@label$;
+		monster 'map_tnm1$,116,21,"마신의 그림자",2940,1,.@label$;
+		monster 'map_tnm1$,134,21,"마신의 그림자",2939,1,.@label$;
+		monster 'map_tnm1$,130,25,"마신의 그림자",2939,1,.@label$;
+		monster 'map_tnm1$,129,27,"마신의 그림자",2940,1,.@label$;
+		monster 'map_tnm1$,120,27,"마신의 그림자",2941,1,.@label$;
+		monster 'map_tnm1$,118,22,"마신의 그림자",2941,1,.@label$;
+		monster 'map_tnm1$,138,27,"마신의 그림자",2939,1,.@label$;
+		monster 'map_tnm1$,144,23,"마신의 그림자",2939,1,.@label$;
+		monster 'map_tnm1$,129,20,"마신의 그림자",2940,1,.@label$;
+		monster 'map_tnm1$,140,24,"마신의 그림자",2940,1,.@label$;
+		monster 'map_tnm1$,144,20,"마신의 그림자",2940,1,.@label$;
+		monster 'map_tnm1$,130,27,"마신의 그림자",2941,1,.@label$;
+		monster 'map_tnm1$,127,24,"마신의 그림자",2941,1,.@label$;
+		monster 'map_tnm1$,142,27,"마신의 그림자",2941,1,.@label$;
+		monster 'map_tnm1$,140,22,"마신의 그림자",2941,1,.@label$;
+		mapannounce 'map_tnm1$, "빠른 진행: 마물 무리가 한 번에 출현했습니다.", bc_map,0x33CCFF;
+		end;
+	}
+	initnpctimer;
 	end;
 OnTimer2000:
 	if (unitexists('mob_id) == true)
@@ -860,6 +984,18 @@ OnMobDead:
 		mes "한다고 하셨어. 어서 시작하자.";
 		close;
 	}
+	if ('need_fast) {
+		if (isbegin_quest(7571) == 0) {
+			erasequest 7569;
+			erasequest 7570;
+			setquest 7571;
+		}
+		mes "[루이]";
+		mes "통로가 확보됐어. 위층으로 이동하자.";
+		close2;
+		warp 'map_tnm1$,124,86;
+		end;
+	}
 	mes "[루이]";
 	mes "습격 속에서도 다행히 많은";
 	mes "병사들이 살아남아 마물을 처리했어.";
@@ -892,6 +1028,24 @@ OnMobDead:
 	}
 	if ('devil_tower < 4)
 		end;
+	if ('need_fast && 'devil_tower == 4) {
+		mes "[루실]";
+		mes "시스템 복구를 시작합니다. 잠시만 기다려 주세요.";
+		donpcevent instance_npcname("휴이#hui02") + "::OnEnable";
+		'devil_tower = 5;
+		percentheal -30,0;
+		specialeffect EF_LEVEL99_3;
+		progressbar "000000",1;
+		if (isbegin_quest(7572) == 0)
+			setquest 7572;
+		disablenpc instance_npcname("루실#tnm02");
+		enablenpc instance_npcname("루실#tnm03");
+		enablenpc instance_npcname("마법 검사#tnm02");
+		enablenpc instance_npcname("마왕 모로크#tnm01");
+		'devil_tower = 7;
+		mes "복구가 완료되었습니다. 주변 마물들을 정리한 뒤 휴이와 대화하세요.";
+		close3;
+	}
 	if ('devil_tower < 6) {
 		if ('devil_tower == 4) {
 			mes "[루실]";
@@ -979,6 +1133,16 @@ OnMobDead:
 		mes "하지만 그전에, 이 마물들부터 처리해야 해요!";
 		close;
 	}
+	if ('need_fast) {
+		mes "[휴이]";
+		mes "길이 열렸어요. 마왕의 인장이 있는 곳으로 이동할게요.";
+		next;
+		if (select("즉시 이동한다.:조금 더 준비한다.") == 2)
+			close;
+		close2;
+		warp 'map_tnm2$,152,130;
+		end;
+	}
 	mes "[휴이]";
 	mes "다른 분들은 어떻게 지내고 계실지...";
 	mes "위층은 타나토스 님과 루실 누나만 가본 곳이라서요...";
@@ -1001,6 +1165,28 @@ OnMobDead:
 
 OnEnable:
 	enablenpc instance_npcname("휴이#hui02");
+	if ('need_fast) {
+		'mob_count = 16;
+		.@label$ = instance_npcname("휴이#hui02") + "::OnMobDead";
+		monster 'map_tnm1$,142,90,"마신의 그림자",2939,1,.@label$;
+		monster 'map_tnm1$,139,91,"마신의 그림자",2940,1,.@label$;
+		monster 'map_tnm1$,130,86,"마신의 그림자",2940,1,.@label$;
+		monster 'map_tnm1$,143,95,"마신의 그림자",2941,1,.@label$;
+		monster 'map_tnm1$,134,90,"마신의 그림자",2941,1,.@label$;
+		monster 'map_tnm1$,137,103,"마신의 그림자",2939,1,.@label$;
+		monster 'map_tnm1$,140,102,"마신의 그림자",2939,1,.@label$;
+		monster 'map_tnm1$,132,103,"마신의 그림자",2940,1,.@label$;
+		monster 'map_tnm1$,146,100,"마신의 그림자",2940,1,.@label$;
+		monster 'map_tnm1$,142,105,"마신의 그림자",2940,1,.@label$;
+		monster 'map_tnm1$,135,107,"마신의 그림자",2941,1,.@label$;
+		monster 'map_tnm1$,135,107,"마신의 그림자",2939,1,.@label$;
+		monster 'map_tnm1$,146,100,"마신의 그림자",2939,1,.@label$;
+		monster 'map_tnm1$,130,86,"마신의 그림자",2940,1,.@label$;
+		monster 'map_tnm1$,137,103,"마신의 그림자",2940,1,.@label$;
+		monster 'map_tnm1$,143,95,"마신의 그림자",2941,1,.@label$;
+		mapannounce 'map_tnm1$, "빠른 진행: 루실 주변의 마물들이 한 번에 출현했습니다.", bc_map,0x33CCFF;
+		end;
+	}
 	initnpctimer;
 	end;
 OnTimer3000:
@@ -1058,6 +1244,17 @@ OnMobDead:
 		close3;
 	}
 	if ('devil_tower == 7) {
+		if ('need_fast) {
+			if (isbegin_quest(7573) == 0)
+				setquest 7573;
+			'demon$ = instance_npcname("마왕 모로크#tnm01");
+			'thanatos$ = instance_npcname("마법 검사#tnm02");
+			'devil_tower = 8;
+			mes "[루실]";
+			mes "다가오는 마법의 인장 5개를 모두 파괴해 주세요.";
+			donpcevent instance_npcname("#devil_seal_timer") + "::OnStart";
+			close3;
+		}
 		mes "[루실]";
 		mes "아, 마침 제시간에 잘 도착했군요.";
 		mes "저쪽 상황을 한번 보시겠어요?";
@@ -1392,6 +1589,27 @@ S_Sealdead:
 		donpcevent instance_npcname("마왕의 인장 소환#DIR_NORTH") + "::OnDisable";
 		mapannounce 'map_tnm2$, "마왕 모로크: 내가 고작 이런 인간들에게..!", bc_map,0xFF0000;
 		npctalk "마왕 모로크: 내가 고작 이런 인간들에게..!", instance_npcname("마왕 모로크#tnm01");
+		if ('need_fast) {
+			specialeffect EF_LORD,AREA, instance_npcname("마법 검사#tnm02");
+			disablenpc instance_npcname("마왕 모로크#tnm01");
+			disablenpc instance_npcname("마법 검사#tnm02");
+			disablenpc instance_npcname("루실#tnm03");
+			enablenpc instance_npcname("루실#tnm04");
+			enablenpc instance_npcname("#tnm3event01");
+			enablenpc instance_npcname("어린 소녀#tnm01");
+			'devil_tower = 9;
+			'demon$ = 'thanatos$ = "";
+			'round[DIR_NORTHWEST] = 'round[DIR_SOUTHWEST] = 'round[DIR_SOUTHEAST] = 'round[DIR_NORTHEAST] = 'round[DIR_NORTH] = 0;
+			'seal_id[DIR_NORTHWEST] = 'seal_id[DIR_SOUTHWEST] = 'seal_id[DIR_SOUTHEAST] = 'seal_id[DIR_NORTHEAST] = 'seal_id[DIR_NORTH] = 0;
+			'seal_hp[DIR_NORTHWEST] = 'seal_hp[DIR_SOUTHWEST] = 'seal_hp[DIR_SOUTHEAST] = 'seal_hp[DIR_NORTHEAST] = 'seal_hp[DIR_NORTH] = 0;
+			'seal_dead[DIR_NORTHWEST] = 'seal_dead[DIR_SOUTHWEST] = 'seal_dead[DIR_SOUTHEAST] = 'seal_dead[DIR_NORTHEAST] = 'seal_dead[DIR_NORTH] = 0;
+			deletearray 'coord_seal_DIR_NORTHWEST[0],14;
+			deletearray 'coord_seal_DIR_SOUTHWEST[0],14;
+			deletearray 'coord_seal_DIR_SOUTHEAST[0],14;
+			deletearray 'coord_seal_DIR_NORTHEAST[0],14;
+			deletearray 'coord_seal_DIR_NORTH[0],14;
+			end;
+		}
 		initnpctimer;
 	}
 	end;
@@ -1428,6 +1646,22 @@ OnTimer7000:
 1@tnm2,144,137,3	script	루실#tnm04	4_F_LUCILE,{
 	if ('devil_tower < 9)
 		end;
+	if ('need_fast) {
+		if (isbegin_quest(7572) == 1)
+			erasequest 7572;
+		if (isbegin_quest(7573) == 1)
+			erasequest 7573;
+		if (isbegin_quest(7574) == 0)
+			setquest 7574;
+		mes "[루실]";
+		mes "남쪽에서 강한 충돌이 감지됐어요. 바로 이동할까요?";
+		next;
+		if (select("바로 이동한다.:조금 더 준비한다.") == 2)
+			close3;
+		close2;
+		warp 'map_tnm3$,21,171;
+		end;
+	}
 	if (isbegin_quest(7574) == 0) {
 		if (isbegin_quest(7572) == 1)
 			erasequest 7572;// Lucile...?
@@ -1470,10 +1704,29 @@ OnTouch:
 	setpcblock PCBLOCK_NPC, true;
 	disablenpc instance_npcname("#tnm3event01");
 	enablenpc instance_npcname("어린 소녀#tnm01");
-	sleep2 4000;
+	if ('need_fast)
+		sleep2 300;
+	else
+		sleep2 4000;
 	mapannounce 'map_tnm3$, "어린 소녀: 오딘이시여 절 돌보소서! 마물이에요!! 도와주세요!", bc_map,0xFF00;
 	'mob_count = 12;
-	initnpctimer;
+	if ('need_fast) {
+		.@label$ = instance_npcname("어린 소녀#tnm01") + "::OnMobDead";
+		monster 'map_tnm3$,33,171,"마신의 그림자",2939,1,.@label$;
+		monster 'map_tnm3$,39,172,"마신의 그림자",2939,1,.@label$;
+		monster 'map_tnm3$,34,177,"마신의 그림자",2940,1,.@label$;
+		monster 'map_tnm3$,36,176,"마신의 그림자",2940,1,.@label$;
+		monster 'map_tnm3$,37,175,"마신의 그림자",2940,1,.@label$;
+		monster 'map_tnm3$,37,173,"마신의 그림자",2941,1,.@label$;
+		monster 'map_tnm3$,36,172,"마신의 그림자",2941,1,.@label$;
+		monster 'map_tnm3$,29,178,"마신의 그림자",2941,1,.@label$;
+		monster 'map_tnm3$,35,172,"마신의 그림자",2941,1,.@label$;
+		monster 'map_tnm3$,34,173,"마신의 그림자",2941,1,.@label$;
+		monster 'map_tnm3$,35,172,"마신의 그림자",2939,1,.@label$;
+		monster 'map_tnm3$,34,173,"마신의 그림자",2941,1,.@label$;
+	}
+	else
+		initnpctimer;
 	setpcblock PCBLOCK_NPC, false;
 	end;
 OnTimer1000:
@@ -1523,6 +1776,15 @@ OnTimer9000:
 			mes "[어린 소녀]";
 			mes "*훌쩍이며* 마물들이 너무 무서워요.";
 			close;
+		}
+		if ('need_fast) {
+			mes "[어린 소녀]";
+			mes "선반 뒤 비밀 통로로 가면 아빠가 있는 곳에 갈 수 있어요.";
+			close2;
+			enablenpc instance_npcname("#tnm3gate01");
+			enablenpc instance_npcname("#tnm3event02ect");
+			'devil_tower = 11;
+			end;
 		}
 		mes "[어린 소녀]";
 		mes "어째서 갑자기 마물들이 쳐들어와서,";
@@ -1584,7 +1846,29 @@ OnTouch:
 	enablenpc instance_npcname("어린 소녀#tnm02");
 	npctalk "어린 소녀: 보세요! 마물들이에요, 곧 성을 점령할 거예요!", instance_npcname("어린 소녀#tnm02");
 	'mob_count = 18;
-	initnpctimer;
+	if ('need_fast) {
+		.@label$ = instance_npcname("어린 소녀#tnm02") + "::OnMobDead";
+		monster 'map_tnm3$,97,174,"마신의 그림자",2939,1,.@label$;
+		monster 'map_tnm3$,98,175,"마신의 그림자",2939,1,.@label$;
+		monster 'map_tnm3$,100,166,"마신의 그림자",2939,1,.@label$;
+		monster 'map_tnm3$,108,171,"마신의 그림자",2940,1,.@label$;
+		monster 'map_tnm3$,104,172,"마신의 그림자",2940,1,.@label$;
+		monster 'map_tnm3$,109,169,"마신의 그림자",2941,1,.@label$;
+		monster 'map_tnm3$,111,173,"마신의 그림자",2941,1,.@label$;
+		monster 'map_tnm3$,113,167,"마신의 그림자",2941,1,.@label$;
+		monster 'map_tnm3$,101,176,"마신의 그림자",2939,1,.@label$;
+		monster 'map_tnm3$,116,170,"마신의 그림자",2941,1,.@label$;
+		monster 'map_tnm3$,107,175,"마신의 그림자",2940,1,.@label$;
+		monster 'map_tnm3$,106,174,"마신의 그림자",2940,1,.@label$;
+		monster 'map_tnm3$,106,169,"마신의 그림자",2939,1,.@label$;
+		monster 'map_tnm3$,103,177,"마신의 그림자",2940,1,.@label$;
+		monster 'map_tnm3$,121,171,"마신의 그림자",2941,1,.@label$;
+		monster 'map_tnm3$,119,173,"마신의 그림자",2941,1,.@label$;
+		monster 'map_tnm3$,127,166,"마신의 그림자",2941,1,.@label$;
+		monster 'map_tnm3$,125,166,"마신의 그림자",2941,1,.@label$;
+	}
+	else
+		initnpctimer;
 	end;
 OnTimer1000:
 	.@label$ = instance_npcname("어린 소녀#tnm02") + "::OnMobDead";
@@ -1652,12 +1936,18 @@ OnTouch_:
 	if ('devil_tower == 11) {
 		'devil_tower = 12;
 		setpcblock PCBLOCK_NPC, true;
-		sleep2 1000;
-		npctalk "악의 그림자: 어디서 쥐새끼들이 기어 들어오는 냄새가 난다 했더니, 역시나였군!!";
-		sleep2 3000;
-		npctalk "악의 그림자: 네놈들은 그 쓸데없는 호기심과 참견을 후회하게 될 거다. 자, 만찬의 시간이다!";
-		sleep2 3000;
-		npctalk "악의 그림자: 심연의 어둠이여, 명하노니 나타나라!!";
+		if ('need_fast) {
+			npctalk "악의 그림자: 침입자다! 모두 처리해라!";
+			sleep2 300;
+		}
+		else {
+			sleep2 1000;
+			npctalk "악의 그림자: 어디서 쥐새끼들이 기어 들어오는 냄새가 난다 했더니, 역시나였군!!";
+			sleep2 3000;
+			npctalk "악의 그림자: 네놈들은 그 쓸데없는 호기심과 참견을 후회하게 될 거다. 자, 만찬의 시간이다!";
+			sleep2 3000;
+			npctalk "악의 그림자: 심연의 어둠이여, 명하노니 나타나라!!";
+		}
 		disablenpc instance_npcname("사악한 그림자#tnm3mob01");
 		donpcevent instance_npcname("악의 그림자 처치#tnm3mob01") + "::OnSummon";
 		setpcblock PCBLOCK_NPC, false;
@@ -1704,12 +1994,18 @@ OnTouch_:// possibility to skip this step
 	if ('shade == 0) {
 		'shade = 1;
 		setpcblock PCBLOCK_NPC, true;
-		sleep2 1000;
-		npctalk "마물 그림자: 네놈들이 바로 그 성가신 방해꾼들이냐!";
-		sleep2 2000;
-		npctalk "마물 그림자: 쳇, 지키는 것 하나 제대로 못 하는 것들이.. 뭐 됐다, 여기서 전부 죽여주마.";
-		sleep2 3000;
-		npctalk "마물 그림자: 네놈들의 심장 피를 제물 삼아, 죽음을 마왕의 생명으로 바꿔주겠다!!!";
+		if ('need_fast) {
+			npctalk "마물 그림자: 방해꾼들을 모두 없애라!";
+			sleep2 300;
+		}
+		else {
+			sleep2 1000;
+			npctalk "마물 그림자: 네놈들이 바로 그 성가신 방해꾼들이냐!";
+			sleep2 2000;
+			npctalk "마물 그림자: 쳇, 지키는 것 하나 제대로 못 하는 것들이.. 뭐 됐다, 여기서 전부 죽여주마.";
+			sleep2 3000;
+			npctalk "마물 그림자: 네놈들의 심장 피를 제물 삼아, 죽음을 마왕의 생명으로 바꿔주겠다!!!";
+		}
 		disablenpc instance_npcname("마물 그림자#mobmaster");
 		donpcevent instance_npcname("#mobmaster_kill") + "::OnSummon";
 		setpcblock PCBLOCK_NPC, false;
@@ -1790,6 +2086,19 @@ OnStart:
 	enablenpc instance_npcname("#morocc_lord_talk");
 	'Morocc$ = instance_npcname("모로크 로드나이트#mocl");
 	'loki$ = instance_npcname("로키#tnmloki01");
+	if ('need_fast) {
+		npctalk "로키: 마인드 블래스터로 마왕의 가호를 끊어내겠다!", 'loki$;
+		specialeffect EF_BEGINSPELL3,AREA, 'loki$;
+		sleep 500;
+		enablenpc instance_npcname("로키#tnmloki02");
+		mapwarp 'map_tnm3$, 'map_tnm3$,136,62;
+		'devil_tower = 13;
+		disablenpc instance_npcname("#morocc_lord_talk");
+		disablenpc instance_npcname("모로크 로드나이트#mocl");
+		disablenpc instance_npcname("로키#tnmloki01");
+		disablenpc instance_npcname("어린 소녀#tnm04");
+		end;
+	}
 	npctalk "모로크 로드나이트: 그래.. 그 쥐새끼가 어쌔신이었나? 죽음을 자초하러 온 게냐?", 'Morocc$;
 	initnpctimer;
 	end;
@@ -1891,6 +2200,22 @@ OnTimer55500:
 		mes "[로키]";
 		mes "...정말 꼴불견이군.";
 		mes "내 임무를 돕고 싶다면, 지금 당장 ^4d4dff용병 계약을 해지^000000해 주어야겠다.";
+		close;
+	}
+	if ('need_fast) {
+		mes "[로키]";
+		mes "마인드 블래스터로 가호를 해제할 테니 마신의 추종자를 처치해라.";
+		next;
+		if (select("전투를 시작한다.:조금 더 준비한다.") == 2)
+			close;
+		disablenpc instance_npcname("로키#tnmloki02");
+		'devil_tower = 14;
+		mercenary_create 2937,1800000;
+		mapannounce 'map_tnm3$, "마신의 추종자가 나타났습니다.", bc_map,0xFF00;
+		enablenpc instance_npcname("#boss_skills_timer");
+		monster 'map_tnm3$,93,52,"마신의 추종자",2942,1, instance_npcname("#boss_skills_timer") + "::OnBossDead";
+		'boss_id = $@mobid[0];
+		donpcevent instance_npcname("#boss_skills_timer") + "::OnStart";
 		close;
 	}
 	mes "[로키]";
@@ -2053,6 +2378,7 @@ OnMobDead:
 OnBossDead:
 	stopnpctimer;
 	killmonster 'map_tnm3$, 'label$;
+	callfunc("F_NEED_DevilTowerPartyMode", getcharid(1), 2);
 	'x_boss = 'y_boss = 'boss_id = 0;
 	'label$ = "";
 	mapannounce 'map_tnm3$, "마왕 숭배자의 목소리: 아니, 말도 안 돼. 이럴 수가.. 이 기운은.. 이 힘은.. 혹시 네놈.. 정체가..", bc_map,0xFF0000;
@@ -2077,6 +2403,7 @@ OnBossDead:
 		mes "보상 처리 중 오류가 발생했습니다.";
 		close;
 	}
+	#NEED_MD_DEVIL_TOWER_CLEAR = 1;
 	specialeffect EF_COIN;
 	disablenpc instance_npcname("상자#tnmbosang");
 	makeitem 7293,1, 'map_tnm3$, (69 + rand(-5,5)), (70 + rand(-5,5));	// Rose Quartz
@@ -2145,6 +2472,19 @@ OnBossDead:
 1@tnm3,69,72,3	script	로키#tnmloki03	4_M_ROKI2,{
 	if ('devil_tower != 15)
 		end;
+	#NEED_MD_DEVIL_TOWER_CLEAR = 1;
+	if ('need_fast) {
+		if (isbegin_quest(7576) == 0)
+			setquest 7576;
+		mes "[로키]";
+		mes "마왕의 부활은 저지했다. 원래 시간대로 돌아가겠나?";
+		next;
+		if (select("마신의 탑을 나간다.:주변을 더 둘러본다.") == 2)
+			close;
+		close2;
+		warp "dali02",134,112;
+		end;
+	}
 	if (isbegin_quest(7576) == 0) {
 		mes "[로키]";
 		mes "..정말 귀찮게 됐군.";
@@ -2183,6 +2523,7 @@ OnBossDead:
 OnInstanceInit:
 	'heal_count = 0;
 	'devil_tower = 0;
+	'need_fast = 0;
 	'mob_count = 0;
 	'shade = 0;
 
@@ -2271,4 +2612,54 @@ OnInstanceInit:
 	disablenpc instance_npcname("로키#tnmloki03");
 	disablenpc instance_npcname("상자#tnmbosang");
 	end;
+}
+
+// NEED: 마신의 탑 빠른 진행 파티 처리
+// mode 0: 대기 플래그 초기화
+// mode 1: 전원 클리어/온라인 확인 후 빠른 진행 대기 플래그 설정
+// mode 2: 온라인 파티원 전원에게 최초 클리어 기록 저장
+function	script	F_NEED_DevilTowerPartyMode	{
+	.@party_id = getarg(0);
+	.@mode = getarg(1);
+	.@origin_aid = getcharid(3);
+
+	if (.@party_id < 1)
+		return 0;
+
+	getpartymember .@party_id,1;
+	.@count = $@partymembercount;
+	if (.@count < 1)
+		return 0;
+	copyarray .@aid[0],$@partymemberaid[0],.@count;
+
+	if (.@mode == 1) {
+		for (.@i = 0; .@i < .@count; .@i++) {
+			if (!attachrid(.@aid[.@i])) {
+				attachrid(.@origin_aid);
+				return 0;
+			}
+			if (!#NEED_MD_DEVIL_TOWER_CLEAR) {
+				attachrid(.@origin_aid);
+				return 0;
+			}
+		}
+	}
+
+	for (.@i = 0; .@i < .@count; .@i++) {
+		if (!attachrid(.@aid[.@i]))
+			continue;
+		switch (.@mode) {
+		case 0:
+			@NEED_DT_FAST_PARTY = 0;
+			break;
+		case 1:
+			@NEED_DT_FAST_PARTY = .@party_id;
+			break;
+		case 2:
+			#NEED_MD_DEVIL_TOWER_CLEAR = 1;
+			break;
+		}
+	}
+	attachrid(.@origin_aid);
+	return 1;
 }

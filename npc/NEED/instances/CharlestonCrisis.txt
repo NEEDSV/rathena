@@ -5,9 +5,13 @@
 //= 위기의 찰스턴 Instance
 //===== Changelogs: ==========================================
 //= 1.0 First version. [Capuche]
+//= 1.1 NEED: 최초 클리어 후 빠른 이동 및 대화 생략 기능 추가.
 //============================================================
 
 verus04,75,114,5	script	찰스턴::Charleston#mcd	4_F_CHARLESTON02,{
+	// 기존 완료 캐릭터의 빠른 진행 기능을 계정 단위로 소급 해금합니다.
+	if (#NEED_MD_CHARLESTON_CLEAR == 0 && isbegin_quest(13186) == 2)
+		#NEED_MD_CHARLESTON_CLEAR = 1;
 	.@instance_db_id = 30;
 	.@remaining = instance_ip_reward_remaining(.@instance_db_id);
 	.@limit = instance_ip_reward_limit(.@instance_db_id);
@@ -140,6 +144,9 @@ verus04,75,114,5	script	찰스턴::Charleston#mcd	4_F_CHARLESTON02,{
 }
 
 verus04,81,112,5	script	기계 장치::Machine#mcd	PORTAL,{
+	// 기존 완료 캐릭터의 빠른 진행 기능을 계정 단위로 소급 해금합니다.
+	if (#NEED_MD_CHARLESTON_CLEAR == 0 && isbegin_quest(13186) == 2)
+		#NEED_MD_CHARLESTON_CLEAR = 1;
 	.@instance_db_id = 30;
 	.@remaining = instance_ip_reward_remaining(.@instance_db_id);
 	.@limit = instance_ip_reward_limit(.@instance_db_id);
@@ -243,12 +250,260 @@ verus04,81,112,5	script	기계 장치::Machine#mcd	PORTAL,{
 	end;
 }
 
+
+// 빠른 진행용 공통 대화 생략 선택지
+function	script	F_CharlestonSkipMenu	{
+	if ('need_charleston_fast != 1 || is_party_leader() == false)
+		return 0;
+
+	mes "[빠른 진행]";
+	mes "이미 확인한 대화와 연출을 생략할 수 있습니다.";
+	next;
+	return select( "대화와 연출을 확인한다.", "대화와 연출을 생략한다." ) == 2;
+}
+
+// 파티 내 온라인 구성원 모두가 최초 클리어를 완료했는지 확인합니다.
+function	script	F_CharlestonCanEnableFast	{
+	.@caller_aid = getcharid(3);
+	.@party_id = getcharid(1);
+	if (.@party_id < 1)
+		return 0;
+
+	getpartymember .@party_id,1;
+	.@member_count = $@partymembercount;
+	copyarray .@member_aid[0],$@partymemberaid[0],.@member_count;
+	.@allowed = 1;
+
+	for (.@i = 0; .@i < .@member_count; .@i++) {
+		if (attachrid(.@member_aid[.@i]) == 0)
+			continue;
+
+		if (#NEED_MD_CHARLESTON_CLEAR == 0 && isbegin_quest(13186) == 2)
+			#NEED_MD_CHARLESTON_CLEAR = 1;
+
+		if (#NEED_MD_CHARLESTON_CLEAR == 0) {
+			.@allowed = 0;
+			break;
+		}
+	}
+
+	attachrid(.@caller_aid);
+	return .@allowed;
+}
+
+// 빠른 진행 모드를 활성화하고 이동 포탈 및 초반 게이트를 개방합니다.
+function	script	F_CharlestonEnableFast	{
+	'need_charleston_fast = 1;
+	for (.@i = 1; .@i <= 13; .@i++)
+		enablenpc instance_npcname("Charleston Fast Travel#" + .@i);
+
+	enablenpc instance_npcname("1gate#1");
+	enablenpc instance_npcname("2gate#1");
+	enablenpc instance_npcname("3gate#1");
+	enablenpc instance_npcname("4gate#1");
+
+	mapannounce 'map_name$, "빠른 진행 모드가 활성화되었습니다. 빠른 이동 포탈과 대화 생략 메뉴를 이용할 수 있습니다.", bc_map, 0x33CCFF;
+	return 1;
+}
+
+// 최초 클리어 이후 파티장이 활성화할 수 있는 빠른 진행 모드입니다.
+1@mcd,125,272,4	script	빠른 진행 안내::Charleston Fast Start#1	4_F_CHARLESTON01,{
+	if (#NEED_MD_CHARLESTON_CLEAR == 0 && isbegin_quest(13186) == 2)
+		#NEED_MD_CHARLESTON_CLEAR = 1;
+
+	if ('need_charleston_fast == 1) {
+		mes "[빠른 진행 안내]";
+		mes "이 인스턴스에는 빠른 진행 모드가 적용되어 있습니다.";
+		close;
+	}
+
+	if (#NEED_MD_CHARLESTON_CLEAR == 0) {
+		mes "[빠른 진행 안내]";
+		mes "최초 클리어 전에는 모든 진행과 대화를 직접 확인해야 합니다.";
+		close;
+	}
+
+	if (is_party_leader() == false) {
+		mes "[빠른 진행 안내]";
+		mes "빠른 진행 모드는 파티장만 활성화할 수 있습니다.";
+		close;
+	}
+
+	mes "[빠른 진행 안내]";
+	mes "이 계정은 위기의 찰스턴 최초 클리어 기록이 확인되었습니다.";
+	mes "빠른 진행 모드를 활성화하면 주요 전투와 필수 재료는 유지되지만, 긴 대화와 이동 시간을 줄일 수 있습니다.";
+	next;
+	switch( select( "일반 진행을 유지한다.", "빠른 진행 모드를 활성화한다.", "취소한다." ) ) {
+	case 1:
+		mes "[빠른 진행 안내]";
+		mes "기존 방식으로 진행합니다.";
+		close;
+	case 2:
+		if (callfunc("F_CharlestonCanEnableFast") == 0) {
+			mes "[빠른 진행 안내]";
+			mes "파티 내 온라인 구성원 중 최초 클리어를 완료하지 않은 계정이 있습니다.";
+			mes "모든 구성원이 최초 진행을 완료한 뒤 이용해 주세요.";
+			close;
+		}
+		callfunc("F_CharlestonEnableFast");
+		mes "[빠른 진행 안내]";
+		mes "빠른 이동 포탈이 활성화되었습니다.";
+		mes "주요 NPC 대화에서 생략 여부를 선택할 수 있습니다.";
+		close;
+	case 3:
+		end;
+	}
+	end;
+}
+
+// 진행 단계에 맞는 목적지만 노출하는 빠른 이동 포탈입니다.
+1@mcd,129,270,4	script	빠른 이동 포탈::Charleston Fast Travel#1	PORTAL,{
+	if ('need_charleston_fast != 1)
+		end;
+
+	mes "[빠른 이동 포탈]";
+	mes "현재 진행 단계: ^3355FF" + 'ep15_1_mcd01 + "^000000";
+
+	switch( 'ep15_1_mcd01 ) {
+	case 0:
+		mes "찰스턴 1호와 대화해 공장 조사를 시작해 주세요.";
+		next;
+		if (select( "공장 입구", "취소" ) == 1) {
+			close2;
+			warp 'map_name$,127,270;
+			end;
+		}
+		close;
+	case 1:
+	case 2:
+	case 3:
+		mes "연구실로 바로 이동할 수 있습니다.";
+		next;
+		switch( select( "공장 입구", "베 박사 연구실", "취소" ) ) {
+		case 1: close2; warp 'map_name$,127,270; end;
+		case 2: close2; warp 'map_name$,120,220; end;
+		case 3: close;
+		}
+		end;
+	case 4:
+		mes "락스텝 탐색 위치로 이동할 수 있습니다.";
+		next;
+		switch( select( "연구실", "락스텝 1", "락스텝 2", "락스텝 3", "락스텝 4", "락스텝 5", "락스텝 6", "락스텝 7", "취소" ) ) {
+		case 1: close2; warp 'map_name$,120,220; end;
+		case 2: close2; warp 'map_name$,82,226; end;
+		case 3: close2; warp 'map_name$,124,84; end;
+		case 4: close2; warp 'map_name$,109,68; end;
+		case 5: close2; warp 'map_name$,208,181; end;
+		case 6: close2; warp 'map_name$,181,192; end;
+		case 7: close2; warp 'map_name$,128,124; end;
+		case 8: close2; warp 'map_name$,52,108; end;
+		case 9: close;
+		}
+		end;
+	case 5:
+	case 6:
+	case 7:
+		mes "보조 발전기 위치로 이동할 수 있습니다.";
+		next;
+		switch( select( "연구실", "보조 발전기 1", "보조 발전기 2", "보조 발전기 3", "취소" ) ) {
+		case 1: close2; warp 'map_name$,120,220; end;
+		case 2: close2; warp 'map_name$,84,231; end;
+		case 3: close2; warp 'map_name$,170,196; end;
+		case 4: close2; warp 'map_name$,124,84; end;
+		case 5: close;
+		}
+		end;
+	case 8:
+	case 9:
+		mes "연구실 전투 구역으로 이동할 수 있습니다.";
+		next;
+		switch( select( "연구실", "찰스턴 2호 전투 구역", "취소" ) ) {
+		case 1: close2; warp 'map_name$,120,220; end;
+		case 2: close2; warp 'map_name$,140,214; end;
+		case 3: close;
+		}
+		end;
+	case 10:
+		mes "공장 중앙 코어 앞으로 이동할 수 있습니다.";
+		next;
+		switch( select( "연구실", "중앙 코어", "취소" ) ) {
+		case 1: close2; warp 'map_name$,120,220; end;
+		case 2: close2; warp 'map_name$,130,122; end;
+		case 3: close;
+		}
+		end;
+	case 11:
+		mes "코어 접속 장치 진행 위치로 이동할 수 있습니다.";
+		next;
+		if (isnpccloaked(instance_npcname("8gate#1")) == false) {
+			switch( select( "중앙 코어", "찰스턴 3호 격납고", "취소" ) ) {
+			case 1: close2; warp 'map_name$,130,122; end;
+			case 2: close2; warp 'map_name$,130,145; end;
+			case 3: close;
+			}
+		}
+		switch( select( "중앙 코어", "취소" ) ) {
+		case 1: close2; warp 'map_name$,130,122; end;
+		case 2: close;
+		}
+		end;
+	case 12:
+		mes "찰스턴 3호 전투 구역으로 이동할 수 있습니다.";
+		next;
+		switch( select( "찰스턴 3호 격납고", "취소" ) ) {
+		case 1: close2; warp 'map_name$,130,145; end;
+		case 2: close;
+		}
+		end;
+	case 13:
+		mes "찰스턴 2호의 후속 진행 위치로 이동할 수 있습니다.";
+		next;
+		switch( select( "찰스턴 3호 격납고", "연구실", "취소" ) ) {
+		case 1: close2; warp 'map_name$,130,145; end;
+		case 2: close2; warp 'map_name$,120,214; end;
+		case 3: close;
+		}
+		end;
+	case 14:
+		mes "베 박사가 있는 연구실로 이동할 수 있습니다.";
+		next;
+		switch( select( "연구실", "찰스턴 3호 격납고", "취소" ) ) {
+		case 1: close2; warp 'map_name$,120,214; end;
+		case 2: close2; warp 'map_name$,130,145; end;
+		case 3: close;
+		}
+		end;
+	default:
+		mes "마무리 진행 위치로 이동할 수 있습니다.";
+		next;
+		switch( select( "연구실", "샬로쉬", "취소" ) ) {
+		case 1: close2; warp 'map_name$,120,214; end;
+		case 2: close2; warp 'map_name$,80,167; end;
+		case 3: close;
+		}
+		end;
+	}
+	end;
+}
+1@mcd,118,220,4	duplicate(Charleston Fast Travel#1)	빠른 이동 포탈::Charleston Fast Travel#2	PORTAL
+1@mcd,82,224,4	duplicate(Charleston Fast Travel#1)	빠른 이동 포탈::Charleston Fast Travel#3	PORTAL
+1@mcd,124,82,4	duplicate(Charleston Fast Travel#1)	빠른 이동 포탈::Charleston Fast Travel#4	PORTAL
+1@mcd,207,179,4	duplicate(Charleston Fast Travel#1)	빠른 이동 포탈::Charleston Fast Travel#5	PORTAL
+1@mcd,180,190,4	duplicate(Charleston Fast Travel#1)	빠른 이동 포탈::Charleston Fast Travel#6	PORTAL
+1@mcd,126,122,4	duplicate(Charleston Fast Travel#1)	빠른 이동 포탈::Charleston Fast Travel#7	PORTAL
+1@mcd,50,106,4	duplicate(Charleston Fast Travel#1)	빠른 이동 포탈::Charleston Fast Travel#8	PORTAL
+1@mcd,169,194,4	duplicate(Charleston Fast Travel#1)	빠른 이동 포탈::Charleston Fast Travel#9	PORTAL
+1@mcd,139,212,4	duplicate(Charleston Fast Travel#1)	빠른 이동 포탈::Charleston Fast Travel#10	PORTAL
+1@mcd,128,120,4	duplicate(Charleston Fast Travel#1)	빠른 이동 포탈::Charleston Fast Travel#11	PORTAL
+1@mcd,128,143,4	duplicate(Charleston Fast Travel#1)	빠른 이동 포탈::Charleston Fast Travel#12	PORTAL
+1@mcd,78,165,4	duplicate(Charleston Fast Travel#1)	빠른 이동 포탈::Charleston Fast Travel#13	PORTAL
+
 // GM용 NPC
 sec_in02,10,13,3	script	찰스턴 테스트::Charleston#sara	4_F_CHARLESTON01,{
 	mes "위기의 찰스턴 테스트 ver130603a";
 	if (callfunc("F_GM_NPC",1854,0,0,9999) < 1)
 		close;
-	switch( select( "20시간 재입장 대기시간 초기화", "초기 진행 퀘스트 상태 초기화", "던전 진행 완료 상태 설정" ) ) {
+	switch( select( "20시간 재입장 대기시간 초기화", "초기 진행 퀘스트 상태 초기화", "던전 진행 완료 상태 설정", "빠른 진행 해금", "빠른 진행 해금 초기화" ) ) {
 	case 1:
 		if (isbegin_quest(13185))
 			erasequest 13185;
@@ -266,6 +521,16 @@ sec_in02,10,13,3	script	찰스턴 테스트::Charleston#sara	4_F_CHARLESTON01,{
 			setquest 13184;
 		if (isbegin_quest(13184) == 1)
 			completequest 13184;
+		close;
+	case 4:
+		#NEED_MD_CHARLESTON_CLEAR = 1;
+		mes "빠른 진행 기능을 해금했습니다.";
+		close;
+	case 5:
+		#NEED_MD_CHARLESTON_CLEAR = 0;
+		if (isbegin_quest(13186) > 0)
+			erasequest 13186;
+		mes "빠른 진행 해금 기록과 기존 완료 퀘스트 기록을 초기화했습니다.";
 		close;
 	}
 	end;
@@ -288,6 +553,35 @@ OnTouch_:
 	if ('ep15_1_mcd01 != 0) {
 		mes "[찰스턴 1호]";
 		mes "왼쪽 복도를 따라가세요. 자신의 몸은 스스로 지켜야 한다는 점을 잊지 마세요.";
+		close3;
+	}
+
+	if (#NEED_MD_CHARLESTON_CLEAR == 0 && isbegin_quest(13186) == 2)
+		#NEED_MD_CHARLESTON_CLEAR = 1;
+
+	// 입장 직후 첫 접촉에서 빠른 진행을 바로 선택할 수 있도록 합니다.
+	if (#NEED_MD_CHARLESTON_CLEAR == 1 && 'need_charleston_fast == 0 && is_party_leader() == true) {
+		mes "[빠른 진행 안내]";
+		mes "최초 클리어 기록이 확인되었습니다.";
+		mes "이번 입장에서 빠른 진행 모드를 사용하시겠습니까?";
+		next;
+		if (select( "일반 진행으로 시작한다.", "빠른 진행을 활성화한다." ) == 2) {
+			if (callfunc("F_CharlestonCanEnableFast") == 0) {
+				mes "[빠른 진행 안내]";
+				mes "파티 내 온라인 구성원 중 최초 클리어를 완료하지 않은 계정이 있습니다.";
+				mes "이번 입장은 일반 진행으로 시작합니다.";
+				next;
+			}
+			else
+				callfunc("F_CharlestonEnableFast");
+		}
+	}
+
+	if (callfunc("F_CharlestonSkipMenu")) {
+		'ep15_1_mcd01 = 1;
+		monster 'map_name$,24,275, "경비 로봇", 3127,1, instance_npcname("Charleston 1#0") + "::OnMyMobDead";	// KICK_STEP
+		mes "[찰스턴 1호]";
+		mes "공장 보안 해제를 위해 첫 번째 경비 로봇을 처리해 주세요.";
 		close3;
 	}
 	mes "[찰스턴 1호]";
@@ -354,6 +648,12 @@ OnTouch_:
 	}
 	if ('ep15_1_mcd01 > 2)
 		end;
+	if (('ep15_1_mcd01 == 1 || 'ep15_1_mcd01 == 2) && callfunc("F_CharlestonSkipMenu")) {
+		'ep15_1_mcd01 = 3;
+		mes "[베 박사]";
+		mes "찰스턴 2호 복구를 위해 찰스턴 1호의 안내를 따라 주세요.";
+		close;
+	}
 	if ('ep15_1_mcd01 == 2) {
 		mes "[베 박사]";
 		mes "누구와 함께 왔는지는 중요하지 않습니다. 나를 도울 수 있는지만 말해 주세요.";
@@ -466,6 +766,28 @@ OnTouch_:
 		close3;
 	}
 	if ('ep15_1_mcd01 == 3) {
+		if (callfunc("F_CharlestonSkipMenu")) {
+			'ep15_1_mcd01 = 4;
+			.@label$ = instance_npcname("Charleston 1#1") + "::OnMyMobDead";
+			monster 'map_name$, 84,226, "락스텝", 3126,1, .@label$;
+			monster 'map_name$,126, 84, "락스텝", 3126,1, .@label$;
+			monster 'map_name$,111, 68, "락스텝", 3126,1, .@label$;
+			monster 'map_name$,210,181, "락스텝", 3126,1, .@label$;
+			monster 'map_name$,183,192, "락스텝", 3126,1, .@label$;
+			monster 'map_name$,130,124, "락스텝", 3126,1, .@label$;
+			monster 'map_name$, 54,108, "락스텝", 3126,1, .@label$;
+			viewpoint 1,84,226,1,0xFF00FF;
+			viewpoint 1,126,84,2,0xFF00FF;
+			viewpoint 1,111,68,3,0xFF00FF;
+			viewpoint 1,210,181,4,0xFF00FF;
+			viewpoint 1,183,192,5,0xFF00FF;
+			viewpoint 1,130,124,6,0xFF00FF;
+			viewpoint 1,54,108,7,0xFF00FF;
+			disablenpc instance_npcname("5gate#1");
+			mes "[찰스턴 1호]";
+			mes "표시된 위치에서 락스텝 3기를 파괴해 주세요.";
+			close3;
+		}
 		cutin "dalle01.bmp",2;
 		mes "[찰스턴 1호]";
 		mes "해야 할 일을 설명할게요. 그전에 불청객이 들어오지 못하도록 공장 입구부터 닫겠습니다.";
@@ -572,6 +894,23 @@ OnTimer300:
 		close3;
 	}
 	if ('ep15_1_mcd01 == 4) {
+		if (callfunc("F_CharlestonSkipMenu")) {
+			enablenpc instance_npcname("Backup Generator#1");
+			enablenpc instance_npcname("Backup Generator#2");
+			enablenpc instance_npcname("Backup Generator#3");
+			monster 'map_name$, 86,231, "경비 로봇", 3127,1;
+			monster 'map_name$,172,196, "경비 로봇", 3127,1;
+			monster 'map_name$,126, 84, "경비 로봇", 3127,1;
+			monster 'map_name$, 97,149, "경비 로봇", 3127,1;
+			monster 'map_name$,160,151, "경비 로봇", 3127,1;
+			'ep15_1_mcd01 = 5;
+			viewpoint 1,86,231,8,0xFF00FF;
+			viewpoint 1,172,196,9,0xFF00FF;
+			viewpoint 1,126,84,10,0xFF00FF;
+			mes "[찰스턴 1호]";
+			mes "보조 발전기 세 곳을 모두 가동해 주세요.";
+			close3;
+		}
 		cutin "dalle01.bmp",2;
 		mes "[찰스턴 1호]";
 		mes "후우, 일단 상황이 정리된 것 같군요. 경계 모드를 해제하고 찰스턴 2호를 재가동해 볼게요.";
@@ -625,6 +964,15 @@ OnTimer300:
 	if ('ep15_1_mcd01 == 8) {
 		.@npc2$ = instance_npcname("Charleston 2#0");
 		.@npc5$ = instance_npcname("Dr. Ve#1");
+		if (callfunc("F_CharlestonSkipMenu")) {
+			disablenpc .@npc2$;
+			disablenpc instance_npcname("Charleston 1#3");
+			enablenpc instance_npcname("Charleston 1#4");
+			enablenpc instance_npcname("Charleston 2#1");
+			mes "[찰스턴 1호]";
+			mes "찰스턴 2호가 공장 통제권을 장악했습니다. 뒤를 쫓아 주세요.";
+			close3;
+		}
 		cutin "dalle01.bmp",2;
 		mes "[찰스턴 1호]";
 		mes "돌아오셨군요. 여러분 덕분에 찰스턴 2호의 재가동 준비가 거의 끝났어요. 잠시만 기다려 주세요.";
@@ -779,6 +1127,15 @@ OnTimer300:
 	if ('ep15_1_mcd01 > 11)
 		end;
 	if ('ep15_1_mcd01 == 8) {
+		if (callfunc("F_CharlestonSkipMenu")) {
+			'ep15_1_mcd01 = 9;
+			donpcevent instance_npcname("battle#1") + "::OnStart";
+			disablenpc instance_npcname("6gate#1");
+			disablenpc instance_npcname("7gate#1");
+			mes "[찰스턴 2호]";
+			mes "공장 방어 로봇이 작동합니다.";
+			close3;
+		}
 		cutin "nale03.bmp",0;
 		mes "[찰스턴 2호]";
 		mes "따라오지 마! 공장 전체를 파괴해 버릴 거야!";
@@ -832,6 +1189,23 @@ OnTimer300:
 1@mcd,144,212,5,0	script	battle#1	HIDDEN_WARP_NPC,{
 	end;
 OnStart:
+	if ('need_charleston_fast == 1) {
+		areamonster 'map_name$,134,202,154,222,"C-타입", 3128,4;
+		sleep 700;
+		areamonster 'map_name$,134,202,154,222,"H-타입", 3128,3;
+		sleep 700;
+		areamonster 'map_name$,134,202,154,222,"A-타입", 3128,3;
+		sleep 700;
+		areamonster 'map_name$,134,202,154,222,"L-타입", 3128,4;
+		sleep 700;
+		areamonster 'map_name$,134,208,154,228,"N-타입", 3126,1;
+		areamonster 'map_name$,134,202,154,222,"S-타입", 3128,12;
+		sleep 700;
+		areamonster 'map_name$,136,204,152,220,"C-타입", 3128,13;
+		sleep 700;
+		donpcevent instance_npcname("battle#2") + "::OnStart";
+		end;
+	}
 	sleep 2000;
 	.@npc1$ = instance_npcname("Charleston 2#1");
 	.@npc4$ = instance_npcname("Charleston 1#4");
@@ -909,6 +1283,18 @@ OnTimer300:
 	if ('ep15_1_mcd01 == 9) {
 		.@npc1$ = instance_npcname("Charleston 1#5");
 		.@npc5$ = instance_npcname("Dr. Ve#2");
+		if (callfunc("F_CharlestonSkipMenu")) {
+			'ep15_1_mcd01 = 10;
+			disablenpc instance_npcname("Charleston 2#2");
+			disablenpc .@npc1$;
+			enablenpc instance_npcname("Charleston 2#3");
+			enablenpc instance_npcname("Charleston 1#6");
+			enablenpc instance_npcname("6gate#1");
+			enablenpc instance_npcname("7gate#1");
+			mes "[찰스턴 1호]";
+			mes "찰스턴 2호가 중앙 코어로 향했습니다.";
+			close3;
+		}
 		cutin "dalle01.bmp",2;
 		mes "[찰스턴 1호]";
 		mes "이제 그만해요! 감정적으로 혼란스럽다는 건 이해하지만, 이건 너무 심하잖아요.";
@@ -1045,6 +1431,19 @@ OnTimer300:
 			close3;
 		}
 		.@npc2$ = instance_npcname("Charleston 2#31");
+		if (callfunc("F_CharlestonSkipMenu")) {
+			delitem 6213,1;	// Explosive_Powder
+			specialeffect EF_LORD, AREA, instance_npcname("8gate#1");
+			disablenpc instance_npcname("Charleston 1#61");
+			disablenpc .@npc2$;
+			cloakoffnpc instance_npcname("8gate#1");
+			enablenpc instance_npcname("Charleston 3#0");
+			enablenpc instance_npcname("Charleston 2#4");
+			enablenpc instance_npcname("Charleston 1#7");
+			mes "[찰스턴 1호]";
+			mes "코어 격납고가 개방되었습니다.";
+			close3;
+		}
 		cutin "dalle01.bmp",2;
 		delitem 6213,1;	// Explosive_Powder
 		mes "[찰스턴 1호]";
@@ -1102,6 +1501,21 @@ OnTimer300:
 	close3;
 OnTouch_:
 	if ('ep15_1_mcd01 == 10) {
+		if ('need_charleston_fast == 1 && is_party_leader() == false) {
+			mes "[찰스턴 2호]";
+			mes "코어 접속 진행은 파티장이 시작해야 합니다.";
+			close;
+		}
+		if (callfunc("F_CharlestonSkipMenu")) {
+			'ep15_1_mcd01 = 11;
+			disablenpc instance_npcname("Charleston 1#6");
+			disablenpc instance_npcname("Charleston 2#3");
+			enablenpc instance_npcname("Charleston 1#61");
+			enablenpc instance_npcname("Charleston 2#31");
+			mes "[찰스턴 1호]";
+			mes "코어 접속 장치를 해제하려면 " + getitemname(6213) + " 1개가 필요합니다.";
+			close;
+		}
 		donpcevent instance_npcname("CoreDialog#3") + "::OnStart";
 		'ep15_1_mcd01 = 11;
 	}
@@ -1173,6 +1587,17 @@ OnStart:
 		end;
 	if ('ep15_1_mcd01 == 11) {
 		'ep15_1_mcd01 = 12;
+		if (callfunc("F_CharlestonSkipMenu")) {
+			disablenpc instance_npcname("Charleston 1#7");
+			disablenpc instance_npcname("Charleston 1#8");
+			disablenpc instance_npcname("Charleston 2#4");
+			disablenpc instance_npcname("Charleston 3#0");
+			'boss_status = 1;
+			donpcevent instance_npcname("boss#2") + "::OnStart";
+			mes "[빠른 진행]";
+			mes "찰스턴 3호와의 전투가 시작됩니다.";
+			close;
+		}
 		donpcevent instance_npcname("boss#1") + "::OnStart";
 	}
 	end;
@@ -1365,6 +1790,14 @@ OnMyMobDead:
 		end;
 	if ('ep15_1_mcd01 == 12) {
 		'ep15_1_mcd01 = 13;
+		if (callfunc("F_CharlestonSkipMenu")) {
+			disablenpc instance_npcname("Charleston 2#5");
+			enablenpc instance_npcname("Charleston 2#6");
+			donpcevent instance_npcname("boss#2") + "::OnStop";
+			mes "[찰스턴 2호]";
+			mes "베 박사를 만나기 위해 연구실로 이동합니다.";
+			close3;
+		}
 		donpcevent instance_npcname("boss#3") + "::OnStart";
 	}
 	end;
@@ -1375,6 +1808,16 @@ OnMyMobDead:
 		end;
 	if ('ep15_1_mcd01 == 13) {
 		'ep15_1_mcd01 = 14;
+		if (callfunc("F_CharlestonSkipMenu")) {
+			enablenpc instance_npcname("Charleston 2#7");
+			enablenpc instance_npcname("Dr. Ve#3");
+			enablenpc instance_npcname("9gate#1");
+			disablenpc instance_npcname("Charleston 2#6");
+			disablenpc instance_npcname("Dr. Ve#2");
+			mes "[찰스턴 2호]";
+			mes "베 박사가 있는 연구실로 이동해 주세요.";
+			close3;
+		}
 		cutin "nale01.bmp",0;
 		mes "[찰스턴 2호]";
 		mes "생각해 보니 베 박사는 모든 면에서 수상했어. 무슨 일이든 조수인 찰스턴 1호에게 의지했잖아.";
@@ -1499,6 +1942,16 @@ OnStop:
 		end;
 	if ('ep15_1_mcd01 == 14) {
 		'ep15_1_mcd01 = 15;
+		if (callfunc("F_CharlestonSkipMenu")) {
+			disablenpc instance_npcname("end#1");
+			disablenpc instance_npcname("Charleston 2#7");
+			disablenpc instance_npcname("Dr. Ve#3");
+			enablenpc instance_npcname("Charleston 2#8");
+			enablenpc instance_npcname("Dr. Ve#4");
+			mes "[빠른 진행]";
+			mes "사건이 마무리되었습니다. 베 박사에게 마지막 내용을 확인해 주세요.";
+			close;
+		}
 		donpcevent instance_npcname("end#1") + "::OnStart";
 	}
 	end;
@@ -1566,6 +2019,12 @@ OnTimer300:
 }
 
 1@mcd,116,215,4	script	베 박사::Dr. Ve#4	4_M_DOCTOR,{
+	if (('ep15_1_mcd01 == 15 || 'ep15_1_mcd01 == 16) && callfunc("F_CharlestonSkipMenu")) {
+		'ep15_1_mcd01 = 17;
+		mes "[베 박사]";
+		mes "모든 조사가 끝났습니다. 샬로쉬에게 돌아가 원래 시간대로 이동하세요.";
+		close;
+	}
 	if ('ep15_1_mcd01 == 17) {
 		mes "[베 박사]";
 		mes "완전한 기계 기술로 불멸의 동력원을 얻기에는 변수가 너무 많군.";
@@ -1729,6 +2188,7 @@ OnTimer300:
 			next;
 			mes "[샬로쉬]";
 			mes "나도 새로운 소음과 이야기를 찾아 떠나야겠네.";
+			#NEED_MD_CHARLESTON_CLEAR = 1;
 			completequest 13184;
 			if (isbegin_quest(13186) == 0) {
 				setquest 13186;
@@ -2174,7 +2634,11 @@ OnTouch_:
 OnInstanceInit:
 	'ep15_1_mcd01 = 0;
 	'boss_status = 0;
+	'need_charleston_fast = 0;
 	'map_name$ = instance_mapname("1@mcd");
+
+	for (.@i = 1; .@i <= 13; .@i++)
+		disablenpc instance_npcname("Charleston Fast Travel#" + .@i);
 
 	disablenpc instance_npcname("Charleston 1#2");
 	disablenpc instance_npcname("Charleston 1#3");

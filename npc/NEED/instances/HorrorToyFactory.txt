@@ -6,6 +6,7 @@
 //===== Changelogs: ==========================================
 //= 1.0 First version. Uses official script structure and text
 //=     from iRO. [Capuche]
+//= 1.1 NEED: 최초 클리어 후 반복 대화 및 연출 빠른 진행 추가.
 //============================================================
 
 xmas,237,303,3	script	캐서린 제트 존슨#cj	4_F_SKULL06GIRL,{
@@ -264,6 +265,71 @@ xmas,233,305,4	script	공장 차원 이동기#port	PORTAL,{
 	}
 }
 
+// NEED Horror Toy Factory repeat-clear helpers
+//============================================================
+function	script	F_NEED_HorrorFastOK	{
+	.@party_id = getcharid(1);
+	.@original_aid = getcharid(3);
+
+	if (.@party_id < 1 || !#NEED_MD_HORROR_TOY_CLEAR)
+		return 0;
+
+	getpartymember .@party_id, 2;
+	.@member_count = $@partymembercount;
+	copyarray .@member_aid[0], $@partymemberaid[0], .@member_count;
+
+	.@eligible = 1;
+	for (.@i = 0; .@i < .@member_count; ++.@i) {
+		if (!attachrid(.@member_aid[.@i])) {
+			.@eligible = 0;
+			break;
+		}
+
+		if (!#NEED_MD_HORROR_TOY_CLEAR)
+			.@eligible = 0;
+
+		detachrid;
+
+		if (!.@eligible)
+			break;
+	}
+
+	if (.@original_aid)
+		attachrid(.@original_aid);
+
+	return .@eligible;
+}
+
+function	script	F_NEED_HorrorUnlock	{
+	.@party_id = getarg(0);
+	.@map_name$ = getarg(1);
+	.@original_aid = playerattached() ? getcharid(3) : 0;
+
+	if (.@party_id < 1) {
+		if (.@original_aid)
+			#NEED_MD_HORROR_TOY_CLEAR = 1;
+		return 0;
+	}
+
+	getpartymember .@party_id, 2;
+	.@member_count = $@partymembercount;
+	copyarray .@member_aid[0], $@partymemberaid[0], .@member_count;
+
+	for (.@i = 0; .@i < .@member_count; ++.@i) {
+		if (!attachrid(.@member_aid[.@i]))
+			continue;
+
+		if (strcharinfo(3) == .@map_name$)
+			#NEED_MD_HORROR_TOY_CLEAR = 1;
+		detachrid;
+	}
+
+	if (.@original_aid)
+		attachrid(.@original_aid);
+
+	return .@member_count;
+}
+
 1@xm_d,112,20,6	script	캐서린 제트 존슨#0	4_F_SKULL06GIRL,{
 	if (getstatus(SC_MONSTER_TRANSFORM,1) > 0) {
 		mes "[캐서린 제트 존슨]";
@@ -278,22 +344,55 @@ xmas,233,305,4	script	공장 차원 이동기#port	PORTAL,{
 		mes "어.. 잠시만요. 책임자분과 이야기 중이에요. 조금만 기다려 주세요.";
 		close;
 	}
+
+	'NEED_HORROR_PARTY_ID = getcharid(1);
+
+	if (!'NEED_HORROR_MODE_SET && #NEED_MD_HORROR_TOY_CLEAR) {
+		if (callfunc("F_NEED_HorrorFastOK")) {
+			mes "[캐서린 제트 존슨]";
+			mes "전에 이 공장을 탐험한 적이 있으시군요.";
+			mes "이번에는 반복되는 설명과 연출을 빠르게 진행할 수 있어요.";
+			next;
+			switch(select("빠른 진행으로 시작한다.:전체 이야기와 연출을 확인한다.:아직 시작하지 않는다.")) {
+			case 1:
+				'NEED_HORROR_MODE_SET = 1;
+				'NEED_HORROR_FAST = 1;
+				mes "[캐서린 제트 존슨]";
+				mes "알겠어요. 필요한 설명만 드리고 바로 진행할게요.";
+				donpcevent instance_npcname("캐서린 제트 존슨#01") + "::OnStart2";
+				close;
+			case 2:
+				'NEED_HORROR_MODE_SET = 1;
+				'NEED_HORROR_FAST = 0;
+				donpcevent instance_npcname("캐서린 제트 존슨#01") + "::OnStart";
+				close;
+			case 3:
+				mes "[캐서린 제트 존슨]";
+				mes "준비가 끝나면 다시 말씀해 주세요.";
+				close;
+			}
+		}
+
+		mes "[캐서린 제트 존슨]";
+		mes "파티원 중 아직 공장을 끝까지 탐험하지 않은 분이 있어요.";
+		mes "이번에는 기존 이야기와 진행을 모두 따라가야 합니다.";
+		next;
+	}
+
 	mes "[캐서린 제트 존슨]";
 	mes "모두 변신하지 않은 상태인 거 맞나요?";
 	npctalk "캐서린 제트 존슨: 모두 변신하지 않은 상태인 거 맞나요?";
 	next;
-	switch( select( "이야기를 그만 듣는다", "그녀의 이야기를 듣는다", "사정은 다 알아요. 어서 시작합시다!" ) ) {
-	case 1:
+	if (select("이야기를 그만 듣는다.:그녀의 이야기를 듣는다.") == 1) {
 		mes "[캐서린 제트 존슨]";
 		mes "아, 알겠어요. 준비되면 말씀해 주세요.";
 		close;
-	case 2:
-		donpcevent instance_npcname("캐서린 제트 존슨#01") + "::OnStart";
-		close;
-	case 3:
-		donpcevent instance_npcname("캐서린 제트 존슨#01") + "::OnStart2";
-		close;
 	}
+
+	'NEED_HORROR_MODE_SET = 1;
+	'NEED_HORROR_FAST = 0;
+	donpcevent instance_npcname("캐서린 제트 존슨#01") + "::OnStart";
+	close;
 }
 
 1@xm_d,112,20,1	script	캐서린 제트 존슨#01	4_F_SKULL06GIRL,{
@@ -349,19 +448,14 @@ OnStart2:
 	enablenpc instance_npcname("#bgm01");
 	enablenpc instance_npcname("캐서린 제트 존슨#01");
 	disablenpc instance_npcname("캐서린 제트 존슨#0");
-	sleep 3000;
-	npctalk "캐서린 제트 존슨: 아.. 전에 여기를 탐험한 적이 있으시군요? 알겠어요, 그럼 아까 그 장소에서 다시 만나요.";
-	sleep 6000;
-	disablenpc instance_npcname("캐서린 제트 존슨#01");
+	npctalk "캐서린 제트 존슨: 유니폼을 입고 제2 생산 라인까지 이동해 주세요.";
+	mapannounce 'xm_d_map$, "공장 안내 방송: 제1 생산 라인을 가동합니다. 모든 직원은 유니폼을 착용하십시오.", bc_map, "0x00ff44";
 	enablenpc instance_npcname("직원용 유니폼 박스#1");
 	enablenpc instance_npcname("직원용 유니폼 박스#2");
 	enablenpc instance_npcname("직원용 유니폼 박스#3");
-	mapannounce 'xm_d_map$, "공장 안내 방송: 일어나세요, 장난감 공장의 작업 시간이 되었습니다...", bc_map, "0x00ff44";
-	sleep 6000;
-	mapannounce 'xm_d_map$, "공장 안내 방송: 작업 구역의 안전을 위해 폐기물과 파편을 즉시 제거해 주십시오.", bc_map, "0x00ff44";
-	sleep 6000;
-	mapannounce 'xm_d_map$, "공장 안내 방송: 오늘도 어린이들의 꿈을 담은 선물을 만듭시다.", bc_map, "0x00ff44";
+	sleep 2000;
 	donpcevent instance_npcname("#fac1ct") + "::OnStart";
+	disablenpc instance_npcname("캐서린 제트 존슨#01");
 	disablenpc instance_npcname("#bgm01");
 	end;
 }
@@ -613,21 +707,24 @@ OnMyMobDead:
 
 1@xm_d,185,100,6	script	캐서린 제트 존슨#2	4_F_SKULL06GIRL,{
 	if (is_party_leader() == true) {
+		if ('NEED_HORROR_FAST) {
+			mes "[캐서린 제트 존슨]";
+			mes "일꾼 10명에게서 장인 어르신에 관한 기억을 확인해 주세요.";
+			close2;
+			donpcevent instance_npcname("캐서린 제트 존슨#21") + "::OnStart2";
+			end;
+		}
+
 		mes "[캐서린 제트 존슨]";
 		mes "여기까지 무사히 오셔서 정말 다행이에요.";
 		next;
-		switch( select( "이야기를 그만 듣는다", "그녀의 작전을 듣는다", "어떻게 해야 할지 알아요. 어서 진행합시다!" ) ) {
-		case 1:
+		if (select("이야기를 그만 듣는다.:그녀의 작전을 듣는다.") == 1) {
 			mes "[캐서린 제트 존슨]";
 			mes "아, 알겠어요. 준비되면 말씀해 주세요.";
 			close;
-		case 2:
-			donpcevent instance_npcname("캐서린 제트 존슨#21") + "::OnStart";
-			close;
-		case 3:
-			donpcevent instance_npcname("캐서린 제트 존슨#21") + "::OnStart2";
-			close;
 		}
+		donpcevent instance_npcname("캐서린 제트 존슨#21") + "::OnStart";
+		close;
 	}
 	mes "[캐서린 제트 존슨]";
 	mes "잠깐만요~ 매니저님과 이야기 중이니까 잠시만 기다려 주세요.";
@@ -644,10 +741,19 @@ S_Skip:
 	enablenpc instance_npcname("#bgm06");
 	enablenpc instance_npcname("캐서린 제트 존슨#21");
 	disablenpc instance_npcname("캐서린 제트 존슨#2");
+	if (getarg(0) == 1) {
+		npctalk "캐서린 제트 존슨: 일꾼 10명의 기억을 확인한 뒤 다음 구역으로 이동해 주세요.";
+		sleep 500;
+		disablenpc instance_npcname("캐서린 제트 존슨#21");
+		enablenpc instance_npcname("직원용 유니폼 박스#4");
+		donpcevent instance_npcname("#fac2ct") + "::OnStart";
+		for ( .@i = 1; .@i <= 10; .@i++ )
+			enablenpc instance_npcname( "일꾼#"+ .@i );
+		disablenpc instance_npcname("#bgm06");
+		end;
+	}
 	sleep 3000;
-	if (getarg(0) == 1)
-		npctalk "캐서린 제트 존슨: 단서를 다 찾으면 다른 곳으로 가보세요. 전 지난번에 어르신을 뵈었던 곳을 더 찾아볼게요.";
-	else {
+	if (getarg(0) == 0) {
 		npctalk "캐서린 제트 존슨: 이곳은 제2공장이었어요.";
 		sleep 5000;
 		npctalk "캐서린 제트 존슨: 예전엔 사람들로 북적였는데, 지금은 텅 비어버렸네요.";
@@ -736,6 +842,15 @@ OnStart:
 1@xm_d,155,98,3	script	일꾼#1	4_M_COOKIE,{
 	if (getstatus(SC_MONSTER_TRANSFORM,1) == 1246) {
 		.@num = atoi(strnpcinfo(2));
+		if ('NEED_HORROR_FAST) {
+			npctalk "일꾼: 장인 어르신에 대한 기억이 떠올랐어... 이제 쉬고 싶어.";
+			disablenpc();
+			if ('worker[.@num] == 0) {
+				'worker[.@num] = 1;
+				donpcevent instance_npcname("#fac2wpc") + "::OnStart";
+			}
+			end;
+		}
 		mes "[일꾼]";
 		mes "응? 무슨 일이야?";
 		next;
@@ -886,6 +1001,19 @@ OnTouch_:
 OnStart:
 	.@antonio$ = instance_npcname("안토니오#1");
 	.@santa$ = instance_npcname("붙잡힌 산타#3");
+	if ('NEED_HORROR_FAST) {
+		npctalk "붙잡힌 산타: 안토니오를 쫓아내고 공장 안쪽으로 이동해 주게!", .@santa$;
+		sleep 100;
+		disablenpc .@antonio$;
+		disablenpc instance_npcname("#bgm04");
+		enablenpc instance_npcname("#fac4wp");
+		enablenpc instance_npcname("#fac4wp2");
+		donpcevent instance_npcname("#fac3ct") + "::OnStart";
+		donpcevent instance_npcname("#fac3ct2") + "::OnStart";
+		donpcevent instance_npcname("#fac3ct3") + "::OnStart";
+		enablenpc instance_npcname("#bgm05");
+		end;
+	}
 	sleep 3000;
 	npctalk "안토니오: 내 말 좀 들어봐, 산타~ 난 이 공장이 아주 맘에 든단 말씀이야.", .@antonio$;
 	sleep 3000;
@@ -1056,6 +1184,15 @@ OnTouch:
 
 OnStart:
 	.@kimi$ = instance_npcname("셀린 키미#0");
+	if ('NEED_HORROR_FAST) {
+		npctalk "캐서린 제트 존슨: 키미의 상태가 위험해요. 본체와 환영을 함께 상대해야 해요!";
+		sleep 500;
+		disablenpc instance_npcname("캐서린 제트 존슨#5");
+		disablenpc .@kimi$;
+		donpcevent instance_npcname("#finalbs2") + "::OnStart";
+		disablenpc instance_npcname("#bgm02");
+		end;
+	}
 	sleep 2000;
 	npctalk "캐서린 제트 존슨: 키미! 내 말 좀 들어봐. 널 원망하려고 여기 온 게 아냐.";
 	sleep 3000;
@@ -1135,6 +1272,7 @@ OnMyMobDead:
 OnEnd:
 	stopnpctimer;
 	killmonster 'xm_d_map$, instance_npcname("#finalbs2") + "::OnMyMobDead";
+	callfunc("F_NEED_HorrorUnlock", 'NEED_HORROR_PARTY_ID, 'xm_d_map$);
 	disablenpc instance_npcname("#bgm03");
 	donpcevent instance_npcname("#finalbs_e") + "::OnStart";
 	end;
@@ -1324,7 +1462,10 @@ OnTouch_:
 OnStart:
 	npctalk "셀린 키미: 당신마저도... 날 죽이러 온 거냐고요?";
 	specialeffect EF_MAPPILLAR2;
-	sleep 5000;
+	if ('NEED_HORROR_FAST)
+		sleep 500;
+	else
+		sleep 5000;
 	disablenpc instance_npcname("셀린 키미#2");
 	donpcevent instance_npcname("#finalbs2") + "::OnStart";
 	end;
@@ -1358,6 +1499,13 @@ OnStart:
 	enablenpc instance_npcname("캐서린 제트 존슨#6");
 	for ( .@i = 1; .@i <= 10; .@i++ )
 		enablenpc instance_npcname("포장된 선물#"+ .@i);
+	if ('NEED_HORROR_FAST) {
+		mapannounce 'xm_d_map$, "캐서린 제트 존슨: 보물을 확인한 뒤 남쪽 비상구로 나가주세요!",bc_map,"0xffff00";
+		enablenpc instance_npcname("#exwp1");
+		disablenpc instance_npcname("#jeton2");
+		disablenpc instance_npcname("캐서린 제트 존슨#6");
+		end;
+	}
 	sleep 6000;
 	mapannounce 'xm_d_map$, "캐서린 제트 존슨의 비명: 괜찮으세요? 어서 남쪽 비상구로 대피하세요!",bc_map,"0xffff00";
 	end;
@@ -1374,6 +1522,12 @@ OnTouch_:
 1@xm_d,218,145,5	script	캐서린 제트 존슨#6	4_F_SKULL06GIRL,{
 	end;
 OnStart:
+	if ('NEED_HORROR_FAST) {
+		npctalk "캐서린 제트 존슨: 보물을 확인한 뒤 열린 비상구로 나가주세요.";
+		disablenpc instance_npcname("캐서린 제트 존슨#6");
+		enablenpc instance_npcname("#exwp1");
+		end;
+	}
 	sleep 1000;
 	npctalk "캐서린 제트 존슨: 안타깝게도 키미를 설득하는 데 실패하고 말았네요.";
 	sleep 3000;
@@ -1407,6 +1561,7 @@ OnStart:
 }
 
 1@xm_d,210,141,3	script	포장된 선물#1	4_TREASURE_BOX,{
+	#NEED_MD_HORROR_TOY_CLEAR = 1;
 	specialeffect EF_COIN;
 	disablenpc();
 	initnpctimer;
@@ -1598,6 +1753,9 @@ OnTimer1000:
 
 OnInstanceInit:
 	'xm_d_map$ = instance_mapname("1@xm_d");
+	'NEED_HORROR_PARTY_ID = 0;
+	'NEED_HORROR_MODE_SET = 0;
+	'NEED_HORROR_FAST = 0;
 
 	// Warps
 	disablenpc instance_npcname("#fac3wp");

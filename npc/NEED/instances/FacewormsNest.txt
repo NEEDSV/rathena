@@ -6,6 +6,7 @@
 //===== Changelogs: ==========================================
 //= 1.0 First version. [exneval]
 //= 1.1 Conversion & style change for rAthena. [Capuche]
+//= 1.2 NEED: 최초 클리어 후 반복 입장 대화/연출 간소화.
 //============================================================
 
 // Timeless Item Quests
@@ -435,6 +436,71 @@ dali,72,55,4	script	차원 이동 장치	CLEAR_NPC,{
 	}
 }
 
+// NEED Faceworm repeat-clear helpers
+//============================================================
+function	script	F_NEED_FaceFastOK	{
+	.@party_id = getcharid(1);
+	.@original_aid = getcharid(3);
+
+	if (.@party_id < 1 || !#NEED_MD_FACEWORM_CLEAR)
+		return 0;
+
+	getpartymember .@party_id, 2;
+	.@member_count = $@partymembercount;
+	copyarray .@member_aid[0], $@partymemberaid[0], .@member_count;
+
+	.@eligible = 1;
+	for (.@i = 0; .@i < .@member_count; ++.@i) {
+		if (!attachrid(.@member_aid[.@i])) {
+			.@eligible = 0;
+			break;
+		}
+
+		if (!#NEED_MD_FACEWORM_CLEAR)
+			.@eligible = 0;
+
+		detachrid;
+
+		if (!.@eligible)
+			break;
+	}
+
+	if (.@original_aid)
+		attachrid(.@original_aid);
+
+	return .@eligible;
+}
+
+function	script	F_NEED_FaceUnlock	{
+	.@party_id = getarg(0);
+	.@map_name$ = getarg(1);
+	.@original_aid = playerattached() ? getcharid(3) : 0;
+
+	if (.@party_id < 1) {
+		if (.@original_aid)
+			#NEED_MD_FACEWORM_CLEAR = 1;
+		return 0;
+	}
+
+	getpartymember .@party_id, 2;
+	.@member_count = $@partymembercount;
+	copyarray .@member_aid[0], $@partymemberaid[0], .@member_count;
+
+	for (.@i = 0; .@i < .@member_count; ++.@i) {
+		if (!attachrid(.@member_aid[.@i]))
+			continue;
+
+		if (strcharinfo(3) == .@map_name$)
+			#NEED_MD_FACEWORM_CLEAR = 1;
+		detachrid;
+	}
+
+	if (.@original_aid)
+		attachrid(.@original_aid);
+
+	return .@member_count;
+}
+
 // Instance Scripts :: in_face
 // 1st Stage
 //============================================================
@@ -447,6 +513,38 @@ dali,72,55,4	script	차원 이동 장치	CLEAR_NPC,{
 		cutin "",255;
 		end;
 	}
+
+	'NEED_FACE_PARTY_ID = getcharid(1);
+
+	if (!'NEED_FACE_MODE_SET) {
+		'NEED_FACE_MODE_SET = 1;
+
+		if (#NEED_MD_FACEWORM_CLEAR) {
+			if (callfunc("F_NEED_FaceFastOK")) {
+				mes "[케이야스]";
+				mes "이미 이 둥지를 공략한 경험이 있군.";
+				mes "이번에는 설명과 연출을 빠르게 진행할 수 있네.";
+				next;
+
+				if (select("빠른 진행으로 시작한다.:전체 대화를 확인한다.") == 1) {
+					'NEED_FACE_FAST = 1;
+					mes "[케이야스]";
+					mes "좋아. 설명은 줄이고 바로 사냥을 시작하지.";
+					close2;
+					cutin "",255;
+					donpcevent instance_npcname("케이야스#01") + "::OnStart";
+					end;
+				}
+			}
+			else {
+				mes "[케이야스]";
+				mes "파티원 중 아직 둥지를 끝까지 공략하지 않은 사람이 있군.";
+				mes "이번에는 기존 이야기와 진행을 그대로 따라가겠네.";
+				next;
+			}
+		}
+	}
+
 	.@account_id = getcharid(3);
 	.@player_name$ = strcharinfo(0);
 	mes "[케이야스]";
@@ -473,14 +571,24 @@ dali,72,55,4	script	차원 이동 장치	CLEAR_NPC,{
 	donpcevent instance_npcname("케이야스#01") + "::OnStart";
 	end;
 }
-
 1@face,110,348,6	script	케이야스#01	4_M_CHAOS,{
 	end;
 OnStart:
 	.@iris_name$ = instance_npcname("스아이리#0");
-	donpcevent instance_npcname("#globaltimer22") + "::OnT_s";
 	hideoffnpc instance_npcname("케이야스#01");
 	hideonnpc instance_npcname("케이야스#0");
+
+	if ('NEED_FACE_FAST) {
+		hideonnpc instance_npcname("케이야스#01");
+		hideonnpc instance_npcname("스아이리#0");
+		mapannounce 'map_name$, "페이스웜 사냥을 바로 시작합니다.",bc_map,"0xffffff";
+		donpcevent instance_npcname("#globaltimer22") + "::OnT_s";
+		donpcevent instance_npcname("#fwormcontrol1") + "::OnStart";
+		mapannounce 'map_name$, "페이스웜 타임 어택이 시작되었습니다. 빨리 처치할수록 보상이 풍성해집니다.",bc_map,"0xffffff";
+		donpcevent instance_npcname("#fwormprize1") + "::OnStart";
+		end;
+	}
+
 	sleep 5000;
 	npctalk "케이야스: 하하하, 정말 모른단 말인가? 페이스웜은 최근 이 근처에 나타나기 시작한 괴물 이름이라네.";
 	sleep 5000;
@@ -504,6 +612,7 @@ OnStart:
 	sleep 6000;
 	hideonnpc instance_npcname("케이야스#01");
 	hideonnpc instance_npcname("스아이리#0");
+	donpcevent instance_npcname("#globaltimer22") + "::OnT_s";
 	donpcevent instance_npcname("#fwormcontrol1") + "::OnStart";
 	mapannounce 'map_name$, "페이스웜 타임 어택이 시작되었습니다. 빨리 처치할수록 보상이 풍성해집니다.",bc_map,"0xffffff";
 	donpcevent instance_npcname("#fwormprize1") + "::OnStart";
@@ -512,7 +621,6 @@ OnInstanceInit:
 	hideonnpc instance_npcname("케이야스#01");
 	end;
 }
-
 1@face,116,346,3	script	스아이리#0	4_F_IRIS,{
 	cutin "h_iris02",2;
 	mes "[스아이리]";
@@ -687,6 +795,16 @@ OnInstanceInit:
 		cutin "",255;
 		end;
 	}
+
+	if ('NEED_FACE_FAST) {
+		mes "[케이야스]";
+		mes "앞 구역과 같은 방식으로 빠르게 정리하지.";
+		close2;
+		cutin "",255;
+		donpcevent instance_npcname("케이야스#11") + "::OnStart";
+		end;
+	}
+
 	mes "[케이야스]";
 	mes "와우, 나를 이만큼이나 쫓아오다니 실력이 대단한데.";
 	npctalk "케이야스: 와우, 나를 이만큼이나 쫓아오다니 실력이 대단한데.";
@@ -709,13 +827,22 @@ OnInstanceInit:
 	hideonnpc instance_npcname("케이야스#1");
 	end;
 }
-
 1@face,120,97,6	script	케이야스#11	4_M_CHAOS,{
 	end;
 OnStart:
 	.@iris_name$ = instance_npcname("스아이리#1");
 	hideoffnpc instance_npcname("케이야스#11");
 	hideonnpc instance_npcname("케이야스#1");
+
+	if ('NEED_FACE_FAST) {
+		hideonnpc instance_npcname("케이야스#11");
+		hideonnpc .@iris_name$;
+		mapannounce 'map_name$, "다음 구역의 페이스웜 사냥을 시작합니다.",bc_map,"0xffffff";
+		donpcevent instance_npcname("#fwormcontrol2") + "::OnStart";
+		donpcevent instance_npcname("#fwormprize2") + "::OnStart";
+		end;
+	}
+
 	npctalk "케이야스: 아냐 아냐~~ 그 정도로는 퀸 명함도 못 내밀어.";
 	sleep 4000;
 	npctalk "케이야스: 우리가 방금 본 건 그냥 돌연변이 페이스웜일 뿐이라네.";
@@ -745,7 +872,6 @@ OnInstanceInit:
 	hideonnpc instance_npcname("케이야스#11");
 	end;
 }
-
 1@face,129,97,3	script	스아이리#1	4_F_IRIS,{
 	cutin "h_iris02",2;
 	mes "[스아이리]";
@@ -903,6 +1029,16 @@ OnInstanceInit:
 		cutin "",255;
 		end;
 	}
+
+	if ('NEED_FACE_FAST) {
+		mes "[케이야스]";
+		mes "협곡의 적을 바로 정리하도록 하지.";
+		close2;
+		donpcevent instance_npcname("케이야스#22") + "::OnStart";
+		cutin "",255;
+		end;
+	}
+
 	mes "[케이야스]";
 	mes "실력이 상당하군! 하지만 방심은 금물이네. 이 험한 협곡에선 무슨 일이 생길지 모르거든.";
 	npctalk "케이야스: 실력이 상당하군! 하지만 방심은 금물이네. 이 험한 협곡에선 무슨 일이 생길지 모르거든.";
@@ -915,12 +1051,21 @@ OnInstanceInit:
 	hideonnpc instance_npcname("케이야스#2");
 	end;
 }
-
 1@face,153,113,7	script	케이야스#22	4_M_CHAOS,{
 	end;
 OnStart:
 	hideoffnpc instance_npcname("케이야스#22");
 	hideonnpc instance_npcname("케이야스#2");
+
+	if ('NEED_FACE_FAST) {
+		hideonnpc instance_npcname("케이야스#22");
+		hideonnpc instance_npcname("스아이리#2");
+		mapannounce 'map_name$, "협곡 구역의 페이스웜 사냥을 시작합니다.",bc_map,"0xffffff";
+		donpcevent instance_npcname("#fwormcontrol3") + "::OnStart";
+		donpcevent instance_npcname("#fwormprize3") + "::OnStart";
+		end;
+	}
+
 	sleep 4000;
 	npctalk "스아이리: 이곳의 기운이 좋지 않아. 당장 여기서 나가자, 케이야스!", instance_npcname("스아이리#2");
 	sleep 4000;
@@ -935,7 +1080,6 @@ OnInstanceInit:
 	hideonnpc instance_npcname("케이야스#22");
 	end;
 }
-
 1@face,160,113,1	script	스아이리#2	4_F_IRIS,{
 	cutin "h_iris01",2;
 	mes "[스아이리]";
@@ -1098,6 +1242,14 @@ OnInstanceInit:
 1@face,1,10,7	script	#announcer1	CLEAR_NPC,{
 	end;
 OnStart:
+	if ('NEED_FACE_FAST) {
+		mapannounce 'map_name$, "독 지대를 조심하며 다음 구역을 정리하세요.",bc_map,"0xffff00";
+		donpcevent instance_npcname("#fwormcontrol4") + "::OnStart";
+		donpcevent instance_npcname("#fwormcontrol42") + "::OnStart";
+		donpcevent instance_npcname("#fwormprize4") + "::OnStart";
+		end;
+	}
+
 	mapannounce 'map_name$, "케이야스의 목소리: 이봐 모험가들, 조심해! 독 근처엔 얼씬도 하지 말라고!",bc_map,"0xffff00";
 	sleep 6000;
 	mapannounce 'map_name$, "케이야스의 목소리: 우린 다른 둥지를 찾는 중이네. 뭔가 발견하면 바로 알려주게.",bc_map,"0xffff00";
@@ -1109,7 +1261,6 @@ OnInstanceInit:
 	hideonnpc instance_npcname("#announcer1");
 	end;
 }
-
 1@face,2,5,3	script	#fwormcontrol4	CLEAR_NPC,{
 	end;
 OnStart:
@@ -1301,6 +1452,19 @@ OnInstanceInit:
 OnStart:
 	.@iris$ = instance_npcname("스아이리#4");
 	.@chaos5$ = instance_npcname("케이야스#5");
+
+	if ('NEED_FACE_FAST) {
+		hideonnpc instance_npcname("케이야스#4");
+		hideonnpc .@iris$;
+		mapannounce 'map_name$, "거대한 둥지에서 페이스웜 퀸이 모습을 드러냅니다.",bc_map,"0xffff00";
+		specialeffect EF_DUSTSTORM,AREA, .@chaos5$;
+		specialeffect EF_MAPPILLAR2,AREA, .@chaos5$;
+		sleep 500;
+		donpcevent instance_npcname("#fwormboss5") + "::OnStart";
+		donpcevent instance_npcname("#fwormprize5") + "::OnStart";
+		end;
+	}
+
 	sleep 2000;
 	npctalk "케이야스: 스아이리, 이 웅덩이의 정체가 대체 뭘까?";
 	sleep 3000;
@@ -1357,7 +1521,6 @@ OnInstanceInit:
 	hideonnpc instance_npcname("케이야스#4");
 	end;
 }
-
 1@face,220,149,1	script	스아이리#4	4_F_IRIS,{
 	cutin "h_iris01",2;
 	mes "[스아이리]";
@@ -1592,6 +1755,7 @@ OnTimer25000:
 	end;
 OnMyMobDead:
 	if (mobcount( 'map_name$,instance_npcname("#fwormboss5") + "::OnMyMobDead" ) < 1) {
+		callfunc("F_NEED_FaceUnlock", 'NEED_FACE_PARTY_ID, 'map_name$);
 		hideoffnpc instance_npcname("#fwormprize5");
 		hideoffnpc instance_npcname("케이야스#6");
 		hideoffnpc instance_npcname("스아이리#6");
@@ -1975,6 +2139,16 @@ OnStart:
 	donpcevent instance_npcname("케이야스#north") + "::OnEnd";
 	hideoffnpc instance_npcname("케이야스#6");
 	hideoffnpc .@iris$;
+
+	if ('NEED_FACE_FAST) {
+		mapannounce 'map_name$, "페이스웜 퀸을 처치했습니다. 전리품을 확인한 뒤 차원 이동 장치로 퇴장할 수 있습니다.",bc_map,"0xffff00";
+		sleep 500;
+		hideonnpc instance_npcname("케이야스#6");
+		hideonnpc .@iris$;
+		hideoffnpc instance_npcname("차원 이동 장치#6");
+		end;
+	}
+
 	sleep 2000;
 	npctalk "케이야스: 휴... 정말 끈질긴 싸움이었어.";
 	sleep 3000;
@@ -2002,7 +2176,6 @@ OnInstanceInit:
 	hideonnpc instance_npcname("케이야스#6");
 	end;
 }
-
 1@face,220,159,4	script	스아이리#6	4_F_IRIS,{
 	cutin "h_iris02",2;
 	mes "[스아이리]";
@@ -2383,6 +2556,7 @@ OnInstanceInit:
 1@face,214,108,3	duplicate(#fwormprize1)	#fwormprize4	4_TREASURE_BOX
 
 1@face,213,157,3	script	#fwormprize5	4_TREASURE_BOX,{
+	#NEED_MD_FACEWORM_CLEAR = 1;
 	'120903_str_face$ = strcharinfo(0);
 	donpcevent instance_npcname("#globaltimer22") + "::OnT_s2";
 	donpcevent instance_npcname("#globaltimer22") + "::OnT_s3";
