@@ -54,6 +54,7 @@
 #include "mapreg.hpp"
 #include "mercenary.hpp"
 #include "mob.hpp"
+#include "need_autopot.hpp"
 #include "need_equipment_build.hpp"
 #include "needwiki.hpp"
 #include "npc.hpp"
@@ -196,6 +197,12 @@ uint64 AtcommandAliasDatabase::parseBodyNode( const ryml::NodeRef& node ){
 }
 
 const char* AtcommandAliasDatabase::checkAlias( const char* alias ){
+	// NEED: accept both the legacy Korean client code page and UTF-8 spelling.
+	if( strcmp( alias, "\277\300\305\344\305\245\276\356" ) == 0 ||
+		strcmp( alias, "\354\230\244\355\206\240\355\201\220\354\226\264" ) == 0 ){
+		return "autopot";
+	}
+
 	std::string alias_str( alias );
 	std::string* command = util::umap_find( this->aliases, alias_str );
 

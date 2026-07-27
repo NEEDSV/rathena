@@ -9,6 +9,7 @@
  **/
 
 //ACMD_DEF(newcommand),
+ACMD_DEF(autopot),
 ACMD_DEF(needbuildcheck),
 ACMD_DEF(needbuildlikesync),
 ACMD_DEF(needbuildreward),

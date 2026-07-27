@@ -46,6 +46,7 @@
 #include "mercenary.hpp"
 #include "mob.hpp"
 #include "navi.hpp"
+#include "need_autopot.hpp"
 #ifndef MAP_GENERATOR
 #include "needwiki.hpp"
 #endif
@@ -134,7 +135,7 @@ static block_list *bl_list[BL_LIST_MAX];
 static int32 bl_list_count = 0;
 
 #ifndef MAP_MAX_MSG
-	#define MAP_MAX_MSG 1800
+	#define MAP_MAX_MSG 1900
 #endif
 
 struct map_data map[MAX_MAP_PER_SERVER];
@@ -2228,6 +2229,7 @@ void map_deliddb(block_list *bl)
 int32 map_quit(map_session_data *sd) {
 	int32 i;
 
+	need_autopot_logout(sd);
 	pc_bg_strip_clear_saved_equipment(sd);
 	costume_collection_db_clear(sd);
 
@@ -5064,6 +5066,7 @@ void MapServer::finalize(){
 	chrif_flush_fifo();
 
 	do_final_atcommand();
+	need_autopot_final();
 	do_final_battle();
 	do_final_chrif();
 #ifndef MAP_GENERATOR
@@ -5460,6 +5463,7 @@ bool MapServer::initialize( int32 argc, char *argv[] ){
 	do_init_skill();
 	do_init_mob();
 	do_init_pc();
+	need_autopot_init();
 	do_init_status();
 	do_init_party();
 	do_init_guild();

@@ -18,6 +18,11 @@
 //	return 0;
 //}
 
+ACMD_FUNC(autopot)
+{
+	return need_autopot_atcommand(fd, sd, message);
+}
+
 ACMD_FUNC(needbuildcheck)
 {
 	nullpo_retr(-1, sd);

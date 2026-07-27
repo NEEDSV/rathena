@@ -53,6 +53,7 @@
 #include "map.hpp"
 #include "mercenary.hpp"
 #include "mob.hpp"
+#include "need_autopot.hpp"
 #include "npc.hpp"
 #include "party.hpp" // party_search()
 #include "pc_groups.hpp"
@@ -7131,6 +7132,7 @@ enum e_setpos pc_setpos(map_session_data* sd, uint16 mapindex, int32 x, int32 y,
 		chrif_changemapserver(sd, ip, (int16)port);
 
 		//Free session data from this map server [Kevin]
+		need_autopot_logout(sd);
 		unit_free_pc(sd);
 
 		if( st ){
@@ -7181,6 +7183,7 @@ enum e_setpos pc_setpos(map_session_data* sd, uint16 mapindex, int32 x, int32 y,
 	sd->m = m;
 	sd->x = sd->ud.to_x = x;
 	sd->y = sd->ud.to_y = y;
+	need_autopot_map_changed(sd);
 
 	if( sd->status.guild_id > 0 && mapdata->getMapFlag(MF_GVG_CASTLE) )
 	{	// Increased guild castle regen [Valaris]
