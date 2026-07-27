@@ -436,6 +436,22 @@ struct s_bg_strip_requip_item {
 	struct item item = {};
 };
 
+struct need_autopot_state {
+	bool hp_enabled = false;
+	bool sp_enabled = false;
+	bool processing = false;
+	bool hp_missing_notified = false;
+	bool sp_missing_notified = false;
+	t_itemid hp_item_id = 0;
+	t_itemid sp_item_id = 0;
+	uint8 hp_percent = 90;
+	uint8 sp_percent = 50;
+	uint16 interval_ms = 500;
+	t_tick next_check_tick = 0;
+	int8 active_preset_slot = -1;
+	char active_preset_name[25] = {};
+};
+
 class map_session_data : public block_list {
 public:
 	struct unit_data ud;
@@ -549,6 +565,7 @@ public:
 		std::unordered_set<uint32> registered_collections;
 		std::unordered_set<t_itemid> registered_items;
 	} costume_collection;
+	need_autopot_state autopot;
 
 	// Item Storages
 	struct s_storage storage, premiumStorage;
