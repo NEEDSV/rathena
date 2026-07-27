@@ -134,6 +134,7 @@ static int32 block_free_count = 0, block_free_lock = 0;
 static block_list *bl_list[BL_LIST_MAX];
 static int32 bl_list_count = 0;
 
+#define MAP_MAX_MSG 2000
 #ifndef MAP_MAX_MSG
 	#define MAP_MAX_MSG 1900
 #endif
