@@ -6578,10 +6578,10 @@ ACMD_FUNC(storematch)
 {
 	nullpo_retr(-1, sd);
 
-	if (NEED_STORE_MATCH_TOWN_ONLY && (sd->m < 0 || !map_getmapflag(sd->m, MF_TOWN))) {
-		clif_displaymessage(fd, msg_txt(sd,1615));
-		return 0;
-	}
+	//if (NEED_STORE_MATCH_TOWN_ONLY && (sd->m < 0 || !map_getmapflag(sd->m, MF_TOWN))) {
+	//	clif_displaymessage(fd, msg_txt(sd,1615));
+	//	return 0;
+	//}
 
 	if (pc_isdead(sd)) {
 		clif_displaymessage(fd, msg_txt(sd,1616));
