@@ -29,9 +29,6 @@ bat_room	mapflag	noskill
 
 bat_room,154,161,4	script	전장 관리인#2	953,{
 	end;
-OnInIt:
-		waitingroom "전장 참여 >>>>",0;
-		end;
 }
 bat_room,184,164,4	script	전장 관리인	953,{
 	// 랜덤 매칭 모집/편성 중에는 NPC를 숨기지 않고 전장 홍보 메뉴만 제공합니다.
@@ -66,8 +63,17 @@ bat_room,184,164,4	script	전장 관리인	953,{
 		callfunc "F_BG_Reward";
 		close;
 	}
+
+OnTimer2500:
+	showscript strnpcinfo(1), getnpcid(0);
+	initnpctimer;
+	end;
+	
+OnInit:
+	showscript strnpcinfo(1), getnpcid(0);
+	initnpctimer;
+	end;
 }
-		
 function	script	F_BG_Reward	{
 	mes "[전장 관리인]";
 	mes "티에라/플라비우스/KvM 참여 시 전장 포인트 + 9";
