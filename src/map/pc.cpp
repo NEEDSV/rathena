@@ -84,6 +84,7 @@ static inline bool pc_attendance_rewarded_today( map_session_data* sd );
 static void pc_macro_detect_log(map_session_data &sd, const char *event, int32 retry_left, const char *punishment = "", int32 punishment_time = 0);
 static TIMER_FUNC(pc_macro_detector_display_timer);
 static TIMER_FUNC(pc_macro_detector_pending_timer);
+static TIMER_FUNC(pc_macro_detector_success_immunity_timer);
 static bool pc_macro_validate_bmp(const char *data, size_t size);
 
 #define PVP_CALCRANK_INTERVAL 1000	// PVP calculation interval
@@ -2137,6 +2138,7 @@ bool pc_authok(map_session_data *sd, uint32 login_id2, time_t expiration_time, i
 	sd->tid_queue_active = INVALID_TIMER;
 	sd->macro_detect.timer = INVALID_TIMER;
 	sd->macro_detect.display_timer = INVALID_TIMER;
+	sd->macro_detect.success_immunity_timer = INVALID_TIMER;
 
 	sd->skill_keep_using.tid = INVALID_TIMER;
 	sd->skill_keep_using.skill_id = 0;
@@ -7055,6 +7057,7 @@ enum e_setpos pc_setpos(map_session_data* sd, uint16 mapindex, int32 x, int32 y,
 				}
 			}
 		}
+		pc_macro_detector_cancel_success_immunity(*sd, "success_immunity_cancel_mapchange");
 		for(int32 i = 0; i < EQI_MAX; i++ ) {
 			if( sd->equip_index[i] >= 0 )
 				if( pc_isequip( sd, sd->equip_index[i] ) != ITEM_EQUIP_ACK_OK ){
@@ -9855,6 +9858,7 @@ int32 pc_dead(map_session_data *sd,block_list *src)
 	}
 
 	// NEED: The Super Novice rescue above is not a real death. Every path continuing from here is.
+	pc_macro_detector_cancel_success_immunity(*sd, "success_immunity_cancel_death");
 	// Reset here so immediate resurrection/respawn paths cannot retain Earth Strain resistance.
 	sd->earthstrain_strip_resist = 0;
 	if (pc_bg_strip_has_saved_equipment(sd))
@@ -16232,13 +16236,110 @@ static void pc_macro_detector_delete_timeout_timer(map_session_data &sd) {
 	delete_timer(tid, pc_macro_detector_timeout);
 }
 
+static void pc_macro_detector_success_immunity_log(const map_session_data &sd, const char *state,
+	int32 timer_id, uint32 generation, const char *reason) {
+	if (battle_config.macro_checker_debug == 0)
+		return;
+	const map_data *mapdata = sd.m >= 0 ? map_getmapdata(sd.m) : nullptr;
+	ShowInfo("MacroCaptcha: aid=%d cid=%d map=%s state=%s generation=%u timer_id=%d duration=%d release_reason=%s\n",
+		sd.status.account_id, sd.status.char_id, mapdata != nullptr ? mapdata->name : "",
+		state, generation, timer_id, battle_config.macro_checker_success_immunity,
+		reason != nullptr ? reason : "");
+}
+
+void pc_macro_detector_cancel_success_immunity(map_session_data &sd, const char *reason) {
+	if (sd.macro_detect.success_immunity_generation == 0)
+		return;
+
+	const int32 timer_id = sd.macro_detect.success_immunity_timer;
+	const uint32 generation = sd.macro_detect.success_immunity_generation;
+	if (timer_id != INVALID_TIMER) {
+		sd.macro_detect.success_immunity_timer = INVALID_TIMER;
+		delete_timer(timer_id, pc_macro_detector_success_immunity_timer);
+	}
+	if (sd.macro_detect.blocked_actions & PCBLOCK_IMMUNE) {
+		sd.state.block_action &= ~PCBLOCK_IMMUNE;
+		sd.macro_detect.blocked_actions &= ~PCBLOCK_IMMUNE;
+	}
+	sd.macro_detect.success_immunity_generation = 0;
+	pc_macro_detector_success_immunity_log(sd, reason, timer_id, generation, reason);
+}
+
+static TIMER_FUNC(pc_macro_detector_success_immunity_timer) {
+	map_session_data *sd = map_id2sd(id);
+	const uint32 generation = static_cast<uint32>(data);
+	if (sd == nullptr || sd->macro_detect.success_immunity_timer != tid)
+		return 0;
+
+	sd->macro_detect.success_immunity_timer = INVALID_TIMER;
+	if (sd->macro_detect.success_immunity_generation != generation ||
+		sd->macro_detect.generation != generation ||
+		sd->macro_detect.phase != s_macro_detect::e_macro_detect_phase::NONE ||
+		sd->macro_detect.cd != nullptr)
+		return 0;
+	if (!sd->state.active || sd->prev == nullptr || !session_isActive(sd->fd)) {
+		pc_macro_detector_cancel_success_immunity(*sd, "success_immunity_cancel_session");
+		return 0;
+	}
+	if (pc_isdead(sd)) {
+		pc_macro_detector_cancel_success_immunity(*sd, "success_immunity_cancel_death");
+		return 0;
+	}
+
+	if (sd->macro_detect.blocked_actions & PCBLOCK_IMMUNE) {
+		sd->state.block_action &= ~PCBLOCK_IMMUNE;
+		sd->macro_detect.blocked_actions &= ~PCBLOCK_IMMUNE;
+	}
+	sd->macro_detect.success_immunity_generation = 0;
+	pc_macro_detector_success_immunity_log(*sd, "success_immunity_expire", tid, generation, "expire");
+	return 0;
+}
+
 static void pc_macro_detector_reset_runtime(map_session_data &sd) {
 	const uint32 generation = sd.macro_detect.generation;
+	pc_macro_detector_cancel_success_immunity(sd, "success_immunity_cancel_reset");
 	pc_macro_detector_restore_actions(sd);
 	sd.macro_detect = {};
 	sd.macro_detect.timer = INVALID_TIMER;
 	sd.macro_detect.display_timer = INVALID_TIMER;
+	sd.macro_detect.success_immunity_timer = INVALID_TIMER;
 	sd.macro_detect.generation = generation;
+}
+
+static void pc_macro_detector_finish_success(map_session_data &sd) {
+	const uint32 generation = sd.macro_detect.generation;
+	const uint16 immediate_release = sd.macro_detect.blocked_actions & ~PCBLOCK_IMMUNE;
+	const uint16 delayed_immunity = sd.macro_detect.blocked_actions & PCBLOCK_IMMUNE;
+
+	sd.state.block_action &= ~immediate_release;
+	sd.macro_detect.blocked_actions &= ~immediate_release;
+
+	// Clear the challenge while preserving only immunity that this captcha added.
+	sd.macro_detect = {};
+	sd.macro_detect.timer = INVALID_TIMER;
+	sd.macro_detect.display_timer = INVALID_TIMER;
+	sd.macro_detect.success_immunity_timer = INVALID_TIMER;
+	sd.macro_detect.generation = generation;
+	sd.macro_detect.blocked_actions = delayed_immunity;
+
+	if (delayed_immunity == 0 || battle_config.macro_checker_success_immunity <= 0) {
+		sd.state.block_action &= ~delayed_immunity;
+		sd.macro_detect.blocked_actions = 0;
+		return;
+	}
+
+	sd.macro_detect.success_immunity_generation = generation;
+	sd.macro_detect.success_immunity_timer = add_timer(
+		gettick() + battle_config.macro_checker_success_immunity,
+		pc_macro_detector_success_immunity_timer, sd.id, generation);
+	if (sd.macro_detect.success_immunity_timer == INVALID_TIMER) {
+		sd.state.block_action &= ~PCBLOCK_IMMUNE;
+		sd.macro_detect.blocked_actions &= ~PCBLOCK_IMMUNE;
+		sd.macro_detect.success_immunity_generation = 0;
+		return;
+	}
+	pc_macro_detector_success_immunity_log(sd, "success_immunity_start",
+		sd.macro_detect.success_immunity_timer, generation, "success");
 }
 
 static void pc_macro_detector_cancel(map_session_data &sd, const char *reason, bool clear_persistent) {
@@ -16786,7 +16887,7 @@ void pc_macro_detector_process_answer(map_session_data &sd, const char captcha_a
 		pc_macro_detect_log(sd, "success", retry_left);
 		pc_macro_detector_clear_pending(sd);
 
-		pc_macro_detector_reset_runtime(sd);
+		pc_macro_detector_finish_success(sd);
 
 		// Assign temporary macro variable to check failures
 		pc_setreg(&sd, add_str("@captcha_retries"), battle_config.macro_detection_retry - retry_left);
@@ -16823,6 +16924,7 @@ void pc_macro_detector_process_answer(map_session_data &sd, const char captcha_a
  * @param sd: Player data
  */
 void pc_macro_detector_disconnect(map_session_data &sd) {
+	pc_macro_detector_cancel_success_immunity(sd, "success_immunity_cancel_logout");
 	pc_macro_detector_delete_display_timer(sd);
 	pc_macro_detector_delete_timeout_timer(sd);
 	pc_macro_detector_debug_log(sd, "disconnect");
@@ -16905,6 +17007,7 @@ void pc_macro_reporter_process(map_session_data &sd, int32 reporter_account_id) 
 		return;
 
 	// Set pending data before stopping actions so concurrent triggers cannot create a second timer.
+	pc_macro_detector_cancel_success_immunity(sd, "success_immunity_cancel_new_captcha");
 	sd.macro_detect.cd = cd;
 	if (++sd.macro_detect.generation == 0)
 		++sd.macro_detect.generation;
@@ -17182,6 +17285,7 @@ void do_init_pc(void) {
 	add_timer_func_list(pc_on_expire_active, "pc_on_expire_active");
 	add_timer_func_list(pc_macro_detector_timeout, "pc_macro_detector_timeout");
 	add_timer_func_list(pc_macro_detector_pending_timer, "pc_macro_detector_pending_timer");
+	add_timer_func_list(pc_macro_detector_success_immunity_timer, "pc_macro_detector_success_immunity_timer");
 
 	add_timer(gettick() + autosave_interval, pc_autosave, 0, 0);
 

@@ -11839,6 +11839,7 @@ void clif_parse_ActionRequest_sub( map_session_data& sd, uint8 action_type, int3
 	{
 	case DMG_NORMAL: // once attack
 	case DMG_REPEAT: // continuous attack
+		pc_macro_detector_cancel_success_immunity(sd, "success_immunity_cancel_attack");
 
 		if( pc_cant_act(&sd) )
 			return;
@@ -12207,6 +12208,7 @@ void clif_parse_UseItem(int32 fd, map_session_data *sd)
 		clif_clearunit_area( *sd, CLR_DEAD );
 		return;
 	}
+	pc_macro_detector_cancel_success_immunity(*sd, "success_immunity_cancel_item");
 
 	if ( (!sd->npc_id && pc_istrading(sd)) || sd->chatID || (sd->state.block_action & PCBLOCK_USEITEM) ) {
 		clif_msg( *sd, MSI_BUSY );
@@ -12993,6 +12995,7 @@ void clif_parse_skill_toid( map_session_data* sd, uint16 skill_id, uint16 skill_
 	if( sd == nullptr ){
 		return;
 	}
+	pc_macro_detector_cancel_success_immunity(*sd, "success_immunity_cancel_skill");
 
 	t_tick tick = gettick();
 
@@ -13123,6 +13126,7 @@ void clif_parse_UseSkillToId( int32 fd, map_session_data *sd ){
  * Client tells server he'd like to use AoE skill id 'skill_id' of level 'skill_lv' on 'x','y' location
  *------------------------------------------*/
 static void clif_parse_UseSkillToPosSub( int32 fd, map_session_data& sd, uint16 skill_lv, uint16 skill_id, int16 x, int16 y, int32 skillmoreinfo ){
+	pc_macro_detector_cancel_success_immunity(sd, "success_immunity_cancel_skill");
 	t_tick tick = gettick();
 
 	if( !(skill_get_inf(skill_id)&INF_GROUND_SKILL) )

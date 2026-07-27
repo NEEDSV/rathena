@@ -163,11 +163,13 @@ struct s_macro_detect {
 	int32 retry;
 	int32 timer; ///< ACK watchdog (IMAGE_SENT) or answer timeout (ACTIVE)
 	int32 display_timer; ///< Delayed captcha display timer (PENDING only)
+	int32 success_immunity_timer; ///< Delayed immunity release after a correct answer
 	t_tick trigger_tick;
 	t_tick scheduled_display_tick;
 	t_tick display_tick;
 	t_tick last_damage_tick;
 	uint32 generation;
+	uint32 success_immunity_generation;
 	uint16 mapindex;
 	uint16 blocked_actions; ///< Action bits added by the macro detector
 	uint16 display_retry; ///< Diagnostic count only; it never forces image transmission
@@ -1886,6 +1888,7 @@ void pc_macro_captcha_register_upload(map_session_data & sd, uint16 upload_size,
 TIMER_FUNC(pc_macro_detector_timeout);
 void pc_macro_detector_process_ack(map_session_data &sd);
 void pc_macro_detector_process_answer(map_session_data &sd, const char captcha_answer[CAPTCHA_ANSWER_SIZE_MAX]);
+void pc_macro_detector_cancel_success_immunity(map_session_data &sd, const char *reason);
 void pc_macro_detector_disconnect(map_session_data &sd);
 
 // Macro Reporter

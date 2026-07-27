@@ -762,6 +762,7 @@ struct Battle_Config
 	int32 macro_checker_display_delay;
 	int32 macro_checker_debug;
 	int32 macro_checker_allow_instance;
+	int32 macro_checker_success_immunity;
 	int32 macrochecker_delay;
 	int32 need_macro_hunt_check_rate;
 	int32 need_macro_hunt_delay;
