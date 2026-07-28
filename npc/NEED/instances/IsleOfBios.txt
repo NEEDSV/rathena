@@ -137,6 +137,50 @@ moro_cav,45,60,5	script	방황 노인#sara	4_M_EINOLD,{
 1@dth2,291,102,0	warp2	warp1#bios2	2,2,1@dth3,45,68
 
 // 구역 1
+// NEED: 반복 클리어 계정 전용 3층 직행 포탈
+1@dth1,72,94,3	script	빠른 이동 포탈#bios	PORTAL,{
+	// 업데이트 이전 클리어 캐릭터는 계정 해금으로 소급 적용합니다.
+	if (ep14_3_isle > 0)
+		#NEED_MD_BIOS_CLEAR = 1;
+
+	if (!#NEED_MD_BIOS_CLEAR) {
+		mes "[빠른 이동 포탈]";
+		mes "비오스의 섬을 한 번 이상 완료한 계정만";
+		mes "이 포탈을 이용할 수 있습니다.";
+		close;
+	}
+
+	mes "[빠른 이동 포탈]";
+	mes "첫 번째와 두 번째 구역을 건너뛰고";
+	mes "최종 구역으로 바로 이동하시겠습니까?";
+	next;
+
+	if (select("^3355FF최종 구역으로 이동한다^000000:기존 진행을 계속한다") == 2)
+		close;
+
+	// 첫 사용 시에만 3층 시작 NPC를 활성화합니다.
+	// 이후 파티원은 같은 포탈로 3층에 합류할 수 있습니다.
+	if (!'NEED_BIOS_FAST_PORTAL_READY) {
+		'NEED_BIOS_FAST_PORTAL_READY = 1;
+
+		enablenpc instance_npcname("제이스#bios3");
+		enablenpc instance_npcname("브리드#bios3");
+
+		// 이미 정상 진행으로 3층 이벤트가 시작된 경우에는
+		// 시작 트리거를 다시 활성화하지 않습니다.
+		if (!'NEED_BIOS_BOSS_EVENT_STARTED)
+			enablenpc instance_npcname("event_boss#bios3");
+
+		mapannounce 'map_dth1$,
+			"시스템: 반복 클리어 빠른 이동 포탈이 활성화되었습니다.",
+			bc_map,"0xFFFF00";
+	}
+
+	close2;
+	warp instance_mapname("1@dth3"),45,68;
+	end;
+}
+
 1@dth1,74,94,3	script	사신 안쿠#bios1	3029,{ end; }
 1@dth1,71,97,3	duplicate(사신 안쿠#bios1)	제이스#bios1	4_M_GUILLOTINE
 1@dth1,67,97,5	duplicate(사신 안쿠#bios1)	브리드#bios1	4_M_KNIGHT_BLACK
@@ -356,6 +400,7 @@ OnMyMobDead:
 		mes "이 으스스한 곳에서 어서 나가자!";
 		close2;
 		getitem 6684,1;// 영웅의 증표
+		#NEED_MD_BIOS_CLEAR = 1;
 		if (ep14_3_isle == 0)
 			ep14_3_isle = 1;
 		if (checkquest(15007,PLAYTIME) == 0 || checkquest(15007,PLAYTIME) == 1)
@@ -368,6 +413,10 @@ OnMyMobDead:
 1@dth3,64,74,5	script	event_boss#bios3	HIDDEN_WARP_NPC,5,7,{
 	end;
 OnTouch_:
+	if ('NEED_BIOS_BOSS_EVENT_STARTED)
+		end;
+
+	'NEED_BIOS_BOSS_EVENT_STARTED = 1;
 	disablenpc instance_npcname("event_boss#bios3");
 	'party_id = getcharid(1);
 	donpcevent instance_npcname("freeze#bios3") + "::OnStart";
@@ -707,6 +756,8 @@ OnStop:
 
 OnInstanceInit:
 	'reward = 'boss_id = 0;
+	'NEED_BIOS_FAST_PORTAL_READY = 0;
+	'NEED_BIOS_BOSS_EVENT_STARTED = 0;
 	'map_dth1$ = instance_mapname("1@dth1");
 	'map_dth2$ = instance_mapname("1@dth2");
 	'map_dth3$ = instance_mapname("1@dth3");

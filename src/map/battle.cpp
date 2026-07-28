@@ -7427,7 +7427,8 @@ enum damage_lv battle_weapon_attack(block_list* src, block_list* target, t_tick 
 		}
 		if (sc->getSCE(SC_GIANTGROWTH) && (wd.flag&BF_SHORT) && rnd()%100 < sc->getSCE(SC_GIANTGROWTH)->val2 && !is_infinite_defense(target, wd.flag) && !vellum_damage) {
 			wd.damage <<= 1; // 2017: double damage.
-			skill_break_equip(src, src, EQP_WEAPON, 10, BCT_SELF);
+			// NEED: Turisus (Giant Growth) self weapon-break side effect removed per user request; the
+			// damage amplification (double damage) and STR bonus / proc rate / duration stay unchanged.
 		}
 
 		if( sc->getSCE( SC_VIGOR ) && ( wd.flag&BF_SHORT ) && !is_infinite_defense( target, wd.flag ) && !vellum_damage ){
