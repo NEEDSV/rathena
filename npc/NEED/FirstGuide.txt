@@ -2,7 +2,8 @@
 // NEED 최초 접속 안내 / 연대기 퀴즈
 // 계정 1회 통과 변수: #Need_FirstGuide_Clear
 // 시작 안내 맵: ra_temsky
-// 통과 후 이동: pvp_n_1-5,100,133
+// 통과 후 이동: pvp_n_2-5,100,133
+// 초보존 도착 후 NEED 클랜 자동 가입
 //============================================================
 
 // 중앙 NPC
@@ -13,30 +14,12 @@ ra_temsky,100,100,4	script	기록관리자 아카샤	4_M_JOB_WIZARD,{
 		mes "";
 		mes "^00AA00Ctrl + F1^000000 을 누르면";
 		mes "언제든 NEED Wiki를 열 수 있습니다.";
-		close2;	
-	sc_start SC_INCREASEAGI,1800000,10;
-	specialeffect2 EF_BLESSING;
-	sc_start SC_BLESSING,1800000,10;
-	specialeffect2 EF_HEAL2;
-	sc_start SC_MAGNIFICAT,1800000,5;
-	sc_start SC_IMPOSITIO,1800000,5;
-	sc_start SC_ANGELUS,1800000,10;
-	sc_start SC_ASSUMPTIO,1800000,5;
-	sc_start SC_OVERTHRUST,1800000,5;
-	sc_start SC_CP_WEAPON, 1800000, 5;  // 무기 보호
-	sc_start SC_CP_SHIELD, 1800000, 5;  // 방패 보호
-	sc_start SC_CP_ARMOR,  1800000, 5;  // 갑옷 보호
-	sc_start SC_CP_HELM,   1800000, 5;  // 투구 보호
-	sc_start SC_STRFOOD,1800000,10;
-	sc_start SC_INTFOOD,1800000,10;
-	sc_start SC_DEXFOOD,1800000,10;
-	sc_start SC_AGIFOOD,1800000,10;
-	sc_start SC_VITFOOD,1800000,10;
-	sc_start SC_LUKFOOD,1800000,10;
-		savepoint "lasagna",170,151;
-		warp "pvp_n_2-5",100,133;
-		end;	
+		close2;
+
+		callsub S_MoveToNewbieZone;
+		end;
 	}
+
 	mes "[기록관리자 아카샤]";
 	mes "환영합니다, 모험가여.";
 	mes "";
@@ -166,6 +149,10 @@ ra_temsky,100,100,4	script	기록관리자 아카샤	4_M_JOB_WIZARD,{
 	#Need_FirstGuide_Clear = 1;
 
 	close2;
+	callsub S_MoveToNewbieZone;
+	end;
+
+S_MoveToNewbieZone:
 	sc_start SC_INCREASEAGI,1800000,10;
 	specialeffect2 EF_BLESSING;
 	sc_start SC_BLESSING,1800000,10;
@@ -175,17 +162,21 @@ ra_temsky,100,100,4	script	기록관리자 아카샤	4_M_JOB_WIZARD,{
 	sc_start SC_ANGELUS,1800000,10;
 	sc_start SC_ASSUMPTIO,1800000,5;
 	sc_start SC_OVERTHRUST,1800000,5;
-	sc_start SC_CP_WEAPON, 1800000, 5;  // 무기 보호
-	sc_start SC_CP_SHIELD, 1800000, 5;  // 방패 보호
-	sc_start SC_CP_ARMOR,  1800000, 5;  // 갑옷 보호
-	sc_start SC_CP_HELM,   1800000, 5;  // 투구 보호
+	sc_start SC_CP_WEAPON,1800000,5;  // 무기 보호
+	sc_start SC_CP_SHIELD,1800000,5;  // 방패 보호
+	sc_start SC_CP_ARMOR,1800000,5;   // 갑옷 보호
+	sc_start SC_CP_HELM,1800000,5;    // 투구 보호
 	sc_start SC_STRFOOD,1800000,10;
 	sc_start SC_INTFOOD,1800000,10;
 	sc_start SC_DEXFOOD,1800000,10;
 	sc_start SC_AGIFOOD,1800000,10;
 	sc_start SC_VITFOOD,1800000,10;
 	sc_start SC_LUKFOOD,1800000,10;
+
 	savepoint "lasagna",170,151;
+
+	// 워프가 완료된 뒤 초보존에서 NEED 클랜 가입 처리를 실행합니다.
+	addtimer 1000, "NEED_Clan::OnFirstGuideComplete";
 	warp "pvp_n_2-5",100,133;
-	end;
+	return;
 }

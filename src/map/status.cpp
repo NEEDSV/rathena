@@ -3195,8 +3195,6 @@ static int32 status_get_hpbonus(block_list *bl, enum e_status_bonus type) {
 				bonus += 2000;
 			if(sc->getSCE(SC_MARIONETTE))
 				bonus -= 1000;
-			if(sc->getSCE(SC_SWORDCLAN))
-				bonus += 30;
 			if(sc->getSCE(SC_ARCWANDCLAN))
 				bonus += 30;
 			if(sc->getSCE(SC_GOLDENMACECLAN))
@@ -3351,8 +3349,6 @@ static int32 status_get_spbonus(block_list *bl, enum e_status_bonus type) {
 				bonus += sc->getSCE(SC_INCMSP)->val1;
 			if(sc->getSCE(SC_EARTH_INSIGNIA) && sc->getSCE(SC_EARTH_INSIGNIA)->val1 == 3)
 				bonus += 50;
-			if(sc->getSCE(SC_SWORDCLAN))
-				bonus += 10;
 			if(sc->getSCE(SC_ARCWANDCLAN))
 				bonus += 10;
 			if(sc->getSCE(SC_GOLDENMACECLAN))
@@ -6946,6 +6942,8 @@ static uint16 status_calc_agi(block_list *bl, status_change *sc, int32 agi)
 		agi -= sc->getSCE(SC_STOMACHACHE)->val1;
 	if(sc->getSCE(SC_KYOUGAKU))
 		agi -= sc->getSCE(SC_KYOUGAKU)->val2;
+	if(sc->getSCE(SC_SWORDCLAN))
+		agi += 1;
 	if(sc->getSCE(SC_CROSSBOWCLAN))
 		agi += 1;
 	if(sc->getSCE(SC_JUMPINGCLAN))
@@ -7078,6 +7076,8 @@ static uint16 status_calc_int(block_list *bl, status_change *sc, int32 int_)
 		int_ -= sc->getSCE(SC_STOMACHACHE)->val1;
 	if(sc->getSCE(SC_KYOUGAKU))
 		int_ -= sc->getSCE(SC_KYOUGAKU)->val2;
+	if(sc->getSCE(SC_SWORDCLAN))
+		int_ += 1;
 	if(sc->getSCE(SC_ARCWANDCLAN))
 		int_ += 1;
 	if(sc->getSCE(SC_GOLDENMACECLAN))
@@ -7156,6 +7156,8 @@ static uint16 status_calc_dex(block_list *bl, status_change *sc, int32 dex)
 		dex -= sc->getSCE(SC_STOMACHACHE)->val1;
 	if(sc->getSCE(SC_KYOUGAKU))
 		dex -= sc->getSCE(SC_KYOUGAKU)->val2;
+	if(sc->getSCE(SC_SWORDCLAN))
+		dex += 1;
 	if(sc->getSCE(SC_ARCWANDCLAN))
 		dex += 1;
 	if(sc->getSCE(SC_CROSSBOWCLAN))
@@ -7223,6 +7225,8 @@ static uint16 status_calc_luk(block_list *bl, status_change *sc, int32 luk)
 		luk -= luk * sc->getSCE(SC__STRIPACCESSORY)->val2 / 100;
 	if(sc->getSCE(SC_BANANA_BOMB))
 		luk -= 75;
+	if(sc->getSCE(SC_SWORDCLAN))
+		luk += 1;
 	if(sc->getSCE(SC_GOLDENMACECLAN))
 		luk += 1;
 	if(sc->getSCE(SC_JUMPINGCLAN))
@@ -7500,6 +7504,8 @@ static uint16 status_calc_watk(block_list *bl, status_change *sc, int32 watk)
 		watk += sc->getSCE(SC_POWERFUL_FAITH)->val2;
 	if (sc->getSCE(SC_GUARD_STANCE))
 		watk -= sc->getSCE(SC_GUARD_STANCE)->val3;
+	if (sc->getSCE(SC_SWORDCLAN))
+		watk += 30;
 
 	return (uint16)cap_value(watk,0,USHRT_MAX);
 }
@@ -7556,6 +7562,8 @@ uint16 status_calc_pseudobuff_matk( map_session_data* sd, status_change *sc, int
 		matk += 50;
 	if (sc->getSCE(SC_CLIMAX_DES_HU))
 		matk += 100;
+	if (sc->getSCE(SC_SWORDCLAN))
+		matk += 30;
 
 	return static_cast<uint16>( cap_value(matk,0,USHRT_MAX) );
 }

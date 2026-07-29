@@ -1,0 +1,226 @@
+//===== rAthena Script =======================================
+//= NEED 클랜
+//===== Description: =========================================
+//= 길드가 없는 캐릭터를 NEED 클랜에 자동 가입시킵니다.
+//= 기존 소드/아크 완드/골든 메이스/크로스보우 클랜은
+//= NEED 클랜 하나로 통합하여 운영합니다.
+//============================================================
+
+lasagna,169,163,5	script	NEED 클랜 관리자	10058,{
+	cutin "laperm01.bmp", 2;
+	mes "[NEED 클랜 관리자]";
+	mes "안녕하세요. 신규 모험가들의 교류를 돕는 ^3131FFNEED 클랜^000000입니다.";
+	next;
+
+	switch (select("클랜 안내:가입한다.:탈퇴한다.:채팅 방법")) {
+		case 1:
+			mes "[NEED 클랜 관리자]";
+			mes "NEED 클랜은 특정 직업군을 위한 클랜이 아닙니다.";
+			mes "근거리, 원거리, 마법, 보조 직업을 포함한 ^3131FF모든 직업이 함께 이용^000000합니다.";
+			next;
+			mes "[NEED 클랜 관리자]";
+			mes "클랜원에게는 다음과 같은 소소한 능력치 보너스가 적용됩니다.";
+			mes "^FF0000<모든 스테이터스 +1, ATK +30, MATK +30>^000000";
+			next;
+			mes "[NEED 클랜 관리자]";
+			mes "클랜은 신규 유저 간의 질문, 정보 공유 및 파티 모집을 위한 공간입니다.";
+			mes "다른 모험가를 배려하며 즐겁게 이용해 주세요.";
+			break;
+
+		case 2:
+			mes "[NEED 클랜 관리자]";
+			if (getcharid(2)) {
+				mes "현재 길드에 가입되어 있어 NEED 클랜에 가입할 수 없습니다.";
+				mes "길드에서 탈퇴한 뒤 다시 찾아와 주세요.";
+				break;
+			}
+
+			if (getcharid(5) == SWORDCLAN) {
+				mes "이미 ^3131FFNEED 클랜^000000에 가입되어 있습니다.";
+				next;
+				mes "[NEED 클랜 관리자]";
+				mes "클랜 채팅: ^3131FF/cl 할 말^000000";
+				mes "클랜 정보 확인: ^3131FFCtrl+G^000000";
+				break;
+			}
+
+			// 기존 클랜 소속자는 NEED 클랜으로 통합합니다.
+			if (getcharid(5) != 0) {
+				if (!clan_leave()) {
+					mes "기존 클랜 탈퇴 처리 중 오류가 발생했습니다.";
+					break;
+				}
+				sc_end SC_ARCWANDCLAN;
+				sc_end SC_GOLDENMACECLAN;
+				sc_end SC_CROSSBOWCLAN;
+			}
+
+			if (clan_join(SWORDCLAN)) {
+				NEED_Clan_OptOut = 0;
+				sc_start2 SC_SWORDCLAN, INFINITE_TICK, 0, SWORDCLAN;
+				cutin "laperm02.bmp", 2;
+				mes "[NEED 클랜 관리자]";
+				mes "^3131FFNEED 클랜^000000에 가입되었습니다!";
+				next;
+				mes "[NEED 클랜 관리자]";
+				mes "클랜 채팅은 ^3131FF/cl 할 말^000000로 이용할 수 있습니다.";
+				mes "우측 하단 대화 채널을 ^3131FF클랜^000000으로 설정해도 됩니다.";
+				next;
+				mes "[NEED 클랜 관리자]";
+				mes "^3131FFCtrl+G^000000를 누르면 클랜 정보를 확인할 수 있습니다.";
+			} else {
+				mes "클랜 가입 처리 중 오류가 발생했습니다.";
+			}
+			break;
+
+		case 3:
+			mes "[NEED 클랜 관리자]";
+			if (getcharid(5) == 0) {
+				mes "현재 가입된 클랜이 없습니다.";
+				break;
+			}
+			if (getcharid(5) != SWORDCLAN) {
+				mes "현재 NEED 클랜 소속이 아닙니다.";
+				break;
+			}
+
+			mes "NEED 클랜에서 탈퇴하시겠습니까?";
+			mes "탈퇴 후에는 자동 가입 대상에서 제외됩니다.";
+			next;
+			if (select("탈퇴한다.:취소한다.") == 1) {
+				if (clan_leave()) {
+					NEED_Clan_OptOut = 1;
+					sc_end SC_SWORDCLAN;
+					mes "[NEED 클랜 관리자]";
+					mes "NEED 클랜에서 탈퇴했습니다.";
+					mes "다시 가입하려면 언제든 찾아와 주세요.";
+				} else {
+					mes "클랜 탈퇴 처리 중 오류가 발생했습니다.";
+				}
+			}
+			break;
+
+		case 4:
+			mes "[NEED 클랜 관리자]";
+			mes "채팅창에 다음과 같이 입력해 주세요.";
+			mes "^3131FF/cl 할 말^000000";
+			next;
+			mes "[NEED 클랜 관리자]";
+			mes "또는 화면 우측 하단의 대화 채널을 ^3131FF클랜^000000으로 변경한 뒤 채팅을 입력하면 됩니다.";
+			next;
+			mes "[NEED 클랜 관리자]";
+			mes "클랜 정보와 접속 중인 클랜원은 ^3131FFCtrl+G^000000로 확인할 수 있습니다.";
+			break;
+	}
+
+	close2;
+	cutin "", 255;
+	end;
+
+OnInit:
+	// SWORDCLAN의 표시 명칭과 실제 버프 효과는 DB/소스에서 NEED 사양으로 변경해야 합니다.
+	sc_start2 SC_SWORDCLAN, INFINITE_TICK, 0, SWORDCLAN, 10000, SCSTART_NOAVOID, getnpcid(0);
+	end;
+}
+
+-	script	NEED_Clan	FAKE_NPC,{
+OnPCLoginEvent:
+	// 길드 가입자는 클랜 자동 가입 대상에서 제외합니다.
+	if (getcharid(2)) {
+		if (getcharid(5)) {
+			sc_end SC_SWORDCLAN;
+			sc_end SC_ARCWANDCLAN;
+			sc_end SC_GOLDENMACECLAN;
+			sc_end SC_CROSSBOWCLAN;
+			clan_leave();
+		}
+		end;
+	}
+
+	// 이미 NEED 클랜에 가입되어 있다면 상태 효과만 복구합니다.
+	if (getcharid(5) == SWORDCLAN) {
+		if (!getstatus(SC_SWORDCLAN))
+			sc_start2 SC_SWORDCLAN, INFINITE_TICK, 0, SWORDCLAN;
+		end;
+	}
+
+	// 최초 안내를 마친 캐릭터가 초보존에서 접속한 경우에만
+	// 워프 직후 가입 타이머가 끊겼을 상황을 복구합니다.
+	if (#Need_FirstGuide_Clear
+		&& strcharinfo(3) == "pvp_n_2-5"
+		&& !getcharid(5)
+		&& !NEED_Clan_OptOut)
+		addtimer 1000, "NEED_Clan::OnFirstGuideComplete";
+
+	end;
+
+OnFirstGuideComplete:
+	// 반드시 최초 안내를 통과하고 초보존에 도착한 뒤에만 가입합니다.
+	if (!#Need_FirstGuide_Clear)
+		end;
+
+	// 직접 탈퇴한 캐릭터는 자동으로 다시 가입시키지 않습니다.
+	if (NEED_Clan_OptOut)
+		end;
+
+	// 길드 가입자는 클랜 자동 가입 대상이 아닙니다.
+	if (getcharid(2))
+		end;
+
+	// 이미 NEED 클랜에 가입되어 있다면 상태 효과만 복구합니다.
+	if (getcharid(5) == SWORDCLAN) {
+		if (!getstatus(SC_SWORDCLAN))
+			sc_start2 SC_SWORDCLAN, INFINITE_TICK, 0, SWORDCLAN;
+		end;
+	}
+
+	// 다른 클랜에 가입되어 있다면 자동으로 변경하지 않습니다.
+	if (getcharid(5))
+		end;
+
+	if (clan_join(SWORDCLAN)) {
+		sc_start2 SC_SWORDCLAN, INFINITE_TICK, 0, SWORDCLAN;
+
+		// 초보존 도착 직후 다른 안내와 겹치지 않도록 잠시 후 표시합니다.
+		addtimer 2000, "NEED_Clan::OnJoinGuide";
+	}
+	end;
+
+OnJoinGuide:
+	// 타이머 실행 전에 탈퇴하거나 길드에 가입한 경우 안내하지 않습니다.
+	if (getcharid(5) != SWORDCLAN)
+		end;
+
+	announce "[NEED 클랜] 신규 모험가를 위한 통합 클랜에 가입되었습니다!", bc_self | bc_blue;
+
+	mes "[^3131FFNEED 클랜^000000]";
+	mes "신규 모험가분들의 소통과";
+	mes "정보 공유를 위해";
+	mes "^3131FFNEED 클랜^000000에 자동 가입되었습니다.";
+	next;
+
+	mes "[^3131FFNEED 클랜^000000]";
+	mes "클랜 가입 중에는 다음 효과가 적용됩니다.";
+	mes "";
+	mes "^FF0000모든 스테이터스 +1^000000";
+	mes "^FF0000ATK +30 / MATK +30^000000";
+	next;
+
+	mes "[^3131FF클랜 채팅 이용 방법^000000]";
+	mes "채팅창에 아래와 같이 입력해 주세요.";
+	mes "";
+	mes "^3131FF/cl 할 말^000000";
+	mes "";
+	mes "또는 화면 우측 하단의";
+	mes "대화 채널을 ^3131FF클랜 대화^000000로 설정할 수 있습니다.";
+	next;
+
+	mes "[^3131FFNEED 클랜^000000]";
+	mes "^3131FFCtrl+G^000000를 누르면";
+	mes "클랜 정보와 접속 중인 클랜원을";
+	mes "확인할 수 있습니다.";
+	close;
+
+	dispbottom "[NEED 클랜] 채팅: /cl 할 말  |  클랜 정보: Ctrl+G";
+	end;
+}
