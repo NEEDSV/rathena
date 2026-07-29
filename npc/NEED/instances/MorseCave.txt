@@ -33,6 +33,33 @@ moro_cav,61,69,3	script	선임추적자#a1	4_M_JOB_ASSASSIN,{
 		mes "내일 다시 와주시겠습니까?";
 		close;
 	case 2:
+		// 전날 결과 보고 없이 종료해 9318이 남아 있는 경우 먼저 정리합니다.
+		// 9319가 만료된 상태에서만 실행되므로 당일 진행 중 퀘스트는 삭제하지 않습니다.
+		.@previous_hunt = checkquest(9318,HUNTING);
+		if (.@previous_hunt != -1) {
+			mes "[선임 추적자]";
+			mes "이전 원정의 진행 기록이 아직 남아 있군요.";
+			mes "새로운 원정을 시작하기 전에";
+			mes "지난 원정 결과부터 정리하겠습니다.";
+			next;
+
+			if (.@previous_hunt == 2) {
+				mes "[선임 추적자]";
+				mes "모로크의 군대를 모두 쓰러뜨린 기록이 확인되었습니다.";
+				mes "토벌 보상으로 " + getitemname(6684) + " 1개를 드리겠습니다.";
+				getitem 6684,1;	// 영웅의 증표
+			}
+			else {
+				mes "[선임 추적자]";
+				mes "지난 원정은 완료되지 않은 것으로 확인되었습니다.";
+				mes "남아 있던 진행 기록을 초기화하겠습니다.";
+			}
+
+			erasequest 9318;	// 숨어 있는 모로크 추적
+			ep14_3_mors01 = 1;
+			next;
+		}
+
 		mes "[선임 추적자]";
 		mes "돌아오실 줄 알았습니다.";
 		mes "푹 쉬고 오신 것 같군요.";
@@ -197,8 +224,10 @@ moro_cav,57,69,3	script	붉은꽃#a1	CLEAR_NPC,{
 		close;
 	}
 	if (isbegin_quest(9318) > 0) {
-		mes "- 붉은 꽃은 닫혀 있다.";
-		mes "아직은 들어갈 수 없다. -";
+		mes "[붉은 꽃]";
+		mes "이전 모르스의 동굴 진행 기록이 남아 있습니다.";
+		mes "옆의 ^3355FF선임 추적자^000000에게";
+		mes "지난 원정 결과를 먼저 보고해 주세요.";
 		close;
 	}
 	switch( checkquest(9319,PLAYTIME) ) {
