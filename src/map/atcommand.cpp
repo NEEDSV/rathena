@@ -10,6 +10,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
+#include <iomanip>
 #include <set>
 #include <sstream>
 #include <string>
@@ -9498,6 +9499,196 @@ ACMD_FUNC(iteminfo)
 	return 0;
 }
 
+static std::string atcommand_itemrate_number(double value, int32 precision = 3) {
+	std::ostringstream output;
+	output << std::fixed << std::setprecision(precision) << value;
+	std::string result = output.str();
+
+	while (result.size() > 1 && result.back() == '0')
+		result.pop_back();
+	if (!result.empty() && result.back() == '.')
+		result.pop_back();
+
+	return result;
+}
+
+static void atcommand_itemrate_line(const int32 fd, map_session_data* sd, int32 message_id, const char* value) {
+	char output[CHAT_SIZE_MAX];
+	safesnprintf(output, sizeof(output), msg_txt(sd, message_id), value);
+	clif_displaymessage(fd, output);
+}
+
+static void atcommand_itemrate_display_option(const int32 fd, map_session_data* sd, const NeedItemProbability& option, size_t index) {
+	char output[CHAT_SIZE_MAX];
+	safesnprintf(output, sizeof(output), msg_txt(sd, 1866), index);
+	clif_displaymessage(fd, output);
+
+	if (!option.condition.empty()) {
+		if (option.has_minimum_refine) {
+			safesnprintf(output, sizeof(output), msg_txt(sd, 1855), option.minimum_refine);
+			atcommand_itemrate_line(fd, sd, 1845, output);
+		} else {
+			atcommand_itemrate_line(fd, sd, 1845, option.condition.c_str());
+		}
+	}
+
+	int32 trigger_message = 1861;
+	switch (option.trigger) {
+		case e_need_probability_trigger::ATTACK:
+			trigger_message = 1858;
+			break;
+		case e_need_probability_trigger::MAGIC_ATTACK:
+			trigger_message = 1869;
+			break;
+		case e_need_probability_trigger::WHEN_HIT:
+			trigger_message = 1859;
+			break;
+		case e_need_probability_trigger::ON_SKILL:
+			trigger_message = 1860;
+			break;
+		case e_need_probability_trigger::RANDOM:
+			trigger_message = 1862;
+			break;
+		default:
+			break;
+	}
+	atcommand_itemrate_line(fd, sd, 1846, msg_txt(sd, trigger_message));
+
+	if (!option.trigger_detail.empty()) {
+		if (option.kind == e_need_probability_kind::AUTOBONUS && option.trigger != e_need_probability_trigger::ON_SKILL)
+			atcommand_itemrate_line(fd, sd, 1868, option.trigger_detail.c_str());
+		else
+			atcommand_itemrate_line(fd, sd, 1867, option.trigger_detail.c_str());
+	}
+
+	if (option.dynamic_rate) {
+		atcommand_itemrate_line(fd, sd, 1847, msg_txt(sd, 1851));
+		atcommand_itemrate_line(fd, sd, 1850, option.rate_expression.c_str());
+	} else if (option.rate_divisor > 0) {
+		const std::string number = atcommand_itemrate_number(
+			static_cast<double>(option.rate_value) * 100.0 / static_cast<double>(option.rate_divisor));
+		safesnprintf(output, sizeof(output), msg_txt(sd, 1856), number.c_str());
+		atcommand_itemrate_line(fd, sd, 1847, output);
+	}
+
+	if (!option.duration_expression.empty()) {
+		std::string duration;
+		if (option.duration >= 0) {
+			duration = atcommand_itemrate_number(static_cast<double>(option.duration) / 1000.0);
+			safesnprintf(output, sizeof(output), msg_txt(sd, 1857), duration.c_str());
+			duration = output;
+		} else {
+			duration = option.duration_expression;
+		}
+		atcommand_itemrate_line(fd, sd, 1848, duration.c_str());
+	}
+
+	if (option.effect_type == e_need_probability_effect::HP_DRAIN ||
+		option.effect_type == e_need_probability_effect::SP_DRAIN) {
+		const std::string amount = option.effect_value >= 0 ?
+			atcommand_itemrate_number(static_cast<double>(option.effect_value)) : option.effect_value_expression;
+		const int32 message_id = option.effect_type == e_need_probability_effect::HP_DRAIN ? 1870 : 1871;
+		safesnprintf(output, sizeof(output), msg_txt(sd, message_id), amount.c_str());
+		atcommand_itemrate_line(fd, sd, 1849, output);
+	} else if (option.effect_type == e_need_probability_effect::HP_REGEN ||
+		option.effect_type == e_need_probability_effect::SP_REGEN) {
+		const std::string amount = option.effect_value >= 0 ?
+			atcommand_itemrate_number(static_cast<double>(option.effect_value)) : option.effect_value_expression;
+		const std::string interval = option.effect_interval >= 0 ?
+			atcommand_itemrate_number(static_cast<double>(option.effect_interval) / 1000.0) : option.effect_interval_expression;
+		const int32 message_id = option.effect_type == e_need_probability_effect::HP_REGEN ? 1872 : 1873;
+		safesnprintf(output, sizeof(output), msg_txt(sd, message_id), interval.c_str(), amount.c_str());
+		atcommand_itemrate_line(fd, sd, 1849, output);
+	} else if (!option.skill.empty()) {
+		safesnprintf(output, sizeof(output), msg_txt(sd, 1863), option.skill.c_str(), option.skill_level.c_str());
+		atcommand_itemrate_line(fd, sd, 1849, output);
+	} else if (!option.status.empty()) {
+		safesnprintf(output, sizeof(output), msg_txt(sd, 1864), option.status.c_str());
+		atcommand_itemrate_line(fd, sd, 1849, output);
+	} else if (!option.effect.empty()) {
+		atcommand_itemrate_line(fd, sd, 1849, option.effect.c_str());
+	}
+
+	if (option.unresolved) {
+		atcommand_itemrate_line(fd, sd, 1849, msg_txt(sd, 1852));
+	}
+
+	if (option.unresolved || option.kind == e_need_probability_kind::RANDOM_BRANCH) {
+		std::string original = option.original;
+		if (original.size() > 180)
+			original = original.substr(0, 177) + "...";
+		atcommand_itemrate_line(fd, sd, 1853, original.c_str());
+	}
+}
+
+ACMD_FUNC(itemrate)
+{
+	if (!message || !*message) {
+		clif_displaymessage(fd, msg_txt(sd, 1841));
+		return -1;
+	}
+
+	std::map<t_itemid, std::shared_ptr<item_data>> items;
+	uint16 count = 1;
+	const t_itemid item_id = strtoul(message, nullptr, 10);
+
+	if (item_id == 0)
+		count = itemdb_searchname_array(items, MAX_SEARCH, message);
+	else if ((items[item_id] = item_db.find(item_id)) == nullptr)
+		count = 0;
+
+	if (count == 0) {
+		clif_displaymessage(fd, msg_txt(sd, 1842));
+		return -1;
+	}
+
+	constexpr size_t maximum_results = 20;
+	size_t displayed = 0;
+	size_t total = 0;
+	bool displayed_item = false;
+
+	for (const auto& result : items)
+		total += result.second->probability_options.size();
+
+	for (const auto& result : items) {
+		const std::shared_ptr<item_data>& item = result.second;
+
+		if (item->probability_options.empty())
+			continue;
+
+		if (displayed_item)
+			clif_displaymessage(fd, msg_txt(sd, 1874));
+
+		safesnprintf(atcmd_output, sizeof(atcmd_output), msg_txt(sd, 1843), item->ename.c_str());
+		clif_displaymessage(fd, atcmd_output);
+		displayed_item = true;
+		size_t item_option_index = 1;
+
+		static constexpr const char* source_order[] = { "Script", "EquipScript", "UnEquipScript" };
+		for (const char* source : source_order) {
+			for (const NeedItemProbability& option : item->probability_options) {
+				if (option.source != source)
+					continue;
+				if (displayed >= maximum_results)
+					break;
+				atcommand_itemrate_display_option(fd, sd, option, item_option_index++);
+				++displayed;
+			}
+			if (displayed >= maximum_results)
+				break;
+		}
+		if (displayed >= maximum_results)
+			break;
+	}
+
+	if (total > displayed) {
+		safesnprintf(atcmd_output, sizeof(atcmd_output), msg_txt(sd, 1865), displayed, total);
+		clif_displaymessage(fd, atcmd_output);
+	}
+
+	return 0;
+}
+
 /*==========================================
  * Show who drops the item.
  *------------------------------------------*/
@@ -12552,6 +12743,7 @@ void atcommand_basecommands(void) {
 		ACMD_DEF(mutearea),
 		ACMD_DEF(rates),
 		ACMD_DEF(iteminfo),
+		ACMD_DEF(itemrate),
 		ACMD_DEF(whodrops),
 		ACMD_DEF(whereis),
 		ACMD_DEF(mapflag),

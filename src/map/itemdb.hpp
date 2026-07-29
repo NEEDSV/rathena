@@ -3484,6 +3484,61 @@ struct s_roulette_db {
 extern struct s_roulette_db rd;
 extern NeedLuckyEggDatabase need_lucky_egg_db;
 
+enum class e_need_probability_kind : uint8 {
+	AUTOBONUS,
+	AUTOSPELL,
+	ADD_EFFECT,
+	DRAIN,
+	STATUS_START,
+	RANDOM_BRANCH,
+};
+
+enum class e_need_probability_effect : uint8 {
+	RAW,
+	HP_DRAIN,
+	SP_DRAIN,
+	HP_REGEN,
+	SP_REGEN,
+};
+
+enum class e_need_probability_trigger : uint8 {
+	ATTACK,
+	MAGIC_ATTACK,
+	WHEN_HIT,
+	ON_SKILL,
+	SCRIPT,
+	RANDOM,
+};
+
+struct NeedItemProbability {
+	std::string source;
+	std::string trigger_detail;
+	std::string condition;
+	std::string effect;
+	std::string rate_expression;
+	std::string duration_expression;
+	std::string skill;
+	std::string skill_level;
+	std::string status;
+	std::string original;
+	std::string effect_value_expression;
+	std::string effect_interval_expression;
+	int64 rate_value = 0;
+	int64 duration = 0;
+	int64 rate_divisor = 0;
+	int64 minimum_refine = 0;
+	int64 effect_value = 0;
+	int64 effect_interval = 0;
+	e_need_probability_kind kind = e_need_probability_kind::RANDOM_BRANCH;
+	e_need_probability_effect effect_type = e_need_probability_effect::RAW;
+	e_need_probability_trigger trigger = e_need_probability_trigger::SCRIPT;
+	bool dynamic_rate = false;
+	bool has_minimum_refine = false;
+	bool unresolved = false;
+};
+
+void need_parse_item_probability(struct item_data& item, const std::string& script, const char* source);
+
 ///Main item data struct
 struct item_data
 {
@@ -3522,6 +3577,9 @@ struct item_data
 		int32 id;
 	} mob[MAX_SEARCH]; //Holds the mobs that have the highest drop rate for this item. [Skotlex]
 	std::string script_source; // Original item script text.
+	std::string equip_script_source;
+	std::string unequip_script_source;
+	std::vector<NeedItemProbability> probability_options;
 	struct script_code *script;	//Default script for everything.
 	struct script_code *equip_script;	//Script executed once when equipping.
 	struct script_code *unequip_script;//Script executed once when unequipping.

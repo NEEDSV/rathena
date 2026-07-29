@@ -3,6 +3,9 @@
 
 #include "itemdb.hpp"
 
+#include <algorithm>
+#include <cerrno>
+#include <cctype>
 #include <chrono>
 #include <cmath>
 #include <cstdlib>
@@ -38,6 +41,568 @@ NeedLuckyEggDatabase need_lucky_egg_db;
 struct s_roulette_db rd;
 
 static void itemdb_jobid2mapid(uint64 bclass[3], e_mapid jobmask, bool active);
+
+namespace {
+
+std::string need_probability_trim(std::string value) {
+	const auto first = std::find_if_not(value.begin(), value.end(), [](unsigned char c) { return std::isspace(c) != 0; });
+	const auto last = std::find_if_not(value.rbegin(), value.rend(), [](unsigned char c) { return std::isspace(c) != 0; }).base();
+
+	if (first >= last)
+		return {};
+
+	return std::string(first, last);
+}
+
+std::string need_probability_lower(std::string value) {
+	std::transform(value.begin(), value.end(), value.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+	return value;
+}
+
+bool need_probability_identifier_char(char c) {
+	return std::isalnum(static_cast<unsigned char>(c)) != 0 || c == '_';
+}
+
+size_t need_probability_matching(const std::string& text, size_t open, char left, char right) {
+	int32 depth = 0;
+	bool quoted = false;
+	bool escaped = false;
+
+	for (size_t i = open; i < text.size(); ++i) {
+		const char c = text[i];
+
+		if (quoted) {
+			if (escaped)
+				escaped = false;
+			else if (c == '\\')
+				escaped = true;
+			else if (c == '"')
+				quoted = false;
+			continue;
+		}
+
+		if (c == '"') {
+			quoted = true;
+			continue;
+		}
+
+		if (c == left)
+			++depth;
+		else if (c == right && --depth == 0)
+			return i;
+	}
+
+	return std::string::npos;
+}
+
+size_t need_probability_statement_end(const std::string& text, size_t start) {
+	bool quoted = false;
+	bool escaped = false;
+	int32 parentheses = 0;
+
+	for (size_t i = start; i < text.size(); ++i) {
+		const char c = text[i];
+
+		if (quoted) {
+			if (escaped)
+				escaped = false;
+			else if (c == '\\')
+				escaped = true;
+			else if (c == '"')
+				quoted = false;
+			continue;
+		}
+
+		if (c == '"') {
+			quoted = true;
+		} else if (c == '(') {
+			++parentheses;
+		} else if (c == ')' && parentheses > 0) {
+			--parentheses;
+		} else if (c == ';' && parentheses == 0) {
+			return i + 1;
+		}
+	}
+
+	return text.size();
+}
+
+std::vector<std::string> need_probability_split_arguments(const std::string& text) {
+	std::vector<std::string> result;
+	bool quoted = false;
+	bool escaped = false;
+	int32 parentheses = 0;
+	int32 braces = 0;
+	size_t begin = 0;
+
+	for (size_t i = 0; i <= text.size(); ++i) {
+		const char c = i < text.size() ? text[i] : ',';
+
+		if (quoted) {
+			if (escaped)
+				escaped = false;
+			else if (c == '\\')
+				escaped = true;
+			else if (c == '"')
+				quoted = false;
+			continue;
+		}
+
+		if (c == '"') {
+			quoted = true;
+		} else if (c == '(') {
+			++parentheses;
+		} else if (c == ')' && parentheses > 0) {
+			--parentheses;
+		} else if (c == '{') {
+			++braces;
+		} else if (c == '}' && braces > 0) {
+			--braces;
+		} else if (c == ',' && parentheses == 0 && braces == 0) {
+			result.emplace_back(need_probability_trim(text.substr(begin, i - begin)));
+			begin = i + 1;
+		}
+	}
+
+	return result;
+}
+
+std::string need_probability_unquote(std::string value) {
+	value = need_probability_trim(std::move(value));
+
+	if (value.size() >= 2 && value.front() == '"' && value.back() == '"')
+		value = value.substr(1, value.size() - 2);
+
+	value = need_probability_trim(std::move(value));
+
+	if (value.size() >= 2 && value.front() == '{' && value.back() == '}')
+		value = need_probability_trim(value.substr(1, value.size() - 2));
+
+	return value;
+}
+
+bool need_probability_integer(const std::string& expression, int64& value) {
+	const std::string trimmed = need_probability_trim(expression);
+	char* end = nullptr;
+	errno = 0;
+	const int64 parsed = strtoll(trimmed.c_str(), &end, 0);
+
+	if (errno != 0 || end == trimmed.c_str())
+		return false;
+
+	while (*end != '\0' && std::isspace(static_cast<unsigned char>(*end)) != 0)
+		++end;
+
+	if (*end != '\0')
+		return false;
+
+	value = parsed;
+	return true;
+}
+
+void need_probability_set_rate(NeedItemProbability& option, const std::string& expression, int64 divisor) {
+	option.rate_expression = need_probability_trim(expression);
+	option.rate_divisor = divisor;
+	option.dynamic_rate = !need_probability_integer(option.rate_expression, option.rate_value);
+}
+
+void need_probability_set_duration(NeedItemProbability& option, const std::string& expression) {
+	option.duration_expression = need_probability_trim(expression);
+
+	if (!need_probability_integer(option.duration_expression, option.duration))
+		option.duration = -1;
+}
+
+void need_probability_set_effect_value(NeedItemProbability& option, const std::string& expression) {
+	option.effect_value_expression = need_probability_trim(expression);
+
+	if (!need_probability_integer(option.effect_value_expression, option.effect_value))
+		option.effect_value = -1;
+}
+
+void need_probability_set_effect_interval(NeedItemProbability& option, const std::string& expression) {
+	option.effect_interval_expression = need_probability_trim(expression);
+
+	if (!need_probability_integer(option.effect_interval_expression, option.effect_interval))
+		option.effect_interval = -1;
+}
+
+std::string need_probability_conditions(const std::string& script, size_t command_position) {
+	const std::string lower = need_probability_lower(script);
+	std::vector<std::string> active;
+
+	for (size_t pos = 0; pos < command_position;) {
+		pos = lower.find("if", pos);
+		if (pos == std::string::npos || pos >= command_position)
+			break;
+
+		if ((pos > 0 && need_probability_identifier_char(lower[pos - 1])) ||
+			(pos + 2 < lower.size() && need_probability_identifier_char(lower[pos + 2]))) {
+			pos += 2;
+			continue;
+		}
+
+		size_t open = lower.find_first_not_of(" \t\r\n", pos + 2);
+		if (open == std::string::npos || lower[open] != '(') {
+			pos += 2;
+			continue;
+		}
+
+		const size_t close = need_probability_matching(script, open, '(', ')');
+		if (close == std::string::npos) {
+			pos += 2;
+			continue;
+		}
+
+		if (command_position > open && command_position < close) {
+			active.emplace_back(need_probability_trim(script.substr(open + 1, close - open - 1)));
+			pos = close + 1;
+			continue;
+		}
+
+		if (close >= command_position) {
+			pos = close + 1;
+			continue;
+		}
+
+		size_t body = script.find_first_not_of(" \t\r\n", close + 1);
+		bool contains = false;
+
+		if (body < script.size() && script[body] == '{') {
+			const size_t body_end = need_probability_matching(script, body, '{', '}');
+			contains = command_position > body && (body_end == std::string::npos || command_position < body_end);
+		} else if (body != std::string::npos) {
+			contains = command_position >= body && command_position < need_probability_statement_end(script, body);
+		}
+
+		if (contains)
+			active.emplace_back(need_probability_trim(script.substr(open + 1, close - open - 1)));
+
+		pos = close + 1;
+	}
+
+	std::string result;
+	for (const std::string& condition : active) {
+		if (!result.empty())
+			result += " && ";
+		result += condition;
+	}
+	return result;
+}
+
+std::string need_probability_arguments_text(const std::string& statement, size_t command_length) {
+	std::string arguments = need_probability_trim(statement.substr(command_length));
+
+	if (!arguments.empty() && arguments.back() == ';')
+		arguments.pop_back();
+
+	arguments = need_probability_trim(std::move(arguments));
+	if (arguments.size() >= 2 && arguments.front() == '(' && arguments.back() == ')')
+		arguments = arguments.substr(1, arguments.size() - 2);
+
+	return need_probability_trim(std::move(arguments));
+}
+
+void need_probability_add(std::vector<NeedItemProbability>& output, NeedItemProbability option) {
+	if (option.trigger == e_need_probability_trigger::ATTACK &&
+		need_probability_lower(option.trigger_detail).find("bf_magic") != std::string::npos)
+		option.trigger = e_need_probability_trigger::MAGIC_ATTACK;
+
+	std::string compact_condition;
+	compact_condition.reserve(option.condition.size());
+	for (const char c : option.condition) {
+		if (std::isspace(static_cast<unsigned char>(c)) == 0)
+			compact_condition.push_back(c);
+	}
+
+	const std::string refine_prefix = "getrefine()>=";
+	if (compact_condition.rfind(refine_prefix, 0) == 0) {
+		int64 refine = 0;
+		if (need_probability_integer(compact_condition.substr(refine_prefix.size()), refine)) {
+			option.minimum_refine = refine;
+			option.has_minimum_refine = true;
+		}
+	}
+
+	const auto duplicate = std::find_if(output.begin(), output.end(), [&option](const NeedItemProbability& current) {
+		return current.source == option.source &&
+			current.trigger == option.trigger &&
+			current.condition == option.condition &&
+			current.effect == option.effect &&
+			current.rate_expression == option.rate_expression &&
+			current.duration_expression == option.duration_expression &&
+			current.skill == option.skill &&
+			current.skill_level == option.skill_level &&
+			current.status == option.status &&
+			current.effect_type == option.effect_type &&
+			current.effect_value_expression == option.effect_value_expression &&
+			current.effect_interval_expression == option.effect_interval_expression;
+	});
+
+	if (duplicate == output.end())
+		output.emplace_back(std::move(option));
+}
+
+void need_probability_parse_regen_effect(NeedItemProbability& option) {
+	const std::string command = "bonus2";
+	const std::string lower = need_probability_lower(option.effect);
+	size_t position = lower.find(command);
+
+	if (position == std::string::npos ||
+		(position > 0 && need_probability_identifier_char(lower[position - 1])) ||
+		(position + command.size() < lower.size() && need_probability_identifier_char(lower[position + command.size()])))
+		return;
+
+	const size_t end = need_probability_statement_end(option.effect, position);
+	const std::string statement = option.effect.substr(position, end - position);
+	const auto arguments = need_probability_split_arguments(need_probability_arguments_text(statement, command.size()));
+
+	if (arguments.size() < 3)
+		return;
+
+	const std::string type = need_probability_lower(arguments[0]);
+	if (type == "bhpregenrate")
+		option.effect_type = e_need_probability_effect::HP_REGEN;
+	else if (type == "bspregenrate")
+		option.effect_type = e_need_probability_effect::SP_REGEN;
+	else
+		return;
+
+	need_probability_set_effect_value(option, arguments[1]);
+	need_probability_set_effect_interval(option, arguments[2]);
+}
+
+void need_probability_parse_autobonus(std::vector<NeedItemProbability>& output, const std::string& source,
+	const std::string& command, const std::string& statement, const std::string& condition) {
+	const auto arguments = need_probability_split_arguments(need_probability_arguments_text(statement, command.size()));
+	NeedItemProbability option;
+	option.source = source;
+	option.condition = condition;
+	option.original = need_probability_trim(statement);
+	option.kind = e_need_probability_kind::AUTOBONUS;
+	option.trigger = command == "autobonus2" ? e_need_probability_trigger::WHEN_HIT :
+		command == "autobonus3" ? e_need_probability_trigger::ON_SKILL : e_need_probability_trigger::ATTACK;
+
+	if (arguments.size() < 3) {
+		option.unresolved = true;
+		need_probability_add(output, std::move(option));
+		return;
+	}
+
+	option.effect = need_probability_unquote(arguments[0]);
+	need_probability_parse_regen_effect(option);
+	need_probability_set_rate(option, arguments[1], 1000);
+	need_probability_set_duration(option, arguments[2]);
+
+	if (command == "autobonus3" && arguments.size() >= 4)
+		option.trigger_detail = need_probability_unquote(arguments[3]);
+	else if (arguments.size() >= 4)
+		option.trigger_detail = arguments[3];
+
+	need_probability_add(output, std::move(option));
+}
+
+void need_probability_parse_bonus(std::vector<NeedItemProbability>& output, const std::string& source,
+	const std::string& command, const std::string& statement, const std::string& condition) {
+	const auto arguments = need_probability_split_arguments(need_probability_arguments_text(statement, command.size()));
+	if (arguments.empty())
+		return;
+
+	const std::string type = need_probability_lower(arguments[0]);
+	NeedItemProbability option;
+	option.source = source;
+	option.condition = condition;
+	option.original = need_probability_trim(statement);
+
+	// Explicit whitelist: these bonus2 types contain a probability. Other bonus2
+	// values must not be treated as chance-based options.
+	if (command == "bonus2" && (type == "bhpdrainrate" || type == "bspdrainrate")) {
+		option.kind = e_need_probability_kind::DRAIN;
+		option.trigger = e_need_probability_trigger::ATTACK;
+		option.effect_type = type == "bhpdrainrate" ?
+			e_need_probability_effect::HP_DRAIN : e_need_probability_effect::SP_DRAIN;
+
+		if (arguments.size() < 3) {
+			option.unresolved = true;
+		} else {
+			need_probability_set_rate(option, arguments[1], 1000);
+			need_probability_set_effect_value(option, arguments[2]);
+		}
+		need_probability_add(output, std::move(option));
+		return;
+	}
+
+	if (type == "bautospell" || type == "bautospellwhenhit" || type == "bautospellonskill") {
+		option.kind = e_need_probability_kind::AUTOSPELL;
+		option.trigger = type == "bautospellwhenhit" ? e_need_probability_trigger::WHEN_HIT :
+			type == "bautospellonskill" ? e_need_probability_trigger::ON_SKILL : e_need_probability_trigger::ATTACK;
+
+		const bool on_skill = type == "bautospellonskill";
+		const size_t skill_index = on_skill ? 2 : 1;
+		const size_t level_index = on_skill ? 3 : 2;
+		const size_t rate_index = on_skill ? 4 : 3;
+
+		if (arguments.size() <= rate_index) {
+			option.unresolved = true;
+		} else {
+			if (on_skill)
+				option.trigger_detail = need_probability_unquote(arguments[1]);
+			option.skill = need_probability_unquote(arguments[skill_index]);
+			option.skill_level = arguments[level_index];
+			need_probability_set_rate(option, arguments[rate_index], 1000);
+		}
+		need_probability_add(output, std::move(option));
+		return;
+	}
+
+	if (type == "baddeff" || type == "baddeffwhenhit" || type == "baddeffonskill") {
+		option.kind = e_need_probability_kind::ADD_EFFECT;
+		option.trigger = type == "baddeffwhenhit" ? e_need_probability_trigger::WHEN_HIT :
+			type == "baddeffonskill" ? e_need_probability_trigger::ON_SKILL : e_need_probability_trigger::ATTACK;
+
+		const bool on_skill = type == "baddeffonskill";
+		const size_t status_index = on_skill ? 2 : 1;
+		const size_t rate_index = on_skill ? 3 : 2;
+
+		if (arguments.size() <= rate_index) {
+			option.unresolved = true;
+		} else {
+			if (on_skill)
+				option.trigger_detail = need_probability_unquote(arguments[1]);
+			option.status = arguments[status_index];
+			need_probability_set_rate(option, arguments[rate_index], 10000);
+
+			if (!on_skill && arguments.size() >= 5)
+				need_probability_set_duration(option, arguments[4]);
+			else if (on_skill && arguments.size() >= 6)
+				need_probability_set_duration(option, arguments[5]);
+		}
+		need_probability_add(output, std::move(option));
+	}
+}
+
+void need_probability_parse_sc_start(std::vector<NeedItemProbability>& output, const std::string& source,
+	const std::string& command, const std::string& statement, const std::string& condition) {
+	const auto arguments = need_probability_split_arguments(need_probability_arguments_text(statement, command.size()));
+	const size_t rate_index = command == "sc_start4" ? 6 : command == "sc_start2" ? 4 : 3;
+	NeedItemProbability option;
+	option.source = source;
+	option.condition = condition;
+	option.original = need_probability_trim(statement);
+	option.kind = e_need_probability_kind::STATUS_START;
+	option.trigger = e_need_probability_trigger::SCRIPT;
+
+	if (arguments.size() < 3) {
+		option.unresolved = true;
+	} else {
+		option.status = arguments[0];
+		need_probability_set_duration(option, arguments[1]);
+		need_probability_set_rate(option, arguments.size() > rate_index ? arguments[rate_index] : "10000", 10000);
+	}
+
+	need_probability_add(output, std::move(option));
+}
+
+void need_probability_parse_random(std::vector<NeedItemProbability>& output, const std::string& source,
+	const std::string& command, const std::string& call, const std::string& condition) {
+	const size_t open = call.find('(');
+	const size_t close = call.rfind(')');
+	if (open == std::string::npos || close == std::string::npos || close <= open)
+		return;
+
+	const auto arguments = need_probability_split_arguments(call.substr(open + 1, close - open - 1));
+	NeedItemProbability option;
+	option.source = source;
+	option.condition = condition;
+	option.original = need_probability_trim(call);
+	option.kind = e_need_probability_kind::RANDOM_BRANCH;
+	option.trigger = e_need_probability_trigger::RANDOM;
+	option.effect = condition;
+	option.dynamic_rate = true;
+	option.rate_expression = condition.empty() ? call : condition;
+
+	int64 range = 0;
+	int64 threshold = 0;
+	const std::string lower_condition = need_probability_lower(condition);
+	const size_t comparison = lower_condition.find_first_of("<>");
+	if (command == "rand" && arguments.size() == 1 && need_probability_integer(arguments[0], range) &&
+		comparison != std::string::npos) {
+		size_t number = comparison + 1;
+		if (number < lower_condition.size() && lower_condition[number] == '=')
+			++number;
+		if (need_probability_integer(lower_condition.substr(number), threshold) && lower_condition[comparison] == '<') {
+			if (comparison + 1 < lower_condition.size() && lower_condition[comparison + 1] == '=')
+				++threshold;
+			option.rate_value = threshold;
+			option.rate_divisor = range;
+			option.rate_expression = std::to_string(threshold);
+			option.dynamic_rate = false;
+		}
+	}
+
+	need_probability_add(output, std::move(option));
+}
+
+} // namespace
+
+void need_parse_item_probability(item_data& item, const std::string& script, const char* source) {
+	item.probability_options.erase(
+		std::remove_if(item.probability_options.begin(), item.probability_options.end(),
+			[source](const NeedItemProbability& option) { return option.source == source; }),
+		item.probability_options.end());
+
+	const std::string lower = need_probability_lower(script);
+	static const std::vector<std::string> commands = {
+		"autobonus3", "autobonus2", "autobonus",
+		"sc_start4", "sc_start2", "sc_start",
+		"bonus5", "bonus4", "bonus3", "bonus2", "bonus",
+		"getrand", "rand",
+	};
+
+	for (size_t position = 0; position < lower.size();) {
+		size_t found = std::string::npos;
+		std::string command;
+
+		for (const std::string& candidate : commands) {
+			size_t candidate_position = lower.find(candidate, position);
+			while (candidate_position != std::string::npos &&
+				((candidate_position > 0 && need_probability_identifier_char(lower[candidate_position - 1])) ||
+				(candidate_position + candidate.size() < lower.size() && need_probability_identifier_char(lower[candidate_position + candidate.size()]))))
+				candidate_position = lower.find(candidate, candidate_position + candidate.size());
+
+			if (candidate_position < found) {
+				found = candidate_position;
+				command = candidate;
+			}
+		}
+
+		if (found == std::string::npos)
+			break;
+
+		const std::string condition = need_probability_conditions(script, found);
+
+		if (command == "rand" || command == "getrand") {
+			const size_t open = script.find('(', found + command.size());
+			const size_t close = open == std::string::npos ? std::string::npos : need_probability_matching(script, open, '(', ')');
+			if (open != std::string::npos && close != std::string::npos && !condition.empty())
+				need_probability_parse_random(item.probability_options, source, command, script.substr(found, close - found + 1), condition);
+			position = close == std::string::npos ? found + command.size() : close + 1;
+			continue;
+		}
+
+		const size_t end = need_probability_statement_end(script, found);
+		const std::string statement = script.substr(found, end - found);
+
+		if (command.rfind("autobonus", 0) == 0)
+			need_probability_parse_autobonus(item.probability_options, source, command, statement, condition);
+		else if (command.rfind("bonus", 0) == 0)
+			need_probability_parse_bonus(item.probability_options, source, command, statement, condition);
+		else
+			need_probability_parse_sc_start(item.probability_options, source, command, statement, condition);
+
+		position = end > found ? end : found + command.size();
+	}
+}
 
 const std::string ItemDatabase::getDefaultLocation() {
 	return std::string(db_path) + "/item_db.yml";
@@ -1119,10 +1684,12 @@ uint64 ItemDatabase::parseBodyNode(const ryml::NodeRef& node) {
 		}
 
 		item->script_source = script;
+		need_parse_item_probability(*item, script, "Script");
 		item->script = parse_script(script.c_str(), this->getCurrentFile().c_str(), this->getLineNumber(node["Script"]), SCRIPT_IGNORE_EXTERNAL_BRACKETS);
 	} else {
 		if (!exists) {
 			item->script_source.clear();
+			need_parse_item_probability(*item, {}, "Script");
 			item->script = nullptr;
 		}
 	}
@@ -1138,10 +1705,15 @@ uint64 ItemDatabase::parseBodyNode(const ryml::NodeRef& node) {
 			item->equip_script = nullptr;
 		}
 
+		item->equip_script_source = script;
+		need_parse_item_probability(*item, script, "EquipScript");
 		item->equip_script = parse_script(script.c_str(), this->getCurrentFile().c_str(), this->getLineNumber(node["EquipScript"]), SCRIPT_IGNORE_EXTERNAL_BRACKETS);
 	} else {
-		if (!exists)
+		if (!exists) {
+			item->equip_script_source.clear();
+			need_parse_item_probability(*item, {}, "EquipScript");
 			item->equip_script = nullptr;
+		}
 	}
 
 	if (this->nodeExists(node, "UnEquipScript")) {
@@ -1155,10 +1727,15 @@ uint64 ItemDatabase::parseBodyNode(const ryml::NodeRef& node) {
 			item->unequip_script = nullptr;
 		}
 
+		item->unequip_script_source = script;
+		need_parse_item_probability(*item, script, "UnEquipScript");
 		item->unequip_script = parse_script(script.c_str(), this->getCurrentFile().c_str(), this->getLineNumber(node["UnEquipScript"]), SCRIPT_IGNORE_EXTERNAL_BRACKETS);
 	} else {
-		if (!exists)
+		if (!exists) {
+			item->unequip_script_source.clear();
+			need_parse_item_probability(*item, {}, "UnEquipScript");
 			item->unequip_script = nullptr;
+		}
 	}
 
 	if (!exists)
