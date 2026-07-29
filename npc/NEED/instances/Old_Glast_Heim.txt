@@ -1576,14 +1576,17 @@ OnStart:
 	end;
 
 OnMyMobDead:
-	if (rand(10) == 0) {// can re-spawn
+	// 기사단장이 이미 소환 중이거나 처치된 뒤에는 다시 소환하지 않습니다.
+	if ('ogh_com_h1 != 0)
+		end;
+
+	if (rand(10) == 0) {
+		'ogh_com_h1 = 1;
 		mapannounce 'map_name$[1], "사악한 기운을 가진 어떤 존재가 이 지역안에 나타난 것 같습니다.", bc_map,0xFFFF44,FW_NORMAL,15;
-		killmonster 'map_name$[1], instance_npcname("#ghmemorialmob05") + "::OnBossDead";
 
 		.@r = rand(4) * 2;
 		setarray .@coord[0], 41,146, 58,44, 122,148, 131,64;
 		monster 'map_name$[1],.@coord[.@r],.@coord[.@r+1], "파멸의 제1기사단장",2473,1, instance_npcname("#ghmemorialmob05") + "::OnBossDead", 0, "OnBossAura";
-		'ogh_com_h1 = 1;
 	}
 	end;
 OnBossAura:
@@ -1592,6 +1595,10 @@ OnBossAura:
 	end;
 	
 OnBossDead:
+	// 정상적으로 소환된 기사단장의 사망 이벤트만 처리합니다.
+	if ('ogh_com_h1 != 1)
+		end;
+	'ogh_com_h1 = 2;
 	mapannounce 'map_name$[1], "3시 방향 2구역으로 통하는 출구가 열렸습니다. 중앙 통로쪽에서 이동 가능합니다.", bc_map,0xFFFF00;
 	enablenpc instance_npcname("#23 Control");
 	enablenpc instance_npcname("#23 Control2");
@@ -1660,18 +1667,25 @@ OnStart:
 	end;
 
 OnMyMobDead:
-	if (rand(10) == 0) {// can re-spawn
+	// 기사단장이 이미 소환 중이거나 처치된 뒤에는 다시 소환하지 않습니다.
+	if ('ogh_com_h2 != 0)
+		end;
+
+	if (rand(10) == 0) {
+		'ogh_com_h2 = 1;
 		mapannounce 'map_name$[1], "사악한 기운을 가진 어떤 존재가 이 지역안에 나타난 것 같습니다.", bc_map,0xFFFF44,FW_NORMAL,15;
-		killmonster 'map_name$[1], instance_npcname("#ghmemorialmob06") + "::OnBossDead";
 
 		.@r = rand(4) * 2;
 		setarray .@coord[0], 166,119, 211,45, 227,139, 245,74;
 		monster 'map_name$[1],.@coord[.@r],.@coord[.@r+1], "파멸의 제2기사단장",2474,1, instance_npcname("#ghmemorialmob06") + "::OnBossDead", 0, "OnBossAura";
-		'ogh_com_h2 = 1;
 	}
 	end;
 
 OnBossDead:
+	// 정상적으로 소환된 기사단장의 사망 이벤트만 처리합니다.
+	if ('ogh_com_h2 != 1)
+		end;
+	'ogh_com_h2 = 2;
 	mapannounce 'map_name$[1], "12시 방향 3구역으로 통하는 출구가 열렸습니다. 중앙 통로쪽에서 이동 가능합니다.", bc_map,0xFFFF00;
 	enablenpc instance_npcname("#24 Control");
 	enablenpc instance_npcname("#24 Control2");
@@ -2253,6 +2267,8 @@ OnInstanceInit:
 	'map_name$[0] = instance_mapname("1@gl_k");
 	'map_name$[1] = instance_mapname("2@gl_k");
 	'ogh_root_state = 0; // 0: 시작 전, 1: 연출 중, 2: 소환됨, 3: 처치 완료
+	'ogh_com_h1 = 0; // 제1기사단장: 0 미소환 / 1 소환 중 / 2 처치 완료
+	'ogh_com_h2 = 0; // 제2기사단장: 0 미소환 / 1 소환 중 / 2 처치 완료
 	
 	//스킵용 워프
 	disablenpc instance_npcname("#cut01");
@@ -3738,17 +3754,24 @@ OnStart:
 	end;
 
 OnMyMobDead:
-	if (rand(10) == 0) {// can re-spawn
+	// 기사단장이 이미 소환 중이거나 처치된 뒤에는 다시 소환하지 않습니다.
+	if ('ogh_com_h1 != 0)
+		end;
+
+	if (rand(10) == 0) {
+		'ogh_com_h1 = 1;
 		mapannounce 'map_name$[1], "사악한 기운을 가진 어떤 존재가 이 지역안에 나타난 것 같습니다.", bc_map,0xFFFF44,FW_NORMAL,15;
-		killmonster 'map_name$[1], instance_npcname("#ghmemorialmob05_h") + "::OnBossDead";
 		.@r = rand(4) * 2;
 		setarray .@coord[0], 41,146, 58,44, 122,148, 131,64;
 		monster 'map_name$[1],.@coord[.@r],.@coord[.@r+1], "파멸의 제1기사단장",3148,1, instance_npcname("#ghmemorialmob05_h") + "::OnBossDead";
-		'ogh_com_h1 = 1;
 	}
 	end;
 
 OnBossDead:
+	// 정상적으로 소환된 기사단장의 사망 이벤트만 처리합니다.
+	if ('ogh_com_h1 != 1)
+		end;
+	'ogh_com_h1 = 2;
 	mapannounce 'map_name$[1], "3시 방향 2구역으로 통하는 출구가 열렸습니다. 중앙 통로쪽에서 이동 가능합니다.", bc_map,0xFFFF00;
 	enablenpc instance_npcname("#23 Control_h");
 	enablenpc instance_npcname("#23 Control2_h");
@@ -3817,18 +3840,25 @@ OnStart:
 	end;
 
 OnMyMobDead:
-	if (rand(10) == 0) {// can re-spawn
+	// 기사단장이 이미 소환 중이거나 처치된 뒤에는 다시 소환하지 않습니다.
+	if ('ogh_com_h2 != 0)
+		end;
+
+	if (rand(10) == 0) {
+		'ogh_com_h2 = 1;
 		mapannounce 'map_name$[1], "사악한 기운을 가진 어떤 존재가 이 지역안에 나타난 것 같습니다.", bc_map,0xFFFF44,FW_NORMAL,15;
-		killmonster 'map_name$[1], instance_npcname("#ghmemorialmob06_h") + "::OnBossDead";
 
 		.@r = rand(4) * 2;
 		setarray .@coord[0], 166,119, 211,45, 227,139, 245,74;
 		monster 'map_name$[1],.@coord[.@r],.@coord[.@r+1], "파멸의 제2기사단장",3149,1, instance_npcname("#ghmemorialmob06_h") + "::OnBossDead";
-		'ogh_com_h2 = 1;
 	}
 	end;
 
 OnBossDead:
+	// 정상적으로 소환된 기사단장의 사망 이벤트만 처리합니다.
+	if ('ogh_com_h2 != 1)
+		end;
+	'ogh_com_h2 = 2;
 	mapannounce 'map_name$[1], "12시 방향 3구역으로 통하는 출구가 열렸습니다. 중앙 통로쪽에서 이동 가능합니다.", bc_map,0xFFFF00;
 	enablenpc instance_npcname("#24 Control_h");
 	enablenpc instance_npcname("#24 Control2_h");
@@ -4445,6 +4475,8 @@ OnInstanceInit:
 	'map_name$[0] = instance_mapname("1@gl_k2");
 	'map_name$[1] = instance_mapname("2@gl_k2");
 	'ogh_root_state_h = 0; // 0: 시작 전, 1: 연출 중, 2: 소환됨, 3: 처치 완료
+	'ogh_com_h1 = 0; // 제1기사단장: 0 미소환 / 1 소환 중 / 2 처치 완료
+	'ogh_com_h2 = 0; // 제2기사단장: 0 미소환 / 1 소환 중 / 2 처치 완료
 	
 	//스킵용 워프
 	disablenpc instance_npcname("#cut01_h");
