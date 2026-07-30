@@ -10244,6 +10244,21 @@ TIMER_FUNC(status_change_start_timer) {
  */
 // NEED battleground strip-duration override: true only for equipment-strip statuses (weapon/shield/armor/
 // helm/accessory + shadow gear). Used to force a 10s duration on battleground maps; excludes look-alike SCs.
+// NEED: strong crowd-control statuses whose FINAL (post-resistance) duration is capped to 10s on
+// battleground maps (players only). Success chance and mechanics are unchanged; only the cap applies.
+static bool need_bg_status_duration_cap(sc_type type) {
+	switch (type) {
+		case SC_CRYSTALIZE:
+		case SC_MANDRAGORA:
+		case SC_HARMONIZE:
+		case SC_STASIS:
+		case SC__IGNORANCE:
+			return true;
+		default:
+			return false;
+	}
+}
+
 static bool need_is_equipment_strip_status(sc_type type) {
 	switch (type) {
 		case SC_STRIPWEAPON:
@@ -10341,6 +10356,14 @@ bool status_change_start(block_list* src, block_list* bl, sc_type type, int32 ra
 	}
 
 	int32 tick = (int32)duration;
+
+	// NEED: on battleground maps, cap the FINAL (post-resistance) duration of the strong CC statuses
+	// above to 10s (players only, target's map). Placed right after the resistance calc and before the
+	// type switch so interval statuses (e.g. Crystalize derives val4 = tick/1000) inherit the cap too.
+	// Only lowers durations above 10s; shorter durations are kept. CC statuses are never INFINITE_TICK,
+	// and the tick > 10000 guard leaves system/infinite states untouched.
+	if (bl->type == BL_PC && need_bg_status_duration_cap(type) && map_getmapflag(bl->m, MF_BATTLEGROUND) && tick > 10000)
+		tick = 10000;
 
 	// Type-specific checks that need to happen before the delay
 	switch (type) {

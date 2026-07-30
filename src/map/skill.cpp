@@ -7956,6 +7956,11 @@ int32 skill_unit_onleft(uint16 skill_id, block_list *bl, t_tick tick)
 				//NOTE: It'd be nice if we could get the skill_lv for a more accurate extra time, but alas...
 				//not possible on our current implementation.
 				t_tick duration = skill_get_time2(skill_id, 1);
+				// NEED: on battleground maps, cap only Don't Forget Me's post-field residual duration to 10s
+				// (players only). The in-field effect and the ground unit lifetime are unchanged; other songs
+				// keep their normal residual.
+				if (skill_id == DC_DONTFORGETME && bl->type == BL_PC && map_getmapflag(bl->m, MF_BATTLEGROUND) && duration > 10000)
+					duration = 10000;
 				sce->val4 = 1; //Store the fact that this is a "reduced" duration effect.
 				sce->timer = add_timer(tick + duration, status_change_timer, bl->id, type);
 				// Update icon duration
