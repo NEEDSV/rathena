@@ -2231,3 +2231,40 @@ OnTouch:
 	mes "이제 전장 대기실을 이용할 수 있습니다.";
 	close;
 }
+
+function	script	F_BG_ClearDebuff	{
+	.@gid = getarg(0, 0);
+
+	if (!.@gid)
+		return;
+
+	sc_end SC_STONE,     .@gid;
+	sc_end SC_FREEZE,    .@gid;
+	sc_end SC_STUN,      .@gid;
+	sc_end SC_SLEEP,     .@gid;
+	sc_end SC_DEEPSLEEP, .@gid;
+	sc_end SC_SILENCE,   .@gid;
+	sc_end SC_CURSE,     .@gid;
+	sc_end SC_BLIND,     .@gid;
+	sc_end SC_POISON,    .@gid;
+	sc_end SC_BLEEDING,  .@gid;
+	sc_end SC_CONFUSION, .@gid;
+
+	return;
+}
+
+function	script	F_BG_ClearMapDebuff	{
+	.@map$ = getarg(0);
+
+	if (.@map$ == "")
+		return;
+
+	.@count = getmapunits(BL_PC, .@map$, .@players[0]);
+
+	for (.@i = 0; .@i < .@count; .@i++) {
+		if (.@players[.@i])
+			callfunc "F_BG_ClearDebuff", .@players[.@i];
+	}
+
+	return;
+}
