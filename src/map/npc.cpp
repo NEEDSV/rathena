@@ -3,6 +3,7 @@
 
 #include "npc.hpp"
 
+#include <algorithm>
 #include <cerrno>
 #include <cstdlib>
 #include <cstring>
@@ -761,6 +762,26 @@ uint64 BarterDatabase::parseBodyNode( const ryml::NodeRef& node ){
 						if( !requirement_exists ){
 							requirement->refine = -1;
 						}
+					}
+
+					if( this->nodeExists( requiredItemNode, "Bound" ) ){
+						std::string bound_name;
+
+						if( !this->asString( requiredItemNode, "Bound", bound_name ) ){
+							return 0;
+						}
+
+						std::string bound_name_constant = "BOUND_" + bound_name;
+						int64 bound;
+
+						if( !script_get_constant( bound_name_constant.c_str(), &bound ) || bound < BOUND_NONE || bound >= BOUND_MAX ){
+							this->invalidWarning( requiredItemNode["Bound"], "barter_parseBodyNode: Invalid Bound value '%s' in barter '%s', RequiredItems Index %hu.\n", bound_name.c_str(), barter->name.c_str(), requirement_index );
+							return 0;
+						}
+
+						requirement->bound = static_cast<enum bound_type>( bound );
+					}else if( !requirement_exists ){
+						requirement->bound = std::nullopt;
 					}
 
 					if( !requirement_exists ){
@@ -3180,6 +3201,32 @@ uint8 npc_selllist(map_session_data* sd, int32 list_length, const PACKET_CZ_PC_S
 	return 0;
 }
 
+static bool npc_barter_requirement_matches( const struct item& inventory_item, const s_npc_barter_requirement& requirement, int8 refine ){
+	if( inventory_item.nameid != requirement.nameid ){
+		return false;
+	}
+
+	// Equipped items and items in equip switch are not taken into account.
+	if( inventory_item.equip != 0 || inventory_item.equipSwitch != 0 ){
+		return false;
+	}
+
+	// Server is configured to hide favorite items on selling.
+	if( battle_config.hide_fav_sell && inventory_item.favorite != 0 ){
+		return false;
+	}
+
+	if( requirement.bound.has_value() && inventory_item.bound != requirement.bound.value() ){
+		return false;
+	}
+
+	if( refine >= 0 && inventory_item.refine != refine ){
+		return false;
+	}
+
+	return true;
+}
+
 e_purchase_result npc_barter_purchase( map_session_data& sd, std::shared_ptr<s_npc_barter> barter, std::vector<s_barter_purchase>& purchases ){
 	uint64 requiredZeny = 0;
 	uint32 requiredWeight = 0;
@@ -3220,46 +3267,23 @@ e_purchase_result npc_barter_purchase( map_session_data& sd, std::shared_ptr<s_n
 			}
 
 			if( itemdb_isstackable2( id.get() ) ){
-				int32 j;
+				uint32 remaining = requirement->amount * amount;
 
-				for( j = 0; j < MAX_INVENTORY; j++ ){
-					if( sd.inventory.u.items_inventory[j].nameid == requirement->nameid ){
-						// Equipped items are not taken into account
-						if( sd.inventory.u.items_inventory[j].equip != 0 ){
-							continue;
-						}
+				for( int32 j = 0; j < MAX_INVENTORY && remaining > 0; j++ ){
+					const struct item& inventory_item = sd.inventory.u.items_inventory[j];
 
-						// Items in equip switch are not taken into account
-						if( sd.inventory.u.items_inventory[j].equipSwitch != 0 ){
-							continue;
-						}
-
-						// Server is configured to hide favorite items on selling
-						if( battle_config.hide_fav_sell && sd.inventory.u.items_inventory[j].favorite != 0 ){
-							continue;
-						}
-
-						// Actually stackable items should never be refinable, but who knows...
-						if( requirement->refine >= 0 && sd.inventory.u.items_inventory[j].refine != requirement->refine ){
-							// Refine does not match, continue with next item
-							continue;
-						}
-
-						// Found a match, accumulate required amount
-						requiredItems[j] += requirement->amount * amount;
-
-						// Check if there are still enough items available
-						if( requiredItems[j] > sd.inventory.u.items_inventory[j].amount ){
-							return e_purchase_result::PURCHASE_FAIL_GOODS;
-						}
-
-						// Cancel the loop
-						break;
+					if( !npc_barter_requirement_matches( inventory_item, *requirement, requirement->refine ) ){
+						continue;
 					}
+
+					uint32 available = inventory_item.amount - requiredItems[j];
+					uint32 taken = std::min( available, remaining );
+
+					requiredItems[j] += taken;
+					remaining -= taken;
 				}
 
-				// Required item not found
-				if( j == MAX_INVENTORY ){
+				if( remaining > 0 ){
 					return e_purchase_result::PURCHASE_FAIL_GOODS;
 				}
 			}else{
@@ -3267,40 +3291,21 @@ e_purchase_result npc_barter_purchase( map_session_data& sd, std::shared_ptr<s_n
 					int32 j;
 
 					for( j = 0; j < MAX_INVENTORY; j++ ){
-						if( sd.inventory.u.items_inventory[j].nameid == requirement->nameid ){
-							// Equipped items are not taken into account
-							if( sd.inventory.u.items_inventory[j].equip != 0 ){
-								continue;
-							}
-
-							// Items in equip switch are not taken into account
-							if( sd.inventory.u.items_inventory[j].equipSwitch != 0 ){
-								continue;
-							}
-
-							// Server is configured to hide favorite items on selling
-							if( battle_config.hide_fav_sell && sd.inventory.u.items_inventory[j].favorite != 0 ){
-								continue;
-							}
-
-							// If necessary, check if the refine rate matches
-							if( requirement->refine >= 0 && sd.inventory.u.items_inventory[j].refine != requirement->refine ){
-								// Refine does not match, continue with next item
-								continue;
-							}
-
-							// Found a match, since it is not stackable, check if it was already taken
-							if( requiredItems[j] > 0 ){
-								// Item was already taken, try to find another match
-								continue;
-							}
-
-							// Mark it as taken
-							requiredItems[j] = 1;
-
-							// Cancel the loop
-							break;
+						if( !npc_barter_requirement_matches( sd.inventory.u.items_inventory[j], *requirement, requirement->refine ) ){
+							continue;
 						}
+
+						// Found a match, since it is not stackable, check if it was already taken
+						if( requiredItems[j] > 0 ){
+							// Item was already taken, try to find another match
+							continue;
+						}
+
+						// Mark it as taken
+						requiredItems[j] = 1;
+
+						// Cancel the loop
+						break;
 					}
 
 					// Required item not found
@@ -3312,40 +3317,21 @@ e_purchase_result npc_barter_purchase( map_session_data& sd, std::shared_ptr<s_n
 							// Try to find a higher refine level, going from the next lowest to the highest possible
 							for( refine = requirement->refine + 1; refine <= MAX_REFINE; refine++ ){
 								for( j = 0; j < MAX_INVENTORY; j++ ){
-									if( sd.inventory.u.items_inventory[j].nameid == requirement->nameid ){
-										// Equipped items are not taken into account
-										if( sd.inventory.u.items_inventory[j].equip != 0 ){
-											continue;
-										}
-
-										// Items in equip switch are not taken into account
-										if(	sd.inventory.u.items_inventory[j].equipSwitch != 0 ){
-											continue;
-										}
-
-										// Server is configured to hide favorite items on selling
-										if( battle_config.hide_fav_sell && sd.inventory.u.items_inventory[j].favorite != 0 ){
-											continue;
-										}
-
-										// If necessary, check if the refine rate matches
-										if( requirement->refine >= 0 && sd.inventory.u.items_inventory[j].refine != refine ){
-											// Refine does not match, continue with next item
-											continue;
-										}
-
-										// Found a match, since it is not stackable, check if it was already taken
-										if( requiredItems[j] > 0 ){
-											// Item was already taken, try to find another match
-											continue;
-										}
-
-										// Mark it as taken
-										requiredItems[j] = 1;
-
-										// Cancel the loop
-										break;
+									if( !npc_barter_requirement_matches( sd.inventory.u.items_inventory[j], *requirement, refine ) ){
+										continue;
 									}
+
+									// Found a match, since it is not stackable, check if it was already taken
+									if( requiredItems[j] > 0 ){
+										// Item was already taken, try to find another match
+										continue;
+									}
+
+									// Mark it as taken
+									requiredItems[j] = 1;
+
+									// Cancel the loop
+									break;
 								}
 
 								// If a match was found, make sure to cancel the loop

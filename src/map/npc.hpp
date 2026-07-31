@@ -5,6 +5,7 @@
 #define NPC_HPP
 
 #include <map>
+#include <optional>
 #include <vector>
 
 #include <common/database.hpp>
@@ -86,6 +87,7 @@ struct s_npc_barter_requirement{
 	t_itemid nameid;
 	uint16 amount;
 	int8 refine;
+	std::optional<enum bound_type> bound;
 };
 
 struct s_npc_barter_item{
