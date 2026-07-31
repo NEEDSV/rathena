@@ -5,6 +5,7 @@
 //= Devil Tower Instance
 //===== Changelogs: ==========================================
 //= 1.0 First version. [Capuche]
+//= 1.1 NEED: Start daily reset timer on successful entry.
 //============================================================
 
 dali02,134,119,5	script	역사학자 쉡#tnm01	4_F_NOVICE,{
@@ -18,32 +19,6 @@ dali02,134,119,5	script	역사학자 쉡#tnm01	4_F_NOVICE,{
 		mes "무슨 뜻인지 이해하시죠?";
 		close;
 	}
-	switch( checkquest(7577,PLAYTIME) ) {// daily timer
-	case -1:
-		break;
-	case 0:
-	case 1:
-		mes "[쉡]";
-		mes "벌써 다시 탐사를 시작하시려는 건가요?";
-		mes "시간 여행의 여파에서 몸을 회복할 시간이 필요합니다.";
-		next;
-		mes "[쉡]";
-		mes "오늘은 푹 쉬고 내일 다시 방문해 주세요!";
-		mes "이해하셨나요?";
-		close;
-	case 2:
-		mes "[쉡]";
-		mes "충분히 휴식을 취하셨나요?";
-		mes "오늘은 탐사 일정이 잡혀 있습니다!";
-		mes "탐사대원분을 간절히 기다리고 있었습니다!";
-		erasequest 7577;// Space distortion
-		devil_tower_can_reenter = 0;
-		devil_tower_enter = 0;
-		next;
-		mes "!- 알림 -!";
-		mes "이제 악마의탑에 재입장할 수 있습니다.";
-		close;
-	}
 	if (isbegin_quest(7576) > 0) {// instance completed
 		#NEED_MD_DEVIL_TOWER_CLEAR = 1;
 		mes "[쉡]";
@@ -54,7 +29,6 @@ dali02,134,119,5	script	역사학자 쉡#tnm01	4_F_NOVICE,{
 		mes "이게 확인된 정보의 전부군요.";
 		mes "정말 훌륭한 일을 해내셨습니다.";
 		mes "더 많은 단서를 찾을 수 있기를 기대합니다!";
-		setquest 7577;// Space distortion
 		erasequest 7568;// Explore the tower
 		erasequest 7571;// Tower Expedition
 		erasequest 7574;// Thanatos Tower
@@ -74,7 +48,6 @@ dali02,134,119,5	script	역사학자 쉡#tnm01	4_F_NOVICE,{
 		mes "이게 확인된 정보의 전부군요.";
 		mes "정말 훌륭한 일을 해내셨습니다.";
 		mes "더 많은 단서를 찾을 수 있기를 기대합니다!";
-		setquest 7577;// Space distortion
 		erasequest 7568;// Explore the tower
 		erasequest 7571;// Tower Expedition
 		erasequest 7574;// Thanatos Tower
@@ -93,7 +66,6 @@ dali02,134,119,5	script	역사학자 쉡#tnm01	4_F_NOVICE,{
 		mes "이게 확인된 정보의 전부군요.";
 		mes "정말 훌륭한 일을 해내셨습니다.";
 		mes "더 많은 단서를 찾을 수 있기를 기대합니다!";
-		setquest 7577;// Space distortion
 		erasequest 7568;// Explore the tower
 		erasequest 7571;// Tower Expedition
 		if (isbegin_quest(7572)) erasequest 7572;// Lucile...?
@@ -103,6 +75,31 @@ dali02,134,119,5	script	역사학자 쉡#tnm01	4_F_NOVICE,{
 		devil_tower_enter = 0;
 		mes "내일 다시 방문해 주십시오!";
 		close;
+	}
+	// 일일 제한은 실제 입장 성공 시점에 시작한다.
+	// 진행/완료 보고 중에는 7577이 활성 상태여도 대화를 막지 않는다.
+	if (isbegin_quest(7568) == 0) {
+		switch( checkquest(7577,PLAYTIME) ) {// daily timer
+		case -1:
+			break;
+		case 0:
+		case 1:
+			mes "[쉡]";
+			mes "벌써 다시 탐사를 시작하시려는 건가요?";
+			mes "시간 여행의 여파에서 몸을 회복할 시간이 필요합니다.";
+			next;
+			mes "[쉡]";
+			mes "오늘은 푹 쉬고 다음 초기화 이후 다시 방문해 주세요!";
+			mes "이해하셨나요?";
+			close;
+		case 2:
+			erasequest 7577;// Space distortion
+			devil_tower_can_reenter = 0;
+			devil_tower_enter = 0;
+			mes "[쉡]";
+			mes "초기화 시간이 지나 다시 탐사할 수 있습니다.";
+			close;
+		}
 	}
 	switch( checkquest(7568,PLAYTIME) ) {// entrance timer - 1h30 to enter
 	case -1:
@@ -171,7 +168,6 @@ dali02,134,119,5	script	역사학자 쉡#tnm01	4_F_NOVICE,{
 		mes "[쉡]";
 		mes "지금으로선 방법이 없군요.";
 		mes "다음 탐사 기회는 언제든 다시 올 겁니다.";
-		setquest 7577;// Space distortion
 		erasequest 7568;
 		if (isbegin_quest(7569)) erasequest 7569;// Treat the injured
 		if (isbegin_quest(7570)) erasequest 7570;// Destroy the demons
@@ -211,7 +207,6 @@ dali02,134,119,5	script	역사학자 쉡#tnm01	4_F_NOVICE,{
 		mes "[쉡]";
 		mes "정말이신가요?";
 		mes "그럼 내일 다시 뵙도록 하죠.";
-		setquest 7577;// Space distortion
 		erasequest 7568;
 		if (isbegin_quest(7569)) erasequest 7569;// Treat the injured
 		if (isbegin_quest(7570)) erasequest 7570;// Destroy the demons
@@ -411,6 +406,11 @@ dali02,141,120,3	script	차원 이동 장치#tnm0	PORTAL,{
 		mes "모든 준비를 완벽히 마치고 오세요.";
 		close;
 	case IE_OK:
+		// 일일 재입장 제한은 던전 종료/보고가 아니라 실제 입장 성공 시점부터 시작한다.
+		if (checkquest(7577,PLAYTIME) == 2)
+			erasequest 7577;
+		if (checkquest(7577) == -1)
+			setquest 7577;// Space distortion
 		mapannounce "dali02", "파티원 " + strcharinfo(0) + " 파티의 " + getpartyname( getcharid(1) ) + " 방 입장 " + .@md_name$ + "", bc_map,0xFF99;
 		devil_tower_enter = 1;
 		end;
