@@ -1,0 +1,2281 @@
+//===== rAthena Script =======================================
+//= 악몽의 지터벅
+//===== Description: =========================================
+//= [공식 진행 스크립트 변환]
+//= 악몽의 지터벅 Instance
+//===== Changelogs: ==========================================
+//= 1.0 최초 버전. [Capuche]
+//= 1.0.1 아이구 컷인 수정. [mazvi]
+//============================================================
+
+moc_para01,26,95,5	script	로엘#sara	4_M_ROEL,{
+	.@instance_db_id = 24;
+	.@remaining = instance_ip_reward_remaining(.@instance_db_id);
+	.@limit = instance_ip_reward_limit(.@instance_db_id);
+
+	if (.@remaining == -1 || .@limit == -1) {
+		mes "보상 이용 횟수를 확인하지 못했습니다.";
+		mes "잠시 후 다시 시도해 주세요.";
+		end;
+	}
+
+	if (.@remaining != -2 && .@limit > 0) {
+		if (.@remaining <= 0) {
+			mes "오늘 해당 던전의 보상 이용 횟수를";
+			mes "모두 사용했습니다.";
+			mes "남은 보상 횟수: ^FF00000회 / " + .@limit + "회^000000";
+			mes "초기화 시간: 매일 오전 4시";
+			end;
+		}
+
+		mes "오늘 남은 보상 횟수:";
+		mes "^3355FF" + .@remaining + "회 / " + .@limit + "회^000000";
+		next;
+	}
+	
+	cutin "roel01",0;
+	if (BaseLevel < 120) {
+		mes "[로엘]";
+		mes "새로운 모험에 참여하려면";
+		mes "베이스 레벨 120 이상이어야 합니다.";
+		close3;
+	}
+
+	switch (isbegin_quest(13183)) {
+	case 0:
+		switch (isbegin_quest(13181)) {
+		case 0:
+			mes "[로엘]";
+			mes "저는 하얀 날개 길드의 신입 로엘입니다.";
+			mes "실종된 전 길드장 뉴오즈의 흔적을 찾았습니다.";
+			next;
+			mes "[로엘]";
+			mes "뉴오즈를 찾는 원정에 함께하시겠습니까?";
+			if (select("참여한다.:참여하지 않는다.") == 1) {
+				mes "[로엘]";
+				mes "루나인이 마지막 흔적을 기억해 두었습니다.";
+				mes "옆의 루나인에게 차원의 균열을 열어 달라고 해주세요.";
+				setquest 13181;
+			}
+			close3;
+		case 1:
+			mes "[로엘]";
+			mes "입장 준비가 되었다면 루나인에게 말해주세요.";
+			close3;
+		case 2:
+			cutin "roel03",0;
+			mes "[로엘]";
+			mes "첫 원정을 무사히 마치셨군요.";
+			mes "다음 모험도 기대하겠습니다!";
+			erasequest 13181;
+			setquest 13183;
+			completequest 13183;
+			getexp 1500000,500000;
+			close3;
+		}
+		end;
+
+	case 1:
+	case 2:
+		switch (isbegin_quest(13181)) {
+		case 0:
+			mes "[로엘]";
+			mes "샬로시를 만났던 공간은 같은 사건이 반복되는";
+			mes "시간의 고리에 갇혀 있다고 합니다.";
+			next;
+			mes "[로엘]";
+			mes "같은 원정을 다시 경험하시겠습니까?";
+			if (select("다시 도전한다.:그만둔다.") == 1) {
+				setquest 13181;
+				mes "[로엘]";
+				mes "루나인에게 차원의 균열을 열어 달라고 해주세요.";
+			}
+			close3;
+		case 1:
+			mes "[로엘]";
+			mes "원정을 포기하시겠습니까?";
+			if (select("계속 진행한다.:포기한다.") == 2) {
+				erasequest 13181;
+				mes "[로엘]";
+				mes "원정 신청을 취소했습니다.";
+			}
+			close3;
+		case 2:
+			cutin "roel03",0;
+			mes "[로엘]";
+			mes "이번 원정도 수고하셨습니다.";
+			erasequest 13181;
+			getexp 1500000,500000;
+			close3;
+		}
+	}
+}
+
+moc_para01,29,95,5	script	루나인#sara	4_F_RUNAIN,{
+	cutin "lunain01",0;
+	if (BaseLevel < 120) {
+		mes "[루나인]";
+		mes "^ff0000베이스 레벨 120 이상만 이용할 수 있습니다.^000000";
+		close3;
+	}
+	if (isbegin_quest(13181) != 1) {
+		mes "[루나인]";
+		mes "먼저 로엘에게 원정 참가 신청을 해주세요.";
+		close3;
+	}
+
+	.@party_id = getcharid(1);
+	.@md_name$ = "악몽의 지터벅";
+
+	if (.@party_id < 1) {
+		mes "[루나인]";
+		mes "파티를 구성한 뒤 다시 찾아와 주세요.";
+		close3;
+	}
+
+	switch (checkquest(13182,PLAYTIME)) {
+	case -1:
+		break;
+	case 0:
+	case 1:
+		mes "[루나인]";
+		mes "^ff0000마지막 입장 후 20시간 동안 다시 입장할 수 없습니다.^000000";
+		close3;
+	case 2:
+		erasequest 13182;
+		mes "[루나인]";
+		mes "입장 제한 시간이 종료되었습니다.";
+		close3;
+	}
+
+	if (is_party_leader())
+		.@choice = select("차원의 균열을 연다.:악몽의 지터벅에 입장한다.:취소한다.");
+	else
+		.@choice = select("악몽의 지터벅에 입장한다.:취소한다.") + 1;
+
+	switch (.@choice) {
+	case 1:
+		if (!is_party_leader()) {
+			mes "[루나인]";
+			mes "차원의 균열은 파티장만 생성할 수 있습니다.";
+			close3;
+		}
+		if (instance_create(.@md_name$) < 0) {
+			mes "[루나인]";
+			mes "메모리얼 던전 생성에 실패했습니다.";
+			close3;
+		}
+		mes "[루나인]";
+		mes "차원의 균열을 열었습니다.";
+		mes "다시 말을 걸어 입장해 주세요.";
+		close3;
+
+	case 2:
+		switch (instance_enter(.@md_name$)) {
+		case IE_NOMEMBER:
+			mes "[루나인]";
+			mes "해당 파티의 구성원만 입장할 수 있습니다.";
+			close3;
+		case IE_NOINSTANCE:
+			mes "[루나인]";
+			mes "파티장이 아직 차원의 균열을 생성하지 않았습니다.";
+			close3;
+		case IE_OTHER:
+			mes "[루나인]";
+			mes "알 수 없는 오류가 발생했습니다.";
+			close3;
+		case IE_OK:
+			setquest 13182;
+			mapannounce "moc_para01",
+				getpartyname(getcharid(1)) + " 파티의 " + strcharinfo(0) + " 님이 악몽의 지터벅에 입장합니다.",
+				bc_map,0xFF99;
+			specialeffect2 EF_READYPORTAL2;
+			specialeffect2 EF_PORTAL2;
+			end;
+		}
+	case 3:
+		cutin "",255;
+		end;
+	}
+}
+
+// Warps
+1@jtb,45,47,0	warp	1 Door 1	3,3,1@jtb,100,14
+1@jtb,135,17,0	warp	2 Door 1	3,3,1@jtb,184,17
+1@jtb,220,23,0	warp	3 Door 1	3,3,1@jtb,270,13
+1@jtb,306,47,0	warp	4 Door 1	3,3,1@jtb,11,102
+
+1@jtb,39,133,0	warp	6 Door 1	3,3,1@jtb,96,100
+1@jtb,133,106,0	warp	7 Door 1	3,3,1@jtb,183,128
+1@jtb,209,133,0	warp	8 Door 1	3,3,1@jtb,277,95
+1@jtb,307,122,0	warp	9 Door 1	3,3,1@jtb,359,97
+1@jtb,386,133,0	warp	10 Door 1	3,3,1@jtb,13,214
+1@jtb,49,196,0	warp	11 Door 1	3,3,1@jtb,95,201
+1@jtb,133,197,0	warp	12 Door 1	3,3,1@jtb,181,198
+1@jtb,218,203,0	warp	13 Door 1	3,3,1@jtb,269,206
+1@jtb,307,195,0	warp	14 Door 1	3,3,1@jtb,355,214
+1@jtb,388,182,0	warp	15 Door 1	3,3,1@jtb,13,274
+1@jtb,47,302,0	warp	16 Door 1	3,3,1@jtb,99,298
+1@jtb,134,275,0	warp	17 Door 1	3,3,1@jtb,200,271
+1@jtb,199,305,0	warp	18 Door 1	3,3,1@jtb,13,384
+1@jtb,49,365,0	warp	19 Door 1	3,3,1@jtb,107,389
+1@jtb,111,352,0	warp	20 Door 1	3,3,1@jtb,184,385
+1@jtb,220,359,0	warp	21 Door 1	3,3,1@jtb,287,355
+1@jtb,311,358,0	warp	22 Door 1	3,3,1@jtb,335,320
+1@jtb,325,325,0	warp	23 Door 1	10,10,1@jtb,360,23
+
+1@jtb,391,30,0	script	24 Door 1	WARPNPC,3,3,{
+	end;
+OnTouch_:
+	if (isbegin_quest(13181) == 1)
+		completequest 13181;
+	warp "moc_para01",30,88;
+	end;
+}
+
+
+// Room 1 : Entrance
+1@jtb,28,30,5	script	뉴오즈#01	4_M_NEWOZ,{
+	if ('room != 1 || !is_party_leader()) {
+		mes "[뉴오즈]";
+		mes "모험을 시작하려면 파티장을 불러줘.";
+		close;
+	}
+
+	// 반복 클리어 계정은 시작 시 빠른 진행 방식을 선택할 수 있습니다.
+	if (isbegin_quest(13183) == 2) {
+		mes "[뉴오즈]";
+		mes "이 공간은 같은 사건을 반복하고 있어.";
+		mes "이번에는 어떻게 진행할까?";
+		next;
+
+		switch (select("^3355FF빠른 진행 - 추가 지터벅 없음^000000:^FF5500빠른 진행 - 추가 지터벅 모두 등장^000000:간소화된 이야기 진행")) {
+		case 1:
+			'NEED_JITTER_FAST = 1;
+			'jitterbug_options = 0;
+			break;
+		case 2:
+			'NEED_JITTER_FAST = 1;
+			'jitterbug_options = 31;
+			break;
+		case 3:
+			'NEED_JITTER_FAST = 0;
+			'jitterbug_options = 0;
+			break;
+		}
+	}
+
+	if ('NEED_JITTER_FAST) {
+		mes "[뉴오즈]";
+		mes "이야기 구간을 생략합니다.";
+		if ('jitterbug_options == 31)
+			mes "추가 지터벅 전투는 모두 활성화됩니다.";
+		else
+			mes "추가 지터벅 전투는 발생하지 않습니다.";
+		next;
+
+		disablenpc instance_npcname("로엘#01");
+		disablenpc instance_npcname("멜로디 잭#01");
+		disablenpc instance_npcname("아랑#01");
+		disablenpc instance_npcname("라기#01");
+		disablenpc instance_npcname("아이구#01");
+		disablenpc instance_npcname("밍민#01");
+		disablenpc instance_npcname("루나인#01");
+		disablenpc instance_npcname("겔카#01");
+		disablenpc instance_npcname("로터#01");
+		disablenpc instance_npcname("뉴오즈#01");
+
+		donpcevent 'jitterbug_main$ + "::OnNextIs2";
+		close;
+	}
+
+	mes "[뉴오즈]";
+	mes "드디어 모두 모였군!";
+	mes "이곳은 길과 풍경이 계속 뒤틀리는 수상한 공간이야.";
+	next;
+	mes "[로터]";
+	mes "뉴오즈를 찾는 데 시간을 너무 많이 썼다.";
+	mes "우선 출구를 찾으며 이 공간의 정체를 조사하자.";
+	next;
+	mes "[밍민]";
+	mes "공기와 땅에서 비정상적인 기운이 느껴져.";
+	mes "몬스터가 나타날 수 있으니 조심해.";
+	next;
+
+	if ('room == 1 && is_party_leader())
+		donpcevent 'jitterbug_main$ + "::OnNextIs2";
+
+	mes "[뉴오즈]";
+	mes "좋아, 새로운 모험을 시작하자!";
+	close;
+}
+
+1@jtb,34,22,4	script	로엘#01	4_M_ROEL,{
+	mes "[로엘]";
+	mes "하얀 날개 길드의 신입 로엘입니다. 잘 부탁드립니다.";
+	close;
+}
+
+1@jtb,28,21,5	script	멜로디 잭#01	CLEAR_NPC,{
+	mes "[멜로디 잭]";
+	mes "숨어 있는 중이니 너무 신경 쓰지 마.";
+	close;
+}
+
+1@jtb,31,24,4	script	아랑#01	4_F_TAEKWON,{
+	mes "[아랑]";
+	mes "안녕! 재미있는 모험이 되겠네!";
+	close;
+}
+
+1@jtb,33,26,4	script	라기#01	4_M_RAGI,{
+	mes "[라기]";
+	mes "아이구를 따라 여기까지 왔습니다.";
+	close;
+}
+
+1@jtb,31,28,4	script	아이구#01	4_F_IU,{
+	mes "[아이구]";
+	mes "처음 보는 얼굴이네. 잘 부탁해!";
+	close;
+}
+
+1@jtb,25,24,5	script	밍민#01	4_F_GENETIC,{
+	mes "[밍민]";
+	mes "뉴오즈가 있는 곳에는 언제나 사고가 따라다니지.";
+	close;
+}
+
+1@jtb,23,22,5	script	루나인#01	4_F_RUNAIN,{
+	mes "[루나인]";
+	mes "저 사람이 유명한 뉴오즈군요.";
+	close;
+}
+
+1@jtb,23,26,5	script	겔카#01	4_F_GELKA,{
+	mes "[겔카]";
+	mes "이곳은 불길한 느낌이 듭니다.";
+	close;
+}
+
+1@jtb,25,28,5	script	로터#01	4_M_ROTERT,{
+	mes "[로터]";
+	mes "드디어 뉴오즈를 찾았군.";
+	close;
+}
+
+
+// Room 2
+1@jtb,123,45,4	script	루나인#02	4_F_RUNAIN,{
+	if ('room != 2 || !is_party_leader()) {
+		mes "[루나인]";
+		mes "지금은 앞으로 나아갈 때가 아닙니다.";
+		close;
+	}
+
+	mes "[루나인]";
+	mes "안개 속에서 낯선 소녀를 발견했어.";
+	next;
+	mes "[아이구]";
+	mes "기억을 잃은 것 같아. 우선 함께 이동하자.";
+	next;
+	mes "[???]";
+	mes "노래하는 사람을 찾고 있어.";
+
+	if ('room == 2 && is_party_leader())
+		donpcevent 'jitterbug_main$ + "::OnNextIs3";
+	close;
+}
+
+1@jtb,121,47,4	script	???#02	4_F_SHALOSH,{ end; }
+
+1@jtb,118,45,5	script	아이구#02	4_F_IU,{
+	mes "[아이구]";
+	mes "수수께끼로 가득한 공간이야.";
+	close;
+}
+
+
+// Room 3
+1@jtb,198,31,5	script	로터#03	4_M_ROTERT,{
+	if ('room != 3 || !is_party_leader()) {
+		mes "[로터]";
+		mes "지금은 앞으로 나아갈 때가 아닙니다.";
+		close;
+	}
+
+	mes "[겔카]";
+	mes "앞쪽에서 강한 몬스터 반응이 감지됩니다.";
+	next;
+	mes "[로터]";
+	mes "쓸데없는 연출은 그만하고 전투를 준비해.";
+
+	if ('room == 3 && is_party_leader())
+		donpcevent 'jitterbug_main$ + "::OnNextIs4";
+	close;
+}
+
+1@jtb,205,31,4	script	겔카#03	4_F_GELKA,{
+	mes "[겔카]";
+	mes "언제 몬스터가 튀어나올지 모릅니다.";
+	close;
+}
+
+
+// Room 4
+1@jtb,292,22,4	script	???#04	4_F_SHALOSH,{
+	if ('room != 4 || !is_party_leader()) {
+		mes "[???]";
+		mes "지금은 앞으로 나아갈 때가 아닙니다.";
+		close;
+	}
+
+	mes "[???]";
+	mes "나는 혼자가 아니야.";
+	next;
+	mes "[???]";
+	mes "아이구와 루나인이 함께 있어 줬어.";
+	next;
+	mes "[???]";
+	mes "아직 기억은 잘 나지 않아.";
+
+	if ('room == 4 && is_party_leader())
+		donpcevent 'jitterbug_main$ + "::OnNextIs6";
+	close;
+}
+
+// Room 5 (final room)
+
+// Room 6
+1@jtb,20,108,5	script	뉴오즈#06	4_M_NEWOZ,{
+	if ('room != 6 || !is_party_leader()) {
+		mes "[뉴오즈]";
+		mes "지금은 앞으로 나아갈 때가 아닙니다.";
+		close;
+	}
+
+	mes "[아이구]";
+	mes "뉴오즈, 또 길을 잃은 거야?";
+	next;
+	mes "[뉴오즈]";
+	mes "미안해. 이곳은 길이 계속 바뀌는 미로 같아.";
+	next;
+	mes "[샬로시]";
+	mes "나는 샬로시. 노래를 들려줘.";
+	next;
+	mes "[뉴오즈]";
+	mes "좋아. 이곳을 빠져나가면 꼭 노래해 줄게.";
+
+	if ('room == 6 && is_party_leader())
+		donpcevent 'jitterbug_main$ + "::OnNextIs7";
+	close;
+}
+
+1@jtb,25,110,4	script	아이구#06	4_F_IU,{
+	mes "[아이구]";
+	mes "몬스터의 수가 빠르게 늘어나고 있어.";
+	close;
+}
+
+1@jtb,27,108,4	script	샬로시#06	4_F_SHALOSH,{
+	mes "[샬로시]";
+	mes "...";
+	close;
+}
+
+1@jtb,25,104,4	script	아랑#06	4_F_TAEKWON,{
+	mes "[아랑]";
+	mes "난 무섭지 않아!";
+	close;
+}
+
+
+// Room 7
+1@jtb,111,115,5	script	로엘#07	4_M_ROEL,{
+	if ('room != 7 || !is_party_leader()) {
+		mes "[로엘]";
+		mes "지금은 앞으로 나아갈 때가 아닙니다.";
+		close;
+	}
+
+	mes "[루나인]";
+	mes "안개가 걷혔지만 모두 흩어졌어.";
+	next;
+	mes "[아이구]";
+	mes "샬로시도 사라졌어. 서둘러 찾아야 해.";
+	next;
+	mes "[로엘]";
+	mes "앞장서겠습니다. 제가 모두를 지키겠습니다!";
+
+	if ('room == 7 && is_party_leader())
+		donpcevent 'jitterbug_main$ + "::OnNextIs8";
+	close;
+}
+
+1@jtb,116,117,4	script	루나인#07	4_F_RUNAIN,{
+	mes "[루나인]";
+	mes "뉴오즈는 또 어디로 간 걸까요?";
+	close;
+}
+
+1@jtb,115,113,4	script	아이구#07	4_F_IU,{
+	mes "[아이구]";
+	mes "오랜만의 모험이라 기분이 좋아.";
+	close;
+}
+
+
+// Room 8
+1@jtb,206,107,5	script	밍민#08	4_F_GENETIC,{
+	if ('room != 8 || !is_party_leader()) {
+		mes "[밍민]";
+		mes "지금은 앞으로 나아갈 때가 아닙니다.";
+		close;
+	}
+
+	mes "[밍민]";
+	mes "뉴오즈, 그 소녀는 누구야?";
+	next;
+	mes "[뉴오즈]";
+	mes "이곳에서 만난 샬로시야. 기억을 잃은 것 같아.";
+	next;
+	mes "[샬로시]";
+	mes "몬스터들이 오고 있어.";
+	next;
+	mes "[밍민]";
+	mes "질문은 나중에 하지. 먼저 전투를 준비하자.";
+
+	if ('room == 8 && is_party_leader())
+		donpcevent 'jitterbug_main$ + "::OnNextIs9";
+	close;
+}
+
+1@jtb,206,114,5	script	샬로시#08	4_F_SHALOSH,{
+	mes "[샬로시]";
+	mes "뉴오즈의 손은 따뜻해.";
+	close;
+}
+
+1@jtb,203,112,5	script	뉴오즈#08	4_M_NEWOZ,{
+	mes "[뉴오즈]";
+	mes "이 길 끝에는 무엇이 기다리고 있을까?";
+	close;
+}
+
+
+// Room 9 (menu affects the boss encounter in the next room)
+1@jtb,285,114,5	script	뉴오즈#09	4_M_NEWOZ,{
+	if ('room != 9 || !is_party_leader()) {
+		mes "[뉴오즈]";
+		mes "노래는 언제나 즐겁지.";
+		close;
+	}
+
+	mes "[뉴오즈]";
+	mes "샬로시가 노래를 좋아하는 것 같아.";
+	mes "너는 어떤 노래가 가장 좋아?";
+	next;
+
+	switch (select("아이구의 데뷔곡 - 길 잃은 포링:아이구의 싱글 - 카드첩을 몰랐던 건 나뿐:뉴오즈의 빨간 포션:라기의 자작곡 - 우연한 달빛")) {
+	case 1:
+	case 2:
+	case 4:
+		'jitterbug_options &= ~1;
+		break;
+	case 3:
+		'jitterbug_options |= 1;
+		break;
+	}
+
+	mes "[라기]";
+	mes "노래는 나중에 더 들려드리죠.";
+	mes "앞쪽에서 몬스터가 나타나고 있습니다.";
+	next;
+
+	if ('room == 9 && is_party_leader()) {
+		donpcevent 'jitterbug_main$ + "::OnNextIs10";
+		if ('jitterbug_options & 1)
+			areamonster 'map_jtb$,351,131,389,96,"페르",3108,1;
+	}
+
+	close;
+}
+
+1@jtb,290,114,4	script	라기#09	4_M_RAGI,{
+	mes "[라기]";
+	mes "모험은 익숙하지 않지만 꽤 즐겁습니다.";
+	close;
+}
+
+1@jtb,286,117,5	script	샬로시#09	4_F_SHALOSH,{
+	mes "[샬로시]";
+	mes "휘파람은 어려워.";
+	close;
+}
+
+// Room 10
+1@jtb,375,117,4	script	뉴오즈#10	4_M_NEWOZ,{
+	if ('room != 10 || !is_party_leader()) {
+		mes "[뉴오즈]";
+		mes "지금은 앞으로 나아갈 때가 아닙니다.";
+		close;
+	}
+
+	mes "[뉴오즈]";
+	mes "몬스터를 벌써 전부 처리했어? 나도 싸우고 싶었는데!";
+	next;
+	mes "[로엘]";
+	mes "작아 보여도 매우 사나운 몬스터들입니다.";
+	next;
+	mes "[샬로시]";
+	mes "페르들이 우리를 따라오고 있어.";
+	next;
+	mes "[루나인]";
+	mes "친구가 아니라 몬스터야. 방심하지 마.";
+
+	if ('room == 10 && is_party_leader())
+		donpcevent 'jitterbug_main$ + "::OnNextIs11";
+	close;
+}
+
+1@jtb,374,110,4	script	샬로시#10	4_F_SHALOSH,{
+	mes "[샬로시]";
+	mes "위험하지 않아. 걱정하지 마.";
+	close;
+}
+
+1@jtb,369,117,5	script	로엘#10	4_M_ROEL,{
+	mes "[로엘]";
+	mes "충분히 훈련했습니다. 도움이 될 수 있습니다.";
+	close;
+}
+
+1@jtb,368,111,5	script	루나인#10	4_F_RUNAIN,{
+	mes "[루나인]";
+	mes "모험 중에는 절대 방심하지 마세요.";
+	close;
+}
+
+
+// Room 11
+1@jtb,26,201,5	script	루나인#11	4_F_RUNAIN,{
+	if ('room != 11 || !is_party_leader()) {
+		mes "[루나인]";
+		mes "지금은 앞으로 나아갈 때가 아닙니다.";
+		close;
+	}
+
+	mes "[루나인]";
+	mes "가위바위보에서 진 아랑이 초록 포션을 마실 차례야.";
+	next;
+	mes "[아랑]";
+	mes "싫어! 너무 써!";
+	next;
+	mes "[밍민]";
+	mes "상태 이상이 없으면 아무 효과도 없어. 빨리 마셔.";
+	next;
+	mes "[로엘]";
+	mes "저는 주변의 위험을 확인하고 오겠습니다.";
+
+	if ('room == 11 && is_party_leader())
+		donpcevent 'jitterbug_main$ + "::OnNextIs12";
+	close;
+}
+
+1@jtb,32,198,4	script	로엘#11	4_M_ROEL,{
+	mes "[로엘]";
+	mes "어디선가 물이 흐르기 시작했습니다.";
+	close;
+}
+
+1@jtb,28,197,4	script	아랑#11	4_F_TAEKWON,{
+	mes "[아랑]";
+	mes "초록 포션은 너무 써!";
+	close;
+}
+
+1@jtb,25,196,5	script	아이구#11	4_F_IU,{
+	mes "[아이구]";
+	mes "어깨를 들썩이며 노래하자~";
+	close;
+}
+
+1@jtb,23,200,5	script	밍민#11	4_F_GENETIC,{
+	mes "[밍민]";
+	mes "분위기가 점점 이상해지는군.";
+	close;
+}
+
+
+// Room 12
+1@jtb,106,198,5	script	밍민#12	4_F_GENETIC,{
+	if ('room != 12 || !is_party_leader()) {
+		mes "[밍민]";
+		mes "지금은 앞으로 나아갈 때가 아닙니다.";
+		close;
+	}
+
+	mes "[밍민]";
+	mes "숲처럼 보이던 공간이 갑자기 동굴로 변했어.";
+	next;
+	mes "[밍민]";
+	mes "지형도 식물도 모두 뒤죽박죽이군.";
+	next;
+	mes "[밍민]";
+	mes "버섯 조사는 나중에 하고 먼저 앞으로 가자.";
+
+	if ('room == 12 && is_party_leader())
+		donpcevent 'jitterbug_main$ + "::OnNextIs13";
+	close;
+}
+
+// Room 13
+1@jtb,195,206,4	script	뉴오즈#13	4_M_NEWOZ,{
+	if ('room != 13 || !is_party_leader()) {
+		mes "[뉴오즈]";
+		mes "지금은 앞으로 나아갈 때가 아닙니다.";
+		close;
+	}
+
+	mes "[멜로디 잭]";
+	mes "뉴오즈, 길드장 계약은 이미 끝났지만 약속은 지키겠다.";
+	next;
+	mes "[뉴오즈]";
+	mes "고마워. 역시 믿을 만한 동료야.";
+	next;
+	mes "[멜로디 잭]";
+	mes "착각하지 마. 내가 원하는 대가가 있어서 돕는 거야.";
+
+	if ('room == 13 && is_party_leader())
+		donpcevent 'jitterbug_main$ + "::OnNextIs14";
+	close;
+}
+
+1@jtb,191,206,5	script	멜로디 잭#13	CLEAR_NPC,{
+	mes "[멜로디 잭]";
+	mes "이유가 있으니 숨어 있는 거야.";
+	close;
+}
+
+
+// Room 14 (menu affects the boss encounter in the next room)
+1@jtb,282,194,5	script	뉴오즈#14	4_M_NEWOZ,{
+	if ('room != 14 || !is_party_leader()) {
+		mes "[뉴오즈]";
+		mes "이곳에 다른 누군가가 있을지도 몰라.";
+		close;
+	}
+
+	mes "[샬로시]";
+	mes "조금 기억났어.";
+	mes "어둠 속에서 낮고 긴 목소리를 들었어.";
+	next;
+	mes "[뉴오즈]";
+	mes "내 노래를 듣기 전부터 들린 목소리라면";
+	mes "이곳에 다른 존재가 있다는 뜻일지도 몰라.";
+	next;
+	mes "[밍민]";
+	mes "그 목소리는 무엇이었을까?";
+	next;
+
+	if (select("샬로시 자신의 생각이었다.:누군가와 대화하고 있었다.") == 1)
+		'jitterbug_options &= ~2;
+	else
+		'jitterbug_options |= 2;
+
+	if ('room == 14 && is_party_leader()) {
+		donpcevent 'jitterbug_main$ + "::OnNextIs15";
+		if ('jitterbug_options & 2)
+			areamonster 'map_jtb$,358,212,388,182,"페르",3108,1;
+	}
+
+	mes "[아이구]";
+	mes "기억이 더 돌아올 때까지 천천히 기다려 주자.";
+	close;
+}
+
+1@jtb,285,191,1	script	샬로시#14	4_F_SHALOSH,{
+	mes "[샬로시]";
+	mes "누군가 내 소원을 이루어 준 것 같아.";
+	close;
+}
+
+1@jtb,285,195,4	script	라기#14	4_M_RAGI,{
+	mes "[라기]";
+	mes "내 농담이 재미있으면 그냥 웃어주세요.";
+	close;
+}
+
+1@jtb,287,194,4	script	아이구#14	4_F_IU,{
+	mes "[아이구]";
+	mes "라기의 농담은 격려하지 않는 편이 좋아.";
+	close;
+}
+
+1@jtb,289,191,4	script	로엘#14	4_M_ROEL,{
+	mes "[로엘]";
+	mes "샬로시의 기억이 빨리 돌아오면 좋겠습니다.";
+	close;
+}
+
+1@jtb,280,191,8	script	밍민#14	4_F_GENETIC,{
+	mes "[밍민]";
+	mes "신입들을 챙기는 것도 보통 일이 아니군.";
+	close;
+}
+
+
+// Room 15
+1@jtb,380,219,5	script	뉴오즈#15	4_M_NEWOZ,{
+	if ('room != 15 || !is_party_leader()) {
+		mes "[뉴오즈]";
+		mes "지금은 앞으로 나아갈 때가 아닙니다.";
+		close;
+	}
+
+	mes "[뉴오즈]";
+	mes "아랑, 샬로시! 무사했구나.";
+	next;
+	mes "[샬로시]";
+	mes "뉴오즈는 생각보다 강하지 않아.";
+	next;
+	mes "[밍민]";
+	mes "이제 다른 사람의 생각까지 읽는 건가? 흥미롭군.";
+	next;
+	mes "[로터]";
+	mes "잡담은 그만하고 다음 구역으로 이동한다.";
+
+	if ('room == 15 && is_party_leader())
+		donpcevent 'jitterbug_main$ + "::OnNextIs16";
+	close;
+}
+
+1@jtb,382,211,4	script	밍민#15	4_F_GENETIC,{
+	mes "[밍민]";
+	mes "지금은 별로 신경 쓰고 싶지 않아.";
+	close;
+}
+
+1@jtb,378,211,5	script	겔카#15	4_F_GELKA,{
+	mes "[겔카]";
+	mes "훈련을 게을리하지 않습니다.";
+	close;
+}
+
+1@jtb,385,214,4	script	샬로시#15	4_F_SHALOSH,{
+	mes "[샬로시]";
+	mes "다른 사람의 생각이 들리지 않아?";
+	close;
+}
+
+1@jtb,383,216,5	script	아랑#15	4_F_TAEKWON,{
+	mes "[아랑]";
+	mes "얍! 얍!";
+	close;
+}
+
+1@jtb,384,218,4	script	루나인#15	4_F_RUNAIN,{
+	mes "[루나인]";
+	mes "쉬는 날에는 빵을 굽고 뜨개질도 해요.";
+	close;
+}
+
+1@jtb,375,214,5	script	로터#15	4_M_ROTERT,{
+	mes "[로터]";
+	mes "내가 가장 강한 건 사실이다.";
+	close;
+}
+
+1@jtb,376,218,5	script	로엘#15	4_M_ROEL,{
+	mes "[로엘]";
+	mes "동료는 가장 좋은 친구가 되어야 합니다.";
+	close;
+}
+
+
+// Room 16
+1@jtb,25,280,5	script	뉴오즈#16	4_M_NEWOZ,{
+	if ('room != 16 || !is_party_leader()) {
+		mes "[뉴오즈]";
+		mes "지금은 앞으로 나아갈 때가 아닙니다.";
+		close;
+	}
+
+	mes "[뉴오즈]";
+	mes "로터와 밍민을 보니 예전 모험이 떠오르는군.";
+	next;
+	mes "[밍민]";
+	mes "좋은 추억보다 사고 친 기억이 훨씬 많지만 말이지.";
+	next;
+	mes "[로터]";
+	mes "그런 이야기는 지금 하지 않아도 된다.";
+	next;
+	mes "[뉴오즈]";
+	mes "하하, 그래도 모두 즐거운 추억이야.";
+
+	if ('room == 16 && is_party_leader())
+		donpcevent 'jitterbug_main$ + "::OnNextIs17";
+	close;
+}
+
+1@jtb,30,279,4	script	밍민#16	4_F_GENETIC,{
+	mes "[밍민]";
+	mes "길드장 자리를 두고 다투다니 여전히 철이 없군.";
+	close;
+}
+
+1@jtb,30,284,4	script	로터#16	4_M_ROTERT,{
+	mes "[로터]";
+	mes "소문에 속지 마라. 나는 남문 최고의 퇴마 비숍이다!";
+	close;
+}
+
+
+// Room 17 (menu affects the boss encounter in the next room)
+1@jtb,110,281,5	script	샬로시#17	4_F_SHALOSH,{
+	if ('room != 17 || !is_party_leader()) {
+		mes "[샬로시]";
+		mes "친구... 경쟁... 동료...";
+		close;
+	}
+
+	mes "[루나인]";
+	mes "뉴오즈는 모험 말고는 관심이 없는 것 같아.";
+	next;
+	mes "[아이구]";
+	mes "그래도 건전한 경쟁은 나쁘지 않지.";
+	mes "모험가님은 연애가 잘되고 있어?";
+	next;
+
+	switch (select("연인이 있는지부터 물어봐야지.:짝사랑 중이다.:행복하게 만나고 있다.")) {
+	case 1:
+	case 2:
+		'jitterbug_options &= ~4;
+		break;
+	case 3:
+		'jitterbug_options |= 4;
+		break;
+	}
+
+	if ('room == 17 && is_party_leader()) {
+		donpcevent 'jitterbug_main$ + "::OnNextIs18";
+		if ('jitterbug_options & 4)
+			areamonster 'map_jtb$,183,301,220,272,"페르",3108,1;
+	}
+
+	mes "[샬로시]";
+	mes "친구와 경쟁하는 것도 인간의 관계구나.";
+	close;
+}
+
+1@jtb,113,285,4	script	루나인#17	4_F_RUNAIN,{
+	mes "[루나인]";
+	mes "지금은 휴전이지만 뉴오즈는 포기하지 않을 거예요.";
+	close;
+}
+
+1@jtb,108,285,5	script	아이구#17	4_F_IU,{
+	mes "[아이구]";
+	mes "경쟁도 좋지만 오래가는 우정이 더 중요해.";
+	close;
+}
+
+
+// Room 18
+1@jtb,198,282,5	script	샬로시#18	4_F_SHALOSH,{
+	if ('room != 18 || !is_party_leader()) {
+		mes "[샬로시]";
+		mes "지금은 앞으로 나아갈 때가 아닙니다.";
+		close;
+	}
+
+	mes "[샬로시]";
+	mes "페르들은 나보다 먼저 이곳에 나타났어.";
+	next;
+	mes "[샬로시]";
+	mes "아무것도 하지 않고 울기만 해서 친구가 되었어.";
+	next;
+	mes "[루나인]";
+	mes "하지만 지금은 우리를 공격하고 있어. 조심해야 해.";
+	next;
+	mes "[로엘]";
+	mes "샬로시를 지키면서 앞으로 이동하죠.";
+
+	if ('room == 18 && is_party_leader())
+		donpcevent 'jitterbug_main$ + "::OnNextIs19";
+	close;
+}
+
+1@jtb,203,281,4	script	루나인#18	4_F_RUNAIN,{
+	mes "[루나인]";
+	mes "진짜 친구는 선언하지 않아도 자연스럽게 친구가 되는 거야.";
+	close;
+}
+
+1@jtb,199,278,8	script	로엘#18	4_M_ROEL,{
+	mes "[로엘]";
+	mes "샬로시를 지킬 수 있다면 괜찮습니다.";
+	close;
+}
+
+
+// Room 19
+1@jtb,28,377,5	script	뉴오즈#19	4_M_NEWOZ,{
+	if ('room != 19 || !is_party_leader()) {
+		mes "[뉴오즈]";
+		mes "지금은 앞으로 나아갈 때가 아닙니다.";
+		close;
+	}
+
+	mes "[뉴오즈]";
+	mes "공간의 분위기가 갑자기 달라졌어.";
+	next;
+	mes "[밍민]";
+	mes "형태가 무너지고 있어. 이 장소가 사라지는 것 같아.";
+	next;
+	mes "[멜로디 잭]";
+	mes "낯선 기운도 강해지고 있다. 오래 머물면 위험해.";
+	next;
+	mes "[아랑]";
+	mes "샬로시가 보이지 않아! 모두 흩어져서 찾아보자.";
+
+	if ('room == 19 && is_party_leader())
+		donpcevent 'jitterbug_main$ + "::OnNextIs20";
+	close;
+}
+
+1@jtb,30,377,5	script	멜로디 잭#19	CLEAR_NPC,{
+	mes "[멜로디 잭]";
+	mes "뉴오즈는 언제나 눈치가 부족해.";
+	close;
+}
+
+1@jtb,30,373,4	script	로터#19	4_M_ROTERT,{
+	mes "[로터]";
+	mes "뉴오즈가 또 사고를 칠 것 같은 예감이 든다.";
+	close;
+}
+
+1@jtb,25,373,5	script	밍민#19	4_F_GENETIC,{
+	mes "[밍민]";
+	mes "더 위험해지기 전에 출구를 찾아야 해.";
+	close;
+}
+
+1@jtb,24,376,5	script	아이구#19	4_F_IU,{
+	mes "[아이구]";
+	mes "뉴오즈의 모험심은 늘 지나치지만 싫지는 않아.";
+	close;
+}
+
+1@jtb,26,380,5	script	아랑#19	4_F_TAEKWON,{
+	mes "[아랑]";
+	mes "귀엽고 약한 포링 같은 몬스터면 좋겠어!";
+	close;
+}
+
+1@jtb,31,380,4	script	라기#19	4_M_RAGI,{
+	mes "[라기]";
+	mes "늘 다투지만 정말 좋은 친구들 같군요.";
+	close;
+}
+
+1@jtb,33,376,4	script	겔카#19	4_F_GELKA,{
+	mes "[겔카]";
+	mes "위기의 순간에 활약하기 위해 꾸준히 훈련합니다.";
+	close;
+}
+
+
+// Room 20 (menu affects the boss encounter in the next room)
+1@jtb,105,377,5	script	로엘#20	4_M_ROEL,{
+	if ('room != 20 || !is_party_leader()) {
+		mes "[로엘]";
+		mes "겔카와 합동 기술을 연습하고 있습니다.";
+		close;
+	}
+
+	mes "[겔카]";
+	mes "적에게 포위된 영웅의 마지막 방어선을 재현하겠습니다!";
+	next;
+	mes "[로엘]";
+	mes "철벽 방어와 최후의 보루!";
+	next;
+	specialeffect EF_KEEPING;
+	specialeffect EF_BOTTOM_BASILICA,AREA,instance_npcname("겔카#20");
+	mes "[로엘과 겔카]";
+	mes "합동 기술 완료!";
+	next;
+
+	if (select("멋진 기술이다!:이름만 그럴듯하게 붙인 것 같다.") == 1)
+		'jitterbug_options &= ~8;
+	else
+		'jitterbug_options |= 8;
+
+	if ('room == 20 && is_party_leader()) {
+		donpcevent 'jitterbug_main$ + "::OnNextIs21";
+		if ('jitterbug_options & 8)
+			areamonster 'map_jtb$,182,387,219,354,"페르",3108,1;
+	}
+
+	mes "[겔카]";
+	mes "실전에서도 반드시 도움이 될 겁니다.";
+	close;
+}
+
+1@jtb,110,377,4	script	겔카#20	4_F_GELKA,{
+	mes "[겔카]";
+	mes "전투는 모험가 훈련의 필수 과정입니다.";
+	close;
+}
+
+
+// Room 21 (menu affects the boss encounter in the next room)
+1@jtb,198,369,5	script	뉴오즈#21	4_M_NEWOZ,{
+	if ('room != 21 || !is_party_leader()) {
+		mes "[뉴오즈]";
+		mes "샬로시를 찾아야 해.";
+		close;
+	}
+
+	mes "[샬로시]";
+	mes "페르들이 화가 났어. 나를 지키려고 하고 있어.";
+	next;
+	mes "[루나인]";
+	mes "친구라면 서로 공격하지 않아.";
+	next;
+	mes "[샬로시]";
+	mes "페르?";
+	next;
+
+	enablenpc instance_npcname("페르#21");
+	enablenpc instance_npcname("페르#22");
+	specialeffect EF_READYPORTAL2,AREA,instance_npcname("샬로시#21");
+	specialeffect EF_PORTAL2,AREA,instance_npcname("샬로시#21");
+	disablenpc instance_npcname("샬로시#21");
+	disablenpc instance_npcname("페르#21");
+	disablenpc instance_npcname("페르#22");
+
+	mes "[로터]";
+	mes "공간이 무너지고 있다. 뉴오즈와 샬로시를 찾아야 한다.";
+	next;
+
+	if (select("로터와 겔카를 따라간다.:혼자 수색한다.") == 1)
+		'jitterbug_options &= ~16;
+	else
+		'jitterbug_options |= 16;
+
+	if ('room == 21 && is_party_leader()) {
+		disablenpc instance_npcname("아이구#21");
+		disablenpc instance_npcname("뉴오즈#21");
+		donpcevent 'jitterbug_main$ + "::OnNextIs22";
+	}
+
+	mes "[밍민]";
+	mes "두 팀으로 나누어 샬로시를 찾자.";
+	close;
+}
+
+1@jtb,202,367,5	script	멜로디 잭#21	CLEAR_NPC,{
+	mes "[멜로디 잭]";
+	mes "이럴 줄 알았는데 아이구가 내 말을 듣지 않았어.";
+	close;
+}
+
+1@jtb,204,366,4	script	아랑#21	4_F_TAEKWON,{
+	mes "[아랑]";
+	mes "하압!";
+	close;
+}
+
+1@jtb,201,365,4	script	겔카#21	4_F_GELKA,{
+	mes "[겔카]";
+	mes "길드장님을 믿습니다!";
+	close;
+}
+
+1@jtb,202,363,4	script	밍민#21	4_F_GENETIC,{
+	mes "[밍민]";
+	mes "어쩌다 이런 일에 휘말린 거지?";
+	close;
+}
+
+1@jtb,195,365,5	script	루나인#21	4_F_RUNAIN,{
+	mes "[루나인]";
+	mes "뉴오즈와 샬로시를 먼저 찾아야 해요.";
+	close;
+}
+
+1@jtb,194,363,5	script	로엘#21	4_M_ROEL,{
+	mes "[로엘]";
+	mes "어디까지든 함께 가겠습니다.";
+	close;
+}
+
+1@jtb,194,367,5	script	라기#21	4_M_RAGI,{
+	mes "[라기]";
+	mes "오늘이 마지막 연주가 아니었으면 좋겠군요.";
+	close;
+}
+
+1@jtb,195,368,5	script	아이구#21	4_F_IU,{
+	mes "[아이구]";
+	mes "난 뉴오즈를 따라갈 거야.";
+	close;
+}
+
+1@jtb,201,369,4	script	로터#21	4_M_ROTERT,{
+	mes "[로터]";
+	mes "길드장다운 지휘력을 보여주겠다!";
+	close;
+}
+
+1@jtb,197,363,5	duplicate(???#02)	페르#21	4_F_PERE01
+1@jtb,198,363,5	duplicate(???#02)	샬로시#21	4_F_SHALOSH
+1@jtb,199,363,5	duplicate(???#02)	페르#22	4_F_PERE01
+
+
+// Room 22
+// 1@jtb,318,358,5	duplicate(???#02)	뉴오즈#22	4_M_NEWOZ
+
+
+// Room 23 (Boss Room entrance)
+1@jtb,320,323,5	script	뉴오즈#23	4_M_NEWOZ,{
+	if ('room != 23 || !is_party_leader()) {
+		mes "[뉴오즈]";
+		mes "샬로시를 찾았다. 이제 페르를 진정시켜야 해.";
+		close;
+	}
+
+	.@shaloshi$ = instance_npcname("샬로시#23");
+	.@ferre_23$ = instance_npcname("페르#23");
+	.@ferre_24$ = instance_npcname("페르#24");
+
+	mes "[뉴오즈]";
+	mes "샬로시, 무사해서 다행이야.";
+	next;
+	mes "[샬로시]";
+	mes "페르가 화가 났어. 우리를 지키려는 것 같아.";
+	next;
+	mes "[페르]";
+	mes "페르! 페르! 페르!";
+	next;
+
+	disablenpc .@ferre_23$;
+	enablenpc .@ferre_24$;
+	specialeffect EF_LORD,AREA,.@ferre_24$;
+	specialeffect EF_SUI_EXPLOSION,AREA,.@ferre_24$;
+
+	mes "[샬로시]";
+	mes "페르가 본래 모습으로 변했어!";
+	next;
+	mes "^FF0000강력한 적이 나타났습니다!^000000";
+	next;
+	mes "[뉴오즈]";
+	mes "말로 해결할 수 없다면 싸워서 진정시키는 수밖에 없어.";
+	mes "모험가님, 힘을 빌려줘!";
+	next;
+
+	if ('room == 23 && is_party_leader()) {
+		'party_id = getcharid(1);
+		donpcevent 'jitterbug_main$ + "::OnNextIs23";
+
+		if ('jitterbug_options & 16)
+			monster 'map_jtb$,327,331,"페르",3108,2;
+	}
+
+	close;
+}
+
+1@jtb,324,327,4	duplicate(???#02)	페르#23	4_F_PERE01
+1@jtb,324,327,4	duplicate(???#02)	페르#24	4_JITTERBUG
+1@jtb,326,329,4	duplicate(???#02)	샬로시#23	4_F_SHALOSH
+
+// 1@jtb,323,337,5	script	Boss#23	HIDDEN_WARP_NPC
+
+1@jtb,320,323,5	script	뉴오즈#boss	4_M_NEWOZ,{
+	end;
+OnStart:
+	enablenpc instance_npcname("뉴오즈#boss");
+	npctalk "뉴오즈: 걱정하지 마! 나도 도와줄게!";
+	initnpctimer;
+	end;
+
+OnTimer30000:
+	.@r = rand(5);
+	if (.@r == 0)
+		npctalk "뉴오즈: 고추가 참견하면? 할라피뇨!";
+	else if (.@r == 1)
+		npctalk "뉴오즈: 바나나는 왜 선크림을 바를까? 껍질이 벗겨지니까!";
+	else if (.@r == 2)
+		npctalk "뉴오즈: 음악을 하는 물고기는? 피아노 참치!";
+	else if (.@r == 3)
+		npctalk "뉴오즈: 우쿨렐레 줄이 끊어졌네. 대신 노래로 도와줄게!";
+	else
+		npctalk "뉴오즈: 초록 호박에게 농부가 한 말은? 왜 주황색이 아니야?";
+
+	emotion ET_DELIGHT;
+	initnpctimer;
+
+	if ('boss_id) {
+		getunitdata 'boss_id,.@data;
+		npcskilleffect "WZ_STORMGUST",1,.@data[UMOB_X],.@data[UMOB_Y];
+		unittalk 'boss_id,"페르! 페르!";
+
+		getpartymember 'party_id,1,.@char_id;
+		getpartymember 'party_id,2,.@account_id;
+
+		for (.@i = 0; .@i < $@partymembercount; ++.@i) {
+			if (!isloggedin(.@account_id[.@i],.@char_id[.@i]))
+				continue;
+
+			getmapxy .@map$,.@x,.@y,BL_PC,.@account_id[.@i];
+			if (.@map$ == 'map_jtb$ && distance(.@x,.@y,323,324) < 10)
+				sc_start SC_FREEZE,15000,0,10000,0,.@account_id[.@i];
+		}
+	}
+	end;
+
+OnStop:
+	stopnpctimer;
+	disablenpc instance_npcname("뉴오즈#boss");
+	end;
+}
+
+// Room 23 - After Boss dead
+1@jtb,320,323,5	script	뉴오즈#24	4_M_NEWOZ,{
+	if ('room != 24 || !is_party_leader()) {
+		mes "[뉴오즈]";
+		mes "샬로시와 마지막 이야기를 나누고 있어.";
+		close;
+	}
+
+	mes "[샬로시]";
+	mes "페르가 만든 공간은 곧 무너질 거야.";
+	mes "내가 페르를 데리고 떠나면 출구가 나타날 거야.";
+	next;
+	mes "[샬로시]";
+	mes "이제 모든 기억이 돌아왔어.";
+	mes "나는 모로크의 세 번째 사도이자 마음을 읽는 마족, 샬로시야.";
+	next;
+	mes "[로터]";
+	mes "모로크의 사도라고?";
+	next;
+	mes "[샬로시]";
+	mes "지금은 자유지만 내가 마족이라는 사실은 변하지 않아.";
+	mes "다시 만나면 우리는 적이 될까?";
+	next;
+	mes "[뉴오즈]";
+	mes "아니. 오늘부터 너도 하얀 날개 길드의 동료야.";
+	next;
+	mes "[샬로시]";
+	mes "고마워. 다음에 재미있는 장소를 찾으면 다시 초대할게.";
+	mes "안녕, 친구들.";
+	next;
+
+	specialeffect EF_PORTAL2,AREA,instance_npcname("샬로시#24");
+	specialeffect EF_PORTAL2,AREA,instance_npcname("페르#25");
+	disablenpc instance_npcname("샬로시#24");
+	disablenpc instance_npcname("페르#25");
+
+	if ('room == 24 && is_party_leader())
+		donpcevent 'jitterbug_main$ + "::OnNextIs5";
+
+	mes "[뉴오즈]";
+	mes "출구가 열렸어. 모두 밖으로 나가자.";
+	close;
+}
+
+1@jtb,326,329,4	duplicate(???#02)	샬로시#24	4_F_SHALOSH
+1@jtb,324,327,4	duplicate(???#02)	페르#25	4_F_PERE01
+
+1@jtb,328,326,4	duplicate(???#02)	로터#24	4_M_ROTERT
+1@jtb,330,328,4	duplicate(???#02)	겔카#24	4_F_GELKA
+1@jtb,328,324,4	duplicate(???#02)	밍민#24	4_F_GENETIC
+1@jtb,317,325,5	duplicate(???#02)	아이구#24	4_F_IU
+1@jtb,316,322,5	duplicate(???#02)	라기#24	4_M_RAGI
+1@jtb,319,320,5	duplicate(???#02)	아랑#24	4_F_TAEKWON
+1@jtb,321,318,4	duplicate(???#02)	루나인#24	4_F_RUNAIN
+1@jtb,326,319,4	duplicate(???#02)	로엘#24	4_M_ROEL
+1@jtb,325,322,4	duplicate(???#02)	멜로디 잭#24	CLEAR_NPC
+
+
+// Room 5 (Exit)
+1@jtb,379,31,4	script	뉴오즈#05	4_M_NEWOZ,{
+	if ('room != 25 || !is_party_leader()) {
+		mes "[뉴오즈]";
+		mes "오랜만에 정말 즐거운 모험이었어.";
+		if ('room >= 25 && isbegin_quest(13181) == 1)
+			completequest 13181;
+		close;
+	}
+
+	mes "[뉴오즈]";
+	mes "오랜 친구들과 새로운 동료가 함께한 멋진 모험이었어.";
+	next;
+	mes "[로터]";
+	mes "참고로 지금 길드장은 나다.";
+	mes "길드 이름도 새로 정할 거야.";
+	next;
+	mes "[아이구]";
+	mes "이상한 이름만 아니면 돼.";
+	next;
+	mes "[밍민]";
+	mes "그냥 하얀 날개 길드로 유지하는 게 가장 낫겠군.";
+	next;
+	mes "[로터]";
+	mes "좋아, 오늘 원정은 여기까지다. 모두 해산!";
+
+	completequest 13181;
+
+	if ('room == 25) {
+		'room = 26;
+		enablenpc instance_npcname("24 Door 1");
+	}
+
+	close;
+}
+
+1@jtb,363,11,5	script	멜로디 잭#05	CLEAR_NPC,{
+	mes "[멜로디 잭]";
+	mes "약속은 끝났어. 이제 받을 대가를 생각해 봐야겠군.";
+	close;
+}
+
+1@jtb,358,25,5	script	겔카#05	4_F_GELKA,{
+	mes "[겔카]";
+	mes "앞으로도 더 열심히 훈련하겠습니다!";
+	close;
+}
+
+1@jtb,385,20,5	script	루나인#05	4_F_RUNAIN,{
+	mes "[루나인]";
+	mes "집에 가서 씻고 따뜻한 빵을 먹고 싶어요.";
+	close;
+}
+
+1@jtb,375,31,5	script	로터#05	4_M_ROTERT,{
+	mes "[로터]";
+	mes "아직은 신입이다. 길드를 위해 열심히 노력해라.";
+	close;
+}
+
+1@jtb,380,28,4	script	아이구#05	4_F_IU,{
+	mes "[아이구]";
+	mes "다시는 뉴오즈를 놓치지 않을 거야!";
+	close;
+}
+
+1@jtb,359,43,5	script	라기#05	4_M_RAGI,{
+	mes "[라기]";
+	mes "이번 모험에서 새로운 곡의 영감을 많이 얻었습니다.";
+	close;
+}
+
+1@jtb,378,47,5	script	아랑#05	4_F_TAEKWON,{
+	mes "[아랑]";
+	mes "로엘과도 이제 친구가 됐어.";
+	close;
+}
+
+1@jtb,381,47,4	script	로엘#05	4_M_ROEL,{
+	mes "[로엘]";
+	mes "저도 아이구처럼 멋지게 춤추고 싶습니다.";
+	close;
+}
+
+// Exchange npc
+1@jtb,375,28,5	script	밍민#05	4_F_GENETIC,{
+	disable_items;
+
+	if (!checkweight(18122,1) || (MaxWeight - Weight) < 1000) {
+		mes "[밍민]";
+		mes "소지품이 너무 많습니다.";
+		mes "인벤토리를 정리한 뒤 다시 이용해 주세요.";
+		close;
+	}
+
+	mes "[밍민]";
+	mes "샬로시와 페르를 연구하면서";
+	mes "장신구 조합과 지터벅 이빨의 활용법을 알아냈어.";
+	next;
+
+	switch (select("펜던트 오브 마엘슈트롬 조합:지터벅 이빨 교환:그만둔다.")) {
+	case 1:
+		mes "[밍민]";
+		mes "펜던트 오브 하모니와 펜던트 오브 카오스를 합치면";
+		mes "펜던트 오브 마엘슈트롬를 만들 수 있어.";
+		next;
+		mes "[밍민]";
+		mes "조합에는 각 펜던트가 1개씩 필요하며";
+		mes "장착 중인 장비는 재료로 사용할 수 없어.";
+		next;
+
+		if ((countitem(2990) - isequippedcnt(2990)) < 1
+		 || (countitem(2991) - isequippedcnt(2991)) < 1) {
+			mes "[밍민]";
+			mes "펜던트 오브 하모니와 펜던트 오브 카오스를";
+			mes "인벤토리에 각각 1개씩 준비해 줘.";
+			break;
+		}
+
+		if (select("조합하지 않는다.:조합한다.") == 2) {
+			delitem 2990,1;
+			delitem 2991,1;
+			getitem 2992,1;
+			specialeffect EF_PHARMACY_FAIL;
+			mes "[밍민]";
+			mes "조합이 완료됐어.";
+			mes "펜던트 오브 마엘슈트롬를 확인해 봐.";
+		}
+		break;
+
+	case 2:
+		mes "[밍민]";
+		mes "지터벅 이빨 50개를 가져오면";
+		mes "이 공간에서 발견한 물품 중 하나로 무작위 교환해 줄게.";
+		next;
+
+		if (select("교환하지 않는다.:50개를 교환한다.") == 2) {
+			if (countitem(6719) < 50) {
+				mes "[밍민]";
+				mes "지터벅 이빨이 50개보다 적어.";
+				break;
+			}
+
+			delitem 6719,50;
+			.@item_id = F_Rand(
+				616,
+				1935,
+				1990,
+				2988,
+				2989,
+				2990,
+				2991,
+				12246,
+				15100,
+				15101,
+				18122,
+				18123
+			);
+			getitem .@item_id,1;
+
+			mes "[밍민]";
+			mes "교환이 완료됐어.";
+			mes "획득한 아이템을 확인해 봐.";
+		}
+		break;
+
+	case 3:
+		break;
+	}
+
+	mes "[밍민]";
+	mes "이곳에는 아직 연구할 것이 많이 남아 있어.";
+	close;
+}
+
+
+1@jtb,1,1,0	script	#jitterbug_main	-1,{
+	end;
+OnNextIs2:
+	'room = 2;
+	enablenpc instance_npcname("1 Door 1");
+	areamonster 'map_jtb$,100,13,133,46, "페르", 3069,10, 'jitterbug_main$ + "::OnMobDead2";// PERE1
+	end;
+OnMobDead2:
+	if (mobcount('map_jtb$, 'jitterbug_main$ + "::OnMobDead2") == 0) {
+		if ('NEED_JITTER_FAST) {
+			sleep 500;
+			donpcevent 'jitterbug_main$ + "::OnNextIs3";
+			end;
+		}
+		sleep 500;
+		enablenpc instance_npcname("아이구#02");
+		enablenpc instance_npcname("루나인#02");
+	}
+	end;
+
+OnNextIs3:
+	'room = 3;
+	enablenpc instance_npcname("2 Door 1");
+	areamonster 'map_jtb$,180,12,220,46, "페르", 3069,10, 'jitterbug_main$ + "::OnMobDead3";// PERE1
+	end;
+OnMobDead3:
+	if (mobcount('map_jtb$, 'jitterbug_main$ + "::OnMobDead3") == 0) {
+		if ('NEED_JITTER_FAST) {
+			sleep 500;
+			donpcevent 'jitterbug_main$ + "::OnNextIs4";
+			end;
+		}
+		sleep 500;
+		enablenpc instance_npcname("로터#03");
+		enablenpc instance_npcname("겔카#03");
+	}
+	end;
+
+OnNextIs4:
+	'room = 4;
+	enablenpc instance_npcname("3 Door 1");
+	areamonster 'map_jtb$,268,14,305,46, "페르", 3069,20, 'jitterbug_main$ + "::OnMobDead4";// PERE1
+	end;
+OnMobDead4:
+	if (mobcount('map_jtb$, 'jitterbug_main$ + "::OnMobDead4") == 0) {
+		if ('NEED_JITTER_FAST) {
+			sleep 500;
+			donpcevent 'jitterbug_main$ + "::OnNextIs6";
+			end;
+		}
+		sleep 500;
+		enablenpc instance_npcname("???#04");
+	}
+	end;
+
+OnNextIs6:
+	'room = 6;
+	enablenpc instance_npcname("4 Door 1");
+	areamonster 'map_jtb$,11,97,47,130, "페르", 3069,20, 'jitterbug_main$ + "::OnMobDead6";// PERE1
+	end;
+OnMobDead6:
+	if (mobcount('map_jtb$, 'jitterbug_main$ + "::OnMobDead6") == 0) {
+		if ('NEED_JITTER_FAST) {
+			sleep 500;
+			donpcevent 'jitterbug_main$ + "::OnNextIs7";
+			end;
+		}
+		sleep 500;
+		enablenpc instance_npcname("뉴오즈#06");
+		enablenpc instance_npcname("아이구#06");
+		enablenpc instance_npcname("샬로시#06");
+		enablenpc instance_npcname("아랑#06");
+	}
+	end;
+
+OnNextIs7:
+	'room = 7;
+	enablenpc instance_npcname("6 Door 1");
+	areamonster 'map_jtb$,94,96,131,131, "페르", 3069,10, 'jitterbug_main$ + "::OnMobDead7";// PERE1
+	areamonster 'map_jtb$,94,96,131,131, "페르", 3070,5,  'jitterbug_main$ + "::OnMobDead7";// PERE2
+	end;
+OnMobDead7:
+	if (mobcount('map_jtb$, 'jitterbug_main$ + "::OnMobDead7") == 0) {
+		if ('NEED_JITTER_FAST) {
+			sleep 500;
+			donpcevent 'jitterbug_main$ + "::OnNextIs8";
+			end;
+		}
+		sleep 500;
+		enablenpc instance_npcname("로엘#07");
+		enablenpc instance_npcname("루나인#07");
+		enablenpc instance_npcname("아이구#07");
+	}
+	end;
+
+OnNextIs8:
+	'room = 8;
+	enablenpc instance_npcname("7 Door 1");
+	areamonster 'map_jtb$,182,95,219,131, "페르", 3069,15, 'jitterbug_main$ + "::OnMobDead8";// PERE1
+	areamonster 'map_jtb$,182,95,219,131, "페르", 3070,5,  'jitterbug_main$ + "::OnMobDead8";// PERE2
+	end;
+OnMobDead8:
+	if (mobcount('map_jtb$, 'jitterbug_main$ + "::OnMobDead8") == 0) {
+		if ('NEED_JITTER_FAST) {
+			sleep 500;
+			donpcevent 'jitterbug_main$ + "::OnNextIs9";
+			end;
+		}
+		sleep 500;
+		enablenpc instance_npcname("밍민#08");
+		enablenpc instance_npcname("샬로시#08");
+		enablenpc instance_npcname("뉴오즈#08");
+	}
+	end;
+
+OnNextIs9:
+	'room = 9;
+	enablenpc instance_npcname("8 Door 1");
+	areamonster 'map_jtb$,268,131,306,95, "페르", 3069,22, 'jitterbug_main$ + "::OnMobDead9";// PERE1
+	areamonster 'map_jtb$,268,131,306,95, "페르", 3070,5,  'jitterbug_main$ + "::OnMobDead9";// PERE2
+	end;
+OnMobDead9:
+	if (mobcount('map_jtb$, 'jitterbug_main$ + "::OnMobDead9") == 0) {
+		if ('NEED_JITTER_FAST) {
+			sleep 500;
+			if ('jitterbug_options & 1)
+				areamonster 'map_jtb$,351,131,389,96,"페르",3108,1;
+			donpcevent 'jitterbug_main$ + "::OnNextIs10";
+			end;
+		}
+		sleep 500;
+		enablenpc instance_npcname("뉴오즈#09");
+		enablenpc instance_npcname("라기#09");
+		enablenpc instance_npcname("샬로시#09");
+	}
+	end;
+
+OnNextIs10:
+	'room = 10;
+	enablenpc instance_npcname("9 Door 1");
+	.@label$ = 'jitterbug_main$ + "::OnMobDead10";
+	areamonster 'map_jtb$,351,131,389,96, "페르", 3069,10, .@label$;// PERE1
+	areamonster 'map_jtb$,351,131,389,96, "페르", 3071,5,  .@label$;// PERE3
+	areamonster 'map_jtb$,351,131,389,96, "페르", 3108,1,  .@label$;// JITTERBUG1
+	end;
+OnMobDead10:
+	if (mobcount('map_jtb$, 'jitterbug_main$ + "::OnMobDead10") == 0) {
+		if ('NEED_JITTER_FAST) {
+			sleep 500;
+			donpcevent 'jitterbug_main$ + "::OnNextIs11";
+			end;
+		}
+		sleep 500;
+		enablenpc instance_npcname("뉴오즈#10");
+		enablenpc instance_npcname("샬로시#10");
+		enablenpc instance_npcname("로엘#10");
+		enablenpc instance_npcname("루나인#10");
+	}
+	end;
+
+OnNextIs11:
+	'room = 11;
+	enablenpc instance_npcname("10 Door 1");
+	areamonster 'map_jtb$,11,218,48,182, "페르", 3069,10, 'jitterbug_main$ + "::OnMobDead11";// PERE1
+	areamonster 'map_jtb$,11,218,48,182, "페르", 3070,5,  'jitterbug_main$ + "::OnMobDead11";// PERE2
+	end;
+OnMobDead11:
+	if (mobcount('map_jtb$, 'jitterbug_main$ + "::OnMobDead11") == 0) {
+		if ('NEED_JITTER_FAST) {
+			sleep 500;
+			donpcevent 'jitterbug_main$ + "::OnNextIs12";
+			end;
+		}
+		sleep 500;
+		enablenpc instance_npcname("루나인#11");
+		enablenpc instance_npcname("로엘#11");
+		enablenpc instance_npcname("아랑#11");
+		enablenpc instance_npcname("아이구#11");
+		enablenpc instance_npcname("밍민#11");
+	}
+	end;
+
+OnNextIs12:
+	'room = 12;
+	enablenpc instance_npcname("11 Door 1");
+	areamonster 'map_jtb$,94,218,132,182, "페르", 3069,10, 'jitterbug_main$ + "::OnMobDead12";// PERE1
+	end;
+OnMobDead12:
+	if (mobcount('map_jtb$, 'jitterbug_main$ + "::OnMobDead12") == 0) {
+		if ('NEED_JITTER_FAST) {
+			sleep 500;
+			donpcevent 'jitterbug_main$ + "::OnNextIs13";
+			end;
+		}
+		sleep 500;
+		enablenpc instance_npcname("밍민#12");
+	}
+	end;
+
+OnNextIs13:
+	'room = 13;
+	enablenpc instance_npcname("12 Door 1");
+	areamonster 'map_jtb$,180,217,218,182, "페르", 3069,15, 'jitterbug_main$ + "::OnMobDead13";// PERE1
+	areamonster 'map_jtb$,180,217,218,182, "페르", 3070,5,  'jitterbug_main$ + "::OnMobDead13";// PERE2
+	end;
+OnMobDead13:
+	if (mobcount('map_jtb$, 'jitterbug_main$ + "::OnMobDead13") == 0) {
+		if ('NEED_JITTER_FAST) {
+			sleep 500;
+			donpcevent 'jitterbug_main$ + "::OnNextIs14";
+			end;
+		}
+		sleep 500;
+		enablenpc instance_npcname("뉴오즈#13");
+		enablenpc instance_npcname("멜로디 잭#13");
+	}
+	end;
+
+OnNextIs14:
+	'room = 14;
+	disablenpc instance_npcname("멜로디 잭#13");
+	enablenpc instance_npcname("13 Door 1");
+	.@label$ = 'jitterbug_main$ + "::OnMobDead14";
+	areamonster 'map_jtb$,268,216,305,181, "페르", 3069,15, .@label$;// PERE1
+	areamonster 'map_jtb$,268,216,305,181, "페르", 3070,5,  .@label$;// PERE2
+	areamonster 'map_jtb$,268,216,305,181, "페르", 3071,5,  .@label$;// PERE3
+	end;
+OnMobDead14:
+	if (mobcount('map_jtb$, 'jitterbug_main$ + "::OnMobDead14") == 0) {
+		if ('NEED_JITTER_FAST) {
+			sleep 500;
+			if ('jitterbug_options & 2)
+				areamonster 'map_jtb$,358,212,388,182,"페르",3108,1;
+			donpcevent 'jitterbug_main$ + "::OnNextIs15";
+			end;
+		}
+		sleep 500;
+		enablenpc instance_npcname("뉴오즈#14");
+		enablenpc instance_npcname("샬로시#14");
+		enablenpc instance_npcname("라기#14");
+		enablenpc instance_npcname("아이구#14");
+		enablenpc instance_npcname("로엘#14");
+		enablenpc instance_npcname("밍민#14");
+	}
+	end;
+
+OnNextIs15:
+	'room = 15;
+	enablenpc instance_npcname("14 Door 1");
+	.@label$ = 'jitterbug_main$ + "::OnMobDead15";
+	areamonster 'map_jtb$,358,212,388,182, "페르", 3069,20, .@label$;// PERE1
+	areamonster 'map_jtb$,358,212,388,182, "페르", 3070,10, .@label$;// PERE2
+	areamonster 'map_jtb$,358,212,388,182, "페르", 3109,1,  .@label$;// JITTERBUG2
+	end;
+OnMobDead15:
+	if (mobcount('map_jtb$, 'jitterbug_main$ + "::OnMobDead15") == 0) {
+		if ('NEED_JITTER_FAST) {
+			sleep 500;
+			donpcevent 'jitterbug_main$ + "::OnNextIs16";
+			end;
+		}
+		sleep 500;
+		enablenpc instance_npcname("뉴오즈#15");
+		enablenpc instance_npcname("밍민#15");
+		enablenpc instance_npcname("겔카#15");
+		enablenpc instance_npcname("샬로시#15");
+		enablenpc instance_npcname("아랑#15");
+		enablenpc instance_npcname("루나인#15");
+		enablenpc instance_npcname("로터#15");
+		enablenpc instance_npcname("로엘#15");
+	}
+	end;
+
+OnNextIs16:
+	'room = 16;
+	enablenpc instance_npcname("15 Door 1");
+	.@label$ = 'jitterbug_main$ + "::OnMobDead16";
+	areamonster 'map_jtb$,13,300,47,267, "페르", 3069,10, .@label$;// PERE1
+	areamonster 'map_jtb$,13,300,47,267, "페르", 3070,10, .@label$;// PERE2
+	areamonster 'map_jtb$,13,300,47,267, "페르", 3071,10, .@label$;// PERE3
+	areamonster 'map_jtb$,13,300,47,267, "페르", 3072,5,  .@label$;// PERE4
+	end;
+OnMobDead16:
+	if (mobcount('map_jtb$, 'jitterbug_main$ + "::OnMobDead16") == 0) {
+		if ('NEED_JITTER_FAST) {
+			sleep 500;
+			donpcevent 'jitterbug_main$ + "::OnNextIs17";
+			end;
+		}
+		sleep 500;
+		enablenpc instance_npcname("뉴오즈#16");
+		enablenpc instance_npcname("밍민#16");
+		enablenpc instance_npcname("로터#16");
+	}
+	end;
+
+OnNextIs17:
+	'room = 17;
+	enablenpc instance_npcname("16 Door 1");
+	.@label$ = 'jitterbug_main$ + "::OnMobDead17";
+	areamonster 'map_jtb$,104,297,132,268, "페르", 3069,8, .@label$;// PERE1
+	areamonster 'map_jtb$,104,297,132,268, "페르", 3070,10,.@label$;// PERE2
+	areamonster 'map_jtb$,104,297,132,268, "페르", 3071,5, .@label$;// PERE3
+	areamonster 'map_jtb$,104,297,132,268, "페르", 3072,7, .@label$;// PERE4
+	end;
+OnMobDead17:
+	if (mobcount('map_jtb$, 'jitterbug_main$ + "::OnMobDead17") == 0) {
+		if ('NEED_JITTER_FAST) {
+			sleep 500;
+			if ('jitterbug_options & 4)
+				areamonster 'map_jtb$,183,301,220,272,"페르",3108,1;
+			donpcevent 'jitterbug_main$ + "::OnNextIs18";
+			end;
+		}
+		sleep 500;
+		enablenpc instance_npcname("샬로시#17");
+		enablenpc instance_npcname("루나인#17");
+		enablenpc instance_npcname("아이구#17");
+	}
+	end;
+
+OnNextIs18:
+	'room = 18;
+	enablenpc instance_npcname("17 Door 1");
+	.@label$ = 'jitterbug_main$ + "::OnMobDead18";
+	monster 'map_jtb$, 210, 272, "페르", 3069,1, .@label$;// PERE1
+	monster 'map_jtb$, 211, 273, "페르", 3071,1, .@label$;// PERE3
+	monster 'map_jtb$, 212, 272, "페르", 3072,1, .@label$;// PERE4
+	monster 'map_jtb$, 209, 273, "페르", 3072,1, .@label$;
+	monster 'map_jtb$, 213, 273, "페르", 3070,1, .@label$;// PERE2
+	monster 'map_jtb$, 211, 274, "페르", 3070,1, .@label$;
+	monster 'map_jtb$, 212, 275, "페르", 3070,1, .@label$;
+	monster 'map_jtb$, 213, 275, "페르", 3070,1, .@label$;
+	monster 'map_jtb$, 213, 276, "페르", 3070,1, .@label$;
+
+	areamonster 'map_jtb$,183,301,220,272, "페르", 3069,5, .@label$;// PERE1
+	areamonster 'map_jtb$,183,301,220,272, "페르", 3070,8, .@label$;// PERE2
+	areamonster 'map_jtb$,183,301,220,272, "페르", 3071,5, .@label$;// PERE3
+	areamonster 'map_jtb$,183,301,220,272, "페르", 3072,5, .@label$;// PERE4
+	areamonster 'map_jtb$,183,301,220,272, "페르", 3108,1, .@label$;// JITTERBUG1
+	end;
+OnMobDead18:
+	if (mobcount('map_jtb$, 'jitterbug_main$ + "::OnMobDead18") == 0) {
+		if ('NEED_JITTER_FAST) {
+			sleep 500;
+			donpcevent 'jitterbug_main$ + "::OnNextIs19";
+			end;
+		}
+		sleep 500;
+		enablenpc instance_npcname("샬로시#18");
+		enablenpc instance_npcname("루나인#18");
+		enablenpc instance_npcname("로엘#18");
+	}
+	end;
+
+OnNextIs19:
+	'room = 19;
+	enablenpc instance_npcname("18 Door 1");
+	.@label$ = 'jitterbug_main$ + "::OnMobDead19";
+	areamonster 'map_jtb$,13,389,45,355, "페르", 3069,5, .@label$;// PERE1
+	areamonster 'map_jtb$,13,389,45,355, "페르", 3070,9, .@label$;// PERE2
+	areamonster 'map_jtb$,13,389,45,355, "페르", 3071,9, .@label$;// PERE3
+	areamonster 'map_jtb$,13,389,45,355, "페르", 3072,9, .@label$;// PERE4
+	end;
+OnMobDead19:
+	if (mobcount('map_jtb$, 'jitterbug_main$ + "::OnMobDead19") == 0) {
+		if ('NEED_JITTER_FAST) {
+			sleep 500;
+			donpcevent 'jitterbug_main$ + "::OnNextIs20";
+			end;
+		}
+		sleep 500;
+		enablenpc instance_npcname("뉴오즈#19");
+		enablenpc instance_npcname("멜로디 잭#19");
+		enablenpc instance_npcname("로터#19");
+		enablenpc instance_npcname("밍민#19");
+		enablenpc instance_npcname("아이구#19");
+		enablenpc instance_npcname("아랑#19");
+		enablenpc instance_npcname("라기#19");
+		enablenpc instance_npcname("겔카#19");
+	}
+	end;
+
+OnNextIs20:
+	'room = 20;
+	enablenpc instance_npcname("19 Door 1");
+	.@label$ = 'jitterbug_main$ + "::OnMobDead20";
+	areamonster 'map_jtb$,95,387,133,352, "페르", 3069,3, .@label$;// PERE1
+	areamonster 'map_jtb$,95,387,133,352, "페르", 3070,10, .@label$;// PERE2
+	areamonster 'map_jtb$,95,387,133,352, "페르", 3072,6, .@label$;// PERE4
+	end;
+OnMobDead20:
+	if (mobcount('map_jtb$, 'jitterbug_main$ + "::OnMobDead20") == 0) {
+		if ('NEED_JITTER_FAST) {
+			sleep 500;
+			if ('jitterbug_options & 8)
+				areamonster 'map_jtb$,182,387,219,354,"페르",3108,1;
+			donpcevent 'jitterbug_main$ + "::OnNextIs21";
+			end;
+		}
+		sleep 500;
+		enablenpc instance_npcname("로엘#20");
+		enablenpc instance_npcname("겔카#20");
+	}
+	end;
+
+OnNextIs21:
+	'room = 21;
+	enablenpc instance_npcname("20 Door 1");
+	.@label$ = 'jitterbug_main$ + "::OnMobDead21";
+	areamonster 'map_jtb$,182,387,219,354, "페르", 3069,10, .@label$;// PERE1
+	areamonster 'map_jtb$,182,387,219,354, "페르", 3070,10, .@label$;// PERE2
+	areamonster 'map_jtb$,182,387,219,354, "페르", 3071,10, .@label$;// PERE3
+	areamonster 'map_jtb$,182,387,219,354, "페르", 3072,10, .@label$;// PERE4
+	areamonster 'map_jtb$,182,387,219,354, "페르", 3109,1,  .@label$;// JITTERBUG2
+	end;
+OnMobDead21:
+	if (mobcount('map_jtb$, 'jitterbug_main$ + "::OnMobDead21") == 0) {
+		if ('NEED_JITTER_FAST) {
+			sleep 500;
+			donpcevent 'jitterbug_main$ + "::OnNextIs22";
+			end;
+		}
+		sleep 500;
+		enablenpc instance_npcname("뉴오즈#21");
+		enablenpc instance_npcname("멜로디 잭#21");
+		enablenpc instance_npcname("아랑#21");
+		enablenpc instance_npcname("겔카#21");
+		enablenpc instance_npcname("밍민#21");
+		enablenpc instance_npcname("루나인#21");
+		enablenpc instance_npcname("로엘#21");
+		enablenpc instance_npcname("라기#21");
+		enablenpc instance_npcname("아이구#21");
+		enablenpc instance_npcname("로터#21");
+		enablenpc instance_npcname("샬로시#21");
+	}
+	end;
+
+OnNextIs22:
+	'room = 22;
+	enablenpc instance_npcname("21 Door 1");
+	.@label$ = 'jitterbug_main$ + "::OnMobDead22";
+	monster 'map_jtb$, 288, 339, "페르", 3069,1, .@label$;// PERE1
+	monster 'map_jtb$, 288, 319, "페르", 3069,1, .@label$;
+	monster 'map_jtb$, 288, 309, "페르", 3069,1, .@label$;
+	monster 'map_jtb$, 287, 296, "페르", 3069,1, .@label$;
+	monster 'map_jtb$, 299, 295, "페르", 3069,1, .@label$;
+	monster 'map_jtb$, 310, 294, "페르", 3069,1, .@label$;
+	monster 'map_jtb$, 323, 295, "페르", 3069,1, .@label$;
+	monster 'map_jtb$, 334, 295, "페르", 3069,1, .@label$;
+	monster 'map_jtb$, 344, 295, "페르", 3069,1, .@label$;
+	monster 'map_jtb$, 353, 294, "페르", 3069,1, .@label$;
+	monster 'map_jtb$, 357, 300, "페르", 3069,1, .@label$;
+	monster 'map_jtb$, 357, 307, "페르", 3069,1, .@label$;
+	monster 'map_jtb$, 358, 317, "페르", 3069,1, .@label$;
+	monster 'map_jtb$, 358, 325, "페르", 3069,1, .@label$;
+	monster 'map_jtb$, 358, 338, "페르", 3069,1, .@label$;
+	end;
+OnMobDead22:
+	if (mobcount('map_jtb$, 'jitterbug_main$ + "::OnMobDead22") == 0) {
+		sleep 500;
+		if ('room == 22) {
+			'room = 23;
+			enablenpc instance_npcname("22 Door 1");
+			enablenpc instance_npcname("페르#23");
+			enablenpc instance_npcname("샬로시#23");
+			enablenpc instance_npcname("뉴오즈#23");
+		}
+	}
+	end;
+
+OnNextIs23:
+	'room = 24;
+	disablenpc instance_npcname("22 Door 1");	// can't enter in the boss room anymore
+	disablenpc instance_npcname("페르#24");
+	disablenpc instance_npcname("뉴오즈#23");
+	disablenpc instance_npcname("샬로시#23");
+	donpcevent instance_npcname("뉴오즈#boss") + "::OnStart";
+
+	.@label$ = 'jitterbug_main$ + "::OnMobDead23";
+	for ( .@id = 3069; .@id < 3072; .@id++ ) {
+		monster 'map_jtb$,323,315, "페르", .@id, 1;// no label
+		monster 'map_jtb$,331,324, "페르", .@id, 1;
+		monster 'map_jtb$,322,338, "페르", .@id, 1;
+		monster 'map_jtb$,314,325, "페르", .@id, 1;
+	}
+	monster 'map_jtb$,322,335, "각성한 페르", 3073,1, .@label$;	// GRAND_PERE
+	'boss_id = $@mobid[0];
+	end;
+OnMobDead23:
+	if (mobcount('map_jtb$, 'jitterbug_main$ + "::OnMobDead23") == 0) {
+		sleep 500;
+		donpcevent instance_npcname("뉴오즈#boss") + "::OnStop";
+		enablenpc instance_npcname("뉴오즈#24");
+		enablenpc instance_npcname("샬로시#24");
+		enablenpc instance_npcname("페르#25");
+		'boss_id = 0;
+	}
+	end;
+
+OnNextIs5:
+	'room = 25;
+	enablenpc instance_npcname("23 Door 1");// note: dead players are not warped
+	enablenpc instance_npcname("뉴오즈#05");
+	enablenpc instance_npcname("멜로디 잭#05");
+	enablenpc instance_npcname("겔카#05");
+	enablenpc instance_npcname("루나인#05");
+	enablenpc instance_npcname("로터#05");
+	enablenpc instance_npcname("아이구#05");
+	enablenpc instance_npcname("라기#05");
+	enablenpc instance_npcname("아랑#05");
+	enablenpc instance_npcname("로엘#05");
+	enablenpc instance_npcname("밍민#05");
+	end;
+
+
+OnInstanceInit:
+	// NEED: 반복 클리어 빠른 진행 및 선택 옵션
+	'NEED_JITTER_FAST = 0;
+	'jitterbug_options = 0;
+
+	// 기존 호환 변수
+	'additionnal_option = false;
+
+	'room = 1;
+	'boss_id = 0;
+	'map_jtb$ = instance_mapname("1@jtb");
+	'jitterbug_main$ = instance_npcname("#jitterbug_main");
+
+	// warps
+	disablenpc instance_npcname("1 Door 1");
+	disablenpc instance_npcname("2 Door 1");
+	disablenpc instance_npcname("3 Door 1");
+	disablenpc instance_npcname("4 Door 1");
+	disablenpc instance_npcname("6 Door 1");
+	disablenpc instance_npcname("7 Door 1");
+	disablenpc instance_npcname("8 Door 1");
+	disablenpc instance_npcname("9 Door 1");
+	disablenpc instance_npcname("10 Door 1");
+	disablenpc instance_npcname("11 Door 1");
+	disablenpc instance_npcname("12 Door 1");
+	disablenpc instance_npcname("13 Door 1");
+	disablenpc instance_npcname("14 Door 1");
+	disablenpc instance_npcname("15 Door 1");
+	disablenpc instance_npcname("16 Door 1");
+	disablenpc instance_npcname("17 Door 1");
+	disablenpc instance_npcname("18 Door 1");
+	disablenpc instance_npcname("19 Door 1");
+	disablenpc instance_npcname("20 Door 1");
+	disablenpc instance_npcname("21 Door 1");
+	disablenpc instance_npcname("22 Door 1");
+	disablenpc instance_npcname("23 Door 1");
+	disablenpc instance_npcname("24 Door 1");
+
+	// Room 2
+	disablenpc instance_npcname("아이구#02");
+	disablenpc instance_npcname("???#02");
+	disablenpc instance_npcname("루나인#02");
+
+	// Room 3
+	disablenpc instance_npcname("로터#03");
+	disablenpc instance_npcname("겔카#03");
+
+	// Room 4
+	disablenpc instance_npcname("???#04");
+
+	// Room 6
+	disablenpc instance_npcname("뉴오즈#06");
+	disablenpc instance_npcname("아이구#06");
+	disablenpc instance_npcname("샬로시#06");
+	disablenpc instance_npcname("아랑#06");
+
+	// Room 7
+	disablenpc instance_npcname("로엘#07");
+	disablenpc instance_npcname("루나인#07");
+	disablenpc instance_npcname("아이구#07");
+
+	// Room 8
+	disablenpc instance_npcname("밍민#08");
+	disablenpc instance_npcname("샬로시#08");
+	disablenpc instance_npcname("뉴오즈#08");
+
+	// Room 9 (menu affects the boss encounter in the next room)
+	disablenpc instance_npcname("뉴오즈#09");
+	disablenpc instance_npcname("라기#09");
+	disablenpc instance_npcname("샬로시#09");
+
+	// Room 10
+	disablenpc instance_npcname("뉴오즈#10");
+	disablenpc instance_npcname("샬로시#10");
+	disablenpc instance_npcname("로엘#10");
+	disablenpc instance_npcname("루나인#10");
+
+	// Room 11
+	disablenpc instance_npcname("루나인#11");
+	disablenpc instance_npcname("로엘#11");
+	disablenpc instance_npcname("아랑#11");
+	disablenpc instance_npcname("아이구#11");
+	disablenpc instance_npcname("밍민#11");
+
+	// Room 12
+	disablenpc instance_npcname("밍민#12");
+
+	// Room 13
+	disablenpc instance_npcname("뉴오즈#13");
+	disablenpc instance_npcname("멜로디 잭#13");
+
+	// Room 14 (menu affects the boss encounter in the next room)
+	disablenpc instance_npcname("뉴오즈#14");
+	disablenpc instance_npcname("샬로시#14");
+	disablenpc instance_npcname("라기#14");
+	disablenpc instance_npcname("아이구#14");
+	disablenpc instance_npcname("로엘#14");
+	disablenpc instance_npcname("밍민#14");
+
+	// Room 15
+	disablenpc instance_npcname("뉴오즈#15");
+	disablenpc instance_npcname("밍민#15");
+	disablenpc instance_npcname("겔카#15");
+	disablenpc instance_npcname("샬로시#15");
+	disablenpc instance_npcname("아랑#15");
+	disablenpc instance_npcname("루나인#15");
+	disablenpc instance_npcname("로터#15");
+	disablenpc instance_npcname("로엘#15");
+
+	// Room 16
+	disablenpc instance_npcname("뉴오즈#16");
+	disablenpc instance_npcname("밍민#16");
+	disablenpc instance_npcname("로터#16");
+
+	// Room 17 (menu affects the boss encounter in the next room)
+	disablenpc instance_npcname("샬로시#17");
+	disablenpc instance_npcname("루나인#17");
+	disablenpc instance_npcname("아이구#17");
+
+	// Room 18
+	disablenpc instance_npcname("샬로시#18");
+	disablenpc instance_npcname("루나인#18");
+	disablenpc instance_npcname("로엘#18");
+
+	// Room 19
+	disablenpc instance_npcname("뉴오즈#19");
+	disablenpc instance_npcname("멜로디 잭#19");
+	disablenpc instance_npcname("로터#19");
+	disablenpc instance_npcname("밍민#19");
+	disablenpc instance_npcname("아이구#19");
+	disablenpc instance_npcname("아랑#19");
+	disablenpc instance_npcname("라기#19");
+	disablenpc instance_npcname("겔카#19");
+
+	// Room 20 (menu affects the boss encounter in the next room)
+	disablenpc instance_npcname("로엘#20");
+	disablenpc instance_npcname("겔카#20");
+
+	// Room 21 (menu affects the boss encounter in the boss room)
+	disablenpc instance_npcname("뉴오즈#21");
+	disablenpc instance_npcname("멜로디 잭#21");
+	disablenpc instance_npcname("아랑#21");
+	disablenpc instance_npcname("겔카#21");
+	disablenpc instance_npcname("밍민#21");
+	disablenpc instance_npcname("루나인#21");
+	disablenpc instance_npcname("로엘#21");
+	disablenpc instance_npcname("라기#21");
+	disablenpc instance_npcname("아이구#21");
+	disablenpc instance_npcname("로터#21");
+	disablenpc instance_npcname("샬로시#21");
+	disablenpc instance_npcname("페르#21");
+	disablenpc instance_npcname("페르#22");
+
+	// Boss room entrance
+	disablenpc instance_npcname("페르#23");
+	disablenpc instance_npcname("페르#24");
+	disablenpc instance_npcname("샬로시#23");
+	disablenpc instance_npcname("뉴오즈#23");
+	disablenpc instance_npcname("뉴오즈#boss");
+
+	// Boss room - boss dead
+	disablenpc instance_npcname("뉴오즈#24");
+	disablenpc instance_npcname("샬로시#24");
+	disablenpc instance_npcname("로터#24");
+	disablenpc instance_npcname("겔카#24");
+	disablenpc instance_npcname("밍민#24");
+	disablenpc instance_npcname("아이구#24");
+	disablenpc instance_npcname("라기#24");
+	disablenpc instance_npcname("아랑#24");
+	disablenpc instance_npcname("루나인#24");
+	disablenpc instance_npcname("로엘#24");
+	disablenpc instance_npcname("멜로디 잭#24");
+	disablenpc instance_npcname("페르#25");
+
+	// Exit
+	disablenpc instance_npcname("뉴오즈#05");
+	disablenpc instance_npcname("멜로디 잭#05");
+	disablenpc instance_npcname("겔카#05");
+	disablenpc instance_npcname("루나인#05");
+	disablenpc instance_npcname("로터#05");
+	disablenpc instance_npcname("아이구#05");
+	disablenpc instance_npcname("라기#05");
+	disablenpc instance_npcname("아랑#05");
+	disablenpc instance_npcname("로엘#05");
+	disablenpc instance_npcname("밍민#05");
+	end;
+}

@@ -1,0 +1,2564 @@
+//===== rAthena Script =======================================
+//= Temple of Demon God
+//===== Description: =========================================
+//= [Official Conversion]
+//= Temple of Demon God Instance (part of episode 14.3)
+//===== Changelogs: ==========================================
+//= 1.0 First version. [Capuche]
+//============================================================
+
+moro_vol,108,88,5	script	지휘관 히바 아지프#14301	4_M_REDSWORD,{
+	cutin "ep13_captin_edq.bmp",2;
+	mes "[히바 아지프]";
+
+	// 모르스의 동굴 선행 진행 여부는 검사하지 않습니다.
+	if (BaseLevel < 160) {
+		mes "이곳은 상식으로는 이해하기 어려운 장소라네.";
+		mes "모로크가 이 어딘가에 있을 것이 분명해.";
+		next;
+		mes "[히바 아지프]";
+		mes "하지만 아직 자네를 투입하기에는 위험이 너무 크군.";
+		mes "마신전 토벌 임무는 Base 레벨 160부터 수행할 수 있다네.";
+		next;
+		mes "[히바 아지프]";
+		mes "지금은 힘을 더 기른 뒤 다시 찾아오게.";
+		mes "그때 자네의 힘이 필요할 걸세.";
+		close3;
+	}
+
+	if (ep4_3_mockill == 0) {
+		if (isbegin_quest(7597) == 1) {
+			mes "오, 우리의 영웅이 돌아왔군!";
+			mes "하하하! 드디어 원정의 끝에 도달했어!";
+			mes "정말 훌륭하게 해냈네.";
+			mes "온 인류를 대신해 자네에게 감사하지.";
+			next;
+			mes "[부관 아비달]";
+			mes "정말 대단합니다!";
+			mes "세상을 구하셨군요!";
+			mes "이 일이 끝나면 저도 고향으로...";
+			next;
+			mes "[히바 아지프]";
+			mes "아비달, 거기까지!";
+			mes "왜 그렇게 불길한 말을 하는 건가!";
+			next;
+			mes "[히바 아지프]";
+			mes "많지는 않지만 보답으로 받아 주게.";
+			mes "그동안 정말 수고했네.";
+			mes "하하하.";
+			mes "이제야 편히 잠들 수 있겠군!";
+			next;
+			mes "[히바 아지프]";
+			mes "잠깐, 자네에게서 불길한 기운이 느껴지는군...";
+			mes "세상에, 이게 대체 뭔가?!";
+			mes "마신에게 영혼을 먹히기라도 할 셈인가?";
+			next;
+			mes "[히바 아지프]";
+			mes "그 기운은 내가 결정으로 만들어 주겠네.";
+			mes "그리고 라피네 야영지의 수호자를 찾아가 보게.";
+			mes "그녀라면 이것에 대해 알고 있을지도 모르지.";
+			next;
+			mes "[히바 아지프]";
+			mes "보상으로 다음 물품을 지급하겠네.";
+			mes getitemname(22567) + " 1개";
+			mes getitemname(6715) + " 1개";
+
+			ep4_3_mockill = 1;
+			erasequest 7597;	// 거짓 신의 몰락
+			setquest 7598;		// 갇힌 신
+			getitem 22567,1;	// 원정대 보상
+			getitem 6715,1;	// 사악한 영혼의 조각
+			getexp 1000000,500000;
+			close3;
+		}
+
+		if (isbegin_quest(7593) == 1) {
+			mes "중앙 언덕의 동굴 안에서 마신전이 발견되었다네.";
+			mes "하지만 기묘한 나무가 신전 입구를 가로막고 있지.";
+			next;
+			mes "[히바 아지프]";
+			mes "수호자라 불리는 보라색 옷의 여인이";
+			mes "곧 그곳으로 가겠다고 했네.";
+			mes "그녀를 찾아가 보게.";
+			close3;
+		}
+
+		mes "잘 왔네.";
+		mes "어두운 동굴 안쪽으로 향하는 길이 열렸다는 보고를 받았어.";
+		mes "가끔은 이 저주받은 분지 자체가 살아 있는 것처럼 느껴지는군.";
+		next;
+		mes "[히바 아지프]";
+		mes "자네는 영리하고 유능하니 내가 왜 이 이야기를 하는지 알겠지?";
+		mes "걱정하지 말게. 선발대는 이미 보내 두었네.";
+		next;
+		mes "[히바 아지프]";
+		mes "기뻐하게, 동료여!";
+		mes "이 위험한 원정도 머지않아 끝날 걸세.";
+		mes "그리고 그 마지막을 장식할 사람은 바로 자네야.";
+		next;
+		mes "[히바 아지프]";
+		mes "새롭게 발견된 장소는 '마신전'이라 부르기로 했네.";
+		mes "최초 발견자가 붙인 이름인데, 모두가 자연스럽게 그렇게 부르더군.";
+		next;
+		mes "[히바 아지프]";
+		mes "자네에게 마신전 토벌 임무를 맡기고 싶네.";
+		mes "명령이 아니라 부탁일세.";
+		mes "위험을 감수하고 임무를 받아들일지는 자네가 결정하게.";
+		next;
+
+		if (select("임무를 맡겠습니다.:거절하겠습니다.") == 2) {
+			mes "[히바 아지프]";
+			mes "알겠네.";
+			mes "세계의 평화를 위해 목숨을 걸고 싶지 않은 모양이군.";
+			mes "세상이 끝나는 그날까지 잘 살아 보게.";
+			close3;
+		}
+
+		mes "[히바 아지프]";
+		mes "역시 자네에게 부탁하길 잘했군.";
+		mes "로키의 말로는 봉인이 깨졌을 때 입은 상처가 남아 있어";
+		mes "마신이 아직 완전히 회복하지 못했다고 하네.";
+		next;
+		mes "[히바 아지프]";
+		mes "아직 상처를 회복하는 중이라면";
+		mes "지금이야말로 놈을 공격할 절호의 기회일세.";
+		mes "행운을 빌겠네.";
+
+		setquest 7593;	// 마신 토벌
+		close3;
+	}
+
+	if (isbegin_quest(7597) == 1) {
+		mes "휘유, 수고했네!";
+		mes "마신전은 어떻던가?";
+		mes "여전히 같은 모습이었나?";
+		next;
+		mes "[히바 아지프]";
+		mes "보상으로 " + getitemname(22567) + " 1개를 지급하겠네.";
+		mes "다음에도 부탁하지.";
+
+		erasequest 7597;	// 거짓 신의 몰락
+		setquest 7598;		// 갇힌 신
+		getitem 22567,1;	// 원정대 보상
+		getexp 1000000,500000;
+		close3;
+	}
+
+	switch (checkquest(7598,PLAYTIME)) {
+	case -1:
+		mes "아무리 생각해도 이곳에서 무슨 일이 벌어지는지 이해할 수가 없군.";
+		mes "그 괴물이 신을 대신하겠다고 선언한 뒤로 모든 것이 엉망이 되었어.";
+		next;
+		mes "[히바 아지프]";
+		mes "한번 뒤틀린 차원은 다시 원래대로 돌아오지 않는 것 같네.";
+		mes "마신전에 다시 한번 다녀와 줄 수 있겠나?";
+		next;
+
+		if (select("다시 다녀오겠습니다.:거절하겠습니다.") == 2) {
+			mes "[히바 아지프]";
+			mes "알겠네.";
+			mes "자네는 이미 충분히 많은 일을 해 주었어.";
+			mes "다른 사람을 보내도록 하지.";
+			close3;
+		}
+
+		mes "[히바 아지프]";
+		mes "다른 차원의 균열과 마찬가지로";
+		mes "마신전도 끝없는 시간의 반복 속에 갇혀 있다네.";
+		next;
+		mes "[히바 아지프]";
+		mes "모로크는 이 세계에서 벗어나려 필사적으로 몸부림쳤지만 실패했지.";
+		mes "결국 그의 세계에는 지옥 같은 기억만 끝없이 반복되고 있어.";
+		next;
+		mes "[히바 아지프]";
+		mes "마신전을 조사할 때 조심하게.";
+		mes "모로크를 다시 만나면 주저하지 말고 또 쓰러뜨리게.";
+		mes "그자에게 동정은 필요 없어.";
+		mes "무운을 빌겠네.";
+
+		if (isbegin_quest(7593) == 0)
+			setquest 7593;	// 마신 토벌
+		close3;
+
+	case 0:
+	case 1:
+		mes "마신의 본체는 처리했으니 지금은 조금 여유를 가져도 되네.";
+		mes "오늘은 쉬는 것이 어떤가?";
+		mes "나머지는 우리에게 맡기게.";
+		close3;
+
+	case 2:
+		erasequest 7598;	// 갇힌 신
+		mes "어제 그렇게 치열한 전투를 치렀다는 사실이 믿기지 않을 정도로 멀쩡해 보이는군.";
+		mes "다시 싸울 준비가 되었나?";
+		next;
+		mes "[히바 아지프]";
+		mes "준비가 되면 다시 말해 주게.";
+		mes "모로크는 사라졌지만 마신전은 아직 남아 있어.";
+		mes "아마 차원의 균열과 관련이 있겠지.";
+		next;
+		mes "[히바 아지프]";
+		mes "아, 걱정하지 말게.";
+		mes "지금 당장 자네를 다시 보낼 생각은 없으니까.";
+		mes "하하하!";
+		close3;
+	}
+	end;
+
+OnInit:
+	questinfo(QTYPE_QUEST2, QMARK_NONE, "BaseLevel >= 160 && ep4_3_mockill > 0 && !isbegin_quest(7593) && !isbegin_quest(7597) && !isbegin_quest(7598)");
+	questinfo(QTYPE_QUEST2, QMARK_NONE, "!isbegin_quest(7598) && !isbegin_quest(7593) && isbegin_quest(7597) == 1");
+	end;
+}
+
+moro_cav,41,73,4	script	수호자 니드호그#epeom01	4_F_NYDHOG,{
+	.@party_id = getcharid(1);
+	.@md_name$ = "마신전";
+
+	// 기존 클리어 캐릭터의 반복 간소화 기능을 계정 단위로 소급 해금합니다.
+	if (isbegin_quest(7597) > 0)
+		#NEED_MD_EOM_CLEAR = 1;
+
+	if (checkquest(7605,PLAYTIME) == 2)
+		erasequest 7605;
+	if (getcharid(1) < 1) {
+		mes "[니드호그]";
+		mes "이곳은 혼자 탐험하기에는 너무 위험합니다.";
+		mes "파티를 구성한 뒤 동료들과 함께 와 주세요.";
+		cutin "ep14_nyd01.bmp",2;
+		close3;
+	}
+	if (is_party_leader() == false) {
+		mes "[니드호그]";
+		mes "마신전 입장 신청은 파티장만 할 수 있습니다.";
+		mes "원정대의 안전을 위한 조치이니 파티장이 제게 말을 걸어 주세요.";
+		cutin "ep14_nyd01.bmp",2;
+		close3;
+	}
+	switch( checkquest(7593,HUNTING) ) {
+	case -1:
+		mes "[니드호그]";
+		mes "죄송하지만 지휘관의 허가 없이는 들어갈 수 없습니다.";
+		mes "마신 토벌 임무를 받은 상태여야 입장할 수 있습니다.";
+		cutin "ep14_nyd01.bmp",2;
+		next;
+		mes "[니드호그]";
+		mes "지휘관 히바 아지프에게서 마신 토벌 임무를 받아 주세요.";
+		close3;
+	case 0:
+	case 1:
+		.@fast_mode = 0;
+
+		if (#NEED_MD_EOM_CLEAR) {
+			mes "[니드호그]";
+			mes "이전에 마신전을 완료한 기록이 확인되었습니다.";
+			mes "이번 원정의 진행 방식을 선택해 주세요.";
+			next;
+
+			switch (select("일반 진행:간소화 진행:입장하지 않는다")) {
+			case 1:
+				.@fast_mode = 0;
+				break;
+			case 2:
+				.@fast_mode = 1;
+				break;
+			case 3:
+				close3;
+			}
+		}
+		else {
+			mes "[니드호그]";
+			mes "기다리고 있었습니다, 영웅이 될 분이여.";
+			mes "모로크가 기다리는 신전 깊숙한 곳으로 안내하겠습니다.";
+			cutin "ep14_nyd03.bmp",2;
+			next;
+			mes "[니드호그]";
+			mes "이 나무는 세계수와 매우 닮았습니다.";
+			mes "숨 쉬듯 만들어 내는 마력의 틈을 이용해 길을 열겠습니다.";
+			mes "준비되셨습니까?";
+			cutin "ep14_nyd04.bmp",2;
+			next;
+			if (select("지금 입장한다.:입장하지 않는다.") == 2)
+				close3;
+		}
+
+		NEED_EOM_FAST_PENDING = .@fast_mode;
+
+		if (instance_create(.@md_name$) < 1) {
+			mes "파티 이름: " + getpartyname(.@party_id);
+			mes "파티장: " + strcharinfo(0);
+			mes "^0000ff마신전^000000 생성에 실패했습니다.";
+			close;
+		}
+		if (isbegin_quest(7596) == 1)
+			erasequest 7596;
+		mes "[니드호그]";
+		if (.@fast_mode)
+			mes "간소화 진행으로 마신전을 생성했습니다.";
+		else
+			mes "마신전 입구를 열었습니다.";
+		mes "옆의 나무를 통해 입장해 주세요.";
+		cutin "ep14_nyd04.bmp",2;
+		close3;
+	case 2:	// todo, custom text
+		mes "[니드호그]";
+		mes "절망의 신을 쓰러뜨리셨군요!";
+		mes "그의 야망은 지나치게 컸습니다.";
+		mes "새로운 세계를 만들고 신이 되겠다는 말만 반복했지요.";
+		cutin "ep14_nyd03.bmp",2;
+		next;
+		mes "[니드호그]";
+		mes "하지만 결국 스스로 만들어 낸 것은 아무것도 없었습니다.";
+		mes "마족의 육체를 버리고 다시 태어났지만, 그 모습조차 기존의 신을 흉내 낸 것에 불과했습니다.";
+		next;
+		mes "[니드호그]";
+		mes "결국 인간과 닮은 모습이 되었을 뿐이고,";
+		mes "신이라는 틀에서도 벗어나지 못했습니다.";
+		mes "스스로 불행을 불러들인 셈입니다.";
+		cutin "ep14_nyd02.bmp",2;
+		next;
+		cutin "ep14_nyd04.bmp",2;
+		mes "[니드호그]";
+		mes "토벌을 확인해 드릴 테니 지휘관에게 보고해 주세요.";
+		mes "감사합니다!";
+		setquest 7597;
+		erasequest 7593;
+		for ( .@quest = 7601; .@quest < 7605; .@quest++ ) {
+			if (isbegin_quest(.@quest))
+				erasequest .@quest;
+		}
+		if (isbegin_quest(7596))
+			erasequest 7596;
+		close3;
+	}
+}
+
+moro_cav,45,75,0	script	세계수와 닮은 나무#eom_gate	CLEAR_NPC,{
+	switch( checkquest(7593,HUNTING) ) {
+	case -1:
+		mes "[니드호그]";
+		mes "죄송하지만 지휘관의 허가 없이는 들어갈 수 없습니다.";
+		mes "마신 토벌 임무를 받은 상태여야 입장할 수 있습니다.";
+		cutin "ep14_nyd01.bmp",2;
+		next;
+		mes "[니드호그]";
+		mes "지휘관 히바 아지프에게서 '마신 토벌' 임무를 받아 주세요.";
+		close3;
+	case 0:
+	case 1:
+		mes "나무에 손을 대자 낯선 마력의 흐름이 느껴진다.";
+		mes "이 흐름을 따라가면 신전 깊숙한 곳으로 갈 수 있을 것 같다.";
+		next;
+		if (select( "입장한다.", "그만둔다." ) == 2) {
+			mes "[니드호그]";
+			mes "알겠습니다.";
+			mes "준비할 시간이 필요하신 거군요.";
+			mes "천천히 준비하세요. 여기서 기다리겠습니다.";
+			cutin "ep14_nyd04.bmp",2;
+			close3;
+		}
+		switch( instance_enter("Temple of the Demon God") ) {
+		case IE_NOMEMBER:
+			mes "[니드호그]";
+			mes "이곳은 혼자 탐험하기에는 너무 위험합니다.";
+			mes "파티를 구성한 뒤 동료들과 함께 와 주세요.";
+			cutin "ep14_nyd01.bmp",2;
+			close3;
+		case IE_NOINSTANCE:
+			mes "[니드호그]";
+			mes "현재 파티 이름으로 발급된 입장 권한이 없습니다.";
+			mes "파티장이 입장 신청을 하면 신전으로 향하는 문을 열겠습니다.";
+			cutin "ep14_nyd01.bmp",2;
+			next;
+			mes "[니드호그]";
+			mes "원정대가 정한 절차를 따라 주세요.";
+			mes "모두의 안전을 위한 일입니다.";
+			close3;
+		case IE_OTHER:	// todo, custom text
+			mes "[니드호그]";
+			mes "마력의 흐름이 불안정해졌습니다.";
+			mes "간신히 만든 틈이 흔들리고 있습니다.";
+			mes "지금은 입장할 수 없을 것 같습니다.";
+			cutin "ep14_nyd01.bmp",2;
+			close3;
+		case IE_OK:
+			mapannounce "moro_cav", "" + strcharinfo(0) + " 님이 속한 파티 " + getpartyname( getcharid(1) ) + "에서 마신전에 입장합니다.",bc_map;
+			// warp "1@eom",101,16;
+			end;
+		}
+	case 2:	// todo, custom text
+		mes "[니드호그]";
+		mes "절망의 신을 쓰러뜨리셨군요!";
+		mes "그의 야망은 지나치게 컸습니다.";
+		mes "새로운 세계를 만들고 신이 되겠다는 말만 반복했지요.";
+		cutin "ep14_nyd01.bmp",2;
+		next;
+		mes "[니드호그]";
+		mes "하지만 결국 스스로 만들어 낸 것은 아무것도 없었습니다.";
+		mes "마족의 육체를 버리고 다시 태어났지만, 그 모습조차 기존의 신을 흉내 낸 것에 불과했습니다.";
+		cutin "ep14_nyd02.bmp",2;
+		next;
+		mes "[니드호그]";
+		mes "결국 인간과 닮은 모습이 되었을 뿐이고,";
+		mes "신이라는 틀에서도 벗어나지 못했습니다.";
+		mes "스스로 불행을 불러들인 셈입니다.";
+		cutin "ep14_nyd03.bmp",2;
+		next;
+		cutin "ep14_nyd04.bmp",2;
+		mes "[니드호그]";
+		mes "토벌을 확인해 드릴 테니 지휘관에게 보고해 주세요.";
+		mes "감사합니다!";
+		setquest 7597;
+		erasequest 7593;
+		for ( .@quest = 7601; .@quest < 7605; .@quest++ ) {
+			if (isbegin_quest(.@quest))
+				erasequest .@quest;
+		}
+		if (isbegin_quest(7596))
+			erasequest 7596;
+		close3;
+	}
+}
+
+1@eom,1,1,0	script	#demon_god_variables	-1,{
+	end;
+OnVariableReset:
+	'boss_id = 0;
+	'boss_hp = 0;
+	'bossx = 'bossy = 0;
+	'boss_phase = 0;
+	'icestunami = false;
+	'spawn = false;
+	'miniboss_id[0] = 'miniboss_id[1] = 0;
+	'combo_is_allowed = false;
+	'flowing_lava_deactivate[0] = 'flowing_lava_deactivate[1] = false;
+	end;
+OnMyMobDead:
+	if (!playerattached())	// shouldn't happen
+		end;
+	.@mob_id = killedrid;
+	sleep 5000;
+	monster 'map_eom$,0,0,"--ja--", .@mob_id,1, instance_npcname("#demon_god_variables") + "::OnMyMobDead";
+	end;
+OnInstanceInit:
+	'NEED_EOM_FAST = 0;
+	'NEED_EOM_MODE_SET = 0;
+	donpcevent instance_npcname("#demon_god_variables") + "::OnVariableReset";
+
+	'map_eom$ = instance_mapname("1@eom");
+	'step = 0;
+	'inject_soul = 0;
+
+	// Entrance
+	disablenpc instance_npcname("#door_mobmaster");
+	disablenpc instance_npcname("빈 영혼 구슬#ahat01");
+	disablenpc instance_npcname("빈 영혼 구슬#shnaim01");
+	disablenpc instance_npcname("채워진 영혼 구슬#ahat02");
+	disablenpc instance_npcname("채워진 영혼 구슬#shnaim02");
+	disablenpc instance_npcname("#gate_to_center");
+
+	// Center to Ice
+	disablenpc instance_npcname("수상한 소년#mockid01");
+	disablenpc instance_npcname("#gate_to_ice");
+	disablenpc instance_npcname("로키#eomloki01");
+	disablenpc instance_npcname("니드호그#eomnyd01");
+	disablenpc instance_npcname("브리나래아#brinpc01");
+	disablenpc instance_npcname("#ice_hpcheck");
+	disablenpc instance_npcname("니드호그#eomnyd02");
+	disablenpc instance_npcname("#ice_to_center");
+
+	// Center to Fire
+	disablenpc instance_npcname("모로크#mockid02");
+	disablenpc instance_npcname("#gate_to_fire");
+	disablenpc instance_npcname("#fire_event01");
+	disablenpc instance_npcname("#skollmaster");
+	disablenpc instance_npcname("#loco_call");
+	disablenpc instance_npcname("#fire_combo");
+	disablenpc instance_npcname("흐르는 용암#lavapond01");
+	disablenpc instance_npcname("흐르는 용암#lavapond02");
+	disablenpc instance_npcname("굳은 용암#lavaseal01");
+	disablenpc instance_npcname("굳은 용암#lavaseal02");
+	disablenpc instance_npcname("#lavazone11");
+	disablenpc instance_npcname("#lavazone12");
+	disablenpc instance_npcname("#lavazone21");
+	disablenpc instance_npcname("#lavazone22");
+	disablenpc instance_npcname("니드호그#eomnyd03");
+	disablenpc instance_npcname("#fire_to_center");
+
+	// Center to Last
+	disablenpc instance_npcname("#gate_to_last");
+	disablenpc instance_npcname("수상한 청년#mocadt01");
+	disablenpc instance_npcname("#moc_master");
+	disablenpc instance_npcname("#despair_god_main");
+	disablenpc instance_npcname("#mk_hpcheck");
+	disablenpc instance_npcname("#moc_origin");
+	disablenpc instance_npcname("#morocc_god");
+	disablenpc instance_npcname("#despair_main");
+	disablenpc instance_npcname("니드호그#eomnyd04");
+
+	// mimic permanent spawn
+	.@event$ = instance_npcname("#demon_god_variables") + "::OnMyMobDead";
+	monster 'map_eom$,0,0,"--ja--", 3101,3, .@event$;	// MM_MANA_WHITE
+	monster 'map_eom$,0,0,"--ja--", 3102,3, .@event$;	// MM_MANA_RED
+	monster 'map_eom$,0,0,"--ja--", 3103,3, .@event$;	// MM_MANA_YELLOW
+	end;
+}
+
+1@eom,101,43,3	script	마신의 사도 아하트#ahat	4_HUMAN_GERUTOO,{
+	cutin "ep13_ahat_" + (Sex ? "f" : "m") + ".bmp",2;	// note: cutin f for male, m for female
+	// if (is_party_leader() == false || checkquest(7593,HUNTING) != 1 || isbegin_quest(7596) != 0) {	// quest to 'var for reload
+	if (is_party_leader() == false || checkquest(7593,HUNTING) != 1 || 'step != 0) {
+		mes "[아하트]";
+		mes "환영합니다.";
+		mes "이곳은 마신전입니다.";
+		mes "오늘 여러분을 맞이하게 되어 영광입니다.";
+		close3;
+	}
+	if (!'NEED_EOM_MODE_SET) {
+		'NEED_EOM_MODE_SET = 1;
+		'NEED_EOM_FAST = (#NEED_MD_EOM_CLEAR && NEED_EOM_FAST_PENDING);
+		NEED_EOM_FAST_PENDING = 0;
+	}
+
+	.@ahat$ = instance_npcname("마신의 사도 아하트#ahat");
+	if ('NEED_EOM_FAST) {
+		mes "[아하트]";
+		mes "다시 이곳에 왔군요.";
+		mes "두 사도를 쓰러뜨리고 영혼을 구슬에 주입해 문을 여세요.";
+	}
+	else {
+	mes "[아하트]";
+	mes "결국 여기까지 왔군요.";
+	mes "정말 끈질긴 분들입니다.";
+	mes "하하, 제가 여기 있어서 놀랐습니까?";
+	npctalk "아하트: 결국 여기까지 왔군요.", .@ahat$;
+	next;
+	mes "[아하트]";
+	mes "전혀 예상하지 못했습니까?";
+	mes "정식으로 소개하겠습니다.";
+	mes "저는 마신의 첫 번째 종, 아하트입니다.";
+	npctalk "아하트: 정식으로 소개하지요. 저는 마신의 첫 번째 종, 아하트입니다.", .@ahat$;
+	next;
+	mes "[아하트]";
+	mes "오늘 이곳에서 목숨을 잃게 될지도 모르겠군요.";
+	mes "그런 눈으로 보지 마세요. 모든 것이 계획대로입니다.";
+	npctalk "아하트: 오늘 목숨을 잃더라도 모든 것은 계획대로입니다.", .@ahat$;
+	next;
+	mes "[아하트]";
+	mes "주인께서는 쉬나임과 제가 여러분을 시험하기를 원하십니다.";
+	mes "여러분이 손님이 될 자격이 있는지 확인하기 위해서지요.";
+	npctalk "아하트: 주인께서는 쉬나임과 제가 여러분의 자격을 시험하기를 원하십니다.", .@ahat$;
+	next;
+	mes "[아하트]";
+	mes "여러분의 힘만으로 여기까지 왔다고 생각한다면,";
+	mes "큰 착각입니다.";
+	npctalk "아하트: 여러분의 힘만으로 여기까지 왔다고 생각한다면 큰 착각입니다.", .@ahat$;
+	next;
+	mes "[아하트]";
+	mes "모든 것은 주인께서 계획하신 대로입니다.";
+	mes "우선 이 문부터 열 수 있는지 지켜보겠습니다.";
+	npctalk "아하트: 모든 것은 계획대로입니다. 우선 이 문부터 열어 보시지요.", .@ahat$;
+	}
+	if (isbegin_quest(7596) == 0)
+		setquest 7596;
+	if ('step != 0)
+		close3;
+	'step = 1;
+	close2;
+	cutin "",255;
+	setpcblock PCBLOCK_NPC, true;
+	if ('NEED_EOM_FAST)
+		sleep2 200;
+	else
+		sleep2 1000;
+	setpcblock PCBLOCK_NPC, false;
+	disablenpc .@ahat$;
+	warpparty 'map_eom$,101,16,getcharid(1),'map_eom$,2,2;
+	donpcevent instance_npcname("#door_mobmaster") + "::OnStart";
+	end;
+}
+
+1@eom,1,1,0	script	#door_mobmaster	CLEAR_NPC,{
+	end;
+OnStart:
+	'apostle = 10;
+	enablenpc instance_npcname("#door_mobmaster");
+	.@label$ = instance_npcname("#door_mobmaster") + "::OnMyMobDead";
+	monster 'map_eom$,102,30, "마신의 사도 아하트",3105,1, .@label$;	// MM_GB_MOROCC_1
+	setunitdata $@mobid[0], UMOB_HP, 5000000;
+	monster 'map_eom$, 98,30, "마신의 파편",1918,1, .@label$;
+	monster 'map_eom$,100,30, "마신의 파편",1918,1, .@label$;
+	monster 'map_eom$,104,30, "마신의 파편",1918,1, .@label$;
+	monster 'map_eom$,106,30, "마신의 파편",1918,1, .@label$;
+	sleep 2000;
+	mapannounce 'map_eom$, "마신의 사도 아하트와 쉬나임을 처치하고 영혼을 모으세요.", bc_map, 0x00ff00;
+	monster 'map_eom$,102,40, "마신의 사도 쉬나임",3106,1, .@label$;	// MM_GB_MOROCC_4
+	setunitdata $@mobid[0], UMOB_HP, 5000000;
+	monster 'map_eom$, 98,40, "마신의 파편",1921,1, .@label$;
+	monster 'map_eom$,100,40, "마신의 파편",1921,1, .@label$;
+	monster 'map_eom$,104,40, "마신의 파편",1921,1, .@label$;
+	monster 'map_eom$,106,40, "마신의 파편",1921,1, .@label$;
+	sleep 3000;
+	mapannounce 'map_eom$, "두 사도의 영혼이 마신전의 문을 여는 열쇠입니다.", bc_map, 0x00ff00;
+	end;
+OnMyMobDead:
+	'apostle -= 1;
+	if ('apostle == 0) {
+		'step = 2;
+		disablenpc instance_npcname("#door_mobmaster");
+		enablenpc instance_npcname("빈 영혼 구슬#shnaim01");
+		enablenpc instance_npcname("빈 영혼 구슬#ahat01");
+		mapannounce 'map_eom$, "마신전의 문을 여는 영혼 구슬이 활성화되었습니다.", bc_map, 0x00ff00;
+	}
+	end;
+}
+
+1@eom,104,56,0	script	빈 영혼 구슬#ahat01	CLEAR_NPC,{
+	if ('step == 2) {
+		if (strnpcinfo(2) == "ahat01")
+			callsub( S_Globe, 1, "아하트", 6713, "ahat02" );
+		else
+			callsub( S_Globe, 2, "쉬나임", 6714, "shnaim02" );
+	}
+	end;
+S_Globe:
+	.@bit = getarg(0);
+	.@item_id = getarg(2);
+	.@visible_npc_name$ = getarg(1);
+	.@hidden_npc_name$ = getarg(3);
+
+	disable_items;
+	if (is_party_leader() == false || isbegin_quest(7596) != 1 || 'step != 2) {
+		mes "이 장치는 파티장만 조작할 수 있습니다.";
+		close;
+	}
+	if (countitem(.@item_id) < 1) {
+		mes "영혼 구슬을 활성화하려면 " + getitemname(.@item_id) + " 1개가 필요합니다.";
+		close;
+	}
+	mes "빈 영혼 구슬에 " + getitemname(.@item_id) + "을 주입합니다.";
+	next;
+	specialeffect EF_SPHERE;
+	if ('NEED_EOM_FAST)
+		progressbar "000000",1;
+	else
+		progressbar "000000",10;
+	if (!('inject_soul & .@bit) && countitem(.@item_id) > 0) {
+		'inject_soul |= .@bit;
+		delitem .@item_id,1;
+		specialeffect EF_ENTRY;
+		disablenpc instance_npcname( strnpcinfo(0) );
+		enablenpc instance_npcname("채워진 영혼 구슬#" + .@hidden_npc_name$);
+		specialeffect EF_ENTRY,AREA, instance_npcname("채워진 영혼 구슬#" + .@hidden_npc_name$);
+		specialeffect EF_LEVEL99_3,AREA, instance_npcname("채워진 영혼 구슬#" + .@hidden_npc_name$);
+		mes getitemname(.@item_id) + "을 사용해 영혼 구슬을 활성화했습니다.";
+		if ('inject_soul == 3 && 'step == 2) {
+			'step = 3;
+			if (isbegin_quest(7596) == 1)
+				erasequest 7596;// Qualifications of the Guests
+			enablenpc instance_npcname("#gate_to_center");
+			enablenpc instance_npcname("수상한 소년#mockid01");
+			specialeffect EF_MAPPILLAR,AREA, instance_npcname("#gate_to_center");
+			specialeffect EF_LEVEL99_3,AREA, instance_npcname("#gate_to_center");
+		}
+	}
+	close;
+}
+1@eom,98,56,0	duplicate(빈 영혼 구슬#ahat01)	빈 영혼 구슬#shnaim01	CLEAR_NPC
+
+1@eom,104,56,0	duplicate(dummy_npc)	채워진 영혼 구슬#ahat02	CLEAR_NPC
+1@eom,98,56,0	duplicate(dummy_npc)	채워진 영혼 구슬#shnaim02	CLEAR_NPC
+
+1@eom,101,58,0	script	#gate_to_center	WARPNPC,1,1,{
+	end;
+OnTouch_:
+	if (isbegin_quest(7596) == 1)
+		erasequest 7596;
+	warp 'map_eom$,98,115;
+	end;
+}
+
+1@eom,100,122,3	script	수상한 소년#mockid01	4_F_MOCBOY,{
+	if ('step != 3)
+		end;
+	if (is_party_leader() == false || checkquest(7593,HUNTING) != 1) {
+		mes "[수상한 소년]";
+		mes "하찮은 존재여.";
+		mes "감히 신이 될 존재에게 손을 대다니!";
+		close;
+	}
+	if ('NEED_EOM_FAST) {
+		mes "[수상한 소년]";
+		mes "모로크는 자신이 신으로 재탄생했다고 선언하며";
+		mes "태초의 서리를 본뜬 존재를 불러냈습니다.";
+		close2;
+		cutin "",255;
+		'step = 4;
+		disablenpc instance_npcname("수상한 소년#mockid01");
+		donpcevent instance_npcname("#gate_to_ice") + "::OnEnable";
+		enablenpc instance_npcname("니드호그#eomnyd01");
+		enablenpc instance_npcname("브리나래아#brinpc01");
+		end;
+	}
+
+	cutin "morocc_kid.bmp",2;
+	mes "[수상한 소년]";
+
+	mes "여기까지 온 것은 칭찬해 주마.";
+	mes "훌륭한 말이 되어 주었구나.";
+	next;
+	select("무슨 말을 하는 거지?");
+	unittalk getcharid(3), "" + strcharinfo(0) + " : 무슨 말을 하는 거지?";
+	mes "[수상한 소년]";
+	mes "나는 이날을 기다려 왔다.";
+	mes "마계의 구석을 벗어나 온 우주를 지배할 날을 말이다.";
+	npctalk "수상한 소년: 마계를 벗어나 온 우주를 지배할 이날을 기다려 왔다.";
+	sleep2 2000;
+	next;
+	mes "[수상한 소년]";
+	mes "그러기 위해서는 낡은 육체를 버려야 했다.";
+	mes "그래서 죽었다. 정확히는 너희가 나를 죽이도록 내버려 둔 것이지.";
+	npctalk "수상한 소년: 새 육체를 얻기 위해 너희가 나를 죽이도록 내버려 두었다.";
+	sleep2 2000;
+	next;
+	mes "[수상한 소년]";
+	mes "죽음은 재탄생을 위한 필수 과정이었다.";
+	mes "그리고 너희가 다시 나를 되살렸다.";
+	npctalk "수상한 소년: 죽음 뒤에 다시 태어났고, 그 일도 너희가 해냈다.";
+	sleep2 2000;
+	next;
+	mes "[수상한 소년]";
+	mes "이 모든 것은 내가 신으로 다시 태어나기 위한 계획이었다.";
+	npctalk "수상한 소년: 모든 것은 내가 신으로 다시 태어나기 위한 계획이었다.";
+	sleep2 2000;
+	next;
+	mes "[모로크]";
+	mes "그렇다, 어리석은 인간들이여!";
+	mes "나는 세계를 품기 위해 한 번 죽었다.";
+	mes "그리고 이 세계를 삼키기 위해 다시 태어났다.";
+	npctalk "모로크: 나는 세계를 품고 삼키기 위해 죽었다가 다시 태어났다.";
+	sleep2 2000;
+	next;
+	mes "[모로크]";
+	mes "새로운 세계를 만들고 그 창조주가 되겠다.";
+	mes "새로 태어난 내 땅에 처음 발을 들인 존재들에게 묻겠다.";
+	npctalk "모로크: 새로운 세계를 만들고 그 창조주가 되겠다.";
+	sleep2 2000;
+	next;
+	mes "[모로크]";
+	mes "나를 따라 새로운 세계의 탄생을 지켜보지 않겠느냐?";
+	npctalk "모로크: 나를 따라 새로운 세계의 탄생을 지켜보지 않겠느냐?";
+	close2;
+	setpcblock PCBLOCK_NPC, true;
+	cutin "",255;
+	sleep2 1000;
+	.@loki$ = instance_npcname("로키#eomloki01");
+	.@nidhogg$ = instance_npcname("니드호그#eomnyd01");
+	enablenpc .@loki$;
+	enablenpc .@nidhogg$;
+	npctalk "로키: 헛소리는 그만둬라. 파괴가 좋다고 솔직히 말해.", .@loki$;
+	sleep2 5000;
+	npctalk "로키: 이게 네가 말한 새로운 세계라면 실망스럽군.", .@loki$;
+	sleep2 5000;
+	npctalk "로키: 육체를 태워도 네 힘은 태초의 이미르에 미치지 못한다.", .@loki$;
+	sleep2 5000;
+	npctalk "로키: 세계수까지 훔쳐야 했다는 것부터 창조성과는 거리가 멀지.", .@loki$;
+	sleep2 5000;
+	npctalk "로키: 네 모습을 똑바로 봐라. 창조주라 믿는 것 자체가 망상이다.", .@loki$;
+	sleep2 5000;
+	npctalk "니드호그: 동의합니다. 당신은 이 세계에 필요하지 않습니다.", .@nidhogg$;
+	sleep2 4000;
+	npctalk "니드호그: 세계수조차 당신의 존재를 거부하고 있습니다!", .@nidhogg$;
+	sleep2 4000;
+	npctalk "니드호그: 세계수의 수호자로서 당신을 이 세계에서 제거하겠습니다.", .@nidhogg$;
+	sleep2 2000;
+	npctalk "모로크: 흥!";
+	sleep2 2000;
+	npctalk "모로크: 필멸자 주제에 죽음을 재촉하는구나.";
+	sleep2 3000;
+	npctalk "모로크: 너희의 살과 피를 새 세계의 제물로 삼겠다.";
+	sleep2 3000;
+	npctalk "모로크: 태초의 어둠을 본 적이 있느냐?";
+	sleep2 3000;
+	npctalk "모로크: 생명의 시작인 서리를 본 적이 있느냐?";
+	sleep2 6000;
+	npctalk "모로크: 내가 되살린 아우둠라의 서리를 보아라.";
+	sleep2 3000;
+	specialeffect EF_ENTRY;
+	if ('step == 3) {
+		'step = 4;
+		disablenpc instance_npcname("수상한 소년#mockid01");
+		donpcevent instance_npcname("#gate_to_ice") + "::OnEnable";
+		enablenpc instance_npcname("니드호그#eomnyd01");
+		enablenpc instance_npcname("브리나래아#brinpc01");
+		npctalk "로키: 도망치는 거냐?", .@loki$;
+		sleep2 2000;
+		disablenpc .@loki$;
+	}
+	setpcblock PCBLOCK_NPC, false;
+	end;
+}
+
+1@eom,91,120,0	script	#gate_to_ice	WARPNPC,1,1,{
+	end;
+OnEnable:
+	.@gate_to_ice = instance_npcname("#gate_to_ice");
+	enablenpc instance_npcname("#gate_to_ice");
+	specialeffect EF_ICECRASH;
+	sleep 1000;
+	specialeffect EF_MAPPILLAR;
+	end;
+OnTouch_:
+	if (isbegin_quest(7601) == 0 && isbegin_quest(7602) == 0)
+		setquest 7601;
+	warp 'map_eom$,61,88;
+	end;
+}
+
+1@eom,95,122,5	script	로키#eomloki01	4_M_ROKI2,{
+	mes "[로키]";
+	mes "한심하군.";
+	mes "보기에도 역겹다.";
+	close;
+}
+
+1@eom,94,120,5	script	니드호그#eomnyd01	4_F_NYDHOG,2,2,{
+	if ('step < 4 || is_party_leader() == false)
+		end;
+	if (getmercinfo(0) > 0) {
+		mes "[니드호그]";
+		mes "이미 용병과 함께하고 있군요.";
+		mes "현재 용병을 해고한 뒤 제 도움을 받아 주시겠습니까?";
+		close;
+	}
+	switch( checkquest(7605,PLAYTIME) ) {
+	case -1:
+		break;
+	case 0:
+	case 1:
+		mes "[니드호그]";
+		mes "이미 한 번 도움을 드렸습니다.";
+		mes "부디 조심하세요!";
+		close;
+	case 2:
+		erasequest 7605;
+		break;
+	}
+	setnpcdisplay instance_npcname("니드호그#eomnyd01"), 3087;
+	mes "[니드호그]";
+	mes "" + strcharinfo(0) + ",";
+	mes "이번 전투에서는 제가 힘을 보태겠습니다.";
+	npctalk "니드호그: 이번 전투에서는 제가 힘을 보태겠습니다.";
+	specialeffect EF_SPHERE;
+	next;
+	mes "[니드호그]";
+	mes "수호자로서의 제 임무는 아직 끝나지 않았습니다.";
+	npctalk "니드호그: 수호자로서의 제 임무는 아직 끝나지 않았습니다.";
+	next;
+	mercenary_create 3087,1800000;// M_NYDHOG
+	mes "^4d4dff수호자 니드호그가 용병으로 합류했습니다.^000000";
+	setquest 7605;// Guardian's Blessing
+	disablenpc instance_npcname("니드호그#eomnyd01");
+	close;
+
+OnTouch:
+	if ('step >= 4 && is_party_leader())
+		npctalk "니드호그: 잠깐만요!";
+	end;
+}
+
+// Center -> Ice
+1@eom,48,88,0	script	차가운 마력 결정#eom01	4_ENERGY_BLUE,{
+	getitem 22566,1;// Frost_Crystal
+	specialeffect EF_LEVEL99_4;
+	disablenpc instance_npcname( strnpcinfo(0) );
+	end;
+}
+1@eom,51,103,0	duplicate(차가운 마력 결정#eom01)	차가운 마력 결정#eom02	4_ENERGY_BLUE
+1@eom,24,109,0	duplicate(차가운 마력 결정#eom01)	차가운 마력 결정#eom03	4_ENERGY_BLUE
+1@eom,26,128,0	duplicate(차가운 마력 결정#eom01)	차가운 마력 결정#eom04	4_ENERGY_BLUE
+1@eom,40,140,0	duplicate(차가운 마력 결정#eom01)	차가운 마력 결정#eom05	4_ENERGY_BLUE
+1@eom,38,139,0	duplicate(차가운 마력 결정#eom01)	차가운 마력 결정#eom06	4_ENERGY_BLUE
+1@eom,51,149,0	duplicate(차가운 마력 결정#eom01)	차가운 마력 결정#eom07	4_ENERGY_BLUE
+1@eom,49,148,0	duplicate(차가운 마력 결정#eom01)	차가운 마력 결정#eom08	4_ENERGY_BLUE
+
+1@eom,61,88,0	script	#icemob01	HIDDEN_WARP_NPC,2,1,{
+	end;
+OnTouch_:
+	if ('step >= 4) {
+		disablenpc instance_npcname("#icemob01");
+		areamonster 'map_eom$,40,93,48,101, "서리 거미",3088,4;	// MM_BRINARANEA_BABY
+	}
+	end;
+}
+
+1@eom,22,116,3	script	서리 거미#icemob02	3088,3,3,{
+	end;
+OnTouch_:
+	if ('step >= 4) {
+		disablenpc instance_npcname("서리 거미#icemob02");
+		monster 'map_eom$,22,116, "서리 거미",3088,1;	// MM_BRINARANEA_BABY
+		areamonster 'map_eom$,22,113,28,119, "서리 거미",3088,3;
+	}
+	end;
+}
+
+1@eom,53,134,3	script	서리 거미#icemob03	3088,3,3,{
+	end;
+OnTouch_:
+	if ('step >= 4) {
+		disablenpc instance_npcname("서리 거미#icemob03");
+		monster 'map_eom$,53,134, "서리 거미",3088,1;	// MM_BRINARANEA_BABY
+		areamonster 'map_eom$,47,133,53,139, "서리 거미",3088,3;
+	}
+	end;
+}
+
+1@eom,38,129,3	script	브리나래아#brinpc01	3091,10,10,{
+	end;
+OnTouch_:
+	if ('step == 4) {
+		'step = 5;
+		npctalk "브리나래아: 먹잇감이 제 발로 둥지에 들어왔구나.";
+		initnpctimer;
+	}
+	end;
+OnTimer3000:
+	npctalk "브리나래아: 오늘 밤 아이들이 배불리 먹겠구나. 호호호!";
+	disablenpc instance_npcname("브리나래아#brinpc01");
+	donpcevent instance_npcname("#ice_hpcheck") + "::OnSpawn";
+	end;
+OnTimer5000:
+	stopnpctimer;
+	unittalk 'boss_id, "요리를 시작해 볼까? 후후후.";
+	donpcevent instance_npcname("#ice_combo") + "::OnStart";
+	donpcevent instance_npcname("#ice_hpcheck") + "::OnStart";
+	end;
+}
+
+1@eom,2,3,0	script	#ice_hpcheck	CLEAR_NPC,{
+	end;
+OnSpawn:
+	enablenpc instance_npcname("#ice_hpcheck");
+	monster 'map_eom$,38,123, "브리나래아",3091,1, instance_npcname("#ice_hpcheck") + "::OnMyMobDead";	// MM_BRINARANEA
+	'boss_id = $@mobid[0];
+	getunitdata 'boss_id, .@data;
+	'boss_hp = .@data[UMOB_MAXHP];
+	unitskilluseid 'boss_id, "NPC_WIDEFREEZE",5;
+	end;
+OnStart:
+	initnpctimer;
+	end;
+
+OnTimer3000:
+	getunitdata 'boss_id, .@data;
+	.@hp = .@data[UMOB_HP];
+	if ('boss_hp < .@hp) {
+		'boss_hp = .@hp;
+		initnpctimer;
+		end;
+	}
+	if (('boss_hp - .@hp) > 2000000) {
+		'boss_hp = .@hp;
+		donpcevent instance_npcname("#super_heal") + "::OnStart";
+		initnpctimer;
+		end;
+	}
+	'boss_hp = .@hp;
+
+	if (.@hp > 69500000 && .@hp < 70000000) {
+		unittalk 'boss_id, "아이들아, 나오너라. 진수성찬이 제 발로 찾아왔다!";
+		donpcevent instance_npcname("#ice_hpcheck") + "::OnCallBaby";
+	}
+	else if (.@hp > 59500000 && .@hp < 60000000) {
+		unittalk 'boss_id, "아이들아, 식사 시간이다!";
+		donpcevent instance_npcname("#ice_hpcheck") + "::OnCallBaby";
+	}
+	else if (.@hp > 49500000 && .@hp < 50000000) {
+		unittalk 'boss_id, "아직 배부르지 않느냐? 어서 나오너라!";
+		donpcevent instance_npcname("#ice_hpcheck") + "::OnCallBaby";
+	}
+	else if (.@hp < 22200000 && 'icestunami == false)
+		donpcevent instance_npcname("#icestunami") + "::OnStart";
+	initnpctimer;
+	end;
+
+OnMyMobDead:
+	donpcevent instance_npcname("#ice_hpcheck") + "::OnEnd";
+	disablenpc instance_npcname("브리나래아#brinpc01");
+	stopnpctimer instance_npcname("#ice_combo");
+	stopnpctimer instance_npcname("#brinaranea_event_1");
+	stopnpctimer instance_npcname("#brinaranea_event_2");
+	stopnpctimer instance_npcname("#brinaranea_event_3");
+	stopnpctimer instance_npcname("#brinaranea_event_4");
+	stopnpctimer instance_npcname("브리나래아#brinpc01");
+	stopnpctimer instance_npcname("#super_heal");
+	// stopnpctimer instance_npcname("#icestunami");
+
+	enablenpc instance_npcname("니드호그#eomnyd02");
+	enablenpc instance_npcname("#ice_to_center");
+	enablenpc instance_npcname("모로크#mockid02");
+	mapannounce 'map_eom$, "니드호그: 브리나래아의 힘이 사라지며 새로운 이동 통로가 나타났습니다.", bc_map, 0x00ff00;
+	'step = 6;
+
+	donpcevent instance_npcname("#demon_god_variables") + "::OnVariableReset";
+	end;
+
+OnEnd:
+	stopnpctimer;
+	disablenpc instance_npcname("#ice_hpcheck");
+	killmonster 'map_eom$, instance_npcname("#ice_hpcheck") + "::OnMyMobDead";
+	end;
+
+OnCallBaby:
+	sleep 500;
+	if ('boss_id == 0)
+		end;
+	getunitdata 'boss_id, .@data;
+	'boss_hp = .@data[UMOB_HP];
+	killmonster 'map_eom$, instance_npcname("#ice_hpcheck") + "::OnMyMobDead";
+	monster 'map_eom$,38,123, "브리나래아",3091,1, instance_npcname("#ice_hpcheck") + "::OnMyMobDead";	// MM_BRINARANEA
+	'boss_id = $@mobid[0];
+	setunitdata 'boss_id, UMOB_HP, 'boss_hp;
+	if ('spawn == true)
+		end;
+	'spawn = true;
+	unitskilluseid 'boss_id, "NPC_WIDEFREEZE",5;
+	sleep 1000;
+	if ('boss_id == 0)
+		end;
+	getunitdata 'boss_id, .@data;
+	areamonster 'map_eom$,(.@data[UMOB_X]-5),(.@data[UMOB_Y]-5),(.@data[UMOB_X]+5),(.@data[UMOB_Y]+5), " ",3088,5;	// MM_BRINARANEA_BABY
+	sleep 15000;
+	'spawn = false;
+	end;
+
+OnTest_hp:
+	if ('boss_id && mobcount( 'map_eom$, instance_npcname("#ice_hpcheck") + "::OnMyMobDead" ) > 0)
+		setunitdata 'boss_id, UMOB_HP, 2000000;
+	end;
+}
+
+1@eom,2,6,0	script	#ice_combo	CLEAR_NPC,{
+	end;
+OnStart:
+	initnpctimer;
+	end;
+OnTimer10000:
+	donpcevent instance_npcname("#brinaranea_event_" + rand(1,4)) + "::OnStart";
+	stopnpctimer;
+	end;
+}
+
+1@eom,1,1,0	script	#brinaranea_event_1	-1,{
+	end;
+OnStart:
+	initnpctimer;
+	unittalk 'boss_id, "공연을 시작하지!";
+	end;
+OnTimer1000:
+	unitskilluseid 'boss_id, "NPC_WIDEFREEZE",5;
+	end;
+OnTimer2500:
+	getunitdata 'boss_id, .@data;
+	'bossx = .@data[UMOB_X];
+	'bossy = .@data[UMOB_Y];
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,('bossx-3),('bossy+3),-50;
+	end;
+OnTimer4000:
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,('bossx+3),('bossy+3),-50;
+	end;
+OnTimer5500:
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,('bossx+3),('bossy-3),-50;
+	end;
+OnTimer7000:
+	stopnpctimer;
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,('bossx-3),('bossy-3),-50;
+	donpcevent instance_npcname("#ice_combo") + "::OnStart";
+	end;
+}
+
+1@eom,1,1,0	script	#brinaranea_event_2	-1,{
+	end;
+OnStart:
+	initnpctimer;
+	unittalk 'boss_id, "재미있는 놀이구나. 맛있어 보이는군!";
+	end;
+OnTimer2000:
+	unitskilluseid 'boss_id, "NPC_WIDEFREEZE",5;
+	end;
+OnTimer4000:
+	stopnpctimer;
+	getunitdata 'boss_id, .@data;
+	if (.@data[UMOB_TARGETID] > 0)
+		if (getunittype(.@data[UMOB_TARGETID]) == BL_PC)
+			unitskilluseid 'boss_id,"WZ_JUPITEL",28, .@data[UMOB_TARGETID], -50;
+	donpcevent instance_npcname("#ice_combo") + "::OnStart";
+	end;
+}
+
+1@eom,1,1,0	script	#brinaranea_event_3	-1,{
+	end;
+OnStart:
+	initnpctimer;
+	unittalk 'boss_id, "나와 놀아 보겠느냐?";
+	end;
+OnTimer1000:
+	unitskilluseid 'boss_id, "NPC_WIDEFREEZE",5;
+	end;
+OnTimer2500:
+	getunitdata 'boss_id, .@data;
+	'bossx = .@data[UMOB_X];
+	'bossy = .@data[UMOB_Y];
+	unitskillusepos 'boss_id,"WZ_VERMILION",5,'bossx,'bossy,-50;
+	end;
+OnTimer3500:
+	callsub( S_Skill,3 );
+	end;
+OnTimer4500:
+	callsub( S_Skill,4 );
+	end;
+OnTimer5500:
+	callsub( S_Skill,5 );
+	end;
+OnTimer6500:
+	callsub( S_Skill,6 );
+	end;
+OnTimer7500:
+	callsub( S_Skill,7 );
+	stopnpctimer;
+	donpcevent instance_npcname("#ice_combo") + "::OnStart";
+	end;
+S_Skill:
+	.@d = getarg(0);
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20, ('bossx - .@d), ('bossy + .@d),-50;
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20, ('bossx + .@d), ('bossy + .@d),-50;
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20, ('bossx + .@d), ('bossy - .@d),-50;
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20, ('bossx - .@d), ('bossy - .@d),-50;
+	return;
+}
+
+1@eom,1,1,0	script	#brinaranea_event_4	-1,{
+	end;
+OnStart:
+	initnpctimer;
+	unittalk 'boss_id, "하하하...";
+	end;
+OnTimer1000:
+	unitskilluseid 'boss_id,"AL_HEAL",11;
+	end;
+OnTimer2000:
+	unitskilluseid 'boss_id,"AL_HEAL",11;
+	end;
+OnTimer3000:
+	stopnpctimer;
+	unitskilluseid 'boss_id,"AL_HEAL",11;
+	getunitdata 'boss_id, .@data;
+	'boss_hp = .@data[UMOB_HP];
+	donpcevent instance_npcname("#ice_combo") + "::OnStart";
+	end;
+}
+
+1@eom,1,1,0	script	#super_heal	-1,{
+	end;
+OnStart:
+	initnpctimer;
+	unittalk 'boss_id, "성가신 것들! 아우둠라의 서리를 방해하지 마라!";
+	unitskilluseid 'boss_id, "NPC_ALLHEAL",1;
+	getunitdata 'boss_id, .@data;
+	'boss_hp = .@data[UMOB_HP];
+	end;
+OnTimer2000:
+	stopnpctimer;
+	mapannounce 'map_eom$, "니드호그: 안 돼요... 완전히 회복했습니다.", bc_map, 0x00ff00;
+	end;
+}
+
+1@eom,2,4,0	script	#icestunami	CLEAR_NPC,{
+	end;
+OnStart:
+	'icestunami = true;
+	initnpctimer;
+	unittalk 'boss_id, "지옥의 사냥개들아, 이것도 견딜 수 있느냐?";
+	getunitdata 'boss_id, .@data;
+	'x_icemine = .@data[UMOB_X];
+	'y_icemine = .@data[UMOB_Y];
+	callsub( S_Spawn,6 );
+OnTimer2000: callsub( S_Spawn,3 );
+OnTimer4000: callsub( S_Spawn,0 );
+OnTimer6000: callsub( S_Spawn,-3 );
+OnTimer8000: callsub( S_Spawn,-6 );
+OnTimer13000:
+	killmonster 'map_eom$, instance_npcname("#icestunami") + "::OnMobDead";
+	end;
+OnTimer23000:
+	'icestunami = false;
+	'x_icemine = 0;
+	'y_icemine = 0;
+	stopnpctimer;
+	end;
+S_Spawn:
+	.@y = 'y_icemine + getarg(0);
+	.@label$ = instance_npcname("#icestunami") + "::OnMobDead";
+	monster 'map_eom$,('x_icemine-6),.@y," ",2943,1, .@label$;// MM_ICE_MINE
+	monster 'map_eom$,('x_icemine-3),.@y," ",2943,1, .@label$;
+	monster 'map_eom$,  ('x_icemine),.@y," ",2943,1, .@label$;
+	monster 'map_eom$,('x_icemine+3),.@y," ",2943,1, .@label$;
+	monster 'map_eom$,('x_icemine+6),.@y," ",2943,1, .@label$;
+	end;
+OnMobDead:
+	end;
+}
+
+1@eom,59,147,3	script	니드호그#eomnyd02	4_F_NYDHOG,{
+	if ('step < 6)
+		end;
+	if (isbegin_quest(7602) == 0 && checkquest(7601,HUNTING) == 2) {
+		mes "[니드호그]";
+		mes "힘겨운 전투였습니다.";
+		mes "충분하지는 않겠지만 성장에 도움이 되기를 바랍니다.";
+		next;
+		mes "^4d4dff브리나래아 처치 보상으로 많은 경험치를 획득했습니다.^000000";
+		erasequest 7601;// Temple of the Demon God Phase 1
+		setquest 7602;// Temple of the Demon God Phase 1 Completed
+		getexp 1000000,500000;
+		close;
+	}
+	mes "[니드호그]";
+	mes "이 끔찍한 장소가 태초의 서리를 흉내 낼 수 있을까요?";
+	mes "그렇다고는 할 수 없습니다.";
+	mes "스스로 만든 것이 하나도 없는데 어떻게 자신을 창조주라 믿는 걸까요?";
+	close;
+}
+
+1@eom,67,149,0	script	#ice_to_center	WARPNPC,1,1,{
+	end;
+OnTouch_:
+	if (isbegin_quest(7602) == 0 && checkquest(7601,HUNTING) == 2) {
+		mes "[니드호그]";
+		mes "힘겨운 전투였습니다.";
+		mes "충분하지는 않겠지만 성장에 도움이 되기를 바랍니다.";
+		next;
+		mes "^4d4dff브리나래아 처치 보상으로 많은 경험치를 획득했습니다.^000000";
+		setquest 7602;
+		erasequest 7601;
+		getexp 1000000,500000;
+		close;
+	}
+	warp 'map_eom$,98,115;
+	end;
+}
+
+// Center to Fire
+1@eom,100,122,3	script	모로크#mockid02	4_F_MOCBOY,{
+	if ('step != 6 || is_party_leader() == false || checkquest(7593,HUNTING) != 1)
+		end;
+	if ('NEED_EOM_FAST) {
+		mes "[모로크]";
+		mes "이번에는 태양을 삼킨 늑대의 모조품을 상대해 보아라.";
+	}
+	else {
+		cutin "morocc_kid.bmp",2;
+		mes "[모로크]";
+
+	mes "제법이군.";
+	mes "태양을 삼킨 늑대도 상대할 수 있겠느냐?";
+	npctalk "모로크: 제법이군. 태양을 삼킨 늑대도 상대할 수 있겠느냐?";
+	next;
+	mes "[모로크]";
+	mes "그조차 감당하지 못한다면 신을 상대할 수는 없겠지.";
+	npctalk "모로크: 그조차 감당하지 못한다면 신을 상대할 수는 없겠지.";
+	next;
+	mes "[모로크]";
+	mes "지켜보겠다. 크하하하!";
+	npctalk "모로크: 지켜보겠다. 크하하하!";
+	}
+	close2;
+	cutin "",255;
+	if ('step == 6) {
+		'step = 7;
+		setpcblock PCBLOCK_NPC, true;
+		enablenpc instance_npcname("#fire_event01");
+		donpcevent instance_npcname("#gate_to_fire") + "::OnEnable";
+		if ('NEED_EOM_FAST)
+			sleep2 200;
+		else
+			sleep2 2000;
+		setpcblock PCBLOCK_NPC, false;
+		specialeffect EF_ENTRY;
+		cloakonnpc instance_npcname("모로크#mockid02");	// cloakonnpc to properly display the previous effect
+	}
+	end;
+}
+
+1@eom,104,120,0	script	#gate_to_fire	WARPNPC,1,1,{
+	end;
+OnTouch_:
+	if (isbegin_quest(7603) == 0 && isbegin_quest(7604) == 0)
+		setquest 7603;
+	warp 'map_eom$,132,93;
+	end;
+OnEnable:
+	enablenpc instance_npcname("#gate_to_fire");
+	specialeffect EF_METEORSTORM;
+	sleep 1000;
+	specialeffect EF_MAPPILLAR;
+	end;
+}
+
+1@eom,132,93,0	script	#fire_event01	HIDDEN_WARP_NPC,1,1,{
+	end;
+OnTouch_:
+	disablenpc instance_npcname("#fire_event01");
+	sleep 1000;
+	mapannounce 'map_eom$, "크르르...", bc_map, 0xff0000;
+	sleep 3000;
+	mapannounce 'map_eom$, "인간 냄새가 난다... 크르르...", bc_map, 0xff0000;
+	monster 'map_eom$,139,101, "광기의 카사",3089,1;	// MM_LOCO_KASA
+	sleep 1000;
+	monster 'map_eom$,142, 98, "광기의 카사",3089,1;
+	sleep 1000;
+	monster 'map_eom$,144, 92, "광기의 카사",3089,1;
+	sleep 3000;
+	monster 'map_eom$,145,104, "광기의 카사",3089,1;
+	sleep 1000;
+	monster 'map_eom$,148, 98, "광기의 카사",3089,1;
+	sleep 1000;
+	monster 'map_eom$,150, 93, "광기의 카사",3089,1;
+	sleep 3000;
+	monster 'map_eom$,151,106, "광기의 카사",3089,1;
+	sleep 1000;
+	monster 'map_eom$,153,100, "광기의 카사",3089,1;
+	sleep 1000;
+	monster 'map_eom$,156, 95, "광기의 카사",3089,1;
+	mapannounce 'map_eom$, "...불타라!", bc_map, 0xff0000;
+	donpcevent instance_npcname("#skollmaster") + "::OnStart";
+	end;
+}
+
+1@eom,3,1,0	script	#skollmaster	CLEAR_NPC,{
+	end;
+OnStart:
+	enablenpc instance_npcname("#skollmaster");
+	enablenpc instance_npcname("흐르는 용암#lavapond01");
+	enablenpc instance_npcname("흐르는 용암#lavapond02");
+	enablenpc instance_npcname("#lavazone11");
+	enablenpc instance_npcname("#lavazone12");
+	enablenpc instance_npcname("#lavazone21");
+	enablenpc instance_npcname("#lavazone22");
+	'flowing_lava_deactivate[0] = 'flowing_lava_deactivate[1] = false;
+
+	monster 'map_eom$,148,98, "무스펠스콜",3092,1, instance_npcname("#skollmaster") + "::OnMobDead";	// MM_MUSPELLSKOLL
+	'boss_id = $@mobid[0];
+	getunitdata 'boss_id, .@data;
+	'boss_hp = .@data[UMOB_MAXHP];
+	sleep 1000;
+	if ('boss_id)
+		unittalk 'boss_id, "너희로군... 좋아, 뼈까지 부숴 주마!";
+	sleep 4000;
+	if ('boss_id)
+		donpcevent instance_npcname("#skollmaster") + "::OnLava_heal";
+	end;
+
+OnLava_heal:
+	'lava_heal = true;
+	donpcevent instance_npcname("#fire_combo") + "::OnEnd";
+	stopnpctimer instance_npcname("#fire_hpcheck");
+	callsub S_Event, 0, 156,117;
+	initnpctimer;
+	end;
+OnTimer2000:
+	callsub S_Event, 1, 180,129;
+	end;
+OnTimer4000:
+	callsub S_ReSpawn, 168,121;
+	unitskilluseid 'boss_id, "CR_REFLECTSHIELD",1;
+	unittalk 'boss_id, "다시 시작하지. 덤벼라!";
+	donpcevent instance_npcname("#loco_call") + "::OnSpawn";
+	end;
+OnTimer6000:
+	stopnpctimer;
+	'lava_heal = false;
+	donpcevent instance_npcname("#fire_hpcheck") + "::OnStart";
+	donpcevent instance_npcname("#fire_combo") + "::OnEvent";
+	end;
+S_ReSpawn:
+	getunitdata 'boss_id, .@data;
+	'boss_hp = .@data[UMOB_HP];
+	killmonster 'map_eom$, instance_npcname("#skollmaster") + "::OnMobDead";
+	monster 'map_eom$,getarg(0),getarg(1), "무스펠스콜",3092,1, instance_npcname("#skollmaster") + "::OnMobDead";	// MM_MUSPELLSKOLL
+	'boss_id = $@mobid[0];
+	setunitdata 'boss_id, UMOB_HP, 'boss_hp;
+	return;
+S_Event:
+	callsub S_ReSpawn, getarg(1),getarg(2);
+	if ('flowing_lava_deactivate[ getarg(0) ] == false) {
+		for ( .@i = 0; .@i < 8; .@i++ ) {
+			unitskilluseid 'boss_id, "AL_HEAL",11;
+			sleep 100;
+			if ('boss_id == 0)
+				end;
+		}
+		unitskilluseid 'boss_id, "AL_HEAL",11;
+	}
+	mapannounce 'map_eom$, "니드호그: 무스펠스콜이 용암의 힘으로 회복하려 합니다!", bc_map, 0x00ff00;
+	getunitdata 'boss_id, .@data;
+	'boss_hp = .@data[UMOB_HP];
+	donpcevent instance_npcname("#loco_call") + "::OnSpawn";
+	return;
+
+OnMobDead:
+	stopnpctimer instance_npcname("#fire_hpcheck");
+	stopnpctimer instance_npcname("#muspellskoll_event_1");
+	stopnpctimer instance_npcname("#muspellskoll_event_2");
+	stopnpctimer instance_npcname("#muspellskoll_event_3");
+	donpcevent instance_npcname("#fire_combo") + "::OnEnd";
+	donpcevent instance_npcname("#loco_call") + "::OnEnd";
+
+	killmonster 'map_eom$, instance_npcname("#skollmaster") + "::OnMobDead";
+	mapannounce 'map_eom$, "니드호그: 무스펠스콜의 힘이 사라지며 새로운 이동 통로가 나타났습니다.", bc_map, 0x00ff00;
+
+	enablenpc instance_npcname("니드호그#eomnyd03");
+	enablenpc instance_npcname("#fire_to_center");
+	enablenpc instance_npcname("수상한 청년#mocadt01");
+
+	'step = 8;
+	donpcevent instance_npcname("#demon_god_variables") + "::OnVariableReset";
+	end;
+
+OnTest_hp:
+	if ('boss_id && mobcount( 'map_eom$, instance_npcname("#skollmaster") + "::OnMobDead" ) > 0)
+		setunitdata 'boss_id, UMOB_HP, 2000000;
+	end;
+}
+
+1@eom,3,7,0	script	#fire_hpcheck	CLEAR_NPC,{
+	end;
+OnStart:
+	initnpctimer;
+	end;
+OnTimer3000:
+	getunitdata 'boss_id, .@data;
+	.@hp = .@data[UMOB_HP];
+	if ('boss_hp < .@hp) {
+		initnpctimer;
+		end;
+	}
+	if (('boss_hp - .@hp) > 1000000) {
+		'boss_hp = .@hp;
+		donpcevent instance_npcname("#fire_hpcheck") + "::OnHeal";	// the event can stack and the boss can stay in this state until it demise
+		initnpctimer;
+		end;
+	}
+	'boss_hp = .@hp;
+
+	if ('lava_heal == false) {
+		if (.@hp > 29500000 && .@hp < 30000000 || .@hp > 35500000 && .@hp < 36000000 || .@hp > 39500000 && .@hp < 40000000 || .@hp > 44500000 && .@hp < 45000000) {
+			unittalk 'boss_id, "이대로 쓰러지지는 않는다!";
+			donpcevent instance_npcname("#skollmaster") + "::OnLava_heal";
+		}
+	}
+	initnpctimer;
+	end;
+
+OnHeal:
+	if ('fire_combo)
+		donpcevent instance_npcname("#fire_combo") + "::OnEnd";
+	unittalk 'boss_id, "내가 만만해 보이느냐? 재로 만들어 주마!";
+	sleep 2000;
+	if ('boss_id == 0)
+		end;
+	getunitdata 'boss_id, .@data;
+	unitskillusepos 'boss_id,"WZ_METEOR",11,.@data[UMOB_X],.@data[UMOB_Y],-50;
+	sleep 1000;
+	if ('boss_id == 0)
+		end;
+	for ( .@i = 0; .@i < 18; .@i++ ) {
+		unitskilluseid 'boss_id, "AL_HEAL",11;
+		sleep 200;
+		if ('boss_id == 0)
+			end;
+	}
+	getunitdata 'boss_id, .@data;
+	unitskillusepos 'boss_id,"WZ_METEOR",11,.@data[UMOB_X],.@data[UMOB_Y],-50;
+	for ( .@i = 0; .@i < 18; .@i++ ) {
+		unitskilluseid 'boss_id, "AL_HEAL",11;
+		sleep 200;
+		if ('boss_id == 0)
+			end;
+	}
+	getunitdata 'boss_id, .@data;
+	'boss_hp = .@data[UMOB_HP];
+	if (!'fire_combo)
+		donpcevent instance_npcname("#fire_combo") + "::OnEvent";
+	end;
+}
+
+1@eom,3,5,0	script	#loco_call	CLEAR_NPC,{
+	end;
+OnSpawn:
+	enablenpc instance_npcname("#loco_call");
+	initnpctimer;
+	getunitdata 'boss_id, .@data;
+	'x_loco = .@data[UMOB_X];
+	'y_loco = .@data[UMOB_Y];
+	end;
+OnTimer1000:
+	.@label$ = instance_npcname("#loco_call") + "::OnMobDead";
+	if (mobcount( 'map_eom$, .@label$ ) < 6)
+		areamonster 'map_eom$,('x_loco-5),('y_loco-5),('x_loco+5),('y_loco+5)," ",3089,3, .@label$;	// MM_LOCO_KASA
+	end;
+OnTimer16000:
+	stopnpctimer;
+	disablenpc instance_npcname("#loco_call");
+	end;
+OnMobDead:
+	end;
+OnEnd:
+	stopnpctimer;
+	disablenpc instance_npcname("#loco_call");
+	end;
+}
+
+1@eom,1,1,0	script	#muspellskoll_event_1	-1,{
+	end;
+OnEvent:
+	initnpctimer;
+	unittalk 'boss_id, "모조리 불타 버려라!";
+	end;
+OnTimer1000:
+	unitskilluseid 'boss_id, "NPC_FIRESTORM",3;
+	end;
+OnTimer3000:
+	stopnpctimer;
+	unitskilluseid 'boss_id, "WZ_SIGHTRASHER",10;
+	if ('fire_combo)
+		donpcevent instance_npcname("#fire_combo") + "::OnEvent";
+	end;
+}
+
+1@eom,1,1,0	script	#muspellskoll_event_2	-1,{
+	end;
+OnEvent:
+	initnpctimer;
+	unittalk 'boss_id, "크르르...";
+	end;
+OnTimer1000:
+	getunitdata 'boss_id, .@data;
+	'bossx = .@data[UMOB_X];
+	'bossy = .@data[UMOB_Y];
+	unitskilluseid 'boss_id, "NPC_FIRESTORM",3;
+	end;
+OnTimer3000:
+	unitskillusepos 'boss_id,"WZ_FIREPILLAR",1,('bossx-3),('bossy+3),-50;
+	end;
+OnTimer5000:
+	unitskillusepos 'boss_id,"WZ_FIREPILLAR",1,('bossx+3),('bossy+3),-50;
+	end;
+OnTimer7000:
+	unitskillusepos 'boss_id,"WZ_FIREPILLAR",1,('bossx-3),('bossy-3),-50;
+	end;
+OnTimer9000:
+	unitskillusepos 'boss_id,"WZ_FIREPILLAR",1,('bossx+3),('bossy-3),-50;
+	end;
+OnTimer19000:
+	stopnpctimer;
+	if ('fire_combo)
+		donpcevent instance_npcname("#fire_combo") + "::OnEvent";
+	end;
+}
+
+1@eom,1,1,0	script	#muspellskoll_event_3	-1,{
+	end;
+OnEvent:
+	initnpctimer;
+	unittalk 'boss_id, "내 불꽃이 너희를 집어삼킬 것이다!";
+	end;
+OnTimer1000:
+	unitskilluseid 'boss_id, "NPC_FIRESTORM",3;
+	end;
+OnTimer2000:
+	donpcevent instance_npcname("#flamecross") + "::OnStart";
+	end;
+OnTimer7000:
+	getunitdata 'boss_id, .@data;
+	'bossx = .@data[UMOB_X];
+	'bossy = .@data[UMOB_Y];
+	unitskillusepos 'boss_id,"WZ_METEOR",5,('bossx),('bossy+5),-50;
+	end;
+OnTimer9000:
+	unitskillusepos 'boss_id,"WZ_METEOR",5,('bossx),('bossy-5),-50;
+	end;
+OnTimer11000:
+	unitskillusepos 'boss_id,"WZ_METEOR",5,('bossx),('bossy+10),-50;
+	end;
+OnTimer13000:
+	stopnpctimer;
+	unitskillusepos 'boss_id,"WZ_METEOR",5,'bossx,('bossy-10),-50;
+	if ('fire_combo)
+		donpcevent instance_npcname("#fire_combo") + "::OnEvent";
+	end;
+}
+
+1@eom,3,3,0	script	#fire_combo	CLEAR_NPC,{
+	end;
+OnEvent:
+	initnpctimer;
+	'fire_combo = true;
+	end;
+OnTimer10000:
+	stopnpctimer;
+	.@r = rand(1,4);
+	if (.@r == 1)
+		donpcevent instance_npcname("#muspellskoll_event_1") + "::OnEvent";
+	else if (.@r == 2)
+		donpcevent instance_npcname("#muspellskoll_event_2") + "::OnEvent";
+	else if (.@r == 3)
+		donpcevent instance_npcname("#muspellskoll_event_3") + "::OnEvent";
+	else
+		donpcevent instance_npcname("#flamecross") + "::OnSpawn";
+	end;
+OnEnd:
+	stopnpctimer;
+	'fire_combo = false;
+	disablenpc instance_npcname("#fire_combo");
+	end;
+}
+
+1@eom,3,8,0	script	#flamecross	CLEAR_NPC,{
+	end;
+OnStart:
+	getunitdata 'boss_id, .@data;
+	.@x = .@data[UMOB_X];
+	.@y = .@data[UMOB_Y];
+	callsub( S_Spawn,.@x,.@y,3 );
+	sleep 300;
+	callsub( S_Spawn,.@x,.@y,6 );
+	sleep 300;
+	callsub( S_Spawn,.@x,.@y,9 );
+	sleep 300;
+	callsub( S_Spawn,.@x,.@y,13 );
+	sleep 5000;
+	killmonster 'map_eom$, instance_npcname("#flamecross") + "::OnMobDead";
+	end;
+
+S_Spawn:
+	if (!'boss_id) {
+		killmonster 'map_eom$, instance_npcname("#flamecross") + "::OnMobDead";
+		end;
+	}
+	.@x = getarg(0);
+	.@y = getarg(1);
+	.@dxy = getarg(2);
+	.@label$ = instance_npcname("#flamecross") + "::OnMobDead";
+	monster 'map_eom$,(.@x+.@dxy),(.@y+.@dxy)," ",2960,1, .@label$;// MM_FLAMECROSS
+	monster 'map_eom$,(.@x-.@dxy),(.@y-.@dxy)," ",2960,1, .@label$;
+	monster 'map_eom$,(.@x+.@dxy),(.@y-.@dxy)," ",2960,1, .@label$;
+	monster 'map_eom$,(.@x-.@dxy),(.@y+.@dxy)," ",2960,1, .@label$;
+	return;
+
+OnSpawn:
+	getunitdata 'boss_id, .@data;
+	.@label$ = instance_npcname("#flamecross") + "::OnMobDead";	// same OnMobDead than OnStart?
+	if (mobcount( 'map_eom$, .@label$ ) < 2)
+		areamonster 'map_eom$,(.@data[UMOB_X]-1),(.@data[UMOB_Y]-1),(.@data[UMOB_X]+1),(.@data[UMOB_Y]+1)," ",3090,2, .@label$;	// MM_LOCO_SALAMANDER
+	if ('fire_combo)
+		donpcevent instance_npcname("#fire_combo") + "::OnEvent";
+	end;
+
+OnMobDead:
+	end;
+}
+
+1@eom,154,119,0	script	흐르는 용암#lavapond01	CLEAR_NPC,{	// todo, custom text
+	if (countitem(22566) < 1)
+		end;
+	mes getitemname(22566) + "을 사용하면 용암의 흐름을 막을 수 있습니다.";
+	next;
+	if (select("" + getitemname(22566) + "을 사용한다.:사용하지 않는다.") == 2)
+		end;
+	if ('flowing_lava_deactivate[0] == true)
+		end;
+	'flowing_lava_deactivate[0] = true;
+	delitem 22566,1;// Frost_Crystal
+	disablenpc instance_npcname("흐르는 용암#lavapond01");
+	donpcevent instance_npcname("굳은 용암#lavaseal01") + "::OnEnable";
+	initnpctimer;
+	end;
+OnTimer300:
+	donpcevent instance_npcname("굳은 용암#lavaseal01") + "::OnEffect";
+	end;
+OnTimer120000:
+	'flowing_lava_deactivate[0] = false;
+	donpcevent instance_npcname("굳은 용암#lavaseal01") + "::OnDisable";
+	enablenpc instance_npcname("흐르는 용암#lavapond01");
+	mapannounce 'map_eom$, "니드호그: 서리가 녹아 용암이 다시 흐르기 시작했습니다!", bc_map, 0x00ff00;
+	stopnpctimer;
+	end;
+}
+
+1@eom,182,129,0	script	흐르는 용암#lavapond02	CLEAR_NPC,{	// todo, custom text
+	if (countitem(22566) < 1)
+		end;
+	mes getitemname(22566) + "을 사용하면 용암의 흐름을 막을 수 있습니다.";
+	next;
+	if (select("" + getitemname(22566) + "을 사용한다.:사용하지 않는다.") == 2)
+		end;
+	if ('flowing_lava_deactivate[1] == true)
+		end;
+	'flowing_lava_deactivate[1] = true;
+	delitem 22566,1;// Frost_Crystal
+	disablenpc instance_npcname("흐르는 용암#lavapond02");
+	donpcevent instance_npcname("굳은 용암#lavaseal02") + "::OnEnable";
+	initnpctimer;
+	end;
+OnTimer300:
+	donpcevent instance_npcname("굳은 용암#lavaseal02") + "::OnEffect";
+	end;
+OnTimer120000:
+	'flowing_lava_deactivate[1] = false;
+	donpcevent instance_npcname("굳은 용암#lavaseal02") + "::OnDisable";
+	enablenpc instance_npcname("흐르는 용암#lavapond02");
+	mapannounce 'map_eom$, "니드호그: 서리가 녹아 용암이 다시 흐르기 시작했습니다!", bc_map, 0x00ff00;
+	stopnpctimer;
+	end;
+}
+
+1@eom,154,119,0	script	굳은 용암#lavaseal01	CLEAR_NPC,{
+	end;
+OnEnable:
+	enablenpc instance_npcname("굳은 용암#lavaseal01");
+	disablenpc instance_npcname("#lavazone11");
+	disablenpc instance_npcname("#lavazone12");
+	end;
+OnDisable:
+	stopnpctimer;
+	disablenpc instance_npcname("굳은 용암#lavaseal01");
+	enablenpc instance_npcname("#lavazone11");
+	enablenpc instance_npcname("#lavazone12");
+	end;
+OnEffect:
+	initnpctimer;
+	specialeffect EF_LIGHTNINGLOADER;
+	end;
+OnTimer3000:
+	initnpctimer;
+	end;
+}
+
+1@eom,182,129,0	script	굳은 용암#lavaseal02	CLEAR_NPC,{
+	end;
+OnEnable:
+	enablenpc instance_npcname("굳은 용암#lavaseal02");
+	disablenpc instance_npcname("#lavazone21");
+	disablenpc instance_npcname("#lavazone22");
+	end;
+OnDisable:
+	stopnpctimer;
+	disablenpc instance_npcname("굳은 용암#lavaseal02");
+	enablenpc instance_npcname("#lavazone21");
+	enablenpc instance_npcname("#lavazone22");
+	end;
+OnEffect:
+	initnpctimer;
+	specialeffect EF_LIGHTNINGLOADER;
+	end;
+OnTimer3000:
+	initnpctimer;
+	end;
+}
+
+1@eom,161,122,0	script	#lavazone11	HIDDEN_WARP_NPC,10,10,{
+	end;
+OnTouch:
+	percentheal -3,0;
+	specialeffect2 EF_SPRINKLESAND;
+	end;
+}
+1@eom,161,102,0	duplicate(#lavazone11)	#lavazone12	HIDDEN_WARP_NPC,10,10
+1@eom,163,150,0	duplicate(#lavazone11)	#lavazone21	HIDDEN_WARP_NPC,10,10
+1@eom,163,150,0	duplicate(#lavazone11)	#lavazone22	HIDDEN_WARP_NPC,10,10
+
+1@eom,151,155,3	script	니드호그#eomnyd03	4_F_NYDHOG,{
+	if (checkquest(7603,HUNTING) == 2 && isbegin_quest(7604) == 0) {
+		mes "[니드호그]";
+		mes "이번에도 훌륭했습니다.";
+		mes "충분하지는 않겠지만 성장에 도움이 되기를 바랍니다.";
+		next;
+		mes "^4d4dff무스펠스콜 처치 보상으로 많은 경험치를 획득했습니다.^000000";
+		erasequest 7603;// Temple of the Demon God Phase 2
+		setquest 7604;// Temple of the Demon God Phase 2 Completed
+		getexp 1000000,500000;
+		close;
+	}
+	mes "[니드호그]";
+	mes "스콜... 스콜과 하티...";
+	mes "이곳의 모든 것은 바깥세상을 흉내 낸 것에 불과합니다.";
+	mes "그는 창조주가 아닙니다.";
+	close;
+}
+
+1@eom,147,156,0	script	#fire_to_center	WARPNPC,1,1,{
+	end;
+OnTouch_:
+	if (checkquest(7603,HUNTING) == 2 && isbegin_quest(7604) == 0) {
+		mes "[니드호그]";
+		mes "이번에도 훌륭했습니다.";
+		mes "충분하지는 않겠지만 성장에 도움이 되기를 바랍니다.";
+		next;
+		mes "^4d4dff무스펠스콜 처치 보상으로 많은 경험치를 획득했습니다.^000000";
+		setquest 7604;
+		erasequest 7603;
+		getexp 1000000,500000;
+		close;
+	}
+	warp 'map_eom$,98,115;
+	end;
+}
+
+// Center to Last
+1@eom,98,123,5	script	수상한 청년#mocadt01	3097,5,5,{	// MM_MOROCC_ADT
+	end;
+OnTouch_:
+	if ('step == 8 && is_party_leader()) {
+		'step = 9;
+		if ('NEED_EOM_FAST) {
+			specialeffect EF_BEGINSPELL5;
+			enablenpc instance_npcname("#gate_to_last");
+			enablenpc instance_npcname("#moc_master");
+			specialeffect EF_READYPORTAL2,AREA, instance_npcname("#gate_to_last");
+			disablenpc instance_npcname("수상한 청년#mocadt01");
+			end;
+		}
+		initnpctimer;
+	}
+	end;
+OnTimer1000:
+	npctalk "내 기대를 뛰어넘는군.";
+	end;
+OnTimer4000:
+	npctalk "도전을 받아 주마.";
+	end;
+OnTimer7000:
+	npctalk "너희의 피로 대지를 적시고 찢긴 살로 양분을 삼겠다.";
+	end;
+OnTimer8000:
+	specialeffect EF_BEGINSPELL5;
+	enablenpc instance_npcname("#gate_to_last");
+	enablenpc instance_npcname("#moc_master");
+	specialeffect EF_READYPORTAL2,AREA, instance_npcname("#gate_to_last");
+	end;
+OnTimer10000:
+	npctalk "진정한 절망의 깊이를 보여 주마.";
+	end;
+OnTimer12000:
+	stopnpctimer;
+	specialeffect EF_ENTRY;
+	disablenpc instance_npcname("수상한 청년#mocadt01");
+	end;
+}
+
+1@eom,98,127,0	warp	#gate_to_last	1,1,1@eom,102,186
+
+1@eom,101,194,3	script	#moc_master	3096,10,10,{
+	end;
+OnTouch_:
+	if ('step != 9)
+		end;
+	'step = 10;
+	if ('NEED_EOM_FAST) {
+		disablenpc instance_npcname("#moc_master");
+		donpcevent instance_npcname("#despair_god_main") + "::OnStart";
+		end;
+	}
+	npctalk "모로크: 여기까지 왔으니 쓸데없는 이야기는 그만두지.";
+	initnpctimer;
+	end;
+OnTimer2000:
+	stopnpctimer;
+	npctalk "모로크: 덤벼라, 필멸자들이여!";
+	disablenpc instance_npcname("#moc_master");
+	donpcevent instance_npcname("#despair_god_main") + "::OnStart";
+	end;
+}
+
+1@eom,1,1,0	script	#despair_god_main	-1,{
+	end;
+OnStart:
+	enablenpc instance_npcname("#despair_god_main");
+	'boss_phase = 1;
+
+	monster 'map_eom$,101,194, "반신 모로크",3096,1, instance_npcname("#despair_god_main") + "::OnMobDead";	// MM_MOROCC_KID
+	'boss_id = $@mobid[0];
+	getunitdata 'boss_id, .@data;
+	'boss_hp = .@data[UMOB_MAXHP];
+
+	unitskillusepos 'boss_id,"WZ_METEOR",11,101,194,-50;
+
+	enablenpc instance_npcname("#mk_trap");
+	donpcevent instance_npcname("#mk_hpcheck") + "::OnStart";
+	donpcevent instance_npcname("#mk_combo") + "::OnEvent";
+	end;
+
+OnPhase02:
+	if ('boss_phase != 1)
+		end;
+	'boss_phase = 2;
+	stopnpctimer instance_npcname("#demigod_event_1");
+	stopnpctimer instance_npcname("#demigod_event_2");
+	stopnpctimer instance_npcname("#demigod_event_3");
+	stopnpctimer instance_npcname("#mk_hpcheck");
+	stopnpctimer instance_npcname("#mk_combo");
+	unittalk 'boss_id, "이 정도로는 부족하다!";
+	sleep 2000;
+	if ('boss_id == 0)
+		end;
+	getunitdata 'boss_id, .@data;
+	'boss_hp = .@data[UMOB_HP];
+	killmonster 'map_eom$, instance_npcname("#despair_god_main") + "::OnMobDead";
+	monster 'map_eom$,101,207, "반신 모로크",3096,1, instance_npcname("#despair_god_main") + "::OnMobDead";	// MM_MOROCC_KID
+	'boss_id = $@mobid[0];
+	setunitdata 'boss_id, UMOB_HP, 'boss_hp;
+	setunitdata 'boss_id, UMOB_MODE, (MD_MVP|MD_STATUSIMMUNE|MD_KNOCKBACKIMMUNE|MD_MVP|MD_DETECTOR);	// todo: MD_SKILL_IMMUNE ?
+	sleep 2000;
+	if ('boss_id == 0)
+		end;
+	donpcevent instance_npcname("#moc_origin") + "::OnEnable";
+	end;
+
+OnPhase03:
+	if ('boss_phase != 2)
+		end;
+	'boss_phase = 3;
+	getunitdata 'boss_id, .@data;
+	.@hp = .@data[UMOB_HP] + ('boss_hp - .@data[UMOB_HP]) * 10;
+	'boss_hp = min(80000000,.@hp);
+	killmonster 'map_eom$, instance_npcname("#despair_god_main") + "::OnMobDead";
+	monster 'map_eom$,101,194, "반신 모로크",3096,1, instance_npcname("#despair_god_main") + "::OnMobDead";	// MM_MOROCC_KID
+	'boss_id = $@mobid[0];
+	setunitdata 'boss_id, UMOB_HP, 'boss_hp;
+	unittalk 'boss_id, "그만 좀 끈질기게 굴어라!";
+	sleep 2000;
+	if ('boss_id == 0)
+		end;
+	unitskilluseid 'boss_id, "NPC_WIDEWEB",1;
+	sleep 1000;
+	if ('boss_id == 0)
+		end;
+	unitskilluseid 'boss_id, "NPC_FIRESTORM",3;
+	sleep 1000;
+	if ('boss_id == 0)
+		end;
+	unitskilluseid 'boss_id, "MG_FIREBALL",1;
+	donpcevent instance_npcname("#mk_hpcheck") + "::OnStart";
+	donpcevent instance_npcname("#mk_combo") + "::OnEvent";
+	end;
+
+OnTest_hp:
+	if ('boss_id && mobcount( 'map_eom$, instance_npcname("#despair_god_main") + "::OnMobDead" ) > 0)
+		setunitdata 'boss_id, UMOB_HP, 2000000;
+	end;
+
+OnMobDead:
+	disablenpc instance_npcname("#despair_god_main");
+	killmonster 'map_eom$, instance_npcname("#despair_god_main") + "::OnMobDead";
+	stopnpctimer instance_npcname("#mk_combo");
+	stopnpctimer instance_npcname("#demigod_event_1");
+	stopnpctimer instance_npcname("#demigod_event_2");
+	stopnpctimer instance_npcname("#demigod_event_3");
+	stopnpctimer instance_npcname("#moc_meddling");
+	stopnpctimer instance_npcname("#mk_hpcheck");
+	donpcevent instance_npcname("#moc_origin") + "::OnEnd";
+
+	donpcevent instance_npcname("#demon_god_variables") + "::OnVariableReset";
+	donpcevent instance_npcname("#morocc_god") + "::OnStart";
+	end;
+}
+
+1@eom,4,2,0	script	#mk_combo	CLEAR_NPC,{
+	end;
+OnEvent:
+	initnpctimer;
+	'combo_is_allowed = true;
+	end;
+OnStart:
+	initnpctimer;
+	end;
+OnTimer10000:
+	donpcevent instance_npcname("#demigod_event_" + rand(1,3)) + "::OnEvent";
+	stopnpctimer;
+	end;
+OnEnd:
+	stopnpctimer;
+	'combo_is_allowed = false;
+	end;
+}
+
+1@eom,4,1,0	script	#mk_hpcheck	CLEAR_NPC,{
+	end;
+OnStart:
+	initnpctimer;
+	end;
+OnTimer6000:
+	getunitdata 'boss_id, .@data;
+	.@hp = .@data[UMOB_HP];
+	if ('boss_hp < .@hp) {
+		initnpctimer;
+		end;
+	}
+	.@hp_a = 'boss_hp - .@hp;
+	if (.@hp_a > 1000000) {
+		if (.@hp_a > 200000) {
+			.@hp_b = .@hp + (.@hp_a - 200000) * 3;
+			.@hp_b = min(80000000, .@hp_b);
+			setunitdata 'boss_id, UMOB_HP, .@hp_b;
+			mapannounce 'map_eom$, "니드호그: 엄청난 회복력입니다! 다시 회복하게 두지 마세요!", bc_map, 0x00ff00;
+		}
+		unitskilluseid 'boss_id, "AL_HEAL",11;
+		getunitdata 'boss_id, .@data;
+		'boss_hp = .@data[UMOB_HP];
+		initnpctimer;
+		end;
+	}
+	'boss_hp = .@hp;
+
+	switch( 'boss_phase ) {	// process by phase instead of (officially) hp, just in case
+	case 1:
+		if (.@hp < 40000000)
+			donpcevent instance_npcname("#despair_god_main") + "::OnPhase02";
+		break;
+	case 2:
+		break;
+	case 3:
+		if (.@hp > 100000 && .@hp < 30000000)
+			donpcevent instance_npcname("#mk_trap") + "::OnTrap";
+		break;
+	}
+	initnpctimer;
+	end;
+}
+
+1@eom,1,1,0	script	#demigod_event_1	-1,{
+	end;
+OnEvent:
+	initnpctimer;
+	unittalk 'boss_id, "크하하, 피할 수 있다면 피해 봐라!";
+	end;
+OnTimer2000:
+	unitskilluseid 'boss_id, "NPC_WIDEWEB",1;
+	end;
+OnTimer3000:
+	unitskilluseid 'boss_id, "NPC_FIRESTORM",3;
+	end;
+OnTimer5000:
+	getunitdata 'boss_id, .@data;
+	unitskillusepos 'boss_id,"WZ_VERMILION",21,.@data[UMOB_X],.@data[UMOB_Y],-50;
+	end;
+OnTimer7000:
+	stopnpctimer;
+	unitskilluseid 'boss_id, "CR_REFLECTSHIELD",1;
+	if ('combo_is_allowed)
+		donpcevent instance_npcname("#mk_combo") + "::OnEvent";
+	end;
+}
+
+1@eom,1,1,0	script	#demigod_event_2	-1,{
+	end;
+OnEvent:
+	initnpctimer;
+	unittalk 'boss_id, "나약한 영혼을 위한 광시곡이다...";
+	end;
+OnTimer2000:
+	unitskilluseid 'boss_id, "NPC_WIDEWEB",1;
+	end;
+OnTimer3000:
+	getunitdata 'boss_id, .@data;
+	'bossx = .@data[UMOB_X];
+	'bossy = .@data[UMOB_Y];
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,('bossx-2),'bossy,-50;
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,('bossx+2),'bossy,-50;
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,'bossx,('bossy+2),-50;
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,'bossx,('bossy-2),-50;
+	end;
+OnTimer4000:
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,('bossx-6),'bossy,-50;
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,('bossx+6),'bossy,-50;
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,'bossx,('bossy+6),-50;
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,'bossx,('bossy-6),-50;
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,('bossx-4),('bossy+4),-50;
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,('bossx-4),('bossy-4),-50;
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,('bossx+4),('bossy+4),-50;
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,('bossx+4),('bossy-4),-50;
+	end;
+OnTimer5000:
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,('bossx-10),'bossy,-50;
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,('bossx+10),'bossy,-50;
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,'bossx,('bossy+10),-50;
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,'bossx,('bossy-10),-50;
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,('bossx-8),('bossy+8),-50;
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,('bossx-8),('bossy-8),-50;
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,('bossx+8),('bossy+8),-50;
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,('bossx+8),('bossy-8),-50;
+	end;
+OnTimer6000:
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,('bossx-16),'bossy,-50;
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,('bossx+16),'bossy,-50;
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,'bossx,('bossy+16),-50;
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,'bossx,('bossy-16),-50;
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,('bossx-12),('bossy+12),-50;
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,('bossx-12),('bossy-12),-50;
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,('bossx+12),('bossy+12),-50;
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,('bossx+12),('bossy-12),-50;
+	end;
+OnTimer7000:
+	stopnpctimer;
+	if ('combo_is_allowed)
+		donpcevent instance_npcname("#mk_combo") + "::OnEvent";
+	end;
+}
+
+1@eom,1,1,0	script	#demigod_event_3	-1,{
+	end;
+OnEvent:
+	initnpctimer;
+	unittalk 'boss_id, "이 푸가와 진혼곡은 누구를 위한 것인가?";
+	end;
+OnTimer2000:
+	unitskilluseid 'boss_id, "NPC_WIDEWEB",1;
+	end;
+OnTimer3000:
+	unitskilluseid 'boss_id, "NPC_FIRESTORM",3;
+	end;
+OnTimer5000:
+	getunitdata 'boss_id, .@data;
+	unitskillusepos 'boss_id,"WZ_METEOR",5,(.@data[UMOB_X]-5),.@data[UMOB_Y],-50;
+	unitskillusepos 'boss_id,"WZ_METEOR",5,(.@data[UMOB_X]+5),.@data[UMOB_Y],-50;
+	unitskillusepos 'boss_id,"WZ_METEOR",5,.@data[UMOB_X],(.@data[UMOB_Y]+5),-50;
+	unitskillusepos 'boss_id,"WZ_METEOR",5,.@data[UMOB_X],(.@data[UMOB_Y]-5),-50;
+	end;
+OnTimer9000:
+	unittalk 'boss_id, "재가 되어라!";
+	end;
+OnTimer11000:
+	getunitdata 'boss_id, .@data;
+	unitskillusepos 'boss_id,"WZ_VERMILION",21,.@data[UMOB_X],.@data[UMOB_Y],-50;	// assuming position on (0,0) is self
+	end;
+OnTimer13000:
+	stopnpctimer;
+	if ('combo_is_allowed)
+		donpcevent instance_npcname("#mk_combo") + "::OnEvent";
+	end;
+}
+
+1@eom,4,3,0	script	#moc_origin	CLEAR_NPC,{
+	end;
+OnEnable:
+	enablenpc instance_npcname("#moc_origin");
+	monster 'map_eom$,114,198, "태초의 모로크", 3098,1, instance_npcname("#moc_origin") + "::OnMobDead1";	// MM_MOROCC_ORIGIN
+	'miniboss_id[0] = $@mobid[0];
+	'miniboss_id[1] = 0;
+	initnpctimer;
+	end;
+OnTimer1000:
+	donpcevent instance_npcname("#moc_origin") + "::OnOriginheal";
+	if ('miniboss_id[0] < 1)
+		end;
+	getunitdata 'miniboss_id[0], .@data;
+	if (.@data[UMOB_HP] < 2200000) {
+		if ('miniboss_id[1] == 0) {
+			monster 'map_eom$,86,199, "안식의 모로크", 3099,1, instance_npcname("#moc_origin") + "::OnMobDead2";	// MM_MOROCC_REST
+			'miniboss_id[1] = $@mobid[0];
+		}
+	}
+	end;
+OnTimer2000:
+	initnpctimer;
+	end;
+
+OnOriginheal:
+	for ( .@i = 0; .@i < 11; .@i++ ) {
+		unitskilluseid 'boss_id, "AL_HEAL",11;
+		sleep 200;
+		if ('boss_id == 0)
+			end;
+	}
+	end;
+
+OnMobDead1:
+	'miniboss_id[0] = 0;
+	callsub S_Dead;
+OnMobDead2:
+	'miniboss_id[1] = 0;
+	callsub S_Dead;
+S_Dead:
+	if ('miniboss_id[1] == 0 && 'miniboss_id[0] > 0) {	// todo, custom text
+		unittalk 'miniboss_id[0], "---!!!";
+		setunitdata 'miniboss_id[0], UMOB_HP, 3000000;
+		stopnpctimer instance_npcname("#moc_meddling");
+	}
+	else if ('miniboss_id[1] == 0 && 'miniboss_id[0] == 0) {
+		donpcevent instance_npcname("#moc_origin") + "::OnEnd";
+		stopnpctimer instance_npcname("#moc_meddling");
+		donpcevent instance_npcname("#despair_god_main") + "::OnPhase03";
+	}
+	else {
+		unittalk 'miniboss_id[1], "편히 잠들게 해 주마. 이것이 나의 자비다!"; // todo, custom text
+		setunitdata 'miniboss_id[1], UMOB_HP, 1000000;
+		donpcevent instance_npcname("#moc_meddling") + "::OnStart";
+	}
+	end;
+
+OnEnd:
+	stopnpctimer;
+	disablenpc instance_npcname("#moc_origin");
+	killmonster 'map_eom$, instance_npcname("#moc_origin") + "::OnMobDead1";
+	killmonster 'map_eom$, instance_npcname("#moc_origin") + "::OnMobDead2";
+	end;
+}
+
+1@eom,1,1,0	script	#moc_meddling	-1,{
+	end;
+OnStart:
+	initnpctimer;
+	getunitdata 'miniboss_id[1], .@data;
+	if (.@data[UMOB_HP] > 100000)
+		unitskillusepos 'miniboss_id[1],"WZ_METEOR",9,.@data[UMOB_X],.@data[UMOB_Y],-50;
+	end;
+OnTimer5000:
+	initnpctimer;
+	end;
+}
+
+1@eom,4,6,0	script	#mk_trap	CLEAR_NPC,{
+	end;
+OnTrap:
+	.@label$ = instance_npcname("#mk_trap") + "::OnMobDead";
+	if (mobcount( 'map_eom$, .@label$ ) < 3) {
+		getunitdata 'boss_id, .@data;
+		monster 'map_eom$,.@data[UMOB_X]-4,.@data[UMOB_Y], "광기의 카사", 3089,1, .@label$;	// MM_LOCO_KASA
+		monster 'map_eom$,.@data[UMOB_X],.@data[UMOB_Y]-4, "광기의 카사", 3089,1, .@label$;
+		monster 'map_eom$,.@data[UMOB_X]+4,.@data[UMOB_Y], "광기의 카사", 3089,1, .@label$;
+		monster 'map_eom$,.@data[UMOB_X],.@data[UMOB_Y]+4, "광기의 카사", 3089,1, .@label$;
+	}
+	end;
+OnMobDead:
+	end;
+}
+
+1@eom,102,222,3	script	#morocc_god	3097,{
+	end;
+OnStart:
+	enablenpc instance_npcname("#morocc_god");
+	initnpctimer;
+	end;
+OnTimer2000:
+	mapannounce 'map_eom$, "점점 재미있어지는군. 후후.", bc_map, 0xff0000;
+	end;
+OnTimer6000:
+	mapannounce 'map_eom$, "설마 벌써 끝났다고 생각한 건 아니겠지?", bc_map, 0xff0000;
+	end;
+OnTimer10000:
+	disablenpc instance_npcname("#morocc_god");
+	end;
+OnTimer12000:
+	donpcevent instance_npcname("#despair_main") + "::OnStart";
+	end;
+OnTimer13000:
+	unittalk 'boss_id, "무엇을 기다리는 것이냐?!";
+	end;
+OnTimer14000:
+	unitskilluseid 'boss_id, "NPC_WIDEWEB",1;
+	end;
+OnTimer16000:
+	mapannounce 'map_eom$, "네 피를 가져가겠다!", bc_map, 0xff0000;
+	end;
+OnTimer17000:
+	stopnpctimer;
+	getunitdata 'boss_id, .@data;
+	unitskillusepos 'boss_id,"NPC_WIDESUCK",1,.@data[UMOB_X],.@data[UMOB_Y],-50;
+	donpcevent instance_npcname("#ma_combo") + "::OnStart";
+	end;
+}
+
+1@eom,1,1,0	script	#despair_main	-1,{
+	end;
+OnStart:
+	enablenpc instance_npcname("#despair_main");
+	monster 'map_eom$,101,194, "절망의 신 모로크",3097,1, instance_npcname("#despair_main") + "::OnMobDead";	// MM_MOROCC_ADT
+	'boss_id = $@mobid[0];
+	end;
+OnMobDead:
+	disablenpc instance_npcname("#despair_main");
+	killmonster 'map_eom$, instance_npcname("#despair_main") + "::OnMobDead";
+	stopnpctimer instance_npcname("#morocc_god");
+	stopnpctimer instance_npcname("#ma_combo");
+	stopnpctimer instance_npcname("#despair_event_1");
+	stopnpctimer instance_npcname("#despair_event_2");
+	stopnpctimer instance_npcname("#despair_event_3");
+	stopnpctimer instance_npcname("#despair_event_4");
+	stopnpctimer instance_npcname("#despair_event_5");
+	mapannounce 'map_eom$, "이것으로... 끝났다고... 생각하지 마라... 너희는 이미...", bc_map, 0xff0000;
+	initnpctimer;
+
+	'step = 11;
+	donpcevent instance_npcname("#demon_god_variables") + "::OnVariableReset";
+	end;
+OnTimer2000:
+	stopnpctimer;
+	enablenpc instance_npcname("니드호그#eomnyd04");
+	end;
+
+OnTest_hp:
+	if ('boss_id && mobcount( 'map_eom$, instance_npcname("#despair_main") + "::OnMobDead" ) > 0)
+		setunitdata 'boss_id, UMOB_HP, 2000000;
+	end;
+}
+
+1@eom,4,8,0	script	#ma_combo	CLEAR_NPC,{
+	end;
+OnStart:
+	initnpctimer;
+	end;
+OnTimer10000:
+	donpcevent instance_npcname("#despair_event_" + rand(1,5)) + "::OnEvent";
+	stopnpctimer;
+	end;
+}
+
+1@eom,1,1,0	script	#despair_event_1	-1,{
+	end;
+OnEvent:
+	initnpctimer;
+	unittalk 'boss_id, "천천히, 고통스럽게 태워 주마.";
+	end;
+OnTimer2000:
+	unitskilluseid 'boss_id, "NPC_WIDEWEB",1;
+	end;
+OnTimer3000:
+	unitskilluseid 'boss_id, "NPC_FIRESTORM",3;
+	end;
+OnTimer5000:
+	stopnpctimer;
+	getunitdata 'boss_id, .@data;
+	unitskillusepos 'boss_id,"WZ_METEOR",11,.@data[UMOB_X],.@data[UMOB_Y],-50;
+	donpcevent instance_npcname("#ma_combo") + "::OnStart";
+	end;
+}
+
+1@eom,1,1,0	script	#despair_event_2	-1,{
+	end;
+OnEvent:
+	initnpctimer;
+	unittalk 'boss_id, "광시곡이 들리느냐? 고통에 몸부림치는 너희 영혼의 비명이다!";
+	end;
+OnTimer2000:
+	unitskilluseid 'boss_id, "NPC_WIDEWEB",1;
+	end;
+OnTimer3000:
+	getunitdata 'boss_id, .@data;
+	'bossx = .@data[UMOB_X];
+	'bossy = .@data[UMOB_Y];
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,('bossx-2),'bossy,-50;
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,('bossx+2),'bossy,-50;
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,'bossx,('bossy+2),-50;
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,'bossx,('bossy-2),-50;
+	end;
+OnTimer4000:
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,('bossx-6),'bossy,-50;
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,('bossx+6),'bossy,-50;
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,'bossx,('bossy+6),-50;
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,'bossx,('bossy-6),-50;
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,('bossx-4),('bossy+4),-50;
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,('bossx-4),('bossy-4),-50;
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,('bossx+4),('bossy+4),-50;
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,('bossx+4),('bossy-4),-50;
+	end;
+OnTimer5000:
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,('bossx-10),'bossy,-50;
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,('bossx+10),'bossy,-50;
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,'bossx,('bossy+10),-50;
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,'bossx,('bossy-10),-50;
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,('bossx-8),('bossy+8),-50;
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,('bossx-8),('bossy-8),-50;
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,('bossx+8),('bossy+8),-50;
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,('bossx+8),('bossy-8),-50;
+	end;
+OnTimer6000:
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,('bossx-16),'bossy,-50;
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,('bossx+16),'bossy,-50;
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,'bossx,('bossy+16),-50;
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,'bossx,('bossy-16),-50;
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,('bossx-12),('bossy+12),-50;
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,('bossx-12),('bossy-12),-50;
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,('bossx+12),('bossy+12),-50;
+	unitskillusepos 'boss_id,"MG_THUNDERSTORM",20,('bossx+12),('bossy-12),-50;
+	end;
+OnTimer7000:
+	stopnpctimer;
+	donpcevent instance_npcname("#ma_combo") + "::OnStart";
+	end;
+}
+
+1@eom,1,1,0	script	#despair_event_3	-1,{
+	end;
+OnEvent:
+	initnpctimer;
+	unittalk 'boss_id, "죽음의 벼락을 받아라!";
+	end;
+OnTimer2000:
+	unitskilluseid 'boss_id, "NPC_WIDEWEB",1;
+	end;
+OnTimer4000:
+	unitskilluseid 'boss_id, "NPC_WIDEFREEZE",5;
+	end;
+OnTimer6000:
+	getunitdata 'boss_id, .@data;
+	unitskillusepos 'boss_id,"WZ_VERMILION",5,(.@data[UMOB_X]-7),.@data[UMOB_Y],-50;
+	unitskillusepos 'boss_id,"WZ_VERMILION",5,(.@data[UMOB_X]+7),.@data[UMOB_Y],-50;
+	unitskillusepos 'boss_id,"WZ_VERMILION",5,.@data[UMOB_X],(.@data[UMOB_Y]+7),-50;
+	unitskillusepos 'boss_id,"WZ_VERMILION",5,.@data[UMOB_X],(.@data[UMOB_Y]-7),-50;
+	end;
+OnTimer10000:
+	unittalk 'boss_id, "아름다운 불꽃이 되어 타올라라!";
+	end;
+OnTimer12000:
+	getunitdata 'boss_id, .@data;
+	unitskillusepos 'boss_id,"WZ_VERMILION",21,.@data[UMOB_X],.@data[UMOB_Y],-50;
+	end;
+OnTimer14000:
+	stopnpctimer;
+	donpcevent instance_npcname("#ma_combo") + "::OnStart";
+	end;
+}
+
+1@eom,1,1,0	script	#despair_event_4	-1,{
+	end;
+OnEvent:
+	initnpctimer;
+	unittalk 'boss_id, "네 목숨을 거두겠다.";
+	unitskilluseid 'boss_id, "NPC_FLAMECROSS",1;
+	end;
+OnTimer1000:
+	getunitdata 'boss_id, .@data;
+	unitskillusepos 'boss_id,"NPC_WIDESUCK",1,.@data[UMOB_X],.@data[UMOB_Y],-50;
+	end;
+OnTimer5000:
+	stopnpctimer;
+	donpcevent instance_npcname("#ma_combo") + "::OnStart";
+	end;
+}
+
+1@eom,1,1,0	script	#despair_event_5	-1,{
+	end;
+OnEvent:
+	initnpctimer;
+	unittalk 'boss_id, "후후후.";
+	end;
+OnTimer2000:
+	unitskilluseid 'boss_id, "NPC_FIRESTORM",3;
+	end;
+OnTimer4000:
+	getunitdata 'boss_id, .@data;
+	unitskillusepos 'boss_id,"WZ_FIREPILLAR",10,.@data[UMOB_X],.@data[UMOB_Y],-50;
+	end;
+OnTimer8000:
+	stopnpctimer;
+	donpcevent instance_npcname("#ma_combo") + "::OnStart";
+	end;
+}
+
+1@eom,103,194,3	script	니드호그#eomnyd04	4_F_NYDHOG,{
+	if ('step < 11)
+		end;
+
+	if (isbegin_quest(7597) == 0 && checkquest(7593,HUNTING) == 2) {
+		if ('NEED_EOM_FAST) {
+			mes "[니드호그]";
+			mes "절망의 신을 다시 쓰러뜨렸습니다.";
+			mes "토벌 기록을 정리하고 지휘관에게 보고할 수 있도록 하겠습니다.";
+		}
+		else {
+			mes "[니드호그]";
+			mes "신이 되려던 존재를 막아 냈습니다.";
+			mes "목표는 달성했지만 불길한 기분은 사라지지 않습니다.";
+			cutin "ep14_nyd03.bmp",2;
+			next;
+			mes "[니드호그]";
+			mes "이 세계는 모로크의 정신 속에서 만들어졌습니다.";
+			mes "같은 하루와 같은 절망이 영원히 반복될 것입니다.";
+			cutin "ep14_nyd02.bmp",2;
+			next;
+			mes "[니드호그]";
+			mes "그는 새로운 세계의 창조주가 되려 했지만";
+			mes "결국 기존의 세계와 신을 흉내 냈을 뿐입니다.";
+			next;
+			mes "[니드호그]";
+			mes "이곳을 벗어나 현실로 돌아갑시다.";
+			mes "다음에도 함께 싸울 수 있기를 바랍니다.";
+			cutin "ep14_nyd04.bmp",2;
+		}
+
+		if (isbegin_quest(7593) == 1) {
+			erasequest 7593;
+			setquest 7597;
+		}
+		if (checkquest(7601,HUNTING) == 1)
+			erasequest 7601;
+		if (isbegin_quest(7602) > 0)
+			erasequest 7602;
+		if (isbegin_quest(7603) == 1)
+			erasequest 7603;
+		if (isbegin_quest(7604) > 0)
+			erasequest 7604;
+		if (isbegin_quest(7596) == 1)
+			erasequest 7596;
+
+		// 최초 완료 후 계정 내 모든 캐릭터가 간소화 진행을 선택할 수 있습니다.
+		#NEED_MD_EOM_CLEAR = 1;
+	}
+	else {
+		mes "[니드호그]";
+		mes "이곳은 아직 모로크의 정신세계와 이어져 있습니다.";
+		mes "그는 이 안에서 과거를 계속 반복하고 있을 겁니다.";
+		cutin "ep14_nyd03.bmp",2;
+	}
+	next;
+	select("밖으로 나간다.");
+	mes "[니드호그]";
+	mes "알겠습니다. 원정대원들이 있는 곳으로 보내 드리겠습니다.";
+	close2;
+	warp "moro_vol",91,87;
+	end;
+}
+
+1@eom,5,1,0	script	테스트 도우미#eomtest	4_ENERGY_BLUE,{
+	mes "무슨 일이지?";
+	next;
+	if (callfunc("F_GM_NPC",1854,0) < 1) {
+		mes "권한이 없습니다.";
+		close;
+	}
+	mes "어느 보스를 조정하시겠습니까?";
+	next;
+	switch( select( "브리나래아", "무스펠스콜", "반신 모로크", "절망의 신 모로크" ) ) {
+	case 1:
+		mes "브리나래아의 체력을 2,000,000으로 설정했습니다.";
+		donpcevent instance_npcname("브리나래아#brinpc01") + "::OnTest_hp";
+		close;
+	case 2:
+		mes "무스펠스콜의 체력을 2,000,000으로 설정했습니다.";
+		donpcevent instance_npcname("#skollmaster") + "::OnTest_hp";
+		close;
+
+	case 3:
+		mes "반신 모로크의 체력을 2,000,000으로 설정했습니다.";
+		donpcevent instance_npcname("#despair_god_main") + "::OnTest_hp";
+		close;
+
+	case 4:
+		mes "절망의 신 모로크의 체력을 2,000,000으로 설정했습니다.";
+		donpcevent instance_npcname("#despair_main") + "::OnTest_hp";
+		close;
+	}
+	end;
+}
