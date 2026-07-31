@@ -153,8 +153,12 @@ S_DoRebirth:
 
 S_ApplyRetroactivePoints:
 	// 캐릭터별 최초 1회만 기존 환생 횟수를 기준으로 소급 지급
-	if (PointRetroactiveDoneVar)
+	// 기존 스크립트가 사용하던 PointRetroactiveDoneVar도 함께 확인하여 중복 소급을 방지합니다.
+	if (getd(.PointRetroactiveDoneVar$) || PointRetroactiveDoneVar) {
+		setd .PointRetroactiveDoneVar$, 1;
+		PointRetroactiveDoneVar = 1;
 		return;
+	}
 
 	.@count = getd(.CountVar$);
 	.@retroactive_point = .@count * .RetroactivePointPerRebirth;
@@ -169,6 +173,7 @@ S_ApplyRetroactivePoints:
 	}
 
 	// 환생 횟수가 0이어도 최초 확인 완료 처리하여 이후 중복 소급 방지
+	setd .PointRetroactiveDoneVar$, 1;
 	PointRetroactiveDoneVar = 1;
 	return;
 
@@ -186,6 +191,7 @@ S_ResetRebirthShopWeek:
 	if (getd(.ShopWeekVar$) != .@week_start) {
 		setd .ShopWeekVar$, .@week_start;
 		setd .ShopBlessingCountVar$, 0;
+		setd .ShopSillitPongCountVar$, 0;
 	}
 
 	return;
@@ -195,11 +201,16 @@ S_OpenRebirthShop:
 		callsub S_ResetRebirthShopWeek;
 
 		.@point = getd(.PointVar$);
-		.@used = getd(.ShopBlessingCountVar$);
-		.@remaining = .Shop_Blessing_WeeklyLimit - .@used;
 
-		if (.@remaining < 0)
-			.@remaining = 0;
+		.@blessing_used = getd(.ShopBlessingCountVar$);
+		.@blessing_remaining = .Shop_Blessing_WeeklyLimit - .@blessing_used;
+		if (.@blessing_remaining < 0)
+			.@blessing_remaining = 0;
+
+		.@sillit_used = getd(.ShopSillitPongCountVar$);
+		.@sillit_remaining = .Shop_Sillit_Pong_WeeklyLimit - .@sillit_used;
+		if (.@sillit_remaining < 0)
+			.@sillit_remaining = 0;
 
 		mes "[환생 상점]";
 		mes "보유 환생 포인트: ^00AA00" + .@point + "점^000000";
@@ -207,7 +218,8 @@ S_OpenRebirthShop:
 		next;
 
 		.@shop_menu = select(
-			"대장장이의 축복 (주 " + .@remaining + "회 남음)",
+			"대장장이의 축복 (주 " + .@blessing_remaining + "회 남음)",
+			"봉인된 실릿 퐁 (주 " + .@sillit_remaining + "회 남음)",
 			"뒤로"
 		);
 
@@ -217,6 +229,10 @@ S_OpenRebirthShop:
 				break;
 
 			case 2:
+				callsub S_BuyRebirthShopSillitPong;
+				break;
+
+			case 3:
 				return;
 		}
 	}
@@ -302,6 +318,94 @@ S_BuyRebirthShopBlessing:
 
 	mes "[환생 상점]";
 	mes callsub(S_ItemName, .Shop_Blessing_ItemID) + " 1개를 구매했습니다.";
+	mes " ";
+	mes "남은 환생 포인트: ^00AA00" + getd(.PointVar$) + "점^000000";
+	mes "이번 주 남은 구매 횟수: ^0055FF" + .@remaining + "회^000000";
+	next;
+	return;
+
+S_BuyRebirthShopSillitPong:
+	callsub S_ResetRebirthShopWeek;
+
+	.@point = getd(.PointVar$);
+	.@used = getd(.ShopSillitPongCountVar$);
+	.@remaining = .Shop_Sillit_Pong_WeeklyLimit - .@used;
+
+	if (.@remaining < 0)
+		.@remaining = 0;
+
+	mes "[환생 상점]";
+	mes "판매 상품: " + callsub(S_ItemName, .Shop_Sillit_Pong_ItemID);
+	mes " ";
+	mes "필요 환생 포인트: ^00AA00" + .Shop_Sillit_Pong_PointCost + "점^000000";
+	mes "필요 제니: ^FF8800" + callfunc("F_InsertComma", .Shop_Sillit_Pong_ZenyCost) + " Zeny^000000";
+	mes " ";
+	mes "보유 환생 포인트: " + .@point + "점";
+	mes "이번 주 구매 가능: " + .@remaining + "회";
+	next;
+
+	if (select("구매한다", "상품 목록으로") == 2)
+		return;
+
+	if (.Shop_Sillit_Pong_ItemID <= 0) {
+		mes "[환생 상점]";
+		mes "^FF0000봉인된 실릿 퐁 아이템 ID가 설정되지 않았습니다.^000000";
+		next;
+		return;
+	}
+
+	if (.@remaining <= 0) {
+		mes "[환생 상점]";
+		mes "이번 주 구매 가능 횟수를 모두 사용했습니다.";
+		next;
+		return;
+	}
+
+	if (.Shop_Sillit_Pong_WeeklyLimit <= 0 ||
+		.Shop_Sillit_Pong_PointCost < 0 ||
+		.Shop_Sillit_Pong_ZenyCost < 0) {
+		mes "[환생 상점]";
+		mes "^FF0000봉인된 실릿 퐁 상점 설정이 올바르지 않습니다.^000000";
+		next;
+		return;
+	}
+
+	if (getd(.PointVar$) < .Shop_Sillit_Pong_PointCost) {
+		mes "[환생 상점]";
+		mes "환생 포인트가 부족합니다.";
+		mes "필요 포인트: " + .Shop_Sillit_Pong_PointCost + "점";
+		mes "보유 포인트: " + getd(.PointVar$) + "점";
+		next;
+		return;
+	}
+
+	if (Zeny < .Shop_Sillit_Pong_ZenyCost) {
+		mes "[환생 상점]";
+		mes "제니가 부족합니다.";
+		mes "필요 제니: " + callfunc("F_InsertComma", .Shop_Sillit_Pong_ZenyCost) + " Zeny";
+		next;
+		return;
+	}
+
+	if (!checkweight(.Shop_Sillit_Pong_ItemID, 1)) {
+		mes "[환생 상점]";
+		mes "소지 무게 또는 인벤토리 공간을 확인해주세요.";
+		next;
+		return;
+	}
+
+	// 조건 확인 후 재화 차감 및 상품 지급
+	setd .PointVar$, getd(.PointVar$) - .Shop_Sillit_Pong_PointCost;
+	Zeny -= .Shop_Sillit_Pong_ZenyCost;
+	getitem .Shop_Sillit_Pong_ItemID, 1;
+	setd .ShopSillitPongCountVar$, getd(.ShopSillitPongCountVar$) + 1;
+
+	.@remaining = .Shop_Sillit_Pong_WeeklyLimit - getd(.ShopSillitPongCountVar$);
+	if (.@remaining < 0)
+		.@remaining = 0;
+
+	mes "[환생 상점]";
+	mes callsub(S_ItemName, .Shop_Sillit_Pong_ItemID) + " 1개를 구매했습니다.";
 	mes " ";
 	mes "남은 환생 포인트: ^00AA00" + getd(.PointVar$) + "점^000000";
 	mes "이번 주 남은 구매 횟수: ^0055FF" + .@remaining + "회^000000";
@@ -708,10 +812,16 @@ OnInit:
 	.Shop_Blessing_PointCost = 3;         // 필요 환생 포인트
 	.Shop_Blessing_ZenyCost = 100000000;   // 필요 제니
 	.Shop_Blessing_WeeklyLimit = 5;       // 캐릭터당 주간 구매 제한
+	
+	.Shop_Sillit_Pong_ItemID = 399919;         // 봉인된 실릿 퐁
+	.Shop_Sillit_Pong_PointCost = 10;         // 필요 환생 포인트
+	.Shop_Sillit_Pong_ZenyCost = 100000000;   // 필요 제니
+	.Shop_Sillit_Pong_WeeklyLimit = 1;       // 캐릭터당 주간 구매 제한	
 
 	// 캐릭터 단위 주간 구매 기록 변수
 	.ShopWeekVar$ = "NEED_REBIRTH_SHOP_WEEK";
 	.ShopBlessingCountVar$ = "NEED_REBIRTH_BLESSING_WEEK_COUNT";
+	.ShopSillitPongCountVar$ = "NEED_REBIRTH_SILLIT_PONG_WEEK_COUNT";
 
 	// ============================================================
 	// 1회마다 지급 보상
