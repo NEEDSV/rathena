@@ -1,9 +1,17 @@
 //============================================================
 // 짝퉁 장인 카피엘
 // 인기 의상의 색상 배리에이션 교환 NPC
+//
+// 교환 조건
+// - 비귀속 원본 의상 1개
+// - 의상 교환쿠폰 100개
+//
+// 오오라 옷장에서 받은 귀속 의상은 교환 재료로 사용할 수 없습니다.
 //============================================================
 
 itemmall,27,74,4	script	짝퉁 장인 카피엘#costume_copy	4_M_MIDDLE,{
+	disable_items;
+
 	mes "^3b488c[짝퉁 장인 카피엘]^000000";
 	mes "쉿! 목소리 좀 낮춰!";
 	mes "여기 있는 물건들은 평범한 의상이 아니라고.";
@@ -16,6 +24,7 @@ itemmall,27,74,4	script	짝퉁 장인 카피엘#costume_copy	4_M_MIDDLE,{
 	mes "그런 특별한 물건들이야.";
 	next;
 
+L_Main:
 	switch(select(
 		"염색한 의상을 보여줘.",
 		"이거 정품 맞아?",
@@ -24,8 +33,7 @@ itemmall,27,74,4	script	짝퉁 장인 카피엘#costume_copy	4_M_MIDDLE,{
 		"다음에 올게."
 	)) {
 		case 1:
-			callsub S_CostumeMenu;
-			close2;
+			goto L_CostumeMenu;
 
 		case 2:
 			mes "^3b488c[짝퉁 장인 카피엘]^000000";
@@ -54,11 +62,12 @@ itemmall,27,74,4	script	짝퉁 장인 카피엘#costume_copy	4_M_MIDDLE,{
 			mes "^FF0000의상 도감에 등록되지 않아.^000000";
 			mes "순수하게 생김새와 색상만 보고 고르라고.";
 			close;
+
 		case 4:
 			mes "^3b488c[짝퉁 장인 카피엘]^000000";
 			mes "그럼 원하는 의상을 디스코드에 올려봐.";
-			mes "내가 슬쩍보고 한번 만들어주지.";
-			close;		
+			mes "내가 슬쩍 보고 한번 만들어주지.";
+			close;
 
 		case 5:
 			mes "^3b488c[짝퉁 장인 카피엘]^000000";
@@ -68,11 +77,12 @@ itemmall,27,74,4	script	짝퉁 장인 카피엘#costume_copy	4_M_MIDDLE,{
 	}
 
 	end;
-	
+
+
 //------------------------------------------------------------
-// 의상 선택 메뉴
+// 원본 의상 선택 메뉴
 //------------------------------------------------------------
-S_CostumeMenu:
+L_CostumeMenu:
 	mes "^3b488c[짝퉁 장인 카피엘]^000000";
 	mes "어떤 의상을 찾고 있지?";
 	mes "원본 이름을 골라봐.";
@@ -80,20 +90,253 @@ S_CostumeMenu:
 
 	switch(select(
 		"사념의 오오라",
+		"처음으로 돌아간다.",
 		"다음에 올게."
 	)) {
 		case 1:
-			callshop "Subject_Aura";
-			end;
+			goto L_SubjectAura;
 
 		case 2:
+			goto L_Main;
+
+		case 3:
 			mes "^3b488c[짝퉁 장인 카피엘]^000000";
 			mes "단속반에는 비밀이다!";
 			close;
 	}
 
 	end;
-	
+
+
+//------------------------------------------------------------
+// 사념의 오오라 색상 선택
+//------------------------------------------------------------
+L_SubjectAura:
+	mes "^3b488c[짝퉁 장인 카피엘]^000000";
+	mes "사념의 오오라를 어떤 색으로 바꿀까?";
+	mes "";
+	mes "교환에는 아래 재료가 필요해.";
+	mes "^0066FF" + getitemname(C_Subject_Aura) + " 1개^000000";
+	mes "^FF0000" + getitemname(Costume_Exchange) + " 10개^000000";
+	mes "";
+	mes "^FF0000귀속된 원본 의상은 사용할 수 없어.^000000";
+	next;
+
+	switch(select(
+		"블랙",
+		"화이트",
+		"아쿠아",
+		"블루",
+		"브라운",
+		"그린",
+		"오렌지",
+		"핑크",
+		"퍼플",
+		"옐로우",
+		"의상 목록으로 돌아간다."
+	)) {
+		case 1:
+			.@result_id = C_Subject_Aura_Black;
+			break;
+
+		case 2:
+			.@result_id = C_Subject_Aura_White;
+			break;
+
+		case 3:
+			.@result_id = C_Subject_Aura_Cyan;
+			break;
+
+		case 4:
+			.@result_id = C_Subject_Aura_Blue;
+			break;
+
+		case 5:
+			.@result_id = C_Subject_Aura_Brown;
+			break;
+
+		case 6:
+			.@result_id = C_Subject_Aura_Green;
+			break;
+
+		case 7:
+			// DB의 AegisName이 Orage로 등록되어 있어 그대로 사용
+			.@result_id = C_Subject_Aura_Orage;
+			break;
+
+		case 8:
+			.@result_id = C_Subject_Aura_Pink;
+			break;
+
+		case 9:
+			.@result_id = C_Subject_Aura_Purple;
+			break;
+
+		case 10:
+			.@result_id = C_Subject_Aura_Yellow;
+			break;
+
+		case 11:
+			goto L_CostumeMenu;
+	}
+
+	callsub S_Exchange,
+		C_Subject_Aura,
+		.@result_id,
+		Costume_Exchange,
+		10;
+
+	// 교환을 취소한 경우 색상 메뉴로 복귀
+	goto L_SubjectAura;
+
+
+//------------------------------------------------------------
+// 비귀속 원본 의상 검사 및 교환
+//
+// getarg(0) : 원본 의상 ID
+// getarg(1) : 결과 의상 ID
+// getarg(2) : 교환쿠폰 ID
+// getarg(3) : 교환쿠폰 수량
+//------------------------------------------------------------
+S_Exchange:
+	.@original_id = getarg(0);
+	.@result_id   = getarg(1);
+	.@ticket_id   = getarg(2);
+	.@ticket_amt  = getarg(3);
+
+	// 비귀속·비대여·미장착 원본 의상 검색
+	callsub S_FindTradableOriginal, .@original_id;
+	.@original_idx = @costume_copy_find_idx;
+	.@found_bound  = @costume_copy_found_bound;
+	.@found_equip  = @costume_copy_found_equip;
+	.@found_rental = @costume_copy_found_rental;
+
+	if (.@original_idx < 0) {
+		mes "^3b488c[짝퉁 장인 카피엘]^000000";
+
+		if (.@found_equip) {
+			mes "교환 가능한 원본 의상을 장착하고 있군.";
+			mes "장착을 해제한 뒤 다시 찾아와.";
+		}
+		else if (.@found_rental) {
+			mes "기간제 원본 의상은 사용할 수 없어.";
+			mes "기간 제한이 없는 원본을 가져와.";
+		}
+		else if (.@found_bound) {
+			mes "그 원본은 귀속 표시가 붙어 있군.";
+			mes "^FF0000오오라 옷장에서 꺼낸 귀속 의상은^000000";
+			mes "^FF0000교환 재료로 사용할 수 없어.^000000";
+		}
+		else {
+			mes "^FF0000" + getitemname(.@original_id) + " 1개^000000가 필요해.";
+		}
+
+		close;
+	}
+
+	if (countitem(.@ticket_id) < .@ticket_amt) {
+		mes "^3b488c[짝퉁 장인 카피엘]^000000";
+		mes "^FF0000" + getitemname(.@ticket_id) + " " + .@ticket_amt + "개^000000가 필요해.";
+		close;
+	}
+
+	mes "^3b488c[짝퉁 장인 카피엘]^000000";
+	mes "좋아, 재료는 확인했어.";
+	mes "";
+	mes "^0066FF" + getitemname(.@original_id) + " 1개^000000";
+	mes "^FF0000" + getitemname(.@ticket_id) + " " + .@ticket_amt + "개^000000";
+	mes "";
+	mes "이 재료를 사용해서";
+	mes "^008000" + getitemname(.@result_id) + "^000000";
+	mes "으로 바꿀 거야.";
+	next;
+
+	if (select("교환한다.", "그만둔다.") == 2) {
+		mes "^3b488c[짝퉁 장인 카피엘]^000000";
+		mes "마음이 바뀌면 다른 색을 골라봐.";
+		next;
+		return;
+	}
+
+	// 확인창 이후 재료 상태를 다시 검사
+	callsub S_FindTradableOriginal, .@original_id;
+	.@original_idx = @costume_copy_find_idx;
+
+	if (.@original_idx < 0 || countitem(.@ticket_id) < .@ticket_amt) {
+		mes "^3b488c[짝퉁 장인 카피엘]^000000";
+		mes "어라? 방금 확인한 재료가 보이지 않는데?";
+		mes "비귀속 원본 의상과 교환쿠폰을 다시 확인해 줘.";
+		close;
+	}
+
+	// 검증한 비귀속 원본 의상 슬롯만 정확히 제거
+	if (!delitemidx(.@original_idx, 1)) {
+		mes "^3b488c[짝퉁 장인 카피엘]^000000";
+		mes "원본 의상을 회수하지 못했어.";
+		mes "장착 여부와 인벤토리를 확인한 뒤 다시 시도해 줘.";
+		close;
+	}
+
+	// 교환쿠폰은 귀속 여부와 관계없이 사용 가능
+	delitem .@ticket_id, .@ticket_amt;
+
+	getitem .@result_id, 1;
+
+	mes "^3b488c[짝퉁 장인 카피엘]^000000";
+	mes "자, 완성이다!";
+	mes "^008000" + getitemname(.@result_id) + "^000000";
+	mes "누가 물어보면 정품이라고 해!";
+	close;
+
+
+//------------------------------------------------------------
+// 교환 가능한 원본 의상 슬롯 검색
+//
+// 결과는 아래 임시 캐릭터 변수에 저장
+// @costume_copy_find_idx
+// @costume_copy_found_bound
+// @costume_copy_found_equip
+// @costume_copy_found_rental
+//------------------------------------------------------------
+S_FindTradableOriginal:
+	.@original_id = getarg(0);
+
+	@costume_copy_find_idx     = -1;
+	@costume_copy_found_bound  = 0;
+	@costume_copy_found_equip  = 0;
+	@costume_copy_found_rental = 0;
+
+	getinventorylist;
+
+	for (.@i = 0; .@i < @inventorylist_count; ++.@i) {
+		if (@inventorylist_id[.@i] != .@original_id)
+			continue;
+
+		// 귀속된 원본은 교환 불가
+		if (@inventorylist_bound[.@i] != BOUND_NONE) {
+			@costume_copy_found_bound = 1;
+			continue;
+		}
+
+		// 기간제 원본은 교환 불가
+		if (@inventorylist_expire[.@i] != 0) {
+			@costume_copy_found_rental = 1;
+			continue;
+		}
+
+		// 장착 중인 원본은 교환 불가
+		if (@inventorylist_equip[.@i] != 0) {
+			@costume_copy_found_equip = 1;
+			continue;
+		}
+
+		@costume_copy_find_idx = @inventorylist_idx[.@i];
+		break;
+	}
+
+	return;
+
+
 OnInit:
 	waitingroom "의상 교환쿠폰 사용처",0;
 	end;
