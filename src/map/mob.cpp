@@ -7576,6 +7576,13 @@ void mob_reload_itemmob_data(void) {
 				continue;
 
 			item_data* id = itemdb_search(entry->nameid);
+
+			if( id == nullptr )
+				continue;
+
+			if( entry->rate && ( id->maxchance == -1 || id->maxchance < entry->rate ) )
+				id->maxchance = entry->rate;
+
 			int32 k;
 
 			for (k = 0; k < MAX_SEARCH; k++) {
