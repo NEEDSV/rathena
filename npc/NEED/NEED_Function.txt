@@ -652,3 +652,38 @@ OnPCLoginEvent:
 	mes "캐시 30,000과 50,000,000 Zeny가 지급되었습니다.";
 	close;
 }
+
+-	script	NEED_Job60_Hotfix	-1,{
+
+OnPCLoginEvent:
+	// 이미 최초 접속 검사가 끝난 캐릭터
+	if (NEED_JOB60_PATCH_20260802)
+		end;
+
+	// 최초 접속 즉시 처리 완료 상태로 잠금
+	// 베이스 175가 아니더라도 이후 다시 검사하지 않음
+	NEED_JOB60_PATCH_20260802 = 1;
+
+	// 패치 누락 당시 이미 베이스 175였던 캐릭터만 대상
+	if (BaseLevel < 175)
+		end;
+
+	// 이미 잡 레벨 60이면 처리 불필요
+	if (JobLevel >= 60)
+		end;
+
+	.@old_job_level = JobLevel;
+	.@add_job_level = 60 - JobLevel;
+
+	// 잡 레벨과 스킬 포인트를 함께 정상 증가시킴
+	atcommand "@joblevelup " + .@add_job_level;
+
+	if (JobLevel >= 60) {
+		dispbottom "[레벨 확장 보정] 잡 레벨이 "
+			+ .@old_job_level + "에서 60으로 보정되었습니다.";
+	} else {
+		dispbottom "[레벨 확장 보정] 현재 직업의 최대 잡 레벨까지만 보정되었습니다.";
+	}
+
+	end;
+}
