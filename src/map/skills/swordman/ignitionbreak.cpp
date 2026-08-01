@@ -35,14 +35,8 @@ void SkillIgnitionBreak::calculateSkillRatio(const Damage *wd, const block_list 
 void SkillIgnitionBreak::castendNoDamageId(block_list *src, block_list *target, uint16 skill_lv, t_tick tick, int32& flag) const {
 	skill_area_temp[1] = 0;
 
-	// NEED: restore the modern skill-effect packet for current clients (PACKETVER 20211103). The prior
-	// 2017-only clif_skill_damage path did not render Ignition Break's explosion effect on modern
-	// clients; clif_skill_nodamage (as used by @displayskill and the NPC version) does. Older clients
-	// keep the 2017 clif_skill_damage animation path via the #else branch.
-#if PACKETVER >= 20180207
-	clif_skill_nodamage(src, *target, getSkillId(), skill_lv);
-#else
+	// Keep the 2017 skill animation path: ZC_NOTIFY_SKILL carries attackMT,
+	// allowing the client to scale Ignition Break's motion with the caster's ASPD.
 	clif_skill_damage( *src, *src, tick, status_get_amotion(src), 0, DMGVAL_IGNORE, 1, getSkillId(), skill_lv, DMG_SINGLE );
-#endif
 	map_foreachinrange(skill_area_sub, target, skill_get_splash(getSkillId(), skill_lv), BL_CHAR|BL_SKILL, src, getSkillId(), skill_lv, tick, flag|BCT_ENEMY|SD_SPLASH|1, skill_castend_damage_id);
 }
