@@ -4152,8 +4152,7 @@ OnStart:
 	enablenpc instance_npcname("#ghmemorialmob07_h");
 	monster 'map_name$[1],158,255,"각성 암다라이스",3150,1,instance_npcname("#ghmemorialmob07_h") + "::OnMyMobDead";// MG_AMDARAIS_H
 	'boss_id = $@mobid[0];
-	unittalk 'boss_id, "Run away... run away from me...";
-	donpcevent instance_npcname(strnpcinfo(0)) + "::OnSummonUnit";
+	unittalk 'boss_id, "도망쳐... 내게서 도망...";
 	initnpctimer;
 	end;
 
@@ -4173,42 +4172,12 @@ OnTimer55000:
 	donpcevent instance_npcname("#ghmemorialmob08_h") + "::OnStart";// Varmundt buffs and additionnal monsters
 	stopnpctimer;
 	end;
-	
-OnSummonUnit:
-	sleep 5000;
-	while(unitexists('boss_id)){
-		if(unitexists('boss_id)){
-			getunitdata 'boss_id,.@boss_data;
-			.@HP = .@boss_data[UMOB_HP];
-			.@MAX_HP = .@boss_data[UMOB_MAXHP];
-			.@trigger = (.@MAX_HP/10)*7;
-		}
-		if(.@HP <= .@trigger)
-			break;
-		sleep 1000;
-	}
-	while(unitexists('boss_id)){
-		getunitdata 'boss_id,.@boss_data;
-		.@x = .@boss_data[UMOB_X];
-		.@y = .@boss_data[UMOB_Y];
-		.@event$ = instance_npcname(strnpcinfo(0)) + "::OnUnitDead";
-		if(unitexists('boss_id)){
-			monster 'map_name$[1],.@x + 5,.@y + 5,"",2495,1,.@event$;
-			monster 'map_name$[1],.@x + 5,.@y - 5,"",2495,1,.@event$;
-			monster 'map_name$[1],.@x - 5,.@y + 5,"",2495,1,.@event$;
-			monster 'map_name$[1],.@x - 5,.@y - 5,"",2495,1,.@event$;
-		}
-		sleep 15000;
-		killmonster 'map_name$[1],.@event$;
-	}
 OnUnitDead:
 end;
 
 OnMyMobDead:
 	if (mobcount('map_name$[1], instance_npcname("#ghmemorialmob07_h") + "::OnMyMobDead") < 1) {
 		stopnpctimer;
-		.@event$ = instance_npcname(strnpcinfo(0)) + "::OnUnitDead";
-		killmonster 'map_name$[1],.@event$;
 		enablenpc instance_npcname("후긴#21_h");
 		enablenpc instance_npcname("#Secret Room Exit_h");
 
