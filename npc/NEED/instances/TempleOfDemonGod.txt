@@ -944,6 +944,9 @@ OnTimer5000:
 1@eom,2,3,0	script	#ice_hpcheck	CLEAR_NPC,{
 	end;
 OnSpawn:
+	'brina_phase_70 = 0;
+	'brina_phase_60 = 0;
+	'brina_phase_50 = 0;
 	enablenpc instance_npcname("#ice_hpcheck");
 	monster 'map_eom$,38,123, "브리나라네아",3091,1, instance_npcname("#ice_hpcheck") + "::OnMyMobDead";	// MM_BRINARANEA
 	'boss_id = $@mobid[0];
@@ -971,20 +974,25 @@ OnTimer3000:
 	}
 	'boss_hp = .@hp;
 
-	if (.@hp > 69500000 && .@hp < 70000000) {
+	if (.@hp > 69500000 && .@hp < 70000000 && 'brina_phase_70 == 0) {
+		'brina_phase_70 = 1;
 		unittalk 'boss_id, "아이들아, 나오너라. 진수성찬이 제 발로 찾아왔다!";
 		donpcevent instance_npcname("#ice_hpcheck") + "::OnCallBaby";
 	}
-	else if (.@hp > 59500000 && .@hp < 60000000) {
+	else if (.@hp > 59500000 && .@hp < 60000000 && 'brina_phase_60 == 0) {
+		'brina_phase_60 = 1;
 		unittalk 'boss_id, "아이들아, 식사 시간이다!";
 		donpcevent instance_npcname("#ice_hpcheck") + "::OnCallBaby";
 	}
-	else if (.@hp > 49500000 && .@hp < 50000000) {
+	else if (.@hp > 49500000 && .@hp < 50000000 && 'brina_phase_50 == 0) {
+		'brina_phase_50 = 1;
 		unittalk 'boss_id, "아직 배부르지 않느냐? 어서 나오너라!";
 		donpcevent instance_npcname("#ice_hpcheck") + "::OnCallBaby";
 	}
-	else if (.@hp < 22200000 && 'icestunami == false)
+	else if (.@hp < 22200000 && 'icestunami == false) {
 		donpcevent instance_npcname("#icestunami") + "::OnStart";
+	}
+
 	initnpctimer;
 	end;
 
@@ -1893,7 +1901,7 @@ OnStart:
 	enablenpc instance_npcname("#despair_god_main");
 	'boss_phase = 1;
 
-	monster 'map_eom$,101,194, "반신 모로크",3096,1, instance_npcname("#despair_god_main") + "::OnMobDead";	// MM_MOROCC_KID
+	monster 'map_eom$,101,194, "재생의 반마신",3096,1, instance_npcname("#despair_god_main") + "::OnMobDead";	// MM_MOROCC_KID
 	'boss_id = $@mobid[0];
 	getunitdata 'boss_id, .@data;
 	'boss_hp = .@data[UMOB_MAXHP];
@@ -1921,7 +1929,7 @@ OnPhase02:
 	getunitdata 'boss_id, .@data;
 	'boss_hp = .@data[UMOB_HP];
 	killmonster 'map_eom$, instance_npcname("#despair_god_main") + "::OnMobDead";
-	monster 'map_eom$,101,207, "반신 모로크",3096,1, instance_npcname("#despair_god_main") + "::OnMobDead";	// MM_MOROCC_KID
+	monster 'map_eom$,101,207, " 재생의 반마신",3096,1, instance_npcname("#despair_god_main") + "::OnMobDead";	// MM_MOROCC_KID
 	'boss_id = $@mobid[0];
 	setunitdata 'boss_id, UMOB_HP, 'boss_hp;
 	setunitdata 'boss_id, UMOB_MODE, (MD_MVP|MD_STATUSIMMUNE|MD_KNOCKBACKIMMUNE|MD_MVP|MD_DETECTOR);	// todo: MD_SKILL_IMMUNE ?
@@ -1939,7 +1947,7 @@ OnPhase03:
 	.@hp = .@data[UMOB_HP] + ('boss_hp - .@data[UMOB_HP]) * 10;
 	'boss_hp = min(80000000,.@hp);
 	killmonster 'map_eom$, instance_npcname("#despair_god_main") + "::OnMobDead";
-	monster 'map_eom$,101,194, "반신 모로크",3096,1, instance_npcname("#despair_god_main") + "::OnMobDead";	// MM_MOROCC_KID
+	monster 'map_eom$,101,194, " 재생의 반마신",3096,1, instance_npcname("#despair_god_main") + "::OnMobDead";	// MM_MOROCC_KID
 	'boss_id = $@mobid[0];
 	setunitdata 'boss_id, UMOB_HP, 'boss_hp;
 	unittalk 'boss_id, "그만 좀 끈질기게 굴어라!";
@@ -2532,7 +2540,7 @@ OnTimer8000:
 	mes "[니드호그]";
 	mes "알겠습니다. 원정대원들이 있는 곳으로 보내 드리겠습니다.";
 	close2;
-	warp "moro_vol",91,87;
+	warp "moro_cav",35,73;
 	end;
 }
 
