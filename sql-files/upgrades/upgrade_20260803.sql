@@ -1,0 +1,2 @@
+ALTER TABLE `vendings`
+	ADD COLUMN `currency` TINYINT(3) UNSIGNED NOT NULL DEFAULT '0' AFTER `autotrade`;

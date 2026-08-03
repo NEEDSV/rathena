@@ -550,9 +550,9 @@ int8 vending_openvending( map_session_data& sd, const char* message, const uint8
 	
 	Sql_EscapeString( mmysql_handle, message_sql, sd.message );
 
-	if( Sql_Query( mmysql_handle, "INSERT INTO `%s`(`id`, `account_id`, `char_id`, `sex`, `map`, `x`, `y`, `title`, `autotrade`, `body_direction`, `head_direction`, `sit`) "
-		"VALUES( %d, %d, %d, '%c', '%s', %d, %d, '%s', %d, '%d', '%d', '%d' );",
-		vendings_table, sd.vender_id, sd.status.account_id, sd.status.char_id, sd.status.sex == SEX_FEMALE ? 'F' : 'M', map_getmapdata(sd.m)->name, sd.x, sd.y, message_sql, sd.state.autotrade, at ? at->dir : sd.ud.dir, at ? at->head_dir : sd.head_dir, at ? at->sit : pc_issit(&sd) ) != SQL_SUCCESS ) {
+	if( Sql_Query( mmysql_handle, "INSERT INTO `%s`(`id`, `account_id`, `char_id`, `sex`, `map`, `x`, `y`, `title`, `autotrade`, `body_direction`, `head_direction`, `sit`, `currency`) "
+		"VALUES( %d, %d, %d, '%c', '%s', %d, %d, '%s', %d, '%d', '%d', '%d', '%u' );",
+		vendings_table, sd.vender_id, sd.status.account_id, sd.status.char_id, sd.status.sex == SEX_FEMALE ? 'F' : 'M', map_getmapdata(sd.m)->name, sd.x, sd.y, message_sql, sd.state.autotrade, at ? at->dir : sd.ud.dir, at ? at->head_dir : sd.head_dir, at ? at->sit : pc_issit(&sd), static_cast<uint8>(sd.vending_currency) ) != SQL_SUCCESS ) {
 		Sql_ShowDebug(mmysql_handle);
 	}
 
@@ -753,7 +753,7 @@ void do_init_vending_autotrade(void)
 {
 	if (battle_config.feature_autotrade) {
 		if (Sql_Query(mmysql_handle,
-			"SELECT `id`, `account_id`, `char_id`, `sex`, `title`, `body_direction`, `head_direction`, `sit` "
+			"SELECT `id`, `account_id`, `char_id`, `sex`, `title`, `body_direction`, `head_direction`, `sit`, `currency` "
 			"FROM `%s` "
 			"WHERE `autotrade` = 1 AND (SELECT COUNT(`vending_id`) FROM `%s` WHERE `vending_id` = `id`) > 0 "
 			"ORDER BY `id`;",
@@ -772,6 +772,7 @@ void do_init_vending_autotrade(void)
 			while (SQL_SUCCESS == Sql_NextRow(mmysql_handle)) {
 				size_t len;
 				char* data;
+				e_vending_currency currency;
 
 				at = nullptr;
 				CREATE(at, struct s_autotrader, 1);
@@ -783,6 +784,11 @@ void do_init_vending_autotrade(void)
 				Sql_GetData(mmysql_handle, 5, &data, nullptr); at->dir = atoi(data);
 				Sql_GetData(mmysql_handle, 6, &data, nullptr); at->head_dir = atoi(data);
 				Sql_GetData(mmysql_handle, 7, &data, nullptr); at->sit = atoi(data);
+				Sql_GetData(mmysql_handle, 8, &data, nullptr); currency = static_cast<e_vending_currency>(atoi(data));
+				if (!vending_currency_is_valid(currency)) {
+					ShowWarning("Invalid vending currency %d for vending id %u; falling back to Zeny.\n", atoi(data), at->id);
+					currency = e_vending_currency::ZENY;
+				}
 				at->count = 0;
 
 				if (battle_config.feature_autotrade_direction >= 0)
@@ -796,6 +802,7 @@ void do_init_vending_autotrade(void)
 				CREATE(at->sd, map_session_data, 1); // TODO: Dont use Memory Manager allocation anymore and rely on the C++ container
 				new (at->sd) map_session_data();
 				pc_setnewpc(at->sd, at->account_id, at->char_id, 0, gettick(), at->sex, 0);
+				at->sd->vending_currency = currency;
 				at->sd->state.autotrade = 1|2;
 				if (battle_config.autotrade_monsterignore)
 					at->sd->state.block_action |= PCBLOCK_IMMUNE;
