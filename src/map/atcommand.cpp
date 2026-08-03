@@ -197,17 +197,8 @@ uint64 AtcommandAliasDatabase::parseBodyNode( const ryml::NodeRef& node ){
 	return 1;
 }
 
-const char* AtcommandAliasDatabase::checkAlias( const char* alias ){
-	// NEED: accept both the legacy Korean client code page and UTF-8 spelling.
-	if( strcmp( alias, "\277\300\305\344\305\245\276\356" ) == 0 ||
-		strcmp( alias, "\354\230\244\355\206\240\355\201\220\354\226\264" ) == 0 ){
-		return "autopot";
-	}
-	if( strcmp( alias, "\270\360\265\345\300\374\310\257" ) == 0 ||
-		strcmp( alias, "\353\252\250\353\223\234\354\240\204\355\231\230" ) == 0 ){
-		return "performancemode";
-	}
-
+const char* AtcommandAliasDatabase::checkAlias( const char* alias )
+{
 	std::string alias_str( alias );
 	std::string* command = util::umap_find( this->aliases, alias_str );
 
