@@ -14,6 +14,8 @@
 - 노점 확인 SQL: `SELECT id,account_id,char_id,title,autotrade,currency FROM vendings;` 및 `SELECT * FROM vending_items ORDER BY vending_id,index;`
 - 캐시 로그 확인 SQL: `SELECT id,time,char_id,type,cash_type,amount,map FROM cashlog WHERE char_id IN (<CID_A>,<CID_B>,<CID_C>) ORDER BY id;` (`type='V'`, 구매자 음수/판매자 양수)
 - 서버 로그에서 `Cash vending rollback failure`가 한 줄이라도 나오면 즉시 실패로 판정하고 해당 AID/CID와 cashlog를 보존한다.
+- 기본 캐시 수수료 설정은 `cash_vending_tax: 500`, `cash_vending_tax_min: 10000`이다. 구매자는 gross 전액을 지불하고 판매자는 `floor(gross × 9500 / 10000)`을 받는다.
+- 수수료가 없는 성공 거래의 cashlog 합계는 0이어야 한다. 수수료가 적용된 성공 거래의 cashlog 합계는 정확히 `-tax`여야 한다.
 
 ## 테스트 체크리스트
 
@@ -38,15 +40,41 @@
 | 17 | 기능 OFF | `enable_cash_vending: off` 후 map-server 재시작 | A=100, B=1,000 / 빨간 1개 | 노점 스킬 사용, Zeny UI 정상 확인; 기존 `currency=1` 행 복원 여부 확인 | Cash 선택/구매 불가, Zeny 구매 가능 | Zeny 결과만 반영 | 캐시 오토행은 복원되지 않고 시작 정리 정책 확인 | Cash 거래 성공, 메뉴 잠금 잔존, Zeny 회귀 |
 | 18 | 캐시 오토트레이드 OFF | `enable_cash_vending:on`, `cash_vending_autotrade:off` | A=100, B=1,000 / 빨간 1개, 100 CP | Cash 개점 후 `@autotrade` 실행 | 구매자는 변화 없음 | 온라인 Cash 노점은 유지되며 명령만 거부 | 1 | `autotrade=0,currency=1`, cashlog 없음 | 노점 강제 종료, 오토 전환 성공, 상태 잠금 |
 
+## 캐시 노점 수수료 체크리스트
+
+각 테스트는 별도 거래로 실행한다. `gross`는 한 번의 구매 요청 전체 금액, `net=floor(gross × (10000-cash_vending_tax) / 10000)`, `tax=gross-net`이다.
+
+| # | 시나리오 | 설정·준비 | 예상 결과 | cashlog·실패 판정 |
+|---|---|---|---|---|
+| 19 | 9,999 CP 경계 미만 | 세율 500, 최소 10,000; B=20,000, A=0 | B -9,999, A +9,999, tax 0 | 합계 0. 세금이 발생하면 실패 |
+| 20 | 10,000 CP 경계 | 세율 500, 최소 10,000; B=20,000, A=0 | B -10,000, A +9,500, tax 500 | 합계 -500 |
+| 21 | 10,001 CP 절삭 | 세율 500, 최소 10,000; B=20,000, A=0 | B -10,001, A +9,500, tax 501 | 합계 -501. A가 9,501이면 실패 |
+| 22 | 여러 품목 합계 10,000 | 각 품목은 10,000 미만, 한 요청 합계 10,000 | gross 10,000, net 9,500 | 품목별이 아닌 요청 합계에 세율이 적용돼야 함 |
+| 23 | 판매자 상한: gross 불가/net 가능 | A=`MAX_CASHPOINT-9,500`, gross 10,000 | 거래 성공, A가 정확히 MAX 도달 | gross 기준으로 거부하면 실패 |
+| 24 | 판매자 상한: net도 불가 | A=`MAX_CASHPOINT-9,499`, gross 10,000 | 전체 거부, CP·아이템·재고 불변 | cashlog 또는 부분 지급이 있으면 실패 |
+| 25 | 지급 후 아이템 이동 실패 롤백 | 테스트 전용으로 `pc_additem()` 실패를 유도, gross 10,000 | 판매자 net 9,500 회수, 구매자 gross 10,000 환불, 재고 불변 | 거래 관련 cashlog 합계는 최종 0. 감사 로그가 남으면 해당 복구 실패 조사 |
+| 26 | 캐시 오토트레이드 수수료 | Cash 오토노점에서 gross 10,000 구매 | 구매자 -10,000, 오토판매자 +9,500 | 합계 -500, 잔량·SQL 정상 |
+| 27 | 재시작 복원 노점 수수료 | 재시작 후 복원된 Cash 노점에서 gross 10,000 구매 | 구매자 -10,000, 판매자 +9,500 | 합계 -500, `currency=1` 유지 |
+| 28 | 세율 비활성화 | `cash_vending_tax: 0`, 최소 10,000 | gross와 net 동일 | 모든 성공 거래 cashlog 합계 0 |
+| 29 | 최소 금액 0 | 세율 500, `cash_vending_tax_min: 0`, gross 1 | net 0, tax 1 | 구매자 -1, 판매자 지급 로그 없음, 합계 -1 |
+| 30 | 제목 금지어 및 복원 | `Cash`, `CASH`, `cash`, `CaSh`, `Cash Points`, `Zeny`, `캐시`, `제니` 각각 시도 후 기존 `[Cash] 정상제목` 오토노점 복원 | 사용자 금지어는 개점 거부·상태 초기화, DB 공식 접두사는 제거 후 currency에 맞게 한 번만 재부착 | 금지 제목 개점, 메뉴 잠금 잔존, 공식 접두사 중복 또는 복원 실패 시 실패 |
+
 ## 메뉴·제목 추가 확인
 
 - Zeny/Cash 정상 선택, 취소, ESC, 범위 밖 선택, 같은 응답 재전송 후 노점 스킬을 다시 사용한다. 메뉴가 다시 열리고 캐릭터가 이동·NPC 대화·스킬 사용 가능한지 확인한다.
 - 선택 중 맵 이동, 로그아웃, 사망, 다른 NPC 클릭을 각각 수행한다. 복귀/부활/재로그인 후 노점 스킬을 다시 사용할 수 있어야 한다.
 - 제목은 영문, 짧은/최대 길이 CP949 한글, 한영 혼합, 빈 문자열, `[Cash]`, `[Zeny]`, 반대 통화 접두사, 접두사만, 비정상 바이트 패킷으로 확인한다. 최종 제목은 접두사가 하나만 있고 한글 끝 문자가 깨지지 않아야 한다.
 
+## 노점 등록 목록 출력 확인
+
+- 온라인 Zeny 노점을 한 품목, 여러 품목, 최대 품목으로 각각 개설한다. 성공 ACK 뒤 `[노점 등록 목록]`과 실제 `sd.vending[]` 순서의 상품명·수량·등록 가격·`Zeny` 단위가 한 번만 출력돼야 한다.
+- 같은 조건으로 Cash 노점을 개설한다. 단위만 `Cash Points`여야 하며 표시 가격은 수수료 공제 전 등록 가격이어야 한다.
+- 한글 아이템명이 CP949에서 깨지지 않는지 확인한다. 개설 실패·취소 시에는 제목과 상품 행 모두 출력되면 안 된다.
+- Cash 노점을 `@autotrade`로 전환해도 목록이 다시 출력되면 안 된다. 서버 재시작으로 오토노점을 복원할 때도 접속 세션에 목록을 출력하면 안 된다.
+
 ## 운영 적용 전 필수 통과 기준
 
-- 1~18 전부 통과하고 cashlog의 각 성공 거래가 구매자 음수/판매자 양수 한 쌍이며 합계 0이다.
+- 1~30 전부 통과한다. 수수료 없는 성공 거래의 cashlog 합계는 0이고, 수수료 적용 거래의 합계는 정확히 `-tax`이다.
 - 실패 거래는 인벤토리, 카트, Cash Points, `vendings`, `vending_items` 어느 것도 바꾸지 않는다.
 - 서버 재시작 및 동일 계정 로그인 테스트에서 오래된 `#CASHPOINTS`가 로딩되지 않는다.
 - 서버 로그에 `Cash vending rollback failure`, SQL 오류, assertion, crash가 없다.
