@@ -332,15 +332,21 @@ ACMD_FUNC(noloot)
 ACMD_FUNC(performancemode) {
 	nullpo_retr(-1, sd);
 	if( (sd->class_ & MAPID_SECONDMASK) != MAPID_BARDDANCER ){
-		clif_displaymessage(fd, msg_txt(sd, 1776)); // Bard/Dancer classes only.
+		clif_displaymessage(fd, msg_txt(sd, 1879)); // Bard/Dancer classes only.
 		return -1;
 	}
+
+	if (map_getmapflag(sd->m, MF_BATTLEGROUND)) {
+		clif_displaymessage(fd, msg_txt(sd,1883));
+		return -1;
+	}
+
 	char arg[32];
 	memset(arg, '\0', sizeof(arg));
 	if( message && *message )
 		sscanf(message, "%31s", arg);
 	if( !strcmpi(arg, "status") || strcmp(arg, "\310\256\300\316") == 0 || strcmp(arg, "\355\231\225\354\235\270") == 0 ){
-		clif_displaymessage(fd, msg_txt(sd, need_get_solo_performance_mode(sd) == NEED_PERFORMANCE_MODERN ? 1775 : 1774));
+		clif_displaymessage(fd, msg_txt(sd, need_get_solo_performance_mode(sd) == NEED_PERFORMANCE_MODERN ? 1878 : 1877));
 		return 0;
 	}
 	bool have_target = false;
@@ -355,12 +361,12 @@ ACMD_FUNC(performancemode) {
 			strcmp(arg, "\271\366\307\301") == 0 || strcmp(arg, "\353\262\204\355\224\204") == 0 ){
 			target = NEED_PERFORMANCE_MODERN; have_target = true;
 		} else {
-			clif_displaymessage(fd, msg_txt(sd, need_get_solo_performance_mode(sd) == NEED_PERFORMANCE_MODERN ? 1775 : 1774));
+			clif_displaymessage(fd, msg_txt(sd, need_get_solo_performance_mode(sd) == NEED_PERFORMANCE_MODERN ? 1878 : 1877));
 			return -1;
 		}
 	}
 	if( sd->sc.getSCE(SC_DANCING) ){
-		clif_displaymessage(fd, msg_txt(sd, 1777)); // Cannot change while performing.
+		clif_displaymessage(fd, msg_txt(sd, 1880)); // Cannot change while performing.
 		return -1;
 	}
 	if( have_target ){

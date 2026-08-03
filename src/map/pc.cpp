@@ -11547,7 +11547,7 @@ static bool need_performance_switch_ready( map_session_data* sd, bool notify ){
 		return false;
 	if( sd->canperformancemode_tick != 0 && DIFF_TICK( sd->canperformancemode_tick, gettick() ) > 0 ){
 		if( notify )
-			clif_displaymessage( sd->fd, msg_txt( sd, 1778 ) ); // Please wait a moment before switching again.
+			clif_displaymessage( sd->fd, msg_txt( sd, 1881) ); // Please wait a moment before switching again.
 		return false;
 	}
 	return true;
@@ -11573,12 +11573,12 @@ bool need_set_solo_performance_mode( map_session_data* sd, e_need_performance_mo
 	if( !pc_setglobalreg( sd, add_str( "NEED_SOLO_PERFORMANCE_MODE" ), mode ) ){
 		ShowError( "need_set_solo_performance_mode: registry write failed for char %u; mode unchanged.\n", sd->status.char_id );
 		if( notify )
-			clif_displaymessage( sd->fd, msg_txt( sd, 1779 ) ); // Failed to save the setting. Please try again.
+			clif_displaymessage( sd->fd, msg_txt( sd, 1882) ); // Failed to save the setting. Please try again.
 		return false;
 	}
 	sd->canperformancemode_tick = gettick() + NEED_PERFORMANCE_SWITCH_COOLDOWN;
 	if( notify )
-		clif_displaymessage( sd->fd, msg_txt( sd, mode == NEED_PERFORMANCE_MODERN ? 1773 : 1772 ) );
+		clif_displaymessage( sd->fd, msg_txt( sd, mode == NEED_PERFORMANCE_MODERN ? 1876 : 1875) );
 	return true;
 }
 
