@@ -235,9 +235,10 @@ static double vending_calc_tax(map_session_data *sd, double zeny)
  */
 void vending_purchasereq(map_session_data* sd, int32 aid, int32 uid, const uint8* data, int32 count)
 {
-	int32 i, j, cursor, w, new_ = 0, blank, vend_list[MAX_VENDING];
+	int32 i, j, cursor, new_ = 0, blank, vend_list[MAX_VENDING];
 	double z;
 	int64 cash_total = 0;
+	int64 weight = 0;
 	struct s_vending vending[MAX_VENDING]; // against duplicate packets
 	map_session_data* vsd = map_id2sd(aid);
 
@@ -277,7 +278,6 @@ void vending_purchasereq(map_session_data* sd, int32 aid, int32 uid, const uint8
 
 	// some checks
 	z = 0.; // zeny counter
-	w = 0;  // weight counter
 	for( i = 0; i < count; i++ ) {
 		int16 amount = *(uint16*)(data + 4*i + 0);
 		int16 idx    = *(uint16*)(data + 4*i + 2);
@@ -329,8 +329,8 @@ void vending_purchasereq(map_session_data* sd, int32 aid, int32 uid, const uint8
 				return;
 			}
 		}
-		w += itemdb_weight(vsd->cart.u.items_cart[idx].nameid) * amount;
-		if( w + sd->weight > sd->max_weight ) {
+		weight += static_cast<int64>(itemdb_weight(vsd->cart.u.items_cart[idx].nameid)) * amount;
+		if (weight + sd->weight > sd->max_weight) {
 			clif_buyvending( *sd, idx, amount, PURCHASEMC_OVERWEIGHT );
 			return;
 		}

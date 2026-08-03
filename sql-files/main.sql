@@ -159,7 +159,6 @@ CREATE TABLE IF NOT EXISTS `buyingstores` (
   `head_direction` CHAR( 1 ) NOT NULL DEFAULT '0',
   `sit` CHAR( 1 ) NOT NULL DEFAULT '1',
   `autotrade` tinyint(4) NOT NULL,
-  `currency` tinyint(3) unsigned NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`)
 ) ENGINE=MyISAM;
 
@@ -1154,6 +1153,7 @@ CREATE TABLE IF NOT EXISTS `vendings` (
   `head_direction` CHAR( 1 ) NOT NULL DEFAULT '0',
   `sit` CHAR( 1 ) NOT NULL DEFAULT '1',
   `autotrade` tinyint(4) NOT NULL,
+  `currency` tinyint(3) unsigned NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`)
 ) ENGINE=MyISAM;
 
