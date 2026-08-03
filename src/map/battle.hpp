@@ -346,6 +346,9 @@ struct Battle_Config
 	int32 vending_over_max;
 	int32 vending_tax;
 	int32 vending_tax_min;
+	int32 enable_cash_vending;
+	int32 cash_vending_autotrade;
+	int32 cash_vending_same_account;
 	int32 show_steal_in_same_party;
 	int32 party_share_type;
 	int32 party_hp_mode;

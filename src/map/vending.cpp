@@ -98,6 +98,13 @@ void vending_prepare(map_session_data& sd, uint16 skill_lv)
 	sd.state.pending_vending_currency = true;
 	sd.vend_skill_lv = skill_lv;
 	sd.vending_currency = e_vending_currency::ZENY;
+
+	if (!battle_config.enable_cash_vending) {
+		sd.state.pending_vending_currency = false;
+		vending_open_setup_ui(sd);
+		return;
+	}
+
 	sd.npc_menu = VENDING_CURRENCY_MENU_CASH;
 
 	clif_displaymessage(sd.fd, msg_txt(&sd, 1883));
@@ -120,6 +127,11 @@ bool vending_currency_selection(map_session_data& sd, int32 npc_id, uint8 select
 			sd.vending_currency = e_vending_currency::ZENY;
 			break;
 		case VENDING_CURRENCY_MENU_CASH:
+			if (!battle_config.enable_cash_vending) {
+				clif_displaymessage(sd.fd, msg_txt(&sd, 1886));
+				vending_cancel_setup(sd);
+				return true;
+			}
 			sd.vending_currency = e_vending_currency::CASH;
 			break;
 		default:
@@ -236,7 +248,11 @@ void vending_purchasereq(map_session_data* sd, int32 aid, int32 uid, const uint8
 		clif_displaymessage(sd->fd, msg_txt(sd, 1891));
 		return;
 	}
-	if (vsd->vending_currency == e_vending_currency::CASH && sd->status.account_id == vsd->status.account_id) {
+	if (vsd->vending_currency == e_vending_currency::CASH && !battle_config.enable_cash_vending) {
+		clif_displaymessage(sd->fd, msg_txt(sd, 1886));
+		return;
+	}
+	if (vsd->vending_currency == e_vending_currency::CASH && !battle_config.cash_vending_same_account && sd->status.account_id == vsd->status.account_id) {
 		clif_displaymessage(sd->fd, msg_txt(sd, 1889));
 		return;
 	}
@@ -457,6 +473,11 @@ int8 vending_openvending( map_session_data& sd, const char* message, const uint8
 	}
 	if (!vending_currency_is_valid(sd.vending_currency)) {
 		clif_displaymessage(sd.fd, msg_txt(&sd, 1891));
+		vending_cancel_setup(sd);
+		return 1;
+	}
+	if (sd.vending_currency == e_vending_currency::CASH && !battle_config.enable_cash_vending) {
+		clif_displaymessage(sd.fd, msg_txt(&sd, 1886));
 		vending_cancel_setup(sd);
 		return 1;
 	}
@@ -788,6 +809,10 @@ void do_init_vending_autotrade(void)
 				if (!vending_currency_is_valid(currency)) {
 					ShowWarning("Invalid vending currency %d for vending id %u; falling back to Zeny.\n", atoi(data), at->id);
 					currency = e_vending_currency::ZENY;
+				}
+				if (currency == e_vending_currency::CASH && (!battle_config.enable_cash_vending || !battle_config.cash_vending_autotrade)) {
+					aFree(at);
+					continue;
 				}
 				at->count = 0;
 
