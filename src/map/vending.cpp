@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <array>
 #include <cstdlib> // atoi
+#include <string>
 
 #include <common/malloc.hpp> // aMalloc, aFree
 #include <common/nullpo.hpp>
@@ -76,6 +77,64 @@ static const char* vending_currency_prefix(map_session_data& sd, e_vending_curre
 	return msg_txt(&sd, currency == e_vending_currency::CASH ? 1894 : 1893);
 }
 
+static void vending_title_body(map_session_data& sd, const char* title, const char*& body, size_t& length)
+{
+	const char* zeny_prefix = vending_currency_prefix(sd, e_vending_currency::ZENY);
+	const char* cash_prefix = vending_currency_prefix(sd, e_vending_currency::CASH);
+
+	body = title;
+	length = strnlen(title, sizeof(sd.message));
+	if (length >= strlen(zeny_prefix) && strncmp(body, zeny_prefix, strlen(zeny_prefix)) == 0) {
+		body += strlen(zeny_prefix);
+		length -= strlen(zeny_prefix);
+	} else if (length >= strlen(cash_prefix) && strncmp(body, cash_prefix, strlen(cash_prefix)) == 0) {
+		body += strlen(cash_prefix);
+		length -= strlen(cash_prefix);
+	}
+	while (length > 0 && *body == ' ') {
+		body++;
+		length--;
+	}
+}
+
+static bool vending_ascii_contains_case_insensitive(const char* text, size_t text_length, const char* keyword)
+{
+	const size_t keyword_length = strlen(keyword);
+
+	if (keyword_length == 0 || keyword_length > text_length)
+		return false;
+	for (size_t offset = 0; offset + keyword_length <= text_length; offset++) {
+		size_t index = 0;
+		for (; index < keyword_length; index++) {
+			uint8 left = static_cast<uint8>(text[offset + index]);
+			uint8 right = static_cast<uint8>(keyword[index]);
+			if (left >= 'A' && left <= 'Z')
+				left += 'a' - 'A';
+			if (right >= 'A' && right <= 'Z')
+				right += 'a' - 'A';
+			if (left != right)
+				break;
+		}
+		if (index == keyword_length)
+			return true;
+	}
+	return false;
+}
+
+static bool vending_title_is_valid(map_session_data& sd, const char* title)
+{
+	const char* body;
+	size_t body_length;
+
+	vending_title_body(sd, title, body, body_length);
+	if (vending_ascii_contains_case_insensitive(body, body_length, msg_txt(&sd, 1900)) ||
+		vending_ascii_contains_case_insensitive(body, body_length, msg_txt(&sd, 1901)))
+		return false;
+
+	const std::string body_string(body, body_length);
+	return body_string.find(msg_txt(&sd, 1902)) == std::string::npos && body_string.find(msg_txt(&sd, 1903)) == std::string::npos;
+}
+
 static size_t vending_cp949_safe_length(const char* text, size_t length, size_t maximum)
 {
 	size_t offset = 0;
@@ -101,23 +160,10 @@ static size_t vending_cp949_safe_length(const char* text, size_t length, size_t 
 
 static void vending_set_title(map_session_data& sd, const char* title)
 {
-	const char* zeny_prefix = vending_currency_prefix(sd, e_vending_currency::ZENY);
-	const char* cash_prefix = vending_currency_prefix(sd, e_vending_currency::CASH);
-	const char* unprefixed = title;
-	const size_t title_length = strnlen(title, sizeof(sd.message));
-	size_t unprefixed_length = title_length;
+	const char* unprefixed;
+	size_t unprefixed_length;
 
-	if (unprefixed_length >= strlen(zeny_prefix) && strncmp(unprefixed, zeny_prefix, strlen(zeny_prefix)) == 0) {
-		unprefixed += strlen(zeny_prefix);
-		unprefixed_length -= strlen(zeny_prefix);
-	} else if (unprefixed_length >= strlen(cash_prefix) && strncmp(unprefixed, cash_prefix, strlen(cash_prefix)) == 0) {
-		unprefixed += strlen(cash_prefix);
-		unprefixed_length -= strlen(cash_prefix);
-	}
-	while (unprefixed_length > 0 && *unprefixed == ' ') {
-		unprefixed++;
-		unprefixed_length--;
-	}
+	vending_title_body(sd, title, unprefixed, unprefixed_length);
 
 	const char* prefix = vending_currency_prefix(sd, sd.vending_currency);
 	const size_t prefix_length = std::min(strlen(prefix), sizeof(sd.message) - 1);
@@ -131,6 +177,20 @@ static void vending_set_title(map_session_data& sd, const char* title)
 		written += copy_length;
 	}
 	sd.message[written] = '\0';
+}
+
+static void vending_show_registered_items(map_session_data& sd)
+{
+	char output[CHAT_SIZE_MAX];
+
+	clif_displaymessage(sd.fd, msg_txt(&sd, 1896));
+	for (int32 i = 0; i < sd.vend_num; i++) {
+		const s_vending& vending = sd.vending[i];
+		const item& cart_item = sd.cart.u.items_cart[vending.index];
+		const uint16 message_id = sd.vending_currency == e_vending_currency::CASH ? 1898 : 1897;
+		safesnprintf(output, sizeof(output), msg_txt(&sd, message_id), itemdb_ename(cart_item.nameid), vending.amount, vending.value);
+		clif_displaymessage(sd.fd, output);
+	}
 }
 
 static bool vending_simulate_additem(const map_session_data& sd, std::array<item, MAX_INVENTORY>& inventory, const item& incoming, int32 amount, int16& target)
@@ -590,6 +650,12 @@ int8 vending_openvending( map_session_data& sd, const char* message, const uint8
 		vending_cancel_setup(sd);
 		return 1;
 	}
+	if (!vending_title_is_valid(sd, message)) {
+		clif_displaymessage(sd.fd, msg_txt(&sd, 1899));
+		vending_cancel_setup(sd);
+		clif_openvending_ack(sd, OPENSTORE2_FAILED);
+		return 1;
+	}
 
 	vending_skill_lvl = pc_checkskill(&sd, MC_VENDING);
 	
@@ -699,6 +765,8 @@ int8 vending_openvending( map_session_data& sd, const char* message, const uint8
 	clif_showvendingboard( sd );
 
 	idb_put(vending_db, sd.status.char_id, &sd);
+	if (at == nullptr)
+		vending_show_registered_items(sd);
 
 	return 0;
 }
