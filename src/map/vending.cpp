@@ -231,19 +231,29 @@ static bool vending_simulate_additem(const map_session_data& sd, std::array<item
 	return false;
 }
 
-static bool vending_reverse_cash(map_session_data& buyer, map_session_data& seller, int32 payment, int32 seller_credit, const char* stage)
+static int32 vending_calc_cash_net(int64 gross)
+{
+	if (battle_config.cash_vending_tax == 0 || gross < battle_config.cash_vending_tax_min)
+		return static_cast<int32>(gross);
+
+	return static_cast<int32>(gross * (10000 - battle_config.cash_vending_tax) / 10000);
+}
+
+static bool vending_reverse_cash(map_session_data& buyer, map_session_data& seller, int32 buyer_paid, int32 seller_credited, int32 seller_net, const char* stage)
 {
 	int32 seller_reversed = 0;
 	int32 buyer_refunded = 0;
+	const int32 tax_amount = buyer_paid - seller_net;
 
-	if (seller_credit > 0)
-		seller_reversed = pc_paycash(&seller, seller_credit, 0, LOG_TYPE_VENDING);
-	if (seller_reversed == seller_credit)
-		buyer_refunded = pc_getcash(&buyer, payment, 0, LOG_TYPE_VENDING);
+	if (seller_credited > 0)
+		seller_reversed = pc_paycash(&seller, seller_credited, 0, LOG_TYPE_VENDING);
+	if (seller_reversed == seller_credited)
+		buyer_refunded = pc_getcash(&buyer, buyer_paid, 0, LOG_TYPE_VENDING);
 
-	if (seller_reversed != seller_credit || buyer_refunded != payment) {
+	if (seller_reversed != seller_credited || buyer_refunded != buyer_paid) {
 		ShowError(msg_txt(&buyer, 1895), stage, buyer.status.account_id, buyer.status.char_id,
-			seller.status.account_id, seller.status.char_id, payment, seller_credit, seller_reversed, buyer_refunded);
+			seller.status.account_id, seller.status.char_id, buyer_paid, seller_net, tax_amount,
+			seller_credited, seller_reversed, buyer_refunded);
 		return false;
 	}
 
@@ -401,6 +411,7 @@ void vending_purchasereq(map_session_data* sd, int32 aid, int32 uid, const uint8
 	int32 i, j, cursor, vend_list[MAX_VENDING];
 	double z;
 	int64 cash_total = 0;
+	int32 cash_net = 0;
 	int64 weight = 0;
 	int16 inventory_target[MAX_VENDING];
 	std::array<item, MAX_INVENTORY> simulated_inventory;
@@ -477,11 +488,6 @@ void vending_purchasereq(map_session_data* sd, int32 aid, int32 uid, const uint8
 				clif_displaymessage(sd->fd, msg_txt(sd, 1887));
 				return;
 			}
-			if (cash_total > static_cast<int64>(MAX_CASHPOINT) - vsd->cashPoints) {
-				clif_buyvending(*sd, idx, vsd->vending[j].amount, PURCHASEMC_OUT_OF_STOCK);
-				clif_displaymessage(sd->fd, msg_txt(sd, 1888));
-				return;
-			}
 		} else {
 			z += ((double)vsd->vending[j].value * (double)amount);
 			if( z > (double)sd->status.zeny || z < 0. || z > (double)MAX_ZENY ) {
@@ -519,14 +525,20 @@ void vending_purchasereq(map_session_data* sd, int32 aid, int32 uid, const uint8
 
 	if (vsd->vending_currency == e_vending_currency::CASH) {
 		const int32 payment = static_cast<int32>(cash_total);
+		cash_net = vending_calc_cash_net(cash_total);
+		if (cash_net > MAX_CASHPOINT - vsd->cashPoints) {
+			clif_buyvending(*sd, 0, 0, PURCHASEMC_OUT_OF_STOCK);
+			clif_displaymessage(sd->fd, msg_txt(sd, 1888));
+			return;
+		}
 		if (!sd->vars_ok || !vsd->vars_ok || pc_paycash(sd, payment, 0, LOG_TYPE_VENDING) != payment) {
 			clif_displaymessage(sd->fd, msg_txt(sd, 1892));
 			return;
 		}
 
-		const int32 received = pc_getcash(vsd, payment, 0, LOG_TYPE_VENDING);
-		if (received != payment) {
-			vending_reverse_cash(*sd, *vsd, payment, max(received, 0), "seller_credit");
+		const int32 received = cash_net > 0 ? pc_getcash(vsd, cash_net, 0, LOG_TYPE_VENDING) : 0;
+		if (received != cash_net) {
+			vending_reverse_cash(*sd, *vsd, payment, max(received, 0), cash_net, "seller_credit");
 			clif_displaymessage(sd->fd, msg_txt(sd, 1892));
 			return;
 		}
@@ -552,10 +564,11 @@ void vending_purchasereq(map_session_data* sd, int32 aid, int32 uid, const uint8
 					item_rollback_ok = false;
 			}
 			if (vsd->vending_currency == e_vending_currency::CASH)
-				vending_reverse_cash(*sd, *vsd, static_cast<int32>(cash_total), static_cast<int32>(cash_total), "buyer_item_add");
+				vending_reverse_cash(*sd, *vsd, static_cast<int32>(cash_total), cash_net, cash_net, "buyer_item_add");
 			if (!item_rollback_ok)
 				ShowError(msg_txt(sd, 1895), "buyer_item_remove", sd->status.account_id, sd->status.char_id,
-					vsd->status.account_id, vsd->status.char_id, static_cast<int32>(cash_total), static_cast<int32>(cash_total), -1, -1);
+					vsd->status.account_id, vsd->status.char_id, static_cast<int32>(cash_total), cash_net,
+					static_cast<int32>(cash_total) - cash_net, cash_net, -1, -1);
 			clif_displaymessage(sd->fd, msg_txt(sd, 1892));
 			return;
 		}
