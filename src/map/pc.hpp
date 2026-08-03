@@ -628,6 +628,7 @@ public:
 
 	int32 invincible_timer;
 	t_tick canlog_tick;
+	t_tick canperformancemode_tick;	// NEED: @performancemode switch anti-spam cooldown
 	t_tick canuseitem_tick;	// [Skotlex]
 	t_tick canusecashfood_tick;
 	t_tick canequip_tick;	// [Inkfish]
@@ -1689,6 +1690,16 @@ int64 pc_readregistry( const map_session_data* sd, int64 reg );
 bool pc_setregistry(map_session_data *sd, int64 reg, int64 val);
 char *pc_readregistry_str( const map_session_data* sd, int64 reg );
 bool pc_setregistry_str(map_session_data *sd, int64 reg, const char *val);
+
+// NEED: solo-performance (bard/dancer) mode switch - classic field-song unit vs modern self+party time buff.
+enum e_need_performance_mode : uint8 {
+	NEED_PERFORMANCE_CLASSIC = 0,	// 2017 ground/field song unit (default; existing NEED behaviour)
+	NEED_PERFORMANCE_MODERN  = 1,	// current-official self + party time buff (no ground unit)
+};
+#define NEED_PERFORMANCE_SWITCH_COOLDOWN 10000	// ms; session-only anti-spam shared by the command and future skills
+e_need_performance_mode need_get_solo_performance_mode( map_session_data* sd );
+bool need_set_solo_performance_mode( map_session_data* sd, e_need_performance_mode mode, bool notify );
+bool need_toggle_solo_performance_mode( map_session_data* sd, bool notify );
 
 #define pc_readglobalreg(sd,reg) pc_readregistry(sd,reg)
 #define pc_setglobalreg(sd,reg,val) pc_setregistry(sd,reg,val)

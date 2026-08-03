@@ -10851,8 +10851,8 @@ int32 pc_itemheal(map_session_data *sd, t_itemid itemid, int32 hp, int32 sp)
 		}
 
 #ifdef RENEWAL
-		if (sd->sc.getSCE(SC_APPLEIDUN))
-			hp += sd->sc.getSCE(SC_APPLEIDUN)->val3 / 100;
+		if (status_change_entry* e = need_solo_perf_active(&sd->sc, SC_APPLEIDUN, SC_NEED_APPLEIDUN_MODERN)) // NEED Fix3: classic/modern idun heal (whole-skill)
+			hp += e->val3 / 100;
 #endif
 
 		if (penalty > 0) {
@@ -11538,6 +11538,57 @@ bool pc_setregstr(map_session_data* sd, int64 reg, const char* str)
  * - '#type' (permanent numeric account reg)
  * - '##type' (permanent numeric account reg2)
  **/
+// ================= NEED: solo-performance mode (bard/dancer) =================
+// Character-scoped, permanently stored via char registry "NEED_SOLO_PERFORMANCE_MODE" (no extra SQL
+// table). Default/invalid -> CLASSIC. Fix2: the mode change completes ONLY on a successful registry
+// write; on failure the old mode is kept, no cooldown is applied, and an error is logged.
+static bool need_performance_switch_ready( map_session_data* sd, bool notify ){
+	if( sd == nullptr )
+		return false;
+	if( sd->canperformancemode_tick != 0 && DIFF_TICK( sd->canperformancemode_tick, gettick() ) > 0 ){
+		if( notify )
+			clif_displaymessage( sd->fd, msg_txt( sd, 1778 ) ); // Please wait a moment before switching again.
+		return false;
+	}
+	return true;
+}
+
+e_need_performance_mode need_get_solo_performance_mode( map_session_data* sd ){
+	if( sd == nullptr )
+		return NEED_PERFORMANCE_CLASSIC;
+	int64 v = pc_readglobalreg( sd, add_str( "NEED_SOLO_PERFORMANCE_MODE" ) );
+	if( v == NEED_PERFORMANCE_MODERN )
+		return NEED_PERFORMANCE_MODERN;
+	return NEED_PERFORMANCE_CLASSIC; // 0, unset, or any invalid value -> classic
+}
+
+bool need_set_solo_performance_mode( map_session_data* sd, e_need_performance_mode mode, bool notify ){
+	if( sd == nullptr )
+		return false;
+	if( mode != NEED_PERFORMANCE_CLASSIC && mode != NEED_PERFORMANCE_MODERN )
+		mode = NEED_PERFORMANCE_CLASSIC;
+	if( !need_performance_switch_ready( sd, notify ) )
+		return false;
+	// Fix2: only commit on a successful registry write. On failure keep the old mode and skip cooldown.
+	if( !pc_setglobalreg( sd, add_str( "NEED_SOLO_PERFORMANCE_MODE" ), mode ) ){
+		ShowError( "need_set_solo_performance_mode: registry write failed for char %u; mode unchanged.\n", sd->status.char_id );
+		if( notify )
+			clif_displaymessage( sd->fd, msg_txt( sd, 1779 ) ); // Failed to save the setting. Please try again.
+		return false;
+	}
+	sd->canperformancemode_tick = gettick() + NEED_PERFORMANCE_SWITCH_COOLDOWN;
+	if( notify )
+		clif_displaymessage( sd->fd, msg_txt( sd, mode == NEED_PERFORMANCE_MODERN ? 1773 : 1772 ) );
+	return true;
+}
+
+bool need_toggle_solo_performance_mode( map_session_data* sd, bool notify ){
+	if( sd == nullptr )
+		return false;
+	e_need_performance_mode next = ( need_get_solo_performance_mode( sd ) == NEED_PERFORMANCE_CLASSIC ) ? NEED_PERFORMANCE_MODERN : NEED_PERFORMANCE_CLASSIC;
+	return need_set_solo_performance_mode( sd, next, notify );
+}
+
 int64 pc_readregistry( const map_session_data* sd , int64 reg )
 {
 	struct script_reg_num *p = nullptr;

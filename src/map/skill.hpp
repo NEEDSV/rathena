@@ -673,6 +673,13 @@ int32 skill_area_sub_count(block_list* src, block_list* target, uint16 skill_id,
 TIMER_FUNC(skill_timerskill);
 extern int32 skill_area_temp[8];
 int32 skill_castend_song(block_list* src, uint16 skill_id, uint16 skill_lv, t_tick tick);
+// NEED Fix3: forward-declare the mode enum (defined in pc.hpp) so skill.hpp compiles regardless of
+// include order (?). Underlying type must match pc.hpp exactly.
+enum e_need_performance_mode : uint8;
+sc_type need_solo_perf_modern_sc( uint16 skill_id );
+void need_end_conflicting_solo_performances( block_list* target, uint16 incoming_skill_id, e_need_performance_mode incoming_mode );
+bool need_solo_perf_field_priority_block( block_list* target, uint16 incoming_skill_id );
+int32 need_castend_solo_song_modern( block_list* src, uint16 skill_id, uint16 skill_lv, t_tick tick );
 
 bool skill_blockpc_start(map_session_data &sd, uint16 skill_id, t_tick tick);
 void skill_blockpc_clear(map_session_data &sd);

@@ -5,12 +5,18 @@
 
 #include <config/core.hpp>
 
+#include "map/pc.hpp"
+
 SkillImpressiveRiff::SkillImpressiveRiff() : SkillImpl(BA_ASSASSINCROSS) {
 }
 
 void SkillImpressiveRiff::castendNoDamageId(block_list *src, block_list *target, uint16 skill_lv, t_tick tick, int32& flag) const {
 #ifdef RENEWAL
-	skill_unitsetting(src, getSkillId(), skill_lv, src->x, src->y, 0);
+	// NEED @performancemode: modern mode = self+party time buff (no unit); classic = field song.
+	if( map_session_data* sd = BL_CAST(BL_PC, src); sd != nullptr && need_get_solo_performance_mode(sd) == NEED_PERFORMANCE_MODERN )
+		need_castend_solo_song_modern(src, getSkillId(), skill_lv, tick);
+	else
+		skill_unitsetting(src, getSkillId(), skill_lv, src->x, src->y, 0);
 #endif
 }
 

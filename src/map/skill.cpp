@@ -4437,6 +4437,98 @@ static int32 skill_apply_songs(block_list* target, va_list ap)
  * @param tick: Timer tick
  * @return Number of targets or 0 otherwise
  */
+// ===== NEED Fix3: solo-performance mutual exclusion (bard 4 / dancer 4 incl. Don't Forget Me) =====
+sc_type need_solo_perf_modern_sc( uint16 skill_id ){
+	switch( skill_id ){
+		case BA_WHISTLE:       return SC_NEED_WHISTLE_MODERN;
+		case BA_ASSASSINCROSS: return SC_NEED_ASSNCROS_MODERN;
+		case BA_POEMBRAGI:     return SC_NEED_POEMBRAGI_MODERN;
+		case BA_APPLEIDUN:     return SC_NEED_APPLEIDUN_MODERN;
+		case DC_HUMMING:       return SC_NEED_HUMMING_MODERN;
+		case DC_FORTUNEKISS:   return SC_NEED_FORTUNE_MODERN;
+		case DC_SERVICEFORYOU: return SC_NEED_SERVICE4U_MODERN;
+	}
+	return SC_NONE; // DC_DONTFORGETME and non-solo skills have no modern state (?)
+}
+
+// Fixed same-class solo group. Don't Forget Me is in the dancer conflict group (?) but is NOT a
+// mode-switch target and has no modern state, so it is only ever ended, never given a modern buff.
+static bool need_solo_perf_group( uint16 skill_id, const uint16** grp, int32* gn ){
+	static const uint16 bard[]   = { BA_WHISTLE, BA_ASSASSINCROSS, BA_POEMBRAGI, BA_APPLEIDUN };
+	static const uint16 dancer[] = { DC_DONTFORGETME, DC_HUMMING, DC_FORTUNEKISS, DC_SERVICEFORYOU };
+	for( int32 i = 0; i < 4; i++ ) if( bard[i] == skill_id ){ *grp = bard; *gn = 4; return true; }
+	for( int32 i = 0; i < 4; i++ ) if( dancer[i] == skill_id ){ *grp = dancer; *gn = 4; return true; }
+	return false;
+}
+
+// End same-group OTHER-skill solo states. incoming MODERN -> end others' classic AND modern;
+// incoming CLASSIC -> end others' modern only (classic-vs-classic keeps existing EndOnStart).
+// The incoming skill's own opposite-mode state is preserved (?36).
+void need_end_conflicting_solo_performances( block_list* target, uint16 incoming_skill_id, e_need_performance_mode incoming_mode ){
+	const uint16* grp = nullptr; int32 gn = 0;
+	if( !need_solo_perf_group(incoming_skill_id, &grp, &gn) ) return;
+	status_change* sc = status_get_sc(target);
+	if( sc == nullptr ) return;
+	for( int32 i = 0; i < gn; i++ ){
+		if( grp[i] == incoming_skill_id ) continue; // same skill: keep both modes
+		sc_type modern = need_solo_perf_modern_sc(grp[i]);
+		if( modern != SC_NONE && sc->getSCE(modern) )
+			status_change_end(target, modern);
+		if( incoming_mode == NEED_PERFORMANCE_MODERN ){
+			sc_type classic = skill_get_sc(grp[i]);
+			if( classic != SC_NONE && sc->getSCE(classic) )
+				status_change_end(target, classic);
+		}
+	}
+}
+
+// ? field-interior priority: if the target already stands in another skill's classic field buff,
+// an incoming modern solo of a DIFFERENT skill is rejected (no flicker). Don't Forget Me is an enemy
+// debuff, not a buff field, so it does not block modern dancer solos (they win over it, ?).
+bool need_solo_perf_field_priority_block( block_list* target, uint16 incoming_skill_id ){
+	const uint16* grp = nullptr; int32 gn = 0;
+	if( !need_solo_perf_group(incoming_skill_id, &grp, &gn) ) return false;
+	status_change* sc = status_get_sc(target);
+	if( sc == nullptr ) return false;
+	for( int32 i = 0; i < gn; i++ ){
+		if( grp[i] == incoming_skill_id ) continue; // same skill: coexist
+		if( grp[i] == DC_DONTFORGETME ) continue;   // debuff, not a buff field
+		if( sc->getSCE(skill_get_sc(grp[i])) ) return true;
+	}
+	return false;
+}
+
+// ===== NEED Fix3: modern solo cast path (no unit; self + party time buff) =====
+#define NEED_MODERN_SOLO_SONG_SPLASH   15
+#define NEED_MODERN_SOLO_SONG_DURATION 180000
+
+static int32 need_apply_solo_song_modern( block_list* target, va_list ap ){
+	int32 flag = va_arg(ap, int32);
+	block_list* src = va_arg(ap, block_list*);
+	uint16 skill_id = static_cast<uint16>(va_arg(ap, int32));
+	uint16 skill_lv = static_cast<uint16>(va_arg(ap, int32));
+	sc_type sc = need_solo_perf_modern_sc(skill_id);
+	if( sc == SC_NONE || battle_check_target(src, target, flag) <= 0 )
+		return 0;
+	if( need_solo_perf_field_priority_block(target, skill_id) ) // Fix3 ?: active classic field wins
+		return 0;
+	int32 result = sc_start(src, target, sc, 100, skill_lv, NEED_MODERN_SOLO_SONG_DURATION);
+	if( result != 0 ) // Fix3 ?: end conflicts only after the new state actually applied
+		need_end_conflicting_solo_performances(target, skill_id, NEED_PERFORMANCE_MODERN);
+	return result;
+}
+
+int32 need_castend_solo_song_modern( block_list* src, uint16 skill_id, uint16 skill_lv, t_tick tick ){
+	nullpo_ret(src);
+	map_session_data* sd = BL_CAST(BL_PC, src);
+	if( sd != nullptr ){
+		sd->skill_id_dance = skill_id;
+		sd->skill_lv_dance = skill_lv;
+	}
+	clif_skill_nodamage(src, *src, skill_id, skill_lv);
+	return map_foreachinrange(need_apply_solo_song_modern, src, NEED_MODERN_SOLO_SONG_SPLASH, splash_target(src), (int32)BCT_PARTY, src, skill_id, skill_lv);
+}
+
 int32 skill_castend_song(block_list* src, uint16 skill_id, uint16 skill_lv, t_tick tick)
 {
 	nullpo_ret(src);
@@ -6738,8 +6830,10 @@ static int32 skill_unit_onplace(skill_unit *unit, block_list *bl, t_tick tick)
 			// Pseudo-infinite duration
 			// In case it is just started, it needs to last one interval longer than the skill unit lasts
 			// This is to ensure the skill unit is removed before the status change ends
-			if (!sce)
-				sc_start4(ss, bl, type, 100, sg->skill_lv, sg->val1, sg->val2, 0, sg->limit + SKILLUNITTIMER_INTERVAL);
+			if (!sce) {
+				if (sc_start4(ss, bl, type, 100, sg->skill_lv, sg->val1, sg->val2, 0, sg->limit + SKILLUNITTIMER_INTERVAL)) // NEED Fix3: apply first
+					need_end_conflicting_solo_performances(bl, sg->skill_id, NEED_PERFORMANCE_CLASSIC); // then end other-skill modern
+			}
 #ifdef NEED_2017_BARD_STATUS_ICON_REFRESH
 			else if (sce->val4 == 1 && (type == SC_POEMBRAGI || type == SC_ASSNCROS || type == SC_APPLEIDUN ||
 				type == SC_DONTFORGETME || type == SC_SERVICE4U || type == SC_FORTUNE || type == SC_HUMMING)) {
@@ -10362,8 +10456,8 @@ int32 skill_castfix(block_list *bl, uint16 skill_id, uint16 skill_lv) {
 		// These cast time reductions are processed even if the skill fails
 		if (sc != nullptr && !sc->empty()) {
 			// Magic Strings stacks additively with item bonuses
-			if (!(flag&2) && sc->getSCE(SC_POEMBRAGI))
-				reduce_cast_rate += sc->getSCE(SC_POEMBRAGI)->val2;
+			if (status_change_entry* e = need_solo_perf_active(sc, SC_POEMBRAGI, SC_NEED_POEMBRAGI_MODERN); e != nullptr && !(flag&2)) // NEED Fix3: classic/modern bragi (whole-skill)
+				reduce_cast_rate += e->val2;
 			// Foresight halves the cast time, it does not stack additively
 			if (sc->getSCE(SC_MEMORIZE)) {
 				if (!sd || pc_checkskill(sd, skill_id) > 0) { // Foresight only decreases cast times from learned skills, not skills granted by items
@@ -10524,8 +10618,8 @@ int32 skill_vfcastfix(block_list *bl, double time, uint16 skill_id, uint16 skill
 					status_change_end(bl, SC_MEMORIZE);
 			}
 		}
-		if (sc->getSCE(SC_POEMBRAGI))
-			reduce_cast_rate += sc->getSCE(SC_POEMBRAGI)->val2;
+		if (status_change_entry* e = need_solo_perf_active(sc, SC_POEMBRAGI, SC_NEED_POEMBRAGI_MODERN)) // NEED Fix3: classic/modern bragi
+			reduce_cast_rate += e->val2;
 		if (sc->getSCE(SC_IZAYOI))
 			VARCAST_REDUCTION(50);
 		if (sc->getSCE(SC_WATER_INSIGNIA) && sc->getSCE(SC_WATER_INSIGNIA)->val1 == 3 && skill_get_type(skill_id) == BF_MAGIC && skill_get_ele(skill_id, skill_lv) == ELE_WATER)
@@ -10658,8 +10752,8 @@ int32 skill_delayfix(block_list *bl, uint16 skill_id, uint16 skill_lv)
 
 	if (!(delaynodex&2)) {
 		if (sc != nullptr && !sc->empty()) {
-			if (sc->getSCE(SC_POEMBRAGI))
-				delay += sc->getSCE(SC_POEMBRAGI)->val3;
+			if (status_change_entry* e = need_solo_perf_active(sc, SC_POEMBRAGI, SC_NEED_POEMBRAGI_MODERN)) // NEED Fix3: classic/modern bragi
+				delay += e->val3;
 			if (sc->getSCE(SC_WIND_INSIGNIA) && sc->getSCE(SC_WIND_INSIGNIA)->val1 == 3 && skill_get_type(skill_id) == BF_MAGIC && skill_get_ele(skill_id, skill_lv) == ELE_WIND)
 				delay += 50; // After Delay of Wind element spells reduced by 50%.
 			if (sc->getSCE(SC_MAGICMUSHROOM) && sc->getSCE(SC_MAGICMUSHROOM)->val3 == 0)

@@ -2028,7 +2028,15 @@ int32 unit_set_walkdelay(block_list *bl, t_tick tick, t_tick delay, int32 type, 
 		// Trapped or legacy walk delay system disabled
 		if (!unit_can_move(bl) || !(bl->type&battle_config.damage_walk_delay)) {
 			// Stop on the closest cell center
-			unit_stop_walking( bl, USW_MOVE_FULL_CELL );
+			int32 stop_type = USW_MOVE_FULL_CELL;
+
+			// NEED: A damage flinch stops the client at its interpolated position. When the server
+			// finishes the current cell without sending its authoritative position, the two can
+			// remain split until another action refreshes the position.
+			if (bl->type == BL_PC && map_getmapflag(bl->m, MF_BATTLEGROUND))
+				stop_type |= USW_FIXPOS;
+
+			unit_stop_walking( bl, stop_type );
 			return 0;
 		}
 
@@ -2049,14 +2057,20 @@ int32 unit_set_walkdelay(block_list *bl, t_tick tick, t_tick delay, int32 type, 
 	ud->canmove_tick = tick + delay;
 
 	if (ud->walktimer != INVALID_TIMER) { // Stop walking, if chasing, readjust timers.
+		int32 stop_type = USW_NONE;
+
+		// Keep the legacy walk-delay mode synchronized under the same narrow conditions.
+		if (!type && bl->type == BL_PC && map_getmapflag(bl->m, MF_BATTLEGROUND))
+			stop_type |= USW_FIXPOS;
+
 		if (delay == 1) // Minimal delay (walk-delay) disabled. Just stop walking.
-			unit_stop_walking( bl, USW_NONE );
+			unit_stop_walking( bl, stop_type );
 		else {
 			// Resume running after can move again [Kevin]
 			if(ud->state.running)
 				add_timer(ud->canmove_tick, unit_resume_running, bl->id, (intptr_t)ud);
 			else {
-				unit_stop_walking( bl, USW_MOVE_FULL_CELL );
+				unit_stop_walking( bl, stop_type | USW_MOVE_FULL_CELL );
 
 				if(ud->target_to != 0)
 					add_timer(ud->canmove_tick+1, unit_walktobl_sub, bl->id, ud->target_to);

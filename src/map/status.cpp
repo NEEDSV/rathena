@@ -3151,6 +3151,35 @@ void status_calc_pet_(pet_data *pd, uint8 opt)
  * @return bonus: total bonus for HP
  * @author [Cydh]
  */
+// NEED Fix3: whole-skill solo-performance selection + counterpart lookup (see status.hpp).
+status_change_entry* need_solo_perf_active( status_change* sc, sc_type classic, sc_type modern ){
+	if( sc == nullptr )
+		return nullptr;
+	if( status_change_entry* c = sc->getSCE(classic); c != nullptr )
+		return c; // classic (field) takes priority
+	return sc->getSCE(modern);
+}
+
+sc_type need_solo_perf_counterpart( sc_type type ){
+	switch( type ){
+		case SC_WHISTLE:                return SC_NEED_WHISTLE_MODERN;
+		case SC_NEED_WHISTLE_MODERN:    return SC_WHISTLE;
+		case SC_ASSNCROS:               return SC_NEED_ASSNCROS_MODERN;
+		case SC_NEED_ASSNCROS_MODERN:   return SC_ASSNCROS;
+		case SC_POEMBRAGI:              return SC_NEED_POEMBRAGI_MODERN;
+		case SC_NEED_POEMBRAGI_MODERN:  return SC_POEMBRAGI;
+		case SC_APPLEIDUN:              return SC_NEED_APPLEIDUN_MODERN;
+		case SC_NEED_APPLEIDUN_MODERN:  return SC_APPLEIDUN;
+		case SC_HUMMING:                return SC_NEED_HUMMING_MODERN;
+		case SC_NEED_HUMMING_MODERN:    return SC_HUMMING;
+		case SC_FORTUNE:                return SC_NEED_FORTUNE_MODERN;
+		case SC_NEED_FORTUNE_MODERN:    return SC_FORTUNE;
+		case SC_SERVICE4U:              return SC_NEED_SERVICE4U_MODERN;
+		case SC_NEED_SERVICE4U_MODERN:  return SC_SERVICE4U;
+		default: return SC_NONE;
+	}
+}
+
 static int32 status_get_hpbonus(block_list *bl, enum e_status_bonus type) {
 	int32 bonus = 0;
 
@@ -3217,8 +3246,8 @@ static int32 status_get_hpbonus(block_list *bl, enum e_status_bonus type) {
 			//Increasing
 			if(sc->getSCE(SC_INCMHPRATE))
 				bonus += sc->getSCE(SC_INCMHPRATE)->val1;
-			if(sc->getSCE(SC_APPLEIDUN))
-				bonus += sc->getSCE(SC_APPLEIDUN)->val2;
+			if (status_change_entry* e = need_solo_perf_active(sc, SC_APPLEIDUN, SC_NEED_APPLEIDUN_MODERN))
+				bonus += e->val2; // NEED Fix3: whole-skill mode
 			if(sc->getSCE(SC_DELUGE))
 				bonus += sc->getSCE(SC_DELUGE)->val2;
 			if(sc->getSCE(SC_BERSERK))
@@ -3384,8 +3413,8 @@ static int32 status_get_spbonus(block_list *bl, enum e_status_bonus type) {
 				bonus += sc->getSCE(SC_INCMSPRATE)->val1;
 			if(sc->getSCE(SC_RAISINGDRAGON))
 				bonus += sc->getSCE(SC_RAISINGDRAGON)->val1;
-			if(sc->getSCE(SC_SERVICE4U))
-				bonus += sc->getSCE(SC_SERVICE4U)->val2;
+			if (status_change_entry* e = need_solo_perf_active(sc, SC_SERVICE4U, SC_NEED_SERVICE4U_MODERN))
+				bonus += e->val2; // NEED Fix3: whole-skill mode
 			if(sc->getSCE(SC_MERC_SPUP))
 				bonus += sc->getSCE(SC_MERC_SPUP)->val2;
 			if (sc->getSCE(SC_LUXANIMA))
@@ -4732,8 +4761,8 @@ int32 status_calc_pc_sub(map_session_data* sd, uint8 opt)
 	if((skill=pc_checkskill(sd,HP_MANARECHARGE))>0 )
 		sd->dsprate -= 4*skill;
 
-	if(sc->getSCE(SC_SERVICE4U))
-		sd->dsprate -= sc->getSCE(SC_SERVICE4U)->val3;
+	if (status_change_entry* e = need_solo_perf_active(sc, SC_SERVICE4U, SC_NEED_SERVICE4U_MODERN))
+		sd->dsprate -= e->val3; // NEED Fix3: whole-skill mode
 
 	// Underflow protections.
 	if(sd->dsprate < 0)
@@ -4932,8 +4961,8 @@ int32 status_calc_pc_sub(map_session_data* sd, uint8 opt)
 		if (sc->getSCE(SC_LAUDARAMUS))
 			sd->bonus.crit_atk_rate += 5 * sc->getSCE(SC_LAUDARAMUS)->val1;
 #ifdef RENEWAL
-		if (sc->getSCE(SC_FORTUNE))
-			sd->bonus.crit_atk_rate += 2 * sc->getSCE(SC_FORTUNE)->val1;
+		if (status_change_entry* e = need_solo_perf_active(sc, SC_FORTUNE, SC_NEED_FORTUNE_MODERN))
+			sd->bonus.crit_atk_rate += 2 * e->val1; // NEED Fix3: whole-skill mode
 #endif
 #ifndef NEED_2017_SKILL_FORMULA
 		if (sc->getSCE(SC_SYMPHONYOFLOVER)) {
@@ -7597,8 +7626,8 @@ static int16 status_calc_critical(block_list *bl, status_change *sc, int32 criti
 
 	if (sc->getSCE(SC_EXPLOSIONSPIRITS))
 		critical += sc->getSCE(SC_EXPLOSIONSPIRITS)->val2;
-	if (sc->getSCE(SC_FORTUNE))
-		critical += sc->getSCE(SC_FORTUNE)->val2;
+	if (status_change_entry* e = need_solo_perf_active(sc, SC_FORTUNE, SC_NEED_FORTUNE_MODERN))
+		critical += e->val2; // NEED Fix3: whole-skill mode
 	if (sc->getSCE(SC_TRUESIGHT))
 		critical += sc->getSCE(SC_TRUESIGHT)->val2;
 	if (sc->getSCE(SC_CLOAKING))
@@ -7639,8 +7668,8 @@ static int16 status_calc_hit(block_list *bl, status_change *sc, int32 hit)
 		hit += sc->getSCE(SC_INCHIT)->val1;
 	if(sc->getSCE(SC_TRUESIGHT))
 		hit += sc->getSCE(SC_TRUESIGHT)->val3;
-	if(sc->getSCE(SC_HUMMING))
-		hit += sc->getSCE(SC_HUMMING)->val2;
+	if (status_change_entry* e = need_solo_perf_active(sc, SC_HUMMING, SC_NEED_HUMMING_MODERN))
+		hit += e->val2; // NEED Fix3: whole-skill mode
 	if(sc->getSCE(SC_CONCENTRATION))
 		hit += sc->getSCE(SC_CONCENTRATION)->val3;
 	if(sc->getSCE(SC_INSPIRATION))
@@ -7719,8 +7748,8 @@ static int16 status_calc_flee(block_list *bl, status_change *sc, int32 flee)
 	// Fixed value
 	if(sc->getSCE(SC_INCFLEE))
 		flee += sc->getSCE(SC_INCFLEE)->val1;
-	if(sc->getSCE(SC_WHISTLE))
-		flee += sc->getSCE(SC_WHISTLE)->val2;
+	if (status_change_entry* e = need_solo_perf_active(sc, SC_WHISTLE, SC_NEED_WHISTLE_MODERN))
+		flee += e->val2; // NEED Fix3: whole-skill mode
 	if(sc->getSCE(SC_WINDWALK))
 		flee += sc->getSCE(SC_WINDWALK)->val2;
 	if(sc->getSCE(SC_VIOLENTGALE))
@@ -7815,8 +7844,8 @@ static int16 status_calc_flee2(block_list *bl, status_change *sc, int32 flee2)
 	if(sc == nullptr || sc->empty())
 		return cap_value(flee2,10,SHRT_MAX);
 
-	if(sc->getSCE(SC_WHISTLE))
-		flee2 += sc->getSCE(SC_WHISTLE)->val3;
+	if (status_change_entry* e = need_solo_perf_active(sc, SC_WHISTLE, SC_NEED_WHISTLE_MODERN))
+		flee2 += e->val3; // NEED Fix3: whole-skill mode
 	if(sc->getSCE(SC__UNLUCKY))
 		flee2 -= flee2 * sc->getSCE(SC__UNLUCKY)->val2 / 100;
 	if (sc->getSCE(SC_HISS))
@@ -8347,9 +8376,9 @@ static int16 status_calc_aspd(block_list *bl, status_change *sc, bool fixed)
 				bonus = 5;
 		}
 
-		if (sc->getSCE(SC_ASSNCROS) && bonus < sc->getSCE(SC_ASSNCROS)->val2) {
+		if (status_change_entry* e = need_solo_perf_active(sc, SC_ASSNCROS, SC_NEED_ASSNCROS_MODERN); e != nullptr && bonus < e->val2) { // NEED Fix3
 			if (bl->type != BL_PC)
-				bonus += sc->getSCE(SC_ASSNCROS)->val2;
+				bonus += e->val2;
 			else {
 				switch(((TBL_PC*)bl)->status.weapon) {
 					case W_BOW:
@@ -8360,7 +8389,7 @@ static int16 status_calc_aspd(block_list *bl, status_change *sc, bool fixed)
 					case W_GRENADE:
 						break;
 					default:
-						bonus += sc->getSCE(SC_ASSNCROS)->val2;
+						bonus += e->val2;
 						break;
 				}
 			}
@@ -8539,9 +8568,9 @@ static int16 status_calc_aspd_rate(block_list *bl, status_change *sc, int32 aspd
 		max < sc->getSCE(SC_INVINCIBLE)->val4)
 		max = sc->getSCE(SC_INVINCIBLE)->val4;
 
-	if (sc->getSCE(SC_ASSNCROS) && max < sc->getSCE(SC_ASSNCROS)->val2) {
+	if (status_change_entry* e = need_solo_perf_active(sc, SC_ASSNCROS, SC_NEED_ASSNCROS_MODERN); e != nullptr && max < e->val2) { // NEED Fix3
 		if (bl->type != BL_PC)
-			max = sc->getSCE(SC_ASSNCROS)->val2;
+			max = e->val2;
 		else
 			switch (((TBL_PC*)bl)->status.weapon) {
 				case W_BOW:
@@ -8552,7 +8581,7 @@ static int16 status_calc_aspd_rate(block_list *bl, status_change *sc, int32 aspd
 				case W_GRENADE:
 					break;
 				default:
-					max = sc->getSCE(SC_ASSNCROS)->val2;
+					max = e->val2;
 			}
 	}
 	aspd_rate -= max;
@@ -11335,6 +11364,31 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 #endif
 			val2 = val1 < 10 ? 9 + val1 : 20; // MaxSP percent increase
 			val3 = 5 + val1; // SP cost reduction
+			break;
+		case SC_NEED_WHISTLE_MODERN:
+			val2 = 18 + 2 * val1;
+			val3 = ((val1 + 1) / 2) * 10;
+			break;
+		case SC_NEED_ASSNCROS_MODERN:
+			val2 = val1 < 10 ? val1 * 2 - 1 : 20;
+			break;
+		case SC_NEED_POEMBRAGI_MODERN:
+			val2 = 2 * val1;
+			val3 = 3 * val1;
+			break;
+		case SC_NEED_APPLEIDUN_MODERN:
+			val2 = val1 < 10 ? 9 + val1 : 20;
+			val3 = 2 * val1;
+			break;
+		case SC_NEED_HUMMING_MODERN:
+			val2 = 4 * val1;
+			break;
+		case SC_NEED_FORTUNE_MODERN:
+			val2 = val1 * 10;
+			break;
+		case SC_NEED_SERVICE4U_MODERN:
+			val2 = val1 < 10 ? 9 + val1 : 20;
+			val3 = 5 + val1;
 			break;
 #endif
 		case SC_EXPLOSIONSPIRITS:
@@ -14382,8 +14436,21 @@ int32 status_change_end( block_list* bl, enum sc_type type, int32 tid ){
 	bool keep_accessory_strip_icon =
 		(type == SC_NEED_EARTHSTRAIN_STRIPACC && sc->getSCE(SC__STRIPACCESSORY)) ||
 		(type == SC__STRIPACCESSORY && sc->getSCE(SC_NEED_EARTHSTRAIN_STRIPACC));
-	if (!keep_accessory_strip_icon)
+	// NEED Fix3 (?/?): solo classic/modern share an EFST; if one ends while the same-skill counterpart
+	// remains, resend the icon with the counterpart's remaining time (clamped >= 0) instead of clearing.
+	sc_type solo_counterpart = need_solo_perf_counterpart(type);
+	status_change_entry* solo_ce = (solo_counterpart != SC_NONE) ? sc->getSCE(solo_counterpart) : nullptr;
+	if (keep_accessory_strip_icon) {
+		; // accessory-strip counterpart still owns the icon
+	} else if (solo_ce != nullptr) {
+		const struct TimerData* solo_td = get_timer(solo_ce->timer);
+		t_tick solo_remaining = 0;
+		if (solo_td != nullptr)
+			solo_remaining = (std::max)(static_cast<t_tick>(0), DIFF_TICK(solo_td->tick, gettick()));
+		clif_status_change(bl, status_icon, 1, solo_remaining, solo_ce->val1, solo_ce->val2, solo_ce->val3);
+	} else {
 		clif_status_change(bl,status_icon,0,0,0,0,0);
+	}
 
 	if( opt_flag[SCF_NONPLAYER] ) // bugreport:681
 		clif_changeoption2( *bl );

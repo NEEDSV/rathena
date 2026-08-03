@@ -2012,6 +2012,13 @@
 	export_constant(SC_NEED_GRACE);
 	export_constant(SC_NEED_GOLDPC);
 	export_constant(SC_NEED_EARTHSTRAIN_STRIPACC);
+	export_constant(SC_NEED_WHISTLE_MODERN);
+	export_constant(SC_NEED_ASSNCROS_MODERN);
+	export_constant(SC_NEED_POEMBRAGI_MODERN);
+	export_constant(SC_NEED_APPLEIDUN_MODERN);
+	export_constant(SC_NEED_HUMMING_MODERN);
+	export_constant(SC_NEED_FORTUNE_MODERN);
+	export_constant(SC_NEED_SERVICE4U_MODERN);
 
 /// Do not modify code below this, until the end of the API hook, since it will be automatically generated again
 /// @APIHOOK_START(EFST_CONST)

@@ -1453,6 +1453,14 @@ enum sc_type : int16 {
 	SC_SHIELDSPELL_REF,
 	SC_NEED_GOLDPC,
 	SC_NEED_EARTHSTRAIN_STRIPACC,
+	// NEED: modern (current-official) solo-performance buffs, separate from the 2017 field-song SCs.
+	SC_NEED_WHISTLE_MODERN,
+	SC_NEED_ASSNCROS_MODERN,
+	SC_NEED_POEMBRAGI_MODERN,
+	SC_NEED_APPLEIDUN_MODERN,
+	SC_NEED_HUMMING_MODERN,
+	SC_NEED_FORTUNE_MODERN,
+	SC_NEED_SERVICE4U_MODERN,
 
 	SC_MAX, //Automatically updated max, used in for's to check we are within bounds.
 };
@@ -3682,6 +3690,9 @@ static bool sc_start2(block_list *src, block_list *bl, sc_type type, int32 rate,
 static bool sc_start4(block_list *src, block_list *bl, sc_type type, int32 rate, int32 val1, int32 val2, int32 val3, int32 val4, t_tick duration, int32 delay = 0) {
 	return status_change_start(src, bl, type, 100 * rate, val1, val2, val3, val4, duration, SCSTART_NONE, delay);
 }
+// NEED Fix3: whole-skill solo-performance selection (classic priority) + shared-icon counterpart lookup.
+status_change_entry* need_solo_perf_active( status_change* sc, sc_type classic, sc_type modern );
+sc_type need_solo_perf_counterpart( sc_type type );
 int32 status_change_end(block_list* bl, enum sc_type type, int32 tid = INVALID_TIMER);
 TIMER_FUNC(status_change_timer);
 int32 status_change_timer_sub(block_list* bl, va_list ap);

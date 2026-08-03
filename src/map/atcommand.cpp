@@ -203,6 +203,10 @@ const char* AtcommandAliasDatabase::checkAlias( const char* alias ){
 		strcmp( alias, "\354\230\244\355\206\240\355\201\220\354\226\264" ) == 0 ){
 		return "autopot";
 	}
+	if( strcmp( alias, "\270\360\265\345\300\374\310\257" ) == 0 ||
+		strcmp( alias, "\353\252\250\353\223\234\354\240\204\355\231\230" ) == 0 ){
+		return "performancemode";
+	}
 
 	std::string alias_str( alias );
 	std::string* command = util::umap_find( this->aliases, alias_str );
