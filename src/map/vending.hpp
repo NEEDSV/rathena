@@ -12,6 +12,11 @@ class map_session_data;
 struct s_search_store_search;
 struct s_autotrader;
 
+enum class e_vending_currency : uint8 {
+	ZENY = 0,
+	CASH = 1,
+};
+
 struct s_vending {
 	int16 index; /// cart index (return item data)
 	int16 amount; ///amout of the item for vending
@@ -19,6 +24,9 @@ struct s_vending {
 };
 
 DBMap * vending_getdb();
+bool vending_currency_is_valid(e_vending_currency currency);
+void vending_prepare(map_session_data& sd, uint16 skill_lv);
+bool vending_currency_selection(map_session_data& sd, int32 npc_id, uint8 selection);
 void do_final_vending(void);
 void do_init_vending(void);
 void do_init_vending_autotrade( void );

@@ -13447,6 +13447,9 @@ void clif_parse_NpcSelectMenu(int32 fd,map_session_data *sd){
 	int32 npc_id = RFIFOL(fd,info->pos[0]);
 	uint8 select = RFIFOB(fd,info->pos[1]);
 
+	if (vending_currency_selection(*sd, npc_id, select))
+		return;
+
 #ifdef SECURE_NPCTIMEOUT
 	if( sd->npc_idle_timer == INVALID_TIMER && !sd->state.ignoretimeout )
 		return;

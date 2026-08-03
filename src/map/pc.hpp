@@ -506,6 +506,7 @@ public:
 		t_itemid noloot_itemid[NEED_NOLOOT_MAX];
 		uint32 gmaster_flag : 1;
 		uint32 prevend : 1;//used to flag wheather you've spent 40sp to open the vending or not.
+		bool pending_vending_currency;
 		bool pending_vending_ui; // flag whether the vending packet should still be sent to this player or not
 		uint32 warping : 1;//states whether you're in the middle of a warp processing
 		uint32 permanent_speed : 1; // When 1, speed cannot be changed through status_calc_pc().
@@ -832,6 +833,7 @@ public:
 	int32 vender_id;
 	int32 vend_num;
 	uint16 vend_skill_lv;
+	e_vending_currency vending_currency = e_vending_currency::ZENY;
 	char message[MESSAGE_SIZE];
 	struct s_vending vending[MAX_VENDING];
 
