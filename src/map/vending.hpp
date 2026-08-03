@@ -26,6 +26,7 @@ struct s_vending {
 DBMap * vending_getdb();
 bool vending_currency_is_valid(e_vending_currency currency);
 void vending_prepare(map_session_data& sd, uint16 skill_lv);
+void vending_cancel_setup(map_session_data& sd);
 bool vending_currency_selection(map_session_data& sd, int32 npc_id, uint8 selection);
 void do_final_vending(void);
 void do_init_vending(void);

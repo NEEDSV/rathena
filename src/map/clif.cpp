@@ -13447,7 +13447,7 @@ void clif_parse_NpcSelectMenu(int32 fd,map_session_data *sd){
 	int32 npc_id = RFIFOL(fd,info->pos[0]);
 	uint8 select = RFIFOB(fd,info->pos[1]);
 
-	if (vending_currency_selection(*sd, npc_id, select))
+	if (vending_currency_selection(*sd, npc_id, select) || npc_id == sd->id)
 		return;
 
 #ifdef SECURE_NPCTIMEOUT
@@ -14360,24 +14360,29 @@ void clif_parse_OpenVending(int32 fd, map_session_data* sd){
 		len -= 85;
 		flag = RFIFOB(fd,info->pos[2]) != 0;
 		if (!flag) {
-			sd->state.prevend = 0;
-			sd->state.workinprogress = WIP_DISABLE_NONE;
+			vending_cancel_setup(*sd);
 		}
 	}
 
-	if( sd->sc.getSCE(SC_NOCHAT) && sd->sc.getSCE(SC_NOCHAT)->val1&MANNER_NOROOM )
+	if( sd->sc.getSCE(SC_NOCHAT) && sd->sc.getSCE(SC_NOCHAT)->val1&MANNER_NOROOM ) {
+		vending_cancel_setup(*sd);
 		return;
+	}
 	if( map_getmapflag(sd->m, MF_NOVENDING) ) {
 		clif_displaymessage (sd->fd, msg_txt(sd,276)); // "You can't open a shop on this map"
+		vending_cancel_setup(*sd);
 		return;
 	}
 	if( map_getcell(sd->m,sd->x,sd->y,CELL_CHKNOVENDING) ) {
 		clif_displaymessage (sd->fd, msg_txt(sd,204)); // "You can't open a shop on this cell."
+		vending_cancel_setup(*sd);
 		return;
 	}
 
-	if( message[0] == '\0' ) // invalid input
+	if( message[0] == '\0' ) { // invalid input
+		vending_cancel_setup(*sd);
 		return;
+	}
 
 	vending_openvending(*sd, message, data, len/8, nullptr);
 }
