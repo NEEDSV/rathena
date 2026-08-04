@@ -5175,22 +5175,6 @@ void clif_getareachar_unit( map_session_data* sd,block_list *bl ){
 	clif_hat_effects( *bl, SELF, *sd );
 }
 
-/**
- * Rebuilds a player's unit for both the player and nearby clients.
- * This keeps the session connected while applying view-data fields, such as sex,
- * which are part of the unit packet and cannot be updated by ZC_SPRITE_CHANGE.
- */
-void clif_refresh_player_unit(map_session_data& sd)
-{
-	if (sd.prev == nullptr)
-		return;
-
-	clif_clearunit_area(sd, CLR_OUTSIGHT);
-	clif_clearunit_single(sd.id, CLR_OUTSIGHT, sd);
-	clif_spawn(&sd);
-	clif_getareachar_unit(&sd, &sd);
-}
-
 //Modifies the type of damage according to target status changes [Skotlex]
 //Aegis data specifies that: 4 endure against single hit sources, 9 against multi-hit.
 static enum e_damage_type clif_calc_delay(const block_list& bl, e_damage_type type, int32 div, int64 damage, int32 delay, t_tick tick) {
@@ -21736,6 +21720,23 @@ void clif_hat_effect_single( const block_list& bl, uint16 effectId, bool enable 
 #endif
 }
 
+static TIMER_FUNC(clif_gender_change_effect_end_timer)
+{
+	map_session_data* sd = map_id2sd(id);
+
+	if (sd == nullptr || sd->login_id1 != static_cast<uint32>(data))
+		return 0;
+
+	clif_status_change_sub(sd, sd->id, EFST_GENDER_CHANGE, 0, 0, 0, 0, 0, AREA);
+	return 0;
+}
+
+void clif_gender_change_effect(const map_session_data& sd)
+{
+	clif_status_change_sub(&sd, sd.id, EFST_GENDER_CHANGE, 1, 3000, 0, 0, 0, AREA);
+	add_timer(gettick() + 3000, clif_gender_change_effect_end_timer, sd.id, sd.login_id1);
+}
+
 
 /// Notify the client that a sale has started
 /// 09b2 <item id>.W <remaining time>.L (ZC_NOTIFY_BARGAIN_SALE_SELLING)
@@ -26644,6 +26645,7 @@ void do_init_clif(void) {
 
 	add_timer_func_list(clif_clearunit_delayed_sub, "clif_clearunit_delayed_sub");
 	add_timer_func_list(clif_delayquit, "clif_delayquit");
+	add_timer_func_list(clif_gender_change_effect_end_timer, "clif_gender_change_effect_end_timer");
 
 #if PACKETVER_MAIN_NUM >= 20190403 || PACKETVER_RE_NUM >= 20190320
 	add_timer_func_list( clif_ping_timer, "clif_ping_timer" );

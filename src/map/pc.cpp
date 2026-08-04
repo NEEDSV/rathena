@@ -6505,19 +6505,6 @@ bool pc_isUseitem(map_session_data *sd,int32 n)
  *------------------------------------------*/
 static constexpr t_tick CHANGE_GENDER_CARD_EFFECT_DELAY = 3000;
 
-static TIMER_FUNC(pc_change_gender_card_effect_end)
-{
-	map_session_data* sd = map_id2sd(id);
-
-	// The original session may have logged out before the effect finished. Do not
-	// disconnect a newly-created session which happens to reuse the same AID.
-	if (sd == nullptr || sd->login_id1 != static_cast<uint32>(data))
-		return 0;
-
-	clif_refresh_player_unit(*sd);
-	return 0;
-}
-
 static bool pc_use_change_gender_card(map_session_data* sd, int32 index, t_tick tick)
 {
 	nullpo_retr(false, sd);
@@ -6532,42 +6519,41 @@ static bool pc_use_change_gender_card(map_session_data* sd, int32 index, t_tick 
 		return false;
 
 	if (pc_isdead(sd) || pc_cant_act(sd) || pc_issit(sd) || sd->state.mail_writing || (sd->state.block_action & PCBLOCK_USEITEM)) {
-		clif_displaymessage(sd->fd, msg_txt(sd, 1884));
+		clif_msg(*sd, MSI_BUSY);
 		return false;
 	}
 
 	if (sd->status.party_id != 0 || sd->status.guild_id != 0) {
-		clif_displaymessage(sd->fd, msg_txt(sd, 1885));
+		clif_msg(*sd, MSI_GENDER_CHANGE_FAILED_CAUSE_GROUP);
 		return false;
 	}
 
 	if (pc_ismarried(sd)) {
-		clif_displaymessage(sd->fd, msg_txt(sd, 1886));
+		clif_msg(*sd, MSI_GENDER_CHANGE_FAILED_CAUSE_MARRIED);
 		return false;
 	}
 
 	if (pc_isriding(sd) || pc_isridingwug(sd) || pc_isridingdragon(sd) || pc_ismadogear(sd) || sd->sc.getSCE(SC_ALL_RIDING)) {
-		clif_displaymessage(sd->fd, msg_txt(sd, 1887));
+		clif_msg(*sd, MSI_GENDER_CHANGE_FAILED_CAUSE_RIDING);
 		return false;
 	}
 
 	if (sd->disguise != 0 || sd->sc.getSCE(SC_MONSTER_TRANSFORM) || sd->sc.getSCE(SC_ACTIVE_MONSTER_TRANSFORM)) {
-		clif_displaymessage(sd->fd, msg_txt(sd, 1888));
+		clif_msg(*sd, MSI_GENDER_CHANGE_FAILED_CAUSE_MONSTER_TRANSFORM);
 		return false;
 	}
 
 	if ((sd->class_ & MAPID_SECONDMASK) == MAPID_BARDDANCER || (sd->class_ & MAPID_SECONDMASK) == MAPID_KAGEROUOBORO) {
-		clif_displaymessage(sd->fd, msg_txt(sd, 1889));
+		clif_msg(*sd, MSI_GENDER_CHANGE_FAILED_CAUSE_JOB);
 		return false;
 	}
 
 	if (card.expire_time != 0) {
-		clif_displaymessage(sd->fd, msg_txt(sd, 1890));
 		return false;
 	}
 
 	if ((sd->status.sex != SEX_MALE && sd->status.sex != SEX_FEMALE) || !chrif_isconnected()) {
-		clif_displaymessage(sd->fd, msg_txt(sd, 1892));
+		clif_msg(*sd, MSI_BUSY);
 		return false;
 	}
 
@@ -6583,7 +6569,7 @@ static bool pc_use_change_gender_card(map_session_data* sd, int32 index, t_tick 
 
 	if (pc_delitem(sd, index, 1, 0, 0, LOG_TYPE_CONSUME) != 0) {
 		sd->canuseitem_tick = old_canuseitem_tick;
-		clif_displaymessage(sd->fd, msg_txt(sd, 1892));
+		clif_msg(*sd, MSI_BUSY);
 		return false;
 	}
 
@@ -6621,15 +6607,17 @@ static bool pc_use_change_gender_card(map_session_data* sd, int32 index, t_tick 
 		}
 		status_calc_pc(sd, SCO_FORCE);
 		sd->canuseitem_tick = old_canuseitem_tick;
-		clif_displaymessage(sd->fd, msg_txt(sd, 1892));
+		clif_msg(*sd, MSI_BUSY);
 		return false;
 	}
 
 	clif_useitemack_itemid(sd, index, refund.nameid, remaining, true);
 	sd->canuseitem_tick = tick + CHANGE_GENDER_CARD_EFFECT_DELAY;
-	clif_specialeffect(sd, EF_ANGEL2, AREA);
-	if (add_timer(tick + CHANGE_GENDER_CARD_EFFECT_DELAY, pc_change_gender_card_effect_end, sd->id, sd->login_id1) == INVALID_TIMER)
-		clif_refresh_player_unit(*sd);
+	unit_stop_walking(sd, USW_FIXPOS | USW_FORCE_STOP);
+	clif_sprite_change(sd, sd->id, LOOK_GENDER, sd->status.sex, 0, AREA);
+	clif_changelook(sd, LOOK_BASE, sd->vd.look[LOOK_BASE]);
+	clif_changelook(sd, LOOK_BODY2, sd->vd.look[LOOK_BODY2]);
+	clif_gender_change_effect(*sd);
 	return true;
 }
 
@@ -17476,7 +17464,6 @@ void do_init_pc(void) {
 	add_timer_func_list(pc_macro_detector_timeout, "pc_macro_detector_timeout");
 	add_timer_func_list(pc_macro_detector_pending_timer, "pc_macro_detector_pending_timer");
 	add_timer_func_list(pc_macro_detector_success_immunity_timer, "pc_macro_detector_success_immunity_timer");
-	add_timer_func_list(pc_change_gender_card_effect_end, "pc_change_gender_card_effect_end");
 
 	add_timer(gettick() + autosave_interval, pc_autosave, 0, 0);
 
