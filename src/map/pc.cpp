@@ -6614,6 +6614,8 @@ static bool pc_use_change_gender_card(map_session_data* sd, int32 index, t_tick 
 	clif_useitemack_itemid(sd, index, refund.nameid, remaining, true);
 	sd->canuseitem_tick = tick + CHANGE_GENDER_CARD_EFFECT_DELAY;
 	unit_stop_walking(sd, USW_FIXPOS | USW_FORCE_STOP);
+	if (DIFF_TICK(tick + CHANGE_GENDER_CARD_EFFECT_DELAY, sd->ud.canmove_tick) > 0)
+		sd->ud.canmove_tick = tick + CHANGE_GENDER_CARD_EFFECT_DELAY;
 	clif_sprite_change(sd, sd->id, LOOK_GENDER, sd->status.sex, 0, AREA);
 	clif_changelook(sd, LOOK_BASE, sd->vd.look[LOOK_BASE]);
 	clif_changelook(sd, LOOK_BODY2, sd->vd.look[LOOK_BODY2]);
