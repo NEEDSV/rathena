@@ -7117,6 +7117,8 @@ enum e_setpos pc_setpos(map_session_data* sd, uint16 mapindex, int32 x, int32 y,
 		ShowDebug("pc_setpos: Passed mapindex(%d) is invalid!\n", mapindex);
 		return SETPOS_MAPINDEX;
 	}
+	if (sd->state.prevend && !sd->state.vending)
+		vending_cancel_setup(*sd);
 
 	if ( sd->state.autotrade && (sd->vender_id || sd->buyer_id) ) // Player with autotrade just causes clif glitch! @ FIXME
 		return SETPOS_AUTOTRADE;
@@ -9987,6 +9989,8 @@ int32 pc_dead(map_session_data *sd,block_list *src)
 	}
 
 	// NEED: The Super Novice rescue above is not a real death. Every path continuing from here is.
+	if (sd->state.prevend && !sd->state.vending)
+		vending_cancel_setup(*sd);
 	pc_macro_detector_cancel_success_immunity(*sd, "success_immunity_cancel_death");
 	// Reset here so immediate resurrection/respawn paths cannot retain Earth Strain resistance.
 	sd->earthstrain_strip_resist = 0;

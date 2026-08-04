@@ -7292,6 +7292,10 @@ ACMD_FUNC(autotrade) {
 		clif_displaymessage(fd, msg_txt(sd,549)); // "You should have a shop open to use @autotrade."
 		return -1;
 	}
+	if (sd->state.vending && sd->vending_currency == e_vending_currency::CASH && !battle_config.cash_vending_autotrade) {
+		clif_displaymessage(fd, msg_txt(sd, 1890));
+		return -1;
+	}
 
 	sd->state.autotrade = 1;
 	if (battle_config.autotrade_monsterignore)

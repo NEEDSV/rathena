@@ -36,6 +36,7 @@
 #include "pc.hpp"
 #include "pet.hpp"
 #include "script.hpp" // script_config
+#include "vending.hpp"
 
 using namespace rathena;
 
@@ -2276,6 +2277,8 @@ void run_tomb(map_session_data* sd, npc_data* nd)
 int32 npc_click(map_session_data* sd, npc_data* nd)
 {
 	nullpo_retr(1, sd);
+	if (sd->state.prevend && !sd->state.vending)
+		vending_cancel_setup(*sd);
 
 	if (sd->npc_id != 0) {
 		ShowError("npc_click: npc_id != 0\n");
