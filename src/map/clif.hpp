@@ -934,6 +934,7 @@ void clif_changeoption_target( const block_list* bl, const block_list* target);
 #define clif_changeoption(bl) clif_changeoption_target(bl, nullptr)	// area
 void clif_changeoption2( const block_list& bl );
 void clif_useitemack( const map_session_data* sd, int32 index, int32 amount, bool ok );	// self
+void clif_useitemack_itemid( const map_session_data* sd, int32 index, t_itemid nameid, int32 amount, bool ok );
 void clif_GlobalMessage( const block_list& bl, const char* message, enum send_target target );
 void clif_createchat( const map_session_data& sd, e_create_chatroom flag );
 void clif_dispchat( const chat_data& cd );
@@ -946,6 +947,7 @@ void clif_chat_leave( const chat_data& cd, const map_session_data& sd, bool kick
 void clif_changechatstatus( const chat_data& cd);
 void clif_refresh_storagewindow(map_session_data *sd);
 void clif_refresh(map_session_data *sd);	// self
+void clif_refresh_player_unit(map_session_data& sd);
 
 void clif_emotion( const block_list& bl, emotion_type type );
 void clif_talkiebox( const block_list* bl, const char* talkie );

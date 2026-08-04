@@ -4498,13 +4498,19 @@ void clif_changeoption2( const block_list& bl ){
 void clif_useitemack( const map_session_data* sd, int32 index, int32 amount, bool ok ){
 	nullpo_retv( sd );
 
-	int32 fd = sd->fd;
-
-	if( !session_isActive( fd ) ){
+	if( index < 0 || index >= MAX_INVENTORY || sd->inventory.u.items_inventory[index].nameid == 0 || sd->inventory_data[index] == nullptr ){
 		return;
 	}
 
-	if( index < 0 || index >= MAX_INVENTORY || sd->inventory.u.items_inventory[index].nameid == 0 || sd->inventory_data[index] == nullptr ){
+	clif_useitemack_itemid( sd, index, sd->inventory.u.items_inventory[index].nameid, amount, ok );
+}
+
+void clif_useitemack_itemid( const map_session_data* sd, int32 index, t_itemid nameid, int32 amount, bool ok ){
+	nullpo_retv( sd );
+
+	int32 fd = sd->fd;
+
+	if( !session_isActive( fd ) || index < 0 || index >= MAX_INVENTORY || nameid == 0 ){
 		return;
 	}
 
@@ -4513,7 +4519,7 @@ void clif_useitemack( const map_session_data* sd, int32 index, int32 amount, boo
 	p.packetType = useItemAckType;
 	p.index = index + 2;
 #if PACKETVER > 3
-	p.itemId = client_nameid( sd->inventory.u.items_inventory[index].nameid );
+	p.itemId = client_nameid( nameid );
 	p.AID = sd->id;
 #endif
 	p.amount = amount;
@@ -5167,6 +5173,22 @@ void clif_getareachar_unit( map_session_data* sd,block_list *bl ){
 	}
 
 	clif_hat_effects( *bl, SELF, *sd );
+}
+
+/**
+ * Rebuilds a player's unit for both the player and nearby clients.
+ * This keeps the session connected while applying view-data fields, such as sex,
+ * which are part of the unit packet and cannot be updated by ZC_SPRITE_CHANGE.
+ */
+void clif_refresh_player_unit(map_session_data& sd)
+{
+	if (sd.prev == nullptr)
+		return;
+
+	clif_clearunit_area(sd, CLR_OUTSIGHT);
+	clif_clearunit_single(sd.id, CLR_OUTSIGHT, sd);
+	clif_spawn(&sd);
+	clif_getareachar_unit(&sd, &sd);
 }
 
 //Modifies the type of damage according to target status changes [Skotlex]
@@ -11634,6 +11656,32 @@ void clif_parse_GlobalMessage(int32 fd, map_session_data* sd)
 	// validate packet and retrieve name and message
 	if( !clif_process_message(sd, false, name, message, output ) )
 		return;
+
+	// NEED: ^메시지 → 클랜 채팅
+	if (message[0] == '^')
+	{
+		// 내용이 없는 경우
+		if (message[1] == '\0')
+			return;
+
+		// 클랜에 가입되어 있지 않은 경우
+		if (sd->clan == nullptr)
+		{
+			return;
+		}
+
+		// 앞의 ^ 문자를 제외하고 클랜 채팅 형식으로 재구성
+		safesnprintf(
+			output,
+			sizeof(output),
+			"%s : %s",
+			name,
+			message + 1
+		);
+
+		clan_send_message(*sd, output, strlen(output));
+		return;
+	}
 
 	if( sd->gcbind && ((sd->gcbind->opt&CHAN_OPT_CAN_CHAT) || pc_has_permission(sd, PC_PERM_CHANNEL_ADMIN)) ) {
 		channel_send(sd->gcbind,sd,message);
