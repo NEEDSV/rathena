@@ -21736,6 +21736,7 @@ static TIMER_FUNC(clif_gender_change_effect_end_timer)
 		return 0;
 
 	clif_status_change_sub(sd, sd->id, EFST_GENDER_CHANGE, 0, 0, 0, 0, 0, AREA);
+	clif_msg(*sd, MSI_GENDER_CHANGE_MESSAGE_COMPLETE);
 	return 0;
 }
 

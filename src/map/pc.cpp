@@ -6518,6 +6518,11 @@ static bool pc_use_change_gender_card(map_session_data* sd, int32 index, t_tick 
 	if (card.nameid != ITEMID_CHANGE_GENDER_CARD || card.amount <= 0 || card_data == nullptr || card_data->nameid != ITEMID_CHANGE_GENDER_CARD)
 		return false;
 
+	if (map_flag_gvg2(sd->m) || map_getmapflag(sd->m, MF_BATTLEGROUND)) {
+		clif_msg(*sd, MSI_BUSY);
+		return false;
+	}
+
 	if (pc_isdead(sd) || pc_cant_act(sd) || pc_issit(sd) || sd->state.mail_writing || (sd->state.block_action & PCBLOCK_USEITEM)) {
 		clif_msg(*sd, MSI_BUSY);
 		return false;
@@ -6549,6 +6554,7 @@ static bool pc_use_change_gender_card(map_session_data* sd, int32 index, t_tick 
 	}
 
 	if (card.expire_time != 0) {
+		clif_msg(*sd, MSI_BUSY);
 		return false;
 	}
 
