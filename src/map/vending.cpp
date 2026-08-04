@@ -188,7 +188,12 @@ static void vending_show_registered_items(map_session_data& sd)
 		const s_vending& vending = sd.vending[i];
 		const item& cart_item = sd.cart.u.items_cart[vending.index];
 		const uint16 message_id = sd.vending_currency == e_vending_currency::CASH ? 1898 : 1897;
-		safesnprintf(output, sizeof(output), msg_txt(&sd, message_id), itemdb_ename(cart_item.nameid), vending.amount, vending.value);
+		std::string price = std::to_string(vending.value);
+
+		for (size_t position = price.length(); position > 3; position -= 3)
+			price.insert(position - 3, 1, ',');
+
+		safesnprintf(output, sizeof(output), msg_txt(&sd, message_id), itemdb_ename(cart_item.nameid), vending.amount, price.c_str());
 		clif_displaymessage(sd.fd, output);
 	}
 }
