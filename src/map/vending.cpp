@@ -188,12 +188,19 @@ static void vending_show_registered_items(map_session_data& sd)
 		const s_vending& vending = sd.vending[i];
 		const item& cart_item = sd.cart.u.items_cart[vending.index];
 		const uint16 message_id = sd.vending_currency == e_vending_currency::CASH ? 1898 : 1897;
+		std::string message = msg_txt(&sd, message_id);
 		std::string price = std::to_string(vending.value);
 
 		for (size_t position = price.length(); position > 3; position -= 3)
 			price.insert(position - 3, 1, ',');
 
-		safesnprintf(output, sizeof(output), msg_txt(&sd, message_id), itemdb_ename(cart_item.nameid), vending.amount, price.c_str());
+		// Keep the msg_txt contract compatible with older map-server binaries. The
+		// price is defined as %u in the message file and converted locally to %s so
+		// that mixed binary/config deployments cannot interpret an integer as a pointer.
+		if (const size_t price_placeholder = message.rfind("%u"); price_placeholder != std::string::npos)
+			message.replace(price_placeholder, 2, "%s");
+
+		safesnprintf(output, sizeof(output), message.c_str(), itemdb_ename(cart_item.nameid), vending.amount, price.c_str());
 		clif_displaymessage(sd.fd, output);
 	}
 }
