@@ -11658,7 +11658,7 @@ void clif_parse_GlobalMessage(int32 fd, map_session_data* sd)
 		return;
 
 	// NEED: ^메시지 → 클랜 채팅
-	if (message[0] == '^')
+	if (message[0] == '~')
 	{
 		// 내용이 없는 경우
 		if (message[1] == '\0')
