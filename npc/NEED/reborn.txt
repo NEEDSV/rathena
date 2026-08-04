@@ -402,6 +402,12 @@ S_GiveEveryReward:
 		callsub S_GiveItem, .Every_ExpManual_ID, .Every_ExpManual_Amount;
 		mes "- " + callsub(S_ItemName, .Every_ExpManual_ID) + " " + .Every_ExpManual_Amount + "개";
 	}
+	
+	if (.Every_GoldBox_ID > 0 && .Every_GoldBox_Amount > 0) {
+		.@rand = rand(1,5);
+		callsub S_GiveItem, .Every_GoldBox_ID, .Every_GoldBox_Amount + .@rand;
+		mes "- " + callsub(S_ItemName, .Every_GoldBox_ID) + " " + .Every_GoldBox_Amount + .@rand + "개";
+	}
 
 	next;
 	return;
@@ -688,6 +694,7 @@ S_ShowRewardInfo:
 	mes "[환생 보상]";
 	mes "1회마다: 환생 포인트 " + .PointPerRebirth + "점";
 	mes "1회마다: 의상 상자 10개, 300% 교범 1개";
+	mes "1회마다: 행운 금화 주머니 5개 + (1 ~ 5개)";
 	mes .EveryN_Count + "회마다: 3배 풍선껌 1개";
 	mes " ";
 	mes .Cnt_EffectStone + "회: 환생 전용 이펙트 스톤";
@@ -801,6 +808,9 @@ OnInit:
 
 	.Every_ExpManual_ID = 14545;        // 300% 교범 아이템 ID
 	.Every_ExpManual_Amount = 1;
+	
+	.Every_GoldBox_ID = 399906;        // 금화 행운 주머니
+	.Every_GoldBox_Amount = 5;
 
 	// ============================================================
 	// N회마다 지급 보상
