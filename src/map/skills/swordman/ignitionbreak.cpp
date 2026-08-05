@@ -32,11 +32,44 @@ void SkillIgnitionBreak::calculateSkillRatio(const Damage *wd, const block_list 
 		skillratio += 100 * skill_lv;
 }
 
-void SkillIgnitionBreak::castendNoDamageId(block_list *src, block_list *target, uint16 skill_lv, t_tick tick, int32& flag) const {
+void SkillIgnitionBreak::castendNoDamageId(
+	block_list* src,
+	block_list* target,
+	uint16 skill_lv,
+	t_tick tick,
+	int32& flag
+) const {
 	skill_area_temp[1] = 0;
 
-	// Keep the 2017 skill animation path: ZC_NOTIFY_SKILL carries attackMT,
-	// allowing the client to scale Ignition Break's motion with the caster's ASPD.
-	clif_skill_damage( *src, *src, tick, status_get_amotion(src), 0, DMGVAL_IGNORE, 1, getSkillId(), skill_lv, DMG_SINGLE );
-	map_foreachinrange(skill_area_sub, target, skill_get_splash(getSkillId(), skill_lv), BL_CHAR|BL_SKILL, src, getSkillId(), skill_lv, tick, flag|BCT_ENEMY|SD_SPLASH|1, skill_castend_damage_id);
+#if PACKETVER >= 20180207
+	// 먼저 신형 클라이언트용 폭발 이펙트 요청
+	clif_skill_nodamage(src, *target, getSkillId(), skill_lv);
+#endif
+
+	// 이후 ASPD 기반 모션 패킷
+	clif_skill_damage(
+		*src,
+		*src,
+		tick,
+		status_get_amotion(src),
+		0,
+		DMGVAL_IGNORE,
+		1,
+		getSkillId(),
+		skill_lv,
+		DMG_SINGLE
+	);
+
+	map_foreachinrange(
+		skill_area_sub,
+		target,
+		skill_get_splash(getSkillId(), skill_lv),
+		BL_CHAR | BL_SKILL,
+		src,
+		getSkillId(),
+		skill_lv,
+		tick,
+		flag | BCT_ENEMY | SD_SPLASH | 1,
+		skill_castend_damage_id
+	);
 }

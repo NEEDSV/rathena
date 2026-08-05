@@ -496,12 +496,28 @@ bool skill_pos_maxcount_check(block_list *src, int16 x, int16 y, uint16 skill_id
 			clif_skill_fail( *sd, skill_id );
 		return false;
 	}
-	if (type&battle_config.land_skill_limit && (maxcount = skill_get_maxcount(skill_id, skill_lv)) > 0) {
+	const bool need_bg_three_limit = sd != nullptr && map_getmapflag(src->m, MF_BATTLEGROUND) && (skill_id == HT_ANKLESNARE || skill_id == WM_POEMOFNETHERWORLD);
+
+	if (need_bg_three_limit)
+	{
+		maxcount = 3;
+	}
+	else if (type & battle_config.land_skill_limit)
+	{
+		maxcount = skill_get_maxcount(skill_id, skill_lv);
+	}
+
+	if (maxcount > 0)
+	{
 		unit_skillunit_maxcount(*ud, skill_id, maxcount);
 
-		if (maxcount == 0) {
+		if (maxcount == 0)
+		{
 			if (sd && display_failure)
-				clif_skill_fail( *sd, skill_id );
+			{
+				clif_skill_fail(*sd, skill_id);
+			}
+
 			return false;
 		}
 	}

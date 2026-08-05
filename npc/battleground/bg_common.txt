@@ -2175,6 +2175,24 @@ function	script	F_BG_Badge	{
 	return;
 }
 
+bat_room,154,149,0	script	NEED_BG_PointMigration	HIDDEN_WARP_NPC,3,3,{
+OnTouch:
+	if (NEED_BG_POINT_MIGRATED)
+		end;
+
+	.@old_point = BATTLEGROUND_POINT;
+
+	if (.@old_point > 0) {
+		#BATTLEGROUND_POINT += .@old_point;
+		BATTLEGROUND_POINT = 0;
+
+		dispbottom "[전장] 기존 전장 포인트 " + .@old_point + "점이 계정 공유 포인트로 이전되었습니다.";
+	}
+
+	// 포인트 이전 처리가 끝난 뒤 완료 기록
+	NEED_BG_POINT_MIGRATED = 1;
+	end;
+}
 
 bat_room,154,149,0	script	전장 이용 동의#batroom	HIDDEN_WARP_NPC,3,3,{
 OnTouch:

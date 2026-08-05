@@ -685,6 +685,14 @@ enum e_clif_messages : uint16 {
 
 	// Enchantment failed!
 	MSI_ENCHANT_FAILED = 3858,
+
+	MSI_GENDER_CHANGE_FAILED_CAUSE_JOB = 4130,
+	MSI_GENDER_CHANGE_FAILED_CAUSE_GROUP = 4131,
+	MSI_GENDER_CHANGE_FAILED_CAUSE_MARRIED = 4132,
+	MSI_GENDER_CHANGE_FAILED_CAUSE_MONSTER_TRANSFORM = 4133,
+	MSI_GENDER_CHANGE_MESSAGE_COMPLETE = 4137,
+	MSI_GENDER_CHANGE_FAILED_CAUSE_RIDING = 4208,
+
 };
 
 enum e_personalinfo : uint8_t {
@@ -934,6 +942,7 @@ void clif_changeoption_target( const block_list* bl, const block_list* target);
 #define clif_changeoption(bl) clif_changeoption_target(bl, nullptr)	// area
 void clif_changeoption2( const block_list& bl );
 void clif_useitemack( const map_session_data* sd, int32 index, int32 amount, bool ok );	// self
+void clif_useitemack_itemid( const map_session_data* sd, int32 index, t_itemid nameid, int32 amount, bool ok );
 void clif_GlobalMessage( const block_list& bl, const char* message, enum send_target target );
 void clif_createchat( const map_session_data& sd, e_create_chatroom flag );
 void clif_dispchat( const chat_data& cd );
@@ -1051,6 +1060,7 @@ void clif_item_damaged( const map_session_data& sd, uint16 position );
 void clif_item_refine_list( map_session_data& sd );
 void clif_hat_effects( const block_list& bl, enum send_target target, const block_list& tbl );
 void clif_hat_effect_single( const block_list& bl, uint16 effectId, bool enable );
+void clif_gender_change_effect(const map_session_data& sd);
 
 void clif_item_skill(const map_session_data* sd,uint16 skill_id,uint16 skill_lv);
 

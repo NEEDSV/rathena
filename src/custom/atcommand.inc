@@ -329,3 +329,52 @@ ACMD_FUNC(noloot)
 	clif_displaymessage(fd, atcmd_output);
 	return 0;
 }
+ACMD_FUNC(performancemode) {
+	nullpo_retr(-1, sd);
+	if( (sd->class_ & MAPID_SECONDMASK) != MAPID_BARDDANCER ){
+		clif_displaymessage(fd, msg_txt(sd, 1879)); // Bard/Dancer classes only.
+		return -1;
+	}
+
+	if (map_getmapflag(sd->m, MF_BATTLEGROUND)) {
+		clif_displaymessage(fd, msg_txt(sd,1883));
+		return -1;
+	}
+
+	char arg[32];
+	memset(arg, '\0', sizeof(arg));
+	if( message && *message )
+		sscanf(message, "%31s", arg);
+	if( !strcmpi(arg, "status") || strcmp(arg, "\310\256\300\316") == 0 || strcmp(arg, "\355\231\225\354\235\270") == 0 ){
+		clif_displaymessage(fd, msg_txt(sd, need_get_solo_performance_mode(sd) == NEED_PERFORMANCE_MODERN ? 1878 : 1877));
+		return 0;
+	}
+	bool have_target = false;
+	e_need_performance_mode target = NEED_PERFORMANCE_CLASSIC;
+	if( *arg ){
+		if( !strcmpi(arg, "classic") || !strcmpi(arg, "field") || !strcmpi(arg, "2017") ||
+			strcmp(arg, "\300\345\306\307") == 0 || strcmp(arg, "\354\236\245\355\214\220") == 0 ||
+			strcmp(arg, "\305\254\267\241\275\304") == 0 || strcmp(arg, "\355\201\264\353\236\230\354\213\235") == 0 ){
+			target = NEED_PERFORMANCE_CLASSIC; have_target = true;
+		} else if( !strcmpi(arg, "modern") || !strcmpi(arg, "current") || !strcmpi(arg, "buff") || !strcmpi(arg, "2026") ||
+			strcmp(arg, "\307\366\307\340") == 0 || strcmp(arg, "\355\230\204\355\226\211") == 0 ||
+			strcmp(arg, "\271\366\307\301") == 0 || strcmp(arg, "\353\262\204\355\224\204") == 0 ){
+			target = NEED_PERFORMANCE_MODERN; have_target = true;
+		} else {
+			clif_displaymessage(fd, msg_txt(sd, need_get_solo_performance_mode(sd) == NEED_PERFORMANCE_MODERN ? 1878 : 1877));
+			return -1;
+		}
+	}
+	if( sd->sc.getSCE(SC_DANCING) ){
+		clif_displaymessage(fd, msg_txt(sd, 1880)); // Cannot change while performing.
+		return -1;
+	}
+	if( have_target ){
+		if( !need_set_solo_performance_mode(sd, target, true) )
+			return -1;
+	} else {
+		if( !need_toggle_solo_performance_mode(sd, true) )
+			return -1;
+	}
+	return 0;
+}

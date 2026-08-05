@@ -6503,6 +6503,132 @@ bool pc_isUseitem(map_session_data *sd,int32 n)
  *	0 = fail
  *	1 = success
  *------------------------------------------*/
+static constexpr t_tick CHANGE_GENDER_CARD_EFFECT_DELAY = 3000;
+
+static bool pc_use_change_gender_card(map_session_data* sd, int32 index, t_tick tick)
+{
+	nullpo_retr(false, sd);
+
+	if (index < 0 || index >= MAX_INVENTORY)
+		return false;
+
+	item& card = sd->inventory.u.items_inventory[index];
+	item_data* card_data = sd->inventory_data[index];
+
+	if (card.nameid != ITEMID_CHANGE_GENDER_CARD || card.amount <= 0 || card_data == nullptr || card_data->nameid != ITEMID_CHANGE_GENDER_CARD)
+		return false;
+
+	if (map_flag_gvg2(sd->m) || map_getmapflag(sd->m, MF_BATTLEGROUND)) {
+		clif_msg(*sd, MSI_BUSY);
+		return false;
+	}
+
+	if (pc_isdead(sd) || pc_cant_act(sd) || pc_issit(sd) || sd->state.mail_writing || (sd->state.block_action & PCBLOCK_USEITEM)) {
+		clif_msg(*sd, MSI_BUSY);
+		return false;
+	}
+
+	if (sd->status.party_id != 0 || sd->status.guild_id != 0) {
+		clif_msg(*sd, MSI_GENDER_CHANGE_FAILED_CAUSE_GROUP);
+		return false;
+	}
+
+	if (pc_ismarried(sd)) {
+		clif_msg(*sd, MSI_GENDER_CHANGE_FAILED_CAUSE_MARRIED);
+		return false;
+	}
+
+	if (pc_isriding(sd) || pc_isridingwug(sd) || pc_isridingdragon(sd) || pc_ismadogear(sd) || sd->sc.getSCE(SC_ALL_RIDING)) {
+		clif_msg(*sd, MSI_GENDER_CHANGE_FAILED_CAUSE_RIDING);
+		return false;
+	}
+
+	if (sd->disguise != 0 || sd->sc.getSCE(SC_MONSTER_TRANSFORM) || sd->sc.getSCE(SC_ACTIVE_MONSTER_TRANSFORM)) {
+		clif_msg(*sd, MSI_GENDER_CHANGE_FAILED_CAUSE_MONSTER_TRANSFORM);
+		return false;
+	}
+
+	if ((sd->class_ & MAPID_SECONDMASK) == MAPID_BARDDANCER || (sd->class_ & MAPID_SECONDMASK) == MAPID_KAGEROUOBORO) {
+		clif_msg(*sd, MSI_GENDER_CHANGE_FAILED_CAUSE_JOB);
+		return false;
+	}
+
+	if (card.expire_time != 0) {
+		clif_msg(*sd, MSI_BUSY);
+		return false;
+	}
+
+	if ((sd->status.sex != SEX_MALE && sd->status.sex != SEX_FEMALE) || !chrif_isconnected()) {
+		clif_msg(*sd, MSI_BUSY);
+		return false;
+	}
+
+	const int32 old_sex = sd->status.sex;
+	const int32 remaining = card.amount - 1;
+	const t_tick old_canuseitem_tick = sd->canuseitem_tick;
+	item refund = card;
+	int32 equipped[MAX_INVENTORY] = {};
+	int32 equip_switch[MAX_INVENTORY] = {};
+
+	refund.amount = 1;
+	sd->canuseitem_tick = tick + battle_config.item_use_interval;
+
+	if (pc_delitem(sd, index, 1, 0, 0, LOG_TYPE_CONSUME) != 0) {
+		sd->canuseitem_tick = old_canuseitem_tick;
+		clif_msg(*sd, MSI_BUSY);
+		return false;
+	}
+
+	sd->status.sex = old_sex == SEX_MALE ? SEX_FEMALE : SEX_MALE;
+	status_set_viewdata(sd, sd->status.class_);
+
+	for (int32 i = 0; i < MAX_INVENTORY; i++) {
+		item& inventory_item = sd->inventory.u.items_inventory[i];
+
+		if (inventory_item.nameid == 0 || sd->inventory_data[i] == nullptr || pc_isequip(sd, i) == ITEM_EQUIP_ACK_OK)
+			continue;
+
+		if (inventory_item.equip != 0) {
+			equipped[i] = inventory_item.equip;
+			pc_unequipitem(sd, i, 3);
+		}
+		if (inventory_item.equipSwitch != 0) {
+			equip_switch[i] = inventory_item.equipSwitch;
+			pc_equipswitch_remove(sd, i);
+		}
+	}
+
+	status_calc_pc(sd, SCO_FORCE);
+
+	if (chrif_save(sd, CSAVE_NORMAL | CSAVE_INVENTORY) != 0) {
+		sd->status.sex = old_sex;
+		status_set_viewdata(sd, sd->status.class_);
+		if (pc_additem(sd, &refund, 1, LOG_TYPE_CONSUME) != ADDITEM_SUCCESS)
+			ShowError("pc_use_change_gender_card: Failed to refund item %u (AID=%d, CID=%d).\n", ITEMID_CHANGE_GENDER_CARD, sd->status.account_id, sd->status.char_id);
+		for (int32 i = 0; i < MAX_INVENTORY; i++) {
+			if (equipped[i] != 0)
+				pc_equipitem(sd, i, equipped[i]);
+			if (equip_switch[i] != 0)
+				pc_equipitem(sd, i, equip_switch[i], true);
+		}
+		status_calc_pc(sd, SCO_FORCE);
+		sd->canuseitem_tick = old_canuseitem_tick;
+		clif_msg(*sd, MSI_BUSY);
+		return false;
+	}
+
+	clif_useitemack_itemid(sd, index, refund.nameid, remaining, true);
+	sd->canuseitem_tick = tick + CHANGE_GENDER_CARD_EFFECT_DELAY;
+	unit_stop_walking(sd, USW_FIXPOS | USW_FORCE_STOP);
+	if (DIFF_TICK(tick + CHANGE_GENDER_CARD_EFFECT_DELAY, sd->ud.canmove_tick) > 0)
+		sd->ud.canmove_tick = tick + CHANGE_GENDER_CARD_EFFECT_DELAY;
+	clif_sprite_change(sd, sd->id, LOOK_GENDER, sd->status.sex, 0, AREA);
+	clif_changelook(sd, LOOK_BASE, sd->vd.look[LOOK_BASE]);
+	clif_changelook(sd, LOOK_BODY2, sd->vd.look[LOOK_BODY2]);
+	clif_gender_change_effect(*sd);
+	return true;
+}
+
 int32 pc_useitem(map_session_data *sd,int32 n)
 {
 	t_tick tick = gettick();
@@ -6513,6 +6639,8 @@ int32 pc_useitem(map_session_data *sd,int32 n)
 	struct item_data *id;
 
 	nullpo_ret(sd);
+	if (n < 0 || n >= MAX_INVENTORY)
+		return 0;
 
 	if (sd->state.mail_writing)
 		return 0;
@@ -6581,6 +6709,10 @@ int32 pc_useitem(map_session_data *sd,int32 n)
 	sd->itemindex = n;
 	amount = item.amount;
 	script = id->script;
+
+	if (nameid == ITEMID_CHANGE_GENDER_CARD)
+		return pc_use_change_gender_card(sd, n, tick) ? 1 : 0;
+
 	//Check if the item is to be consumed immediately [Skotlex]
 	if (id->flag.delay_consume > 0)
 		clif_useitemack(sd, n, amount, true);
@@ -6991,6 +7123,8 @@ enum e_setpos pc_setpos(map_session_data* sd, uint16 mapindex, int32 x, int32 y,
 		ShowDebug("pc_setpos: Passed mapindex(%d) is invalid!\n", mapindex);
 		return SETPOS_MAPINDEX;
 	}
+	if (sd->state.prevend && !sd->state.vending)
+		vending_cancel_setup(*sd);
 
 	if ( sd->state.autotrade && (sd->vender_id || sd->buyer_id) ) // Player with autotrade just causes clif glitch! @ FIXME
 		return SETPOS_AUTOTRADE;
@@ -9861,6 +9995,8 @@ int32 pc_dead(map_session_data *sd,block_list *src)
 	}
 
 	// NEED: The Super Novice rescue above is not a real death. Every path continuing from here is.
+	if (sd->state.prevend && !sd->state.vending)
+		vending_cancel_setup(*sd);
 	pc_macro_detector_cancel_success_immunity(*sd, "success_immunity_cancel_death");
 	// Reset here so immediate resurrection/respawn paths cannot retain Earth Strain resistance.
 	sd->earthstrain_strip_resist = 0;
@@ -11547,7 +11683,7 @@ static bool need_performance_switch_ready( map_session_data* sd, bool notify ){
 		return false;
 	if( sd->canperformancemode_tick != 0 && DIFF_TICK( sd->canperformancemode_tick, gettick() ) > 0 ){
 		if( notify )
-			clif_displaymessage( sd->fd, msg_txt( sd, 1778 ) ); // Please wait a moment before switching again.
+			clif_displaymessage( sd->fd, msg_txt( sd, 1881) ); // Please wait a moment before switching again.
 		return false;
 	}
 	return true;
@@ -11573,12 +11709,12 @@ bool need_set_solo_performance_mode( map_session_data* sd, e_need_performance_mo
 	if( !pc_setglobalreg( sd, add_str( "NEED_SOLO_PERFORMANCE_MODE" ), mode ) ){
 		ShowError( "need_set_solo_performance_mode: registry write failed for char %u; mode unchanged.\n", sd->status.char_id );
 		if( notify )
-			clif_displaymessage( sd->fd, msg_txt( sd, 1779 ) ); // Failed to save the setting. Please try again.
+			clif_displaymessage( sd->fd, msg_txt( sd, 1882) ); // Failed to save the setting. Please try again.
 		return false;
 	}
 	sd->canperformancemode_tick = gettick() + NEED_PERFORMANCE_SWITCH_COOLDOWN;
 	if( notify )
-		clif_displaymessage( sd->fd, msg_txt( sd, mode == NEED_PERFORMANCE_MODERN ? 1773 : 1772 ) );
+		clif_displaymessage( sd->fd, msg_txt( sd, mode == NEED_PERFORMANCE_MODERN ? 1876 : 1875) );
 	return true;
 }
 

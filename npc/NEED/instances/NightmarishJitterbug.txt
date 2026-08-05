@@ -236,11 +236,15 @@ OnTouch_:
 
 // Room 1 : Entrance
 1@jtb,28,30,5	script	뉴오즈#01	4_M_NEWOZ,{
-	if ('room != 1 || !is_party_leader()) {
+	if ('room != 1) {
 		mes "[뉴오즈]";
-		mes "모험을 시작하려면 파티장을 불러줘.";
+		mes "이미 모험이 시작되었거나 다른 파티원이 진행 중이야.";
 		close;
 	}
+
+	// 선택 결과는 로컬 변수에 보관하고, 전환 잠금을 획득한 한 명의 선택만 적용합니다.
+	.@fast_mode = 0;
+	.@options = 0;
 
 	// 반복 클리어 계정은 시작 시 빠른 진행 방식을 선택할 수 있습니다.
 	if (isbegin_quest(13183) == 2) {
@@ -249,30 +253,39 @@ OnTouch_:
 		mes "이번에는 어떻게 진행할까?";
 		next;
 
-		switch (select("^3355FF빠른 진행 - 추가 지터벅 없음^000000:^FF5500빠른 진행 - 추가 지터벅 모두 등장^000000:간소화된 이야기 진행")) {
+		switch (select("^3355FF빠른 진행 - 추가 지터벅 없음^000000:^FF5500빠른 진행 - 추가 지터벅 모두 등장^000000:일반 진행 - 대화 축약")) {
 		case 1:
-			'NEED_JITTER_FAST = 1;
-			'jitterbug_options = 0;
+			.@fast_mode = 1;
+			.@options = 0;
 			break;
 		case 2:
-			'NEED_JITTER_FAST = 1;
-			'jitterbug_options = 31;
+			.@fast_mode = 1;
+			.@options = 31;
 			break;
 		case 3:
-			'NEED_JITTER_FAST = 0;
-			'jitterbug_options = 0;
+			.@fast_mode = 0;
+			.@options = 0;
 			break;
 		}
 	}
 
-	if ('NEED_JITTER_FAST) {
+	if (.@fast_mode) {
 		mes "[뉴오즈]";
 		mes "이야기 구간을 생략합니다.";
-		if ('jitterbug_options == 31)
+		if (.@options == 31)
 			mes "추가 지터벅 전투는 모두 활성화됩니다.";
 		else
 			mes "추가 지터벅 전투는 발생하지 않습니다.";
 		next;
+
+		if ('room != 1 || 'jitter_transition) {
+			mes "[뉴오즈]";
+			mes "다른 파티원이 먼저 모험을 시작했습니다.";
+			close;
+		}
+		'jitter_transition = true;
+		'NEED_JITTER_FAST = .@fast_mode;
+		'jitterbug_options = .@options;
 
 		disablenpc instance_npcname("로엘#01");
 		disablenpc instance_npcname("멜로디 잭#01");
@@ -302,8 +315,12 @@ OnTouch_:
 	mes "몬스터가 나타날 수 있으니 조심해.";
 	next;
 
-	if ('room == 1 && is_party_leader())
+	if ('room == 1 && !'jitter_transition) {
+		'jitter_transition = true;
+		'NEED_JITTER_FAST = .@fast_mode;
+		'jitterbug_options = .@options;
 		donpcevent 'jitterbug_main$ + "::OnNextIs2";
+	}
 
 	mes "[뉴오즈]";
 	mes "좋아, 새로운 모험을 시작하자!";
@@ -367,7 +384,7 @@ OnTouch_:
 
 // Room 2
 1@jtb,123,45,4	script	루나인#02	4_F_RUNAIN,{
-	if ('room != 2 || !is_party_leader()) {
+	if ('room != 2) {
 		mes "[루나인]";
 		mes "지금은 앞으로 나아갈 때가 아닙니다.";
 		close;
@@ -382,8 +399,10 @@ OnTouch_:
 	mes "[???]";
 	mes "노래하는 사람을 찾고 있어.";
 
-	if ('room == 2 && is_party_leader())
+	if ('room == 2 && !'jitter_transition) {
+		'jitter_transition = true;
 		donpcevent 'jitterbug_main$ + "::OnNextIs3";
+	}
 	close;
 }
 
@@ -398,7 +417,7 @@ OnTouch_:
 
 // Room 3
 1@jtb,198,31,5	script	로터#03	4_M_ROTERT,{
-	if ('room != 3 || !is_party_leader()) {
+	if ('room != 3) {
 		mes "[로터]";
 		mes "지금은 앞으로 나아갈 때가 아닙니다.";
 		close;
@@ -410,8 +429,10 @@ OnTouch_:
 	mes "[로터]";
 	mes "쓸데없는 연출은 그만하고 전투를 준비해.";
 
-	if ('room == 3 && is_party_leader())
+	if ('room == 3 && !'jitter_transition) {
+		'jitter_transition = true;
 		donpcevent 'jitterbug_main$ + "::OnNextIs4";
+	}
 	close;
 }
 
@@ -424,7 +445,7 @@ OnTouch_:
 
 // Room 4
 1@jtb,292,22,4	script	???#04	4_F_SHALOSH,{
-	if ('room != 4 || !is_party_leader()) {
+	if ('room != 4) {
 		mes "[???]";
 		mes "지금은 앞으로 나아갈 때가 아닙니다.";
 		close;
@@ -439,8 +460,10 @@ OnTouch_:
 	mes "[???]";
 	mes "아직 기억은 잘 나지 않아.";
 
-	if ('room == 4 && is_party_leader())
+	if ('room == 4 && !'jitter_transition) {
+		'jitter_transition = true;
 		donpcevent 'jitterbug_main$ + "::OnNextIs6";
+	}
 	close;
 }
 
@@ -448,7 +471,7 @@ OnTouch_:
 
 // Room 6
 1@jtb,20,108,5	script	뉴오즈#06	4_M_NEWOZ,{
-	if ('room != 6 || !is_party_leader()) {
+	if ('room != 6) {
 		mes "[뉴오즈]";
 		mes "지금은 앞으로 나아갈 때가 아닙니다.";
 		close;
@@ -466,8 +489,10 @@ OnTouch_:
 	mes "[뉴오즈]";
 	mes "좋아. 이곳을 빠져나가면 꼭 노래해 줄게.";
 
-	if ('room == 6 && is_party_leader())
+	if ('room == 6 && !'jitter_transition) {
+		'jitter_transition = true;
 		donpcevent 'jitterbug_main$ + "::OnNextIs7";
+	}
 	close;
 }
 
@@ -492,7 +517,7 @@ OnTouch_:
 
 // Room 7
 1@jtb,111,115,5	script	로엘#07	4_M_ROEL,{
-	if ('room != 7 || !is_party_leader()) {
+	if ('room != 7) {
 		mes "[로엘]";
 		mes "지금은 앞으로 나아갈 때가 아닙니다.";
 		close;
@@ -507,8 +532,10 @@ OnTouch_:
 	mes "[로엘]";
 	mes "앞장서겠습니다. 제가 모두를 지키겠습니다!";
 
-	if ('room == 7 && is_party_leader())
+	if ('room == 7 && !'jitter_transition) {
+		'jitter_transition = true;
 		donpcevent 'jitterbug_main$ + "::OnNextIs8";
+	}
 	close;
 }
 
@@ -527,7 +554,7 @@ OnTouch_:
 
 // Room 8
 1@jtb,206,107,5	script	밍민#08	4_F_GENETIC,{
-	if ('room != 8 || !is_party_leader()) {
+	if ('room != 8) {
 		mes "[밍민]";
 		mes "지금은 앞으로 나아갈 때가 아닙니다.";
 		close;
@@ -545,8 +572,10 @@ OnTouch_:
 	mes "[밍민]";
 	mes "질문은 나중에 하지. 먼저 전투를 준비하자.";
 
-	if ('room == 8 && is_party_leader())
+	if ('room == 8 && !'jitter_transition) {
+		'jitter_transition = true;
 		donpcevent 'jitterbug_main$ + "::OnNextIs9";
+	}
 	close;
 }
 
@@ -565,7 +594,7 @@ OnTouch_:
 
 // Room 9 (menu affects the boss encounter in the next room)
 1@jtb,285,114,5	script	뉴오즈#09	4_M_NEWOZ,{
-	if ('room != 9 || !is_party_leader()) {
+	if ('room != 9) {
 		mes "[뉴오즈]";
 		mes "노래는 언제나 즐겁지.";
 		close;
@@ -576,26 +605,22 @@ OnTouch_:
 	mes "너는 어떤 노래가 가장 좋아?";
 	next;
 
-	switch (select("아이구의 데뷔곡 - 길 잃은 포링:아이구의 싱글 - 카드첩을 몰랐던 건 나뿐:뉴오즈의 빨간 포션:라기의 자작곡 - 우연한 달빛")) {
-	case 1:
-	case 2:
-	case 4:
-		'jitterbug_options &= ~1;
-		break;
-	case 3:
-		'jitterbug_options |= 1;
-		break;
-	}
+	.@enable_extra = (select("아이구의 데뷔곡 - 길 잃은 포링:아이구의 싱글 - 카드첩을 몰랐던 건 나뿐:뉴오즈의 빨간 포션:라기의 자작곡 - 우연한 달빛") == 3);
 
 	mes "[라기]";
 	mes "노래는 나중에 더 들려드리죠.";
 	mes "앞쪽에서 몬스터가 나타나고 있습니다.";
 	next;
 
-	if ('room == 9 && is_party_leader()) {
+	if ('room == 9 && !'jitter_transition) {
+		'jitter_transition = true;
+		if (.@enable_extra) {
+			'jitterbug_options |= 1;
+			areamonster 'map_jtb$,351,131,389,96,"페레",3108,1;
+		}
+		else
+			'jitterbug_options &= ~1;
 		donpcevent 'jitterbug_main$ + "::OnNextIs10";
-		if ('jitterbug_options & 1)
-			areamonster 'map_jtb$,351,131,389,96,"페르",3108,1;
 	}
 
 	close;
@@ -615,7 +640,7 @@ OnTouch_:
 
 // Room 10
 1@jtb,375,117,4	script	뉴오즈#10	4_M_NEWOZ,{
-	if ('room != 10 || !is_party_leader()) {
+	if ('room != 10) {
 		mes "[뉴오즈]";
 		mes "지금은 앞으로 나아갈 때가 아닙니다.";
 		close;
@@ -628,13 +653,15 @@ OnTouch_:
 	mes "작아 보여도 매우 사나운 몬스터들입니다.";
 	next;
 	mes "[샬로시]";
-	mes "페르들이 우리를 따라오고 있어.";
+	mes "페레들이 우리를 따라오고 있어.";
 	next;
 	mes "[루나인]";
 	mes "친구가 아니라 몬스터야. 방심하지 마.";
 
-	if ('room == 10 && is_party_leader())
+	if ('room == 10 && !'jitter_transition) {
+		'jitter_transition = true;
 		donpcevent 'jitterbug_main$ + "::OnNextIs11";
+	}
 	close;
 }
 
@@ -659,7 +686,7 @@ OnTouch_:
 
 // Room 11
 1@jtb,26,201,5	script	루나인#11	4_F_RUNAIN,{
-	if ('room != 11 || !is_party_leader()) {
+	if ('room != 11) {
 		mes "[루나인]";
 		mes "지금은 앞으로 나아갈 때가 아닙니다.";
 		close;
@@ -677,8 +704,10 @@ OnTouch_:
 	mes "[로엘]";
 	mes "저는 주변의 위험을 확인하고 오겠습니다.";
 
-	if ('room == 11 && is_party_leader())
+	if ('room == 11 && !'jitter_transition) {
+		'jitter_transition = true;
 		donpcevent 'jitterbug_main$ + "::OnNextIs12";
+	}
 	close;
 }
 
@@ -709,7 +738,7 @@ OnTouch_:
 
 // Room 12
 1@jtb,106,198,5	script	밍민#12	4_F_GENETIC,{
-	if ('room != 12 || !is_party_leader()) {
+	if ('room != 12) {
 		mes "[밍민]";
 		mes "지금은 앞으로 나아갈 때가 아닙니다.";
 		close;
@@ -724,14 +753,16 @@ OnTouch_:
 	mes "[밍민]";
 	mes "버섯 조사는 나중에 하고 먼저 앞으로 가자.";
 
-	if ('room == 12 && is_party_leader())
+	if ('room == 12 && !'jitter_transition) {
+		'jitter_transition = true;
 		donpcevent 'jitterbug_main$ + "::OnNextIs13";
+	}
 	close;
 }
 
 // Room 13
 1@jtb,195,206,4	script	뉴오즈#13	4_M_NEWOZ,{
-	if ('room != 13 || !is_party_leader()) {
+	if ('room != 13) {
 		mes "[뉴오즈]";
 		mes "지금은 앞으로 나아갈 때가 아닙니다.";
 		close;
@@ -746,8 +777,10 @@ OnTouch_:
 	mes "[멜로디 잭]";
 	mes "착각하지 마. 내가 원하는 대가가 있어서 돕는 거야.";
 
-	if ('room == 13 && is_party_leader())
+	if ('room == 13 && !'jitter_transition) {
+		'jitter_transition = true;
 		donpcevent 'jitterbug_main$ + "::OnNextIs14";
+	}
 	close;
 }
 
@@ -760,7 +793,7 @@ OnTouch_:
 
 // Room 14 (menu affects the boss encounter in the next room)
 1@jtb,282,194,5	script	뉴오즈#14	4_M_NEWOZ,{
-	if ('room != 14 || !is_party_leader()) {
+	if ('room != 14) {
 		mes "[뉴오즈]";
 		mes "이곳에 다른 누군가가 있을지도 몰라.";
 		close;
@@ -778,15 +811,17 @@ OnTouch_:
 	mes "그 목소리는 무엇이었을까?";
 	next;
 
-	if (select("샬로시 자신의 생각이었다.:누군가와 대화하고 있었다.") == 1)
-		'jitterbug_options &= ~2;
-	else
-		'jitterbug_options |= 2;
+	.@enable_extra = (select("샬로시 자신의 생각이었다.:누군가와 대화하고 있었다.") == 2);
 
-	if ('room == 14 && is_party_leader()) {
+	if ('room == 14 && !'jitter_transition) {
+		'jitter_transition = true;
+		if (.@enable_extra) {
+			'jitterbug_options |= 2;
+			areamonster 'map_jtb$,358,212,388,182,"페레",3108,1;
+		}
+		else
+			'jitterbug_options &= ~2;
 		donpcevent 'jitterbug_main$ + "::OnNextIs15";
-		if ('jitterbug_options & 2)
-			areamonster 'map_jtb$,358,212,388,182,"페르",3108,1;
 	}
 
 	mes "[아이구]";
@@ -827,7 +862,7 @@ OnTouch_:
 
 // Room 15
 1@jtb,380,219,5	script	뉴오즈#15	4_M_NEWOZ,{
-	if ('room != 15 || !is_party_leader()) {
+	if ('room != 15) {
 		mes "[뉴오즈]";
 		mes "지금은 앞으로 나아갈 때가 아닙니다.";
 		close;
@@ -845,8 +880,10 @@ OnTouch_:
 	mes "[로터]";
 	mes "잡담은 그만하고 다음 구역으로 이동한다.";
 
-	if ('room == 15 && is_party_leader())
+	if ('room == 15 && !'jitter_transition) {
+		'jitter_transition = true;
 		donpcevent 'jitterbug_main$ + "::OnNextIs16";
+	}
 	close;
 }
 
@@ -895,7 +932,7 @@ OnTouch_:
 
 // Room 16
 1@jtb,25,280,5	script	뉴오즈#16	4_M_NEWOZ,{
-	if ('room != 16 || !is_party_leader()) {
+	if ('room != 16) {
 		mes "[뉴오즈]";
 		mes "지금은 앞으로 나아갈 때가 아닙니다.";
 		close;
@@ -913,8 +950,10 @@ OnTouch_:
 	mes "[뉴오즈]";
 	mes "하하, 그래도 모두 즐거운 추억이야.";
 
-	if ('room == 16 && is_party_leader())
+	if ('room == 16 && !'jitter_transition) {
+		'jitter_transition = true;
 		donpcevent 'jitterbug_main$ + "::OnNextIs17";
+	}
 	close;
 }
 
@@ -933,7 +972,7 @@ OnTouch_:
 
 // Room 17 (menu affects the boss encounter in the next room)
 1@jtb,110,281,5	script	샬로시#17	4_F_SHALOSH,{
-	if ('room != 17 || !is_party_leader()) {
+	if ('room != 17) {
 		mes "[샬로시]";
 		mes "친구... 경쟁... 동료...";
 		close;
@@ -947,20 +986,17 @@ OnTouch_:
 	mes "모험가님은 연애가 잘되고 있어?";
 	next;
 
-	switch (select("연인이 있는지부터 물어봐야지.:짝사랑 중이다.:행복하게 만나고 있다.")) {
-	case 1:
-	case 2:
-		'jitterbug_options &= ~4;
-		break;
-	case 3:
-		'jitterbug_options |= 4;
-		break;
-	}
+	.@enable_extra = (select("연인이 있는지부터 물어봐야지.:짝사랑 중이다.:행복하게 만나고 있다.") == 3);
 
-	if ('room == 17 && is_party_leader()) {
+	if ('room == 17 && !'jitter_transition) {
+		'jitter_transition = true;
+		if (.@enable_extra) {
+			'jitterbug_options |= 4;
+			areamonster 'map_jtb$,183,301,220,272,"페레",3108,1;
+		}
+		else
+			'jitterbug_options &= ~4;
 		donpcevent 'jitterbug_main$ + "::OnNextIs18";
-		if ('jitterbug_options & 4)
-			areamonster 'map_jtb$,183,301,220,272,"페르",3108,1;
 	}
 
 	mes "[샬로시]";
@@ -983,14 +1019,14 @@ OnTouch_:
 
 // Room 18
 1@jtb,198,282,5	script	샬로시#18	4_F_SHALOSH,{
-	if ('room != 18 || !is_party_leader()) {
+	if ('room != 18) {
 		mes "[샬로시]";
 		mes "지금은 앞으로 나아갈 때가 아닙니다.";
 		close;
 	}
 
 	mes "[샬로시]";
-	mes "페르들은 나보다 먼저 이곳에 나타났어.";
+	mes "페레들은 나보다 먼저 이곳에 나타났어.";
 	next;
 	mes "[샬로시]";
 	mes "아무것도 하지 않고 울기만 해서 친구가 되었어.";
@@ -1001,8 +1037,10 @@ OnTouch_:
 	mes "[로엘]";
 	mes "샬로시를 지키면서 앞으로 이동하죠.";
 
-	if ('room == 18 && is_party_leader())
+	if ('room == 18 && !'jitter_transition) {
+		'jitter_transition = true;
 		donpcevent 'jitterbug_main$ + "::OnNextIs19";
+	}
 	close;
 }
 
@@ -1021,7 +1059,7 @@ OnTouch_:
 
 // Room 19
 1@jtb,28,377,5	script	뉴오즈#19	4_M_NEWOZ,{
-	if ('room != 19 || !is_party_leader()) {
+	if ('room != 19) {
 		mes "[뉴오즈]";
 		mes "지금은 앞으로 나아갈 때가 아닙니다.";
 		close;
@@ -1039,8 +1077,10 @@ OnTouch_:
 	mes "[아랑]";
 	mes "샬로시가 보이지 않아! 모두 흩어져서 찾아보자.";
 
-	if ('room == 19 && is_party_leader())
+	if ('room == 19 && !'jitter_transition) {
+		'jitter_transition = true;
 		donpcevent 'jitterbug_main$ + "::OnNextIs20";
+	}
 	close;
 }
 
@@ -1089,7 +1129,7 @@ OnTouch_:
 
 // Room 20 (menu affects the boss encounter in the next room)
 1@jtb,105,377,5	script	로엘#20	4_M_ROEL,{
-	if ('room != 20 || !is_party_leader()) {
+	if ('room != 20) {
 		mes "[로엘]";
 		mes "겔카와 합동 기술을 연습하고 있습니다.";
 		close;
@@ -1107,15 +1147,17 @@ OnTouch_:
 	mes "합동 기술 완료!";
 	next;
 
-	if (select("멋진 기술이다!:이름만 그럴듯하게 붙인 것 같다.") == 1)
-		'jitterbug_options &= ~8;
-	else
-		'jitterbug_options |= 8;
+	.@enable_extra = (select("멋진 기술이다!:이름만 그럴듯하게 붙인 것 같다.") == 2);
 
-	if ('room == 20 && is_party_leader()) {
+	if ('room == 20 && !'jitter_transition) {
+		'jitter_transition = true;
+		if (.@enable_extra) {
+			'jitterbug_options |= 8;
+			areamonster 'map_jtb$,182,387,219,354,"페레",3108,1;
+		}
+		else
+			'jitterbug_options &= ~8;
 		donpcevent 'jitterbug_main$ + "::OnNextIs21";
-		if ('jitterbug_options & 8)
-			areamonster 'map_jtb$,182,387,219,354,"페르",3108,1;
 	}
 
 	mes "[겔카]";
@@ -1132,40 +1174,42 @@ OnTouch_:
 
 // Room 21 (menu affects the boss encounter in the next room)
 1@jtb,198,369,5	script	뉴오즈#21	4_M_NEWOZ,{
-	if ('room != 21 || !is_party_leader()) {
+	if ('room != 21) {
 		mes "[뉴오즈]";
 		mes "샬로시를 찾아야 해.";
 		close;
 	}
 
 	mes "[샬로시]";
-	mes "페르들이 화가 났어. 나를 지키려고 하고 있어.";
+	mes "페레들이 화가 났어. 나를 지키려고 하고 있어.";
 	next;
 	mes "[루나인]";
 	mes "친구라면 서로 공격하지 않아.";
 	next;
 	mes "[샬로시]";
-	mes "페르?";
+	mes "페레?";
 	next;
 
-	enablenpc instance_npcname("페르#21");
-	enablenpc instance_npcname("페르#22");
+	enablenpc instance_npcname("페레#21");
+	enablenpc instance_npcname("페레#22");
 	specialeffect EF_READYPORTAL2,AREA,instance_npcname("샬로시#21");
 	specialeffect EF_PORTAL2,AREA,instance_npcname("샬로시#21");
 	disablenpc instance_npcname("샬로시#21");
-	disablenpc instance_npcname("페르#21");
-	disablenpc instance_npcname("페르#22");
+	disablenpc instance_npcname("페레#21");
+	disablenpc instance_npcname("페레#22");
 
 	mes "[로터]";
 	mes "공간이 무너지고 있다. 뉴오즈와 샬로시를 찾아야 한다.";
 	next;
 
-	if (select("로터와 겔카를 따라간다.:혼자 수색한다.") == 1)
-		'jitterbug_options &= ~16;
-	else
-		'jitterbug_options |= 16;
+	.@enable_extra = (select("로터와 겔카를 따라간다.:혼자 수색한다.") == 2);
 
-	if ('room == 21 && is_party_leader()) {
+	if ('room == 21 && !'jitter_transition) {
+		'jitter_transition = true;
+		if (.@enable_extra)
+			'jitterbug_options |= 16;
+		else
+			'jitterbug_options &= ~16;
 		disablenpc instance_npcname("아이구#21");
 		disablenpc instance_npcname("뉴오즈#21");
 		donpcevent 'jitterbug_main$ + "::OnNextIs22";
@@ -1230,9 +1274,9 @@ OnTouch_:
 	close;
 }
 
-1@jtb,197,363,5	duplicate(???#02)	페르#21	4_F_PERE01
+1@jtb,197,363,5	duplicate(???#02)	페레#21	4_F_PERE01
 1@jtb,198,363,5	duplicate(???#02)	샬로시#21	4_F_SHALOSH
-1@jtb,199,363,5	duplicate(???#02)	페르#22	4_F_PERE01
+1@jtb,199,363,5	duplicate(???#02)	페레#22	4_F_PERE01
 
 
 // Room 22
@@ -1241,24 +1285,24 @@ OnTouch_:
 
 // Room 23 (Boss Room entrance)
 1@jtb,320,323,5	script	뉴오즈#23	4_M_NEWOZ,{
-	if ('room != 23 || !is_party_leader()) {
+	if ('room != 23) {
 		mes "[뉴오즈]";
-		mes "샬로시를 찾았다. 이제 페르를 진정시켜야 해.";
+		mes "샬로시를 찾았다. 이제 페레를 진정시켜야 해.";
 		close;
 	}
 
 	.@shaloshi$ = instance_npcname("샬로시#23");
-	.@ferre_23$ = instance_npcname("페르#23");
-	.@ferre_24$ = instance_npcname("페르#24");
+	.@ferre_23$ = instance_npcname("페레#23");
+	.@ferre_24$ = instance_npcname("페레#24");
 
 	mes "[뉴오즈]";
 	mes "샬로시, 무사해서 다행이야.";
 	next;
 	mes "[샬로시]";
-	mes "페르가 화가 났어. 우리를 지키려는 것 같아.";
+	mes "페레가 화가 났어. 우리를 지키려는 것 같아.";
 	next;
-	mes "[페르]";
-	mes "페르! 페르! 페르!";
+	mes "[페레]";
+	mes "페레! 페레! 페레!";
 	next;
 
 	disablenpc .@ferre_23$;
@@ -1267,7 +1311,7 @@ OnTouch_:
 	specialeffect EF_SUI_EXPLOSION,AREA,.@ferre_24$;
 
 	mes "[샬로시]";
-	mes "페르가 본래 모습으로 변했어!";
+	mes "페레가 본래 모습으로 변했어!";
 	next;
 	mes "^FF0000강력한 적이 나타났습니다!^000000";
 	next;
@@ -1276,19 +1320,19 @@ OnTouch_:
 	mes "모험가님, 힘을 빌려줘!";
 	next;
 
-	if ('room == 23 && is_party_leader()) {
+	if ('room == 23 && !'jitter_transition) {
+		'jitter_transition = true;
 		'party_id = getcharid(1);
-		donpcevent 'jitterbug_main$ + "::OnNextIs23";
-
 		if ('jitterbug_options & 16)
-			monster 'map_jtb$,327,331,"페르",3108,2;
+			monster 'map_jtb$,327,331,"페레",3108,2;
+		donpcevent 'jitterbug_main$ + "::OnNextIs23";
 	}
 
 	close;
 }
 
-1@jtb,324,327,4	duplicate(???#02)	페르#23	4_F_PERE01
-1@jtb,324,327,4	duplicate(???#02)	페르#24	4_JITTERBUG
+1@jtb,324,327,4	duplicate(???#02)	페레#23	4_F_PERE01
+1@jtb,324,327,4	duplicate(???#02)	페레#24	4_JITTERBUG
 1@jtb,326,329,4	duplicate(???#02)	샬로시#23	4_F_SHALOSH
 
 // 1@jtb,323,337,5	script	Boss#23	HIDDEN_WARP_NPC
@@ -1320,7 +1364,7 @@ OnTimer30000:
 	if ('boss_id) {
 		getunitdata 'boss_id,.@data;
 		npcskilleffect "WZ_STORMGUST",1,.@data[UMOB_X],.@data[UMOB_Y];
-		unittalk 'boss_id,"페르! 페르!";
+		unittalk 'boss_id,"페레! 페레!";
 
 		getpartymember 'party_id,1,.@char_id;
 		getpartymember 'party_id,2,.@account_id;
@@ -1344,15 +1388,15 @@ OnStop:
 
 // Room 23 - After Boss dead
 1@jtb,320,323,5	script	뉴오즈#24	4_M_NEWOZ,{
-	if ('room != 24 || !is_party_leader()) {
+	if ('room != 24) {
 		mes "[뉴오즈]";
 		mes "샬로시와 마지막 이야기를 나누고 있어.";
 		close;
 	}
 
 	mes "[샬로시]";
-	mes "페르가 만든 공간은 곧 무너질 거야.";
-	mes "내가 페르를 데리고 떠나면 출구가 나타날 거야.";
+	mes "페레가 만든 공간은 곧 무너질 거야.";
+	mes "내가 페레를 데리고 떠나면 출구가 나타날 거야.";
 	next;
 	mes "[샬로시]";
 	mes "이제 모든 기억이 돌아왔어.";
@@ -1374,12 +1418,14 @@ OnStop:
 	next;
 
 	specialeffect EF_PORTAL2,AREA,instance_npcname("샬로시#24");
-	specialeffect EF_PORTAL2,AREA,instance_npcname("페르#25");
+	specialeffect EF_PORTAL2,AREA,instance_npcname("페레#25");
 	disablenpc instance_npcname("샬로시#24");
-	disablenpc instance_npcname("페르#25");
+	disablenpc instance_npcname("페레#25");
 
-	if ('room == 24 && is_party_leader())
+	if ('room == 24 && !'jitter_transition) {
+		'jitter_transition = true;
 		donpcevent 'jitterbug_main$ + "::OnNextIs5";
+	}
 
 	mes "[뉴오즈]";
 	mes "출구가 열렸어. 모두 밖으로 나가자.";
@@ -1387,7 +1433,7 @@ OnStop:
 }
 
 1@jtb,326,329,4	duplicate(???#02)	샬로시#24	4_F_SHALOSH
-1@jtb,324,327,4	duplicate(???#02)	페르#25	4_F_PERE01
+1@jtb,324,327,4	duplicate(???#02)	페레#25	4_F_PERE01
 
 1@jtb,328,326,4	duplicate(???#02)	로터#24	4_M_ROTERT
 1@jtb,330,328,4	duplicate(???#02)	겔카#24	4_F_GELKA
@@ -1402,7 +1448,7 @@ OnStop:
 
 // Room 5 (Exit)
 1@jtb,379,31,4	script	뉴오즈#05	4_M_NEWOZ,{
-	if ('room != 25 || !is_party_leader()) {
+	if ('room != 25) {
 		mes "[뉴오즈]";
 		mes "오랜만에 정말 즐거운 모험이었어.";
 		if ('room >= 25 && isbegin_quest(13181) == 1)
@@ -1426,11 +1472,14 @@ OnStop:
 	mes "[로터]";
 	mes "좋아, 오늘 원정은 여기까지다. 모두 해산!";
 
-	completequest 13181;
+	if (isbegin_quest(13181) == 1)
+		completequest 13181;
 
-	if ('room == 25) {
+	if ('room == 25 && !'jitter_transition) {
+		'jitter_transition = true;
 		'room = 26;
 		enablenpc instance_npcname("24 Door 1");
+		'jitter_transition = false;
 	}
 
 	close;
@@ -1496,15 +1545,15 @@ OnStop:
 	}
 
 	mes "[밍민]";
-	mes "샬로시와 페르를 연구하면서";
+	mes "샬로시와 페레를 연구하면서";
 	mes "장신구 조합과 지터벅 이빨의 활용법을 알아냈어.";
 	next;
 
-	switch (select("펜던트 오브 마엘슈트롬 조합:지터벅 이빨 교환:그만둔다.")) {
+	switch (select("기묘한 펜던트 조합:지터벅 이빨 교환:그만둔다.")) {
 	case 1:
 		mes "[밍민]";
-		mes "펜던트 오브 하모니와 펜던트 오브 카오스를 합치면";
-		mes "펜던트 오브 마엘슈트롬를 만들 수 있어.";
+		mes "조화의 펜던트와 혼돈의 펜던트를 합치면";
+		mes "소용돌이의 펜던트를 만들 수 있어.";
 		next;
 		mes "[밍민]";
 		mes "조합에는 각 펜던트가 1개씩 필요하며";
@@ -1514,7 +1563,7 @@ OnStop:
 		if ((countitem(2990) - isequippedcnt(2990)) < 1
 		 || (countitem(2991) - isequippedcnt(2991)) < 1) {
 			mes "[밍민]";
-			mes "펜던트 오브 하모니와 펜던트 오브 카오스를";
+			mes "조화의 펜던트와 혼돈의 펜던트를";
 			mes "인벤토리에 각각 1개씩 준비해 줘.";
 			break;
 		}
@@ -1526,7 +1575,7 @@ OnStop:
 			specialeffect EF_PHARMACY_FAIL;
 			mes "[밍민]";
 			mes "조합이 완료됐어.";
-			mes "펜던트 오브 마엘슈트롬를 확인해 봐.";
+			mes "소용돌이의 펜던트를 확인해 봐.";
 		}
 		break;
 
@@ -1579,14 +1628,24 @@ OnStop:
 1@jtb,1,1,0	script	#jitterbug_main	-1,{
 	end;
 OnNextIs2:
+	if ('room != 1)
+		end;
 	'room = 2;
 	enablenpc instance_npcname("1 Door 1");
-	areamonster 'map_jtb$,100,13,133,46, "페르", 3069,10, 'jitterbug_main$ + "::OnMobDead2";// PERE1
+	areamonster 'map_jtb$,100,13,133,46, "페레", 3069,10, 'jitterbug_main$ + "::OnMobDead2";// PERE1
+	'jitter_transition = false;
 	end;
 OnMobDead2:
 	if (mobcount('map_jtb$, 'jitterbug_main$ + "::OnMobDead2") == 0) {
 		if ('NEED_JITTER_FAST) {
+			if ('room != 2 || 'jitter_transition)
+				end;
+			'jitter_transition = true;
 			sleep 500;
+			if ('room != 2) {
+				'jitter_transition = false;
+				end;
+			}
 			donpcevent 'jitterbug_main$ + "::OnNextIs3";
 			end;
 		}
@@ -1597,14 +1656,24 @@ OnMobDead2:
 	end;
 
 OnNextIs3:
+	if ('room != 2)
+		end;
 	'room = 3;
 	enablenpc instance_npcname("2 Door 1");
-	areamonster 'map_jtb$,180,12,220,46, "페르", 3069,10, 'jitterbug_main$ + "::OnMobDead3";// PERE1
+	areamonster 'map_jtb$,180,12,220,46, "페레", 3069,10, 'jitterbug_main$ + "::OnMobDead3";// PERE1
+	'jitter_transition = false;
 	end;
 OnMobDead3:
 	if (mobcount('map_jtb$, 'jitterbug_main$ + "::OnMobDead3") == 0) {
 		if ('NEED_JITTER_FAST) {
+			if ('room != 3 || 'jitter_transition)
+				end;
+			'jitter_transition = true;
 			sleep 500;
+			if ('room != 3) {
+				'jitter_transition = false;
+				end;
+			}
 			donpcevent 'jitterbug_main$ + "::OnNextIs4";
 			end;
 		}
@@ -1615,14 +1684,24 @@ OnMobDead3:
 	end;
 
 OnNextIs4:
+	if ('room != 3)
+		end;
 	'room = 4;
 	enablenpc instance_npcname("3 Door 1");
-	areamonster 'map_jtb$,268,14,305,46, "페르", 3069,20, 'jitterbug_main$ + "::OnMobDead4";// PERE1
+	areamonster 'map_jtb$,268,14,305,46, "페레", 3069,20, 'jitterbug_main$ + "::OnMobDead4";// PERE1
+	'jitter_transition = false;
 	end;
 OnMobDead4:
 	if (mobcount('map_jtb$, 'jitterbug_main$ + "::OnMobDead4") == 0) {
 		if ('NEED_JITTER_FAST) {
+			if ('room != 4 || 'jitter_transition)
+				end;
+			'jitter_transition = true;
 			sleep 500;
+			if ('room != 4) {
+				'jitter_transition = false;
+				end;
+			}
 			donpcevent 'jitterbug_main$ + "::OnNextIs6";
 			end;
 		}
@@ -1632,14 +1711,24 @@ OnMobDead4:
 	end;
 
 OnNextIs6:
+	if ('room != 4)
+		end;
 	'room = 6;
 	enablenpc instance_npcname("4 Door 1");
-	areamonster 'map_jtb$,11,97,47,130, "페르", 3069,20, 'jitterbug_main$ + "::OnMobDead6";// PERE1
+	areamonster 'map_jtb$,11,97,47,130, "페레", 3069,20, 'jitterbug_main$ + "::OnMobDead6";// PERE1
+	'jitter_transition = false;
 	end;
 OnMobDead6:
 	if (mobcount('map_jtb$, 'jitterbug_main$ + "::OnMobDead6") == 0) {
 		if ('NEED_JITTER_FAST) {
+			if ('room != 6 || 'jitter_transition)
+				end;
+			'jitter_transition = true;
 			sleep 500;
+			if ('room != 6) {
+				'jitter_transition = false;
+				end;
+			}
 			donpcevent 'jitterbug_main$ + "::OnNextIs7";
 			end;
 		}
@@ -1652,15 +1741,25 @@ OnMobDead6:
 	end;
 
 OnNextIs7:
+	if ('room != 6)
+		end;
 	'room = 7;
 	enablenpc instance_npcname("6 Door 1");
-	areamonster 'map_jtb$,94,96,131,131, "페르", 3069,10, 'jitterbug_main$ + "::OnMobDead7";// PERE1
-	areamonster 'map_jtb$,94,96,131,131, "페르", 3070,5,  'jitterbug_main$ + "::OnMobDead7";// PERE2
+	areamonster 'map_jtb$,94,96,131,131, "페레", 3069,10, 'jitterbug_main$ + "::OnMobDead7";// PERE1
+	areamonster 'map_jtb$,94,96,131,131, "페레", 3070,5,  'jitterbug_main$ + "::OnMobDead7";// PERE2
+	'jitter_transition = false;
 	end;
 OnMobDead7:
 	if (mobcount('map_jtb$, 'jitterbug_main$ + "::OnMobDead7") == 0) {
 		if ('NEED_JITTER_FAST) {
+			if ('room != 7 || 'jitter_transition)
+				end;
+			'jitter_transition = true;
 			sleep 500;
+			if ('room != 7) {
+				'jitter_transition = false;
+				end;
+			}
 			donpcevent 'jitterbug_main$ + "::OnNextIs8";
 			end;
 		}
@@ -1672,15 +1771,25 @@ OnMobDead7:
 	end;
 
 OnNextIs8:
+	if ('room != 7)
+		end;
 	'room = 8;
 	enablenpc instance_npcname("7 Door 1");
-	areamonster 'map_jtb$,182,95,219,131, "페르", 3069,15, 'jitterbug_main$ + "::OnMobDead8";// PERE1
-	areamonster 'map_jtb$,182,95,219,131, "페르", 3070,5,  'jitterbug_main$ + "::OnMobDead8";// PERE2
+	areamonster 'map_jtb$,182,95,219,131, "페레", 3069,15, 'jitterbug_main$ + "::OnMobDead8";// PERE1
+	areamonster 'map_jtb$,182,95,219,131, "페레", 3070,5,  'jitterbug_main$ + "::OnMobDead8";// PERE2
+	'jitter_transition = false;
 	end;
 OnMobDead8:
 	if (mobcount('map_jtb$, 'jitterbug_main$ + "::OnMobDead8") == 0) {
 		if ('NEED_JITTER_FAST) {
+			if ('room != 8 || 'jitter_transition)
+				end;
+			'jitter_transition = true;
 			sleep 500;
+			if ('room != 8) {
+				'jitter_transition = false;
+				end;
+			}
 			donpcevent 'jitterbug_main$ + "::OnNextIs9";
 			end;
 		}
@@ -1692,17 +1801,27 @@ OnMobDead8:
 	end;
 
 OnNextIs9:
+	if ('room != 8)
+		end;
 	'room = 9;
 	enablenpc instance_npcname("8 Door 1");
-	areamonster 'map_jtb$,268,131,306,95, "페르", 3069,22, 'jitterbug_main$ + "::OnMobDead9";// PERE1
-	areamonster 'map_jtb$,268,131,306,95, "페르", 3070,5,  'jitterbug_main$ + "::OnMobDead9";// PERE2
+	areamonster 'map_jtb$,268,131,306,95, "페레", 3069,22, 'jitterbug_main$ + "::OnMobDead9";// PERE1
+	areamonster 'map_jtb$,268,131,306,95, "페레", 3070,5,  'jitterbug_main$ + "::OnMobDead9";// PERE2
+	'jitter_transition = false;
 	end;
 OnMobDead9:
 	if (mobcount('map_jtb$, 'jitterbug_main$ + "::OnMobDead9") == 0) {
 		if ('NEED_JITTER_FAST) {
+			if ('room != 9 || 'jitter_transition)
+				end;
+			'jitter_transition = true;
 			sleep 500;
+			if ('room != 9) {
+				'jitter_transition = false;
+				end;
+			}
 			if ('jitterbug_options & 1)
-				areamonster 'map_jtb$,351,131,389,96,"페르",3108,1;
+				areamonster 'map_jtb$,351,131,389,96,"페레",3108,1;
 			donpcevent 'jitterbug_main$ + "::OnNextIs10";
 			end;
 		}
@@ -1714,17 +1833,27 @@ OnMobDead9:
 	end;
 
 OnNextIs10:
+	if ('room != 9)
+		end;
 	'room = 10;
 	enablenpc instance_npcname("9 Door 1");
 	.@label$ = 'jitterbug_main$ + "::OnMobDead10";
-	areamonster 'map_jtb$,351,131,389,96, "페르", 3069,10, .@label$;// PERE1
-	areamonster 'map_jtb$,351,131,389,96, "페르", 3071,5,  .@label$;// PERE3
-	areamonster 'map_jtb$,351,131,389,96, "페르", 3108,1,  .@label$;// JITTERBUG1
+	areamonster 'map_jtb$,351,131,389,96, "페레", 3069,10, .@label$;// PERE1
+	areamonster 'map_jtb$,351,131,389,96, "페레", 3071,5,  .@label$;// PERE3
+	areamonster 'map_jtb$,351,131,389,96, "페레", 3108,1,  .@label$;// JITTERBUG1
+	'jitter_transition = false;
 	end;
 OnMobDead10:
 	if (mobcount('map_jtb$, 'jitterbug_main$ + "::OnMobDead10") == 0) {
 		if ('NEED_JITTER_FAST) {
+			if ('room != 10 || 'jitter_transition)
+				end;
+			'jitter_transition = true;
 			sleep 500;
+			if ('room != 10) {
+				'jitter_transition = false;
+				end;
+			}
 			donpcevent 'jitterbug_main$ + "::OnNextIs11";
 			end;
 		}
@@ -1737,15 +1866,25 @@ OnMobDead10:
 	end;
 
 OnNextIs11:
+	if ('room != 10)
+		end;
 	'room = 11;
 	enablenpc instance_npcname("10 Door 1");
-	areamonster 'map_jtb$,11,218,48,182, "페르", 3069,10, 'jitterbug_main$ + "::OnMobDead11";// PERE1
-	areamonster 'map_jtb$,11,218,48,182, "페르", 3070,5,  'jitterbug_main$ + "::OnMobDead11";// PERE2
+	areamonster 'map_jtb$,11,218,48,182, "페레", 3069,10, 'jitterbug_main$ + "::OnMobDead11";// PERE1
+	areamonster 'map_jtb$,11,218,48,182, "페레", 3070,5,  'jitterbug_main$ + "::OnMobDead11";// PERE2
+	'jitter_transition = false;
 	end;
 OnMobDead11:
 	if (mobcount('map_jtb$, 'jitterbug_main$ + "::OnMobDead11") == 0) {
 		if ('NEED_JITTER_FAST) {
+			if ('room != 11 || 'jitter_transition)
+				end;
+			'jitter_transition = true;
 			sleep 500;
+			if ('room != 11) {
+				'jitter_transition = false;
+				end;
+			}
 			donpcevent 'jitterbug_main$ + "::OnNextIs12";
 			end;
 		}
@@ -1759,14 +1898,24 @@ OnMobDead11:
 	end;
 
 OnNextIs12:
+	if ('room != 11)
+		end;
 	'room = 12;
 	enablenpc instance_npcname("11 Door 1");
-	areamonster 'map_jtb$,94,218,132,182, "페르", 3069,10, 'jitterbug_main$ + "::OnMobDead12";// PERE1
+	areamonster 'map_jtb$,94,218,132,182, "페레", 3069,10, 'jitterbug_main$ + "::OnMobDead12";// PERE1
+	'jitter_transition = false;
 	end;
 OnMobDead12:
 	if (mobcount('map_jtb$, 'jitterbug_main$ + "::OnMobDead12") == 0) {
 		if ('NEED_JITTER_FAST) {
+			if ('room != 12 || 'jitter_transition)
+				end;
+			'jitter_transition = true;
 			sleep 500;
+			if ('room != 12) {
+				'jitter_transition = false;
+				end;
+			}
 			donpcevent 'jitterbug_main$ + "::OnNextIs13";
 			end;
 		}
@@ -1776,15 +1925,25 @@ OnMobDead12:
 	end;
 
 OnNextIs13:
+	if ('room != 12)
+		end;
 	'room = 13;
 	enablenpc instance_npcname("12 Door 1");
-	areamonster 'map_jtb$,180,217,218,182, "페르", 3069,15, 'jitterbug_main$ + "::OnMobDead13";// PERE1
-	areamonster 'map_jtb$,180,217,218,182, "페르", 3070,5,  'jitterbug_main$ + "::OnMobDead13";// PERE2
+	areamonster 'map_jtb$,180,217,218,182, "페레", 3069,15, 'jitterbug_main$ + "::OnMobDead13";// PERE1
+	areamonster 'map_jtb$,180,217,218,182, "페레", 3070,5,  'jitterbug_main$ + "::OnMobDead13";// PERE2
+	'jitter_transition = false;
 	end;
 OnMobDead13:
 	if (mobcount('map_jtb$, 'jitterbug_main$ + "::OnMobDead13") == 0) {
 		if ('NEED_JITTER_FAST) {
+			if ('room != 13 || 'jitter_transition)
+				end;
+			'jitter_transition = true;
 			sleep 500;
+			if ('room != 13) {
+				'jitter_transition = false;
+				end;
+			}
 			donpcevent 'jitterbug_main$ + "::OnNextIs14";
 			end;
 		}
@@ -1795,20 +1954,30 @@ OnMobDead13:
 	end;
 
 OnNextIs14:
+	if ('room != 13)
+		end;
 	'room = 14;
 	disablenpc instance_npcname("멜로디 잭#13");
 	enablenpc instance_npcname("13 Door 1");
 	.@label$ = 'jitterbug_main$ + "::OnMobDead14";
-	areamonster 'map_jtb$,268,216,305,181, "페르", 3069,15, .@label$;// PERE1
-	areamonster 'map_jtb$,268,216,305,181, "페르", 3070,5,  .@label$;// PERE2
-	areamonster 'map_jtb$,268,216,305,181, "페르", 3071,5,  .@label$;// PERE3
+	areamonster 'map_jtb$,268,216,305,181, "페레", 3069,15, .@label$;// PERE1
+	areamonster 'map_jtb$,268,216,305,181, "페레", 3070,5,  .@label$;// PERE2
+	areamonster 'map_jtb$,268,216,305,181, "페레", 3071,5,  .@label$;// PERE3
+	'jitter_transition = false;
 	end;
 OnMobDead14:
 	if (mobcount('map_jtb$, 'jitterbug_main$ + "::OnMobDead14") == 0) {
 		if ('NEED_JITTER_FAST) {
+			if ('room != 14 || 'jitter_transition)
+				end;
+			'jitter_transition = true;
 			sleep 500;
+			if ('room != 14) {
+				'jitter_transition = false;
+				end;
+			}
 			if ('jitterbug_options & 2)
-				areamonster 'map_jtb$,358,212,388,182,"페르",3108,1;
+				areamonster 'map_jtb$,358,212,388,182,"페레",3108,1;
 			donpcevent 'jitterbug_main$ + "::OnNextIs15";
 			end;
 		}
@@ -1823,17 +1992,27 @@ OnMobDead14:
 	end;
 
 OnNextIs15:
+	if ('room != 14)
+		end;
 	'room = 15;
 	enablenpc instance_npcname("14 Door 1");
 	.@label$ = 'jitterbug_main$ + "::OnMobDead15";
-	areamonster 'map_jtb$,358,212,388,182, "페르", 3069,20, .@label$;// PERE1
-	areamonster 'map_jtb$,358,212,388,182, "페르", 3070,10, .@label$;// PERE2
-	areamonster 'map_jtb$,358,212,388,182, "페르", 3109,1,  .@label$;// JITTERBUG2
+	areamonster 'map_jtb$,358,212,388,182, "페레", 3069,20, .@label$;// PERE1
+	areamonster 'map_jtb$,358,212,388,182, "페레", 3070,10, .@label$;// PERE2
+	areamonster 'map_jtb$,358,212,388,182, "페레", 3109,1,  .@label$;// JITTERBUG2
+	'jitter_transition = false;
 	end;
 OnMobDead15:
 	if (mobcount('map_jtb$, 'jitterbug_main$ + "::OnMobDead15") == 0) {
 		if ('NEED_JITTER_FAST) {
+			if ('room != 15 || 'jitter_transition)
+				end;
+			'jitter_transition = true;
 			sleep 500;
+			if ('room != 15) {
+				'jitter_transition = false;
+				end;
+			}
 			donpcevent 'jitterbug_main$ + "::OnNextIs16";
 			end;
 		}
@@ -1850,18 +2029,28 @@ OnMobDead15:
 	end;
 
 OnNextIs16:
+	if ('room != 15)
+		end;
 	'room = 16;
 	enablenpc instance_npcname("15 Door 1");
 	.@label$ = 'jitterbug_main$ + "::OnMobDead16";
-	areamonster 'map_jtb$,13,300,47,267, "페르", 3069,10, .@label$;// PERE1
-	areamonster 'map_jtb$,13,300,47,267, "페르", 3070,10, .@label$;// PERE2
-	areamonster 'map_jtb$,13,300,47,267, "페르", 3071,10, .@label$;// PERE3
-	areamonster 'map_jtb$,13,300,47,267, "페르", 3072,5,  .@label$;// PERE4
+	areamonster 'map_jtb$,13,300,47,267, "페레", 3069,10, .@label$;// PERE1
+	areamonster 'map_jtb$,13,300,47,267, "페레", 3070,10, .@label$;// PERE2
+	areamonster 'map_jtb$,13,300,47,267, "페레", 3071,10, .@label$;// PERE3
+	areamonster 'map_jtb$,13,300,47,267, "페레", 3072,5,  .@label$;// PERE4
+	'jitter_transition = false;
 	end;
 OnMobDead16:
 	if (mobcount('map_jtb$, 'jitterbug_main$ + "::OnMobDead16") == 0) {
 		if ('NEED_JITTER_FAST) {
+			if ('room != 16 || 'jitter_transition)
+				end;
+			'jitter_transition = true;
 			sleep 500;
+			if ('room != 16) {
+				'jitter_transition = false;
+				end;
+			}
 			donpcevent 'jitterbug_main$ + "::OnNextIs17";
 			end;
 		}
@@ -1873,20 +2062,30 @@ OnMobDead16:
 	end;
 
 OnNextIs17:
+	if ('room != 16)
+		end;
 	'room = 17;
 	enablenpc instance_npcname("16 Door 1");
 	.@label$ = 'jitterbug_main$ + "::OnMobDead17";
-	areamonster 'map_jtb$,104,297,132,268, "페르", 3069,8, .@label$;// PERE1
-	areamonster 'map_jtb$,104,297,132,268, "페르", 3070,10,.@label$;// PERE2
-	areamonster 'map_jtb$,104,297,132,268, "페르", 3071,5, .@label$;// PERE3
-	areamonster 'map_jtb$,104,297,132,268, "페르", 3072,7, .@label$;// PERE4
+	areamonster 'map_jtb$,104,297,132,268, "페레", 3069,8, .@label$;// PERE1
+	areamonster 'map_jtb$,104,297,132,268, "페레", 3070,10,.@label$;// PERE2
+	areamonster 'map_jtb$,104,297,132,268, "페레", 3071,5, .@label$;// PERE3
+	areamonster 'map_jtb$,104,297,132,268, "페레", 3072,7, .@label$;// PERE4
+	'jitter_transition = false;
 	end;
 OnMobDead17:
 	if (mobcount('map_jtb$, 'jitterbug_main$ + "::OnMobDead17") == 0) {
 		if ('NEED_JITTER_FAST) {
+			if ('room != 17 || 'jitter_transition)
+				end;
+			'jitter_transition = true;
 			sleep 500;
+			if ('room != 17) {
+				'jitter_transition = false;
+				end;
+			}
 			if ('jitterbug_options & 4)
-				areamonster 'map_jtb$,183,301,220,272,"페르",3108,1;
+				areamonster 'map_jtb$,183,301,220,272,"페레",3108,1;
 			donpcevent 'jitterbug_main$ + "::OnNextIs18";
 			end;
 		}
@@ -1898,29 +2097,39 @@ OnMobDead17:
 	end;
 
 OnNextIs18:
+	if ('room != 17)
+		end;
 	'room = 18;
 	enablenpc instance_npcname("17 Door 1");
 	.@label$ = 'jitterbug_main$ + "::OnMobDead18";
-	monster 'map_jtb$, 210, 272, "페르", 3069,1, .@label$;// PERE1
-	monster 'map_jtb$, 211, 273, "페르", 3071,1, .@label$;// PERE3
-	monster 'map_jtb$, 212, 272, "페르", 3072,1, .@label$;// PERE4
-	monster 'map_jtb$, 209, 273, "페르", 3072,1, .@label$;
-	monster 'map_jtb$, 213, 273, "페르", 3070,1, .@label$;// PERE2
-	monster 'map_jtb$, 211, 274, "페르", 3070,1, .@label$;
-	monster 'map_jtb$, 212, 275, "페르", 3070,1, .@label$;
-	monster 'map_jtb$, 213, 275, "페르", 3070,1, .@label$;
-	monster 'map_jtb$, 213, 276, "페르", 3070,1, .@label$;
+	monster 'map_jtb$, 210, 272, "페레", 3069,1, .@label$;// PERE1
+	monster 'map_jtb$, 211, 273, "페레", 3071,1, .@label$;// PERE3
+	monster 'map_jtb$, 212, 272, "페레", 3072,1, .@label$;// PERE4
+	monster 'map_jtb$, 209, 273, "페레", 3072,1, .@label$;
+	monster 'map_jtb$, 213, 273, "페레", 3070,1, .@label$;// PERE2
+	monster 'map_jtb$, 211, 274, "페레", 3070,1, .@label$;
+	monster 'map_jtb$, 212, 275, "페레", 3070,1, .@label$;
+	monster 'map_jtb$, 213, 275, "페레", 3070,1, .@label$;
+	monster 'map_jtb$, 213, 276, "페레", 3070,1, .@label$;
 
-	areamonster 'map_jtb$,183,301,220,272, "페르", 3069,5, .@label$;// PERE1
-	areamonster 'map_jtb$,183,301,220,272, "페르", 3070,8, .@label$;// PERE2
-	areamonster 'map_jtb$,183,301,220,272, "페르", 3071,5, .@label$;// PERE3
-	areamonster 'map_jtb$,183,301,220,272, "페르", 3072,5, .@label$;// PERE4
-	areamonster 'map_jtb$,183,301,220,272, "페르", 3108,1, .@label$;// JITTERBUG1
+	areamonster 'map_jtb$,183,301,220,272, "페레", 3069,5, .@label$;// PERE1
+	areamonster 'map_jtb$,183,301,220,272, "페레", 3070,8, .@label$;// PERE2
+	areamonster 'map_jtb$,183,301,220,272, "페레", 3071,5, .@label$;// PERE3
+	areamonster 'map_jtb$,183,301,220,272, "페레", 3072,5, .@label$;// PERE4
+	areamonster 'map_jtb$,183,301,220,272, "페레", 3108,1, .@label$;// JITTERBUG1
+	'jitter_transition = false;
 	end;
 OnMobDead18:
 	if (mobcount('map_jtb$, 'jitterbug_main$ + "::OnMobDead18") == 0) {
 		if ('NEED_JITTER_FAST) {
+			if ('room != 18 || 'jitter_transition)
+				end;
+			'jitter_transition = true;
 			sleep 500;
+			if ('room != 18) {
+				'jitter_transition = false;
+				end;
+			}
 			donpcevent 'jitterbug_main$ + "::OnNextIs19";
 			end;
 		}
@@ -1932,18 +2141,28 @@ OnMobDead18:
 	end;
 
 OnNextIs19:
+	if ('room != 18)
+		end;
 	'room = 19;
 	enablenpc instance_npcname("18 Door 1");
 	.@label$ = 'jitterbug_main$ + "::OnMobDead19";
-	areamonster 'map_jtb$,13,389,45,355, "페르", 3069,5, .@label$;// PERE1
-	areamonster 'map_jtb$,13,389,45,355, "페르", 3070,9, .@label$;// PERE2
-	areamonster 'map_jtb$,13,389,45,355, "페르", 3071,9, .@label$;// PERE3
-	areamonster 'map_jtb$,13,389,45,355, "페르", 3072,9, .@label$;// PERE4
+	areamonster 'map_jtb$,13,389,45,355, "페레", 3069,5, .@label$;// PERE1
+	areamonster 'map_jtb$,13,389,45,355, "페레", 3070,9, .@label$;// PERE2
+	areamonster 'map_jtb$,13,389,45,355, "페레", 3071,9, .@label$;// PERE3
+	areamonster 'map_jtb$,13,389,45,355, "페레", 3072,9, .@label$;// PERE4
+	'jitter_transition = false;
 	end;
 OnMobDead19:
 	if (mobcount('map_jtb$, 'jitterbug_main$ + "::OnMobDead19") == 0) {
 		if ('NEED_JITTER_FAST) {
+			if ('room != 19 || 'jitter_transition)
+				end;
+			'jitter_transition = true;
 			sleep 500;
+			if ('room != 19) {
+				'jitter_transition = false;
+				end;
+			}
 			donpcevent 'jitterbug_main$ + "::OnNextIs20";
 			end;
 		}
@@ -1960,19 +2179,29 @@ OnMobDead19:
 	end;
 
 OnNextIs20:
+	if ('room != 19)
+		end;
 	'room = 20;
 	enablenpc instance_npcname("19 Door 1");
 	.@label$ = 'jitterbug_main$ + "::OnMobDead20";
-	areamonster 'map_jtb$,95,387,133,352, "페르", 3069,3, .@label$;// PERE1
-	areamonster 'map_jtb$,95,387,133,352, "페르", 3070,10, .@label$;// PERE2
-	areamonster 'map_jtb$,95,387,133,352, "페르", 3072,6, .@label$;// PERE4
+	areamonster 'map_jtb$,95,387,133,352, "페레", 3069,3, .@label$;// PERE1
+	areamonster 'map_jtb$,95,387,133,352, "페레", 3070,10, .@label$;// PERE2
+	areamonster 'map_jtb$,95,387,133,352, "페레", 3072,6, .@label$;// PERE4
+	'jitter_transition = false;
 	end;
 OnMobDead20:
 	if (mobcount('map_jtb$, 'jitterbug_main$ + "::OnMobDead20") == 0) {
 		if ('NEED_JITTER_FAST) {
+			if ('room != 20 || 'jitter_transition)
+				end;
+			'jitter_transition = true;
 			sleep 500;
+			if ('room != 20) {
+				'jitter_transition = false;
+				end;
+			}
 			if ('jitterbug_options & 8)
-				areamonster 'map_jtb$,182,387,219,354,"페르",3108,1;
+				areamonster 'map_jtb$,182,387,219,354,"페레",3108,1;
 			donpcevent 'jitterbug_main$ + "::OnNextIs21";
 			end;
 		}
@@ -1983,19 +2212,29 @@ OnMobDead20:
 	end;
 
 OnNextIs21:
+	if ('room != 20)
+		end;
 	'room = 21;
 	enablenpc instance_npcname("20 Door 1");
 	.@label$ = 'jitterbug_main$ + "::OnMobDead21";
-	areamonster 'map_jtb$,182,387,219,354, "페르", 3069,10, .@label$;// PERE1
-	areamonster 'map_jtb$,182,387,219,354, "페르", 3070,10, .@label$;// PERE2
-	areamonster 'map_jtb$,182,387,219,354, "페르", 3071,10, .@label$;// PERE3
-	areamonster 'map_jtb$,182,387,219,354, "페르", 3072,10, .@label$;// PERE4
-	areamonster 'map_jtb$,182,387,219,354, "페르", 3109,1,  .@label$;// JITTERBUG2
+	areamonster 'map_jtb$,182,387,219,354, "페레", 3069,10, .@label$;// PERE1
+	areamonster 'map_jtb$,182,387,219,354, "페레", 3070,10, .@label$;// PERE2
+	areamonster 'map_jtb$,182,387,219,354, "페레", 3071,10, .@label$;// PERE3
+	areamonster 'map_jtb$,182,387,219,354, "페레", 3072,10, .@label$;// PERE4
+	areamonster 'map_jtb$,182,387,219,354, "페레", 3109,1,  .@label$;// JITTERBUG2
+	'jitter_transition = false;
 	end;
 OnMobDead21:
 	if (mobcount('map_jtb$, 'jitterbug_main$ + "::OnMobDead21") == 0) {
 		if ('NEED_JITTER_FAST) {
+			if ('room != 21 || 'jitter_transition)
+				end;
+			'jitter_transition = true;
 			sleep 500;
+			if ('room != 21) {
+				'jitter_transition = false;
+				end;
+			}
 			donpcevent 'jitterbug_main$ + "::OnNextIs22";
 			end;
 		}
@@ -2015,55 +2254,63 @@ OnMobDead21:
 	end;
 
 OnNextIs22:
+	if ('room != 21)
+		end;
 	'room = 22;
 	enablenpc instance_npcname("21 Door 1");
 	.@label$ = 'jitterbug_main$ + "::OnMobDead22";
-	monster 'map_jtb$, 288, 339, "페르", 3069,1, .@label$;// PERE1
-	monster 'map_jtb$, 288, 319, "페르", 3069,1, .@label$;
-	monster 'map_jtb$, 288, 309, "페르", 3069,1, .@label$;
-	monster 'map_jtb$, 287, 296, "페르", 3069,1, .@label$;
-	monster 'map_jtb$, 299, 295, "페르", 3069,1, .@label$;
-	monster 'map_jtb$, 310, 294, "페르", 3069,1, .@label$;
-	monster 'map_jtb$, 323, 295, "페르", 3069,1, .@label$;
-	monster 'map_jtb$, 334, 295, "페르", 3069,1, .@label$;
-	monster 'map_jtb$, 344, 295, "페르", 3069,1, .@label$;
-	monster 'map_jtb$, 353, 294, "페르", 3069,1, .@label$;
-	monster 'map_jtb$, 357, 300, "페르", 3069,1, .@label$;
-	monster 'map_jtb$, 357, 307, "페르", 3069,1, .@label$;
-	monster 'map_jtb$, 358, 317, "페르", 3069,1, .@label$;
-	monster 'map_jtb$, 358, 325, "페르", 3069,1, .@label$;
-	monster 'map_jtb$, 358, 338, "페르", 3069,1, .@label$;
+	monster 'map_jtb$, 288, 339, "페레", 3069,1, .@label$;// PERE1
+	monster 'map_jtb$, 288, 319, "페레", 3069,1, .@label$;
+	monster 'map_jtb$, 288, 309, "페레", 3069,1, .@label$;
+	monster 'map_jtb$, 287, 296, "페레", 3069,1, .@label$;
+	monster 'map_jtb$, 299, 295, "페레", 3069,1, .@label$;
+	monster 'map_jtb$, 310, 294, "페레", 3069,1, .@label$;
+	monster 'map_jtb$, 323, 295, "페레", 3069,1, .@label$;
+	monster 'map_jtb$, 334, 295, "페레", 3069,1, .@label$;
+	monster 'map_jtb$, 344, 295, "페레", 3069,1, .@label$;
+	monster 'map_jtb$, 353, 294, "페레", 3069,1, .@label$;
+	monster 'map_jtb$, 357, 300, "페레", 3069,1, .@label$;
+	monster 'map_jtb$, 357, 307, "페레", 3069,1, .@label$;
+	monster 'map_jtb$, 358, 317, "페레", 3069,1, .@label$;
+	monster 'map_jtb$, 358, 325, "페레", 3069,1, .@label$;
+	monster 'map_jtb$, 358, 338, "페레", 3069,1, .@label$;
+	'jitter_transition = false;
 	end;
 OnMobDead22:
 	if (mobcount('map_jtb$, 'jitterbug_main$ + "::OnMobDead22") == 0) {
 		sleep 500;
-		if ('room == 22) {
+		if ('room == 22 && !'jitter_transition) {
+			'jitter_transition = true;
 			'room = 23;
 			enablenpc instance_npcname("22 Door 1");
-			enablenpc instance_npcname("페르#23");
+			enablenpc instance_npcname("페레#23");
 			enablenpc instance_npcname("샬로시#23");
 			enablenpc instance_npcname("뉴오즈#23");
+			'jitter_transition = false;
 		}
 	}
 	end;
 
 OnNextIs23:
+	if ('room != 23)
+		end;
 	'room = 24;
 	disablenpc instance_npcname("22 Door 1");	// can't enter in the boss room anymore
-	disablenpc instance_npcname("페르#24");
+	disablenpc instance_npcname("페레#24");
 	disablenpc instance_npcname("뉴오즈#23");
 	disablenpc instance_npcname("샬로시#23");
 	donpcevent instance_npcname("뉴오즈#boss") + "::OnStart";
 
 	.@label$ = 'jitterbug_main$ + "::OnMobDead23";
 	for ( .@id = 3069; .@id < 3072; .@id++ ) {
-		monster 'map_jtb$,323,315, "페르", .@id, 1;// no label
-		monster 'map_jtb$,331,324, "페르", .@id, 1;
-		monster 'map_jtb$,322,338, "페르", .@id, 1;
-		monster 'map_jtb$,314,325, "페르", .@id, 1;
+		monster 'map_jtb$,323,315, "페레", .@id, 1;// no label
+		monster 'map_jtb$,331,324, "페레", .@id, 1;
+		monster 'map_jtb$,322,338, "페레", .@id, 1;
+		monster 'map_jtb$,314,325, "페레", .@id, 1;
 	}
-	monster 'map_jtb$,322,335, "각성한 페르", 3073,1, .@label$;	// GRAND_PERE
+	monster 'map_jtb$,322,335, "각성한 페레", 3073,1, .@label$;	// GRAND_PERE
 	'boss_id = $@mobid[0];
+	'jitter_transition = false;
 	end;
 OnMobDead23:
 	if (mobcount('map_jtb$, 'jitterbug_main$ + "::OnMobDead23") == 0) {
@@ -2071,12 +2318,14 @@ OnMobDead23:
 		donpcevent instance_npcname("뉴오즈#boss") + "::OnStop";
 		enablenpc instance_npcname("뉴오즈#24");
 		enablenpc instance_npcname("샬로시#24");
-		enablenpc instance_npcname("페르#25");
+		enablenpc instance_npcname("페레#25");
 		'boss_id = 0;
 	}
 	end;
 
 OnNextIs5:
+	if ('room != 24)
+		end;
 	'room = 25;
 	enablenpc instance_npcname("23 Door 1");// note: dead players are not warped
 	enablenpc instance_npcname("뉴오즈#05");
@@ -2089,6 +2338,7 @@ OnNextIs5:
 	enablenpc instance_npcname("아랑#05");
 	enablenpc instance_npcname("로엘#05");
 	enablenpc instance_npcname("밍민#05");
+	'jitter_transition = false;
 	end;
 
 
@@ -2096,6 +2346,7 @@ OnInstanceInit:
 	// NEED: 반복 클리어 빠른 진행 및 선택 옵션
 	'NEED_JITTER_FAST = 0;
 	'jitterbug_options = 0;
+	'jitter_transition = false;
 
 	// 기존 호환 변수
 	'additionnal_option = false;
@@ -2242,12 +2493,12 @@ OnInstanceInit:
 	disablenpc instance_npcname("아이구#21");
 	disablenpc instance_npcname("로터#21");
 	disablenpc instance_npcname("샬로시#21");
-	disablenpc instance_npcname("페르#21");
-	disablenpc instance_npcname("페르#22");
+	disablenpc instance_npcname("페레#21");
+	disablenpc instance_npcname("페레#22");
 
 	// Boss room entrance
-	disablenpc instance_npcname("페르#23");
-	disablenpc instance_npcname("페르#24");
+	disablenpc instance_npcname("페레#23");
+	disablenpc instance_npcname("페레#24");
 	disablenpc instance_npcname("샬로시#23");
 	disablenpc instance_npcname("뉴오즈#23");
 	disablenpc instance_npcname("뉴오즈#boss");
@@ -2264,7 +2515,7 @@ OnInstanceInit:
 	disablenpc instance_npcname("루나인#24");
 	disablenpc instance_npcname("로엘#24");
 	disablenpc instance_npcname("멜로디 잭#24");
-	disablenpc instance_npcname("페르#25");
+	disablenpc instance_npcname("페레#25");
 
 	// Exit
 	disablenpc instance_npcname("뉴오즈#05");

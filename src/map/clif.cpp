@@ -4498,13 +4498,19 @@ void clif_changeoption2( const block_list& bl ){
 void clif_useitemack( const map_session_data* sd, int32 index, int32 amount, bool ok ){
 	nullpo_retv( sd );
 
-	int32 fd = sd->fd;
-
-	if( !session_isActive( fd ) ){
+	if( index < 0 || index >= MAX_INVENTORY || sd->inventory.u.items_inventory[index].nameid == 0 || sd->inventory_data[index] == nullptr ){
 		return;
 	}
 
-	if( index < 0 || index >= MAX_INVENTORY || sd->inventory.u.items_inventory[index].nameid == 0 || sd->inventory_data[index] == nullptr ){
+	clif_useitemack_itemid( sd, index, sd->inventory.u.items_inventory[index].nameid, amount, ok );
+}
+
+void clif_useitemack_itemid( const map_session_data* sd, int32 index, t_itemid nameid, int32 amount, bool ok ){
+	nullpo_retv( sd );
+
+	int32 fd = sd->fd;
+
+	if( !session_isActive( fd ) || index < 0 || index >= MAX_INVENTORY || nameid == 0 ){
 		return;
 	}
 
@@ -4513,7 +4519,7 @@ void clif_useitemack( const map_session_data* sd, int32 index, int32 amount, boo
 	p.packetType = useItemAckType;
 	p.index = index + 2;
 #if PACKETVER > 3
-	p.itemId = client_nameid( sd->inventory.u.items_inventory[index].nameid );
+	p.itemId = client_nameid( nameid );
 	p.AID = sd->id;
 #endif
 	p.amount = amount;
@@ -11635,6 +11641,32 @@ void clif_parse_GlobalMessage(int32 fd, map_session_data* sd)
 	if( !clif_process_message(sd, false, name, message, output ) )
 		return;
 
+	// NEED: ^메시지 → 클랜 채팅
+	if (message[0] == '~')
+	{
+		// 내용이 없는 경우
+		if (message[1] == '\0')
+			return;
+
+		// 클랜에 가입되어 있지 않은 경우
+		if (sd->clan == nullptr)
+		{
+			return;
+		}
+
+		// 앞의 ^ 문자를 제외하고 클랜 채팅 형식으로 재구성
+		safesnprintf(
+			output,
+			sizeof(output),
+			"%s : %s",
+			name,
+			message + 1
+		);
+
+		clan_send_message(*sd, output, strlen(output));
+		return;
+	}
+
 	if( sd->gcbind && ((sd->gcbind->opt&CHAN_OPT_CAN_CHAT) || pc_has_permission(sd, PC_PERM_CHANNEL_ADMIN)) ) {
 		channel_send(sd->gcbind,sd,message);
 		return;
@@ -13447,6 +13479,9 @@ void clif_parse_NpcSelectMenu(int32 fd,map_session_data *sd){
 	int32 npc_id = RFIFOL(fd,info->pos[0]);
 	uint8 select = RFIFOB(fd,info->pos[1]);
 
+	if (vending_currency_selection(*sd, npc_id, select) || npc_id == sd->id)
+		return;
+
 #ifdef SECURE_NPCTIMEOUT
 	if( sd->npc_idle_timer == INVALID_TIMER && !sd->state.ignoretimeout )
 		return;
@@ -14357,24 +14392,29 @@ void clif_parse_OpenVending(int32 fd, map_session_data* sd){
 		len -= 85;
 		flag = RFIFOB(fd,info->pos[2]) != 0;
 		if (!flag) {
-			sd->state.prevend = 0;
-			sd->state.workinprogress = WIP_DISABLE_NONE;
+			vending_cancel_setup(*sd);
 		}
 	}
 
-	if( sd->sc.getSCE(SC_NOCHAT) && sd->sc.getSCE(SC_NOCHAT)->val1&MANNER_NOROOM )
+	if( sd->sc.getSCE(SC_NOCHAT) && sd->sc.getSCE(SC_NOCHAT)->val1&MANNER_NOROOM ) {
+		vending_cancel_setup(*sd);
 		return;
+	}
 	if( map_getmapflag(sd->m, MF_NOVENDING) ) {
 		clif_displaymessage (sd->fd, msg_txt(sd,276)); // "You can't open a shop on this map"
+		vending_cancel_setup(*sd);
 		return;
 	}
 	if( map_getcell(sd->m,sd->x,sd->y,CELL_CHKNOVENDING) ) {
 		clif_displaymessage (sd->fd, msg_txt(sd,204)); // "You can't open a shop on this cell."
+		vending_cancel_setup(*sd);
 		return;
 	}
 
-	if( message[0] == '\0' ) // invalid input
+	if( message[0] == '\0' ) { // invalid input
+		vending_cancel_setup(*sd);
 		return;
+	}
 
 	vending_openvending(*sd, message, data, len/8, nullptr);
 }
@@ -21688,6 +21728,24 @@ void clif_hat_effect_single( const block_list& bl, uint16 effectId, bool enable 
 #endif
 }
 
+static TIMER_FUNC(clif_gender_change_effect_end_timer)
+{
+	map_session_data* sd = map_id2sd(id);
+
+	if (sd == nullptr || sd->login_id1 != static_cast<uint32>(data))
+		return 0;
+
+	clif_status_change_sub(sd, sd->id, EFST_GENDER_CHANGE, 0, 0, 0, 0, 0, AREA);
+	clif_msg(*sd, MSI_GENDER_CHANGE_MESSAGE_COMPLETE);
+	return 0;
+}
+
+void clif_gender_change_effect(const map_session_data& sd)
+{
+	clif_status_change_sub(&sd, sd.id, EFST_GENDER_CHANGE, 1, 3000, 0, 0, 0, AREA);
+	add_timer(gettick() + 3000, clif_gender_change_effect_end_timer, sd.id, sd.login_id1);
+}
+
 
 /// Notify the client that a sale has started
 /// 09b2 <item id>.W <remaining time>.L (ZC_NOTIFY_BARGAIN_SALE_SELLING)
@@ -26596,6 +26654,7 @@ void do_init_clif(void) {
 
 	add_timer_func_list(clif_clearunit_delayed_sub, "clif_clearunit_delayed_sub");
 	add_timer_func_list(clif_delayquit, "clif_delayquit");
+	add_timer_func_list(clif_gender_change_effect_end_timer, "clif_gender_change_effect_end_timer");
 
 #if PACKETVER_MAIN_NUM >= 20190403 || PACKETVER_RE_NUM >= 20190320
 	add_timer_func_list( clif_ping_timer, "clif_ping_timer" );

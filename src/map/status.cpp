@@ -7938,7 +7938,7 @@ static defType status_calc_def(block_list *bl, status_change *sc, int32 def)
 	if( sc->getSCE(SC_BANDING) && sc->getSCE(SC_BANDING)->val2 > 1 )
 		def += (5 + sc->getSCE(SC_BANDING)->val1) * sc->getSCE(SC_BANDING)->val2 / 10;
 	if( sc->getSCE(SC_ECHOSONG) )
-		def += sc->getSCE(SC_ECHOSONG)->val3;
+		def += def * sc->getSCE(SC_ECHOSONG)->val3 / 100; // NEED: 2017 spec - percent of DEF, not flat (rathena_ref_20171129 status.cpp)
 	if( sc->getSCE(SC_CAMOUFLAGE) )
 		def -= def * 5 * sc->getSCE(SC_CAMOUFLAGE)->val3 / 100;
 	if( sc->getSCE(SC_SOLID_SKIN_OPTION) )
@@ -8307,8 +8307,6 @@ static uint16 status_calc_speed(block_list *bl, status_change *sc, int32 speed)
 			val = max(val, sc->getSCE(SC_ARCLOUSEDASH)->val3);
 		if( sc->getSCE(SC_DORAM_WALKSPEED) )
 			val = max(val, sc->getSCE(SC_DORAM_WALKSPEED)->val1);
-		if (sc->getSCE(SC_RUSHWINDMILL))
-			val = max(val, 25); // !TODO: Confirm bonus movement speed
 		if (sc->getSCE(SC_EMERGENCY_MOVE))
 			val = max(val, sc->getSCE(SC_EMERGENCY_MOVE)->val2);
 		if( sc->getSCE(SC_JAWAII_SERENADE) ){
@@ -12336,8 +12334,10 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 			val3 = 2 * val1 + val2 + (sd?sd->status.job_level:50) / 4; // MDEF Increase
 			break;
 		case SC_MOONLITSERENADE: // MATK Increase
-		case SC_RUSHWINDMILL: // ATK Increase
 			val3 = 4 + val1 * 3 + val2 + (sd?sd->status.job_level:50) / 5;
+			break;
+		case SC_RUSHWINDMILL: // NEED: 2017 spec - flat equip ATK bonus = 6*lv + Lesson + JobLv/5 (rathena_ref_20171129 status.cpp)
+			val3 = 6 * val1 + val2 + (sd?sd->status.job_level:50) / 5;
 			break;
 		case SC_ECHOSONG:
 			val3 = 6 * val1 + val2 + (sd?sd->status.job_level:50) / 4; // DEF Increase

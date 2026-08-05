@@ -425,10 +425,16 @@ moro_cav,45,75,0	script	세계수와 닮은 나무#eom_gate	CLEAR_NPC,{
 OnVariableReset:
 	'boss_id = 0;
 	'boss_hp = 0;
+	'boss_max_hp = 0;
 	'bossx = 'bossy = 0;
 	'boss_phase = 0;
 	'icestunami = false;
 	'spawn = false;
+	'brina_phase_70 = 'brina_phase_60 = 'brina_phase_50 = 0;
+	'muspell_phase_90 = 'muspell_phase_80 = 'muspell_phase_72 = 'muspell_phase_60 = 0;
+	'lava_heal = false;
+	'fire_combo = false;
+	'fire_recovery = false;
 	'miniboss_id[0] = 'miniboss_id[1] = 0;
 	'combo_is_allowed = false;
 	'flowing_lava_deactivate[0] = 'flowing_lava_deactivate[1] = false;
@@ -947,11 +953,16 @@ OnSpawn:
 	'brina_phase_70 = 0;
 	'brina_phase_60 = 0;
 	'brina_phase_50 = 0;
+	'spawn = false;
 	enablenpc instance_npcname("#ice_hpcheck");
 	monster 'map_eom$,38,123, "브리나라네아",3091,1, instance_npcname("#ice_hpcheck") + "::OnMyMobDead";	// MM_BRINARANEA
 	'boss_id = $@mobid[0];
 	getunitdata 'boss_id, .@data;
-	'boss_hp = .@data[UMOB_MAXHP];
+	// 브리나라네아의 최대 HP와 현재 HP를 원본의 1/3로 조정합니다.
+	'boss_max_hp = max(1, .@data[UMOB_MAXHP] / 3);
+	setunitdata 'boss_id, UMOB_MAXHP, 'boss_max_hp;
+	setunitdata 'boss_id, UMOB_HP, 'boss_max_hp;
+	'boss_hp = 'boss_max_hp;
 	unitskilluseid 'boss_id, "NPC_WIDEFREEZE",5;
 	end;
 OnStart:
@@ -959,14 +970,21 @@ OnStart:
 	end;
 
 OnTimer3000:
+	if (!'boss_id || !unitexists('boss_id)) {
+		stopnpctimer;
+		end;
+	}
 	getunitdata 'boss_id, .@data;
 	.@hp = .@data[UMOB_HP];
+	.@max_hp = 'boss_max_hp;
 	if ('boss_hp < .@hp) {
 		'boss_hp = .@hp;
 		initnpctimer;
 		end;
 	}
-	if (('boss_hp - .@hp) > 2000000) {
+	// 기존 2,000,000 피해 제한은 최대 HP의 2.5%였으므로 같은 비율로 적용합니다.
+	.@burst_limit = max(1, .@max_hp / 40);
+	if (('boss_hp - .@hp) > .@burst_limit) {
 		'boss_hp = .@hp;
 		donpcevent instance_npcname("#super_heal") + "::OnStart";
 		initnpctimer;
@@ -974,22 +992,24 @@ OnTimer3000:
 	}
 	'boss_hp = .@hp;
 
-	if (.@hp > 69500000 && .@hp < 70000000 && 'brina_phase_70 == 0) {
+	// 기존 7천만/6천만/5천만 고정 구간을 원래 비율(87.5%/75%/62.5%)로 변경합니다.
+	// 이하 조건과 1회 플래그를 사용해 순간 화력으로 구간을 건너뛰어도 패턴이 누락되지 않습니다.
+	if ('brina_phase_70 == 0 && .@hp <= (.@max_hp * 7 / 8)) {
 		'brina_phase_70 = 1;
 		unittalk 'boss_id, "아이들아, 나오너라. 진수성찬이 제 발로 찾아왔다!";
 		donpcevent instance_npcname("#ice_hpcheck") + "::OnCallBaby";
 	}
-	else if (.@hp > 59500000 && .@hp < 60000000 && 'brina_phase_60 == 0) {
+	else if ('brina_phase_60 == 0 && .@hp <= (.@max_hp * 3 / 4)) {
 		'brina_phase_60 = 1;
 		unittalk 'boss_id, "아이들아, 식사 시간이다!";
 		donpcevent instance_npcname("#ice_hpcheck") + "::OnCallBaby";
 	}
-	else if (.@hp > 49500000 && .@hp < 50000000 && 'brina_phase_50 == 0) {
+	else if ('brina_phase_50 == 0 && .@hp <= (.@max_hp * 5 / 8)) {
 		'brina_phase_50 = 1;
 		unittalk 'boss_id, "아직 배부르지 않느냐? 어서 나오너라!";
 		donpcevent instance_npcname("#ice_hpcheck") + "::OnCallBaby";
 	}
-	else if (.@hp < 22200000 && 'icestunami == false) {
+	else if ('icestunami == false && .@hp <= ((.@max_hp / 400) * 111)) {
 		donpcevent instance_npcname("#icestunami") + "::OnStart";
 	}
 
@@ -1025,25 +1045,19 @@ OnEnd:
 
 OnCallBaby:
 	sleep 500;
-	if ('boss_id == 0)
+	if (!'boss_id || !unitexists('boss_id))
 		end;
 	getunitdata 'boss_id, .@data;
 	'boss_hp = .@data[UMOB_HP];
-	killmonster 'map_eom$, instance_npcname("#ice_hpcheck") + "::OnMyMobDead";
-	monster 'map_eom$,38,123, "브리나라네아",3091,1, instance_npcname("#ice_hpcheck") + "::OnMyMobDead";	// MM_BRINARANEA
-	'boss_id = $@mobid[0];
-	setunitdata 'boss_id, UMOB_HP, 'boss_hp;
-	if ('spawn == true)
-		end;
-	'spawn = true;
+
+	// 아기 거미 소환 시 보스를 삭제·재생성하지 않습니다.
+	// 현재 위치와 전투 상태를 유지해 불필요한 위치 초기화 및 사망 이벤트 오작동을 방지합니다.
 	unitskilluseid 'boss_id, "NPC_WIDEFREEZE",5;
 	sleep 1000;
-	if ('boss_id == 0)
+	if (!'boss_id || !unitexists('boss_id))
 		end;
 	getunitdata 'boss_id, .@data;
 	areamonster 'map_eom$,(.@data[UMOB_X]-5),(.@data[UMOB_Y]-5),(.@data[UMOB_X]+5),(.@data[UMOB_Y]+5), " ",3088,5;	// MM_BRINARANEA_BABY
-	sleep 15000;
-	'spawn = false;
 	end;
 
 OnTest_hp:
@@ -1196,11 +1210,20 @@ OnStart:
 	getunitdata 'boss_id, .@data;
 	'x_icemine = .@data[UMOB_X];
 	'y_icemine = .@data[UMOB_Y];
-	callsub( S_Spawn,6 );
-OnTimer2000: callsub( S_Spawn,3 );
-OnTimer4000: callsub( S_Spawn,0 );
-OnTimer6000: callsub( S_Spawn,-3 );
-OnTimer8000: callsub( S_Spawn,-6 );
+	callsub S_Spawn,6;
+	end;
+OnTimer2000:
+	callsub S_Spawn,3;
+	end;
+OnTimer4000:
+	callsub S_Spawn,0;
+	end;
+OnTimer6000:
+	callsub S_Spawn,-3;
+	end;
+OnTimer8000:
+	callsub S_Spawn,-6;
+	end;
 OnTimer13000:
 	killmonster 'map_eom$, instance_npcname("#icestunami") + "::OnMobDead";
 	end;
@@ -1218,7 +1241,7 @@ S_Spawn:
 	monster 'map_eom$,  ('x_icemine),.@y," ",2943,1, .@label$;
 	monster 'map_eom$,('x_icemine+3),.@y," ",2943,1, .@label$;
 	monster 'map_eom$,('x_icemine+6),.@y," ",2943,1, .@label$;
-	end;
+	return;
 OnMobDead:
 	end;
 }
@@ -1360,11 +1383,21 @@ OnStart:
 	enablenpc instance_npcname("#lavazone21");
 	enablenpc instance_npcname("#lavazone22");
 	'flowing_lava_deactivate[0] = 'flowing_lava_deactivate[1] = false;
+	'muspell_phase_90 = 0;
+	'muspell_phase_80 = 0;
+	'muspell_phase_72 = 0;
+	'muspell_phase_60 = 0;
+	'lava_heal = false;
+	'fire_recovery = false;
 
 	monster 'map_eom$,148,98, "무스펠스콜",3092,1, instance_npcname("#skollmaster") + "::OnMobDead";	// MM_MUSPELLSKOLL
 	'boss_id = $@mobid[0];
 	getunitdata 'boss_id, .@data;
-	'boss_hp = .@data[UMOB_MAXHP];
+	// 무스펠스콜의 최대 HP와 현재 HP를 원본의 1/3로 조정합니다.
+	'boss_max_hp = max(1, .@data[UMOB_MAXHP] / 3);
+	setunitdata 'boss_id, UMOB_MAXHP, 'boss_max_hp;
+	setunitdata 'boss_id, UMOB_HP, 'boss_max_hp;
+	'boss_hp = 'boss_max_hp;
 	sleep 1000;
 	if ('boss_id)
 		unittalk 'boss_id, "너희로군... 좋아, 뼈까지 부숴 주마!";
@@ -1396,23 +1429,26 @@ OnTimer6000:
 	donpcevent instance_npcname("#fire_combo") + "::OnEvent";
 	end;
 S_ReSpawn:
+	if (!'boss_id || !unitexists('boss_id))
+		return;
 	getunitdata 'boss_id, .@data;
-	'boss_hp = .@data[UMOB_HP];
+	'boss_hp = min('boss_max_hp, .@data[UMOB_HP]);
 	killmonster 'map_eom$, instance_npcname("#skollmaster") + "::OnMobDead";
 	monster 'map_eom$,getarg(0),getarg(1), "무스펠스콜",3092,1, instance_npcname("#skollmaster") + "::OnMobDead";	// MM_MUSPELLSKOLL
 	'boss_id = $@mobid[0];
+	setunitdata 'boss_id, UMOB_MAXHP, 'boss_max_hp;
 	setunitdata 'boss_id, UMOB_HP, 'boss_hp;
 	return;
 S_Event:
 	callsub S_ReSpawn, getarg(1),getarg(2);
 	if ('flowing_lava_deactivate[ getarg(0) ] == false) {
-		for ( .@i = 0; .@i < 8; .@i++ ) {
+		// 최대 HP를 1/3로 낮춘 만큼 고정 회복 스킬 횟수도 9회에서 3회로 조정합니다.
+		for ( .@i = 0; .@i < 3; .@i++ ) {
 			unitskilluseid 'boss_id, "AL_HEAL",11;
 			sleep 100;
 			if ('boss_id == 0)
 				end;
 		}
-		unitskilluseid 'boss_id, "AL_HEAL",11;
 	}
 	mapannounce 'map_eom$, "니드호그: 무스펠스콜이 용암의 힘으로 회복하려 합니다!", bc_map, 0x00ff00;
 	getunitdata 'boss_id, .@data;
@@ -1421,6 +1457,8 @@ S_Event:
 	return;
 
 OnMobDead:
+	'fire_recovery = false;
+	'lava_heal = false;
 	stopnpctimer instance_npcname("#fire_hpcheck");
 	stopnpctimer instance_npcname("#muspellskoll_event_1");
 	stopnpctimer instance_npcname("#muspellskoll_event_2");
@@ -1451,22 +1489,49 @@ OnStart:
 	initnpctimer;
 	end;
 OnTimer3000:
+	if (!'boss_id || !unitexists('boss_id)) {
+		stopnpctimer;
+		end;
+	}
 	getunitdata 'boss_id, .@data;
 	.@hp = .@data[UMOB_HP];
+	.@max_hp = 'boss_max_hp;
 	if ('boss_hp < .@hp) {
+		// 회복 후 기준 HP를 갱신하지 않으면 이후 HP 검사가 계속 건너뛰어지는 문제를 방지합니다.
+		'boss_hp = .@hp;
 		initnpctimer;
 		end;
 	}
-	if (('boss_hp - .@hp) > 1000000) {
+	// 기존 1,000,000 피해 제한은 최대 HP의 2%였으므로 같은 비율로 적용합니다.
+	.@burst_limit = max(1, .@max_hp / 50);
+	if (('boss_hp - .@hp) > .@burst_limit && 'fire_recovery == false) {
 		'boss_hp = .@hp;
-		donpcevent instance_npcname("#fire_hpcheck") + "::OnHeal";	// the event can stack and the boss can stay in this state until it demise
+		'fire_recovery = true;
+		donpcevent instance_npcname("#fire_hpcheck") + "::OnHeal";
 		initnpctimer;
 		end;
 	}
 	'boss_hp = .@hp;
 
-	if ('lava_heal == false) {
-		if (.@hp > 29500000 && .@hp < 30000000 || .@hp > 35500000 && .@hp < 36000000 || .@hp > 39500000 && .@hp < 40000000 || .@hp > 44500000 && .@hp < 45000000) {
+	if ('lava_heal == false && 'fire_recovery == false) {
+		// 기존 4,500만/4,000만/3,600만/3,000만 구간을 90%/80%/72%/60%로 변경합니다.
+		if ('muspell_phase_90 == 0 && .@hp <= (.@max_hp * 9 / 10)) {
+			'muspell_phase_90 = 1;
+			unittalk 'boss_id, "이대로 쓰러지지는 않는다!";
+			donpcevent instance_npcname("#skollmaster") + "::OnLava_heal";
+		}
+		else if ('muspell_phase_80 == 0 && .@hp <= (.@max_hp * 4 / 5)) {
+			'muspell_phase_80 = 1;
+			unittalk 'boss_id, "이대로 쓰러지지는 않는다!";
+			donpcevent instance_npcname("#skollmaster") + "::OnLava_heal";
+		}
+		else if ('muspell_phase_72 == 0 && .@hp <= ((.@max_hp / 25) * 18)) {
+			'muspell_phase_72 = 1;
+			unittalk 'boss_id, "이대로 쓰러지지는 않는다!";
+			donpcevent instance_npcname("#skollmaster") + "::OnLava_heal";
+		}
+		else if ('muspell_phase_60 == 0 && .@hp <= (.@max_hp * 3 / 5)) {
+			'muspell_phase_60 = 1;
 			unittalk 'boss_id, "이대로 쓰러지지는 않는다!";
 			donpcevent instance_npcname("#skollmaster") + "::OnLava_heal";
 		}
@@ -1479,29 +1544,31 @@ OnHeal:
 		donpcevent instance_npcname("#fire_combo") + "::OnEnd";
 	unittalk 'boss_id, "내가 만만해 보이느냐? 재로 만들어 주마!";
 	sleep 2000;
-	if ('boss_id == 0)
+	if (!'boss_id || !unitexists('boss_id))
 		end;
 	getunitdata 'boss_id, .@data;
 	unitskillusepos 'boss_id,"WZ_METEOR",11,.@data[UMOB_X],.@data[UMOB_Y],-50;
 	sleep 1000;
-	if ('boss_id == 0)
+	if (!'boss_id || !unitexists('boss_id))
 		end;
-	for ( .@i = 0; .@i < 18; .@i++ ) {
+	// 최대 HP를 1/3로 낮춘 만큼 고정 회복 스킬 횟수도 각 18회에서 6회로 조정합니다.
+	for ( .@i = 0; .@i < 6; .@i++ ) {
 		unitskilluseid 'boss_id, "AL_HEAL",11;
 		sleep 200;
-		if ('boss_id == 0)
+		if (!'boss_id || !unitexists('boss_id))
 			end;
 	}
 	getunitdata 'boss_id, .@data;
 	unitskillusepos 'boss_id,"WZ_METEOR",11,.@data[UMOB_X],.@data[UMOB_Y],-50;
-	for ( .@i = 0; .@i < 18; .@i++ ) {
+	for ( .@i = 0; .@i < 6; .@i++ ) {
 		unitskilluseid 'boss_id, "AL_HEAL",11;
 		sleep 200;
-		if ('boss_id == 0)
+		if (!'boss_id || !unitexists('boss_id))
 			end;
 	}
 	getunitdata 'boss_id, .@data;
 	'boss_hp = .@data[UMOB_HP];
+	'fire_recovery = false;
 	if (!'fire_combo)
 		donpcevent instance_npcname("#fire_combo") + "::OnEvent";
 	end;
@@ -2299,6 +2366,12 @@ OnStart:
 	enablenpc instance_npcname("#despair_main");
 	monster 'map_eom$,101,194, "절망의 신 모로크",3097,1, instance_npcname("#despair_main") + "::OnMobDead";	// MM_MOROCC_ADT
 	'boss_id = $@mobid[0];
+	getunitdata 'boss_id, .@data;
+	// 절망의 신 모로크의 최대 HP와 현재 HP를 원본의 1/3로 조정합니다.
+	'boss_max_hp = max(1, .@data[UMOB_MAXHP] / 3);
+	setunitdata 'boss_id, UMOB_MAXHP, 'boss_max_hp;
+	setunitdata 'boss_id, UMOB_HP, 'boss_max_hp;
+	'boss_hp = 'boss_max_hp;
 	end;
 OnMobDead:
 	disablenpc instance_npcname("#despair_main");

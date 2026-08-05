@@ -37,7 +37,7 @@ menu	"마지막 이동 ^777777["+lastwarp$+"]^000000",-,
 	if (lastwarp$ == "")
 		message strcharinfo(0),"당신은 아직 아무 데도 순간이동하지 않았어요.";
 	else
-		warp lastwarp$,lastwarpx,lastwarpy;
+		Go(lastwarp$,lastwarpx,lastwarpy);
 	end;
 
 Favorites:
@@ -69,10 +69,18 @@ Favorites:
 // --------------------------------------------------
 
 function Go {
-	set lastwarp$, getarg(0);
+	.@map$ = getarg(0);
+
+	// 뒤틀린 시간의 시계탑 2·3층은 Base Lv. 150 이상만 입장할 수 있습니다.
+	if ((.@map$ == "c_tower2_" || .@map$ == "c_tower3_") && BaseLevel < 150) {
+		message strcharinfo(0),"뒤틀린 시간의 시계탑은 Base Lv. 150 이상부터 입장할 수 있습니다.";
+		end;
+	}
+
+	set lastwarp$, .@map$;
 	set lastwarpx, getarg(1,0);
 	set lastwarpy, getarg(2,0);
-	warp getarg(0),getarg(1,0),getarg(2,0);
+	warp .@map$,getarg(1,0),getarg(2,0);
 	end;
 }
 function Disp {
@@ -160,7 +168,7 @@ function FavoriteMenu {
 				return;
 			}
 
-			warp #WARP_FAV_MAP$[.@slot], #WARP_FAV_X[.@slot], #WARP_FAV_Y[.@slot];
+			Go(#WARP_FAV_MAP$[.@slot], #WARP_FAV_X[.@slot], #WARP_FAV_Y[.@slot]);
 		}
 
 		if (.@select == .@register_index) {
@@ -601,8 +609,8 @@ D11: Restrict("RE",9,10,11);
 	 setarray @c[2],199,159,148,283,65,147,56,155,297,25,127,169,277,178,268,74,266,27,60,142,79,39;
 	 //Disp("시계탑 1층:시계탑 2층:시계탑 3층:시계탑 4층:시계탑 지하 1층:시계탑 지하 2층:시계탑 지하 3층:시계탑 지하 4층:뒤틀린 시간의 시계탑 2층:뒤틀린 시간의 시계탑 3층:시계탑 미지의 지하층");
 	 //Pick("","c_tower1","c_tower2","c_tower3","c_tower4","alde_dun01","alde_dun02","alde_dun03","alde_dun04","c_tower2_","c_tower3_","clock_01");
-	 Disp("시계탑 1층:시계탑 2층:시계탑 3층:시계탑 4층:시계탑 지하 1층:시계탑 지하 2층:시계탑 지하 3층:시계탑 지하 4층");
-	 Pick("","c_tower1","c_tower2","c_tower3","c_tower4","alde_dun01","alde_dun02","alde_dun03","alde_dun04");
+	 Disp("시계탑 1층:시계탑 2층:시계탑 3층:시계탑 4층:시계탑 지하 1층:시계탑 지하 2층:시계탑 지하 3층:시계탑 지하 4층:뒤틀린 시간의 시계탑 2층(150↑):뒤틀린 시간의 시계탑 3층(150↑)");
+	 Pick("","c_tower1","c_tower2","c_tower3","c_tower4","alde_dun01","alde_dun02","alde_dun03","alde_dun04","c_tower2_","c_tower3_");
 D12: setarray @c[2],52,17,381,343,302,262;
 	 Disp("묘르닐 폐광",1,3); Pick("mjo_dun");
 D13: setarray @c[2],131,247,19,19,180,169,100,92;
