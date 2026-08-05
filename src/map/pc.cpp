@@ -5592,10 +5592,35 @@ bool pc_skill_plagiarism_reset(map_session_data &sd, uint8 type)
 
 	if (sd.status.skill[idx].flag == SKILL_FLAG_PLAGIARIZED) {
 		uint16 skill_id = sd.status.skill[idx].id;
-		sd.status.skill[idx].id = 0;
-		sd.status.skill[idx].lv = 0;
-		sd.status.skill[idx].flag = SKILL_FLAG_PERMANENT;
-		clif_deleteskill(sd, skill_id);
+		// SC_PRESERVE dup-skill fix: plagiarism (cloneskill_idx) and reproduce (reproduceskill_idx) are two
+		// independent copy slots, but they share one status.skill[] entry when they hold the same skill id.
+		// Only truly remove the skill (clif_deleteskill) when the OTHER slot does not also own it; otherwise
+		// keep the window entry and restore its level from the surviving slot's stored level var. Either way,
+		// only this slot's index and vars are cleared below.
+		uint16 other_idx = (type == 1) ? sd.reproduceskill_idx : sd.cloneskill_idx;
+		uint16 other_id = static_cast<uint16>(pc_readglobalreg(&sd, add_str((type == 1) ? SKILL_VAR_REPRODUCE : SKILL_VAR_PLAGIARISM)));
+		uint16 other_lv = static_cast<uint16>(pc_readglobalreg(&sd, add_str((type == 1) ? SKILL_VAR_REPRODUCE_LV : SKILL_VAR_PLAGIARISM_LV)));
+		// keep_shared gate: cap = the currently learned level of THIS slot's copy skill (SC_REPRODUCE if reproduce
+		// survives, RG_PLAGIARISM if plagiarism survives). cap > 0 is required to keep the skill at all - if the
+		// character no longer knows the copy skill, login-restore would not bring it back, so the reset path must
+		// delete it too instead of keeping a stale stored level.
+		uint16 cap = (type == 1) ? pc_checkskill(&sd, SC_REPRODUCE) : pc_checkskill(&sd, RG_PLAGIARISM);
+		if (skill_id != 0 && other_lv > 0 && cap > 0 && other_idx == idx && other_id == skill_id) {
+			// Clamp the restored level exactly like the login-restore path: learned copy-skill level, then max.
+			if (other_lv > cap)
+				other_lv = cap;
+			if (uint16 skmax = skill_get_max(skill_id); other_lv > skmax)
+				other_lv = skmax;
+			sd.status.skill[idx].lv = static_cast<uint8>(other_lv);
+			sd.status.skill[idx].flag = SKILL_FLAG_PLAGIARIZED;
+			clif_addskill(sd, skill_id);
+		}
+		else {
+			sd.status.skill[idx].id = 0;
+			sd.status.skill[idx].lv = 0;
+			sd.status.skill[idx].flag = SKILL_FLAG_PERMANENT;
+			clif_deleteskill(sd, skill_id);
+		}
 		
 		if (type == 1) {
 			sd.cloneskill_idx = 0;

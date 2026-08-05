@@ -2623,11 +2623,11 @@ static void skill_do_copy(block_list* src,block_list *bl, uint16 skill_id, uint1
 
 		switch ( skill_isCopyable(tsd, skill_id) ) {
 			case 1: //Copied by Plagiarism
-				//Delete reproduced skill when the plagiarized skill id is the same
-				if ( tsd->reproduceskill_idx && tsd->status.skill[tsd->reproduceskill_idx].flag == SKILL_FLAG_PLAGIARIZED && tsd->status.skill[tsd->reproduceskill_idx].id == skill_id ) {
-					pc_skill_plagiarism_reset(*tsd, 2);
-				}
-
+				// SC_PRESERVE dup-skill fix: do NOT reset the reproduce slot here even when it holds the same skill id.
+				// Plagiarism and Reproduce are independent copy slots that share one status.skill[] entry for the same
+				// skill; deleting the reproduce entry here made the reproduced skill vanish from the window and zeroed
+				// its vars. pc_skill_plagiarism_reset() now keeps a shared skill alive while the other slot still owns
+				// it, so only this (plagiarism) slot is reset below.
 				pc_skill_plagiarism_reset(*tsd, 1);
 
 				//Cap level to RG_PLAGIARISM level
@@ -2639,11 +2639,9 @@ static void skill_do_copy(block_list* src,block_list *bl, uint16 skill_id, uint1
 				break;
 
 			case 2: //Copied by Reproduce
-				//Delete plagiarized skill when the reproduced skill id is the same
-				if ( tsd->cloneskill_idx > 0 && tsd->status.skill[tsd->cloneskill_idx].flag == SKILL_FLAG_PLAGIARIZED && tsd->status.skill[tsd->cloneskill_idx].id == skill_id ) {
-					pc_skill_plagiarism_reset(*tsd, 1);
-				}
-
+				// SC_PRESERVE dup-skill fix: do NOT reset the plagiarism slot here even when it holds the same skill id.
+				// See the case-1 note; the shared status.skill[] entry is now preserved by pc_skill_plagiarism_reset()
+				// while the other slot still owns the skill, so only this (reproduce) slot is reset below.
 				pc_skill_plagiarism_reset(*tsd, 2);
 
 				//Copied skill level depends on the Reproduce level used
@@ -2669,6 +2667,23 @@ static void skill_do_copy(block_list* src,block_list *bl, uint16 skill_id, uint1
 		}
 		tsd->status.skill[idx].id = skill_id;
 		tsd->status.skill[idx].lv = lv;
+		// SC_PRESERVE dup-skill fix: when plagiarism and reproduce end up holding the same skill, the shown level
+		// must match the login-restore result, where the reproduce level is written last and therefore wins.
+		// Require BOTH slots to genuinely hold this skill: the indices AND the stored skill-id vars must equal the
+		// copied skill, the stored reproduce level must be > 0, and the character must actually know SC_REPRODUCE
+		// (rep_cap > 0). Otherwise a stale/mismatched stored value must not overwrite the level, and login-restore
+		// (which skips reproduce when SC_REPRODUCE is unlearned) would not pick the reproduce level either.
+		uint16 sv_plagiarism = static_cast<uint16>(pc_readglobalreg(tsd, add_str(SKILL_VAR_PLAGIARISM)));
+		uint16 sv_reproduce = static_cast<uint16>(pc_readglobalreg(tsd, add_str(SKILL_VAR_REPRODUCE)));
+		uint16 rep_lv = static_cast<uint16>(pc_readglobalreg(tsd, add_str(SKILL_VAR_REPRODUCE_LV)));
+		uint16 rep_cap = pc_checkskill(tsd, SC_REPRODUCE);
+		if (tsd->cloneskill_idx == idx && tsd->reproduceskill_idx == idx && sv_plagiarism == skill_id && sv_reproduce == skill_id && rep_lv > 0 && rep_cap > 0) {
+			if (rep_lv > rep_cap)
+				rep_lv = rep_cap;
+			if (uint16 skmax = skill_get_max(skill_id); rep_lv > skmax)
+				rep_lv = skmax;
+			tsd->status.skill[idx].lv = static_cast<uint8>(rep_lv);
+		}
 		tsd->status.skill[idx].flag = SKILL_FLAG_PLAGIARIZED;
 		clif_addskill(*tsd,skill_id);
 	}
@@ -11500,6 +11515,42 @@ int32 skill_banding_count(map_session_data *sd)
  	return cap_value(party_foreachsamemap(party_sub_count, sd, skill_get_splash(LG_BANDING, 1)), 0, MAX_PARTY);
 }
 
+/**
+ * Sub-function for skill_vacuum_extreme_clear_status: ends SC_VACUUM_EXTREME on a target only when the status
+ * was applied by the given vacuum group (SC_VACUUM_EXTREME->val2 == group_id, set by sc_start4 in
+ * skill_unit_onplace_timer).
+ * @param bl: Target block list
+ * @param ap: group_id of the removed Vacuum Extreme group
+ */
+static int32 skill_vacuum_extreme_clear_status_sub(block_list *bl, va_list ap)
+{
+	int32 group_id = va_arg(ap, int32);
+	status_change *sc = status_get_sc(bl);
+
+	if (sc != nullptr) {
+		status_change_entry *sce = sc->getSCE(SC_VACUUM_EXTREME);
+
+		if (sce != nullptr && sce->val2 == group_id)
+			status_change_end(bl, SC_VACUUM_EXTREME);
+	}
+
+	return 0;
+}
+
+/**
+ * NEED: free the targets bound by a specific Vacuum Extreme group when a ground-magic remover (Land
+ * Protector, Ganbantein, Earth Drive, Crazy Weed) actually removes that group's skill unit. Called only at a
+ * real removal of a SO_VACUUM_EXTREME unit, so natural expiry / caster logout / generic unit cleanup are
+ * unaffected. Scans the whole map (not just the removed unit's range) so a target slid out of the original
+ * area is still matched by group_id. Ends only SC_VACUUM_EXTREME whose val2 equals group_id.
+ * @param m: Map index of the removed unit
+ * @param group_id: group_id of the removed Vacuum Extreme group
+ */
+static void skill_vacuum_extreme_clear_status(int16 m, int32 group_id)
+{
+	map_foreachinmap(skill_vacuum_extreme_clear_status_sub, m, BL_CHAR, group_id);
+}
+
 /*==========================================
  * Check new skill unit cell when overlapping in other skill unit cell.
  * Catched skill in cell value pushed to *unit pointer.
@@ -11533,6 +11584,11 @@ int32 skill_cell_overlap(block_list *bl, va_list ap)
 
 				//It deletes everything except traps and barriers
 				if ((!skill->inf2[INF2_ISTRAP] && !skill->inf2[INF2_IGNORELANDPROTECTOR]) || unit->group->skill_id == WZ_FIREPILLAR) {
+					// Land Protector actually removes this unit: free the targets bound by THIS vacuum group. The status
+					// is duration-based and the skill_unit_onplace cell-check does not reliably clear it for an already-
+					// bound, movement-locked target, so it is ended here at the real removal event (see helper).
+					if (unit->group->skill_id == SO_VACUUM_EXTREME)
+						skill_vacuum_extreme_clear_status(unit->m, unit->group->group_id);
 					if (skill->unit_flag[UF_RANGEDSINGLEUNIT]) {
 						if (unit->val2&(1 << UF_RANGEDSINGLEUNIT))
 							skill_delunitgroup(unit->group);
@@ -11549,6 +11605,12 @@ int32 skill_cell_overlap(block_list *bl, va_list ap)
 		case HW_GANBANTEIN:
 		case LG_EARTHDRIVE:
 			// Officially songs/dances are removed
+			// NEED: Ganbantein / Earth Drive / Crazy Weed actually remove this unit here (Crazy Weed only when the
+			// unit is not CrazyWeedImmune - checked in the case above). If it is a Vacuum Extreme unit, free the
+			// targets bound by THIS vacuum group before deleting, same policy as Land Protector. Gated to
+			// SO_VACUUM_EXTREME so other removed ground skills and other deletion causes are untouched.
+			if (unit->group->skill_id == SO_VACUUM_EXTREME)
+				skill_vacuum_extreme_clear_status(unit->m, unit->group->group_id);
 			if (skill_get_unit_flag(unit->group->skill_id, UF_RANGEDSINGLEUNIT)) {
 				if (unit->val2&(1 << UF_RANGEDSINGLEUNIT))
 					skill_delunitgroup(unit->group);
