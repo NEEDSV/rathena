@@ -82,6 +82,7 @@ static constexpr t_itemid need_package_grace_ticket = 399904;
 
 int32 pc_split_atoui(char* str, uint32* val, char sep, int32 max);
 static inline bool pc_attendance_rewarded_today( map_session_data* sd );
+static inline bool pc_attendance_has_remaining_rewards( map_session_data* sd );
 static void pc_macro_detect_log(map_session_data &sd, const char *event, int32 retry_left, const char *punishment = "", int32 punishment_time = 0);
 static TIMER_FUNC(pc_macro_detector_display_timer);
 static TIMER_FUNC(pc_macro_detector_pending_timer);
@@ -15432,7 +15433,7 @@ void pc_scdata_received(map_session_data *sd) {
 
 	clif_weight_limit( sd );
 
-	if( pc_has_permission( sd, PC_PERM_ATTENDANCE ) && pc_attendance_enabled() && !pc_attendance_rewarded_today( sd ) && pc_attendance_counter(sd) < 200 ){
+	if( pc_has_permission( sd, PC_PERM_ATTENDANCE ) && pc_attendance_enabled() && !pc_attendance_rewarded_today( sd ) && pc_attendance_has_remaining_rewards( sd ) ){
 		clif_ui_open( *sd, OUT_UI_ATTENDANCE, pc_attendance_counter( sd ) );
 	}
 
@@ -16248,6 +16249,20 @@ int32 pc_attendance_counter( map_session_data* sd ){
 	return 10 * counter + ( ( pc_attendance_rewarded_today(sd) ) ? 1 : 0 );
 }
 
+static inline bool pc_attendance_has_remaining_rewards( map_session_data* sd ){
+	std::shared_ptr<s_attendance_period> period = pc_attendance_period();
+
+	if( period == nullptr ){
+		return false;
+	}
+
+	// The UI-open value encodes the claimed day count in its decimal tens.
+	// Use the loaded period length instead of the legacy hardcoded 20-day cap.
+	int32 claimed_days = pc_attendance_counter( sd ) / 10;
+
+	return claimed_days >= 0 && static_cast<size_t>( claimed_days ) < period->rewards.size();
+}
+
 void pc_attendance_claim_reward( map_session_data* sd ){
 	// If the user's group does not have the permission
 	if( !pc_has_permission( sd, PC_PERM_ATTENDANCE ) ){
@@ -16284,6 +16299,18 @@ void pc_attendance_claim_reward( map_session_data* sd ){
 	if( save_settings&CHARSAVE_ATTENDANCE )
 		chrif_save(sd, CSAVE_NORMAL);
 
+#ifdef NEED_ATTENDANCE_UI_POC
+	// UI compatibility PoC only: these account variables are temporary display
+	// state, not an authorization or anti-abuse boundary. Never deliver rewards
+	// from this branch; the production event will use an SQL-backed provider.
+	char output[CHAT_SIZE_MAX];
+	char log_output[CHAT_SIZE_MAX];
+
+	safesnprintf( output, sizeof(output), msg_txt( sd, 1904 ), attendance_counter );
+	clif_displaymessage( sd->fd, output );
+	safesnprintf( log_output, sizeof(log_output), msg_txt( sd, 1905 ), sd->status.account_id, sd->status.char_id, attendance_counter );
+	ShowInfo( "%s\n", log_output );
+#else
 	std::shared_ptr<s_attendance_reward> reward = period->rewards[attendance_counter - 1];
 
 	struct mail_message msg;
@@ -16304,6 +16331,7 @@ void pc_attendance_claim_reward( map_session_data* sd ){
 	msg.timestamp = time(nullptr);
 
 	intif_Mail_send(0, &msg);
+#endif
 
 	clif_attendence_response( sd, attendance_counter );
 }

@@ -5365,7 +5365,11 @@ bool MapServer::initialize( int32 argc, char *argv[] ){
 	safestrncpy(console_log_filepath, "./log/map-msg_log.log", sizeof(console_log_filepath));
 
 	/* Multilanguage */
+#ifdef NEED_ATTENDANCE_UI_POC
+	MSG_CONF_NAME_EN = "conf/msg_conf/map_msg_attendance_poc.conf"; // Temporary attendance UI PoC overlay
+#else
 	MSG_CONF_NAME_EN = "conf/msg_conf/map_msg.conf"; // English (default)
+#endif
 	MSG_CONF_NAME_RUS = "conf/msg_conf/map_msg_rus.conf";	// Russian
 	MSG_CONF_NAME_SPN = "conf/msg_conf/map_msg_spn.conf";	// Spanish
 	MSG_CONF_NAME_GRM = "conf/msg_conf/map_msg_grm.conf";	// German
