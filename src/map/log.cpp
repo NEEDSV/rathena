@@ -22,6 +22,10 @@
 
 static char log_timestamp_format[20];
 
+// NEED 2026 summer event item range, including reserved IDs for later use.
+constexpr t_itemid NEED_SUMMER_ITEM_ID_MIN = 399925;
+constexpr t_itemid NEED_SUMMER_ITEM_ID_MAX = 399935;
+
 /// filters for item logging
 typedef enum e_log_filter
 {
@@ -144,6 +148,9 @@ static char log_feedingtype2char(e_log_feeding_type type) {
 /// check if this item should be logged according the settings
 static bool should_log_item(t_itemid nameid, int32 amount, int32 refine)
 {
+	if (nameid >= NEED_SUMMER_ITEM_ID_MIN && nameid <= NEED_SUMMER_ITEM_ID_MAX)
+		return true;
+
 	int32 filter = log_config.filter;
 	std::shared_ptr<item_data> id = item_db.find(nameid);
 
