@@ -830,6 +830,9 @@ struct Battle_Config
 	int32 need_world_drop_event_target_item_id;
 	int32 need_world_drop_event_debug_message;
 	int32 need_world_drop_event_debug_gm_level;
+	int32 need_summer_hunt_enable;
+	int32 need_summer_hunt_fragment_enable;
+	int32 need_summer_hunt_golden_enable;
 	int32 feature_dynamicnpc_timeout;
 	int32 feature_dynamicnpc_rangex;
 	int32 feature_dynamicnpc_rangey;

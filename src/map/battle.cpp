@@ -9002,6 +9002,9 @@ static const struct _battle_data {
 	{ "need_world_drop_event_target_item_id", &battle_config.need_world_drop_event_target_item_id, 399990, 0, INT_MAX,       },
 	{ "need_world_drop_event_debug_message", &battle_config.need_world_drop_event_debug_message, 0, 0,      1,              },
 	{ "need_world_drop_event_debug_gm_level", &battle_config.need_world_drop_event_debug_gm_level, 60, 0,   INT_MAX,        },
+	{ "need_summer_hunt_enable",             &battle_config.need_summer_hunt_enable,          0,      0,      1,              },
+	{ "need_summer_hunt_fragment_enable",    &battle_config.need_summer_hunt_fragment_enable, 0,      0,      1,              },
+	{ "need_summer_hunt_golden_enable",      &battle_config.need_summer_hunt_golden_enable,   0,      0,      1,              },
 
 	{ "feature.dynamicnpc_timeout",         &battle_config.feature_dynamicnpc_timeout,      1000,   60000,  INT_MAX,        },
 	{ "feature.dynamicnpc_rangex",          &battle_config.feature_dynamicnpc_rangex,       2,      0,      INT_MAX,        },

@@ -38,6 +38,7 @@
 #include "map.hpp"
 #include "mapreg.hpp"
 #include "mercenary.hpp"
+#include "need_summer_hunt.hpp"
 #include "npc.hpp"
 #include "party.hpp"
 #include "path.hpp"
@@ -3296,7 +3297,13 @@ int32 mob_dead(mob_data *md, block_list *src, int32 type)
 		}
 	}
 
+	map_session_data* need_summer_highest_damage_sd = nullptr;
 	if (!lootdmg.empty()) {
+		// Summer rewards use actual aggregated damage, before the first-attacker loot bonus.
+		need_summer_highest_damage_sd = std::max_element(lootdmg.begin(), lootdmg.end(), [](const s_dmg_entry& a, const s_dmg_entry& b) {
+			return a.damage < b.damage;
+		})->sd;
+
 		// Officially, the first player in the damage log gets 30% of total damage as bonus for loot priority
 		lootdmg[0].damage += (total_damage * battle_config.first_attack_loot_bonus) / 100;
 
@@ -3922,6 +3929,8 @@ int32 mob_dead(mob_data *md, block_list *src, int32 type)
 			need_world_drop_on_kill(need_owner, md, type);
 			pc_need_macro_hunt_on_mob_kill(*need_owner.selected, *md);
 		}
+		if (need_summer_highest_damage_sd != nullptr && src != nullptr && !md->state.npc_killmonster)
+			need_summer_hunt_on_kill(need_summer_highest_damage_sd, md, type);
 
 		if( md->npc_event[0] && !md->state.npc_killmonster ) {
 			if( sd && battle_config.mob_npc_event_type ) {
