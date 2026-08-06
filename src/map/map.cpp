@@ -47,6 +47,7 @@
 #include "mob.hpp"
 #include "navi.hpp"
 #include "need_autopot.hpp"
+#include "need_summer_attendance.hpp"
 #ifndef MAP_GENERATOR
 #include "needwiki.hpp"
 #endif
@@ -2230,6 +2231,7 @@ void map_deliddb(block_list *bl)
 int32 map_quit(map_session_data *sd) {
 	int32 i;
 
+	need_summer_attendance_session_end(sd);
 	need_autopot_logout(sd);
 	pc_bg_strip_clear_saved_equipment(sd);
 	costume_collection_db_clear(sd);
@@ -5067,6 +5069,7 @@ void MapServer::finalize(){
 	chrif_flush_fifo();
 
 	do_final_atcommand();
+	need_summer_attendance_final();
 	need_autopot_final();
 	do_final_battle();
 	do_final_chrif();
@@ -5365,11 +5368,7 @@ bool MapServer::initialize( int32 argc, char *argv[] ){
 	safestrncpy(console_log_filepath, "./log/map-msg_log.log", sizeof(console_log_filepath));
 
 	/* Multilanguage */
-#ifdef NEED_ATTENDANCE_UI_POC
-	MSG_CONF_NAME_EN = "conf/msg_conf/map_msg_attendance_poc.conf"; // Temporary attendance UI PoC overlay
-#else
-	MSG_CONF_NAME_EN = "conf/msg_conf/map_msg.conf"; // English (default)
-#endif
+	MSG_CONF_NAME_EN = "conf/msg_conf/map_msg_need_summer.conf"; // English plus NEED summer messages
 	MSG_CONF_NAME_RUS = "conf/msg_conf/map_msg_rus.conf";	// Russian
 	MSG_CONF_NAME_SPN = "conf/msg_conf/map_msg_spn.conf";	// Spanish
 	MSG_CONF_NAME_GRM = "conf/msg_conf/map_msg_grm.conf";	// German
@@ -5468,6 +5467,7 @@ bool MapServer::initialize( int32 argc, char *argv[] ){
 	do_init_skill();
 	do_init_mob();
 	do_init_pc();
+	need_summer_attendance_init();
 	need_autopot_init();
 	do_init_status();
 	do_init_party();

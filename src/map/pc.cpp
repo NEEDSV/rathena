@@ -54,6 +54,7 @@
 #include "mercenary.hpp"
 #include "mob.hpp"
 #include "need_autopot.hpp"
+#include "need_summer_attendance.hpp"
 #include "npc.hpp"
 #include "party.hpp" // party_search()
 #include "pc_groups.hpp"
@@ -82,7 +83,6 @@ static constexpr t_itemid need_package_grace_ticket = 399904;
 
 int32 pc_split_atoui(char* str, uint32* val, char sep, int32 max);
 static inline bool pc_attendance_rewarded_today( map_session_data* sd );
-static inline bool pc_attendance_has_remaining_rewards( map_session_data* sd );
 static void pc_macro_detect_log(map_session_data &sd, const char *event, int32 retry_left, const char *punishment = "", int32 punishment_time = 0);
 static TIMER_FUNC(pc_macro_detector_display_timer);
 static TIMER_FUNC(pc_macro_detector_pending_timer);
@@ -15433,11 +15433,15 @@ void pc_scdata_received(map_session_data *sd) {
 
 	clif_weight_limit( sd );
 
-	if( pc_has_permission( sd, PC_PERM_ATTENDANCE ) && pc_attendance_enabled() && !pc_attendance_rewarded_today( sd ) && pc_attendance_has_remaining_rewards( sd ) ){
+	bool attendance_auto_open = battle_config.feature_need_summer_attendance
+		? need_summer_attendance_should_auto_open( sd )
+		: !pc_attendance_rewarded_today( sd ) && pc_attendance_counter( sd ) < 200;
+	if( pc_has_permission( sd, PC_PERM_ATTENDANCE ) && pc_attendance_enabled() && attendance_auto_open ){
 		clif_ui_open( *sd, OUT_UI_ATTENDANCE, pc_attendance_counter( sd ) );
 	}
 
 	sd->state.pc_loaded = true;
+	need_summer_attendance_session_start( sd );
 
 	if (sd->state.connect_new == 0 && sd->fd) { // Character already loaded map! Gotta trigger LoadEndAck manually.
 		sd->state.connect_new = 1;
@@ -16214,12 +16218,14 @@ std::shared_ptr<s_attendance_period> pc_attendance_period(){
 }
 
 bool pc_attendance_enabled(){
-	// Check if the attendance feature is disabled
 	if( !battle_config.feature_attendance ){
 		return false;
 	}
 
-	// Check if there is a running attendance period
+	if( battle_config.feature_need_summer_attendance ){
+		return need_summer_attendance_enabled();
+	}
+
 	return pc_attendance_period() != nullptr;
 }
 
@@ -16228,68 +16234,46 @@ static inline bool pc_attendance_rewarded_today( map_session_data* sd ){
 }
 
 int32 pc_attendance_counter( map_session_data* sd ){
+	if( battle_config.feature_need_summer_attendance ){
+		return need_summer_attendance_ui_progress( sd );
+	}
+
 	std::shared_ptr<s_attendance_period> period = pc_attendance_period();
 
-	// No running attendance period
 	if( period == nullptr ){
 		return 0;
 	}
 
-	// Get the counter for the current period
 	int32 counter = static_cast<int32>(pc_readreg2( sd, ATTENDANCE_COUNT_VAR ));
 
-	// Check if we have a remaining counter from a previous period
 	if( counter > 0 && pc_readreg2( sd, ATTENDANCE_DATE_VAR ) < period->start ){
-		// Reset the counter to zero
 		pc_setreg2( sd, ATTENDANCE_COUNT_VAR, 0 );
-
 		return 0;
 	}
 
-	return 10 * counter + ( ( pc_attendance_rewarded_today(sd) ) ? 1 : 0 );
-}
-
-static inline bool pc_attendance_has_remaining_rewards( map_session_data* sd ){
-	std::shared_ptr<s_attendance_period> period = pc_attendance_period();
-
-	if( period == nullptr ){
-		return false;
-	}
-
-	// The UI-open value encodes the claimed day count in its decimal tens.
-	// Use the loaded period length instead of the legacy hardcoded 20-day cap.
-	int32 claimed_days = pc_attendance_counter( sd ) / 10;
-
-	return claimed_days >= 0 && static_cast<size_t>( claimed_days ) < period->rewards.size();
+	return 10 * counter + ( pc_attendance_rewarded_today( sd ) ? 1 : 0 );
 }
 
 void pc_attendance_claim_reward( map_session_data* sd ){
-	// If the user's group does not have the permission
 	if( !pc_has_permission( sd, PC_PERM_ATTENDANCE ) ){
 		return;
 	}
 
-	// Check if the attendance feature is disabled
-	if( !pc_attendance_enabled() ){
+	if( battle_config.feature_need_summer_attendance ){
+		if( need_summer_attendance_enabled() ){
+			need_summer_attendance_claim( sd );
+		}
 		return;
 	}
 
-	// Check if the user already got his reward today
-	if( pc_attendance_rewarded_today( sd ) ){
+	if( !pc_attendance_enabled() || pc_attendance_rewarded_today( sd ) ){
 		return;
 	}
 
-	int32 attendance_counter = static_cast<int32>(pc_readreg2( sd, ATTENDANCE_COUNT_VAR ));
-
-	attendance_counter += 1;
-
+	int32 attendance_counter = static_cast<int32>(pc_readreg2( sd, ATTENDANCE_COUNT_VAR )) + 1;
 	std::shared_ptr<s_attendance_period> period = pc_attendance_period();
 
-	if( period == nullptr ){
-		return;
-	}
-
-	if( period->rewards.size() < attendance_counter ){
+	if( period == nullptr || period->rewards.size() < attendance_counter ){
 		return;
 	}
 
@@ -16299,40 +16283,21 @@ void pc_attendance_claim_reward( map_session_data* sd ){
 	if( save_settings&CHARSAVE_ATTENDANCE )
 		chrif_save(sd, CSAVE_NORMAL);
 
-#ifdef NEED_ATTENDANCE_UI_POC
-	// UI compatibility PoC only: these account variables are temporary display
-	// state, not an authorization or anti-abuse boundary. Never deliver rewards
-	// from this branch; the production event will use an SQL-backed provider.
-	char output[CHAT_SIZE_MAX];
-	char log_output[CHAT_SIZE_MAX];
-
-	safesnprintf( output, sizeof(output), msg_txt( sd, 1904 ), attendance_counter );
-	clif_displaymessage( sd->fd, output );
-	safesnprintf( log_output, sizeof(log_output), msg_txt( sd, 1905 ), sd->status.account_id, sd->status.char_id, attendance_counter );
-	ShowInfo( "%s\n", log_output );
-#else
 	std::shared_ptr<s_attendance_reward> reward = period->rewards[attendance_counter - 1];
-
-	struct mail_message msg;
-
-	memset( &msg, 0, sizeof( struct mail_message ) );
+	struct mail_message msg = {};
 
 	msg.dest_id = sd->status.char_id;
 	safestrncpy( msg.send_name, msg_txt( sd, 788 ), NAME_LENGTH );
 	safesnprintf( msg.title, MAIL_TITLE_LENGTH, msg_txt( sd, 789 ), attendance_counter );
 	safesnprintf( msg.body, MAIL_BODY_LENGTH, msg_txt( sd, 790 ), attendance_counter );
-
 	msg.item[0].nameid = reward->item_id;
 	msg.item[0].amount = reward->amount;
 	msg.item[0].identify = 1;
-
 	msg.status = MAIL_NEW;
 	msg.type = MAIL_INBOX_NORMAL;
 	msg.timestamp = time(nullptr);
 
 	intif_Mail_send(0, &msg);
-#endif
-
 	clif_attendence_response( sd, attendance_counter );
 }
 

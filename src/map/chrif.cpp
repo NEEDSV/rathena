@@ -26,6 +26,7 @@
 #include "log.hpp"
 #include "map.hpp"
 #include "mercenary.hpp"
+#include "need_summer_attendance.hpp"
 #include "npc.hpp"
 #include "pc.hpp"
 #include "pc_groups.hpp"
@@ -432,6 +433,7 @@ int32 chrif_changemapserver(map_session_data* sd, uint32 ip, uint16 port) {
 	}
 
 	chrif_check(-1);
+	need_summer_attendance_session_end(sd);
 
 	WFIFOHEAD( char_fd, 37 + MAP_NAME_LENGTH_EXT );
 	WFIFOW(char_fd, 0) = 0x2b05;

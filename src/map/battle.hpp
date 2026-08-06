@@ -700,6 +700,11 @@ struct Battle_Config
 	int32 summoner_size;
 	int32 homunculus_autofeed_always;
 	int32 feature_attendance;
+	int32 feature_need_summer_attendance;
+	int32 need_summer_attendance_start_date;
+	int32 need_summer_attendance_end_date;
+	int32 need_summer_attendance_required_seconds;
+	int32 need_summer_attendance_max_claims;
 	int32 feature_privateairship;
 	int32 rental_transaction;
 	int32 min_shop_buy;

@@ -10,10 +10,6 @@
  **/
 #define PACKETVER 20250604
 
-// Temporary: compile the attendance UI compatibility PoC without reward delivery.
-// Remove this define before implementing or deploying the real attendance service.
-#define NEED_ATTENDANCE_UI_POC
-
 #ifndef NEED_NOLOOT_MAX
 #define NEED_NOLOOT_MAX 30
 #endif
