@@ -4,19 +4,24 @@
 #include "need_summer_attendance.hpp"
 
 #include <algorithm>
+#include <climits>
 #include <cstdlib>
+#include <cstring>
 #include <ctime>
 #include <string>
 #include <unordered_map>
 #include <utility>
 
 #include <common/showmsg.hpp>
+#include <common/mmo.hpp>
 #include <common/socket.hpp>
 #include <common/sql.hpp>
 #include <common/timer.hpp>
 
 #include "battle.hpp"
 #include "clif.hpp"
+#include "intif.hpp"
+#include "itemdb.hpp"
 #include "map.hpp"
 #include "pc.hpp"
 
@@ -25,6 +30,12 @@ namespace {
 constexpr uint32 NEED_SUMMER_EVENT_ID = 202608;
 constexpr int32 NEED_SUMMER_ATTENDANCE_TIMER_INTERVAL = 5000;
 constexpr uint32 NEED_SUMMER_ATTENDANCE_FLUSH_SECONDS = 30;
+constexpr uint32 NEED_SUMMER_TOKEN_ITEM_ID = 399925;
+constexpr uint32 NEED_SUMMER_TOKEN_AMOUNT = 10;
+constexpr uint32 NEED_SUMMER_BOX_ITEM_ID = 399928;
+constexpr uint32 NEED_SUMMER_BOX_AMOUNT = 1;
+constexpr uint32 NEED_SUMMER_OUTBOX_MAX_ATTEMPTS = 5;
+constexpr int32 NEED_SUMMER_OUTBOX_BATCH_SIZE = 20;
 
 constexpr int32 MSG_ATTENDANCE_READY = 1904;
 constexpr int32 MSG_ATTENDANCE_REMAINING = 1905;
@@ -37,6 +48,24 @@ constexpr int32 MSG_ATTENDANCE_INVALID_SESSION = 1911;
 constexpr int32 MSG_ATTENDANCE_CLAIM_LOG = 1912;
 constexpr int32 MSG_ATTENDANCE_INVALID_CONFIG = 1913;
 constexpr int32 MSG_ATTENDANCE_SCHEMA_UNAVAILABLE = 1914;
+constexpr int32 MSG_OUTBOX_SENDER = 1915;
+constexpr int32 MSG_OUTBOX_TITLE = 1916;
+constexpr int32 MSG_OUTBOX_BODY = 1917;
+constexpr int32 MSG_OUTBOX_DELIVERED = 1918;
+constexpr int32 MSG_OUTBOX_RETRY = 1919;
+constexpr int32 MSG_OUTBOX_REVIEW = 1920;
+constexpr int32 MSG_OUTBOX_MAIL_SCHEMA_UNAVAILABLE = 1921;
+constexpr int32 MSG_OUTBOX_ERROR_PARSE = 1922;
+constexpr int32 MSG_OUTBOX_ERROR_PAYLOAD = 1923;
+constexpr int32 MSG_OUTBOX_ERROR_PROCESSING = 1924;
+constexpr int32 MSG_OUTBOX_ERROR_DESTINATION_LOOKUP = 1925;
+constexpr int32 MSG_OUTBOX_ERROR_DESTINATION_MISSING = 1926;
+constexpr int32 MSG_OUTBOX_ERROR_DESTINATION_NAME = 1927;
+constexpr int32 MSG_OUTBOX_ERROR_MAIL_INSERT = 1928;
+constexpr int32 MSG_OUTBOX_ERROR_MAIL_ID = 1929;
+constexpr int32 MSG_OUTBOX_ERROR_ATTACHMENT = 1930;
+constexpr int32 MSG_OUTBOX_ERROR_COMMIT = 1931;
+constexpr int32 MSG_OUTBOX_ITEM_UNAVAILABLE = 1932;
 
 struct need_summer_logical_date {
 	char sql_date[11] = {};
@@ -69,15 +98,52 @@ enum class need_summer_claim_result : uint8 {
 	DATABASE_ERROR,
 };
 
+enum need_summer_outbox_status : uint8 {
+	NEED_SUMMER_OUTBOX_PENDING = 0,
+	NEED_SUMMER_OUTBOX_PROCESSING = 1,
+	NEED_SUMMER_OUTBOX_DELIVERED = 2,
+	NEED_SUMMER_OUTBOX_RETRY = 3,
+	NEED_SUMMER_OUTBOX_REVIEW = 4,
+};
+
+enum class need_summer_consume_result : uint8 {
+	IDLE,
+	PROCESSED,
+	FAILED,
+};
+
+struct need_summer_outbox_row {
+	uint64 outbox_id = 0;
+	uint64 claim_id = 0;
+	uint32 event_id = 0;
+	uint32 account_id = 0;
+	uint32 char_id = 0;
+	uint32 token_item_id = 0;
+	uint32 token_amount = 0;
+	uint32 box_item_id = 0;
+	uint32 box_amount = 0;
+	uint32 attempts = 0;
+	uint32 claim_event_id = 0;
+	uint32 claim_account_id = 0;
+	uint32 claim_char_id = 0;
+	uint32 claim_no = 0;
+};
+
 std::unordered_map<uint32, need_summer_attendance_session> attendance_sessions;
 int32 attendance_timer_id = INVALID_TIMER;
 bool attendance_schema_checked = false;
 bool attendance_schema_available = false;
+char attendance_char_table[64] = "char";
+char attendance_mail_table[64] = "mail";
+char attendance_mail_attachment_table[64] = "mail_attachments";
+
+void need_summer_outbox_consume_batch();
+bool need_summer_sql_uint32(uint32 column, uint32& value);
 
 void need_summer_attendance_sql_error() {
 	if (mmysql_handle != nullptr)
 		Sql_ShowDebug(mmysql_handle);
-	attendance_schema_checked = true;
+	attendance_schema_checked = false;
 	attendance_schema_available = false;
 }
 
@@ -91,6 +157,10 @@ bool need_summer_attendance_schema_ready() {
 	attendance_schema_available = false;
 	if (mmysql_handle == nullptr)
 		return false;
+	if (!item_db.exists(NEED_SUMMER_TOKEN_ITEM_ID) || !item_db.exists(NEED_SUMMER_BOX_ITEM_ID)) {
+		ShowError("%s\n", msg_txt(nullptr, MSG_OUTBOX_ITEM_UNAVAILABLE));
+		return false;
+	}
 
 	static const char* checks[] = {
 		"SELECT `event_id`,`account_id`,`claimed_count` FROM `need_summer_attendance_account` LIMIT 0",
@@ -100,16 +170,61 @@ bool need_summer_attendance_schema_ready() {
 		"SELECT `event_id`,`family_group_id`,`account_id`,`action` FROM `need_summer_attendance_family_audit` LIMIT 0",
 		"SELECT `event_id`,`logical_date`,`ip`,`family_group_id` FROM `need_summer_attendance_ip_daily` LIMIT 0",
 		"SELECT `claim_id`,`event_id`,`logical_date`,`account_id`,`claim_no`,`status` FROM `need_summer_attendance_claim` LIMIT 0",
-		"SELECT `outbox_id`,`claim_id`,`event_id`,`account_id`,`char_id`,`status` FROM `need_summer_attendance_reward_outbox` LIMIT 0",
+		"SELECT `outbox_id`,`claim_id`,`event_id`,`account_id`,`char_id`,`token_item_id`,`token_amount`,"
+		"`box_item_id`,`box_amount`,`status`,`attempts`,`next_attempt_at`,`last_attempt_at`,`last_error`,"
+		"`mail_id`,`delivered_at` FROM `need_summer_attendance_reward_outbox` LIMIT 0",
 	};
 
 	for (const char* query : checks) {
 		if (SQL_ERROR == Sql_QueryStr(mmysql_handle, query)) {
 			need_summer_attendance_sql_error();
+			attendance_schema_checked = true;
 			ShowError("%s\n", msg_txt(nullptr, MSG_ATTENDANCE_SCHEMA_UNAVAILABLE));
 			return false;
 		}
 		Sql_FreeResult(mmysql_handle);
+	}
+
+	char table_check[512] = {};
+	const char* table_checks[] = {
+		"SELECT `char_id`,`account_id`,`name` FROM `%s` LIMIT 0",
+		"SELECT `id`,`send_name`,`send_id`,`dest_name`,`dest_id`,`title`,`message`,`time`,`status`,`zeny`,`type` FROM `%s` LIMIT 0",
+		"SELECT `id`,`index`,`nameid`,`amount`,`identify` FROM `%s` LIMIT 0",
+	};
+	const char* table_names[] = {
+		attendance_char_table,
+		attendance_mail_table,
+		attendance_mail_attachment_table,
+	};
+	for (size_t i = 0; i < ARRAYLENGTH(table_checks); ++i) {
+		safesnprintf(table_check, sizeof(table_check), table_checks[i], table_names[i]);
+		if (SQL_ERROR == Sql_QueryStr(mmysql_handle, table_check)) {
+			need_summer_attendance_sql_error();
+			attendance_schema_checked = true;
+			ShowError("%s\n", msg_txt(nullptr, MSG_OUTBOX_MAIL_SCHEMA_UNAVAILABLE));
+			return false;
+		}
+		Sql_FreeResult(mmysql_handle);
+	}
+
+	if (SQL_ERROR == Sql_Query(mmysql_handle,
+		"SELECT COUNT(*) FROM `information_schema`.`TABLES` WHERE `TABLE_SCHEMA`=DATABASE() "
+		"AND `TABLE_NAME` IN ('need_summer_attendance_reward_outbox','need_summer_attendance_claim','%s','%s') "
+		"AND `ENGINE`='InnoDB'",
+		attendance_mail_table, attendance_mail_attachment_table) || SQL_SUCCESS != Sql_NextRow(mmysql_handle)) {
+		need_summer_attendance_sql_error();
+		attendance_schema_checked = true;
+		Sql_FreeResult(mmysql_handle);
+		ShowError("%s\n", msg_txt(nullptr, MSG_OUTBOX_MAIL_SCHEMA_UNAVAILABLE));
+		return false;
+	}
+
+	uint32 innodb_tables = 0;
+	bool mail_schema_ready = need_summer_sql_uint32(0, innodb_tables) && innodb_tables == 4;
+	Sql_FreeResult(mmysql_handle);
+	if (!mail_schema_ready) {
+		ShowError("%s\n", msg_txt(nullptr, MSG_OUTBOX_MAIL_SCHEMA_UNAVAILABLE));
+		return false;
 	}
 
 	attendance_schema_available = true;
@@ -399,7 +514,12 @@ int32 need_summer_attendance_timer_sub(map_session_data* sd, va_list) {
 }
 
 TIMER_FUNC(need_summer_attendance_timer) {
+	if (!battle_config.feature_attendance || !battle_config.feature_need_summer_attendance ||
+		!need_summer_attendance_schema_ready())
+		return 0;
+
 	map_foreachpc(need_summer_attendance_timer_sub);
+	need_summer_outbox_consume_batch();
 	return 0;
 }
 
@@ -576,7 +696,267 @@ need_summer_claim_result need_summer_attendance_reserve(map_session_data* sd, ui
 	return need_summer_claim_result::SUCCESS;
 }
 
+bool need_summer_sql_uint64(uint32 column, uint64& value) {
+	char* data = nullptr;
+	if (SQL_SUCCESS != Sql_GetData(mmysql_handle, column, &data, nullptr) || data == nullptr)
+		return false;
+	value = strtoull(data, nullptr, 10);
+	return true;
+}
+
+void need_summer_uint64_string(uint64 value, char (&output)[32]) {
+	safesnprintf(output, sizeof(output), "%" PRIu64, value);
+}
+
+void need_summer_outbox_rollback() {
+	if (SQL_ERROR == Sql_QueryStr(mmysql_handle, "ROLLBACK"))
+		need_summer_attendance_sql_error();
+}
+
+void need_summer_outbox_log_retry(const need_summer_outbox_row& row, uint32 attempt, const char* reason, bool review) {
+	char outbox_id[32] = {}, claim_id[32] = {};
+	need_summer_uint64_string(row.outbox_id, outbox_id);
+	need_summer_uint64_string(row.claim_id, claim_id);
+	if (review)
+		ShowWarning(msg_txt(nullptr, MSG_OUTBOX_REVIEW), outbox_id, claim_id, reason);
+	else
+		ShowWarning(msg_txt(nullptr, MSG_OUTBOX_RETRY), outbox_id, claim_id, attempt, reason);
+}
+
+void need_summer_outbox_record_failure(const need_summer_outbox_row& row, const char* reason) {
+	char escaped_reason[511] = {};
+	Sql_EscapeStringLen(mmysql_handle, escaped_reason, reason, strnlen(reason, 255));
+	uint32 next_attempt = row.attempts + 1;
+	uint32 next_status = next_attempt >= NEED_SUMMER_OUTBOX_MAX_ATTEMPTS
+		? NEED_SUMMER_OUTBOX_REVIEW
+		: NEED_SUMMER_OUTBOX_RETRY;
+
+	if (SQL_ERROR == Sql_Query(mmysql_handle,
+		"UPDATE `need_summer_attendance_reward_outbox` SET `status`='%u',`attempts`='%u',"
+		"`last_attempt_at`=NOW(),`next_attempt_at`=DATE_ADD(NOW(),INTERVAL 60 SECOND),"
+		"`last_error`='%s',`updated_at`=NOW() WHERE `outbox_id`='%" PRIu64 "' AND `status` IN ('0','3')",
+		next_status, next_attempt, escaped_reason, row.outbox_id)) {
+		need_summer_attendance_sql_error();
+		return;
+	}
+	if (Sql_NumRowsAffected(mmysql_handle) != 1)
+		return;
+	need_summer_outbox_log_retry(row, next_attempt, reason, next_status == NEED_SUMMER_OUTBOX_REVIEW);
+}
+
+bool need_summer_outbox_mark_review_locked(const need_summer_outbox_row& row, const char* reason) {
+	char escaped_reason[511] = {};
+	Sql_EscapeStringLen(mmysql_handle, escaped_reason, reason, strnlen(reason, 255));
+	if (SQL_ERROR == Sql_Query(mmysql_handle,
+		"UPDATE `need_summer_attendance_reward_outbox` SET `status`='%u',`attempts`=`attempts`+1,"
+		"`last_attempt_at`=NOW(),`last_error`='%s',`updated_at`=NOW() WHERE `outbox_id`='%" PRIu64 "'",
+		NEED_SUMMER_OUTBOX_REVIEW, escaped_reason, row.outbox_id) || Sql_NumRowsAffected(mmysql_handle) != 1 ||
+		SQL_ERROR == Sql_QueryStr(mmysql_handle, "COMMIT")) {
+		need_summer_attendance_sql_error();
+		need_summer_outbox_rollback();
+		return false;
+	}
+	need_summer_outbox_log_retry(row, row.attempts + 1, reason, true);
+	return true;
+}
+
+need_summer_consume_result need_summer_outbox_consume_one() {
+	if (SQL_ERROR == Sql_QueryStr(mmysql_handle, "START TRANSACTION")) {
+		need_summer_attendance_sql_error();
+		return need_summer_consume_result::FAILED;
+	}
+
+	if (SQL_ERROR == Sql_Query(mmysql_handle,
+		"SELECT `o`.`outbox_id`,`o`.`claim_id`,`o`.`event_id`,`o`.`account_id`,`o`.`char_id`,"
+		"`o`.`token_item_id`,`o`.`token_amount`,`o`.`box_item_id`,`o`.`box_amount`,`o`.`attempts`,"
+		"COALESCE(`c`.`event_id`,0),COALESCE(`c`.`account_id`,0),COALESCE(`c`.`char_id`,0),COALESCE(`c`.`claim_no`,0) "
+		"FROM `need_summer_attendance_reward_outbox` `o` "
+		"LEFT JOIN `need_summer_attendance_claim` `c` ON `c`.`claim_id`=`o`.`claim_id` "
+		"WHERE `o`.`event_id`='%u' AND `o`.`status` IN ('0','3') AND `o`.`attempts`<'%u' "
+		"AND `o`.`next_attempt_at`<=NOW() ORDER BY `o`.`outbox_id` LIMIT 1 FOR UPDATE",
+		NEED_SUMMER_EVENT_ID, NEED_SUMMER_OUTBOX_MAX_ATTEMPTS)) {
+		need_summer_attendance_sql_error();
+		need_summer_outbox_rollback();
+		return need_summer_consume_result::FAILED;
+	}
+
+	if (Sql_NumRows(mmysql_handle) == 0) {
+		Sql_FreeResult(mmysql_handle);
+		if (SQL_ERROR == Sql_QueryStr(mmysql_handle, "COMMIT")) {
+			need_summer_attendance_sql_error();
+			need_summer_outbox_rollback();
+			return need_summer_consume_result::FAILED;
+		}
+		return need_summer_consume_result::IDLE;
+	}
+
+	need_summer_outbox_row row;
+	bool parsed = SQL_SUCCESS == Sql_NextRow(mmysql_handle) &&
+		need_summer_sql_uint64(0, row.outbox_id) && need_summer_sql_uint64(1, row.claim_id) &&
+		need_summer_sql_uint32(2, row.event_id) && need_summer_sql_uint32(3, row.account_id) &&
+		need_summer_sql_uint32(4, row.char_id) && need_summer_sql_uint32(5, row.token_item_id) &&
+		need_summer_sql_uint32(6, row.token_amount) && need_summer_sql_uint32(7, row.box_item_id) &&
+		need_summer_sql_uint32(8, row.box_amount) && need_summer_sql_uint32(9, row.attempts) &&
+		need_summer_sql_uint32(10, row.claim_event_id) && need_summer_sql_uint32(11, row.claim_account_id) &&
+		need_summer_sql_uint32(12, row.claim_char_id) && need_summer_sql_uint32(13, row.claim_no);
+	Sql_FreeResult(mmysql_handle);
+
+	if (!parsed || row.outbox_id == 0 || row.claim_id == 0) {
+		if (row.outbox_id != 0 && row.claim_id != 0)
+			return need_summer_outbox_mark_review_locked(row, msg_txt(nullptr, MSG_OUTBOX_ERROR_PARSE))
+				? need_summer_consume_result::PROCESSED : need_summer_consume_result::FAILED;
+		need_summer_outbox_rollback();
+		return need_summer_consume_result::FAILED;
+	}
+
+	if (row.event_id != NEED_SUMMER_EVENT_ID || row.claim_event_id != row.event_id ||
+		row.claim_account_id != row.account_id || row.claim_char_id != row.char_id || row.claim_no == 0 ||
+		row.token_item_id != NEED_SUMMER_TOKEN_ITEM_ID || row.token_amount != NEED_SUMMER_TOKEN_AMOUNT ||
+		row.box_item_id != NEED_SUMMER_BOX_ITEM_ID || row.box_amount != NEED_SUMMER_BOX_AMOUNT) {
+		return need_summer_outbox_mark_review_locked(row, msg_txt(nullptr, MSG_OUTBOX_ERROR_PAYLOAD))
+			? need_summer_consume_result::PROCESSED : need_summer_consume_result::FAILED;
+	}
+
+	if (SQL_ERROR == Sql_Query(mmysql_handle,
+		"UPDATE `need_summer_attendance_reward_outbox` SET `status`='%u',`last_attempt_at`=NOW(),"
+		"`updated_at`=NOW() WHERE `outbox_id`='%" PRIu64 "' AND `status` IN ('0','3')",
+		NEED_SUMMER_OUTBOX_PROCESSING, row.outbox_id) || Sql_NumRowsAffected(mmysql_handle) != 1) {
+		need_summer_attendance_sql_error();
+		need_summer_outbox_rollback();
+		need_summer_outbox_record_failure(row, msg_txt(nullptr, MSG_OUTBOX_ERROR_PROCESSING));
+		return need_summer_consume_result::FAILED;
+	}
+
+	if (SQL_ERROR == Sql_Query(mmysql_handle,
+		"SELECT `name` FROM `%s` WHERE `char_id`='%u' AND `account_id`='%u' LIMIT 1",
+		attendance_char_table, row.char_id, row.account_id)) {
+		need_summer_attendance_sql_error();
+		need_summer_outbox_rollback();
+		need_summer_outbox_record_failure(row, msg_txt(nullptr, MSG_OUTBOX_ERROR_DESTINATION_LOOKUP));
+		return need_summer_consume_result::FAILED;
+	}
+
+	if (Sql_NumRows(mmysql_handle) == 0 || SQL_SUCCESS != Sql_NextRow(mmysql_handle)) {
+		Sql_FreeResult(mmysql_handle);
+		return need_summer_outbox_mark_review_locked(row, msg_txt(nullptr, MSG_OUTBOX_ERROR_DESTINATION_MISSING))
+			? need_summer_consume_result::PROCESSED : need_summer_consume_result::FAILED;
+	}
+
+	char* name_data = nullptr;
+	char destination_name[NAME_LENGTH] = {};
+	if (SQL_SUCCESS != Sql_GetData(mmysql_handle, 0, &name_data, nullptr) || name_data == nullptr || name_data[0] == '\0') {
+		Sql_FreeResult(mmysql_handle);
+		return need_summer_outbox_mark_review_locked(row, msg_txt(nullptr, MSG_OUTBOX_ERROR_DESTINATION_NAME))
+			? need_summer_consume_result::PROCESSED : need_summer_consume_result::FAILED;
+	}
+	safestrncpy(destination_name, name_data, sizeof(destination_name));
+	Sql_FreeResult(mmysql_handle);
+
+	char sender[NAME_LENGTH] = {}, title[MAIL_TITLE_LENGTH] = {}, body[MAIL_BODY_LENGTH] = {};
+	safestrncpy(sender, msg_txt(nullptr, MSG_OUTBOX_SENDER), sizeof(sender));
+	safesnprintf(title, sizeof(title), msg_txt(nullptr, MSG_OUTBOX_TITLE), row.claim_no);
+	safesnprintf(body, sizeof(body), msg_txt(nullptr, MSG_OUTBOX_BODY), row.claim_no);
+	char escaped_sender[NAME_LENGTH * 2 + 1] = {}, escaped_destination[NAME_LENGTH * 2 + 1] = {};
+	char escaped_title[MAIL_TITLE_LENGTH * 2 + 1] = {}, escaped_body[MAIL_BODY_LENGTH * 2 + 1] = {};
+	Sql_EscapeStringLen(mmysql_handle, escaped_sender, sender, strnlen(sender, sizeof(sender)));
+	Sql_EscapeStringLen(mmysql_handle, escaped_destination, destination_name, strnlen(destination_name, sizeof(destination_name)));
+	Sql_EscapeStringLen(mmysql_handle, escaped_title, title, strnlen(title, sizeof(title)));
+	Sql_EscapeStringLen(mmysql_handle, escaped_body, body, strnlen(body, sizeof(body)));
+
+	if (SQL_ERROR == Sql_Query(mmysql_handle,
+		"INSERT INTO `%s` (`send_name`,`send_id`,`dest_name`,`dest_id`,`title`,`message`,`time`,`status`,`zeny`,`type`) "
+		"VALUES ('%s','0','%s','%u','%s','%s','%lu','%d','0','%d')",
+		attendance_mail_table, escaped_sender, escaped_destination, row.char_id, escaped_title, escaped_body,
+		static_cast<unsigned long>(time(nullptr)), MAIL_NEW, MAIL_INBOX_NORMAL)) {
+		need_summer_attendance_sql_error();
+		need_summer_outbox_rollback();
+		need_summer_outbox_record_failure(row, msg_txt(nullptr, MSG_OUTBOX_ERROR_MAIL_INSERT));
+		return need_summer_consume_result::FAILED;
+	}
+
+	uint64 mail_id = Sql_LastInsertId(mmysql_handle);
+	if (mail_id == 0 || mail_id > INT_MAX) {
+		need_summer_outbox_rollback();
+		need_summer_outbox_record_failure(row, msg_txt(nullptr, MSG_OUTBOX_ERROR_MAIL_ID));
+		return need_summer_consume_result::FAILED;
+	}
+
+	if (SQL_ERROR == Sql_Query(mmysql_handle,
+		"INSERT INTO `%s` (`id`,`index`,`nameid`,`amount`,`identify`) VALUES "
+		"('%" PRIu64 "','0','%u','%u','1'),('%" PRIu64 "','1','%u','%u','1')",
+		attendance_mail_attachment_table, mail_id, row.token_item_id, row.token_amount,
+		mail_id, row.box_item_id, row.box_amount) || Sql_NumRowsAffected(mmysql_handle) != 2) {
+		need_summer_attendance_sql_error();
+		need_summer_outbox_rollback();
+		need_summer_outbox_record_failure(row, msg_txt(nullptr, MSG_OUTBOX_ERROR_ATTACHMENT));
+		return need_summer_consume_result::FAILED;
+	}
+
+	if (SQL_ERROR == Sql_Query(mmysql_handle,
+		"UPDATE `need_summer_attendance_reward_outbox` SET `status`='%u',`attempts`=`attempts`+1,"
+		"`mail_id`='%" PRIu64 "',`last_error`='',`delivered_at`=NOW(),`updated_at`=NOW() "
+		"WHERE `outbox_id`='%" PRIu64 "' AND `status`='%u'",
+		NEED_SUMMER_OUTBOX_DELIVERED, mail_id, row.outbox_id, NEED_SUMMER_OUTBOX_PROCESSING) ||
+		Sql_NumRowsAffected(mmysql_handle) != 1 ||
+		SQL_ERROR == Sql_Query(mmysql_handle,
+		"UPDATE `need_summer_attendance_claim` SET `status`='1',`updated_at`=NOW() "
+		"WHERE `claim_id`='%" PRIu64 "' AND `event_id`='%u'",
+		row.claim_id, NEED_SUMMER_EVENT_ID) || Sql_NumRowsAffected(mmysql_handle) != 1 ||
+		SQL_ERROR == Sql_QueryStr(mmysql_handle, "COMMIT")) {
+		need_summer_attendance_sql_error();
+		need_summer_outbox_rollback();
+		need_summer_outbox_record_failure(row, msg_txt(nullptr, MSG_OUTBOX_ERROR_COMMIT));
+		return need_summer_consume_result::FAILED;
+	}
+
+	map_session_data* recipient = map_charid2sd(row.char_id);
+	if (recipient != nullptr) {
+		recipient->mail.changed = true;
+		recipient->mail.inbox.unread++;
+		clif_Mail_new(recipient, static_cast<int32>(mail_id), sender, title);
+		intif_Mail_requestinbox(recipient->status.char_id, 1, MAIL_INBOX_NORMAL);
+	}
+	char outbox_id_text[32] = {}, claim_id_text[32] = {}, mail_id_text[32] = {};
+	need_summer_uint64_string(row.outbox_id, outbox_id_text);
+	need_summer_uint64_string(row.claim_id, claim_id_text);
+	need_summer_uint64_string(mail_id, mail_id_text);
+	ShowInfo(msg_txt(nullptr, MSG_OUTBOX_DELIVERED), outbox_id_text, claim_id_text, mail_id_text,
+		row.account_id, row.char_id);
+	return need_summer_consume_result::PROCESSED;
+}
+
+void need_summer_outbox_consume_batch() {
+	for (int32 i = 0; i < NEED_SUMMER_OUTBOX_BATCH_SIZE; ++i) {
+		if (need_summer_outbox_consume_one() != need_summer_consume_result::PROCESSED)
+			break;
+	}
+}
+
 }  // namespace
+
+void need_summer_attendance_set_char_table(const char* table) {
+	if (table == nullptr || table[0] == '\0')
+		return;
+	safestrncpy(attendance_char_table, table, sizeof(attendance_char_table));
+	attendance_schema_checked = false;
+	attendance_schema_available = false;
+}
+
+void need_summer_attendance_set_mail_table(const char* table) {
+	if (table == nullptr || table[0] == '\0')
+		return;
+	safestrncpy(attendance_mail_table, table, sizeof(attendance_mail_table));
+	attendance_schema_checked = false;
+	attendance_schema_available = false;
+}
+
+void need_summer_attendance_set_mail_attachment_table(const char* table) {
+	if (table == nullptr || table[0] == '\0')
+		return;
+	safestrncpy(attendance_mail_attachment_table, table, sizeof(attendance_mail_attachment_table));
+	attendance_schema_checked = false;
+	attendance_schema_available = false;
+}
 
 bool need_summer_attendance_enabled() {
 	need_summer_logical_date logical_date;

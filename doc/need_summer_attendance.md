@@ -54,14 +54,31 @@ The IP row records the family group of its first claimant. Another account may
 reuse that IP only when both accounts resolve to the same active, pre-approved
 family group. Account/day uniqueness is never waived.
 
-### Reward delivery boundary
+### 보상 outbox 전달 경계
 
-The current implementation atomically reserves the daily reward payload
-(`399925` x10 and `399928` x1) in the outbox and returns the attendance UI
-success packet. It does not yet add items to inventory or send mail. The event
-must not be opened for production rewards until an idempotent outbox consumer
-has been implemented and tested; this avoids pretending that an inventory
-write and a MySQL commit are one atomic operation.
+수령 트랜잭션은 `399925` 10개와 `399928` 1개를 하나의 claim 및 outbox
+행으로 예약한다. map-server의 5초 타이머가 한 번에 최대 20건을 소비하며,
+두 기능 플래그와 SQL 스키마 검사가 모두 통과한 경우에만 동작한다.
+`feature.need_summer_attendance: off` 상태에서는 outbox를 조회하거나 우편을
+생성하지 않는다.
+
+일반 `intif_Mail_send` 경로는 map-server 요청 후 char-server가 비동기로
+응답하므로 outbox 상태와 동일 SQL 트랜잭션으로 묶을 수 없다. 이 consumer는
+char-server가 사용하는 정규 `mail` 및 `mail_attachments` 테이블에 시스템
+우편을 기록하고, outbox를 `DELIVERED`로 바꾸는 작업을 하나의 InnoDB
+트랜잭션으로 실행한다. `inter_athena.conf`의 `char_db`, `mail_db`,
+`mail_attachment_db` 사용자 지정 테이블 이름도 따른다.
+
+outbox 상태는 `0=PENDING`, `1=PROCESSING`, `2=DELIVERED`, `3=RETRY`,
+`4=REVIEW`이다. 대상 행은 `FOR UPDATE`로 잠그며 `claim_id`와 `mail_id`에
+각각 고유 제약이 있다. 우편 본문, 두 첨부 행, outbox 완료, claim 완료 중
+하나라도 실패하면 전부 롤백한다. 일시 실패는 60초 뒤 재시도하며 5번째
+실패부터 `REVIEW`로 남긴다. 데이터 불일치나 존재하지 않는 캐릭터는 즉시
+`REVIEW`가 된다. 완료 여부와 관계없이 outbox 행은 삭제하지 않는다.
+
+운영 활성화 전 아이템 DB에 `399925`와 `399928`이 실제로 등록되어 있어야
+한다. 현재 스키마나 우편 테이블이 없고, 접근할 수 없거나, 필요한 테이블이
+InnoDB가 아니면 provider와 consumer 모두 fail-closed 처리된다.
 
 ## Family approval procedure
 
@@ -93,6 +110,85 @@ COMMIT;
 For removal, set the member `active` value to 0 and insert a `REMOVE` audit
 row in one transaction. Do not move an account between groups while it has an
 in-flight claim request. Prior claims and IP rows remain immutable evidence.
+
+## 운영 조회 SQL
+
+상태별 전체 현황과 마지막 오류를 조회한다.
+
+```sql
+SELECT
+  `outbox_id`, `claim_id`, `account_id`, `char_id`,
+  CASE `status`
+    WHEN 0 THEN 'PENDING'
+    WHEN 1 THEN 'PROCESSING'
+    WHEN 2 THEN 'DELIVERED'
+    WHEN 3 THEN 'RETRY'
+    WHEN 4 THEN 'REVIEW'
+    ELSE CONCAT('UNKNOWN(', `status`, ')')
+  END AS `delivery_status`,
+  `attempts`, `next_attempt_at`, `last_attempt_at`, `mail_id`,
+  `last_error`, `created_at`, `delivered_at`
+FROM `need_summer_attendance_reward_outbox`
+WHERE `event_id` = 202608
+ORDER BY `outbox_id`;
+```
+
+아직 완료되지 않은 건만 조회한다. 커밋된 `PROCESSING` 행은 정상 구조에서는
+생기지 않으므로, 장시간 상태 1인 행은 운영 검토 대상으로 취급한다.
+
+```sql
+SELECT `outbox_id`, `claim_id`, `account_id`, `char_id`, `status`,
+       `attempts`, `next_attempt_at`, `last_attempt_at`, `last_error`
+FROM `need_summer_attendance_reward_outbox`
+WHERE `event_id` = 202608 AND `status` IN (0, 1, 3, 4)
+ORDER BY `status`, `next_attempt_at`, `outbox_id`;
+```
+
+전달 완료 우편과 첨부 보상을 확인한다.
+
+```sql
+SELECT o.`outbox_id`, o.`claim_id`, o.`account_id`, o.`char_id`,
+       o.`mail_id`, o.`delivered_at`,
+       GROUP_CONCAT(CONCAT(a.`nameid`, ' x', a.`amount`)
+                    ORDER BY a.`index` SEPARATOR ', ') AS `attachments`
+FROM `need_summer_attendance_reward_outbox` AS o
+JOIN `mail` AS m ON m.`id` = o.`mail_id` AND m.`dest_id` = o.`char_id`
+JOIN `mail_attachments` AS a ON a.`id` = m.`id`
+WHERE o.`event_id` = 202608 AND o.`status` = 2
+GROUP BY o.`outbox_id`, o.`claim_id`, o.`account_id`, o.`char_id`,
+         o.`mail_id`, o.`delivered_at`
+ORDER BY o.`outbox_id`;
+```
+
+다음 검증 SQL은 `399925 x10`과 `399928 x1`이 정확히 함께 들어가지 않은
+완료 건만 반환한다. 정상 결과는 0행이다.
+
+```sql
+SELECT o.`outbox_id`, o.`claim_id`, o.`mail_id`, COUNT(*) AS `attachment_rows`,
+       SUM(a.`nameid` = 399925 AND a.`amount` = 10) AS `token_rows`,
+       SUM(a.`nameid` = 399928 AND a.`amount` = 1) AS `box_rows`
+FROM `need_summer_attendance_reward_outbox` AS o
+JOIN `mail_attachments` AS a ON a.`id` = o.`mail_id`
+WHERE o.`event_id` = 202608 AND o.`status` = 2
+GROUP BY o.`outbox_id`, o.`claim_id`, o.`mail_id`
+HAVING `attachment_rows` <> 2 OR `token_rows` <> 1 OR `box_rows` <> 1;
+```
+
+운영자가 원인을 해결한 `REVIEW` 건을 재시도 큐로 되돌릴 때는 먼저
+`mail_id IS NULL`을 확인하고 단일 행만 갱신한다. consumer가 동작 중인
+환경에서는 반드시 유지보수 절차에 따라 실행한다.
+
+```sql
+UPDATE `need_summer_attendance_reward_outbox`
+SET `status` = 3,
+    `next_attempt_at` = NOW(),
+    `last_error` = CONCAT('운영자 재시도: ', `last_error`),
+    `updated_at` = NOW()
+WHERE `event_id` = 202608
+  AND `outbox_id` = :outbox_id
+  AND `status` = 4
+  AND `mail_id` IS NULL;
+```
 
 ## Verification checklist
 

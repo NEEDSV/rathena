@@ -4343,6 +4343,12 @@ int32 inter_config_read(const char *cfgName)
 			safestrncpy(sales_table, w2, sizeof(sales_table));
 		else if (strcmpi(w1, "guild_storage_log") == 0)
 			safestrncpy(guild_storage_log_table, w2, sizeof(guild_storage_log_table));
+		else if (strcmpi(w1, "char_db") == 0)
+			need_summer_attendance_set_char_table(w2);
+		else if (strcmpi(w1, "mail_db") == 0)
+			need_summer_attendance_set_mail_table(w2);
+		else if (strcmpi(w1, "mail_attachment_db") == 0)
+			need_summer_attendance_set_mail_attachment_table(w2);
 		else
 		//Map Server SQL DB
 		if(strcmpi(w1,"map_server_ip")==0)
