@@ -110,6 +110,7 @@ CREATE TABLE IF NOT EXISTS `need_summer_attendance_reward_outbox` (
   `attempts` smallint unsigned NOT NULL DEFAULT 0,
   `next_attempt_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `last_attempt_at` datetime DEFAULT NULL,
+  `last_error_code` varchar(64) CHARACTER SET ascii COLLATE ascii_general_ci NOT NULL DEFAULT '',
   `last_error` varchar(255) NOT NULL DEFAULT '',
   `mail_id` bigint unsigned DEFAULT NULL,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,

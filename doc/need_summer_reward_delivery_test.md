@@ -6,10 +6,9 @@
 실행한다. 운영 DB, 운영 계정, 운영 우편 테이블에는 적용하지 않는다. 저장소의
 기본 `feature.need_summer_attendance` 값은 계속 `off`로 둔다.
 
-현재 작업 환경에는 MariaDB 서비스는 있으나 MySQL/MariaDB CLI가 PATH에 없고
-해당 DB가 폐기 가능한 테스트 DB인지 확인되지 않았다. 따라서 이 문서 작성
-시점에는 아래 SQL을 실행하지 않았으며 실제 우편 전달·수령 결과를 검증한
-것으로 간주하지 않는다.
+현재 작업 환경의 설정 DB는 폐기 가능한 테스트 DB인지 확인되지 않았다.
+따라서 아래 변경 SQL과 우편 생성 SQL은 그 DB에 실행하지 않았으며 실제 우편
+전달·수령 결과를 검증한 것으로 간주하지 않는다.
 
 ## 테스트 DB 설치
 
@@ -21,6 +20,9 @@ mysql.exe -h 127.0.0.1 -u test_admin -p --execute="CREATE DATABASE need_summer_2
 mysql.exe -h 127.0.0.1 -u test_admin -p --database=need_summer_2026_test --execute="SOURCE E:/tools/Need/need-summer-2026/sql-files/main.sql"
 mysql.exe -h 127.0.0.1 -u test_admin -p --database=need_summer_2026_test --execute="SOURCE E:/tools/Need/need-summer-2026/sql-files/upgrades/upgrade_20260806.sql"
 ```
+
+이미 기존 여름 스키마를 설치한 테스트 DB라면 전체 스키마를 다시 적용하지
+말고 `sql-files/upgrades/upgrade_20260806_2.sql`만 추가 적용한다.
 
 테스트 전용 `conf/import/inter_conf.txt`에서 map DB를 위 데이터베이스로
 지정한다. 운영 설정 파일을 복사하거나 덮어쓰지 않는다. 테스트 작업 복제본의
@@ -88,7 +90,7 @@ SET @test_claim_id = 1;
 SET @test_outbox_id = 1;
 
 SELECT `outbox_id`,`claim_id`,`status`,`attempts`,`mail_id`,
-       `last_error`,`delivered_at`
+       `last_error_code`,`last_error`,`delivered_at`
 FROM `need_summer_attendance_reward_outbox`
 WHERE `outbox_id` = @test_outbox_id;
 
@@ -113,6 +115,40 @@ ORDER BY a.`index`;
 - mail_attachments: 정확히 2행
 - index 0: `399925 x10`, identify 1
 - index 1: `399928 x1`, identify 1
+
+우편 문자열은 아래와 같아야 한다. 콘솔 표시가 깨지더라도 DB의 `HEX()` 결과와
+클라이언트 표시를 기준으로 판정한다.
+
+- 발신자명: `NEED 여름 출석`
+- 제목: `여름 출석 1일차 보상`
+- 본문: `2026 여름 이벤트 출석 1일차 보상입니다.`
+
+```sql
+SELECT `id`,`send_name`,`title`,`message`,
+       HEX(`send_name`) AS `send_name_hex`,
+       HEX(`title`) AS `title_hex`,
+       HEX(`message`) AS `message_hex`
+FROM `mail`
+WHERE `id` = (
+  SELECT `mail_id`
+  FROM `need_summer_attendance_reward_outbox`
+  WHERE `outbox_id` = @test_outbox_id
+);
+```
+
+## 실패 및 fail-closed 검증
+
+폐기 가능한 테스트 DB 복제본에서만 우편 INSERT를 실패시키고 다음을 확인한다.
+운영 테이블의 문자셋이나 권한은 이 테스트를 위해 변경하지 않는다.
+
+- 1~4번째 실패: `status=3`, `attempts`가 매번 1씩 증가,
+  `next_attempt_at`이 마지막 시도보다 60초 뒤
+- 5번째 실패: `status=4`
+- `last_error_code`와 `last_error`에는 `MAIL_INSERT_FAILED` 같은 ASCII 코드
+- 한글 상세 원인은 map-server 로그에 출력
+- ASCII 상태 UPDATE도 실패하게 만들면 consumer가 fail-closed 로그를 한 번
+  남기고 재시작 전까지 같은 행을 5초마다 처리하지 않음
+- 설정을 복구하고 map-server를 재시작해도 이미 완료된 우편은 중복 생성되지 않음
 
 ## 중복 방지 검증
 

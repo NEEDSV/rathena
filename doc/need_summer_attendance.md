@@ -23,9 +23,10 @@ Autotrade sessions never add time.
 ## Installation and activation
 
 1. Keep `feature.need_summer_attendance` off while installing or upgrading.
-2. Import `sql-files/upgrades/upgrade_20260806.sql` into the main map-server
-   database. `sql-files/need_summer_attendance.sql` is the standalone schema
-   for a new installation.
+2. 새 설치는 `sql-files/upgrades/upgrade_20260806.sql` 또는 독립 스키마
+   `sql-files/need_summer_attendance.sql`을 적용한다. 기존 여름 스키마가 이미
+   설치된 DB에는 추가로 `sql-files/upgrades/upgrade_20260806_2.sql`을 적용해
+   ASCII `last_error_code` 컬럼을 만든다.
 3. Verify the host timezone and that 04:00 local time is the intended reset.
 4. Start map-server and verify that all eight `need_summer_attendance_*` tables
    are accessible to the configured SQL user.
@@ -75,6 +76,14 @@ outbox 상태는 `0=PENDING`, `1=PROCESSING`, `2=DELIVERED`, `3=RETRY`,
 하나라도 실패하면 전부 롤백한다. 일시 실패는 60초 뒤 재시도하며 5번째
 실패부터 `REVIEW`로 남긴다. 데이터 불일치나 존재하지 않는 캐릭터는 즉시
 `REVIEW`가 된다. 완료 여부와 관계없이 outbox 행은 삭제하지 않는다.
+
+`last_error_code`는 `ascii` 문자셋의 기계 판독용 코드다. `last_error`도
+인코딩과 무관하게 같은 ASCII 코드를 저장하고, 사람이 읽는 한글 상세 원인은
+map-server 로그에만 남긴다. 따라서 한글 상세 오류의 변환 문제로 RETRY 또는
+REVIEW 갱신이 다시 실패하지 않는다. 이 ASCII 상태 갱신 자체가 실패하거나
+대상 행을 정확히 한 건 갱신하지 못하면 consumer는 메모리에서 fail-closed
+상태가 된다. 서버를 재시작할 때까지 추가 outbox를 소비하지 않고 신규 출석
+수령도 거절하여, 전달할 수 없는 보상이 더 예약되지 않게 한다.
 
 운영 활성화 전 아이템 DB에 `399925`와 `399928`이 실제로 등록되어 있어야
 한다. 현재 스키마나 우편 테이블이 없고, 접근할 수 없거나, 필요한 테이블이
@@ -127,7 +136,7 @@ SELECT
     ELSE CONCAT('UNKNOWN(', `status`, ')')
   END AS `delivery_status`,
   `attempts`, `next_attempt_at`, `last_attempt_at`, `mail_id`,
-  `last_error`, `created_at`, `delivered_at`
+  `last_error_code`, `last_error`, `created_at`, `delivered_at`
 FROM `need_summer_attendance_reward_outbox`
 WHERE `event_id` = 202608
 ORDER BY `outbox_id`;
@@ -138,7 +147,8 @@ ORDER BY `outbox_id`;
 
 ```sql
 SELECT `outbox_id`, `claim_id`, `account_id`, `char_id`, `status`,
-       `attempts`, `next_attempt_at`, `last_attempt_at`, `last_error`
+       `attempts`, `next_attempt_at`, `last_attempt_at`,
+       `last_error_code`, `last_error`
 FROM `need_summer_attendance_reward_outbox`
 WHERE `event_id` = 202608 AND `status` IN (0, 1, 3, 4)
 ORDER BY `status`, `next_attempt_at`, `outbox_id`;
@@ -182,7 +192,8 @@ HAVING `attachment_rows` <> 2 OR `token_rows` <> 1 OR `box_rows` <> 1;
 UPDATE `need_summer_attendance_reward_outbox`
 SET `status` = 3,
     `next_attempt_at` = NOW(),
-    `last_error` = CONCAT('운영자 재시도: ', `last_error`),
+    `last_error_code` = 'OPERATOR_RETRY',
+    `last_error` = 'OPERATOR_RETRY',
     `updated_at` = NOW()
 WHERE `event_id` = 202608
   AND `outbox_id` = :outbox_id

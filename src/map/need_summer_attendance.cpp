@@ -66,6 +66,18 @@ constexpr int32 MSG_OUTBOX_ERROR_MAIL_ID = 1929;
 constexpr int32 MSG_OUTBOX_ERROR_ATTACHMENT = 1930;
 constexpr int32 MSG_OUTBOX_ERROR_COMMIT = 1931;
 constexpr int32 MSG_OUTBOX_ITEM_UNAVAILABLE = 1932;
+constexpr int32 MSG_OUTBOX_FAIL_CLOSED = 1933;
+
+constexpr const char* OUTBOX_ERROR_PARSE = "OUTBOX_ROW_PARSE_FAILED";
+constexpr const char* OUTBOX_ERROR_PAYLOAD = "INVALID_REWARD_PAYLOAD";
+constexpr const char* OUTBOX_ERROR_PROCESSING = "PROCESSING_STATE_UPDATE_FAILED";
+constexpr const char* OUTBOX_ERROR_DESTINATION_LOOKUP = "DESTINATION_LOOKUP_FAILED";
+constexpr const char* OUTBOX_ERROR_DESTINATION_MISSING = "INVALID_CHARACTER";
+constexpr const char* OUTBOX_ERROR_DESTINATION_NAME = "INVALID_CHARACTER";
+constexpr const char* OUTBOX_ERROR_MAIL_INSERT = "MAIL_INSERT_FAILED";
+constexpr const char* OUTBOX_ERROR_MAIL_ID = "MAIL_ID_OUT_OF_RANGE";
+constexpr const char* OUTBOX_ERROR_ATTACHMENT = "ATTACHMENT_INSERT_FAILED";
+constexpr const char* OUTBOX_ERROR_COMMIT = "SQL_TRANSACTION_FAILED";
 
 struct need_summer_logical_date {
 	char sql_date[11] = {};
@@ -133,6 +145,7 @@ std::unordered_map<uint32, need_summer_attendance_session> attendance_sessions;
 int32 attendance_timer_id = INVALID_TIMER;
 bool attendance_schema_checked = false;
 bool attendance_schema_available = false;
+bool attendance_outbox_fail_closed = false;
 char attendance_char_table[64] = "char";
 char attendance_mail_table[64] = "mail";
 char attendance_mail_attachment_table[64] = "mail_attachments";
@@ -171,7 +184,7 @@ bool need_summer_attendance_schema_ready() {
 		"SELECT `event_id`,`logical_date`,`ip`,`family_group_id` FROM `need_summer_attendance_ip_daily` LIMIT 0",
 		"SELECT `claim_id`,`event_id`,`logical_date`,`account_id`,`claim_no`,`status` FROM `need_summer_attendance_claim` LIMIT 0",
 		"SELECT `outbox_id`,`claim_id`,`event_id`,`account_id`,`char_id`,`token_item_id`,`token_amount`,"
-		"`box_item_id`,`box_amount`,`status`,`attempts`,`next_attempt_at`,`last_attempt_at`,`last_error`,"
+		"`box_item_id`,`box_amount`,`status`,`attempts`,`next_attempt_at`,`last_attempt_at`,`last_error_code`,`last_error`,"
 		"`mail_id`,`delivered_at` FROM `need_summer_attendance_reward_outbox` LIMIT 0",
 	};
 
@@ -268,6 +281,7 @@ bool need_summer_attendance_config_valid() {
 
 bool need_summer_attendance_active_on(uint32 logical_date) {
 	return battle_config.feature_attendance && battle_config.feature_need_summer_attendance &&
+		!attendance_outbox_fail_closed &&
 		need_summer_attendance_schema_ready() &&
 		need_summer_attendance_config_valid() &&
 		logical_date >= static_cast<uint32>(battle_config.need_summer_attendance_start_date) &&
@@ -515,6 +529,7 @@ int32 need_summer_attendance_timer_sub(map_session_data* sd, va_list) {
 
 TIMER_FUNC(need_summer_attendance_timer) {
 	if (!battle_config.feature_attendance || !battle_config.feature_need_summer_attendance ||
+		attendance_outbox_fail_closed ||
 		!need_summer_attendance_schema_ready())
 		return 0;
 
@@ -713,19 +728,26 @@ void need_summer_outbox_rollback() {
 		need_summer_attendance_sql_error();
 }
 
-void need_summer_outbox_log_retry(const need_summer_outbox_row& row, uint32 attempt, const char* reason, bool review) {
+void need_summer_outbox_fail_closed() {
+	if (!attendance_outbox_fail_closed)
+		ShowError("%s\n", msg_txt(nullptr, MSG_OUTBOX_FAIL_CLOSED));
+	attendance_outbox_fail_closed = true;
+}
+
+void need_summer_outbox_log_retry(const need_summer_outbox_row& row, uint32 attempt, int32 reason_message, bool review) {
 	char outbox_id[32] = {}, claim_id[32] = {};
 	need_summer_uint64_string(row.outbox_id, outbox_id);
 	need_summer_uint64_string(row.claim_id, claim_id);
+	const char* reason = msg_txt(nullptr, reason_message);
 	if (review)
 		ShowWarning(msg_txt(nullptr, MSG_OUTBOX_REVIEW), outbox_id, claim_id, reason);
 	else
 		ShowWarning(msg_txt(nullptr, MSG_OUTBOX_RETRY), outbox_id, claim_id, attempt, reason);
 }
 
-void need_summer_outbox_record_failure(const need_summer_outbox_row& row, const char* reason) {
-	char escaped_reason[511] = {};
-	Sql_EscapeStringLen(mmysql_handle, escaped_reason, reason, strnlen(reason, 255));
+void need_summer_outbox_record_failure(const need_summer_outbox_row& row, const char* error_code, int32 reason_message) {
+	char escaped_error_code[129] = {};
+	Sql_EscapeStringLen(mmysql_handle, escaped_error_code, error_code, strnlen(error_code, 64));
 	uint32 next_attempt = row.attempts + 1;
 	uint32 next_status = next_attempt >= NEED_SUMMER_OUTBOX_MAX_ATTEMPTS
 		? NEED_SUMMER_OUTBOX_REVIEW
@@ -734,29 +756,36 @@ void need_summer_outbox_record_failure(const need_summer_outbox_row& row, const 
 	if (SQL_ERROR == Sql_Query(mmysql_handle,
 		"UPDATE `need_summer_attendance_reward_outbox` SET `status`='%u',`attempts`='%u',"
 		"`last_attempt_at`=NOW(),`next_attempt_at`=DATE_ADD(NOW(),INTERVAL 60 SECOND),"
-		"`last_error`='%s',`updated_at`=NOW() WHERE `outbox_id`='%" PRIu64 "' AND `status` IN ('0','3')",
-		next_status, next_attempt, escaped_reason, row.outbox_id)) {
+		"`last_error_code`='%s',`last_error`='%s',`updated_at`=NOW() "
+		"WHERE `outbox_id`='%" PRIu64 "' AND `status` IN ('0','3')",
+		next_status, next_attempt, escaped_error_code, escaped_error_code, row.outbox_id)) {
 		need_summer_attendance_sql_error();
+		need_summer_outbox_fail_closed();
 		return;
 	}
-	if (Sql_NumRowsAffected(mmysql_handle) != 1)
+	if (Sql_NumRowsAffected(mmysql_handle) != 1) {
+		need_summer_outbox_fail_closed();
 		return;
-	need_summer_outbox_log_retry(row, next_attempt, reason, next_status == NEED_SUMMER_OUTBOX_REVIEW);
+	}
+	need_summer_outbox_log_retry(row, next_attempt, reason_message, next_status == NEED_SUMMER_OUTBOX_REVIEW);
 }
 
-bool need_summer_outbox_mark_review_locked(const need_summer_outbox_row& row, const char* reason) {
-	char escaped_reason[511] = {};
-	Sql_EscapeStringLen(mmysql_handle, escaped_reason, reason, strnlen(reason, 255));
+bool need_summer_outbox_mark_review_locked(const need_summer_outbox_row& row, const char* error_code, int32 reason_message) {
+	char escaped_error_code[129] = {};
+	Sql_EscapeStringLen(mmysql_handle, escaped_error_code, error_code, strnlen(error_code, 64));
 	if (SQL_ERROR == Sql_Query(mmysql_handle,
 		"UPDATE `need_summer_attendance_reward_outbox` SET `status`='%u',`attempts`=`attempts`+1,"
-		"`last_attempt_at`=NOW(),`last_error`='%s',`updated_at`=NOW() WHERE `outbox_id`='%" PRIu64 "'",
-		NEED_SUMMER_OUTBOX_REVIEW, escaped_reason, row.outbox_id) || Sql_NumRowsAffected(mmysql_handle) != 1 ||
+		"`last_attempt_at`=NOW(),`last_error_code`='%s',`last_error`='%s',`updated_at`=NOW() "
+		"WHERE `outbox_id`='%" PRIu64 "'",
+		NEED_SUMMER_OUTBOX_REVIEW, escaped_error_code, escaped_error_code, row.outbox_id) ||
+		Sql_NumRowsAffected(mmysql_handle) != 1 ||
 		SQL_ERROR == Sql_QueryStr(mmysql_handle, "COMMIT")) {
 		need_summer_attendance_sql_error();
 		need_summer_outbox_rollback();
+		need_summer_outbox_fail_closed();
 		return false;
 	}
-	need_summer_outbox_log_retry(row, row.attempts + 1, reason, true);
+	need_summer_outbox_log_retry(row, row.attempts + 1, reason_message, true);
 	return true;
 }
 
@@ -803,9 +832,10 @@ need_summer_consume_result need_summer_outbox_consume_one() {
 
 	if (!parsed || row.outbox_id == 0 || row.claim_id == 0) {
 		if (row.outbox_id != 0 && row.claim_id != 0)
-			return need_summer_outbox_mark_review_locked(row, msg_txt(nullptr, MSG_OUTBOX_ERROR_PARSE))
+			return need_summer_outbox_mark_review_locked(row, OUTBOX_ERROR_PARSE, MSG_OUTBOX_ERROR_PARSE)
 				? need_summer_consume_result::PROCESSED : need_summer_consume_result::FAILED;
 		need_summer_outbox_rollback();
+		need_summer_outbox_fail_closed();
 		return need_summer_consume_result::FAILED;
 	}
 
@@ -813,7 +843,7 @@ need_summer_consume_result need_summer_outbox_consume_one() {
 		row.claim_account_id != row.account_id || row.claim_char_id != row.char_id || row.claim_no == 0 ||
 		row.token_item_id != NEED_SUMMER_TOKEN_ITEM_ID || row.token_amount != NEED_SUMMER_TOKEN_AMOUNT ||
 		row.box_item_id != NEED_SUMMER_BOX_ITEM_ID || row.box_amount != NEED_SUMMER_BOX_AMOUNT) {
-		return need_summer_outbox_mark_review_locked(row, msg_txt(nullptr, MSG_OUTBOX_ERROR_PAYLOAD))
+		return need_summer_outbox_mark_review_locked(row, OUTBOX_ERROR_PAYLOAD, MSG_OUTBOX_ERROR_PAYLOAD)
 			? need_summer_consume_result::PROCESSED : need_summer_consume_result::FAILED;
 	}
 
@@ -823,7 +853,7 @@ need_summer_consume_result need_summer_outbox_consume_one() {
 		NEED_SUMMER_OUTBOX_PROCESSING, row.outbox_id) || Sql_NumRowsAffected(mmysql_handle) != 1) {
 		need_summer_attendance_sql_error();
 		need_summer_outbox_rollback();
-		need_summer_outbox_record_failure(row, msg_txt(nullptr, MSG_OUTBOX_ERROR_PROCESSING));
+		need_summer_outbox_record_failure(row, OUTBOX_ERROR_PROCESSING, MSG_OUTBOX_ERROR_PROCESSING);
 		return need_summer_consume_result::FAILED;
 	}
 
@@ -832,13 +862,13 @@ need_summer_consume_result need_summer_outbox_consume_one() {
 		attendance_char_table, row.char_id, row.account_id)) {
 		need_summer_attendance_sql_error();
 		need_summer_outbox_rollback();
-		need_summer_outbox_record_failure(row, msg_txt(nullptr, MSG_OUTBOX_ERROR_DESTINATION_LOOKUP));
+		need_summer_outbox_record_failure(row, OUTBOX_ERROR_DESTINATION_LOOKUP, MSG_OUTBOX_ERROR_DESTINATION_LOOKUP);
 		return need_summer_consume_result::FAILED;
 	}
 
 	if (Sql_NumRows(mmysql_handle) == 0 || SQL_SUCCESS != Sql_NextRow(mmysql_handle)) {
 		Sql_FreeResult(mmysql_handle);
-		return need_summer_outbox_mark_review_locked(row, msg_txt(nullptr, MSG_OUTBOX_ERROR_DESTINATION_MISSING))
+		return need_summer_outbox_mark_review_locked(row, OUTBOX_ERROR_DESTINATION_MISSING, MSG_OUTBOX_ERROR_DESTINATION_MISSING)
 			? need_summer_consume_result::PROCESSED : need_summer_consume_result::FAILED;
 	}
 
@@ -846,7 +876,7 @@ need_summer_consume_result need_summer_outbox_consume_one() {
 	char destination_name[NAME_LENGTH] = {};
 	if (SQL_SUCCESS != Sql_GetData(mmysql_handle, 0, &name_data, nullptr) || name_data == nullptr || name_data[0] == '\0') {
 		Sql_FreeResult(mmysql_handle);
-		return need_summer_outbox_mark_review_locked(row, msg_txt(nullptr, MSG_OUTBOX_ERROR_DESTINATION_NAME))
+		return need_summer_outbox_mark_review_locked(row, OUTBOX_ERROR_DESTINATION_NAME, MSG_OUTBOX_ERROR_DESTINATION_NAME)
 			? need_summer_consume_result::PROCESSED : need_summer_consume_result::FAILED;
 	}
 	safestrncpy(destination_name, name_data, sizeof(destination_name));
@@ -870,14 +900,14 @@ need_summer_consume_result need_summer_outbox_consume_one() {
 		static_cast<unsigned long>(time(nullptr)), MAIL_NEW, MAIL_INBOX_NORMAL)) {
 		need_summer_attendance_sql_error();
 		need_summer_outbox_rollback();
-		need_summer_outbox_record_failure(row, msg_txt(nullptr, MSG_OUTBOX_ERROR_MAIL_INSERT));
+		need_summer_outbox_record_failure(row, OUTBOX_ERROR_MAIL_INSERT, MSG_OUTBOX_ERROR_MAIL_INSERT);
 		return need_summer_consume_result::FAILED;
 	}
 
 	uint64 mail_id = Sql_LastInsertId(mmysql_handle);
 	if (mail_id == 0 || mail_id > INT_MAX) {
 		need_summer_outbox_rollback();
-		need_summer_outbox_record_failure(row, msg_txt(nullptr, MSG_OUTBOX_ERROR_MAIL_ID));
+		need_summer_outbox_record_failure(row, OUTBOX_ERROR_MAIL_ID, MSG_OUTBOX_ERROR_MAIL_ID);
 		return need_summer_consume_result::FAILED;
 	}
 
@@ -888,13 +918,13 @@ need_summer_consume_result need_summer_outbox_consume_one() {
 		mail_id, row.box_item_id, row.box_amount) || Sql_NumRowsAffected(mmysql_handle) != 2) {
 		need_summer_attendance_sql_error();
 		need_summer_outbox_rollback();
-		need_summer_outbox_record_failure(row, msg_txt(nullptr, MSG_OUTBOX_ERROR_ATTACHMENT));
+		need_summer_outbox_record_failure(row, OUTBOX_ERROR_ATTACHMENT, MSG_OUTBOX_ERROR_ATTACHMENT);
 		return need_summer_consume_result::FAILED;
 	}
 
 	if (SQL_ERROR == Sql_Query(mmysql_handle,
 		"UPDATE `need_summer_attendance_reward_outbox` SET `status`='%u',`attempts`=`attempts`+1,"
-		"`mail_id`='%" PRIu64 "',`last_error`='',`delivered_at`=NOW(),`updated_at`=NOW() "
+		"`mail_id`='%" PRIu64 "',`last_error_code`='',`last_error`='',`delivered_at`=NOW(),`updated_at`=NOW() "
 		"WHERE `outbox_id`='%" PRIu64 "' AND `status`='%u'",
 		NEED_SUMMER_OUTBOX_DELIVERED, mail_id, row.outbox_id, NEED_SUMMER_OUTBOX_PROCESSING) ||
 		Sql_NumRowsAffected(mmysql_handle) != 1 ||
@@ -905,7 +935,7 @@ need_summer_consume_result need_summer_outbox_consume_one() {
 		SQL_ERROR == Sql_QueryStr(mmysql_handle, "COMMIT")) {
 		need_summer_attendance_sql_error();
 		need_summer_outbox_rollback();
-		need_summer_outbox_record_failure(row, msg_txt(nullptr, MSG_OUTBOX_ERROR_COMMIT));
+		need_summer_outbox_record_failure(row, OUTBOX_ERROR_COMMIT, MSG_OUTBOX_ERROR_COMMIT);
 		return need_summer_consume_result::FAILED;
 	}
 
@@ -926,6 +956,8 @@ need_summer_consume_result need_summer_outbox_consume_one() {
 }
 
 void need_summer_outbox_consume_batch() {
+	if (attendance_outbox_fail_closed)
+		return;
 	for (int32 i = 0; i < NEED_SUMMER_OUTBOX_BATCH_SIZE; ++i) {
 		if (need_summer_outbox_consume_one() != need_summer_consume_result::PROCESSED)
 			break;
@@ -1079,6 +1111,7 @@ void need_summer_attendance_session_end(map_session_data* sd) {
 void need_summer_attendance_init() {
 	attendance_schema_checked = false;
 	attendance_schema_available = false;
+	attendance_outbox_fail_closed = false;
 
 	if (!need_summer_attendance_config_valid()) {
 		ShowWarning("%s\n", msg_txt(nullptr, MSG_ATTENDANCE_INVALID_CONFIG));
@@ -1098,4 +1131,5 @@ void need_summer_attendance_final() {
 	attendance_sessions.clear();
 	attendance_schema_checked = false;
 	attendance_schema_available = false;
+	attendance_outbox_fail_closed = false;
 }
