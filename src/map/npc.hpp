@@ -93,6 +93,7 @@ struct s_npc_barter_requirement{
 struct s_npc_barter_item{
 	uint16 index;
 	t_itemid nameid;
+	uint32 outputAmount;
 	bool stockLimited;
 	uint32 stock;
 	uint32 price;

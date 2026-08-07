@@ -617,6 +617,23 @@ uint64 BarterDatabase::parseBodyNode( const ryml::NodeRef& node ){
 				item->nameid = id->nameid;
 			}
 
+			if( this->nodeExists( itemNode, "OutputAmount" ) ){
+				uint32 output_amount;
+
+				if( !this->asUInt32( itemNode, "OutputAmount", output_amount ) ){
+					return 0;
+				}
+
+				if( output_amount == 0 ){
+					this->invalidWarning( itemNode["OutputAmount"], "barter_parseBodyNode: OutputAmount must be greater than zero.\n" );
+					return 0;
+				}
+
+				item->outputAmount = output_amount;
+			}else if( !item_exists ){
+				item->outputAmount = 1;
+			}
+
 			if( this->nodeExists( itemNode, "Stock" ) ){
 				uint32 stock;
 
@@ -3245,21 +3262,27 @@ e_purchase_result npc_barter_purchase( map_session_data& sd, std::shared_ptr<s_n
 		}
 
 		uint32 amount = purchase.amount;
+		uint64 output_amount64 = static_cast<uint64>( amount ) * purchase.item->outputAmount;
+
+		if( output_amount64 > MAX_AMOUNT ){
+			return e_purchase_result::PURCHASE_FAIL_COUNT;
+		}
+		uint32 output_amount = static_cast<uint32>( output_amount64 );
 
 		if( purchase.item->stockLimited && purchase.item->stock < amount ){
 			return e_purchase_result::PURCHASE_FAIL_STOCK_EMPTY;
 		}
 
-		char result = pc_checkadditem( &sd, purchase.item->nameid, amount );
+		char result = pc_checkadditem( &sd, purchase.item->nameid, output_amount );
 
 		if( result == CHKADDITEM_OVERAMOUNT ){
 			return e_purchase_result::PURCHASE_FAIL_COUNT;
 		}else if( result == CHKADDITEM_NEW ){
-			requiredSlots += purchase.data->inventorySlotNeeded( amount );
+			requiredSlots += purchase.data->inventorySlotNeeded( output_amount );
 		}
 
 		requiredZeny += ( purchase.item->price * amount );
-		requiredWeight += ( purchase.data->weight * amount );
+		requiredWeight += ( purchase.data->weight * output_amount );
 
 		for( const auto& requirementPair : purchase.item->requirements ){
 			std::shared_ptr<s_npc_barter_requirement> requirement = requirementPair.second;
@@ -3386,6 +3409,8 @@ e_purchase_result npc_barter_purchase( map_session_data& sd, std::shared_ptr<s_n
 	}
 
 	for( s_barter_purchase& purchase : purchases ){
+		uint32 output_amount = purchase.amount * purchase.item->outputAmount;
+
 		if( purchase.item->stockLimited ){
 			purchase.item->stock -= purchase.amount;
 
@@ -3401,18 +3426,18 @@ e_purchase_result npc_barter_purchase( map_session_data& sd, std::shared_ptr<s_n
 			it.nameid = purchase.item->nameid;
 			it.identify = true;
 
-			if( pc_additem( &sd, &it, purchase.amount, LOG_TYPE_BARTER ) != ADDITEM_SUCCESS ){
+			if( pc_additem( &sd, &it, output_amount, LOG_TYPE_BARTER ) != ADDITEM_SUCCESS ){
 				return e_purchase_result::PURCHASE_FAIL_EXCHANGE_FAILED;
 			}
 		}else{
 			if( purchase.data->type == IT_PETEGG ){
-				for( int32 i = 0; i < purchase.amount; i++ ){
+				for( uint32 i = 0; i < output_amount; i++ ){
 					if( !pet_create_egg( &sd, purchase.item->nameid ) ){
 						return e_purchase_result::PURCHASE_FAIL_EXCHANGE_FAILED;
 					}
 				}
 			}else{
-				for( int32 i = 0; i < purchase.amount; i++ ){
+				for( uint32 i = 0; i < output_amount; i++ ){
 					struct item it = {};
 
 					it.nameid = purchase.item->nameid;

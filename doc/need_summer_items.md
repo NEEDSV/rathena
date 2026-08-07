@@ -88,10 +88,11 @@ LOG_TYPE_CONSUME)`을 호출하므로 Script가 없다는 이유만으로 안전
 
 ### 399931 코코넛 쉐도우 상자
 
-17429 `Shadow_Box3`은 `IG_SHADOW_BOX3`에서 아래 6종 중 한 개를 같은
-확률로 지급한다. 여름 상자의 확정 사양은 한 개 지급이 아니라 50%로 세트를
-선택한 뒤 해당 세트 3종을 모두 지급하는 것이므로 기존 그룹을 그대로
-호출하면 안 된다.
+상점 가격은 코코넛 토큰 100개이며, 계정과 IP 각각 주간 2개·시즌 8개로
+제한한다. 사용 시 아래 6종 중 한 개를 같은 확률로 지급하는 사양이다.
+399931의 사용 Script는 이번 교환소 작업에 포함하지 않으며 후속 작업에서
+구현한다. 17429 `Shadow_Box3`의 `IG_SHADOW_BOX3`이 정확히 같은 6종 균등
+구성이면 후속 Script에서 해당 그룹을 재사용할 수 있다.
 
 | 세트 | Id | AegisName | Name |
 |---|---:|---|---|
@@ -123,7 +124,7 @@ BMP가 필요하다. 실제 리소스 이름은 클라이언트 작업자가 Lua
 | 399928 | `NEED_Summer_Consumable_Box` | 여름 소모품 상자 | DelayConsume | 비활성 | 의문의 알 또는 쉐도우 상자 예정 | 모든 이동 차단 | 둘 다 필요 | 아니요 |
 | 399929 | `NEED_Summer_Zeny_Pouch_100M` | 1억 제니 주머니 | DelayConsume | 비활성 | 1억 제니 지급 예정 | 모든 이동 차단 | 둘 다 필요 | 아니요 |
 | 399930 | `NEED_Summer_Cash_Ticket_100K` | 캐시 10만 포인트 교환권 | DelayConsume | 비활성 | 캐시 10만 지급 예정 | 모든 이동 차단 | 둘 다 필요 | 아니요 |
-| 399931 | `NEED_Summer_Coconut_Shadow_Box` | 코코넛 쉐도우 상자 | DelayConsume | 비활성 | 50% 확률로 3종 세트 지급 예정 | 모든 이동 차단 | 둘 다 필요 | 아니요 |
+| 399931 | `NEED_Summer_Coconut_Shadow_Box` | 코코넛 쉐도우 상자 | DelayConsume | 비활성 | 6종 중 하나를 균등 지급 예정 | 모든 이동 차단 | 둘 다 필요 | 아니요 |
 | 399934 | `NEED_Summer_Costume_Part_Ticket` | 의상 부위 변경권 | DelayConsume | 비활성 | 의상 부위 변경 예정 | 모든 이동 차단 | 둘 다 필요 | 아니요 |
 | 399935 | `NEED_Summer_Aria_Costume_Box` | 아리아 의상 선택 상자 | DelayConsume | 비활성 | 허용 목록 기반 의상 선택 예정 | 모든 이동 차단 | 둘 다 필요 | 아니요 |
 
