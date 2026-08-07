@@ -33,6 +33,7 @@
 #include "map.hpp"
 #include "mob.hpp"
 #include "navi.hpp"
+#include "need_summer_shop.hpp"
 #include "pc.hpp"
 #include "pet.hpp"
 #include "script.hpp" // script_config
@@ -3396,15 +3397,26 @@ e_purchase_result npc_barter_purchase( map_session_data& sd, std::shared_ptr<s_n
 		return e_purchase_result::PURCHASE_FAIL_COUNT;
 	}
 
+	need_summer_shop_transaction summer_transaction;
+	need_summer_shop_begin_result summer_result = need_summer_shop_begin( sd, barter, purchases, summer_transaction );
+	if( summer_result == need_summer_shop_begin_result::REJECTED ){
+		return e_purchase_result::PURCHASE_FAIL_EXCHANGE_FAILED;
+	}
+	auto summer_failure = [&]() {
+		need_summer_shop_finish( sd, summer_transaction, false );
+		return e_purchase_result::PURCHASE_FAIL_EXCHANGE_FAILED;
+	};
+
 	for( int32 i = 0; i < MAX_INVENTORY; i++ ){
 		if( requiredItems[i] > 0 ){
 			if( pc_delitem( &sd, i, requiredItems[i], 0, 0, LOG_TYPE_BARTER ) != 0 ){
-				return e_purchase_result::PURCHASE_FAIL_EXCHANGE_FAILED;
+				return summer_failure();
 			}
 		}
 	}
 
 	if( pc_payzeny( &sd, (int32)requiredZeny, LOG_TYPE_BARTER ) != 0 ){
+		need_summer_shop_finish( sd, summer_transaction, false );
 		return e_purchase_result::PURCHASE_FAIL_MONEY;
 	}
 
@@ -3416,7 +3428,7 @@ e_purchase_result npc_barter_purchase( map_session_data& sd, std::shared_ptr<s_n
 
 			if( Sql_Query( mmysql_handle, "REPLACE INTO `%s` (`name`,`index`,`amount`) VALUES ( '%s', '%hu', '%hu' )", barter_table, barter->name.c_str(), purchase.item->index, purchase.item->stock ) != SQL_SUCCESS ){
 				Sql_ShowDebug( mmysql_handle );
-				return e_purchase_result::PURCHASE_FAIL_EXCHANGE_FAILED;
+				return summer_failure();
 			}
 		}
 
@@ -3427,13 +3439,13 @@ e_purchase_result npc_barter_purchase( map_session_data& sd, std::shared_ptr<s_n
 			it.identify = true;
 
 			if( pc_additem( &sd, &it, output_amount, LOG_TYPE_BARTER ) != ADDITEM_SUCCESS ){
-				return e_purchase_result::PURCHASE_FAIL_EXCHANGE_FAILED;
+				return summer_failure();
 			}
 		}else{
 			if( purchase.data->type == IT_PETEGG ){
 				for( uint32 i = 0; i < output_amount; i++ ){
 					if( !pet_create_egg( &sd, purchase.item->nameid ) ){
-						return e_purchase_result::PURCHASE_FAIL_EXCHANGE_FAILED;
+						return summer_failure();
 					}
 				}
 			}else{
@@ -3445,13 +3457,16 @@ e_purchase_result npc_barter_purchase( map_session_data& sd, std::shared_ptr<s_n
 					it.refine = purchase.item->refine;
 
 					if( pc_additem( &sd, &it, 1, LOG_TYPE_BARTER ) != ADDITEM_SUCCESS ){
-						return e_purchase_result::PURCHASE_FAIL_EXCHANGE_FAILED;
+						return summer_failure();
 					}
 				}
 			}
 		}
 	}
 
+	if( !need_summer_shop_finish( sd, summer_transaction, true ) ){
+		return e_purchase_result::PURCHASE_FAIL_EXCHANGE_FAILED;
+	}
 	return e_purchase_result::PURCHASE_SUCCEED;
 }
 
