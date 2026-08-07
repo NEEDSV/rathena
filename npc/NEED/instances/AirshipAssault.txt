@@ -1,0 +1,1484 @@
+//===== rAthena Script =======================================
+//= Airship Assault Instance Script
+//===== Description ==========================================
+//= Heroes Trail Part-III 'Airship Assault' instance
+//===== Additional Comments: ================================= 
+//= [Official Conversion]
+//= 1.0 First Version [Ziu]
+//= 1.1 Fix Explosion Effect and add respawn attack visual mob [Ziu]
+//= 1.1a Change close;-> end; [Ziu]
+//= 2.0 English version [Secretdataz/Capuche]
+//= 2.1 Clean-up [Secretdataz]
+//= 2.2 Dialogues clean-ups [Aleos]
+//= 2.3 Korean translation and first-clear fast mode [NEED]
+//============================================================
+
+dali02,136,79,3	script	모험가 레온#air1	4_M_DST_GRAND,{
+	mes "[모험가 레온]";
+	mes "흠... 며칠 동안 관찰해 보니, 이곳은 비공정의 기억이 새겨진 장치인 것 같아.";
+	next;
+	mes "[모험가 레온]";
+	mes "...그 이상은 모르겠군. 더 확인된 정보는 없어...";
+	close;
+}
+
+dali02,142,81,3	script	차원의 장치#air1	PORTAL,{
+	.@instance_db_id = 20;
+	.@remaining = instance_ip_reward_remaining(.@instance_db_id);
+	.@limit = instance_ip_reward_limit(.@instance_db_id);
+
+	if (.@remaining == -1 || .@limit == -1) {
+		mes "보상 이용 횟수를 확인하지 못했습니다.";
+		mes "잠시 후 다시 시도해 주세요.";
+		end;
+	}
+
+	if (.@remaining != -2 && .@limit > 0) {
+		if (.@remaining <= 0) {
+			mes "오늘 해당 던전의 보상 이용 횟수를";
+			mes "모두 사용했습니다.";
+			mes "남은 보상 횟수: ^FF00000회 / " + .@limit + "회^000000";
+			mes "초기화 시간: 매일 오전 4시";
+			end;
+		}
+
+		mes "오늘 남은 보상 횟수:";
+		mes "^3355FF" + .@remaining + "회 / " + .@limit + "회^000000";
+		next;
+	}
+	
+	if (checkquest(15050,PLAYTIME) == 2) {
+		erasequest 15050;// Memorial Dungeon: Airship Assault
+		erasequest 15051;
+	}
+	else if (checkquest(15051,PLAYTIME) == 2) {// Memorial Dungeon: Airship Assault
+		mes "^ff0000마지막 입장 후 23시간 동안 다시 입장할 수 없습니다.^000000";
+		close;
+	}
+	.@party_id = getcharid(1);
+	.@p_name$ = getpartyname(.@party_id);
+	.@md_name$ = "비공정 습격";
+
+	if (BaseLevel < 125) {
+		mes "^ff0000125레벨 미만은 입장할 수 없습니다.^000000";
+		close;
+	}
+	if (.@party_id < 1) {
+		mes "^ff0000입장하려면 1인 이상의 파티를 생성하거나 가입해야 합니다.^000000";
+		close;
+	}
+	if (is_party_leader() == false) {
+		mes "^ff0000이 메모리얼 던전은 1인 전용입니다. 파티장만 입장할 수 있습니다.^000000";
+		close;
+	}
+	.@s = select( "장치 가동", "장치 사용", "취소" );
+	if (is_party_leader(.@party_id) == false) {
+		mes "^ff0000이 메모리얼 던전은 1인 전용입니다. 파티장만 입장할 수 있습니다.^000000";
+		close;
+	}
+	switch(.@s) {
+	case 1:
+		NEED_AIRSHIP_FAST_PENDING = 0;
+		if (#NEED_MD_AIRSHIP_CLEAR) {
+			mes "[차원의 장치]";
+			mes "진행 방식을 선택해 주세요.";
+			next;
+			switch (select("간소화 진행:일반 진행:취소")) {
+			case 1:
+				NEED_AIRSHIP_FAST_PENDING = 1;
+				break;
+			case 2:
+				break;
+			case 3:
+				end;
+			}
+		}
+		if (instance_create(.@md_name$) < 0) {
+			NEED_AIRSHIP_FAST_PENDING = 0;
+			mes "파티명: " + getpartyname( getcharid(1) );
+			mes "캐릭터명: " + strcharinfo(0);
+			mes "^0000ff비공정 습격^000000 인스턴스 생성에 실패했습니다.";
+			close;
+		}
+		mes "^ff0000차원의 장치가 준비되었습니다.^000000";
+		mes "^ff0000장치를 다시 클릭해 입장해 주세요.^000000";
+		close;
+	case 2:
+		switch( instance_enter(.@md_name$) ) {
+		case IE_OK:
+			'need_airship_fast = NEED_AIRSHIP_FAST_PENDING;
+			NEED_AIRSHIP_FAST_PENDING = 0;
+			if (isbegin_quest(15050) == 0) {
+				setquest 15050;// Memorial Dungeon: Airship Assault
+				setquest 15051;// Memorial Dungeon: Airship Assault
+			}
+			mapannounce "dali02", strcharinfo(0) + " 님이 비공정 습격 인스턴스에 입장했습니다.", bc_map,"0x00ff99";
+			specialeffect2 EF_WARP;
+			// warp "1@air1",244,73;
+			end;
+		case IE_NOMEMBER:
+			mes "^ff0000입장하려면 1인 이상의 파티를 생성하거나 가입해야 합니다.^000000";
+			close;
+		case IE_NOINSTANCE:
+			mes "^ff0000파티장이 아직 장치를 가동하지 않았습니다.^000000";
+			close;
+		case IE_OTHER:
+			mes "알 수 없는 오류가 발생했습니다.";// Custom
+			close;
+		}
+	case 3:
+		end;
+	}
+}
+
+// Warps
+1@air1,253,54,0	warp	warp1#air1	2,2,1@air1,91,68
+1@air1,104,72,0	warp	warp2a#air1	2,2,1@air1,101,200
+1@air1,104,52,0	warp	warp2b#air1	2,2,1@air1,101,176
+1@air1,103,200,0	warp	warp3a#air1	2,2,1@air2,104,52
+1@air1,103,176,0	warp	warp3b#air1	2,2,1@air2,104,52
+1@air2,88,67,0	warp	warp4a#air2	2,2,1@air2,247,53
+1@air2,244,73,0	warp	warp5a#air2	2,2,dali02,137,82
+
+// Entrance
+1@air1,240,57,3	script	로키#air1	4_M_ROKI2,{
+	if ('airship_status == 0) {
+		cutin "ep14_roki02",2;
+		mes "[로키]";
+		mes "...귀찮은 녀석들이 보이지 않아 다행이군...";
+		close3;
+	}
+	cutin "ep14_roki02",2;
+	mes "[로키]";
+	mes "...여기는 내가 막겠다. 비공정 아래층으로 내려가...!!";
+	close3;
+}
+
+1@air1,235,57,5	script	펜릴#air1	4_F_FENRIR,{
+	if ('airship_status == 0) {
+		cutin "fenrir_a",2;
+		mes "[펜릴]";
+		mes "기계의 힘으로 하늘을 난다니... 기술의 발전은 정말 놀랍군.";
+		next;
+		mes "[펜릴]";
+		mes "하지만 다른 힘도 느껴져... 이 비공정은 기술만으로 날고 있는 게 아닌 것 같아.";
+		close3;
+	}
+	cutin "fenrir_b",2;
+	mes "[펜릴]";
+	mes "여기는 내가 맡을게. 카오스, 아이리스와 함께 아래층으로 내려가!";
+	close3;
+}
+
+1@air1,215,67,5	script	아이리스#air1	4_F_IRIS,{ end; }
+1@air1,214,66,5	duplicate(아이리스#air1)	카오스#air1	4_M_CHAOS
+
+1@air1,217,67,3	script	페록 선장#air1	4_M_REINDEER,{
+	if ('need_airship_fast && 'airship_status == 0) {
+		cutin "fly_felrock2",2;
+		mes "[페록 선장]";
+		mes "적이 비공정을 습격했다!";
+		mes "아래층으로 내려가 적을 모두 처치해라!";
+		close2;
+		cutin "",255;
+		disablenpc instance_npcname("페록 선장#air1");
+		donpcevent instance_npcname("#airshipputmob1") + "::OnStart";
+		end;
+	}
+	if ('airship_status == 0) {
+		cutin "h_iris02",2;
+		mes "[아이리스]";
+		mes "우와~ 정말 멋지다!! 바람도 시원해~!!";
+		mes "야호~ 하늘을 날고 있어! 게다가 공짜라니!";
+		next;
+		mes "[아이리스]";
+		mes "마법도 없이 이렇게 큰 배가 나는 게 신기하지 않아, 카오스?";
+		next;
+		cutin "h_chaos02",2;
+		mes "[카오스]";
+		mes "......";
+		next;
+		cutin "h_iris02",2;
+		mes "[아이리스]";
+		mes "...?? 카오스?";
+		next;
+		cutin "h_chaos02",2;
+		mes "[카오스]";
+		mes ".....현자 카드몬...";
+		next;
+		cutin "h_iris01",2;
+		mes "[아이리스]";
+		mes "내 말을 듣지 않고 뭐 하는 거야!!!!";
+		next;
+		cutin "h_chaos03",2;
+		mes "[카오스]";
+		mes "아악! 으아아~!!";
+		next;
+		cutin "h_iris01",2;
+		mes "[아이리스]";
+		mes "흥! 딴생각한 벌이야!";
+		next;
+		cutin "h_chaos03",2;
+		mes "[카오스]";
+		mes "아... 아이리스!! 날 죽일 셈이야~!!";
+		next;
+		cutin "h_iris01",2;
+		mes "[아이리스]";
+		mes "흥! 죽든 말든 내 알 바 아니야...";
+		next;
+		cutin "fly_felrock2",2;
+		mes "[페록 선장]";
+		mes "어이!! 배 위에서 장난치지 마라!!";
+		mes "요즘 젊은 인간들은 예의가 없어! 계속 떠들면 전부 밖으로 던져 버리겠다!!";
+		next;
+		cutin "h_iris02",2;
+		mes "[아이리스]";
+		mes "앗... 그런데 선장님, 이렇게 큰 비공정은 어떻게 하늘을 나는 거예요? 정말 신기해요!";
+		next;
+		cutin "fly_felrock2",2;
+		mes "[페록 선장]";
+		mes "응? 좋은 질문이군.";
+		mes "보다시피 큰 보일러에서 물을 끓이고, 증기 압력으로 피스톤과 톱니바퀴를 움직여 터빈과 프로펠러를 돌린다.";
+		next;
+		cutin "h_iris02",2;
+		mes "[아이리스]";
+		mes "에... 그렇게 뜨는 거구나... 신비한 장치가 있을 줄 알았는데 조금 실망이네...";
+		next;
+		cutin "fly_felrock2",2;
+		mes "[페록 선장]";
+		mes "맞아. 증기만으로 이 거대한 배를 띄울 수는 없지. 그래서 '룬 엔진'이라는 증폭 장치를 사용한다.";
+		next;
+		cutin "h_iris01",2;
+		mes "[아이리스]";
+		mes "룬 엔진? 그게 뭐예요?";
+		next;
+		cutin "fly_felrock2",2;
+		mes "[페록 선장]";
+		mes "마력이 담긴 돌을 사용하는 장치다.";
+		mes "전설에 따르면 부서진 심장의 파편이 떨어진 것이라더군... 터무니없는 이야기지만 중요한 건 아니지...";
+		next;
+		mes "[페록 선장]";
+		mes "그 돌은 이른바 '이미르의 눈물'이다. 증기기관과 연결하면 돌에서 흘러나오는 룬의 힘이 에너지를 증폭시킨다.";
+		next;
+		mes "[페록 선장]";
+		mes "엄지손가락만 한 돌 하나가 이 배를 움직인다고 해도 과장이 아니다. 엄청난 힘을 지녔지.";
+		next;
+		cutin "h_iris01",2;
+		mes "[아이리스]";
+		mes "그 작은 것이...!!!";
+		next;
+		cutin "ep14_roki02",2;
+		mes "[로키]";
+		mes "......응?";
+		mes "무언가 이쪽으로 오고 있어...";
+		next;
+		cutin "",255;
+		mes "[경비병]";
+		mes "비상!! 7시 방향에 대규모 와이번 부대 출현!!";
+		next;
+		cutin "fly_felrock2",2;
+		mes "[페록 선장]";
+		mes "뭐라고?!";
+		next;
+		cutin "",255;
+		mes "[경비병]";
+		mes "그... 그렘린입니다!! 와이번에서 그렘린들이 내려왔습니다!!";
+		for ( .@i = 1; .@i <= 8; .@i++ )
+			enablenpc instance_npcname("그렘린#" + .@i + "air1");
+		enablenpc instance_npcname("로타 자이로#1air1");
+		enablenpc instance_npcname("로타 자이로#2air1");
+		enablenpc instance_npcname("아시두스#1air1");
+		enablenpc instance_npcname("아시두스#2air1");
+		enablenpc instance_npcname("와이번#air1");
+		'airship_status = 1;
+		next;
+	}
+	if ('airship_status == 1) {
+		cutin "h_chaos01",2;
+		mes "[카오스]";
+		mes "흠... 이번엔 뭐지?";
+		next;
+		cutin "h_arcana02",2;
+		mes "[아르카나]";
+		mes "하하하하~ 오래 기다렸지!!";
+		mes "아름다운 마녀 아르카나의 깜짝 공중 몬스터 쇼!!";
+		next;
+		cutin "h_chaos03",2;
+		mes "[카오스]";
+		mes "무... 무슨 쇼?";
+		next;
+		cutin "h_arcana02",2;
+		mes "[아르카나]";
+		mes "자... 시작해 볼까! 그렘린들아~!!";
+		mes "파티 타임이다~!!";
+		next;
+		cutin "",255;
+		mes "[경비병]";
+		mes "서... 선장님! 큰일입니다!";
+		mes "비공정 곳곳에 그렘린이 나타났습니다!!";
+		next;
+		cutin "fly_felrock2",2;
+		mes "[페록 선장]";
+		mes "뭐라고?! 저것들이 그렘린이라고?!";
+		mes "이 자식들아!! 당장 내려와!!";
+		next;
+		cutin "h_iris01",2;
+		mes "[아이리스]";
+		mes "선장님, 그렇게 흥분할 필요는 없어요.";
+		mes "그렘린은 기계를 만지는 장난꾸러기 몬스터일 뿐인데...";
+		next;
+		cutin "fly_felrock2",2;
+		mes "[페록 선장]";
+		mes "네가 뭘 안다고 그래!!";
+		mes "여기는 고도 8,000이야!! 작은 고장 하나로도 추락할 수 있다고!";
+		next;
+		cutin "",255;
+		mes "[경비병]";
+		mes "으악!! 후방 1번 엔진이!!";
+		mes "...큰일입니다! 놈들이 엔진실로 향하고 있습니다! 룬 엔진을 지켜야 합니다!!";
+		next;
+		cutin "fly_felrock2",2;
+		mes "[페록 선장]";
+		mes "제길... 내 무기를 어디에 뒀더라...";
+		mes "이봐, 인간들!! 내가 선장실에서 무기를 찾는 동안 저 녀석들을 막아라!!";
+		next;
+		mes "[페록 선장]";
+		mes "특히 룬 엔진에는 접근하지 못하게 해라!! 그게 파괴되면 비공정은 더 이상 날 수 없다!!";
+		next;
+		mes "[페록 선장]";
+		mes "젠장... 무기만 있었어도...";
+		next;
+		disablenpc instance_npcname("페록 선장#air1");
+		cutin "h_chaos02",2;
+		mes "[카오스]";
+		mes "아이리스!! 엔진실로 내려가자! 로키와 펜릴은 이곳을 지켜 줘!";
+		next;
+		cutin "h_iris01",2;
+		mes "[아이리스]";
+		mes "어... 알았어! 가자!!";
+		close2;
+		cutin "",255;
+		if ('airship_status == 1)
+			donpcevent instance_npcname("#airshipputmob1") + "::OnStart";
+	}
+	end;
+}
+
+1@air1,236,57,3	duplicate(아이리스#air1)	그렘린#1air1	3176
+1@air1,239,57,5	duplicate(아이리스#air1)	그렘린#2air1	3176
+1@air1,230,50,5	duplicate(아이리스#air1)	그렘린#3air1	3176
+1@air1,226,62,3	duplicate(아이리스#air1)	그렘린#4air1	3176
+1@air1,241,48,3	duplicate(아이리스#air1)	그렘린#5air1	3176
+1@air1,225,40,7	duplicate(아이리스#air1)	그렘린#6air1	3176
+1@air1,236,48,7	duplicate(아이리스#air1)	그렘린#7air1	3176
+1@air1,224,66,5	duplicate(아이리스#air1)	그렘린#8air1	3176
+1@air1,213,75,5	duplicate(아이리스#air1)	와이번#air1	3180
+1@air1,218,78,3	duplicate(아이리스#air1)	아시두스#1air1	3178
+1@air1,208,78,5	duplicate(아이리스#air1)	아시두스#2air1	3179
+1@air1,200,78,5	duplicate(아이리스#air1)	로타 자이로#1air1	3175
+1@air1,223,78,3	duplicate(아이리스#air1)	로타 자이로#2air1	3175
+
+// Step 1
+1@air1,0,0,0	script	#airshipputmob1	HIDDEN_WARP_NPC,{
+	end;
+OnStart:
+	enablenpc instance_npcname("#airshipputmob1");
+	enablenpc instance_npcname("여행 중인 기사#air1");
+	enablenpc instance_npcname("쓰러진 주정뱅이#air1");
+	enablenpc instance_npcname("식사 중인 부자#a");
+	enablenpc instance_npcname("무임승차 음유시인#air1");
+	enablenpc instance_npcname("비공정 식당 관리인#air1");
+	enablenpc instance_npcname("도박꾼#air1");
+	'airship_status = 2;
+	initnpctimer;
+	end;
+OnTimer500:
+	disablenpc instance_npcname("아이리스#air1");
+	disablenpc instance_npcname("카오스#air1");
+	mapannounce 'map_air1$, "적이 갑자기 나타나 비공정을 파괴하려 하고 있습니다.", bc_map,"0xFFFF00";
+	
+	enablenpc instance_npcname("warp1#air1");
+	.@label$ = instance_npcname("#airshipputmob1") + "::OnMyMobDead";
+	monster 'map_air1$,113,66, "비홀더",3177,1, .@label$;
+	monster 'map_air1$,113,58, "비홀더",3177,1, .@label$;
+	monster 'map_air1$, 94,76, "비홀더",3177,1, .@label$;
+	monster 'map_air1$, 96,46, "비홀더",3177,1, .@label$;
+	monster 'map_air1$, 67,69, "비홀더",3177,1, .@label$;
+	monster 'map_air1$, 67,54, "비홀더",3177,1, .@label$;
+	monster 'map_air1$, 67,30, "비홀더",3177,1, .@label$;
+	monster 'map_air1$, 46,57, "비홀더",3177,1, .@label$;
+	monster 'map_air1$, 44,64, "비홀더",3177,1, .@label$;
+	monster 'map_air1$, 35,45, "비홀더",3177,1, .@label$;
+	monster 'map_air1$, 25,65, "비홀더",3177,1, .@label$;
+	monster 'map_air1$, 25,63, "비홀더",3177,1, .@label$;
+	monster 'map_air1$, 25,61, "비홀더",3177,1, .@label$;
+	monster 'map_air1$, 36,79, "비홀더",3177,1, .@label$;
+	monster 'map_air1$, 63,91, "비홀더",3177,1, .@label$;
+
+	monster 'map_air1$,106,56, "로타 자이로",3175,1, .@label$;
+	monster 'map_air1$,115,68, "로타 자이로",3175,1, .@label$;
+	monster 'map_air1$, 95,64, "로타 자이로",3175,1, .@label$;
+	monster 'map_air1$, 96,56, "로타 자이로",3175,1, .@label$;
+	monster 'map_air1$, 82,77, "로타 자이로",3175,1, .@label$;
+	monster 'map_air1$, 63,30, "로타 자이로",3175,1, .@label$;
+	monster 'map_air1$, 44,61, "로타 자이로",3175,1, .@label$;
+	monster 'map_air1$, 42,53, "로타 자이로",3175,1, .@label$;
+	monster 'map_air1$, 33,54, "로타 자이로",3175,1, .@label$;
+	monster 'map_air1$, 18,65, "로타 자이로",3175,1, .@label$;
+	monster 'map_air1$, 18,61, "로타 자이로",3175,1, .@label$;
+	monster 'map_air1$, 18,56, "로타 자이로",3175,1, .@label$;
+	monster 'map_air1$, 32,71, "로타 자이로",3175,1, .@label$;
+	monster 'map_air1$, 69,90, "로타 자이로",3175,1, .@label$;
+	monster 'map_air1$, 84,45, "로타 자이로",3175,1, .@label$;
+	end;
+OnTimer1500:
+	mapannounce 'map_air1$, "비공정 아래층으로 내려가 적을 처치하세요.", bc_map,"0xFFFF00";
+	end;
+OnTimer2500:
+	mapannounce 'map_air1$, "해당 층의 적을 모두 처치해야 다음 구역으로 이동할 수 있습니다.", bc_map,"0xFFFF00";
+	stopnpctimer;
+	end;
+OnMyMobDead:
+	if (mobcount( 'map_air1$, instance_npcname("#airshipputmob1") + "::OnMyMobDead" ) < 1) {
+		mapannounce 'map_air1$, "이 층의 적을 모두 처치했습니다. 다음 층으로 내려가세요.", bc_map,"0xFFFF00";
+		disablenpc instance_npcname("#airshipputmob1");
+		donpcevent instance_npcname("#airshipputmob2") + "::OnStart";
+		'airship_status = 3;
+	}
+	end;
+}
+
+1@air1,120,62,3	script	여행 중인 기사#air1	4_M_JOB_KNIGHT1,{
+	mes "[여행 중인 기사]";
+	mes "이 녀석들은 뭐지?";
+	mes "전부 베어 버릴까? ...아니, 이 돈으로는 나설 수 없지...";
+	close2;
+	emotion ET_OHNO;
+	end;
+}
+
+1@air1,95,47,3	script	쓰러진 주정뱅이#air1	4_M_LIEMAN,{
+	mes "[쓰러진 주정뱅이]";
+	mes "으으... 취한다... 딸꾹";
+	mes "....드르렁... 쿨쿨";
+	close2;
+	emotion ET_CONFUSE;
+	end;
+}
+
+1@air1,75,71,5	script	식사 중인 부자#a	1_M_JOBTESTER,{
+	mes "[식사 중인 부자]";
+	mes "뭐... 뭐야, 이 몬스터들은?!";
+	mes "감히 내 소중한 식사 시간을 방해해! 경비병! 어디 있나!";
+	close;
+}
+
+1@air1,61,88,5	script	무임승차 음유시인#air1	1_M_BARD,{
+	mes "[무임승차 음유시인]";
+	mes "우와... 화려해~ 환상적이야~";
+	mes "폭발하는 비공정조차 멋지군~ 우와~";
+	close;
+}
+
+1@air1,46,61,5	script	비공정 식당 관리인#air1	1_M_PUBMASTER,{
+	mes "[비공정 식당 관리인]";
+	mes "무섭게 생겼어도 저 몬스터들도 우리 식당의 손님이지.";
+	mes "몬스터 손님, 무엇을 드릴까요?";
+	next;
+	mes "[비공정 식당 관리인]";
+	mes "아... 으악! 살려 줘!!";
+	close;
+}
+
+1@air1,28,67,5	script	도박꾼#air1	4_M_YURI,{
+	mes "[도박꾼]";
+	mes "이봐! 내 카드에 손대지 마!";
+	mes "손과 목을 함께 날려 버리겠다!";
+	next;
+	mes "[도박꾼]";
+	mes "응..?!";
+	mes "이제 감이 좀 오는데 몬스터가 나타나다니?! 내가 돈을 좀 땄다고 빼앗으려는 거야?!";
+	close;
+}
+
+// Step 2
+1@air1,0,0,0	script	#airshipputmob2	HIDDEN_WARP_NPC,{
+	end;
+OnStart:
+	enablenpc instance_npcname("#airshipputmob2");
+	enablenpc instance_npcname("비공정 승무원#1air1");
+	enablenpc instance_npcname("비공정 승무원#2air1");
+	enablenpc instance_npcname("국왕 호위병#1air1");
+	enablenpc instance_npcname("국왕 호위병#2air1");
+	enablenpc instance_npcname("관광객#1air1");
+	enablenpc instance_npcname("관광객#2air1");
+	enablenpc instance_npcname("소국의 왕#1air1");
+	enablenpc instance_npcname("warp2a#air1");
+	enablenpc instance_npcname("warp2b#air1");
+	.@label$ = instance_npcname("#airshipputmob2") + "::OnMyMobDead";
+
+	monster 'map_air1$,111,190, "그렘린",3176,1, .@label$;
+	monster 'map_air1$,120,190, "그렘린",3176,1, .@label$;
+	monster 'map_air1$, 97,198, "그렘린",3176,1, .@label$;
+	monster 'map_air1$, 97,201, "그렘린",3176,1, .@label$;
+	monster 'map_air1$, 82,191, "그렘린",3176,1, .@label$;
+	monster 'map_air1$, 82,199, "그렘린",3176,1, .@label$;
+	monster 'map_air1$, 66,197, "그렘린",3176,1, .@label$;
+	monster 'map_air1$, 67,161, "그렘린",3176,1, .@label$;
+	monster 'map_air1$, 54,173, "그렘린",3176,1, .@label$;
+	monster 'map_air1$, 69,213, "그렘린",3176,1, .@label$;
+	monster 'map_air1$, 43,175, "그렘린",3176,1, .@label$;
+	monster 'map_air1$, 36,190, "그렘린",3176,1, .@label$;
+	monster 'map_air1$, 41,202, "그렘린",3176,1, .@label$;
+	monster 'map_air1$, 26,195, "그렘린",3176,1, .@label$;
+	monster 'map_air1$, 20,193, "그렘린",3176,1, .@label$;
+
+	monster 'map_air1$, 82,186, "아시두스",3179,1, .@label$;
+	monster 'map_air1$, 81,202, "아시두스",3179,1, .@label$;
+	monster 'map_air1$, 97,178, "아시두스",3179,1, .@label$;
+	monster 'map_air1$, 97,175, "아시두스",3179,1, .@label$;
+	monster 'map_air1$, 67,180, "아시두스",3179,1, .@label$;
+	monster 'map_air1$, 65,157, "아시두스",3179,1, .@label$;
+	monster 'map_air1$, 64,212, "아시두스",3179,1, .@label$;
+	monster 'map_air1$, 37,173, "아시두스",3179,1, .@label$;
+	monster 'map_air1$, 37,201, "아시두스",3179,1, .@label$;
+	monster 'map_air1$, 32,186, "아시두스",3179,1, .@label$;
+	monster 'map_air1$, 20,181, "아시두스",3179,1, .@label$;
+	monster 'map_air1$, 18,186, "아시두스",3179,1, .@label$;
+	monster 'map_air1$, 55,200, "아시두스",3179,1, .@label$;
+	monster 'map_air1$,115,184, "아시두스",3179,1, .@label$;
+	monster 'map_air1$,115,189, "아시두스",3179,1, .@label$;
+	end;
+OnMyMobDead:
+	if (mobcount( 'map_air1$, instance_npcname("#airshipputmob2") + "::OnMyMobDead" ) < 1) {
+		mapannounce 'map_air1$, "이 층의 적을 모두 처치했습니다. 엔진실 입구로 이동하세요.", bc_map,"0xFFFF00";
+		enablenpc instance_npcname("아이리스#2air1");
+		enablenpc instance_npcname("카오스#2air1");
+		enablenpc instance_npcname("그렘린#2aair1");
+		disablenpc instance_npcname("#airshipputmob2");
+		'airship_status = 4;
+	}
+	end;
+}
+
+1@air1,93,193,3	script	비공정 승무원#1air1	4_M_EIN_SOLDIER,{
+	mes "[비공정 승무원]";
+	mes "여기가 엔진실 입구다. 놈들이 들어가지 못하게 막아!";
+	close;
+}
+
+1@air1,22,182,7	script	비공정 승무원#2air1	4_M_EIN_SOLDIER,{
+	mes "[비공정 승무원]";
+	mes "젠장... 너무 많아! 이대로면 엔진실이 뚫리겠어!!";
+	close;
+}
+
+1@air1,43,191,4	script	국왕 호위병#1air1	8W_SOLDIER,{
+	mes "[국왕 호위병]";
+	mes "무슨 일이 있어도 잠든 국왕 폐하를 깨워서는 안 된다!";
+	close;
+}
+1@air1,39,191,4	duplicate(국왕 호위병#1air1)	국왕 호위병#2air1	8W_SOLDIER
+
+1@air1,58,197,3	script	관광객#1air1	4_M_LIEMAN,{
+	mes "[" + strnpcinfo(1) + "]";
+	mes "....드르렁... 쿨쿨";
+	close;
+}
+1@air1,49,169,5	duplicate(관광객#1air1)	관광객#2air1	4_M_LIEMAN
+1@air1,42,205,3	duplicate(관광객#1air1)	소국의 왕#1air1	4_M_TRISTAN
+
+1@air1,88,187,5	duplicate(아이리스#air1)	카오스#2air1	4_M_CHAOS
+1@air1,93,188,5	duplicate(아이리스#air1)	그렘린#2aair1	3176
+
+1@air1,88,189,5	script	아이리스#2air1	4_F_IRIS,{
+	if ('need_airship_fast && 'airship_status == 4) {
+		cutin "h_iris01",2;
+		mes "[아이리스]";
+		mes "그렘린이 룬 엔진을 폭파했어!";
+		mes "적을 처치하며 갑판으로 올라가자!";
+		close2;
+		cutin "",255;
+		hideonnpc instance_npcname("그렘린#2aair1");
+		donpcevent instance_npcname("#airshipputmob3") + "::OnStart";
+		donpcevent instance_npcname("firecontrol#air2") + "::OnStart";
+		'airship_status = 5;
+		disablenpc instance_npcname("아이리스#2air1");
+		disablenpc instance_npcname("카오스#2air1");
+		end;
+	}
+	if ('airship_status == 4) {
+		cutin "h_chaos02",2;
+		mes "[카오스]";
+		mes "젠장... 벌써 여기까지 왔군! 그래도 네 덕분에 룬 엔진은 지켰어.";
+		next;
+		cutin "h_iris01",2;
+		mes "[아이리스]";
+		mes "어... 어?! 그렘린 한 마리가 엔진실로 향하고 있어!!";
+		next;
+		cutin "h_chaos03",2;
+		mes "[카오스]";
+		mes ".....!! 막아야 해!!";
+		next;
+		cutin "",255;
+		mes "[그렘린]";
+		mes "끼익..!!";
+		if ('airship_status == 4) {
+			hideonnpc instance_npcname("그렘린#2aair1");
+			donpcevent instance_npcname("#airshipputmob3") + "::OnStart";
+			donpcevent instance_npcname("firecontrol#air2") + "::OnStart";
+			'airship_status = 5;
+		}
+		next;
+	}
+	if ('airship_status == 5) {
+		specialeffect EF_SUI_EXPLOSION,AREA, instance_npcname("그렘린#2aair1");
+		mes "- 펑! 퍼펑!";
+		next;
+		cutin "h_iris01",2;
+		mes "[아이리스]";
+		mes "꺄악!!";
+		next;
+		cutin "",255;
+		mes "[승무원]";
+		mes "으악! 룬 엔진이!! 엔진실이 폭발했다!! 진화반! 불을 꺼라!!";
+		next;
+		cutin "h_chaos02",2;
+		mes "[카오스]";
+		mes "젠장!! 여긴 위험해! 우선 빠져나가자! 아이리스, 서둘러!!";
+		close2;
+		// 'airship_status = 6;// no consequence
+		cutin "",255;
+		disablenpc instance_npcname("아이리스#2air1");
+		disablenpc instance_npcname("카오스#2air1");
+		initnpctimer;
+	}
+	end;
+OnTimer1000:
+	mapannounce 'map_air1$, "적을 처치하면서 비공정 갑판으로 올라가세요.", bc_map,"0xFFFF00";
+	stopnpctimer;
+	end;
+}
+
+// Step 3
+1@air2,0,0,0	script	#airshipputmob3	HIDDEN_WARP_NPC,{
+	end;
+OnStart:
+	enablenpc instance_npcname("#airshipputmob3");
+	enablenpc instance_npcname("warp3a#air1");
+	enablenpc instance_npcname("warp3b#air1");
+	enablenpc instance_npcname("쓰러진 주정뱅이#air2");
+	enablenpc instance_npcname("식사 중인 부자#b");
+	enablenpc instance_npcname("여행 중인 기사#air2");
+	enablenpc instance_npcname("무임승차 음유시인#air2");
+	enablenpc instance_npcname("도박꾼#air2");
+	enablenpc instance_npcname("비공정 식당 관리인#air2");
+
+	.@label$ = instance_npcname("#airshipputmob3") + "::OnMyMobDead";
+	monster 'map_air2$,115,68, "비홀더",3177,1, .@label$;
+	monster 'map_air2$,106,56, "비홀더",3177,1, .@label$;
+	monster 'map_air2$, 95,64, "비홀더",3177,1, .@label$;
+	monster 'map_air2$, 96,56, "비홀더",3177,1, .@label$;
+	monster 'map_air2$, 84,45, "비홀더",3177,1, .@label$;
+	monster 'map_air2$, 63,30, "비홀더",3177,1, .@label$;
+	monster 'map_air2$, 76,77, "비홀더",3177,1, .@label$;
+	monster 'map_air2$, 69,90, "비홀더",3177,1, .@label$;
+	monster 'map_air2$, 50,57, "비홀더",3177,1, .@label$;
+	monster 'map_air2$, 42,53, "비홀더",3177,1, .@label$;
+	monster 'map_air2$, 32,71, "비홀더",3177,1, .@label$;
+	monster 'map_air2$, 18,65, "비홀더",3177,1, .@label$;
+	monster 'map_air2$, 18,61, "비홀더",3177,1, .@label$;
+	monster 'map_air2$, 18,56, "비홀더",3177,1, .@label$;
+	monster 'map_air2$, 33,54, "비홀더",3177,1, .@label$;
+
+	monster 'map_air2$,113,66, "아시두스",3178,1, .@label$;
+	monster 'map_air2$,113,58, "아시두스",3178,1, .@label$;
+	monster 'map_air2$, 94,76, "아시두스",3178,1, .@label$;
+	monster 'map_air2$, 96,46, "아시두스",3178,1, .@label$;
+	monster 'map_air2$, 67,30, "아시두스",3178,1, .@label$;
+	monster 'map_air2$, 67,54, "아시두스",3178,1, .@label$;
+	monster 'map_air2$, 67,69, "아시두스",3178,1, .@label$;
+	monster 'map_air2$, 63,91, "아시두스",3178,1, .@label$;
+	monster 'map_air2$, 51,50, "아시두스",3178,1, .@label$;
+	monster 'map_air2$, 36,79, "아시두스",3178,1, .@label$;
+	monster 'map_air2$, 25,65, "아시두스",3178,1, .@label$;
+	monster 'map_air2$, 25,63, "아시두스",3178,1, .@label$;
+	monster 'map_air2$, 25,61, "아시두스",3178,1, .@label$;
+	monster 'map_air2$, 30,45, "아시두스",3178,1, .@label$;
+	monster 'map_air2$, 38,72, "아시두스",3178,1, .@label$;
+	end;
+OnMyMobDead:
+	if (mobcount( 'map_air2$, instance_npcname("#airshipputmob3") + "::OnMyMobDead" ) < 1) {
+		mapannounce 'map_air2$, "이 층의 적을 모두 처치했습니다. 갑판으로 올라가세요.", bc_map,"0xFFFF00";
+		enablenpc instance_npcname("warp4a#air2");
+		enablenpc instance_npcname("아이리스#air2");
+		enablenpc instance_npcname("펜릴#air2");
+		enablenpc instance_npcname("와이번#air2");
+		enablenpc instance_npcname("와이번#2air2");
+		enablenpc instance_npcname("와이번#3air2");
+		enablenpc instance_npcname("아시두스#1air2");
+		enablenpc instance_npcname("아시두스#2air2");
+		enablenpc instance_npcname("로타 자이로#1air2");
+		enablenpc instance_npcname("로타 자이로#2air2");
+		donpcevent instance_npcname("firecontrol2#air2") + "::OnStart";
+		disablenpc instance_npcname("#airshipputmob3");
+		'airship_status = 6;
+	}
+	end;
+}
+
+1@air2,95,47,3	duplicate(쓰러진 주정뱅이#air1)	쓰러진 주정뱅이#air2	4_M_LIEMAN
+1@air2,75,71,5	duplicate(식사 중인 부자#a)	식사 중인 부자#b	1_M_JOBTESTER
+
+1@air2,120,62,3	script	여행 중인 기사#air2	4_M_JOB_KNIGHT1,{
+	mes "[여행 중인 기사]";
+	mes "아... 으악!!";
+	mes "폭발하겠어! 건너가야 해... 반대편 비공정으로 넘어가야 해!!";
+	close;
+}
+
+1@air2,61,88,5	script	무임승차 음유시인#air2	1_M_BARD,{
+	mes "[무임승차 음유시인]";
+	mes "우와... 화려해~ 환상적이야~";
+	mes "폭발하는 비공정조차 멋지군~ 우와~";
+	close;
+}
+
+1@air2,28,67,5	script	도박꾼#air2	4_M_YURI,{
+	mes "[도박꾼]";
+	mes "뭐야? 불이잖아?";
+	mes "으아아아아~";
+	close;
+}
+
+1@air2,46,61,5	script	비공정 식당 관리인#air2	1_M_PUBMASTER,{
+	mes "[비공정 식당 관리인]";
+	mes "이 비공정... 추락하는 건가...";
+	mes "그래도 난 이 배와 운명을 함께하겠다. 이 배와 나는 하나다!";
+	next;
+	mes "[비공정 식당 관리인]";
+	mes "아... 으악! 살려 줘!!";
+	close;
+}
+
+// Step 4
+1@air2,236,57,3	script	그렘린#1air2	3176,{
+	end;
+OnExplosion1:
+	specialeffect EF_SUI_EXPLOSION;
+	sleep 500;
+	specialeffect EF_SUI_EXPLOSION,AREA, instance_npcname("그렘린#2air2");
+	sleep 500;
+	specialeffect EF_SUI_EXPLOSION,AREA, instance_npcname("그렘린#3air2");
+	end;
+OnExplosion2:
+	specialeffect EF_SUI_EXPLOSION;
+	hideonnpc instance_npcname("그렘린#1air2");
+	sleep 500;
+	specialeffect EF_SUI_EXPLOSION,AREA, instance_npcname("그렘린#2air2");
+	hideonnpc instance_npcname("그렘린#2air2");
+	sleep 500;
+	specialeffect EF_SUI_EXPLOSION,AREA, instance_npcname("그렘린#3air2");
+	hideonnpc instance_npcname("그렘린#3air2");
+	end;
+}
+
+1@air2,239,57,5	duplicate(아이리스#air1)	그렘린#2air2	3176
+1@air2,230,50,5	duplicate(아이리스#air1)	그렘린#3air2	3176
+1@air2,226,62,3	duplicate(아이리스#air1)	그렘린#4air2	3176
+1@air2,241,48,3	duplicate(아이리스#air1)	그렘린#5air2	3176
+1@air2,225,40,7	duplicate(아이리스#air1)	그렘린#6air2	3176
+1@air2,236,48,7	duplicate(아이리스#air1)	그렘린#7air2	3176
+1@air2,224,66,5	duplicate(아이리스#air1)	그렘린#8air2	3176
+
+1@air2,229,56,5	duplicate(아이리스#air1)	로키#air2	4_M_ROKI2
+1@air2,241,54,3	duplicate(아이리스#air1)	아이리스#air2	4_F_IRIS
+1@air2,213,75,5	duplicate(아이리스#air1)	와이번#air2	3180
+1@air2,235,59,3	duplicate(아이리스#air1)	와이번#2air2	3180
+1@air2,235,49,3	duplicate(아이리스#air1)	와이번#3air2	3180
+1@air2,218,78,3	duplicate(아이리스#air1)	아시두스#1air2	3178
+1@air2,208,78,5	duplicate(아이리스#air1)	아시두스#2air2	3179
+1@air2,200,78,5	duplicate(아이리스#air1)	로타 자이로#1air2	3175
+1@air2,223,78,3	duplicate(아이리스#air1)	로타 자이로#2air2	3175
+
+1@air2,229,54,5	script	펜릴#air2	4_F_FENRIR,{
+	if ('airship_status != 6)
+		end;
+	if ('need_airship_fast) {
+		cutin "fenrir_a",2;
+		mes "[펜릴]";
+		mes "와이번이 비공정을 공격하고 있어.";
+		mes "한 마리는 내가 맡을 테니 다른 한 마리를 부탁해!";
+		close2;
+		cutin "",255;
+		donpcevent instance_npcname("calla#air2") + "::OnStart";
+		end;
+	}
+	cutin "fenrir_a",2;
+	mes "[펜릴]";
+	mes "...끝도 없이 몰려오는군.";
+	next;
+	cutin "h_guardian2",1;
+	mes "[?????]";
+	mes "역시 우리의 직감은 틀리지 않았어. 사악한 기운을 따라 여기까지 온 보람이 있군.";
+	next;
+	cutin "h_iris01",2;
+	mes "[아이리스]";
+	mes "...?? 누구냐!!";
+	next;
+	cutin "h_guardian2",1;
+	mes "[?????]";
+	mes "소개하지...";
+	next;
+	mes "[?????]";
+	mes "시바! 바사라! 락슈미!";
+	mes "우리는 무적의 레인저!";
+	next;
+	cutin "h_guardian1",1;
+	mes "[가디언 히로인즈]";
+	mes "가디언 히로인즈!!";
+	next;
+	cutin "h_chaos02",2;
+	mes "[카오스]";
+	mes "......";
+	next;
+	cutin "fenrir_a",2;
+	mes "[펜릴]";
+	mes "......";
+	next;
+	cutin "h_guardian1",1;
+	mes "[시바]";
+	mes "응? 반응이 왜 이래? 다들 시큰둥하잖아... 너무 과했나?";
+	next;
+	mes "[바사라]";
+	mes "아니야. 모두 우리의 멋진 등장에 넋을 잃은 거야.";
+	next;
+	mes "[락슈미]";
+	mes "그래, 그래. 영웅의 등장치고는 연출이 조금 과했지!!";
+	next;
+	cutin "h_iris02",2;
+	mes "[아이리스]";
+	mes "푸....";
+	mes "푸하하하하하하하하";
+	next;
+	mes "[아이리스]";
+	mes "뭐야? 저 바보들은?!";
+	mes "저 옷 좀 봐!!";
+	mes "무대 의상인가? 영웅이 아니라 연예인 아니야?";
+	next;
+	cutin "h_guardian3",1;
+	mes "[시바]";
+	mes "흥. 뭘 모르네!";
+	mes "이 옷이 얼마나 비싼지 알아? 최신 유행에 둔감한 사람들은 이래서 문제야~";
+	next;
+	mes "[바사라]";
+	mes "얘들아! 잡담할 때가 아니야! 사악한 기운을 뿌리 뽑자!!";
+	next;
+	mes "[시바]";
+	mes "알겠어, 바사라! 신속한 공격으로 끝내자!!";
+	mes "풍마 금속 수리검!! 이얍!";
+	next;
+	cutin "",255;
+	mes "- 펑! 퍼펑!";
+	donpcevent instance_npcname("그렘린#1air2") + "::OnExplosion1";
+	next;
+	cutin "h_iris01",2;
+	mes "[아이리스]";
+	mes "뭐, 뭐야 저 사람들... 완전 바보잖아...";
+	next;
+	cutin "h_arcana02",2;
+	mes "[아르카나]";
+	mes "어머?";
+	mes "뜻밖의 지원군인가?";
+	mes "재미있는 파티가 되겠네~";
+	next;
+	cutin "fenrir_a",2;
+	mes "[펜릴]";
+	mes "잠깐!";
+	mes "이 파티는 여기서 끝내는 게 좋겠군... 너는 뭐지? 프레이야가 보냈나?";
+	next;
+	cutin "h_arcana02",2;
+	mes "[아르카나]";
+	mes "오호. 겁이 없구나.";
+	mes "하찮은 인간이 감히 프레이야님의 이름을 입에 담다니.";
+	next;
+	cutin "fenrir_a",2;
+	mes "[펜릴]";
+	mes "역시 프레이야의 수하인가?";
+	next;
+	cutin "h_arcana01",2;
+	mes "[아르카나]";
+	mes "...말조심해. 계속 그러면...";
+	mes "신벌을 받게 될 거야!";
+	next;
+	donpcevent instance_npcname("그렘린#1air2") + "::OnExplosion1";
+	cutin "fenrir_b",2;
+	mes "[펜릴]";
+	mes "...!!";
+	next;
+	cutin "h_arcana02",2;
+	mes "[아르카나]";
+	mes "좋아~ 머리를 식혀 줄 멋진 것을 보여 주지.";
+	next;
+	cutin "fenrir_b",2;
+	mes "[펜릴]";
+	mes "설마... 와이번의 숨결?!!";
+	next;
+	cutin "h_arcana02",2;
+	mes "[아르카나]";
+	mes "빙고~";
+	next;
+	cutin "",255;
+	mes "[와이번]";
+	mes "우오오오..!!";
+	next;
+	cutin "fenrir_b",2;
+	mes "[펜릴]";
+	mes "안 돼... 비공정이!!";
+	next;
+	enablenpc instance_npcname("로키#air2");
+	specialeffect EF_SUI_EXPLOSION,AREA, instance_npcname("로키#air2");
+	cutin "",255;
+	mes "- 콰아앙!!!";
+	next;
+	cutin "fenrir_a",2;
+	mes "[펜릴]";
+	mes "...?! 로키!!";
+	next;
+	cutin "ep14_roki02",2;
+	mes "[로키]";
+	mes "흠...";
+	mes "새 옷이 망가졌군...";
+	next;
+	cutin "h_arcana02",2;
+	mes "[아르카나]";
+	mes "오호... 와이번의 숨결을 되받아치다니 예상 밖이네. 하지만 이것도 버틸 수 있을까?";
+	next;
+	cutin "",255;
+	mes "[와이번]";
+	mes "우오오오..!!";
+	next;
+	cutin "ep14_roki02",2;
+	mes "[로키]";
+	mes "귀찮은 것들...";
+	mes "너! 한 마리는 내가 맡을 테니 다른 한 마리를 상대해...";
+	close2;
+	cutin "",255;
+	if ('airship_status == 6)
+		donpcevent instance_npcname("calla#air2") + "::OnStart";
+	end;
+}
+
+1@air2,104,72,0	script	calla#air2	HIDDEN_WARP_NPC,{
+	end;
+OnStart:
+	'airship_status = 7;
+	disablenpc instance_npcname("펜릴#air2");
+	disablenpc instance_npcname("로키#air2");
+	disablenpc instance_npcname("아이리스#air2");
+	disablenpc instance_npcname("와이번#2air2");
+	disablenpc instance_npcname("와이번#3air2");
+	enablenpc instance_npcname("calla#air2");
+	monster 'map_air2$,235,49,"와이번",3180,1, instance_npcname("calla#air2") + "::OnMyMobDead";// E1_G_S_NYDHOG
+	end;
+OnMyMobDead:
+	if (mobcount( 'map_air2$, instance_npcname("calla#air2") + "::OnMyMobDead" ) < 1) {
+		for ( .@i = 1; .@i <= 8; .@i++ )
+			enablenpc instance_npcname("그렘린#" + .@i + "air2");
+		enablenpc instance_npcname("아이리스#2air2");
+		enablenpc instance_npcname("페록 선장#air2");
+		disablenpc instance_npcname("calla#air2");
+		'airship_status = 8;
+	}
+	end;
+}
+
+// Step 5
+1@air2,232,51,5	script	아이리스#2air2	4_F_IRIS,{
+	if ('airship_status != 8)
+		end;
+	if ('need_airship_fast) {
+		cutin "h_iris01",2;
+		mes "[아이리스]";
+		mes "페록 선장이 폭주하고 있어!";
+		mes "정신을 차리도록 제압해 줘!";
+		close2;
+		cutin "",255;
+		donpcevent instance_npcname("callb#air2") + "::OnStart";
+		end;
+	}
+	mes "[그렘린들]";
+	mes "끼익... 크아악~!!";
+	next;
+	cutin "h_iris01",2;
+	mes "[아이리스]";
+	mes "꺅! 아직도 더 있어!!";
+	next;
+	cutin "fly_felrock2",2;
+	mes "[페록 선장]";
+	mes "찾았다! 내 무기! 흐흐흐.";
+	next;
+	mes "[페록 선장]";
+	mes "내 배를 공격하면 어떻게 되는지 보여 주마!";
+	next;
+	mes "[페록 선장]";
+	mes "특수 제작 엑소더스 조커 13세 둠 라이플로 끝내 주지!";
+	next;
+	cutin "h_iris01",2;
+	mes "[아이리스]";
+	mes "자... 잠깐만...";
+	mes "정말 그걸 쏠 생각이에요?!";
+	next;
+	cutin "fly_felrock2",2;
+	mes "[페록 선장]";
+	mes "물론이지!";
+	mes "흐흐흐흐흐흐!";
+	next;
+	donpcevent instance_npcname("그렘린#1air2") + "::OnExplosion2";
+	cutin "",255;
+	mes "- 탕! 타타탕! 탕!";
+	next;
+	mes "[그렘린들]";
+	mes "끄아악!!";
+	next;
+	cutin "fly_felrock2",2;
+	mes "[페록 선장]";
+	mes "무하하하!";
+	mes "어떠냐!!";
+	mes "무하하하하하!";
+	next;
+	donpcevent instance_npcname("그렘린#1air2") + "::OnExplosion1";
+	cutin "",255;
+	mes "- 탕! 타타탕! 탕!";
+	next;
+	mes "[경비병]";
+	mes "으악... 엔... 엔진이!";
+	next;
+	cutin "fly_felrock2",2;
+	mes "[페록 선장]";
+	mes "뭐라고?! 놈들이 엔진을 더 부수고 있다고?!! 화나게 하는군!!";
+	next;
+	cutin "h_iris01",2;
+	mes "[아이리스]";
+	mes "선장님이 부순 거잖아요!!!";
+	next;
+	donpcevent instance_npcname("그렘린#1air2") + "::OnExplosion1";
+	cutin "",255;
+	mes "- 탕! 타타탕! 탕!";
+	next;
+	cutin "fly_felrock2",2;
+	mes "[페록 선장]";
+	mes "이 자식들! 죽어라! 죽어!";
+	mes "무하하하!!";
+	next;
+	cutin "h_iris01",2;
+	mes "[아이리스]";
+	mes "이러다 저 순록 선장 때문에 비공정이 추락하겠어!! 선장을 막아 줘!! 무서워...";
+	next;
+	mes "[아이리스]";
+	mes "어떻게 막지? ...죽지 않을 정도로 두들겨 패면 정신을 차릴지도 몰라... 부탁해!!";
+	close2;
+	cutin "",255;
+	if ('airship_status == 8)
+		donpcevent instance_npcname("callb#air2") + "::OnStart";
+	end;
+}
+
+1@air2,247,51,3	duplicate(아이리스#air1)	페록 선장#air2	4_M_REINDEER
+
+1@air2,104,52,0	script	callb#air2	HIDDEN_WARP_NPC,{
+	end;
+OnStart:
+	'airship_status = 9;
+	for ( .@i = 1; .@i <= 8; .@i++ )
+		disablenpc instance_npcname("그렘린#" + .@i + "air2");
+	disablenpc instance_npcname("페록 선장#air2");
+	disablenpc instance_npcname("아이리스#2air2");
+	enablenpc instance_npcname("callb#air2");
+	monster 'map_air2$,247,51,"폭주한 페록 선장",3181,1, instance_npcname("callb#air2") + "::OnMyMobDead";// E1_FELOCK
+	end;
+OnMyMobDead:
+	if (mobcount( 'map_air2$, instance_npcname("callb#air2") + "::OnMyMobDead" ) < 1)
+		initnpctimer;
+	end;
+OnTimer6000:
+	enablenpc instance_npcname("카오스#air2");
+	enablenpc instance_npcname("페록 선장#2air2");
+	disablenpc instance_npcname("callb#air2");
+	'airship_status = 10;
+	stopnpctimer;
+	end;
+}
+
+// Final
+1@air2,239,58,5	script	카오스#air2	4_M_CHAOS,{
+	if ('need_airship_fast && 'airship_status == 10) {
+		cutin "h_chaos02",2;
+		mes "[카오스]";
+		mes "비공정이 곧 추락한다!";
+		mes "출구를 열었으니 어서 탈출해!";
+		close2;
+		'airship_status = 11;
+		enablenpc instance_npcname("warp5a#air2");
+		#NEED_MD_AIRSHIP_CLEAR = 1;
+		cutin "",255;
+		getexp 100000,65000;
+		end;
+	}
+	if ('airship_status > 10) {
+		cutin "h_chaos02",2;
+		mes "[카오스]";
+		mes "너도 당장 탈출해!! 이 배는 위험해!!";
+		close3;
+	}
+	cutin "fly_felrock2",2;
+	mes "[페록 선장]";
+	mes "이런... 정신없이 쏘다 보니 그렘린이 많이 사라졌군? 흐흐흐.";
+	next;
+	cutin "h_iris01",2;
+	mes "[아이리스]";
+	mes "선장님 때문에 비공정이 망가졌잖아요!!";
+	next;
+	cutin "h_arcana02",2;
+	mes "[아르카나]";
+	mes "우리 일을 대신 해 주네. 흠, 이 정도면 충분한가?";
+	next;
+	mes "[아르카나]";
+	mes "그럼 이제 슬슬 빠져나가 볼까...";
+	next;
+	cutin "h_guardian1",1;
+	mes "[락슈미]";
+	mes "어? ...바사라, 저쪽이 후퇴하는 것 같아.";
+	next;
+	mes "[바사라]";
+	mes "당연하지!! 우리의 실력을 깨달은 거야!! 호호호~";
+	next;
+	mes "[바사라]";
+	mes "그럼 마지막으로 풍마 금속 수리검!!";
+	next;
+	for ( .@i = 1; .@i < 4; .@i++ ) {
+		enablenpc instance_npcname("그렘린#" + .@i + "air2");
+		hideonnpc instance_npcname("그렘린#" + .@i + "air2");
+	}
+	donpcevent instance_npcname("그렘린#1air2") + "::OnExplosion1";
+	cutin "",255;
+	mes "- 타타탕! 탕!";
+	next;
+	cutin "fenrir_b",2;
+	mes "[펜릴]";
+	mes "꺅!! 떨어지겠어!!";
+	mes "...짧아... 닿지 않아...";
+	next;
+	mes "[펜릴]";
+	mes "...이게 끝인가?";
+	mes "...예전처럼 또 닿지 못하는 곳...";
+	mes "카오스...";
+	next;
+	cutin "ep14_roki02",2;
+	mes "[로키]";
+	mes "...잡아.";
+	next;
+	cutin "fenrir_b",2;
+	mes "[펜릴]";
+	mes "로... 키?";
+	next;
+	cutin "ep14_roki02",2;
+	mes "[로키]";
+	mes "뭘 보고 있어? 어서 올라와...";
+	next;
+	cutin "",255;
+	mes "[경비병]";
+	mes "모든 엔진 정지 확인!!";
+	mes "서둘러 탈출해야 합니다!";
+	next;
+	cutin "fly_felrock2",2;
+	mes "[페록 선장]";
+	mes "젠장...";
+	mes "전원 구명정에 탑승해라!";
+	mes "승객을 우선 탑승시키고, 탑승이 끝난 구명정부터 출발시켜라!";
+	next;
+	cutin "h_chaos02",2;
+	mes "[카오스]";
+	mes "잠깐!! 아직 남아 있는 사람들이 있어요!!";
+	next;
+	cutin "fly_felrock2",2;
+	mes "[페록 선장]";
+	mes "어쩔 수 없다!";
+	mes "계속 지체하면 다른 사람들까지 위험해진다!! 안타깝지만 우리가 할 수 있는 건 여기까지야!";
+	next;
+	cutin "h_chaos03",2;
+	mes "[카오스]";
+	mes "남은 사람들도 소중한 생명이에요! 그냥 버리고 갈 거예요?!!";
+	next;
+	cutin "fly_felrock2",2;
+	mes "[페록 선장]";
+	mes "그래, 네 말이 맞다...";
+	mes "그럼 뒷일은 너희에게 맡기고 나는 먼저 간다!!";
+	disablenpc instance_npcname("페록 선장#2air2");
+	next;
+	cutin "h_chaos03",2;
+	mes "[카오스]";
+	mes "이봐! 어디 가는 거야! 아악!!";
+	mes "반드시 잡아서 죽여 버리겠어!!";
+	next;
+	cutin "h_guardian1",1;
+	mes "[바사라]";
+	mes "이런 하찮은 그렘린을 상대할 때가 아니야.";
+	next;
+	mes "[바사라]";
+	mes "더 거대한 악의 기운이 느껴져.";
+	mes "이 작은 녀석들은 저들에게 맡기고 가자!";
+	next;
+	mes "[락슈미&시바]";
+	mes "알겠어!! 레인저 비행 형태!!";
+	next;
+	cutin "h_iris01",2;
+	mes "[아이리스]";
+	mes "어? 잠깐!!";
+	mes "비공정을 부숴 놓고 어디 가는 거야?!";
+	next;
+	mes "[아이리스]";
+	mes "다음에 만나면 반드시 혼내 줄 거야!! 각오해! 알겠어?! 이 촌뜨기들아!!";
+	next;
+	cutin "h_guardian3",1;
+	mes "[가디언 히로인즈]";
+	mes "...촌뜨기? (분노)";
+	next;
+	mes "[가디언 히로인즈]";
+	mes "정의의 길을 모욕하는 자에게는 가차 없이 정의의 심판을 내려야겠지?";
+	next;
+	mes "[가디언 히로인즈]";
+	mes "악당들아 죽어라!! 풍마 금속 수리검!!";
+	next;
+	donpcevent instance_npcname("그렘린#1air2") + "::OnExplosion1";
+	cutin "",255;
+	mes "- 탕! 타타탕! 탕!";
+	next;
+	cutin "h_iris01",2;
+	mes "[아이리스]";
+	mes "꺄악!!";
+	next;
+	cutin "h_guardian1",1;
+	mes "[가디언 히로인즈]";
+	mes "아하하하하하!!";
+	mes "꼴좋다~!! 가자!!";
+	next;
+	cutin "h_chaos03",2;
+	mes "[카오스]";
+	mes "아이리스!! 이쪽으로 와!!";
+	mes "빨리 펜릴과 로키를 찾아서 탈출하자!!";
+	next;
+	cutin "h_chaos02",2;
+	mes "[카오스]";
+	mes "너도 당장 탈출해!! 이 배는 위험해!!";
+	close2;
+	if ('airship_status == 10){
+		'airship_status = 11;
+		enablenpc instance_npcname("warp5a#air2");
+		#NEED_MD_AIRSHIP_CLEAR = 1;
+		cutin "",255;
+		getexp 100000,65000;
+	}
+	end;
+}
+
+1@air2,243,58,3	duplicate(아이리스#air1)	페록 선장#2air2	4_M_REINDEER
+
+// Explosions
+1@air2,113,52,0	duplicate(아이리스#air1)	fire1#air2	HIDDEN_WARP_NPC
+1@air2,115,68,0	duplicate(아이리스#air1)	fire2#air2	HIDDEN_WARP_NPC
+1@air2,96,58,0	duplicate(아이리스#air1)	fire3#air2	HIDDEN_WARP_NPC
+1@air2,90,75,0	duplicate(아이리스#air1)	fire4#air2	HIDDEN_WARP_NPC
+1@air2,92,51,0	duplicate(아이리스#air1)	fire5#air2	HIDDEN_WARP_NPC
+1@air2,77,42,0	duplicate(아이리스#air1)	fire6#air2	HIDDEN_WARP_NPC
+1@air2,69,77,0	duplicate(아이리스#air1)	fire7#air2	HIDDEN_WARP_NPC
+1@air2,50,49,0	duplicate(아이리스#air1)	fire8#air2	HIDDEN_WARP_NPC
+1@air2,44,61,0	duplicate(아이리스#air1)	fire9#air2	HIDDEN_WARP_NPC
+1@air2,31,53,0	duplicate(아이리스#air1)	fire10#air2	HIDDEN_WARP_NPC
+1@air2,24,74,0	duplicate(아이리스#air1)	fire11#air2	HIDDEN_WARP_NPC
+1@air2,43,45,0	duplicate(아이리스#air1)	fire12#air2	HIDDEN_WARP_NPC
+1@air2,73,65,0	duplicate(아이리스#air1)	fire13#air2	HIDDEN_WARP_NPC
+1@air2,53,72,0	duplicate(아이리스#air1)	fire14#air2	HIDDEN_WARP_NPC
+1@air2,82,62,0	duplicate(아이리스#air1)	fire15#air2	HIDDEN_WARP_NPC
+1@air2,234,70,0	duplicate(아이리스#air1)	fire21#air2	HIDDEN_WARP_NPC
+1@air2,247,64,0	duplicate(아이리스#air1)	fire22#air2	HIDDEN_WARP_NPC
+1@air2,230,33,0	duplicate(아이리스#air1)	fire23#air2	HIDDEN_WARP_NPC
+1@air2,277,39,0	duplicate(아이리스#air1)	fire25#air2	HIDDEN_WARP_NPC
+1@air2,223,50,0	duplicate(아이리스#air1)	fire26#air2	HIDDEN_WARP_NPC
+1@air2,238,70,0	duplicate(아이리스#air1)	fire29#air2	HIDDEN_WARP_NPC
+1@air2,238,32,0	duplicate(아이리스#air1)	fire30#air2	HIDDEN_WARP_NPC
+
+1@air2,0,0,0	script	firecontrol#air2	HIDDEN_WARP_NPC,{
+	end;
+OnStart:
+	enablenpc instance_npcname("firecontrol#air2");
+	for ( .@i = 1; .@i <= 15; .@i++ )
+		enablenpc instance_npcname("fire" + .@i + "#air2");
+	initnpctimer;
+	end;
+OnTimer1000:
+	specialeffect EF_BLASTMINEBOMB,AREA, instance_npcname("fire1#air2");
+	specialeffect EF_BLASTMINEBOMB,AREA, instance_npcname("fire8#air2");
+	end;
+OnTimer1400:
+	specialeffect EF_BLASTMINEBOMB,AREA, instance_npcname("fire2#air2");
+	specialeffect EF_BLASTMINEBOMB,AREA, instance_npcname("fire9#air2");
+	end;
+OnTimer1800:
+	specialeffect EF_BLASTMINEBOMB,AREA, instance_npcname("fire3#air2");
+	specialeffect EF_BLASTMINEBOMB,AREA, instance_npcname("fire10#air2");
+	end;
+OnTimer2200:
+	specialeffect EF_BLASTMINEBOMB,AREA, instance_npcname("fire4#air2");
+	specialeffect EF_BLASTMINEBOMB,AREA, instance_npcname("fire11#air2");
+	end;
+OnTimer2600:
+	specialeffect EF_BLASTMINEBOMB,AREA, instance_npcname("fire5#air2");
+	specialeffect EF_BLASTMINEBOMB,AREA, instance_npcname("fire12#air2");
+	end;
+OnTimer3000:
+	specialeffect EF_BLASTMINEBOMB,AREA, instance_npcname("fire6#air2");
+	specialeffect EF_BLASTMINEBOMB,AREA, instance_npcname("fire13#air2");
+	end;
+OnTimer3400:
+	specialeffect EF_BLASTMINEBOMB,AREA, instance_npcname("fire7#air2");
+	specialeffect EF_BLASTMINEBOMB,AREA, instance_npcname("fire14#air2");
+	end;
+OnTimer3800:
+	specialeffect EF_BLASTMINEBOMB,AREA, instance_npcname("fire15#air2");
+	initnpctimer;
+	end;
+}
+
+1@air2,0,0,0	script	firecontrol2#air2	HIDDEN_WARP_NPC,{
+	end;
+OnStart:
+	enablenpc instance_npcname("firecontrol2#air2");
+	enablenpc instance_npcname("fire21#air2");
+	enablenpc instance_npcname("fire22#air2");
+	enablenpc instance_npcname("fire23#air2");
+	enablenpc instance_npcname("fire25#air2");
+	enablenpc instance_npcname("fire26#air2");
+	enablenpc instance_npcname("fire29#air2");
+	enablenpc instance_npcname("fire30#air2");
+	initnpctimer;
+	end;
+OnTimer1000:
+	specialeffect EF_BLASTMINEBOMB,AREA, instance_npcname("fire21#air2");
+	end;
+OnTimer1400:
+	specialeffect EF_BLASTMINEBOMB,AREA, instance_npcname("fire22#air2");
+	end;
+OnTimer1800:
+	specialeffect EF_BLASTMINEBOMB,AREA, instance_npcname("fire23#air2");
+	end;
+OnTimer2200:
+	specialeffect EF_BLASTMINEBOMB,AREA, instance_npcname("fire25#air2");
+	end;
+OnTimer2600:
+	specialeffect EF_BLASTMINEBOMB,AREA, instance_npcname("fire26#air2");
+	end;
+OnTimer3000:
+	specialeffect EF_BLASTMINEBOMB,AREA, instance_npcname("fire29#air2");
+	end;
+OnTimer3400:
+	specialeffect EF_BLASTMINEBOMB,AREA, instance_npcname("fire30#air2");
+	initnpctimer;
+	end;
+
+OnInstanceInit:
+	'airship_status = 0;
+	'need_airship_fast = 0;
+
+	'map_air1$ = instance_mapname("1@air1");
+	'map_air2$ = instance_mapname("1@air2");
+
+	// Warps
+	disablenpc instance_npcname("warp1#air1");
+	disablenpc instance_npcname("warp2a#air1");
+	disablenpc instance_npcname("warp2b#air1");
+	disablenpc instance_npcname("warp3a#air1");
+	disablenpc instance_npcname("warp3b#air1");
+	disablenpc instance_npcname("warp4a#air2");
+	disablenpc instance_npcname("warp5a#air2");
+
+	// Entrance
+	disablenpc instance_npcname("아시두스#1air1");
+	disablenpc instance_npcname("아시두스#2air1");
+	disablenpc instance_npcname("로타 자이로#1air1");
+	disablenpc instance_npcname("로타 자이로#2air1");
+	disablenpc instance_npcname("와이번#air1");
+	for ( .@i = 1; .@i <= 8; .@i++ )
+		disablenpc instance_npcname("그렘린#" + .@i + "air1");
+
+	// Step 1
+	disablenpc instance_npcname("#airshipputmob1");
+	disablenpc instance_npcname("여행 중인 기사#air1");
+	disablenpc instance_npcname("쓰러진 주정뱅이#air1");
+	disablenpc instance_npcname("식사 중인 부자#a");
+	disablenpc instance_npcname("무임승차 음유시인#air1");
+	disablenpc instance_npcname("비공정 식당 관리인#air1");
+	disablenpc instance_npcname("도박꾼#air1");
+
+	// Step 2
+	disablenpc instance_npcname("#airshipputmob2");
+	disablenpc instance_npcname("아이리스#2air1");
+	disablenpc instance_npcname("카오스#2air1");
+	disablenpc instance_npcname("그렘린#2aair1");
+	disablenpc instance_npcname("비공정 승무원#1air1");
+	disablenpc instance_npcname("비공정 승무원#2air1");
+	disablenpc instance_npcname("국왕 호위병#1air1");
+	disablenpc instance_npcname("국왕 호위병#2air1");
+	disablenpc instance_npcname("관광객#1air1");
+	disablenpc instance_npcname("관광객#2air1");
+	disablenpc instance_npcname("소국의 왕#1air1");
+
+	// Step 3 - 1@air2
+	disablenpc instance_npcname("#airshipputmob3");
+	disablenpc instance_npcname("firecontrol#air2");
+	disablenpc instance_npcname("쓰러진 주정뱅이#air2");
+	disablenpc instance_npcname("식사 중인 부자#b");
+	disablenpc instance_npcname("여행 중인 기사#air2");
+	disablenpc instance_npcname("무임승차 음유시인#air2");
+	disablenpc instance_npcname("도박꾼#air2");
+	disablenpc instance_npcname("비공정 식당 관리인#air2");
+
+	// Step 4
+	disablenpc instance_npcname("calla#air2");
+	disablenpc instance_npcname("firecontrol2#air2");
+	disablenpc instance_npcname("펜릴#air2");
+	disablenpc instance_npcname("로키#air2");
+	disablenpc instance_npcname("아이리스#air2");
+	disablenpc instance_npcname("와이번#air2");
+	disablenpc instance_npcname("와이번#2air2");
+	disablenpc instance_npcname("와이번#3air2");
+	disablenpc instance_npcname("아시두스#1air2");
+	disablenpc instance_npcname("아시두스#2air2");
+	disablenpc instance_npcname("로타 자이로#1air2");
+	disablenpc instance_npcname("로타 자이로#2air2");
+	disablenpc instance_npcname("페록 선장#air2");
+	for ( .@i = 1; .@i <= 3; .@i++ )
+		hideonnpc instance_npcname("그렘린#" + .@i + "air2");
+	for ( .@i = 4; .@i <= 8; .@i++ )
+		disablenpc instance_npcname("그렘린#" + .@i + "air2");
+
+	// Step 5
+	disablenpc instance_npcname("callb#air2");
+	disablenpc instance_npcname("아이리스#2air2");
+
+	// Final
+	disablenpc instance_npcname("카오스#air2");
+	disablenpc instance_npcname("페록 선장#2air2");
+
+	// Blast
+	for ( .@i = 1; .@i <= 15; .@i++ )
+		disablenpc instance_npcname("fire" + .@i + "#air2");
+	disablenpc instance_npcname("fire21#air2");
+	disablenpc instance_npcname("fire22#air2");
+	disablenpc instance_npcname("fire23#air2");
+	disablenpc instance_npcname("fire25#air2");
+	disablenpc instance_npcname("fire26#air2");
+	disablenpc instance_npcname("fire29#air2");
+	disablenpc instance_npcname("fire30#air2");
+	end;
+}
