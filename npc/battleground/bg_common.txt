@@ -1625,6 +1625,64 @@ function	script	F_BG_ClearAllReadyState	{
 }
 
 //============================================================
+// 전장 맵 공통 디버프 정리
+//
+// 티에라/플라비우스/KVM의 라운드 전환 및 종료 시 사용합니다.
+// 해당 맵에 현재 접속해 있는 플레이어에게만 적용하며,
+// 일반적인 버프는 유지하고 전투 진행을 방해하는 상태 이상 위주로 해제합니다.
+//============================================================
+function	script	F_BG_ClearMapDebuff	{
+	.@map$ = getarg(0, "");
+	if (.@map$ == "")
+		return 0;
+
+	.@caller_aid = getattachedrid();
+	.@count = getmapunits(BL_PC, .@map$, .@unit_aid[0]);
+	.@cleared = 0;
+
+	for (.@i = 0; .@i < .@count; .@i++) {
+		if (.@unit_aid[.@i] <= 0)
+			continue;
+
+		if (!attachrid(.@unit_aid[.@i]))
+			continue;
+
+		// 기본 상태 이상
+		sc_end SC_STONE;
+		sc_end SC_FREEZE;
+		sc_end SC_STUN;
+		sc_end SC_SLEEP;
+		sc_end SC_POISON;
+		sc_end SC_CURSE;
+		sc_end SC_SILENCE;
+		sc_end SC_CONFUSION;
+		sc_end SC_BLIND;
+		sc_end SC_BLEEDING;
+		sc_end SC_DECREASEAGI;
+		sc_end SC_HALLUCINATION;
+
+		// 장비 해제 계열
+		sc_end SC_STRIPWEAPON;
+		sc_end SC_STRIPARMOR;
+		sc_end SC_STRIPHELM;
+		sc_end SC_STRIPSHIELD;
+
+		// 전장에서 지속 시 다음 라운드 진행을 방해하는 주요 상태
+		sc_end SC_STASIS;
+		sc_end SC_HARMONIZE;
+
+		.@cleared++;
+	}
+
+	if (.@caller_aid)
+		attachrid .@caller_aid;
+	else
+		detachrid;
+
+	return .@cleared;
+}
+
+//============================================================
 // 전장 관리 메뉴 - 홍보하기
 //============================================================
 function	script	F_BG_Menu_Promotion	{

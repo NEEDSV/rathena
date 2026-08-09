@@ -1,5 +1,5 @@
 //============================================================
-// NEED 전장 랜덤 매칭 시스템 - 티에라/플라비우스/KVM 풀사이클 v12.1-hotfix-admin
+// NEED 전장 랜덤 매칭 시스템 - 티에라/플라비우스/KVM 풀사이클 v12.1-hotfix-admin-precheck
 // - 한 번의 매칭으로 티에라 -> 플라비우스 -> KVM 전체 사이클 진행
 // - 최초 티에라는 자동 입장, 이후 전장은 양 팀 파티장의 입장 준비로 진행
 // - 티에라/플라비우스 종료 후 파티 유지, KVM 종료 후에만 자동 해체
@@ -455,6 +455,8 @@ function	script	F_BG_RM_CancelRecruit	{
 
 	stopnpctimer "NEED_BG_RM_Core";
 	stopnpctimer "NEED_BG_RM_RecruitMonitor";
+	donpcevent "NEED_BG_RM_FinalizeWatch::OnStop";
+	$@BG_RM_FINALIZE_WATCH_TOKEN = 0;
 	$@BG_RM_STATE = 0;
 	$@BG_RM_MANAGER_MENU_LOCK = 0;
 	$@BG_RM_ACTIVE = 0;
@@ -469,6 +471,7 @@ function	script	F_BG_RM_CancelRecruit	{
 	callfunc "F_BG_RM_SetWaitingRooms", 1;
 	callfunc "F_BG_RM_SetManager", 1;
 
+	debugmes "[BG RM] recruit cancelled reason=" + .@reason$;
 	mapannounce "bat_room", "[전장 랜덤 매칭] " + .@reason$, bc_map, "0xFF7777";
 	return;
 }
@@ -772,6 +775,7 @@ OnInit:
 	$@BG_RM_COUNTS_SAVED = 0;
 	$@BG_RM_KVM_PARTY_DESTROYED = 0;
 	$@BG_RM_MISSING_CURSOR = 0;
+	$@BG_RM_FINALIZE_WATCH_TOKEN = 0;
 	callfunc "F_BG_RM_ClearArrays";
 	end;
 
@@ -1097,6 +1101,8 @@ OnFinalize:
 	$@BG_RM_MISSING_CURSOR = 0;
 	$@BG_RM_STATE = 2;
 	.@finalize_token = $@BG_RM_TOKEN;
+	$@BG_RM_FINALIZE_WATCH_TOKEN = .@finalize_token;
+	donpcevent "NEED_BG_RM_FinalizeWatch::OnStart";
 
 	mapannounce "bat_room",
 		"[전장 랜덤 매칭] 모집이 마감되었습니다. 참가자 확인 및 팀 편성을 시작합니다.",
@@ -1408,31 +1414,73 @@ OnFinalize:
 
 	debugmes "[BG RM] team assignment done G=" + .@count_g + " C=" + .@count_c;
 
-	// 파티 생성 직전 접속/위치/파티 상태를 한 번 더 확인
-	for (.@i = 0; .@i < .@count_g; .@i++) {
-		if (
-			!isloggedin(.@aid_g[.@i],.@cid_g[.@i]) ||
-			getmapxy(.@map$,.@x,.@y,BL_PC,.@name_g$[.@i]) != 0 ||
-			.@map$ != "bat_room" ||
-			getcharid(1,.@name_g$[.@i]) ||
-			getcharid(4,.@name_g$[.@i])
-		) {
-			callfunc "F_BG_RM_CancelRecruit", "파티 생성 직전 참가자가 대기실을 이탈하거나 접속 상태가 변경되어 매칭이 취소되었습니다.";
-			end;
+	//========================================================
+	// 파티 생성 직전 최종 검증
+	// 이름 기반 조회 대신 신청 당시 저장한 AID/CID로 직접 확인합니다.
+	//========================================================
+	.@invalid = 0;
+	.@invalid_reason$ = "";
+	.@invalid_name$ = "";
+	.@invalid_cid = 0;
+
+	for (.@team = 1; .@team <= 2 && !.@invalid; .@team++) {
+		.@team_count = (.@team == 1) ? .@count_g : .@count_c;
+
+		for (.@i = 0; .@i < .@team_count; .@i++) {
+			.@check_aid = (.@team == 1) ? .@aid_g[.@i] : .@aid_c[.@i];
+			.@check_cid = (.@team == 1) ? .@cid_g[.@i] : .@cid_c[.@i];
+			.@check_name$ = (.@team == 1) ? .@name_g$[.@i] : .@name_c$[.@i];
+
+			if (!isloggedin(.@check_aid,.@check_cid)) {
+				.@invalid = 1;
+				.@invalid_reason$ = "로그아웃";
+			}
+			else if (!attachrid(.@check_aid)) {
+				.@invalid = 1;
+				.@invalid_reason$ = "RID 연결 실패";
+			}
+			else {
+				if (getcharid(0) != .@check_cid) {
+					.@invalid = 1;
+					.@invalid_reason$ = "캐릭터 ID 불일치";
+				}
+				else if (strcharinfo(3) != "bat_room") {
+					.@invalid = 1;
+					.@invalid_reason$ = "전장 대기존 이탈";
+				}
+				else if (getcharid(1)) {
+					.@invalid = 1;
+					.@invalid_reason$ = "기존 파티 가입";
+				}
+				else if (getcharid(4)) {
+					.@invalid = 1;
+					.@invalid_reason$ = "기존 BG 팀 가입";
+				}
+
+				detachrid;
+			}
+
+			if (.@invalid) {
+				.@invalid_name$ = .@check_name$;
+				.@invalid_cid = .@check_cid;
+				debugmes "[BG RM] pre-party validation failed"
+					+ " team=" + ((.@team == 1) ? "G" : "C")
+					+ " index=" + .@i
+					+ " cid=" + .@invalid_cid
+					+ " reason=" + .@invalid_reason$;
+				break;
+			}
 		}
 	}
-	for (.@i = 0; .@i < .@count_c; .@i++) {
-		if (
-			!isloggedin(.@aid_c[.@i],.@cid_c[.@i]) ||
-			getmapxy(.@map$,.@x,.@y,BL_PC,.@name_c$[.@i]) != 0 ||
-			.@map$ != "bat_room" ||
-			getcharid(1,.@name_c$[.@i]) ||
-			getcharid(4,.@name_c$[.@i])
-		) {
-			callfunc "F_BG_RM_CancelRecruit", "파티 생성 직전 참가자가 대기실을 이탈하거나 접속 상태가 변경되어 매칭이 취소되었습니다.";
-			end;
-		}
+
+	if (.@invalid) {
+		callfunc "F_BG_RM_CancelRecruit",
+			"파티 생성 직전 참가자 상태가 변경되어 매칭이 취소되었습니다. 대상: "
+			+ .@invalid_name$ + " / 사유: " + .@invalid_reason$;
+		end;
 	}
+
+	debugmes "[BG RM] pre-party validation done G=" + .@count_g + " C=" + .@count_c;
 
 	//========================================================
 	// 파티장 완전 무작위 선정
@@ -1473,6 +1521,12 @@ OnFinalize:
 	.@party_suffix$ = (gettimetick(2) % 100000000) + "-" + .@serial;
 	.@party_name_g$ = "[기욤]" + .@party_suffix$;
 	.@party_name_c$ = "[크루아]" + .@party_suffix$;
+
+	debugmes "[BG RM] leaders selected"
+		+ " G_cid=" + .@cid_g[0]
+		+ " C_cid=" + .@cid_c[0]
+		+ " G_count=" + .@count_g
+		+ " C_count=" + .@count_c;
 
 	//========================================================
 	// 기욤 파티 생성 및 전원 가입 확인
@@ -1740,6 +1794,8 @@ OnFinalize:
 	$@BG_RM_CYCLE_ACTIVE = 1;
 	$@BG_RM_CYCLE_STAGE = 1;
 	$@BG_RM_STATE = 3;
+	$@BG_RM_FINALIZE_WATCH_TOKEN = 0;
+	donpcevent "NEED_BG_RM_FinalizeWatch::OnStop";
 	callfunc "F_BG_RM_SetManager", 1;
 
 	for (.@i = 0; .@i < $@BG_RM_G_COUNT; .@i++)
@@ -1801,6 +1857,8 @@ OnAdminForceStop:
 	stopnpctimer;
 	stopnpctimer "NEED_BG_RM_RecruitMonitor";
 	stopnpctimer "NEED_BG_RM_Monitor";
+	donpcevent "NEED_BG_RM_FinalizeWatch::OnStop";
+	$@BG_RM_FINALIZE_WATCH_TOKEN = 0;
 
 	// 전장 내부 카운트다운/정리 타이머 중지
 	stopnpctimer "티에라 진행#bat_a01";
@@ -1845,6 +1903,53 @@ OnAdminForceStop:
 	end;
 }
 
+
+
+//============================================================
+// 랜덤 매칭 팀 편성 정지 감시
+// state=2가 90초 이상 유지되면 자동 강제 종료합니다.
+//============================================================
+-	script	NEED_BG_RM_FinalizeWatch	-1,{
+	end;
+
+OnInit:
+	.Token = 0;
+	stopnpctimer;
+	end;
+
+OnStart:
+	.Token = $@BG_RM_FINALIZE_WATCH_TOKEN;
+	stopnpctimer;
+	initnpctimer;
+	end;
+
+OnStop:
+	.Token = 0;
+	stopnpctimer;
+	end;
+
+OnTimer90000:
+	stopnpctimer;
+
+	if (
+		$@BG_RM_STATE != 2 ||
+		.Token <= 0 ||
+		.Token != $@BG_RM_FINALIZE_WATCH_TOKEN
+	)
+		end;
+
+	debugmes "[BG RM] finalize watchdog timeout"
+		+ " token=" + .Token
+		+ " count=" + $@BG_RM_COUNT;
+
+	mapannounce "bat_room",
+		"[전장 랜덤 매칭] 팀 편성이 90초 동안 완료되지 않아 자동으로 초기화합니다.",
+		bc_map, "0xFF5555";
+
+	$@BG_RM_ADMIN_NAME$ = "자동 복구";
+	donpcevent "NEED_BG_RM_Core::OnAdminForceStop";
+	end;
+}
 
 
 //============================================================
