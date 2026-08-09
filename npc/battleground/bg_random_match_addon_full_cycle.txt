@@ -1,5 +1,5 @@
 //============================================================
-// NEED 전장 랜덤 매칭 시스템 - 티에라/플라비우스/KVM 풀사이클 v12.1-hotfix-admin-loopguard
+// NEED 전장 랜덤 매칭 시스템 - 티에라/플라비우스/KVM 풀사이클 v12.1-hotfix-admin-levelbalance
 // - 한 번의 매칭으로 티에라 -> 플라비우스 -> KVM 전체 사이클 진행
 // - 최초 티에라는 자동 입장, 이후 전장은 양 팀 파티장의 입장 준비로 진행
 // - 티에라/플라비우스 종료 후 파티 유지, KVM 종료 후에만 자동 해체
@@ -384,6 +384,91 @@ function	script	F_BG_RM_PerformerFamily	{
 	return 0;
 }
 
+//============================================================
+// 랜덤 매칭 단독 민스트럴 현행(버프형) 모드 강제
+//
+// @모드전환의 캐릭터 저장 키:
+//   NEED_SOLO_PERFORMANCE_MODE
+//   0 = 장판형(Classic)
+//   1 = 현행 버프형(Modern)
+//
+// 랜덤 매칭 전체 참가자 중 실제 민스트럴 계열
+// (JOB_MINSTREL / JOB_MINSTREL_T)이 정확히 1명일 때만 사용합니다.
+// 원래 설정값은 NEED_BG_RM_PERFORMANCE_RESTORE에 보관하고
+// 풀사이클 종료/취소 시 복구합니다.
+//============================================================
+function	script	F_BG_RM_EnsureForcedPerformanceMode	{
+	if ($@BG_RM_FORCED_PERFORMANCE_AID <= 0 || $@BG_RM_FORCED_PERFORMANCE_CID <= 0)
+		return 0;
+
+	if (!isloggedin($@BG_RM_FORCED_PERFORMANCE_AID,$@BG_RM_FORCED_PERFORMANCE_CID))
+		return 0;
+
+	.@caller_aid = getattachedrid();
+
+	if (!attachrid($@BG_RM_FORCED_PERFORMANCE_AID)) {
+		if (.@caller_aid)
+			attachrid .@caller_aid;
+		return 0;
+	}
+
+	if (getcharid(0) != $@BG_RM_FORCED_PERFORMANCE_CID) {
+		if (.@caller_aid)
+			attachrid .@caller_aid;
+		else
+			detachrid;
+		return 0;
+	}
+
+	// +1 형태로 저장하여 원래 값이 0이어도 복구 예약 여부를 구분합니다.
+	if (!NEED_BG_RM_PERFORMANCE_RESTORE)
+		NEED_BG_RM_PERFORMANCE_RESTORE = NEED_SOLO_PERFORMANCE_MODE + 1;
+
+	NEED_SOLO_PERFORMANCE_MODE = 1;
+
+	if (.@caller_aid)
+		attachrid .@caller_aid;
+	else
+		detachrid;
+
+	return 1;
+}
+
+function	script	F_BG_RM_RestoreForcedPerformanceMode	{
+	.@aid = $@BG_RM_FORCED_PERFORMANCE_AID;
+	.@cid = $@BG_RM_FORCED_PERFORMANCE_CID;
+	$@BG_RM_FORCED_PERFORMANCE_AID = 0;
+	$@BG_RM_FORCED_PERFORMANCE_CID = 0;
+
+	if (.@aid <= 0 || .@cid <= 0)
+		return;
+
+	if (!isloggedin(.@aid,.@cid))
+		return;
+
+	.@caller_aid = getattachedrid();
+
+	if (!attachrid(.@aid)) {
+		if (.@caller_aid)
+			attachrid .@caller_aid;
+		return;
+	}
+
+	if (getcharid(0) == .@cid && NEED_BG_RM_PERFORMANCE_RESTORE) {
+		NEED_SOLO_PERFORMANCE_MODE = NEED_BG_RM_PERFORMANCE_RESTORE - 1;
+		NEED_BG_RM_PERFORMANCE_RESTORE = 0;
+		dispbottom "[전장] 랜덤 매칭이 종료되어 @모드전환 설정이 이전 상태로 복구되었습니다.";
+	}
+
+	if (.@caller_aid)
+		attachrid .@caller_aid;
+	else
+		detachrid;
+
+	return;
+}
+
+
 function	script	F_BG_RM_RestoreCounts	{
 	if ($@BG_RM_COUNTS_SAVED) {
 		$BG_User_Count = $@BG_RM_SAVED_USER_COUNT;
@@ -467,6 +552,7 @@ function	script	F_BG_RM_CancelRecruit	{
 	$@BG_RM_KVM_PARTY_DESTROYED = 0;
 	$@BG_RM_MISSING_CURSOR = 0;
 
+	callfunc "F_BG_RM_RestoreForcedPerformanceMode";
 	callfunc "F_BG_RM_ClearArrays";
 	callfunc "F_BG_RM_SetWaitingRooms", 1;
 	callfunc "F_BG_RM_SetManager", 1;
@@ -523,6 +609,10 @@ function	script	F_BG_RM_AbortCreatedBattle	{
 }
 function	script	F_BG_RM_StartBattle	{
 	.@mode = getarg(0);
+
+	// 단독 민스트럴이 있는 매칭은 각 전장 입장 직전에도 현행 모드를 다시 보장합니다.
+	if ($@BG_RM_FORCED_PERFORMANCE_CID > 0)
+		callfunc "F_BG_RM_EnsureForcedPerformanceMode";
 
 	// 최초 티에라는 모집 확정 이후에도 참가자가 이탈하지 않았을 때만 시작합니다.
 	if (.@mode == 1 && !callfunc("F_BG_RM_ValidateInitialReady"))
@@ -684,6 +774,7 @@ function	script	F_BG_RM_Finish	{
 	callfunc "F_BG_RM_DestroyParties";
 	callfunc "F_BG_RM_RestoreCounts";
 	callfunc "F_BG_RM_ClearLeaders";
+	callfunc "F_BG_RM_RestoreForcedPerformanceMode";
 
 	$@BG_RM_ACTIVE = 0;
 	$@BG_RM_CYCLE_ACTIVE = 0;
@@ -751,6 +842,7 @@ OnInit:
 	.MaxPartyMembers = MAX_PARTY;
 	.MaxPlayers = .MaxPartyMembers * 2;
 	.RecruitSeconds = 300;
+	.MaxBaseLevel = 175;
 
 	stopnpctimer;
 	stopnpctimer "NEED_BG_RM_RecruitMonitor";
@@ -776,6 +868,8 @@ OnInit:
 	$@BG_RM_KVM_PARTY_DESTROYED = 0;
 	$@BG_RM_MISSING_CURSOR = 0;
 	$@BG_RM_FINALIZE_WATCH_TOKEN = 0;
+	$@BG_RM_FORCED_PERFORMANCE_AID = 0;
+	$@BG_RM_FORCED_PERFORMANCE_CID = 0;
 	callfunc "F_BG_RM_ClearArrays";
 	end;
 
@@ -1116,6 +1210,10 @@ OnFinalize:
 	}
 
 	.@count = 0;
+	.@max_level_count = 0;
+	.@minstrel_total_count = 0;
+	.@single_minstrel_aid = 0;
+	.@single_minstrel_cid = 0;
 
 	// 접속, 위치, 파티 상태를 최종 재검증
 	for (.@i = 0; .@i < $@BG_RM_COUNT; .@i++) {
@@ -1140,12 +1238,49 @@ OnFinalize:
 		.@cid_list[.@count] = .@cid;
 		.@name_list$[.@count] = .@name$;
 		.@class_list[.@count] = readparam(Class,.@cid);
+		.@level_list[.@count] = readparam(BaseLevel,.@cid);
+
+		if (.@level_list[.@count] == .MaxBaseLevel)
+			.@max_level_count++;
+
+		// "민스트럴만" 적용: 바드/클로운은 자동 현행 모드 대상에서 제외합니다.
+		if (
+			.@class_list[.@count] == JOB_MINSTREL ||
+			.@class_list[.@count] == JOB_MINSTREL_T
+		) {
+			.@minstrel_total_count++;
+			.@single_minstrel_aid = .@aid;
+			.@single_minstrel_cid = .@cid;
+		}
+
 		.@count++;
 	}
 
 	if (.@count < .MinPlayers) {
 		callfunc "F_BG_RM_CancelRecruit", "최종 참가자가 " + .MinPlayers + "명 미만이어서 매칭이 취소되었습니다. (" + .@count + "명)";
 		end;
+	}
+
+	// 양 팀 파티장은 반드시 현재 만렙(175)이어야 하므로 최소 2명이 필요합니다.
+	if (.@max_level_count < 2) {
+		callfunc "F_BG_RM_CancelRecruit",
+			"양 팀 파티장 선정을 위해 175레벨 참가자가 최소 2명 필요합니다. (현재 " + .@max_level_count + "명)";
+		end;
+	}
+
+	// 전체 참가자 중 실제 민스트럴이 정확히 1명인 경우에만
+	// 해당 캐릭터의 @모드전환 저장값을 현행(Modern=1)으로 강제합니다.
+	if (.@minstrel_total_count == 1) {
+		$@BG_RM_FORCED_PERFORMANCE_AID = .@single_minstrel_aid;
+		$@BG_RM_FORCED_PERFORMANCE_CID = .@single_minstrel_cid;
+
+		if (!callfunc("F_BG_RM_EnsureForcedPerformanceMode")) {
+			callfunc "F_BG_RM_CancelRecruit", "단독 민스트럴의 현행 모드 적용에 실패하여 매칭이 취소되었습니다.";
+			end;
+		}
+
+		debugmes "[BG RM] single minstrel modern mode forced"
+			+ " cid=" + .@single_minstrel_cid;
 	}
 
 	debugmes "[BG RM] finalize validated eligible=" + .@count
@@ -1178,6 +1313,10 @@ OnFinalize:
 		.@tmp = .@class_list[.@i];
 		.@class_list[.@i] = .@class_list[.@j];
 		.@class_list[.@j] = .@tmp;
+
+		.@tmp = .@level_list[.@i];
+		.@level_list[.@i] = .@level_list[.@j];
+		.@level_list[.@j] = .@tmp;
 	}
 
 	// 홀수 인원일 때 한 명이 더 많은 팀은 무작위
@@ -1195,9 +1334,53 @@ OnFinalize:
 	}
 
 	cleararray .@used[0], 0, .@count;
+	cleararray .@is_low[0], 0, .@count;
 	.@count_g = 0;
 	.@count_c = 0;
 	.@single_count = 0;
+	.@low_count = 0;
+
+	// 175 미만 참가자는 일반 직업 배정에서 제외하고 마지막 단계에 따로 배정합니다.
+	for (.@i = 0; .@i < .@count; .@i++) {
+		if (.@level_list[.@i] < .MaxBaseLevel) {
+			.@is_low[.@i] = 1;
+			.@low_index[.@low_count] = .@i;
+			.@low_count++;
+		}
+	}
+
+	// 낮은 레벨 인원 자체가 양 팀에 최대한 균등하게 들어가도록
+	// 최종 팀 정원에서 저레벨 전용 슬롯을 먼저 예약합니다.
+	.@low_cap_g = .@low_count / 2;
+	.@low_cap_c = .@low_count / 2;
+
+	if ((.@low_count % 2) == 1) {
+		if (.@cap_g > .@cap_c)
+			.@low_cap_g++;
+		else if (.@cap_c > .@cap_g)
+			.@low_cap_c++;
+		else if (rand(2) == 0)
+			.@low_cap_g++;
+		else
+			.@low_cap_c++;
+	}
+
+	.@high_cap_g = .@cap_g - .@low_cap_g;
+	.@high_cap_c = .@cap_c - .@low_cap_c;
+
+	if (.@high_cap_g < 1 || .@high_cap_c < 1) {
+		callfunc "F_BG_RM_CancelRecruit",
+			"175레벨 파티장을 양 팀에 배치할 수 없는 인원 구성이라 매칭이 취소되었습니다.";
+		end;
+	}
+
+	debugmes "[BG RM] level slots"
+		+ " max175=" + .@max_level_count
+		+ " low=" + .@low_count
+		+ " high_cap_G=" + .@high_cap_g
+		+ " high_cap_C=" + .@high_cap_c
+		+ " low_cap_G=" + .@low_cap_g
+		+ " low_cap_C=" + .@low_cap_c;
 
 	// 우선 분리 규칙:
 	// 민스트럴 계열과 원더러 계열이 전체 참가자 중 각각 정확히 1명이라면
@@ -1206,6 +1389,9 @@ OnFinalize:
 	.@wanderer_count = 0;
 
 	for (.@i = 0; .@i < .@count; .@i++) {
+		if (.@is_low[.@i])
+			continue;
+
 		.@family = callfunc("F_BG_RM_PerformerFamily", .@class_list[.@i]);
 
 		if (.@family == 1) {
@@ -1257,14 +1443,14 @@ OnFinalize:
 	// 1단계: 동일 직업이 2명 이상인 그룹을 기욤/크루아에 교차 배정
 	// 1명뿐인 직업은 즉시 배정하지 않고 단독 직업 목록에 보관합니다.
 	for (.@i = 0; .@i < .@count; .@i++) {
-		if (.@used[.@i])
+		if (.@used[.@i] || .@is_low[.@i])
 			continue;
 
 		.@group_count = 0;
 		.@target_class = .@class_list[.@i];
 
 		for (.@j = 0; .@j < .@count; .@j++) {
-			if (!.@used[.@j] && .@class_list[.@j] == .@target_class) {
+			if (!.@used[.@j] && !.@is_low[.@j] && .@class_list[.@j] == .@target_class) {
 				.@group_index[.@group_count] = .@j;
 				.@used[.@j] = 1;
 				.@group_count++;
@@ -1297,9 +1483,9 @@ OnFinalize:
 			.@index = .@group_index[.@j];
 			.@team = (.@start_team + .@j) % 2;
 
-			if (.@team == 0 && .@count_g >= .@cap_g)
+			if (.@team == 0 && .@count_g >= .@high_cap_g)
 				.@team = 1;
-			else if (.@team == 1 && .@count_c >= .@cap_c)
+			else if (.@team == 1 && .@count_c >= .@high_cap_c)
 				.@team = 0;
 
 			if (.@team == 0) {
@@ -1329,8 +1515,8 @@ OnFinalize:
 	.@pair_start_team = rand(2);
 
 	for (.@i = 0; .@i < .@single_count; .@i += 2) {
-		.@remain_g = .@cap_g - .@count_g;
-		.@remain_c = .@cap_c - .@count_c;
+		.@remain_g = .@high_cap_g - .@count_g;
+		.@remain_c = .@high_cap_c - .@count_c;
 
 		// 두 명이 남았고 양 팀 모두 자리가 있으면 반드시 한 명씩 나눕니다.
 		if (.@i + 1 < .@single_count && .@remain_g > 0 && .@remain_c > 0) {
@@ -1377,8 +1563,8 @@ OnFinalize:
 		// 한 명만 남았거나 한쪽 팀 정원이 찬 경우 남은 정원에 맞춰 배정합니다.
 		for (.@j = .@i; .@j < .@single_count && .@j < .@i + 2; .@j++) {
 			.@index = .@single_index[.@j];
-			.@remain_g = .@cap_g - .@count_g;
-			.@remain_c = .@cap_c - .@count_c;
+			.@remain_g = .@high_cap_g - .@count_g;
+			.@remain_c = .@high_cap_c - .@count_c;
 
 			if (.@remain_g <= 0)
 				.@team = 1;
@@ -1410,12 +1596,104 @@ OnFinalize:
 		}
 	}
 
-	if (.@count_g != .@cap_g || .@count_c != .@cap_c || (.@count_g > .@count_c + 1 || .@count_c > .@count_g + 1) || .@count_g > .MaxPartyMembers || .@count_c > .MaxPartyMembers) {
+	// 175레벨 참가자 우선 배정이 예약된 정원만큼 정확히 끝났는지 확인합니다.
+	if (.@count_g != .@high_cap_g || .@count_c != .@high_cap_c) {
+		debugmes "[BG RM] high-level assignment invalid"
+			+ " G=" + .@count_g + "/" + .@high_cap_g
+			+ " C=" + .@count_c + "/" + .@high_cap_c;
+		callfunc "F_BG_RM_CancelRecruit", "175레벨 우선 팀 배정 중 오류가 발생하여 매칭이 취소되었습니다.";
+		end;
+	}
+
+	//========================================================
+	// 마지막 단계: 175 미만 참가자 균형 배정
+	// 1) 동레벨 랜덤성을 위해 먼저 섞음
+	// 2) 높은 레벨부터 처리
+	// 3) 양 팀 저레벨 인원 수를 우선 동일하게 맞춤
+	// 4) 인원 수가 같으면 저레벨 BaseLevel 합이 낮은 팀을 우선
+	//========================================================
+	for (.@i = .@low_count - 1; .@i > 0; .@i--) {
+		.@j = rand(.@i + 1);
+		.@tmp = .@low_index[.@i];
+		.@low_index[.@i] = .@low_index[.@j];
+		.@low_index[.@j] = .@tmp;
+	}
+
+	for (.@i = 0; .@i < .@low_count - 1; .@i++) {
+		for (.@j = 0; .@j < .@low_count - .@i - 1; .@j++) {
+			if (
+				.@level_list[.@low_index[.@j]] <
+				.@level_list[.@low_index[.@j + 1]]
+			) {
+				.@tmp = .@low_index[.@j];
+				.@low_index[.@j] = .@low_index[.@j + 1];
+				.@low_index[.@j + 1] = .@tmp;
+			}
+		}
+	}
+
+	.@low_g = 0;
+	.@low_c = 0;
+	.@low_level_sum_g = 0;
+	.@low_level_sum_c = 0;
+
+	for (.@i = 0; .@i < .@low_count; .@i++) {
+		.@index = .@low_index[.@i];
+		.@remain_low_g = .@low_cap_g - .@low_g;
+		.@remain_low_c = .@low_cap_c - .@low_c;
+
+		if (.@remain_low_g <= 0)
+			.@team = 1;
+		else if (.@remain_low_c <= 0)
+			.@team = 0;
+		else if (.@low_g < .@low_c)
+			.@team = 0;
+		else if (.@low_c < .@low_g)
+			.@team = 1;
+		else if (.@low_level_sum_g < .@low_level_sum_c)
+			.@team = 0;
+		else if (.@low_level_sum_c < .@low_level_sum_g)
+			.@team = 1;
+		else
+			.@team = rand(2);
+
+		if (.@team == 0) {
+			.@aid_g[.@count_g] = .@aid_list[.@index];
+			.@cid_g[.@count_g] = .@cid_list[.@index];
+			.@name_g$[.@count_g] = .@name_list$[.@index];
+			.@count_g++;
+			.@low_g++;
+			.@low_level_sum_g += .@level_list[.@index];
+		}
+		else {
+			.@aid_c[.@count_c] = .@aid_list[.@index];
+			.@cid_c[.@count_c] = .@cid_list[.@index];
+			.@name_c$[.@count_c] = .@name_list$[.@index];
+			.@count_c++;
+			.@low_c++;
+			.@low_level_sum_c += .@level_list[.@index];
+		}
+	}
+
+	debugmes "[BG RM] low-level assignment done"
+		+ " G_low=" + .@low_g + " sum=" + .@low_level_sum_g
+		+ " C_low=" + .@low_c + " sum=" + .@low_level_sum_c;
+
+	if (
+		.@count_g != .@cap_g ||
+		.@count_c != .@cap_c ||
+		.@low_g != .@low_cap_g ||
+		.@low_c != .@low_cap_c ||
+		(.@count_g > .@count_c + 1 || .@count_c > .@count_g + 1) ||
+		.@count_g > .MaxPartyMembers ||
+		.@count_c > .MaxPartyMembers
+	) {
 		debugmes "[BG RM] team assignment invalid"
 			+ " G=" + .@count_g + "/" + .@cap_g
 			+ " C=" + .@count_c + "/" + .@cap_c
-			+ " party_max=" + .MaxPartyMembers;
-		callfunc "F_BG_RM_CancelRecruit", "팀 배정 중 오류가 발생하여 매칭이 취소되었습니다.";
+			+ " G_low=" + .@low_g + "/" + .@low_cap_g
+			+ " C_low=" + .@low_c + "/" + .@low_cap_c;
+		callfunc "F_BG_RM_CancelRecruit", "최종 팀 배정 중 오류가 발생하여 매칭이 취소되었습니다.";
 		end;
 	}
 
@@ -1498,10 +1776,33 @@ OnFinalize:
 	debugmes "[BG RM] pre-party validation done G=" + .@count_g + " C=" + .@count_c;
 
 	//========================================================
-	// 파티장 완전 무작위 선정
-	// 팀 배열의 0번이 파티장이므로 무작위 대상과 교환합니다.
+	// 파티장 선정
+	// 현재 만렙 175 캐릭터만 후보에 포함합니다.
+	// 175 미만 참가자는 어떤 경우에도 자동 파티장이 되지 않습니다.
 	//========================================================
-	.@leader_index = rand(.@count_g);
+	.@leader_candidate_g = 0;
+	for (.@i = 0; .@i < .@count_g; .@i++) {
+		if (readparam(BaseLevel,.@cid_g[.@i]) == .MaxBaseLevel) {
+			.@leader_index_g[.@leader_candidate_g] = .@i;
+			.@leader_candidate_g++;
+		}
+	}
+
+	.@leader_candidate_c = 0;
+	for (.@i = 0; .@i < .@count_c; .@i++) {
+		if (readparam(BaseLevel,.@cid_c[.@i]) == .MaxBaseLevel) {
+			.@leader_index_c[.@leader_candidate_c] = .@i;
+			.@leader_candidate_c++;
+		}
+	}
+
+	if (.@leader_candidate_g <= 0 || .@leader_candidate_c <= 0) {
+		callfunc "F_BG_RM_CancelRecruit",
+			"175레벨 파티장 후보가 없는 진영이 발생하여 매칭이 취소되었습니다.";
+		end;
+	}
+
+	.@leader_index = .@leader_index_g[rand(.@leader_candidate_g)];
 	if (.@leader_index > 0) {
 		.@tmp = .@aid_g[0];
 		.@aid_g[0] = .@aid_g[.@leader_index];
@@ -1516,7 +1817,7 @@ OnFinalize:
 		.@name_g$[.@leader_index] = .@tmp$;
 	}
 
-	.@leader_index = rand(.@count_c);
+	.@leader_index = .@leader_index_c[rand(.@leader_candidate_c)];
 	if (.@leader_index > 0) {
 		.@tmp = .@aid_c[0];
 		.@aid_c[0] = .@aid_c[.@leader_index];
@@ -1530,6 +1831,12 @@ OnFinalize:
 		.@name_c$[0] = .@name_c$[.@leader_index];
 		.@name_c$[.@leader_index] = .@tmp$;
 	}
+
+	debugmes "[BG RM] level-175 leaders selected"
+		+ " G_cid=" + .@cid_g[0]
+		+ " C_cid=" + .@cid_c[0]
+		+ " G_candidates=" + .@leader_candidate_g
+		+ " C_candidates=" + .@leader_candidate_c;
 
 	$@BG_RM_PARTY_SERIAL++;
 	.@serial = $@BG_RM_PARTY_SERIAL % 10000;
@@ -1896,6 +2203,7 @@ OnAdminForceStop:
 	callfunc "F_BG_RM_DestroyParties";
 	callfunc "F_BG_RM_RestoreCounts";
 	callfunc "F_BG_RM_ClearLeaders";
+	callfunc "F_BG_RM_RestoreForcedPerformanceMode";
 
 	$@BG_RM_STATE = 0;
 	$@BG_RM_MANAGER_MENU_LOCK = 0;
@@ -1963,6 +2271,49 @@ OnTimer90000:
 
 	$@BG_RM_ADMIN_NAME$ = "자동 복구";
 	donpcevent "NEED_BG_RM_Core::OnAdminForceStop";
+	end;
+}
+
+
+//============================================================
+// 단독 민스트럴 모드 복구 안전망
+//============================================================
+-	script	NEED_BG_RM_PerformanceRestore	-1,{
+	end;
+
+OnPCLoginEvent:
+	if (!NEED_BG_RM_PERFORMANCE_RESTORE)
+		end;
+
+	.@active_member = 0;
+
+	if ($@BG_RM_CYCLE_ACTIVE) {
+		for (.@i = 0; .@i < $@BG_RM_G_COUNT; .@i++) {
+			if ($@BG_RM_G_CID[.@i] == getcharid(0)) {
+				.@active_member = 1;
+				break;
+			}
+		}
+
+		if (!.@active_member) {
+			for (.@i = 0; .@i < $@BG_RM_C_COUNT; .@i++) {
+				if ($@BG_RM_C_CID[.@i] == getcharid(0)) {
+					.@active_member = 1;
+					break;
+				}
+			}
+		}
+	}
+
+	if (.@active_member) {
+		NEED_SOLO_PERFORMANCE_MODE = 1;
+		dispbottom "[전장] 단독 민스트럴 랜덤 매칭이 진행 중이라 현행 버프형 모드를 유지합니다.";
+		end;
+	}
+
+	NEED_SOLO_PERFORMANCE_MODE = NEED_BG_RM_PERFORMANCE_RESTORE - 1;
+	NEED_BG_RM_PERFORMANCE_RESTORE = 0;
+	dispbottom "[전장] 이전 랜덤 매칭의 @모드전환 설정을 원래 상태로 복구했습니다.";
 	end;
 }
 
