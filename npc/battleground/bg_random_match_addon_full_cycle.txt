@@ -1,5 +1,5 @@
 //============================================================
-// NEED 전장 랜덤 매칭 시스템 - 티에라/플라비우스/KVM 풀사이클 v12.1
+// NEED 전장 랜덤 매칭 시스템 - 티에라/플라비우스/KVM 풀사이클 v12.1-hotfix-admin
 // - 한 번의 매칭으로 티에라 -> 플라비우스 -> KVM 전체 사이클 진행
 // - 최초 티에라는 자동 입장, 이후 전장은 양 팀 파티장의 입장 준비로 진행
 // - 티에라/플라비우스 종료 후 파티 유지, KVM 종료 후에만 자동 해체
@@ -145,18 +145,18 @@ function	script	F_BG_RM_ResetMembers	{
 	return;
 }
 function	script	F_BG_RM_ClearArrays	{
-	cleararray $@BG_RM_AID[0], 0, 24;
-	cleararray $@BG_RM_CID[0], 0, 24;
-	cleararray $@BG_RM_CLASS[0], 0, 24;
-	cleararray $@BG_RM_NAME$[0], "", 24;
+	cleararray $@BG_RM_AID[0], 0, MAX_PARTY * 2;
+	cleararray $@BG_RM_CID[0], 0, MAX_PARTY * 2;
+	cleararray $@BG_RM_CLASS[0], 0, MAX_PARTY * 2;
+	cleararray $@BG_RM_NAME$[0], "", MAX_PARTY * 2;
 
-	cleararray $@BG_RM_G_AID[0], 0, 12;
-	cleararray $@BG_RM_G_CID[0], 0, 12;
-	cleararray $@BG_RM_G_NAME$[0], "", 12;
+	cleararray $@BG_RM_G_AID[0], 0, MAX_PARTY;
+	cleararray $@BG_RM_G_CID[0], 0, MAX_PARTY;
+	cleararray $@BG_RM_G_NAME$[0], "", MAX_PARTY;
 
-	cleararray $@BG_RM_C_AID[0], 0, 12;
-	cleararray $@BG_RM_C_CID[0], 0, 12;
-	cleararray $@BG_RM_C_NAME$[0], "", 12;
+	cleararray $@BG_RM_C_AID[0], 0, MAX_PARTY;
+	cleararray $@BG_RM_C_CID[0], 0, MAX_PARTY;
+	cleararray $@BG_RM_C_NAME$[0], "", MAX_PARTY;
 
 	$@BG_RM_COUNT = 0;
 	$@BG_RM_G_COUNT = 0;
@@ -746,7 +746,7 @@ OnInit:
 	//========================================================
 	.MinPlayers = 10;
 	.MaxPartyMembers = MAX_PARTY;
-	.MaxPlayers = 48;
+	.MaxPlayers = .MaxPartyMembers * 2;
 	.RecruitSeconds = 300;
 
 	stopnpctimer;
@@ -1082,9 +1082,12 @@ OnTimer295000:
 
 OnTimer300000:
 	stopnpctimer;
-	if ($@BG_RM_STATE == 1)
-		donpcevent strnpcinfo(3) + "::OnFinalize";
-	end;
+	if ($@BG_RM_STATE != 1)
+		end;
+
+	// 같은 NPC의 OnFinalize를 다시 이벤트로 예약하지 않고
+	// 현재 타이머 실행 흐름에서 바로 마감 처리합니다.
+	goto OnFinalize;
 
 OnFinalize:
 	if ($@BG_RM_STATE != 1)
@@ -1093,6 +1096,12 @@ OnFinalize:
 	stopnpctimer "NEED_BG_RM_RecruitMonitor";
 	$@BG_RM_MISSING_CURSOR = 0;
 	$@BG_RM_STATE = 2;
+	.@finalize_token = $@BG_RM_TOKEN;
+
+	mapannounce "bat_room",
+		"[전장 랜덤 매칭] 모집이 마감되었습니다. 참가자 확인 및 팀 편성을 시작합니다.",
+		bc_map, "0xFFCC66";
+	debugmes "[BG RM] finalize begin count=" + $@BG_RM_COUNT;
 
 	// 모집 중 이미 열려 있던 관리인 대화 등으로 수동 준비 상태가 생겼는지 재확인
 	if ($@TierraBG1 || $@FlaviusBG1 || $@KvM01BG || callfunc("F_BG_RM_ManualReadyActive") || $BG_GUILLAUME_PARTY_ID || $BG_CROIX_PARTY_ID) {
@@ -1132,6 +1141,10 @@ OnFinalize:
 		callfunc "F_BG_RM_CancelRecruit", "최종 참가자가 " + .MinPlayers + "명 미만이어서 매칭이 취소되었습니다. (" + .@count + "명)";
 		end;
 	}
+
+	debugmes "[BG RM] finalize validated eligible=" + .@count
+		+ " max=" + .MaxPlayers
+		+ " party_max=" + .MaxPartyMembers;
 
 	// 전체 참가 순서 셔플
 	for (.@i = .@count - 1; .@i > 0; .@i--) {
@@ -1223,8 +1236,8 @@ OnFinalize:
 		.@used[.@wanderer_index] = 1;
 
 		debugmes "[BG RM] priority split performer"
-			+ " minstrel=" + .@name_list$[.@minstrel_index]
-			+ " wanderer=" + .@name_list$[.@wanderer_index]
+			+ " minstrel_cid=" + .@cid_list[.@minstrel_index]
+			+ " wanderer_cid=" + .@cid_list[.@wanderer_index]
 			+ " minstrel_team=" + ((.@minstrel_team == 0) ? "G" : "C");
 	}
 
@@ -1385,9 +1398,15 @@ OnFinalize:
 	}
 
 	if (.@count_g != .@cap_g || .@count_c != .@cap_c || (.@count_g > .@count_c + 1 || .@count_c > .@count_g + 1) || .@count_g > .MaxPartyMembers || .@count_c > .MaxPartyMembers) {
+		debugmes "[BG RM] team assignment invalid"
+			+ " G=" + .@count_g + "/" + .@cap_g
+			+ " C=" + .@count_c + "/" + .@cap_c
+			+ " party_max=" + .MaxPartyMembers;
 		callfunc "F_BG_RM_CancelRecruit", "팀 배정 중 오류가 발생하여 매칭이 취소되었습니다.";
 		end;
 	}
+
+	debugmes "[BG RM] team assignment done G=" + .@count_g + " C=" + .@count_c;
 
 	// 파티 생성 직전 접속/위치/파티 상태를 한 번 더 확인
 	for (.@i = 0; .@i < .@count_g; .@i++) {
@@ -1473,6 +1492,8 @@ OnFinalize:
 	.@party_id = 0;
 	for (.@retry = 0; .@retry < 50; .@retry++) {
 		sleep 100;
+		if ($@BG_RM_STATE != 2 || .@finalize_token != $@BG_RM_TOKEN)
+			end;
 		.@party_id = getcharid(1,.@name_g$[0]);
 		if (.@party_id > 0)
 			break;
@@ -1490,6 +1511,8 @@ OnFinalize:
 	debugmes "[BG RM] G party created party_id=" + $@BG_RM_PARTY_G
 		+ " leader=" + .@name_g$[0];
 	sleep 500;
+	if ($@BG_RM_STATE != 2 || .@finalize_token != $@BG_RM_TOKEN)
+		end;
 
 	for (.@i = 1; .@i < .@count_g; .@i++) {
 		if (getcharid(1,.@name_g$[.@i]) > 0) {
@@ -1520,6 +1543,8 @@ OnFinalize:
 		.@joined = 0;
 		for (.@retry = 0; .@retry < 50; .@retry++) {
 			sleep 100;
+			if ($@BG_RM_STATE != 2 || .@finalize_token != $@BG_RM_TOKEN)
+				end;
 			.@current_party = getcharid(1,.@name_g$[.@i]);
 			if (.@current_party == $@BG_RM_PARTY_G) {
 				.@joined = 1;
@@ -1558,6 +1583,8 @@ OnFinalize:
 	.@party_id = 0;
 	for (.@retry = 0; .@retry < 50; .@retry++) {
 		sleep 100;
+		if ($@BG_RM_STATE != 2 || .@finalize_token != $@BG_RM_TOKEN)
+			end;
 		.@party_id = getcharid(1,.@name_c$[0]);
 		if (.@party_id > 0)
 			break;
@@ -1576,6 +1603,8 @@ OnFinalize:
 	debugmes "[BG RM] C party created party_id=" + $@BG_RM_PARTY_C
 		+ " leader=" + .@name_c$[0];
 	sleep 500;
+	if ($@BG_RM_STATE != 2 || .@finalize_token != $@BG_RM_TOKEN)
+		end;
 
 	for (.@i = 1; .@i < .@count_c; .@i++) {
 		if (getcharid(1,.@name_c$[.@i]) > 0) {
@@ -1606,6 +1635,8 @@ OnFinalize:
 		.@joined = 0;
 		for (.@retry = 0; .@retry < 50; .@retry++) {
 			sleep 100;
+			if ($@BG_RM_STATE != 2 || .@finalize_token != $@BG_RM_TOKEN)
+				end;
 			.@current_party = getcharid(1,.@name_c$[.@i]);
 			if (.@current_party == $@BG_RM_PARTY_C) {
 				.@joined = 1;
@@ -1685,6 +1716,10 @@ OnFinalize:
 	$BG_Guillaume_Count = .@count_g;
 	$BG_Croix_Count = .@count_c;
 
+	debugmes "[BG RM] parties ready G_party=" + $@BG_RM_PARTY_G
+		+ " C_party=" + $@BG_RM_PARTY_C
+		+ " mode=" + $@BG_RM_MODE;
+
 	if (!callfunc("F_BG_RM_StartBattle",$@BG_RM_MODE)) {
 		callfunc "F_BG_RM_AbortCreatedBattle", $@BG_RM_MODE;
 		callfunc "F_BG_RM_DestroyParties";
@@ -1717,6 +1752,96 @@ OnFinalize:
 	message $@BG_RM_C_NAME$[0], "[전장] 랜덤 매칭 크루아 파티장입니다. 티에라 종료 후 다음 전장 입장 준비를 진행해 주세요.";
 
 	donpcevent "NEED_BG_RM_Monitor::OnStart";
+	end;
+
+OnAdminForceStart:
+	.@admin$ = $@BG_RM_ADMIN_NAME$;
+	$@BG_RM_ADMIN_NAME$ = "";
+
+	if ($@BG_RM_STATE != 1) {
+		if (.@admin$ != "")
+			message .@admin$, "[전장] 현재 즉시 시작할 랜덤 매칭 모집이 없습니다.";
+		end;
+	}
+
+	if ($@BG_RM_COUNT < .MinPlayers) {
+		if (.@admin$ != "")
+			message .@admin$, "[전장] 최소 참가 인원이 부족합니다. 현재 " + $@BG_RM_COUNT + "명 / 최소 " + .MinPlayers + "명";
+		end;
+	}
+
+	stopnpctimer;
+	mapannounce "bat_room",
+		"[전장 랜덤 매칭] 운영자 " + ((.@admin$ == "") ? "관리자" : .@admin$)
+		+ "님이 모집을 즉시 마감했습니다. 팀 편성을 시작합니다.",
+		bc_map, "0xFFCC66";
+
+	goto OnFinalize;
+
+OnAdminForceStop:
+	.@admin$ = $@BG_RM_ADMIN_NAME$;
+	$@BG_RM_ADMIN_NAME$ = "";
+
+	if (
+		!$@BG_RM_STATE &&
+		!$@BG_RM_ACTIVE &&
+		!$@BG_RM_CYCLE_ACTIVE &&
+		!$@TierraBG1 &&
+		!$@FlaviusBG1 &&
+		!$@KvM01BG
+	) {
+		if (.@admin$ != "")
+			message .@admin$, "[전장] 강제 종료할 랜덤 매칭이 없습니다.";
+		end;
+	}
+
+	// OnFinalize가 sleep 중이라면 기존 실행이 재개되지 않도록 토큰을 변경합니다.
+	$@BG_RM_TOKEN++;
+
+	stopnpctimer;
+	stopnpctimer "NEED_BG_RM_RecruitMonitor";
+	stopnpctimer "NEED_BG_RM_Monitor";
+
+	// 전장 내부 카운트다운/정리 타이머 중지
+	stopnpctimer "티에라 진행#bat_a01";
+	stopnpctimer "티에라 정리 타이머#bat_a01";
+	stopnpctimer "티에라 카운트다운#bat_a01";
+	stopnpctimer "start#bat_b01";
+	stopnpctimer "#bat_b01_timer";
+	stopnpctimer "countdown#bat_b01";
+	stopnpctimer "time#bat_b01";
+	stopnpctimer "KvM01_BG";
+	stopnpctimer "KvM01_BG_Out";
+
+	// 현재 랜덤 매칭이 만든 BG 팀 정리 및 참가자 복귀
+	if ($@BG_RM_MODE >= 1 && $@BG_RM_MODE <= 3)
+		callfunc "F_BG_RM_AbortCreatedBattle", $@BG_RM_MODE;
+	else
+		callfunc "F_BG_RM_ResetMembers";
+
+	callfunc "F_BG_ClearAllReadyState";
+	callfunc "F_BG_RM_DestroyParties";
+	callfunc "F_BG_RM_RestoreCounts";
+	callfunc "F_BG_RM_ClearLeaders";
+
+	$@BG_RM_STATE = 0;
+	$@BG_RM_MANAGER_MENU_LOCK = 0;
+	$@BG_RM_ACTIVE = 0;
+	$@BG_RM_CYCLE_ACTIVE = 0;
+	$@BG_RM_CYCLE_STAGE = 0;
+	$@BG_RM_MODE = 0;
+	$@BG_RM_END_TICK = 0;
+	$@BG_RM_KVM_PARTY_DESTROYED = 0;
+	$@BG_RM_MISSING_CURSOR = 0;
+
+	callfunc "F_BG_RM_ClearArrays";
+	callfunc "F_BG_RM_SetWaitingRooms", 1;
+	callfunc "F_BG_RM_SetManager", 1;
+
+	mapannounce "bat_room",
+		"[전장 랜덤 매칭] 운영자 " + ((.@admin$ == "") ? "관리자" : .@admin$)
+		+ "님이 랜덤 매칭을 강제 종료했습니다.",
+		bc_map, "0xFF7777";
 	end;
 }
 
