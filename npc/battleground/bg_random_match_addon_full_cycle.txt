@@ -1,5 +1,5 @@
 //============================================================
-// NEED 전장 랜덤 매칭 시스템 - 티에라/플라비우스/KVM 풀사이클 v12.1-hotfix-admin-precheck
+// NEED 전장 랜덤 매칭 시스템 - 티에라/플라비우스/KVM 풀사이클 v12.1-hotfix-admin-loopguard
 // - 한 번의 매칭으로 티에라 -> 플라비우스 -> KVM 전체 사이클 진행
 // - 최초 티에라는 자동 입장, 이후 전장은 양 팀 파티장의 입장 준비로 진행
 // - 티에라/플라비우스 종료 후 파티 유지, KVM 종료 후에만 자동 해체
@@ -1152,6 +1152,13 @@ OnFinalize:
 		+ " max=" + .MaxPlayers
 		+ " party_max=" + .MaxPartyMembers;
 
+	// 참가자가 많을 경우 아래의 다중 for/while 배정 로직이
+	// rAthena의 1회 실행 GOTO/command 안전 한도에 먼저 도달할 수 있습니다.
+	// 모든 반복문의 상한은 참가 인원(.MaxPlayers)으로 제한되어 있으므로
+	// 팀 편성 구간에서만 loop guard를 일시 해제합니다.
+	freeloop 1;
+	debugmes "[BG RM] matching loop guard disabled count=" + .@count;
+
 	// 전체 참가 순서 셔플
 	for (.@i = .@count - 1; .@i > 0; .@i--) {
 		.@j = rand(.@i + 1);
@@ -1413,6 +1420,14 @@ OnFinalize:
 	}
 
 	debugmes "[BG RM] team assignment done G=" + .@count_g + " C=" + .@count_c;
+
+	// 팀 편성은 끝났으므로 기본 무한루프 보호를 즉시 복구합니다.
+	freeloop 0;
+
+	// run_script_main의 command/goto 카운터를 새 실행 구간으로 갱신합니다.
+	// 1ms 뒤 같은 위치에서 이어지며 지역 배열/변수는 그대로 유지됩니다.
+	sleep 1;
+	debugmes "[BG RM] matching loop guard restored";
 
 	//========================================================
 	// 파티 생성 직전 최종 검증
