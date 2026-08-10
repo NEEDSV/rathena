@@ -106,8 +106,8 @@ dali02,142,81,3	script	차원의 장치#air1	PORTAL,{
 	case 2:
 		switch( instance_enter(.@md_name$) ) {
 		case IE_OK:
-			'need_airship_fast = NEED_AIRSHIP_FAST_PENDING;
-			NEED_AIRSHIP_FAST_PENDING = 0;
+			// 간소화 선택값은 인스턴스 내부에서 최초 진행 시 확정합니다.
+			// 외부 NPC에서 인스턴스 변수(')를 설정하면 대상 인스턴스에 반영되지 않을 수 있습니다.
 			if (isbegin_quest(15050) == 0) {
 				setquest 15050;// Memorial Dungeon: Airship Assault
 				setquest 15051;// Memorial Dungeon: Airship Assault
@@ -174,6 +174,15 @@ dali02,142,81,3	script	차원의 장치#air1	PORTAL,{
 1@air1,214,66,5	duplicate(아이리스#air1)	케이아스#air1	4_M_CHAOS
 
 1@air1,217,67,3	script	펠록 선장#air1	4_M_REINDEER,{
+	// 차원의 장치에서 선택한 진행 방식을 인스턴스 내부 변수로 최초 1회 확정합니다.
+	if (!'need_airship_mode_set) {
+		'need_airship_mode_set = 1;
+		'need_airship_fast = (#NEED_MD_AIRSHIP_CLEAR && NEED_AIRSHIP_FAST_PENDING);
+		NEED_AIRSHIP_FAST_PENDING = 0;
+		if ('need_airship_fast)
+			dispbottom "[비공정 습격] 간소화 진행이 적용되었습니다.";
+	}
+
 	if ('need_airship_fast && 'airship_status == 0) {
 		cutin "fly_felrock2",2;
 		mes "[펠록 선장]";
@@ -1389,6 +1398,7 @@ OnTimer3400:
 OnInstanceInit:
 	'airship_status = 0;
 	'need_airship_fast = 0;
+	'need_airship_mode_set = 0;
 
 	'map_air1$ = instance_mapname("1@air1");
 	'map_air2$ = instance_mapname("1@air2");
