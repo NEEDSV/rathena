@@ -954,15 +954,20 @@ OnSpawn:
 	'brina_phase_60 = 0;
 	'brina_phase_50 = 0;
 	'spawn = false;
+
 	enablenpc instance_npcname("#ice_hpcheck");
-	monster 'map_eom$,38,123, "브리나라네아",3091,1, instance_npcname("#ice_hpcheck") + "::OnMyMobDead";	// MM_BRINARANEA
+
+	monster 'map_eom$,38,123, "브리나라네아",3091,1,
+		instance_npcname("#ice_hpcheck") + "::OnMyMobDead";
+
 	'boss_id = $@mobid[0];
+
 	getunitdata 'boss_id, .@data;
-	// 브리나라네아의 최대 HP와 현재 HP를 원본의 1/3로 조정합니다.
-	'boss_max_hp = max(1, .@data[UMOB_MAXHP] / 3);
-	setunitdata 'boss_id, UMOB_MAXHP, 'boss_max_hp;
-	setunitdata 'boss_id, UMOB_HP, 'boss_max_hp;
-	'boss_hp = 'boss_max_hp;
+
+	// HP는 mob_db 설정값을 그대로 사용한다.
+	'boss_max_hp = .@data[UMOB_MAXHP];
+	'boss_hp = .@data[UMOB_HP];
+
 	unitskilluseid 'boss_id, "NPC_WIDEFREEZE",5;
 	end;
 OnStart:
@@ -974,26 +979,20 @@ OnTimer3000:
 		stopnpctimer;
 		end;
 	}
+
 	getunitdata 'boss_id, .@data;
+
 	.@hp = .@data[UMOB_HP];
 	.@max_hp = 'boss_max_hp;
+
 	if ('boss_hp < .@hp) {
 		'boss_hp = .@hp;
 		initnpctimer;
 		end;
 	}
-	// 기존 2,000,000 피해 제한은 최대 HP의 2.5%였으므로 같은 비율로 적용합니다.
-	.@burst_limit = max(1, .@max_hp / 40);
-	if (('boss_hp - .@hp) > .@burst_limit) {
-		'boss_hp = .@hp;
-		donpcevent instance_npcname("#super_heal") + "::OnStart";
-		initnpctimer;
-		end;
-	}
+
 	'boss_hp = .@hp;
 
-	// 기존 7천만/6천만/5천만 고정 구간을 원래 비율(87.5%/75%/62.5%)로 변경합니다.
-	// 이하 조건과 1회 플래그를 사용해 순간 화력으로 구간을 건너뛰어도 패턴이 누락되지 않습니다.
 	if ('brina_phase_70 == 0 && .@hp <= (.@max_hp * 7 / 8)) {
 		'brina_phase_70 = 1;
 		unittalk 'boss_id, "아이들아, 나오너라. 진수성찬이 제 발로 찾아왔다!";

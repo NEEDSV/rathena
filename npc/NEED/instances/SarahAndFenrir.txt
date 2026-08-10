@@ -5,6 +5,7 @@
 //= 펜릴과 사라 Instance
 //===== Changelogs: ==========================================
 //= 1.0 First version. [Capuche]
+//= NEED: completion report / cooldown start / re-entry fixes
 //============================================================
 
 dali02,97,142,3	script	베른하르트 교수#a1	4_LGTSCIENCE,{
@@ -31,7 +32,7 @@ dali02,97,142,3	script	베른하르트 교수#a1	4_LGTSCIENCE,{
 		mes "^3355FF" + .@remaining + "회 / " + .@limit + "회^000000";
 		next;
 	}
-	
+
 	if (BaseLevel < 145) {
 		mes "- Base 레벨 145 이상부터 이용할 수 있습니다. -";
 		close;
@@ -40,6 +41,79 @@ dali02,97,142,3	script	베른하르트 교수#a1	4_LGTSCIENCE,{
 	// 기존 완료 캐릭터의 기록을 계정 단위 간소화 해금으로 소급 적용합니다.
 	if (#NEED_MD_SF_CLEAR == 0 && (sarah_fenrir > 0 || isbegin_quest(9337) > 0))
 		#NEED_MD_SF_CLEAR = 1;
+
+	// 진행 중인 원정과 완료 보고는 재사용 대기시간보다 먼저 처리합니다.
+	// 9336은 최초 입장 성공 시점부터 시작되며, 교수에게 보고할 때 다시 생성하지 않습니다.
+	.@mission_state = isbegin_quest(9335);
+	.@cooldown_state = checkquest(9336,PLAYTIME);
+
+	// 전날 원정이 미완료 상태로 끝났다면 재사용 대기시간 만료 후 진행 기록을 정리합니다.
+	if (.@mission_state > 0 && isbegin_quest(9337) == 0 && .@cooldown_state == 2) {
+		erasequest 9335;
+		erasequest 9336;
+		.@mission_state = 0;
+		.@cooldown_state = -1;
+		mes "[베른하르트 교수]";
+		mes "지난 원정의 차원 연결이 완전히 끊어진 것 같군.";
+		mes "미완료된 원정 기록을 정리했네.";
+		next;
+	}
+
+	if (.@mission_state > 0) {
+		// 마지막 펜릴에게서 9337을 받은 경우에만 정상 클리어로 인정합니다.
+		if (isbegin_quest(9337) == 0) {
+			mes "[베른하르트 교수]";
+			mes "아직 과거의 글래스트헤임에서 임무를 마쳤다는 기록이 확인되지 않는군.";
+			mes "차원 이동 장치가 유지되고 있다면 장치를 통해 다시 들어갈 수 있네.";
+			close;
+		}
+
+		mes "[베른하르트 교수]";
+		mes "무사히 돌아왔군. 임무를 끝까지 마친 기록도 확인했네.";
+		mes "많은 위험을 겪었을 텐데 수고했네.";
+		next;
+
+		.@give_earring = 0;
+		.@earring_index = -1;
+		if (sarah_fenrir == 0) {
+			mes "[베른하르트 교수]";
+			if (countitem(6803) > 0) {
+				mes "기간테스의 파편 1개를 연구 자료로 받는 대신 귀걸이 하나를 주겠네.";
+				next;
+				mes "- 사라의 왼쪽 귀걸이 -";
+				mes "힐 1레벨 사용 가능";
+				mes "- 사라의 오른쪽 귀걸이 -";
+				mes "텔레포테이션 1레벨 사용 가능";
+				next;
+				.@earring_index = select("사라의 왼쪽 귀걸이:사라의 오른쪽 귀걸이:이번에는 받지 않는다") - 1;
+				if (.@earring_index < 2)
+					.@give_earring = 1;
+			}
+			else {
+				mes "기간테스의 파편을 가지고 있지 않군.";
+				mes "파편 없이 귀걸이를 지급할 수는 없지만, 이번 원정은 정상적으로 완료 처리하겠네.";
+				mes "나중에 파편을 구하면 수석 조교에게서 귀걸이를 교환할 수 있네.";
+				next;
+			}
+		}
+
+		mes "[베른하르트 교수]";
+		mes "기간테스의 파편을 수석 조교에게 가져가면 귀걸이 인챈트나 교환에 사용할 수 있네.";
+		mes "차원 이동 장치의 재사용 대기시간은 이번 원정에 처음 입장한 시점부터 계산되고 있네.";
+		mes "충전이 끝나면 다시 원정을 시작할 수 있을 걸세.";
+
+		erasequest 9335;// Search for shards of Gigantes
+		if (isbegin_quest(9337) > 0)
+			erasequest 9337;// Wrapping up the Adventure
+
+		if (sarah_fenrir == 0)
+			sarah_fenrir = 1;
+		if (.@give_earring) {
+			delitem 6803,1;// Shard of Gigantes
+			getitem (28310+.@earring_index),1;
+		}
+		close;
+	}
 	switch( checkquest(9336,PLAYTIME) ) {
 	case -1:
 		switch( isbegin_quest(9335) ) {
@@ -116,41 +190,8 @@ dali02,97,142,3	script	베른하르트 교수#a1	4_LGTSCIENCE,{
 			mes "장치가 오래 유지되지는 않으니 서두르게.";
 			close;
 		case 1:
-			mes "[베른하르트 교수]";
-			mes "기간테스의 파편은 무사히 가져왔나?";
-			mes "많은 위험을 겪었을 텐데 수고했네.";
-			next;
-			mes "[베른하르트 교수]";
-			mes "목숨을 걸고 가져온 파편을 대가 없이 받을 생각은 없네!";
-			if (sarah_fenrir == 0) {
-				mes "예전에 발굴한 유물 가운데 쓸 만한 귀걸이 하나를 주겠네.";
-				next;
-				mes "- 사라의 왼쪽 귀걸이 -";
-				mes "힐 1레벨 사용 가능";
-				mes "- 사라의 오른쪽 귀걸이 -";
-				mes "텔레포테이션 1레벨 사용 가능";
-				next;
-				.@s = select( "사라의 왼쪽 귀걸이", "사라의 오른쪽 귀걸이" ) - 1;
-			}
-			mes "[베른하르트 교수]";
-			mes "기간테스의 파편을 수석 조교에게 가져가면 귀걸이에 인챈트를 해 줄 걸세.";
-			next;
-			mes "[베른하르트 교수]";
-			mes "기간테스의 파편은 많을수록 좋네.";
-			mes "다만 차원 이동 장치를 가동할 에너지가 안정적으로 공급되지 않고 있어.";
-			next;
-			mes "[베른하르트 교수]";
-			mes "장치의 에너지가 충전되려면 일주일 정도 필요하니 그 뒤에 다시 찾아오게.";
-			mes "그때 다시 기간테스의 파편을 부탁하겠네.";
-			erasequest 9335;// Search for shards of Gigantes
-			setquest 9336;// Go back to Professor Bernhard
-			if (isbegin_quest(9337) > 0)
-				erasequest 9337;// Wrapping up the Adventure
-			if (sarah_fenrir == 0) {
-				sarah_fenrir = 1;
-				getitem (28310+.@s),1;
-			}
-			close;
+			// 진행 중인 원정은 위의 공통 처리 구간에서 처리됩니다.
+			end;
 		case 2:
 			end;
 		}
@@ -161,6 +202,7 @@ dali02,97,142,3	script	베른하르트 교수#a1	4_LGTSCIENCE,{
 		mes "차원 이동 장치를 여는 데 많은 에너지가 필요하니 충전이 끝난 뒤 다시 찾아오게.";
 		close;
 	case 2:
+		erasequest 9336;
 		mes "[베른하르트 교수]";
 		mes "기다리고 있었네.";
 		mes "그동안 잘 지냈나?";
@@ -256,60 +298,73 @@ dali02,99,148,3	script	차원 이동 장치#XX1	PORTAL,{
 		mes "아직 장치를 이용할 수 없습니다. -";
 		close;
 	}
-	switch( checkquest(9336,PLAYTIME) ) {
-	case -1:
-		break;
-	case 0:
-	case 1:
-		mes "- 차원 이동 장치가 닫혀 있습니다. -";
-		mes "- 지금은 입장할 수 없습니다. -";
-		close;
-	case 2:
-		break;
-	}
-	if (isbegin_quest(9335) > 0) {
-		mes "- 차원 이동 장치가 닫혀 있습니다. -";
-		mes "- 지금은 입장할 수 없습니다. -";
-		close;
-	}
-	if (select( "입장하지 않는다.", "차원 이동 장치에 들어간다." ) == 1) {
-		if (getcharid(1) > 0) {
-			mes "- 차원 이동 장치 주변의 공간이";
-			mes "일그러지고 있다. -";
+
+	.@mission_state = isbegin_quest(9335);
+
+	// 새 원정 시작에만 재사용 대기시간을 적용합니다.
+	// 이미 9335가 진행 중이면 기존 인스턴스 재입장을 허용합니다.
+	if (.@mission_state == 0) {
+		switch( checkquest(9336,PLAYTIME) ) {
+		case -1:
+			break;
+		case 0:
+		case 1:
+			mes "- 차원 이동 장치가 아직 충전 중입니다. -";
+			mes "- 지금은 새로운 원정을 시작할 수 없습니다. -";
 			close;
+		case 2:
+			erasequest 9336;
+			break;
 		}
-		mes "- 축축하고 낯선 기운이 느껴진다. -";
+	}
+
+	if (select("입장하지 않는다.:차원 이동 장치에 들어간다.") == 1) {
+		mes "- 차원 이동 장치 주변의 공간이";
+		mes "일그러지고 있다. -";
 		close;
 	}
+
 	.@md_name$ = "펜릴과 사라";
 	switch( instance_enter(.@md_name$) ) {
 	case IE_OTHER:
 		mes "알 수 없는 오류가 발생했습니다.";
 		close;
 	case IE_NOINSTANCE:
-		mes "메모리얼 던전 " + .@md_name$ + "이 생성되어 있지 않습니다.";
-		mes "파티장이 메모리얼 던전을 생성하지 않았습니다.";
+		if (.@mission_state > 0) {
+			mes "진행 중이던 펜릴과 사라 인스턴스가 이미 종료되었습니다.";
+			mes "재사용 대기시간이 끝난 뒤 베른하르트 교수에게 말을 걸면 미완료 기록을 정리할 수 있습니다.";
+		}
+		else {
+			mes "메모리얼 던전 " + .@md_name$ + "이 생성되어 있지 않습니다.";
+			mes "파티장이 먼저 베른하르트 교수에게서 메모리얼 던전을 생성해야 합니다.";
+		}
 		close;
 	case IE_NOMEMBER:
 		mes "해당 파티의 구성원만 입장할 수 있습니다.";
 		close;
 	case IE_OK:
 		mapannounce "dali02", getpartyname(getcharid(1)) + " 파티의 " + strcharinfo(0) + " 님이 펜릴과 사라에 입장합니다.", bc_map,0xFF99,FW_NORMAL,12;
-		setquest 9335;// Search for shards of Gigantes
-		if (isbegin_quest(9336) > 0)
-			erasequest 9336;
-		// warp "1@glast",367,304;
+
+		// 최초 입장 성공 시점부터 쿨타임을 시작합니다.
+		// 재입장에서는 9335/9336을 다시 설정하지 않아 최초 입장 시각을 유지합니다.
+		if (.@mission_state == 0) {
+			setquest 9335;// Search for shards of Gigantes
+			if (isbegin_quest(9336) > 0)
+				erasequest 9336;
+			setquest 9336;// Go back to Professor Bernhard - cooldown starts on first entry
+		}
 		end;
 	}
 }
-
-lasa_in01,189,50,3	script	수석 조교#a1	4_M_REPAIR,{
+dali02,93,146,6	script	수석 조교#a1	4_M_REPAIR,{
+	if (sarah_fenrir == 0)
+		end;
 	disable_items;
 	mes "[수석 조교]";
 	mes "교수님께 이야기는 들었습니다.";
 	mes "목숨을 걸고 기간테스의 파편을 가져온 만큼 충분히 보상하라고 하셨습니다.";
 	next;
-	switch( select( "귀걸이 인챈트", "인챈트 리스트 확인", "대화를 마친다." ) ) {
+	switch( select( "귀걸이 인챈트", "귀걸이 구매", "대화를 마친다." ) ) {
 	case 1:
 		mes "[수석 조교]";
 		mes "발굴 현장에서 발견한 사라의 귀걸이에는 상당한 잠재력이 있습니다.";
@@ -566,64 +621,43 @@ lasa_in01,189,50,3	script	수석 조교#a1	4_M_REPAIR,{
 			close;
 		}
 	case 2:
-		callfunc "F_ShowSarahEarringEnchantList";
-		end;
+		mes "[수석 조교]";
+		mes "교수님과 글래스트헤임을 조사하던 중 발견한 희귀한 귀걸이입니다.";
+		next;
+		mes "[수석 조교]";
+		mes "과거 사라가 착용했던 것으로 보이며 잠재력을 끌어내는 힘이 있습니다.";
+		next;
+		mes "[수석 조교]";
+		mes "교수님의 연구를 도와주신 분이니 기간테스의 파편 1개와 교환해 드리겠습니다.";
+		next;
+		mes "[수석 조교]";
+		mes "- 사라의 왼쪽 귀걸이 -";
+		mes "힐 1레벨 사용 가능";
+		mes "- 사라의 오른쪽 귀걸이 -";
+		mes "텔레포테이션 1레벨 사용 가능";
+		mes "-----------------------";
+		mes "어느 귀걸이를 원하십니까?";
+		next;
+		.@s = select( "사라의 왼쪽 귀걸이", "사라의 오른쪽 귀걸이", "대화를 마친다." ) - 1;
+		if (.@s < 2) {
+			if (countitem(6803) < 1) {
+				mes "[수석 조교]";
+				mes "기간테스의 파편이 부족합니다.";
+				mes "교환하려면 기간테스의 파편이 필요합니다.";
+				close;
+			}
+			delitem 6803,1;// Shard of Gigantes
+			getitem (28310+.@s),1;
+		}
+		mes "[수석 조교]";
+		mes "베른하르트 교수님은 제가 가장 존경하는 분입니다.";
+		mes "당신에게도 존경하는 사람이 있습니까?";
+		close;
 	case 3:
 		mes "[수석 조교]";
 		mes "교수님께 이야기는 들었습니다.";
 		mes "목숨을 걸고 기간테스의 파편을 가져온 만큼 충분히 보상하라고 하셨습니다.";
 		close;
-	}
-
-OnInit:
-	waitingroom "사라의 귀걸이 인챈트",0;
-	end;
-}
-
-function	script	F_ShowSarahEarringEnchantList	{
-	mes "[수석 조교]";
-	mes "사라의 귀걸이에 부여될 수 있는 인챈트 목록입니다.";
-	mes "왼쪽 장착 위치에서는 각 계열의 ^0000FF공통 후보 4종^000000 중 하나가 부여됩니다.";
-	mes "오른쪽 장착 위치에서는 ^0000FF추가 후보 2종^000000을 포함한 총 6종 중 하나가 부여됩니다.";
-	mes "^FF0000인챈트에 실패하면 사라의 귀걸이가 파괴됩니다.^000000";
-	next;
-
-	while (true) {
-		switch(select(
-			"CRI 또는 크리티컬",
-			"명궁 또는 회피",
-			"절약 또는 MATK",
-			"공격 후딜 또는 스킬 후딜",
-			"닫기"
-			)) {
-
-		case 1:
-			setdialogsize(240,280);
-			callfunc "F_ShowEnchantGroup","공통 후보",4863,4864,4939,4940;
-			callfunc "F_ShowEnchantGroup","오른쪽 장착 위치 추가 후보",4941,4865;
-			break;
-
-		case 2:
-			setdialogsize(240,280);
-			callfunc "F_ShowEnchantGroup","공통 후보",4832,4833,4942,4943;
-			callfunc "F_ShowEnchantGroup","오른쪽 장착 위치 추가 후보",4944,4834;
-			break;
-
-		case 3:
-			setdialogsize(240,280);
-			callfunc "F_ShowEnchantGroup","공통 후보",4945,4946,4897,4898;
-			callfunc "F_ShowEnchantGroup","오른쪽 장착 위치 추가 후보",4947,4899;
-			break;
-
-		case 4:
-			setdialogsize(240,280);
-			callfunc "F_ShowEnchantGroup","공통 후보",4869,4872,4948,4949;
-			callfunc "F_ShowEnchantGroup","오른쪽 장착 위치 추가 후보",4950,4873;
-			break;
-
-		case 5:
-			close;
-		}
 	}
 }
 
@@ -882,7 +916,9 @@ OnTouch:
 		enablenpc 'fenrir_3$;
 		enablenpc instance_npcname("#glast_event_7");
 		disablenpc instance_npcname("#glast_move_01");
-		mapannounce 'map_glast$, "펜릴: 서쪽 성벽에서 기간테스를 상대해 주세요. 고대 기간테스도 조사할 수 있습니다.", bc_map, 0xEBFF;
+		// 간소화 모드에서도 다음 진행 위치를 확실히 안내합니다.
+		viewpoint 1,47,270,1,0xFF0000;
+		mapannounce 'map_glast$, "펜릴: 고대 기간테스의 파편을 조사한 뒤 서쪽 성벽의 펜릴에게 와 주세요.", bc_map, 0xEBFF;
 		end;
 	}
 
@@ -954,7 +990,22 @@ OnTouch:
 	end;
 }
 
-1@glast,47,270,4	duplicate(#effect_glast_event01_1)	펜릴#glast_03	4_F_FENRIR
+1@glast,47,270,4	script	펜릴#glast_03	4_F_FENRIR,{
+	// 간소화 진행에서는 숨은 트리거를 밟지 못하더라도 펜릴을 직접 클릭해 진행할 수 있습니다.
+	if (!'NEED_SF_FAST)
+		end;
+	if ('NEED_SF_LEFT_ENTERED || 'skip_left_part)
+		end;
+
+	'NEED_SF_LEFT_ENTERED = 1;
+	disablenpc instance_npcname("#glast_event_7");
+	donpcevent instance_npcname("#fenrir_left_final_2") + "::OnStop";
+	disablenpc 'fenrir_3$;
+	enablenpc 'fenrir_4$;
+	enablenpc instance_npcname("#glast_event_9");
+	mapwarp 'map_glast$,'map_glast$,41,348;
+	end;
+}
 
 // Fenrir left side, inside
 1@glast,44,357,0	script	#glast_event_9	HIDDEN_WARP_NPC,3,3,{
@@ -1164,7 +1215,9 @@ OnStart:
 			disablenpc instance_npcname("#effect_glast_event02_" + .@i);
 		disablenpc instance_npcname("#effect_glast_event02_bis");
 		disablenpc instance_npcname("#fenrir_left_final_1");
-		areawarp 'map_glast$,26,338,59,375, 'map_glast$,105,369;
+		// 서쪽 전투가 끝나면 인스턴스 내 파티원을 다음 진행 지점으로 이동시킵니다.
+		// areawarp 범위 밖에 있던 캐릭터가 진행에서 이탈하는 문제를 방지합니다.
+		mapwarp 'map_glast$,'map_glast$,105,369;
 		enablenpc instance_npcname("#glast_event_13");
 		enablenpc 'fenrir_5$;
 		end;
