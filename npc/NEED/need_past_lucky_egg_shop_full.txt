@@ -1,0 +1,629 @@
+//============================================================
+// NEED - 과거 행운의 알 상점
+//
+// 1단계
+// - 매일 00:00 / 12:00 갱신
+// - 활성화된 과거 행운의 알 중 1종 랜덤 판매
+// - 기본가 1,000 Cash
+// - 랜덤 판매가: 110 / 120 / 130 / 140 / 150%
+// - 서버 재고: 300~500개
+// - 계정당 회차 구매 제한: 10개
+//
+// 2단계
+// - 추억의 행운 조각(900106) 30개
+// - 11,000 Cash
+// - 원하는 활성화 과거 행운의 알 10개 선택 구매
+//
+// 활성화 정책
+// - 12855 교황 스크롤까지 활성화
+// - 이후 품목은 모두 비활성 상태로 미리 등록
+// - 시즌 개방 시 .EggEnabled[]의 해당 항목만 0 -> 1 변경
+//
+// 갱신 10분 전 전체 공지
+// - 11:50 / 23:50
+//============================================================
+
+lasagna,169,195,4	script	추억의 행운의 알 상인#need_past_egg	4_F_KAFRA6,{
+
+	callsub S_EnsureRotation;
+	callsub S_SyncAccountRotation;
+
+	while (1) {
+		mes "[추억의 행운의 알 상인]";
+		mes "지나간 시즌의 행운의 알을";
+		mes "다시 만날 수 있는 특별 판매소입니다.";
+		mes " ";
+
+		if ($NeedPastEggMarketItem > 0) {
+			mes "현재 한정 판매:";
+			mes "^0055FF" + getitemname($NeedPastEggMarketItem) + "^000000";
+			mes "판매가: ^FF8800" + $NeedPastEggMarketUnitPrice + " Cash^000000";
+			mes "가격 배율: " + $NeedPastEggMarketRate + "%";
+			mes "남은 서버 재고: " + $NeedPastEggMarketStock + "개";
+			mes "내 구매량: " + #NeedPastEggBought + " / " + .BuyLimit + "개";
+		}
+		else {
+			mes "^FF0000현재 판매 가능한 행운의 알이 없습니다.^000000";
+		}
+		setdialogsize(300,300);
+		next;
+
+		switch (select("랜덤 한정 판매 이용:과거 행운의 알 선택 구매:시스템 설명:닫기")) {
+		case 1:
+			callsub S_RandomShop;
+			break;
+
+		case 2:
+			callsub S_SelectShop;
+			break;
+
+		case 3:
+			mes "[추억의 행운의 알 상인]";
+			mes "랜덤 한정 판매는 매일";
+			mes "^0055FF00:00 / 12:00^000000에 갱신됩니다.";
+			mes " ";
+			mes "상품, 판매 가격, 서버 재고가";
+			mes "갱신 시마다 새롭게 결정됩니다.";
+			next;
+
+			mes "[추억의 행운의 알 상인]";
+			mes "한정 판매 상품은 계정당";
+			mes "회차별 최대 " + .BuyLimit + "개까지 구매할 수 있습니다.";
+			mes " ";
+			mes "원하는 과거 행운의 알을 직접 구매할 경우";
+			mes "^FF0000" + getitemname(.MemoryFragment) + " " + .SelectFragmentCost + "개^000000";
+			mes "+ ^FF8800" + .SelectCashPrice + " Cash^000000가 필요합니다.";
+			mes "선택한 행운의 알 " + .SelectEggAmount + "개를 받을 수 있습니다.";
+			next;
+			break;
+
+		default:
+			close;
+		}
+	}
+
+
+//============================================================
+// 1단계 - 랜덤 한정 판매
+//============================================================
+S_RandomShop:
+	callsub S_EnsureRotation;
+	callsub S_SyncAccountRotation;
+
+	if ($NeedPastEggMarketItem <= 0 || $NeedPastEggMarketUnitPrice <= 0) {
+		mes "[추억의 행운의 알 상인]";
+		mes "현재 판매 가능한 상품이 없습니다.";
+		next;
+		return;
+	}
+
+	if ($NeedPastEggMarketStock <= 0) {
+		mes "[추억의 행운의 알 상인]";
+		mes "^FF0000현재 회차의 상품이 모두 판매되었습니다.^000000";
+		mes "다음 갱신을 기다려주세요.";
+		next;
+		return;
+	}
+
+	.@remaining = .BuyLimit - #NeedPastEggBought;
+	if (.@remaining <= 0) {
+		mes "[추억의 행운의 알 상인]";
+		mes "이번 회차의 계정 구매 가능 수량을";
+		mes "모두 사용했습니다.";
+		next;
+		return;
+	}
+
+	.@max = $NeedPastEggMarketStock;
+	if (.@remaining < .@max)
+		.@max = .@remaining;
+
+	mes "[추억의 행운의 알 상인]";
+	mes "상품: ^0055FF" + getitemname($NeedPastEggMarketItem) + "^000000";
+	mes "개당 가격: ^FF8800" + $NeedPastEggMarketUnitPrice + " Cash^000000";
+	mes "남은 서버 재고: " + $NeedPastEggMarketStock + "개";
+	mes "내 구매 가능: " + .@remaining + "개";
+	mes " ";
+	mes "구매할 수량을 입력해주세요.";
+	mes "(1 ~ " + .@max + ")";
+	next;
+
+	input .@amount, 1, .@max;
+
+	.@rotation$ = $NeedPastEggRotation$;
+	.@item = $NeedPastEggMarketItem;
+	.@unit_price = $NeedPastEggMarketUnitPrice;
+	.@total = .@unit_price * .@amount;
+
+	mes "[추억의 행운의 알 상인]";
+	mes "상품: ^0055FF" + getitemname(.@item) + "^000000";
+	mes "수량: " + .@amount + "개";
+	mes "필요 Cash: ^FF8800" + .@total + "^000000";
+	mes " ";
+	mes "구매하시겠습니까?";
+	next;
+
+	if (select("구매한다:취소") == 2)
+		return;
+
+	callsub S_EnsureRotation;
+	callsub S_SyncAccountRotation;
+
+	if ($NeedPastEggRotation$ != .@rotation$ ||
+		$NeedPastEggMarketItem != .@item ||
+		$NeedPastEggMarketUnitPrice != .@unit_price) {
+		mes "[추억의 행운의 알 상인]";
+		mes "^FF0000대화 중 판매 상품이 갱신되었습니다.^000000";
+		mes "현재 상품을 다시 확인해주세요.";
+		next;
+		return;
+	}
+
+	.@remaining = .BuyLimit - #NeedPastEggBought;
+	if (.@remaining <= 0 || .@amount > .@remaining) {
+		mes "[추억의 행운의 알 상인]";
+		mes "계정 구매 가능 수량이 부족합니다.";
+		next;
+		return;
+	}
+
+	if ($NeedPastEggMarketStock < .@amount) {
+		mes "[추억의 행운의 알 상인]";
+		mes "^FF0000다른 모험가의 구매로 재고가 부족해졌습니다.^000000";
+		mes "현재 남은 재고: " + $NeedPastEggMarketStock + "개";
+		next;
+		return;
+	}
+
+	.@total = .@unit_price * .@amount;
+
+	if (#CASHPOINTS < .@total) {
+		mes "[추억의 행운의 알 상인]";
+		mes "Cash가 부족합니다.";
+		mes "필요 Cash: " + .@total;
+		mes "보유 Cash: " + #CASHPOINTS;
+		next;
+		return;
+	}
+
+	if (!checkweight(.@item, .@amount)) {
+		mes "[추억의 행운의 알 상인]";
+		mes "소지 무게 또는 인벤토리 공간을 확인해주세요.";
+		next;
+		return;
+	}
+
+	#CASHPOINTS -= .@total;
+	$NeedPastEggMarketStock -= .@amount;
+	callsub S_CheckStockNotice;
+	#NeedPastEggBought += .@amount;
+	getitem .@item, .@amount;
+	getitem .MemoryFragment, .@amount;
+
+	mes "[추억의 행운의 알 상인]";
+	mes "^0055FF" + getitemname(.@item) + "^000000 " + .@amount + "개를 구매했습니다.";
+	mes "사용 Cash: ^FF8800" + .@total + "^000000";
+	mes "남은 Cash: " + #CASHPOINTS;
+	mes "남은 서버 재고: " + $NeedPastEggMarketStock + "개";
+	mes "이번 회차 내 구매량: " + #NeedPastEggBought + " / " + .BuyLimit;
+	next;
+	return;
+
+
+//============================================================
+// 2단계 - 원하는 과거 행운의 알 10개 선택 구매
+//============================================================
+S_SelectShop:
+	.@menu$ = "";
+	.@count = 0;
+
+	for (.@i = 0; .@i < getarraysize(.EggId); .@i++) {
+		if (!.EggEnabled[.@i])
+			continue;
+
+		.@eligible_index[.@count] = .@i;
+
+		if (.@count > 0)
+			.@menu$ += ":";
+
+		.@menu$ += getitemname(.EggId[.@i]) + " " + .SelectEggAmount + "개 (" + .SelectCashPrice + " Cash)";
+		.@count++;
+	}
+
+	if (.@count <= 0) {
+		mes "[추억의 행운의 알 상인]";
+		mes "선택 구매 가능한 과거 행운의 알이 없습니다.";
+		next;
+		return;
+	}
+
+	mes "[과거 행운의 알 선택 구매]";
+	mes "원하는 과거 행운의 알을 선택해주세요.";
+	mes " ";
+	mes "교환 비용:";
+	mes "^FF0000" + getitemname(.MemoryFragment) + " " + .SelectFragmentCost + "개^000000";
+	mes "+ ^FF8800" + .SelectCashPrice + " Cash^000000";
+	mes " ";
+	mes "지급 수량: ^0055FF" + .SelectEggAmount + "개^000000";
+	next;
+
+	.@selected = select(.@menu$) - 1;
+	.@index = .@eligible_index[.@selected];
+	.@item = .EggId[.@index];
+
+	mes "[과거 행운의 알 선택 구매]";
+	mes "선택 상품:";
+	mes "^0055FF" + getitemname(.@item) + " " + .SelectEggAmount + "개^000000";
+	mes " ";
+	mes "필요 재료:";
+	mes "- " + getitemname(.MemoryFragment) + " ^FF0000" + .SelectFragmentCost + "개^000000";
+	mes "- Cash ^FF8800" + .SelectCashPrice + "^000000";
+	mes " ";
+	mes "현재 보유:";
+	mes "- " + getitemname(.MemoryFragment) + " " + countitem(.MemoryFragment) + "개";
+	mes "- Cash " + #CASHPOINTS;
+	mes " ";
+	mes "교환하시겠습니까?";
+	next;
+
+	if (select("교환한다:취소") == 2)
+		return;
+
+	if (!.EggEnabled[.@index] || .EggId[.@index] != .@item) {
+		mes "[추억의 행운의 알 상인]";
+		mes "상품 설정이 변경되었습니다.";
+		mes "다시 시도해주세요.";
+		next;
+		return;
+	}
+
+	if (countitem(.MemoryFragment) < .SelectFragmentCost) {
+		mes "[추억의 행운의 알 상인]";
+		mes getitemname(.MemoryFragment) + "이(가) 부족합니다.";
+		mes "필요 수량: " + .SelectFragmentCost + "개";
+		next;
+		return;
+	}
+
+	if (#CASHPOINTS < .SelectCashPrice) {
+		mes "[추억의 행운의 알 상인]";
+		mes "Cash가 부족합니다.";
+		mes "필요 Cash: " + .SelectCashPrice;
+		mes "보유 Cash: " + #CASHPOINTS;
+		next;
+		return;
+	}
+
+	if (!checkweight(.@item, .SelectEggAmount)) {
+		mes "[추억의 행운의 알 상인]";
+		mes "소지 무게 또는 인벤토리 공간을 확인해주세요.";
+		next;
+		return;
+	}
+
+	delitem .MemoryFragment, .SelectFragmentCost;
+	#CASHPOINTS -= .SelectCashPrice;
+	getitem .@item, .SelectEggAmount;
+
+	mes "[추억의 행운의 알 상인]";
+	mes "^0055FF" + getitemname(.@item) + "^000000 " + .SelectEggAmount + "개를 교환했습니다.";
+	mes " ";
+	mes "사용 재료:";
+	mes "- " + getitemname(.MemoryFragment) + " " + .SelectFragmentCost + "개";
+	mes "- Cash " + .SelectCashPrice;
+	mes "남은 Cash: " + #CASHPOINTS;
+	next;
+	return;
+
+
+//============================================================
+// 현재 12시간 회차 보정
+//============================================================
+S_EnsureRotation:
+	.@slot = 0;
+	if (gettime(3) >= 12)
+		.@slot = 1;
+
+	.@key$ = sprintf("%04d%02d%02d-%d",
+		gettime(7), gettime(6), gettime(5), .@slot);
+
+	if ($NeedPastEggRotation$ != .@key$ || $NeedPastEggMarketItem <= 0)
+		callsub S_Rotate;
+
+	return;
+
+
+//============================================================
+// 랜덤 회차 생성
+//============================================================
+S_Rotate:
+	.@slot = 0;
+	if (gettime(3) >= 12)
+		.@slot = 1;
+
+	.@key$ = sprintf("%04d%02d%02d-%d",
+		gettime(7), gettime(6), gettime(5), .@slot);
+
+	.@count = 0;
+
+	for (.@i = 0; .@i < getarraysize(.EggId); .@i++) {
+		if (!.EggEnabled[.@i])
+			continue;
+
+		.@eligible_index[.@count] = .@i;
+		.@count++;
+	}
+
+	if (.@count <= 0) {
+		$NeedPastEggRotation$ = .@key$;
+		$NeedPastEggMarketItem = 0;
+		$NeedPastEggMarketRate = 0;
+		$NeedPastEggMarketUnitPrice = 0;
+		$NeedPastEggMarketStock = 0;
+		return;
+	}
+
+	.@pick = .@eligible_index[rand(.@count)];
+
+	$NeedPastEggRotation$ = .@key$;
+	$NeedPastEggMarketItem = .EggId[.@pick];
+
+	$NeedPastEggMarketRate = 110 + (rand(5) * 10);
+	$NeedPastEggMarketUnitPrice = (.BaseCashPrice * $NeedPastEggMarketRate) / 100;
+
+	$NeedPastEggMarketStock = rand(.StockMin, .StockMax);
+	
+	// 판매율 계산용 최초 재고 저장
+	$NeedPastEggMarketInitialStock = $NeedPastEggMarketStock;
+	
+	// 회차별 알림 플래그 초기화
+	$NeedPastEggStock90Notice = 0;
+	$NeedPastEggSoldOutNotice = 0;
+
+	return;
+
+
+//============================================================
+// 계정 회차 구매량 동기화
+//============================================================
+S_SyncAccountRotation:
+	if (#NeedPastEggRotation$ != $NeedPastEggRotation$) {
+		#NeedPastEggRotation$ = $NeedPastEggRotation$;
+		#NeedPastEggBought = 0;
+	}
+	return;
+
+
+//============================================================
+// 갱신 10분 전 전체 공지
+//============================================================
+OnClock1150:
+	announce "[행운의 알] 10분 후 과거 행운의 알이 새롭게 입고됩니다! 구매처 : 마을 중앙 12시", bc_all;
+	end;
+
+OnClock2350:
+	announce "[행운의 알] 10분 후 과거 행운의 알이 새롭게 입고됩니다! 구매처 : 마을 중앙 12시", bc_all;
+	end;
+
+
+//============================================================
+// 자동 갱신
+//============================================================
+OnClock0000:
+	callsub S_Rotate;
+	end;
+
+OnClock1200:
+	callsub S_Rotate;
+	end;
+
+//============================================================
+// 판매 재고 알림
+//============================================================
+S_CheckStockNotice:
+
+	// 품절
+	if ($NeedPastEggMarketStock <= 0) {
+		$NeedPastEggMarketStock = 0;
+
+		if (!$NeedPastEggSoldOutNotice) {
+			$NeedPastEggSoldOutNotice = 1;
+
+			announce "[행운의 알] "
+				+ getitemname($NeedPastEggMarketItem)
+				+ "의 준비된 수량이 모두 판매되었습니다!", bc_all;
+		}
+
+		return;
+	}
+
+	// 약 90% 판매 완료 = 최초 재고의 10% 이하 남음
+	if (!$NeedPastEggStock90Notice &&
+		$NeedPastEggMarketInitialStock > 0 &&
+		$NeedPastEggMarketStock * 10 <= $NeedPastEggMarketInitialStock) {
+
+		$NeedPastEggStock90Notice = 1;
+
+		announce "[행운의 알] "
+			+ getitemname($NeedPastEggMarketItem)
+			+ "의 준비된 수량이 얼마 남지 않았습니다! 남은 수량: "
+			+ $NeedPastEggMarketStock + "개", bc_all;
+	}
+
+	return;
+
+//============================================================
+// 설정
+//============================================================
+OnInit:
+	.MemoryFragment = 900106;		// 추억의 행운 조각
+	.BaseCashPrice = 1000;			// 행운의 알 1개 기존 기본가
+	.StockMin = 300;				// 회차 최소 서버 재고
+	.StockMax = 500;				// 회차 최대 서버 재고
+	.BuyLimit = 10;					// 계정당 회차 구매 제한
+
+	.SelectFragmentCost = 30;		// 선택 교환 필요 조각
+	.SelectEggAmount = 10;			// 선택 교환 지급 수량
+	.SelectCashRate = 110;			// 10개 기본가의 110%
+	.SelectCashPrice = (.BaseCashPrice * .SelectEggAmount * .SelectCashRate) / 100; // 11,000 Cash
+
+	// ---------------------------------------------------------
+	// 과거 행운의 알 전체 목록
+	// EggEnabled: 1=판매/선택 가능, 0=비활성
+	// 12855 교황 스크롤까지 활성 / 이후 전부 비활성
+	// ---------------------------------------------------------
+	setarray .EggId[0],
+		12654,	// 행운의 알Ⅸ
+		12673,	// 행운의 알 X
+		12685,	// 그리폰의 알
+		12785,	// 드래곤의 알
+		12795,	// RWC 스크롤
+		12804,	// 크루 스크롤
+		12834,	// 언데드의 핵
+		12835,	// 소녀의 마음
+		12855,	// 교황 스크롤
+		22510,	// 늑대왕 스크롤
+		14613,	// 2012 RWC 스크롤
+		14623,	// 황금 보물상자
+		14627,	// 크리스마스 스크롤
+		14663,	// 봉인된 다크로드 스크롤
+		14679,	// 봉인된 폭풍의 기사 스크롤
+		14682,	// 봉인된 베르제브브 스크롤
+		14689,	// 봉인된 키엘-D-01 스크롤
+		14696,	// 봉인된 그룸언더나이트 스크롤
+		14705,	// 봉인된 타락한대신관 스크롤
+		14713,	// 봉인된 이프리트 스크롤
+		14717,	// 2013 RWC 스크롤
+		14718,	// 봉인된 터틀 제네럴 스크롤
+		14725,	// 봉인된 백소진 스크롤
+		14733,	// 봉인된 파라오 스크롤
+		22735,	// 봉인된 월야화 스크롤
+		14739,	// 봉인된보스이그니젬스크롤
+		14740,	// 봉인된 베스퍼 스크롤
+		22842,	// 봉인된 드라큐라 스크롤 II
+		22823,	// 봉인된 스나이퍼 스크롤
+		22828,	// 봉인된 인장스크롤
+		14758,	// 안심 제련 스크롤
+		22873,	// 봉인된 베르제브브 스크롤 II
+		22888,	// 신년 스크롤
+		22902,	// 봉인된 인장 스크롤 II
+		22906,	// 봉인된인장 스크롤 III
+		22946,	// 스테이터스 감소 스크롤
+		22971,	// 매드바니 스크롤
+		14780,	// 영혼의 뚫어뻥 스크롤
+		14781,	// 해피벌룬 스크롤
+		23024,	// 피아멧트 스크롤
+		23034,	// 인비지블 스크롤
+		23051,	// 신상모자 스크롤
+		23069,	// 2015 스페셜 스크롤
+		23072,	// 천사 스크롤
+		23095,	// 포링 스크롤
+		23106,	// 아미스트르 스크롤
+		23116,	// 쉐도우 스크롤
+		23119,	// 영혼의 스크롤
+		23134,	// 풍선 스크롤
+		23162,	// 건슬링거 스크롤
+		23167,	// 7월의 그린 스크롤
+		23176,	// 카프라 스크롤
+		23195,	// 사이그룬 스크롤
+		23205,	// 신상 모자 스크롤 II
+		23217,	// 2016년 스페셜 스크롤
+		23235,	// 매드바니 스크롤 II
+		23245,	// 라피네 스크롤
+		23283,	// 사랑 스크롤
+		23305,	// 고양이 스크롤
+		23318,	// 쉐도우 스크롤 II
+		23332,	// 5월의 황금 스크롤
+		23383,	// 장군의 스크롤
+		23440,	// 센티멘탈 스크롤
+		23473,	// 인피니티스크롤
+		23537,	// 피빛의 스크롤
+		23618,	// 2017 스페셜 스크롤
+		23650,	// 아이스 스크롤
+		23661,	// 2018 신년 스크롤
+		23700,	// 설날 스크롤
+		23710,	// 봄의 스크롤
+		23718,	// 봄맞이 스크롤
+		23765,	// 5월의 레인보우 스크롤
+		23804,	// 영혼의 뚫어뻥 스크롤 II
+		23878;	// 별과 영혼의 스크롤
+
+	setarray .EggEnabled[0],
+		1,	// 12654 행운의 알Ⅸ
+		1,	// 12673 행운의 알 X
+		1,	// 12685 그리폰의 알
+		1,	// 12785 드래곤의 알
+		1,	// 12795 RWC 스크롤
+		1,	// 12804 크루 스크롤
+		1,	// 12834 언데드의 핵
+		1,	// 12835 소녀의 마음
+		1,	// 12855 교황 스크롤
+		0,	// 22510 늑대왕 스크롤
+		0,	// 14613 2012 RWC 스크롤
+		0,	// 14623 황금 보물상자
+		0,	// 14627 크리스마스 스크롤
+		0,	// 14663 봉인된 다크로드 스크롤
+		0,	// 14679 봉인된 폭풍의 기사 스크롤
+		0,	// 14682 봉인된 베르제브브 스크롤
+		0,	// 14689 봉인된 키엘-D-01 스크롤
+		0,	// 14696 봉인된 그룸언더나이트 스크롤
+		0,	// 14705 봉인된 타락한대신관 스크롤
+		0,	// 14713 봉인된 이프리트 스크롤
+		0,	// 14717 2013 RWC 스크롤
+		0,	// 14718 봉인된 터틀 제네럴 스크롤
+		0,	// 14725 봉인된 백소진 스크롤
+		0,	// 14733 봉인된 파라오 스크롤
+		0,	// 22735 봉인된 월야화 스크롤
+		0,	// 14739 봉인된보스이그니젬스크롤
+		0,	// 14740 봉인된 베스퍼 스크롤
+		0,	// 22842 봉인된 드라큐라 스크롤 II
+		0,	// 22823 봉인된 스나이퍼 스크롤
+		0,	// 22828 봉인된 인장스크롤
+		0,	// 14758 안심 제련 스크롤
+		0,	// 22873 봉인된 베르제브브 스크롤 II
+		0,	// 22888 신년 스크롤
+		0,	// 22902 봉인된 인장 스크롤 II
+		0,	// 22906 봉인된인장 스크롤 III
+		0,	// 22946 스테이터스 감소 스크롤
+		0,	// 22971 매드바니 스크롤
+		0,	// 14780 영혼의 뚫어뻥 스크롤
+		0,	// 14781 해피벌룬 스크롤
+		0,	// 23024 피아멧트 스크롤
+		0,	// 23034 인비지블 스크롤
+		0,	// 23051 신상모자 스크롤
+		0,	// 23069 2015 스페셜 스크롤
+		0,	// 23072 천사 스크롤
+		0,	// 23095 포링 스크롤
+		0,	// 23106 아미스트르 스크롤
+		0,	// 23116 쉐도우 스크롤
+		0,	// 23119 영혼의 스크롤
+		0,	// 23134 풍선 스크롤
+		0,	// 23162 건슬링거 스크롤
+		0,	// 23167 7월의 그린 스크롤
+		0,	// 23176 카프라 스크롤
+		0,	// 23195 사이그룬 스크롤
+		0,	// 23205 신상 모자 스크롤 II
+		0,	// 23217 2016년 스페셜 스크롤
+		0,	// 23235 매드바니 스크롤 II
+		0,	// 23245 라피네 스크롤
+		0,	// 23283 사랑 스크롤
+		0,	// 23305 고양이 스크롤
+		0,	// 23318 쉐도우 스크롤 II
+		0,	// 23332 5월의 황금 스크롤
+		0,	// 23383 장군의 스크롤
+		0,	// 23440 센티멘탈 스크롤
+		0,	// 23473 인피니티스크롤
+		0,	// 23537 피빛의 스크롤
+		0,	// 23618 2017 스페셜 스크롤
+		0,	// 23650 아이스 스크롤
+		0,	// 23661 2018 신년 스크롤
+		0,	// 23700 설날 스크롤
+		0,	// 23710 봄의 스크롤
+		0,	// 23718 봄맞이 스크롤
+		0,	// 23765 5월의 레인보우 스크롤
+		0,	// 23804 영혼의 뚫어뻥 스크롤 II
+		0;	// 23878 별과 영혼의 스크롤
+
+	callsub S_EnsureRotation;
+	end;
+}

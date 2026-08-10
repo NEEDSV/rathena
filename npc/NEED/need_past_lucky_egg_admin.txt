@@ -1,0 +1,154 @@
+//============================================================
+// NEED - 과거 행운의 알 운영자 메뉴
+//
+// 사용:
+//   @eggadmin
+//
+// 기능:
+// 1. 랜덤 상품 즉시 갱신
+//    - 메인 NPC의 OnClock1200 이벤트를 직접 호출
+//    - 메인 스크립트의 활성 목록 / 가격 / 재고 규칙을 그대로 사용
+//
+// 2. 현재 판매 재고 변경
+//    - 현재 남은 서버 재고를 운영자가 직접 지정
+//
+// 주의:
+// - 이 스크립트는 메인 행운의 알 스크립트와 별도 파일로 사용한다.
+// - 메인 NPC 이름이 변경되면 .MainNpcEvent$만 수정하면 된다.
+//============================================================
+
+-	script	NEED_LuckyEgg_Admin	-1,{
+
+OnInit:
+	// 운영자 전용 명령어
+	bindatcmd "eggadmin", strnpcinfo(3) + "::OnAdmin", 99, 99;
+
+	// 메인 행운의 알 NPC의 수동 갱신에 사용할 이벤트
+	.MainNpcEvent$ = "추억의 행운의 알 상인#need_past_egg::OnClock1200";
+	end;
+
+
+OnAdmin:
+	while (1) {
+		mes "[행운의 알 운영자 메뉴]";
+
+		if ($NeedPastEggMarketItem > 0) {
+			mes "현재 상품: ^0055FF" + getitemname($NeedPastEggMarketItem) + "^000000";
+			mes "Item ID: " + $NeedPastEggMarketItem;
+			mes "현재 가격: ^FF8800" + $NeedPastEggMarketUnitPrice + " Cash^000000";
+			mes "가격 배율: " + $NeedPastEggMarketRate + "%";
+			mes "현재 재고: ^009900" + $NeedPastEggMarketStock + "개^000000";
+			mes "회차 키: " + $NeedPastEggRotation$;
+		}
+		else {
+			mes "^FF0000현재 설정된 판매 상품이 없습니다.^000000";
+		}
+
+		next;
+
+		switch (select(
+			"랜덤 상품 즉시 갱신:" +
+			"현재 재고 변경:" +
+			"닫기"
+		)) {
+
+		//====================================================
+		// 랜덤 상품 즉시 갱신
+		//====================================================
+		case 1:
+			mes "[랜덤 상품 즉시 갱신]";
+			mes "현재 판매 상품을 즉시 다시 추첨합니다.";
+			mes " ";
+			mes "메인 스크립트에 설정된";
+			mes "^0055FF활성 행운의 알 목록^000000에서 상품을 다시 뽑고,";
+			mes "가격과 서버 재고도 함께 재추첨됩니다.";
+			mes " ";
+			mes "^FF0000현재 남아 있는 재고는 사라집니다.^000000";
+			next;
+
+			if (select("즉시 갱신한다:취소") == 2)
+				break;
+
+			.@old_item = $NeedPastEggMarketItem;
+			.@old_price = $NeedPastEggMarketUnitPrice;
+			.@old_stock = $NeedPastEggMarketStock;
+
+			// 메인 스크립트의 실제 갱신 이벤트 호출.
+			// 따라서 활성/비활성 목록을 이 운영 스크립트에 중복 작성할 필요가 없다.
+			donpcevent .MainNpcEvent$;
+
+			// 이벤트 처리 후 표시 갱신 여유
+			sleep2 100;
+
+			mes "[랜덤 상품 즉시 갱신]";
+			mes "갱신이 완료되었습니다.";
+			mes " ";
+
+			if (.@old_item > 0)
+				mes "이전: " + getitemname(.@old_item) + " / " + .@old_price + " Cash / 재고 " + .@old_stock;
+
+			if ($NeedPastEggMarketItem > 0) {
+				mes "현재: ^0055FF" + getitemname($NeedPastEggMarketItem) + "^000000";
+				mes "가격: ^FF8800" + $NeedPastEggMarketUnitPrice + " Cash^000000";
+				mes "배율: " + $NeedPastEggMarketRate + "%";
+				mes "재고: ^009900" + $NeedPastEggMarketStock + "개^000000";
+			}
+			else {
+				mes "^FF0000갱신 후 판매 상품이 설정되지 않았습니다.^000000";
+				mes "메인 스크립트의 활성 목록을 확인해주세요.";
+			}
+
+			next;
+			break;
+
+
+		//====================================================
+		// 현재 판매 재고 직접 변경
+		//====================================================
+		case 2:
+			if ($NeedPastEggMarketItem <= 0) {
+				mes "[현재 재고 변경]";
+				mes "먼저 판매 상품을 갱신해주세요.";
+				next;
+				break;
+			}
+
+			mes "[현재 재고 변경]";
+			mes "상품: ^0055FF" + getitemname($NeedPastEggMarketItem) + "^000000";
+			mes "현재 재고: ^009900" + $NeedPastEggMarketStock + "개^000000";
+			mes " ";
+			mes "변경할 ^FF0000최종 재고 수량^000000을 입력해주세요.";
+			mes "0을 입력하면 품절 상태로 만들 수 있습니다.";
+			next;
+
+			input .@new_stock, 0, 100000;
+
+			mes "[현재 재고 변경]";
+			mes "상품: ^0055FF" + getitemname($NeedPastEggMarketItem) + "^000000";
+			mes "기존 재고: " + $NeedPastEggMarketStock + "개";
+			mes "변경 재고: ^009900" + .@new_stock + "개^000000";
+			mes " ";
+			mes "변경하시겠습니까?";
+			next;
+
+			if (select("변경한다:취소") == 2)
+				break;
+
+			.@old_stock = $NeedPastEggMarketStock;
+			$NeedPastEggMarketStock = .@new_stock;
+
+			mes "[현재 재고 변경]";
+			mes "재고를 변경했습니다.";
+			mes " ";
+			mes .@old_stock + "개 -> ^009900" + $NeedPastEggMarketStock + "개^000000";
+			next;
+			break;
+
+
+		default:
+			close;
+		}
+	}
+
+	end;
+}
