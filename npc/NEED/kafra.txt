@@ -11,6 +11,7 @@ S_Menu:
 		+ ":카트/탈것 대여"
 		+ ":환전 서비스"
 		+ ":스텟/스킬 초기화 서비스"
+		+ ":퀘스트 스킬 습득 서비스"
 		+ ":종료";
 
 	.@sel = select(.@opt$);
@@ -21,6 +22,7 @@ S_Menu:
 		case 3: goto All;
 		case 4: goto Exchange;
 		case 5: goto Reset;
+		case 6: goto QPlat;
 
 		default: goto EXIT;   // 종료
 	}
@@ -96,13 +98,13 @@ S_01: //세이브
 	// 현재 위치 저장
 	getmapxy(.@map$, .@x, .@y);
 	savepoint .@map$, .@x, .@y;
-	mes "[카프라 직원]";
+	mes "[카프라]";
 	mes "^FF0000현재 위치로 저장했습니다.^000000";
 	mes "이용해주셔서 감사합니다.";
 	goto M_Exit;
 
 EXIT:
-	mes "[카프라 직원]";
+	mes "[카프라]";
 	mes "저희 카프라 서비스는 보다 완벽한";
 	mes "서비스와 관리 업무를 목표로 하여";
 	mes "안심하고 이용 하실 수 있도록";
@@ -177,7 +179,7 @@ All:
 	end;
 	
 Exchange:
-	mes "[카프라 직원]";
+	mes "[카프라]";
 	mes "보유 캐시: ^0055FF" + callfunc("F_InsertComma", #CASHPOINTS) + "^000000";
 	mes "환전할 주화를 선택해주세요.";
 	next;
@@ -189,13 +191,13 @@ Exchange:
 	.@max = #CASHPOINTS / .@cash;
 
 	if (.@max <= 0) {
-		mes "[카프라 직원]";
+		mes "[카프라]";
 		mes "보유 캐시가 부족합니다.";
 		mes .@name$ + " 1개 환전에 필요한 캐시: ^FF0000" + .@cash + "^000000";
 		close;
 	}
 
-	mes "[카프라 직원]";
+	mes "[카프라]";
 	mes .@name$ + " 1개 = ^0055FF" + .@cash + " 캐시^000000";
 	mes "현재 최대 환전 가능 수량: ^0055FF" + callfunc("F_InsertComma", .@max) + "개^000000";
 	mes "환전할 수량을 입력해주세요.";
@@ -206,19 +208,19 @@ Exchange:
 	.@total_cash = .@amount * .@cash;
 
 	if (#CASHPOINTS < .@total_cash) {
-		mes "[카프라 직원]";
+		mes "[카프라]";
 		mes "캐시가 부족합니다.";
 		close;
 	}
 
 	if (!checkweight(.@item_id, .@amount)) {
-		mes "[카프라 직원]";
+		mes "[카프라]";
 		mes "인벤토리 무게가 부족합니다.";
 		mes "소지 무게를 비운 후 다시 이용해주세요.";
 		close;
 	}
 
-	mes "[카프라 직원]";
+	mes "[카프라]";
 	mes .@name$ + " ^0055FF" + callfunc("F_InsertComma", .@amount) + "개^000000로 환전합니다.";
 	mes "소모 캐시: ^FF0000" + callfunc("F_InsertComma", .@total_cash) + "^000000";
 	mes "진행하시겠습니까?";
@@ -230,7 +232,7 @@ Exchange:
 	#CASHPOINTS -= .@total_cash;
 	getitem .@item_id, .@amount;
 
-	mes "[카프라 직원]";
+	mes "[카프라]";
 	mes "환전이 완료되었습니다.";
 	mes "획득: ^0055FF" + .@name$ + " " + callfunc("F_InsertComma", .@amount) + "개^000000";
 	mes "남은 캐시: ^0055FF" + callfunc("F_InsertComma", #CASHPOINTS) + "^000000";
@@ -288,7 +290,7 @@ Check_Option: //체크
 	if (zeny < @setPrice) goto No_Zeny;
 	if (getskilllv(@checkSkill) == 0) goto W_Needskill;
 
-	mes "[카프라 직원]";
+	mes "[카프라]";
 	mes "선택하신 서비스는 ^ff0000" + @servName$ + "^000000 서비스 입니다.";
 	mes "이용해주셔서 감사합니다.";
 	if (@setServ == 0) setcart;
@@ -301,20 +303,20 @@ Check_Option: //체크
 	goto M_Exit;
 
 No_Zeny: //제니 체크
-	mes "[카프라 직원]";
+	mes "[카프라]";
 	mes "죄송합니다. ^FF3300제니^000000가 부족합니다.";
 	emotion 23;
 	goto M_Exit;
 
 W_Needskill: //스킬 체크
-	mes "[카프라 직원]";
+	mes "[카프라]";
 	mes "^FF3300" + @earnName$ + "^000000 스킬을 배우고 오세요.";
 	emotion 23;
 	goto M_Exit;
 
 
 QPlat: // 퀘스트 스킬 배우기
-	mes "[카프라 직원]";
+	mes "[카프라]";
 	mes "현재 직업에 맞는 퀘스트 스킬을 지급합니다.";
 	next;
 	callfunc "F_GetPlatinumSkills"; // rAthena 전역 함수 호출
@@ -322,7 +324,7 @@ QPlat: // 퀘스트 스킬 배우기
 	goto M_Exit;
 
 S_OS:
-	mes "[Kafra]";
+	mes "[카프라]";
 	mes "어느 창고를 여시겠어요?";
 	switch(select(" - 1번 창고"," - 2번 창고"," - 3번 창고")) {
 	case 1: close2; openstorage; end;              // ID 0
@@ -332,21 +334,21 @@ S_OS:
 	
 S_GOS:
 	if (!getcharid(2)) {
-		mes "[카프라 직원]";
+		mes "[카프라]";
 		mes "길드 가입이 필요합니다.";
 		goto M_Exit;
 	}
 
 	// 2) 권한 체크(길드원 권한에 '창고 사용'이 있어야 함)
 	if (!guild_has_permission(GUILD_PERM_STORAGE)) {
-		mes "[카프라 직원]";
+		mes "[카프라]";
 		mes "길드 창고 사용 권한이 없습니다.";
 		mes "길드 마스터에게 권한을 요청하세요.";
 		goto M_Exit;
 	}
 
 	// 3) 열기 전 안내 -> 대화창 닫고 시도
-	mes "[카프라 직원]";
+	mes "[카프라]";
 	mes "길드 창고를 열어 드리겠습니다.";
 	close2;
 
