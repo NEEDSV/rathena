@@ -20,6 +20,7 @@
 #include "itemdb.hpp"
 #include "log.hpp"
 #include "map.hpp" // map_session_data
+#include "need_fishing.hpp"
 #include "packets.hpp"
 #include "pc.hpp"
 #include "pc_groups.hpp"
@@ -133,6 +134,9 @@ void do_reconnect_storage(void){
 int32 storage_storageopen(map_session_data *sd)
 {
 	nullpo_ret(sd);
+
+	// NEED fishing: opening storage cancels the session.
+	need_fishing_notify_action(sd);
 
 	if(sd->state.storage_flag)
 		return 1; //Already open?

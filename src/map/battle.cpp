@@ -9006,6 +9006,21 @@ static const struct _battle_data {
 	{ "need_summer_hunt_fragment_enable",    &battle_config.need_summer_hunt_fragment_enable, 0,      0,      1,              },
 	{ "need_summer_hunt_golden_enable",      &battle_config.need_summer_hunt_golden_enable,   0,      0,      1,              },
 
+	// NEED summer event fishing system (stage 1: technical validation). Off by default.
+	{ "need_summer_fishing_enable",         &battle_config.need_summer_fishing_enable,      0,      0,      1,              },
+	{ "need_summer_fishing_debug",          &battle_config.need_summer_fishing_debug,       0,      0,      1,              },
+	{ "need_summer_fishing_bite_min_ms",    &battle_config.need_summer_fishing_bite_min_ms, 2000,   0,      INT_MAX,        },
+	{ "need_summer_fishing_bite_max_ms",    &battle_config.need_summer_fishing_bite_max_ms, 5000,   0,      INT_MAX,        },
+	{ "need_summer_fishing_input_window_ms", &battle_config.need_summer_fishing_input_window_ms, 1500, 1,  INT_MAX,        },
+	{ "need_summer_fishing_perfect_ms",     &battle_config.need_summer_fishing_perfect_ms,  400,    0,      INT_MAX,        },
+	{ "need_summer_fishing_great_ms",       &battle_config.need_summer_fishing_great_ms,    650,    0,      INT_MAX,        },
+	{ "need_summer_fishing_good_ms",        &battle_config.need_summer_fishing_good_ms,     900,    0,      INT_MAX,        },
+	{ "need_summer_fishing_normal_ms",      &battle_config.need_summer_fishing_normal_ms,   1200,   0,      INT_MAX,        },
+	{ "need_summer_fishing_reel_wait_min_ms", &battle_config.need_summer_fishing_reel_wait_min_ms, 700, 0,  INT_MAX,        },
+	{ "need_summer_fishing_reel_wait_max_ms", &battle_config.need_summer_fishing_reel_wait_max_ms, 1800, 0, INT_MAX,        },
+	{ "need_summer_fishing_reel_input_window_ms", &battle_config.need_summer_fishing_reel_input_window_ms, 1000, 1, INT_MAX, },
+	{ "need_summer_fishing_result_script_timeout_ms", &battle_config.need_summer_fishing_result_script_timeout_ms, 3000, 1, INT_MAX, },
+
 	{ "feature.dynamicnpc_timeout",         &battle_config.feature_dynamicnpc_timeout,      1000,   60000,  INT_MAX,        },
 	{ "feature.dynamicnpc_rangex",          &battle_config.feature_dynamicnpc_rangex,       2,      0,      INT_MAX,        },
 	{ "feature.dynamicnpc_rangey",          &battle_config.feature_dynamicnpc_rangey,       2,      0,      INT_MAX,        },

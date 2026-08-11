@@ -59,6 +59,7 @@
 #include "mercenary.hpp"
 #include "mob.hpp"
 #include "need_equipment_build.hpp"
+#include "need_fishing.hpp"
 #include "npc.hpp"
 #include "party.hpp"
 #include "path.hpp"
@@ -28530,6 +28531,155 @@ BUILDIN_FUNC(preg_match) {
 #endif
 }
 
+/**
+ * NEED summer event fishing system (stage 1: technical validation) builtins
+ */
+
+/// need_fishing_start <spot_id>{,"<result_event>"};
+/// Starts a fishing session. Returns 1 on success, 0 on failure (duplicate/disabled/etc).
+BUILDIN_FUNC(need_fishing_start)
+{
+	map_session_data* sd;
+
+	if( !script_rid2sd( sd ) ) {
+		script_pushint( st, 0 );
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	int32 spot_id = script_getnum( st, 2 );
+	const char* result_event = ( script_hasdata( st, 3 ) ) ? script_getstr( st, 3 ) : nullptr;
+
+	script_pushint( st, need_fishing_start( sd, spot_id, result_event ) ? 1 : 0 );
+	return SCRIPT_CMD_SUCCESS;
+}
+
+/// need_fishing_input;
+/// Handles a timing input. Return: grade (1=Perfect..5=Fail) or a negative status
+/// (-3 disabled, -2 not fishing, -1 too early).
+BUILDIN_FUNC(need_fishing_input)
+{
+	map_session_data* sd;
+
+	if( !script_rid2sd( sd ) ) {
+		script_pushint( st, NEED_FISHING_INPUT_NO_SESSION );
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	script_pushint( st, need_fishing_input( sd ) );
+	return SCRIPT_CMD_SUCCESS;
+}
+
+/// need_fishing_cancel;
+/// Cancels the ongoing fishing (keeps the last result). Returns 1 if a session was
+/// cancelled, 0 if there was nothing to cancel.
+BUILDIN_FUNC(need_fishing_cancel)
+{
+	map_session_data* sd;
+
+	if( !script_rid2sd( sd ) ) {
+		script_pushint( st, 0 );
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	script_pushint( st, need_fishing_cancel( sd, true ) ? 1 : 0 );
+	return SCRIPT_CMD_SUCCESS;
+}
+
+/// need_fishing_begin_reel <reel_rounds>,"<resolve_event>";
+/// Begins the reel-in phase while HOOKED. reel_rounds is decided by the script, independent of
+/// any fish. 0 goes straight to resolving; >=1 runs the reel rounds. resolve_event fires once all
+/// reels succeed (that is when the script must draw the fish). Returns 1 on success, 0 on failure.
+BUILDIN_FUNC(need_fishing_begin_reel)
+{
+	map_session_data* sd;
+
+	if( !script_rid2sd( sd ) ) {
+		script_pushint( st, 0 );
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	int32 reel_rounds = script_getnum( st, 2 );
+	const char* resolve_event = script_getstr( st, 3 );
+
+	script_pushint( st, need_fishing_begin_reel( sd, reel_rounds, resolve_event ) ? 1 : 0 );
+	return SCRIPT_CMD_SUCCESS;
+}
+
+/// need_fishing_complete_catch <fish_id>,<rarity>,<length_mm>,<weight_g>,"<final_event>";
+/// Completes the catch while RESOLVING (after all reels): the script has drawn the fish now.
+/// Finalizes as final success (code 8) and fires final_event. Returns 1 on success, 0 on failure.
+BUILDIN_FUNC(need_fishing_complete_catch)
+{
+	map_session_data* sd;
+
+	if( !script_rid2sd( sd ) ) {
+		script_pushint( st, 0 );
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	int32 fish_id = script_getnum( st, 2 );
+	int32 rarity = script_getnum( st, 3 );
+	int32 length_mm = script_getnum( st, 4 );
+	int32 weight_g = script_getnum( st, 5 );
+	const char* final_event = script_getstr( st, 6 );
+
+	script_pushint( st, need_fishing_complete_catch( sd, fish_id, rarity, length_mm, weight_g, final_event ) ? 1 : 0 );
+	return SCRIPT_CMD_SUCCESS;
+}
+
+/// need_fishing_state;
+/// Returns the current fishing session state (e_need_fishing_state):
+/// 0=IDLE, 1=WAITING, 2=BITE, 3=HOOKED, 4=REEL_WAIT, 5=REEL_BITE, 6=FINALIZING.
+BUILDIN_FUNC(need_fishing_state)
+{
+	map_session_data* sd;
+
+	if( !script_rid2sd( sd ) ) {
+		script_pushint( st, NEED_FISHING_IDLE );
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	script_pushint( st, (int32)need_fishing_get_state( sd ) );
+	return SCRIPT_CMD_SUCCESS;
+}
+
+/// need_fishing_lastresult {<type>};
+/// Query the last finalized result. type: 0=result code (default), 1=reaction ms,
+/// 2=grade, 3=spot id, 4=session id, 5=fish id, 6=rarity, 7=length(mm), 8=weight(g),
+/// 9=reel total, 10=reel success. Returns 0 (or -1 for reaction ms) if no result.
+BUILDIN_FUNC(need_fishing_lastresult)
+{
+	map_session_data* sd;
+
+	if( !script_rid2sd( sd ) ) {
+		script_pushint( st, 0 );
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	int32 type = ( script_hasdata( st, 2 ) ) ? script_getnum( st, 2 ) : 0;
+	const s_need_fishing_result* r = need_fishing_last_result( sd );
+
+	if( r == nullptr ) {
+		script_pushint( st, ( type == 1 ) ? -1 : 0 );
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	switch( type ) {
+		case 1:  script_pushint( st, r->reaction_ms ); break;
+		case 2:  script_pushint( st, (int32)r->grade ); break;
+		case 3:  script_pushint( st, r->spot_id ); break;
+		case 4:  script_pushint( st, (int32)r->session_id ); break;
+		case 5:  script_pushint( st, r->fish_id ); break;
+		case 6:  script_pushint( st, r->rarity ); break;
+		case 7:  script_pushint( st, r->length_mm ); break;
+		case 8:  script_pushint( st, r->weight_g ); break;
+		case 9:  script_pushint( st, r->reel_total ); break;
+		case 10: script_pushint( st, r->reel_success ); break;
+		default: script_pushint( st, (int32)r->code ); break;
+	}
+	return SCRIPT_CMD_SUCCESS;
+}
+
 /// script command definitions
 /// for an explanation on args, see add_buildin_func
 struct script_function buildin_func[] = {
@@ -29273,6 +29423,15 @@ struct script_function buildin_func[] = {
 	BUILDIN_DEF(getupgrade_rune, ""),
 	BUILDIN_DEF(meshyperlink, "ss"),
 	BUILDIN_DEF(mesemotion,"i"),
+
+	// NEED summer event fishing system (stage 1: technical validation)
+	BUILDIN_DEF(need_fishing_start,"i?"),
+	BUILDIN_DEF(need_fishing_input,""),
+	BUILDIN_DEF(need_fishing_begin_reel,"is"),
+	BUILDIN_DEF(need_fishing_complete_catch,"iiiis"),
+	BUILDIN_DEF(need_fishing_cancel,""),
+	BUILDIN_DEF(need_fishing_state,""),
+	BUILDIN_DEF(need_fishing_lastresult,"?"),
 
 #include <custom/script_def.inc>
 

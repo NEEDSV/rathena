@@ -16,6 +16,7 @@
 #include "intif.hpp"
 #include "itemdb.hpp"
 #include "log.hpp"
+#include "need_fishing.hpp"
 #include "path.hpp"
 #include "pc.hpp"
 #include "pc_groups.hpp"
@@ -31,6 +32,9 @@
 void trade_traderequest(map_session_data *sd, map_session_data *target_sd)
 {
 	nullpo_retv(sd);
+
+	// NEED fishing: starting a trade cancels the session.
+	need_fishing_notify_action(sd);
 
 	if (map_getmapflag(sd->m, MF_NOTRADE)) {
 		clif_displaymessage (sd->fd, msg_txt(sd,272));

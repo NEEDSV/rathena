@@ -54,6 +54,7 @@
 #include "mercenary.hpp"
 #include "mob.hpp"
 #include "need_autopot.hpp"
+#include "need_fishing.hpp"
 #include "need_summer_attendance.hpp"
 #include "npc.hpp"
 #include "party.hpp" // party_search()
@@ -10001,6 +10002,9 @@ int32 pc_dead(map_session_data *sd,block_list *src)
 	int32 i=0,k=0;
 	t_tick tick = gettick();
 	struct map_data *mapdata = map_getmapdata(sd->m);
+
+	// NEED fishing: clear the fishing session and timers on character death
+	need_fishing_clear(sd);
 
 	// Activate Steel body if a super novice dies at 99+% exp [celest]
 	// Super Novices have no kill or die functions attached when saved by their angel

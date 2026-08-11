@@ -47,6 +47,7 @@
 #include "mob.hpp"
 #include "navi.hpp"
 #include "need_autopot.hpp"
+#include "need_fishing.hpp"
 #include "need_summer_attendance.hpp"
 #include "need_summer_hunt.hpp"
 #ifndef MAP_GENERATOR
@@ -2234,6 +2235,7 @@ int32 map_quit(map_session_data *sd) {
 
 	need_summer_attendance_session_end(sd);
 	need_autopot_logout(sd);
+	need_fishing_free(sd); // clear fishing session AND last result on logout/disconnect
 	pc_bg_strip_clear_saved_equipment(sd);
 	costume_collection_db_clear(sd);
 
@@ -5079,6 +5081,7 @@ void MapServer::finalize(){
 	need_summer_hunt_final();
 	need_summer_attendance_final();
 	need_autopot_final();
+	need_fishing_final();
 	do_final_battle();
 	do_final_chrif();
 #ifndef MAP_GENERATOR

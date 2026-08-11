@@ -25,7 +25,7 @@
 namespace {
 
 constexpr uint32 EVENT_ID = 202608;
-constexpr int32 EVENT_START = 20260815;
+constexpr int32 EVENT_START = 20260810;
 constexpr int32 SHOP_END = 20260919;
 
 constexpr int32 MSG_DISABLED = 1943;
@@ -72,8 +72,8 @@ constexpr std::array<product_spec, static_cast<size_t>(product_index::COUNT)> PR
 	{ "FRAGMENT_EXCHANGE", 399925, 10, 399926, 20, 3, 0, 0 },
 	{ "ZENY_POUCH", 399929, 1, 399925, 100, 0, 2, 8 },
 	{ "CASH_TICKET", 399930, 1, 399925, 250, 0, 0, 2 },
-	{ "SHADOW_BOX", 399931, 1, 399925, 100, 0, 2, 8 },
-	{ "ARIA_BOX", 399935, 1, 399925, 300, 0, 0, 1 },
+	{ "SHADOW_BOX", 399931, 1, 399925, 200, 0, 2, 8 },
+	{ "ARIA_BOX", 399935, 1, 399925, 500, 0, 0, 1 },
 }};
 
 struct product_usage {

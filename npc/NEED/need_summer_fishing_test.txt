@@ -1,0 +1,287 @@
+//===== rAthena Script =======================================
+//= NEED 여름 이벤트 낚시 - 운영/테스트 NPC
+//===== Description ==========================================
+//= 운영 낚시 흐름(한여름 낚싯대 399936)에는 포함되지 않는 개발/테스트 NPC.
+//= 강제 시작/어종/릴/상태/최근결과/취소/낚싯대/미끼/보상카운터/분포/스팟/도감(collection).
+//= 모든 이벤트/추첨/표시 함수는 Core/데이터 스크립트와 공용(어군 코드 중복 방지).
+//= collection 삭제 등 GM 전용 기능은 운영 일반 NPC에 노출하지 않는다.
+//============================================================
+
+comodo,185,152,5	script	낚시 테스트#need_fishing_test	4_F_STARFISHGIRL,{
+	mes "[낚시 테스트]";
+	mes "개발/테스트 전용입니다. (사용 한여름 낚싯대 399936 사용)";
+	next;
+	switch( select(
+		"낚시 시작",
+		"강제 어종 낚시(희귀도)",
+		"강제 어종 낚시(No.01~12)",
+		"강제 릴 횟수 테스트",
+		"낚시 상태 확인",
+		"최근 결과 확인",
+		"최근 catch SQL 확인",
+		"낚시 취소",
+		"한여름 낚싯대 받기",
+		"한여름 낚시 미끼 10개 받기",
+		"오늘 보상 카운터/제한",
+		"GM: 보상 카운터 초기화",
+		"추첨 분포 100회(희귀도)",
+		"추첨 분포 1000회(희귀도)",
+		"12종 어종 분포 1000회",
+		"활성 스팟 정보",
+		"스팟 강제 재추첨",
+		"마커/표지 강제 재표시",
+		"[도감] 12종 데이터 보기",
+		"[도감] 신규 4종 길이/무게",
+		"[도감] 내 계정 등록 현황",
+		"[도감] 특정 어종 상세",
+		"[도감] Cutin 미리보기",
+		"[도감/GM] 특정 어종 collection 삭제",
+		"실제 낚시 도감 UI 열기",
+		"닫기" ) ) {
+	case 1:
+		callsub S_GiveRod;
+		set @nff_force_fish, 0; set @nff_force_reel_flag, 0; set @nff_bait_mode, 0;
+		if ( !need_fishing_start( 1, "NEED_Summer_Fishing_Core::OnFishResult" ) ) { mes "낚시를 시작할 수 없습니다. (기능 off 또는 이미 진행 중)"; close; }
+		mes "낚시를 시작했습니다. 첨벙 신호가 오면 한여름 낚싯대를 사용하세요!";
+		close;
+	case 2:
+		mes "강제할 희귀도를 선택하세요. (릴 횟수는 독립 RNG로 별도 결정)";
+		next;
+		.@rf = select( "일반", "고급", "희귀", "전설" );
+		setarray .@force[1], 1, 5, 9, 12;
+		callsub S_GiveRod;
+		set @nff_force_fish, .@force[.@rf]; set @nff_force_reel_flag, 0; set @nff_bait_mode, 0;
+		if ( !need_fishing_start( 1, "NEED_Summer_Fishing_Core::OnFishResult" ) ) { set @nff_force_fish, 0; mes "낚시를 시작할 수 없습니다."; close; }
+		mes "강제 어종으로 낚시를 시작했습니다. (릴 횟수는 랜덤)";
+		close;
+	case 3:
+		mes "강제로 획득할 어종 번호(No.)를 선택하세요.";
+		next;
+		.@fid = select( "No.01 작은 정어리", "No.02 코모도 꽃게", "No.03 통통한 복어", "No.04 은빛 고등어", "No.05 무지개 도미", "No.06 대왕 문어", "No.07 산호 해마", "No.08 진주 가오리", "No.09 황금 참치", "No.10 코모도 청새치", "No.11 심해의 유령어", "No.12 한여름의 황금 고래" );
+		callsub S_GiveRod;
+		set @nff_force_fish, .@fid; set @nff_force_reel_flag, 0; set @nff_bait_mode, 0;
+		if ( !need_fishing_start( 1, "NEED_Summer_Fishing_Core::OnFishResult" ) ) { set @nff_force_fish, 0; mes "낚시를 시작할 수 없습니다."; close; }
+		mes "No." + ( .@fid < 10 ? "0" + .@fid : "" + .@fid ) + " " + callfunc( "F_NeedFishNameById", .@fid ) + " 강제 낚시를 시작했습니다.";
+		close;
+	case 4:
+		mes "강제할 릴 횟수를 선택하세요.";
+		next;
+		.@r = select( "릴 0회", "릴 1회", "릴 2회", "릴 3회" ) - 1;
+		callsub S_GiveRod;
+		set @nff_force_fish, 0; set @nff_force_reel_flag, 1; set @nff_force_reel_val, .@r; set @nff_bait_mode, 0;
+		if ( !need_fishing_start( 1, "NEED_Summer_Fishing_Core::OnFishResult" ) ) { set @nff_force_reel_flag, 0; mes "낚시를 시작할 수 없습니다."; close; }
+		mes "릴 " + .@r + "회 고정 낚시를 시작했습니다.";
+		close;
+	case 5:
+		.@st = need_fishing_state();
+		mes "현재 낚시 상태: " + .@st;
+		mes "( 0=IDLE 1=WAITING 2=BITE 3=HOOKED 4=REEL_WAIT 5=REEL_BITE 6=FINALIZING 7=RESOLVING )";
+		close;
+	case 6:
+		.@code = need_fishing_lastresult(0);
+		if ( .@code == 0 ) { mes "기록된 최근 결과가 없습니다."; close; }
+		mes "결과 코드: " + .@code + " ( " + callfunc( "F_NeedFishCodeName", .@code ) + " )";
+		mes "반응 시간: " + need_fishing_lastresult(1) + "ms / 등급 " + need_fishing_lastresult(2);
+		mes "릴: " + need_fishing_lastresult(10) + " / " + need_fishing_lastresult(9);
+		.@fid = need_fishing_lastresult(5);
+		if ( .@fid > 0 ) {
+			mes "어종 ID: " + .@fid + " / 희귀도: " + callfunc( "F_NeedFishRarityName", need_fishing_lastresult(6) );
+			mes "길이: " + callfunc( "F_NeedFishLenCm", need_fishing_lastresult(7) ) + "cm / 무게: " + callfunc( "F_NeedFishWtKg", need_fishing_lastresult(8) ) + "kg";
+		}
+		close;
+	case 7:
+		.@f = 0;
+		query_sql( "SELECT `fish_id`,`rarity`,`length_mm`,`weight_g`,`reaction_grade`,`rewarded`,`bait_used` FROM `need_summer_fishing_catch` WHERE `account_id`=" + getcharid(3) + " ORDER BY `id` DESC LIMIT 1", .@f, .@r, .@l, .@w, .@g, .@rw, .@b );
+		if ( .@f <= 0 ) { mes "저장된 catch 기록이 없습니다."; close; }
+		mes "[최근 catch SQL]";
+		mes "어종 " + .@f + " / 희귀도 " + callfunc( "F_NeedFishRarityName", .@r );
+		mes "길이 " + callfunc( "F_NeedFishLenCm", .@l ) + "cm / 무게 " + callfunc( "F_NeedFishWtKg", .@w ) + "kg";
+		mes "반응등급 " + .@g + " / 보상 " + .@rw + " / 미끼 " + .@b;
+		close;
+	case 8:
+		if ( need_fishing_cancel() ) mes "진행 중인 낚시를 취소했습니다.";
+		else mes "취소할 낚시 세션이 없습니다.";
+		close;
+	case 9:
+		getitem 399936, 1; mes "한여름 낚싯대(399936)를 지급했습니다. F1~F9 단축키로 사용하세요."; close;
+	case 10:
+		getitem 399970, 10; mes "한여름 낚시 미끼(399970) 10개를 지급했습니다."; close;
+	case 11:
+		.@ld = atoi( gettimestr( "%Y%m%d", 9, gettimetick(2) - 14400 ) );
+		callfunc "F_NeedFishRewardStatus", getcharid(3), getcharip(), .@ld;
+		mes "[오늘 보상 카운터]";
+		mes "account 성공: " + $@nfr_acc_cnt + " / 10";
+		mes "IP 성공: " + $@nfr_ip_cnt + " / 10";
+		mes "가족 여부: " + $@nfr_family;
+		mes "기본 보상 가능(무료 여부): " + $@nfr_free;
+		mes "현재 캐스팅 방식: " + ( $@nfr_free ? "무료" : ( countitem(399970) > 0 ? "미끼 추가" : "불가(미끼 없음)" ) );
+		close;
+	case 12:
+		if ( getgmlevel() < 60 ) { mes "GM 전용 기능입니다."; close; }
+		.@ld = atoi( gettimestr( "%Y%m%d", 9, gettimetick(2) - 14400 ) );
+		query_sql( "DELETE FROM `need_summer_fishing_reward` WHERE `event_id`=202608 AND `logical_date`=" + .@ld + " AND `subject_type`=0 AND `subject_key`='" + getcharid(3) + "'" );
+		query_sql( "DELETE FROM `need_summer_fishing_reward` WHERE `event_id`=202608 AND `logical_date`=" + .@ld + " AND `subject_type`=1 AND `subject_key`='" + escape_sql( getcharip() ) + "'" );
+		mes "오늘(account+IP) 보상 카운터를 초기화했습니다.";
+		close;
+	case 13:
+		callsub S_DistTest, 100;
+		close;
+	case 14:
+		callsub S_DistTest, 1000;
+		close;
+	case 15:
+		callsub S_SpeciesDist, 1000;
+		close;
+	case 16:
+		if ( !$@nsf_active ) { mes "현재 활성 스팟이 없습니다."; close; }
+		.@left = $@nsf_next_rotate - gettimetick(2); if ( .@left < 0 ) .@left = 0;
+		mes "활성 후보 지역: 제 " + $@nsf_region + " 해안 구역";
+		mes "현재 스팟 좌표: comodo " + $@nsf_x + ", " + $@nsf_y;
+		if ( $@nsf_sign_ok ) mes "안내 표지 좌표: " + $@nsf_sign_x + ", " + $@nsf_sign_y;
+		else mes "안내 표지: 배치 실패(다음 로테이션 재시도)";
+		mes "미니맵 대표 좌표: " + $@nsf_reptx[$@nsf_region] + ", " + $@nsf_repty[$@nsf_region];
+		mes "접근 허용 거리: " + $NSF_MAX_DIST + "셀 / 다음 교체까지: " + .@left + "초";
+		close;
+	case 17:
+		donpcevent "NEED_Summer_Fishing_Core::OnForceRotate";
+		mes "스팟 강제 재추첨을 요청했습니다. 활성 스팟 정보로 새 좌표를 확인하세요.";
+		close;
+	case 18:
+		donpcevent "NEED_Summer_Fishing_Core::OnForceMarker";
+		mes "미니맵 마커/현장 표지를 강제로 재표시했습니다.";
+		close;
+	case 19:
+		mes "[12종 어종 데이터]";
+		for ( .@i = 0; .@i < $@nff_count; .@i++ ) {
+			.@fid = $@nff_id[.@i];
+			mes " No." + ( .@fid < 10 ? "0" + .@fid : "" + .@fid ) + " " + $@nff_name$[.@i] + " [" + callfunc( "F_NeedFishRarityName", $@nff_rarity[.@i] ) + "]";
+			mes "   길이 " + callfunc( "F_NeedFishLenCm", $@nff_minlen[.@i] ) + "~" + callfunc( "F_NeedFishLenCm", $@nff_maxlen[.@i] ) + "cm / 무게 " + callfunc( "F_NeedFishWtKg", $@nff_minwt[.@i] ) + "~" + callfunc( "F_NeedFishWtKg", $@nff_maxwt[.@i] ) + "kg / " + $@nff_cutin$[.@i];
+			if ( .@i == 3 || .@i == 7 ) next;
+		}
+		close;
+	case 20:
+		mes "[신규 4종 길이/무게]";
+		setarray .@ns[0], 4, 7, 8, 11;
+		for ( .@k = 0; .@k < 4; .@k++ ) {
+			.@i = callfunc( "F_NeedFishIndexById", .@ns[.@k] );
+			mes " No." + ( .@ns[.@k] < 10 ? "0" + .@ns[.@k] : "" + .@ns[.@k] ) + " " + $@nff_name$[.@i] + " [" + callfunc( "F_NeedFishRarityName", $@nff_rarity[.@i] ) + "]";
+			mes "   길이 " + callfunc( "F_NeedFishLenCm", $@nff_minlen[.@i] ) + "~" + callfunc( "F_NeedFishLenCm", $@nff_maxlen[.@i] ) + "cm / 무게 " + callfunc( "F_NeedFishWtKg", $@nff_minwt[.@i] ) + "~" + callfunc( "F_NeedFishWtKg", $@nff_maxwt[.@i] ) + "kg";
+		}
+		close;
+	case 21:
+		.@n = query_sql( "SELECT `fish_id`,`catch_count` FROM `need_summer_fishing_collection` WHERE `event_id`=202608 AND `account_id`=" + getcharid(3) + " ORDER BY `fish_id`", .@cf, .@cc );
+		mes "[도감 등록 현황] 등록 " + .@n + " / 12";
+		if ( .@n <= 0 ) { mes "아직 등록된 어종이 없습니다."; close; }
+		for ( .@k = 0; .@k < .@n; .@k++ ) {
+			mes " No." + ( .@cf[.@k] < 10 ? "0" + .@cf[.@k] : "" + .@cf[.@k] ) + " " + callfunc( "F_NeedFishNameById", .@cf[.@k] ) + " x" + .@cc[.@k];
+			if ( .@k == 5 ) next;
+		}
+		close;
+	case 22:
+		mes "상세를 볼 어종 번호(No.)를 선택하세요.";
+		next;
+		.@fid = select( "No.01 작은 정어리", "No.02 코모도 꽃게", "No.03 통통한 복어", "No.04 은빛 고등어", "No.05 무지개 도미", "No.06 대왕 문어", "No.07 산호 해마", "No.08 진주 가오리", "No.09 황금 참치", "No.10 코모도 청새치", "No.11 심해의 유령어", "No.12 한여름의 황금 고래" );
+		.@n = query_sql( "SELECT `catch_count`,`max_length_mm`,`max_length_weight_g`,`max_weight_g`,`max_weight_length_mm` FROM `need_summer_fishing_collection` WHERE `event_id`=202608 AND `account_id`=" + getcharid(3) + " AND `fish_id`=" + .@fid, .@cc, .@ml, .@mlw, .@mw, .@mwl );
+		mes "[No." + ( .@fid < 10 ? "0" + .@fid : "" + .@fid ) + " " + callfunc( "F_NeedFishNameById", .@fid ) + "]";
+		if ( .@n <= 0 ) { mes "아직 도감에 등록되지 않았습니다."; close; }
+		mes "잡은 횟수: " + .@cc[0];
+		mes "최대 길이: " + callfunc( "F_NeedFishLenCm", .@ml[0] ) + "cm (무게 " + callfunc( "F_NeedFishWtKg", .@mlw[0] ) + "kg)";
+		mes "최대 무게: " + callfunc( "F_NeedFishWtKg", .@mw[0] ) + "kg (길이 " + callfunc( "F_NeedFishLenCm", .@mwl[0] ) + "cm)";
+		close;
+	case 23:
+		mes "미리 볼 어종 번호(No.)를 선택하세요.";
+		next;
+		.@fid = select( "No.01 작은 정어리", "No.02 코모도 꽃게", "No.03 통통한 복어", "No.04 은빛 고등어", "No.05 무지개 도미", "No.06 대왕 문어", "No.07 산호 해마", "No.08 진주 가오리", "No.09 황금 참치", "No.10 코모도 청새치", "No.11 심해의 유령어", "No.12 한여름의 황금 고래" );
+		callfunc( "F_NeedFishShowCutin", .@fid );
+		mes "[Cutin 미리보기]";
+		mes "No." + ( .@fid < 10 ? "0" + .@fid : "" + .@fid ) + " " + callfunc( "F_NeedFishNameById", .@fid );
+		mes "리소스: " + callfunc( "F_NeedFishCutinRes", .@fid );
+		close2;
+		cutin "", 255;
+		end;
+	case 24:
+		if ( getgmlevel() < 60 ) { mes "GM 전용 기능입니다."; close; }
+		mes "삭제할 어종 번호(No.)를 선택하세요. (내 계정 collection 에서 삭제)";
+		next;
+		.@fid = select( "No.01 작은 정어리", "No.02 코모도 꽃게", "No.03 통통한 복어", "No.04 은빛 고등어", "No.05 무지개 도미", "No.06 대왕 문어", "No.07 산호 해마", "No.08 진주 가오리", "No.09 황금 참치", "No.10 코모도 청새치", "No.11 심해의 유령어", "No.12 한여름의 황금 고래", "전체 삭제" );
+		if ( .@fid == 13 ) {
+			query_sql( "DELETE FROM `need_summer_fishing_collection` WHERE `event_id`=202608 AND `account_id`=" + getcharid(3) );
+			mes "내 계정 collection 전체를 삭제했습니다.";
+			close;
+		}
+		query_sql( "DELETE FROM `need_summer_fishing_collection` WHERE `event_id`=202608 AND `account_id`=" + getcharid(3) + " AND `fish_id`=" + .@fid );
+		mes "No." + ( .@fid < 10 ? "0" + .@fid : "" + .@fid ) + " collection 을 삭제했습니다. 다시 잡으면 최초 획득 연출이 발생합니다.";
+		close;
+	case 25:
+		callfunc "F_NeedFishDex";
+		close;
+	case 26:
+		close;
+	}
+
+// ---- 추첨 분포 테스트: 등급별로 희귀도 분포를 각각 뽑아본다(등급 무관 확인). 등급 보정 없음 ----
+// 낚시터가 하나이므로 기본 가중치(8000/1700/280/20)를 사용. 신규 4종도 희귀도 그룹에 포함.
+S_DistTest:
+	.@n = getarg(0);
+	.@fever = $NEED_FISHING_FEVER_RATE; if ( .@fever <= 0 ) .@fever = 10000;
+	.@rw1 = 8000;
+	.@rw2 = 1700;
+	.@rw3 = 280 * .@fever / 10000;
+	.@rw4 = 20 * .@fever / 10000;
+	.@t1 = .@rw1;
+	.@t2 = .@rw1 + .@rw2;
+	.@t3 = .@rw1 + .@rw2 + .@rw3;
+	.@tot = .@rw1 + .@rw2 + .@rw3 + .@rw4;
+	for ( .@g = 1; .@g <= 4; .@g++ ) {
+		.@c1 = 0; .@c2 = 0; .@c3 = 0; .@c4 = 0;
+		for ( .@k = 0; .@k < .@n; .@k++ ) {
+			.@r = rand(.@tot);
+			.@rar = 1 + (.@r >= .@t1) + (.@r >= .@t2) + (.@r >= .@t3);
+			.@c1 = .@c1 + (.@rar == 1);
+			.@c2 = .@c2 + (.@rar == 2);
+			.@c3 = .@c3 + (.@rar == 3);
+			.@c4 = .@c4 + (.@rar == 4);
+		}
+		mes "^0000FF[" + callfunc( "F_NeedFishGradeName", .@g ) + " " + .@n + "회]^000000 (등급 무관)";
+		mes " 일반 " + .@c1 + " / 고급 " + .@c2 + " / 희귀 " + .@c3 + " / 전설 " + .@c4;
+		debugmes "[FishDist] grade=" + .@g + " n=" + .@n + " C=" + .@c1 + " U=" + .@c2 + " R=" + .@c3 + " L=" + .@c4;
+		next;
+	}
+	mes "분포 테스트 완료. 4개 등급 각각의 희귀도 분포가 유사하면 공정 플레이(등급 분리) 유지.";
+	return;
+
+// ---- 12종 어종 분포: 희귀도 추첨 후 같은 희귀도 내 어종을 균등 선택(가중치 동일)하여 집계 ----
+S_SpeciesDist:
+	.@n = getarg(0);
+	.@fever = $NEED_FISHING_FEVER_RATE; if ( .@fever <= 0 ) .@fever = 10000;
+	.@rw1 = 8000;
+	.@rw2 = 1700;
+	.@rw3 = 280 * .@fever / 10000;
+	.@rw4 = 20 * .@fever / 10000;
+	.@t1 = .@rw1;
+	.@t2 = .@rw1 + .@rw2;
+	.@t3 = .@rw1 + .@rw2 + .@rw3;
+	.@tot = .@rw1 + .@rw2 + .@rw3 + .@rw4;
+	setarray .@grp1[0], 1, 2, 3, 4;
+	setarray .@grp2[0], 5, 6, 7, 8;
+	setarray .@grp3[0], 9, 10, 11;
+	deletearray .@cnt[0], 13;
+	for ( .@k = 0; .@k < .@n; .@k++ ) {
+		.@r = rand(.@tot);
+		.@rar = 1 + (.@r >= .@t1) + (.@r >= .@t2) + (.@r >= .@t3);
+		.@fid = (.@rar == 1) * .@grp1[rand(4)] + (.@rar == 2) * .@grp2[rand(4)] + (.@rar == 3) * .@grp3[rand(3)] + (.@rar == 4) * 12;
+		.@cnt[.@fid] = .@cnt[.@fid] + 1;
+	}
+	mes "^0000FF[12종 어종 분포 " + .@n + "회]^000000 (등급 무관, 동일 희귀도 내 균등)";
+	for ( .@i = 0; .@i < $@nff_count; .@i++ ) {
+		.@fid = $@nff_id[.@i];
+		mes " No." + ( .@fid < 10 ? "0" + .@fid : "" + .@fid ) + " " + $@nff_name$[.@i] + " [" + callfunc( "F_NeedFishRarityName", $@nff_rarity[.@i] ) + "] : " + .@cnt[.@fid];
+		if ( .@i == 5 ) next;
+	}
+	debugmes "[FishSpeciesDist] n=" + .@n + " done";
+	return;
+
+S_GiveRod:
+	if ( countitem(399936) < 1 ) { getitem 399936, 1; dispbottom "한여름 낚싯대(399936)를 지급했습니다. F1~F9 단축키로 사용하세요."; }
+	return;
+}
