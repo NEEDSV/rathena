@@ -237,7 +237,7 @@ comodo,1,1,4	script	한여름 낚시터#nsf_guide	4_BOARD3,{
 }
 
 // 고정 낚시 안내판 (방법/현재 어군/오늘 현황/미끼 구입)
-comodo,188,152,4	script	한여름 낚시 안내#nsf_board	4_BOARD3,{
+comodo,186,157,6	script	한여름 낚시 안내#nsf_board	4_BOARD3,{
 	mes "[한여름 낚시 안내]";
 	switch ( select( "낚시 방법", "현재 어군 정보", "오늘의 낚시 현황", "낚시 도감", "한여름 낚시 미끼 구입", "그만 보기" ) ) {
 	case 1:
@@ -300,8 +300,6 @@ comodo,188,152,4	script	한여름 낚시 안내#nsf_board	4_BOARD3,{
 // ---- 낚시 도감 UI (nsf_board / 테스트 NPC 공용). PAGE_SIZE=6, 데이터 기반 페이지 ----
 function	script	F_NeedFishDex	{
 L_DexLoad:
-	.@dw = 500; .@dh = 400;
-	setdialogsize( .@dw, .@dh );
 	.@psize = 6;
 	.@aid = getcharid(3);
 	.@rows = query_sql( "SELECT `fish_id`,`catch_count`,`max_length_mm`,`max_length_weight_g`,DATE_FORMAT(`max_length_caught_at`,'%Y-%m-%d'),`max_weight_g`,`max_weight_length_mm`,DATE_FORMAT(`max_weight_caught_at`,'%Y-%m-%d'),DATE_FORMAT(`first_caught_at`,'%Y-%m-%d'),DATE_FORMAT(`last_caught_at`,'%Y-%m-%d') FROM `need_summer_fishing_collection` WHERE `event_id`=202608 AND `account_id`=" + .@aid + " ORDER BY `fish_id`", .@rf, .@rcc, .@rml, .@rmlw, .@rmld$, .@rmw, .@rmwl, .@rmwd$, .@rfd$, .@rld$ );
@@ -329,11 +327,14 @@ L_DexLoad:
 	.@page = 0;
 
 L_DexMain:
+	clear;
 	mes "[한여름 낚시 도감]";
 	mes "수집 현황 : " + .@have + " / " + .@active;
 	mes "전체 낚은 횟수 : " + .@totalcc + "회";
 	mes " ";
 	mes "어종을 선택해주세요.";
+	.@dw = 500; .@dh = 400;
+	setdialogsize( .@dw, .@dh );
 	next;
 
 L_DexList:
