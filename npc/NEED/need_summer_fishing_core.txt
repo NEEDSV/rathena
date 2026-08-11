@@ -24,7 +24,6 @@ OnInit:
 	$@nsf_active = 0; $@nsf_region = 0; $@nsf_sign_ok = 0;
 	setmapflag "comodo", mf_loadevent;
 	disablenpc "한여름 어군#nsf_school";
-	disablenpc "한여름 낚시터#nsf_guide";
 	callsub S_Generate, 0;
 	if ( $@nsf_active ) callsub S_MarkersRefresh;
 	initnpctimer;
@@ -202,13 +201,10 @@ S_PlaceSign:
 	}
 	if ( .@best < 0 ) {
 		$@nsf_sign_ok = 0;
-		disablenpc "한여름 낚시터#nsf_guide";
 		debugmes "need_fishing_spot: guide sign cell not found near " + .@sx + "," + .@sy;
 		return;
 	}
 	$@nsf_sign_x = .@bx; $@nsf_sign_y = .@by; $@nsf_sign_ok = 1;
-	movenpc "한여름 낚시터#nsf_guide", .@bx, .@by;
-	enablenpc "한여름 낚시터#nsf_guide";
 	return;
 }
 
@@ -217,39 +213,39 @@ comodo,1,1,4	script	한여름 어군#nsf_school	4_SEA_OTTER,{
 	mes "[한여름 어군]";
 	mes "수면 아래로 물고기 떼가 모여 있는 것이 보인다.";
 	mes "이 근처에서 「한여름 낚싯대」를 사용하면 낚시를 시작할 수 있다.";
-	close;
-}
-
-// 현장 클릭 안내 표지. 클릭해도 낚시 시작 안 함.
-comodo,1,1,4	script	한여름 낚시터#nsf_guide	4_BOARD3,{
-	mes "[한여름 낚시터]";
-	mes "수면 아래로 물고기 떼가 모여든 것이 보인다.";
-	mes " ";
-	mes "이 주변에서 「한여름 낚싯대」를 사용하면 낚시를 시작할 수 있다.";
-	mes "낚싯대를 단축키에 등록하면 입질이 왔을 때 빠르게 줄을 당길 수 있다.";
 	mes " ";
 	mes "어군은 일정 시간이 지나면 코모도의 다른 해안으로 이동한다.";
 	if ( $@nsf_active ) {
 		.@left = ( $@nsf_next_rotate - gettimetick(2) ) / 60; if ( .@left < 0 ) .@left = 0;
 		mes "현재 어군 이동까지 남은 시간: 약 " + .@left + "분";
 	}
+	.@dw = 400; .@dh = 200;
+	setdialogsize( .@dw, .@dh );
 	close;
 }
 
 // 고정 낚시 안내판 (방법/현재 어군/오늘 현황/미끼 구입)
 comodo,186,157,6	script	한여름 낚시 안내#nsf_board	4_BOARD3,{
 	mes "[한여름 낚시 안내]";
-	switch ( select( "낚시 방법", "현재 어군 정보", "오늘의 낚시 현황", "낚시 도감", "한여름 낚시 미끼 구입", "그만 보기" ) ) {
+	mes "- 코모도 해안에는 한 번에 하나의 어군이 나타납니다.";
+	mes " ";
+	mes "- 어군은 약 1시간마다 다른 해안으로 이동합니다.";
+	mes " ";
+	mes "- 미니맵의 표시를 따라 현재 해안으로 이동합니다.";
+	mes " ";
+	mes "- 물고기 떼가 보이는 곳 근처에서 한여름 낚싯대를 사용합니다.";
+	mes " ";
+	mes "- 입질 신호가 나타나면 다시 낚싯대를 사용해 줄을 당깁니다.";
+	mes " ";
+	mes "- 희귀한 물고기는 여러 차례 줄을 감아야 할 수 있습니다.";
+	mes " ";
+	mes "- 하루 기본 보상은 최종 성공 10회까지이며, 이후에는 미끼가 필요합니다.";
+	.@dw = 400; .@dh = 400;
+	setdialogsize( .@dw, .@dh );
+	next;
+	switch ( select( "현재 어군 정보", "오늘의 낚시 현황", "낚시 도감", "한여름 낚시 미끼 구입", "그만 보기" ) ) {
 	case 1:
-		mes "- 코모도 해안에는 한 번에 하나의 어군이 나타납니다.";
-		mes "- 어군은 약 1시간마다 다른 해안으로 이동합니다.";
-		mes "- 미니맵의 표시를 따라 현재 해안으로 이동합니다.";
-		mes "- 물고기 떼가 보이는 곳 근처에서 한여름 낚싯대를 사용합니다.";
-		mes "- 입질 신호가 나타나면 다시 낚싯대를 사용해 줄을 당깁니다.";
-		mes "- 희귀한 물고기는 여러 차례 줄을 감아야 할 수 있습니다.";
-		mes "- 하루 기본 보상은 최종 성공 10회까지이며, 이후에는 미끼가 필요합니다.";
-		close;
-	case 2:
+		mes "[한여름 낚시 안내]";
 		if ( !$@nsf_active ) { mes "현재 활성 어군이 없습니다."; close; }
 		.@left = ( $@nsf_next_rotate - gettimetick(2) ) / 60; if ( .@left < 0 ) .@left = 0;
 		mes "현재 어군: 제 " + $@nsf_region + " 해안 구역";
@@ -262,7 +258,8 @@ comodo,186,157,6	script	한여름 낚시 안내#nsf_board	4_BOARD3,{
 			mes "다음 교체까지: " + ( $@nsf_next_rotate - gettimetick(2) ) + "초";
 		}
 		close;
-	case 3:
+	case 2:
+		clear;
 		.@ld = atoi( gettimestr( "%Y%m%d", 9, gettimetick(2) - 14400 ) );
 		callfunc "F_NeedFishRewardStatus", getcharid(3), getcharip(), .@ld;
 		mes "[오늘의 낚시 현황]";
@@ -272,10 +269,11 @@ comodo,186,157,6	script	한여름 낚시 안내#nsf_board	4_BOARD3,{
 		else mes "기본 보상을 모두 획득했습니다. 미끼로 최대어/랭킹에 계속 도전할 수 있습니다.";
 		if ( $NSF_DEBUG ) mes "[DEBUG] account="+$@nfr_acc_cnt+" ip="+$@nfr_ip_cnt+" family="+$@nfr_family;
 		close;
-	case 4:
+	case 3:
 		callfunc "F_NeedFishDex";
 		close;
-	case 5:
+	case 4:
+		clear;
 		mes "[한여름 낚시 미끼]";
 		mes "1개 = 100,000 Zeny";
 		mes "구입 수량을 선택하세요.";
@@ -291,7 +289,7 @@ comodo,186,157,6	script	한여름 낚시 안내#nsf_board	4_BOARD3,{
 		getitem 399970, .@amt;
 		mes "한여름 낚시 미끼 " + .@amt + "개를 구입했습니다. (" + .@cost + " Zeny)";
 		close;
-	case 6:
+	case 5:
 		close;
 	}
 	end;
@@ -333,8 +331,6 @@ L_DexMain:
 	mes "전체 낚은 횟수 : " + .@totalcc + "회";
 	mes " ";
 	mes "어종을 선택해주세요.";
-	.@dw = 500; .@dh = 400;
-	setdialogsize( .@dw, .@dh );
 	next;
 
 L_DexList:
