@@ -10280,6 +10280,7 @@ static bool need_bg_status_duration_cap(sc_type type) {
 		case SC_HARMONIZE:
 		case SC_STASIS:
 		case SC__IGNORANCE:
+		case SC__WEAKNESS:
 			return true;
 		default:
 			return false;
@@ -14488,6 +14489,9 @@ int32 status_change_end( block_list* bl, enum sc_type type, int32 tid ){
 
 	if (sd != nullptr) {
 		switch (type) {
+			case SC__WEAKNESS:
+				pc_bg_strip_try_reequip(sd, EQP_ARMS);
+				break;
 			case SC_STRIPWEAPON:
 				pc_bg_strip_try_reequip(sd, EQP_ARMS);
 				break;
