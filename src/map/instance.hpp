@@ -126,7 +126,7 @@ extern InstanceDatabase instance_db;
 extern std::unordered_map<int32, std::shared_ptr<s_instance_data>> instances;
 
 std::shared_ptr<s_instance_db> instance_search_db_name(const char* name);
-int32 instance_ip_reward_complete(map_session_data* sd, e_instance_ip_reward_type reward_type, int32 instance_id = 0, int32 monster_gid = 0, uint16 monster_id = 0);
+int32 instance_ip_reward_complete(map_session_data* sd, e_instance_ip_reward_type reward_type, int32 instance_id = 0, int32 monster_gid = 0, uint16 monster_id = 0, uint16* remaining = nullptr, uint16* effective_limit = nullptr, bool* override_applied = nullptr);
 int32 instance_ip_reward_remaining(map_session_data* sd, int32 instance_id = 0, uint16* daily_limit = nullptr);
 int32 instance_ip_reward_remaining_by_db_id(map_session_data* sd, int32 instance_db_id, uint16* daily_limit = nullptr);
 int32 instance_ip_reward_limit(map_session_data* sd, int32 instance_id = 0);

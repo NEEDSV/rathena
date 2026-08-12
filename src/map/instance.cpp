@@ -326,51 +326,110 @@ bool instance_ip_reward_monster_enabled(int16 map_id, uint16 monster_id, int32& 
 	return true;
 }
 
-static int32 instance_ip_reward_remaining_for_db(map_session_data* sd, const std::shared_ptr<s_instance_db>& db, uint16* daily_limit) {
-	if (daily_limit != nullptr)
-		*daily_limit = 0;
-	if (sd == nullptr || sd->fd <= 0 || !session_isActive(sd->fd) || session[sd->fd]->client_addr == 0)
-		return -1;
+static bool instance_ip_reward_get_ip(map_session_data* sd, char (&ip)[46]) {
+	if (sd == nullptr || sd->fd <= 0 || !session_isActive(sd->fd) ||
+		session[sd->fd]->client_addr == 0)
+		return false;
+	snprintf(ip, sizeof(ip), "%u.%u.%u.%u", CONVIP(session[sd->fd]->client_addr));
+	return true;
+}
+
+// Resolves one live SQL override per operation: dungeon-specific, global, then YAML.
+static int32 instance_ip_reward_get_effective_limit(map_session_data* sd, const std::shared_ptr<s_instance_db>& db, uint16& effective_limit, bool& override_applied) {
+	effective_limit = 0;
+	override_applied = false;
 	if (db == nullptr)
 		return -1;
 	if (db->ip_daily_reward_limit == 0)
 		return -2;
-	if (daily_limit != nullptr)
-		*daily_limit = db->ip_daily_reward_limit;
 
-	char reward_date[11];
-	if (!instance_ip_reward_date(reward_date))
+	char ip[46];
+	if (!instance_ip_reward_get_ip(sd, ip))
 		return -1;
-	char ip[16];
-	snprintf(ip, sizeof(ip), "%u.%u.%u.%u", CONVIP(session[sd->fd]->client_addr));
+
+	effective_limit = db->ip_daily_reward_limit;
 	if (SQL_ERROR == Sql_Query(mmysql_handle,
-		"SELECT `use_count` FROM `instance_ip_reward` WHERE `reward_date`='%s' AND `instance_db_id`='%d' "
-		"AND `ip`=INET6_ATON('%s') LIMIT 1", reward_date, db->id, ip)) {
-		ShowError("instance_ip_reward_remaining: SQL query failed for instance_db=%d, char_id=%d.\n",
-			db->id, sd->status.char_id);
+		"SELECT `daily_limit` FROM `instance_ip_reward_override` "
+		"WHERE `ip`=INET6_ATON('%s') AND `instance_db_id` IN ('0','%d') "
+		"AND `enabled`='1' AND `daily_limit`>'0' AND (`expires_at` IS NULL OR `expires_at`>NOW()) "
+		"ORDER BY (`instance_db_id`='%d') DESC LIMIT 1",
+		ip, db->id, db->id)) {
+		ShowError("instance_ip_reward_get_effective_limit: SQL query failed for instance_db=%d, char_id=%d.\n",
+			db->id, sd != nullptr ? sd->status.char_id : 0);
 		Sql_ShowDebug(mmysql_handle);
 		return -1;
 	}
 
-	uint32 used = 0;
 	if (Sql_NumRows(mmysql_handle) > 0) {
 		if (SQL_SUCCESS != Sql_NextRow(mmysql_handle)) {
-			ShowError("instance_ip_reward_remaining: Failed to read SQL result for instance_db=%d, char_id=%d.\n",
-				db->id, sd->status.char_id);
 			Sql_FreeResult(mmysql_handle);
 			return -1;
 		}
 		char* data = nullptr;
 		if (SQL_SUCCESS != Sql_GetData(mmysql_handle, 0, &data, nullptr) || data == nullptr) {
-			ShowError("instance_ip_reward_remaining: Invalid SQL result for instance_db=%d, char_id=%d.\n",
-				db->id, sd->status.char_id);
+			Sql_FreeResult(mmysql_handle);
+			return -1;
+		}
+		uint32 override_limit = static_cast<uint32>(strtoul(data, nullptr, 10));
+		if (override_limit == 0 || override_limit > UINT16_MAX) {
+			ShowError("instance_ip_reward_get_effective_limit: Invalid override limit %u for instance_db=%d.\n",
+				override_limit, db->id);
+			Sql_FreeResult(mmysql_handle);
+			return -1;
+		}
+		effective_limit = static_cast<uint16>(override_limit);
+		override_applied = true;
+	}
+	Sql_FreeResult(mmysql_handle);
+	return effective_limit;
+}
+
+static int32 instance_ip_reward_get_used_count(const std::shared_ptr<s_instance_db>& db, const char* reward_date, const char* ip, uint32& used) {
+	used = 0;
+	if (db == nullptr || reward_date == nullptr || ip == nullptr)
+		return -1;
+	if (SQL_ERROR == Sql_Query(mmysql_handle,
+		"SELECT `use_count` FROM `instance_ip_reward` WHERE `reward_date`='%s' AND `instance_db_id`='%d' "
+		"AND `ip`=INET6_ATON('%s') LIMIT 1", reward_date, db->id, ip)) {
+		ShowError("instance_ip_reward_get_used_count: SQL query failed for instance_db=%d.\n", db->id);
+		Sql_ShowDebug(mmysql_handle);
+		return -1;
+	}
+	if (Sql_NumRows(mmysql_handle) > 0) {
+		if (SQL_SUCCESS != Sql_NextRow(mmysql_handle)) {
+			Sql_FreeResult(mmysql_handle);
+			return -1;
+		}
+		char* data = nullptr;
+		if (SQL_SUCCESS != Sql_GetData(mmysql_handle, 0, &data, nullptr) || data == nullptr) {
 			Sql_FreeResult(mmysql_handle);
 			return -1;
 		}
 		used = static_cast<uint32>(strtoul(data, nullptr, 10));
 	}
 	Sql_FreeResult(mmysql_handle);
-	return used >= db->ip_daily_reward_limit ? 0 : db->ip_daily_reward_limit - used;
+	return 0;
+}
+
+static int32 instance_ip_reward_remaining_for_db(map_session_data* sd, const std::shared_ptr<s_instance_db>& db, uint16* daily_limit) {
+	if (daily_limit != nullptr)
+		*daily_limit = 0;
+	uint16 effective_limit = 0;
+	bool override_applied = false;
+	int32 limit_result = instance_ip_reward_get_effective_limit(sd, db, effective_limit, override_applied);
+	if (limit_result < 0)
+		return limit_result;
+
+	char reward_date[11];
+	char ip[46];
+	if (!instance_ip_reward_date(reward_date) || !instance_ip_reward_get_ip(sd, ip))
+		return -1;
+	uint32 used = 0;
+	if (instance_ip_reward_get_used_count(db, reward_date, ip, used) < 0)
+		return -1;
+	if (daily_limit != nullptr)
+		*daily_limit = effective_limit;
+	return used >= effective_limit ? 0 : effective_limit - used;
 }
 
 int32 instance_ip_reward_remaining(map_session_data* sd, int32 instance_id, uint16* daily_limit) {
@@ -402,11 +461,10 @@ int32 instance_ip_reward_remaining_by_db_id(map_session_data* sd, int32 instance
 	return instance_ip_reward_remaining_for_db(sd, db, daily_limit);
 }
 
-static int32 instance_ip_reward_limit_for_db(const std::shared_ptr<s_instance_db>& db) {
-	if (db == nullptr)
-		return -1;
-	return db->ip_daily_reward_limit == 0 ? -2 : db->ip_daily_reward_limit;
-
+static int32 instance_ip_reward_limit_for_db(map_session_data* sd, const std::shared_ptr<s_instance_db>& db) {
+	uint16 effective_limit = 0;
+	bool override_applied = false;
+	return instance_ip_reward_get_effective_limit(sd, db, effective_limit, override_applied);
 }
 
 int32 instance_ip_reward_limit(map_session_data* sd, int32 instance_id) {
@@ -421,7 +479,7 @@ int32 instance_ip_reward_limit(map_session_data* sd, int32 instance_id) {
 	std::shared_ptr<s_instance_data> idata = util::umap_find(instances, instance_id);
 	if (idata == nullptr)
 		return -1;
-	return instance_ip_reward_limit_for_db(instance_db.find(idata->id));
+	return instance_ip_reward_limit_for_db(sd, instance_db.find(idata->id));
 
 }
 
@@ -435,7 +493,7 @@ int32 instance_ip_reward_limit_by_db_id(map_session_data* sd, int32 instance_db_
 		ShowError("instance_ip_reward_limit_by_db_id: Unknown instance DB ID %d.\n", instance_db_id);
 		return -1;
 	}
-	return instance_ip_reward_limit_for_db(db);
+	return instance_ip_reward_limit_for_db(sd, db);
 }
 
 static void instance_ip_reward_entry_message(map_session_data* sd, int32 remaining, uint16 daily_limit) {
@@ -451,7 +509,13 @@ static void instance_ip_reward_entry_message(map_session_data* sd, int32 remaini
 	clif_displaymessage(sd->fd, "Reset time: 04:00 every day");
 }
 
-int32 instance_ip_reward_complete(map_session_data* sd, e_instance_ip_reward_type reward_type, int32 instance_id, int32 monster_gid, uint16 monster_id) {
+int32 instance_ip_reward_complete(map_session_data* sd, e_instance_ip_reward_type reward_type, int32 instance_id, int32 monster_gid, uint16 monster_id, uint16* remaining_out, uint16* effective_limit_out, bool* override_applied_out) {
+	if (remaining_out != nullptr)
+		*remaining_out = 0;
+	if (effective_limit_out != nullptr)
+		*effective_limit_out = 0;
+	if (override_applied_out != nullptr)
+		*override_applied_out = false;
 	if (sd == nullptr || reward_type < IP_REWARD_PERSONAL || reward_type > IP_REWARD_MONSTER ||
 		sd->fd <= 0 || !session_isActive(sd->fd) || session[sd->fd]->client_addr == 0)
 		return -1;
@@ -474,8 +538,9 @@ int32 instance_ip_reward_complete(map_session_data* sd, e_instance_ip_reward_typ
 	char reward_date[11];
 	if (!instance_ip_reward_date(reward_date))
 		return -1;
-	char ip[16];
-	snprintf(ip, sizeof(ip), "%u.%u.%u.%u", CONVIP(session[sd->fd]->client_addr));
+	char ip[46];
+	if (!instance_ip_reward_get_ip(sd, ip))
+		return -1;
 	char escaped_name[NAME_LENGTH * 2 + 1];
 	Sql_EscapeString(mmysql_handle, escaped_name, sd->status.name);
 
@@ -489,6 +554,16 @@ int32 instance_ip_reward_complete(map_session_data* sd, e_instance_ip_reward_typ
 		return -1;
 	}
 	transaction = true;
+	uint16 effective_limit = 0;
+	bool applied_override = false;
+	if (instance_ip_reward_get_effective_limit(sd, db, effective_limit, applied_override) < 1) {
+		rollback();
+		return -1;
+	}
+	if (effective_limit_out != nullptr)
+		*effective_limit_out = effective_limit;
+	if (override_applied_out != nullptr)
+		*override_applied_out = applied_override;
 
 	if (reward_type == IP_REWARD_MONSTER) {
 		if (SQL_ERROR == Sql_Query(mmysql_handle,
@@ -514,6 +589,15 @@ int32 instance_ip_reward_complete(map_session_data* sd, e_instance_ip_reward_typ
 			char* data = nullptr;
 			Sql_GetData(mmysql_handle, 0, &data, nullptr);
 			int32 previous = data != nullptr ? atoi(data) : -1;
+			Sql_FreeResult(mmysql_handle);
+			uint32 used = 0;
+			if (instance_ip_reward_get_used_count(db, reward_date, ip, used) < 0) {
+				rollback();
+				return -1;
+			}
+			uint16 remaining = used >= effective_limit ? 0 : static_cast<uint16>(effective_limit - used);
+			if (remaining_out != nullptr)
+				*remaining_out = remaining;
 			if (SQL_ERROR == Sql_QueryStr(mmysql_handle, "COMMIT")) {
 				Sql_ShowDebug(mmysql_handle);
 				rollback();
@@ -537,14 +621,22 @@ int32 instance_ip_reward_complete(map_session_data* sd, e_instance_ip_reward_typ
 		"`monster_id`=IF(`use_count`<'%hu',VALUES(`monster_id`),`monster_id`),"
 		"`use_count`=IF(`use_count`<'%hu',`use_count`+1,`use_count`)",
 		reward_date, idata->id, ip, sd->status.account_id, sd->status.char_id, escaped_name,
-		reward_type, instance_id, monster_id, db->ip_daily_reward_limit, db->ip_daily_reward_limit,
-		db->ip_daily_reward_limit, db->ip_daily_reward_limit, db->ip_daily_reward_limit,
-		db->ip_daily_reward_limit, db->ip_daily_reward_limit, db->ip_daily_reward_limit)) {
+			reward_type, instance_id, monster_id, effective_limit, effective_limit,
+			effective_limit, effective_limit, effective_limit,
+			effective_limit, effective_limit, effective_limit)) {
 		Sql_ShowDebug(mmysql_handle);
 		rollback();
 		return -1;
 	}
 	int32 result = Sql_NumRowsAffected(mmysql_handle) > 0 ? 1 : 0;
+	uint32 used = 0;
+	if (instance_ip_reward_get_used_count(db, reward_date, ip, used) < 0) {
+		rollback();
+		return -1;
+	}
+	uint16 remaining = used >= effective_limit ? 0 : static_cast<uint16>(effective_limit - used);
+	if (remaining_out != nullptr)
+		*remaining_out = remaining;
 	if (reward_type == IP_REWARD_MONSTER && SQL_ERROR == Sql_Query(mmysql_handle,
 		"UPDATE `instance_ip_reward_event` SET `allowed`='%d' WHERE `reward_date`='%s' AND `instance_db_id`='%d' "
 		"AND `ip`=INET6_ATON('%s') AND `server_boot`='%" PRIu64 "' AND `runtime_instance_id`='%d' "
@@ -560,9 +652,9 @@ int32 instance_ip_reward_complete(map_session_data* sd, e_instance_ip_reward_typ
 		return -1;
 	}
 	transaction = false;
-	ShowInfo("[Instance IP Reward] date=%s instance_db=%d runtime=%d type=%u result=%d ip=%s account=%d char=%d name=%s monster=%hu gid=%d\n",
-		reward_date, idata->id, instance_id, reward_type, result, ip, sd->status.account_id,
-		sd->status.char_id, sd->status.name, monster_id, monster_gid);
+	ShowInfo("[Instance IP Reward] date=%s instance_db=%d runtime=%d type=%u result=%d remaining=%hu limit=%hu override=%d ip=%s account=%d char=%d name=%s monster=%hu gid=%d\n",
+		reward_date, idata->id, instance_id, reward_type, result, remaining, effective_limit,
+		applied_override ? 1 : 0, ip, sd->status.account_id, sd->status.char_id, sd->status.name, monster_id, monster_gid);
 	return result;
 }
 
