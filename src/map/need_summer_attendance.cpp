@@ -4,6 +4,7 @@
 #include "need_summer_attendance.hpp"
 
 #include <algorithm>
+#include <array>
 #include <climits>
 #include <cstdlib>
 #include <cstring>
@@ -36,6 +37,21 @@ constexpr uint32 NEED_SUMMER_BOX_ITEM_ID = 399928;
 constexpr uint32 NEED_SUMMER_BOX_AMOUNT = 1;
 constexpr uint32 NEED_SUMMER_OUTBOX_MAX_ATTEMPTS = 5;
 constexpr int32 NEED_SUMMER_OUTBOX_BATCH_SIZE = 20;
+
+struct need_summer_bonus_reward {
+	uint32 claim_no;
+	uint32 item_id;
+	uint32 amount;
+};
+
+constexpr std::array<need_summer_bonus_reward, 4> NEED_SUMMER_BONUS_REWARDS = {{
+	{ 5, 1001592, 1 },
+	{ 10, 12412, 1 },
+	{ 15, 7720, 3 },
+	{ 20, 399934, 1 },
+}};
+
+static_assert(MAIL_MAX_ITEM >= 3, "Summer attendance milestone rewards require three mail attachment slots.");
 
 constexpr int32 MSG_ATTENDANCE_READY = 1904;
 constexpr int32 MSG_ATTENDANCE_REMAINING = 1905;
@@ -134,6 +150,8 @@ struct need_summer_outbox_row {
 	uint32 token_amount = 0;
 	uint32 box_item_id = 0;
 	uint32 box_amount = 0;
+	uint32 bonus_item_id = 0;
+	uint32 bonus_amount = 0;
 	uint32 attempts = 0;
 	uint32 claim_event_id = 0;
 	uint32 claim_account_id = 0;
@@ -170,7 +188,10 @@ bool need_summer_attendance_schema_ready() {
 	attendance_schema_available = false;
 	if (mmysql_handle == nullptr)
 		return false;
-	if (!item_db.exists(NEED_SUMMER_TOKEN_ITEM_ID) || !item_db.exists(NEED_SUMMER_BOX_ITEM_ID)) {
+	bool reward_items_ready = item_db.exists(NEED_SUMMER_TOKEN_ITEM_ID) && item_db.exists(NEED_SUMMER_BOX_ITEM_ID);
+	for (const need_summer_bonus_reward& reward : NEED_SUMMER_BONUS_REWARDS)
+		reward_items_ready = reward_items_ready && item_db.exists(reward.item_id);
+	if (!reward_items_ready) {
 		ShowError("%s\n", msg_txt(nullptr, MSG_OUTBOX_ITEM_UNAVAILABLE));
 		return false;
 	}
@@ -184,7 +205,7 @@ bool need_summer_attendance_schema_ready() {
 		"SELECT `event_id`,`logical_date`,`ip`,`family_group_id` FROM `need_summer_attendance_ip_daily` LIMIT 0",
 		"SELECT `claim_id`,`event_id`,`logical_date`,`account_id`,`claim_no`,`status` FROM `need_summer_attendance_claim` LIMIT 0",
 		"SELECT `outbox_id`,`claim_id`,`event_id`,`account_id`,`char_id`,`token_item_id`,`token_amount`,"
-		"`box_item_id`,`box_amount`,`status`,`attempts`,`next_attempt_at`,`last_attempt_at`,`last_error_code`,`last_error`,"
+		"`box_item_id`,`box_amount`,`bonus_item_id`,`bonus_amount`,`status`,`attempts`,`next_attempt_at`,`last_attempt_at`,`last_error_code`,`last_error`,"
 		"`mail_id`,`delivered_at` FROM `need_summer_attendance_reward_outbox` LIMIT 0",
 	};
 
@@ -242,6 +263,14 @@ bool need_summer_attendance_schema_ready() {
 
 	attendance_schema_available = true;
 	return true;
+}
+
+need_summer_bonus_reward need_summer_attendance_bonus_reward(uint32 claim_no) {
+	for (const need_summer_bonus_reward& reward : NEED_SUMMER_BONUS_REWARDS) {
+		if (reward.claim_no == claim_no)
+			return reward;
+	}
+	return {};
 }
 
 bool need_summer_attendance_logical_date(time_t now, need_summer_logical_date& result) {
@@ -687,11 +716,14 @@ need_summer_claim_result need_summer_attendance_reserve(map_session_data* sd, ui
 	}
 
 	uint64 claim_id = Sql_LastInsertId(mmysql_handle);
+	need_summer_bonus_reward bonus_reward = need_summer_attendance_bonus_reward(next_claim);
 	if (claim_id == 0 || SQL_ERROR == Sql_Query(mmysql_handle,
 		"INSERT INTO `need_summer_attendance_reward_outbox` "
-		"(`claim_id`,`event_id`,`account_id`,`char_id`,`token_item_id`,`token_amount`,`box_item_id`,`box_amount`,`status`) "
-		"VALUES ('%" PRIu64 "','%u','%u','%u','399925','10','399928','1','0')",
-		claim_id, NEED_SUMMER_EVENT_ID, sd->status.account_id, sd->status.char_id) ||
+		"(`claim_id`,`event_id`,`account_id`,`char_id`,`token_item_id`,`token_amount`,`box_item_id`,`box_amount`,"
+		"`bonus_item_id`,`bonus_amount`,`status`) "
+		"VALUES ('%" PRIu64 "','%u','%u','%u','399925','10','399928','1','%u','%u','0')",
+		claim_id, NEED_SUMMER_EVENT_ID, sd->status.account_id, sd->status.char_id,
+		bonus_reward.item_id, bonus_reward.amount) ||
 		SQL_ERROR == Sql_Query(mmysql_handle,
 		"UPDATE `need_summer_attendance_account` SET `claimed_count`='%u',`updated_at`=NOW() "
 		"WHERE `event_id`='%u' AND `account_id`='%u'",
@@ -797,7 +829,7 @@ need_summer_consume_result need_summer_outbox_consume_one() {
 
 	if (SQL_ERROR == Sql_Query(mmysql_handle,
 		"SELECT `o`.`outbox_id`,`o`.`claim_id`,`o`.`event_id`,`o`.`account_id`,`o`.`char_id`,"
-		"`o`.`token_item_id`,`o`.`token_amount`,`o`.`box_item_id`,`o`.`box_amount`,`o`.`attempts`,"
+		"`o`.`token_item_id`,`o`.`token_amount`,`o`.`box_item_id`,`o`.`box_amount`,`o`.`bonus_item_id`,`o`.`bonus_amount`,`o`.`attempts`,"
 		"COALESCE(`c`.`event_id`,0),COALESCE(`c`.`account_id`,0),COALESCE(`c`.`char_id`,0),COALESCE(`c`.`claim_no`,0) "
 		"FROM `need_summer_attendance_reward_outbox` `o` "
 		"LEFT JOIN `need_summer_attendance_claim` `c` ON `c`.`claim_id`=`o`.`claim_id` "
@@ -825,9 +857,10 @@ need_summer_consume_result need_summer_outbox_consume_one() {
 		need_summer_sql_uint32(2, row.event_id) && need_summer_sql_uint32(3, row.account_id) &&
 		need_summer_sql_uint32(4, row.char_id) && need_summer_sql_uint32(5, row.token_item_id) &&
 		need_summer_sql_uint32(6, row.token_amount) && need_summer_sql_uint32(7, row.box_item_id) &&
-		need_summer_sql_uint32(8, row.box_amount) && need_summer_sql_uint32(9, row.attempts) &&
-		need_summer_sql_uint32(10, row.claim_event_id) && need_summer_sql_uint32(11, row.claim_account_id) &&
-		need_summer_sql_uint32(12, row.claim_char_id) && need_summer_sql_uint32(13, row.claim_no);
+		need_summer_sql_uint32(8, row.box_amount) && need_summer_sql_uint32(9, row.bonus_item_id) &&
+		need_summer_sql_uint32(10, row.bonus_amount) && need_summer_sql_uint32(11, row.attempts) &&
+		need_summer_sql_uint32(12, row.claim_event_id) && need_summer_sql_uint32(13, row.claim_account_id) &&
+		need_summer_sql_uint32(14, row.claim_char_id) && need_summer_sql_uint32(15, row.claim_no);
 	Sql_FreeResult(mmysql_handle);
 
 	if (!parsed || row.outbox_id == 0 || row.claim_id == 0) {
@@ -839,10 +872,12 @@ need_summer_consume_result need_summer_outbox_consume_one() {
 		return need_summer_consume_result::FAILED;
 	}
 
+	need_summer_bonus_reward expected_bonus = need_summer_attendance_bonus_reward(row.claim_no);
 	if (row.event_id != NEED_SUMMER_EVENT_ID || row.claim_event_id != row.event_id ||
 		row.claim_account_id != row.account_id || row.claim_char_id != row.char_id || row.claim_no == 0 ||
 		row.token_item_id != NEED_SUMMER_TOKEN_ITEM_ID || row.token_amount != NEED_SUMMER_TOKEN_AMOUNT ||
-		row.box_item_id != NEED_SUMMER_BOX_ITEM_ID || row.box_amount != NEED_SUMMER_BOX_AMOUNT) {
+		row.box_item_id != NEED_SUMMER_BOX_ITEM_ID || row.box_amount != NEED_SUMMER_BOX_AMOUNT ||
+		row.bonus_item_id != expected_bonus.item_id || row.bonus_amount != expected_bonus.amount) {
 		return need_summer_outbox_mark_review_locked(row, OUTBOX_ERROR_PAYLOAD, MSG_OUTBOX_ERROR_PAYLOAD)
 			? need_summer_consume_result::PROCESSED : need_summer_consume_result::FAILED;
 	}
@@ -911,11 +946,23 @@ need_summer_consume_result need_summer_outbox_consume_one() {
 		return need_summer_consume_result::FAILED;
 	}
 
-	if (SQL_ERROR == Sql_Query(mmysql_handle,
-		"INSERT INTO `%s` (`id`,`index`,`nameid`,`amount`,`identify`) VALUES "
-		"('%" PRIu64 "','0','%u','%u','1'),('%" PRIu64 "','1','%u','%u','1')",
-		attendance_mail_attachment_table, mail_id, row.token_item_id, row.token_amount,
-		mail_id, row.box_item_id, row.box_amount) || Sql_NumRowsAffected(mmysql_handle) != 2) {
+	uint32 attachment_count = row.bonus_item_id == 0 ? 2 : 3;
+	bool attachment_failed = false;
+	if (row.bonus_item_id == 0) {
+		attachment_failed = SQL_ERROR == Sql_Query(mmysql_handle,
+			"INSERT INTO `%s` (`id`,`index`,`nameid`,`amount`,`identify`) VALUES "
+			"('%" PRIu64 "','0','%u','%u','1'),('%" PRIu64 "','1','%u','%u','1')",
+			attendance_mail_attachment_table, mail_id, row.token_item_id, row.token_amount,
+			mail_id, row.box_item_id, row.box_amount);
+	} else {
+		attachment_failed = SQL_ERROR == Sql_Query(mmysql_handle,
+			"INSERT INTO `%s` (`id`,`index`,`nameid`,`amount`,`identify`) VALUES "
+			"('%" PRIu64 "','0','%u','%u','1'),('%" PRIu64 "','1','%u','%u','1'),"
+			"('%" PRIu64 "','2','%u','%u','1')",
+			attendance_mail_attachment_table, mail_id, row.token_item_id, row.token_amount,
+			mail_id, row.box_item_id, row.box_amount, mail_id, row.bonus_item_id, row.bonus_amount);
+	}
+	if (attachment_failed || Sql_NumRowsAffected(mmysql_handle) != attachment_count) {
 		need_summer_attendance_sql_error();
 		need_summer_outbox_rollback();
 		need_summer_outbox_record_failure(row, OUTBOX_ERROR_ATTACHMENT, MSG_OUTBOX_ERROR_ATTACHMENT);
