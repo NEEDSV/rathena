@@ -1392,11 +1392,8 @@ OnStart:
 	monster 'map_eom$,148,98, "무스펠스콜",3092,1, instance_npcname("#skollmaster") + "::OnMobDead";	// MM_MUSPELLSKOLL
 	'boss_id = $@mobid[0];
 	getunitdata 'boss_id, .@data;
-	// 무스펠스콜의 최대 HP와 현재 HP를 원본의 1/3로 조정합니다.
-	'boss_max_hp = max(1, .@data[UMOB_MAXHP] / 3);
-	setunitdata 'boss_id, UMOB_MAXHP, 'boss_max_hp;
-	setunitdata 'boss_id, UMOB_HP, 'boss_max_hp;
-	'boss_hp = 'boss_max_hp;
+	'boss_max_hp = .@data[UMOB_MAXHP];
+	'boss_hp = .@data[UMOB_HP];
 	sleep 1000;
 	if ('boss_id)
 		unittalk 'boss_id, "너희로군... 좋아, 뼈까지 부숴 주마!";
@@ -1430,28 +1427,54 @@ OnTimer6000:
 S_ReSpawn:
 	if (!'boss_id || !unitexists('boss_id))
 		return;
+
 	getunitdata 'boss_id, .@data;
-	'boss_hp = min('boss_max_hp, .@data[UMOB_HP]);
+
+	// 재소환 전 현재 HP만 보존합니다.
+	.@keep_hp = max(1, min(.@data[UMOB_HP], .@data[UMOB_MAXHP]));
+
 	killmonster 'map_eom$, instance_npcname("#skollmaster") + "::OnMobDead";
-	monster 'map_eom$,getarg(0),getarg(1), "무스펠스콜",3092,1, instance_npcname("#skollmaster") + "::OnMobDead";	// MM_MUSPELLSKOLL
+
+	monster 'map_eom$,getarg(0),getarg(1),
+		"무스펠스콜",3092,1,
+		instance_npcname("#skollmaster") + "::OnMobDead";
+
 	'boss_id = $@mobid[0];
-	setunitdata 'boss_id, UMOB_MAXHP, 'boss_max_hp;
+
+	if (!'boss_id || !unitexists('boss_id))
+		return;
+
+	// 새로 생성된 몬스터의 DB 최대 HP를 기준으로 다시 동기화합니다.
+	getunitdata 'boss_id, .@data;
+	'boss_max_hp = .@data[UMOB_MAXHP];
+	'boss_hp = min(.@keep_hp, 'boss_max_hp);
+
 	setunitdata 'boss_id, UMOB_HP, 'boss_hp;
 	return;
 S_Event:
 	callsub S_ReSpawn, getarg(1),getarg(2);
-	if ('flowing_lava_deactivate[ getarg(0) ] == false) {
-		// 최대 HP를 1/3로 낮춘 만큼 고정 회복 스킬 횟수도 9회에서 3회로 조정합니다.
-		for ( .@i = 0; .@i < 3; .@i++ ) {
+
+	if (!'boss_id || !unitexists('boss_id))
+		return;
+
+	if ('flowing_lava_deactivate[getarg(0)] == false) {
+		// DB에서 HP를 1/3 수준으로 조정했으므로 회복 횟수도 비례 축소합니다.
+		for (.@i = 0; .@i < 3; .@i++) {
 			unitskilluseid 'boss_id, "AL_HEAL",11;
 			sleep 100;
-			if ('boss_id == 0)
-				end;
+
+			if (!'boss_id || !unitexists('boss_id))
+				return;
 		}
 	}
-	mapannounce 'map_eom$, "니드호그: 무스펠스콜이 용암의 힘으로 회복하려 합니다!", bc_map, 0x00ff00;
+
+	mapannounce 'map_eom$,
+		"니드호그: 무스펠스콜이 용암의 힘으로 회복하려 합니다!",
+		bc_map, 0x00ff00;
+
 	getunitdata 'boss_id, .@data;
 	'boss_hp = .@data[UMOB_HP];
+
 	donpcevent instance_npcname("#loco_call") + "::OnSpawn";
 	return;
 
@@ -1477,8 +1500,15 @@ OnMobDead:
 	end;
 
 OnTest_hp:
-	if ('boss_id && mobcount( 'map_eom$, instance_npcname("#skollmaster") + "::OnMobDead" ) > 0)
-		setunitdata 'boss_id, UMOB_HP, 2000000;
+	if ('boss_id && unitexists('boss_id) &&
+		mobcount('map_eom$, instance_npcname("#skollmaster") + "::OnMobDead") > 0) {
+
+		getunitdata 'boss_id, .@data;
+		.@test_hp = min(2000000, .@data[UMOB_MAXHP]);
+
+		setunitdata 'boss_id, UMOB_HP, .@test_hp;
+		'boss_hp = .@test_hp;
+	}
 	end;
 }
 
@@ -1502,8 +1532,7 @@ OnTimer3000:
 		end;
 	}
 	// 기존 1,000,000 피해 제한은 최대 HP의 2%였으므로 같은 비율로 적용합니다.
-	.@burst_limit = max(1, .@max_hp / 50);
-	if (('boss_hp - .@hp) > .@burst_limit && 'fire_recovery == false) {
+	if (('boss_hp - .@hp) > 1000000 && 'fire_recovery == false) {
 		'boss_hp = .@hp;
 		'fire_recovery = true;
 		donpcevent instance_npcname("#fire_hpcheck") + "::OnHeal";

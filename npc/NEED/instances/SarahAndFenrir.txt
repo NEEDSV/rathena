@@ -32,7 +32,7 @@ dali02,97,142,3	script	베른하르트 교수#a1	4_LGTSCIENCE,{
 		mes "^3355FF" + .@remaining + "회 / " + .@limit + "회^000000";
 		next;
 	}
-
+	
 	if (BaseLevel < 145) {
 		mes "- Base 레벨 145 이상부터 이용할 수 있습니다. -";
 		close;
@@ -47,15 +47,18 @@ dali02,97,142,3	script	베른하르트 교수#a1	4_LGTSCIENCE,{
 	.@mission_state = isbegin_quest(9335);
 	.@cooldown_state = checkquest(9336,PLAYTIME);
 
-	// 전날 원정이 미완료 상태로 끝났다면 재사용 대기시간 만료 후 진행 기록을 정리합니다.
-	if (.@mission_state > 0 && isbegin_quest(9337) == 0 && .@cooldown_state == 2) {
+	// 미완료 원정(9335)은 쿨타임 만료 여부가 아니라 실제 인스턴스 생존 여부로 정리합니다.
+	// 인스턴스가 이미 소멸했다면 9335만 제거하고 9336은 그대로 두어 입장 제한 시간을 유지합니다.
+	if (.@mission_state > 0 && isbegin_quest(9337) == 0 && instance_id(IM_PARTY) <= 0) {
 		erasequest 9335;
-		erasequest 9336;
 		.@mission_state = 0;
-		.@cooldown_state = -1;
 		mes "[베른하르트 교수]";
-		mes "지난 원정의 차원 연결이 완전히 끊어진 것 같군.";
-		mes "미완료된 원정 기록을 정리했네.";
+		mes "지난 원정의 차원 연결이 이미 끊어진 것 같군.";
+		mes "남아 있던 미완료 원정 기록만 정리했네.";
+		if (.@cooldown_state == 0 || .@cooldown_state == 1)
+			mes "차원 이동 장치는 아직 충전 중이니 충전이 끝난 뒤 다시 찾아오게.";
+		else
+			mes "차원 이동 장치의 충전 상태를 다시 확인해 보겠네.";
 		next;
 	}
 
@@ -174,7 +177,7 @@ dali02,97,142,3	script	베른하르트 교수#a1	4_LGTSCIENCE,{
 			}
 
 			NEED_SF_FAST_PENDING = .@fast_mode;
-			.@instance_id = instance_create("펜릴과 사라");
+			.@instance_id = instance_create("Fenrir and Sarah");
 			if (.@instance_id < 0) {
 				NEED_SF_FAST_PENDING = 0;
 				mes "[베른하르트 교수]";
@@ -247,7 +250,7 @@ dali02,97,142,3	script	베른하르트 교수#a1	4_LGTSCIENCE,{
 			}
 
 			NEED_SF_FAST_PENDING = .@fast_mode;
-			.@instance_id = instance_create("펜릴과 사라");
+			.@instance_id = instance_create("Fenrir and Sarah");
 			if (.@instance_id < 0) {
 				NEED_SF_FAST_PENDING = 0;
 				mes "[베른하르트 교수]";
@@ -324,15 +327,31 @@ dali02,99,148,3	script	차원 이동 장치#XX1	PORTAL,{
 		close;
 	}
 
-	.@md_name$ = "펜릴과 사라";
+	.@md_name$ = "Fenrir and Sarah";
 	switch( instance_enter(.@md_name$) ) {
 	case IE_OTHER:
 		mes "알 수 없는 오류가 발생했습니다.";
 		close;
 	case IE_NOINSTANCE:
-		if (.@mission_state > 0) {
+		if (.@mission_state > 0 && isbegin_quest(9337) == 0) {
+			// 인스턴스가 실제로 사라졌다면 재입장 플래그(9335)를 즉시 정리해 교수-장치 안내 루프를 방지합니다.
+			erasequest 9335;
+			.@mission_state = 0;
+			.@cooldown_state = checkquest(9336,PLAYTIME);
 			mes "진행 중이던 펜릴과 사라 인스턴스가 이미 종료되었습니다.";
-			mes "재사용 대기시간이 끝난 뒤 베른하르트 교수에게 말을 걸면 미완료 기록을 정리할 수 있습니다.";
+			mes "미완료 원정 기록을 정리했습니다.";
+			if (.@cooldown_state == 0 || .@cooldown_state == 1)
+				mes "차원 이동 장치의 재사용 대기시간이 끝난 뒤 베른하르트 교수에게 다시 말을 걸어 주세요.";
+			else if (.@cooldown_state == 2) {
+				erasequest 9336;
+				mes "재사용 대기시간도 끝났습니다. 베른하르트 교수에게서 새 원정을 생성할 수 있습니다.";
+			}
+			else
+				mes "베른하르트 교수에게서 새 원정을 생성할 수 있습니다.";
+		}
+		else if (.@mission_state > 0 && isbegin_quest(9337) > 0) {
+			mes "펜릴과 사라 원정의 완료 기록이 확인되었습니다.";
+			mes "베른하르트 교수에게 돌아가 완료 보고를 진행해 주세요.";
 		}
 		else {
 			mes "메모리얼 던전 " + .@md_name$ + "이 생성되어 있지 않습니다.";
@@ -911,14 +930,33 @@ OnTouch:
 	disablenpc instance_npcname("#glast_event_5");
 
 	if ('NEED_SF_FAST) {
+		// 간소화 모드에서는 고대 기간테스(3196) 파편 파밍만 유지하고,
+		// 서쪽 성벽 이동 및 면역 기간테스(3191/3192) 필수 전투는 생략합니다.
 		for (.@i = 1; .@i < 7; .@i++)
 			enablenpc instance_npcname("고대 기간테스#glast_" + .@i);
-		enablenpc 'fenrir_3$;
-		enablenpc instance_npcname("#glast_event_7");
+
+		'skip_left_part = 1;
+		'NEED_SF_LEFT_ENTERED = 1;
+		'NEED_SF_LEFT_BATTLE = 0;
+
+		// 서쪽 진행 관련 NPC/타이머를 확실히 정지해 우회 진입을 막습니다.
+		disablenpc 'fenrir_3$;
+		disablenpc 'fenrir_4$;
+		disablenpc instance_npcname("#glast_event_7");
+		disablenpc instance_npcname("#glast_event_9");
+		donpcevent instance_npcname("#fenrir_left_final_2") + "::OnStop";
+		donpcevent instance_npcname("#glast_event_9") + "::OnStop";
+		donpcevent instance_npcname("#fenrir_left_vermilion") + "::OnStop";
+		disablenpc instance_npcname("#fenrir_left_final_1");
+
+		// 서쪽 전투 이후 열리던 중앙 성 진행을 바로 개방합니다.
+		enablenpc instance_npcname("#glast_move_03");
+		enablenpc instance_npcname("#glast_event_15");
+		enablenpc 'fenrir_6$;
 		disablenpc instance_npcname("#glast_move_01");
-		// 간소화 모드에서도 다음 진행 위치를 확실히 안내합니다.
-		viewpoint 1,47,270,1,0xFF0000;
-		mapannounce 'map_glast$, "펜릴: 고대 기간테스의 파편을 조사한 뒤 서쪽 성벽의 펜릴에게 와 주세요.", bc_map, 0xEBFF;
+
+		viewpoint 1,199,237,1,0xFF0000;
+		mapannounce 'map_glast$, "펜릴: 고대 기간테스의 파편을 조사한 뒤 중앙 성의 계단으로 이동해 주세요.", bc_map, 0xEBFF;
 		end;
 	}
 
