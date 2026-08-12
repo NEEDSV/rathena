@@ -1,5 +1,5 @@
 //============================================================
-// NEED 전장 랜덤 매칭 시스템 - 티에라/플라비우스/KVM 풀사이클 v12.1-hotfix-admin-levelbalance
+// NEED 전장 랜덤 매칭 시스템 - 티에라/플라비우스/KVM 풀사이클 v12.1-hotfix-admin-teamnotice
 // - 한 번의 매칭으로 티에라 -> 플라비우스 -> KVM 전체 사이클 진행
 // - 최초 티에라는 자동 입장, 이후 전장은 양 팀 파티장의 입장 준비로 진행
 // - 티에라/플라비우스 종료 후 파티 유지, KVM 종료 후에만 자동 해체
@@ -385,6 +385,249 @@ function	script	F_BG_RM_PerformerFamily	{
 }
 
 //============================================================
+// 티에라 입장 시 직업 구성 표시용 13개 직업 계열
+//
+// 저레벨 참가자도 보기 좋게 2차/전승 직업을 해당 3차 계열로 묶습니다.
+// 알 수 없는/특수 직업은 "기타"로 표시합니다.
+//============================================================
+function	script	F_BG_RM_NoticeJobFamily	{
+	.@class = getarg(0);
+
+	// 룬나이트 계열
+	if (
+		.@class == JOB_KNIGHT ||
+		.@class == JOB_KNIGHT2 ||
+		.@class == JOB_LORD_KNIGHT ||
+		.@class == JOB_LORD_KNIGHT2 ||
+		.@class == JOB_RUNE_KNIGHT ||
+		.@class == JOB_RUNE_KNIGHT_T ||
+		.@class == JOB_RUNE_KNIGHT2 ||
+		.@class == JOB_RUNE_KNIGHT_T2
+	)
+		return 1;
+
+	// 로열가드 계열
+	if (
+		.@class == JOB_CRUSADER ||
+		.@class == JOB_CRUSADER2 ||
+		.@class == JOB_PALADIN ||
+		.@class == JOB_PALADIN2 ||
+		.@class == JOB_ROYAL_GUARD ||
+		.@class == JOB_ROYAL_GUARD_T ||
+		.@class == JOB_ROYAL_GUARD2 ||
+		.@class == JOB_ROYAL_GUARD_T2
+	)
+		return 2;
+
+	// 워록 계열
+	if (
+		.@class == JOB_WIZARD ||
+		.@class == JOB_HIGH_WIZARD ||
+		.@class == JOB_WARLOCK ||
+		.@class == JOB_WARLOCK_T
+	)
+		return 3;
+
+	// 소서러 계열
+	if (
+		.@class == JOB_SAGE ||
+		.@class == JOB_PROFESSOR ||
+		.@class == JOB_SORCERER ||
+		.@class == JOB_SORCERER_T
+	)
+		return 4;
+
+	// 레인저 계열
+	if (
+		.@class == JOB_HUNTER ||
+		.@class == JOB_SNIPER ||
+		.@class == JOB_RANGER ||
+		.@class == JOB_RANGER_T ||
+		.@class == JOB_RANGER2 ||
+		.@class == JOB_RANGER_T2
+	)
+		return 5;
+
+	// 민스트럴 계열
+	if (
+		.@class == JOB_BARD ||
+		.@class == JOB_CLOWN ||
+		.@class == JOB_MINSTREL ||
+		.@class == JOB_MINSTREL_T
+	)
+		return 6;
+
+	// 원더러 계열
+	if (
+		.@class == JOB_DANCER ||
+		.@class == JOB_GYPSY ||
+		.@class == JOB_WANDERER ||
+		.@class == JOB_WANDERER_T
+	)
+		return 7;
+
+	// 미케닉 계열
+	if (
+		.@class == JOB_BLACKSMITH ||
+		.@class == JOB_WHITESMITH ||
+		.@class == JOB_MECHANIC ||
+		.@class == JOB_MECHANIC_T ||
+		.@class == JOB_MECHANIC2 ||
+		.@class == JOB_MECHANIC_T2
+	)
+		return 8;
+
+	// 제네릭 계열
+	if (
+		.@class == JOB_ALCHEMIST ||
+		.@class == JOB_CREATOR ||
+		.@class == JOB_GENETIC ||
+		.@class == JOB_GENETIC_T
+	)
+		return 9;
+
+	// 길로틴크로스 계열
+	if (
+		.@class == JOB_ASSASSIN ||
+		.@class == JOB_ASSASSIN_CROSS ||
+		.@class == JOB_GUILLOTINE_CROSS ||
+		.@class == JOB_GUILLOTINE_CROSS_T
+	)
+		return 10;
+
+	// 쉐도우체이서 계열
+	if (
+		.@class == JOB_ROGUE ||
+		.@class == JOB_STALKER ||
+		.@class == JOB_SHADOW_CHASER ||
+		.@class == JOB_SHADOW_CHASER_T
+	)
+		return 11;
+
+	// 아크비숍 계열
+	if (
+		.@class == JOB_PRIEST ||
+		.@class == JOB_HIGH_PRIEST ||
+		.@class == JOB_ARCH_BISHOP ||
+		.@class == JOB_ARCH_BISHOP_T
+	)
+		return 12;
+
+	// 수라 계열
+	if (
+		.@class == JOB_MONK ||
+		.@class == JOB_CHAMPION ||
+		.@class == JOB_SURA ||
+		.@class == JOB_SURA_T
+	)
+		return 13;
+
+	return 0;
+}
+
+function	script	F_BG_RM_NoticeJobName$	{
+	switch(getarg(0)) {
+	case 1:  return "룬나이트";
+	case 2:  return "로열가드";
+	case 3:  return "워록";
+	case 4:  return "소서러";
+	case 5:  return "레인저";
+	case 6:  return "민스트럴";
+	case 7:  return "원더러";
+	case 8:  return "미케닉";
+	case 9:  return "제네릭";
+	case 10: return "길로틴크로스";
+	case 11: return "쉐도우체이서";
+	case 12: return "아크비숍";
+	case 13: return "수라";
+	}
+	return "기타";
+}
+
+//============================================================
+// 티에라 내부 준비 구역 입장 직후 양 팀 멤버/직업 구성 공지
+//
+// 한 줄이 너무 길어지는 것을 피하기 위해 닉네임은 6명 단위로 분할합니다.
+// 양 팀 모두 같은 정보를 볼 수 있도록 bat_a01 맵 전체에 출력합니다.
+//============================================================
+function	script	F_BG_RM_AnnounceTierraTeamInfo	{
+	for (.@team = 1; .@team <= 2; .@team++) {
+		.@count = (.@team == 1) ? $@BG_RM_G_COUNT : $@BG_RM_C_COUNT;
+		.@team_name$ = (.@team == 1) ? "기욤" : "크루아";
+		.@color$ = (.@team == 1) ? "0x66CCFF" : "0xFF7777";
+
+		cleararray .@job_count[0], 0, 14;
+		.@other_count = 0;
+
+		// 직업 구성 집계
+		for (.@i = 0; .@i < .@count; .@i++) {
+			.@cid = (.@team == 1) ? $@BG_RM_G_CID[.@i] : $@BG_RM_C_CID[.@i];
+			.@class = readparam(Class,.@cid);
+			.@family = callfunc("F_BG_RM_NoticeJobFamily", .@class);
+
+			if (.@family > 0 && .@family <= 13)
+				.@job_count[.@family]++;
+			else
+				.@other_count++;
+		}
+
+		.@composition$ = "";
+		for (.@family = 1; .@family <= 13; .@family++) {
+			if (.@job_count[.@family] <= 0)
+				continue;
+
+			.@job_name$ = callfunc("F_BG_RM_NoticeJobName$", .@family);
+
+			if (.@composition$ != "")
+				.@composition$ += " / ";
+
+			.@composition$ += .@job_name$ + "-" + .@job_count[.@family];
+		}
+
+		if (.@other_count > 0) {
+			if (.@composition$ != "")
+				.@composition$ += " / ";
+			.@composition$ += "기타-" + .@other_count;
+		}
+
+		if (.@composition$ == "")
+			.@composition$ = "구성 정보 없음";
+
+		mapannounce "bat_a01",
+			"[랜덤 매칭][" + .@team_name$ + " 직업 구성] " + .@composition$,
+			bc_map, .@color$;
+
+		// 닉네임은 6명씩 나눠서 출력합니다.
+		.@page_count = (.@count + 5) / 6;
+
+		for (.@page = 0; .@page < .@page_count; .@page++) {
+			.@member_list$ = "";
+			.@start = .@page * 6;
+			.@end = .@start + 6;
+			if (.@end > .@count)
+				.@end = .@count;
+
+			for (.@i = .@start; .@i < .@end; .@i++) {
+				.@name$ = (.@team == 1) ? $@BG_RM_G_NAME$[.@i] : $@BG_RM_C_NAME$[.@i];
+
+				if (.@member_list$ != "")
+					.@member_list$ += ", ";
+
+				.@member_list$ += .@name$;
+			}
+
+			mapannounce "bat_a01",
+				"[랜덤 매칭][" + .@team_name$ + " 멤버 "
+				+ (.@page + 1) + "/" + .@page_count + "] " + .@member_list$,
+				bc_map, .@color$;
+		}
+	}
+
+	return;
+}
+
+
+//============================================================
 // 랜덤 매칭 단독 민스트럴 현행(버프형) 모드 강제
 //
 // @모드전환의 캐릭터 저장 키:
@@ -647,6 +890,9 @@ function	script	F_BG_RM_StartBattle	{
 		callfunc "F_BG_RM_PrepareTeamMembers", 2, $@TierraBG1_id2;
 		$@TierraBG1 = 1;
 		$@TierraBG1_Victory = 0;
+
+		// 첫 티에라 입장 시 양 팀 닉네임과 직업 구성을 공개합니다.
+		callfunc "F_BG_RM_AnnounceTierraTeamInfo";
 
 		announce "[전장 안내] 랜덤 매칭 티에라 협곡이 기욤 " + $@BG_RM_G_COUNT + "명 vs 크루아 " + $@BG_RM_C_COUNT + "명으로 내부 준비를 시작합니다.", bc_all, "0x33CCFF";
 		stopnpctimer "티에라 진행#bat_a01";
