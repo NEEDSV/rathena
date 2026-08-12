@@ -12365,7 +12365,20 @@ bool pc_equipitem(map_session_data *sd,int16 n,int32 req_pos,bool equipswitch)
 		}
 		return false;
 	}
-	if( !sd->sc.empty() && (sd->sc.cant.equip || (sd->sc.getSCE(SC_PYROCLASTIC) && sd->inventory_data[n]->type == IT_WEAPON))) {
+	// Pyroclastic locks the equipped weapon to prevent switching. A weapon force-removed by Strip Weapon /
+	// Masquerade Weakness (pc_unequipitem flag&2) leaves an empty hand that could never be refilled while
+	// Pyroclastic lasts. Keep the block only while a real IT_WEAPON is still equipped in either hand, so an
+	// empty hand can be restored; voluntary switching stays blocked because unequipping the current weapon is
+	// still refused in pc_unequipitem. A shield (IT_ARMOR) in the left hand does not count as a weapon.
+	bool pyro_has_weapon = false;
+	if( sd->sc.getSCE(SC_PYROCLASTIC) && sd->inventory_data[n]->type == IT_WEAPON ){
+		int16 idx_r = sd->equip_index[EQI_HAND_R];
+		int16 idx_l = sd->equip_index[EQI_HAND_L];
+		if( ( idx_r >= 0 && sd->inventory_data[idx_r] && sd->inventory_data[idx_r]->type == IT_WEAPON ) ||
+			( idx_l >= 0 && sd->inventory_data[idx_l] && sd->inventory_data[idx_l]->type == IT_WEAPON ) )
+			pyro_has_weapon = true;
+	}
+	if( !sd->sc.empty() && (sd->sc.cant.equip || pyro_has_weapon)) {
 		if( equipswitch ){
 			clif_equipswitch_add( sd, n, req_pos, ITEM_EQUIP_ACK_FAIL );
 		}else{
