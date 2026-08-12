@@ -27,10 +27,14 @@ OnInit:
 	callsub S_Generate, 0;
 	if ( $@nsf_active ) callsub S_MarkersRefresh;
 	initnpctimer;
+	callfunc "F_NeedFishRankConst";
+	callfunc "F_NeedFishRankSweep";
+	$@nsf_next_rank_sweep = gettimetick(2) + 300;
 	end;
 
 OnTimer10000:
 	if ( gettimetick(2) >= $@nsf_next_rotate ) callsub S_Rotate;
+	if ( gettimetick(2) >= $@nsf_next_rank_sweep ) { callfunc "F_NeedFishRankSweep"; $@nsf_next_rank_sweep = gettimetick(2) + 300; }
 	setnpctimer 0;
 	end;
 
@@ -115,6 +119,8 @@ S_HandleSuccess:
 	query_sql( "INSERT INTO `need_summer_fishing_catch` (`event_id`,`logical_date`,`account_id`,`char_id`,`character_name`,`fish_id`,`rarity`,`length_mm`,`weight_g`,`reaction_ms`,`reaction_grade`,`spot_id`,`reel_total`,`reel_success`,`session_id`,`rewarded`,`reward_token_amount`,`bait_used`,`caught_at`) VALUES (202608," + .@ld + "," + .@aid + "," + .@cid + ",'" + escape_sql(.@cname$) + "'," + .@fish + "," + .@rar + "," + .@len + "," + .@wt + "," + .@rms + "," + .@rgr + "," + .@spot + "," + .@rt + "," + .@rs + "," + .@sess + "," + .@rewarded + "," + .@tok + "," + .@bait + ",NOW())" );
 	callfunc( "F_NeedFishCollectionUpsert", .@aid, .@fish, .@len, .@wt );
 	.@newfish = $@nff_col_first;
+	.@rweek = callfunc( "F_NeedFishRankWeek" );
+	if ( .@rweek >= 1 && .@fish == callfunc( "F_NeedFishRankTarget", .@rweek ) ) callfunc( "F_NeedFishWeeklyBestUpsert", .@rweek, .@fish, .@aid, .@cid, .@cname$, .@len, .@wt, .@rms );
 	dispbottom "[한여름 낚시] " + callfunc( "F_NeedFishRarityName", .@rar ) + " 어종을 낚았습니다! 길이 " + callfunc( "F_NeedFishLenCm", .@len ) + "cm / 무게 " + callfunc( "F_NeedFishWtKg", .@wt ) + "kg";
 	if ( .@bait ) {
 		dispbottom "[한여름 낚시] 오늘의 기본 보상 횟수를 모두 사용했으므로 코코넛 토큰은 지급되지 않습니다.";
@@ -243,7 +249,7 @@ comodo,186,157,6	script	한여름 낚시 안내#nsf_board	4_BOARD3,{
 	.@dw = 400; .@dh = 400;
 	setdialogsize( .@dw, .@dh );
 	next;
-	switch ( select( "현재 어군 정보", "오늘의 낚시 현황", "낚시 도감", "한여름 낚시 미끼 구입", "그만 보기" ) ) {
+	switch ( select( "현재 어군 정보", "오늘의 낚시 현황", "낚시 도감", "주간 낚시 랭킹", "한여름 낚시 미끼 구입", "그만 보기" ) ) {
 	case 1:
 		mes "[한여름 낚시 안내]";
 		if ( !$@nsf_active ) { mes "현재 활성 어군이 없습니다."; close; }
@@ -273,6 +279,9 @@ comodo,186,157,6	script	한여름 낚시 안내#nsf_board	4_BOARD3,{
 		callfunc "F_NeedFishDex";
 		close;
 	case 4:
+		callfunc "F_NeedFishRankingUI";
+		close;
+	case 5:
 		clear;
 		mes "[한여름 낚시 미끼]";
 		mes "1개 = 100,000 Zeny";
@@ -289,7 +298,7 @@ comodo,186,157,6	script	한여름 낚시 안내#nsf_board	4_BOARD3,{
 		getitem 399970, .@amt;
 		mes "한여름 낚시 미끼 " + .@amt + "개를 구입했습니다. (" + .@cost + " Zeny)";
 		close;
-	case 5:
+	case 6:
 		close;
 	}
 	end;
@@ -476,5 +485,229 @@ function	script	F_NeedFishCollectionUpsert	{
 	if ( .@upd < 0 ) debugmes "need_fishing_collection: update failed aid=" + .@aid + " fish=" + .@fid;
 	$@nff_col_first = 0;
 	return 0;
+}
+
+// ============================================================
+// (fishing12) 주간 지정 어종 랭킹
+//  주차: 이벤트 본기간 4주(각 경계 오전 04:00). 대상 어종 1주차=4/2=5/3=8/4=10.
+//  랭킹은 account 단위 최고 기록(길이>무게>먼저 잡은 순). 반응/릴 무관.
+// ============================================================
+// 랭킹 상수(주차 경계 logical date / 대상 어종) - 한 곳에서만 정의
+function	script	F_NeedFishRankConst	{
+	if ( $@nfrk_ready ) return;
+	setarray $@nfrk_startld[1], 20260815, 20260822, 20260829, 20260905;
+	setarray $@nfrk_endld[1],   20260822, 20260829, 20260905, 20260912;
+	setarray $@nfrk_target[1],  4, 5, 8, 10;
+	$@nfrk_event_start_ld = 20260815;
+	$@nfrk_event_end_ld   = 20260912;
+	$@nfrk_ready = 1;
+	return;
+}
+// 현재 logical date(오전 4시 기준 YYYYMMDD 정수)
+function	script	F_NeedFishCurLD	{
+	return atoi( gettimestr( "%Y%m%d", 9, gettimetick(2) - 14400 ) );
+}
+// logical date -> 주차(0=랭킹기간 아님, 1~4)
+function	script	F_NeedFishRankWeekByLD	{
+	callfunc "F_NeedFishRankConst";
+	.@ld = getarg(0);
+	if ( .@ld < $@nfrk_startld[1] ) return 0;
+	for ( .@k = 1; .@k <= 4; .@k++ ) { if ( .@ld < $@nfrk_endld[.@k] ) return .@k; }
+	return 0;
+}
+// 실제 현재 주차(테스트 override 무시) - 서버 컨트롤러/스냅샷용
+function	script	F_NeedFishRankRealWeek	{
+	return callfunc( "F_NeedFishRankWeekByLD", callfunc( "F_NeedFishCurLD" ) );
+}
+// 플레이어 컨텍스트 주차(GM 디버그 테스트 override 반영)
+function	script	F_NeedFishRankWeek	{
+	if ( $NSF_DEBUG && @nff_rank_test_week >= 1 && @nff_rank_test_week <= 4 && getgmlevel() >= 60 ) return @nff_rank_test_week;
+	return callfunc( "F_NeedFishRankWeekByLD", callfunc( "F_NeedFishCurLD" ) );
+}
+// 주차 -> 대상 fish_id
+function	script	F_NeedFishRankTarget	{
+	callfunc "F_NeedFishRankConst";
+	.@w = getarg(0);
+	if ( .@w < 1 || .@w > 4 ) return 0;
+	return $@nfrk_target[.@w];
+}
+// No. 2자리 표기
+function	script	F_NeedFishNo2	{
+	.@f = getarg(0);
+	return ( .@f < 10 ? "0" + .@f : "" + .@f );
+}
+// YYYYMMDD -> 8~10월 선형 일수(남은 시간 계산용)
+function	script	F_NeedFishRankDayNum	{
+	.@ld = getarg(0); .@mo = ( .@ld / 100 ) % 100; .@dy = .@ld % 100;
+	if ( .@mo == 9 ) return 31 + .@dy;
+	if ( .@mo == 10 ) return 61 + .@dy;
+	return .@dy;
+}
+// 현재 주차 종료(다음 04:00)까지 남은 초
+function	script	F_NeedFishRankRemainSec	{
+	callfunc "F_NeedFishRankConst";
+	.@w = getarg(0); if ( .@w < 1 || .@w > 4 ) return 0;
+	.@endld = $@nfrk_endld[.@w];
+	.@curld = callfunc( "F_NeedFishCurLD" );
+	.@h = gettime(3); .@m = gettime(2); .@s = gettime(1);
+	.@toNext = ( .@h >= 4 ? ( 28 - .@h ) : ( 4 - .@h ) ) * 3600 - .@m * 60 - .@s;
+	.@dd = callfunc( "F_NeedFishRankDayNum", .@endld ) - callfunc( "F_NeedFishRankDayNum", .@curld );
+	.@r = .@toNext + ( .@dd - 1 ) * 86400;
+	if ( .@r < 0 ) .@r = 0;
+	return .@r;
+}
+// 남은 시간 문자열
+function	script	F_NeedFishFmtDur	{
+	.@s = getarg(0); if ( .@s < 0 ) .@s = 0;
+	.@d = .@s / 86400; .@h = ( .@s % 86400 ) / 3600; .@mi = ( .@s % 3600 ) / 60;
+	if ( .@d >= 1 ) return .@d + "일 " + .@h + "시간";
+	return .@h + "시간 " + .@mi + "분";
+}
+// 순위 색상(1 금 / 2 은 / 3 동 / 그 외 기본)
+function	script	F_NeedFishRankColor	{
+	switch ( getarg(0) ) {
+	case 1: return "^E7A70F";
+	case 2: return "^9AA0A8";
+	case 3: return "^C87A3A";
+	default: return "^333333";
+	}
+}
+// 주간 최고 기록 upsert. 반환 1=신규,0=기존(갱신/유지),-1=SQL실패.
+//  갱신: new_len>old_len 또는 (동일 길이 AND new_wt>old_wt). 완전 동일이면 유지(먼저 잡은 기록 우선).
+function	script	F_NeedFishWeeklyBestUpsert	{
+	.@w = getarg(0); .@f = getarg(1); .@aid = getarg(2); .@cid = getarg(3); .@cn$ = getarg(4);
+	.@len = getarg(5); .@wt = getarg(6); .@rms = getarg(7);
+	.@ol = 0; .@ow = 0;
+	.@n = query_sql( "SELECT `length_mm`,`weight_g` FROM `need_summer_fishing_weekly_best` WHERE `event_id`=202608 AND `week_no`=" + .@w + " AND `fish_id`=" + .@f + " AND `account_id`=" + .@aid, .@ol, .@ow );
+	if ( .@n < 0 ) { debugmes "need_fishing_weekly_best: select fail acc=" + .@aid + " w=" + .@w + " f=" + .@f + " len=" + .@len + " wt=" + .@wt; return -1; }
+	if ( .@n == 0 ) {
+		.@r = query_sql( "INSERT INTO `need_summer_fishing_weekly_best` (`event_id`,`week_no`,`fish_id`,`account_id`,`char_id`,`char_name`,`length_mm`,`weight_g`,`reaction_ms`,`caught_at`,`updated_at`) VALUES (202608," + .@w + "," + .@f + "," + .@aid + "," + .@cid + ",'" + escape_sql(.@cn$) + "'," + .@len + "," + .@wt + "," + .@rms + ",NOW(),NOW())" );
+		if ( .@r < 0 ) debugmes "need_fishing_weekly_best: insert fail acc=" + .@aid + " w=" + .@w;
+		return 1;
+	}
+	if ( .@len > .@ol || ( .@len == .@ol && .@wt > .@ow ) )
+		query_sql( "UPDATE `need_summer_fishing_weekly_best` SET `char_id`=" + .@cid + ",`char_name`='" + escape_sql(.@cn$) + "',`length_mm`=" + .@len + ",`weight_g`=" + .@wt + ",`reaction_ms`=" + .@rms + ",`caught_at`=NOW(),`updated_at`=NOW() WHERE `event_id`=202608 AND `week_no`=" + .@w + " AND `fish_id`=" + .@f + " AND `account_id`=" + .@aid );
+	return 0;
+}
+// 특정 주차 TOP10 Snapshot(멱등, 부분 복구). 반환 = 확정 rank 수.
+function	script	F_NeedFishSnapshotWeek	{
+	callfunc "F_NeedFishRankConst";
+	.@w = getarg(0); if ( .@w < 1 || .@w > 4 ) return 0;
+	.@f = $@nfrk_target[.@w];
+	.@pc = 0;
+	query_sql( "SELECT COUNT(*) FROM `need_summer_fishing_weekly_best` WHERE `event_id`=202608 AND `week_no`=" + .@w + " AND `fish_id`=" + .@f, .@pc );
+	.@exp = ( .@pc > 10 ? 10 : .@pc );
+	if ( .@exp <= 0 ) return 0;
+	.@have = 0;
+	query_sql( "SELECT COUNT(*) FROM `need_summer_fishing_weekly_result` WHERE `event_id`=202608 AND `week_no`=" + .@w, .@have );
+	if ( .@have >= .@exp ) return .@exp;
+	.@n = query_sql( "SELECT `account_id`,`char_id`,`char_name`,`length_mm`,`weight_g`,`reaction_ms`,DATE_FORMAT(`caught_at`,'%Y-%m-%d %H:%i:%s') FROM `need_summer_fishing_weekly_best` WHERE `event_id`=202608 AND `week_no`=" + .@w + " AND `fish_id`=" + .@f + " ORDER BY `length_mm` DESC,`weight_g` DESC,`caught_at` ASC,`account_id` ASC LIMIT 10", .@a, .@ci, .@cn$, .@l, .@wg, .@rm, .@ca$ );
+	for ( .@i = 0; .@i < .@n; .@i++ ) {
+		query_sql( "INSERT INTO `need_summer_fishing_weekly_result` (`event_id`,`week_no`,`rank_no`,`fish_id`,`account_id`,`char_id`,`char_name`,`length_mm`,`weight_g`,`reaction_ms`,`caught_at`,`snapshotted_at`) VALUES (202608," + .@w + "," + ( .@i + 1 ) + "," + .@f + "," + .@a[.@i] + "," + .@ci[.@i] + ",'" + escape_sql(.@cn$[.@i]) + "'," + .@l[.@i] + "," + .@wg[.@i] + "," + .@rm[.@i] + ",'" + .@ca$[.@i] + "',NOW()) ON DUPLICATE KEY UPDATE `fish_id`=VALUES(`fish_id`),`account_id`=VALUES(`account_id`),`char_id`=VALUES(`char_id`),`char_name`=VALUES(`char_name`),`length_mm`=VALUES(`length_mm`),`weight_g`=VALUES(`weight_g`),`reaction_ms`=VALUES(`reaction_ms`),`caught_at`=VALUES(`caught_at`),`snapshotted_at`=VALUES(`snapshotted_at`)" );
+	}
+	if ( $NSF_DEBUG ) debugmes "need_fishing_snapshot: week=" + .@w + " fish=" + .@f + " ranks=" + .@n;
+	return .@n;
+}
+// 종료된 모든 주차 스냅샷 보완(재시작/저빈도 트리거 안전). 진행 중 주차는 제외.
+function	script	F_NeedFishRankSweep	{
+	callfunc "F_NeedFishRankConst";
+	.@curld = callfunc( "F_NeedFishCurLD" );
+	for ( .@k = 1; .@k <= 4; .@k++ ) { if ( .@curld >= $@nfrk_endld[.@k] ) callfunc( "F_NeedFishSnapshotWeek", .@k ); }
+	return;
+}
+// ---- 운영 랭킹 UI (안내판 / 테스트 NPC 공용). 진입 시 TOP10+내기록+내순위 조회 후 세션 캐시 ----
+function	script	F_NeedFishRankingUI	{
+	callfunc "F_NeedFishRankConst";
+	callfunc "F_NeedFishRankSweep";
+	setdialogsize( 500, 400 );
+	.@curld = callfunc( "F_NeedFishCurLD" );
+	.@aid = getcharid(3);
+	if ( .@curld < $@nfrk_event_start_ld ) {
+		mes "[한여름 주간 낚시 랭킹]";
+		mes " ";
+		mes "주간 랭킹은 8월 15일 오전 4시부터 시작됩니다.";
+		mes " ";
+		.@tf = $@nfrk_target[1];
+		mes "1주차 대상 어종 : No." + callfunc( "F_NeedFishNo2", .@tf ) + " " + callfunc( "F_NeedFishNameById", .@tf );
+		close;
+	}
+	.@ended = ( .@curld >= $@nfrk_event_end_ld );
+	.@week = ( .@ended ? 4 : callfunc( "F_NeedFishRankWeek" ) );
+	.@fish = callfunc( "F_NeedFishRankTarget", .@week );
+	if ( .@ended ) .@n = query_sql( "SELECT `char_name`,`length_mm`,`weight_g` FROM `need_summer_fishing_weekly_result` WHERE `event_id`=202608 AND `week_no`=" + .@week + " ORDER BY `rank_no` ASC LIMIT 10", .@tn$, .@tl, .@tw );
+	else .@n = query_sql( "SELECT `char_name`,`length_mm`,`weight_g` FROM `need_summer_fishing_weekly_best` WHERE `event_id`=202608 AND `week_no`=" + .@week + " AND `fish_id`=" + .@fish + " ORDER BY `length_mm` DESC,`weight_g` DESC,`caught_at` ASC,`account_id` ASC LIMIT 10", .@tn$, .@tl, .@tw );
+	.@myn = query_sql( "SELECT `length_mm`,`weight_g`,`char_name`,DATE_FORMAT(`caught_at`,'%Y-%m-%d') FROM `need_summer_fishing_weekly_best` WHERE `event_id`=202608 AND `week_no`=" + .@week + " AND `fish_id`=" + .@fish + " AND `account_id`=" + .@aid, .@ml, .@mw, .@mc$, .@md$ );
+	.@myrank = 0;
+	if ( .@myn > 0 ) {
+		.@ahead = 0;
+		query_sql( "SELECT COUNT(*) FROM `need_summer_fishing_weekly_best` b, ( SELECT `length_mm` ml,`weight_g` mw,`caught_at` mc,`account_id` ma FROM `need_summer_fishing_weekly_best` WHERE `event_id`=202608 AND `week_no`=" + .@week + " AND `fish_id`=" + .@fish + " AND `account_id`=" + .@aid + " ) me WHERE b.`event_id`=202608 AND b.`week_no`=" + .@week + " AND b.`fish_id`=" + .@fish + " AND ( b.`length_mm` > me.ml OR ( b.`length_mm`=me.ml AND b.`weight_g` > me.mw ) OR ( b.`length_mm`=me.ml AND b.`weight_g`=me.mw AND b.`caught_at` < me.mc ) OR ( b.`length_mm`=me.ml AND b.`weight_g`=me.mw AND b.`caught_at`=me.mc AND b.`account_id` < me.ma ) )", .@ahead );
+		.@myrank = .@ahead + 1;
+	}
+	.@remsec = ( .@ended ? 0 : callfunc( "F_NeedFishRankRemainSec", .@week ) );
+
+L_RankMain:
+	mes "[한여름 주간 낚시 랭킹]";
+	if ( .@ended ) {
+		mes "이번 한여름 낚시 랭킹이 종료되었습니다.";
+		mes "4주차 최종 결과를 확인할 수 있습니다.";
+	} else {
+		mes .@week + "주차";
+		mes "대상 어종 : No." + callfunc( "F_NeedFishNo2", .@fish ) + " " + callfunc( "F_NeedFishNameById", .@fish ) + " [" + callfunc( "F_NeedFishRarityName", callfunc( "F_NeedFishRarityById", .@fish ) ) + "]";
+		mes "남은 시간 : " + callfunc( "F_NeedFishFmtDur", .@remsec );
+	}
+	mes " ";
+	mes "순위는 대상 어종의 최대 길이로 결정됩니다.";
+	mes "길이가 같으면 더 무거운 기록, 그마저 같으면 먼저 잡은 기록이 우선합니다.";
+	next;
+	switch ( select( "TOP 10 보기", "내 기록 보기", "주간 보상", "돌아가기" ) ) {
+	case 1: goto L_RankTop;
+	case 2: goto L_RankMine;
+	case 3: goto L_RankReward;
+	case 4: close;
+	}
+
+L_RankTop:
+	mes "[" + .@week + "주차 - " + callfunc( "F_NeedFishNameById", .@fish ) + "]";
+	mes " ";
+	if ( .@n <= 0 ) mes "아직 기록이 없습니다.";
+	for ( .@i = 0; .@i < .@n; .@i++ ) {
+		mes callfunc( "F_NeedFishRankColor", .@i + 1 ) + ( .@i + 1 ) + "위^000000  " + .@tn$[.@i] + "  " + callfunc( "F_NeedFishLenCm", .@tl[.@i] ) + "cm / " + callfunc( "F_NeedFishWtKg", .@tw[.@i] ) + "kg";
+		if ( .@i == 4 ) next;
+	}
+	next;
+	select( "돌아가기" );
+	goto L_RankMain;
+
+L_RankMine:
+	mes "[내 주간 기록]";
+	mes "대상 어종 : No." + callfunc( "F_NeedFishNo2", .@fish ) + " " + callfunc( "F_NeedFishNameById", .@fish );
+	mes " ";
+	if ( .@myn <= 0 ) {
+		mes "이번 주 랭킹 기록이 없습니다.";
+		mes "대상 어종을 낚아 기록에 도전해보세요!";
+	} else {
+		mes "최고 길이 : " + callfunc( "F_NeedFishLenCm", .@ml[0] ) + "cm";
+		mes "당시 무게 : " + callfunc( "F_NeedFishWtKg", .@mw[0] ) + "kg";
+		mes "기록 캐릭터 : " + .@mc$[0];
+		mes "기록일 : " + .@md$[0];
+		mes " ";
+		mes "현재 순위 : " + .@myrank + "위";
+	}
+	next;
+	select( "돌아가기" );
+	goto L_RankMain;
+
+L_RankReward:
+	mes "[주간 랭킹 보상]";
+	mes " ";
+	mes "^E7A70F1위^000000  코코넛 토큰 50개";
+	mes "^9AA0A82위^000000  코코넛 토큰 30개";
+	mes "^C87A3A3위^000000  코코넛 토큰 20개";
+	mes "4 ~ 10위  코코넛 토큰 10개";
+	mes " ";
+	mes "주차 종료 후 최종 순위를 기준으로 지급됩니다.";
+	next;
+	select( "돌아가기" );
+	goto L_RankMain;
 }
 

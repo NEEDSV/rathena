@@ -37,6 +37,7 @@ comodo,185,152,5	script	낚시 테스트#need_fishing_test	4_F_STARFISHGIRL,{
 		"[도감] Cutin 미리보기",
 		"[도감/GM] 특정 어종 collection 삭제",
 		"실제 낚시 도감 UI 열기",
+		"주간 랭킹 테스트",
 		"닫기" ) ) {
 	case 1:
 		callsub S_GiveRod;
@@ -216,6 +217,9 @@ comodo,185,152,5	script	낚시 테스트#need_fishing_test	4_F_STARFISHGIRL,{
 		callfunc "F_NeedFishDex";
 		close;
 	case 26:
+		callsub S_RankTest;
+		close;
+	case 27:
 		close;
 	}
 
@@ -284,4 +288,117 @@ S_SpeciesDist:
 S_GiveRod:
 	if ( countitem(399936) < 1 ) { getitem 399936, 1; dispbottom "한여름 낚싯대(399936)를 지급했습니다. F1~F9 단축키로 사용하세요."; }
 	return;
+
+// ---- 주간 랭킹 테스트/관리 (GM 삭제/Snapshot 포함) ----
+S_RankTest:
+	setdialogsize( 500, 400 );
+	mes "[주간 랭킹 테스트]";
+	.@rw = callfunc( "F_NeedFishRankRealWeek" );
+	mes "실제 현재 주차: " + ( .@rw >= 1 ? .@rw + "주차" : "랭킹 기간 아님" );
+	mes "테스트 override(@nff_rank_test_week): " + @nff_rank_test_week;
+	.@ap = callfunc( "F_NeedFishRankWeek" );
+	mes "적용 주차: " + ( .@ap >= 1 ? .@ap + "주차" : "없음" );
+	next;
+	switch ( select(
+		"실제/적용 주차 확인",
+		"테스트 주차 설정 1~4",
+		"테스트 주차 해제",
+		"현재 주차 대상 어종",
+		"내 weekly_best 확인",
+		"현재 TOP10 확인",
+		"실제 랭킹 UI 열기",
+		"[GM] 특정 주차 Snapshot 실행",
+		"[GM] 특정 주차 result 확인",
+		"[GM] 내 weekly_best 삭제",
+		"[GM] 특정 주차 ranking 삭제",
+		"돌아가기" ) ) {
+	case 1:
+		mes "실제 현재 주차: " + ( .@rw >= 1 ? .@rw + "주차" : "랭킹 기간 아님" );
+		mes "적용(override 반영) 주차: " + ( .@ap >= 1 ? .@ap + "주차" : "없음" );
+		close;
+	case 2:
+		if ( !$NSF_DEBUG || getgmlevel() < 60 ) { mes "GM(60+) 및 $NSF_DEBUG 활성에서만 가능합니다."; close; }
+		mes "테스트 주차를 선택하세요.";
+		next;
+		.@w = select( "1주차", "2주차", "3주차", "4주차" );
+		set @nff_rank_test_week, .@w;
+		.@f = callfunc( "F_NeedFishRankTarget", .@w );
+		mes "테스트 주차 " + .@w + "로 설정했습니다. (내 캐릭터 낚시/랭킹 UI에 적용)";
+		mes "대상 어종: No." + callfunc( "F_NeedFishNo2", .@f ) + " " + callfunc( "F_NeedFishNameById", .@f );
+		close;
+	case 3:
+		set @nff_rank_test_week, 0;
+		mes "테스트 주차를 해제했습니다. (실제 날짜 기준)";
+		close;
+	case 4:
+		.@w = callfunc( "F_NeedFishRankWeek" );
+		if ( .@w < 1 ) { mes "현재 랭킹 대상 주차가 아닙니다."; close; }
+		.@f = callfunc( "F_NeedFishRankTarget", .@w );
+		mes .@w + "주차 대상 어종: No." + callfunc( "F_NeedFishNo2", .@f ) + " " + callfunc( "F_NeedFishNameById", .@f ) + " [" + callfunc( "F_NeedFishRarityName", callfunc( "F_NeedFishRarityById", .@f ) ) + "]";
+		close;
+	case 5:
+		.@w = callfunc( "F_NeedFishRankWeek" );
+		if ( .@w < 1 ) { mes "현재 랭킹 대상 주차가 아닙니다."; close; }
+		.@f = callfunc( "F_NeedFishRankTarget", .@w );
+		.@n = query_sql( "SELECT `length_mm`,`weight_g`,`char_name`,DATE_FORMAT(`caught_at`,'%Y-%m-%d %H:%i') FROM `need_summer_fishing_weekly_best` WHERE `event_id`=202608 AND `week_no`=" + .@w + " AND `fish_id`=" + .@f + " AND `account_id`=" + getcharid(3), .@l, .@wt, .@cn$, .@ca$ );
+		mes "[내 weekly_best] " + .@w + "주차 / No." + callfunc( "F_NeedFishNo2", .@f );
+		if ( .@n <= 0 ) { mes "기록 없음."; close; }
+		mes "길이 " + callfunc( "F_NeedFishLenCm", .@l ) + "cm / 무게 " + callfunc( "F_NeedFishWtKg", .@wt ) + "kg";
+		mes "캐릭터 " + .@cn$ + " / " + .@ca$;
+		close;
+	case 6:
+		.@w = callfunc( "F_NeedFishRankWeek" );
+		if ( .@w < 1 ) { mes "현재 랭킹 대상 주차가 아닙니다."; close; }
+		.@f = callfunc( "F_NeedFishRankTarget", .@w );
+		.@n = query_sql( "SELECT `char_name`,`length_mm`,`weight_g` FROM `need_summer_fishing_weekly_best` WHERE `event_id`=202608 AND `week_no`=" + .@w + " AND `fish_id`=" + .@f + " ORDER BY `length_mm` DESC,`weight_g` DESC,`caught_at` ASC,`account_id` ASC LIMIT 10", .@cn$, .@l, .@wt );
+		mes "[TOP10] " + .@w + "주차 / " + callfunc( "F_NeedFishNameById", .@f );
+		if ( .@n <= 0 ) { mes "기록 없음."; close; }
+		for ( .@i = 0; .@i < .@n; .@i++ ) mes ( .@i + 1 ) + "위 " + .@cn$[.@i] + " " + callfunc( "F_NeedFishLenCm", .@l[.@i] ) + "cm/" + callfunc( "F_NeedFishWtKg", .@wt[.@i] ) + "kg";
+		close;
+	case 7:
+		callfunc "F_NeedFishRankingUI";
+		close;
+	case 8:
+		if ( getgmlevel() < 60 ) { mes "GM 전용 기능입니다."; close; }
+		mes "Snapshot을 실행할 주차를 선택하세요.";
+		next;
+		.@w = select( "1주차", "2주차", "3주차", "4주차" );
+		.@r = callfunc( "F_NeedFishSnapshotWeek", .@w );
+		mes .@w + "주차 Snapshot 실행. 확정 rank 수: " + .@r;
+		close;
+	case 9:
+		if ( getgmlevel() < 60 ) { mes "GM 전용 기능입니다."; close; }
+		mes "결과를 볼 주차를 선택하세요.";
+		next;
+		.@w = select( "1주차", "2주차", "3주차", "4주차" );
+		.@n = query_sql( "SELECT `rank_no`,`char_name`,`length_mm`,`weight_g` FROM `need_summer_fishing_weekly_result` WHERE `event_id`=202608 AND `week_no`=" + .@w + " ORDER BY `rank_no` ASC LIMIT 10", .@rk, .@cn$, .@l, .@wt );
+		mes "[weekly_result] " + .@w + "주차";
+		if ( .@n <= 0 ) { mes "결과 없음."; close; }
+		for ( .@i = 0; .@i < .@n; .@i++ ) mes .@rk[.@i] + "위 " + .@cn$[.@i] + " " + callfunc( "F_NeedFishLenCm", .@l[.@i] ) + "cm/" + callfunc( "F_NeedFishWtKg", .@wt[.@i] ) + "kg";
+		close;
+	case 10:
+		if ( getgmlevel() < 60 ) { mes "GM 전용 기능입니다."; close; }
+		mes "내 계정의 weekly_best 전체를 삭제합니다. 진행할까요?";
+		next;
+		if ( select( "삭제", "취소" ) == 2 ) close;
+		query_sql( "DELETE FROM `need_summer_fishing_weekly_best` WHERE `event_id`=202608 AND `account_id`=" + getcharid(3) );
+		mes "내 weekly_best를 삭제했습니다.";
+		close;
+	case 11:
+		if ( getgmlevel() < 60 ) { mes "GM 전용 기능입니다."; close; }
+		mes "삭제할 주차의 랭킹 데이터(weekly_best + weekly_result)를 모두 지웁니다.";
+		next;
+		.@w = select( "1주차", "2주차", "3주차", "4주차", "취소" );
+		if ( .@w == 5 ) close;
+		mes .@w + "주차 랭킹 데이터를 삭제할까요?";
+		next;
+		if ( select( "삭제", "취소" ) == 2 ) close;
+		query_sql( "DELETE FROM `need_summer_fishing_weekly_best` WHERE `event_id`=202608 AND `week_no`=" + .@w );
+		query_sql( "DELETE FROM `need_summer_fishing_weekly_result` WHERE `event_id`=202608 AND `week_no`=" + .@w );
+		mes .@w + "주차 랭킹 데이터를 삭제했습니다.";
+		close;
+	case 12:
+		close;
+	}
+	end;
 }

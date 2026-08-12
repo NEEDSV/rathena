@@ -73,3 +73,47 @@ CREATE TABLE IF NOT EXISTS `need_summer_fishing_collection` (
   KEY `idx_acc`  (`event_id`, `account_id`),
   KEY `idx_fish` (`event_id`, `fish_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- ============================================================
+-- (fishing12) 주간 지정 어종 랭킹
+--  주차: 이벤트 본기간 4주(각 경계 오전 04:00). 대상 어종 1주차=4/2주차=5/3주차=8/4주차=10.
+--  랭킹은 account 단위 최고 기록. 순위 = 길이 DESC > 무게 DESC > 먼저 잡은 순(ASC).
+--  반응 등급/릴 횟수는 순위에 영향 없음(reaction_ms는 기록용으로만 저장).
+--  운영 DB 자동 적용 금지. 수동 적용.
+-- ============================================================
+
+-- account 단위 주간 최고 기록 (한 계정 = 한 주차/대상어종 당 1행)
+CREATE TABLE IF NOT EXISTS `need_summer_fishing_weekly_best` (
+  `event_id`    INT UNSIGNED     NOT NULL,
+  `week_no`     TINYINT UNSIGNED NOT NULL,
+  `fish_id`     INT UNSIGNED     NOT NULL,
+  `account_id`  INT UNSIGNED     NOT NULL,
+  `char_id`     INT UNSIGNED     NOT NULL,      -- 최고 기록을 달성한 캐릭터
+  `char_name`   VARCHAR(30)      NOT NULL DEFAULT '',
+  `length_mm`   INT UNSIGNED     NOT NULL,
+  `weight_g`    INT UNSIGNED     NOT NULL,
+  `reaction_ms` INT              NOT NULL DEFAULT -1,  -- 기록용, 순위 미사용
+  `caught_at`   DATETIME         NOT NULL,
+  `updated_at`  DATETIME         NOT NULL,
+  PRIMARY KEY (`event_id`,`week_no`,`fish_id`,`account_id`),
+  KEY `idx_rank` (`event_id`,`week_no`,`fish_id`,`length_mm`,`weight_g`,`caught_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- 주차 종료 TOP10 Snapshot (최종 순위 확정). rank_no = 1..10
+--  account 유일성은 weekly_best(계정당 1행)에서 자연 보장되므로 별도 UNIQUE 없이 조회 인덱스만.
+CREATE TABLE IF NOT EXISTS `need_summer_fishing_weekly_result` (
+  `event_id`       INT UNSIGNED     NOT NULL,
+  `week_no`        TINYINT UNSIGNED NOT NULL,
+  `rank_no`        TINYINT UNSIGNED NOT NULL,
+  `fish_id`        INT UNSIGNED     NOT NULL,
+  `account_id`     INT UNSIGNED     NOT NULL,
+  `char_id`        INT UNSIGNED     NOT NULL,
+  `char_name`      VARCHAR(30)      NOT NULL DEFAULT '',
+  `length_mm`      INT UNSIGNED     NOT NULL,
+  `weight_g`       INT UNSIGNED     NOT NULL,
+  `reaction_ms`    INT              NOT NULL DEFAULT -1,
+  `caught_at`      DATETIME         NOT NULL,
+  `snapshotted_at` DATETIME         NOT NULL,
+  PRIMARY KEY (`event_id`,`week_no`,`rank_no`),
+  KEY `idx_acc` (`event_id`,`week_no`,`account_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
