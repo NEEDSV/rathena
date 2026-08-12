@@ -1,396 +1,30 @@
 //===== rAthena Script =======================================
-//= Nightmare Biolab NPCs
+//= Nightmare Biolab NPCs - 2013 Stable (Korean)
 //===== Description: =========================================
-//= [Walkthrough Conversion]
-//= Nightmare Biolab exchange NPCs
-//  NOTE: The nightmare biolab monsters are currently missing
-//  some items used in the file.
-//    Silent Energy Particles (ID: 25127)
-//    Weak Energy Particles (ID: 25128)
-//    Unstable Energy Particles (ID: 25129)
-//    Sinister Energy Particles (ID: 25130)
-//    Cursed Crystal (ID: 23080)
-//===== Changelogs: ==========================================
-//= 1.0 First version. [Capuche]
-//= 1.1 Added some missing warp points and lore pieces [akaineko]
-//= 1.2 Added the new enchant and update the enchant rates [Haydrich]
+//= Tomb of the Fallen initial-release reconstruction.
+//=
+//= Retained:
+//= - Original entrance / exit
+//= - Weapon dismantling -> Energy Fragment
+//= - Old Helmet crafting (14 types)
+//= - Manteau of Fallen [1] crafting
+//=
+//= Removed (later-update content):
+//= - Sentimental / Cursed Fragment item functions
+//= - Veteran Adventurer / Bully exchange NPCs
+//= - Silent Mind soul exchange
+//= - Wandering Mind Old Helmet enchant / reset
+//= - Safe-map exchange NPCs
+//= - Recovery / combat buff devices
+//= - Later lore trigger NPCs
 //============================================================
 
-// Item Functions
 //============================================================
-function	script	F_Pieces_Of_Sentiment	{	// 22687
-	if (strcharinfo(3) == "lhz_dun_n")// usage forbidden on the same map
-		return;
-	specialeffect2 EF_HIT4;
-	.@r = rand(1,23);
-	if (.@r == 1)
-		warp "lhz_dun_n",140,89;
-	else if (.@r == 2)
-		warp "lhz_dun_n",75,138;
-	else if (.@r == 3)
-		warp "lhz_dun_n",198,151;
-	else if (.@r == 4)
-		warp "lhz_dun_n",200,189;
-	else if (.@r == 5)
-		warp "lhz_dun_n",87,84;
-	else if (.@r == 6)
-		warp "lhz_dun_n",201,101;
-	else if (.@r == 7)
-		warp "lhz_dun_n",230,138;
-	else if (.@r == 8)
-		warp "lhz_dun_n",239,220;
-	else if (.@r == 9)
-		warp "lhz_dun_n",162,252;
-	else if (.@r == 10)
-		warp "lhz_dun_n",99,106;
-	else if (.@r == 11)
-		warp "lhz_dun_n",40,212;
-	else if (.@r == 12)
-		warp "lhz_dun_n",140,191;
-	else if (.@r == 13)
-		warp "lhz_dun_n",164,77;
-	else if (.@r == 14)
-		warp "lhz_dun_n",124,138;
-	else if (.@r == 15)
-		warp "lhz_dun_n",28,140;
-	else if (.@r == 16)
-		warp "lhz_dun_n",78,189;
-	else if (.@r == 17)
-		warp "lhz_dun_n",137,262;
-	else if (.@r == 18)
-		warp "lhz_dun_n",115,253;
-	else if (.@r == 19)
-		warp "lhz_dun_n",140,39;
-	else if (.@r == 20)
-		warp "lhz_dun_n",240,64;
-	else if (.@r == 21)
-		warp "lhz_dun_n",131,235;
-	else if (.@r == 22)
-		warp "lhz_dun_n",34,70;
-	else
-		warp "lhz_dun_n",176,202;
-	delitem 22687,1;
-	return;
-}
-
-function	script	F_Cursed_Fragment	{	// 23016
-	.@r = rand(1,12);
-	if (.@r == 1) {
-		showscript "I will never forgive you...!";
-		sc_start SC_ATKPOTION,600000,50;
-		sc_start SC_MATKPOTION,600000,50;
-	}
-	else if (.@r == 2) {
-		showscript "Somebody please help me...";
-		sc_start SC_CURSE,10000,0;
-	}
-	else if (.@r == 3) {
-		showscript "Stop it... It hurts...";
-		sc_start SC_BLEEDING,5000,0;
-	}
-	else if (.@r == 4) {
-		showscript "It's so cold in here...";
-		sc_start SC_FREEZE,5000,0;
-	}
-	else if (.@r == 5) {
-		showscript "Please... Stay with me...";
-		itemskill "AL_TELEPORT",1;
-	}
-	else if (.@r == 6) {
-		showscript "Stay... here with me...";
-		itemskill "AL_TELEPORT",1;
-	}
-	else if (.@r == 7) {
-		showscript "You shouldn't have come here...";
-		sc_start SC_STUN,5000,0;
-	}
-	else if (.@r == 8) {
-		showscript "Hello... Is anyone there...?";
-		sc_start SC_BLIND,5000,0;
-	}
-	else if (.@r == 9) {
-		showscript "I am so scared....scared....";
-		sc_start SC_CONFUSION,10000,0;
-	}
-	else if (.@r == 10) {
-		showscript "Dear Odin...";
-		sc_start SC_ASSUMPTIO,100000,5;
-		specialeffect2 EF_ASSUMPTIO;
-	}
-	else if (.@r == 11) {
-		showscript "Wake up!";
-		percentheal 0,20;
-	}
-	else {
-		showscript "I am sorry... I will leave now... thank you...";
-		getitem 6820,1;// Energy_Fragment
-	}
-	return;
-}
-
-
-// Nightmare Biolab Entrances
-lighthalzen,321,218,4	script	Ohno Tohiro#1	4_M_RASWORD,{
-	disable_items;
-	mes "[¿À³ë ÅäÈ÷·Î]";
-	.@r = rand(1,10);
-	if (.@r < 6)
-		mes "Àú´Â ÀÏÁ¾ÀÇ ¿¬±¸¿ë µµÇ¥¸¦ ¼öÁıÇØ ´Ş¶ó´Â ¿äÃ»À» ¹Ş¾Ò½À´Ï´Ù...";
-	else if (.@r < 7) {
-		mes "- ´©±º°¡ ÀÌ¾ß±âÇÏ´Â ¼Ò¸®°¡ µé·Á¿ä - ¿ø°İ Åë½Å -";
-		next;
-		mes "[¿À³ë ÅäÈ÷·Î]";
-		mes "³×... ¸ğµç ÀÏÀÌ ¼øÁ¶·Ó°Ô ÁøÇàµÇ°í ÀÖ½À´Ï´Ù.";
-		mes "º¸°í¼­ ¼öÁı »óÅÂ´Â ¾çÈ£ÇÕ´Ï´Ù.";
-		mes "¿¹, ¾Ë°Ú½À´Ï´Ù.";
-		next;
-		mes "[¿À³ë ÅäÈ÷·Î]";
-		mes "ÇØ´ç ¿¬±¸¼Ò¿Í °ü·ÃµÈ Á¤º¸´Â ÃÖ¿ì¼±ÀûÀ¸·Î Áï½Ã º¸°íÇÏ°Ú½À´Ï´Ù.";
-		mes "³×, ¾Ë°Ú½À´Ï´Ù. ±×·¸°Ô ÇÏ°Ú½À´Ï´Ù.";
-		next;
-		mes "[¿À³ë ÅäÈ÷·Î]";
-		mes "¾î¸Ó, ´©°¡ ¿Ô³×! ³ªÁß¿¡ ´Ù½Ã ÀüÈ­ÇÒ°Ô.";
-	}
-	else {
-		mes "[¿À³ë ÅäÈ÷·Î]";
-		mes "¾î±ú°¡ ¹«°Ì´Ù.";
-		mes "¿ì¸®ÀÇ ¿À·£ ¼Ò¸Á...";
-		mes "ÇÏ³ª¾¿, ÃµÃµÈ÷...";
-	}
-	next;
-	mes "[¿À³ë ÅäÈ÷·Î]";
-	mes "¾î...? ¹ú½á ´©°¡ ¿Í ÀÖ´Â ÁÙ ¸ô¶ú³×¿ä...";
-	mes "Èì... Èì...";
-	mes "Á¦°Ô ¿øÇÏ½Ã´Â °Ô ÀÖÀ¸½Å°¡¿ä?";
-	while(true) {
-		next;
-		switch( select( "´ëÈ­¸¦ ³¡³»¼¼¿ä.", "±×¿¡°Ô ¸í¿¹ÀÇ ¹¦¿¡ ´ëÇØ ¹°¾îº¸¼¼¿ä.", "¿µ±¤ÀÇ ¹«´ıÀ¸·Î µ¹¾Æ°¡½Ê½Ã¿À.", "Á¦´Ï°¡ ÃæºĞÇÏÁö ¾Ê´Ù°í ¸»ÇØ º¸¼¼¿ä." ) ) {
-		case 1:
-			mes "[¿À³ë ÅäÈ÷·Î]";
-			mes "´ç½ÅÀ» Á¦¿ÜÇÏ°íµµ ÀÌ Æ´»õ¸¦ Ã£´Â ¸ğÇè°¡µéÀº ¸¹½À´Ï´Ù!";
-			mes "¸¶À½ÀÌ ¹Ù²î¸é ´Ù½Ã Àú¿¡°Ô ¿À¼¼¿ä!";
-			close;
-		case 2:
-			mes "[¿À³ë ÅäÈ÷·Î]";
-			mes "±×°÷À¸·Î ÀÌ¾îÁö´Â Æ´»õ¿¡ ´ëÇØ¼­µµ µé¾îºÃÁö?";
-			mes "¿äÁò ´ç½Å °°Àº ¸ğÇè°¡µéÀÌ Á¤¸» ¸¹¾Æ¿ä!";
-			next;
-			mes "[¿À³ë ÅäÈ÷·Î]";
-			mes "³ª´Â ÀÌ Æ´»õ¿¡ Ã³À½À¸·Î µé¾î°¡ ºÃ´Âµ¥, ±Û½ê, ±×°÷Àº ¿Â°® ±«¹°µéÀÌ ¿ì±Û°Å¸®´Â °÷À¸·Î ÀÌ¾îÁ³¾î.";
-			next;
-			mes "[¿À³ë ÅäÈ÷·Î]";
-			mes "Á¦°¡ ¾Æ´Â ¸ğÇè°¡ ÇÑ ¸í¿¡°Ô ¹Ì¸® ¾Ë·ÁÁá´õ´Ï, ±×°¡ ±²ÀåÈ÷ °ü½ÉÀ» º¸¿´¾î¿ä!";
-			mes "±×´Â »ıÀÇÇĞ ¿¬±¸, ¿¬±¸½Ç °°Àº °ÍµéÀ» °è¼ÓÇØ¼­ Áß¾ó°Å·È´Ù.";
-			next;
-			mes "[¿À³ë ÅäÈ÷·Î]";
-			mes "±×´Â °è¼ÓÇØ¼­ ³»°Ô ±×°÷¿¡ °¡´Â ±æÀ» ¾Ë·Á´Ş¶ó°í Á¹¶ú´Ù. ´Ù¸¥ »ç¶÷µéÀÌ ¾Ë°Ô µÇ´Â °É ¿øÄ¡ ¾Ê¾Ò±â¿¡ ±×¿¡°Ô ÀÌ Æ´»õ¿¡ ´ëÇØ ¾Ë·ÁÁÖ±â°¡ ²¨·ÁÁ³Áö¸¸, °á±¹ 10¸¸ Á¦´Ï¸¦ ¹Ş°í Á¤º¸¸¦ ³Ñ°ÜÁÖ¾ú´Ù.";
-			next;
-			mes "[¿À³ë ÅäÈ÷·Î]";
-			mes "¾ó¸¶ Áö³ªÁö ¾Ê¾Æ ±×´Â ¿Â¸ö¿¡ ½É°¢ÇÑ ºÎ»óÀ» ÀÔÀº Ã¤ µ¹¾Æ¿Ô´Ù. »ì¾Æ µ¹¾Æ¿Â °Ç ±âÀûÀÌ¾ú´Ù¡¦ Á¤¸» ²ûÂïÇÑ ÀÏÀÌ¾ú´Ù¡¦";
-			mes "ÇÏÁö¸¸ ±×´Â ¿©·¯ °¡Áö ¹°°ÇÀ» ¼Õ¿¡ Áã°í ÀÖ¾ú´Ù. ¾ğ¶æ º¸±â¿¡ ±×°ÍµéÀº ³Ê¹«³ª °­·ÂÇØ º¸¿©¼­ ³ªÁ¶Â÷µµ µÎ·Á¿òÀ» ´À²¼´Ù.";
-			next;
-			mes "[¿À³ë ÅäÈ÷·Î]";
-			mes "±× ÈÄ, ¼Ò¹®À» µéÀº ¸¹Àº ¸ğÇè°¡µéÀÌ ÀÌ À§ÇèÇÑ Æ´»õ¸¦ ÅëÇØ ÀÌ°÷À¸·Î µé¾î°¬½À´Ï´Ù. ÇÏÁö¸¸ Àú´Â ÀÌ Æ´»õ¿¡¼­ ´Ù½Ã ³ª¿À´Â ¸ğÇè°¡¸¦ °ÅÀÇ º» ÀûÀÌ ¾ø½À´Ï´Ù. ±× ÀÌÈÄ·Î ÀÌ°÷Àº '¿µ±¤ÀÇ ¹«´ı'ÀÌ¶ó ºÒ¸®°Ô µÇ¾ú½À´Ï´Ù.";
-			mes "±×µé ´öºĞ¿¡ ¾à°£ÀÇ µ·À» ¹ú¾ú¾î¿ä.";
-			next;
-			mes "[¿À³ë ÅäÈ÷·Î]";
-			mes "³»°¡ µ·À» ¹ø ÀÌÀ¯°¡ ±Ã±İÇÏ¼¼¿ä?";
-			mes "¿©±â´Â ³»°¡ Ã³À½ ¹ß°ßÇÑ °÷ÀÌ´Ï±î ¼ÒÀ¯±Çµµ ³ªÇÑÅ× ÀÖ¾î! ¹¹ ¹®Á¦¶óµµ ÀÖ¾î?";
-			next;
-			mes "[¿À³ë ÅäÈ÷·Î]";
-			mes "À½À½... ¾îÂ·µç, Á¦´Ï 10¸¸ °³¸¦ ³»³õÀ¸½Ã¿À. ±×·¯¸é ÀÚ³× °°Àº ¸ğÇè°¡µéÀ» À§ÇÑ Æ´»õ·Î ÅëÇÏ´Â ¹®À» ¿­¾îÁÖ°Ú¼Ò...";
-			continue;
-		case 3:
-			if (Zeny < 100000) {
-				mes "[¿À³ë ÅäÈ÷·Î]";
-				mes "µ·ÀÌ ºÎÁ·ÇØ¿ä!";
-				mes "ÀÌ ¼¼»ó¿¡ °øÂ¥´Â ¾ø´Ù!";
-				continue;
-			}
-			mes "[¿À³ë ÅäÈ÷·Î]";
-			mes "¾îµğ º¸ÀÚ... ÇÏ³ª... µÑ... ¼Â";
-			mes "ÁÁ½À´Ï´Ù. ÀÌÁ¦ Á¦´Ï¸¦ ¹Ş¾ÒÀ¸´Ï Æ´»õ¸¦ ¿­¾îº¸°Ú½À´Ï´Ù.";
-			mes "ºÎµğ »ì¾Æ µ¹¾Æ¿À½Ã±æ ¹Ù¶ø´Ï´Ù!";
-			next;
-			if (Zeny >= 100000) {
-				Zeny -= 100000;
-				warp "lhz_dun_n",100,202;
-			}
-			end;
-		case 4:
-			mes "[¿À³ë ÅäÈ÷·Î]";
-			mes "¹¹¶ó°í¿ä? Á¦´Ï°¡ ºÎÁ·ÇÑµ¥µµ Âü°¡ÇÏ°í ½Í´Ù°í¿ä?";
-			mes "À½... ±×·³... È¤½Ã ¿¬±¸ Â÷Æ® °°Àº °Å ÀÖÀ¸½Å°¡¿ä?";
-			next;
-			mes "[¿À³ë ÅäÈ÷·Î]";
-			mes "Á¶¿ëÈ÷ ÇØ. ÁÖº¯ »ç¶÷µéÀÌ µéÀ»Áöµµ ¸ô¶ó. ³Ê ±×°Å ÀÖ¾î, ¾ø¾î?";
-			next;
-			mes "[¿À³ë ÅäÈ÷·Î]";
-			mes "¿Ö ÇÊ¿äÇÑÁö´Â ¹¯Áö ¸¶¼¼¿ä. ¿¬±¸ µµÇ¥ 10°³¸¸ °¡Á®¿À¼¼¿ä. ±×·¯¸é °øÂ¥·Î ¸í¿¹ÀÇ ¹«´ı¿¡ º¸³»µå¸®°Ú½À´Ï´Ù. ¾î¶»°Ô »ı°¢ÇÏ¼¼¿ä?";
-			next;
-			if (select( "ÀÌÀü ¸Ş´º·Î µ¹¾Æ°¡¼¼¿ä.", "¿¬±¸ ÀÚ·á Â÷Æ® 10°³¸¦ Á¦ÃâÇÏ¼¼¿ä." ) == 1) {
-				mes "[¿À³ë ÅäÈ÷·Î]";
-				mes "ÀúÇÑÅ× ´Ù¸¥ º¼ÀÏÀÌ¶óµµ ÀÖÀ¸½Å°¡¿ä?";
-				continue;
-			}
-			if (countitem(7347) < 10) {
-				mes "[¿À³ë ÅäÈ÷·Î]";
-				mes "ÇöÀç ¿¬±¸ Â÷Æ® 10°³°¡ ´©¶ôµÈ °Í °°½À´Ï´Ù.";
-				mes "¾îÂ¼¸é ´ç½ÅÀÌ Ã¢°í¿¡¼­ Á÷Á¢ °¡Á®°£ °Ô ¾Æ´Ò ¼öµµ ÀÖ¾î¿ä.";
-				next;
-				mes "[¿À³ë ÅäÈ÷·Î]";
-				mes "Á¦°Ô ´õ ¿øÇÏ½Ã´Â °ÍÀÌ ÀÖÀ¸½Å°¡¿ä?";
-				continue;
-			}
-			mes "[¿À³ë ÅäÈ÷·Î]";
-			mes "¾Æ... ±×·¡, ¹Ù·Î ÀÌ°Å¾ß... ³»°¡ ÇÊ¿äÇß´ø °Ô ¹Ù·Î ÀÌ°Å¾ß... ÈÄÈÄ...";
-			next;
-			mes "[¿À³ë ÅäÈ÷·Î]";
-			mes "¾à¼Ó´ë·Î ³Î ±× Æ´»õ·Î º¸³»ÁÖ°Ú´Ù.";
-			mes "³×°¡ »ì¾ÆÀÖ±æ ¹Ù¶ó. ´Ù½Ã ¸¸³ªÀÚ!";
-			next;
-			delitem 7347,10;// Lab_Staff_Record
-			warp "lhz_dun_n",100,202;
-			end;
-		}
-	}
-}
-
-lighthalzen,320,204,3	script	A kid with black finger	4_F_04,{
-	disable_items;
-	mes "[´ŞÀÇ]";
-	mes "¹«¾ùÀ» Ã£°í ÀÖ´Â °Ì´Ï±î? Á×Àº ÀÚµéÀÌ ¶°µµ´Â °÷À» Ã£°í ÀÖ´Â °Ì´Ï±î?";
-	next;
-	mes "[´ŞÀÇ]";
-	mes "¿øÇÏ½Ã¸é Á¦°¡ ±×°÷±îÁö µ¥·Á´Ù µå¸± ¼ö ÀÖ½À´Ï´Ù. ^0000cd20 ¼¾Æ¼¸àÅ» ÇÁ·¡±×¸ÕÆ®¿Í 15¸¸ Á¦´Ï^000000°¡ ÇÊ¿äÇÕ´Ï´Ù.";
-	next;
-	mes "[´ŞÀÇ]";
-	mes "¾Æ´Ï¸é Á×Àº ÀÚµéÀÇ ¹æÇØ ¾øÀÌ ¾ÈÀüÇÏ°Ô °¨Á¤À» È®ÀÎÇÒ ¼öµµ ÀÖ½À´Ï´Ù. ±×·¯·Á¸é °¨Á¤ÀÇ Á¶°¢ ^0000cd30°³¿Í Á¦´Ï 200¸¸^000000°³°¡ ÇÊ¿äÇÕ´Ï´Ù.";
-	next;
-	mes "[´ŞÀÇ]";
-	mes "¾îµğ·Î °¡°í ½Í¾î¿ä?";
-	next;
-	switch( select( "Á×Àº ÀÚµéÀÌ ¶°µµ´Â °÷.", "»ı°¢¸¸ÀÌ ÃæÁ·µÉ ¼ö ÀÖ´Ù.", "¿©±â´Â ¾î¶² °÷ÀÎ°¡¿ä?", "Àú´Â ±¦Âú¾Æ¿ä." ) ) {
-	case 1:
-		mes "[´ŞÀÇ]";
-		mes "ÇÊ¿äÇÑ °Ç ´Ù Ã¬°åÁÒ?";
-		next;
-		if (countitem(22687) < 20 || Zeny < 150000) {
-			mes "[´ŞÀÇ]";
-			mes "¾îµğ º¸ÀÚ.";
-			next;
-			mes "[´ŞÀÇ]";
-			mes "±×°ÍÀ¸·Î´Â ºÎÁ·ÇØ. °¨¼º Á¶°¢ ^0000cd20°³¿Í Á¦´Ï 15¸¸^000000°³°¡ ÇÊ¿äÇØ. °øÂ¥·Î´Â µ¥·Á´Ù ÁÙ ¼ö ¾ø¾î.";
-			close;
-		}
-		mes "[´ŞÀÇ]";
-		mes "ÇÊ¿äÇÑ °Ç ´Ù Ã¬°åÁÒ?";
-		next;
-		mes "[´ŞÀÇ]";
-		mes "ÁÁ¾Æ¿ä. ÇÊ¿äÇÑ °Ç ´Ù °®Ãè³×¿ä. Á¦°¡ µ¥·Á´Ù µå¸±°Ô¿ä.";
-		next;
-		mes "[´ŞÀÇ]";
-		mes "ÇÏÁö¸¸... ³»°¡ ³Î °Å±â µ¥·Á°¡´Â °Ç µ· ¶§¹®ÀÌ¾ß... Á¶½ÉÇØ¾ß ÇØ.";
-		next;
-		mes "[´ŞÀÇ]";
-		mes "±×·¡¼­... ¾ÈÀ¸·Î µé¾î°¡ º¸¸é ¼öÁ¤Ã³·³ »ı±ä ÀÌ»óÇÑ ±â°è°¡ º¸ÀÏ °Å¿¹¿ä.";
-		next;
-		mes "[´ŞÀÇ]";
-		mes "ÀÌ ±â°è¸¦ »ç¿ëÇÏ¸é HP°¡ È¸º¹µË´Ï´Ù. ´öºĞ¿¡ »ì¾Æ³²À» ¼ö ÀÖ¾úÁÒ. ±×·±µ¥ ¿Ö Àú·± °÷¿¡ ÀÖ´ÂÁö´Â Àúµµ ¸ğ¸£°Ú³×¿ä...";
-		next;
-		mes "[´ŞÀÇ]";
-		mes "¾Æ¹«µµ »ç¿ëÇÏÁö ¸øÇÏµµ·Ï ±â°è¸¦ ²¨³ùÁö¸¸, Æ¯º°È÷ ´ç½Å¿¡°Ô¸¸ »ç¿ëÇÏ°Ô ÇØ µå¸±°Ô¿ä.";
-		next;
-		mes "[´ŞÀÇ]";
-		mes "Á¶½ÉÇØ¼­ »ç¿ëÇÏ½Ã°í, ÇÊ¿äÇÑ °æ¿ì¿¡¸¸ ±â°è¸¦ »ç¿ëÇÏ¼¼¿ä!";
-		delitem 22687,20;// Sentimental Fragment
-		Zeny = Zeny - 150000;
-		if (isbegin_quest(14683) > 0)
-			erasequest 14683;
-		setquest 14683;// Mysterious Device
-		close2;
-		warp "lhz_dun_n",162,254;
-		end;
-	case 2:
-		mes "[´ŞÀÇ]";
-		mes "¹°°ÇÀÌ¶û µ·Àº ´Ù ÁØºñÇß¾î?";
-		next;
-		if (countitem(22687) < 30 || Zeny < 2000000) {
-			mes "[´ŞÀÇ]";
-			mes "¾îµğ º¸ÀÚ.";
-			next;
-			mes "[´ŞÀÇ]";
-			mes "±×°ÍÀ¸·Î´Â ºÎÁ·ÇØ. °¨¼º Á¶°¢ ^0000cd30°³¿Í 200¸¸ Á¦´Ï^000000°¡ ÇÊ¿äÇØ. ³Î °øÂ¥·Î µ¥·Á°¥ ¼ø ¾ø¾î.";
-			close;
-		}
-		mes "[´ŞÀÇ]";
-		mes "ÁÁ¾Æ¿ä. ÇÊ¿äÇÑ °Ç ´Ù °®Ãè³×¿ä. Á¦°¡ µ¥·Á´Ù µå¸±°Ô¿ä.";
-		next;
-		mes "[´ŞÀÇ]";
-		mes "Ãâ±¸´Â º® ¹Ù±ùÂÊ¿¡ ÀÖ½À´Ï´Ù.";
-		next;
-		mes "[´ŞÀÇ]";
-		mes "^EE0000À½, ±×¸®°í ÇÑ °¡Áö °æ°íÇÒ Á¡ÀÌ ÀÖ½À´Ï´Ù. ±×°÷¿¡´Â ÇöÀç À§Ä¡°¡ ÀúÀåµÇÁö ¾ÊÀ¸¹Ç·Î, ·Î±×¾Æ¿ôÇÏ°Å³ª ¿¬°áÀÌ ²÷¾îÁö¸é ÀúÀå ÁöÁ¡À¸·Î ÀÌµ¿ÇÏ°Ô µË´Ï´Ù.";
-		close2;
-		delitem 22687,30;
-		Zeny = Zeny - 2000000;
-		warp "lhz_d_n2",60,44;
-		end;
-	case 3:
-		mes "[´ŞÀÇ]";
-		mes "³ª´Â ¸ÔÀ» °ÍÀ» Ã£À¸·Á°í ¶¥À» ÆÄ´Ù°¡ ÈÎ¾À ´õ ÁÁÀº °ÍÀ» ¹ß°ßÇß´Ù.";
-		next;
-		mes "[´ŞÀÇ]";
-		mes "»ê ÀÚ´Â ±×°÷¿¡¼­ »ì¾Æ³²À» ¼ö ¾ø´Ù. ¿ÀÁ÷ Á×Àº ÀÚµé¸¸ÀÌ ¶°µ¹¾Æ´Ù´Ñ´Ù.";
-		next;
-		mes "[´ŞÀÇ]";
-		mes "±×°÷¿¡ °£ »ç¶÷µéÀº ¾Æ¹«µµ µ¹¾Æ¿ÀÁö ¸øÇß´Ù´Â ¼Ò¹®ÀÌ ÀÖ¾î¿ä...";
-		next;
-		mes "[´ŞÀÇ]";
-		mes "³Ê¹« ¹«¼­¿üÁö¸¸... ±×°÷Àº ¸ğÇè°¡µéÀÌ ¸¹ÀÌ Ã£´Â ÀÎ±â Àå¼Ò¶ó´Â °ÍÀ» ¾Ë°Ô µÆ¾î¿ä.";
-		next;
-		mes "[´ŞÀÇ]";
-		mes "³»°¡ µµÂøÇÑ °÷Àº Strange Sentiment ±ÙÃ³¿´´Ù.";
-		next;
-		mes "[´ŞÀÇ]";
-		mes "¼ö¸¹Àº Á×Àº ÀÚµéÀÌ ³ª¸¦ Á×ÀÌ·Á Çß±â¿¡ ³ª´Â µµ¸ÁÃÆ´Ù.";
-		next;
-		mes "[´ŞÀÇ]";
-		mes "±×·±µ¥ ±æÀ» ÀÒ°í ÀÌ»óÇÑ °÷À¸·Î ¶³¾îÁ³¾î¿ä.";
-		next;
-		mes "[´ŞÀÇ]";
-		mes "±×°÷Àº ¸¶Ä¡ Á×Àº ÀÚµéÀÌ ¶°µµ´Â °÷ °°¾ÒÁö¸¸, °Å±â¿¡´Â ¿ÀÁ÷ °¨Á¤µé¸¸ ³²¾Æ ÀÖ¾ú¾î. ³Ê¹« ¹«¼­¿ö¼­ ¹Ù·Î µµ¸ÁÃÄ ³ª¿ÔÁö.";
-		next;
-		mes "[´ŞÀÇ]";
-		mes "µ·°ú ¹°°ÇÀ» ÁÖ½Ã¸é ±×°÷À¸·Î µ¥·Á´Ù µå¸®°Ú½À´Ï´Ù.";
-		next;
-		mes "[´ŞÀÇ]";
-		mes "±×ÀÇ µµ¿ò ¾øÀÌµµ ´õ ¼ö¿ùÇÏ°Ô ÇØ³¾ ¼ö ÀÖÀ»Áöµµ ¸ô¶ó¿ä.";
-		close;
-	case 4:
-		mes "[´ŞÀÇ]";
-		mes "¾ğÁ¦µç ÆíÇÏ°Ô Ã£¾Æ¿À¼¼¿ä. ¾îÂ÷ÇÇ ÀÒÀ» °Ç ¾øÀİ¾Æ¿ä.";
-		close;
-	}
-}
-
-lighthalzen,327,216,3	script	Crevice#1	4_CRACK,{
-	end;
-OnInit:
-	initnpctimer;
-	end;
-OnTimer5000:
-	specialeffect EF_AGIUP3;
-	end;
-OnTimer6000:
-	initnpctimer;
-	end;
-}
-
-// Dungeon exit
+// Dungeon Exit
+//============================================================
 lhz_dun_n,96,203,3	script	Dungeon gateway#1	4_CRACK,{
-	if (select( "´øÀüÀ» ³ª°¡Áö ¸¶¼¼¿ä.", "´øÀü¿¡¼­ ³ª°¡¼¼¿ä." ) == 1) {
-		mes "- ´ç½ÅÀº ¾ÆÁ÷ ¿©±â¼­ Ã³¸®ÇØ¾ß ÇÒ ÀÏÀÌ ³²¾Æ ÀÖ½À´Ï´Ù -";
+	if (select("ì•„ì§ ë‚˜ê°€ì§€ ì•ŠëŠ”ë‹¤.", "ë˜ì „ì—ì„œ ë‚˜ê°„ë‹¤.") == 1) {
+		mes "- ì•„ì§ ì´ê³³ì— ë³¼ì¼ì´ ë‚¨ì•„ ìˆë‹¤. -";
 		close;
 	}
 	warp "lighthalzen",310,228;
@@ -406,764 +40,116 @@ OnTimer6000:
 	end;
 }
 
-// Lighthalzen Exchange NPCs
-lighthalzen,319,213,4	script	Veteran Adventurer#JCv2	4_M_MELODY,2,2,{
-	disable_items;
-	mes "[º£Å×¶û ¸ğÇè°¡]";
-	mes "¿À! »ı°¢ÀÌ³ª ¿øÇÑÀ» ÁÖ°í¹Ş°í ½ÍÀ¸½Å °Ç°¡¿ä?";
-	next;
-	setarray .@items[0],
-		6469,200,	// Will of Warrior
-		6470,200,	// Blood Thirst
-		6471,300;	// Ghost Chill
-	.@color$[0] = countitem(6820) < 200 ? "^777777" : "^000000";
-	.@color$[1] = countitem(6820) < 300 ? "^777777" : "^000000";
-	.@s = select( "ÀÌ¾ß±â¸¦ µé¾îº¸¼¼¿ä.", .@color$[0] + "1 Will of Warrior (200 Energy pieces)", .@color$[0] + "1 Blood Thirst (200 energy pieces)", .@color$[1] + "1 Ghost Chill (300 energy pieces)^000000" ) - 2;
-	if (.@s == -1) {
-		emotion ET_QUESTION;
-		mes "[º£Å×¶û ¸ğÇè°¡]";
-		mes "½Ã°£ÀÌ Á» ÀÖÀ¸½Ã³×¿ä? Àúµµ ¿äÁò Àå»ç°¡ Àß ¾È µÅ¼­¿ä...";
-		next;
-		mes "[º£Å×¶û ¸ğÇè°¡]";
-		mes "¾î´À ³¯, ±æµåÀåÀÌ °©ÀÚ±â ¿ì¸® ±æµå¿¡ µé¾î¿Ô´Ù¡¦";
-		next;
-		mes "[º£Å×¶û ¸ğÇè°¡]";
-		mes "'^1F294DI'¸ğµç ±æµåÀÇ ¸ğµç ±¸¼º¿ø¿¡°Ô Àü»çÀÚÀÇ ¸ÁÅä¸¦ ÀÔÈ÷°Ú½À´Ï´Ù!!^000000'.";
-		next;
-		mes "[º£Å×¶û ¸ğÇè°¡]";
-		mes "¾Æ½Ã´Ù½ÃÇÇ, ÀÌ Àåºñ¸¦ Á¦ÀÛÇÏ·Á¸é ¸¹Àº Àç·á°¡ ÇÊ¿äÇÏ±â ¶§¹®¿¡ ¸ğµç ±æµå¿øµéÀº ¾îÂ¿ ¼ö ¾øÀÌ ´øÀü¿¡ °¤Çô ÀÛ¾÷¿¡ ¸Å´Ş¸± ¼ö¹Û¿¡ ¾ø¾ú½À´Ï´Ù.";
-		next;
-		mes "[º£Å×¶û ¸ğÇè°¡]";
-		mes "¾ğÁ¨°¡ ¾î¶² Çà¿îÀÌ Ã£¾Æ¿ÃÁö ¾Æ¹«µµ ¸ğ¸£´Â ¹ıÀÌÁÒ. Àú´Â ±»Àº °á½ÉÀ¸·Î ¹ß±¼ ÀÛ¾÷¿¡ ¸ôµÎÇß°í, ±× °á°ú Á¤¸» ¸¹Àº Èñ±Í À¯¹°µéÀ» ¹ß°ßÇß½À´Ï´Ù.";
-		next;
-		mes "[º£Å×¶û ¸ğÇè°¡]";
-		mes "ºÎ±æµåÀå´Ô²²¼­ ½×¿©°¡´Â ¹°°ÇµéÀ» ´Ù¸¥ »ç¶÷µé°ú ±³È¯ÇÏ¶ó°í Àú¸¦ º¸³»¼Ì¾î¿ä.";
-		next;
-		mes "[º£Å×¶û ¸ğÇè°¡]";
-		mes "¹°·Ğ, ±³È¯ ±İ¾×Àº ±æµåÀåÀÌ °áÁ¤ÇßÀ¸¸ç, ±æµåÀåÀº ÀÌ¸¦ °­Á¶Çß½À´Ï´Ù.";
-		mes "'^1F294DI´Â ÀÌ ±İ¾×º¸´Ù ³·À¸¸é Àı´ë ¹Ş¾ÆµéÀÌÁö ¾ÊÀ» °Å¿¹¿ä!!^000000'...";
-		next;
-		emotion ET_HNG;
-		mes "[º£Å×¶û ¸ğÇè°¡]";
-		mes "ºÎ±æµåÀåÀÌ ±æµåÀåÀÇ ´«¿¡ ÈëÀ» ´øÁö·Á°í Çß¾î¿ä. ÀúÈñ´Â ±×³à¸¦ ¸»¸®´À¶ó Á¤¸» ¾Ö¸¦ ¸Ô¾ú¾î¿ä.";
-		next;
-		mes "[º£Å×¶û ¸ğÇè°¡]";
-		mes "±×°¡ ¾çÀ» ÁÙÀÌ¸é ±İ¹æ ÇØ°áµÉ °Å¶ó°í »ı°¢ÇØ¿ä. (ÇÑ¼û)... ±×·¸°Ô µÆ³×¿ä.";
-		close;
-	}
-	.@s *= 2;
-	mes "[º£Å×¶û ¸ğÇè°¡]";
-	mes " ^3300661" + getitemname(.@items[.@s]) + "^000000Àº ^CC3333À¸·Î ´ëÃ¼µË´Ï´Ù." + .@items[.@s+1] + " ¿¡³ÊÁö Á¶°¢^000000.";
-	next;
-	if (select( "Exchange.", "±³È¯ÇÏÁö ¸¶½Ê½Ã¿À." ) == 2) {
-		emotion ET_OTL;
-		mes "[º£Å×¶û ¸ğÇè°¡]";
-		mes "¹¹¶ó°í¿ä?... Àú´Â ±³È¯ÇÏ½Ç ÁÙ ¾Ë¾Ò¾î¿ä.";
-		close;
-	}
-	while(true) {
-		if (countitem(6820) < .@items[.@s+1]) {
-			emotion ET_SORRY;
-			mes "[º£Å×¶û ¸ğÇè°¡]";
-			mes " ÁË¼ÛÇÕ´Ï´Ù. ±æµåÀåÀÌ ÁÖ¹®ÇØ¼­ ¾îÂ¿ ¼ö ¾ø¾î¿ä. ²À ÇÊ¿äÇØ¿ä." + .@items[.@s+1] + " ¸¸¾à ±×°¡ °ÅÀıÇÑ´Ù¸é, Àú´Â ±× ¹°°ÇÀ» ±³È¯ÇÒ ¼ö ¾ø½À´Ï´Ù.";
-			close;
-		}
-		delitem 6820, .@items[.@s+1];// Energy Pieces
-		getitem .@items[.@s],1;
-		mes "[º£Å×¶û ¸ğÇè°¡]";
-		mes "°è¼Ó ±³È¯ÇÏ½Ã°Ú½À´Ï±î?";
-		next;
-		if (select( "´ëÈ­¸¦ °è¼Ó ÀÌ¾î°¡¼¼¿ä.", "°Å·¡¸¦ Áß´ÜÇÏ¼¼¿ä." ) == 2) {
-			emotion ET_THANKS;
-			mes "[º£Å×¶û ¸ğÇè°¡]";
-			mes "°í¸¶¿ö¿ä... ´öºĞ¿¡ ±æµåÀå¿¡°Ô ¹ú¹ŞÁö ¾ÊÀ» °Í °°³×¿ä.";
-			close;
-		}
-	}
-	end;
-
-OnTouch:
-	.@r = rand(4);
-	if (.@r == 0)
-		npctalk "Àü»çÀÇ ÀÇÁö 1°³¸¦ ¿¡³ÊÁö Á¶°¢ 200°³·Î ±³È¯ÇÏ°í ½Í½À´Ï´Ù.", "", bc_self;
-	else if (.@r == 1)
-		npctalk "°í½ºÆ® Ä¥ 1°³¸¦ ¿¡³ÊÁö 300°³·Î ±³È¯ÇÏ°í ½Í½À´Ï´Ù.", "", bc_self;
-	else if (.@r == 2)
-		npctalk "ºí·¯µå ½á½ºÆ® 1°³¸¦ ¿¡³ÊÁö 200°³·Î ±³È¯ÇÏ°í ½Í½À´Ï´Ù.", "", bc_self;
-	else {
-		emotion ET_OHNO;
-		npctalk "¾Æ!... ¿Ö ÀÌ·¸°Ô ºÎÇ° ±¸ÇÏ±â°¡ ¾î·Á¿ï±î¿ä?", "", bc_self;
-	}
-	end;
-}
-
-lighthalzen,312,296,4	script	Bully#JCv2	4_M_LGTPOOR,{
-	disable_items;
-	mes "[±«·ÓÈ÷´Â »ç¶÷]";
-	mes "ÀÌºÁ, Ä£±¸. È¤½Ã ¿¡³ÊÁö Á¶°¢ ³²´Â °Å ÀÖ¾î? ¿øÇÏ¸é Àû´çÇÑ °É·Î ±³È¯ÇØ ÁÙ°Ô.";
-	next;
-	.@s = select(
-		"Listen to the story.",
-		( countitem(25127) < 2000 ? "^777777" : "^000000" ) + "1 Energy Fragment (2000 Silent E Particles)",
-		( countitem(25128) < 1000 ? "^777777" : "^000000" ) + "1 Energy Fragment (1000 Weak E Particles)",
-		( countitem(25129) < 500 ? "^777777" : "^000000" ) + "1 Energy Fragment (500 Unstable E Particles)",
-		( countitem(25130) < 500 ? "^777777" : "^000000" ) + "1 Energy Fragment (500 Sinister E Particles)",
-		( countitem(25131) < 50 ? "^777777" : "^000000" ) + "1 Energy Fragment (50 Fallen E Particles)",
-		( countitem(6820) < 50 ? "^777777" : "^000000" ) + "1 Sentimental Fragment (50 Energy Fragments)",
-		( countitem(6820) < 666 ? "^777777" : "^000000" ) + "1 Cursed Fragment (666 Energy Fragments)"
-	) - 2;
-	if (.@s == -1) {
-		emotion ET_THINK;
-		mes "[±«·ÓÈ÷´Â »ç¶÷]";
-		mes ". . . . . . .";
-		next;
-		mes "[±«·ÓÈ÷´Â »ç¶÷]";
-		mes "À½... ÀÌ°Ç ²Ï ¿¹»óÄ¡ ¸øÇÑ ÀÏÀÌ³×¿ä.";
-		mes "±×´Â º¸Åë ³ª¸¦ ¹«½ÃÇÏ°í ÀÚ±â ÀÏÀ» °è¼ÓÇÑ´Ù.";
-		next;
-		mes "[±«·ÓÈ÷´Â »ç¶÷]";
-		mes "ÁË¼ÛÇÏÁö¸¸ ÇÒ ¸»ÀÌ ¾ø³×¿ä. ±×³É µ·À» ¸¹ÀÌ ¹ú ¼ö ÀÖ¾î¼­ ÇÏ´Â °Í»ÓÀÌ¿¡¿ä.";
-		close;
-	}
-	setarray .@exchange[0],
-		6820, 25127,2000,	// Silent Energy Particle -> Energy Fragment
-		6820, 25128,1000,	// Weak Energy Particles -> Energy Fragment
-		6820, 25129,500,	// Unstable Energy Particle -> Energy Fragment
-		6820, 25130,500,	// Sinister Energy Particle -> Energy Fragment
-		6820, 25131,50,		// Fallen Energy Particle -> Energy Fragment
-		22687, 6820,50,		// Energy Fragment -> Sentimental Fragment
-		23016, 6820,666;	// Energy Fragment -> Cursed Fragment
-	.@index = .@s * 3;
-	mes "[±«·ÓÈ÷´Â »ç¶÷]";
-	mes "^330066À» ±³È¯ÇÏ½Ã°Ú½À´Ï±î?" + .@exchange[.@index+2] + " " + getitemname(.@exchange[.@index+1]) + " ^000000°ú ^CC33331" + getitemname(.@exchange[.@index]) + "^000000?";
-	next;
-	if (select( "Exchange.", "±³È¯ÇÏÁö ¸¶½Ê½Ã¿À." ) == 2) {
-		emotion ET_HNG;
-		mes "[±«·ÓÈ÷´Â »ç¶÷]";
-		mes "À½... ¸¶À½¿¡ ¾È µå½Ã¸é ¾îÂ¿ ¼ö ¾øÁÒ.";
-		close;
-	}
-	while(true) {
-		if (countitem(.@exchange[.@index+1]) < .@exchange[.@index+2]) {
-			emotion ET_SCRATCH;
-			mes "[±«·ÓÈ÷´Â »ç¶÷]";
-			mes "¾È µÅ... ¾È µÅ... ÀÌ·¯¸é ¾È µÅ.";
-			mes " ´ç½ÅÀº ±×°ÍÀ» ¹«¾ù°ú ±³È¯ÇÏ°Ú´Ù°í ¸»¾¸ÇÏ¼ÌÀİ¾Æ¿ä." + .@exchange[.@index+2] + " (Ç×¸ñ)µé.";
-			close;
-		}
-		delitem .@exchange[.@index+1], .@exchange[.@index+2];
-		getitem .@exchange[.@index], 1;
-		emotion ET_SEXY;
-		mes "[±«·ÓÈ÷´Â »ç¶÷]";
-		mes "¾Æ, °¨»çÇÕ´Ï´Ù. È¤½Ã ´Ù¸¥ ±³È¯ÇÏ°í ½ÍÀº °Ô ÀÖÀ¸½Å°¡¿ä?";
-		next;
-		if (select( "´ëÈ­¸¦ °è¼Ó ÀÌ¾î°¡¼¼¿ä.", "°Å·¡¸¦ Áß´ÜÇÏ¼¼¿ä." ) == 2) {
-			mes "[±«·ÓÈ÷´Â »ç¶÷]";
-			mes "¿¡³ÊÁö°¡ Á¶±İÀÌ¶óµµ ³²À¸¸é ´Ù½Ã ³»°Ô ¿À¼¼¿ä.";
-			close;
-		}
-	}
-}
-
-// Enchants NPCs
-lhz_dun_n,145,265,4	script	Silent Mind#JCv2	4_CENERE,{
-	disable_items;
-	mes "[°í¿äÇÑ ¸¶À½]";
-	mes ". . . . . .!";
-	mes "...";
-	mes "^FF0000*°°Àº Á¾·ùÀÇ ¿µÈ¥ 3°³¸¦ Á¤½Å¿¡ ÁÖ¸é Á×À½ÀÇ »óÀÚ¸¦ ¾òÀ» ¼ö ÀÖ½À´Ï´Ù.*^000000";
-	next;
-	setarray .@item[0],6814,6815,6816,6817,6818,6819;
-	for ( .@i = 0; .@i < 6; ++.@i ) {
-		if (countitem(.@item[.@i]) < 3)
-			.@menu$ += "^777777Not enough " + getitemname(.@item[.@i]) + ".^000000:";
-		else
-			.@menu$ += "Hand over 3 " + getitemname(.@item[.@i]) + ".:";
-	}
-	.@s = select(.@menu$) - 1;
-	while(true) {
-		if (countitem(.@item[.@s]) < 3) {
-			emotion ET_HNG;
-			mes "[°í¿äÇÑ ¸¶À½]";
-			mes "!. . . . . .";
-			mes "Á×À½ÀÇ »óÀÚ¿¡¼­ ¿µÈ¥À» ±³È¯ÇÏ·Á¸é °°Àº Á¾·ùÀÇ ¿µÈ¥ 3°³°¡ ÇÊ¿äÇÕ´Ï´Ù.";
-			close;
-		}
-		delitem .@item[.@s],3;
-		getitem 22679,1;// Chest_of_Death
-		emotion ET_HUNGRY;
-		mes "[°í¿äÇÑ ¸¶À½]";
-		mes ". . . . . .";
-		mes "...";
-		mes "^FF0000*Á×À½ÀÇ »óÀÚ¸¦ È¹µæÇÏ¼Ì½À´Ï´Ù. °Å·¡¸¦ °è¼ÓÇÏ½Ã°Ú½À´Ï±î?*^000000";
-		next;
-		if (select( "´ëÈ­¸¦ °è¼Ó ÀÌ¾î°¡¼¼¿ä.", "°Å·¡¸¦ Áß´ÜÇÏ¼¼¿ä." ) == 2) {
-			mes "[°í¿äÇÑ ¸¶À½]";
-			mes ". . . . . .";
-			close;
-		}
-	}
-}
-
-lhz_dun_n,134,265,2	script	Wandering Mind#JCv2	4_CENERE,{
-	disable_items;
-	npctalk "Å©Å©... ¹º°¡... ´À²¸Á®...", "", bc_self;
-	mes "[¹æÈ²ÇÏ´Â ¸¶À½]";
-	mes "Å©Å©... ³ª´Â... ¼ö¸¹Àº... »ç¶÷µéÀÇ... ¿øÇÑÀ»... ´À³¥ ¼ö ÀÖ¾î...";
-	next;
-	npctalk "³ª´Â¡¦ ´©±¸ÀÏ±î?...", "", bc_self;
-	mes "[¹æÈ²ÇÏ´Â ¸¶À½]";
-	mes "¿©±â°¡ ¾îµğÁö...? ¿©±â°¡...?... ¾Æ¾Æ¾Ç... ³ª´Â... ´©±¸Áö...?... ±â¾ïÀÌ... ¾È ³ª...";
-	next;
-	mes "[¹æÈ²ÇÏ´Â ¸¶À½]";
-	mes "³»°Ô ÇÊ¿äÇÑ °Ç... ¿øÇÑÀÇ... ¿øÇÑÀÇ... °­·ÂÇÑ... Èû...ÀÌ¾ß... ±×°Ç... ³ª¿¡°Ôµµ... ±×¸®°í... ³ÊÈñ ¸ğµÎ¿¡°Ôµµ... µµ¿òÀÌ µÉ °Å¾ß... ¤»¤»¤»";
-	next;
-	switch( select( "³°Àº Çï¸ä ¸¶¹ı ºÎ¿©", "¿À·¡µÈ Çï¸ä Àç¼³Á¤", "³°Àº Åõ±¸ ¸¶¹ı ºÎ¿© ¼³¸í" ) ) {
-	case 1:
-		npctalk "³Ñ°ÜÁà... ¿øÇÑ... ¿øÇÑ...", "", bc_self;
-		mes "[¹æÈ²ÇÏ´Â ¸¶À½]";
-		mes "Å©¸£¸£... ÇìÇì... ³Ñ°ÜÁà... ¿øÇÑÀÇ... ¿øÇÑÀÇ... °­·ÂÇÑ Èû... ³»°¡ ¸¶¹ıÀ» °É¾îÁÙ°Ô... Æ¯º°ÇÑ ÈûÀ»... Çï¸ä¿¡... ºÒ¾î³Ö¾î ÁÙ°Ô...";
-		mes "ÀúÁÖ¹ŞÀº Á¶°¢À» °¡Á®¿À¸é ³°Àº Åõ±¸¿¡ ¸¶¹ıÀ» ºÎ¿©ÇÒ ¼ö ÀÖ½À´Ï´Ù.";
-		next;
-		.@equip_id = getequipid(EQI_HEAD_TOP);
-		switch(.@equip_id) {
-			case 18971:// Old_Rune_Circlet
-			case 18972:// Old_Mitra
-			case 18973:// Old_Driver_Band_R
-			case 18974:// Old_Driver_Band_Y
-			case 18975:// Old_Shadow_Handicraft
-			case 18976:// Old_Minstrel_Song_Hat
-			case 18977:// Old_Midas_Whisper
-			case 18978:// Old_Magic_Stone_Hat
-			case 18979:// Old_Blazing_Soul
-			case 18980:// Old_Wind_Whisper
-			case 18981:// Old_Dying_Swan
-			case 18982:// Old_Circlet_Of_Bone
-			case 18983:// Old_Protect_Of_Crown
-			case 18984:// Old_Camo_RabbitHood
-				break;
-			default:
-				npctalk "ÆÄ±«ÇØ... ÆÄ±«ÇØ...", "", bc_self;
-				mes "[¹æÈ²ÇÏ´Â ¸¶À½]";
-				mes "ÀÌ°Ç¡¦ Èï¹Ì·Ó±º¡¦ Àú Çï¸ä ¾È¿¡´Â¡¦ Çâ±â´Â ¾øÁö¸¸¡¦ Æ¯º°ÇÑ ÈûÀÌ °¡µæÇØ¡¦ ÆÄ±«¸¦¡¦ ¿øÇÏ´Â °Ç°¡¡¦? ¤»¤»¤»";
-				mes "ÀúÁÖ¹ŞÀº Á¶°¢À» ÀÌ¿ëÇÑ ¸¶¹ı ºÎ¿©´Â ³°Àº Åõ±¸¿¡¼­¸¸ °¡´ÉÇÕ´Ï´Ù.";
-				close;
-		}
-		mes "[¹æÈ²ÇÏ´Â ¸¶À½]";
-	
-		.@requirement = 10;	// 10 Cursed Fragments by default
-		setarray .@card[0], getequipcardid(EQI_HEAD_TOP,0), getequipcardid(EQI_HEAD_TOP,1), getequipcardid(EQI_HEAD_TOP,2), getequipcardid(EQI_HEAD_TOP,3);
-		.@refine = getequiprefinerycnt(EQI_HEAD_TOP);
-	
-		if (.@card[3] == 0) {
-			.@slot = 3;
-			mes "ÀÚ, ±×·³... °¡º±°Ô ½ÃÀÛÇØ º¼±î¿ä?... ¿îÀ»... ½ÃÇèÇØ º¸¼¼¿ä... Å©¸£..ÇìÇì...";
-			mes "^FF0000*4¹øÂ° ½½·Ô¿¡ ¸¶¹ı ºÎ¿©¸¦ ½ÃµµÇÕ´Ï´Ù. 6°¡Áö »óÅÂ È¿°ú Áß ÇÏ³ª°¡ ¹«ÀÛÀ§·Î ºÎ¿©µË´Ï´Ù.*^000000";
-		}
-		else if (.@card[2] == 0) {
-			.@slot = 2;
-			mes "Å©¸£... ÇìÇì... ´ç½ÅÀº... ´ç½ÅÀÇ... Ã¹... ¸¶¹ıÀÌ... ¸¶À½¿¡ µå³ª¿ä?...";
-			mes "^FF0000*¼¼ ¹øÂ° ½½·Ô¿¡ ¸¶¹ı ºÎ¿©¸¦ ½ÃµµÇÕ´Ï´Ù. 6°¡Áö »óÅÂ È¿°ú Áß ÇÏ³ª°¡ ¹«ÀÛÀ§·Î ºÎ¿©µË´Ï´Ù.*^000000";
-		}
-		else if (.@card[1] == 0) {
-			.@slot = 1;
-			mes "Å©¸£... ÇìÇì... ÈÎ¾À ´õ °­·ÂÇÑ ÈûÀ» ¾òÀ» ¼ö ÀÖ´Â ¹®ÀÌ... ÀÖÀ»Áö´Â... ÀÌÁ¦... °áÁ¤µÉ °ÍÀÌ´Ù...";
-			mes "^FF0000*µÎ ¹øÂ° ½½·Ô¿¡ ¸¶¹ı ºÎ¿©¸¦ ½ÃµµÇÕ´Ï´Ù.";
-			mes "ÀÏ´Ü ±â°³, ¸¶¹ı Á¤¼ö, ¿¹¸®ÇÔ, ±Ã¼úÀÇ ´ŞÀÎ, ±İ°­¼®, ¾ÖÁ¤ ¸¶¹ı ºÎ¿©¿¡ ¼º°øÇÏ¸é °­È­ÇÒ ¼ö ÀÖ½À´Ï´Ù.*^000000";
-		}
-		else {
-			// enchant leveling
-			switch( .@card[1] ) {
-			case 29061:	// Ambition1Lv
-			case 29071:	// Tab1Lv
-			case 29081:	// Expect1Lv
-			case 29091:	// ArchLine1Lv
-			case 29101:	// Steel1Lv
-			case 29111:	// Mercy1Lv
-			case 29706:	// Tenacity1Lv
-				mes "Å©... Çì... Çì... ´ç½ÅÀº... ¿îÀÌ... ÁÁ³×¿ä... ¸ğµç ¼º°øÀ»... ±â¿øÇÕ´Ï´Ù!... ±×·¡¾ß¸¸... ´õ ¸¹Àº ¿øÇÑÀ» Ç°°í... Àú¸¦ Ã£¾Æ¿À½Ã°ÚÁÒ... ¾Æ¸¶µµ...";
-				.@requirement = 20;
-				.@enchant_level = 1;
-				.@enchant_rate = 70;
-				break;
-			case 29062:	// Ambition2Lv
-			case 29072:	// Tab2Lv
-			case 29082:	// Expect2Lv
-			case 29092:	// ArchLine2Lv
-			case 29102:	// Steel2Lv
-			case 29112:	// Mercy2Lv
-			case 29707:	// Tenacity2Lv
-				mes "3´Ü°è °­È­? ¼º°øÇÏ¸é ÈÎ¾À °­·ÂÇÑ ÈûÀ» ¾ò°Ô µÇÁö¸¸, ½ÇÆĞÇÏ¸é Áö±İ±îÁö ¸ğ¾Æ¿Â ÈûÀ» ÀÒ°Ô µÉ °Ì´Ï´Ù.";
-				.@requirement = 40;
-				.@enchant_level = 2;
-				.@enchant_rate = 50;
-				break;
-			case 29063:	// Ambition3Lv
-			case 29073:	// Tab3Lv
-			case 29083:	// Expect3Lv
-			case 29093:	// ArchLine3Lv
-			case 29103:	// Steel3Lv
-			case 29113:	// Mercy3Lv
-			case 29708:	// Tenacity3Lv
-				mes "4´Ü°è °­È­? ¼º°øÇÏ¸é ÈÎ¾À °­·ÂÇÑ ÈûÀ» ¾ò°Ô µÇÁö¸¸, ½ÇÆĞÇÏ¸é Áö±İ±îÁö ¸ğ¾Æ¿Â ÈûÀ» ¸ğµÎ ÀÒ°Ô µÉ °Ì´Ï´Ù.";
-				.@requirement = 50;
-				.@enchant_level = 3;
-				.@enchant_rate = 35;
-				break;
-			case 29064:	// Ambition4Lv
-			case 29074:	// Tab4Lv
-			case 29084:	// Expect4Lv
-			case 29094:	// ArchLine4Lv
-			case 29104:	// Steel4Lv
-			case 29114:	// Mercy4Lv
-			case 29709:	// Tenacity4Lv
-				mes "5´Ü°è °­È­?... ´ç½ÅÀº... ÀÌ·± ¾öÃ»³­... ÈûÀ»... Á¦¾îÇÒ... ÁØºñ°¡... µÇ¾ú½À´Ï±î?... ÇÏÁö¸¸ ¸¸¾à ½ÇÆĞÇÑ´Ù¸é... ±× °á°ú´Â... º¼ ¸¸ÇÑ... °ÍÀÌ µÉ °Ì´Ï´Ù...";
-				.@requirement = 70;
-				.@enchant_level = 4;
-				.@enchant_rate = 25;
-				break;
-			case 29065:	// Ambition5Lv
-			case 29075:	// Tab5Lv
-			case 29085:	// Expect5Lv
-			case 29095:	// ArchLine5Lv
-			case 29105:	// Steel5Lv
-			case 29115:	// Mercy5Lv
-			case 29710:	// Tenacity5Lv
-				mes "6´Ü°è °­È­?... ´ç½ÅÀº... ÀÌ·± ¾öÃ»³­... ÈûÀ»... Á¦¾îÇÒ... ÁØºñ°¡... µÇ¾ú½À´Ï±î?... ÇÏÁö¸¸ ¸¸¾à ½ÇÆĞÇÑ´Ù¸é... ±× °á°ú´Â... º¼ ¸¸ÇÑ... °ÍÀÌ µÉ °Ì´Ï´Ù...";
-				.@requirement = 100;
-				.@enchant_level = 5;
-				.@enchant_rate = 18;
-				break;
-			case 29066:	// Ambition6Lv
-			case 29076:	// Tab6Lv
-			case 29086:	// Expect6Lv
-			case 29096:	// ArchLine6Lv
-			case 29106:	// Steel6Lv
-			case 29116:	// Mercy6Lv
-			case 29711:	// Tenacity6Lv
-				// custom text
-				mes "7´Ü°è °­È­?... ´ç½ÅÀº... ÀÌ·± ¾öÃ»³­... ÈûÀ»... Á¦¾îÇÒ... ÁØºñ°¡... µÇ¾ú½À´Ï±î?... ÇÏÁö¸¸ ¸¸¾à ½ÇÆĞÇÑ´Ù¸é... ±× °á°ú´Â... º¼ ¸¸ÇÑ... °ÍÀÌ µÉ °Ì´Ï´Ù...";
-				.@requirement = 150;
-				.@enchant_level = 6;
-				.@enchant_rate = 13;
-				break;
-			case 29067:	// Ambition7Lv
-			case 29077:	// Tab7Lv
-			case 29087:	// Expect7Lv
-			case 29097:	// ArchLine7Lv
-			case 29107:	// Steel7Lv
-			case 29117:	// Mercy7Lv
-			case 29712:	// Tenacity7Lv
-				// custom text
-				mes "8´Ü°è °­È­?... ´ç½ÅÀº... ÀÌ·± ¾öÃ»³­... ÈûÀ»... Á¦¾îÇÒ... ÁØºñ°¡... µÇ¾ú½À´Ï±î?... ÇÏÁö¸¸ ¸¸¾à ½ÇÆĞÇÑ´Ù¸é... ±× °á°ú´Â... º¼ ¸¸ÇÑ... °ÍÀÌ µÉ °Ì´Ï´Ù...";
-				.@requirement = 250;
-				.@enchant_level = 7;
-				.@enchant_rate = 9;
-				break;
-			case 29068:	// Ambition8Lv
-			case 29078:	// Tab8Lv
-			case 29088:	// Expect8Lv
-			case 29098:	// ArchLine8Lv
-			case 29108:	// Steel8Lv
-			case 29118:	// Mercy8Lv
-			case 29713:	// Tenacity8Lv
-				// custom text
-				mes "9´Ü°è °­È­?... ´ç½ÅÀº... ÀÌ·± ¾öÃ»³­... ÈûÀ»... Á¦¾îÇÒ... ÁØºñ°¡... µÇ¾ú½À´Ï±î?... ÇÏÁö¸¸ ¸¸¾à ½ÇÆĞÇÑ´Ù¸é... ±× °á°ú´Â... º¼ ¸¸ÇÑ... °ÍÀÌ µÉ °Ì´Ï´Ù...";
-				.@requirement = 500;
-				.@enchant_level = 8;
-				.@enchant_rate = 6;
-				break;
-			case 29069:	// Ambition9Lv
-			case 29079:	// Tab9Lv
-			case 29089:	// Expect9Lv
-			case 29099:	// ArchLine9Lv
-			case 29109:	// Steel9Lv
-			case 29119:	// Mercy9Lv
-			case 29714:	// Tenacity9Lv
-				// custom text
-				mes "10´Ü°è °­È­?... ´ç½ÅÀº... ÀÌ·± ¾öÃ»³­... ÈûÀ»... Á¦¾îÇÒ... ÁØºñ°¡... µÇ¾ú½À´Ï±î?... ÇÏÁö¸¸ ¸¸¾à ½ÇÆĞÇÑ´Ù¸é... ±× °á°ú´Â... º¼ ¸¸ÇÑ... °ÍÀÌ µÉ °Ì´Ï´Ù...";
-				.@requirement = 1000;
-				.@enchant_level = 9;
-				.@enchant_rate = 4;
-				break;
-			case 29070:	// Ambition10Lv
-			case 29080:	// Tab10Lv
-			case 29090:	// Expect10Lv
-			case 29100:	// ArchLine10Lv
-			case 29110:	// Steel10Lv
-			case 29120:	// Mercy10Lv
-			case 29715:	// Tenacity10Lv
-				// custom text
-			default:
-				mes "Å©¸£¸£ ÇìÇì... ºÒ°¡´ÉÇØ... ÀÌ ÈûÀ» °­È­ÇÏ´Â °Ç... ºÒ°¡´ÉÇØ... ³²Àº À¯ÀÏÇÑ ¹æ¹ıÀº... ¸®¼ÂÇÏ´Â °Í»ÓÀÌ¾ß...";
-				mes "^FF0000*±â°³, ¸¶¹ıÀÇ Á¤½Å, È°·Â, ¸íÁß·ü, ±İ°­¼®, ÀÚºñ";
-				mes "Àåºñ¿¡ ¸¶¹ıÀÌ ºÎ¿©µÈ °æ¿ì¿¡¸¸ ¸¶¹ı ºÎ¿© ·¹º§À» °­È­ÇÒ ¼ö ÀÖ½À´Ï´Ù.*^000000";
-				close;
-			}
-			.@slot = 999;
-		}
-		next;
-		mes "[¹æÈ²ÇÏ´Â ¸¶À½]";
-		mes " ÇÏÁö¸¸...±× Àü¿¡...È®ÀÎÇØ¾ß ÇÒ °Ô ÀÖ¾î¿ä...´ç½ÅÀÌ...ÀúÁÖ¹ŞÀº Á¶°¢µéÀ» ÃæºĞÈ÷ °¡Áö°í ÀÖ´ÂÁö ¸»ÀÌ¿¡¿ä...";
-		next;
-		mes "[¹æÈ²ÇÏ´Â ¸¶À½]";
-		mes "ÀúÁÖ¹ŞÀº... Á¶°¢µé..." + .@requirement + " ÇÊ¿äÇÑ °Ç°¡¿ä...? È¤½Ã... »ì ¿©À¯°¡ ÀÖÀ¸½ÇÁö... ±Ã±İÇÏ³×¿ä... ¤»¤»¤»";
-		mes " ^FF0000*¸¶¹ı ºÎ¿©¿¡¼­," + .@requirement + " ÀúÁÖ¹ŞÀº Á¶°¢ÀÌ ÇÊ¿äÇÕ´Ï´Ù.*^000000";
-		next;
-		if (select( "¼ö¼ö·á¸¦ ÁöºÒÇÏ¼¼¿ä.", "¼ö¼ö·á¸¦ ÁöºÒÇÏÁö ¸¶½Ê½Ã¿À." ) == 2) {
-			mes "[¹æÈ²ÇÏ´Â ¸¶À½]";
-			mes "Å©...Å©... ¾Æ¹«·¡µµ... ´ç½ÅÀº ¾ÆÁ÷... ±×·± ¾öÃ»³­ ÈûÀ»... ¹Ş¾ÆµéÀÏ ÁØºñ°¡ ¾È µÈ °Í °°±º¿ä...";
-			close;
-		}
-		if (countitem(23016) < .@requirement) {// Cursed Fragment
-			mes "[¹æÈ²ÇÏ´Â ¸¶À½]";
-			mes "Å©...Å©... Áö±İ... ³ó´ãÇÏ´Â °Å¾ß...?... ¾îÂ°¼­... ±×·¸°Ô »ç¼ÒÇÑ ¿øÇÑ ¶§¹®¿¡... ±Ç·ÂÀ»... °¥¸ÁÇÏ´Â °Å¾ß?...";
-			mes "¸¶¹ı ºÎ¿© ½Ã ÀúÁÖ¹ŞÀº Á¶°¢ 10°³°¡ ÇÊ¿äÇÕ´Ï´Ù.";
-			mes "º¸À¯ÇÏ°í ÀÖ´Â ÀúÁÖ¹ŞÀº Á¶°¢ÀÇ °³¼ö¸¦ È®ÀÎÇÏ¼¼¿ä.*^000000";
-			close;
-		}
-		mes "[¹æÈ²ÇÏ´Â ¸¶À½]";
-		mes "Å©¸£¸£¡¦ ÇìÇì¡¦ ÀÌ°Ç¡¦ ¿øÇÑÀÇ Èû¡¦ ³» »ı°¢¿£¡¦ ÀÌ ÈûÀº¡¦ ÃæºĞÈ÷¡¦ °­·ÂÇØ¼­¡¦";
-		mes "^FF0000*Àåºñ Á¦·Ã ·¹º§, Ä«µå, Àåºñ ¼Õ½ÇÀº ¹ß»ıÇÏÁö ¾Ê½À´Ï´Ù. ´Ü, ¼º°ø ¿©ºÎ¿¡ µû¶ó ¸¶¹ı ºÎ¿© ·¹º§ÀÌ ³·¾ÆÁú ¼ö ÀÖ½À´Ï´Ù.*^000000";
-		next;
-		if (select( "¸¶¹ıÀ» ½ÃÀüÇÏ¼¼¿ä.", "¸¶¹ıÀ» ½ÃÀüÇÏÁö ¸¶½Ê½Ã¿À." ) == 2) {
-			mes "[¹æÈ²ÇÏ´Â ¸¶À½]";
-			mes "Å©...Å©... ¾Æ¹«·¡µµ... ´ç½ÅÀº ¾ÆÁ÷... ±×·± ¾öÃ»³­ ÈûÀ»... ¹Ş¾ÆµéÀÏ ÁØºñ°¡ ¾È µÈ °Í °°±º¿ä...";
-			close;
-		}
-		progressbar "000000",1;
-		delitem 23016, .@requirement;// Cursed Fragment
-
-		// anti-hack
-		if (callfunc("F_IsEquipIDHack", EQI_HEAD_TOP, .@equip_id) || callfunc("F_IsEquipCardHack", EQI_HEAD_TOP, .@card[0], .@card[1], .@card[2], .@card[3]) || callfunc("F_IsEquipRefineHack", EQI_HEAD_TOP, .@refine))
-			close;
-
-		switch(.@slot) {
-		case 3:
-		case 2:
-			setarray .@enchant[0],
-				4700,	// Strength1
-				4701,	// Strength2
-				4702,	// Strength3
-				4703,	// Strength4
-				4704,	// Strength5
-				4710,	// Inteligence1
-				4711,	// Inteligence2
-				4712,	// Inteligence3
-				4713,	// Inteligence4
-				4714,	// Inteligence5
-				4720,	// Dexterity1
-				4721,	// Dexterity2
-				4722,	// Dexterity3
-				4723,	// Dexterity4
-				4724,	// Dexterity5
-				4730,	// Agility1
-				4731,	// Agility2
-				4732,	// Agility3
-				4733,	// Agility4
-				4734,	// Agility5
-				4740,	// Vitality1
-				4741,	// Vitality2
-				4742,	// Vitality3
-				4743,	// Vitality4
-				4744,	// Vitality5
-				4750,	// Luck1
-				4751,	// Luck2
-				4752,	// Luck3
-				4753,	// Luck4
-				4754;	// Luck5
-			.@card[.@slot] = .@enchant[ rand( getarraysize(.@enchant) ) ];	// unknown rates
-			break;
-		case 1:
-			setarray .@enchant[0],
-				4703,	// Strength4
-				4704,	// Strength5
-				4713,	// Inteligence4
-				4714,	// Inteligence5
-				4723,	// Dexterity4
-				4724,	// Dexterity5
-				4733,	// Agility4
-				4734,	// Agility5
-				4743,	// Vitality4
-				4744,	// Vitality5
-				4753,	// Luck4
-				4754,	// Luck5
-				29706,	// Tenacity1Lv
-				29061,	// Ambition1Lv
-				29071,	// Tab1Lv
-				29081,	// Expect1Lv
-				29091,	// ArchLine1Lv
-				29101,	// Steel1Lv
-				29111;	// Mercy1Lv
-			.@card[1] = .@enchant[ rand( getarraysize(.@enchant) ) ];	// unknown rates
-			break;
-		case 999:
-			// enchant leveling
-			if (.@enchant_rate > rand(100))
-				.@level_dt = 1;
-			else
-				.@level_dt = -1;
-			.@enchant_level += .@level_dt;
-			.@card[1] += .@level_dt;
-			if ((.@card[1] < 29061 || .@card[1] > 29120) && (.@card[1] < 29706 || .@card[1] > 29715)) {
-				mes "[¹æÈ²ÇÏ´Â ¸¶À½]";
-				mes "¾È ÁÁÀº ÀÏÀÌ ÀÏ¾î³µ¾î¿ä.";
-				close;
-			}
-			if (.@enchant_level < 1 || .@enchant_level > 10) {
-				// item not deleted
-				specialeffect2 EF_SUI_EXPLOSION;
-				mes "[¹æÈ²ÇÏ´Â ¸¶À½]";
-				mes "Å©¡¦À¸¸£··¡¦!! ¿øÇÑÀÇ ÈûÀÌ¡¦ ±¤ÆøÇØÁ³Áö¸¸¡¦ ´ÙÇàÈ÷¡¦ ±× ÈûÀÌ¡¦ ¾àÇØ¼­¡¦ Æø¹ßÇÏÁö´Â ¾Ê¾Ò¾î.";
-				close;
-			}
-			break;
-		default:
-			mes "[¹æÈ²ÇÏ´Â ¸¶À½]";
-			mes "¾È ÁÁÀº ÀÏÀÌ ÀÏ¾î³µ¾î¿ä.";
-			close;
-		}
-		delequip EQI_HEAD_TOP;
-		getitem2 .@equip_id,1,1,.@refine,0,.@card[0],.@card[1],.@card[2],.@card[3];
-		if (.@level_dt == -1) {// can only happens during enchant leveling
-			specialeffect2 EF_SUI_EXPLOSION;
-			mes "[¹æÈ²ÇÏ´Â ¸¶À½]";
-			mes "Å©...¾Æ¾Æ...!! ¿øÇÑÀÇ ÈûÀÌ... ±¤±â¿¡ ÈÛ½Î¿´´Ù... ÇÑ¶§ ¾ÈÁ¤ÀûÀÌ¾ú´ø ±× Èû¸¶Àú... ÇÑ ´Ü°è ¾Æ·¡·Î ¶³¾îÁ³´Ù...";
-			mes "^FF0000*¸¶¹ı ºÎ¿© ½ÇÆĞ·Î ÀÎÇØ ÇÑ ´Ü°è ÇÏÇâ Á¶Á¤µÇ¾ú½À´Ï´Ù.*^000000";
-			close;
-		}
-		specialeffect2 EF_FIREHIT;
-		mes "[¹æÈ²ÇÏ´Â ¸¶À½]";
-		mes "±×°ÍÀº¡¦ ¼º°øÀÔ´Ï´Ù. ¿øÇÑÀÇ ÈûÀÌ ´õ¿í °­ÇØÁø °ÍÀ» ´À³¥ ¼ö ÀÖ½À´Ï´Ù.";
-		mes "^FF0000*ÃàÇÏÇÕ´Ï´Ù. ¸¶¹ı ºÎ¿©¿¡ ¼º°øÇÏ¼Ì½À´Ï´Ù.*^000000";
-		close;
-	case 2:
-		.@equip_id = getequipid(EQI_HEAD_TOP);
-		switch(.@equip_id) {
-			case 18971:// Old_Rune_Circlet
-			case 18972:// Old_Mitra
-			case 18973:// Old_Driver_Band_R
-			case 18974:// Old_Driver_Band_Y
-			case 18975:// Old_Shadow_Handicraft
-			case 18976:// Old_Minstrel_Song_Hat
-			case 18977:// Old_Midas_Whisper
-			case 18978:// Old_Magic_Stone_Hat
-			case 18979:// Old_Blazing_Soul
-			case 18980:// Old_Wind_Whisper
-			case 18981:// Old_Dying_Swan
-			case 18982:// Old_Circlet_Of_Bone
-			case 18983:// Old_Protect_Of_Crown
-			case 18984:// Old_Camo_RabbitHood
-				break;
-			default:
-				npctalk "ÆÄ±«ÇØ... ÆÄ±«ÇØ...", "", bc_self;
-				mes "[¹æÈ²ÇÏ´Â ¸¶À½]";
-				mes "ÀÌ°Ç¡¦ Èï¹Ì·Ó±º¡¦ Àú Çï¸ä ¾È¿¡´Â¡¦ Çâ±â´Â ¾øÁö¸¸¡¦ Æ¯º°ÇÑ ÈûÀÌ °¡µæÇØ¡¦ ÆÄ±«¸¦¡¦ ¿øÇÏ´Â °Ç°¡¡¦? ¤»¤»¤»";
-				mes "ÀúÁÖ¹ŞÀº Á¶°¢À» ÀÌ¿ëÇÑ ¸¶¹ı ºÎ¿©´Â ³°Àº Åõ±¸¿¡¼­¸¸ °¡´ÉÇÕ´Ï´Ù.";
-				close;
-		}
-		setarray .@card[0], getequipcardid(EQI_HEAD_TOP,0), getequipcardid(EQI_HEAD_TOP,1), getequipcardid(EQI_HEAD_TOP,2), getequipcardid(EQI_HEAD_TOP,3);
-		.@refine = getequiprefinerycnt(EQI_HEAD_TOP);
-
-		if (.@card[3] < 1) {// one enchant required
-			npctalk "´ç½ÅÀº... Á¤¸» Â÷ºĞÇÏ½Ã³×¿ä...", "", bc_self;
-			mes "[¹æÈ²ÇÏ´Â ¸¶À½]";
-			mes "¤»¤»¤»... ²Ï Ä§ÂøÇØ º¸ÀÌ½Ã³×¿ä... Á¦°¡ ´ç½Å¿¡°Ô ÁØ ¹°°Ç¿¡´Â... ¾î¶² Èûµµ... ´ã°Ü ÀÖÁö ¾Ê¾Æ¿ä...";
-			mes "^FF0000*ÀÌ Åõ±¸´Â ¸¶¹ıÀÌ ºÎ¿©µÇÁö ¾Ê¾ÒÀ¸¹Ç·Î ÃÊ±âÈ­ÇÒ ¼ö ¾ø½À´Ï´Ù.*^000000";
-			close;
-		}
-		npctalk "Å©¸£... ÇìÇì... ¿À´Ã Àß ¸ÔÀ» °Å¾ß...", "", bc_self;
-		mes "[¹æÈ²ÇÏ´Â ¸¶À½]";
-		mes "¤»¤»¤»... ÀÌ ´É·ÂÀÌ ¸¶À½¿¡ ¾È µå´Â °Ç°¡?... Á¤½Å ´É·Â 10°¡Áö¸¦ °¡Á®¿Í ºÁ... ±×·³ ÀÌ ´É·ÂÀ»... ¾ø¾Ö¹ö¸®Áö...";
-		mes "^FF0000*ÃÊ±âÈ­ÇÏ·Á¸é °¨¼º Á¶°¢ 10°³°¡ ÇÊ¿äÇÕ´Ï´Ù.";
-		mes "Àåºñ Á¦·Ã ·¹º§°ú ½½·Ô Ä«µå 1°³¸¦ Á¦¿ÜÇÑ Åõ±¸¿¡ Àû¿ëµÈ ¸ğµç ¸¶¹ı ºÎ¿© È¿°ú°¡ ÃÊ±âÈ­µË´Ï´Ù.*^000000";
-		next;
-		if (select( "±×¸¦ ¹«½ÃÇÏ¼¼¿ä.", "¼ö¼ö·á¸¦ ÁöºÒÇÏ¼¼¿ä." ) == 1) {
-			npctalk "Forever...", "", bc_self;
-			mes "[¹æÈ²ÇÏ´Â ¸¶À½]";
-			mes "³­... ³Î... ±â´Ù¸±... °Å¾ß... ³×°¡ ³¯... ÇÊ¿ä·Î ÇÑ´Ù¸é... ¿µ¿øÈ÷... ±â´Ù¸±°Ô... ¤»¤»¤»";
-			close;
-		}
-		if (countitem(22687) < 10) {// Sentimental Fragment
-			mes "Å©Å©..Å©... ¸¸¾à ´ç½ÅÀÌ... °¡Á®¿ÀÁö ¾Ê´Â´Ù¸é...";
-			mes "10°¡Áö ÃÊ´É·Â... ³­ Å«ÀÏ ³ª°Ú´Âµ¥...";
-			mes "^FF0000*ÃÊ±âÈ­ÇÏ·Á¸é °¨¼º Á¶°¢ 10°³°¡ ÇÊ¿äÇÕ´Ï´Ù.";
-			mes "º¸À¯ÇÏ°í ÀÖ´Â °¨Á¤ Á¶°¢ÀÇ °³¼ö¸¦ È®ÀÎÇÏ¼¼¿ä.*^000000";
-			close;
-		}
-		npctalk "Å©... Å©...", "", bc_self;
-		mes "[¹æÈ²ÇÏ´Â ¸¶À½]";
-		mes "ÁÁ¾Æ!... ³»°¡... ³°Àº Åõ±¸ÀÇ... ¸¶¹ıÀ»... ÃÊ±âÈ­... ÇÒ°Ô... ¾Æ¸¶... °­ÇÑ Á¤½Å·ÂÀ»... Èí¼öÇÒ ¼ö ÀÖÀ» °Í °°¾Æ...";
-		next;
-		progressbar "000000",2;
-		specialeffect2 EF_FIREHIT;
-		delitem 22687,10;// Sentimental Fragment
-
-		if (callfunc("F_IsEquipIDHack", EQI_HEAD_TOP, .@equip_id) || callfunc("F_IsEquipCardHack", EQI_HEAD_TOP, .@card[0], .@card[1], .@card[2], .@card[3]) || callfunc("F_IsEquipRefineHack", EQI_HEAD_TOP, .@refine))
-			close;
-
-		delequip EQI_HEAD_TOP;
-		getitem2 .@equip_id,1,1,.@refine,0,.@card[0],0,0,0;
-		mes "[¹æÈ²ÇÏ´Â ¸¶À½]";
-		mes "Å©...Å©... °­·ÄÇÑ ¿øÇÑÀÇ ÈûÀÌ... Èí¼öµÇ¾ú¾î... ³»°¡ ÀÒ¾î¹ö¸° °Íµé... Å©... ¾Æ¾Æ...";
-		close;
-	case 3:
-		for ( .@i = 18971; .@i <= 18984; ++.@i ) {
-			if (.@i < 18977)
-				.@string$[0] += getitemname(.@i) + ", ";
-			else if (.@i < 18984)
-				.@string$[1] += getitemname(.@i) + ", ";
-			else
-				.@string$[2] = getitemname(.@i);
-		}
-		mes "[¹æÈ²ÇÏ´Â ¸¶À½]";
-		mes "±Ç·ÂÀ» ¿øÇÏ½Ê´Ï±î?... ±×·¸´Ù¸é... ´ç½ÅÀº... ³°Àº Çï¸äÀ» °¡Á®¾ß ÇÕ´Ï´Ù.";
-		mes " ^FF0000*±×°ÍÀ» ¸¶¹ıÀ¸·Î º¯È¯ÇÒ ¼ö ÀÖ½À´Ï´Ù" + .@string$[0];
-		mes "" + .@string$[1];
-		mes "" + .@string$[2] + ".*^000000";
-		next;
-		mes "[¹æÈ²ÇÏ´Â ¸¶À½]";
-		mes "¸¸¾à ³×°¡... ¿øÇÑÀÇ... ÈûÀ»... °¡Á®¿Â´Ù¸é... ³ª´Â... ³Ê¿¡°Ô... ¾öÃ»³­ ÈûÀ»... ÁÖ°Ú´Ù...";
-		mes "^FF0000*¸¶¹ıÀ» ºÎ¿©ÇÏ·Á¸é ÀúÁÖ¹ŞÀº Á¶°¢ÀÌ ÇÊ¿äÇÕ´Ï´Ù.*^000000";
-		next;
-		mes "[¹æÈ²ÇÏ´Â ¸¶À½]";
-		mes "Å©Å©... ¹°·Ğ... ¾öÃ»³­ ÈûÀ» ¾òÀ¸·Á¸é... ¼¿ ¼ö ¾øÀÌ ¸¹Àº... ¿øÇÑÀÇ... ÈûÀÌ ÇÊ¿äÇÒÁöµµ ¸ô¶ó¿ä...";
-		mes "^FF0000*¸¶¹ı ºÎ¿©´Â 4, 3, 2 ½½·Ô ¼ø¼­·Î ÁøÇàµË´Ï´Ù. °¢ ½½·ÔÀ» Ã³À½ ¸¶¹ı ºÎ¿©ÇÒ ¶§´Â ÀúÁÖ¹ŞÀº Á¶°¢ 10°³°¡ ÇÊ¿äÇÕ´Ï´Ù.*^000000";
-		next;
-		mes "[¹æÈ²ÇÏ´Â ¸¶À½]";
-		mes " ¸¸¾à... ±âÈ¸°¡ µÈ´Ù¸é... ¸¶¹ı ºÎ¿© ·¹º§À»... ¾÷±×·¹ÀÌµåÇÒ ¼ö ÀÖÀ»Áöµµ ¸ğ¸¨´Ï´Ù...";
-		mes "¸¶¹ı ºÎ¿© ·¹º§À» °­È­ÇÒ ¶§, ·¹º§¿¡ µû¶ó ÀúÁÖ¹ŞÀº Á¶°¢ 50, 70, 100, 150, 250, 500, 1000°³°¡ ¼Ò¸ğµË´Ï´Ù.";
-		mes "2´Ü°è¿¡¼­ ÀúÁÖ¹ŞÀº Á¶°¢ 20°³, 3´Ü°è¿¡¼­ ÀúÁÖ¹ŞÀº Á¶°¢ 40°³¸¦ ¸ğÀ¸¸é Áõ°¡ÇÕ´Ï´Ù.*^000000";
-		close;
-	}
-}
-
-lhz_dun_n,143,269,4	script	Victimized Soul's Mind#1	4_M_DEATH2,{
+//============================================================
+// Victimized Soul's Mind
+// Weapon dismantling -> Energy Fragment
+// 70%: 1 / 20%: 2 / 10%: 3
+//============================================================
+lhz_dun_n,143,269,4	script	ì–µìš¸í•œ í˜¼ì˜ ì‚¬ë…#1	4_M_DEATH2,{
 	disable_items;
 	.@r = rand(5);
 	if (.@r == 0)
-		npctalk "´ç½ÅµéÀÌ... ³ª¸¦... ±«¹°·Î... ¸¸µç... µéÀÌ±º¿ä...", "", bc_self;
+		npctalk "ë„ˆí¬ê°€... ë‚˜ë¥¼... ê´´ë¬¼ë¡œ ë§Œë“¤ì—ˆì–´...", "", bc_self;
 	else if (.@r == 1)
-		npctalk "Á¦¹ß Àú¸¦ ±¸ÇØ ÁÖ¼¼¿ä... ´ç½ÅÀÌ ½ÃÅ°´Â °Ç ¹¹µçÁö... ÇÒ°Ô¿ä...", "", bc_self;
+		npctalk "ì‚´ë ¤ ì¤˜... ì‹œí‚¤ëŠ” ê±´... ë­ë“  í• ê²Œ...", "", bc_self;
 	else if (.@r == 2)
-		npctalk "»ç¶ûÇÏ´Â ¾Æ³»¿Í µşÀÌ Áı¿¡¼­ Àú¸¦ ±â´Ù¸®°í ÀÖ½À´Ï´Ù...", "", bc_self;
+		npctalk "ì‚¬ë‘í•˜ëŠ”... ì•„ë‚´ì™€ ë”¸ì´... ì§‘ì—ì„œ ê¸°ë‹¤ë¦¬ê³  ìˆì–´...", "", bc_self;
 	else if (.@r == 3)
-		npctalk "±×·±... ²ûÂïÇÑ ÀÏÀ» ÀúÁö¸¥ ÈÄ¿¡... ´ç½ÅÀº... ±×·¨±º¿ä", "", bc_self;
+		npctalk "ì´ëŸ° ë”ì°í•œ ì§“ì„... í•´ ë†“ê³ ë„...", "", bc_self;
 	else
-		npctalk "My...leg...my...arm...", "", bc_self;
-	mes "[ÇÇÇØ¸¦ ÀÔÀº ¿µÈ¥ÀÇ ¸¶À½]";
-	mes "¼ö¸¹Àº... ÇÇÇèÀÚµéÀÇ... ¸¶À½µé...";
-	mes "°ú°Å...ÇöÀç...±×¸®°í º¹¼ö...";
-	mes "´©±¸¼¼¿ä...";
-	mes "´ç½ÅÀº... ½½ÇÄ¿¡ ±«·Î¿öÇÏ´Â... ¿ì¸®¸¦... À§·ÎÇØ ÁÙ ¼ö ÀÖ³ª¿ä?...";
+		npctalk "ë‚´... ë‹¤ë¦¬... ë‚´... íŒ”...", "", bc_self;
+
+	mes "[ì–µìš¸í•œ í˜¼ì˜ ì‚¬ë…]";
+	mes "ìˆ˜ë§ì€... ì‹¤í—˜ì²´ì˜... ì‚¬ë…...";
+	mes "ê³¼ê±°ì™€... í˜„ì¬... ê·¸ë¦¬ê³  ë³µìˆ˜...";
+	mes "ë„ˆëŠ”... ëˆ„êµ¬ì§€...";
+	mes "ìŠ¬í”” ì†ì—ì„œ... ê³ í†µë°›ëŠ” ìš°ë¦¬ë¥¼... ìœ„ë¡œí•´ ì¤„ ìˆ˜ ìˆë‚˜...?";
 	next;
-	if (.@r == 0)
-		npctalk "³»°¡ Á×Àº ÈÄ¿¡µµ... È¤Àº ²Ş¼Ó¿¡¼­¶óµµ...", "", bc_self;
-	else if (.@r == 1)
-		npctalk "Á¦¹ß... Àú¸¦ ±¸ÇØ ÁÖ¼¼¿ä... Á¦¹ß... ±× Ä®À»... Ä¡¿ö ÁÖ¼¼¿ä... ¹«¼­¿ö¿ä...", "", bc_self;
-	else if (.@r == 2)
-		npctalk "Á¦¹ß... ±×³É... ³¯ ³õ¾ÆÁà... µ· ÁÙ°Ô... ¿øÇÏ´Â ¸¸Å­ ÁÙ°Ô...", "", bc_self;
-	else if (.@r == 3)
-		npctalk "´ç½ÅÀº¡¦ ÇÏ³ª´ÔÀÇ¡¦ Áø³ë°¡¡¦ µÎ·ÆÁö ¾Ê³ª¿ä?¡¦", "", bc_self;
-	else
-		npctalk "¾Æ¾Ç... ¾Æ... À¸À¹...", "", bc_self;
-	mes "[ÇÇÇØ¸¦ ÀÔÀº ¿µÈ¥ÀÇ ¸¶À½]";
-	mes "¸¸¾à ´ç½ÅÀÌ... ÇÒ ¼ö ÀÖ´Ù¸é... ¾îÂ¼¸é... Á¦°¡... ´ç½ÅµéÀ»... µµ¿ï ¼ö ÀÖÀ»Áöµµ ¸ô¶ó¿ä...";
-	next;
-	if (.@r == 0)
-		npctalk "³Î... Á¶°¢Á¶°¢À¸·Î ¾Ã¾î¸Ô¾î ¹ö¸± °Å¾ß...", "", bc_self;
-	else if (.@r == 1)
-		npctalk "Á¦¹ß... ¾Æ¾Æ¾Æ...", "", bc_self;
-	else if (.@r == 2)
-		npctalk "Please...", "", bc_self;
-	else if (.@r == 3)
-		npctalk "ÇÏ³ª´ÔÀÌ ´ç½ÅÀ» º¸È£ÇÏ½Ç °ÍÀÔ´Ï´Ù. ´ç½ÅÀÌ Áö±İ ´çÀå ÁË¸¦ È¸°³ÇÑ´Ù¸é ¸»ÀÔ´Ï´Ù.", "", bc_self;
-	else
-		npctalk "...shrieking...", "", bc_self;
-	mes "[ÇÇÇØ¸¦ ÀÔÀº ¿µÈ¥ÀÇ ¸¶À½]";
-	mes "±× ¹«±â´Â... °­ÇÑ Á¤½ÅÀ¸·Î °¡µæ Â÷ ÀÖ´Â µí... ¿ì¸®ÀÇ ½½ÇÄ°ú ¿ø¸ÁÀ¸·Î °¡µæ Â÷ ÀÖ´Â µí...";
-	mes "¸¸¾à ´ç½ÅÀÌ... ÇÏ³ª¸¦... °¡Á®¿Â´Ù¸é... Á¦°¡... ±×°ÍÀ»... ¿¡³ÊÁö... Á¶°¢µé·Î... º¹¿øÇØ µå¸®°Ú½À´Ï´Ù...";
-	while(true) {
+	mes "[ì–µìš¸í•œ í˜¼ì˜ ì‚¬ë…]";
+	mes "ê°•í•œ ì‚¬ë…ì´... ê¹ƒë“  ë¬´ê¸°...";
+	mes "ìš°ë¦¬ì˜ ìŠ¬í””ê³¼... ì›í•œì´ ìŠ¤ë©°ë“  ë¬´ê¸°ë¥¼... ê°€ì ¸ì™€ë¼...";
+	mes "ê·¸ ì•ˆì˜ í˜ì„... ì—ë„ˆì§€ íŒŒí¸ìœ¼ë¡œ... ë˜ëŒë ¤ ì£¼ê² ë‹¤...";
+
+	while (true) {
 		next;
-		if (checkweight(2677,5) == 0) {
-			mes "[ÇÇÇØ¸¦ ÀÔÀº ¿µÈ¥ÀÇ ¸¶À½]";
-			mes "´ç½ÅÀÇ ¹è³¶...";
-			mes "°¡µæ Â÷ ÀÖ½À´Ï´Ù...";
+		if (checkweight(6820,5) == 0) {
+			mes "[ì–µìš¸í•œ í˜¼ì˜ ì‚¬ë…]";
+			mes "ê°€ë°©ì´... ë„ˆë¬´ ë¬´ê²ë‹¤...";
 			close;
 		}
-		if (select( "¹«±â¸¦ ³Ñ°Ü¶ó.", "´ëÈ­¸¦ ³¡³»¼¼¿ä." ) == 2) {
-			mes "[ÇÇÇØ¸¦ ÀÔÀº ¿µÈ¥ÀÇ ¸¶À½]";
-			mes "...´ç½ÅÀº... ´Ù½Ã... Àú¸¦... Ã£¾Æ³¾ °Ì´Ï´Ù...";
+		if (select("ë¬´ê¸°ë¥¼ ê±´ë„¨ë‹¤.", "ëŒ€í™”ë¥¼ ëë‚¸ë‹¤.") == 2) {
+			mes "[ì–µìš¸í•œ í˜¼ì˜ ì‚¬ë…]";
+			mes "...ë‹¤ì‹œ... ì°¾ì•„ì˜¤ê²Œ ë  ê±°ë‹¤...";
 			close;
 		}
-		mes "[ÇÇÇØ¸¦ ÀÔÀº ¿µÈ¥ÀÇ ¸¶À½]";
-		mes "ÀÌ ¹«±â¿¡´Â µµ´ëÃ¼ ¾î¶² Á¾·ùÀÇ Á¤½ÅÀÌ ´ã°Ü ÀÖ´Â °É±î?";
+		mes "[ì–µìš¸í•œ í˜¼ì˜ ì‚¬ë…]";
+		mes "ì–´ë–¤ ë¬´ê¸°ì—... ì‚¬ë…ì´ ê¹ƒë“¤ì–´ ìˆì§€...?";
 		next;
-		while(true) {
-			switch( select( "ÀÌÀü ¸Ş´º·Î µ¹¾Æ°¡±â.", "Katar", "Bow", "µµ³¢, Ã¶Åğ, Ã¥", "Wand", "°Ë, ´Ü°Ë", "Ã¢, ¾ç¼Õ°Ë", "¾Ç±â, Ã¤Âï, ³ÊÅ¬" ) ) {
+		while (true) {
+			switch (select("ì´ì „ ë©”ë‰´ë¡œ ëŒì•„ê°„ë‹¤.", "ì¹´íƒ€ë¥´", "í™œ", "ë„ë¼ / ë‘”ê¸° / ì±…", "ì§€íŒ¡ì´", "ê²€ / ë‹¨ê²€", "ì°½ / ì–‘ì†ê²€", "ì•…ê¸° / ì±„ì° / ë„ˆí´")) {
 			case 1:
 				break;
 			case 2:
 				callsub S_Exchange,
-					1284,	// Krishna
-					1290,	// Agent_Katar
-					1285,	// Chakram
-					1291;	// Guillotine_Katar
+					1284, // Krishna
+					1290, // Agent_Katar
+					1285, // Chakram
+					1291; // Guillotine_Katar
 				continue;
 			case 3:
 				callsub S_Exchange,
-					18109,	// Catapult
-					18110,	// Big_CrossBow
-					1745,	// Falken_Blitz
-					18103,	// Mystic_Bow
-					18111;	// Creeper_Bow
+					18109, // Catapult
+					18110, // Big_CrossBow
+					1745,  // Falken_Blitz
+					18103, // Mystic_Bow
+					18111; // Creeper_Bow
 				continue;
 			case 4:
 				callsub S_Exchange,
-					1311,	// Vecer_Axe
-					1392,	// Ygnus_Stale
-					1393,	// End_Sektura
-					16017,	// Bloody_Cross
-					16010,	// Red_Ether_Bag
-					2161,	// Geffenia_Book_Water
-					1584,	// Chilly_Spell_Book
-					16000,	// Erde
-					16001;	// Red_Square_Bag
+					1311,  // Vecer_Axe
+					1392,  // Ygnus_Stale
+					1393,  // End_Sektura
+					16017, // Bloody_Cross
+					16010, // Red_Ether_Bag
+					2161,  // Geffenia_Book_Water
+					1584,  // Chilly_Spell_Book
+					16000, // Erde
+					16001; // Red_Square_Bag
 				continue;
 			case 5:
 				callsub S_Exchange,
-					2005,	// Dea_Staff
-					2004,	// Kronos
-					1647,	// Croce_Staff
-					1659,	// Recovery_Light
-					1646,	// La'cryma_Stick
-					1654;	// Mental_Stick
+					2005, // Dea_Staff
+					2004, // Kronos
+					1647, // Croce_Staff
+					1659, // Recovery_Light
+					1646, // La'cryma_Stick
+					1654; // Mental_Stick
 				continue;
 			case 6:
 				callsub S_Exchange,
-					13431,	// Chrome_Sword
-					13421,	// Ruber
-					13061,	// Black_Wing
-					13062,	// Ancient_Dagger
-					13070,	// Scarletto_Nail
-					13069,	// Aztoe_Nail
-					13046,	// Krieg
-					13047;	// Weihna
+					13431, // Chrome_Sword
+					13421, // Ruber
+					13061, // Black_Wing
+					13062, // Ancient_Dagger
+					13070, // Scarletto_Nail
+					13069, // Aztoe_Nail
+					13046, // Krieg
+					13047; // Weihna
 				continue;
 			case 7:
 				callsub S_Exchange,
-					1433,	// Imperial_Spear
-					1435,	// Cannon_Spear
-					1490,	// Giant_Lance
-					1196,	// Chrome_Twohand_Sword
-					1189;	// Krasnaya
+					1433, // Imperial_Spear
+					1435, // Cannon_Spear
+					1490, // Giant_Lance
+					1196, // Chrome_Twohand_Sword
+					1189; // Krasnaya
 				continue;
 			case 8:
 				callsub S_Exchange,
-					1930,	// Green_Whistle
-					1984,	// Stem_Whip
-					1985,	// Rosebine
-					1830;	// Sura_Rampage
+					1930, // Green_Whistle
+					1984, // Stem_Whip
+					1985, // Rosebine
+					1830; // Sura_Rampage
 				continue;
 			}
 			break;
@@ -1173,25 +159,26 @@ lhz_dun_n,143,269,4	script	Victimized Soul's Mind#1	4_M_DEATH2,{
 
 S_Exchange:
 	.@size = getargcount();
-	.@menu$ = "ÀÌÀü ¸Ş´º·Î µ¹¾Æ°¡±â:";
-	for ( .@i = 0; .@i < .@size; .@i++ ) {
+	.@menu$ = "ì´ì „ ë©”ë‰´ë¡œ ëŒì•„ê°„ë‹¤.:";
+	for (.@i = 0; .@i < .@size; .@i++) {
 		if (countitem(getarg(.@i)) < 1)
-			.@menu$ += "^999999Not enough " + getitemname(getarg(.@i)) + ".^000000:";
+			.@menu$ += "^999999" + getitemname(getarg(.@i)) + " ì—†ìŒ^000000:";
 		else
-			.@menu$ += "You have " + getitemname(getarg(.@i)) + ".:";
+			.@menu$ += getitemname(getarg(.@i)) + " ë³´ìœ  ì¤‘:";
 	}
 	.@s = select(.@menu$) - 2;
 	if (.@s == -1)
 		return;
-	mes "[ÇÇÇØ¸¦ ÀÔÀº ¿µÈ¥ÀÇ ¸¶À½]";
-	mes "´ç½ÅÀº¡¦°­ÇÑ Á¤½ÅÀ¸·Î °¡µæ Âù¡¦ ¹«±â¸¦¡¦ ¼±ÅÃÇß±º¿ä¡¦ Àú´Â¡¦ ±×°ÍÀ»¡¦¿¡³ÊÁö Á¶°¢À¸·Î¡¦ µÇµ¹¸®·Á°í ÇÕ´Ï´Ù¡¦ µ¿ÀÇÇÏ½Ê´Ï±î?";
+
+	mes "[ì–µìš¸í•œ í˜¼ì˜ ì‚¬ë…]";
+	mes "^006400" + getitemname(getarg(.@s)) + "^000000...";
+	mes "ì´ ë¬´ê¸°ë¥¼... ì—ë„ˆì§€ íŒŒí¸ìœ¼ë¡œ... ë˜ëŒë¦¬ê² ë‹¤...";
+	mes "ì •ë§... ê´œì°®ê² ë‚˜...?";
 	next;
-	if (select( "µ¿ÀÇÇÏÁö ¾Ê½À´Ï´Ù.", "¿¡³ÊÁö Á¶°¢À» È¹µæÇÏ¼¼¿ä." ) == 2) {
+	if (select("ê·¸ë§Œë‘”ë‹¤.", "ì—ë„ˆì§€ íŒŒí¸ìœ¼ë¡œ ë¶„í•´í•œë‹¤.") == 2) {
 		if (countitem(getarg(.@s)) < 1) {
-			mes "[ÇÇÇØ¸¦ ÀÔÀº ¿µÈ¥ÀÇ ¸¶À½]";
-			mes "´ç½ÅÀº... °¡Áö°í ÀÖÁö ¾Ê½À´Ï´Ù... ^006400" + getitemname(getarg(.@s)) + "^000000...";
-			mes "Àú¿Í... ´Ù¸¥ ¿ë¹«°¡ ÀÖÀ¸½Å°¡¿ä?...";
-			next;
+			mes "[ì–µìš¸í•œ í˜¼ì˜ ì‚¬ë…]";
+			mes "^006400" + getitemname(getarg(.@s)) + "^000000ì´... ë³´ì´ì§€ ì•ŠëŠ”ë‹¤...";
 			return;
 		}
 		donpcevent strnpcinfo(0) + "::OnBar";
@@ -1211,16 +198,16 @@ S_Exchange:
 			.@amount = 2;
 		else
 			.@amount = 3;
-		getitem 6820, .@amount;// Energy Fragment
-		mes "[ÇÇÇØ¸¦ ÀÔÀº ¿µÈ¥ÀÇ ¸¶À½]";
-		mes "Àú´Â ^006400À» º¹¿øÇÏ¿© ¿¡³ÊÁö Á¶°¢À» ¸¸µé¾ú½À´Ï´Ù." + getitemname(getarg(.@s)) + "^000000...";
+		getitem 6820,.@amount; // Energy Fragment
+		mes "[ì–µìš¸í•œ í˜¼ì˜ ì‚¬ë…]";
+		mes "^006400" + getitemname(getarg(.@s)) + "^000000ì— ê¹ƒë“  í˜ì„...";
+		mes "ì—ë„ˆì§€ íŒŒí¸ ^006400" + .@amount + "ê°œ^000000ë¡œ ë˜ëŒë ¸ë‹¤...";
 		next;
-		mes "- Á¤½ÅÀÇ °­·ÂÇÑ ÆÄÀåÀÌ ³» ¸ö¼ÓÀ¸·Î ½º¸çµé¾î Ä¡¸íÀûÀÎ ¼Õ»óÀ» ÀÔ¾ú¾î. -";
+		mes "- ê°•í•œ ì‚¬ë…ì˜ íŒŒë™ì´ ëª¸ì„ ë®ì³ í° í”¼í•´ë¥¼ ì…ì—ˆë‹¤. -";
 		next;
 	}
-	mes "[ÇÇÇØ¸¦ ÀÔÀº ¿µÈ¥ÀÇ ¸¶À½]";
-	mes "Àú¿Í... ´Ù¸¥ ¿ë¹«°¡ ÀÖÀ¸½Å°¡¿ä?...";
-	next;
+	mes "[ì–µìš¸í•œ í˜¼ì˜ ì‚¬ë…]";
+	mes "ë‹¤ë¥¸... ë³¼ì¼ì´ ìˆë‚˜...?";
 	return;
 
 OnBar:
@@ -1228,398 +215,138 @@ OnBar:
 	end;
 }
 
-lhz_dun_n,136,269,6	script	Sorrowful Soul's Mind#1	4_M_DEATH,{
+//============================================================
+// Sorrowful Soul's Mind
+// Old Helmet / Manteau of Fallen [1] crafting
+// Normal: 20% success
+// Safe: x5 soul/chill + x5 Energy Fragment = 100%
+//============================================================
+lhz_dun_n,136,269,6	script	ì„œê¸€í”ˆ í˜¼ì˜ ì‚¬ë…#1	4_M_DEATH,{
 	disable_items;
 	.@r = rand(5);
 	if (.@r == 0)
-		npctalk "¾ö¸¶... ³Ê¹« ¾ÆÆÄ¿ä...", "", bc_self;
+		npctalk "ì—„ë§ˆ... ì•„íŒŒ...", "", bc_self;
 	else if (.@r == 1)
-		npctalk "¸ğµÎ Áö¿Á¿¡³ª °¡¶ó...", "", bc_self;
+		npctalk "ëª¨ë‘... ì§€ì˜¥ìœ¼ë¡œ ê°€ ë²„ë ¤...", "", bc_self;
 	else if (.@r == 2)
-		npctalk "ÀÌÇØ°¡ ¾È µÅ. ¿Ö ÇÏÇÊ¡¦ ³ª¾ß?¡¦", "", bc_self;
+		npctalk "ì™œ... í•˜í•„ ë‚˜ì˜€ì§€...?", "", bc_self;
 	else if (.@r == 3)
-		npctalk "À¸À¸... ³­ ÀÌ·±... ´ëÁ¢À» ¹ŞÀ» ÀÚ°İÀÌ ¾ø¾î...", "", bc_self;
+		npctalk "ìœ¼ìœ¼... ë‚˜ëŠ”... ì´ëŸ° ì¼ì„ ë‹¹í•  ì´ìœ ê°€ ì—†ëŠ”ë°...", "", bc_self;
 	else
-		npctalk "³ÊÈñµéÀº ¸ğµÎ...¾Ç¸¶¾ß...", "", bc_self;
-	mes "[½½ÇÄ¿¡ Àá±ä ¿µÈ¥ÀÇ ¸¶À½]";
-	mes "¼ö¸¹Àº... ÇÇÇèÀÚµéÀÇ... ¸¶À½µé...";
-	mes "°ú°Å...ÇöÀç...±×¸®°í º¹¼ö...";
+		npctalk "ë„ˆí¬ëŠ” ëª¨ë‘... ì•…ë§ˆì•¼...", "", bc_self;
+
+	mes "[ì„œê¸€í”ˆ í˜¼ì˜ ì‚¬ë…]";
+	mes "ìˆ˜ë§ì€... ì‹¤í—˜ì²´ì˜... ì‚¬ë…...";
+	mes "ê³¼ê±°ì™€... í˜„ì¬... ê·¸ë¦¬ê³  ë³µìˆ˜...";
+	mes "ë„ˆëŠ”... ëˆ„êµ¬ì§€...?";
+	mes "ìŠ¬í”” ì†ì—ì„œ... ê³ í†µë°›ëŠ” ìš°ë¦¬ì˜ í˜¼ì„... ë˜ëŒë ¤ ì¤„ ìˆ˜ ìˆë‚˜...?";
 	next;
-	if (.@r == 0)
-		npctalk "³» ¸¶À½ÀÌ¡¦ ³Ê¹« ¾ÆÆÄ¿ä¡¦", "", bc_self;
-	else if (.@r == 1)
-		npctalk "Á¦°¡¡¦ ±×°÷À¸·Î¡¦ º¸³»µå¸®°Ú½À´Ï´Ù¡¦", "", bc_self;
-	else if (.@r == 2)
-		npctalk "Àú´Â¡¦ ¿©±â¿¡ ¸Ó¹° ½Ã°£ÀÌ ¾ó¸¶ ³²Áö ¾Ê¾Ò¾î¿ä.", "", bc_self;
-	else if (.@r == 3)
-		npctalk "³×°¡ ÀúÁö¸¥ ¸ğµç ÀÏ¿¡µµ ºÒ±¸ÇÏ°í... »ì¾Æ³²À» °Å¶ó°í »ı°¢Çß¾î?...", "", bc_self;
-	else
-		npctalk "³­ ÁË°¡ ¾ø¾î... ³­... ÀÌ·± ÀÏÀ» ´çÇÒ ÀÚ°İÀÌ ¾ø¾î...", "", bc_self;
-	mes "[½½ÇÄ¿¡ Àá±ä ¿µÈ¥ÀÇ ¸¶À½]";
-	mes "´©±¸¼¼¿ä?...";
-	mes "´ç½ÅÀº...°íÅë ¼Ó¿¡...½½ÇÄ¿¡ Àá±ä ¿ì¸®ÀÇ ¿µÈ¥À» ´Ù½Ã µ¥·Á°¡ ÁÙ ¼ö ÀÖ³ª¿ä?...";
-	next;
-	if (.@r == 0)
-		npctalk "³ª´Â... Áı¿¡... °¡°í ½Í¾î...", "", bc_self;
-	else if (.@r == 1)
-		npctalk "³»°¡ Á×Àº ÈÄ¿¡µµ ³Î ÀúÁÖÇÒ °Å¾ß...", "", bc_self;
-	else if (.@r == 2)
-		npctalk "Àú´Â¡¦¾Æ¹«°Íµµ ¾ø¾î¿ä¡¦", "", bc_self;
-	else if (.@r == 3)
-		npctalk "Áö±İ ¹«½¼ »ı°¢À» ÇÏ°í ÀÖ´Â °Å¾ß?...", "", bc_self;
-	else
-		npctalk "´ç½ÅÀº... °¡Á·Á¶Â÷... ¾ø´Â °Ç°¡¿ä?...", "", bc_self;
-	mes "[½½ÇÄ¿¡ Àá±ä ¿µÈ¥ÀÇ ¸¶À½]";
-	mes "¸¸¾à ´ç½ÅÀÌ... ÇÒ ¼ö ÀÖ´Ù¸é... ¾îÂ¼¸é... Á¦°¡... ´ç½Åµé¿¡°Ô... ÇÊ¿äÇÑ °ÍÀ»... ÁÙ ¼ö ÀÖÀ»Áöµµ ¸ô¶ó¿ä...";
-	next;
-	setarray .@item_name$[0],
-		getitemname(18971),	// Old_Rune_Circlet
-		getitemname(18972),	// Old_Mitra
-		getitemname(18973),	// Old_Driver_Band_R
-		getitemname(18974),	// Old_Driver_Band_Y
-		getitemname(18975),	// Old_Shadow_Handicraft
-		getitemname(18976),	// Old_Minstrel_Song_Hat
-		getitemname(18977),	// Old_Midas_Whisper
-		getitemname(18978),	// Old_Magic_Stone_Hat
-		getitemname(18979),	// Old_Blazing_Soul
-		getitemname(18980),	// Old_Wind_Whisper
-		getitemname(18981),	// Old_Dying_Swan
-		getitemname(18984),	// Old_Camo_RabbitHood
-		getitemname(18982),	// Old_Circlet_Of_Bone
-		getitemname(18983),	// Old_Protect_Of_Crown
-		getitemname(20749);	// Cloak of the Fallen Soldier[1]
-	while(true) {
-		if (checkweight(2677,5) == 0) {
-			mes "[½½ÇÄ¿¡ Àá±ä ¿µÈ¥ÀÇ ¸¶À½]";
-			mes "´ç½ÅÀÇ ¹è³¶...";
-			mes "°¡µæ Â÷ ÀÖ½À´Ï´Ù...";
+	mes "[ì„œê¸€í”ˆ í˜¼ì˜ ì‚¬ë…]";
+	mes "ê·¸ë ‡ë‹¤ë©´... ìš°ë¦¬ë„... ë„¤ê²Œ í•„ìš”í•œ ê²ƒì„... ë§Œë“¤ì–´ ì¤„ ìˆ˜ ìˆë‹¤...";
+
+	setarray .@reward[0],
+		18971, // Old_Rune_Circlet
+		18972, // Old_Mitra
+		18973, // Old_Driver_Band_R
+		18974, // Old_Driver_Band_Y
+		18975, // Old_Shadow_Handicraft
+		18976, // Old_Minstrel_Song_Hat
+		18977, // Old_Midas_Whisper
+		18978, // Old_Magic_Stone_Hat
+		18979, // Old_Blazing_Soul
+		18980, // Old_Wind_Whisper
+		18981, // Old_Dying_Swan
+		18984, // Old_Camo_RabbitHood
+		18982, // Old_Circlet_Of_Bone
+		18983, // Old_Protect_Of_Crown
+		20749; // Manteau_Of_Fallen_
+
+	setarray .@equipment[0],
+		19961,19962,19963,19964,19965,19966,19967,19968,19969,19970,19971,19974,19973,19972,
+		20748;
+
+	setarray .@misc[0],
+		6814, // Swordman Soul
+		6819, // Acolyte Soul
+		6815, // Merchant Soul
+		6815, // Merchant Soul
+		6816, // Thief Soul
+		6818, // Archer Soul
+		6815, // Merchant Soul
+		6817, // Mage Soul
+		6819, // Acolyte Soul
+		6817, // Mage Soul
+		6818, // Archer Soul
+		6818, // Archer Soul
+		6816, // Thief Soul
+		6814, // Swordman Soul
+		6471; // Ghost Chill
+
+	while (true) {
+		if (checkweight(20749,1) == 0) {
+			mes "[ì„œê¸€í”ˆ í˜¼ì˜ ì‚¬ë…]";
+			mes "ê°€ë°©ì´... ë„ˆë¬´ ë¬´ê²ë‹¤...";
 			close;
 		}
-		if (select( "¿µÈ¥À» ³Ñ°ÜÁÖ½Ã¿À.", "´ëÈ­¸¦ ³¡³»¼¼¿ä." ) == 2) {
-			mes "[½½ÇÄ¿¡ Àá±ä ¿µÈ¥ÀÇ ¸¶À½]";
-			mes "...³×°¡... ´Ù½Ã... ³»°Ô·Î... µ¹¾Æ¿Í ÁÖ±æ... ¹Ù¶ó...";
+		next;
+		if (select("ì¥ë¹„ë¥¼ ì¡°í•©í•œë‹¤.", "ëŒ€í™”ë¥¼ ëë‚¸ë‹¤.") == 2) {
+			mes "[ì„œê¸€í”ˆ í˜¼ì˜ ì‚¬ë…]";
+			mes "...ë‹¤ì‹œ... ì°¾ì•„ì˜¤ê¸¸...";
 			close;
 		}
-		mes "[½½ÇÄ¿¡ Àá±ä ¿µÈ¥ÀÇ ¸¶À½]";
-		mes "¸¸¾à ´ç½ÅÀÌ... ¿ì¸®ÀÇ ¿µÈ¥À» ³Ñ°ÜÁØ´Ù¸é... ³ª´Â... Æ¯º°ÇÑ ÈûÀ» °¡Áø... ¹«¾ğ°¡¸¦... ¸¸µé¾î³¾ °Å¾ß... ¾î¶² Á¶ÇÕÀ» »ç¿ëÇØ¼­...";
-		mes "´ç½ÅÀº... ¹«¾ùÀ»... ¿øÇÏ½Ê´Ï±î?...";
-		while(true) {
-			next;
-			switch( select( "ÀÌÀü ¸Ş´º·Î µ¹¾Æ°¡¼¼¿ä.", .@item_name$[0], .@item_name$[1], .@item_name$[2], .@item_name$[3], .@item_name$[4], .@item_name$[5], .@item_name$[6], .@item_name$[7], .@item_name$[8], .@item_name$[9], .@item_name$[10], .@item_name$[11], .@item_name$[12], .@item_name$[13], .@item_name$[14] + "[1]" ) ) {
-			case 1:
-				break;
-			case 2:
-				mes "- " + .@item_name$[0] + " -";
-				mes "ÀÌ ¾ÆÀÌÅÛÀº ´Ù¸¥ °èÁ¤°ú °Å·¡ÇÒ ¼ö ¾ø½À´Ï´Ù.";
-				mes "^006400¸ğµç ÁÖ + 1, MDEF+ 5^000000";
-				mes "^006400ATK + Á¤Á¦ ·¹º§ 1 Áõ°¡´ç 4^000000";
-				mes "^006400ASPD + 5 Á¤Á¦ ·¹º§ Áõ°¡´ç 1^000000";
-				mes "^006400Á¤Á¦ ·¹º§ÀÌ ÇÑ ´Ü°è¾¿ Áõ°¡ÇÒ ¶§¸¶´Ù MHP, MSP°¡ 1%¾¿ Áõ°¡ÇÕ´Ï´Ù^000000";
-				mes "^006400Á¡È­ ÆÄ±« ÇÇÇØ·®À» 20% Áõ°¡½ÃÅµ´Ï´Ù^000000";
-				mes "^006400Á¤Á¦ ·¹º§ 2 Áõ°¡´ç^000000";
-				mes "^006400¹éÃ¢ °ø°İ·ÂÀ» 15% Áõ°¡½ÃÅµ´Ï´Ù^000000";
-				mes "^006400Á¤Á¦ ·¹º§ 2 Áõ°¡´ç^000000";
-				mes "^006400À¯Çü: Çï¸ä ¹æ¾î·Â: 10^000000";
-				mes "^006400À§Ä¡: »ó´Ü ¹«°Ô: 10^000000";
-				mes "^006400½½·Ô: 1^000000";
-				mes "^006400ÇÊ¿ä ·¹º§: 170 Á÷¾÷: ·é ³ªÀÌÆ®^000000";
-				callsub S_Make,
-					18971,	// Old_Rune_Circlet
-					19961,	// C_Rune_Circlet
-					6814;	// Swordman_Soul
-				continue;
-			case 3:
-				mes "- " + .@item_name$[1] + " -";
-				mes "ÀÌ ¾ÆÀÌÅÛÀº ´Ù¸¥ °èÁ¤°ú °Å·¡ÇÒ ¼ö ¾ø½À´Ï´Ù.";
-				mes "^006400¸ğµç ÁÖ + 1, MDEF+ 5^000000";
-				mes "^006400¸¶¹ı °ø°İ·Â + 2, °ø°İ·Â + 4, È¸º¹·® + Á¦·Ã ·¹º§ 1 Áõ°¡´ç 2%.^000000";
-				mes "^006400Á¤Á¦ ·¹º§ 2 Áõ°¡´ç MHP, MSP¸¦ 1%¾¿ Áõ°¡½ÃÅµ´Ï´Ù^000000";
-				mes "^006400Á¤·Ã ·¹º§ 2 Áõ°¡´ç ÁÖµ¦½º ÇÇÇØ·®ÀÌ 20% Áõ°¡ÇÕ´Ï´Ù.^000000";
-				mes "^006400Á¤·Ã ·¹º§ÀÌ 2 Áõ°¡ÇÒ ¶§¸¶´Ù ¸¶±×´©½º ¿¢¼Ò¸£½Ã½º¹«½ºÀÇ ÇÇÇØ·®ÀÌ 10% Áõ°¡ÇÕ´Ï´Ù.^000000";
-				mes "^006400À¯Çü: Çï¸ä ¹æ¾î·Â: 10^000000";
-				mes "^006400À§Ä¡: »ó´Ü ¹«°Ô: 10^000000";
-				mes "^006400½½·Ô: 1^000000";
-				mes "^006400ÇÊ¿ä ·¹º§: 170 Á÷Ã¥: ´ëÁÖ±³^000000";
-				callsub S_Make,
-					18972,	// Old_Mitra
-					19962,	// C_Mitra
-					6819;	// Acolyte_Soul
-				continue;
-			case 4:
-				mes "- " + .@item_name$[2] + " -";
-				mes "ÀÌ ¾ÆÀÌÅÛÀº ´Ù¸¥ °èÁ¤°ú °Å·¡ÇÒ ¼ö ¾ø½À´Ï´Ù.";
-				mes "^006400¸ğµç ÁÖ + 1^000000";
-				mes "^006400ATK + Á¤Á¦ ·¹º§ 1 Áõ°¡´ç 4^000000";
-				mes "^006400ASPD + 5 Á¤Á¦ ·¹º§ Áõ°¡´ç 1^000000";
-				mes "^006400Á¤Á¦ ·¹º§ 2 Áõ°¡´ç MHP, MSP¸¦ 1%¾¿ Áõ°¡½ÃÅµ´Ï´Ù^000000";
-				mes "^006400Á¤·Ã ·¹º§ÀÌ 2 Áõ°¡ÇÒ ¶§¸¶´Ù ÆÄ¿ö ½ºÀ® ÇÇÇØ·®ÀÌ 20% Áõ°¡ÇÕ´Ï´Ù.^000000";
-				mes "^006400Á¤·Ã ·¹º§ÀÌ 2 Áõ°¡ÇÒ ¶§¸¶´Ù µµ³¢ È¸¿À¸® °ø°İ·ÂÀÌ 20% Áõ°¡ÇÕ´Ï´Ù.^000000";
-				mes "^006400À¯Çü: Çï¸ä ¹æ¾î·Â: 10^000000";
-				mes "^006400À§Ä¡: »ó´Ü ¹«°Ô: 10^000000";
-				mes "^006400½½·Ô: 1^000000";
-				mes "^006400ÇÊ¿ä ·¹º§: 170 Á÷¾÷: Á¤ºñ°ø^000000";
-				callsub S_Make,
-					18973,	// Old_Driver_Band_R
-					19963,	// C_Driver_Band_R
-					6815;	// Merchant_Soul
-				continue;
-			case 5:
-				mes "- " + .@item_name$[3] + " -";
-				mes "ÀÌ ¾ÆÀÌÅÛÀº ´Ù¸¥ °èÁ¤°ú °Å·¡ÇÒ ¼ö ¾ø½À´Ï´Ù.";
-				mes "^006400¸ğµç ÁÖ + 1^000000";
-				mes "^006400ATK + Á¤Á¦ ·¹º§ 1 Áõ°¡´ç 4^000000";
-				mes "^006400ASPD + 5 Á¤Á¦ ·¹º§ Áõ°¡´ç 1^000000";
-				mes "^006400Á¤Á¦ ·¹º§ 2 Áõ°¡´ç MHP, MSP¸¦ 1%¾¿ Áõ°¡½ÃÅµ´Ï´Ù^000000";
-				mes "^006400Á¤·Ã ·¹º§ÀÌ 2 Áõ°¡ÇÒ ¶§¸¶´Ù ¾Ï Ä³³íÀÇ °ø°İ·ÂÀÌ 5%¾¿ Áõ°¡ÇÕ´Ï´Ù.^000000";
-				mes "^006400ÀÚ»ì ÆÄ±« Àç»ç¿ë ´ë±â½Ã°£À» Á¤Á¦ ·¹º§ 4 Áõ°¡´ç 10ÃÊ¾¿ °¨¼Ò½ÃÅµ´Ï´Ù.^000000";
-				mes "^006400À¯Çü: Çï¸ä ¹æ¾î·Â: 10^000000";
-				mes "^006400À§Ä¡: »ó´Ü ¹«°Ô: 10^000000";
-				mes "^006400½½·Ô: 1^000000";
-				mes "^006400ÇÊ¿ä ·¹º§: 170 Á÷¾÷: Á¤ºñ°ø^000000";
-				callsub S_Make,
-					18974,	// Old_Driver_Band_Y
-					19964,	// C_Driver_Band_Y
-					6815;	// Merchant_Soul
-				continue;
-			case 6:
-				mes "- " + .@item_name$[4] + " -";
-				mes "ÀÌ ¾ÆÀÌÅÛÀº ´Ù¸¥ °èÁ¤°ú °Å·¡ÇÒ ¼ö ¾ø½À´Ï´Ù.";
-				mes "^006400¸ğµç ÁÖ + 1^000000";
-				mes "Á¤Á¦ ·¹º§ÀÌ ÇÑ ´Ü°è Áõ°¡ÇÒ ¶§¸¶´Ù °ø°İ·Â + 4, ¸¶¹ı °ø°İ·Â + 4°¡ Ãß°¡µË´Ï´Ù.";
-				mes "^006400Á¤Á¦ ·¹º§ 2 Áõ°¡´ç MHP, MSP¸¦ 1%¾¿ Áõ°¡½ÃÅµ´Ï´Ù^000000";
-				mes "^006400Á¤·Ã ·¹º§ÀÌ 2 Áõ°¡ÇÒ ¶§¸¶´Ù »ï°¢Çü »ç°İ ÇÇÇØ·®ÀÌ 25% Áõ°¡ÇÕ´Ï´Ù.^000000";
-				mes "^006400Ä³¸¯ÅÍÀÇ Á¤·Ã ·¹º§ÀÌ 6¿¡ µµ´ŞÇÏ¸é °¡¸é¹«µµÈ¸ Àá±İ ÇØÁ¦ ¿­¼è, ±â·Â ÀúÇÏ Àç»ç¿ë ´ë±â½Ã°£ÀÌ 1ÃÊ °¨¼ÒÇÕ´Ï´Ù.^000000";
-				mes "^006400Ä³¸¯ÅÍÀÇ ´Ü·Ã ·¹º§ÀÌ 8¿¡ µµ´ŞÇÏ¸é °¡¸é¹«µµÈ¸-°ÔÀ¸¸§, ¾àÈ­ Àç»ç¿ë ´ë±â½Ã°£À» 1ÃÊ °¨¼Ò½ÃÅµ´Ï´Ù.^000000";
-				mes "^006400Ä³¸¯ÅÍÀÇ Á¤Á¦ ·¹º§ÀÌ 10¿¡ µµ´ŞÇÏ¸é °¡¸é¹«µµÈ¸-¹«Áö, ¿ì¿ïÇÔÀÇ Àç»ç¿ë ´ë±â½Ã°£ÀÌ 1ÃÊ °¨¼ÒÇÕ´Ï´Ù.^000000";
-				mes "^006400À¯Çü: Çï¸ä ¹æ¾î·Â: 10^000000";
-				mes "^006400À§Ä¡: »ó´Ü ¹«°Ô: 10^000000";
-				mes "^006400½½·Ô: 1^000000";
-				mes "^006400ÇÊ¿ä ·¹º§: 170 Á÷¾÷: ¼¨µµ¿ì Ã¼ÀÌ¼­^000000";
-				callsub S_Make,
-					18975,	// Old_Shadow_Handicraft
-					19965,	// C_Shadow_Handicraft
-					6816;	// Thief_Soul
-				continue;
-			case 7:
-				mes "- " + .@item_name$[5] + " -";
-				mes "ÀÌ ¾ÆÀÌÅÛÀº ´Ù¸¥ °èÁ¤°ú °Å·¡ÇÒ ¼ö ¾ø½À´Ï´Ù.";
-				mes "^006400¸ğµç ÁÖ + 1^000000";
-				mes "^006400Á¤·Ã ·¹º§ÀÌ 1´Ü°è Áõ°¡ÇÒ ¶§¸¶´Ù ¿ø°Å¸® ¹°¸® °ø°İ·ÂÀÌ 1%¾¿ Áõ°¡ÇÕ´Ï´Ù.^000000";
-				mes "^006400Á¤Á¦ ·¹º§ 2 Áõ°¡´ç MHP, MSP¸¦ 1%¾¿ Áõ°¡½ÃÅµ´Ï´Ù^000000";
-				mes "^006400Á¤·Ã ·¹º§ÀÌ 2 Áõ°¡ÇÒ ¶§¸¶´Ù È­»ì ¹úÄÁÀÇ ÇÇÇØ·®ÀÌ 20% Áõ°¡ÇÕ´Ï´Ù.^000000";
-				mes "^006400Á¤·Ã ·¹º§ÀÌ 2 Áõ°¡ÇÒ ¶§¸¶´Ù Æø¿ì ÇÇÇØ·®ÀÌ 5%¾¿ Áõ°¡ÇÕ´Ï´Ù.^000000";
-				mes "^006400À¯Çü: Çï¸ä ¹æ¾î·Â: 10^000000";
-				mes "^006400À§Ä¡: »ó´Ü ¹«°Ô: 10^000000";
-				mes "^006400½½·Ô: 1^000000";
-				mes "^006400ÇÊ¿ä ·¹º§: 170 Á÷¾÷: À½À¯½ÃÀÎ^000000";
-				callsub S_Make,
-					18976,	// Old_Minstrel_Song_Hat
-					19966,	// C_Minstrel_Song_Hat
-					6818;	// Archer_Soul
-				continue;
-			case 8:
-				mes "- " + .@item_name$[6] + " -";
-				mes "ÀÌ ¾ÆÀÌÅÛÀº ´Ù¸¥ °èÁ¤°ú °Å·¡ÇÒ ¼ö ¾ø½À´Ï´Ù.";
-				mes "^006400¸ğµç ÁÖ + 1^000000";
-				mes "^006400ATK + Á¤Á¦ ·¹º§ 1 Áõ°¡´ç 4^000000";
-				mes "^006400Á¤·Ã ·¹º§ 2 Áõ°¡´ç ¿ø°Å¸® ¹°¸® °ø°İ·ÂÀÌ 1%¾¿ Áõ°¡ÇÕ´Ï´Ù.^000000";
-				mes "^006400Á¤Á¦ ·¹º§ 2 Áõ°¡´ç MHP, MSP¸¦ 1%¾¿ Áõ°¡½ÃÅµ´Ï´Ù^000000";
-				mes "^006400Á¤·Ã ·¹º§ÀÌ 2 Áõ°¡ÇÒ ¶§¸¶´Ù Ä«Æ® Ä³³íÀÇ °ø°İ·ÂÀÌ 15% Áõ°¡ÇÕ´Ï´Ù.^000000";
-				mes "^006400À¯Çü: Çï¸ä ¹æ¾î·Â: 10^000000";
-				mes "^006400À§Ä¡: »ó´Ü ¹«°Ô: 10^000000";
-				mes "^006400½½·Ô: 1^000000";
-				mes "^006400ÇÊ¿ä ·¹º§: 170 Á÷¹«: ÀÏ¹İ^000000";
-				callsub S_Make,
-					18977,	// Old_Midas_Whisper
-					19967,	// C_Midas_Whisper
-					6815;	// Merchant_Soul
-				continue;
-			case 9:
-				mes "- " + .@item_name$[7] + " -";
-				mes "ÀÌ ¾ÆÀÌÅÛÀº ´Ù¸¥ °èÁ¤°ú °Å·¡ÇÒ ¼ö ¾ø½À´Ï´Ù.";
-				mes "^006400¸ğµç ÁÖ + 1 MDEF+ 5^000000";
-				mes "^006400SP È¸º¹·®À» 20% Áõ°¡½ÃÅµ´Ï´Ù.^000000";
-				mes "^006400MATK + Á¤Á¦ ·¹º§ Áõ°¡´ç 1%.^000000";
-				mes "^006400Á¤Á¦ ·¹º§ 2 Áõ°¡´ç MHP, MSP¸¦ 1%¾¿ Áõ°¡½ÃÅµ´Ï´Ù^000000";
-				mes "^006400Á¤·Ã ·¹º§ 2 Áõ°¡´ç ¿µÈ¥ È®Àå ÇÇÇØ·®ÀÌ 5% Áõ°¡ÇÕ´Ï´Ù.^000000";
-				mes "^006400Å©¸²½¼ ·Ï Àç»ç¿ë ´ë±â½Ã°£À» 1ÃÊ °¨¼Ò½ÃÅµ´Ï´Ù.^000000";
-				mes "^006400Á¤·Ã ·¹º§¿¡ µû¶ó Å©¸²½¼ ·Ï Àç»ç¿ë ´ë±â½Ã°£À» 0.1¸¸Å­ °¨¼Ò½ÃÅµ´Ï´Ù.^000000";
-				mes "^006400À¯Çü: Çï¸ä ¹æ¾î·Â: 10^000000";
-				mes "^006400À§Ä¡: »ó´Ü ¹«°Ô: 10^000000";
-				mes "^006400½½·Ô: 1^000000";
-				mes "^006400ÇÊ¿ä ·¹º§: 170 Á÷¾÷: Èæ¸¶¹ı»ç^000000";
-				callsub S_Make,
-					18978,	// Old_Magic_Stone_Hat
-					19968,	// C_Magic_Stone_Hat
-					6817;	// Mage_Soul
-				continue;
-			case 10:
-				mes "- " + .@item_name$[8] + " -";
-				mes "ÀÌ ¾ÆÀÌÅÛÀº ´Ù¸¥ °èÁ¤°ú °Å·¡ÇÒ ¼ö ¾ø½À´Ï´Ù.";
-				mes "^006400¸ğµç ÁÖ + 1^000000";
-				mes "Á¤Á¦ ·¹º§ÀÌ ÇÑ ´Ü°è Áõ°¡ÇÒ ¶§¸¶´Ù °ø°İ·Â(ATK) + 4, Ä¡¸íÅ¸ È®·ü(CRI) + 2°¡ Áõ°¡ÇÕ´Ï´Ù.";
-				mes "^006400Á¤Á¦ ·¹º§ 2 Áõ°¡´ç MHP, MSP¸¦ 1%¾¿ Áõ°¡½ÃÅµ´Ï´Ù^000000";
-				mes "^006400Á¤·Ã ·¹º§ÀÌ 2 Áõ°¡ÇÒ ¶§¸¶´Ù ·¥ÆäÀÌÁö ºí·¡½ºÅÍÀÇ ÇÇÇØ·®ÀÌ 15% Áõ°¡ÇÕ´Ï´Ù.^000000";
-				mes "^006400Á¤·Ã ·¹º§ÀÌ 2 Áõ°¡ÇÒ ¶§¸¶´Ù ¹ø°³ °ø°İ ÇÇÇØ·®ÀÌ 20% Áõ°¡ÇÕ´Ï´Ù.^000000";
-				mes "^006400À¯Çü: Çï¸ä ¹æ¾î·Â: 10^000000";
-				mes "^006400À§Ä¡: »ó´Ü ¹«°Ô: 10^000000";
-				mes "^006400½½·Ô: 1^000000";
-				mes "^006400ÇÊ¿ä ·¹º§: 170 Á÷¾÷: ¼ö¶ó^000000";
-				callsub S_Make,
-					18979,	// Old_Blazing_Soul
-					19969,	// C_Blazing_Soul
-					6819;	// Acolyte_Soul
-				continue;
-			case 11:
-				mes "- " + .@item_name$[9] + " -";
-				mes "ÀÌ ¾ÆÀÌÅÛÀº ´Ù¸¥ °èÁ¤°ú °Å·¡ÇÒ ¼ö ¾ø½À´Ï´Ù.";
-				mes "^006400¸ğµç ÁÖ + 1 MDEF+ 5.^000000";
-				mes "^006400MATK + 1%, ATK + 4 (Á¤·Ã ·¹º§ 1´Ü°è Áõ°¡´ç)^000000";
-				mes "^006400Á¤Á¦ ·¹º§ 2 Áõ°¡´ç MHP, MSP¸¦ 1%¾¿ Áõ°¡½ÃÅµ´Ï´Ù^000000";
-				mes "^006400Á¤·Ã ·¹º§ÀÌ 2 Áõ°¡ÇÒ ¶§¸¶´Ù µ¶ Æø¹ß ÇÇÇØ·®ÀÌ 15% Áõ°¡ÇÕ´Ï´Ù.^000000";
-				mes "^006400Á¤·Ã ·¹º§ 2 Áõ°¡´ç ¹Ù·¹Æ¼¸£ Ã¢ÀÇ °ø°İ·ÂÀÌ 20% Áõ°¡ÇÕ´Ï´Ù.^000000";
-				mes "^006400À¯Çü: Çï¸ä ¹æ¾î·Â: 10^000000";
-				mes "^006400À§Ä¡: »ó´Ü ¹«°Ô: 10^000000";
-				mes "^006400½½·Ô: 1^000000";
-				mes "^006400ÇÊ¿ä ·¹º§: 170 Á÷¾÷: ¸¶¹ı»ç^000000";
-				callsub S_Make,
-					18980,	// Old_Wind_Whisper
-					19970,	// C_Wind_Whisper
-					6817;	// Mage_Soul
-				continue;
-			case 12:
-				mes "- " + .@item_name$[10] + " -";
-				mes "ÀÌ ¾ÆÀÌÅÛÀº ´Ù¸¥ °èÁ¤°ú °Å·¡ÇÒ ¼ö ¾ø½À´Ï´Ù.";
-				mes "^006400¸ğµç ÁÖ + 1^000000";
-				mes "^006400Á¤·Ã ·¹º§ÀÌ 1´Ü°è Áõ°¡ÇÒ ¶§¸¶´Ù ¿ø°Å¸® ¹°¸® °ø°İ·ÂÀÌ 1%¾¿ Áõ°¡ÇÕ´Ï´Ù.^000000";
-				mes "^006400Á¤Á¦ ·¹º§ 2 Áõ°¡´ç MHP, MSP¸¦ 1%¾¿ Áõ°¡½ÃÅµ´Ï´Ù^000000";
-				mes "^006400Á¤·Ã ·¹º§ÀÌ 2 Áõ°¡ÇÒ ¶§¸¶´Ù È­»ì ¹úÄÁÀÇ ÇÇÇØ·®ÀÌ 20% Áõ°¡ÇÕ´Ï´Ù.^000000";
-				mes "^006400Á¤·Ã ·¹º§ÀÌ 2 Áõ°¡ÇÒ ¶§¸¶´Ù Æø¿ì ÇÇÇØ·®ÀÌ 5%¾¿ Áõ°¡ÇÕ´Ï´Ù.^000000";
-				mes "^006400À¯Çü: Çï¸ä ¹æ¾î·Â: 10^000000";
-				mes "^006400À§Ä¡: »ó´Ü ¹«°Ô: 10^000000";
-				mes "^006400½½·Ô: 1^000000";
-				mes "^006400ÇÊ¿ä ·¹º§: 170 Á÷¾÷: ¹æ¶ûÀÚ^000000";
-				callsub S_Make,
-					18981,	// Old_Dying_Swan
-					19971,	// C_Dying_Swan
-					6818;	// Archer_Soul
-				continue;
-			case 13:
-				mes "- " + .@item_name$[11] + " -";
-				mes "ÀÌ ¾ÆÀÌÅÛÀº ´Ù¸¥ °èÁ¤°ú °Å·¡ÇÒ ¼ö ¾ø½À´Ï´Ù.";
-				mes "^006400¸ğµç ÁÖ + 1^000000";
-				mes "^006400Á¤·Ã ·¹º§ÀÌ 1´Ü°è Áõ°¡ÇÒ ¶§¸¶´Ù ¿ø°Å¸® ¹°¸® °ø°İ·ÂÀÌ 1%¾¿ Áõ°¡ÇÕ´Ï´Ù.^000000";
-				mes "^006400¿Ïº® È¸ÇÇ +1 (Á¤·Ã ·¹º§ 3 Áõ°¡´ç)^000000";
-				mes "^006400Á¤Á¦ ·¹º§ 2 Áõ°¡´ç MHP, MSP¸¦ 1%¾¿ Áõ°¡½ÃÅµ´Ï´Ù^000000";
-				mes "^006400Á¤·Ã ·¹º§ÀÌ 2 Áõ°¡ÇÒ ¶§¸¶´Ù Áı¼ÓÅº ÇÇÇØ·®ÀÌ 15% Áõ°¡ÇÕ´Ï´Ù.^000000";
-				mes "^006400Á¤·Ã ·¹º§ÀÌ 2 Áõ°¡ÇÒ ¶§¸¶´Ù ¿ö±× ½ºÆ®¶óÀÌÅ© ÇÇÇØ·®ÀÌ 10% Áõ°¡ÇÕ´Ï´Ù.^000000";
-				mes "^006400À¯Çü: Çï¸ä ¹æ¾î·Â: 10^000000";
-				mes "^006400À§Ä¡: »ó´Ü ¹«°Ô: 10^000000";
-				mes "^006400½½·Ô: 1^000000";
-				mes "^006400ÇÊ¿ä ·¹º§: 170 Á÷¾÷: ·¹ÀÎÀú^000000";
-				callsub S_Make,
-					18984,	// Old_Camo_RabbitHood
-					19974,	// C_Camouflage_RabbitHood
-					6818;	// Archer_Soul
-				continue;
-			case 14:
-				mes "- " + .@item_name$[12] + " -";
-				mes "ÀÌ ¾ÆÀÌÅÛÀº ´Ù¸¥ °èÁ¤°ú °Å·¡ÇÒ ¼ö ¾ø½À´Ï´Ù.";
-				mes "^006400¸ğµç ÁÖ + 1^000000";
-				mes "^006400Á¤·Ã ·¹º§ÀÌ ¿À¸¦ ¶§¸¶´Ù Ä¡¸íÅ¸ ÇÇÇØ°¡ 1% Áõ°¡ÇÏ°í °ø°İ ¼Óµµ°¡ Áõ°¡ÇÕ´Ï´Ù(°ø°İ Áö¿¬ ½Ã°£ÀÌ 1% °¨¼Ò).^000000";
-				mes "^006400Á¤Á¦ ·¹º§ 2 Áõ°¡´ç MHP, MSP¸¦ 1%¾¿ Áõ°¡½ÃÅµ´Ï´Ù^000000";
-				mes "^006400Á¤·Ã ·¹º§ÀÌ 2 Áõ°¡ÇÒ ¶§¸¶´Ù Å©·Î½º ÀÓÆÑÆ® ÇÇÇØ·®ÀÌ 10% Áõ°¡ÇÕ´Ï´Ù.^000000";
-				mes "^006400Á¤·Ã ·¹º§ 2 Áõ°¡´ç Å©·Î½º ¸®ÆÛ ½½·¡½Ã ÇÇÇØ·®ÀÌ 20% Áõ°¡ÇÕ´Ï´Ù.^000000";
-				mes "^006400À¯Çü: Çï¸ä ¹æ¾î·Â: 10^000000";
-				mes "^006400À§Ä¡: »ó´Ü ¹«°Ô: 10^000000";
-				mes "^006400½½·Ô: 1^000000";
-				mes "^006400ÇÊ¿ä ·¹º§: 170 Á÷¾÷: ´ÜµÎ´ë_½ÊÀÚ°¡^000000";
-				callsub S_Make,
-					18982,	// Old_Circlet_Of_Bone
-					19973,	// C_Circlet_Of_Bone
-					6816;	// Thief_Soul
-				continue;
-			case 15:
-				mes "- " + .@item_name$[13] + " -";
-				mes "ÀÌ ¾ÆÀÌÅÛÀº ´Ù¸¥ °èÁ¤°ú °Å·¡ÇÒ ¼ö ¾ø½À´Ï´Ù.";
-				mes "^006400¸ğµç ÁÖ + 1 MDEF+ 5.^000000";
-				mes "^006400ATK + Á¤Á¦ ·¹º§ 1 Áõ°¡´ç 4^000000";
-				mes "^006400ASPD + 5 Á¤Á¦ ·¹º§ Áõ°¡´ç 1^000000";
-				mes "^006400Á¤Á¦ ·¹º§ 2 Áõ°¡´ç MHP, MSP¸¦ 1%¾¿ Áõ°¡½ÃÅµ´Ï´Ù^000000";
-				mes "^006400Á¤·Ã ·¹º§ 2 Áõ°¡´ç ´ëÆ÷Ã¢ °ø°İ·ÂÀÌ 20% Áõ°¡ÇÕ´Ï´Ù.^000000";
-				mes "^006400Á¤·Ã ·¹º§ÀÌ 2 Áõ°¡ÇÒ ¶§¸¶´Ù ºê·£µå ÇÇÇØ·®ÀÌ 5%¾¿ Áõ°¡ÇÕ´Ï´Ù.^000000";
-				mes "^006400À¯Çü: Çï¸ä ¹æ¾î·Â: 10^000000";
-				mes "^006400À§Ä¡: »ó´Ü ¹«°Ô: 10^000000";
-				mes "^006400½½·Ô: 1^000000";
-				mes "^006400ÇÊ¿ä ·¹º§: 170 Á÷¾÷: ¿Õ½Ç °æºñº´^000000";
-				callsub S_Make,
-					18983,	// Old_Protect_Of_Crown
-					19972,	// C_Protect_Of_Crown
-					6814;	// Swordman_Soul
-				continue;
-			case 16:
-				mes "- " + .@item_name$[14] + "[1] -";
-				mes "^006400Àü¼³ÀûÀÎ ½Ã°è´Â ÀüÅõ¿¡¼­ ¿ë°¨ÇÏ°Ô ½Î¿ì´Ù Àü»çÇÑ »ç¶÷µéÀÌ Âø¿ëÇß´ø °ÍÀ¸·Î ¾Ë·ÁÁ® ÀÖ½À´Ï´Ù.^000000 ^006400";
-				mes "Á¤Á¦ ´Ü°è°¡ 2´Ü°è Áõ°¡ÇÒ ¶§¸¶´Ù MHP¿Í MSP°¡ 1%¾¿ Áõ°¡ÇÕ´Ï´Ù.";
-				mes "Ä³¸¯ÅÍÀÇ ¼ø¼ö Èû ½ºÅÈÀÌ 90¿¡ µµ´ŞÇÏ¸é °ø°İ·ÂÀÌ 10 Áõ°¡ÇÕ´Ï´Ù.";
-				mes "(Á¤·Ã ·¹º§ 1´Ü°è Áõ°¡´ç °ø°İ·Â +2 Ãß°¡)";
-				mes "Ä³¸¯ÅÍÀÇ ¼ø¼ö Áö´ÉÀÌ 90¿¡ µµ´ŞÇÏ¸é ¸¶¹ı °ø°İ·Â(MATK)ÀÌ 20 Áõ°¡ÇÕ´Ï´Ù.";
-				mes "(Á¤Á¦ ·¹º§ÀÌ ÇÑ ´Ü°è ¿Ã¶ó°¥ ¶§¸¶´Ù MATK°¡ 3¾¿ Ãß°¡µË´Ï´Ù.)";
-				mes "Ä³¸¯ÅÍÀÇ ¼ø¼ö È°·ÂÀÌ 90¿¡ µµ´ŞÇßÀ» ¶§";
-				mes "ÀÏ¹İ °ø°İ¿¡ ´ëÇÑ 3% ÀúÇ×·Â";
-				mes "(Á¤¹Ğµµ ¼öÁØÀÌ 8¿¡ µµ´ŞÇÏ¸é 3% Ãß°¡ Áõ°¡)";
-				mes "Á¤Á¦ ¼öÁØÀÌ 10¿¡ µµ´ŞÇÏ¸é 4% Ãß°¡ ÇÒÀÎ)";
-				mes "Ä³¸¯ÅÍÀÇ ¼ø¼ö ¹ÎÃ¸¼ºÀÌ 90¿¡ µµ´ŞÇßÀ» ¶§";
-				mes "°ø°İ ¼Óµµ Áõ°¡ (°ø°İ Áö¿¬ ½Ã°£ 3% °¨¼Ò)";
-				mes "(°ø°İ Áö¿¬ ½Ã°£Àº Á¤Á¦ ·¹º§ÀÌ 2 Áõ°¡ÇÒ ¶§¸¶´Ù 1%¾¿ Ãß°¡ÀûÀ¸·Î °¨¼ÒÇÕ´Ï´Ù.)";
-				mes "(Ä³¸¯ÅÍÀÇ °­È­ ·¹º§ÀÌ 10¿¡ µµ´ŞÇÏ¸é °ø°İ ¼Óµµ + 1ÀÌ Ãß°¡µË´Ï´Ù.)";
-				mes "Ä³¸¯ÅÍÀÇ ¼ø¼ö ¹ÎÃ¸¼º(DEX)ÀÌ 90¿¡ µµ´ŞÇßÀ» ¶§";
-				mes "¿ø°Å¸® °ø°İ·ÂÀ» 3% Áõ°¡½ÃÅµ´Ï´Ù.";
-				mes "(¼¼·Ãµµ 2´Ü°è Áõ°¡´ç Ãß°¡ 1%)";
-				mes "Ä³¸¯ÅÍÀÇ Çà¿î(LUK)ÀÌ 90¿¡ µµ´ŞÇÏ¸é";
-				mes "Ä¡¸íÅ¸ ÇÇÇØ·®ÀÌ 5% Áõ°¡ÇÕ´Ï´Ù.";
-				mes "(¼¼·Ãµµ ·¹º§ÀÌ ÇÑ ´Ü°è ¿Ã¶ó°¥ ¶§¸¶´Ù Ãß°¡·Î 1%¾¿ Áõ°¡)";
-				mes "À¯Çü: ·Îºê ¹æ¾î·Â: 30";
-				mes "¹«°Ô: 60";
-				mes "½½·Ô: 1";
-				mes "ÇÊ¿ä ·¹º§: 170 Á÷Á¾: ÀüÃ¼^000000";
-				callsub S_Make,
-					20749,	// Manteau_Of_Fallen_
-					20748,	// Manteau_Of_Fallen
-					6471,	// Goast_Chill
-					true;
-				continue;
-			}
-			break;
-		}
+
+		.@menu$ = "ì´ì „ ë©”ë‰´ë¡œ ëŒì•„ê°„ë‹¤.:";
+		for (.@i = 0; .@i < getarraysize(.@reward); .@i++)
+			.@menu$ += getitemname(.@reward[.@i]) + ":";
+		.@s = select(.@menu$) - 2;
+		if (.@s == -1)
+			continue;
+
+		if (.@s == 14)
+			callsub S_Make,.@reward[.@s],.@equipment[.@s],.@misc[.@s],true;
+		else
+			callsub S_Make,.@reward[.@s],.@equipment[.@s],.@misc[.@s],false;
 	}
+	end;
 
 S_Make:
 	.@reward_id = getarg(0);
 	.@equipment_req = getarg(1);
 	.@item_misc_req = getarg(2);
-	if (getarg(3,0)) {
-		setarray .@string$[0], "chill", "cloak";
-		setarray .@material[0],20,100;	// chill, energy
+	.@is_cloak = getarg(3,0);
+
+	if (.@is_cloak) {
+		.@material_misc = 20;  // Ghost Chill
+		.@material_energy = 100;
+		.@material_name$ = "ë§ìì˜ í•œê¸°";
+		.@equipment_name$ = "ì „ì‚¬ìì˜ ë§í† ";
 	}
 	else {
-		setarray .@string$[0], "soul", "hat";
-		setarray .@material[0],1,20;	// soul, energy
+		.@material_misc = 1;   // Class Soul
+		.@material_energy = 20;
+		.@material_name$ = "í˜¼";
+		.@equipment_name$ = "ì˜ìƒ íˆ¬êµ¬";
 	}
+
+	mes "[ì„œê¸€í”ˆ í˜¼ì˜ ì‚¬ë…]";
+	mes "^006400" + getitemname(.@reward_id) + "^000000ì„ ë§Œë“¤ê³  ì‹¶ì€ê°€...?";
 	next;
-	mes "[½½ÇÄ¿¡ Àá±ä ¿µÈ¥ÀÇ ¸¶À½]";
-	mes "¸¸µé±â À§ÇØ... ^006400" + getitemname(.@reward_id) + "^000000...";
-	mes " ±×µéÀÇ ¹æ¶ûÀ» °¡Á®¿À¼¼¿ä..." + .@string$[0] + ", " + .@string$[1] + "...¿µÈ¥À» ´ã´Â ±×¸©ÀÌÀÚ... ¾îµÒÀÇ ¿¡³ÊÁö°¡... ÀÌ°÷À» °¡µæ Ã¤¿ì°í ÀÖ´Ù...";
+	mes "[ì„œê¸€í”ˆ í˜¼ì˜ ì‚¬ë…]";
+	mes "í•„ìš”í•œ ê²ƒì€...";
+	mes "^006400" + getitemname(.@equipment_req) + " 1ê°œ^000000,";
+	mes "^006400" + getitemname(.@item_misc_req) + " " + .@material_misc + "ê°œ^000000,";
+	mes "ê·¸ë¦¬ê³  ^006400" + getitemname(6820) + " " + .@material_energy + "ê°œ^000000ë‹¤...";
+	mes "í˜¼ê³¼ ì—ë„ˆì§€ íŒŒí¸ì„ 5ë°° ì‚¬ìš©í•˜ë©´... ë°˜ë“œì‹œ ì„±ê³µí•œë‹¤...";
 	next;
-	mes "[½½ÇÄ¿¡ Àá±ä ¿µÈ¥ÀÇ ¸¶À½]";
-	mes " 1°³°¡ ÇÊ¿äÇØ¿ä" + getitemname(.@equipment_req) + ", " + .@material[0] + " " + getitemname(.@item_misc_req) + "... " + .@material[1] + " " + getitemname(6820) + "..";
-	mes " 5¹è" + getitemname(6820) + " and " + .@string$[0] + "¼öÁıµÈ Á¤º¸µéÀÌ... ´ç½ÅÀº... °áÄÚ ½ÇÆĞÇÏÁö ¾ÊÀ» °ÍÀÔ´Ï´Ù...";
-	mes "¾î¶»°Ô¡¦ ÇÏ½Ã°Ú¾î¿ä¡¦";
-	next;
-	switch( select( "ÀÌÀü ¸Ş´º·Î µ¹¾Æ°¡¼¼¿ä.", "Use " + .@material[1] + " energies, " + .@material[0] + " " + .@string$[0], "Use " + (.@material[1] * 5) + " energies, " + (.@material[0] * 5) + " " + .@string$[0] + "s" ) ) {
+
+	switch (select(
+		"ì´ì „ ë©”ë‰´ë¡œ ëŒì•„ê°„ë‹¤.",
+		"ì¼ë°˜ ì¡°í•© - " + .@material_name$ + " " + .@material_misc + "ê°œ / ì—ë„ˆì§€ íŒŒí¸ " + .@material_energy + "ê°œ (20%)",
+		"ì•ˆì „ ì¡°í•© - " + .@material_name$ + " " + (.@material_misc * 5) + "ê°œ / ì—ë„ˆì§€ íŒŒí¸ " + (.@material_energy * 5) + "ê°œ (100%)"
+	)) {
 	case 1:
-		mes "[½½ÇÄ¿¡ Àá±ä ¿µÈ¥ÀÇ ¸¶À½]";
-		mes "Àú´Â ´ç½ÅÀÌ ´Ù¸¥ °Íµéµµ º¼ ¼ö ÀÖ±â¸¦ ¹Ù¶ú¾î¿ä...";
+		mes "[ì„œê¸€í”ˆ í˜¼ì˜ ì‚¬ë…]";
+		mes "ë‹¤ë¥¸ ê²ƒì„... ì‚´í´ë³´ëŠ” ê²ƒë„ ì¢‹ê² ì§€...";
 		return;
 	case 2:
 		.@rate = 1;
@@ -1628,511 +355,42 @@ S_Make:
 		.@rate = 5;
 		break;
 	}
-	if (countitem(.@equipment_req) < 1 || countitem(.@item_misc_req) < (.@material[0] * .@rate) || countitem(6820) < (.@material[1] * .@rate)) {
-		mes "[½½ÇÄ¿¡ Àá±ä ¿µÈ¥ÀÇ ¸¶À½]";
-		mes "´ç½ÅÀº ^006400À» ¸¸µé±â¿¡ ÃæºĞÇÑ Àç·á°¡... ¾ø½À´Ï´Ù." + getitemname(.@reward_id) + "^000000...";
+
+	if (countitem(.@equipment_req) < 1 || countitem(.@item_misc_req) < (.@material_misc * .@rate) || countitem(6820) < (.@material_energy * .@rate)) {
+		mes "[ì„œê¸€í”ˆ í˜¼ì˜ ì‚¬ë…]";
+		mes "^006400" + getitemname(.@reward_id) + "^000000ì„ ë§Œë“¤ê¸° ìœ„í•œ ì¬ë£Œê°€... ë¶€ì¡±í•˜ë‹¤...";
 		return;
 	}
+
 	progressbar "000000",5;
 	percentheal -50,-50;
 	specialeffect2 EF_POISONSMOKE;
 	specialeffect2 EF_NPC_BURNT;
-	delitem .@equipment_req, 1;
-	delitem .@item_misc_req, (.@material[0] * .@rate);
-	delitem 6820, (.@material[1] * .@rate);// Energy Fragment
 
-	if ((20*.@rate) > rand(100)) {
+	delitem .@equipment_req,1;
+	delitem .@item_misc_req,(.@material_misc * .@rate);
+	delitem 6820,(.@material_energy * .@rate); // Energy Fragment
+
+	if ((20 * .@rate) > rand(100)) {
 		specialeffect EF_BLACKBODY;
 		specialeffect EF_GUMGANG4;
 		specialeffect EF_DARKCASTING2;
 		specialeffect EF_RG_COIN7;
-		mes "[½½ÇÄ¿¡ Àá±ä ¿µÈ¥ÀÇ ¸¶À½]";
-		mes "¿©±â ÀÖ½À´Ï´Ù... ^006400" + getitemname(.@reward_id) + "^000000...";
+		mes "[ì„œê¸€í”ˆ í˜¼ì˜ ì‚¬ë…]";
+		mes "ì„±ê³µí–ˆë‹¤...";
+		mes "^006400" + getitemname(.@reward_id) + "^000000ì„ ë°›ì•„ë¼...";
 		getitem .@reward_id,1;
 	}
 	else {
 		specialeffect EF_POISONSMOKE;
 		specialeffect EF_GUMGANG4;
-		mes "[½½ÇÄ¿¡ Àá±ä ¿µÈ¥ÀÇ ¸¶À½]";
-		mes "^006400" + getitemname(.@reward_id) + "^000000... ½ÇÆĞ...";
+		mes "[ì„œê¸€í”ˆ í˜¼ì˜ ì‚¬ë…]";
+		mes "^006400" + getitemname(.@reward_id) + "^000000ì˜ ì¡°í•©ì—... ì‹¤íŒ¨í–ˆë‹¤...";
 	}
 	next;
-	mes "- Á¤½ÅÀÇ °­·ÂÇÑ ÆÄÀåÀÌ ³» ¸ö¼ÓÀ¸·Î ½º¸çµé¾î Ä¡¸íÀûÀÎ ¼Õ»óÀ» ÀÔ¾ú½À´Ï´Ù. -";
+	mes "- ê°•í•œ ì‚¬ë…ì˜ íŒŒë™ì´ ëª¸ì„ ë®ì³ í° í”¼í•´ë¥¼ ì…ì—ˆë‹¤. -";
 	next;
-	mes "[½½ÇÄ¿¡ Àá±ä ¿µÈ¥ÀÇ ¸¶À½]";
-	mes "È¤½Ã¡¦ Á¦°¡¡¦ µµ¿Íµå¸± ÀÏÀÌ¡¦ ÀÖÀ»±î¿ä?¡¦";
+	mes "[ì„œê¸€í”ˆ í˜¼ì˜ ì‚¬ë…]";
+	mes "ë‹¤ë¥¸... ë„ì›€ì´ í•„ìš”í•œê°€...?";
 	return;
 }
-
-// Exchange npcs - safe map (no mobs)
-lhz_d_n2,53,49,4	duplicate(Silent Mind#JCv2)	Silent Mind#JCv2C	4_CENERE
-lhz_d_n2,42,49,2	duplicate(Wandering Mind#JCv2)	Wandering Mind#JCv2C	4_CENERE
-lhz_d_n2,51,53,4	duplicate(Victimized Soul's Mind#1)	Victimized Soul's Mind#1C	4_M_DEATH2
-lhz_d_n2,44,53,6	duplicate(Sorrowful Soul's Mind#1)	Sorrowful Soul's Mind#1C	4_M_DEATH
-
-// Safe map - Exit
-lhz_d_n2,34,45,3	script	#lhzdw	1_SHADOW_NPC,{
-	mes "[¹Ù½ºÅ×Ã÷]";
-	mes "Ãâ±¸°¡ º¸ÀÔ´Ï´Ù.";
-	next;
-	if (select( "¶óÀÌÆ®ÇÒÁ¨À¸·Î µ¹¾Æ°¡¼¼¿ä.", "µ¹¾Æ°¡Áö ¸¶." ) == 1)
-		warp "lighthalzen",310,228;
-	end;
-}
-
-// Heal
-lhz_dun_n,167,259,2	script	A Questionable Device#l	4_SYSTEM_BOX,3,3,{
-	if (isbegin_quest(14683) == 1) {
-		mes "[½Ã½ºÅÛ ¸Ş½ÃÁö]";
-		mes "ºñ»ó ÇÁ·ÎÅäÄİÀÌ È°¼ºÈ­µÇ¾ú½À´Ï´Ù. »ç¿ëÀÚ´Â RT-223À» ½ÇÇàÇÒ ¼ö ÀÖ½À´Ï´Ù.";
-		next;
-		if (select( "¶ÙÁö ¸¶¼¼¿ä.", "Run." ) == 2) {
-			mes "[½Ã½ºÅÛ ¸Ş½ÃÁö]";
-			mes "¸ğµç ÀÎ¿øÀº ºñ»ó ¼öÄ¢À» ÁØ¼öÇØ¾ß ÇÕ´Ï´Ù.";
-			close;
-		}
-		specialeffect EF_MAPPILLAR;
-		mes "[½Ã½ºÅÛ ¸Ş½ÃÁö]";
-		mes "RT-223À» »ç¿ëÀÚ¿¡°Ô ½ÇÇàÇÕ´Ï´Ù. ÀÌ °úÁ¤ÀÌ ¿Ï·áµÇ¸é ´ë±â ¸ğµå°¡ È°¼ºÈ­µË´Ï´Ù.";
-		specialeffect2 EF_BABY;
-		percentheal 100,100;
-		completequest 14683;// Mysterious Device
-		close;
-	}
-	end;
-
-OnTouch:
-	npctalk "¸ğµç ÀÎ¿øÀº ºñ»ó ¼öÄ¢À» ÁØ¼öÇØ¾ß ÇÕ´Ï´Ù.", "", bc_self;
-	end;
-
-OnInit:
-	questinfo( QTYPE_QUEST, QMARK_YELLOW, "isbegin_quest(14683) == 1" );
-	end;
-}
-
-// Misc
-lhz_dun_n,75,121,0	script	#Alphoccio_Basil_A1	HIDDEN_WARP_NPC,3,3,{
-	end;
-OnTouch:
-	specialeffect EF_BAT2;
-	disablenpc();
-	initnpctimer;
-	end;
-OnTimer1000:
-	.@npc_name$ = strnpcinfo(0);
-	if (.@npc_name$ == "#Alphoccio_Basil_A1") {
-		.@talker_name$ = "#lhz_dun_talk_A23"; 
-		switch (rand(5)) {
-			case 0:	 .@msg$ = "It was my mistake to think that this will be just traveling..."; break;
-			case 1:	 .@msg$ = "Hah... And so what?.. I listen to my wife..."; break;
-			case 2:	 .@msg$ = "What's wrong with them all here?.. Why such eyes?.."; break;
-			case 3:	 .@msg$ = "I can hear the sounds of music and songs.. Hah hah..."; break;
-			default: .@msg$ = "Where am I?.. Is there any exit?.."; break;
-		}
-	}
-	else if (.@npc_name$ == "#Alphoccio_Basil_A2") {
-		.@talker_name$ = "#lhz_dun_talk_A24";
-		switch (rand(5)) {
-			case 0:	 .@msg$ = "I thought we could make songs and travel around the world forever..."; break;
-			case 1:	 .@msg$ = "It doesn't matter where are we while you're near me..."; break;
-			case 2:	 .@msg$ = "Trentini... Where are you..."; break;
-			case 3: .@msg$ = "The sound of the song is fading away..."; break;
-			default: .@msg$ = "And now... What is left for me?.."; break;
-		}
-	}
-	else if (.@npc_name$ == "#Catherine Cheiron_A1") {
-		.@talker_name$ = "#lhz_dun_talk_A5";
-		switch (rand(5)) {
-			case 0:	 .@msg$ = "It's a very strange trick..."; break;
-			case 1:	 .@msg$ = "Sob sob... Somebody... Please.."; break;
-			case 2:	 .@msg$ = "It's cold... This place... Is it a warehouse?.."; break;
-			case 3:	 .@msg$ = "My voice... won't come out..."; break;
-			default: .@msg$ = "Friends... I'm scared..."; break;
-		}
-	}
-	else if (.@npc_name$ == "#Katrinn Chiron_A2") {
-		.@talker_name$ = "#lhz_dun_talk_A6";
-		switch (rand(5)) {
-			case 0:	 .@msg$ = "Seyren... Where are you..."; break;
-			case 1:	 .@msg$ = "Pain... Darkness... I'm scared..."; break;
-			case 2:  .@msg$ = "The magic that was so hard for me to learn is now just... useless..."; break;
-			case 3:  .@msg$ = "Those who are not humans..."; break;
-			default: .@msg$ = "Friends... Too dark..."; break;
-		}
-	}
-	else if (.@npc_name$ == "#Celia_Alde_A1") {
-		.@talker_name$ = "#lhz_dun_talk_A17";
-		switch (rand(5)) {
-			case 0:  .@msg$ = "Crap... This is crazy... All of this..."; break;
-			case 1:  .@msg$ = "I'm not sure I could tell who..."; break;
-			case 2:	 .@msg$ = "So poor spirit here... May it be..."; break;
-			case 3:  .@msg$ = "This is ridiculous... How this could even happen..?"; break;
-			default: .@msg$ = "Darn it... This is beyond my analytical abilities... Impossible..."; break;
-		}
-	}
-	else if (.@npc_name$ == "#Celia_Alde_A2") {
-		.@talker_name$ = "#lhz_dun_talk_A18";
-		switch (rand(4)) {
-			case 0:  .@msg$ = "Nobody around... What is..."; break;
-			case 1:  .@msg$ = "My... survival... and escape... analysis results..."; break;
-			case 2:	 .@msg$ = "Where... what... No, no... Never..."; break;
-			default: .@msg$ = "I wanna get out of here as soon as possible..."; break;
-		}
-	}
-	else if (.@npc_name$ == "#Chen_Liu_A1") {
-		.@talker_name$ = "#lhz_dun_talk_A19";
-		switch (rand(5)) {
-			case 0:  .@msg$ = "My head feels somewhat weird..."; break;
-			case 1:  .@msg$ = "This place seems like an abandoned cellar..."; break;
-			case 2:	 .@msg$ = "There's a wound in my chest... What's goin..."; break;
-			case 3:	 .@msg$ = "I'm about to lose myself..."; break;
-			default: .@msg$ = "I'm a Monk... Agent of divine punishment..."; break;
-		}
-	}
-	else if (.@npc_name$ == "#Chen_Liu_A2") {
-		.@talker_name$ = "#lhz_dun_talk_A20";
-		switch (rand(4)) {
-			case 0:  .@msg$ = "Enemies' faces... That's collegues' faces..."; break;
-			case 1:  .@msg$ = "St Capitolina Abbey... There's still a work to be done..."; break;
-			case 2:	 .@msg$ = "My wound is sewed up... What the hell they have done to me?.."; break;
-			default: .@msg$ = "Holy power... Power of the mind..."; break;
-		}
-	}
-	else if (.@npc_name$ == "#Eremes_Guille_A1") {
-		.@talker_name$ = "#lhz_dun_talk_A7";
-		switch (rand(5)) {
-			case 0:  .@msg$ = "Concentrate on survival..."; break;
-			case 1:  .@msg$ = "I bear the Guillotine crest, I must survive!.."; break;
-			case 2:	 .@msg$ = "Don't give up... Remember the mission..."; break;
-			case 3:	 .@msg$ = "Exit is not near at all... I can't see it..."; break;
-			default: .@msg$ = "All of this... It was planned meticulously for sure..."; break;
-		}
-	}
-	else if (.@npc_name$ == "#Eremes_Guille_A2") {
-		.@talker_name$ = "#lhz_dun_talk_A8";
-		switch (rand(5)) {
-			case 0:  .@msg$ = "Is Katrinn all right... I must protect..."; break;
-			case 1:  .@msg$ = "I must complete my mission... My orders..."; break;
-			case 2:	 .@msg$ = "Assasin Guild waits for me..."; break;
-			case 3: .@msg$ = "I cannot believe I fell into a trap like this..."; break;
-			default: .@msg$ = "My eyes are blurred... I won't last long..."; break;
-		}
-	}
-	else if (.@npc_name$ == "#Flamel_Emule_A1") {
-		.@talker_name$ = "#lhz_dun_talk_A15";
-		switch (rand(5)) {
-			case 0:	 .@msg$ = "I've never felt so helpless before..."; break;
-			case 1:	 .@msg$ = "Celia... I'm scared..."; break;
-			case 2:	 .@msg$ = "My body is full of surgical scars..."; break;
-			case 3:	 .@msg$ = "Nobody showed up... Nobody... Here..."; break;
-			default: .@msg$ = "I can bear it..."; break;
-		}
-	}
-	else if (.@npc_name$ == "#Flamel_Emule_A2") {
-		.@talker_name$ = "#lhz_dun_talk_A16";
-		switch (rand(5)) {
-			case 0:  .@msg$ = "My family... Geneticists... gonna be so embarassed..."; break;
-			case 1:  .@msg$ = "I feel like... my consciousness... is no longer me..."; break;
-			case 2:	 .@msg$ = "My consciousness... is fading..."; break;
-			case 3:	 .@msg$ = "Now with the last remaining strength..."; break;
-			default: .@msg$ = "My body... what... No way..."; break;
-		}
-	}
-	else if (.@npc_name$ == "#Gertie_Wie_A1") {
-		.@talker_name$ = "#lhz_dun_talk_A21";
-		switch (rand(4)) {
-			case 0:	 .@msg$ = "We have been used..."; break;
-			case 1:	 .@msg$ = "What are you up to..."; break;
-			case 2:	 .@msg$ = "It's too wide... Can't see any exit..."; break;
-			default: .@msg$ = "Hah... Grand misfortune..."; break;
-		}
-	}
-	else if (.@npc_name$ == "#Gertie_Wie_A2") {
-		.@talker_name$ = "#lhz_dun_talk_A22";
-		switch (rand(5)) {
-			case 0:	 .@msg$ = "I should have received more money if I knew this would happen..."; break;
-			case 1:	 .@msg$ = "My cheeks are burning... Whatever happened to us... It's right..."; break;
-			case 2:	 .@msg$ = "My ages are gone... Young ones... Shall grow up into warriors..."; break;
-			case 3:	 .@msg$ = "I'll watch carefully... I should remember..."; break;
-			default: .@msg$ = "If we knew this would happen and we'd get this..."; break;
-		}
-	}
-	else if (.@npc_name$ == "#Harword_AltEisen_A1") {
-		.@talker_name$ = "#lhz_dun_talk_A9";
-		switch (rand(5)) {
-			case 0:  .@msg$ = "What moves my body now... Is it really my will..?"; break;
-			case 1:  .@msg$ = "Where is this plase?.. I was told nothing..."; break;
-			case 2:  .@msg$ = "I won't go anywhere... I'll be by your side..."; break;
-			case 3:  .@msg$ = "I must look for my sister Cecil... no matter what..."; break;
-			default: .@msg$ = "Dangerous... My mind shuts down..."; break;
-		}
-	}
-	else if (.@npc_name$ == "#Harword Alt-Eisen_A2") {
-		.@talker_name$ = "#lhz_dun_talk_A10";
-		switch (rand(3)) {
-			case 0:	 .@msg$ = "I cannot see my future anymore..."; break;
-			case 1: .@msg$ = "My eyes... just keep... closing..."; break;
-			default: .@msg$ = "Damn it... Cheer up... Don't loose the will..."; break;
-		}
-	}
-	else if (.@npc_name$ == "#Magaleta_Sorin_A1") {
-		.@talker_name$ = "#lhz_dun_talk_A3";
-		switch (rand(5)) {
-			case 0:  .@msg$ = "Dear Odin... Let Seyren be all..."; break;
-			case 1:  .@msg$ = "All of this terrifies me..."; break;
-			case 2:	 .@msg$ = "That's not my will... This is not me..."; break;
-			case 3:	 .@msg$ = "Holy power can't heal the black blood..."; break;
-			default: .@msg$ = "Dear Odin... May we... May he..."; break;
-		}
-	}
-	else if (.@npc_name$ == "#Magaleta_Sorin_A2") {
-		.@talker_name$ = "#lhz_dun_talk_A4";
-		switch (rand(4)) {
-			case 0:  .@msg$ = "Dear Odin, be my strength remaining..."; break;
-			case 1:  .@msg$ = "My body keeps loosing its strength..."; break;
-			case 2:	 .@msg$ = "Holy powers keep weakening..."; break;
-			default: .@msg$ = "My Seyren... Where are you..."; break;
-		}
-	}
-	else if (.@npc_name$ == "#Randel_Lawrence_A1") {
-		.@talker_name$ = "#lhz_dun_talk_A13";
-		switch (rand(4)) {
-			case 0:  .@msg$ = "I was dispatched here as the commander..."; break;
-			case 1:  .@msg$ = "Now it's impossible... Really..."; break;
-			case 2:	 .@msg$ = "I'll show you paladins strength..."; break;
-			default: .@msg$ = "Where is my crew..."; break;
-		}
-	}
-	else if (.@npc_name$ == "#Randel_Lawrence_A2") {
-		.@talker_name$ = "#lhz_dun_talk_A14";
-		switch (rand(5)) {
-			case 0:  .@msg$ = "Dispatched crew... If any of you survive... You must make out of this... This is an order..."; break;
-			case 1:  .@msg$ = "My powers are gone now..."; break;
-			case 2:	 .@msg$ = "What is that?.. I'm changing..."; break;
-			case 3:	 .@msg$ = "Am I the last survivor here?.."; break;
-			default: .@msg$ = "Have I fallen? It darkens before my eyes..."; break;
-		}
-	}
-	else if (.@npc_name$ == "#Seyren_Windsor_A1") {
-		.@talker_name$ = "#lhz_dun_talk_A1";
-		switch (rand(4)) {
-			case 0:  .@msg$ = "I have to find my fellows... I must..."; break;
-			case 1:  .@msg$ = "Where's Sorin?.. Are my friends all right?.."; break;
-			case 2:	 .@msg$ = "There is a traitor amongst our leaders... Nobody is safe to tell to..."; break;
-			default: .@msg$ = "My father should be informed of this..."; break;
-		}
-	}
-	else if (.@npc_name$ == "#Seyren_Windsor_A2") {
-		.@talker_name$ = "#lhz_dun_talk_A2";
-		switch (rand(5)) {
-			case 0:  .@msg$ = "My guilt tightens..."; break;
-			case 1:  .@msg$ = "I am Windsor, son of honor, I shall not defile my name..."; break;
-			case 2:	 .@msg$ = "Gotta flee from them... This should never..."; break;
-			case 3:	 .@msg$ = "We cannot die in such a place..."; break;
-			default: .@msg$ = "My love... Margaretha..."; break;
-		}
-	}
-	else if (.@npc_name$ == "#Shecil_Damon_A1") {
-		.@talker_name$ = "#lhz_dun_talk_A11";
-		switch (rand(5)) {
-			case 0:  .@msg$ = "Keep calm... It's okay..."; break;
-			case 1:  .@msg$ = "This hallway is not the exit too..."; break;
-			case 2:	 .@msg$ = "I'll come... Wait for me, Sorin..."; break;
-			case 3:  .@msg$ = "I'm scared... Very... scared..."; break;
-			default: .@msg$ = "I still have my bow and arrows..."; break;
-		}
-	}
-	else if (.@npc_name$ == "#Shecil_Damon_A2") {
-		.@talker_name$ = "#lhz_dun_talk_A12";
-		switch (rand(5)) {
-			case 0:	 .@msg$ = "I cannot die like this here..."; break;
-			case 1:	 .@msg$ = "Sorin... Where did you go..."; break;
-			case 2:	 .@msg$ = "Friends... That's what I miss..."; break;
-			case 3:	 .@msg$ = "What's in that space?.. Where will come up..?"; break;
-			default: .@msg$ = "I can do this... It's not an end..."; break;
-		}
-	}
-	else if (.@npc_name$ == "#Trentini_A1") {
-		.@talker_name$ = "#lhz_dun_talk_A25";
-		switch (rand(5)) {
-			case 0:  .@msg$ = "I can feel where he is..."; break;
-			case 1:  .@msg$ = "What do I do now?.. My head aches too much..."; break;
-			case 2:	 .@msg$ = "It's my fault... I shoul break up with Alphoccio in the end..."; break;
-			case 3:	 .@msg$ = "It's an end, it's an oppression... That's the result..."; break;
-			default: .@msg$ = "I miss you... Very much..."; break;
-		}
-	}
-	else if (.@npc_name$ == "#Trentini_A2") {
-		.@talker_name$ = "#lhz_dun_talk_A26";
-		switch (rand(4)) {
-			case 0:  .@msg$ = "Is anybody there?.. Friends, please... Ah..."; break;
-			case 1:  .@msg$ = "That Taro reading was terrifying..."; break;
-			case 2:	 .@msg$ = "I liked all their voices so much..."; break;
-			default: .@msg$ = "My body won't move at all..."; break;
-		}
-	}
-	npctalk .@msg$, .@talker_name$;
-	end;
-OnTimer40000:
-	stopnpctimer;
-	enablenpc();
-	end;
-}
-
-lhz_dun_n,92,102,0	duplicate(#Alphoccio_Basil_A1)	#Alphoccio_Basil_A2	HIDDEN_WARP_NPC,3,3
-lhz_dun_n,150,74,0	duplicate(#Alphoccio_Basil_A1)	#Catherine Cheiron_A1	HIDDEN_WARP_NPC,3,3
-lhz_dun_n,174,98,0	duplicate(#Alphoccio_Basil_A1)	#Katrinn Chiron_A2	HIDDEN_WARP_NPC,3,3
-lhz_dun_n,25,65,0	duplicate(#Alphoccio_Basil_A1)	#Celia_Alde_A1	HIDDEN_WARP_NPC,3,3
-lhz_dun_n,60,102,0	duplicate(#Alphoccio_Basil_A1)	#Celia_Alde_A2	HIDDEN_WARP_NPC,3,3
-lhz_dun_n,194,188,0	duplicate(#Alphoccio_Basil_A1)	#Chen_Liu_A1	HIDDEN_WARP_NPC,3,3
-lhz_dun_n,255,206,0	duplicate(#Alphoccio_Basil_A1)	#Chen_Liu_A2	HIDDEN_WARP_NPC,3,3
-lhz_dun_n,81,184,0	duplicate(#Alphoccio_Basil_A1)	#Eremes_Guille_A1	HIDDEN_WARP_NPC,3,3
-lhz_dun_n,113,191,0	duplicate(#Alphoccio_Basil_A1)	#Eremes_Guille_A2	HIDDEN_WARP_NPC,3,3
-lhz_dun_n,84,87,0	duplicate(#Alphoccio_Basil_A1)	#Flamel_Emule_A1	HIDDEN_WARP_NPC,3,3
-lhz_dun_n,39,55,0	duplicate(#Alphoccio_Basil_A1)	#Flamel_Emule_A2	HIDDEN_WARP_NPC,3,3
-lhz_dun_n,232,198,0	duplicate(#Alphoccio_Basil_A1)	#Gertie_Wie_A1	HIDDEN_WARP_NPC,3,3
-lhz_dun_n,130,148,0	duplicate(#Alphoccio_Basil_A1)	#Gertie_Wie_A2	HIDDEN_WARP_NPC,3,3
-lhz_dun_n,119,195,0	duplicate(#Alphoccio_Basil_A1)	#Harword Alt-Eisen_A1	HIDDEN_WARP_NPC,3,3
-lhz_dun_n,158,210,0	duplicate(#Alphoccio_Basil_A1)	#Harword Alt-Eisen_A2	HIDDEN_WARP_NPC,3,3
-lhz_dun_n,159,122,0	duplicate(#Alphoccio_Basil_A1)	#Magaleta_Sorin_A1	HIDDEN_WARP_NPC,3,3
-lhz_dun_n,133,39,0	duplicate(#Alphoccio_Basil_A1)	#Magaleta_Sorin_A2	HIDDEN_WARP_NPC,3,3
-lhz_dun_n,168,193,0	duplicate(#Alphoccio_Basil_A1)	#Randel_Lawrence_A1	HIDDEN_WARP_NPC,3,3
-lhz_dun_n,188,188,0	duplicate(#Alphoccio_Basil_A1)	#Randel_Lawrence_A2	HIDDEN_WARP_NPC,3,3
-lhz_dun_n,44,155,0	duplicate(#Alphoccio_Basil_A1)	#Seyren Windsor_A1	HIDDEN_WARP_NPC,3,3
-lhz_dun_n,54,221,0	duplicate(#Alphoccio_Basil_A1)	#Seyren Windsor_A2	HIDDEN_WARP_NPC,3,3
-lhz_dun_n,249,66,0	duplicate(#Alphoccio_Basil_A1)	#Shecil_Damon_A1	HIDDEN_WARP_NPC,3,3
-lhz_dun_n,213,97,0	duplicate(#Alphoccio_Basil_A1)	#Shecil_Damon_A2	HIDDEN_WARP_NPC,3,3
-lhz_dun_n,191,129,0	duplicate(#Alphoccio_Basil_A1)	#Trentini_A1	HIDDEN_WARP_NPC,3,3
-lhz_dun_n,259,132,0	duplicate(#Alphoccio_Basil_A1)	#Trentini_A2	HIDDEN_WARP_NPC,3,3
-
-lhz_dun_n,44,155,6	script	#lhz_dun_talk_A1	CLEAR_NPC,{ end; }
-lhz_dun_n,54,221,6	duplicate(#lhz_dun_talk_A1)	#lhz_dun_talk_A2	CLEAR_NPC
-lhz_dun_n,159,122,6	duplicate(#lhz_dun_talk_A1)	#lhz_dun_talk_A3	CLEAR_NPC
-lhz_dun_n,133,39,6	duplicate(#lhz_dun_talk_A1)	#lhz_dun_talk_A4	CLEAR_NPC
-lhz_dun_n,150,74,6	duplicate(#lhz_dun_talk_A1)	#lhz_dun_talk_A5	CLEAR_NPC
-lhz_dun_n,174,98,6	duplicate(#lhz_dun_talk_A1)	#lhz_dun_talk_A6	CLEAR_NPC
-lhz_dun_n,81,184,6	duplicate(#lhz_dun_talk_A1)	#lhz_dun_talk_A7	CLEAR_NPC
-lhz_dun_n,113,191,6	duplicate(#lhz_dun_talk_A1)	#lhz_dun_talk_A8	CLEAR_NPC
-lhz_dun_n,119,195,6	duplicate(#lhz_dun_talk_A1)	#lhz_dun_talk_A9	CLEAR_NPC
-lhz_dun_n,158,210,6	duplicate(#lhz_dun_talk_A1)	#lhz_dun_talk_A10	CLEAR_NPC
-lhz_dun_n,249,66,6	duplicate(#lhz_dun_talk_A1)	#lhz_dun_talk_A11	CLEAR_NPC
-lhz_dun_n,213,97,6	duplicate(#lhz_dun_talk_A1)	#lhz_dun_talk_A12	CLEAR_NPC
-lhz_dun_n,168,193,6	duplicate(#lhz_dun_talk_A1)	#lhz_dun_talk_A13	CLEAR_NPC
-lhz_dun_n,188,188,6	duplicate(#lhz_dun_talk_A1)	#lhz_dun_talk_A14	CLEAR_NPC
-lhz_dun_n,84,87,6	duplicate(#lhz_dun_talk_A1)	#lhz_dun_talk_A15	CLEAR_NPC
-lhz_dun_n,39,55,6	duplicate(#lhz_dun_talk_A1)	#lhz_dun_talk_A16	CLEAR_NPC
-lhz_dun_n,25,65,6	duplicate(#lhz_dun_talk_A1)	#lhz_dun_talk_A17	CLEAR_NPC
-lhz_dun_n,60,102,6	duplicate(#lhz_dun_talk_A1)	#lhz_dun_talk_A18	CLEAR_NPC
-lhz_dun_n,194,188,6	duplicate(#lhz_dun_talk_A1)	#lhz_dun_talk_A19	CLEAR_NPC
-lhz_dun_n,255,206,6	duplicate(#lhz_dun_talk_A1)	#lhz_dun_talk_A20	CLEAR_NPC
-lhz_dun_n,232,198,6	duplicate(#lhz_dun_talk_A1)	#lhz_dun_talk_A21	CLEAR_NPC
-lhz_dun_n,130,148,6	duplicate(#lhz_dun_talk_A1)	#lhz_dun_talk_A22	CLEAR_NPC
-lhz_dun_n,75,121,6	duplicate(#lhz_dun_talk_A1)	#lhz_dun_talk_A23	CLEAR_NPC
-lhz_dun_n,92,102,6	duplicate(#lhz_dun_talk_A1)	#lhz_dun_talk_A24	CLEAR_NPC
-lhz_dun_n,191,129,6	duplicate(#lhz_dun_talk_A1)	#lhz_dun_talk_A25	CLEAR_NPC
-lhz_dun_n,259,132,6	duplicate(#lhz_dun_talk_A1)	#lhz_dun_talk_A26	CLEAR_NPC
-
-// npc location -> quest ID inaccurate
-lhz_dun_n,132,61,2	script	A Questionable Device#14684	4_SYSTEM_BOX,5,5,{
-	end;
-OnTouch:
-	.@quest_id = atoi(strnpcinfo(2));
-	switch( checkquest(.@quest_id,PLAYTIME) ) {
-	case -1:
-		break;
-	case 0:
-	case 1:
-		npctalk "ÇöÀç... ÇÊ¿äÇÑ... ³Ã°¢... ´Ù¿î... ½Ã°£...";
-		end;
-	case 2:
-		erasequest .@quest_id;
-		break;
-	}
-	specialeffect EF_MAPPILLAR;
-	npctalk "ºñ»ó ÇÁ·ÎÅäÄİ... È°¼ºÈ­µÊ... RT..017... Äğ´Ù¿î... 1½Ã°£......";
-	specialeffect2 EF_BABY;
-	setquest .@quest_id;// Mysterious Device
-	switch( .@quest_id ) {
-	case 14684:
-		// atk dmg+10%, def+10% on monsters (inaccurates, unknown values)
-		// atk+: Swordman, Thief / def+: Acolyte, Merchant
-		sc_start2 SC_LHZ_DUN_N1,1800000,10,10,10000,SCSTART_NOTICKDEF;	/// last 30 mins
-		break;
-	case 14685:
-		// atk+: Acolyte, Merchant / def+: Mage, Archer
-		sc_start2 SC_LHZ_DUN_N2,1800000,10,10,10000,SCSTART_NOTICKDEF;
-		break;
-	case 14686:
-		// atk+: Mage, Archer / def+: Swordman, Thief
-		sc_start2 SC_LHZ_DUN_N3,1800000,10,10,10000,SCSTART_NOTICKDEF;
-		break;
-	case 14687:
-		// atk+: MvPs / def+: MvPs
-		sc_start2 SC_LHZ_DUN_N4,1800000,10,10,10000,SCSTART_NOTICKDEF;
-		break;
-	}
-	end;
-
-OnInit:
-	.@condition$ = "!isbegin_quest(" + strnpcinfo(2) + ")";
-	questinfo( QTYPE_QUEST, QMARK_YELLOW, .@condition$ );
-	end;
-}
-
-lhz_dun_n,53,127,2	duplicate(A Questionable Device#14684)	A Questionable Device#14685	4_SYSTEM_BOX,5,5
-lhz_dun_n,214,127,2	duplicate(A Questionable Device#14684)	A Questionable Device#14686	4_SYSTEM_BOX,5,5
-lhz_dun_n,148,148,2	duplicate(A Questionable Device#14684)	A Questionable Device#14687	4_SYSTEM_BOX,5,5
-
-/*
-// Unknown effects
-lhz_dun_n,130,204,2	script	Dead Man#lhzd01	4_TOWER_06,5,5
-lhz_dun_n,78,133,2	script	Dead Man#lhzd02	4_TOWER_06,5,5
-lhz_dun_n,47,65,2	script	Dead Man#lhzd03	4_TOWER_06,5,5
-lhz_dun_n,141,39,2	script	Dead Man#lhzd04	4_TOWER_06,5,5
-lhz_dun_n,123,85,2	script	Dead Man#lhzd05	4_TOWER_06,5,5
-lhz_dun_n,212,71,2	script	Dead Man#lhzd06	4_TOWER_06,5,5
-lhz_dun_n,213,109,2	script	Dead Man#lhzd07	4_TOWER_06,5,5
-lhz_dun_n,145,179,2	script	Dead Man#lhzd08	4_TOWER_06,5,5
-lhz_dun_n,233,135,2	script	Dead Man#lhzd09	4_TOWER_06,5,5
-lhz_dun_n,241,201,2	script	Dead Man#lhzd10	4_TOWER_06,5,5
-lhz_dun_n,150,211,2	script	Dead Man#lhzd11	4_TOWER_03,5,5
-lhz_dun_n,69,144,2	script	Dead Man#lhzd12	4_TOWER_03,5,5
-lhz_dun_n,113,81,2	script	Dead Man#lhzd13	4_TOWER_03,5,5
-lhz_dun_n,144,64,2	script	Dead Man#lhzd14	4_TOWER_03,5,5
-lhz_dun_n,157,93,2	script	Dead Man#lhzd15	4_TOWER_03,5,5
-lhz_dun_n,231,69,2	script	Dead Man#lhzd16	4_TOWER_03,5,5
-lhz_dun_n,179,107,2	script	Dead Man#lhzd17	4_TOWER_03,5,5
-lhz_dun_n,172,175,2	script	Dead Man#lhzd18	4_TOWER_03,5,5
-lhz_dun_n,228,149,2	script	Dead Man#lhzd19	4_TOWER_03,5,5
-lhz_dun_n,248,218,2	script	Dead Man#lhzd20	4_TOWER_03,5,5
-lhz_dun_n,139,233,2	script	Dead Man#lhzd21	4_TOWER_08,5,5
-lhz_dun_n,69,110,2	script	Dead Man#lhzd22	4_TOWER_08,5,5
-lhz_dun_n,100,109,2	script	Dead Man#lhzd23	4_TOWER_08,5,5
-lhz_dun_n,137,72,2	script	Dead Man#lhzd24	4_TOWER_08,5,5
-lhz_dun_n,169,85,2	script	Dead Man#lhzd25	4_TOWER_08,5,5
-lhz_dun_n,245,63,2	script	Dead Man#lhzd26	4_TOWER_08,5,5
-lhz_dun_n,182,126,2	script	Dead Man#lhzd27	4_TOWER_08,5,5
-lhz_dun_n,182,154,2	script	Dead Man#lhzd28	4_TOWER_08,5,5
-lhz_dun_n,246,141,2	script	Dead Man#lhzd29	4_TOWER_08,5,5
-lhz_dun_n,236,226,2	script	Dead Man#lhzd30	4_TOWER_08,5,5
-lhz_dun_n,38,200,2	script	Dead Man#lhzd31	4_TOWER_11,5,5
-lhz_dun_n,95,86,2	script	Dead Man#lhzd32	4_TOWER_11,5,5
-lhz_dun_n,98,138,2	script	Dead Man#lhzd33	4_TOWER_11,5,5
-lhz_dun_n,145,89,2	script	Dead Man#lhzd34	4_TOWER_11,5,5
-lhz_dun_n,186,92,2	script	Dead Man#lhzd35	4_TOWER_11,5,5
-lhz_dun_n,181,148,2	script	Dead Man#lhzd36	4_TOWER_11,5,5
-lhz_dun_n,181,148,2	script	Dead Man#lhzd37	4_TOWER_11,5,5
-lhz_dun_n,203,144,2	script	Dead Man#lhzd38	4_TOWER_11,5,5
-lhz_dun_n,240,134,2	script	Dead Man#lhzd39	4_TOWER_11,5,5
-lhz_dun_n,141,129,2	script	Dead Man#lhzd40	4_TOWER_11,5,5
-lhz_dun_n,81,160,2	script	Dead Man#lhzd41	4_TOWER_13,5,5
-lhz_dun_n,41,77,2	script	Dead Man#lhzd42	4_TOWER_13,5,5
-lhz_dun_n,99,162,2	script	Dead Man#lhzd43	4_TOWER_13,5,5
-lhz_dun_n,136,95,2	script	Dead Man#lhzd44	4_TOWER_13,5,5
-lhz_dun_n,184,80,2	script	Dead Man#lhzd45	4_TOWER_13,5,5
-lhz_dun_n,202,102,2	script	Dead Man#lhzd46	4_TOWER_13,5,5
-lhz_dun_n,157,143,2	script	Dead Man#lhzd47	4_TOWER_13,5,5
-lhz_dun_n,202,133,2	script	Dead Man#lhzd48	4_TOWER_13,5,5
-lhz_dun_n,220,178,2	script	Dead Man#lhzd49	4_TOWER_13,5,5
-lhz_dun_n,131,148,2	script	Dead Man#lhzd50	4_TOWER_13,5,5
-*/
