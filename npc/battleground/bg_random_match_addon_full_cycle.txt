@@ -1,5 +1,5 @@
 //============================================================
-// NEED 전장 랜덤 매칭 시스템 - 티에라/플라비우스/KVM 풀사이클 v12.1-hotfix-admin-teamnotice
+// NEED 전장 랜덤 매칭 시스템 - 티에라/플라비우스/KVM 풀사이클 v12.1-hotfix-admin-missingexclude
 // - 한 번의 매칭으로 티에라 -> 플라비우스 -> KVM 전체 사이클 진행
 // - 최초 티에라는 자동 입장, 이후 전장은 양 팀 파티장의 입장 준비로 진행
 // - 티에라/플라비우스 종료 후 파티 유지, KVM 종료 후에만 자동 해체
@@ -237,6 +237,8 @@ function	script	F_BG_RM_CancelReason$	{
 		return "접속 위치 확인 실패";
 	case 5:
 		return "직접 참가 취소";
+	case 6:
+		return "랜덤 매칭 참가 레벨 미달";
 	}
 	return "알 수 없는 사유";
 }
@@ -318,6 +320,21 @@ function	script	F_BG_RM_AnnounceMissingApplicants	{
 		.@name$ = convertpcinfo(.@aid,CPC_NAME);
 
 		if (.@aid <= 0 || .@cid <= 0 || .@name$ == "")
+			continue;
+
+		// 운영자/테스트 캐릭터 미신청 명단 제외
+		.@excluded = 0;
+		for (.@j = 0; .@j < $@BG_RM_MISSING_EXCLUDE_COUNT; .@j++) {
+			if (.@name$ == $@BG_RM_MISSING_EXCLUDE_NAME$[.@j]) {
+				.@excluded = 1;
+				break;
+			}
+		}
+		if (.@excluded)
+			continue;
+
+		// 참가 레벨 미달 캐릭터에게는 미신청 홍보를 하지 않습니다.
+		if ($@BG_RM_MIN_JOIN_LEVEL > 0 && readparam(BaseLevel,.@cid) < $@BG_RM_MIN_JOIN_LEVEL)
 			continue;
 
 		if (callfunc("F_BG_RM_FindRecruitSlot",.@aid,.@cid) >= 0)
@@ -1088,7 +1105,20 @@ OnInit:
 	.MaxPartyMembers = MAX_PARTY;
 	.MaxPlayers = .MaxPartyMembers * 2;
 	.RecruitSeconds = 300;
+
+	// 랜덤 매칭 참가 BaseLevel 제한
+	// 운영 상황에 따라 이 값만 변경하면 @전장매칭 / @전장참가에 공통 적용됩니다.
+	.MinJoinLevel = 150;
 	.MaxBaseLevel = 175;
+
+	// 별도 감시 NPC/함수에서도 같은 기준을 사용하도록 공개합니다.
+	$@BG_RM_MIN_JOIN_LEVEL = .MinJoinLevel;
+
+	// 랜덤 매칭 "미신청자" NPC 안내 제외 캐릭터명
+	// 운영자/테스트 캐릭터가 bat_room에 있어도 미신청 명단에 노출되지 않습니다.
+	cleararray $@BG_RM_MISSING_EXCLUDE_NAME$[0], "", 10;
+	$@BG_RM_MISSING_EXCLUDE_COUNT = 1;
+	$@BG_RM_MISSING_EXCLUDE_NAME$[0] = "[GM]NEED";
 
 	stopnpctimer;
 	stopnpctimer "NEED_BG_RM_RecruitMonitor";
@@ -1127,6 +1157,11 @@ OnCommandStart:
 
 	if (!#NEED_BG_RULE_AGREE) {
 		dispbottom "[전장] 전장 이용 규칙 동의 후 사용할 수 있습니다.";
+		end;
+	}
+
+	if (BaseLevel < .MinJoinLevel) {
+		dispbottom "[전장] 랜덤 매칭은 BaseLevel " + .MinJoinLevel + " 이상부터 신청할 수 있습니다. (현재 " + BaseLevel + ")";
 		end;
 	}
 
@@ -1171,6 +1206,8 @@ OnCommandStart:
 
 		if (.@aid <= 0 || .@cid <= 0 || .@name$ == "")
 			continue;
+		if (readparam(BaseLevel,.@cid) < .MinJoinLevel)
+			continue;
 		if (getcharid(1,.@name$) || getcharid(4,.@name$))
 			continue;
 
@@ -1178,7 +1215,7 @@ OnCommandStart:
 	}
 
 	if (.@eligible < .MinPlayers) {
-		dispbottom "[전장] 현재 참가 가능한 인원이 " + .MinPlayers + "명 미만입니다. (현재 " + .@eligible + "명)";
+		dispbottom "[전장] BaseLevel " + .MinJoinLevel + " 이상 참가 가능 인원이 " + .MinPlayers + "명 미만입니다. (현재 " + .@eligible + "명)";
 		end;
 	}
 
@@ -1215,7 +1252,7 @@ OnCommandStart:
 
 	mapannounce "bat_room", "[전장 랜덤 매칭] " + strcharinfo(0) + "님이 티에라 → 플라비우스 → KVM 풀사이클 매칭을 신청했습니다.", bc_map, "0x66CCFF";
 	mapannounce "bat_room", "[전장 랜덤 매칭] 참가자는 " + .RecruitSeconds + "초 이내에 @전장참가를 입력해 주세요. 신청 취소: @전장취소", bc_map, "0x66CCFF";
-	mapannounce "bat_room", "[전장 랜덤 매칭] 현재 참가 1명 / 최소 " + .MinPlayers + "명", bc_map, "0x66CCFF";
+	mapannounce "bat_room", "[전장 랜덤 매칭] 참가 조건: BaseLevel " + .MinJoinLevel + " 이상 / 현재 참가 1명 / 최소 " + .MinPlayers + "명", bc_map, "0x66CCFF";
 	end;
 
 OnCommandJoin:
@@ -1231,6 +1268,11 @@ OnCommandJoin:
 
 	if (!#NEED_BG_RULE_AGREE) {
 		dispbottom "[전장] 전장 이용 규칙 동의 후 참가할 수 있습니다.";
+		end;
+	}
+
+	if (BaseLevel < .MinJoinLevel) {
+		dispbottom "[전장] 랜덤 매칭은 BaseLevel " + .MinJoinLevel + " 이상부터 참가할 수 있습니다. (현재 " + BaseLevel + ")";
 		end;
 	}
 
@@ -1357,7 +1399,10 @@ OnCommandStatus:
 		}
 		else {
 			announce "[전장] 내 상태: 현재 모집 미참가", bc_self, "0xFFCC66";
-			dispbottom "[전장] 참가하려면 @전장참가를 입력해 주세요.";
+			if (BaseLevel < .MinJoinLevel)
+				dispbottom "[전장] 참가 조건: BaseLevel " + .MinJoinLevel + " 이상 / 현재 " + BaseLevel;
+			else
+				dispbottom "[전장] 참가하려면 @전장참가를 입력해 주세요.";
 		}
 
 		dispbottom "[전장] 모집 현황: " + callfunc("F_BG_RM_ModeName$",$@BG_RM_MODE)
@@ -1480,11 +1525,17 @@ OnFinalize:
 			continue;
 		}
 
+		.@base_level = readparam(BaseLevel,.@cid);
+		if (.@base_level < .MinJoinLevel) {
+			message .@name$, "[전장] BaseLevel " + .MinJoinLevel + " 미만이라 랜덤 매칭 최종 참가자에서 제외되었습니다.";
+			continue;
+		}
+
 		.@aid_list[.@count] = .@aid;
 		.@cid_list[.@count] = .@cid;
 		.@name_list$[.@count] = .@name$;
 		.@class_list[.@count] = readparam(Class,.@cid);
-		.@level_list[.@count] = readparam(BaseLevel,.@cid);
+		.@level_list[.@count] = .@base_level;
 
 		if (.@level_list[.@count] == .MaxBaseLevel)
 			.@max_level_count++;
@@ -1628,63 +1679,163 @@ OnFinalize:
 		+ " low_cap_G=" + .@low_cap_g
 		+ " low_cap_C=" + .@low_cap_c;
 
-	// 우선 분리 규칙:
-	// 민스트럴 계열과 원더러 계열이 전체 참가자 중 각각 정확히 1명이라면
-	// 일반 단독 직업 무작위 배정보다 먼저 서로 다른 팀에 고정 배정합니다.
-	.@minstrel_count = 0;
-	.@wanderer_count = 0;
+	//========================================================
+	// 우선 분리 규칙
+	//
+	// 전체 참가자 기준으로 아래 직업군이 각각 정확히 1명씩 존재하면
+	// 두 캐릭터는 반드시 서로 다른 팀에 배치합니다.
+	//
+	// rule 0: 민스트럴(6) ↔ 원더러(7)
+	// rule 1: 로열가드(2) ↔ 소서러(4)
+	// rule 2: 아크비숍(12) ↔ 제네릭(9)
+	//
+	// 175 미만 캐릭터가 포함된 경우에도 "마지막 배정" 원칙은 유지합니다.
+	// 이 단계에서는 저레벨 캐릭터의 최종 팀만 예약하고,
+	// 실제 팀 배열 추가는 저레벨 마지막 단계에서 처리합니다.
+	//========================================================
+	cleararray .@forced_team[0], 0, .@count;
+	.@forced_high_g = 0;
+	.@forced_high_c = 0;
+	.@forced_low_g = 0;
+	.@forced_low_c = 0;
 
-	for (.@i = 0; .@i < .@count; .@i++) {
-		if (.@is_low[.@i])
+	.@split_rule_count = 3;
+
+	.@split_family_a[0] = 6;
+	.@split_family_b[0] = 7;
+
+	.@split_family_a[1] = 2;
+	.@split_family_b[1] = 4;
+
+	.@split_family_a[2] = 12;
+	.@split_family_b[2] = 9;
+
+	for (.@rule = 0; .@rule < .@split_rule_count; .@rule++) {
+		.@family_a = .@split_family_a[.@rule];
+		.@family_b = .@split_family_b[.@rule];
+		.@count_a = 0;
+		.@count_b = 0;
+		.@index_a = -1;
+		.@index_b = -1;
+
+		for (.@i = 0; .@i < .@count; .@i++) {
+			.@family = callfunc("F_BG_RM_NoticeJobFamily", .@class_list[.@i]);
+
+			if (.@family == .@family_a) {
+				.@index_a = .@i;
+				.@count_a++;
+			}
+			else if (.@family == .@family_b) {
+				.@index_b = .@i;
+				.@count_b++;
+			}
+		}
+
+		if (.@count_a != 1 || .@count_b != 1)
 			continue;
 
-		.@family = callfunc("F_BG_RM_PerformerFamily", .@class_list[.@i]);
+		// -----------------------------------------------------
+		// 방향 0: A -> 기욤 / B -> 크루아
+		// 방향 1: A -> 크루아 / B -> 기욤
+		//
+		// 현재까지 다른 우선 분리 규칙이 예약한 슬롯까지 포함해
+		// 양쪽 방향이 실제 정원 안에서 가능한지 먼저 확인합니다.
+		// -----------------------------------------------------
+		.@a_low = .@is_low[.@index_a];
+		.@b_low = .@is_low[.@index_b];
 
-		if (.@family == 1) {
-			.@minstrel_index = .@i;
-			.@minstrel_count++;
+		.@need_hg_0 = (!.@a_low) ? 1 : 0;
+		.@need_hc_0 = (!.@b_low) ? 1 : 0;
+		.@need_lg_0 = (.@a_low) ? 1 : 0;
+		.@need_lc_0 = (.@b_low) ? 1 : 0;
+
+		.@need_hg_1 = (!.@b_low) ? 1 : 0;
+		.@need_hc_1 = (!.@a_low) ? 1 : 0;
+		.@need_lg_1 = (.@b_low) ? 1 : 0;
+		.@need_lc_1 = (.@a_low) ? 1 : 0;
+
+		.@can_0 = (
+			.@forced_high_g + .@need_hg_0 <= .@high_cap_g &&
+			.@forced_high_c + .@need_hc_0 <= .@high_cap_c &&
+			.@forced_low_g + .@need_lg_0 <= .@low_cap_g &&
+			.@forced_low_c + .@need_lc_0 <= .@low_cap_c
+		);
+
+		.@can_1 = (
+			.@forced_high_g + .@need_hg_1 <= .@high_cap_g &&
+			.@forced_high_c + .@need_hc_1 <= .@high_cap_c &&
+			.@forced_low_g + .@need_lg_1 <= .@low_cap_g &&
+			.@forced_low_c + .@need_lc_1 <= .@low_cap_c
+		);
+
+		if (!.@can_0 && !.@can_1) {
+			callfunc "F_BG_RM_CancelRecruit",
+				"직업 우선 분리 규칙을 만족할 수 없는 팀 정원이라 매칭이 취소되었습니다. (규칙 " + .@rule + ")";
+			end;
 		}
-		else if (.@family == 2) {
-			.@wanderer_index = .@i;
-			.@wanderer_count++;
-		}
-	}
 
-	if (.@minstrel_count == 1 && .@wanderer_count == 1) {
-		// 어느 직업군이 기욤/크루아로 갈지는 무작위지만 두 직업군은 반드시 분리됩니다.
-		.@minstrel_team = rand(2);
+		if (.@can_0 && .@can_1)
+			.@orientation = rand(2);
+		else if (.@can_0)
+			.@orientation = 0;
+		else
+			.@orientation = 1;
 
-		if (.@minstrel_team == 0) {
-			.@aid_g[.@count_g] = .@aid_list[.@minstrel_index];
-			.@cid_g[.@count_g] = .@cid_list[.@minstrel_index];
-			.@name_g$[.@count_g] = .@name_list$[.@minstrel_index];
-			.@count_g++;
+		if (.@orientation == 0) {
+			.@forced_team[.@index_a] = 1;
+			.@forced_team[.@index_b] = 2;
 
-			.@aid_c[.@count_c] = .@aid_list[.@wanderer_index];
-			.@cid_c[.@count_c] = .@cid_list[.@wanderer_index];
-			.@name_c$[.@count_c] = .@name_list$[.@wanderer_index];
-			.@count_c++;
+			.@forced_high_g += .@need_hg_0;
+			.@forced_high_c += .@need_hc_0;
+			.@forced_low_g += .@need_lg_0;
+			.@forced_low_c += .@need_lc_0;
 		}
 		else {
-			.@aid_c[.@count_c] = .@aid_list[.@minstrel_index];
-			.@cid_c[.@count_c] = .@cid_list[.@minstrel_index];
-			.@name_c$[.@count_c] = .@name_list$[.@minstrel_index];
-			.@count_c++;
+			.@forced_team[.@index_a] = 2;
+			.@forced_team[.@index_b] = 1;
 
-			.@aid_g[.@count_g] = .@aid_list[.@wanderer_index];
-			.@cid_g[.@count_g] = .@cid_list[.@wanderer_index];
-			.@name_g$[.@count_g] = .@name_list$[.@wanderer_index];
-			.@count_g++;
+			.@forced_high_g += .@need_hg_1;
+			.@forced_high_c += .@need_hc_1;
+			.@forced_low_g += .@need_lg_1;
+			.@forced_low_c += .@need_lc_1;
 		}
 
-		.@used[.@minstrel_index] = 1;
-		.@used[.@wanderer_index] = 1;
-
-		debugmes "[BG RM] priority split performer"
-			+ " minstrel_cid=" + .@cid_list[.@minstrel_index]
-			+ " wanderer_cid=" + .@cid_list[.@wanderer_index]
-			+ " minstrel_team=" + ((.@minstrel_team == 0) ? "G" : "C");
+		debugmes "[BG RM] hard split reserved"
+			+ " rule=" + .@rule
+			+ " familyA=" + .@family_a
+			+ " familyB=" + .@family_b
+			+ " A_cid=" + .@cid_list[.@index_a]
+			+ " B_cid=" + .@cid_list[.@index_b]
+			+ " A_team=" + ((.@forced_team[.@index_a] == 1) ? "G" : "C");
 	}
+
+	// 175레벨 우선 분리 대상은 지금 실제 팀에 넣습니다.
+	// 175 미만은 forced_team 예약만 유지하고 마지막 단계에서 처리합니다.
+	for (.@i = 0; .@i < .@count; .@i++) {
+		if (!.@forced_team[.@i] || .@is_low[.@i])
+			continue;
+
+		if (.@forced_team[.@i] == 1) {
+			.@aid_g[.@count_g] = .@aid_list[.@i];
+			.@cid_g[.@count_g] = .@cid_list[.@i];
+			.@name_g$[.@count_g] = .@name_list$[.@i];
+			.@count_g++;
+		}
+		else {
+			.@aid_c[.@count_c] = .@aid_list[.@i];
+			.@cid_c[.@count_c] = .@cid_list[.@i];
+			.@name_c$[.@count_c] = .@name_list$[.@i];
+			.@count_c++;
+		}
+
+		.@used[.@i] = 1;
+	}
+
+	debugmes "[BG RM] hard split high applied"
+		+ " G=" + .@count_g
+		+ " C=" + .@count_c
+		+ " forced_low_G=" + .@forced_low_g
+		+ " forced_low_C=" + .@forced_low_c;
 
 	// 1단계: 동일 직업이 2명 이상인 그룹을 기욤/크루아에 교차 배정
 	// 1명뿐인 직업은 즉시 배정하지 않고 단독 직업 목록에 보관합니다.
@@ -1853,11 +2004,76 @@ OnFinalize:
 
 	//========================================================
 	// 마지막 단계: 175 미만 참가자 균형 배정
-	// 1) 동레벨 랜덤성을 위해 먼저 섞음
-	// 2) 높은 레벨부터 처리
-	// 3) 양 팀 저레벨 인원 수를 우선 동일하게 맞춤
-	// 4) 인원 수가 같으면 저레벨 BaseLevel 합이 낮은 팀을 우선
+	//
+	// 우선순위:
+	// 1) 하드 분리 규칙으로 예약된 저레벨 팀 배치
+	// 2) 동일 직업 저레벨을 가능한 한 서로 다른 팀에 분산
+	// 3) 양 팀 저레벨 인원 수 균형
+	// 4) 양 팀 저레벨 BaseLevel 합 균형
+	//
+	// 예:
+	// 쉐도우체이서 170 / 쉐도우체이서 174가 있으면,
+	// 양 팀 저레벨 슬롯이 남아 있는 한 1명씩 서로 다른 팀에 배정합니다.
 	//========================================================
+	cleararray .@low_assigned[0], 0, .@count;
+	cleararray .@low_team[0], 0, .@count;
+	cleararray .@low_group_done[0], 0, .@count;
+
+	.@low_g = 0;
+	.@low_c = 0;
+	.@low_level_sum_g = 0;
+	.@low_level_sum_c = 0;
+
+	// -------------------------------------------------------
+	// 1단계: 하드 분리 규칙으로 팀이 예약된 저레벨 먼저 확정
+	// -------------------------------------------------------
+	for (.@i = 0; .@i < .@low_count; .@i++) {
+		.@index = .@low_index[.@i];
+
+		if (!.@forced_team[.@index])
+			continue;
+
+		.@team = .@forced_team[.@index] - 1;
+		.@remain_low_g = .@low_cap_g - .@low_g;
+		.@remain_low_c = .@low_cap_c - .@low_c;
+
+		if (
+			(.@team == 0 && .@remain_low_g <= 0) ||
+			(.@team == 1 && .@remain_low_c <= 0)
+		) {
+			callfunc "F_BG_RM_CancelRecruit",
+				"저레벨 직업 우선 분리 슬롯이 부족하여 매칭이 취소되었습니다.";
+			end;
+		}
+
+		if (.@team == 0) {
+			.@aid_g[.@count_g] = .@aid_list[.@index];
+			.@cid_g[.@count_g] = .@cid_list[.@index];
+			.@name_g$[.@count_g] = .@name_list$[.@index];
+			.@count_g++;
+			.@low_g++;
+			.@low_level_sum_g += .@level_list[.@index];
+			.@low_team[.@index] = 1;
+		}
+		else {
+			.@aid_c[.@count_c] = .@aid_list[.@index];
+			.@cid_c[.@count_c] = .@cid_list[.@index];
+			.@name_c$[.@count_c] = .@name_list$[.@index];
+			.@count_c++;
+			.@low_c++;
+			.@low_level_sum_c += .@level_list[.@index];
+			.@low_team[.@index] = 2;
+		}
+
+		.@low_assigned[.@index] = 1;
+	}
+
+	// -------------------------------------------------------
+	// 2단계: 남은 저레벨은 동일 직업별 그룹으로 처리
+	//
+	// low_index 자체는 먼저 랜덤 셔플 후 레벨 내림차순 정렬합니다.
+	// 같은 레벨끼리는 랜덤성이 유지되고, 높은 저레벨부터 그룹이 선택됩니다.
+	// -------------------------------------------------------
 	for (.@i = .@low_count - 1; .@i > 0; .@i--) {
 		.@j = rand(.@i + 1);
 		.@tmp = .@low_index[.@i];
@@ -1878,48 +2094,130 @@ OnFinalize:
 		}
 	}
 
-	.@low_g = 0;
-	.@low_c = 0;
-	.@low_level_sum_g = 0;
-	.@low_level_sum_c = 0;
-
 	for (.@i = 0; .@i < .@low_count; .@i++) {
-		.@index = .@low_index[.@i];
-		.@remain_low_g = .@low_cap_g - .@low_g;
-		.@remain_low_c = .@low_cap_c - .@low_c;
+		.@first_index = .@low_index[.@i];
 
-		if (.@remain_low_g <= 0)
-			.@team = 1;
-		else if (.@remain_low_c <= 0)
-			.@team = 0;
-		else if (.@low_g < .@low_c)
-			.@team = 0;
-		else if (.@low_c < .@low_g)
-			.@team = 1;
-		else if (.@low_level_sum_g < .@low_level_sum_c)
-			.@team = 0;
-		else if (.@low_level_sum_c < .@low_level_sum_g)
-			.@team = 1;
-		else
-			.@team = rand(2);
+		if (.@low_assigned[.@first_index] || .@low_group_done[.@first_index])
+			continue;
 
-		if (.@team == 0) {
-			.@aid_g[.@count_g] = .@aid_list[.@index];
-			.@cid_g[.@count_g] = .@cid_list[.@index];
-			.@name_g$[.@count_g] = .@name_list$[.@index];
-			.@count_g++;
-			.@low_g++;
-			.@low_level_sum_g += .@level_list[.@index];
+		.@target_class = .@class_list[.@first_index];
+		.@group_count = 0;
+
+		// 아직 미배정인 동일 직업 저레벨을 한 그룹으로 모읍니다.
+		for (.@j = 0; .@j < .@low_count; .@j++) {
+			.@index = .@low_index[.@j];
+
+			if (
+				.@low_assigned[.@index] ||
+				.@low_group_done[.@index] ||
+				.@class_list[.@index] != .@target_class
+			)
+				continue;
+
+			.@low_group_index[.@group_count] = .@index;
+			.@low_group_done[.@index] = 1;
+			.@group_count++;
 		}
-		else {
-			.@aid_c[.@count_c] = .@aid_list[.@index];
-			.@cid_c[.@count_c] = .@cid_list[.@index];
-			.@name_c$[.@count_c] = .@name_list$[.@index];
-			.@count_c++;
-			.@low_c++;
-			.@low_level_sum_c += .@level_list[.@index];
+
+		// 동일 직업 그룹 내부는 먼저 섞고 레벨 높은 순으로 정렬합니다.
+		for (.@j = .@group_count - 1; .@j > 0; .@j--) {
+			.@k = rand(.@j + 1);
+			.@tmp = .@low_group_index[.@j];
+			.@low_group_index[.@j] = .@low_group_index[.@k];
+			.@low_group_index[.@k] = .@tmp;
 		}
+
+		for (.@j = 0; .@j < .@group_count - 1; .@j++) {
+			for (.@k = 0; .@k < .@group_count - .@j - 1; .@k++) {
+				if (
+					.@level_list[.@low_group_index[.@k]] <
+					.@level_list[.@low_group_index[.@k + 1]]
+				) {
+					.@tmp = .@low_group_index[.@k];
+					.@low_group_index[.@k] = .@low_group_index[.@k + 1];
+					.@low_group_index[.@k + 1] = .@tmp;
+				}
+			}
+		}
+
+		// 같은 직업의 하드 분리 예약 인원이 이미 팀에 들어간 경우까지 포함해서
+		// 현재 해당 직업의 팀별 인원 수를 계산합니다.
+		.@class_g = 0;
+		.@class_c = 0;
+
+		for (.@j = 0; .@j < .@low_count; .@j++) {
+			.@index = .@low_index[.@j];
+
+			if (
+				.@class_list[.@index] != .@target_class ||
+				!.@low_assigned[.@index]
+			)
+				continue;
+
+			if (.@low_team[.@index] == 1)
+				.@class_g++;
+			else if (.@low_team[.@index] == 2)
+				.@class_c++;
+		}
+
+		for (.@j = 0; .@j < .@group_count; .@j++) {
+			.@index = .@low_group_index[.@j];
+			.@remain_low_g = .@low_cap_g - .@low_g;
+			.@remain_low_c = .@low_cap_c - .@low_c;
+
+			if (.@remain_low_g <= 0)
+				.@team = 1;
+			else if (.@remain_low_c <= 0)
+				.@team = 0;
+			// 동일 직업이 적은 팀을 가장 먼저 선택합니다.
+			else if (.@class_g < .@class_c)
+				.@team = 0;
+			else if (.@class_c < .@class_g)
+				.@team = 1;
+			// 동일 직업 수가 같으면 전체 저레벨 인원 수를 맞춥니다.
+			else if (.@low_g < .@low_c)
+				.@team = 0;
+			else if (.@low_c < .@low_g)
+				.@team = 1;
+			// 인원까지 같으면 저레벨 레벨 합을 맞춥니다.
+			else if (.@low_level_sum_g < .@low_level_sum_c)
+				.@team = 0;
+			else if (.@low_level_sum_c < .@low_level_sum_g)
+				.@team = 1;
+			else
+				.@team = rand(2);
+
+			if (.@team == 0) {
+				.@aid_g[.@count_g] = .@aid_list[.@index];
+				.@cid_g[.@count_g] = .@cid_list[.@index];
+				.@name_g$[.@count_g] = .@name_list$[.@index];
+				.@count_g++;
+				.@low_g++;
+				.@low_level_sum_g += .@level_list[.@index];
+				.@class_g++;
+				.@low_team[.@index] = 1;
+			}
+			else {
+				.@aid_c[.@count_c] = .@aid_list[.@index];
+				.@cid_c[.@count_c] = .@cid_list[.@index];
+				.@name_c$[.@count_c] = .@name_list$[.@index];
+				.@count_c++;
+				.@low_c++;
+				.@low_level_sum_c += .@level_list[.@index];
+				.@class_c++;
+				.@low_team[.@index] = 2;
+			}
+
+			.@low_assigned[.@index] = 1;
+		}
+
+		debugmes "[BG RM] low class split"
+			+ " class=" + .@target_class
+			+ " added=" + .@group_count
+			+ " classG=" + .@class_g
+			+ " classC=" + .@class_c;
 	}
+
 
 	debugmes "[BG RM] low-level assignment done"
 		+ " G_low=" + .@low_g + " sum=" + .@low_level_sum_g
@@ -2663,6 +2961,10 @@ OnTimer1000:
 		else if (getcharid(1,.@name$) || getcharid(4,.@name$)) {
 			.@reason$ = "파티 또는 전장 팀에 가입하여";
 			.@reason_code = 3;
+		}
+		else if ($@BG_RM_MIN_JOIN_LEVEL > 0 && readparam(BaseLevel,.@cid) < $@BG_RM_MIN_JOIN_LEVEL) {
+			.@reason$ = "참가 레벨 조건을 충족하지 못해";
+			.@reason_code = 6;
 		}
 
 		if (.@reason_code == 0)
