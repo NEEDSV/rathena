@@ -92,6 +92,74 @@ The result is only advisory: always call `instance_ip_complete(IP_REWARD_PERSONA
 again immediately before granting the actual reward, because another character on
 the same IP may consume the last count after this pre-entry query.
 
+## Per-IP family/shared-network overrides
+
+Apply `sql-files/upgrades/upgrade_20260812.sql`. Every query and reward completion
+resolves the live effective limit in this order:
+
+1. The IP plus the current `instance_db_id`.
+2. The IP plus `instance_db_id = 0` (all limited instances).
+3. The instance's `IpDailyRewardLimit` value.
+
+Disabled rows, expired rows, and rows with `daily_limit = 0` are ignored. Overrides
+are queried from SQL on every limit check, so changes take effect without a server
+restart or reload. They only change the comparison limit; existing daily counter
+rows are never reset.
+
+Register a six-use override for every IP-limited instance:
+
+```sql
+INSERT INTO `instance_ip_reward_override`
+  (`ip`, `instance_db_id`, `daily_limit`, `memo`)
+VALUES
+  (INET6_ATON('123.123.123.123'), 0, 6, 'Family/shared network');
+```
+
+Use a nonzero instance DB ID for a dungeon-specific override. It has priority over
+the global row:
+
+```sql
+INSERT INTO `instance_ip_reward_override`
+  (`ip`, `instance_db_id`, `daily_limit`, `memo`, `expires_at`)
+VALUES
+  (INET6_ATON('123.123.123.123'), 15, 4, 'Geffen family exception', '2026-09-01 04:00:00');
+```
+
+Update, disable, or delete the global override:
+
+```sql
+UPDATE `instance_ip_reward_override`
+SET `daily_limit` = 6
+WHERE `ip` = INET6_ATON('123.123.123.123') AND `instance_db_id` = 0;
+
+UPDATE `instance_ip_reward_override`
+SET `enabled` = 0
+WHERE `ip` = INET6_ATON('123.123.123.123') AND `instance_db_id` = 0;
+
+DELETE FROM `instance_ip_reward_override`
+WHERE `ip` = INET6_ATON('123.123.123.123') AND `instance_db_id` = 0;
+```
+
+List overrides in an operator-friendly format:
+
+```sql
+SELECT
+  INET6_NTOA(`ip`) AS `ip`,
+  `instance_db_id`,
+  `daily_limit`,
+  `enabled`,
+  `memo`,
+  `expires_at`,
+  `updated_at`
+FROM `instance_ip_reward_override`
+ORDER BY `ip`, `instance_db_id`;
+```
+
+Pre-entry checks remain read-only and `instance_ip_complete(IP_REWARD_PERSONAL)`
+must still run immediately before the reward. Counter increments keep using the
+same conditional UPSERT, with the resolved effective limit substituted for the
+YAML default.
+
 The script must keep its existing character/quest completion guard. The IP command
 is concurrency-safe across map servers, but a personal reward has no universal event
 identifier with which the core could infer that two script calls are the same claim.
