@@ -57,6 +57,7 @@
 #include "mob.hpp"
 #include "need_autopot.hpp"
 #include "need_equipment_build.hpp"
+#include "need_summer_attendance.hpp"
 #include "needwiki.hpp"
 #include "npc.hpp"
 #include "party.hpp"
@@ -7297,6 +7298,7 @@ ACMD_FUNC(autotrade) {
 		return -1;
 	}
 
+	need_summer_attendance_session_pause(sd);
 	sd->state.autotrade = 1;
 	if (battle_config.autotrade_monsterignore)
 		sd->state.block_action |= PCBLOCK_IMMUNE;

@@ -700,6 +700,11 @@ struct Battle_Config
 	int32 summoner_size;
 	int32 homunculus_autofeed_always;
 	int32 feature_attendance;
+	int32 feature_need_summer_attendance;
+	int32 need_summer_attendance_start_date;
+	int32 need_summer_attendance_end_date;
+	int32 need_summer_attendance_required_seconds;
+	int32 need_summer_attendance_max_claims;
 	int32 feature_privateairship;
 	int32 rental_transaction;
 	int32 min_shop_buy;
@@ -825,6 +830,25 @@ struct Battle_Config
 	int32 need_world_drop_event_target_item_id;
 	int32 need_world_drop_event_debug_message;
 	int32 need_world_drop_event_debug_gm_level;
+	int32 need_summer_hunt_enable;
+	int32 need_summer_hunt_fragment_enable;
+	int32 need_summer_hunt_golden_enable;
+	// NEED summer event fishing system (stage 1: technical validation)
+	int32 need_summer_fishing_enable;
+	int32 need_summer_fishing_debug;
+	int32 need_summer_fishing_rank_reward_enable;
+	int32 need_summer_fishing_bite_min_ms;
+	int32 need_summer_fishing_bite_max_ms;
+	int32 need_summer_fishing_input_window_ms;
+	int32 need_summer_fishing_perfect_ms;
+	int32 need_summer_fishing_great_ms;
+	int32 need_summer_fishing_good_ms;
+	int32 need_summer_fishing_normal_ms;
+	// Stage 2: reel-in rounds and script processing timeout
+	int32 need_summer_fishing_reel_wait_min_ms;
+	int32 need_summer_fishing_reel_wait_max_ms;
+	int32 need_summer_fishing_reel_input_window_ms;
+	int32 need_summer_fishing_result_script_timeout_ms;
 	int32 feature_dynamicnpc_timeout;
 	int32 feature_dynamicnpc_rangex;
 	int32 feature_dynamicnpc_rangey;

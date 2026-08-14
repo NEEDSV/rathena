@@ -33,6 +33,7 @@
 #include "map.hpp"
 #include "mob.hpp"
 #include "navi.hpp"
+#include "need_summer_shop.hpp"
 #include "pc.hpp"
 #include "pet.hpp"
 #include "script.hpp" // script_config
@@ -615,6 +616,23 @@ uint64 BarterDatabase::parseBodyNode( const ryml::NodeRef& node ){
 				}
 
 				item->nameid = id->nameid;
+			}
+
+			if( this->nodeExists( itemNode, "OutputAmount" ) ){
+				uint32 output_amount;
+
+				if( !this->asUInt32( itemNode, "OutputAmount", output_amount ) ){
+					return 0;
+				}
+
+				if( output_amount == 0 ){
+					this->invalidWarning( itemNode["OutputAmount"], "barter_parseBodyNode: OutputAmount must be greater than zero.\n" );
+					return 0;
+				}
+
+				item->outputAmount = output_amount;
+			}else if( !item_exists ){
+				item->outputAmount = 1;
 			}
 
 			if( this->nodeExists( itemNode, "Stock" ) ){
@@ -3245,21 +3263,27 @@ e_purchase_result npc_barter_purchase( map_session_data& sd, std::shared_ptr<s_n
 		}
 
 		uint32 amount = purchase.amount;
+		uint64 output_amount64 = static_cast<uint64>( amount ) * purchase.item->outputAmount;
+
+		if( output_amount64 > MAX_AMOUNT ){
+			return e_purchase_result::PURCHASE_FAIL_COUNT;
+		}
+		uint32 output_amount = static_cast<uint32>( output_amount64 );
 
 		if( purchase.item->stockLimited && purchase.item->stock < amount ){
 			return e_purchase_result::PURCHASE_FAIL_STOCK_EMPTY;
 		}
 
-		char result = pc_checkadditem( &sd, purchase.item->nameid, amount );
+		char result = pc_checkadditem( &sd, purchase.item->nameid, output_amount );
 
 		if( result == CHKADDITEM_OVERAMOUNT ){
 			return e_purchase_result::PURCHASE_FAIL_COUNT;
 		}else if( result == CHKADDITEM_NEW ){
-			requiredSlots += purchase.data->inventorySlotNeeded( amount );
+			requiredSlots += purchase.data->inventorySlotNeeded( output_amount );
 		}
 
 		requiredZeny += ( purchase.item->price * amount );
-		requiredWeight += ( purchase.data->weight * amount );
+		requiredWeight += ( purchase.data->weight * output_amount );
 
 		for( const auto& requirementPair : purchase.item->requirements ){
 			std::shared_ptr<s_npc_barter_requirement> requirement = requirementPair.second;
@@ -3373,25 +3397,38 @@ e_purchase_result npc_barter_purchase( map_session_data& sd, std::shared_ptr<s_n
 		return e_purchase_result::PURCHASE_FAIL_COUNT;
 	}
 
+	need_summer_shop_transaction summer_transaction;
+	need_summer_shop_begin_result summer_result = need_summer_shop_begin( sd, barter, purchases, summer_transaction );
+	if( summer_result == need_summer_shop_begin_result::REJECTED ){
+		return e_purchase_result::PURCHASE_FAIL_EXCHANGE_FAILED;
+	}
+	auto summer_failure = [&]() {
+		need_summer_shop_finish( sd, summer_transaction, false );
+		return e_purchase_result::PURCHASE_FAIL_EXCHANGE_FAILED;
+	};
+
 	for( int32 i = 0; i < MAX_INVENTORY; i++ ){
 		if( requiredItems[i] > 0 ){
 			if( pc_delitem( &sd, i, requiredItems[i], 0, 0, LOG_TYPE_BARTER ) != 0 ){
-				return e_purchase_result::PURCHASE_FAIL_EXCHANGE_FAILED;
+				return summer_failure();
 			}
 		}
 	}
 
 	if( pc_payzeny( &sd, (int32)requiredZeny, LOG_TYPE_BARTER ) != 0 ){
+		need_summer_shop_finish( sd, summer_transaction, false );
 		return e_purchase_result::PURCHASE_FAIL_MONEY;
 	}
 
 	for( s_barter_purchase& purchase : purchases ){
+		uint32 output_amount = purchase.amount * purchase.item->outputAmount;
+
 		if( purchase.item->stockLimited ){
 			purchase.item->stock -= purchase.amount;
 
 			if( Sql_Query( mmysql_handle, "REPLACE INTO `%s` (`name`,`index`,`amount`) VALUES ( '%s', '%hu', '%hu' )", barter_table, barter->name.c_str(), purchase.item->index, purchase.item->stock ) != SQL_SUCCESS ){
 				Sql_ShowDebug( mmysql_handle );
-				return e_purchase_result::PURCHASE_FAIL_EXCHANGE_FAILED;
+				return summer_failure();
 			}
 		}
 
@@ -3401,18 +3438,18 @@ e_purchase_result npc_barter_purchase( map_session_data& sd, std::shared_ptr<s_n
 			it.nameid = purchase.item->nameid;
 			it.identify = true;
 
-			if( pc_additem( &sd, &it, purchase.amount, LOG_TYPE_BARTER ) != ADDITEM_SUCCESS ){
-				return e_purchase_result::PURCHASE_FAIL_EXCHANGE_FAILED;
+			if( pc_additem( &sd, &it, output_amount, LOG_TYPE_BARTER ) != ADDITEM_SUCCESS ){
+				return summer_failure();
 			}
 		}else{
 			if( purchase.data->type == IT_PETEGG ){
-				for( int32 i = 0; i < purchase.amount; i++ ){
+				for( uint32 i = 0; i < output_amount; i++ ){
 					if( !pet_create_egg( &sd, purchase.item->nameid ) ){
-						return e_purchase_result::PURCHASE_FAIL_EXCHANGE_FAILED;
+						return summer_failure();
 					}
 				}
 			}else{
-				for( int32 i = 0; i < purchase.amount; i++ ){
+				for( uint32 i = 0; i < output_amount; i++ ){
 					struct item it = {};
 
 					it.nameid = purchase.item->nameid;
@@ -3420,13 +3457,16 @@ e_purchase_result npc_barter_purchase( map_session_data& sd, std::shared_ptr<s_n
 					it.refine = purchase.item->refine;
 
 					if( pc_additem( &sd, &it, 1, LOG_TYPE_BARTER ) != ADDITEM_SUCCESS ){
-						return e_purchase_result::PURCHASE_FAIL_EXCHANGE_FAILED;
+						return summer_failure();
 					}
 				}
 			}
 		}
 	}
 
+	if( !need_summer_shop_finish( sd, summer_transaction, true ) ){
+		return e_purchase_result::PURCHASE_FAIL_EXCHANGE_FAILED;
+	}
 	return e_purchase_result::PURCHASE_SUCCEED;
 }
 

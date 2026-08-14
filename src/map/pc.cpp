@@ -54,6 +54,8 @@
 #include "mercenary.hpp"
 #include "mob.hpp"
 #include "need_autopot.hpp"
+#include "need_fishing.hpp"
+#include "need_summer_attendance.hpp"
 #include "npc.hpp"
 #include "party.hpp" // party_search()
 #include "pc_groups.hpp"
@@ -10001,6 +10003,9 @@ int32 pc_dead(map_session_data *sd,block_list *src)
 	t_tick tick = gettick();
 	struct map_data *mapdata = map_getmapdata(sd->m);
 
+	// NEED fishing: clear the fishing session and timers on character death
+	need_fishing_clear(sd);
+
 	// Activate Steel body if a super novice dies at 99+% exp [celest]
 	// Super Novices have no kill or die functions attached when saved by their angel
 	if (!sd->state.snovice_dead_flag && (sd->class_&MAPID_SECONDMASK) == MAPID_SUPER_NOVICE) {
@@ -15445,11 +15450,15 @@ void pc_scdata_received(map_session_data *sd) {
 
 	clif_weight_limit( sd );
 
-	if( pc_has_permission( sd, PC_PERM_ATTENDANCE ) && pc_attendance_enabled() && !pc_attendance_rewarded_today( sd ) && pc_attendance_counter(sd) < 200 ){
+	bool attendance_auto_open = battle_config.feature_need_summer_attendance
+		? need_summer_attendance_should_auto_open( sd )
+		: !pc_attendance_rewarded_today( sd ) && pc_attendance_counter( sd ) < 200;
+	if( pc_has_permission( sd, PC_PERM_ATTENDANCE ) && pc_attendance_enabled() && attendance_auto_open ){
 		clif_ui_open( *sd, OUT_UI_ATTENDANCE, pc_attendance_counter( sd ) );
 	}
 
 	sd->state.pc_loaded = true;
+	need_summer_attendance_session_start( sd );
 
 	if (sd->state.connect_new == 0 && sd->fd) { // Character already loaded map! Gotta trigger LoadEndAck manually.
 		sd->state.connect_new = 1;
@@ -16226,12 +16235,14 @@ std::shared_ptr<s_attendance_period> pc_attendance_period(){
 }
 
 bool pc_attendance_enabled(){
-	// Check if the attendance feature is disabled
 	if( !battle_config.feature_attendance ){
 		return false;
 	}
 
-	// Check if there is a running attendance period
+	if( battle_config.feature_need_summer_attendance ){
+		return need_summer_attendance_enabled();
+	}
+
 	return pc_attendance_period() != nullptr;
 }
 
@@ -16240,54 +16251,46 @@ static inline bool pc_attendance_rewarded_today( map_session_data* sd ){
 }
 
 int32 pc_attendance_counter( map_session_data* sd ){
+	if( battle_config.feature_need_summer_attendance ){
+		return need_summer_attendance_ui_progress( sd );
+	}
+
 	std::shared_ptr<s_attendance_period> period = pc_attendance_period();
 
-	// No running attendance period
 	if( period == nullptr ){
 		return 0;
 	}
 
-	// Get the counter for the current period
 	int32 counter = static_cast<int32>(pc_readreg2( sd, ATTENDANCE_COUNT_VAR ));
 
-	// Check if we have a remaining counter from a previous period
 	if( counter > 0 && pc_readreg2( sd, ATTENDANCE_DATE_VAR ) < period->start ){
-		// Reset the counter to zero
 		pc_setreg2( sd, ATTENDANCE_COUNT_VAR, 0 );
-
 		return 0;
 	}
 
-	return 10 * counter + ( ( pc_attendance_rewarded_today(sd) ) ? 1 : 0 );
+	return 10 * counter + ( pc_attendance_rewarded_today( sd ) ? 1 : 0 );
 }
 
 void pc_attendance_claim_reward( map_session_data* sd ){
-	// If the user's group does not have the permission
 	if( !pc_has_permission( sd, PC_PERM_ATTENDANCE ) ){
 		return;
 	}
 
-	// Check if the attendance feature is disabled
-	if( !pc_attendance_enabled() ){
+	if( battle_config.feature_need_summer_attendance ){
+		if( need_summer_attendance_enabled() ){
+			need_summer_attendance_claim( sd );
+		}
 		return;
 	}
 
-	// Check if the user already got his reward today
-	if( pc_attendance_rewarded_today( sd ) ){
+	if( !pc_attendance_enabled() || pc_attendance_rewarded_today( sd ) ){
 		return;
 	}
 
-	int32 attendance_counter = static_cast<int32>(pc_readreg2( sd, ATTENDANCE_COUNT_VAR ));
-
-	attendance_counter += 1;
-
+	int32 attendance_counter = static_cast<int32>(pc_readreg2( sd, ATTENDANCE_COUNT_VAR )) + 1;
 	std::shared_ptr<s_attendance_period> period = pc_attendance_period();
 
-	if( period == nullptr ){
-		return;
-	}
-
-	if( period->rewards.size() < attendance_counter ){
+	if( period == nullptr || period->rewards.size() < attendance_counter ){
 		return;
 	}
 
@@ -16298,26 +16301,20 @@ void pc_attendance_claim_reward( map_session_data* sd ){
 		chrif_save(sd, CSAVE_NORMAL);
 
 	std::shared_ptr<s_attendance_reward> reward = period->rewards[attendance_counter - 1];
-
-	struct mail_message msg;
-
-	memset( &msg, 0, sizeof( struct mail_message ) );
+	struct mail_message msg = {};
 
 	msg.dest_id = sd->status.char_id;
 	safestrncpy( msg.send_name, msg_txt( sd, 788 ), NAME_LENGTH );
 	safesnprintf( msg.title, MAIL_TITLE_LENGTH, msg_txt( sd, 789 ), attendance_counter );
 	safesnprintf( msg.body, MAIL_BODY_LENGTH, msg_txt( sd, 790 ), attendance_counter );
-
 	msg.item[0].nameid = reward->item_id;
 	msg.item[0].amount = reward->amount;
 	msg.item[0].identify = 1;
-
 	msg.status = MAIL_NEW;
 	msg.type = MAIL_INBOX_NORMAL;
 	msg.timestamp = time(nullptr);
 
 	intif_Mail_send(0, &msg);
-
 	clif_attendence_response( sd, attendance_counter );
 }
 

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NEED Summer Monitor</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- login gate -->
+  <div id="login" class="login hidden">
+    <form id="loginForm" class="login-box">
+      <h1>NEED Summer Monitor</h1>
+      <p class="muted">운영자 전용 · 읽기 전용</p>
+      <input id="lu" type="text" placeholder="관리자 ID" autocomplete="username" />
+      <input id="lp" type="password" placeholder="비밀번호" autocomplete="current-password" />
+      <button type="submit">로그인</button>
+      <div id="loginErr" class="err"></div>
+    </form>
+  </div>
+
+  <!-- app -->
+  <div id="app" class="hidden">
+    <header class="topbar">
+      <div class="brand">NEED Summer Monitor <span class="ver">v1</span></div>
+      <form id="searchForm" class="search">
+        <label>기간<select id="days">
+          <option value="1">1일</option>
+          <option value="3">3일</option>
+          <option value="7" selected>7일</option>
+          <option value="14">14일</option>
+          <option value="30">30일</option>
+        </select></label>
+        <input id="q_account" type="text" placeholder="Account ID" />
+        <input id="q_char" type="text" placeholder="Character 이름" />
+        <input id="q_charid" type="text" placeholder="Character ID" />
+        <input id="q_ip" type="text" placeholder="IP" />
+        <button type="submit">검색</button>
+        <button type="button" id="btnLogout" class="ghost">로그아웃</button>
+      </form>
+    </header>
+
+    <nav class="tabs">
+      <button class="tab active" data-tab="origins">Origin 목록</button>
+      <button class="tab" data-tab="account">Account 상세</button>
+      <button class="tab" data-tab="shadow">Shadow 추적</button>
+      <button class="tab" data-tab="receivers">수령 계정 집중</button>
+    </nav>
+
+    <main>
+      <!-- origins -->
+      <section id="tab-origins" class="panel">
+        <h2>최근 이벤트 Origin <span id="originMeta" class="muted"></span></h2>
+        <div id="originsTable" class="tablewrap"></div>
+      </section>
+
+      <!-- account detail -->
+      <section id="tab-account" class="panel hidden">
+        <div id="accountHead"></div>
+        <nav class="subtabs">
+          <button class="subtab active" data-sub="timeline">Timeline</button>
+          <button class="subtab" data-sub="zeny">Zeny 이동</button>
+          <button class="subtab" data-sub="gold">Gold 이동</button>
+          <button class="subtab" data-sub="conc">이 계정으로의 집중</button>
+        </nav>
+        <div id="sub-timeline" class="subpanel"></div>
+        <div id="sub-zeny" class="subpanel hidden"></div>
+        <div id="sub-gold" class="subpanel hidden"></div>
+        <div id="sub-conc" class="subpanel hidden"></div>
+      </section>
+
+      <!-- shadow -->
+      <section id="tab-shadow" class="panel hidden">
+        <h2>Shadow 추적 <span class="muted">(unique_id 기반 · 정확)</span></h2>
+        <form id="shadowForm" class="inline">
+          <input id="shadowUid" type="text" placeholder="unique_id" />
+          <button type="submit">추적</button>
+        </form>
+        <div id="shadowResult"></div>
+      </section>
+
+      <!-- receivers -->
+      <section id="tab-receivers" class="panel hidden">
+        <h2>수령 계정 집중 현황 <span class="muted">(기간 내 Origin 계정 → 수령 계정)</span></h2>
+        <button id="btnAutoRank" type="button">기간 내 집중 계정 자동 탐지</button>
+        <div id="receiversResult"></div>
+      </section>
+    </main>
+
+    <footer class="foot muted">
+      읽기 전용 운영 보조 도구. 자동 제재·악용 확정 판정 없음. 배지: <span class="badge exact">정확</span>
+      <span class="badge high">높음</span> <span class="badge medium">중간</span> <span class="badge candidate">후보</span>
+      <span class="badge internal">내부이동</span>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

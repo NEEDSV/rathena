@@ -1,0 +1,57 @@
+-- NEED 2026 summer fragment exchange and coconut token shop ledger.
+-- Import into the main map-server database before enabling any shop toggle.
+
+CREATE TABLE IF NOT EXISTS `need_summer_shop_counter` (
+  `event_id` int unsigned NOT NULL,
+  `purchase_type` varchar(32) CHARACTER SET ascii COLLATE ascii_general_ci NOT NULL,
+  `scope_type` varchar(8) CHARACTER SET ascii COLLATE ascii_general_ci NOT NULL,
+  `account_id` int unsigned NOT NULL DEFAULT 0,
+  `ip` varbinary(16) NOT NULL,
+  `period_type` varchar(8) CHARACTER SET ascii COLLATE ascii_general_ci NOT NULL,
+  `period_key` int unsigned NOT NULL,
+  `used_count` int unsigned NOT NULL DEFAULT 0,
+  `family_group_id` int unsigned NOT NULL DEFAULT 0,
+  `first_account_id` int unsigned NOT NULL,
+  `first_char_id` int unsigned NOT NULL,
+  `last_account_id` int unsigned NOT NULL,
+  `last_char_id` int unsigned NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`event_id`,`purchase_type`,`scope_type`,`account_id`,`ip`,`period_type`,`period_key`),
+  KEY `event_account` (`event_id`,`account_id`),
+  KEY `event_ip` (`event_id`,`ip`),
+  KEY `updated_at` (`updated_at`)
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS `need_summer_shop_log` (
+  `log_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `event_id` int unsigned NOT NULL,
+  `logical_date` date NOT NULL,
+  `event_week` tinyint unsigned NOT NULL,
+  `account_id` int unsigned NOT NULL,
+  `char_id` int unsigned NOT NULL,
+  `char_name` varchar(24) NOT NULL,
+  `ip` varbinary(16) NOT NULL,
+  `family_group_id` int unsigned NOT NULL DEFAULT 0,
+  `family_exception` tinyint unsigned NOT NULL DEFAULT 0,
+  `purchase_type` varchar(32) CHARACTER SET ascii COLLATE ascii_general_ci NOT NULL,
+  `period_type` varchar(8) CHARACTER SET ascii COLLATE ascii_general_ci NOT NULL,
+  `period_key` int unsigned NOT NULL,
+  `quantity` int unsigned NOT NULL,
+  `account_used` int unsigned NOT NULL DEFAULT 0,
+  `ip_used` int unsigned NOT NULL DEFAULT 0,
+  `account_season_used` int unsigned NOT NULL DEFAULT 0,
+  `ip_season_used` int unsigned NOT NULL DEFAULT 0,
+  `consume_item_id` int unsigned NOT NULL,
+  `consume_amount` int unsigned NOT NULL,
+  `grant_item_id` int unsigned NOT NULL,
+  `grant_amount` int unsigned NOT NULL,
+  `result` varchar(16) CHARACTER SET ascii COLLATE ascii_general_ci NOT NULL,
+  `failure_code` varchar(64) CHARACTER SET ascii COLLATE ascii_general_ci NOT NULL DEFAULT '',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`log_id`),
+  KEY `event_account` (`event_id`,`account_id`,`created_at`),
+  KEY `event_ip` (`event_id`,`ip`,`created_at`),
+  KEY `result_created` (`result`,`created_at`),
+  KEY `purchase_period` (`event_id`,`purchase_type`,`period_type`,`period_key`)
+) ENGINE=InnoDB;

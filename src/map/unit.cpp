@@ -30,6 +30,7 @@
 #include "map.hpp"
 #include "mercenary.hpp"
 #include "mob.hpp"
+#include "need_fishing.hpp"
 #include "npc.hpp"
 #include "party.hpp"
 #include "path.hpp"
@@ -846,6 +847,10 @@ int32 unit_walktoxy( block_list *bl, int16 x, int16 y, unsigned char flag)
 
 	if (ud == nullptr)
 		return 0;
+
+	// NEED fishing: moving away from the spot cancels the session.
+	if( map_session_data* fsd = BL_CAST( BL_PC, bl ) )
+		need_fishing_notify_action( fsd );
 
 	if ((flag&8) && !map_nearby_freecell(bl->m, x, y, BL_CHAR|BL_NPC, 1)) //This might change x and y
 		return 0;
@@ -1767,6 +1772,10 @@ bool unit_stop_walking( block_list* bl, int32 type, t_tick canmove_delay ){
  */
 int32 unit_skilluse_id(block_list *src, int32 target_id, uint16 skill_id, uint16 skill_lv)
 {
+	// NEED fishing: using a skill cancels the session.
+	if( map_session_data* fsd = BL_CAST( BL_PC, src ) )
+		need_fishing_notify_action( fsd );
+
 	return unit_skilluse_id2(
 		src, target_id, skill_id, skill_lv,
 		skill_castfix(src, skill_id, skill_lv),
@@ -2599,6 +2608,10 @@ int32 unit_skilluse_id2(block_list *src, int32 target_id, uint16 skill_id, uint1
  */
 int32 unit_skilluse_pos(block_list *src, int16 skill_x, int16 skill_y, uint16 skill_id, uint16 skill_lv)
 {
+	// NEED fishing: using a ground-targeted skill cancels the session.
+	if( map_session_data* fsd = BL_CAST( BL_PC, src ) )
+		need_fishing_notify_action( fsd );
+
 	return unit_skilluse_pos2(
 		src, skill_x, skill_y, skill_id, skill_lv,
 		skill_castfix(src, skill_id, skill_lv),
@@ -2922,6 +2935,10 @@ int32 unit_attack(block_list *src,int32 target_id,int32 continuous)
 	unit_data* ud = unit_bl2ud(src);
 	if (ud == nullptr)
 		return USW_NONE;
+
+	// NEED fishing: attacking cancels the session.
+	if( map_session_data* fsd = BL_CAST( BL_PC, src ) )
+		need_fishing_notify_action( fsd );
 
 	mob_data* md = BL_CAST(BL_MOB, src);
 
@@ -3884,6 +3901,9 @@ void unit_refresh( const block_list* bl, bool walking ) {
  */
 void unit_remove_map_pc(map_session_data *sd, clr_type clrtype)
 {
+	// NEED fishing: clear session and timers on map change / warp / logout / disconnect
+	need_fishing_clear(sd);
+
 	unit_remove_map(sd,clrtype);
 
 	//CLR_RESPAWN is the warp from logging out, CLR_TELEPORT is the warp from teleporting, but pets/homunc need to just 'vanish' instead of showing the warping animation.

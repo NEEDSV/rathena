@@ -1,0 +1,53 @@
+// NEED 2026 summer exchange and token shop. Defaults are intentionally off.
+comodo,191,157,4	script	바캉스 상인 코코#summer2026	4_F_STARFISHGIRL,{
+	mes "[바캉스 상인 코코]";
+	if (!$NS_SHOP_ON) {
+		mes "아직 교환 준비 중이에요.";
+		close;
+	}
+//	.@logical_date = atoi(gettimestr("%Y%m%d", 9, gettimetick(2) - 14400));
+//	if (.@logical_date < 20260815 || .@logical_date >= 20260919) {
+//		mes "여름 교환 행사가 끝났어요.";
+//		close;
+//	}
+	mes "파도 소리가 들리면 여름이 왔다는 뜻이에요.";
+	next;
+	switch (select("수박 조각을 교환한다:코코넛 상점을 둘러본다:교환 안내를 듣는다:다음에 올게요")) {
+	case 1:
+		if (!$NS_EXCHANGE_ON) {
+			mes "[바캉스 상인 코코]";
+			mes "수박 조각 교환은 지금 준비 중이에요.";
+			close;
+		}
+		close2;
+		callshop "need_summer_fragment_exchange", 1;
+		end;
+	case 2:
+		if (!$NS_TOKEN_SHOP_ON) {
+			mes "[바캉스 상인 코코]";
+			mes "코코넛 상점은 지금 준비 중이에요.";
+			close;
+		}
+		close2;
+		callshop "need_summer_token_shop", 1;
+		end;
+	case 3:
+		mes "[바캉스 상인 코코]";
+		mes "수박 조각 20개를 코코넛 토큰 10개로 바꿔 드려요.";
+		mes "교환은 계정과 접속 IP를 기준으로 하루 3회까지 가능해요.";
+		next;
+		mes "[바캉스 상인 코코]";
+		mes "주간 상품은 매주 2개까지 살 수 있고, 쓰지 않은 횟수는 다음 주로 넘어가지 않아요.";
+		mes "교환과 상점은 9월 19일 오전 4시에 닫혀요.";
+		close;
+	default:
+		close;
+	}
+
+OnInit:
+	// 운영자가 아래 세 값을 1로 바꾸기 전에는 UI와 구매를 모두 차단한다.
+	$NS_SHOP_ON = 0;
+	$NS_EXCHANGE_ON = 0;
+	$NS_TOKEN_SHOP_ON = 0;
+	end;
+}

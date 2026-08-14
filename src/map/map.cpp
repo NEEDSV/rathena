@@ -47,6 +47,10 @@
 #include "mob.hpp"
 #include "navi.hpp"
 #include "need_autopot.hpp"
+#include "need_fishing.hpp"
+#include "need_summer_attendance.hpp"
+#include "need_summer_fishing_reward.hpp"
+#include "need_summer_hunt.hpp"
 #ifndef MAP_GENERATOR
 #include "needwiki.hpp"
 #endif
@@ -2230,7 +2234,9 @@ void map_deliddb(block_list *bl)
 int32 map_quit(map_session_data *sd) {
 	int32 i;
 
+	need_summer_attendance_session_end(sd);
 	need_autopot_logout(sd);
+	need_fishing_free(sd); // clear fishing session AND last result on logout/disconnect
 	pc_bg_strip_clear_saved_equipment(sd);
 	costume_collection_db_clear(sd);
 
@@ -4341,6 +4347,18 @@ int32 inter_config_read(const char *cfgName)
 			safestrncpy(sales_table, w2, sizeof(sales_table));
 		else if (strcmpi(w1, "guild_storage_log") == 0)
 			safestrncpy(guild_storage_log_table, w2, sizeof(guild_storage_log_table));
+		else if (strcmpi(w1, "char_db") == 0) {
+			need_summer_attendance_set_char_table(w2);
+			need_summer_fishing_reward_set_char_table(w2);
+		}
+		else if (strcmpi(w1, "mail_db") == 0) {
+			need_summer_attendance_set_mail_table(w2);
+			need_summer_fishing_reward_set_mail_table(w2);
+		}
+		else if (strcmpi(w1, "mail_attachment_db") == 0) {
+			need_summer_attendance_set_mail_attachment_table(w2);
+			need_summer_fishing_reward_set_mail_attachment_table(w2);
+		}
 		else
 		//Map Server SQL DB
 		if(strcmpi(w1,"map_server_ip")==0)
@@ -5067,7 +5085,11 @@ void MapServer::finalize(){
 	chrif_flush_fifo();
 
 	do_final_atcommand();
+	need_summer_hunt_final();
+	need_summer_attendance_final();
+	need_summer_fishing_reward_final();
 	need_autopot_final();
+	need_fishing_final();
 	do_final_battle();
 	do_final_chrif();
 #ifndef MAP_GENERATOR
@@ -5365,7 +5387,7 @@ bool MapServer::initialize( int32 argc, char *argv[] ){
 	safestrncpy(console_log_filepath, "./log/map-msg_log.log", sizeof(console_log_filepath));
 
 	/* Multilanguage */
-	MSG_CONF_NAME_EN = "conf/msg_conf/map_msg.conf"; // English (default)
+	MSG_CONF_NAME_EN = "conf/msg_conf/map_msg_need_summer.conf"; // English plus NEED summer messages
 	MSG_CONF_NAME_RUS = "conf/msg_conf/map_msg_rus.conf";	// Russian
 	MSG_CONF_NAME_SPN = "conf/msg_conf/map_msg_spn.conf";	// Spanish
 	MSG_CONF_NAME_GRM = "conf/msg_conf/map_msg_grm.conf";	// German
@@ -5464,6 +5486,9 @@ bool MapServer::initialize( int32 argc, char *argv[] ){
 	do_init_skill();
 	do_init_mob();
 	do_init_pc();
+	need_summer_hunt_init();
+	need_summer_attendance_init();
+	need_summer_fishing_reward_init();
 	need_autopot_init();
 	do_init_status();
 	do_init_party();

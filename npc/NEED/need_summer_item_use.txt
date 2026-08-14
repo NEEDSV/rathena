@@ -1,0 +1,141 @@
+//============================================================
+// NEED 2026 여름 이벤트 사용 아이템
+//============================================================
+
+//------------------------------------------------------------
+// 황금 수박
+//------------------------------------------------------------
+function	script	F_NEED_Summer_GoldenWatermelon	{
+	.@item_id = 399927;
+	.@max_cash = 2147483647;
+
+	if (countitem(.@item_id) < 1)
+		return 0;
+
+	// 실패 후 재사용으로 결과를 다시 뽑는 것을 막기 위해
+	// 최대 제니·캐시 보상을 모두 받을 수 있을 때만 추첨한다.
+	if (Zeny > MAX_ZENY - 100000000) {
+		dispbottom "[여름 이벤트] 제니를 1억 이상 보유할 수 있는 공간이 필요합니다.";
+		return 0;
+	}
+
+	if (#CASHPOINTS > .@max_cash - 100000) {
+		dispbottom "[여름 이벤트] 캐시 포인트를 10만 이상 보유할 수 있는 공간이 필요합니다.";
+		return 0;
+	}
+
+	.@roll = rand(1, 10000);
+
+	if (.@roll <= 200) {
+		.@reward_type = 1;
+		.@amount = 100000000;
+	}
+	else if (.@roll <= 1400) {
+		.@reward_type = 1;
+		.@amount = 50000000;
+	}
+	else if (.@roll <= 6400) {
+		.@reward_type = 1;
+		.@amount = 10000000;
+	}
+	else if (.@roll <= 6500) {
+		.@reward_type = 2;
+		.@amount = 100000;
+	}
+	else if (.@roll <= 7500) {
+		.@reward_type = 2;
+		.@amount = 50000;
+	}
+	else {
+		.@reward_type = 2;
+		.@amount = 10000;
+	}
+
+	// 모든 검사를 통과하고 결과가 결정된 뒤에만 소비한다.
+	delitem .@item_id,1;
+
+	if (.@reward_type == 1) {
+		.@before = Zeny;
+		Zeny += .@amount;
+		.@granted = Zeny - .@before;
+		if ( .@granted > 0 ) callfunc "F_NEED_Summer_RewardLog", .@item_id, 1, .@granted;
+		dispbottom "[여름 이벤트] 황금 수박에서 제니 " + callfunc("F_InsertComma", .@amount) + "을 획득했습니다.";
+		
+		if (.@amount == 100000000)
+			announce "[여름 이벤트] " + strcharinfo(0) + " 님이 황금 수박에서 1억 제니를 획득했습니다!", bc_all;
+	}
+	else {
+		.@before = #CASHPOINTS;
+		#CASHPOINTS += .@amount;
+		.@granted = #CASHPOINTS - .@before;
+		if ( .@granted > 0 ) callfunc "F_NEED_Summer_RewardLog", .@item_id, 2, .@granted;
+		dispbottom "[여름 이벤트] 황금 수박에서 캐시 포인트 " + callfunc("F_InsertComma", .@amount) + "을 획득했습니다.";
+		
+		if (.@amount == 100000)
+			announce "[여름 이벤트] " + strcharinfo(0) + " 님이 황금 수박에서 캐시 10만 포인트를 획득했습니다!", bc_all;
+	}
+
+	return 1;
+}
+
+//------------------------------------------------------------
+// 1억 제니 주머니
+//------------------------------------------------------------
+function	script	F_NEED_Summer_ZenyPouch	{
+	.@item_id = 399929;
+	.@amount = 100000000;
+
+	if (countitem(.@item_id) < 1)
+		return 0;
+
+	if (Zeny > MAX_ZENY - .@amount) {
+		dispbottom "[여름 이벤트] 제니 보유 한도를 초과하여 사용할 수 없습니다.";
+		return 0;
+	}
+
+	delitem .@item_id,1;
+	.@before = Zeny;
+	Zeny += .@amount;
+	.@granted = Zeny - .@before;
+	if ( .@granted > 0 ) callfunc "F_NEED_Summer_RewardLog", .@item_id, 1, .@granted;
+
+	dispbottom "[여름 이벤트] 제니 1억을 획득했습니다.";
+	return 1;
+}
+
+
+//------------------------------------------------------------
+// 캐시 10만 포인트 교환권
+//------------------------------------------------------------
+function	script	F_NEED_Summer_CashTicket	{
+	.@item_id = 399930;
+	.@amount = 100000;
+	.@max_cash = 2147483647;
+
+	if (countitem(.@item_id) < 1)
+		return 0;
+
+	if (#CASHPOINTS > .@max_cash - .@amount) {
+		dispbottom "[여름 이벤트] 캐시 포인트 보유 한도를 초과하여 사용할 수 없습니다.";
+		return 0;
+	}
+
+	delitem .@item_id,1;
+	.@before = #CASHPOINTS;
+	#CASHPOINTS += .@amount;
+	.@granted = #CASHPOINTS - .@before;
+	if ( .@granted > 0 ) callfunc "F_NEED_Summer_RewardLog", .@item_id, 2, .@granted;
+
+	dispbottom "[여름 이벤트] 캐시 포인트 10만을 획득했습니다.";
+	return 1;
+}
+
+//------------------------------------------------------------
+// 이벤트 보상 Origin Log (Zeny/Cash). ITEM(399931)은 C++ 훅에서 기록.
+//  reward_type: 1=ZENY, 2=CASH. 지급 성공 후 1건 INSERT. 실패해도 보상은 유지(query_sql 오류 무시).
+//------------------------------------------------------------
+function	script	F_NEED_Summer_RewardLog	{
+	.@src = getarg(0); .@rt = getarg(1); .@amt = getarg(2);
+	query_sql( "INSERT INTO `need_summer_reward_log` (`event_id`,`source_item_id`,`account_id`,`char_id`,`ip`,`reward_type`,`reward_item_id`,`reward_amount`,`unique_id`,`created_at`) VALUES (202608," + .@src + "," + getcharid(3) + "," + getcharid(0) + ",'" + escape_sql(getcharip()) + "'," + .@rt + ",0," + .@amt + ",0,NOW())" );
+	return;
+}
