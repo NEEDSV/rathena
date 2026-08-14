@@ -9,7 +9,7 @@
 //===== 참고(조사 결과) ========================================
 //=  battle config : conf/battle/feature.conf, need_world_drop.conf,
 //=                  need_summer_fishing.conf
-//=  Script 전역   : npc/NEED/need_summer_shop.txt(OnInit 에서 1 로 초기화),
+//=  Script 전역   : npc/NEED/need_summer_shop.txt(날짜 자동 오픈 + $NS_SHOP_TEST 강제),
 //=                  $NSF_DEBUG(별도 할당 없음 -> reload 후에도 유지)
 //=  hunt 의존성   : fragment/golden 은 need_summer_hunt_enable 자식
 //=  출석 의존성   : feature.attendance && feature.need_summer_attendance
@@ -79,16 +79,15 @@ S_Board:
 		if ( .@frageff ) { .@warn$[.@wc] = "이벤트 시작 전이지만 수박 조각이 활성입니다."; .@wc++; }
 		if ( .@goldeff ) { .@warn$[.@wc] = "이벤트 시작 전이지만 황금 수박이 활성입니다."; .@wc++; }
 		if ( .@fish )    { .@warn$[.@wc] = "이벤트 시작 전이지만 낚시가 ON 입니다."; .@wc++; }
-		if ( $NS_SHOP_ON ) { .@warn$[.@wc] = "이벤트 시작 전이지만 상점이 ON 입니다."; .@wc++; }
 	}
 	if ( .@ds == 1 ) {
 		if ( !.@hunt ) { .@warn$[.@wc] = "이벤트 진행 중이지만 필드 사냥 전체가 OFF 입니다."; .@wc++; }
 		else if ( !.@frageff ) { .@warn$[.@wc] = "이벤트 진행 중이지만 수박 조각이 비활성입니다."; .@wc++; }
 		if ( !.@fish ) { .@warn$[.@wc] = "이벤트 진행 중이지만 낚시가 OFF 입니다."; .@wc++; }
-		if ( !$NS_SHOP_ON ) { .@warn$[.@wc] = "이벤트 진행 중이지만 상점이 OFF 입니다."; .@wc++; }
 	}
 	if ( .@fdbg )     { .@warn$[.@wc] = "낚시 Engine DEBUG 가 활성화되어 있습니다."; .@wc++; }
 	if ( $NSF_DEBUG ) { .@warn$[.@wc] = "낚시 Script DEBUG 가 활성화되어 있습니다."; .@wc++; }
+	if ( $NS_SHOP_TEST ) { .@warn$[.@wc] = "상점 테스트 강제 ON - 날짜와 무관하게 열려 있습니다."; .@wc++; }
 
 	mes "[NEED 한여름 이벤트 관리]";
 	mes "서버 시각 : " + gettimestr("%Y-%m-%d %H:%M:%S", 21);
@@ -106,10 +105,9 @@ S_Board:
 	mes " [CONFIG] 필드 사냥 전체 : " + callfunc("F_NSGM_OO", .@hunt);
 	mes " [CONFIG] 수박 조각(설정) : " + callfunc("F_NSGM_OO", .@frag) + " / 실제 " + callfunc("F_NSGM_ST", .@frageff, "활성", "비활성");
 	mes " [CONFIG] 황금 수박(설정) : " + callfunc("F_NSGM_OO", .@gold) + " / 실제 " + callfunc("F_NSGM_ST", .@goldeff, "활성", "비활성");
-	mes "^FFCC00[이벤트 상점]^000000";
-	mes " [Script] 상점 NPC       : " + callfunc("F_NSGM_OO", $NS_SHOP_ON);
-	mes " [Script] 수박조각 교환   : " + callfunc("F_NSGM_OO", $NS_EXCHANGE_ON) + " / 실제 " + callfunc("F_NSGM_ST", $NS_SHOP_ON && $NS_EXCHANGE_ON, "활성", "비활성");
-	mes " [Script] 코코넛 토큰상점 : " + callfunc("F_NSGM_OO", $NS_TOKEN_SHOP_ON) + " / 실제 " + callfunc("F_NSGM_ST", $NS_SHOP_ON && $NS_TOKEN_SHOP_ON, "활성", "비활성");
+	mes "^FFCC00[이벤트 상점] (날짜 자동)^000000";
+	mes " [자동] 상점/교환/토큰 : " + callfunc("F_NSGM_ST", callfunc("F_NeedSummerShopActive"), "활성", "비활성");
+	if ( $NS_SHOP_TEST ) mes "   ^FF9900(테스트 강제 ON - 날짜 무관)^000000";
 	mes "^FFCC00[낚시]^000000";
 	mes " [CONFIG] 낚시 시스템     : " + callfunc("F_NSGM_OO", .@fish);
 	mes " [CONFIG] 랭킹 보상 우편  : " + callfunc("F_NSGM_OO", .@rank) + " ^999999(낚시와 독립)^000000";
@@ -167,20 +165,21 @@ S_Hunt:
 
 // ---- 이벤트 상점 상세 + 토글 ----
 S_Shop:
-	mes "[이벤트 상점]";
-	mes "[Script] 상점 NPC       : " + callfunc("F_NSGM_OO", $NS_SHOP_ON);
-	mes "[Script] 수박조각 교환   : " + callfunc("F_NSGM_OO", $NS_EXCHANGE_ON) + " / 실제 " + callfunc("F_NSGM_ST", $NS_SHOP_ON && $NS_EXCHANGE_ON, "활성", "비활성");
-	mes "[Script] 코코넛 토큰상점 : " + callfunc("F_NSGM_OO", $NS_TOKEN_SHOP_ON) + " / 실제 " + callfunc("F_NSGM_ST", $NS_SHOP_ON && $NS_TOKEN_SHOP_ON, "활성", "비활성");
-	if ( !$NS_SHOP_ON && ( $NS_EXCHANGE_ON || $NS_TOKEN_SHOP_ON ) )
-		mes "  ^FF9900원인: 상점 NPC OFF (교환/토큰은 상점 내부 메뉴)^000000";
-	mes "^999999설정: npc/NEED/need_summer_shop.txt (Script runtime)^000000";
-	mes "^FF9900* @reloadscript / 서버 재시작 시 OnInit 에서 셋 다 ON(1) 으로 초기화됩니다.^000000";
-	mes "변경 방식: ^00CC66GM 메뉴에서 즉시 토글 가능^000000";
+	.@ld = callfunc("F_NeedFishCurLD");
+	.@act = callfunc("F_NeedSummerShopActive");
+	mes "[이벤트 상점] - 날짜 기반 자동";
+	mes "현재 상태 : " + callfunc("F_NSGM_ST", .@act, "활성", "비활성");
+	if ( $NS_SHOP_TEST ) mes "  ^FF9900근거: 테스트 강제 ON (날짜 무관)^000000";
+	else if ( .@act ) mes "  ^999999근거: 날짜 창 내^000000";
+	else mes "  ^999999근거: 날짜 창 밖^000000";
+	mes "운영 창 : 2026-08-15 04:00 ~ 2026-09-19 04:00";
+	mes "오늘(논리일자) : " + .@ld;
+	mes "테스트 강제 ON : " + callfunc("F_NSGM_OO", $NS_SHOP_TEST);
+	mes "^999999설정: npc/NEED/need_summer_shop.txt (날짜 자동 + $NS_SHOP_TEST)^000000";
+	mes "^999999* 상점/교환/토큰은 날짜 창에서 자동 오픈. 리로드/재시작 영향 없음.^000000";
 	next;
-	.@s = select( "상점 NPC 전환", "수박조각 교환 전환", "코코넛 토큰상점 전환", "돌아가기" );
-	if ( .@s == 1 ) callsub S_Toggle, "$NS_SHOP_ON", $NS_SHOP_ON, "상점 NPC";
-	else if ( .@s == 2 ) callsub S_Toggle, "$NS_EXCHANGE_ON", $NS_EXCHANGE_ON, "수박조각 교환";
-	else if ( .@s == 3 ) callsub S_Toggle, "$NS_TOKEN_SHOP_ON", $NS_TOKEN_SHOP_ON, "코코넛 토큰상점";
+	if ( select( "테스트 강제 ON/OFF 전환", "돌아가기" ) == 1 )
+		callsub S_Toggle, "$NS_SHOP_TEST", $NS_SHOP_TEST, "상점 테스트 강제";
 	return;
 
 // ---- 낚시 상세 ----

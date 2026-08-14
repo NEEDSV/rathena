@@ -1,7 +1,7 @@
 // NEED 2026 summer exchange and token shop. Defaults are intentionally off.
 comodo,191,157,4	script	바캉스 상인 코코#summer2026	4_F_STARFISHGIRL,{
 	mes "[바캉스 상인 코코]";
-	if (!$NS_SHOP_ON) {
+	if (!callfunc("F_NeedSummerShopActive")) {
 		mes "아직 교환 준비 중이에요.";
 		close;
 	}
@@ -14,7 +14,7 @@ comodo,191,157,4	script	바캉스 상인 코코#summer2026	4_F_STARFISHGIRL,{
 	next;
 	switch (select("수박 조각을 교환한다:코코넛 상점을 둘러본다:교환 안내를 듣는다:다음에 올게요")) {
 	case 1:
-		if (!$NS_EXCHANGE_ON) {
+		if (!callfunc("F_NeedSummerShopActive")) {
 			mes "[바캉스 상인 코코]";
 			mes "수박 조각 교환은 지금 준비 중이에요.";
 			close;
@@ -23,7 +23,7 @@ comodo,191,157,4	script	바캉스 상인 코코#summer2026	4_F_STARFISHGIRL,{
 		callshop "need_summer_fragment_exchange", 1;
 		end;
 	case 2:
-		if (!$NS_TOKEN_SHOP_ON) {
+		if (!callfunc("F_NeedSummerShopActive")) {
 			mes "[바캉스 상인 코코]";
 			mes "코코넛 상점은 지금 준비 중이에요.";
 			close;
@@ -45,9 +45,16 @@ comodo,191,157,4	script	바캉스 상인 코코#summer2026	4_F_STARFISHGIRL,{
 	}
 
 OnInit:
-	// 운영자가 아래 세 값을 1로 바꾸기 전에는 UI와 구매를 모두 차단한다.
-	$NS_SHOP_ON = 0;
-	$NS_EXCHANGE_ON = 0;
-	$NS_TOKEN_SHOP_ON = 0;
+	// Shop opens automatically by event date window.
+	// For testing outside the window, a GM sets $NS_SHOP_TEST via @summergm.
 	end;
+}
+
+// Shop active when a GM test override is set OR the current logical date
+// (04:00 boundary) is within the event/exchange window 2026-08-15 ~ 2026-09-18.
+function	script	F_NeedSummerShopActive	{
+	if ( $NS_SHOP_TEST ) return 1;
+	.@ld = atoi( gettimestr("%Y%m%d", 9, gettimetick(2) - 14400) );
+	if ( .@ld >= 20260815 && .@ld <= 20260918 ) return 1;
+	return 0;
 }
