@@ -26,7 +26,7 @@ namespace {
 
 constexpr t_itemid NEED_SUMMER_FRAGMENT_ITEM_ID = 399926;
 constexpr t_itemid NEED_SUMMER_GOLDEN_ITEM_ID = 399927;
-constexpr int32 NEED_SUMMER_FRAGMENT_RATE = 300;
+constexpr int32 NEED_SUMMER_FRAGMENT_RATE = 500;
 constexpr int32 NEED_SUMMER_GOLDEN_RATE = 5;
 constexpr int32 NEED_SUMMER_RATE_SCALE = 10000;
 constexpr int32 NEED_SUMMER_LEVEL_DIFFERENCE = 15;
