@@ -25,6 +25,10 @@ static char log_timestamp_format[20];
 // NEED 2026 summer event item range, including reserved IDs for later use.
 constexpr t_itemid NEED_SUMMER_ITEM_ID_MIN = 399925;
 constexpr t_itemid NEED_SUMMER_ITEM_ID_MAX = 399935;
+// Gold coin (399990) is a Usable/stackable cash-exchange item. It is outside the
+// range above and would otherwise be dropped by the amount filter on small moves,
+// so it is always logged to keep cash-to-gold transfers traceable.
+constexpr t_itemid NEED_SUMMER_GOLD_COIN_ID = 399990;
 
 /// filters for item logging
 typedef enum e_log_filter
@@ -149,6 +153,9 @@ static char log_feedingtype2char(e_log_feeding_type type) {
 static bool should_log_item(t_itemid nameid, int32 amount, int32 refine)
 {
 	if (nameid >= NEED_SUMMER_ITEM_ID_MIN && nameid <= NEED_SUMMER_ITEM_ID_MAX)
+		return true;
+
+	if (nameid == NEED_SUMMER_GOLD_COIN_ID)
 		return true;
 
 	int32 filter = log_config.filter;

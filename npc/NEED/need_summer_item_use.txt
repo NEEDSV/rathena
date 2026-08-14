@@ -55,14 +55,20 @@ function	script	F_NEED_Summer_GoldenWatermelon	{
 	delitem .@item_id,1;
 
 	if (.@reward_type == 1) {
+		.@before = Zeny;
 		Zeny += .@amount;
+		.@granted = Zeny - .@before;
+		if ( .@granted > 0 ) callfunc "F_NEED_Summer_RewardLog", .@item_id, 1, .@granted;
 		dispbottom "[여름 이벤트] 황금 수박에서 제니 " + callfunc("F_InsertComma", .@amount) + "을 획득했습니다.";
 		
 		if (.@amount == 100000000)
 			announce "[여름 이벤트] " + strcharinfo(0) + " 님이 황금 수박에서 1억 제니를 획득했습니다!", bc_all;
 	}
 	else {
+		.@before = #CASHPOINTS;
 		#CASHPOINTS += .@amount;
+		.@granted = #CASHPOINTS - .@before;
+		if ( .@granted > 0 ) callfunc "F_NEED_Summer_RewardLog", .@item_id, 2, .@granted;
 		dispbottom "[여름 이벤트] 황금 수박에서 캐시 포인트 " + callfunc("F_InsertComma", .@amount) + "을 획득했습니다.";
 		
 		if (.@amount == 100000)
@@ -88,7 +94,10 @@ function	script	F_NEED_Summer_ZenyPouch	{
 	}
 
 	delitem .@item_id,1;
+	.@before = Zeny;
 	Zeny += .@amount;
+	.@granted = Zeny - .@before;
+	if ( .@granted > 0 ) callfunc "F_NEED_Summer_RewardLog", .@item_id, 1, .@granted;
 
 	dispbottom "[여름 이벤트] 제니 1억을 획득했습니다.";
 	return 1;
@@ -112,8 +121,21 @@ function	script	F_NEED_Summer_CashTicket	{
 	}
 
 	delitem .@item_id,1;
+	.@before = #CASHPOINTS;
 	#CASHPOINTS += .@amount;
+	.@granted = #CASHPOINTS - .@before;
+	if ( .@granted > 0 ) callfunc "F_NEED_Summer_RewardLog", .@item_id, 2, .@granted;
 
 	dispbottom "[여름 이벤트] 캐시 포인트 10만을 획득했습니다.";
 	return 1;
+}
+
+//------------------------------------------------------------
+// 이벤트 보상 Origin Log (Zeny/Cash). ITEM(399931)은 C++ 훅에서 기록.
+//  reward_type: 1=ZENY, 2=CASH. 지급 성공 후 1건 INSERT. 실패해도 보상은 유지(query_sql 오류 무시).
+//------------------------------------------------------------
+function	script	F_NEED_Summer_RewardLog	{
+	.@src = getarg(0); .@rt = getarg(1); .@amt = getarg(2);
+	query_sql( "INSERT INTO `need_summer_reward_log` (`event_id`,`source_item_id`,`account_id`,`char_id`,`ip`,`reward_type`,`reward_item_id`,`reward_amount`,`unique_id`,`created_at`) VALUES (202608," + .@src + "," + getcharid(3) + "," + getcharid(0) + ",'" + escape_sql(getcharip()) + "'," + .@rt + ",0," + .@amt + ",0,NOW())" );
+	return;
 }

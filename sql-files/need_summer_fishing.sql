@@ -117,3 +117,37 @@ CREATE TABLE IF NOT EXISTS `need_summer_fishing_weekly_result` (
   PRIMARY KEY (`event_id`,`week_no`,`rank_no`),
   KEY `idx_acc` (`event_id`,`week_no`,`account_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- ============================================================
+-- (fishing13) 주간 랭킹 보상 지급 outbox (시스템 우편 durable delivery)
+--  weekly_result(순위 원장) -> 이 outbox(보상 전달 원장) -> 시스템 우편.
+--  status: 0=pending,1=processing,2=delivered,3=retry,4=review (출석 outbox와 동일 의미).
+--  UNIQUE(event,week,rank) = 멱등 예약 키. UNIQUE(event,week,account) = 계정 중복 방어.
+--  reward_item_id=399925(코코넛 토큰). 운영 DB 자동 적용 금지(수동).
+-- ============================================================
+CREATE TABLE IF NOT EXISTS `need_summer_fishing_rank_reward_outbox` (
+  `outbox_id`       BIGINT UNSIGNED  NOT NULL AUTO_INCREMENT,
+  `event_id`        INT UNSIGNED     NOT NULL,
+  `week_no`         TINYINT UNSIGNED NOT NULL,
+  `rank_no`         TINYINT UNSIGNED NOT NULL,
+  `account_id`      INT UNSIGNED     NOT NULL,
+  `char_id`         INT UNSIGNED     NOT NULL,
+  `char_name`       VARCHAR(30)      NOT NULL DEFAULT '',
+  `reward_item_id`  INT UNSIGNED     NOT NULL,
+  `reward_amount`   INT UNSIGNED     NOT NULL,
+  `status`          TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '0=pending,1=processing,2=delivered,3=retry,4=review',
+  `attempts`        SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+  `next_attempt_at` DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `last_attempt_at` DATETIME         DEFAULT NULL,
+  `last_error_code` VARCHAR(64) CHARACTER SET ascii COLLATE ascii_general_ci NOT NULL DEFAULT '',
+  `last_error`      VARCHAR(255)     NOT NULL DEFAULT '',
+  `mail_id`         BIGINT UNSIGNED  DEFAULT NULL,
+  `created_at`      DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`      DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `delivered_at`    DATETIME         DEFAULT NULL,
+  PRIMARY KEY (`outbox_id`),
+  UNIQUE KEY `uq_rank` (`event_id`,`week_no`,`rank_no`),
+  UNIQUE KEY `uq_account` (`event_id`,`week_no`,`account_id`),
+  UNIQUE KEY `uq_mail` (`mail_id`),
+  KEY `status_created` (`status`,`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;

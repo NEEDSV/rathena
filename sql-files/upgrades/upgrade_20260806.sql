@@ -106,6 +106,8 @@ CREATE TABLE IF NOT EXISTS `need_summer_attendance_reward_outbox` (
   `token_amount` int unsigned NOT NULL,
   `box_item_id` int unsigned NOT NULL,
   `box_amount` int unsigned NOT NULL,
+  `bonus_item_id` int unsigned NOT NULL DEFAULT 0,
+  `bonus_amount` int unsigned NOT NULL DEFAULT 0,
   `status` tinyint unsigned NOT NULL DEFAULT 0 COMMENT '0=pending,1=processing,2=delivered,3=retry,4=review',
   `attempts` smallint unsigned NOT NULL DEFAULT 0,
   `next_attempt_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,

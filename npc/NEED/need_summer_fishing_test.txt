@@ -311,6 +311,7 @@ S_RankTest:
 		"[GM] 특정 주차 result 확인",
 		"[GM] 내 weekly_best 삭제",
 		"[GM] 특정 주차 ranking 삭제",
+		"[GM] 랭킹 보상 outbox 관리",
 		"돌아가기" ) ) {
 	case 1:
 		mes "실제 현재 주차: " + ( .@rw >= 1 ? .@rw + "주차" : "랭킹 기간 아님" );
@@ -398,7 +399,63 @@ S_RankTest:
 		mes .@w + "주차 랭킹 데이터를 삭제했습니다.";
 		close;
 	case 12:
+		callsub S_RewardTest;
+		close;
+	case 13:
 		close;
 	}
 	end;
+
+// ---- (fishing13) GM: 랭킹 보상 outbox 관리 (조회/REVIEW 복구). 대량 자동 지급 없음 ----
+S_RewardTest:
+	if ( getgmlevel() < 60 ) { mes "GM 전용 기능입니다."; close; }
+	setdialogsize( 500, 400 );
+	mes "[랭킹 보상 outbox 관리]";
+	mes "보상 지급은 map-server consumer(플래그 need_summer_fishing_rank_reward_enable)가 처리합니다.";
+	next;
+	switch ( select( "보상 outbox 현황(주차/상태)", "주차별 outbox 목록", "특정 outbox 상세", "REVIEW -> RETRY 요청", "돌아가기" ) ) {
+	case 1:
+		.@n = query_sql( "SELECT `week_no`,`status`,COUNT(*) FROM `need_summer_fishing_rank_reward_outbox` WHERE `event_id`=202608 GROUP BY `week_no`,`status` ORDER BY `week_no`,`status`", .@w, .@st, .@c );
+		mes "[보상 outbox 현황]";
+		if ( .@n <= 0 ) { mes "outbox 없음."; close; }
+		setarray .@sn$[0], "PENDING", "PROCESSING", "DELIVERED", "RETRY", "REVIEW";
+		for ( .@i = 0; .@i < .@n; .@i++ ) mes .@w[.@i] + "주차 " + .@sn$[.@st[.@i]] + " : " + .@c[.@i] + "건";
+		close;
+	case 2:
+		mes "확인할 주차를 선택하세요.";
+		next;
+		.@w = select( "1주차", "2주차", "3주차", "4주차" );
+		.@n = query_sql( "SELECT `rank_no`,`char_name`,`reward_amount`,`status`,`attempts`,COALESCE(`mail_id`,0) FROM `need_summer_fishing_rank_reward_outbox` WHERE `event_id`=202608 AND `week_no`=" + .@w + " ORDER BY `rank_no` ASC", .@rk, .@cn$, .@amt, .@st, .@at, .@mid );
+		mes "[" + .@w + "주차 보상 outbox]";
+		if ( .@n <= 0 ) { mes "예약 없음."; close; }
+		setarray .@sn$[0], "PENDING", "PROCESSING", "DELIVERED", "RETRY", "REVIEW";
+		for ( .@i = 0; .@i < .@n; .@i++ ) mes .@rk[.@i] + "위 " + .@cn$[.@i] + " x" + .@amt[.@i] + " [" + .@sn$[.@st[.@i]] + " a" + .@at[.@i] + " m" + .@mid[.@i] + "]";
+		close;
+	case 3:
+		mes "상세를 볼 outbox_id 를 입력하세요.";
+		next;
+		input .@oid;
+		.@n = query_sql( "SELECT `week_no`,`rank_no`,`account_id`,`char_id`,`char_name`,`reward_amount`,`status`,`attempts`,COALESCE(`mail_id`,0),`last_error_code` FROM `need_summer_fishing_rank_reward_outbox` WHERE `outbox_id`=" + .@oid, .@w, .@rk, .@aid, .@cid, .@cn$, .@amt, .@st, .@at, .@mid, .@ec$ );
+		if ( .@n <= 0 ) { mes "해당 outbox 없음."; close; }
+		setarray .@sn$[0], "PENDING", "PROCESSING", "DELIVERED", "RETRY", "REVIEW";
+		mes "outbox " + .@oid + " / " + .@w + "주차 " + .@rk + "위";
+		mes "account " + .@aid + " char " + .@cid + " " + .@cn$;
+		mes "보상 399925 x" + .@amt;
+		mes "상태 " + .@sn$[.@st] + " / attempts " + .@at + " / mail_id " + .@mid;
+		if ( .@ec$ != "" ) mes "last_error_code: " + .@ec$;
+		close;
+	case 4:
+		mes "status=REVIEW 이고 mail_id 가 없는 outbox 만 RETRY(PENDING)로 되돌립니다.";
+		mes "이미 우편이 나간(mail_id 존재) 행은 변경되지 않습니다.";
+		mes "되돌릴 outbox_id 를 입력하세요.";
+		next;
+		input .@oid;
+		query_sql( "UPDATE `need_summer_fishing_rank_reward_outbox` SET `status`=0,`attempts`=0,`next_attempt_at`=NOW(),`last_error_code`='',`last_error`='',`updated_at`=NOW() WHERE `outbox_id`=" + .@oid + " AND `status`=4 AND `mail_id` IS NULL" );
+		mes "요청 처리 완료. (조건 미충족 시 실제 변경 없음)";
+		close;
+	case 5:
+		close;
+	}
+	end;
+
 }

@@ -60,6 +60,7 @@
 #include "mob.hpp"
 #include "need_equipment_build.hpp"
 #include "need_fishing.hpp"
+#include "need_summer_reward_log.hpp"
 #include "npc.hpp"
 #include "party.hpp"
 #include "path.hpp"
@@ -23812,9 +23813,26 @@ BUILDIN_FUNC(getgroupitem) {
 		identify = script_getnum( st, 3 );
 	}
 	
+	// NEED summer: origin-log the coconut shadow box (399931) reward only, without adding any
+	// per-pc_additem cost. The group id constant is resolved once; other groups just do one compare.
+	static int32 need_summer_shadowbox_group = -2; // -2 = unresolved, -1 = constant not found
+	if( need_summer_shadowbox_group == -2 ){
+		int64 need_summer_gid = 0;
+		need_summer_shadowbox_group = script_get_constant( "IG_NEED_SUMMER_COCONUT_SHADOW_BOX", &need_summer_gid ) ? (int32)need_summer_gid : -1;
+	}
+	bool need_summer_shadowbox = ( need_summer_shadowbox_group >= 0 && group_id == need_summer_shadowbox_group );
+	if( need_summer_shadowbox )
+		sd->last_addeditem_index = -1;
+
 	if( itemdb_group.pc_get_itemgroup( group_id, identify, *sd ) ){
 		ShowError("buildin_getgroupitem: Invalid group id '%d' specified.\n",group_id);
 		return SCRIPT_CMD_FAILURE;
+	}
+
+	if( need_summer_shadowbox && sd->last_addeditem_index >= 0 && sd->last_addeditem_index < MAX_INVENTORY ){
+		struct item* need_summer_reward = &sd->inventory.u.items_inventory[sd->last_addeditem_index];
+		if( need_summer_reward->nameid != 0 )
+			need_summer_reward_log_item( sd, 399931, need_summer_reward->nameid, need_summer_reward->amount, need_summer_reward->unique_id );
 	}
 
 	return SCRIPT_CMD_SUCCESS;

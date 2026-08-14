@@ -9009,6 +9009,7 @@ static const struct _battle_data {
 	// NEED summer event fishing system (stage 1: technical validation). Off by default.
 	{ "need_summer_fishing_enable",         &battle_config.need_summer_fishing_enable,      0,      0,      1,              },
 	{ "need_summer_fishing_debug",          &battle_config.need_summer_fishing_debug,       0,      0,      1,              },
+	{ "need_summer_fishing_rank_reward_enable", &battle_config.need_summer_fishing_rank_reward_enable, 0, 0, 1,          },
 	{ "need_summer_fishing_bite_min_ms",    &battle_config.need_summer_fishing_bite_min_ms, 2000,   0,      INT_MAX,        },
 	{ "need_summer_fishing_bite_max_ms",    &battle_config.need_summer_fishing_bite_max_ms, 5000,   0,      INT_MAX,        },
 	{ "need_summer_fishing_input_window_ms", &battle_config.need_summer_fishing_input_window_ms, 1500, 1,  INT_MAX,        },

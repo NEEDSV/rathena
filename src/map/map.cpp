@@ -49,6 +49,7 @@
 #include "need_autopot.hpp"
 #include "need_fishing.hpp"
 #include "need_summer_attendance.hpp"
+#include "need_summer_fishing_reward.hpp"
 #include "need_summer_hunt.hpp"
 #ifndef MAP_GENERATOR
 #include "needwiki.hpp"
@@ -4346,12 +4347,18 @@ int32 inter_config_read(const char *cfgName)
 			safestrncpy(sales_table, w2, sizeof(sales_table));
 		else if (strcmpi(w1, "guild_storage_log") == 0)
 			safestrncpy(guild_storage_log_table, w2, sizeof(guild_storage_log_table));
-		else if (strcmpi(w1, "char_db") == 0)
+		else if (strcmpi(w1, "char_db") == 0) {
 			need_summer_attendance_set_char_table(w2);
-		else if (strcmpi(w1, "mail_db") == 0)
+			need_summer_fishing_reward_set_char_table(w2);
+		}
+		else if (strcmpi(w1, "mail_db") == 0) {
 			need_summer_attendance_set_mail_table(w2);
-		else if (strcmpi(w1, "mail_attachment_db") == 0)
+			need_summer_fishing_reward_set_mail_table(w2);
+		}
+		else if (strcmpi(w1, "mail_attachment_db") == 0) {
 			need_summer_attendance_set_mail_attachment_table(w2);
+			need_summer_fishing_reward_set_mail_attachment_table(w2);
+		}
 		else
 		//Map Server SQL DB
 		if(strcmpi(w1,"map_server_ip")==0)
@@ -5080,6 +5087,7 @@ void MapServer::finalize(){
 	do_final_atcommand();
 	need_summer_hunt_final();
 	need_summer_attendance_final();
+	need_summer_fishing_reward_final();
 	need_autopot_final();
 	need_fishing_final();
 	do_final_battle();
@@ -5480,6 +5488,7 @@ bool MapServer::initialize( int32 argc, char *argv[] ){
 	do_init_pc();
 	need_summer_hunt_init();
 	need_summer_attendance_init();
+	need_summer_fishing_reward_init();
 	need_autopot_init();
 	do_init_status();
 	do_init_party();

@@ -836,6 +836,7 @@ struct Battle_Config
 	// NEED summer event fishing system (stage 1: technical validation)
 	int32 need_summer_fishing_enable;
 	int32 need_summer_fishing_debug;
+	int32 need_summer_fishing_rank_reward_enable;
 	int32 need_summer_fishing_bite_min_ms;
 	int32 need_summer_fishing_bite_max_ms;
 	int32 need_summer_fishing_input_window_ms;

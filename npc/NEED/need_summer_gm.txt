@@ -1,0 +1,288 @@
+//===== NEED 여름 이벤트 =======================================
+//= NEED 한여름 이벤트 통합 GM 관리
+//===== 설명 ===================================================
+//= 여름 이벤트 전체 기능의 "실제 런타임 상태"를 GM이 한눈에 확인.
+//=  - battle config : 기존 getbattleflag 로 런타임 값 조회(읽기 전용)
+//=  - Script 전역변수($NS_*, $NSF_DEBUG) : 직접 조회 + 안전 토글
+//= 새로운 상위 master flag 를 만들지 않고, 기존 설정을 보여주기만 함.
+//= GM 전용(@summergm, GM60+). 투명 NPC 라 일반 유저에게 노출되지 않음.
+//===== 참고(조사 결과) ========================================
+//=  battle config : conf/battle/feature.conf, need_world_drop.conf,
+//=                  need_summer_fishing.conf
+//=  Script 전역   : npc/NEED/need_summer_shop.txt(OnInit 에서 1 로 초기화),
+//=                  $NSF_DEBUG(별도 할당 없음 -> reload 후에도 유지)
+//=  hunt 의존성   : fragment/golden 은 need_summer_hunt_enable 자식
+//=  출석 의존성   : feature.attendance && feature.need_summer_attendance
+//==============================================================
+
+-	script	need_summer_gm	-1,{
+	if ( getgmlevel() < 60 ) {
+		mes "[NEED 한여름 이벤트 관리]";
+		mes "GM(60+) 전용 기능입니다.";
+		close;
+	}
+	callsub S_Main;
+	end;
+
+OnCommand:
+	if ( getgmlevel() < 60 ) end;
+	callsub S_Main;
+	end;
+
+OnInit:
+	bindatcmd "summergm", "need_summer_gm::OnCommand", 60, 60;
+	end;
+
+// ---- main menu ----
+S_Main:
+	while ( 1 ) {
+		.@sel = select(
+			"[전체 상태 보기]",
+			"[출석 관리]",
+			"[필드 사냥 관리]",
+			"[이벤트 상점 관리]",
+			"[한여름 낚시 관리]",
+			"[운영/보상 상태]",
+			"[DEBUG 상태]",
+			"[상태 새로고침]",
+			"[닫기]" );
+		if ( .@sel == 1 ) callsub S_Board;
+		else if ( .@sel == 2 ) callsub S_Attend;
+		else if ( .@sel == 3 ) callsub S_Hunt;
+		else if ( .@sel == 4 ) callsub S_Shop;
+		else if ( .@sel == 5 ) callsub S_Fishing;
+		else if ( .@sel == 6 ) callsub S_Reward;
+		else if ( .@sel == 7 ) callsub S_Debug;
+		else if ( .@sel == 8 ) { /* 새로고침: 루프 재진입 시 값 재조회 */ }
+		else break;
+	}
+	return;
+
+// ---- full state board ----
+S_Board:
+	.@base = getbattleflag("feature.attendance");
+	.@prov = getbattleflag("feature.need_summer_attendance");
+	.@hunt = getbattleflag("need_summer_hunt_enable");
+	.@frag = getbattleflag("need_summer_hunt_fragment_enable");
+	.@gold = getbattleflag("need_summer_hunt_golden_enable");
+	.@fish = getbattleflag("need_summer_fishing_enable");
+	.@rank = getbattleflag("need_summer_fishing_rank_reward_enable");
+	.@fdbg = getbattleflag("need_summer_fishing_debug");
+	.@frageff = ( .@hunt && .@frag );
+	.@goldeff = ( .@hunt && .@gold );
+	.@ds = callfunc("F_NSGM_DateState");
+	setarray .@dsn$[0], "시작 전", "진행 중", "상점 유예 기간", "종료";
+
+	// ---- 경고 계산 ----
+	.@wc = 0;
+	if ( .@ds == 0 ) {
+		if ( .@frageff ) { .@warn$[.@wc] = "이벤트 시작 전이지만 수박 조각이 활성입니다."; .@wc++; }
+		if ( .@goldeff ) { .@warn$[.@wc] = "이벤트 시작 전이지만 황금 수박이 활성입니다."; .@wc++; }
+		if ( .@fish )    { .@warn$[.@wc] = "이벤트 시작 전이지만 낚시가 ON 입니다."; .@wc++; }
+		if ( $NS_SHOP_ON ) { .@warn$[.@wc] = "이벤트 시작 전이지만 상점이 ON 입니다."; .@wc++; }
+	}
+	if ( .@ds == 1 ) {
+		if ( !.@hunt ) { .@warn$[.@wc] = "이벤트 진행 중이지만 필드 사냥 전체가 OFF 입니다."; .@wc++; }
+		else if ( !.@frageff ) { .@warn$[.@wc] = "이벤트 진행 중이지만 수박 조각이 비활성입니다."; .@wc++; }
+		if ( !.@fish ) { .@warn$[.@wc] = "이벤트 진행 중이지만 낚시가 OFF 입니다."; .@wc++; }
+		if ( !$NS_SHOP_ON ) { .@warn$[.@wc] = "이벤트 진행 중이지만 상점이 OFF 입니다."; .@wc++; }
+	}
+	if ( .@fdbg )     { .@warn$[.@wc] = "낚시 Engine DEBUG 가 활성화되어 있습니다."; .@wc++; }
+	if ( $NSF_DEBUG ) { .@warn$[.@wc] = "낚시 Script DEBUG 가 활성화되어 있습니다."; .@wc++; }
+
+	mes "[NEED 한여름 이벤트 관리]";
+	mes "서버 시각 : " + gettimestr("%Y-%m-%d %H:%M:%S", 21);
+	mes "본 이벤트 : 08/15 04:00 ~ 09/12 03:59";
+	mes "상점 운영 : ~ 09/19 03:59";
+	mes "이벤트 상태 : ^0088FF" + .@dsn$[.@ds] + "^000000";
+	if ( .@wc > 0 ) mes "현재 경고 : ^FF9900" + .@wc + "건^000000";
+	else mes "현재 경고 : 0건";
+	mes "^999999----------------------------^000000";
+	mes "^FFCC00[출석]^000000";
+	mes " [CONFIG] 기본 Attendance : " + callfunc("F_NSGM_OO", .@base);
+	mes " [CONFIG] 여름 Provider   : " + callfunc("F_NSGM_OO", .@prov);
+	mes "   => 종합 : " + callfunc("F_NSGM_ST", .@base && .@prov, "활성", "비활성");
+	mes "^FFCC00[필드 사냥]^000000";
+	mes " [CONFIG] 필드 사냥 전체 : " + callfunc("F_NSGM_OO", .@hunt);
+	mes " [CONFIG] 수박 조각(설정) : " + callfunc("F_NSGM_OO", .@frag) + " / 실제 " + callfunc("F_NSGM_ST", .@frageff, "활성", "비활성");
+	mes " [CONFIG] 황금 수박(설정) : " + callfunc("F_NSGM_OO", .@gold) + " / 실제 " + callfunc("F_NSGM_ST", .@goldeff, "활성", "비활성");
+	mes "^FFCC00[이벤트 상점]^000000";
+	mes " [Script] 상점 NPC       : " + callfunc("F_NSGM_OO", $NS_SHOP_ON);
+	mes " [Script] 수박조각 교환   : " + callfunc("F_NSGM_OO", $NS_EXCHANGE_ON) + " / 실제 " + callfunc("F_NSGM_ST", $NS_SHOP_ON && $NS_EXCHANGE_ON, "활성", "비활성");
+	mes " [Script] 코코넛 토큰상점 : " + callfunc("F_NSGM_OO", $NS_TOKEN_SHOP_ON) + " / 실제 " + callfunc("F_NSGM_ST", $NS_SHOP_ON && $NS_TOKEN_SHOP_ON, "활성", "비활성");
+	mes "^FFCC00[낚시]^000000";
+	mes " [CONFIG] 낚시 시스템     : " + callfunc("F_NSGM_OO", .@fish);
+	mes " [CONFIG] 랭킹 보상 우편  : " + callfunc("F_NSGM_OO", .@rank) + " ^999999(낚시와 독립)^000000";
+	mes " [DEBUG]  낚시 Engine DBG : " + callfunc("F_NSGM_OO", .@fdbg);
+	mes " [DEBUG]  낚시 Script DBG : " + callfunc("F_NSGM_OO", $NSF_DEBUG);
+	if ( .@wc > 0 ) {
+		mes "^999999----------------------------^000000";
+		mes "^FF9900[경고 목록]^000000";
+		for ( .@i = 0; .@i < .@wc; .@i++ )
+			mes " - ^FF9900" + .@warn$[.@i] + "^000000";
+	}
+	next;
+	return;
+
+// ---- 출석 상세 ----
+S_Attend:
+	.@base = getbattleflag("feature.attendance");
+	.@prov = getbattleflag("feature.need_summer_attendance");
+	.@sd = getbattleflag("need_summer.attendance_start_date");
+	.@ed = getbattleflag("need_summer.attendance_end_date");
+	.@ld = callfunc("F_NeedFishCurLD");
+	.@inwin = ( .@ld >= .@sd && .@ld <= .@ed );
+	mes "[여름 출석]";
+	mes "[CONFIG] 기본 Attendance : " + callfunc("F_NSGM_OO", .@base);
+	mes "[CONFIG] 여름 Provider   : " + callfunc("F_NSGM_OO", .@prov);
+	mes "출석 기간 : " + .@sd + " ~ " + .@ed;
+	mes "오늘(논리일자) : " + .@ld + " / " + callfunc("F_NSGM_ST", .@inwin, "기간 내", "기간 외");
+	mes "=> 플래그+날짜 종합 : " + callfunc("F_NSGM_ST", .@base && .@prov && .@inwin, "활성", "비활성");
+	if ( .@base && !.@prov ) mes "^FF9900원인: 여름 Provider OFF^000000";
+	if ( !.@base && .@prov ) mes "^FF9900원인: 기본 Attendance OFF^000000";
+	mes "^999999* 실제 지급은 DB 스키마/outbox 상태(서버 내부)에도 의존하며 Script 에서 조회 불가.^000000";
+	mes "^999999설정: conf/battle/feature.conf^000000";
+	mes "변경 방식: ^FF5555config 수정 + map-server 재시작^000000 (런타임 변경 미지원)";
+	next;
+	return;
+
+// ---- 필드 사냥 상세 ----
+S_Hunt:
+	.@hunt = getbattleflag("need_summer_hunt_enable");
+	.@frag = getbattleflag("need_summer_hunt_fragment_enable");
+	.@gold = getbattleflag("need_summer_hunt_golden_enable");
+	mes "[필드 사냥]";
+	mes "[CONFIG] 필드 사냥 전체 : " + callfunc("F_NSGM_OO", .@hunt);
+	mes "[CONFIG] 수박 조각(설정) : " + callfunc("F_NSGM_OO", .@frag);
+	mes "[CONFIG] 황금 수박(설정) : " + callfunc("F_NSGM_OO", .@gold);
+	mes "^999999------ 실제 동작 ------^000000";
+	mes "수박 조각 : " + callfunc("F_NSGM_ST", .@hunt && .@frag, "활성", "비활성");
+	if ( .@frag && !.@hunt ) mes "  ^FF9900원인: 필드 사냥 전체 OFF^000000";
+	mes "황금 수박 : " + callfunc("F_NSGM_ST", .@hunt && .@gold, "활성", "비활성");
+	if ( .@gold && !.@hunt ) mes "  ^FF9900원인: 필드 사냥 전체 OFF^000000";
+	mes "^999999설정: conf/battle/need_world_drop.conf^000000";
+	mes "변경 방식: ^FF5555config 수정 + map-server 재시작^000000 (런타임 변경 미지원)";
+	next;
+	return;
+
+// ---- 이벤트 상점 상세 + 토글 ----
+S_Shop:
+	mes "[이벤트 상점]";
+	mes "[Script] 상점 NPC       : " + callfunc("F_NSGM_OO", $NS_SHOP_ON);
+	mes "[Script] 수박조각 교환   : " + callfunc("F_NSGM_OO", $NS_EXCHANGE_ON) + " / 실제 " + callfunc("F_NSGM_ST", $NS_SHOP_ON && $NS_EXCHANGE_ON, "활성", "비활성");
+	mes "[Script] 코코넛 토큰상점 : " + callfunc("F_NSGM_OO", $NS_TOKEN_SHOP_ON) + " / 실제 " + callfunc("F_NSGM_ST", $NS_SHOP_ON && $NS_TOKEN_SHOP_ON, "활성", "비활성");
+	if ( !$NS_SHOP_ON && ( $NS_EXCHANGE_ON || $NS_TOKEN_SHOP_ON ) )
+		mes "  ^FF9900원인: 상점 NPC OFF (교환/토큰은 상점 내부 메뉴)^000000";
+	mes "^999999설정: npc/NEED/need_summer_shop.txt (Script runtime)^000000";
+	mes "^FF9900* @reloadscript / 서버 재시작 시 OnInit 에서 셋 다 ON(1) 으로 초기화됩니다.^000000";
+	mes "변경 방식: ^00CC66GM 메뉴에서 즉시 토글 가능^000000";
+	next;
+	.@s = select( "상점 NPC 전환", "수박조각 교환 전환", "코코넛 토큰상점 전환", "돌아가기" );
+	if ( .@s == 1 ) callsub S_Toggle, "$NS_SHOP_ON", $NS_SHOP_ON, "상점 NPC";
+	else if ( .@s == 2 ) callsub S_Toggle, "$NS_EXCHANGE_ON", $NS_EXCHANGE_ON, "수박조각 교환";
+	else if ( .@s == 3 ) callsub S_Toggle, "$NS_TOKEN_SHOP_ON", $NS_TOKEN_SHOP_ON, "코코넛 토큰상점";
+	return;
+
+// ---- 낚시 상세 ----
+S_Fishing:
+	.@fish = getbattleflag("need_summer_fishing_enable");
+	.@rank = getbattleflag("need_summer_fishing_rank_reward_enable");
+	.@week = callfunc("F_NeedFishRankRealWeek");
+	mes "[한여름 낚시]";
+	mes "[CONFIG] 낚시 플레이     : " + callfunc("F_NSGM_OO", .@fish);
+	mes "[CONFIG] 랭킹 보상 우편  : " + callfunc("F_NSGM_OO", .@rank) + " ^999999(낚시와 독립)^000000";
+	if ( .@week >= 1 && .@week <= 4 ) mes "주간 랭킹 : ^0088FF" + .@week + "주차 진행 중^000000";
+	else mes "주간 랭킹 : 기간 외";
+	mes "^999999* 낚시 OFF + 랭킹보상 ON 도 정상(이벤트 종료 직후 지급).^000000";
+	mes "^999999설정: conf/battle/need_summer_fishing.conf^000000";
+	mes "변경 방식: ^FF5555config 수정 + map-server 재시작^000000 (런타임 변경 미지원)";
+	next;
+	return;
+
+// ---- 운영/보상 상태(outbox) ----
+S_Reward:
+	.@rank = getbattleflag("need_summer_fishing_rank_reward_enable");
+	.@pending = 0; .@retry = 0; .@review = 0; .@deliver = 0;
+	.@n = query_sql( "SELECT `status`,COUNT(*) FROM `need_summer_fishing_rank_reward_outbox` WHERE `event_id`=202608 GROUP BY `status`", .@st, .@c );
+	for ( .@i = 0; .@i < .@n; .@i++ ) {
+		if ( .@st[.@i] == 0 ) .@pending = .@c[.@i];
+		else if ( .@st[.@i] == 2 ) .@deliver = .@c[.@i];
+		else if ( .@st[.@i] == 3 ) .@retry = .@c[.@i];
+		else if ( .@st[.@i] == 4 ) .@review = .@c[.@i];
+	}
+	mes "[운영/보상 상태]";
+	mes "[CONFIG] 랭킹 보상 consumer : " + callfunc("F_NSGM_OO", .@rank);
+	mes "^999999--- 랭킹 보상 우편 outbox ---^000000";
+	mes " PENDING   : " + .@pending;
+	mes " RETRY     : " + .@retry;
+	mes " REVIEW    : " + .@review;
+	mes " DELIVERED : " + .@deliver;
+	if ( .@review > 0 ) mes "^FF9900[주의] REVIEW " + .@review + "건 - 수동 확인 필요.^000000";
+	if ( .@pending > 0 && !.@rank ) mes "^FF9900[안내] PENDING 이 있으나 consumer 가 OFF 입니다(대기 중).^000000";
+	mes " ";
+	mes "상세 관리(목록/재큐)는 [낚시 테스트#need_fishing_test] NPC 의";
+	mes "랭킹/보상 메뉴를 사용하세요. ^999999(중복 구현 방지)^000000";
+	next;
+	return;
+
+// ---- DEBUG 상세 + 토글 ----
+S_Debug:
+	.@fdbg = getbattleflag("need_summer_fishing_debug");
+	mes "[DEBUG 상태]";
+	mes "[DEBUG] 낚시 Engine DEBUG (config) : " + callfunc("F_NSGM_OO", .@fdbg);
+	mes "  변경: ^FF5555conf/battle/need_summer_fishing.conf 수정 + 재시작^000000";
+	mes "[DEBUG] 낚시 Script DEBUG ($NSF_DEBUG) : " + callfunc("F_NSGM_OO", $NSF_DEBUG);
+	mes "  변경: ^00CC66GM 메뉴에서 즉시 토글^000000 (reload 후에도 유지)";
+	if ( .@fdbg || $NSF_DEBUG )
+		mes "^FF9900[주의] DEBUG 활성 - 실제 어군 좌표 노출 등 운영 동작 차이가 발생할 수 있습니다.^000000";
+	next;
+	if ( select( "낚시 Script DEBUG 전환", "돌아가기" ) == 1 )
+		callsub S_Toggle, "$NSF_DEBUG", $NSF_DEBUG, "낚시 Script DEBUG";
+	return;
+
+// ---- 공통 토글(확인창 + 변경 로그) ----
+// getarg0 = 변수명$, getarg1 = 현재값, getarg2 = 표시명$
+S_Toggle:
+	.@vn$ = getarg(0);
+	.@cur = getarg(1);
+	.@lb$ = getarg(2);
+	.@new = .@cur ? 0 : 1;
+	mes "[" + .@lb$ + "]";
+	mes "현재 상태 : " + callfunc("F_NSGM_OO", .@cur);
+	mes " ";
+	mes "이 기능을 " + ( .@new ? "^00CC66ON^000000" : "^FF5555OFF^000000" ) + " 으로 변경하시겠습니까?";
+	next;
+	if ( select( "[변경]", "[취소]" ) == 2 ) {
+		mes "[" + .@lb$ + "]";
+		mes "취소했습니다.";
+		next;
+		return;
+	}
+	setd .@vn$, .@new;
+	logmes "[SummerGM] " + strcharinfo(0) + "(aid " + getcharid(3) + ") " + .@vn$ + " " + .@cur + " -> " + .@new;
+	debugmes "[SummerGM] " + .@vn$ + " " + .@cur + " -> " + .@new + " by " + strcharinfo(0);
+	mes "[" + .@lb$ + "]";
+	mes .@lb$ + " 기능을 " + ( .@new ? "^00CC66ON^000000" : "^FF5555OFF^000000" ) + " 으로 변경했습니다.";
+	next;
+	return;
+}
+
+// ============ 공통 헬퍼 함수 ============
+// ON/OFF 색상 문자열
+function	script	F_NSGM_OO	{
+	if ( getarg(0) ) return "^00CC66ON^000000";
+	return "^FF5555OFF^000000";
+}
+// 상태 라벨(활성/비활성 등) 색상 문자열: arg0=값, arg1=on라벨$, arg2=off라벨$
+function	script	F_NSGM_ST	{
+	if ( getarg(0) ) return "^00CC66" + getarg(1) + "^000000";
+	return "^FF5555" + getarg(2) + "^000000";
+}
+// 이벤트 날짜 상태: 0 시작전 / 1 진행중 / 2 상점유예 / 3 종료 (논리일자 04:00 경계)
+function	script	F_NSGM_DateState	{
+	.@ld = callfunc("F_NeedFishCurLD");
+	if ( .@ld < 20260815 ) return 0;
+	if ( .@ld <= 20260911 ) return 1;
+	if ( .@ld <= 20260918 ) return 2;
+	return 3;
+}
