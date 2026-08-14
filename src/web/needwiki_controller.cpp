@@ -60,7 +60,17 @@ static std::string needwiki_remote_ip(const Request& req)
 	return ip;
 }
 
-static bool needwiki_find_online_session(const Request& req, uint32& account_id, uint32& char_id, std::string& token, bool& token_enabled)
+// 인증 세션 조회 결과. 실패 시 정확한 원인을 클라이언트(위키 DLL)로 전달해
+// 유저 알림에 표기하기 위해 사유를 구분한다.
+enum class NeedWikiSessionResult {
+	Success,     // 온라인 세션 1개 확정
+	DbError,     // DB 조회 실패
+	NoAccount,   // 접속 IP와 일치하는 계정(login.last_ip) 없음
+	NoOnline,    // 계정은 찾았으나 온라인 캐릭터 없음
+	Multiple,    // 동일 IP에서 온라인 세션이 2개 이상이라 특정 불가
+};
+
+static NeedWikiSessionResult needwiki_find_online_session(const Request& req, uint32& account_id, uint32& char_id, std::string& token, bool& token_enabled)
 {
 	const std::string remote_ip = needwiki_remote_ip(req);
 
@@ -75,7 +85,7 @@ static bool needwiki_find_online_session(const Request& req, uint32& account_id,
 		|| SQL_SUCCESS != login_stmt.BindParam(0, SQLDT_STRING, const_cast<char*>(remote_ip.c_str()), remote_ip.size())) {
 		SqlStmt_ShowDebug(login_stmt);
 		loginlock.unlock();
-		return false;
+		return NeedWikiSessionResult::DbError;
 	}
 
 	uint32 candidate_account_id = 0;
@@ -88,7 +98,7 @@ static bool needwiki_find_online_session(const Request& req, uint32& account_id,
 		|| SQL_SUCCESS != login_stmt.BindColumn(2, SQLDT_UINT8, &candidate_enabled, sizeof(candidate_enabled))) {
 		SqlStmt_ShowDebug(login_stmt);
 		loginlock.unlock();
-		return false;
+		return NeedWikiSessionResult::DbError;
 	}
 
 	std::vector<std::tuple<uint32, std::string, bool>> login_candidates;
@@ -115,7 +125,7 @@ static bool needwiki_find_online_session(const Request& req, uint32& account_id,
 			|| SQL_SUCCESS != char_stmt.BindColumn(0, SQLDT_UINT32, &cid, sizeof(cid))) {
 			SqlStmt_ShowDebug(char_stmt);
 			charlock.unlock();
-			return false;
+			return NeedWikiSessionResult::DbError;
 		}
 
 		while (SQL_SUCCESS == char_stmt.NextRow())
@@ -124,14 +134,20 @@ static bool needwiki_find_online_session(const Request& req, uint32& account_id,
 
 	charlock.unlock();
 
-	if (sessions.size() != 1)
-		return false;
+	if (login_candidates.empty())
+		return NeedWikiSessionResult::NoAccount;
+
+	if (sessions.empty())
+		return NeedWikiSessionResult::NoOnline;
+
+	if (sessions.size() > 1)
+		return NeedWikiSessionResult::Multiple;
 
 	account_id = std::get<0>(sessions.front());
 	char_id = std::get<1>(sessions.front());
 	token = std::get<2>(sessions.front());
 	token_enabled = std::get<3>(sessions.front());
-	return true;
+	return NeedWikiSessionResult::Success;
 }
 
 static bool needwiki_refresh_token(uint32 account_id, std::string& token)
@@ -376,10 +392,28 @@ HANDLER_FUNC(needwiki_auth)
 	std::string token;
 	bool token_enabled = false;
 
-	if (!needwiki_find_online_session(req, account_id, char_id, token, token_enabled)) {
-		ShowInfo("[NEED Wiki Auth] account_id=0 result=failed\n");
-		res.status = 401;
-		res.set_content("AUTH_NOT_FOUND", "text/plain");
+	const NeedWikiSessionResult session_result = needwiki_find_online_session(req, account_id, char_id, token, token_enabled);
+	if (session_result != NeedWikiSessionResult::Success) {
+		// 정확한 실패 사유를 응답 본문으로 내려보내면 위키 DLL이 이를 유저 알림에 표기한다.
+		const char* reason_body = "AUTH_NO_ACCOUNT";
+		int reason_status = 401;
+		switch (session_result) {
+		case NeedWikiSessionResult::NoAccount:
+			reason_body = "AUTH_NO_ACCOUNT";
+			break;
+		case NeedWikiSessionResult::NoOnline:
+			reason_body = "AUTH_NO_ONLINE";
+			break;
+		case NeedWikiSessionResult::Multiple:
+			reason_body = "AUTH_MULTIPLE";
+			break;
+		default:
+			reason_body = "AUTH_DB_ERROR";
+			reason_status = 500;
+			break;
+		}
+		res.status = reason_status;
+		res.set_content(reason_body, "text/plain");
 		return;
 	}
 
