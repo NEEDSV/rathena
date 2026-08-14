@@ -249,8 +249,28 @@ comodo,186,157,6	script	한여름 낚시 안내#nsf_board	4_BOARD3,{
 	.@dw = 400; .@dh = 400;
 	setdialogsize( .@dw, .@dh );
 	next;
-	switch ( select( "현재 어군 정보", "오늘의 낚시 현황", "낚시 도감", "주간 낚시 랭킹", "한여름 낚시 미끼 구입", "그만 보기" ) ) {
+	switch ( select( "낚시 방법","현재 어군 정보", "오늘의 낚시 현황", "낚시 도감", "주간 낚시 랭킹", "한여름 낚시 미끼 구입", "그만 보기" ) ) {
 	case 1:
+		clear;
+		mes "[한여름 낚시 안내]";
+		mes "낚시를 즐기려면 먼저";
+		mes "^FF8C00[한여름 낚싯대]^000000를 단축키에 등록해주세요.";
+		mes " ";
+		mes "^0099FF■ 낚시 방법^000000";
+		mes "① 해변에 있는 ^FF8C00낚시 포인트^000000 근처로 이동합니다.";
+		mes "② 단축키에 등록한 ^FF8C00[한여름 낚싯대]^000000를 사용하면 낚시를 시작합니다.";
+		mes "③ 물고기가 입질하면 낚싯대를 ^FF0000다시 사용^000000하여 줄을 당겨주세요!";
+		mes "④ 물고기의 종류에 따라 한 번에 잡히지 않을 수도 있습니다.";
+		mes " ";
+		mes "희귀한 물고기일수록 쉽게 잡히지 않으니";
+		mes "물고기의 움직임을 잘 보고 타이밍에 맞춰 낚싯대를 사용해보세요.";
+		mes " ";
+		mes "^0099FF※ 낚시 포인트를 클릭하는 것이 아니라,";
+		mes "낚시 포인트 근처에서 낚싯대를 직접 사용해야 합니다.^000000";
+		mes " ";
+		mes "그럼, 월척을 낚아보세요!";
+		close;
+	case 2:
 		mes "[한여름 낚시 안내]";
 		if ( !$@nsf_active ) { mes "현재 활성 어군이 없습니다."; close; }
 		.@left = ( $@nsf_next_rotate - gettimetick(2) ) / 60; if ( .@left < 0 ) .@left = 0;
@@ -264,7 +284,7 @@ comodo,186,157,6	script	한여름 낚시 안내#nsf_board	4_BOARD3,{
 			mes "다음 교체까지: " + ( $@nsf_next_rotate - gettimetick(2) ) + "초";
 		}
 		close;
-	case 2:
+	case 3:
 		clear;
 		.@ld = atoi( gettimestr( "%Y%m%d", 9, gettimetick(2) - 14400 ) );
 		callfunc "F_NeedFishRewardStatus", getcharid(3), getcharip(), .@ld;
@@ -275,13 +295,13 @@ comodo,186,157,6	script	한여름 낚시 안내#nsf_board	4_BOARD3,{
 		else mes "기본 보상을 모두 획득했습니다. 미끼로 최대어/랭킹에 계속 도전할 수 있습니다.";
 		if ( $NSF_DEBUG ) mes "[DEBUG] account="+$@nfr_acc_cnt+" ip="+$@nfr_ip_cnt+" family="+$@nfr_family;
 		close;
-	case 3:
+	case 4:
 		callfunc "F_NeedFishDex";
 		close;
-	case 4:
+	case 5:
 		callfunc "F_NeedFishRankingUI";
 		close;
-	case 5:
+	case 6:
 		clear;
 		mes "[한여름 낚시 미끼]";
 		mes "1개 = 100,000 Zeny";
@@ -298,7 +318,7 @@ comodo,186,157,6	script	한여름 낚시 안내#nsf_board	4_BOARD3,{
 		getitem 399970, .@amt;
 		mes "한여름 낚시 미끼 " + .@amt + "개를 구입했습니다. (" + .@cost + " Zeny)";
 		close;
-	case 6:
+	case 7:
 		close;
 	}
 	end;

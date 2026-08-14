@@ -26,7 +26,7 @@ namespace {
 
 constexpr t_itemid NEED_SUMMER_FRAGMENT_ITEM_ID = 399926;
 constexpr t_itemid NEED_SUMMER_GOLDEN_ITEM_ID = 399927;
-constexpr int32 NEED_SUMMER_FRAGMENT_RATE = 300;
+constexpr int32 NEED_SUMMER_FRAGMENT_RATE = 500;
 constexpr int32 NEED_SUMMER_GOLDEN_RATE = 5;
 constexpr int32 NEED_SUMMER_RATE_SCALE = 10000;
 constexpr int32 NEED_SUMMER_LEVEL_DIFFERENCE = 15;
@@ -191,7 +191,7 @@ bool need_summer_hunt_normal_field_target(const map_session_data* sd, const mob_
 		return false;
 	if (md->master_id != 0 || md->special_state.ai != AI_NONE || md->special_state.clone)
 		return false;
-	if (md->spawn == nullptr || md->spawn->state.dynamic || md->npc_event[0] != '\0' || md->deletetimer != INVALID_TIMER)
+	if (md->spawn == nullptr || md->deletetimer != INVALID_TIMER)
 		return false;
 
 	const int64 level_difference = static_cast<int64>(sd->status.base_level) - static_cast<int64>(md->level);
