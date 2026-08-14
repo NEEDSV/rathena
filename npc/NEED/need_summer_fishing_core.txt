@@ -120,7 +120,7 @@ S_HandleSuccess:
 	callfunc( "F_NeedFishCollectionUpsert", .@aid, .@fish, .@len, .@wt );
 	.@newfish = $@nff_col_first;
 	.@rweek = callfunc( "F_NeedFishRankWeek" );
-	if ( .@rweek >= 1 && .@fish == callfunc( "F_NeedFishRankTarget", .@rweek ) ) callfunc( "F_NeedFishWeeklyBestUpsert", .@rweek, .@fish, .@aid, .@cid, .@cname$, .@len, .@wt, .@rms );
+	if ( .@rweek >= 1 && .@fish == callfunc( "F_NeedFishRankTarget", .@rweek ) ) callfunc( "F_NeedFishRankTopChange", .@rweek, .@fish, .@aid, .@cid, .@cname$, .@len, .@wt, .@rms );
 	dispbottom "[한여름 낚시] " + callfunc( "F_NeedFishRarityName", .@rar ) + " 어종을 낚았습니다! 길이 " + callfunc( "F_NeedFishLenCm", .@len ) + "cm / 무게 " + callfunc( "F_NeedFishWtKg", .@wt ) + "kg";
 	if ( .@bait ) {
 		dispbottom "[한여름 낚시] 오늘의 기본 보상 횟수를 모두 사용했으므로 코코넛 토큰은 지급되지 않습니다.";
@@ -740,3 +740,17 @@ function	script	F_NeedFishRankReserveRewards	{
 	return .@made;
 }
 
+// (fishing) 1위 변동 감지 후 전체 공지. 실제 최고기록 갱신은 F_NeedFishWeeklyBestUpsert 재사용.
+function	script	F_NeedFishRankTopChange	{
+	.@w = getarg(0); .@f = getarg(1); .@aid = getarg(2); .@cid = getarg(3); .@cn$ = getarg(4);
+	.@len = getarg(5); .@wt = getarg(6); .@rms = getarg(7);
+	.@old1 = 0;
+	query_sql( "SELECT `account_id` FROM `need_summer_fishing_weekly_best` WHERE `event_id`=202608 AND `week_no`=" + .@w + " AND `fish_id`=" + .@f + " ORDER BY `length_mm` DESC,`weight_g` DESC,`caught_at` ASC,`account_id` ASC LIMIT 1", .@old1 );
+	callfunc( "F_NeedFishWeeklyBestUpsert", .@w, .@f, .@aid, .@cid, .@cn$, .@len, .@wt, .@rms );
+	.@new1 = 0;
+	query_sql( "SELECT `account_id` FROM `need_summer_fishing_weekly_best` WHERE `event_id`=202608 AND `week_no`=" + .@w + " AND `fish_id`=" + .@f + " ORDER BY `length_mm` DESC,`weight_g` DESC,`caught_at` ASC,`account_id` ASC LIMIT 1", .@new1 );
+	if ( .@new1 == .@aid && .@new1 != .@old1 ) {
+		announce "[한여름 낚시] " + .@cn$ + "님이 " + callfunc( "F_NeedFishNameById", .@f ) + " " + callfunc( "F_NeedFishLenCm", .@len ) + "cm 기록으로 " + .@w + "주차 랭킹 1위에 올랐습니다!", bc_all, 0x00CCFF;
+	}
+	return;
+}
