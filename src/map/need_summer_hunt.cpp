@@ -235,7 +235,7 @@ bool need_summer_hunt_record_log(map_session_data* sd, mob_data* md, const char*
 	const map_data* mapdata = map_getmapdata(md->m);
 	Sql_EscapeStringLen(mmysql_handle, escaped_name, sd->status.name, strnlen(sd->status.name, NAME_LENGTH));
 	Sql_EscapeStringLen(mmysql_handle, escaped_map, mapdata != nullptr ? mapdata->name : "",
-		mapdata != nullptr ? strnlen(mapdata->name, MAP_NAME_LENGTH_EXT) : 0);
+		mapdata != nullptr ? strnlen(mapdata->name, MAP_NAME_LENGTH) : 0);
 	Sql_EscapeStringLen(mmysql_handle, escaped_result, result, strnlen(result, 16));
 	Sql_EscapeStringLen(mmysql_handle, escaped_failure, failure_code, strnlen(failure_code, 64));
 
@@ -374,7 +374,7 @@ void need_summer_hunt_try_golden(map_session_data* sd, mob_data* md) {
 	const map_data* mapdata = map_getmapdata(md->m);
 	Sql_EscapeStringLen(mmysql_handle, escaped_name, sd->status.name, strnlen(sd->status.name, NAME_LENGTH));
 	Sql_EscapeStringLen(mmysql_handle, escaped_map, mapdata != nullptr ? mapdata->name : "",
-		mapdata != nullptr ? strnlen(mapdata->name, MAP_NAME_LENGTH_EXT) : 0);
+		mapdata != nullptr ? strnlen(mapdata->name, MAP_NAME_LENGTH) : 0);
 	if (SQL_ERROR == Sql_Query(mmysql_handle,
 		"INSERT INTO `need_summer_hunt_golden_claim` "
 		"(`event_id`,`logical_date`,`account_id`,`char_id`,`char_name`,`ip`,`family_group_id`,`family_exception`,"
