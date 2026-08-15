@@ -1,5 +1,5 @@
 //============================================================
-// NEED 전장 랜덤 매칭 시스템 - 티에라/플라비우스/KVM 풀사이클 v12.1-hotfix-admin-missingexclude
+// NEED 전장 랜덤 매칭 시스템 - 티에라/플라비우스/KVM 풀사이클 v12.1-hotfix-admin-tierra-notice-delay
 // - 한 번의 매칭으로 티에라 -> 플라비우스 -> KVM 전체 사이클 진행
 // - 최초 티에라는 자동 입장, 이후 전장은 양 팀 파티장의 입장 준비로 진행
 // - 티에라/플라비우스 종료 후 파티 유지, KVM 종료 후에만 자동 해체
@@ -801,6 +801,7 @@ function	script	F_BG_RM_CancelRecruit	{
 	stopnpctimer "NEED_BG_RM_Core";
 	stopnpctimer "NEED_BG_RM_RecruitMonitor";
 	donpcevent "NEED_BG_RM_FinalizeWatch::OnStop";
+	donpcevent "NEED_BG_RM_TierraTeamNotice::OnStop";
 	$@BG_RM_FINALIZE_WATCH_TOKEN = 0;
 	$@BG_RM_STATE = 0;
 	$@BG_RM_MANAGER_MENU_LOCK = 0;
@@ -908,12 +909,14 @@ function	script	F_BG_RM_StartBattle	{
 		$@TierraBG1 = 1;
 		$@TierraBG1_Victory = 0;
 
-		// 첫 티에라 입장 시 양 팀 닉네임과 직업 구성을 공개합니다.
-		callfunc "F_BG_RM_AnnounceTierraTeamInfo";
-
 		announce "[전장 안내] 랜덤 매칭 티에라 협곡이 기욤 " + $@BG_RM_G_COUNT + "명 vs 크루아 " + $@BG_RM_C_COUNT + "명으로 내부 준비를 시작합니다.", bc_all, "0x33CCFF";
 		stopnpctimer "티에라 진행#bat_a01";
 		initnpctimer "티에라 진행#bat_a01";
+
+		// bg_join 직후에는 클라이언트가 아직 맵 로딩 중일 수 있으므로
+		// 팀 구성 노티는 별도 타이머에서 5초 뒤 출력합니다.
+		donpcevent "NEED_BG_RM_TierraTeamNotice::OnStart";
+		debugmes "[BG RM] Tierra team notice scheduled delay=5000";
 		return 1;
 	}
 
@@ -1032,6 +1035,7 @@ function	script	F_BG_RM_Finish	{
 
 	stopnpctimer "NEED_BG_RM_Monitor";
 	stopnpctimer "NEED_BG_RM_RecruitMonitor";
+	donpcevent "NEED_BG_RM_TierraTeamNotice::OnStop";
 	callfunc "F_BG_ClearAllReadyState";
 	callfunc "F_BG_RM_ResetMembers";
 	callfunc "F_BG_RM_DestroyParties";
@@ -2724,6 +2728,7 @@ OnAdminForceStop:
 	stopnpctimer "NEED_BG_RM_RecruitMonitor";
 	stopnpctimer "NEED_BG_RM_Monitor";
 	donpcevent "NEED_BG_RM_FinalizeWatch::OnStop";
+	donpcevent "NEED_BG_RM_TierraTeamNotice::OnStop";
 	$@BG_RM_FINALIZE_WATCH_TOKEN = 0;
 
 	// 전장 내부 카운트다운/정리 타이머 중지
@@ -2989,6 +2994,47 @@ OnTimer1000:
 		initnpctimer;
 	end;
 }
+
+//============================================================
+// 티에라 팀 구성 노티 지연 출력
+//
+// bg_join 직후 mapannounce를 보내면 클라이언트 맵 로딩과 겹쳐
+// 공지가 보이지 않을 수 있으므로 5초 뒤에 출력합니다.
+//============================================================
+-	script	NEED_BG_RM_TierraTeamNotice	-1,{
+	end;
+
+OnInit:
+	stopnpctimer;
+	end;
+
+OnStart:
+	stopnpctimer;
+	initnpctimer;
+	end;
+
+OnStop:
+	stopnpctimer;
+	end;
+
+OnTimer5000:
+	stopnpctimer;
+
+	if (
+		!$@BG_RM_CYCLE_ACTIVE ||
+		$@BG_RM_CYCLE_STAGE != 1 ||
+		!$@TierraBG1
+	)
+		end;
+
+	debugmes "[BG RM] Tierra team notice fired"
+		+ " G=" + $@BG_RM_G_COUNT
+		+ " C=" + $@BG_RM_C_COUNT;
+
+	callfunc "F_BG_RM_AnnounceTierraTeamInfo";
+	end;
+}
+
 
 //============================================================
 // 랜덤 매칭 풀사이클 감시
