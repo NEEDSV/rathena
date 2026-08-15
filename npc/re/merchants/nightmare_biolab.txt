@@ -392,6 +392,8 @@ S_Make:
 	mes "^006400" + getitemname(.@item_misc_req) + " " + .@material_misc + "개^000000,";
 	mes "그리고 ^006400" + getitemname(6820) + " " + .@material_energy + "개^000000다...";
 	mes "혼과 에너지 파편을 5배 사용하면... 반드시 성공한다...";
+	if (!.@is_cloak)
+		mes "^FF0000※ 귀속된 의상 투구는 조합 재료로 사용할 수 없습니다.^000000";
 	next;
 
 	switch (select(
@@ -411,18 +413,86 @@ S_Make:
 		break;
 	}
 
-	if (countitem(.@equipment_req) < 1 || countitem(.@item_misc_req) < (.@material_misc * .@rate) || countitem(6820) < (.@material_energy * .@rate)) {
+	// 낡은 투구 조합은 귀속되지 않은 의상 투구만 재료로 인정한다.
+	// countitem()/delitem()은 동일 Item ID의 귀속 여부를 구분하지 않으므로,
+	// 실제 인벤토리에서 bound == 0인 개체의 index를 찾아 직접 소비한다.
+	.@equipment_idx = -1;
+
+	if (!.@is_cloak) {
+		getinventorylist;
+		for (.@i = 0; .@i < @inventorylist_count; ++.@i) {
+			if (@inventorylist_id[.@i] == .@equipment_req && @inventorylist_bound[.@i] == 0) {
+				.@equipment_idx = @inventorylist_idx[.@i];
+				break;
+			}
+		}
+
+		if (.@equipment_idx < 0) {
+			mes "[서글픈 혼의 사념]";
+			if (countitem(.@equipment_req) > 0) {
+				mes "그 의상에는... 주인을 묶어 둔 힘이 느껴지는군...";
+				mes "^FF0000※ 귀속된 의상 투구는 조합 재료로 사용할 수 없습니다.^000000";
+				mes "^FF0000귀속되지 않은 " + getitemname(.@equipment_req) + " 1개가 필요합니다.^000000";
+			}
+			else {
+				mes "^006400" + getitemname(.@reward_id) + "^000000을 만들기 위한 의상 투구가... 부족하다...";
+			}
+			return;
+		}
+	}
+	else if (countitem(.@equipment_req) < 1) {
+		mes "[서글픈 혼의 사념]";
+		mes "^006400" + getitemname(.@reward_id) + "^000000을 만들기 위한 장비가... 부족하다...";
+		return;
+	}
+
+	if (countitem(.@item_misc_req) < (.@material_misc * .@rate) || countitem(6820) < (.@material_energy * .@rate)) {
 		mes "[서글픈 혼의 사념]";
 		mes "^006400" + getitemname(.@reward_id) + "^000000을 만들기 위한 재료가... 부족하다...";
 		return;
 	}
 
 	progressbar "000000",5;
+
+	// 진행바 이후 재료 상태를 한 번 더 확인한다.
+	// 특히 의상 투구는 다시 검색하여 비귀속 개체의 정확한 inventory index를 확보한다.
+	if (!.@is_cloak) {
+		.@equipment_idx = -1;
+		getinventorylist;
+		for (.@i = 0; .@i < @inventorylist_count; ++.@i) {
+			if (@inventorylist_id[.@i] == .@equipment_req && @inventorylist_bound[.@i] == 0) {
+				.@equipment_idx = @inventorylist_idx[.@i];
+				break;
+			}
+		}
+
+		if (.@equipment_idx < 0) {
+			mes "[서글픈 혼의 사념]";
+			mes "^FF0000귀속되지 않은 " + getitemname(.@equipment_req) + "을 찾을 수 없다... 조합을 중단한다.^000000";
+			return;
+		}
+	}
+	else if (countitem(.@equipment_req) < 1) {
+		mes "[서글픈 혼의 사념]";
+		mes "조합에 필요한 장비가... 사라졌다...";
+		return;
+	}
+
+	if (countitem(.@item_misc_req) < (.@material_misc * .@rate) || countitem(6820) < (.@material_energy * .@rate)) {
+		mes "[서글픈 혼의 사념]";
+		mes "조합에 필요한 재료가... 부족해졌다...";
+		return;
+	}
+
 	percentheal -50,-50;
 	specialeffect2 EF_POISONSMOKE;
 	specialeffect2 EF_NPC_BURNT;
 
-	delitem .@equipment_req,1;
+	if (.@is_cloak)
+		delitem .@equipment_req,1;
+	else
+		delitemidx .@equipment_idx,1;
+
 	delitem .@item_misc_req,(.@material_misc * .@rate);
 	delitem 6820,(.@material_energy * .@rate); // Energy Fragment
 
