@@ -368,11 +368,7 @@ need_summer_shop_begin_result need_summer_shop_begin(map_session_data& sd,
 		return need_summer_shop_begin_result::NOT_APPLICABLE;
 
 	std::unique_ptr<transaction_state> state = std::make_unique<transaction_state>();
-	if (!feature_enabled("$NS_SHOP_ON") ||
-		!feature_enabled(exchange ? "$NS_EXCHANGE_ON" : "$NS_TOKEN_SHOP_ON")) {
-		clif_displaymessage(sd.fd, msg_txt(&sd, MSG_DISABLED));
-		return need_summer_shop_begin_result::REJECTED;
-	}
+
 	if (!logical_now(*state) || state->logical_key < EVENT_START || state->logical_key >= SHOP_END) {
 		clif_displaymessage(sd.fd, msg_txt(&sd, MSG_OUTSIDE_PERIOD));
 		return need_summer_shop_begin_result::REJECTED;
