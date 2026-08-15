@@ -26,7 +26,13 @@ namespace {
 
 constexpr t_itemid NEED_SUMMER_FRAGMENT_ITEM_ID = 399926;
 constexpr t_itemid NEED_SUMMER_GOLDEN_ITEM_ID = 399927;
-constexpr int32 NEED_SUMMER_FRAGMENT_RATE = 500;
+// Watermelon fragment drop rate scales with the reward owner's base level (fising.md).
+// Rate is per NEED_SUMMER_RATE_SCALE. Base (<=159) stays at the previous 5%.
+constexpr int32 NEED_SUMMER_FRAGMENT_RATE_LOW = 500; // 5%  base level <= 159
+constexpr int32 NEED_SUMMER_FRAGMENT_RATE_MID = 600; // 6%  base level 160 ~ 174
+constexpr int32 NEED_SUMMER_FRAGMENT_RATE_MAX = 700; // 7%  base level >= 175
+constexpr int32 NEED_SUMMER_FRAGMENT_LEVEL_MID = 160;
+constexpr int32 NEED_SUMMER_FRAGMENT_LEVEL_MAX = 175;
 constexpr int32 NEED_SUMMER_GOLDEN_RATE = 5;
 constexpr int32 NEED_SUMMER_RATE_SCALE = 10000;
 constexpr int32 NEED_SUMMER_LEVEL_DIFFERENCE = 15;
@@ -187,7 +193,9 @@ bool need_summer_hunt_normal_field_target(const map_session_data* sd, const mob_
 	if (mapdata == nullptr || mapdata->instance_id > 0 || mapdata_flag_vs2(mapdata))
 		return false;
 
-	if (md->get_bosstype() != BOSSTYPE_NONE || md->state.boss || md->guardian_data != nullptr || md->bg_id != 0)
+	// Boss-type / boss-mode field mobs are allowed to drop the fragment (fising.md sec.3),
+	// e.g. lhz_dun_n. WoE guardians and battleground mobs remain excluded (not field mobs).
+	if (md->guardian_data != nullptr || md->bg_id != 0)
 		return false;
 	if (md->master_id != 0 || md->special_state.ai != AI_NONE || md->special_state.clone)
 		return false;
@@ -423,6 +431,16 @@ void need_summer_hunt_try_golden(map_session_data* sd, mob_data* md) {
 	need_summer_hunt_console_log(sd, md, ip, logical_date.sql_date, family_exception, claim_id, RESULT_DELIVERED, ERROR_NONE);
 }
 
+// Reward-owner base level -> fragment drop rate bucket (fising.md sec.1/5).
+int32 need_summer_fragment_rate(const map_session_data* sd) {
+	int32 lv = (sd != nullptr) ? sd->status.base_level : 0;
+	if (lv >= NEED_SUMMER_FRAGMENT_LEVEL_MAX)
+		return NEED_SUMMER_FRAGMENT_RATE_MAX;
+	if (lv >= NEED_SUMMER_FRAGMENT_LEVEL_MID)
+		return NEED_SUMMER_FRAGMENT_RATE_MID;
+	return NEED_SUMMER_FRAGMENT_RATE_LOW;
+}
+
 }  // namespace
 
 void need_summer_hunt_on_kill(map_session_data* sd, mob_data* md, int32 type) {
@@ -430,7 +448,7 @@ void need_summer_hunt_on_kill(map_session_data* sd, mob_data* md, int32 type) {
 		return;
 
 	if (battle_config.need_summer_hunt_fragment_enable != 0 && need_summer_hunt_fragment_ready() &&
-		rnd_chance<int32>(NEED_SUMMER_FRAGMENT_RATE, NEED_SUMMER_RATE_SCALE)) {
+		rnd_chance<int32>(need_summer_fragment_rate(sd), NEED_SUMMER_RATE_SCALE)) {
 		// Frequent inventory failures are intentionally silent. pc_additem records successful grants in picklog.
 		need_summer_hunt_add_fragment(sd);
 	}
