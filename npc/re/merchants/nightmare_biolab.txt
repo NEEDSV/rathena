@@ -225,42 +225,139 @@ S_Exchange:
 	if (.@s == -1)
 		return;
 
-	mes "[억울한 혼의 사념]";
-	mes "^006400" + getitemname(getarg(.@s)) + "^000000...";
-	mes "이 무기를... 에너지 파편으로... 되돌리겠다...";
-	mes "정말... 괜찮겠나...?";
-	next;
-	if (select("그만둔다.", "에너지 파편으로 분해한다.") == 2) {
-		if (countitem(getarg(.@s)) < 1) {
-			mes "[억울한 혼의 사념]";
-			mes "^006400" + getitemname(getarg(.@s)) + "^000000이... 보이지 않는다...";
-			return;
-		}
-		donpcevent strnpcinfo(0) + "::OnBar";
-		sleep2 5000;
-		specialeffect EF_BLACKBODY;
-		specialeffect EF_GUMGANG4;
-		specialeffect EF_DARKCASTING2;
-		specialeffect EF_RG_COIN7;
-		percentheal -50,-50;
-		specialeffect2 EF_POISONSMOKE;
-		specialeffect2 EF_NPC_BURNT;
-		delitem getarg(.@s),1;
-		.@r = rand(100);
-		if (.@r < 70)
-			.@amount = 1;
-		else if (.@r < 90)
-			.@amount = 2;
-		else
-			.@amount = 3;
-		getitem 6820,.@amount; // Energy Fragment
+	.@item_id = getarg(.@s);
+	.@batch_max = 100;	// 서버 부하/스크립트 과다 반복 방지를 위한 1회 처리 상한
+
+	// 실제 인벤토리에서 미장착 상태의 대상 무기 수량만 계산한다.
+	getinventorylist;
+	.@available = 0;
+	for (.@i = 0; .@i < @inventorylist_count; ++.@i) {
+		if (@inventorylist_id[.@i] == .@item_id && @inventorylist_equip[.@i] == 0)
+			.@available += @inventorylist_amount[.@i];
+	}
+
+	if (.@available < 1) {
 		mes "[억울한 혼의 사념]";
-		mes "^006400" + getitemname(getarg(.@s)) + "^000000에 깃든 힘을...";
-		mes "에너지 파편 ^006400" + .@amount + "개^000000로 되돌렸다...";
-		next;
-		mes "- 강한 사념의 파동이 몸을 덮쳐 큰 피해를 입었다. -";
+		mes "^006400" + getitemname(.@item_id) + "^000000이... 보이지 않는다...";
+		if (countitem(.@item_id) > 0)
+			mes "^FF0000※ 장착 중인 무기는 분해할 수 없습니다. 장착을 해제한 뒤 다시 시도해 주세요.^000000";
+		return;
+	}
+
+	mes "[억울한 혼의 사념]";
+	mes "^006400" + getitemname(.@item_id) + "^000000...";
+	mes "이 무기에 깃든 힘을... 에너지 파편으로... 되돌릴 수 있다...";
+	mes "현재 분해 가능한 수량은 ^006400" + .@available + "개^000000다...";
+	next;
+
+	.@batch_count = .@available;
+	if (.@batch_count > .@batch_max)
+		.@batch_count = .@batch_max;
+
+	.@choice = select(
+		"그만둔다.",
+		"1개만 분해한다.",
+		"일괄 분해한다. (" + .@batch_count + "개" + (.@available > .@batch_max ? " / 1회 최대 " + .@batch_max + "개" : "") + ")"
+	);
+
+	if (.@choice == 1)
+		return;
+
+	if (.@choice == 2)
+		.@target_count = 1;
+	else
+		.@target_count = .@batch_count;
+
+	// 결과는 무기 1개당 최대 에너지 파편 3개.
+	// 최악의 결과를 기준으로 무게를 미리 확인해 지급 실패를 방지한다.
+	if (checkweight(6820, .@target_count * 3) == 0) {
+		mes "[억울한 혼의 사념]";
+		mes "에너지 파편을 받아 들이기엔... 가방이 너무 무겁다...";
+		mes "^FF0000※ 최대 " + (.@target_count * 3) + "개의 에너지 파편을 받을 수 있도록 무게를 비워 주세요.^000000";
+		return;
+	}
+
+	if (.@choice == 3 && .@available > .@batch_max) {
+		mes "[억울한 혼의 사념]";
+		mes "한 번에 너무 많은 사념을 해방하면... 힘이 폭주할 수 있다...";
+		mes "^FF0000※ 한 번에 최대 " + .@batch_max + "개까지만 분해합니다.^000000";
+		mes "이번에는 ^006400" + .@target_count + "개^000000를 분해한다...";
 		next;
 	}
+
+	mes "[억울한 혼의 사념]";
+	mes "^006400" + getitemname(.@item_id) + " " + .@target_count + "개^000000를 분해하겠다...";
+	mes "정말... 괜찮겠나...?";
+	next;
+	if (select("그만둔다.", "에너지 파편으로 분해한다.") == 1)
+		return;
+
+	donpcevent strnpcinfo(0) + "::OnBar";
+	sleep2 5000;
+
+	// 진행바 도중 인벤토리 상태가 바뀌었을 가능성을 고려해
+	// 삭제 직전에 목록을 새로 받아 유효한 inventory index만 사용한다.
+	getinventorylist;
+
+	.@processed = 0;
+	.@total_fragment = 0;
+
+	for (.@i = 0; .@i < @inventorylist_count && .@processed < .@target_count; ++.@i) {
+		if (@inventorylist_id[.@i] != .@item_id || @inventorylist_equip[.@i] != 0)
+			continue;
+
+		.@delete_amount = @inventorylist_amount[.@i];
+		if (.@delete_amount > (.@target_count - .@processed))
+			.@delete_amount = .@target_count - .@processed;
+
+		// getinventorylist()에서 방금 얻은 유효 index만 사용한다.
+		if (!delitemidx(@inventorylist_idx[.@i], .@delete_amount))
+			continue;
+
+		for (.@j = 0; .@j < .@delete_amount; ++.@j) {
+			.@r = rand(100);
+			if (.@r < 70)
+				.@total_fragment += 1;
+			else if (.@r < 90)
+				.@total_fragment += 2;
+			else
+				.@total_fragment += 3;
+		}
+
+		.@processed += .@delete_amount;
+	}
+
+	if (.@processed < 1) {
+		mes "[억울한 혼의 사념]";
+		mes "분해할 무기를... 찾지 못했다...";
+		mes "^FF0000※ 인벤토리 상태가 변경되어 분해가 취소되었습니다.^000000";
+		return;
+	}
+
+	specialeffect EF_BLACKBODY;
+	specialeffect EF_GUMGANG4;
+	specialeffect EF_DARKCASTING2;
+	specialeffect EF_RG_COIN7;
+	percentheal -50,-50;
+	specialeffect2 EF_POISONSMOKE;
+	specialeffect2 EF_NPC_BURNT;
+
+	getitem 6820, .@total_fragment; // Energy Fragment
+
+	mes "[억울한 혼의 사념]";
+	mes "^006400" + getitemname(.@item_id) + " " + .@processed + "개^000000에 깃든 힘을...";
+	mes "에너지 파편 ^006400" + .@total_fragment + "개^000000로 되돌렸다...";
+
+	if (.@processed < .@target_count) {
+		mes "^FF0000※ 인벤토리 상태 변경으로 요청한 수량 중 " + .@processed + "개만 처리되었습니다.^000000";
+	}
+	else if (.@choice == 3 && .@available > .@processed) {
+		mes "^777777※ 동일 무기가 더 남아 있다면 다시 말을 걸어 추가로 분해할 수 있습니다.^000000";
+	}
+
+	next;
+	mes "- 강한 사념의 파동이 몸을 덮쳐 큰 피해를 입었다. -";
+	next;
 	mes "[억울한 혼의 사념]";
 	mes "다른... 볼일이 있나...?";
 	return;
