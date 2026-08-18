@@ -1060,8 +1060,13 @@ OnCallBaby:
 	end;
 
 OnTest_hp:
-	if ('boss_id && mobcount( 'map_eom$, instance_npcname("#ice_hpcheck") + "::OnMyMobDead" ) > 0)
-		setunitdata 'boss_id, UMOB_HP, 2000000;
+	if ('boss_id && unitexists('boss_id) &&
+		mobcount( 'map_eom$, instance_npcname("#ice_hpcheck") + "::OnMyMobDead" ) > 0) {
+		getunitdata 'boss_id, .@data;
+		.@test_hp = min(2000000, .@data[UMOB_MAXHP]);
+		setunitdata 'boss_id, UMOB_HP, .@test_hp;
+		'boss_hp = .@test_hp;
+	}
 	end;
 }
 
@@ -1428,28 +1433,14 @@ S_ReSpawn:
 	if (!'boss_id || !unitexists('boss_id))
 		return;
 
-	getunitdata 'boss_id, .@data;
-
-	// 재소환 전 현재 HP만 보존합니다.
-	.@keep_hp = max(1, min(.@data[UMOB_HP], .@data[UMOB_MAXHP]));
-
-	killmonster 'map_eom$, instance_npcname("#skollmaster") + "::OnMobDead";
-
-	monster 'map_eom$,getarg(0),getarg(1),
-		"무스펠스콜",3092,1,
-		instance_npcname("#skollmaster") + "::OnMobDead";
-
-	'boss_id = $@mobid[0];
-
-	if (!'boss_id || !unitexists('boss_id))
+	// 용암 패턴 중 보스를 삭제·재생성하지 않고 동일 GID 상태로 위치만 이동합니다.
+	// HP 바가 이전 GID를 참조해 0%로 남거나, 재생성 과정에서 상태가 초기화되는 문제를 방지합니다.
+	if (!unitwarp('boss_id, 'map_eom$, getarg(0), getarg(1)))
 		return;
 
-	// 새로 생성된 몬스터의 DB 최대 HP를 기준으로 다시 동기화합니다.
 	getunitdata 'boss_id, .@data;
 	'boss_max_hp = .@data[UMOB_MAXHP];
-	'boss_hp = min(.@keep_hp, 'boss_max_hp);
-
-	setunitdata 'boss_id, UMOB_HP, 'boss_hp;
+	'boss_hp = .@data[UMOB_HP];
 	return;
 S_Event:
 	callsub S_ReSpawn, getarg(1),getarg(2);
@@ -1531,7 +1522,7 @@ OnTimer3000:
 		initnpctimer;
 		end;
 	}
-	// 기존 1,000,000 피해 제한은 최대 HP의 2%였으므로 같은 비율로 적용합니다.
+	// 원본의 3초당 1,000,000 고정 피해 제한을 유지합니다.
 	if (('boss_hp - .@hp) > 1000000 && 'fire_recovery == false) {
 		'boss_hp = .@hp;
 		'fire_recovery = true;
@@ -1579,7 +1570,7 @@ OnHeal:
 	sleep 1000;
 	if (!'boss_id || !unitexists('boss_id))
 		end;
-	// 최대 HP를 1/3로 낮춘 만큼 고정 회복 스킬 횟수도 각 18회에서 6회로 조정합니다.
+	// DB에서 무스펠스콜 HP를 1/3 수준으로 조정했으므로 고정 회복 횟수도 각 18회에서 6회로 조정합니다.
 	for ( .@i = 0; .@i < 6; .@i++ ) {
 		unitskilluseid 'boss_id, "AL_HEAL",11;
 		sleep 200;
@@ -2063,8 +2054,13 @@ OnPhase03:
 	end;
 
 OnTest_hp:
-	if ('boss_id && mobcount( 'map_eom$, instance_npcname("#despair_god_main") + "::OnMobDead" ) > 0)
-		setunitdata 'boss_id, UMOB_HP, 2000000;
+	if ('boss_id && unitexists('boss_id) &&
+		mobcount( 'map_eom$, instance_npcname("#despair_god_main") + "::OnMobDead" ) > 0) {
+		getunitdata 'boss_id, .@data;
+		.@test_hp = min(2000000, .@data[UMOB_MAXHP]);
+		setunitdata 'boss_id, UMOB_HP, .@test_hp;
+		'boss_hp = .@test_hp;
+	}
 	end;
 
 OnMobDead:
@@ -2164,7 +2160,7 @@ OnTimer5000:
 	end;
 OnTimer7000:
 	stopnpctimer;
-	unitskilluseid 'boss_id, "CR_REFLECTSHIELD",1;
+	// NEED: 장시간 유지되는 리플렉트 쉴드는 근접 직업의 전투를 과도하게 제한하므로 제거합니다.
 	if ('combo_is_allowed)
 		donpcevent instance_npcname("#mk_combo") + "::OnEvent";
 	end;
@@ -2395,11 +2391,9 @@ OnStart:
 	monster 'map_eom$,101,194, "절망의 신 모로크",3097,1, instance_npcname("#despair_main") + "::OnMobDead";	// MM_MOROCC_ADT
 	'boss_id = $@mobid[0];
 	getunitdata 'boss_id, .@data;
-	// 절망의 신 모로크의 최대 HP와 현재 HP를 원본의 1/3로 조정합니다.
-	'boss_max_hp = max(1, .@data[UMOB_MAXHP] / 3);
-	setunitdata 'boss_id, UMOB_MAXHP, 'boss_max_hp;
-	setunitdata 'boss_id, UMOB_HP, 'boss_max_hp;
-	'boss_hp = 'boss_max_hp;
+	// HP는 mob_db 설정값을 그대로 사용합니다. 런타임 UMOB_MAXHP 변경은 HP% 표시 불일치를 유발할 수 있습니다.
+	'boss_max_hp = .@data[UMOB_MAXHP];
+	'boss_hp = .@data[UMOB_HP];
 	end;
 OnMobDead:
 	disablenpc instance_npcname("#despair_main");
@@ -2423,8 +2417,13 @@ OnTimer2000:
 	end;
 
 OnTest_hp:
-	if ('boss_id && mobcount( 'map_eom$, instance_npcname("#despair_main") + "::OnMobDead" ) > 0)
-		setunitdata 'boss_id, UMOB_HP, 2000000;
+	if ('boss_id && unitexists('boss_id) &&
+		mobcount( 'map_eom$, instance_npcname("#despair_main") + "::OnMobDead" ) > 0) {
+		getunitdata 'boss_id, .@data;
+		.@test_hp = min(2000000, .@data[UMOB_MAXHP]);
+		setunitdata 'boss_id, UMOB_HP, .@test_hp;
+		'boss_hp = .@test_hp;
+	}
 	end;
 }
 
