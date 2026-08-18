@@ -292,11 +292,9 @@ S_Exchange:
 	if (select("그만둔다.", "에너지 파편으로 분해한다.") == 1)
 		return;
 
-	donpcevent strnpcinfo(0) + "::OnBar";
-	sleep2 5000;
-
-	// 진행바 도중 인벤토리 상태가 바뀌었을 가능성을 고려해
-	// 삭제 직전에 목록을 새로 받아 유효한 inventory index만 사용한다.
+	// 일괄 분해에서는 progressbar_npc / sleep2를 사용하지 않는다.
+	// NPC 작업(work-in-progress) 상태가 남아 이동/대화가 잠기는 현상을 방지한다.
+	// 확인 직후 인벤토리를 다시 읽고 즉시 분해를 완료한다.
 	getinventorylist;
 
 	.@processed = 0;
@@ -334,13 +332,9 @@ S_Exchange:
 		return;
 	}
 
-	specialeffect EF_BLACKBODY;
-	specialeffect EF_GUMGANG4;
-	specialeffect EF_DARKCASTING2;
-	specialeffect EF_RG_COIN7;
+	// 분해 처리는 이미 완료되었으며, 연출은 결과 시점에 한 번만 실행한다.
 	percentheal -50,-50;
 	specialeffect2 EF_POISONSMOKE;
-	specialeffect2 EF_NPC_BURNT;
 
 	getitem 6820, .@total_fragment; // Energy Fragment
 
@@ -357,14 +351,22 @@ S_Exchange:
 
 	next;
 	mes "- 강한 사념의 파동이 몸을 덮쳐 큰 피해를 입었다. -";
+
+	// 일괄 분해는 처리 완료 즉시 NPC 대화를 종료하여
+	// 이동/다른 NPC 이용을 바로 가능하게 한다.
+	if (.@choice == 3) {
+		next;
+		mes "[억울한 혼의 사념]";
+		mes "한꺼번에 뒤엉킨 사념은... 모두 흩어졌다...";
+		mes "필요하다면... 다시 찾아와라...";
+		close;
+	}
+
 	next;
 	mes "[억울한 혼의 사념]";
 	mes "다른... 볼일이 있나...?";
 	return;
 
-OnBar:
-	progressbar_npc "000000",5;
-	end;
 }
 
 //============================================================
@@ -489,6 +491,7 @@ S_SoulExchange:
 	mes "^00640010,000,000 Zeny^000000를 내놓는다면...";
 	mes "그 혼과는 다른... 또 하나의 혼으로... 뒤섞어 주겠다...";
 	next;
+	mes "[서글픈 혼의 사념]";
 	mes "^FF0000※ 선택한 혼은 결과에서 제외됩니다.^000000";
 	mes "^FF0000※ 나머지 5종의 혼 중 1종이 동일한 확률로 등장합니다.^000000";
 	next;
