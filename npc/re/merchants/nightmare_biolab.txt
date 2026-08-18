@@ -441,10 +441,16 @@ lhz_dun_n,136,269,6	script	서글픈 혼의 사념#1	4_M_DEATH,{
 			close;
 		}
 		next;
-		if (select("장비를 조합한다.", "대화를 끝낸다.") == 2) {
+		.@main_menu = select("장비를 조합한다.", "전사자의 혼을 다른 혼으로 바꾼다.", "대화를 끝낸다.");
+		if (.@main_menu == 3) {
 			mes "[서글픈 혼의 사념]";
 			mes "...다시... 찾아오길...";
 			close;
+		}
+
+		if (.@main_menu == 2) {
+			callsub S_SoulExchange;
+			continue;
 		}
 
 		.@menu$ = "이전 메뉴로 돌아간다.:";
@@ -460,6 +466,120 @@ lhz_dun_n,136,269,6	script	서글픈 혼의 사념#1	4_M_DEATH,{
 			callsub S_Make,.@reward[.@s],.@equipment[.@s],.@misc[.@s],false;
 	}
 	end;
+
+S_SoulExchange:
+	// 전사자의 혼 2개 + 10,000,000 Zeny
+	// 선택한 혼을 제외한 나머지 5종 중 1종을 균등 랜덤 지급
+	setarray .@soul_list[0],
+		6814, // Swordman Soul
+		6815, // Merchant Soul
+		6816, // Thief Soul
+		6817, // Mage Soul
+		6818, // Archer Soul
+		6819; // Acolyte Soul
+
+	.@zeny_cost = 10000000;
+
+	mes "[서글픈 혼의 사념]";
+	mes "같은 혼이... 너무 많이 남았나...?";
+	mes "서로 다른 원한도... 이곳에서는... 결국 뒤섞이게 마련이지...";
+	next;
+	mes "[서글픈 혼의 사념]";
+	mes "같은 종류의 전사자의 혼 ^0064002개^000000와...";
+	mes "^00640010,000,000 Zeny^000000를 내놓는다면...";
+	mes "그 혼과는 다른... 또 하나의 혼으로... 뒤섞어 주겠다...";
+	next;
+	mes "^FF0000※ 선택한 혼은 결과에서 제외됩니다.^000000";
+	mes "^FF0000※ 나머지 5종의 혼 중 1종이 동일한 확률로 등장합니다.^000000";
+	next;
+
+	.@menu$ = "그만둔다.:";
+	for (.@i = 0; .@i < getarraysize(.@soul_list); ++.@i) {
+		if (countitem(.@soul_list[.@i]) < 2)
+			.@menu$ += "^777777" + getitemname(.@soul_list[.@i]) + " - 2개 미만^000000:";
+		else
+			.@menu$ += getitemname(.@soul_list[.@i]) + " 2개를 건넨다.:";
+	}
+
+	.@choice = select(.@menu$) - 1;
+	if (.@choice == 0)
+		return;
+
+	.@source_index = .@choice - 1;
+	.@source_id = .@soul_list[.@source_index];
+
+	if (countitem(.@source_id) < 2) {
+		mes "[서글픈 혼의 사념]";
+		mes "그 혼은... 아직 충분히 모이지 않았군...";
+		mes "^FF0000" + getitemname(.@source_id) + " 2개가 필요합니다.^000000";
+		return;
+	}
+
+	if (Zeny < .@zeny_cost) {
+		mes "[서글픈 혼의 사념]";
+		mes "이 원한을... 다른 모습으로 뒤섞으려면...";
+		mes "그만한 대가가... 필요하다...";
+		mes "^FF000010,000,000 Zeny가 필요합니다.^000000";
+		return;
+	}
+
+	// 선택한 혼을 제외한 5종 후보 구성
+	deletearray .@result_list;
+	.@result_count = 0;
+	for (.@i = 0; .@i < getarraysize(.@soul_list); ++.@i) {
+		if (.@i == .@source_index)
+			continue;
+		.@result_list[.@result_count] = .@soul_list[.@i];
+		.@result_count++;
+	}
+
+	.@result_id = .@result_list[rand(.@result_count)];
+
+	if (checkweight(.@result_id,1) == 0) {
+		mes "[서글픈 혼의 사념]";
+		mes "새로운 혼을... 받아들이기엔...";
+		mes "가방이... 너무 무겁다...";
+		return;
+	}
+
+	mes "[서글픈 혼의 사념]";
+	mes "^006400" + getitemname(.@source_id) + " 2개^000000와";
+	mes "^00640010,000,000 Zeny^000000를 바쳐...";
+	mes "다른 전사자의 혼 하나로... 뒤섞겠나...?";
+	next;
+	if (select("그만둔다.", "혼을 뒤섞는다.") == 1)
+		return;
+
+	progressbar "000000",2;
+
+	// 진행 중 인벤토리/제니 상태가 바뀔 수 있으므로 차감 직전에 재검증
+	if (countitem(.@source_id) < 2 || Zeny < .@zeny_cost) {
+		mes "[서글픈 혼의 사념]";
+		mes "방금 전과... 상태가 달라졌군...";
+		mes "재료와 Zeny를... 다시 확인해라...";
+		return;
+	}
+
+	if (checkweight(.@result_id,1) == 0) {
+		mes "[서글픈 혼의 사념]";
+		mes "가방이... 너무 무거워졌다...";
+		return;
+	}
+
+	delitem .@source_id,2;
+	Zeny -= .@zeny_cost;
+
+	specialeffect EF_BLACKBODY;
+	specialeffect EF_DARKCASTING2;
+	specialeffect2 EF_POISONSMOKE;
+
+	getitem .@result_id,1;
+
+	mes "[서글픈 혼의 사념]";
+	mes "뒤섞인 원한이... 새로운 모습을 드러냈다...";
+	mes "^006400" + getitemname(.@result_id) + " 1개^000000를 얻었다...";
+	next;
+	return;
 
 S_Make:
 	.@reward_id = getarg(0);
