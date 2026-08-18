@@ -1,306 +1,460 @@
-//===== rAthena Script =======================================
-//= 오토큐어
-//===== Description: =========================================
-//= Provides an @autopot command to automatically use potions.
-//===== Changelogs: ==========================================
-//= 1.0 First version. [Euphy]
-//= 2.0 rewrite and adding SP option. [sader1992]
 //============================================================
--	script	#autopot	-1,{
+// NEED 오토큐어 설정 UI
+// - 실제 자동 물약 처리는 C++ @autopot 사용
+// - 이 스크립트는 UI/명령어 호출만 담당
+//============================================================
+
+-	script	NEED_오토큐어_UI	-1,{
+
 OnInit:
-	.HP_Option = true;	//Allow HP option
-	.SP_Option = true;	//Allow SP option
-	.MinDelay = 100;	//Minimum Delay Allowed in milliseconds (Default and Recommended: 100) [lower values will increase server strain]
-	.MaxDelay = 1000;	//Maximum Delay Allowed in milliseconds (Default and Recommended: 1000)
-	setarray .blackList[0],0;	//Array of black listed item ID
-
-	if(!.HP_Option && !.SP_Option){
-		debugmes "경고: @오토큐어의 hp와 sp가 모두 비활성화되었습니다.";
-		end;
-	}
-	bindatcmd("오토큐어",strnpcinfo(0)+"::OnCommand");
-end;
-
-L_Help:
-	dispbottom "사용 가능한 명령어:";
-	if(.HP_Option && .SP_Option){
-		dispbottom " @오토큐어 <hp|sp> <item id> {<min hp|sp % [1..100]> {<지연 [" + .MinDelay + ".."+.MaxDelay+"]>}}";
-		dispbottom " @오토큐어 <hp|sp> 목록";
-		dispbottom " @오토큐어 <hp|sp> <on|off>";
-	}else{
-		dispbottom " @오토큐어 <" + (.HP_Option?"hp":"sp") + " > <item id> {<min" + (.HP_Option?"hp":"sp") + " % [1..100]> {<지연 [" + .MinDelay + ".."+.MaxDelay+"]>}}";
-		dispbottom " @오토큐어 <" + (.HP_Option?"hp":"sp") + "> 목록";
-		dispbottom " @오토큐어 <" + (.HP_Option?"hp":"sp") + "> <on|off>";
-	}
-	dispbottom " @오토큐어 정보";
-	dispbottom " @오토큐어 도움말";
-	dispbottom " @오토큐어 블랙리스트";
-	return;
-
-L_Info:
-	dispbottom "----------자동 물약 정보-----------";
-	if(.HP_Option){
-		dispbottom " HP 물약:" + getitemname(@autopot_hp_ID) + " (" + @autopot_hp_ID + ")";
-		dispbottom " 최소 HP:" + @autopot_hp_Min + " %";
-	}
-	if(.SP_Option){
-		dispbottom " SP 포션:" + getitemname(@autopot_sp_ID) + " (" + @autopot_sp_ID + ")";
-		dispbottom " 최소 SP:" + @autopot_sp_Min + " %";
-	}
-	dispbottom "DELAY:    " + @autopot_delay + " ms";
-	dispbottom "---------------------------------------------";
-	return;
-
-L_Start:
-	.@map$ = strcharinfo(3);
-
-	if (
-		getmapflag(.@map$, mf_gvg) ||
-		getmapflag(.@map$, mf_gvg_castle) ||
-		getmapflag(.@map$, mf_battleground) ||
-		getmapflag(.@map$, mf_pvp)
-	) {
-		message strcharinfo(0), "오토큐어는 사냥터에서만 사용할 수 있습니다.";
-		end;
-	}
-	
-	deltimer strnpcinfo(3) + "::OnStart";
-	.@type$  = getarg(0,0);
-	.@potion = getarg(1,0);
-	setd "@autopot_" + .@type$ + "_Min",getarg(2,0);
-	@autopot_delay = getarg(3,.MinDelay);
-
-	if (getd("@autopot_" + .@type$ + "_Min")   < 1  || getd("@autopot_" + .@type$ + "_Min") > 100)  setd "@autopot_" + .@type$ + "_Min",90;
-	if (@autopot_delay < .MinDelay) @autopot_delay = .MinDelay;
-	if (@autopot_delay > .MaxDelay) @autopot_delay = .MaxDelay;
-	if (getiteminfo(.@potion, ITEMINFO_TYPE) != IT_HEALING) {
-		dispbottom getitemname(.@potion) + " 이것은 회복 아이템이 아닙니다.";
-		end;
-	}
-	if(inarray(.blackList[0],.@potion) != -1){
-		message strcharinfo(0), "'" + getitemname(.@potion) + "'는 블랙리스트에 올라 있어 사용할 수 없습니다.";
-		end;
-	}
-	if (BaseLevel < getiteminfo(.@potion, ITEMINFO_EQUIPLEVELMIN)) {
-		message strcharinfo(0), "기본 레벨이 너무 낮아서 '를 사용할 수 없습니다." + getitemname(.@potion) + "'.";
-		end;
-	}
-	setd "@autopot_" + .@type$ + "_ID",.@potion;
-	setd "@autopot_" + .@type$ + "_Active",true;
-	addtimer @autopot_delay,strnpcinfo(3) + "::OnStart";
-	message strcharinfo(0), "오토큐어 " + strtoupper(.@type$) + " enabled.";
-	callsub L_Info;
-	return;
-
-
-L_MenuConfig:
-	.@type$ = getarg(0);
-	.@potion = getarg(1);
-
-	.@default_percent = getd("@autopot_" + .@type$ + "_Min");
-	if (.@default_percent < 1 || .@default_percent > 100)
-		.@default_percent = 90;
-
-	.@default_delay = @autopot_delay;
-	if (.@default_delay < .MinDelay || .@default_delay > .MaxDelay)
-		.@default_delay = .MinDelay;
-
-	mes "[자동 물약]";
-	mes "선택한 물약: ^0055FF" + getitemname(.@potion) + "^000000";
-	mes "현재 설정: " + .@default_percent + "% / " + .@default_delay + "ms";
-	next;
-
-	mes "[자동 물약]";
-	mes strtoupper(.@type$) + "가 몇 % 미만일 때 사용할까요?";
-	mes "1 ~ 100 사이 숫자를 입력하세요.";
-	input .@percent,1,100;
-	next;
-
-	.@normal_delay = (.MinDelay + .MaxDelay) / 2;
-	mes "[자동 물약]";
-	mes "사용 속도를 선택하세요.";
-	.@speed = select("빠름 (" + .MinDelay + "ms):보통 (" + .@normal_delay + "ms):느림 (" + .MaxDelay + "ms):직접 입력");
-
-	if (.@speed == 1)
-		.@delay = .MinDelay;
-	else if (.@speed == 2)
-		.@delay = .@normal_delay;
-	else if (.@speed == 3)
-		.@delay = .MaxDelay;
-	else {
-		next;
-		mes "[자동 물약]";
-		mes "딜레이를 입력하세요. (" + .MinDelay + " ~ " + .MaxDelay + " ms)";
-		input .@delay,.MinDelay,.MaxDelay;
-	}
-
-	close2;
-	callsub L_Start,.@type$,.@potion,.@percent,.@delay;
+	// 소스의 @오토큐어와 충돌하지 않도록 별도 진입 명령 사용
+	bindatcmd "오토큐어설정", strnpcinfo(3) + "::OnCommand", 0, 99;
+	bindatcmd "autopotui", strnpcinfo(3) + "::OnCommand", 0, 99;
 	end;
 
 OnCommand:
-	if (!getarraysize(.@atcmd_parameters$)) {
-		message strcharinfo(0), "잘못된 구문입니다.";
-		callsub L_Help;
-		end;
-	}
-	.@command$[0] = strtolower(.@atcmd_parameters$[0]);
-	.@command$[1] = strtolower(.@atcmd_parameters$[1]);
-	
-	if(.@command$[0] == "hp" || .@command$[0] == "sp"){
-		if((!.HP_Option && .@command$[0] == "hp") || (!.SP_Option && .@command$[0] == "sp")){
-			message strcharinfo(0), "오토큐어 " + strtoupper(.@command$[0]) + " 서버에서 비활성화되어 있습니다.";
+	callsub S_Main;
+	end;
+
+
+//============================================================
+// 메인 메뉴
+//============================================================
+S_Main:
+	while (1) {
+		mes "[오토큐어]";
+		mes "자동 물약 설정을 관리합니다.";
+		mes "원하는 항목을 선택해주세요.";
+		next;
+
+		switch(select(
+			"HP 자동 물약 설정:"
+			"SP 자동 물약 설정:"
+			"HP / SP 활성화 관리:"
+			"사용 속도 설정:"
+			"프리셋 관리:"
+			"현재 설정 확인:"
+			"전체 비활성화:"
+			"종료"
+		)) {
+		case 1:
+			callsub S_SetPotion, "hp";
+			break;
+
+		case 2:
+			callsub S_SetPotion, "sp";
+			break;
+
+		case 3:
+			callsub S_Toggle;
+			break;
+
+		case 4:
+			callsub S_Delay;
+			break;
+
+		case 5:
+			callsub S_Preset;
+			break;
+
+		case 6:
+			close2;
+			atcommand "@autopot info";
 			end;
-		}
-		if(.@command$[1] == "on"){
-			if(getd("@autopot_" + .@command$[0] + "_Active")){
-				message strcharinfo(0), "오토큐어 " + strtoupper(.@command$[0]) + " 이미 켜져 있습니다.";
-				end;
-			}
-			if(!getd("@autopot_" + .@command$[0] + "_ID")){
-				dispbottom " 사용할 물약을 설정해야 합니다" + strtoupper(.@command$[0]) + "";
-				callsub L_Help;
-				end;
-			}
-			callsub L_Start,.@command$[0],getd("@autopot_" + .@command$[0] + "_ID"),getd("@autopot_" + .@command$[0] + "_Min"),@autopot_delay;
+
+		case 7:
+			mes "[오토큐어]";
+			mes "HP와 SP 자동 물약을 모두 비활성화하시겠습니까?";
+			next;
+
+			if (select("비활성화:취소") == 2)
+				break;
+
+			close2;
+			atcommand "@autopot off";
 			end;
+
+		default:
+			close;
 		}
-		if(.@command$[1] == "off"){
-			message strcharinfo(0), "오토큐어 " + strtoupper(.@command$[0]) + " disabled.";
-			setd "@autopot_" + .@command$[0] + "_Active",false;
-			if(!@autopot_hp_Active && !@autopot_sp_Active)
-				deltimer strnpcinfo(3) + "::OnStart";
+	}
+
+	return;
+
+
+//============================================================
+// HP / SP 물약 설정
+//============================================================
+S_SetPotion:
+	.@type$ = getarg(0);
+
+	.@item = callsub(S_SelectHealingItem);
+
+	if (.@item <= 0)
+		return;
+
+	mes "[오토큐어]";
+	mes "선택한 아이템:";
+	mes "^0055FF" + getitemname(.@item) + "^000000";
+	mes "보유 수량: " + countitem(.@item) + "개";
+	next;
+
+	mes "[오토큐어]";
+	if (.@type$ == "hp")
+		mes "HP가 몇 % 미만일 때 사용할까요?";
+	else
+		mes "SP가 몇 % 미만일 때 사용할까요?";
+
+	mes "1 ~ 100 사이의 숫자를 입력해주세요.";
+	input .@percent, 1, 100;
+	next;
+
+	mes "[오토큐어]";
+	mes "자동 물약 반응 속도를 선택해주세요.";
+	mes "현재 서버 허용 범위: 300 ~ 2000ms";
+	next;
+
+	switch(select(
+		"빠름 - 300ms:"
+		"보통 - 500ms:"
+		"여유 - 1000ms:"
+		"직접 입력:"
+		"취소"
+	)) {
+	case 1:
+		.@delay = 300;
+		break;
+
+	case 2:
+		.@delay = 500;
+		break;
+
+	case 3:
+		.@delay = 1000;
+		break;
+
+	case 4:
+		mes "[오토큐어]";
+		mes "300 ~ 2000 사이의 값을 입력해주세요.";
+		input .@delay, 300, 2000;
+		break;
+
+	default:
+		return;
+	}
+
+	mes "[오토큐어]";
+	mes "다음과 같이 설정합니다.";
+	mes " ";
+
+	if (.@type$ == "hp")
+		mes "구분: ^FF0000HP^000000";
+	else
+		mes "구분: ^0055FFSP^000000";
+
+	mes "물약: " + getitemname(.@item);
+	mes "사용 기준: " + .@percent + "% 미만";
+	mes "반응 속도: " + .@delay + "ms";
+	next;
+
+	if (select("적용:취소") == 2)
+		return;
+
+	.@command$ =
+		"@autopot " + .@type$ + " " +
+		.@item + " " +
+		.@percent + " " +
+		.@delay;
+
+	close2;
+	atcommand .@command$;
+	end;
+
+
+//============================================================
+// 인벤토리 회복 아이템 선택
+//============================================================
+S_SelectHealingItem:
+	getinventorylist;
+
+	.@count = 0;
+	.@menu$ = "";
+
+	for (.@i = 0; .@i < @inventorylist_count; .@i++) {
+
+		.@item = @inventorylist_id[.@i];
+
+		if (getiteminfo(.@item, ITEMINFO_TYPE) != IT_HEALING)
+			continue;
+
+		// UI가 너무 길어지는 것을 방지
+		if (.@count >= 20)
+			break;
+
+		.@name$ = getitemname(.@item);
+
+		if (.@name$ == "" || .@name$ == "null")
+			continue;
+
+		// select 구분자 충돌 방지
+		.@name$ = replacestr(.@name$, ":", "：");
+
+		.@items[.@count] = .@item;
+
+		.@menu$ +=
+			.@name$ +
+			" (" + countitem(.@item) + "개):";
+
+		.@count++;
+	}
+
+	if (.@count <= 0) {
+		mes "[오토큐어]";
+		mes "인벤토리에 설정 가능한";
+		mes "회복 아이템이 없습니다.";
+		next;
+		return 0;
+	}
+
+	mes "[오토큐어]";
+	mes "사용할 회복 아이템을 선택해주세요.";
+
+	if (.@count >= 20)
+		mes "^777777※ 최대 20종까지만 표시됩니다.^000000";
+
+	next;
+
+	.@selected = select(.@menu$ + "취소") - 1;
+
+	if (.@selected >= .@count)
+		return 0;
+
+	return .@items[.@selected];
+
+
+//============================================================
+// HP / SP ON/OFF
+//============================================================
+S_Toggle:
+	mes "[오토큐어]";
+	mes "활성화 상태를 변경합니다.";
+	next;
+
+	switch(select(
+		"HP 활성화:"
+		"HP 비활성화:"
+		"SP 활성화:"
+		"SP 비활성화:"
+		"HP / SP 모두 비활성화:"
+		"뒤로가기"
+	)) {
+	case 1:
+		close2;
+		atcommand "@autopot hp on";
+		end;
+
+	case 2:
+		close2;
+		atcommand "@autopot hp off";
+		end;
+
+	case 3:
+		close2;
+		atcommand "@autopot sp on";
+		end;
+
+	case 4:
+		close2;
+		atcommand "@autopot sp off";
+		end;
+
+	case 5:
+		close2;
+		atcommand "@autopot off";
+		end;
+
+	default:
+		return;
+	}
+
+
+//============================================================
+// 전체 딜레이 변경
+//============================================================
+S_Delay:
+	mes "[오토큐어]";
+	mes "자동 물약 검사 속도를 설정합니다.";
+	mes "현재 허용 범위는 300 ~ 2000ms입니다.";
+	next;
+
+	switch(select(
+		"빠름 - 300ms:"
+		"보통 - 500ms:"
+		"여유 - 1000ms:"
+		"직접 입력:"
+		"뒤로가기"
+	)) {
+	case 1:
+		.@delay = 300;
+		break;
+
+	case 2:
+		.@delay = 500;
+		break;
+
+	case 3:
+		.@delay = 1000;
+		break;
+
+	case 4:
+		mes "[오토큐어]";
+		mes "300 ~ 2000 사이의 값을 입력해주세요.";
+		input .@delay, 300, 2000;
+		break;
+
+	default:
+		return;
+	}
+
+	close2;
+	atcommand "@autopot delay " + .@delay;
+	end;
+
+
+//============================================================
+// 프리셋
+//============================================================
+S_Preset:
+	while (1) {
+		mes "[오토큐어 프리셋]";
+		mes "현재 설정을 최대 5개까지";
+		mes "계정 단위로 저장할 수 있습니다.";
+		next;
+
+		switch(select(
+			"프리셋 목록 확인:"
+			"프리셋 저장:"
+			"프리셋 불러오기:"
+			"프리셋 삭제:"
+			"뒤로가기"
+		)) {
+		case 1:
+			close2;
+			atcommand "@autopot preset";
 			end;
-		}
-		if(.@command$[1] == "목록"){
-			getinventorylist;
 
-			.@menu$ = "";
-			.@count = 0;
+		case 2:
+			callsub S_PresetSave;
+			break;
 
-			for(.@i = 0; .@i < @inventorylist_count; .@i++){
+		case 3:
+			callsub S_PresetLoad;
+			break;
 
-				.@item_id = @inventorylist_id[.@i];
+		case 4:
+			callsub S_PresetDelete;
+			break;
 
-				if (getiteminfo(.@item_id, ITEMINFO_TYPE) == IT_HEALING) {
-
-					.@item_name$ = getitemname(.@item_id);
-
-					// getitemname NULL/빈값 방어
-					if (.@item_name$ == "")
-						.@item_name$ = "알 수 없는 아이템";
-
-					// select 메뉴 구분자인 : 가 아이템명에 들어가면 메뉴가 깨질 수 있으니 전각 콜론으로 치환
-					.@item_name$ = replacestr(.@item_name$, ":", "：");
-
-					.@items[.@count] = .@item_id;
-
-					.@line$ = "~ ^0055FF" + .@item_name$ + "^000000 (" + countitem(.@item_id) + "개)";
-
-					if (inarray(.blackList[0], .@item_id) != -1)
-						.@line$ = .@line$ + " ^364022Black Listed^000000";
-
-					if (BaseLevel < getiteminfo(.@item_id, ITEMINFO_EQUIPLEVELMIN))
-						.@line$ = .@line$ + " ^E82C0CNeed Higher Level^000000";
-
-					// 메뉴 구분자는 반드시 마지막에 ASCII 콜론 1개만
-					.@menu$ = .@menu$ + .@line$ + ":";
-
-					.@count++;
-				}
-			}
-			if(.@count){
-				mes "[자동 물약]";
-				mes "" + strtoupper(.@command$[0]) + "아이템을 선택하세요.";
-				.@select = select(.@menu$ + "   ^777777취소^000000") - 1;
-				if (.@select == .@count)
-					close;
-
-				callsub L_MenuConfig,.@command$[0],.@items[.@select];
-				end;
-			}else{
-				message strcharinfo(0), "인벤토리에 회복 아이템이 없습니다.";
-			}
-			end;
-		}
-		.@potion = atoi(.@command$[1]);
-		.@percent = atoi(.@atcmd_parameters$[2]);
-		.@delay = atoi(.@atcmd_parameters$[3]);
-		if(getitemname(.@potion) != "null"){
-			callsub L_Start,.@command$[0],.@potion,.@percent,.@delay;
-			end;
-		}
-		message strcharinfo(0), "자동 물약: 문제가 발생했습니다!";
-		callsub L_Help;
-		end;
-	}
-	if(.@command$[0] == "블랙리스트"){
-		dispbottom "--------------블랙리스트 품목--------------";
-		for(.@i=0;.@i<getarraysize(.blackList);.@i++){
-			dispbottom "    " + getitemname(.blackList[.@i]) + " (" + .blackList[.@i] + ")";
-		}
-		dispbottom "---------------------------------------------";
-		end;
-	}
-	if(.@command$[0] == "정보"){
-		if(@autopot_hp_Active || @autopot_sp_Active){
-			message strcharinfo(0), "자동 물약 정보가 아래에 표시됩니다.";
-			callsub L_Info;
-		}else{
-			message strcharinfo(0), "자동 물약 생성 기능이 활성화되어 있지 않습니다.";
-		}
-		end;
-	}
-	if(.@command$[0] == "도움말"){
-		message strcharinfo(0), "명령어 목록은 아래에 표시됩니다.";
-		callsub L_Help;
-		end;
-	}
-	
-	message strcharinfo(0), "잘못된 구문입니다.";
-	callsub L_Help;
-end;
-
-OnStart:
-	.@map$ = strcharinfo(3);
-
-	if (
-		getmapflag(.@map$, mf_gvg) ||
-		getmapflag(.@map$, mf_gvg_castle) ||
-		getmapflag(.@map$, mf_battleground) ||
-		getmapflag(.@map$, mf_pvp)
-	) {
-		if (@autopot_hp_Active || @autopot_sp_Active) {
-			message strcharinfo(0), "오토큐어은 사냥터에서만 사용할 수 있습니다.";
-			set @autopot_hp_Active, false;
-			set @autopot_sp_Active, false;
-		}
-		end;
-	}
-	
-	if (!getstatus(SC_BERSERK) && !getstatus(SC_SATURDAYNIGHTFEVER) && !getstatus(SC_GRAVITATION) &&
-	    !getstatus(SC_TRICKDEAD) && !getstatus(SC_HIDING) && !getstatus(SC__SHADOWFORM) && !getstatus(SC__INVISIBILITY) &&
-	    !getstatus(SC__MANHOLE) && !getstatus(SC_KAGEHUMI) && !getstatus(SC_HEAT_BARREL_AFTER) &&
-		!getstatus(SC_STONE) && !getstatus(SC_FREEZE) && !getstatus(SC_STUN) && !getstatus(SC_SLEEP))
-		{
-		if(Hp){
-			if(@autopot_hp_Active && Hp * 100 / MaxHp < @autopot_hp_Min) {
-				if (countitem(@autopot_hp_ID)) {
-					delitem @autopot_hp_ID,1;
-					consumeitem @autopot_hp_ID;
-					specialeffect2 207;
-				}
-			}
-			if(@autopot_sp_Active && Sp * 100 / MaxSp < @autopot_sp_Min) {
-				if (countitem(@autopot_sp_ID)) {
-					delitem @autopot_sp_ID,1;
-					consumeitem @autopot_sp_ID;
-					specialeffect2 208;
-				}
-			}
+		default:
+			return;
 		}
 	}
-	if(@autopot_hp_Active || @autopot_sp_Active)
-		addtimer @autopot_delay,strnpcinfo(3) + "::OnStart";
-end;
+
+	return;
+
+
+//============================================================
+// 프리셋 저장
+//============================================================
+S_PresetSave:
+	mes "[오토큐어 프리셋]";
+	mes "저장할 슬롯을 선택해주세요.";
+	next;
+
+	.@slot = select(
+		"1번:"
+		"2번:"
+		"3번:"
+		"4번:"
+		"5번:"
+		"취소"
+	);
+
+	if (.@slot > 5)
+		return;
+
+	mes "[오토큐어 프리셋]";
+	mes "프리셋 이름을 입력해주세요.";
+	mes "^7777771 ~ 24바이트^000000";
+	next;
+
+	input .@name$;
+
+	if (.@name$ == "") {
+		mes "[오토큐어 프리셋]";
+		mes "이름을 입력해주세요.";
+		next;
+		return;
+	}
+
+	close2;
+	atcommand "@autopot save " + .@slot + " " + .@name$;
+	end;
+
+
+//============================================================
+// 프리셋 불러오기
+//============================================================
+S_PresetLoad:
+	mes "[오토큐어 프리셋]";
+	mes "불러올 슬롯을 선택해주세요.";
+	next;
+
+	.@slot = select(
+		"1번:"
+		"2번:"
+		"3번:"
+		"4번:"
+		"5번:"
+		"취소"
+	);
+
+	if (.@slot > 5)
+		return;
+
+	close2;
+	atcommand "@autopot load " + .@slot;
+	end;
+
+
+//============================================================
+// 프리셋 삭제
+//============================================================
+S_PresetDelete:
+	mes "[오토큐어 프리셋]";
+	mes "삭제할 슬롯을 선택해주세요.";
+	next;
+
+	.@slot = select(
+		"1번:"
+		"2번:"
+		"3번:"
+		"4번:"
+		"5번:"
+		"취소"
+	);
+
+	if (.@slot > 5)
+		return;
+
+	mes "[오토큐어 프리셋]";
+	mes .@slot + "번 프리셋을 삭제하시겠습니까?";
+	next;
+
+	if (select("삭제:취소") == 2)
+		return;
+
+	close2;
+	atcommand "@autopot delete " + .@slot;
+	end;
 }
