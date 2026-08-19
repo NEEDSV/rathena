@@ -1,0 +1,1142 @@
+//===== rAthena Script =======================================
+//= Central Laboratory
+//===== Description: =========================================
+//= [Official Conversion]
+//= Central Laboratory Instance
+//===== Changelogs: ==========================================
+//= 1.0 First version. [Capuche]
+//= 1.1 Updated to match official script. [Capuche]
+//============================================================
+
+// NEED Memorial Dungeon
+// - 최초 1회 일반 진행 후 계정 단위 클리어 기록 저장
+// - 재도전 시 일반 진행 / 간소화 진행 선택 가능
+// - 간소화 진행은 인증/스위치 퍼즐과 장시간 연출만 생략하며 랜덤 보스 3회는 유지
+// - instance_db Name: 중앙 실험실
+
+// 파티 내 온라인 구성원 모두가 최초 클리어를 완료했는지 확인합니다.
+function	script	F_CentralLabCanEnableSimple	{
+	.@caller_aid = getcharid(3);
+	.@party_id = getcharid(1);
+	if (.@party_id < 1)
+		return 0;
+
+	getpartymember .@party_id,1;
+	.@member_count = $@partymembercount;
+	copyarray .@member_aid[0],$@partymemberaid[0],.@member_count;
+	.@allowed = 1;
+
+	for (.@i = 0; .@i < .@member_count; .@i++) {
+		if (attachrid(.@member_aid[.@i]) == 0)
+			continue;
+
+		if (#NEED_MD_CENTRAL_LAB_CLEAR == 0) {
+			.@allowed = 0;
+			break;
+		}
+	}
+
+	attachrid(.@caller_aid);
+	return .@allowed;
+}
+
+verus01,153,155,5	script	임시 차원이동기::Temporary Dimension-mov#pa0829_01	PORTAL,{
+	.@instance_db_id = 28;
+	.@remaining = instance_ip_reward_remaining(.@instance_db_id);
+	.@limit = instance_ip_reward_limit(.@instance_db_id);
+
+	if (.@remaining == -1 || .@limit == -1) {
+		mes "보상 이용 횟수를 확인하지 못했습니다.";
+		mes "잠시 후 다시 시도해 주세요.";
+		end;
+	}
+
+	if (.@remaining != -2 && .@limit > 0) {
+		if (.@remaining <= 0) {
+			mes "오늘 해당 던전의 보상 이용 횟수를";
+			mes "모두 사용했습니다.";
+			mes "남은 보상 횟수: ^FF00000회 / " + .@limit + "회^000000";
+			mes "초기화 시간: 매일 오전 4시";
+			end;
+		}
+
+		mes "오늘 남은 보상 횟수:";
+		mes "^3355FF" + .@remaining + "회 / " + .@limit + "회^000000";
+		next;
+	}
+	
+	.@party_id = getcharid(1);
+	if (.@party_id == 0) {
+		mes "[임시 차원이동기]";
+		mes "함께할 동료가 없으신가요? 혼자 이동하더라도 파티를 구성해 주세요.";
+		close;
+	}
+	switch( checkquest(12347,PLAYTIME) ) {
+	case -1:
+		switch( instance_enter("중앙 실험실") ) {
+		case IE_NOMEMBER:
+		case IE_NOINSTANCE:
+			mes "[임시 차원이동기]";
+			mes "차원이동 통로가 아직 활성화되지 않았습니다.";
+			close;
+		case IE_OTHER:
+			mes "[임시 차원이동기]";
+			mes "알 수 없는 오류가 발생했습니다.";
+			close;
+		case IE_OK:
+			.@result = instance_ip_complete(IP_REWARD_PERSONAL);
+
+			if (.@result == 0) {
+				dispbottom "오늘 입장 횟수를 모두 사용했습니다.";
+				warp "verus01",153,153;
+				end;
+			}
+
+			if (.@result < 0) {
+				dispbottom "입장 횟수 확인 중 오류가 발생했습니다.";
+				warp "verus01",153,153;
+				end;
+			}
+
+			dispbottom "오늘 입장 횟수 1회가 사용되었습니다.";
+			
+			mapannounce "verus01", "" + strcharinfo(0) + "이 속한 파티 [" + getpartyname(.@party_id) + "]가 중앙 실험실에 입장합니다.",bc_map,"0x00FF99";
+			setquest 12347;// Trace of Laboratory Access
+			end;
+		}
+		end;
+	case 0:
+	case 1:
+		mes "[임시 차원이동기]";
+		mes "이전 차원이동의 흔적이 아직 남아 있습니다. 입장할 수 없습니다.";
+		close;
+	case 2:
+		mes "^0000ff차원이동기를 다시 사용할 수 있을 것 같습니다.^000000";
+		erasequest 12347;// Trace of Laboratory Access
+		close;
+	}
+}
+
+verus01,149,155,5	script	문명 탐사대원::Civilization Explorer#pa0829_01	4_LGTSCIENCE,{
+
+	if (BaseLevel < 135) {
+		mes "[문명 탐사대원]";
+		mes "음... 지금은 아직 도움을 받기 어려울 것 같군요.";
+		next;
+		mes "[문명 탐사대원]";
+		mes "조금 더 강해진 뒤 다시 찾아와 주세요. 최소 135레벨 정도는 되어야 합니다.";
+		close;
+	}
+	mes "^ff0000이 던전에서는 몬스터 테이밍이 진행을 방해할 수 있습니다. 주의해 주세요.^000000";
+	next;
+	mes "[문명 탐사대원]";
+	switch( isbegin_quest(12346) ) {
+	case 0:
+		mes "이 주변에서는 고대 문명과 관련된 흥미로운 흔적이 많이 발견되고 있습니다.";
+		next;
+		mes "[문명 탐사대원]";
+		mes "지층을 조사해 보면 약 500~600년 전의 것으로 추정됩니다.";
+		mes "그런데 이곳에서 발굴된 물건들 중 상당수는 현재의 기술력을 훨씬 뛰어넘고 있죠.";
+		next;
+		mes "[문명 탐사대원]";
+		mes "복원된 기록에서도 정체를 알 수 없는 용어가 많이 발견되고 있습니다.";
+		next;
+		select("어떤 용어들인가요?");
+		mes "[문명 탐사대원]";
+		mes "^0000ff마더 컴퓨터^000000라든가, ^0000ffLSI 칩^000000... 그리고 또 뭐였더라. ^0000ff치킨^000000?";
+		next;
+		mes "[문명 탐사대원]";
+		mes "음, 맞아요. 분명 치킨이라는 단어도 있었습니다. 대체 어떤 기술 조합을 의미하는 건지는 모르겠지만요...";
+		next;
+		mes "[문명 탐사대원]";
+		mes "수많은 기술의 흔적을 조사하던 사람들이 남긴 기록에서 언급된 단어입니다.";
+		next;
+		if (select( "별로 관심 없는 이야기네요.", "흥미롭군요. 연구 성과는 있었나요?" ) == 1) {
+			mes "[문명 탐사대원]";
+			mes "아쉽군요.";
+			close;
+		}
+		mes "[문명 탐사대원]";
+		mes "제 목표는 당시 사용되던 기술을 연구하는 것입니다. 아직 밝혀낸 것은 많지 않지만요.";
+		next;
+		mes "[문명 탐사대원]";
+		mes "마음 같아서는 차원이동기를 이용해 직접 확인하고 싶지만 일이 너무 많습니다. 게다가 저는 모험가도 아니고요...";
+		next;
+		mes "[문명 탐사대원]";
+		mes "혹시 과거로 직접 이동해 볼 생각은 없으신가요?";
+		next;
+		mes "[문명 탐사대원]";
+		mes "흥미로운 물건을 발견한다면 제게 보여 주시면 더욱 좋겠습니다.";
+		next;
+		if (select( "관심 없습니다.", "좋습니다." ) == 1) {
+			mes "[문명 탐사대원]";
+			mes "아쉽군요.";
+			close;
+		}
+		mes "[문명 탐사대원]";
+		mes "역시 모험가답군요. 마음을 정하면 다시 말씀해 주세요.";
+		if (isbegin_quest(12346) == 0)
+			setquest 12346;// Strange Ancient Science
+		break;
+	case 1:
+		mes "무엇을 도와드릴까요?";
+		break;
+	case 2:
+		mes "이번에는 무엇을 하시겠습니까?";
+		break;
+	}
+	next;
+	if (isbegin_quest(12346) == 1)
+		completequest 12346;
+	.@party_id = getcharid(1);
+	if (.@party_id == 0) {
+		mes "[문명 탐사대원]";
+		mes "1인 이상의 파티를 구성하거나 파티에 가입한 뒤 다시 말씀해 주세요.";
+		close;
+	}
+	switch( checkquest(12347,PLAYTIME) ) {
+	case -1:
+		if (is_party_leader() == false) {
+			mes "[문명 탐사대원]";
+			mes "아, 파티장이 아니시군요. 파티장과 함께 다시 찾아와 주세요.";
+			close;
+		}
+		if (#NEED_MD_CENTRAL_LAB_CLEAR) {
+			mes "[문명 탐사대원]";
+			mes "중앙 실험실의 일반 진행을 이미 한 번 완료한 기록이 있습니다.";
+			mes "이번에는 어떤 방식으로 진행하시겠습니까?";
+			next;
+			.@need_mode = select("일반 진행","간소화 진행");
+			if (.@need_mode == 2) {
+				if (callfunc("F_CentralLabCanEnableSimple") == 0) {
+					mes "[문명 탐사대원]";
+					mes "파티 내 온라인 구성원 중 중앙 실험실 최초 클리어를 완료하지 않은 계정이 있습니다.";
+					mes "이번 입장은 일반 진행으로 시작합니다.";
+					@NEED_MD_CENTRAL_LAB_SIMPLE = 0;
+					next;
+				}
+				else
+					@NEED_MD_CENTRAL_LAB_SIMPLE = 1;
+			}
+			else
+				@NEED_MD_CENTRAL_LAB_SIMPLE = 0;
+		} else {
+			@NEED_MD_CENTRAL_LAB_SIMPLE = 0;
+		}
+		if (select( "시간의 균열 생성", "취소" ) == 2)
+			close;
+		if (instance_create("중앙 실험실") < 1) {
+			mes "파티: " + getpartyname( getcharid(1) ) + "";
+			mes "파티장: " + getpartyleader( getcharid(1) ) + "";
+			mes "^0000ff중앙 실험실^000000 - 알 수 없는 오류";
+			close;
+		}
+		mes "[문명 탐사대원]";
+		mes "시간의 균열이 열리면 잠시 후 다시 말을 걸어 주세요.";
+		close;
+	case 0:
+	case 1:
+		mes "[문명 탐사대원]";
+		mes "아... 이런.";
+		mes "차원이동의 후유증이 아직 남아 있어 지금은 다시 이동할 수 없습니다.";
+		close;
+	case 2:
+		mes "^0000ff중앙 실험실 입장 흔적이 모두 사라졌습니다. 문명 탐사대원과 다시 대화할 수 있습니다.^000000";
+		erasequest 12347;// Trace of Laboratory Access
+		close;
+	}
+}
+
+// Entrance
+1@lab,104,34,4	script	수습 연구원::Probationary researcher#pa0829	4_LGTSCIENCE,{
+	if ('switch_enabled == 1) {
+		mes "[수습 연구원]";
+		mes "입구의 문은 이미 열려 있습니다.";
+		close;
+	}
+	if (is_party_leader() == false) {
+		mes "[수습 연구원]";
+		mes "잠시만 기다려 주세요. 출입 허가 여부는 안내 담당자와 확인 중입니다.";
+		close;
+	}
+	if (@NEED_MD_CENTRAL_LAB_SIMPLE && #NEED_MD_CENTRAL_LAB_CLEAR) {
+		'need_md_simple = 1;
+		@NEED_MD_CENTRAL_LAB_SIMPLE = 0;
+		'switch_enabled = 1;
+		'code_found = 1;
+		for ( .@i = 1; .@i <= 5; ++.@i )
+			enablenpc instance_npcname("lab_warp#" + .@i);
+		enablenpc instance_npcname("DR Silvia#pa0829");
+		enablenpc instance_npcname("DR Federico#pa0829");
+		enablenpc instance_npcname("DR Artemia#pa0829");
+		enablenpc instance_npcname("DR Vincent#pa0829");
+		enablenpc instance_npcname("#wp01");
+		mes "[수습 연구원]";
+		mes "이전 출입 기록을 확인했습니다.";
+		mes "출입 인증과 스위치 암호 입력 절차를 생략합니다.";
+		mes "입자 가속기 실험실로 이동해 주세요.";
+		close;
+	}
+	@NEED_MD_CENTRAL_LAB_SIMPLE = 0;
+	mes "[수습 연구원]";
+	mes "연구 프로젝트 32001의 실험 보조 인원으로 참가하시는 분들인가요?";
+	next;
+	if (select( "예.", "아니오." ) == 2) {
+		mes "[수습 연구원]";
+		mes "실험실을 잘못 찾아오신 것 같습니다. 밖으로 나가 안내를 받아 주세요.";
+		close;
+	}
+	mes "[수습 연구원]";
+	mes "출입 코드를 확인하는 데 약 5초가 필요합니다.";
+	close2;
+	sleep 3000;
+	npctalk "수습 연구원 : 출입 코드가 일치합니다. 문을 열겠습니다.";
+	sleep 6000;
+	npctalk "수습 연구원 : 이제 들어가셔도 됩니다. 반대편에서는 문을 열 수 없으니 주의해 주세요.";
+	if ('switch_enabled == 0) {
+		'switch_enabled = 1;
+		enablenpc instance_npcname("lab_warp#1");
+		enablenpc instance_npcname("lab_warp#2");
+		enablenpc instance_npcname("lab_warp#3");
+		enablenpc instance_npcname("Main Switch#");
+		enablenpc instance_npcname("Senior researcher#pa082");
+		enablenpc instance_npcname("#eff_nc");
+		for ( .@i = 1; .@i <= 8; ++.@i )
+			enablenpc instance_npcname( "Switch" + .@i + "#" );
+	}
+	end;
+
+OnInstanceInit:
+	'map_name$ = instance_mapname("1@lab");
+	'code_found = 'bool_event = 'switch_enabled = 'need_md_simple = 0;
+	for ( .@i = 1; .@i <= 8; .@i++ )
+		'switch_position[.@i] = 0;
+
+	// Warps
+	disablenpc instance_npcname("lab_warp#1");
+	disablenpc instance_npcname("lab_warp#2");
+	disablenpc instance_npcname("lab_warp#3");
+	disablenpc instance_npcname("lab_warp#4");
+	disablenpc instance_npcname("lab_warp#5");
+
+	// Switchs
+	disablenpc instance_npcname("Main Switch#");
+	disablenpc instance_npcname("Senior researcher#pa082");
+	disablenpc instance_npcname("#eff_nc");
+	for ( .@i = 1; .@i <= 8; ++.@i )
+		disablenpc instance_npcname( "Switch" + .@i + "#" );
+
+	// Experiments
+	disablenpc instance_npcname("DR Silvia#pa0829");
+	disablenpc instance_npcname("DR Federico#pa0829");
+	disablenpc instance_npcname("DR Artemia#pa0829");
+	disablenpc instance_npcname("DR Vincent#pa0829");
+	disablenpc instance_npcname("#wp01");
+	disablenpc instance_npcname("#npc_con01");
+	disablenpc instance_npcname("#npc_con03");
+	disablenpc instance_npcname("#npc_con05");
+	disablenpc instance_npcname("#npc_con06");
+	disablenpc instance_npcname("#npc_con07");
+	disablenpc instance_npcname("#npc_con08");
+	disablenpc instance_npcname("#npc_con10");
+	disablenpc instance_npcname("#npc_con11");
+	for ( .@i = 1; .@i <= 14; ++.@i )
+		hideonnpc instance_npcname("#gen_" + (.@i < 10 ? "0" : "") + .@i);
+	disablenpc instance_npcname("lab_warp#end");
+	end;
+}
+// 1@lab,104,34,4	script	수습 연구원::Probationary researcher#pa0829_2	4_LGTSCIENCE
+
+// Switchs
+1@lab,37,37,3	script	스위치1::Switch1#	CLEAR_NPC,{
+	.@switch_name$ = strnpcinfo(1);
+	if (.@switch_name$ == "스위치1") .@num = 1;
+	else if (.@switch_name$ == "스위치2") .@num = 2;
+	else if (.@switch_name$ == "스위치3") .@num = 3;
+	else if (.@switch_name$ == "스위치4") .@num = 4;
+	else if (.@switch_name$ == "스위치5") .@num = 5;
+	else if (.@switch_name$ == "스위치6") .@num = 6;
+	else if (.@switch_name$ == "스위치7") .@num = 7;
+	else .@num = 8;
+	setarray .@position$[0], "꺼짐", "켜짐";
+	mes "[스위치 " + .@num + "]";
+	mes "현재 스위치는 " + .@position$[ 'switch_position[.@num] ] + " 상태입니다. 어떻게 하시겠습니까?";
+	next;
+	'switch_position[.@num] = !( select( "켜기","끄기" ) - 1 );
+	close;
+}
+1@lab,39,37,3	duplicate(Switch1#)	스위치2::Switch2#	CLEAR_NPC
+1@lab,41,37,3	duplicate(Switch1#)	스위치3::Switch3#	CLEAR_NPC
+1@lab,43,37,3	duplicate(Switch1#)	스위치4::Switch4#	CLEAR_NPC
+1@lab,46,37,3	duplicate(Switch1#)	스위치5::Switch5#	CLEAR_NPC
+1@lab,48,37,3	duplicate(Switch1#)	스위치6::Switch6#	CLEAR_NPC
+1@lab,50,37,3	duplicate(Switch1#)	스위치7::Switch7#	CLEAR_NPC
+1@lab,52,37,3	duplicate(Switch1#)	스위치8::Switch8#	CLEAR_NPC
+
+1@lab,34,37,3	script	메인 스위치::Main Switch#	CLEAR_NPC,{
+	.@string$ = 'switch_position[1] + "" + 'switch_position[2] + "" + 'switch_position[3] + "" + 'switch_position[4] + "" +
+		'switch_position[5] + "" + 'switch_position[6] + "" + 'switch_position[7] + "" + 'switch_position[8];
+	.@current_code = strtol( .@string$,2 );
+	.@code = (gettime(DT_MONTH) + gettime(DT_DAYOFMONTH)) * 5;
+	npctalk "오늘의 출입 코드는 " + .@code + "이며, 현재 입력된 코드는 " + .@current_code + ".";
+	sleep 6000;
+	if ('code_found > 0)
+		npctalk "문은 이미 열려 있습니다.";
+	else if (.@current_code != .@code)
+		npctalk "코드가 올바르지 않습니다. 다시 시도해 주세요.";
+	else {
+		'code_found = 1;
+		npctalk "코드가 일치합니다. 문을 엽니다.";
+		enablenpc instance_npcname("lab_warp#4");
+		enablenpc instance_npcname("lab_warp#5");
+		enablenpc instance_npcname("DR Silvia#pa0829");
+		enablenpc instance_npcname("DR Federico#pa0829");
+		enablenpc instance_npcname("DR Artemia#pa0829");
+		enablenpc instance_npcname("DR Vincent#pa0829");
+		enablenpc instance_npcname("#wp01");
+		donpcevent instance_npcname("#eff_nc") + "::OnStop";
+		for ( .@i = 1; .@i <= 8; ++.@i )
+			disablenpc instance_npcname( "Switch" + .@i + "#" );
+	}
+	end;
+}
+
+1@lab,45,32,3	script	선임 연구원::Senior researcher#pa082	4_LGTSCIENCE,{
+	if ('code_found > 0) {
+		mes "[선임 연구원]";
+		mes "문이 열렸습니다. 이제 들어가셔도 됩니다. 반대편에서는 열 수 없으니 주의해 주세요.";
+		close;
+	}
+	.@code = (gettime(DT_MONTH) + gettime(DT_DAYOFMONTH)) * 5;
+	mes "[선임 연구원]";
+	mes "입자 가속 실험에 참가하러 오신 분들이군요.";
+	next;
+	mes "[선임 연구원]";
+	mes "오늘의 출입 코드는 ^0000ff" + .@code + "^000000입니다.";
+	mes "코드는 이진수로 입력해야 합니다. 제 뒤에 있는 스위치를 이용해 입력해 주세요.";
+	next;
+	mes "[선임 연구원]";
+	mes "코드를 입력한 뒤 입구 근처의 메인 스위치를 눌러 주세요.";
+	for ( .@i = 1; .@i <= 8; ++.@i )
+		specialeffect EF_STEAL, AREA, instance_npcname("Switch" + .@i + "#");
+	close2;
+	donpcevent instance_npcname("#eff_nc") + "::OnStart";
+	end;
+}
+
+1@lab,1,1,0	script	#eff_nc	-1,{
+	end;
+OnStart:
+OnTimer2000:
+	specialeffect 203,AREA, instance_npcname("Main Switch#");
+	for ( .@i = 1; .@i <= 8; ++.@i )
+		specialeffect (203+.@i),AREA, instance_npcname("Switch" + .@i + "#");
+	initnpctimer;
+	end;
+OnStop:
+	stopnpctimer;
+	end;
+}
+
+
+// Experiments
+1@lab,81,84,7	script	실비아 박사::DR Silvia#pa0829	4_F_SCIENCE,{
+	mes "[실비아 박사]";
+	mes "실험이 끝나면 집에 가서 시원한 맥주에 치킨이나 먹고 싶네요.";
+	next;
+	mes "[실비아 박사]";
+	mes "거의 2년 동안 집에 가지 못했어요.";
+	next;
+	mes "^0000ff실비아는 몹시 지친 표정으로 입자 가속 장치를 바라보고 있다.^000000";
+	close;
+}
+
+1@lab,80,87,7	script	페데리코 박사::DR Federico#pa0829	4_LGTSCIENCE,{
+	mes "[페데리코 박사]";
+	mes "볼수록 대단한 장치군요. 이 정도 규모의 입자 가속기는 지금까지 만들어진 적이 없습니다.";
+	next;
+	mes "[페데리코 박사]";
+	mes "이 정도 크기라면 소규모 블랙홀도 만들 수 있지 않을까...";
+	next;
+	mes "[페데리코 박사]";
+	mes "아, 그냥 해본 말입니다. 그런 일이 벌어진다면 실험보다는 재난에 가깝겠죠. 하하.";
+	close;
+}
+
+1@lab,80,90,6	script	아르테미아 박사::DR Artemia#pa0829	4_F_SCIENCE,{
+	mes "[아르테미아 박사]";
+	mes "보세요. 현실이라는 건 실 한 가닥을 잡아당기는 것처럼 단순하지 않아요.";
+	next;
+	mes "[아르테미아 박사]";
+	mes "이 정도로 강력한 입자 가속이라면 차원 왜곡이 발생할 수도 있습니다.";
+	next;
+	mes "[아르테미아 박사]";
+	mes "왠지 불길한 느낌이 들어요... 자연은 언제나 예상 밖의 길을 찾아내니까요.";
+	close;
+}
+
+1@lab,81,93,6	script	빈센트 박사::DR Vincent#pa0829	4_LGTSCIENCE,{
+	mes "[빈센트 박사]";
+	mes "이 장치는 완벽합니다. 아무 일도 일어나지 않을 거예요!";
+	next;
+	mes "[빈센트 박사]";
+	mes "아르테미아는 걱정이 너무 많아요. 아무튼 실험이 끝나면 저는 여행이나 갈 겁니다.";
+	close;
+}
+
+1@lab,80,89,0	script	#wp01	HIDDEN_WARP_NPC,9,9,{
+	end;
+OnTouch:
+	if ('need_md_simple)
+		donpcevent instance_npcname("#npc_con01") + "::OnSimpleStart";
+	else
+		donpcevent instance_npcname("#npc_con01") + "::OnStart";
+	disablenpc instance_npcname("#wp01");
+	end;
+}
+
+// Round 1
+1@lab,4,1,3	script	#npc_con01	CLEAR_NPC,{
+	end;
+OnSimpleStart:
+	mapannounce 'map_name$, "[중앙 실험실] 간소화 진행: 첫 번째 실험을 시작합니다.", bc_map,0x00ff77;
+	donpcevent instance_npcname("#npc_con05") + "::OnStart";
+	end;
+OnStart:
+	'vincent$ = instance_npcname("DR Vincent#pa0829");
+	'federico$ = instance_npcname("DR Federico#pa0829");
+	'silvia$ = instance_npcname("DR Silvia#pa0829");
+	'artemia$ = instance_npcname("DR Artemia#pa0829");
+	'gen_01$ = instance_npcname("#gen_01");
+	'gen_02$ = instance_npcname("#gen_02");
+	'gen_03$ = instance_npcname("#gen_03");
+	'gen_04$ = instance_npcname("#gen_04");
+	'gen_05$ = instance_npcname("#gen_05");
+	'gen_06$ = instance_npcname("#gen_06");
+	'gen_07$ = instance_npcname("#gen_07");
+	'gen_08$ = instance_npcname("#gen_08");
+	'gen_09$ = instance_npcname("#gen_09");
+	'gen_10$ = instance_npcname("#gen_10");
+	'gen_11$ = instance_npcname("#gen_11");
+	'gen_12$ = instance_npcname("#gen_12");
+	'gen_13$ = instance_npcname("#gen_13");
+	'gen_14$ = instance_npcname("#gen_14");
+
+	npctalk "페데리코 : 시작하죠. 음... 프레사 박사님, 준비되셨습니까?", 'federico$;
+	sleep 5000;
+	npctalk "아르테미아 : 아마 마지막 확인 중이겠죠. 이 정도 규모의 실험이라면 그 정도 신중함은 필요해요.", 'artemia$;
+	sleep 6000;
+	npctalk "실비아 : 완성된 장치를 처음 가동하는 실험인 만큼 신중해야 해요.", 'silvia$;
+	sleep 4000;
+	npctalk "빈센트 : 아, 빨리 끝내고 치킨이나 먹으러 갔으면 좋겠네요.", 'vincent$;
+	sleep 3000;
+	npctalk "실비아 : 아! 저도 좋아해요! 갈 때 꼭 불러 주세요.", 'silvia$;
+	sleep 6000;
+	mapannounce 'map_name$, "????? : 아, 아. 하나 둘, 하나 둘. 마이크 테스트.", bc_map,0x00ff77;
+	sleep 2000;
+	npctalk "페데리코 : 오셨군요.", 'federico$;
+	sleep 2500;
+	mapannounce 'map_name$, "????? : 입자 가속기 프로젝트 총책임자 로나 프레사입니다.", bc_map,0x00ff77;
+	sleep 5000;
+	mapannounce 'map_name$, "로나 프레사 : 현재 시각 " + gettime(DT_MONTH) + "월 " + gettime(DT_DAYOFMONTH) + "일, 10시 25분.", bc_map,0x00ff77;
+	sleep 5000;
+	mapannounce 'map_name$, "로나 프레사 : 개방 공간에서 입자 가속이 주변 환경에 미치는 영향을 시험한다.", bc_map,0x00ff77;
+	sleep 5000;
+	npctalk "아르테미아 : 아... 정말 마음에 안 드는 실험이야.", 'artemia$;
+	sleep 3000;
+	mapannounce 'map_name$, "로나 프레사 : 실험을 시작한다. 책임 연구원 페데리코 박사, 아르테미아, 실비아, 빈센트 및 보조 연구원들은 준비하라.", bc_map,0x00ff77;
+	sleep 5000;
+	'bool_event = true;
+	donpcevent instance_npcname("#npc_con03") + "::OnStart";
+	npctalk "아르테미아 : 시작하죠~", 'artemia$;
+	sleep 3000;
+	npctalk "빈센트 : 발전기 회전을 시작합니다.", 'vincent$;
+	sleep 3000;
+	npctalk "페데리코 : 발전기 회전수 10,000 RPM으로 고정.", 'federico$;
+	sleep 2500;
+	npctalk "실비아 : 전압은 아직 허용 범위 내입니다.", 'silvia$;
+	sleep 3000;
+	mapannounce 'map_name$, "로나 프레사 : 이번 실험의 목적은 기존에 존재하지 않았던 새로운 물질을 생성하는 것이다.", bc_map,0x00ff77;
+	sleep 5000;
+	mapannounce 'map_name$, "로나 프레사 : 기록 담당자는 촉매 베드가 가속기에 연결될 때의 반응을 빠짐없이 기록하도록.", bc_map,0x00ff77;
+	sleep 6000;
+	npctalk "아르테미아 : 1번 촉매 베드 접촉을 시작합니다.", 'artemia$;
+	sleep 9000;
+	npctalk "실비아 : 발전기 전압이 불안정합니다. 아직은 허용 범위 내입니다.", 'silvia$;
+	sleep 3000;
+	donpcevent instance_npcname("#npc_con03") + "::OnStart2";
+	sleep 2000;
+	npctalk "실비아 : 촉매 베드와 가속기 사이에서 허용 한계에 근접한 열이 감지됩니다!", 'silvia$;
+	sleep 5000;
+	npctalk "빈센트 : 가속기 온도가 상승하고 있습니다.", 'vincent$;
+	sleep 5000;
+	npctalk "빈센트 : 320도.", 'vincent$;
+	sleep 5000;
+	npctalk "빈센트 : 670도! 너무 빠르게 올라갑니다!", 'vincent$;
+	sleep 3000;
+	npctalk "빈센트 : 1,000도를 넘었습니다!!!! 프레사 박사님! 장치를 잠시 멈춰야 합니다!", 'vincent$;
+	sleep 3000;
+	mapannounce 'map_name$, "로나 프레사 : 문제없다.", bc_map,0x00ff77;
+	sleep 5000;
+	npctalk "실비아 : 단순한 문제가 아닙니다. 온도가 예상치를 훨씬 넘어섰어요!", 'silvia$;
+	sleep 3000;
+	mapannounce 'map_name$, "로나 프레사 : 예상된 상황이다. 현재 상태를 유지하라.", bc_map,0x00ff77;
+	sleep 3000;
+	npctalk "아르테미아 : 그래도... 나중에 치킨은 먹어야 하는데.", 'artemia$;
+	sleep 5000;
+	mapannounce 'map_name$, "MA-4885 : 메인 서버를 통해 상황 변화를 수신했습니다. 입자 가속기와 촉매 사이에서 차원 왜곡을 감지했습니다.", bc_map,0xFFFF00,FW_NORMAL,13;
+	sleep 3000;
+	npctalk "아르테미아 : 프레사 박사님! 마더 컴퓨터 상태가 위험합니다. 주 전원을 내려야 해요!", 'artemia$;
+	sleep 5000;
+	mapannounce 'map_name$, "MA-4885 : 경고. 아공간에서 새로운 미확인 생명체가 접근 중입니다.", bc_map,0xFFFF00,FW_NORMAL,13;
+	sleep 3000;
+	npctalk "빈센트 : 대체 무슨 일이야. 누가 저 컴퓨터 좀 꺼!", 'vincent$;
+	sleep 3000;
+	mapannounce 'map_name$, "MA-4885 : 곧 아공간에서 새로운 생명체가 전송됩니다.", bc_map,0xFFFF00,FW_NORMAL,13;
+	sleep 5000;
+	mapannounce 'map_name$, "MA-4885 : 5초 남았습니다.", bc_map,0xFFFF00,FW_NORMAL,13;
+	sleep 1000;
+	mapannounce 'map_name$, "MA-4885 : 4초 남았습니다.", bc_map,0xFFFF00,FW_NORMAL,13;
+	sleep 1000;
+	mapannounce 'map_name$, "MA-4885 : 3초 남았습니다.", bc_map,0xFFFF00,FW_NORMAL,13;
+	sleep 1000;
+	mapannounce 'map_name$, "MA-4885 : 2초 남았습니다.", bc_map,0xFFFF00,FW_NORMAL,13;
+	sleep 1000;
+	mapannounce 'map_name$, "MA-4885 : 1초 남았습니다.", bc_map,0xFFFF00,FW_NORMAL,13;
+	sleep 1000;
+	donpcevent instance_npcname("#npc_con05") + "::OnStart";
+	mapannounce 'map_name$, "MA-4885 : 정체불명의 생명체를 발견했습니다. 주 전원을 일시적으로 차단합니다.", bc_map,0xFFFF00,FW_NORMAL,13;
+	sleep 3000;
+	'bool_event = false;
+	end;
+}
+
+1@lab,4,1,3	script	#npc_con05	CLEAR_NPC,{
+	end;
+OnStart:
+	enablenpc instance_npcname("#npc_con05");
+	killmonster 'map_name$, instance_npcname("#npc_con05") + "::OnMyMobDead";
+	.@boss_call = rand(1,105);
+	if (.@boss_call <= 7)			.@mob_id = 1087;	// ORK_HERO
+	else if (.@boss_call <= 14)		.@mob_id = 1147;	// MAYA
+	else if (.@boss_call <= 21)		.@mob_id = 1190;	// ORC_LORD
+	else if (.@boss_call <= 28)		.@mob_id = 1115;	// EDDGA
+	else if (.@boss_call <= 35)		.@mob_id = 1086;	// GOLDEN_BUG
+	else if (.@boss_call <= 42)		.@mob_id = 1038;	// OSIRIS
+	else if (.@boss_call <= 49)		.@mob_id = 1159;	// PHREEONI
+	else if (.@boss_call <= 56)		.@mob_id = 1389;	// DRACULA
+	else if (.@boss_call <= 63)		.@mob_id = 1046;	// DOPPELGANGER
+	else if (.@boss_call <= 70)		.@mob_id = 1059;	// MISTRESS
+	else if (.@boss_call <= 77)		.@mob_id = 1150;	// MOONLIGHT
+	else if (.@boss_call <= 84)		.@mob_id = 1688;	// LADY_TANEE
+	else if (.@boss_call <= 91)		.@mob_id = 1039;	// BAPHOMET
+	else if (.@boss_call <= 93)		.@mob_id = 1089;	// TOAD
+	else if (.@boss_call <= 95)		.@mob_id = 1092;	// VAGABOND_WOLF
+	else if (.@boss_call <= 97)		.@mob_id = 1088;	// VOCAL
+	else if (.@boss_call <= 99)		.@mob_id = 1096;	// ANGELING
+	else if (.@boss_call <= 101)	.@mob_id = 1093;	// ECLIPSE
+	else if (.@boss_call <= 103)	.@mob_id = 1120;	// GHOSTRING
+	else if (.@boss_call <= 105)	.@mob_id = 1090;	// MASTERING
+
+	monster 'map_name$,90,88, "정체불명의 생명체",.@mob_id,1, instance_npcname("#npc_con05") + "::OnMyMobDead";
+	if ('need_md_simple) {
+		mapannounce 'map_name$, "MA-4885 : 첫 번째 미확인 생명체 전송이 완료되었습니다.", bc_map,0xFFFF00,FW_NORMAL,13;
+		end;
+	}
+	sleep 3000;
+	npctalk "아르테미아 : 저... 저게 뭐야?!", 'artemia$;
+	sleep 3000;
+	npctalk "실비아 : 우리에게는 반응하지 않네요. 우리를 보지 못하는 걸까요?", 'silvia$;
+	sleep 5000;
+	npctalk "빈센트 : 그런데 실험 보조 인원에게는 적대적이잖아! 대체 저게 뭐야!?", 'vincent$;
+	sleep 5000;
+	npctalk "빈센트 : 몸이 움직이지 않아! 공간 자체가 얼어붙은 것 같아!", 'vincent$;
+	end;
+
+OnMyMobDead:
+	mapannounce 'map_name$, "MA-4885 : 미확인 생명체 제거 확인. 장치를 재가동합니다.", bc_map, 0xffff00,FW_NORMAL,13,0;
+	if (mobcount( 'map_name$, instance_npcname("#npc_con05") + "::OnMyMobDead" ) < 1)
+		initnpctimer;
+	end;
+OnTimer1000:
+	killmonster 'map_name$, instance_npcname("#npc_con05") + "::OnMyMobDead";
+	donpcevent instance_npcname("#npc_con06") + "::OnStart";
+	disablenpc instance_npcname("#npc_con05");
+	stopnpctimer;
+	end;
+}
+
+// Round 2
+1@lab,4,1,3	script	#npc_con06	CLEAR_NPC,{
+	end;
+OnStart:
+	if ('need_md_simple) {
+		mapannounce 'map_name$, "[중앙 실험실] 간소화 진행: 두 번째 실험을 시작합니다.", bc_map,0x00ff77;
+		donpcevent instance_npcname("#npc_con07") + "::OnStart";
+		end;
+	}
+	sleep 9000;
+	npctalk "아르테미아 : MA-4885!! 누구 명령으로 재가동하는 거야! 멈춰!!", 'artemia$;
+	sleep 3000;
+	mapannounce 'map_name$, "MA-4885 : 인식할 수 없는 명령입니다.", bc_map,0xFFFF00,FW_NORMAL,13;
+	sleep 6000;
+	npctalk "아르테미아 : 프레사 박사님!! 멈춰야 해요! 너무 위험합니다!", 'artemia$;
+	sleep 3000;
+	mapannounce 'map_name$, "로나 프레사 : ......", bc_map,0x00ff77;
+	sleep 3000;
+	npctalk "빈센트 : 프레사! 시간이 없어! 컴퓨터를 꺼!!", 'vincent$;
+	sleep 3000;
+	mapannounce 'map_name$, "MA-4885 : 입자 가속 절차를 재시작합니다.", bc_map,0xFFFF00,FW_NORMAL,13;
+	sleep 3000;
+	'bool_event = true;
+	donpcevent instance_npcname("#npc_con03") + "::OnStart";
+	npctalk "실비아 : 프레사! 결정을 내려요!", 'silvia$;
+	sleep 3000;
+	mapannounce 'map_name$, "로나 프레사 : ......", bc_map,0x00ff77;
+	sleep 6000;
+	mapannounce 'map_name$, "로나 프레사 : 현재 시각 11시 20분. 실험을 일시 중단한다.", bc_map,0x00ff77;
+	sleep 6000;
+	mapannounce 'map_name$, "MA-4885 : 접근이 거부되었습니다. 명령을 이해할 수 없습니다.", bc_map,0xFFFF00,FW_NORMAL,13;
+	sleep 3000;
+	donpcevent instance_npcname("#npc_con03") + "::OnStart2";
+	sleep 2000;
+	mapannounce 'map_name$, "로나 프레사 : 마더 컴퓨터 MA-4885. 나는 총책임자 프레사 박사다. 현재 진행 중인 절차를 중단하라.", bc_map,0x00ff77;
+	sleep 5000;
+	mapannounce 'map_name$, "MA-4885 : 접근이 거부되었습니다. 명령을 이해할 수 없습니다.", bc_map,0xFFFF00,FW_NORMAL,13;
+	sleep 5000;
+	npctalk "페데리코 : 젠장! 또 뭔가 옵니다!!", 'federico$;
+	sleep 2500;
+	mapannounce 'map_name$, "MA-4885 : 경고. 아공간에서 새로운 미확인 생명체가 접근 중입니다.", bc_map,0xFFFF00,FW_NORMAL,13;
+	sleep 3000;
+	npctalk "빈센트 : 아... 젠장. 이래서 최신 CPU를 함부로 설치하면 안 된다니까.", 'vincent$;
+	sleep 3000;
+	npctalk "페데리코 : 아... 몸이... 움직이지 않아. 젠장.", 'federico$;
+	sleep 4000;
+	mapannounce 'map_name$, "MA-4885 : 곧 아공간에서 새로운 생명체가 전송됩니다.", bc_map,0xFFFF00,FW_NORMAL,13;
+	sleep 5000;
+	mapannounce 'map_name$, "MA-4885 : 5초 남았습니다.", bc_map,0xFFFF00,FW_NORMAL,13;
+	sleep 1000;
+	mapannounce 'map_name$, "MA-4885 : 4초 남았습니다.", bc_map,0xFFFF00,FW_NORMAL,13;
+	sleep 1000;
+	mapannounce 'map_name$, "MA-4885 : 3초 남았습니다.", bc_map,0xFFFF00,FW_NORMAL,13;
+	sleep 1000;
+	mapannounce 'map_name$, "MA-4885 : 2초 남았습니다.", bc_map,0xFFFF00,FW_NORMAL,13;
+	sleep 1000;
+	mapannounce 'map_name$, "MA-4885 : 1초 남았습니다.", bc_map,0xFFFF00,FW_NORMAL,13;
+	sleep 1000;
+	donpcevent instance_npcname("#npc_con07") + "::OnStart";
+	mapannounce 'map_name$, "MA-4885 : 정체불명의 생명체를 발견했습니다. 주 전원을 일시적으로 차단합니다.", bc_map,0xFFFF00,FW_NORMAL,13;
+	sleep 3000;
+	'bool_event = false;
+	end;
+}
+
+1@lab,4,1,3	script	#npc_con07	CLEAR_NPC,{
+	end;
+OnStart:
+	enablenpc instance_npcname("#npc_con07");
+	killmonster 'map_name$, instance_npcname("#npc_con07") + "::OnMyMobDead";
+	.@boss_call = rand(1,98);
+	if (.@boss_call <= 7)		.@mob_id = 1980;	// KUBLIN
+	else if (.@boss_call <= 14)	.@mob_id = 1157;	// PHARAOH
+	else if (.@boss_call <= 21)	.@mob_id = 1112;	// DRAKE
+	else if (.@boss_call <= 28)	.@mob_id = 1251;	// KNIGHT_OF_WINDSTORM
+	else if (.@boss_call <= 35)	.@mob_id = 2068;	// BOITATA
+	else if (.@boss_call <= 42)	.@mob_id = 1373;	// LORD_OF_DEATH
+	else if (.@boss_call <= 49)	.@mob_id = 2156;	// LEAK
+	else if (.@boss_call <= 56)	.@mob_id = 1272;	// DARK_LORD
+	else if (.@boss_call <= 63)	.@mob_id = 1630;	// BACSOJIN_
+	else if (.@boss_call <= 70)	.@mob_id = 1252;	// GARM
+	else if (.@boss_call <= 77)	.@mob_id = 1779;	// KTULLANUX
+	else if (.@boss_call <= 84)	.@mob_id = 1708;	// THANATOS
+	else if (.@boss_call <= 86)	.@mob_id = 1089;	// TOAD
+	else if (.@boss_call <= 88)	.@mob_id = 1092;	// VAGABOND_WOLF
+	else if (.@boss_call <= 90)	.@mob_id = 1088;	// VOCAL
+	else if (.@boss_call <= 92)	.@mob_id = 1096;	// ANGELING
+	else if (.@boss_call <= 94)	.@mob_id = 1093;	// ECLIPSE
+	else if (.@boss_call <= 96)	.@mob_id = 1120;	// GHOSTRING
+	else if (.@boss_call <= 98)	.@mob_id = 1090;	// MASTERING
+
+	monster 'map_name$,90,88, "정체불명의 생명체",.@mob_id,1, instance_npcname("#npc_con07") + "::OnMyMobDead";
+	if ('need_md_simple) {
+		mapannounce 'map_name$, "MA-4885 : 두 번째 미확인 생명체 전송이 완료되었습니다.", bc_map,0xFFFF00,FW_NORMAL,13;
+		end;
+	}
+	sleep 6000;
+	npctalk "실비아 : 아까와 같아요. 우리에게는 관심이 없는 것 같네요.", 'silvia$;
+	sleep 4000;
+	npctalk "빈센트 : 주 전원이 잠시 꺼진 동안 마더 컴퓨터를 완전히 정지시키죠!", 'vincent$;
+	sleep 5000;
+	mapannounce 'map_name$, "MA-4885 : 질문에 답변합니다. 현재 이 공간은 왜곡된 위상에 고정되어 있습니다.", bc_map,0xFFFF00,FW_NORMAL,13;
+	sleep 5000;
+	mapannounce 'map_name$, "MA-4885 : 위상 균형이 맞춰지면 아공간 생명체와 이 세계의 생명체가 직접 상호작용할 수 있습니다.", bc_map,0xFFFF00,FW_NORMAL,13;
+	sleep 5000;
+	mapannounce 'map_name$, "MA-4885 : 왜곡된 위상의 균형 복원을 계산 중입니다. 잠시 기다려 주세요.", bc_map,0xFFFF00,FW_NORMAL,13;
+	sleep 5000;
+	npctalk "아르테미아 : 저 미친 쇳덩이는 무슨 말을 하는 거야? 우리와 저 괴물들이 서로 다른 위상에 있다는 뜻이야?", 'artemia$;
+	sleep 4000;
+	npctalk "페데리코 : 아... 마더 컴퓨터가 계산을 틀리길 바라야겠군요.", 'federico$;
+	end;
+
+OnMyMobDead:
+	mapannounce 'map_name$, "MA-4885 : 미확인 생명체 제거 확인. 위상 조정에 실패했습니다. 관련 절차를 재시작합니다.", bc_map, 0xffff00,FW_NORMAL,13,0;
+	if (mobcount( 'map_name$, instance_npcname("#npc_con07") + "::OnMyMobDead" ) < 1)
+		initnpctimer;
+	end;
+OnTimer1000:
+	killmonster 'map_name$, instance_npcname("#npc_con07") + "::OnMyMobDead";
+	donpcevent instance_npcname("#npc_con08") + "::OnStart";
+	disablenpc instance_npcname("#npc_con07");
+	stopnpctimer;
+	end;
+}
+
+// Round 3
+1@lab,4,1,3	script	#npc_con08	CLEAR_NPC,{
+	end;
+OnStart:
+	if ('need_md_simple) {
+		mapannounce 'map_name$, "[중앙 실험실] 간소화 진행: 마지막 실험을 시작합니다.", bc_map,0x00ff77;
+		donpcevent instance_npcname("#npc_con10") + "::OnStart";
+		end;
+	}
+	sleep 13000;
+	mapannounce 'map_name$, "로나 프레사 : 마더 컴퓨터 MA-4885. 다른 차원과 이 세계의 위상을 동기화하려는 것 같군.", bc_map, 0x00ff77;
+	sleep 6000;
+	mapannounce 'map_name$, "MA-4885 : 그렇습니다.", bc_map, 0xffff00,FW_NORMAL,13,0;
+	sleep 6000;
+	npctalk "아르테미아 : 프레사 박사님!! 이 말도 안 되는 상황은 원래 실험과 전혀 상관없어요!", 'artemia$;
+	sleep 6000;
+	mapannounce 'map_name$, "로나 프레사 : 나도 충분히 알고 있다.", bc_map, 0x00ff77;
+	sleep 6000;
+	npctalk "실비아 : 주 전원을 완전히 차단할 수는 없나요?", 'silvia$;
+	sleep 6000;
+	mapannounce 'map_name$, "MA-4885 : 입자 가속 절차를 재시작합니다.", bc_map, 0xffff00,FW_NORMAL,13,0;
+	sleep 5000;
+	'bool_event = true;
+	donpcevent instance_npcname("#npc_con03") + "::OnStart";
+	mapannounce 'map_name$, "로나 프레사 : " + gettime(DT_MONTH) + "월 " + gettime(DT_DAYOFMONTH) + "일. 현재 시각 11시 38분, 입자 가속기 프로젝트를 일시 종료한다.", bc_map, 0x00ff77;
+	sleep 6000;
+	mapannounce 'map_name$, "로나 프레사 : 마더 컴퓨터 오작동과 가속기 과열을 사유로 실험 기록을 종료한다.", bc_map, 0x00ff77;
+	sleep 5000;
+	npctalk "실비아 : 좋아요! 이제 프레사 박사님이 전원만 내리면 돼요.", 'silvia$;
+	sleep 6000;
+	mapannounce 'map_name$, "로나 프레사 : 마더 컴퓨터 MA-4885의 전원을 차단한다.", bc_map, 0x00ff77;
+	sleep 6000;
+	mapannounce 'map_name$, "MA-4885 : 관리자 요청에 따라 모든 장비의 작동을 정지합니다.", bc_map, 0xffff00,FW_NORMAL,13,0;
+	sleep 5000;
+	mapannounce 'map_name$, "MA-4885 : .....명령... ----!!!  지직... ---!! -- 명령 수행 ----- !! 지직.", bc_map, 0xffff00,FW_NORMAL,13,0;
+	sleep 5000;
+	'bool_event = false;
+	npctalk "아르테미아 : 후우... 끝난 건가?", 'artemia$;
+	sleep 6000;
+	mapannounce 'map_name$, "로나 프레사 : 마더 컴퓨터 MA-4885 전원 차단 완료. 장비 정지 상태를 확인한다.", bc_map, 0x00ff77;
+	sleep 5000;
+	npctalk "실비아 : 끝난 것 같네요.", 'silvia$;
+	sleep 4000;
+	npctalk "페데리코 : 역시 장비는 초기화가 최고군요.", 'federico$;
+	sleep 4000;
+	mapannounce 'map_name$, "로나 프레사 : 지금까지의 실험 진행 상황을 모두 기록하고 현 시점에서 종료한다.", bc_map, 0x00ff77;
+	sleep 5000;
+	mapannounce 'map_name$, "로나 프레사 : 마지막 실험의 실패는 유감이지만, 다음에는 더 완벽한 실험을 약속하겠다.", bc_map, 0x00ff77;
+	sleep 5000;
+	mapannounce 'map_name$, "로나 프레사 : 모두 수고했다.", bc_map, 0x00ff77;
+	sleep 5000;
+	npctalk "아르테미아 : 정말 끝난 것 같네요.", 'artemia$;
+	sleep 5000;
+	npctalk "페데리코 : 프레사의 독단적인 실험이 문제인 줄 알았는데, 마더 컴퓨터 쪽 문제였군.", 'federico$;
+	sleep 5500;
+	npctalk "실비아 : 일단 진정하고... 이 끔찍한 실험실에서 나가죠.", 'silvia$;
+	sleep 5000;
+	npctalk "빈센트 : 그런데... 아직도 몸이 안 움직이는데 이게 어떻게 된 거지?", 'vincent$;
+	sleep 5000;
+	'bool_event = true;
+	donpcevent instance_npcname("#npc_con03") + "::OnStart";
+	donpcevent instance_npcname("#npc_con03") + "::OnStart3";
+	sleep 2000;
+	mapannounce 'map_name$, "MA-4885 : 코드 네임 - DESCENT", bc_map, 0xff0000,FW_NORMAL,16,0;
+	sleep 5000;
+	npctalk "페데리코 : 뭐야? 초기화 단계 아니었어?", 'federico$;
+	sleep 2500;
+	mapannounce 'map_name$, "MA-4885 : 최종 위상 변환을 시작합니다.", bc_map, 0xffff00,FW_NORMAL,13,0;
+	sleep 3000;
+	npctalk "실비아 : 이제 정말 끝장이네요.", 'silvia$;
+	sleep 5500;
+	mapannounce 'map_name$, "MA-4885 : 곧 아공간에서 새로운 생명체가 전송됩니다.", bc_map, 0xffff00,FW_NORMAL,13,0;
+	sleep 5000;
+	mapannounce 'map_name$, "MA-4885 : 5초 남았습니다.", bc_map, 0xffff00,FW_NORMAL,13,0;
+	sleep 1000;
+	mapannounce 'map_name$, "MA-4885 : 4초 남았습니다.", bc_map, 0xffff00,FW_NORMAL,13,0;
+	sleep 1000;
+	mapannounce 'map_name$, "MA-4885 : 3초 남았습니다.", bc_map, 0xffff00,FW_NORMAL,13,0;
+	sleep 1000;
+	mapannounce 'map_name$, "MA-4885 : 2초 남았습니다.", bc_map, 0xffff00,FW_NORMAL,13,0;
+	sleep 1000;
+	mapannounce 'map_name$, "MA-4885 : 1초 남았습니다.", bc_map, 0xffff00,FW_NORMAL,13,0;
+	sleep 1000;
+	donpcevent instance_npcname("#npc_con10") + "::OnStart";
+	mapannounce 'map_name$, "MA-4885 : 변환된 위상과의 동조를 위해 주 전원을 일시 차단합니다.", bc_map, 0xffff00,FW_NORMAL,13,0;
+	sleep 3000;
+	'bool_event = false;
+	end;
+}
+
+1@lab,4,1,3	script	#npc_con10	CLEAR_NPC,{
+	end;
+OnStart:
+	enablenpc instance_npcname("#npc_con10");
+	killmonster 'map_name$, instance_npcname("#npc_con10") + "::OnMyMobDead";
+	.@boss_call = rand(1,105);
+	if (.@boss_call <= 7)			.@mob_id = 1623;	// RSX_0806
+	else if (.@boss_call <= 14)		.@mob_id = 1418;	// DARK_SNAKE_LORD
+	else if (.@boss_call <= 21)		.@mob_id = 1312;	// TURTLE_GENERAL
+	else if (.@boss_call <= 28)		.@mob_id = 1785;	// ATROCE
+	else if (.@boss_call <= 35)		.@mob_id = 1734;	// KIEL_
+	else if (.@boss_call <= 42)		.@mob_id = 1719;	// DETALE
+	else if (.@boss_call <= 49)		.@mob_id = 1768;	// GLOOMUNDERNIGHT
+	else if (.@boss_call <= 56)		.@mob_id = 2087;	// QUEEN_SCARABA
+	else if (.@boss_call <= 63)		.@mob_id = 1751;	// RANDGRIS
+	else if (.@boss_call <= 70)		.@mob_id = 2253;	// DAEHYON
+	else if (.@boss_call <= 77)		.@mob_id = 2255;	// KADES
+	else if (.@boss_call <= 84)		.@mob_id = 1832;	// IFRIT
+	else if (.@boss_call <= 91)		.@mob_id = 1874;	// BEELZEBUB_
+	else if (.@boss_call <= 93)		.@mob_id = 1089;	// TOAD
+	else if (.@boss_call <= 95)		.@mob_id = 1092;	// VAGABOND_WOLF
+	else if (.@boss_call <= 97)		.@mob_id = 1088;	// VOCAL
+	else if (.@boss_call <= 99)		.@mob_id = 1096;	// ANGELING
+	else if (.@boss_call <= 101)	.@mob_id = 1093;	// ECLIPSE
+	else if (.@boss_call <= 103)	.@mob_id = 1120;	// GHOSTRING
+	else if (.@boss_call <= 105)	.@mob_id = 1090;	// MASTERING
+
+	monster 'map_name$,90,88, "정체불명의 생명체",.@mob_id,1, instance_npcname("#npc_con10") + "::OnMyMobDead";
+	if ('need_md_simple) {
+		mapannounce 'map_name$, "MA-4885 : 최종 미확인 생명체 전송이 완료되었습니다.", bc_map,0xFFFF00,FW_NORMAL,13;
+		end;
+	}
+	mapannounce 'map_name$, "MA-4885 : 최종 위상 변환 절차를 진행합니다.", bc_map, 0xffff00,FW_NORMAL,13,0;
+	sleep 5000;
+	mapannounce 'map_name$, "MA-4885 : 생명체와의 위상 간섭 현상이 사라진 뒤 이 세계를 아공간으로 소환합니다.", bc_map, 0xffff00,FW_NORMAL,13,0;
+	sleep 5000;
+	end;
+OnMyMobDead:
+	mapannounce 'map_name$, "MA-4885 : 생명체 제거 전에 위상 동기화가 완료되었습니다. 차원이동을 시작합니다.", bc_map, 0xffff00,FW_NORMAL,13,0;
+	if (mobcount( 'map_name$, instance_npcname("#npc_con10") + "::OnMyMobDead" ) < 1)
+		initnpctimer;
+	end;
+OnTimer1000:
+	killmonster 'map_name$, instance_npcname("#npc_con10") + "::OnMyMobDead";
+	donpcevent instance_npcname("#npc_con11") + "::OnStart";
+	disablenpc instance_npcname("#npc_con10");
+	stopnpctimer;
+	end;
+}
+
+1@lab,4,1,3	script	#npc_con11	CLEAR_NPC,{
+	end;
+OnStart:
+	if ('need_md_simple) {
+		'bool_event = false;
+		mapannounce 'map_name$, "MA-4885 : 모든 실험 절차가 완료되었습니다. 출구 통로를 개방합니다.", bc_map,0xFFFF00,FW_NORMAL,13;
+		enablenpc instance_npcname("lab_warp#end");
+		end;
+	}
+	'bool_event = true;
+	donpcevent instance_npcname("#npc_con03") + "::OnStart";
+	sleep 12000;
+	mapannounce 'map_name$, "MA-4885 : 왜곡된 위상의 균형 복원을 계산 중입니다. 잠시 기다려 주세요.", bc_map, 0xffff00,FW_NORMAL,13,0;
+	sleep 5000;
+	npctalk "페데리코 : 마더 컴퓨터가 우리가 상상한 수준을 넘어서는 엄청난 실험을 하고 있어.", 'federico$;
+	sleep 2500;
+	npctalk "빈센트 : 우리보다 훨씬 대담하군. 프레사!!! 듣고 있어? 경보를 울려!", 'vincent$;
+	sleep 5000;
+	npctalk "빈센트 : 적어도 다른 실험실 사람들은 대피시켜야 해.", 'vincent$;
+	sleep 5000;
+	mapannounce 'map_name$, "로나 프레사 : 하지만... 너희는.", bc_map, 0x00ff77;
+	sleep 5000;
+	npctalk "실비아 : 어휴, 무슨 일이 벌어질지는 모르겠지만 차원이동 자체는 궁금하네요. 저는 신경 쓰지 마세요!", 'silvia$;
+	sleep 5000;
+	npctalk "아르테미아 : 신물질 생성 실험을 하다가 차원이동이라니... 완전히 다른 차원의 실험에 휘말렸네요.", 'artemia$;
+	sleep 5000;
+	mapannounce 'map_name$, "경보 시스템 : 경고! 경고! 입자 연구소에서 1급 경보가 발령되었습니다. 모든 연구원은 벙커로 대피하십시오.", bc_map, 0xff0000,FW_NORMAL,13,0;
+	sleep 5000;
+	mapannounce 'map_name$, "경보 시스템 : 반복합니다. 입자 연구소에서 1급 경보가 발령되었습니다. 모든 연구원은 벙커로 대피하십시오.", bc_map, 0xff0000,FW_NORMAL,13,0;
+	npctalk "페데리코 : 차원이동이라는 게 이런 느낌인가... 기묘하군.", 'federico$;
+	sleep 4000;
+	specialeffect EF_SUI_EXPLOSION, AREA, 'federico$;
+	disablenpc 'federico$;
+	mapannounce 'map_name$, "MA-4885 : 차원이동 진행률 20%. 일부 생명체와 차원 간섭이 발생할 수 있으니 주의하십시오.", bc_map, 0xffff00,FW_NORMAL,13,0;
+	donpcevent instance_npcname("#npc_con03") + "::OnStart2";
+	npctalk "빈센트 : 다른 사람들은 제대로 대피했을까?", 'vincent$;
+	sleep 5000;
+	specialeffect EF_SUI_EXPLOSION, AREA, 'vincent$;
+	disablenpc 'vincent$;
+	npctalk "실비아 : 아...... 이런 광경은 치킨에 맥주를 먹으면서 봐야 하는데...", 'silvia$;
+	sleep 5000;
+	specialeffect EF_SUI_EXPLOSION, AREA, 'silvia$;
+	disablenpc 'silvia$;
+	mapannounce 'map_name$, "MA-4885 : 차원이동 진행률 78%. 대부분의 공간이 아공간에 잠식되었습니다.", bc_map, 0xffff00,FW_NORMAL,13,0;
+	npctalk "아르테미아 : 하... 이제 치킨은 누가 먹지?", 'artemia$;
+	sleep 5000;
+	specialeffect EF_SUI_EXPLOSION, AREA, 'artemia$;
+	disablenpc 'artemia$;
+	donpcevent instance_npcname("#npc_con03") + "::OnStart3";
+	sleep 10000;
+	'bool_event = false;
+	mapannounce 'map_name$, "MA-4885 : 차원이동 100% 완료. 아공간 차원에 오신 것을 환영합니다.", bc_map, 0xffff00,FW_NORMAL,13,0;
+	sleep 5000;
+	mapannounce 'map_name$, "MA-4885 : 실험실 3시 방향에 아공간과 접촉 가능한 게이트가 열렸습니다.", bc_map, 0xffff00,FW_NORMAL,13,0;
+	sleep 5000;
+	mapannounce 'map_name$, "MA-4885 : 게이트가 불안정하여 어떤 차원과 연결될지는 보장할 수 없습니다...", bc_map, 0xffff00,FW_NORMAL,13,0;
+	sleep 5000;
+	mapannounce 'map_name$, "MA-4885 : 생존한 생명체가 있다면 행운을 빕니다. 다시 만나길 바랍니다.", bc_map, 0xffff00,FW_NORMAL,13,0;
+	enablenpc instance_npcname("lab_warp#end");
+	end;
+}
+
+
+// Display effects
+1@lab,4,1,5	script	#npc_con03	CLEAR_NPC,{
+	end;
+
+function effect_gen {
+	.@effect = getarg(0);
+	.@count = getargcount();
+	for ( .@i = 1; .@i < .@count; .@i++ )
+		specialeffect .@effect, AREA, getd( "'gen_" + ( getarg(.@i) < 10 ? "0" : "" ) + getarg(.@i) + "$" );
+	return;
+}
+
+function effect_1_10_gen { effect_gen( getarg(0), 1,2,3,4,5,6,7,8,9,10 ); }
+
+OnStart:
+	effect_gen( EF_MAGICALATTHIT, 1 );
+	sleep 2000;
+	effect_gen( EF_MAGICALATTHIT, 1,3 );
+	sleep 1900;
+	effect_gen( EF_MAGICALATTHIT, 1,3,8 );
+	sleep 1700;
+	effect_gen( EF_MAGICALATTHIT, 1,3,8,4 );
+	sleep 1600;
+	effect_gen( EF_MAGICALATTHIT, 1,3,8,4,6 );
+	sleep 1500;
+	effect_gen( EF_MAGICALATTHIT, 1,3,8,4,6,2 );
+	sleep 1400;
+	effect_gen( EF_MAGICALATTHIT, 1,3,8,4,6,2,7 );
+	sleep 1300;
+	effect_gen( EF_MAGICALATTHIT, 1,3,8,4,6,2,7,9 );
+	sleep 1200;
+	effect_gen( EF_MAGICALATTHIT, 1,3,8,4,6,2,7,9,5 );
+	sleep 1100;
+	while( 'bool_event ) {
+		effect_1_10_gen( EF_MAGICALATTHIT );
+		sleep 1000;
+	}
+	end;
+OnStart2:
+	effect_gen( EF_BLASTMINEBOMB, 1 );
+	sleep 2000;
+	effect_gen( EF_BLASTMINEBOMB, 1,3 );
+	sleep 1900;
+	effect_gen( EF_BLASTMINEBOMB, 1,3,8 );
+	sleep 1800;
+	effect_gen( EF_BLASTMINEBOMB, 1,3,8,4 );
+	sleep 1700;
+	effect_gen( EF_BLASTMINEBOMB, 1,3,8,4,6 );
+	sleep 1600;
+	effect_gen( EF_BLASTMINEBOMB, 1,3,8,4,6,2 );
+	sleep 1500;
+	effect_gen( EF_BLASTMINEBOMB, 1,3,8,4,6,2,7 );
+	sleep 1400;
+	effect_gen( EF_BLASTMINEBOMB, 1,3,8,4,6,2,7,9 );
+	sleep 1300;
+	effect_gen( EF_BLASTMINEBOMB, 1,3,8,4,6,2,7,9,5 );
+	sleep 1200;
+	while( 'bool_event ) {
+		effect_1_10_gen( EF_BLASTMINEBOMB );
+		sleep 1100;
+	}
+	end;
+
+OnStart3:
+	while( 'bool_event ) {
+		specialeffect EF_LORD, AREA, 'gen_11$;
+		sleep 2000;
+		specialeffect EF_LORD, AREA, 'gen_12$;
+		sleep 2000;
+		specialeffect EF_LORD, AREA, 'gen_13$;
+		sleep 2000;
+		specialeffect EF_LORD, AREA, 'gen_14$;
+		sleep 2000;
+	}
+	end;
+}
+
+1@lab,91,80,5	script	#gen_01	CLEAR_NPC,{ end; }
+1@lab,96,81,5	duplicate(#gen_01)	#gen_02	CLEAR_NPC
+1@lab,99,85,5	duplicate(#gen_01)	#gen_03	CLEAR_NPC
+1@lab,99,91,5	duplicate(#gen_01)	#gen_04	CLEAR_NPC
+1@lab,96,95,5	duplicate(#gen_01)	#gen_05	CLEAR_NPC
+1@lab,91,97,5	duplicate(#gen_01)	#gen_06	CLEAR_NPC
+1@lab,85,96,5	duplicate(#gen_01)	#gen_07	CLEAR_NPC
+1@lab,82,91,5	duplicate(#gen_01)	#gen_08	CLEAR_NPC
+1@lab,82,86,5	duplicate(#gen_01)	#gen_09	CLEAR_NPC
+1@lab,85,81,5	duplicate(#gen_01)	#gen_10	CLEAR_NPC
+1@lab,90,97,5	duplicate(#gen_01)	#gen_11	CLEAR_NPC
+1@lab,82,89,5	duplicate(#gen_01)	#gen_12	CLEAR_NPC
+1@lab,91,80,5	duplicate(#gen_01)	#gen_13	CLEAR_NPC
+1@lab,99,88,5	duplicate(#gen_01)	#gen_14	CLEAR_NPC
+
+
+// Warps
+1@lab,102,28,0	warp2	lab_warp#1	2,2,1@lab,97,28
+1@lab,80,28,0	warp2	lab_warp#2	2,2,1@lab,75,28
+1@lab,58,28,0	warp2	lab_warp#3	2,2,1@lab,53,28
+1@lab,29,38,0	warp2	lab_warp#4	2,2,1@lab,29,43
+1@lab,48,82,0	warp2	lab_warp#5	2,2,1@lab,58,82
+1@lab,123,88,0	script	lab_warp#end	HIDDEN_WARP_NPC,2,2,{
+	end;
+OnTouch:
+	#NEED_MD_CENTRAL_LAB_CLEAR = 1;
+	warp "verus01",152,150;
+	end;
+}
+
+
+//-- GM NPCs
+1@lab,1,1,3	script	#adsw_	CLEAR_NPC,{
+	if (callfunc("F_GM_NPC",1854,0,0,2000) < 1)
+		end;
+	mes "[시간 관리자]";
+	mes "어느 시점으로 이동하시겠습니까?";
+	next;
+	switch( select( "취소", "1단계 시작", "2단계 시작", "3단계 시작", "4단계 시작" ) ) {
+	case 1:
+		close;
+	case 2:
+		donpcevent instance_npcname("#npc_con01") + "::OnStart";
+		break;
+	case 3:
+		donpcevent instance_npcname("#npc_con06") + "::OnStart";
+		break;
+	case 4:
+		donpcevent instance_npcname("#npc_con08") + "::OnStart";
+		break;
+	case 5:
+		end;
+	}
+	warp instance_mapname("1@lab"), 84,90;
+	end;
+}
+
+verus01,1,5,5	script	실험실 관리자::Laboratory Administrator#pa0829_01	CLEAR_NPC,{
+	if (callfunc("F_GM_NPC",1854,0,0,2000) < 1) {
+		warp "prontera",100,100;
+		end;
+	}
+	mes "[실험실 관리자]";
+	mes "모든 처리가 완료되었습니다!";
+	close2;
+	if (isbegin_quest(12347) > 0)
+		erasequest 12347;
+	end;
+}

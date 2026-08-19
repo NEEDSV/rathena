@@ -1,0 +1,908 @@
+//===== rAthena Script =======================================
+//= The Last Room
+//===== Description: =========================================
+//= [Official Conversion]
+//= The Last Room Instance
+//===== Changelogs: ==========================================
+//= 1.0 First version. [Capuche]
+//= 1.1 Updated to match official script. [Capuche]
+//============================================================
+
+// NEED Memorial Dungeon
+// - 최초 1회 일반 진행 후 계정 단위 클리어 기록 저장
+// - 재도전 시 일반 진행 / 간소화 진행 선택 가능
+// - 간소화 진행은 진행 대화와 대기 연출만 생략하며 1차 프로토콜, 2구역, T_W_O 전투는 유지
+// - instance_db Name: 마지막 방
+
+// 파티 내 온라인 구성원 모두가 최초 클리어를 완료했는지 확인합니다.
+function	script	F_LastRoomCanEnableSimple	{
+	.@caller_aid = getcharid(3);
+	.@party_id = getcharid(1);
+	if (.@party_id < 1)
+		return 0;
+
+	getpartymember .@party_id,1;
+	.@member_count = $@partymembercount;
+	copyarray .@member_aid[0],$@partymemberaid[0],.@member_count;
+	.@allowed = 1;
+
+	for (.@i = 0; .@i < .@member_count; .@i++) {
+		if (attachrid(.@member_aid[.@i]) == 0)
+			continue;
+
+		if (#NEED_MD_LAST_ROOM_CLEAR == 0) {
+			.@allowed = 0;
+			break;
+		}
+	}
+
+	attachrid(.@caller_aid);
+	return .@allowed;
+}
+
+un_myst,163,38,5	script	마크::Mark	4_M_BLUEMAN,{
+	.@instance_db_id = 29;
+	.@remaining = instance_ip_reward_remaining(.@instance_db_id);
+	.@limit = instance_ip_reward_limit(.@instance_db_id);
+
+	if (.@remaining == -1 || .@limit == -1) {
+		mes "보상 이용 횟수를 확인하지 못했습니다.";
+		mes "잠시 후 다시 시도해 주세요.";
+		end;
+	}
+
+	if (.@remaining != -2 && .@limit > 0) {
+		if (.@remaining <= 0) {
+			mes "오늘 해당 던전의 보상 이용 횟수를";
+			mes "모두 사용했습니다.";
+			mes "남은 보상 횟수: ^FF00000회 / " + .@limit + "회^000000";
+			mes "초기화 시간: 매일 오전 4시";
+			end;
+		}
+
+		mes "오늘 남은 보상 횟수:";
+		mes "^3355FF" + .@remaining + "회 / " + .@limit + "회^000000";
+		next;
+	}
+	
+	mes "[마크]";
+	cutin "bu_mark1.bmp",0;
+
+	if (BaseLevel < 150) {
+		mes "이곳은 위험합니다.";
+		mes "조금 더 강해진 뒤 다시 오는 편이 좋겠습니다.";
+		close3;
+	}
+	mes "지금까지 본 문들과 달리, 이 문은 이쪽에서 막아 놓았던 흔적이 있습니다.";
+	next;
+	mes "[마크]";
+	mes "안쪽에 뭔가 있는 걸까요?";
+	next;
+	switch( checkquest(11379,PLAYTIME) ) {
+	case -1:
+		.@party_id = getcharid(1);
+		if (.@party_id < 1) {
+			mes "...이곳은 느낌이 좋지 않습니다.";
+			mes "혼자서는 위험할 수 있으니 파티를 구성하는 편이 좋겠습니다.";
+			close3;
+		}
+		if (is_party_leader() == true) {
+			if (#NEED_MD_LAST_ROOM_CLEAR) {
+				mes "[마크]";
+				mes "마지막 방의 일반 진행을 이미 한 번 완료한 기록이 있습니다.";
+				mes "이번에는 어떤 방식으로 진행하시겠습니까?";
+				next;
+				.@need_mode = select("일반 진행","간소화 진행");
+				if (.@need_mode == 2) {
+					if (callfunc("F_LastRoomCanEnableSimple") == 0) {
+						mes "[마크]";
+						mes "파티 내 온라인 구성원 중 마지막 방 최초 클리어를 완료하지 않은 계정이 있습니다.";
+						mes "이번 입장은 일반 진행으로 시작합니다.";
+						@NEED_MD_LAST_ROOM_SIMPLE = 0;
+						next;
+					}
+					else
+						@NEED_MD_LAST_ROOM_SIMPLE = 1;
+				}
+				else
+					@NEED_MD_LAST_ROOM_SIMPLE = 0;
+			}
+			else
+				@NEED_MD_LAST_ROOM_SIMPLE = 0;
+
+			.@string$ = "문을 연다.";
+		}
+		switch( select( .@string$, "입장한다.", "그만둔다." ) ) {
+		case 1:
+			if (instance_create("마지막 방") < 1) {
+				mes "파티: " + getpartyname( getcharid(1) ) + "";
+				mes "파티장: " + getpartyleader( getcharid(1) ) + "";
+				mes "^0000ff마지막 방^000000 - 생성에 실패했습니다.";
+				close3;
+			}
+			mes "[마크]";
+			mes "문을 열겠습니다.";
+			mes "문이 완전히 열리면 안으로 들어가세요.";
+			close3;
+		case 2:
+			switch( instance_enter("마지막 방") ) {
+			case IE_NOMEMBER:
+				mes "[마크]";
+				mes "...아무래도 수상한 느낌이 듭니다!";
+				mes "혼자서는 조금 위험합니다. 파티를 구성한 뒤 입장해 주세요!";
+				close3;
+			case IE_NOINSTANCE:
+				mes "[마크]";
+				mes "문이 아직 완전히 열린 것 같지 않습니다.";
+				close3;
+			case IE_OTHER:
+				mes "[마크]";
+				mes "이봐요... 무슨 일이죠?";
+				close3;
+			case IE_OK:
+				mapannounce "un_myst", "" + strcharinfo(0) + "이 속한 파티 [" + getpartyname(.@party_id) + "]가 마지막 방에 입장합니다.",bc_map,"0x00FF99";
+				setquest 11379;// Final Room
+				if (isbegin_quest(11380) == 0)
+					setquest 11380;// Final Room
+				end;
+			}
+			end;
+		case 3:
+			close3;
+		}
+		end;
+	case 0:
+	case 1:
+		mes "[마크]";
+		cutin "bu_mark1.bmp",0;
+		mes "...많이 지쳐 보이는군요.";
+		mes "이미 다녀왔으니 오늘은 하루 쉬는 편이 좋겠습니다.";
+		close3;
+	case 2:
+		mes "[마크]";
+		cutin "bu_mark1.bmp",0;
+		mes "이런 곳에 다시 들어가고 싶다니 믿기 어렵군요...";
+		erasequest 11379;// Final Room
+		close3;
+	}
+}
+
+// 1st step
+/*
+// npcs found on iro
+1@uns,139,41,3	script	마크::Mark#room1	4_M_BLUEMAN,{
+	mes "[마크]";
+	mes "뭔가 느낌이 좋지 않습니다. 조심해서 움직이는 편이 좋겠군요.";
+	cutin "bu_mark4.bmp",0;
+	close3;
+}
+
+1@uns,145,32,5	script	알프::Alph#room1	4_M_BLACKMAN,{
+	mes "[알프]";
+	mes "곳곳에 수상한 흔적이 남아 있습니다.";
+	mes "무거운 기계 같은 것이 지나간 흔적인 것 같습니다...";
+	cutin "bu_alp1.bmp",2;
+	close3;
+}
+
+1@uns,143,39,5	script	매기::Maggi#room1	4_F_PINKWOMAN,{
+	mes "[매기]";
+	mes "아아....";
+	cutin "bu_maggi4.bmp",2;
+	close3;
+}
+*/
+
+1@uns,145,37,3	script	타마린::Tamarin#room1	4_M_TAMARIN,{
+	mes "[타마린]";
+	mes "베리티, 괜찮아요?";
+	mes "안색이 좋지 않은데...";
+	cutin "ep143_taang.bmp",2;
+	close3;
+}
+
+1@uns,143,38,5	script	두::Du#room1	4_M_REDMAN,{
+	mes "[두]";
+	mes "불길한 느낌이 들어...";
+	cutin "bu_du1.bmp",2;
+	close3;
+}
+
+1@uns,144,37,3	script	베리티::Verity#room1	4_F_BERRYTEA,{
+	if ('protocole < 2) {
+		mes "[베리티]";
+		mes "으윽... 갑자기 느낌이 좋지 않아요.";
+		cutin "EP15_2_brt_6.bmp",2;
+		if (is_party_leader() == false) {
+			mes "파티장과 이야기하고 싶어요.";
+			close3;
+		}
+		if (@NEED_MD_LAST_ROOM_SIMPLE && #NEED_MD_LAST_ROOM_CLEAR) {
+			'need_md_simple = 1;
+			@NEED_MD_LAST_ROOM_SIMPLE = 0;
+			'protocole = 1;
+			disablenpc instance_npcname("#lrdoor1");
+			enablenpc instance_npcname("#lrdoor2");
+			mes "[베리티]";
+			mes "이전 탐사 기록을 확인했습니다.";
+			mes "초기 조사 대화를 생략하고 바로 1차 방어 프로토콜 구역으로 이동합니다.";
+			close3;
+		}
+		@NEED_MD_LAST_ROOM_SIMPLE = 0;
+		npctalk "베리티 : 으윽... 갑자기 느낌이 좋지 않아요.";
+		next;
+		mes "[베리티]";
+		mes "머리가... 깨질 것 같아... 윽....";
+		npctalk "베리티 : 머리가... 깨질 것 같아... 윽....";
+		next;
+		mes "[베리티]";
+		mes "....윽....";
+		npctalk "베리티 : ....윽....";
+		next;
+		mes "[두]";
+		mes "누나! 괜찮아?!";
+		cutin "bu_du5.bmp",2;
+		npctalk "두 : 누나! 괜찮아?!", instance_npcname("Du#room1");
+		next;
+		mes "[베리티]";
+		mes "....돌아가야 해....";
+		cutin "EP15_2_brt_7.bmp",2;
+		npctalk "베리티 : ....돌아가야 해....";
+		next;
+		mes "[타마린]";
+		mes "베리티, 괜찮아요?";
+		mes "걸을 수 있겠어요?";
+		cutin "ep143_tahuk.bmp",2;
+		npctalk "타마린 : 베리티, 괜찮아요? 걸을 수 있겠어요?", instance_npcname("Tamarin#room1");
+		next;
+		mes "[베리티]";
+		mes "윽...";
+		cutin "EP15_2_brt_6.bmp",2;
+		npctalk "베리티 : 윽...";
+		next;
+		mes "[두]";
+		mes "" + strcharinfo(0) + "! 아무래도 돌아가는 편이 좋겠어.";
+		cutin "bu_du5.bmp",2;
+		npctalk "두 : " + strcharinfo(0) + "! 아무래도 돌아가는 편이 좋겠어.", instance_npcname("Du#room1");
+		next;
+		mes "[베리티]";
+		mes "아... 아니야. 금방 따라갈 테니 먼저 가.";
+		cutin "EP15_2_brt_4.bmp",2;
+		npctalk "베리티 : 아... 아니야. 금방 따라갈 테니 먼저 가.";
+		next;
+		mes "[타마린]";
+		mes "그럼 베리티가 회복할 때까지 제가 곁에 있을 테니 먼저 가세요.";
+		cutin "ep143_tahuk.bmp",2;
+		npctalk "타마린 : 그럼 베리티가 회복할 때까지 제가 곁에 있을 테니 먼저 가세요.";
+		if ('protocole == 0) {
+			'protocole = 1;
+			disablenpc instance_npcname("#lrdoor1");
+			enablenpc instance_npcname("#lrdoor2");
+		}
+		close2;
+		cutin "",255;
+	}
+	end;
+}
+
+1@uns,140,45,0	script	#lrdoor1	WARPNPC,5,5,{
+	end;
+OnTouch:
+	warp 'map_name$,142,30;
+	end;
+}
+
+1@uns,140,45,0	script	#lrdoor2	HIDDEN_WARP_NPC,5,5,{
+	end;
+OnTouch:
+	if ('protocole == 1) {
+		'protocole = 2;
+		disablenpc instance_npcname("#lrdoor2");
+		// disablenpc instance_npcname("Mark#room1");
+		disablenpc instance_npcname("Du#room1");
+		disablenpc instance_npcname("Tamarin#room1");
+		disablenpc instance_npcname("Verity#room1");
+		// disablenpc instance_npcname("Maggi#room1");
+		// disablenpc instance_npcname("Alph#room1");
+		if ('need_md_simple) {
+			mapannounce 'map_name$, "[마지막 방] 간소화 진행: 1차 방어 프로토콜을 즉시 시작합니다.",bc_map,"0xFF0000";
+			donpcevent instance_npcname("#lrdoor3") + "::OnSimpleStart";
+		}
+		else {
+			mapannounce 'map_name$, "-----------------끼이익---------------------",bc_map,"0xFF0000";
+			donpcevent instance_npcname("#lrdoor3") + "::OnStart";
+		}
+	}
+	end;
+}
+
+1@uns,1,1,0	script	#lrdoor3	-1,{
+	end;
+OnSimpleStart:
+	enablenpc instance_npcname("#lrdoor3");
+	mapannounce 'map_name$, "시스템 메시지 : 침입자를 감지했습니다. 제거 프로토콜을 즉시 실행합니다.",bc_map,"0xFF0000";
+	areamonster 'map_name$,30,33,70,73,"시스템 메시지",3253,1, instance_npcname("#lrdoor3") + "::OnMyMobDead";
+	callsub S_Spawn;
+	end;
+OnStart:
+	initnpctimer;
+	end;
+OnTimer2000:
+	mapannounce 'map_name$, "-----끼이익---우웅--------------------------",bc_map,"0xFF0000";
+	end;
+OnTimer4000:
+	mapannounce 'map_name$, "--------------우우우웅-----------------",bc_map,"0xFF0000";
+	end;
+OnTimer6000:
+	mapannounce 'map_name$, "-----치직--------치지직------------------",bc_map,"0xFF0000";
+	end;
+OnTimer8000:
+	mapannounce 'map_name$, "시스템 메시지 : 침입자를 감지했습니다.",bc_map,"0xFF0000";
+	end;
+OnTimer10000:
+	mapannounce 'map_name$, "시스템 메시지 : 지정 프로토콜에 따라 입구를 봉쇄하고 침입자를 제거합니다.",bc_map,"0xFF0000";
+	enablenpc instance_npcname("#lrdoor3");
+	areamonster 'map_name$,30,33,70,73,"시스템 메시지",3253,1, instance_npcname("#lrdoor3") + "::OnMyMobDead";
+	callsub S_Spawn;
+OnTimer310000:
+	mapannounce 'map_name$, "시스템 메시지 : 침입자를 제거합니다.",bc_map,"0xFF0000";
+	callsub S_Spawn;
+OnTimer610000:
+	stopnpctimer;
+	mapannounce 'map_name$, "시스템 메시지 : 침입자를 제거합니다.",bc_map,"0xFF0000";
+	callsub S_Spawn;
+S_Spawn:
+	.@label$ = instance_npcname("#lrdoor3") + "::OnMyMobDead";
+	areamonster 'map_name$,125,44,145, 64, "기계 부품",3251,3, .@label$;	// GC109
+	areamonster 'map_name$,117,50,137, 70, "기계 부품",3251,3, .@label$;
+	areamonster 'map_name$, 77,59, 97, 79, "기계 부품",3251,3, .@label$;
+	areamonster 'map_name$, 53,86, 73,106, "기계 부품",3251,3, .@label$;
+	areamonster 'map_name$,125,44,145, 64, "기계 부품",3252,3, .@label$;	// DR815
+	areamonster 'map_name$,117,50,137, 70, "기계 부품",3252,3, .@label$;
+	areamonster 'map_name$, 77,59, 97, 79, "기계 부품",3252,3, .@label$;
+	areamonster 'map_name$, 53,86, 73,106, "기계 부품",3252,3, .@label$;
+	end;
+OnMyMobDead:
+	.@count = mobcount( 'map_name$, instance_npcname("#lrdoor3") + "::OnMyMobDead" );
+	if (.@count < 1) {
+		mapannounce 'map_name$, "시스템 메시지 : 1차 프로토콜 실패. 다음 프로토콜을 시작합니다.",bc_map,"0xFF0000";
+		stopnpctimer;
+		if ('need_md_simple) {
+			'protocole = 3;
+			enablenpc instance_npcname("#lrdoor4");
+			for ( .@i = 1; .@i < 16; ++.@i )
+				enablenpc instance_npcname( "#lrboom" + .@i );
+			enablenpc instance_npcname("Verity#room2");
+			enablenpc instance_npcname("Verity#room3");
+			mapannounce 'map_name$, "[마지막 방] 간소화 진행: 타마린과의 진행 대화를 생략합니다. 2구역으로 이동하세요.",bc_map,"0x00FF99";
+		}
+		else
+			enablenpc instance_npcname("Tamarin#room2");
+		disablenpc instance_npcname("#lrdoor3");
+	}
+	end;
+}
+
+1@uns,67,97,3	script	타마린::Tamarin#room2	4_M_TAMARIN,{
+	mes "[타마린]";
+	mes "헉, 헉... 베리티가 갑자기... 제대로 서 있지도 못하더니... 헉...";
+	cutin "ep143_tahuk.bmp",2;
+	if (is_party_leader() == false) {
+		next;
+		mes "[타마린]";
+		mes "우리끼리 이야기해서 해결할 문제는 아닌 것 같습니다.";
+		mes "먼저 파티장의 의견을 들어보죠.";
+		close3;
+	}
+	npctalk "타마린 : 헉, 헉... 베리티가 갑자기... 제대로 서 있지도 못하더니... 헉...";
+	next;
+	mes "[타마린]";
+	mes "갑자기 너무 빠르게 달려가서... 헉... 따라잡기도 힘들었습니다. 헉...";
+	npctalk "타마린 : 갑자기 너무 빠르게 달려가서... 헉... 따라잡기도 힘들었습니다. 헉...";
+	next;
+	mapannounce 'map_name$, "시스템 메시지 : 미확인 물체가 1구역에서 2구역으로 빠르게 이동 중입니다.",bc_map,"0xFF0000";
+	mes "[타마린]";
+	mes "어... 베리티가 벌써 저기까지 간 걸까요?";
+	npctalk "타마린 : 어... 베리티가 벌써 저기까지 간 걸까요?";
+	next;
+	mapannounce 'map_name$, "시스템 메시지 : 비상 프로토콜을 시작합니다.",bc_map,"0xFF0000";
+	mes "[타마린]";
+	mes "서둘러 베리티를 찾아야 합니다.";
+	npctalk "타마린 : 서둘러 베리티를 찾아야 합니다.";
+	next;
+	mes "[타마린]";
+	mes "위쪽으로 이어지는 길뿐이니 먼저 가세요.";
+	npctalk "타마린 : 위쪽으로 이어지는 길뿐이니 먼저 가세요.";
+	if ('protocole == 2) {
+		'protocole = 3;
+		enablenpc instance_npcname("#lrdoor4");
+		for ( .@i = 1; .@i < 16; ++.@i )
+			enablenpc instance_npcname( "#lrboom" + .@i );
+		enablenpc instance_npcname("Verity#room2");
+		enablenpc instance_npcname("Verity#room3");
+	}
+	close3;
+}
+
+// 2nd step
+1@uns,100,121,0	warp2	#lrdoor4	3,3,1@uns,145,107
+
+1@uns,157,94,0	script	#lrboom1	4_CRACK,2,2,{
+	end;
+OnTouch:
+	sscanf( strnpcinfo(2), "lrboom%d", .@num );
+	areamonster 'map_name$,178,34,198,54, "기계 부품", (3251 + ((.@num-1) % 2)), 3;
+	mapannounce 'map_name$, "시스템 메시지 : 2구역에서 침입자를 감지했습니다.",bc_map,"0xFF0000";
+	disablenpc();
+	end;
+}
+1@uns,164,97,0	duplicate(#lrboom1)	#lrboom2	4_CRACK,2,2
+1@uns,166,92,0	duplicate(#lrboom1)	#lrboom3	4_CRACK,2,2
+1@uns,170,96,0	duplicate(#lrboom1)	#lrboom4	4_CRACK,2,2
+1@uns,175,93,0	duplicate(#lrboom1)	#lrboom5	4_CRACK,2,2
+1@uns,190,97,0	duplicate(#lrboom1)	#lrboom6	4_CRACK,2,2
+1@uns,194,94,0	duplicate(#lrboom1)	#lrboom7	4_CRACK,2,2
+1@uns,199,96,0	duplicate(#lrboom1)	#lrboom8	4_CRACK,2,2
+1@uns,206,93,0	duplicate(#lrboom1)	#lrboom9	4_CRACK,2,2
+1@uns,217,91,0	duplicate(#lrboom1)	#lrboom10	4_CRACK,2,2
+1@uns,224,79,0	duplicate(#lrboom1)	#lrboom11	4_CRACK,2,2
+1@uns,227,73,0	duplicate(#lrboom1)	#lrboom12	4_CRACK,2,2
+1@uns,227,69,0	duplicate(#lrboom1)	#lrboom13	4_CRACK,2,2
+1@uns,220,63,0	duplicate(#lrboom1)	#lrboom14	4_CRACK,2,2
+1@uns,201,60,0	duplicate(#lrboom1)	#lrboom15	4_CRACK,2,2
+
+1@uns,224,29,3	script	베리티::Verity#room2	4_F_BERRYTEA,{
+	if ('need_md_simple) {
+		mes "[베리티]";
+		mes "문 너머에서 강한 신호가 느껴져요.";
+		mes "바로 마더 룸으로 이동하죠.";
+		close2;
+		cutin "",255;
+		warp 'map_name$,240,255;
+		end;
+	}
+	mes "[베리티]";
+	mes "아... 여기가 어디지...";
+	mes "무슨 일이 있었던 거지?";
+	cutin "EP15_2_brt_6.bmp",2;
+	next;
+	mes "[베리티]";
+	mes "머리가... 깨질 것 같아.";
+	mes "이... 문 안쪽에서 소리가 들려...";
+	next;
+	if (select( "그만둔다.", "안으로 들어간다." ) == 1) {
+		mes "[베리티]";
+		mes "돌아가... 돌아가야 해...";
+		cutin "EP15_2_brt_7.bmp",2;
+		close3;
+	}
+	mes "[베리티]";
+	mes "서둘러... 돌아가야 해...";
+	cutin "EP15_2_brt_7.bmp",2;
+	close2;
+	warp 'map_name$,240,255;
+	end;
+}
+
+// Last step
+1@uns,242,253,3	script	베리티::Verity#room3	4_F_BERRYTEA,{
+	if ('need_md_simple && 'protocole == 3) {
+		mes "[베리티]";
+		mes "마더 룸에 도착했습니다. 최종 프로토콜을 시작합니다.";
+		'protocole = 4;
+		disablenpc instance_npcname("Verity#room3");
+		donpcevent instance_npcname("#bosslr") + "::OnStart";
+		close3;
+	}
+	mes "[베리티]";
+	mes "드디어... 돌아왔어...";
+	mes "드디어.....";
+	cutin "EP15_2_brt_7.bmp",2;
+	if ('protocole == 3) {
+		'protocole = 4;
+		disablenpc instance_npcname("Verity#room3");
+		donpcevent instance_npcname("#bosslr") + "::OnStart";
+	}
+	close3;
+}
+
+1@uns,1,1,0	script	#bosslr	-1,{
+	end;
+OnStart:
+	enablenpc instance_npcname("#bosslr");
+	initnpctimer;
+	end;
+OnTimer2000:
+	mapannounce 'map_name$, "시스템 메시지 : 마더 룸에서 침입자를 감지했습니다.",bc_map,"0xFF0000";
+	end;
+OnTimer4000:
+	mapannounce 'map_name$, "시스템 메시지 : 최종 프로토콜을 시작합니다.",bc_map,"0xFF0000";
+	areamonster 'map_name$,235,255,255,275,"T_W_O",3254,1, instance_npcname("#bosslr") + "::OnMyMobDead";
+	end;
+OnTimer6000:
+	mapannounce 'map_name$, "시스템 메시지 : 모든 시스템을 정비 모드에서 전투 모드로 전환합니다.",bc_map,"0xFF0000";
+	end;
+OnTimer8000:
+	mapannounce 'map_name$, "시스템 메시지 : 보호를 위한 최종 프로토콜입니다... 관계없는 인원은 즉시 대피하십시오.",bc_map,"0xFF0000";
+	end;
+OnTimer11000:
+	mapannounce 'map_name$, "T_W_O : 돌아가야 해..... 여기는 아니야....",bc_map,"0xFF0000";
+	end;
+OnTimer30000:
+	mapannounce 'map_name$, "시스템 메시지 : 시스템 손상이 발생했습니다.",bc_map,"0xFF0000";
+	areamonster 'map_name$,225,250,265,280, "시스템 메시지",3253,4, instance_npcname("#bosslr") + "::OnMyMobDead2";
+	end;
+OnTimer32000:
+	mapannounce 'map_name$, "T_W_O : 나는 누구지? 왜 여기에 있는 거야?",bc_map,"0xFF0000";
+	end;
+OnTimer60000:
+	mapannounce 'map_name$, "시스템 메시지 : 시스템 손상 중 구역 내부에 치명적인 피해가 발생할 수 있으니 주의하십시오.",bc_map,"0xFF0000";
+	end;
+OnTimer90000:
+	mapannounce 'map_name$, "시스템 메시지 : 시스템 손상이 발생했습니다.",bc_map,"0xFF0000";
+	areamonster 'map_name$,225,250,265,280, "시스템 메시지",3253,4, instance_npcname("#bosslr") + "::OnMyMobDead2";
+	end;
+OnTimer100000:
+	mapannounce 'map_name$, "T_W_O : 아무것도 남지 않았어....",bc_map,"0xFF0000";
+	end;
+OnTimer110000:
+	mapannounce 'map_name$, "T_W_O : 나도... 그들도....",bc_map,"0xFF0000";
+	end;
+OnTimer150000:
+	mapannounce 'map_name$, "시스템 메시지 : 시스템 손상이 발생했습니다.",bc_map,"0xFF0000";
+	areamonster 'map_name$,225,250,265,280, "시스템 메시지",3253,4, instance_npcname("#bosslr") + "::OnMyMobDead2";
+	end;
+OnTimer210000:
+	mapannounce 'map_name$, "시스템 메시지 : 시스템 손상이 발생했습니다.",bc_map,"0xFF0000";
+	areamonster 'map_name$,225,250,265,280, "시스템 메시지",3253,4, instance_npcname("#bosslr") + "::OnMyMobDead2";
+	stopnpctimer;
+	end;
+OnMyMobDead:
+	if (mobcount( 'map_name$, instance_npcname("#bosslr") + "::OnMyMobDead" ) < 1) {
+		stopnpctimer;
+		killmonster 'map_name$, instance_npcname("#bosslr") + "::OnMyMobDead";
+		killmonster 'map_name$, instance_npcname("#bosslr") + "::OnMyMobDead2";
+		mapannounce 'map_name$, "시스템 메시지 : 모든 프로토콜 실패. 위협 요소를 제외한 구역을 봉쇄합니다.",bc_map,"0xFF0000";
+		// enablenpc instance_npcname("Alph#room4");
+		// enablenpc instance_npcname("Tamarin#room4");
+		// enablenpc instance_npcname("Maggi#room4");
+		// enablenpc instance_npcname("Du#room4");
+		// enablenpc instance_npcname("Mark#room4");
+		enablenpc instance_npcname("Verity#room4");
+		disablenpc instance_npcname("#bosslr");
+	}
+	end;
+OnMyMobDead2:
+	end;
+}
+
+1@uns,242,253,3	script	베리티::Verity#room4	4_F_BERRYTEA,{
+	mes "[베리티]";
+	mes "나는 누구지?";
+	mes "나는 누구지...";
+	cutin "EP15_2_brt_6.bmp",2;
+	close2;
+	#NEED_MD_LAST_ROOM_CLEAR = 1;
+	warp "un_bunker",299,162;
+	end;
+
+OnInstanceInit:
+	'map_name$ = instance_mapname("1@uns");
+	'protocole = 'need_md_simple = 0;
+
+	// 1st step
+	disablenpc instance_npcname("#lrdoor3");
+	disablenpc instance_npcname("Tamarin#room2");
+	disablenpc instance_npcname("#lrdoor4");
+
+	// 2nd step
+	disablenpc instance_npcname("Verity#room2");
+	for ( .@i = 1; .@i < 16; ++.@i )
+		disablenpc instance_npcname( "#lrboom" + .@i );
+
+	// Last step
+	disablenpc instance_npcname("Verity#room3");
+	disablenpc instance_npcname("#bosslr");
+	// disablenpc instance_npcname("Alph#room4");
+	// disablenpc instance_npcname("Tamarin#room4");
+	// disablenpc instance_npcname("Maggi#room4");
+	// disablenpc instance_npcname("Du#room4");
+	// disablenpc instance_npcname("Mark#room4");
+	disablenpc instance_npcname("Verity#room4");
+	end;
+}
+
+/*
+1@uns,236,258,1	script	알프::Alph#room4	4_M_BLACKMAN,{
+	mes "[알프]";
+	mes "아직 안심하기는 이릅니다...";
+	cutin "bu_alp1.bmp",2;
+	close3;
+}
+
+1@uns,244,257,3	script	타마린::Tamarin#room4	4_M_TAMARIN,{
+	mes "[타마린]";
+	mes "베리티!!!";
+	mes "정신 차려요!";
+	cutin "ep143_tahuk.bmp",2;
+	close3;
+}
+
+1@uns,245,254,3	script	매기::Maggi#room4	4_F_PINKWOMAN,{
+	mes "[매기]";
+	mes "베리티, 괜찮아요?";
+	cutin "bu_maggi4.bmp",2;
+	close3;
+}
+
+1@uns,244,254,3	script	두::Du#room4	4_M_REDMAN,{
+	mes "[두]";
+	mes "누나!";
+	mes "무슨 일이야?!";
+	mes "괜찮아?";
+	cutin "bu_du5.bmp",2;
+	close3;
+}
+
+1@uns,242,255,5	script	마크::Mark#room4	4_M_BLUEMAN,{
+	mes "[마크]";
+	mes "모두 비켜!";
+	mes "힐을 쓰겠습니다!!!";
+	cutin "bu_mark4.bmp",0;
+	close3;
+}
+
+1@uns,242,253,3	script	베리티::Verity#room4	4_F_BERRYTEA,{
+	mes "[두]";
+	mes "누나!";
+	mes "무슨 일이야?!";
+	mes "괜찮아?";
+	cutin "bu_du5.bmp",2;
+	npctalk "두 : 누나! 무슨 일이야?! 괜찮아?", instance_npcname("Du#room4");
+	next;
+	mes "[타마린]";
+	mes "베리티!!!";
+	mes "정신 차려요!";
+	cutin "ep143_tahuk.bmp",2;
+	npctalk "타마린 : 베리티!!! 정신 차려요!", instance_npcname("Tamarin#room4");
+	next;
+	mes "[마크]";
+	mes "모두 비켜!";
+	mes "힐을 쓰겠습니다!!!";
+	cutin "bu_mark4.bmp",0;
+	npctalk "마크 : 모두 비켜! 힐을 쓰겠습니다!!!", instance_npcname("Mark#room4");
+	next;
+	mes "[베리티]";
+	mes "으... 음...";
+	cutin "EP15_2_brt_4.bmp",2;
+	npctalk "베리티 : 으... 음...";
+	next;
+	mes "[베리티]";
+	mes "어...";
+	mes "무슨 일이죠?";
+	mes "다들 표정이 왜 그렇게 심각해요.";
+	cutin "EP15_2_brt_5.bmp",2;
+	npctalk "베리티 : 어... 무슨 일이죠? 다들 표정이 왜 그렇게 심각해요.";
+	next;
+	mes "[두]";
+	mes "그걸 말이라고 해!";
+	mes "기억 안 나?";
+	cutin "bu_du4.bmp",2;
+	npctalk "두 : 그걸 말이라고 해! 기억 안 나?", instance_npcname("Du#room4");
+	next;
+	mes "[베리티]";
+	mes "기억?";
+	cutin "EP15_2_brt_5.bmp",2;
+	npctalk "베리티 : 기억?";
+	next;
+	mes "[베리티]";
+	mes "... 그러고 보니 여기가 어디지?";
+	cutin "EP15_2_brt_3.bmp",2;
+	npctalk "베리티 : ... 그러고 보니 여기가 어디지?";
+	next;
+	mes "[타마린]";
+	mes "베리티, 정말 아무것도 기억나지 않아요?";
+	mes "아까...";
+	cutin "ep143_tahuk.bmp",2;
+	npctalk "타마린 : 베리티, 정말 아무것도 기억나지 않아요? 아까...", instance_npcname("Tamarin#room4");
+	next;
+	mes "[베리티]";
+	mes "음...";
+	mes "지하로 내려온 뒤부터 머리가 깨질 듯 아팠던 것 같아요...";
+	npctalk "베리티 : 지하로 내려온 뒤부터 머리가 깨질 듯 아팠던 것 같아요...";
+	cutin "EP15_2_brt_3.bmp",2;
+	next;
+	mes "[베리티]";
+	mes "그 뒤로는 아무것도 기억나지 않아요.";
+	npctalk "베리티 : 그 뒤로는 아무것도 기억나지 않아요.";
+	cutin "EP15_2_brt_5.bmp",2;
+	next;
+	mes "[두]";
+	mes "방금 엄청난 일이...";
+	cutin "bu_du4.bmp",2;
+	npctalk "두 : 방금 엄청난 일이...", instance_npcname("Du#room4");
+	next;
+	mes "[알프]";
+	mes "이봐... 지금 한가롭게 이야기하고 있을 상황은 아닌 것 같은데.";
+	cutin "bu_alp3.bmp",2;
+	npctalk "알프 : 이봐... 지금 한가롭게 이야기하고 있을 상황은 아닌 것 같은데.", instance_npcname("Alph#room4");
+	next;
+	mes "[두]";
+	mes "이게 한가롭게 이야기하는 걸로 보여?";
+	mes "아까 정말 엄청난 일이 있었다고!";
+	cutin "bu_du4.bmp",2;
+	npctalk "두 : 이게 한가롭게 이야기하는 걸로 보여? 아까 정말 엄청난 일이 있었다고!", instance_npcname("Du#room4");
+	next;
+	mes "[알프]";
+	mes "이 소리 들려?";
+	mes "뭔가 오고 있어...";
+	cutin "bu_alp1.bmp",2;
+	npctalk "알프 : 이 소리 들려? 뭔가 오고 있어...", instance_npcname("Alph#room4");
+	next;
+	mes "[타마린]";
+	mes "지... 지금 보니 바닥이... 조금 흔들리고 있지 않나요?";
+	cutin "ep143_tahuk.bmp",2;
+	npctalk "타마린 : 지... 지금 보니 바닥이... 조금 흔들리고 있지 않나요?", instance_npcname("Tamarin#room4");
+	next;
+	mes "[두]";
+	mes "뭐... 뭐야 이건?";
+	cutin "bu_du4.bmp",2;
+	npctalk "두 : 뭐... 뭐야 이건?", instance_npcname("Du#room4");
+	next;
+	mes "[알프]";
+	mes "이건... 위험해.";
+	mes "우리가 감당할 수 있는 수준이 아니야...";
+	cutin "bu_alp2.bmp",2;
+	npctalk "알프 : 이건... 위험해. 우리가 감당할 수 있는 수준이 아니야...", instance_npcname("Alph#room4");
+	next;
+	mes "[마크]";
+	mes "빠... 빨리 밖으로!!!!!";
+	cutin "bu_mark4.bmp",0;
+	npctalk "마크 : 빠... 빨리 밖으로!!!!!", instance_npcname("Mark#room4");
+	close2;
+	warp "un_bunker",299,162;
+	end;
+*/
+
+
+
+verus01,151,173,3	script	프루츠::Fruit#Verus	4_F_FRUIT,{
+	if (checkweight(1119,3) == 0) {
+		mes "- 소지품이 너무 많아 퀘스트를 진행할 수 없습니다. -";
+		close;
+	}
+	if (checkquest(11380,HUNTING) == 2) {
+		mes "[프루츠]";
+		mes "으아아아악!!!";
+		mes "대단해!!!";
+		cutin "EP15_2_fru_2.bmp",2;
+		next;
+		mes "[프루츠]";
+		mes "그래서? 그래서? 그다음은?";
+		mes "어서! 더 이야기해 줘!!!";
+		erasequest 11380;// Last Room
+		getexp 200000,0;
+		getitem 6827,1;// Normal_Parts
+		getitem 6828,1;// Gravity_Parts
+		close3;
+	}
+	if (ep15_2_bslast < 2) {
+		mes "[프루츠]";
+		mes "우와아아아아!!!!";
+		mes "이거 보여?";
+		mes "바로 여기!!!!";
+		cutin "EP15_2_fru_2.bmp",2;
+		next;
+		mes "[프루츠]";
+		mes "뭔가 막 빙글빙글 돌아갈 것 같지 않아?!";
+		mes "하아!";
+		next;
+		mes "[프루츠]";
+		mes "통째로 내 연구실에 가져가고 싶다!";
+		mes "보고만 있어야 한다니...";
+		cutin "EP15_2_fru_3.bmp",2;
+		next;
+		mes "[프루츠]";
+		mes "그래서 말인데...";
+		mes "여기서 바빠서 바로 아래에 있다는 지하 벙커에는 아직 못 가봤거든.";
+		cutin "EP15_2_fru_2.bmp",2;
+		next;
+		mes "[프루츠]";
+		mes "네가 가볼래?";
+		next;
+		mes "[프루츠]";
+		mes "이렇게 조사 지점을 전부 알려주는 사람도 흔치 않잖아?";
+		next;
+		mes "[프루츠]";
+		mes "물론 공짜로 시키려는 건 아니야!";
+		mes "흥미로운 조사 결과를 가져오면 보상도 줄게!";
+		next;
+		mes "[프루츠]";
+		mes "어때?";
+		next;
+		if (select( "그만둔다.", "해본다." ) == 1) {
+			mes "[프루츠]";
+			mes "에...";
+			cutin "EP15_2_fru_1.bmp",2;
+			close3;
+		}
+		mes "[프루츠]";
+		mes "야호!!!";
+		mes "조금만 안쪽으로 들어가면 안내해 줄 사람이 있을 거야.";
+		next;
+		mes "[프루츠]";
+		mes "재미있는 걸 잔뜩 가져오길 기대할게.";
+		// completequest 11381;	// completed officially
+		erasequest 11381;// Vestige
+		setquest 11382;// Vestige
+		ep15_2_bslast = 2;
+		close3;
+	}
+	if (ep15_2_bslast == 2) {
+		mes "[프루츠]";
+		mes "야호!!!";
+		mes "조금만 안쪽으로 들어가면 안내해 줄 사람이 있을 거야.";
+		cutin "EP15_2_fru_2.bmp",2;
+		next;
+		mes "[프루츠]";
+		mes "재미있는 걸 잔뜩 가져오길 기대할게.";
+		close3;
+	}
+	if (ep15_2_bslast < 9) {
+		mes "[프루츠]";
+		mes "어때, 조사는 좀 진전이 있어?";
+		mes "지하 벙커라지만 규모가 장난 아니지!";
+		cutin "EP15_2_fru_3.bmp",2;
+		next;
+		mes "[프루츠]";
+		mes "길 잃는 거 아니야?";
+		close3;
+	}
+	mes "[프루츠]";
+	mes "흠... 더 재미있는 건 없어?";
+	cutin "EP15_2_fru_1.bmp",2;
+	next;
+	if (select( "물품을 교환한다.", "그만둔다." ) == 1) {
+		mes "[프루츠]";
+		mes getitemname(6827) + " 17개를 가져오면 장비로 교환해 줄게!";
+		next;
+		switch( select( getitemname(18997), getitemname(28326), getitemname(28327) ) ) {
+		case 1:
+			mes "[프루츠]";
+			mes getitemname(18997) + "은 HIT + 50, FLEE + 50, MSP - 50% 효과가 있어.";
+			next;
+			mes "[프루츠]";
+			mes getitemname(28326) + ", " + getitemname(28327) + "와 함께 장착하면 이동 가속 효과를 얻을 수 있어.";
+			next;
+			mes "[프루츠]";
+			mes "ATK와 MATK + 50. 투구 제련도가 9 이상이면 MSP + 50%, MHP + 10% 효과도 있어.";
+			.@item_id = 18997;	// Riot_Chip
+			break;
+		case 2:
+			mes "[프루츠]";
+			mes getitemname(28326) + "은 STR + 4. " + getitemname(28327) + "와 함께 장착하면 STR + 8, INT + 8 효과가 있어.";
+			.@item_id = 28326;	// Broken_Chip_1
+			break;
+		case 3:
+			mes "[프루츠]";
+			mes getitemname(28327) + "는 INT + 4. " + getitemname(28326) + "과 함께 장착하면 STR + 8, INT + 8 효과가 있어.";
+			.@item_id = 28327;	// Broken_Chip_2
+			break;
+		}
+		next;
+		if (select( "교환한다.", "그만둔다." ) == 1) {
+			if (countitem(6827) < 17) {
+				mes "[프루츠]";
+				mes getitemname(6827) + " 수량이 부족해!!!";
+				close3;
+			}
+			delitem 6827,17;// Normal_Parts
+			getitem .@item_id,1;
+			close3;
+		}
+		// continue
+	}
+	mes "[프루츠]";
+	mes "원하는 게 이게 아니었어?";
+	close3;
+}
