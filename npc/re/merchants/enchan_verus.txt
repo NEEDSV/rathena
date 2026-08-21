@@ -734,7 +734,7 @@ function	script	F_ShowCharlestonEnchantList	{
 			)) {
 
 		case 1:
-			setdialogsize(220,300);
+			setdialogsize(300,300);
 			callfunc "F_ShowEnchantGroup","STR",4700,4701,4702;
 			callfunc "F_ShowEnchantGroup","DEX",4720,4721,4722;
 			callfunc "F_ShowEnchantGroup","명궁",4832,4833,4834;
@@ -742,7 +742,7 @@ function	script	F_ShowCharlestonEnchantList	{
 			break;
 
 		case 2:
-			setdialogsize(220,300);
+			setdialogsize(300,300);
 			callfunc "F_ShowEnchantGroup","VIT",4740,4741,4742;
 			callfunc "F_ShowEnchantGroup","DEF",4791,4792,4793;
 			callfunc "F_ShowEnchantGroup","무속성 내성",4933,4934,4935;
@@ -750,7 +750,7 @@ function	script	F_ShowCharlestonEnchantList	{
 			break;
 
 		case 3:
-			setdialogsize(220,300);
+			setdialogsize(300,300);
 			callfunc "F_ShowEnchantGroup","회피",4860,4762,4763;
 			callfunc "F_ShowEnchantGroup","LUK",4750,4751,4752;
 			callfunc "F_ShowEnchantGroup","공격 후 딜레이",4869,4872;
@@ -780,7 +780,7 @@ function	script	F_ShowCharlestonEnchantList	{
 			break;
 
 		case 6:
-			setdialogsize(220,300);
+			setdialogsize(300,300);
 			callfunc "F_ShowEnchantGroup","STR",4700,4701;
 			callfunc "F_ShowEnchantGroup","DEX",4720,4721;
 			callfunc "F_ShowEnchantGroup","AGI",4730,4731;
@@ -790,7 +790,7 @@ function	script	F_ShowCharlestonEnchantList	{
 			break;
 
 		case 7:
-			setdialogsize(220,300);
+			setdialogsize(300,300);
 			callfunc "F_ShowEnchantGroup","STR",4701,4702;
 			callfunc "F_ShowEnchantGroup","DEX",4721,4722;
 			callfunc "F_ShowEnchantGroup","AGI",4731,4732;
@@ -817,7 +817,7 @@ function	script	F_ShowCharlestonEnchantList	{
 	}
 }
 
-verus04,163,219,4	script	PLUTO_09#pa0829	4_SCR_AT_ROBOTS,{
+lasa_in01,189,52,4	script	PLUTO_09#pa0829	4_SCR_AT_ROBOTS,{
 	disable_items;
 	if (checkweight(1201,1) == 0 || (MaxWeight - Weight) < 10000) {
 		mes "^ff0000소지품이 너무 많거나 남은 무게가 부족합니다. 소지품을 정리한 뒤 다시 이용해 주세요.^000000";
@@ -856,7 +856,7 @@ verus04,163,219,4	script	PLUTO_09#pa0829	4_SCR_AT_ROBOTS,{
 		mes "[PLUTO_09]";
 		mes "장비 제작에는 " + getitemname(6961) + " 10개와 " + getitemname(6962) + " 5개가 필요합니다.";
 		next;
-		switch( select( "그만두기", "제작: " + getitemname(.@id[0]), "제작: " + getitemname(.@id[1]) ) ) {
+		switch( select( "그만두기", "엑셀리온 윙 제작", "엑셀리온 슈츠 제작") ) {
 		case 1:
 			mes "^0000ff화면 속 공룡이 잠시 눈을 감은 뒤 이쪽을 바라봅니다.^000000";
 			close;
@@ -952,9 +952,12 @@ verus04,163,219,4	script	PLUTO_09#pa0829	4_SCR_AT_ROBOTS,{
 		close;
 	}
 	end;
+OnInit:
+	waitingroom "엑셀리온 장비, 리액토 설계도 제작",0;
+	end;
 }
 
-verus04,165,217,4	script	MARS_01#pa0829	4_SCR_MT_ROBOTS,{
+lasa_in01,189,54,4	script	MARS_01#pa0829	4_SCR_MT_ROBOTS,{
 	disable_items;
 	if (checkweight(1201,1) == 0 || (MaxWeight - Weight) < 10000) {
 		mes "^ff0000소지품이 너무 많거나 남은 무게가 부족합니다. 소지품을 정리한 뒤 다시 이용해 주세요.^000000";
@@ -1024,7 +1027,7 @@ verus04,165,217,4	script	MARS_01#pa0829	4_SCR_MT_ROBOTS,{
 	mes strcharinfo(0) + " 님,";
 	mes "안녕하세요! 무엇을 도와드릴까요?";
 	next;
-	switch( select( "안내 확인", "인챈트: " + getitemname(20773), "인챈트: " + getitemname(15128), "인챈트 리스트 확인" ) ) {	// Excelion_Wing, Excelion_Suit
+	switch( select( "안내 확인", "엑셀리온 윙 인챈트", "엑셀리온 슈트 인챈트", "인챈트 리스트 확인" ) ) {	// Excelion_Wing, Excelion_Suit
 	case 1:
 		mes "^0000ff곧 안내가 시작됩니다.^000000";
 		next;
@@ -1076,17 +1079,22 @@ verus04,165,217,4	script	MARS_01#pa0829	4_SCR_MT_ROBOTS,{
 		6986, 4991, 1,1,0;	// Reactor_A_ASPD_		Reactor_A_ASPD
 	.@size = getarraysize(.@list);
 
-	for ( .@i = 0; .@i < .@size; .@i += 5 ) {
+	.@menu$ = "그만두기";
+
+	for (.@i = 0; .@i < .@size; .@i += 5) {
+		.@menu$ += ":";
+
 		if (countitem(.@list[.@i]) < 1)
-			.@menu$ += sprintf( "^aaaaaa%s (미소지)^000000:", getitemname(.@list[.@i]) );
+			.@menu$ += "^aaaaaa" + getitemname(.@list[.@i]) + " (미소지)^000000";
 		else
-			.@menu$ += sprintf( "%s:", getitemname(.@list[.@i]) );
+			.@menu$ += getitemname(.@list[.@i]);
 	}
+
 	mes "[MARS_01]";
 	mes strcharinfo(0) + " 님,";
 	mes "사용할 인챈트 설계도를 선택해 주세요!";
 	next;
-	.@s = select("그만두기:" + .@menu$) - 2;
+	.@s = select(.@menu$) - 2;
 	if (.@s < 0) {
 		mes "[MARS_01]";
 		mes "다음에 다시 이용해 주세요.";
@@ -1123,10 +1131,24 @@ verus04,165,217,4	script	MARS_01#pa0829	4_SCR_MT_ROBOTS,{
 		close;
 	}
 
-	if (.@card[0] > 0 && .@item_enchant_id == .@card[0]) { .@slot_sum++; }
-	if (.@card[1] > 0 && .@item_enchant_id == .@card[1]) { .@slot_sum++; }
-	if (.@card[2] > 0 && .@item_enchant_id == .@card[2]) { .@slot_sum++; }
-	if (.@card[3] > 0 && .@item_enchant_id == .@card[3]) { .@slot_sum++; }
+	.@slot_sum = 0;
+	.@enchant_total = 0;
+
+	// 동일 인챈트 개수
+	if (.@card[1] > 0 && .@item_enchant_id == .@card[1])
+		.@slot_sum++;
+	if (.@card[2] > 0 && .@item_enchant_id == .@card[2])
+		.@slot_sum++;
+	if (.@card[3] > 0 && .@item_enchant_id == .@card[3])
+		.@slot_sum++;
+
+	// 현재 장비에 부여된 전체 인챈트 개수
+	if (.@card[1] > 0)
+		.@enchant_total++;
+	if (.@card[2] > 0)
+		.@enchant_total++;
+	if (.@card[3] > 0)
+		.@enchant_total++;
 
 	if (.@max_num_enchant < 1) {
 		mes "[MARS_01]";
@@ -1168,7 +1190,9 @@ verus04,165,217,4	script	MARS_01#pa0829	4_SCR_MT_ROBOTS,{
 	mes "[MARS_01]^0000ff";
 	mes "선택한 장비: " + getequipname(.@part) + " / 설계도: " + getitemname(.@item_req);
 	mes "^000000------------------";
-	mes "선택한 설계도는 이 장비에 최대 ^0000ff" + .@max_num_enchant + "회^000000까지 부여할 수 있습니다. 현재 동일 인챈트 부여 횟수는 ^0000ff" + .@slot_sum + "회^000000입니다. 계속하시겠습니까?";
+	mes "현재 장비 인챈트: ^0000ff" + .@enchant_total + "/3회^000000";
+	mes "선택한 설계도 부여 횟수: ^0000ff" + .@slot_sum + "/" + .@max_num_enchant + "회^000000";
+	mes "계속하시겠습니까?";
 	next;
 	if (select( "취소", "계속 진행" ) == 1) {
 		mes "[MARS_01]";
@@ -1208,6 +1232,9 @@ verus04,165,217,4	script	MARS_01#pa0829	4_SCR_MT_ROBOTS,{
 	delequip .@part;
 	getitem2 .@equip_id,1,1,.@equip_refine,0,.@card[0],.@card[1],.@card[2],.@card[3];
 	close;
+OnInit:
+	waitingroom "엑셀리온 인챈트",0;
+	end;
 }
 
 function	script	F_ShowExcelionEnchantList	{
@@ -1238,58 +1265,96 @@ function	script	F_ShowExcelionEnchantList	{
 
 	.@size = getarraysize(.@list);
 
-	mes "[MARS_01]";
-	mes "확인할 장비의 인챈트 목록을 선택해 주세요.";
-	next;
-
 	while (true) {
-		switch(select(
-			"엑셀리온 윙",
-			"엑셀리온 슈트",
-			"닫기"
-			)) {
+		clear;
+		setdialogsize(300,300);
 
+		mes "[MARS_01]";
+		mes "확인할 장비의 인챈트 목록을 선택해 주세요.";
+		next;
+
+		// 구버전/커스텀 소스에서도 메뉴 구분이 확실하도록
+		// 하나의 문자열에 ':' 구분자를 사용하는 방식으로 통일합니다.
+		switch(select("엑셀리온 윙:엑셀리온 슈트:닫기")) {
 		case 1:
-			.@max_index = 3; // 윙
+			.@max_index = 3;	// 윙
 			.@title$ = getitemname(20773);
+			.@first_start = 4;	// T 계열
+			.@first_end = 8;
 			break;
 
 		case 2:
-			.@max_index = 2; // 슈트
+			.@max_index = 2;	// 슈트
 			.@title$ = getitemname(15128);
+			.@first_start = 0;	// P 계열
+			.@first_end = 4;
 			break;
 
 		case 3:
-			close;
+			return;
 		}
 
-		setdialogsize(330,420);
+		// --------------------------------------------------------
+		// 1페이지
+		// 윙  : T 계열 + Cure 계열
+		// 슈트: P 계열 + Cure 계열
+		// --------------------------------------------------------
+		clear;
 		mes "[MARS_01]";
 		mes "^0000ff" + .@title$ + " 인챈트 가능 설계도^000000";
-		mes "------------------------------";
-		mes "괄호 안 숫자는 동일 인챈트를 해당 장비에 부여할 수 있는 최대 횟수입니다.";
-		mes "^ff0000[첫 슬롯 전용]^000000은 첫 번째 인챈트 슬롯에만 사용할 수 있습니다.";
+		mes "괄호 안 숫자는 동일 인챈트의 최대 부여 횟수입니다.";
 		mes "------------------------------";
 
-		.@shown = 0;
-		for ( .@i = 0; .@i < .@size; .@i += 5 ) {
+		if (.@max_index == 3)
+			mes "^0000ff[T 계열]^000000";
+		else
+			mes "^0000ff[P 계열]^000000";
+
+		for (.@i = .@first_start * 5; .@i < .@first_end * 5; .@i += 5) {
 			.@max = .@list[.@i + .@max_index];
-
 			if (.@max < 1)
 				continue;
 
-			.@line$ = getitemname(.@list[.@i]) + " ^777777(최대 " + .@max + "회)^000000";
-
+			.@line$ = " - " + getitemname(.@list[.@i]) + " ^777777(최대 " + .@max + "회)^000000";
 			if (.@list[.@i+4] > 0)
 				.@line$ += " ^ff0000[첫 슬롯 전용]^000000";
 
 			mes .@line$;
-			.@shown++;
 		}
 
-		if (.@shown == 0)
-			mes "사용 가능한 설계도가 없습니다.";
+		mes " ";
+		mes "^0000ff[Cure 계열]^000000";
 
+		for (.@i = 8 * 5; .@i < 12 * 5; .@i += 5) {
+			.@max = .@list[.@i + .@max_index];
+			if (.@max < 1)
+				continue;
+
+			mes " - " + getitemname(.@list[.@i]) + " ^777777(최대 " + .@max + "회)^000000";
+		}
+
+		next;
+
+		// --------------------------------------------------------
+		// 2페이지 : A 계열
+		// 한 화면에 모든 설계도를 몰아넣지 않고 별도 페이지로 분리합니다.
+		// --------------------------------------------------------
+		clear;
+		mes "[MARS_01]";
+		mes "^0000ff" + .@title$ + " 인챈트 가능 설계도^000000";
+		mes "^0000ff[A 계열]^000000";
+		mes "------------------------------";
+
+		for (.@i = 12 * 5; .@i < .@size; .@i += 5) {
+			.@max = .@list[.@i + .@max_index];
+			if (.@max < 1)
+				continue;
+
+			mes " - " + getitemname(.@list[.@i]) + " ^777777(최대 " + .@max + "회)^000000";
+		}
+
+		mes " ";
+		mes "^777777※ [첫 슬롯 전용] 설계도는 첫 번째 인챈트 슬롯에만 사용할 수 있습니다.^000000";
 		next;
 	}
 }
