@@ -764,8 +764,6 @@ OnInstanceInit:
 	end;
 */
 
-
-
 un_myst,159,41,3	script	프루츠::Fruit#Verus	4_F_FRUIT,{
 	if (checkweight(1119,3) == 0) {
 		mes "- 소지품이 너무 많아 퀘스트를 진행할 수 없습니다. -";
@@ -832,9 +830,11 @@ un_myst,159,41,3	script	프루츠::Fruit#Verus	4_F_FRUIT,{
 		next;
 		mes "[프루츠]";
 		mes "재미있는 걸 잔뜩 가져오길 기대할게.";
-		// completequest 11381;	// completed officially
-		erasequest 11381;// Vestige
-		setquest 11382;// Vestige
+		// 간소화 진행 캐릭터는 11381 퀘스트 로그가 없을 수 있으므로 보유 여부 확인 후 삭제
+		if (isbegin_quest(11381) > 0)
+			erasequest 11381;// Vestige
+		if (isbegin_quest(11382) == 0)
+			setquest 11382;// Vestige
 		ep15_2_bslast = 2;
 		close3;
 	}
