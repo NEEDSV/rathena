@@ -1,0 +1,932 @@
+//============================================================
+// NEED Battleground Fever System
+//============================================================
+// 용맹의 휘장 : 7828
+// 특공의 휘장 : 7829
+//
+// 기본 정책
+// - 피버 진행도는 단계 미달성 시 계속 이월
+// - 단계 달성 시 다음 주말 핫타임에 효과 적용
+// - 토/일 달성분은 다음 주말 적용
+// - 3단계 달성 시 기부 잠금
+// - 3단계 주말 종료 후 월요일 04:00 새 사이클 시작
+// - 랭킹은 1~3단계 전체 누적 기부량 기준
+// - 랭킹은 진행 중 비공개, 3단계 달성 시 최종 결과 공개
+//
+// 외부 전장 스크립트에서는
+//   callfunc("F_NEED_BG_Fever_GoldBonus")
+//   callfunc("F_NEED_BG_Fever_BadgeBonus")
+// 를 이용하여 기존 핫타임 배율에 추가하면 됨.
+//============================================================
+
+
+//============================================================
+// 피버 보너스 조회 함수
+// 반환값은 "기존 핫타임에 추가되는 %".
+//============================================================
+
+function	script	F_NEED_BG_Fever_GoldBonus	{
+
+	switch ($NEED_BG_Fever_ActiveStage) {
+	case 1:
+		return $NEED_BG_Fever_GoldBonus1;	// +30%
+	case 2:
+		return $NEED_BG_Fever_GoldBonus2;	// +50%
+	case 3:
+		return $NEED_BG_Fever_GoldBonus3;	// +50%
+	}
+
+	return 0;
+}
+
+
+function	script	F_NEED_BG_Fever_BadgeBonus	{
+
+	switch ($NEED_BG_Fever_ActiveStage) {
+	case 1:
+		return $NEED_BG_Fever_BadgeBonus1;
+	case 2:
+		return $NEED_BG_Fever_BadgeBonus2;
+	case 3:
+		return $NEED_BG_Fever_BadgeBonus3;	// +100%
+	}
+
+	return 0;
+}
+
+
+//============================================================
+// 개인 사이클 데이터 확인
+//============================================================
+
+function	script	F_NEED_BG_Fever_CheckPlayer	{
+
+	if (#NEED_BG_FEVER_CYCLE != $NEED_BG_Fever_Cycle) {
+		#NEED_BG_FEVER_CYCLE = $NEED_BG_Fever_Cycle;
+		#NEED_BG_FEVER_DONATE = 0;
+	}
+
+	return;
+}
+
+
+//============================================================
+// 미수령 랭킹 보상 확인 / 지급
+//
+// #NEED_BG_FEVER_REWARD_CYCLE
+//   = 해당 계정이 확인을 완료한 마지막 피버 사이클
+//
+// 피버 결과는 사이클별 글로벌 배열에 남기므로
+// 여러 사이클 동안 접속하지 않아도 보상이 유실되지 않음.
+//============================================================
+
+function	script	F_NEED_BG_Fever_ClaimReward	{
+
+	.@aid = getcharid(3);
+
+	if (.@aid <= 0)
+		return 0;
+
+
+	//--------------------------------------------------------
+	// 아직 결과가 확정된 피버가 없음
+	//--------------------------------------------------------
+
+	.@last_result = $NEED_BG_Fever_ResultCycle;
+
+	if (.@last_result <= 0)
+		return 0;
+
+
+	//--------------------------------------------------------
+	// 이 계정이 마지막으로 확인한 사이클 다음부터 검사
+	//--------------------------------------------------------
+
+	.@start = #NEED_BG_FEVER_REWARD_CYCLE + 1;
+
+	if (.@start < 1)
+		.@start = 1;
+
+
+	if (.@start > .@last_result)
+		return 0;
+
+
+	.@reward = 0;
+
+
+	for (.@cycle = .@start;
+		.@cycle <= .@last_result;
+		++.@cycle) {
+
+
+		//----------------------------------------------------
+		// 1위
+		//----------------------------------------------------
+
+		if ($NEED_BG_Fever_Winner1_AID[.@cycle] == .@aid)
+			.@reward +=
+				$NEED_BG_Fever_Winner1_Point[.@cycle];
+
+
+		//----------------------------------------------------
+		// 2위
+		//----------------------------------------------------
+
+		if ($NEED_BG_Fever_Winner2_AID[.@cycle] == .@aid)
+			.@reward +=
+				$NEED_BG_Fever_Winner2_Point[.@cycle];
+
+
+		//----------------------------------------------------
+		// 3위
+		//----------------------------------------------------
+
+		if ($NEED_BG_Fever_Winner3_AID[.@cycle] == .@aid)
+			.@reward +=
+				$NEED_BG_Fever_Winner3_Point[.@cycle];
+	}
+
+
+	//--------------------------------------------------------
+	// 확인 완료 사이클 갱신
+	//
+	// 보상 당첨 여부와 관계없이 갱신해야
+	// 매번 과거 사이클 전체를 다시 검사하지 않음.
+	//--------------------------------------------------------
+
+	#NEED_BG_FEVER_REWARD_CYCLE = .@last_result;
+
+
+	//--------------------------------------------------------
+	// 실제 보상 지급
+	//--------------------------------------------------------
+
+	if (.@reward > 0) {
+
+		#BATTLEGROUND_POINT += .@reward;
+
+		dispbottom "[전장 피버] 기부 랭킹 보상으로 전장 포인트 "
+			+ .@reward + "점을 받았습니다.";
+	}
+
+
+	return .@reward;
+}
+
+//============================================================
+// TOP 3 갱신
+//============================================================
+
+function	script	F_NEED_BG_Fever_UpdateRank	{
+
+	.@aid = getcharid(3);
+	.@amount = #NEED_BG_FEVER_DONATE;
+	.@name$ = strcharinfo(0);
+
+
+	//--------------------------------------------------------
+	// 기존 1위
+	//--------------------------------------------------------
+
+	if ($NEED_BG_Fever_Rank1_AID == .@aid) {
+
+		$NEED_BG_Fever_Rank1_Amount = .@amount;
+		$NEED_BG_Fever_Rank1_Name$ = .@name$;
+
+		return;
+	}
+
+
+	//--------------------------------------------------------
+	// 기존 2위
+	//--------------------------------------------------------
+
+	if ($NEED_BG_Fever_Rank2_AID == .@aid) {
+
+		$NEED_BG_Fever_Rank2_Amount = .@amount;
+		$NEED_BG_Fever_Rank2_Name$ = .@name$;
+
+		if ($NEED_BG_Fever_Rank2_Amount > $NEED_BG_Fever_Rank1_Amount) {
+
+			.@aid2 = $NEED_BG_Fever_Rank1_AID;
+			.@amount2 = $NEED_BG_Fever_Rank1_Amount;
+			.@name2$ = $NEED_BG_Fever_Rank1_Name$;
+
+			$NEED_BG_Fever_Rank1_AID = $NEED_BG_Fever_Rank2_AID;
+			$NEED_BG_Fever_Rank1_Amount = $NEED_BG_Fever_Rank2_Amount;
+			$NEED_BG_Fever_Rank1_Name$ = $NEED_BG_Fever_Rank2_Name$;
+
+			$NEED_BG_Fever_Rank2_AID = .@aid2;
+			$NEED_BG_Fever_Rank2_Amount = .@amount2;
+			$NEED_BG_Fever_Rank2_Name$ = .@name2$;
+		}
+
+		return;
+	}
+
+
+	//--------------------------------------------------------
+	// 기존 3위
+	//--------------------------------------------------------
+
+	if ($NEED_BG_Fever_Rank3_AID == .@aid) {
+
+		$NEED_BG_Fever_Rank3_Amount = .@amount;
+		$NEED_BG_Fever_Rank3_Name$ = .@name$;
+
+		if ($NEED_BG_Fever_Rank3_Amount > $NEED_BG_Fever_Rank2_Amount) {
+
+			.@aid2 = $NEED_BG_Fever_Rank2_AID;
+			.@amount2 = $NEED_BG_Fever_Rank2_Amount;
+			.@name2$ = $NEED_BG_Fever_Rank2_Name$;
+
+			$NEED_BG_Fever_Rank2_AID = $NEED_BG_Fever_Rank3_AID;
+			$NEED_BG_Fever_Rank2_Amount = $NEED_BG_Fever_Rank3_Amount;
+			$NEED_BG_Fever_Rank2_Name$ = $NEED_BG_Fever_Rank3_Name$;
+
+			$NEED_BG_Fever_Rank3_AID = .@aid2;
+			$NEED_BG_Fever_Rank3_Amount = .@amount2;
+			$NEED_BG_Fever_Rank3_Name$ = .@name2$;
+		}
+
+		// 2위로 올라간 후 다시 1위 검사
+		if ($NEED_BG_Fever_Rank2_AID == .@aid &&
+			$NEED_BG_Fever_Rank2_Amount > $NEED_BG_Fever_Rank1_Amount) {
+
+			.@aid2 = $NEED_BG_Fever_Rank1_AID;
+			.@amount2 = $NEED_BG_Fever_Rank1_Amount;
+			.@name2$ = $NEED_BG_Fever_Rank1_Name$;
+
+			$NEED_BG_Fever_Rank1_AID = $NEED_BG_Fever_Rank2_AID;
+			$NEED_BG_Fever_Rank1_Amount = $NEED_BG_Fever_Rank2_Amount;
+			$NEED_BG_Fever_Rank1_Name$ = $NEED_BG_Fever_Rank2_Name$;
+
+			$NEED_BG_Fever_Rank2_AID = .@aid2;
+			$NEED_BG_Fever_Rank2_Amount = .@amount2;
+			$NEED_BG_Fever_Rank2_Name$ = .@name2$;
+		}
+
+		return;
+	}
+
+
+	//--------------------------------------------------------
+	// 신규 TOP 3 진입
+	//--------------------------------------------------------
+
+	if (.@amount > $NEED_BG_Fever_Rank1_Amount) {
+
+		$NEED_BG_Fever_Rank3_AID = $NEED_BG_Fever_Rank2_AID;
+		$NEED_BG_Fever_Rank3_Amount = $NEED_BG_Fever_Rank2_Amount;
+		$NEED_BG_Fever_Rank3_Name$ = $NEED_BG_Fever_Rank2_Name$;
+
+		$NEED_BG_Fever_Rank2_AID = $NEED_BG_Fever_Rank1_AID;
+		$NEED_BG_Fever_Rank2_Amount = $NEED_BG_Fever_Rank1_Amount;
+		$NEED_BG_Fever_Rank2_Name$ = $NEED_BG_Fever_Rank1_Name$;
+
+		$NEED_BG_Fever_Rank1_AID = .@aid;
+		$NEED_BG_Fever_Rank1_Amount = .@amount;
+		$NEED_BG_Fever_Rank1_Name$ = .@name$;
+
+	}
+	else if (.@amount > $NEED_BG_Fever_Rank2_Amount) {
+
+		$NEED_BG_Fever_Rank3_AID = $NEED_BG_Fever_Rank2_AID;
+		$NEED_BG_Fever_Rank3_Amount = $NEED_BG_Fever_Rank2_Amount;
+		$NEED_BG_Fever_Rank3_Name$ = $NEED_BG_Fever_Rank2_Name$;
+
+		$NEED_BG_Fever_Rank2_AID = .@aid;
+		$NEED_BG_Fever_Rank2_Amount = .@amount;
+		$NEED_BG_Fever_Rank2_Name$ = .@name$;
+
+	}
+	else if (.@amount > $NEED_BG_Fever_Rank3_Amount) {
+
+		$NEED_BG_Fever_Rank3_AID = .@aid;
+		$NEED_BG_Fever_Rank3_Amount = .@amount;
+		$NEED_BG_Fever_Rank3_Name$ = .@name$;
+	}
+
+	return;
+}
+
+
+//============================================================
+// 단계 갱신
+//============================================================
+
+function	script	F_NEED_BG_Fever_CheckStage	{
+
+	.@old = $NEED_BG_Fever_Level;
+	.@new = .@old;
+
+
+	if ($NEED_BG_Fever_Total >= $NEED_BG_Fever_Need3)
+		.@new = 3;
+	else if ($NEED_BG_Fever_Total >= $NEED_BG_Fever_Need2)
+		.@new = 2;
+	else if ($NEED_BG_Fever_Total >= $NEED_BG_Fever_Need1)
+		.@new = 1;
+
+
+	if (.@new <= .@old)
+		return;
+
+
+	$NEED_BG_Fever_Level = .@new;
+
+
+	//--------------------------------------------------------
+	// 달성 단계는 다음 주말 예약
+	//--------------------------------------------------------
+
+	if (.@new > $NEED_BG_Fever_PendingStage)
+		$NEED_BG_Fever_PendingStage = .@new;
+
+
+	announce "[전장 피버] 피버 " + .@new
+		+ "단계가 달성되었습니다!", bc_all;
+
+
+	//--------------------------------------------------------
+	// 3단계 완료
+	//--------------------------------------------------------
+
+	if (.@new == 3) {
+
+		$NEED_BG_Fever_Locked = 1;
+
+
+		//----------------------------------------------------
+		// 이번 피버 사이클의 최종 결과 저장
+		//----------------------------------------------------
+
+		.@cycle = $NEED_BG_Fever_Cycle;
+
+
+		// 1위
+		$NEED_BG_Fever_Winner1_AID[.@cycle] =
+			$NEED_BG_Fever_Rank1_AID;
+
+		$NEED_BG_Fever_Winner1_Name$[.@cycle] =
+			$NEED_BG_Fever_Rank1_Name$;
+
+		$NEED_BG_Fever_Winner1_Point[.@cycle] =
+			$NEED_BG_Fever_RankPoint1;
+
+
+		// 2위
+		$NEED_BG_Fever_Winner2_AID[.@cycle] =
+			$NEED_BG_Fever_Rank2_AID;
+
+		$NEED_BG_Fever_Winner2_Name$[.@cycle] =
+			$NEED_BG_Fever_Rank2_Name$;
+
+		$NEED_BG_Fever_Winner2_Point[.@cycle] =
+			$NEED_BG_Fever_RankPoint2;
+
+
+		// 3위
+		$NEED_BG_Fever_Winner3_AID[.@cycle] =
+			$NEED_BG_Fever_Rank3_AID;
+
+		$NEED_BG_Fever_Winner3_Name$[.@cycle] =
+			$NEED_BG_Fever_Rank3_Name$;
+
+		$NEED_BG_Fever_Winner3_Point[.@cycle] =
+			$NEED_BG_Fever_RankPoint3;
+
+
+		//----------------------------------------------------
+		// 가장 최근에 결과가 확정된 사이클
+		//----------------------------------------------------
+
+		$NEED_BG_Fever_ResultCycle = .@cycle;
+
+
+		//----------------------------------------------------
+		// 최종 순위 공개
+		//
+		// 실제 기부량은 공개하지 않음.
+		//----------------------------------------------------
+
+		announce "[전장 피버] 피버 3단계가 완성되었습니다!",
+			bc_all;
+
+
+		if ($NEED_BG_Fever_Rank1_AID > 0)
+			announce "[전장 피버] 기부 1위 : "
+				+ $NEED_BG_Fever_Rank1_Name$
+				+ " / 전장 포인트 "
+				+ $NEED_BG_Fever_RankPoint1
+				+ "점", bc_all;
+
+
+		if ($NEED_BG_Fever_Rank2_AID > 0)
+			announce "[전장 피버] 기부 2위 : "
+				+ $NEED_BG_Fever_Rank2_Name$
+				+ " / 전장 포인트 "
+				+ $NEED_BG_Fever_RankPoint2
+				+ "점", bc_all;
+
+
+		if ($NEED_BG_Fever_Rank3_AID > 0)
+			announce "[전장 피버] 기부 3위 : "
+				+ $NEED_BG_Fever_Rank3_Name$
+				+ " / 전장 포인트 "
+				+ $NEED_BG_Fever_RankPoint3
+				+ "점", bc_all;
+
+
+		announce "[전장 피버] 3단계 피버가 적용될 때까지 "
+			+ "추가 기부가 잠시 중단됩니다.",
+			bc_all;
+	}
+
+	return;
+}
+
+
+//============================================================
+// NPC
+//
+// 위치는 원하는 곳으로 변경.
+//============================================================
+
+bat_room,150,150,4	script	전장 피버 관리인	4_F_KAFRA1,{
+
+	callfunc "F_NEED_BG_Fever_CheckPlayer";
+	callfunc "F_NEED_BG_Fever_ClaimReward";
+
+
+	mes "[전장 피버 관리인]";
+	mes "전장에서 획득한 휘장을 기부하여";
+	mes "모두가 함께 ^FF8000전장 피버^000000를";
+	mes "활성화할 수 있습니다.";
+	next;
+
+
+	while (1) {
+
+		//----------------------------------------------------
+		// 현재 단계 표시
+		//----------------------------------------------------
+
+		mes "[전장 피버]";
+
+		if ($NEED_BG_Fever_Level == 0)
+			mes "현재 전장 피버: ^777777준비 단계^000000";
+		else
+			mes "현재 전장 피버: ^FF8000"
+				+ $NEED_BG_Fever_Level
+				+ "단계^000000";
+
+
+		//----------------------------------------------------
+		// 진행도
+		//----------------------------------------------------
+
+		if ($NEED_BG_Fever_Level < 3) {
+
+			if ($NEED_BG_Fever_Level == 0) {
+				.@start = 0;
+				.@target = $NEED_BG_Fever_Need1;
+			}
+			else if ($NEED_BG_Fever_Level == 1) {
+				.@start = $NEED_BG_Fever_Need1;
+				.@target = $NEED_BG_Fever_Need2;
+			}
+			else {
+				.@start = $NEED_BG_Fever_Need2;
+				.@target = $NEED_BG_Fever_Need3;
+			}
+
+
+			.@progress = $NEED_BG_Fever_Total - .@start;
+			.@need = .@target - .@start;
+
+			if (.@progress < 0)
+				.@progress = 0;
+
+			.@percent = (.@progress * 100) / .@need;
+
+			if (.@percent > 100)
+				.@percent = 100;
+
+
+			//------------------------------------------------
+			// 10칸 진행바
+			//------------------------------------------------
+
+			.@bars = .@percent / 10;
+
+			if (.@bars > 10)
+				.@bars = 10;
+
+			.@bar$ = "";
+
+			for (.@i = 0; .@i < 10; ++.@i) {
+				if (.@i < .@bars)
+					.@bar$ += "■";
+				else
+					.@bar$ += "□";
+			}
+
+			mes "다음 단계 진행도:";
+			mes "^00AAFF" + .@bar$ + "^000000 "
+				+ .@percent + "%";
+
+		}
+		else {
+			mes "진행도: ^00AAFF피버 3단계 완료^000000";
+		}
+
+
+		mes " ";
+		mes "나의 이번 피버 누적 기부량:";
+		mes "^00AAFF" + #NEED_BG_FEVER_DONATE + "개^000000";
+		mes " ";
+
+
+		if ($NEED_BG_Fever_ActiveStage > 0)
+			mes "이번 주말 적용 피버: ^FF8000"
+				+ $NEED_BG_Fever_ActiveStage
+				+ "단계^000000";
+		else if ($NEED_BG_Fever_PendingStage > 0)
+			mes "다음 주말 예정 피버: ^FF8000"
+				+ $NEED_BG_Fever_PendingStage
+				+ "단계^000000";
+
+
+		mes " ";
+		mes "^777777※ 기부자 순위는 피버 3단계";
+		mes "달성 후 공개됩니다.^000000";
+
+		next;
+
+
+		.@menu = select(
+			"휘장 기부",
+			"피버 단계별 혜택",
+			"기부 시스템 안내",
+			"종료"
+		);
+
+
+		switch (.@menu) {
+
+		case 1:
+
+			if ($NEED_BG_Fever_Locked) {
+				mes "[전장 피버 관리인]";
+				mes "현재 피버 3단계가 완성되어";
+				mes "기부 접수가 잠시 중단되었습니다.";
+				mes " ";
+				mes "3단계 피버 적용이 종료된 후";
+				mes "새로운 기부가 시작됩니다.";
+				next;
+				break;
+			}
+
+			mes "[전장 피버 관리인]";
+			mes "어떤 휘장을 기부하시겠습니까?";
+			next;
+
+			.@sel = select(
+				getitemname($NEED_BG_Fever_Item1),
+				getitemname($NEED_BG_Fever_Item2),
+				"취소"
+			);
+
+			if (.@sel == 3)
+				break;
+
+
+			if (.@sel == 1)
+				.@item = $NEED_BG_Fever_Item1;
+			else
+				.@item = $NEED_BG_Fever_Item2;
+
+
+			.@have = countitem(.@item);
+
+			if (.@have <= 0) {
+				mes "[전장 피버 관리인]";
+				mes getitemname(.@item)
+					+ "을 보유하고 있지 않습니다.";
+				next;
+				break;
+			}
+
+
+			mes "[전장 피버 관리인]";
+			mes "보유 수량: ^00AAFF"
+				+ .@have + "개^000000";
+			mes " ";
+			mes "기부할 수량을 선택해주세요.";
+			next;
+
+
+			.@amount_sel = select(
+				"10개",
+				"50개",
+				"100개",
+				"직접 입력",
+				"전부 기부",
+				"취소"
+			);
+
+
+			switch (.@amount_sel) {
+
+			case 1:
+				.@amount = 10;
+				break;
+
+			case 2:
+				.@amount = 50;
+				break;
+
+			case 3:
+				.@amount = 100;
+				break;
+
+			case 4:
+				mes "[전장 피버 관리인]";
+				mes "기부할 수량을 입력해주세요.";
+				input .@amount, 1, .@have;
+				break;
+
+			case 5:
+				.@amount = .@have;
+				break;
+
+			default:
+				break 2;
+			}
+
+
+			if (.@amount <= 0)
+				break;
+
+
+			if (countitem(.@item) < .@amount) {
+				mes "[전장 피버 관리인]";
+				mes "휘장이 부족합니다.";
+				next;
+				break;
+			}
+
+
+			mes "[전장 피버 관리인]";
+			mes getitemname(.@item)
+				+ " ^FF8000"
+				+ .@amount
+				+ "개^000000를 기부하시겠습니까?";
+			mes " ";
+			mes "^FF0000기부한 휘장은 되돌릴 수 없습니다.^000000";
+			next;
+
+
+			if (select("기부한다","취소") == 2)
+				break;
+
+
+			//------------------------------------------------
+			// 최종 검증 후 차감
+			//------------------------------------------------
+
+			if ($NEED_BG_Fever_Locked) {
+				mes "[전장 피버 관리인]";
+				mes "이미 피버 3단계가 달성되었습니다.";
+				next;
+				break;
+			}
+
+			if (countitem(.@item) < .@amount) {
+				mes "[전장 피버 관리인]";
+				mes "휘장 수량이 변경되어 기부할 수 없습니다.";
+				next;
+				break;
+			}
+
+
+			delitem .@item, .@amount;
+
+			#NEED_BG_FEVER_DONATE += .@amount;
+			$NEED_BG_Fever_Total += .@amount;
+
+
+			callfunc "F_NEED_BG_Fever_UpdateRank";
+			callfunc "F_NEED_BG_Fever_CheckStage";
+
+
+			mes "[전장 피버 관리인]";
+			mes "^00AAFF" + .@amount
+				+ "개^000000의 휘장을 기부했습니다.";
+			mes " ";
+			mes "나의 누적 기부량: ^00AAFF"
+				+ #NEED_BG_FEVER_DONATE
+				+ "개^000000";
+
+			next;
+			break;
+
+
+		case 2:
+
+			mes "[전장 피버 혜택]";
+			mes "^00AAFF피버 1단계^000000";
+			mes "주말 핫타임 금화 최종 ^FF80002.3배^000000";
+			mes " ";
+			mes "^00AAFF피버 2단계^000000";
+			mes "주말 핫타임 금화 최종 ^FF80002.5배^000000";
+			mes " ";
+			mes "^00AAFF피버 3단계^000000";
+			mes "주말 핫타임 금화 최종 ^FF80002.5배^000000";
+			mes "전투 휘장 최종 ^FF80003배^000000";
+			next;
+			break;
+
+
+		case 3:
+
+			mes "[전장 피버 관리인]";
+			mes "용맹의 휘장과 특공의 휘장을";
+			mes "기부하여 서버 전체 피버를";
+			mes "올릴 수 있습니다.";
+			mes " ";
+			mes "단계에 도달하지 못해도";
+			mes "^00AAFF기부 진행도는 초기화되지 않습니다.^000000";
+			mes " ";
+			mes "단계 달성 시 해당 피버가";
+			mes "주말 전장 핫타임에 적용됩니다.";
+			mes " ";
+			mes "3단계 달성 시 한 사이클이 완료되며";
+			mes "전체 누적 기부량을 기준으로";
+			mes "TOP 3 기부자가 결정됩니다.";
+			next;
+
+			mes "[랭킹 보상]";
+			mes "1위 : 전장 포인트 ^FF8000"
+				+ $NEED_BG_Fever_RankPoint1 + "점^000000";
+			mes "2위 : 전장 포인트 ^FF8000"
+				+ $NEED_BG_Fever_RankPoint2 + "점^000000";
+			mes "3위 : 전장 포인트 ^FF8000"
+				+ $NEED_BG_Fever_RankPoint3 + "점^000000";
+			mes " ";
+			mes "진행 중인 기부 순위와";
+			mes "다른 유저의 기부량은 공개되지 않습니다.";
+			next;
+			break;
+
+
+		default:
+			close;
+		}
+	}
+
+
+OnInit:
+
+	//--------------------------------------------------------
+	// ================= 설정 구간 ============================
+	//--------------------------------------------------------
+
+	// 기부 아이템
+	$NEED_BG_Fever_Item1 = 7828;	// 용맹의 휘장
+	$NEED_BG_Fever_Item2 = 7829;	// 특공의 휘장
+
+
+	// 피버 단계 누적 요구량
+	$NEED_BG_Fever_Need1 = 3000;
+	$NEED_BG_Fever_Need2 = 7000;
+	$NEED_BG_Fever_Need3 = 12000;
+
+
+	// 기존 핫타임에 추가되는 금화 보너스(%)
+	//
+	// 기존 핫타임 = 200%
+	// 1단계 +30%  => 최종 230%
+	// 2단계 +50%  => 최종 250%
+	// 3단계 +50%  => 최종 250%
+	//
+	$NEED_BG_Fever_GoldBonus1 = 30;
+	$NEED_BG_Fever_GoldBonus2 = 50;
+	$NEED_BG_Fever_GoldBonus3 = 50;
+
+
+	// 기존 핫타임에 추가되는 전투 휘장 보너스(%)
+	//
+	// 기존 핫타임 = 200%
+	// 3단계 +100% => 최종 300%
+	//
+	$NEED_BG_Fever_BadgeBonus1 = 0;
+	$NEED_BG_Fever_BadgeBonus2 = 0;
+	$NEED_BG_Fever_BadgeBonus3 = 100;
+
+
+	// 최종 랭킹 보상
+	$NEED_BG_Fever_RankPoint1 = 100;
+	$NEED_BG_Fever_RankPoint2 = 50;
+	$NEED_BG_Fever_RankPoint3 = 30;
+
+
+	//--------------------------------------------------------
+	// 시스템 최초 실행
+	//--------------------------------------------------------
+
+	if ($NEED_BG_Fever_Cycle <= 0)
+		$NEED_BG_Fever_Cycle = 1;
+
+	end;
+
+
+//============================================================
+// 매일 04:00 처리
+//============================================================
+
+OnClock0400:
+
+	.@dow = gettime(DT_DAYOFWEEK);
+
+
+	//--------------------------------------------------------
+	// 토요일 04:00
+	// 예약된 피버를 이번 주말 활성화
+	//--------------------------------------------------------
+
+	if (.@dow == 6) {
+
+		if ($NEED_BG_Fever_PendingStage > 0) {
+
+			$NEED_BG_Fever_ActiveStage =
+				$NEED_BG_Fever_PendingStage;
+
+			$NEED_BG_Fever_PendingStage = 0;
+
+			announce "[전장 피버] 이번 주말 전장 핫타임에 "
+				+ "피버 "
+				+ $NEED_BG_Fever_ActiveStage
+				+ "단계가 적용됩니다!", bc_all;
+		}
+
+		end;
+	}
+
+
+	//--------------------------------------------------------
+	// 월요일 04:00
+	// 지난 주말 피버 종료
+	//--------------------------------------------------------
+
+	if (.@dow == 1) {
+
+		.@finished_stage = $NEED_BG_Fever_ActiveStage;
+
+		$NEED_BG_Fever_ActiveStage = 0;
+
+
+		//----------------------------------------------------
+		// 3단계 주말까지 종료되었다면
+		// 새로운 사이클 시작
+		//----------------------------------------------------
+
+		if (.@finished_stage == 3 &&
+			$NEED_BG_Fever_Locked) {
+
+			$NEED_BG_Fever_Cycle++;
+
+			$NEED_BG_Fever_Total = 0;
+			$NEED_BG_Fever_Level = 0;
+			$NEED_BG_Fever_Locked = 0;
+			$NEED_BG_Fever_PendingStage = 0;
+
+
+			//------------------------------------------------
+			// TOP 3 초기화
+			//------------------------------------------------
+
+			$NEED_BG_Fever_Rank1_AID = 0;
+			$NEED_BG_Fever_Rank1_Amount = 0;
+			$NEED_BG_Fever_Rank1_Name$ = "";
+
+			$NEED_BG_Fever_Rank2_AID = 0;
+			$NEED_BG_Fever_Rank2_Amount = 0;
+			$NEED_BG_Fever_Rank2_Name$ = "";
+
+			$NEED_BG_Fever_Rank3_AID = 0;
+			$NEED_BG_Fever_Rank3_Amount = 0;
+			$NEED_BG_Fever_Rank3_Name$ = "";
+
+
+			announce "[전장 피버] 새로운 전장 피버 기부가 "
+				+ "시작되었습니다!", bc_all;
+		}
+
+		end;
+	}
+
+	end;
+}

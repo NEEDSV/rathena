@@ -1,0 +1,1314 @@
+//============================================================
+// NEED Battleground Fever - GM Admin
+// need_bg_fever_admin.txt
+//
+// 필요:
+// - need_bg_fever.txt가 먼저 로드되어 있어야 함.
+// - F_NEED_BG_Fever_CheckStage 함수 사용
+//
+// 관리자 기능
+// 1. 현재 상태 조회
+// 2. 진행도 관리
+// 3. 피버 상태 관리
+// 4. 현재 TOP 3 확인
+// 5. 과거 랭킹 확인
+// 6. 사이클 관리
+// 7. 설정값 조회 / 런타임 수정
+//
+// ※ 과거 확정 랭킹 결과 배열은 새 사이클 시작 시 삭제하지 않음.
+//============================================================
+
+
+bat_room,155,150,4	script	전장 피버 관리자	4_M_01,{
+
+	//--------------------------------------------------------
+	// 권한 검사
+	//--------------------------------------------------------
+
+	if (getgmlevel() < .GM_Level) {
+		mes "[전장 피버 관리자]";
+		mes "접근 권한이 없습니다.";
+		close;
+	}
+
+
+	while (1) {
+
+		mes "[전장 피버 관리자]";
+		mes "^00AAFF현재 사이클 : "
+			+ $NEED_BG_Fever_Cycle
+			+ "회차^000000";
+
+		mes "현재 진행 단계 : "
+			+ $NEED_BG_Fever_Level
+			+ "단계";
+
+		mes "누적 기부량 : ^FF8000"
+			+ $NEED_BG_Fever_Total
+			+ "^000000";
+
+		mes "Pending : "
+			+ $NEED_BG_Fever_PendingStage
+			+ "단계";
+
+		mes "Active : "
+			+ $NEED_BG_Fever_ActiveStage
+			+ "단계";
+
+		if ($NEED_BG_Fever_Locked)
+			mes "기부 상태 : ^FF0000잠금^000000";
+		else
+			mes "기부 상태 : ^00AA00가능^000000";
+
+		next;
+
+
+		.@menu = select(
+			"상세 상태 조회",
+			"진행도 관리",
+			"피버 상태 관리",
+			"현재 TOP 3 확인",
+			"과거 랭킹 확인",
+			"사이클 관리",
+			"설정값 관리",
+			"종료"
+		);
+
+
+		switch (.@menu) {
+
+		//----------------------------------------------------
+		// 상세 상태
+		//----------------------------------------------------
+
+		case 1:
+
+			callsub S_ShowStatus;
+			break;
+
+
+		//----------------------------------------------------
+		// 진행도 관리
+		//----------------------------------------------------
+
+		case 2:
+
+			callsub S_ProgressMenu;
+			break;
+
+
+		//----------------------------------------------------
+		// 피버 상태 관리
+		//----------------------------------------------------
+
+		case 3:
+
+			callsub S_StateMenu;
+			break;
+
+
+		//----------------------------------------------------
+		// 현재 TOP 3
+		//----------------------------------------------------
+
+		case 4:
+
+			callsub S_CurrentRank;
+			break;
+
+
+		//----------------------------------------------------
+		// 과거 랭킹
+		//----------------------------------------------------
+
+		case 5:
+
+			callsub S_HistoryRank;
+			break;
+
+
+		//----------------------------------------------------
+		// 사이클 관리
+		//----------------------------------------------------
+
+		case 6:
+
+			callsub S_CycleMenu;
+			break;
+
+
+		//----------------------------------------------------
+		// 설정 관리
+		//----------------------------------------------------
+
+		case 7:
+
+			callsub S_ConfigMenu;
+			break;
+
+
+		default:
+			close;
+		}
+	}
+
+
+//============================================================
+// 상세 상태
+//============================================================
+
+S_ShowStatus:
+
+	mes "[전장 피버 상태]";
+	mes "사이클 : ^00AAFF"
+		+ $NEED_BG_Fever_Cycle
+		+ "^000000";
+
+	mes " ";
+	mes "현재 단계 : "
+		+ $NEED_BG_Fever_Level;
+
+	mes "누적 기부량 : "
+		+ $NEED_BG_Fever_Total;
+
+	mes " ";
+
+	mes "1단계 기준 : "
+		+ $NEED_BG_Fever_Need1;
+
+	mes "2단계 기준 : "
+		+ $NEED_BG_Fever_Need2;
+
+	mes "3단계 기준 : "
+		+ $NEED_BG_Fever_Need3;
+
+
+	//--------------------------------------------------------
+	// 다음 단계 진행도
+	//--------------------------------------------------------
+
+	if ($NEED_BG_Fever_Level < 3) {
+
+		if ($NEED_BG_Fever_Level == 0) {
+
+			.@start = 0;
+			.@target = $NEED_BG_Fever_Need1;
+
+		}
+		else if ($NEED_BG_Fever_Level == 1) {
+
+			.@start = $NEED_BG_Fever_Need1;
+			.@target = $NEED_BG_Fever_Need2;
+
+		}
+		else {
+
+			.@start = $NEED_BG_Fever_Need2;
+			.@target = $NEED_BG_Fever_Need3;
+		}
+
+
+		.@progress =
+			$NEED_BG_Fever_Total - .@start;
+
+		.@need =
+			.@target - .@start;
+
+
+		if (.@progress < 0)
+			.@progress = 0;
+
+
+		if (.@need > 0)
+			.@percent =
+				(.@progress * 100) / .@need;
+		else
+			.@percent = 100;
+
+
+		if (.@percent > 100)
+			.@percent = 100;
+
+
+		mes " ";
+		mes "다음 단계 진행도 : ^00AAFF"
+			+ .@percent
+			+ "%^000000";
+
+		mes "다음 단계까지 : ^FF8000"
+			+ (.@target - $NEED_BG_Fever_Total)
+			+ "개^000000";
+
+	}
+	else {
+
+		mes " ";
+		mes "진행도 : ^00AAFF3단계 완료^000000";
+	}
+
+
+	mes " ";
+	mes "Pending Stage : "
+		+ $NEED_BG_Fever_PendingStage;
+
+	mes "Active Stage : "
+		+ $NEED_BG_Fever_ActiveStage;
+
+	mes "Locked : "
+		+ $NEED_BG_Fever_Locked;
+
+	mes "최근 결과 사이클 : "
+		+ $NEED_BG_Fever_ResultCycle;
+
+	next;
+
+	return;
+
+
+//============================================================
+// 진행도 관리
+//============================================================
+
+S_ProgressMenu:
+
+	while (1) {
+
+		mes "[진행도 관리]";
+		mes "현재 누적 : ^00AAFF"
+			+ $NEED_BG_Fever_Total
+			+ "^000000";
+
+		mes "현재 단계 : "
+			+ $NEED_BG_Fever_Level;
+
+		next;
+
+
+		.@sel = select(
+			"+100 (정상 로직)",
+			"+1,000 (정상 로직)",
+			"직접 추가 (정상 로직)",
+			"누적량 직접 설정",
+			"3단계 정상 완료 테스트",
+			"돌아가기"
+		);
+
+
+		switch (.@sel) {
+
+		//----------------------------------------------------
+		// +100
+		//----------------------------------------------------
+
+		case 1:
+
+			if ($NEED_BG_Fever_Locked) {
+				mes "[진행도 관리]";
+				mes "현재 기부가 잠금 상태입니다.";
+				next;
+				break;
+			}
+
+			$NEED_BG_Fever_Total += 100;
+
+			callfunc "F_NEED_BG_Fever_CheckStage";
+
+			mes "[진행도 관리]";
+			mes "누적 기부량에 ^00AAFF100^000000을";
+			mes "추가했습니다.";
+			next;
+			break;
+
+
+		//----------------------------------------------------
+		// +1000
+		//----------------------------------------------------
+
+		case 2:
+
+			if ($NEED_BG_Fever_Locked) {
+				mes "[진행도 관리]";
+				mes "현재 기부가 잠금 상태입니다.";
+				next;
+				break;
+			}
+
+			$NEED_BG_Fever_Total += 1000;
+
+			callfunc "F_NEED_BG_Fever_CheckStage";
+
+			mes "[진행도 관리]";
+			mes "누적 기부량에 ^00AAFF1,000^000000을";
+			mes "추가했습니다.";
+			next;
+			break;
+
+
+		//----------------------------------------------------
+		// 직접 추가
+		//----------------------------------------------------
+
+		case 3:
+
+			if ($NEED_BG_Fever_Locked) {
+				mes "[진행도 관리]";
+				mes "현재 기부가 잠금 상태입니다.";
+				next;
+				break;
+			}
+
+			mes "[진행도 관리]";
+			mes "추가할 수량을 입력해주세요.";
+			input .@amount, 1, 100000000;
+
+			$NEED_BG_Fever_Total += .@amount;
+
+			callfunc "F_NEED_BG_Fever_CheckStage";
+
+			mes "[진행도 관리]";
+			mes "^00AAFF"
+				+ .@amount
+				+ "^000000을 추가했습니다.";
+
+			next;
+			break;
+
+
+		//----------------------------------------------------
+		// 누적량 직접 설정
+		//----------------------------------------------------
+
+		case 4:
+
+			mes "[경고]";
+			mes "이 기능은 누적 기부량 변수만";
+			mes "직접 변경합니다.";
+			mes " ";
+			mes "^FF0000단계 달성 이벤트는 발생하지 않습니다.^000000";
+			mes " ";
+			mes "복구 또는 디버깅 목적으로만";
+			mes "사용해주세요.";
+
+			next;
+
+
+			if (select("취소","계속") == 1)
+				break;
+
+
+			mes "[누적량 직접 설정]";
+			mes "설정할 누적 기부량을 입력해주세요.";
+			input .@value, 0, 100000000;
+
+			mes "[최종 확인]";
+			mes "기존 : "
+				+ $NEED_BG_Fever_Total;
+
+			mes "변경 : ^FF8000"
+				+ .@value
+				+ "^000000";
+
+			next;
+
+
+			if (select("취소","변경") == 1)
+				break;
+
+
+			$NEED_BG_Fever_Total = .@value;
+
+			mes "[진행도 관리]";
+			mes "누적 기부량을 변경했습니다.";
+			next;
+			break;
+
+
+		//----------------------------------------------------
+		// 3단계 정상 완료 테스트
+		//----------------------------------------------------
+
+		case 5:
+
+			mes "[경고]";
+			mes "^FF0000실제 3단계 완료 로직을 실행합니다.^000000";
+			mes " ";
+			mes "현재 TOP 3가 최종 랭킹으로 저장되고";
+			mes "기부가 잠기며 랭킹 결과가 발표됩니다.";
+
+			next;
+
+
+			if (select("취소","계속") == 1)
+				break;
+
+
+			mes "[최종 확인]";
+			mes "정말 3단계 완료 처리를";
+			mes "실행하시겠습니까?";
+
+			next;
+
+
+			if (select("취소","3단계 완료") == 1)
+				break;
+
+
+			if ($NEED_BG_Fever_Level >= 3) {
+
+				mes "[진행도 관리]";
+				mes "이미 3단계 상태입니다.";
+				next;
+				break;
+			}
+
+
+			if ($NEED_BG_Fever_Total
+				< $NEED_BG_Fever_Need3)
+
+				$NEED_BG_Fever_Total =
+					$NEED_BG_Fever_Need3;
+
+
+			callfunc "F_NEED_BG_Fever_CheckStage";
+
+
+			mes "[진행도 관리]";
+			mes "3단계 완료 로직을 실행했습니다.";
+			next;
+			break;
+
+
+		default:
+			return;
+		}
+	}
+
+
+//============================================================
+// 피버 상태 관리
+//============================================================
+
+S_StateMenu:
+
+	while (1) {
+
+		mes "[피버 상태 관리]";
+		mes "현재 단계 : "
+			+ $NEED_BG_Fever_Level;
+
+		mes "Pending : "
+			+ $NEED_BG_Fever_PendingStage;
+
+		mes "Active : "
+			+ $NEED_BG_Fever_ActiveStage;
+
+		mes "Locked : "
+			+ $NEED_BG_Fever_Locked;
+
+		next;
+
+
+		.@sel = select(
+			"현재 진행 단계 강제 설정",
+			"Pending Stage 설정",
+			"Active Stage 설정",
+			"피버 효과 즉시 OFF",
+			"기부 잠금/해제",
+			"돌아가기"
+		);
+
+
+		switch (.@sel) {
+
+		//----------------------------------------------------
+		// Level
+		//----------------------------------------------------
+
+		case 1:
+
+			mes "[진행 단계 강제 설정]";
+			mes "^FF0000달성 이벤트는 실행하지 않습니다.^000000";
+			mes "상태 복구/테스트용입니다.";
+			next;
+
+
+			.@stage =
+				select(
+					"0단계",
+					"1단계",
+					"2단계",
+					"3단계",
+					"취소"
+				) - 1;
+
+
+			if (.@stage == 4)
+				break;
+
+
+			$NEED_BG_Fever_Level = .@stage;
+
+			mes "[피버 상태 관리]";
+			mes "진행 단계를 "
+				+ .@stage
+				+ "단계로 변경했습니다.";
+
+			next;
+			break;
+
+
+		//----------------------------------------------------
+		// Pending
+		//----------------------------------------------------
+
+		case 2:
+
+			mes "[Pending Stage]";
+			mes "다음 주말에 적용할 단계를";
+			mes "직접 설정합니다.";
+
+			next;
+
+
+			.@stage =
+				select(
+					"없음",
+					"1단계",
+					"2단계",
+					"3단계",
+					"취소"
+				) - 1;
+
+
+			if (.@stage == 4)
+				break;
+
+
+			$NEED_BG_Fever_PendingStage =
+				.@stage;
+
+			mes "[피버 상태 관리]";
+			mes "Pending Stage를 "
+				+ .@stage
+				+ "단계로 변경했습니다.";
+
+			next;
+			break;
+
+
+		//----------------------------------------------------
+		// Active
+		//----------------------------------------------------
+
+		case 3:
+
+			mes "[Active Stage]";
+			mes "현재 적용되는 피버 효과를";
+			mes "직접 설정합니다.";
+			mes " ";
+			mes "금화/휘장 배율 테스트에";
+			mes "사용할 수 있습니다.";
+
+			next;
+
+
+			.@stage =
+				select(
+					"없음",
+					"1단계",
+					"2단계",
+					"3단계",
+					"취소"
+				) - 1;
+
+
+			if (.@stage == 4)
+				break;
+
+
+			$NEED_BG_Fever_ActiveStage =
+				.@stage;
+
+			mes "[피버 상태 관리]";
+			mes "Active Stage를 "
+				+ .@stage
+				+ "단계로 변경했습니다.";
+
+			next;
+			break;
+
+
+		//----------------------------------------------------
+		// 즉시 OFF
+		//----------------------------------------------------
+
+		case 4:
+
+			$NEED_BG_Fever_ActiveStage = 0;
+
+			mes "[피버 상태 관리]";
+			mes "현재 피버 효과를 OFF했습니다.";
+			next;
+			break;
+
+
+		//----------------------------------------------------
+		// Lock
+		//----------------------------------------------------
+
+		case 5:
+
+			if ($NEED_BG_Fever_Locked) {
+
+				mes "[기부 잠금]";
+				mes "현재 기부가 잠겨 있습니다.";
+				mes "잠금을 해제하시겠습니까?";
+				next;
+
+				if (select("취소","잠금 해제") == 2) {
+
+					$NEED_BG_Fever_Locked = 0;
+
+					mes "[피버 상태 관리]";
+					mes "기부 잠금을 해제했습니다.";
+					next;
+				}
+
+			}
+			else {
+
+				mes "[기부 잠금]";
+				mes "현재 기부가 가능합니다.";
+				mes "기부를 잠그시겠습니까?";
+				next;
+
+				if (select("취소","기부 잠금") == 2) {
+
+					$NEED_BG_Fever_Locked = 1;
+
+					mes "[피버 상태 관리]";
+					mes "기부를 잠금 처리했습니다.";
+					next;
+				}
+			}
+
+			break;
+
+
+		default:
+			return;
+		}
+	}
+
+
+//============================================================
+// 현재 TOP 3
+//============================================================
+
+S_CurrentRank:
+
+	mes "[현재 기부 TOP 3]";
+	mes "^777777유저에게는 공개되지 않는 운영자 정보입니다.^000000";
+	mes " ";
+
+
+	if ($NEED_BG_Fever_Rank1_AID > 0) {
+
+		mes "^FF80001위^000000";
+		mes "캐릭터 : "
+			+ $NEED_BG_Fever_Rank1_Name$;
+
+		mes "AID : "
+			+ $NEED_BG_Fever_Rank1_AID;
+
+		mes "기부량 : ^00AAFF"
+			+ $NEED_BG_Fever_Rank1_Amount
+			+ "^000000";
+
+	}
+	else {
+		mes "1위 : 없음";
+	}
+
+
+	mes " ";
+
+
+	if ($NEED_BG_Fever_Rank2_AID > 0) {
+
+		mes "^FF80002위^000000";
+		mes "캐릭터 : "
+			+ $NEED_BG_Fever_Rank2_Name$;
+
+		mes "AID : "
+			+ $NEED_BG_Fever_Rank2_AID;
+
+		mes "기부량 : ^00AAFF"
+			+ $NEED_BG_Fever_Rank2_Amount
+			+ "^000000";
+
+	}
+	else {
+		mes "2위 : 없음";
+	}
+
+
+	mes " ";
+
+
+	if ($NEED_BG_Fever_Rank3_AID > 0) {
+
+		mes "^FF80003위^000000";
+		mes "캐릭터 : "
+			+ $NEED_BG_Fever_Rank3_Name$;
+
+		mes "AID : "
+			+ $NEED_BG_Fever_Rank3_AID;
+
+		mes "기부량 : ^00AAFF"
+			+ $NEED_BG_Fever_Rank3_Amount
+			+ "^000000";
+
+	}
+	else {
+		mes "3위 : 없음";
+	}
+
+	next;
+
+	return;
+
+
+//============================================================
+// 과거 확정 랭킹
+//============================================================
+
+S_HistoryRank:
+
+	if ($NEED_BG_Fever_ResultCycle <= 0) {
+
+		mes "[과거 랭킹]";
+		mes "아직 완료된 피버 사이클이 없습니다.";
+		next;
+
+		return;
+	}
+
+
+	mes "[과거 랭킹]";
+	mes "최근 완료 사이클 : ^00AAFF"
+		+ $NEED_BG_Fever_ResultCycle
+		+ "회차^000000";
+
+	mes "확인할 사이클 번호를 입력해주세요.";
+
+	input .@cycle, 1,
+		$NEED_BG_Fever_ResultCycle;
+
+
+	mes "[피버 "
+		+ .@cycle
+		+ "회차 결과]";
+
+
+	if ($NEED_BG_Fever_Winner1_AID[.@cycle] > 0) {
+
+		mes "1위 : "
+			+ $NEED_BG_Fever_Winner1_Name$[.@cycle];
+
+		mes "AID : "
+			+ $NEED_BG_Fever_Winner1_AID[.@cycle];
+
+		mes "보상 : "
+			+ $NEED_BG_Fever_Winner1_Point[.@cycle]
+			+ "점";
+
+	}
+	else {
+		mes "1위 : 기록 없음";
+	}
+
+
+	mes " ";
+
+
+	if ($NEED_BG_Fever_Winner2_AID[.@cycle] > 0) {
+
+		mes "2위 : "
+			+ $NEED_BG_Fever_Winner2_Name$[.@cycle];
+
+		mes "AID : "
+			+ $NEED_BG_Fever_Winner2_AID[.@cycle];
+
+		mes "보상 : "
+			+ $NEED_BG_Fever_Winner2_Point[.@cycle]
+			+ "점";
+
+	}
+	else {
+		mes "2위 : 기록 없음";
+	}
+
+
+	mes " ";
+
+
+	if ($NEED_BG_Fever_Winner3_AID[.@cycle] > 0) {
+
+		mes "3위 : "
+			+ $NEED_BG_Fever_Winner3_Name$[.@cycle];
+
+		mes "AID : "
+			+ $NEED_BG_Fever_Winner3_AID[.@cycle];
+
+		mes "보상 : "
+			+ $NEED_BG_Fever_Winner3_Point[.@cycle]
+			+ "점";
+
+	}
+	else {
+		mes "3위 : 기록 없음";
+	}
+
+	next;
+
+	return;
+
+
+//============================================================
+// 사이클 관리
+//============================================================
+
+S_CycleMenu:
+
+	while (1) {
+
+		mes "[사이클 관리]";
+		mes "현재 : ^00AAFF"
+			+ $NEED_BG_Fever_Cycle
+			+ "회차^000000";
+
+		next;
+
+
+		.@sel = select(
+			"현재 회차 데이터 초기화",
+			"새 사이클 강제 시작",
+			"Active/Pending만 초기화",
+			"돌아가기"
+		);
+
+
+		switch (.@sel) {
+
+		//----------------------------------------------------
+		// 현재 회차 초기화
+		//----------------------------------------------------
+
+		case 1:
+
+			mes "[경고]";
+			mes "^FF0000현재 회차의 진행도와";
+			mes "실시간 TOP 3가 삭제됩니다.^000000";
+			mes " ";
+			mes "회차 번호는 유지됩니다.";
+			mes "과거 확정 랭킹은 삭제되지 않습니다.";
+
+			next;
+
+
+			if (select("취소","계속") == 1)
+				break;
+
+
+			mes "[최종 확인]";
+			mes "정말 현재 회차를 초기화하시겠습니까?";
+			next;
+
+
+			if (select("취소","초기화") == 1)
+				break;
+
+
+			callsub S_ResetCurrentCycle, 0;
+
+
+			mes "[사이클 관리]";
+			mes "현재 회차 데이터를 초기화했습니다.";
+			next;
+			break;
+
+
+		//----------------------------------------------------
+		// 새 사이클
+		//----------------------------------------------------
+
+		case 2:
+
+			mes "[경고]";
+			mes "현재 진행 중인 피버를 종료하고";
+			mes "^FF0000새로운 사이클을 시작합니다.^000000";
+			mes " ";
+			mes "현재 진행도와 실시간 TOP 3는";
+			mes "초기화됩니다.";
+			mes " ";
+			mes "과거 확정 랭킹은 유지됩니다.";
+
+			next;
+
+
+			if (select("취소","계속") == 1)
+				break;
+
+
+			mes "[최종 확인]";
+			mes "현재 "
+				+ $NEED_BG_Fever_Cycle
+				+ "회차를 종료하고";
+
+			mes "새로운 회차를 시작하시겠습니까?";
+
+			next;
+
+
+			if (select("취소","새 사이클 시작") == 1)
+				break;
+
+
+			callsub S_ResetCurrentCycle, 1;
+
+
+			mes "[사이클 관리]";
+			mes "새로운 피버 사이클을 시작했습니다.";
+			mes "현재 : "
+				+ $NEED_BG_Fever_Cycle
+				+ "회차";
+
+			next;
+			break;
+
+
+		//----------------------------------------------------
+		// Active/Pending reset
+		//----------------------------------------------------
+
+		case 3:
+
+			$NEED_BG_Fever_ActiveStage = 0;
+			$NEED_BG_Fever_PendingStage = 0;
+
+			mes "[사이클 관리]";
+			mes "Active / Pending 상태를";
+			mes "모두 초기화했습니다.";
+
+			next;
+			break;
+
+
+		default:
+			return;
+		}
+	}
+
+
+//============================================================
+// 현재 사이클 초기화
+//
+// getarg(0)
+// 0 = 회차 유지
+// 1 = 회차 +1
+//============================================================
+
+S_ResetCurrentCycle:
+
+	.@next_cycle = getarg(0);
+
+
+	if (.@next_cycle)
+		$NEED_BG_Fever_Cycle++;
+
+
+	$NEED_BG_Fever_Total = 0;
+	$NEED_BG_Fever_Level = 0;
+
+	$NEED_BG_Fever_PendingStage = 0;
+	$NEED_BG_Fever_ActiveStage = 0;
+
+	$NEED_BG_Fever_Locked = 0;
+
+
+	//--------------------------------------------------------
+	// 실시간 TOP 3 초기화
+	//--------------------------------------------------------
+
+	$NEED_BG_Fever_Rank1_AID = 0;
+	$NEED_BG_Fever_Rank1_Amount = 0;
+	$NEED_BG_Fever_Rank1_Name$ = "";
+
+	$NEED_BG_Fever_Rank2_AID = 0;
+	$NEED_BG_Fever_Rank2_Amount = 0;
+	$NEED_BG_Fever_Rank2_Name$ = "";
+
+	$NEED_BG_Fever_Rank3_AID = 0;
+	$NEED_BG_Fever_Rank3_Amount = 0;
+	$NEED_BG_Fever_Rank3_Name$ = "";
+
+
+	//--------------------------------------------------------
+	// 주의:
+	//
+	// $NEED_BG_Fever_Winner*_*
+	// $NEED_BG_Fever_ResultCycle
+	//
+	// 과거 확정 결과는 절대 삭제하지 않음.
+	//--------------------------------------------------------
+
+	return;
+
+
+//============================================================
+// 설정 관리
+//============================================================
+
+S_ConfigMenu:
+
+	while (1) {
+
+		mes "[피버 설정]";
+		mes "^00AAFF단계 기준^000000";
+		mes "1단계 : "
+			+ $NEED_BG_Fever_Need1;
+
+		mes "2단계 : "
+			+ $NEED_BG_Fever_Need2;
+
+		mes "3단계 : "
+			+ $NEED_BG_Fever_Need3;
+
+		mes " ";
+
+		mes "^00AAFF금화 추가 보너스^000000";
+		mes "1단계 : +"
+			+ $NEED_BG_Fever_GoldBonus1
+			+ "%";
+
+		mes "2단계 : +"
+			+ $NEED_BG_Fever_GoldBonus2
+			+ "%";
+
+		mes "3단계 : +"
+			+ $NEED_BG_Fever_GoldBonus3
+			+ "%";
+
+		mes " ";
+
+		mes "^00AAFF전투 휘장 추가 보너스^000000";
+		mes "1단계 : +"
+			+ $NEED_BG_Fever_BadgeBonus1
+			+ "%";
+
+		mes "2단계 : +"
+			+ $NEED_BG_Fever_BadgeBonus2
+			+ "%";
+
+		mes "3단계 : +"
+			+ $NEED_BG_Fever_BadgeBonus3
+			+ "%";
+
+		mes " ";
+
+		mes "^00AAFF랭킹 보상^000000";
+		mes "1위 : "
+			+ $NEED_BG_Fever_RankPoint1;
+
+		mes "2위 : "
+			+ $NEED_BG_Fever_RankPoint2;
+
+		mes "3위 : "
+			+ $NEED_BG_Fever_RankPoint3;
+
+		next;
+
+
+		.@sel = select(
+			"단계 필요량 변경",
+			"금화 보너스 변경",
+			"전투 휘장 보너스 변경",
+			"랭킹 포인트 변경",
+			"돌아가기"
+		);
+
+
+		switch (.@sel) {
+
+		//----------------------------------------------------
+		// 필요량
+		//----------------------------------------------------
+
+		case 1:
+
+			mes "[단계 필요량]";
+			mes "1단계 누적 필요량을 입력해주세요.";
+			input .@need1, 1, 100000000;
+
+			mes "2단계 누적 필요량을 입력해주세요.";
+			input .@need2, 1, 100000000;
+
+			mes "3단계 누적 필요량을 입력해주세요.";
+			input .@need3, 1, 100000000;
+
+
+			if (.@need1 >= .@need2 ||
+				.@need2 >= .@need3) {
+
+				mes "[오류]";
+				mes "단계 기준은 반드시";
+				mes "^FF00001단계 < 2단계 < 3단계^000000";
+				mes "순서여야 합니다.";
+
+				next;
+				break;
+			}
+
+
+			mes "[확인]";
+			mes "1단계 : "
+				+ .@need1;
+
+			mes "2단계 : "
+				+ .@need2;
+
+			mes "3단계 : "
+				+ .@need3;
+
+			next;
+
+
+			if (select("취소","변경") == 1)
+				break;
+
+
+			$NEED_BG_Fever_Need1 = .@need1;
+			$NEED_BG_Fever_Need2 = .@need2;
+			$NEED_BG_Fever_Need3 = .@need3;
+
+
+			mes "[설정 변경]";
+			mes "피버 단계 필요량을 변경했습니다.";
+			next;
+			break;
+
+
+		//----------------------------------------------------
+		// Gold
+		//----------------------------------------------------
+
+		case 2:
+
+			mes "[금화 추가 보너스]";
+			mes "기존 핫타임 200%에";
+			mes "추가되는 값입니다.";
+			mes " ";
+			mes "예: 30 입력 = 최종 230%";
+			next;
+
+
+			mes "1단계 추가 %";
+			input .@b1, 0, 1000;
+
+			mes "2단계 추가 %";
+			input .@b2, 0, 1000;
+
+			mes "3단계 추가 %";
+			input .@b3, 0, 1000;
+
+
+			$NEED_BG_Fever_GoldBonus1 = .@b1;
+			$NEED_BG_Fever_GoldBonus2 = .@b2;
+			$NEED_BG_Fever_GoldBonus3 = .@b3;
+
+
+			mes "[설정 변경]";
+			mes "금화 피버 보너스를 변경했습니다.";
+			next;
+			break;
+
+
+		//----------------------------------------------------
+		// Badge
+		//----------------------------------------------------
+
+		case 3:
+
+			mes "[전투 휘장 추가 보너스]";
+			mes "기존 핫타임 200%에";
+			mes "추가되는 값입니다.";
+			next;
+
+
+			mes "1단계 추가 %";
+			input .@b1, 0, 1000;
+
+			mes "2단계 추가 %";
+			input .@b2, 0, 1000;
+
+			mes "3단계 추가 %";
+			input .@b3, 0, 1000;
+
+
+			$NEED_BG_Fever_BadgeBonus1 = .@b1;
+			$NEED_BG_Fever_BadgeBonus2 = .@b2;
+			$NEED_BG_Fever_BadgeBonus3 = .@b3;
+
+
+			mes "[설정 변경]";
+			mes "전투 휘장 피버 보너스를 변경했습니다.";
+			next;
+			break;
+
+
+		//----------------------------------------------------
+		// Ranking point
+		//----------------------------------------------------
+
+		case 4:
+
+			mes "[랭킹 보상]";
+			mes "1위 전장 포인트";
+			input .@p1, 0, 100000;
+
+			mes "2위 전장 포인트";
+			input .@p2, 0, 100000;
+
+			mes "3위 전장 포인트";
+			input .@p3, 0, 100000;
+
+
+			$NEED_BG_Fever_RankPoint1 = .@p1;
+			$NEED_BG_Fever_RankPoint2 = .@p2;
+			$NEED_BG_Fever_RankPoint3 = .@p3;
+
+
+			mes "[설정 변경]";
+			mes "랭킹 보상을 변경했습니다.";
+			next;
+			break;
+
+
+		default:
+			return;
+		}
+	}
+
+
+//============================================================
+// Init
+//============================================================
+
+OnInit:
+
+	// 서버 GM 정책에 맞게 수정
+	.GM_Level = 99;
+
+	end;
+}

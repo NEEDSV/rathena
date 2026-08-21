@@ -38,10 +38,36 @@ function	script	F_NEED_GoldEvent_BGAmount	{
 	.@amount = getarg(0);
 
 	if ($NEED_EVENT_BG_GOLD_ON) {
-		if ($NEED_EVENT_BG_GOLD_RATE <= 0)
-			$NEED_EVENT_BG_GOLD_RATE = 200;
+		//--------------------------------------------------------
+		// 기본 핫타임 배율
+		//--------------------------------------------------------
+		.@rate = $NEED_EVENT_BG_GOLD_RATE;
+		if (.@rate <= 0)
+			.@rate = 200;
+		//--------------------------------------------------------
+		// 전장 피버 추가 배율
+		//
+		// 기본값:
+		// 1단계 +30% → 230%
+		// 2단계 +50% → 250%
+		// 3단계 +50% → 250%
+		//--------------------------------------------------------
+		switch ($NEED_BG_Fever_ActiveStage) {
 
-		.@amount = .@amount * $NEED_EVENT_BG_GOLD_RATE / 100;
+		case 1:
+			.@rate += $NEED_BG_Fever_GoldBonus1;
+			break;
+
+		case 2:
+			.@rate += $NEED_BG_Fever_GoldBonus2;
+			break;
+
+		case 3:
+			.@rate += $NEED_BG_Fever_GoldBonus3;
+			break;
+		}
+
+		.@amount = .@amount * .@rate / 100;
 	}
 
 	if (.@amount < 0)

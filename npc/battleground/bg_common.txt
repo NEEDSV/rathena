@@ -2241,6 +2241,30 @@ bat_room,1,151,3	script	Switch#batgnd	81,{
 	}
 }
 
+function	script	F_NEED_BG_KVM_BadgeAmount	{
+	.@amount = getarg(0);
+
+	//--------------------------------------------------------
+	// KVM 전투휘장 핫타임이 아니면 기본 지급
+	//--------------------------------------------------------
+	if (!$NEED_EVENT_BG_BADGE_ON)
+		return .@amount;
+
+	//--------------------------------------------------------
+	// 기본 KVM 핫타임 = 2배
+	//--------------------------------------------------------
+	.@rate = 200;
+
+	//--------------------------------------------------------
+	// 피버 3단계
+	// 기존 2배 + 추가 1배 = 최종 3배
+	//--------------------------------------------------------
+	if ($NEED_BG_Fever_ActiveStage == 3)
+		.@rate += $NEED_BG_Fever_BadgeBonus3;
+
+	return .@amount * .@rate / 100;
+}
+
 // Badge Reward Function
 //============================================================
 function	script	F_BG_Badge	{
@@ -2299,8 +2323,16 @@ function	script	F_BG_Badge	{
 	.@bonusmount = ($BG_User_Count - 5) * 2;
 	getitem .@badge,.@amount + .@partyleaderbonus;
 
+	//----------------------------------------------------------
+	// 금화
+	//
+	// F_NEED_GoldEvent_BGAmount 내부에서
+	// 기존 핫타임 + 피버까지 모두 처리.
+	//----------------------------------------------------------
 	.@gold_amount = .@cashamount + .@bonusmount;
-	.@gold_amount = callfunc("F_NEED_GoldEvent_BGAmount", .@gold_amount);
+	.@gold_amount =
+		callfunc("F_NEED_GoldEvent_BGAmount", .@gold_amount);
+
 	getitem 399990, .@gold_amount;
 
 	return;
