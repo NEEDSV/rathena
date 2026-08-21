@@ -18,6 +18,12 @@
 #include "battle.hpp"
 #include "map.hpp"
 
+// [부하 계측] path_search 호출 통계. @pathstat 으로 조회/리셋.
+// path_search_calls : path_search 총 호출 수
+// path_search_astar : 그 중 무거운 A* 분기(flag&1==0, 이동패킷 flag=4가 해당) 진입 수
+uint64 path_search_calls = 0;
+uint64 path_search_astar = 0;
+
 #define SET_OPEN 0
 #define SET_CLOSED 1
 
@@ -272,6 +278,8 @@ bool path_search(struct walkpath_data *wpd, int16 m, int16 x0, int16 y0, int16 x
 	struct map_data *mapdata = map_getmapdata(m);
 	struct walkpath_data s_wpd;
 
+	path_search_calls++;   // [부하 계측] 총 호출 카운트
+
 	if (flag&2)
 		return path_search_long(nullptr, m, x0, y0, x1, y1, cell);
 
@@ -337,6 +345,8 @@ bool path_search(struct walkpath_data *wpd, int16 m, int16 x0, int16 y0, int16 x
 		// A* (A-star) pathfinding
 		// We always use A* for finding walkpaths because it is what game client uses.
 		// Easy pathfinding cuts corners of non-walkable cells, but client always walks around it.
+		path_search_astar++;   // [부하 계측] 무거운 A* 분기 진입 카운트
+
 		BHEAP_RESET(g_open_set);
 
 		memset(tp, 0, sizeof(tp));

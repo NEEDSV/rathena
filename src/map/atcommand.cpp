@@ -61,6 +61,7 @@
 #include "needwiki.hpp"
 #include "npc.hpp"
 #include "party.hpp"
+#include "path.hpp"
 #include "pc.hpp"
 #include "pc_groups.hpp"
 #include "pet.hpp"
@@ -4459,6 +4460,39 @@ ACMD_FUNC(reloadcashdb){
 	cashshop_reloaddb();
 	clif_displaymessage( fd, msg_txt( sd, 832 ) ); // Cash shop database has been reloaded.
 
+	return 0;
+}
+
+// [부하 계측] path_search(A* 경로탐색) 호출 통계 조회/리셋
+// 사용: @pathstat        -> 총계 + 이전 조회 후 증가분 출력
+//       @pathstat reset  -> 카운터 0 으로 리셋
+ACMD_FUNC(pathstat){
+	nullpo_retr(-1, sd);
+	static uint64 prev_calls = 0, prev_astar = 0;
+
+	if (message && strcmpi(message, "reset") == 0) {
+		path_search_calls = 0;
+		path_search_astar = 0;
+		prev_calls = 0;
+		prev_astar = 0;
+		clif_displaymessage(fd, "[pathstat] path_search 카운터를 리셋했습니다.");
+		return 0;
+	}
+
+	uint64 dcalls = path_search_calls - prev_calls;
+	uint64 dastar = path_search_astar - prev_astar;
+
+	safesnprintf(atcmd_output, sizeof(atcmd_output),
+		"[pathstat] 누적 path_search=%llu (그중 A*=%llu)",
+		(unsigned long long)path_search_calls, (unsigned long long)path_search_astar);
+	clif_displaymessage(fd, atcmd_output);
+	safesnprintf(atcmd_output, sizeof(atcmd_output),
+		"[pathstat] 이전 조회 후 증가: +%llu (A*=+%llu)  ('@pathstat reset' 으로 리셋)",
+		(unsigned long long)dcalls, (unsigned long long)dastar);
+	clif_displaymessage(fd, atcmd_output);
+
+	prev_calls = path_search_calls;
+	prev_astar = path_search_astar;
 	return 0;
 }
 
@@ -12625,6 +12659,7 @@ void atcommand_basecommands(void) {
 		ACMD_DEF(localbroadcast), // + /lb and /nlb
 		ACMD_DEF(recallall),
 		ACMD_DEFR(reload,ATCMD_NOSCRIPT),
+		ACMD_DEF(pathstat), // [부하 계측] path_search 호출 통계
 		ACMD_DEF(reloaditemdb),
 		ACMD_DEF(reloadcashdb),
 		ACMD_DEF(reloadmobdb),

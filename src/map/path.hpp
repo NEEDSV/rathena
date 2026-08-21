@@ -60,6 +60,10 @@ struct shootpath_data {
 // calculates destination cell for knockback
 int32 path_blownpos(int16 m,int16 x0,int16 y0,int16 dx,int16 dy,int32 count);
 
+// [부하 계측] path_search 호출 통계 (@pathstat 로 조회/리셋)
+extern uint64 path_search_calls;
+extern uint64 path_search_astar;
+
 // tries to find a walkable path
 bool path_search(struct walkpath_data *wpd,int16 m,int16 x0,int16 y0,int16 x1,int16 y1,int32 flag,cell_chk cell);
 
