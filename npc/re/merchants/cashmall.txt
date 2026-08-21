@@ -1462,7 +1462,7 @@ itemmall,16,66,5	script	피어싱 브로스넌#pa0829	4_M_KHMAN,{
 	mes "[피어싱 브로스넌]";
 	mes "저는 피어싱 전문가의 조수입니다. 혹시라도 소켓 인챈트 작업에 성공한 투구를 갖고 계시다면 성심성의껏 추가 효능을 부여해 드리지요.";
 	next;
-	.@s = select( "관둔다", "능력치부여(100만제니 필요)", "강화능력치 초기화(개다래 또는 냥다래 필요)" );
+	.@s = select( "관둔다", "능력치부여(100만제니 필요)", "강화능력치 초기화(냥다래 필요)" );
 	if(.@s == 1) {
 		mes "[피어싱 브로스넌]";
 		mes "그럼 다음에 또...";
@@ -1515,19 +1515,24 @@ itemmall,16,66,5	script	피어싱 브로스넌#pa0829	4_M_KHMAN,{
 				mes "지금부터 장비에 능력치를 부여합니다";
 				Zeny = Zeny - 1000000;
 				.@equip = getequipid(EQI_HEAD_MID);
+
+				.@card0 = getequipcardid(EQI_HEAD_MID,0);
+				.@card1 = getequipcardid(EQI_HEAD_MID,1);
+				.@card2 = getequipcardid(EQI_HEAD_MID,2);
+
 				delequip(EQI_HEAD_MID);
-				getitem2 .@equip,1,1,0,0,getequipcardid(EQI_HEAD_MID,0),getequipcardid(EQI_HEAD_MID,1),getequipcardid(EQI_HEAD_MID,2),.@enchant;
+
+				getitem2 .@equip,1,1,0,0,.@card0,.@card1,.@card2,.@enchant;
 				close;
 			} else if(.@s == 3) {
 				mes "[피어싱 브로스넌]";
-				mes "장비의 초기화에는 개다래 열매 또는 냥다래 열매 1개가 소요됩니다. 아래의 초기화 할 장비가 현재 장착중인 장비가 맞는지 확인 해 주십시오.";
+				mes "장비의 초기화에는 냥다래 열매 1개가 소요됩니다. 아래의 초기화 할 장비가 현재 장착중인 장비가 맞는지 확인 해 주십시오.";
 				mes "^0000ff" + getitemname(getequipid(EQI_HEAD_MID)) + "^000000";
 				next;
 				mes "^FF0000[경고]^000000";
-				mes "^FF0000냥다래(개다래) 열매 1개로 초기화를 진행합니다.^000000";
-				mes "^FF0000위의 교환된 아이템은 청약철회대상에 포함되지 않으며, 냥다래 열매로의 재교환 역시 불가능합니다.^000000";
+				mes "^FF0000냥다래 열매 1개로 초기화를 진행합니다.^000000";
 				next;
-				.@m = (countitem(6909) < 1)?"^aaaaaa개다래, 냥다래 열매 (없음)^000000":"초기화를 진행한다. ";
+				.@m = (countitem(6909) < 1)?"^aaaaaa냥다래 열매 (없음)^000000":"초기화를 진행한다. ";
 				if( select( "그만둡니다", "초기화를 진행한다. " ) == 1) {
 					mes "[피어싱 브로스넌]";
 					mes "그럼 다음에 또 뵙지요.";
@@ -1547,12 +1552,19 @@ itemmall,16,66,5	script	피어싱 브로스넌#pa0829	4_M_KHMAN,{
 				mes "[피어싱 브로스넌]";
 				mes "장비의 능력치를 초기화 합니다.";
 				.@equip = getequipid(EQI_HEAD_MID);
+
+				.@card0 = getequipcardid(EQI_HEAD_MID,0);
+				.@card1 = getequipcardid(EQI_HEAD_MID,1);
+				.@card2 = getequipcardid(EQI_HEAD_MID,2);
+
 				delequip(EQI_HEAD_MID);
+
 				if(countitem(6417))
 					delitem 6417,1;
 				else if(countitem(6909))
 					delitem 6909,1;
-				getitem .@equip,1;
+
+				getitem2 .@equip,1,1,0,0,.@card0,.@card1,.@card2,0;
 				close;
 			}
 		case 3:
