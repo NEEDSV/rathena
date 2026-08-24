@@ -6053,6 +6053,12 @@ std::shared_ptr<s_skill_unit_group> skill_unitsetting(block_list *src, uint16 sk
 	status_data* status = status_get_status_data(*src);
 	sc = status_get_sc(src);	// for traps, firewall and fogwall - celest
 	hidden = (skill->unit_flag[UF_HIDDENTRAP] && (battle_config.traps_setting == 2 || (battle_config.traps_setting == 1 && map_flag_vs(src->m))));
+	// NEED: battleground only - keep Ankle Snare visible on the ground. Renewal defaults
+	// traps_setting to 2, which hides every UF_HIDDENTRAP trap from everyone but the caster's
+	// party, so players could not see a placed snare at all. Trigger, range, target, placement
+	// count and item cost are untouched, and every other trap keeps the traps_setting behaviour.
+	if (hidden && skill_id == HT_ANKLESNARE && map_getmapflag(src->m, MF_BATTLEGROUND))
+		hidden = false;
 
 	switch( skill_id ) {
 	case MH_STEINWAND:
@@ -7299,6 +7305,14 @@ int32 skill_unit_onplace_timer(skill_unit *unit, block_list *bl, t_tick tick)
 		case UNT_MANHOLE:
 			if( sg->val2 == 0 && tsc && ((sg->unit_id == UNT_ANKLESNARE && skill_id != SC_ESCAPE) || bl->id != sg->src_id) ) {
 				t_tick sec = skill_get_time2(sg->skill_id,sg->skill_lv);
+
+				// NEED: battleground only - cap the Ankle Snare hold at 10s (players only, target's map).
+				// Scoped to HT_ANKLESNARE so the SC_ANKLE applied by Spiral Pierce / Glacier Fist / Tarot
+				// Card, and the snare unit created by SC_ESCAPE, keep their own durations. sg->limit below
+				// is derived from sec, so the trap object expires together with the shortened hold.
+				if (skill_id == HT_ANKLESNARE && bl->type == BL_PC &&
+					map_getmapflag(bl->m, MF_BATTLEGROUND) && sec > 10000)
+					sec = 10000;
 
 				if( status_change_start(ss, bl,type,10000,sg->skill_lv,sg->group_id,0,0,sec, SCSTART_NORATEDEF) ) {
 					const struct TimerData* td = tsc->getSCE(type)?get_timer(tsc->getSCE(type)->timer):nullptr;

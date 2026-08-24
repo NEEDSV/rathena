@@ -10281,6 +10281,12 @@ static bool need_bg_status_duration_cap(sc_type type) {
 		case SC_STASIS:
 		case SC__IGNORANCE:
 		case SC__WEAKNESS:
+		// Marsh of Abyss (30s) and Banana Bomb. Both Banana Bomb statuses are listed so the
+		// forced sit-down and the LUK debuff expire together instead of one outlasting the
+		// other; neither status is shared with another skill.
+		case SC_MARSHOFABYSS:
+		case SC_BANANA_BOMB:
+		case SC_BANANA_BOMB_SITDOWN:
 			return true;
 		default:
 			return false;
