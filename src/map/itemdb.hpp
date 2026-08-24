@@ -3699,12 +3699,15 @@ public:
 	bool item_exists(uint16 group_id, t_itemid nameid);
 	int16 item_exists_pc(map_session_data *sd, uint16 group_id);
 	std::vector<s_item_group_search_result> find_item_groups(t_itemid nameid, size_t limit, size_t& total_matches);
+	std::shared_ptr<s_item_group_entry> find_entry(uint16 group_id, t_itemid nameid);
 	std::shared_ptr<s_item_group_entry> get_random_entry(uint16 group_id, uint8 sub_group, e_group_algorithm_type algorithm = GROUP_ALGORITHM_USEDB);
+	bool pc_can_get_itemgroup_entry(const map_session_data& sd, std::shared_ptr<s_item_group_entry> data) const;
+	bool pc_get_itemgroup_entry(map_session_data& sd, bool identify, std::shared_ptr<s_item_group_entry> data, t_itemid source_id);
 	uint8 pc_get_itemgroup( uint16 group_id, bool identify, map_session_data& sd );
 
 private:
 	std::shared_ptr<s_item_group_entry> get_random_itemsubgroup(std::shared_ptr<s_item_group_random> random, e_group_algorithm_type algorithm = GROUP_ALGORITHM_USEDB);
-	void pc_get_itemgroup_sub( map_session_data& sd, bool identify, std::shared_ptr<s_item_group_entry> data );
+	bool pc_get_itemgroup_sub(map_session_data& sd, bool identify, std::shared_ptr<s_item_group_entry> data, bool announce = true, t_itemid source_id = 0);
 };
 
 extern ItemGroupDatabase itemdb_group;

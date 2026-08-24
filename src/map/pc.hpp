@@ -452,6 +452,36 @@ struct need_autopot_state {
 	char active_preset_name[25] = {};
 };
 
+static constexpr size_t NEED_TCP_DIAG_SAMPLE_COUNT = 12;
+
+struct need_tcp_diag_sample {
+	uint64 rtt_us = 0;
+	uint64 retrans_delta = 0;
+	uint64 retrans_bytes_delta = 0;
+	uint64 fast_retrans_delta = 0;
+	uint64 timeout_episodes_delta = 0;
+	uint64 lost = 0;
+	uint64 retrans_out = 0;
+};
+
+struct need_tcp_diag_state {
+	need_tcp_diag_sample samples[NEED_TCP_DIAG_SAMPLE_COUNT] = {};
+	size_t sample_next = 0;
+	size_t sample_count = 0;
+
+	bool sample_baseline_valid = false;
+	uint64 sample_total_retrans = 0;
+	uint64 sample_retrans_bytes = 0;
+	uint64 sample_fast_retrans = 0;
+	uint64 sample_timeout_episodes = 0;
+
+	bool query_baseline_valid = false;
+	uint64 query_total_retrans = 0;
+	uint64 query_retrans_bytes = 0;
+	uint64 query_fast_retrans = 0;
+	uint64 query_timeout_episodes = 0;
+};
+
 class map_session_data : public block_list {
 public:
 	struct unit_data ud;
@@ -567,6 +597,7 @@ public:
 		std::unordered_set<t_itemid> registered_items;
 	} costume_collection;
 	need_autopot_state autopot;
+	need_tcp_diag_state tcp_diag;
 
 	// Item Storages
 	struct s_storage storage, premiumStorage;

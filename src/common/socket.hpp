@@ -113,6 +113,33 @@ struct socket_data
 	void* session_data; // stores application-specific data related to the session
 };
 
+/// Kernel-maintained statistics for an established TCP connection.
+/// Availability flags are explicit because Linux TCP_INFO and Windows
+/// SIO_TCP_INFO expose different fields.
+struct s_tcp_connection_info {
+	bool rtt_available = false;
+	bool rtt_variance_available = false;
+	bool min_rtt_available = false;
+	bool rto_available = false;
+	bool total_retrans_available = false;
+	bool retrans_bytes_available = false;
+	bool fast_retrans_available = false;
+	bool timeout_episodes_available = false;
+	bool lost_available = false;
+	bool retrans_out_available = false;
+
+	uint64 rtt_us = 0;
+	uint64 rtt_variance_us = 0;
+	uint64 min_rtt_us = 0;
+	uint64 rto_us = 0;
+	uint64 total_retrans = 0;
+	uint64 retrans_bytes = 0;
+	uint64 fast_retrans = 0;
+	uint64 timeout_episodes = 0;
+	uint64 lost = 0;
+	uint64 retrans_out = 0;
+};
+
 
 // Data prototype declaration
 
@@ -127,6 +154,7 @@ extern time_t stall_time;
 // some checking on sockets
 extern bool session_isValid(int32 fd);
 extern bool session_isActive(int32 fd);
+bool socket_get_tcp_connection_info(int32 fd, s_tcp_connection_info& info);
 //////////////////////////////////
 
 // Function prototype declaration

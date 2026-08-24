@@ -1653,6 +1653,188 @@ ACMD_FUNC(item)
 /*==========================================
  *
  *------------------------------------------*/
+static void luckygrant_log(map_session_data* sd, const char* target, uint32 group_id, t_itemid source_id, t_itemid reward_id, int32 flag, const char* result, const char* reason)
+{
+	ShowInfo("[LUCKYGRANT] GM=%s Target=%s GroupID=%u SourceItemID=%u RewardItemID=%u Flag=%d Result=%s%s%s\n",
+		sd->status.name, target[0] != '\0' ? target : "-", group_id, source_id, reward_id, flag,
+		result, reason != nullptr ? " Reason=" : "", reason != nullptr ? reason : "");
+}
+
+ACMD_FUNC(luckygrant)
+{
+	char target_name[NAME_LENGTH] = {};
+	char extra = '\0';
+	uint32 group_value = 0;
+	t_itemid source_item_id = 0;
+	t_itemid reward_item_id = 0;
+	int32 grant_flag = -1;
+
+	nullpo_retr(-1, sd);
+
+	int32 parsed = 0;
+	if (message != nullptr && message[0] == '"')
+		parsed = sscanf(message, "\"%23[^\"]\" %u %u %u %d %c", target_name, &group_value, &source_item_id, &reward_item_id, &grant_flag, &extra);
+	else if (message != nullptr)
+		parsed = sscanf(message, "%23s %u %u %u %d %c", target_name, &group_value, &source_item_id, &reward_item_id, &grant_flag, &extra);
+
+	if (parsed != 5) {
+		clif_displaymessage(fd, "Usage: @luckygrant <character name> <GroupID> <lucky egg ItemID> <reward ItemID> <0|1>");
+		luckygrant_log(sd, target_name, group_value, source_item_id, reward_item_id, grant_flag, "FAILED", "INVALID_INPUT");
+		return -1;
+	}
+
+	if (grant_flag != 0 && grant_flag != 1) {
+		clif_displaymessage(fd, "Invalid flag. Use 0 (announce only) or 1 (grant and announce).");
+		luckygrant_log(sd, target_name, group_value, source_item_id, reward_item_id, grant_flag, "FAILED", "INVALID_FLAG");
+		return -1;
+	}
+
+	map_session_data* target_sd = map_nick2sd(target_name, false);
+	if (target_sd == nullptr) {
+		clif_displaymessage(fd, "The target character is not online.");
+		luckygrant_log(sd, target_name, group_value, source_item_id, reward_item_id, grant_flag, "FAILED", "TARGET_OFFLINE");
+		return -1;
+	}
+
+	if (group_value > UINT16_MAX || itemdb_group.find(static_cast<uint16>(group_value)) == nullptr) {
+		clif_displaymessage(fd, "The specified item group does not exist.");
+		luckygrant_log(sd, target_name, group_value, source_item_id, reward_item_id, grant_flag, "FAILED", "INVALID_GROUP");
+		return -1;
+	}
+
+	std::shared_ptr<s_item_group_entry> entry = itemdb_group.find_entry(static_cast<uint16>(group_value), reward_item_id);
+	if (entry == nullptr) {
+		clif_displaymessage(fd, "The reward item is not registered in the specified group.");
+		luckygrant_log(sd, target_name, group_value, source_item_id, reward_item_id, grant_flag, "FAILED", "REWARD_NOT_IN_GROUP");
+		return -1;
+	}
+
+	if (!entry->isAnnounced) {
+		clif_displaymessage(fd, "The item is not an Announced entry in the specified group.");
+		luckygrant_log(sd, target_name, group_value, source_item_id, reward_item_id, grant_flag, "FAILED", "NOT_ANNOUNCED");
+		return -1;
+	}
+
+	std::shared_ptr<item_data> source_item = item_db.find(source_item_id);
+	std::shared_ptr<item_data> reward_item = item_db.find(reward_item_id);
+	if (source_item == nullptr || reward_item == nullptr) {
+		clif_displaymessage(fd, source_item == nullptr ? "The lucky egg ItemID is invalid." : "The reward ItemID is invalid.");
+		luckygrant_log(sd, target_name, group_value, source_item_id, reward_item_id, grant_flag, "FAILED",
+			source_item == nullptr ? "INVALID_SOURCE_ITEM" : "INVALID_REWARD_ITEM");
+		return -1;
+	}
+
+	if (grant_flag == 1) {
+		if (!itemdb_group.pc_get_itemgroup_entry(*target_sd, true, entry, source_item_id)) {
+			clif_displaymessage(fd, "Item delivery failed; no announcement was sent.");
+			luckygrant_log(sd, target_name, group_value, source_item_id, reward_item_id, grant_flag, "FAILED", "ITEM_DELIVERY_FAILED");
+			return -1;
+		}
+	} else {
+		intif_broadcast_obtain_special_item(target_sd, reward_item_id, source_item_id, ITEMOBTAIN_TYPE_BOXITEM);
+	}
+
+	char output[CHAT_SIZE_MAX];
+	if (grant_flag == 1)
+		safesnprintf(output, sizeof(output), "Granted %s to %s and sent the lucky egg announcement.", reward_item->name.c_str(), target_sd->status.name);
+	else
+		safesnprintf(output, sizeof(output), "Sent the lucky egg announcement for %s receiving %s (no item granted).", target_sd->status.name, reward_item->name.c_str());
+	clif_displaymessage(fd, output);
+	luckygrant_log(sd, target_name, group_value, source_item_id, reward_item_id, grant_flag, "SUCCESS", nullptr);
+	return 0;
+}
+
+ACMD_FUNC(luckygrantcheck)
+{
+	char target_name[NAME_LENGTH] = {};
+	char extra = '\0';
+	uint32 group_value = 0;
+	t_itemid source_item_id = 0;
+	t_itemid reward_item_id = 0;
+	int32 grant_flag = -1;
+
+	nullpo_retr(-1, sd);
+
+	int32 parsed = 0;
+	if (message != nullptr && message[0] == '"')
+		parsed = sscanf(message, "\"%23[^\"]\" %u %u %u %d %c", target_name, &group_value, &source_item_id, &reward_item_id, &grant_flag, &extra);
+	else if (message != nullptr)
+		parsed = sscanf(message, "%23s %u %u %u %d %c", target_name, &group_value, &source_item_id, &reward_item_id, &grant_flag, &extra);
+
+	if (parsed != 5) {
+		clif_displaymessage(fd, "Usage: @luckygrantcheck <character name> <GroupID> <lucky egg ItemID> <reward ItemID> <0|1>");
+		return -1;
+	}
+	if (grant_flag != 0 && grant_flag != 1) {
+		clif_displaymessage(fd, "Invalid flag. Use 0 (announce only) or 1 (grant and announce).");
+		return -1;
+	}
+
+	map_session_data* target_sd = map_nick2sd(target_name, false);
+	if (target_sd == nullptr) {
+		clif_displaymessage(fd, "CHECK FAILED: The target character is not online. No action was taken.");
+		return -1;
+	}
+	if (group_value > UINT16_MAX) {
+		clif_displaymessage(fd, "CHECK FAILED: The specified item group does not exist. No action was taken.");
+		return -1;
+	}
+
+	std::shared_ptr<s_item_group_db> group = itemdb_group.find(static_cast<uint16>(group_value));
+	if (group == nullptr) {
+		clif_displaymessage(fd, "CHECK FAILED: The specified item group does not exist. No action was taken.");
+		return -1;
+	}
+
+	std::shared_ptr<s_item_group_entry> entry = itemdb_group.find_entry(static_cast<uint16>(group_value), reward_item_id);
+	if (entry == nullptr) {
+		clif_displaymessage(fd, "CHECK FAILED: The reward item is not registered in the specified group. No action was taken.");
+		return -1;
+	}
+	if (!entry->isAnnounced) {
+		clif_displaymessage(fd, "CHECK FAILED: The entry is not Announced. No action was taken.");
+		return -1;
+	}
+
+	std::shared_ptr<item_data> source_item = item_db.find(source_item_id);
+	std::shared_ptr<item_data> reward_item = item_db.find(reward_item_id);
+	if (source_item == nullptr || reward_item == nullptr) {
+		clif_displaymessage(fd, source_item == nullptr ? "CHECK FAILED: The lucky egg ItemID is invalid. No action was taken."
+			: "CHECK FAILED: The reward ItemID is invalid. No action was taken.");
+		return -1;
+	}
+
+	char output[CHAT_SIZE_MAX];
+	clif_displaymessage(fd, "[LUCKYGRANT CHECK - PREVIEW ONLY / NO ACTION TAKEN]");
+	safesnprintf(output, sizeof(output), "Target: %s | Mode: %s", target_sd->status.name,
+		grant_flag == 0 ? "announcement only" : "grant then announce");
+	clif_displaymessage(fd, output);
+	safesnprintf(output, sizeof(output), "Group: %u (%s)", group_value, group->name.empty() ? "unnamed" : group->name.c_str());
+	clif_displaymessage(fd, output);
+	safesnprintf(output, sizeof(output), "Source: %u (%s) | Reward: %u (%s)", source_item_id, source_item->name.c_str(), reward_item_id, reward_item->name.c_str());
+	clif_displaymessage(fd, output);
+	safesnprintf(output, sizeof(output), "Entry: Amount=%u Bound=%u Named=%s UniqueId=%s Stacked=%s Duration=%u min",
+		entry->amount, entry->bound, entry->isNamed ? "yes" : "no", entry->GUID ? "yes" : "no",
+		entry->isStacked ? "yes" : "no", entry->duration);
+	clif_displaymessage(fd, output);
+	safesnprintf(output, sizeof(output), "Refine=%u~%u | Grade=%u~%u | RandomOptionGroup=%s | Announced=yes",
+		entry->refineMinimum, entry->refineMaximum, entry->minimumEnchantgrade, entry->maximumEnchantgrade,
+		entry->randomOptionGroup != nullptr ? "yes" : "no");
+	clif_displaymessage(fd, output);
+
+	uint64 required_weight = static_cast<uint64>(itemdb_weight(reward_item_id)) * entry->amount;
+	if (grant_flag == 0) {
+		clif_displaymessage(fd, "Capacity check: not required for flag 0.");
+	} else {
+		bool can_grant = itemdb_group.pc_can_get_itemgroup_entry(*target_sd, entry);
+		safesnprintf(output, sizeof(output), "Capacity: %s | Weight=%u+%llu/%u | EmptySlots=%u",
+			can_grant ? "PASS" : "FAIL", target_sd->weight, required_weight, target_sd->max_weight, pc_inventoryblank(target_sd));
+		clif_displaymessage(fd, output);
+	}
+	clif_displaymessage(fd, "Preview complete. Run @luckygrant with the same arguments to execute.");
+	return 0;
+}
+
 ACMD_FUNC(item2)
 {
 	char item_name[100];
@@ -8332,6 +8514,296 @@ ACMD_FUNC(unmute)
 	return 0;
 }
 
+namespace {
+
+constexpr int32 NEED_TCP_DIAG_SAMPLE_INTERVAL = 5 * 1000;
+constexpr uint64 NEED_TCP_DIAG_RTT_NORMAL_US = 150 * 1000;
+constexpr uint64 NEED_TCP_DIAG_RTT_UNSTABLE_US = 300 * 1000;
+constexpr uint64 NEED_TCP_DIAG_RTTVAR_NORMAL_US = 50 * 1000;
+constexpr uint64 NEED_TCP_DIAG_RTO_UNSTABLE_US = 1000 * 1000;
+constexpr uint64 NEED_TCP_DIAG_RETRANS_UNSTABLE = 2;
+
+int32 need_tcp_diag_timer_id = INVALID_TIMER;
+
+uint64 need_tcp_diag_counter_delta(uint64 current, uint64 previous)
+{
+    if (current >= previous)
+        return current - previous;
+
+    // Linux and Windows TCP_INFO v0 counters used here are 32-bit. A live
+    // session cannot legitimately reset them, so handle their wraparound.
+    if (current <= UINT32_MAX && previous <= UINT32_MAX)
+        return static_cast<uint64>(UINT32_MAX) - previous + 1 + current;
+
+    return 0;
+}
+
+void need_tcp_diag_store_sample(map_session_data* sd, const s_tcp_connection_info& info)
+{
+    need_tcp_diag_state& state = sd->tcp_diag;
+    need_tcp_diag_sample sample = {};
+    sample.rtt_us = info.rtt_us;
+    sample.lost = info.lost_available ? info.lost : 0;
+    sample.retrans_out = info.retrans_out_available ? info.retrans_out : 0;
+
+    if (state.sample_baseline_valid) {
+        if (info.total_retrans_available)
+            sample.retrans_delta = need_tcp_diag_counter_delta(info.total_retrans, state.sample_total_retrans);
+        if (info.retrans_bytes_available)
+            sample.retrans_bytes_delta = need_tcp_diag_counter_delta(info.retrans_bytes, state.sample_retrans_bytes);
+        if (info.fast_retrans_available)
+            sample.fast_retrans_delta = need_tcp_diag_counter_delta(info.fast_retrans, state.sample_fast_retrans);
+        if (info.timeout_episodes_available)
+            sample.timeout_episodes_delta = need_tcp_diag_counter_delta(info.timeout_episodes, state.sample_timeout_episodes);
+    }
+
+    state.sample_baseline_valid = true;
+    if (info.total_retrans_available)
+        state.sample_total_retrans = info.total_retrans;
+    if (info.retrans_bytes_available)
+        state.sample_retrans_bytes = info.retrans_bytes;
+    if (info.fast_retrans_available)
+        state.sample_fast_retrans = info.fast_retrans;
+    if (info.timeout_episodes_available)
+        state.sample_timeout_episodes = info.timeout_episodes;
+
+    state.samples[state.sample_next] = sample;
+    state.sample_next = (state.sample_next + 1) % NEED_TCP_DIAG_SAMPLE_COUNT;
+    if (state.sample_count < NEED_TCP_DIAG_SAMPLE_COUNT)
+        ++state.sample_count;
+}
+
+int32 need_tcp_diag_sample_sub(map_session_data* sd, va_list)
+{
+    nullpo_ret(sd);
+
+    s_tcp_connection_info info = {};
+    if (socket_get_tcp_connection_info(sd->fd, info))
+        need_tcp_diag_store_sample(sd, info);
+
+    return 0;
+}
+
+TIMER_FUNC(need_tcp_diag_timer)
+{
+    map_foreachpc(need_tcp_diag_sample_sub);
+    return 0;
+}
+
+struct need_tcp_diag_recent {
+    uint64 average_rtt_us = 0;
+    uint64 min_rtt_us = 0;
+    uint64 max_rtt_us = 0;
+    uint64 retrans_delta = 0;
+    uint64 retrans_bytes_delta = 0;
+    uint64 fast_retrans_delta = 0;
+    uint64 timeout_episodes_delta = 0;
+    uint64 lost = 0;
+    uint64 retrans_out = 0;
+};
+
+need_tcp_diag_recent need_tcp_diag_summarize(const need_tcp_diag_state& state, uint64 fallback_rtt_us)
+{
+    need_tcp_diag_recent recent = {};
+    uint64 rtt_sum = 0;
+    size_t rtt_count = 0;
+
+    for (size_t i = 0; i < state.sample_count; ++i) {
+        const need_tcp_diag_sample& sample = state.samples[i];
+        if (sample.rtt_us > 0) {
+            rtt_sum += sample.rtt_us;
+            recent.min_rtt_us = recent.min_rtt_us == 0 ? sample.rtt_us : std::min(recent.min_rtt_us, sample.rtt_us);
+            recent.max_rtt_us = std::max(recent.max_rtt_us, sample.rtt_us);
+            ++rtt_count;
+        }
+        recent.retrans_delta += sample.retrans_delta;
+        recent.retrans_bytes_delta += sample.retrans_bytes_delta;
+        recent.fast_retrans_delta += sample.fast_retrans_delta;
+        recent.timeout_episodes_delta += sample.timeout_episodes_delta;
+        recent.lost = std::max(recent.lost, sample.lost);
+        recent.retrans_out = std::max(recent.retrans_out, sample.retrans_out);
+    }
+
+    if (rtt_count > 0) {
+        recent.average_rtt_us = rtt_sum / rtt_count;
+    } else {
+        recent.average_rtt_us = fallback_rtt_us;
+        recent.min_rtt_us = fallback_rtt_us;
+        recent.max_rtt_us = fallback_rtt_us;
+    }
+    return recent;
+}
+
+const char* need_tcp_diag_status(const s_tcp_connection_info& info, const need_tcp_diag_recent& recent)
+{
+    const bool retrans_unstable =
+        recent.retrans_delta >= NEED_TCP_DIAG_RETRANS_UNSTABLE ||
+        recent.fast_retrans_delta >= NEED_TCP_DIAG_RETRANS_UNSTABLE ||
+        recent.timeout_episodes_delta > 0;
+    const bool loss_now = recent.lost > 0 || recent.retrans_out > 0;
+    const bool latency_unstable =
+        info.rtt_us >= NEED_TCP_DIAG_RTT_UNSTABLE_US ||
+        (info.rto_available && info.rto_us >= NEED_TCP_DIAG_RTO_UNSTABLE_US);
+
+    if (retrans_unstable || loss_now || latency_unstable)
+        return "\xBA\xD2\xBE\xC8\xC1\xA4";
+
+    const bool retrans_warning =
+        recent.retrans_delta > 0 ||
+        recent.retrans_bytes_delta > 0 ||
+        recent.fast_retrans_delta > 0;
+    const bool latency_warning =
+        info.rtt_us >= NEED_TCP_DIAG_RTT_NORMAL_US ||
+        (info.rtt_variance_available && info.rtt_variance_us >= NEED_TCP_DIAG_RTTVAR_NORMAL_US);
+
+    return (retrans_warning || latency_warning) ? "\xBA\xB8\xC5\xEB" : "\xBE\xE7\xC8\xA3";
+}
+
+uint64 need_tcp_diag_ms(uint64 microseconds)
+{
+    return (microseconds + 500) / 1000;
+}
+
+void need_tcp_diag_display_line(int32 fd, const char* format, uint64 value)
+{
+    snprintf(atcmd_output, sizeof(atcmd_output), format, value);
+    clif_displaymessage(fd, atcmd_output);
+}
+
+} // namespace
+
+ACMD_FUNC(ping)
+{
+    nullpo_retr(-1, sd);
+
+    map_session_data* target_sd = sd;
+    char target_name[NAME_LENGTH] = {};
+    if (message != nullptr && sscanf(message, " %23[^\n]", target_name) == 1) {
+        if (pc_get_group_id(sd) == 0) {
+            clif_displaymessage(fd, "\xB4\xD9\xB8\xA5 \xC4\xB3\xB8\xAF\xC5\xCD \xC1\xB6\xC8\xB8 \xB1\xC7\xC7\xD1\xC0\xCC \xBE\xF8\xBD\xC0\xB4\xCF\xB4\xD9.");
+            return -1;
+        }
+        target_sd = map_nick2sd(target_name, false);
+        if (target_sd == nullptr ||
+            (pc_has_permission(target_sd, PC_PERM_HIDE_SESSION) &&
+             pc_get_group_level(target_sd) > pc_get_group_level(sd))) {
+            clif_displaymessage(fd, "\xC4\xB3\xB8\xAF\xC5\xCD\xB8\xA6 \xC3\xA3\xC0\xBB \xBC\xF6 \xBE\xF8\xBD\xC0\xB4\xCF\xB4\xD9.");
+            return -1;
+        }
+    }
+
+    s_tcp_connection_info info = {};
+    if (!socket_get_tcp_connection_info(target_sd->fd, info)) {
+        clif_displaymessage(fd, "TCP \xC5\xEB\xB0\xE8\xB8\xA6 \xC1\xB6\xC8\xB8\xC7\xD2 \xBC\xF6 \xBE\xF8\xBD\xC0\xB4\xCF\xB4\xD9.");
+        return -1;
+    }
+
+    need_tcp_diag_state& state = target_sd->tcp_diag;
+    need_tcp_diag_recent recent = need_tcp_diag_summarize(state, info.rtt_us);
+    // Include the partial interval since the last five-second sample so an
+    // event immediately before @ping is not hidden until the next timer tick.
+    if (state.sample_baseline_valid) {
+        if (info.total_retrans_available)
+            recent.retrans_delta += need_tcp_diag_counter_delta(info.total_retrans, state.sample_total_retrans);
+        if (info.retrans_bytes_available)
+            recent.retrans_bytes_delta += need_tcp_diag_counter_delta(info.retrans_bytes, state.sample_retrans_bytes);
+        if (info.fast_retrans_available)
+            recent.fast_retrans_delta += need_tcp_diag_counter_delta(info.fast_retrans, state.sample_fast_retrans);
+        if (info.timeout_episodes_available)
+            recent.timeout_episodes_delta += need_tcp_diag_counter_delta(info.timeout_episodes, state.sample_timeout_episodes);
+    }
+    if (info.lost_available)
+        recent.lost = std::max(recent.lost, info.lost);
+    if (info.retrans_out_available)
+        recent.retrans_out = std::max(recent.retrans_out, info.retrans_out);
+    uint64 query_retrans_delta = 0;
+    uint64 query_retrans_bytes_delta = 0;
+    uint64 query_fast_retrans_delta = 0;
+    uint64 query_timeout_delta = 0;
+    if (state.query_baseline_valid) {
+        if (info.total_retrans_available)
+            query_retrans_delta = need_tcp_diag_counter_delta(info.total_retrans, state.query_total_retrans);
+        if (info.retrans_bytes_available)
+            query_retrans_bytes_delta = need_tcp_diag_counter_delta(info.retrans_bytes, state.query_retrans_bytes);
+        if (info.fast_retrans_available)
+            query_fast_retrans_delta = need_tcp_diag_counter_delta(info.fast_retrans, state.query_fast_retrans);
+        if (info.timeout_episodes_available)
+            query_timeout_delta = need_tcp_diag_counter_delta(info.timeout_episodes, state.query_timeout_episodes);
+    }
+    state.query_baseline_valid = true;
+    if (info.total_retrans_available)
+        state.query_total_retrans = info.total_retrans;
+    if (info.retrans_bytes_available)
+        state.query_retrans_bytes = info.retrans_bytes;
+    if (info.fast_retrans_available)
+        state.query_fast_retrans = info.fast_retrans;
+    if (info.timeout_episodes_available)
+        state.query_timeout_episodes = info.timeout_episodes;
+
+    clif_displaymessage(fd, "[NEED \xB3\xD7\xC6\xAE\xBF\xF6\xC5\xA9 \xC1\xF8\xB4\xDC]");
+    if (target_sd != sd) {
+        snprintf(atcmd_output, sizeof(atcmd_output), "\xB4\xEB\xBB\xF3          : %s", target_sd->status.name);
+        clif_displaymessage(fd, atcmd_output);
+        if (session_isActive(target_sd->fd)) {
+            snprintf(atcmd_output, sizeof(atcmd_output), "IP            : %d.%d.%d.%d",
+                CONVIP(session[target_sd->fd]->client_addr));
+            clif_displaymessage(fd, atcmd_output);
+        }
+    }
+
+    need_tcp_diag_display_line(fd, "TCP RTT       : %" PRIu64 " ms", need_tcp_diag_ms(info.rtt_us));
+    if (info.rtt_variance_available)
+        need_tcp_diag_display_line(fd, "RTT \xBA\xAF\xB5\xBF\xC6\xF8    : %" PRIu64 " ms", need_tcp_diag_ms(info.rtt_variance_us));
+    else
+        clif_displaymessage(fd, "RTT \xBA\xAF\xB5\xBF\xC6\xF8    : \xC1\xF6\xBF\xF8 \xBE\xC8 \xC7\xD4");
+    if (info.min_rtt_available)
+        need_tcp_diag_display_line(fd, "\xC3\xD6\xBC\xD2 RTT      : %" PRIu64 " ms", need_tcp_diag_ms(info.min_rtt_us));
+    if (info.rto_available)
+        need_tcp_diag_display_line(fd, "TCP RTO       : %" PRIu64 " ms", need_tcp_diag_ms(info.rto_us));
+    else
+        clif_displaymessage(fd, "TCP RTO       : \xC1\xF6\xBF\xF8 \xBE\xC8 \xC7\xD4");
+
+    snprintf(atcmd_output, sizeof(atcmd_output),
+        "\xC3\xD6\xB1\xD9 \xC6\xF2\xB1\xD5/\xB9\xFC\xC0\xA7: %" PRIu64 " ms (%" PRIu64 "~%" PRIu64 " ms)",
+        need_tcp_diag_ms(recent.average_rtt_us),
+        need_tcp_diag_ms(recent.min_rtt_us),
+        need_tcp_diag_ms(recent.max_rtt_us));
+    clif_displaymessage(fd, atcmd_output);
+
+    if (info.total_retrans_available) {
+        need_tcp_diag_display_line(fd, "TCP \xC0\xE7\xC0\xFC\xBC\xDB    : %" PRIu64 "\xC8\xB8", info.total_retrans);
+        need_tcp_diag_display_line(fd, "\xC3\xD6\xB1\xD9 60\xC3\xCA     : +%" PRIu64 "\xC8\xB8", recent.retrans_delta);
+        need_tcp_diag_display_line(fd, "\xC1\xB6\xC8\xB8\xB0\xA3 \xC0\xE7\xC0\xFC\xBC\xDB : +%" PRIu64 "\xC8\xB8", query_retrans_delta);
+    }
+    if (info.retrans_bytes_available) {
+        need_tcp_diag_display_line(fd, "\xC0\xE7\xC0\xFC\xBC\xDB \xB9\xD9\xC0\xCC\xC6\xAE: %" PRIu64 " bytes", info.retrans_bytes);
+        need_tcp_diag_display_line(fd, "\xC3\xD6\xB1\xD9 60\xC3\xCA     : +%" PRIu64 " bytes", recent.retrans_bytes_delta);
+        need_tcp_diag_display_line(fd, "\xC1\xB6\xC8\xB8\xB0\xA3 \xC1\xF5\xB0\xA1   : +%" PRIu64 " bytes", query_retrans_bytes_delta);
+    }
+    if (info.fast_retrans_available || info.timeout_episodes_available) {
+        snprintf(atcmd_output, sizeof(atcmd_output), "Fast/RTO \xB9\xDF\xBB\xFD : %" PRIu64 " / %" PRIu64 "\xC8\xB8",
+            info.fast_retrans, info.timeout_episodes);
+        clif_displaymessage(fd, atcmd_output);
+        snprintf(atcmd_output, sizeof(atcmd_output), "\xC3\xD6\xB1\xD9 Fast/RTO : +%" PRIu64 " / +%" PRIu64,
+            recent.fast_retrans_delta, recent.timeout_episodes_delta);
+        clif_displaymessage(fd, atcmd_output);
+        snprintf(atcmd_output, sizeof(atcmd_output), "\xC1\xB6\xC8\xB8\xB0\xA3 Fast/RTO : +%" PRIu64 " / +%" PRIu64,
+            query_fast_retrans_delta, query_timeout_delta);
+        clif_displaymessage(fd, atcmd_output);
+    }
+    if (info.lost_available || info.retrans_out_available) {
+        snprintf(atcmd_output, sizeof(atcmd_output), "\xC7\xF6\xC0\xE7 \xBC\xD5\xBD\xC7/\xC0\xE7\xC0\xFC\xBC\xDB: %" PRIu64 " / %" PRIu64,
+            info.lost, info.retrans_out);
+        clif_displaymessage(fd, atcmd_output);
+    }
+
+    snprintf(atcmd_output, sizeof(atcmd_output), "\xBB\xF3\xC5\xC2          : %s",
+        need_tcp_diag_status(info, recent));
+    clif_displaymessage(fd, atcmd_output);
+
+    return 0;
+}
+
 /*==========================================
  * @uptime by MC Cameri
  *------------------------------------------*/
@@ -12585,6 +13057,8 @@ void atcommand_basecommands(void) {
 		ACMD_DEF(heal),
 		ACMD_DEF(healap),
 		ACMD_DEF(item),
+		ACMD_DEFR(luckygrant, ATCMD_NOCONSOLE),
+		ACMD_DEFR(luckygrantcheck, ATCMD_NOCONSOLE),
 		ACMD_DEF(item2),
 		ACMD_DEF2("itembound",item),
 		ACMD_DEF2("itembound2",item2),
@@ -12746,6 +13220,7 @@ void atcommand_basecommands(void) {
 		ACMD_DEF(setbattleflag),
 		ACMD_DEF(unmute),
 		ACMD_DEF(clearweather),
+		ACMD_DEF(ping),
 		ACMD_DEF(uptime),
 		ACMD_DEF(changesex),
 		ACMD_DEF(changecharsex),
@@ -13239,8 +13714,16 @@ void atcommand_doload(void) {
 
 void do_init_atcommand(void) {
 	atcommand_doload();
+	add_timer_func_list(need_tcp_diag_timer, "need_tcp_diag_timer");
+	need_tcp_diag_timer_id = add_timer_interval(
+		gettick() + NEED_TCP_DIAG_SAMPLE_INTERVAL,
+		need_tcp_diag_timer, 0, 0, NEED_TCP_DIAG_SAMPLE_INTERVAL);
 }
 
 void do_final_atcommand(void) {
+	if (need_tcp_diag_timer_id != INVALID_TIMER) {
+		delete_timer(need_tcp_diag_timer_id, need_tcp_diag_timer);
+		need_tcp_diag_timer_id = INVALID_TIMER;
+	}
 	atcommand_db_clear();
 }

@@ -2137,6 +2137,23 @@ bool ItemGroupDatabase::item_exists(uint16 group_id, t_itemid nameid)
 	return false;
 }
 
+std::shared_ptr<s_item_group_entry> ItemGroupDatabase::find_entry(uint16 group_id, t_itemid nameid)
+{
+	std::shared_ptr<s_item_group_db> group = this->find(group_id);
+
+	if (group == nullptr)
+		return nullptr;
+
+	for (const auto& random : group->random) {
+		for (const auto& entry : random.second->data) {
+			if (entry.second != nullptr && entry.second->nameid == nameid)
+				return entry.second;
+		}
+	}
+
+	return nullptr;
+}
+
 std::vector<s_item_group_search_result> ItemGroupDatabase::find_item_groups(t_itemid nameid, size_t limit, size_t& total_matches)
 {
 	std::vector<s_item_group_search_result> results;
@@ -3741,9 +3758,31 @@ std::shared_ptr<s_item_group_entry> ItemGroupDatabase::get_random_entry(uint16 g
 * @param identify
 * @param data: item data selected in a subgroup
 */
-void ItemGroupDatabase::pc_get_itemgroup_sub( map_session_data& sd, bool identify, std::shared_ptr<s_item_group_entry> data ){
+bool ItemGroupDatabase::pc_can_get_itemgroup_entry(const map_session_data& sd, std::shared_ptr<s_item_group_entry> data) const{
 	if (data == nullptr)
-		return;
+		return false;
+
+	uint64 required_weight = static_cast<uint64>(itemdb_weight(data->nameid)) * data->amount;
+	if (static_cast<uint64>(sd.weight) + required_weight > sd.max_weight)
+		return false;
+
+	return itemdb_isstackable(data->nameid) || pc_inventoryblank(&sd) >= data->amount;
+}
+
+bool ItemGroupDatabase::pc_get_itemgroup_sub(map_session_data& sd, bool identify, std::shared_ptr<s_item_group_entry> data, bool announce, t_itemid source_id){
+	if (data == nullptr)
+		return false;
+
+	if (!announce) {
+		if (!this->pc_can_get_itemgroup_entry(sd, data)) {
+			uint64 required_weight = static_cast<uint64>(itemdb_weight(data->nameid)) * data->amount;
+			if (static_cast<uint64>(sd.weight) + required_weight > sd.max_weight)
+				clif_additem(&sd, 0, 0, ADDITEM_OVERWEIGHT);
+			else
+				clif_additem(&sd, 0, 0, ADDITEM_OVERITEM);
+			return false;
+		}
+	}
 
 	item tmp = {};
 
@@ -3766,6 +3805,8 @@ void ItemGroupDatabase::pc_get_itemgroup_sub( map_session_data& sd, bool identif
 		get_amt = 1;
 
 	tmp.amount = get_amt;
+
+	bool success = true;
 
 	// Do loop for non-stackable item
 	for (uint16 i = 0; i < data->amount; i += get_amt) {
@@ -3802,13 +3843,29 @@ void ItemGroupDatabase::pc_get_itemgroup_sub( map_session_data& sd, bool identif
 		e_additem_result flag = pc_additem( &sd, &tmp, get_amt, LOG_TYPE_SCRIPT );
 
 		if( flag == ADDITEM_SUCCESS ){
-			if( data->isAnnounced ){
-				intif_broadcast_obtain_special_item( &sd, data->nameid, sd.itemid, ITEMOBTAIN_TYPE_BOXITEM );
+			if( announce && data->isAnnounced ){
+				intif_broadcast_obtain_special_item( &sd, data->nameid, source_id != 0 ? source_id : sd.itemid, ITEMOBTAIN_TYPE_BOXITEM );
 			}
 		}else{
 			clif_additem( &sd, 0, 0, flag );
+			success = false;
+			if (!announce)
+				break;
 		}
 	}
+
+	return success;
+}
+
+bool ItemGroupDatabase::pc_get_itemgroup_entry(map_session_data& sd, bool identify, std::shared_ptr<s_item_group_entry> data, t_itemid source_id){
+	if (data == nullptr || !data->isAnnounced)
+		return false;
+
+	if (!this->pc_get_itemgroup_sub(sd, identify, data, false, source_id))
+		return false;
+
+	intif_broadcast_obtain_special_item(&sd, data->nameid, source_id, ITEMOBTAIN_TYPE_BOXITEM);
+	return true;
 }
 
 /** [Cydh]

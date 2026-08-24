@@ -3,10 +3,12 @@
 
 #include "socket.hpp"
 
+#include <cstddef>
 #include <cstdlib>
 
 #ifdef WIN32
 	#include "winapi.hpp"
+	#include <mstcpip.h>
 #else
 	#include <cerrno>
 	#include <arpa/inet.h>
@@ -1633,6 +1635,90 @@ bool session_isValid(int32 fd)
 bool session_isActive(int32 fd)
 {
 	return ( session_isValid(fd) && !session[fd]->flag.eof );
+}
+
+bool socket_get_tcp_connection_info(int32 fd, s_tcp_connection_info& info)
+{
+	info = {};
+
+	// Socket operations and atcommands run on the map-server's main network
+	// thread. Rechecking here keeps the native descriptor lookup inside the
+	// same lifetime boundary as getsockopt/WSAIoctl.
+	if (!session_isActive(fd))
+		return false;
+
+#if defined(WIN32)
+#if defined(SIO_TCP_INFO) && defined(NTDDI_WIN10_RS2) && (NTDDI_VERSION >= NTDDI_WIN10_RS2)
+	if (fd <= 0 || fd >= sock_arr_len || fd2sock(fd) == INVALID_SOCKET)
+		return false;
+
+	TCP_INFO_v0 tcp_info = {};
+	DWORD tcp_info_version = 0;
+	DWORD bytes_returned = 0;
+	if (WSAIoctl(fd2sock(fd), SIO_TCP_INFO,
+		&tcp_info_version, sizeof(tcp_info_version),
+		&tcp_info, sizeof(tcp_info), &bytes_returned,
+		nullptr, nullptr) == SOCKET_ERROR ||
+		bytes_returned < sizeof(tcp_info))
+		return false;
+
+	info.rtt_available = true;
+	info.min_rtt_available = true;
+	info.retrans_bytes_available = true;
+	info.fast_retrans_available = true;
+	info.timeout_episodes_available = true;
+	info.rtt_us = tcp_info.RttUs;
+	info.min_rtt_us = tcp_info.MinRttUs;
+	info.retrans_bytes = tcp_info.BytesRetrans;
+	info.fast_retrans = tcp_info.FastRetrans;
+	info.timeout_episodes = tcp_info.TimeoutEpisodes;
+	return true;
+#else
+	return false;
+#endif
+#elif defined(__linux__) || defined(__linux)
+	struct tcp_info tcp_info = {};
+	socklen_t tcp_info_length = sizeof(tcp_info);
+	if (getsockopt(fd, IPPROTO_TCP, TCP_INFO, &tcp_info, &tcp_info_length) != 0)
+		return false;
+
+#define TCP_INFO_FIELD_AVAILABLE(field) \
+	(tcp_info_length >= offsetof(struct tcp_info, field) + sizeof(tcp_info.field))
+
+	if (TCP_INFO_FIELD_AVAILABLE(tcpi_rtt)) {
+		info.rtt_available = true;
+		info.rtt_us = tcp_info.tcpi_rtt;
+	}
+	if (TCP_INFO_FIELD_AVAILABLE(tcpi_rttvar)) {
+		info.rtt_variance_available = true;
+		info.rtt_variance_us = tcp_info.tcpi_rttvar;
+	}
+	if (TCP_INFO_FIELD_AVAILABLE(tcpi_rto)) {
+		info.rto_available = true;
+		info.rto_us = tcp_info.tcpi_rto;
+	}
+	if (TCP_INFO_FIELD_AVAILABLE(tcpi_min_rtt)) {
+		info.min_rtt_available = true;
+		info.min_rtt_us = tcp_info.tcpi_min_rtt;
+	}
+	if (TCP_INFO_FIELD_AVAILABLE(tcpi_total_retrans)) {
+		info.total_retrans_available = true;
+		info.total_retrans = tcp_info.tcpi_total_retrans;
+	}
+	if (TCP_INFO_FIELD_AVAILABLE(tcpi_lost)) {
+		info.lost_available = true;
+		info.lost = tcp_info.tcpi_lost;
+	}
+	if (TCP_INFO_FIELD_AVAILABLE(tcpi_retrans)) {
+		info.retrans_out_available = true;
+		info.retrans_out = tcp_info.tcpi_retrans;
+	}
+
+#undef TCP_INFO_FIELD_AVAILABLE
+	return info.rtt_available;
+#else
+	return false;
+#endif
 }
 
 #ifdef HAVE_GETADDRINFO
