@@ -2105,7 +2105,7 @@ int32 unit_set_walkdelay(block_list *bl, t_tick tick, t_tick delay, int32 type, 
 			// NEED: A damage flinch stops the client at its interpolated position. When the server
 			// finishes the current cell without sending its authoritative position, the two can
 			// remain split until another action refreshes the position.
-			if (bl->type == BL_PC && map_getmapflag(bl->m, MF_BATTLEGROUND))
+			if (bl->type == BL_PC && (map_getmapflag(bl->m, MF_BATTLEGROUND) || map_flag_gvg2(bl->m)))
 				stop_type |= USW_FIXPOS;
 
 			unit_stop_walking( bl, stop_type );
