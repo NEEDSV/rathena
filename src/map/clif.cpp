@@ -2234,13 +2234,6 @@ void clif_blown( const block_list* bl )
 /// sitting it will stand up.
 /// 0088 <id>.L <x>.W <y>.W (ZC_STOPMOVE)
 void clif_fixpos( const block_list& bl ){	
-	// NEED TEMP DIAGNOSTIC v2 (Sura position desync) - remove this block when the trace is finished.
-	if( bl.type == BL_PC && ( map_flag_gvg2( bl.m ) || map_getmapflag( bl.m, MF_BATTLEGROUND ) || map_getmapflag( bl.m, MF_PVP ) ) ){
-		const unit_data* trace_ud = unit_bl2ud( const_cast<block_list*>( &bl ) );
-		ShowDebug( "[DESYNC] tick=%u clif_fixpos SENT id=%d map=%s pos=%d,%d dmg_tick=%u since_dmg=%d\n",
-			(uint32)gettick(), bl.id, map_mapid2mapname( bl.m ), bl.x, bl.y,
-			(uint32)( trace_ud ? trace_ud->dmg_tick : 0 ), (int32)( trace_ud ? DIFF_TICK( gettick(), trace_ud->dmg_tick ) : -1 ) );
-	}
 	PACKET_ZC_STOPMOVE packet = {};
 
 	packet.packetType = HEADER_ZC_STOPMOVE;

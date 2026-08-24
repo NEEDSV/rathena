@@ -330,17 +330,6 @@ int32 battle_damage(block_list *src, block_list *target, int64 damage, int16 div
 	map_session_data* sd = nullptr;
 
 	t_tick delay = battle_calc_walkdelay(*target, damage, div_, tick);
-	// NEED TEMP DIAGNOSTIC v2 (Sura position desync) - remove this block when the trace is finished.
-	if( target->type == BL_PC && ( map_flag_gvg2( target->m ) || map_getmapflag( target->m, MF_BATTLEGROUND ) || map_getmapflag( target->m, MF_PVP ) ) ){
-		unit_data* trace_ud = unit_bl2ud( target );
-		ShowDebug( "[DESYNC] tick=%u battle_damage target=%d map=%s(bg=%d,gvg=%d,pvp=%d) skill=%d dmg=%d div=%d dmotion=%d walkdelay=%d pos=%d,%d to=%d,%d walktimer=%d dmg_tick=%u since_dmg=%d\n",
-			(uint32)tick, target->id, map_mapid2mapname( target->m ),
-			map_getmapflag( target->m, MF_BATTLEGROUND ) ? 1 : 0, map_flag_gvg2( target->m ) ? 1 : 0, map_getmapflag( target->m, MF_PVP ) ? 1 : 0,
-			skill_id, (int32)damage, div_, status_get_status_data( *target )->dmotion, (int32)delay,
-			target->x, target->y, trace_ud ? trace_ud->to_x : -1, trace_ud ? trace_ud->to_y : -1,
-			trace_ud ? trace_ud->walktimer : -1,
-			(uint32)( trace_ud ? trace_ud->dmg_tick : 0 ), (int32)( trace_ud ? DIFF_TICK( tick, trace_ud->dmg_tick ) : -1 ) );
-	}
 
 	if (src)
 		sd = BL_CAST(BL_PC, src);
