@@ -41,31 +41,6 @@
 
 using namespace rathena;
 
-
-// ==== NEED TEMP DIAGNOSTIC v2 (Sura position desync) ====
-// Remove this block and every NEED_DESYNC_TRACE use when the trace is finished.
-#define NEED_DESYNC_TRACE 1
-#if NEED_DESYNC_TRACE
-// Only trace players on siege/pvp maps so the log does not flood during normal hunting.
-static bool need_desync_trace_target( const block_list* bl ){
-	if( bl == nullptr || bl->type != BL_PC )
-		return false;
-	return map_flag_gvg2( bl->m ) || map_getmapflag( bl->m, MF_BATTLEGROUND ) || map_getmapflag( bl->m, MF_PVP );
-}
-static const char* need_desync_mapkind( const block_list* bl ){
-	if( bl == nullptr )
-		return "?";
-	if( map_getmapflag( bl->m, MF_BATTLEGROUND ) )
-		return "BG";
-	if( map_flag_gvg2( bl->m ) )
-		return "GVG";
-	if( map_getmapflag( bl->m, MF_PVP ) )
-		return "PVP";
-	return "FIELD";
-}
-#endif
-
-
 #ifndef MAX_SHADOW_SCAR 
 	#define MAX_SHADOW_SCAR 100 /// Max Shadow Scars
 #endif
@@ -263,15 +238,6 @@ bool unit_walktoxy_nextcell(block_list& bl, bool sendMove, t_tick tick) {
 	}
 	ud->walktimer = add_timer(tick + speed, unit_walktoxy_timer, bl.id, speed);
 
-#if NEED_DESYNC_TRACE
-	if( need_desync_trace_target( &bl ) ){
-		ShowDebug( "[DESYNC] tick=%u move_step id=%d map=%s(%s) pos=%d,%d to=%d,%d walktimer=%d dmg_tick=%u since_dmg=%d resend=%s sendMove=%d\n",
-			(uint32)tick, bl.id, map_mapid2mapname( bl.m ), need_desync_mapkind( &bl ),
-			bl.x, bl.y, ud->to_x, ud->to_y, ud->walktimer,
-			(uint32)ud->dmg_tick, (int32)DIFF_TICK( tick, ud->dmg_tick ),
-			( sendMove || DIFF_TICK( tick, ud->dmg_tick ) < MOVE_REFRESH_TIME ) ? "YES" : "NO", sendMove ? 1 : 0 );
-	}
-#endif
 	// Resend move packet when unit was damaged recently
 	if (sendMove || DIFF_TICK(tick, ud->dmg_tick) < MOVE_REFRESH_TIME) {
 		clif_move(*ud);
@@ -1736,17 +1702,6 @@ void unit_stop_walking_soon(block_list& bl, t_tick tick)
  */
 bool unit_stop_walking( block_list* bl, int32 type, t_tick canmove_delay ){
 	const struct TimerData* td = nullptr;
-#if NEED_DESYNC_TRACE
-	if( need_desync_trace_target( bl ) ){
-		unit_data* trace_ud = unit_bl2ud( bl );
-		ShowDebug( "[DESYNC] tick=%u stop_walking ENTER id=%d map=%s(%s) pos=%d,%d to=%d,%d walktimer=%d stop_type=0x%x FIXPOS=%s dmg_tick=%u since_dmg=%d\n",
-			(uint32)gettick(), bl->id, map_mapid2mapname( bl->m ), need_desync_mapkind( bl ),
-			bl->x, bl->y, trace_ud ? trace_ud->to_x : -1, trace_ud ? trace_ud->to_y : -1,
-			trace_ud ? trace_ud->walktimer : -1, type,
-			( type & USW_FIXPOS ) ? "YES" : "NO",
-			(uint32)( trace_ud ? trace_ud->dmg_tick : 0 ), (int32)( trace_ud ? DIFF_TICK( gettick(), trace_ud->dmg_tick ) : -1 ) );
-	}
-#endif
 	t_tick tick;
 
 	if( bl == nullptr ){
@@ -1798,14 +1753,6 @@ bool unit_stop_walking( block_list* bl, int32 type, t_tick canmove_delay ){
 		ud->canmove_tick = gettick() + canmove_delay;
 	}
 
-#if NEED_DESYNC_TRACE
-	if( need_desync_trace_target( bl ) ){
-		ShowDebug( "[DESYNC] tick=%u stop_walking EXIT  id=%d map=%s(%s) pos=%d,%d to=%d,%d fixpos_sent=%s\n",
-			(uint32)gettick(), bl->id, map_mapid2mapname( bl->m ), need_desync_mapkind( bl ),
-			bl->x, bl->y, ud->to_x, ud->to_y,
-			( type & USW_FIXPOS ) ? "YES" : "NO" );
-	}
-#endif
 	// Re-added, the check in unit_set_walkdelay means dmg during running won't fall through to this place in code [Kevin]
 	if (ud->state.running) {
 		status_change_end(bl, SC_RUN);
@@ -2068,16 +2015,6 @@ void unit_set_castdelay(unit_data& ud, t_tick tick, int32 casttime) {
 int32 unit_set_walkdelay(block_list *bl, t_tick tick, t_tick delay, int32 type, uint16 skill_id)
 {
 	struct unit_data *ud = unit_bl2ud(bl);
-#if NEED_DESYNC_TRACE
-	if( need_desync_trace_target( bl ) ){
-		ShowDebug( "[DESYNC] tick=%u set_walkdelay id=%d map=%s(%s) skill=%d delay=%d type=%d pos=%d,%d to=%d,%d walktimer=%d can_move=%d legacy_delay_enabled=%d dmg_tick=%u since_dmg=%d\n",
-			(uint32)tick, bl->id, map_mapid2mapname( bl->m ), need_desync_mapkind( bl ),
-			skill_id, (int32)delay, type, bl->x, bl->y,
-			ud ? ud->to_x : -1, ud ? ud->to_y : -1, ud ? ud->walktimer : -1,
-			unit_can_move( bl ) ? 1 : 0, ( bl->type & battle_config.damage_walk_delay ) ? 1 : 0,
-			(uint32)( ud ? ud->dmg_tick : 0 ), (int32)( ud ? DIFF_TICK( tick, ud->dmg_tick ) : -1 ) );
-	}
-#endif
 
 	if (delay <= 0 || !ud)
 		return 0;
@@ -2560,16 +2497,6 @@ int32 unit_skilluse_id2(block_list *src, int32 target_id, uint16 skill_id, uint1
 	casttime = skill_vfcastfix(src, casttime, skill_id, skill_lv);
 #endif
 
-#if NEED_DESYNC_TRACE
-	if( need_desync_trace_target( src ) || need_desync_trace_target( target ) ){
-		unit_data* t_ud = unit_bl2ud( target );
-		ShowDebug( "[DESYNC] tick=%u CAST_START caster=%d skill=%d map=%s(%s) caster_pos=%d,%d caster_to=%d,%d caster_walktimer=%d running=%d | target=%d target_pos=%d,%d target_to=%d,%d target_walktimer=%d\n",
-			(uint32)tick, src->id, skill_id, map_mapid2mapname( src->m ), need_desync_mapkind( src ),
-			src->x, src->y, ud->to_x, ud->to_y, ud->walktimer, ud->state.running ? 1 : 0,
-			target ? target->id : 0, target ? target->x : -1, target ? target->y : -1,
-			t_ud ? t_ud->to_x : -1, t_ud ? t_ud->to_y : -1, t_ud ? t_ud->walktimer : -1 );
-	}
-#endif
 	// Need TK_RUN or WUGDASH handler to be done before that, see bugreport:6026
 	if(!ud->state.running){
 		// Even though this is not how official works but this will do the trick. bugreport:6829
