@@ -2765,6 +2765,11 @@ void skill_attack_blow(block_list *src, block_list *dsrc, block_list *target, ui
 			break;
 	}
 
+	// NEED TEMP DIAGNOSTIC v2 (Sura position desync) - remove this block when the trace is finished.
+	if( target->type == BL_PC && ( map_flag_gvg2( target->m ) || map_getmapflag( target->m, MF_BATTLEGROUND ) || map_getmapflag( target->m, MF_PVP ) ) ){
+		ShowDebug( "[DESYNC] tick=%u skill_attack_blow target=%d skill=%d blewcount=%d pos=%d,%d -> clif_fixpos follows\n",
+			(uint32)tick, target->id, skill_id, blewcount, target->x, target->y );
+	}
 	clif_fixpos( *target );
 }
 
@@ -5424,10 +5429,22 @@ TIMER_FUNC(skill_castend_id){
 
 		// NEED custom: any skill use releases the caster's Cursed Circle before the skill runs.
 		skill_release_cursedcircle_on_skilluse(src, ud->skill_id);
+		// NEED TEMP DIAGNOSTIC v2 (Sura position desync) - remove these two blocks when finished.
+		if( src->type == BL_PC && ( map_flag_gvg2( src->m ) || map_getmapflag( src->m, MF_BATTLEGROUND ) || map_getmapflag( src->m, MF_PVP ) ) ){
+			ShowDebug( "[DESYNC] tick=%u CASTEND_PRE  caster=%d skill=%d pos=%d,%d walktimer=%d | target=%d pos=%d,%d\n",
+				(uint32)tick, src->id, ud->skill_id, src->x, src->y, ud->walktimer,
+				target->id, target->x, target->y );
+		}
 		if (skill_get_casttype(ud->skill_id) == CAST_NODAMAGE)
 			skill_castend_nodamage_id(src,target,ud->skill_id,ud->skill_lv,tick,flag);
 		else
 			skill_castend_damage_id(src,target,ud->skill_id,ud->skill_lv,tick,flag);
+
+		if( src->type == BL_PC && ( map_flag_gvg2( src->m ) || map_getmapflag( src->m, MF_BATTLEGROUND ) || map_getmapflag( src->m, MF_PVP ) ) ){
+			ShowDebug( "[DESYNC] tick=%u CASTEND_POST caster=%d skill=%d pos=%d,%d walktimer=%d | target=%d pos=%d,%d\n",
+				(uint32)gettick(), src->id, ud->skill_id, src->x, src->y, ud->walktimer,
+				target->id, target->x, target->y );
+		}
 
 		if( sd && sd->skill_keep_using.tid == INVALID_TIMER && sd->skill_keep_using.skill_id > 0 && sd->skill_keep_using.skill_id == ud->skill_id && !skill_isNotOk(ud->skill_id, *sd) && skill_check_condition_castbegin(*sd, ud->skill_id, ud->skill_lv) ){
 			sd->skill_keep_using.tid = add_timer( sd->ud.canact_tick + 100, skill_keep_using, sd->id, 0 );
