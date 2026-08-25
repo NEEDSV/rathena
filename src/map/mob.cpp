@@ -3129,6 +3129,13 @@ static void need_world_drop_on_kill(const need_world_drop_owner& owner, mob_data
 		return;
 	}
 
+	// NEED: 옛 글래스트 헤임 하드 반복 소환 구더기(3142)는 커스텀 월드 드랍에서 제외합니다.
+	// 일반 mob_db 드랍/경험치/퀘스트 처리는 그대로 유지되고 NeedWorldDrop만 건너뜁니다.
+	if (md->mob_id == 3142) {
+		need_world_drop_debug_log(owner, md, "none", 0, 0, 0, 0, 0, -1, 0, 0, "skip", "mob_id_excluded");
+		return;
+	}
+
 	const map_data *mapdata = map_getmapdata(md->m);
 	const char *map_name = mapdata != nullptr ? mapdata->name : "";
 
