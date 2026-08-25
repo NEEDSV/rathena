@@ -34,38 +34,41 @@
 
 
 // Costume exchange
-itemmall,23,74,5	script	디자이너 헤이담#eventhat::Designer Heidam#eventhat	4_CAT_SAILOR5,{
-	message strcharinfo(0),"아직 오픈되지 않은 기능입니다. 로드맵을 참고해주세요.";
-	end;
-	
+itemmall,23,74,5	script	헤이담 펠로우#eventhat	4_CAT_SAILOR5,{
 	if (checkweight(1301,1) == 0) {
-		mes "- 잠시만 멈춰 주세요!! -";
-		mes "- 지금 소지하신 물건이 너무 많아서 -";
-		mes "- 더 이상 아이템을 받으실 수 없어요. -";
-		mes "- 소지품 무게를 좀 줄이신 뒤에 -";
-		mes "- 나중에 다시 저를 찾아와 주세요! -";
+		mes "- 잠깐! -";
+		mes "- 소지품이 너무 많습니다. -";
+		mes "- 아이템을 받을 공간을 확보한 뒤 -";
+		mes "- 다시 찾아와 주세요. -";
 		close;
 	}
 	disable_items;
-	mes "[디자이너 헤이담]";
-	mes "세상의 온갖 멋진 의상을 다루는 디자이너 헤이담이라고 합니다.";
-	mes "혹시 키트 코인을 가지고 계신가요? 그렇다면 저 헤이담을 찾아주세요!";
+	mes "[헤이담 펠로우]";
+	mes "난 세상의 멋진 의상이라면 모르는 게 없는 디자이너, 헤이담 펠로우야.";
+	mes "냥다래 열매나 교환할 의상을 가지고 있다면 잘 찾아왔어.";
 	next;
-	if (select( "의상을 랜덤 인챈트 상자로 교환한다", "대화를 계속한다" ) == 2) {
-		mes "[디자이너 헤이담]";
-		mes "지금은 이런 모습이지만, 저도 한때는 잘나가는 패션 모델이자 디자이너였다고요!";
+	switch (select("냥다래 열매로 무작위 의상 교환", "의상을 인챈트 스톤 상자로 교환", "대화 계속하기")) {
+	case 1:
+		callsub L_RandomCostume;
+		close;
+	case 2:
+		break;
+	case 3:
+		mes "[헤이담 펠로우]";
+		mes "지금은 이렇게 보여도 예전에는 꽤 이름난 패션 모델이자 디자이너였다고!";
 		next;
-		mes "[디자이너 헤이담]";
-		mes "그렇게 불쌍하게 보지 마세요! 제 외모는 저도 잘 알지만, 전 제 내면을 사랑하니까요.";
+		mes "[헤이담 펠로우]";
+		mes "그런 눈으로 보지 마. 내 모습이 어떤지는 나도 잘 알고 있어.";
+		mes "그래도 중요한 건 겉모습보다 안에 있는 마음 아니겠어?";
 		close;
 	}
 	mes "[" + strcharinfo(0) + "]";
-	mes "이 물건은 저한테 필요 없어요! 다른 건 없나요?";
+	mes "이 의상은 이제 필요 없는데... 다른 걸로 바꿀 수 있을까?";
 	next;
-	mes "[디자이너 헤이담]";
-	mes "오, 그렇다면 의상 인챈트 아이템이 들어있는 상자로 바꿔 드릴게요.";
+	mes "[헤이담 펠로우]";
+	mes "물론이지. 교환 가능한 의상이라면 의상 인챈트 스톤 상자로 바꿔줄게.";
 	next;
-	mes "- 뒤적뒤적 -";
+	mes "- 헤이담이 소지품을 살펴보고 있다. -";
 	next;
 	// ===================================================================
 	// =================== Costume Enchant Stone Box 4 ===================
@@ -431,57 +434,278 @@ itemmall,23,74,5	script	디자이너 헤이담#eventhat::Designer Heidam#eventhat	4_CAT
 		400074,		// C_Disapear_Time_TW
 		410005,		// C_Magic_Heir_TW
 		440002;		// C_Happy_Cat_TW
+	// ====================================================================
+	// =================== Costume Enchant Stone Box 22 ===================
+	// ====================================================================
+	.@box_list[18] = 100502;		// Enchant_Stone_Box22
+	setarray .@item_list_18[0],
+		20603,
+		31618,
+		31927,
+		31936,
+		20605,
+		20121,
+		31937,
+		31943,
+		20522,
+		20173,
+		31380,
+		19910,
+		20604,
+		20221,
+		19877,
+		31805,
+		20240,
+		19292,
+		20441,
+		20237,
+		480097,
+		420029,
+		20496,
+		19722,
+		480095,
+		19866,
+		31617,
+		31472;
 
 	while(1) {
+		// 옷장 시스템 등으로 귀속된 의상은 교환 대상에서 제외한다.
+		// @inventorylist_bound[] == 0 인 비귀속 아이템만 인정한다.
+		getinventorylist;
+
 		for ( .@i = 0; .@i < 18; ++.@i ) {
 			if (getiteminfo(.@box_list[.@i], ITEMINFO_TYPE) == -1)	// temporary check
 				continue;
+
 			.@size = getarraysize( getd(".@item_list_" + .@i) );
 			for ( .@h = 0; .@h < .@size; ++.@h ) {
 				.@id = getd( ".@item_list_" + .@i + "[" + .@h + "]" );
+
 				if (getiteminfo(.@id, ITEMINFO_TYPE) == -1)	// temporary check
 					continue;
-				if (countitem(.@id) < 1)
+
+				// 같은 ID의 귀속/비귀속 의상을 함께 보유할 수 있으므로
+				// countitem() 대신 실제 인벤토리 슬롯을 확인한다.
+				.@inv_idx = -1;
+				for ( .@j = 0; .@j < @inventorylist_count; ++.@j ) {
+					if (@inventorylist_id[.@j] != .@id)
+						continue;
+					if (@inventorylist_bound[.@j] != 0)
+						continue;
+
+					.@inv_idx = @inventorylist_idx[.@j];
+					break;
+				}
+
+				// 해당 의상을 가지고 있어도 귀속본뿐이면 교환 대상으로 표시하지 않는다.
+				if (.@inv_idx < 0)
 					continue;
-				mes "[디자이너 헤이담]";
-				mes "지금 소지하고 계신 ^3131FF" + getitemname(.@id) + "^000000을(를) 의상 인챈트 상자로 교환하시겠어요?";
+
+				mes "[헤이담 펠로우]";
+				mes "^3131FF" + getitemname(.@id) + "^000000을 가지고 있네.";
+				mes "이 의상을 의상 인챈트 스톤 상자로 교환할까?";
 				next;
-				switch( select( "교환한다", "다른 것을 찾는다", "교환을 그만둔다" ) ) {
+
+				switch( select("교환한다", "다른 의상을 찾는다", "교환을 그만둔다") ) {
 				case 1:
-					mes "[디자이너 헤이담]";
-					if (countitem(.@id) < 1)
-						mes "오~ 뭔가 순식간에 사라졌네요...";
-					else {
-						mes "교환이 완료되었습니다.";
-						delitem .@id, 1;
-						getitem .@box_list[.@i], 1;
+					mes "[헤이담 펠로우]";
+
+					// 교환 직전 인벤토리를 다시 읽어 비귀속본이 여전히 존재하는지 확인한다.
+					// delitem ID 방식은 같은 ID의 귀속본을 잘못 삭제할 수 있으므로 사용하지 않는다.
+					getinventorylist;
+					.@inv_idx = -1;
+
+					for ( .@j = 0; .@j < @inventorylist_count; ++.@j ) {
+						if (@inventorylist_id[.@j] != .@id)
+							continue;
+						if (@inventorylist_bound[.@j] != 0)
+							continue;
+
+						.@inv_idx = @inventorylist_idx[.@j];
+						break;
 					}
-					mes "교환할 만한 다른 물건이 더 있는지 살펴볼게요...";
+
+					if (.@inv_idx < 0) {
+						mes "교환 가능한 비귀속 의상을 찾을 수 없어.";
+						mes "귀속된 의상은 교환할 수 없어.";
+					}
+					else {
+						// 찾은 비귀속 인벤토리 슬롯만 정확히 1개 삭제한다.
+						.@deleted = delitemidx(.@inv_idx, 1);
+						if (!.@deleted) {
+							mes "의상 교환 중 문제가 발생했어.";
+							mes "소지품을 확인한 뒤 다시 시도해줘.";
+						}
+						else {
+							mes "교환 완료!";
+							getitem .@box_list[.@i], 1;
+						}
+					}
+
+					mes "다른 교환 가능한 의상이 있는지도 살펴볼게.";
 					next;
 					break;
+
 				case 2:
 					break;
+
 				case 3:
-					mes "[디자이너 헤이담]";
-					mes "야옹? 어디 가시는 건가요?";
+					mes "[헤이담 펠로우]";
+					mes "벌써 가려고? 다음에 또 찾아와.";
 					close;
 				}
 			}
 		}
-		mes "[디자이너 헤이담]";
-		mes "이게 전부인 것 같네요.";
+
+		mes "[헤이담 펠로우]";
+		mes "지금 가지고 있는 교환 가능한 비귀속 의상은 이게 전부인 것 같네.";
 		next;
-		if (select( "더 살펴본다", "그만둔다" ) == 2) {
-			mes "[디자이너 헤이담]";
-			mes "안녕히 가세요~";
+
+		if (select("다시 살펴본다", "그만둔다") == 2) {
+			mes "[헤이담 펠로우]";
+			mes "다음에 또 봐!";
 			close;
 		}
 	}
+
+// -------------------------------------------------------------------
+// 말랑도 패션스톤 의상 그룹 관리
+//
+// item_group_db.yml:
+//   Group: NEED_MALANGDO_4A
+// 스크립트:
+//   IG_NEED_MALANGDO_4A
+//
+// .CurrentCostumeGroup 값만 변경하면 현재 패션스톤 풀을 변경할 수 있다.
+// -------------------------------------------------------------------
+OnInit:
+	// 운영/확인용 그룹명
+	setarray .CostumeGroup$[0],
+		"IG_NEED_MALANGDO_4A",	// 0  : 상자 4-A (2014-08-06 ~ 2014-08-19)
+		"IG_NEED_MALANGDO_4B",	// 1  : 상자 4-B (2014-08-20 ~ 2014-10-14)
+		"IG_NEED_MALANGDO_4C",	// 2  : 상자 4-C (2014-10-15 ~ 2014-10-28)
+		"IG_NEED_MALANGDO_4D",	// 3  : 상자 4-D (2014-10-29 ~ 2014-11-18)
+		"IG_NEED_MALANGDO_5A",	// 4  : 상자 5-A (2014-11-19 ~ 2014-12-02)
+		"IG_NEED_MALANGDO_5B",	// 5  : 상자 5-B (2014-12-03 ~ 2014-12-16)
+		"IG_NEED_MALANGDO_5C",	// 6  : 상자 5-C (2014-12-17 ~ 2015-03-03)
+		"IG_NEED_MALANGDO_6A",	// 7  : 상자 6-A (2015-03-04 ~ 2015-03-17)
+		"IG_NEED_MALANGDO_6B",	// 8  : 상자 6-B (2015-03-18 ~ 2015-04-14)
+		"IG_NEED_MALANGDO_7A",	// 9  : 상자 7-A (2015-04-15 ~ 2015-05-26)
+		"IG_NEED_MALANGDO_7B",	// 10 : 상자 7-B (2015-05-27 ~ 2015-07-14)
+		"IG_NEED_MALANGDO_8A",	// 11 : 상자 8-A (2015-07-15 ~ 2015-07-28)
+		"IG_NEED_MALANGDO_8B";	// 12 : 상자 8-B (2015-07-29 ~ 2015-08-25)
+
+	// 실제 groupranditem() 호출용 그룹 ID
+	setarray .CostumeGroup[0],
+		IG_NEED_MALANGDO_4A,
+		IG_NEED_MALANGDO_4B,
+		IG_NEED_MALANGDO_4C,
+		IG_NEED_MALANGDO_4D,
+		IG_NEED_MALANGDO_5A,
+		IG_NEED_MALANGDO_5B,
+		IG_NEED_MALANGDO_5C,
+		IG_NEED_MALANGDO_6A,
+		IG_NEED_MALANGDO_6B,
+		IG_NEED_MALANGDO_7A,
+		IG_NEED_MALANGDO_7B,
+		IG_NEED_MALANGDO_8A,
+		IG_NEED_MALANGDO_8B;
+
+	// ===============================================================
+	// 현재 적용할 패션스톤 풀
+	// 0 = 4-A / 1 = 4-B / 2 = 4-C / 3 = 4-D
+	// 4 = 5-A / 5 = 5-B / 6 = 5-C
+	// 7 = 6-A / 8 = 6-B
+	// 9 = 7-A / 10 = 7-B
+	// 11 = 8-A / 12 = 8-B
+	// ===============================================================
+	.CurrentCostumeGroup = 0;
+	end;
+
+// -------------------------------------------------------------------
+// 냥다래 열매 -> 무작위 의상 교환
+// 실제 확률/구성은 item_group_db.yml의 NEED_MALANGDO_* 그룹에서 관리한다.
+// -------------------------------------------------------------------
+L_RandomCostume:
+	.@silvervine = 6417;	// 냥다래 열매
+	.@cost = 14;
+
+	.@group_index = .CurrentCostumeGroup;
+	if (.@group_index < 0 || .@group_index >= getarraysize(.CostumeGroup)) {
+		mes "[헤이담 펠로우]";
+		mes "현재 의상 교환 설정에 문제가 있어.";
+		mes "관리자에게 문의해줘.";
+		return;
+	}
+
+	.@group_id = .CostumeGroup[.@group_index];
+	.@group$ = .CostumeGroup$[.@group_index];
+
+	mes "[헤이담 펠로우]";
+	mes "냥다래 열매 ^3131FF" + .@cost + "개^000000를 가져오면";
+	mes "현재 준비된 패션스톤 의상 중 하나로 무작위 교환해줄게.";
+	mes "어떤 의상이 나올지는 직접 고를 수 없어.";
+	next;
+
+	if (countitem(.@silvervine) < .@cost) {
+		mes "[헤이담 펠로우]";
+		mes "냥다래 열매가 부족하네.";
+		mes "필요 수량 : ^FF0000" + .@cost + "개^000000";
+		mes "보유 수량 : ^3131FF" + countitem(.@silvervine) + "개^000000";
+		return;
+	}
+
+	mes "[헤이담 펠로우]";
+	mes "냥다래 열매 ^3131FF" + .@cost + "개^000000를 사용해서";
+	mes "무작위 의상 1개로 교환할까?";
+	next;
+
+	if (select("교환한다", "그만둔다") == 2) {
+		mes "[헤이담 펠로우]";
+		mes "마음이 바뀌면 언제든 다시 찾아와.";
+		return;
+	}
+
+	// 거래 직전 재확인
+	if (countitem(.@silvervine) < .@cost) {
+		mes "[헤이담 펠로우]";
+		mes "어라? 냥다래 열매가 부족해졌네.";
+		mes "소지품을 다시 확인해봐.";
+		return;
+	}
+
+	// 그룹 DB의 Rate를 기준으로 당첨 아이템 ID만 먼저 선정한다.
+	// 지급 전에 무게를 검사하기 위해 getrandgroupitem() 대신 groupranditem()을 사용한다.
+	.@reward = groupranditem(.@group_id, 1);
+
+	if (.@reward <= 0 || getiteminfo(.@reward, ITEMINFO_TYPE) == -1) {
+		mes "[헤이담 펠로우]";
+		mes "현재 의상 목록을 불러오지 못했어.";
+		mes "관리자에게 문의해줘.";
+		return;
+	}
+
+	if (checkweight(.@reward, 1) == 0) {
+		mes "[헤이담 펠로우]";
+		mes "소지품이 너무 무거워서 의상을 건네줄 수 없겠어.";
+		mes "인벤토리를 정리한 뒤 다시 찾아와.";
+		return;
+	}
+
+	delitem .@silvervine, .@cost;
+	getitem .@reward, 1;
+
+	mes "[헤이담 펠로우]";
+	mes "좋아, 교환 완료!";
+	mes "^3131FF" + getitemname(.@reward) + "^000000을 받았어.";
+	mes "멋지게 잘 써줘!";
+	return;
 	
 Oninit:
 	waitingroom "의상 > 인챈트 스톤 상자 교환",0;
 	end;
 }
+
 
 // Costume enchant (top, mid, low)
 lasa_in01,177,45,5	script	에이버 드 도쉬#cos_ect	4_WHITETIGER,{
