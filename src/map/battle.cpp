@@ -330,6 +330,15 @@ int32 battle_damage(block_list *src, block_list *target, int64 damage, int16 div
 	map_session_data* sd = nullptr;
 
 	t_tick delay = battle_calc_walkdelay(*target, damage, div_, tick);
+	// NEED TEMP DIAGNOSTIC v3 [DESYNC2] - remove this block when the trace is finished.
+	if( need_desync2_trace_target( target ) ){
+		unit_data* dbg_ud = unit_bl2ud( target );
+		ShowDebug( "[DESYNC2] tick=%u DAMAGE_APPLY target=%d map=%s(%s) skill=%d dmg=%d div=%d dmotion=%d walkdelay=%d pos=%d,%d to=%d,%d walktimer=%d\n",
+			(uint32)tick, target->id, map_mapid2mapname( target->m ), need_desync2_mapkind( target ),
+			skill_id, (int32)damage, div_, status_get_status_data( *target )->dmotion, (int32)delay,
+			target->x, target->y, dbg_ud ? dbg_ud->to_x : -1, dbg_ud ? dbg_ud->to_y : -1,
+			dbg_ud ? dbg_ud->walktimer : -1 );
+	}
 
 	if (src)
 		sd = BL_CAST(BL_PC, src);

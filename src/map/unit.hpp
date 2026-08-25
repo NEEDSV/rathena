@@ -142,6 +142,10 @@ int32 unit_is_walking( const block_list* bl );
 void unit_set_attackdelay(block_list& bl, t_tick tick, e_delay_event event);
 int32 unit_set_walkdelay(block_list *bl, t_tick tick, t_tick delay, int32 type, uint16 skill_id = 0);
 
+// NEED TEMP DIAGNOSTIC v3 [DESYNC2] - remove together with the blocks in unit.cpp
+bool need_desync2_trace_target( const block_list* bl );
+const char* need_desync2_mapkind( const block_list* bl );
+
 t_tick unit_get_walkpath_time(block_list& bl);
 t_tick unit_escape(block_list *bl, block_list *target, int16 dist, uint8 flag = 0);
 

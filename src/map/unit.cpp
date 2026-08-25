@@ -41,6 +41,31 @@
 
 using namespace rathena;
 
+
+// ==== NEED TEMP DIAGNOSTIC v3 [DESYNC2] (Sura Windmill vs Bash) ====
+// Remove this block and every NEED_DESYNC2_TRACE use when the trace is finished.
+#define NEED_DESYNC2_TRACE 1
+#if NEED_DESYNC2_TRACE
+// Only trace players on siege/pvp maps so the log does not flood during normal hunting.
+bool need_desync2_trace_target( const block_list* bl ){
+	if( bl == nullptr || bl->type != BL_PC )
+		return false;
+	return map_flag_gvg2( bl->m ) || map_getmapflag( bl->m, MF_BATTLEGROUND ) || map_getmapflag( bl->m, MF_PVP );
+}
+const char* need_desync2_mapkind( const block_list* bl ){
+	if( bl == nullptr )
+		return "?";
+	if( map_getmapflag( bl->m, MF_BATTLEGROUND ) )
+		return "BG";
+	if( map_flag_gvg2( bl->m ) )
+		return "GVG";
+	if( map_getmapflag( bl->m, MF_PVP ) )
+		return "PVP";
+	return "FIELD";
+}
+#endif
+
+
 #ifndef MAX_SHADOW_SCAR 
 	#define MAX_SHADOW_SCAR 100 /// Max Shadow Scars
 #endif
@@ -1702,6 +1727,18 @@ void unit_stop_walking_soon(block_list& bl, t_tick tick)
  */
 bool unit_stop_walking( block_list* bl, int32 type, t_tick canmove_delay ){
 	const struct TimerData* td = nullptr;
+#if NEED_DESYNC2_TRACE
+	if( need_desync2_trace_target( bl ) ){
+		unit_data* dbg_ud = unit_bl2ud( bl );
+		ShowDebug( "[DESYNC2] tick=%u STOP_ENTER id=%d map=%s(%s) pos=%d,%d to=%d,%d walktimer=%d stop_type=0x%x FULL_CELL=%s FIXPOS=%s will_early_return=%s\n",
+			(uint32)gettick(), bl->id, map_mapid2mapname( bl->m ), need_desync2_mapkind( bl ),
+			bl->x, bl->y, dbg_ud ? dbg_ud->to_x : -1, dbg_ud ? dbg_ud->to_y : -1,
+			dbg_ud ? dbg_ud->walktimer : -1, type,
+			( type & USW_MOVE_FULL_CELL ) ? "YES" : "NO",
+			( type & USW_FIXPOS ) ? "YES" : "NO",
+			( !( type & USW_FORCE_STOP ) && dbg_ud != nullptr && dbg_ud->walktimer == INVALID_TIMER ) ? "YES" : "NO" );
+	}
+#endif
 	t_tick tick;
 
 	if( bl == nullptr ){
@@ -1752,6 +1789,15 @@ bool unit_stop_walking( block_list* bl, int32 type, t_tick canmove_delay ){
 	if( canmove_delay > 0 ){
 		ud->canmove_tick = gettick() + canmove_delay;
 	}
+
+#if NEED_DESYNC2_TRACE
+	if( need_desync2_trace_target( bl ) ){
+		ShowDebug( "[DESYNC2] tick=%u STOP_EXIT  id=%d map=%s(%s) pos=%d,%d to=%d,%d fixpos_sent=%s\n",
+			(uint32)gettick(), bl->id, map_mapid2mapname( bl->m ), need_desync2_mapkind( bl ),
+			bl->x, bl->y, ud->to_x, ud->to_y,
+			( type & USW_FIXPOS ) ? "YES" : "NO" );
+	}
+#endif
 
 	// Re-added, the check in unit_set_walkdelay means dmg during running won't fall through to this place in code [Kevin]
 	if (ud->state.running) {
@@ -2069,7 +2115,7 @@ int32 unit_set_walkdelay(block_list *bl, t_tick tick, t_tick delay, int32 type, 
 		int32 stop_type = USW_NONE;
 
 		// Keep the legacy walk-delay mode synchronized under the same narrow conditions.
-		if (!type && bl->type == BL_PC && map_getmapflag(bl->m, MF_BATTLEGROUND))
+		if (!type && bl->type == BL_PC && (map_getmapflag(bl->m, MF_BATTLEGROUND) || map_flag_gvg2(bl->m)))
 			stop_type |= USW_FIXPOS;
 
 		if (delay == 1) // Minimal delay (walk-delay) disabled. Just stop walking.

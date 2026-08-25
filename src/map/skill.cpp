@@ -4006,8 +4006,23 @@ TIMER_FUNC(skill_timerskill){
 					if( target->type == BL_PC ) {
 						map_session_data *tsd = nullptr;
 						if( (tsd = ((TBL_PC*)target)) && !pc_issit(tsd) ) {
+							// NEED TEMP DIAGNOSTIC v3 [DESYNC2] - remove these three logs when finished.
+							if( need_desync2_trace_target( target ) ){
+								ShowDebug( "[DESYNC2] tick=%u WINDMILL_PC_SETSIT target=%d map=%s pos=%d,%d to=%d,%d walktimer=%d\n",
+									(uint32)tick, target->id, map_mapid2mapname( target->m ), target->x, target->y,
+									tsd->ud.to_x, tsd->ud.to_y, tsd->ud.walktimer );
+							}
 							pc_setsit(tsd);
+							if( need_desync2_trace_target( target ) ){
+								ShowDebug( "[DESYNC2] tick=%u WINDMILL_SKILL_SIT target=%d pos=%d,%d to=%d,%d walktimer=%d\n",
+									(uint32)gettick(), target->id, target->x, target->y,
+									tsd->ud.to_x, tsd->ud.to_y, tsd->ud.walktimer );
+							}
 							skill_sit(tsd, true);
+							if( need_desync2_trace_target( target ) ){
+								ShowDebug( "[DESYNC2] tick=%u WINDMILL_CLIF_SITTING target=%d pos=%d,%d\n",
+									(uint32)gettick(), target->id, target->x, target->y );
+							}
 							clif_sitting(*tsd);
 						}
 					}
