@@ -9,7 +9,7 @@
 //      (searchs "'exploit_disabled" variable - the variable is
 //      false by default like on official server). [Capuche]
 //= NEED: EP16.1 메인 스토리 선행 조건 제거.
-//=       계정 단위 #NEED_MD_ROOM_CONSCIOUSNESS_CLEAR 로 최초 클리어 기록.
+//=       계정 단위 #NEED_RC_CLEAR 로 최초 클리어 기록.
 //=       파티 내 온라인 구성원 전원이 클리어한 경우 재방문 간소화.
 //=       잡몹 2웨이브 -> 개조된 암다라이스 -> 비쥬 -> 즉시 퇴장.
 //============================================================
@@ -37,10 +37,10 @@ function	script	F_RoomConsciousnessCanEnableSimple	{
 			continue;
 
 		// 기존 EP16.1 스토리 완료 캐릭터는 최초 1회 자동 이관.
-		if (#NEED_MD_ROOM_CONSCIOUSNESS_CLEAR == 0 && ep16_royal >= 20)
-			#NEED_MD_ROOM_CONSCIOUSNESS_CLEAR = 1;
+		if (#NEED_RC_CLEAR == 0 && ep16_royal >= 20)
+			#NEED_RC_CLEAR = 1;
 
-		if (#NEED_MD_ROOM_CONSCIOUSNESS_CLEAR == 0) {
+		if (#NEED_RC_CLEAR == 0) {
 			.@allowed = 0;
 			break;
 		}
@@ -56,7 +56,7 @@ function	script	F_RoomConsciousnessMarkClear	{
 	.@party_id = getcharid(1);
 
 	if (.@party_id < 1) {
-		#NEED_MD_ROOM_CONSCIOUSNESS_CLEAR = 1;
+		#NEED_RC_CLEAR = 1;
 		return;
 	}
 
@@ -74,7 +74,7 @@ function	script	F_RoomConsciousnessMarkClear	{
 		if (attachrid(.@member_aid[.@i]) == 0)
 			continue;
 
-		#NEED_MD_ROOM_CONSCIOUSNESS_CLEAR = 1;
+		#NEED_RC_CLEAR = 1;
 	}
 
 	attachrid(.@caller_aid);
