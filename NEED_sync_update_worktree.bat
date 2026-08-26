@@ -2,112 +2,121 @@
 setlocal EnableExtensions EnableDelayedExpansion
 chcp 65001 >nul
 
-rem =========================================================
-rem NEED rAthena update worktree sync
-rem - Worktree path is kept as-is
-rem - Branch name is kept as feature/update26b808
-rem - Fetches origin and hard-resets the feature branch
-rem   to origin's default branch (fallback: origin/need-server)
-rem - Aborts if there are uncommitted changes
-rem =========================================================
-
-set "REPO=E:\tools\Need\rathena-need-server"
+set "MAIN_REPO=E:\tools\Need\rathena"
+set "WORK_REPO=E:\tools\Need\rathena-need-server"
+set "BASE_BRANCH=need-server"
 set "WORK_BRANCH=feature/update26b808"
 set "REMOTE=origin"
-set "FALLBACK_BASE=need-server"
 
 echo.
-echo [NEED] Update worktree sync
-echo Repository: %REPO%
+echo ========================================================
+echo  NEED update worktree sync
+echo ========================================================
 echo.
 
-cd /d "%REPO%" || (
-    echo [ERROR] Cannot open repository path.
+git -C "%MAIN_REPO%" rev-parse --is-inside-work-tree >nul 2>&1 || (
+    echo [ERROR] Main worktree not found: %MAIN_REPO%
     pause
     exit /b 1
 )
 
-git rev-parse --is-inside-work-tree >nul 2>&1 || (
-    echo [ERROR] This folder is not a Git worktree.
+for /f "delims=" %%B in ('git -C "%MAIN_REPO%" branch --show-current') do set "MAIN_BRANCH=%%B"
+if /I not "!MAIN_BRANCH!"=="%BASE_BRANCH%" (
+    echo [ERROR] Main worktree branch is not %BASE_BRANCH%.
+    echo         Current: !MAIN_BRANCH!
+    echo         No changes were made.
     pause
     exit /b 1
 )
 
-for /f "delims=" %%B in ('git branch --show-current') do set "CURRENT_BRANCH=%%B"
-
-if /I not "!CURRENT_BRANCH!"=="%WORK_BRANCH%" (
-    echo [ERROR] Current branch is not %WORK_BRANCH%.
-    echo Current branch: !CURRENT_BRANCH!
-    echo No changes were made.
+for /f "delims=" %%S in ('git -C "%MAIN_REPO%" status --porcelain') do (
+    echo [ERROR] Main worktree has uncommitted changes.
+    git -C "%MAIN_REPO%" status --short
     pause
     exit /b 1
 )
 
-for /f "delims=" %%S in ('git status --porcelain') do (
-    echo [ERROR] Uncommitted changes exist.
-    echo Commit, stash, or discard them before syncing.
-    echo.
-    git status --short
+git -C "%WORK_REPO%" rev-parse --is-inside-work-tree >nul 2>&1 || (
+    echo [ERROR] Update worktree not found: %WORK_REPO%
     pause
     exit /b 1
 )
 
-echo [1/3] Fetching %REMOTE%...
-git fetch %REMOTE%
+for /f "delims=" %%B in ('git -C "%WORK_REPO%" branch --show-current') do set "WORK_CURRENT=%%B"
+if /I not "!WORK_CURRENT!"=="%WORK_BRANCH%" (
+    echo [ERROR] Update worktree branch is not %WORK_BRANCH%.
+    echo         Current: !WORK_CURRENT!
+    echo         No changes were made.
+    pause
+    exit /b 1
+)
+
+for /f "delims=" %%S in ('git -C "%WORK_REPO%" status --porcelain') do (
+    echo [ERROR] Update worktree has uncommitted changes.
+    git -C "%WORK_REPO%" status --short
+    pause
+    exit /b 1
+)
+
+echo [1/4] Fetching origin...
+git -C "%MAIN_REPO%" fetch %REMOTE%
 if errorlevel 1 (
     echo [ERROR] git fetch failed.
     pause
     exit /b 1
 )
 
-set "BASE_REF="
-for /f "delims=" %%R in ('git symbolic-ref --short refs/remotes/%REMOTE%/HEAD 2^>nul') do set "BASE_REF=%%R"
-
-if not defined BASE_REF (
-    set "BASE_REF=%REMOTE%/%FALLBACK_BASE%"
-)
-
-git rev-parse --verify "!BASE_REF!" >nul 2>&1
+echo [2/4] Updating local %BASE_BRANCH% with fast-forward only...
+git -C "%MAIN_REPO%" pull --ff-only %REMOTE% %BASE_BRANCH%
 if errorlevel 1 (
-    echo [ERROR] Base branch !BASE_REF! was not found.
-    echo.
-    echo Remote branches:
-    git branch -r
+    echo [ERROR] Main branch could not be fast-forwarded.
+    echo         Update worktree was not reset.
     pause
     exit /b 1
 )
 
-echo [2/3] Resetting %WORK_BRANCH% to !BASE_REF!...
-git reset --hard "!BASE_REF!"
+for /f "delims=" %%H in ('git -C "%MAIN_REPO%" rev-parse --short %BASE_BRANCH%') do set "BASE_HEAD=%%H"
+
+echo [3/4] Resetting %WORK_BRANCH% to local %BASE_BRANCH% (!BASE_HEAD!)...
+git -C "%WORK_REPO%" reset --hard %BASE_BRANCH%
 if errorlevel 1 (
-    echo [ERROR] git reset failed.
+    echo [ERROR] Reset failed.
     pause
     exit /b 1
 )
 
+echo [4/4] Verification...
+for /f "delims=" %%H in ('git -C "%WORK_REPO%" rev-parse --short HEAD') do set "WORK_HEAD=%%H"
+
 echo.
-echo [3/3] Local worktree is now synced.
-echo Base:    !BASE_REF!
-echo Branch:  %WORK_BRANCH%
+echo Main   %BASE_BRANCH% : !BASE_HEAD!
+echo Update %WORK_BRANCH% : !WORK_HEAD!
 echo.
 
-set /p "ANSWER=Also sync origin/%WORK_BRANCH% with the same state? [y/N]: "
+if /I not "!BASE_HEAD!"=="!WORK_HEAD!" (
+    echo [ERROR] HEADs do not match. Remote feature was NOT touched.
+    pause
+    exit /b 1
+)
+
+echo [OK] Local update worktree now exactly matches %BASE_BRANCH%.
+echo.
+
+set /p "ANSWER=Also update origin/%WORK_BRANCH% to this state? [y/N]: "
 if /I "!ANSWER!"=="Y" (
-    echo.
-    echo Updating remote feature branch with --force-with-lease...
-    git push --force-with-lease %REMOTE% %WORK_BRANCH%
+    git -C "%WORK_REPO%" push --force-with-lease %REMOTE% %WORK_BRANCH%
     if errorlevel 1 (
-        echo [ERROR] Remote push failed.
+        echo [ERROR] Remote feature push failed.
         pause
         exit /b 1
     )
-    echo Remote feature branch synced.
+    echo [OK] Remote feature branch updated.
 ) else (
-    echo Remote feature branch was not changed.
+    echo [INFO] Remote feature branch was not changed.
 )
 
 echo.
-git status -sb
+git -C "%WORK_REPO%" status -sb
 echo.
 echo [DONE] Ready for the next update.
 pause
