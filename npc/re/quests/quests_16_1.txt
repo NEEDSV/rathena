@@ -13,7 +13,7 @@
 //= NEED: EP16.1 일일퀘스트 독립 개방
 //= - 메인/왕가 스토리를 진행하지 않아도 명예의 증표 일일퀘 이용 가능.
 //= - 기존 스토리 진행 중인 캐릭터의 진행도는 가능한 한 유지.
-//= - 비쥬(의식의 방)는 수정된 RoomOfConsciousness_KR_Simple_NoStoryReq.txt와 연동.
+//= - 의식의 방 일일퀘는 7705/7706 기반 NoStoryReq 구조로 독립 개방.
 //============================================================
 
 // NEED: 연회 준비 스토리를 시작하지 않은 캐릭터는 요리 일일퀘스트 단계로 바로 이관합니다.
@@ -53,7 +53,7 @@ prontera,121,72,3	script	왕실 급사#e16_pr	4_M_ZONDAOYAJI,5,5,{
 	}
 	switch( ep16_royal ) {
 	case 0:
-		if (BaseLevel < 100) {// Access to the New World pre-req (Onward to the New World Quest or Cat Paw Agent Quest)
+		if (BaseLevel < 100) {// NEED: EP13 이계 선행 제거, 레벨 제한만 유지
 			mes "[왕실 급사]";
 			mes "안녕하세요!";
 			mes "지금 ^4d4dff왕궁에서는 이계에서 돌아온 영웅들을 위한 연회^000000가 열리고 있습니다.";
@@ -61,8 +61,6 @@ prontera,121,72,3	script	왕실 급사#e16_pr	4_M_ZONDAOYAJI,5,5,{
 			next;
 			mes "[왕실 급사]";
 			mes "다들 어디에 계신지 모르겠군요. 워낙 여러 곳에 흩어져 있어서 한 분 한 분 찾기가 쉽지 않습니다. 하하하!";
-			mes "아직 연회에 초대받기에는 조금 이른 것 같습니다.";
-			mes "^4d4dffBase Lv.100 이상^000000이 되면 다시 찾아와 주세요.";
 			close;
 		}
 		mes "[왕실 급사]";
@@ -162,7 +160,7 @@ prontera,121,72,3	script	왕실 급사#e16_pr	4_M_ZONDAOYAJI,5,5,{
 	}
 
 OnTouch:
-	if (ep16_royal == 0 && BaseLevel > 99 && (ep13_ryu > 99 || ep13_start > 99))
+	if (ep16_royal == 0 && BaseLevel > 99)
 		npctalk "잠깐! 당신은 분명... " + strcharinfo(0) + ". 전해드릴 말씀이 있습니다!", "", bc_self;
 	else
 		npctalk "원정에서 돌아온 영웅을 찾고 있습니다...", "", bc_self;
@@ -4133,8 +4131,6 @@ prt_cas_q,20,139,3	script	스피카 네리우스#ep16_room01	4_EP16_SPICA,{
 			next;
 			setquest 7684;// Visit the Nerius
 			completequest 7684;// Visit the Nerius
-			if (achievementinfo(130000, ACHIEVEINFO_COUNT2) == 0)
-				achievementupdate(130000, ACHIEVEINFO_COUNT2, 1);
 			break;
 		case 1:
 			completequest 7684;
@@ -4707,8 +4703,6 @@ prt_cas_q,14,184,5	script	아이젠호너 발터#ep16wal	4_M_1STPRIN1,{
 		completequest 14469;// Look around the Walther Family
 		setquest 14470;// In Search of the Guardian Knight
 		ep16_wal = 2;
-		if (achievementinfo(130000, ACHIEVEINFO_COUNT3) == 0)
-			achievementupdate(130000, ACHIEVEINFO_COUNT3, 1);
 		if (isbegin_quest(7682) == 1 && isbegin_quest(5402) == 2 && isbegin_quest(7683) == 2 && isbegin_quest(7684) == 2 && ep16_wal > 1 && ep16_wig > 1 && ep16_lug > 1 && ep16_gaobs > 1) {
 			completequest 7682;// Socializing Starts from an Eye Contact
 			setquest 7685;// What Is the Next Thing on the Schedule ?
@@ -5480,6 +5474,17 @@ L_NEED_RoomDaily:
 		mes "[프리드리히]";
 		mes "발키리에게서 이미르의 심장 조각을 지켜주십시오.";
 		setquest 7705;// Hope You Cannot Let Go
+		next;
+		mes "[프리드리히]";
+		mes "메인 스토리를 진행하지 않은 경우에도";
+		mes "^4d4dff과거 왕가의 기억 입구^000000에서 닐렘을 찾아갈 수 있습니다.";
+		next;
+		if (select("과거 왕가의 기억으로 이동", "직접 가겠습니다.") == 1) {
+			close2;
+			cutin "",255;
+			warp "prt_lib_q",89,43;
+			end;
+		}
 		close3;
 	case 0:
 	case 1:
@@ -5501,6 +5506,13 @@ L_NEED_RoomDaily:
 		mes "[프리드리히]";
 		mes "닐렘이 기다리고 있을 겁니다.";
 		mes "언제나처럼 부탁드리겠습니다.";
+		next;
+		if (select("과거 왕가의 기억으로 이동", "직접 가겠습니다.") == 1) {
+			close2;
+			cutin "",255;
+			warp "prt_lib_q",89,43;
+			end;
+		}
 		close3;
 	case 2:
 		cutin "ep16_friedrich_stolz_heine",1;
@@ -5707,8 +5719,6 @@ prt_cas_q,19,85,4	script	크로네커 그란츠 하이네#ep16_01	4_EP16_GRANZ,{
 				mes "우리 가문의 일에 지나치게 호기심을 갖지 마십시오.";
 				mes "후우... 나중에 다시 뵙겠군요.";
 				completequest 7683;
-				if (achievementinfo(130000, ACHIEVEINFO_COUNT1) == 0)
-					achievementupdate(130000, ACHIEVEINFO_COUNT1, 1);
 				next;
 				if (isbegin_quest(7682) == 1 && isbegin_quest(5402) == 2 && isbegin_quest(7683) == 2 && isbegin_quest(7684) == 2 && ep16_wal > 1 && ep16_wig > 1 && ep16_lug > 1 && ep16_gaobs > 1) {
 					completequest 7682;// Socializing Starts from an Eye Contact
@@ -6234,9 +6244,18 @@ prt_cas_q,96,184,1	script	아그네스 뢰겐부르그#ep16lu	4_EP16_AGNES,{
 		mes "짐이 많아 보이네요. 조금 정리하고 오는 건 어때요?";
 		close;
 	}
-	// NEED: 뢰겐부르그 스토리를 시작하지 않았다면 바로 일일퀘스트 구간으로 이동합니다.
-	if (ep16_lug == 0 && BaseLevel >= 100)
-		goto L_NEED_AgnesDaily;
+	// NEED: 뢰겐부르그 스토리와 일일퀘스트를 분리합니다.
+	// 스토리 중간 진행 캐릭터도 일일 의뢰를 선택하면 반복 일퀘로 바로 진입합니다.
+	if (BaseLevel >= 100 && ep16_lug < 13) {
+		cutin "16agn_nor",2;
+		mes "[아그네스]";
+		mes "무슨 일로 찾아오셨나요?";
+		next;
+		if (select("일일 의뢰", "다른 용무(가문 이야기)") == 1) {
+			.@need_daily_mode = 1;
+			goto L_NEED_AgnesDaily;
+		}
+	}
 
 	if (ep16_lug == 0) {
 		cutin "16agn_nor",2;
@@ -6745,7 +6764,7 @@ L_NEED_AgnesDaily:
 
 		// NEED: 기본 가문 스토리를 건너뛴 캐릭터는 첫 장편 의뢰(14508)를 생략하고
 		// 반복용 재료 의뢰 6종 중 하나를 즉시 받습니다.
-		if (ep16_lug == 0) {
+		if (.@need_daily_mode) {
 			setarray .@need_daily_list[0],14510,14511,14512,14513,14514,14515;
 			.@need_daily = .@need_daily_list[rand(getarraysize(.@need_daily_list))];
 			setquest .@need_daily;
@@ -7366,8 +7385,6 @@ prt_cas_q,96,186,3	script	볼프 뢰겐부르그#ep16lug	4_EP16_WOLF,{
 		mes "네, 맞습니다.";
 		completequest 14495;// To Wolf
 		setquest 14496;// To Isaac
-		if (achievementinfo(130000, ACHIEVEINFO_COUNT7) == 0)
-			achievementupdate(130000, ACHIEVEINFO_COUNT7, 1);
 		ep16_lug = 2;
 		if (isbegin_quest(7682) == 1 && isbegin_quest(5402) == 2 && isbegin_quest(7683) == 2 && isbegin_quest(7684) == 2 && ep16_wal > 1 && ep16_wig > 1 && ep16_lug > 1 && ep16_gaobs > 1) {
 			completequest 7682;// Socializing Starts from an Eye Contact
@@ -8973,7 +8990,11 @@ prt_cas_q,80,80,4	script	리하르트 가문 집사#EP161GAM	1_M_LIBRARYMASTER,{
 			close;
 		}
 	}
-	next;
+	// NEED: 기존 스토리 완료 상태(4)에서는 위에서 mes가 출력되어 next가 필요하지만,
+	// 스토리 미진행 직행 상태(3)에서 반복 퀘스트가 이미 진행 중이면 mes 없이 next가 실행되어
+	// "There is no mes active" 경고가 발생하므로 해당 경우에는 next를 호출하지 않습니다.
+	if (.@ep161_family00 == 4)
+		next;
 
 	if (checkquest(.@quest_list[.@i],HUNTING) == 2) {
 		if (isbegin_quest(5403) == 1)
@@ -9114,8 +9135,6 @@ prt_cas_q,93,74,4	script	포 리하르트#EP161GAM	4_M_6THPRIN1,{
 		mes "뭐, 중요한 이야기는 아니니 넘어가도록 하지. 오랜만에 이렇게 말을 많이 했더니 목이 마르군.";
 		next;
 		completequest 5402;// The Royal Richard
-		if (achievementinfo(130000, ACHIEVEINFO_COUNT5) == 0)
-			achievementupdate(130000, ACHIEVEINFO_COUNT5, 1);
 		if (isbegin_quest(7682) == 1 && isbegin_quest(5402) == 2 && isbegin_quest(7683) == 2 && isbegin_quest(7684) == 2 && ep16_wal > 1 && ep16_wig > 1 && ep16_lug > 1 && ep16_gaobs > 1) {
 			completequest 7682;// Socializing Starts from an Eye Contact
 			setquest 7685;// What Is the Next Thing on the Schedule ?
@@ -9538,8 +9557,6 @@ prt_cas_q,93,129,3	script	여왕#ep16_1	4_EP16_EGEO,{
 		mes "급한 업무가 있어 오래 함께하지 못하는 점 양해해 주세요.";
 		completequest 11400;// The Geoborgs
 		setquest 11401;// The Geoborgs
-		if (achievementinfo(130000, ACHIEVEINFO_COUNT6) == 0)
-			achievementupdate(130000, ACHIEVEINFO_COUNT6, 1);
 		ep16_gaobs = 2;
 		if (isbegin_quest(7682) == 1 && isbegin_quest(5402) == 2 && isbegin_quest(7683) == 2 && isbegin_quest(7684) == 2 && ep16_wal > 1 && ep16_wig > 1 && ep16_lug > 1 && ep16_gaobs > 1) {
 			completequest 7682;// Socializing Starts from an Eye Contact
@@ -10020,8 +10037,6 @@ prt_cas_q,146,121,4	script	총각#ep16wig	1_M_ORIENT01,{
 	mes "그 우아하고 빛나는 모습을 보기 전에는 절대 안 가!";
 	mes "유르겐을 만나려고 페이욘에서 여기까지 왔다고!";
 	close2;
-	if (achievementinfo(110001, ACHIEVEINFO_COUNT5) == 0)
-		achievementupdate(110001, ACHIEVEINFO_COUNT5, 1);
 	end;
 }
 
@@ -10046,8 +10061,6 @@ prt_cas_q,148,117,7	script	아가씨#ep16wig	4_F_02,{
 		npctalk "카트린은 너무 착해.", "처녀#ep16wig", bc_area;
 	}
 	close2;
-	if (achievementinfo(110001, ACHIEVEINFO_COUNT3) == 0)
-		achievementupdate(110001, ACHIEVEINFO_COUNT3, 1);
 	end;
 }
 
@@ -10071,8 +10084,6 @@ prt_cas_q,148,122,4	script	여인들#ep16wig	1_F_03,{
 		npctalk "적어도 하늘은 용서해 준다니 다행이네.", "처녀#ep16wig", bc_area;
 	}
 	close2;
-	if (achievementinfo(110001, ACHIEVEINFO_COUNT2) == 0)
-		achievementupdate(110001, ACHIEVEINFO_COUNT2, 1);
 	end;
 }
 
@@ -10097,8 +10108,6 @@ prt_cas_q,150,122,4	script	규수#ep16wig	1_F_LIBRARYGIRL,{
 		npctalk "23번째면 오늘은 못 볼 수도 있겠네.", "처녀#ep16wig", bc_area;
 	}
 	close2;
-	if (achievementinfo(110001, ACHIEVEINFO_COUNT1) == 0)
-		achievementupdate(110001, ACHIEVEINFO_COUNT1, 1);
 	end;
 }
 
@@ -10123,8 +10132,6 @@ prt_cas_q,150,117,7	script	처녀#ep16wig	4_F_01,{
 		npctalk "줄 정리하던 사람은 어디 간 거야?";
 	}
 	close2;
-	if (achievementinfo(110001, ACHIEVEINFO_COUNT4) == 0)
-		achievementupdate(110001, ACHIEVEINFO_COUNT4, 1);
 	end;
 }
 
@@ -10556,9 +10563,18 @@ prt_cas_q,95,9,5	script	유르겐 위그너#ep16wig	4_M_4THPRIN1,{
 		mes "조금 정리하고 오시는 게 어떻습니까?";
 		close3;
 	}
-	// NEED: 위그너 스토리를 시작하지 않은 캐릭터는 사랑의 전령 일일퀘스트로 바로 이동합니다.
-	if (ep16_wig == 0 && BaseLevel >= 100)
-		goto L_NEED_JurgenDaily;
+	// NEED: 위그너 스토리와 일일퀘스트를 분리합니다.
+	// 스토리 중간 진행 캐릭터도 일일 의뢰를 선택하면 사랑의 전령 반복퀘로 바로 진입합니다.
+	if (BaseLevel >= 100 && ep16_wig < 21) {
+		cutin "16jur_nor",0;
+		mes "[유르겐]";
+		mes "무슨 일로 찾아오셨습니까?";
+		next;
+		if (select("일일 의뢰", "다른 용무(가문 이야기)") == 1) {
+			.@need_daily_mode = 1;
+			goto L_NEED_JurgenDaily;
+		}
+	}
 
 	if (ep16_wig == 0) {
 		mes "[유르겐]";
@@ -10670,8 +10686,6 @@ prt_cas_q,95,9,5	script	유르겐 위그너#ep16wig	4_M_4THPRIN1,{
 			completequest 7682;// Socializing Starts from an Eye Contact
 			setquest 7685;// What Is the Next Thing on the Schedule ?
 		}
-		if (achievementinfo(130000, ACHIEVEINFO_COUNT4) == 0)
-			achievementupdate(130000, ACHIEVEINFO_COUNT4, 1);
 		cutin "16jur_nor",0;
 		mes "[유르겐]";
 		mes "유르겐은 어디 있지?";
@@ -11269,7 +11283,7 @@ L_NEED_JurgenDaily:
 	switch( checkquest(14492,PLAYTIME) ) {
 	case -1:
 		// NEED: 기본 위그너 스토리를 생략한 캐릭터는 바로 오늘의 전달 임무를 받습니다.
-		if (ep16_wig == 0 && isbegin_quest(14493) == 0 && isbegin_quest(14494) == 0) {
+		if (.@need_daily_mode && isbegin_quest(14493) == 0 && isbegin_quest(14494) == 0) {
 			setquest 14493;// Today I Feel
 			cutin "16jur_nor",0;
 			mes "[유르겐]";
@@ -12116,8 +12130,6 @@ prt_cas_q,95,11,4	script	여인들#ep16wig01	1_F_03,{
 	mes "[여인들]";
 	mes "유르겐, 넌 내 거야!";
 	close2;
-	if (achievementinfo(110001, ACHIEVEINFO_COUNT6) == 0)
-		achievementupdate(110001, ACHIEVEINFO_COUNT6, 1);
 	end;
 
 OnTimer600000:
@@ -12161,8 +12173,6 @@ prt_cas_q,98,23,1	script	총각#ep16wig01	1_M_ORIENT01,{
 	mes "[총각]";
 	mes "유르겐과 악수도 못 했어! 아, 너무 뜨거워!";
 	close2;
-	if (achievementinfo(110001, ACHIEVEINFO_COUNT7) == 0)
-		achievementupdate(110001, ACHIEVEINFO_COUNT7, 1);
 	end;
 
 OnTimer480000:
@@ -16767,7 +16777,6 @@ lasa_in01,189,58,3	script	딜런#pa0829	4_CAT_SAILOR5,{
 	mes "흠, 잘 처리됐군. 장비를 확인해 봐.";
 	specialeffect2 EF_REPAIRWEAPON;
 	close;
-	
 OnInit:
 	waitingroom "독설/아첨 인챈트",0;
 	end;
@@ -16828,7 +16837,6 @@ function	script	F_Show16_1HonorEnchantGroup	{
 		mes "^i[" + getarg(.@i) + "] " + mesitemlink(getarg(.@i));
 	return;
 }
-
 
 prt_pri00,51,116,8	script	엘론드 로렌스#EP161ER	4_M_CRU,1,1,{
 	if (checkweight(1301,1) == 0) {
