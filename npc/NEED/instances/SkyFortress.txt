@@ -7,12 +7,61 @@
 //= 1.0 First version. [Capuche]
 //= NEED: 전체 한글화.
 //=       본 파일 내부에는 EP16.1 메인 스토리 진행도 선행 검사가 없음.
-//=       9418/9419는 공중요새 자체 진행/1일 재입장 쿨타임이므로 유지.
+//=       9418/9419는 공중요새 자체 진행/3일 재입장 쿨타임이므로 유지.
 //============================================================
-1@sthb,1,2,0	script	dummy_skyfort	-1,{
-	end;
+
+prt_q,249,82,2	script	한#a1	8W_SOLDIER,{
+	mes "[한]";
+	mes "프론테라 중심부에는 지금도";
+	mes "엄청난 수의 몬스터가 몰려들고 있을 거야.";
+	mes "***";
+	next;
+	mes "[한]";
+	mes "내 가족... 내 친구들...";
+	mes "모두 그곳에 있어...";
+	mes "내가 지켜야 하는데...";
+	mes "하지만... 지금 내게는";
+	mes "이곳을 지켜야 할 더 중요한 임무가 있어...";
+	next;
+	mes "[한]";
+	mes "과학자 도연이라면 해낼 수 있을 거야.";
+	mes "끝없이 몬스터를 쏟아내는";
+	mes "저 끔찍한 근원지를 없앨 수 있을 거야...";
+	mes "그래서 나는 도연을 지키고 있어.";
+	mes "***";
+	next;
+	mes "[한]";
+	mes "도연을 지키고 이 요새를 파괴하는 것이";
+	mes "결국 내 가족과";
+	mes "친구들을 지키는 일이니까.";
+	close;
 }
 
+prt_q,252,79,4	script	도엑#a1	8W_SOLDIER,{
+	mes "[도엑]";
+	mes "여기 있는 이 과학자가";
+	mes "정말 프론테라를 지킬 수 있을까?";
+	mes "정말 가능할까?";
+	mes "당신은 그렇게 믿어?";
+	next;
+	mes "[도엑]";
+	mes "솔직히 나는 믿기 어려워...";
+	mes "하지만...";
+	next;
+	mes "[도엑]";
+	mes "내가 사랑하던 사람들은 모두...";
+	mes "...저 몬스터들에게 당했어....";
+	next;
+	mes "[도엑]";
+	mes "이게 내가 붙잡을 수 있는 마지막 희망이야...";
+	mes "정말 마지막이야.";
+	mes "그러니 부탁할게.";
+	mes "도연을 도와줘...";
+	next;
+	mes "- 그리고 그는 한동안 -";
+	mes "- 아무 말도 하지 않았다. -";
+	close;
+}
 
 prt_q,249,79,4	script	과학자 도연#a1	4_M_MAYOR,{
 	if (!checkweight(2104,2)) {
@@ -115,7 +164,7 @@ prt_q,249,79,4	script	과학자 도연#a1	4_M_MAYOR,{
 		mes "막대한 마력이 필요합니다.";
 		mes "-던전 이용권-을 가져오시거나,";
 		mes "아니면 제가 마력을 다시 모으는 데";
-		mes "약 1일 정도가 필요합니다.";
+		mes "약 3일 정도가 필요합니다.";
 		next;
 		mes "[과학자 도연]";
 		mes "공중요새에 다시 들어가";
@@ -136,7 +185,7 @@ prt_q,249,79,4	script	과학자 도연#a1	4_M_MAYOR,{
 		mes "막대한 마력이 필요합니다.";
 		mes "-던전 이용권-을 가져오시거나,";
 		mes "아니면 제가 마력을 다시 모으는 데";
-		mes "약 1일 정도가 필요합니다.";
+		mes "약 3일 정도가 필요합니다.";
 		next;
 		if (is_party_leader() == true) {
 			.@party_name$ = getpartyname(getcharid(1));
@@ -624,6 +673,12 @@ OnTimer7000:
 	end;
 }
 
+// NEED: 공용 dummy_npc 로딩 의존성 제거.
+// npc/NEED 단독 로드 환경에서도 duplicate 원본을 찾을 수 있도록 파일 전용 더미 NPC 사용.
+1@sthb,1,2,0	script	dummy_skyfort	-1,{
+	end;
+}
+
 1@sthb,64,67,4	duplicate(dummy_skyfort)	스테판 잭 어니스트 울프#sthd_02	4_AS_RAGGED_GOLEM
 
 1@sthb,56,71,0	script	#sthd_event_1	HIDDEN_WARP_NPC,8,8,{
@@ -906,10 +961,9 @@ OnTouch:
 	mes "- 워프가 -";
 	mes "- 성공적으로 작동했다. -";
 	mes "- 음산한 워프에서 -";
-	mes "- 음산한 워프에서 -";
 	mes "- 검은 빛이 피어오른다. -";
 	disablenpc();
-	enablenpc instance_npcname("Activated Warp#" + strnpcinfo(2));
+	enablenpc instance_npcname("활성화된 워프#" + strnpcinfo(2));
 	close;
 }
 
