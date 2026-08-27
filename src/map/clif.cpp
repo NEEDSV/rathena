@@ -8474,7 +8474,7 @@ void clif_pet_autofeed_status( const map_session_data* sd, bool force ) {
 
 	if (force || battle_config.pet_autofeed_always) {
 		// Always send ON or OFF
-		if (sd->pd && battle_config.feature_pet_autofeed) {
+		if (sd->pd && battle_config.feature_pet_autofeed && sd->pd->get_pet_db()->allow_autofeed) {
 			clif_configuration(sd, CONFIG_PET_AUTOFEED, sd->pd->pet.autofeed);
 		}
 		else {
@@ -8483,7 +8483,7 @@ void clif_pet_autofeed_status( const map_session_data* sd, bool force ) {
 	}
 	else {
 		// Only send when enabled
-		if (sd->pd && battle_config.feature_pet_autofeed && sd->pd->pet.autofeed) {
+		if (sd->pd && battle_config.feature_pet_autofeed && sd->pd->get_pet_db()->allow_autofeed && sd->pd->pet.autofeed) {
 			clif_configuration(sd, CONFIG_PET_AUTOFEED, true);
 		}
 	}

@@ -367,7 +367,10 @@ uint64 PetDatabase::parseBodyNode( const ryml::NodeRef& node ){
 		pet->allow_autofeed = allow;
 	}else{
 		if( !exists ){
-			pet->allow_autofeed = false;
+			// Auto-feeding is a general pet convenience. Only enable it by
+			// default for pets that have a functional feeding cycle; special
+			// database entries can still opt out explicitly.
+			pet->allow_autofeed = pet->FoodID != 0 && pet->fullness > 0 && pet->hungry_delay > 0;
 		}
 	}
 
@@ -877,7 +880,7 @@ static TIMER_FUNC(pet_hungry){
 
 	clif_send_petdata( sd, *pd, CHANGESTATEPET_HUNGER );
 
-	if( battle_config.feature_pet_autofeed && pd->pet.autofeed && pd->pet.hungry <= battle_config.feature_pet_autofeed_rate ){
+	if( battle_config.feature_pet_autofeed && pet_db_ptr->allow_autofeed && pd->pet.autofeed && pd->pet.hungry <= battle_config.feature_pet_autofeed_rate ){
 		pet_food( sd, pd );
 	}
 
@@ -1025,6 +1028,9 @@ bool pet_data_init(map_session_data *sd, struct s_pet *pet)
 	pd->master = sd;
 	pd->db = mob_db.find(pet->class_);
 	memcpy(&pd->pet, pet, sizeof(struct s_pet));
+	if( !pet_db_ptr->allow_autofeed ){
+		pd->pet.autofeed = false;
+	}
 	status_set_viewdata(pd, pet->class_);
 	unit_dataset(pd);
 	pd->ud.dir = sd->ud.dir;
