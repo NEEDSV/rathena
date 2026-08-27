@@ -26,6 +26,13 @@
 //= 중요:
 //=   chobozone.txt의 초보존 제한을 "1~39"로 운영하려면
 //=   if (BaseLevel > .limitlv) 를 if (BaseLevel >= .limitlv) 로 수정할 것.
+//=
+//= 대화 화면 규칙:
+//=   메뉴 이동으로 새 화면에 진입하는 독립 라벨과 select 직후
+//=   인라인 화면 본문은 첫 줄에서 clear; 로 이전 대사를 지운다.
+//=   S_CurrentStage / S_ShowGoal 같은 callsub 서브루틴과
+//=   F_NEED_* 공용 함수에는 clear; 를 넣지 않는다.
+//=   next; 로 이어지는 같은 화면의 연속 페이지에도 넣지 않는다.
 //============================================================
 
 //============================================================
@@ -221,9 +228,19 @@ moc_para01,27,35,4	script	낙원단 성장 지원관#need_beginner	4_M_ZONDAOYAJI,{
 
 		callfunc("F_NEED_BeginnerSupply", 1);
 		next;
+		// 등록 안내를 출력한 상태이므로 clear 지점을 거쳐 메인 화면으로 이동한다.
+		goto L_Main;
 	}
 
+	// NPC 최초 클릭 시점에는 아직 출력된 대사가 없어 clear 대상이 아니다.
+	// (mes 없이 clear 를 실행하면 서버가 경고를 남긴다)
+	goto L_MainDraw;
+
 L_Main:
+	// 메뉴 이동으로 되돌아온 경우에만 이전 화면 대사를 지운다.
+	clear;
+
+L_MainDraw:
 	setdialogsize(440,260);
 	mes "^00AAFF[낙원단 성장 지원관]^000000";
 	mes "";
@@ -279,6 +296,7 @@ L_Main:
 	}
 
 L_Reward:
+	clear;
 	setdialogsize(460,360);
 	mes "^00AAFF[성장 지원 보상]^000000";
 	mes "";
@@ -295,6 +313,8 @@ L_Reward:
 		+ "돌아가기";
 	switch(select(.@menu$)) {
 	case 1:
+		// 메뉴 선택으로 새 화면에 진입하므로 이전 대사를 지운다.
+		clear;
 		if (NEED_BEGINNER_REWARD_1) {
 			mes "^00AAFF[Lv.1 성장 보상]^000000";
 			mes "";
@@ -323,6 +343,8 @@ L_Reward:
 		goto L_Main;
 
 	case 2:
+		// 메뉴 선택으로 새 화면에 진입하므로 이전 대사를 지운다.
+		clear;
 		if (BaseLevel < 100) {
 			mes "^00AAFF[Lv.100 성장 보상]^000000";
 			mes "";
@@ -379,6 +401,8 @@ L_Reward:
 		goto L_Main;
 
 	case 3:
+		// 메뉴 선택으로 새 화면에 진입하므로 이전 대사를 지운다.
+		clear;
 		if (BaseLevel < 150) {
 			mes "^00AAFF[Lv.150 성장 보상]^000000";
 			mes "";
@@ -413,6 +437,8 @@ L_Reward:
 		goto L_Main;
 
 	case 4:
+		// 메뉴 선택으로 새 화면에 진입하므로 이전 대사를 지운다.
+		clear;
 		if (BaseLevel < 175 || JobLevel < 60) {
 			mes "^00AAFF[성장 지원 졸업 보상]^000000";
 			mes "";
@@ -485,7 +511,8 @@ L_Reward:
 	}
 
 L_Goal:
-	setdialogsize(460,380);
+	clear;
+	setdialogsize(460,360);
 	mes "^00AAFF[현재 성장 목표]^000000";
 	mes "";
 	callsub S_ShowGoal;
@@ -498,6 +525,7 @@ L_Goal:
 	goto L_Main;
 
 L_Guide:
+	clear;
 	setdialogsize(500,420);
 	mes "^00AAFF[성장 학습 현황]^000000";
 	mes "";
@@ -582,7 +610,8 @@ L_Guide:
 //   어떤 성장 보상 조건에도 사용하지 않는다.
 //============================================================
 L_Study:
-	setdialogsize(460,300);
+	clear;
+	setdialogsize(460,260);
 	mes "^00AAFF[성장 학습하기]^000000";
 	mes "";
 	mes "익히고 싶은 항목을 선택해주세요.";
@@ -611,7 +640,8 @@ L_Study:
 	}
 
 L_StudyCard:
-	setdialogsize(460,320);
+	clear;
+	setdialogsize(460,300);
 	mes "^00AAFF[카드 시스템 학습]^000000";
 	mes "";
 	mes "카드는 슬롯이 있는 장비에 장착하여";
@@ -646,6 +676,7 @@ L_StudyCard:
 	goto L_Study;
 
 L_StudyRefine:
+	clear;
 	if (BaseLevel < 140) {
 		mes "^00AAFF[제련 시스템 학습]^000000";
 		mes "";
@@ -655,7 +686,7 @@ L_StudyRefine:
 		goto L_Study;
 	}
 
-	setdialogsize(460,340);
+	setdialogsize(460,320);
 	mes "^00AAFF[제련 시스템 학습]^000000";
 	mes "";
 	mes "제련은 장비의 제련 수치를 올려";
@@ -691,6 +722,7 @@ L_StudyRefine:
 	goto L_Study;
 
 L_StudyExcelion:
+	clear;
 	if (BaseLevel < 150) {
 		mes "^00AAFF[엑셀리온 인챈트 학습]^000000";
 		mes "";
@@ -700,7 +732,7 @@ L_StudyExcelion:
 		goto L_Study;
 	}
 
-	setdialogsize(480,440);
+	setdialogsize(480,420);
 	mes "^00AAFF[엑셀리온 인챈트 학습]^000000";
 	mes "";
 	mes "엑셀리온 장비는";
@@ -745,6 +777,7 @@ L_StudyExcelion:
 	goto L_Study;
 
 L_StudyCash:
+	clear;
 	if (BaseLevel < 150) {
 		mes "^00AAFF[금화 / 캐시 시스템 학습]^000000";
 		mes "";
@@ -799,6 +832,7 @@ L_StudyCash:
 //   정보 제공용이며 완료 변수를 기록하지 않는다.
 //============================================================
 L_Field:
+	clear;
 	setdialogsize(460,320);
 	mes "^00AAFF[Lv.150 추천 필드]^000000";
 	mes "";
@@ -820,7 +854,8 @@ L_Field:
 	goto L_Study;
 
 L_StudyReset:
-	setdialogsize(460,340);
+	clear;
+	setdialogsize(460,320);
 	mes "^00AAFF[스탯 / 스킬 초기화]^000000";
 	mes "";
 	mes "마을 카프라에서 무료 스탯 / 스킬 초기화를";
@@ -844,7 +879,8 @@ L_StudyReset:
 //   완료 변수를 기록하지 않으며, 어떤 보상 조건과도 연결하지 않는다.
 //============================================================
 L_After175:
-	setdialogsize(480,340);
+	clear;
+	setdialogsize(480,260);
 	mes "^00AAFF[175 이후 콘텐츠 안내]^000000";
 	mes "";
 	mes "^00AA00성장지원 과정을 졸업했습니다.^000000";
@@ -883,6 +919,7 @@ L_After175:
 	}
 
 L_A175What:
+	clear;
 	setdialogsize(480,360);
 	mes "^00AAFF[무엇부터 할까요]^000000";
 	mes "";
@@ -911,6 +948,7 @@ L_A175What:
 	goto L_After175;
 
 L_A175Gear:
+	clear;
 	setdialogsize(460,340);
 	mes "^00AAFF[장비를 맞추고 싶어요]^000000";
 	mes "";
@@ -935,6 +973,7 @@ L_A175Gear:
 	goto L_After175;
 
 L_A175Tomb:
+	clear;
 	setdialogsize(480,380);
 	mes "^00AAFF[전사자의 무덤]^000000";
 	mes "";
@@ -960,6 +999,7 @@ L_A175Tomb:
 	goto L_After175;
 
 L_A175EP161:
+	clear;
 	setdialogsize(460,340);
 	mes "^00AAFF[EP16.1]^000000";
 	mes "";
@@ -979,6 +1019,7 @@ L_A175EP161:
 	goto L_After175;
 
 L_A175MD:
+	clear;
 	setdialogsize(460,320);
 	mes "^00AAFF[메모리얼 던전]^000000";
 	mes "";
@@ -998,7 +1039,8 @@ L_A175MD:
 	goto L_After175;
 
 L_A175BG:
-	setdialogsize(460,340);
+	clear;
+	setdialogsize(460,320);
 	mes "^00AAFF[전장]^000000";
 	mes "";
 	mes "졸업 보상으로 받은 ^FF9900전장 지원 시즈 세트^000000를";
@@ -1016,7 +1058,8 @@ L_A175BG:
 	goto L_After175;
 
 L_A175Cash:
-	setdialogsize(460,380);
+	clear;
+	setdialogsize(460,360);
 	mes "^00AAFF[금화 / 캐시]^000000";
 	mes "";
 	mes "사냥 중 몬스터 레벨에 따라";
@@ -1036,6 +1079,7 @@ L_A175Cash:
 	goto L_After175;
 
 L_A175Shadow:
+	clear;
 	setdialogsize(460,300);
 	mes "^00AAFF[쉐도우 장비]^000000";
 	mes "";
@@ -1053,6 +1097,7 @@ L_A175Shadow:
 	goto L_After175;
 
 L_A175Enchant:
+	clear;
 	setdialogsize(460,340);
 	mes "^00AAFF[인챈트]^000000";
 	mes "";
@@ -1075,6 +1120,7 @@ L_A175Enchant:
 	goto L_After175;
 
 L_A175Sub:
+	clear;
 	setdialogsize(460,340);
 	mes "^00AAFF[부캐릭터 육성]^000000";
 	mes "";
@@ -1094,6 +1140,7 @@ L_A175Sub:
 	goto L_After175;
 
 L_Supply:
+	clear;
 	setdialogsize(460,320);
 	mes "^00AAFF[7일 초보자 지원]^000000";
 	mes "";
@@ -1129,7 +1176,8 @@ L_Supply:
 	goto L_Main;
 
 L_Help:
-	setdialogsize(440,320);
+	clear;
+	setdialogsize(440,300);
 	mes "^00AAFF[초보자 도움말]^000000";
 	mes "";
 	mes "궁금한 항목을 선택해주세요.";
@@ -1144,6 +1192,8 @@ L_Help:
 		+ "돌아가기";
 	switch(select(.@menu$)) {
 	case 1:
+		// 메뉴 선택으로 새 화면에 진입하므로 이전 대사를 지운다.
+		clear;
 		mes "^00AAFF[전직 도우미]^000000";
 		mes "";
 		mes "성장 지원관 ^0055FF왼쪽^000000에 전직 도우미가 있습니다.";
@@ -1159,6 +1209,8 @@ L_Help:
 		goto L_Help;
 
 	case 2:
+		// 메뉴 선택으로 새 화면에 진입하므로 이전 대사를 지운다.
+		clear;
 		mes "^00AAFF[버프 도우미]^000000";
 		mes "";
 		mes "성장 지원관 ^0055FF오른쪽^000000에";
@@ -1172,6 +1224,8 @@ L_Help:
 		goto L_Help;
 
 	case 3:
+		// 메뉴 선택으로 새 화면에 진입하므로 이전 대사를 지운다.
+		clear;
 		mes "^00AAFF[클랜 채팅]^000000";
 		mes "";
 		mes "채팅창에";
@@ -1187,6 +1241,8 @@ L_Help:
 		goto L_Help;
 
 	case 4:
+		// 메뉴 선택으로 새 화면에 진입하므로 이전 대사를 지운다.
+		clear;
 		mes "^00AAFF[초보존 / 라자냐]^000000";
 		mes "";
 		mes "Base Lv.39까지는";
@@ -1207,6 +1263,7 @@ L_Help:
 	}
 
 L_Wiki:
+	clear;
 	setdialogsize(440,280);
 	mes "^00AAFF[NEED Wiki]^000000";
 	mes "";
@@ -1223,6 +1280,7 @@ L_Wiki:
 	goto L_Main;
 
 L_NewbieZone:
+	clear;
 	if (BaseLevel >= 40) {
 		mes "^00AAFF[초보존]^000000";
 		mes "";
@@ -1253,6 +1311,7 @@ L_NewbieZone:
 	goto L_Main;
 
 L_Lasagna:
+	clear;
 	if (BaseLevel < 40) {
 		mes "^00AAFF[라자냐 이동]^000000";
 		mes "";
