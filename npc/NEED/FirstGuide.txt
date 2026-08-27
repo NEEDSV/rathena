@@ -16,7 +16,7 @@ ra_temsky,100,100,4	script	기록관리자 아카샤	4_M_JOB_WIZARD,{
 		mes "언제든 NEED Wiki를 열 수 있습니다.";
 		close2;
 
-		callsub S_MoveToNewbieZone;
+		callsub S_MoveByAccount;
 		end;
 	}
 
@@ -144,12 +144,15 @@ ra_temsky,100,100,4	script	기록관리자 아카샤	4_M_JOB_WIZARD,{
 	mes "[기록관리자 아카샤]";
 	mes "이제 당신의 이야기를 시작할 시간입니다.";
 	mes "";
-	mes "초보자 지역으로 이동합니다.";
+	if (getcharid(3) >= $NEED_BEGINNER_ACCOUNT_MIN)
+		mes "^00AAFF낙원단 성장 지원소^000000로 이동합니다.";
+	else
+		mes "^00AAFF초보자 지역^000000으로 이동합니다.";
 
 	#Need_FirstGuide_Clear = 1;
 
 	close2;
-	callsub S_MoveToNewbieZone;
+	callsub S_MoveByAccount;
 	end;
 
 S_MoveToNewbieZone:
@@ -175,8 +178,28 @@ S_MoveToNewbieZone:
 
 	savepoint "lasagna",170,151;
 
-	// 워프가 완료된 뒤 초보존에서 NEED 클랜 가입 처리를 실행합니다.
 	addtimer 1000, "NEED_Clan::OnFirstGuideComplete";
 	warp "pvp_n_2-5",100,133;
+	return;
+	
+S_MoveByAccount:
+	// 신규 계정
+	if (getcharid(3) >= $NEED_BEGINNER_ACCOUNT_MIN) {
+		callsub S_MoveToEden;
+		return;
+	}
+
+	// 기존 계정
+	callsub S_MoveToNewbieZone;
+	return;
+	
+S_MoveToEden:
+	// 신규 계정은 낙원단을 최초 성장 거점으로 사용
+	savepoint "moc_para01",28,30;
+
+	// NEED 클랜 자동 가입
+	addtimer 1000, "NEED_Clan::OnFirstGuideComplete";
+
+	warp "moc_para01",28,30;
 	return;
 }
