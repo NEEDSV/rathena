@@ -1,0 +1,268 @@
+//===== NEED Script ==========================================
+//= EP16.1 명예의 증표 일일퀘스트 이동 NPC
+//===== Description: =========================================
+//= NEED: EP16.1 스토리 선행 제거 버전용.
+//= 명예의 증표 일일퀘스트 시작 NPC/구역으로 바로 이동.
+//= 하루 최대 명예의 증표: 66개
+//=
+//= 배치 위치: prontera,155,180
+//= 필요하면 첫 줄의 맵/좌표만 원하는 허브 위치로 변경하세요.
+//============================================================
+
+lasagna,192,173,4	script	EP16.1 일일퀘 이동#need_ep161_daily	4_M_ZONDAOYAJI,{
+L_Main:
+	mes "[EP16.1 일일퀘 이동]";
+	mes "명예의 증표를 획득할 수 있는";
+	mes "EP16.1 일일퀘스트 시작 위치로 이동합니다.";
+	next;
+	mes "[EP16.1 일일퀘 이동]";
+	mes "^4d4dff하루 최대 66개의 명예의 증표^000000를 획득할 수 있습니다.";
+	mes "원하는 콘텐츠를 선택해 주세요.";
+	next;
+
+	switch (select(
+		"의식의 방 - 10개",
+		"왕궁 주방 3종 - 총 12개",
+		"아그네스 뢰겐부르그 - 4개",
+		"리하르트 전사 수련 - 4개",
+		"유르겐 위그너 - 4개",
+		"침공당한 프론테라 - 4개",
+		"왕궁 지하감옥 7종 - 총 28개",
+		"그만두기"
+	)) {
+	case 1:
+		goto L_Room;
+	case 2:
+		goto L_Kitchen;
+	case 3:
+		if (BaseLevel < 100) {
+			mes "[EP16.1 일일퀘 이동]";
+			mes "이 콘텐츠는 ^FF0000Base Lv.100 이상^000000부터 이용할 수 있습니다.";
+			next;
+			goto L_Main;
+		}
+		mes "[EP16.1 일일퀘 이동]";
+		mes "^4d4dff아그네스 뢰겐부르그^000000에게 이동합니다.";
+		mes "일일 의뢰 완료 시 명예의 증표 4개를 획득합니다.";
+		close2;
+		// 시작 NPC: prt_cas_q,96,184
+		warp "prt_cas_q",94,184;
+		end;
+	case 4:
+		if (BaseLevel < 140) {
+			mes "[EP16.1 일일퀘 이동]";
+			mes "이 콘텐츠는 ^FF0000Base Lv.140 이상^000000부터 이용할 수 있습니다.";
+			next;
+			goto L_Main;
+		}
+		mes "[EP16.1 일일퀘 이동]";
+		mes "^4d4dff리하르트 가문 집사^000000에게 이동합니다.";
+		mes "전사 수련 완료 시 명예의 증표 4개를 획득합니다.";
+		close2;
+		// 시작 NPC: prt_cas_q,80,80
+		warp "prt_cas_q",78,80;
+		end;
+	case 5:
+		if (BaseLevel < 100) {
+			mes "[EP16.1 일일퀘 이동]";
+			mes "이 콘텐츠는 ^FF0000Base Lv.100 이상^000000부터 이용할 수 있습니다.";
+			next;
+			goto L_Main;
+		}
+		mes "[EP16.1 일일퀘 이동]";
+		mes "^4d4dff유르겐 위그너^000000에게 이동합니다.";
+		mes "일일 의뢰 완료 시 명예의 증표 4개를 획득합니다.";
+		close2;
+		// 시작 NPC: prt_cas_q,95,9
+		warp "prt_cas_q",93,9;
+		end;
+	case 6:
+		if (BaseLevel < 140) {
+			mes "[EP16.1 일일퀘 이동]";
+			mes "이 콘텐츠는 ^FF0000Base Lv.140 이상^000000부터 이용할 수 있습니다.";
+			next;
+			goto L_Main;
+		}
+		mes "[EP16.1 일일퀘 이동]";
+		mes "^4d4dff수비대장 슈피겔^000000에게 이동합니다.";
+		mes "4종 중 하나의 의뢰가 배정되며 명예의 증표 4개를 획득합니다.";
+		close2;
+		// 시작 NPC: prt_q,156,324
+		warp "prt_q",156,321;
+		end;
+	case 7:
+		goto L_Prison;
+	default:
+		close;
+	}
+
+L_Room:
+	mes "[의식의 방]";
+	mes "의식의 방 일일퀘스트는";
+	mes "^4d4dff프리드리히에게 수락 → 닐렘을 통해 입장^000000 순서입니다.";
+	next;
+	switch (select(
+		"일일퀘 수락 - 프리드리히",
+		"의식의 방 입장 - 닐렘",
+		"뒤로"
+	)) {
+	case 1:
+		if (BaseLevel < 100) {
+			mes "[EP16.1 일일퀘 이동]";
+			mes "이 콘텐츠는 ^FF0000Base Lv.100 이상^000000부터 이용할 수 있습니다.";
+			next;
+			goto L_Main;
+		}
+		mes "[EP16.1 일일퀘 이동]";
+		mes "^4d4dff프리드리히 S. 하이네^000000에게 이동합니다.";
+		mes "일일퀘스트 완료 보상은 명예의 증표 10개입니다.";
+		close2;
+		// 일일퀘 시작 NPC: prt_cas_q,21,83
+		warp "prt_cas_q",23,83;
+		end;
+	case 2:
+		if (BaseLevel < 100) {
+			mes "[EP16.1 일일퀘 이동]";
+			mes "이 콘텐츠는 ^FF0000Base Lv.100 이상^000000부터 이용할 수 있습니다.";
+			next;
+			goto L_Main;
+		}
+		mes "[EP16.1 일일퀘 이동]";
+		mes "일일퀘스트를 먼저 수락한 뒤";
+		mes "^4d4dff닐렘^000000에게 의식의 방 입장을 진행하세요.";
+		close2;
+		// 의식의 방 입장 NPC: prt_lib_q,91,85
+		warp "prt_lib_q",89,85;
+		end;
+	default:
+		goto L_Main;
+	}
+
+L_Kitchen:
+	if (BaseLevel < 100) {
+		mes "[EP16.1 일일퀘 이동]";
+		mes "왕궁 주방 일일퀘스트는 ^FF0000Base Lv.100 이상^000000부터 이용할 수 있습니다.";
+		next;
+		goto L_Main;
+	}
+	mes "[왕궁 주방]";
+	mes "왕궁 주방에는 명예의 증표 4개씩 지급하는";
+	mes "3개의 일일퀘스트가 있습니다.";
+	next;
+	switch (select(
+		"그리폰 구이 - 총주방장",
+		"소스 만들기 - 소스 장인",
+		"접시 수거 - 설거지 담당",
+		"뒤로"
+	)) {
+	case 1:
+		mes "[EP16.1 일일퀘 이동]";
+		mes "^4d4dff왕실 총주방장^000000에게 이동합니다.";
+		close2;
+		// 시작 NPC: prt_cas,309,200
+		warp "prt_cas",306,200;
+		end;
+	case 2:
+		mes "[EP16.1 일일퀘 이동]";
+		mes "^4d4dff왕실 소스 장인^000000에게 이동합니다.";
+		close2;
+		// 시작 NPC: prt_cas,319,211
+		warp "prt_cas",316,211;
+		end;
+	case 3:
+		mes "[EP16.1 일일퀘 이동]";
+		mes "^4d4dff설거지 담당^000000에게 이동합니다.";
+		close2;
+		// 시작 NPC: prt_cas,302,205
+		warp "prt_cas",305,205;
+		end;
+	default:
+		goto L_Main;
+	}
+
+L_Prison:
+	if (BaseLevel < 140) {
+		mes "[EP16.1 일일퀘 이동]";
+		mes "왕궁 지하감옥 일일퀘스트는 ^FF0000Base Lv.140 이상^000000부터 이용할 수 있습니다.";
+		next;
+		goto L_Main;
+	}
+	mes "[왕궁 지하감옥]";
+	mes "A/B/C/E/F/G/H 구역에 각각 1개의 일일퀘스트가 있습니다.";
+	mes "각 퀘스트 완료 시 명예의 증표 4개를 획득합니다.";
+	next;
+	mes "[왕궁 지하감옥]";
+	mes "철창이나 벽에 끼는 것을 방지하기 위해";
+	mes "^4d4dff원본 GM 도우미에서 사용하는 각 구역 안전 진입 좌표^000000로 이동합니다.";
+	next;
+
+	switch (select(
+		"A구역 - 소중한 동료에게",
+		"B구역 - 보는 눈이 없군",
+		"C구역 - 청결한 생활",
+		"E구역 - 어둡다 인간",
+		"F구역 - 상쾌한 감옥생활",
+		"G구역 - 어둠을 억누르는",
+		"H구역 - 작은데 신경쓰여",
+		"뒤로"
+	)) {
+	case 1:
+		mes "[EP16.1 일일퀘 이동]";
+		mes "A구역의 ^4d4dff죄수 243AD265^000000 근처로 이동합니다.";
+		close2;
+		// 죄수 NPC: prt_prison,243,265
+		// 안전 진입 좌표: Sector A
+		warp "prt_prison",245,255;
+		end;
+	case 2:
+		mes "[EP16.1 일일퀘 이동]";
+		mes "B구역의 ^4d4dff죄수 267BD184^000000 근처로 이동합니다.";
+		close2;
+		// 죄수 NPC: prt_prison,267,184
+		// 안전 진입 좌표: Sector B
+		warp "prt_prison",265,195;
+		end;
+	case 3:
+		mes "[EP16.1 일일퀘 이동]";
+		mes "C구역의 ^4d4dff죄수 265CM154^000000 근처로 이동합니다.";
+		close2;
+		// 죄수 NPC: prt_prison,265,154
+		// 안전 진입 좌표: Sector C
+		warp "prt_prison",255,155;
+		end;
+	case 4:
+		mes "[EP16.1 일일퀘 이동]";
+		mes "E구역의 ^4d4dff죄수 95EB72^000000 근처로 이동합니다.";
+		close2;
+		// 죄수 NPC: prt_prison,95,72
+		// 안전 진입 좌표: Sector E
+		warp "prt_prison",105,75;
+		end;
+	case 5:
+		mes "[EP16.1 일일퀘 이동]";
+		mes "F구역의 ^4d4dff죄수 117FM188^000000 근처로 이동합니다.";
+		close2;
+		// 죄수 NPC: prt_prison,117,188
+		// 안전 진입 좌표: Sector F
+		warp "prt_prison",105,190;
+		end;
+	case 6:
+		mes "[EP16.1 일일퀘 이동]";
+		mes "G구역의 ^4d4dff죄수 103GD214^000000 근처로 이동합니다.";
+		close2;
+		// 죄수 NPC: prt_prison,103,214
+		// 안전 진입 좌표: Sector G
+		warp "prt_prison",95,215;
+		end;
+	case 7:
+		mes "[EP16.1 일일퀘 이동]";
+		mes "H구역의 ^4d4dff죄수 55HK115^000000 근처로 이동합니다.";
+		close2;
+		// 죄수 NPC: prt_prison,55,115
+		// 안전 진입 좌표: Sector H
+		warp "prt_prison",55,125;
+		end;
+	default:
+		goto L_Main;
+	}
+}
