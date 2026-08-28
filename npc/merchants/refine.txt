@@ -383,12 +383,38 @@ function	script	F_RefineTime	{
 	setarray .@cert_level[0],19,18,17,16,15,14,13,12,11,9,8,7,6,5;
 	.@size_cert = getarraysize(.@cert_weapon);
 
+	// 초심자 무기 7제련 이용권(25428) 전용 allowlist
+	// 399908 Select_Rebeginer_Box 의 구성 16종 (db/re/item_packages.yml)
+	// 이 목록에 있는 무기에만 25428 을 사용할 수 있다.
+	setarray .@rebeginer_w[0],
+		1848,	// 초심자 수라의 너클
+		2046,	// 초심자 워록의 스태프
+		13144,	// 초심자 리벨리온의 리볼버
+		13341,	// 초심자 카게로우&오보로의 풍마수리검
+		13483,	// 초심자 제네릭의 소드
+		16075,	// 초심자 미케닉의 메이스
+		16076,	// 초심자 슈퍼노비스의 메이스
+		18165,	// 초심자 레인저의 활
+		18166,	// 초심자 원더러&민스트럴의 활
+		21037,	// 초심자 룬나이트의 투핸드소드
+		26015,	// 초심자 로얄가드의 랜스
+		26119,	// 초심자 소서러의 지팡이
+		26120,	// 초심자 소환사의 강아지풀
+		28027,	// 초심자 길로틴크로스의 카타르
+		28616,	// 초심자 아크비숍의 성서
+		28740;	// 초심자 쉐도우체이서의 대거
+	.@rebeginer_ticket = 25428;
+
 	for ( .@i = 0; .@i < .@size_cert; ++.@i ) {
 		if (countitem(.@cert_weapon[.@i]) > 0 || countitem(.@cert_armor[.@i]) > 0) {
 			.@check = 1;
 			break;
 		}
 	}
+
+	// 25428 만 가진 경우에도 제련권 사용 메뉴에 들어올 수 있어야 한다.
+	if (countitem(.@rebeginer_ticket) > 0)
+		.@check = 1;
 
 	if (.@check == 0) {
 			mes "[홀그렌]";
@@ -439,6 +465,15 @@ function	script	F_RefineTime	{
 			case 3:
 			case 4:
 				copyarray .@tickets[0], .@cert_weapon[0], .@size_cert;
+				copyarray .@tlevel[0], .@cert_level[0], .@size_cert;
+				.@size_list = .@size_cert;
+				// 초심자 무기 allowlist 에 있는 무기에만 25428 을 목록에 넣는다.
+				if (inarray(.@rebeginer_w[0], .@refineitemid) >= 0 &&
+					countitem(.@rebeginer_ticket) > 0) {
+					.@tickets[.@size_list] = .@rebeginer_ticket;
+					.@tlevel[.@size_list] = 7;
+					.@size_list += 1;
+				}
 				.@type$ = "Weapon";
 				break;
 			default:
@@ -449,6 +484,9 @@ function	script	F_RefineTime	{
 		switch( getequiparmorlv( .@part ) ){
 			case 1:
 				copyarray .@tickets[0], .@cert_armor[0], .@size_cert;
+				copyarray .@tlevel[0], .@cert_level[0], .@size_cert;
+				// 방어구에는 25428 을 절대 넣지 않는다.
+				.@size_list = .@size_cert;
 				.@type$ = "Armor";
 				break;
 			default:
@@ -460,13 +498,24 @@ function	script	F_RefineTime	{
 		close;
 	}
 	.@check = 0;
-	for ( .@i = 0; .@i < .@size_cert; ++.@i ) {
+	for ( .@i = 0; .@i < .@size_list; ++.@i ) {
 		if (countitem(.@tickets[.@i]) > 0) {
 			.@check = 1;
 			break;
 		}
 	}
 	if (.@check == 0) {
+		// 25428 만 가지고 일반 장비를 고른 경우를 따로 안내한다.
+		if (countitem(.@rebeginer_ticket) > 0) {
+			emotion ET_THINK;
+			mes "[홀그렌]";
+			mes "보유 중인 ^006400초심자 무기 제련권^000000은";
+			mes "이 장비에 사용할 수 없습니다.";
+			mes "";
+			mes "초심자 무기를 장착한 뒤";
+			mes "다시 이용해주세요.";
+			close;
+		}
 		emotion ET_THINK;
 		mes "[홀그렌]";
 		mes "If you want to refine this ^006400"+.@type$+"^000000, please come along with ^006400"+.@type$+" Refine Ticket^000000.";
@@ -477,12 +526,17 @@ function	script	F_RefineTime	{
 	mes "이 ^006400"+.@type$+"^000000을 제련하려면 ^006400"+.@type$+" 제련권^000000이 필요합니다.";
 	next;
 	.@menu$ = "";
-	for ( .@i = 0; .@i < .@size_cert; ++.@i )
+	for ( .@i = 0; .@i < .@size_list; ++.@i )
 		.@menu$ += getitemname(.@tickets[.@i]) + ":";
 	.@select = select(.@menu$)-1;
-	.@ticket_lv = .@cert_level[.@select];
+	.@ticket_lv = .@tlevel[.@select];
 	.@ticket_id = .@tickets[.@select];
-	.@ticket_fee = callfunc("F_NeedRefineTicketFee", .@ticket_lv);
+	// 25428 은 성장지원 전용 제련권이다. 아이템 DB / 기존 스크립트 어디에도
+	// 사용 비용 근거가 없으므로 0 제니로 두고, 일반 +7 제련권 비용을 쓰지 않는다.
+	if (.@ticket_id == .@rebeginer_ticket)
+		.@ticket_fee = 0;
+	else
+		.@ticket_fee = callfunc("F_NeedRefineTicketFee", .@ticket_lv);
 
 	if (countitem(.@ticket_id) == 0) {
 		emotion ET_QUESTION;
@@ -495,8 +549,14 @@ function	script	F_RefineTime	{
 	if (getequiprefinerycnt(.@part) >= .@ticket_lv) {
 		emotion ET_PROFUSELY_SWEAT;
 		mes "[홀그렌]";
-		mes "^8B4513이 장비는 제련보장권 만큼 이미 제련이 되었습니다.^000000";
-		mes "제련보장권 이하의 제련된 장비를 가져오세요.";
+		if (.@ticket_id == .@rebeginer_ticket) {
+			mes "이 초심자 무기는 이미 ^006400+7 이상^000000입니다.";
+			mes "해당 제련권을 사용할 수 없습니다.";
+		}
+		else {
+			mes "^8B4513이 장비는 제련보장권 만큼 이미 제련이 되었습니다.^000000";
+			mes "제련보장권 이하의 제련된 장비를 가져오세요.";
+		}
 		close;
 	}
 	mes "[홀그렌]";
@@ -537,6 +597,25 @@ function	script	F_RefineTime	{
 		mes "제련 비용이 부족합니다.";
 		close;
 	}
+	// 25428 전용 경로는 티켓 / 제니를 소비하기 전에 모든 조건을 다시 본다.
+	// (장비 교체 / 카드 변경 / 제련도 변경 / 장비 해제 / 티켓 소실)
+	if (.@ticket_id == .@rebeginer_ticket) {
+		if (!getequipisequiped(.@part) || !getequipisenableref(.@part) ||
+			inarray(.@rebeginer_w[0], getequipid(.@part)) < 0 ||
+			getequiprefinerycnt(.@part) >= 7 ||
+			countitem(.@rebeginer_ticket) < 1 ||
+			callfunc("F_IsEquipIDHack", .@part, .@refineitemid) ||
+			callfunc("F_IsEquipRefineHack", .@part, .@refinerycnt) ||
+			callfunc("F_IsEquipCardHack", .@part, .@card[0], .@card[1], .@card[2], .@card[3])) {
+			emotion ET_FRET;
+			next;
+			mes "[홀그렌]";
+			mes "장비 상태가 처음과 달라졌습니다.";
+			mes "제련권을 사용하지 않고 중단합니다.";
+			close;
+		}
+	}
+
 	delitem .@ticket_id,1;
 	Zeny = Zeny - .@ticket_fee;
 
@@ -553,6 +632,14 @@ function	script	F_RefineTime	{
 	successrefitem .@part, .@ticket_lv - getequiprefinerycnt(.@part);
 	next;
 	emotion ET_DELIGHT;
+	if (.@ticket_id == .@rebeginer_ticket) {
+		mes "[홀그렌]";
+		mes "초심자 무기 제련이 완료되었습니다.";
+		mes "";
+		mes "대상 무기 : ^006400" + getequipname(.@part) + "^000000";
+		mes "제련 결과 : ^006400+7^000000";
+		close;
+	}
 	mes "[홀그렌]";
 	mes "좋습니다, 여기 있습니다~";
 	mes "^0000FF"+strcharinfo(0)+"^000000님!";

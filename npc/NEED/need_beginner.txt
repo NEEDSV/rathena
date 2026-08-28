@@ -433,6 +433,9 @@ L_Reward:
 		mes "";
 		mes "직접 제련 시스템을 이용하여";
 		mes "초심자 무기를 ^0055FF+7^000000로 강화해보세요.";
+		mes "";
+		mes "^0055FF라자냐 홀그렌^000000의 ^00AA00제련권 사용^000000에서";
+		mes "초심자 무기를 +7로 강화할 수 있습니다.";
 		next;
 		goto L_Main;
 
@@ -521,6 +524,9 @@ L_Goal:
 		mes "<TIPBOX>▶ 처음 시작하기 가이드<INFO>8010</INFO></TIPBOX>";
 	else
 		mes "<TIPBOX>▶ Lv.100 성장 가이드<INFO>8410</INFO></TIPBOX>";
+
+	// 추천 사냥터 안내 + 이동 (Base Lv.175 이상은 내부에서 스스로 건너뛴다)
+	callsub S_HuntingGuide;
 	next;
 	goto L_Main;
 
@@ -1495,7 +1501,6 @@ S_ShowGoal:
 		mes "";
 		mes "Job Lv.10이 되면";
 		mes "^0055FF1차 전직^000000을 진행할 수 있습니다.";
-		callsub S_HuntingGuide;
 		return;
 	}
 
@@ -1511,7 +1516,6 @@ S_ShowGoal:
 			mes "^777777전직을 먼저 마쳐야^000000";
 			mes "^777777이후 성장 구간을 진행할 수 있습니다.^000000";
 		}
-		callsub S_HuntingGuide;
 		return;
 	}
 
@@ -1523,7 +1527,6 @@ S_ShowGoal:
 		mes "";
 		mes "Lv.40부터는 ^00AAFF라자냐^000000를";
 		mes "생활 거점으로 이용합니다.";
-		callsub S_HuntingGuide;
 		return;
 	}
 
@@ -1534,7 +1537,6 @@ S_ShowGoal:
 		mes "";
 		mes "Lv.100 달성 시";
 		mes "^FF9900초심자 장비와 종합 은총^000000이 지급됩니다.";
-		callsub S_HuntingGuide;
 		return;
 	}
 
@@ -1546,7 +1548,6 @@ S_ShowGoal:
 		mes "종합 은총 이용권을 받아주세요.";
 		mes "";
 		mes "^777777캐릭터당 1회만 받을 수 있습니다.^000000";
-		callsub S_HuntingGuide;
 		return;
 	}
 
@@ -1558,7 +1559,6 @@ S_ShowGoal:
 		mes "메모리얼 던전에 직접 입장하면";
 		mes "학습이 자동으로 기록됩니다.";
 		mes "^777777클리어는 필요하지 않습니다.^000000";
-		callsub S_HuntingGuide;
 		return;
 	}
 
@@ -1571,7 +1571,6 @@ S_ShowGoal:
 		mes "Lv.120부터 ^00AAFF카드 시스템^000000을";
 		mes "배워볼 수 있습니다.";
 		mes "^777777지금은 레벨업에 집중해보세요.^000000";
-		callsub S_HuntingGuide;
 		return;
 	}
 
@@ -1583,7 +1582,6 @@ S_ShowGoal:
 		mes "";
 		mes "^777777학습은 선택 사항이며^000000";
 		mes "^777777실제 카드 장착을 요구하지 않습니다.^000000";
-		callsub S_HuntingGuide;
 		return;
 	}
 
@@ -1595,7 +1593,6 @@ S_ShowGoal:
 		mes "";
 		mes "Lv.140부터 ^00AAFF제련 시스템^000000을";
 		mes "배워볼 수 있습니다.";
-		callsub S_HuntingGuide;
 		return;
 	}
 
@@ -1608,7 +1605,6 @@ S_ShowGoal:
 		mes "에르늄 파밍과 방어구 +4 제련 등";
 		mes "기본 제련 흐름을 익혀보세요.";
 		mes "^777777실제 제련 성공은 필요하지 않습니다.^000000";
-		callsub S_HuntingGuide;
 		return;
 	}
 
@@ -1621,7 +1617,6 @@ S_ShowGoal:
 		mes "";
 		mes "^777777Lv.150 전에 현재 세팅을^000000";
 		mes "^777777확인해두면 좋습니다.^000000";
-		callsub S_HuntingGuide;
 		return;
 	}
 
@@ -1637,7 +1632,6 @@ S_ShowGoal:
 			mes "";
 			mes "^777777제련 시스템 학습은 아직 미완료입니다.^000000";
 		}
-		callsub S_HuntingGuide;
 		return;
 	}
 
@@ -1649,7 +1643,6 @@ S_ShowGoal:
 		mes "받아주세요.";
 		mes "";
 		mes "^777777캐릭터당 1회만 받을 수 있습니다.^000000";
-		callsub S_HuntingGuide;
 		return;
 	}
 
@@ -1663,7 +1656,6 @@ S_ShowGoal:
 		mes "^777777학습 콘텐츠는 선택 사항입니다.^000000";
 		mes "^777777원하는 콘텐츠를 진행하며^000000";
 		mes "^777777Lv.175 / Job Lv.60을 목표로 해도 됩니다.^000000";
-		callsub S_HuntingGuide;
 		return;
 	}
 
@@ -1676,7 +1668,6 @@ S_ShowGoal:
 		mes "";
 		mes "^777777학습 완료가 졸업 조건은 아닙니다.^000000";
 		mes "^777777단순한 다음 추천 목표입니다.^000000";
-		callsub S_HuntingGuide;
 		return;
 	}
 
@@ -1715,68 +1706,84 @@ S_ShowGoal:
 	return;
 
 //============================================================
-// 추천 레벨업 사냥터 안내 (13차)
+// 추천 레벨업 사냥터 안내 + 바로 이동 (13차 신설 / 14차 이동 추가)
 //   현재 BaseLevel 만으로 즉시 판정하는 정보 안내 전용 서브루틴.
+//   표시 명칭 / 권장 구간 / 이동 목적지를 같은 분기에서 함께 정해
+//   나중에 서로 어긋나지 않도록 한다.
 //   성장 조건 / 보상 조건 / 목표 판정(S_GoalLine)에 관여하지 않으며
-//   완료 변수도 만들지 않고 워프도 제공하지 않는다.
+//   완료 변수도 만들지 않는다. 이동은 강제하지 않는다.
 //   Base Lv.175 이상은 175 이후 콘텐츠 안내가 따로 있으므로 표시하지 않는다.
-//   맵 명칭은 npc/custom/warper.txt 의 Disp() 표기를 그대로 사용한다.
-//     pvp_n_2-5 / anthell01 / orcsdun01 / gld_dun02
-//     mag_dun02 / lasa_dun02 / lasa_dun03 / c_tower3_
+//
+//   목적지 좌표는 npc/custom/warper.txt 의 @c[] 값을 그대로 재사용한다.
+//     anthell01  (35,262)  D4  @c[2],@c[3]
+//     orcsdun01  (32,170)  D36 @c[2],@c[3]
+//     gld_dun02  (39,161)  G2  @c[2],@c[3]
+//     mag_dun02  (47,30)   D30 @c[4],@c[5]
+//     lasa_dun02 (22,171)  D28 @c[4],@c[5]
+//     lasa_dun03 (190,18)  D28 @c[6],@c[7]
+//     c_tower3_  (60,142)  D11 @c[20],@c[21]
+//   초보존은 L_NewbieZone 이 사용하는 좌표를 그대로 쓴다. (100,133)
 //============================================================
 S_HuntingGuide:
 	// Base Lv.175 이상은 일반 레벨업 사냥터 안내 대상이 아니다.
 	if (BaseLevel >= 175)
 		return;
 
+	if (BaseLevel < 20) {
+		.@name$ = "초보존";
+		.@range$ = "Base Lv.1 ~ 19";
+		.@map$ = "pvp_n_2-5"; .@x = 100; .@y = 133;
+	}
+	else if (BaseLevel < 40) {
+		.@name$ = "개미지옥 1층";
+		.@range$ = "Base Lv.20 ~ 39";
+		.@map$ = "anthell01"; .@x = 35; .@y = 262;
+	}
+	else if (BaseLevel < 60) {
+		.@name$ = "오크 지하 동굴 1층";
+		.@range$ = "Base Lv.40 ~ 59";
+		.@map$ = "orcsdun01"; .@x = 32; .@y = 170;
+	}
+	else if (BaseLevel < 100) {
+		.@name$ = "루이나 지하 던전 1층";
+		.@range$ = "Base Lv.60 ~ 99";
+		.@map$ = "gld_dun02"; .@x = 39; .@y = 161;
+	}
+	else if (BaseLevel < 110) {
+		.@name$ = "노그로드 2층";
+		.@range$ = "Base Lv.100 ~ 109";
+		.@map$ = "mag_dun02"; .@x = 47; .@y = 30;
+	}
+	else if (BaseLevel < 130) {
+		.@name$ = "용의 둥지 2층";
+		.@range$ = "Base Lv.110 ~ 129";
+		.@map$ = "lasa_dun02"; .@x = 22; .@y = 171;
+	}
+	else if (BaseLevel < 160) {
+		.@name$ = "용의 둥지 3층";
+		.@range$ = "Base Lv.130 ~ 159";
+		.@map$ = "lasa_dun03"; .@x = 190; .@y = 18;
+	}
+	else {
+		.@name$ = "뒤틀린 시간의 시계탑 3층";
+		.@range$ = "Base Lv.160 ~ 174";
+		.@map$ = "c_tower3_"; .@x = 60; .@y = 142;
+	}
+
 	mes "";
 	mes "^0055FF[추천 레벨업 사냥터]^000000 ^777777(참고용)^000000";
+	mes "^00AAFF" + .@name$ + "^000000";
+	mes "^777777권장 구간 : " + .@range$ + "^000000";
+	mes "";
 
-	if (BaseLevel < 20) {
-		mes "^00AAFF초보존^000000";
-		mes "^777777권장 구간 : Base Lv.1 ~ 19^000000";
+	// 이동은 선택 사항이다.
+	// 돌아가기를 고르면 기존 현재 성장 목표 화면 흐름을 그대로 잇는다.
+	if (select("^00AAFF추천 사냥터로 이동^000000:돌아가기") == 2)
 		return;
-	}
 
-	if (BaseLevel < 40) {
-		mes "^00AAFF개미지옥 1층^000000";
-		mes "^777777권장 구간 : Base Lv.20 ~ 39^000000";
-		return;
-	}
-
-	if (BaseLevel < 60) {
-		mes "^00AAFF오크 지하 동굴 1층^000000";
-		mes "^777777권장 구간 : Base Lv.40 ~ 59^000000";
-		return;
-	}
-
-	if (BaseLevel < 100) {
-		mes "^00AAFF루이나 지하 던전 1층^000000";
-		mes "^777777권장 구간 : Base Lv.60 ~ 99^000000";
-		return;
-	}
-
-	if (BaseLevel < 110) {
-		mes "^00AAFF노그로드 2층^000000";
-		mes "^777777권장 구간 : Base Lv.100 ~ 109^000000";
-		return;
-	}
-
-	if (BaseLevel < 130) {
-		mes "^00AAFF용의 둥지 2층^000000";
-		mes "^777777권장 구간 : Base Lv.110 ~ 129^000000";
-		return;
-	}
-
-	if (BaseLevel < 160) {
-		mes "^00AAFF용의 둥지 3층^000000";
-		mes "^777777권장 구간 : Base Lv.130 ~ 159^000000";
-		return;
-	}
-
-	mes "^00AAFF뒤틀린 시간의 시계탑 3층^000000";
-	mes "^777777권장 구간 : Base Lv.160 ~ 174^000000";
-	return;
+	close2;
+	warp .@map$, .@x, .@y;
+	end;
 
 OnInit:
 	waitingroom "신규 성장 지원",0;
