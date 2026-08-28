@@ -417,6 +417,7 @@ EQP_COSTUME_HEAD_LOW,29227,25227,
 EQP_COSTUME_HEAD_LOW,29229,25228,
 EQP_COSTUME_HEAD_LOW,29228,25229,
 EQP_COSTUME_GARMENT,29362,25302,
+EQP_COSTUME_GARMENT,4807,6908,
 5,1000521,310658,
 5,1000520,310654,
 5,1000522,310659,
@@ -428,7 +429,8 @@ EQP_COSTUME_GARMENT,29362,25302,
 5,1002395,314661,
 5,1000675,311014,
 5,1000676,311015,
-5,1000855,311354;
+5,1000855,311354,
+EQP_COSTUME_GARMENT,313068,1001650;
 	end;
 
 OnCostumePreviewEnd:
@@ -725,6 +727,9 @@ L_ClosetWear:
 	set .@slot_count, callsub(L_ClosetGetSlotCount);
 	set .@count, 0;
 
+	// 옷장 슬롯 전체 검사 중 중첩 callsub로 infinity 보호 한도에 걸리지 않도록 허용
+	freeloop(1);
+
 	for (set .@slot_idx, 0; .@slot_idx < .@slot_count; set .@slot_idx, .@slot_idx + 1) {
 		set .@slot_cid, callsub(L_ClosetGetSlotValue, .@slot_idx);
 
@@ -745,6 +750,8 @@ L_ClosetWear:
 		set .@cid_list[.@count], .@slot_cid;
 		set .@count, .@count + 1;
 	}
+
+	freeloop(0);
 
 	if (.@count <= 0) {
 		mes "[옷장 입기]";
@@ -1219,6 +1226,9 @@ L_ClosetSearchPage:
 
 	mes " ";
 
+	// 페이지 출력 중 각 항목마다 옷장 슬롯을 재검사하므로 infinity 보호 한도 완화
+	freeloop(1);
+
 	for (set .@search_i, .@search_start; .@search_i < .@search_end; set .@search_i, .@search_i + 1) {
 		set .@search_line_no, .@search_i - .@search_start + 1;
 		set .@search_cid, .@search_cid_list[.@search_i];
@@ -1230,6 +1240,8 @@ L_ClosetSearchPage:
 
 		mes .@search_line_no + ". [" + .@search_cid + "/" + .@search_item_id + "] " + getcostumename(.@search_cid) + .@search_closet_mark$;
 	}
+
+	freeloop(0);
 
 	next;
 
@@ -1527,6 +1539,10 @@ L_ClosetRegisterPage:
 	mes "미리보기 또는 등록할 번호를 선택해주세요.";
 	mes " ";
 
+	// 한 페이지의 각 의상마다 L_ClosetIsRegistered가 전체 슬롯을 순회하므로
+	// 실제 종료되는 반복이라도 rAthena infinity 보호 한도를 넘을 수 있어 허용
+	freeloop(1);
+
 	set .@i, .@start;
 	while (.@i < .@end) {
 		set .@cid, @costume_collection_ids[.@i];
@@ -1540,6 +1556,8 @@ L_ClosetRegisterPage:
 
 		set .@i, .@i + 1;
 	}
+
+	freeloop(0);
 
 	next;
 
@@ -2075,6 +2093,9 @@ L_StoneEnchant:
 	set .@row_count, .@data_size / 3;
 	set .@count, 0;
 
+	// StoneData 전체 순회는 데이터 증가 시 infinity 보호 한도에 걸릴 수 있으므로 허용
+	freeloop(1);
+
 	for (set .@i, 0; .@i < .@row_count; set .@i, .@i + 1) {
 		set .@base, .@i * 3;
 		set .@part, .StoneData[.@base];
@@ -2093,6 +2114,8 @@ L_StoneEnchant:
 		set .@stone_idx_list[.@count], .@i;
 		set .@count, .@count + 1;
 	}
+
+	freeloop(0);
 
 	if (.@count <= 0) {
 		mes "[인챈트 스톤]";
@@ -2264,6 +2287,9 @@ L_StoneEnchantDual:
 	set .@row_count, .@data_size / 3;
 	set .@count, 0;
 
+	// 듀얼 스톤도 StoneData 전체를 순회하므로 동일하게 보호 한도 완화
+	freeloop(1);
+
 	for (set .@i, 0; .@i < .@row_count; set .@i, .@i + 1) {
 		set .@base, .@i * 3;
 
@@ -2285,6 +2311,8 @@ L_StoneEnchantDual:
 		set .@stone_idx_list[.@count], .@i;
 		set .@count, .@count + 1;
 	}
+
+	freeloop(0);
 
 	if (.@count <= 0) {
 		mes "[듀얼 스톤]";

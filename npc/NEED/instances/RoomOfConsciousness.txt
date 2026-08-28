@@ -1,0 +1,1051 @@
+//===== rAthena Script =======================================
+//= 메모리얼 던전: 의식의 방.
+//===== Description: =========================================
+//- [Walkthrough conversion]
+//- NEED: EP16.1 메인 스토리 선행 조건 제거.
+//===== Changelogs: ==========================================
+//= 1.0 First version. [Capuche]
+//= 1.1 Added a setting to prevent an exploit
+//      (searchs "'exploit_disabled" variable - the variable is
+//      false by default like on official server). [Capuche]
+//= NEED: EP16.1 메인 스토리 선행 조건 제거.
+//=       계정 단위 #NEED_RC_CLEAR 로 최초 클리어 기록.
+//=       파티 내 온라인 구성원 전원이 클리어한 경우 재방문 간소화.
+//=       잡몹 2웨이브 -> 개조된 암다라이스 -> 비쥬 -> 즉시 퇴장.
+//============================================================
+
+// NEED: 파티 내 온라인 구성원 전원이 의식의 방을 1회 이상 완료했는지 확인합니다.
+function	script	F_RoomConsciousnessCanEnableSimple	{
+	.@caller_aid = getcharid(3);
+	.@party_id = getcharid(1);
+	if (.@party_id < 1)
+		return 0;
+
+	getpartymember .@party_id,1;
+	.@member_count = $@partymembercount;
+	copyarray .@member_cid[0],$@partymembercid[0],.@member_count;
+
+	getpartymember .@party_id,2;
+	copyarray .@member_aid[0],$@partymemberaid[0],.@member_count;
+
+	.@allowed = 1;
+	for (.@i = 0; .@i < .@member_count; ++.@i) {
+		if (!isloggedin(.@member_aid[.@i], .@member_cid[.@i]))
+			continue;
+
+		if (attachrid(.@member_aid[.@i]) == 0)
+			continue;
+
+		// 기존 EP16.1 스토리 완료 캐릭터는 최초 1회 자동 이관.
+		if (#NEED_RC_CLEAR == 0 && ep16_royal >= 20)
+			#NEED_RC_CLEAR = 1;
+
+		if (#NEED_RC_CLEAR == 0) {
+			.@allowed = 0;
+			break;
+		}
+	}
+
+	attachrid(.@caller_aid);
+	return .@allowed;
+}
+
+// NEED: 클리어 시 파티 내 온라인 구성원 모두에게 계정 단위 클리어 기록을 저장합니다.
+function	script	F_RoomConsciousnessMarkClear	{
+	.@caller_aid = getcharid(3);
+	.@party_id = getcharid(1);
+
+	if (.@party_id < 1) {
+		#NEED_RC_CLEAR = 1;
+		return;
+	}
+
+	getpartymember .@party_id,1;
+	.@member_count = $@partymembercount;
+	copyarray .@member_cid[0],$@partymembercid[0],.@member_count;
+
+	getpartymember .@party_id,2;
+	copyarray .@member_aid[0],$@partymemberaid[0],.@member_count;
+
+	for (.@i = 0; .@i < .@member_count; ++.@i) {
+		if (!isloggedin(.@member_aid[.@i], .@member_cid[.@i]))
+			continue;
+
+		if (attachrid(.@member_aid[.@i]) == 0)
+			continue;
+
+		#NEED_RC_CLEAR = 1;
+	}
+
+	attachrid(.@caller_aid);
+	return;
+}
+
+1@mir,103,40,3	script	펜릴#1mir	4_F_FENRIR,{
+	if (is_party_leader() == false)	// it shouldn't happen
+		end;
+
+	// NEED: EP16.1 스토리 진행도와 무관하게 의식의 방 자체 클리어 기록으로 간소화 판정.
+	if (callfunc("F_RoomConsciousnessCanEnableSimple")) {
+		'simple_mode = true;
+		'step = 1;
+		cutin "fenrir_a",2;
+		mes "[펜릴]";
+		mes "이미 한 번 겪어 본 싸움이야.";
+		mes "이번에는 바로 적들을 정리하자.";
+		close2;
+		cutin "",255;
+		disablenpc instance_npcname("아이리스#1mir");
+		disablenpc instance_npcname("아이리스#2mir");
+		disablenpc instance_npcname("펜릴#1mir");
+		donpcevent instance_npcname("eq#mir1") + "::OnEvent";
+		end;
+	}
+
+	cutin "fenrir_a",2;
+	mes "[펜릴]";
+	mes "프론테라 성 지하에 봉인되어 있다더니...";
+	mes "설마 이렇게 거대한 것일 줄은...";
+	mes "상상도 못 했어...";
+	next;
+	cutin "hero_iris_01",2;
+	mes "[아이리스]";
+	mes "대체 안에는 뭐가 있는 걸까요?";
+	next;
+	cutin "fenrir_a",2;
+	mes "[펜릴]";
+	mes "모르겠어. 우선 안쪽부터 조사해 보자.";
+	close2;
+	cutin "",255;
+	disablenpc instance_npcname("아이리스#1mir");
+	disablenpc instance_npcname("펜릴#1mir");
+	end;
+
+OnInstanceInit:
+	'map_name$ = instance_mapname("1@mir");
+	'step = 0;
+	'simple_mode = false;
+
+	// On official server the instance can be repeated if the player log out after the death of Bijou (main quest)
+	// true: 반복 악용 방지
+	// false: 본섭과 동일 - 반복 가능
+	'exploit_disabled = false;
+
+	disablenpc instance_npcname("비쥬#2mir");
+
+	disablenpc instance_npcname("펜릴#3mir");
+	disablenpc instance_npcname("아이리스#3mir");
+	disablenpc instance_npcname("비쥬#3mir");
+	disablenpc instance_npcname("개조된 암다라이스#3mir");
+
+	disablenpc instance_npcname("펜릴#4mir");
+	disablenpc instance_npcname("아이리스#4mir");
+	disablenpc instance_npcname("비쥬#4mir");
+
+	disablenpc instance_npcname("펜릴#5mir");
+	disablenpc instance_npcname("아이리스#5mir");
+	disablenpc instance_npcname("비쥬#5mir");
+	disablenpc instance_npcname("사라#5mir");
+
+	disablenpc instance_npcname("펜릴#6mir");
+	disablenpc instance_npcname("아이리스#6mir");
+	disablenpc instance_npcname("비쥬#6mir");
+	disablenpc instance_npcname("사라#6mir");
+
+	disablenpc instance_npcname("펜릴#boss1a");
+	disablenpc instance_npcname("펜릴#boss1b");
+	disablenpc instance_npcname("펜릴#boss1c");
+	disablenpc instance_npcname("펜릴#boss1d");
+	disablenpc instance_npcname("아이리스#boss1a");
+	disablenpc instance_npcname("아이리스#boss1b");
+	disablenpc instance_npcname("아이리스#boss1c");
+	disablenpc instance_npcname("아이리스#boss1d");
+
+	disablenpc instance_npcname("펜릴#boss2a");
+	disablenpc instance_npcname("펜릴#boss2b");
+	disablenpc instance_npcname("펜릴#boss2c");
+	disablenpc instance_npcname("펜릴#boss2d");
+	disablenpc instance_npcname("아이리스#boss2a");
+	disablenpc instance_npcname("아이리스#boss2b");
+	disablenpc instance_npcname("아이리스#boss2c");
+	disablenpc instance_npcname("아이리스#boss2d");
+
+	disablenpc instance_npcname("eq#mir2");
+	disablenpc instance_npcname("eq#mir3");
+	disablenpc instance_npcname("eq#mir4");
+	disablenpc instance_npcname("eq#mir5");
+	disablenpc instance_npcname("eq#mir6");
+	end;
+}
+
+1@mir,100,94,7	script	아이리스#2mir	4_F_IRIS,{
+	if (is_party_leader() == false)	// it shouldn't happen
+		end;
+	if ('step != 0)
+		end;
+	mes "[아이리스]";
+	mes "이... 이건 설마...";
+	mes "이미르의 심장!";
+	next;
+	cutin "fenrir_a",2;
+	mes "[펜릴]";
+	mes "이건...";
+	mes "이것이 이미르의 심장...";
+	next;
+	cutin "hero_iris_01",255;
+	mes "쿠구구궁...";
+	next;
+	specialeffect EF_SCREEN_QUAKE,AREA, instance_npcname("아이리스#2mir");
+	cutin "hero_iris_01",2;
+	mes "[아이리스]";
+	mes "갑자기 왜 이렇게 흔들리는 거죠?!";
+	next;
+	cutin "fenrir_b",2;
+	mes "[펜릴]";
+	mes "큭... 이곳에도 공격이 시작된 모양이야.";
+	next;
+	enablenpc instance_npcname("비쥬#2mir");
+	cutin "bijou_01",2;
+	mes "[비쥬]";
+	mes "후후... 반갑군, 인간들.";
+	next;
+	cutin "fenrir_b",2;
+	mes "[펜릴]";
+	mes "!!";
+	mes "설마... 네가 왜 여기에!";
+	next;
+	cutin "bijou_01",2;
+	mes "[비쥬]";
+	mes "지금부터 이곳은 발키리 히멜메즈 님을 따르는 불멸의 군단이";
+	mes "접수하도록 하지.";
+	next;
+	specialeffect EF_SCREEN_QUAKE,AREA, instance_npcname("아이리스#2mir");
+	cutin "hero_iris_01",2;
+	mes "[아이리스]";
+	mes "뭐라고? 감히!";
+	mes "좋아요! 어디 한번 덤벼 봐요!";
+	next;
+	cutin "bijou_01",2;
+	mes "[비쥬]";
+	mes "후후... 내가 너희 같은 하찮은 인간을 상대할 시간이 있어 보이나?";
+	mes "하지만 특별히 자비를 베풀어 불멸의 군단의 무서움을 조금 맛보게 해 주지.";
+	next;
+	cutin "fenrir_b",2;
+	mes "[펜릴]";
+	mes "큭... 대체 언제 이렇게 많은 병력이 들어온 거지?";
+	close2;
+	cutin "",255;
+	if ('step == 0) {
+		'step = 1;
+		donpcevent instance_npcname("eq#mir1") + "::OnEvent";
+		disablenpc instance_npcname("아이리스#2mir");
+	}
+	end;
+}
+
+1@mir,101,104,0	script	eq#mir1	HIDDEN_WARP_NPC,{
+	end;
+OnEvent:
+	initnpctimer;
+	end;
+OnTimer200:
+	disablenpc instance_npcname("아이리스#1mir");
+	disablenpc instance_npcname("펜릴#1mir");
+	disablenpc instance_npcname("펜릴#2mir");
+	disablenpc instance_npcname("비쥬#2mir");
+	mapannounce 'map_name$, "펜릴: 곧 적들이 나타날 거야! 전투 준비를 해!", bc_map,0xFFFF00,FW_NORMAL,12;
+	end;
+OnTimer2200:
+	mapannounce 'map_name$, "펜릴: 적들이 몰려오고 있어! 모두 처치해야 해!", bc_map,0xFFFF00,FW_NORMAL,12;
+	// 좌표 부정확
+	monster 'map_name$,83,67,"강화 스켈레톤",3446,1, instance_npcname("eq#mir1") + "::OnMobDead";// P_SKELETON
+	monster 'map_name$,91,51,"강화 스켈레톤",3446,1, instance_npcname("eq#mir1") + "::OnMobDead";// P_SKELETON
+	monster 'map_name$,111,67,"강화 스켈레톤",3446,1, instance_npcname("eq#mir1") + "::OnMobDead";// P_SKELETON
+	monster 'map_name$,92,69,"강화 솔져 스켈레톤",3447,1, instance_npcname("eq#mir1") + "::OnMobDead";// P_SOLDIER_SKELETON
+	monster 'map_name$,109,50,"강화 솔져 스켈레톤",3447,1, instance_npcname("eq#mir1") + "::OnMobDead";// P_SOLDIER_SKELETON
+	monster 'map_name$,109,47,"강화 아쳐 스켈레톤",3445,1, instance_npcname("eq#mir1") + "::OnMobDead";// P_ARCHER_SKELETON
+	monster 'map_name$,90,48,"강화 아쳐 스켈레톤",3445,1, instance_npcname("eq#mir1") + "::OnMobDead";// P_ARCHER_SKELETON
+	'skeleton_wave[0] = 7;
+	stopnpctimer;
+	end;
+
+OnMobDead:
+	'skeleton_wave[0]--;
+	if ('skeleton_wave[0] == 0) {
+		mapannounce 'map_name$, "아이리스: 후우... 이제 적들을 전부 쓰러뜨린 건가요?", bc_map,0xFFFF00,FW_NORMAL,12;
+		startnpctimer;
+	}
+	end;
+OnTimer4200:
+	mapannounce 'map_name$, "펜릴: 아닌 것 같아. 아직 잔당이 남아 있어. 조심해!", bc_map,0xFFFF00,FW_NORMAL,12;
+	end;
+OnTimer6200:
+	// 좌표 부정확
+	monster 'map_name$,83,67,"강화 스켈레톤",3446,1, instance_npcname("eq#mir1") + "::OnMobDead2";// P_SKELETON
+	monster 'map_name$,91,51,"강화 스켈레톤",3446,1, instance_npcname("eq#mir1") + "::OnMobDead2";// P_SKELETON
+	monster 'map_name$,111,67,"강화 스켈레톤",3446,1, instance_npcname("eq#mir1") + "::OnMobDead2";// P_SKELETON
+	monster 'map_name$,92,69,"강화 솔져 스켈레톤",3447,1, instance_npcname("eq#mir1") + "::OnMobDead2";// P_SOLDIER_SKELETON
+	monster 'map_name$,109,50,"강화 솔져 스켈레톤",3447,1, instance_npcname("eq#mir1") + "::OnMobDead2";// P_SOLDIER_SKELETON
+	monster 'map_name$,109,47,"강화 아쳐 스켈레톤",3445,1, instance_npcname("eq#mir1") + "::OnMobDead2";// P_ARCHER_SKELETON
+	monster 'map_name$,90,48,"강화 아쳐 스켈레톤",3445,1, instance_npcname("eq#mir1") + "::OnMobDead2";// P_ARCHER_SKELETON
+	'skeleton_wave[1] = 7;
+	stopnpctimer;
+	end;
+
+OnMobDead2:
+	'skeleton_wave[1]--;
+	if ('skeleton_wave[1] == 0 && 'step == 1) {
+		if ('simple_mode) {
+			'step = 3;
+			mapannounce 'map_name$, "펜릴: 잔당은 정리됐어! 이제 개조된 암다라이스를 쓰러뜨려!", bc_map,0xFFFF00,FW_NORMAL,12;
+			disablenpc instance_npcname("eq#mir1");
+			donpcevent instance_npcname("eq#mir2") + "::OnEvent";
+			end;
+		}
+
+		'step = 2;
+		mapannounce 'map_name$, "펜릴: 후우! 이제 정말 끝난 것 같아.", bc_map,0xFFFF00,FW_NORMAL,12;
+		enablenpc instance_npcname("펜릴#3mir");
+		enablenpc instance_npcname("아이리스#3mir");
+		enablenpc instance_npcname("비쥬#2mir");
+		disablenpc instance_npcname("eq#mir1");
+	}
+	end;
+}
+
+1@mir,103,85,1	script	아이리스#3mir	4_F_IRIS,{
+	if (is_party_leader() == false)	// it shouldn't happen
+		end;
+	if ('step != 2)
+		end;
+	mes "[비쥬]";
+	mes "후후... 인간치고는 제법 하는군.";
+	next;
+	cutin "bijou_02",2;
+	mes "[비쥬]";
+	mes "하지만 이번에도 무사할 수 있을까? 일어나라, 나의 부하야!";
+	specialeffect EF_WARP,AREA, instance_npcname("개조된 암다라이스#3mir");
+	sleep2 3000;
+	specialeffect EF_ENTRY,AREA, instance_npcname("개조된 암다라이스#3mir");
+	enablenpc instance_npcname("개조된 암다라이스#3mir");
+	next;
+	cutin "hero_iris_01",2;
+	mes "[아이리스]";
+	mes "뭐... 뭐죠, 이 괴물은?!";
+	next;
+	cutin "bijou_01",2;
+	mes "[비쥬]";
+	mes "아...";
+	mes "가기 전에 내 소개 정도는 해 주지.";
+	mes "내 이름은 비쥬.";
+	mes "발키리 히멜메즈 님을 보좌하는 부관이다.";
+	next;
+	cutin "fenrir_b",2;
+	mes "[펜릴]";
+	mes "큭...";
+	mes "역시 발키리의 부하답군. 기대를 저버리지 않는걸.";
+	mes "이미르의 심장은 엄청난 에너지원이야. 대체 어디에 쓰려는 거지?";
+	next;
+	cutin "bijou_01",2;
+	mes "[비쥬]";
+	mes "......";
+	mes "알 필요 없다. 어차피 곧 사라질 목숨이니까.";
+	next;
+	cutin "fenrir_b",2;
+	mes "[펜릴]";
+	mes "좋은 일에 쓰려는 건 아닐 테지.";
+	mes "내가 비쥬가 이미르의 심장을 가져가지 못하게 막을게. 넌 저 거대한 괴물을 맡아 줘!";
+	close2;
+	cutin "",255;
+	if ('step == 2) {
+		'step = 3;
+		donpcevent instance_npcname("eq#mir2") + "::OnEvent";
+	}
+	end;
+}
+
+1@mir,101,104,0	script	eq#mir2	HIDDEN_WARP_NPC,{
+	end;
+OnEvent:
+	enablenpc instance_npcname("eq#mir2");
+	enablenpc instance_npcname("eq#mir3");
+	disablenpc instance_npcname("비쥬#2mir");
+	disablenpc instance_npcname("펜릴#3mir");
+	disablenpc instance_npcname("아이리스#3mir");
+	disablenpc instance_npcname("개조된 암다라이스#3mir");
+
+	monster 'map_name$,101,95,"개조된 암다라이스",3448,1, instance_npcname("eq#mir2") + "::OnMobDead";// P_AMDARAIS
+	'boss_id = $@mobid[0];
+	'target_event = 1;	// 암다라이스
+	initnpctimer;
+	end;
+OnTimer1000:
+	getunitdata 'boss_id, .@data;
+	if (.@data[UMOB_HP] == .@data[UMOB_MAXHP]) {
+		initnpctimer;
+		end;
+	}
+	mapannounce 'map_name$, "아이리스: 이 괴물... 아무리 공격해도 체력이 줄어들지 않는 것 같아요!", bc_map,0xFFFF00,FW_NORMAL,12;
+	end;
+OnTimer3000:
+	mapannounce 'map_name$, "비쥬: 후후... 암다라이스는 그렇게 쉽게 쓰러지지 않는다.", bc_map,0xFFFF00,FW_NORMAL,12;
+	end;
+OnTimer5000:
+	mapannounce 'map_name$, "펜릴: 이 언데드는 보통 언데드와는 다른 것 같아.", bc_map,0xFFFF00,FW_NORMAL,12;
+	end;
+OnTimer7000:
+	mapannounce 'map_name$, "펜릴: 그래, 핵이야! 핵을 공격하면 큰 피해를 줄 수 있어!", bc_map,0xFFFF00,FW_NORMAL,12;
+	end;
+OnTimer9000:
+	donpcevent instance_npcname("eq#mir3") + "::OnEvent";
+	stopnpctimer;
+	end;
+OnMobDead:
+	if ('step != 3)
+		end;
+	'step = 4;
+	stopnpctimer;
+	donpcevent instance_npcname("eq#mir3") + "::OnStop";
+	if ('random_letter$ != "")
+		donpcevent instance_npcname( "펜릴#boss1" + 'random_letter$ ) + "::OnStop";
+	disablenpc instance_npcname("eq#mir2");
+
+	if ('simple_mode) {
+		// NEED: 연출용 비쥬 1차전과 사라 등장 장편 이벤트를 생략하고 최종전으로 직행.
+		'step = 7;
+		mapannounce 'map_name$, "펜릴: 좋아, 이제 비쥬만 남았어! 마지막 전투를 준비해!", bc_map,0xFFFF00,FW_NORMAL,12;
+		donpcevent instance_npcname("eq#mir5") + "::OnEvent";
+		end;
+	}
+
+	enablenpc instance_npcname("펜릴#4mir");
+	enablenpc instance_npcname("아이리스#4mir");
+	end;
+}
+
+1@mir,101,104,0	script	eq#mir3	HIDDEN_WARP_NPC,{
+	end;
+OnEvent:
+	callsub S_Announce, true;
+OnEvent2:
+	callsub S_Announce, false;
+S_Announce:
+	setarray .@list$[0],"a","b","c","d";
+	'random_letter$ = .@list$[ rand(4) ];
+	donpcevent instance_npcname( "펜릴#boss" + 'target_event + "" + 'random_letter$ ) + "::OnEvent";	// 1: P_AMDARAIS / 2: BIJOU
+	if (getarg(0) == true)
+		mapannounce 'map_name$, "펜릴: 내가 있는 곳으로 유인해!", bc_map,0xFFFF00,FW_NORMAL,12;
+	end;
+OnStart:
+	initnpctimer;
+	end;
+OnTimer25000:
+	donpcevent instance_npcname("eq#mir3") + "::OnEvent";
+	stopnpctimer;
+	end;
+OnStop:
+	stopnpctimer;
+	disablenpc instance_npcname("eq#mir3");
+	end;
+}
+
+1@mir,103,80,3	script	펜릴#boss1a	4_F_FENRIR,2,2,{
+	end;
+OnEvent:
+	'fenrir_name$ = instance_npcname( strnpcinfo(0) );
+	'iris_name$ = instance_npcname( "아이리스#" + strnpcinfo(2) );
+	enablenpc 'fenrir_name$;
+	enablenpc 'iris_name$;
+	end;
+
+OnTouchNPC:
+	if ('touch_mob == 0) {
+		npctalk "펜릴: 잘했어! 이제 부탁할게, 아이리스!", 'fenrir_name$;
+		'touch_mob = 1;
+		initnpctimer;
+	}
+	end;
+OnTimer2000:
+	npctalk "아이리스: 좋아요, 제가 해 볼게요! 제가 원하는 것은...!", 'iris_name$;
+	specialeffect EF_BEGINSPELL,AREA, 'iris_name$;
+	end;
+OnTimer4000:
+	npctalk "아이리스: 마비 부적! 가라!!", 'iris_name$;
+	if ('target_event == 1)
+		unittalk 'boss_id, "크아아악---!!";
+	else
+		unittalk 'boss_id, "비쥬: 이게 무슨...!!";
+	end;
+OnTimer5000:
+	npctalk "아이리스: 성공했어요!", 'iris_name$;
+	end;
+OnTimer7000:
+	npctalk "펜릴: 그럼 이제 내 차례군. 하아앗!", 'fenrir_name$;
+	specialeffect EF_BEGINSPELL,AREA, 'fenrir_name$;
+	specialeffect EF_TETRACASTING,AREA, 'fenrir_name$;
+	progressbar_npc "000000",3;
+	end;
+OnTimer10000:
+	npctalk "펜릴: 받아라!!", 'fenrir_name$;
+	specialeffect EF_SUI_EXPLOSION,AREA, 'fenrir_name$;
+	specialeffect EF_LORD,AREA, 'fenrir_name$;
+	specialeffect EF_FLAMELAUNCHER,AREA, 'fenrir_name$;
+	if ('target_event == 1)
+		unittalk 'boss_id, "크아아악!!";
+	else
+		unittalk 'boss_id, "비쥬: 큭... 생각보다 제법 아픈걸...!";
+	getunitdata 'boss_id, .@data;
+	if (.@data[UMOB_HP] > 0) {
+		.@damage = rand(700,1300) * 1000;
+		if (.@damage >= .@data[UMOB_HP])
+			.@mob_hp = 0;
+		else
+			.@mob_hp = .@data[UMOB_HP] - .@damage;
+		setunitdata 'boss_id, UMOB_HP, .@mob_hp;
+	}
+	end;
+OnTimer13000:
+	npctalk "펜릴: 완벽하진 않지만 상당한 피해를 준 것 같아!", 'fenrir_name$;
+	end;
+OnTimer14500:
+	npctalk "펜릴: 마력을 너무 많이 소모했어. 잠깐 쉬어야겠어. 그동안 부탁할게!", 'fenrir_name$;
+	end;
+OnTimer16500:
+	donpcevent instance_npcname("eq#mir3") + "::OnStart";
+OnStop:
+	stopnpctimer;
+	disablenpc();
+	disablenpc instance_npcname( "아이리스#" + strnpcinfo(2) );
+	'touch_mob = 0;
+	'random_letter$ = "";
+	end;
+}
+
+1@mir,100,90,7	script	아이리스#4mir	4_F_IRIS,{
+	if (is_party_leader() == false)	// it shouldn't happen
+		end;
+	if ('step != 4)
+		end;
+	mes "[아이리스]";
+	mes "끝난 건가요...? 이제 사라진 거죠?";
+	mes "그럼 이제 남은 건...";
+	next;
+	enablenpc instance_npcname("비쥬#4mir");
+	cutin "bijou_01",2;
+	mes "[비쥬]";
+	mes "나... 이제 나 하나뿐인가...";
+	next;
+	cutin "hero_iris_01",2;
+	mes "[아이리스]";
+	mes "뭐라고?!";
+	next;
+	mes "콰앙!";
+	specialeffect EF_SUI_EXPLOSION,AREA, instance_npcname("아이리스#4mir");
+	next;
+	cutin "hero_iris_01",2;
+	mes "[아이리스]";
+	mes "꺄아아악---!!!";
+	next;
+	cutin "bijou_01",2;
+	mes "[비쥬]";
+	mes "정말 예상 밖이군. 후후...";
+	mes "내가 3년이나 공들여 완성한 암다라이스를 쓰러뜨릴 줄은 몰랐다.";
+	next;
+	cutin "bijou_02",2;
+	mes "[비쥬]";
+	mes "대가를 치르게 해 주지.";
+	mes "내 3년의 노력을 망쳐 놓은 대가를!!";
+	mes "천천히...";
+	mes "아주 고통스럽게 말이야...!!";
+	close2;
+	cutin "",255;
+	if ('step == 4) {
+		'step = 5;
+		donpcevent instance_npcname("eq#mir4") + "::OnEvent";
+	}
+	end;
+}
+
+1@mir,101,104,0	script	eq#mir4	HIDDEN_WARP_NPC,{
+	end;
+OnEvent:
+	enablenpc instance_npcname("eq#mir4");
+	disablenpc instance_npcname("펜릴#4mir");
+	disablenpc instance_npcname("아이리스#4mir");
+	disablenpc instance_npcname("비쥬#4mir");
+	monster 'map_name$,102,95,"비쥬",3450,1, instance_npcname("eq#mir4") + "::OnMobDead";// BIJOU
+	'boss_id = $@mobid[0];
+	initnpctimer;
+	end;
+OnTimer1000:
+	getunitdata 'boss_id, .@data;
+	if (.@data[UMOB_HP] == .@data[UMOB_MAXHP]) {
+		initnpctimer;
+		end;
+	}
+	donpcevent instance_npcname("eq#mir4") + "::OnMobDead";
+	end;
+OnMobDead:
+	if ('step != 5)
+		end;
+	'step = 6;
+	killmonster 'map_name$, instance_npcname("eq#mir4") + "::OnMobDead";
+	stopnpctimer;
+	enablenpc instance_npcname("펜릴#5mir");
+	enablenpc instance_npcname("아이리스#5mir");
+	enablenpc instance_npcname("비쥬#5mir");
+	disablenpc instance_npcname("eq#mir4");
+	end;
+}
+
+1@mir,103,90,1	script	펜릴#5mir	4_F_FENRIR,{
+	if (is_party_leader() == false)	// it shouldn't happen
+		end;
+	if ('step != 6)
+		end;
+	mes "[펜릴]";
+	mes "큭... 아무것도 통하지 않다니!";
+	next;
+	cutin "bijou_01",2;
+	mes "[비쥬]";
+	mes "후후...";
+	mes "절망이 어떤 것인지 직접 맛보게 해 주마.";
+	next;
+	cutin "bijou_02",2;
+	mes "[비쥬]";
+	mes "프로스트 다이버!";
+	specialeffect EF_LOCKON,AREA, instance_npcname("펜릴#5mir");
+	sleep2 3000;
+	specialeffect EF_FREEZE,AREA, instance_npcname("펜릴#5mir");
+	next;
+	cutin "fenrir_b",2;
+	mes "[펜릴]";
+	mes "큭...";
+	next;
+	cutin "bijou_01",2;
+	mes "[비쥬]";
+	mes "어떠냐? 제법 아프지?";
+	mes "이제 몸도 제대로 움직이지 못하겠지.";
+	mes "...하지만 쉽게 죽여 줄 거라 생각하지 마라...";
+	next;
+	mes "[비쥬]";
+	mes "우선 이 성가신 성직자 계집부터 처리해야겠군.";
+	next;
+	cutin "fenrir_b",2;
+	mes "[펜릴]";
+	mes "아... 아이리스!!";
+	next;
+	cutin "sarah_hero3",2;
+	mes "[사라]";
+	mes "......";
+	enablenpc instance_npcname("사라#5mir");
+	next;
+	cutin "bijou_02",2;
+	mes "[비쥬]";
+	mes "사라...?";
+	next;
+	cutin "sarah_hero3",2;
+	mes "[사라]";
+	mes "여기가 바로...";
+	mes "프론테라 성의 지하.";
+	mes "첫 번째 이미르의 심장이 봉인된 장소로군.";
+	next;
+	mes "[사라]";
+	mes "그리고 저것이...";
+	mes "이미르의 심장...";
+	next;
+	cutin "bijou_02",2;
+	mes "[비쥬]";
+	mes "네가 어떻게 여기까지 온 거지?";
+	mes "사라 이리네.";
+	mes "네가 이곳에 나타날 줄은 몰랐군.";
+	next;
+	cutin "sarah_hero3",2;
+	mes "[사라]";
+	mes "여기서 뭘 하고 있는 거지, 비쥬?";
+	next;
+	cutin "bijou_01",2;
+	mes "[비쥬]";
+	mes "아, 방해되는 벌레들을 처리하던 중이었습니다.";
+	next;
+	cutin "sarah_hero3",2;
+	mes "[사라]";
+	mes "그게 무슨 대답이지, 비쥬?";
+	next;
+	mes "[사라]";
+	mes "내 말은 왜 아직도 여기서 시간을 낭비하고 있느냐는 거다. 이미르의 심장 봉인은 왜 풀지 못했지?";
+	next;
+	cutin "bijou_02",2;
+	mes "[비쥬]";
+	mes "그게... 첫 번째 봉인까지는 풀었습니다만...";
+	mes "곧 이곳을 정리하겠습니다. 걱정하실 필요 없습니다, 사라.";
+	next;
+	mes "[비쥬]";
+	mes "저를 믿고 맡겨 주십시오. 자랑스러운 발키리답게 기다려 주시면 됩니다.";
+	next;
+	cutin "bijou_01",2;
+	mes "[비쥬]";
+	mes "(흥... 융통성 없는 발키리 같으니! 저런 풋내기가 히멜메즈 님과 같은 대우를 받다니, 정말 불공평해.)";
+	next;
+	cutin "sarah_hero3_2",2;
+	mes "[사라]";
+	mes "정신을 못 차렸군, 비쥬... 여기엔 히멜메즈가 없다.";
+	next;
+	cutin "bijou_03",2;
+	mes "[비쥬]";
+	mes "....헉...";
+	mes "숨이... 막혀...!";
+	next;
+	cutin "sarah_hero3_2",2;
+	mes "[사라]";
+	mes "입조심하는 게 좋을 거다!";
+	next;
+	cutin "bijou_03",2;
+	mes "[비쥬]";
+	mes "콜록...";
+	mes "콜록, 콜록...";
+	next;
+	cutin "sarah_hero3",2;
+	mes "[사라]";
+	mes "이런 하찮은 일에 시간을 낭비하는 부하는 필요 없다.";
+	mes "이미르의 심장은... 내가 직접 가져가겠다.";
+	disablenpc instance_npcname("사라#5mir");
+	next;
+	cutin "bijou_02",2;
+	mes "[비쥬]";
+	mes "(역시 발키리인가... 어쩔 수 없군.)";
+	next;
+	cutin "fenrir_b",2;
+	mes "[펜릴]";
+	mes "지금이야!";
+	mes "프로스트 다이버!";
+	specialeffect EF_FREEZE,AREA, instance_npcname("비쥬#5mir");
+	next;
+	cutin "bijou_03",2;
+	mes "[비쥬]";
+	mes "뭐라고?!";
+	next;
+	mes "[비쥬]";
+	mes "이런... 위험할 뻔했군.";
+	mes "어떻게 이런 일이...?";
+	next;
+	cutin "fenrir_a",2;
+	mes "[펜릴]";
+	mes "이 마법은...";
+	mes "역시 고위 마법이군. 사용하는 것만으로도 상당히 힘들어.";
+	next;
+	cutin "bijou_02",2;
+	mes "[비쥬]";
+	mes "(뭐지?! 방금 내가 사용한 마법을 그대로 익힌 건가?)";
+	next;
+	cutin "fenrir_a",2;
+	mes "[펜릴]";
+	mes "아이리스! 이건 회복 포션이야.";
+	mes "마시면 정신이 들 거야.";
+	next;
+	sleep2 500;
+	specialeffect EF_POTION1,AREA, instance_npcname("아이리스#5mir");
+	cutin "hero_iris_01",2;
+	mes "[아이리스]";
+	mes "으으...";
+	next;
+	sleep2 500;
+	specialeffect EF_POTION1,AREA, instance_npcname("아이리스#5mir");
+	cutin "fenrir_a",2;
+	mes "[펜릴]";
+	mes "아이리스, 정신이 들어?";
+	next;
+	cutin "hero_iris_01",2;
+	mes "[아이리스]";
+	mes "으음....";
+	mes "우욱...";
+	mes "으엑! 너무 써!";
+	mes "대체 이게 뭐예요?!";
+	mes "나한테 뭘 먹인 거예요?";
+	next;
+	cutin "fenrir_a",2;
+	mes "[펜릴]";
+	mes "정신이 들었구나, 아이리스.";
+	mes "정말 다행이야.";
+	next;
+	cutin "hero_iris_01",2;
+	mes "[아이리스]";
+	mes "후우... 그런데 펜릴!";
+	mes "이미르의 심장은 어떻게 됐어요?";
+	next;
+	cutin "bijou_02",2;
+	mes "[비쥬]";
+	mes "(...펜릴? 이미르의 심장에만 신경 쓰느라 저 여자를 잊고 있었군. 내 예상이 맞다면 저 여자는...!)";
+	next;
+	mes "[비쥬]";
+	mes "후우... 그래, 이제 알겠군.";
+	mes "네 몸에 흐르는 그 짐승의 피... 그게 답이었어!";
+	next;
+	cutin "bijou_01",2;
+	mes "[비쥬]";
+	mes "그렇다면 제대로 상대해 주지! 후후...";
+	mes "천 년 전의 영웅을 여기서 만나게 될 줄이야!";
+	next;
+	cutin "bijou_03",2;
+	mes "[비쥬]";
+	mes "죽어라!!";
+	next;
+	cutin "fenrir_b",2;
+	mes "[펜릴]";
+	mes "...조심해. 공격해 온다!";
+	close2;
+	cutin "",255;
+	if ('step == 6) {
+		'step = 7;
+		donpcevent instance_npcname("eq#mir5") + "::OnEvent";
+	}
+	end;
+}
+
+1@mir,101,104,0	script	eq#mir5	HIDDEN_WARP_NPC,{
+	end;
+OnEvent:
+	enablenpc instance_npcname("eq#mir3");
+	enablenpc instance_npcname("eq#mir5");
+	disablenpc instance_npcname("비쥬#5mir");
+	disablenpc instance_npcname("펜릴#5mir");
+	disablenpc instance_npcname("아이리스#5mir");
+
+	monster 'map_name$,102,95,"비쥬",3450,1, instance_npcname("eq#mir5") + "::OnMobDead";// BIJOU
+	'boss_id = $@mobid[0];
+	'target_event = 2;
+	initnpctimer;
+	end;
+OnTimer1000:
+	getunitdata 'boss_id, .@data;
+	if (.@data[UMOB_HP] == .@data[UMOB_MAXHP]) {
+		initnpctimer;
+		end;
+	}
+	end;
+OnTimer3000:
+	mapannounce 'map_name$, "아이리스: 함께 싸워요! 이번에도 이길 수 있어요!", bc_map,0xFFFF00,FW_NORMAL,12;
+	end;
+OnTimer5000:
+	mapannounce 'map_name$, "펜릴: 나도 그렇게 생각해. 이번에도 내가 있는 곳으로 비쥬를 유인해 줘.", bc_map,0xFFFF00,FW_NORMAL,12;
+	end;
+OnTimer7000:
+	mapannounce 'map_name$, "비쥬: ......", bc_map,0xFFFF00,FW_NORMAL,12;
+	donpcevent instance_npcname("eq#mir3") + "::OnEvent2";
+	donpcevent instance_npcname("eq#mir6") + "::OnTalk";
+	stopnpctimer;
+	end;
+OnMobDead:
+	if ('step != 7)
+		end;
+	'step = 8;
+	stopnpctimer;
+	donpcevent instance_npcname("eq#mir3") + "::OnStop";
+	donpcevent instance_npcname("eq#mir6") + "::OnStop";
+	if ('random_letter$ != "")
+		donpcevent instance_npcname( "펜릴#boss2" + 'random_letter$ ) + "::OnStop";
+	disablenpc instance_npcname("eq#mir5");
+
+	if ('simple_mode) {
+		// NEED: 반복 클리어는 별도 스토리 진행 없이 즉시 종료.
+		mapannounce 'map_name$, "의식의 방을 클리어했습니다.", bc_map,0x00FF00,FW_NORMAL,14;
+		mapwarp 'map_name$, "prt_lib_q",88,83;
+		end;
+	}
+
+	enablenpc instance_npcname("펜릴#6mir");
+	enablenpc instance_npcname("아이리스#6mir");
+	enablenpc instance_npcname("비쥬#6mir");
+
+	if (playerattached() && 'exploit_disabled && ep16_royal == 19) {
+		erasequest 7700;// 다시 한 번!
+		setquest 7701;// 잃어버린 이미르의 심장
+		ep16_royal = 20;
+	}
+	end;
+}
+
+1@mir,101,104,0	script	eq#mir6	HIDDEN_WARP_NPC,{
+	end;
+OnTalk:
+	enablenpc instance_npcname("eq#mir6");
+	initnpctimer;
+	end;
+OnTimer20000:
+	.@r = rand(3);
+	if (.@r == 0)
+		unittalk 'boss_id, "비쥬: 히멜메즈 님을 위하여!";
+	else if (.@r == 1)
+		unittalk 'boss_id, "비쥬: 흥... 아직도 살아 있나!";
+	else
+		unittalk 'boss_id, "비쥬: 후후... 고통스럽지?";
+	initnpctimer;
+	end;
+OnStop:
+	stopnpctimer;
+	end;
+}
+
+1@mir,100,95,5	script	아이리스#6mir	4_F_IRIS,{
+	if (is_party_leader() == false)	// it shouldn't happen
+		end;
+	if ('step != 8)
+		end;
+	mes "[아이리스]";
+	mes "큭...";
+	next;
+	cutin "bijou_01",2;
+	mes "[비쥬]";
+	mes "후후후... 죽어라!";
+	mes "성직자 따위는 죽어 버려!";
+	specialeffect EF_TETRACASTING,AREA, instance_npcname("아이리스#6mir");
+	next;
+	cutin "fenrir_b",2;
+	mes "[펜릴]";
+	mes "아이리스!!";
+	mes "안 돼! 멈춰!!";
+	specialeffect EF_TETRACASTING,AREA, instance_npcname("아이리스#6mir");
+	next;
+	cutin "bijou_01",2;
+	mes "[비쥬]";
+	mes "후후...";
+	mes "동료를 찾는 건가?";
+	mes "좋은 생각이지만... 이미 늦었어.";
+	specialeffect EF_TETRACASTING,AREA, instance_npcname("아이리스#6mir");
+	next;
+	mes "[비쥬]";
+	mes "왜냐하면...";
+	mes "이게 네 목숨을 끊을 마지막 일격이 될 테니까! 하하하하!";
+	specialeffect EF_TETRACASTING,AREA, instance_npcname("아이리스#6mir");
+	next;
+	sleep2 300;
+	enablenpc instance_npcname("사라#6mir");
+	cutin "bijou_03",2;
+	mes "[비쥬]";
+	mes "....후우...";
+	mes "뭐지...? 배에...";
+	mes "이 칼은...";
+	mes "사... 사라...? 어떻게...?";
+	specialeffect EF_HFLIMOON1,AREA, instance_npcname("비쥬#6mir");
+	next;
+	cutin "bijou_death",4;
+	mes "[사라]";
+	mes "하고 싶은 말은 그게 전부인가?";
+	mes "걱정 마라. 네 용맹한 공적은 히멜메즈에게 전해 주지. 나를 원망하지 마라, 비쥬.";
+	next;
+	mes "[비쥬]";
+	mes "왜...? 대체 왜!";
+	mes "...저... 저 계집 때문인가...? 네 동생이라서? 그것 때문이야? 대답해, 사라!";
+	next;
+	mes "[비쥬]";
+	mes "큭...";
+	specialeffect EF_HFLIMOON1,AREA, instance_npcname("비쥬#6mir");
+	disablenpc instance_npcname("비쥬#6mir");
+	next;
+	mes "[사라]";
+	mes "......";
+	mes "네 영혼은 이제 자유다, 비쥬.";
+	next;
+	cutin "hero_iris_01",2;
+	mes "[아이리스]";
+	mes "(나를... 구해 준 건가...?)";
+	next;
+	mes "[아이리스]";
+	mes "사라...";
+	mes "사라... 맞지?";
+	mes "어릴 때 헤어진 언니라고 들었어...";
+	next;
+	mes "[아이리스]";
+	mes "...대체 무슨 생각이야? 왜... 왜 나를 구한 거야?!";
+	mes "이런다고 내 마음이 바뀔 거라 생각하지 마! 난 절대로 널 용서하지 않을 거야!";
+	next;
+	mes "[아이리스]";
+	mes "엄마... 아빠... 마을 사람들까지. 반드시 복수할 거야!";
+	next;
+	cutin "sarah_hero3",2;
+	mes "[사라]";
+	mes "입 닥쳐!";
+	mes "마치 너만 피해자인 것처럼 떠들지 마라.";
+	mes "그들은 자신들이 저지른 죄의 대가를 치른 것뿐이다. 12년 전 내 어머니를 죽인 죄의 대가를.";
+	next;
+	mes "[사라]";
+	mes "진실을 알고 싶나? 네가 그렇게 소중하다고 떠드는 사람들... 장로와 마을 사람들은 사실...";
+	next;
+	mes "[사라]";
+	mes "......";
+	mes "그만...";
+	mes "지금은 이미르의 심장이 우선이다.";
+	next;
+	mes "[사라]";
+	mes "잘 들어라.";
+	mes "내가 널 살려 준 게 아니다.";
+	mes "네 목숨은 곧 내가 거두겠다.";
+	mes "다음에 만날 때는 다시는 빛을 보지 못하게 해 주지.";
+	next;
+	mes "[사라]";
+	mes "그때까지 다른 누구에게도 죽지 마라, 아이리스.";
+	mes "오늘은 이만 작별하지.";
+	disablenpc instance_npcname("사라#6mir");
+	next;
+	specialeffect EF_SCREEN_QUAKE,AREA, instance_npcname("아이리스#6mir");
+	cutin "fenrir_b",2;
+	mes "[펜릴]";
+	mes "큭... 저 발키리가 이미르의 심장을 가져가면서 천장을 무너뜨렸어!";
+	next;
+	mes "[펜릴]";
+	mes "우리도 어서 나가자! 이곳은 너무 위험해!";
+	close2;
+
+	// NEED: 스토리 진행 여부와 무관하게 의식의 방 최초 클리어 기록 저장.
+	callfunc "F_RoomConsciousnessMarkClear";
+
+	// 원래 EP16.1 메인 스토리를 진행 중인 캐릭터는 기존 스토리 진행도도 정상 갱신.
+	if (ep16_royal == 19) {
+		erasequest 7700;// 다시 한 번!
+		setquest 7701;// 잃어버린 이미르의 심장
+		ep16_royal = 20;
+	}
+	warp "prt_lib_q",88,83;
+	end;
+}
+1@mir,1,1,0	script	dummy_room_con	-1,{
+	end;
+}
+
+1@mir,100,40,5	duplicate(dummy_room_con)	아이리스#1mir	4_F_IRIS
+1@mir,103,94,1	duplicate(dummy_room_con)	펜릴#2mir	4_F_FENRIR
+1@mir,102,98,3	duplicate(dummy_room_con)	비쥬#2mir	4_F_BIJOU
+
+1@mir,100,85,7	duplicate(dummy_room_con)	펜릴#3mir	4_F_FENRIR
+1@mir,102,88,3	duplicate(dummy_room_con)	비쥬#3mir	4_F_BIJOU
+1@mir,101,95,1	duplicate(dummy_room_con)	개조된 암다라이스#3mir	3448
+
+1@mir,94,73,3	duplicate(펜릴#boss1a)	펜릴#boss1b	4_F_FENRIR,2,2
+1@mir,112,73,3	duplicate(펜릴#boss1a)	펜릴#boss1c	4_F_FENRIR,2,2
+1@mir,103,60,3	duplicate(펜릴#boss1a)	펜릴#boss1d	4_F_FENRIR,2,2
+
+1@mir,100,80,5	duplicate(dummy_room_con)	아이리스#boss1a	4_F_IRIS
+1@mir,91,73,5	duplicate(dummy_room_con)	아이리스#boss1b	4_F_IRIS
+1@mir,109,73,5	duplicate(dummy_room_con)	아이리스#boss1c	4_F_IRIS
+1@mir,100,60,5	duplicate(dummy_room_con)	아이리스#boss1d	4_F_IRIS
+
+1@mir,103,76,3	duplicate(펜릴#boss1a)	펜릴#boss2a	4_F_FENRIR,2,2
+1@mir,94,70,3	duplicate(펜릴#boss1a)	펜릴#boss2b	4_F_FENRIR,2,2
+1@mir,112,70,3	duplicate(펜릴#boss1a)	펜릴#boss2c	4_F_FENRIR,2,2
+1@mir,103,63,3	duplicate(펜릴#boss1a)	펜릴#boss2d	4_F_FENRIR,2,2
+
+1@mir,100,76,5	duplicate(dummy_room_con)	아이리스#boss2a	4_F_IRIS
+1@mir,91,70,5	duplicate(dummy_room_con)	아이리스#boss2b	4_F_IRIS
+1@mir,109,70,5	duplicate(dummy_room_con)	아이리스#boss2c	4_F_IRIS
+1@mir,100,63,5	duplicate(dummy_room_con)	아이리스#boss2d	4_F_IRIS
+
+1@mir,102,95,3	duplicate(dummy_room_con)	비쥬#4mir	4_F_BIJOU
+1@mir,103,90,1	duplicate(dummy_room_con)	펜릴#4mir	4_F_FENRIR
+
+1@mir,102,95,3	duplicate(dummy_room_con)	비쥬#5mir	4_F_BIJOU
+1@mir,99,95,5	duplicate(dummy_room_con)	사라#5mir	4_F_SARAH
+1@mir,100,90,7	duplicate(dummy_room_con)	아이리스#5mir	4_F_IRIS
+
+1@mir,102,95,3	duplicate(dummy_room_con)	비쥬#6mir	4_F_BIJOU
+1@mir,104,95,3	duplicate(dummy_room_con)	사라#6mir	4_F_SARAH
+1@mir,103,90,1	duplicate(dummy_room_con)	펜릴#6mir	4_F_FENRIR

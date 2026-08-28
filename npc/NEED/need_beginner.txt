@@ -1,0 +1,1958 @@
+//===== NEED Script ==========================================
+//= 신규 성장 지원 시스템 V1
+//= 대상: account_id >= $NEED_BEGINNER_ACCOUNT_MIN
+//= 공용 신규 계정 기준값: 2,000,000
+//= 메인 NPC: moc_para01,27,35
+//= 낙원단 워프 도착: moc_para01,28,30
+//=
+//= 성장 보상:
+//=   Lv.1       : 메탈 무기 상자 (101454)
+//=   Lv.100     : 초심자 무기/방어구/쉐도우 + 종합 은총 이용권
+//=   Lv.150     : 초심자 무기 7제련 이용권 (25428)
+//=   Lv.175/60  : 전장 지원 시즈 세트 3종 (900115~900117, 14일)
+//=
+//= 7일 초보자 소모품 지원:
+//=   소형 생명수 100 / 중형 생명수 100 / 신묘한 생명수 100 / 올마이티 10
+//=   최초 성장지원 등록 시 시작, 24시간 단위 1회, 계정 단위
+//=
+//= 공용 판정:
+//=   $NEED_BEGINNER_ACCOUNT_MIN = 2000000
+//=   FirstGuide / jobmaster에서도 동일 변수를 사용할 것
+//=
+//= TIPBOX:
+//=   8000, 8010~8013, 8400, 8410~8414, 8420~8422, 8430~8433 사용
+//=   System/tipbox.lub에 NEED 전용 TIPBOX 데이터가 필요
+//=
+//= 중요:
+//=   chobozone.txt의 초보존 제한을 "1~39"로 운영하려면
+//=   if (BaseLevel > .limitlv) 를 if (BaseLevel >= .limitlv) 로 수정할 것.
+//=
+//= 대화 화면 규칙:
+//=   메뉴 이동으로 새 화면에 진입하는 독립 라벨과 select 직후
+//=   인라인 화면 본문은 첫 줄에서 clear; 로 이전 대사를 지운다.
+//=   S_CurrentStage / S_ShowGoal 같은 callsub 서브루틴과
+//=   F_NEED_* 공용 함수에는 clear; 를 넣지 않는다.
+//=   next; 로 이어지는 같은 화면의 연속 페이지에도 넣지 않는다.
+//============================================================
+
+//============================================================
+// 공용 신규 계정 기준
+// FirstGuide / jobmaster / 성장지원 NPC에서 동일하게 사용
+//============================================================
+-	script	NEED_Beginner_Config	-1,{
+OnInit:
+	$NEED_BEGINNER_ACCOUNT_MIN = 2000000;
+	end;
+}
+
+
+//============================================================
+// 신규 성장지원 대상 계정 여부
+//============================================================
+function	script	F_NEED_IsBeginnerAccount	{
+	return (getcharid(3) >= $NEED_BEGINNER_ACCOUNT_MIN);
+}
+
+//============================================================
+// 초반 성장 단계 판정 (공용)
+//   성장 지원관 / 초보존 안내원이 같은 목표를 말하도록
+//   초반 단계 판정을 이 함수 하나로 통일한다.
+//
+//   1 : Job Lv.10 달성      (노비스 계열 / Job Lv.10 미만)
+//   2 : 1차 전직 진행       (노비스 계열 / Job Lv.10 이상)
+//   3 : Base Lv.40 달성     (1차 전직 완료 / Base Lv.40 미만)
+//   4 : 초보자 지역 졸업     (1차 전직 완료 / Base Lv.40 이상)
+//
+//   전직 완료 여부는 별도 변수 없이 현재 Class 로 판정한다.
+//   노비스 계열은 Base 레벨과 무관하게 전직 안내를 우선한다.
+//============================================================
+function	script	F_NEED_GetBeginnerStage	{
+	// 아직 1차 전직을 하지 않았다면 레벨보다 전직 안내가 우선한다.
+	if (Class == Job_Novice || Class == Job_Novice_High || Class == Job_Baby)
+		return ((JobLevel < 10) ? 1 : 2);
+
+	if (BaseLevel >= 40)
+		return 4;
+
+	return 3;
+}
+
+//============================================================
+// 성장 학습(메모리얼 입장) 기록
+//   호출 위치 : 각 메모리얼 던전의 실제 입장 성공(IE_OK) 직후
+//   기존 계정에는 적용되지 않으며, 보상/입장 조건과 무관한
+//   선택 학습 지표로만 사용한다.
+//============================================================
+function	script	F_NEED_GuideEnter	{
+	.@key$ = getarg(0);
+
+	// 기존 계정은 성장 학습 대상이 아님
+	if (!callfunc("F_NEED_IsBeginnerAccount"))
+		return 0;
+
+	setarray .@keys$[0],
+		"SARA", "OGH", "INFINITE", "CHARLESTON", "TOY", "OGH_HARD";
+	setarray .@vars$[0],
+		"NEED_GUIDE_SARA", "NEED_GUIDE_OGH", "NEED_GUIDE_INFINITE",
+		"NEED_GUIDE_CHARLESTON", "NEED_GUIDE_TOY", "NEED_GUIDE_OGH_HARD";
+	setarray .@names$[0],
+		"사라의 기억", "옛 글래스트헤임", "무한의 공간",
+		"위기의 찰스턴", "호러 장난감 공장", "옛 글래스트헤임 상급";
+	setarray .@minlv[0],
+		100, 150, 150, 150, 150, 150;
+
+	.@idx = inarray(.@keys$, .@key$);
+	if (.@idx < 0)
+		return 0;
+
+	if (BaseLevel < .@minlv[.@idx])
+		return 0;
+
+	// 이미 완료한 학습은 재처리하지 않음
+	if (getd(.@vars$[.@idx]))
+		return 0;
+
+	setd .@vars$[.@idx], 1;
+	dispbottom "[NEED 성장지원] " + .@names$[.@idx] + " 입장 학습을 완료했습니다.";
+	return 1;
+}
+
+
+function	script	F_NEED_BeginnerSupply	{
+	.@show = getarg(0, 0);
+
+	// 기존 계정은 신규 성장지원 대상이 아님
+	if (!callfunc("F_NEED_IsBeginnerAccount"))
+		return 0;
+
+	if (!#NEED_BEGINNER || #NEED_BEGINNER_START <= 0)
+		return 0;
+
+	.@now = gettimetick(2);
+	.@elapsed = .@now - #NEED_BEGINNER_START;
+
+	if (.@elapsed < 0 || .@elapsed >= 604800) {
+		if (.@show) {
+			setdialogsize(440,260);
+			mes "^00AAFF[7일 초보자 지원]^000000";
+			mes "";
+			mes "^777777초보자 소모품 지원 기간이 종료되었습니다.^000000";
+			mes "";
+			mes "이후 필요한 소모품은";
+			mes "^FF9900금화 / 캐시샵^000000을 통해 구매할 수 있습니다.";
+		}
+		return 0;
+	}
+
+	.@day = (.@elapsed / 86400) + 1;
+
+	if (#NEED_BEGINNER_SUPPLY_DAY >= .@day) {
+		if (.@show) {
+			setdialogsize(440,260);
+			mes "^00AAFF[7일 초보자 지원]^000000";
+			mes "";
+			mes "오늘의 소모품 보충은 ^00AA00완료^000000되었습니다.";
+			mes "";
+			mes "^777777지원 " + .@day + "일차 / 총 7일^000000";
+		}
+		return 0;
+	}
+
+	#NEED_BEGINNER_SUPPLY_DAY = .@day;
+
+	.@small = 100 - countitem(14534);
+	.@medium = 100 - countitem(14535);
+	.@mysterious = 100 - countitem(12832);
+	.@almighty = 10 - countitem(12883);
+
+	if (.@small > 0)
+		getitembound 14534, .@small, BOUND_ACCOUNT;
+	if (.@medium > 0)
+		getitembound 14535, .@medium, BOUND_ACCOUNT;
+	if (.@mysterious > 0)
+		getitembound 12832, .@mysterious, BOUND_ACCOUNT;
+	if (.@almighty > 0)
+		getitembound 12883, .@almighty, BOUND_ACCOUNT;
+
+	if (.@show) {
+		setdialogsize(440,260);
+		mes "^00AAFF[7일 초보자 지원]^000000";
+		mes "";
+		mes "^00AA00오늘의 소모품 보충이 완료되었습니다.^000000";
+		mes "";
+		mes "소형 생명수    ^FF9900최대 100개^000000";
+		mes "중형 생명수    ^FF9900최대 100개^000000";
+		mes "신묘한 생명수  ^FF9900최대 100개^000000";
+		mes "올마이티        ^FF9900최대 10개^000000";
+		mes "";
+		mes "^777777지원 " + .@day + "일차 / 총 7일^000000";
+	}
+	return 1;
+}
+
+moc_para01,27,35,4	script	낙원단 성장 지원관#need_beginner	4_M_ZONDAOYAJI,{
+	setdialogsize(440,320);
+
+	if (!callfunc("F_NEED_IsBeginnerAccount")) {
+		mes "^00AAFF[낙원단 성장 지원관]^000000";
+		mes "";
+		mes "신규 모험가를 위한 ^0055FF성장 지원 안내소^000000입니다.";
+		mes "";
+		mes "^777777현재 계정은 신규 성장지원 대상이 아닙니다.^000000";
+		mes "";
+		mes "일반 성장 정보는 ^00AA00Ctrl + F1^000000";
+		mes "NEED Wiki에서 확인할 수 있습니다.";
+		close;
+	}
+
+	if (!#NEED_BEGINNER) {
+		#NEED_BEGINNER = 1;
+		#NEED_BEGINNER_START = gettimetick(2);
+		#NEED_BEGINNER_SUPPLY_DAY = 0;
+
+		mes "^00AAFF[낙원단 성장 지원관]^000000";
+		mes "";
+		mes "^00AA00신규 모험가 성장지원^000000";
+		mes "^00AA00대상자로 등록되었습니다.^000000";
+		mes "";
+		mes "앞으로 성장 과정에서";
+		mes "무엇을 해야 할지 모르겠다면";
+		mes "^0055FF이곳 낙원단 성장 지원관^000000을 찾아주세요.";
+		mes "";
+		mes "^777777처음에는 모든 시스템을";
+		mes "이해하지 않아도 됩니다.";
+		mes "우선 사냥과 전직부터 익혀보세요.^000000";
+		mes "";
+		mes "<TIPBOX>▶ 처음 시작하기 가이드<INFO>8010</INFO></TIPBOX>";
+		next;
+
+		callfunc("F_NEED_BeginnerSupply", 1);
+		next;
+		// 등록 안내를 출력한 상태이므로 clear 지점을 거쳐 메인 화면으로 이동한다.
+		goto L_Main;
+	}
+
+	// NPC 최초 클릭 시점에는 아직 출력된 대사가 없어 clear 대상이 아니다.
+	// (mes 없이 clear 를 실행하면 서버가 경고를 남긴다)
+	goto L_MainDraw;
+
+L_Main:
+	// 메뉴 이동으로 되돌아온 경우에만 이전 화면 대사를 지운다.
+	clear;
+
+L_MainDraw:
+	setdialogsize(440,260);
+	mes "^00AAFF[낙원단 성장 지원관]^000000";
+	mes "";
+	callsub S_CurrentStage;
+	mes "";
+	mes "무엇을 도와드릴까요?";
+
+	// 이동 메뉴 추천 방향도 목표 안내와 같은 단계 기준을 사용한다.
+	// stage 4 = 1차 전직 완료 + Base Lv.40 이상 (초보 구간 졸업)
+	.@stage = callfunc("F_NEED_GetBeginnerStage");
+
+	if (.@stage != 4) {
+		.@menu$ = "^FF9900성장 지원 보상^000000:"
+			+ "^0055FF현재 성장 목표^000000:"
+			+ "^00AAFF초보존으로 이동^000000:"
+			+ "7일 초보자 지원:"
+			+ "초보자 도움말:"
+			+ "NEED Wiki:"
+			+ "그만두기";
+		switch(select(.@menu$)) {
+		case 1: goto L_Reward;
+		case 2: goto L_Goal;
+		case 3: goto L_NewbieZone;
+		case 4: goto L_Supply;
+		case 5: goto L_Help;
+		case 6: goto L_Wiki;
+		default: close;
+		}
+	}
+	else {
+		.@menu$ = "^FF9900성장 지원 보상^000000:"
+			+ "^0055FF현재 성장 목표^000000:"
+			+ ((BaseLevel >= 100) ? "^00AA00성장 학습 현황^000000" : "") + ":"
+			+ ((BaseLevel >= 120) ? "^00AAFF성장 학습하기^000000" : "") + ":"
+			+ ((BaseLevel >= 175 && JobLevel >= 60) ? "^FF9900175 이후 콘텐츠 안내^000000" : "") + ":"
+			+ "^00AAFF라자냐로 이동^000000:"
+			+ "7일 초보자 지원:"
+			+ "초보자 도움말:"
+			+ "NEED Wiki:"
+			+ "그만두기";
+		switch(select(.@menu$)) {
+		case 1: goto L_Reward;
+		case 2: goto L_Goal;
+		case 3: goto L_Guide;
+		case 4: goto L_Study;
+		case 5: goto L_After175;
+		case 6: goto L_Lasagna;
+		case 7: goto L_Supply;
+		case 8: goto L_Help;
+		case 9: goto L_Wiki;
+		default: close;
+		}
+	}
+
+L_Reward:
+	clear;
+	setdialogsize(460,360);
+	mes "^00AAFF[성장 지원 보상]^000000";
+	mes "";
+	mes "성장 단계에 따라 장비가 지급됩니다.";
+	mes "^777777각 보상은 캐릭터당 1회만 받을 수 있습니다.^000000";
+	mes "";
+	mes "<TIPBOX>▶ 성장 지원 시스템 안내<INFO>8011</INFO></TIPBOX>";
+	mes "";
+
+	.@menu$ = "Lv.1 - 메탈 무기 상자:"
+		+ "Lv.100 - 초심자 장비 / 종합 은총:"
+		+ "Lv.150 - 초심자 무기 +7 제련권:"
+		+ "Lv.175/60 - 전장 지원 시즈 세트 (14일):"
+		+ "돌아가기";
+	switch(select(.@menu$)) {
+	case 1:
+		// 메뉴 선택으로 새 화면에 진입하므로 이전 대사를 지운다.
+		clear;
+		if (NEED_BEGINNER_REWARD_1) {
+			mes "^00AAFF[Lv.1 성장 보상]^000000";
+			mes "";
+			mes "이미 ^00AA00수령 완료^000000한 보상입니다.";
+			next;
+			goto L_Reward;
+		}
+		if (!checkweight(101454,1)) {
+			mes "^FF0000소지 무게를 비운 뒤 다시 시도해주세요.^000000";
+			close;
+		}
+		getitem 101454,1;
+		NEED_BEGINNER_REWARD_1 = 1;
+
+		mes "^00AAFF[Lv.1 성장 보상]^000000";
+		mes "";
+		mes "^FF9900메탈 무기 상자 1개^000000를 지급했습니다.";
+		mes "";
+		mes "상자를 사용하면 원하는 메탈 무기를";
+		mes "직접 선택할 수 있습니다.";
+		mes "";
+		mes "^777777어떤 무기를 골라야 할지 모르겠다면";
+		mes "전직할 직업을 먼저 정한 뒤";
+		mes "선택하는 것을 권장합니다.^000000";
+		next;
+		goto L_Main;
+
+	case 2:
+		// 메뉴 선택으로 새 화면에 진입하므로 이전 대사를 지운다.
+		clear;
+		if (BaseLevel < 100) {
+			mes "^00AAFF[Lv.100 성장 보상]^000000";
+			mes "";
+			mes "이 보상은 ^FF0000Base Lv.100 이상^000000부터";
+			mes "받을 수 있습니다.";
+			next;
+			goto L_Reward;
+		}
+		if (NEED_BEGINNER_REWARD_100) {
+			mes "^00AAFF[Lv.100 성장 보상]^000000";
+			mes "";
+			mes "이미 ^00AA00수령 완료^000000한 보상입니다.";
+			next;
+			goto L_Reward;
+		}
+		if (!checkweight(399908,1) || !checkweight(23583,1) ||
+			!checkweight(23584,1) || !checkweight(399904,1)) {
+			mes "^FF0000소지 무게를 비운 뒤 다시 시도해주세요.^000000";
+			close;
+		}
+
+		getitem 399908,1;
+		getitem 23583,1;
+		getitem 23584,1;
+		getitem 399904,1;
+		NEED_BEGINNER_REWARD_100 = 1;
+
+		mes "^00AAFF[Lv.100 성장 보상]^000000";
+		mes "";
+		mes "^FF9900초심자 무기 상자^000000";
+		mes "^FF9900초심자 방어구 상자^000000";
+		mes "^FF9900초심자 전용 쉐도우 박스^000000";
+		mes "^FF9900종합 은총 이용권^000000";
+		mes "";
+		mes "총 4종을 지급했습니다.";
+		next;
+
+		mes "^00AAFF[은총 시스템]^000000";
+		mes "";
+		mes "NEED의 은총은 총 ^0055FF3종^000000으로 나뉩니다.";
+		mes "";
+		mes "^FF9900보관의 은총^000000 - 창고보관 커맨드";
+		mes "^FF9900속성의 은총^000000 - 속부 커맨드";
+		mes "^FF9900거래의 은총^000000 - 오버챠지 / 디스카운트";
+		mes "";
+		mes "자세한 사용법은 ^00AAFF마을 중앙 은총 관리인^000000 또는";
+		mes "^00AA00NEED Wiki^000000에서 확인할 수 있습니다.";
+		mes "";
+		mes "<TIPBOX>▶ Lv.100 성장 가이드<INFO>8410</INFO></TIPBOX>";
+		mes "<TIPBOX>▶ 쉐도우 장비 가이드<INFO>8412</INFO></TIPBOX>";
+		mes "<TIPBOX>▶ 은총 시스템 가이드<INFO>8413</INFO></TIPBOX>";
+		mes "<TIPBOX>▶ 메모리얼 던전 가이드<INFO>8414</INFO></TIPBOX>";
+		next;
+		goto L_Main;
+
+	case 3:
+		// 메뉴 선택으로 새 화면에 진입하므로 이전 대사를 지운다.
+		clear;
+		if (BaseLevel < 150) {
+			mes "^00AAFF[Lv.150 성장 보상]^000000";
+			mes "";
+			mes "이 보상은 ^FF0000Base Lv.150 이상^000000부터";
+			mes "받을 수 있습니다.";
+			next;
+			goto L_Reward;
+		}
+		if (NEED_BEGINNER_REWARD_150) {
+			mes "^00AAFF[Lv.150 성장 보상]^000000";
+			mes "";
+			mes "이미 ^00AA00수령 완료^000000한 보상입니다.";
+			next;
+			goto L_Reward;
+		}
+		if (!checkweight(25428,1)) {
+			mes "^FF0000소지 무게를 비운 뒤 다시 시도해주세요.^000000";
+			close;
+		}
+
+		getitem 25428,1;
+		NEED_BEGINNER_REWARD_150 = 1;
+
+		mes "^00AAFF[Lv.150 성장 보상]^000000";
+		mes "";
+		mes "^FF9900초심자 무기 7제련 이용권^000000";
+		mes "1개를 지급했습니다.";
+		mes "";
+		mes "직접 제련 시스템을 이용하여";
+		mes "초심자 무기를 ^0055FF+7^000000로 강화해보세요.";
+		next;
+		goto L_Main;
+
+	case 4:
+		// 메뉴 선택으로 새 화면에 진입하므로 이전 대사를 지운다.
+		clear;
+		if (BaseLevel < 175 || JobLevel < 60) {
+			mes "^00AAFF[성장 지원 졸업 보상]^000000";
+			mes "";
+			mes "졸업 조건은";
+			mes "^FF0000Base Lv.175 / Job Lv.60^000000 입니다.";
+			mes "";
+			mes "현재: Base ^0055FF" + BaseLevel + "^000000 / Job ^0055FF" + JobLevel + "^000000";
+			next;
+			goto L_Reward;
+		}
+		if (NEED_BEGINNER_REWARD_175) {
+			mes "^00AAFF[성장 지원 졸업 보상]^000000";
+			mes "";
+			mes "이미 ^00AA00수령 완료^000000한 보상입니다.";
+			mes "";
+			mes "<TIPBOX>▶ NEED 전장 입문 가이드<INFO>8400</INFO></TIPBOX>";
+			mes "<TIPBOX>▶ 전사자의 무덤 가이드<INFO>8440</INFO></TIPBOX>";
+			next;
+			goto L_Reward;
+		}
+		if (!checkweight(900115,1) || !checkweight(900116,1) || !checkweight(900117,1)) {
+			mes "^FF0000소지 무게를 비운 뒤 다시 시도해주세요.^000000";
+			close;
+		}
+
+		// 14일 = 1,209,600초
+		rentitem 900115,1209600;	// [기간제] 전장 지원 시즈 플레이트
+		rentitem 900116,1209600;	// [기간제] 전장 지원 시즈 망토
+		rentitem 900117,1209600;	// [기간제] 전장 지원 시즈 그리브
+		NEED_BEGINNER_REWARD_175 = 1;
+
+		mes "^00AAFF[성장 지원 과정 완료]^000000";
+		mes "";
+		mes "^00AA00축하합니다!^000000";
+		mes "";
+		mes "전장에 바로 입문할 수 있도록";
+		mes "^FF990014일 기간제 전장 지원 시즈 세트^000000를";
+		mes "지급했습니다.";
+		mes "";
+		mes "^0055FF[기간제] 전장 지원 시즈 플레이트^000000";
+		mes "^0055FF[기간제] 전장 지원 시즈 망토^000000";
+		mes "^0055FF[기간제] 전장 지원 시즈 그리브^000000";
+		mes "";
+		mes "^FF0000※ 지급일로부터 14일 동안^000000";
+		mes "^FF0000사용할 수 있습니다.^000000";
+		next;
+
+		mes "^00AAFF[전장 입문 지원]^000000";
+		mes "";
+		mes "이 장비는";
+		mes "^FF9900전장 입문을 위한 임시 지원 장비^000000입니다.";
+		mes "지원 기간 동안 전장을 직접 경험하면서";
+		mes "이후 사용할 PvP 장비를 준비해보세요.";
+		mes "";
+		mes "^777777거래 / 창고 / 우편 /";
+		mes "제련 / 카드 변경 제한은";
+		mes "아이템 자체 설정에 따라 적용됩니다.^000000";
+		mes "";
+		mes "이제부터는 전장, EP16.1, 메모리얼,";
+		mes "장비 세팅 등 원하는 콘텐츠를";
+		mes "선택해 성장할 수 있습니다.";
+		mes "";
+		mes "<TIPBOX>▶ NEED 전장 입문 가이드<INFO>8400</INFO></TIPBOX>";
+		mes "<TIPBOX>▶ 전사자의 무덤 가이드<INFO>8440</INFO></TIPBOX>";
+		next;
+		goto L_Main;
+
+	default:
+		goto L_Main;
+	}
+
+L_Goal:
+	clear;
+	setdialogsize(460,400);
+	mes "^00AAFF[현재 성장 목표]^000000";
+	mes "";
+	callsub S_ShowGoal;
+	mes "";
+	if (BaseLevel < 100)
+		mes "<TIPBOX>▶ 처음 시작하기 가이드<INFO>8010</INFO></TIPBOX>";
+	else
+		mes "<TIPBOX>▶ Lv.100 성장 가이드<INFO>8410</INFO></TIPBOX>";
+	next;
+	goto L_Main;
+
+L_Guide:
+	clear;
+	setdialogsize(500,420);
+	mes "^00AAFF[성장 학습 현황]^000000";
+	mes "";
+
+	.@ok$ = "^00AA00[완료]^000000";
+	.@no$ = "^FF9900[미완료]^000000";
+
+	.@equip$ = (NEED_BEGINNER_REWARD_100) ? .@ok$ : .@no$;
+	.@sara$ = (NEED_GUIDE_SARA) ? .@ok$ : .@no$;
+
+	mes "^0055FF[Lv.100 성장 학습]^000000";
+	mes .@equip$ + " 초심자 장비 수령";
+	mes .@sara$ + " 사라의 기억 입장";
+
+	// Lv.120 이후 장비 성장 / 경제 학습
+	if (BaseLevel >= 120) {
+		.@card$ = (NEED_GUIDE_CARD) ? .@ok$ : .@no$;
+
+		mes "";
+		mes "^0055FF[장비 성장]^000000";
+		mes .@card$ + " 카드 시스템";
+
+		if (BaseLevel >= 140) {
+			.@refine$ = (NEED_GUIDE_REFINE) ? .@ok$ : .@no$;
+			mes .@refine$ + " 제련 시스템";
+		}
+		if (BaseLevel >= 150) {
+			.@exc$ = (NEED_GUIDE_EXCELION) ? .@ok$ : .@no$;
+			.@cash$ = (NEED_GUIDE_CASH) ? .@ok$ : .@no$;
+			mes .@exc$ + " 엑셀리온 인챈트";
+			mes .@cash$ + " 금화 / 캐시 시스템";
+		}
+	}
+
+	if (BaseLevel >= 150) {
+		.@ogh$ = (NEED_GUIDE_OGH) ? .@ok$ : .@no$;
+		.@inf$ = (NEED_GUIDE_INFINITE) ? .@ok$ : .@no$;
+		.@cha$ = (NEED_GUIDE_CHARLESTON) ? .@ok$ : .@no$;
+		.@toy$ = (NEED_GUIDE_TOY) ? .@ok$ : .@no$;
+		.@oghh$ = (NEED_GUIDE_OGH_HARD) ? .@ok$ : .@no$;
+
+		mes "";
+		mes "^0055FF[추천 메모리얼]^000000";
+		mes .@ogh$ + " 옛 글래스트헤임 일반";
+		mes .@inf$ + " 무한의 공간";
+		mes .@cha$ + " 위기의 찰스턴";
+		mes .@toy$ + " 호러 장난감 공장";
+		mes .@oghh$ + " 옛 글래스트헤임 상급";
+	}
+	else {
+		mes "";
+		mes "^777777추천 메모리얼 학습은^000000";
+		mes "^777777Base Lv.150부터 표시됩니다.^000000";
+	}
+
+	// Lv.149 카프라 무료 초기화 종료 임박 경고
+	if (BaseLevel == 149) {
+		mes "";
+		mes "^FF0000[중요 안내]^000000";
+		mes "마을 카프라의 무료 스탯 / 스킬 초기화는";
+		mes "^FF0000Base Lv.149까지만 이용할 수 있습니다.^000000";
+		mes "Lv.150 달성 전 현재";
+		mes "스탯과 스킬 세팅을 확인해주세요.";
+		mes "<TIPBOX>▶ 스탯 / 스킬 초기화 가이드<INFO>8422</INFO></TIPBOX>";
+	}
+
+	mes "";
+	mes "^FF0000※ 성장 학습은 선택사항입니다.^000000";
+	mes "^777777   완료하지 않아도^000000";
+	mes "^777777   성장 보상을 받을 수 있습니다.^000000";
+	mes "";
+	mes "<TIPBOX>▶ 메모리얼 던전 가이드<INFO>8414</INFO></TIPBOX>";
+	if (BaseLevel >= 150)
+		mes "<TIPBOX>▶ Lv.150 성장 가이드<INFO>8430</INFO></TIPBOX>";
+	next;
+	goto L_Main;
+
+//============================================================
+// 성장 학습하기
+//   레벨별로 열람 가능한 학습 항목만 표시한다.
+//   완료한 항목도 다시 열람할 수 있으며, 학습 여부는
+//   어떤 성장 보상 조건에도 사용하지 않는다.
+//============================================================
+L_Study:
+	clear;
+	setdialogsize(460,260);
+	mes "^00AAFF[성장 학습하기]^000000";
+	mes "";
+	mes "익히고 싶은 항목을 선택해주세요.";
+	mes "";
+	mes "^777777학습은 선택사항이며 완료하지 않아도";
+	mes "성장 보상 수령에 영향을 주지 않습니다.^000000";
+
+	.@ok$ = " ^00AA00[완료]^000000";
+
+	.@menu$ = "^00AAFF카드 시스템^000000" + ((NEED_GUIDE_CARD) ? .@ok$ : "") + ":"
+		+ ((BaseLevel >= 140) ? "^00AAFF제련 시스템^000000" + ((NEED_GUIDE_REFINE) ? .@ok$ : "") : "") + ":"
+		+ ((BaseLevel >= 150) ? "^00AAFF엑셀리온 인챈트^000000" + ((NEED_GUIDE_EXCELION) ? .@ok$ : "") : "") + ":"
+		+ ((BaseLevel >= 150) ? "^00AAFF금화 / 캐시 시스템^000000" + ((NEED_GUIDE_CASH) ? .@ok$ : "") : "") + ":"
+		+ ((BaseLevel >= 150) ? "^0055FF추천 필드 안내^000000" : "") + ":"
+		+ "스탯 / 스킬 초기화 안내:"
+		+ "돌아가기";
+
+	switch(select(.@menu$)) {
+	case 1: goto L_StudyCard;
+	case 2: goto L_StudyRefine;
+	case 3: goto L_StudyExcelion;
+	case 4: goto L_StudyCash;
+	case 5: goto L_Field;
+	case 6: goto L_StudyReset;
+	default: goto L_Main;
+	}
+
+L_StudyCard:
+	clear;
+	setdialogsize(460,300);
+	mes "^00AAFF[카드 시스템 학습]^000000";
+	mes "";
+	mes "카드는 슬롯이 있는 장비에 장착하여";
+	mes "추가 효과를 얻는 시스템입니다.";
+	mes "";
+	mes "초반에는 필요한 카드를 직접 파밍하고";
+	mes "사용할 장비에 장착해보는 것을 권장합니다.";
+	mes "";
+	mes "^FF0000※ 카드 장착 전^000000";
+	mes "^FF0000해당 장비를 오래 사용할지 확인해주세요.^000000";
+	mes "";
+	mes "<TIPBOX>▶ 카드 시스템 가이드<INFO>8420</INFO></TIPBOX>";
+	next;
+
+	if (NEED_GUIDE_CARD) {
+		mes "^00AAFF[카드 시스템 학습]^000000";
+		mes "";
+		mes "이 학습은 이미 ^00AA00완료^000000했습니다.";
+		mes "";
+		mes "^777777가이드는 언제든 다시 확인할 수 있습니다.^000000";
+		next;
+		goto L_Study;
+	}
+
+	if (select("^00AA00학습 내용 확인 완료^000000:나중에 확인한다") == 1) {
+		NEED_GUIDE_CARD = 1;
+		mes "^00AAFF[카드 시스템 학습]^000000";
+		mes "";
+		mes "^00AA00카드 시스템 학습을 완료했습니다.^000000";
+		next;
+	}
+	goto L_Study;
+
+L_StudyRefine:
+	clear;
+	if (BaseLevel < 140) {
+		mes "^00AAFF[제련 시스템 학습]^000000";
+		mes "";
+		mes "이 학습은 ^FF0000Base Lv.140 이상^000000부터";
+		mes "열람할 수 있습니다.";
+		next;
+		goto L_Study;
+	}
+
+	setdialogsize(460,320);
+	mes "^00AAFF[제련 시스템 학습]^000000";
+	mes "";
+	mes "제련은 장비의 제련 수치를 올려";
+	mes "성능을 강화하는 시스템입니다.";
+	mes "";
+	mes "제련 재료를 직접 획득한 뒤";
+	mes "^FF9900방어구를 +4 정도까지^000000";
+	mes "제련해보는 것을 권장합니다.";
+	mes "";
+	mes "^777777성공률은 장비 등급과^000000";
+	mes "^777777현재 제련 수치에 따라 다릅니다.^000000";
+	mes "";
+	mes "<TIPBOX>▶ 제련 시스템 가이드<INFO>8421</INFO></TIPBOX>";
+	next;
+
+	if (NEED_GUIDE_REFINE) {
+		mes "^00AAFF[제련 시스템 학습]^000000";
+		mes "";
+		mes "이 학습은 이미 ^00AA00완료^000000했습니다.";
+		mes "";
+		mes "^777777가이드는 언제든 다시 확인할 수 있습니다.^000000";
+		next;
+		goto L_Study;
+	}
+
+	if (select("^00AA00학습 내용 확인 완료^000000:나중에 확인한다") == 1) {
+		NEED_GUIDE_REFINE = 1;
+		mes "^00AAFF[제련 시스템 학습]^000000";
+		mes "";
+		mes "^00AA00제련 시스템 학습을 완료했습니다.^000000";
+		next;
+	}
+	goto L_Study;
+
+L_StudyExcelion:
+	clear;
+	if (BaseLevel < 150) {
+		mes "^00AAFF[엑셀리온 인챈트 학습]^000000";
+		mes "";
+		mes "이 학습은 ^FF0000Base Lv.150 이상^000000부터";
+		mes "열람할 수 있습니다.";
+		next;
+		goto L_Study;
+	}
+
+	setdialogsize(480,420);
+	mes "^00AAFF[엑셀리온 인챈트 학습]^000000";
+	mes "";
+	mes "엑셀리온 장비는";
+	mes "베루스 지역 재료로 제작하고";
+	mes "^FF9900리액터 설계도^000000로";
+	mes "옵션을 부여하는 장비입니다.";
+	mes "";
+	mes "담당 NPC는 ^0055FF라자냐 실내^000000에 있습니다.";
+	mes "  ^00AAFFMARS_01^000000 - 로봇 가동 / 엑셀리온 인챈트";
+	mes "  ^00AAFFPLUTO_09^000000 - 장비 제작 / 설계도 제작";
+	mes "";
+	mes "① ^FF9900낡은 연료통^000000 1개를";
+	mes "   MARS_01에게 넣어 로봇을 가동";
+	mes "② ^0055FF베루스 중앙광장^000000에서";
+	mes "   ^FF9900커다란 고철^000000 / ^FF9900낡은 연료통^000000 파밍";
+	mes "③ PLUTO_09에서 엑셀리온 윙 / 슈츠 제작";
+	mes "④ PLUTO_09에서 리액터 설계도 제작";
+	mes "⑤ 장비를 착용하고 MARS_01에서 인챈트";
+	mes "";
+	mes "^777777인챈트로 장비가 파괴되지는 않습니다.^000000";
+	mes "";
+	mes "<TIPBOX>▶ 엑셀리온 인챈트 가이드<INFO>8432</INFO></TIPBOX>";
+	next;
+
+	if (NEED_GUIDE_EXCELION) {
+		mes "^00AAFF[엑셀리온 인챈트 학습]^000000";
+		mes "";
+		mes "이 학습은 이미 ^00AA00완료^000000했습니다.";
+		mes "";
+		mes "^777777가이드는 언제든 다시 확인할 수 있습니다.^000000";
+		next;
+		goto L_Study;
+	}
+
+	if (select("^00AA00학습 내용 확인 완료^000000:나중에 확인한다") == 1) {
+		NEED_GUIDE_EXCELION = 1;
+		mes "^00AAFF[엑셀리온 인챈트 학습]^000000";
+		mes "";
+		mes "^00AA00엑셀리온 인챈트 학습을 완료했습니다.^000000";
+		next;
+	}
+	goto L_Study;
+
+L_StudyCash:
+	clear;
+	if (BaseLevel < 150) {
+		mes "^00AAFF[금화 / 캐시 시스템 학습]^000000";
+		mes "";
+		mes "이 학습은 ^FF0000Base Lv.150 이상^000000부터";
+		mes "열람할 수 있습니다.";
+		next;
+		goto L_Study;
+	}
+
+	setdialogsize(460,360);
+	mes "^00AAFF[금화 / 캐시 시스템 학습]^000000";
+	mes "";
+	mes "NEED의 기본 경제 흐름입니다.";
+	mes "";
+	mes "^0055FF사냥^000000 → ^FF9900주화 획득^000000 → ^FF9900캐시 전환^000000 → ^0055FF캐시 사용^000000";
+	mes "";
+	mes "사냥 중 몬스터 레벨에 따라";
+	mes "금화 / 미스릴화가 드랍되고";
+	mes "주화를 ^FF9900사용^000000하면 캐시로 전환됩니다.";
+	mes "";
+	mes "캐시는 라자냐의 ^00AAFF캐쉬 판매 안내인^000000을 통해";
+	mes "아이템몰에서 소모품 등을";
+	mes "구매할 때 사용합니다.";
+	mes "";
+	mes "^777777행운의 알은 선택적인 소비처이며";
+	mes "성장에 필수적인 콘텐츠는 아닙니다.^000000";
+	mes "";
+	mes "<TIPBOX>▶ 금화 / 캐시 시스템 가이드<INFO>8433</INFO></TIPBOX>";
+	next;
+
+	if (NEED_GUIDE_CASH) {
+		mes "^00AAFF[금화 / 캐시 시스템 학습]^000000";
+		mes "";
+		mes "이 학습은 이미 ^00AA00완료^000000했습니다.";
+		mes "";
+		mes "^777777가이드는 언제든 다시 확인할 수 있습니다.^000000";
+		next;
+		goto L_Study;
+	}
+
+	if (select("^00AA00학습 내용 확인 완료^000000:나중에 확인한다") == 1) {
+		NEED_GUIDE_CASH = 1;
+		mes "^00AAFF[금화 / 캐시 시스템 학습]^000000";
+		mes "";
+		mes "^00AA00금화 / 캐시 시스템 학습을 완료했습니다.^000000";
+		next;
+	}
+	goto L_Study;
+
+//============================================================
+// Lv.150 추천 필드 안내
+//   정보 제공용이며 완료 변수를 기록하지 않는다.
+//============================================================
+L_Field:
+	clear;
+	setdialogsize(460,320);
+	mes "^00AAFF[Lv.150 추천 필드]^000000";
+	mes "";
+	mes "^0055FF[레벨업 / 재료]^000000";
+	mes "  용의 둥지 2층";
+	mes "  뒤틀린 시간의 시계탑 3층";
+	mes "  베루스 중앙광장";
+	mes "";
+	mes "^0055FF[금화 / 주화]^000000";
+	mes "  노그로드 2층";
+	mes "  유페로스 폐허 외부";
+	mes "";
+	mes "^777777각 지역의 몬스터 레벨과 획득 주화는";
+	mes "아래 가이드에서 확인할 수 있습니다.^000000";
+	mes "";
+	mes "<TIPBOX>▶ Lv.150 추천 필드<INFO>8431</INFO></TIPBOX>";
+	mes "<TIPBOX>▶ 메모리얼 던전 가이드<INFO>8414</INFO></TIPBOX>";
+	next;
+	goto L_Study;
+
+L_StudyReset:
+	clear;
+	setdialogsize(460,320);
+	mes "^00AAFF[스탯 / 스킬 초기화]^000000";
+	mes "";
+	mes "마을 카프라에서 무료 스탯 / 스킬 초기화를";
+	mes "이용할 수 있습니다.";
+	mes "";
+	mes "^FF0000무료 초기화는 Base Lv.149까지만^000000";
+	mes "^FF0000이용할 수 있습니다.^000000";
+	mes "";
+	mes "^777777반드시 초기화해야 하는 것은 아닙니다.";
+	mes "현재 세팅이 문제없으면";
+	mes "그대로 진행해도 됩니다.^000000";
+	mes "";
+	mes "<TIPBOX>▶ 스탯 / 스킬 초기화 가이드<INFO>8422</INFO></TIPBOX>";
+	next;
+	goto L_Study;
+
+
+//============================================================
+// 175 이후 콘텐츠 안내
+//   Base Lv.175 / Job Lv.60 졸업자에게 표시되는 정보 안내소.
+//   완료 변수를 기록하지 않으며, 어떤 보상 조건과도 연결하지 않는다.
+//============================================================
+L_After175:
+	clear;
+	setdialogsize(480,260);
+	mes "^00AAFF[175 이후 콘텐츠 안내]^000000";
+	mes "";
+	mes "^00AA00성장지원 과정을 졸업했습니다.^000000";
+	mes "";
+	mes "이제 정해진 순서 없이 원하는 콘텐츠를";
+	mes "자유롭게 선택해 성장할 수 있습니다.";
+	mes "";
+	mes "^777777이 안내는 정보 제공용이며";
+	mes "열람 여부가 보상에 영향을 주지 않습니다.^000000";
+
+	.@menu$ = "^FF9900뭘 해야 할지 모르겠어요^000000:"
+		+ "장비를 맞추고 싶어요:"
+		+ "^00AAFF전사자의 무덤을 진행하고 싶어요^000000:"
+		+ "EP16.1을 진행하고 싶어요:"
+		+ "메모리얼 던전을 돌고 싶어요:"
+		+ "전장을 해보고 싶어요:"
+		+ "금화 / 캐시를 모으고 싶어요:"
+		+ "쉐도우 장비가 궁금해요:"
+		+ "인챈트에 대해 알고 싶어요:"
+		+ "부캐릭터를 키우고 싶어요:"
+		+ "NEED Wiki 열기:"
+		+ "그만두기";
+	switch(select(.@menu$)) {
+	case 1: goto L_A175What;
+	case 2: goto L_A175Gear;
+	case 3: goto L_A175Tomb;
+	case 4: goto L_A175EP161;
+	case 5: goto L_A175MD;
+	case 6: goto L_A175BG;
+	case 7: goto L_A175Cash;
+	case 8: goto L_A175Shadow;
+	case 9: goto L_A175Enchant;
+	case 10: goto L_A175Sub;
+	case 11: goto L_Wiki;
+	default: close;
+	}
+
+L_A175What:
+	clear;
+	setdialogsize(480,360);
+	mes "^00AAFF[무엇부터 할까요]^000000";
+	mes "";
+	mes "하고 싶은 방향을 먼저 정해보세요.";
+	mes "";
+	mes "^0055FFPvP를 해보고 싶다면^000000";
+	mes "  졸업 보상 전장 지원 시즈 세트를 착용";
+	mes "  → 전장 자동매칭 참여";
+	mes "  → 전장 보상으로 실제 PvP 장비 준비";
+	mes "";
+	mes "^0055FFPvE 장비를 성장시키고 싶다면^000000";
+	mes "  전사자의 무덤 진행";
+	mes "  → 직업별 투구 제작";
+	mes "  → 제련 / 카드로 강화";
+	mes "";
+	mes "^0055FF최신 에피소드를 진행하고 싶다면^000000";
+	mes "  EP16.1 콘텐츠";
+	mes "";
+	mes "^0055FF기존 파밍을 계속하고 싶다면^000000";
+	mes "  추천 메모리얼 / 추천 필드 / 금화 파밍";
+	mes "";
+	mes "<TIPBOX>▶ 전사자의 무덤 가이드<INFO>8440</INFO></TIPBOX>";
+	mes "<TIPBOX>▶ NEED 전장 입문 가이드<INFO>8400</INFO></TIPBOX>";
+	mes "<TIPBOX>▶ Lv.150 성장 가이드<INFO>8430</INFO></TIPBOX>";
+	next;
+	goto L_After175;
+
+L_A175Gear:
+	clear;
+	setdialogsize(460,340);
+	mes "^00AAFF[장비를 맞추고 싶어요]^000000";
+	mes "";
+	mes "목적에 따라 방향이 나뉩니다.";
+	mes "";
+	mes "^0055FFPvE 장비 성장^000000";
+	mes "  전사자의 무덤 →";
+	mes "  직업별 투구 / 전사자의 망토";
+	mes "";
+	mes "^0055FFPvP 장비^000000";
+	mes "  전장 참여 보상으로 준비";
+	mes "";
+	mes "^0055FFEP16.1 장비^000000";
+	mes "  EP16.1 콘텐츠 진행";
+	mes "";
+	mes "^FF9900직업별 상세 세팅^000000은";
+	mes "^00AA00Ctrl + F1^000000 NEED Wiki에서 확인해주세요.";
+	mes "";
+	mes "<TIPBOX>▶ 전사자의 무덤 가이드<INFO>8440</INFO></TIPBOX>";
+	mes "<TIPBOX>▶ 쉐도우 장비 가이드<INFO>8412</INFO></TIPBOX>";
+	next;
+	goto L_After175;
+
+L_A175Tomb:
+	clear;
+	setdialogsize(480,380);
+	mes "^00AAFF[전사자의 무덤]^000000";
+	mes "";
+	mes "175 이후 대표적인";
+	mes "^FF9900PvE 장비 성장 콘텐츠^000000입니다.";
+	mes "";
+	mes "입장 : 라자냐의 ^00AAFF전사자의 무덤^000000 NPC";
+	mes "  Base Lv.150 이상 / 입장료 200,000 Zeny";
+	mes "  재입장 대기시간 3분";
+	mes "";
+	mes "무덤 안에서는";
+	mes "  일반 몬스터에서 ^FF9900의상 투구^000000와 ^FF9900혼^000000";
+	mes "  MVP에서 ^FF9900혼을 대량^000000 획득합니다.";
+	mes "";
+	mes "모은 재료로 무덤 안 NPC에게";
+	mes "^0055FF직업별 투구^000000와 ^0055FF전사자의 망토^000000를 제작합니다.";
+	mes "";
+	mes "^777777제작 재료와 확률은^000000";
+	mes "^777777아래 가이드에서 확인해주세요.^000000";
+	mes "";
+	mes "<TIPBOX>▶ 전사자의 무덤 가이드<INFO>8440</INFO></TIPBOX>";
+	next;
+	goto L_After175;
+
+L_A175EP161:
+	clear;
+	setdialogsize(460,340);
+	mes "^00AAFF[EP16.1]^000000";
+	mes "";
+	mes "라자냐에 EP16.1 전용 안내 NPC가 있습니다.";
+	mes "";
+	mes "^00AAFFEP16.1 통합 안내^000000";
+	mes "  일일퀘스트 / 메모리얼 / 명예의 증표 교환";
+	mes "  인챈트 안내와";
+	mes "  각 콘텐츠 입구 이동을 제공합니다.";
+	mes "";
+	mes "^00AAFFEP16.1 일일퀘 이동^000000";
+	mes "  명예의 증표 일일퀘스트 구역으로";
+	mes "  바로 이동합니다.";
+	mes "";
+	mes "^777777두 NPC 모두 라자냐 중앙 부근에 있습니다.^000000";
+	next;
+	goto L_After175;
+
+L_A175MD:
+	clear;
+	setdialogsize(460,320);
+	mes "^00AAFF[메모리얼 던전]^000000";
+	mes "";
+	mes "성장지원에서 안내한 추천 메모리얼은";
+	mes "졸업 이후에도 계속 이용할 수 있습니다.";
+	mes "";
+	mes "  옛 글래스트헤임 일반 / 상급";
+	mes "  무한의 공간";
+	mes "  위기의 찰스턴";
+	mes "  호러 장난감 공장";
+	mes "";
+	mes "^777777EP16.1 메모리얼은 EP16.1 통합 안내 NPC에서";
+	mes "함께 확인할 수 있습니다.^000000";
+	mes "";
+	mes "<TIPBOX>▶ 메모리얼 던전 가이드<INFO>8414</INFO></TIPBOX>";
+	next;
+	goto L_After175;
+
+L_A175BG:
+	clear;
+	setdialogsize(460,320);
+	mes "^00AAFF[전장]^000000";
+	mes "";
+	mes "졸업 보상으로 받은 ^FF9900전장 지원 시즈 세트^000000를";
+	mes "착용하고 바로 참여할 수 있습니다.";
+	mes "";
+	mes "전장 대기실에서 매칭 커맨드를 사용하면";
+	mes "^0055FF티에라 협곡 → 플라비우스 → KVM^000000 순서로";
+	mes "전체 사이클이 진행됩니다.";
+	mes "";
+	mes "^777777참가 조건과 커맨드는^000000";
+	mes "^777777아래 가이드에서 확인해주세요.^000000";
+	mes "";
+	mes "<TIPBOX>▶ NEED 전장 입문 가이드<INFO>8400</INFO></TIPBOX>";
+	next;
+	goto L_After175;
+
+L_A175Cash:
+	clear;
+	setdialogsize(460,360);
+	mes "^00AAFF[금화 / 캐시]^000000";
+	mes "";
+	mes "사냥 중 몬스터 레벨에 따라";
+	mes "주화가 드랍되고,";
+	mes "주화를 ^FF9900사용^000000하면 캐시로 전환됩니다.";
+	mes "";
+	mes "175 이후에는 MVP 처치로";
+	mes "^FF9900백금화^000000도 노릴 수 있습니다.";
+	mes "전사자의 무덤 MVP도 대상입니다.";
+	mes "";
+	mes "^777777주화 종류와 캐시 사용처는^000000";
+	mes "^777777아래 가이드에서 확인해주세요.^000000";
+	mes "";
+	mes "<TIPBOX>▶ 금화 / 캐시 시스템 가이드<INFO>8433</INFO></TIPBOX>";
+	mes "<TIPBOX>▶ Lv.150 추천 필드<INFO>8431</INFO></TIPBOX>";
+	next;
+	goto L_After175;
+
+L_A175Shadow:
+	clear;
+	setdialogsize(460,300);
+	mes "^00AAFF[쉐도우 장비]^000000";
+	mes "";
+	mes "쉐도우 장비는 일반 무기 / 방어구와 별도로";
+	mes "장착하는 보조 장비입니다.";
+	mes "";
+	mes "175 이후에는 직업과 콘텐츠에 맞춰";
+	mes "쉐도우 세트를 골라 맞추게 됩니다.";
+	mes "";
+	mes "^777777직업별 추천 쉐도우 구성은^000000";
+	mes "^00AA00Ctrl + F1^000000 ^777777NEED Wiki에서 확인해주세요.^000000";
+	mes "";
+	mes "<TIPBOX>▶ 쉐도우 장비 가이드<INFO>8412</INFO></TIPBOX>";
+	next;
+	goto L_After175;
+
+L_A175Enchant:
+	clear;
+	setdialogsize(460,340);
+	mes "^00AAFF[인챈트]^000000";
+	mes "";
+	mes "현재 이용할 수 있는 인챈트 계열입니다.";
+	mes "";
+	mes "^0055FF엑셀리온^000000";
+	mes "  베루스 재료로 장비를 제작하고";
+	mes "  리액터 설계도로 옵션을 부여합니다.";
+	mes "";
+	mes "^0055FFEP16.1 인챈트^000000";
+	mes "  EP16.1 통합 안내 NPC에서";
+	mes "  확인할 수 있습니다.";
+	mes "";
+	mes "^777777전사자의 무덤 투구는 전용 인챈트 대신";
+	mes "제련과 카드로 성장시킵니다.^000000";
+	mes "";
+	mes "<TIPBOX>▶ 엑셀리온 인챈트 가이드<INFO>8432</INFO></TIPBOX>";
+	mes "<TIPBOX>▶ 전사자의 무덤 가이드<INFO>8440</INFO></TIPBOX>";
+	next;
+	goto L_After175;
+
+L_A175Sub:
+	clear;
+	setdialogsize(460,340);
+	mes "^00AAFF[부캐릭터 육성]^000000";
+	mes "";
+	mes "성장지원은 ^FF9900캐릭터 단위^000000로 제공됩니다.";
+	mes "새 캐릭터도 낙원단에서";
+	mes "같은 안내를 받을 수 있습니다.";
+	mes "";
+	mes "^777777단, 7일 초보자 소모품 지원은";
+	mes "계정 단위이므로 이미 기간이 지났다면";
+	mes "다시 제공되지 않습니다.^000000";
+	mes "";
+	mes "라자냐의 ^00AAFF환생 관리자^000000 를 통해";
+	mes "환생 관련 콘텐츠도 확인할 수 있습니다.";
+	mes "";
+	mes "<TIPBOX>▶ NEED 초보자 성장 가이드<INFO>8000</INFO></TIPBOX>";
+	next;
+	goto L_After175;
+
+L_Supply:
+	clear;
+	setdialogsize(460,320);
+	mes "^00AAFF[7일 초보자 지원]^000000";
+	mes "";
+
+	.@now = gettimetick(2);
+	.@elapsed = .@now - #NEED_BEGINNER_START;
+
+	if (.@elapsed < 0 || .@elapsed >= 604800) {
+		mes "^777777초보자 소모품 지원 기간이 종료되었습니다.^000000";
+		mes "";
+		mes "이후 필요한 소모품은";
+		mes "^FF9900금화 / 캐시샵^000000을 통해 구매할 수 있습니다.";
+		next;
+		goto L_Main;
+	}
+
+	.@day = (.@elapsed / 86400) + 1;
+	mes "현재 지원 기간 : ^0055FF" + .@day + "일차 / 7일^000000";
+	mes "";
+	mes "매일 다음 수량까지 부족분을 보충합니다.";
+	mes "";
+	mes "소형 생명수    ^FF9900100개^000000";
+	mes "중형 생명수    ^FF9900100개^000000";
+	mes "신묘한 생명수  ^FF9900100개^000000";
+	mes "올마이티        ^FF990010개^000000";
+	mes "";
+	mes "^777777계정 단위 지원이며,^000000";
+	mes "^777777해당 일차에는 1회만 보충됩니다.^000000";
+	next;
+
+	callfunc("F_NEED_BeginnerSupply", 1);
+	next;
+	goto L_Main;
+
+L_Help:
+	clear;
+	setdialogsize(440,300);
+	mes "^00AAFF[초보자 도움말]^000000";
+	mes "";
+	mes "궁금한 항목을 선택해주세요.";
+	mes "";
+	mes "<TIPBOX>▶ NEED 초보자 성장 가이드<INFO>8000</INFO></TIPBOX>";
+	mes "<TIPBOX>▶ 성장 지원 시스템 안내<INFO>8011</INFO></TIPBOX>";
+
+	.@menu$ = "전직 도우미:"
+		+ "버프 도우미:"
+		+ "클랜 채팅:"
+		+ "초보존 / 라자냐:"
+		+ "돌아가기";
+	switch(select(.@menu$)) {
+	case 1:
+		// 메뉴 선택으로 새 화면에 진입하므로 이전 대사를 지운다.
+		clear;
+		mes "^00AAFF[전직 도우미]^000000";
+		mes "";
+		mes "성장 지원관 ^0055FF왼쪽^000000에 전직 도우미가 있습니다.";
+		mes "";
+		mes "전직 조건을 달성했다면";
+		mes "전직 도우미를 통해";
+		mes "다음 직업으로 전직할 수 있습니다.";
+		mes "";
+		mes "^FF9900첫 목표 : Job Lv.10 달성 후 1차 전직^000000";
+		mes "";
+		mes "<TIPBOX>▶ 전직 / 버프 도우미 가이드<INFO>8013</INFO></TIPBOX>";
+		next;
+		goto L_Help;
+
+	case 2:
+		// 메뉴 선택으로 새 화면에 진입하므로 이전 대사를 지운다.
+		clear;
+		mes "^00AAFF[버프 도우미]^000000";
+		mes "";
+		mes "성장 지원관 ^0055FF오른쪽^000000에";
+		mes "버프 도우미가 있습니다.";
+		mes "";
+		mes "사망하거나 사냥 도중 버프가 사라졌다면";
+		mes "^FF9900무료 버프^000000를 다시 받을 수 있습니다.";
+		mes "";
+		mes "<TIPBOX>▶ 전직 / 버프 도우미 가이드<INFO>8013</INFO></TIPBOX>";
+		next;
+		goto L_Help;
+
+	case 3:
+		// 메뉴 선택으로 새 화면에 진입하므로 이전 대사를 지운다.
+		clear;
+		mes "^00AAFF[클랜 채팅]^000000";
+		mes "";
+		mes "채팅창에";
+		mes "^FF9900~할말^000000";
+		mes "형태로 입력하면";
+		mes "클랜 채팅을 이용할 수 있습니다.";
+		mes "";
+		mes "게임 진행 중 궁금한 점이 있다면";
+		mes "다른 모험가들에게 질문해보세요.";
+		mes "";
+		mes "<TIPBOX>▶ 클랜 채팅 가이드<INFO>8012</INFO></TIPBOX>";
+		next;
+		goto L_Help;
+
+	case 4:
+		// 메뉴 선택으로 새 화면에 진입하므로 이전 대사를 지운다.
+		clear;
+		mes "^00AAFF[초보존 / 라자냐]^000000";
+		mes "";
+		mes "Base Lv.39까지는";
+		mes "^0055FF초보존^000000을 이용할 수 있습니다.";
+		mes "";
+		mes "Base Lv.40을 달성하면 초보존을 졸업하고";
+		mes "^FF9900라자냐^000000를 생활 거점으로 이용하게 됩니다.";
+		mes "";
+		mes "^777777성장 보상과 가이드가 필요할 때는";
+		mes "언제든 낙원단으로 돌아오면 됩니다.^000000";
+		mes "";
+		mes "<TIPBOX>▶ 처음 시작하기 가이드<INFO>8010</INFO></TIPBOX>";
+		next;
+		goto L_Help;
+
+	default:
+		goto L_Main;
+	}
+
+L_Wiki:
+	clear;
+	setdialogsize(440,280);
+	mes "^00AAFF[NEED Wiki]^000000";
+	mes "";
+	mes "게임 중 장비, 사냥터, 콘텐츠가 궁금하다면";
+	mes "";
+	mes "^FF9900Ctrl + F1^000000";
+	mes "";
+	mes "을 눌러 NEED Wiki를 열 수 있습니다.";
+	mes "";
+	mes "간단한 성장 안내는";
+	mes "아래 팁에서도 다시 볼 수 있습니다.";
+	mes "<TIPBOX>▶ NEED 초보자 성장 가이드<INFO>8000</INFO></TIPBOX>";
+	next;
+	goto L_Main;
+
+L_NewbieZone:
+	clear;
+	if (BaseLevel >= 40) {
+		mes "^00AAFF[초보존]^000000";
+		mes "";
+		mes "Base Lv.40부터는 ^FF0000초보존을 졸업^000000합니다.";
+		mes "";
+		mes "이제 라자냐에서";
+		mes "본격적인 모험을 시작해보세요.";
+		next;
+		goto L_Main;
+	}
+
+	mes "^00AAFF[초보존 이동]^000000";
+	mes "";
+	mes "초보존에서는 기본적인 사냥과";
+	mes "직업 성장에 익숙해질 수 있습니다.";
+	mes "";
+	mes "버프가 필요하면 초보존의 ^FF9900버프 NPC^000000 또는";
+	mes "낙원단의 ^FF9900버프 도우미^000000를 이용해주세요.";
+	mes "";
+	mes "<TIPBOX>▶ 처음 시작하기 가이드<INFO>8010</INFO></TIPBOX>";
+	next;
+
+	if (select("^00AAFF초보존으로 이동^000000:돌아가기") == 1) {
+		close2;
+		warp "pvp_n_2-5",100,133;
+		end;
+	}
+	goto L_Main;
+
+L_Lasagna:
+	clear;
+	if (BaseLevel < 40) {
+		mes "^00AAFF[라자냐 이동]^000000";
+		mes "";
+		mes "라자냐 이동은";
+		mes "^FF0000Base Lv.40 이상^000000부터 안내합니다.";
+		next;
+		goto L_Main;
+	}
+
+	mes "^00AAFF[초보존 졸업]^000000";
+	mes "";
+	mes "^00AA00기초 성장 과정을 완료했습니다.^000000";
+	mes "";
+	mes "이제 NEED의 생활 거점인";
+	mes "^FF9900라자냐^000000에서 본격적인 모험을 시작해보세요.";
+	mes "";
+	mes "이동 후 저장 위치도 라자냐로 변경됩니다.";
+	next;
+
+	if (select("^00AAFF라자냐로 이동^000000:돌아가기") == 1) {
+		NEED_BEGINNER_LASAGNA = 1;
+		savepoint "lasagna",170,151;
+		close2;
+		warp "lasagna",170,151;
+		end;
+	}
+	goto L_Main;
+
+//============================================================
+// 공용 다음 목표 판정 (12차)
+//   S_CurrentStage(메인 화면)와 S_ShowGoal(상세 화면)이 항상
+//   같은 목표를 가리키도록 판정과 한 줄 표시를 이곳에서만 처리한다.
+//   getarg(0) = 표시 접두 ("다음 목표" / "현재 목표")
+//   반환값    = 목표 코드 (S_ShowGoal 의 상세 안내 분기용)
+//
+//   기존 레벨 / 보상 변수 / 학습 변수만 사용하며
+//   목표 안내를 위한 영구 변수를 새로 만들지 않는다.
+//   학습 완료는 어떤 보상 / 레벨업 / 졸업 조건도 막지 않는다.
+//============================================================
+S_GoalLine:
+	.@pre$ = getarg(0);
+	.@stage = callfunc("F_NEED_GetBeginnerStage");
+
+	// stage 4 = 1차 전직 완료 + Base Lv.40 이상 (초보 구간 졸업)
+	if (.@stage != 4) {
+		if (.@stage == 1) {
+			mes .@pre$ + " : ^FF9900Job Lv.10 달성^000000";
+			return 1;
+		}
+		if (.@stage == 2) {
+			mes .@pre$ + " : ^FF99001차 전직^000000";
+			return 2;
+		}
+		mes .@pre$ + " : ^FF9900Base Lv.40 달성^000000";
+		return 3;
+	}
+
+	// Base Lv.40 ~ 99
+	if (BaseLevel < 100) {
+		mes .@pre$ + " : ^FF9900Base Lv.100 달성^000000";
+		return 4;
+	}
+
+	// Base Lv.100 ~ 119 : Lv.100 보상 -> 사라의 기억 -> Base Lv.120
+	if (BaseLevel < 120) {
+		if (!NEED_BEGINNER_REWARD_100) {
+			mes .@pre$ + " : ^FF9900Lv.100 성장 지원 보상 받기^000000";
+			return 5;
+		}
+		if (!NEED_GUIDE_SARA) {
+			mes .@pre$ + " : ^FF9900사라의 기억 입장^000000";
+			return 6;
+		}
+		mes .@pre$ + " : ^FF9900Base Lv.120 달성^000000";
+		return 7;
+	}
+
+	// Base Lv.120 ~ 139 : 카드 학습 -> Base Lv.140
+	if (BaseLevel < 140) {
+		if (!NEED_GUIDE_CARD) {
+			mes .@pre$ + " : ^FF9900카드 시스템 학습^000000";
+			return 8;
+		}
+		mes .@pre$ + " : ^FF9900Base Lv.140 달성^000000";
+		return 9;
+	}
+
+	// Base Lv.140 ~ 148 : 제련 학습 -> Base Lv.149
+	if (BaseLevel < 149) {
+		if (!NEED_GUIDE_REFINE) {
+			mes .@pre$ + " : ^FF9900제련 시스템 학습^000000";
+			return 10;
+		}
+		mes .@pre$ + " : ^FF9900Base Lv.149 달성^000000";
+		return 11;
+	}
+
+	// Base Lv.149 : 무료 초기화 마지막 구간이지만 목표는 멈추지 않는다
+	if (BaseLevel < 150) {
+		mes .@pre$ + " : ^FF9900Base Lv.150 달성^000000";
+		return 12;
+	}
+
+	// Base Lv.150 ~ 174 : Lv.150 보상 -> 미완료 학습 -> Base Lv.175 / Job Lv.60
+	if (BaseLevel < 175) {
+		if (!NEED_BEGINNER_REWARD_150) {
+			mes .@pre$ + " : ^FF9900Lv.150 성장 지원 보상 받기^000000";
+			return 13;
+		}
+
+		// 미완료 학습이 있으면 그중 하나만 대표 목표로 보여준다.
+		// 전부 필수처럼 보이지 않도록 한 번에 한 항목만 노출한다.
+		if (!NEED_GUIDE_EXCELION)
+			.@rep$ = "엑셀리온 인챈트 학습";
+		else if (!NEED_GUIDE_CASH)
+			.@rep$ = "금화 / 캐시 시스템 학습";
+		else if (!NEED_GUIDE_OGH)
+			.@rep$ = "옛 글래스트헤임 입장";
+		else if (!NEED_GUIDE_INFINITE)
+			.@rep$ = "무한의 공간 입장";
+		else if (!NEED_GUIDE_CHARLESTON)
+			.@rep$ = "위기의 찰스턴 입장";
+		else if (!NEED_GUIDE_TOY)
+			.@rep$ = "호러 장난감 공장 입장";
+		else if (!NEED_GUIDE_OGH_HARD)
+			.@rep$ = "옛 글래스트헤임 상급 입장";
+
+		if (.@rep$ != "") {
+			mes .@pre$ + " : ^FF9900" + .@rep$ + "^000000";
+			return 14;
+		}
+
+		mes .@pre$ + " : ^FF9900Base Lv.175 / Job Lv.60 달성^000000";
+		return 15;
+	}
+
+	// Base Lv.175 이상
+	if (JobLevel < 60) {
+		mes .@pre$ + " : ^FF9900Job Lv.60 달성^000000";
+		return 16;
+	}
+
+	if (!NEED_BEGINNER_REWARD_175) {
+		mes .@pre$ + " : ^FF9900성장지원 졸업 보상 받기^000000";
+		return 17;
+	}
+
+	mes .@pre$ + " : ^00AA00성장지원 졸업 완료^000000";
+	return 18;
+
+S_CurrentStage:
+	// 단계 이름만 이곳에서 정하고, 다음 목표는 S_GoalLine 으로 통일한다.
+	.@stage = callfunc("F_NEED_GetBeginnerStage");
+
+	// stage 4 = 1차 전직 완료 + Base Lv.40 이상 (초보 구간 졸업)
+	if (.@stage != 4)
+		mes "현재 단계 : ^0055FF초보 모험가^000000";
+	else if (BaseLevel < 100)
+		mes "현재 단계 : ^0055FF초급 모험가^000000";
+	else if (BaseLevel < 150)
+		mes "현재 단계 : ^0055FF견습 모험가^000000";
+	else if (BaseLevel < 175 || JobLevel < 60)
+		mes "현재 단계 : ^0055FF숙련 모험가^000000";
+	else
+		mes "현재 단계 : ^00AA00정식 모험가^000000";
+
+	// 반환된 목표 코드는 메인 화면에서 사용하지 않는다.
+	.@goal = callsub(S_GoalLine, "다음 목표");
+	return;
+
+S_ShowGoal:
+	// 목표 한 줄은 S_GoalLine 이 출력한다. (메인 화면과 항상 동일)
+	.@goal = callsub(S_GoalLine, "현재 목표");
+	mes "";
+
+	if (.@goal == 1) {
+		mes "① 성장 지원 보상에서";
+		mes "   메탈 무기 상자를 받습니다.";
+		mes "② 초보자 지역에서 사냥하며";
+		mes "   Job Lv.10을 달성합니다.";
+		mes "";
+		mes "Job Lv.10이 되면";
+		mes "^0055FF1차 전직^000000을 진행할 수 있습니다.";
+		callsub S_HuntingGuide;
+		return;
+	}
+
+	if (.@goal == 2) {
+		mes "^00AA00Job Lv.10을 달성했습니다.^000000";
+		mes "";
+		mes "성장 지원관 ^0055FF왼쪽^000000의 ^00AAFF전직 도우미^000000를 이용해";
+		mes "원하는 직업으로 전직해보세요.";
+		if (BaseLevel >= 40) {
+			mes "";
+			mes "^FF0000Base Lv.40을 넘었지만^000000";
+			mes "^FF0000아직 전직하지 않았습니다.^000000";
+			mes "^777777전직을 먼저 마쳐야^000000";
+			mes "^777777이후 성장 구간을 진행할 수 있습니다.^000000";
+		}
+		callsub S_HuntingGuide;
+		return;
+	}
+
+	if (.@goal == 3) {
+		mes "^00AA001차 전직을 완료했습니다.^000000";
+		mes "";
+		mes "이제 초보자 지역과 일반 사냥을 통해";
+		mes "Base Lv.40까지 성장해보세요.";
+		mes "";
+		mes "Lv.40부터는 ^00AAFF라자냐^000000를";
+		mes "생활 거점으로 이용합니다.";
+		callsub S_HuntingGuide;
+		return;
+	}
+
+	if (.@goal == 4) {
+		mes "라자냐를 거점으로 사냥을 계속해주세요.";
+		mes "전직 조건을 달성할 때마다";
+		mes "낙원단의 ^00AAFF전직 도우미^000000를 이용할 수 있습니다.";
+		mes "";
+		mes "Lv.100 달성 시";
+		mes "^FF9900초심자 장비와 종합 은총^000000이 지급됩니다.";
+		callsub S_HuntingGuide;
+		return;
+	}
+
+	if (.@goal == 5) {
+		mes "^00AA00Base Lv.100을 달성했습니다.^000000";
+		mes "";
+		mes "^FF9900성장 지원 보상^000000 메뉴에서";
+		mes "초심자 무기 / 방어구 / 쉐도우와";
+		mes "종합 은총 이용권을 받아주세요.";
+		mes "";
+		mes "^777777캐릭터당 1회만 받을 수 있습니다.^000000";
+		callsub S_HuntingGuide;
+		return;
+	}
+
+	if (.@goal == 6) {
+		mes "^00AA00Lv.100 성장 보상을 받았습니다.^000000";
+		mes "";
+		mes "다음은 ^00AAFF사라의 기억^000000 메모리얼입니다.";
+		mes "";
+		mes "메모리얼 던전에 직접 입장하면";
+		mes "학습이 자동으로 기록됩니다.";
+		mes "^777777클리어는 필요하지 않습니다.^000000";
+		callsub S_HuntingGuide;
+		return;
+	}
+
+	if (.@goal == 7) {
+		mes "^00AA00Lv.100 성장 학습을 완료했습니다.^000000";
+		mes "";
+		mes "다음 학습은 ^FF9900Base Lv.120^000000부터";
+		mes "시작됩니다.";
+		mes "";
+		mes "Lv.120부터 ^00AAFF카드 시스템^000000을";
+		mes "배워볼 수 있습니다.";
+		mes "^777777지금은 레벨업에 집중해보세요.^000000";
+		callsub S_HuntingGuide;
+		return;
+	}
+
+	if (.@goal == 8) {
+		mes "^00AA00Base Lv.120을 달성했습니다.^000000";
+		mes "";
+		mes "^00AAFF성장 학습하기^000000 메뉴에서";
+		mes "카드 시스템을 확인해보세요.";
+		mes "";
+		mes "^777777학습은 선택 사항이며^000000";
+		mes "^777777실제 카드 장착을 요구하지 않습니다.^000000";
+		callsub S_HuntingGuide;
+		return;
+	}
+
+	if (.@goal == 9) {
+		mes "^00AA00카드 시스템 학습을 완료했습니다.^000000";
+		mes "";
+		mes "다음 학습은 ^FF9900Base Lv.140^000000부터";
+		mes "시작됩니다.";
+		mes "";
+		mes "Lv.140부터 ^00AAFF제련 시스템^000000을";
+		mes "배워볼 수 있습니다.";
+		callsub S_HuntingGuide;
+		return;
+	}
+
+	if (.@goal == 10) {
+		mes "^00AA00Base Lv.140을 달성했습니다.^000000";
+		mes "";
+		mes "^00AAFF성장 학습하기^000000 메뉴에서";
+		mes "제련 시스템을 확인해보세요.";
+		mes "";
+		mes "에르늄 파밍과 방어구 +4 제련 등";
+		mes "기본 제련 흐름을 익혀보세요.";
+		mes "^777777실제 제련 성공은 필요하지 않습니다.^000000";
+		callsub S_HuntingGuide;
+		return;
+	}
+
+	if (.@goal == 11) {
+		mes "^00AA00제련 시스템 학습을 완료했습니다.^000000";
+		mes "";
+		mes "^FF0000※ 마을 카프라의 무료 스탯 / 스킬^000000";
+		mes "^FF0000   초기화는 Base Lv.149까지만^000000";
+		mes "^FF0000   이용할 수 있습니다.^000000";
+		mes "";
+		mes "^777777Lv.150 전에 현재 세팅을^000000";
+		mes "^777777확인해두면 좋습니다.^000000";
+		callsub S_HuntingGuide;
+		return;
+	}
+
+	if (.@goal == 12) {
+		mes "^FF0000※ Base Lv.149는 무료 스탯 / 스킬^000000";
+		mes "^FF0000   초기화를 이용할 수 있는^000000";
+		mes "^FF0000   마지막 구간입니다.^000000";
+		mes "";
+		mes "필요하다면 Lv.150 달성 전에";
+		mes "마을 카프라에서 초기화해주세요.";
+		mes "^777777초기화는 필수가 아닙니다.^000000";
+		if (!NEED_GUIDE_REFINE) {
+			mes "";
+			mes "^777777제련 시스템 학습은 아직 미완료입니다.^000000";
+		}
+		callsub S_HuntingGuide;
+		return;
+	}
+
+	if (.@goal == 13) {
+		mes "^00AA00Base Lv.150을 달성했습니다.^000000";
+		mes "";
+		mes "^FF9900성장 지원 보상^000000 메뉴에서";
+		mes "초심자 무기 +7 제련 이용권을";
+		mes "받아주세요.";
+		mes "";
+		mes "^777777캐릭터당 1회만 받을 수 있습니다.^000000";
+		callsub S_HuntingGuide;
+		return;
+	}
+
+	if (.@goal == 14) {
+		mes "Lv.150부터 여러 콘텐츠를";
+		mes "자유롭게 병행할 수 있습니다.";
+		mes "";
+		mes "^FF9900아직 익히지 않은 성장 콘텐츠가 있습니다.^000000";
+		mes "^00AAFF성장 학습 현황^000000에서 전체를 볼 수 있습니다.";
+		mes "";
+		mes "^777777학습 콘텐츠는 선택 사항입니다.^000000";
+		mes "^777777원하는 콘텐츠를 진행하며^000000";
+		mes "^777777Lv.175 / Job Lv.60을 목표로 해도 됩니다.^000000";
+		callsub S_HuntingGuide;
+		return;
+	}
+
+	if (.@goal == 15) {
+		mes "^00AA00추천 성장 학습을 모두 완료했습니다.^000000";
+		mes "";
+		mes "이제 원하는 콘텐츠를 진행하며";
+		mes "^FF9900Base Lv.175 / Job Lv.60^000000을";
+		mes "목표로 성장해보세요.";
+		mes "";
+		mes "^777777학습 완료가 졸업 조건은 아닙니다.^000000";
+		mes "^777777단순한 다음 추천 목표입니다.^000000";
+		callsub S_HuntingGuide;
+		return;
+	}
+
+	if (.@goal == 16) {
+		mes "^00AA00Base Lv.175를 달성했습니다.^000000";
+		mes "";
+		mes "남은 조건은 ^FF9900Job Lv.60^000000입니다.";
+		mes "";
+		mes "현재: Base ^0055FF" + BaseLevel + "^000000 / Job ^0055FF" + JobLevel + "^000000";
+		mes "";
+		mes "^777777Job 경험치는 사냥으로 함께 오릅니다.^000000";
+		return;
+	}
+
+	if (.@goal == 17) {
+		mes "^00AA00성장지원 졸업 조건을 달성했습니다.^000000";
+		mes "";
+		mes "^FF9900성장 지원 보상^000000 메뉴에서";
+		mes "^FF990014일 전장 지원 시즈 세트^000000를";
+		mes "받아주세요.";
+		mes "";
+		mes "^777777수령 후 175 이후 콘텐츠 안내가^000000";
+		mes "^777777메인 메뉴에 표시됩니다.^000000";
+		return;
+	}
+
+	// .@goal == 18 : 성장지원 졸업 완료
+	mes "^00AA00성장지원 과정을 모두 완료했습니다.^000000";
+	mes "";
+	mes "이제 정해진 순서 없이";
+	mes "원하는 콘텐츠를 진행할 수 있습니다.";
+	mes "";
+	mes "메인 메뉴의 ^FF9900175 이후 콘텐츠 안내^000000에서";
+	mes "방향을 다시 확인할 수 있습니다.";
+	mes "^777777성장지원관은 계속 이용할 수 있습니다.^000000";
+	return;
+
+//============================================================
+// 추천 레벨업 사냥터 안내 (13차)
+//   현재 BaseLevel 만으로 즉시 판정하는 정보 안내 전용 서브루틴.
+//   성장 조건 / 보상 조건 / 목표 판정(S_GoalLine)에 관여하지 않으며
+//   완료 변수도 만들지 않고 워프도 제공하지 않는다.
+//   Base Lv.175 이상은 175 이후 콘텐츠 안내가 따로 있으므로 표시하지 않는다.
+//   맵 명칭은 npc/custom/warper.txt 의 Disp() 표기를 그대로 사용한다.
+//     pvp_n_2-5 / anthell01 / orcsdun01 / gld_dun02
+//     mag_dun02 / lasa_dun02 / lasa_dun03 / c_tower3_
+//============================================================
+S_HuntingGuide:
+	// Base Lv.175 이상은 일반 레벨업 사냥터 안내 대상이 아니다.
+	if (BaseLevel >= 175)
+		return;
+
+	mes "";
+	mes "^0055FF[추천 레벨업 사냥터]^000000 ^777777(참고용)^000000";
+
+	if (BaseLevel < 20) {
+		mes "^00AAFF초보존^000000";
+		mes "^777777권장 구간 : Base Lv.1 ~ 19^000000";
+		return;
+	}
+
+	if (BaseLevel < 40) {
+		mes "^00AAFF개미지옥 1층^000000";
+		mes "^777777권장 구간 : Base Lv.20 ~ 39^000000";
+		return;
+	}
+
+	if (BaseLevel < 60) {
+		mes "^00AAFF오크 지하 동굴 1층^000000";
+		mes "^777777권장 구간 : Base Lv.40 ~ 59^000000";
+		return;
+	}
+
+	if (BaseLevel < 100) {
+		mes "^00AAFF루이나 지하 던전 1층^000000";
+		mes "^777777권장 구간 : Base Lv.60 ~ 99^000000";
+		return;
+	}
+
+	if (BaseLevel < 110) {
+		mes "^00AAFF노그로드 2층^000000";
+		mes "^777777권장 구간 : Base Lv.100 ~ 109^000000";
+		return;
+	}
+
+	if (BaseLevel < 130) {
+		mes "^00AAFF용의 둥지 2층^000000";
+		mes "^777777권장 구간 : Base Lv.110 ~ 129^000000";
+		return;
+	}
+
+	if (BaseLevel < 160) {
+		mes "^00AAFF용의 둥지 3층^000000";
+		mes "^777777권장 구간 : Base Lv.130 ~ 159^000000";
+		return;
+	}
+
+	mes "^00AAFF뒤틀린 시간의 시계탑 3층^000000";
+	mes "^777777권장 구간 : Base Lv.160 ~ 174^000000";
+	return;
+
+OnInit:
+	waitingroom "신규 성장 지원",0;
+	end;
+}
+
+pvp_n_2-5,102,132,4	script	초보존 안내원#need_beginner	637,{
+	setdialogsize(440,360);
+
+	// 기존 계정은 예전 초보존 동선을 그대로 사용
+	if (!callfunc("F_NEED_IsBeginnerAccount")) {
+		mes "^00AAFF[초보존 안내원]^000000";
+		mes "";
+		mes "초보자 지역을 이용 중입니다.";
+		mes "";
+		mes "사냥을 마쳤다면";
+		mes "^FF9900라자냐^000000로 이동할 수 있습니다.";
+		next;
+
+		if (select("^00AAFF라자냐로 이동^000000:계속 사냥한다") == 1) {
+			savepoint "lasagna",170,151;
+			close2;
+			warp "lasagna",170,151;
+			end;
+		}
+		close;
+	}
+
+	// 신규 계정이 아직 성장지원 등록 전인 경우
+	if (!#NEED_BEGINNER) {
+		mes "^00AAFF[초보존 안내원]^000000";
+		mes "";
+		mes "낙원단의 ^0055FF성장 지원관^000000에게 먼저";
+		mes "신규 성장 안내를 받아주세요.";
+		close;
+	}
+
+	// 1차 전직을 마치고 Base Lv.40 이상이 된 경우에만 졸업 안내를 한다.
+	// (노비스 상태로 Lv.40 을 넘긴 캐릭터는 아래에서 전직 안내를 먼저 받는다.)
+	if (callfunc("F_NEED_GetBeginnerStage") == 4) {
+		mes "^00AAFF[초보존 안내원]^000000";
+		mes "";
+		mes "^00AA00Base Lv.40을 달성했습니다!^000000";
+		mes "";
+		mes "이제 초보존을 졸업하고";
+		mes "NEED의 생활 거점인 ^FF9900라자냐^000000로";
+		mes "이동할 수 있습니다.";
+		mes "";
+		mes "성장 보상이나 전직 안내가 필요하다면";
+		mes "언제든 ^0055FF낙원단^000000으로 돌아가면 됩니다.";
+		mes "";
+		mes "<TIPBOX>▶ 처음 시작하기 가이드<INFO>8010</INFO></TIPBOX>";
+		next;
+
+		.@menu$ = "^00AAFF라자냐로 이동^000000:"
+			+ "낙원단으로 이동:"
+			+ "계속 머문다";
+		switch(select(.@menu$)) {
+		case 1:
+			NEED_BEGINNER_LASAGNA = 1;
+			savepoint "lasagna",170,151;
+			close2;
+			warp "lasagna",170,151;
+			end;
+		case 2:
+			close2;
+			warp "moc_para01",28,30;
+			end;
+		default:
+			close;
+		}
+	}
+
+	mes "^00AAFF[초보존 안내원]^000000";
+	mes "";
+
+	.@stage = callfunc("F_NEED_GetBeginnerStage");
+	if (.@stage == 1) {
+		mes "현재 목표는 ^FF9900Job Lv.10 달성^000000입니다.";
+		mes "";
+		mes "이곳에서 사냥하며";
+		mes "Job Lv.10을 달성해보세요.";
+		mes "Job Lv.10이 되면";
+		mes "^0055FF1차 전직^000000을 진행할 수 있습니다.";
+	}
+	else if (.@stage == 2) {
+		mes "^00AA00Job Lv.10을 달성했습니다!^000000";
+		mes "";
+		mes "현재 목표는 ^FF99001차 전직^000000입니다.";
+		mes "낙원단의 ^00AAFF전직 도우미^000000를 통해";
+		mes "원하는 직업으로 전직해보세요.";
+		if (BaseLevel >= 40) {
+			mes "";
+			mes "^FF0000Base Lv.40을 넘었지만^000000";
+			mes "^FF0000아직 전직하지 않았습니다.^000000";
+			mes "^777777먼저 전직을 마친 뒤^000000";
+			mes "^777777라자냐로 이동하는 것을 권장합니다.^000000";
+		}
+	}
+	else {
+		mes "현재 목표는 ^FF9900Base Lv.40 달성^000000입니다.";
+		mes "";
+		mes "^00AA001차 전직을 완료했습니다.^000000";
+		mes "이곳에서 Base Lv.40까지 성장해보세요.";
+	}
+
+	mes "";
+	mes "전직이 필요하거나";
+	mes "성장지원 내용을 다시 확인하려면";
+	mes "^0055FF낙원단^000000으로 돌아갈 수 있습니다.";
+	next;
+
+	if (select("^00AAFF낙원단으로 이동^000000:계속 사냥한다") == 1) {
+		close2;
+		warp "moc_para01",28,30;
+		end;
+	}
+	close;
+}
+
+-	script	NEED_Beginner_Auto	-1,{
+
+OnPCLoginEvent:
+	if (!callfunc("F_NEED_IsBeginnerAccount"))
+		end;
+
+	if (!#NEED_BEGINNER || #NEED_BEGINNER_START <= 0)
+		end;
+
+	.@result = callfunc("F_NEED_BeginnerSupply", 0);
+	if (.@result)
+		dispbottom "[NEED 성장지원] 오늘의 초보자 소모품이 보충되었습니다.";
+	end;
+
+OnPCBaseLvUpEvent:
+	if (!callfunc("F_NEED_IsBeginnerAccount"))
+		end;
+
+	if (!#NEED_BEGINNER)
+		end;
+
+	switch(BaseLevel) {
+	case 40:
+		dispbottom "[NEED 성장지원] 초보존 졸업 레벨에 도달했습니다. 라자냐로 이동해보세요.";
+		break;
+	case 100:
+		dispbottom "[NEED 성장지원] Lv.100 성장 보상을 받을 수 있습니다. 낙원단 성장 지원관을 찾아가세요.";
+		break;
+	case 149:
+		dispbottom "[중요] 카프라 무료 스탯/스킬 초기화는 Base Lv.149까지 이용할 수 있습니다.";
+		break;
+	case 150:
+		dispbottom "[NEED 성장지원] 초심자 무기 +7 제련 이용권을 받을 수 있습니다.";
+		break;
+	case 175:
+		dispbottom "[NEED 성장지원] Job Lv.60까지 달성하면 성장지원 졸업 보상을 받을 수 있습니다.";
+		break;
+	}
+	end;
+
+OnPCJobLvUpEvent:
+	if (!callfunc("F_NEED_IsBeginnerAccount"))
+		end;
+
+	if (!#NEED_BEGINNER)
+		end;
+
+	// 노비스 계열이 Job Lv.10 에 도달한 순간 1회만 안내한다.
+	// 레벨업 이벤트는 수치가 오를 때만 호출되므로 별도 변수가 필요 없다.
+	// 단계 판정은 F_NEED_GetBeginnerStage 로 통일한다. (2 = 1차 전직 진행)
+	if (JobLevel == 10 && callfunc("F_NEED_GetBeginnerStage") == 2) {
+		dispbottom "[NEED 성장지원] Job Lv.10을 달성했습니다! 낙원단 전직 도우미를 통해 1차 전직을 진행해보세요.";
+		end;
+	}
+
+	if (BaseLevel >= 175 && JobLevel >= 60)
+		dispbottom "[NEED 성장지원] 졸업 조건을 달성했습니다. 낙원단 성장 지원관을 찾아가세요.";
+	end;
+}
