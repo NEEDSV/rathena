@@ -2234,11 +2234,6 @@ void clif_blown( const block_list* bl )
 /// sitting it will stand up.
 /// 0088 <id>.L <x>.W <y>.W (ZC_STOPMOVE)
 void clif_fixpos( const block_list& bl ){	
-	// NEED TEMP DIAGNOSTIC v3 [DESYNC2] - remove this block when the trace is finished.
-	if( need_desync2_trace_target( &bl ) ){
-		ShowDebug( "[DESYNC2] tick=%u FIXPOS id=%d map=%s pos=%d,%d\n",
-			(uint32)gettick(), bl.id, map_mapid2mapname( bl.m ), bl.x, bl.y );
-	}
 	PACKET_ZC_STOPMOVE packet = {};
 
 	packet.packetType = HEADER_ZC_STOPMOVE;
@@ -6120,8 +6115,6 @@ static int clif_skill_damage_hook(block_list* src, block_list* dst, t_tick tick,
 /// 0114 <skill id>.W <src id>.L <dst id>.L <tick>.L <src delay>.L <dst delay>.L <damage>.W <level>.W <div>.W <type>.B (ZC_NOTIFY_SKILL)
 /// 01de <skill id>.W <src id>.L <dst id>.L <tick>.L <src delay>.L <dst delay>.L <damage>.L <level>.W <div>.W <type>.B (ZC_NOTIFY_SKILL2)
 void clif_skill_damage( const block_list& src, const block_list& dst, t_tick tick, int32 sdelay, int32 ddelay, int64 sdamage, int16 div, uint16 skill_id, uint16 skill_lv, e_damage_type type ){
-	// NEED TEMP DIAGNOSTIC v3 [DESYNC2] - remember the action type before any adjustment.
-	const e_damage_type dbg_type_in = type;
 	type = clif_calc_delay(dst, type, div, sdamage, ddelay, tick);
 	sdamage = clif_hallucination_damage( dst, sdamage );
 
@@ -6155,15 +6148,6 @@ void clif_skill_damage( const block_list& src, const block_list& dst, t_tick tic
 #endif
 	packet.action = static_cast<decltype(packet.action)>(type);
 
-	// NEED TEMP DIAGNOSTIC v3 [DESYNC2] - remove this block when the trace is finished.
-	if( need_desync2_trace_target( &dst ) ){
-		unit_data* dbg_ud = unit_bl2ud( const_cast<block_list*>( &dst ) );
-		ShowDebug( "[DESYNC2] tick=%u SKILL_DAMAGE src=%d dst=%d map=%s skill=%d skill_lv=%d attackMT(sdelay)=%d attackedMT(ddelay)=%d damage=%d div=%d action_in=%d action_out=%d pos=%d,%d to=%d,%d walktimer=%d\n",
-			(uint32)tick, src.id, dst.id, map_mapid2mapname( dst.m ), skill_id, (int32)(int16)skill_lv,
-			sdelay, ddelay, (int32)sdamage, div, (int32)dbg_type_in, (int32)packet.action,
-			dst.x, dst.y, dbg_ud ? dbg_ud->to_x : -1, dbg_ud ? dbg_ud->to_y : -1,
-			dbg_ud ? dbg_ud->walktimer : -1 );
-	}
 	if (disguised(&dst)) {
 		clif_send( &packet, sizeof( packet ), &dst, AREA_WOS );
 		packet.targetID = disguised_bl_id( dst.id );
