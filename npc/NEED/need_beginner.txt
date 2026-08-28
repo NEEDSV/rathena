@@ -512,7 +512,7 @@ L_Reward:
 
 L_Goal:
 	clear;
-	setdialogsize(460,360);
+	setdialogsize(460,400);
 	mes "^00AAFF[현재 성장 목표]^000000";
 	mes "";
 	callsub S_ShowGoal;
@@ -1340,80 +1340,182 @@ L_Lasagna:
 	}
 	goto L_Main;
 
-S_CurrentStage:
-	.@stage = callfunc("F_NEED_GetBeginnerStage");
-
-	// stage 4 = 1차 전직 완료 + Base Lv.40 이상 (초보 구간 졸업)
-	if (.@stage != 4) {
-		mes "현재 단계 : ^0055FF초보 모험가^000000";
-		if (.@stage == 1)
-			mes "다음 목표 : ^FF9900Job Lv.10 달성^000000";
-		else if (.@stage == 2)
-			mes "다음 목표 : ^FF99001차 전직^000000";
-		else
-			mes "다음 목표 : ^FF9900Base Lv.40 달성^000000";
-		return;
-	}
-
-	if (BaseLevel < 100) {
-		mes "현재 단계 : ^0055FF초급 모험가^000000";
-		mes "다음 목표 : ^FF9900Base Lv.100 달성^000000";
-		return;
-	}
-
-	if (BaseLevel < 150) {
-		mes "현재 단계 : ^0055FF견습 모험가^000000";
-		mes "다음 목표 : ^FF9900Base Lv.150 달성^000000";
-		return;
-	}
-
-	if (BaseLevel < 175 || JobLevel < 60) {
-		mes "현재 단계 : ^0055FF숙련 모험가^000000";
-		mes "다음 목표 : ^FF9900Base Lv.175 / Job Lv.60^000000";
-		return;
-	}
-
-	mes "현재 단계 : ^00AA00정식 모험가^000000";
-	mes "상태 : ^FF9900성장지원 졸업 가능^000000";
-	return;
-
-S_ShowGoal:
+//============================================================
+// 공용 다음 목표 판정 (12차)
+//   S_CurrentStage(메인 화면)와 S_ShowGoal(상세 화면)이 항상
+//   같은 목표를 가리키도록 판정과 한 줄 표시를 이곳에서만 처리한다.
+//   getarg(0) = 표시 접두 ("다음 목표" / "현재 목표")
+//   반환값    = 목표 코드 (S_ShowGoal 의 상세 안내 분기용)
+//
+//   기존 레벨 / 보상 변수 / 학습 변수만 사용하며
+//   목표 안내를 위한 영구 변수를 새로 만들지 않는다.
+//   학습 완료는 어떤 보상 / 레벨업 / 졸업 조건도 막지 않는다.
+//============================================================
+S_GoalLine:
+	.@pre$ = getarg(0);
 	.@stage = callfunc("F_NEED_GetBeginnerStage");
 
 	// stage 4 = 1차 전직 완료 + Base Lv.40 이상 (초보 구간 졸업)
 	if (.@stage != 4) {
 		if (.@stage == 1) {
-			mes "현재 목표 : ^FF9900Job Lv.10 달성^000000";
-			mes "";
-			mes "① 성장 지원 보상에서";
-			mes "   메탈 무기 상자를 받습니다.";
-			mes "② 초보자 지역에서 사냥하며";
-			mes "   Job Lv.10을 달성합니다.";
-			mes "";
-			mes "Job Lv.10이 되면";
-			mes "^0055FF1차 전직^000000을 진행할 수 있습니다.";
-			return;
+			mes .@pre$ + " : ^FF9900Job Lv.10 달성^000000";
+			return 1;
 		}
-
 		if (.@stage == 2) {
-			mes "현재 목표 : ^FF99001차 전직^000000";
-			mes "";
-			mes "^00AA00Job Lv.10을 달성했습니다.^000000";
-			mes "";
-			mes "성장 지원관 ^0055FF왼쪽^000000의 ^00AAFF전직 도우미^000000를 이용해";
-			mes "원하는 직업으로 전직해보세요.";
-			if (BaseLevel >= 40) {
-				mes "";
-				mes "^FF0000Base Lv.40을 넘었지만^000000";
-				mes "^FF0000아직 전직하지 않았습니다.^000000";
-				mes "^777777전직을 먼저 마쳐야^000000";
-				mes "^777777이후 성장 구간을 진행할 수 있습니다.^000000";
-			}
-			return;
+			mes .@pre$ + " : ^FF99001차 전직^000000";
+			return 2;
+		}
+		mes .@pre$ + " : ^FF9900Base Lv.40 달성^000000";
+		return 3;
+	}
+
+	// Base Lv.40 ~ 99
+	if (BaseLevel < 100) {
+		mes .@pre$ + " : ^FF9900Base Lv.100 달성^000000";
+		return 4;
+	}
+
+	// Base Lv.100 ~ 119 : Lv.100 보상 -> 사라의 기억 -> Base Lv.120
+	if (BaseLevel < 120) {
+		if (!NEED_BEGINNER_REWARD_100) {
+			mes .@pre$ + " : ^FF9900Lv.100 성장 지원 보상 받기^000000";
+			return 5;
+		}
+		if (!NEED_GUIDE_SARA) {
+			mes .@pre$ + " : ^FF9900사라의 기억 입장^000000";
+			return 6;
+		}
+		mes .@pre$ + " : ^FF9900Base Lv.120 달성^000000";
+		return 7;
+	}
+
+	// Base Lv.120 ~ 139 : 카드 학습 -> Base Lv.140
+	if (BaseLevel < 140) {
+		if (!NEED_GUIDE_CARD) {
+			mes .@pre$ + " : ^FF9900카드 시스템 학습^000000";
+			return 8;
+		}
+		mes .@pre$ + " : ^FF9900Base Lv.140 달성^000000";
+		return 9;
+	}
+
+	// Base Lv.140 ~ 148 : 제련 학습 -> Base Lv.149
+	if (BaseLevel < 149) {
+		if (!NEED_GUIDE_REFINE) {
+			mes .@pre$ + " : ^FF9900제련 시스템 학습^000000";
+			return 10;
+		}
+		mes .@pre$ + " : ^FF9900Base Lv.149 달성^000000";
+		return 11;
+	}
+
+	// Base Lv.149 : 무료 초기화 마지막 구간이지만 목표는 멈추지 않는다
+	if (BaseLevel < 150) {
+		mes .@pre$ + " : ^FF9900Base Lv.150 달성^000000";
+		return 12;
+	}
+
+	// Base Lv.150 ~ 174 : Lv.150 보상 -> 미완료 학습 -> Base Lv.175 / Job Lv.60
+	if (BaseLevel < 175) {
+		if (!NEED_BEGINNER_REWARD_150) {
+			mes .@pre$ + " : ^FF9900Lv.150 성장 지원 보상 받기^000000";
+			return 13;
 		}
 
-		mes "현재 목표 : ^FF9900Base Lv.40 달성^000000";
+		// 미완료 학습이 있으면 그중 하나만 대표 목표로 보여준다.
+		// 전부 필수처럼 보이지 않도록 한 번에 한 항목만 노출한다.
+		if (!NEED_GUIDE_EXCELION)
+			.@rep$ = "엑셀리온 인챈트 학습";
+		else if (!NEED_GUIDE_CASH)
+			.@rep$ = "금화 / 캐시 시스템 학습";
+		else if (!NEED_GUIDE_OGH)
+			.@rep$ = "옛 글래스트헤임 입장";
+		else if (!NEED_GUIDE_INFINITE)
+			.@rep$ = "무한의 공간 입장";
+		else if (!NEED_GUIDE_CHARLESTON)
+			.@rep$ = "위기의 찰스턴 입장";
+		else if (!NEED_GUIDE_TOY)
+			.@rep$ = "호러 장난감 공장 입장";
+		else if (!NEED_GUIDE_OGH_HARD)
+			.@rep$ = "옛 글래스트헤임 상급 입장";
+
+		if (.@rep$ != "") {
+			mes .@pre$ + " : ^FF9900" + .@rep$ + "^000000";
+			return 14;
+		}
+
+		mes .@pre$ + " : ^FF9900Base Lv.175 / Job Lv.60 달성^000000";
+		return 15;
+	}
+
+	// Base Lv.175 이상
+	if (JobLevel < 60) {
+		mes .@pre$ + " : ^FF9900Job Lv.60 달성^000000";
+		return 16;
+	}
+
+	if (!NEED_BEGINNER_REWARD_175) {
+		mes .@pre$ + " : ^FF9900성장지원 졸업 보상 받기^000000";
+		return 17;
+	}
+
+	mes .@pre$ + " : ^00AA00성장지원 졸업 완료^000000";
+	return 18;
+
+S_CurrentStage:
+	// 단계 이름만 이곳에서 정하고, 다음 목표는 S_GoalLine 으로 통일한다.
+	.@stage = callfunc("F_NEED_GetBeginnerStage");
+
+	// stage 4 = 1차 전직 완료 + Base Lv.40 이상 (초보 구간 졸업)
+	if (.@stage != 4)
+		mes "현재 단계 : ^0055FF초보 모험가^000000";
+	else if (BaseLevel < 100)
+		mes "현재 단계 : ^0055FF초급 모험가^000000";
+	else if (BaseLevel < 150)
+		mes "현재 단계 : ^0055FF견습 모험가^000000";
+	else if (BaseLevel < 175 || JobLevel < 60)
+		mes "현재 단계 : ^0055FF숙련 모험가^000000";
+	else
+		mes "현재 단계 : ^00AA00정식 모험가^000000";
+
+	// 반환된 목표 코드는 메인 화면에서 사용하지 않는다.
+	.@goal = callsub(S_GoalLine, "다음 목표");
+	return;
+
+S_ShowGoal:
+	// 목표 한 줄은 S_GoalLine 이 출력한다. (메인 화면과 항상 동일)
+	.@goal = callsub(S_GoalLine, "현재 목표");
+	mes "";
+
+	if (.@goal == 1) {
+		mes "① 성장 지원 보상에서";
+		mes "   메탈 무기 상자를 받습니다.";
+		mes "② 초보자 지역에서 사냥하며";
+		mes "   Job Lv.10을 달성합니다.";
 		mes "";
+		mes "Job Lv.10이 되면";
+		mes "^0055FF1차 전직^000000을 진행할 수 있습니다.";
+		callsub S_HuntingGuide;
+		return;
+	}
+
+	if (.@goal == 2) {
+		mes "^00AA00Job Lv.10을 달성했습니다.^000000";
+		mes "";
+		mes "성장 지원관 ^0055FF왼쪽^000000의 ^00AAFF전직 도우미^000000를 이용해";
+		mes "원하는 직업으로 전직해보세요.";
+		if (BaseLevel >= 40) {
+			mes "";
+			mes "^FF0000Base Lv.40을 넘었지만^000000";
+			mes "^FF0000아직 전직하지 않았습니다.^000000";
+			mes "^777777전직을 먼저 마쳐야^000000";
+			mes "^777777이후 성장 구간을 진행할 수 있습니다.^000000";
+		}
+		callsub S_HuntingGuide;
+		return;
+	}
+
+	if (.@goal == 3) {
 		mes "^00AA001차 전직을 완료했습니다.^000000";
 		mes "";
 		mes "이제 초보자 지역과 일반 사냥을 통해";
@@ -1421,70 +1523,259 @@ S_ShowGoal:
 		mes "";
 		mes "Lv.40부터는 ^00AAFF라자냐^000000를";
 		mes "생활 거점으로 이용합니다.";
+		callsub S_HuntingGuide;
 		return;
 	}
 
-	if (BaseLevel < 100) {
-		mes "현재 목표 : ^FF9900Base Lv.100 달성^000000";
-		mes "";
+	if (.@goal == 4) {
 		mes "라자냐를 거점으로 사냥을 계속해주세요.";
 		mes "전직 조건을 달성할 때마다";
 		mes "낙원단의 ^00AAFF전직 도우미^000000를 이용할 수 있습니다.";
 		mes "";
 		mes "Lv.100 달성 시";
 		mes "^FF9900초심자 장비와 종합 은총^000000이 지급됩니다.";
+		callsub S_HuntingGuide;
 		return;
 	}
 
-	if (BaseLevel < 120) {
-		mes "현재 목표 : ^FF9900Lv.100 성장 보상 수령^000000";
+	if (.@goal == 5) {
+		mes "^00AA00Base Lv.100을 달성했습니다.^000000";
 		mes "";
-		mes "초심자 무기 / 방어구 / 쉐도우로";
-		mes "장비를 교체하고 은총 시스템과";
-		mes "메모리얼 던전을 익혀보세요.";
+		mes "^FF9900성장 지원 보상^000000 메뉴에서";
+		mes "초심자 무기 / 방어구 / 쉐도우와";
+		mes "종합 은총 이용권을 받아주세요.";
 		mes "";
-		mes "^777777사라의 기억 튜토리얼은^000000";
-		mes "^777777후속 단계에서 연결됩니다.^000000";
+		mes "^777777캐릭터당 1회만 받을 수 있습니다.^000000";
+		callsub S_HuntingGuide;
 		return;
 	}
 
-	if (BaseLevel < 140) {
-		mes "현재 목표 : ^FF9900Base Lv.140 달성^000000";
+	if (.@goal == 6) {
+		mes "^00AA00Lv.100 성장 보상을 받았습니다.^000000";
 		mes "";
-		mes "이 구간부터 카드 시스템 등";
-		mes "장비 성장 방법을";
-		mes "하나씩 익혀갈 수 있습니다.";
+		mes "다음은 ^00AAFF사라의 기억^000000 메모리얼입니다.";
 		mes "";
-		mes "^777777학습 콘텐츠는 순서 강제 없이^000000";
-		mes "^777777병렬로 제공됩니다.^000000";
+		mes "메모리얼 던전에 직접 입장하면";
+		mes "학습이 자동으로 기록됩니다.";
+		mes "^777777클리어는 필요하지 않습니다.^000000";
+		callsub S_HuntingGuide;
 		return;
 	}
 
-	if (BaseLevel < 150) {
-		mes "현재 목표 : ^FF9900Base Lv.150 달성^000000";
+	if (.@goal == 7) {
+		mes "^00AA00Lv.100 성장 학습을 완료했습니다.^000000";
+		mes "";
+		mes "다음 학습은 ^FF9900Base Lv.120^000000부터";
+		mes "시작됩니다.";
+		mes "";
+		mes "Lv.120부터 ^00AAFF카드 시스템^000000을";
+		mes "배워볼 수 있습니다.";
+		mes "^777777지금은 레벨업에 집중해보세요.^000000";
+		callsub S_HuntingGuide;
+		return;
+	}
+
+	if (.@goal == 8) {
+		mes "^00AA00Base Lv.120을 달성했습니다.^000000";
+		mes "";
+		mes "^00AAFF성장 학습하기^000000 메뉴에서";
+		mes "카드 시스템을 확인해보세요.";
+		mes "";
+		mes "^777777학습은 선택 사항이며^000000";
+		mes "^777777실제 카드 장착을 요구하지 않습니다.^000000";
+		callsub S_HuntingGuide;
+		return;
+	}
+
+	if (.@goal == 9) {
+		mes "^00AA00카드 시스템 학습을 완료했습니다.^000000";
+		mes "";
+		mes "다음 학습은 ^FF9900Base Lv.140^000000부터";
+		mes "시작됩니다.";
+		mes "";
+		mes "Lv.140부터 ^00AAFF제련 시스템^000000을";
+		mes "배워볼 수 있습니다.";
+		callsub S_HuntingGuide;
+		return;
+	}
+
+	if (.@goal == 10) {
+		mes "^00AA00Base Lv.140을 달성했습니다.^000000";
+		mes "";
+		mes "^00AAFF성장 학습하기^000000 메뉴에서";
+		mes "제련 시스템을 확인해보세요.";
 		mes "";
 		mes "에르늄 파밍과 방어구 +4 제련 등";
-		mes "기본 제련 시스템을 익혀보세요.";
-		mes "";
-		mes "^FF0000카프라 무료 스탯/스킬 초기화는^000000";
-		mes "^FF0000Lv.149까지입니다.^000000";
+		mes "기본 제련 흐름을 익혀보세요.";
+		mes "^777777실제 제련 성공은 필요하지 않습니다.^000000";
+		callsub S_HuntingGuide;
 		return;
 	}
 
-	if (BaseLevel < 175 || JobLevel < 60) {
-		mes "현재 목표 : ^FF9900Base Lv.175 / Job Lv.60^000000";
+	if (.@goal == 11) {
+		mes "^00AA00제련 시스템 학습을 완료했습니다.^000000";
 		mes "";
-		mes "초심자 무기 +7 제련권을 사용하고";
-		mes "상위 사냥터 / 메모리얼 / 금화 /";
-		mes "엑셀리온 인챈트를";
-		mes "원하는 순서로 진행해보세요.";
+		mes "^FF0000※ 마을 카프라의 무료 스탯 / 스킬^000000";
+		mes "^FF0000   초기화는 Base Lv.149까지만^000000";
+		mes "^FF0000   이용할 수 있습니다.^000000";
+		mes "";
+		mes "^777777Lv.150 전에 현재 세팅을^000000";
+		mes "^777777확인해두면 좋습니다.^000000";
+		callsub S_HuntingGuide;
 		return;
 	}
 
-	mes "^00AA00성장지원 졸업 조건을 달성했습니다.^000000";
+	if (.@goal == 12) {
+		mes "^FF0000※ Base Lv.149는 무료 스탯 / 스킬^000000";
+		mes "^FF0000   초기화를 이용할 수 있는^000000";
+		mes "^FF0000   마지막 구간입니다.^000000";
+		mes "";
+		mes "필요하다면 Lv.150 달성 전에";
+		mes "마을 카프라에서 초기화해주세요.";
+		mes "^777777초기화는 필수가 아닙니다.^000000";
+		if (!NEED_GUIDE_REFINE) {
+			mes "";
+			mes "^777777제련 시스템 학습은 아직 미완료입니다.^000000";
+		}
+		callsub S_HuntingGuide;
+		return;
+	}
+
+	if (.@goal == 13) {
+		mes "^00AA00Base Lv.150을 달성했습니다.^000000";
+		mes "";
+		mes "^FF9900성장 지원 보상^000000 메뉴에서";
+		mes "초심자 무기 +7 제련 이용권을";
+		mes "받아주세요.";
+		mes "";
+		mes "^777777캐릭터당 1회만 받을 수 있습니다.^000000";
+		callsub S_HuntingGuide;
+		return;
+	}
+
+	if (.@goal == 14) {
+		mes "Lv.150부터 여러 콘텐츠를";
+		mes "자유롭게 병행할 수 있습니다.";
+		mes "";
+		mes "^FF9900아직 익히지 않은 성장 콘텐츠가 있습니다.^000000";
+		mes "^00AAFF성장 학습 현황^000000에서 전체를 볼 수 있습니다.";
+		mes "";
+		mes "^777777학습 콘텐츠는 선택 사항입니다.^000000";
+		mes "^777777원하는 콘텐츠를 진행하며^000000";
+		mes "^777777Lv.175 / Job Lv.60을 목표로 해도 됩니다.^000000";
+		callsub S_HuntingGuide;
+		return;
+	}
+
+	if (.@goal == 15) {
+		mes "^00AA00추천 성장 학습을 모두 완료했습니다.^000000";
+		mes "";
+		mes "이제 원하는 콘텐츠를 진행하며";
+		mes "^FF9900Base Lv.175 / Job Lv.60^000000을";
+		mes "목표로 성장해보세요.";
+		mes "";
+		mes "^777777학습 완료가 졸업 조건은 아닙니다.^000000";
+		mes "^777777단순한 다음 추천 목표입니다.^000000";
+		callsub S_HuntingGuide;
+		return;
+	}
+
+	if (.@goal == 16) {
+		mes "^00AA00Base Lv.175를 달성했습니다.^000000";
+		mes "";
+		mes "남은 조건은 ^FF9900Job Lv.60^000000입니다.";
+		mes "";
+		mes "현재: Base ^0055FF" + BaseLevel + "^000000 / Job ^0055FF" + JobLevel + "^000000";
+		mes "";
+		mes "^777777Job 경험치는 사냥으로 함께 오릅니다.^000000";
+		return;
+	}
+
+	if (.@goal == 17) {
+		mes "^00AA00성장지원 졸업 조건을 달성했습니다.^000000";
+		mes "";
+		mes "^FF9900성장 지원 보상^000000 메뉴에서";
+		mes "^FF990014일 전장 지원 시즈 세트^000000를";
+		mes "받아주세요.";
+		mes "";
+		mes "^777777수령 후 175 이후 콘텐츠 안내가^000000";
+		mes "^777777메인 메뉴에 표시됩니다.^000000";
+		return;
+	}
+
+	// .@goal == 18 : 성장지원 졸업 완료
+	mes "^00AA00성장지원 과정을 모두 완료했습니다.^000000";
 	mes "";
-	mes "성장 지원 보상 메뉴에서";
-	mes "^FF990014일 전장 지원 시즈 세트^000000를 받아주세요.";
+	mes "이제 정해진 순서 없이";
+	mes "원하는 콘텐츠를 진행할 수 있습니다.";
+	mes "";
+	mes "메인 메뉴의 ^FF9900175 이후 콘텐츠 안내^000000에서";
+	mes "방향을 다시 확인할 수 있습니다.";
+	mes "^777777성장지원관은 계속 이용할 수 있습니다.^000000";
+	return;
+
+//============================================================
+// 추천 레벨업 사냥터 안내 (13차)
+//   현재 BaseLevel 만으로 즉시 판정하는 정보 안내 전용 서브루틴.
+//   성장 조건 / 보상 조건 / 목표 판정(S_GoalLine)에 관여하지 않으며
+//   완료 변수도 만들지 않고 워프도 제공하지 않는다.
+//   Base Lv.175 이상은 175 이후 콘텐츠 안내가 따로 있으므로 표시하지 않는다.
+//   맵 명칭은 npc/custom/warper.txt 의 Disp() 표기를 그대로 사용한다.
+//     pvp_n_2-5 / anthell01 / orcsdun01 / gld_dun02
+//     mag_dun02 / lasa_dun02 / lasa_dun03 / c_tower3_
+//============================================================
+S_HuntingGuide:
+	// Base Lv.175 이상은 일반 레벨업 사냥터 안내 대상이 아니다.
+	if (BaseLevel >= 175)
+		return;
+
+	mes "";
+	mes "^0055FF[추천 레벨업 사냥터]^000000 ^777777(참고용)^000000";
+
+	if (BaseLevel < 20) {
+		mes "^00AAFF초보존^000000";
+		mes "^777777권장 구간 : Base Lv.1 ~ 19^000000";
+		return;
+	}
+
+	if (BaseLevel < 40) {
+		mes "^00AAFF개미지옥 1층^000000";
+		mes "^777777권장 구간 : Base Lv.20 ~ 39^000000";
+		return;
+	}
+
+	if (BaseLevel < 60) {
+		mes "^00AAFF오크 지하 동굴 1층^000000";
+		mes "^777777권장 구간 : Base Lv.40 ~ 59^000000";
+		return;
+	}
+
+	if (BaseLevel < 100) {
+		mes "^00AAFF루이나 지하 던전 1층^000000";
+		mes "^777777권장 구간 : Base Lv.60 ~ 99^000000";
+		return;
+	}
+
+	if (BaseLevel < 110) {
+		mes "^00AAFF노그로드 2층^000000";
+		mes "^777777권장 구간 : Base Lv.100 ~ 109^000000";
+		return;
+	}
+
+	if (BaseLevel < 130) {
+		mes "^00AAFF용의 둥지 2층^000000";
+		mes "^777777권장 구간 : Base Lv.110 ~ 129^000000";
+		return;
+	}
+
+	if (BaseLevel < 160) {
+		mes "^00AAFF용의 둥지 3층^000000";
+		mes "^777777권장 구간 : Base Lv.130 ~ 159^000000";
+		return;
+	}
+
+	mes "^00AAFF뒤틀린 시간의 시계탑 3층^000000";
+	mes "^777777권장 구간 : Base Lv.160 ~ 174^000000";
 	return;
 
 OnInit:
