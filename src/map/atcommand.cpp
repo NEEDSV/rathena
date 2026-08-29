@@ -790,6 +790,7 @@ ACMD_FUNC(who) {
 	int32 display_type = 1;
 	int32 map_id = -1;
 	int32 excluded_map_id = -1;
+	int32 excluded_map_id2 = -1;
 
 	nullpo_retr(-1, sd);
 
@@ -809,15 +810,18 @@ ACMD_FUNC(who) {
 	const char* command_name = command;
 	if( *command_name == atcommand_symbol || *command_name == charcommand_symbol )
 		command_name++;
-	if( strcmpi(command_name, "who3") == 0 )
+	if( strcmpi(command_name, "who3") == 0 ) {
 		excluded_map_id = map_mapname2mapid("lasagna");
+		excluded_map_id2 = map_mapname2mapid("payon");
+	}
 
 	level = pc_get_group_level(sd);
 	StringBuf_Init(&buf);
 
 	iter = mapit_getallusers();
 	for (pl_sd = (TBL_PC*)mapit_first(iter); mapit_exists(iter); pl_sd = (TBL_PC*)mapit_next(iter))	{
-		if( excluded_map_id >= 0 && pl_sd->m == excluded_map_id )
+		if( ( excluded_map_id >= 0 && pl_sd->m == excluded_map_id ) ||
+			( excluded_map_id2 >= 0 && pl_sd->m == excluded_map_id2 ) )
 			continue;
 
 		if (!((pc_has_permission(pl_sd, PC_PERM_HIDE_SESSION) || pc_isinvisible(pl_sd)) && pc_get_group_level(pl_sd) > level)) { // you can look only lower or same level

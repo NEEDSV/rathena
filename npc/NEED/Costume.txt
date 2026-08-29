@@ -417,7 +417,6 @@ EQP_COSTUME_HEAD_LOW,29227,25227,
 EQP_COSTUME_HEAD_LOW,29229,25228,
 EQP_COSTUME_HEAD_LOW,29228,25229,
 EQP_COSTUME_GARMENT,29362,25302,
-EQP_COSTUME_GARMENT,4807,6908,
 5,1000521,310658,
 5,1000520,310654,
 5,1000522,310659,
@@ -429,8 +428,36 @@ EQP_COSTUME_GARMENT,4807,6908,
 5,1002395,314661,
 5,1000675,311014,
 5,1000676,311015,
-5,1000855,311354,
-EQP_COSTUME_GARMENT,313068,1001650;
+5,1000855,311354;
+
+// 이펙트 스톤
+// PART, CardID, EtcID
+// 이펙트는 의상 상/중/하단의 4번째 카드 슬롯(card[3])에 저장
+setarray .EffectStoneData[0],
+EQP_COSTUME_GARMENT,313068,1001650,
+
+EQP_COSTUME_HEAD_TOP,29041,25058,      // Twinkle Effect (Upper)
+EQP_COSTUME_HEAD_TOP,29142,25206,      // Electric Effect (Upper)
+EQP_COSTUME_HEAD_TOP,310322,1000365,   // Magic Feather Effect (Upper)
+
+EQP_COSTUME_HEAD_MID,29040,25059,      // Ghost Effect (Middle)
+EQP_COSTUME_HEAD_MID,29142,25136,      // Electric Effect (Middle)
+EQP_COSTUME_HEAD_MID,29144,25138,      // Shrink Effect (Middle)
+EQP_COSTUME_HEAD_MID,29160,25176,      // Blue Aura Effect (Middle)
+EQP_COSTUME_HEAD_MID,29162,25177,      // Shadow Effect (Middle)
+EQP_COSTUME_HEAD_MID,29161,25178,      // Pink Glow Effect (Middle)
+EQP_COSTUME_HEAD_MID,29224,25224,      // White Body Effect (Middle)
+EQP_COSTUME_HEAD_MID,29226,25225,      // Crimson Wave Effect (Middle)
+EQP_COSTUME_HEAD_MID,300152,1000319,   // Angel Blessing Effect (Middle)
+EQP_COSTUME_HEAD_MID,300157,1000345,   // Time Accessory Effect (Middle)
+EQP_COSTUME_HEAD_MID,311459,1001038,   // 20th Anniversary Effect (Middle)
+EQP_COSTUME_HEAD_MID,314094,1002193,   // Blue Fighting Spirit Effect (Middle)
+EQP_COSTUME_HEAD_MID,314095,1002194,   // Red Fighting Spirit Effect (Middle)
+
+EQP_COSTUME_HEAD_LOW,29143,25137,      // Green Floor Effect (Bottom)
+EQP_COSTUME_HEAD_LOW,29144,25205,      // Shrink Effect (Bottom)
+EQP_COSTUME_HEAD_LOW,29225,25226,      // Water Field Effect (Bottom)
+EQP_COSTUME_HEAD_LOW,29142,1000882;    // Electric Effect (Bottom)
 	end;
 
 OnCostumePreviewEnd:
@@ -845,21 +872,25 @@ L_PutCloset:
 	}
 
 	set .@stone_card_id, 0;
+	set .@effect_card_id, 0;
 
 	if (.@part == EQP_COSTUME_HEAD_TOP)
 	{
 		set .@stone_card_id, COSTUME_STONE_TOP;
+		set .@effect_card_id, COSTUME_EFFECT_TOP;
 	    COSTUME_RENT_TOP = .@cid;
 	}
 	else if (.@part == EQP_COSTUME_HEAD_MID)
 	{
 		set .@stone_card_id, COSTUME_STONE_MID;
+		set .@effect_card_id, COSTUME_EFFECT_MID;
 	    COSTUME_RENT_MID = .@cid;
 	}
 	else if (.@part == EQP_COSTUME_HEAD_LOW)
 	{
 	    COSTUME_RENT_LOW = .@cid;
 		set .@stone_card_id, COSTUME_STONE_LOW;
+		set .@effect_card_id, COSTUME_EFFECT_LOW;
 	}
 	else if (.@part == EQP_COSTUME_GARMENT)
 	{
@@ -873,7 +904,8 @@ L_PutCloset:
 	}
 	else
 	{
-		getitembound2 .@item_id, 1, 1, 0, 0, .@stone_card_id, 0, 0, 0, .ClosetBoundType;
+		// 일반 스톤 = card[0], 이펙트 스톤 = card[3]
+		getitembound2 .@item_id, 1, 1, 0, 0, .@stone_card_id, 0, 0, .@effect_card_id, .ClosetBoundType;
 	}
 		
 	mes "[의상 옷장]";
@@ -2023,6 +2055,20 @@ L_StoneMenu:
 	else
 		mes "듀얼 : ^777777없음^000000";
 	mes " ";
+	mes "^0055FF이펙트 스톤 (100% 성공)^000000";
+	if (COSTUME_EFFECT_TOP)
+		mes "상단 이펙트 : ^FF8000" + getitemname(COSTUME_EFFECT_TOP) + "^000000";
+	else
+		mes "상단 이펙트 : ^777777없음^000000";
+	if (COSTUME_EFFECT_MID)
+		mes "중단 이펙트 : ^FF8000" + getitemname(COSTUME_EFFECT_MID) + "^000000";
+	else
+		mes "중단 이펙트 : ^777777없음^000000";
+	if (COSTUME_EFFECT_LOW)
+		mes "하단 이펙트 : ^FF8000" + getitemname(COSTUME_EFFECT_LOW) + "^000000";
+	else
+		mes "하단 이펙트 : ^777777없음^000000";
+	mes " ";
 	mes "보유 중인 인챈트 스톤을 소비해";
 	mes "부위별 스톤 세팅을 변경합니다.";
 	next;
@@ -2033,6 +2079,7 @@ L_StoneMenu:
 		"하단 스톤 부여",
 		"걸칠것 스톤 부여",
 		"듀얼 스톤 부여",
+		"이펙트 스톤 부여 (100%)",
 		"종료"
 	)) {
 	case 1:
@@ -2061,10 +2108,11 @@ L_StoneMenu:
 		goto L_StoneEnchant;
 	case 5:
 		set .@stone_equip_index, EQI_COSTUME_GARMENT;
-		set .@stone_part, "듀얼";
 		set .@stone_part_name$, "듀얼";
 		set .@stone_part, 5;
 		goto L_StoneEnchantDual;
+	case 6:
+		goto L_EffectStoneMenu;
 
 	default:
 		goto L_Main;
@@ -2272,7 +2320,17 @@ L_StoneEnchant:
 		}
 		else
 		{
-			getitembound2 .@equip_item_id, 1, 1, 0, 0, .@card_id, 0, 0, 0, .ClosetBoundType;
+			set .@effect_card_id, 0;
+
+			if (.@stone_part == EQP_COSTUME_HEAD_TOP)
+				set .@effect_card_id, COSTUME_EFFECT_TOP;
+			else if (.@stone_part == EQP_COSTUME_HEAD_MID)
+				set .@effect_card_id, COSTUME_EFFECT_MID;
+			else if (.@stone_part == EQP_COSTUME_HEAD_LOW)
+				set .@effect_card_id, COSTUME_EFFECT_LOW;
+
+			// 일반 스톤을 갱신해도 기존 이펙트(card[3])는 유지
+			getitembound2 .@equip_item_id, 1, 1, 0, 0, .@card_id, 0, 0, .@effect_card_id, .ClosetBoundType;
 		}
 		mes "[인챈트 스톤]";
 		mes "현재 착용 중이던 의상도 새 스톤으로 갱신되었습니다.";
@@ -2280,6 +2338,223 @@ L_StoneEnchant:
 		close;
 	}
 	
+
+L_EffectStoneMenu:
+	mes "[이펙트 스톤]";
+	mes "이펙트 스톤은 의상 상단/중단/하단에";
+	mes "부여할 수 있으며 ^0055FF100% 확정 성공^000000합니다.";
+	mes " ";
+	mes "부여된 이펙트는 해당 부위의 옷장 세팅에 저장되며";
+	mes "다른 옷장 의상으로 교체해도 자동 적용됩니다.";
+	next;
+
+	switch(select("상단 이펙트:중단 이펙트:하단 이펙트:뒤로")) {
+	case 1:
+		set .@effect_equip_index, EQI_COSTUME_HEAD_TOP;
+		set .@effect_part, EQP_COSTUME_HEAD_TOP;
+		set .@effect_part_name$, "상단";
+		set .@effect_rent_cid, COSTUME_RENT_TOP;
+		set .@effect_old_card_id, COSTUME_EFFECT_TOP;
+		break;
+	case 2:
+		set .@effect_equip_index, EQI_COSTUME_HEAD_MID;
+		set .@effect_part, EQP_COSTUME_HEAD_MID;
+		set .@effect_part_name$, "중단";
+		set .@effect_rent_cid, COSTUME_RENT_MID;
+		set .@effect_old_card_id, COSTUME_EFFECT_MID;
+		break;
+	case 3:
+		set .@effect_equip_index, EQI_COSTUME_HEAD_LOW;
+		set .@effect_part, EQP_COSTUME_HEAD_LOW;
+		set .@effect_part_name$, "하단";
+		set .@effect_rent_cid, COSTUME_RENT_LOW;
+		set .@effect_old_card_id, COSTUME_EFFECT_LOW;
+		break;
+	default:
+		goto L_StoneMenu;
+	}
+
+	goto L_EffectStoneEnchant;
+
+L_EffectStoneEnchant:
+	if (.@effect_rent_cid <= 0) {
+		mes "[이펙트 스톤]";
+		mes "현재 " + .@effect_part_name$ + " 옷장 의상을 착용 중이 아닙니다.";
+		close;
+	}
+
+	set .@effect_equip_item_id, getequipid(.@effect_equip_index);
+	set .@effect_rent_item_id, getcostumeitemid(.@effect_rent_cid);
+
+	if (.@effect_equip_item_id <= 0 || .@effect_equip_item_id != .@effect_rent_item_id) {
+		mes "[이펙트 스톤]";
+		mes "현재 착용 중인 " + .@effect_part_name$ + " 의상이";
+		mes "옷장 대여 의상과 일치하지 않습니다.";
+		close;
+	}
+
+	deletearray .@effect_idx_list[0], getarraysize(.@effect_idx_list);
+
+	set .@effect_data_size, getarraysize(.EffectStoneData);
+	set .@effect_row_count, .@effect_data_size / 3;
+	set .@effect_count, 0;
+
+	freeloop(1);
+
+	for (set .@i, 0; .@i < .@effect_row_count; set .@i, .@i + 1) {
+		set .@base, .@i * 3;
+		set .@part, .EffectStoneData[.@base];
+		set .@card_id, .EffectStoneData[.@base + 1];
+		set .@etc_id, .EffectStoneData[.@base + 2];
+
+		if (.@part != .@effect_part)
+			continue;
+
+		if (.@card_id <= 0 || .@etc_id <= 0)
+			continue;
+
+		if (countitem(.@etc_id) <= 0)
+			continue;
+
+		set .@effect_idx_list[.@effect_count], .@i;
+		set .@effect_count, .@effect_count + 1;
+	}
+
+	freeloop(0);
+
+	if (.@effect_count <= 0) {
+		mes "[이펙트 스톤]";
+		mes "보유 중인 " + .@effect_part_name$ + " 이펙트 스톤이 없습니다.";
+		close;
+	}
+
+	mes "[이펙트 스톤 - " + .@effect_part_name$ + "]";
+	mes "보유 중인 이펙트 스톤";
+	mes " ";
+
+	set .@i, 0;
+	while (.@i < .@effect_count) {
+		set .@row, .@effect_idx_list[.@i];
+		set .@base, .@row * 3;
+		set .@etc_id, .EffectStoneData[.@base + 2];
+
+		mes (.@i + 1) + ". " + getitemname(.@etc_id) + " x" + countitem(.@etc_id);
+		set .@i, .@i + 1;
+	}
+
+	next;
+
+	mes "[이펙트 스톤 - " + .@effect_part_name$ + "]";
+	mes "부여할 스톤 번호를 입력해주세요.";
+	mes "1 ~ " + .@effect_count + "번까지 입력 가능합니다.";
+	next;
+
+	input .@input_no;
+
+	if (.@input_no < 1 || .@input_no > .@effect_count) {
+		mes "[이펙트 스톤]";
+		mes "잘못된 번호입니다.";
+		close;
+	}
+
+	set .@row, .@effect_idx_list[.@input_no - 1];
+	set .@base, .@row * 3;
+	set .@effect_card_id, .EffectStoneData[.@base + 1];
+	set .@effect_etc_id, .EffectStoneData[.@base + 2];
+
+	if (.@effect_card_id <= 0 || .@effect_etc_id <= 0) {
+		mes "[이펙트 스톤]";
+		mes "이펙트 스톤 매칭 데이터가 올바르지 않습니다.";
+		close;
+	}
+
+	mes "[이펙트 스톤]";
+	mes "대상 의상:";
+	mes getitemname(.@effect_equip_item_id);
+	mes " ";
+	mes "사용 스톤:";
+	mes getitemname(.@effect_etc_id);
+	mes " ";
+	mes "부여 이펙트:";
+	mes getitemname(.@effect_card_id);
+	mes " ";
+	mes "성공 확률: ^00AAFF100.00%^000000";
+
+	if (.@effect_old_card_id > 0) {
+		mes " ";
+		mes "^FF8000현재 이펙트: " + getitemname(.@effect_old_card_id) + "^000000";
+		mes "^FF0000진행 시 기존 이펙트는 새 이펙트로 교체됩니다.^000000";
+	}
+
+	next;
+
+	if (select("부여한다:취소") == 2)
+		goto L_EffectStoneMenu;
+
+	// 진행 직전 재검사
+	if (countitem(.@effect_etc_id) <= 0) {
+		mes "[이펙트 스톤]";
+		mes "선택한 이펙트 스톤을 보유하고 있지 않습니다.";
+		close;
+	}
+
+	set .@effect_equip_item_id, getequipid(.@effect_equip_index);
+
+	if (.@effect_equip_item_id <= 0 || .@effect_equip_item_id != .@effect_rent_item_id) {
+		mes "[이펙트 스톤]";
+		mes "착용 상태가 변경되어 진행할 수 없습니다.";
+		close;
+	}
+
+	// 옷장 귀속 의상인지 먼저 확인하고 난 뒤 스톤을 소비
+	unequip .@effect_equip_index;
+
+	set .@bound_total, countbound(.ClosetBoundType);
+	set .@bound_amount, 0;
+
+	for (set .@i, 0; .@i < .@bound_total; set .@i, .@i + 1) {
+		if (@bound_items[.@i] == .@effect_equip_item_id) {
+			set .@bound_amount, @bound_amount[.@i];
+			break;
+		}
+	}
+
+	if (.@bound_amount <= 0) {
+		mes "[이펙트 스톤]";
+		mes "옷장 의상을 회수할 수 없습니다.";
+		mes "일반 의상 보호를 위해 진행을 중단합니다.";
+		close;
+	}
+
+	// 100% 확정 성공: rand() 실패 판정 없음
+	delitem .@effect_etc_id, 1;
+
+	if (.@effect_part == EQP_COSTUME_HEAD_TOP) {
+		set COSTUME_EFFECT_TOP, .@effect_card_id;
+		set .@normal_card_id, COSTUME_STONE_TOP;
+	}
+	else if (.@effect_part == EQP_COSTUME_HEAD_MID) {
+		set COSTUME_EFFECT_MID, .@effect_card_id;
+		set .@normal_card_id, COSTUME_STONE_MID;
+	}
+	else {
+		set COSTUME_EFFECT_LOW, .@effect_card_id;
+		set .@normal_card_id, COSTUME_STONE_LOW;
+	}
+
+	delitem .@effect_equip_item_id, 1;
+
+	// 기존 일반 스톤(card[0])은 유지하고 이펙트만 card[3]에 갱신
+	getitembound2 .@effect_equip_item_id, 1, 1, 0, 0, .@normal_card_id, 0, 0, .@effect_card_id, .ClosetBoundType;
+
+	specialeffect2 EF_LEVELUP;
+	mes "[이펙트 스톤]";
+	mes "^00AA00이펙트 스톤 부여에 성공했습니다.^000000";
+	mes "^FF8000" + getitemname(.@effect_card_id) + "^000000 세팅이 저장되었습니다.";
+	mes "현재 의상도 새 이펙트로 갱신되었습니다.";
+	mes "인벤토리에서 다시 착용해주세요.";
+	close;
+
 L_StoneEnchantDual:
 	deletearray .@stone_idx_list[0], getarraysize(.@stone_idx_list);
 
