@@ -9011,30 +9011,6 @@ prt_cas_q,80,80,4	script	리하르트 가문 집사#EP161GAM	1_M_LIBRARYMASTER,{
 		mes "- 소지품이 너무 많아 퀘스트를 진행할 수 없습니다. -";
 		close;
 	}
-	switch( checkquest(5414,PLAYTIME) ) {
-	case -1:
-		break;
-	case 0:
-	case 1:
-		.@r = rand(1,5);
-		mes "[집사]";
-		if (.@r == 1)
-			mes "힘든 전투 뒤 충분히 쉬는 것이 더 강해지는 지름길입니다.";
-		else if (.@r == 2)
-			mes "리하르트 가문에서는 여러 방식의 훈련을 시행합니다. 충분한 휴식도 가장 중요한 훈련 중 하나이지요.";
-		else if (.@r == 3)
-			mes "역대 리하르트 가문의 당주들도 훈련 뒤에는 충분히 휴식했습니다. 너무 당연한 이야기이긴 하군요.";
-		else if (.@r == 4)
-			mes "훈련을 마치고 나면 몸이 근질거려 더 움직이고 싶어지는 기분은 누구나 알 겁니다. 하지만 그럴 때일수록 쉬어야 합니다.";
-		else
-			mes "다음 훈련도 만만치 않을 겁니다. 지금은 충분히 쉬어 두십시오.";
-		close;
-	case 2:
-		erasequest 5414;// [Stand by]Warrior Discipline
-		mes "[집사]";
-		mes "이제 몸이 근질근질해 보이는군요. 다음 훈련을 진행할 때가 된 것 같습니다.";
-		close;
-	}
 	.@ep161_family00 = isbegin_quest(5402) + isbegin_quest(5403);
 	// NEED: 메인 스토리 방문 단계(7682 진행 중 / ep16_royal == 2)에서는
 	// 5402 발급을 최우선으로 처리하고, 스토리와 무관한 Lv.140 이상 캐릭터만
@@ -9043,6 +9019,39 @@ prt_cas_q,80,80,4	script	리하르트 가문 집사#EP161GAM	1_M_LIBRARYMASTER,{
 	.@ep161_visit = ((isbegin_quest(7681) == 2 && isbegin_quest(7682) == 1) || ep16_royal == 2);
 	if (.@ep161_family00 == 0 && BaseLevel >= 140 && !.@ep161_visit)
 		.@ep161_family00 = 3;
+
+	// NEED: 전사 수련 반복 일일퀘스트의 쿨타임(5414) 판정은
+	// 리하르트 메인 스토리 단계(5402 발급 -> 포 리하르트 -> 5403)를
+	// 모두 지난 뒤(.@ep161_family00 >= 3)에만 수행합니다.
+	//   - 5414 가 남아 있다는 이유로 5402 발급이 막히지 않도록 하기 위함입니다.
+	//   - 5414 를 삭제하거나 초기화하지 않으므로 일일퀘스트 쿨타임은 그대로 유지되며,
+	//     메인 스토리와 반복 일일퀘스트가 서로의 진행을 막지 않습니다.
+	if (.@ep161_family00 >= 3) {
+		switch( checkquest(5414,PLAYTIME) ) {
+		case -1:
+			break;
+		case 0:
+		case 1:
+			.@r = rand(1,5);
+			mes "[집사]";
+			if (.@r == 1)
+				mes "힘든 전투 뒤 충분히 쉬는 것이 더 강해지는 지름길입니다.";
+			else if (.@r == 2)
+				mes "리하르트 가문에서는 여러 방식의 훈련을 시행합니다. 충분한 휴식도 가장 중요한 훈련 중 하나이지요.";
+			else if (.@r == 3)
+				mes "역대 리하르트 가문의 당주들도 훈련 뒤에는 충분히 휴식했습니다. 너무 당연한 이야기이긴 하군요.";
+			else if (.@r == 4)
+				mes "훈련을 마치고 나면 몸이 근질거려 더 움직이고 싶어지는 기분은 누구나 알 겁니다. 하지만 그럴 때일수록 쉬어야 합니다.";
+			else
+				mes "다음 훈련도 만만치 않을 겁니다. 지금은 충분히 쉬어 두십시오.";
+			close;
+		case 2:
+			erasequest 5414;// [Stand by]Warrior Discipline
+			mes "[집사]";
+			mes "이제 몸이 근질근질해 보이는군요. 다음 훈련을 진행할 때가 된 것 같습니다.";
+			close;
+		}
+	}
 
 	if (.@ep161_family00 == 0) {
 		if ((isbegin_quest(7681) == 2 && isbegin_quest(7682) == 1) || ep16_royal == 2) {
