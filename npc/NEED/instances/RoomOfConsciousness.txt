@@ -36,6 +36,15 @@ function	script	F_RoomConsciousnessCanEnableSimple	{
 		if (attachrid(.@member_aid[.@i]) == 0)
 			continue;
 
+		// NEED: EP16.1 메인 스토리로 의식의 방을 진행 중인 파티원이 한 명이라도 있으면
+		// 간소화 모드를 사용하지 않고 원본 스토리 연출을 그대로 진행한다.
+		// 간소화 종료 분기는 7700 -> 7701 / ep16_royal = 20 갱신 단계를 건너뛰므로,
+		// 그대로 두면 메인 스토리가 ep16_royal = 19 에서 멈춘다.
+		if (ep16_royal == 19 && isbegin_quest(7700) == 1) {
+			.@allowed = 0;
+			break;
+		}
+
 		// 기존 EP16.1 스토리 완료 캐릭터는 최초 1회 자동 이관.
 		if (#NEED_RC_CLEAR == 0 && ep16_royal >= 20)
 			#NEED_RC_CLEAR = 1;
@@ -75,6 +84,51 @@ function	script	F_RoomConsciousnessMarkClear	{
 			continue;
 
 		#NEED_RC_CLEAR = 1;
+	}
+
+	attachrid(.@caller_aid);
+	return;
+}
+
+// NEED: 간소화 모드로 종료되더라도 EP16.1 메인 스토리 진행 중인 파티원의
+// 진행도(7700 -> 7701 / ep16_royal = 20)가 유실되지 않도록 보정합니다.
+// 원본 스토리 모드는 펜릴#6mir 마무리 대화에서 같은 처리를 수행하므로
+// 이 함수는 간소화 종료 분기 전용 안전장치입니다.
+function	script	F_RoomConsciousnessFinishStory	{
+	if (playerattached() == 0)
+		return;
+
+	.@caller_aid = getcharid(3);
+	.@party_id = getcharid(1);
+
+	if (.@party_id < 1) {
+		if (ep16_royal == 19 && isbegin_quest(7700) == 1) {
+			erasequest 7700;// 다시 한 번!
+			setquest 7701;// 잃어버린 이미르의 심장
+			ep16_royal = 20;
+		}
+		return;
+	}
+
+	getpartymember .@party_id,1;
+	.@member_count = $@partymembercount;
+	copyarray .@member_cid[0],$@partymembercid[0],.@member_count;
+
+	getpartymember .@party_id,2;
+	copyarray .@member_aid[0],$@partymemberaid[0],.@member_count;
+
+	for (.@i = 0; .@i < .@member_count; ++.@i) {
+		if (!isloggedin(.@member_aid[.@i], .@member_cid[.@i]))
+			continue;
+
+		if (attachrid(.@member_aid[.@i]) == 0)
+			continue;
+
+		if (ep16_royal == 19 && isbegin_quest(7700) == 1) {
+			erasequest 7700;// 다시 한 번!
+			setquest 7701;// 잃어버린 이미르의 심장
+			ep16_royal = 20;
+		}
 	}
 
 	attachrid(.@caller_aid);
@@ -847,8 +901,14 @@ OnMobDead:
 	disablenpc instance_npcname("eq#mir5");
 
 	if ('simple_mode) {
-		// NEED: 반복 클리어는 별도 스토리 진행 없이 즉시 종료.
+		// NEED: 반복 클리어는 별도 스토리 연출 없이 즉시 종료.
 		mapannounce 'map_name$, "의식의 방을 클리어했습니다.", bc_map,0x00FF00,FW_NORMAL,14;
+		// 안전장치: 간소화 모드로 들어왔더라도 메인 스토리 진행 중인 파티원이 있으면
+		// 클리어 기록과 스토리 진행도(7700 -> 7701 / ep16_royal = 20)를 보정한다.
+		if (playerattached()) {
+			callfunc "F_RoomConsciousnessMarkClear";
+			callfunc "F_RoomConsciousnessFinishStory";
+		}
 		mapwarp 'map_name$, "prt_lib_q",88,83;
 		end;
 	}
