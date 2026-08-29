@@ -9022,6 +9022,11 @@ static const struct _battle_data {
 	{ "need_summer_fishing_reel_input_window_ms", &battle_config.need_summer_fishing_reel_input_window_ms, 1000, 1, INT_MAX, },
 	{ "need_summer_fishing_result_script_timeout_ms", &battle_config.need_summer_fishing_result_script_timeout_ms, 3000, 1, INT_MAX, },
 
+	// NEED newbie escort party EXP bonus
+	{ "need_newbie_party_exp_bonus_enable", &battle_config.need_newbie_party_exp_bonus_enable, 1,   0,      1,              },
+	{ "need_newbie_party_exp_bonus",        &battle_config.need_newbie_party_exp_bonus,     100,    0,      INT_MAX,        },
+	{ "need_newbie_party_exp_bonus_max_members", &battle_config.need_newbie_party_exp_bonus_max_members, 6, 1, MAX_PARTY,   },
+
 	{ "feature.dynamicnpc_timeout",         &battle_config.feature_dynamicnpc_timeout,      1000,   60000,  INT_MAX,        },
 	{ "feature.dynamicnpc_rangex",          &battle_config.feature_dynamicnpc_rangex,       2,      0,      INT_MAX,        },
 	{ "feature.dynamicnpc_rangey",          &battle_config.feature_dynamicnpc_rangey,       2,      0,      INT_MAX,        },

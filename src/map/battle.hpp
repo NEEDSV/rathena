@@ -849,6 +849,10 @@ struct Battle_Config
 	int32 need_summer_fishing_reel_wait_max_ms;
 	int32 need_summer_fishing_reel_input_window_ms;
 	int32 need_summer_fishing_result_script_timeout_ms;
+	// NEED newbie escort party EXP bonus
+	int32 need_newbie_party_exp_bonus_enable;
+	int32 need_newbie_party_exp_bonus;
+	int32 need_newbie_party_exp_bonus_max_members;
 	int32 feature_dynamicnpc_timeout;
 	int32 feature_dynamicnpc_rangex;
 	int32 feature_dynamicnpc_rangey;

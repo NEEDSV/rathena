@@ -1240,6 +1240,33 @@ int32 party_send_xy_clear(struct party_data *p)
 	return 0;
 }
 
+/**
+ * NEED custom: account level flag that marks a newbie-support account.
+ * Set by npc/NEED/need_beginner.txt when the account registers at the
+ * beginner guide NPC. Read-only here.
+ */
+static constexpr const char* NEED_NEWBIE_ACCOUNT_VAR = "#NEED_BEGINNER";
+
+/**
+ * NEED custom: is at least one newbie-support account among the members that
+ * actually receive a share of the party EXP?
+ * @param sd Members already filtered by the vanilla EXP share conditions
+ * @param c Number of valid entries in sd
+ * @return true when the NEED newbie escort EXP bonus must be used
+ */
+static bool need_party_newbie_share(map_session_data* const sd[], uint32 c)
+{
+	if (!battle_config.need_newbie_party_exp_bonus_enable || battle_config.need_newbie_party_exp_bonus <= 0)
+		return false;
+
+	for (uint32 i = 0; i < c; i++) {
+		if (pc_readreg2(sd[i], NEED_NEWBIE_ACCOUNT_VAR) != 0)
+			return true;
+	}
+
+	return false;
+}
+
 /** Party EXP and Zeny sharing
  * @param p Party data
  * @param src EXP source (for renewal level penalty)
@@ -1274,16 +1301,33 @@ void party_exp_share(struct party_data* p, block_list* src, t_exp base_exp, t_ex
 	job_exp/=c;
 	zeny/=c;
 
-	if (battle_config.party_even_share_bonus && c > 1) {
-		double bonus = 100 + battle_config.party_even_share_bonus*(c-1);
+	// Default (vanilla) even-share bonus, applied to both EXP and Zeny.
+	double exp_bonus = 0, zeny_bonus = 0;
 
-		if (base_exp)
-			base_exp = (t_exp) cap_value(base_exp * bonus/100, 0, MAX_EXP);
-		if (job_exp)
-			job_exp = (t_exp) cap_value(job_exp * bonus/100, 0, MAX_EXP);
-		if (zeny)
-			zeny = (uint32)cap_value(zeny * bonus/100, INT_MIN, INT_MAX);
+	if (battle_config.party_even_share_bonus && c > 1)
+		exp_bonus = zeny_bonus = 100 + battle_config.party_even_share_bonus*(c-1);
+
+	// NEED newbie escort bonus: when at least one of the members that actually
+	// share EXP is flagged as a newbie-support account, the vanilla even-share
+	// EXP bonus is replaced (never stacked) by the NEED formula. Having more than
+	// one newbie in the party does not increase it any further, and only the first
+	// need_newbie_party_exp_bonus_max_members shared members are credited.
+	// Zeny keeps using the vanilla bonus.
+	if (need_party_newbie_share(sd, c)) {
+		uint32 members = u32min(c, (uint32)battle_config.need_newbie_party_exp_bonus_max_members);
+
+		exp_bonus = (members > 1) ? 100 + (double)battle_config.need_newbie_party_exp_bonus*(members-1) : 0;
 	}
+
+	if (exp_bonus > 0) {
+		if (base_exp)
+			base_exp = (t_exp) cap_value(base_exp * exp_bonus/100, 0, MAX_EXP);
+		if (job_exp)
+			job_exp = (t_exp) cap_value(job_exp * exp_bonus/100, 0, MAX_EXP);
+	}
+
+	if (zeny_bonus > 0 && zeny)
+		zeny = (uint32)cap_value(zeny * zeny_bonus/100, INT_MIN, INT_MAX);
 
 	for (i = 0; i < c; i++) {
 #ifdef RENEWAL_EXP
