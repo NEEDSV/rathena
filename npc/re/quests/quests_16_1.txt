@@ -14453,69 +14453,6 @@ prt_cas,161,168,5	script	왕실 수호기사#02	4_M_CRU,{
 // Corridor right
 prt_cas,270,168,3	duplicate(왕실 수호기사#02)	왕실 수호기사#03	4_M_CRU
 
-prt_cas,165,255,7	script	보급담당 아르너#ep16	4_M_JOB_KNIGHT2,{
-	mes "[보급담당 아르너]";
-	mes "룬 미드가츠의 귀족들이 신뢰의 증표로 주는 명예의 증표를 프론테라의 귀중한 물품과 교환하실 수 있습니다.";
-	next;
-	switch( select( "소모품", "방어구", "아이템 설명 보기" ) ) {
-	case 1:
-		.@type$ = "소모품";
-		setarray .@data[0],
-			22899,2,	// City Map
-			11600,6,	// Shining Holy Water
-			22848,6,	// Prison Key
-			22847,6;	// Prontera Badge
-		break;
-	case 2:
-		.@type$ = "방어구";
-		setarray .@data[0],
-			28354,300,	// City Map[1]
-			28355,800,	// Shining Holy Water [1]
-			28900,800,	// Royal Guard Shield
-			28356,300,	// Prontera Badge
-			15146,1200,	// Flattery Robe
-			15147,1200,	// Invective Robe
-			20246,2200,	// Costume Time Decor
-			20247,2200;	// Black Hand of Destiny
-		break;
-	case 3:
-		mes "[보급담당 아르너]";
-		mes "아이템 설명을 확인하시겠습니까?";
-		close2;
-		readbook 11061,1;
-		end;
-	}
-	.@size = getarraysize(.@data);
-	for ( .@i = 0; .@i < .@size; .@i += 2 )
-		.@item_name$ = getitemname(.@data[.@i]);
-		.@menu$ = .@menu$ + .@item_name$ + ":";
-	mes "[보급담당 아르너]";
-	mes "명예의 증표로 교환할 수 있는 ^3131FF" + .@type$ + "^000000 품목은 다음과 같습니다.";
-	next;
-	.@s = (select(.@menu$) - 1) * 2;
-	mes "[보급담당 아르너]";
-	.@item_name$ = getitemname(.@data[.@s]);
-	mes "^3131FF" + .@item_name$ + "^000000... 이 물건을 보고 계셨군요.";
-	mes "선택하신 품목의 교환 비용을 확인해 주세요.";
-	mes "^FF0000" + .@data[.@s+1] + "개의 명예의 증표^000000로 교환할 수 있습니다.";
-	next;
-	if (select( "교환한다", "취소" ) == 2) {
-		mes "[보급담당 아르너]";
-		mes "프론테라의 영광을 위하여!";
-		close;
-	}
-	if (countitem(6919) < .@data[.@s+1]) {
-		mes "[보급담당 아르너]";
-		mes "명예의 증표가 부족합니다.";
-		close;
-	}
-	mes "[보급담당 아르너]";
-	mes "프론테라에서 명예를 상징하는 물건입니다. 소중히 다뤄 주세요.";
-	delitem 6919,.@data[.@s+1];
-	getitem .@data[.@s],1;
-	close;
-}
-
 prt_cas,180,275,5	script	물류담당 신#sin	4_M_JOB_KNIGHT1,{
 	mes "[물류담당 신]";
 	mes "당신이 소문으로만 듣던, 연회에 초대받은 모험가인가요?";
