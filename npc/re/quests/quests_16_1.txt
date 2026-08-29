@@ -16,32 +16,77 @@
 //= - 의식의 방 일일퀘는 7705/7706 기반 NoStoryReq 구조로 독립 개방.
 //============================================================
 
-// NEED: 연회 준비 스토리를 시작하지 않은 캐릭터는 요리 일일퀘스트 단계로 바로 이관합니다.
-// ep16_cookbs 전용 진행도만 변경하며 EP16.1 메인 진행도(ep16_royal)는 건드리지 않습니다.
-function	script	F_NEED_EP161_CookingDailyUnlock	{
-	if (BaseLevel >= 100 && ep16_cookbs == 0) {
-		// 이미 연회 준비 관련 퀘스트를 진행 중이면 자동 이관하지 않습니다.
-		.@active = 0;
-		for (.@qid = 11394; .@qid <= 11431; ++.@qid) {
-			if (isbegin_quest(.@qid) == 1) {
-				.@active = 1;
-				break;
-			}
-		}
-		if (!.@active)
-			ep16_cookbs = 23;
+// NEED: EP16.1 데이터 보정 플래그 ep16_fix (캐릭터 변수, 비트마스크)
+//   bit0   1 : 왕궁 주방 ep16_cookbs 위조 복구
+//   bit1   2 : 지하감옥 A구역(5416/5425) 최초 보상 소급
+//   bit2   4 : 지하감옥 B구역(5417/5428)
+//   bit3   8 : 지하감옥 C구역(5418/5431)
+//   bit4  16 : 지하감옥 E구역(5420/5436)
+//   bit5  32 : 지하감옥 F구역(5421/5439)
+//   bit6  64 : 지하감옥 G구역(5422/5442)
+//   bit7 128 : 지하감옥 H구역(5423/5445)
+// 각 보정은 캐릭터당 해당 비트가 꺼져 있을 때 1회만 수행됩니다.
+
+// NEED: 왕궁 주방 반복 일일퀘스트 개방 여부만 판정합니다.
+// 스토리 진행도(ep16_cookbs)는 개방 목적으로 변경하지 않으며, 연회 준비 스토리를
+// 시작하지 않은 Lv.100 이상 캐릭터에게만 1을 돌려줍니다.
+// 반복 일일퀘스트 진행도는 스토리와 분리된 ep16_cookdaily 로 관리합니다.
+function	script	F_NEED_EP161_CookingDailyOpen	{
+	// [보정] 과거 강제 개방 코드(F_NEED_EP161_CookingDailyUnlock)가
+	// ep16_cookbs 를 23(스토리 완료)으로 위조한 캐릭터를 되돌립니다.
+	//
+	// 정상 완료 캐릭터를 오인하지 않는 근거:
+	//   - ep16_cookbs 가 23 이 되는 경로는 총주방장 최초 보고(completequest 11420 과
+	//     같은 블록에서 대입) 와 소스 일일퀘 보고(이미 23 이상이어야 도달) 두 곳뿐이다.
+	//   - erasequest 11420 은 전체 npc 스크립트 어디에도 존재하지 않으므로
+	//     정상 완료 캐릭터의 11420 은 영구히 완료(2) 상태로 남는다.
+	//   => "ep16_cookbs 가 정확히 23 인데 11420 이 미발급(0)" 조합은
+	//      정상 완료 캐릭터에서는 성립할 수 없다.
+	//   - 11419 는 정상 완료 캐릭터도 erasequest 되어 0 이므로 판별에 쓰지 않는다.
+	//   - 외부 개입 등으로 오판정이 나더라도 보정 플래그로 캐릭터당 1회만 동작한다.
+	if ((ep16_fix & 1) == 0 && ep16_cookbs == 23 && isbegin_quest(11420) == 0) {
+		ep16_fix = ep16_fix | 1;
+		ep16_cookbs = 0;
+		dispbottom "[EP16.1] 왕궁 주방 스토리 기록을 복구했습니다. 왕실 요리사에게 다시 말을 걸어보세요.";
 	}
-	return;
+
+	if (BaseLevel < 100 || ep16_cookbs != 0)
+		return 0;
+
+	return 1;
 }
 
-// NEED: 지하감옥 최초 1회성 죄수 퀘스트를 보상 없이 완료 처리하여
-// 바로 반복 일일퀘스트를 받을 수 있게 합니다.
-function	script	F_NEED_EP161_PrisonDailyUnlock	{
-	.@first_quest = getarg(0);
-	if (BaseLevel >= 140 && isbegin_quest(.@first_quest) == 0) {
-		setquest .@first_quest;
-		completequest .@first_quest;
+// NEED: 과거 강제 개방 코드(F_NEED_EP161_PrisonDailyUnlock)가 죄수 최초 의뢰를
+// 보상 없이 completequest 로 위조하면서, 같은 대사에서 함께 발급되어야 할
+// 구역 퀘스트를 누락시킨 캐릭터를 복구합니다.
+//   getarg(0) 구역 퀘스트 ID (5416~5423)
+//   getarg(1) 최초 의뢰 ID   (5425 등)
+//   getarg(2) ep16_fix 보정 비트
+//
+// 피해자 판정: 최초 의뢰가 완료(2) 인데 구역 퀘스트가 미발급(0) 인 조합.
+//   정상 진행 캐릭터는 두 퀘스트를 항상 같은 대사에서 함께 setquest 하므로
+//   이 조합이 성립하지 않습니다.
+// 구역 퀘스트를 되돌리고, 위조로 건너뛴 최초 보상(명예의 증표 4개)을 소급 지급합니다.
+// 보정 플래그로 캐릭터당 구역당 1회만 지급됩니다.
+function	script	F_NEED_EP161_PrisonSectorRepair	{
+	.@sector_quest = getarg(0);
+	.@first_quest = getarg(1);
+	.@fix_bit = getarg(2);
+
+	if (ep16_fix & .@fix_bit)
+		return;
+	if (isbegin_quest(.@first_quest) != 2 || isbegin_quest(.@sector_quest) != 0)
+		return;
+	// 무게가 모자라면 이번에는 보정하지 않고 다음 방문에 다시 시도합니다.
+	if (checkweight(6919,4) == 0) {
+		dispbottom "[EP16.1] 소지 무게가 부족해 지하감옥 최초 의뢰 보상을 지급하지 못했습니다. 정리 후 다시 말을 걸어주세요.";
+		return;
 	}
+
+	ep16_fix = ep16_fix | .@fix_bit;
+	setquest .@sector_quest;
+	getitem 6919,4;// TokenOfHonor
+	dispbottom "[EP16.1] 누락되었던 구역 진행 기록을 복구하고, 최초 의뢰 보상 명예의 증표 4개를 지급했습니다.";
 	return;
 }
 
@@ -1686,7 +1731,7 @@ prt_lib,91,85,3	script	마법사 닐렘#ep16_warp	4_M_JOB_WIZARD,{
 			mes "하하, 너무 늦는 것도 좋지는 않죠...";
 			close;
 		}
-		if (instance_create("의식의 방") < 0) {
+		if (instance_create("Ritual of Blessing") < 0) {
 			mes "[닐렘]";
 			mes "흠? 무슨 일인지 모르겠군요. 지금은 들어갈 수 없는 것 같습니다.";
 			mes "마력을 보여야 열리는 비밀 공간입니다.";
@@ -1879,7 +1924,7 @@ prt_lib,88,90,1	script	의식의 방#evt_gate01	PORTAL,{
 			mes "^4d4dff파티장만 메모리얼 던전 [축복의 의식]에 입장할 수 있습니다.^000000";
 			close;
 		}
-		switch( instance_enter("의식의 방") ) {
+		switch( instance_enter("Ritual of Blessing") ) {
 		case IE_OTHER:
 			mes "[닐렘]";
 			mes "음, 마력의 흐름이 불안정하군요.";
@@ -2080,7 +2125,8 @@ prt_lib,80,79,3	script	크로네커 그란츠 하이네#ep16_01_lib01	4_EP16_GRANZ,{
 		erasequest 7703;// Who Knows the Truth
 		getitem 6919,30;// TokenOfHonor
 		getexp 800000,800000;
-		setquest 7706;// Nillem Is Not Almighty
+		// NEED: 7706 은 프리드리히 의식의 방 반복 일일퀘스트 전용 쿨타임으로만 사용합니다.
+		// 메인 스토리 완료가 그날의 반복 일일퀘스트를 막지 않도록 setquest 7706 을 제거했습니다.
 		ep16_royal = 23;
 		next;
 		cutin "",255;
@@ -2915,8 +2961,9 @@ OnTouch:
 
 // Kitchen
 prt_cas,309,200,5	script	왕실 총주방장#ep16_1	4_EP16_COOK,{
-	callfunc "F_NEED_EP161_CookingDailyUnlock";
-	if ((ep16_royal < 2 && ep16_cookbs < 23) || ep16_cookbs == 0) {
+	// NEED: 스토리 미진행 캐릭터는 스토리 변수를 건드리지 않고 반복 일일퀘스트만 이용합니다.
+	.@need_cook_daily = callfunc("F_NEED_EP161_CookingDailyOpen");
+	if (!.@need_cook_daily && ((ep16_royal < 2 && ep16_cookbs < 23) || ep16_cookbs == 0)) {
 		mes "[총주방장]";
 		mes "으아악!";
 		mes "특별 보조 요리사는 대체 언제 오는 거야?";
@@ -2998,7 +3045,7 @@ prt_cas,309,200,5	script	왕실 총주방장#ep16_1	4_EP16_COOK,{
 		ep16_cookbs = 2;
 		close3;
 	}
-	if (ep16_cookbs < 12) {
+	if (!.@need_cook_daily && ep16_cookbs < 12) {
 		mes "[총주방장]";
 		mes "아직 소스가 준비 안 됐나?";
 		mes "소스 장인 오리엔탈 오이스터에게 가서 소스를 받아와!";
@@ -3045,7 +3092,7 @@ prt_cas,309,200,5	script	왕실 총주방장#ep16_1	4_EP16_COOK,{
 		mes "왕실 요리사라면 빈 접시를 누구보다 빠르게 채울 수 있어야 한다!";
 		close3;
 	}
-	if (ep16_cookbs < 22) {
+	if (!.@need_cook_daily && ep16_cookbs < 22) {
 		mes "[총주방장]";
 		mes "으아아악!";
 		mes "요리를 향한 마음!";
@@ -3132,8 +3179,9 @@ prt_cas,309,200,5	script	왕실 총주방장#ep16_1	4_EP16_COOK,{
 prt_cas,313,199,0	script	#ep16_1	HIDDEN_WARP_NPC,2,2,{
 	end;
 OnTouch:
-	callfunc "F_NEED_EP161_CookingDailyUnlock";
-	if (ep16_royal < 2 && ep16_cookbs < 23) {
+	// NEED: 스토리 미진행 캐릭터는 스토리 변수를 건드리지 않고 반복 일일퀘스트만 이용합니다.
+	.@need_cook_daily = callfunc("F_NEED_EP161_CookingDailyOpen");
+	if (!.@need_cook_daily && ep16_royal < 2 && ep16_cookbs < 23) {
 		mes "[총주방장]";
 		mes "거기 당신!";
 		mes "방해되잖아!";
@@ -3207,7 +3255,10 @@ S_Dish:
 }
 
 prt_cas,319,211,3	script	왕실 소스 장인#ep16	4_M_ALCHE_B,{
-	callfunc "F_NEED_EP161_CookingDailyUnlock";
+	// NEED: 스토리 미진행 캐릭터는 ep16_cookbs 를 건드리지 않고
+	// 별도 진행도(ep16_cookdaily)로 소스 반복 일일퀘스트만 진행합니다.
+	if (callfunc("F_NEED_EP161_CookingDailyOpen"))
+		callsub S_NeedSauceDaily;
 	if (ep16_royal < 2 && ep16_cookbs < 23) {
 		mes "[오리엔탈 오이스터]";
 		mes "흠... 정말 향긋하군!";
@@ -3316,7 +3367,8 @@ prt_cas,319,211,3	script	왕실 소스 장인#ep16	4_M_ALCHE_B,{
 			mes "오늘도 멋진 소스를 만들어 보시겠습니까?";
 			next;
 			ep16_cookbs = 26;
-			setquest 11421;// Banquet: Unexpected Sauce
+			if (isbegin_quest(11421) == 0)
+				setquest 11421;// Banquet: Unexpected Sauce
 			callsub S_Sauce;
 		case 0:
 		case 1:
@@ -3344,24 +3396,111 @@ prt_cas,319,211,3	script	왕실 소스 장인#ep16	4_M_ALCHE_B,{
 	mes "아예 소스 장인이 되어보시는 건 어떻습니까?";
 	close;
 
+S_NeedSauceDaily:
+	// NEED: 연회 준비 스토리를 진행하지 않은 캐릭터 전용 소스 반복 일일퀘스트.
+	// 원본과 동일한 재료 4종 수집 흐름이지만 진행도는 ep16_cookdaily 에만 기록합니다.
+	if (ep16_cookdaily == 0)
+		ep16_cookdaily = 23;
+	if (ep16_cookdaily == 25) {
+		mes "[오리엔탈 오이스터]";
+		mes "이런...";
+		mes "재료는 소스의 생명과도 같습니다.";
+		mes "절대 실수해서는 안 됩니다.";
+		next;
+		mes "[오리엔탈 오이스터]";
+		mes "그럼 처음부터 다시 시작합시다!";
+		next;
+		ep16_cookdaily = 26;
+		callsub S_Sauce;
+	}
+	if (ep16_cookdaily == 26 || ep16_cookdaily == 28 || ep16_cookdaily == 30 || ep16_cookdaily == 32) {
+		mes "[오리엔탈 오이스터]";
+		mes "재료를 가져오세요!";
+		mes "총주방장님이 살기 어린 눈으로 저를 보고 있습니다!";
+		close;
+	}
+	if (ep16_cookdaily == 27 || ep16_cookdaily == 29 || ep16_cookdaily == 31) {
+		mes "[오리엔탈 오이스터]";
+		mes "흠, 아주 좋습니다!";
+		next;
+		ep16_cookdaily++;
+		callsub S_Sauce;
+	}
+	if (ep16_cookdaily == 33) {
+		if (checkweight(1119,3) == 0) {
+			mes "- 소지품이 너무 많습니다.";
+			mes "인벤토리를 정리한 뒤 다시 시도해 주세요. -";
+			close;
+		}
+		mes "[오리엔탈 오이스터]";
+		mes "오!";
+		mes "아주 좋아요!";
+		mes "덕분에 완벽한 소스를 만들었습니다!";
+		mes "지금 바로 총주방장님께 가져가세요!";
+		next;
+		mes "[오리엔탈 오이스터]";
+		mes "소스 만드는 데 재능이 있으신 것 같군요.";
+		mes "아예 소스 장인이 되어보시는 건 어떻습니까?";
+		erasequest 11421;// Banquet: Unexpected Sauce
+		setquest 11422;// Complete Today's Sauce
+		getitem 6919,4;// TokenOfHonor
+		ep16_cookdaily = 23;
+		close;
+	}
+	switch( checkquest(11422,PLAYTIME) ) {// daily
+	case -1:
+		mes "[오리엔탈 오이스터]";
+		mes "다시 오실 줄 알았습니다!";
+		mes "이것이 바로 소스의 마법이죠!";
+		next;
+		mes "[오리엔탈 오이스터]";
+		mes "오늘도 멋진 소스를 만들어 보시겠습니까?";
+		next;
+		ep16_cookdaily = 26;
+		if (isbegin_quest(11421) == 0)
+			setquest 11421;// Banquet: Unexpected Sauce
+		callsub S_Sauce;
+	case 0:
+	case 1:
+		mes "[오리엔탈 오이스터]";
+		mes "이런!";
+		mes "요리사에게는 미각이 아주 중요합니다.";
+		mes "피곤하면 미각이 제대로 작동하지 않지요.";
+		next;
+		mes "[오리엔탈 오이스터]";
+		mes "완벽한 소스를 만들고 싶다면 조금 쉬십시오.";
+		close;
+	case 2:
+		mes "[오리엔탈 오이스터]";
+		mes "오! 오셨군요!";
+		mes "푹 쉬셨습니까? 다시 소스를 만들어 볼까요?";
+		erasequest 11422;// Complete Today's Sauce
+		close;
+	}
+	close;
+
 S_Sauce:
 	mes "[오리엔탈 오이스터]";
 	switch( rand(11428,11431) ) {
 	case 11428:
 		mes "먼저 상쾌한 맛을 내는 재료를 가져오세요.";
-		setquest 11428;// Ingredient for the Sauce
+		if (isbegin_quest(11428) == 0)
+			setquest 11428;// Ingredient for the Sauce
 		break;
 	case 11429:
 		mes "쫄깃한 식감을 내는 재료를 가져오세요.";
-		setquest 11429;// Ingredient for the Sauce
+		if (isbegin_quest(11429) == 0)
+			setquest 11429;// Ingredient for the Sauce
 		break;
 	case 11430:
 		mes "반짝반짝 빛나는 재료를 가져오세요.";
-		setquest 11430;// Ingredient for the Sauce
+		if (isbegin_quest(11430) == 0)
+			setquest 11430;// Ingredient for the Sauce
 		break;
 	case 11431:
 		mes "먼저 부드러운 맛을 내는 재료를 가져오세요.";
-		setquest 11431;// Ingredient for the Sauce
+		if (isbegin_quest(11431) == 0)
+			setquest 11431;// Ingredient for the Sauce
 		break;
 	}
 	close;
@@ -3369,6 +3508,30 @@ S_Sauce:
 
 function	script	check_sauce	{
 	.@quest_id = getarg(0);
+	// NEED: 스토리 미진행 캐릭터는 ep16_cookbs 대신 ep16_cookdaily 로 진행합니다.
+	if (ep16_cookbs == 0 && ep16_cookdaily > 0) {
+		if (ep16_cookdaily == 26 || ep16_cookdaily == 28 || ep16_cookdaily == 30 || ep16_cookdaily == 32) {
+			if (isbegin_quest(.@quest_id) > 0) {
+				mes "- 필요한 재료를 챙겼다. -";
+				ep16_cookdaily++;
+				erasequest .@quest_id;
+				close;
+			}
+			mes "- 지금 필요한 재료가 아니다. -";
+			mes "- 소스 장인에게 다시 물어봐야겠다. -";
+			ep16_cookdaily = 25;
+			if (isbegin_quest(11428) > 0)
+				erasequest 11428;
+			if (isbegin_quest(11429) > 0)
+				erasequest 11429;
+			if (isbegin_quest(11430) > 0)
+				erasequest 11430;
+			if (isbegin_quest(11431) > 0)
+				erasequest 11431;
+			close;
+		}
+		return;
+	}
 	.@main_quest = (ep16_cookbs == 4 || ep16_cookbs == 6 || ep16_cookbs == 8 || ep16_cookbs == 10);
 	if (.@main_quest || ep16_cookbs == 26 || ep16_cookbs == 28 || ep16_cookbs == 30 || ep16_cookbs == 32) {
 		if (isbegin_quest(.@quest_id) > 0) {
@@ -3433,7 +3596,8 @@ prt_cas,330,211,5	script	자이언타우루스 버터#ep16_	4_ENERGY_YELLOW,{
 }
 
 prt_cas,302,205,5	script	설거지 담당#ep16_1	4_M_ALCHE_D,{
-	callfunc "F_NEED_EP161_CookingDailyUnlock";
+	// NEED: 스토리 미진행 캐릭터는 스토리 변수를 건드리지 않고 반복 일일퀘스트만 이용합니다.
+	.@need_cook_daily = callfunc("F_NEED_EP161_CookingDailyOpen");
 	if (ep16_cookbs == 21) {
 		if (countitem(6935) < 15) {
 			mes "[설거지 담당]";
@@ -3475,7 +3639,7 @@ prt_cas,302,205,5	script	설거지 담당#ep16_1	4_M_ALCHE_D,{
 		mes "무슨 문제라도 있나요?";
 		close;
 	}
-	if (ep16_cookbs > 22) {
+	if (ep16_cookbs > 22 || .@need_cook_daily) {
 		switch( checkquest(11427,PLAYTIME) ) {
 		case -1:
 			if (isbegin_quest(11426) == 0) {
@@ -3965,8 +4129,9 @@ prt_cas,361,142,5	script	타마린#ep16_1	4_EP16_TAMARIN,{
 }
 
 prt_cas,358,124,0	script	그리폰 구이#ep16_1	4_EP16_FOOD,{
-	callfunc "F_NEED_EP161_CookingDailyUnlock";
-	if (ep16_royal < 2 && ep16_cookbs < 23) {
+	// NEED: 스토리 미진행 캐릭터는 스토리 변수를 건드리지 않고 반복 일일퀘스트만 이용합니다.
+	.@need_cook_daily = callfunc("F_NEED_EP161_CookingDailyOpen");
+	if (!.@need_cook_daily && ep16_royal < 2 && ep16_cookbs < 23) {
 		mes "맛있어 보이는 그리폰 구이다.";
 		close;
 	}
@@ -5396,7 +5561,7 @@ prt_cas_q,21,83,3	script	프리드리히 S. 하이네#ep16_01	4_EP16_STOLZ,{
 		close3;
 	}
 	if (ep16_royal < 16)
-		end;
+		close3;
 	if (ep16_royal == 16) {
 		cutin "ep16_friedrich_stolz_heine",1;
 		mes "[프리드리히]";
@@ -5412,7 +5577,7 @@ prt_cas_q,21,83,3	script	프리드리히 S. 하이네#ep16_01	4_EP16_STOLZ,{
 		close3;
 	}
 	if (ep16_royal < 23)
-		end;
+		close3;
 	if (ep16_royal == 23) {
 		cutin "ep16_friedrich_stolz_heine",1;
 		mes "[프리드리히]";
@@ -6433,7 +6598,9 @@ L_NEED_AgnesDaily:
 			setquest 14509;// Still Making It
 			getitem 6919,4;// TokenOfHonor
 			getexp 200000,200000;
-			ep16_lug = 15;
+			// NEED: 일일 의뢰 경로에서는 뢰겐부르그 스토리 진행도를 변경하지 않습니다.
+			if (!.@need_daily_mode)
+				ep16_lug = 15;
 			close3;
 		case 14510:
 			if (countitem(7166) < 15 || countitem(507) < 30 || countitem(509) < 10) {
@@ -8869,9 +9036,12 @@ prt_cas_q,80,80,4	script	리하르트 가문 집사#EP161GAM	1_M_LIBRARYMASTER,{
 		close;
 	}
 	.@ep161_family00 = isbegin_quest(5402) + isbegin_quest(5403);
-	// NEED: 왕가 스토리 미진행 캐릭터도 Lv.140 이상이면 전사 수련 일일퀘스트를 바로 이용합니다.
-	// 실제 5402/5403 퀘스트 상태는 변경하지 않아 다른 스토리 진행도에는 영향을 주지 않습니다.
-	if (.@ep161_family00 == 0 && BaseLevel >= 140)
+	// NEED: 메인 스토리 방문 단계(7682 진행 중 / ep16_royal == 2)에서는
+	// 5402 발급을 최우선으로 처리하고, 스토리와 무관한 Lv.140 이상 캐릭터만
+	// 전사 수련 반복 일일퀘스트로 직행시킵니다.
+	// 5402/5403 퀘스트 상태는 어떤 경우에도 변경하지 않습니다.
+	.@ep161_visit = ((isbegin_quest(7681) == 2 && isbegin_quest(7682) == 1) || ep16_royal == 2);
+	if (.@ep161_family00 == 0 && BaseLevel >= 140 && !.@ep161_visit)
 		.@ep161_family00 = 3;
 
 	if (.@ep161_family00 == 0) {
@@ -12283,8 +12453,12 @@ prt_cas,322,216,5	script	메이드#ep16wig02	1_F_04,{
 		close;
 	}
 	.@name$ = strcharinfo(0);
-	// NEED: 유르겐 일일퀘스트 진행 중이면 위그너 스토리 진행도와 무관하게 전달 처리를 허용합니다.
-	if (ep16_wig == 0 && (isbegin_quest(14493) == 1 || isbegin_quest(14494) == 1 || checkquest(14492,PLAYTIME) >= 0))
+	// NEED: 유르겐 일일퀘스트(14493/14494)를 보유 중이면
+	// 위그너 스토리 진행도(ep16_wig)보다 우선해서 전달 처리를 합니다.
+	if (isbegin_quest(14493) == 1 || isbegin_quest(14494) == 1)
+		goto L_NEED_MaryDaily;
+	// 14492(쿨타임)만 남은 경우에는 메인 스토리 메이드 대화를 막지 않습니다.
+	if (ep16_wig == 0 && checkquest(14492,PLAYTIME) >= 0)
 		goto L_NEED_MaryDaily;
 
 	if (ep16_wig == 4) {
@@ -17110,8 +17284,9 @@ prt_prison,243,265,6	script	죄수 243AD265#EP161A	4_M_DRAKE,{
 		close;
 	}
 
-	// NEED: 최초 스토리 의뢰를 보상 없이 완료 상태로 이관하여 반복 일일퀘스트를 즉시 개방합니다.
-	callfunc "F_NEED_EP161_PrisonDailyUnlock", 5425;
+	// NEED: 과거 강제 개방 코드로 구역 퀘스트와 최초 보상이 누락된 캐릭터를 복구합니다.
+	// 최초 의뢰는 원본 흐름대로 직접 진행하며 보상도 정상 지급됩니다.
+	callfunc "F_NEED_EP161_PrisonSectorRepair", 5416, 5425, 2;
 	switch( isbegin_quest(5425) ) {
 	case 0:
 		emotion ET_SPARK;
@@ -17470,8 +17645,9 @@ prt_prison,267,184,8	script	죄수 267BD184#EP161B	4_DRACULA,{
 		close;
 	}
 
-	// NEED: 최초 스토리 의뢰를 보상 없이 완료 상태로 이관하여 반복 일일퀘스트를 즉시 개방합니다.
-	callfunc "F_NEED_EP161_PrisonDailyUnlock", 5428;
+	// NEED: 과거 강제 개방 코드로 구역 퀘스트와 최초 보상이 누락된 캐릭터를 복구합니다.
+	// 최초 의뢰는 원본 흐름대로 직접 진행하며 보상도 정상 지급됩니다.
+	callfunc "F_NEED_EP161_PrisonSectorRepair", 5417, 5428, 4;
 	switch( isbegin_quest(5428) ) {
 	case 0:
 		emotion ET_COOL;
@@ -17667,8 +17843,9 @@ prt_prison,265,154,4	script	죄수 265CM154#EP161C	4_MOONLIGHT,{
 		close;
 	}
 
-	// NEED: 최초 스토리 의뢰를 보상 없이 완료 상태로 이관하여 반복 일일퀘스트를 즉시 개방합니다.
-	callfunc "F_NEED_EP161_PrisonDailyUnlock", 5431;
+	// NEED: 과거 강제 개방 코드로 구역 퀘스트와 최초 보상이 누락된 캐릭터를 복구합니다.
+	// 최초 의뢰는 원본 흐름대로 직접 진행하며 보상도 정상 지급됩니다.
+	callfunc "F_NEED_EP161_PrisonSectorRepair", 5418, 5431, 8;
 	switch( isbegin_quest(5431) ) {
 	case 0:
 		mes "[죄수 265CM154]";
@@ -17886,7 +18063,7 @@ prt_prison,243,17,4	script	죄수 243DV17#EP161D	4_PORING,{
 		mes "- 소지품이 너무 많아 퀘스트를 진행할 수 없습니다. -";
 		close;
 	}
-	if (isbegin_quest(5415) < 2 || BaseLevel < 140) {// Restricted Sector
+	if (isbegin_quest(5415) < 2 && BaseLevel < 140) {// Restricted Sector - NEED: Lv140+ daily bypass
 		emotion ET_THINK, playerattached();
 		emotion ET_THINK;
 		mes "... ... ... ...";
@@ -18001,8 +18178,9 @@ prt_prison,95,72,6	script	죄수 95EB72#EP161E	4_BAPHOMET,{
 		close;
 	}
 
-	// NEED: 최초 스토리 의뢰를 보상 없이 완료 상태로 이관하여 반복 일일퀘스트를 즉시 개방합니다.
-	callfunc "F_NEED_EP161_PrisonDailyUnlock", 5436;
+	// NEED: 과거 강제 개방 코드로 구역 퀘스트와 최초 보상이 누락된 캐릭터를 복구합니다.
+	// 최초 의뢰는 원본 흐름대로 직접 진행하며 보상도 정상 지급됩니다.
+	callfunc "F_NEED_EP161_PrisonSectorRepair", 5420, 5436, 16;
 	switch( isbegin_quest(5436) ) {
 	case 0:
 		emotion ET_SEXY;
@@ -18217,8 +18395,9 @@ prt_prison,117,188,4	script	죄수 117FM188#EP161F	4_MISTRESS,{
 		close;
 	}
 
-	// NEED: 최초 스토리 의뢰를 보상 없이 완료 상태로 이관하여 반복 일일퀘스트를 즉시 개방합니다.
-	callfunc "F_NEED_EP161_PrisonDailyUnlock", 5439;
+	// NEED: 과거 강제 개방 코드로 구역 퀘스트와 최초 보상이 누락된 캐릭터를 복구합니다.
+	// 최초 의뢰는 원본 흐름대로 직접 진행하며 보상도 정상 지급됩니다.
+	callfunc "F_NEED_EP161_PrisonSectorRepair", 5421, 5439, 32;
 	switch( isbegin_quest(5439) ) {
 	case 0:
 		emotion ET_HNG;
@@ -18384,8 +18563,9 @@ prt_prison,103,214,4	script	죄수 103GD214#EP161G	4_DARKLORD,{
 		close;
 	}
 
-	// NEED: 최초 스토리 의뢰를 보상 없이 완료 상태로 이관하여 반복 일일퀘스트를 즉시 개방합니다.
-	callfunc "F_NEED_EP161_PrisonDailyUnlock", 5442;
+	// NEED: 과거 강제 개방 코드로 구역 퀘스트와 최초 보상이 누락된 캐릭터를 복구합니다.
+	// 최초 의뢰는 원본 흐름대로 직접 진행하며 보상도 정상 지급됩니다.
+	callfunc "F_NEED_EP161_PrisonSectorRepair", 5422, 5442, 64;
 
 	setarray .@flowers[0],
 		 710, 100,	// ID, percent
@@ -18614,8 +18794,9 @@ prt_prison,55,115,2	script	죄수 55HK115#EP161H	4_STORMKNIGHT,{
 		close;
 	}
 
-	// NEED: 최초 스토리 의뢰를 보상 없이 완료 상태로 이관하여 반복 일일퀘스트를 즉시 개방합니다.
-	callfunc "F_NEED_EP161_PrisonDailyUnlock", 5445;
+	// NEED: 과거 강제 개방 코드로 구역 퀘스트와 최초 보상이 누락된 캐릭터를 복구합니다.
+	// 최초 의뢰는 원본 흐름대로 직접 진행하며 보상도 정상 지급됩니다.
+	callfunc "F_NEED_EP161_PrisonSectorRepair", 5423, 5445, 128;
 	switch( isbegin_quest(5445) ) {
 	case 0:
 		emotion ET_QUESTION;

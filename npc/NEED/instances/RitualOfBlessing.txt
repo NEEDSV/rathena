@@ -1,0 +1,767 @@
+//===== rAthena Script =======================================
+//= 축복의 의식 (Ritual of Blessing) 메모리얼 던전
+//===== Description: =========================================
+//= EP16.1 메인 퀘스트 필수 인스턴스.
+//= 진행: 7692 -> [의식/침입자 사건] -> 7692 삭제 / 7693 발급 / ep16_royal = 9
+//=
+//= NEED: 전체 한글화 및 자체 dummy NPC 적용.
+//=       instance_db.yml 의 인스턴스 이름 "Ritual of Blessing" 은
+//=       내부 참조용이므로 절대 번역하지 않는다.
+//=       입장 경로: npc/re/quests/quests_16_1.txt 의 "의식의 방#evt_gate01"
+//===== Changelogs: ==========================================
+//= 1.0 First version. [Capuche]
+//= 1.1 NEED 한글화 / 자체 dummy NPC / 대사 정리.
+//============================================================
+
+2@mir,100,17,5	script	스키아#skia01	4_EP16_SKIA,{
+	mes "[스키아]";
+	mes "환영!";
+	mes "언제 도착하실지 궁금했어요.";
+	next;
+	mes "[니힐]";
+	mes "드디어 오셨군요!";
+	mes "다른 가문 사람들은 이미 모두 자리에 앉았습니다.";
+	next;
+	mes "[니힐]";
+	mes "그런데... 저기...";
+	mes "연회장을 떠난 뒤로...";
+	mes "아뇨, 아무것도 아닙니다.";
+	npctalk "...?", instance_npcname("스키아#skia01");
+	next;
+	mes "[니힐]";
+	mes "더 기다리게 하면 좋을 것이 없습니다. 어서 가시지요.";
+	next;
+	mes "[스키아]";
+	mes "^4d4dff리하르트 경 옆에 자리가 하나 비어 있다. 참관인을 위해 마련된 자리인 모양이다.^000000";
+	next;
+	mes "[스키아]";
+	mes "그럼 가시죠.";
+	close2;
+	enablenpc instance_npcname("스키아 네리우스#skia02");
+	enablenpc instance_npcname("니힐 M. 하이네#nihil02");
+	disablenpc instance_npcname("스키아#skia01");
+	disablenpc instance_npcname("니힐#nihil01");
+	end;
+}
+2@mir,103,17,3	duplicate(스키아#skia01)	니힐#nihil01	4_EP16_NIHIL
+
+2@mir,107,77,0	script	#royal_evt02	HIDDEN_WARP_NPC,2,2,{
+	end;
+OnTouch_:
+	disablenpc instance_npcname("#royal_evt02");
+	donpcevent instance_npcname("#royal_evt02") + "::OnEvent";// player can move
+	end;
+OnEvent:
+	disablenpc instance_npcname("스키아#skia01");	// extra
+	disablenpc instance_npcname("니힐#nihil01");
+	enablenpc instance_npcname("스키아 네리우스#skia02");
+	enablenpc instance_npcname("니힐 M. 하이네#nihil02");
+
+	mapannounce 'map_2mir$, "크로네커: 다소 지체되었습니다만, 이제 의식을 시작하겠습니다.", bc_map,0xFF99;
+	sleep 3000;
+	mapannounce 'map_2mir$, "크로네커: 왕궁에 전해 내려온 왕실 회의의 법도에 따라,", bc_map,0xFF99;
+	sleep 3000;
+	npctalk "Heine", instance_npcname("프리드리히 S. 하이네#stol_1");
+	npctalk "Heine", instance_npcname("니힐 M. 하이네#nihil02");
+	sleep 3000;
+	npctalk "Nerius", instance_npcname("스키아 네리우스#skia02");
+	npctalk "Nerius", instance_npcname("스피카 네리우스#spica01");
+	sleep 3000;
+	npctalk "Walther", instance_npcname("아이젠호너 발터#eisen");
+	npctalk "Walther", instance_npcname("이안 발터#ian01");
+	sleep 3000;
+	npctalk "Wigner", instance_npcname("르뷔에르 위그너#louvier1");
+	npctalk "Wigner", instance_npcname("유르겐 위그너#jurgen01");
+	npctalk "Wigner", instance_npcname("아이작 위그너#isaac01");
+	npctalk "Wigner", instance_npcname("카트린 위그너#kath01");
+	sleep 3000;
+	npctalk "Geoborg", instance_npcname("캐서린 게오보르그#ca1");
+	npctalk "Geoborg", instance_npcname("에른스트 게오보르그#ernst01");
+	sleep 3000;
+	npctalk "Richard", instance_npcname("포 리하르트#po01");
+	sleep 3000;
+	npctalk "Roegenburg", instance_npcname("막시밀리안 뢰겐부르그#m1");
+	npctalk "Roegenburg", instance_npcname("볼프 뢰겐부르그#wolf01");
+	npctalk "Roegenburg", instance_npcname("헬무트 뢰겐부르그#helmu");
+	npctalk "Roegenburg", instance_npcname("아그네스 뢰겐부르그#agnes0_1");
+	sleep 3000;
+	mapannounce 'map_2mir$, "크로네커: 룬 미드가츠를 떠받치는 일곱 왕가를 대표하여 아룁니다.", bc_map,0xFF99;
+	sleep 3000;
+	mapannounce 'map_2mir$, "크로네커: 새로이 추대된 대표를 소개하겠습니다.", bc_map,0xFF99;
+	sleep 3000;
+	mapannounce 'map_2mir$, "크로네커: 축복의 별빛이 이 땅의 영광에 닿기를...", bc_map,0xFF99;
+	sleep 3000;
+	npctalk "모든 존재에게 주어진 근원의 힘이 작용하도록 허락해 주십시오.", instance_npcname("프리드리히 S. 하이네#stol_1");
+	npctalk "모든 존재에게 주어진 근원의 힘이 작용하도록 허락해 주십시오.", instance_npcname("니힐 M. 하이네#nihil02");
+	sleep 3000;
+	npctalk "뒤돌아보지 않고 한 발짝 앞으로 나아가 단검으로 적을 찌를 용기.", instance_npcname("캐서린 게오보르그#ca1");
+	npctalk "뒤돌아보지 않고 한 발짝 앞으로 나아가 단검으로 적을 찌를 용기.", instance_npcname("에른스트 게오보르그#ernst01");
+	sleep 3000;
+	npctalk "이 세상의 모든 것을 포용하는 마음,", instance_npcname("스키아 네리우스#skia02");
+	npctalk "이 세상의 모든 것을 포용하는 마음,", instance_npcname("스피카 네리우스#spica01");
+	sleep 3000;
+	npctalk "품에 안은 모든 것을 지키려는 강한 의지,", instance_npcname("포 리하르트#po01");
+	sleep 3000;
+	npctalk "어떤 상황에서도 정의와 신념에 대한 굽히지 않는 굳건한 자존심.", instance_npcname("아이젠호너 발터#eisen");
+	npctalk "어떤 상황에서도 정의와 신념에 대한 굽히지 않는 굳건한 자존심.", instance_npcname("이안 발터#ian01");
+	sleep 3000;
+	npctalk "겸손한 마음으로 타인을 존경하는 미덕", instance_npcname("막시밀리안 뢰겐부르그#m1");
+	npctalk "겸손한 마음으로 타인을 존경하는 미덕", instance_npcname("볼프 뢰겐부르그#wolf01");
+	npctalk "겸손한 마음으로 타인을 존경하는 미덕", instance_npcname("헬무트 뢰겐부르그#helmu");
+	npctalk "겸손한 마음으로 타인을 존경하는 미덕", instance_npcname("아그네스 뢰겐부르그#agnes0_1");
+	sleep 3000;
+	npctalk "그리고 진실을 직시하는 지혜", instance_npcname("르뷔에르 위그너#louvier1");
+	npctalk "그리고 진실을 직시하는 지혜", instance_npcname("유르겐 위그너#jurgen01");
+	npctalk "그리고 진실을 직시하는 지혜", instance_npcname("아이작 위그너#isaac01");
+	npctalk "그리고 진실을 직시하는 지혜", instance_npcname("카트린 위그너#kath01");
+	sleep 3000;
+	mapannounce 'map_2mir$, "크로네커: 우리의 새로운 왕께...", bc_map,0xFF99;
+	sleep 1500;
+	mapannounce 'map_2mir$, "침입자: 좋은 분위기에 끼어들어 미안하군!", bc_map,0xDDDDDD;
+	sleep 500;
+	specialeffect EF_SCREEN_QUAKE, AREA, instance_npcname("피터 하이네#peter01");
+	disablenpc instance_npcname("피터 하이네#peter01");
+	enablenpc instance_npcname("쓰러진 피터#peter02");
+	sleep 500;
+	mapannounce 'map_2mir$, "크로네커: 피터!!!", bc_map,0xFF99;
+	sleep 500;
+	disablenpc instance_npcname("크로네커 그란츠 하이네#gran1");
+	.@kronecker_2$ = instance_npcname("크로네커 그란츠 하이네#gran2");
+	enablenpc .@kronecker_2$;
+	sleep 500;
+	.@intruder$ = instance_npcname("침입자#hunter01");
+	enablenpc .@intruder$;
+	npctalk "이야, 반갑습니다! 당신이 그 유명한 현자 그란츠 대공이시군요!", .@intruder$;
+	sleep 3000;
+	npctalk "무슨 짓인가!!!", .@kronecker_2$;
+	sleep 3000;
+	npctalk "아뇨, 별일 아닙니다. 어차피 여기엔 값나갈 만한 게 없더군요.", .@intruder$;
+	sleep 3000;
+	npctalk "이곳에 굉장한 물건이 숨겨져 있다고 들었는데 말이죠...", .@intruder$;
+	sleep 3000;
+	npctalk "그런데 이건 뭐지? 가짜잖아!", .@intruder$;
+	specialeffect EF_BEGINSPELL,AREA,.@kronecker_2$;
+	sleep 500;
+	specialeffect EF_BEGINSPELL6,AREA, .@intruder$;
+	specialeffect EF_LEVEL99,AREA, .@intruder$;
+	sleep 2000;
+	npctalk "거기 노인장, 그리고 그 뒤의 고귀하신 분들...", .@intruder$;
+	sleep 3000;
+	npctalk "가만히들 계시죠. 심심하면 뭐라도 부수고 싶어지거든.", .@intruder$;
+	sleep 3000;
+	npctalk "예를 들면...", .@intruder$;
+	sleep 3000;
+	npctalk "이 가짜, 이미르의 심장을 흉내 냈군!", .@intruder$;
+	sleep 3000;
+	npctalk "무엇을 원하는가?", .@kronecker_2$;
+	sleep 3000;
+	npctalk "이미르의 심장 조각이 여기 있다고 들었는데, 아무리 봐도 없군.", .@intruder$;
+	sleep 3000;
+	npctalk "...무슨 소리를 하는 겐가?", .@kronecker_2$;
+	sleep 3000;
+	npctalk "이런, 모르고 계셨습니까?", .@intruder$;
+	sleep 3000;
+	npctalk "하긴, 알았다면 이런 걸 묻어두고 의식이나 치르며 시간을 낭비하진 않았겠죠.", .@intruder$;
+	sleep 3000;
+	npctalk "어쩌겠습니까, 영감님. 이건 가짜입니다.", .@intruder$;
+	sleep 2000;
+	npctalk "감히 네놈이...", .@kronecker_2$;
+	sleep 2000;
+	npctalk "그런 눈으로 보지 마시죠. 나도 헛걸음한 셈이니까.", .@intruder$;
+	sleep 3000;
+	npctalk "그럼 이번엔 조용히 물러가 드리죠.", .@intruder$;
+	sleep 3000;
+	npctalk "하! 아무리 강한 힘이라도 쓸 줄 모르면 무슨 소용이지? 당신들에겐 필요 없겠군.", .@intruder$;
+	sleep 3000;
+	npctalk "이 가짜 이미르의 심장은 여기서 치워주지!", .@intruder$;
+	sleep 500;
+	specialeffect EF_BEGINSPELL3,AREA, .@intruder$;
+	sleep 500;
+	specialeffect EF_SCREEN_QUAKE,AREA, instance_npcname("피터 하이네#peter01");
+	specialeffect EF_LORD,AREA, .@kronecker_2$;
+	specialeffect EF_LORD,AREA, instance_npcname("르뷔에르 위그너#louvier1");
+	specialeffect EF_LORD,AREA, instance_npcname("캐서린 게오보르그#ca1");
+
+	disablenpc instance_npcname("이안 발터#ian01");
+	disablenpc instance_npcname("르뷔에르 위그너#louvier1");
+	disablenpc instance_npcname("유르겐 위그너#jurgen01");
+	disablenpc instance_npcname("캐서린 게오보르그#ca1");
+	disablenpc instance_npcname("카트린 위그너#kath01");
+	disablenpc instance_npcname("아이작 위그너#isaac01");
+
+	enablenpc instance_npcname("이안 발터#ian02");
+	enablenpc instance_npcname("르뷔에르 위그너#louvier2");
+	enablenpc instance_npcname("유르겐 위그너#jurgen02");
+	enablenpc instance_npcname("캐서린 게오보르그#ca2");
+	enablenpc instance_npcname("카트린 위그너#kath02");
+	enablenpc instance_npcname("아이작 위그너#isaac02");
+	sleep 500;
+	specialeffect EF_LORD,AREA, instance_npcname("막시밀리안 뢰겐부르그#m1");
+	disablenpc instance_npcname("에른스트 게오보르그#ernst01");
+	disablenpc instance_npcname("막시밀리안 뢰겐부르그#m1");
+	disablenpc instance_npcname("볼프 뢰겐부르그#wolf01");
+	disablenpc instance_npcname("아그네스 뢰겐부르그#agnes0_1");
+
+	enablenpc instance_npcname("막시밀리안 뢰겐부르그#m2");
+	enablenpc instance_npcname("에른스트 게오보르그#ernst02");
+	enablenpc instance_npcname("아그네스 뢰겐부르그#agnes0_2");
+	enablenpc instance_npcname("볼프 뢰겐부르그#wolf02");
+
+	specialeffect EF_LORD,AREA, instance_npcname("아그네스 뢰겐부르그#agnes0_2");
+
+	mapannounce 'map_2mir$, "침입자: 자, 여러분. 즐거운 시간 되시길!", bc_map,0xDDDDDD;
+	disablenpc .@intruder$;
+	enablenpc instance_npcname("침입자#hunter02");
+	enablenpc instance_npcname("침입자#hunter03");
+	enablenpc instance_npcname("침입자#hunter04");
+	enablenpc instance_npcname("침입자#hunter05");
+	enablenpc instance_npcname("침입자#hunter06");
+
+	sleep 500;
+	donpcevent instance_npcname("#ritual_intruder_main") + "::OnEvent";
+
+	disablenpc instance_npcname("포 리하르트#po01");
+	disablenpc instance_npcname("스피카 네리우스#spica01");
+	disablenpc instance_npcname("아이젠호너 발터#eisen");
+	disablenpc instance_npcname("프리드리히 S. 하이네#stol_1");
+	disablenpc instance_npcname("헬무트 뢰겐부르그#helmu");
+	disablenpc instance_npcname("스키아 네리우스#skia02");
+	disablenpc instance_npcname("니힐 M. 하이네#nihil02");
+
+	enablenpc instance_npcname("스키아 네리우스#skia03");
+	enablenpc instance_npcname("니힐 M. 하이네#nihil03");
+	enablenpc instance_npcname("스피카 네리우스#spica02");
+	enablenpc instance_npcname("포 리하르트#po02");
+	enablenpc instance_npcname("아이젠호너 발터#eisen2");
+	enablenpc instance_npcname("프리드리히 S. 하이네#stol_2");
+	enablenpc instance_npcname("헬무트 뢰겐부르그#helmu2");
+	end;
+}
+
+2@mir,1,1,0	script	#ritual_intruder_main	-1,{
+	end;
+OnEvent:
+	enablenpc instance_npcname("#ritual_intruder_main");
+	.@label$ = instance_npcname("#ritual_intruder_main") + "::OnMobDead";
+	monster 'map_2mir$,107,73,"수상한 침입자",3454,1, .@label$;	// HEART_HUNTER_N
+	setunitdata $@mobid[0], UMOB_HP, 10000;
+	monster 'map_2mir$, 98,73,"수상한 침입자",3454,1, .@label$;
+	setunitdata $@mobid[0], UMOB_HP, 10000;
+	monster 'map_2mir$,101,83,"수상한 침입자",3454,1, .@label$;
+	setunitdata $@mobid[0], UMOB_HP, 10000;
+	'intruder_count = 0;
+
+	donpcevent instance_npcname("침입자#hunter02") + "::OnStart";
+	donpcevent instance_npcname("침입자#hunter03") + "::OnStart";
+	donpcevent instance_npcname("침입자#hunter04") + "::OnStart";
+	donpcevent instance_npcname("침입자#hunter05") + "::OnStart";
+	donpcevent instance_npcname("침입자#hunter06") + "::OnStart";
+	end;
+OnMobDead:
+	'intruder_count++;
+	switch( 'intruder_count ) {
+	case 1:
+		donpcevent instance_npcname("침입자#hunter02") + "::OnLeave";
+		donpcevent instance_npcname("침입자#hunter05") + "::OnLeave";
+		break;
+	case 2:
+		donpcevent instance_npcname("침입자#hunter03") + "::OnLeave";
+		donpcevent instance_npcname("침입자#hunter06") + "::OnLeave";
+		break;
+	case 3:
+		donpcevent instance_npcname("침입자#hunter04") + "::OnLeave";
+		break;
+	}
+	sleep 100;	// it seems there is a slight delay
+
+	switch( 'intruder_count ) {
+	case 3:
+		mapannounce 'map_2mir$, "침입자: 다들 철수한다!", bc_map,0xDDDDDD;
+		// display the effect a second time
+		donpcevent instance_npcname("침입자#hunter02") + "::OnLeave";
+		donpcevent instance_npcname("침입자#hunter03") + "::OnLeave";
+		donpcevent instance_npcname("침입자#hunter04") + "::OnLeave";
+		donpcevent instance_npcname("침입자#hunter05") + "::OnLeave";
+		donpcevent instance_npcname("침입자#hunter06") + "::OnLeave";
+
+		disablenpc instance_npcname("침입자#hunter02");
+		disablenpc instance_npcname("침입자#hunter03");
+		disablenpc instance_npcname("침입자#hunter04");
+		disablenpc instance_npcname("침입자#hunter05");
+		disablenpc instance_npcname("침입자#hunter06");
+		break;
+	default:
+		break;
+	}
+	end;
+}
+
+2@mir,87,79,5	script	침입자#hunter02	3454,{
+	end;
+OnStart:
+	initnpctimer;
+	end;
+OnLeave:
+	stopnpctimer;
+	specialeffect EF_TEIHIT3;
+	hideonnpc instance_npcname("침입자#hunter02");	// officially disabled, changed to hideonnpc to display the effect a second time
+	end;
+OnTimer1000:
+	specialeffect EF_PIERCE;
+	end;
+OnTimer2000:
+	specialeffect EF_CONCENTRATION, AREA, instance_npcname("아이젠호너 발터#eisen2");
+	end;
+OnTimer4000:
+	specialeffect EF_HOLYCROSS;
+	end;
+OnTimer5000:
+	npctalk "소용없다!";
+	specialeffect EF_TEIHIT1X, AREA, instance_npcname("아이젠호너 발터#eisen2");
+	end;
+OnTimer7000:
+	specialeffect EF_SHIELDCHARGE;
+	end;
+OnTimer8000:
+	specialeffect EF_CHAINCOMBO, AREA, instance_npcname("아이젠호너 발터#eisen2");
+	end;
+OnTimer10000:
+	specialeffect EF_PIERCE;
+	end;
+OnTimer11000:
+	specialeffect EF_TEIHIT1X, AREA, instance_npcname("아이젠호너 발터#eisen2");
+	npctalk "지금은 이야기할 때가 아니오!", instance_npcname("아이젠호너 발터#eisen2");
+	initnpctimer;
+	end;
+}
+
+2@mir,91,84,5	script	침입자#hunter03	3454,{
+	end;
+OnStart:
+	initnpctimer;
+	end;
+OnLeave:
+	stopnpctimer;
+	specialeffect EF_TEIHIT3;
+	hideonnpc instance_npcname("침입자#hunter03");
+	end;
+OnTimer1500:
+	specialeffect EF_MAGICALATTHIT;
+	end;
+OnTimer2500:
+	specialeffect EF_TEIHIT1X, AREA, instance_npcname("스키아 네리우스#skia03");
+	end;
+OnTimer4500:
+	specialeffect EF_HIT5;
+	end;
+OnTimer5500:
+	specialeffect EF_HIT6, AREA, instance_npcname("스키아 네리우스#skia03");
+	end;
+OnTimer7500:
+	specialeffect EF_HIT2;
+	end;
+OnTimer8500:
+	npctalk "소용없다!";
+	specialeffect EF_HIT1, AREA, instance_npcname("스키아 네리우스#skia03");
+	end;
+OnTimer11100:
+	specialeffect EF_HOLYCROSS;
+	end;
+OnTimer12000:
+	specialeffect EF_HIT1, AREA, instance_npcname("스키아 네리우스#skia03");
+	initnpctimer;
+	end;
+}
+
+2@mir,94,86,5	script	침입자#hunter04	3454,{
+	end;
+OnStart:
+	initnpctimer;
+	end;
+OnLeave:
+	stopnpctimer;
+	specialeffect EF_TEIHIT3;
+	hideonnpc instance_npcname("침입자#hunter04");
+	end;
+OnTimer1200:	// weird timer but ~correct
+	specialeffect EF_MAGICALATTHIT;
+	end;
+OnTimer2200:
+	specialeffect EF_TEIHIT1X, AREA, instance_npcname("프리드리히 S. 하이네#stol_2");
+	end;
+OnTimer3800:
+	specialeffect EF_HIT5;
+	end;
+OnTimer4800:
+	npctalk "하하!";
+	specialeffect EF_HIT6, AREA, instance_npcname("프리드리히 S. 하이네#stol_2");
+	end;
+OnTimer8200:
+	specialeffect EF_HIT2;
+	end;
+OnTimer9200:
+	specialeffect EF_HIT1, AREA, instance_npcname("프리드리히 S. 하이네#stol_2");
+	end;
+OnTimer11500:
+	specialeffect EF_HOLYCROSS;
+	end;
+OnTimer12500:
+	specialeffect EF_AUTOCOUNTER, AREA, instance_npcname("프리드리히 S. 하이네#stol_2");
+	npctalk "...이 자들, 대체 어디서 온 것이냐?", instance_npcname("프리드리히 S. 하이네#stol_2");
+	initnpctimer;
+	end;
+}
+
+2@mir,107,86,5	script	침입자#hunter05	3454,{
+	end;
+OnStart:
+	initnpctimer;
+	end;
+OnLeave:
+	stopnpctimer;
+	specialeffect EF_TEIHIT3;
+	hideonnpc instance_npcname("침입자#hunter05");
+	end;
+OnTimer1000:
+	specialeffect EF_MAGICALATTHIT;
+	end;
+OnTimer2000:
+	specialeffect EF_TEIHIT1X, AREA, instance_npcname("헬무트 뢰겐부르그#helmu2");
+	end;
+OnTimer4000:
+	npctalk "이 정도로!!!";
+	specialeffect EF_HIT5;
+	end;
+OnTimer4500:
+	npctalk "누구한테 하는 소리냐!!!", instance_npcname("헬무트 뢰겐부르그#helmu2");
+	specialeffect EF_HIT6, AREA, instance_npcname("헬무트 뢰겐부르그#helmu2");
+	end;
+OnTimer7000:
+	specialeffect EF_HIT2;
+	end;
+OnTimer8000:
+	specialeffect EF_HIT1, AREA, instance_npcname("헬무트 뢰겐부르그#helmu2");
+	end;
+OnTimer10000:
+	specialeffect EF_HOLYCROSS;
+	end;
+OnTimer11000:
+	specialeffect EF_AUTOCOUNTER, AREA, instance_npcname("헬무트 뢰겐부르그#helmu2");
+	npctalk "크윽!!!", instance_npcname("헬무트 뢰겐부르그#helmu2");
+	initnpctimer;
+	end;
+}
+
+2@mir,110,85,5	script	침입자#hunter06	3454,{
+	end;
+OnStart:
+	initnpctimer;
+	end;
+OnLeave:
+	stopnpctimer;
+	specialeffect EF_TEIHIT3;
+	hideonnpc instance_npcname("침입자#hunter06");
+	end;
+OnTimer1000:
+	specialeffect EF_HITDARK;
+	end;
+OnTimer2000:
+	specialeffect EF_TEIHIT1X, AREA, instance_npcname("포 리하르트#po02");
+	end;
+OnTimer4000:
+	npctalk "이 정도로!!!";
+	specialeffect EF_LIGHTBOLT;
+	end;
+OnTimer5000:
+	specialeffect EF_HIT6, AREA, instance_npcname("포 리하르트#po02");
+	end;
+OnTimer7000:
+	specialeffect EF_COMBOATTACK1;
+	end;
+OnTimer8000:
+	specialeffect EF_HIT1, AREA, instance_npcname("포 리하르트#po02");
+	end;
+OnTimer10000:
+	specialeffect EF_NAPALMBEAT;
+	end;
+OnTimer12000:
+	npctalk "이거 참, 상황이 좋지 않군요.", instance_npcname("포 리하르트#po02");
+	specialeffect EF_AUTOCOUNTER, AREA, instance_npcname("포 리하르트#po02");
+	initnpctimer;
+	end;
+}
+
+2@mir,97,80,7	script	프리드리히 S. 하이네#stol_1	4_EP16_STOLZ,{
+	npctalk "...조용하군.";
+	end;
+}
+
+2@mir,88,78,2	script	아이젠호너 발터#eisen2	4_M_1STPRIN1,{
+	if ('intruder_count < 3) {
+		npctalk "지금은 이야기할 때가 아니오!";
+		end;
+	}
+	mes "[이센호너]";
+	mes "대체 무슨 일이 벌어진 것인가...?";
+	mes "우리가 먼저 이곳을 벗어나겠소.";
+	next;
+	mes "[이센호너]";
+	mes "모두 무사하십니까...?";
+	close2;
+	disablenpc instance_npcname("아이젠호너 발터#eisen2");
+	disablenpc instance_npcname("이안 발터#ian02");
+	end;
+}
+
+2@mir,106,85,7	script	헬무트 뢰겐부르그#helmu2	4_EP16_HELMUT,{
+	if ('intruder_count < 3) {
+		npctalk "흠!";
+		end;
+	}
+	mes "[헬무트]";
+	mes "일단 큰 탈은 없어 보이는군.";
+	mes "...나는 이만 가봐야겠소. 형제들 안색이 좋지 않군.";
+	close2;
+	disablenpc instance_npcname("헬무트 뢰겐부르그#helmu2");
+	disablenpc instance_npcname("볼프 뢰겐부르그#wolf02");
+	disablenpc instance_npcname("막시밀리안 뢰겐부르그#m2");
+	disablenpc instance_npcname("아그네스 뢰겐부르그#agnes0_2");
+	end;
+}
+
+2@mir,92,83,2	script	스키아 네리우스#skia03	4_EP16_SKIA,{
+	if ('intruder_count < 3) {
+		npctalk "어... 저 사람들은 대체 어디서 온 거야?";
+		end;
+	}
+	mes "[스키아]";
+	mes "휴, 이제 여기서 나가요.";
+	mes "언니, 어서요!";
+	mes "니힐, 너도 같이 가야 해!";
+	next;
+	mes "[스키아]";
+	mes "다른 분들은 알아서 빠져나올 거예요!";
+	close2;
+	disablenpc instance_npcname("스키아 네리우스#skia03");
+	disablenpc instance_npcname("스피카 네리우스#spica02");
+	end;
+}
+
+2@mir,109,84,7	script	포 리하르트#po02	4_M_6THPRIN1,{
+	if ('intruder_count < 3) {
+		npctalk "...하하, 여기서 칼을 뽑게 될 줄이야!";
+		end;
+	}
+	npctalk "홀이 정리된 것 같으니 나는 이만 가지. 이번엔 꽤나 성가셨어!";
+	sleep 2000;
+	disablenpc instance_npcname("포 리하르트#po02");
+	end;
+}
+
+2@mir,95,85,1	script	프리드리히 S. 하이네#stol_2	4_EP16_STOLZ,{
+	if ('intruder_count < 3) {
+		npctalk "다른 분들을 부탁드립니다.";
+		end;
+	}
+	mes "[프리드리히]";
+	mes "다행히 사망자는 없는 것 같습니다.";
+	npctalk "뭘 하고 있나! 부상자들을 데리고 어서 빠져나가라!";
+	close2;
+OnDisable:
+	disablenpc instance_npcname("스키아 네리우스#skia03");
+	disablenpc instance_npcname("스피카 네리우스#spica02");
+	disablenpc instance_npcname("아이젠호너 발터#eisen2");
+	disablenpc instance_npcname("이안 발터#ian02");
+	disablenpc instance_npcname("르뷔에르 위그너#louvier2");
+	disablenpc instance_npcname("유르겐 위그너#jurgen02");
+	disablenpc instance_npcname("카트린 위그너#kath02");
+	disablenpc instance_npcname("에른스트 게오보르그#ernst02");
+	disablenpc instance_npcname("캐서린 게오보르그#ca2");
+	disablenpc instance_npcname("포 리하르트#po02");
+	disablenpc instance_npcname("막시밀리안 뢰겐부르그#m2");
+	disablenpc instance_npcname("볼프 뢰겐부르그#wolf02");
+	disablenpc instance_npcname("헬무트 뢰겐부르그#helmu2");
+	disablenpc instance_npcname("아그네스 뢰겐부르그#agnes0_2");
+	disablenpc instance_npcname("아이작 위그너#isaac02");
+	end;
+}
+
+2@mir,101,93,7	script	크로네커 그란츠 하이네#gran2	4_EP16_GRANZ,{
+	if ('intruder_count < 3) {
+		mes "[크로네커]";
+		mes "피터가 위독합니다.";
+		mes "...부디 저 침입자들을 막아 주시겠습니까?";
+		close;
+	}
+	if (isbegin_quest(7692) == 1) {
+		mes "[크로네커]";
+		mes "....";
+		mes ".... ^4d4dff테라 글로리아^000000가 사라졌습니다...";
+		next;
+		select("테라 글로리아?");
+		mes "[크로네커]";
+		mes "룬 미드가츠 왕궁에 대대로 전해 내려오는 왕관입니다.";
+		mes "단순한 왕관 이상의 의미를 지닌 물건이지요.";
+		next;
+		mes "[크로네커]";
+		mes "그자들이 가져갔단 말인가...?";
+		mes "이게 대체 무슨 일이란 말입니까...!";
+		next;
+		mes "[크로네커]";
+		mes "이곳에 숨겨진 비밀은 일곱 왕가 외에는 아무도 모릅니다!";
+		next;
+		mes "[크로네커]";
+		mes "그렇다면 이것이 뜻하는 바는...?";
+		mes "우선 확인해 봐야 할 것들이 있습니다.";
+		next;
+		mes "[크로네커]";
+		mes "일단 여기서 나가시죠.";
+		mes "밝혀내야 할 것이 아직 많이 남아 있습니다.";
+		erasequest 7692;
+		setquest 7693;// Surprise Attack
+		ep16_royal = 9;
+		next;
+		mes "[크로네커]";
+		mes "남아 있는 분들은 부상자를 데리고 즉시 이곳을 떠나십시오!";
+		mes "이 의식장은 당분간 폐쇄합니다!";
+		donpcevent instance_npcname("프리드리히 S. 하이네#stol_2") + "::OnDisable";
+		disablenpc instance_npcname("니힐 M. 하이네#nihil03");
+		close;
+	}
+	mes "[크로네커]";
+	mes "피터가 크게 다쳤습니다.";
+	mes "서둘러 옮겨야 합니다.";
+	next;
+	mes "[크로네커]";
+	mes "밖에서 뵙겠습니다.";
+	mes "들어오셨던 문으로 나가시면 됩니다.";
+	mes "왕가의 기억에서 다시 뵙지요.";
+	close;
+}
+
+2@mir,93,80,2	script	니힐 M. 하이네#nihil03	4_EP16_NIHIL,4,4,{
+	if ('intruder_count < 3) {
+		npctalk "오... 이럴 수가...";
+		end;
+	}
+	mes "[니힐]";
+	mes "...이건 전부... 제 탓입니다...";
+	close;
+OnTouch_:
+	npctalk "제가 도와드리겠습니다!";
+	npcskill "AL_HEAL",11,99,60;
+	npcskill "PR_KYRIE",10,99,60;
+	end;
+}
+
+2@mir,97,65,5	script	유르겐 위그너#jurgen02	4_M_4THPRIN1,{
+	npctalk "당신을 믿겠습니다!";
+	npcskill "AL_INCAGI",10,99,60;
+	end;
+}
+
+2@mir,111,66,4	script	캐서린 게오보르그#ca2	4_EP16_EGEO,{
+	npctalk "부디 도움이 되기를.";
+	npcskill "AL_HEAL",10,130,115;
+	end;
+}
+
+2@mir,107,61,6	script	아이작 위그너#isaac02	4_EP16_ISAAC,{
+	npctalk "기운을 내세요!";
+	npcskill "AL_BLESSING",10,99,60;
+	end;
+}
+
+2@mir,112,71,1	script	아그네스 뢰겐부르그#agnes0_2	4_EP16_AGNES,{
+	npctalk "꺄악! 조심하세요!";
+	end;
+}
+
+2@mir,96,83,2	script	스피카 네리우스#spica02	4_EP16_SPICA,{
+	if ('intruder_count < 3)
+		npctalk "...스... 키... 아...";
+	else
+		npctalk "스키아... 저 사람은 어째서 나 대신 니힐 경을 구한 거지?";
+	end;
+}
+
+
+2@mir,102,97,3	script	침입자#hunter01	3454,{
+	end;
+OnInstanceInit:
+	'map_2mir$ = instance_mapname("2@mir");
+	'intruder_count = 0;
+
+	disablenpc instance_npcname("스피카 네리우스#spica02");
+	disablenpc instance_npcname("아그네스 뢰겐부르그#agnes0_2");
+	disablenpc instance_npcname("아이작 위그너#isaac02");
+	disablenpc instance_npcname("캐서린 게오보르그#ca2");
+	disablenpc instance_npcname("유르겐 위그너#jurgen02");
+	disablenpc instance_npcname("크로네커 그란츠 하이네#gran2");
+	disablenpc instance_npcname("아이젠호너 발터#eisen2");
+	disablenpc instance_npcname("헬무트 뢰겐부르그#helmu2");
+	disablenpc instance_npcname("포 리하르트#po02");
+	disablenpc instance_npcname("프리드리히 S. 하이네#stol_2");
+
+	disablenpc instance_npcname("침입자#hunter01");
+	disablenpc instance_npcname("침입자#hunter02");
+	disablenpc instance_npcname("침입자#hunter03");
+	disablenpc instance_npcname("침입자#hunter04");
+	disablenpc instance_npcname("침입자#hunter05");
+	disablenpc instance_npcname("침입자#hunter06");
+
+	disablenpc instance_npcname("스키아 네리우스#skia03");
+	disablenpc instance_npcname("니힐 M. 하이네#nihil03");
+	end;
+}
+
+// NEED: 이 파일에서만 사용하는 자체 dummy NPC.
+// 외부 npc/re/other/global_npcs.txt 의 dummy_npc 에 의존하지 않는다.
+-	script	#ritual_dummy_base	-1,{
+	end;
+}
+
+2@mir,96,83,0	script	#ritual_hidden_base	-1,{
+	end;
+OnInstanceInit:
+	disablenpc();
+	end;
+}
+2@mir,88,74,3	duplicate(#ritual_hidden_base)	이안 발터#ian02	1_M_JOBTESTER
+2@mir,86,70,4	duplicate(#ritual_hidden_base)	르뷔에르 위그너#louvier2	4_EP16_LOUVIERE
+2@mir,94,72,3	duplicate(#ritual_hidden_base)	카트린 위그너#kath02	4_EP16_POE
+2@mir,112,66,3	duplicate(#ritual_hidden_base)	에른스트 게오보르그#ernst02	4_M_2NDPRIN1
+2@mir,91,69,7	duplicate(#ritual_hidden_base)	막시밀리안 뢰겐부르그#m2	4_EP16_MAX
+2@mir,94,66,3	duplicate(#ritual_hidden_base)	볼프 뢰겐부르그#wolf02	4_EP16_WOLF
+2@mir,100,80,7	duplicate(#ritual_hidden_base)	니힐 M. 하이네#nihil02	4_EP16_NIHIL
+2@mir,101,95,3	duplicate(#ritual_hidden_base)	쓰러진 피터#peter02	4_EP16_PETER
+2@mir,97,77,7	duplicate(#ritual_hidden_base)	스키아 네리우스#skia02	4_EP16_SKIA
+
+
+2@mir,101,88,4	duplicate(#ritual_dummy_base)	크로네커 그란츠 하이네#gran1	4_EP16_GRANZ
+2@mir,97,71,7	duplicate(#ritual_dummy_base)	르뷔에르 위그너#louvier1	4_EP16_LOUVIERE
+2@mir,100,71,7	duplicate(#ritual_dummy_base)	유르겐 위그너#jurgen01	4_M_4THPRIN1
+2@mir,97,68,7	duplicate(#ritual_dummy_base)	아이작 위그너#isaac01	4_EP16_ISAAC
+2@mir,100,68,7	duplicate(#ritual_dummy_base)	카트린 위그너#kath01	4_EP16_POE
+2@mir,103,80,2	duplicate(#ritual_dummy_base)	캐서린 게오보르그#ca1	4_EP16_EGEO
+2@mir,106,80,2	duplicate(#ritual_dummy_base)	에른스트 게오보르그#ernst01	4_M_2NDPRIN1
+2@mir,103,77,2	duplicate(#ritual_dummy_base)	포 리하르트#po01	4_M_6THPRIN1
+2@mir,103,74,2	duplicate(#ritual_dummy_base)	막시밀리안 뢰겐부르그#m1	4_EP16_MAX
+2@mir,106,74,2	duplicate(#ritual_dummy_base)	볼프 뢰겐부르그#wolf01	4_EP16_WOLF
+2@mir,101,94,0	duplicate(#ritual_dummy_base)	피터 하이네#peter01	4_M_3RDPRIN1
+2@mir,100,77,7	duplicate(#ritual_dummy_base)	스피카 네리우스#spica01	4_EP16_SPICA
+2@mir,106,71,2	duplicate(#ritual_dummy_base)	아그네스 뢰겐부르그#agnes0_1	4_EP16_AGNES
+2@mir,100,74,7	duplicate(#ritual_dummy_base)	이안 발터#ian01	1_M_JOBTESTER
+2@mir,97,74,7	duplicate(#ritual_dummy_base)	아이젠호너 발터#eisen	4_M_1STPRIN1
+2@mir,103,71,2	duplicate(#ritual_dummy_base)	헬무트 뢰겐부르그#helmu	4_EP16_HELMUT
+
+2@mir,101,10,0	script	#ritual_exit	WARPNPC,1,1,{
+	if (isbegin_quest(7693) == 1) {
+		warp "prt_lib",88,80;
+		end;
+	}
+	mes "[" + strcharinfo(0) + "]";
+	mes "축복의 의식을 끝까지 지켜봐야 한다.";
+	mes "지금 나갈 수는 없다.";
+	close;
+}
