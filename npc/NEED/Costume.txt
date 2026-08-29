@@ -434,8 +434,6 @@ EQP_COSTUME_GARMENT,29362,25302,
 // PART, CardID, EtcID
 // 이펙트는 의상 상/중/하단의 4번째 카드 슬롯(card[3])에 저장
 setarray .EffectStoneData[0],
-EQP_COSTUME_GARMENT,313068,1001650,
-
 EQP_COSTUME_HEAD_TOP,29041,25058,      // Twinkle Effect (Upper)
 EQP_COSTUME_HEAD_TOP,29142,25206,      // Electric Effect (Upper)
 EQP_COSTUME_HEAD_TOP,310322,1000365,   // Magic Feather Effect (Upper)
@@ -457,7 +455,27 @@ EQP_COSTUME_HEAD_MID,314095,1002194,   // Red Fighting Spirit Effect (Middle)
 EQP_COSTUME_HEAD_LOW,29143,25137,      // Green Floor Effect (Bottom)
 EQP_COSTUME_HEAD_LOW,29144,25205,      // Shrink Effect (Bottom)
 EQP_COSTUME_HEAD_LOW,29225,25226,      // Water Field Effect (Bottom)
-EQP_COSTUME_HEAD_LOW,29142,1000882;    // Electric Effect (Bottom)
+EQP_COSTUME_HEAD_LOW,29142,1000882,    // Electric Effect (Bottom)
+
+// 걸칠것 이펙트 스톤 - card[3], 100% 성공
+EQP_COSTUME_GARMENT,313065,1001615,    // Footprint Effect
+EQP_COSTUME_GARMENT,313067,1001617,    // Purple Star Footprint
+EQP_COSTUME_GARMENT,313068,1001650,    // Yellow Star Footprint
+EQP_COSTUME_GARMENT,313069,1001651,    // Red Star Footprint
+EQP_COSTUME_GARMENT,313345,1001772,    // Puppy Footprint
+EQP_COSTUME_GARMENT,313559,1001908,    // Panda Footprint
+EQP_COSTUME_GARMENT,313560,1001909,    // Panda Color Footprint
+EQP_COSTUME_GARMENT,313953,1002855,    // Cherry Blossom Footprint
+EQP_COSTUME_GARMENT,313956,1002285,    // Purple Butterfly Footprint
+EQP_COSTUME_GARMENT,313957,1002394,    // Yellow Butterfly Footprint
+EQP_COSTUME_GARMENT,314171,1002239,    // Toothless Footprint
+EQP_COSTUME_GARMENT,314172,1002240,    // Jumping Toothless Footprint
+EQP_COSTUME_GARMENT,314212,1002294,    // Nyar's Blue Footprint
+EQP_COSTUME_GARMENT,314213,1002295,    // Nyar's Purple Footprint
+EQP_COSTUME_GARMENT,314214,1002296,    // Divine Light Footprint
+EQP_COSTUME_GARMENT,314846,1002623,    // Blue Star Footprint
+EQP_COSTUME_GARMENT,314847,1002624,    // Divine Blue Light Footprint
+EQP_COSTUME_GARMENT,314066,1002286;    // ROS2025 Commemorative Footprint
 	end;
 
 OnCostumePreviewEnd:
@@ -895,12 +913,14 @@ L_PutCloset:
 	else if (.@part == EQP_COSTUME_GARMENT)
 	{
 		set .@stone_card_id, COSTUME_STONE_GARMENT;
+		set .@effect_card_id, COSTUME_EFFECT_GARMENT;
 		COSTUME_RENT_GARMENT = .@cid;
 	}
 
 	if (.@part == EQP_COSTUME_GARMENT)
 	{
-		getitembound2 .@item_id,1,1,0,0,COSTUME_STONE_GARMENT,COSTUME_STONE_DUAL,0,0,.ClosetBoundType;
+		// 걸칠것: 일반 card[0] + 듀얼 card[1] + 이펙트 card[3]
+		getitembound2 .@item_id,1,1,0,0,COSTUME_STONE_GARMENT,COSTUME_STONE_DUAL,0,COSTUME_EFFECT_GARMENT,.ClosetBoundType;
 	}
 	else
 	{
@@ -2068,6 +2088,10 @@ L_StoneMenu:
 		mes "하단 이펙트 : ^FF8000" + getitemname(COSTUME_EFFECT_LOW) + "^000000";
 	else
 		mes "하단 이펙트 : ^777777없음^000000";
+	if (COSTUME_EFFECT_GARMENT)
+		mes "걸칠것 이펙트 : ^FF8000" + getitemname(COSTUME_EFFECT_GARMENT) + "^000000";
+	else
+		mes "걸칠것 이펙트 : ^777777없음^000000";
 	mes " ";
 	mes "보유 중인 인챈트 스톤을 소비해";
 	mes "부위별 스톤 세팅을 변경합니다.";
@@ -2316,7 +2340,8 @@ L_StoneEnchant:
 		delitem .@equip_item_id, 1;
 		if (.@stone_part == EQP_COSTUME_GARMENT)
 		{
-			getitembound2 .@equip_item_id,1,1,0,0,COSTUME_STONE_GARMENT,COSTUME_STONE_DUAL,0,0,.ClosetBoundType;
+			// 일반 걸칠것 스톤을 갱신해도 듀얼과 이펙트는 유지
+			getitembound2 .@equip_item_id,1,1,0,0,COSTUME_STONE_GARMENT,COSTUME_STONE_DUAL,0,COSTUME_EFFECT_GARMENT,.ClosetBoundType;
 		}
 		else
 		{
@@ -2341,14 +2366,14 @@ L_StoneEnchant:
 
 L_EffectStoneMenu:
 	mes "[이펙트 스톤]";
-	mes "이펙트 스톤은 의상 상단/중단/하단에";
+	mes "이펙트 스톤은 의상 상단/중단/하단/걸칠것에";
 	mes "부여할 수 있으며 ^0055FF100% 확정 성공^000000합니다.";
 	mes " ";
 	mes "부여된 이펙트는 해당 부위의 옷장 세팅에 저장되며";
 	mes "다른 옷장 의상으로 교체해도 자동 적용됩니다.";
 	next;
 
-	switch(select("상단 이펙트:중단 이펙트:하단 이펙트:뒤로")) {
+	switch(select("상단 이펙트:중단 이펙트:하단 이펙트:걸칠것 이펙트:뒤로")) {
 	case 1:
 		set .@effect_equip_index, EQI_COSTUME_HEAD_TOP;
 		set .@effect_part, EQP_COSTUME_HEAD_TOP;
@@ -2369,6 +2394,13 @@ L_EffectStoneMenu:
 		set .@effect_part_name$, "하단";
 		set .@effect_rent_cid, COSTUME_RENT_LOW;
 		set .@effect_old_card_id, COSTUME_EFFECT_LOW;
+		break;
+	case 4:
+		set .@effect_equip_index, EQI_COSTUME_GARMENT;
+		set .@effect_part, EQP_COSTUME_GARMENT;
+		set .@effect_part_name$, "걸칠것";
+		set .@effect_rent_cid, COSTUME_RENT_GARMENT;
+		set .@effect_old_card_id, COSTUME_EFFECT_GARMENT;
 		break;
 	default:
 		goto L_StoneMenu;
@@ -2526,7 +2558,7 @@ L_EffectStoneEnchant:
 		close;
 	}
 
-	// 100% 확정 성공: rand() 실패 판정 없음
+	// 100% 확정 성공: 실패 확률 판정 없음
 	delitem .@effect_etc_id, 1;
 
 	if (.@effect_part == EQP_COSTUME_HEAD_TOP) {
@@ -2537,15 +2569,25 @@ L_EffectStoneEnchant:
 		set COSTUME_EFFECT_MID, .@effect_card_id;
 		set .@normal_card_id, COSTUME_STONE_MID;
 	}
-	else {
+	else if (.@effect_part == EQP_COSTUME_HEAD_LOW) {
 		set COSTUME_EFFECT_LOW, .@effect_card_id;
 		set .@normal_card_id, COSTUME_STONE_LOW;
+	}
+	else {
+		set COSTUME_EFFECT_GARMENT, .@effect_card_id;
+		set .@normal_card_id, COSTUME_STONE_GARMENT;
 	}
 
 	delitem .@effect_equip_item_id, 1;
 
-	// 기존 일반 스톤(card[0])은 유지하고 이펙트만 card[3]에 갱신
-	getitembound2 .@effect_equip_item_id, 1, 1, 0, 0, .@normal_card_id, 0, 0, .@effect_card_id, .ClosetBoundType;
+	if (.@effect_part == EQP_COSTUME_GARMENT) {
+		// 걸칠것: 일반 card[0], 듀얼 card[1]을 보존하고 이펙트만 card[3] 갱신
+		getitembound2 .@effect_equip_item_id, 1, 1, 0, 0, .@normal_card_id, COSTUME_STONE_DUAL, 0, .@effect_card_id, .ClosetBoundType;
+	}
+	else {
+		// 상/중/하단: 기존 일반 스톤(card[0])은 유지하고 이펙트만 card[3] 갱신
+		getitembound2 .@effect_equip_item_id, 1, 1, 0, 0, .@normal_card_id, 0, 0, .@effect_card_id, .ClosetBoundType;
+	}
 
 	specialeffect2 EF_LEVELUP;
 	mes "[이펙트 스톤]";
