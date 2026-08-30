@@ -360,8 +360,9 @@ L_Reward:
 			next;
 			goto L_Reward;
 		}
+		// 399904 는 무게 0 의 임대 티켓으로 지급되므로 무게 검사 대상이 아니다.
 		if (!checkweight(399908,1) || !checkweight(23583,1) ||
-			!checkweight(23584,1) || !checkweight(399904,1)) {
+			!checkweight(23584,1)) {
 			mes "^FF0000소지 무게를 비운 뒤 다시 시도해주세요.^000000";
 			close;
 		}
@@ -369,15 +370,30 @@ L_Reward:
 		getitem 399908,1;
 		getitem 23583,1;
 		getitem 23584,1;
-		getitem 399904,1;
+
+		// 종합 은총은 일반 아이템이 아니라 7일 기간제로 활성화한다.
+		// (NeedGracePackageUntil 설정 + 399904 임대 티켓 동기화)
+		.@grace_until = callfunc("NeedGrace_GrantPackage", 604800);
+
+		// 은총 기간이 실제로 설정된 뒤에만 수령 기록을 남긴다.
+		if (.@grace_until <= gettimetick(2)) {
+			mes "^FF0000종합 은총 활성화에 실패했습니다.^000000";
+			mes "^FF0000잠시 후 다시 시도해주세요.^000000";
+			close;
+		}
+
 		NEED_BEGINNER_REWARD_100 = 1;
+
+		// 임대 티켓까지 정상 생성되었으면 보정 대상에서 제외한다.
+		if (rentalcountitem(399904) > 0)
+			NEED_BEGINNER_GRACE_FIX = 1;
 
 		mes "^00AAFF[Lv.100 성장 보상]^000000";
 		mes "";
 		mes "^FF9900초심자 무기 상자^000000";
 		mes "^FF9900초심자 방어구 상자^000000";
 		mes "^FF9900초심자 전용 쉐도우 박스^000000";
-		mes "^FF9900종합 은총 이용권^000000";
+		mes "^FF99007일 종합 은총 이용권^000000";
 		mes "";
 		mes "총 4종을 지급했습니다.";
 		next;
@@ -1706,15 +1722,16 @@ S_ShowGoal:
 	return;
 
 //============================================================
-// 추천 레벨업 사냥터 안내 + 바로 이동 (13차 신설 / 14차 이동 추가)
+// 추천 레벨업 사냥터 안내 + 목록 선택 이동 (13차 신설 / 15차 목록형 UI)
 //   현재 BaseLevel 만으로 즉시 판정하는 정보 안내 전용 서브루틴.
-//   표시 명칭 / 권장 구간 / 이동 목적지를 같은 분기에서 함께 정해
-//   나중에 서로 어긋나지 않도록 한다.
+//   표시 명칭 / 권장 구간 / 이동 목적지를 아래 배열 한 세트로만 관리한다.
+//   화면 표시 · 선택 메뉴 · 실제 warp 목적지가 모두 같은 인덱스를 쓰므로
+//   한쪽만 수정되어 어긋나는 일이 없다.
 //   성장 조건 / 보상 조건 / 목표 판정(S_GoalLine)에 관여하지 않으며
 //   완료 변수도 만들지 않는다. 이동은 강제하지 않는다.
 //   Base Lv.175 이상은 175 이후 콘텐츠 안내가 따로 있으므로 표시하지 않는다.
 //
-//   목적지 좌표는 npc/custom/warper.txt 의 @c[] 값을 그대로 재사용한다.
+//   목적지 좌표는 npc/custom/warper.txt 의 @c[] 값을 그대로 재사용한다. (14차 검증)
 //     anthell01  (35,262)  D4  @c[2],@c[3]
 //     orcsdun01  (32,170)  D36 @c[2],@c[3]
 //     gld_dun02  (39,161)  G2  @c[2],@c[3]
@@ -1729,60 +1746,68 @@ S_HuntingGuide:
 	if (BaseLevel >= 175)
 		return;
 
-	if (BaseLevel < 20) {
-		.@name$ = "초보존";
-		.@range$ = "Base Lv.1 ~ 19";
-		.@map$ = "pvp_n_2-5"; .@x = 100; .@y = 133;
-	}
-	else if (BaseLevel < 40) {
-		.@name$ = "개미지옥 1층";
-		.@range$ = "Base Lv.20 ~ 39";
-		.@map$ = "anthell01"; .@x = 35; .@y = 262;
-	}
-	else if (BaseLevel < 60) {
-		.@name$ = "오크 지하 동굴 1층";
-		.@range$ = "Base Lv.40 ~ 59";
-		.@map$ = "orcsdun01"; .@x = 32; .@y = 170;
-	}
-	else if (BaseLevel < 100) {
-		.@name$ = "루이나 지하 던전 1층";
-		.@range$ = "Base Lv.60 ~ 99";
-		.@map$ = "gld_dun02"; .@x = 39; .@y = 161;
-	}
-	else if (BaseLevel < 110) {
-		.@name$ = "노그로드 2층";
-		.@range$ = "Base Lv.100 ~ 109";
-		.@map$ = "mag_dun02"; .@x = 47; .@y = 30;
-	}
-	else if (BaseLevel < 130) {
-		.@name$ = "용의 둥지 2층";
-		.@range$ = "Base Lv.110 ~ 129";
-		.@map$ = "lasa_dun02"; .@x = 22; .@y = 171;
-	}
-	else if (BaseLevel < 160) {
-		.@name$ = "용의 둥지 3층";
-		.@range$ = "Base Lv.130 ~ 159";
-		.@map$ = "lasa_dun03"; .@x = 190; .@y = 18;
-	}
-	else {
-		.@name$ = "뒤틀린 시간의 시계탑 3층";
-		.@range$ = "Base Lv.160 ~ 174";
-		.@map$ = "c_tower3_"; .@x = 60; .@y = 142;
-	}
+	setarray .@hg_name$[0],
+		"초보존",
+		"개미지옥 1층",
+		"오크 지하 동굴 1층",
+		"루이나 지하 던전 1층",
+		"노그로드 2층",
+		"용의 둥지 2층",
+		"용의 둥지 3층",
+		"뒤틀린 시간의 시계탑 3층";
+	setarray .@hg_min[0],   1,  20,  40,  60, 100, 110, 130, 160;
+	setarray .@hg_max[0],  19,  39,  59,  99, 109, 129, 159, 174;
+	setarray .@hg_map$[0],
+		"pvp_n_2-5",
+		"anthell01",
+		"orcsdun01",
+		"gld_dun02",
+		"mag_dun02",
+		"lasa_dun02",
+		"lasa_dun03",
+		"c_tower3_";
+	setarray .@hg_x[0], 100,  35,  32,  39,  47,  22, 190,  60;
+	setarray .@hg_y[0], 133, 262, 170, 161,  30, 171,  18, 142;
+	.@hg_size = getarraysize(.@hg_name$);
+
+	// 현재 레벨이 속한 추천 구간을 찾는다.
+	.@cur = 0;
+	while (.@cur < .@hg_size - 1 && BaseLevel > .@hg_max[.@cur])
+		.@cur += 1;
 
 	mes "";
 	mes "^0055FF[추천 레벨업 사냥터]^000000 ^777777(참고용)^000000";
-	mes "^00AAFF" + .@name$ + "^000000";
-	mes "^777777권장 구간 : " + .@range$ + "^000000";
-	mes "";
+	mes "^777777현재 추천^000000";
+	mes "^00AAFF" + .@hg_name$[.@cur] + "^000000";
+	mes "^777777권장 구간 : Base Lv." + .@hg_min[.@cur] + " ~ " + .@hg_max[.@cur] + "^000000";
 
-	// 이동은 선택 사항이다.
-	// 돌아가기를 고르면 기존 현재 성장 목표 화면 흐름을 그대로 잇는다.
-	if (select("^00AAFF추천 사냥터로 이동^000000:돌아가기") == 2)
+	if (select("^00AAFF추천 사냥터 목록 / 이동^000000:돌아가기") == 2)
+		return;
+
+	// 메뉴 선택으로 새 화면에 진입하므로 이전 대사를 지운다.
+	clear;
+	mes "^00AAFF[추천 사냥터 이동]^000000";
+	mes "";
+	mes "원하는 사냥터를 선택해주세요.";
+	mes "^777777괄호 안의 레벨은 권장 구간입니다.^000000";
+
+	// 현재 추천 구간만 색상과 별표로 구분한다. 선택 제한은 두지 않는다.
+	.@menu$ = "";
+	for (.@i = 0; .@i < .@hg_size; .@i += 1) {
+		.@line$ = .@hg_name$[.@i] + " (Lv." + .@hg_min[.@i] + "~" + .@hg_max[.@i] + ")";
+		if (.@i == .@cur)
+			.@menu$ += "^FF9900★ " + .@line$ + "^000000:";
+		else
+			.@menu$ += .@line$ + ":";
+	}
+	.@menu$ += "돌아가기";
+
+	.@sel = select(.@menu$) - 1;
+	if (.@sel < 0 || .@sel >= .@hg_size)
 		return;
 
 	close2;
-	warp .@map$, .@x, .@y;
+	warp .@hg_map$[.@sel], .@hg_x[.@sel], .@hg_y[.@sel];
 	end;
 
 OnInit:
@@ -1912,6 +1937,33 @@ OnPCLoginEvent:
 
 	if (!#NEED_BEGINNER || #NEED_BEGINNER_START <= 0)
 		end;
+
+	// 15차: Lv.100 종합 은총 지급 버그 1회 보정
+	//   수정 전에는 종합 은총을 일반 getitem 399904 로 지급해
+	//   NeedGracePackageUntil 이 설정되지 않고 임대 티켓도 없었다.
+	//   정상 경로는 전부 rentitem 이므로 일반(비임대) 399904 보유가
+	//   그 버그의 유일한 증거다. countitem 은 비임대만,
+	//   rentalcountitem 은 임대만 세므로 둘은 확실히 구분된다.
+	if (NEED_BEGINNER_REWARD_100 && !NEED_BEGINNER_GRACE_FIX) {
+		.@now = gettimetick(2);
+
+		if (countitem(399904) > 0 && NeedGracePackageUntil <= .@now) {
+			// delitem 은 임대/일반을 구분하지 않으므로
+			// 임대 티켓이 하나도 없을 때만 잘못 지급된 일반 티켓을 회수한다.
+			if (rentalcountitem(399904) <= 0)
+				delitem 399904, 1;
+
+			callfunc("NeedGrace_GrantPackage", 604800);
+			NEED_BEGINNER_GRACE_FIX = 1;
+			dispbottom "[NEED 성장지원] Lv.100 종합 은총을 7일 기간제로 보정했습니다.";
+		}
+		else if (NeedGracePackageUntil > .@now && rentalcountitem(399904) <= 0) {
+			// 기간은 남아 있는데 임대 티켓만 없는 경우 동기화만 복구한다.
+			// (기간을 추가로 늘리지 않는다)
+			callfunc "NeedGrace_RefreshRentalTicket", 399904, NeedGracePackageUntil;
+			NEED_BEGINNER_GRACE_FIX = 1;
+		}
+	}
 
 	.@result = callfunc("F_NEED_BeginnerSupply", 0);
 	if (.@result)

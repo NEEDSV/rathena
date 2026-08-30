@@ -486,6 +486,34 @@ function	script	NeedGrace_RefreshRentalTicket	{
 	return;
 }
 
+// ============================================================
+// 외부(성장지원 등)에서 종합 은총을 지급할 때 쓰는 공용 함수 (15차)
+//   getarg(0) = 지급 기간(초). 생략하면 주간 이용권과 같은 7일.
+//   기존 종합 은총 기간이 남아 있으면 날리지 않고 뒤에 이어 붙인다.
+//   변수(NeedGracePackageUntil)와 임대 티켓(399904)의 만료 시각을
+//   NeedGrace_RefreshRentalTicket 으로 항상 동기화한다.
+//   반환값 = 새 만료 시각. 실패하면 기존 값을 그대로 돌려준다.
+// ============================================================
+function	script	NeedGrace_GrantPackage	{
+	set .@seconds, getarg(0, $@NeedGraceWeeklySeconds);
+	set .@item, $@NeedGracePackageTicket;
+	set .@now, gettimetick(2);
+
+	if (.@seconds <= 0 || .@item <= 0)
+		return NeedGracePackageUntil;
+
+	// 기존 은총 구매와 같은 연장 규칙을 사용한다.
+	if (NeedGracePackageUntil > .@now)
+		set .@new_until, NeedGracePackageUntil + .@seconds;
+	else
+		set .@new_until, .@now + .@seconds;
+
+	NeedGracePackageUntil = .@new_until;
+	callfunc "NeedGrace_RefreshRentalTicket", .@item, .@new_until;
+
+	return .@new_until;
+}
+
 function	script	NeedGrace_GetEffectiveUntil	{
 	set .@type, getarg(0);
 
