@@ -68,6 +68,15 @@ function	script	F_NEED_EP161_CookingDailyOpen	{
 //   이 조합이 성립하지 않습니다.
 // 구역 퀘스트를 되돌리고, 위조로 건너뛴 최초 보상(명예의 증표 4개)을 소급 지급합니다.
 // 보정 플래그로 캐릭터당 구역당 1회만 지급됩니다.
+// NEED: 「오늘도 내 마음은」 반복 일일퀘스트의 14493 과 14494 가 동시에 남아 있는
+// 비정상 상태를 정리합니다. 14494 가 후속 단계이므로 14493 만 제거하고 14494 를 유지하며,
+// 보상은 어느 쪽도 지급하지 않으므로 중복 지급이 발생하지 않습니다.
+function	script	F_NEED_EP161_WignerDailyFix	{
+	if (isbegin_quest(14493) == 1 && isbegin_quest(14494) == 1)
+		erasequest 14493;// Today I Feel
+	return;
+}
+
 function	script	F_NEED_EP161_PrisonSectorRepair	{
 	.@sector_quest = getarg(0);
 	.@first_quest = getarg(1);
@@ -10749,10 +10758,8 @@ prt_cas_q,95,9,5	script	유르겐 위그너#ep16wig	4_M_4THPRIN1,{
 		mes "[유르겐]";
 		mes "무슨 일로 찾아오셨습니까?";
 		next;
-		if (select("일일 의뢰", "다른 용무(가문 이야기)") == 1) {
-			.@need_daily_mode = 1;
+		if (select("일일 의뢰", "다른 용무(가문 이야기)") == 1)
 			goto L_NEED_JurgenDaily;
-		}
 	}
 
 	if (ep16_wig == 0) {
@@ -11458,439 +11465,437 @@ prt_cas_q,95,9,5	script	유르겐 위그너#ep16wig	4_M_4THPRIN1,{
 		ep16_wig = 16;
 		close3;
 	}
-L_NEED_JurgenDaily:
-	switch( checkquest(14492,PLAYTIME) ) {
-	case -1:
-		// NEED: 기본 위그너 스토리를 생략한 캐릭터는 바로 오늘의 전달 임무를 받습니다.
-		if (.@need_daily_mode && isbegin_quest(14493) == 0 && isbegin_quest(14494) == 0) {
-			setquest 14493;// Today I Feel
-			cutin "16jur_nor",0;
+	// NEED: 위그너 가문 스토리 16~20 단계는 일일퀘스트 쿨타임(14492)과 무관하게 항상 처리합니다.
+	// 기존에는 이 구간이 checkquest(14492,PLAYTIME) == -1 안에 있어,
+	// 쿨타임이 남아 있으면 스토리 진행이 통째로 막혔습니다.
+	if (ep16_wig == 16) {	// first time (not repeatable)
+		mes "[" + strcharinfo(0) + "]";
+		mes "유르겐, 안녕?";
+		next;
+		cutin "16jur_nor",0;
+		mes "[유르겐]";
+		mes "아, 모험가님. 어서 오세요.";
+		mes "연회는 즐기고 계십니까? 혹시 도움이 필요한 일이라도?";
+		next;
+		mes "[" + strcharinfo(0) + "]";
+		mes "아니. 잠깐 이야기하고 싶어서.";
+		mes "네 누나가 요즘 어떻게 지내는지도 궁금하고.";
+		next;
+		cutin "16jur_nor",0;
+		mes "[유르겐]";
+		mes "도와주신 덕분에 지금은 정말 잘 지내고 있습니다.";
+		mes "누나와도 전보다 훨씬 많이 이야기하고 있고...";
+		next;
+		cloakoffnpcself( "메이드#ep16wig01" );
+		cutin "",255;
+		mes "[메이드]";
+		mes "실례하겠습니다.";
+		next;
+		emotion ET_HUK, getnpcid(0, "메이드#ep16wig01");
+		mes "[메이드]";
+		mes "죄송합니다. 아무도 없는 줄 알았습니다. 방을 청소하려고 했는데 정말 죄송합니다. 나중에 다시 오겠습니다.";
+		next;
+		cutin "16jur_nor",0;
+		mes "[유르겐]";
+		mes "아니, 괜찮아. 들어와. 사람이 있다고 방을 청소하지 못한다는 건 말이 안 되잖아.";
+		next;
+		cutin "",255;
+		mes "[" + strcharinfo(0) + "]";
+		mes "안녕하세요, 오랜만이네요. 지난번에는 여러모로 미안했습니다. 다행히 상자 문제는 잘 해결됐어요.";
+		next;
+		mes "[메이드]";
+		mes "아... 네... 그렇군요...";
+		mes "안녕하세요...";
+		next;
+		cutin "16jur_nor",0;
+		mes "[유르겐]";
+		mes "지난번 그분인가요? 상자에 대해 물어보셨던...?";
+		next;
+		mes "[" + strcharinfo(0) + "]";
+		mes "맞아.";
+		next;
+		mes "[유르겐]";
+		mes "그때는 미안했어요. 너무 다급하고 정신이 없었거든요. 기분이 상했다면 사과할게요.";
+		next;
+		cutin "",255;
+		mes "[메이드]";
+		mes "그렇게 말씀해 주셔서 감사합니다. 메이드라는 이유로 의심받거나 도둑 취급을 받을 때가 있거든요.";
+		next;
+		mes "[메이드]";
+		mes "하지만 왕자님은 다른 것 같네요. 조금 놀랐습니다. 상류사회 사람들은 사과 같은 건 할 줄 모르는 줄 알았거든요.";
+		next;
+		mes "[메이드]";
+		mes "아, 제가 주제넘게 말했네요.";
+		mes "죄송해요.";
+		next;
+		cutin "16jur_nor",0;
+		mes "[유르겐]";
+		mes "아니, 괜찮아.";
+		next;
+		cutin "",255;
+		mes "[메이드]";
+		mes "그럼 저는 이만 가보겠습니다.";
+		mes "원래 방이 비었을 때 청소해야 하거든요. 실례하겠습니다.";
+		next;
+		cloakonnpcself( "메이드#ep16wig01" );
+		cutin "16jur_sim",0;
+		mes "[유르겐]";
+		mes "그럴 필요까지는... 아, 가버렸네...";
+		next;
+		mes "[유르겐]";
+		mes "저기, 모험가님?";
+		next;
+		mes "[" + strcharinfo(0) + "]";
+		mes "뭐라고?";
+		next;
+		cutin "16jur_sim",0;
+		emotion ET_THROB;
+		mes "[유르겐]";
+		mes "저 아무래도 ^0000cd사랑에 빠진 것 같습니다^000000.";
+		next;
+		cutin "",255;
+		mes "[" + strcharinfo(0) + "]";
+		mes "아, 그렇구나.";
+		next;
+		emotion ET_HUK, playerattached();
+		mes "[" + strcharinfo(0) + "]";
+		mes "뭐라고?";
+		next;
+		cutin "16jur_nor",0;
+		emotion ET_THROB;
+		mes "[유르겐]";
+		mes "저렇게 제 눈을 똑바로 바라보는 사람은 처음 만나봤습니다.";
+		next;
+		mes "[유르겐]";
+		mes "첫눈에 반했습니다. 차분하고 당당한 목소리, 꾸밈없는 행동, 강한 의지가 느껴지는 말투...";
+		next;
+		mes "[유르겐]";
+		mes "지금까지 제가 본 여자들은 모두 온실 속 꽃 같았습니다. 하지만 그녀는 들판에 핀 야생화 같아요.";
+		next;
+		mes "[유르겐]";
+		mes "제가 만나온 아가씨들과는 완전히 다릅니다.";
+		next;
+		mes "[유르겐]";
+		mes "모험가님! 첫눈에 반한 사람에게 마음을 어떻게 전해야 합니까? 가서 손을 잡고 사랑한다고 말하면 될까요?";
+		next;
+		mes "[" + strcharinfo(0) + "]";
+		mes "뭐라고? 그런 건 전혀 모르는 거야?";
+		next;
+		cutin "16jur_nor",0;
+		mes "[유르겐]";
+		mes "제 ^0000cd첫사랑^000000입니다. 그녀를 만난 뒤 제 인생은 완전히 달라질 겁니다.";
+		next;
+		mes "[" + strcharinfo(0) + "]";
+		mes "흠... 문 밖에 있는 사람들이 너한테 해왔던 일을 떠올려 봐.";
+		next;
+		cutin "16jur_sim",0;
+		mes "[유르겐]";
+		mes "글쎄요... 딱히 기억나는 건... 음... 인상적인 사람은 몇 있었습니다. 경비를 뚫고 들어와 제 방 커튼 뒤에 숨었던 사람도 있었고...";
+		next;
+		mes "[" + strcharinfo(0) + "]";
+		mes "음... 대단하긴 하네. 하지만 범죄니까 잊어.";
+		next;
+		cutin "16jur_nor",0;
+		mes "[유르겐]";
+		mes "실물 크기의 황금 동상을 보내온 사람도 있었습니다. 필요도 없고 실제 저만큼 잘생기지도 않아서 돌려보냈지만요.";
+		next;
+		mes "[유르겐]";
+		mes "저와 똑같이 생긴 황금 동상을 보내는 건 어떨까요?";
+		next;
+		mes "[" + strcharinfo(0) + "]";
+		mes "처음부터 그렇게 과하게 하면 부담스러워할 거야. 작은 선물과 함께 ^0000cd편지^000000를 보내보는 건 어때?";
+		next;
+		mes "[유르겐]";
+		mes "좋은 생각입니다! 잠시만 기다려 주세요!";
+		next;
+		mes "[" + strcharinfo(0) + "]";
+		mes "뭐? 뭘 기다리라는 거야?";
+		next;
+		cutin "16jur_sim",0;
+		mes "[유르겐]";
+		mes "잊으셨습니까? 제가 저 문 밖으로 한 발만 나가도 사람들이 몰려듭니다.";
+		next;
+		mes "[유르겐]";
+		mes "그녀에게도 폐가 되겠지요. 그러고 보니 이름도 묻지 못했습니다.";
+		next;
+		cutin "16jur_nor",0;
+		mes "[유르겐]";
+		mes "보석을 담은 이 상자와 편지를 그녀에게 전해 주세요.";
+		next;
+		if (select( "알겠어.", "어려울 것 같습니다." ) == 2) {
+			mes "[" + strcharinfo(0) + "]";
+			mes "그건 좀 어려워. 다른 할 일도 있거든.";
+			next;
+			cutin "16jur_sim",0;
 			mes "[유르겐]";
-			mes "오늘도 메리에게 제 마음을 전해 주시겠습니까?";
+			mes "어려운 부탁을 드려 죄송합니다. 그럼 제가 직접 가야겠군요. 내일 아침 룬 미드가츠 일보에 위그너 가문의 후계자가 추종자들에게 깔려 사망했다는 기사가 실릴지도 모르겠습니다.";
 			next;
 			mes "[유르겐]";
-			mes "^0000cd바다가 담긴 돌 15개와 시들지 않는 장미 1개^000000를 준비해 메리에게 전해 주세요.";
+			mes "아니면 불쌍한 메이드가 내일까지 병원에 입원할 수도 있겠군요. 아무튼 이해합니다.";
 			close3;
 		}
+		cutin "",255;
+		mes "[" + strcharinfo(0) + "]";
+		mes "알았어. 그럼 다녀올게.";
+		setquest 14488;// Please Deliver My Love
+		ep16_wig = 17;
+		close;
+	}
+	if (ep16_wig == 17) {
+		cutin "16jur_nor",0;
+		mes "[유르겐]";
+		mes "모험가님! 기다리고 있었습니다. 어떻게 됐습니까? 그녀도 저를 사랑한다고 했나요?";
+		next;
+		mes "[" + strcharinfo(0) + "]";
+		mes "아직 만나지 못했어. 다시 찾아가 볼게.";
+		close3;
+	}
+	if (ep16_wig == 18) {
+		cutin "16jur_nor",0;
+		mes "[유르겐]";
+		mes "모험가님! 기다리고 있었습니다.";
+		mes "어떻게 됐습니까? 그녀도 저를 사랑한다고 했나요?";
+		next;
+		mes "[" + strcharinfo(0) + "]";
+		mes "아니, 사실은... ^0000cd거절했어^000000. 네가 보낸 물건도 돌려줬고.";
+		next;
+		cutin "16jur_sim",0;
+		mes "[유르겐]";
+		mes "저를 거절했다고요?";
+		mes "왜죠? 제 외모가 마음에 들지 않는다고 했습니까? 아니면 제가 보낸 물건이 부족했나요?";
+		next;
+		mes "[" + strcharinfo(0) + "]";
+		mes "그런 게 아니라... 지금은 누군가와 만날 상황이 아니라고 했어. 사정이 있는 것 같더라.";
+		next;
+		mes "[유르겐]";
+		mes "이미 남자친구가 있는 겁니까? 놀랍지는 않군요. 그렇게 매력적인 사람이니. 제가 반한 것도 당연합니다.";
+		next;
+		mes "[" + strcharinfo(0) + "]";
+		mes "아니, 그것도 아니야... 그냥 지금은 연애할 상황이 아니라고 했어.";
+		next;
+		mes "[유르겐]";
+		mes "와... ^0000cd살면서 이렇게까지 무언가를 간절히 원해본 건 처음입니다^000000. 이렇게 얻기 어려울 줄은 몰랐군요.";
+		mes "사는 게 원래 이렇게 어려운 겁니까?";
+		next;
+		cutin "16jur_nor",0;
+		mes "[유르겐]";
+		mes "하지만 아버지께서는 언제나 적어도 세 번은 시도해 보라고 하셨습니다.";
+		next;
+		mes "[유르겐]";
+		mes "첫 번째는 시작하기 위해, 두 번째는 확인하기 위해, 세 번째는 인연이 아니라면 포기하기 위해서라고요.";
+		next;
+		mes "[유르겐]";
+		mes "그러니 모험가님. 한 번만 더 부탁드리겠습니다.";
+		next;
+		mes "[" + strcharinfo(0) + "]";
+		mes "그럼 편지를 다시 써야겠네...";
+		next;
+		mes "[유르겐]";
+		mes "특별한 게 필요합니다. 제 마음을 비춰줄 아름답고 반짝이는 무언가...";
+		next;
+		mes "[유르겐]";
+		mes "바다가 담긴 돌! 그리고 꽃!";
+		next;
+		mes "[" + strcharinfo(0) + "]";
+		mes "뭐라고?";
+		next;
+		mes "[유르겐]";
+		mes "그녀에게 ^0000cd바다처럼 넓고 아름다운 마음^000000과 ^0000cd영원히 시들지 않는 마음^000000을 전하고 싶습니다.";
+		next;
+		mes "[" + strcharinfo(0) + "]";
+		mes "그것도 내가 직접 다 구해와야 하는 거야?";
+		next;
+		cutin "16jur_sim",0;
+		mes "[유르겐]";
+		mes "부탁드립니다, 모험가님. 제 사랑의 전령이 되어주세요. 바다보다 넓고 시들지 않는 제 마음을 그녀에게 전해 주세요.";
+		next;
+		mes "[" + strcharinfo(0) + "]";
+		mes "이번에도 부탁드리겠습니다.";
+		next;
+		cutin "16jur_nor",0;
+		mes "[유르겐]";
+		mes "필요한 건 ^0000cd바다가 담긴 돌 15개와 시들지 않는 장미 1개^000000입니다.";
+		next;
+		mes "[유르겐]";
+		mes "전부 구해 그녀에게 전해 주세요.";
+		next;
+		mes "[유르겐]";
+		mes "이 은혜는 절대 잊지 않고 반드시 갚겠습니다. 우리 위그너는 빚을 잊지 않습니다.";
+		next;
+		mes "[" + strcharinfo(0) + "]";
+		mes "대가를 바라고 하는 건 아니지만 그렇게 간절해 보이니 전해줄게.";
+		next;
+		mes "[유르겐]";
+		mes "감사합니다! 아, 혹시 그녀의 이름은 알아내셨습니까?";
+		next;
+		mes "[" + strcharinfo(0) + "]";
+		mes "메리. 이름은 메리야.";
+		next;
+		mes "[유르겐]";
+		mes "^0000cd메리^000000. 흔하지만 예쁜 이름이군요. 흔하다는 건 그만큼 많은 사랑을 받는 이름이라는 뜻이겠지요. 이제부터 제 물건에는 전부 그 이름을 수놓아야겠습니다.";
+		next;
+		mes "[유르겐]";
+		mes "모험가님, 이제 출발해 주세요. 제 마음을 무사히 전해주시길 바랍니다.";
+		erasequest 14489;// I Have to Turn It Down
+		setquest 14490;// My Love Once More
+		ep16_wig = 19;
+		close3;
+	}
+	if (ep16_wig == 19) {
+		cutin "16jur_nor",0;
+		mes "[유르겐]";
+		mes "메리에게 제 마음을 잘 전하셨습니까? 생각보다 빨리 돌아오셨군요.";
+		next;
+		mes "[유르겐]";
+		mes "혹시 가져가야 할 물건을 잊으셨습니까?";
+		next;
+		mes "[유르겐]";
+		mes "^0000cd메두사를 처치해 얻는 바다가 담긴 돌 15개와 시들지 않는 장미 1개^000000가 필요합니다.";
+		next;
+		mes "[유르겐]";
+		mes "이런 평범한 물건으로 마음을 표현한다면 메리도 부담스럽지 않겠지요? 바다보다 넓고 시들지 않는 제 마음을 전해 주세요.";
+		close3;
+	}
+	if (ep16_wig == 20) {
+		cutin "16jur_nor",0;
+		mes "[유르겐]";
+		mes "모험가님! 돌아오셨군요!";
+		mes "당신이 없는 동안에도 계속 그녀 생각만 했습니다.";
+		next;
+		emotion ET_THROB;
+		mes "[유르겐]";
+		mes "밥을 먹을 때도, 차를 마실 때도, 거울을 볼 때도, 다른 사람과 이야기할 때도! 하루 종일 그녀만 생각했습니다. 괴로우면서도 설레더군요.";
+		next;
+		mes "[" + strcharinfo(0) + "]";
+		mes "사랑에 빠지면 그런 법이지.";
+		next;
+		cutin "16jur_sim",0;
+		mes "[유르겐]";
+		mes "아, 그렇다면 그동안 수많은 사람에게 제가 못할 짓을 했던 셈이군요. 이제 와서 어쩔 수는 없지만.";
+		next;
+		cutin "16jur_nor",0;
+		mes "[유르겐]";
+		mes "그런데 손이 비어 있는 걸 보니 드디어 그녀가 제 마음을 받아준 거군요!";
+		next;
+		mes "[" + strcharinfo(0) + "]";
+		mes "음, 부정적으로 반응한 건 아니지만 아직 서로 잘 모르니까 조심하는 게 좋겠어.";
+		mes "조금 시간을 주는 게 어때?";
+		next;
+		mes "[유르겐]";
+		mes "그럼 아직 제 마음을 완전히 받아준 건 아니군요. 그래도 괜찮습니다! 아직 거절당한 건 아니니까!";
+		next;
+		cutin "16jur_sim",0;
+		mes "[유르겐]";
+		mes "누군가를 사랑하는 게 이렇게 괴로운 일인지 몰랐습니다. 그녀의 말 한마디, 행동 하나에 이렇게 마음 졸이게 될 줄도요.";
+		next;
+		mes "[" + strcharinfo(0) + "]";
+		mes "그래. 누군가의 마음을 얻는 게 가장 어려운 일이야.";
+		next;
+		cutin "16jur_nor",0;
+		mes "[유르겐]";
+		mes "앞으로는 저를 좋아해 주는 사람들에게 좀 더 잘해야겠군요.";
+		next;
+		mes "[" + strcharinfo(0) + "]";
+		mes "그건 별로 좋은 생각이 아닌 것 같은데...";
+		next;
+		mes "[유르겐]";
+		mes "모험가님, 다시 한번 감사합니다. 내일도 와주시겠습니까?";
+		next;
+		mes "[" + strcharinfo(0) + "]";
+		mes "뭐라고?";
+		next;
+		mes "[유르겐]";
+		mes "좋은 징조 같습니다. 파도가 올 때 노를 저어라. 우리 가문의 수많은 격언 중 하나입니다.";
+		next;
+		emotion ET_THROB;
+		mes "[유르겐]";
+		mes "매일 그녀에게 제 뜨거운 마음을 알리고 싶습니다.";
+		next;
+		mes "[유르겐]";
+		mes "모험가님이 대신 전해주시면 모든 일이 잘 풀릴 것 같은 예감이 듭니다.";
+		next;
+		mes "[" + strcharinfo(0) + "]";
+		mes "그녀에게 시간을 좀 주는 게 어때?";
+		next;
+		cutin "16jur_sim",0;
+		mes "[유르겐]";
+		mes "그녀가 저를 잊으면 어떡합니까? 그럼 하루에 한 번만이라도 제 마음을 전해 주세요. 거절하실 건 아니지요?";
+		next;
+		cutin "16jur_nor",0;
+		mes "[유르겐]";
+		mes "아, 깜빡할 뻔했군요. 많지는 않지만 제 사랑의 전령에게 드리는 감사의 표시로 받아주세요.";
+		next;
+		mes "[유르겐]";
+		mes "그럼 내일 또 뵙겠습니다!";
+		erasequest 14491;// I Have to Turn It Down Again
+		setquest 14492;// There Is a Silver Lining
+		getitem 6919,4;// TokenOfHonor
+		getexp 200000,200000;
+		ep16_wig = 21;
+		close3;
+	}
 
-		if (ep16_wig == 16) {	// first time (not repeatable)
-			mes "[" + strcharinfo(0) + "]";
-			mes "유르겐, 안녕?";
-			next;
-			cutin "16jur_nor",0;
-			mes "[유르겐]";
-			mes "아, 모험가님. 어서 오세요.";
-			mes "연회는 즐기고 계십니까? 혹시 도움이 필요한 일이라도?";
-			next;
-			mes "[" + strcharinfo(0) + "]";
-			mes "아니. 잠깐 이야기하고 싶어서.";
-			mes "네 누나가 요즘 어떻게 지내는지도 궁금하고.";
-			next;
-			cutin "16jur_nor",0;
-			mes "[유르겐]";
-			mes "도와주신 덕분에 지금은 정말 잘 지내고 있습니다.";
-			mes "누나와도 전보다 훨씬 많이 이야기하고 있고...";
-			next;
-			cloakoffnpcself( "메이드#ep16wig01" );
-			cutin "",255;
-			mes "[메이드]";
-			mes "실례하겠습니다.";
-			next;
-			emotion ET_HUK, getnpcid(0, "메이드#ep16wig01");
-			mes "[메이드]";
-			mes "죄송합니다. 아무도 없는 줄 알았습니다. 방을 청소하려고 했는데 정말 죄송합니다. 나중에 다시 오겠습니다.";
-			next;
-			cutin "16jur_nor",0;
-			mes "[유르겐]";
-			mes "아니, 괜찮아. 들어와. 사람이 있다고 방을 청소하지 못한다는 건 말이 안 되잖아.";
-			next;
-			cutin "",255;
-			mes "[" + strcharinfo(0) + "]";
-			mes "안녕하세요, 오랜만이네요. 지난번에는 여러모로 미안했습니다. 다행히 상자 문제는 잘 해결됐어요.";
-			next;
-			mes "[메이드]";
-			mes "아... 네... 그렇군요...";
-			mes "안녕하세요...";
-			next;
-			cutin "16jur_nor",0;
-			mes "[유르겐]";
-			mes "지난번 그분인가요? 상자에 대해 물어보셨던...?";
-			next;
-			mes "[" + strcharinfo(0) + "]";
-			mes "맞아.";
-			next;
-			mes "[유르겐]";
-			mes "그때는 미안했어요. 너무 다급하고 정신이 없었거든요. 기분이 상했다면 사과할게요.";
-			next;
-			cutin "",255;
-			mes "[메이드]";
-			mes "그렇게 말씀해 주셔서 감사합니다. 메이드라는 이유로 의심받거나 도둑 취급을 받을 때가 있거든요.";
-			next;
-			mes "[메이드]";
-			mes "하지만 왕자님은 다른 것 같네요. 조금 놀랐습니다. 상류사회 사람들은 사과 같은 건 할 줄 모르는 줄 알았거든요.";
-			next;
-			mes "[메이드]";
-			mes "아, 제가 주제넘게 말했네요.";
-			mes "죄송해요.";
-			next;
-			cutin "16jur_nor",0;
-			mes "[유르겐]";
-			mes "아니, 괜찮아.";
-			next;
-			cutin "",255;
-			mes "[메이드]";
-			mes "그럼 저는 이만 가보겠습니다.";
-			mes "원래 방이 비었을 때 청소해야 하거든요. 실례하겠습니다.";
-			next;
-			cloakonnpcself( "메이드#ep16wig01" );
-			cutin "16jur_sim",0;
-			mes "[유르겐]";
-			mes "그럴 필요까지는... 아, 가버렸네...";
-			next;
-			mes "[유르겐]";
-			mes "저기, 모험가님?";
-			next;
-			mes "[" + strcharinfo(0) + "]";
-			mes "뭐라고?";
-			next;
-			cutin "16jur_sim",0;
-			emotion ET_THROB;
-			mes "[유르겐]";
-			mes "저 아무래도 ^0000cd사랑에 빠진 것 같습니다^000000.";
-			next;
-			cutin "",255;
-			mes "[" + strcharinfo(0) + "]";
-			mes "아, 그렇구나.";
-			next;
-			emotion ET_HUK, playerattached();
-			mes "[" + strcharinfo(0) + "]";
-			mes "뭐라고?";
-			next;
-			cutin "16jur_nor",0;
-			emotion ET_THROB;
-			mes "[유르겐]";
-			mes "저렇게 제 눈을 똑바로 바라보는 사람은 처음 만나봤습니다.";
-			next;
-			mes "[유르겐]";
-			mes "첫눈에 반했습니다. 차분하고 당당한 목소리, 꾸밈없는 행동, 강한 의지가 느껴지는 말투...";
-			next;
-			mes "[유르겐]";
-			mes "지금까지 제가 본 여자들은 모두 온실 속 꽃 같았습니다. 하지만 그녀는 들판에 핀 야생화 같아요.";
-			next;
-			mes "[유르겐]";
-			mes "제가 만나온 아가씨들과는 완전히 다릅니다.";
-			next;
-			mes "[유르겐]";
-			mes "모험가님! 첫눈에 반한 사람에게 마음을 어떻게 전해야 합니까? 가서 손을 잡고 사랑한다고 말하면 될까요?";
-			next;
-			mes "[" + strcharinfo(0) + "]";
-			mes "뭐라고? 그런 건 전혀 모르는 거야?";
-			next;
-			cutin "16jur_nor",0;
-			mes "[유르겐]";
-			mes "제 ^0000cd첫사랑^000000입니다. 그녀를 만난 뒤 제 인생은 완전히 달라질 겁니다.";
-			next;
-			mes "[" + strcharinfo(0) + "]";
-			mes "흠... 문 밖에 있는 사람들이 너한테 해왔던 일을 떠올려 봐.";
-			next;
-			cutin "16jur_sim",0;
-			mes "[유르겐]";
-			mes "글쎄요... 딱히 기억나는 건... 음... 인상적인 사람은 몇 있었습니다. 경비를 뚫고 들어와 제 방 커튼 뒤에 숨었던 사람도 있었고...";
-			next;
-			mes "[" + strcharinfo(0) + "]";
-			mes "음... 대단하긴 하네. 하지만 범죄니까 잊어.";
-			next;
-			cutin "16jur_nor",0;
-			mes "[유르겐]";
-			mes "실물 크기의 황금 동상을 보내온 사람도 있었습니다. 필요도 없고 실제 저만큼 잘생기지도 않아서 돌려보냈지만요.";
-			next;
-			mes "[유르겐]";
-			mes "저와 똑같이 생긴 황금 동상을 보내는 건 어떨까요?";
-			next;
-			mes "[" + strcharinfo(0) + "]";
-			mes "처음부터 그렇게 과하게 하면 부담스러워할 거야. 작은 선물과 함께 ^0000cd편지^000000를 보내보는 건 어때?";
-			next;
-			mes "[유르겐]";
-			mes "좋은 생각입니다! 잠시만 기다려 주세요!";
-			next;
-			mes "[" + strcharinfo(0) + "]";
-			mes "뭐? 뭘 기다리라는 거야?";
-			next;
-			cutin "16jur_sim",0;
-			mes "[유르겐]";
-			mes "잊으셨습니까? 제가 저 문 밖으로 한 발만 나가도 사람들이 몰려듭니다.";
-			next;
-			mes "[유르겐]";
-			mes "그녀에게도 폐가 되겠지요. 그러고 보니 이름도 묻지 못했습니다.";
-			next;
-			cutin "16jur_nor",0;
-			mes "[유르겐]";
-			mes "보석을 담은 이 상자와 편지를 그녀에게 전해 주세요.";
-			next;
-			if (select( "알겠어.", "어려울 것 같습니다." ) == 2) {
-				mes "[" + strcharinfo(0) + "]";
-				mes "그건 좀 어려워. 다른 할 일도 있거든.";
-				next;
-				cutin "16jur_sim",0;
-				mes "[유르겐]";
-				mes "어려운 부탁을 드려 죄송합니다. 그럼 제가 직접 가야겠군요. 내일 아침 룬 미드가츠 일보에 위그너 가문의 후계자가 추종자들에게 깔려 사망했다는 기사가 실릴지도 모르겠습니다.";
-				next;
-				mes "[유르겐]";
-				mes "아니면 불쌍한 메이드가 내일까지 병원에 입원할 수도 있겠군요. 아무튼 이해합니다.";
-				close3;
-			}
-			cutin "",255;
-			mes "[" + strcharinfo(0) + "]";
-			mes "알았어. 그럼 다녀올게.";
-			setquest 14488;// Please Deliver My Love
-			ep16_wig = 17;
-			close;
-		}
-		if (ep16_wig == 17) {
-			cutin "16jur_nor",0;
-			mes "[유르겐]";
-			mes "모험가님! 기다리고 있었습니다. 어떻게 됐습니까? 그녀도 저를 사랑한다고 했나요?";
-			next;
-			mes "[" + strcharinfo(0) + "]";
-			mes "아직 만나지 못했어. 다시 찾아가 볼게.";
-			close3;
-		}
-		if (ep16_wig == 18) {
-			cutin "16jur_nor",0;
-			mes "[유르겐]";
-			mes "모험가님! 기다리고 있었습니다.";
-			mes "어떻게 됐습니까? 그녀도 저를 사랑한다고 했나요?";
-			next;
-			mes "[" + strcharinfo(0) + "]";
-			mes "아니, 사실은... ^0000cd거절했어^000000. 네가 보낸 물건도 돌려줬고.";
-			next;
-			cutin "16jur_sim",0;
-			mes "[유르겐]";
-			mes "저를 거절했다고요?";
-			mes "왜죠? 제 외모가 마음에 들지 않는다고 했습니까? 아니면 제가 보낸 물건이 부족했나요?";
-			next;
-			mes "[" + strcharinfo(0) + "]";
-			mes "그런 게 아니라... 지금은 누군가와 만날 상황이 아니라고 했어. 사정이 있는 것 같더라.";
-			next;
-			mes "[유르겐]";
-			mes "이미 남자친구가 있는 겁니까? 놀랍지는 않군요. 그렇게 매력적인 사람이니. 제가 반한 것도 당연합니다.";
-			next;
-			mes "[" + strcharinfo(0) + "]";
-			mes "아니, 그것도 아니야... 그냥 지금은 연애할 상황이 아니라고 했어.";
-			next;
-			mes "[유르겐]";
-			mes "와... ^0000cd살면서 이렇게까지 무언가를 간절히 원해본 건 처음입니다^000000. 이렇게 얻기 어려울 줄은 몰랐군요.";
-			mes "사는 게 원래 이렇게 어려운 겁니까?";
-			next;
-			cutin "16jur_nor",0;
-			mes "[유르겐]";
-			mes "하지만 아버지께서는 언제나 적어도 세 번은 시도해 보라고 하셨습니다.";
-			next;
-			mes "[유르겐]";
-			mes "첫 번째는 시작하기 위해, 두 번째는 확인하기 위해, 세 번째는 인연이 아니라면 포기하기 위해서라고요.";
-			next;
-			mes "[유르겐]";
-			mes "그러니 모험가님. 한 번만 더 부탁드리겠습니다.";
-			next;
-			mes "[" + strcharinfo(0) + "]";
-			mes "그럼 편지를 다시 써야겠네...";
-			next;
-			mes "[유르겐]";
-			mes "특별한 게 필요합니다. 제 마음을 비춰줄 아름답고 반짝이는 무언가...";
-			next;
-			mes "[유르겐]";
-			mes "바다가 담긴 돌! 그리고 꽃!";
-			next;
-			mes "[" + strcharinfo(0) + "]";
-			mes "뭐라고?";
-			next;
-			mes "[유르겐]";
-			mes "그녀에게 ^0000cd바다처럼 넓고 아름다운 마음^000000과 ^0000cd영원히 시들지 않는 마음^000000을 전하고 싶습니다.";
-			next;
-			mes "[" + strcharinfo(0) + "]";
-			mes "그것도 내가 직접 다 구해와야 하는 거야?";
-			next;
-			cutin "16jur_sim",0;
-			mes "[유르겐]";
-			mes "부탁드립니다, 모험가님. 제 사랑의 전령이 되어주세요. 바다보다 넓고 시들지 않는 제 마음을 그녀에게 전해 주세요.";
-			next;
-			mes "[" + strcharinfo(0) + "]";
-			mes "이번에도 부탁드리겠습니다.";
-			next;
-			cutin "16jur_nor",0;
-			mes "[유르겐]";
-			mes "필요한 건 ^0000cd바다가 담긴 돌 15개와 시들지 않는 장미 1개^000000입니다.";
-			next;
-			mes "[유르겐]";
-			mes "전부 구해 그녀에게 전해 주세요.";
-			next;
-			mes "[유르겐]";
-			mes "이 은혜는 절대 잊지 않고 반드시 갚겠습니다. 우리 위그너는 빚을 잊지 않습니다.";
-			next;
-			mes "[" + strcharinfo(0) + "]";
-			mes "대가를 바라고 하는 건 아니지만 그렇게 간절해 보이니 전해줄게.";
-			next;
-			mes "[유르겐]";
-			mes "감사합니다! 아, 혹시 그녀의 이름은 알아내셨습니까?";
-			next;
-			mes "[" + strcharinfo(0) + "]";
-			mes "메리. 이름은 메리야.";
-			next;
-			mes "[유르겐]";
-			mes "^0000cd메리^000000. 흔하지만 예쁜 이름이군요. 흔하다는 건 그만큼 많은 사랑을 받는 이름이라는 뜻이겠지요. 이제부터 제 물건에는 전부 그 이름을 수놓아야겠습니다.";
-			next;
-			mes "[유르겐]";
-			mes "모험가님, 이제 출발해 주세요. 제 마음을 무사히 전해주시길 바랍니다.";
-			erasequest 14489;// I Have to Turn It Down
-			setquest 14490;// My Love Once More
-			ep16_wig = 19;
-			close3;
-		}
-		if (ep16_wig == 19) {
-			cutin "16jur_nor",0;
-			mes "[유르겐]";
-			mes "메리에게 제 마음을 잘 전하셨습니까? 생각보다 빨리 돌아오셨군요.";
-			next;
-			mes "[유르겐]";
-			mes "혹시 가져가야 할 물건을 잊으셨습니까?";
-			next;
-			mes "[유르겐]";
-			mes "^0000cd메두사를 처치해 얻는 바다가 담긴 돌 15개와 시들지 않는 장미 1개^000000가 필요합니다.";
-			next;
-			mes "[유르겐]";
-			mes "이런 평범한 물건으로 마음을 표현한다면 메리도 부담스럽지 않겠지요? 바다보다 넓고 시들지 않는 제 마음을 전해 주세요.";
-			close3;
-		}
-		if (ep16_wig == 20) {
-			cutin "16jur_nor",0;
-			mes "[유르겐]";
-			mes "모험가님! 돌아오셨군요!";
-			mes "당신이 없는 동안에도 계속 그녀 생각만 했습니다.";
-			next;
-			emotion ET_THROB;
-			mes "[유르겐]";
-			mes "밥을 먹을 때도, 차를 마실 때도, 거울을 볼 때도, 다른 사람과 이야기할 때도! 하루 종일 그녀만 생각했습니다. 괴로우면서도 설레더군요.";
-			next;
-			mes "[" + strcharinfo(0) + "]";
-			mes "사랑에 빠지면 그런 법이지.";
-			next;
-			cutin "16jur_sim",0;
-			mes "[유르겐]";
-			mes "아, 그렇다면 그동안 수많은 사람에게 제가 못할 짓을 했던 셈이군요. 이제 와서 어쩔 수는 없지만.";
-			next;
-			cutin "16jur_nor",0;
-			mes "[유르겐]";
-			mes "그런데 손이 비어 있는 걸 보니 드디어 그녀가 제 마음을 받아준 거군요!";
-			next;
-			mes "[" + strcharinfo(0) + "]";
-			mes "음, 부정적으로 반응한 건 아니지만 아직 서로 잘 모르니까 조심하는 게 좋겠어.";
-			mes "조금 시간을 주는 게 어때?";
-			next;
-			mes "[유르겐]";
-			mes "그럼 아직 제 마음을 완전히 받아준 건 아니군요. 그래도 괜찮습니다! 아직 거절당한 건 아니니까!";
-			next;
-			cutin "16jur_sim",0;
-			mes "[유르겐]";
-			mes "누군가를 사랑하는 게 이렇게 괴로운 일인지 몰랐습니다. 그녀의 말 한마디, 행동 하나에 이렇게 마음 졸이게 될 줄도요.";
-			next;
-			mes "[" + strcharinfo(0) + "]";
-			mes "그래. 누군가의 마음을 얻는 게 가장 어려운 일이야.";
-			next;
-			cutin "16jur_nor",0;
-			mes "[유르겐]";
-			mes "앞으로는 저를 좋아해 주는 사람들에게 좀 더 잘해야겠군요.";
-			next;
-			mes "[" + strcharinfo(0) + "]";
-			mes "그건 별로 좋은 생각이 아닌 것 같은데...";
-			next;
-			mes "[유르겐]";
-			mes "모험가님, 다시 한번 감사합니다. 내일도 와주시겠습니까?";
-			next;
-			mes "[" + strcharinfo(0) + "]";
-			mes "뭐라고?";
-			next;
-			mes "[유르겐]";
-			mes "좋은 징조 같습니다. 파도가 올 때 노를 저어라. 우리 가문의 수많은 격언 중 하나입니다.";
-			next;
-			emotion ET_THROB;
-			mes "[유르겐]";
-			mes "매일 그녀에게 제 뜨거운 마음을 알리고 싶습니다.";
-			next;
-			mes "[유르겐]";
-			mes "모험가님이 대신 전해주시면 모든 일이 잘 풀릴 것 같은 예감이 듭니다.";
-			next;
-			mes "[" + strcharinfo(0) + "]";
-			mes "그녀에게 시간을 좀 주는 게 어때?";
-			next;
-			cutin "16jur_sim",0;
-			mes "[유르겐]";
-			mes "그녀가 저를 잊으면 어떡합니까? 그럼 하루에 한 번만이라도 제 마음을 전해 주세요. 거절하실 건 아니지요?";
-			next;
-			cutin "16jur_nor",0;
-			mes "[유르겐]";
-			mes "아, 깜빡할 뻔했군요. 많지는 않지만 제 사랑의 전령에게 드리는 감사의 표시로 받아주세요.";
-			next;
-			mes "[유르겐]";
-			mes "그럼 내일 또 뵙겠습니다!";
-			erasequest 14491;// I Have to Turn It Down Again
-			setquest 14492;// There Is a Silver Lining
-			getitem 6919,4;// TokenOfHonor
-			getexp 200000,200000;
-			ep16_wig = 21;
-			close3;
-		}
-		if (isbegin_quest(14493) == 1) {// daily
-			cutin "16jur_nor",0;
-			mes "[유르겐]";
-			mes "메리에게 제 마음을 잘 전하셨습니까? 생각보다 빨리 돌아오셨군요.";
-			next;
-			mes "[유르겐]";
-			mes "혹시 가져가야 할 물건을 잊으셨습니까?";
-			next;
-			mes "[유르겐]";
-			mes "^0000cd메두사를 처치해 얻는 바다가 담긴 돌 15개와 시들지 않는 장미 1개^000000가 필요합니다.";
-			next;
-			mes "[유르겐]";
-			mes "이런 평범한 물건으로 마음을 표현한다면 메리도 부담스럽지 않겠지요?";
-			next;
-			mes "[유르겐]";
-			mes "바다보다 넓고 시들지 않는 제 마음을 전해 주세요.";
-			close3;
-		}
-		if (isbegin_quest(14494) == 1) {
-			cutin "16jur_nor",0;
-			mes "[유르겐]";
-			mes "모험가님, 제 사랑의 뜻을 전해준 당신을 ^0000cd사랑의 전령^000000이라고 부르고 싶습니다.";
-			next;
-			mes "[" + strcharinfo(0) + "]";
-			mes "그러지 마...";
-			next;
-			mes "[유르겐]";
-			mes "^0000cd사랑의 큐피드^000000...";
-			next;
-			mes "[" + strcharinfo(0) + "]";
-			mes "그만해.";
-			next;
-			mes "[유르겐]";
-			mes "메리가 제 마음을 받아주는 날에는 거대한 순금 동상을 드리고 싶습니다.";
-			next;
-			mes "[" + strcharinfo(0) + "]";
-			mes "정말 그럴 필요 없어.";
-			next;
-			mes "[유르겐]";
-			mes "하지만 지금은 이것밖에 드릴 게 없군요. 나중에 저희 저택에 들러주세요. 정말 값진 물건들이 있습니다.";
-			next;
-			mes "[유르겐]";
-			mes "그럼 모험가님, 내일 다시 뵙겠습니다.";
-			erasequest 14494;// I Have to Turn It Down Again
-			setquest 14492;// There Is a Silver Lining
-			getitem 6919,4;// TokenOfHonor
-			getexp 200000,200000;
-			close3;
-		}
-		end;
-	case 0:
-	case 1:
+L_NEED_JurgenDaily:
+	// NEED: 「오늘도 내 마음은」 반복 일일퀘스트 전용 루트.
+	// 이 아래에서는 ep16_wig 와 14486~14491 스토리 퀘스트를 판정하거나 변경하지 않습니다.
+	callfunc "F_NEED_EP161_WignerDailyFix";
+
+	// 1) 14494 진행 중 - 유르겐에게 보고하고 완료 처리
+	if (isbegin_quest(14494) == 1) {
+		cutin "16jur_nor",0;
+		mes "[유르겐]";
+		mes "모험가님, 제 사랑의 뜻을 전해준 당신을 ^0000cd사랑의 전령^000000이라고 부르고 싶습니다.";
+		next;
+		mes "[" + strcharinfo(0) + "]";
+		mes "그러지 마...";
+		next;
+		mes "[유르겐]";
+		mes "^0000cd사랑의 큐피드^000000...";
+		next;
+		mes "[" + strcharinfo(0) + "]";
+		mes "그만해.";
+		next;
+		mes "[유르겐]";
+		mes "메리가 제 마음을 받아주는 날에는 거대한 순금 동상을 드리고 싶습니다.";
+		next;
+		mes "[" + strcharinfo(0) + "]";
+		mes "정말 그럴 필요 없어.";
+		next;
+		mes "[유르겐]";
+		mes "하지만 지금은 이것밖에 드릴 게 없군요. 나중에 저희 저택에 들러주세요. 정말 값진 물건들이 있습니다.";
+		next;
+		mes "[유르겐]";
+		mes "그럼 모험가님, 내일 다시 뵙겠습니다.";
+		erasequest 14494;// I Have to Turn It Down Again
+		setquest 14492;// There Is a Silver Lining
+		getitem 6919,4;// TokenOfHonor
+		getexp 200000,200000;
+		close3;
+	}
+
+	// 2) 14493 진행 중 - 메리에게 전달하라는 안내
+	if (isbegin_quest(14493) == 1) {// daily
+		cutin "16jur_nor",0;
+		mes "[유르겐]";
+		mes "메리에게 제 마음을 잘 전하셨습니까? 생각보다 빨리 돌아오셨군요.";
+		next;
+		mes "[유르겐]";
+		mes "혹시 가져가야 할 물건을 잊으셨습니까?";
+		next;
+		mes "[유르겐]";
+		mes "^0000cd메두사를 처치해 얻는 바다가 담긴 돌 15개와 시들지 않는 장미 1개^000000가 필요합니다.";
+		next;
+		mes "[유르겐]";
+		mes "이런 평범한 물건으로 마음을 표현한다면 메리도 부담스럽지 않겠지요?";
+		next;
+		mes "[유르겐]";
+		mes "바다보다 넓고 시들지 않는 제 마음을 전해 주세요.";
+		close3;
+	}
+
+	// 3) 14492 쿨타임이 유효하면 오늘은 완료 안내만
+	.@wig_cd = checkquest(14492,PLAYTIME);
+	if (.@wig_cd == 0 || .@wig_cd == 1) {
 		cutin "16jur_nor",0;
 		mes "[유르겐]";
 		mes "모험가님, 이 시간에는 무슨 일로 오셨습니까? 도와드릴 일이 있나요?";
@@ -11904,30 +11909,32 @@ L_NEED_JurgenDaily:
 		mes "[유르겐]";
 		mes "매분 매초 편지를 보내지 않으려고 열심히 참고 있습니다. 때가 되면 다시 와주세요.";
 		close3;
-	case 2:
-		cutin "16jur_nor",0;
-		mes "[유르겐]";
-		mes "모험가님, 오셨군요! 오늘은 좋은 일이 생길 것 같은 예감이 듭니다.";
-		next;
-		mes "[유르겐]";
-		mes "^0000cd바다가 담긴 돌 15개와 시들지 않는 장미 1개^000000와 함께 제 사랑의 뜻을 그녀에게 전해 주세요.";
-		next;
-		mes "[유르겐]";
-		mes "기억하시지요? 바다가 담긴 돌은 메두사를 처치하면 얻을 수 있습니다.";
-		next;
-		emotion ET_CRY;
-		mes "[유르겐]";
-		mes "그녀에게 전해주시고 오늘 메리가 어떻게 지내는지도 알려주세요. 요즘 방을 청소하러 오지 않아 아쉽습니다.";
-		next;
-		mes "[유르겐]";
-		mes "직접 만나러 가고 싶지만 그녀가 부담스러워할 것 같군요.";
-		next;
-		mes "[유르겐]";
-		mes "모험가님, 부탁드립니다!";
-		erasequest 14492;// There Is a Silver Lining
-		setquest 14493;// Today I Feel
-		close3;
 	}
+	if (.@wig_cd == 2)
+		erasequest 14492;// There Is a Silver Lining
+
+	// 4) 신규 14493 발급
+	setquest 14493;// Today I Feel
+	cutin "16jur_nor",0;
+	mes "[유르겐]";
+	mes "모험가님, 오셨군요! 오늘은 좋은 일이 생길 것 같은 예감이 듭니다.";
+	next;
+	mes "[유르겐]";
+	mes "^0000cd바다가 담긴 돌 15개와 시들지 않는 장미 1개^000000와 함께 제 사랑의 뜻을 그녀에게 전해 주세요.";
+	next;
+	mes "[유르겐]";
+	mes "기억하시지요? 바다가 담긴 돌은 메두사를 처치하면 얻을 수 있습니다.";
+	next;
+	emotion ET_CRY;
+	mes "[유르겐]";
+	mes "그녀에게 전해주시고 오늘 메리가 어떻게 지내는지도 알려주세요. 요즘 방을 청소하러 오지 않아 아쉽습니다.";
+	next;
+	mes "[유르겐]";
+	mes "직접 만나러 가고 싶지만 그녀가 부담스러워할 것 같군요.";
+	next;
+	mes "[유르겐]";
+	mes "모험가님, 부탁드립니다!";
+	close3;
 }
 
 prt_cas_q,96,7,1	script	카트린 위그너#ep16wig	4_EP16_POE,{
@@ -12462,13 +12469,21 @@ prt_cas,322,216,5	script	메이드#ep16wig02	1_F_04,{
 		close;
 	}
 	.@name$ = strcharinfo(0);
-	// NEED: 유르겐 일일퀘스트(14493/14494)를 보유 중이면
-	// 위그너 스토리 진행도(ep16_wig)보다 우선해서 전달 처리를 합니다.
-	if (isbegin_quest(14493) == 1 || isbegin_quest(14494) == 1)
-		goto L_NEED_MaryDaily;
-	// 14492(쿨타임)만 남은 경우에는 메인 스토리 메이드 대화를 막지 않습니다.
-	if (ep16_wig == 0 && checkquest(14492,PLAYTIME) >= 0)
-		goto L_NEED_MaryDaily;
+	// NEED: 위그너 가문 스토리와 「오늘도 내 마음은」 반복 일일퀘스트를 분리합니다.
+	//   - 둘 다 진행 가능한 상태에서만 선택지를 띄웁니다.
+	//   - 한쪽만 활성이면 선택창 없이 해당 경로로 바로 갑니다.
+	//   - 14492(쿨타임)만 남은 상태는 스토리 대화를 가로채는 조건으로 쓰지 않습니다.
+	.@mary_daily = (isbegin_quest(14493) == 1 || isbegin_quest(14494) == 1);
+	.@mary_story = ((ep16_wig >= 1 && ep16_wig <= 12) || (ep16_wig >= 17 && ep16_wig <= 20));
+	if (.@mary_daily) {
+		if (!.@mary_story)
+			goto L_NEED_MaryDaily;
+		mes "[메이드]";
+		mes "어머, 모험가님. 오늘은 무슨 일로 오셨어요?";
+		next;
+		if (select("가문 이야기", "일일 의뢰") == 2)
+			goto L_NEED_MaryDaily;
+	}
 
 	if (ep16_wig == 4) {
 		mes "[메이드]";
@@ -12912,6 +12927,8 @@ prt_cas,322,216,5	script	메이드#ep16wig02	1_F_04,{
 		close;
 	}
 L_NEED_MaryDaily:
+	// NEED: 반복 일일퀘스트 전용 루트. ep16_wig 와 14486~14491 은 변경하지 않습니다.
+	callfunc "F_NEED_EP161_WignerDailyFix";
 	if (ep16_wig > 20 || isbegin_quest(14493) == 1 || isbegin_quest(14494) == 1 || checkquest(14492,PLAYTIME) >= 0) {
 		if (isbegin_quest(14494) == 1 || isbegin_quest(14492) == 1) {	// daily quest
 			mes "[메리]";
