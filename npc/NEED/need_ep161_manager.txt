@@ -8,6 +8,187 @@
 //= 배치 위치: prontera,150,180
 //============================================================
 
+
+//============================================================
+//= NEED: EP16.1 반복 일일퀘스트 공용 계산 / 즉시 완료 처리
+//=
+//= 반복 일일퀘스트 15종(총 66개)만 취급합니다.
+//= 메인 스토리 · 최초 퀘스트 · 지하감옥 구역/보정(ep16_fix) ·
+//= #NEED_RC_CLEAR · ep16_royal / ep16_wig / ep16_lug 는 일절 건드리지 않습니다.
+//============================================================
+
+// NEED: 오늘의 반복 일일퀘스트 진행 상황을 계산합니다.
+//   반환값            : 오늘 아직 받지 못한 명예의 증표 수 (0~66)
+//   $@ep161_done      : 오늘 완료한 반복 일일퀘스트 수 (0~15)
+//   $@ep161_remain    : 남은 증표 수 (반환값과 동일)
+//   $@ep161_pend[]    : 아직 완료하지 않은 쿨타임 퀘스트 ID 목록
+//   $@ep161_pend_amt[]: 각 항목의 증표 수
+// 판정 기준은 각 반복 일일퀘스트의 쿨타임 퀘스트 checkquest(id,PLAYTIME) 입니다.
+function	script	F_NEED_EP161_DailyStatus	{
+	// 쿨타임 퀘스트 15종 / 각 증표 수 (10 + 4*14 = 66)
+	setarray .@cd[0],
+		 7706,	// 의식의 방
+		11425,	// 왕궁 주방 - 그리폰 구이
+		11422,	// 왕궁 주방 - 소스 만들기
+		11427,	// 왕궁 주방 - 접시 수거
+		14509,	// 아그네스 뢰겐부르그
+		 5414,	// 리하르트 전사 수련
+		14492,	// 유르겐 위그너
+		 5452,	// 침공당한 프론테라
+		 5426, 5429, 5433, 5437, 5440, 5443, 5446;	// 지하감옥 A B C E F G H
+	setarray .@amt[0],
+		10,
+		 4, 4, 4,
+		 4, 4, 4, 4,
+		 4, 4, 4, 4, 4, 4, 4;
+
+	.@size = getarraysize(.@cd);
+	deletearray $@ep161_pend[0];
+	deletearray $@ep161_pend_amt[0];
+	$@ep161_done = 0;
+	$@ep161_remain = 0;
+	.@n = 0;
+
+	for (.@i = 0; .@i < .@size; ++.@i) {
+		.@state = checkquest(.@cd[.@i],PLAYTIME);
+		if (.@state == 0 || .@state == 1) {	// 오늘 이미 완료
+			$@ep161_done++;
+			continue;
+		}
+		$@ep161_pend[.@n] = .@cd[.@i];
+		$@ep161_pend_amt[.@n] = .@amt[.@i];
+		$@ep161_remain += .@amt[.@i];
+		.@n++;
+	}
+	return $@ep161_remain;
+}
+
+// NEED: 즉시 완료를 차단해야 하는 상태인지 판정합니다.
+//   0 : 사용 가능
+//   1 : 의식의 방 메인 스토리 진행 중 (7700)
+//   2 : 아그네스 최초 장편 의뢰 진행 중 (14508)
+//
+// 실제 코드에서 확인된 충돌만 차단합니다.
+//   - 7706 쿨타임이 있으면 "흔들리는 공간#evt_gate02" 가 입장을 막으므로
+//     메인 스토리(7700)로 의식의 방에 들어가야 하는 캐릭터는 진행이 막힌다.
+//   - 14509 쿨타임이 있으면 아그네스의 최초 의뢰(14508) 보고 분기에 도달하지 못한다.
+// 그 밖의 계열은 최초/스토리 분기가 쿨타임 판정보다 앞에 있어 충돌하지 않는다.
+//   (지하감옥 최초 5425 등은 isbegin_quest 분기, 주방 최초는 ep16_cookbs 분기,
+//    리하르트는 v5 수정으로 스토리 우선, 위그너는 v7 수정으로 완전 분리)
+function	script	F_NEED_EP161_InstantBlock	{
+	if (isbegin_quest(7700) == 1)
+		return 1;
+	if (isbegin_quest(14508) == 1)
+		return 2;
+	return 0;
+}
+
+// NEED: $@ep161_pend[] 에 남아 있는 반복 일일퀘스트를 오늘 완료 상태로 만듭니다.
+// 진행 중인 "반복" 퀘스트만 정리하고 쿨타임을 설정하며,
+// 메인/최초/구역 퀘스트와 ep16_fix 는 절대 건드리지 않습니다.
+function	script	F_NEED_EP161_InstantApply	{
+	.@size = getarraysize($@ep161_pend);
+	for (.@i = 0; .@i < .@size; ++.@i) {
+		.@cd = $@ep161_pend[.@i];
+
+		switch (.@cd) {
+		case 7706:	// 의식의 방 - 7705 만 정리 (7700~7703 메인은 제외)
+			if (isbegin_quest(7705) > 0)
+				erasequest 7705;
+			break;
+		case 11422:	// 소스 만들기 - 11421 과 재료 11428~11431
+			if (isbegin_quest(11421) > 0)
+				erasequest 11421;
+			for (.@q = 11428; .@q <= 11431; ++.@q) {
+				if (isbegin_quest(.@q) > 0)
+					erasequest .@q;
+			}
+			// 소스 일일퀘 상태 머신(25~33)만 대기값 23 으로 되돌립니다.
+			// 사이클 중인 값만 정확히 지정해 복구하므로,
+			// 스토리 진행도나 향후 추가될 다른 상태값이 롤백되지 않습니다.
+			//   23    : 대기(일일퀘 수령 가능)
+			//   25~33 : 재료 4종 수집 사이클 진행 중
+			if (ep16_cookbs >= 25 && ep16_cookbs <= 33)
+				ep16_cookbs = 23;
+			if (ep16_cookdaily >= 25 && ep16_cookdaily <= 33)
+				ep16_cookdaily = 23;
+			break;
+		case 11425:	// 그리폰 구이
+			if (isbegin_quest(11423) > 0)
+				erasequest 11423;
+			if (isbegin_quest(11424) > 0)
+				erasequest 11424;
+			break;
+		case 11427:	// 접시 수거
+			if (isbegin_quest(11426) > 0)
+				erasequest 11426;
+			break;
+		case 14509:	// 아그네스 - 반복 의뢰 14510~14515 만 (최초 14508 제외)
+			for (.@q = 14510; .@q <= 14515; ++.@q) {
+				if (isbegin_quest(.@q) > 0)
+					erasequest .@q;
+			}
+			break;
+		case 5414:	// 리하르트 전사 수련 - 5404~5413 (5402/5403 메인 제외)
+			for (.@q = 5404; .@q <= 5413; ++.@q) {
+				if (isbegin_quest(.@q) > 0)
+					erasequest .@q;
+			}
+			break;
+		case 14492:	// 유르겐 - 14493/14494 만 (14486~14491 스토리 제외)
+			if (isbegin_quest(14493) > 0)
+				erasequest 14493;
+			if (isbegin_quest(14494) > 0)
+				erasequest 14494;
+			break;
+		case 5452:	// 침공당한 프론테라 - 5448~5468 (쿨 5452 자신 제외)
+			for (.@q = 5448; .@q <= 5468; ++.@q) {
+				if (.@q == 5452)
+					continue;
+				if (isbegin_quest(.@q) > 0)
+					erasequest .@q;
+			}
+			break;
+		case 5426:	// 지하감옥 A - 반복 5427 만
+			if (isbegin_quest(5427) > 0)
+				erasequest 5427;
+			break;
+		case 5429:	// 지하감옥 B
+			if (isbegin_quest(5430) > 0)
+				erasequest 5430;
+			break;
+		case 5433:	// 지하감옥 C - 반복 5434/5435 만 (최초 5431/5432 제외)
+			if (isbegin_quest(5434) > 0)
+				erasequest 5434;
+			if (isbegin_quest(5435) > 0)
+				erasequest 5435;
+			break;
+		case 5437:	// 지하감옥 E
+			if (isbegin_quest(5438) > 0)
+				erasequest 5438;
+			break;
+		case 5440:	// 지하감옥 F
+			if (isbegin_quest(5441) > 0)
+				erasequest 5441;
+			break;
+		case 5443:	// 지하감옥 G
+			if (isbegin_quest(5444) > 0)
+				erasequest 5444;
+			break;
+		case 5446:	// 지하감옥 H
+			if (isbegin_quest(5447) > 0)
+				erasequest 5447;
+			break;
+		}
+
+		// 만료되어 남아 있는 쿨타임 기록을 정리한 뒤 오늘 쿨타임을 새로 설정합니다.
+		if (isbegin_quest(.@cd) > 0)
+			erasequest .@cd;
+		setquest .@cd;
+	}
+	return;
+}
+
 lasagna,188,173,4	script	EP16.1 통합 안내#need_ep161_mgr	4_M_JOB_KNIGHT2,{
 L_Main:
 	setdialogsize(440,380);
@@ -42,6 +223,7 @@ L_Main:
 
 	switch( select(
 		"오늘의 일퀘 현황",
+		"일일퀘스트 즉시 완료",
 		"오늘 무엇을 하면 되나요?",
 		"명예의 증표 일일퀘스트",
 		"메모리얼 던전",
@@ -53,14 +235,15 @@ L_Main:
 		"그만두기"
 	) ) {
 	case 1: goto L_Status;
-	case 2: goto L_Today;
-	case 3: goto L_Daily;
-	case 4: goto L_MD;
-	case 5: goto L_Exchange;
-	case 6: goto L_Enchant;
-	case 7: goto L_Rewards;
-	case 8: goto L_Region;
-	case 9: goto L_Story;
+	case 2: goto L_Instant;
+	case 3: goto L_Today;
+	case 4: goto L_Daily;
+	case 5: goto L_MD;
+	case 6: goto L_Exchange;
+	case 7: goto L_Enchant;
+	case 8: goto L_Rewards;
+	case 9: goto L_Region;
+	case 10: goto L_Story;
 	default: close;
 	}
 
@@ -260,6 +443,10 @@ L_Status:
 		}
 	}
 
+	// NEED: 즉시 완료 기능과 동일한 공용 계산으로 집계를 맞춥니다.
+	// (아래 상태 문자열은 위에서 만든 값을 그대로 사용합니다)
+	.@remain = callfunc("F_NEED_EP161_DailyStatus");
+	.@done = $@ep161_done;
 	.@earned = 66 - .@remain;
 
 	mes "[오늘의 EP16.1 일퀘 현황]";
@@ -319,6 +506,169 @@ L_Status:
 	case 2: goto L_Today;
 	default: goto L_Main;
 	}
+
+L_Instant:
+	setdialogsize(480,420);
+
+	if (.InstantDailyCash <= 0) {
+		mes "[EP16.1 통합 안내]";
+		mes "일일퀘스트 즉시 완료는 현재 이용할 수 없습니다.";
+		next;
+		goto L_Main;
+	}
+	if (BaseLevel < .InstantDailyMinLevel) {
+		mes "[EP16.1 통합 안내]";
+		mes "즉시 완료는 ^FF0000Base Lv." + .InstantDailyMinLevel + " 이상^000000부터 이용할 수 있습니다.";
+		mes "현재 레벨: ^4d4dff" + BaseLevel + "^000000";
+		next;
+		goto L_Main;
+	}
+
+	.@block = callfunc("F_NEED_EP161_InstantBlock");
+	if (.@block) {
+		mes "[EP16.1 통합 안내]";
+		mes "지금은 즉시 완료를 사용할 수 없습니다.";
+		next;
+		mes "[사유]";
+		if (.@block == 1) {
+			mes "^FF9900의식의 방 메인 스토리^000000를 진행 중입니다.";
+			mes "즉시 완료는 의식의 방 일일 쿨타임을 설정하므로,";
+			mes "지금 사용하면 메인 스토리 입장이 막힙니다.";
+			next;
+			mes "^4d4dff닐렘^000000을 통해 의식의 방 메인 스토리를 먼저 마친 뒤 이용해 주세요.";
+		}
+		else {
+			mes "^FF9900아그네스의 최초 의뢰^000000를 진행 중입니다.";
+			mes "즉시 완료는 뢰겐부르그 일일 쿨타임을 설정하므로,";
+			mes "지금 사용하면 최초 의뢰 보고가 막힙니다.";
+			next;
+			mes "^4d4dff아그네스 뢰겐부르그^000000에게 최초 의뢰를 먼저 보고한 뒤 이용해 주세요.";
+		}
+		next;
+		goto L_Main;
+	}
+
+	.@remain = callfunc("F_NEED_EP161_DailyStatus");
+	.@done = $@ep161_done;
+
+	mes "[EP16.1 일일퀘스트 즉시 완료]";
+	mes "";
+	mes "오늘 완료한 반복 일퀘";
+	mes "^00AA00" + .@done + " / 15^000000";
+	mes "";
+	mes "오늘 획득 완료";
+	mes "^00AA00" + (66 - .@remain) + " / 66^000000";
+	mes "";
+	mes "남은 보상";
+	mes "^FF9900명예의 증표 " + .@remain + "개^000000";
+	next;
+
+	if (.@remain <= 0) {
+		mes "[EP16.1 통합 안내]";
+		mes "오늘의 반복 일일퀘스트를 이미 모두 완료했습니다.";
+		mes "^777777캐시는 차감되지 않았습니다.^000000";
+		next;
+		goto L_Main;
+	}
+
+	// 가격 계산: 비례 모드면 기준가 × 남은 증표 / 66 (올림), 아니면 고정가
+	if (.InstantDailyProrate && .@remain < 66)
+		.@price = (.InstantDailyCash * .@remain + 65) / 66;
+	else
+		.@price = .InstantDailyCash;
+
+	mes "[EP16.1 일일퀘스트 즉시 완료]";
+	mes "즉시 완료 시 남아 있는 반복 일일퀘스트를";
+	mes "오늘 완료 상태로 처리합니다.";
+	mes "";
+	mes "획득";
+	mes "^FF9900명예의 증표 " + .@remain + "개^000000";
+	mes "";
+	mes "캐시 비용";
+	mes "^FF0000" + callfunc("F_InsertComma", .@price) + " Cash^000000";
+	mes "";
+	mes "현재 보유 캐시";
+	mes "^4d4dff" + callfunc("F_InsertComma", #CASHPOINTS) + " Cash^000000";
+	next;
+	mes "[EP16.1 통합 안내]";
+	mes "※ 진행 중이던 반복 일일퀘스트는 정리되고 쿨타임이 설정됩니다.";
+	mes "※ 메인 스토리와 최초 퀘스트 진행도는 변경되지 않습니다.";
+	mes "※ 지급되는 것은 ^4d4dff명예의 증표^000000뿐이며 경험치는 지급되지 않습니다.";
+	next;
+
+	if (select("취소", "캐시를 사용해 즉시 완료") == 1) {
+		mes "[EP16.1 통합 안내]";
+		mes "취소했습니다. 캐시는 차감되지 않았습니다.";
+		next;
+		goto L_Main;
+	}
+
+	// ── 결제 직전 최종 재검증 ──────────────────────────────
+	.@block = callfunc("F_NEED_EP161_InstantBlock");
+	if (.@block) {
+		mes "[EP16.1 통합 안내]";
+		mes "퀘스트 상태가 변경되어 즉시 완료를 진행할 수 없습니다.";
+		mes "^777777캐시는 차감되지 않았습니다.^000000";
+		next;
+		goto L_Main;
+	}
+
+	.@remain = callfunc("F_NEED_EP161_DailyStatus");
+	.@done = $@ep161_done;
+	if (.@remain <= 0) {
+		mes "[EP16.1 통합 안내]";
+		mes "이미 오늘의 반복 일일퀘스트를 모두 완료했습니다.";
+		mes "^777777캐시는 차감되지 않았습니다.^000000";
+		next;
+		goto L_Main;
+	}
+
+	// 가격 계산: 비례 모드면 기준가 × 남은 증표 / 66 (올림), 아니면 고정가
+	if (.InstantDailyProrate && .@remain < 66)
+		.@price = (.InstantDailyCash * .@remain + 65) / 66;
+	else
+		.@price = .InstantDailyCash;
+
+	if (checkweight(6919, .@remain) == 0) {
+		mes "[EP16.1 통합 안내]";
+		mes "소지 무게가 부족해 명예의 증표 " + .@remain + "개를 받을 수 없습니다.";
+		mes "정리 후 다시 시도해 주세요.";
+		mes "^777777캐시는 차감되지 않았습니다.^000000";
+		next;
+		goto L_Main;
+	}
+	if (#CASHPOINTS < .@price) {
+		mes "[EP16.1 통합 안내]";
+		mes "캐시가 부족합니다.";
+		mes "필요 캐시: ^FF0000" + callfunc("F_InsertComma", .@price) + "^000000";
+		mes "보유 캐시: ^4d4dff" + callfunc("F_InsertComma", #CASHPOINTS) + "^000000";
+		next;
+		goto L_Main;
+	}
+
+	// ── 결제 및 처리 ───────────────────────────────────────
+	.@cash_before = #CASHPOINTS;
+	#CASHPOINTS -= .@price;
+	getitem 6919, .@remain;// TokenOfHonor
+	callfunc "F_NEED_EP161_InstantApply";
+
+	logmes "[NEED-EP161-INSTANT] aid=" + getcharid(3) + " cid=" + getcharid(0)
+		+ " name=" + strcharinfo(0) + " cost=" + .@price + " reward=" + .@remain
+		+ " completed=" + .@done + "/15 remaining=" + (15 - .@done)
+		+ " cash_before=" + .@cash_before + " cash_after=" + #CASHPOINTS;
+
+	mes "[EP16.1 통합 안내]";
+	mes "오늘의 반복 일일퀘스트를 모두 완료 처리했습니다.";
+	mes "";
+	mes "지급: ^FF9900명예의 증표 " + .@remain + "개^000000";
+	mes "차감: ^FF0000" + callfunc("F_InsertComma", .@price) + " Cash^000000";
+	mes "남은 캐시: ^4d4dff" + callfunc("F_InsertComma", #CASHPOINTS) + " Cash^000000";
+	next;
+	mes "[EP16.1 통합 안내]";
+	mes "오늘의 일퀘 현황은 ^00AA0015 / 15^000000 · ^00AA0066 / 66^000000 으로 표시됩니다.";
+	mes "내일 04시에 다시 초기화됩니다.";
+	next;
+	goto L_Main;
 
 L_Today:
 	mes "[오늘 무엇을 하면 되나요?]";
@@ -716,4 +1066,14 @@ L_Story:
 	default:
 		goto L_Main;
 	}
+
+OnInit:
+	// NEED: EP16.1 일일퀘스트 즉시 완료 설정
+	//   .InstantDailyCash     반복 일퀘 66개가 모두 남았을 때의 기준 캐시 가격 (0 = 기능 비활성화)
+	//   .InstantDailyProrate  1 = 남은 보상량에 비례해 가격 감소 / 0 = 고정 가격
+	//   .InstantDailyMinLevel 기능 사용 최소 Base Level
+	.InstantDailyCash = 0;
+	.InstantDailyProrate = 1;
+	.InstantDailyMinLevel = 140;
+	end;
 }
