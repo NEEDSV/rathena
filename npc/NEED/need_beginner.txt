@@ -42,6 +42,17 @@
 -	script	NEED_Beginner_Config	-1,{
 OnInit:
 	$NEED_BEGINNER_ACCOUNT_MIN = 2000817;
+
+	// GM / 운영진 테스트 계정 예외 그룹 (conf/groups.yml 기준)
+	//    2  Support          (Level 1)
+	//    3  Script Manager   (Level 1)
+	//    4  Event Manager    (Level 1)
+	//   10  Law Enforcement  (Level 2)
+	//   99  Admin            (Level 99)
+	// 0 Player / 1 Super Player / 5 VIP 는 Level 0 유저 그룹이므로 제외한다.
+	// 운영 그룹 구성이 바뀌면 이 배열만 수정하면 된다.
+	deletearray $NEED_BEGINNER_GM_GROUP[0], getarraysize($NEED_BEGINNER_GM_GROUP);
+	setarray $NEED_BEGINNER_GM_GROUP[0], 2, 3, 4, 10, 99;
 	end;
 }
 
@@ -50,6 +61,12 @@ OnInit:
 // 신규 성장지원 대상 계정 여부
 //============================================================
 function	script	F_NEED_IsBeginnerAccount	{
+	// GM / 운영진 계정은 테스트를 위해 account_id 컷만 우회한다.
+	// 보상 / 레벨 조건 / 1회 지급 변수는 일반 신규 유저와 완전히 동일하다.
+	if (getarraysize($NEED_BEGINNER_GM_GROUP) > 0 &&
+		inarray($NEED_BEGINNER_GM_GROUP[0], getgroupid()) >= 0)
+		return 1;
+
 	return (getcharid(3) >= $NEED_BEGINNER_ACCOUNT_MIN);
 }
 
@@ -472,13 +489,33 @@ L_Reward:
 			mes "^00AAFF[성장 지원 졸업 보상]^000000";
 			mes "";
 			mes "이미 ^00AA00수령 완료^000000한 보상입니다.";
+
+			// 16차 이전 졸업자에게 환생 티켓만 1회 추가 지급한다.
+			// (Base Lv.175 / Job Lv.60 조건은 위 분기에서 이미 확인됨)
+			if (!NEED_BEGINNER_REBIRTH_TICKET) {
+				if (!checkweight(399992,1)) {
+					mes "";
+					mes "^FF0000소지 무게와 인벤토리를 비운 뒤^000000";
+					mes "^FF0000다시 시도해주세요.^000000";
+					next;
+					goto L_Reward;
+				}
+
+				getitembound 399992,1,Bound_Char;
+				NEED_BEGINNER_REBIRTH_TICKET = 1;
+
+				mes "";
+				mes "^FF9900NEED 환생 티켓 1개^000000를 지급했습니다.";
+				mes "^777777첫 환생을 경험해보세요.^000000";
+			}
 			mes "";
 			mes "<TIPBOX>▶ NEED 전장 입문 가이드<INFO>8400</INFO></TIPBOX>";
 			mes "<TIPBOX>▶ 전사자의 무덤 가이드<INFO>8440</INFO></TIPBOX>";
 			next;
 			goto L_Reward;
 		}
-		if (!checkweight(900115,1) || !checkweight(900116,1) || !checkweight(900117,1)) {
+		if (!checkweight(900115,1) || !checkweight(900116,1) ||
+			!checkweight(900117,1) || !checkweight(399992,1)) {
 			mes "^FF0000소지 무게를 비운 뒤 다시 시도해주세요.^000000";
 			close;
 		}
@@ -487,6 +524,17 @@ L_Reward:
 		rentitem 900115,1209600;	// [기간제] 전장 지원 시즈 플레이트
 		rentitem 900116,1209600;	// [기간제] 전장 지원 시즈 망토
 		rentitem 900117,1209600;	// [기간제] 전장 지원 시즈 그리브
+
+		// 환생 티켓은 졸업 보상 변수와 분리해 별도 1회 변수로 관리한다.
+		// (16차 이전 졸업자에게도 나중에 1회 지급할 수 있어야 한다)
+		// 배럭을 통한 캐릭터 간 이전을 막기 위해 캐릭터 귀속으로 지급한다.
+		.@rb_given = 0;
+		if (!NEED_BEGINNER_REBIRTH_TICKET) {
+			getitembound 399992,1,Bound_Char;
+			NEED_BEGINNER_REBIRTH_TICKET = 1;
+			.@rb_given = 1;
+		}
+
 		NEED_BEGINNER_REWARD_175 = 1;
 
 		mes "^00AAFF[성장 지원 과정 완료]^000000";
@@ -503,6 +551,11 @@ L_Reward:
 		mes "";
 		mes "^FF0000※ 지급일로부터 14일 동안^000000";
 		mes "^FF0000사용할 수 있습니다.^000000";
+
+		if (.@rb_given) {
+			mes "";
+			mes "^FF9900NEED 환생 티켓 1개^000000도 함께 지급했습니다.";
+		}
 		next;
 
 		mes "^00AAFF[전장 입문 지원]^000000";
@@ -896,6 +949,28 @@ L_StudyReset:
 
 
 //============================================================
+// 환생 안내 (16차)
+//   실제 환생은 라자냐 「환생 관리자」(lasagna,175,131) 가 담당한다.
+//   여기서는 위치와 개요만 알리고 상세는 TIPBOX 8441 로 연결한다.
+//   워프 기능은 제공하지 않는다.
+//============================================================
+L_A175Rebirth:
+	clear;
+	setdialogsize(460,280);
+	mes "^00AAFF[환생]^000000";
+	mes "";
+	mes "^FF9900Base Lv.175 / Job Lv.60^000000 이후에는";
+	mes "환생으로 다시 성장할 수 있습니다.";
+	mes "";
+	mes "^0055FF환생 관리자^000000 - 라자냐 (175,131)";
+	mes "";
+	mes "^777777환생 조건 / 초기화 범위 / 보상은^000000";
+	mes "^777777아래 가이드에서 확인해주세요.^000000";
+	mes "<TIPBOX>▶ 환생 가이드<INFO>8441</INFO></TIPBOX>";
+	next;
+	goto L_After175;
+
+//============================================================
 // 175 이후 콘텐츠 안내
 //   Base Lv.175 / Job Lv.60 졸업자에게 표시되는 정보 안내소.
 //   완료 변수를 기록하지 않으며, 어떤 보상 조건과도 연결하지 않는다.
@@ -914,6 +989,7 @@ L_After175:
 	mes "열람 여부가 보상에 영향을 주지 않습니다.^000000";
 
 	.@menu$ = "^FF9900뭘 해야 할지 모르겠어요^000000:"
+		+ "^FF9900환생을 하고 싶어요^000000:"
 		+ "장비를 맞추고 싶어요:"
 		+ "^00AAFF전사자의 무덤을 진행하고 싶어요^000000:"
 		+ "EP16.1을 진행하고 싶어요:"
@@ -927,25 +1003,28 @@ L_After175:
 		+ "그만두기";
 	switch(select(.@menu$)) {
 	case 1: goto L_A175What;
-	case 2: goto L_A175Gear;
-	case 3: goto L_A175Tomb;
-	case 4: goto L_A175EP161;
-	case 5: goto L_A175MD;
-	case 6: goto L_A175BG;
-	case 7: goto L_A175Cash;
-	case 8: goto L_A175Shadow;
-	case 9: goto L_A175Enchant;
-	case 10: goto L_A175Sub;
-	case 11: goto L_Wiki;
+	case 2: goto L_A175Rebirth;
+	case 3: goto L_A175Gear;
+	case 4: goto L_A175Tomb;
+	case 5: goto L_A175EP161;
+	case 6: goto L_A175MD;
+	case 7: goto L_A175BG;
+	case 8: goto L_A175Cash;
+	case 9: goto L_A175Shadow;
+	case 10: goto L_A175Enchant;
+	case 11: goto L_A175Sub;
+	case 12: goto L_Wiki;
 	default: close;
 	}
 
 L_A175What:
 	clear;
-	setdialogsize(480,360);
+	setdialogsize(480,400);
 	mes "^00AAFF[무엇부터 할까요]^000000";
 	mes "";
 	mes "하고 싶은 방향을 먼저 정해보세요.";
+	mes "^777777환생 / 장비 성장 / 전장 / EP16.1 /^000000";
+	mes "^777777메모리얼 등을 진행할 수 있습니다.^000000";
 	mes "";
 	mes "^0055FFPvP를 해보고 싶다면^000000";
 	mes "  졸업 보상 전장 지원 시즈 세트를 착용";
