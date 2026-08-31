@@ -9664,7 +9664,6 @@ bool skill_check_condition_castend( map_session_data& sd, uint16 skill_id, uint1
 	struct s_skill_condition require;
 	struct status_data *status;
 	int32 i;
-	int16 index[MAX_SKILL_ITEM_REQUIRE];
 
 	if( sd.chatID )
 		return false;
@@ -9887,8 +9886,7 @@ bool skill_check_condition_castend( map_session_data& sd, uint16 skill_id, uint1
 	for( i = 0; i < MAX_SKILL_ITEM_REQUIRE; ++i ) {
 		if( !require.itemid[i] )
 			continue;
-		index[i] = pc_search_inventory(&sd,require.itemid[i]);
-		if( index[i] < 0 || sd.inventory.u.items_inventory[index[i]].amount < require.amount[i] ) {
+		if( pc_inventory_count(&sd, require.itemid[i]) < require.amount[i] ) {
 			if( require.itemid[i] == ITEMID_HOLY_WATER )
 				clif_skill_fail( sd, skill_id, USESKILL_FAIL_HOLYWATER ); //Holy water is required.
 			else if( require.itemid[i] == ITEMID_RED_GEMSTONE )
@@ -10021,7 +10019,7 @@ void skill_consume_requirement(map_session_data *sd, uint16 skill_id, uint16 ski
 		}
 
 		status_change *sc = &sd->sc;
-		int32 n,i;
+		int32 i;
 
 		if( sc->empty() )
 			sc = nullptr;
@@ -10056,8 +10054,7 @@ void skill_consume_requirement(map_session_data *sd, uint16 skill_id, uint16 ski
 					break;
 			}
 
-			if( (n = pc_search_inventory(sd,require.itemid[i])) >= 0 )
-				pc_delitem(sd,n,require.amount[i],0,1,LOG_TYPE_CONSUME);
+			pc_delitem_by_nameid(sd, require.itemid[i], require.amount[i], 0, 1, LOG_TYPE_CONSUME);
 		}
 	}
 }
@@ -13228,11 +13225,8 @@ int16 skill_can_produce_mix(map_session_data *sd, t_itemid nameid, int32 trigger
 			if (pc_search_inventory(sd,nameid_produce) < 0)
 				return 0;
 		} else {
-			uint16 idx, amt;
+			uint32 amt = pc_inventory_count(sd, nameid_produce);
 
-			for (idx = 0, amt = 0; idx < MAX_INVENTORY; idx++)
-				if (sd->inventory.u.items_inventory[idx].nameid == nameid_produce)
-					amt += sd->inventory.u.items_inventory[idx].amount;
 			if (amt < qty * skill_produce_db[i].mat_amount[j])
 				return 0;
 		}

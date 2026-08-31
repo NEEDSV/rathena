@@ -6055,6 +6055,25 @@ int16 pc_search_inventory( const map_session_data* sd, t_itemid nameid) {
 	return ( i < MAX_INVENTORY ) ? i : -1;
 }
 
+/**
+ * Count all instances of an item in a player's inventory.
+ * @param sd Player
+ * @param nameid Item ID to count
+ * @return Total amount across all inventory stacks
+ **/
+uint32 pc_inventory_count( const map_session_data* sd, t_itemid nameid ) {
+	uint32 amount = 0;
+
+	nullpo_retr(0, sd);
+
+	for( int16 i = 0; i < MAX_INVENTORY; ++i ) {
+		if( sd->inventory.u.items_inventory[i].nameid == nameid )
+			amount += sd->inventory.u.items_inventory[i].amount;
+	}
+
+	return amount;
+}
+
 /** Attempt to add a new item to player inventory
  * @param sd
  * @param item_data
@@ -6208,6 +6227,32 @@ char pc_delitem(map_session_data *sd,int32 n,int32 amount,int32 type, int16 reas
 	pc_show_questinfo(sd);
 
 	return 0;
+}
+
+/**
+ * Remove an item by name ID, consuming multiple inventory stacks as needed.
+ * The total is checked before any item is removed.
+ * @return 1 if the total amount is insufficient or deletion failed; 0 on success
+ **/
+char pc_delitem_by_nameid( map_session_data* sd, t_itemid nameid, uint32 amount, int32 type, int16 reason, e_log_pick_type log_type ) {
+	nullpo_retr(1, sd);
+
+	if( nameid == 0 || pc_inventory_count(sd, nameid) < amount )
+		return 1;
+
+	for( int16 i = 0; i < MAX_INVENTORY && amount > 0; ++i ) {
+		if( sd->inventory.u.items_inventory[i].nameid != nameid )
+			continue;
+
+		uint32 del_amount = std::min<uint32>(amount, sd->inventory.u.items_inventory[i].amount);
+
+		if( pc_delitem(sd, i, static_cast<int32>(del_amount), type, reason, log_type) != 0 )
+			return 1;
+
+		amount -= del_amount;
+	}
+
+	return amount == 0 ? 0 : 1;
 }
 
 /*==========================================

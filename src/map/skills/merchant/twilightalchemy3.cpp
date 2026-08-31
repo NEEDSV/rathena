@@ -14,10 +14,8 @@ void SkillTwilightAlchemy3::castendNoDamageId(block_list* src, block_list* targe
 	map_session_data* sd = BL_CAST(BL_PC, src);
 
 	if (sd) {
-		int32 ebottle = pc_search_inventory(sd,ITEMID_EMPTY_BOTTLE);
+		uint32 ebottle = pc_inventory_count(sd, ITEMID_EMPTY_BOTTLE);
 		int16 alcohol_idx = -1, acid_idx = -1, fire_idx = -1;
-		if( ebottle >= 0 )
-			ebottle = sd->inventory.u.items_inventory[ebottle].amount;
 		//check if you can produce all three, if not, then fail:
 		if (!(alcohol_idx = skill_can_produce_mix(sd,ITEMID_ALCOHOL,-1, 100)) //100 Alcohol
 			|| !(acid_idx = skill_can_produce_mix(sd,ITEMID_ACID_BOTTLE,-1, 50)) //50 Acid Bottle
