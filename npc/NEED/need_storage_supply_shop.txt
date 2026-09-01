@@ -1,5 +1,5 @@
 //===== rAthena Script ========================================
-//= NEED 창고 보급 상점
+//= NEED 창고 보급 상인
 //===== 설명 ==================================================
 //= 대량으로 소비하는 보급품을 인벤토리를 거치지 않고
 //= 개인 창고로 바로 지급하는 전용 상점.
@@ -11,22 +11,22 @@
 //= - 실제 구매/검증/지급/로그는 storageshopbuy() 안에서 처리된다.
 //=============================================================
 
-lasagna,161,141,6	script	창고 보급 상점	558,{
+lasagna,161,141,6	script	창고 보급 상인	558,{
 	.@m_total = storageshopcategories();
 
 	if (.@m_total < 1 || .@m_total > getarraysize(.cat_name$)) {
-		mes "[창고 보급 상점]";
+		mes "[창고 보급 상인]";
 		mes "상점 설정에 문제가 있어 지금은 이용할 수 없습니다.";
 		mes "운영자에게 문의해주세요.";
 		close;
 	}
 
-	mes "[창고 보급 상점]";
+	mes "[창고 보급 상인]";
 	mes "이곳에서 구매한 물품은 인벤토리를 거치지 않고";
 	mes "^0000FF개인 창고^000000로 바로 들어갑니다.";
 	next;
 
-	mes "[창고 보급 상점]";
+	mes "[창고 보급 상인]";
 	mes "대신 창고 직행 편의를 제공하는 대가로";
 	mes "^FF0000상인 할인(디스카운트)이 적용되지 않습니다.^000000";
 	mes "누구나 동일하게 할인 전 판매가로 구매합니다.";
@@ -40,14 +40,14 @@ lasagna,161,141,6	script	창고 보급 상점	558,{
 
 		.@m_menu$ += "종료";
 
-		mes "[창고 보급 상점]";
+		mes "[창고 보급 상인]";
 		mes "어떤 품목을 보시겠습니까?";
 		next;
 
 		.@m_sel = select(.@m_menu$);
 
 		if (.@m_sel < 1 || .@m_sel > .@m_total) {
-			mes "[창고 보급 상점]";
+			mes "[창고 보급 상인]";
 			mes "또 이용해주세요.";
 			close;
 		}
@@ -150,7 +150,7 @@ S_Buy:
 	.@b_max = storageshopmaxqty(.@b_id);
 
 	if (.@b_id <= 0 || .@b_price <= 0 || .@b_max <= 0) {
-		mes "[창고 보급 상점]";
+		mes "[창고 보급 상인]";
 		mes "지금은 판매하지 않는 품목입니다.";
 		next;
 		return;
@@ -162,7 +162,7 @@ S_Buy:
 		if (.@b_afford > .@b_max)
 			.@b_afford = .@b_max;
 
-		mes "[창고 보급 상점]";
+		mes "[창고 보급 상인]";
 		mes "품목 : ^0000FF" + getitemname(.@b_id) + "^000000";
 		mes "개당 가격 : " + callfunc("F_InsertComma", .@b_price) + " Zeny";
 		mes "1회 최대 구매 : " + callfunc("F_InsertComma", .@b_max) + " 개";
@@ -198,13 +198,13 @@ S_Buy:
 			break;
 
 		case 5:
-			mes "[창고 보급 상점]";
+			mes "[창고 보급 상인]";
 			mes "구매할 수량을 입력해주세요.";
 			mes "입력 가능 범위 : 1 ~ " + callfunc("F_InsertComma", .@b_max);
 			next;
 
 			if (input(.@b_amount, 1, .@b_max) != 0) {
-				mes "[창고 보급 상점]";
+				mes "[창고 보급 상인]";
 				mes "1 이상 " + callfunc("F_InsertComma", .@b_max) + " 이하의 수량만 입력할 수 있습니다.";
 				next;
 				continue;
@@ -219,7 +219,7 @@ S_Buy:
 		// 입력값은 서버(storageshopbuy)에서 다시 검증하지만,
 		// 안내를 위해 스크립트에서도 범위를 확인한다.
 		if (.@b_amount < 1 || .@b_amount > .@b_max) {
-			mes "[창고 보급 상점]";
+			mes "[창고 보급 상인]";
 
 			if (.@b_afford < 1 && .@b_sel == 4)
 				mes "제니가 부족하여 구매할 수 없습니다.";
@@ -232,7 +232,7 @@ S_Buy:
 
 		.@b_total = .@b_amount * .@b_price;
 
-		mes "[창고 보급 상점]";
+		mes "[창고 보급 상인]";
 		mes "^0000FF" + getitemname(.@b_id) + "^000000";
 		mes " ";
 		mes "구매 수량 : " + callfunc("F_InsertComma", .@b_amount) + " 개";
@@ -248,7 +248,7 @@ S_Buy:
 
 		.@b_result = storageshopbuy(.@b_id, .@b_amount);
 
-		mes "[창고 보급 상점]";
+		mes "[창고 보급 상인]";
 
 		switch (.@b_result) {
 		case 1:
