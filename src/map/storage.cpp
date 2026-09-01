@@ -300,6 +300,116 @@ static int32 storage_additem(map_session_data* sd, struct s_storage *stor, struc
 }
 
 /**
+ * Make a player add a large amount of an item to his storage, splitting it over
+ * several stacks and free slots when needed. (used by the storage supply shop)
+ * storage_additem() bails out with 'no room' as soon as the first matching stack
+ * is full, so it cannot deliver more than one stack worth of items at once.
+ * @param sd : player
+ * @param stor : Storage data
+ * @param it : item to add
+ * @param amount : quantity of items
+ * @param simulate : if true, only count what would fit, without touching the storage
+ * @return the amount that was actually stored (or that would fit when simulating)
+ */
+int32 storage_additem_bulk(map_session_data* sd, struct s_storage* stor, struct item* it, int32 amount, bool simulate)
+{
+	nullpo_ret(sd);
+	nullpo_ret(stor);
+	nullpo_ret(it);
+
+	if( it->nameid == 0 || amount <= 0 )
+		return 0;
+
+	if( !stor->state.put )
+		return 0;
+
+	struct item_data* data = itemdb_search(it->nameid);
+
+	if( data == nullptr )
+		return 0;
+
+	// Only stackable items can be split over several stacks
+	if( !itemdb_isstackable2(data) )
+		return 0;
+
+	if( !itemdb_canstore(it, pc_get_group_level(sd)) ) // Check if item is storable. [Skotlex]
+		return 0;
+
+	if( (it->bound > BOUND_ACCOUNT) && !pc_can_give_bounded_items(sd) )
+		return 0;
+
+	int32 stack_max = MAX_AMOUNT;
+
+	if( data->stack.storage && data->stack.amount < stack_max ) // item stack limitation
+		stack_max = data->stack.amount;
+
+	if( stack_max <= 0 )
+		return 0;
+
+	// Only refresh the client while the storage window is actually open,
+	// the whole list is resent by storage_storageopen() otherwise.
+	bool notify = !simulate && ( sd->state.storage_flag == 1 || sd->state.storage_flag == 3 );
+	int32 remain = amount;
+	int32 i;
+
+	// Fill up the existing stacks first
+	for( i = 0; i < stor->max_amount && remain > 0; i++ ) {
+		if( !compare_item(&stor->u.items_storage[i], it) )
+			continue;
+
+		int32 space = stack_max - stor->u.items_storage[i].amount;
+
+		if( space <= 0 )
+			continue;
+
+		int32 add = ( space < remain ) ? space : remain;
+
+		remain -= add;
+
+		if( simulate )
+			continue;
+
+		stor->u.items_storage[i].amount += add;
+		stor->dirty = true;
+
+		if( notify )
+			clif_storageitemadded(sd,&stor->u.items_storage[i],i,add);
+	}
+
+	// Then open new stacks on the free slots
+	uint16 used = stor->amount;
+
+	for( i = 0; i < stor->max_amount && remain > 0; i++ ) {
+		if( used >= stor->max_amount )
+			break;
+
+		if( stor->u.items_storage[i].nameid != 0 )
+			continue;
+
+		int32 add = ( stack_max < remain ) ? stack_max : remain;
+
+		remain -= add;
+		used++;
+
+		if( simulate )
+			continue;
+
+		memcpy(&stor->u.items_storage[i],it,sizeof(stor->u.items_storage[0]));
+		stor->u.items_storage[i].amount = add;
+		stor->amount++;
+		stor->dirty = true;
+
+		if( notify )
+			clif_storageitemadded(sd,&stor->u.items_storage[i],i,add);
+	}
+
+	if( notify && remain < amount )
+		clif_updatestorageamount(*sd, stor->amount, stor->max_amount);
+
+	return amount - remain;
+}
+
+/**
  * Make a player delete an item from his storage
  * @param sd : player
  * @param n : idx on storage to remove the item from

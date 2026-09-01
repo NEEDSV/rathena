@@ -856,3 +856,102 @@ BUILDIN_FUNC(storagegetitem)
 	script_pushint(st, result);
 	return SCRIPT_CMD_SUCCESS;
 }
+
+// =====================================================================
+// 창고 보급 상점 (창고 직행 구매)
+// 판매 품목 / 가격 / 수량 제한은 모두 src/map/need_storage_shop.cpp 에서
+// 관리하며, 스크립트는 메뉴 표시와 결과 안내만 담당한다.
+// 디스카운트(MC_DISCOUNT / RG_COMPULSION 등)는 이 경로에 전혀 개입하지 않는다.
+// =====================================================================
+
+// 카테고리 개수를 반환한다.
+BUILDIN_FUNC(storageshopcategories)
+{
+	script_pushint(st, need_storage_shop_category_count());
+	return SCRIPT_CMD_SUCCESS;
+}
+
+// 해당 카테고리에서 현재 판매 중인 품목 수를 반환한다.
+BUILDIN_FUNC(storageshopitemcount)
+{
+	script_pushint(st, need_storage_shop_item_count(script_getnum(st, 2)));
+	return SCRIPT_CMD_SUCCESS;
+}
+
+// 카테고리 내 index 번째 판매 품목의 아이템 ID를 반환한다. (없으면 0)
+BUILDIN_FUNC(storageshopitem)
+{
+	script_pushint(st, need_storage_shop_item_at(script_getnum(st, 2), script_getnum(st, 3)));
+	return SCRIPT_CMD_SUCCESS;
+}
+
+// 개당 구매 가격을 반환한다. (판매하지 않는 아이템이면 0)
+// item_db 의 Buy 가격 또는 설정된 Override 가격이며 할인은 적용되지 않는다.
+BUILDIN_FUNC(storageshopprice)
+{
+	script_pushint(st, need_storage_shop_price(script_getnum(st, 2)));
+	return SCRIPT_CMD_SUCCESS;
+}
+
+// 1회 최대 구매 수량을 반환한다. (판매하지 않는 아이템이면 0)
+BUILDIN_FUNC(storageshopmaxqty)
+{
+	script_pushint(st, need_storage_shop_max_quantity(script_getnum(st, 2)));
+	return SCRIPT_CMD_SUCCESS;
+}
+
+// 창고 직행 구매를 처리한다.
+// 성공 시 @storageshop_price / @storageshop_total 에 실제 청구 금액이,
+// @storageshop_amount 에 실제로 창고에 들어간 수량이 들어간다. (실패 시 0)
+// 반환값은 e_need_storage_shop_result 참조.
+//   1 성공 / 0 실패 / -1 미판매 / -2 수량 오류 / -3 제니 부족
+//  -4 창고 공간 부족 / -5 창고 사용 불가 / -6 창고 보관 불가 / -7 가격 오버플로우
+BUILDIN_FUNC(storageshopbuy)
+{
+	map_session_data* sd = nullptr;
+
+	if (!script_rid2sd(sd)) {
+		script_pushint(st, NEED_STORAGE_SHOP_FAIL);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	int64 nameid = script_getnum64(st, 2);
+	int64 amount = script_getnum64(st, 3);
+
+	// 스크립트에서 넘어온 값이 t_itemid / int32 범위를 벗어나면 그대로 거절한다.
+	if (nameid <= 0 || nameid > UINT32_MAX) {
+		pc_setreg(sd, add_str("@storageshop_price"), 0);
+		pc_setreg(sd, add_str("@storageshop_total"), 0);
+		pc_setreg(sd, add_str("@storageshop_amount"), 0);
+		script_pushint(st, NEED_STORAGE_SHOP_NOT_SOLD);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	if (amount < 1 || amount > INT32_MAX) {
+		pc_setreg(sd, add_str("@storageshop_price"), 0);
+		pc_setreg(sd, add_str("@storageshop_total"), 0);
+		pc_setreg(sd, add_str("@storageshop_amount"), 0);
+		script_pushint(st, NEED_STORAGE_SHOP_BAD_AMOUNT);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	int32 price = 0;
+	int32 total = 0;
+	int32 stored = 0;
+
+	e_need_storage_shop_result result = need_storage_shop_buy(
+		sd,
+		static_cast<t_itemid>(nameid),
+		static_cast<int32>(amount),
+		&price,
+		&total,
+		&stored
+	);
+
+	pc_setreg(sd, add_str("@storageshop_price"), price);
+	pc_setreg(sd, add_str("@storageshop_total"), total);
+	pc_setreg(sd, add_str("@storageshop_amount"), stored);
+
+	script_pushint(st, result);
+	return SCRIPT_CMD_SUCCESS;
+}

@@ -1,0 +1,317 @@
+//===== rAthena Script ========================================
+//= NEED 창고 보급 상점
+//===== 설명 ==================================================
+//= 대량으로 소비하는 보급품을 인벤토리를 거치지 않고
+//= 개인 창고로 바로 지급하는 전용 상점.
+//=
+//= - 판매 품목 / 가격 / 1회 최대 구매 수량은 모두 서버측
+//=   src/map/need_storage_shop.cpp 의 설정 테이블에서 관리한다.
+//= - 이 상점은 상인 디스카운트(MC_DISCOUNT 등)가 적용되지 않고
+//=   항상 item_db 의 기본 구매가(또는 Override 가격)로 판매한다.
+//= - 실제 구매/검증/지급/로그는 storageshopbuy() 안에서 처리된다.
+//=============================================================
+
+lasagna,161,141,6	script	창고 보급 상점	558,{
+	.@m_total = storageshopcategories();
+
+	if (.@m_total < 1 || .@m_total > getarraysize(.cat_name$)) {
+		mes "[창고 보급 상점]";
+		mes "상점 설정에 문제가 있어 지금은 이용할 수 없습니다.";
+		mes "운영자에게 문의해주세요.";
+		close;
+	}
+
+	mes "[창고 보급 상점]";
+	mes "이곳에서 구매한 물품은 인벤토리를 거치지 않고";
+	mes "^0000FF개인 창고^000000로 바로 들어갑니다.";
+	next;
+
+	mes "[창고 보급 상점]";
+	mes "대신 창고 직행 편의를 제공하는 대가로";
+	mes "^FF0000상인 할인(디스카운트)이 적용되지 않습니다.^000000";
+	mes "누구나 동일하게 할인 전 판매가로 구매합니다.";
+	next;
+
+	while (1) {
+		.@m_menu$ = "";
+
+		for (.@m_i = 0; .@m_i < .@m_total; .@m_i++)
+			.@m_menu$ += .cat_name$[.@m_i] + ":";
+
+		.@m_menu$ += "종료";
+
+		mes "[창고 보급 상점]";
+		mes "어떤 품목을 보시겠습니까?";
+		next;
+
+		.@m_sel = select(.@m_menu$);
+
+		if (.@m_sel < 1 || .@m_sel > .@m_total) {
+			mes "[창고 보급 상점]";
+			mes "또 이용해주세요.";
+			close;
+		}
+
+		.@m_cat = .@m_sel - 1;
+
+		callsub S_Category, .@m_cat;
+	}
+
+	end;
+
+// =========================
+// 카테고리 품목 목록 (페이지 단위)
+// =========================
+S_Category:
+	.@c_cat = getarg(0);
+	.@c_count = storageshopitemcount(.@c_cat);
+
+	if (.@c_count < 1) {
+		mes "[" + .cat_name$[.@c_cat] + "]";
+		mes "현재 판매 중인 품목이 없습니다.";
+		next;
+		return;
+	}
+
+	.@c_page = 0;
+	.@c_last = (.@c_count - 1) / .PageSize;
+
+	while (1) {
+		.@c_start = .@c_page * .PageSize;
+		.@c_end = .@c_start + .PageSize;
+
+		if (.@c_end > .@c_count)
+			.@c_end = .@c_count;
+
+		.@c_shown = 0;
+		.@c_menu$ = "";
+
+		for (.@c_i = .@c_start; .@c_i < .@c_end; .@c_i++) {
+			.@c_id = storageshopitem(.@c_cat, .@c_i);
+
+			if (.@c_id <= 0)
+				continue;
+
+			.@c_name$ = getitemname(.@c_id);
+
+			.@c_ids[.@c_shown] = .@c_id;
+			.@c_menu$ += .@c_name$ + " (" + callfunc("F_InsertComma", storageshopprice(.@c_id)) + " Zeny):";
+			.@c_shown++;
+		}
+
+		if (.@c_shown < 1) {
+			mes "[" + .cat_name$[.@c_cat] + "]";
+			mes "현재 판매 중인 품목이 없습니다.";
+			next;
+			return;
+		}
+
+		.@c_menu$ += "이전 페이지:다음 페이지:이전 메뉴로";
+
+		mes "[" + .cat_name$[.@c_cat] + "]";
+		mes "구매할 품목을 선택해주세요.";
+		mes "페이지 : " + (.@c_page + 1) + " / " + (.@c_last + 1);
+		next;
+
+		.@c_sel = select(.@c_menu$);
+
+		if (.@c_sel >= 1 && .@c_sel <= .@c_shown) {
+			.@c_pick = .@c_ids[.@c_sel - 1];
+
+			callsub S_Buy, .@c_pick;
+			continue;
+		}
+
+		if (.@c_sel == .@c_shown + 1) {
+			if (.@c_page > 0)
+				.@c_page--;
+
+			continue;
+		}
+
+		if (.@c_sel == .@c_shown + 2) {
+			if (.@c_page < .@c_last)
+				.@c_page++;
+
+			continue;
+		}
+
+		return;
+	}
+
+	return;
+
+// =========================
+// 수량 선택 및 구매
+// =========================
+S_Buy:
+	.@b_id = getarg(0);
+	.@b_price = storageshopprice(.@b_id);
+	.@b_max = storageshopmaxqty(.@b_id);
+
+	if (.@b_id <= 0 || .@b_price <= 0 || .@b_max <= 0) {
+		mes "[창고 보급 상점]";
+		mes "지금은 판매하지 않는 품목입니다.";
+		next;
+		return;
+	}
+
+	while (1) {
+		.@b_afford = Zeny / .@b_price;
+
+		if (.@b_afford > .@b_max)
+			.@b_afford = .@b_max;
+
+		mes "[창고 보급 상점]";
+		mes "품목 : ^0000FF" + getitemname(.@b_id) + "^000000";
+		mes "개당 가격 : " + callfunc("F_InsertComma", .@b_price) + " Zeny";
+		mes "1회 최대 구매 : " + callfunc("F_InsertComma", .@b_max) + " 개";
+		mes "보유 제니 : " + callfunc("F_InsertComma", Zeny) + " Zeny";
+		next;
+
+		.@b_sel = select(
+			"100 개",
+			"1,000 개",
+			"10,000 개",
+			"최대 구매 가능 수량 (" + callfunc("F_InsertComma", .@b_afford) + " 개)",
+			"직접 입력",
+			"이전으로"
+		);
+
+		.@b_amount = 0;
+
+		switch (.@b_sel) {
+		case 1:
+			.@b_amount = 100;
+			break;
+
+		case 2:
+			.@b_amount = 1000;
+			break;
+
+		case 3:
+			.@b_amount = 10000;
+			break;
+
+		case 4:
+			.@b_amount = .@b_afford;
+			break;
+
+		case 5:
+			mes "[창고 보급 상점]";
+			mes "구매할 수량을 입력해주세요.";
+			mes "입력 가능 범위 : 1 ~ " + callfunc("F_InsertComma", .@b_max);
+			next;
+
+			if (input(.@b_amount, 1, .@b_max) != 0) {
+				mes "[창고 보급 상점]";
+				mes "1 이상 " + callfunc("F_InsertComma", .@b_max) + " 이하의 수량만 입력할 수 있습니다.";
+				next;
+				continue;
+			}
+
+			break;
+
+		default:
+			return;
+		}
+
+		// 입력값은 서버(storageshopbuy)에서 다시 검증하지만,
+		// 안내를 위해 스크립트에서도 범위를 확인한다.
+		if (.@b_amount < 1 || .@b_amount > .@b_max) {
+			mes "[창고 보급 상점]";
+
+			if (.@b_afford < 1 && .@b_sel == 4)
+				mes "제니가 부족하여 구매할 수 없습니다.";
+			else
+				mes "구매 수량이 올바르지 않습니다.";
+
+			next;
+			continue;
+		}
+
+		.@b_total = .@b_amount * .@b_price;
+
+		mes "[창고 보급 상점]";
+		mes "^0000FF" + getitemname(.@b_id) + "^000000";
+		mes " ";
+		mes "구매 수량 : " + callfunc("F_InsertComma", .@b_amount) + " 개";
+		mes "개당 가격 : " + callfunc("F_InsertComma", .@b_price) + " Zeny";
+		mes "총 가격 : ^FF0000" + callfunc("F_InsertComma", .@b_total) + "^000000 Zeny";
+		mes "지급 위치 : ^0000FF개인 창고^000000";
+		mes " ";
+		mes "구매하시겠습니까?";
+		next;
+
+		if (select("구매", "취소") == 2)
+			continue;
+
+		.@b_result = storageshopbuy(.@b_id, .@b_amount);
+
+		mes "[창고 보급 상점]";
+
+		switch (.@b_result) {
+		case 1:
+			// 실제로 창고에 들어간 수량은 서버가 @storageshop_amount 로 알려준다.
+			mes getitemname(.@b_id) + " " + callfunc("F_InsertComma", @storageshop_amount) + "개를";
+			mes "개인 창고에 보관했습니다.";
+			mes callfunc("F_InsertComma", @storageshop_total) + " Zeny를 사용했습니다.";
+			break;
+
+		case -1:
+			mes "지금은 판매하지 않는 품목입니다.";
+			break;
+
+		case -2:
+			mes "구매 수량이 올바르지 않습니다.";
+			break;
+
+		case -3:
+			mes "제니가 부족하여 구매할 수 없습니다.";
+			break;
+
+		case -4:
+			mes "개인 창고 공간이 부족하여 구매할 수 없습니다.";
+			mes "필요한 공간을 확보한 후 다시 시도해주세요.";
+			break;
+
+		case -5:
+			mes "지금은 창고를 사용할 수 없습니다.";
+			mes "창고 창을 닫고 거래나 노점을 종료한 뒤";
+			mes "다시 시도해주세요.";
+			break;
+
+		case -6:
+			mes "창고에 보관할 수 없는 아이템입니다.";
+			break;
+
+		case -7:
+			mes "총 구매 금액이 너무 커서 구매할 수 없습니다.";
+			mes "수량을 줄여서 다시 시도해주세요.";
+			break;
+
+		default:
+			mes "구매에 실패했습니다.";
+			break;
+		}
+
+		next;
+	}
+
+	return;
+
+OnInit:
+	// 한 페이지에 표시할 품목 수
+	.PageSize = 8;
+
+	// 표시명 순서는 need_storage_shop.cpp 의 CATEGORIES 테이블 순서와 같아야 한다.
+	setarray .cat_name$[0],
+		"회복 / 편의 용품",
+		"파머시 / 제조 재료",
+		"스킬 소모품",
+		"화살",
+		"총알",
+		"캐논볼",
+		"기타 탄환";
+	end;
+}

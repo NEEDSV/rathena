@@ -60,6 +60,7 @@
 #include "mob.hpp"
 #include "need_equipment_build.hpp"
 #include "need_fishing.hpp"
+#include "need_storage_shop.hpp"
 #include "need_summer_reward_log.hpp"
 #include "npc.hpp"
 #include "party.hpp"
