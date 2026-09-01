@@ -7,7 +7,7 @@
 
 class map_session_data;
 
-constexpr uint16 NEED_AUTOPOT_MIN_INTERVAL = 300;
+constexpr uint16 NEED_AUTOPOT_MIN_INTERVAL = 100;
 constexpr uint16 NEED_AUTOPOT_DEFAULT_INTERVAL = 500;
 constexpr uint16 NEED_AUTOPOT_MAX_INTERVAL = 2000;
 constexpr uint8 NEED_AUTOPOT_MAX_PRESETS = 5;

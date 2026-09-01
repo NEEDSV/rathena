@@ -150,6 +150,57 @@ std::shared_ptr<item_data> healing_item(t_itemid item_id)
 	return data != nullptr && data->type == IT_HEALING ? data : nullptr;
 }
 
+/// Read-only mirror of pc_itemcd_check()/pc_itemcd_add(). Returns the tick at which the
+/// item may be consumed again, or 0 when it is ready now. Unlike the engine helpers this
+/// never mutates the delay table and never sends a failure packet to the client.
+t_tick item_delay_until(map_session_data* sd, const item_data* data, t_tick tick)
+{
+	if (data->delay.duration == 0 || pc_has_permission(sd, PC_PERM_ITEM_UNCONDITIONAL))
+		return 0;
+
+	if (data->delay.sc > SC_NONE && data->delay.sc < SC_MAX) {
+		const status_change_entry* sce = sd->sc.getSCE(data->delay.sc);
+		if (sce == nullptr)
+			return 0;
+		const TimerData* timer = get_timer(sce->timer);
+		return timer != nullptr ? timer->tick : tick + 1000;
+	}
+
+	for (int32 i = 0; i < MAX_ITEMDELAYS; ++i) {
+		if (sd->item_delay[i].nameid == data->nameid)
+			return DIFF_TICK(sd->item_delay[i].tick, tick) > 0 ? sd->item_delay[i].tick : 0;
+	}
+	return 0;
+}
+
+/// Cheap pre-check of the engine-wide restrictions pc_useitem()/pc_isUseitem() apply.
+/// Skipping the call keeps the shared item-use window free for the player's own hotkeys
+/// and avoids the failure packets those helpers emit on every rejection.
+bool engine_can_use_item(map_session_data* sd, t_tick tick)
+{
+	if (sd->state.mail_writing || sd->state.trading || sd->state.storage_flag != 0 || sd->npc_id != 0)
+		return false;
+	if (pc_isdead(sd))
+		return false;
+	if (sd->sc.opt1 > 0 && sd->sc.opt1 != OPT1_STONEWAIT && sd->sc.opt1 != OPT1_BURNING)
+		return false;
+	// Shared "prevent mass item usage" window, also used by the player's manual item use.
+	if (DIFF_TICK(sd->canuseitem_tick, tick) > 0)
+		return false;
+	return !map_getmapflag(sd->m, MF_NOITEMCONSUMPTION);
+}
+
+/// Per-item restrictions that make pc_useitem() emit a client packet on failure.
+bool item_usable_now(map_session_data* sd, const item_data* data)
+{
+	if (pc_has_permission(sd, PC_PERM_ITEM_UNCONDITIONAL))
+		return true;
+	if (data->item_usage.sitting && pc_issit(sd) &&
+		pc_get_group_level(sd) < data->item_usage.override)
+		return false;
+	return !itemdb_isNoEquip(data, sd->m);
+}
+
 const char* item_name(map_session_data* sd, t_itemid item_id, std::string& storage)
 {
 	std::shared_ptr<item_data> data = item_db.find(item_id);
@@ -359,10 +410,13 @@ bool need_autopot_enable(map_session_data* sd, bool hp)
 	if (item_id == 0 || !need_autopot_validate_item(sd, item_id, true))
 		return false;
 
-	if (hp)
+	if (hp) {
 		sd->autopot.hp_enabled = true;
-	else
+		sd->autopot.hp_next_use_tick = 0;
+	} else {
 		sd->autopot.sp_enabled = true;
+		sd->autopot.sp_next_use_tick = 0;
+	}
 	sd->autopot.next_check_tick = gettick();
 	update_active(sd);
 	return true;
@@ -372,10 +426,13 @@ void need_autopot_disable(map_session_data* sd, bool hp)
 {
 	if (sd == nullptr)
 		return;
-	if (hp)
+	if (hp) {
 		sd->autopot.hp_enabled = false;
-	else
+		sd->autopot.hp_next_use_tick = 0;
+	} else {
 		sd->autopot.sp_enabled = false;
+		sd->autopot.sp_next_use_tick = 0;
+	}
 	update_active(sd);
 }
 
@@ -386,6 +443,8 @@ void need_autopot_disable_all(map_session_data* sd, bool notify)
 	sd->autopot.hp_enabled = false;
 	sd->autopot.sp_enabled = false;
 	sd->autopot.processing = false;
+	sd->autopot.hp_next_use_tick = 0;
+	sd->autopot.sp_next_use_tick = 0;
 	update_active(sd);
 	if (notify) {
 		message(sd, NEED_AUTOPOT_MSG_MAP_RESTRICTED);
@@ -432,10 +491,14 @@ bool need_autopot_is_map_allowed(const map_session_data* sd)
 {
 	if (sd == nullptr || sd->m < 0)
 		return false;
-	return !map_getmapflag(sd->m, MF_PVP) &&
-		!map_getmapflag(sd->m, MF_GVG) &&
-		!map_getmapflag(sd->m, MF_GVG_CASTLE) &&
-		!map_getmapflag(sd->m, MF_BATTLEGROUND);
+	map_data* mapdata = map_getmapdata(sd->m);
+	if (mapdata == nullptr)
+		return false;
+	return !mapdata->getMapFlag(MF_TOWN) &&
+		!mapdata->getMapFlag(MF_PVP) &&
+		!mapdata->getMapFlag(MF_GVG) &&
+		!mapdata->getMapFlag(MF_GVG_CASTLE) &&
+		!mapdata->getMapFlag(MF_BATTLEGROUND);
 }
 
 bool need_autopot_is_status_blocked(map_session_data* sd)
@@ -483,7 +546,38 @@ bool need_autopot_use_item(map_session_data* sd, uint32 raw_item_id, bool hp)
 		return false;
 	}
 	missing_notified = false;
-	return pc_useitem(sd, index) != 0;
+
+	// Never call pc_useitem() while the engine would reject it: pc_itemcd_check() answers
+	// every rejection with a cooldown message, which at a 100ms interval floods the client
+	// connection and delays the player's own hotkey packets.
+	const t_tick tick = gettick();
+	t_tick& next_use_tick = hp ? sd->autopot.hp_next_use_tick : sd->autopot.sp_next_use_tick;
+	const t_tick delay_until = item_delay_until(sd, data.get(), tick);
+	if (delay_until != 0) {
+		next_use_tick = delay_until;
+		return false;
+	}
+	if (!item_usable_now(sd, data.get())) {
+		next_use_tick = tick + sd->autopot.interval_ms;
+		return false;
+	}
+	next_use_tick = 0;
+
+	// The item script may detach, warp or kill the player, so sd is re-resolved instead of
+	// being touched directly after the call.
+	const int32 session_id = sd->id;
+	const uint32 char_id = sd->status.char_id;
+	if (pc_useitem(sd, index) != 0)
+		return true;
+
+	// Rejected for a reason not covered above; back off one interval instead of retrying
+	// on every cycle.
+	sd = map_id2sd(session_id);
+	if (sd != nullptr && sd->state.active && sd->status.char_id == char_id) {
+		t_tick& retry_tick = hp ? sd->autopot.hp_next_use_tick : sd->autopot.sp_next_use_tick;
+		retry_tick = gettick() + sd->autopot.interval_ms;
+	}
+	return false;
 }
 
 void need_autopot_process(map_session_data* sd)
@@ -501,28 +595,55 @@ void need_autopot_process(map_session_data* sd)
 		return;
 	}
 
-	const bool need_hp = sd->autopot.hp_enabled &&
+	const bool low_hp = sd->autopot.hp_enabled &&
 		static_cast<int64>(sd->battle_status.hp) * 100 <
 		static_cast<int64>(sd->battle_status.max_hp) * sd->autopot.hp_percent;
-	const bool need_sp = sd->autopot.sp_enabled &&
+	const bool low_sp = sd->autopot.sp_enabled &&
 		static_cast<int64>(sd->battle_status.sp) * 100 <
 		static_cast<int64>(sd->battle_status.max_sp) * sd->autopot.sp_percent;
-	if (!need_hp && !need_sp)
+	if (!low_hp && !low_sp)
 		return;
-	if (need_autopot_is_status_blocked(sd))
+
+	// Checking the thresholds every interval does not mean attempting an item use every
+	// interval: both the per-type retry ticks and the engine restrictions are honoured
+	// before pc_useitem() is even considered.
+	const bool try_hp = low_hp && DIFF_TICK(sd->autopot.hp_next_use_tick, tick) <= 0;
+	const bool try_sp = low_sp && DIFF_TICK(sd->autopot.sp_next_use_tick, tick) <= 0;
+	if (!try_hp && !try_sp)
+		return;
+	if (need_autopot_is_status_blocked(sd) || !engine_can_use_item(sd, tick))
 		return;
 
 	processing_guard guard(sd->autopot.processing);
 	const int32 session_id = sd->id;
 	const uint32 char_id = sd->status.char_id;
-	if (need_hp)
-		need_autopot_use_item(sd, sd->autopot.hp_item_id, true);
 
-	sd = map_id2sd(session_id);
-	if (sd == nullptr || !sd->state.active || sd->status.char_id != char_id)
-		return;
-	if (need_sp)
-		need_autopot_use_item(sd, sd->autopot.sp_item_id, false);
+	// Only one item can pass battle_config.item_use_interval per cycle, so a single type is
+	// picked and the two alternate while both are low. Trying HP first unconditionally
+	// would leave SP starved for as long as HP stays below its threshold.
+	bool use_hp = try_hp;
+	if (try_hp && try_sp)
+		use_hp = !sd->autopot.last_used_hp;
+
+	for (int32 attempt = 0; attempt < 2; ++attempt) {
+		if (need_autopot_use_item(sd, use_hp ? sd->autopot.hp_item_id : sd->autopot.sp_item_id, use_hp)) {
+			sd = map_id2sd(session_id);
+			if (sd != nullptr && sd->state.active && sd->status.char_id == char_id)
+				sd->autopot.last_used_hp = use_hp;
+			return;
+		}
+
+		// The preferred type could not be used (item delay, missing potion). Fall back to
+		// the other one in the same cycle rather than waiting for the next interval.
+		sd = map_id2sd(session_id);
+		if (sd == nullptr || !sd->state.active || sd->status.char_id != char_id)
+			return;
+		if (attempt != 0 || !(try_hp && try_sp))
+			return;
+		use_hp = !use_hp;
+		if (DIFF_TICK(use_hp ? sd->autopot.hp_next_use_tick : sd->autopot.sp_next_use_tick, tick) > 0)
+			return;
+	}
 }
 
 bool need_autopot_save_preset(map_session_data* sd, uint8 slot, const char* name)
@@ -793,10 +914,12 @@ int32 need_autopot_atcommand(int32 fd, map_session_data* sd, const char* raw_mes
 		sd->autopot.hp_item_id = static_cast<t_itemid>(item_id);
 		sd->autopot.hp_percent = static_cast<uint8>(percent);
 		sd->autopot.hp_missing_notified = false;
+		sd->autopot.hp_next_use_tick = 0;
 	} else {
 		sd->autopot.sp_item_id = static_cast<t_itemid>(item_id);
 		sd->autopot.sp_percent = static_cast<uint8>(percent);
 		sd->autopot.sp_missing_notified = false;
+		sd->autopot.sp_next_use_tick = 0;
 	}
 	sd->autopot.interval_ms = static_cast<uint16>(interval);
 	sd->autopot.active_preset_slot = -1;

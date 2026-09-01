@@ -448,6 +448,12 @@ struct need_autopot_state {
 	uint8 sp_percent = 50;
 	uint16 interval_ms = 500;
 	t_tick next_check_tick = 0;
+	// Earliest tick at which a potion use may be attempted again, mirrored from the
+	// engine item delay so pc_useitem() is not called while it would fail anyway.
+	t_tick hp_next_use_tick = 0;
+	t_tick sp_next_use_tick = 0;
+	// Type of the last consumed potion, used to alternate HP/SP and avoid SP starvation.
+	bool last_used_hp = false;
 	int8 active_preset_slot = -1;
 	char active_preset_name[25] = {};
 };
