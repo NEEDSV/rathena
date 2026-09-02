@@ -378,3 +378,75 @@ ACMD_FUNC(performancemode) {
 	}
 	return 0;
 }
+
+// NEED: pet auto feeding toggle for pets whose client UI does not expose the
+// auto feeding checkbox. Operates on the existing pet.autofeed value only.
+// Message ids 1904~1987 are reserved by conf/msg_conf/map_msg_need_summer.conf,
+// which is loaded after conf/msg_conf/import/map_msg_eng_conf.txt - do not use them.
+enum e_need_pet_autofeed_message : int32 {
+	NEED_PET_AUTOFEED_MSG_FEATURE_OFF = 1988,
+	NEED_PET_AUTOFEED_MSG_NO_PET,
+	NEED_PET_AUTOFEED_MSG_NOT_ALLOWED,
+	NEED_PET_AUTOFEED_MSG_ENABLED,
+	NEED_PET_AUTOFEED_MSG_DISABLED,
+	NEED_PET_AUTOFEED_MSG_INFO_ON,
+	NEED_PET_AUTOFEED_MSG_INFO_OFF,
+	NEED_PET_AUTOFEED_MSG_USAGE,
+};
+
+ACMD_FUNC(petautofeed)
+{
+	nullpo_retr(-1, sd);
+
+	if( !battle_config.feature_pet_autofeed ){
+		clif_displaymessage(fd, msg_txt(sd, NEED_PET_AUTOFEED_MSG_FEATURE_OFF));
+		return -1;
+	}
+
+	if( !sd->status.pet_id || sd->pd == nullptr ){
+		clif_displaymessage(fd, msg_txt(sd, NEED_PET_AUTOFEED_MSG_NO_PET));
+		return -1;
+	}
+
+	std::shared_ptr<s_pet_db> pet_db_ptr = sd->pd->get_pet_db();
+
+	// Entries like E_CRAMP / E_HYDRA opt out through AllowAutoFeed: false.
+	// Never hardcode mob ids here - the database value is the only source.
+	if( pet_db_ptr == nullptr || !pet_db_ptr->allow_autofeed ){
+		clif_displaymessage(fd, msg_txt(sd, NEED_PET_AUTOFEED_MSG_NOT_ALLOWED));
+		return -1;
+	}
+
+	char arg[16];
+
+	memset(arg, '\0', sizeof(arg));
+
+	if( message && *message )
+		sscanf(message, "%15s", arg);
+
+	bool enable;
+
+	if( *arg == '\0' ){
+		enable = !sd->pd->pet.autofeed;
+	}else if( !strcmpi(arg, "on") || !strcmpi(arg, "1") ){
+		enable = true;
+	}else if( !strcmpi(arg, "off") || !strcmpi(arg, "0") ){
+		enable = false;
+	}else if( !strcmpi(arg, "info") || !strcmpi(arg, "status") ){
+		clif_displaymessage(fd, msg_txt(sd, sd->pd->pet.autofeed ? NEED_PET_AUTOFEED_MSG_INFO_ON : NEED_PET_AUTOFEED_MSG_INFO_OFF));
+		return 0;
+	}else{
+		clif_displaymessage(fd, msg_txt(sd, NEED_PET_AUTOFEED_MSG_USAGE));
+		return -1;
+	}
+
+	sd->pd->pet.autofeed = enable;
+
+	// Keep the client checkbox in sync for pets that do expose the UI.
+	clif_pet_autofeed_status(sd, true);
+	intif_save_petdata(sd->status.account_id, &sd->pd->pet);
+
+	clif_displaymessage(fd, msg_txt(sd, enable ? NEED_PET_AUTOFEED_MSG_ENABLED : NEED_PET_AUTOFEED_MSG_DISABLED));
+
+	return 0;
+}

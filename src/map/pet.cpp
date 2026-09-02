@@ -1176,6 +1176,10 @@ int32 pet_recv_petdata(uint32 account_id,struct s_pet *p,int32 flag)
 			clif_send_petdata( sd, *sd->pd, CHANGESTATEPET_HAIRSTYLE );
 			clif_send_petdata( nullptr, *sd->pd, CHANGESTATEPET_ACCESSORY );
 			clif_send_petstatus( *sd, *sd->pd );
+			// The pet data can arrive after the client already finished loading the map.
+			// In that case clif_parse_LoadEndAck() has sent the auto feeding state without
+			// a pet attached, so it has to be resent here - like pet_birth_process() does.
+			clif_pet_autofeed_status(sd,true);
 		}
 	}
 
