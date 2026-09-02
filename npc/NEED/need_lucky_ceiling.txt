@@ -1,0 +1,1215 @@
+//============================================================
+// NEED - 행운의 알 교환소 (시즌 천장 / 공용 마일리지)
+//
+// 기존 시스템과의 관계
+// - 행운 포인트 아이템(399905) 지급 로직은 건드리지 않는다.
+//   (행운의 알 개봉 시 item_db 스크립트가 지급 -> 그대로 유지)
+// - 기존 행운 포인트 바터 상점(need_lucky_mileage_shop)도 그대로 두고
+//   본 NPC 메뉴에서 호출만 한다. (+7 제련권 등 기존 교환 유지)
+//
+// 이 스크립트가 추가하는 것
+// 1) 시즌 한정 아이템 천장
+//    행운 포인트 + 해당 시즌 행운의 알 실물 + Zeny -> 확정 교환
+// 2) 공용 희귀 아이템 마일리지
+//    행운 포인트 + Zeny -> 확정 교환 (행운의 알 불필요)
+//
+// 재고
+// - 개인/계정 제한 없음. 서버 전체 공용 재고만 사용.
+// - 주간 리셋 : 매주 토요일 22:00
+// - 월간 리셋 : 매월 첫 번째 토요일 22:00
+//
+// [재고 영속화]
+// 재고는 `need_lucky_ceiling_stock` SQL 테이블이 원본(master)이다.
+// mapreg($) 만 쓰면 자동 저장 주기(300초) 때문에 비정상 종료 시
+// 이미 팔린 재고가 되살아날 수 있어, 재고가 바뀌는 모든 시점에
+// SQL 로 즉시 기록하고 반영 여부까지 확인한다.
+//
+//   .SqlReady = 1 : 테이블 정상. 판매 가능
+//   .SqlReady = 0 : 테이블 없음/DB 오류. 재고 상품 판매를 전부 차단
+//                   (공급량 초과 지급 방지가 최우선)
+//
+// sql-files/need_lucky_ceiling.sql 을 먼저 적용해야 한다.
+//
+// $ 변수는 SQL 값을 담아두는 인메모리 사본이다.
+// map-server 는 단일 스레드 단일 기록자이므로 SQL 과 항상 같은 값을 갖는다.
+//   $NeedLPStock[상품ID]  현재 남은 서버 재고
+//   $NeedLPCyc[상품ID]    현재 재고가 속한 주기 키
+//   $NeedLPMode[상품ID]   0=설정값 사용 / 1=강제 판매중지 / 2=강제 판매
+//
+// 운영자 명령어
+//   @ceiladmin  (GM 99)
+//
+// 상품 추가/수정은 파일 맨 아래 [상품 설정] 블록만 편집하면 된다.
+//============================================================
+
+lasagna,167,136,4	script	행운의 알 교환소#need_lucky_ceil	4_F_KAFRA6,{
+
+	callsub S_NormalizeAll;
+
+	while (1) {
+		mes "[행운의 알 교환소]";
+		mes "모아둔 행운의 포인트로";
+		mes "원하는 상품을 확정 교환할 수 있습니다.";
+		mes " ";
+		mes "보유 " + getitemname(.PointItem) + " : ^0055FF" + countitem(.PointItem) + " P^000000";
+		mes "보유 Zeny : ^0055FF" + callfunc("F_InsertComma", Zeny) + "^000000";
+
+		if (!.SqlReady) {
+			mes " ";
+			mes "^FF0000현재 재고 시스템 점검 중이라^000000";
+			mes "^FF0000수량 제한 상품을 판매할 수 없습니다.^000000";
+		}
+
+		setdialogsize(340,340);
+		next;
+
+		switch (select(
+			"시즌 한정 아이템 천장:" +
+			"공용 희귀 아이템:" +
+			"기존 행운 포인트 상점:" +
+			"교환 규칙 안내:" +
+			"닫기"
+		)) {
+
+		case 1:
+			callsub S_Category, 1;
+			break;
+
+		case 2:
+			callsub S_Category, 2;
+			break;
+
+		case 3:
+			close2;
+			callshop "need_lucky_mileage_shop";
+			end;
+
+		case 4:
+			callsub S_Rules;
+			break;
+
+		default:
+			close;
+		}
+	}
+
+
+//============================================================
+// 카테고리 목록
+// getarg(0) : 1 = 시즌 천장, 2 = 공용 희귀
+//============================================================
+S_Category:
+	.@cat = getarg(0);
+
+	while (1) {
+		callsub S_NormalizeAll;
+
+		.@count = 0;
+		.@menu$ = "";
+
+		for (.@i = 0; .@i < getarraysize(.Pid); .@i++) {
+			if (.Cat[.@i] != .@cat)
+				continue;
+			if (!callsub(S_IsOpen, .@i))
+				continue;
+
+			.@idx[.@count] = .@i;
+
+			if (.@count > 0)
+				.@menu$ += ":";
+
+			.@menu$ += .Name$[.@i] + callsub(S_StockTag, .@i);
+			.@count++;
+		}
+
+		if (.@count <= 0) {
+			mes "[행운의 알 교환소]";
+			mes "현재 판매 중인 상품이 없습니다.";
+			next;
+			return;
+		}
+
+		mes "[행운의 알 교환소]";
+		if (.@cat == 1) {
+			mes "^FF8800시즌 한정 아이템 천장^000000";
+			mes "해당 시즌 행운의 알 ^FF0000실물^000000이 필요합니다.";
+			mes "지급품은 ^FF0000계정 귀속^000000으로 처리될 수 있습니다.";
+		}
+		else {
+			mes "^0055FF공용 희귀 아이템^000000";
+			mes "행운의 알 없이 교환할 수 있는 상품입니다.";
+		}
+		mes " ";
+		mes "괄호 안은 ^0055FF서버 전체 남은 재고^000000입니다.";
+		next;
+
+		.@sel = select(.@menu$ + ":뒤로") - 1;
+		if (.@sel < 0 || .@sel >= .@count)
+			return;
+
+		callsub S_Detail, .@idx[.@sel];
+	}
+	return;
+
+
+//============================================================
+// 상품 상세 / 구매
+// getarg(0) : 상품 슬롯 index
+//============================================================
+S_Detail:
+	.@i = getarg(0);
+	.@pid = .Pid[.@i];
+
+	callsub S_Normalize, .@i;
+
+	.@nparts = 0;
+	if (.Choice$[.@i] != "") {
+		explode(.@parts$, .Choice$[.@i], ",");
+		.@nparts = getarraysize(.@parts$);
+	}
+
+	mes "[" + .Name$[.@i] + "]";
+	if (.@nparts > 0) {
+		mes "구성 파츠 ^0055FF" + .@nparts + "종^000000 중 1종을 선택합니다.";
+		mes "지급 수량 : " + .RewardAmt[.@i] + "개";
+	}
+	else {
+		mes "지급 : ^0055FF" + getitemname(.Reward[.@i]) + " " + .RewardAmt[.@i] + "개^000000";
+	}
+	mes " ";
+	mes "^FF0000[필요 재료]^000000";
+	mes "- " + getitemname(.PointItem) + " : " + .Point[.@i] + " P"
+		+ "  (보유 " + countitem(.PointItem) + ")";
+
+	if (.EggId[.@i] > 0)
+		mes "- " + getitemname(.EggId[.@i]) + " : " + .EggAmt[.@i] + "개"
+			+ "  (보유 " + countitem(.EggId[.@i]) + ")";
+	else
+		mes "- 행운의 알 : 필요 없음";
+
+	mes "- Zeny : " + callfunc("F_InsertComma", .Zeny[.@i])
+		+ "  (보유 " + callfunc("F_InsertComma", Zeny) + ")";
+	mes " ";
+
+	mes "^0055FF[서버 재고]^000000";
+	if (.Cycle[.@i] == 0) {
+		mes "- 재고 제한 없음";
+	}
+	else if (!.SqlReady) {
+		mes "- ^FF0000재고 시스템 점검 중^000000";
+	}
+	else {
+		mes "- 남은 수량 : " + $NeedLPStock[.@pid] + " / " + .Stock[.@i]
+			+ " (" + ((.Cycle[.@i] == 1) ? "주간" : "월간") + ")";
+		mes "- 다음 재입고 : " + callsub(S_NextResetStr, .@i);
+	}
+	mes " ";
+
+	if (.Bound[.@i]) {
+		mes "^FF0000[거래 제한]^000000";
+		mes "계정 귀속으로 지급됩니다.";
+		mes "거래 / 우편 / 노점 / 드랍 / 길드 창고 불가";
+		mes "^0055FF계정 창고 이동은 가능^000000합니다.";
+	}
+	else {
+		mes "[거래 제한]";
+		mes "해당 아이템의 기본 정책을 따릅니다.";
+	}
+	next;
+
+	if (.Cycle[.@i] != 0 && !.SqlReady) {
+		mes "[행운의 알 교환소]";
+		mes "^FF0000현재 재고 시스템 점검 중입니다.^000000";
+		mes "잠시 후 다시 이용해주세요.";
+		next;
+		return;
+	}
+
+	if (.Cycle[.@i] != 0 && $NeedLPStock[.@pid] <= 0) {
+		mes "[행운의 알 교환소]";
+		mes "^FF0000이번 " + ((.Cycle[.@i] == 1) ? "주" : "달") + " 준비된 수량이";
+		mes "모두 소진되었습니다.^000000";
+		mes " ";
+		mes "다음 재입고 : " + callsub(S_NextResetStr, .@i);
+		next;
+		return;
+	}
+
+	.@choice = 0;
+
+	if (.@nparts > 0) {
+		.@pmenu$ = "";
+		for (.@k = 0; .@k < .@nparts; .@k++) {
+			if (.@k > 0)
+				.@pmenu$ += ":";
+			.@pmenu$ += getitemname(atoi(.@parts$[.@k]));
+		}
+
+		mes "[" + .Name$[.@i] + "]";
+		mes "받으실 파츠를 선택해주세요.";
+		mes " ";
+		mes "어떤 파츠를 선택하더라도";
+		mes "^FF0000공용 재고 1개^000000가 차감됩니다.";
+		next;
+
+		.@sel = select(.@pmenu$ + ":취소") - 1;
+		if (.@sel < 0 || .@sel >= .@nparts)
+			return;
+
+		.@choice = .@sel;
+		.@reward = atoi(.@parts$[.@choice]);
+	}
+	else {
+		.@reward = .Reward[.@i];
+	}
+
+	mes "[최종 확인]";
+	mes "지급 : ^0055FF" + getitemname(.@reward) + " " + .RewardAmt[.@i] + "개^000000";
+	mes " ";
+	mes "소모 :";
+	mes "- " + getitemname(.PointItem) + " " + .Point[.@i] + " P";
+	if (.EggId[.@i] > 0)
+		mes "- " + getitemname(.EggId[.@i]) + " " + .EggAmt[.@i] + "개";
+	mes "- Zeny " + callfunc("F_InsertComma", .Zeny[.@i]);
+	mes " ";
+	mes "^FF0000교환한 재료는 되돌릴 수 없습니다.^000000";
+	next;
+
+	if (select("교환한다:취소") == 2)
+		return;
+
+	.@ret = callsub(S_Buy, .@i, .@choice);
+
+	mes "[행운의 알 교환소]";
+	switch (.@ret) {
+	case 0:
+		mes "^0055FF" + getitemname(.@reward) + " " + .RewardAmt[.@i] + "개^000000를";
+		mes "교환했습니다.";
+		mes " ";
+		if (.Cycle[.@i] != 0)
+			mes "서버 남은 수량 : " + $NeedLPStock[.@pid] + " / " + .Stock[.@i];
+		if (.Bound[.@i])
+			mes "^FF0000계정 귀속 상태로 지급되었습니다.^000000";
+		break;
+
+	case 1:
+		mes "^FF0000해당 상품의 판매가 종료되었습니다.^000000";
+		break;
+
+	case 2:
+		mes "^FF0000방금 다른 유저가 마지막 수량을 가져갔습니다.^000000";
+		mes "다음 재입고를 기다려주세요.";
+		break;
+
+	case 3:
+		mes "^FF0000" + getitemname(.PointItem) + "이(가) 부족합니다.^000000";
+		mes "필요 : " + .Point[.@i] + " P / 보유 : " + countitem(.PointItem) + " P";
+		break;
+
+	case 4:
+		mes "^FF0000" + getitemname(.EggId[.@i]) + "이(가) 부족합니다.^000000";
+		mes "필요 : " + .EggAmt[.@i] + "개 / 보유 : " + countitem(.EggId[.@i]) + "개";
+		break;
+
+	case 5:
+		mes "^FF0000Zeny가 부족합니다.^000000";
+		mes "필요 : " + callfunc("F_InsertComma", .Zeny[.@i]);
+		break;
+
+	case 6:
+		mes "^FF0000소지 무게 또는 인벤토리 공간이 부족합니다.^000000";
+		mes "정리 후 다시 시도해주세요.";
+		break;
+
+	case 8:
+		mes "^FF0000현재 재고 시스템 점검 중입니다.^000000";
+		mes "잠시 후 다시 시도해주세요.";
+		mes " ";
+		mes "재화는 전혀 소모되지 않았습니다.";
+		break;
+
+	case 9:
+		mes "^FF0000재고 처리에 실패해 교환을 취소했습니다.^000000";
+		mes "잠시 후 다시 시도해주세요.";
+		mes " ";
+		mes "재화는 전혀 소모되지 않았습니다.";
+		break;
+
+	default:
+		mes "^FF0000상품 설정이 변경되어 교환을 취소했습니다.^000000";
+		break;
+	}
+	next;
+	return;
+
+
+//============================================================
+// 실제 구매 처리
+//
+// getarg(0) : 상품 슬롯 index
+// getarg(1) : 선택형 파츠 index (단일 상품이면 0)
+//
+// 반환 0 정상 / 1 판매중지 / 2 재고없음 / 3 포인트부족
+//      4 행알부족 / 5 Zeny부족 / 6 무게-공간부족 / 7 설정변경
+//      8 재고 영속화 불가(점검중) / 9 재고 저장 실패
+//
+// [중요] 아래 구간에는 next / select / input / menu / sleep 을
+//        절대 넣지 말 것.
+//        map-server 스크립트 엔진은 단일 스레드이며 위 명령에서만
+//        다른 플레이어에게 실행이 넘어간다. 따라서 이 구간 전체가
+//        하나의 원자적 처리로 동작하고,
+//        재고 확인 -> 재료 확인 -> 재고 차감 -> 재료 차감 -> 지급
+//        사이에 다른 유저가 끼어들 수 없다.
+//        query_sql 도 동기 호출이라 실행을 넘기지 않는다.
+//
+// [처리 순서] 공급량 초과 지급을 막는 것이 최우선이므로
+//        재고 차감을 SQL 에 먼저 확정하고, 성공했을 때만 재료를 차감한다.
+//        중간에 서버가 죽으면 "재고는 줄었는데 아이템은 못 받음" 쪽으로
+//        기울며, 그 반대(재고 복구 + 아이템 지급)는 발생하지 않는다.
+//============================================================
+S_Buy:
+	.@i = getarg(0);
+	.@pid = .Pid[.@i];
+
+	// ---------- 원자적 구간 시작 ----------
+	if (!callsub(S_IsOpen, .@i))
+		return 1;
+
+	// 재고를 즉시 영구 저장할 수 없는 상태면 재고 상품은 팔지 않는다
+	if (.Cycle[.@i] != 0 && !.SqlReady)
+		return 8;
+
+	callsub S_Normalize, .@i;
+
+	if (.Choice$[.@i] != "") {
+		explode(.@parts$, .Choice$[.@i], ",");
+		.@nparts = getarraysize(.@parts$);
+		if (getarg(1) < 0 || getarg(1) >= .@nparts)
+			return 7;
+		.@reward = atoi(.@parts$[getarg(1)]);
+	}
+	else {
+		.@reward = .Reward[.@i];
+	}
+
+	if (.@reward <= 0)
+		return 7;
+
+	.@amount = .RewardAmt[.@i];
+	if (.@amount <= 0)
+		return 7;
+
+	if (.Cycle[.@i] != 0 && $NeedLPStock[.@pid] <= 0)
+		return 2;
+
+	if (.Point[.@i] > 0 && countitem(.PointItem) < .Point[.@i])
+		return 3;
+
+	if (.EggId[.@i] > 0 && .EggAmt[.@i] > 0 && countitem(.EggId[.@i]) < .EggAmt[.@i])
+		return 4;
+
+	if (.Zeny[.@i] > 0 && Zeny < .Zeny[.@i])
+		return 5;
+
+	if (!checkweight(.@reward, .@amount))
+		return 6;
+
+	// (1) 서버 재고 차감을 SQL 에 먼저 확정한다.
+	//     저장/검증에 실패하면 여기서 끝내므로 유저 재화는 그대로 남는다.
+	if (.Cycle[.@i] != 0) {
+		.@newstock = $NeedLPStock[.@pid] - 1;
+
+		if (!callsub(S_SaveStock, .@i, $NeedLPCyc[.@pid], .@newstock))
+			return 9;
+
+		$NeedLPStock[.@pid] = .@newstock;
+	}
+
+	// (2) 재료 차감
+	if (.Point[.@i] > 0)
+		delitem .PointItem, .Point[.@i];
+
+	if (.EggId[.@i] > 0 && .EggAmt[.@i] > 0)
+		delitem .EggId[.@i], .EggAmt[.@i];
+
+	if (.Zeny[.@i] > 0)
+		Zeny = Zeny - .Zeny[.@i];
+
+	// (3) 지급
+	if (.Bound[.@i])
+		getitembound .@reward, .@amount, BOUND_ACCOUNT;
+	else
+		getitem .@reward, .@amount;
+
+	// (4) 구매 로그
+	// 시간 / account_id / char_id / char_name / map 은
+	// npclog 테이블에 자동으로 함께 기록된다.
+	logmes "[LuckyCeil] pid=" + .@pid
+		+ " code=" + .Code$[.@i]
+		+ " reward=" + .@reward + "x" + .@amount
+		+ " bound=" + .Bound[.@i]
+		+ " point=" + .Point[.@i]
+		+ " egg=" + .EggId[.@i] + "x" + .EggAmt[.@i]
+		+ " zeny=" + .Zeny[.@i]
+		+ " left=" + ((.Cycle[.@i] != 0) ? $NeedLPStock[.@pid] : -1);
+	// ---------- 원자적 구간 끝 ----------
+
+	return 0;
+
+
+//============================================================
+// 교환 규칙 안내
+//============================================================
+S_Rules:
+	mes "[교환 규칙 안내]";
+	mes "^FF88001. 시즌 한정 아이템 천장^000000";
+	mes "- 해당 시즌 행운의 알 ^FF0000미개봉 실물^000000이 필요합니다.";
+	mes "- 개봉 횟수가 아니라 아이템을 직접 소모합니다.";
+	mes "- 해당 행운의 알 판매가 종료된 뒤에 열립니다.";
+	next;
+
+	mes "[교환 규칙 안내]";
+	mes "^0055FF2. 공용 희귀 아이템^000000";
+	mes "- 여러 행운의 알에서 반복 등장하는 상품입니다.";
+	mes "- 행운의 알 없이 포인트와 Zeny로만 교환합니다.";
+	next;
+
+	mes "[교환 규칙 안내]";
+	mes "^0055FF3. 서버 공용 재고^000000";
+	mes "- 개인/계정 제한이 아니라 ^FF0000서버 전체 수량^000000입니다.";
+	mes "- 주간 상품 : 매주 ^0055FF토요일 22:00^000000 초기화";
+	mes "- 월간 상품 : 매월 ^0055FF첫 번째 토요일 22:00^000000 초기화";
+	mes "- 남은 수량은 다음 주기로 이월되지 않습니다.";
+	next;
+
+	mes "[교환 규칙 안내]";
+	mes "^FF00004. 거래 제한^000000";
+	mes "- 천장으로 확정 교환한 아이템은 계정 귀속입니다.";
+	mes "- 거래 / 우편 / 노점 / 드랍 / 길드 창고 불가";
+	mes "- 계정 창고 이동은 가능합니다.";
+	mes " ";
+	mes "- 행운의 알을 직접 열어서 얻은 아이템은";
+	mes "  기존 정책 그대로 유지됩니다.";
+	next;
+
+	mes "[교환 규칙 안내]";
+	mes "^0055FF5. 세트형 상품^000000";
+	mes "- 파츠를 선택하는 상품은 파츠별 재고가 아니라";
+	mes "  ^FF0000공용 재고 1개^000000를 차감합니다.";
+	next;
+	return;
+
+
+//============================================================
+// 판매 여부
+// $NeedLPMode : 0 = 설정값 사용 / 1 = 강제 판매중지 / 2 = 강제 판매
+//============================================================
+S_IsOpen:
+	.@i = getarg(0);
+	.@pid = .Pid[.@i];
+
+	if ($NeedLPMode[.@pid] == 1)
+		return 0;
+	if ($NeedLPMode[.@pid] == 2)
+		return 1;
+
+	return .Enabled[.@i];
+
+
+//============================================================
+// 메뉴에 붙는 재고 표기
+//============================================================
+S_StockTag:
+	.@i = getarg(0);
+
+	if (.Cycle[.@i] == 0)
+		return "";
+
+	if (!.SqlReady)
+		return " (점검중)";
+
+	.@pid = .Pid[.@i];
+
+	if ($NeedLPStock[.@pid] <= 0)
+		return " (품절)";
+
+	return " (" + $NeedLPStock[.@pid] + "/" + .Stock[.@i] + ")";
+
+
+//============================================================
+// [영속화] SQL 재고 적재
+//
+// map-server 기동 / @reloadscript / 운영자 수동 재적재 시 호출.
+// need_lucky_ceiling_stock 테이블을 원본으로 삼아 $ 사본을 채운다.
+//
+// 반환 1 = 정상, 0 = 테이블 없음/DB 오류 (판매 차단 상태로 전환)
+//============================================================
+S_SqlLoad:
+	.SqlReady = 0;
+
+	.@n = query_sql(
+		"SELECT `product_id`,`period_key`,`stock`,`sale_mode` FROM `need_lucky_ceiling_stock`",
+		.@qpid, .@qkey, .@qstock, .@qmode);
+
+	if (.@n < 0) {
+		logmes "[LuckyCeil] SQL LOAD FAILED - table need_lucky_ceiling_stock unavailable. sales blocked.";
+		debugmes "[LuckyCeil] need_lucky_ceiling_stock 테이블을 읽을 수 없습니다. sql-files/need_lucky_ceiling.sql 을 적용하세요. (재고 상품 판매 차단)";
+		return 0;
+	}
+
+	// SQL 이 원본이다.
+	// mapreg 에 남아 있던 이전 값이 이기지 못하도록 인메모리 사본을 먼저 비운다.
+	// 이렇게 해야 SQL 행이 없는 상품이 S_Normalize 에서 반드시 리셋되면서
+	// 첫 행이 생성된다. (안 그러면 주기가 바뀔 때까지 SQL 에 아무것도 안 남는다)
+	for (.@i = 0; .@i < getarraysize(.Pid); .@i++) {
+		$NeedLPCyc[.Pid[.@i]]   = 0;
+		$NeedLPStock[.Pid[.@i]] = 0;
+		$NeedLPMode[.Pid[.@i]]  = 0;
+	}
+
+	for (.@i = 0; .@i < .@n; .@i++) {
+		$NeedLPCyc[.@qpid[.@i]]   = .@qkey[.@i];
+		$NeedLPStock[.@qpid[.@i]] = .@qstock[.@i];
+		$NeedLPMode[.@qpid[.@i]]  = .@qmode[.@i];
+	}
+
+	.SqlReady = 1;
+	logmes "[LuckyCeil] SQL LOAD OK rows=" + .@n;
+	return 1;
+
+
+//============================================================
+// [영속화] 재고 즉시 저장
+//
+// getarg(0) : 상품 슬롯 index
+// getarg(1) : 주기 키
+// getarg(2) : 저장할 재고 값
+//
+// 반환 1 = 저장 및 검증 성공, 0 = 실패
+//
+// 쓰기 후 곧바로 다시 읽어 값이 실제로 반영됐는지까지 확인한다.
+// 여기서 0을 돌려주면 호출부는 인메모리 값을 건드리지 않는다.
+//============================================================
+S_SaveStock:
+	if (!.SqlReady)
+		return 0;
+
+	.@i = getarg(0);
+	.@pid = .Pid[.@i];
+	.@key = getarg(1);
+	.@val = getarg(2);
+
+	.@r = query_sql(
+		"INSERT INTO `need_lucky_ceiling_stock` "
+		+ "(`product_id`,`period_type`,`period_key`,`stock`,`base_stock`,`updated_at`) VALUES ("
+		+ .@pid + "," + .Cycle[.@i] + "," + .@key + "," + .@val + "," + .Stock[.@i] + ",NOW()) "
+		+ "ON DUPLICATE KEY UPDATE "
+		+ "`period_type`=VALUES(`period_type`),`period_key`=VALUES(`period_key`),"
+		+ "`stock`=VALUES(`stock`),`base_stock`=VALUES(`base_stock`),`updated_at`=NOW()");
+
+	if (.@r < 0) {
+		logmes "[LuckyCeil] SQL SAVE FAILED pid=" + .@pid + " key=" + .@key + " stock=" + .@val;
+		return 0;
+	}
+
+	.@chk = -999999;
+	.@n = query_sql(
+		"SELECT `stock` FROM `need_lucky_ceiling_stock` WHERE `product_id`=" + .@pid
+		+ " AND `period_key`=" + .@key, .@chk);
+
+	if (.@n < 1 || .@chk != .@val) {
+		logmes "[LuckyCeil] SQL VERIFY FAILED pid=" + .@pid + " expect=" + .@val + " got=" + .@chk;
+		return 0;
+	}
+
+	return 1;
+
+
+//============================================================
+// [영속화] 판매 모드 즉시 저장
+//
+// getarg(0) : 상품 ID
+// getarg(1) : 모드 값 (0/1/2)
+//
+// 반환 1 = 성공, 0 = 실패
+//============================================================
+S_SaveMode:
+	if (!.SqlReady)
+		return 0;
+
+	.@pid = getarg(0);
+	.@mode = getarg(1);
+
+	.@r = query_sql(
+		"INSERT INTO `need_lucky_ceiling_stock` (`product_id`,`sale_mode`,`updated_at`) VALUES ("
+		+ .@pid + "," + .@mode + ",NOW()) "
+		+ "ON DUPLICATE KEY UPDATE `sale_mode`=VALUES(`sale_mode`),`updated_at`=NOW()");
+
+	if (.@r < 0) {
+		logmes "[LuckyCeil] SQL MODE SAVE FAILED pid=" + .@pid + " mode=" + .@mode;
+		return 0;
+	}
+
+	.@chk = -1;
+	.@n = query_sql(
+		"SELECT `sale_mode` FROM `need_lucky_ceiling_stock` WHERE `product_id`=" + .@pid, .@chk);
+
+	if (.@n < 1 || .@chk != .@mode) {
+		logmes "[LuckyCeil] SQL MODE VERIFY FAILED pid=" + .@pid + " expect=" + .@mode + " got=" + .@chk;
+		return 0;
+	}
+
+	return 1;
+
+
+//============================================================
+// 전체 상품 재고 주기 점검
+//============================================================
+S_NormalizeAll:
+	for (.@i = 0; .@i < getarraysize(.Pid); .@i++)
+		callsub S_Normalize, .@i;
+	return;
+
+
+//============================================================
+// 상품 1개 재고 주기 점검 / 리셋
+//
+// 주기 키가 바뀌었으면 기본 재고로 되돌린다.
+// 대화 / 구매 / 정각 이벤트마다 확인하므로
+// OnClock 이 누락되거나 서버가 꺼져 있었어도 정상 초기화된다.
+//
+// 리셋은 SQL 에 먼저 기록하고, 성공했을 때만 인메모리 값을 바꾼다.
+// 저장에 실패하면 이전 주기 상태를 그대로 유지한다.
+// (지난 주기 재고가 남아 있으면 그만큼만 팔리므로 공급량 초과가 아니다)
+//============================================================
+S_Normalize:
+	.@i = getarg(0);
+	.@pid = .Pid[.@i];
+
+	if (.Cycle[.@i] == 0)
+		return 0;
+
+	if (.Cycle[.@i] == 1)
+		.@key = callsub(S_WeekKey);
+	else
+		.@key = callsub(S_MonthKey);
+
+	if ($NeedLPCyc[.@pid] != .@key) {
+		if (!callsub(S_SaveStock, .@i, .@key, .Stock[.@i]))
+			return 0;
+
+		$NeedLPCyc[.@pid] = .@key;
+		$NeedLPStock[.@pid] = .Stock[.@i];
+
+		logmes "[LuckyCeil] CYCLE RESET pid=" + .@pid + " key=" + .@key + " stock=" + .Stock[.@i];
+	}
+
+	return .@key;
+
+
+//============================================================
+// 주간 주기 키
+// 기준 : 매주 토요일 22:00
+// 반환 : 마지막 리셋 기준일의 YYYYMMDD
+//============================================================
+S_WeekKey:
+	.@dow = gettime(DT_DAYOFWEEK);		// 0 = 일 ... 6 = 토
+	.@back = (.@dow + 1) % 7;			// 직전 토요일까지 며칠 전인가
+
+	if (.@back == 0 && gettime(DT_HOUR) < 22)
+		.@back = 7;						// 토요일 21:59 까지는 지난 주기
+
+	return atoi(gettimestr("%Y%m%d", 11, gettimetick(2) - .@back * 86400));
+
+
+//============================================================
+// 월간 주기 키
+// 기준 : 매월 첫 번째 토요일 22:00
+// 반환 : YYYYMM
+//============================================================
+S_MonthKey:
+	.@y = gettime(DT_YEAR);
+	.@m = gettime(DT_MONTH);
+	.@fs = callsub(S_FirstSat, .@y, .@m);
+
+	if (gettime(DT_DAYOFMONTH) > .@fs
+		|| (gettime(DT_DAYOFMONTH) == .@fs && gettime(DT_HOUR) >= 22))
+		return .@y * 100 + .@m;
+
+	.@m -= 1;
+	if (.@m <= 0) {
+		.@m = 12;
+		.@y -= 1;
+	}
+	return .@y * 100 + .@m;
+
+
+//============================================================
+// 지정 연/월의 첫 번째 토요일 일자 (1 ~ 7)
+// getarg(0) = 연, getarg(1) = 월
+//============================================================
+S_FirstSat:
+	setarray .@t[0], 0,3,2,5,0,3,5,1,4,6,2,4;
+
+	.@y = getarg(0);
+	.@m = getarg(1);
+
+	if (.@m < 3)
+		.@y -= 1;
+
+	// Sakamoto : 해당 월 1일의 요일 (0 = 일 ... 6 = 토)
+	.@dow1 = (.@y + .@y/4 - .@y/100 + .@y/400 + .@t[.@m - 1] + 1) % 7;
+
+	return 1 + ((6 - .@dow1) + 7) % 7;
+
+
+//============================================================
+// 다음 재고 초기화 시점 문자열
+//============================================================
+S_NextResetStr:
+	.@i = getarg(0);
+
+	if (.Cycle[.@i] == 1) {
+		.@dow = gettime(DT_DAYOFWEEK);
+		.@fwd = (6 - .@dow + 7) % 7;
+
+		if (.@fwd == 0 && gettime(DT_HOUR) >= 22)
+			.@fwd = 7;
+
+		return gettimestr("%Y-%m-%d", 11, gettimetick(2) + .@fwd * 86400) + " (토) 22:00";
+	}
+
+	if (.Cycle[.@i] == 2) {
+		.@y = gettime(DT_YEAR);
+		.@m = gettime(DT_MONTH);
+		.@fs = callsub(S_FirstSat, .@y, .@m);
+
+		if (gettime(DT_DAYOFMONTH) > .@fs
+			|| (gettime(DT_DAYOFMONTH) == .@fs && gettime(DT_HOUR) >= 22)) {
+			.@m += 1;
+			if (.@m > 12) {
+				.@m = 1;
+				.@y += 1;
+			}
+			.@fs = callsub(S_FirstSat, .@y, .@m);
+		}
+
+		.@ms$ = "" + .@m;
+		if (.@m < 10)
+			.@ms$ = "0" + .@m;
+
+		.@ds$ = "" + .@fs;
+		if (.@fs < 10)
+			.@ds$ = "0" + .@fs;
+
+		return .@y + "-" + .@ms$ + "-" + .@ds$ + " (첫째 토요일) 22:00";
+	}
+
+	return "-";
+
+
+//============================================================
+// 운영자 메뉴  @ceiladmin
+//============================================================
+OnAdmin:
+	while (1) {
+		callsub S_NormalizeAll;
+
+		.@count = 0;
+		.@menu$ = "";
+
+		for (.@i = 0; .@i < getarraysize(.Pid); .@i++) {
+			.@idx[.@count] = .@i;
+
+			if (.@count > 0)
+				.@menu$ += ":";
+
+			.@state$ = "판매중";
+			if (!callsub(S_IsOpen, .@i))
+				.@state$ = "중지";
+
+			.@menu$ += "[" + .Pid[.@i] + "] " + .Name$[.@i]
+				+ " / " + .@state$
+				+ callsub(S_StockTag, .@i);
+
+			.@count++;
+		}
+
+		mes "[행운의 알 교환소 - 운영자]";
+		mes "등록 상품 : " + .@count + "개";
+		mes " ";
+
+		if (.SqlReady) {
+			mes "재고 저장소 : ^0055FF정상^000000 (need_lucky_ceiling_stock)";
+		}
+		else {
+			mes "재고 저장소 : ^FF0000오류^000000";
+			mes "^FF0000재고 상품 판매가 전부 차단된 상태입니다.^000000";
+			mes "sql-files/need_lucky_ceiling.sql 적용 여부를 확인하세요.";
+		}
+
+		mes " ";
+		mes "주간 주기 키 : " + callsub(S_WeekKey);
+		mes "월간 주기 키 : " + callsub(S_MonthKey);
+		mes " ";
+		mes "관리할 상품을 선택해주세요.";
+		next;
+
+		.@sel = select(.@menu$ + ":재고 저장소 재연결:닫기") - 1;
+
+		if (.@sel == .@count) {
+			mes "[재고 저장소 재연결]";
+
+			if (callsub(S_SqlLoad)) {
+				mes "^0055FF정상적으로 다시 읽었습니다.^000000";
+				callsub S_NormalizeAll;
+			}
+			else {
+				mes "^FF0000여전히 읽을 수 없습니다.^000000";
+				mes "need_lucky_ceiling_stock 테이블과 DB 상태를 확인하세요.";
+			}
+
+			logmes "[LuckyCeilAdmin] sql reload ready=" + .SqlReady;
+			next;
+			continue;
+		}
+
+		if (.@sel < 0 || .@sel > .@count)
+			close;
+
+		callsub S_AdminItem, .@idx[.@sel];
+	}
+	end;
+
+
+S_AdminItem:
+	.@i = getarg(0);
+	.@pid = .Pid[.@i];
+
+	while (1) {
+		callsub S_Normalize, .@i;
+
+		mes "[" + .Name$[.@i] + "]";
+		mes "상품 ID : " + .@pid + " (" + .Code$[.@i] + ")";
+		mes "분류 : " + ((.Cat[.@i] == 1) ? "시즌 천장" : "공용 희귀");
+		mes "스크립트 설정 : " + ((.Enabled[.@i]) ? "판매" : "중지");
+
+		if ($NeedLPMode[.@pid] == 1)
+			mes "운영자 지정 : ^FF0000강제 판매중지^000000";
+		else if ($NeedLPMode[.@pid] == 2)
+			mes "운영자 지정 : ^0055FF강제 판매^000000";
+		else
+			mes "운영자 지정 : 없음 (설정값 사용)";
+
+		.@open = callsub(S_IsOpen, .@i);
+		mes "현재 상태 : " + ((.@open) ? "^0055FF판매중^000000" : "^FF0000중지^000000");
+		mes " ";
+
+		if (.Cycle[.@i] == 0) {
+			mes "재고 : 제한 없음";
+		}
+		else {
+			mes "재고 : " + $NeedLPStock[.@pid] + " / " + .Stock[.@i]
+				+ " (" + ((.Cycle[.@i] == 1) ? "주간" : "월간") + ")";
+			mes "주기 값 : " + $NeedLPCyc[.@pid];
+			mes "다음 재입고 : " + callsub(S_NextResetStr, .@i);
+		}
+		next;
+
+		switch (select(
+			"재고 직접 수정:" +
+			"기본 재고로 즉시 초기화:" +
+			"판매 강제 ON:" +
+			"판매 강제 OFF:" +
+			"운영자 지정 해제:" +
+			"뒤로"
+		)) {
+
+		case 1:
+			if (.Cycle[.@i] == 0) {
+				mes "재고 제한이 없는 상품입니다.";
+				next;
+				break;
+			}
+			mes "[재고 직접 수정]";
+			mes "변경할 최종 재고를 입력해주세요.";
+			mes "현재 : " + $NeedLPStock[.@pid];
+			next;
+
+			input .@new, 0, 100000;
+
+			.@old = $NeedLPStock[.@pid];
+
+			// SQL 에 먼저 확정하고 성공했을 때만 인메모리 값을 바꾼다
+			if (!callsub(S_SaveStock, .@i, $NeedLPCyc[.@pid], .@new)) {
+				mes "[재고 직접 수정]";
+				mes "^FF0000재고 저장에 실패했습니다. 변경하지 않았습니다.^000000";
+				mes "현재 재고 : " + .@old;
+				next;
+				break;
+			}
+
+			$NeedLPStock[.@pid] = .@new;
+
+			logmes "[LuckyCeilAdmin] pid=" + .@pid + " stock " + .@old + " -> " + .@new + " (saved)";
+
+			mes "[재고 직접 수정]";
+			mes .@old + "개 -> ^009900" + $NeedLPStock[.@pid] + "개^000000";
+			mes "^0055FF즉시 영구 저장되었습니다.^000000";
+			next;
+			break;
+
+		case 2:
+			if (.Cycle[.@i] == 0) {
+				mes "재고 제한이 없는 상품입니다.";
+				next;
+				break;
+			}
+			.@old = $NeedLPStock[.@pid];
+
+			if (!callsub(S_SaveStock, .@i, $NeedLPCyc[.@pid], .Stock[.@i])) {
+				mes "[재고 초기화]";
+				mes "^FF0000재고 저장에 실패했습니다. 변경하지 않았습니다.^000000";
+				mes "현재 재고 : " + .@old;
+				next;
+				break;
+			}
+
+			$NeedLPStock[.@pid] = .Stock[.@i];
+
+			logmes "[LuckyCeilAdmin] pid=" + .@pid + " reset " + .@old + " -> " + .Stock[.@i] + " (saved)";
+
+			mes "[재고 초기화]";
+			mes .@old + "개 -> ^009900" + $NeedLPStock[.@pid] + "개^000000";
+			mes "^0055FF즉시 영구 저장되었습니다.^000000";
+			next;
+			break;
+
+		case 3:
+			callsub S_AdminSetMode, .@i, 2;
+			break;
+
+		case 4:
+			callsub S_AdminSetMode, .@i, 1;
+			break;
+
+		case 5:
+			callsub S_AdminSetMode, .@i, 0;
+			break;
+
+		default:
+			return;
+		}
+	}
+	return;
+
+
+//============================================================
+// 운영자 판매 모드 변경 (즉시 영구 저장)
+// getarg(0) : 상품 슬롯 index
+// getarg(1) : 0 = 지정 해제 / 1 = 강제 판매중지 / 2 = 강제 판매
+//============================================================
+S_AdminSetMode:
+	.@i = getarg(0);
+	.@pid = .Pid[.@i];
+	.@mode = getarg(1);
+	.@old = $NeedLPMode[.@pid];
+
+	if (!callsub(S_SaveMode, .@pid, .@mode)) {
+		mes "[판매 상태 변경]";
+		mes "^FF0000저장에 실패해 변경하지 않았습니다.^000000";
+		next;
+		return;
+	}
+
+	$NeedLPMode[.@pid] = .@mode;
+
+	logmes "[LuckyCeilAdmin] pid=" + .@pid + " mode " + .@old + " -> " + .@mode + " (saved)";
+
+	mes "[판매 상태 변경]";
+	if (.@mode == 2)
+		mes "^0055FF강제 판매^000000로 지정했습니다.";
+	else if (.@mode == 1)
+		mes "^FF0000강제 판매중지^000000로 지정했습니다.";
+	else {
+		mes "운영자 지정을 해제했습니다.";
+		mes "스크립트 설정값을 따릅니다.";
+	}
+	mes "^0055FF즉시 영구 저장되었습니다.^000000";
+	next;
+	return;
+
+
+//============================================================
+// 정각 처리 - 재고 주기 점검 및 공지
+//============================================================
+OnClock2200:
+	callsub S_NormalizeAll;
+
+	if (gettime(DT_DAYOFWEEK) != SATURDAY)
+		end;
+
+	announce "[행운의 알 교환소] 주간 확정 교환 재고가 초기화되었습니다.", bc_all;
+
+	if (gettime(DT_DAYOFMONTH) == callsub(S_FirstSat, gettime(DT_YEAR), gettime(DT_MONTH)))
+		announce "[행운의 알 교환소] 월간 확정 교환 재고가 초기화되었습니다.", bc_all;
+
+	end;
+
+
+//============================================================
+//                      [상품 설정]
+//
+// 상품을 추가할 때는 아래 setarray 각 줄의 같은 위치에
+// 항목을 하나씩 추가하면 된다. 핵심 로직은 손대지 않는다.
+//
+// .Pid       상품 ID. 재고 저장 키로 쓰이므로 한 번 정하면 바꾸지 말 것.
+//            (1 ~ 60000 범위의 고유값. 삭제한 ID는 재사용하지 말 것)
+// .Code$     로그용 ASCII 코드
+// .Name$     NPC 표시명
+// .Enabled   1 = 판매, 0 = 중지
+// .Cat       1 = 시즌 천장, 2 = 공용 희귀
+// .Point     필요 행운 포인트
+// .Zeny      필요 Zeny
+// .EggId     필요 행운의 알 ID (0 = 필요 없음)
+// .EggAmt    필요 행운의 알 수량
+// .Stock     주기당 기본 재고
+// .Cycle     0 = 재고 제한 없음, 1 = 주간, 2 = 월간
+// .Bound     1 = 계정 귀속 지급
+// .Reward    지급 아이템 ID (선택형이면 0)
+// .RewardAmt 지급 수량
+// .Choice$   선택형 파츠 목록. "" 이면 단일 상품.
+//            예) "24180,24181,24182"
+//
+// 기본 가격 기준 (등장 확률 -> 포인트 / 해당 행알 / Zeny)
+//   1.5%  ->    300P / 100개 /   100,000,000
+//   1.0%  ->    400P / 100개 /   100,000,000
+//   0.5%  ->    800P / 100개 /   200,000,000
+//   0.2%  ->  2,000P / 100개 /   500,000,000
+//   0.1%  ->  4,000P / 100개 / 1,000,000,000
+//
+// 서버 전체 주간 교환량 기준
+//   1 ~ 1.5% -> 5개 / 0.5% -> 3개 / 0.2% -> 2개 / 0.1% -> 1개
+//============================================================
+OnInit:
+	.PointItem = 399905;	// 행운 포인트
+
+	bindatcmd "ceiladmin", strnpcinfo(3) + "::OnAdmin", 99, 99;
+
+	//--------------------------------------------------------
+	// 상품 ID
+	//--------------------------------------------------------
+	setarray .Pid[0],
+		100,	// 대장장이의 축복
+		101,	// 봉인된인장 카드
+		102,	// +9 제련 교환권
+		200,	// 하트날개 헤어밴드
+		201;	// 베어러즈 쉐도우
+
+	setarray .Code$[0],
+		"BS_BLESSING",
+		"SEALED_CARD",
+		"REFINE9",
+		"HEARTWING",
+		"BEARERS_SHADOW";
+
+	setarray .Name$[0],
+		"대장장이의 축복",
+		"봉인된인장 카드",
+		"+9 제련 교환권",
+		"하트날개 헤어밴드",
+		"베어러즈 쉐도우";
+
+	// 시즌 천장(200번대)은 해당 행운의 알 판매가 종료된 뒤
+	// 0 -> 1 로 바꾸거나 @ceiladmin 에서 강제 판매로 열어준다.
+	setarray .Enabled[0],
+		1,	// 100 대장장이의 축복
+		1,	// 101 봉인된인장 카드
+		1,	// 102 +9 제련 교환권
+		0,	// 200 하트날개 헤어밴드  (소녀의 마음 판매 종료 후 개방)
+		0;	// 201 베어러즈 쉐도우    (봉인된 드라큐라 스크롤 판매 종료 후 개방)
+
+	setarray .Cat[0],
+		2,	// 100 공용
+		2,	// 101 공용
+		2,	// 102 공용
+		1,	// 200 시즌
+		1;	// 201 시즌
+
+	setarray .Point[0],
+		500,	// 100
+		10000,	// 101
+		30000,	// 102
+		400,	// 200  소녀의 마음 내 등장 확률 1.00%
+		300;	// 201  봉인된 드라큐라 스크롤 내 등장 확률 1.79% -> 1.5% 대역
+
+	setarray .Zeny[0],
+		100000000,	// 100
+		1000000000,	// 101
+		2000000000,	// 102
+		100000000,	// 200
+		100000000;	// 201
+
+	setarray .EggId[0],
+		0,		// 100 공용 - 행알 불필요
+		0,		// 101 공용 - 행알 불필요
+		0,		// 102 공용 - 행알 불필요
+		12835,	// 200 소녀의 마음
+		22812;	// 201 봉인된 드라큐라 스크롤
+
+	setarray .EggAmt[0],
+		0,		// 100
+		0,		// 101
+		0,		// 102
+		100,	// 200
+		100;	// 201
+
+	setarray .Stock[0],
+		100,	// 100 주간 100개
+		1,		// 101 주간 1개
+		1,		// 102 월간 1개
+		5,		// 200 주간 5개
+		5;		// 201 주간 5개
+
+	setarray .Cycle[0],
+		1,	// 100 주간
+		1,	// 101 주간
+		2,	// 102 월간
+		1,	// 200 주간
+		1;	// 201 주간
+
+	setarray .Bound[0],
+		0,	// 100 기존 아이템 정책 유지
+		0,	// 101 기존 아이템 정책 유지
+		0,	// 102 기존 아이템 정책 유지
+		1,	// 200 계정 귀속
+		1;	// 201 계정 귀속
+
+	setarray .Reward[0],
+		6635,	// 100 대장장이의 축복
+		22829,	// 101 봉인된인장 카드 (사용 시 기존 랜덤 처리 그대로)
+		0,		// 102 선택형
+		18563,	// 200 하트날개 헤어밴드
+		0;		// 201 선택형
+
+	setarray .RewardAmt[0],
+		1,	// 100
+		1,	// 101
+		1,	// 102
+		1,	// 200
+		1;	// 201
+
+	setarray .Choice$[0],
+		"",										// 100
+		"",										// 101
+		"6228,6232",							// 102 무기/방어구 9 제련 보장권
+		"",										// 200
+		"24180,24181,24182,24183,24184,24185";	// 201 베어러즈 쉐도우 6종
+
+	// 재고 원본을 SQL 에서 읽어온다.
+	// 실패하면 .SqlReady = 0 이 되어 재고 상품 판매가 전부 차단된다.
+	callsub S_SqlLoad;
+
+	callsub S_NormalizeAll;
+	end;
+}
