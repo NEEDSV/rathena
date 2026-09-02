@@ -71,6 +71,11 @@ OnInit:
 	set .RewardCoinAmount, 30;	// 단계 달성 시 지급할 의상 코인 개수
 	set .CostumeCoinID, 399991;		// TODO: 의상 코인 아이템 ID
 	set .ExchangeCost, 300;
+
+	// 의상 도감 100% 완성 보상 (택1 / 계정당 1회)
+	set .CollectionCompleteRewardBlue, 1002294;		// 냐르의 푸른빛 발자국(걸칠것)
+	set .CollectionCompleteRewardPurple, 1002295;	// 냐르의 보랏빛 발자국(걸칠것)
+
 	set .PageSize, 20;
 	set .SearchMaxResults, 200;
 	set .PreviewDuration, 30000; // 의상 미리보기 유지 시간 (30초)
@@ -91,6 +96,7 @@ OnInit:
 // PART = EQP_COSTUME_HEAD_TOP / MID / LOW / GARMENT / 5
 setarray .StoneData[0],
 EQP_COSTUME_HEAD_LOW,6745,4932,
+EQP_COSTUME_HEAD_TOP,6791,4937
 EQP_COSTUME_HEAD_LOW,25015,29027,
 EQP_COSTUME_HEAD_MID,25060,29047,
 EQP_COSTUME_HEAD_MID,25061,310330,
@@ -542,7 +548,12 @@ L_CollectionMenu:
 	mes " ";
 	mes "도감 보상:";
 	mes "^FF8000"+.RewardStepPoint + "^000000개 등록마다 의상 코인 ^FF8000" + .RewardCoinAmount + "^000000개 지급";
-	mes "보상은 계정 단위로 1회만 수령 가능합니다.";
+	mes " ";
+	mes "^0055FF도감 100% 완성 특별 보상^000000";
+	mes "냐르의 푸른빛 발자국(걸칠것)";
+	mes "또는 냐르의 보랏빛 발자국(걸칠것) 중 ^FF8000택1^000000";
+	mes " ";
+	mes "모든 보상은 계정 단위로 1회만 수령 가능합니다.";
 	mes " ";
 	mes "^FF8000※ 같은 의상의 귀속 아이템을 보유 중이면";
 	mes "   일반 의상 보호를 위해 등록 목록에서 제외됩니다.^000000";
@@ -985,10 +996,37 @@ L_ViewBookPage:
 	
 L_Reward:
 	set .@registered, getcostumeregistercount();
+	set .@total, getcostumeactivecount();
+
+	mes "[도감 보상]";
+	mes "등록 의상: " + .@registered + " / " + .@total;
+	mes " ";
+	mes "^FF8000[단계 보상]^000000";
+	mes .RewardStepPoint + "개 등록마다 의상 코인 " + .RewardCoinAmount + "개";
+	mes " ";
+	mes "^0055FF[100% 완성 보상]^000000";
+	mes "도감의 모든 의상을 등록하면";
+	mes "냐르의 푸른빛 발자국(걸칠것)";
+	mes "또는 냐르의 보랏빛 발자국(걸칠것) 중 하나를 선택할 수 있습니다.";
+	mes " ";
+	mes "※ 100% 완성 보상은 계정당 1회만 수령 가능합니다.";
+	next;
+
+	switch(select("단계 보상 받기:100% 완성 보상 받기:뒤로")) {
+	case 1:
+		goto L_RewardStep;
+	case 2:
+		goto L_RewardComplete;
+	default:
+		goto L_CollectionMenu;
+	}
+
+L_RewardStep:
+	set .@registered, getcostumeregistercount();
 	set .@next_step, #COSTUME_REWARD_STEP + 1;
 	set .@need_count, .@next_step * .RewardStepPoint;
 
-	mes "[도감 보상]";
+	mes "[도감 단계 보상]";
 	mes "등록 의상: " + .@registered + " / " + getcostumeactivecount();
 	mes "현재 수령 단계: " + (#COSTUME_REWARD_STEP * .RewardStepPoint) + "개";
 	mes "다음 보상 단계: " + .@need_count + "개";
@@ -998,14 +1036,14 @@ L_Reward:
 	next;
 
 	if (.@registered < .@need_count) {
-		mes "[도감 보상]";
+		mes "[도감 단계 보상]";
 		mes "아직 보상을 받을 수 없습니다.";
 		mes "다음 보상까지 " + (.@need_count - .@registered) + "개 남았습니다.";
 		close;
 	}
 
 	if (select("보상을 받는다:취소") == 2)
-		goto L_Main;
+		goto L_Reward;
 
 	// 재검사
 	set .@registered, getcostumeregistercount();
@@ -1013,7 +1051,7 @@ L_Reward:
 	set .@need_count, .@next_step * .RewardStepPoint;
 
 	if (.@registered < .@need_count) {
-		mes "[도감 보상]";
+		mes "[도감 단계 보상]";
 		mes "보상 조건을 만족하지 않습니다.";
 		close;
 	}
@@ -1023,11 +1061,105 @@ L_Reward:
 
 	announce strcharinfo(0) + "님이 의상 도감 " + .@need_count + "개 수집을 달성했습니다!", bc_all;
 
-	mes "[도감 보상]";
+	mes "[도감 단계 보상]";
 	mes "보상을 수령했습니다.";
 	mes "의상 코인 " + .RewardCoinAmount + "개를 획득했습니다.";
 	close;
-	
+
+L_RewardComplete:
+	set .@registered, getcostumeregistercount();
+	set .@total, getcostumeactivecount();
+
+	mes "[도감 100% 완성 보상]";
+	mes "등록 의상: " + .@registered + " / " + .@total;
+	mes " ";
+
+	if (#COSTUME_COMPLETE_REWARD) {
+		mes "^777777이미 100% 완성 보상을 수령했습니다.^000000";
+		close;
+	}
+
+	if (.@total <= 0 || .@registered < .@total) {
+		mes "아직 의상 도감을 100% 완성하지 못했습니다.";
+
+		if (.@total > 0)
+			mes "남은 의상: ^FF8000" + (.@total - .@registered) + "^000000개";
+
+		close;
+	}
+
+	mes "^00AA00의상 도감 100% 완성을 축하합니다!^000000";
+	mes "아래 보상 중 하나를 선택해주세요.";
+	mes " ";
+	mes "1. ^0055FF냐르의 푸른빛 발자국(걸칠것)^000000";
+	mes "2. ^9932CC냐르의 보랏빛 발자국(걸칠것)^000000";
+	mes " ";
+	mes "^FF0000※ 선택 후에는 다른 보상으로 변경할 수 없습니다.^000000";
+	next;
+
+	set .@complete_select, select(
+		"냐르의 푸른빛 발자국(걸칠것)",
+		"냐르의 보랏빛 발자국(걸칠것)",
+		"취소"
+	);
+
+	if (.@complete_select == 3)
+		goto L_Reward;
+
+	if (.@complete_select == 1) {
+		set .@reward_item_id, .CollectionCompleteRewardBlue;
+		set .@reward_name$, "냐르의 푸른빛 발자국(걸칠것)";
+	}
+	else {
+		set .@reward_item_id, .CollectionCompleteRewardPurple;
+		set .@reward_name$, "냐르의 보랏빛 발자국(걸칠것)";
+	}
+
+	mes "[도감 100% 완성 보상]";
+	mes "^FF8000" + .@reward_name$ + "^000000";
+	mes "1개를 선택했습니다.";
+	mes " ";
+	mes "이 보상을 수령하시겠습니까?";
+	next;
+
+	if (select("수령한다:취소") == 2)
+		goto L_RewardComplete;
+
+	// 지급 직전 조건 및 중복 수령 재검사
+	set .@registered, getcostumeregistercount();
+	set .@total, getcostumeactivecount();
+
+	if (#COSTUME_COMPLETE_REWARD) {
+		mes "[도감 100% 완성 보상]";
+		mes "이미 보상을 수령했습니다.";
+		close;
+	}
+
+	if (.@total <= 0 || .@registered < .@total) {
+		mes "[도감 100% 완성 보상]";
+		mes "현재 100% 완성 조건을 만족하지 않습니다.";
+		close;
+	}
+
+	if (.@reward_item_id != .CollectionCompleteRewardBlue &&
+		.@reward_item_id != .CollectionCompleteRewardPurple) {
+		mes "[도감 100% 완성 보상]";
+		mes "보상 정보를 확인할 수 없습니다.";
+		close;
+	}
+
+	// 계정당 1회 수령 처리
+	set #COSTUME_COMPLETE_REWARD, .@reward_item_id;
+	getitem .@reward_item_id, 1;
+
+	announce strcharinfo(0) + "님이 의상 도감 100% 수집을 달성했습니다!", bc_all;
+
+	mes "[도감 100% 완성 보상]";
+	mes "100% 완성 보상을 수령했습니다.";
+	mes "^FF8000" + .@reward_name$ + "^000000";
+	mes "1개를 획득했습니다.";
+	close;
+
 L_Exchange:
 	mes "[의상 교환]";
 	mes "교환할 도감 번호를 입력해주세요.";
