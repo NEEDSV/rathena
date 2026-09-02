@@ -48,6 +48,7 @@
 #include "navi.hpp"
 #include "need_autopot.hpp"
 #include "need_fishing.hpp"
+#include "need_storage_shop.hpp"
 #include "need_summer_attendance.hpp"
 #include "need_summer_fishing_reward.hpp"
 #include "need_summer_hunt.hpp"
@@ -2236,6 +2237,7 @@ int32 map_quit(map_session_data *sd) {
 
 	need_summer_attendance_session_end(sd);
 	need_autopot_logout(sd);
+	need_storage_shop_session_end(*sd);
 	need_fishing_free(sd); // clear fishing session AND last result on logout/disconnect
 	pc_bg_strip_clear_saved_equipment(sd);
 	costume_collection_db_clear(sd);

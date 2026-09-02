@@ -25,6 +25,7 @@
 #include "mail.hpp"
 #include "map.hpp"
 #include "mercenary.hpp"
+#include "need_storage_shop.hpp"
 #include "party.hpp"
 #include "pc.hpp"
 #include "pc_groups.hpp"
@@ -3525,8 +3526,12 @@ static bool intif_parse_StorageReceived(int32 fd)
 			break;
 
 		case TABLE_STORAGE:
-			if (stor->stor_id)
-				storage_premiumStorage_open(sd);
+			if (stor->stor_id) {
+				// NEED storage supply shop pulls a premium storage in the background
+				// to deliver a purchase; that load must not pop the storage window.
+				if (!need_storage_shop_consume_silent_load(*sd, stor->stor_id))
+					storage_premiumStorage_open(sd);
+			}
 			else {
 #ifdef VIP_ENABLE
 				if (!pc_isvip(sd))
@@ -3556,10 +3561,16 @@ static void intif_parse_StorageSaved(int32 fd)
 					map_session_data *sd = map_id2sd( RFIFOL( fd, 2 ) );
 					struct s_storage* stor = nullptr;
 
-					if( RFIFOB( fd, 8 ) ){
+					uint8 ack_stor_id = RFIFOB( fd, 8 );
+
+					if( ack_stor_id ){
 						// ShowInfo("Storage %d has been saved (AID: %d).\n", RFIFOL(fd, 2), RFIFOB(fd, 8) );
 
-						if( sd ){
+						// Only the premium storage that is actually held right now may be
+						// marked clean. A late acknowledgement of a storage that has since
+						// been swapped out must not clear the dirty flag of its successor,
+						// which would drop that successor on the next swap.
+						if( sd && sd->premiumStorage.stor_id == ack_stor_id ){
 							stor = &sd->premiumStorage;
 						}
 					}else{

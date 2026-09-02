@@ -21,6 +21,7 @@
 #include "log.hpp"
 #include "map.hpp" // map_session_data
 #include "need_fishing.hpp"
+#include "need_storage_shop.hpp"
 #include "packets.hpp"
 #include "pc.hpp"
 #include "pc_groups.hpp"
@@ -268,8 +269,12 @@ static int32 storage_additem(map_session_data* sd, struct s_storage *stor, struc
 	if( itemdb_isstackable2(data) ) { // Stackable
 		for( i = 0; i < stor->max_amount; i++ ) {
 			if( compare_item(&stor->u.items_storage[i], it) ) { // existing items found, stack them
+				// This stack cannot take the whole amount. Keep looking instead of
+				// giving up: the same item may be spread over several stacks (the
+				// storage supply shop splits bulk deliveries), and a free slot below
+				// can still hold it.
 				if( amount > MAX_AMOUNT - stor->u.items_storage[i].amount || ( data->stack.storage && amount > data->stack.amount - stor->u.items_storage[i].amount ) )
-					return 2;
+					continue;
 
 				stor->u.items_storage[i].amount += amount;
 				stor->dirty = true;
@@ -1264,6 +1269,11 @@ bool storage_premiumStorage_load(map_session_data *sd, uint8 num, uint8 mode) {
 		return 0;
 
 	if (sd->state.banking || sd->state.callshop)
+		return 0;
+
+	// The NEED storage supply shop may have a background load in flight for this
+	// account; a second request would race with it over sd->premiumStorage.
+	if (need_storage_shop_load_in_flight(*sd))
 		return 0;
 
 	if (!pc_can_give_items(sd)) { // check is this GM level is allowed to put items to storage

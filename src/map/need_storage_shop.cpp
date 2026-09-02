@@ -5,14 +5,18 @@
 
 #include <cstring>
 #include <memory>
+#include <unordered_map>
 
 #include <common/showmsg.hpp>
 #include <common/strlib.hpp>
+#include <common/timer.hpp>
 
+#include "intif.hpp"
 #include "itemdb.hpp"
 #include "log.hpp"
 #include "map.hpp"
 #include "pc.hpp"
+#include "script.hpp"
 #include "storage.hpp"
 
 namespace {
@@ -266,7 +270,284 @@ void check_config() {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// Target storage (storage 1 / 2 / 3)
+//
+// storage 1 -> stor_id 0, sd->storage, always available
+// storage 2 -> stor_id 1, premium storage, unlocked by #NEED_STORAGE2_UNLOCK
+// storage 3 -> stor_id 2, premium storage, unlocked by #NEED_STORAGE3_UNLOCK
+//
+// The unlock variables are the very ones the existing NEED storage NPC
+// (npc/NEED/Storage_Command.txt) sets when the account pays cash for the extra
+// storage, so the shop reuses that permission instead of inventing its own.
+// ---------------------------------------------------------------------------
+
+constexpr const char* UNLOCK_VARS[] = {
+	nullptr,                    // storage 1 needs no unlock
+	"#NEED_STORAGE2_UNLOCK",    // storage 2
+	"#NEED_STORAGE3_UNLOCK",    // storage 3
+};
+
+/**
+ * A premium storage load/save the supply shop started itself, keyed by account id.
+ * At most one entry per account exists, so only one request is ever in flight.
+ * A load entry is erased when its response is consumed (or when the player logs
+ * out), never on a timeout: the char server cannot be told to forget the request,
+ * so the entry has to outlive it to absorb a late response.
+ * `expire` only decides when need_storage_shop_prepare() starts reporting FAILED.
+ */
+struct pending_load {
+	uint8 stor_id;
+	bool saving;      // true while waiting for the previously held storage to be saved
+	t_tick expire;
+};
+
+std::unordered_map<uint32, pending_load> pending_loads;
+
+constexpr t_tick PENDING_TIMEOUT = 10000;  // ms
+
+bool valid_storage_id( int32 stor_id ) {
+	return stor_id >= 0 && stor_id <= NEED_STORAGE_SHOP_STORAGE_MAX;
+}
+
+/**
+ * The storage the shop should write into, or nullptr when it is not usable right
+ * now. A premium storage must be the one currently held by sd->premiumStorage and
+ * must already carry the data the char server sent.
+ */
+s_storage* resolve_storage( map_session_data* sd, int32 stor_id ) {
+	if( sd == nullptr || !valid_storage_id( stor_id ) )
+		return nullptr;
+
+	if( stor_id == 0 ){
+		// state.put is only set once the char server has sent the storage over
+		return sd->storage.state.put ? &sd->storage : nullptr;
+	}
+
+	if( sd->premiumStorage.stor_id != static_cast<uint8>( stor_id ) )
+		return nullptr;
+
+	return sd->premiumStorage.state.put ? &sd->premiumStorage : nullptr;
+}
+
+/// Shared "the player must not touch a storage right now" test.
+bool player_busy( map_session_data* sd ) {
+	if( sd->state.trading || sd->state.vending || sd->state.buyingstore || sd->state.prevend || sd->state.autotrade )
+		return true;
+
+	if( sd->state.mail_writing || sd->state.banking )
+		return true;
+
+	// Any open storage window (own, guild or premium) blocks the purchase.
+	if( sd->state.storage_flag != 0 )
+		return true;
+
+	return !pc_can_give_items( sd );
+}
+
 }  // namespace
+
+/**
+ * Is the given storage unlocked for this account?
+ * Storage 1 always is; storage 2 and 3 reuse the account variables the existing
+ * NEED storage NPC sets when the account unlocks them with cash.
+ */
+bool need_storage_shop_is_unlocked( map_session_data* sd, int32 stor_id ) {
+	if( sd == nullptr || !valid_storage_id( stor_id ) )
+		return false;
+
+	if( stor_id == 0 )
+		return true;
+
+	// The storage table itself has to exist as well (conf/inter_server.yml).
+	if( !storage_exists( static_cast<uint8>( stor_id ) ) )
+		return false;
+
+	const char* var = UNLOCK_VARS[stor_id];
+
+	if( var == nullptr )
+		return false;
+
+	return pc_readaccountreg( sd, add_str( var ) ) != 0;
+}
+
+/**
+ * The storage the shop currently delivers to.
+ * A stored choice the account may no longer use falls back to storage 1, and the
+ * stored value is rewritten so the fallback is not repeated.
+ * @param out_reset : set to true when such a fallback happened (optional)
+ */
+int32 need_storage_shop_get_target( map_session_data* sd, bool* out_reset ) {
+	if( out_reset != nullptr )
+		*out_reset = false;
+
+	if( sd == nullptr )
+		return 0;
+
+	int32 stor_id = static_cast<int32>( pc_readaccountreg( sd, add_str( NEED_STORAGE_SHOP_TARGET_VAR ) ) );
+
+	if( valid_storage_id( stor_id ) && need_storage_shop_is_unlocked( sd, stor_id ) )
+		return stor_id;
+
+	if( stor_id != 0 ) {
+		pc_setaccountreg( sd, add_str( NEED_STORAGE_SHOP_TARGET_VAR ), 0 );
+
+		if( out_reset != nullptr )
+			*out_reset = true;
+	}
+
+	return 0;
+}
+
+/// Remember the storage the shop delivers to. Fails for a locked storage.
+bool need_storage_shop_set_target( map_session_data* sd, int32 stor_id ) {
+	if( sd == nullptr || !need_storage_shop_is_unlocked( sd, stor_id ) )
+		return false;
+
+	pc_setaccountreg( sd, add_str( NEED_STORAGE_SHOP_TARGET_VAR ), stor_id );
+
+	return true;
+}
+
+/**
+ * Make sure the target storage is loaded and writable before any zeny is taken.
+ * Storage 1 is always resident; storage 2 and 3 are pulled from the char server in
+ * the background, so the caller polls this until it stops returning WAITING.
+ *
+ * At most one premium storage load per account is ever in flight, and such a load
+ * is never abandoned: intif_storage_request() cannot be recalled, so the pending
+ * entry lives until the matching response has been consumed silently. Switching
+ * target or running into the timeout therefore does not drop the entry, which is
+ * what keeps a late response from being mistaken for a normal storage request and
+ * popping the storage window.
+ * @see e_need_storage_shop_prepare
+ */
+e_need_storage_shop_prepare need_storage_shop_prepare( map_session_data* sd, int32 stor_id ) {
+	if( sd == nullptr )
+		return NEED_STORAGE_SHOP_PREPARE_FAILED;
+
+	if( !valid_storage_id( stor_id ) || !need_storage_shop_is_unlocked( sd, stor_id ) )
+		return NEED_STORAGE_SHOP_PREPARE_LOCKED;
+
+	if( player_busy( sd ) )
+		return NEED_STORAGE_SHOP_PREPARE_BUSY;
+
+	// Storage 1 lives in sd->storage and is never touched by a premium load, so it
+	// must not be held up by one either.
+	if( stor_id == 0 ) {
+		if( resolve_storage( sd, 0 ) != nullptr )
+			return NEED_STORAGE_SHOP_PREPARE_READY;
+
+		// Requested at login and never swapped out, so it only takes a moment.
+		return NEED_STORAGE_SHOP_PREPARE_WAITING;
+	}
+
+	t_tick now = gettick();
+	auto it = pending_loads.find( sd->status.account_id );
+
+	if( it != pending_loads.end() ) {
+		pending_load& pending = it->second;
+
+		if( !pending.saving ) {
+			// A load is in flight. It cannot be cancelled, so wait for it even when
+			// the player picked a different storage meanwhile: the response is
+			// consumed silently and the next call issues the new request. Never send
+			// a second load, not even after the timeout, or the two responses would
+			// race over sd->premiumStorage.
+			if( DIFF_TICK( now, pending.expire ) > 0 )
+				return NEED_STORAGE_SHOP_PREPARE_FAILED;
+
+			return NEED_STORAGE_SHOP_PREPARE_WAITING;
+		}
+
+		if( sd->premiumStorage.dirty ) {
+			// Still waiting for the save acknowledgement. Saving is idempotent and
+			// never overwrites memory, so a lost acknowledgement may be retried.
+			if( DIFF_TICK( now, pending.expire ) > 0 ) {
+				pending.expire = now + PENDING_TIMEOUT;
+				storage_premiumStorage_save( sd );
+			}
+
+			return NEED_STORAGE_SHOP_PREPARE_WAITING;
+		}
+
+		// The storage held before is safely on the char server now.
+		pending_loads.erase( it );
+	}
+
+	if( resolve_storage( sd, stor_id ) != nullptr )
+		return NEED_STORAGE_SHOP_PREPARE_READY;
+
+	// Swapping premium storages overwrites sd->premiumStorage wholesale, so any
+	// unsaved change of the storage currently held has to reach the char server
+	// first or it would be lost.
+	if( sd->premiumStorage.stor_id != static_cast<uint8>( stor_id ) && sd->premiumStorage.dirty ) {
+		pending_load saving = {};
+
+		saving.stor_id = static_cast<uint8>( stor_id );
+		saving.saving = true;
+		saving.expire = now + PENDING_TIMEOUT;
+		pending_loads[sd->status.account_id] = saving;
+
+		storage_premiumStorage_save( sd );
+
+		return NEED_STORAGE_SHOP_PREPARE_WAITING;
+	}
+
+	pending_load loading = {};
+
+	loading.stor_id = static_cast<uint8>( stor_id );
+	loading.saving = false;
+	loading.expire = now + PENDING_TIMEOUT;
+	pending_loads[sd->status.account_id] = loading;
+
+	if( !intif_storage_request( sd, TABLE_STORAGE, static_cast<uint8>( stor_id ), STOR_MODE_ALL ) ) {
+		// Nothing left the map server, so no response can arrive for this entry.
+		pending_loads.erase( sd->status.account_id );
+		return NEED_STORAGE_SHOP_PREPARE_FAILED;
+	}
+
+	return NEED_STORAGE_SHOP_PREPARE_WAITING;
+}
+
+/**
+ * Is a premium storage load the supply shop issued still on its way?
+ * While that is the case nothing else may request or write a premium storage for
+ * this account, or the two would race over sd->premiumStorage.
+ */
+bool need_storage_shop_load_in_flight( const map_session_data& sd ) {
+	auto it = pending_loads.find( sd.status.account_id );
+
+	return it != pending_loads.end() && !it->second.saving;
+}
+
+/**
+ * Drop the pending load/save bookkeeping of a leaving player.
+ * Called from map_quit(); the account id would otherwise still look busy to the
+ * next session of the same account.
+ */
+void need_storage_shop_session_end( map_session_data& sd ) {
+	pending_loads.erase( sd.status.account_id );
+}
+
+/**
+ * Called from intif_parse_StorageReceived() for premium storages.
+ * @return true when this storage was pulled in by the supply shop, in which case
+ *         the storage window must NOT be opened.
+ */
+bool need_storage_shop_consume_silent_load( map_session_data& sd, uint8 stor_id ) {
+	auto it = pending_loads.find( sd.status.account_id );
+
+	if( it == pending_loads.end() )
+		return false;
+
+	if( it->second.saving || it->second.stor_id != stor_id )
+		return false;
+
+	pending_loads.erase( it );
+
+	return true;
+}
 
 /// Number of categories of the shop menu.
 int32 need_storage_shop_category_count() {
@@ -344,10 +625,13 @@ int32 need_storage_shop_max_quantity( t_itemid nameid ) {
 }
 
 /**
- * Buy an item and put it straight into the personal storage.
- * The zeny is only taken once the storage is known to have room for the whole
- * amount, and it is given back when the delivery still ends up incomplete.
+ * Buy an item and put it straight into the requested personal storage.
+ * The zeny is only taken once that storage is known to be loaded and to have room
+ * for the whole amount, and it is given back when the delivery still ends up
+ * incomplete. A locked or not yet loaded storage is refused outright: the purchase
+ * never falls back to another storage.
  * @param sd : player
+ * @param stor_id : target storage (0 = storage 1, 1 = storage 2, 2 = storage 3)
  * @param nameid : item to buy
  * @param amount : amount to buy
  * @param out_price : filled with the unit price that was charged (optional)
@@ -355,7 +639,7 @@ int32 need_storage_shop_max_quantity( t_itemid nameid ) {
  * @param out_amount : filled with the amount that was actually stored (optional)
  * @return @see e_need_storage_shop_result
  */
-e_need_storage_shop_result need_storage_shop_buy( map_session_data* sd, t_itemid nameid, int32 amount, int32* out_price, int32* out_total, int32* out_amount ) {
+e_need_storage_shop_result need_storage_shop_buy( map_session_data* sd, int32 stor_id, t_itemid nameid, int32 amount, int32* out_price, int32* out_total, int32* out_amount ) {
 	if( out_price != nullptr )
 		*out_price = 0;
 
@@ -409,23 +693,29 @@ e_need_storage_shop_result need_storage_shop_buy( map_session_data* sd, t_itemid
 	if( sd->status.zeny < total )
 		return NEED_STORAGE_SHOP_NO_ZENY;
 
-	// 5. is the storage usable and able to hold everything?
-	if( sd->state.trading || sd->state.vending || sd->state.buyingstore || sd->state.mail_writing )
+	// 5. is the target storage unlocked, loaded and able to hold everything?
+	//    Never silently deliver anywhere else than where the player asked for.
+	if( !need_storage_shop_is_unlocked( sd, stor_id ) )
+		return NEED_STORAGE_SHOP_STORAGE_LOCKED;
+
+	// A storage window that is already open (own, guild or premium storage) would
+	// end up showing stale data, so the purchase waits for it to close. Trading,
+	// vending and the like are blocked for the same reason.
+	if( player_busy( sd ) )
 		return NEED_STORAGE_SHOP_BUSY;
 
-	// A storage window that is already open (own, guild or premium storage)
-	// would end up showing stale data, so the purchase waits for it to close.
-	if( sd->state.storage_flag != 0 )
-		return NEED_STORAGE_SHOP_BUSY;
+	// A background load would overwrite sd->premiumStorage wholesale once it
+	// arrives, so nothing may be written into a premium storage until it landed.
+	// Storage 1 is a different buffer and stays usable throughout.
+	if( stor_id != 0 && need_storage_shop_load_in_flight( *sd ) )
+		return NEED_STORAGE_SHOP_NOT_READY;
 
-	s_storage* stor = &sd->storage;
+	// state.put is only set once the char server has sent the storage over, and a
+	// premium storage has to be the one currently held by sd->premiumStorage.
+	s_storage* stor = resolve_storage( sd, stor_id );
 
-	// state.put is only set once the char server has sent the storage over
-	if( !stor->state.put )
-		return NEED_STORAGE_SHOP_BUSY;
-
-	if( !pc_can_give_items( sd ) )
-		return NEED_STORAGE_SHOP_BUSY;
+	if( stor == nullptr )
+		return NEED_STORAGE_SHOP_NOT_READY;
 
 	struct item it = {};
 
@@ -450,8 +740,8 @@ e_need_storage_shop_result need_storage_shop_buy( map_session_data* sd, t_itemid
 
 		pc_getzeny( sd, static_cast<int32>( refund ), LOG_TYPE_NPC );
 
-		ShowError( "need_storage_shop: incomplete delivery for char %d, item %u, %d/%d stored, %d zeny refunded.\n",
-			sd->status.char_id, nameid, stored, amount, static_cast<int32>( refund ) );
+		ShowError( "need_storage_shop: incomplete delivery for char %d, storage %d, item %u, %d/%d stored, %d zeny refunded.\n",
+			sd->status.char_id, stor_id + 1, nameid, stored, amount, static_cast<int32>( refund ) );
 
 		if( stored <= 0 )
 			return NEED_STORAGE_SHOP_NO_ROOM;
@@ -468,14 +758,20 @@ e_need_storage_shop_result need_storage_shop_buy( map_session_data* sd, t_itemid
 	if( out_amount != nullptr )
 		*out_amount = amount;
 
+	// A premium storage only lives in sd->premiumStorage until something saves it,
+	// and it is dropped as soon as another storage is loaded into that slot. Push
+	// it to the char server right away so a purchase can never be lost.
+	if( stor != &sd->storage )
+		storage_premiumStorage_save( sd );
+
 	// 8. logs - the zeny movement is already logged by pc_payzeny()
 	it.amount = amount;
 	log_pick_pc( sd, LOG_TYPE_NPC, amount, &it );
 
 	char message[128];
 
-	safesnprintf( message, sizeof( message ), "storage supply shop: item=%u amount=%d unit=%d total=%d",
-		nameid, amount, price, static_cast<int32>( total ) );
+	safesnprintf( message, sizeof( message ), "storage supply shop: storage=%d item=%u amount=%d unit=%d total=%d",
+		stor_id + 1, nameid, amount, price, static_cast<int32>( total ) );
 	log_npc( sd, message );
 
 	return NEED_STORAGE_SHOP_OK;

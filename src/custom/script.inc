@@ -822,7 +822,9 @@ BUILDIN_FUNC(storagegetitem)
 		return SCRIPT_CMD_SUCCESS;
 	}
 
-	int32 index = -1;
+	// 창고 보급 상점의 대량 지급 등으로 동일 아이템이 여러 스택에 나뉘어
+	// 있을 수 있으므로, 단일 스택만 보지 않고 전체 보유량을 합산한다.
+	int32 total = 0;
 
 	for (int32 i = 0;
 		i < ARRAYLENGTH(stor->u.items_storage);
@@ -833,27 +835,58 @@ BUILDIN_FUNC(storagegetitem)
 		if (storage_item.nameid != nameid)
 			continue;
 
-		if (storage_item.amount < amount)
-			continue;
+		total += storage_item.amount;
 
-		index = i;
-		break;
+		if (total >= amount)
+			break;
 	}
 
-	if (index < 0) {
+	if (total < amount) {
 		script_pushint(st, 0);
 		return SCRIPT_CMD_SUCCESS;
 	}
 
-	int32 result = storage_storageget_script(
-		sd,
-		stor,
-		index,
-		amount,
-		false
-	);
+	// 여러 스택에서 나눠 꺼내는 도중 인벤토리가 막혀 절반만 인출되는 것을 막기 위해
+	// 무게와 인벤토리 공간을 미리 확인한다. (pc_additem 과 동일한 기준)
+	if (pc_checkadditem(sd, nameid, amount) == CHKADDITEM_OVERAMOUNT) {
+		script_pushint(st, 0);
+		return SCRIPT_CMD_SUCCESS;
+	}
 
-	script_pushint(st, result);
+	if ((double)sd->weight + (double)id->weight * (double)amount > (double)sd->max_weight) {
+		script_pushint(st, 0);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	int32 remain = amount;
+
+	for (int32 i = 0;
+		i < ARRAYLENGTH(stor->u.items_storage) && remain > 0;
+		i++
+	) {
+		const struct item& storage_item = stor->u.items_storage[i];
+
+		if (storage_item.nameid != nameid)
+			continue;
+
+		int32 take = (storage_item.amount < remain) ? storage_item.amount : remain;
+
+		if (storage_storageget_script(sd, stor, i, take, false) != 1)
+			break;
+
+		remain -= take;
+	}
+
+	if (remain > 0) {
+		// 사전 검사를 모두 통과했으므로 정상적으로는 도달하지 않는다.
+		ShowError("storagegetitem: partial withdrawal for char %d, item %u, %d/%d taken.\n",
+			sd->status.char_id, nameid, amount - remain, amount);
+
+		script_pushint(st, 0);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	script_pushint(st, 1);
 	return SCRIPT_CMD_SUCCESS;
 }
 
@@ -901,11 +934,14 @@ BUILDIN_FUNC(storageshopmaxqty)
 }
 
 // 창고 직행 구매를 처리한다.
+// 세 번째 인자로 목적 창고(0=창고1 / 1=창고2 / 2=창고3)를 지정할 수 있고,
+// 생략하면 계정에 저장된 지급 창고를 사용한다.
 // 성공 시 @storageshop_price / @storageshop_total 에 실제 청구 금액이,
 // @storageshop_amount 에 실제로 창고에 들어간 수량이 들어간다. (실패 시 0)
 // 반환값은 e_need_storage_shop_result 참조.
 //   1 성공 / 0 실패 / -1 미판매 / -2 수량 오류 / -3 제니 부족
 //  -4 창고 공간 부족 / -5 창고 사용 불가 / -6 창고 보관 불가 / -7 가격 오버플로우
+//  -8 미개방 창고 / -9 목적 창고 미로드
 BUILDIN_FUNC(storageshopbuy)
 {
 	map_session_data* sd = nullptr;
@@ -917,6 +953,10 @@ BUILDIN_FUNC(storageshopbuy)
 
 	int64 nameid = script_getnum64(st, 2);
 	int64 amount = script_getnum64(st, 3);
+
+	// 스크립트가 넘긴 창고 번호는 신뢰하지 않는다. 실제 개방 여부와 로드 상태는
+	// need_storage_shop_buy() 안에서 다시 검증한다.
+	int32 stor_id = script_hasdata(st, 4) ? script_getnum(st, 4) : need_storage_shop_get_target(sd, nullptr);
 
 	// 스크립트에서 넘어온 값이 t_itemid / int32 범위를 벗어나면 그대로 거절한다.
 	if (nameid <= 0 || nameid > UINT32_MAX) {
@@ -941,6 +981,7 @@ BUILDIN_FUNC(storageshopbuy)
 
 	e_need_storage_shop_result result = need_storage_shop_buy(
 		sd,
+		stor_id,
 		static_cast<t_itemid>(nameid),
 		static_cast<int32>(amount),
 		&price,
@@ -953,5 +994,71 @@ BUILDIN_FUNC(storageshopbuy)
 	pc_setreg(sd, add_str("@storageshop_amount"), stored);
 
 	script_pushint(st, result);
+	return SCRIPT_CMD_SUCCESS;
+}
+
+// 현재 지급 창고를 반환한다. (0 = 창고1, 1 = 창고2, 2 = 창고3)
+// 저장된 창고를 현재 계정이 이용할 수 없으면 창고1로 초기화하고
+// @storageshop_target_reset 에 1 을 넣어 알린다.
+BUILDIN_FUNC(storageshoptarget)
+{
+	map_session_data* sd = nullptr;
+
+	if (!script_rid2sd(sd)) {
+		script_pushint(st, 0);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	bool was_reset = false;
+	int32 stor_id = need_storage_shop_get_target(sd, &was_reset);
+
+	pc_setreg(sd, add_str("@storageshop_target_reset"), was_reset ? 1 : 0);
+
+	script_pushint(st, stor_id);
+	return SCRIPT_CMD_SUCCESS;
+}
+
+// 지급 창고를 변경한다. 미개방 창고는 거절한다. (1 성공 / 0 실패)
+BUILDIN_FUNC(storageshopsettarget)
+{
+	map_session_data* sd = nullptr;
+
+	if (!script_rid2sd(sd)) {
+		script_pushint(st, 0);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	script_pushint(st, need_storage_shop_set_target(sd, script_getnum(st, 2)) ? 1 : 0);
+	return SCRIPT_CMD_SUCCESS;
+}
+
+// 해당 창고가 이 계정에서 개방되어 있는지 확인한다. (1 / 0)
+BUILDIN_FUNC(storageshopunlocked)
+{
+	map_session_data* sd = nullptr;
+
+	if (!script_rid2sd(sd)) {
+		script_pushint(st, 0);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	script_pushint(st, need_storage_shop_is_unlocked(sd, script_getnum(st, 2)) ? 1 : 0);
+	return SCRIPT_CMD_SUCCESS;
+}
+
+// 목적 창고를 구매 가능한 상태로 준비한다. (창고2/3은 비동기 로드가 필요)
+// 반환값: 0 준비완료 / 1 로딩중(재호출 필요) / -1 미개방 / -2 사용 불가 상태 / -3 실패
+BUILDIN_FUNC(storageshopprepare)
+{
+	map_session_data* sd = nullptr;
+
+	if (!script_rid2sd(sd)) {
+		script_pushint(st, NEED_STORAGE_SHOP_PREPARE_FAILED);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	int32 stor_id = script_hasdata(st, 2) ? script_getnum(st, 2) : need_storage_shop_get_target(sd, nullptr);
+
+	script_pushint(st, need_storage_shop_prepare(sd, stor_id));
 	return SCRIPT_CMD_SUCCESS;
 }

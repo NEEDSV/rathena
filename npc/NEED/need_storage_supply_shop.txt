@@ -1,5 +1,5 @@
 //===== rAthena Script ========================================
-//= NEED 창고 보급 상인
+//= NEED 창고 보급 상점
 //===== 설명 ==================================================
 //= 대량으로 소비하는 보급품을 인벤토리를 거치지 않고
 //= 개인 창고로 바로 지급하는 전용 상점.
@@ -8,56 +8,198 @@
 //=   src/map/need_storage_shop.cpp 의 설정 테이블에서 관리한다.
 //= - 이 상점은 상인 디스카운트(MC_DISCOUNT 등)가 적용되지 않고
 //=   항상 item_db 의 기본 구매가(또는 Override 가격)로 판매한다.
+//= - 지급 창고는 창고 1 / 2 / 3 중에서 고를 수 있다. 창고 2/3 은
+//=   계정이 해금한 경우에만 메뉴에 표시되며, 개방 여부 판정과
+//=   목적 창고 검증은 전부 서버에서 다시 수행한다.
 //= - 실제 구매/검증/지급/로그는 storageshopbuy() 안에서 처리된다.
 //=============================================================
 
-lasagna,161,141,6	script	창고 보급 상인	558,{
+lasagna,161,141,6	script	창고 보급 상점	558,{
 	.@m_total = storageshopcategories();
 
 	if (.@m_total < 1 || .@m_total > getarraysize(.cat_name$)) {
-		mes "[창고 보급 상인]";
+		mes "[창고 보급 상점]";
 		mes "상점 설정에 문제가 있어 지금은 이용할 수 없습니다.";
 		mes "운영자에게 문의해주세요.";
 		close;
 	}
 
-	mes "[창고 보급 상인]";
+	mes "[창고 보급 상점]";
 	mes "이곳에서 구매한 물품은 인벤토리를 거치지 않고";
-	mes "^0000FF개인 창고^000000로 바로 들어갑니다.";
+	mes "^0000FF선택한 개인 창고^000000로 바로 들어갑니다.";
 	next;
 
-	mes "[창고 보급 상인]";
+	mes "[창고 보급 상점]";
 	mes "대신 창고 직행 편의를 제공하는 대가로";
 	mes "^FF0000상인 할인(디스카운트)이 적용되지 않습니다.^000000";
 	mes "누구나 동일하게 할인 전 판매가로 구매합니다.";
 	next;
 
 	while (1) {
-		.@m_menu$ = "";
+		// 저장된 지급 창고를 현재 계정 권한으로 다시 검증한다.
+		// 이용할 수 없는 창고였다면 서버가 창고 1로 되돌리고 알려준다.
+		.@m_target = storageshoptarget();
 
-		for (.@m_i = 0; .@m_i < .@m_total; .@m_i++)
-			.@m_menu$ += .cat_name$[.@m_i] + ":";
+		if (@storageshop_target_reset) {
+			@storageshop_target_reset = 0;
 
-		.@m_menu$ += "종료";
+			mes "[창고 보급 상점]";
+			mes "기존에 선택한 지급 창고를 현재 이용할 수 없어";
+			mes "지급 위치가 ^0000FF" + .stor_name$[0] + "^000000 (으)로 변경되었습니다.";
+			next;
+		}
 
-		mes "[창고 보급 상인]";
-		mes "어떤 품목을 보시겠습니까?";
+		mes "[창고 보급 상점]";
+		mes "현재 지급 창고 : ^0000FF" + .stor_name$[.@m_target] + "^000000";
 		next;
 
-		.@m_sel = select(.@m_menu$);
+		switch (select("물품 구매", "지급 창고 변경", "종료")) {
+		case 1:
+			callsub S_Categories;
+			break;
 
-		if (.@m_sel < 1 || .@m_sel > .@m_total) {
-			mes "[창고 보급 상인]";
+		case 2:
+			callsub S_ChangeTarget;
+			break;
+
+		default:
+			mes "[창고 보급 상점]";
 			mes "또 이용해주세요.";
 			close;
 		}
-
-		.@m_cat = .@m_sel - 1;
-
-		callsub S_Category, .@m_cat;
 	}
 
 	end;
+
+// =========================
+// 지급 창고 변경
+// 개방된 창고만 메뉴에 표시한다. (판정은 서버의 storageshopunlocked)
+// =========================
+S_ChangeTarget:
+	.@t_menu$ = "";
+	.@t_count = 0;
+
+	for (.@t_i = 0; .@t_i <= .StorageMax; .@t_i++) {
+		if (!storageshopunlocked(.@t_i))
+			continue;
+
+		.@t_ids[.@t_count] = .@t_i;
+		.@t_menu$ += .stor_name$[.@t_i] + ":";
+		.@t_count++;
+	}
+
+	if (.@t_count < 1) {
+		mes "[지급 창고 변경]";
+		mes "이용할 수 있는 창고가 없습니다.";
+		next;
+		return;
+	}
+
+	.@t_menu$ += "이전으로";
+
+	mes "[지급 창고 변경]";
+	mes "구매한 물품을 받을 창고를 선택해주세요.";
+	mes "창고 2 / 창고 3 은 해금한 계정에만 표시됩니다.";
+	next;
+
+	.@t_sel = select(.@t_menu$);
+
+	if (.@t_sel < 1 || .@t_sel > .@t_count)
+		return;
+
+	.@t_pick = .@t_ids[.@t_sel - 1];
+
+	// 서버에서 다시 개방 여부를 확인하고 저장한다.
+	if (!storageshopsettarget(.@t_pick)) {
+		mes "[지급 창고 변경]";
+		mes "해당 창고는 아직 이용할 수 없습니다.";
+		mes "창고를 개방한 후 다시 이용해주세요.";
+		next;
+		return;
+	}
+
+	mes "[지급 창고 변경]";
+	mes "지급 창고가 ^0000FF" + .stor_name$[.@t_pick] + "^000000 (으)로 변경되었습니다.";
+	next;
+	return;
+
+// =========================
+// 목적 창고 준비 (창고 2/3 은 비동기 로드가 필요)
+// 결과는 .@p_ret 에 담긴다. 0 준비완료 / 그 외 실패
+// =========================
+S_Prepare:
+	.@p_target = getarg(0);
+	.@p_ret = storageshopprepare(.@p_target);
+	.@p_wait = 0;
+
+	while (.@p_ret == 1 && .@p_wait < 25) {
+		sleep2 200;
+
+		.@p_ret = storageshopprepare(.@p_target);
+		.@p_wait++;
+	}
+
+	return;
+
+// 준비 실패 사유 안내
+S_PrepareError:
+	mes "[창고 보급 상점]";
+
+	if (.@p_ret == -1) {
+		mes "해당 창고는 아직 이용할 수 없습니다.";
+		mes "창고를 개방한 후 다시 이용해주세요.";
+	} else if (.@p_ret == -2) {
+		mes "지금은 창고를 사용할 수 없습니다.";
+		mes "창고 창을 닫고 거래나 노점을 종료한 뒤";
+		mes "다시 시도해주세요.";
+	} else {
+		mes .stor_name$[.@p_target] + " 정보를 불러오지 못했습니다.";
+		mes "잠시 후 다시 시도해주세요.";
+	}
+
+	next;
+	return;
+
+// =========================
+// 카테고리 선택
+// =========================
+S_Categories:
+	// 품목을 고르는 동안 목적 창고를 미리 로드해 둔다.
+	.@g_target = storageshoptarget();
+
+	callsub S_Prepare, .@g_target;
+
+	if (.@p_ret != 0) {
+		callsub S_PrepareError;
+		return;
+	}
+
+	.@g_total = storageshopcategories();
+
+	while (1) {
+		.@g_menu$ = "";
+
+		for (.@g_i = 0; .@g_i < .@g_total; .@g_i++)
+			.@g_menu$ += .cat_name$[.@g_i] + ":";
+
+		.@g_menu$ += "이전으로";
+
+		mes "[창고 보급 상점]";
+		mes "지급 창고 : ^0000FF" + .stor_name$[.@g_target] + "^000000";
+		mes "어떤 품목을 보시겠습니까?";
+		next;
+
+		.@g_sel = select(.@g_menu$);
+
+		if (.@g_sel < 1 || .@g_sel > .@g_total)
+			return;
+
+		.@g_cat = .@g_sel - 1;
+
+		callsub S_Category, .@g_cat;
+	}
+
+	return;
 
 // =========================
 // 카테고리 품목 목록 (페이지 단위)
@@ -150,20 +292,22 @@ S_Buy:
 	.@b_max = storageshopmaxqty(.@b_id);
 
 	if (.@b_id <= 0 || .@b_price <= 0 || .@b_max <= 0) {
-		mes "[창고 보급 상인]";
+		mes "[창고 보급 상점]";
 		mes "지금은 판매하지 않는 품목입니다.";
 		next;
 		return;
 	}
 
 	while (1) {
+		.@b_target = storageshoptarget();
 		.@b_afford = Zeny / .@b_price;
 
 		if (.@b_afford > .@b_max)
 			.@b_afford = .@b_max;
 
-		mes "[창고 보급 상인]";
+		mes "[창고 보급 상점]";
 		mes "품목 : ^0000FF" + getitemname(.@b_id) + "^000000";
+		mes "지급 위치 : ^0000FF" + .stor_name$[.@b_target] + "^000000";
 		mes "개당 가격 : " + callfunc("F_InsertComma", .@b_price) + " Zeny";
 		mes "1회 최대 구매 : " + callfunc("F_InsertComma", .@b_max) + " 개";
 		mes "보유 제니 : " + callfunc("F_InsertComma", Zeny) + " Zeny";
@@ -198,13 +342,13 @@ S_Buy:
 			break;
 
 		case 5:
-			mes "[창고 보급 상인]";
+			mes "[창고 보급 상점]";
 			mes "구매할 수량을 입력해주세요.";
 			mes "입력 가능 범위 : 1 ~ " + callfunc("F_InsertComma", .@b_max);
 			next;
 
 			if (input(.@b_amount, 1, .@b_max) != 0) {
-				mes "[창고 보급 상인]";
+				mes "[창고 보급 상점]";
 				mes "1 이상 " + callfunc("F_InsertComma", .@b_max) + " 이하의 수량만 입력할 수 있습니다.";
 				next;
 				continue;
@@ -219,7 +363,7 @@ S_Buy:
 		// 입력값은 서버(storageshopbuy)에서 다시 검증하지만,
 		// 안내를 위해 스크립트에서도 범위를 확인한다.
 		if (.@b_amount < 1 || .@b_amount > .@b_max) {
-			mes "[창고 보급 상인]";
+			mes "[창고 보급 상점]";
 
 			if (.@b_afford < 1 && .@b_sel == 4)
 				mes "제니가 부족하여 구매할 수 없습니다.";
@@ -232,13 +376,13 @@ S_Buy:
 
 		.@b_total = .@b_amount * .@b_price;
 
-		mes "[창고 보급 상인]";
+		mes "[창고 보급 상점]";
 		mes "^0000FF" + getitemname(.@b_id) + "^000000";
 		mes " ";
 		mes "구매 수량 : " + callfunc("F_InsertComma", .@b_amount) + " 개";
 		mes "개당 가격 : " + callfunc("F_InsertComma", .@b_price) + " Zeny";
 		mes "총 가격 : ^FF0000" + callfunc("F_InsertComma", .@b_total) + "^000000 Zeny";
-		mes "지급 위치 : ^0000FF개인 창고^000000";
+		mes "지급 위치 : ^0000FF" + .stor_name$[.@b_target] + "^000000";
 		mes " ";
 		mes "구매하시겠습니까?";
 		next;
@@ -246,15 +390,23 @@ S_Buy:
 		if (select("구매", "취소") == 2)
 			continue;
 
-		.@b_result = storageshopbuy(.@b_id, .@b_amount);
+		// 결제 직전에 목적 창고가 아직 준비 상태인지 다시 확인한다.
+		callsub S_Prepare, .@b_target;
 
-		mes "[창고 보급 상인]";
+		if (.@p_ret != 0) {
+			callsub S_PrepareError;
+			continue;
+		}
+
+		.@b_result = storageshopbuy(.@b_id, .@b_amount, .@b_target);
+
+		mes "[창고 보급 상점]";
 
 		switch (.@b_result) {
 		case 1:
 			// 실제로 창고에 들어간 수량은 서버가 @storageshop_amount 로 알려준다.
 			mes getitemname(.@b_id) + " " + callfunc("F_InsertComma", @storageshop_amount) + "개를";
-			mes "개인 창고에 보관했습니다.";
+			mes "^0000FF" + .stor_name$[.@b_target] + "^000000에 보관했습니다.";
 			mes callfunc("F_InsertComma", @storageshop_total) + " Zeny를 사용했습니다.";
 			break;
 
@@ -271,7 +423,7 @@ S_Buy:
 			break;
 
 		case -4:
-			mes "개인 창고 공간이 부족하여 구매할 수 없습니다.";
+			mes .stor_name$[.@b_target] + "의 공간이 부족하여 구매할 수 없습니다.";
 			mes "필요한 공간을 확보한 후 다시 시도해주세요.";
 			break;
 
@@ -290,6 +442,16 @@ S_Buy:
 			mes "수량을 줄여서 다시 시도해주세요.";
 			break;
 
+		case -8:
+			mes "해당 창고는 아직 이용할 수 없습니다.";
+			mes "창고를 개방한 후 다시 이용해주세요.";
+			break;
+
+		case -9:
+			mes .stor_name$[.@b_target] + " 정보를 불러오지 못했습니다.";
+			mes "잠시 후 다시 시도해주세요.";
+			break;
+
 		default:
 			mes "구매에 실패했습니다.";
 			break;
@@ -303,6 +465,17 @@ S_Buy:
 OnInit:
 	// 한 페이지에 표시할 품목 수
 	.PageSize = 8;
+
+	// 지급 가능한 최대 창고 index (need_storage_shop.hpp 의
+	// NEED_STORAGE_SHOP_STORAGE_MAX 와 같아야 한다)
+	.StorageMax = 2;
+
+	// 창고 표시명. index 는 서버의 storage id 와 동일하다.
+	//   0 = 기본 개인 창고, 1 = storage2 테이블, 2 = storage3 테이블
+	setarray .stor_name$[0],
+		"창고 1",
+		"창고 2",
+		"창고 3";
 
 	// 표시명 순서는 need_storage_shop.cpp 의 CATEGORIES 테이블 순서와 같아야 한다.
 	setarray .cat_name$[0],
