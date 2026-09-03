@@ -496,11 +496,13 @@ bool skill_pos_maxcount_check(block_list *src, int16 x, int16 y, uint16 skill_id
 			clif_skill_fail( *sd, skill_id );
 		return false;
 	}
-	const bool need_bg_three_limit = sd != nullptr && map_getmapflag(src->m, MF_BATTLEGROUND) && (skill_id == HT_ANKLESNARE || skill_id == WM_POEMOFNETHERWORLD);
+	const bool need_bg_place_limit = sd != nullptr && map_getmapflag(src->m, MF_BATTLEGROUND) && (skill_id == HT_ANKLESNARE || skill_id == WM_POEMOFNETHERWORLD);
 
-	if (need_bg_three_limit)
+	if (need_bg_place_limit)
 	{
-		maxcount = 3;
+		// NEED: battleground placement cap per caster. Ankle Snare was relaxed from 3 to 5;
+		// Poem of Netherworld keeps its original cap of 3.
+		maxcount = (skill_id == HT_ANKLESNARE) ? 5 : 3;
 	}
 	else if (type & battle_config.land_skill_limit)
 	{
