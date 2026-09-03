@@ -7212,6 +7212,11 @@ enum e_setpos pc_setpos(map_session_data* sd, uint16 mapindex, int32 x, int32 y,
 
 	sd->state.changemap = (sd->mapindex != mapindex);
 	sd->state.warping = 1;
+	// Market shops reuse the trade state until the client sends CZ_NPC_MARKET_CLOSE.
+	// A warp can make the client skip that packet, so end only the NPC market state here.
+	if( sd->state.trading && sd->npc_shopid && sd->trade_partner.id == 0 ){
+		sd->state.trading = 0;
+	}
 	sd->state.workinprogress = WIP_DISABLE_NONE;
 	sd->state.mail_writing = false;
 	sd->state.refineui_open = false;
