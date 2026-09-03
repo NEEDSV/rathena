@@ -292,15 +292,15 @@ static int32 needwiki_parse(int32 fd)
 		const size_t payload_len = len - NEEDWIKI_PACKET_HEADER_LEN;
 		std::string payload(RFIFOCP(fd, NEEDWIKI_PACKET_HEADER_LEN), payload_len);
 
-		if (needwiki_is_duplicate_request(char_id, action, payload)) {
-			RFIFOSKIP(fd, len);
-			do_close(fd);
-			return 0;
-		}
-
 		map_session_data* sd = map_charid2sd(char_id);
 
-		if (sd != nullptr) {
+		if (sd != nullptr && sd->status.account_id == account_id) {
+			if (needwiki_is_duplicate_request(char_id, action, payload)) {
+				RFIFOSKIP(fd, len);
+				do_close(fd);
+				return 0;
+			}
+
 			if (action == NEEDWIKI_ACTION_DISPBOTTOM) {
 				char output[CHAT_SIZE_MAX];
 				const std::string cp949_payload = needwiki_utf8_to_cp949(payload);
@@ -377,8 +377,11 @@ static int32 needwiki_parse(int32 fd)
 			} else {
 				ShowWarning("NEED Wiki: unsupported action %u from fd %d.\n", action, fd);
 			}
-		} else {
+		} else if (sd == nullptr) {
 			ShowInfo("NEED Wiki: character %" PRIu32 " is not connected (account %" PRIu32 ").\n", char_id, account_id);
+		} else {
+			ShowWarning("NEED Wiki: rejected account/character mismatch (packet account %" PRIu32 ", character %" PRIu32 ", session account %" PRIu32 ").\n",
+				account_id, char_id, sd->status.account_id);
 		}
 
 		RFIFOSKIP(fd, len);
