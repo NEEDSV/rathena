@@ -5,12 +5,12 @@
 
 #include <cstdlib>
 #include <cstring>
+#include <cctype>
 #include <chrono>
 #include <fstream>
 #include <mutex>
 #include <sstream>
 #include <string>
-#include <tuple>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -45,6 +45,8 @@ static constexpr uint16 NEEDWIKI_PACKET_HEADER_LEN = 14;
 static constexpr int64 NEEDWIKI_DUPLICATE_WINDOW_MS = 500;
 static constexpr const char* NEEDWIKI_ITEM_GROUP_DB_TYPE = "NEED_WIKI_ITEM_GROUP_DB";
 static constexpr uint16 NEEDWIKI_ITEM_GROUP_DB_VERSION = 1;
+static constexpr const char* NEEDWIKI_AUTH_HEADER = "X-NeedWiki-Token";
+static constexpr size_t NEEDWIKI_AUTH_TOKEN_LENGTH = 16;
 
 static std::mutex needwiki_duplicate_mutex;
 static std::unordered_map<std::string, std::chrono::steady_clock::time_point> needwiki_duplicate_requests;
@@ -60,135 +62,14 @@ static std::string needwiki_remote_ip(const Request& req)
 	return ip;
 }
 
-// 인증 세션 조회 결과. 실패 시 정확한 원인을 클라이언트(위키 DLL)로 전달해
-// 유저 알림에 표기하기 위해 사유를 구분한다.
-enum class NeedWikiSessionResult {
-	Success,     // 온라인 세션 1개 확정
-	DbError,     // DB 조회 실패
-	NoAccount,   // 접속 IP와 일치하는 계정(login.last_ip) 없음
-	NoOnline,    // 계정은 찾았으나 온라인 캐릭터 없음
-	Multiple,    // 동일 IP에서 온라인 세션이 2개 이상이라 특정 불가
-};
-
-static NeedWikiSessionResult needwiki_find_online_session(const Request& req, uint32& account_id, uint32& char_id, std::string& token, bool& token_enabled)
-{
-	const std::string remote_ip = needwiki_remote_ip(req);
-
-	SQLLock loginlock(LOGIN_SQL_LOCK);
-	loginlock.lock();
-	auto login_handle = loginlock.getHandle();
-	SqlStmt login_stmt{ *login_handle };
-
-	if (SQL_SUCCESS != login_stmt.Prepare(
-			"SELECT `account_id`, COALESCE(`web_auth_token`, ''), `web_auth_token_enabled` FROM `%s` WHERE `last_ip` = ?",
-			login_table)
-		|| SQL_SUCCESS != login_stmt.BindParam(0, SQLDT_STRING, const_cast<char*>(remote_ip.c_str()), remote_ip.size())) {
-		SqlStmt_ShowDebug(login_stmt);
-		loginlock.unlock();
-		return NeedWikiSessionResult::DbError;
-	}
-
-	uint32 candidate_account_id = 0;
-	char candidate_token[64] = {};
-	uint8 candidate_enabled = 0;
-
-	if (SQL_SUCCESS != login_stmt.Execute()
-		|| SQL_SUCCESS != login_stmt.BindColumn(0, SQLDT_UINT32, &candidate_account_id, sizeof(candidate_account_id))
-		|| SQL_SUCCESS != login_stmt.BindColumn(1, SQLDT_STRING, candidate_token, sizeof(candidate_token))
-		|| SQL_SUCCESS != login_stmt.BindColumn(2, SQLDT_UINT8, &candidate_enabled, sizeof(candidate_enabled))) {
-		SqlStmt_ShowDebug(login_stmt);
-		loginlock.unlock();
-		return NeedWikiSessionResult::DbError;
-	}
-
-	std::vector<std::tuple<uint32, std::string, bool>> login_candidates;
-	while (SQL_SUCCESS == login_stmt.NextRow())
-		login_candidates.emplace_back(candidate_account_id, candidate_token, candidate_enabled != 0);
-
-	loginlock.unlock();
-
-	std::vector<std::tuple<uint32, uint32, std::string, bool>> sessions;
-	SQLLock charlock(CHAR_SQL_LOCK);
-	charlock.lock();
-	auto char_handle = charlock.getHandle();
-
-	for (const auto& candidate : login_candidates) {
-		uint32 aid = std::get<0>(candidate);
-		uint32 cid = 0;
-		SqlStmt char_stmt{ *char_handle };
-
-		if (SQL_SUCCESS != char_stmt.Prepare(
-				"SELECT `char_id` FROM `%s` WHERE `account_id` = ? AND `online` = '1'",
-				char_db_table)
-			|| SQL_SUCCESS != char_stmt.BindParam(0, SQLDT_UINT32, &aid, sizeof(aid))
-			|| SQL_SUCCESS != char_stmt.Execute()
-			|| SQL_SUCCESS != char_stmt.BindColumn(0, SQLDT_UINT32, &cid, sizeof(cid))) {
-			SqlStmt_ShowDebug(char_stmt);
-			charlock.unlock();
-			return NeedWikiSessionResult::DbError;
-		}
-
-		while (SQL_SUCCESS == char_stmt.NextRow())
-			sessions.emplace_back(aid, cid, std::get<1>(candidate), std::get<2>(candidate));
-	}
-
-	charlock.unlock();
-
-	if (login_candidates.empty())
-		return NeedWikiSessionResult::NoAccount;
-
-	if (sessions.empty())
-		return NeedWikiSessionResult::NoOnline;
-
-	if (sessions.size() > 1)
-		return NeedWikiSessionResult::Multiple;
-
-	account_id = std::get<0>(sessions.front());
-	char_id = std::get<1>(sessions.front());
-	token = std::get<2>(sessions.front());
-	token_enabled = std::get<3>(sessions.front());
-	return NeedWikiSessionResult::Success;
-}
-
-static bool needwiki_refresh_token(uint32 account_id, std::string& token)
-{
-	SQLLock loginlock(LOGIN_SQL_LOCK);
-	loginlock.lock();
-	auto handle = loginlock.getHandle();
-
-	for (int attempt = 0; attempt < 3; ++attempt) {
-		SqlStmt update_stmt{ *handle };
-		if (SQL_SUCCESS != update_stmt.Prepare(
-				"UPDATE `%s` SET `web_auth_token` = LEFT(SHA2(CONCAT(UUID(), RAND()), 256), 16), `web_auth_token_enabled` = '1' WHERE `account_id` = ?",
-				login_table)
-			|| SQL_SUCCESS != update_stmt.BindParam(0, SQLDT_UINT32, &account_id, sizeof(account_id))
-			|| SQL_SUCCESS != update_stmt.Execute()) {
-			continue;
-		}
-
-		SqlStmt select_stmt{ *handle };
-		char token_buffer[64] = {};
-		if (SQL_SUCCESS == select_stmt.Prepare(
-				"SELECT `web_auth_token` FROM `%s` WHERE `account_id` = ? AND `web_auth_token_enabled` = '1'",
-				login_table)
-			&& SQL_SUCCESS == select_stmt.BindParam(0, SQLDT_UINT32, &account_id, sizeof(account_id))
-			&& SQL_SUCCESS == select_stmt.Execute()
-			&& SQL_SUCCESS == select_stmt.BindColumn(0, SQLDT_STRING, token_buffer, sizeof(token_buffer))
-			&& SQL_SUCCESS == select_stmt.NextRow()) {
-			token = token_buffer;
-			loginlock.unlock();
-			return !token.empty();
-		}
-	}
-
-	loginlock.unlock();
-	return false;
-}
-
 static bool needwiki_is_authorized(const Request& req, uint32 account_id, uint32 char_id, const std::string& token)
 {
-	if (token.empty())
+	if (token.size() != NEEDWIKI_AUTH_TOKEN_LENGTH)
 		return false;
+	for (const unsigned char ch : token) {
+		if (!std::isxdigit(ch))
+			return false;
+	}
 
 	const std::string remote_ip = needwiki_remote_ip(req);
 	SQLLock loginlock(LOGIN_SQL_LOCK);
@@ -373,10 +254,22 @@ static bool needwiki_get_param(const Request& req, const char* name, std::string
 	return false;
 }
 
+static bool needwiki_get_auth_token(const Request& req, std::string& token)
+{
+	if (req.has_header(NEEDWIKI_AUTH_HEADER)) {
+		token = req.get_header_value(NEEDWIKI_AUTH_HEADER);
+		return !token.empty();
+	}
+
+	// Keep query-token compatibility for already deployed DLLs. New DLLs use the
+	// header so credentials are not written to access logs as part of the URL.
+	return needwiki_get_param(req, "token", token) && !token.empty();
+}
+
 static bool needwiki_require_auth(const Request& req, Response& res, uint32 account_id, uint32 char_id)
 {
 	std::string token;
-	if (!needwiki_get_param(req, "token", token) || !needwiki_is_authorized(req, account_id, char_id, token)) {
+	if (!needwiki_get_auth_token(req, token) || !needwiki_is_authorized(req, account_id, char_id, token)) {
 		res.status = 401;
 		res.set_content("AUTH_EXPIRED", "text/plain");
 		return false;
@@ -387,51 +280,38 @@ static bool needwiki_require_auth(const Request& req, Response& res, uint32 acco
 
 HANDLER_FUNC(needwiki_auth)
 {
-	uint32 account_id = 0;
-	uint32 char_id = 0;
+	std::string account_id_str;
+	std::string char_id_str;
 	std::string token;
-	bool token_enabled = false;
 
-	const NeedWikiSessionResult session_result = needwiki_find_online_session(req, account_id, char_id, token, token_enabled);
-	if (session_result != NeedWikiSessionResult::Success) {
-		// 정확한 실패 사유를 응답 본문으로 내려보내면 위키 DLL이 이를 유저 알림에 표기한다.
-		const char* reason_body = "AUTH_NO_ACCOUNT";
-		int reason_status = 401;
-		switch (session_result) {
-		case NeedWikiSessionResult::NoAccount:
-			reason_body = "AUTH_NO_ACCOUNT";
-			break;
-		case NeedWikiSessionResult::NoOnline:
-			reason_body = "AUTH_NO_ONLINE";
-			break;
-		case NeedWikiSessionResult::Multiple:
-			reason_body = "AUTH_MULTIPLE";
-			break;
-		default:
-			reason_body = "AUTH_DB_ERROR";
-			reason_status = 500;
-			break;
-		}
-		res.status = reason_status;
-		res.set_content(reason_body, "text/plain");
+	if (!needwiki_get_param(req, "account_id", account_id_str) ||
+		!needwiki_get_param(req, "char_id", char_id_str) ||
+		!needwiki_get_auth_token(req, token)) {
+		res.status = HTTP_BAD_REQUEST;
+		res.set_content("AUTH_CLIENT_IDENTITY", "text/plain");
 		return;
 	}
 
-	std::string refresh_value;
-	const bool force_refresh = needwiki_get_param(req, "refresh", refresh_value) && refresh_value == "1";
-	if (force_refresh || !token_enabled || token.empty()) {
-		if (!needwiki_refresh_token(account_id, token)) {
-			ShowInfo("[NEED Wiki Auth] account_id=%u result=failed\n", account_id);
-			res.status = 500;
-			res.set_content("AUTH_ISSUE_FAILED", "text/plain");
-			return;
-		}
+	uint32 account_id = 0;
+	uint32 char_id = 0;
+	if (!needwiki_parse_u32(account_id_str, account_id) || account_id == 0 ||
+		!needwiki_parse_u32(char_id_str, char_id) || char_id == 0) {
+		res.status = HTTP_BAD_REQUEST;
+		res.set_content("AUTH_CLIENT_IDENTITY", "text/plain");
+		return;
 	}
 
-	ShowInfo("[NEED Wiki Auth] account_id=%u result=success\n", account_id);
+	if (!needwiki_is_authorized(req, account_id, char_id, token)) {
+		ShowInfo("[NEED Wiki Auth] account_id=%u char_id=%u result=failed\n", account_id, char_id);
+		res.status = 401;
+		res.set_content("AUTH_INVALID", "text/plain");
+		return;
+	}
+
+	ShowInfo("[NEED Wiki Auth] account_id=%u char_id=%u result=success\n", account_id, char_id);
 	const std::string body = "{\"account_id\":" + std::to_string(account_id)
 		+ ",\"char_id\":" + std::to_string(char_id)
-		+ ",\"token\":\"" + token + "\"}";
+		+ "}";
 	res.set_content(body, "application/json; charset=utf-8");
 }
 
