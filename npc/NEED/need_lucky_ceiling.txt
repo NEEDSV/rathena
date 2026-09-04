@@ -52,7 +52,7 @@
 // 상품 추가/수정은 파일 맨 아래 [상품 설정] 블록만 편집하면 된다.
 //============================================================
 
-lasagna,167,136,4	script	행운의 알 교환소#need_lucky_ceil	4_F_KAFRA6,{
+lasagna,167,195,4	script	행운의 알 교환소#need_lucky_ceil	4_F_KAFRA6,{
 
 	callsub S_NormalizeAll;
 
@@ -112,45 +112,42 @@ lasagna,167,136,4	script	행운의 알 교환소#need_lucky_ceil	4_F_KAFRA6,{
 // 판매 중인 상품이 하나도 없는 행알은 목록에 나오지 않는다.
 //============================================================
 S_SeasonEggList:
+	.@ecount = 0;
+
+	for (.@i = 0; .@i < getarraysize(.Pid); .@i++) {
+		if (.Cat[.@i] != 1)
+			continue;
+		if (!callsub(S_IsOpen, .@i))
+			continue;
+
+		// 기존에는 행알 배열 전체를 다시 도는 중첩 반복문이어서
+		// 상품 수가 늘면 infinity loop 보호 한도에 걸릴 수 있었다.
+		// inarray 로 기존 위치를 한 번에 찾아 스크립트 반복량을 줄인다.
+		.@eggpos = inarray(.@eggid[0], .EggId[.@i]);
+		if (.@eggpos >= 0) {
+			.@ecnt[.@eggpos] = .@ecnt[.@eggpos] + 1;
+			continue;
+		}
+
+		.@eggid[.@ecount] = .EggId[.@i];
+		.@ecnt[.@ecount] = 1;
+		.@ecount++;
+	}
+
+	if (.@ecount <= 0) {
+		mes "[행운의 알 교환소]";
+		mes "현재 판매 중인 시즌 천장 상품이 없습니다.";
+		mes " ";
+		mes "시즌 천장은 해당 행운의 알 판매가";
+		mes "종료된 뒤에 열립니다.";
+		next;
+		return;
+	}
+
+	// 한 번 만든 행알 목록은 페이지를 이동할 때 다시 만들지 않는다.
 	.@page = 0;
 
 	while (1) {
-		callsub S_NormalizeAll;
-
-		.@ecount = 0;
-
-		for (.@i = 0; .@i < getarraysize(.Pid); .@i++) {
-			if (.Cat[.@i] != 1)
-				continue;
-			if (!callsub(S_IsOpen, .@i))
-				continue;
-
-			// 이미 목록에 담은 행알인지 확인
-			.@dup = 0;
-			for (.@k = 0; .@k < .@ecount; .@k++) {
-				if (.@eggid[.@k] == .EggId[.@i]) {
-					.@ecnt[.@k] = .@ecnt[.@k] + 1;
-					.@dup = 1;
-					break;
-				}
-			}
-			if (.@dup)
-				continue;
-
-			.@eggid[.@ecount] = .EggId[.@i];
-			.@ecnt[.@ecount] = 1;
-			.@ecount++;
-		}
-
-		if (.@ecount <= 0) {
-			mes "[행운의 알 교환소]";
-			mes "현재 판매 중인 시즌 천장 상품이 없습니다.";
-			mes " ";
-			mes "시즌 천장은 해당 행운의 알 판매가";
-			mes "종료된 뒤에 열립니다.";
-			next;
-			return;
-		}
 
 		// 행운의 알 목록도 한 메뉴에 전부 넣지 않고 페이지로 나눈다.
 		// 각 메뉴 번호는 .@pageidx 를 거쳐 실제 행알 배열 번호와 연결한다.
@@ -218,8 +215,6 @@ S_SeasonProducts:
 	.@egg = getarg(0);
 
 	while (1) {
-		callsub S_NormalizeAll;
-
 		.@count = 0;
 		.@menu$ = "";
 
@@ -272,8 +267,6 @@ S_Category:
 	.@cat = getarg(0);
 
 	while (1) {
-		callsub S_NormalizeAll;
-
 		.@count = 0;
 		.@menu$ = "";
 
@@ -648,7 +641,8 @@ S_Rules:
 	mes "^FF88001. 시즌 한정 아이템 천장^000000";
 	mes "- 해당 시즌 행운의 알 ^FF0000미개봉 실물^000000이 필요합니다.";
 	mes "- 개봉 횟수가 아니라 아이템을 직접 소모합니다.";
-	mes "- 해당 행운의 알 판매가 종료된 뒤에 열립니다.";
+	mes "- 시즌 천장은 ^0055FF행운의 알 판매 시작 7일 후^000000부터 이용할 수 있습니다.";
+	mes "- 즉, ^0055FF판매 2주차부터^000000 천장 교환이 개방됩니다.";
 	next;
 
 	mes "[교환 규칙 안내]";
