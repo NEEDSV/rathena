@@ -107,16 +107,17 @@ lasagna,167,136,4	script	행운의 알 교환소#need_lucky_ceil	4_F_KAFRA6,{
 //============================================================
 // 시즌 천장 - 1단계 : 행운의 알 목록
 //
-// 시즌 상품이 44종까지 늘어나 한 메뉴에 평면 나열하면 찾기 어렵다.
-// 그래서 "행알 선택 -> 그 행알의 천장 상품 선택" 2단 구조로 보여준다.
+// 시즌 상품과 행알 종류가 계속 늘어날 수 있으므로
+// "행알 선택(페이지) -> 그 행알의 천장 상품 선택" 2단 구조로 보여준다.
 // 판매 중인 상품이 하나도 없는 행알은 목록에 나오지 않는다.
 //============================================================
 S_SeasonEggList:
+	.@page = 0;
+
 	while (1) {
 		callsub S_NormalizeAll;
 
 		.@ecount = 0;
-		.@menu$ = "";
 
 		for (.@i = 0; .@i < getarraysize(.Pid); .@i++) {
 			if (.Cat[.@i] != 1)
@@ -151,14 +152,36 @@ S_SeasonEggList:
 			return;
 		}
 
-		for (.@k = 0; .@k < .@ecount; .@k++) {
-			if (.@k > 0)
+		// 행운의 알 목록도 한 메뉴에 전부 넣지 않고 페이지로 나눈다.
+		// 각 메뉴 번호는 .@pageidx 를 거쳐 실제 행알 배열 번호와 연결한다.
+		.@pages = (.@ecount + .SeasonEggPageSize - 1) / .SeasonEggPageSize;
+
+		if (.@page < 0)
+			.@page = .@pages - 1;
+		if (.@page >= .@pages)
+			.@page = 0;
+
+		.@from = .@page * .SeasonEggPageSize;
+		.@to = .@from + .SeasonEggPageSize;
+		if (.@to > .@ecount)
+			.@to = .@ecount;
+
+		.@pcount = 0;
+		.@menu$ = "";
+
+		for (.@k = .@from; .@k < .@to; .@k++) {
+			.@pageidx[.@pcount] = .@k;
+
+			if (.@pcount > 0)
 				.@menu$ += ":";
 			.@menu$ += getitemname(.@eggid[.@k]) + " (" + .@ecnt[.@k] + "종)";
+			.@pcount++;
 		}
 
 		mes "[행운의 알 교환소]";
 		mes "^FF8800시즌 한정 아이템 천장^000000";
+		mes "행운의 알 " + .@ecount + "종"
+			+ "   (페이지 " + (.@page + 1) + " / " + .@pages + ")";
 		mes " ";
 		mes "확정 교환을 원하는";
 		mes "^0055FF행운의 알^000000을 먼저 선택해주세요.";
@@ -167,11 +190,22 @@ S_SeasonEggList:
 		mes "지급품은 ^FF0000계정 귀속^000000으로 처리됩니다.";
 		next;
 
-		.@sel = select(.@menu$ + ":뒤로") - 1;
-		if (.@sel < 0 || .@sel >= .@ecount)
+		.@sel = select(.@menu$ + ":-- 다음 페이지 --:-- 이전 페이지 --:뒤로") - 1;
+
+		if (.@sel == .@pcount) {
+			.@page = .@page + 1;
+			continue;
+		}
+
+		if (.@sel == .@pcount + 1) {
+			.@page = .@page - 1;
+			continue;
+		}
+
+		if (.@sel < 0 || .@sel >= .@pcount)
 			return;
 
-		callsub S_SeasonProducts, .@eggid[.@sel];
+		callsub S_SeasonProducts, .@eggid[.@pageidx[.@sel]];
 	}
 	return;
 
@@ -1284,6 +1318,7 @@ OnClock2200:
 //============================================================
 OnInit:
 	.PointItem = 399905;	// 행운 포인트
+	.SeasonEggPageSize = 10;	// 시즌 행운의 알 목록 한 페이지 표시 수
 	.AdminPageSize = 12;	// @ceiladmin 상품 목록 한 페이지 표시 수
 
 	bindatcmd "ceiladmin", strnpcinfo(3) + "::OnAdmin", 99, 99;
