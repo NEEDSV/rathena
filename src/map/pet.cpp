@@ -367,10 +367,25 @@ uint64 PetDatabase::parseBodyNode( const ryml::NodeRef& node ){
 		pet->allow_autofeed = allow;
 	}else{
 		if( !exists ){
-			// Auto-feeding is a general pet convenience. Only enable it by
-			// default for pets that have a functional feeding cycle; special
+			// Auto-feeding is available to every pet by default. Special
 			// database entries can still opt out explicitly.
-			pet->allow_autofeed = pet->FoodID != 0 && pet->fullness > 0 && pet->hungry_delay > 0;
+			pet->allow_autofeed = true;
+		}
+	}
+
+	if( this->nodeExists( node, "ClientAutoFeed" ) ){
+		bool client_autofeed;
+
+		if( !this->asBool( node, "ClientAutoFeed", client_autofeed ) ){
+			return 0;
+		}
+
+		pet->client_autofeed = client_autofeed;
+	}else{
+		if( !exists ){
+			// Legacy pets do not expose the client checkbox. Their server-side
+			// auto-feed setting is controlled exclusively through commands.
+			pet->client_autofeed = false;
 		}
 	}
 

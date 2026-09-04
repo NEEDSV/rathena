@@ -8456,6 +8456,13 @@ void clif_pet_autofeed_status( const map_session_data* sd, bool force ) {
 #if PACKETVER >= 20141008
 	nullpo_retv(sd);
 
+	// Legacy pets have no client auto-feed UI. Sending CONFIG_PET_AUTOFEED for
+	// them makes some clients answer with OFF while loading a map, overwriting
+	// the command-controlled server value.
+	if( sd->pd != nullptr && sd->pd->get_pet_db() != nullptr && !sd->pd->get_pet_db()->client_autofeed ){
+		return;
+	}
+
 	if (force || battle_config.pet_autofeed_always) {
 		// Always send ON or OFF
 		if (sd->pd && battle_config.feature_pet_autofeed && sd->pd->get_pet_db()->allow_autofeed) {
@@ -17899,7 +17906,7 @@ void clif_parse_configuration( int32 fd, map_session_data* sd ){
 			break;
 		case CONFIG_PET_AUTOFEED:
 			// Player can not click this if he does not have a pet
-			if( sd->pd == nullptr || !battle_config.feature_pet_autofeed || !sd->pd->get_pet_db()->allow_autofeed ){
+			if( sd->pd == nullptr || !battle_config.feature_pet_autofeed || !sd->pd->get_pet_db()->allow_autofeed || !sd->pd->get_pet_db()->client_autofeed ){
 				return;
 			}
 

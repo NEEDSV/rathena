@@ -46,6 +46,7 @@ struct s_pet_db {
 	uint16 defence_attack_rate; ///< Rate of which the pet will retaliate when master is being attacked (requires at least pet_support_min_friendly intimacy).
 	uint16 change_target_rate; ///< Rate of which the pet will change its attack target.
 	bool allow_autofeed; ///< Can this pet use auto feeding mechanic.
+	bool client_autofeed; ///< Does the client expose and control this pet's auto feeding setting.
 	std::unordered_map<uint16, std::shared_ptr<s_pet_evo_data>> evolution_data; ///< Data for evolving the pet.
 	struct script_code
 		*pet_support_script, ///< Script since pet hatched. For pet* script commands only.
