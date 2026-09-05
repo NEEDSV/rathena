@@ -37,6 +37,7 @@
 #include "map.hpp"
 #include "mercenary.hpp"
 #include "mob.hpp"
+#include "need_jf_pattern.hpp"
 #include "npc.hpp"
 #include "party.hpp"
 #include "path.hpp"
@@ -5694,6 +5695,10 @@ int32 skill_castend_pos2(block_list* src, int32 x, int32 y, uint16 skill_id, uin
 
 	sd = BL_CAST(BL_PC, src);
 
+	// Pattern detection only. Nothing below changes damage, range, delay or behaviour.
+	if (sd != nullptr)
+		need_jf_pattern_record_skill(*sd, skill_id);
+
 	sc = status_get_sc(src);
 	type = skill_get_sc(skill_id);
 	sce = (sc && type != SC_NONE)?sc->getSCE(type):nullptr;
@@ -5783,8 +5788,11 @@ int32 skill_castend_map (map_session_data *sd, uint16 skill_id, const char *mapn
 		//The storage window is closed automatically by the client when there's
 		//any kind of map change, so we need to restore it automatically
 		//bugreport:8027
-		if(strcmp(mapname,"Random") == 0)
+		if(strcmp(mapname,"Random") == 0) {
+			if (skill_id == AL_TELEPORT)
+				need_jf_pattern_record_teleport(*sd);
 			pc_randomwarp(sd,CLR_TELEPORT);
+		}
 		else if (sd->menuskill_val > 1 || skill_id == ALL_ODINS_RECALL) //Need lv2 to be able to warp here.
 			pc_setpos( sd, mapindex_name2id( sd->status.save_point.map ),sd->status.save_point.x, sd->status.save_point.y, CLR_TELEPORT );
 

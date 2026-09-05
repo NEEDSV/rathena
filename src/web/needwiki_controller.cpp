@@ -3,12 +3,16 @@
 
 #include "needwiki_controller.hpp"
 
+#include <algorithm>
 #include <cstdlib>
 #include <cstring>
 #include <cctype>
 #include <chrono>
+#include <ctime>
 #include <fstream>
+#include <iomanip>
 #include <mutex>
+#include <random>
 #include <sstream>
 #include <string>
 #include <unordered_map>
@@ -28,6 +32,8 @@
 #endif
 
 #include <common/cbasetypes.hpp>
+#include <common/needwiki_crypto.hpp>
+#include <common/needwiki_diagnostics.hpp>
 #include <common/showmsg.hpp>
 #include <common/socket.hpp>
 #include <common/sql.hpp>
@@ -37,19 +43,38 @@
 
 static constexpr uint16 NEEDWIKI_PORT = 6905;
 static constexpr uint16 NEEDWIKI_CMD_TEST_ACTION = 0x7A01;
+static constexpr uint16 NEEDWIKI_CMD_ACTION_RESULT = 0x7A02;
+static constexpr uint16 NEEDWIKI_ACTION_STATUS = 0;
 static constexpr uint16 NEEDWIKI_ACTION_DISPBOTTOM = 1;
 static constexpr uint16 NEEDWIKI_ACTION_NAVI = 2;
 static constexpr uint16 NEEDWIKI_ACTION_SHOW_ITEM = 3;
 static constexpr uint16 NEEDWIKI_ACTION_SHOW_GROUP = 4;
-static constexpr uint16 NEEDWIKI_PACKET_HEADER_LEN = 14;
-static constexpr int64 NEEDWIKI_DUPLICATE_WINDOW_MS = 500;
+static constexpr uint16 NEEDWIKI_TOKEN_HASH_LEN = 64;
+static constexpr uint16 NEEDWIKI_PACKET_HEADER_LEN = 6 + NEEDWIKI_TOKEN_HASH_LEN;
+static constexpr uint64 NEEDWIKI_CODE_TTL_SECONDS = 120;
+static constexpr size_t NEEDWIKI_BOOTSTRAP_LIMIT_PER_MINUTE = 10;
 static constexpr const char* NEEDWIKI_ITEM_GROUP_DB_TYPE = "NEED_WIKI_ITEM_GROUP_DB";
 static constexpr uint16 NEEDWIKI_ITEM_GROUP_DB_VERSION = 1;
-static constexpr const char* NEEDWIKI_AUTH_HEADER = "X-NeedWiki-Token";
-static constexpr size_t NEEDWIKI_AUTH_TOKEN_LENGTH = 16;
+static constexpr const char* NEEDWIKI_AUTH_HEADER = "Authorization";
 
-static std::mutex needwiki_duplicate_mutex;
-static std::unordered_map<std::string, std::chrono::steady_clock::time_point> needwiki_duplicate_requests;
+enum NeedWikiActionResult : uint16 {
+	NEEDWIKI_RESULT_OK = 0,
+	NEEDWIKI_RESULT_NOT_BOUND = 1,
+	NEEDWIKI_RESULT_EXPIRED = 2,
+	NEEDWIKI_RESULT_INVALID_SESSION = 3,
+	NEEDWIKI_RESULT_BAD_REQUEST = 4,
+	NEEDWIKI_RESULT_INTERNAL_ERROR = 5,
+};
+
+enum NeedWikiBindingStatus : uint8 {
+	NEEDWIKI_BINDING_WAITING = 0,
+	NEEDWIKI_BINDING_READY = 1,
+	NEEDWIKI_BINDING_REVOKED = 2,
+	NEEDWIKI_BINDING_EXPIRED = 3,
+};
+
+static std::mutex needwiki_bootstrap_mutex;
+static std::unordered_map<std::string, std::vector<std::chrono::steady_clock::time_point>> needwiki_bootstrap_requests;
 
 static std::string needwiki_remote_ip(const Request& req)
 {
@@ -62,77 +87,51 @@ static std::string needwiki_remote_ip(const Request& req)
 	return ip;
 }
 
-static bool needwiki_is_authorized(const Request& req, uint32 account_id, uint32 char_id, const std::string& token)
+static bool needwiki_get_bearer_hash(const Request& req, std::string& token_hash)
 {
-	if (token.size() != NEEDWIKI_AUTH_TOKEN_LENGTH)
+	if (!req.has_header(NEEDWIKI_AUTH_HEADER))
 		return false;
-	for (const unsigned char ch : token) {
-		if (!std::isxdigit(ch))
-			return false;
-	}
-
-	const std::string remote_ip = needwiki_remote_ip(req);
-	SQLLock loginlock(LOGIN_SQL_LOCK);
-	loginlock.lock();
-	auto login_handle = loginlock.getHandle();
-	SqlStmt login_stmt{ *login_handle };
-
-	const bool login_ok = SQL_SUCCESS == login_stmt.Prepare(
-			"SELECT `account_id` FROM `%s` WHERE `account_id` = ? AND `web_auth_token` = ? AND `web_auth_token_enabled` = '1' AND `last_ip` = ?",
-			login_table)
-		&& SQL_SUCCESS == login_stmt.BindParam(0, SQLDT_UINT32, &account_id, sizeof(account_id))
-		&& SQL_SUCCESS == login_stmt.BindParam(1, SQLDT_STRING, const_cast<char*>(token.c_str()), token.size())
-		&& SQL_SUCCESS == login_stmt.BindParam(2, SQLDT_STRING, const_cast<char*>(remote_ip.c_str()), remote_ip.size())
-		&& SQL_SUCCESS == login_stmt.Execute()
-		&& login_stmt.NumRows() == 1;
-
-	loginlock.unlock();
-	if (!login_ok)
+	const std::string header = req.get_header_value(NEEDWIKI_AUTH_HEADER);
+	static constexpr const char* prefix = "Bearer ";
+	if (header.rfind(prefix, 0) != 0)
 		return false;
-
-	SQLLock charlock(CHAR_SQL_LOCK);
-	charlock.lock();
-	auto char_handle = charlock.getHandle();
-	SqlStmt char_stmt{ *char_handle };
-	const bool char_ok = SQL_SUCCESS == char_stmt.Prepare(
-			"SELECT `char_id` FROM `%s` WHERE `account_id` = ? AND `char_id` = ? AND `online` = '1'",
-			char_db_table)
-		&& SQL_SUCCESS == char_stmt.BindParam(0, SQLDT_UINT32, &account_id, sizeof(account_id))
-		&& SQL_SUCCESS == char_stmt.BindParam(1, SQLDT_UINT32, &char_id, sizeof(char_id))
-		&& SQL_SUCCESS == char_stmt.Execute()
-		&& char_stmt.NumRows() == 1;
-
-	charlock.unlock();
-	return char_ok;
+	const std::string token = header.substr(strlen(prefix));
+	if (!needwiki_crypto::is_lower_hex_hash(token))
+		return false;
+	token_hash = needwiki_crypto::sha256_hex(token);
+	return true;
 }
 
-static std::string needwiki_duplicate_key(uint32 char_id, uint16 action, const std::string& payload)
-{
-	return std::to_string(char_id) + "|" + std::to_string(action) + "|" + payload;
-}
-
-static bool needwiki_is_duplicate_request(uint32 char_id, uint16 action, const std::string& payload)
+static bool needwiki_bootstrap_rate_allowed(const Request& req)
 {
 	const auto now = std::chrono::steady_clock::now();
-	const auto window = std::chrono::milliseconds(NEEDWIKI_DUPLICATE_WINDOW_MS);
-	const std::string key = needwiki_duplicate_key(char_id, action, payload);
-
-	std::lock_guard<std::mutex> lock(needwiki_duplicate_mutex);
-
-	for (auto it = needwiki_duplicate_requests.begin(); it != needwiki_duplicate_requests.end();) {
-		if (now - it->second > window)
-			it = needwiki_duplicate_requests.erase(it);
+	const auto cutoff = now - std::chrono::minutes(1);
+	const std::string ip = needwiki_remote_ip(req);
+	std::lock_guard<std::mutex> lock(needwiki_bootstrap_mutex);
+	for (auto it = needwiki_bootstrap_requests.begin(); it != needwiki_bootstrap_requests.end();) {
+		auto& values = it->second;
+		values.erase(std::remove_if(values.begin(), values.end(),
+			[cutoff](const auto& value) { return value < cutoff; }), values.end());
+		if (values.empty())
+			it = needwiki_bootstrap_requests.erase(it);
 		else
 			++it;
 	}
+	auto& requests = needwiki_bootstrap_requests[ip];
+	if (requests.size() >= NEEDWIKI_BOOTSTRAP_LIMIT_PER_MINUTE)
+		return false;
+	requests.push_back(now);
+	return true;
+}
 
-	auto it = needwiki_duplicate_requests.find(key);
-
-	if (it != needwiki_duplicate_requests.end() && now - it->second <= window)
-		return true;
-
-	needwiki_duplicate_requests[key] = now;
-	return false;
+static std::string needwiki_generate_code()
+{
+	std::random_device random;
+	uint64 value = (static_cast<uint64>(random()) << 32) | static_cast<uint64>(random());
+	value %= 100000000ULL;
+	std::ostringstream stream;
+	stream << std::setw(8) << std::setfill('0') << value;
+	return stream.str();
 }
 
 static void needwiki_close_socket(int sock, bool shutdown_first)
@@ -156,29 +155,29 @@ static void needwiki_close_socket(int sock, bool shutdown_first)
 #endif
 }
 
-static bool needwiki_send_packet(uint32 account_id, uint32 char_id, uint16 action, const std::string& payload)
+static NeedWikiActionResult needwiki_send_packet(const std::string& token_hash, uint16 action, const std::string& payload)
 {
-	if (payload.size() > UINT16_MAX - NEEDWIKI_PACKET_HEADER_LEN)
-		return false;
+	if (!needwiki_crypto::is_lower_hex_hash(token_hash) ||
+		payload.size() > UINT16_MAX - NEEDWIKI_PACKET_HEADER_LEN)
+		return NEEDWIKI_RESULT_BAD_REQUEST;
 
 	const uint16 len = static_cast<uint16>(NEEDWIKI_PACKET_HEADER_LEN + payload.size());
 	std::vector<uint8> packet(len);
 
 	WBUFW(packet.data(), 0) = NEEDWIKI_CMD_TEST_ACTION;
 	WBUFW(packet.data(), 2) = len;
-	WBUFL(packet.data(), 4) = account_id;
-	WBUFL(packet.data(), 8) = char_id;
-	WBUFW(packet.data(), 12) = action;
+	WBUFW(packet.data(), 4) = action;
+	memcpy(WBUFP(packet.data(), 6), token_hash.data(), NEEDWIKI_TOKEN_HASH_LEN);
 	memcpy(WBUFP(packet.data(), NEEDWIKI_PACKET_HEADER_LEN), payload.data(), payload.size());
 
 	int sock = static_cast<int>(socket(AF_INET, SOCK_STREAM, 0));
 
 #ifdef WIN32
 	if (sock == INVALID_SOCKET)
-		return false;
+		return NEEDWIKI_RESULT_INTERNAL_ERROR;
 #else
 	if (sock < 0)
-		return false;
+		return NEEDWIKI_RESULT_INTERNAL_ERROR;
 #endif
 
 	sockaddr_in addr{};
@@ -186,12 +185,18 @@ static bool needwiki_send_packet(uint32 account_id, uint32 char_id, uint16 actio
 	addr.sin_port = htons(NEEDWIKI_PORT);
 	addr.sin_addr.s_addr = htonl(MAKEIP(127, 0, 0, 1));
 
-	bool success = false;
-
 	if (connect(sock, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) != 0) {
 		needwiki_close_socket(sock, false);
-		return false;
+		return NEEDWIKI_RESULT_INTERNAL_ERROR;
 	}
+
+#ifdef WIN32
+	DWORD timeout = 2000;
+	setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<const char*>(&timeout), sizeof(timeout));
+#else
+	timeval timeout{ 2, 0 };
+	setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+#endif
 
 	size_t sent = 0;
 	while (sent < packet.size()) {
@@ -203,10 +208,27 @@ static bool needwiki_send_packet(uint32 account_id, uint32 char_id, uint16 actio
 		sent += static_cast<size_t>(ret);
 	}
 
-	success = sent == packet.size();
-	needwiki_close_socket(sock, true);
+	if (sent != packet.size()) {
+		needwiki_close_socket(sock, false);
+		return NEEDWIKI_RESULT_INTERNAL_ERROR;
+	}
 
-	return success;
+	uint8 response[4] = {};
+	size_t received = 0;
+	while (received < sizeof(response)) {
+		const int ret = recv(sock, reinterpret_cast<char*>(response + received), static_cast<int>(sizeof(response) - received), 0);
+		if (ret <= 0)
+			break;
+		received += static_cast<size_t>(ret);
+	}
+	needwiki_close_socket(sock, false);
+	if (received != sizeof(response) || RBUFW(response, 0) != NEEDWIKI_CMD_ACTION_RESULT)
+		return NEEDWIKI_RESULT_INTERNAL_ERROR;
+
+	const uint16 result = RBUFW(response, 2);
+	return result <= NEEDWIKI_RESULT_INTERNAL_ERROR
+		? static_cast<NeedWikiActionResult>(result)
+		: NEEDWIKI_RESULT_INTERNAL_ERROR;
 }
 
 static bool needwiki_parse_u32(const std::string& value, uint32& out)
@@ -254,150 +276,204 @@ static bool needwiki_get_param(const Request& req, const char* name, std::string
 	return false;
 }
 
-static bool needwiki_get_auth_token(const Request& req, std::string& token)
+static NeedWikiBindingStatus needwiki_get_db_status(const std::string& token_hash)
 {
-	if (req.has_header(NEEDWIKI_AUTH_HEADER)) {
-		token = req.get_header_value(NEEDWIKI_AUTH_HEADER);
-		return !token.empty();
+	SQLLock lock(MAP_SQL_LOCK);
+	lock.lock();
+	auto handle = lock.getHandle();
+	SqlStmt stmt{ *handle };
+	uint32 status = NEEDWIKI_BINDING_REVOKED;
+	uint64 code_expires_at = 0;
+	uint64 expires_at = 0;
+	const bool ok = SQL_SUCCESS == stmt.Prepare(
+			"SELECT status,code_expires_at,expires_at FROM needwiki_sessions WHERE token_hash=? LIMIT 1")
+		&& SQL_SUCCESS == stmt.BindParam(0, SQLDT_STRING, const_cast<char*>(token_hash.c_str()), token_hash.size())
+		&& SQL_SUCCESS == stmt.Execute();
+	if (!ok || stmt.NumRows() == 0) {
+		lock.unlock();
+		return NEEDWIKI_BINDING_REVOKED;
 	}
 
-	// Keep query-token compatibility for already deployed DLLs. New DLLs use the
-	// header so credentials are not written to access logs as part of the URL.
-	return needwiki_get_param(req, "token", token) && !token.empty();
+	if (SQL_SUCCESS != stmt.BindColumn(0, SQLDT_UINT32, &status, sizeof(status)) ||
+		SQL_SUCCESS != stmt.BindColumn(1, SQLDT_UINT64, &code_expires_at, sizeof(code_expires_at)) ||
+		SQL_SUCCESS != stmt.BindColumn(2, SQLDT_UINT64, &expires_at, sizeof(expires_at)) ||
+		SQL_SUCCESS != stmt.NextRow()) {
+		lock.unlock();
+		return NEEDWIKI_BINDING_REVOKED;
+	}
+
+	const uint64 now = static_cast<uint64>(time(nullptr));
+	if ((status == NEEDWIKI_BINDING_WAITING && code_expires_at < now) ||
+		(status == NEEDWIKI_BINDING_READY && expires_at < now)) {
+		Sql_Query(handle, "UPDATE needwiki_sessions SET status='%u' WHERE token_hash='%s'",
+			static_cast<uint32>(NEEDWIKI_BINDING_EXPIRED), token_hash.c_str());
+		status = NEEDWIKI_BINDING_EXPIRED;
+	}
+	lock.unlock();
+	return static_cast<NeedWikiBindingStatus>(status);
 }
 
-static bool needwiki_require_auth(const Request& req, Response& res, uint32 account_id, uint32 char_id)
+static void needwiki_set_json_status(Response& res, const char* status, int http_status = 200)
 {
-	std::string token;
-	if (!needwiki_get_auth_token(req, token) || !needwiki_is_authorized(req, account_id, char_id, token)) {
+	res.status = http_status;
+	res.set_content(std::string("{\"status\":\"") + status + "\"}", "application/json; charset=utf-8");
+}
+
+static void needwiki_set_action_result(Response& res, NeedWikiActionResult result)
+{
+	switch (result) {
+		case NEEDWIKI_RESULT_OK:
+			res.set_content("OK", "text/plain");
+			break;
+		case NEEDWIKI_RESULT_EXPIRED:
+			res.status = 401;
+			res.set_content("EXPIRED", "text/plain");
+			break;
+		case NEEDWIKI_RESULT_NOT_BOUND:
+		case NEEDWIKI_RESULT_INVALID_SESSION:
+			res.status = 401;
+			res.set_content("NOT_BOUND", "text/plain");
+			break;
+		case NEEDWIKI_RESULT_BAD_REQUEST:
+			res.status = HTTP_BAD_REQUEST;
+			res.set_content("BAD_REQUEST", "text/plain");
+			break;
+		default:
+			res.status = 503;
+			res.set_content("SERVER_UNAVAILABLE", "text/plain");
+			break;
+	}
+}
+
+HANDLER_FUNC(needwiki_bootstrap_start)
+{
+	std::string token_hash;
+	if (!needwiki_get_bearer_hash(req, token_hash)) {
+		NEEDWIKI_DIAG("[NeedWiki] bootstrap start: INVALID_TOKEN\n");
 		res.status = 401;
-		res.set_content("AUTH_EXPIRED", "text/plain");
-		return false;
+		res.set_content("INVALID_TOKEN", "text/plain");
+		return;
+	}
+	if (!needwiki_bootstrap_rate_allowed(req)) {
+		NEEDWIKI_DIAG("[NeedWiki] bootstrap start: RATE_LIMITED\n");
+		res.status = 429;
+		res.set_content("RATE_LIMITED", "text/plain");
+		return;
 	}
 
-	return true;
+	const uint64 now = static_cast<uint64>(time(nullptr));
+	std::lock_guard<std::mutex> guard(needwiki_bootstrap_mutex);
+	SQLLock lock(MAP_SQL_LOCK);
+	lock.lock();
+	auto handle = lock.getHandle();
+	Sql_Query(handle,
+		"DELETE FROM needwiki_sessions WHERE "
+		"(status IN (2,3) AND expires_at<'%" PRIu64 "') OR "
+		"(status=0 AND code_expires_at<'%" PRIu64 "')",
+		now - 300, now - 300);
+	if (SQL_ERROR == Sql_Query(handle, "DELETE FROM needwiki_sessions WHERE token_hash='%s'", token_hash.c_str())) {
+		lock.unlock();
+		NEEDWIKI_DIAG("[NeedWiki] bootstrap start: DB_ERROR\n");
+		res.status = 503;
+		res.set_content("DB_ERROR", "text/plain");
+		return;
+	}
+
+	std::string code;
+	bool inserted = false;
+	for (int attempt = 0; attempt < 20 && !inserted; ++attempt) {
+		code = needwiki_generate_code();
+		const std::string code_hash = needwiki_crypto::sha256_hex(code);
+		inserted = SQL_SUCCESS == Sql_Query(handle,
+			"INSERT INTO needwiki_sessions "
+			"(token_hash,code_hash,status,created_at,code_expires_at,expires_at) "
+			"VALUES ('%s','%s','%u','%" PRIu64 "','%" PRIu64 "','0')",
+			token_hash.c_str(), code_hash.c_str(), static_cast<uint32>(NEEDWIKI_BINDING_WAITING),
+			now, now + NEEDWIKI_CODE_TTL_SECONDS);
+	}
+	lock.unlock();
+	if (!inserted) {
+		NEEDWIKI_DIAG("[NeedWiki] bootstrap start: ISSUE_FAILED\n");
+		res.status = 503;
+		res.set_content("ISSUE_FAILED", "text/plain");
+		return;
+	}
+
+	nlohmann::json body;
+	body["status"] = "WAITING";
+	body["code"] = code;
+	body["expires_in"] = NEEDWIKI_CODE_TTL_SECONDS;
+	NEEDWIKI_DIAG("[NeedWiki] bootstrap start: WAITING\n");
+	res.set_content(body.dump(), "application/json; charset=utf-8");
 }
 
 HANDLER_FUNC(needwiki_auth)
 {
-	std::string account_id_str;
-	std::string char_id_str;
-	std::string token;
-
-	if (!needwiki_get_param(req, "account_id", account_id_str) ||
-		!needwiki_get_param(req, "char_id", char_id_str) ||
-		!needwiki_get_auth_token(req, token)) {
+	std::string token_hash;
+	if (!needwiki_get_bearer_hash(req, token_hash)) {
 		res.status = HTTP_BAD_REQUEST;
-		res.set_content("AUTH_CLIENT_IDENTITY", "text/plain");
+		res.set_content("INVALID_TOKEN", "text/plain");
 		return;
 	}
 
-	uint32 account_id = 0;
-	uint32 char_id = 0;
-	if (!needwiki_parse_u32(account_id_str, account_id) || account_id == 0 ||
-		!needwiki_parse_u32(char_id_str, char_id) || char_id == 0) {
-		res.status = HTTP_BAD_REQUEST;
-		res.set_content("AUTH_CLIENT_IDENTITY", "text/plain");
-		return;
+	const NeedWikiBindingStatus status = needwiki_get_db_status(token_hash);
+	if (status == NEEDWIKI_BINDING_WAITING) {
+		needwiki_set_json_status(res, "WAITING");
+	} else if (status == NEEDWIKI_BINDING_EXPIRED) {
+		needwiki_set_json_status(res, "EXPIRED", 401);
+	} else if (status != NEEDWIKI_BINDING_READY) {
+		needwiki_set_json_status(res, "NOT_BOUND", 401);
+	} else {
+		const NeedWikiActionResult result = needwiki_send_packet(token_hash, NEEDWIKI_ACTION_STATUS, "");
+		if (result == NEEDWIKI_RESULT_OK)
+			needwiki_set_json_status(res, "READY");
+		else if (result == NEEDWIKI_RESULT_EXPIRED)
+			needwiki_set_json_status(res, "EXPIRED", 401);
+		else if (result == NEEDWIKI_RESULT_INTERNAL_ERROR)
+			needwiki_set_json_status(res, "UNAVAILABLE", 503);
+		else
+			needwiki_set_json_status(res, "NOT_BOUND", 401);
 	}
-
-	if (!needwiki_is_authorized(req, account_id, char_id, token)) {
-		ShowInfo("[NEED Wiki Auth] account_id=%u char_id=%u result=failed\n", account_id, char_id);
-		res.status = 401;
-		res.set_content("AUTH_INVALID", "text/plain");
-		return;
-	}
-
-	ShowInfo("[NEED Wiki Auth] account_id=%u char_id=%u result=success\n", account_id, char_id);
-	const std::string body = "{\"account_id\":" + std::to_string(account_id)
-		+ ",\"char_id\":" + std::to_string(char_id)
-		+ "}";
-	res.set_content(body, "application/json; charset=utf-8");
 }
 
 HANDLER_FUNC(needwiki_test)
 {
-	std::string account_id_str;
-	std::string char_id_str;
 	std::string msg;
 
-	if (!needwiki_get_param(req, "account_id", account_id_str) ||
-		!needwiki_get_param(req, "char_id", char_id_str) ||
-		!needwiki_get_param(req, "msg", msg)) {
+	if (!needwiki_get_param(req, "msg", msg)) {
 		res.status = HTTP_BAD_REQUEST;
-		res.set_content("Missing account_id, char_id, or msg", "text/plain");
+		res.set_content("Missing msg", "text/plain");
 		return;
 	}
 
-	uint32 account_id = 0;
-
-	if (!needwiki_parse_u32(account_id_str, account_id)) {
-		res.status = HTTP_BAD_REQUEST;
-		res.set_content("Invalid account_id", "text/plain");
+	std::string token_hash;
+	if (!needwiki_get_bearer_hash(req, token_hash)) {
+		res.status = 401;
+		res.set_content("INVALID_TOKEN", "text/plain");
 		return;
 	}
 
-	uint32 char_id = 0;
-
-	if (!needwiki_parse_u32(char_id_str, char_id)) {
-		res.status = HTTP_BAD_REQUEST;
-		res.set_content("Invalid char_id", "text/plain");
-		return;
-	}
-
-	if (!needwiki_require_auth(req, res, account_id, char_id))
-		return;
-
-	if (needwiki_is_duplicate_request(char_id, NEEDWIKI_ACTION_DISPBOTTOM, msg)) {
-		res.set_content("OK_DUPLICATE", "text/plain");
-		return;
-	}
-
-	if (!needwiki_send_packet(account_id, char_id, NEEDWIKI_ACTION_DISPBOTTOM, msg)) {
-		res.status = HTTP_BAD_REQUEST;
-		res.set_content("Failed to send NEED Wiki test packet", "text/plain");
-		return;
-	}
-
-	res.set_content("OK", "text/plain");
+	needwiki_set_action_result(res, needwiki_send_packet(token_hash, NEEDWIKI_ACTION_DISPBOTTOM, msg));
 }
 
 HANDLER_FUNC(needwiki_navi)
 {
-	std::string account_id_str;
-	std::string char_id_str;
 	std::string map;
 	std::string x_str;
 	std::string y_str;
 	std::string name;
 
-	if (!needwiki_get_param(req, "account_id", account_id_str) ||
-		!needwiki_get_param(req, "char_id", char_id_str) ||
-		!needwiki_get_param(req, "map", map) ||
+	if (!needwiki_get_param(req, "map", map) ||
 		!needwiki_get_param(req, "x", x_str) ||
 		!needwiki_get_param(req, "y", y_str) ||
 		!needwiki_get_param(req, "name", name)) {
 		res.status = HTTP_BAD_REQUEST;
-		res.set_content("Missing account_id, char_id, map, x, y, or name", "text/plain");
+		res.set_content("Missing map, x, y, or name", "text/plain");
 		return;
 	}
 
-	uint32 account_id = 0;
-	uint32 char_id = 0;
 	uint16 x = 0;
 	uint16 y = 0;
-
-	if (!needwiki_parse_u32(account_id_str, account_id)) {
-		res.status = HTTP_BAD_REQUEST;
-		res.set_content("Invalid account_id", "text/plain");
-		return;
-	}
-
-	if (!needwiki_parse_u32(char_id_str, char_id)) {
-		res.status = HTTP_BAD_REQUEST;
-		res.set_content("Invalid char_id", "text/plain");
-		return;
-	}
 
 	if (!needwiki_parse_u16(x_str, x)) {
 		res.status = HTTP_BAD_REQUEST;
@@ -411,9 +487,6 @@ HANDLER_FUNC(needwiki_navi)
 		return;
 	}
 
-	if (!needwiki_require_auth(req, res, account_id, char_id))
-		return;
-
 	if (map.empty() || name.empty() || map.find('|') != std::string::npos || name.find('|') != std::string::npos) {
 		res.status = HTTP_BAD_REQUEST;
 		res.set_content("Invalid map or name", "text/plain");
@@ -422,49 +495,26 @@ HANDLER_FUNC(needwiki_navi)
 
 	const std::string payload = map + "|" + std::to_string(x) + "|" + std::to_string(y) + "|" + name;
 
-	if (needwiki_is_duplicate_request(char_id, NEEDWIKI_ACTION_NAVI, payload)) {
-		res.set_content("OK_DUPLICATE", "text/plain");
+	std::string token_hash;
+	if (!needwiki_get_bearer_hash(req, token_hash)) {
+		res.status = 401;
+		res.set_content("INVALID_TOKEN", "text/plain");
 		return;
 	}
-
-	if (!needwiki_send_packet(account_id, char_id, NEEDWIKI_ACTION_NAVI, payload)) {
-		res.status = HTTP_BAD_REQUEST;
-		res.set_content("Failed to send NEED Wiki navi packet", "text/plain");
-		return;
-	}
-
-	res.set_content("OK", "text/plain");
+	needwiki_set_action_result(res, needwiki_send_packet(token_hash, NEEDWIKI_ACTION_NAVI, payload));
 }
 
 HANDLER_FUNC(needwiki_showitem)
 {
-	std::string account_id_str;
-	std::string char_id_str;
 	std::string item_id_str;
 
-	if (!needwiki_get_param(req, "account_id", account_id_str) ||
-		!needwiki_get_param(req, "char_id", char_id_str) ||
-		!needwiki_get_param(req, "item_id", item_id_str)) {
+	if (!needwiki_get_param(req, "item_id", item_id_str)) {
 		res.status = HTTP_BAD_REQUEST;
-		res.set_content("Missing account_id, char_id, or item_id", "text/plain");
+		res.set_content("Missing item_id", "text/plain");
 		return;
 	}
 
-	uint32 account_id = 0;
-	uint32 char_id = 0;
 	uint32 item_id = 0;
-
-	if (!needwiki_parse_u32(account_id_str, account_id)) {
-		res.status = HTTP_BAD_REQUEST;
-		res.set_content("Invalid account_id", "text/plain");
-		return;
-	}
-
-	if (!needwiki_parse_u32(char_id_str, char_id)) {
-		res.status = HTTP_BAD_REQUEST;
-		res.set_content("Invalid char_id", "text/plain");
-		return;
-	}
 
 	if (!needwiki_parse_u32(item_id_str, item_id) || item_id == 0) {
 		res.status = HTTP_BAD_REQUEST;
@@ -472,44 +522,23 @@ HANDLER_FUNC(needwiki_showitem)
 		return;
 	}
 
-	if (!needwiki_require_auth(req, res, account_id, char_id))
-		return;
-
 	const std::string payload = std::to_string(item_id);
-
-	if (needwiki_is_duplicate_request(char_id, NEEDWIKI_ACTION_SHOW_ITEM, payload)) {
-		res.set_content("OK_DUPLICATE", "text/plain");
+	std::string token_hash;
+	if (!needwiki_get_bearer_hash(req, token_hash)) {
+		res.status = 401;
+		res.set_content("INVALID_TOKEN", "text/plain");
 		return;
 	}
-
-	if (!needwiki_send_packet(account_id, char_id, NEEDWIKI_ACTION_SHOW_ITEM, payload)) {
-		res.status = HTTP_BAD_REQUEST;
-		res.set_content("Failed to send NEED Wiki showitem packet", "text/plain");
-		return;
-	}
-
-	res.set_content("OK", "text/plain");
+	needwiki_set_action_result(res, needwiki_send_packet(token_hash, NEEDWIKI_ACTION_SHOW_ITEM, payload));
 }
 
 HANDLER_FUNC(needwiki_showgroup)
 {
-	std::string account_id_str;
-	std::string char_id_str;
 	std::string group_id;
 
-	if (!needwiki_get_param(req, "account_id", account_id_str) ||
-		!needwiki_get_param(req, "char_id", char_id_str) ||
-		!needwiki_get_param(req, "group_id", group_id)) {
+	if (!needwiki_get_param(req, "group_id", group_id)) {
 		res.status = HTTP_BAD_REQUEST;
-		res.set_content("Missing account_id, char_id, or group_id", "text/plain");
-		return;
-	}
-
-	uint32 account_id = 0;
-	uint32 char_id = 0;
-	if (!needwiki_parse_u32(account_id_str, account_id) || !needwiki_parse_u32(char_id_str, char_id)) {
-		res.status = HTTP_BAD_REQUEST;
-		res.set_content("Invalid account_id or char_id", "text/plain");
+		res.set_content("Missing group_id", "text/plain");
 		return;
 	}
 
@@ -520,21 +549,13 @@ HANDLER_FUNC(needwiki_showgroup)
 		return;
 	}
 
-	if (!needwiki_require_auth(req, res, account_id, char_id))
-		return;
-
-	if (needwiki_is_duplicate_request(char_id, NEEDWIKI_ACTION_SHOW_GROUP, group_id)) {
-		res.set_content("OK_DUPLICATE", "text/plain");
-		return;
-	}
-
-	if (!needwiki_send_packet(account_id, char_id, NEEDWIKI_ACTION_SHOW_GROUP, group_id)) {
-		res.status = HTTP_BAD_REQUEST;
-		res.set_content("Failed to send NEED Wiki showgroup packet", "text/plain");
+	std::string token_hash;
+	if (!needwiki_get_bearer_hash(req, token_hash)) {
+		res.status = 401;
+		res.set_content("INVALID_TOKEN", "text/plain");
 		return;
 	}
-
-	res.set_content("OK", "text/plain");
+	needwiki_set_action_result(res, needwiki_send_packet(token_hash, NEEDWIKI_ACTION_SHOW_GROUP, group_id));
 }
 
 HANDLER_FUNC(needwiki_itemgroups)

@@ -38,6 +38,7 @@
 #include "map.hpp"
 #include "mapreg.hpp"
 #include "mercenary.hpp"
+#include "need_jf_pattern.hpp"
 #include "need_summer_hunt.hpp"
 #include "npc.hpp"
 #include "party.hpp"
@@ -2567,7 +2568,8 @@ static void mob_item_drop(mob_data *md, std::shared_ptr<s_item_drop_list>& dlist
 	sd = map_charid2sd(dlist->first_charid);
 	if( sd == nullptr ) sd = map_charid2sd(dlist->second_charid);
 	if( sd == nullptr ) sd = map_charid2sd(dlist->third_charid);
-	test_autoloot = sd 
+	test_autoloot = sd
+		&& !need_jf_pattern_penalty_active(*sd)
 		&& !pc_is_noloot(sd, ditem->item_data.nameid)
 		&& (drop_rate <= sd->state.autoloot || pc_isautolooting(sd, ditem->item_data.nameid))
 		&& (flag ? ((battle_config.homunculus_autoloot ? (battle_config.hom_idle_no_share == 0 || !pc_isidle_hom(sd)) : 0) || (battle_config.mercenary_autoloot ? (battle_config.mer_idle_no_share == 0 || !pc_isidle_mer(sd)) : 0)) :
@@ -3121,6 +3123,14 @@ static void need_world_drop_on_kill(const need_world_drop_owner& owner, mob_data
 
 	if (battle_config.need_world_drop_allow_gm == 0 && pc_get_group_level(sd) >= battle_config.need_world_drop_gm_exclude_level) {
 		need_world_drop_debug_log(owner, md, "none", 0, 0, 0, 0, 0, -1, 0, 0, "skip", "gm_excluded");
+		return;
+	}
+
+	// The Jack Frost + Teleport penalty removes the owner from world drop eligibility
+	// entirely: no roll, no item, nothing to pick up manually. Only the penalised
+	// account is affected - a party member who owns the kill still gets the drop.
+	if (need_jf_pattern_penalty_active(*sd)) {
+		need_world_drop_debug_log(owner, md, "none", 0, 0, 0, 0, 0, -1, 0, 0, "skip", "jf_pattern_penalty");
 		return;
 	}
 

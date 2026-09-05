@@ -3,6 +3,8 @@
 
 #include "web.hpp"
 
+#include <algorithm>
+#include <cctype>
 #include <chrono>
 #include <cstdlib>
 #include <cstring>
@@ -437,7 +439,11 @@ void logger(const Request & req, const Response & res) {
 	if (web_config.print_req_res) {
 		ShowDebug("Incoming Headers are:\n");
 		for (const auto & header : req.headers) {
-			ShowDebug("\t%s: %s\n", header.first.c_str(), header.second.c_str());
+			std::string header_name = header.first;
+			std::transform(header_name.begin(), header_name.end(), header_name.begin(),
+				[](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
+			const bool sensitive = header_name == "authorization" || header_name == "x-needwiki-token";
+			ShowDebug("\t%s: %s\n", header.first.c_str(), sensitive ? "[redacted]" : header.second.c_str());
 		}
 		ShowDebug("Incoming Pages are:\n");
 		for (const auto & file : req.files) {
@@ -449,7 +455,8 @@ void logger(const Request & req, const Response & res) {
 		}
 		ShowDebug("Response status is: %d\n", res.status);
 		// since the body may be binary, might not print entire body (has null character).
-		ShowDebug("Body is:\n%s\n", res.body.c_str());
+		const bool sensitive_body = req.path == "/api/wiki/bootstrap/start";
+		ShowDebug("Body is:\n%s\n", sensitive_body ? "[redacted]" : res.body.c_str());
 	}
 	ShowInfo("%s [%s %s] %d\n", req.remote_addr.c_str(), req.method.c_str(), req.path.c_str(), res.status);
 }
@@ -499,6 +506,7 @@ bool WebServer::initialize( int32 argc, char* argv[] ){
 	http_server->Post("/userconfig/save", userconfig_save);
 	http_server->Get("/api/wiki/test", needwiki_test);
 	http_server->Post("/api/wiki/test", needwiki_test);
+	http_server->Post("/api/wiki/bootstrap/start", needwiki_bootstrap_start);
 	http_server->Get("/api/wiki/auth", needwiki_auth);
 	http_server->Get("/api/wiki/navi", needwiki_navi);
 	http_server->Get("/api/wiki/showitem", needwiki_showitem);

@@ -55,7 +55,9 @@
 #include "mob.hpp"
 #include "need_autopot.hpp"
 #include "need_fishing.hpp"
+#include "need_jf_pattern.hpp"
 #include "need_summer_attendance.hpp"
+#include "needwiki.hpp"
 #include "npc.hpp"
 #include "party.hpp" // party_search()
 #include "pc_groups.hpp"
@@ -79,6 +81,7 @@ const char *macro_allowed_answer_chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKL
 static const char need_macro_detect_pending_var[] = "NeedMacroDetectPending";
 static const char need_macro_detect_disconnects_var[] = "NeedMacroDetectDisconnects";
 static const char need_macro_detect_reporter_var[] = "NeedMacroDetectReporterAid";
+static const char need_macro_detect_reason_var[] = "NeedMacroDetectReason";
 static constexpr t_itemid need_trade_grace_ticket = 399901;
 static constexpr t_itemid need_package_grace_ticket = 399904;
 
@@ -2319,6 +2322,7 @@ bool pc_authok(map_session_data *sd, uint32 login_id2, time_t expiration_time, i
 	}
 
 	rune_load(sd);
+	needwiki_session_start(sd);
 
 	// Request all registries (auth is considered completed whence they arrive)
 	intif_request_registry(sd,7);
@@ -2411,6 +2415,9 @@ void pc_reg_received(map_session_data *sd)
 
 	if (pc_readglobalreg(sd, add_str(need_macro_detect_pending_var)) > 0)
 		add_timer(gettick() + 1000, pc_macro_detector_pending_timer, sd->id, 0);
+
+	// Restore an account scoped autoloot penalty before the character can act.
+	need_jf_pattern_on_login(*sd);
 
 	//SG map and mob read [Komurka]
 	for(i=0;i<MAX_PC_FEELHATE;i++) { //for now - someone need to make reading from txt/sql
@@ -16407,6 +16414,7 @@ static void pc_macro_detector_clear_pending(map_session_data &sd) {
 	pc_setglobalreg(&sd, add_str(need_macro_detect_pending_var), 0);
 	pc_setglobalreg(&sd, add_str(need_macro_detect_disconnects_var), 0);
 	pc_setglobalreg(&sd, add_str(need_macro_detect_reporter_var), 0);
+	pc_setglobalreg(&sd, add_str(need_macro_detect_reason_var), 0);
 }
 
 /**
@@ -16419,6 +16427,8 @@ static void pc_macro_detector_set_pending(map_session_data &sd) {
 
 	pc_setglobalreg(&sd, add_str(need_macro_detect_pending_var), 1);
 	pc_setglobalreg(&sd, add_str(need_macro_detect_reporter_var), sd.macro_detect.reporter_aid);
+	// The reason decides whether a solved captcha pays out, so it has to survive a reconnect.
+	pc_setglobalreg(&sd, add_str(need_macro_detect_reason_var), sd.macro_detect.reason);
 }
 
 // Keep the player immune from the moment the PENDING phase stops their actions.
@@ -16660,6 +16670,7 @@ static int32 pc_macro_detector_add_disconnect(map_session_data &sd) {
 	pc_setglobalreg(&sd, add_str(need_macro_detect_pending_var), 1);
 	pc_setglobalreg(&sd, add_str(need_macro_detect_disconnects_var), count);
 	pc_setglobalreg(&sd, add_str(need_macro_detect_reporter_var), sd.macro_detect.reporter_aid);
+	pc_setglobalreg(&sd, add_str(need_macro_detect_reason_var), sd.macro_detect.reason);
 	return count;
 }
 
@@ -17156,6 +17167,8 @@ void pc_macro_detector_process_answer(map_session_data &sd, const char captcha_a
 	// Correct answer
 	if (strcmp(captcha_answer, cd->captcha_answer) == 0) {
 		const int32 retry_left = sd.macro_detect.retry;
+		// pc_macro_detector_finish_success() wipes the challenge, so keep the reason first.
+		const uint8 reason = sd.macro_detect.reason;
 
 		pc_macro_detector_delete_timeout_timer(sd);
 		pc_macro_detector_debug_log(sd, "success");
@@ -17167,8 +17180,13 @@ void pc_macro_detector_process_answer(map_session_data &sd, const char captcha_a
 		// Assign temporary macro variable to check failures
 		pc_setreg(&sd, add_str("@captcha_retries"), battle_config.macro_detection_retry - retry_left);
 
+		// A captcha that was raised by a suspicion or by a GM never pays out; only the
+		// regular hunt based check keeps the existing reward.
+		if( reason == MACRO_CAPTCHA_REASON_JF_PATTERN )
+			need_jf_pattern_on_captcha_success(sd);
+
 		// Grant bonuses via script
-		if( cd->bonus_script != nullptr ){
+		if( cd->bonus_script != nullptr && reason == MACRO_CAPTCHA_REASON_HUNT ){
 			run_script(cd->bonus_script, 0, sd.id, fake_nd->id);
 		}
 
@@ -17262,7 +17280,7 @@ void pc_macro_reporter_area_select(map_session_data &sd, const int16 x, const in
  * @param sd: Target player data
  * @param reporter_account_id: Account ID of reporter
  */
-void pc_macro_reporter_process(map_session_data &sd, int32 reporter_account_id) {
+void pc_macro_reporter_process(map_session_data &sd, int32 reporter_account_id, e_macro_captcha_reason reason) {
 	if (!pc_macro_detector_session_ready(sd))
 		return;
 	const char *map_reject_reason = nullptr;
@@ -17287,6 +17305,7 @@ void pc_macro_reporter_process(map_session_data &sd, int32 reporter_account_id) 
 	if (++sd.macro_detect.generation == 0)
 		++sd.macro_detect.generation;
 	sd.macro_detect.reporter_aid = reporter_account_id;
+	sd.macro_detect.reason = reason;
 	sd.macro_detect.retry = battle_config.macro_detection_retry;
 	sd.macro_detect.phase = s_macro_detect::e_macro_detect_phase::PENDING;
 	sd.macro_detect.trigger_tick = gettick();
@@ -17337,7 +17356,11 @@ static TIMER_FUNC(pc_macro_detector_pending_timer) {
 	if (reporter_aid == 0)
 		reporter_aid = -1;
 
-	pc_macro_reporter_process(*sd, reporter_aid);
+	const int64 stored_reason = pc_readglobalreg(sd, add_str(need_macro_detect_reason_var));
+	const e_macro_captcha_reason reason = stored_reason == MACRO_CAPTCHA_REASON_GM ? MACRO_CAPTCHA_REASON_GM :
+		stored_reason == MACRO_CAPTCHA_REASON_JF_PATTERN ? MACRO_CAPTCHA_REASON_JF_PATTERN : MACRO_CAPTCHA_REASON_HUNT;
+
+	pc_macro_reporter_process(*sd, reporter_aid, reason);
 	return 0;
 }
 

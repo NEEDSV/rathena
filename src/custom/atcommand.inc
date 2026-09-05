@@ -394,6 +394,41 @@ enum e_need_pet_autofeed_message : int32 {
 	NEED_PET_AUTOFEED_MSG_USAGE,
 };
 
+// NEED: operator readout of the Jack Frost + Teleport pattern guard.
+// Session state only - it never changes the suspicion of the inspected character.
+ACMD_FUNC(jfcheck)
+{
+	nullpo_retr(-1, sd);
+
+	map_session_data* pl_sd = sd;
+
+	if( message != nullptr && *message != '\0' ){
+		char name[NAME_LENGTH];
+
+		memset(name, '\0', sizeof(name));
+
+		if( sscanf(message, "%23[^\n]", name) < 1 ){
+			clif_displaymessage(fd, "Usage: @jfcheck <char name>");
+			return -1;
+		}
+
+		pl_sd = map_nick2sd(name, true);
+
+		if( pl_sd == nullptr ){
+			clif_displaymessage(fd, msg_txt(sd, 3)); // Character not found.
+			return -1;
+		}
+
+		if( pc_get_group_level(sd) < pc_get_group_level(pl_sd) ){
+			clif_displaymessage(fd, msg_txt(sd, 81)); // Your GM level don't authorise you to do this action on this player.
+			return -1;
+		}
+	}
+
+	need_jf_pattern_status_report(*sd, *pl_sd);
+	return 0;
+}
+
 ACMD_FUNC(petautofeed)
 {
 	nullpo_retr(-1, sd);

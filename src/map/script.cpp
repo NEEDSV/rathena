@@ -60,6 +60,7 @@
 #include "mob.hpp"
 #include "need_equipment_build.hpp"
 #include "need_fishing.hpp"
+#include "need_jf_pattern.hpp"
 #include "need_storage_shop.hpp"
 #include "need_summer_reward_log.hpp"
 #include "npc.hpp"
@@ -28200,6 +28201,13 @@ BUILDIN_FUNC(autoloot) {
 		}
 	} else {
 		rate = (sd->state.autoloot > 0 ? 0 : 10000);
+	}
+
+	// Turning autoloot off stays allowed; enabling it is blocked while a pattern
+	// penalty runs, so a script cannot be used to work around the command guard.
+	if (rate > 0 && need_jf_pattern_autoloot_guard(*sd, sd->fd)) {
+		script_pushint(st, false);
+		return SCRIPT_CMD_FAILURE;
 	}
 
 	sd->state.autoloot = rate;

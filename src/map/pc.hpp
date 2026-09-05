@@ -21,6 +21,7 @@
 #include "itemdb.hpp" // MAX_ITEMGROUP
 #include "map.hpp" // RC_ALL
 #include "mob.hpp" //e_size
+#include "need_jf_pattern.hpp" // s_need_jf_pattern
 #include "pc_groups.hpp" // s_player_group
 #include "script.hpp" // struct script_reg, struct script_regstr
 #include "searchstore.hpp"  // struct s_search_store_info
@@ -173,6 +174,7 @@ struct s_macro_detect {
 	uint16 mapindex;
 	uint16 blocked_actions; ///< Action bits added by the macro detector
 	uint16 display_retry; ///< Diagnostic count only; it never forces image transmission
+	uint8 reason; ///< e_macro_captcha_reason of the running challenge
 	bool image_packet_sent;
 	bool ack_received;
 	bool answer_window_shown;
@@ -182,6 +184,14 @@ struct s_macro_detect {
 		IMAGE_SENT,
 		ACTIVE,
 	} phase;
+};
+
+/// Why a macro captcha was issued. Only the regular hunt based check keeps the
+/// captcha database bonus script; every other reason is reward free.
+enum e_macro_captcha_reason : uint8 {
+	MACRO_CAPTCHA_REASON_HUNT = 0,	///< Automatic hunting check, keeps the existing reward
+	MACRO_CAPTCHA_REASON_GM = 1,	///< Manual GM check
+	MACRO_CAPTCHA_REASON_JF_PATTERN = 2,	///< Jack Frost + Teleport pattern suspicion
 };
 
 struct s_need_macro_hunt {
@@ -589,6 +599,7 @@ public:
 		uint32 no_walk_delay : 1;
 	} special_state;
 	uint32 login_id1, login_id2;
+	uint64 needwiki_session_generation = 0; // Changes for every authenticated map-server session.
 	uint64 class_;	//This is the internal job ID used by the map server to simplify comparisons/queries/etc. [Skotlex]
 	int32 group_id;
 	std::shared_ptr<s_player_group> group;
@@ -1090,6 +1101,7 @@ public:
 
 	s_macro_detect macro_detect;
 	s_need_macro_hunt need_macro_hunt;
+	s_need_jf_pattern need_jf;
 
 	std::vector<uint32> party_booking_requests;
 
@@ -1962,7 +1974,7 @@ void pc_macro_detector_disconnect(map_session_data &sd);
 
 // Macro Reporter
 void pc_macro_reporter_area_select(map_session_data &sd, const int16 x, const int16 y, const int8 radius);
-void pc_macro_reporter_process(map_session_data &sd, int32 reporter_account_id = -1);
+void pc_macro_reporter_process(map_session_data &sd, int32 reporter_account_id = -1, e_macro_captcha_reason reason = MACRO_CAPTCHA_REASON_HUNT);
 void pc_need_macro_hunt_on_mob_kill(map_session_data &sd, const mob_data &md);
 void pc_need_macro_hunt_record_walk(map_session_data &sd);
 void pc_need_macro_hunt_record_teleport(map_session_data &sd);

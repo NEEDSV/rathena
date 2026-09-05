@@ -6,6 +6,7 @@
 #include "map/battle.hpp"
 #include "map/clif.hpp"
 #include "map/map.hpp"
+#include "map/need_jf_pattern.hpp"
 #include "map/pc.hpp"
 #include "map/unit.hpp"
 
@@ -29,8 +30,11 @@ void SkillTeleport::castendNoDamageId(block_list* src, block_list* target, uint1
 
 		if( sd->state.autocast || ( (sd->skillitem == getSkillId() || battle_config.skip_teleport_lv1_menu) && skill_lv == 1 ) || skill_lv == 3 )
 		{
-			if( skill_lv == 1 )
+			if( skill_lv == 1 ) {
+				// Covers Fly Wing, autocast and the skipped level 1 menu.
+				need_jf_pattern_record_teleport( *sd );
 				pc_randomwarp(sd,CLR_TELEPORT);
+			}
 			else
 				pc_setpos( sd, mapindex_name2id( sd->status.save_point.map ), sd->status.save_point.x, sd->status.save_point.y, CLR_TELEPORT );
 			return;

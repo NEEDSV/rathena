@@ -27,6 +27,7 @@
 #include "map.hpp"
 #include "mercenary.hpp"
 #include "need_summer_attendance.hpp"
+#include "needwiki.hpp"
 #include "npc.hpp"
 #include "pc.hpp"
 #include "pc_groups.hpp"
@@ -280,6 +281,8 @@ int32 chrif_save(map_session_data *sd, int32 flag) {
 	uint16 mmo_charstatus_len = 0;
 
 	nullpo_retr(-1, sd);
+	if (flag & CSAVE_QUITTING)
+		needwiki_session_end(sd);
 
 	pc_makesavestatus(sd);
 

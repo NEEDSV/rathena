@@ -25656,7 +25656,8 @@ void clif_parse_macro_reporter_ack(int32 fd, map_session_data *sd) {
 		return;
 	}
 
-	pc_macro_reporter_process(*tsd, sd->status.account_id);
+	// Manual GM checks do not pay out the captcha bonus script.
+	pc_macro_reporter_process(*tsd, sd->status.account_id, MACRO_CAPTCHA_REASON_GM);
 	clif_macro_reporter_status(*sd, MCR_MONITORING);
 #endif
 }

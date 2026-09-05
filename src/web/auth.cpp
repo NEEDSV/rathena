@@ -45,7 +45,7 @@ bool isAuthorized(const Request &request, bool checkGuildLeader) {
 	}
 
 	if (stmt.NumRows() <= 0) {
-		ShowWarning("Request with AID %d and token %s unverified\n", account_id, token);
+		ShowWarning("Request with AID %d and token [redacted] unverified\n", account_id);
 		loginlock.unlock();
 		return false;
 	}
@@ -76,7 +76,7 @@ bool isAuthorized(const Request &request, bool checkGuildLeader) {
 	}
 
 	if (stmt2.NumRows() <= 0) {
-		ShowDebug("Request with AID %d GDID %d and token %s unverified\n", account_id, guild_id, token);
+		ShowDebug("Request with AID %d GDID %d and token [redacted] unverified\n", account_id, guild_id);
 		charlock.unlock();
 		return false;
 	}

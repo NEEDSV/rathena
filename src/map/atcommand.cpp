@@ -57,6 +57,7 @@
 #include "mob.hpp"
 #include "need_autopot.hpp"
 #include "need_equipment_build.hpp"
+#include "need_jf_pattern.hpp"
 #include "need_summer_attendance.hpp"
 #include "needwiki.hpp"
 #include "npc.hpp"
@@ -7546,6 +7547,22 @@ ACMD_FUNC(autotrade) {
 }
 
 /*==========================================
+ * Binds a one-time Wiki code to this exact live client session.
+ *------------------------------------------*/
+ACMD_FUNC(wikicode) {
+	nullpo_retr(-1, sd);
+
+	char code[9] = {};
+	char extra[2] = {};
+	if (message == nullptr || sscanf(message, "%8s %1s", code, extra) != 1) {
+		clif_displaymessage(fd, "Usage: @wikicode <code>");
+		return -1;
+	}
+
+	return needwiki_bind_code(sd, code);
+}
+
+/*==========================================
  * @changegm by durf (changed by Lupus)
  * Changes Master of your Guild to a specified guild member
  *------------------------------------------*/
@@ -7669,6 +7686,10 @@ ACMD_FUNC(autoloot)
 {
 	int32 rate;
 	nullpo_retr(-1, sd);
+
+	if (need_jf_pattern_autoloot_guard(*sd, fd))
+		return -1;
+
 	// autoloot command without value
 	if(!message || !*message)
 	{
@@ -7704,6 +7725,9 @@ ACMD_FUNC(autolootitem)
 	int32 action = 3; // 1=add, 2=remove, 3=help+list (default), 4=reset
 
 	nullpo_retr(-1, sd);
+
+	if (need_jf_pattern_autoloot_guard(*sd, fd))
+		return -1;
 
 	if (message && *message) {
 		if (message[0] == '+') {
@@ -7818,6 +7842,9 @@ ACMD_FUNC(autoloottype)
 	int32 ITEM_MAX = 1533;
 
 	nullpo_retr(-1, sd);
+
+	if (need_jf_pattern_autoloot_guard(*sd, fd))
+		return -1;
 
 	if (message && *message) {
 		if (message[0] == '+') {
@@ -12953,8 +12980,8 @@ int32 atcommand_macrochecker_sub( block_list* bl, va_list ap ){
 		return 0;
 	}
 
-	// Start the macro checking on the player
-	pc_macro_reporter_process( *tsd, reporter_aid );
+	// Start the macro checking on the player. Manual GM checks do not pay out.
+	pc_macro_reporter_process( *tsd, reporter_aid, MACRO_CAPTCHA_REASON_GM );
 
 	return 1;
 }
@@ -13270,6 +13297,7 @@ void atcommand_basecommands(void) {
 		ACMD_DEF(showzeny),
 		ACMD_DEF(showdelay),
 		ACMD_DEF(autotrade),
+		ACMD_DEFR(wikicode, ATCMD_NOCONSOLE|ATCMD_NOSCRIPT|ATCMD_NOAUTOTRADE),
 		ACMD_DEF(changegm),
 		ACMD_DEF(changeleader),
 		ACMD_DEF(partyoption),

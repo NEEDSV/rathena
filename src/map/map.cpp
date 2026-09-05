@@ -48,6 +48,7 @@
 #include "navi.hpp"
 #include "need_autopot.hpp"
 #include "need_fishing.hpp"
+#include "need_jf_pattern.hpp"
 #include "need_storage_shop.hpp"
 #include "need_summer_attendance.hpp"
 #include "need_summer_fishing_reward.hpp"
@@ -2347,6 +2348,8 @@ int32 map_quit(map_session_data *sd) {
 	pc_clean_skilltree(sd);
 	pc_crimson_marker_clear(sd);
 	pc_macro_detector_disconnect(*sd);
+	// Persist the suspicion score before the save below carries the registry out.
+	need_jf_pattern_on_logout(*sd);
 	chrif_save(sd, CSAVE_QUIT|CSAVE_INVENTORY|CSAVE_CART);
 	unit_free_pc(sd);
 	return 0;
