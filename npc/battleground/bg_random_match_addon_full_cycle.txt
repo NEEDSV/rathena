@@ -1,5 +1,5 @@
 //============================================================
-// NEED 전장 랜덤 매칭 시스템 - 티에라/플라비우스/KVM 풀사이클 v12.1-hotfix-admin-priority-split-v2
+// NEED 전장 랜덤 매칭 시스템 - 티에라/플라비우스/KVM 풀사이클 v12.1-hotfix-admin-tierra-notice-delay
 // - 한 번의 매칭으로 티에라 -> 플라비우스 -> KVM 전체 사이클 진행
 // - 최초 티에라는 자동 입장, 이후 전장은 양 팀 파티장의 입장 준비로 진행
 // - 티에라/플라비우스 종료 후 파티 유지, KVM 종료 후에만 자동 해체
@@ -539,10 +539,6 @@ function	script	F_BG_RM_NoticeJobFamily	{
 	)
 		return 13;
 
-	// 소울링커
-	if (.@class == JOB_SOUL_LINKER)
-		return 14;
-
 	return 0;
 }
 
@@ -561,7 +557,6 @@ function	script	F_BG_RM_NoticeJobName$	{
 	case 11: return "쉐도우체이서";
 	case 12: return "아크비숍";
 	case 13: return "수라";
-	case 14: return "소울링커";
 	}
 	return "기타";
 }
@@ -578,7 +573,7 @@ function	script	F_BG_RM_AnnounceTierraTeamInfo	{
 		.@team_name$ = (.@team == 1) ? "기욤" : "크루아";
 		.@color$ = (.@team == 1) ? "0x66CCFF" : "0xFF7777";
 
-		cleararray .@job_count[0], 0, 15;
+		cleararray .@job_count[0], 0, 14;
 		.@other_count = 0;
 
 		// 직업 구성 집계
@@ -587,14 +582,14 @@ function	script	F_BG_RM_AnnounceTierraTeamInfo	{
 			.@class = readparam(Class,.@cid);
 			.@family = callfunc("F_BG_RM_NoticeJobFamily", .@class);
 
-			if (.@family > 0 && .@family <= 14)
+			if (.@family > 0 && .@family <= 13)
 				.@job_count[.@family]++;
 			else
 				.@other_count++;
 		}
 
 		.@composition$ = "";
-		for (.@family = 1; .@family <= 14; .@family++) {
+		for (.@family = 1; .@family <= 13; .@family++) {
 			if (.@job_count[.@family] <= 0)
 				continue;
 
@@ -1055,8 +1050,6 @@ function	script	F_BG_RM_Finish	{
 	$@BG_RM_MODE = 0;
 	$@BG_RM_END_TICK = 0;
 	$@BG_RM_KVM_PARTY_DESTROYED = 0;
-	$@BG_RM_STAGE_WAIT_TICK = 0;
-	$@BG_RM_REWARD_KEY = 0;
 
 	callfunc "F_BG_RM_ClearArrays";
 	callfunc "F_BG_RM_SetWaitingRooms", 1;
@@ -1077,7 +1070,6 @@ function	script	F_BG_RM_AdvanceCycle	{
 		$@BG_RM_CYCLE_STAGE = 2;
 		$@BG_RM_MODE = 2;
 		$@BG_RM_STATE = 4;
-		$@BG_RM_STAGE_WAIT_TICK = gettimetick(2);
 		mapannounce "bat_room", "[전장 랜덤 매칭] 티에라가 종료되었습니다. 파티를 유지하며 다음 전장은 플라비우스입니다.", bc_map, "0x99FF99";
 		mapannounce "bat_room", "[전장 랜덤 매칭] 기욤/크루아 파티장은 전장 관리인에서 입장 준비를 완료해 주세요.", bc_map, "0x99FF99";
 		return;
@@ -1087,7 +1079,6 @@ function	script	F_BG_RM_AdvanceCycle	{
 		$@BG_RM_CYCLE_STAGE = 3;
 		$@BG_RM_MODE = 3;
 		$@BG_RM_STATE = 4;
-		$@BG_RM_STAGE_WAIT_TICK = gettimetick(2);
 		mapannounce "bat_room", "[전장 랜덤 매칭] 플라비우스가 종료되었습니다. 파티를 유지하며 다음 전장은 KVM입니다.", bc_map, "0x99FF99";
 		mapannounce "bat_room", "[전장 랜덤 매칭] 기욤/크루아 파티장은 전장 관리인에서 입장 준비를 완료해 주세요.", bc_map, "0x99FF99";
 		return;
@@ -1159,8 +1150,6 @@ OnInit:
 	$@BG_RM_FINALIZE_WATCH_TOKEN = 0;
 	$@BG_RM_FORCED_PERFORMANCE_AID = 0;
 	$@BG_RM_FORCED_PERFORMANCE_CID = 0;
-	$@BG_RM_STAGE_WAIT_TICK = 0;
-	$@BG_RM_REWARD_KEY = 0;
 	callfunc "F_BG_RM_ClearArrays";
 	end;
 
@@ -1695,30 +1684,18 @@ OnFinalize:
 		+ " low_cap_C=" + .@low_cap_c;
 
 	//========================================================
-	// 우선 분리 규칙 v2
+	// 우선 분리 규칙
 	//
-	// 적용 쌍:
-	//  rule 0: 민스트럴(6) ↔ 원더러(7)
-	//  rule 1: 로열가드(2) ↔ 소서러(4)
-	//  rule 2: 아크비숍(12) ↔ 제네릭(9)
-	//  rule 3: 소울링커(14) ↔ 워록(3)
+	// 전체 참가자 기준으로 아래 직업군이 각각 정확히 1명씩 존재하면
+	// 두 캐릭터는 반드시 서로 다른 팀에 배치합니다.
 	//
-	// 핵심 원칙:
-	// 1) 각 직업군 자체의 인원이 2명 이상이면 먼저 양 팀에 최대한 균등 분배
-	//    - 2명 -> 1 / 1
-	//    - 3명 -> 2 / 1
-	//    - 4명 -> 2 / 2
-	// 2) 짝을 이루는 두 직업군이 모두 홀수라면
-	//    각 직업군의 "한 명 더 많은 팀"은 반드시 서로 반대로 배치
-	// 3) 175 미만은 실제 팀 배열에 즉시 넣지 않고 팀만 예약한 뒤
-	//    기존 정책대로 저레벨 마지막 단계에서 실제 배치
+	// rule 0: 민스트럴(6) ↔ 원더러(7)
+	// rule 1: 로열가드(2) ↔ 소서러(4)
+	// rule 2: 아크비숍(12) ↔ 제네릭(9)
 	//
-	// 예: 아크비숍 2 + 제네릭 1
-	//     -> 아크비숍 1/1 선분배
-	//     -> 제네릭 1명은 정원에 맞는 한쪽 팀
-	//
-	// 예: 아크비숍 3 + 제네릭 1
-	//     -> 아크비숍의 추가 1명과 제네릭 1명은 서로 반대 팀
+	// 175 미만 캐릭터가 포함된 경우에도 "마지막 배정" 원칙은 유지합니다.
+	// 이 단계에서는 저레벨 캐릭터의 최종 팀만 예약하고,
+	// 실제 팀 배열 추가는 저레벨 마지막 단계에서 처리합니다.
 	//========================================================
 	cleararray .@forced_team[0], 0, .@count;
 	.@forced_high_g = 0;
@@ -1726,7 +1703,7 @@ OnFinalize:
 	.@forced_low_g = 0;
 	.@forced_low_c = 0;
 
-	.@split_rule_count = 4;
+	.@split_rule_count = 3;
 
 	.@split_family_a[0] = 6;
 	.@split_family_b[0] = 7;
@@ -1737,201 +1714,103 @@ OnFinalize:
 	.@split_family_a[2] = 12;
 	.@split_family_b[2] = 9;
 
-	.@split_family_a[3] = 14;
-	.@split_family_b[3] = 3;
-
-	// 수라 홀수 + 제네릭 단독 배치 규칙 계산용
-	.@total_sura = 0;
-	.@total_genetic = 0;
-	.@single_genetic_index = -1;
-
-	for (.@i = 0; .@i < .@count; .@i++) {
-		.@family = callfunc("F_BG_RM_NoticeJobFamily", .@class_list[.@i]);
-
-		if (.@family == 13)
-			.@total_sura++;
-
-		if (.@family == 9) {
-			.@total_genetic++;
-			.@single_genetic_index = .@i;
-		}
-	}
-
 	for (.@rule = 0; .@rule < .@split_rule_count; .@rule++) {
 		.@family_a = .@split_family_a[.@rule];
 		.@family_b = .@split_family_b[.@rule];
 		.@count_a = 0;
 		.@count_b = 0;
+		.@index_a = -1;
+		.@index_b = -1;
 
-		// 해당 우선 분리 직업군의 전체 참가자 인덱스를 모읍니다.
 		for (.@i = 0; .@i < .@count; .@i++) {
 			.@family = callfunc("F_BG_RM_NoticeJobFamily", .@class_list[.@i]);
 
 			if (.@family == .@family_a) {
-				.@rule_a_index[.@count_a] = .@i;
+				.@index_a = .@i;
 				.@count_a++;
 			}
 			else if (.@family == .@family_b) {
-				.@rule_b_index[.@count_b] = .@i;
+				.@index_b = .@i;
 				.@count_b++;
 			}
 		}
 
-		if (.@count_a <= 0 && .@count_b <= 0)
+		if (.@count_a != 1 || .@count_b != 1)
 			continue;
 
-		// 같은 직업군 안에서 특정 캐릭터가 항상 같은 팀을 받지 않도록 셔플합니다.
-		for (.@i = .@count_a - 1; .@i > 0; .@i--) {
-			.@j = rand(.@i + 1);
-			.@tmp = .@rule_a_index[.@i];
-			.@rule_a_index[.@i] = .@rule_a_index[.@j];
-			.@rule_a_index[.@j] = .@tmp;
-		}
+		// -----------------------------------------------------
+		// 방향 0: A -> 기욤 / B -> 크루아
+		// 방향 1: A -> 크루아 / B -> 기욤
+		//
+		// 현재까지 다른 우선 분리 규칙이 예약한 슬롯까지 포함해
+		// 양쪽 방향이 실제 정원 안에서 가능한지 먼저 확인합니다.
+		// -----------------------------------------------------
+		.@a_low = .@is_low[.@index_a];
+		.@b_low = .@is_low[.@index_b];
 
-		for (.@i = .@count_b - 1; .@i > 0; .@i--) {
-			.@j = rand(.@i + 1);
-			.@tmp = .@rule_b_index[.@i];
-			.@rule_b_index[.@i] = .@rule_b_index[.@j];
-			.@rule_b_index[.@j] = .@tmp;
-		}
+		.@need_hg_0 = (!.@a_low) ? 1 : 0;
+		.@need_hc_0 = (!.@b_low) ? 1 : 0;
+		.@need_lg_0 = (.@a_low) ? 1 : 0;
+		.@need_lc_0 = (.@b_low) ? 1 : 0;
 
-		// A/B 각각 어느 팀부터 교차 배정할지 4가지 조합을 검사합니다.
-		// 두 직업군 모두 홀수면 추가 1명이 같은 팀에 몰리지 않도록
-		// 시작 팀이 반드시 서로 반대인 조합만 허용합니다.
-		.@selected = 0;
-		.@candidate_offset = rand(4);
+		.@need_hg_1 = (!.@b_low) ? 1 : 0;
+		.@need_hc_1 = (!.@a_low) ? 1 : 0;
+		.@need_lg_1 = (.@b_low) ? 1 : 0;
+		.@need_lc_1 = (.@a_low) ? 1 : 0;
 
-		for (.@try = 0; .@try < 4; .@try++) {
-			.@candidate = (.@candidate_offset + .@try) % 4;
-			.@start_a = .@candidate % 2;
-			.@start_b = (.@candidate / 2) % 2;
+		.@can_0 = (
+			.@forced_high_g + .@need_hg_0 <= .@high_cap_g &&
+			.@forced_high_c + .@need_hc_0 <= .@high_cap_c &&
+			.@forced_low_g + .@need_lg_0 <= .@low_cap_g &&
+			.@forced_low_c + .@need_lc_0 <= .@low_cap_c
+		);
 
-			if (
-				(.@count_a % 2) == 1 &&
-				(.@count_b % 2) == 1 &&
-				.@start_a == .@start_b
-			)
-				continue;
+		.@can_1 = (
+			.@forced_high_g + .@need_hg_1 <= .@high_cap_g &&
+			.@forced_high_c + .@need_hc_1 <= .@high_cap_c &&
+			.@forced_low_g + .@need_lg_1 <= .@low_cap_g &&
+			.@forced_low_c + .@need_lc_1 <= .@low_cap_c
+		);
 
-			.@need_hg = 0;
-			.@need_hc = 0;
-			.@need_lg = 0;
-			.@need_lc = 0;
-
-			for (.@i = 0; .@i < .@count_a; .@i++) {
-				.@index = .@rule_a_index[.@i];
-				.@team = (.@start_a + .@i) % 2;
-
-				if (.@is_low[.@index]) {
-					if (.@team == 0) .@need_lg++;
-					else .@need_lc++;
-				}
-				else {
-					if (.@team == 0) .@need_hg++;
-					else .@need_hc++;
-				}
-			}
-
-			for (.@i = 0; .@i < .@count_b; .@i++) {
-				.@index = .@rule_b_index[.@i];
-				.@team = (.@start_b + .@i) % 2;
-
-				if (.@is_low[.@index]) {
-					if (.@team == 0) .@need_lg++;
-					else .@need_lc++;
-				}
-				else {
-					if (.@team == 0) .@need_hg++;
-					else .@need_hc++;
-				}
-			}
-
-			if (
-				.@forced_high_g + .@need_hg > .@high_cap_g ||
-				.@forced_high_c + .@need_hc > .@high_cap_c ||
-				.@forced_low_g + .@need_lg > .@low_cap_g ||
-				.@forced_low_c + .@need_lc > .@low_cap_c
-			)
-				continue;
-
-			.@selected = 1;
-			break;
-		}
-
-		if (!.@selected) {
+		if (!.@can_0 && !.@can_1) {
 			callfunc "F_BG_RM_CancelRecruit",
 				"직업 우선 분리 규칙을 만족할 수 없는 팀 정원이라 매칭이 취소되었습니다. (규칙 " + .@rule + ")";
 			end;
 		}
 
-		// 선택된 방향대로 해당 직업군 전원을 교차 예약합니다.
-		for (.@i = 0; .@i < .@count_a; .@i++) {
-			.@index = .@rule_a_index[.@i];
-			.@team = (.@start_a + .@i) % 2;
-			.@forced_team[.@index] = .@team + 1;
-
-			if (.@is_low[.@index]) {
-				if (.@team == 0) .@forced_low_g++;
-				else .@forced_low_c++;
-			}
-			else {
-				if (.@team == 0) .@forced_high_g++;
-				else .@forced_high_c++;
-			}
-		}
-
-		for (.@i = 0; .@i < .@count_b; .@i++) {
-			.@index = .@rule_b_index[.@i];
-			.@team = (.@start_b + .@i) % 2;
-			.@forced_team[.@index] = .@team + 1;
-
-			if (.@is_low[.@index]) {
-				if (.@team == 0) .@forced_low_g++;
-				else .@forced_low_c++;
-			}
-			else {
-				if (.@team == 0) .@forced_high_g++;
-				else .@forced_high_c++;
-			}
-		}
-
-		debugmes "[BG RM] priority family split"
-			+ " rule=" + .@rule
-			+ " familyA=" + .@family_a + " countA=" + .@count_a
-			+ " familyB=" + .@family_b + " countB=" + .@count_b
-			+ " startA=" + .@start_a
-			+ " startB=" + .@start_b;
-	}
-
-	// -------------------------------------------------------
-	// 수라 홀수 + 제네릭 1명 특수 규칙
-	//
-	// 제네릭이 정확히 한 명이고 수라 전체 인원이 홀수라면,
-	// 수라의 "한 명 더 많은 팀"을 제네릭이 없는 반대 팀으로 지정합니다.
-	//
-	// 실제 수라 배정은 기존 동일직업 분산 단계에서 처리하며,
-	// 여기서는 어느 팀이 수라 추가 1명을 받을지만 저장합니다.
-	// -------------------------------------------------------
-	.@sura_extra_team = -1;
-
-	if (
-		.@total_genetic == 1 &&
-		(.@total_sura % 2) == 1 &&
-		.@single_genetic_index >= 0 &&
-		.@forced_team[.@single_genetic_index] > 0
-	) {
-		// forced_team: 1=G, 2=C
-		// sura_extra_team: 0=G, 1=C
-		if (.@forced_team[.@single_genetic_index] == 1)
-			.@sura_extra_team = 1;
+		if (.@can_0 && .@can_1)
+			.@orientation = rand(2);
+		else if (.@can_0)
+			.@orientation = 0;
 		else
-			.@sura_extra_team = 0;
+			.@orientation = 1;
 
-		debugmes "[BG RM] sura odd preference"
-			+ " genetic_cid=" + .@cid_list[.@single_genetic_index]
-			+ " genetic_team=" + ((.@forced_team[.@single_genetic_index] == 1) ? "G" : "C")
-			+ " sura_extra_team=" + ((.@sura_extra_team == 0) ? "G" : "C")
-			+ " sura_count=" + .@total_sura;
+		if (.@orientation == 0) {
+			.@forced_team[.@index_a] = 1;
+			.@forced_team[.@index_b] = 2;
+
+			.@forced_high_g += .@need_hg_0;
+			.@forced_high_c += .@need_hc_0;
+			.@forced_low_g += .@need_lg_0;
+			.@forced_low_c += .@need_lc_0;
+		}
+		else {
+			.@forced_team[.@index_a] = 2;
+			.@forced_team[.@index_b] = 1;
+
+			.@forced_high_g += .@need_hg_1;
+			.@forced_high_c += .@need_hc_1;
+			.@forced_low_g += .@need_lg_1;
+			.@forced_low_c += .@need_lc_1;
+		}
+
+		debugmes "[BG RM] hard split reserved"
+			+ " rule=" + .@rule
+			+ " familyA=" + .@family_a
+			+ " familyB=" + .@family_b
+			+ " A_cid=" + .@cid_list[.@index_a]
+			+ " B_cid=" + .@cid_list[.@index_b]
+			+ " A_team=" + ((.@forced_team[.@index_a] == 1) ? "G" : "C");
 	}
 
 	// 175레벨 우선 분리 대상은 지금 실제 팀에 넣습니다.
@@ -1956,7 +1835,7 @@ OnFinalize:
 		.@used[.@i] = 1;
 	}
 
-	debugmes "[BG RM] priority high applied"
+	debugmes "[BG RM] hard split high applied"
 		+ " G=" + .@count_g
 		+ " C=" + .@count_c
 		+ " forced_low_G=" + .@forced_low_g
@@ -1994,17 +1873,7 @@ OnFinalize:
 			continue;
 		}
 
-		.@target_family = callfunc("F_BG_RM_NoticeJobFamily", .@target_class);
-
-		// 수라가 홀수이고 제네릭이 한쪽에만 있을 때는
-		// 수라의 추가 1명이 제네릭 반대 팀으로 가도록 시작 팀을 고정합니다.
-		if (
-			.@target_family == 13 &&
-			(.@group_count % 2) == 1 &&
-			.@sura_extra_team >= 0
-		)
-			.@start_team = .@sura_extra_team;
-		else if (.@count_g < .@count_c)
+		if (.@count_g < .@count_c)
 			.@start_team = 0;
 		else if (.@count_c < .@count_g)
 			.@start_team = 1;
@@ -2304,16 +2173,6 @@ OnFinalize:
 				.@team = 1;
 			else if (.@remain_low_c <= 0)
 				.@team = 0;
-			// 수라 홀수 특수 규칙:
-			// 해당 저레벨 수라 그룹에서 양 팀 수라 수가 같아지는 순간에는
-			// 추가 1명을 제네릭 반대 팀으로 우선 배치합니다.
-			else if (
-				callfunc("F_BG_RM_NoticeJobFamily", .@target_class) == 13 &&
-				.@sura_extra_team >= 0 &&
-				.@class_g == .@class_c &&
-				((.@group_count - .@j) % 2) == 1
-			)
-				.@team = .@sura_extra_team;
 			// 동일 직업이 적은 팀을 가장 먼저 선택합니다.
 			else if (.@class_g < .@class_c)
 				.@team = 0;
@@ -2785,8 +2644,6 @@ OnFinalize:
 		+ " C_party=" + $@BG_RM_PARTY_C
 		+ " mode=" + $@BG_RM_MODE;
 
-	callfunc "F_BG_RM_BeginRewardStage", $@BG_RM_MODE;
-
 	if (!callfunc("F_BG_RM_StartBattle",$@BG_RM_MODE)) {
 		callfunc "F_BG_RM_AbortCreatedBattle", $@BG_RM_MODE;
 		callfunc "F_BG_RM_DestroyParties";
@@ -2878,7 +2735,6 @@ OnAdminForceStop:
 	stopnpctimer "티에라 진행#bat_a01";
 	stopnpctimer "티에라 정리 타이머#bat_a01";
 	stopnpctimer "티에라 카운트다운#bat_a01";
-	stopnpctimer "티에라 종료 타이머#bat_a01";
 	stopnpctimer "start#bat_b01";
 	stopnpctimer "#bat_b01_timer";
 	stopnpctimer "countdown#bat_b01";
@@ -2907,8 +2763,6 @@ OnAdminForceStop:
 	$@BG_RM_END_TICK = 0;
 	$@BG_RM_KVM_PARTY_DESTROYED = 0;
 	$@BG_RM_MISSING_CURSOR = 0;
-	$@BG_RM_STAGE_WAIT_TICK = 0;
-	$@BG_RM_REWARD_KEY = 0;
 
 	callfunc "F_BG_RM_ClearArrays";
 	callfunc "F_BG_RM_SetWaitingRooms", 1;
