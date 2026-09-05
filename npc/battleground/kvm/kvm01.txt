@@ -121,6 +121,26 @@ function	script	F_KvM_SetPartyTeam	{
 	return;
 }
 
+function	script	F_KvM_JoinPartyToBG	{
+	.@party_id = getarg(0);
+	.@bg_id = getarg(1);
+	.@team = getarg(2);
+
+	if (.@team == 1) {
+		.@x = 52;
+		.@y = 129;
+	}
+	else {
+		.@x = 147;
+		.@y = 55;
+	}
+
+	.@result = callfunc("F_BG_RM_JoinCyclePartyToBG",
+		.@party_id, .@bg_id, .@team, "bat_c01", .@x, .@y);
+
+	return .@result;
+}
+
 function	script	F_KvM_RollbackPartyBG	{
 	.@party_id = getarg(0);
 	.@bg_id = getarg(1);
@@ -259,7 +279,7 @@ OnGuillaumeDie:
 		mapannounce "bat_c01","크루아가 1킬을 획득했습니다. 현재 점수 - 기욤 " + .Guillaume_Kill + "킬, 크루아 " + .Croix_Kill + "킬",bc_map,"0x00ff00";
 
 		// 종료 직전 사망한 경우에도 부활시켜 보상 구역으로 이동합니다.
-		sleep2 5000;
+		sleep2 3000;
 		if ($@KvM01BG == 2 || $@KvM01BG == 3) {
 			Bat_Team = 1;
 			if (HP == 0)
@@ -295,7 +315,7 @@ OnCroixDie:
 		mapannounce "bat_c01","기욤이 1킬을 획득했습니다. 현재 점수 - 기욤 " + .Guillaume_Kill + "킬, 크루아 " + .Croix_Kill + "킬",bc_map,"0x00ff00";
 
 		// 종료 직전 사망한 경우에도 부활시켜 보상 구역으로 이동합니다.
-		sleep2 5000;
+		sleep2 3000;
 		if ($@KvM01BG == 2 || $@KvM01BG == 3) {
 			Bat_Team = 2;
 			if (HP == 0)
@@ -343,22 +363,50 @@ OnPartyReady:
 	$@KvM01BG = 1;
 	$@KvM01BG_Victory = 0;
 	callfunc "F_KvM_ClearReadyState";
-	$@KvM01BG_id1 = party2bg($BG_GUILLAUME_PARTY_ID,"bat_c01",52,129,"KvM01_BG::OnGuillaumeQuit","KvM01_BG::OnGuillaumeDie");
-	if (!$@KvM01BG_id1) {
-		mapannounce "bat_room", "[KVM] 기욤 BG 팀 생성에 실패했습니다.", bc_map, "0xFF6666";
-		donpcevent "KvM01_BG::OnPartyEntryFail";
-		end;
-	}
+	if ($@BG_RM_CYCLE_ACTIVE) {
+		// 랜덤 매칭은 최초 매칭 명단에 포함된 현재 온라인/대기존 인원만 직접 편입합니다.
+		// party2bg를 그대로 사용하면 중간에 추가된 신규 파티원이 함께 들어갈 수 있으므로 사용하지 않습니다.
+		$@KvM01BG_id1 = bg_create("bat_c01",52,129,"KvM01_BG::OnGuillaumeQuit","KvM01_BG::OnGuillaumeDie");
+		$@KvM01BG_id2 = bg_create("bat_c01",147,55,"KvM01_BG::OnCroixQuit","KvM01_BG::OnCroixDie");
 
-	$@KvM01BG_id2 = party2bg($BG_CROIX_PARTY_ID,"bat_c01",147,55,"KvM01_BG::OnCroixQuit","KvM01_BG::OnCroixDie");
-	if (!$@KvM01BG_id2) {
-		mapannounce "bat_room", "[KVM] 크루아 BG 팀 생성에 실패했습니다.", bc_map, "0xFF6666";
-		donpcevent "KvM01_BG::OnPartyEntryFail";
-		end;
-	}
+		if (!$@KvM01BG_id1 || !$@KvM01BG_id2) {
+			mapannounce "bat_room", "[KVM] 랜덤 매칭 BG 팀 생성에 실패했습니다.", bc_map, "0xFF6666";
+			donpcevent "KvM01_BG::OnPartyEntryFail";
+			end;
+		}
 
-	.@joined_g = bg_get_data($@KvM01BG_id1,0);
-	.@joined_c = bg_get_data($@KvM01BG_id2,0);
+		.@joined_g = callfunc("F_KvM_JoinPartyToBG", $BG_GUILLAUME_PARTY_ID, $@KvM01BG_id1, 1);
+		if (.@joined_g < 0) {
+			mapannounce "bat_room", "[KVM] 기욤 팀 가입 실패: " + $@BG_RM_Join_FailReason$ + (($@BG_RM_Join_FailName$ == "") ? "" : " (" + $@BG_RM_Join_FailName$ + ")"), bc_map, "0xFF6666";
+			donpcevent "KvM01_BG::OnPartyEntryFail";
+			end;
+		}
+
+		.@joined_c = callfunc("F_KvM_JoinPartyToBG", $BG_CROIX_PARTY_ID, $@KvM01BG_id2, 2);
+		if (.@joined_c < 0) {
+			mapannounce "bat_room", "[KVM] 크루아 팀 가입 실패: " + $@BG_RM_Join_FailReason$ + (($@BG_RM_Join_FailName$ == "") ? "" : " (" + $@BG_RM_Join_FailName$ + ")"), bc_map, "0xFF6666";
+			donpcevent "KvM01_BG::OnPartyEntryFail";
+			end;
+		}
+	}
+	else {
+		$@KvM01BG_id1 = party2bg($BG_GUILLAUME_PARTY_ID,"bat_c01",52,129,"KvM01_BG::OnGuillaumeQuit","KvM01_BG::OnGuillaumeDie");
+		if (!$@KvM01BG_id1) {
+			mapannounce "bat_room", "[KVM] 기욤 BG 팀 생성에 실패했습니다.", bc_map, "0xFF6666";
+			donpcevent "KvM01_BG::OnPartyEntryFail";
+			end;
+		}
+
+		$@KvM01BG_id2 = party2bg($BG_CROIX_PARTY_ID,"bat_c01",147,55,"KvM01_BG::OnCroixQuit","KvM01_BG::OnCroixDie");
+		if (!$@KvM01BG_id2) {
+			mapannounce "bat_room", "[KVM] 크루아 BG 팀 생성에 실패했습니다.", bc_map, "0xFF6666";
+			donpcevent "KvM01_BG::OnPartyEntryFail";
+			end;
+		}
+
+		.@joined_g = bg_get_data($@KvM01BG_id1,0);
+		.@joined_c = bg_get_data($@KvM01BG_id2,0);
+	}
 	if (.@joined_g != $BG_Guillaume_Count || .@joined_c != $BG_Croix_Count) {
 		mapannounce "bat_room", "[KVM] BG 가입 인원 검증에 실패하여 자동 입장을 취소했습니다.", bc_map, "0xFF6666";
 		donpcevent "KvM01_BG::OnPartyEntryFail";
@@ -368,6 +416,8 @@ OnPartyReady:
 	callfunc "F_KvM_SetPartyTeam", $BG_GUILLAUME_PARTY_ID, $@KvM01BG_id1, 1;
 	callfunc "F_KvM_SetPartyTeam", $BG_CROIX_PARTY_ID, $@KvM01BG_id2, 2;
 	$@KvMReady_Starting = 0;
+	if ($@BG_RM_CYCLE_ACTIVE)
+		callfunc "F_BG_RM_BeginRewardStage", 3;
 
 	// waitingroom2bg와 동일하게 편입 완료 후 점수를 초기화하고 팀 단위로 이동합니다.
 	bg_updatescore "bat_c01",0,0;
@@ -479,7 +529,15 @@ OnTimer30000:
 	.Guillaume_Count = bg_get_data($@KvM01BG_id1, 0);
 	.Croix_Count = bg_get_data($@KvM01BG_id2, 0);
 
-	if (.Guillaume_Count < $BG_Guillaume_Count || .Croix_Count < $BG_Croix_Count) {
+	if ($@BG_RM_CYCLE_ACTIVE) {
+		if (.Guillaume_Count < 1 || .Croix_Count < 1) {
+			donpcevent "KvM01_BG::OnCancel";
+			end;
+		}
+		$BG_Guillaume_Count = .Guillaume_Count;
+		$BG_Croix_Count = .Croix_Count;
+	}
+	else if (.Guillaume_Count < $BG_Guillaume_Count || .Croix_Count < $BG_Croix_Count) {
 		donpcevent "KvM01_BG::OnCancel";
 		end;
 	}
@@ -571,9 +629,11 @@ OnStop:
 
 	bg_warp $@KvM01BG_id1,"bat_c01",53,128;
 	bg_warp $@KvM01BG_id2,"bat_c01",146,55;
-	callfunc "F_BG_ClearMapDebuff", "bat_c01";
 
+	// 종료 타이머를 먼저 시작합니다.
+	// 디버프 정리 쪽에서 문제가 생겨도 60초 뒤 강제 종료는 반드시 진행됩니다.
 	donpcevent "KvM01_BG_Out::OnBegin";
+	callfunc "F_BG_ClearMapDebuff", "bat_c01";
 	end;
 }
 
@@ -588,6 +648,7 @@ OnRoomNotice:
 	end;
 
 OnBegin:
+	stopnpctimer;
 	initnpctimer;
 	end;
 
@@ -596,13 +657,20 @@ OnTimer1000:
 	end;
 
 OnTimer3000:
-	mapannounce "bat_c01","담당관은 60초 동안만 보상을 지급합니다.",bc_map,"0x00ff00";
-	mapannounce "bat_c01","시간이 지나면 전장 대기실로 이동됩니다.",bc_map,"0x00ff00";
+	mapannounce "bat_c01","담당관은 60초 동안 보상을 지급합니다.",bc_map,"0x00ff00";
+	if ($@BG_RM_CYCLE_ACTIVE)
+		mapannounce "bat_c01","미수령 상태로 60초가 지나면 기존 보상이 자동 지급된 뒤 대기실로 이동됩니다.",bc_map,"0x00ff00";
+	else
+		mapannounce "bat_c01","시간이 지나면 전장 대기실로 이동됩니다.",bc_map,"0x00ff00";
 	end;
 
 OnTimer5000:
-	mapannounce "bat_c01","담당관에게 말을 걸지 않으면 보상을 받을 수 없습니다.",bc_map,"0x00ff00";
-	mapannounce "bat_c01","보상을 잊지 말고 수령해주세요.",bc_map,"0x00ff00";
+	if ($@BG_RM_CYCLE_ACTIVE)
+		mapannounce "bat_c01","직접 수령하거나 자동 지급까지 기다릴 수 있습니다. 중복 지급은 되지 않습니다.",bc_map,"0x00ff00";
+	else {
+		mapannounce "bat_c01","담당관에게 말을 걸지 않으면 보상을 받을 수 없습니다.",bc_map,"0x00ff00";
+		mapannounce "bat_c01","보상을 잊지 말고 수령해주세요.",bc_map,"0x00ff00";
+	}
 	end;
 
 OnTimer55000:
@@ -612,14 +680,20 @@ OnTimer55000:
 OnTimer60000:
 	stopnpctimer;
 
+	if ($@BG_RM_CYCLE_ACTIVE)
+		callfunc "F_KvM_AutoRewardRandom";
+
+	// 핵심 상태값을 다른 정리 처리보다 먼저 0으로 확정합니다.
+	// 이후 부가 정리에서 문제가 발생해도 랜덤 매칭 감시는 종료를 감지할 수 있습니다.
+	$@KvM01BG = 0;
+	$@KvM01BG_Victory = 0;
+
 	mapwarp "bat_c01","bat_room",154,150;
 
 	set getvariableofnpc(.Croix_Count,"KvM01_BG"), 0;
 	set getvariableofnpc(.Guillaume_Count,"KvM01_BG"), 0;
 	set getvariableofnpc(.Croix_Kill,"KvM01_BG"), 0;
 	set getvariableofnpc(.Guillaume_Kill,"KvM01_BG"), 0;
-
-	$@KvM01BG_Victory = 0;
 
 	if ($@KvM01BG_id1) {
 		bg_destroy $@KvM01BG_id1;
@@ -634,8 +708,6 @@ OnTimer60000:
 	disablenpc "KVM 담당관#KVM01A";
 	disablenpc "KVM 담당관#KVM01B";
 
-	$@KvM01BG = 0;
-	
 	callfunc "F_BG_ClearAllRegisterAfterKVM";
 
 	donpcevent "KVM 대기실 갱신#bat_c01::OnRefresh";
@@ -648,53 +720,160 @@ OnCroixJoin:
 }
 
 //============================================================
+// KVM 실제 지급 공통 함수
+//
+// 기존 담당관의 지급량/이벤트 배수/전장 포인트 로직을 그대로 이동하여
+// 수동 수령과 랜덤 매칭 자동 수령이 동일한 함수를 사용합니다.
+//============================================================
+function	script	F_KvM_GrantReward	{
+	.@victory = getarg(0);
+	.@team = getarg(1);
+	.@char_id = getcharid(0);
+	.@bonusmount = ($BG_User_Count - 5) * 2;
+	.@partyleaderbonus = 0;
+
+	// 랜덤 매칭의 자동 파티장은 직접 모집한 파티장이 아니므로 기존처럼 추가 보상 제외.
+	if (
+		!$@BG_RM_CYCLE_ACTIVE &&
+		($BG_CROIX_LEADER_CID == .@char_id || $BG_GUILLAUME_LEADER_CID == .@char_id)
+	)
+		.@partyleaderbonus = 3;
+
+	if (.@victory == .@team || .@victory == 3) {
+		if ($NEED_EVENT_BG_BADGE_ON)
+			getitem 7773,6 + .@partyleaderbonus;
+		else
+			getitem 7773,3 + .@partyleaderbonus;
+
+		.@gold_amount = 20 + .@bonusmount;
+	}
+	else {
+		if ($NEED_EVENT_BG_BADGE_ON)
+			getitem 7773,4 + .@partyleaderbonus;
+		else
+			getitem 7773,2 + .@partyleaderbonus;
+
+		.@gold_amount = 15 + .@bonusmount;
+	}
+
+	.@gold_amount = callfunc("F_NEED_GoldEvent_BGAmount", .@gold_amount);
+	getitem 399990, .@gold_amount;
+
+	set #BATTLEGROUND_POINT, #BATTLEGROUND_POINT + 3;
+
+	if (
+		!$@BG_RM_CYCLE_ACTIVE &&
+		($BG_CROIX_LEADER_CID == .@char_id || $BG_GUILLAUME_LEADER_CID == .@char_id)
+	)
+		set #BATTLEGROUND_POINT, #BATTLEGROUND_POINT + 5;
+
+	return;
+}
+
+function	script	F_KvM_AutoRewardRandom	{
+	.@caller_aid = getattachedrid();
+	.@victory = $@KvM01BG_Victory;
+	.@rewarded = 0;
+
+	if (!$@BG_RM_CYCLE_ACTIVE || !.@victory)
+		return 0;
+
+	for (.@team = 1; .@team <= 2; .@team++) {
+		.@count = (.@team == 1) ? $@BG_RM_G_COUNT : $@BG_RM_C_COUNT;
+
+		for (.@i = 0; .@i < .@count; .@i++) {
+			.@aid = (.@team == 1) ? $@BG_RM_G_AID[.@i] : $@BG_RM_C_AID[.@i];
+			.@cid = (.@team == 1) ? $@BG_RM_G_CID[.@i] : $@BG_RM_C_CID[.@i];
+			.@name$ = (.@team == 1) ? $@BG_RM_G_NAME$[.@i] : $@BG_RM_C_NAME$[.@i];
+
+			if (!isloggedin(.@aid,.@cid))
+				continue;
+			if (getmapxy(.@map$,.@x,.@y,BL_PC,.@name$) != 0 || .@map$ != "bat_c01")
+				continue;
+			if (!attachrid(.@aid) || getcharid(0) != .@cid) {
+				if (.@caller_aid)
+					attachrid .@caller_aid;
+				else
+					detachrid;
+				continue;
+			}
+
+			if (!callfunc("F_BG_RM_TryClaimReward",3)) {
+				detachrid;
+				continue;
+			}
+
+			callfunc "F_KvM_GrantReward", .@victory, .@team;
+
+			if (getcharid(4))
+				bg_leave;
+			Bat_Team = 0;
+			dispbottom "[전장] KVM 보상 수령 제한시간이 지나 기존 보상이 자동 지급되었습니다.";
+			warp "bat_room",154,150;
+			.@rewarded++;
+			detachrid;
+		}
+	}
+
+	if (.@caller_aid)
+		attachrid .@caller_aid;
+	else
+		detachrid;
+
+	return .@rewarded;
+}
+
+
+//============================================================
 // KVM 보상 담당관
 //============================================================
 bat_c01,51,130,5	script	KVM 담당관#KVM01A	419,{
 	.@char_id = getcharid(0);
 	.@bonusmount = ($BG_User_Count - 5) * 2;
-	// 랜덤 매칭의 자동 파티장은 직접 모집한 파티장이 아니므로 추가 보상에서 제외합니다.
+	.@partyleaderbonus = 0;
 	if (!$@BG_RM_CYCLE_ACTIVE && ($BG_CROIX_LEADER_CID == .@char_id || $BG_GUILLAUME_LEADER_CID == .@char_id))
 		.@partyleaderbonus = 3;
-				
+
 	if ($@KvM01BG_Victory) {
 		mes "[KVM 담당관]";
 
 		if ($@KvM01BG_Victory == Bat_Team) {
 			mes "멋진 경기였습니다.";
 			mes "KVM의 영광이 함께하길 바랍니다.";
+			mes "승리 보상으로 전투휘장 3개를 획득했습니다.";
+			if (.@partyleaderbonus > 0)
+				mes "파티장 보너스로 3개를 추가 획득했습니다.";
 			close2;
-			.@badge_amount = callfunc("F_NEED_BG_KVM_BadgeAmount", 3);
-			getitem 7773, .@badge_amount + .@partyleaderbonus;
-			.@gold_amount = 20 + .@bonusmount;
-			.@gold_amount = callfunc("F_NEED_GoldEvent_BGAmount", .@gold_amount);
-			getitem 399990, .@gold_amount;
 		}
 		else if ($@KvM01BG_Victory == 3) {
 			mes "이번 경기는 무승부로 종료되었습니다.";
+			mes "참여 보상으로 전투휘장 3개를 획득했습니다.";
+			if (.@partyleaderbonus > 0)
+				mes "파티장 보너스로 3개를 추가 획득했습니다.";
 			close2;
-			.@badge_amount = callfunc("F_NEED_BG_KVM_BadgeAmount", 3);
-			getitem 7773, .@badge_amount + .@partyleaderbonus;
-			.@gold_amount = 20 + .@bonusmount;
-			.@gold_amount = callfunc("F_NEED_GoldEvent_BGAmount", .@gold_amount);
-			getitem 399990, .@gold_amount;
 		}
 		else {
 			mes "아쉽지만 다음 전투에서는 더 좋은 결과가 있기를 바랍니다.";
+			mes "패배 보상으로 전투휘장 2개를 획득했습니다.";
+			if (.@partyleaderbonus > 0)
+				mes "파티장 보너스로 3개를 추가 획득했습니다.";
 			close2;
-			.@badge_amount = callfunc("F_NEED_BG_KVM_BadgeAmount", 2);
-			getitem 7773, .@badge_amount + .@partyleaderbonus;
-			.@gold_amount = 15 + .@bonusmount;
-			.@gold_amount = callfunc("F_NEED_GoldEvent_BGAmount", .@gold_amount);
-			getitem 399990, .@gold_amount;
 		}
+
+		if ($@BG_RM_CYCLE_ACTIVE && !callfunc("F_BG_RM_TryClaimReward",3)) {
+			if (getcharid(4))
+				bg_leave;
+			Bat_Team = 0;
+			warp "bat_room",154,150;
+			end;
+		}
+
+		callfunc "F_KvM_GrantReward", $@KvM01BG_Victory, Bat_Team;
 
 		bg_leave;
 		Bat_Team = 0;
-		set #BATTLEGROUND_POINT, #BATTLEGROUND_POINT + 3;
-		if (!$@BG_RM_CYCLE_ACTIVE && ($BG_CROIX_LEADER_CID == .@char_id || $BG_GUILLAUME_LEADER_CID == .@char_id))
-			set #BATTLEGROUND_POINT, #BATTLEGROUND_POINT + 5;
 		warp "bat_room",154,150;
+
 		// 수동 파티는 기존처럼 파티장이 해체합니다.
 		// 랜덤 매칭 파티는 KVM 전체 정리 완료 후 애드온에서 양 팀을 함께 해체합니다.
 		if (!$@BG_RM_CYCLE_ACTIVE && getcharid(1)) {

@@ -328,14 +328,28 @@ OnPartyReady:
 		end;
 	}
 
-	.@joined_g = callfunc("F_Tierra_JoinPartyToBG", $BG_GUILLAUME_PARTY_ID, $@TierraBG1_id1, 1, "bat_a01", 50, 374);
+	if ($@BG_RM_CYCLE_ACTIVE) {
+		.@joined_g = callfunc("F_BG_RM_JoinCyclePartyToBG", $BG_GUILLAUME_PARTY_ID, $@TierraBG1_id1, 1, "bat_a01", 50, 374);
+		$@TierraJoin_FailName$ = $@BG_RM_Join_FailName$;
+		$@TierraJoin_FailReason$ = $@BG_RM_Join_FailReason$;
+	}
+	else
+		.@joined_g = callfunc("F_Tierra_JoinPartyToBG", $BG_GUILLAUME_PARTY_ID, $@TierraBG1_id1, 1, "bat_a01", 50, 374);
+
 	if (.@joined_g != $BG_Guillaume_Count) {
 		mapannounce "bat_room", "[티에라 협곡] 기욤 팀 자동 입장 실패: " + $@TierraJoin_FailReason$ + (($@TierraJoin_FailName$ == "") ? "" : " (" + $@TierraJoin_FailName$ + ")"), bc_map, "0xFF6666";
 		donpcevent "티에라 진행#bat_a01::OnPartyEntryFail";
 		end;
 	}
 
-	.@joined_c = callfunc("F_Tierra_JoinPartyToBG", $BG_CROIX_PARTY_ID, $@TierraBG1_id2, 2, "bat_a01", 42, 16);
+	if ($@BG_RM_CYCLE_ACTIVE) {
+		.@joined_c = callfunc("F_BG_RM_JoinCyclePartyToBG", $BG_CROIX_PARTY_ID, $@TierraBG1_id2, 2, "bat_a01", 42, 16);
+		$@TierraJoin_FailName$ = $@BG_RM_Join_FailName$;
+		$@TierraJoin_FailReason$ = $@BG_RM_Join_FailReason$;
+	}
+	else
+		.@joined_c = callfunc("F_Tierra_JoinPartyToBG", $BG_CROIX_PARTY_ID, $@TierraBG1_id2, 2, "bat_a01", 42, 16);
+
 	if (.@joined_c != $BG_Croix_Count) {
 		mapannounce "bat_room", "[티에라 협곡] 크루아 팀 자동 입장 실패: " + $@TierraJoin_FailReason$ + (($@TierraJoin_FailName$ == "") ? "" : " (" + $@TierraJoin_FailName$ + ")"), bc_map, "0xFF6666";
 		donpcevent "티에라 진행#bat_a01::OnPartyEntryFail";
@@ -412,7 +426,16 @@ OnTimer1000:
 	.@EnteredGuillaume = bg_get_data($@TierraBG1_id1,0);
 	.@EnteredCroix = bg_get_data($@TierraBG1_id2,0);
 
-	if (.@EnteredGuillaume < $BG_Guillaume_Count || .@EnteredCroix < $BG_Croix_Count) {
+	if ($@BG_RM_CYCLE_ACTIVE) {
+		if (.@EnteredGuillaume < 1 || .@EnteredCroix < 1) {
+			mapannounce "bat_room","[티에라 협곡] 한 진영의 참가자가 모두 이탈하여 전장을 시작할 수 없습니다.",bc_map,"0xFF6666";
+			donpcevent "티에라 진행#bat_a01::OnCancel";
+			end;
+		}
+		$BG_Guillaume_Count = .@EnteredGuillaume;
+		$BG_Croix_Count = .@EnteredCroix;
+	}
+	else if (.@EnteredGuillaume < $BG_Guillaume_Count || .@EnteredCroix < $BG_Croix_Count) {
 		mapannounce "bat_room","[티에라 협곡] 입장 인원이 부족합니다. 기욤 " + .@EnteredGuillaume + "/" + $BG_Guillaume_Count + "명, 크루아 " + .@EnteredCroix + "/" + $BG_Croix_Count + "명",bc_map,"0xFF6666";
 		donpcevent "티에라 진행#bat_a01::OnCancel";
 		end;
@@ -444,7 +467,15 @@ OnTimer45000:
 	.@GuillaumeCount = bg_get_data($@TierraBG1_id1,0);
 	.@CroixCount = bg_get_data($@TierraBG1_id2,0);
 
-	if (.@GuillaumeCount < $BG_Guillaume_Count || .@CroixCount < $BG_Croix_Count) {
+	if ($@BG_RM_CYCLE_ACTIVE) {
+		if (.@GuillaumeCount < 1 || .@CroixCount < 1) {
+			donpcevent "티에라 진행#bat_a01::OnCancel";
+			end;
+		}
+		$BG_Guillaume_Count = .@GuillaumeCount;
+		$BG_Croix_Count = .@CroixCount;
+	}
+	else if (.@GuillaumeCount < $BG_Guillaume_Count || .@CroixCount < $BG_Croix_Count) {
 		donpcevent "티에라 진행#bat_a01::OnCancel";
 		end;
 	}
@@ -483,6 +514,9 @@ OnMyMobDead:
 		enablenpc "기욤 보상관#a01_a";
 		enablenpc "크루아 보상관#a01_b";
 
+		if ($@BG_RM_CYCLE_ACTIVE)
+			donpcevent "티에라 종료 타이머#bat_a01::OnStart";
+
 		announce "크루아 빈트나르 스완더리: 기욤의 식량 창고를 파괴했습니다! 우리가 승리했습니다!",bc_map,"0xFFCE00";
 
 		bg_warp $@TierraBG1_id1,"bat_a01",50,374;
@@ -510,6 +544,9 @@ OnMyMobDead:
 
 		enablenpc "기욤 보상관#a01_a";
 		enablenpc "크루아 보상관#a01_b";
+
+		if ($@BG_RM_CYCLE_ACTIVE)
+			donpcevent "티에라 종료 타이머#bat_a01::OnStart";
 
 		announce "기욤 빈테나르 액슬 로즈: 크루아의 식량 창고를 파괴했다! 우리가 승리했다!",bc_map,"0xFFCE00";
 
@@ -954,6 +991,14 @@ bat_a01,348,74,3	script	크루아 진영 깃발#9	974,{ end; }
 //============================================================
 
 bat_a01,53,377,3	script	기욤 보상관#a01_a	419,{
+	if ($@BG_RM_CYCLE_ACTIVE && !callfunc("F_BG_RM_TryClaimReward",1)) {
+		if (getcharid(4))
+			bg_leave;
+		Bat_Team = 0;
+		warp "bat_room",154,150;
+		end;
+	}
+
 	if (getcharid(4) == $@TierraBG1_id1) {
 		if ($@TierraBG1_Victory == 1)
 			callfunc "F_BG_Badge",1,"Guillaume","Tierra";
@@ -968,6 +1013,7 @@ bat_a01,53,377,3	script	기욤 보상관#a01_a	419,{
 	}
 
 	bg_leave;
+	Bat_Team = 0;
 	warp "bat_room",154,150;
 	end;
 
@@ -977,6 +1023,14 @@ OnInit:
 }
 
 bat_a01,45,19,3	script	크루아 보상관#a01_b	415,{
+	if ($@BG_RM_CYCLE_ACTIVE && !callfunc("F_BG_RM_TryClaimReward",1)) {
+		if (getcharid(4))
+			bg_leave;
+		Bat_Team = 0;
+		warp "bat_room",154,150;
+		end;
+	}
+
 	if (getcharid(4) == $@TierraBG1_id2) {
 		if ($@TierraBG1_Victory == 2)
 			callfunc "F_BG_Badge",1,"Croix","Tierra";
@@ -991,11 +1045,72 @@ bat_a01,45,19,3	script	크루아 보상관#a01_b	415,{
 	}
 
 	bg_leave;
+	Bat_Team = 0;
 	warp "bat_room",154,150;
 	end;
 
 OnInit:
 	disablenpc "크루아 보상관#a01_b";
+	end;
+}
+
+
+//============================================================
+// 랜덤 매칭 티에라 승패 확정 후 자동 보상/퇴장
+//============================================================
+-	script	티에라 종료 타이머#bat_a01	-1,{
+	end;
+
+OnInit:
+	stopnpctimer;
+	end;
+
+OnStart:
+	stopnpctimer;
+	initnpctimer;
+	end;
+
+OnStop:
+	stopnpctimer;
+	end;
+
+OnTimer55000:
+	if ($@BG_RM_CYCLE_ACTIVE && $@TierraBG1 && $@TierraBG1_Victory)
+		mapannounce "bat_a01","5초 후 미수령 보상이 자동 지급되고 전장 대기실로 이동됩니다.",bc_map,"0xFFCC66";
+	end;
+
+OnTimer60000:
+	stopnpctimer;
+
+	if (
+		!$@BG_RM_CYCLE_ACTIVE ||
+		!$@TierraBG1 ||
+		!$@TierraBG1_Victory
+	)
+		end;
+
+	.@result = $@TierraBG1_Victory;
+	callfunc "F_BG_RM_AutoRewardBadge", 1, "bat_a01", .@result, "Tierra";
+
+	// 보상 처리 후 핵심 상태를 먼저 내립니다.
+	$@TierraBG1 = 0;
+	$@TierraBG1_Victory = 0;
+
+	mapwarp "bat_a01","bat_room",154,150;
+	disablenpc "기욤 보상관#a01_a";
+	disablenpc "크루아 보상관#a01_b";
+	donpcevent "티에라 카운트다운#bat_a01::OnStop";
+
+	if ($@TierraBG1_id1) {
+		bg_destroy $@TierraBG1_id1;
+		$@TierraBG1_id1 = 0;
+	}
+	if ($@TierraBG1_id2) {
+		bg_destroy $@TierraBG1_id2;
+		$@TierraBG1_id2 = 0;
+	}
+
+	donpcevent "티에라 대기실 갱신#bat_a01::OnRefresh";
 	end;
 }
 
