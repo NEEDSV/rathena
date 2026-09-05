@@ -41,6 +41,8 @@ L_Convert:
 	.@convertable = 0;
 	.@equipped = 0;
 	.@rental = 0;
+	.@favorite = 0;
+	.@refined = 0;
 
 	getinventorylist;
 
@@ -62,6 +64,18 @@ L_Convert:
 			continue;
 		}
 
+		// 개인탭(즐겨찾기/잠금)에 보관한 쉐도우 장비 제외
+		if (@inventorylist_favorite[.@i] != 0) {
+			.@favorite += @inventorylist_amount[.@i];
+			continue;
+		}
+
+		// 제련된 쉐도우 장비 제외 (+1 이상)
+		if (@inventorylist_refine[.@i] > 0) {
+			.@refined += @inventorylist_amount[.@i];
+			continue;
+		}
+
 		.@convertable += @inventorylist_amount[.@i];
 	}
 
@@ -69,8 +83,9 @@ L_Convert:
 	mes "장착하지 않은 쉐도우 장비를";
 	mes "일괄적으로 변환합니다.";
 	mes " ";
-	mes "^FF0000제련도, 카드, 랜덤 옵션 및";
-	mes "귀속 정보는 보존되지 않습니다.^000000";
+	mes "^FF0000카드, 랜덤 옵션 및 귀속 정보는";
+	mes "보존되지 않습니다.^000000";
+	mes "^00AA00개인탭(잠금) 및 +1 이상 제련 장비는 제외됩니다.^000000";
 	mes " ";
 	mes "변환 가능: ^0055FF" + .@convertable + "개^000000";
 	mes "획득 예정: ^0055FF" + getitemname(.CoinItemId) + " " + .@convertable + "개^000000";
@@ -78,6 +93,8 @@ L_Convert:
 	mes "제외된 장비";
 	mes "장착 중: " + .@equipped + "개";
 	mes "기간제: " + .@rental + "개";
+	mes "개인탭(잠금): " + .@favorite + "개";
+	mes "제련 장비(+1 이상): " + .@refined + "개";
 
 	if (.@convertable <= 0) {
 		mes " ";
@@ -94,7 +111,7 @@ L_Convert:
 	mes "^0055FF" + getitemname(.CoinItemId) + " " + .@preview_count + "개^000000를 획득합니다.";
 	mes " ";
 	mes "^FF0000변환된 쉐도우 장비는 복구할 수 없습니다.^000000";
-	mes "필요한 장비는 착용하거나";
+	mes "필요한 장비는 개인탭에 잠그거나";
 	mes "창고에 보관한 뒤 진행해 주세요.";
 
 	if (select("일괄 변환한다:취소한다") != 1)
@@ -117,6 +134,12 @@ L_Convert:
 			continue;
 
 		if (@inventorylist_expire[.@i] != 0)
+			continue;
+
+		if (@inventorylist_favorite[.@i] != 0)
+			continue;
+
+		if (@inventorylist_refine[.@i] > 0)
 			continue;
 
 		.@current_count += @inventorylist_amount[.@i];
@@ -153,6 +176,12 @@ L_Convert:
 			continue;
 
 		if (@inventorylist_expire[.@i] != 0)
+			continue;
+
+		if (@inventorylist_favorite[.@i] != 0)
+			continue;
+
+		if (@inventorylist_refine[.@i] > 0)
 			continue;
 
 		.@amount = @inventorylist_amount[.@i];
@@ -204,6 +233,10 @@ L_Guide:
 	mes " ";
 	mes "기간제 쉐도우 장비는";
 	mes "영구 재화로 변환될 수 있어 제외됩니다.";
+	mes " ";
+	mes "개인탭(잠금) 장비와";
+	mes "+1 이상 제련된 쉐도우 장비도";
+	mes "실수 방지를 위해 변환 대상에서 제외됩니다.";
 	close;
 
 
