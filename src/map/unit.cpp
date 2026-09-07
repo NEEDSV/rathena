@@ -3689,7 +3689,12 @@ int32 unit_remove_map_(block_list *bl, clr_type clrtype, const char* file, int32
 				else if (sd->state.storage_flag == 3)
 					storage_premiumStorage_quit(sd);
 
-				sd->state.storage_flag = 0; //Force close it when being warped.
+				if( sd->state.storage_flag != 0 ){
+					sd->state.storage_flag = 0; //Force close it when being warped.
+					// Without ZC_CLOSE_STORE the client keeps showing a storage window that
+					// the server no longer accepts any item move for.
+					clif_storageclose( *sd );
+				}
 			}
 
 			if(sd->party_invite > 0)
@@ -3714,6 +3719,9 @@ int32 unit_remove_map_(block_list *bl, clr_type clrtype, const char* file, int32
 			}
 
 			sd->npc_shopid = 0;
+			// The NPC market shop keeps state.trading set until the client closes it;
+			// a warp makes the client skip that packet. @see pc_clear_npcmarket_trading
+			pc_clear_npcmarket_trading( *sd );
 			sd->adopt_invite = 0;
 
 			if(sd->pvp_timer != INVALID_TIMER) {

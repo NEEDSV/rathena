@@ -2351,6 +2351,9 @@ void clif_selllist( const map_session_data& sd){
 void clif_parse_NPCShopClosed(int32 fd, map_session_data *sd) {
 	// TODO: State tracking?
 	sd->npc_shopid = 0;
+	// A market shop is also closed by this packet on some clients, and it would
+	// otherwise leave state.trading set forever. @see pc_clear_npcmarket_trading
+	pc_clear_npcmarket_trading( *sd );
 }
 
 /**
@@ -12485,6 +12488,7 @@ void clif_parse_NpcBuyListSend( int32 fd, map_session_data* sd ){
 	}
 
 	sd->npc_shopid = 0; //Clear shop data.
+	pc_clear_npcmarket_trading( *sd );
 	clif_npc_buy_result(sd, result);
 }
 
@@ -12520,6 +12524,7 @@ void clif_parse_NpcSellListSend(int32 fd,map_session_data *sd)
 		fail = npc_selllist(sd, n, p->sellList);
 
 	sd->npc_shopid = 0; //Clear shop data.
+	pc_clear_npcmarket_trading( *sd );
 	clif_npc_sell_result(sd, fail);
 }
 

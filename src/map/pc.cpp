@@ -7221,9 +7221,7 @@ enum e_setpos pc_setpos(map_session_data* sd, uint16 mapindex, int32 x, int32 y,
 	sd->state.warping = 1;
 	// Market shops reuse the trade state until the client sends CZ_NPC_MARKET_CLOSE.
 	// A warp can make the client skip that packet, so end only the NPC market state here.
-	if( sd->state.trading && sd->npc_shopid && sd->trade_partner.id == 0 ){
-		sd->state.trading = 0;
-	}
+	pc_clear_npcmarket_trading( *sd );
 	sd->state.workinprogress = WIP_DISABLE_NONE;
 	sd->state.mail_writing = false;
 	sd->state.refineui_open = false;
@@ -10002,6 +10000,26 @@ TIMER_FUNC(pc_close_npc_timer){
 
 	return 0;
 }
+
+/**
+ * End the trade state that an NPC market shop leaves behind.
+ *
+ * clif_npc_market_open() marks the session as trading and relies on the client
+ * sending CZ_NPC_MARKET_CLOSE to undo that again. Every other path that tears the
+ * shop session down - the shop quit packet, pc_close_npc() (death, NPC timeout,
+ * @reloadscript), a warp - only cleared npc_shopid, so state.trading stayed set
+ * forever and kept blocking cart moves, @storage, trades and mail until relog.
+ *
+ * A player-to-player trade always sets trade_partner together with state.trading
+ * (see trade.cpp), so requiring an empty trade_partner leaves a real trade alone.
+ */
+void pc_clear_npcmarket_trading( map_session_data& sd )
+{
+	if( sd.state.trading && sd.trade_partner.id == 0 ){
+		sd.state.trading = 0;
+	}
+}
+
 /**
  * Method to properly close a NPC for player and clear anything related.
  * @param sd: Player attached
@@ -10030,6 +10048,7 @@ void pc_close_npc(map_session_data *sd,int32 flag)
 		sd->state.menu_or_input = 0;
 		sd->npc_menu = 0;
 		sd->npc_shopid = 0;
+		pc_clear_npcmarket_trading( *sd );
 #ifdef SECURE_NPCTIMEOUT
 		if( sd->npc_idle_timer != INVALID_TIMER ){
 			delete_timer( sd->npc_idle_timer, npc_secure_timeout_timer );

@@ -1557,6 +1557,7 @@ bool pc_authok(map_session_data *sd, uint32 login_id2, time_t expiration_time, i
 void pc_authfail(map_session_data *sd);
 void pc_reg_received(map_session_data *sd);
 void pc_close_npc(map_session_data *sd,int32 flag);
+void pc_clear_npcmarket_trading( map_session_data& sd );
 TIMER_FUNC(pc_close_npc_timer);
 
 void pc_setequipindex( map_session_data *sd );
