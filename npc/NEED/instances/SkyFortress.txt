@@ -7,7 +7,7 @@
 //= 1.0 First version. [Capuche]
 //= NEED: 전체 한글화.
 //=       본 파일 내부에는 EP16.1 메인 스토리 진행도 선행 검사가 없음.
-//=       9418/9419는 공중요새 자체 진행/1일 재입장 쿨타임이므로 유지.
+//=       9418은 진행/완료 보고, 9419는 일반 입장 성공 시점부터 1일 재입장 쿨타임.
 //============================================================
 
 prt_q,249,82,2	script	한#a1	8W_SOLDIER,{
@@ -74,6 +74,50 @@ prt_q,249,79,4	script	과학자 도연#a1	4_M_MAYOR,{
 		mes "베이스 레벨 145 이상이어야 합니다. -";
 		close;
 	}
+	// NEED: 재입장 쿨타임(9419)은 일반 입장 성공 시점부터 계산한다.
+	// 9418은 기존 완료 보고/최초 보상 처리용으로만 유지한다.
+	if (isbegin_quest(9418) == 1) {
+		mes "무사히 돌아오셨군요.";
+		mes "그래서... 공중요새 안에서는";
+		mes "무슨 일이 있었습니까?";
+		next;
+		mes "- 공중요새 내부에서 있었던 일을 -";
+		mes "- 도연에게 모두 설명했다. -";
+		next;
+		mes "[과학자 도연]";
+		mes "그럴 수가...";
+		mes "그래도 공중요새의 거대한 골렘을 쓰러뜨렸으니";
+		mes "상황이 나아질 거라는 희망은";
+		mes "가져볼 수 있겠습니다.";
+		next;
+		mes "[과학자 도연]";
+		mes "하지만 아직도 그 끔찍한 몬스터들이";
+		mes "프론테라에 계속 나타나고 있습니다.";
+		mes "아무래도 우리가 한 일만으로는";
+		mes "충분하지 않았던 것 같습니다.";
+		mes "***";
+		next;
+		mes "[과학자 도연]";
+		mes "워프를 작동시키려면";
+		mes "막대한 마력이 필요합니다.";
+		mes "-던전 이용권-을 가져오시거나,";
+		mes "아니면 제가 마력을 다시 모으는 데";
+		mes "약 1일 정도가 필요합니다.";
+		next;
+		mes "[과학자 도연]";
+		mes "공중요새에 다시 들어가";
+		mes "프론테라를 구할 수 있도록";
+		mes "부디 힘을 빌려주세요.";
+		completequest 9418;// Attack Sky Fortress Invading Prontera
+		// 9419는 입장 시 이미 시작되므로 여기서 다시 설정하지 않는다.
+		if (isbegin_quest(9427) == 0) {
+			setquest 9427;// Clearing the Sky Fortress for the Same Time
+			completequest 9427;
+			rentitem 14505,3600;// Sky Fortress Ticket
+		}
+		close;
+	}
+
 	switch( checkquest(9419,PLAYTIME) ) {
 	case -1:
 		if (is_party_leader() == false) {
@@ -139,45 +183,6 @@ prt_q,249,79,4	script	과학자 도연#a1	4_M_MAYOR,{
 				}
 			}
 		}
-		mes "무사히 돌아오셨군요.";
-		mes "그래서... 공중요새 안에서는";
-		mes "무슨 일이 있었습니까?";
-		next;
-		mes "- 공중요새 내부에서 있었던 일을 -";
-		mes "- 도연에게 모두 설명했다. -";
-		next;
-		mes "[과학자 도연]";
-		mes "그럴 수가...";
-		mes "그래도 공중요새의 거대한 골렘을 쓰러뜨렸으니";
-		mes "상황이 나아질 거라는 희망은";
-		mes "가져볼 수 있겠습니다.";
-		next;
-		mes "[과학자 도연]";
-		mes "하지만 아직도 그 끔찍한 몬스터들이";
-		mes "프론테라에 계속 나타나고 있습니다.";
-		mes "아무래도 우리가 한 일만으로는";
-		mes "충분하지 않았던 것 같습니다.";
-		mes "***";
-		next;
-		mes "[과학자 도연]";
-		mes "워프를 작동시키려면";
-		mes "막대한 마력이 필요합니다.";
-		mes "-던전 이용권-을 가져오시거나,";
-		mes "아니면 제가 마력을 다시 모으는 데";
-		mes "약 1일 정도가 필요합니다.";
-		next;
-		mes "[과학자 도연]";
-		mes "공중요새에 다시 들어가";
-		mes "프론테라를 구할 수 있도록";
-		mes "부디 힘을 빌려주세요.";
-		completequest 9418;// Attack Sky Fortress Invading Prontera
-		setquest 9419;// Attack Sky Fortress Invading Prontera
-		if (isbegin_quest(9427) == 0) {
-			setquest 9427;// Clearing the Sky Fortress for the Same Time
-			completequest 9427;
-			rentitem 14505,3600;// Sky Fortress Ticket
-		}
-		close;
 	case 0:
 	case 1:
 		mes "[과학자 도연]";
@@ -393,6 +398,7 @@ prt_q,243,75,3	script	공중요새 입구 워프#1	PORTAL,{
 			if (isbegin_quest(9418) > 0)
 				erasequest 9418;
 			setquest 9418;// Attack Sky Fortress Invading Prontera
+			setquest 9419;// NEED: 1일 재입장 쿨타임은 일반 입장 성공 시점부터 시작
 		}
 		fortress_entrance_loc = 0;	// warp back to prt_q on exit
 		// warp "1@sthb",54,67;
