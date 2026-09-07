@@ -9855,8 +9855,10 @@ bool skill_check_condition_castend( map_session_data& sd, uint16 skill_id, uint1
 
 #ifdef RENEWAL
 		switch(skill_id) { // 2016-10-26 kRO update made these skills require an extra ammo to cast
+			// NEED: RL_FIREDANCE intentionally excluded. 2014/2016/2017 rAthena never listed it here
+			// (it joined upstream only with the 2020 Rebellion rework), and Fire Dance is restored to
+			// its pre-limit-break spec: hold exactly 5 bullets, consume exactly 5.
 			case WM_SEVERE_RAINSTORM:
-			case RL_FIREDANCE:
 			case RL_R_TRIP:
 			case RL_FIRE_RAIN:
 				extra_ammo = 1;
