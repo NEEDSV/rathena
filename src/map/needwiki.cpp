@@ -728,18 +728,50 @@ static int32 needwiki_accept(int32 listen_fd)
 	return fd;
 }
 
+/**
+ * NEED Phase 0.2.2 - TEST INFRASTRUCTURE ONLY.
+ *
+ * The internal listener port is hardcoded, and make_listen_bind() calls exit() when a bind
+ * fails (common/socket.cpp), so a SECOND map-server process on the same host always died at
+ * startup - which made it impossible to test map-server-to-map-server language persistence
+ * (0x2b05) locally, no matter which map_port the second instance used.
+ *
+ * This override changes nothing by default: without the environment variable the port stays
+ * NEEDWIKI_PORT (6905), exactly as before. Set NEED_WIKI_PORT only on an extra map-server
+ * instance started for local testing.
+ */
+static uint16 needwiki_listen_port(void)
+{
+	const char* v = getenv("NEED_WIKI_PORT");
+
+	if (v != nullptr) {
+		int32 p = atoi(v);
+
+		if (p > 0 && p < 65536) {
+			ShowWarning("NEED Wiki: internal listener port overridden to %d by NEED_WIKI_PORT (test setup).\n", p);
+			return static_cast<uint16>(p);
+		}
+
+		ShowWarning("NEED Wiki: ignoring invalid NEED_WIKI_PORT '%s', using %u.\n", v, NEEDWIKI_PORT);
+	}
+
+	return NEEDWIKI_PORT;
+}
+
 void do_init_needwiki(void)
 {
+	const uint16 port = needwiki_listen_port();
+
 	needwiki_reload_item_groups();
-	needwiki_fd = make_listen_bind(MAKEIP(127, 0, 0, 1), NEEDWIKI_PORT);
+	needwiki_fd = make_listen_bind(MAKEIP(127, 0, 0, 1), port);
 
 	if (needwiki_fd < 0) {
-		ShowError("NEED Wiki: failed to listen on 127.0.0.1:%u.\n", NEEDWIKI_PORT);
+		ShowError("NEED Wiki: failed to listen on 127.0.0.1:%u.\n", port);
 		return;
 	}
 
 	session[needwiki_fd]->func_recv = needwiki_accept;
-	ShowStatus("NEED Wiki internal listener ready on 127.0.0.1:%u.\n", NEEDWIKI_PORT);
+	ShowStatus("NEED Wiki internal listener ready on 127.0.0.1:%u.\n", port);
 }
 
 void do_final_needwiki(void)

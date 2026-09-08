@@ -7,6 +7,7 @@
 #include <cstring>
 #include <memory>
 
+#include <common/need_lang.hpp>	// NEED Phase 0.2 diagnostics
 #include <common/showmsg.hpp>
 #include <common/socket.hpp>
 #include <common/sql.hpp>
@@ -308,6 +309,14 @@ int32 chlogif_parse_ackaccreq(int32 fd){
 		{
 			int32 client_fd = request_id;
 			sd->clienttype = clienttype;
+
+			// NEED Phase 0.2 : this is the ONLY place a fresh login hands the char-server the
+			// client's clienttype byte, so it is where the raw marker bit is turned into the
+			// session language. From here on the raw clienttype is never used for language
+			// again - sd->need_lang is the char-server side source of truth.
+			sd->need_lang = need_lang_from_clienttype( clienttype );
+			NEED_LANG_LOG( "[NEED LANG][CHAR] fresh login aid=%u clienttype=0x%02X need_lang=%s\n",
+				account_id, (uint32)clienttype, need_lang_name( (e_need_lang)sd->need_lang ) );
 
 			switch( result )
 			{

@@ -132,6 +132,48 @@ enum e_enchantgrade : uint16{
 	ENCHANTGRADE_A
 };
 
+/**
+ * NEED Phase 0.2 - KR / EN client language detection.
+ *
+ * The EN client is the same binary as the KR one, started with "-lang en"; its WARP
+ * LanguageSwitch layer sets an internal g_langEN flag. To make that visible to the servers the
+ * client ORs NEED_CLIENTTYPE_EN_FLAG into the `clienttype` byte of its login packet, which is
+ * already carried Client -> login-server -> char-server by stock rAthena and is otherwise
+ * completely unused (login.hpp even documents it as "/// ???" - it is never read for any
+ * decision, never persisted and never forwarded to map-server).
+ *
+ * char-server converts that marker into e_need_lang and forwards THAT (never the raw
+ * clienttype) to map-server, where map_session_data::need_lang is the single source of truth.
+ *
+ * This is a per-connection session value: it is never written to the database and never mixed
+ * with rAthena's own account-level `#langtype` / sd->langtype feature.
+ */
+enum e_need_lang : uint8 {
+	NEED_LANG_KR = 0,
+	NEED_LANG_EN = 1,
+	NEED_LANG_MAX,	// keep last - anything >= this is rejected and falls back to KR
+};
+
+/// Marker bit the EN client ORs into the login packet's `clienttype` byte.
+/// Bit 7 is safe: the field is write-only across the whole rAthena code base (see above) and
+/// real clients only ever put small service/langtype values (0..few) in it.
+#define NEED_CLIENTTYPE_EN_FLAG 0x80
+
+/// Normalise any incoming byte into a valid e_need_lang. Unknown / malformed -> KR.
+static inline e_need_lang need_lang_sanitize( uint8 value ){
+	return ( value < NEED_LANG_MAX ) ? (e_need_lang)value : NEED_LANG_KR;
+}
+
+/// Derive the session language from a raw login-packet clienttype byte.
+static inline e_need_lang need_lang_from_clienttype( uint8 clienttype ){
+	return ( clienttype & NEED_CLIENTTYPE_EN_FLAG ) ? NEED_LANG_EN : NEED_LANG_KR;
+}
+
+/// Human readable name for logs.
+static inline const char* need_lang_name( e_need_lang lang ){
+	return ( lang == NEED_LANG_EN ) ? "EN" : "KR";
+}
+
 #ifdef RENEWAL
 	#define MAX_WEAPON_LEVEL 5
 	#define MAX_ARMOR_LEVEL 2

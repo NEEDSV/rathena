@@ -8,6 +8,7 @@
 #include <memory>
 
 #include <common/malloc.hpp>
+#include <common/need_lang.hpp>	// NEED Phase 0.2
 #include <common/showmsg.hpp>
 #include <common/socket.hpp>
 #include <common/sql.hpp>
@@ -465,14 +466,17 @@ void chmapif_charselres(int32 fd, uint32 aid, uint8 res){
  * @return : 0 not enough data received, 1 success
  */
 int32 chmapif_parse_authok(int32 fd){
-	if( RFIFOREST(fd) < 18 )
+	// NEED Phase 0.2 : +1 byte (need_lang) at offset 18, so the language survives the
+	// map -> char-select -> map round trip (see chclif_parse_reqtoconnect).
+	if( RFIFOREST(fd) < 19 )
 		return 0;
 	else{
 		uint32 account_id = RFIFOL(fd,2);
 		uint32 login_id1 = RFIFOL(fd,6);
 		uint32 login_id2 = RFIFOL(fd,10);
 		uint32 ip = RFIFOL(fd,14);
-		RFIFOSKIP(fd,18);
+		e_need_lang need_lang = need_lang_sanitize( RFIFOB(fd,18) );
+		RFIFOSKIP(fd,19);
 
 		if( !global_core->is_running() ){
 			chmapif_charselres(fd,account_id,0);
@@ -488,6 +492,9 @@ int32 chmapif_parse_authok(int32 fd){
 			node->ip = ntohl(ip);
 			//node->expiration_time = 0; // unlimited/unknown time by default (not display in map-server)
 			//node->gmlevel = 0;
+			node->need_lang = need_lang;	// NEED Phase 0.2
+			NEED_LANG_LOG( "[NEED LANG][CHAR] char-select request aid=%u need_lang=%s\n",
+				account_id, need_lang_name( need_lang ) );
 
 			char_get_authdb()[node->account_id] = node;
 
@@ -607,7 +614,9 @@ void chmapif_changemapserv_ack(int32 fd, bool nok){
  * @return : 0 not enough data received, 1 success
  */
 int32 chmapif_parse_reqchangemapserv(int32 fd){
-	if( RFIFOREST( fd ) < ( 37 + MAP_NAME_LENGTH_EXT ) ){
+	// NEED Phase 0.2 : +1 byte (need_lang) after group_id, so an EN session stays EN when it
+	// is handed from one map-server to another.
+	if( RFIFOREST( fd ) < ( 38 + MAP_NAME_LENGTH_EXT ) ){
 		return 0;
 	}
 	else {
@@ -654,6 +663,9 @@ int32 chmapif_parse_reqchangemapserv(int32 fd){
 			node->ip = ntohl( RFIFOL( fd, offset + 11 ) );
 			node->group_id = RFIFOL( fd, offset + 15 );
 			node->changing_mapservers = 1;
+			node->need_lang = need_lang_sanitize( RFIFOB( fd, offset + 19 ) );	// NEED Phase 0.2
+			NEED_LANG_LOG( "[NEED LANG][CHAR] map change aid=%u need_lang=%s\n",
+				aid, need_lang_name( (e_need_lang)node->need_lang ) );
 
 			char_get_authdb()[node->account_id] = node;
 
@@ -672,7 +684,7 @@ int32 chmapif_parse_reqchangemapserv(int32 fd){
 		} else { //Reply with nak
 			chmapif_changemapserv_ack(fd,1);
 		}
-		RFIFOSKIP( fd, 37 + MAP_NAME_LENGTH_EXT );
+		RFIFOSKIP( fd, 38 + MAP_NAME_LENGTH_EXT );	// NEED Phase 0.2 : +1 need_lang byte
 	}
 	return 1;
 }
@@ -1031,7 +1043,8 @@ int32 chmapif_parse_reqauth(int32 fd, int32 id){
 		}
 
 		if( global_core->is_running() && autotrade && cd ){
-			uint16 mmo_charstatus_len = sizeof(struct mmo_charstatus) + 25;
+			// NEED Phase 0.2 : +1 byte - need_lang sits at offset 25, mmo_charstatus at 26
+			uint16 mmo_charstatus_len = sizeof(struct mmo_charstatus) + 26;
 
 			WFIFOHEAD(fd,mmo_charstatus_len);
 			WFIFOW(fd,0) = 0x2afd;
@@ -1042,7 +1055,9 @@ int32 chmapif_parse_reqauth(int32 fd, int32 id){
 			WFIFOL(fd,16) = 0;
 			WFIFOL(fd,20) = 0;
 			WFIFOB(fd,24) = 0;
-			memcpy( WFIFOP( fd, 25 ), cd.get(), sizeof(struct mmo_charstatus));
+			// NEED Phase 0.2 : autotrade has no client connection -> KR by definition
+			WFIFOB(fd,25) = NEED_LANG_KR;
+			memcpy( WFIFOP( fd, 26 ), cd.get(), sizeof(struct mmo_charstatus));
 			WFIFOSET(fd, WFIFOW(fd,2));
 
 			char_set_char_online(id, char_id, account_id);
@@ -1058,7 +1073,8 @@ int32 chmapif_parse_reqauth(int32 fd, int32 id){
 #endif
 			)
 		{// auth ok
-			uint16 mmo_charstatus_len = sizeof(struct mmo_charstatus) + 25;
+			// NEED Phase 0.2 : +1 byte - need_lang sits at offset 25, mmo_charstatus at 26
+			uint16 mmo_charstatus_len = sizeof(struct mmo_charstatus) + 26;
 
 			WFIFOHEAD(fd,mmo_charstatus_len);
 			WFIFOW(fd,0) = 0x2afd;
@@ -1069,7 +1085,10 @@ int32 chmapif_parse_reqauth(int32 fd, int32 id){
 			WFIFOL(fd,16) = (uint32)node->expiration_time; // FIXME: will wrap to negative after "19-Jan-2038, 03:14:07 AM GMT"
 			WFIFOL(fd,20) = node->group_id;
 			WFIFOB(fd,24) = node->changing_mapservers;
-			memcpy( WFIFOP( fd, 25 ), cd.get(), sizeof( struct mmo_charstatus ) );
+			WFIFOB(fd,25) = need_lang_sanitize( node->need_lang );	// NEED Phase 0.2
+			memcpy( WFIFOP( fd, 26 ), cd.get(), sizeof( struct mmo_charstatus ) );
+			NEED_LANG_LOG( "[NEED LANG][CHAR] -> map auth aid=%u need_lang=%s changing_mapservers=%d\n",
+				account_id, need_lang_name( need_lang_sanitize( node->need_lang ) ), (int32)node->changing_mapservers );
 			WFIFOSET(fd, WFIFOW(fd,2));
 
 			// only use the auth once and mark user online

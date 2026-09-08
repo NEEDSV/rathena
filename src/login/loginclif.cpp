@@ -3,6 +3,7 @@
 
 #include "loginclif.hpp"
 
+#include <cstdio>	// fflush - NEED Phase 0.2 diagnostics
 #include <cstdlib>
 #include <cstring>
 
@@ -21,6 +22,23 @@
 #include "login.hpp"
 #include "loginchrif.hpp"
 #include "loginlog.hpp"
+
+#include <common/need_lang.hpp>	// NEED Phase 0.2 diagnostics
+
+/**
+ * NEED Phase 0.2 - KR/EN client language detection diagnostics.
+ *
+ * The login-server only CARRIES the marker (it is the client -> char-server transport for the
+ * `clienttype` byte); it makes no language decision of its own. These logs exist so the KR/EN
+ * baseline and the marker can be measured off the real wire instead of assumed.
+ */
+#define NEED_LANG_LOG_CT(opcode, ct) \
+	NEED_LANG_LOG( "[NEED LANG][LOGIN] opcode=0x%04X clienttype=%u (0x%02X) en_flag=%d\n", \
+		(uint32)(opcode), (uint32)(uint8)(ct), (uint32)(uint8)(ct), \
+		( (uint8)(ct) & NEED_CLIENTTYPE_EN_FLAG ) ? 1 : 0 )
+#define NEED_LANG_LOG_OP(opcode, rest) \
+	NEED_LANG_LOG( "[NEED LANG][LOGIN] packet opcode=0x%04X (%u bytes queued)\n", \
+		(uint32)(opcode), (uint32)(rest) )
 
 /**
  * Transmit auth result to client.
@@ -261,7 +279,6 @@ static bool logclif_parse_updclhash( int32 fd, struct login_session_data& sd ){
 
 	return true;
 }
-
 template <typename P>
 static bool logclif_parse_reqauth_raw( int32 fd, login_session_data& sd ){
 	P* p = (P*)RFIFOP( fd, 0 );
@@ -272,6 +289,14 @@ static bool logclif_parse_reqauth_raw( int32 fd, login_session_data& sd ){
 
 	safestrncpy( sd.userid, p->username, sizeof( sd.userid ) );
 	sd.clienttype = p->clienttype;
+#if NEED_LANG_DEBUG
+	// TEST ONLY (see common/need_lang.hpp): lets the PoC exercise the EN chain with the real
+	// client before the client-side marker hook exists. Compiled out when NEED_LANG_DEBUG=0.
+	if( need_lang_force_en() ){
+		sd.clienttype |= NEED_CLIENTTYPE_EN_FLAG;
+	}
+#endif
+	NEED_LANG_LOG_CT( p->packetType, sd.clienttype );
 
 	ShowStatus( "Request for connection of %s (ip: %s)\n", sd.userid, ip );
 	safestrncpy( sd.passwd, p->password, PASSWD_LENGTH );
@@ -303,6 +328,14 @@ static bool logclif_parse_reqauth_md5( int32 fd, login_session_data& sd ){
 
 	safestrncpy( sd.userid, p->username, sizeof( sd.userid ) );
 	sd.clienttype = p->clienttype;
+#if NEED_LANG_DEBUG
+	// TEST ONLY (see common/need_lang.hpp): lets the PoC exercise the EN chain with the real
+	// client before the client-side marker hook exists. Compiled out when NEED_LANG_DEBUG=0.
+	if( need_lang_force_en() ){
+		sd.clienttype |= NEED_CLIENTTYPE_EN_FLAG;
+	}
+#endif
+	NEED_LANG_LOG_CT( p->packetType, sd.clienttype );
 
 	ShowStatus( "Request for connection (passwdenc mode) of %s (ip: %s)\n", sd.userid, ip );
 	bin2hex( sd.passwd, p->passwordMD5, sizeof( p->passwordMD5 ) ); // raw binary data here!
@@ -337,6 +370,14 @@ static bool logclif_parse_reqauth_sso( int32 fd, login_session_data& sd ){
 
 	safestrncpy( sd.userid, p->username, sizeof( sd.userid ) );
 	sd.clienttype = p->clienttype;
+#if NEED_LANG_DEBUG
+	// TEST ONLY (see common/need_lang.hpp): lets the PoC exercise the EN chain with the real
+	// client before the client-side marker hook exists. Compiled out when NEED_LANG_DEBUG=0.
+	if( need_lang_force_en() ){
+		sd.clienttype |= NEED_CLIENTTYPE_EN_FLAG;
+	}
+#endif
+	NEED_LANG_LOG_CT( p->packetType, sd.clienttype );
 
 	ShowStatus( "Request for connection (SSO mode) of %s (ip: %s)\n", sd.userid, ip );
 	// Shinryo: For the time being, just use token as password.
@@ -538,6 +579,8 @@ int32 logclif_parse(int32 fd) {
 	while( RFIFOREST(fd) >= 2 )
 	{
 		uint16 command = RFIFOW(fd,0);
+
+		NEED_LANG_LOG_OP( command, RFIFOREST(fd) );
 
 		switch( command ){
 			// Connection request of a char-server

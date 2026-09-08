@@ -231,6 +231,10 @@ struct auth_node {
 	int32 group_id;
 	unsigned changing_mapservers : 1;
 	uint8 version;
+	// NEED Phase 0.2 : KR/EN client language of THIS connection (e_need_lang). Session only -
+	// never stored in the database. Default 0 == NEED_LANG_KR, so an auth node created by any
+	// path that does not know the language falls back to Korean.
+	uint8 need_lang;
 };
 
 std::unordered_map<uint32, std::shared_ptr<struct auth_node>>& char_get_authdb();
@@ -260,6 +264,10 @@ struct char_session_data {
 	uint8 chars_vip;
 	uint8 chars_billing;
 	uint8 clienttype;
+	// NEED Phase 0.2 : language of this client connection (e_need_lang), derived ONCE from the
+	// login packet's clienttype marker (fresh login) or restored from the auth node (when the
+	// player comes back from a map-server to character select). Never persisted.
+	uint8 need_lang;
 	char new_name[NAME_LENGTH];
 	char birthdate[10+1];  // YYYY-MM-DD
 	// Pincode system

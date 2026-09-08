@@ -10,6 +10,7 @@
 #include <common/ers.hpp>
 #include <common/malloc.hpp>
 #include <common/nullpo.hpp>
+#include <common/need_lang.hpp>	// NEED Phase 0.2
 #include <common/showmsg.hpp>
 #include <common/socket.hpp>
 #include <common/strlib.hpp>
@@ -438,7 +439,8 @@ int32 chrif_changemapserver(map_session_data* sd, uint32 ip, uint16 port) {
 	chrif_check(-1);
 	need_summer_attendance_session_end(sd);
 
-	WFIFOHEAD( char_fd, 37 + MAP_NAME_LENGTH_EXT );
+	// NEED Phase 0.2 : +1 byte (need_lang) so an EN session stays EN on the target map-server
+	WFIFOHEAD( char_fd, 38 + MAP_NAME_LENGTH_EXT );
 	WFIFOW(char_fd, 0) = 0x2b05;
 	WFIFOL(char_fd, 2) = sd->id;
 	WFIFOL(char_fd, 6) = sd->login_id1;
@@ -453,7 +455,10 @@ int32 chrif_changemapserver(map_session_data* sd, uint32 ip, uint16 port) {
 	WFIFOB( char_fd, offset + 10 ) = sd->status.sex;
 	WFIFOL( char_fd, offset + 11 ) = htonl( session[sd->fd]->client_addr );
 	WFIFOL( char_fd, offset + 15 ) = sd->group_id;
-	WFIFOSET( char_fd, 37 + MAP_NAME_LENGTH_EXT );
+	WFIFOB( char_fd, offset + 19 ) = sd->need_lang;	// NEED Phase 0.2
+	WFIFOSET( char_fd, 38 + MAP_NAME_LENGTH_EXT );
+	NEED_LANG_LOG( "[NEED LANG][MAP CHANGE] aid=%u map=%s need_lang=%s\n",
+		sd->id, mapindex_id2name( sd->mapindex ), need_lang_name( sd->need_lang ) );
 
 	return 0;
 }
@@ -665,8 +670,9 @@ void chrif_authok(int32 fd) {
 	TBL_PC* sd;
 
 	//Check if both servers agree on the struct's size
-	if( RFIFOW(fd,2) - 25 != sizeof(struct mmo_charstatus) ) {
-		ShowError("chrif_authok: Data size mismatch! %d != %" PRIuPTR "\n", RFIFOW(fd,2) - 25, sizeof(struct mmo_charstatus));
+	// NEED Phase 0.2 : the header grew by one byte (need_lang at offset 25)
+	if( RFIFOW(fd,2) - 26 != sizeof(struct mmo_charstatus) ) {
+		ShowError("chrif_authok: Data size mismatch! %d != %" PRIuPTR "\n", RFIFOW(fd,2) - 26, sizeof(struct mmo_charstatus));
 		return;
 	}
 
@@ -676,7 +682,8 @@ void chrif_authok(int32 fd) {
 	expiration_time = (time_t)(int32)RFIFOL(fd,16);
 	group_id = RFIFOL(fd,20);
 	changing_mapservers = (RFIFOB(fd,24)) > 0;
-	status = (struct mmo_charstatus*)RFIFOP(fd,25);
+	e_need_lang need_lang = need_lang_sanitize( RFIFOB(fd,25) );	// NEED Phase 0.2
+	status = (struct mmo_charstatus*)RFIFOP(fd,26);
 	char_id = status->char_id;
 
 	//Check if we don't already have player data in our server
@@ -707,6 +714,13 @@ void chrif_authok(int32 fd) {
 		node->char_id == char_id &&
 		node->login_id1 == login_id1 )
 	{ //Auth Ok
+		// NEED Phase 0.2 : store the client language BEFORE pc_authok so everything that
+		// runs during authentication already sees it. pc_authok's signature is deliberately
+		// left untouched - sd is the very session it initialises.
+		sd->need_lang = need_lang;
+		NEED_LANG_LOG( "[NEED LANG][MAP] auth aid=%u need_lang=%s changing_mapservers=%d\n",
+			account_id, need_lang_name( sd->need_lang ), changing_mapservers ? 1 : 0 );
+
 		if (pc_authok(sd, login_id2, expiration_time, group_id, status, changing_mapservers))
 			return;
 	} else { //Auth Failed
@@ -788,13 +802,18 @@ int32 chrif_charselectreq(map_session_data* sd, uint32 s_ip) {
 
 	chrif_check(-1);
 
-	WFIFOHEAD(char_fd,18);
+	// NEED Phase 0.2 : +1 byte (need_lang) so the language survives
+	// map -> character select -> map without a new login-server round trip.
+	WFIFOHEAD(char_fd,19);
 	WFIFOW(char_fd, 0) = 0x2b02;
 	WFIFOL(char_fd, 2) = sd->id;
 	WFIFOL(char_fd, 6) = sd->login_id1;
 	WFIFOL(char_fd,10) = sd->login_id2;
 	WFIFOL(char_fd,14) = htonl(s_ip);
-	WFIFOSET(char_fd,18);
+	WFIFOB(char_fd,18) = sd->need_lang;
+	WFIFOSET(char_fd,19);
+	NEED_LANG_LOG( "[NEED LANG][MAP] -> char-select request aid=%u need_lang=%s\n",
+		sd->id, need_lang_name( sd->need_lang ) );
 
 	return 0;
 }

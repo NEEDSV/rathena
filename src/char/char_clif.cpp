@@ -14,6 +14,7 @@
 #include <common/mmo.hpp>
 #include <common/packets.hpp>
 #include <common/random.hpp>
+#include <common/need_lang.hpp>	// NEED Phase 0.2
 #include <common/showmsg.hpp>
 #include <common/socket.hpp>
 #include <common/sql.hpp>
@@ -866,6 +867,15 @@ int32 chclif_parse_reqtoconnect(int32 fd, struct char_session_data* sd,uint32 ip
 			node->login_id2  == login_id2 /*&&
 			node->ip         == ipl*/ )
 		{// authentication found (coming from map server)
+			// NEED Phase 0.2 : this branch is "coming from map server" (return to character
+			// select). The login-server is NOT contacted again here, so this freshly created
+			// char_session_data has no clienttype at all - the language must come from the
+			// auth node the map-server's char-select request created, otherwise every player
+			// who goes back to character select would silently fall back to KR.
+			sd->need_lang = need_lang_sanitize( node->need_lang );
+			NEED_LANG_LOG( "[NEED LANG][CHAR] back from map aid=%u need_lang=%s\n",
+				account_id, need_lang_name( (e_need_lang)sd->need_lang ) );
+
 			char_get_authdb().erase(account_id);
 			char_auth_ok(fd, sd);
 			sd->pincode_correct = true; // already entered pincode correctly yet
@@ -1033,6 +1043,8 @@ bool chclif_parse_select_accessible_map( int32 fd, struct char_session_data& sd 
 	node->expiration_time = sd.expiration_time;
 	node->group_id = sd.group_id;
 	node->ip = session[fd]->client_addr;
+	// NEED Phase 0.2 : hand the session language to the map-server auth
+	node->need_lang = sd.need_lang;
 
 	char_get_authdb()[node->account_id] = node;
 
@@ -1199,6 +1211,8 @@ bool chclif_parse_charselect( int32 fd, struct char_session_data& sd ){
 	node->expiration_time = sd.expiration_time;
 	node->group_id = sd.group_id;
 	node->ip = session[fd]->client_addr;
+	// NEED Phase 0.2 : hand the session language to the map-server auth
+	node->need_lang = sd.need_lang;
 
 	char_get_authdb()[node->account_id] = node;
 

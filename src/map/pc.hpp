@@ -607,6 +607,19 @@ public:
 	int32 count_rewarp; //count how many time we being rewarped
 
 	int32 langtype;
+
+	/**
+	 * NEED Phase 0.2 : language of the CLIENT this session is connected with (e_need_lang).
+	 *
+	 * Source of truth for "is this player on the EN client?". Set once from the char -> map
+	 * authentication packet (0x2afd) and preserved across map-server changes; anything invalid
+	 * falls back to NEED_LANG_KR.
+	 *
+	 * Completely independent of `langtype` above (rAthena's account-level #langtype feature):
+	 * need_lang is per-connection, is never written to the database and disappears on logout.
+	 */
+	e_need_lang need_lang;
+
 	struct mmo_charstatus status;
 
 	struct {

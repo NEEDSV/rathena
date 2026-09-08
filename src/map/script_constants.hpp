@@ -11212,6 +11212,10 @@
 	export_constant(GUILDINFO_MASTERID);
 	export_constant(GUILDINFO_MASTERNAME);
 
+	/* NEED Phase 0.3 : client language of the current session - getneedlang() / needtr() */
+	export_constant(NEED_LANG_KR);
+	export_constant(NEED_LANG_EN);
+
 	#undef export_constant
 	#undef export_constant2
 	#undef export_parameter

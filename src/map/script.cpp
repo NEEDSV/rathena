@@ -28707,6 +28707,70 @@ BUILDIN_FUNC(need_fishing_lastresult)
 	return SCRIPT_CMD_SUCCESS;
 }
 
+/*==========================================
+ * NEED Phase 0.3 : script access to the session language
+ *
+ * The language itself is decided by the Phase 0.2 chain (client marker -> login-server ->
+ * char-server -> map-server) and map_session_data::need_lang is its single source of truth.
+ * The two primitives below only READ that field, so they never touch the database, the
+ * filesystem or any translation catalog, and they stay cheap enough to be called hundreds of
+ * times while one dialog is being built.
+ *
+ * Both fall back to KR instead of raising a script error when no player is attached (OnInit,
+ * OnTimer, detached scripts). script_rid2sd() deliberately is NOT used for that: it prints a
+ * fatal error AND sets st->state = END, which would abort an existing Korean script that
+ * happens to reach one of these commands from a non-player context. buildin_playerattached()
+ * is the precedent followed here instead.
+ *------------------------------------------*/
+
+/// Language of the player attached to this script state.
+/// No RID / no session / invalid value -> NEED_LANG_KR. Never fails, never ends the script.
+static e_need_lang script_need_lang( struct script_state* st ){
+	map_session_data* sd;
+
+	if( st->rid == 0 || ( sd = map_id2sd( st->rid ) ) == nullptr ){
+		return NEED_LANG_KR;
+	}
+
+	// The char -> map chain already sanitises every write; re-checking here is free and keeps
+	// the script side correct even if a future carrier forgets to.
+	return need_lang_sanitize( (uint8)sd->need_lang );
+}
+
+/// getneedlang();
+/// Returns the NEED client language of the attached player: NEED_LANG_KR (0) or NEED_LANG_EN (1).
+/// Returns NEED_LANG_KR when there is no player attached.
+BUILDIN_FUNC(getneedlang)
+{
+	script_pushint( st, (int32)script_need_lang( st ) );
+	return SCRIPT_CMD_SUCCESS;
+}
+
+/// needtr("<kr text>","<en text>");
+/// Returns the second argument for an EN session and the first one for everything else, so the
+/// existing Korean line always remains the fallback:
+///
+///     mes needtr( "<the current Korean line>", "Hello." );
+///
+/// The chosen argument is handed back exactly as it was passed - no formatting, no encoding
+/// conversion and no "does this look translated?" heuristic - so colour codes (^RRGGBB), item
+/// links, '%', '\n' and the empty string all behave exactly as a plain literal would.
+BUILDIN_FUNC(needtr)
+{
+	int32 idx = ( script_need_lang( st ) == NEED_LANG_EN ) ? 3 : 2;
+
+	// script_isstring() resolves a variable argument in place, after which a plain literal
+	// (C_CONSTSTR) is handed on by pointer and costs no allocation at all. Same mechanism
+	// buildin_getarg() uses to return one of its arguments untouched.
+	if( script_isstring( st, idx ) ){
+		script_pushcopy( st, idx );
+	}else{
+		script_pushstrcopy( st, script_getstr( st, idx ) );
+	}
+
+	return SCRIPT_CMD_SUCCESS;
+}
+
 /// script command definitions
 /// for an explanation on args, see add_buildin_func
 struct script_function buildin_func[] = {
@@ -29459,6 +29523,10 @@ struct script_function buildin_func[] = {
 	BUILDIN_DEF(need_fishing_cancel,""),
 	BUILDIN_DEF(need_fishing_state,""),
 	BUILDIN_DEF(need_fishing_lastresult,"?"),
+
+	// NEED Phase 0.3 : client language of the current session (KR / EN)
+	BUILDIN_DEF(getneedlang,""),
+	BUILDIN_DEF(needtr,"ss"),
 
 #include <custom/script_def.inc>
 
