@@ -14412,8 +14412,15 @@ int32 status_change_end( block_list* bl, enum sc_type type, int32 tid ){
 			break;
 	}
 
-	if (scdb->opt1)
+	if (scdb->opt1) {
 		sc->opt1 = OPT1_NONE;
+		// NEED: an Opt1 (body state) change must always reach the client when the status ends, even when the
+		// status does not advertise its Opt1 on start (no SendOption flag; in status.yml only Deep Sleep).
+		// Any option packet sent while such a status was active (another SendOption status starting or ending,
+		// e.g. Crystalize/Sight expiring during Deep Sleep) already carried this Opt1 to the client, and
+		// without an end notification the client keeps the body state after the server has cleared it.
+		opt_flag.set(SCF_SENDOPTION);
+	}
 
 	if (scdb->opt2)
 		sc->opt2 &= ~scdb->opt2;
