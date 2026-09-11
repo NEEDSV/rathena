@@ -2536,7 +2536,8 @@ static enum e_CASHSHOP_ACK npc_cashshop_process_payment(npc_data *nd, int32 pric
 
 					memset(output, '\0', sizeof(output));
 
-					sprintf(output, msg_txt(sd, 712), id->ename.c_str(), id->nameid); // You do not have enough %s (%u).
+					// NEED Phase 0.13 : message and item name from the same need_lang
+					sprintf(output, msg_txt(sd, 712), item_display_name(id, sd->need_lang), id->nameid); // You do not have enough %s (%u).
 					clif_messagecolor(sd, color_table[COLOR_RED], output, false, SELF);
 					return ERROR_TYPE_PURCHASE_FAIL;
 				}
@@ -2722,7 +2723,8 @@ void npc_shop_currency_type( const map_session_data* sd, const npc_data* nd, int
 
 					memset(output, '\0', sizeof(output));
 
-					sprintf(output, msg_txt(sd, 714), id->ename.c_str(), id->nameid); // Item Shop List: %s (%u)
+					// NEED Phase 0.13 : message and item name from the same need_lang
+					sprintf(output, msg_txt(sd, 714), item_display_name(id, sd->need_lang), id->nameid); // Item Shop List: %s (%u)
 					clif_broadcast(sd, output, strlen(output) + 1, BC_BLUE,SELF);
 				}
 
@@ -3875,6 +3877,8 @@ npc_data *npc_create_npc(int16 m, int16 x, int16 y){
 	nd->m = m;
 	nd->x = x;
 	nd->y = y;
+	nd->name_en[0] = '\0';	// NEED Phase 0.6 : no English display name unless a script sets one
+	nd->chattitle_en[0] = '\0';	// NEED Phase 0.8 : no English waiting room title unless a script sets one
 	nd->sc_display = nullptr;
 	nd->sc_display_count = 0;
 	nd->progressbar.timeout = 0;
@@ -4826,6 +4830,19 @@ int32 npc_duplicate4instance(npc_data *snd, int16 m) {
 			snprintf(w4, sizeof(w4), "%d", snd->class_);
 
 		npc_parse_duplicate(w1, w2, w3, w4, stat_buf, stat_buf, "INSTANCING");
+
+		// NEED Phase 0.6 : carry the English DISPLAY name over to the per-instance copy.
+		// Only name_en is copied - exname is `newname` and stays exactly as the instancing
+		// subsystem generated it, so every event/reference keeps working unchanged.
+		if( snd->name_en[0] != '\0' || snd->chattitle_en[0] != '\0' ){
+			npc_data* ind = npc_name2id( newname );
+
+			if( ind != nullptr ){
+				safestrncpy( ind->name_en, snd->name_en, sizeof( ind->name_en ) );
+				// NEED Phase 0.8 : the English waiting room title is display-only as well
+				safestrncpy( ind->chattitle_en, snd->chattitle_en, sizeof( ind->chattitle_en ) );
+			}
+		}
 	}
 
 	return 0;
@@ -5948,6 +5965,21 @@ npc_data* npc_duplicate_npc( npc_data& nd, char name[NPC_NAME_LENGTH + 1], int16
 	// No need to try and execute any events
 	if( dnd == nullptr ){
 		return nullptr;
+	}
+
+	/**
+	 * NEED Phase 0.7 : inherit the English DISPLAY name, but ONLY when this duplicate keeps the
+	 * source's display name.
+	 *
+	 * The caller chooses the display name explicitly:
+	 *   npc.cpp npc_duplicate_dynamic() passes nd.name  -> same name, so the English one applies
+	 *   script.cpp `duplicate` command passes its own    -> a different name must NOT silently
+	 *                                                       inherit the source's English text
+	 * `exname` is the generated unique name and is untouched here, so npcname_db, event labels
+	 * and every reference stay exactly as the duplicate subsystem created them.
+	 */
+	if( nd.name_en[0] != '\0' && strcmp( name, nd.name ) == 0 ){
+		safestrncpy( dnd->name_en, nd.name_en, sizeof( dnd->name_en ) );
 	}
 
 	//run OnInit Events

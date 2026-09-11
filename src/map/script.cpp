@@ -86,6 +86,10 @@ struct eri *stack_ers;
 static map_session_data* dummy_sd;
 
 static bool script_rid2sd_( struct script_state *st, map_session_data** sd, const char *func );
+/// NEED Phase 0.3 helper, defined near the getneedlang()/needtr() buildins. Declared here so
+/// the display-name buildins further up the file (getitemname, getequipname, mesitemlink) can
+/// ask for the attached player's language too. Returns NEED_LANG_KR when there is no RID.
+static e_need_lang script_need_lang( struct script_state* st );
 
 /**
  * Get `sd` from a account id in `loc` param instead of attached rid
@@ -9483,7 +9487,10 @@ BUILDIN_FUNC(getequipname)
 
 	item = sd->inventory_data[i];
 	if( item != 0 )
-		script_pushstrcopy(st,item->ename.c_str());
+		// NEED Phase 0.11 : display name for the language of the player this dialog is being
+		// written for. script_charid2sd() above may have attached a DIFFERENT character than
+		// the script's RID, so the language comes from the script state, not from that sd.
+		script_pushstrcopy( st, item_display_name( item, script_need_lang( st ) ) );
 	else
 		script_pushconststr(st,"");
 
@@ -12147,6 +12154,42 @@ static int32 buildin_announce_sub(block_list *bl, va_list ap)
 	return SCRIPT_CMD_SUCCESS;
 }
 
+/**
+ * NEED Phase 0.32 : the per-recipient half of the announce family.
+ *
+ * `buildin_announce_sub` already runs ONCE PER PLAYER - `map_foreachinmap(..., BL_PC, ...)`
+ * calls it per recipient and it sends with `SELF`. So mapannounce / areaannounce /
+ * instance_announce never needed new broadcast infrastructure at all: the only reason they
+ * were not language-aware is that the string was chosen before the loop started. This
+ * variant carries BOTH strings into the loop and picks per recipient.
+ */
+static int32 buildin_announce_lang_sub(block_list *bl, va_list ap)
+{
+	map_session_data* tsd = BL_CAST( BL_PC, bl );
+
+	char *kr        = va_arg(ap, char *);
+	char *en        = va_arg(ap, char *);
+	int32  type      = va_arg(ap, int32);
+	char *fontColor = va_arg(ap, char *);
+	int16 fontType  = (int16)va_arg(ap, int32);
+	int16 fontSize  = (int16)va_arg(ap, int32);
+	int16 fontAlign = (int16)va_arg(ap, int32);
+	int16 fontY     = (int16)va_arg(ap, int32);
+
+	if( tsd == nullptr ){
+		return 0;
+	}
+
+	const char* mes = ( need_lang_sanitize( (uint8)tsd->need_lang ) == NEED_LANG_EN && en != nullptr ) ? en : kr;
+	int32 len = (int32)strlen( mes ) + 1;
+
+	if (fontColor)
+		clif_broadcast2(bl, mes, len, strtol(fontColor, (char **)nullptr, 0), fontType, fontSize, fontAlign, fontY, SELF);
+	else
+		clif_broadcast(bl, mes, len, type, SELF);
+	return 0;
+}
+
 BUILDIN_FUNC(mapannounce)
 {
 	const char *mapname   = script_getstr(st,2);
@@ -12190,6 +12233,63 @@ BUILDIN_FUNC(areaannounce)
 
 	map_foreachinallarea(buildin_announce_sub, m, x0, y0, x1, y1, BL_PC,
 		mes, strlen(mes)+1, flag&BC_COLOR_MASK, fontColor, fontType, fontSize, fontAlign, fontY);
+	return SCRIPT_CMD_SUCCESS;
+}
+
+/*==========================================
+ * NEED Phase 0.32 : the recipient-aware announce family.
+ *
+ *   mapannouncelang "<map>","<KR>","<EN>",<flag>{,<color>{,<type>{,<size>{,<align>{,<y>}}}}};
+ *   areaannouncelang "<map>",<x0>,<y0>,<x1>,<y1>,"<KR>","<EN>",<flag>{,...};
+ *   instanceannouncelang <instance id>,"<KR>","<EN>",<flag>{,...};
+ *
+ * Argument order, flag, colour and font handling are identical to the non-lang commands -
+ * only the single message argument becomes an adjacent KR/EN pair, which is what makes the
+ * migration a mechanical rewrite of `X needtr(KR,EN), …` into `Xlang KR, EN, …`.
+ *------------------------------------------*/
+BUILDIN_FUNC(mapannouncelang)
+{
+	const char *mapname   = script_getstr(st,2);
+	const char *kr        = script_getstr(st,3);
+	const char *en        = script_getstr(st,4);
+	int32         flag      = script_getnum(st,5);
+	const char *fontColor = script_hasdata(st,6) ? script_getstr(st,6) : nullptr;
+	int32         fontType  = script_hasdata(st,7) ? script_getnum(st,7) : FW_NORMAL;
+	int32         fontSize  = script_hasdata(st,8) ? script_getnum(st,8) : 12;
+	int32         fontAlign = script_hasdata(st,9) ? script_getnum(st,9) : 0;
+	int32         fontY     = script_hasdata(st,10) ? script_getnum(st,10) : 0;
+	int16 m;
+
+	if ((m = map_mapname2mapid(mapname)) < 0)
+		return SCRIPT_CMD_SUCCESS;
+
+	map_foreachinmap(buildin_announce_lang_sub, m, BL_PC,
+			kr, en, flag&BC_COLOR_MASK, fontColor, fontType, fontSize, fontAlign, fontY);
+	return SCRIPT_CMD_SUCCESS;
+}
+
+BUILDIN_FUNC(areaannouncelang)
+{
+	const char *mapname   = script_getstr(st,2);
+	int32         x0        = script_getnum(st,3);
+	int32         y0        = script_getnum(st,4);
+	int32         x1        = script_getnum(st,5);
+	int32         y1        = script_getnum(st,6);
+	const char *kr        = script_getstr(st,7);
+	const char *en        = script_getstr(st,8);
+	int32         flag      = script_getnum(st,9);
+	const char *fontColor = script_hasdata(st,10) ? script_getstr(st,10) : nullptr;
+	int32         fontType  = script_hasdata(st,11) ? script_getnum(st,11) : FW_NORMAL;
+	int32         fontSize  = script_hasdata(st,12) ? script_getnum(st,12) : 12;
+	int32         fontAlign = script_hasdata(st,13) ? script_getnum(st,13) : 0;
+	int32         fontY     = script_hasdata(st,14) ? script_getnum(st,14) : 0;
+	int16 m;
+
+	if ((m = map_mapname2mapid(mapname)) < 0)
+		return SCRIPT_CMD_SUCCESS;
+
+	map_foreachinallarea(buildin_announce_lang_sub, m, x0, y0, x1, y1, BL_PC,
+		kr, en, flag&BC_COLOR_MASK, fontColor, fontType, fontSize, fontAlign, fontY);
 	return SCRIPT_CMD_SUCCESS;
 }
 
@@ -14835,6 +14935,14 @@ BUILDIN_FUNC(guardianinfo)
 
 /*==========================================
  * Get the item name by item_id or null
+ *
+ * NEED Phase 0.11 : the RETURNED name is chosen for the attached player's language, the
+ * LOOKUP is not. searchname() still resolves the string argument through the AegisName /
+ * `Name:` maps only, so getitemname("<korean name>") keeps finding the same item in an
+ * English session and no script constant, shop row or quest lookup changes meaning.
+ * Because every output path (mes, sprintf, a dynamic menu/select string, dispbottom, an
+ * announce built by the script) consumes this return value, they are all covered by this
+ * one place. No player attached -> Korean, exactly as before.
  *------------------------------------------*/
 BUILDIN_FUNC(getitemname)
 {
@@ -14853,7 +14961,7 @@ BUILDIN_FUNC(getitemname)
 
 	char* item_name = (char *)aMalloc( ITEM_NAME_LENGTH * sizeof( char ) );
 
-	safestrncpy(item_name, i_data->ename.c_str(), ITEM_NAME_LENGTH);
+	safestrncpy( item_name, item_display_name( i_data, script_need_lang( st ) ), ITEM_NAME_LENGTH );
 	script_pushstr(st,item_name);
 
 	return SCRIPT_CMD_SUCCESS;
@@ -16545,6 +16653,66 @@ BUILDIN_FUNC(npctalk)
 			TBL_PC *sd = map_id2sd(st->rid);
 			if (sd == nullptr)
 				return SCRIPT_CMD_FAILURE;
+			clif_messagecolor_target(nd, color, message, true, target, sd);
+		}
+	}
+	return SCRIPT_CMD_SUCCESS;
+}
+
+/*==========================================
+ * NEED Phase 0.32 : recipient-aware npctalk.
+ *
+ *   npctalklang "<KR>","<EN>"{,"<NPC name>",<flag>{,<color>}};
+ *
+ * Identical to `npctalk` in every other respect - the NPC-name argument is still the
+ * `npc_name2id()` LOOKUP KEY that Phases 0.29/0.30 had to un-wrap at 260 sites, and it is
+ * still never translated; the flag still defaults to AREA; the colour still defaults to
+ * 0xFFFFFF.
+ *
+ * `bc_self` deliberately keeps the original single-recipient path: one buffer, one send, no
+ * recipient loop, and the language is the caller's own - which is correct, because the
+ * caller IS the only recipient.
+ *------------------------------------------*/
+BUILDIN_FUNC(npctalklang)
+{
+	npc_data* nd = nullptr;
+	const char* kr = script_getstr(st,2);
+	const char* en = script_getstr(st,3);
+	int32 color = 0xFFFFFF;
+
+	if (script_hasdata(st, 4) && strlen(script_getstr(st,4)) > 0)
+		nd = npc_name2id(script_getstr(st, 4));
+	else
+		nd = (npc_data *)map_id2bl(st->oid);
+
+	if (script_hasdata(st, 6))
+		color = script_getnum(st, 6);
+
+	if (nd != nullptr) {
+		send_target target = AREA;
+
+		if (script_hasdata(st, 5)) {
+			switch(script_getnum(st, 5)) {
+				case BC_ALL:	target = ALL_CLIENT;	break;
+				case BC_MAP:	target = ALL_SAMEMAP;	break;
+				case BC_SELF:	target = SELF;			break;
+				case BC_AREA:
+				default:		target = AREA;			break;
+			}
+		}
+
+		if (target != SELF) {
+			clif_messagecolor_lang(nd, color, kr, en, true, target);
+		} else {
+			// single recipient: keep the original fast path, in that player's language
+			TBL_PC *sd = map_id2sd(st->rid);
+			if (sd == nullptr)
+				return SCRIPT_CMD_FAILURE;
+
+			const char* mes = ( need_lang_sanitize( (uint8)sd->need_lang ) == NEED_LANG_EN ) ? en : kr;
+			char message[CHAT_SIZE_MAX];
+
+			safesnprintf(message, sizeof(message), "%s", mes);
 			clif_messagecolor_target(nd, color, message, true, target, sd);
 		}
 	}
@@ -20682,6 +20850,48 @@ BUILDIN_FUNC(unittalk)
 	return SCRIPT_CMD_SUCCESS;
 }
 
+/*==========================================
+ * NEED Phase 0.32 : recipient-aware unittalk.
+ *
+ *   unittalklang <unit id>,"<KR>","<EN>"{,<flag>};
+ *
+ * This is the surface Phase 0.31 found had never been classified: `BUILDIN_FUNC(unittalk)`
+ * sets `send_target = AREA` and only `bc_self` makes it SELF, so 199 sites that already
+ * carried a `needtr()` were broadcasting the CALLER's language to everyone in range.
+ *
+ * `bc_self` keeps the original single-recipient path unchanged, including its
+ * non-player-object guard and its warning.
+ *------------------------------------------*/
+BUILDIN_FUNC(unittalklang)
+{
+	block_list* bl;
+	const char* kr = script_getstr(st, 3);
+	const char* en = script_getstr(st, 4);
+
+	if( script_rid2bl(2,bl) )
+	{
+		if (script_hasdata(st, 5) && script_getnum(st, 5) == BC_SELF) {
+			map_session_data* ssd = map_id2sd(bl->id);
+
+			if (ssd == nullptr) {
+				ShowWarning("script: unittalklang: bc_self can't be used for non-players objects.\n");
+				return SCRIPT_CMD_FAILURE;
+			}
+
+			// `clif_disp_overhead_` takes a plain const char*; the StringBuf the original
+			// bc_self path builds only copies the string and is not needed here.
+			const char* mes = ( need_lang_sanitize( (uint8)ssd->need_lang ) == NEED_LANG_EN ) ? en : kr;
+
+			clif_disp_overhead_(bl, mes, SELF);
+			return SCRIPT_CMD_SUCCESS;
+		}
+
+		clif_disp_overhead_lang(bl, kr, en, AREA);
+	}
+
+	return SCRIPT_CMD_SUCCESS;
+}
+
 /// Makes the unit cast the skill on the target or self if no target is specified.
 ///
 /// unitskilluseid <unit_id>,<skill_id>,<skill_lv>{,<target_id>,<casttime>,<cancel>,<Line_ID>};
@@ -22581,6 +22791,37 @@ BUILDIN_FUNC(instance_announce) {
 
 	for (const auto &it : idata->map)
 		map_foreachinmap(buildin_announce_sub, it.m, BL_PC, mes, strlen(mes)+1, flag&BC_COLOR_MASK, fontColor, fontType, fontSize, fontAlign, fontY);
+
+	return SCRIPT_CMD_SUCCESS;
+}
+
+/*==========================================
+ * NEED Phase 0.32 : instanceannouncelang <instance id>,"<KR>","<EN>",<flag>{,...};
+ * Using 0 for <instance id> will auto-detect the id, exactly as instance_announce does.
+ *------------------------------------------*/
+BUILDIN_FUNC(instanceannouncelang) {
+	int32           instance_id = script_getnum(st,2);
+	const char     *kr         = script_getstr(st,3);
+	const char     *en         = script_getstr(st,4);
+	int32            flag       = script_getnum(st,5);
+	const char     *fontColor  = script_hasdata(st,6) ? script_getstr(st,6) : nullptr;
+	int32            fontType   = script_hasdata(st,7) ? script_getnum(st,7) : FW_NORMAL;
+	int32            fontSize   = script_hasdata(st,8) ? script_getnum(st,8) : 12;
+	int32            fontAlign  = script_hasdata(st,9) ? script_getnum(st,9) : 0;
+	int32            fontY      = script_hasdata(st,10) ? script_getnum(st,10) : 0;
+
+	if (instance_id <= 0)
+		instance_id = script_instancegetid(st);
+
+	std::shared_ptr<s_instance_data> idata = util::umap_find(instances, instance_id);
+
+	if (instance_id <= 0 || !idata) {
+		ShowError("buildin_instanceannouncelang: Instance not found.\n");
+		return SCRIPT_CMD_FAILURE;
+	}
+
+	for (const auto &it : idata->map)
+		map_foreachinmap(buildin_announce_lang_sub, it.m, BL_PC, kr, en, flag&BC_COLOR_MASK, fontColor, fontType, fontSize, fontAlign, fontY);
 
 	return SCRIPT_CMD_SUCCESS;
 }
@@ -24993,6 +25234,58 @@ BUILDIN_FUNC(showscript) {
 	}
 
 	clif_showscript(bl, msg, target);
+
+	script_pushint(st,1);
+	return SCRIPT_CMD_SUCCESS;
+}
+
+/**
+ * NEED Phase 0.33 : recipient-aware `showscript`.
+ * showscriptlang "<KR>","<EN>"{,<GID>{,<flag>}};
+ *
+ * Identical to `showscript` in every respect except that the single message argument becomes
+ * an adjacent KR/EN pair; <GID> and <flag> keep their positions, meanings and defaults, just
+ * shifted one place right. The pair is handed to clif_showscript_lang, which picks per
+ * recipient - so `OnInit`, `OnTimer<ms>`, an NPC timer or an instance event serves a mixed
+ * KR/EN area correctly, which the caller-RID `needtr()` form could not express at all.
+ *
+ * An empty EN string falls back to KR, which is exactly what `getnpcnameen()` returns for an
+ * NPC with no registered English name - so `showscriptlang strnpcinfo(1), getnpcnameen()` is
+ * safe on every instance whether or not it is registered.
+ *
+ * `needtr()` is NOT changed by this command and must not be used inside it: resolving the pair
+ * here is the whole point.
+ **/
+BUILDIN_FUNC(showscriptlang) {
+	block_list *bl = nullptr;
+	const char *kr = script_getstr(st,2);
+	const char *en = script_getstr(st,3);
+	int32 id = 0;
+	send_target target = AREA;
+
+	if (script_hasdata(st,4)) {
+		id = script_getnum(st,4);
+		bl = map_id2bl(id);
+	}
+	else {
+		bl = st->rid ? map_id2bl(st->rid) : map_id2bl(st->oid);
+	}
+
+	if (!bl) {
+		ShowError("buildin_showscriptlang: Script not attached. (id=%d, rid=%d, oid=%d)\n", id, st->rid, st->oid);
+		script_pushint(st,0);
+		return SCRIPT_CMD_FAILURE;
+	}
+
+	if (script_hasdata(st, 5)) {
+		target = static_cast<send_target>(script_getnum(st, 5));
+		if (target == SELF && map_id2sd(bl->id) == nullptr) {
+			ShowWarning("script: showscriptlang: self can't be used for non-players objects.\n");
+			return SCRIPT_CMD_FAILURE;
+		}
+	}
+
+	clif_showscript_lang(bl, kr, en, target);
 
 	script_pushint(st,1);
 	return SCRIPT_CMD_SUCCESS;
@@ -28082,8 +28375,12 @@ BUILDIN_FUNC(mesitemlink){
 		name = script_getstr( st, 4 );
 	}
 
-	// Create the link, depending on configuration and packet version
-	std::string itemlstr = item_db.create_item_link_for_mes( data, use_brackets, name );
+	// Create the link, depending on configuration and packet version.
+	// NEED Phase 0.11 : with feature.mesitemlink on and PACKETVER >= 20151104 the link is
+	// "<ITEM>[<label>]<INFO><id></INFO></ITEM>" - the LABEL is server text, so it needs the
+	// recipient's language. (itemlink() is different: its <ITEML> tag carries no name at all,
+	// the client renders that one from its own itemInfo.)
+	std::string itemlstr = item_db.create_item_link_for_mes( data, use_brackets, name, script_need_lang( st ) );
 
 	// Push it to the script engine for further usage
 	script_pushstrcopy( st, itemlstr.c_str() );
@@ -28430,7 +28727,7 @@ BUILDIN_FUNC(mesitemicon){
 	}
 
 	// Create the link, depending on configuration
-	std::string itemlstr = item_db.create_item_icon_for_mes( data, name );
+	std::string itemlstr = item_db.create_item_icon_for_mes( data, name, script_need_lang( st ) );
 
 	// Push it to the script engine for further usage
 	script_pushstrcopy( st, itemlstr.c_str() );
@@ -28771,6 +29068,159 @@ BUILDIN_FUNC(needtr)
 	return SCRIPT_CMD_SUCCESS;
 }
 
+/*==========================================
+ * NEED Phase 0.6 : set an NPC's ENGLISH display name
+ *
+ * setnpcnameen "<english name>"{,"<npc unique name>"};
+ *
+ * The English name is a DISPLAY value only. It is delivered instead of the Korean name when a
+ * packet is built for a single recipient whose session is EN (Phase 0.2's need_lang), which
+ * covers the mouseover tooltip and the client's actor cache (and therefore the dialog window
+ * title). It never touches `exname`, npcname_db, event labels, doevent/donpcevent or
+ * duplicate(), so script identity is unaffected.
+ *
+ * Passing an empty string clears it, restoring the original behaviour for that NPC.
+ * With no second argument it applies to the NPC the script is attached to, so it can be called
+ * from that NPC's own OnInit; naming an NPC lets one separate script set names without editing
+ * the target scripts at all.
+ *------------------------------------------*/
+BUILDIN_FUNC(setnpcnameen)
+{
+	const char* en = script_getstr( st, 2 );
+	npc_data* nd;
+
+	if( script_hasdata( st, 3 ) ){
+		const char* target = script_getstr( st, 3 );
+
+		nd = npc_name2id( target );
+
+		if( nd == nullptr ){
+			/**
+			 * NEED Phase 0.7 : optional third argument `quiet`.
+			 *
+			 * A bulk registration file lists every NPC of the whole server, but a map-server
+			 * only loads the NPCs of the maps it owns, so on a multi-map-server setup the
+			 * other server's NPCs are legitimately absent. Without this, each of them would
+			 * emit an error plus run_func's "returned failure" warning and a source report.
+			 *
+			 * Default is 0, i.e. exactly the Phase 0.6 behaviour: a missing NPC is an error,
+			 * which is how three wrong PoC targets were caught. Only a generated file whose
+			 * entries were already validated statically should pass 1.
+			 */
+			if( script_hasdata( st, 4 ) && script_getnum( st, 4 ) != 0 ){
+				return SCRIPT_CMD_SUCCESS;
+			}
+
+			ShowError( "buildin_setnpcnameen: no such npc '%s'.\n", target );
+			script_reportsrc( st );
+			return SCRIPT_CMD_FAILURE;
+		}
+	}else{
+		nd = map_id2nd( st->oid );
+
+		if( nd == nullptr ){
+			ShowError( "buildin_setnpcnameen: no npc attached to this script.\n" );
+			script_reportsrc( st );
+			return SCRIPT_CMD_FAILURE;
+		}
+	}
+
+	safestrncpy( nd->name_en, en, sizeof( nd->name_en ) );
+
+	return SCRIPT_CMD_SUCCESS;
+}
+
+/// getnpcnameen({"<npc unique name>"});
+/// Returns the English display name set by setnpcnameen, or "" when none is set.
+BUILDIN_FUNC(getnpcnameen)
+{
+	npc_data* nd;
+
+	if( script_hasdata( st, 2 ) ){
+		nd = npc_name2id( script_getstr( st, 2 ) );
+	}else{
+		nd = map_id2nd( st->oid );
+	}
+
+	if( nd == nullptr ){
+		script_pushconststr( st, "" );
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	script_pushstrcopy( st, nd->name_en );
+	return SCRIPT_CMD_SUCCESS;
+}
+
+/*==========================================
+ * NEED Phase 0.8 : setwaitingroomen "<english title>"{,"<npc unique name>"{,<quiet>}};
+ *
+ * Registers the ENGLISH title of the waiting room owned by an NPC. `waitingroom` itself always
+ * runs in OnInit (no attached player), so needtr() cannot pick the language there; instead the
+ * Korean title stays in the chat room and this copy is sent only when the room entry packet is
+ * built for one EN recipient (clif_dispchat(cd, tsd)). Nothing about the room - id, limit,
+ * trigger, event label - is touched, and the NPC need not own a room yet when this runs.
+ *
+ * Passing an empty string clears it. Arguments 2 and 3 behave exactly like setnpcnameen.
+ *------------------------------------------*/
+BUILDIN_FUNC(setwaitingroomen)
+{
+	const char* en = script_getstr( st, 2 );
+	npc_data* nd;
+
+	if( script_hasdata( st, 3 ) ){
+		const char* target = script_getstr( st, 3 );
+
+		nd = npc_name2id( target );
+
+		if( nd == nullptr ){
+			if( script_hasdata( st, 4 ) && script_getnum( st, 4 ) != 0 ){
+				return SCRIPT_CMD_SUCCESS;
+			}
+
+			ShowError( "buildin_setwaitingroomen: no such npc '%s'.\n", target );
+			script_reportsrc( st );
+			return SCRIPT_CMD_FAILURE;
+		}
+	}else{
+		nd = map_id2nd( st->oid );
+
+		if( nd == nullptr ){
+			ShowError( "buildin_setwaitingroomen: no npc attached to this script.\n" );
+			script_reportsrc( st );
+			return SCRIPT_CMD_FAILURE;
+		}
+	}
+
+	if( strlen( en ) >= CHATROOM_TITLE_SIZE ){
+		ShowWarning( "buildin_setwaitingroomen: title '%s' is longer than %d bytes and will be truncated.\n", en, CHATROOM_TITLE_SIZE - 1 );
+		script_reportsrc( st );
+	}
+
+	safestrncpy( nd->chattitle_en, en, sizeof( nd->chattitle_en ) );
+	return SCRIPT_CMD_SUCCESS;
+}
+
+/// getwaitingroomen({"<npc unique name>"});
+/// Returns the English waiting room title set by setwaitingroomen, or "" when none is set.
+BUILDIN_FUNC(getwaitingroomen)
+{
+	npc_data* nd;
+
+	if( script_hasdata( st, 2 ) ){
+		nd = npc_name2id( script_getstr( st, 2 ) );
+	}else{
+		nd = map_id2nd( st->oid );
+	}
+
+	if( nd == nullptr ){
+		script_pushconststr( st, "" );
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	script_pushstrcopy( st, nd->chattitle_en );
+	return SCRIPT_CMD_SUCCESS;
+}
+
 /// script command definitions
 /// for an explanation on args, see add_buildin_func
 struct script_function buildin_func[] = {
@@ -28945,7 +29395,10 @@ struct script_function buildin_func[] = {
 	BUILDIN_DEF(playerattached,""), // returns id of the current attached player. [Skotlex]
 	BUILDIN_DEF(announce,"si??????"),
 	BUILDIN_DEF(mapannounce,"ssi?????"),
+	// NEED Phase 0.32 : recipient-aware announce family - one extra string argument
+	BUILDIN_DEF(mapannouncelang,"sssi?????"),
 	BUILDIN_DEF(areaannounce,"siiiisi?????"),
+	BUILDIN_DEF(areaannouncelang,"siiiissi?????"),
 	BUILDIN_DEF(getusers,"i"),
 	BUILDIN_DEF(getmapguildusers,"si"),
 	BUILDIN_DEF(getmapusers,"s"),
@@ -29074,6 +29527,8 @@ struct script_function buildin_func[] = {
 	BUILDIN_DEF(movenpc,"sii?"), // [MouseJstr]
 	BUILDIN_DEF(message,"ss"), // [MouseJstr]
 	BUILDIN_DEF(npctalk,"s???"), // [Valaris]
+	// NEED Phase 0.32 : arg 2/3 are the KR/EN pair, arg 4 is still the npc_name2id key
+	BUILDIN_DEF(npctalklang,"ss???"),
 	BUILDIN_DEF(chatmes,"s?"), // [Jey]
 	BUILDIN_DEF(mobcount,"ss"),
 	BUILDIN_DEF(getlook,"i?"),
@@ -29203,6 +29658,7 @@ struct script_function buildin_func[] = {
 	BUILDIN_DEF(unitstopattack,"i"),
 	BUILDIN_DEF(unitstopwalk,"i?"),
 	BUILDIN_DEF(unittalk,"is?"),
+	BUILDIN_DEF(unittalklang,"iss?"),
 	BUILDIN_DEF(unitskilluseid,"ivi?????"), // originally by Qamera [Celest]
 	BUILDIN_DEF(unitskillusepos,"iviii????"), // [Celest]
 // <--- [zBuffer] List of unit control commands
@@ -29284,6 +29740,7 @@ struct script_function buildin_func[] = {
 	BUILDIN_DEF(instance_mapname,"s?"),
 	BUILDIN_DEF(instance_warpall,"sii??"),
 	BUILDIN_DEF(instance_announce,"isi?????"),
+	BUILDIN_DEF(instanceannouncelang,"issi?????"),
 	BUILDIN_DEF(instance_check_party,"i???"),
 	BUILDIN_DEF(instance_check_guild,"i???"),
 	BUILDIN_DEF(instance_check_clan,"i???"),
@@ -29369,6 +29826,7 @@ struct script_function buildin_func[] = {
 	BUILDIN_DEF(getattachedrid,""),
 	BUILDIN_DEF(getvar,"vi"),
 	BUILDIN_DEF(showscript,"s??"),
+	BUILDIN_DEF(showscriptlang,"ss??"),	// NEED Phase 0.33 : recipient-aware showscript
 	BUILDIN_DEF(ignoretimeout,"i?"),
 	BUILDIN_DEF(geteleminfo,"i?"),
 	BUILDIN_DEF(opendressroom,"?"),
@@ -29527,6 +29985,14 @@ struct script_function buildin_func[] = {
 	// NEED Phase 0.3 : client language of the current session (KR / EN)
 	BUILDIN_DEF(getneedlang,""),
 	BUILDIN_DEF(needtr,"ss"),
+
+	// NEED Phase 0.6 : per-recipient English NPC display name (display only, never identity)
+	BUILDIN_DEF(setnpcnameen,"s??"),
+	BUILDIN_DEF(getnpcnameen,"?"),
+
+	// NEED Phase 0.8 : per-recipient English waiting room title (display only, room identity untouched)
+	BUILDIN_DEF(setwaitingroomen,"s??"),
+	BUILDIN_DEF(getwaitingroomen,"?"),
 
 #include <custom/script_def.inc>
 

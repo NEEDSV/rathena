@@ -55,58 +55,58 @@ un_myst,163,38,5	script	마크::Mark	4_M_BLUEMAN,{
 	.@limit = instance_ip_reward_limit(.@instance_db_id);
 
 	if (.@remaining == -1 || .@limit == -1) {
-		mes "보상 이용 횟수를 확인하지 못했습니다.";
-		mes "잠시 후 다시 시도해 주세요.";
+		mes needtr("보상 이용 횟수를 확인하지 못했습니다.", "Could not read your reward usage count.");
+		mes needtr("잠시 후 다시 시도해 주세요.", "Please try again in a moment.");
 		end;
 	}
 
 	if (.@remaining != -2 && .@limit > 0) {
 		if (.@remaining <= 0) {
-			mes "오늘 해당 던전의 보상 이용 횟수를";
-			mes "모두 사용했습니다.";
-			mes "남은 보상 횟수: ^FF00000회 / " + .@limit + "회^000000";
-			mes "초기화 시간: 매일 오전 4시";
+			mes needtr("오늘 해당 던전의 보상 이용 횟수를", "You have used up all the reward");
+			mes needtr("모두 사용했습니다.", "attempts for this dungeon today.");
+			mes needtr("남은 보상 횟수: ^FF00000회 / ", "Rewards left: ^FF00000 / ") + .@limit + needtr("회^000000", "^000000");
+			mes needtr("초기화 시간: 매일 오전 4시", "Reset time: 4:00 am every day");
 			end;
 		}
 
-		mes "오늘 남은 보상 횟수:";
-		mes "^3355FF" + .@remaining + "회 / " + .@limit + "회^000000";
+		mes needtr("오늘 남은 보상 횟수:", "Rewards left for today:");
+		mes "^3355FF" + .@remaining + needtr("회 / ", " / ") + .@limit + needtr("회^000000", "^000000");
 		next;
 	}
 	
-	mes "[마크]";
+	mes needtr("[마크]", "[Mark]");
 	cutin "bu_mark1.bmp",0;
 
 	if (BaseLevel < 150) {
-		mes "이곳은 위험합니다.";
-		mes "조금 더 강해진 뒤 다시 오는 편이 좋겠습니다.";
+		mes needtr("이곳은 위험합니다.", "It's dangerous here.");
+		mes needtr("조금 더 강해진 뒤 다시 오는 편이 좋겠습니다.", "It would be better to come back next time when we are stronger.");
 		close3;
 	}
-	mes "지금까지 본 문들과 달리, 이 문은 이쪽에서 막아 놓았던 흔적이 있습니다.";
+	mes needtr("지금까지 본 문들과 달리, 이 문은 이쪽에서 막아 놓았던 흔적이 있습니다.", "Unlike the other doors we saw this door has traces of it being blocked from this side.");
 	next;
-	mes "[마크]";
-	mes "안쪽에 뭔가 있는 걸까요?";
+	mes needtr("[마크]", "[Mark]");
+	mes needtr("안쪽에 뭔가 있는 걸까요?", "Is there something inside?");
 	next;
 	switch( checkquest(11379,PLAYTIME) ) {
 	case -1:
 		.@party_id = getcharid(1);
 		if (.@party_id < 1) {
-			mes "...이곳은 느낌이 좋지 않습니다.";
-			mes "혼자서는 위험할 수 있으니 파티를 구성하는 편이 좋겠습니다.";
+			mes needtr("...이곳은 느낌이 좋지 않습니다.", "...It doesn't feel right here.");
+			mes needtr("혼자서는 위험할 수 있으니 파티를 구성하는 편이 좋겠습니다.", "It may be dangerous alone so it might be better to form a party.");
 			close3;
 		}
 		if (is_party_leader() == true) {
 			if (#NEED_MD_LAST_ROOM_CLEAR) {
-				mes "[마크]";
-				mes "마지막 방의 일반 진행을 이미 한 번 완료한 기록이 있습니다.";
-				mes "이번에는 어떤 방식으로 진행하시겠습니까?";
+				mes needtr("[마크]", "[Mark]");
+				mes needtr("마지막 방의 일반 진행을 이미 한 번 완료한 기록이 있습니다.", "You have a record of finishing the normal run of the Last Room once.");
+				mes needtr("이번에는 어떤 방식으로 진행하시겠습니까?", "How would you like to proceed this time?");
 				next;
-				.@need_mode = select("일반 진행","간소화 진행");
+				.@need_mode = select(needtr("일반 진행", "Normal run"),needtr("간소화 진행", "Simplified run"));
 				if (.@need_mode == 2) {
 					if (callfunc("F_LastRoomCanEnableSimple") == 0) {
-						mes "[마크]";
-						mes "파티 내 온라인 구성원 중 마지막 방 최초 클리어를 완료하지 않은 계정이 있습니다.";
-						mes "이번 입장은 일반 진행으로 시작합니다.";
+						mes needtr("[마크]", "[Mark]");
+						mes needtr("파티 내 온라인 구성원 중 마지막 방 최초 클리어를 완료하지 않은 계정이 있습니다.", "Some accounts among the party members online have not finished a first clear of the Last Room.");
+						mes needtr("이번 입장은 일반 진행으로 시작합니다.", "This entry starts on the normal run.");
 						@NEED_MD_LAST_ROOM_SIMPLE = 0;
 						next;
 					}
@@ -119,37 +119,37 @@ un_myst,163,38,5	script	마크::Mark	4_M_BLUEMAN,{
 			else
 				@NEED_MD_LAST_ROOM_SIMPLE = 0;
 
-			.@string$ = "문을 연다.";
+			.@string$ = needtr("문을 연다.", "Open door.");
 		}
-		switch( select( .@string$, "입장한다.", "그만둔다." ) ) {
+		switch( select( .@string$, needtr("입장한다.", "Go in."), needtr("그만둔다.", "Quit.") ) ) {
 		case 1:
 			if (instance_create("마지막 방") < 1) {
-				mes "파티: " + getpartyname( getcharid(1) ) + "";
-				mes "파티장: " + getpartyleader( getcharid(1) ) + "";
-				mes "^0000ff마지막 방^000000 - 생성에 실패했습니다.";
+				mes needtr("파티: ", "Party: ") + getpartyname( getcharid(1) ) + "";
+				mes needtr("파티장: ", "Leader: ") + getpartyleader( getcharid(1) ) + "";
+				mes needtr("^0000ff마지막 방^000000 - 생성에 실패했습니다.", "^0000ffLast room ^000000- Creation failed");
 				close3;
 			}
-			mes "[마크]";
-			mes "문을 열겠습니다.";
-			mes "문이 완전히 열리면 안으로 들어가세요.";
+			mes needtr("[마크]", "[Mark]");
+			mes needtr("문을 열겠습니다.", "I'm opening the door.");
+			mes needtr("문이 완전히 열리면 안으로 들어가세요.", "Go in when the door is completely open.");
 			close3;
 		case 2:
 			switch( instance_enter("마지막 방") ) {
 			case IE_NOMEMBER:
-				mes "[마크]";
-				mes "...아무래도 수상한 느낌이 듭니다!";
-				mes "혼자서는 조금 위험합니다. 파티를 구성한 뒤 입장해 주세요!";
+				mes needtr("[마크]", "[Mark]");
+				mes needtr("...아무래도 수상한 느낌이 듭니다!", "...feel very suspicious!");
+				mes needtr("혼자서는 조금 위험합니다. 파티를 구성한 뒤 입장해 주세요!", "It's a little dangerous to be alone. It is recommended to team up!");
 				close3;
 			case IE_NOINSTANCE:
-				mes "[마크]";
-				mes "문이 아직 완전히 열린 것 같지 않습니다.";
+				mes needtr("[마크]", "[Mark]");
+				mes needtr("문이 아직 완전히 열린 것 같지 않습니다.", "The door does not seem to be fully open.");
 				close3;
 			case IE_OTHER:
-				mes "[마크]";
-				mes "이봐요... 무슨 일이죠?";
+				mes needtr("[마크]", "[Mark]");
+				mes needtr("이봐요... 무슨 일이죠?", "Hey... what is going on?");
 				close3;
 			case IE_OK:
-				mapannounce "un_myst", "" + strcharinfo(0) + "이 속한 파티 [" + getpartyname(.@party_id) + "]가 마지막 방에 입장합니다.",bc_map,"0x00FF99";
+				mapannouncelang "un_myst", "" + strcharinfo(0) + "이 속한 파티 [" + getpartyname(.@party_id) + "]가 마지막 방에 입장합니다.", "" + strcharinfo(0) + " of the party, " + getpartyname(.@party_id) + ", is entering Last room.",bc_map,"0x00FF99";
 				setquest 11379;// Final Room
 				if (isbegin_quest(11380) == 0)
 					setquest 11380;// Final Room
@@ -162,15 +162,15 @@ un_myst,163,38,5	script	마크::Mark	4_M_BLUEMAN,{
 		end;
 	case 0:
 	case 1:
-		mes "[마크]";
+		mes needtr("[마크]", "[Mark]");
 		cutin "bu_mark1.bmp",0;
-		mes "...많이 지쳐 보이는군요.";
-		mes "이미 다녀왔으니 오늘은 하루 쉬는 편이 좋겠습니다.";
+		mes needtr("...많이 지쳐 보이는군요.", "...You look tired.");
+		mes needtr("이미 다녀왔으니 오늘은 하루 쉬는 편이 좋겠습니다.", "Since you went there you should take a day to rest.");
 		close3;
 	case 2:
-		mes "[마크]";
+		mes needtr("[마크]", "[Mark]");
 		cutin "bu_mark1.bmp",0;
-		mes "이런 곳에 다시 들어가고 싶다니 믿기 어렵군요...";
+		mes needtr("이런 곳에 다시 들어가고 싶다니 믿기 어렵군요...", "I can't believe you want to enter a place like this again...");
 		erasequest 11379;// Final Room
 		close3;
 	}
@@ -203,27 +203,27 @@ un_myst,163,38,5	script	마크::Mark	4_M_BLUEMAN,{
 */
 
 1@uns,145,37,3	script	타마린::Tamarin#room1	4_M_TAMARIN,{
-	mes "[타마린]";
-	mes "베리티, 괜찮아요?";
-	mes "안색이 좋지 않은데...";
+	mes needtr("[타마린]", "[Tamarin]");
+	mes needtr("베리티, 괜찮아요?", "Verity, are you alright?");
+	mes needtr("안색이 좋지 않은데...", "You do not look good...");
 	cutin "ep143_taang.bmp",2;
 	close3;
 }
 
 1@uns,143,38,5	script	두::Du#room1	4_M_REDMAN,{
-	mes "[두]";
-	mes "불길한 느낌이 들어...";
+	mes needtr("[두]", "[Du]");
+	mes needtr("불길한 느낌이 들어...", "I have a bad feeling about this...");
 	cutin "bu_du1.bmp",2;
 	close3;
 }
 
 1@uns,144,37,3	script	베리티::Verity#room1	4_F_BERRYTEA,{
 	if ('protocole < 2) {
-		mes "[베리티]";
-		mes "으윽... 갑자기 느낌이 좋지 않아요.";
+		mes needtr("[베리티]", "[Verity]");
+		mes needtr("으윽... 갑자기 느낌이 좋지 않아요.", "Umph...I suddenly have a feeling that's not good.");
 		cutin "EP15_2_brt_6.bmp",2;
 		if (is_party_leader() == false) {
-			mes "파티장과 이야기하고 싶어요.";
+			mes needtr("파티장과 이야기하고 싶어요.", "I wish to talk with the leader.");
 			close3;
 		}
 		if (@NEED_MD_LAST_ROOM_SIMPLE && #NEED_MD_LAST_ROOM_CLEAR) {
@@ -232,57 +232,57 @@ un_myst,163,38,5	script	마크::Mark	4_M_BLUEMAN,{
 			'protocole = 1;
 			disablenpc instance_npcname("#lrdoor1");
 			enablenpc instance_npcname("#lrdoor2");
-			mes "[베리티]";
-			mes "이전 탐사 기록을 확인했습니다.";
-			mes "초기 조사 대화를 생략하고 바로 1차 방어 프로토콜 구역으로 이동합니다.";
+			mes needtr("[베리티]", "[Verity]");
+			mes needtr("이전 탐사 기록을 확인했습니다.", "Your earlier survey record has been confirmed.");
+			mes needtr("초기 조사 대화를 생략하고 바로 1차 방어 프로토콜 구역으로 이동합니다.", "The initial survey dialogue is skipped and you move straight to the first defence protocol area.");
 			close3;
 		}
 		@NEED_MD_LAST_ROOM_SIMPLE = 0;
-		npctalk "베리티 : 으윽... 갑자기 느낌이 좋지 않아요.";
+		npctalklang "베리티 : 으윽... 갑자기 느낌이 좋지 않아요.", "Verity : Ugh... I suddenly have a bad feeling.";
 		next;
-		mes "[베리티]";
-		mes "머리가... 깨질 것 같아... 윽....";
-		npctalk "베리티 : 머리가... 깨질 것 같아... 윽....";
+		mes needtr("[베리티]", "[Verity]");
+		mes needtr("머리가... 깨질 것 같아... 윽....", "Something is splitting my head....Ugh....");
+		npctalklang "베리티 : 머리가... 깨질 것 같아... 윽....", "Verity: Something is splitting my head....Ugh....";
 		next;
-		mes "[베리티]";
-		mes "....윽....";
-		npctalk "베리티 : ....윽....";
+		mes needtr("[베리티]", "[Verity]");
+		mes needtr("....윽....", "....Ugh....");
+		npctalklang "베리티 : ....윽....", "Verity: ....Ugh....";
 		next;
-		mes "[두]";
-		mes "누나! 괜찮아?!";
+		mes needtr("[두]", "[Du]");
+		mes needtr("누나! 괜찮아?!", "Sister! Are you alright?!");
 		cutin "bu_du5.bmp",2;
-		npctalk "두 : 누나! 괜찮아?!", instance_npcname("Du#room1");
+		npctalklang "두 : 누나! 괜찮아?!", "Du: Sister! Are you alright?!", instance_npcname("Du#room1");
 		next;
-		mes "[베리티]";
-		mes "....돌아가야 해....";
+		mes needtr("[베리티]", "[Verity]");
+		mes needtr("....돌아가야 해....", "....Have to go back....");
 		cutin "EP15_2_brt_7.bmp",2;
-		npctalk "베리티 : ....돌아가야 해....";
+		npctalklang "베리티 : ....돌아가야 해....", "Verity: ....Have to go back....";
 		next;
-		mes "[타마린]";
-		mes "베리티, 괜찮아요?";
-		mes "걸을 수 있겠어요?";
+		mes needtr("[타마린]", "[Tamarin]");
+		mes needtr("베리티, 괜찮아요?", "Verity, are you alright?");
+		mes needtr("걸을 수 있겠어요?", "Can you walk?");
 		cutin "ep143_tahuk.bmp",2;
-		npctalk "타마린 : 베리티, 괜찮아요? 걸을 수 있겠어요?", instance_npcname("Tamarin#room1");
+		npctalklang "타마린 : 베리티, 괜찮아요? 걸을 수 있겠어요?", "Tamarin: Verity, are you alright? Can you walk?", instance_npcname("Tamarin#room1");
 		next;
-		mes "[베리티]";
-		mes "윽...";
+		mes needtr("[베리티]", "[Verity]");
+		mes needtr("윽...", "Ugh...");
 		cutin "EP15_2_brt_6.bmp",2;
-		npctalk "베리티 : 윽...";
+		npctalklang "베리티 : 윽...", "Verity: Ugh...";
 		next;
-		mes "[두]";
-		mes "" + strcharinfo(0) + "! 아무래도 돌아가는 편이 좋겠어.";
+		mes needtr("[두]", "[Du]");
+		mes "" + strcharinfo(0) + needtr("! 아무래도 돌아가는 편이 좋겠어.", "! I think it is better that you go back.");
 		cutin "bu_du5.bmp",2;
-		npctalk "두 : " + strcharinfo(0) + "! 아무래도 돌아가는 편이 좋겠어.", instance_npcname("Du#room1");
+		npctalklang "두 : " + strcharinfo(0) + "! 아무래도 돌아가는 편이 좋겠어.", "Du: " + strcharinfo(0) + "! I think it is better that you go back.", instance_npcname("Du#room1");
 		next;
-		mes "[베리티]";
-		mes "아... 아니야. 금방 따라갈 테니 먼저 가.";
+		mes needtr("[베리티]", "[Verity]");
+		mes needtr("아... 아니야. 금방 따라갈 테니 먼저 가.", "N...no. I will catch up soon so go on ahead.");
 		cutin "EP15_2_brt_4.bmp",2;
-		npctalk "베리티 : 아... 아니야. 금방 따라갈 테니 먼저 가.";
+		npctalklang "베리티 : 아... 아니야. 금방 따라갈 테니 먼저 가.", "Verity: N...no. I will catch up soon so go on ahead.";
 		next;
-		mes "[타마린]";
-		mes "그럼 베리티가 회복할 때까지 제가 곁에 있을 테니 먼저 가세요.";
+		mes needtr("[타마린]", "[Tamarin]");
+		mes needtr("그럼 베리티가 회복할 때까지 제가 곁에 있을 테니 먼저 가세요.", "Then I will stay with Verity until she recovers so you can go on ahead.");
 		cutin "ep143_tahuk.bmp",2;
-		npctalk "타마린 : 그럼 베리티가 회복할 때까지 제가 곁에 있을 테니 먼저 가세요.";
+		npctalklang "타마린 : 그럼 베리티가 회복할 때까지 제가 곁에 있을 테니 먼저 가세요.", "Tamarin: Then I will stay with Verity until she recovers so you can go on ahead.";
 		if ('protocole == 0) {
 			'protocole = 1;
 			disablenpc instance_npcname("#lrdoor1");
@@ -314,11 +314,11 @@ OnTouch:
 		// disablenpc instance_npcname("Maggi#room1");
 		// disablenpc instance_npcname("Alph#room1");
 		if ('need_md_simple) {
-			mapannounce 'map_name$, "[마지막 방] 간소화 진행: 1차 방어 프로토콜을 즉시 시작합니다.",bc_map,"0xFF0000";
+			mapannouncelang 'map_name$, "[마지막 방] 간소화 진행: 1차 방어 프로토콜을 즉시 시작합니다.", "-----------------Creak---------------------",bc_map,"0xFF0000";
 			donpcevent instance_npcname("#lrdoor3") + "::OnSimpleStart";
 		}
 		else {
-			mapannounce 'map_name$, "-----------------끼이익---------------------",bc_map,"0xFF0000";
+			mapannouncelang 'map_name$, "-----------------끼이익---------------------", "-----------------screeeech---------------------",bc_map,"0xFF0000";
 			donpcevent instance_npcname("#lrdoor3") + "::OnStart";
 		}
 	}
@@ -329,7 +329,7 @@ OnTouch:
 	end;
 OnSimpleStart:
 	enablenpc instance_npcname("#lrdoor3");
-	mapannounce 'map_name$, "시스템 메시지 : 침입자를 감지했습니다. 제거 프로토콜을 즉시 실행합니다.",bc_map,"0xFF0000";
+	mapannouncelang 'map_name$, "시스템 메시지 : 침입자를 감지했습니다. 제거 프로토콜을 즉시 실행합니다.", "System message : Intruders detected. Executing the elimination protocol immediately.",bc_map,"0xFF0000";
 	areamonster 'map_name$,30,33,70,73,"시스템 메시지",3253,1, instance_npcname("#lrdoor3") + "::OnMyMobDead";
 	callsub S_Spawn;
 	end;
@@ -337,28 +337,28 @@ OnStart:
 	initnpctimer;
 	end;
 OnTimer2000:
-	mapannounce 'map_name$, "-----끼이익---우웅--------------------------",bc_map,"0xFF0000";
+	mapannouncelang 'map_name$, "-----끼이익---우웅--------------------------", "-----Creak---Wrr--------------------------",bc_map,"0xFF0000";
 	end;
 OnTimer4000:
-	mapannounce 'map_name$, "--------------우우우웅-----------------",bc_map,"0xFF0000";
+	mapannouncelang 'map_name$, "--------------우우우웅-----------------", "--------------Wirrrrrrr-----------------",bc_map,"0xFF0000";
 	end;
 OnTimer6000:
-	mapannounce 'map_name$, "-----치직--------치지직------------------",bc_map,"0xFF0000";
+	mapannouncelang 'map_name$, "-----치직--------치지직------------------", "-----Zizip--------Zizizip------------------",bc_map,"0xFF0000";
 	end;
 OnTimer8000:
-	mapannounce 'map_name$, "시스템 메시지 : 침입자를 감지했습니다.",bc_map,"0xFF0000";
+	mapannouncelang 'map_name$, "시스템 메시지 : 침입자를 감지했습니다.", "System message : Intruder detected.",bc_map,"0xFF0000";
 	end;
 OnTimer10000:
-	mapannounce 'map_name$, "시스템 메시지 : 지정 프로토콜에 따라 입구를 봉쇄하고 침입자를 제거합니다.",bc_map,"0xFF0000";
+	mapannouncelang 'map_name$, "시스템 메시지 : 지정 프로토콜에 따라 입구를 봉쇄하고 침입자를 제거합니다.", "System message : Sealing off entrance and eliminating intruder according to designated protocols.",bc_map,"0xFF0000";
 	enablenpc instance_npcname("#lrdoor3");
 	areamonster 'map_name$,30,33,70,73,"시스템 메시지",3253,1, instance_npcname("#lrdoor3") + "::OnMyMobDead";
 	callsub S_Spawn;
 OnTimer310000:
-	mapannounce 'map_name$, "시스템 메시지 : 침입자를 제거합니다.",bc_map,"0xFF0000";
+	mapannouncelang 'map_name$, "시스템 메시지 : 침입자를 제거합니다.", "System message : Eliminating intruder.",bc_map,"0xFF0000";
 	callsub S_Spawn;
 OnTimer610000:
 	stopnpctimer;
-	mapannounce 'map_name$, "시스템 메시지 : 침입자를 제거합니다.",bc_map,"0xFF0000";
+	mapannouncelang 'map_name$, "시스템 메시지 : 침입자를 제거합니다.", "System message : Eliminating intruder.",bc_map,"0xFF0000";
 	callsub S_Spawn;
 S_Spawn:
 	.@label$ = instance_npcname("#lrdoor3") + "::OnMyMobDead";
@@ -374,7 +374,7 @@ S_Spawn:
 OnMyMobDead:
 	.@count = mobcount( 'map_name$, instance_npcname("#lrdoor3") + "::OnMyMobDead" );
 	if (.@count < 1) {
-		mapannounce 'map_name$, "시스템 메시지 : 1차 프로토콜 실패. 다음 프로토콜을 시작합니다.",bc_map,"0xFF0000";
+		mapannouncelang 'map_name$, "시스템 메시지 : 1차 프로토콜 실패. 다음 프로토콜을 시작합니다.", "System message : First protocol failed. Commencing next protocol.",bc_map,"0xFF0000";
 		stopnpctimer;
 		if ('need_md_simple) {
 			'protocole = 3;
@@ -383,7 +383,7 @@ OnMyMobDead:
 				enablenpc instance_npcname( "#lrboom" + .@i );
 			enablenpc instance_npcname("Verity#room2");
 			enablenpc instance_npcname("Verity#room3");
-			mapannounce 'map_name$, "[마지막 방] 간소화 진행: 타마린과의 진행 대화를 생략합니다. 2구역으로 이동하세요.",bc_map,"0x00FF99";
+			mapannouncelang 'map_name$, "[마지막 방] 간소화 진행: 타마린과의 진행 대화를 생략합니다. 2구역으로 이동하세요.", "[Last Room] Simplified run: the progress dialogue with Tamarin is skipped. Move to area 2.",bc_map,"0x00FF99";
 		}
 		else
 			enablenpc instance_npcname("Tamarin#room2");
@@ -393,35 +393,35 @@ OnMyMobDead:
 }
 
 1@uns,67,97,3	script	타마린::Tamarin#room2	4_M_TAMARIN,{
-	mes "[타마린]";
-	mes "헉, 헉... 베리티가 갑자기... 제대로 서 있지도 못하더니... 헉...";
+	mes needtr("[타마린]", "[Tamarin]");
+	mes needtr("헉, 헉... 베리티가 갑자기... 제대로 서 있지도 못하더니... 헉...", "Huff huff... Verity suddenly huff huff couldn't even stand straight before huff huff...");
 	cutin "ep143_tahuk.bmp",2;
 	if (is_party_leader() == false) {
 		next;
-		mes "[타마린]";
-		mes "우리끼리 이야기해서 해결할 문제는 아닌 것 같습니다.";
-		mes "먼저 파티장의 의견을 들어보죠.";
+		mes needtr("[타마린]", "[Tamarin]");
+		mes needtr("우리끼리 이야기해서 해결할 문제는 아닌 것 같습니다.", "I don't think this is a problem we can solve by talking amongst ourselves.");
+		mes needtr("먼저 파티장의 의견을 들어보죠.", "Let's ask the leader's opinion first.");
 		close3;
 	}
-	npctalk "타마린 : 헉, 헉... 베리티가 갑자기... 제대로 서 있지도 못하더니... 헉...";
+	npctalklang "타마린 : 헉, 헉... 베리티가 갑자기... 제대로 서 있지도 못하더니... 헉...", "Tamarin: Huff huff... Verity suddenly huff huff couldn't even stand straight before huff huff...";
 	next;
-	mes "[타마린]";
-	mes "갑자기 너무 빠르게 달려가서... 헉... 따라잡기도 힘들었습니다. 헉...";
-	npctalk "타마린 : 갑자기 너무 빠르게 달려가서... 헉... 따라잡기도 힘들었습니다. 헉...";
+	mes needtr("[타마린]", "[Tamarin]");
+	mes needtr("갑자기 너무 빠르게 달려가서... 헉... 따라잡기도 힘들었습니다. 헉...", "Ran off so fast huff...huff... to even catch up. Huff huff");
+	npctalklang "타마린 : 갑자기 너무 빠르게 달려가서... 헉... 따라잡기도 힘들었습니다. 헉...", "Tamarin: Ran off so fast huff...huff... to even catch up. Huff huff";
 	next;
-	mapannounce 'map_name$, "시스템 메시지 : 미확인 물체가 1구역에서 2구역으로 빠르게 이동 중입니다.",bc_map,"0xFF0000";
-	mes "[타마린]";
-	mes "어... 베리티가 벌써 저기까지 간 걸까요?";
-	npctalk "타마린 : 어... 베리티가 벌써 저기까지 간 걸까요?";
+	mapannouncelang 'map_name$, "시스템 메시지 : 미확인 물체가 1구역에서 2구역으로 빠르게 이동 중입니다.", "System message : An unidentified object is moving fast from Zone 1 to Zone 2.",bc_map,"0xFF0000";
+	mes needtr("[타마린]", "[Tamarin]");
+	mes needtr("어... 베리티가 벌써 저기까지 간 걸까요?", "Uh... Could Verity have gone that far?");
+	npctalklang "타마린 : 어... 베리티가 벌써 저기까지 간 걸까요?", "Tamarin: Uh... Could Verity have gone that far?";
 	next;
-	mapannounce 'map_name$, "시스템 메시지 : 비상 프로토콜을 시작합니다.",bc_map,"0xFF0000";
-	mes "[타마린]";
-	mes "서둘러 베리티를 찾아야 합니다.";
-	npctalk "타마린 : 서둘러 베리티를 찾아야 합니다.";
+	mapannouncelang 'map_name$, "시스템 메시지 : 비상 프로토콜을 시작합니다.", "System message : Commencing emergency protocol.",bc_map,"0xFF0000";
+	mes needtr("[타마린]", "[Tamarin]");
+	mes needtr("서둘러 베리티를 찾아야 합니다.", "We need to find Verity quickly");
+	npctalklang "타마린 : 서둘러 베리티를 찾아야 합니다.", "Tamarin: We need to find Verity quickly";
 	next;
-	mes "[타마린]";
-	mes "위쪽으로 이어지는 길뿐이니 먼저 가세요.";
-	npctalk "타마린 : 위쪽으로 이어지는 길뿐이니 먼저 가세요.";
+	mes needtr("[타마린]", "[Tamarin]");
+	mes needtr("위쪽으로 이어지는 길뿐이니 먼저 가세요.", "There is only the route going up so go ahead.");
+	npctalklang "타마린 : 위쪽으로 이어지는 길뿐이니 먼저 가세요.", "Tamarin: There is only the route going up so go ahead.";
 	if ('protocole == 2) {
 		'protocole = 3;
 		enablenpc instance_npcname("#lrdoor4");
@@ -441,7 +441,7 @@ OnMyMobDead:
 OnTouch:
 	sscanf( strnpcinfo(2), "lrboom%d", .@num );
 	areamonster 'map_name$,178,34,198,54, "기계 부품", (3251 + ((.@num-1) % 2)), 3;
-	mapannounce 'map_name$, "시스템 메시지 : 2구역에서 침입자를 감지했습니다.",bc_map,"0xFF0000";
+	mapannouncelang 'map_name$, "시스템 메시지 : 2구역에서 침입자를 감지했습니다.", "System message : Intruder detected in Zone 2.",bc_map,"0xFF0000";
 	disablenpc();
 	end;
 }
@@ -462,31 +462,31 @@ OnTouch:
 
 1@uns,224,29,3	script	베리티::Verity#room2	4_F_BERRYTEA,{
 	if ('need_md_simple) {
-		mes "[베리티]";
-		mes "문 너머에서 강한 신호가 느껴져요.";
-		mes "바로 마더 룸으로 이동하죠.";
+		mes needtr("[베리티]", "[Verity]");
+		mes needtr("문 너머에서 강한 신호가 느껴져요.", "I feel a strong signal beyond the door.");
+		mes needtr("바로 마더 룸으로 이동하죠.", "Let us go straight to the Mother Room.");
 		close2;
 		cutin "",255;
 		warp 'map_name$,240,255;
 		end;
 	}
-	mes "[베리티]";
-	mes "아... 여기가 어디지...";
-	mes "무슨 일이 있었던 거지?";
+	mes needtr("[베리티]", "[Verity]");
+	mes needtr("아... 여기가 어디지...", "Ah... where am I...");
+	mes needtr("무슨 일이 있었던 거지?", "What happened?");
 	cutin "EP15_2_brt_6.bmp",2;
 	next;
-	mes "[베리티]";
-	mes "머리가... 깨질 것 같아.";
-	mes "이... 문 안쪽에서 소리가 들려...";
+	mes needtr("[베리티]", "[Verity]");
+	mes needtr("머리가... 깨질 것 같아.", "My head...is splitting.");
+	mes needtr("이... 문 안쪽에서 소리가 들려...", "A sound coming from this...door...");
 	next;
-	if (select( "그만둔다.", "안으로 들어간다." ) == 1) {
-		mes "[베리티]";
-		mes "돌아가... 돌아가야 해...";
+	if (select( needtr("그만둔다.", "Quit."), needtr("안으로 들어간다.", "Go inside.") ) == 1) {
+		mes needtr("[베리티]", "[Verity]");
+		mes needtr("돌아가... 돌아가야 해...", "Go back...we have to go back...");
 		cutin "EP15_2_brt_7.bmp",2;
 		close3;
 	}
-	mes "[베리티]";
-	mes "서둘러... 돌아가야 해...";
+	mes needtr("[베리티]", "[Verity]");
+	mes needtr("서둘러... 돌아가야 해...", "Quickly...we have to go back...");
 	cutin "EP15_2_brt_7.bmp",2;
 	close2;
 	warp 'map_name$,240,255;
@@ -496,16 +496,16 @@ OnTouch:
 // Last step
 1@uns,242,253,3	script	베리티::Verity#room3	4_F_BERRYTEA,{
 	if ('need_md_simple && 'protocole == 3) {
-		mes "[베리티]";
-		mes "마더 룸에 도착했습니다. 최종 프로토콜을 시작합니다.";
+		mes needtr("[베리티]", "[Verity]");
+		mes needtr("마더 룸에 도착했습니다. 최종 프로토콜을 시작합니다.", "You have arrived at the Mother Room. Starting the final protocol.");
 		'protocole = 4;
 		disablenpc instance_npcname("Verity#room3");
 		donpcevent instance_npcname("#bosslr") + "::OnStart";
 		close3;
 	}
-	mes "[베리티]";
-	mes "드디어... 돌아왔어...";
-	mes "드디어.....";
+	mes needtr("[베리티]", "[Verity]");
+	mes needtr("드디어... 돌아왔어...", "At last... I am back...");
+	mes needtr("드디어.....", "At last.....");
 	cutin "EP15_2_brt_7.bmp",2;
 	if ('protocole == 3) {
 		'protocole = 4;
@@ -522,47 +522,47 @@ OnStart:
 	initnpctimer;
 	end;
 OnTimer2000:
-	mapannounce 'map_name$, "시스템 메시지 : 마더 룸에서 침입자를 감지했습니다.",bc_map,"0xFF0000";
+	mapannouncelang 'map_name$, "시스템 메시지 : 마더 룸에서 침입자를 감지했습니다.", "System message : Intruder detected in Mother Room.",bc_map,"0xFF0000";
 	end;
 OnTimer4000:
-	mapannounce 'map_name$, "시스템 메시지 : 최종 프로토콜을 시작합니다.",bc_map,"0xFF0000";
+	mapannouncelang 'map_name$, "시스템 메시지 : 최종 프로토콜을 시작합니다.", "System message : Commencing final protocol.",bc_map,"0xFF0000";
 	areamonster 'map_name$,235,255,255,275,"T_W_O",3254,1, instance_npcname("#bosslr") + "::OnMyMobDead";
 	end;
 OnTimer6000:
-	mapannounce 'map_name$, "시스템 메시지 : 모든 시스템을 정비 모드에서 전투 모드로 전환합니다.",bc_map,"0xFF0000";
+	mapannouncelang 'map_name$, "시스템 메시지 : 모든 시스템을 정비 모드에서 전투 모드로 전환합니다.", "System message : Changing all systems from maintenance mode to combat mode.",bc_map,"0xFF0000";
 	end;
 OnTimer8000:
-	mapannounce 'map_name$, "시스템 메시지 : 보호를 위한 최종 프로토콜입니다... 관계없는 인원은 즉시 대피하십시오.",bc_map,"0xFF0000";
+	mapannouncelang 'map_name$, "시스템 메시지 : 보호를 위한 최종 프로토콜입니다... 관계없는 인원은 즉시 대피하십시오.", "System message : This is the final protocol to protect... all unrelated personnel please evacuate.",bc_map,"0xFF0000";
 	end;
 OnTimer11000:
-	mapannounce 'map_name$, "T_W_O : 돌아가야 해..... 여기는 아니야....",bc_map,"0xFF0000";
+	mapannouncelang 'map_name$, "T_W_O : 돌아가야 해..... 여기는 아니야....", "T_W_O : Have to go back..... This place isn't it....",bc_map,"0xFF0000";
 	end;
 OnTimer30000:
-	mapannounce 'map_name$, "시스템 메시지 : 시스템 손상이 발생했습니다.",bc_map,"0xFF0000";
+	mapannouncelang 'map_name$, "시스템 메시지 : 시스템 손상이 발생했습니다.", "System message : System damage occurred.",bc_map,"0xFF0000";
 	areamonster 'map_name$,225,250,265,280, "시스템 메시지",3253,4, instance_npcname("#bosslr") + "::OnMyMobDead2";
 	end;
 OnTimer32000:
-	mapannounce 'map_name$, "T_W_O : 나는 누구지? 왜 여기에 있는 거야?",bc_map,"0xFF0000";
+	mapannouncelang 'map_name$, "T_W_O : 나는 누구지? 왜 여기에 있는 거야?", "T_W_O : Who am I? Why am I here?.",bc_map,"0xFF0000";
 	end;
 OnTimer60000:
-	mapannounce 'map_name$, "시스템 메시지 : 시스템 손상 중 구역 내부에 치명적인 피해가 발생할 수 있으니 주의하십시오.",bc_map,"0xFF0000";
+	mapannouncelang 'map_name$, "시스템 메시지 : 시스템 손상 중 구역 내부에 치명적인 피해가 발생할 수 있으니 주의하십시오.", "System message : There may be critical damage within the Zone during system damage so please be careful.",bc_map,"0xFF0000";
 	end;
 OnTimer90000:
-	mapannounce 'map_name$, "시스템 메시지 : 시스템 손상이 발생했습니다.",bc_map,"0xFF0000";
+	mapannouncelang 'map_name$, "시스템 메시지 : 시스템 손상이 발생했습니다.", "System message : System damage occurred.",bc_map,"0xFF0000";
 	areamonster 'map_name$,225,250,265,280, "시스템 메시지",3253,4, instance_npcname("#bosslr") + "::OnMyMobDead2";
 	end;
 OnTimer100000:
-	mapannounce 'map_name$, "T_W_O : 아무것도 남지 않았어....",bc_map,"0xFF0000";
+	mapannouncelang 'map_name$, "T_W_O : 아무것도 남지 않았어....", "T_W_O : There is nothing left....",bc_map,"0xFF0000";
 	end;
 OnTimer110000:
-	mapannounce 'map_name$, "T_W_O : 나도... 그들도....",bc_map,"0xFF0000";
+	mapannouncelang 'map_name$, "T_W_O : 나도... 그들도....", "T_W_O : I... Nor them....",bc_map,"0xFF0000";
 	end;
 OnTimer150000:
-	mapannounce 'map_name$, "시스템 메시지 : 시스템 손상이 발생했습니다.",bc_map,"0xFF0000";
+	mapannouncelang 'map_name$, "시스템 메시지 : 시스템 손상이 발생했습니다.", "System message : System damage occurred.",bc_map,"0xFF0000";
 	areamonster 'map_name$,225,250,265,280, "시스템 메시지",3253,4, instance_npcname("#bosslr") + "::OnMyMobDead2";
 	end;
 OnTimer210000:
-	mapannounce 'map_name$, "시스템 메시지 : 시스템 손상이 발생했습니다.",bc_map,"0xFF0000";
+	mapannouncelang 'map_name$, "시스템 메시지 : 시스템 손상이 발생했습니다.", "System message : System damage occurred.",bc_map,"0xFF0000";
 	areamonster 'map_name$,225,250,265,280, "시스템 메시지",3253,4, instance_npcname("#bosslr") + "::OnMyMobDead2";
 	stopnpctimer;
 	end;
@@ -571,7 +571,7 @@ OnMyMobDead:
 		stopnpctimer;
 		killmonster 'map_name$, instance_npcname("#bosslr") + "::OnMyMobDead";
 		killmonster 'map_name$, instance_npcname("#bosslr") + "::OnMyMobDead2";
-		mapannounce 'map_name$, "시스템 메시지 : 모든 프로토콜 실패. 위협 요소를 제외한 구역을 봉쇄합니다.",bc_map,"0xFF0000";
+		mapannouncelang 'map_name$, "시스템 메시지 : 모든 프로토콜 실패. 위협 요소를 제외한 구역을 봉쇄합니다.", "System message : All protocols failed. Locking down area excluding threat element.",bc_map,"0xFF0000";
 		// enablenpc instance_npcname("Alph#room4");
 		// enablenpc instance_npcname("Tamarin#room4");
 		// enablenpc instance_npcname("Maggi#room4");
@@ -586,9 +586,9 @@ OnMyMobDead2:
 }
 
 1@uns,242,253,3	script	베리티::Verity#room4	4_F_BERRYTEA,{
-	mes "[베리티]";
-	mes "나는 누구지?";
-	mes "나는 누구지...";
+	mes needtr("[베리티]", "[Verity]");
+	mes needtr("나는 누구지?", "Who am I?");
+	mes needtr("나는 누구지...", "Who am I...");
 	cutin "EP15_2_brt_6.bmp",2;
 	close2;
 	#NEED_MD_LAST_ROOM_CLEAR = 1;
@@ -775,18 +775,18 @@ OnInstanceInit:
 
 un_myst,159,41,3	script	프루츠::Fruit#Verus	4_F_FRUIT,{
 	if (checkweight(1119,3) == 0) {
-		mes "- 소지품이 너무 많아 퀘스트를 진행할 수 없습니다. -";
+		mes needtr("- 소지품이 너무 많아 퀘스트를 진행할 수 없습니다. -", "- You cannot proceed with the quest since you have too many items. -");
 		close;
 	}
 	if (checkquest(11380,HUNTING) == 2) {
-		mes "[프루츠]";
-		mes "으아아아악!!!";
-		mes "대단해!!!";
+		mes needtr("[프루츠]", "[Fruit]");
+		mes needtr("으아아아악!!!", "Waaaaaah!!!");
+		mes needtr("대단해!!!", "Amazing!!!");
 		cutin "EP15_2_fru_2.bmp",2;
 		next;
-		mes "[프루츠]";
-		mes "그래서? 그래서? 그다음은?";
-		mes "어서! 더 이야기해 줘!!!";
+		mes needtr("[프루츠]", "[Fruit]");
+		mes needtr("그래서? 그래서? 그다음은?", "And? And? What happened next?");
+		mes needtr("어서! 더 이야기해 줘!!!", "Come on! Tell me more!!!");
 		erasequest 11380;// Last Room
 		getexp 200000,0;
 		getitem 6827,1;// Normal_Parts
@@ -794,51 +794,51 @@ un_myst,159,41,3	script	프루츠::Fruit#Verus	4_F_FRUIT,{
 		close3;
 	}
 	if (ep15_2_bslast < 2) {
-		mes "[프루츠]";
-		mes "우와아아아아!!!!";
-		mes "이거 보여?";
-		mes "바로 여기!!!!";
+		mes needtr("[프루츠]", "[Fruit]");
+		mes needtr("우와아아아아!!!!", "Wooooooow!!!!");
+		mes needtr("이거 보여?", "Do you see this?");
+		mes needtr("바로 여기!!!!", "Right here!!!!");
 		cutin "EP15_2_fru_2.bmp",2;
 		next;
-		mes "[프루츠]";
-		mes "뭔가 막 빙글빙글 돌아갈 것 같지 않아?!";
-		mes "하아!";
+		mes needtr("[프루츠]", "[Fruit]");
+		mes needtr("뭔가 막 빙글빙글 돌아갈 것 같지 않아?!", "Does it not look like it is about to start spinning?!");
+		mes needtr("하아!", "Haa!");
 		next;
-		mes "[프루츠]";
-		mes "통째로 내 연구실에 가져가고 싶다!";
-		mes "보고만 있어야 한다니...";
+		mes needtr("[프루츠]", "[Fruit]");
+		mes needtr("통째로 내 연구실에 가져가고 싶다!", "I want to take the whole thing back to my laboratory!");
+		mes needtr("보고만 있어야 한다니...", "And all I can do is look at it...");
 		cutin "EP15_2_fru_3.bmp",2;
 		next;
-		mes "[프루츠]";
-		mes "그래서 말인데...";
-		mes "여기서 바빠서 바로 아래에 있다는 지하 벙커에는 아직 못 가봤거든.";
+		mes needtr("[프루츠]", "[Fruit]");
+		mes needtr("그래서 말인데...", "So, about that...");
+		mes needtr("여기서 바빠서 바로 아래에 있다는 지하 벙커에는 아직 못 가봤거든.", "I have been busy here, so I have not been to the underground bunker they say is right below us.");
 		cutin "EP15_2_fru_2.bmp",2;
 		next;
-		mes "[프루츠]";
-		mes "네가 가볼래?";
+		mes needtr("[프루츠]", "[Fruit]");
+		mes needtr("네가 가볼래?", "Do you want to go?");
 		next;
-		mes "[프루츠]";
-		mes "이렇게 조사 지점을 전부 알려주는 사람도 흔치 않잖아?";
+		mes needtr("[프루츠]", "[Fruit]");
+		mes needtr("이렇게 조사 지점을 전부 알려주는 사람도 흔치 않잖아?", "You will not often find someone who tells you every survey point like this, will you?");
 		next;
-		mes "[프루츠]";
-		mes "물론 공짜로 시키려는 건 아니야!";
-		mes "흥미로운 조사 결과를 가져오면 보상도 줄게!";
+		mes needtr("[프루츠]", "[Fruit]");
+		mes needtr("물론 공짜로 시키려는 건 아니야!", "Of course I am not asking you to do it for free!");
+		mes needtr("흥미로운 조사 결과를 가져오면 보상도 줄게!", "Bring me interesting survey results and I will reward you!");
 		next;
-		mes "[프루츠]";
-		mes "어때?";
+		mes needtr("[프루츠]", "[Fruit]");
+		mes needtr("어때?", "What do you say?");
 		next;
-		if (select( "그만둔다.", "해본다." ) == 1) {
-			mes "[프루츠]";
-			mes "에...";
+		if (select( needtr("그만둔다.", "Quit."), needtr("해본다.", "I will do it.") ) == 1) {
+			mes needtr("[프루츠]", "[Fruit]");
+			mes needtr("에...", "Er...");
 			cutin "EP15_2_fru_1.bmp",2;
 			close3;
 		}
-		mes "[프루츠]";
-		mes "야호!!!";
-		mes "조금만 안쪽으로 들어가면 안내해 줄 사람이 있을 거야.";
+		mes needtr("[프루츠]", "[Fruit]");
+		mes needtr("야호!!!", "Yahoo!!!");
+		mes needtr("조금만 안쪽으로 들어가면 안내해 줄 사람이 있을 거야.", "Go a little further in and there should be someone to guide you.");
 		next;
-		mes "[프루츠]";
-		mes "재미있는 걸 잔뜩 가져오길 기대할게.";
+		mes needtr("[프루츠]", "[Fruit]");
+		mes needtr("재미있는 걸 잔뜩 가져오길 기대할게.", "I am counting on you to bring back plenty of interesting things.");
 		// 간소화 진행 캐릭터는 11381 퀘스트 로그가 없을 수 있으므로 보유 여부 확인 후 삭제
 		if (isbegin_quest(11381) > 0)
 			erasequest 11381;// Vestige
@@ -848,27 +848,27 @@ un_myst,159,41,3	script	프루츠::Fruit#Verus	4_F_FRUIT,{
 		close3;
 	}
 	if (ep15_2_bslast == 2) {
-		mes "[프루츠]";
-		mes "야호!!!";
-		mes "조금만 안쪽으로 들어가면 안내해 줄 사람이 있을 거야.";
+		mes needtr("[프루츠]", "[Fruit]");
+		mes needtr("야호!!!", "Yahoo!!!");
+		mes needtr("조금만 안쪽으로 들어가면 안내해 줄 사람이 있을 거야.", "Go a little further in and there should be someone to guide you.");
 		cutin "EP15_2_fru_2.bmp",2;
 		next;
-		mes "[프루츠]";
-		mes "재미있는 걸 잔뜩 가져오길 기대할게.";
+		mes needtr("[프루츠]", "[Fruit]");
+		mes needtr("재미있는 걸 잔뜩 가져오길 기대할게.", "I am counting on you to bring back plenty of interesting things.");
 		close3;
 	}
 	if (ep15_2_bslast < 9) {
-		mes "[프루츠]";
-		mes "어때, 조사는 좀 진전이 있어?";
-		mes "지하 벙커라지만 규모가 장난 아니지!";
+		mes needtr("[프루츠]", "[Fruit]");
+		mes needtr("어때, 조사는 좀 진전이 있어?", "So, is the survey making any progress?");
+		mes needtr("지하 벙커라지만 규모가 장난 아니지!", "They call it an underground bunker, but the scale is no joke!");
 		cutin "EP15_2_fru_3.bmp",2;
 		next;
-		mes "[프루츠]";
-		mes "길 잃는 거 아니야?";
+		mes needtr("[프루츠]", "[Fruit]");
+		mes needtr("길 잃는 거 아니야?", "You are not getting lost, are you?");
 		close3;
 	}
-	mes "[프루츠]";
-	mes "흠... 더 재미있는 건 없어?";
+	mes needtr("[프루츠]", "[Fruit]");
+	mes needtr("흠... 더 재미있는 건 없어?", "Hmm... nothing more interesting?");
 	cutin "EP15_2_fru_1.bmp",2;
 	close3;
 }

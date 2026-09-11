@@ -43,15 +43,15 @@ function	Require_Level	{
 	if (BaseLevel < getarg(0) || JobLevel < getarg(1)) {
 		.@blvl = getarg(0) - BaseLevel;
 		.@jlvl = getarg(1) - JobLevel;
-		mes "요구 레벨:";
+		mes needtr("요구 레벨:", "Level requirement:");
 		mes ((getarg(0)>1)? 
 			"^bb0000"+getarg(0)+"^000000 (^bb0000Base^000000) / ":"")+"^00bb00"+
 			getarg(1)+"^000000 (^00bb00Job^000000)";
-		mes "필요 레벨 " +
+		mes needtr("필요 레벨 ", "Required level ") +
 			((.@blvl > 0) ? "^bb0000"+.@blvl+"^000000" + 
 				((.@jlvl > 0) ? "and " : "") : "") +
 			((.@jlvl > 0) ? "^00bb00"+.@jlvl+"^000000" : "") +
-			" 부족합니다.";
+			needtr(" 부족합니다.", " not met.");
 		close;
 	}
 	return;
@@ -128,18 +128,18 @@ function	Check_Riding	{
 	// those special cases.
 	if (checkfalcon() || checkcart() || checkriding() || ismounting()) {
 		mes "" +
-			((checkfalcon()) ? "팔콘을" : "") +
-			((checkcart()) ? "카트를" : "") +
-			((checkriding()) ? "페코를" : "") +
-			((ismounting()) ? "탈것을" : "") +
-			" 제거하고 오세요.";
+			((checkfalcon()) ? needtr("팔콘을", "Falcon") : "") +
+			((checkcart()) ? needtr("카트를", "Cart") : "") +
+			((checkriding()) ? needtr("페코를", "PecoPeco") : "") +
+			((ismounting()) ? needtr("탈것을", "Mount") : "") +
+			needtr(" 제거하고 오세요.", " must be removed first.");
 		close;
 	}
 	return;
 }
 function	Check_SkillPoints	{
 	if (.SkillPointCheck && SkillPoint) {
-		mes "진행하기 전에 스킬 포인트를 모두 사용하십시오.";
+		mes needtr("진행하기 전에 스킬 포인트를 모두 사용하십시오.", "Please use all your skill points before proceeding.");
 		close;
 	}
 	return;
@@ -203,7 +203,7 @@ function	Job_Options	{
 	// job options for the player.
 	
 	if (F_IsBlockedNeedJob(Class)) {
-		mes "해당 직업은 더 이상 전직할 수 없습니다.";
+		mes needtr("해당 직업은 더 이상 전직할 수 없습니다.", "That job cannot change any further.");
 		close;
 	}
 	
@@ -305,7 +305,7 @@ function	Job_Options	{
 					Job_Options(.@job_opt, Job_Baby_Summoner);
 				break;
 			default:
-				mes "오류가 발생했습니다.";
+				mes needtr("오류가 발생했습니다.", "An error has occurred.");
 				close;
 		}
 	} else if( Is_First_Cls(.@eac) || 				// First Class
@@ -346,7 +346,7 @@ function	Job_Menu	{
 	while(true) {
 		.@opt_cnt =  getarraysize(getarg(0));
 		if( .@opt_cnt <= 0 ) {
-			mes "더 이상 전직할 수 없습니다.";
+			mes needtr("더 이상 전직할 수 없습니다.", "No more jobs are available.");
 			close;
 		}
 
@@ -354,7 +354,7 @@ function	Job_Menu	{
 		if (.@opt_cnt > 1) {
 			// Multiple job classes given. Select one and save it to .@class
 			// After that confirm .@class
-			mes "직업을 선택하세요.";
+			mes needtr("직업을 선택하세요.", "Select a job.");
 			.@menu$ = "";
 			for (.@i = 0; .@i < .@opt_cnt; .@i++) {
 				if( getelementofarray(getarg(0), .@i) == Job_Novice_High)
@@ -377,7 +377,7 @@ function	Job_Menu	{
 			// Super Baby can both be selected in one of the first class
 			// changes. That's why the Level Requirement is after and not before
 			// the selection.
-			mes " 기본 수준" + .SNovice +
+			mes needtr(" 기본 수준", "Base level ") + .SNovice +
 				" is required to turn into a " + jobname(.@class) + ".";
 			return;
 		}
@@ -395,7 +395,7 @@ function	Job_Change	{
 	.@to_cls = getarg(0);
 	next;
 	mes .NPCName$;
-	mes "" + callfunc("F_InsertArticle", jobname(.@to_cls)) + "로 전직하셨습니다!";
+	mes "" + callfunc("F_InsertArticle", jobname(.@to_cls)) + needtr("로 전직하셨습니다!", " is now your job!");
 	if (.@to_cls == Job_Novice_High && .LastJob)
 		lastJob = Class; // Saves the lastJob for rebirth
 	jobchange .@to_cls;
@@ -436,16 +436,16 @@ function	Confirm_Change	{
 	.@class = getarg(0, -1);
 	.@back = getarg(1, false);
 	if( .@class < 0 || eaclass(.@class) == -1 ) {
-		mes "알 수 없는 클래스 오류입니다.";
+		mes needtr("알 수 없는 클래스 오류입니다.", "Unknown Class Error.");
 		close;
 	}
-	mes "^0055FF"+jobname(.@class)+"^000000 로 전직하시겠습니까?";
+	mes "^0055FF"+jobname(.@class)+needtr("^000000 로 전직하시겠습니까?", "^000000 class?");
 	.@job_option$ = " ~ ^0055FF"+jobname(.@class)+"^000000 로 전직";
 	if( .@class == Job_Novice_High)
 		.@job_option$ = " ~ ^0055FF전승^000000";
 	
 	if (select(.@job_option$+": ~ ^777777" + 
-			((.@back) ?"Go back" : "취소") + "^000000") == 1) {
+			((.@back) ?"Go back" : needtr("취소", "Cancel")) + "^000000") == 1) {
 		Job_Change(.@class);
 	}
 	if (!.@back)
@@ -610,7 +610,7 @@ OnUse:
 
     if (@msg$ == "")
    {
-        mes "입력값이 없습니다.";
+        mes needtr("입력값이 없습니다.", "No input was given.");
         close;
     }
 
@@ -626,7 +626,7 @@ OnUse:
 	input .@mob_name$;
 
 	if (.@mob_name$ == "") {
-		dispbottom "몬스터 이름 또는 ID를 입력해 주세요.";
+		dispbottom needtr("몬스터 이름 또는 ID를 입력해 주세요.", "Please enter a monster name or ID.");
 		return;
 	}
 

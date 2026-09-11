@@ -167,6 +167,29 @@ struct npc_data : public block_list {
 	int16 class_,speed;
 	char name[NPC_NAME_LENGTH+1];// display name
 	char exname[NPC_NAME_LENGTH+1];// unique npc name
+	/**
+	 * NEED Phase 0.6 : optional ENGLISH display name, used only when the packet is being built
+	 * for one recipient whose session is EN (map_session_data::need_lang == NEED_LANG_EN).
+	 *
+	 * Empty by default, which means "behave exactly as before". It is a DISPLAY value only:
+	 * `exname`, npcname_db, event labels, doevent/donpcevent and duplicate() are untouched, so
+	 * script identity cannot be affected by it.
+	 *
+	 * Set from a script with  setnpcnameen "<english name>"{,"<npc unique name>"};
+	 */
+	char name_en[NPC_NAME_LENGTH+1];
+	/**
+	 * NEED Phase 0.8 : optional ENGLISH title for the waiting room (chat room) this NPC owns.
+	 *
+	 * `waitingroom` always runs in OnInit, where no player is attached, so the title cannot be
+	 * chosen with needtr(). The Korean title stays in chat_data::title (what every broadcast
+	 * still sends); this copy is used only when the room entry packet is built for ONE
+	 * recipient whose session is EN. Kept on the NPC rather than the chat_data so that the
+	 * registration order between OnInit blocks does not matter.
+	 *
+	 * Set from a script with  setwaitingroomen "<english title>"{,"<npc unique name>"};
+	 */
+	char chattitle_en[CHATROOM_TITLE_SIZE];
 	int32 chat_id,touching_id;
 	uint32 next_walktime;
 	int32 instance_id;

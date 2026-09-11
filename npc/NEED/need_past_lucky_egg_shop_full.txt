@@ -29,26 +29,26 @@ lasagna,169,195,4	script	추억의 행운의 알 상인#need_past_egg	4_F_KAFRA6,{
 	callsub S_SyncAccountRotation;
 
 	while (1) {
-		mes "[추억의 행운의 알 상인]";
-		mes "지나간 시즌의 행운의 알을";
-		mes "다시 만날 수 있는 특별 판매소입니다.";
+		mes needtr("[추억의 행운의 알 상인]", "[Memory Lucky Egg Seller]");
+		mes needtr("지나간 시즌의 행운의 알을", "This is a special shop where you can meet");
+		mes needtr("다시 만날 수 있는 특별 판매소입니다.", "Lucky Eggs from past seasons again.");
 		mes " ";
 
 		if ($NeedPastEggMarketItem > 0) {
-			mes "현재 한정 판매:";
+			mes needtr("현재 한정 판매:", "Current limited sale:");
 			mes "^0055FF" + getitemname($NeedPastEggMarketItem) + "^000000";
-			mes "판매가: ^FF8800" + $NeedPastEggMarketUnitPrice + " Cash^000000";
-			mes "가격 배율: " + $NeedPastEggMarketRate + "%";
-			mes "남은 서버 재고: " + $NeedPastEggMarketStock + "개";
-			mes "내 구매량: " + #NeedPastEggBought + " / " + .BuyLimit + "개";
+			mes needtr("판매가: ^FF8800", "Price: ^FF8800") + $NeedPastEggMarketUnitPrice + " Cash^000000";
+			mes needtr("가격 배율: ", "Price rate: ") + $NeedPastEggMarketRate + "%";
+			mes needtr("남은 서버 재고: ", "Server stock left: ") + $NeedPastEggMarketStock + needtr("개", "");
+			mes needtr("내 구매량: ", "My purchases: ") + #NeedPastEggBought + " / " + .BuyLimit + needtr("개", "");
 		}
 		else {
-			mes "^FF0000현재 판매 가능한 행운의 알이 없습니다.^000000";
+			mes needtr("^FF0000현재 판매 가능한 행운의 알이 없습니다.^000000", "^FF0000No Lucky Egg is on sale right now.^000000");
 		}
 		setdialogsize(300,300);
 		next;
 
-		switch (select("랜덤 한정 판매 이용:과거 행운의 알 선택 구매:시스템 설명:닫기")) {
+		switch (select(needtr("랜덤 한정 판매 이용:과거 행운의 알 선택 구매:시스템 설명:닫기", "Random Limited Sale:Buy a Specific Past Egg:How It Works:Close"))) {
 		case 1:
 			callsub S_RandomShop;
 			break;
@@ -58,22 +58,22 @@ lasagna,169,195,4	script	추억의 행운의 알 상인#need_past_egg	4_F_KAFRA6,{
 			break;
 
 		case 3:
-			mes "[추억의 행운의 알 상인]";
-			mes "랜덤 한정 판매는 매일";
-			mes "^0055FF00:00 / 12:00^000000에 갱신됩니다.";
+			mes needtr("[추억의 행운의 알 상인]", "[Memory Lucky Egg Seller]");
+			mes needtr("랜덤 한정 판매는 매일", "The random limited sale refreshes every day");
+			mes needtr("^0055FF00:00 / 12:00^000000에 갱신됩니다.", "at ^0055FF00:00 / 12:00^000000.");
 			mes " ";
-			mes "상품, 판매 가격, 서버 재고가";
-			mes "갱신 시마다 새롭게 결정됩니다.";
+			mes needtr("상품, 판매 가격, 서버 재고가", "The product, the price and the server stock");
+			mes needtr("갱신 시마다 새롭게 결정됩니다.", "are all rerolled at every refresh.");
 			next;
 
-			mes "[추억의 행운의 알 상인]";
-			mes "한정 판매 상품은 계정당";
-			mes "회차별 최대 " + .BuyLimit + "개까지 구매할 수 있습니다.";
+			mes needtr("[추억의 행운의 알 상인]", "[Memory Lucky Egg Seller]");
+			mes needtr("한정 판매 상품은 계정당", "The limited sale is limited per account");
+			mes needtr("회차별 최대 ", "to at most ") + .BuyLimit + needtr("개까지 구매할 수 있습니다.", " per round.");
 			mes " ";
-			mes "원하는 과거 행운의 알을 직접 구매할 경우";
-			mes "^FF0000" + getitemname(.MemoryFragment) + " " + .SelectFragmentCost + "개^000000";
-			mes "+ ^FF8800" + .SelectCashPrice + " Cash^000000가 필요합니다.";
-			mes "선택한 행운의 알 " + .SelectEggAmount + "개를 받을 수 있습니다.";
+			mes needtr("원하는 과거 행운의 알을 직접 구매할 경우", "To buy a specific past Lucky Egg you need");
+			mes "^FF0000" + getitemname(.MemoryFragment) + " " + .SelectFragmentCost + needtr("개^000000", "^000000");
+			mes "+ ^FF8800" + .SelectCashPrice + needtr(" Cash^000000가 필요합니다.", " Cash^000000.");
+			mes needtr("선택한 행운의 알 ", "You then receive ") + .SelectEggAmount + needtr("개를 받을 수 있습니다.", " of the egg you chose.");
 			next;
 			break;
 
@@ -91,25 +91,25 @@ S_RandomShop:
 	callsub S_SyncAccountRotation;
 
 	if ($NeedPastEggMarketItem <= 0 || $NeedPastEggMarketUnitPrice <= 0) {
-		mes "[추억의 행운의 알 상인]";
-		mes "현재 판매 가능한 상품이 없습니다.";
+		mes needtr("[추억의 행운의 알 상인]", "[Memory Lucky Egg Seller]");
+		mes needtr("현재 판매 가능한 상품이 없습니다.", "There is no product on sale right now.");
 		next;
 		return;
 	}
 
 	if ($NeedPastEggMarketStock <= 0) {
-		mes "[추억의 행운의 알 상인]";
-		mes "^FF0000현재 회차의 상품이 모두 판매되었습니다.^000000";
-		mes "다음 갱신을 기다려주세요.";
+		mes needtr("[추억의 행운의 알 상인]", "[Memory Lucky Egg Seller]");
+		mes needtr("^FF0000현재 회차의 상품이 모두 판매되었습니다.^000000", "^FF0000This round's stock is sold out.^000000");
+		mes needtr("다음 갱신을 기다려주세요.", "Please wait for the next refresh.");
 		next;
 		return;
 	}
 
 	.@remaining = .BuyLimit - #NeedPastEggBought;
 	if (.@remaining <= 0) {
-		mes "[추억의 행운의 알 상인]";
-		mes "이번 회차의 계정 구매 가능 수량을";
-		mes "모두 사용했습니다.";
+		mes needtr("[추억의 행운의 알 상인]", "[Memory Lucky Egg Seller]");
+		mes needtr("이번 회차의 계정 구매 가능 수량을", "You have used up your account's purchases");
+		mes needtr("모두 사용했습니다.", "for this round.");
 		next;
 		return;
 	}
@@ -118,13 +118,13 @@ S_RandomShop:
 	if (.@remaining < .@max)
 		.@max = .@remaining;
 
-	mes "[추억의 행운의 알 상인]";
-	mes "상품: ^0055FF" + getitemname($NeedPastEggMarketItem) + "^000000";
-	mes "개당 가격: ^FF8800" + $NeedPastEggMarketUnitPrice + " Cash^000000";
-	mes "남은 서버 재고: " + $NeedPastEggMarketStock + "개";
-	mes "내 구매 가능: " + .@remaining + "개";
+	mes needtr("[추억의 행운의 알 상인]", "[Memory Lucky Egg Seller]");
+	mes needtr("상품: ^0055FF", "Product: ^0055FF") + getitemname($NeedPastEggMarketItem) + "^000000";
+	mes needtr("개당 가격: ^FF8800", "Price each: ^FF8800") + $NeedPastEggMarketUnitPrice + " Cash^000000";
+	mes needtr("남은 서버 재고: ", "Server stock left: ") + $NeedPastEggMarketStock + needtr("개", "");
+	mes needtr("내 구매 가능: ", "I can still buy: ") + .@remaining + needtr("개", "");
 	mes " ";
-	mes "구매할 수량을 입력해주세요.";
+	mes needtr("구매할 수량을 입력해주세요.", "Please enter how many you want.");
 	mes "(1 ~ " + .@max + ")";
 	next;
 
@@ -135,15 +135,15 @@ S_RandomShop:
 	.@unit_price = $NeedPastEggMarketUnitPrice;
 	.@total = .@unit_price * .@amount;
 
-	mes "[추억의 행운의 알 상인]";
-	mes "상품: ^0055FF" + getitemname(.@item) + "^000000";
-	mes "수량: " + .@amount + "개";
-	mes "필요 Cash: ^FF8800" + .@total + "^000000";
+	mes needtr("[추억의 행운의 알 상인]", "[Memory Lucky Egg Seller]");
+	mes needtr("상품: ^0055FF", "Product: ^0055FF") + getitemname(.@item) + "^000000";
+	mes needtr("수량: ", "Amount: ") + .@amount + needtr("개", "");
+	mes needtr("필요 Cash: ^FF8800", "Cash needed: ^FF8800") + .@total + "^000000";
 	mes " ";
-	mes "구매하시겠습니까?";
+	mes needtr("구매하시겠습니까?", "Would you like to purchase");
 	next;
 
-	if (select("구매한다:취소") == 2)
+	if (select(needtr("구매한다:취소", "Buy:Cancel")) == 2)
 		return;
 
 	callsub S_EnsureRotation;
@@ -152,25 +152,25 @@ S_RandomShop:
 	if ($NeedPastEggRotation$ != .@rotation$ ||
 		$NeedPastEggMarketItem != .@item ||
 		$NeedPastEggMarketUnitPrice != .@unit_price) {
-		mes "[추억의 행운의 알 상인]";
-		mes "^FF0000대화 중 판매 상품이 갱신되었습니다.^000000";
-		mes "현재 상품을 다시 확인해주세요.";
+		mes needtr("[추억의 행운의 알 상인]", "[Memory Lucky Egg Seller]");
+		mes needtr("^FF0000대화 중 판매 상품이 갱신되었습니다.^000000", "^FF0000The sale refreshed while we were talking.^000000");
+		mes needtr("현재 상품을 다시 확인해주세요.", "Please check the current product again.");
 		next;
 		return;
 	}
 
 	.@remaining = .BuyLimit - #NeedPastEggBought;
 	if (.@remaining <= 0 || .@amount > .@remaining) {
-		mes "[추억의 행운의 알 상인]";
-		mes "계정 구매 가능 수량이 부족합니다.";
+		mes needtr("[추억의 행운의 알 상인]", "[Memory Lucky Egg Seller]");
+		mes needtr("계정 구매 가능 수량이 부족합니다.", "Your account does not have enough purchases left.");
 		next;
 		return;
 	}
 
 	if ($NeedPastEggMarketStock < .@amount) {
-		mes "[추억의 행운의 알 상인]";
-		mes "^FF0000다른 모험가의 구매로 재고가 부족해졌습니다.^000000";
-		mes "현재 남은 재고: " + $NeedPastEggMarketStock + "개";
+		mes needtr("[추억의 행운의 알 상인]", "[Memory Lucky Egg Seller]");
+		mes needtr("^FF0000다른 모험가의 구매로 재고가 부족해졌습니다.^000000", "^FF0000Another adventurer bought some and the stock ran short.^000000");
+		mes needtr("현재 남은 재고: ", "Stock left now: ") + $NeedPastEggMarketStock + needtr("개", "");
 		next;
 		return;
 	}
@@ -178,17 +178,17 @@ S_RandomShop:
 	.@total = .@unit_price * .@amount;
 
 	if (#CASHPOINTS < .@total) {
-		mes "[추억의 행운의 알 상인]";
-		mes "Cash가 부족합니다.";
-		mes "필요 Cash: " + .@total;
-		mes "보유 Cash: " + #CASHPOINTS;
+		mes needtr("[추억의 행운의 알 상인]", "[Memory Lucky Egg Seller]");
+		mes needtr("Cash가 부족합니다.", "You do not have enough Cash.");
+		mes needtr("필요 Cash: ", "Cash needed: ") + .@total;
+		mes needtr("보유 Cash: ", "Cash held: ") + #CASHPOINTS;
 		next;
 		return;
 	}
 
 	if (!checkweight(.@item, .@amount)) {
-		mes "[추억의 행운의 알 상인]";
-		mes "소지 무게 또는 인벤토리 공간을 확인해주세요.";
+		mes needtr("[추억의 행운의 알 상인]", "[Memory Lucky Egg Seller]");
+		mes needtr("소지 무게 또는 인벤토리 공간을 확인해주세요.", "Please check your weight and inventory space.");
 		next;
 		return;
 	}
@@ -200,12 +200,12 @@ S_RandomShop:
 	getitem .@item, .@amount;
 	getitem .MemoryFragment, .@amount;
 
-	mes "[추억의 행운의 알 상인]";
-	mes "^0055FF" + getitemname(.@item) + "^000000 " + .@amount + "개를 구매했습니다.";
-	mes "사용 Cash: ^FF8800" + .@total + "^000000";
-	mes "남은 Cash: " + #CASHPOINTS;
-	mes "남은 서버 재고: " + $NeedPastEggMarketStock + "개";
-	mes "이번 회차 내 구매량: " + #NeedPastEggBought + " / " + .BuyLimit;
+	mes needtr("[추억의 행운의 알 상인]", "[Memory Lucky Egg Seller]");
+	mes "^0055FF" + getitemname(.@item) + "^000000 " + .@amount + needtr("개를 구매했습니다.", " purchased.");
+	mes needtr("사용 Cash: ^FF8800", "Cash spent: ^FF8800") + .@total + "^000000";
+	mes needtr("남은 Cash: ", "Cash left: ") + #CASHPOINTS;
+	mes needtr("남은 서버 재고: ", "Server stock left: ") + $NeedPastEggMarketStock + needtr("개", "");
+	mes needtr("이번 회차 내 구매량: ", "My purchases this round: ") + #NeedPastEggBought + " / " + .BuyLimit;
 	next;
 	return;
 
@@ -226,77 +226,77 @@ S_SelectShop:
 		if (.@count > 0)
 			.@menu$ += ":";
 
-		.@menu$ += getitemname(.EggId[.@i]) + " " + .SelectEggAmount + "개 (" + .SelectCashPrice + " Cash)";
+		.@menu$ += getitemname(.EggId[.@i]) + " " + .SelectEggAmount + needtr("개 (", " (") + .SelectCashPrice + " Cash)";
 		.@count++;
 	}
 
 	if (.@count <= 0) {
-		mes "[추억의 행운의 알 상인]";
-		mes "선택 구매 가능한 과거 행운의 알이 없습니다.";
+		mes needtr("[추억의 행운의 알 상인]", "[Memory Lucky Egg Seller]");
+		mes needtr("선택 구매 가능한 과거 행운의 알이 없습니다.", "There is no past Lucky Egg available for direct purchase.");
 		next;
 		return;
 	}
 
-	mes "[과거 행운의 알 선택 구매]";
-	mes "원하는 과거 행운의 알을 선택해주세요.";
+	mes needtr("[과거 행운의 알 선택 구매]", "[Buy a Specific Past Egg]");
+	mes needtr("원하는 과거 행운의 알을 선택해주세요.", "Please choose the past Lucky Egg you want.");
 	mes " ";
-	mes "교환 비용:";
-	mes "^FF0000" + getitemname(.MemoryFragment) + " " + .SelectFragmentCost + "개^000000";
+	mes needtr("교환 비용:", "Exchange cost:");
+	mes "^FF0000" + getitemname(.MemoryFragment) + " " + .SelectFragmentCost + needtr("개^000000", "^000000");
 	mes "+ ^FF8800" + .SelectCashPrice + " Cash^000000";
 	mes " ";
-	mes "지급 수량: ^0055FF" + .SelectEggAmount + "개^000000";
+	mes needtr("지급 수량: ^0055FF", "You receive: ^0055FF") + .SelectEggAmount + needtr("개^000000", "^000000");
 	next;
 
 	.@selected = select(.@menu$) - 1;
 	.@index = .@eligible_index[.@selected];
 	.@item = .EggId[.@index];
 
-	mes "[과거 행운의 알 선택 구매]";
-	mes "선택 상품:";
-	mes "^0055FF" + getitemname(.@item) + " " + .SelectEggAmount + "개^000000";
+	mes needtr("[과거 행운의 알 선택 구매]", "[Buy a Specific Past Egg]");
+	mes needtr("선택 상품:", "Chosen product:");
+	mes "^0055FF" + getitemname(.@item) + " " + .SelectEggAmount + needtr("개^000000", "^000000");
 	mes " ";
-	mes "필요 재료:";
-	mes "- " + getitemname(.MemoryFragment) + " ^FF0000" + .SelectFragmentCost + "개^000000";
+	mes needtr("필요 재료:", "Materials needed:");
+	mes "- " + getitemname(.MemoryFragment) + " ^FF0000" + .SelectFragmentCost + needtr("개^000000", "^000000");
 	mes "- Cash ^FF8800" + .SelectCashPrice + "^000000";
 	mes " ";
-	mes "현재 보유:";
-	mes "- " + getitemname(.MemoryFragment) + " " + countitem(.MemoryFragment) + "개";
+	mes needtr("현재 보유:", "You have:");
+	mes "- " + getitemname(.MemoryFragment) + " " + countitem(.MemoryFragment) + needtr("개", "");
 	mes "- Cash " + #CASHPOINTS;
 	mes " ";
-	mes "교환하시겠습니까?";
+	mes needtr("교환하시겠습니까?", "Do you want to exchange?");
 	next;
 
-	if (select("교환한다:취소") == 2)
+	if (select(needtr("교환한다:취소", "Exchange:Cancel")) == 2)
 		return;
 
 	if (!.EggEnabled[.@index] || .EggId[.@index] != .@item) {
-		mes "[추억의 행운의 알 상인]";
-		mes "상품 설정이 변경되었습니다.";
-		mes "다시 시도해주세요.";
+		mes needtr("[추억의 행운의 알 상인]", "[Memory Lucky Egg Seller]");
+		mes needtr("상품 설정이 변경되었습니다.", "The product setup has changed.");
+		mes needtr("다시 시도해주세요.", "Please try again.");
 		next;
 		return;
 	}
 
 	if (countitem(.MemoryFragment) < .SelectFragmentCost) {
-		mes "[추억의 행운의 알 상인]";
-		mes getitemname(.MemoryFragment) + "이(가) 부족합니다.";
-		mes "필요 수량: " + .SelectFragmentCost + "개";
+		mes needtr("[추억의 행운의 알 상인]", "[Memory Lucky Egg Seller]");
+		mes getitemname(.MemoryFragment) + needtr("이(가) 부족합니다.", " is missing.");
+		mes needtr("필요 수량: ", "Amount needed: ") + .SelectFragmentCost + needtr("개", "");
 		next;
 		return;
 	}
 
 	if (#CASHPOINTS < .SelectCashPrice) {
-		mes "[추억의 행운의 알 상인]";
-		mes "Cash가 부족합니다.";
-		mes "필요 Cash: " + .SelectCashPrice;
-		mes "보유 Cash: " + #CASHPOINTS;
+		mes needtr("[추억의 행운의 알 상인]", "[Memory Lucky Egg Seller]");
+		mes needtr("Cash가 부족합니다.", "You do not have enough Cash.");
+		mes needtr("필요 Cash: ", "Cash needed: ") + .SelectCashPrice;
+		mes needtr("보유 Cash: ", "Cash held: ") + #CASHPOINTS;
 		next;
 		return;
 	}
 
 	if (!checkweight(.@item, .SelectEggAmount)) {
-		mes "[추억의 행운의 알 상인]";
-		mes "소지 무게 또는 인벤토리 공간을 확인해주세요.";
+		mes needtr("[추억의 행운의 알 상인]", "[Memory Lucky Egg Seller]");
+		mes needtr("소지 무게 또는 인벤토리 공간을 확인해주세요.", "Please check your weight and inventory space.");
 		next;
 		return;
 	}
@@ -305,13 +305,13 @@ S_SelectShop:
 	#CASHPOINTS -= .SelectCashPrice;
 	getitem .@item, .SelectEggAmount;
 
-	mes "[추억의 행운의 알 상인]";
-	mes "^0055FF" + getitemname(.@item) + "^000000 " + .SelectEggAmount + "개를 교환했습니다.";
+	mes needtr("[추억의 행운의 알 상인]", "[Memory Lucky Egg Seller]");
+	mes "^0055FF" + getitemname(.@item) + "^000000 " + .SelectEggAmount + needtr("개를 교환했습니다.", " exchanged.");
 	mes " ";
-	mes "사용 재료:";
-	mes "- " + getitemname(.MemoryFragment) + " " + .SelectFragmentCost + "개";
+	mes needtr("사용 재료:", "Materials used:");
+	mes "- " + getitemname(.MemoryFragment) + " " + .SelectFragmentCost + needtr("개", "");
 	mes "- Cash " + .SelectCashPrice;
-	mes "남은 Cash: " + #CASHPOINTS;
+	mes needtr("남은 Cash: ", "Cash left: ") + #CASHPOINTS;
 	next;
 	return;
 

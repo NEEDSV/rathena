@@ -14,27 +14,27 @@ dali02,97,142,3	script	베른하르트 교수#a1	4_LGTSCIENCE,{
 	.@limit = instance_ip_reward_limit(.@instance_db_id);
 
 	if (.@remaining == -1 || .@limit == -1) {
-		mes "보상 이용 횟수를 확인하지 못했습니다.";
-		mes "잠시 후 다시 시도해 주세요.";
+		mes needtr("보상 이용 횟수를 확인하지 못했습니다.", "Could not read your reward usage count.");
+		mes needtr("잠시 후 다시 시도해 주세요.", "Please try again in a moment.");
 		end;
 	}
 
 	if (.@remaining != -2 && .@limit > 0) {
 		if (.@remaining <= 0) {
-			mes "오늘 해당 던전의 보상 이용 횟수를";
-			mes "모두 사용했습니다.";
-			mes "남은 보상 횟수: ^FF00000회 / " + .@limit + "회^000000";
-			mes "초기화 시간: 매일 오전 4시";
+			mes needtr("오늘 해당 던전의 보상 이용 횟수를", "You have used up all the reward");
+			mes needtr("모두 사용했습니다.", "attempts for this dungeon today.");
+			mes needtr("남은 보상 횟수: ^FF00000회 / ", "Rewards left: ^FF00000 / ") + .@limit + needtr("회^000000", "^000000");
+			mes needtr("초기화 시간: 매일 오전 4시", "Reset time: 4:00 am every day");
 			end;
 		}
 
-		mes "오늘 남은 보상 횟수:";
-		mes "^3355FF" + .@remaining + "회 / " + .@limit + "회^000000";
+		mes needtr("오늘 남은 보상 횟수:", "Rewards left for today:");
+		mes "^3355FF" + .@remaining + needtr("회 / ", " / ") + .@limit + needtr("회^000000", "^000000");
 		next;
 	}
 	
 	if (BaseLevel < 145) {
-		mes "- Base 레벨 145 이상부터 이용할 수 있습니다. -";
+		mes needtr("- Base 레벨 145 이상부터 이용할 수 있습니다. -", "- You must be level 145 or over");
 		close;
 	}
 
@@ -52,58 +52,58 @@ dali02,97,142,3	script	베른하르트 교수#a1	4_LGTSCIENCE,{
 	if (.@mission_state > 0 && isbegin_quest(9337) == 0 && instance_id(IM_PARTY) <= 0) {
 		erasequest 9335;
 		.@mission_state = 0;
-		mes "[베른하르트 교수]";
-		mes "지난 원정의 차원 연결이 이미 끊어진 것 같군.";
-		mes "남아 있던 미완료 원정 기록만 정리했네.";
+		mes needtr("[베른하르트 교수]", "[Professor Bernhard]");
+		mes needtr("지난 원정의 차원 연결이 이미 끊어진 것 같군.", "It seems the dimensional link from the last expedition is already broken.");
+		mes needtr("남아 있던 미완료 원정 기록만 정리했네.", "I have only cleared away the unfinished expedition record that was left.");
 		if (.@cooldown_state == 0 || .@cooldown_state == 1)
-			mes "차원 이동 장치는 아직 충전 중이니 충전이 끝난 뒤 다시 찾아오게.";
+			mes needtr("차원 이동 장치는 아직 충전 중이니 충전이 끝난 뒤 다시 찾아오게.", "The Interdimensional Device is still charging, so come back once it is done.");
 		else
-			mes "차원 이동 장치의 충전 상태를 다시 확인해 보겠네.";
+			mes needtr("차원 이동 장치의 충전 상태를 다시 확인해 보겠네.", "I will check the charge state of the Interdimensional Device again.");
 		next;
 	}
 
 	if (.@mission_state > 0) {
 		// 마지막 펜릴에게서 9337을 받은 경우에만 정상 클리어로 인정합니다.
 		if (isbegin_quest(9337) == 0) {
-			mes "[베른하르트 교수]";
-			mes "아직 과거의 글래스트헤임에서 임무를 마쳤다는 기록이 확인되지 않는군.";
-			mes "차원 이동 장치가 유지되고 있다면 장치를 통해 다시 들어갈 수 있네.";
+			mes needtr("[베른하르트 교수]", "[Professor Bernhard]");
+			mes needtr("아직 과거의 글래스트헤임에서 임무를 마쳤다는 기록이 확인되지 않는군.", "I still see no record that you finished the mission in the Glast Heim of the past.");
+			mes needtr("차원 이동 장치가 유지되고 있다면 장치를 통해 다시 들어갈 수 있네.", "If the Interdimensional Device is still holding, you can go back in through it.");
 			close;
 		}
 
-		mes "[베른하르트 교수]";
-		mes "무사히 돌아왔군. 임무를 끝까지 마친 기록도 확인했네.";
-		mes "많은 위험을 겪었을 텐데 수고했네.";
+		mes needtr("[베른하르트 교수]", "[Professor Bernhard]");
+		mes needtr("무사히 돌아왔군. 임무를 끝까지 마친 기록도 확인했네.", "You are back safely. I have confirmed the record that you finished the mission.");
+		mes needtr("많은 위험을 겪었을 텐데 수고했네.", "You must have been through a lot of danger. Well done.");
 		next;
 
 		.@give_earring = 0;
 		.@earring_index = -1;
 		if (sarah_fenrir == 0) {
-			mes "[베른하르트 교수]";
+			mes needtr("[베른하르트 교수]", "[Professor Bernhard]");
 			if (countitem(6803) > 0) {
-				mes "기간테스의 파편 1개를 연구 자료로 받는 대신 귀걸이 하나를 주겠네.";
+				mes needtr("기간테스의 파편 1개를 연구 자료로 받는 대신 귀걸이 하나를 주겠네.", "I will take 1 shard of Gigantes as research material and give you an earring in return.");
 				next;
-				mes "- 사라의 왼쪽 귀걸이 -";
-				mes "힐 1레벨 사용 가능";
-				mes "- 사라의 오른쪽 귀걸이 -";
-				mes "텔레포테이션 1레벨 사용 가능";
+				mes needtr("- 사라의 왼쪽 귀걸이 -", "- The left earring of Sarah -");
+				mes needtr("힐 1레벨 사용 가능", "Usable for Heal 1Lv");
+				mes needtr("- 사라의 오른쪽 귀걸이 -", "- The right earring of Sarah -");
+				mes needtr("텔레포테이션 1레벨 사용 가능", "Usable for Teleport 1Lv");
 				next;
-				.@earring_index = select("사라의 왼쪽 귀걸이:사라의 오른쪽 귀걸이:이번에는 받지 않는다") - 1;
+				.@earring_index = select(needtr("사라의 왼쪽 귀걸이:사라의 오른쪽 귀걸이:이번에는 받지 않는다", "The left earring of Sarah:The right earring of Sarah:Not this time")) - 1;
 				if (.@earring_index < 2)
 					.@give_earring = 1;
 			}
 			else {
-				mes "기간테스의 파편을 가지고 있지 않군.";
-				mes "파편 없이 귀걸이를 지급할 수는 없지만, 이번 원정은 정상적으로 완료 처리하겠네.";
-				mes "나중에 파편을 구하면 수석 조교에게서 귀걸이를 교환할 수 있네.";
+				mes needtr("기간테스의 파편을 가지고 있지 않군.", "You do not have a shard of Gigantes.");
+				mes needtr("파편 없이 귀걸이를 지급할 수는 없지만, 이번 원정은 정상적으로 완료 처리하겠네.", "I cannot hand over an earring without a shard, but I will record this expedition as properly completed.");
+				mes needtr("나중에 파편을 구하면 수석 조교에게서 귀걸이를 교환할 수 있네.", "Once you get a shard later, you can trade it for an earring with the head assistant.");
 				next;
 			}
 		}
 
-		mes "[베른하르트 교수]";
-		mes "기간테스의 파편을 수석 조교에게 가져가면 귀걸이 인챈트나 교환에 사용할 수 있네.";
-		mes "차원 이동 장치의 재사용 대기시간은 이번 원정에 처음 입장한 시점부터 계산되고 있네.";
-		mes "충전이 끝나면 다시 원정을 시작할 수 있을 걸세.";
+		mes needtr("[베른하르트 교수]", "[Professor Bernhard]");
+		mes needtr("기간테스의 파편을 수석 조교에게 가져가면 귀걸이 인챈트나 교환에 사용할 수 있네.", "Take a shard of Gigantes to the head assistant and it can be used to enchant or trade an earring.");
+		mes needtr("차원 이동 장치의 재사용 대기시간은 이번 원정에 처음 입장한 시점부터 계산되고 있네.", "The re-entry cooldown of the Interdimensional Device is counted from the moment you first entered this expedition.");
+		mes needtr("충전이 끝나면 다시 원정을 시작할 수 있을 걸세.", "Once it finishes charging you will be able to start an expedition again.");
 
 		erasequest 9335;// Search for shards of Gigantes
 		if (isbegin_quest(9337) > 0)
@@ -121,51 +121,51 @@ dali02,97,142,3	script	베른하르트 교수#a1	4_LGTSCIENCE,{
 	case -1:
 		switch( isbegin_quest(9335) ) {
 		case 0:// First time doing instance
-			mes "[베른하르트 교수]";
-			mes "나는 슈발츠발드 최고의 무기 연구가, 베른하르트 교수라네.";
+			mes needtr("[베른하르트 교수]", "[Professor Bernhard]");
+			mes needtr("나는 슈발츠발드 최고의 무기 연구가, 베른하르트 교수라네.", "I would say I am Professor Bernhard, the best weapons researcher in Schwarzwald.");
 			next;
-			mes "[베른하르트 교수]";
-			mes "수많은 무기를 만들었지만 늘 무언가 부족하다고 느껴 고대 문헌을 조사했지.";
-			mes "그 과정에서 차원 이동 장치에 관한 기록을 발견했네.";
+			mes needtr("[베른하르트 교수]", "[Professor Bernhard]");
+			mes needtr("수많은 무기를 만들었지만 늘 무언가 부족하다고 느껴 고대 문헌을 조사했지.", "After endless research I have created various weapons, but I felt something was missing so I found the ancient texts.");
+			mes needtr("그 과정에서 차원 이동 장치에 관한 기록을 발견했네.", "I found out about the Dimensional Device during my research.");
 			next;
-			mes "[베른하르트 교수]";
-			mes "더 강력한 무기를 만들려면 찬란했던 과거의 유물도 필요하다는 사실을 깨달았지.";
-			mes "그래서 자네의 도움이 필요하네.";
+			mes needtr("[베른하르트 교수]", "[Professor Bernhard]");
+			mes needtr("더 강력한 무기를 만들려면 찬란했던 과거의 유물도 필요하다는 사실을 깨달았지.", "I also realized that relics from the glorious past were also needed to create more powerful and superior weapons.");
+			mes needtr("그래서 자네의 도움이 필요하네.", "That is why..I need you..");
 			next;
-			mes "[베른하르트 교수]";
+			mes needtr("[베른하르트 교수]", "[Professor Bernhard]");
 			if (is_party_leader() == false) {
-				mes "진정한 연구가로서 강력한 무기를 완성하고 싶네!";
-				mes "그러려면 과거 펜릴과 사라의 전투에 등장했던 기간테스의 파편이 필요해.";
+				mes needtr("진정한 연구가로서 강력한 무기를 완성하고 싶네!", "A longing for accomplishing a powerful weapon as a genuine professor!");
+				mes needtr("그러려면 과거 펜릴과 사라의 전투에 등장했던 기간테스의 파편이 필요해.", "In order to accomplish that, we need shards of Gigantes that once appeared in the past battle of Fenrir and Sarah.");
 				next;
-				mes "[베른하르트 교수]";
-				mes "나는 이 자리를 비울 수 없네.";
-				mes "대신 파편을 가져올 실력 있는 모험가가 필요하지.";
-				mes "자네라면 충분히 해낼 수 있어 보이는군.";
+				mes needtr("[베른하르트 교수]", "[Professor Bernhard]");
+				mes needtr("나는 이 자리를 비울 수 없네.", "I cannot leave my post.");
+				mes needtr("대신 파편을 가져올 실력 있는 모험가가 필요하지.", "I need a warrior who can bring me the shards instead..");
+				mes needtr("자네라면 충분히 해낼 수 있어 보이는군.", "You seem capable.");
 				next;
-				mes "[베른하르트 교수]";
-				mes "자세한 이야기는 파티장과 나누도록 하겠네.";
+				mes needtr("[베른하르트 교수]", "[Professor Bernhard]");
+				mes needtr("자세한 이야기는 파티장과 나누도록 하겠네.", "I will continue discussing this further with your party leader rather than with you.");
 				close;
 			}
-			mes "대신 기간테스의 파편을 가져올 실력 있는 모험가가 필요하지.";
-			mes "자네라면 충분히 해낼 수 있어 보이는군.";
+			mes needtr("대신 기간테스의 파편을 가져올 실력 있는 모험가가 필요하지.", "I need a warrior who can bring me the shard of Gigantes instead..");
+			mes needtr("자네라면 충분히 해낼 수 있어 보이는군.", "You seem capable.");
 			next;
-			mes "[베른하르트 교수]";
-			mes "과거로 이동해 기간테스의 파편을 가져오겠나?";
-			mes "위험을 감수한 만큼 충분히 보상하겠네.";
+			mes needtr("[베른하르트 교수]", "[Professor Bernhard]");
+			mes needtr("과거로 이동해 기간테스의 파편을 가져오겠나?", "What do you think? Would you go to the past and bring me back the shards of");
+			mes needtr("위험을 감수한 만큼 충분히 보상하겠네.", "Gigantes? I will make sure to compensate you sufficiently.");
 			next;
-			if (select("거절한다.:수락한다.") == 1) {
-				mes "[베른하르트 교수]";
-				mes "생각이 바뀌면 다시 찾아오게.";
+			if (select(needtr("거절한다.:수락한다.", "Refuse.:Accept.")) == 1) {
+				mes needtr("[베른하르트 교수]", "[Professor Bernhard]");
+				mes needtr("생각이 바뀌면 다시 찾아오게.", "Come back if you change your mind.");
 				close;
 			}
 
 			.@fast_mode = 0;
 			if (#NEED_MD_SF_CLEAR) {
-				mes "[베른하르트 교수]";
-				mes "이전에 임무를 완료한 기록이 확인되었네.";
-				mes "이번 원정의 진행 방식을 선택하게.";
+				mes needtr("[베른하르트 교수]", "[Professor Bernhard]");
+				mes needtr("이전에 임무를 완료한 기록이 확인되었네.", "A record of completing the mission before has been confirmed.");
+				mes needtr("이번 원정의 진행 방식을 선택하게.", "Choose how this expedition will run.");
 				next;
-				switch (select("간소화 진행:일반 진행:취소")) {
+				switch (select(needtr("간소화 진행:일반 진행:취소", "Simplified run:Normal run:Cancel"))) {
 				case 1:
 					.@fast_mode = 1;
 					break;
@@ -180,17 +180,17 @@ dali02,97,142,3	script	베른하르트 교수#a1	4_LGTSCIENCE,{
 			.@instance_id = instance_create("Fenrir and Sarah");
 			if (.@instance_id < 0) {
 				NEED_SF_FAST_PENDING = 0;
-				mes "[베른하르트 교수]";
-				mes "차원 이동 장치를 가동하지 못했네.";
-				mes "잠시 후 다시 시도해 주게.";
+				mes needtr("[베른하르트 교수]", "[Professor Bernhard]");
+				mes needtr("차원 이동 장치를 가동하지 못했네.", "I could not get the Interdimensional Device running.");
+				mes needtr("잠시 후 다시 시도해 주게.", "Please try again in a moment.");
 				close;
 			}
-			mes "[베른하르트 교수]";
+			mes needtr("[베른하르트 교수]", "[Professor Bernhard]");
 			if (.@fast_mode)
-				mes "간소화 진행으로 차원 이동 장치를 열었네.";
+				mes needtr("간소화 진행으로 차원 이동 장치를 열었네.", "I have opened the Interdimensional Device on the simplified run.");
 			else
-				mes "과거의 글래스트헤임으로 향하는 장치를 열었네.";
-			mes "장치가 오래 유지되지는 않으니 서두르게.";
+				mes needtr("과거의 글래스트헤임으로 향하는 장치를 열었네.", "I have opened the device leading to the Glast Heim of the past.");
+			mes needtr("장치가 오래 유지되지는 않으니 서두르게.", "The device will not hold for long, so hurry.");
 			close;
 		case 1:
 			// 진행 중인 원정은 위의 공통 처리 구간에서 처리됩니다.
@@ -200,45 +200,45 @@ dali02,97,142,3	script	베른하르트 교수#a1	4_LGTSCIENCE,{
 		}
 	case 0:
 	case 1:
-		mes "[베른하르트 교수]";
-		mes "강력한 무기를 만들기에는 기간테스의 파편이 아직 부족하네.";
-		mes "차원 이동 장치를 여는 데 많은 에너지가 필요하니 충전이 끝난 뒤 다시 찾아오게.";
+		mes needtr("[베른하르트 교수]", "[Professor Bernhard]");
+		mes needtr("강력한 무기를 만들기에는 기간테스의 파편이 아직 부족하네.", "We lack the shards of Gigantes in order to make powerful weapons.");
+		mes needtr("차원 이동 장치를 여는 데 많은 에너지가 필요하니 충전이 끝난 뒤 다시 찾아오게.", "Because a lot of energy is needed to open a dimension device, come back and find me when the energy has accumulated.");
 		close;
 	case 2:
 		erasequest 9336;
-		mes "[베른하르트 교수]";
-		mes "기다리고 있었네.";
-		mes "그동안 잘 지냈나?";
-		mes "자네가 없는 동안 차원 에너지를 다시 모으는 데 성공했네.";
-		mes "이제 차원 이동 장치를 다시 열 수 있어.";
+		mes needtr("[베른하르트 교수]", "[Professor Bernhard]");
+		mes needtr("기다리고 있었네.", "I have been waiting for you.");
+		mes needtr("그동안 잘 지냈나?", "How have you been?");
+		mes needtr("자네가 없는 동안 차원 에너지를 다시 모으는 데 성공했네.", "While you were away I managed to gather dimensional energy again.");
+		mes needtr("이제 차원 이동 장치를 다시 열 수 있어.", "Now I can open the Interdimensional Device again.");
 		next;
-		mes "[베른하르트 교수]";
-		mes "진정한 연구가로서 강력한 무기를 완성하고 싶네!";
-		mes "그러려면 과거 펜릴과 사라의 전투에 등장했던 기간테스의 파편이 필요해.";
+		mes needtr("[베른하르트 교수]", "[Professor Bernhard]");
+		mes needtr("진정한 연구가로서 강력한 무기를 완성하고 싶네!", "A longing for accomplishing a powerful weapon as a genuine professor!");
+		mes needtr("그러려면 과거 펜릴과 사라의 전투에 등장했던 기간테스의 파편이 필요해.", "In order to accomplish that, we need shards of Gigantes that once appeared in the past battle of Fenrir and Sarah.");
 		next;
-		mes "[베른하르트 교수]";
-		mes "나는 이 자리를 비울 수 없으니";
-		mes "대신 파편을 가져올 모험가가 필요하네.";
-		mes "자네가 다시 한번 도와주었으면 하는군.";
+		mes needtr("[베른하르트 교수]", "[Professor Bernhard]");
+		mes needtr("나는 이 자리를 비울 수 없으니", "Because I cannot leave my post, ");
+		mes needtr("대신 파편을 가져올 모험가가 필요하네.", "I need a warrior who can bring me the shards instead.");
+		mes needtr("자네가 다시 한번 도와주었으면 하는군.", "I think you can assist me once again..");
 		next;
-		mes "[베른하르트 교수]";
-		mes "좋아, 준비는 모두 끝났네.";
-		mes "다시 과거로 가서 기간테스의 파편을 가져오겠나?";
-		mes "충분히 보상하겠네.";
+		mes needtr("[베른하르트 교수]", "[Professor Bernhard]");
+		mes needtr("좋아, 준비는 모두 끝났네.", "There, all the preparations are finished.");
+		mes needtr("다시 과거로 가서 기간테스의 파편을 가져오겠나?", "Can you go back in time again and bring me the shards of Gigantes?");
+		mes needtr("충분히 보상하겠네.", "I will make sure to compensate you sufficiently.");
 		if (is_party_leader() == true) {
 			next;
-			if (select("거절한다.:수락한다.") == 1) {
-				mes "[베른하르트 교수]";
-				mes "알겠네. 준비가 되면 다시 찾아오게.";
+			if (select(needtr("거절한다.:수락한다.", "Refuse.:Accept.")) == 1) {
+				mes needtr("[베른하르트 교수]", "[Professor Bernhard]");
+				mes needtr("알겠네. 준비가 되면 다시 찾아오게.", "Understood. Come back when you are ready.");
 				close;
 			}
 
 			.@fast_mode = 0;
 			if (#NEED_MD_SF_CLEAR) {
-				mes "[베른하르트 교수]";
-				mes "이번 원정의 진행 방식을 선택하게.";
+				mes needtr("[베른하르트 교수]", "[Professor Bernhard]");
+				mes needtr("이번 원정의 진행 방식을 선택하게.", "Choose how this expedition will run.");
 				next;
-				switch (select("간소화 진행:일반 진행:취소")) {
+				switch (select(needtr("간소화 진행:일반 진행:취소", "Simplified run:Normal run:Cancel"))) {
 				case 1:
 					.@fast_mode = 1;
 					break;
@@ -253,19 +253,19 @@ dali02,97,142,3	script	베른하르트 교수#a1	4_LGTSCIENCE,{
 			.@instance_id = instance_create("Fenrir and Sarah");
 			if (.@instance_id < 0) {
 				NEED_SF_FAST_PENDING = 0;
-				mes "[베른하르트 교수]";
-				mes "차원 이동 장치를 가동하지 못했네.";
+				mes needtr("[베른하르트 교수]", "[Professor Bernhard]");
+				mes needtr("차원 이동 장치를 가동하지 못했네.", "I could not get the Interdimensional Device running.");
 				close;
 			}
-			mes "[베른하르트 교수]";
+			mes needtr("[베른하르트 교수]", "[Professor Bernhard]");
 			if (.@fast_mode)
-				mes "간소화 진행으로 차원 이동 장치를 열었네.";
+				mes needtr("간소화 진행으로 차원 이동 장치를 열었네.", "I have opened the Interdimensional Device on the simplified run.");
 			else
-				mes "과거의 글래스트헤임으로 향하는 장치를 열었네.";
+				mes needtr("과거의 글래스트헤임으로 향하는 장치를 열었네.", "I have opened the device leading to the Glast Heim of the past.");
 		}
 		else {
-			mes "[베른하르트 교수]";
-			mes "차원 이동 장치의 가동은 파티장에게만 맡기겠네.";
+			mes needtr("[베른하르트 교수]", "[Professor Bernhard]");
+			mes needtr("차원 이동 장치의 가동은 파티장에게만 맡기겠네.", "I will leave operating the Interdimensional Device to the party leader only.");
 		}
 		close;
 	}
@@ -277,28 +277,28 @@ dali02,99,148,3	script	차원 이동 장치#XX1	PORTAL,{
 	.@limit = instance_ip_reward_limit(.@instance_db_id);
 
 	if (.@remaining == -1 || .@limit == -1) {
-		mes "보상 이용 횟수를 확인하지 못했습니다.";
-		mes "잠시 후 다시 시도해 주세요.";
+		mes needtr("보상 이용 횟수를 확인하지 못했습니다.", "Could not read your reward usage count.");
+		mes needtr("잠시 후 다시 시도해 주세요.", "Please try again in a moment.");
 		end;
 	}
 
 	if (.@remaining != -2 && .@limit > 0) {
 		if (.@remaining <= 0) {
-			mes "오늘 해당 던전의 보상 이용 횟수를";
-			mes "모두 사용했습니다.";
-			mes "남은 보상 횟수: ^FF00000회 / " + .@limit + "회^000000";
-			mes "초기화 시간: 매일 오전 4시";
+			mes needtr("오늘 해당 던전의 보상 이용 횟수를", "You have used up all the reward");
+			mes needtr("모두 사용했습니다.", "attempts for this dungeon today.");
+			mes needtr("남은 보상 횟수: ^FF00000회 / ", "Rewards left: ^FF00000 / ") + .@limit + needtr("회^000000", "^000000");
+			mes needtr("초기화 시간: 매일 오전 4시", "Reset time: 4:00 am every day");
 			end;
 		}
 
-		mes "오늘 남은 보상 횟수:";
-		mes "^3355FF" + .@remaining + "회 / " + .@limit + "회^000000";
+		mes needtr("오늘 남은 보상 횟수:", "Rewards left for today:");
+		mes "^3355FF" + .@remaining + needtr("회 / ", " / ") + .@limit + needtr("회^000000", "^000000");
 		next;
 	}
 	
 	if (BaseLevel < 145) {
-		mes "- Base 레벨 145 이상부터 이용할 수 있습니다. -";
-		mes "아직 장치를 이용할 수 없습니다. -";
+		mes needtr("- Base 레벨 145 이상부터 이용할 수 있습니다. -", "- You must be level 145 or over");
+		mes needtr("아직 장치를 이용할 수 없습니다. -", "It seems entry is possible. -");
 		close;
 	}
 
@@ -312,8 +312,8 @@ dali02,99,148,3	script	차원 이동 장치#XX1	PORTAL,{
 			break;
 		case 0:
 		case 1:
-			mes "- 차원 이동 장치가 아직 충전 중입니다. -";
-			mes "- 지금은 새로운 원정을 시작할 수 없습니다. -";
+			mes needtr("- 차원 이동 장치가 아직 충전 중입니다. -", "- The Dimensional Device has closed.");
+			mes needtr("- 지금은 새로운 원정을 시작할 수 없습니다. -", "It seems entry is not possible. -");
 			close;
 		case 2:
 			erasequest 9336;
@@ -321,16 +321,16 @@ dali02,99,148,3	script	차원 이동 장치#XX1	PORTAL,{
 		}
 	}
 
-	if (select("입장하지 않는다.:차원 이동 장치에 들어간다.") == 1) {
-		mes "- 차원 이동 장치 주변의 공간이";
-		mes "일그러지고 있다. -";
+	if (select(needtr("입장하지 않는다.:차원 이동 장치에 들어간다.", "Do not enter.:Step into the Interdimensional Device.")) == 1) {
+		mes needtr("- 차원 이동 장치 주변의 공간이", "- The space around the Interdimensional Device");
+		mes needtr("일그러지고 있다. -", "is warping. -");
 		close;
 	}
 
 	.@md_name$ = "Fenrir and Sarah";
 	switch( instance_enter(.@md_name$) ) {
 	case IE_OTHER:
-		mes "알 수 없는 오류가 발생했습니다.";
+		mes needtr("알 수 없는 오류가 발생했습니다.", "An unknown error occurred.");
 		close;
 	case IE_NOINSTANCE:
 		if (.@mission_state > 0 && isbegin_quest(9337) == 0) {
@@ -338,31 +338,31 @@ dali02,99,148,3	script	차원 이동 장치#XX1	PORTAL,{
 			erasequest 9335;
 			.@mission_state = 0;
 			.@cooldown_state = checkquest(9336,PLAYTIME);
-			mes "진행 중이던 펜릴과 사라 인스턴스가 이미 종료되었습니다.";
-			mes "미완료 원정 기록을 정리했습니다.";
+			mes needtr("진행 중이던 펜릴과 사라 인스턴스가 이미 종료되었습니다.", "The Fenrir and Sarah instance you had in progress has already ended.");
+			mes needtr("미완료 원정 기록을 정리했습니다.", "The unfinished expedition record has been cleared.");
 			if (.@cooldown_state == 0 || .@cooldown_state == 1)
-				mes "차원 이동 장치의 재사용 대기시간이 끝난 뒤 베른하르트 교수에게 다시 말을 걸어 주세요.";
+				mes needtr("차원 이동 장치의 재사용 대기시간이 끝난 뒤 베른하르트 교수에게 다시 말을 걸어 주세요.", "Talk to Professor Bernhard again once the re-entry cooldown of the Interdimensional Device is over.");
 			else if (.@cooldown_state == 2) {
 				erasequest 9336;
-				mes "재사용 대기시간도 끝났습니다. 베른하르트 교수에게서 새 원정을 생성할 수 있습니다.";
+				mes needtr("재사용 대기시간도 끝났습니다. 베른하르트 교수에게서 새 원정을 생성할 수 있습니다.", "The re-entry cooldown is over too. You can create a new expedition with Professor Bernhard.");
 			}
 			else
-				mes "베른하르트 교수에게서 새 원정을 생성할 수 있습니다.";
+				mes needtr("베른하르트 교수에게서 새 원정을 생성할 수 있습니다.", "You can create a new expedition with Professor Bernhard.");
 		}
 		else if (.@mission_state > 0 && isbegin_quest(9337) > 0) {
-			mes "펜릴과 사라 원정의 완료 기록이 확인되었습니다.";
-			mes "베른하르트 교수에게 돌아가 완료 보고를 진행해 주세요.";
+			mes needtr("펜릴과 사라 원정의 완료 기록이 확인되었습니다.", "A completion record for the Fenrir and Sarah expedition has been confirmed.");
+			mes needtr("베른하르트 교수에게 돌아가 완료 보고를 진행해 주세요.", "Go back to Professor Bernhard and report your completion.");
 		}
 		else {
-			mes "메모리얼 던전 " + .@md_name$ + "이 생성되어 있지 않습니다.";
-			mes "파티장이 먼저 베른하르트 교수에게서 메모리얼 던전을 생성해야 합니다.";
+			mes needtr("메모리얼 던전 ", "Memorial Dungeon ") + .@md_name$ + needtr("이 생성되어 있지 않습니다.", " does not exist.");
+			mes needtr("파티장이 먼저 베른하르트 교수에게서 메모리얼 던전을 생성해야 합니다.", "The party leader has not created the Memorial Dungeon.");
 		}
 		close;
 	case IE_NOMEMBER:
-		mes "해당 파티의 구성원만 입장할 수 있습니다.";
+		mes needtr("해당 파티의 구성원만 입장할 수 있습니다.", "Only party members can enter the Memorial Dungeon.");
 		close;
 	case IE_OK:
-		mapannounce "dali02", getpartyname(getcharid(1)) + " 파티의 " + strcharinfo(0) + " 님이 펜릴과 사라에 입장합니다.", bc_map,0xFF99,FW_NORMAL,12;
+		mapannouncelang "dali02", getpartyname(getcharid(1)) + " 파티의 " + strcharinfo(0) + " 님이 펜릴과 사라에 입장합니다.", getpartyname(getcharid(1)) + " party's " + strcharinfo(0) + " is entering Fenrir and Sarah.", bc_map,0xFF99,FW_NORMAL,12;
 
 		// 최초 입장 성공 시점부터 쿨타임을 시작합니다.
 		// 재입장에서는 9335/9336을 다시 설정하지 않아 최초 입장 시각을 유지합니다.
@@ -379,80 +379,80 @@ dali02,93,146,6	script	수석 조교#a1	4_M_REPAIR,{
 	if (sarah_fenrir == 0)
 		end;
 	disable_items;
-	mes "[수석 조교]";
-	mes "교수님께 이야기는 들었습니다.";
-	mes "목숨을 걸고 기간테스의 파편을 가져온 만큼 충분히 보상하라고 하셨습니다.";
+	mes needtr("[수석 조교]", "[Chief Assistant]");
+	mes needtr("교수님께 이야기는 들었습니다.", "I've heard about you from the professor.");
+	mes needtr("목숨을 걸고 기간테스의 파편을 가져온 만큼 충분히 보상하라고 하셨습니다.", "The professor has told me to sufficiently compensate you for risking your life and bringing the shards of Gigantes.");
 	next;
-	switch( select( "귀걸이 인챈트", "귀걸이 구매", "대화를 마친다." ) ) {
+	switch( select( needtr("귀걸이 인챈트", "Enchant earring."), needtr("귀걸이 구매", "Purchase earring"), needtr("대화를 마친다.", "Exit conversation") ) ) {
 	case 1:
-		mes "[수석 조교]";
-		mes "발굴 현장에서 발견한 사라의 귀걸이에는 상당한 잠재력이 있습니다.";
+		mes needtr("[수석 조교]", "[Chief Assistant]");
+		mes needtr("발굴 현장에서 발견한 사라의 귀걸이에는 상당한 잠재력이 있습니다.", "Sarah's earrings we have discovered at the archaeological site must certainly have great potential.");
 		next;
-		switch( select( "사라의 귀걸이 인챈트", "사라의 귀걸이 인챈트 초기화", "대화를 마친다." ) ) {
+		switch( select( needtr("사라의 귀걸이 인챈트", "Enchant Sarah's earrings"), needtr("사라의 귀걸이 인챈트 초기화", "Initialize enchantment on Sarah's earrings"), needtr("대화를 마친다.", "Exit conversation") ) ) {
 		case 1:
-			mes "[수석 조교]";
-			mes "귀걸이 하나에는 최대 두 개의 인챈트를 부여할 수 있습니다.";
-			mes "어느 귀걸이에 인챈트하시겠습니까?";
+			mes needtr("[수석 조교]", "[Chief Assistant]");
+			mes needtr("귀걸이 하나에는 최대 두 개의 인챈트를 부여할 수 있습니다.", "2 enchantments are possible on one earring.");
+			mes needtr("어느 귀걸이에 인챈트하시겠습니까?", "Which earring do you wish to enchant?");
 			next;
-			switch( select( "사라의 왼쪽 귀걸이", "사라의 오른쪽 귀걸이", "그만둔다." ) ) {
+			switch( select( needtr("사라의 왼쪽 귀걸이", "The left earring of Sarah"), needtr("사라의 오른쪽 귀걸이", "The right earring of Sarah"), needtr("그만둔다.", "Quit") ) ) {
 			case 1:
 				.@sarah_item_id = 28310;
-				.@sarah_earring$ = "왼쪽";
+				.@sarah_earring$ = needtr("왼쪽", "left");
 				break;
 			case 2:
 				.@sarah_item_id = 28311;
-				.@sarah_earring$ = "오른쪽";
+				.@sarah_earring$ = needtr("오른쪽", "right");
 				break;
 			case 3:
-				mes "[수석 조교]";
-				mes "인챈트를 원하시면";
-				mes "사라의 귀걸이를 준비한 뒤";
-				mes "다시 찾아와 주세요.";
+				mes needtr("[수석 조교]", "[Chief Assistant]");
+				mes needtr("인챈트를 원하시면", "If you want an enchantment ");
+				mes needtr("사라의 귀걸이를 준비한 뒤", "on Sarah's earrings, ");
+				mes needtr("다시 찾아와 주세요.", "come and find me again.");
 				close;
 			}
-			mes "[수석 조교]";
-			mes "인챈트할 귀걸이를 장착해야 합니다.";
-			mes "어느 장착 위치의 귀걸이에 인챈트하시겠습니까?";
+			mes needtr("[수석 조교]", "[Chief Assistant]");
+			mes needtr("인챈트할 귀걸이를 장착해야 합니다.", "You must equip the item to make enchantment possible.");
+			mes needtr("어느 장착 위치의 귀걸이에 인챈트하시겠습니까?", "Which column do you wish to enchant?");
 			next;
-			if (select( "왼쪽 장착 위치", "오른쪽 장착 위치" ) == 1) {
+			if (select( needtr("왼쪽 장착 위치", "Left column"), needtr("오른쪽 장착 위치", "Right column") ) == 1) {
 				.@part = EQI_ACC_L;
-				.@column$ = "왼쪽";
+				.@column$ = needtr("왼쪽", "left");
 				.@bonus_size = 4;		// 4 possibilities
 				.@bonus_chance = 20;	// 20% per possibility
 			}
 			else {
 				.@part = EQI_ACC_R;
-				.@column$ = "오른쪽";
+				.@column$ = needtr("오른쪽", "right");
 				.@bonus_size = 6;		// 6 possibilities
 				.@bonus_chance = 10;	// 10% per possibility
 			}
 			.@equip_id = getequipid(.@part);
 			if (.@equip_id != .@sarah_item_id) {
-				mes "[수석 조교]";
-				mes "인챈트하려면 사라의 " + .@sarah_earring$ + " 귀걸이를 장착해야 합니다.";
+				mes needtr("[수석 조교]", "[Chief Assistant]");
+				mes needtr("인챈트하려면 사라의 ", "If you wish to enchant, you must equip Sarah's ") + .@sarah_earring$ + needtr(" 귀걸이를 장착해야 합니다.", " earring.");
 				close;
 			}
 			setarray .@card[0], getequipcardid(.@part,0), getequipcardid(.@part,1), getequipcardid(.@part,2), getequipcardid(.@part,3);
 			if (.@card[2] > 0) {// 2 enchants
-				mes "[수석 조교]";
-				mes "이미 인챈트가 모두 부여된 귀걸이입니다.";
+				mes needtr("[수석 조교]", "[Chief Assistant]");
+				mes needtr("이미 인챈트가 모두 부여된 귀걸이입니다.", "A fully enchanted earring of Sarah cannot be enchanted any further.");
 				close;
 			}
 			if (.@card[3] > 0) {// 1 enchant
-				mes "[수석 조교]";
-				mes "현재 4번 슬롯에 인챈트가 부여되어 있습니다.";
+				mes needtr("[수석 조교]", "[Chief Assistant]");
+				mes needtr("현재 4번 슬롯에 인챈트가 부여되어 있습니다.", "Sarah's Earring is currently in a state of enchantment in slot 4.");
 				.@slot = 3;
 			}
 			else {// none enchant
-				mes "[수석 조교]";
-				mes "현재 인챈트가 부여되지 않은 귀걸이입니다.";
+				mes needtr("[수석 조교]", "[Chief Assistant]");
+				mes needtr("현재 인챈트가 부여되지 않은 귀걸이입니다.", "Sarah's Earring is currently in a state without enchantment.");
 				.@slot = 4;
 			}
 			next;
-			mes "[수석 조교]";
-			mes "슬롯 " + .@slot + "에 어떤 계열의 인챈트를 부여하시겠습니까?";
+			mes needtr("[수석 조교]", "[Chief Assistant]");
+			mes needtr("슬롯 ", "Which ability do you want as an enchantment on slot ") + .@slot + needtr("에 어떤 계열의 인챈트를 부여하시겠습니까?", "?");
 			next;
-			switch( select( "CRI 또는 크리티컬", "명궁 또는 회피", "절약 또는 MATK", "공격 후딜 또는 스킬 후딜" ) ) {
+			switch( select( needtr("CRI 또는 크리티컬", "CRI or Critical"), needtr("명궁 또는 회피", "Expert archer or Bleed"), needtr("절약 또는 MATK", "Conservation or MATK"), needtr("공격 후딜 또는 스킬 후딜", "Delay Attack or Delay Skill") ) ) {
 			case 1:
 				setarray .@bonus[0],
 					4863,	// Fatal1
@@ -461,8 +461,8 @@ dali02,93,146,6	script	수석 조교#a1	4_M_REPAIR,{
 					4940,	// Critical3
 					4941,	// Critical4
 					4865;	// Fatal3
-				mes "[수석 조교]";
-				mes "CRI 또는 크리티컬 계열을 선택했습니다. 대상 슬롯: " + .@slot + ".";
+				mes needtr("[수석 조교]", "[Chief Assistant]");
+				mes needtr("CRI 또는 크리티컬 계열을 선택했습니다. 대상 슬롯: ", "Selected for CRI or Critical Enchantment slot ") + .@slot + ".";
 				break;
 			case 2:
 				setarray .@bonus[0],
@@ -472,8 +472,8 @@ dali02,93,146,6	script	수석 조교#a1	4_M_REPAIR,{
 					4943,	// Dodge2
 					4944,	// Dodge3
 					4834;	// Expert_Archer3
-				mes "[수석 조교]";
-				mes "명궁 또는 회피 계열을 선택했습니다. 대상 슬롯: " + .@slot + ".";
+				mes needtr("[수석 조교]", "[Chief Assistant]");
+				mes needtr("명궁 또는 회피 계열을 선택했습니다. 대상 슬롯: ", "Selected for Expert Archer or Bleed Enchantment slot ") + .@slot + ".";
 				break;
 			case 3:
 				setarray .@bonus[0],
@@ -483,8 +483,8 @@ dali02,93,146,6	script	수석 조교#a1	4_M_REPAIR,{
 					4898,	// Matk4p
 					4947,	// Thrift3
 					4899;	// Matk5p
-				mes "[수석 조교]";
-				mes "절약 또는 MATK 계열을 선택했습니다. 대상 슬롯: " + .@slot + ".";
+				mes needtr("[수석 조교]", "[Chief Assistant]");
+				mes needtr("절약 또는 MATK 계열을 선택했습니다. 대상 슬롯: ", "Selected for Conservation or MATK Enchantment slot ") + .@slot + ".";
 				break;
 			case 4:
 				setarray .@bonus[0],
@@ -494,35 +494,35 @@ dali02,93,146,6	script	수석 조교#a1	4_M_REPAIR,{
 					4949,	// Skill_Delay2
 					4950,	// Skill_Delay3
 					4873;	// Attack_Delay_3
-				mes "[수석 조교]";
-				mes "공격 후딜 또는 스킬 후딜 계열을 선택했습니다. 대상 슬롯: " + .@slot + ".";
+				mes needtr("[수석 조교]", "[Chief Assistant]");
+				mes needtr("공격 후딜 또는 스킬 후딜 계열을 선택했습니다. 대상 슬롯: ", "Selected for Delay Attack or Delay Skill Enchantment slot ") + .@slot + ".";
 				break;
 			}
 			next;
-			mes "[수석 조교]";
-			mes "인챈트 1회에는 기간테스의 파편 4개가 필요합니다.";
+			mes needtr("[수석 조교]", "[Chief Assistant]");
+			mes needtr("인챈트 1회에는 기간테스의 파편 4개가 필요합니다.", "4 shards of Gigantes is required for one enchantment.");
 			next;
-			mes "[수석 조교]";
-			mes "인챈트는 위험한 작업이며 실패하면 사라의 귀걸이가 파괴됩니다.";
-			mes "그래도 진행하시겠습니까?";
+			mes needtr("[수석 조교]", "[Chief Assistant]");
+			mes needtr("인챈트는 위험한 작업이며 실패하면 사라의 귀걸이가 파괴됩니다.", "Because enchantment is a high risk process, there is risk of Sarah's earring being destroyed.");
+			mes needtr("그래도 진행하시겠습니까?", "Do you still want to do it?");
 			next;
-			if (select( "아니요.", "예." ) == 1) {
-				mes "[수석 조교]";
-				mes "신중히 결정한 뒤 다시 말씀해 주세요.";
+			if (select( needtr("아니요.", "No"), needtr("예.", "Yes") ) == 1) {
+				mes needtr("[수석 조교]", "[Chief Assistant]");
+				mes needtr("신중히 결정한 뒤 다시 말씀해 주세요.", "Please speak to me again after making a clear decision!");
 				close;
 			}
 			if (countitem(6803) < 4) {
-				mes "[수석 조교]";
-				mes "기간테스의 파편이 부족합니다.";
-				mes "인챈트 1회에는 기간테스의 파편 4개가 필요합니다.";
+				mes needtr("[수석 조교]", "[Chief Assistant]");
+				mes needtr("기간테스의 파편이 부족합니다.", "There are not enough shards of Gigantes.");
+				mes needtr("인챈트 1회에는 기간테스의 파편 4개가 필요합니다.", "4 shards of Gigantes is required to do one enchantment.");
 				close;
 			}
-			mes "[수석 조교]";
-			mes "좋습니다. 인챈트를 시작하겠습니다!";
-			mes "행운을 빕니다!";
+			mes needtr("[수석 조교]", "[Chief Assistant]");
+			mes needtr("좋습니다. 인챈트를 시작하겠습니다!", "Good. I will start the enchantment!");
+			mes needtr("행운을 빕니다!", "I wish you luck~!");
 			next;
-			mes "[수석 조교]";
-			mes "으아앗!!";
+			mes needtr("[수석 조교]", "[Chief Assistant]");
+			mes needtr("으아앗!!", "Aahhhh!!");
 			next;
 			progressbar "000000",5;
 			specialeffect2 EF_MAGICALATTHIT;
@@ -539,83 +539,83 @@ dali02,93,146,6	script	수석 조교#a1	4_M_REPAIR,{
 			if (.@i == .@bonus_size) {
 				specialeffect2 EF_CRASHEARTH;
 				specialeffect2 EF_MAXPOWER;
-				mes "[수석 조교]";
-				mes "안타깝게도...";
-				mes "귀걸이가 파괴되었습니다...";
-				mes "후우...";
-				mes "인챈트는 역시 쉽지 않군요.";
+				mes needtr("[수석 조교]", "[Chief Assistant]");
+				mes needtr("안타깝게도...", "Sadly... it is..");
+				mes needtr("귀걸이가 파괴되었습니다...", "destroyed...");
+				mes needtr("후우...", "Whew.. ");
+				mes needtr("인챈트는 역시 쉽지 않군요.", "enchantment is not an easy task..");
 				close;
 			}
 			.@card[.@slot-1] = .@bonus[.@i];
 			specialeffect2 EF_ANGEL2;
 			getitem2 .@sarah_item_id,1,1,0,0,.@card[0],.@card[1],.@card[2],.@card[3];
-			mes "[수석 조교]";
-			mes "인챈트가 완료되었습니다!";
+			mes needtr("[수석 조교]", "[Chief Assistant]");
+			mes needtr("인챈트가 완료되었습니다!", "Enchantment completed!");
 			close;
 		case 2:
-			mes "[수석 조교]";
-			mes "어느 귀걸이의 인챈트를 초기화하시겠습니까?";
+			mes needtr("[수석 조교]", "[Chief Assistant]");
+			mes needtr("어느 귀걸이의 인챈트를 초기화하시겠습니까?", "Which earring do you wish to initialize?");
 			next;
-			switch( select( "사라의 왼쪽 귀걸이", "사라의 오른쪽 귀걸이", "그만둔다." ) ) {
+			switch( select( needtr("사라의 왼쪽 귀걸이", "The left earring of Sarah"), needtr("사라의 오른쪽 귀걸이", "The right earring of Sarah"), needtr("그만둔다.", "Quit") ) ) {
 			case 1:
 				.@sarah_item_id = 28310;
-				.@sarah_earring$ = "왼쪽";
+				.@sarah_earring$ = needtr("왼쪽", "left");
 				break;
 			case 2:
 				.@sarah_item_id = 28311;
-				.@sarah_earring$ = "오른쪽";
+				.@sarah_earring$ = needtr("오른쪽", "right");
 				break;
 			case 3:
-				mes "[수석 조교]";
-				mes "인챈트 초기화를 원하시면 다시 찾아와 주세요.";
+				mes needtr("[수석 조교]", "[Chief Assistant]");
+				mes needtr("인챈트 초기화를 원하시면 다시 찾아와 주세요.", "If you want to initialize an enchantment on Sarah's earrings, come and find me again.");
 				close;
 			}
-			mes "[수석 조교]";
-			mes "사라의 귀걸이 인챈트 초기화에는 기간테스의 파편 1개가 필요합니다.";
+			mes needtr("[수석 조교]", "[Chief Assistant]");
+			mes needtr("사라의 귀걸이 인챈트 초기화에는 기간테스의 파편 1개가 필요합니다.", "On Sarah's earring. 1 shard of Gigantes is required to initialize the enchantment..");
 			next;
 			if (countitem(6803) < 1) {
-				mes "[수석 조교]";
-				mes "기간테스의 파편이 부족합니다.";
-				mes "초기화를 진행하려면 파편을 준비해 주세요.";
+				mes needtr("[수석 조교]", "[Chief Assistant]");
+				mes needtr("기간테스의 파편이 부족합니다.", "There are not enough shards of Gigantes.");
+				mes needtr("초기화를 진행하려면 파편을 준비해 주세요.", "You will need them in order for initialization to take place.");
 				close;
 			}
-			mes "[수석 조교]";
-			mes "초기화할 귀걸이를 장착해야 합니다.";
-			mes "어느 장착 위치의 귀걸이를 초기화하시겠습니까?";
+			mes needtr("[수석 조교]", "[Chief Assistant]");
+			mes needtr("초기화할 귀걸이를 장착해야 합니다.", "You must equip the item to make initialization possible.");
+			mes needtr("어느 장착 위치의 귀걸이를 초기화하시겠습니까?", "Which column's earring do you wish to initialize?");
 			next;
-			if (select( "왼쪽 장착 위치", "오른쪽 장착 위치" ) == 1) {
+			if (select( needtr("왼쪽 장착 위치", "Left column"), needtr("오른쪽 장착 위치", "Right column") ) == 1) {
 				.@part = EQI_ACC_L;
-				.@column$ = "왼쪽";
+				.@column$ = needtr("왼쪽", "left");
 			}
 			else {
 				.@part = EQI_ACC_R;
-				.@column$ = "오른쪽";
+				.@column$ = needtr("오른쪽", "right");
 			}
 			.@equip_id = getequipid(.@part);
 			setarray .@card[0], getequipcardid(.@part,0), getequipcardid(.@part,1), getequipcardid(.@part,2), getequipcardid(.@part,3);
 			if (.@equip_id == -1) {
-				mes "[수석 조교]";
-				mes "초기화할 장착 위치에 장비가 없습니다.";
+				mes needtr("[수석 조교]", "[Chief Assistant]");
+				mes needtr("초기화할 장착 위치에 장비가 없습니다.", "To initialize an enchantment, the relevant column must be equipped with gear.");
 				close;
 			}
 			if (.@equip_id != .@sarah_item_id) {
-				mes "[수석 조교]";
-				mes "해당 장착 위치에 사라의 귀걸이를 장착해야 합니다.";
+				mes needtr("[수석 조교]", "[Chief Assistant]");
+				mes needtr("해당 장착 위치에 사라의 귀걸이를 장착해야 합니다.", "To initialize an enchantment, the relevant column must be equipped with Sarah's earring.");
 				close;
 			}
 			if (getequipcardid(.@part,3) < 1) {
-				mes "[수석 조교]";
-				mes "인챈트가 없는 사라의 귀걸이는 초기화할 수 없습니다.";
+				mes needtr("[수석 조교]", "[Chief Assistant]");
+				mes needtr("인챈트가 없는 사라의 귀걸이는 초기화할 수 없습니다.", "Sarah's earring without an enchantment cannot be initialized.");
 				close;
 			}
-			mes "[수석 조교]";
-			mes "사라의 " + .@sarah_earring$ + " 귀걸이를 " + .@column$ + " 장착 위치에서 선택했습니다.";
-			mes "초기화로 사라진 능력은 복구할 수 없습니다.";
-			mes "계속 진행하시겠습니까?";
+			mes needtr("[수석 조교]", "[Chief Assistant]");
+			mes needtr("사라의 ", "You have selected Sarah's ") + .@sarah_earring$ + needtr(" 귀걸이를 ", " earring on the ") + .@column$ + needtr(" 장착 위치에서 선택했습니다.", " column.");
+			mes needtr("초기화로 사라진 능력은 복구할 수 없습니다.", "It is impossible to restore abilities that are gone after initialization.");
+			mes needtr("계속 진행하시겠습니까?", "Do you still want to proceed?");
 			next;
-			if (select( "아니요.", "예." ) == 2) {
-				mes "[수석 조교]";
-				mes "알겠습니다. 초기화를 시작하겠습니다.";
+			if (select( needtr("아니요.", "No"), needtr("예.", "Yes") ) == 2) {
+				mes needtr("[수석 조교]", "[Chief Assistant]");
+				mes needtr("알겠습니다. 초기화를 시작하겠습니다.", "Yes sir. Initialization will start.");
 				next;
 				progressbar "000000",5;
 				specialeffect2 EF_MAGICALATTHIT;
@@ -629,53 +629,53 @@ dali02,93,146,6	script	수석 조교#a1	4_M_REPAIR,{
 
 				delequip .@part;
 				getitem .@sarah_item_id,1;
-				mes "[수석 조교]";
-				mes "초기화가 완료되었습니다.";
-				mes "필요하시면 다시 찾아와 주세요.";
+				mes needtr("[수석 조교]", "[Chief Assistant]");
+				mes needtr("초기화가 완료되었습니다.", "Initialization completed.");
+				mes needtr("필요하시면 다시 찾아와 주세요.", "Please find me if you need me.");
 			}
 			close;
 		case 3:
-			mes "[수석 조교]";
-			mes "사라의 귀걸이 인챈트를 원하시면 다시 찾아와 주세요.";
+			mes needtr("[수석 조교]", "[Chief Assistant]");
+			mes needtr("사라의 귀걸이 인챈트를 원하시면 다시 찾아와 주세요.", "If you want an enchantment on Sarah's earrings, come and find me again.");
 			close;
 		}
 	case 2:
-		mes "[수석 조교]";
-		mes "교수님과 글래스트헤임을 조사하던 중 발견한 희귀한 귀걸이입니다.";
+		mes needtr("[수석 조교]", "[Chief Assistant]");
+		mes needtr("교수님과 글래스트헤임을 조사하던 중 발견한 희귀한 귀걸이입니다.", "Related to Glast Heim, this is an unique and rare earring found during an excavation with the professor.");
 		next;
-		mes "[수석 조교]";
-		mes "과거 사라가 착용했던 것으로 보이며 잠재력을 끌어내는 힘이 있습니다.";
+		mes needtr("[수석 조교]", "[Chief Assistant]");
+		mes needtr("과거 사라가 착용했던 것으로 보이며 잠재력을 끌어내는 힘이 있습니다.", "I think this has been worn by Sarah in the past and seems to have a great ability to draw out potential strength.");
 		next;
-		mes "[수석 조교]";
-		mes "교수님의 연구를 도와주신 분이니 기간테스의 파편 1개와 교환해 드리겠습니다.";
+		mes needtr("[수석 조교]", "[Chief Assistant]");
+		mes needtr("교수님의 연구를 도와주신 분이니 기간테스의 파편 1개와 교환해 드리겠습니다.", "I will specially trade it for 1 shard since you are the warrior who brought shards of Gigantes for the professor's work.");
 		next;
-		mes "[수석 조교]";
-		mes "- 사라의 왼쪽 귀걸이 -";
-		mes "힐 1레벨 사용 가능";
-		mes "- 사라의 오른쪽 귀걸이 -";
-		mes "텔레포테이션 1레벨 사용 가능";
+		mes needtr("[수석 조교]", "[Chief Assistant]");
+		mes needtr("- 사라의 왼쪽 귀걸이 -", "- The left earring of Sarah -");
+		mes needtr("힐 1레벨 사용 가능", "Usable for Heal 1Lv");
+		mes needtr("- 사라의 오른쪽 귀걸이 -", "- The right earring of Sarah -");
+		mes needtr("텔레포테이션 1레벨 사용 가능", "Usable for Teleport 1Lv");
 		mes "-----------------------";
-		mes "어느 귀걸이를 원하십니까?";
+		mes needtr("어느 귀걸이를 원하십니까?", "Which one do you wish?");
 		next;
-		.@s = select( "사라의 왼쪽 귀걸이", "사라의 오른쪽 귀걸이", "대화를 마친다." ) - 1;
+		.@s = select( needtr("사라의 왼쪽 귀걸이", "The left earring of Sarah"), needtr("사라의 오른쪽 귀걸이", "The right earring of Sarah"), needtr("대화를 마친다.", "Exit conversation") ) - 1;
 		if (.@s < 2) {
 			if (countitem(6803) < 1) {
-				mes "[수석 조교]";
-				mes "기간테스의 파편이 부족합니다.";
-				mes "교환하려면 기간테스의 파편이 필요합니다.";
+				mes needtr("[수석 조교]", "[Chief Assistant]");
+				mes needtr("기간테스의 파편이 부족합니다.", "There are not enough shards of Gigantes.");
+				mes needtr("교환하려면 기간테스의 파편이 필요합니다.", "You will need them for me to trade with you.");
 				close;
 			}
 			delitem 6803,1;// Shard of Gigantes
 			getitem (28310+.@s),1;
 		}
-		mes "[수석 조교]";
-		mes "베른하르트 교수님은 제가 가장 존경하는 분입니다.";
-		mes "당신에게도 존경하는 사람이 있습니까?";
+		mes needtr("[수석 조교]", "[Chief Assistant]");
+		mes needtr("베른하르트 교수님은 제가 가장 존경하는 분입니다.", "Professor Bernhard is the professor I respect the most.");
+		mes needtr("당신에게도 존경하는 사람이 있습니까?", "Do you have someone you respect?");
 		close;
 	case 3:
-		mes "[수석 조교]";
-		mes "교수님께 이야기는 들었습니다.";
-		mes "목숨을 걸고 기간테스의 파편을 가져온 만큼 충분히 보상하라고 하셨습니다.";
+		mes needtr("[수석 조교]", "[Chief Assistant]");
+		mes needtr("교수님께 이야기는 들었습니다.", "I've heard about you from the professor.");
+		mes needtr("목숨을 걸고 기간테스의 파편을 가져온 만큼 충분히 보상하라고 하셨습니다.", "The professor has told me to sufficiently compensate you for risking your life and bringing the shards of Gigantes.");
 		close;
 	}
 }
@@ -689,7 +689,7 @@ OnTouch:
 	// 진행 방식은 인스턴스를 생성한 파티장이 최초 진입 시 확정합니다.
 	if (!'NEED_SF_MODE_SET) {
 		if (!is_party_leader()) {
-			dispbottom "[펜릴과 사라] 파티장이 먼저 진입해 진행 방식을 확정해야 합니다.";
+			dispbottom needtr("[펜릴과 사라] 파티장이 먼저 진입해 진행 방식을 확정해야 합니다.", "[Fenrir and Sarah] The party leader has to enter first and settle how the run will proceed.");
 			end;
 		}
 		'NEED_SF_MODE_SET = 1;
@@ -707,19 +707,19 @@ OnTouch:
 		enablenpc instance_npcname("#glast_move_01");
 		enablenpc instance_npcname("#glast_event_5");
 		enablenpc 'fenrir_2$;
-		mapannounce 'map_glast$, "펜릴: 시간이 없습니다. 남쪽에서 다시 만나죠.", bc_map, 0xEBFF;
+		mapannouncelang 'map_glast$, "펜릴: 시간이 없습니다. 남쪽에서 다시 만나죠.", "Fenrir: There is no time. Let us meet again in the south.", bc_map, 0xEBFF;
 		'NEED_SF_EVENT_LOCK = 0;
 		end;
 	}
 
 	setpcblock PCBLOCK_NPC, true;
 	specialeffect2 EF_HIT2;
-	unittalk getcharid(3), "" + strcharinfo(0) + " : 응? 거기 누구죠? 여행자이신가요?";
+	unittalklang getcharid(3), "" + strcharinfo(0) + " : 응? 거기 누구죠? 여행자이신가요?", "" + strcharinfo(0) + " : Huh? Somebody there? Hello~ You must be a traveler.";
 	sleep2 3000;
 	cutin "fenrir_a.bmp",2;
-	npctalk "펜릴: 이상하군요. 글래스트헤임에 이렇게 짙은 어둠이 가득했던가요...", 'fenrir_1$;
+	npctalklang "펜릴: 이상하군요. 글래스트헤임에 이렇게 짙은 어둠이 가득했던가요...", "Fenrith Fenrir: This is strange.. I don't recall Glast Heim castle being filled with such a dark presence..", 'fenrir_1$;
 	sleep2 3000;
-	npctalk "펜릴: 인사는 나중입니다! 누군가 몬스터를 불러냈어요!", 'fenrir_1$;
+	npctalklang "펜릴: 인사는 나중입니다! 누군가 몬스터를 불러냈어요!", "Fenrith Fenrir: Greetings can come later! Careful! It seems somebody has summoned a monster!", 'fenrir_1$;
 	sleep2 3000;
 	cutin "",255;
 	specialeffect EF_LOCKON, AREA, 'fenrir_1$;
@@ -733,8 +733,8 @@ OnTouch:
 	monster 'map_glast$,364,297, "변이 갈리온",3198,1, .@label$;
 	monster 'map_glast$,364,291, "변이 갈리온",3198,1, .@label$;
 	monster 'map_glast$,353,290, "변이 갈리온",3198,1, .@label$;
-	unittalk getcharid(3), "" + strcharinfo(0) + " : 이 몬스터들은 대체 뭐지?";
-	npctalk "펜릴: 마법을 준비할 동안 시간을 벌어 주세요!", 'fenrir_1$;
+	unittalklang getcharid(3), "" + strcharinfo(0) + " : 이 몬스터들은 대체 뭐지?", "" + strcharinfo(0) + " : What are these things?";
+	npctalklang "펜릴: 마법을 준비할 동안 시간을 벌어 주세요!", "Fenrith Fenrir: Buy me some time while I cast magic! I will handle this!", 'fenrir_1$;
 	donpcevent instance_npcname("#glast_event_1") + "::OnBar";
 	donpcevent instance_npcname("#glast_event_1") + "::OnEvent";
 	setpcblock PCBLOCK_NPC, false;
@@ -747,24 +747,24 @@ OnBar:
 OnEvent:
 	// npctalk "펜릴: 마법을 준비할 동안 시간을 벌어 주세요!", 'fenrir_1$;// double on official
 	sleep 3000;
-	npctalk "펜릴: 진실된 하늘의 분노여.", 'fenrir_1$;
+	npctalklang "펜릴: 진실된 하늘의 분노여.", "Fenrith Fenrir: Wrath of the true sky.", 'fenrir_1$;
 	sleep 3000;
-	npctalk "펜릴: 대지를 가르는 번개여!", 'fenrir_1$;
+	npctalklang "펜릴: 대지를 가르는 번개여!", "Fenrith Fenrir: Thunderbolt that may split the earth!", 'fenrir_1$;
 	sleep 3000;
-	npctalk "펜릴: 지금 이곳에 내리쳐라!", 'fenrir_1$;
+	npctalklang "펜릴: 지금 이곳에 내리쳐라!", "Fenrith Fenrir: Fall before me now!", 'fenrir_1$;
 	sleep 3000;
-	npctalk "펜릴: 썬더 스톰!", 'fenrir_1$;
+	npctalklang "펜릴: 썬더 스톰!", "Fenrith Fenrir: Aaah!! Thunder Storm!!!!!", 'fenrir_1$;
 	for ( .@i = 1; .@i < 8; .@i++ )
 		specialeffect EF_THUNDERSTORM, AREA, instance_npcname( "#effect_glast_event01_" + .@i );
 	killmonster 'map_glast$, instance_npcname("#glast_event_1") + "::OnMobDead";
 	sleep 4000;
-	npctalk "펜릴: 한때 아스가르드 신들의 성지였던 글래스트헤임이...", 'fenrir_1$;
+	npctalklang "펜릴: 한때 아스가르드 신들의 성지였던 글래스트헤임이...", "Fenrith Fenrir: Glast Heim, once the cathedral for the Asgard gods..", 'fenrir_1$;
 	sleep 3000;
-	npctalk "펜릴: 이제는 완전히 몬스터의 소굴이 되었군요.", 'fenrir_1$;
+	npctalklang "펜릴: 이제는 완전히 몬스터의 소굴이 되었군요.", "Fenrith Fenrir: Now it has completely become a habitat for monsters..", 'fenrir_1$;
 	sleep 3000;
-	npctalk "펜릴: 잠깐... 생각해 보니 이상합니다.", 'fenrir_1$;
+	npctalklang "펜릴: 잠깐... 생각해 보니 이상합니다.", "Fenrith Fenrir: Wait.. Come to think of it, something is strange..", 'fenrir_1$;
 	sleep 3000;
-	npctalk "펜릴: 갈리온은 원래 이 주변에 서식하는 몬스터가 아닌데...", 'fenrir_1$;
+	npctalklang "펜릴: 갈리온은 원래 이 주변에 서식하는 몬스터가 아닌데...", "Fenrith Fenrir: Galions are the monsters that habit this vicinity..", 'fenrir_1$;
 	sleep 3000;
 	enablenpc instance_npcname("#glast_event_3");
 	end;
@@ -779,27 +779,27 @@ OnTouch:
 	disablenpc instance_npcname("#glast_event_3");
 	setpcblock PCBLOCK_NPC, true;
 	cutin "fenrir_a.bmp",2;
-	npctalk "펜릴: 갑작스러웠을 텐데 도와주셔서 감사합니다.", 'fenrir_1$;
+	npctalklang "펜릴: 갑작스러웠을 텐데 도와주셔서 감사합니다.", "Fenrith Fenrir: By the way, I know it was sudden but thank you for helping.", 'fenrir_1$;
 	sleep2 2000;
-	npctalk "펜릴: 그런데 당신은 누구죠?", 'fenrir_1$;
+	npctalklang "펜릴: 그런데 당신은 누구죠?", "Fenrith Fenrir: Anyway, who are you?", 'fenrir_1$;
 	sleep2 2000;
-	unittalk getcharid(3), "" + strcharinfo(0) + " : 아, 그게...";
+	unittalklang getcharid(3), "" + strcharinfo(0) + " : 아, 그게...", "" + strcharinfo(0) + " : Ah.. that is....";
 	sleep2 2000;
-	unittalk getcharid(3), "" + strcharinfo(0) + " : 세계를 돌아다니는 여행자입니다!";
+	unittalklang getcharid(3), "" + strcharinfo(0) + " : 세계를 돌아다니는 여행자입니다!", "" + strcharinfo(0) + " : .. I am a traveler who wanders around the world!";
 	sleep2 2000;
-	npctalk "펜릴: 그렇군요. 지금은 중요하지 않겠죠.", 'fenrir_1$;
+	npctalklang "펜릴: 그렇군요. 지금은 중요하지 않겠죠.", "Fenrith Fenrir: Is that so..? I see.. I guess it does not matter.", 'fenrir_1$;
 	sleep2 2000;
-	npctalk "펜릴: 이곳은 위험합니다. 지금이라도 돌아가는 편이 좋아요.", 'fenrir_1$;
+	npctalklang "펜릴: 이곳은 위험합니다. 지금이라도 돌아가는 편이 좋아요.", "Fenrith Fenrir: This place seems quite dangerous now. It is not too late to turn back.", 'fenrir_1$;
 	sleep2 2000;
-	npctalk "펜릴: 저는 찾아야 할 물건이 있어 서둘러야 합니다.", 'fenrir_1$;
+	npctalklang "펜릴: 저는 찾아야 할 물건이 있어 서둘러야 합니다.", "Fenrith Fenrir: There is an object I need to find. I need to hurry before it is too late.", 'fenrir_1$;
 	sleep2 2000;
-	npctalk "펜릴: 어쩌면 당신의 도움이 필요할지도...", 'fenrir_1$;
+	npctalklang "펜릴: 어쩌면 당신의 도움이 필요할지도...", "Fenrith Fenrir: Perhaps you can help me...", 'fenrir_1$;
 	sleep2 2000;
-	npctalk "펜릴: 아닙니다. 도와주셔서 감사해요. 다시 만나길 바라죠!", 'fenrir_1$;
+	npctalklang "펜릴: 아닙니다. 도와주셔서 감사해요. 다시 만나길 바라죠!", "Fenrith Fenrir: No.. Then thank you! I hope we can meet again later!", 'fenrir_1$;
 	sleep2 3000;
 	cutin "",255;
 	specialeffect EF_LOCKON, AREA, 'fenrir_1$;
-	unittalk getcharid(3), "" + strcharinfo(0) + " : 설마 저 사람이 정말 펜릴인가? 아니겠지...";
+	unittalklang getcharid(3), "" + strcharinfo(0) + " : 설마 저 사람이 정말 펜릴인가? 아니겠지...", "" + strcharinfo(0) + " : Did that.. person.. really happen to be.. the.. Fenrir..? No way.. probably not..";
 
 	disablenpc 'fenrir_1$;
 	for ( .@i = 1; .@i < 8; .@i++ )
@@ -842,22 +842,22 @@ OnTimer2000:
 	specialeffect EF_WHITEBODY, AREA, 'sarah_ego$;
 	end;
 OnTimer3000:
-	npctalk "사라 아이린: 훌륭하구나, 펜릴. 영리하게 빠져나갔어.", 'sarah_ego$;
+	npctalklang "사라 아이린: 훌륭하구나, 펜릴. 영리하게 빠져나갔어.", "Sarah Irene: Impressive Fenrith Fenrir, you cleverly escaped", 'sarah_ego$;
 	end;
 OnTimer7500:
-	npctalk "사라 아이린: 하지만 오늘은 반드시 널 굴복시키겠다.", 'sarah_ego$;
+	npctalklang "사라 아이린: 하지만 오늘은 반드시 널 굴복시키겠다.", "Sarah Irene: Mm.. today I will make you stand down", 'sarah_ego$;
 	end;
 OnTimer8000:
-	npctalk "펜릴: 오늘이야말로 우리의 악연을 끝내죠.", 'fenrir_11$;
+	npctalklang "펜릴: 오늘이야말로 우리의 악연을 끝내죠.", "Fenrith Fenrir: Today I hope to end our ill fated relationship.", 'fenrir_11$;
 	end;
 OnTimer11000:
-	npctalk "사라 아이린: 이것으로 끝이라고 생각하지 마라.", 'sarah_ego$;
+	npctalklang "사라 아이린: 이것으로 끝이라고 생각하지 마라.", "Sarah Irene: However, do not think this is the end", 'sarah_ego$;
 	end;
 OnTimer14000:
-	npctalk "사라 아이린: 반드시 다시 만나게 될 것이다!", 'sarah_ego$;
+	npctalklang "사라 아이린: 반드시 다시 만나게 될 것이다!", "Sarah Irene: You will surely see me again!!!", 'sarah_ego$;
 	end;
 OnTimer14500:
-	npctalk "펜릴: 그래요... 기다리고 있겠습니다, 사라 아이린.", 'fenrir_11$;
+	npctalklang "펜릴: 그래요... 기다리고 있겠습니다, 사라 아이린.", "Fenrith Fenrir: Mm... I look forward to it Sarah Irene..", 'fenrir_11$;
 	specialeffect EF_FIREPILLARON2, AREA, 'sarah_ego$;
 	end;
 OnTimer15500:
@@ -956,39 +956,39 @@ OnTouch:
 		disablenpc instance_npcname("#glast_move_01");
 
 		viewpoint 1,199,237,1,0xFF0000;
-		mapannounce 'map_glast$, "펜릴: 고대 기간테스의 파편을 조사한 뒤 중앙 성의 계단으로 이동해 주세요.", bc_map, 0xEBFF;
+		mapannouncelang 'map_glast$, "펜릴: 고대 기간테스의 파편을 조사한 뒤 중앙 성의 계단으로 이동해 주세요.", "Fenrir: Examine the ancient shard of Gigantes, then move to the stairs of the central castle.", bc_map, 0xEBFF;
 		end;
 	}
 
 	setpcblock PCBLOCK_NPC, true;
 	cutin "fenrir_a.bmp",2;
-	npctalk "펜릴: 아직 글래스트헤임에 있었군요. 왜 위험한 곳을 떠나지 않은 겁니까?", 'fenrir_2$;
+	npctalklang "펜릴: 아직 글래스트헤임에 있었군요. 왜 위험한 곳을 떠나지 않은 겁니까?", "Fenrith Fenrir: You are still in Glast Heim? Why aren't you leaving this dangerous place?", 'fenrir_2$;
 	sleep2 2000;
-	unittalk getcharid(3), "" + strcharinfo(0) + " : 위험한 건 알지만 그냥 지나칠 수가 없었습니다.";
+	unittalklang getcharid(3), "" + strcharinfo(0) + " : 위험한 건 알지만 그냥 지나칠 수가 없었습니다.", "" + strcharinfo(0) + " : I know it's dangerous but I thought it would be fun so I couldn't help myself..";
 	sleep2 2000;
-	npctalk "펜릴: 역시 모험가란...", 'fenrir_2$;
+	npctalklang "펜릴: 역시 모험가란...", "Fenrith Fenrir: Hm.. Adventurers..", 'fenrir_2$;
 	sleep2 2000;
-	unittalk getcharid(3), "" + strcharinfo(0) + " : 걱정하지 마세요. 저도 제법 강합니다!";
+	unittalklang getcharid(3), "" + strcharinfo(0) + " : 걱정하지 마세요. 저도 제법 강합니다!", "" + strcharinfo(0) + " : You don't have to worry~! I am fairly strong myself!";
 	sleep2 2000;
-	npctalk "펜릴: 그렇다면 저를 도와줄 수 있겠습니까?", 'fenrir_2$;
+	npctalklang "펜릴: 그렇다면 저를 도와줄 수 있겠습니까?", "Fenrith Fenrir: Oh.. really? Do you think you can assist me then?", 'fenrir_2$;
 	sleep2 2000;
-	npctalk "펜릴: 제가 찾는 물건은 글래스트헤임 어딘가에 있습니다.", 'fenrir_2$;
+	npctalklang "펜릴: 제가 찾는 물건은 글래스트헤임 어딘가에 있습니다.", "Fenrith Fenrir: The object I am looking for is located somewhere in Glast Heim!", 'fenrir_2$;
 	viewpoint 1,47,270,1,0xFF0000;
 	sleep2 2000;
-	npctalk "펜릴: 하지만 같은 물건을 노리는 자들도 곧 도착할 겁니다.", 'fenrir_2$;
+	npctalklang "펜릴: 하지만 같은 물건을 노리는 자들도 곧 도착할 겁니다.", "Fenrith Fenrir: But others looking for the object will arrive there soon!", 'fenrir_2$;
 	sleep2 2000;
-	npctalk "펜릴: 시간이 없습니다. 늦어도 5분 안에는 도착해야 합니다!", 'fenrir_2$;
+	npctalklang "펜릴: 시간이 없습니다. 늦어도 5분 안에는 도착해야 합니다!", "Fenrith Fenrir: This is urgent because there isn't enough time. We have to arrive there soon. 5 minutes at the latest!", 'fenrir_2$;
 	sleep2 2000;
-	npctalk "펜릴: 기다리겠습니다. 늦으면 저 혼자라도 가겠어요!", 'fenrir_2$;
+	npctalklang "펜릴: 기다리겠습니다. 늦으면 저 혼자라도 가겠어요!", "Fenrith Fenrir: I will be waiting! If you are late I will have to go by myself!", 'fenrir_2$;
 	sleep2 2000;
-	npctalk "펜릴: 먼저 가겠습니다. 도울지는 당신이 결정해 주세요!", 'fenrir_2$;
+	npctalklang "펜릴: 먼저 가겠습니다. 도울지는 당신이 결정해 주세요!", "Fenrith Fenrir: Alright, I will go on ahead and you decide if you are going to assist me!", 'fenrir_2$;
 	sleep2 3000;
 	cutin "",255;
 	disablenpc 'fenrir_2$;
 	sleep2 1000;
-	unittalk getcharid(3), "" + strcharinfo(0) + " : 어떻게 하지? 베른하르트 교수는 기간테스의 파편을 부탁했는데...";
+	unittalklang getcharid(3), "" + strcharinfo(0) + " : 어떻게 하지? 베른하르트 교수는 기간테스의 파편을 부탁했는데...", "" + strcharinfo(0) + " : Hm.. what should I do..? I need shards of Gigantes as requested by Professor Bernhard..";
 	sleep2 2000;
-	unittalk getcharid(3), "" + strcharinfo(0) + " : 펜릴을 도울까, 아니면 기간테스의 파편부터 찾을까?";
+	unittalklang getcharid(3), "" + strcharinfo(0) + " : 펜릴을 도울까, 아니면 기간테스의 파편부터 찾을까?", "" + strcharinfo(0) + " : Should I help that person.. Or should I look for Gigantes to take the shards as requested by Professor Bernhard..?";
 	sleep2 2000;
 	donpcevent instance_npcname("#fenrir_left_final_2") + "::OnStart";// timer (5 mins)
 	for ( .@i = 1; .@i < 7; .@i++ )
@@ -1014,9 +1014,9 @@ OnTouch:
 
 	if (!'NEED_SF_FAST) {
 		setpcblock PCBLOCK_NPC, true;
-		npctalk "펜릴: 와 주셨군요. 기다리고 있었습니다!", 'fenrir_3$;
+		npctalklang "펜릴: 와 주셨군요. 기다리고 있었습니다!", "Fenrith Fenrir: You came! I was waiting!", 'fenrir_3$;
 		sleep2 2000;
-		npctalk "펜릴: 시간이 없습니다. 바로 안으로 들어가죠!", 'fenrir_3$;
+		npctalklang "펜릴: 시간이 없습니다. 바로 안으로 들어가죠!", "Fenrith Fenrir: We don't have much time! We have to go search for it now! Let's go in!", 'fenrir_3$;
 		sleep2 2000;
 		setpcblock PCBLOCK_NPC, false;
 	}
@@ -1058,44 +1058,44 @@ OnTouch:
 		monster 'map_glast$,49,363, "기간테스#semi1", 3191,1, instance_npcname("#fenrir_left_final_1") + "::OnMobDead";
 		monster 'map_glast$,41,363, "기간테스#semi2", 3192,1, instance_npcname("#fenrir_left_final_1") + "::OnMobDead";
 		donpcevent instance_npcname("#glast_event_9") + "::OnEvent";
-		mapannounce 'map_glast$, "펜릴: 두 기간테스를 쓰러뜨려 주세요!", bc_map, 0xEBFF;
+		mapannouncelang 'map_glast$, "펜릴: 두 기간테스를 쓰러뜨려 주세요!", "Fenrir: Bring down the two Gigantes!", bc_map, 0xEBFF;
 		setpcblock PCBLOCK_NPC, false;
 		end;
 	}
 
 	cutin "fenrir_a.bmp",2;
-	npctalk "펜릴: 발두르의 검, 센티널 브리즈... 천 년이 지났어도...", 'fenrir_4$;
+	npctalklang "펜릴: 발두르의 검, 센티널 브리즈... 천 년이 지났어도...", "Fenrith Fenrir: The sword of Baldur, Sentinel Breeze... even after 1000 years..", 'fenrir_4$;
 	sleep2 3000;
-	npctalk "펜릴: 누군가 조종하는 듯한 몬스터의 사악한 기운이 느껴집니다.", 'fenrir_4$;
+	npctalklang "펜릴: 누군가 조종하는 듯한 몬스터의 사악한 기운이 느껴집니다.", "Fenrith Fenrir: I can feel the evil of monsters in this place.. as if they are being controlled by someone..", 'fenrir_4$;
 	sleep2 3000;
-	npctalk "펜릴: 그렇다면 이곳에 다른 누군가가 있다는 뜻인가...", 'fenrir_4$;
+	npctalklang "펜릴: 그렇다면 이곳에 다른 누군가가 있다는 뜻인가...", "Fenrith Fenrir: Then there is someone else here other than me?", 'fenrir_4$;
 	sleep2 3000;
-	npctalk "펜릴: 좋아요. 이제 센티널 브리즈로 발두르의 행방을 찾으면 됩니다.", 'fenrir_4$;
+	npctalklang "펜릴: 좋아요. 이제 센티널 브리즈로 발두르의 행방을 찾으면 됩니다.", "Fenrith Fenrir: That will do.. Now all I have to do is use Sentinel Breeze to find Baldur's whereabouts..", 'fenrir_4$;
 	sleep2 3000;
 	enablenpc 'sarah_10$;
 	enablenpc instance_npcname("기간테스#semi1");
 	enablenpc instance_npcname("기간테스#semi2");
 	sleep2 1000;
 	cutin "sarah_hero3.bmp",0;
-	npctalk "사라 아이린: 후후... 역시 예상대로군.", 'sarah_10$;
+	npctalklang "사라 아이린: 후후... 역시 예상대로군.", "Sarah Irene: Hehe.. I see... just as I expected.", 'sarah_10$;
 	sleep2 3000;
-	npctalk "사라 아이린: 그 검이 단서였나?", 'sarah_10$;
+	npctalklang "사라 아이린: 그 검이 단서였나?", "Sarah Irene: Was that blade the clue?", 'sarah_10$;
 	sleep2 3000;
-	npctalk "사라 아이린: 그 검으로 천 년의 봉인을 풀 수 있다는 뜻이겠지, 펜릴?", 'sarah_10$;
+	npctalklang "사라 아이린: 그 검으로 천 년의 봉인을 풀 수 있다는 뜻이겠지, 펜릴?", "Sarah Irene: Then, Fenrith Fenrir, that means a 1000 year old seal can be broken with it?", 'sarah_10$;
 	sleep2 3500;
-	unittalk getcharid(3), "" + strcharinfo(0) + " : 정말 그 펜릴이 맞았구나...";
-	npctalk "펜릴: 발키리였습니까... 일이 복잡해졌군요.", 'fenrir_4$;
+	unittalklang getcharid(3), "" + strcharinfo(0) + " : 정말 그 펜릴이 맞았구나...", "" + strcharinfo(0) + " : Could it be he was the real Fenrir?";
+	npctalklang "펜릴: 발키리였습니까... 일이 복잡해졌군요.", "Fenrith Fenrir: Could this be.. Valkyrie! Now it is not fun anymore", 'fenrir_4$;
 	cutin "fenrir_b.bmp",2;
 	sleep2 5000;
-	npctalk "사라 아이린: 늦었지만 소개하지. 나는 발할라의 열두 발키리 중 하나, 사라 아이린이다.", 'sarah_10$;
+	npctalklang "사라 아이린: 늦었지만 소개하지. 나는 발할라의 열두 발키리 중 하나, 사라 아이린이다.", "Sarah Irene: Belated salutations, my name is Sarah Irene, one of the 12 Valkyries of Valhalla.", 'sarah_10$;
 	cutin "sarah_hero3.bmp",0;
 	sleep2 3000;
-	npctalk "사라 아이린: 이 모든 것은 프레이야 님의 뜻을 이루기 위해서다. 후후...", 'sarah_10$;
-	npctalk "펜릴: 기간테스가 둘입니다! 쉽지 않겠지만 도와주세요!", 'fenrir_4$;
+	npctalklang "사라 아이린: 이 모든 것은 프레이야 님의 뜻을 이루기 위해서다. 후후...", "Sarah Irene: Anyway, also to achieve Freyja's will.. hehe..", 'sarah_10$;
+	npctalklang "펜릴: 기간테스가 둘입니다! 쉽지 않겠지만 도와주세요!", "Fenrith Fenrir: Two Gigantes! This will not be an easy fight. Help me and defeat the Gigantes!", 'fenrir_4$;
 	cutin "fenrir_b.bmp",2;
 	sleep2 3000;
-	npctalk "사라 아이린: 가라, 기간테스와 충성스러운 종들이여!", 'sarah_10$;
-	npctalk "펜릴: 사라는 숨어서 몬스터를 계속 불러낼 겁니다. 기간테스를 맡아 주세요!", 'fenrir_4$;
+	npctalklang "사라 아이린: 가라, 기간테스와 충성스러운 종들이여!", "Sarah Irene: Go forth! Gigantes! And my loyal monsters!", 'sarah_10$;
+	npctalklang "펜릴: 사라는 숨어서 몬스터를 계속 불러낼 겁니다. 기간테스를 맡아 주세요!", "Fenrith Fenrir: Sarah will hide and continuously summon monsters! I will take care of that monster, you face the Gigantes!", 'fenrir_4$;
 	cutin "fenrir_b.bmp",255;
 	sleep2 2000;
 	disablenpc 'sarah_10$;
@@ -1119,11 +1119,11 @@ OnStart:
 	if (!'NEED_SF_LEFT_BATTLE)
 		end;
 	initnpctimer;
-	npctalk "펜릴: 대기를 울리는 전류여, 힘을 보여라!", 'fenrir_4$;
+	npctalklang "펜릴: 대기를 울리는 전류여, 힘을 보여라!", "Fenrith Fenrir: Currents vibrating in the atmosphere! Show me your strength!", 'fenrir_4$;
 	callsub S_Spawn,1,3198;// MM_M_GALION
 
 	progressbar_npc "000000",5, 'fenrir_4$;	// note: display effect after dead of Gigantes
-	npctalk "펜릴: 라이트닝 볼트!", 'fenrir_4$;
+	npctalklang "펜릴: 라이트닝 볼트!", "Fenrith Fenrir: Light Bolt!!!", 'fenrir_4$;
 	for ( .@i = 1; .@i < 9; .@i++ )
 		specialeffect EF_LIGHTBOLT, AREA, instance_npcname("#effect_glast_event02_" + .@i);
 	end;
@@ -1131,10 +1131,10 @@ OnTimer6000:
 	killmonster 'map_glast$, instance_npcname("#glast_event_9") + "::OnMobDead";
 	end;
 OnTimer15000:
-	npctalk "펜릴: 우주의 불길이여, 사악한 기운을 삼켜라!", 'fenrir_4$;
+	npctalklang "펜릴: 우주의 불길이여, 사악한 기운을 삼켜라!", "Fenrith Fenrir: Devour this evil presence with the fire pit of the universe!", 'fenrir_4$;
 	callsub S_Spawn,2,3198;// MM_M_GALION
 	progressbar_npc "000000",5, 'fenrir_4$;
-	npctalk "펜릴: 공간마저 삼키는 지옥의 불길, 메테오 스톰!", 'fenrir_4$;
+	npctalklang "펜릴: 공간마저 삼키는 지옥의 불길, 메테오 스톰!", "Fenrith Fenrir: Hell fire that can swallow even space! Meteor storm~!!!!!", 'fenrir_4$;
 	for ( .@i = 1; .@i < 9; .@i++ )
 		specialeffect EF_METEORSTORM, AREA, instance_npcname("#effect_glast_event02_" + .@i);
 	end;
@@ -1142,10 +1142,10 @@ OnTimer21000:
 	killmonster 'map_glast$, instance_npcname("#glast_event_9") + "::OnMobDead";
 	end;
 OnTimer30000:
-	npctalk "펜릴: 대기를 울리는 전류여, 힘을 보여라!", 'fenrir_4$;
+	npctalklang "펜릴: 대기를 울리는 전류여, 힘을 보여라!", "Fenrith Fenrir: Currents vibrating in the atmosphere! Show me your strength!", 'fenrir_4$;
 	callsub S_Spawn,1,3199;// MM_M_MUTANT_DRAGON
 	progressbar_npc "000000",5, 'fenrir_4$;
-	npctalk "펜릴: 라이트닝 볼트!", 'fenrir_4$;
+	npctalklang "펜릴: 라이트닝 볼트!", "Fenrith Fenrir: Light Bolt!!!", 'fenrir_4$;
 	for ( .@i = 1; .@i < 9; .@i++ )
 		specialeffect EF_LIGHTBOLT, AREA, instance_npcname("#effect_glast_event02_" + .@i);
 	end;
@@ -1153,10 +1153,10 @@ OnTimer36000:
 	killmonster 'map_glast$, instance_npcname("#glast_event_9") + "::OnMobDead";
 	end;
 OnTimer45000:
-	npctalk "펜릴: 서리바람이여, 사악한 기운을 얼려라!", 'fenrir_4$;
+	npctalklang "펜릴: 서리바람이여, 사악한 기운을 얼려라!", "Fenrith Fenrir: Freeze the evil presence with frost wind!!!", 'fenrir_4$;
 	callsub S_Spawn,2,3199;// MM_M_MUTANT_DRAGON
 	progressbar_npc "000000",5, 'fenrir_4$;
-	npctalk "펜릴: 영혼마저 얼리는 폭풍, 스톰 가스트!", 'fenrir_4$;
+	npctalklang "펜릴: 영혼마저 얼리는 폭풍, 스톰 가스트!", "Fenrith Fenrir: A storm that can freeze even the soul!! Storm gust~!!!!!", 'fenrir_4$;
 	for ( .@i = 1; .@i < 9; .@i++ )
 		specialeffect EF_STORMGUST, AREA, instance_npcname("#effect_glast_event02_" + .@i);
 	end;
@@ -1214,21 +1214,21 @@ S_Spawn:
 OnEvent:
 	enablenpc instance_npcname("#fenrir_left_vermilion");
 	initnpctimer;
-	npctalk "펜릴: 끝이 없군요. 한 번에 끝내겠습니다.", 'fenrir_4$;
+	npctalklang "펜릴: 끝이 없군요. 한 번에 끝내겠습니다.", "Fenrith Fenrir: They are endless. I should finish this absolutely.", 'fenrir_4$;
 	progressbar_npc "000000",10, 'fenrir_4$;
 	end;
 OnTimer2000:
-	npctalk "펜릴: 아름다운 진홍의 숨결을 지닌 머나먼 군주여!", 'fenrir_4$;
+	npctalklang "펜릴: 아름다운 진홍의 숨결을 지닌 머나먼 군주여!", "Fenrith Fenrir: Limitlessly distant monarch with the beautiful scarlet breath!!", 'fenrir_4$;
 	end;
 OnTimer4000:
-	npctalk "펜릴: 그대가 지나간 자리에는 허무만이 남으리라.", 'fenrir_4$;
+	npctalklang "펜릴: 그대가 지나간 자리에는 허무만이 남으리라.", "Fenrith Fenrir: Where you have passed will only be filled with nothingness.", 'fenrir_4$;
 	end;
 OnTimer7000:
-	npctalk "펜릴: 지축을 흔드는 힘이여, 지금 그 위엄을 보여라!", 'fenrir_4$;
+	npctalklang "펜릴: 지축을 흔드는 힘이여, 지금 그 위엄을 보여라!", "Fenrith Fenrir: Power to shake the earth's axis! Show your grace right here and now!!!", 'fenrir_4$;
 	end;
 OnTimer10000:
 	stopnpctimer;
-	npctalk "펜릴: 로드 오브 버밀리온!", 'fenrir_4$;
+	npctalklang "펜릴: 로드 오브 버밀리온!", "Fenrith Fenrir: Road of Vermilion!!!!", 'fenrir_4$;
 	for ( .@i = 1; .@i < 9; .@i++ )
 		specialeffect EF_LORD, AREA, instance_npcname("#effect_glast_event02_" + .@i);
 	killmonster 'map_glast$, instance_npcname("#fenrir_left_final_1") + "::OnMobDead";
@@ -1263,21 +1263,21 @@ OnStart:
 	initnpctimer;
 	end;
 OnTimer2000:
-	npctalk "펜릴: 좋아요! 기간테스를 쓰러뜨렸습니다!", 'fenrir_4$;
+	npctalklang "펜릴: 좋아요! 기간테스를 쓰러뜨렸습니다!", "Fenrith Fenrir: Alright! We have defeated a Gigantes!", 'fenrir_4$;
 	enablenpc 'sarah_10$;
 	end;
 OnTimer4000:
-	npctalk "사라 아이린: 역시 펜릴, 쉽게 물러서지 않는군!", 'sarah_10$;
+	npctalklang "사라 아이린: 역시 펜릴, 쉽게 물러서지 않는군!", "Sarah Irene: As expected, Fenrith Fenrir, you do not yield easily!", 'sarah_10$;
 	end;
 OnTimer7000:
-	npctalk "펜릴: 센티널 브리즈에서 당장 손을 떼라!", 'fenrir_4$;
+	npctalklang "펜릴: 센티널 브리즈에서 당장 손을 떼라!", "Fenrith Fenrir: Get away from the Sentinel Breeze immediately!", 'fenrir_4$;
 	end;
 OnTimer9000:
-	npctalk "사라 아이린: 후후... 그럴 수는 없지!", 'sarah_10$;
+	npctalklang "사라 아이린: 후후... 그럴 수는 없지!", "Sarah Irene: Hehe.. I can't do that!", 'sarah_10$;
 	specialeffect EF_WL_TELEKINESIS_INTENSE, AREA, instance_npcname("#effect_glast_event02_bis");
 	end;
 OnTimer11000:
-	npctalk "사라 아이린: 되찾고 싶다면 글래스트헤임 성으로 와라. 기다리겠다!", 'sarah_10$;
+	npctalklang "사라 아이린: 되찾고 싶다면 글래스트헤임 성으로 와라. 기다리겠다!", "Sarah Irene: If you want it back come to Glast Heim Castle! I shall be waiting!", 'sarah_10$;
 	end;
 OnTimer13000:
 	specialeffect EF_FIREPILLARON2, AREA, 'sarah_10$;
@@ -1286,10 +1286,10 @@ OnTimer14000:
 	disablenpc 'sarah_10$;
 	end;
 OnTimer16000:
-	npctalk "펜릴: 검을 되찾으려면 서둘러 따라가야 합니다. 광역 공간이동을 사용하죠!", 'fenrir_4$;
+	npctalklang "펜릴: 검을 되찾으려면 서둘러 따라가야 합니다. 광역 공간이동을 사용하죠!", "Fenrith Fenrir: We must follow quickly to retrieve the sword! I shall use a group space movement spell!", 'fenrir_4$;
 	end;
 OnTimer19000:
-	npctalk "펜릴: 대규모 동시 워프!", 'fenrir_4$;
+	npctalklang "펜릴: 대규모 동시 워프!", "Fenrith Fenrir: Simultaneous large scale warp!", 'fenrir_4$;
 	end;
 OnTimer20000:
 	stopnpctimer;
@@ -1340,7 +1340,7 @@ OnTouch:
 		enablenpc instance_npcname("#glast_move_03");
 		enablenpc instance_npcname("#glast_event_15");
 		enablenpc 'fenrir_6$;
-		mapannounce 'map_glast$, "펜릴: 중앙 성의 계단으로 이동해 주세요.", bc_map, 0xEBFF;
+		mapannouncelang 'map_glast$, "펜릴: 중앙 성의 계단으로 이동해 주세요.", "Fenrir: Move to the stairs of the central castle.", bc_map, 0xEBFF;
 		end;
 	}
 	//for ( .@i = 1; .@i < 8; .@i++ )
@@ -1348,18 +1348,18 @@ OnTouch:
 	setpcblock PCBLOCK_NPC, true;
 	cutin "fenrir_a.bmp",2;
 	sleep2 1000;
-	npctalk "펜릴: 발두르의 검을 되찾으려면 글래스트헤임 성으로 가야 합니다.", 'fenrir_5$;
+	npctalklang "펜릴: 발두르의 검을 되찾으려면 글래스트헤임 성으로 가야 합니다.", "Fenrith Fenrir: I need to go to Glast Heim Castle to retrieve the sword of Baldur.", 'fenrir_5$;
 	sleep2 3000;
-	npctalk "펜릴: 혼자서는 어려울 수 있으니 도와주시면 감사하겠습니다.", 'fenrir_5$;
+	npctalklang "펜릴: 혼자서는 어려울 수 있으니 도와주시면 감사하겠습니다.", "Fenrith Fenrir: It could be difficult alone, I would gratefully accept your help.", 'fenrir_5$;
 	sleep2 3000;
-	npctalk "펜릴: 시간이 부족해 오래 기다릴 수는 없습니다.", 'fenrir_5$;
+	npctalklang "펜릴: 시간이 부족해 오래 기다릴 수는 없습니다.", "Fenrith Fenrir: Since there isn't enough time, we can't wait long.", 'fenrir_5$;
 	sleep2 3000;
-	npctalk "펜릴: 글래스트헤임 중앙 성에서 5분 정도 기다리겠습니다.", 'fenrir_5$;
+	npctalklang "펜릴: 글래스트헤임 중앙 성에서 5분 정도 기다리겠습니다.", "Fenrith Fenrir: I will wait in the central castle of Glast Heim for about 5 minutes.", 'fenrir_5$;
 	sleep2 3000;
-	npctalk "펜릴: 위험하니 억지로 도울 필요는 없습니다. 필요하다면 혼자 가겠습니다.", 'fenrir_5$;
+	npctalklang "펜릴: 위험하니 억지로 도울 필요는 없습니다. 필요하다면 혼자 가겠습니다.", "Fenrith Fenrir: Since it is dangerous you do not have to feel obligated to help me. I will try by myself if I have to.", 'fenrir_5$;
 	viewpoint 1,199,237,1,0xFF0000;
 	sleep2 3000;
-	npctalk "펜릴: 그럼 먼저 가겠습니다. 워프!", 'fenrir_5$;
+	npctalklang "펜릴: 그럼 먼저 가겠습니다. 워프!", "Fenrith Fenrir: Then I will go on ahead! Warp!", 'fenrir_5$;
 	cutin "",255;
 	donpcevent instance_npcname("#glast_event_13") + "::OnBar";
 	setpcblock PCBLOCK_NPC, false;
@@ -1387,35 +1387,35 @@ OnTimer300000:
 	'skip_left_part = 1;
 	disablenpc instance_npcname("#glast_event_7");
 	disablenpc 'fenrir_3$;
-	mapannounce 'map_glast$, "펜릴: 좋아요! 기간테스를 쓰러뜨렸습니다!", bc_map,0xEBFF;
+	mapannouncelang 'map_glast$, "펜릴: 좋아요! 기간테스를 쓰러뜨렸습니다!", "Fenrith Fenrir: Alright! We have defeated a Gigantes!", bc_map,0xEBFF;
 	end;
 OnTimer302000:
-	mapannounce 'map_glast$, "사라 아이린: 역시 펜릴, 쉽게 물러서지 않는군!", bc_map,0xEBFF;
+	mapannouncelang 'map_glast$, "사라 아이린: 역시 펜릴, 쉽게 물러서지 않는군!", "Sarah Irene: As expected, Fenrith Fenrir, you do not yield easily!", bc_map,0xEBFF;
 	end;
 OnTimer305000:
-	mapannounce 'map_glast$, "펜릴: 센티널 브리즈에서 당장 손을 떼라!", bc_map,0xEBFF;
+	mapannouncelang 'map_glast$, "펜릴: 센티널 브리즈에서 당장 손을 떼라!", "Fenrith Fenrir: Get away from the Sentinel Breeze immediately!", bc_map,0xEBFF;
 	end;
 OnTimer307000:
-	mapannounce 'map_glast$, "사라 아이린: 후후... 그럴 수는 없지!", bc_map,0xEBFF;
+	mapannouncelang 'map_glast$, "사라 아이린: 후후... 그럴 수는 없지!", "Sarah Irene: Hehe.. I can't do that!", bc_map,0xEBFF;
 	end;
 OnTimer309000:
-	mapannounce 'map_glast$, "사라 아이린: 되찾고 싶다면 글래스트헤임 성으로 와라. 기다리겠다!", bc_map,0xEBFF;
+	mapannouncelang 'map_glast$, "사라 아이린: 되찾고 싶다면 글래스트헤임 성으로 와라. 기다리겠다!", "Sarah Irene: If you want it back come to Glast Heim Castle! I shall be waiting!", bc_map,0xEBFF;
 	end;
 OnTimer311000:
-	mapannounce 'map_glast$, "펜릴: 발두르의 검을 되찾으려면 글래스트헤임 성으로 가야 합니다.", bc_map,0xEBFF;
+	mapannouncelang 'map_glast$, "펜릴: 발두르의 검을 되찾으려면 글래스트헤임 성으로 가야 합니다.", "Fenrith Fenrir: I need to go to Glast Heim Castle to retrieve the sword of Baldur", bc_map,0xEBFF;
 	end;
 OnTimer313000:
-	mapannounce 'map_glast$, "펜릴: 혼자서는 어려울 수 있으니 도와주시면 감사하겠습니다.", bc_map,0xEBFF;
+	mapannouncelang 'map_glast$, "펜릴: 혼자서는 어려울 수 있으니 도와주시면 감사하겠습니다.", "Fenrith Fenrir: It may be difficult alone. If you are listening I will gratefully accept your help.", bc_map,0xEBFF;
 	end;
 OnTimer315000:
-	mapannounce 'map_glast$, "펜릴: 시간이 부족해 오래 기다릴 수는 없습니다.", bc_map,0xEBFF;
+	mapannouncelang 'map_glast$, "펜릴: 시간이 부족해 오래 기다릴 수는 없습니다.", "Fenrith Fenrir: Since there isn't enough time, we can't wait long.", bc_map,0xEBFF;
 	end;
 OnTimer317000:
-	mapannounce 'map_glast$, "펜릴: 글래스트헤임 중앙 성에서 5분 정도 기다리겠습니다.", bc_map,0xEBFF;
+	mapannouncelang 'map_glast$, "펜릴: 글래스트헤임 중앙 성에서 5분 정도 기다리겠습니다.", "Fenrith Fenrir: I will wait in the central castle of Glast Heim for about 5 minutes.", bc_map,0xEBFF;
 	end;
 OnTimer319000:
 	stopnpctimer;
-	mapannounce 'map_glast$, "펜릴: 위험하니 억지로 도울 필요는 없습니다. 필요하다면 혼자 가겠습니다.", bc_map,0xEBFF;
+	mapannouncelang 'map_glast$, "펜릴: 위험하니 억지로 도울 필요는 없습니다. 필요하다면 혼자 가겠습니다.", "Fenrith Fenrir: Since it is dangerous you do not have to feel obligated to help me. I will try by myself if I have to.", bc_map,0xEBFF;
 	enablenpc instance_npcname("#glast_move_03");
 	enablenpc 'fenrir_6$;
 	enablenpc instance_npcname("#glast_event_15");
@@ -1447,9 +1447,9 @@ OnTouch:
 
 	setpcblock PCBLOCK_NPC, true;
 	sleep2 1000;
-	npctalk "펜릴: 기다리고 있었습니다. 늦지 않아 다행이군요.", 'fenrir_6$;
+	npctalklang "펜릴: 기다리고 있었습니다. 늦지 않아 다행이군요.", "Fenrith Fenrir: I was waiting. Thank you for not being late.", 'fenrir_6$;
 	sleep2 3000;
-	npctalk "펜릴: 센티널 브리즈를 되찾으러 성 위로 올라갑시다. 사라가 기다리고 있을 겁니다!", 'fenrir_6$;
+	npctalklang "펜릴: 센티널 브리즈를 되찾으러 성 위로 올라갑시다. 사라가 기다리고 있을 겁니다!", "Fenrith Fenrir: Let us climb the castle to retrieve Sentinel Breeze! Sarah will be waiting!", 'fenrir_6$;
 	sleep2 3000;
 	disablenpc 'fenrir_6$;
 	enablenpc instance_npcname("#glast_move_03a");
@@ -1474,45 +1474,45 @@ OnTouch:
 		donpcevent instance_npcname("#glast_event_19") + "::OnEvent";
 		monster 'map_glast$,200,336, "사라 아이린#1",3190,1, instance_npcname("#fenrir_boss_final_1") + "::OnBossDead";
 		'boss_id = $@mobid[0];
-		mapannounce 'map_glast$, "펜릴: 사라 아이린을 상대하겠습니다. 소환되는 기간테스를 막아 주세요!", bc_map, 0xEBFF;
+		mapannouncelang 'map_glast$, "펜릴: 사라 아이린을 상대하겠습니다. 소환되는 기간테스를 막아 주세요!", "Fenrir: I will take on Sarah Irine. Hold back the Gigantes she summons!", bc_map, 0xEBFF;
 		setpcblock PCBLOCK_NPC, false;
 		end;
 	}
 
 	cutin "sarah_hero3.bmp",0;
 	sleep2 1000;
-	npctalk "사라 아이린: 기다리다 지칠 뻔했구나, 펜릴.", 'sarah_17$;
+	npctalklang "사라 아이린: 기다리다 지칠 뻔했구나, 펜릴.", "Sarah Irene: It seemed like forever waiting for you~ Fenrith Fenrir.", 'sarah_17$;
 	sleep2 3000;
 	cutin "fenrir_b.bmp",2;
-	npctalk "펜릴: 쓸데없는 말은 그만하고 센티널 브리즈를 돌려줘라!", 'fenrir_7$;
+	npctalklang "펜릴: 쓸데없는 말은 그만하고 센티널 브리즈를 돌려줘라!", "Fenrith Fenrir: No need for useless words, hand over the Sentinel Breeze now!", 'fenrir_7$;
 	sleep2 3000;
 	cutin "sarah_hero3.bmp",0;
-	npctalk "사라 아이린: 할 수 있다면 빼앗아 보아라.", 'sarah_17$;
+	npctalklang "사라 아이린: 할 수 있다면 빼앗아 보아라.", "Sarah Irene: Try if you can.", 'sarah_17$;
 	sleep2 3000;
 	cutin "fenrir_b.bmp",2;
-	npctalk "펜릴: 사라는 혼자 상대하기엔 너무 강합니다. 제가 맞서겠습니다!", 'fenrir_7$;
+	npctalklang "펜릴: 사라는 혼자 상대하기엔 너무 강합니다. 제가 맞서겠습니다!", "Fenrith Fenrir: Sarah may be too difficult for you to face alone. I must face her!", 'fenrir_7$;
 	sleep2 3000;
-	npctalk "펜릴: 순백의 족쇄와 영원한 감옥이여, 지금 나와 계약하라!", 'fenrir_7$;
+	npctalklang "펜릴: 순백의 족쇄와 영원한 감옥이여, 지금 나와 계약하라!", "Fenrith Fenrir: Pure white shackles, eternal prison, make a deal with me now!", 'fenrir_7$;
 	donpcevent instance_npcname("#glast_event_18") + "::OnBar";
 	sleep2 3000;
-	npctalk "펜릴: 화이트 임프리즌!", 'fenrir_7$;
+	npctalklang "펜릴: 화이트 임프리즌!", "Fenrith Fenrir: White Imprison!!", 'fenrir_7$;
 	specialeffect EF_BOTTOM_BASILICA2, AREA, 'sarah_17$;
 	sleep2 3000;
-	npctalk "사라 아이린: 크윽... 이게...", 'sarah_17$;
-	npctalk "펜릴: 화이트 임프리즌으로 사라를 약화시켜 붙잡아 두겠습니다.", 'fenrir_7$;
+	npctalklang "사라 아이린: 크윽... 이게...", "Sarah Irene: Hurk.... he..", 'sarah_17$;
+	npctalklang "펜릴: 화이트 임프리즌으로 사라를 약화시켜 붙잡아 두겠습니다.", "Fenrith Fenrir: I will weaken Sarah with white imprison and face her while she's shackled,", 'fenrir_7$;
 	sleep2 3000;
-	npctalk "펜릴: 소환되는 몬스터들을 맡아 주세요. 믿겠습니다.", 'fenrir_7$;
+	npctalklang "펜릴: 소환되는 몬스터들을 맡아 주세요. 믿겠습니다.", "Fenrith Fenrir: you take care of the monsters she summons. I'm counting on you.", 'fenrir_7$;
 	sleep2 3000;
-	unittalk getcharid(3), "" + strcharinfo(0) + " : 알겠습니다. 강한 상대라면 오히려 좋습니다.";
+	unittalklang getcharid(3), "" + strcharinfo(0) + " : 알겠습니다. 강한 상대라면 오히려 좋습니다.", "" + strcharinfo(0) + " : Will do. Powerful enemies make my blood boil.";
 	sleep2 6000;
-	npctalk "펜릴: 제가 사라를 빈사 상태로 만들면 한꺼번에 공격해 마무리하세요. 방심하면 안 됩니다.", 'fenrir_7$;
+	npctalklang "펜릴: 제가 사라를 빈사 상태로 만들면 한꺼번에 공격해 마무리하세요. 방심하면 안 됩니다.", "Fenrith Fenrir: This is a strategy to attack at once and finish Sarah off while she is in critical condition. Remember, our opponent is strong.", 'fenrir_7$;
 	sleep2 3000;
 	cutin "sarah_hero3_2.bmp",0;
-	npctalk "사라 아이린: 이런 잔재주로 나를 묶어 둘 생각이었나?", 'sarah_17$;
+	npctalklang "사라 아이린: 이런 잔재주로 나를 묶어 둘 생각이었나?", "Sarah Irene: So your plan was to tie me up with this sort of trick?", 'sarah_17$;
 	sleep2 3000;
-	npctalk "사라 아이린: 게다가 풋내기 모험가의 도움까지 빌리다니...", 'sarah_17$;
+	npctalklang "사라 아이린: 게다가 풋내기 모험가의 도움까지 빌리다니...", "Sarah Irene: Furthermore you borrow the assistance of such rookie adventurers...", 'sarah_17$;
 	sleep2 3000;
-	npctalk "사라 아이린: 그 낡은 검과 함께 여기서 사라져라!", 'sarah_17$;
+	npctalklang "사라 아이린: 그 낡은 검과 함께 여기서 사라져라!", "Sarah Irene: You need to disappear from here along with that worn out blade!!", 'sarah_17$;
 	sleep2 3000;
 	cutin "",255;
 	hideonnpc 'sarah_17$;
@@ -1549,7 +1549,7 @@ OnEvent:
 	enablenpc instance_npcname("#fenrir_boss_final_1");
 	initnpctimer;
 	specialeffect EF_PRIMECHARGE4, AREA, 'fenrir_7$;
-	npctalk "펜릴: 치명적인 독과 검은 구름이여, 가장 고통스러운 죽음을 보여라!", 'fenrir_7$;
+	npctalklang "펜릴: 치명적인 독과 검은 구름이여, 가장 고통스러운 죽음을 보여라!", "Fenrith Fenrir: Lethal poison, Dark clouds, appear before me and show a most painful death!", 'fenrir_7$;
 	monster 'map_glast$,190,341, "대형 기간테스#a1", 3194,1, instance_npcname("#fenrir_boss_final_1") + "::OnMobDead";// MM_L_GIGAN1
 	monster 'map_glast$,214,331, "대형 기간테스#b2", 3195,1, instance_npcname("#fenrir_boss_final_1") + "::OnMobDead";// MM_L_GIGAN2
 	progressbar_npc "000000",10, 'fenrir_7$;
@@ -1559,14 +1559,14 @@ OnTimer1000:
 	end;
 OnTimer10000:
 	callsub S_Hit,1;
-	npctalk "펜릴: 클라우드 킬!", 'fenrir_7$;
+	npctalklang "펜릴: 클라우드 킬!", "Fenrith Fenrir: Go! Cloud Kill!!!!!", 'fenrir_7$;
 	specialeffect EF_POISONSMOKE, AREA, 'sarah_17$;
 	for ( .@i = 1; .@i <= 8; .@i++ )
 		specialeffect EF_POISONSMOKE, AREA, instance_npcname("#effect_glast_event03_" + .@i);
 	progressbar_npc "000000",10, 'fenrir_7$;
 	end;
 OnTimer10500:
-	unittalk 'boss_id, "사라 아이린: 기습이라니, 펜릴. 겨우 이 정도인가?";
+	unittalklang 'boss_id, "사라 아이린: 기습이라니, 펜릴. 겨우 이 정도인가?", "Sarah Irene: That was sudden Fenrir. Is that all you've got?";
 	end;
 OnTimer11000:
 	specialeffect EF_POISONSMOKE2, AREA, 'sarah_17$;
@@ -1580,7 +1580,7 @@ OnTimer11000:
 	specialeffect EF_ENCHANTPOISON, AREA, instance_npcname("#effect_glast_event03_8");
 	end;
 OnTimer13000:
-	npctalk "펜릴: 치명적인 독과 검은 구름이여, 가장 고통스러운 죽음을 보여라!", 'fenrir_7$;
+	npctalklang "펜릴: 치명적인 독과 검은 구름이여, 가장 고통스러운 죽음을 보여라!", "Fenrith Fenrir: Lethal poison, Dark clouds, appear before me and show a most painful death!", 'fenrir_7$;
 	specialeffect EF_PRIMECHARGE4, AREA, 'fenrir_7$;
 	specialeffect EF_POISONSMOKE2, AREA, 'sarah_17$;
 	specialeffect EF_POISONSMOKE2, AREA, instance_npcname("#effect_glast_event03_1");
@@ -1594,7 +1594,7 @@ OnTimer13000:
 	end;
 OnTimer20000:
 	callsub S_Hit,2;
-	npctalk "펜릴: 클라우드 킬!", 'fenrir_7$;
+	npctalklang "펜릴: 클라우드 킬!", "Fenrith Fenrir: Go! Cloud Kill!!!!!", 'fenrir_7$;
 	specialeffect EF_POISONSMOKE, AREA, 'sarah_17$;
 	specialeffect EF_BOTTOM_BASILICA2, AREA, 'sarah_17$;
 	for ( .@i = 1; .@i <= 8; .@i++ )
@@ -1602,7 +1602,7 @@ OnTimer20000:
 	progressbar_npc "000000",30, 'fenrir_7$;
 	end;
 OnTimer20500:
-	unittalk 'boss_id, "사라 아이린: 조금 더 즐겁게 해 보아라!";
+	unittalklang 'boss_id, "사라 아이린: 조금 더 즐겁게 해 보아라!", "Sarah Irene: Try to entertain me a little more!!";
 	end;
 OnTimer21000:
 	specialeffect EF_POISONSMOKE2, AREA, 'sarah_17$;
@@ -1616,7 +1616,7 @@ OnTimer21000:
 	specialeffect EF_ENCHANTPOISON, AREA, instance_npcname("#effect_glast_event03_8");
 	end;
 OnTimer23000:
-	npctalk "펜릴: 불꽃을 다스리는 존재여, 꺼지지 않는 불을 빌려다오...", 'fenrir_7$;
+	npctalklang "펜릴: 불꽃을 다스리는 존재여, 꺼지지 않는 불을 빌려다오...", "Fenrith Fenrir: I speak to you who controls fire, I Fenrith, desire a fire that does not go out...", 'fenrir_7$;
 	specialeffect EF_BEGINSPELL_YB, AREA, 'fenrir_7$;
 	specialeffect EF_POISONSMOKE2, AREA, 'sarah_17$;
 	specialeffect EF_POISONSMOKE2, AREA, instance_npcname("#effect_glast_event03_1");
@@ -1629,148 +1629,148 @@ OnTimer23000:
 	specialeffect EF_ENCHANTPOISON, AREA, instance_npcname("#effect_glast_event03_8");
 	end;
 OnTimer36000:
-	npctalk "펜릴: 영혼마저 태우는 영원한 화염이여, 지금 나타나라!", 'fenrir_7$;
+	npctalklang "펜릴: 영혼마저 태우는 영원한 화염이여, 지금 나타나라!", "Fenrith Fenrir: Endlessly burning conflagration, a fire that can scorch even the soul!! Appear before me now!!", 'fenrir_7$;
 	specialeffect EF_BEGINSPELL_YB, AREA, 'fenrir_7$;
 	specialeffect EF_BOTTOM_BASILICA2, AREA, 'sarah_17$;
 	end;
 OnTimer50000:
 	callsub S_Hit,3;
-	npctalk "펜릴: 파이어 인시그니아!", 'fenrir_7$;
+	npctalklang "펜릴: 파이어 인시그니아!", "Fenrith Fenrir: Emerge!! Fire Insignia!!!!", 'fenrir_7$;
 	specialeffect EF_DEMONICFIRE, AREA, 'sarah_17$;
 	progressbar_npc "000000",10, 'fenrir_7$;
 	end;
 OnTimer50500:
-	unittalk 'boss_id, "사라 아이린: 제법이지만 아직 부족하다!";
+	unittalklang 'boss_id, "사라 아이린: 제법이지만 아직 부족하다!", "Sarah Irene: Oh... not bad? But not good enough!!";
 	end;
 OnTimer51000:
 	specialeffect EF_BOTTOM_BASILICA2, AREA, 'sarah_17$;
 	end;
 OnTimer53000:
-	npctalk "펜릴: 대지를 뒤흔드는 근원이여, 땅의 힘을 보여라!", 'fenrir_7$;
+	npctalklang "펜릴: 대지를 뒤흔드는 근원이여, 땅의 힘을 보여라!", "Fenrith Fenrir: The root of earthshaking power!! Fear the power of the earth!!!", 'fenrir_7$;
 	specialeffect EF_PRIMECHARGE4, AREA, 'fenrir_7$;
 	end;
 OnTimer60000:
 	callsub S_Hit,4;
-	npctalk "펜릴: 헤븐즈 드라이브!", 'fenrir_7$;
+	npctalklang "펜릴: 헤븐즈 드라이브!", "Fenrith Fenrir: Go forth!! Heaven's Drive!!!", 'fenrir_7$;
 	specialeffect EF_HEAVENSDRIVE, AREA, 'sarah_17$;
 	monster 'map_glast$,190,341, "대형 기간테스#a1", 3194,1, instance_npcname("#fenrir_boss_final_1") + "::OnMobDead";// MM_L_GIGAN1
 	monster 'map_glast$,214,331, "대형 기간테스#b2", 3195,1, instance_npcname("#fenrir_boss_final_1") + "::OnMobDead";// MM_L_GIGAN2
 	progressbar_npc "000000",10, 'fenrir_7$;
 	end;
 OnTimer60500:
-	unittalk 'boss_id, "사라 아이린: 그 유치한 마법은 이제 그만두지 그래, 펜릴?";
+	unittalklang 'boss_id, "사라 아이린: 그 유치한 마법은 이제 그만두지 그래, 펜릴?", "Sarah Irene: Why don't you stop your childish magic, Fenrir?";
 	end;
 OnTimer63000:
 	specialeffect EF_PRIMECHARGE4, AREA, 'fenrir_7$;
-	npctalk "펜릴: 대지를 뒤흔드는 근원이여, 땅의 힘을 보여라!", 'fenrir_7$;
+	npctalklang "펜릴: 대지를 뒤흔드는 근원이여, 땅의 힘을 보여라!", "Fenrith Fenrir: The root of earthshaking power!! Fear the power of the earth!!!", 'fenrir_7$;
 	end;
 OnTimer70000:
 	callsub S_Hit,5;
-	npctalk "펜릴: 헤븐즈 드라이브!", 'fenrir_7$;
+	npctalklang "펜릴: 헤븐즈 드라이브!", "Fenrith Fenrir: Go forth!! Heaven's Drive!!!", 'fenrir_7$;
 	specialeffect EF_HEAVENSDRIVE, AREA, 'sarah_17$;
 	specialeffect EF_BOTTOM_BASILICA2, AREA, 'sarah_17$;
 	progressbar_npc "000000",30, 'fenrir_7$;
 	end;
 OnTimer70500:
-	unittalk 'boss_id, "사라 아이린: 그 정도로 나를 쓰러뜨릴 수 있다고 생각하느냐?";
+	unittalklang 'boss_id, "사라 아이린: 그 정도로 나를 쓰러뜨릴 수 있다고 생각하느냐?", "Sarah Irene: Do you think that is enough to beat me?";
 	end;
 OnTimer73000:
-	npctalk "펜릴: 자비 없이 차가운 북풍의 숨결이여,", 'fenrir_7$;
+	npctalklang "펜릴: 자비 없이 차가운 북풍의 숨결이여,", "Fenrith Fenrir: The mercilessly cold breath of the Northern winds,", 'fenrir_7$;
 	specialeffect EF_PRIMECHARGE2, AREA, 'fenrir_7$;
 	end;
 OnTimer85000:
-	npctalk "펜릴: 고요한 새벽 안개처럼 내려와 모든 것을 얼려라!", 'fenrir_7$;
+	npctalklang "펜릴: 고요한 새벽 안개처럼 내려와 모든 것을 얼려라!", "Fenrith Fenrir: Come like the silent dawn mist and freeze everything!!", 'fenrir_7$;
 	specialeffect EF_PRIMECHARGE2, AREA, 'fenrir_7$;
 	end;
 OnTimer100000:
 	callsub S_Hit,6;
-	npctalk "펜릴: 프로스트 미스티!", 'fenrir_7$;
+	npctalklang "펜릴: 프로스트 미스티!", "Fenrith Fenrir: Appear!!! Frost Misty!!!!!", 'fenrir_7$;
 	specialeffect EF_FROSTMYSTY, AREA, 'sarah_17$;
 	specialeffect EF_BOTTOM_BASILICA2, AREA, 'sarah_17$;
 	specialeffect EF_FROSTMYSTY, AREA, 'sarah_17$;
 	progressbar_npc "000000",10, 'fenrir_7$;
 	end;
 OnTimer100500:
-	unittalk 'boss_id, "사라 아이린: 나쁘지 않지만 아직 멀었다!";
+	unittalklang 'boss_id, "사라 아이린: 나쁘지 않지만 아직 멀었다!", "Sarah Irene: Not bad but.. not even close!";
 	end;
 OnTimer103000:
-	npctalk "펜릴: 마음 깊은 곳에 숨겨진 의심과 비밀의 힘이여!", 'fenrir_7$;
+	npctalklang "펜릴: 마음 깊은 곳에 숨겨진 의심과 비밀의 힘이여!", "Fenrith Fenrir: The power of doubt, a powerful force, the power of deeply hidden secrets in the mind!!!", 'fenrir_7$;
 	specialeffect EF_PRIMECHARGE, AREA, 'fenrir_7$;
 	end;
 OnTimer110000:
 	callsub S_Hit,7;
-	npctalk "펜릴: 사이킥 웨이브!", 'fenrir_7$;
+	npctalklang "펜릴: 사이킥 웨이브!", "Fenrith Fenrir: Now!!! Psychic Wave!!!!", 'fenrir_7$;
 	specialeffect EF_SPR_PLANT10, AREA, 'sarah_17$;
 	specialeffect EF_BOTTOM_BASILICA2, AREA, 'sarah_17$;
 	progressbar_npc "000000",10, 'fenrir_7$;
 	end;
 OnTimer110500:
-	unittalk 'boss_id, "사라 아이린: 크윽... 소용없다, 펜릴!";
+	unittalklang 'boss_id, "사라 아이린: 크윽... 소용없다, 펜릴!", "Sarah Irene: Ugh... that is no use Fenrir!";
 	end;
 OnTimer113000:
-	npctalk "펜릴: 마음 깊은 곳에 숨겨진 의심과 비밀의 힘이여!", 'fenrir_7$;
+	npctalklang "펜릴: 마음 깊은 곳에 숨겨진 의심과 비밀의 힘이여!", "Fenrith Fenrir: The power of doubt, a powerful force, the power of deeply hidden secrets in the mind!!!", 'fenrir_7$;
 	specialeffect EF_PRIMECHARGE, AREA, 'fenrir_7$;
 	end;
 OnTimer120000:
 	callsub S_Hit,8;
-	npctalk "펜릴: 사이킥 웨이브!", 'fenrir_7$;
+	npctalklang "펜릴: 사이킥 웨이브!", "Fenrith Fenrir: Now!!! Psychic Wave!!!!", 'fenrir_7$;
 	specialeffect EF_SPR_PLANT10, AREA, 'sarah_17$;
 	monster 'map_glast$,190,341, "대형 기간테스#a1", 3194,1, instance_npcname("#fenrir_boss_final_1") + "::OnMobDead";// MM_L_GIGAN1
 	monster 'map_glast$,214,331, "대형 기간테스#b2", 3195,1, instance_npcname("#fenrir_boss_final_1") + "::OnMobDead";// MM_L_GIGAN2
 	progressbar_npc "000000",30, 'fenrir_7$;
 	end;
 OnTimer120500:
-	unittalk 'boss_id, "사라 아이린: 크윽... 성가신 마법 포격이군!";
+	unittalklang 'boss_id, "사라 아이린: 크윽... 성가신 마법 포격이군!", "Sarah Irene: Hurk.. such an annoying magic bombardment!!";
 	end;
 OnTimer123000:
-	npctalk "펜릴: 불꽃을 다스리는 존재여, 꺼지지 않는 불을 빌려다오...", 'fenrir_7$;
+	npctalklang "펜릴: 불꽃을 다스리는 존재여, 꺼지지 않는 불을 빌려다오...", "Fenrith Fenrir: I speak to you who controls fire, I Fenrith, desire a fire that does not go out...", 'fenrir_7$;
 	specialeffect EF_BEGINSPELL_YB, AREA, 'fenrir_7$;
 	end;
 OnTimer135000:
-	npctalk "펜릴: 영혼마저 태우는 영원한 화염이여, 지금 나타나라!", 'fenrir_7$;
+	npctalklang "펜릴: 영혼마저 태우는 영원한 화염이여, 지금 나타나라!", "Fenrith Fenrir: Endlessly burning conflagration, a fire that can scorch even the soul!! Appear before me now!!", 'fenrir_7$;
 	specialeffect EF_BEGINSPELL_YB, AREA, 'fenrir_7$;
 	specialeffect EF_BOTTOM_BASILICA2, AREA, 'sarah_17$;
 	end;
 OnTimer150000:
 	callsub S_Hit,9;
-	npctalk "펜릴: 파이어 인시그니아!", 'fenrir_7$;
+	npctalklang "펜릴: 파이어 인시그니아!", "Fenrith Fenrir: Emerge!! Fire Insignia!!!!", 'fenrir_7$;
 	specialeffect EF_DEMONICFIRE, AREA, 'sarah_17$;
 	specialeffect EF_BOTTOM_BASILICA2, AREA, 'sarah_17$;
 	progressbar_npc "000000",10, 'fenrir_7$;
 	end;
 OnTimer150500:
-	unittalk 'boss_id, "사라 아이린: 나는 사라 아이린이다! 이 정도로 쓰러지지 않는다!";
+	unittalklang 'boss_id, "사라 아이린: 나는 사라 아이린이다! 이 정도로 쓰러지지 않는다!", "Sarah Irene: I am Sarah Irene! I will not fall so easily!!!";
 	end;
 OnTimer153000:
-	npctalk "펜릴: 진실된 하늘의 분노와 대지를 가르는 번개여... 지금 내리쳐라!", 'fenrir_7$;
+	npctalklang "펜릴: 진실된 하늘의 분노와 대지를 가르는 번개여... 지금 내리쳐라!", "Fenrith Fenrir: True wrath of the sky, thunderbolt that may split the earth... Fall before me now!!", 'fenrir_7$;
 	specialeffect EF_DQ9_CHARGE3, AREA, 'fenrir_7$;
 	end;
 OnTimer160000:
 	callsub S_Hit,10;
-	npctalk "펜릴: 썬더 스톰!", 'fenrir_7$;
+	npctalklang "펜릴: 썬더 스톰!", "Fenrith Fenrir: Come now!! Thunder Storm!!!!!", 'fenrir_7$;
 	specialeffect EF_THUNDERSTORM2, AREA, 'sarah_17$;
-	unittalk 'boss_id, "사라 아이린: 크윽... 예상보다 강해졌구나, 펜릴...";
+	unittalklang 'boss_id, "사라 아이린: 크윽... 예상보다 강해졌구나, 펜릴...", "Sarah Irene: Ugh...you are.. stronger than I predicted Fenrir...";
 	progressbar_npc "000000",10, 'fenrir_7$;
 	end;
 OnTimer160500:
-	unittalk 'boss_id, "사라 아이린: 크윽... 예상보다 강해졌구나, 펜릴...";
+	unittalklang 'boss_id, "사라 아이린: 크윽... 예상보다 강해졌구나, 펜릴...", "Sarah Irene: Ugh...you are.. stronger than I predicted Fenrir...";
 	end;
 OnTimer163000:
-	npctalk "펜릴: 진실된 하늘의 분노와 대지를 가르는 번개여... 지금 내리쳐라!", 'fenrir_7$;
+	npctalklang "펜릴: 진실된 하늘의 분노와 대지를 가르는 번개여... 지금 내리쳐라!", "Fenrith Fenrir: True wrath of the sky, thunderbolt that may split the earth... Fall before me now!!", 'fenrir_7$;
 	specialeffect EF_DQ9_CHARGE3, AREA, 'fenrir_7$;
 	end;
 OnTimer170000:
 	callsub S_Hit,11;
-	npctalk "펜릴: 썬더 스톰!", 'fenrir_7$;
+	npctalklang "펜릴: 썬더 스톰!", "Fenrith Fenrir: Come now!! Thunder Storm!!!!!", 'fenrir_7$;
 	specialeffect EF_THUNDERSTORM2, AREA, 'sarah_17$;
 	specialeffect EF_BOTTOM_BASILICA2, AREA, 'sarah_17$;
 	progressbar_npc "000000",30, 'fenrir_7$;
 	end;
 OnTimer170500:
-	unittalk 'boss_id, "사라 아이린: 으아아악!";
+	unittalklang 'boss_id, "사라 아이린: 으아아악!", "Sarah Irene: Argh!!!!!! Ahhh!!!!!";
 	end;
 OnTimer173000:
-	npctalk "펜릴: 자비 없이 차가운 북풍의 숨결이여,", 'fenrir_7$;
+	npctalklang "펜릴: 자비 없이 차가운 북풍의 숨결이여,", "Fenrith Fenrir: The mercilessly cold breath of the Northern winds,", 'fenrir_7$;
 	specialeffect EF_PRIMECHARGE2, AREA, 'fenrir_7$;
 	end;
 OnTimer180000:
@@ -1780,32 +1780,32 @@ OnTimer180000:
 	monster 'map_glast$,214,331, "대형 기간테스#b2", 3195,1, instance_npcname("#fenrir_boss_final_1") + "::OnMobDead";// MM_L_GIGAN2
 	end;
 OnTimer185000:
-	npctalk "펜릴: 고요한 새벽 안개처럼 내려와 모든 것을 얼려라!", 'fenrir_7$;
+	npctalklang "펜릴: 고요한 새벽 안개처럼 내려와 모든 것을 얼려라!", "Fenrith Fenrir: Come like the silent dawn mist and freeze everything!!", 'fenrir_7$;
 	specialeffect EF_PRIMECHARGE2, AREA, 'fenrir_7$;
 	specialeffect EF_BOTTOM_BASILICA2, AREA, 'sarah_17$;
 	end;
 OnTimer200000:
 	callsub S_Hit,12;
-	npctalk "펜릴: 프로스트 미스티!", 'fenrir_7$;
+	npctalklang "펜릴: 프로스트 미스티!", "Fenrith Fenrir: Appear!!! Frost Misty!!!!!", 'fenrir_7$;
 	specialeffect EF_FROSTMYSTY, AREA, 'sarah_17$;
 	donpcevent 'fenrir_7$ + "::OnStart";
 	progressbar_npc "000000",50, 'fenrir_7$;
 	end;
 OnTimer200500:
-	unittalk 'boss_id, "사라 아이린: 네놈들을 모두 죽이겠다!";
+	unittalklang 'boss_id, "사라 아이린: 네놈들을 모두 죽이겠다!", "Sarah Irene: Argh!!! I will kill you all!!!!!!";
 	specialeffect EF_FROSTMYSTY, AREA, 'sarah_17$;
 	specialeffect EF_BOTTOM_BASILICA2, AREA, 'sarah_17$;
 	end;
 OnTimer203000:
-	npctalk "펜릴: 하늘을 꿰뚫는 천상의 검이여,", 'fenrir_7$;
+	npctalklang "펜릴: 하늘을 꿰뚫는 천상의 검이여,", "Fenrith Fenrir: Heaven's sword piercing the sky", 'fenrir_7$;
 	specialeffect EF_BLACKBODY, AREA, 'fenrir_7$;
 	specialeffect EF_RECOGNIZED, AREA, 'fenrir_7$;
 	end;
 OnTimer216000:
-	npctalk "펜릴: 잠시 그 힘을 빌리겠습니다!", 'fenrir_7$;
+	npctalklang "펜릴: 잠시 그 힘을 빌리겠습니다!", "Fenrith Fenrir: I wish to borrow your strength for a moment!!", 'fenrir_7$;
 	end;
 OnTimer230000:
-	npctalk "펜릴: 진공마저 찢는 극한의 힘을 이곳에 내려라!", 'fenrir_7$;
+	npctalklang "펜릴: 진공마저 찢는 극한의 힘을 이곳에 내려라!", "Fenrith Fenrir: Let fall here your extreme strength that can tear even the vacuum!!", 'fenrir_7$;
 	specialeffect EF_BOTTOM_BASILICA2, AREA, 'sarah_17$;
 	end;
 OnTimer239000:
@@ -1815,10 +1815,10 @@ OnTimer239000:
 	monster 'map_glast$,214,331, "대형 기간테스#b2", 3195,1, instance_npcname("#fenrir_boss_final_1") + "::OnMobDead";// MM_L_GIGAN2
 	end;
 OnTimer240000:
-	npctalk "펜릴: 생사를 다스리고 시공을 꿰뚫는 검이여!", 'fenrir_7$;
+	npctalklang "펜릴: 생사를 다스리고 시공을 꿰뚫는 검이여!", "Fenrith Fenrir: Sword that can control life and death, and pierce space time!!!", 'fenrir_7$;
 	end;
 OnTimer250000:
-	npctalk "펜릴: 바레티스 스피어!", 'fenrir_7$;
+	npctalklang "펜릴: 바레티스 스피어!", "Fenrith Fenrir: Come out Baretis Spear!!!!!!", 'fenrir_7$;
 	specialeffect EF_PRESSURE3, AREA, 'sarah_17$;
 	for ( .@i = 1; .@i <= 8; .@i++ )
 		specialeffect EF_PRESSURE3, AREA, instance_npcname("#effect_glast_event03_" + .@i);
@@ -1829,31 +1829,31 @@ OnTimer253000:
 	specialeffect EF_PRESSURE3, AREA, 'sarah_17$;
 	for ( .@i = 1; .@i <= 8; .@i++ )
 		specialeffect EF_PRESSURE3, AREA, instance_npcname("#effect_glast_event03_" + .@i);
-	npctalk "펜릴: 지금입니다! 사라가 빈사 상태입니다. 서둘러 마무리하세요!", 'fenrir_7$;
-	mapannounce 'map_glast$, "펜릴: 지금입니다! 사라가 빈사 상태입니다. 서둘러 마무리하세요!", bc_map,0xEBFF;
-	npctalk "사라 아이린: 이럴 수가... 내가 질 리 없다!", 'sarah_17$;
+	npctalklang "펜릴: 지금입니다! 사라가 빈사 상태입니다. 서둘러 마무리하세요!", "Fenrith Fenrir: Now! I put Sarah in critical condition! You have to finish her off! Attack her quickly! Sarah is strong!", 'fenrir_7$;
+	mapannouncelang 'map_glast$, "펜릴: 지금입니다! 사라가 빈사 상태입니다. 서둘러 마무리하세요!", "Fenrith Fenrir: Now! I put Sarah in critical condition! You have to finish her off!! Attack her quickly! Sarah is strong!", bc_map,0xEBFF;
+	npctalklang "사라 아이린: 이럴 수가... 내가 질 리 없다!", "Sarah Irene: Hurk...this.. cannot happen!!! I cannot lose!!!!!", 'sarah_17$;
 	end;
 OnTimer263000:
-	npctalk "펜릴: 마무리하지 못할 경우를 대비해 마지막 마법을 준비하겠습니다!", 'fenrir_7$;
+	npctalklang "펜릴: 마무리하지 못할 경우를 대비해 마지막 마법을 준비하겠습니다!", "Fenrith Fenrir: Since you may not be able to finish her off alone, I will prepare one final spell!!", 'fenrir_7$;
 	progressbar_npc "000000",50, 'fenrir_7$;
 	end;
 OnTimer273000:
 	specialeffect EF_BOTTOM_BASILICA2, AREA, 'sarah_17$;
-	npctalk "펜릴: 하늘을 꿰뚫는 천상의 검이여,", 'fenrir_7$;
+	npctalklang "펜릴: 하늘을 꿰뚫는 천상의 검이여,", "Fenrith Fenrir: Heaven's sword piercing the sky", 'fenrir_7$;
 	specialeffect EF_RECOGNIZED, AREA, 'fenrir_7$;
 	specialeffect EF_BLACKBODY, AREA, 'fenrir_7$;
 	end;
 OnTimer283000:
-	npctalk "펜릴: 잠시 그 힘을 빌리겠습니다!", 'fenrir_7$;
+	npctalklang "펜릴: 잠시 그 힘을 빌리겠습니다!", "Fenrith Fenrir: I wish to borrow your strength for a moment!!", 'fenrir_7$;
 	end;
 OnTimer293000:
-	npctalk "펜릴: 진공마저 찢는 극한의 힘을 이곳에 내려라!";
+	npctalklang "펜릴: 진공마저 찢는 극한의 힘을 이곳에 내려라!", "Fenrith Fenrir: Let fall here your extreme strength that can tear even the vacuum!!";
 	end;
 OnTimer303000:
-	npctalk "펜릴: 생사를 다스리고 시공을 꿰뚫는 검이여!";
+	npctalklang "펜릴: 생사를 다스리고 시공을 꿰뚫는 검이여!", "Fenrith Fenrir: Sword that can control life and death, and pierce space time!!!";
 	end;
 OnTimer313000:
-	npctalk "펜릴: 바레티스 스피어!";
+	npctalklang "펜릴: 바레티스 스피어!", "Fenrith Fenrir: Come out Baretis Spear!!!!!!";
 	specialeffect EF_PRESSURE3, AREA, 'sarah_17$;
 	for ( .@i = 1; .@i <= 8; .@i++ )
 		specialeffect EF_PRESSURE3, AREA, instance_npcname("#effect_glast_event03_" + .@i);
@@ -1900,7 +1900,7 @@ OnBossDead:
 		enablenpc 'fenrir_11$;
 		enablenpc instance_npcname("#glast_move_05");
 		mapwarp 'map_glast$,'map_glast$,349,282;
-		mapannounce 'map_glast$, "펜릴: 사라를 물리쳤습니다. 입구에서 임무를 마무리하죠.", bc_map, 0xEBFF;
+		mapannouncelang 'map_glast$, "펜릴: 사라를 물리쳤습니다. 입구에서 임무를 마무리하죠.", "Fenrir: Sarah has been defeated. Let us finish the mission at the entrance.", bc_map, 0xEBFF;
 		end;
 	}
 
@@ -1916,16 +1916,16 @@ OnTimer6000:
 	enablenpc 'sarah_20$;
 	end;
 OnTimer9000:
-	npctalk "펜릴: 센티널 브리즈를 되찾았습니다!", 'fenrir_8$;
+	npctalklang "펜릴: 센티널 브리즈를 되찾았습니다!", "Fenrith Fenrir: Sentinel Breeze! I have it in my hand!", 'fenrir_8$;
 	end;
 OnTimer12000:
-	npctalk "사라 아이린: 크윽...", 'sarah_20$;
+	npctalklang "사라 아이린: 크윽...", "Sarah Irene: Hurk....", 'sarah_20$;
 	end;
 OnTimer15000:
-	npctalk "펜릴: 이것으로 발두르를 찾을 수 있습니다!", 'fenrir_8$;
+	npctalklang "펜릴: 이것으로 발두르를 찾을 수 있습니다!", "Fenrith Fenrir: I can find Baldur with this!", 'fenrir_8$;
 	end;
 OnTimer18000:
-	npctalk "사라 아이린: 아직 끝나지 않았다!", 'sarah_20$;
+	npctalklang "사라 아이린: 아직 끝나지 않았다!", "Sarah Irene: Not yet!!", 'sarah_20$;
 	progressbar_npc "000000",2, 'sarah_20$;
 	end;
 OnTimer21000:
@@ -1934,21 +1934,21 @@ OnTimer21000:
 	enablenpc 'fenrir_9$;
 	end;
 OnTimer24000:
-	npctalk "사라 아이린: 후후... 쥐처럼 잘도 피했구나.", 'sarah_20$;
+	npctalklang "사라 아이린: 후후... 쥐처럼 잘도 피했구나.", "Sarah Irene: Hehe... You evade well like a rat.", 'sarah_20$;
 	end;
 OnTimer27000:
-	npctalk "사라 아이린: 하지만 그것을 들고 떠나게 둘 수는 없다.", 'sarah_20$;
+	npctalklang "사라 아이린: 하지만 그것을 들고 떠나게 둘 수는 없다.", "Sarah Irene: However, I cannot let you leave with that.", 'sarah_20$;
 	end;
 OnTimer30000:
-	npctalk "사라 아이린: 이 성 전체를 날려 버리겠다!", 'sarah_20$;
+	npctalklang "사라 아이린: 이 성 전체를 날려 버리겠다!", "Sarah Irene: I will blow this entire castle away! Yaah!", 'sarah_20$;
 	progressbar_npc "000000",15, 'sarah_20$;
 	end;
 OnTimer33000:
-	npctalk "펜릴: 사라가 성을 무너뜨리려 합니다! 대규모 텔레포트를 준비하겠습니다!", 'fenrir_9$;
+	npctalklang "펜릴: 사라가 성을 무너뜨리려 합니다! 대규모 텔레포트를 준비하겠습니다!", "Fenrith Fenrir: She is planning to collapse this place! I must perform a large scale teleportation!!!", 'fenrir_9$;
 	progressbar_npc "000000",6, 'fenrir_9$;
 	end;
 OnTimer36000:
-	npctalk "펜릴: 잘 있어라, 발키리! 센티널 브리즈는 가져가겠다!", 'fenrir_9$;
+	npctalklang "펜릴: 잘 있어라, 발키리! 센티널 브리즈는 가져가겠다!", "Fenrith Fenrir: Farewell Valkyrie!! I shall take the Sentinel Breeze! So long!", 'fenrir_9$;
 	end;
 OnTimer39000:
 	for ( .@i = 1; .@i <= 8; .@i++ )
@@ -1993,19 +1993,19 @@ OnTouch:
 	setpcblock PCBLOCK_NPC, true;
 	sleep2 1500;
 	cutin "fenrir_b.bmp",2;
-	npctalk "펜릴: 실력은 인정하지만 저를 너무 얕본 것 같군요, 발키리.", 'fenrir_10$;
+	npctalklang "펜릴: 실력은 인정하지만 저를 너무 얕본 것 같군요, 발키리.", "Fenrith Fenrir: Hehe.. You are certainly skilled but I think you have underestimated me, Valkyrie.", 'fenrir_10$;
 	sleep2 3000;
-	mapannounce 'map_glast$, "사라 아이린: 제법 즐겁게 해 주는구나, 펜릴...", bc_map,0xEBFF;
+	mapannouncelang 'map_glast$, "사라 아이린: 제법 즐겁게 해 주는구나, 펜릴...", "Sarah Irene: You rather entertain me Fenrith...", bc_map,0xEBFF;
 	sleep2 3000;
-	mapannounce 'map_glast$, "사라 아이린: 그렇게 쉽게 도망칠 수 있을 것 같으냐?", bc_map,0xEBFF;
+	mapannouncelang 'map_glast$, "사라 아이린: 그렇게 쉽게 도망칠 수 있을 것 같으냐?", "Sarah Irene: Did you think you can escape that easily?", bc_map,0xEBFF;
 	sleep2 3000;
-	mapannounce 'map_glast$, "사라 아이린: 글래스트헤임을 지옥으로 만들어 주마!", bc_map,0xEBFF;
+	mapannouncelang 'map_glast$, "사라 아이린: 글래스트헤임을 지옥으로 만들어 주마!", "Sarah Irene: I shall turn Glast Heim into hell!!", bc_map,0xEBFF;
 	sleep2 3000;
-	npctalk "펜릴: 지금 탈출하지 않으면 사라의 몬스터와 마법에 당하고 맙니다!", 'fenrir_10$;
+	npctalklang "펜릴: 지금 탈출하지 않으면 사라의 몬스터와 마법에 당하고 맙니다!", "Fenrith Fenrir: If we don't escape now we will suffer a gruesome fate by Sarah's monsters and magic!", 'fenrir_10$;
 	sleep2 3000;
-	npctalk "펜릴: 처음 만났던 글래스트헤임 입구에서 만나죠. 그곳까지 가면 안전할 겁니다!", 'fenrir_10$;
+	npctalklang "펜릴: 처음 만났던 글래스트헤임 입구에서 만나죠. 그곳까지 가면 안전할 겁니다!", "Fenrith Fenrir: Let's meet at Glast Heim entrance where we first met! If we flee that far it should be safe!", 'fenrir_10$;
 	sleep2 3000;
-	npctalk "펜릴: 시간이 없습니다. 서두르세요!", 'fenrir_10$;
+	npctalklang "펜릴: 시간이 없습니다. 서두르세요!", "Fenrith Fenrir: There is no time! Hurry!", 'fenrir_10$;
 	sleep2 3000;
 	cutin "",255;
 	disablenpc 'fenrir_10$;
@@ -2029,32 +2029,32 @@ OnTimer300000:
 	disablenpc 'fenrir_6$;
 	end;
 OnTimer305000:
-	mapannounce 'map_glast$, "펜릴: 센티널 브리즈를 되찾았습니다!", bc_map,0xEBFF;
+	mapannouncelang 'map_glast$, "펜릴: 센티널 브리즈를 되찾았습니다!", "Fenrith Fenrir: Sentinel Breeze! I have it in my hand!", bc_map,0xEBFF;
 	end;
 OnTimer308000:
-	mapannounce 'map_glast$, "사라 아이린: 크윽...", bc_map,0xEBFF;
+	mapannouncelang 'map_glast$, "사라 아이린: 크윽...", "Sarah Irene: Hurk....", bc_map,0xEBFF;
 	end;
 OnTimer311000:
-	mapannounce 'map_glast$, "펜릴: 실력은 인정하지만 저를 너무 얕본 것 같군요, 발키리.", bc_map,0xEBFF;
+	mapannouncelang 'map_glast$, "펜릴: 실력은 인정하지만 저를 너무 얕본 것 같군요, 발키리.", "Fenrith Fenrir: Hehe.. You are certainly skilled but I think you have underestimated me, Valkyrie.", bc_map,0xEBFF;
 	end;
 OnTimer314000:
-	mapannounce 'map_glast$, "사라 아이린: 제법 즐겁게 해 주는구나, 펜릴...", bc_map,0xEBFF;
+	mapannouncelang 'map_glast$, "사라 아이린: 제법 즐겁게 해 주는구나, 펜릴...", "Sarah Irene: You rather entertain me Fenrith...", bc_map,0xEBFF;
 	end;
 OnTimer317000:
-	mapannounce 'map_glast$, "사라 아이린: 그렇게 쉽게 도망칠 수 있을 것 같으냐?", bc_map,0xEBFF;
+	mapannouncelang 'map_glast$, "사라 아이린: 그렇게 쉽게 도망칠 수 있을 것 같으냐?", "Sarah Irene: Did you think you can escape that easily?", bc_map,0xEBFF;
 	end;
 OnTimer320000:
-	mapannounce 'map_glast$, "사라 아이린: 글래스트헤임을 지옥으로 만들어 주마!", bc_map,0xEBFF;
+	mapannouncelang 'map_glast$, "사라 아이린: 글래스트헤임을 지옥으로 만들어 주마!", "Sarah Irene: I shall turn Glast Heim into hell!!", bc_map,0xEBFF;
 	end;
 OnTimer323000:
-	mapannounce 'map_glast$, "펜릴: 지금 탈출하지 않으면 사라의 몬스터와 마법에 당하고 맙니다!", bc_map,0xEBFF;
+	mapannouncelang 'map_glast$, "펜릴: 지금 탈출하지 않으면 사라의 몬스터와 마법에 당하고 맙니다!", "Fenrith Fenrir: If we don't escape now we will suffer a gruesome fate by Sarah's monsters and magic!", bc_map,0xEBFF;
 	end;
 OnTimer326000:
-	mapannounce 'map_glast$, "펜릴: 처음 만났던 글래스트헤임 입구에서 만나죠. 그곳까지 가면 안전할 겁니다!", bc_map,0xEBFF;
+	mapannouncelang 'map_glast$, "펜릴: 처음 만났던 글래스트헤임 입구에서 만나죠. 그곳까지 가면 안전할 겁니다!", "Fenrith Fenrir: Let's meet at Glast Heim entrance where we first met! If we flee that far it should be safe!", bc_map,0xEBFF;
 	end;
 OnTimer329000:
 	stopnpctimer;
-	mapannounce 'map_glast$, "펜릴: 시간이 없습니다. 서두르세요!", bc_map,0xEBFF;
+	mapannouncelang 'map_glast$, "펜릴: 시간이 없습니다. 서두르세요!", "Fenrith Fenrir: There is no time! Hurry!", bc_map,0xEBFF;
 	donpcevent instance_npcname("#sarah_wrath") + "::OnStart";
 	end;
 OnStop:
@@ -2079,28 +2079,28 @@ OnStart:
 	initnpctimer;
 	end;
 OnTimer10000:
-	mapannounce 'map_glast$, "사라 아이린: 하찮은 것들, 그렇게 쉽게 도망칠 수 있을 것 같으냐?", bc_map,0xEBFF;
+	mapannouncelang 'map_glast$, "사라 아이린: 하찮은 것들, 그렇게 쉽게 도망칠 수 있을 것 같으냐?", "Sarah Irene: Absurd little thing, you think you can escape that easily?", bc_map,0xEBFF;
 	callsub S_Spawn,0;
 	end;
 OnTimer50000:
-	mapannounce 'map_glast$, "사라 아이린: 내 부하들이 반드시 너희를 죽일 것이다!", bc_map,0xEBFF;
+	mapannouncelang 'map_glast$, "사라 아이린: 내 부하들이 반드시 너희를 죽일 것이다!", "Sarah Irene: My minions will make sure to kill you!!!", bc_map,0xEBFF;
 	callsub S_Spawn,1;
 	end;
 OnTimer80000:
-	mapannounce 'map_glast$, "사라 아이린: 절대 도망치게 두지 않겠다!", bc_map,0xEBFF;
+	mapannouncelang 'map_glast$, "사라 아이린: 절대 도망치게 두지 않겠다!", "Sarah Irene: I cannot let you escape!!", bc_map,0xEBFF;
 	callsub S_Spawn,2;
 	end;
 OnTimer110000:
-	mapannounce 'map_glast$, "사라 아이린: 펜릴... 도망치면 내가 찾지 못할 줄 알았느냐?", bc_map,0xEBFF;
+	mapannouncelang 'map_glast$, "사라 아이린: 펜릴... 도망치면 내가 찾지 못할 줄 알았느냐?", "Sarah Irene: Fenrith Fenrir.... Did you think I couldn't track you because you fled?", bc_map,0xEBFF;
 	callsub S_Spawn,3;
 	end;
 OnTimer150000:
-	mapannounce 'map_glast$, "사라 아이린: 하찮은 것들, 그렇게 쉽게 도망칠 수 있을 것 같으냐?", bc_map,0xEBFF;
+	mapannouncelang 'map_glast$, "사라 아이린: 하찮은 것들, 그렇게 쉽게 도망칠 수 있을 것 같으냐?", "Sarah Irene: Absurd little thing, you think you can escape that easily?", bc_map,0xEBFF;
 	callsub S_Spawn,4;
 	end;
 OnTimer300000:
 	stopnpctimer;
-	mapannounce 'map_glast$, "사라 아이린: 하하하! 글래스트헤임이 내 분노로 가득 차고 있다!", bc_map,0xEBFF;
+	mapannouncelang 'map_glast$, "사라 아이린: 하하하! 글래스트헤임이 내 분노로 가득 차고 있다!", "Sarah Irene: Bwahahahahahaha!! Glast Heim is being filled with my wrath!!", bc_map,0xEBFF;
 	for ( .@i = 1; .@i <= 14; .@i++ )
 		enablenpc instance_npcname("#glast_bomb_" + (.@i < 10 ? ("0"+.@i) : .@i));
 	end;
@@ -2210,7 +2210,7 @@ S_Spawn:
 	end;
 OnTouch:
 	unitkill 0;
-	mapannounce 'map_glast$, "사라 아이린: 하하하! 글래스트헤임이 내 분노로 가득 차고 있다!", bc_map,0xEBFF;
+	mapannouncelang 'map_glast$, "사라 아이린: 하하하! 글래스트헤임이 내 분노로 가득 차고 있다!", "Sarah Irene: Bwahahahahahaha!! Glast Heim is being filled with my wrath!!", bc_map,0xEBFF;
 	specialeffect2 EF_LORD;
 	sleep2 1000;
 	specialeffect2 EF_LORD;
@@ -2238,23 +2238,23 @@ OnTouch:
 	#NEED_MD_SF_CLEAR = 1;
 	if (isbegin_quest(9337) == 0) {
 		cutin "fenrir_a.bmp",2;
-		mes "[펜릴]";
-		mes "무사히 도착했군요!";
-		mes "상황이 위험해 보여";
-		mes "걱정했습니다.";
-		mes "어렵고 위험한 일이었는데";
-		mes "도와주셔서 감사합니다.";
+		mes needtr("[펜릴]", "[Fenrith Fenrir]");
+		mes needtr("무사히 도착했군요!", "You arrived safely!");
+		mes needtr("상황이 위험해 보여", "The dangerous situation");
+		mes needtr("걱정했습니다.", "had me worried.");
+		mes needtr("어렵고 위험한 일이었는데", "It was difficult and dangerous work");
+		mes needtr("도와주셔서 감사합니다.", "so I am grateful for your help.");
 		next;
-		mes "[펜릴]";
-		mes "다시 만나게 될 것 같은데";
-		mes "제 착각일까요?";
-		mes "그렇다면 좋겠군요.";
+		mes needtr("[펜릴]", "[Fenrir]");
+		mes needtr("다시 만나게 될 것 같은데", "I feel we will meet again");
+		mes needtr("제 착각일까요?", "but perhaps it is just my imagination?");
+		mes needtr("그렇다면 좋겠군요.", "Mm.. that would be nice.");
 		next;
-		mes "[펜릴]";
-		mes "함께 훌륭하게 싸웠으니";
-		mes "다시 만나기를 바랍니다.";
-		mes "사라도 조심하세요.";
-		mes "당신을 노릴지도 모릅니다.";
+		mes needtr("[펜릴]", "[Fenrir]");
+		mes needtr("함께 훌륭하게 싸웠으니", "We worked well together");
+		mes needtr("다시 만나기를 바랍니다.", "so I hope we will meet again.");
+		mes needtr("사라도 조심하세요.", "And watch for Sarah,");
+		mes needtr("당신을 노릴지도 모릅니다.", "harm can come your way as well.");
 		setquest 9337;// Wrapping up the Adventure
 		getitem 607,1;// Yggdrasilberry
 		getitem 608,1;// Seed_Of_Yggdrasil
@@ -2262,9 +2262,9 @@ OnTouch:
 		cutin "",255;
 		end;
 	}
-	mes "[펜릴]";
-	mes "함께 훌륭하게 싸웠으니";
-	mes "다시 만나기를 바랍니다.";
+	mes needtr("[펜릴]", "[Fenrir]");
+	mes needtr("함께 훌륭하게 싸웠으니", "We worked well together");
+	mes needtr("다시 만나기를 바랍니다.", "so I hope we will meet again.");
 	close;
 }
 
@@ -2279,7 +2279,7 @@ OnTouch:
 	monster 'map_glast$,290,147, "고대 기간테스#X1",3196,1, .@label$;		// MM_L_GIGAN3
 	monster 'map_glast$,290,146, "고대 중형 기간테스",3193,1, .@label$;	// MM_M_GIGAN3
 	monster 'map_glast$,288,147, "고대 중형 기간테스",3193,1, .@label$;	// MM_M_GIGAN3
-	unittalk getcharid(3), "" + strcharinfo(0) + " : 베른하르트 교수가 말한 고대 기간테스다!";
+	unittalklang getcharid(3), "" + strcharinfo(0) + " : 베른하르트 교수가 말한 고대 기간테스다!", "" + strcharinfo(0) + " : The Ancient Gigantes that Professor Bernhard spoke of!!";
 	enablenpc instance_npcname("석상 가고일#glast_01");
 	enablenpc instance_npcname("석상 가고일#glast_02");
 	enablenpc instance_npcname("석상 가고일#glast_03");
@@ -2299,7 +2299,7 @@ OnTouch:
 	monster 'map_glast$,300,248, "고대 기간테스#X2",3196,1, .@label$;		// MM_L_GIGAN3
 	monster 'map_glast$,299,250, "고대 중형 기간테스",3193,1, .@label$;	// MM_M_GIGAN3
 	monster 'map_glast$,302,246, "고대 중형 기간테스",3193,1, .@label$;	// MM_M_GIGAN3
-	unittalk getcharid(3), "" + strcharinfo(0) + " : 베른하르트 교수가 말한 고대 기간테스다!";
+	unittalklang getcharid(3), "" + strcharinfo(0) + " : 베른하르트 교수가 말한 고대 기간테스다!", "" + strcharinfo(0) + " : The Ancient Gigantes that Professor Bernhard spoke of!!";
 	enablenpc instance_npcname("석상 가고일#glast_07");
 	enablenpc instance_npcname("석상 가고일#glast_08");
 	enablenpc instance_npcname("석상 가고일#glast_09");
@@ -2318,7 +2318,7 @@ OnTouch:
 	monster 'map_glast$,292,344, "고대 기간테스#X3",3196,1, .@label$;		// MM_L_GIGAN3
 	monster 'map_glast$,290,346, "고대 중형 기간테스",3193,1, .@label$;	// MM_M_GIGAN3
 	monster 'map_glast$,291,344, "고대 중형 기간테스",3193,1, .@label$;	// MM_M_GIGAN3
-	unittalk getcharid(3), "" + strcharinfo(0) + " : 베른하르트 교수가 말한 고대 기간테스다!";
+	unittalklang getcharid(3), "" + strcharinfo(0) + " : 베른하르트 교수가 말한 고대 기간테스다!", "" + strcharinfo(0) + " : The Ancient Gigantes that Professor Bernhard spoke of!!";
 	enablenpc instance_npcname("석상 가고일#glast_12");
 	enablenpc instance_npcname("석상 가고일#glast_13");
 	enablenpc instance_npcname("석상 가고일#glast_14");
@@ -2335,7 +2335,7 @@ OnTouch:
 	monster 'map_glast$,107,147, "고대 기간테스#X4",3196,1, .@label$;		// MM_L_GIGAN3
 	monster 'map_glast$,107,145, "고대 중형 기간테스",3193,1, .@label$;	// MM_M_GIGAN3
 	monster 'map_glast$,106,148, "고대 중형 기간테스",3193,1, .@label$;	// MM_M_GIGAN3
-	unittalk getcharid(3), "" + strcharinfo(0) + " : 베른하르트 교수가 말한 고대 기간테스다!";
+	unittalklang getcharid(3), "" + strcharinfo(0) + " : 베른하르트 교수가 말한 고대 기간테스다!", "" + strcharinfo(0) + " : The Ancient Gigantes that Professor Bernhard spoke of!!";
 	enablenpc instance_npcname("석상 가고일#glast_15");
 	enablenpc instance_npcname("석상 가고일#glast_16");
 	enablenpc instance_npcname("석상 가고일#glast_17");
@@ -2355,7 +2355,7 @@ OnTouch:
 	monster 'map_glast$,98,248, "고대 기간테스#X5",3196,1, .@label$;		// MM_L_GIGAN3
 	monster 'map_glast$,96,250, "고대 중형 기간테스",3193,1, .@label$;	// MM_M_GIGAN3
 	monster 'map_glast$,98,247, "고대 중형 기간테스",3193,1, .@label$;	// MM_M_GIGAN3
-	unittalk getcharid(3), "" + strcharinfo(0) + " : 베른하르트 교수가 말한 고대 기간테스다!";
+	unittalklang getcharid(3), "" + strcharinfo(0) + " : 베른하르트 교수가 말한 고대 기간테스다!", "" + strcharinfo(0) + " : The Ancient Gigantes that Professor Bernhard spoke of!!";
 	enablenpc instance_npcname("석상 가고일#glast_21");
 	enablenpc instance_npcname("석상 가고일#glast_22");
 	enablenpc instance_npcname("석상 가고일#glast_23");
@@ -2374,7 +2374,7 @@ OnTouch:
 	monster 'map_glast$,107,344, "고대 기간테스#X6",3196,1, .@label$;		// MM_L_GIGAN3
 	monster 'map_glast$,107,344, "고대 중형 기간테스",3193,1, .@label$;	// MM_M_GIGAN3
 	monster 'map_glast$,109,346, "고대 중형 기간테스",3193,1, .@label$;	// MM_M_GIGAN3
-	unittalk getcharid(3), "" + strcharinfo(0) + " : 베른하르트 교수가 말한 고대 기간테스다!";
+	unittalklang getcharid(3), "" + strcharinfo(0) + " : 베른하르트 교수가 말한 고대 기간테스다!", "" + strcharinfo(0) + " : The Ancient Gigantes that Professor Bernhard spoke of!!";
 	enablenpc instance_npcname("석상 가고일#glast_26");
 	enablenpc instance_npcname("석상 가고일#glast_27");
 	enablenpc instance_npcname("석상 가고일#glast_28");

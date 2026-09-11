@@ -14,49 +14,49 @@ sec_in02,126,178,3	script	Kachua's Secret Box#bm	4_TREASURE_BOX,{
 	.@keyname$ = getitemname( .@key$ );
 	.@box$ = "메인 럭키 박스";
 	.@boxname$ = getitemname( .@box$ );
-	mes "안에 무엇이 들어있는지 아무도 모르는 비밀 상자.";
-	mes " ^4d4dff를 소모하면 이 상자를 열 수 있습니다." + mesitemlink( .@key$ ) + ".^000000";
+	mes needtr("안에 무엇이 들어있는지 아무도 모르는 비밀 상자.", "A Secret Box where no one knows what's inside.");
+	mes needtr(" ^4d4dff를 소모하면 이 상자를 열 수 있습니다.", "^4d4dffYou can open this box by consuming ") + mesitemlink( .@key$ ) + ".^000000";
 	next;
 	switch(select("^4d4dffOpen the box 1 time (1 " + .@keyname$ + ")^000000","^4d4dffOpen the box 10 times (10 " + .@keyname$ + "s)^000000")) {
 		case 1:
-			mes "^FF0000[알림]^000000";
-			mes " ^FF0000무작위 아이템 하나를 다른 아이템으로 교환" + .@keyname$ + ".^000000";
-			mes " ^FF0000위에서 교환된 상품은 인출하거나 다른 상품으로 교환할 수 없습니다." + .@keyname$ + ".^000000";
+			mes needtr("^FF0000[알림]^000000", "^FF0000[Notice]^000000");
+			mes needtr(" ^FF0000무작위 아이템 하나를 다른 아이템으로 교환", "^FF0000Exchange one random item with one ") + .@keyname$ + ".^000000";
+			mes needtr(" ^FF0000위에서 교환된 상품은 인출하거나 다른 상품으로 교환할 수 없습니다.", "^FF0000The item exchanged above cannot be withdrawn, nor can it be exchanged to ") + .@keyname$ + ".^000000";
 			next;
-			if(select("계속하세요.","대화를 중단하세요.") == 2) {
-				mes "당신은 상자를 열지 않기로 결정했습니다.";
+			if(select(needtr("계속하세요.", "Keep going."),needtr("대화를 중단하세요.", "Stop conversation.")) == 2) {
+				mes needtr("당신은 상자를 열지 않기로 결정했습니다.", "You have decided not to open the Box.");
 				close;
 			} else if (countitem(.@key$) < 1) {
-				mes " 충분하지 않다" + mesitemlink( .@key$ ) + ".";
+				mes needtr(" 충분하지 않다", "Not enough ") + mesitemlink( .@key$ ) + ".";
 				close;
 			} else {
 				if (checkweight(1201,1) == 0 || ((MaxWeight - Weight) * 100 / MaxWeight) < 10) {
-					mes "인벤토리에 충분한 공간이 있는지 확인해 주세요.";
+					mes needtr("인벤토리에 충분한 공간이 있는지 확인해 주세요.", "^4d4dffPlease make sure you have enough space in your inventory.^000000");
 					close;
 				}
 				delitem(.@key$, 1);
 				consumeitem(.@box$);
-				mes .@boxname$ + " 개장했습니다!";
-				mes "운이 좋으셨나요?";
+				mes .@boxname$ + needtr(" 개장했습니다!", " was opened!");
+				mes needtr("운이 좋으셨나요?", "Were you lucky?");
 				specialeffect2 EF_VALLENTINE;
 				close;
 			}
 		case 2:
-			mes "^FF0000[알림]^000000";
-			mes " ^FF0000랜덤 아이템 10개를 10개로 교환" + .@keyname$ + "s.^000000";
-			mes " ^FF0000위에서 교환된 물품은 인출하거나 다른 물품으로 교환할 수 없습니다." + .@keyname$ + ".^000000";
+			mes needtr("^FF0000[알림]^000000", "^FF0000[Notice]^000000");
+			mes needtr(" ^FF0000랜덤 아이템 10개를 10개로 교환", "^FF0000Exchange 10 random items with 10 ") + .@keyname$ + "s.^000000";
+			mes needtr(" ^FF0000위에서 교환된 물품은 인출하거나 다른 물품으로 교환할 수 없습니다.", "^FF0000The items exchanged above cannot be withdrawn, nor can it be exchanged to ") + .@keyname$ + ".^000000";
 			next;
-			if(select("계속하세요.","대화를 중단하세요.") == 2) {
-				mes "당신은 상자를 열지 않기로 결정했습니다.";
+			if(select(needtr("계속하세요.", "Keep going."),needtr("대화를 중단하세요.", "Stop conversation.")) == 2) {
+				mes needtr("당신은 상자를 열지 않기로 결정했습니다.", "You have decided not to open the Box.");
 				close;
 			} else if (countitem(.@key$) < 10) {
-				mes " 당신은 충분하지 않습니다" + mesitemlink( .@key$ ) + ".";
+				mes needtr(" 당신은 충분하지 않습니다", "You do not have enough ") + mesitemlink( .@key$ ) + ".";
 				close;
 			} else {
 				for (.@i = 1; .@i <= 10; ++.@i) {
 					progressbar "4d4dff",2;
 					if (checkweight(1201,1) == 0 || ((MaxWeight - Weight) * 100 / MaxWeight) < 10) {
-						mes "인벤토리에 충분한 공간이 있는지 확인해 주세요.";
+						mes needtr("인벤토리에 충분한 공간이 있는지 확인해 주세요.", "^4d4dffPlease make sure you have enough space in your inventory.^000000");
 						close;
 					}
 					if (countitem(.@key$) < 1) { // Custom check, just in case
@@ -64,11 +64,11 @@ sec_in02,126,178,3	script	Kachua's Secret Box#bm	4_TREASURE_BOX,{
 					}
 					delitem(.@key$, 1);
 					consumeitem(.@box$);
-					dispbottom .@boxname$ + " 열렸습니다" + .@i + " 여러 번 개장했습니다. 또 다른 지점이 곧 문을 열 예정입니다.",0xFFFFFF;
+					dispbottom .@boxname$ + needtr(" 열렸습니다", " was opened ") + .@i + needtr(" 여러 번 개장했습니다. 또 다른 지점이 곧 문을 열 예정입니다.", " times. Another one is being opened."),0xFFFFFF;
 					specialeffect2 EF_VALLENTINE;
 				}
-				mes .@boxname$ + " 10번이나 열렸어요!";
-				mes "운이 좋으셨나요?";
+				mes .@boxname$ + needtr(" 10번이나 열렸어요!", " was opened 10 times!");
+				mes needtr("운이 좋으셨나요?", "Were you lucky?");
 				close;
 			}
 	}

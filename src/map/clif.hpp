@@ -946,6 +946,7 @@ void clif_useitemack_itemid( const map_session_data* sd, int32 index, t_itemid n
 void clif_GlobalMessage( const block_list& bl, const char* message, enum send_target target );
 void clif_createchat( const map_session_data& sd, e_create_chatroom flag );
 void clif_dispchat( const chat_data& cd );
+void clif_dispchat( const chat_data& cd, map_session_data& tsd );	// NEED Phase 0.8 : one recipient, English title when EN
 void clif_joinchatfail( map_session_data& sd, e_refuse_enter_room result );
 void clif_joinchatok( const map_session_data& sd, const chat_data& cd );
 void clif_addchat( const chat_data& cd, const map_session_data& sd );
@@ -1039,6 +1040,8 @@ void clif_solved_charname( const map_session_data& sd, uint32 charid, const char
 void clif_name( const block_list* src, const block_list* bl, send_target target );
 #define clif_name_self(bl) clif_name( (bl), (bl), SELF )
 #define clif_name_area(bl) clif_name( (bl), (bl), AREA )
+/// NEED Phase 0.21 : the same thing, but one send per player so each gets their language.
+void clif_name_area_lang( block_list* bl );
 
 void clif_use_card( const map_session_data* sd,int32 idx);
 void clif_insert_card( const map_session_data& sd, int32 idx_equip, int32 idx_card, bool failure );
@@ -1193,6 +1196,22 @@ void clif_specialeffect_single(const block_list* bl, int32 type, int32 fd );
 void clif_specialeffect_remove(const block_list* bl_src, int32 effect, enum send_target e_target, block_list* bl_target );
 void clif_messagecolor_target(const block_list* bl, unsigned long color, const char *msg, bool rgb2bgr, enum send_target type, const map_session_data* sd);
 #define clif_messagecolor(bl, color, msg, rgb2bgr, type) clif_messagecolor_target(bl, color, msg, rgb2bgr, type, nullptr) // Mob/Npc color talk [SnakeDrak]
+
+/**
+ * NEED Phase 0.32 : recipient-aware multi-recipient sends.
+ *
+ * `clif_send_lang` is `clif_send` with a filter that only delivers to sessions of one
+ * `map_session_data::need_lang`. Calling it once per language sends the SAME recipient set
+ * the unfiltered call would have reached, split by language, at a cost of two packet builds
+ * regardless of recipient count. Every per-recipient rule inside clif_send/clif_send_sub
+ * (disconnect, AREA_WOS/WOC/WOSC, dynamic-NPC visibility, ally-only) still applies.
+ *
+ * The two `*_lang` helpers fall back to the original single send when the two strings are
+ * equal, which is the all-one-language fast path.
+ */
+int32 clif_send_lang( const void* buf, int32 len, const block_list* bl, enum send_target type, int32 lang );
+void clif_messagecolor_lang( const block_list* bl, unsigned long color, const char* kr, const char* en, bool rgb2bgr, enum send_target type );
+void clif_disp_overhead_lang( const block_list* bl, const char* kr, const char* en, enum send_target flag );
 void clif_specialeffect_value( const block_list* bl, int32 effect_id, int32 num, send_target target );
 
 void clif_GM_kickack( const map_session_data* sd, int32 id );
@@ -1405,6 +1424,20 @@ void clif_update_rankingpoint( const map_session_data& sd, e_rank rankingtype, u
 void clif_crimson_marker( const map_session_data& sd, block_list& bl, bool remove );
 
 void clif_showscript( const block_list* bl, const char* message, enum send_target flag );
+
+/**
+ * NEED Phase 0.33 : `showscript` with a KR/EN pair, chosen per recipient.
+ *
+ * Generalises the Phase 0.9 "the message is the NPC's own display name" case to arbitrary
+ * text. It writes no recipient loop of its own: the buffer is built once per language and each
+ * build goes through the real `clif_send` with the Phase 0.32 language filter, so every
+ * per-recipient rule `clif_send_sub` applies (disconnect, npc_is_hidden_dynamicnpc,
+ * clif_ally_only) still runs, and the cost is two packet builds regardless of recipient count.
+ *
+ * `en == nullptr` / empty `en` / `kr == en` collapses to the original single send, byte for
+ * byte. `flag == SELF` keeps the single-recipient path on that recipient's own language.
+ */
+void clif_showscript_lang( const block_list* bl, const char* kr, const char* en, enum send_target flag );
 void clif_party_leaderchanged( const map_session_data* sd, int32 prev_leader_aid, int32 new_leader_aid );
 
 void clif_account_name(int32 fd, uint32 account_id, const char* accname);

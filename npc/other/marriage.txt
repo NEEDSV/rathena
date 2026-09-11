@@ -91,32 +91,32 @@ OnInit:
 
 OnObjection:
 	if (!.Enabled) {
-		dispbottom "현재 결혼 반대 이벤트가 비활성화되어 있습니다.";
+		dispbottom needtr("현재 결혼 반대 이벤트가 비활성화되어 있습니다.", "The wedding objection event is currently disabled.");
 		end;
 	}
 
 	if (strcharinfo(3) != "prt_church") {
-		dispbottom "결혼식장 안에서만 외칠 수 있습니다.";
+		dispbottom needtr("결혼식장 안에서만 외칠 수 있습니다.", "You can only shout that inside the wedding hall.");
 		end;
 	}
 
 	if (!$@NEED_Wedding_Objection_Ready) {
-		dispbottom "현재 반대할 결혼식이 없습니다.";
+		dispbottom needtr("현재 반대할 결혼식이 없습니다.", "There is no wedding to object to right now.");
 		end;
 	}
 
 	if (gettimetick(2) > $@NEED_Wedding_Objection_EndTick) {
-		dispbottom "이미 결혼 반대 가능 시간이 지났습니다.";
+		dispbottom needtr("이미 결혼 반대 가능 시간이 지났습니다.", "The time to object to this wedding has already passed.");
 		end;
 	}
 
 	if ($@NEED_Wedding_Objection_Voting) {
-		dispbottom "이미 찬반투표가 진행 중입니다. @찬성 또는 @반대 로 투표해주세요.";
+		dispbottom needtr("이미 찬반투표가 진행 중입니다. @찬성 또는 @반대 로 투표해주세요.", "A vote is already in progress. Vote with @찬성 (object) or @반대 (proceed).");
 		end;
 	}
 
 	if (getcharid(3) == $@NEED_Wedding_GroomAid || getcharid(3) == $@NEED_Wedding_BrideAid) {
-		dispbottom "결혼 당사자는 반대투표를 열 수 없습니다.";
+		dispbottom needtr("결혼 당사자는 반대투표를 열 수 없습니다.", "The bride and groom cannot open an objection vote.");
 		end;
 	}
 
@@ -155,17 +155,17 @@ OnVoteNo:
 
 S_Vote:
 	if (!$@NEED_Wedding_Objection_Voting) {
-		dispbottom "현재 진행 중인 결혼 찬반투표가 없습니다.";
+		dispbottom needtr("현재 진행 중인 결혼 찬반투표가 없습니다.", "There is no wedding vote in progress.");
 		end;
 	}
 
 	if (gettimetick(2) > $@NEED_WD_Objection_VoteEndTick) {
-		dispbottom "투표 시간이 종료되었습니다.";
+		dispbottom needtr("투표 시간이 종료되었습니다.", "The voting period has ended.");
 		end;
 	}
 
 	if (getcharid(3) == $@NEED_Wedding_GroomAid || getcharid(3) == $@NEED_Wedding_BrideAid) {
-		dispbottom "결혼 당사자는 투표할 수 없습니다.";
+		dispbottom needtr("결혼 당사자는 투표할 수 없습니다.", "The bride and groom cannot vote.");
 		end;
 	}
 
@@ -174,7 +174,7 @@ S_Vote:
 
 	for (.@i = 0; .@i < $@NEED_Wedding_VoteCount; .@i++) {
 		if ($@NEED_Wedding_VoteAid[.@i] == .@aid) {
-			dispbottom "이미 투표했습니다.";
+			dispbottom needtr("이미 투표했습니다.", "You have already voted.");
 			end;
 		}
 	}
@@ -186,10 +186,10 @@ S_Vote:
 
 	if (getarg(0)) {
 		$@NEED_Wedding_Yes++;
-		dispbottom "이 결혼 반대에 찬성했습니다. 현재 반대 찬성 "+$@NEED_Wedding_Yes+" / 결혼 진행 "+$@NEED_Wedding_No;
+		dispbottom needtr("이 결혼 반대에 찬성했습니다. 현재 반대 찬성 ", "You voted to object to this wedding. Current tally - object: ")+$@NEED_Wedding_Yes+needtr(" / 결혼 진행 ", " / proceed: ")+$@NEED_Wedding_No;
 	} else {
 		$@NEED_Wedding_No++;
-		dispbottom "결혼 진행에 투표했습니다. 현재 반대 찬성 "+$@NEED_Wedding_Yes+" / 결혼 진행 "+$@NEED_Wedding_No;
+		dispbottom needtr("결혼 진행에 투표했습니다. 현재 반대 찬성 ", "You voted for the wedding to proceed. Current tally - object: ")+$@NEED_Wedding_Yes+needtr(" / 결혼 진행 ", " / proceed: ")+$@NEED_Wedding_No;
 	}
 	end;
 
@@ -226,8 +226,8 @@ S_StartShameEffect:
 	@NEED_Wedding_ShameEffect = .ShameEffect;
 	@NEED_Wedding_ShameInterval = .ShameInterval;
 
-	dispbottom "[결혼식] 수많은 반대를 뚫고 결혼을 강행한 주인공이 되었습니다.";
-	dispbottom "[결혼식] 10분 동안 주기적으로 축하 이펙트가 출력됩니다.";
+	dispbottom needtr("[결혼식] 수많은 반대를 뚫고 결혼을 강행한 주인공이 되었습니다.", "[Wedding] You went ahead with the wedding despite countless objections.");
+	dispbottom needtr("[결혼식] 10분 동안 주기적으로 축하 이펙트가 출력됩니다.", "[Wedding] A celebration effect will play periodically for 10 minutes.");
 	specialeffect2 @NEED_Wedding_ShameEffect;
 	addtimer @NEED_Wedding_ShameInterval,"NEED_WeddingObjection::OnShameTick";
 
@@ -246,10 +246,10 @@ OnShameTick:
 	specialeffect2 @NEED_Wedding_ShameEffect;
 
 	if (@NEED_Wedding_ShameRemain % 2 == 0)
-		dispbottom "[결혼식] 이 결혼은 많은 반대를 뚫고 강행되었습니다.";
+		dispbottom needtr("[결혼식] 이 결혼은 많은 반대를 뚫고 강행되었습니다.", "[Wedding] This wedding went ahead despite many objections.");
 
 	if (@NEED_Wedding_ShameRemain <= 0) {
-		dispbottom "[결혼식] 시선집중 상태가 종료되었습니다.";
+		dispbottom needtr("[결혼식] 시선집중 상태가 종료되었습니다.", "[Wedding] The spotlight has ended.");
 		@NEED_Wedding_ShameRemain = 0;
 		@NEED_Wedding_ShameEffect = 0;
 		@NEED_Wedding_ShameInterval = 0;
@@ -272,7 +272,7 @@ S_FireworkForObjectors:
 
 		attachrid .@aid;
 		specialeffect2 .FireworkEffect;
-		dispbottom "[결혼식] 당신의 반대 의견은 받아들여지지 않았지만, 폭죽은 지급되었습니다.";
+		dispbottom needtr("[결혼식] 당신의 반대 의견은 받아들여지지 않았지만, 폭죽은 지급되었습니다.", "[Wedding] Your objection was not upheld, but you have received fireworks.");
 		detachrid;
 	}
 	return;
@@ -286,359 +286,359 @@ prt_church,97,100,4	script	메리 해피f#w	71,{
 		// - Non-VIP players must use a Marriage Covenant to get married.
 		// - VIP players may either pay the Zeny fee or use a Marriage Covenant.
 		if (VIP_SCRIPT && !vip_status(VIP_STATUS_ACTIVE)) {
-			mes "[메리 해피]";
-			mes "죄송하지만 지금은 결혼식을 진행할 수 없습니다.";
-			mes "결혼식은 정액 서비스 이용자만 이용할 수 있습니다.";
-			mes "하지만 ^FF0000결혼 서약서^000000가 있다면 결혼식을 진행할 수 있습니다!";
+			mes needtr("[메리 해피]", "[Marry Happy]");
+			mes needtr("죄송하지만 지금은 결혼식을 진행할 수 없습니다.", "Sorry but you can't get married right now.");
+			mes needtr("결혼식은 정액 서비스 이용자만 이용할 수 있습니다.", "The wedding is only available for subscribed players.");
+			mes needtr("하지만 ^FF0000결혼 서약서^000000가 있다면 결혼식을 진행할 수 있습니다!", "But if you have a ^FF0000Marriage Covenant^000000, then you'll be able to get married!");
 			goto L_End;
 		}
 
 	} else
 		set .@covenant,1;
 	if (Upper == 2) {
-		mes "[메리 해피]";
-		mes "안녕하세요~";
-		mes "제 이름은 메리 해피예요.";
-		mes "결혼과 관련된 정보를";
-		mes "알려드리기 위해";
-		mes "이곳에 있답니다.";
-		mes "궁금한 점이 있으신가요?";
+		mes needtr("[메리 해피]", "[Marry Happy]");
+		mes needtr("안녕하세요~", "Hello~");
+		mes needtr("제 이름은 메리 해피예요.", "My name is Marry Happy");
+		mes needtr("결혼과 관련된 정보를", "and I'm here to provide you");
+		mes needtr("알려드리기 위해", "with information related to");
+		mes needtr("이곳에 있답니다.", "marriage. Now, did you");
+		mes needtr("궁금한 점이 있으신가요?", "have any questions?");
 		next;
-		if (select("결혼하고 싶어요.:도움은 필요 없어요!") == 1) {
-			mes "[메리 해피]";
-			mes "아, 죄송하지만";
-			mes "입양된 캐릭터는";
-			mes "결혼할 수 없답니다.";
-			mes "지금은 어린 시절의";
-			mes "소소한 즐거움을";
-			mes "누려보는 게 어떨까요?";
+		if (select(needtr("결혼하고 싶어요.:도움은 필요 없어요!", "I want to get married.:I don't need your help!")) == 1) {
+			mes needtr("[메리 해피]", "[Marry Happy]");
+			mes needtr("아, 죄송하지만", "Oh, I'm sorry, but");
+			mes needtr("입양된 캐릭터는", "adopted characters");
+			mes needtr("결혼할 수 없답니다.", "aren't allowed to get");
+			mes needtr("지금은 어린 시절의", "married. For now, why");
+			mes needtr("소소한 즐거움을", "don't you enjoy the simple");
+			mes needtr("누려보는 게 어떨까요?", "pleasures of childhood?");
 			goto L_End;
 		}
-		mes "[메리 해피]";
-		mes "아, 물론";
-		mes "필요 없겠죠! 어린아이는";
-		mes "결혼할 수 없어요--";
-		mes "그걸 금지하는 법이";
-		mes "너무 많거든요~ 정말";
-		mes "귀여운 꼬마네요?";
+		mes needtr("[메리 해피]", "[Marry Happy]");
+		mes needtr("아, 물론", "Oh, of course you");
+		mes needtr("필요 없겠죠! 어린아이는", "don't! Little children");
+		mes needtr("결혼할 수 없어요--", "can't get married-- there");
+		mes needtr("그걸 금지하는 법이", "are too many laws against");
+		mes needtr("너무 많거든요~ 정말", "that~ Aren't you the most");
+		mes needtr("귀여운 꼬마네요?", "adorable little thing?");
 		goto L_End;
 	}
-	mes "[메리 해피]";
-	mes "결혼은 서로를 영원히";
-	mes "함께하기로 선택한";
-	mes "두 영혼의 아름다운 결합이에요.";
-	mes "기쁨과 삶을 함께 나누는 것이죠.";
-	mes "당신의 삶에도";
-	mes "그런 특별한 사람이 있나요?";
+	mes needtr("[메리 해피]", "[Marry Happy]");
+	mes needtr("결혼은 서로를 영원히", "Marriage is the beautiful");
+	mes needtr("함께하기로 선택한", "union of two souls that have");
+	mes needtr("두 영혼의 아름다운 결합이에요.", "chosen to be together forever,");
+	mes needtr("기쁨과 삶을 함께 나누는 것이죠.", "to share their joy and lives.");
+	mes needtr("당신의 삶에도", "Is there a special someone");
+	mes needtr("그런 특별한 사람이 있나요?", "like that in your life?");
 	next;
-	switch(select("결혼식에 대해 묻는다:절차에 대해 묻는다:결혼 신청을 한다:우리는 무적의 솔로부대다!")) {
+	switch(select(needtr("결혼식에 대해 묻는다:절차에 대해 묻는다:결혼 신청을 한다:우리는 무적의 솔로부대다!", "Ask about Wedding Ceremony:Ask about Procedure:Apply for Wedding:We are the Invincible Single Army!"))) {
 	case 1:
-		mes "[메리 해피]";
-		mes "현명하고 자비로우신";
-		mes "트리스탄 3세 국왕 폐하께서";
-		mes "예전에는 결혼식을 주관하셨지만,";
-		mes "지금은 왕실 업무와";
-		mes "빡빡한 일정 때문에";
-		mes "더 이상 주관하실 수 없답니다.";
+		mes needtr("[메리 해피]", "[Marry Happy]");
+		mes needtr("현명하고 자비로우신", "Wise and benevolent");
+		mes needtr("트리스탄 3세 국왕 폐하께서", "King Tristram III used to");
+		mes needtr("예전에는 결혼식을 주관하셨지만,", "conduct wedding ceremonies,");
+		mes needtr("지금은 왕실 업무와", "but he's no longer able to do");
+		mes needtr("빡빡한 일정 때문에", "so because of his royal duties");
+		mes needtr("더 이상 주관하실 수 없답니다.", "and freneticly paced schedule.");
 		next;
-		mes "[메리 해피]";
-		mes "사랑의 주교인";
-		mes "보마스 주교님께서 지금은";
-		mes "결혼식을 주관하고 계십니다.";
-		mes "그분은 룬 미드가츠 왕국의";
-		mes "진정한 보물이세요.";
+		mes needtr("[메리 해피]", "[Marry Happy]");
+		mes needtr("사랑의 주교인", "Bishop Vomars, the bishop");
+		mes needtr("보마스 주교님께서 지금은", "of love, is now the officiator");
+		mes needtr("결혼식을 주관하고 계십니다.", "of the marriage ceremony.");
+		mes needtr("그분은 룬 미드가츠 왕국의", "He is truly a treasure to the");
+		mes needtr("진정한 보물이세요.", "Rune-Midgarts Kingdom.");
 		next;
-		mes "[메리 해피]";
-		mes "누군가와 결혼한다는 것은";
-		mes "평생을 함께하겠다는 뜻이니, 청혼하거나 받아들이기 전에는 신중히 생각하세요.";
-		mes "청혼을 받아들이기 전에는 신중히 생각하세요.";
-		mes "남자는 여자와만,";
-		mes "여자는 남자와만 결혼할 수 있다는 점도 기억해 주세요.";
+		mes needtr("[메리 해피]", "[Marry Happy]");
+		mes needtr("누군가와 결혼한다는 것은", "When you marry someone,");
+		mes needtr("평생을 함께하겠다는 뜻이니, 청혼하거나 받아들이기 전에는 신중히 생각하세요.", "it's for the rest of your life, so think carefully before making or");
+		mes needtr("청혼을 받아들이기 전에는 신중히 생각하세요.", "accepting a marriage proposal.");
+		mes needtr("남자는 여자와만,", "Keep in mind that a man can only");
+		mes needtr("여자는 남자와만 결혼할 수 있다는 점도 기억해 주세요.", "marry a woman and vice versa.");
 		next;
-		mes "[메리 해피]";
-		mes "평생을 함께하고 싶은";
-		mes "사람을 운 좋게";
-		mes "만나게 된다면,";
-		mes "용기를 내어 청혼해 보세요. 모두가 완벽한 짝을 찾길 바랄게요~";
-		mes "모두가 완벽한 짝을 찾길 바랄게요~";
+		mes needtr("[메리 해피]", "[Marry Happy]");
+		mes needtr("평생을 함께하고 싶은", "If you're lucky enough to");
+		mes needtr("사람을 운 좋게", "find someone that you really");
+		mes needtr("만나게 된다면,", "want to spend the rest of your");
+		mes needtr("용기를 내어 청혼해 보세요. 모두가 완벽한 짝을 찾길 바랄게요~", "life with, you might want to pop the question. I hope everyone");
+		mes needtr("모두가 완벽한 짝을 찾길 바랄게요~", "finds their perfect match~");
 		break;
 	case 2:
-		mes "[메리 해피]";
-		mes "결혼 절차의 첫 단계는";
-		mes "신청서를 작성하는";
-		mes "것입니다.";
-		mes "신부와 신랑이";
-		mes "모두 신청을 마치면,";
-		mes "두 사람만의 파티를 구성해야 합니다.";
+		mes needtr("[메리 해피]", "[Marry Happy]");
+		mes needtr("결혼 절차의 첫 단계는", "The first part of the");
+		mes needtr("신청서를 작성하는", "wedding procedure is to");
+		mes needtr("것입니다.", "complete the application.");
+		mes needtr("신부와 신랑이", "Once the bride and bridegroom");
+		mes needtr("모두 신청을 마치면,", "have finished applying, they");
+		mes needtr("두 사람만의 파티를 구성해야 합니다.", "must form a party of two.");
 		next;
-		mes "[메리 해피]";
-		mes "두 사람만의 파티를 구성한 뒤,";
-		mes "커플은 보마스 주교님께";
-		mes "말을 걸어야 합니다. 신랑이";
-		mes "먼저 말을 걸고,";
-		mes "신부의 정확한 이름을 주교님께 알려야 합니다. 그렇지 않으면 식이 중단됩니다.";
+		mes needtr("[메리 해피]", "[Marry Happy]");
+		mes needtr("두 사람만의 파티를 구성한 뒤,", "After forming a party of two,");
+		mes needtr("커플은 보마스 주교님께", "the couple must then speak to");
+		mes needtr("말을 걸어야 합니다. 신랑이", "Bishop Vomars. The bridegroom");
+		mes needtr("먼저 말을 걸고,", "speaks first and must tell his");
+		mes needtr("신부의 정확한 이름을 주교님께 알려야 합니다. 그렇지 않으면 식이 중단됩니다.", "bride's exact name to the Bishop. Otherwise, the ceremony will stop.");
 		next;
-		mes "[메리 해피]";
-		mes "그 다음에는 신부가";
-		mes "주교님께 말을 걸어";
-		mes "신랑의 이름을 알려야 합니다.";
-		mes "두 사람의 이름이";
-		mes "정확히 전달되면";
-		mes "반지를 교환할 수 있습니다.";
+		mes needtr("[메리 해피]", "[Marry Happy]");
+		mes needtr("그 다음에는 신부가", "Afterwards, the bride will");
+		mes needtr("주교님께 말을 걸어", "speak to the Bishop and tell");
+		mes needtr("신랑의 이름을 알려야 합니다.", "him the name of her groom.");
+		mes needtr("두 사람의 이름이", "If these names are correctly");
+		mes needtr("정확히 전달되면", "told to the Bishop, they will");
+		mes needtr("반지를 교환할 수 있습니다.", "be able to exchange rings.");
 		next;
-		mes "[메리 해피]";
-		mes "결혼 반지를";
-		mes "교환하면 두 사람은 영원히 부부로 맺어집니다. 물론";
-		mes "그 전까지는 마음을 바꿀 기회가 많이 있으니...";
+		mes needtr("[메리 해피]", "[Marry Happy]");
+		mes needtr("결혼 반지를", "Once the wedding rings are");
+		mes needtr("교환하면 두 사람은 영원히 부부로 맺어집니다. 물론", "exchanged, the couple is forever bound in matrimony. Of course,");
+		mes needtr("그 전까지는 마음을 바꿀 기회가 많이 있으니...", "before this point, there are many chances to change your mind, so...");
 		next;
-		mes "[메리 해피]";
-		mes "한 번에 결혼하려는";
-		mes "커플이 너무 많다면,";
-		mes "줄을 서서 순서대로";
-		mes "보마스 주교님께 말을 걸어 주세요.";
-		mes "한 번에 한 커플만 결혼식을 진행할 수 있습니다.";
+		mes needtr("[메리 해피]", "[Marry Happy]");
+		mes needtr("한 번에 결혼하려는", "If there are too many");
+		mes needtr("커플이 너무 많다면,", "couples who want to get");
+		mes needtr("줄을 서서 순서대로", "married at one time, please");
+		mes needtr("보마스 주교님께 말을 걸어 주세요.", "form a line and speak to Bishop");
+		mes needtr("한 번에 한 커플만 결혼식을 진행할 수 있습니다.", "Vomars in order since only one couple can be married at a time.");
 		next;
-		mes "[메리 해피]";
-		mes "마지막으로, 시간을";
-		mes "너무 오래 끌지 말고";
-		mes "보마스 주교님께 파트너의 정확한 이름을 알려주세요. 너무 오래 걸리면,";
-		mes "식이 자동으로 중단되어 처음부터 다시 해야 합니다.";
+		mes needtr("[메리 해피]", "[Marry Happy]");
+		mes needtr("마지막으로, 시간을", "Finally, be sure to tell");
+		mes needtr("너무 오래 끌지 말고", "Bishop Vomars your partner's");
+		mes needtr("보마스 주교님께 파트너의 정확한 이름을 알려주세요. 너무 오래 걸리면,", "exact name without wasting too much time. If you take too long,");
+		mes needtr("식이 자동으로 중단되어 처음부터 다시 해야 합니다.", "the ceremony will automatically stop and you'll have to try again.");
 		next;
-		mes "[메리 해피]";
-		mes "신부는 반드시 기억해야 합니다.";
-		mes "신랑이 주교님께";
-		mes "말을 마친 뒤";
-		mes "3분 안에";
-		mes "보마스 주교님과 대화를 끝내야 합니다.";
+		mes needtr("[메리 해피]", "[Marry Happy]");
+		mes needtr("신부는 반드시 기억해야 합니다.", "Brides need to remember");
+		mes needtr("신랑이 주교님께", "that they only have 3 minutes");
+		mes needtr("말을 마친 뒤", "to finish speaking to Bishop");
+		mes needtr("3분 안에", "Vomars after their grooms");
+		mes needtr("보마스 주교님과 대화를 끝내야 합니다.", "have finished speaking to him.");
 		next;
-		if (select("고마워요, 도움이 됐어요!:파트너 이름을 쉽게 입력하는 방법은?") == 1) {
-			mes "[메리 해피]";
-			mes "저는 결혼식이";
-			mes "최대한 원활하게";
-			mes "진행되도록 돕기 위해 이곳에 있어요.";
-			mes "이해하지 못한 것이";
-			mes "있다면 언제든";
-			mes "다시 물어보세요.";
+		if (select(needtr("고마워요, 도움이 됐어요!:파트너 이름을 쉽게 입력하는 방법은?", "Thanks, that helps a lot!:Easiest way to say my partner's name?")) == 1) {
+			mes needtr("[메리 해피]", "[Marry Happy]");
+			mes needtr("저는 결혼식이", "Well, I'm here to help");
+			mes needtr("최대한 원활하게", "weddings proceed as");
+			mes needtr("진행되도록 돕기 위해 이곳에 있어요.", "smoothly as possible.");
+			mes needtr("이해하지 못한 것이", "If there was something");
+			mes needtr("있다면 언제든", "you didn't understand,");
+			mes needtr("다시 물어보세요.", "feel free to ask me again.");
 			goto L_End;
 		}
-		mes "[메리 해피]";
-		mes "주교님께 파트너의 이름을";
-		mes "입력하는 가장 쉬운 방법은";
-		mes "파트너에게 귓속말을 보낸 뒤,";
-		mes "채팅 입력창 왼쪽에";
-		mes "표시되는 이름 부분을 왼쪽 클릭하는 것입니다.";
+		mes needtr("[메리 해피]", "[Marry Happy]");
+		mes needtr("주교님께 파트너의 이름을", "The easiest way to write");
+		mes needtr("입력하는 가장 쉬운 방법은", "your partner's name for the");
+		mes needtr("파트너에게 귓속말을 보낸 뒤,", "bishop is to send a private");
+		mes needtr("채팅 입력창 왼쪽에", "message to your partner, and");
+		mes needtr("표시되는 이름 부분을 왼쪽 클릭하는 것입니다.", "then left-click the name section that is left of the chat prompt.");
 		next;
-		mes "[메리 해피]";
-		mes "''Ctrl''과 ''C'' 키를 눌러";
-		mes "이름을 복사하세요. 그 다음,";
-		mes "입력창에서";
-		mes "''Insert''와 ''Shift'' 키를 눌러";
-		mes "붙여넣을 수 있습니다. 쉽죠?";
+		mes needtr("[메리 해피]", "[Marry Happy]");
+		mes needtr("''Ctrl''과 ''C'' 키를 눌러", "Press the ''Ctrl'' and ''C''");
+		mes needtr("이름을 복사하세요. 그 다음,", "keys to copy the name. Then,");
+		mes needtr("입력창에서", "you can paste the name into");
+		mes needtr("''Insert''와 ''Shift'' 키를 눌러", "the input prompt by pressing");
+		mes needtr("붙여넣을 수 있습니다. 쉽죠?", "the ''Insert'' and ''Shift'' keys. That sounds easy, right?");
 		next;
-		mes "[메리 해피]";
-		mes "좋아요, 이제 한 번";
-		mes "연습해 봅시다.";
-		mes "방금 알려드린 방법으로";
-		mes "파트너의 이름을 입력해 보세요.";
+		mes needtr("[메리 해피]", "[Marry Happy]");
+		mes needtr("좋아요, 이제 한 번", "Alright, now let's try");
+		mes needtr("연습해 봅시다.", "it. Practice giving me the");
+		mes needtr("방금 알려드린 방법으로", "name of your partner using");
+		mes needtr("파트너의 이름을 입력해 보세요.", "the method I just described.");
 		next;
 		input .@partner$;
-		mes "[메리 해피]";
-		mes "좋아요. 결혼하기로";
-		mes "결심했다면";
-		mes "다시 저를 찾아와";
-		mes "신청서를 제출해 주세요.";
-		mes "나중에 다시 만나요, 모험가님~";
+		mes needtr("[메리 해피]", "[Marry Happy]");
+		mes needtr("좋아요. 결혼하기로", "Alright, after you've");
+		mes needtr("결심했다면", "decided to get married,");
+		mes needtr("다시 저를 찾아와", "come back to me and");
+		mes needtr("신청서를 제출해 주세요.", "submit your application.");
+		mes needtr("나중에 다시 만나요, 모험가님~", "I'll see you later, adventurer~");
 		break;
 	case 3:
 		cutin "wedding_marry02",2;
 		if (VIP_SCRIPT) {
-			mes "[메리 해피]";
-			mes "^FF0000잠깐만요!^000000";
-			mes "^FF0000프리미엄 계정이 아니라면 결혼을 위해 결혼 서약서가 필요합니다.^000000";
-			mes "^FF0000결혼 신청 전에 본인과 연인의 계정 상태를 확인해 주세요.^000000";
+			mes needtr("[메리 해피]", "[Marry Happy]");
+			mes needtr("^FF0000잠깐만요!^000000", "^FF0000Wait!^000000");
+			mes needtr("^FF0000프리미엄 계정이 아니라면 결혼을 위해 결혼 서약서가 필요합니다.^000000", "^FF0000If your account in not a premium, you must have a Marriage Covenant to get married.^000000");
+			mes needtr("^FF0000결혼 신청 전에 본인과 연인의 계정 상태를 확인해 주세요.^000000", "^FF0000Please check the current state of your account, and the one of your lover, before register for a wedding.^000000");
 			next;
 		}
 		if (Sex == SEX_MALE) {
-			mes "[메리 해피]";
-			mes "결혼을 원하시는군요?";
-			mes "신랑은";
+			mes needtr("[메리 해피]", "[Marry Happy]");
+			mes needtr("결혼을 원하시는군요?", "So you'd like to get married?");
+			mes needtr("신랑은", "As a groom, you need to prepare");
 			if (.@covenant) {
-				mes "^3377FF턱시도 1벌^000000과 ^3377FF결혼 서약서 1개^000000를 준비해야 합니다.";
-				mes "신부는 웨딩드레스를 직접 준비하고";
-				mes "1,200,000 제니를 지불하거나 결혼 서약서를 가져와야 합니다.";
+				mes needtr("^3377FF턱시도 1벌^000000과 ^3377FF결혼 서약서 1개^000000를 준비해야 합니다.", "^3377FF1 Tuxedo^000000 and give me your ^3377FF1 Marriage Covenant^000000.");
+				mes needtr("신부는 웨딩드레스를 직접 준비하고", "Brides have to provide their own Wedding Dresses and pay a fee");
+				mes needtr("1,200,000 제니를 지불하거나 결혼 서약서를 가져와야 합니다.", "of 1,200,000 zeny or also bring a Marriage Covenant.");
 			} else {
-				mes "^3377FF턱시도 1벌^000000과 ^3377FF1,300,000 제니^000000를 준비해야 합니다.";
-				mes "신부는 웨딩드레스를 직접 준비하고";
-				mes "1,200,000 제니를 지불해야 합니다.";
+				mes needtr("^3377FF턱시도 1벌^000000과 ^3377FF1,300,000 제니^000000를 준비해야 합니다.", "^3377FF1 Tuxedo^000000 and pay ^3377FF1,300,000 zeny^000000.");
+				mes needtr("신부는 웨딩드레스를 직접 준비하고", "Brides have to provide their own Wedding Dresses and pay a fee");
+				mes needtr("1,200,000 제니를 지불해야 합니다.", "of 1,200,000 zeny.");
 			}
 		} else {
-			mes "[메리 해피]";
-			mes "결혼을 원하시는군요?";
-			mes "신부는";
+			mes needtr("[메리 해피]", "[Marry Happy]");
+			mes needtr("결혼을 원하시는군요?", "So you'd like to get married?");
+			mes needtr("신부는", "As a bride, you need to prepare");
 			if (.@covenant) {
-				mes "^3377FF웨딩드레스 1벌^000000과 ^3377FF결혼 서약서^000000를 준비해야 합니다.";
-				mes "신랑은 턱시도를 가져오고";
-				mes "1,300,000 제니를 지불하거나 결혼 서약서를 가져와야 합니다.";
+				mes needtr("^3377FF웨딩드레스 1벌^000000과 ^3377FF결혼 서약서^000000를 준비해야 합니다.", "^3377FF1 Wedding Dress^000000 and give me your ^3377FFMarriage Covenant^000000.");
+				mes needtr("신랑은 턱시도를 가져오고", "Grooms must bring a Tuxedo and pay");
+				mes needtr("1,300,000 제니를 지불하거나 결혼 서약서를 가져와야 합니다.", "1,300,000 zeny or also bring a Marriage Covenant.");
 			} else {
-				mes "^3377FF웨딩드레스 1벌^000000과 1,200,000 제니를 준비해야 합니다. 신랑은";
-				mes "턱시도와 1,300,000 제니를 준비해야 결혼할 수 있습니다.";
+				mes needtr("^3377FF웨딩드레스 1벌^000000과 1,200,000 제니를 준비해야 합니다. 신랑은", "^3377FF1 Wedding Dress^000000 and pay a fee of 1,200,000 zeny. Grooms must");
+				mes needtr("턱시도와 1,300,000 제니를 준비해야 결혼할 수 있습니다.", "bring a Tuxedo and pay 1,300,000 zeny to get married.");
 			}
 		}
 		next;
-		mes "[메리 해피]";
-		mes "신부와 신랑은";
-		mes "서로 교환할";
-		mes "^3377FF다이아몬드 반지 1개^000000도 필요합니다.";
-		mes "결혼식 신청을 제출할 때";
-		mes "이 모든 아이템을";
-		mes "준비하고 있어야 합니다.";
+		mes needtr("[메리 해피]", "[Marry Happy]");
+		mes needtr("신부와 신랑은", "Brides and grooms also need");
+		mes needtr("서로 교환할", "to have ^3377FF1 Diamond Ring^000000 to be");
+		mes needtr("^3377FF다이아몬드 반지 1개^000000도 필요합니다.", "exchanged with their partners.");
+		mes needtr("결혼식 신청을 제출할 때", "You'll need all of these items");
+		mes needtr("이 모든 아이템을", "prepared when you submit your");
+		mes needtr("준비하고 있어야 합니다.", "wedding ceremony application.");
 		next;
-		mes "[메리 해피]";
-		mes "예비 신부와";
-		mes "예비 신랑은";
-		mes "결혼식이 진행되기 전에";
-		mes "둘 다 신청 절차를 완료해야 합니다.";
-		mes "그럼 지금";
-		mes "결혼 신청을 하시겠습니까?";
+		mes needtr("[메리 해피]", "[Marry Happy]");
+		mes needtr("예비 신부와", "The prospective bride and");
+		mes needtr("예비 신랑은", "groom must both complete");
+		mes needtr("결혼식이 진행되기 전에", "application process before");
+		mes needtr("둘 다 신청 절차를 완료해야 합니다.", "the wedding can take place.");
+		mes needtr("그럼 지금", "Now, would you like to");
+		mes needtr("결혼 신청을 하시겠습니까?", "apply for marriage?");
 		next;
-		if (select("예:아니오") == 1) {
+		if (select(needtr("예:아니오", "Yes:No")) == 1) {
 			if (getpartnerid()) {
 				cutin "wedding_marry02",2;
-				mes "[메리 해피]";
-				mes "죄송하지만";
-				mes "다른 결혼을 신청할 수 없습니다!";
-				mes "배우자를 배신하는 것을";
-				mes "허락할 수 없어요.";
-				mes "게다가 룬 미드가츠에서는";
-				mes "중혼이 법적으로 금지되어 있답니다.";
+				mes needtr("[메리 해피]", "[Marry Happy]");
+				mes needtr("죄송하지만", "I'm sorry, but you can't");
+				mes needtr("다른 결혼을 신청할 수 없습니다!", "apply for another marriage!");
+				mes needtr("배우자를 배신하는 것을", "I can't allow you to betray");
+				mes needtr("허락할 수 없어요.", "your spouse like that, and");
+				mes needtr("게다가 룬 미드가츠에서는", "besides, polygamy isn't");
+				mes needtr("중혼이 법적으로 금지되어 있답니다.", "legal here in Rune-Midgarts.");
 				break;
 			}
 			else if (wedding_sign == 1) {
-				mes "[메리 해피]";
-				mes "이미";
-				mes "신청을 마치지 않으셨나요?";
-				mes "음, 파트너도";
-				mes "신청 절차를";
-				mes "마쳤는지 확인한 뒤,";
-				mes "보마스 주교님께 말을 걸어 주세요.";
+				mes needtr("[메리 해피]", "[Marry Happy]");
+				mes needtr("이미", "Didn't you already");
+				mes needtr("신청을 마치지 않으셨나요?", "complete the application?");
+				mes needtr("음, 파트너도", "Hmm, make sure that your");
+				mes needtr("신청 절차를", "partner also finished the");
+				mes needtr("마쳤는지 확인한 뒤,", "application process, and");
+				mes needtr("보마스 주교님께 말을 걸어 주세요.", "then talk to Bishop Vomars.");
 				break;
 			}
 			else if (BaseLevel < 45) {
-				mes "[메리 해피]";
-				mes "음, 사랑하는 사람을";
-				mes "지킬 수 있을 만큼";
-				mes "강해진 뒤에야";
-				mes "결혼을 생각할 수 있겠죠.";
-				mes "더 강해진 후에";
-				mes "다시 찾아와 주세요.";
+				mes needtr("[메리 해피]", "[Marry Happy]");
+				mes needtr("음, 사랑하는 사람을", "Hmm, you need to be");
+				mes needtr("지킬 수 있을 만큼", "strong enough to protect");
+				mes needtr("강해진 뒤에야", "the one that you love before");
+				mes needtr("결혼을 생각할 수 있겠죠.", "you can consider marriage.");
+				mes needtr("더 강해진 후에", "After you grow stronger,");
+				mes needtr("다시 찾아와 주세요.", "come and talk to me again.");
 				goto L_End;
 			}
 			else if (countitem(2613) < 1) {
-				mes "[메리 해피]";
-				mes "음? 결혼식에서";
-				mes "파트너와 교환할";
-				mes "다이아몬드 반지를";
-				mes "가져오는 걸 잊으셨나요?";
-				mes "잘 찾아보고";
-				mes "찾은 뒤 다시 와 주세요, 알겠죠?";
+				mes needtr("[메리 해피]", "[Marry Happy]");
+				mes needtr("음? 결혼식에서", "Mm? Did you forget to");
+				mes needtr("파트너와 교환할", "bring the Diamond Ring");
+				mes needtr("다이아몬드 반지를", "to exchange with your partner");
+				mes needtr("가져오는 걸 잊으셨나요?", "during the wedding ceremony?");
+				mes needtr("잘 찾아보고", "Look for it carefully and come");
+				mes needtr("찾은 뒤 다시 와 주세요, 알겠죠?", "back after you find it, okay?");
 				goto L_End;
 			}
 			else if (Sex == SEX_FEMALE) {
 				if (countitem(6026) == 0 && Zeny < 1200000) {
-					mes "[메리 해피]";
-					mes "죄송하지만 모든 신부는";
-					mes "1,200,000 제니를 지불하거나";
-					mes "결혼 서약서를 가져와야";
-					mes "결혼식을";
-					mes "진행할 수 있습니다.";
-					mes "파트너에게 비용을";
-					mes "도와달라고 부탁해 보는 건 어떨까요?";
+					mes needtr("[메리 해피]", "[Marry Happy]");
+					mes needtr("죄송하지만 모든 신부는", "I'm sorry, but all brides");
+					mes needtr("1,200,000 제니를 지불하거나", "must pay the 1,200,000");
+					mes needtr("결혼 서약서를 가져와야", "zeny fee or bring a Marriage");
+					mes needtr("결혼식을", "Covenant to proceed with the");
+					mes needtr("진행할 수 있습니다.", "wedding ceremony. Perhaps");
+					mes needtr("파트너에게 비용을", "you could ask your partner");
+					mes needtr("도와달라고 부탁해 보는 건 어떨까요?", "to help you with the funds?");
 					goto L_End;
 				}
 				else if (countitem(2338) < 1) {
-					mes "[메리 해피]";
-					mes "이런,";
-					mes "웨딩드레스를 잊으셨나요?";
-					mes "서둘러 찾아서";
-					mes "가져와 주세요--";
-					mes "결혼식에는";
-					mes "반드시 필요하답니다!";
+					mes needtr("[메리 해피]", "[Marry Happy]");
+					mes needtr("이런,", "Oh dear, did you forget");
+					mes needtr("웨딩드레스를 잊으셨나요?", "your Wedding Dress?");
+					mes needtr("서둘러 찾아서", "Hurry and find it, then");
+					mes needtr("가져와 주세요--", "bring it to me-- you");
+					mes needtr("결혼식에는", "absolutely need it");
+					mes needtr("반드시 필요하답니다!", "for the wedding!");
 					goto L_End;
 				}
 			}
 			else if (Sex == SEX_MALE) {
 				if (countitem(6026) == 0 && Zeny < 1300000) {
-					mes "[메리 해피]";
-					mes "죄송하지만 필요한";
-					mes "1,300,000 제니나";
-					mes "결혼 서약서를";
-					mes "가지고 있지 않군요.";
-					mes "신랑에게는 반드시 필요합니다.";
-					mes "돈을 어디에 두고 오신 건가요?";
+					mes needtr("[메리 해피]", "[Marry Happy]");
+					mes needtr("죄송하지만 필요한", "I'm sorry, but you don't");
+					mes needtr("1,300,000 제니나", "have the 1,300,000 zeny");
+					mes needtr("결혼 서약서를", "or the Marriage Covenant");
+					mes needtr("가지고 있지 않군요.", "that all grooms must pay");
+					mes needtr("신랑에게는 반드시 필요합니다.", "for the wedding ceremony.");
+					mes needtr("돈을 어디에 두고 오신 건가요?", "Did you misplace your money?");
 					goto L_End;
 				}
 				else if (countitem(7170) < 1) {
-					mes "[메리 해피]";
-					mes "턱시도는 어디 있나요?";
-					mes "결혼식 중에는";
-					mes "반드시 그것을";
-					mes "입어야 합니다! 찾아서";
-					mes "저에게 가져오면";
-					mes "드디어 결혼식을 시작할 수 있어요, 알겠죠?";
+					mes needtr("[메리 해피]", "[Marry Happy]");
+					mes needtr("턱시도는 어디 있나요?", "Where's your Tuxedo?");
+					mes needtr("결혼식 중에는", "You absolutely have to");
+					mes needtr("반드시 그것을", "wear it during the wedding");
+					mes needtr("입어야 합니다! 찾아서", "ceremony! Find it, bring it");
+					mes needtr("저에게 가져오면", "to me, and then we can finally");
+					mes needtr("드디어 결혼식을 시작할 수 있어요, 알겠죠?", "begin the wedding, okay?");
 					goto L_End;
 				}
 			}
-			mes "[메리 해피]";
-			mes "좋아요,";
-			mes "모든 준비가 된 것 같군요.";
-			mes "상대가 누구인지는";
-			mes "잘 모르겠지만,";
-			mes "제가 먼저 다가올 결혼을";
-			mes "축하드릴게요~";
+			mes needtr("[메리 해피]", "[Marry Happy]");
+			mes needtr("좋아요,", "Well, it looks like you");
+			mes needtr("모든 준비가 된 것 같군요.", "have everything ready.");
+			mes needtr("상대가 누구인지는", "Although I'm not sure who");
+			mes needtr("잘 모르겠지만,", "your partner is, let me be");
+			mes needtr("제가 먼저 다가올 결혼을", "the first to congratulate you");
+			mes needtr("축하드릴게요~", "on your upcoming wedding~");
 			next;
-			mes "[메리 해피]";
-			mes "그럼 이제";
-			mes "신청을 시작하겠습니다.";
-			mes "여기에 정확한 본인 이름을 적어 주세요.";
+			mes needtr("[메리 해피]", "[Marry Happy]");
+			mes needtr("그럼 이제", "Now, let's begin the");
+			mes needtr("신청을 시작하겠습니다.", "application. Please write");
+			mes needtr("여기에 정확한 본인 이름을 적어 주세요.", "down your exact name here.");
 			next;
 			while(1) {
 				input .@name$;
 				if (.@name$ != strcharinfo(0)) {
-					mes "[메리 해피]";
-					mes "흠, 이름은 화면에";
-					mes "표시되는 그대로";
-					mes "정확히 적어야 합니다.";
-					mes "복사해서 붙여넣는 게 좋을지도 몰라요.";
-					mes "어쨌든 다시 시도해 봅시다.";
+					mes needtr("[메리 해피]", "[Marry Happy]");
+					mes needtr("흠, 이름은 화면에", "Hmmm, you have to write");
+					mes needtr("표시되는 그대로", "down your name exactly as");
+					mes needtr("정확히 적어야 합니다.", "it is displayed. Maybe you");
+					mes needtr("복사해서 붙여넣는 게 좋을지도 몰라요.", "need to copy and paste it?");
+					mes needtr("어쨌든 다시 시도해 봅시다.", "Anyway, let's try it again.");
 					next;
 				}
 				else 
 					break;
 			}
-			mes "[메리 해피]";
-			mes "좋아요,";
-			mes "신청이 완료된 것 같군요.";
-			mes "나중에 보마스 주교님께";
-			mes "파트너의 정확한 이름을";
-			mes "알려야 한다는 걸";
-			mes "기억해 주세요, 알겠죠?";
+			mes needtr("[메리 해피]", "[Marry Happy]");
+			mes needtr("좋아요,", "Great, it looks like we");
+			mes needtr("신청이 완료된 것 같군요.", "finished your application.");
+			mes needtr("나중에 보마스 주교님께", "Remember that you'll need");
+			mes needtr("파트너의 정확한 이름을", "to tell Bishop Vomars your");
+			mes needtr("알려야 한다는 걸", "partner's exact name when");
+			mes needtr("기억해 주세요, 알겠죠?", "you talk to him later, okay?");
 			next;
-			mes "[메리 해피]";
-			mes "파트너도";
-			mes "신청 절차를";
-			mes "마치면 두 분이 함께";
-			mes "주교님께 말을 걸어";
-			mes "결혼식을 시작할 수 있게 해 주세요.";
+			mes needtr("[메리 해피]", "[Marry Happy]");
+			mes needtr("파트너도", "When your partner is");
+			mes needtr("신청 절차를", "finished with the application");
+			mes needtr("마치면 두 분이 함께", "process, both of you should");
+			mes needtr("주교님께 말을 걸어", "speak to the Bishop to begin");
+			mes needtr("결혼식을 시작할 수 있게 해 주세요.", "the wedding ceremony.");
 			emotion ET_THROB;
 			next;
-			mes "[메리 해피]";
+			mes needtr("[메리 해피]", "[Marry Happy]");
 			if (Sex == SEX_FEMALE) {
-				mes "신부이시니,";
-				mes "신랑이 먼저";
-				mes "보마스 주교님께";
-				mes "말을 걸 때까지 기다려 주세요.";
-				mes "그가 끝나면";
-				mes "신부님의 차례입니다.";
+				mes needtr("신부이시니,", "Since you're the bride,");
+				mes needtr("신랑이 먼저", "you need to wait for the");
+				mes needtr("보마스 주교님께", "groom to speak to Bishop");
+				mes needtr("말을 걸 때까지 기다려 주세요.", "Vomars first. When he's");
+				mes needtr("그가 끝나면", "finished, it'll be your turn");
+				mes needtr("신부님의 차례입니다.", "to speak to Bishop Vomars.");
 				if (.@covenant)
 					delitem 6026,1; //Marriage_Covenant
 				else
@@ -646,12 +646,12 @@ prt_church,97,100,4	script	메리 해피f#w	71,{
 				delitem 2338,1; //Wedding_Dress
 			}
 			else {
-				mes "신랑이시니,";
-				mes "먼저 주교님께";
-				mes "말을 걸어야 합니다.";
-				mes "당신이 끝나면";
-				mes "신부가 보마스 주교님께";
-				mes "말을 걸 차례입니다.";
+				mes needtr("신랑이시니,", "Since you're the groom,");
+				mes needtr("먼저 주교님께", "you need to speak to the");
+				mes needtr("말을 걸어야 합니다.", "Bishop first. When you're");
+				mes needtr("당신이 끝나면", "finished, it will be your");
+				mes needtr("신부가 보마스 주교님께", "bride's turn to speak to");
+				mes needtr("말을 걸 차례입니다.", "Bishop Vomars.");
 				if (.@covenant)
 					delitem 6026,1; //Marriage_Covenant
 				else
@@ -662,13 +662,13 @@ prt_church,97,100,4	script	메리 해피f#w	71,{
 			set wedding_sign,1;
 			goto L_End;
 		}
-		mes "[메리 해피]";
-		mes "아니오...?";
-		mes "결혼할 준비가";
-		mes "되셨다면";
-		mes "언제든 저를 찾아와";
-		mes "신청해 주세요.";
-		mes "알겠죠? 좋은 하루 보내세요~";
+		mes needtr("[메리 해피]", "[Marry Happy]");
+		mes needtr("아니오...?", "No...?");
+		mes needtr("결혼할 준비가", "Well, when you're");
+		mes needtr("되셨다면", "ready for marriage,");
+		mes needtr("언제든 저를 찾아와", "feel free to come back to");
+		mes needtr("신청해 주세요.", "me so that you can apply,");
+		mes needtr("알겠죠? 좋은 하루 보내세요~", "okay? Have a good day~");
 		break;
 	case 4:
 		cutin "wedding_marry02",2;
@@ -679,42 +679,42 @@ prt_church,97,100,4	script	메리 해피f#w	71,{
 		donpcevent "솔로부대#Amatsu::OnEnable";
 		donpcevent "솔로부대#Kunlun::OnEnable";
 		emotion ET_HUK;
-		mes "[솔로부대]";
-		mes "^CC9933좋은 장비를 만들려면";
-		mes "제련은 직접";
-		mes "해야 하는 법이지!^000000";
+		mes needtr("[솔로부대]", "[Single Army]");
+		mes needtr("^CC9933좋은 장비를 만들려면", "^CC9933You have to refine");
+		mes needtr("제련은 직접", "items on your own to");
+		mes needtr("해야 하는 법이지!^000000", "make great equipment!^000000");
 		emotion ET_ROCK, getnpcid(0, "솔로부대#Prontera");
 		next;
-		mes "[솔로부대]";
-		mes "^330099던전에서 파티를";
-		mes "맺는 건 시간 낭비야!";
-		mes "나는 혼자서도";
-		mes "충분히 할 수 있어!^000000";
+		mes needtr("[솔로부대]", "[Single Army]");
+		mes needtr("^330099던전에서 파티를", "^330099It's a waste to");
+		mes needtr("맺는 건 시간 낭비야!", "form parties in");
+		mes needtr("나는 혼자서도", "dungeons! I can");
+		mes needtr("충분히 할 수 있어!^000000", "make it on my own!^000000");
 		emotion ET_ROCK, getnpcid(0, "솔로부대#Geffen");
 		next;
-		mes "[솔로부대]";
-		mes "^666666난 태어날 때부터";
-		mes "전직할 때까지";
-		mes "혼자서";
-		mes "단련해 왔다고!^000000";
+		mes needtr("[솔로부대]", "[Single Army]");
+		mes needtr("^666666난 태어날 때부터", "^666666Hell, I've trained");
+		mes needtr("전직할 때까지", "all by myself since");
+		mes needtr("혼자서", "birth, all the way");
+		mes needtr("단련해 왔다고!^000000", "to my job change!^000000");
 		emotion ET_ROCK, getnpcid(0, "솔로부대#Morocc");
 		next;
-		mes "[솔로부대]";
-		mes "^666600나는 크리스마스를";
-		mes "혼자 보내기로 선택했어...";
-		mes "솔리테어를 하고";
-		mes "십자말풀이를 하면서 말이지!^000000";
+		mes needtr("[솔로부대]", "[Single Army]");
+		mes needtr("^666600나는 크리스마스를", "^666600I CHOOSE to spend");
+		mes needtr("혼자 보내기로 선택했어...", "Christmas alone...");
+		mes needtr("솔리테어를 하고", "playing Solitaire and");
+		mes needtr("십자말풀이를 하면서 말이지!^000000", "doing crossword puzzles!^000000");
 		emotion ET_ROCK, getnpcid(0, "솔로부대#Payon");
 		next;
-		mes "[솔로부대]";
-		mes "^CC9966여자들이 내 마음을";
-		mes "꺾을 수는 있어도";
-		mes "내... 자유는 빼앗을 수 없다!^000000";
+		mes needtr("[솔로부대]", "[Single Army]");
+		mes needtr("^CC9966여자들이 내 마음을", "^CC9966Women may break my");
+		mes needtr("꺾을 수는 있어도", "spirit, but they'll never");
+		mes needtr("내... 자유는 빼앗을 수 없다!^000000", "take... my FREEDOM!^000000");
 		emotion ET_ROCK, getnpcid(0, "솔로부대#Amatsu");
 		next;
-		mes "[솔로부대]";
-		mes "^669900...우리는 자유인이다!";
-		mes "우리는 무적의 솔로부대다!^000000";
+		mes needtr("[솔로부대]", "[Single Army]");
+		mes needtr("^669900...우리는 자유인이다!", "^669900...We're the free! We're");
+		mes needtr("우리는 무적의 솔로부대다!^000000", "the Invincible Single Army!^000000");
 		emotion ET_ROCK, getnpcid(0, "솔로부대#Kunlun");
 		close2;
 		cutin "wedding_marry01",255;
@@ -738,10 +738,10 @@ L_End:
 }
 
 prt_church,97,102,0	script	솔로부대#Prontera	105,{
-	mes "[솔로부대]";
-	mes "^CC9933좋은 장비를 만들려면";
-	mes "제련은 직접";
-	mes "해야 하는 법이지!^000000";
+	mes needtr("[솔로부대]", "[Single Army]");
+	mes needtr("^CC9933좋은 장비를 만들려면", "^CC9933You have to refine");
+	mes needtr("제련은 직접", "items on your own to");
+	mes needtr("해야 하는 법이지!^000000", "make great equipment!^000000");
 	close;
 
 OnInit:
@@ -755,11 +755,11 @@ OnEnable:
 }
 
 prt_church,98,102,0	script	솔로부대#Geffen	705,{
-	mes "[솔로부대]";
-	mes "^330099던전에서 파티를";
-	mes "맺는 건 시간 낭비야!";
-	mes "나는 혼자서도";
-	mes "충분히 할 수 있어!^000000";
+	mes needtr("[솔로부대]", "[Single Army]");
+	mes needtr("^330099던전에서 파티를", "^330099It's a waste to");
+	mes needtr("맺는 건 시간 낭비야!", "form parties in");
+	mes needtr("나는 혼자서도", "dungeons! I can");
+	mes needtr("충분히 할 수 있어!^000000", "make it on my own!^000000");
 	close;
 
 OnInit:
@@ -773,11 +773,11 @@ OnEnable:
 }
 
 prt_church,99,102,0	script	솔로부대#Morocc	707,{
-	mes "[솔로부대]";
-	mes "^666666난 태어날 때부터";
-	mes "전직할 때까지";
-	mes "혼자서";
-	mes "단련해 왔다고!^000000";
+	mes needtr("[솔로부대]", "[Single Army]");
+	mes needtr("^666666난 태어날 때부터", "^666666Hell, I've trained");
+	mes needtr("전직할 때까지", "all by myself since");
+	mes needtr("혼자서", "birth, all the way");
+	mes needtr("단련해 왔다고!^000000", "to my job change!^000000");
 	close;
 
 OnInit:
@@ -791,11 +791,11 @@ OnEnable:
 }
 
 prt_church,100,102,0	script	솔로부대#Payon	708,{
-	mes "[솔로부대]";
-	mes "^666600나는 크리스마스를";
-	mes "혼자 보내기로 선택했어...";
-	mes "솔리테어를 하고";
-	mes "십자말풀이를 하면서 말이지!^000000";
+	mes needtr("[솔로부대]", "[Single Army]");
+	mes needtr("^666600나는 크리스마스를", "^666600I CHOOSE to spend");
+	mes needtr("혼자 보내기로 선택했어...", "Christmas alone...");
+	mes needtr("솔리테어를 하고", "playing Solitaire and");
+	mes needtr("십자말풀이를 하면서 말이지!^000000", "doing crossword puzzles!^000000");
 	close;
 
 OnInit:
@@ -809,10 +809,10 @@ OnEnable:
 }
 
 prt_church,101,102,0	script	솔로부대#Amatsu	767,{
-	mes "[솔로부대]";
-	mes "^CC9966여자들이 내 마음을";
-	mes "꺾을 수는 있어도";
-	mes "내... 자유는 빼앗을 수 없다!^000000";
+	mes needtr("[솔로부대]", "[Single Army]");
+	mes needtr("^CC9966여자들이 내 마음을", "^CC9966Women may break my");
+	mes needtr("꺾을 수는 있어도", "spirit, but they'll never");
+	mes needtr("내... 자유는 빼앗을 수 없다!^000000", "take... my FREEDOM!^000000");
 	close;
 
 OnInit:
@@ -826,9 +826,9 @@ OnEnable:
 }
 
 prt_church,102,102,0	script	솔로부대#Kunlun	780,{
-	mes "[솔로부대]";
-	mes "^669900...우리는 자유인이다!";
-	mes "우리는 무적의 솔로부대다!^000000";
+	mes needtr("[솔로부대]", "[Single Army]");
+	mes needtr("^669900...우리는 자유인이다!", "^669900...We're the free! We're");
+	mes needtr("우리는 무적의 솔로부대다!^000000", "the Invincible Single Army!^000000");
 	close;
 
 OnInit:
@@ -844,11 +844,11 @@ OnEnable:
 prt_church,100,128,4	script	보마스#w	60,{
 	cutin "wedding_bomars01",2;
 	if (Upper == 2) {
-		mes "[보마스]";
-		mes "안녕하신가, 아이야.";
-		mes "길을 잃었니? 흠.";
-		mes "네 엄마와";
-		mes "아빠가 어디 계신지 알고 있니?";
+		mes needtr("[보마스]", "[Vomars]");
+		mes needtr("안녕하신가, 아이야.", "Greetings, child.");
+		mes needtr("길을 잃었니? 흠.", "Are you lost? Hmmm.");
+		mes needtr("네 엄마와", "Do you know where your");
+		mes needtr("아빠가 어디 계신지 알고 있니?", "mommy and daddy are?");
 		close2;
 		cutin "wedding_bomars01",255;
 		end;
@@ -863,67 +863,67 @@ prt_church,100,128,4	script	보마스#w	60,{
 					if (Sex == SEX_MALE) {
 						set $@wedding,1;
 						initnpctimer;
-						mes "[보마스]";
-						mes "젊은 연인들이여,";
-						mes "이 순간을";
-						mes "평생 기억하길 바랍니다. 당신들의 미래에 평화와";
-						mes "기쁨이 함께하기를.";
-						mes "두 사람이 나누는 사랑이 날마다 자라나기를.";
+						mes needtr("[보마스]", "[Vomars]");
+						mes needtr("젊은 연인들이여,", "Young lovers, please");
+						mes needtr("이 순간을", "remember this moment for");
+						mes needtr("평생 기억하길 바랍니다. 당신들의 미래에 평화와", "the rest of your lives. May your future be blessed with peace");
+						mes needtr("기쁨이 함께하기를.", "and joy. May the love you share");
+						mes needtr("두 사람이 나누는 사랑이 날마다 자라나기를.", "grow with each passing day.");
 						next;
-						mapannounce "prt_church","신랑 " + strcharinfo(0) + "...",bc_map;
-						mes "[보마스]";
-						mes "세상의 끝이 올 때까지,";
-						mes "사랑하는 이의 곁에";
-						mes "서서";
-						mes "그녀를 지지하고";
-						mes "보호하겠습니까. 이제,";
-						mes "신부의 이름을 알려주시겠습니까?";
+						mapannouncelang "prt_church","신랑 " + strcharinfo(0) + "...", "It's the marriage proposal from the groom, Mr. " + strcharinfo(0) + "...",bc_map;
+						mes needtr("[보마스]", "[Vomars]");
+						mes needtr("세상의 끝이 올 때까지,", "Until the end of the");
+						mes needtr("사랑하는 이의 곁에", "world, may you stand");
+						mes needtr("서서", "by the side of the one");
+						mes needtr("그녀를 지지하고", "whom you love, to support");
+						mes needtr("보호하겠습니까. 이제,", "her and protect her. Now, may");
+						mes needtr("신부의 이름을 알려주시겠습니까?", "I know the name of your bride?");
 						next;
 						input $@wed_bride$;
-						mes "[보마스]";
+						mes needtr("[보마스]", "[Vomars]");
 						mes "" + strcharinfo(0) + "...";
-						mes "당신은 목숨을 걸고";
-						mes "신부를 영원히 아끼고";
-						mes "보살피겠다고";
+						mes needtr("당신은 목숨을 걸고", "Do you swear on your life");
+						mes needtr("신부를 영원히 아끼고", "that you will forever cherish");
+						mes needtr("보살피겠다고", "and care for your bride,");
 						mes "" + $@wed_bride$ + "?";
 						next;
-						select("맹세합니다.");
+						select(needtr("맹세합니다.", "I do."));
 						set $@wed_groom$,strcharinfo(0);
-						mes "[보마스]";
-						mes "이제 신부가";
-						mes "혼인 서약을";
-						mes "할 차례입니다.";
-						mes "신부는 앞으로 나와 주십시오...";
+						mes needtr("[보마스]", "[Vomars]");
+						mes needtr("이제 신부가", "Now, it is time for");
+						mes needtr("혼인 서약을", "your bride to make");
+						mes needtr("할 차례입니다.", "her wedding vows.");
+						mes needtr("신부는 앞으로 나와 주십시오...", "If she will come forward...");
 						close2;
-						mapannounce "prt_church","신랑 " + strcharinfo(0) + " 님이 신부 " + $@wed_bride$ + "...",bc_map;
+						mapannouncelang "prt_church","신랑 " + strcharinfo(0) + " 님이 신부 " + $@wed_bride$ + "...", "The groom, Mr. " + strcharinfo(0) + ", has made his vows to Miss " + $@wed_bride$ + "...",bc_map;
 						cutin "",255;
 						end;
 					}
-					mes "[보마스]";
-					mes "죄송하지만 결혼식을";
-					mes "시작하려면";
-					mes "신랑이 먼저 저에게 말을 걸어야 합니다.";
-					mes "조금 구식 절차이긴 하지만,";
-					mes "식이 원활하게 진행되도록";
-					mes "돕는 방식이기도 합니다.";
+					mes needtr("[보마스]", "[Vomars]");
+					mes needtr("죄송하지만 결혼식을", "I'm sorry, but the groom");
+					mes needtr("시작하려면", "must speak to me first in");
+					mes needtr("신랑이 먼저 저에게 말을 걸어야 합니다.", "order to begin the wedding.");
+					mes needtr("조금 구식 절차이긴 하지만,", "It's old fashioned protocol,");
+					mes needtr("식이 원활하게 진행되도록", "but I'll admit that it does");
+					mes needtr("돕는 방식이기도 합니다.", "keep things running smoothly.");
 					goto L_End;
 				}
-				mes "[보마스]";
-				mes "결혼식을 진행하기 전에";
-				mes "먼저 파트너와";
-				mes "두 사람만의";
-				mes "파티를 구성해야 합니다.";
-				mes "그 후에";
-				mes "식을 진행할 수 있습니다.";
+				mes needtr("[보마스]", "[Vomars]");
+				mes needtr("결혼식을 진행하기 전에", "Before you can be");
+				mes needtr("먼저 파트너와", "married, you must");
+				mes needtr("두 사람만의", "first form a party of");
+				mes needtr("파티를 구성해야 합니다.", "two with your partner.");
+				mes needtr("그 후에", "Then, we can proceed");
+				mes needtr("식을 진행할 수 있습니다.", "with the ceremony.");
 				goto L_End;
 			}
-			mes "[보마스]";
-			mes "결혼하기 전에";
-			mes "해피 메리에게";
-			mes "결혼 신청을 해야 합니다.";
-			mes "해피 메리가 결혼을 위해";
-			mes "무엇을 준비해야 하는지";
-			mes "알려줄 것입니다.";
+			mes needtr("[보마스]", "[Vomars]");
+			mes needtr("결혼하기 전에", "You must apply for");
+			mes needtr("해피 메리에게", "marriage with Happy Marry");
+			mes needtr("결혼 신청을 해야 합니다.", "before you can get married.");
+			mes needtr("해피 메리가 결혼을 위해", "Happy Marry will let you know");
+			mes needtr("무엇을 준비해야 하는지", "what else you'll need to do");
+			mes needtr("알려줄 것입니다.", "to prepare for marriage.");
 			goto L_End;
 		}
 		else if ($@wedding == 1) {
@@ -933,42 +933,42 @@ prt_church,100,128,4	script	보마스#w	60,{
 				if (.@partymembercount == 2) {
 					if (Sex == SEX_FEMALE) {
 						if (strcharinfo(0) == $@wed_bride$) {
-							mes "[보마스]";
-							mes "젊은 연인들이여,";
-							mes "이 순간을";
-							mes "평생 기억하길 바랍니다. 당신들의 미래에 평화와";
-							mes "기쁨이 함께하기를.";
-							mes "두 사람이 나누는 사랑이 날마다 자라나기를.";
+							mes needtr("[보마스]", "[Vomars]");
+							mes needtr("젊은 연인들이여,", "Young lovers, please");
+							mes needtr("이 순간을", "remember this moment for");
+							mes needtr("평생 기억하길 바랍니다. 당신들의 미래에 평화와", "the rest of your lives. May your future be blessed with peace");
+							mes needtr("기쁨이 함께하기를.", "and joy. May the love you share");
+							mes needtr("두 사람이 나누는 사랑이 날마다 자라나기를.", "grow with each passing day.");
 							next;
-							mapannounce "prt_church","신부 "+$@wed_bride$+" 님의 서약을 들어보겠습니다...",bc_map;
-							mes "[보마스]";
+							mapannouncelang "prt_church","신부 "+$@wed_bride$+" 님의 서약을 들어보겠습니다...", "Let's hear what the bride, Miss "+$@wed_bride$+", has to say...",bc_map;
+							mes needtr("[보마스]", "[Vomars]");
 							mes ""+$@wed_bride$+"...";
-							mes "당신은 ";
-							mes " 님에게"+$@wed_groom$+",";
-							mes "어떤 위험이 닥쳐도";
-							mes "그의 곁을 지키겠다고 맹세합니까?";
+							mes needtr("당신은 ", "Do you swear to stay");
+							mes needtr(" 님에게", "true to ")+$@wed_groom$+",";
+							mes needtr("어떤 위험이 닥쳐도", "to be by his side, no matter");
+							mes needtr("그의 곁을 지키겠다고 맹세합니까?", "what the dangers may be?");
 							next;
-							if (select("^FF0000아니오.^000000:맹세합니다.") == 1) {
+							if (select(needtr("^FF0000아니오.^000000:맹세합니다.", "^FF0000No.^000000:I do.")) == 1) {
 								cutin "wedding_bomars03",2;
-								mapannounce "prt_church","다음 커플은 앞으로 나와 주십시오...",bc_map;
-								mes "[보마스]";
-								mes "그러니까 "+$@wed_groom$;
-								mes " 님은 당신이";
-								mes "결혼하고 싶은 사람이 아니었군요? 흠.";
-								mes "이런 오해가 생겨";
-								mes "정말 유감입니다...";
+								mapannouncelang "prt_church","다음 커플은 앞으로 나와 주십시오...", "Next couple, please proceed...",bc_map;
+								mes needtr("[보마스]", "[Vomars]");
+								mes needtr("그러니까 ", "So ")+$@wed_groom$;
+								mes needtr(" 님은 당신이", "isn't the one you");
+								mes needtr("결혼하고 싶은 사람이 아니었군요? 흠.", "want to marry? Hmm.");
+								mes needtr("이런 오해가 생겨", "I'm truly sorry for this");
+								mes needtr("정말 유감입니다...", "misunderstanding...");
 								set $@wedding,0;
 								close2;
 								stopnpctimer;
 								cutin "",255;
 								end;
 							}
-							mes "[보마스]";
-							mes "정말로 정절과";
-							mes "인내를 맹세합니까?";
-							mes "정말 "+$@wed_groom$+"?";
+							mes needtr("[보마스]", "[Vomars]");
+							mes needtr("정말로 정절과", "Do you truly swear");
+							mes needtr("인내를 맹세합니까?", "fidelity and patience?");
+							mes needtr("정말 ", "Will you marry ")+$@wed_groom$+"?";
 							next;
-							if (select("예, 맹세합니다.:^FF0000아니오.^000000") == 1) {
+							if (select(needtr("예, 맹세합니다.:^FF0000아니오.^000000", "Yes, I do.:^FF0000No.^000000")) == 1) {
 								if (isloggedin(getcharid(3,$@wed_groom$))) {
 									if (marriage($@wed_groom$)) {
 										//Call Wedding effect
@@ -984,20 +984,20 @@ prt_church,100,128,4	script	보마스#w	60,{
 										//Switch Script progression back to Bride
 										attachrid(getcharid(3,$@wed_bride$));
 										cutin "wedding_bomars02",2;
-										mapannounce "prt_church","이제 "+$@wed_groom$+" 님과 "+$@wed_bride$+" 님을 부부로 선포합니다.",bc_map;
+										mapannouncelang "prt_church","이제 "+$@wed_groom$+" 님과 "+$@wed_bride$+" 님을 부부로 선포합니다.", "I now pronounce you, "+$@wed_groom$+" and "+$@wed_bride$+", husband and wife.",bc_map;
 										callfunc "NEED_WeddingObjection_Start",getcharid(3,$@wed_groom$),getcharid(0,$@wed_groom$),$@wed_groom$,getcharid(3,$@wed_bride$),getcharid(0,$@wed_bride$),$@wed_bride$;
-										mes "[보마스]";
-										mes "룬 미드가츠 왕국의";
-										mes "왕실 주교로서";
-										mes "나에게 부여된 권한으로,";
-										mes "두 사람을";
-										mes "남편과 아내로 선포합니다.";
-										mes "두 사람의 미래에 큰 기쁨이 가득하기를.";
+										mes needtr("[보마스]", "[Vomars]");
+										mes needtr("룬 미드가츠 왕국의", "By the power invested in me as");
+										mes needtr("왕실 주교로서", "Royal Bishop of the");
+										mes needtr("나에게 부여된 권한으로,", "Rune-Midgarts Kingdom, I now");
+										mes needtr("두 사람을", "pronounce you husband and");
+										mes needtr("남편과 아내로 선포합니다.", "wife. May your future be");
+										mes needtr("두 사람의 미래에 큰 기쁨이 가득하기를.", "blessed with many great joys.");
 										next;
-										mes "[보마스]";
-										mes "그리고 마지막으로...";
-										mes "언제나 행복하세요,";
-										mes "사랑하는 "+$@wed_bride$+"...";
+										mes needtr("[보마스]", "[Vomars]");
+										mes needtr("그리고 마지막으로...", "And lastly...");
+										mes needtr("언제나 행복하세요,", "Always be happy,");
+										mes needtr("사랑하는 ", "dear ")+$@wed_bride$+"...";
 										set $@wed_groom$,"";
 										set $@wed_bride$,"";
 										set $@wedding,0;
@@ -1009,24 +1009,24 @@ prt_church,100,128,4	script	보마스#w	60,{
 									}
 								}
 								cutin "wedding_bomars03",2;
-								mes "[보마스]";
-								mes "흠. 아무래도";
-								mes "신랑이 식이 끝나기 전에";
-								mes "자리를 떠난 것 같습니다.";
-								mes "신랑이 돌아오면";
-								mes "다시 시도해 주세요.";
+								mes needtr("[보마스]", "[Vomars]");
+								mes needtr("흠. 아무래도", "Hm. It seems that");
+								mes needtr("신랑이 식이 끝나기 전에", "your groom left before");
+								mes needtr("자리를 떠난 것 같습니다.", "the ceremony has finished");
+								mes needtr("신랑이 돌아오면", "Please try again once he's");
+								mes needtr("다시 시도해 주세요.", "returned.");
 								goto L_End;
 							}
 							else {
 								cutin "wedding_bomars03",2;
-								mapannounce "prt_church","아아! "+$@wed_bride$+" 님이 "+$@wed_groom$+" 님의 청혼을 거절했습니다!",bc_map;
-								mes "[보마스]";
-								mes "흠. 아무래도";
-								mes "마음이";
-								mes "바뀐 것 같군요.";
-								mes "신랑에게는 안타깝지만,";
-								mes "마음이 옳다고 말하는 대로";
-								mes "해야 합니다. 이제, 어서 가세요!";
+								mapannouncelang "prt_church","아아! "+$@wed_bride$+" 님이 "+$@wed_groom$+" 님의 청혼을 거절했습니다!", "Alas! "+$@wed_bride$+" has rejected "+$@wed_groom$+"'s marriage proposal!",bc_map;
+								mes needtr("[보마스]", "[Vomars]");
+								mes needtr("흠. 아무래도", "Hm. It seems that");
+								mes needtr("마음이", "you've changed your");
+								mes needtr("바뀐 것 같군요.", "mind. Although I feel");
+								mes needtr("신랑에게는 안타깝지만,", "sorry for the groom, you");
+								mes needtr("마음이 옳다고 말하는 대로", "must do what your heart");
+								mes needtr("해야 합니다. 이제, 어서 가세요!", "tells you is right. Now, run!");
 							}
 							set $@wed_groom$,"";
 							set $@wed_bride$,"";
@@ -1043,26 +1043,26 @@ prt_church,100,128,4	script	보마스#w	60,{
 				callsub S_Busy;
 			}
 			if (strcharinfo(0) == $@wed_bride$) {
-				mes "[보마스]";
-				mes "흠? 아직";
-				mes "해피 메리가";
-				mes "당신의 결혼 신청을";
-				mes "받지 못한 것 같습니다.";
-				mes "그녀에게 말을 걸어";
-				mes "결혼식을 시작할 수 있게 해 주세요.";
+				mes needtr("[보마스]", "[Vomars]");
+				mes needtr("흠? 아직", "Hm? It appears that");
+				mes needtr("해피 메리가", "Happy Marry still hasn't");
+				mes needtr("당신의 결혼 신청을", "received your marriage");
+				mes needtr("받지 못한 것 같습니다.", "application. Please speak");
+				mes needtr("그녀에게 말을 걸어", "to her so that we can begin");
+				mes needtr("결혼식을 시작할 수 있게 해 주세요.", "the wedding ceremony.");
 				goto L_End;
 			}
 			callsub S_Busy;
 		}
 		callsub S_Busy;
 	}
-	mes "[보마스]";
-	mes "영원한 행복을";
-	mes "기원합니다.";
-	mes "현재가 아무리 어둡더라도";
-	mes "언제나 사랑하는 이의 곁에 서서";
-	mes "희망을 가지고";
-	mes "미래를 바라보세요.";
+	mes needtr("[보마스]", "[Vomars]");
+	mes needtr("영원한 행복을", "I wish you eternal");
+	mes needtr("기원합니다.", "happiness. No matter");
+	mes needtr("현재가 아무리 어둡더라도", "how dark the present may");
+	mes needtr("언제나 사랑하는 이의 곁에 서서", "be, always stand by your");
+	mes needtr("희망을 가지고", "loved one's side and look");
+	mes needtr("미래를 바라보세요.", "to the future with hope.");
 
 L_End:
 	close2;
@@ -1071,19 +1071,19 @@ L_End:
 
 S_Busy:
 	if ($@wed_groom$ != "" && $@wed_bride$ != "") {
-		mes "[보마스]";
-		mes "현재";
+		mes needtr("[보마스]", "[Vomars]");
+		mes needtr("현재", "The wedding of");
 		mes ""+ $@wed_bride$ +" and";
-		mes "신랑 "+ $@wed_groom$;
-		mes " 님의 결혼식이 진행 중입니다.";
-		mes "조용히 해 주세요.";
+		mes needtr("신랑 ", "Mister ")+ $@wed_groom$;
+		mes needtr(" 님의 결혼식이 진행 중입니다.", "is currently in progress.");
+		mes needtr("조용히 해 주세요.", "Please keep your voice down.");
 		goto L_End;
 	}
-	mes "[보마스]";
-	mes "지금 다른 커플의";
-	mes "결혼식을 진행 중이니";
-	mes "차례를";
-	mes "기다려 주세요. 양해해 주셔서 감사합니다...";
+	mes needtr("[보마스]", "[Vomars]");
+	mes needtr("지금 다른 커플의", "I'm conducting a wedding");
+	mes needtr("결혼식을 진행 중이니", "for another couple now, so");
+	mes needtr("차례를", "please wait patiently for your");
+	mes needtr("기다려 주세요. 양해해 주셔서 감사합니다...", "turn. Thanks for understanding...");
 	goto L_End;
 
 OnStop:
@@ -1097,7 +1097,7 @@ OnReset:
 	end;
 
 OnTimer180000:
-	mapannounce "prt_church","응답이 너무 늦었습니다... 다음 커플은 앞으로 나와 주십시오.",bc_map;
+	mapannouncelang "prt_church","응답이 너무 늦었습니다... 다음 커플은 앞으로 나와 주십시오.", "You've responded too slowly... Next couple, please proceed.",bc_map;
 	donpcevent "보마스#w::OnReset";
 	stopnpctimer;
 	end;
@@ -1105,150 +1105,150 @@ OnTimer180000:
 
 prt_church,28,178,4	script	The King of Rune-Midgarts	108,{
 	callfunc "F_GM_NPC";
-	mes "[보마스]";
-	mes "누, 누구십니까?";
-	mes "내 굉장한 힘을";
-	mes "불러내려면";
-	mes "비밀번호를 알아야 합니다.";
+	mes needtr("[보마스]", "[Vomars]");
+	mes needtr("누, 누구십니까?", "Wh-who are you?");
+	mes needtr("내 굉장한 힘을", "You must know the");
+	mes needtr("불러내려면", "password to invoke");
+	mes needtr("비밀번호를 알아야 합니다.", "my awesome powers.");
 	next;
 	if (callfunc("F_GM_NPC",1854,0) < 1) {
-		mes "[보마스]";
-		mes "이곳은";
-		mes "장난칠 곳이";
-		mes "아닙니다.";
+		mes needtr("[보마스]", "[Vomars]");
+		mes needtr("이곳은", "This is");
+		mes needtr("장난칠 곳이", "no place for");
+		mes needtr("아닙니다.", "fooling around.");
 		close2;
 		warp "prt_church",101,102;
 		end;
 	}
-	mes "[결혼식 스위치]";
-	mes "결혼식 진행에";
-	mes "문제가 있습니까?";
-	mes "원한다면";
-	mes "보마스 주교 NPC를 초기화할 수 있습니다.";
+	mes needtr("[결혼식 스위치]", "[Wedding Switch]");
+	mes needtr("결혼식 진행에", "Is there a problem with");
+	mes needtr("문제가 있습니까?", "the wedding ceremony?");
+	mes needtr("원한다면", "I can reset the Bishop");
+	mes needtr("보마스 주교 NPC를 초기화할 수 있습니다.", "Vomars NPC if you like.");
 	next;
-	switch(select("괜찮습니다:초기화")) {
+	switch(select(needtr("괜찮습니다:초기화", "No, thanks:RESET"))) {
 	case 1:
-		mes "[결혼식 스위치]";
-		mes "알겠습니다.";
-		mes "하지만";
-		mes "보마스 주교";
-		mes "NPC가 멈춘 상태라면";
-		mes "초기화하는 것이 좋습니다.";
+		mes needtr("[결혼식 스위치]", "[Wedding Switch]");
+		mes needtr("알겠습니다.", "Alright, then.");
+		mes needtr("하지만", "However, if the");
+		mes needtr("보마스 주교", "Bishop Vomars");
+		mes needtr("NPC가 멈춘 상태라면", "NPC is stuck, it may");
+		mes needtr("초기화하는 것이 좋습니다.", "be best to reset it.");
 		close;
 	case 2:
 		donpcevent "보마스#w::OnStop";
 		donpcevent "보마스#w::OnReset";
-		mapannounce "prt_church","응답이 너무 늦었습니다... 다음 커플은 앞으로 나와 주십시오.",bc_map;
-		mes "[결혼식 스위치]";
-		mes "보마스 주교 NPC가";
-		mes "다시 활성화되었습니다.";
-		mes "이제 결혼식을";
-		mes "진행할 수 있을 것입니다.";
+		mapannouncelang "prt_church","응답이 너무 늦었습니다... 다음 커플은 앞으로 나와 주십시오.", "You've responded too slowly... Next couple, please proceed.",bc_map;
+		mes needtr("[결혼식 스위치]", "[Wedding Switch]");
+		mes needtr("보마스 주교 NPC가", "The Bishop Vomars NPC");
+		mes needtr("다시 활성화되었습니다.", "has now been reactivated.");
+		mes needtr("이제 결혼식을", "It should now be possible");
+		mes needtr("진행할 수 있을 것입니다.", "to proceed with weddings.");
 		close;
 	}
 }
 
 prt_church,20,179,4	script	Divorce Staff	71,{
 	callfunc "F_GM_NPC";
-	mes "[배드 엔딩]";
-	mes "어이쿠...";
-	mes "제가 아무것도";
-	mes "해드릴 수 없다는 건 아시죠.";
+	mes needtr("[배드 엔딩]", "[Bad Ending]");
+	mes needtr("어이쿠...", "Uh oh...");
+	mes needtr("제가 아무것도", "You know I can't");
+	mes needtr("해드릴 수 없다는 건 아시죠.", "do anything for you.");
 	next;
 	if (callfunc("F_GM_NPC",1854,0) < 1) {
-		mes "[배드 엔딩]";
-		mes "흠...";
-		mes "정말";
-		mes "이곳에";
-		mes "있으면 안 됩니다...";
+		mes needtr("[배드 엔딩]", "[Bad Ending]");
+		mes needtr("흠...", "Hmm...");
+		mes needtr("정말", "You really");
+		mes needtr("이곳에", "shouldn't be");
+		mes needtr("있으면 안 됩니다...", "in this place...");
 		close;
 	}
-	mes "[배드 엔딩]";
-	mes "좋아요,";
-	mes "비밀번호를 알고 있군요!";
-	mes "그럼 인벤토리에 있는";
-	mes "결혼 반지를";
-	mes "제거해 드릴까요?";
+	mes needtr("[배드 엔딩]", "[Bad Ending]");
+	mes needtr("좋아요,", "Great, you know the");
+	mes needtr("비밀번호를 알고 있군요!", "password! Now, did you");
+	mes needtr("그럼 인벤토리에 있는", "want me to remove the");
+	mes needtr("결혼 반지를", "Wedding Ring in your");
+	mes needtr("제거해 드릴까요?", "inventory?");
 	next;
-	switch(select("결혼 반지 1개 제거:그냥 둔다")) {
+	switch(select(needtr("결혼 반지 1개 제거:그냥 둔다", "Drop 1 Wedding Ring.:Keep it."))) {
 	case 1:
 		set .@ring, (Sex == SEX_MALE)?2634:2635; //Bridegroom_Ring, Bride_Ring
 		if (countitem(.@ring)) {
 			delitem .@ring,1;
-			mes "[배드 엔딩]";
-			mes "완료했습니다!";
+			mes needtr("[배드 엔딩]", "[Bad Ending]");
+			mes needtr("완료했습니다!", "It's done!");
 		} else {
-			mes "[배드 엔딩]";
-			mes "결혼 반지를";
-			mes "찾을 수 없었습니다...";
-			mes "착용 중이 아닌지";
-			mes "확인해 주세요.";
+			mes needtr("[배드 엔딩]", "[Bad Ending]");
+			mes needtr("결혼 반지를", "I couldn't find");
+			mes needtr("찾을 수 없었습니다...", "the Wedding Ring...");
+			mes needtr("착용 중이 아닌지", "Please make sure");
+			mes needtr("확인해 주세요.", "that it's not equipped.");
 		}
 		close;
 	case 2:
-		mes "[배드 엔딩]";
-		mes "정말 그 반지를";
-		mes "간직하고 싶으신가요?";
-		mes "알겠습니다. 하지만 문제가 생기면";
-		mes "저를 찾아오세요.";
+		mes needtr("[배드 엔딩]", "[Bad Ending]");
+		mes needtr("정말 그 반지를", "You sure you want");
+		mes needtr("간직하고 싶으신가요?", "to keep that ring?");
+		mes needtr("알겠습니다. 하지만 문제가 생기면", "Alright, but if it becomes");
+		mes needtr("저를 찾아오세요.", "a problem, you come to me.");
 		close;
 	}
 }
 
 prt_church,22,179,4	script	Remarry Staff	71,{
 	callfunc "F_GM_NPC";
-	mes "[다시 결혼]";
-	mes "흠...?";
-	mes "대체";
-	mes "여기서 뭘 하고 계신가요?";
+	mes needtr("[다시 결혼]", "[Wedding Again]");
+	mes needtr("흠...?", "Hmm...?");
+	mes needtr("대체", "What exactly are");
+	mes needtr("여기서 뭘 하고 계신가요?", "you doing here?");
 	next;
 	if (callfunc("F_GM_NPC",1854,0) < 1) {
-		mes "[다시 결혼]";
-		mes "앗!";
-		mes "당신 같은 모험가가";
-		mes "이런 곳에";
-		mes "있으면 안 됩니다!";
+		mes needtr("[다시 결혼]", "[Wedding Again]");
+		mes needtr("앗!", "Ahk!");
+		mes needtr("당신 같은 모험가가", "An adventurer");
+		mes needtr("이런 곳에", "like you shouldn't");
+		mes needtr("있으면 안 됩니다!", "be in this place!");
 		close;
 	}
 	if (getpartnerid()) {
-		mes "[다시 결혼]";
-		mes "흠...";
-		mes "결혼 반지는";
-		mes "결혼한 캐릭터에게만";
-		mes "만들어 드릴 수 있습니다.";
+		mes needtr("[다시 결혼]", "[Wedding Again]");
+		mes needtr("흠...", "Hmm...");
+		mes needtr("결혼 반지는", "I can only create");
+		mes needtr("결혼한 캐릭터에게만", "a Wedding Ring if the");
+		mes needtr("만들어 드릴 수 있습니다.", "character is married.");
 		close;
 	}
-	mes "[다시 결혼]";
-	mes "아, 비밀번호를";
-	mes "알고 계시군요.";
-	mes "좋습니다. 결혼 반지를";
-	mes "잃어버렸다면";
-	mes "새로 만들어 드릴 수 있습니다.";
+	mes needtr("[다시 결혼]", "[Wedding Again]");
+	mes needtr("아, 비밀번호를", "Ah, I see that you");
+	mes needtr("알고 계시군요.", "know the password.");
+	mes needtr("좋습니다. 결혼 반지를", "Alright, if you somehow");
+	mes needtr("잃어버렸다면", "lost your Wedding Ring,");
+	mes needtr("새로 만들어 드릴 수 있습니다.", "I can make you a new one.");
 	next;
-	switch(select("새 결혼 반지를 만든다:취소")) {
+	switch(select(needtr("새 결혼 반지를 만든다:취소", "Make new Wedding Ring.:Cancel."))) {
 	case 1:
 		set .@ring, (Sex == SEX_MALE)?2634:2635; //Bridegroom_Ring, Bride_Ring
 		if (countitem(.@ring) || isequipped(.@ring)) {
-			mes "[다시 결혼]";
-			mes "잠깐, 잠깐...";
-			mes "이미 결혼 반지를";
-			mes "착용하고 있군요.";
-			mes "하나 이상은 필요 없으니";
-			mes "새로 만들지 않는 게 좋겠습니다.";
+			mes needtr("[다시 결혼]", "[Wedding Again]");
+			mes needtr("잠깐, 잠깐...", "Wait, wait...");
+			mes needtr("이미 결혼 반지를", "You're wearing your");
+			mes needtr("착용하고 있군요.", "Wedding Ring. I better");
+			mes needtr("하나 이상은 필요 없으니", "not make you another since");
+			mes needtr("새로 만들지 않는 게 좋겠습니다.", "you don't need more than one.");
 		} else {
 			getitem .@ring,1;
-			mes "[다시 결혼]";
-			mes "자, 여기 있습니다~";
-			mes "새로 만든";
-			mes "결혼 반지입니다!";
+			mes needtr("[다시 결혼]", "[Wedding Again]");
+			mes needtr("자, 여기 있습니다~", "Here you go~");
+			mes needtr("새로 만든", "It's your brand");
+			mes needtr("결혼 반지입니다!", "new Wedding Ring!");
 		}
 		close;
 	case 2:
-		mes "[다시 결혼]";
-		mes "알겠습니다. 언젠가";
-		mes "결혼 반지를 잃어버리면";
-		mes "필요할 때";
-		mes "저를 찾아오세요, 알겠죠?";
+		mes needtr("[다시 결혼]", "[Wedding Again]");
+		mes needtr("알겠습니다. 언젠가", "Alright. If you ever");
+		mes needtr("결혼 반지를 잃어버리면", "lose your Wedding Ring,");
+		mes needtr("필요할 때", "come to me if you happen");
+		mes needtr("저를 찾아오세요, 알겠죠?", "to need a new one, okay?");
 		close;
 	}
 }

@@ -9883,7 +9883,8 @@ bool skill_check_condition_castend( map_session_data& sd, uint16 skill_id, uint1
 			sprintf(e_msg,msg_txt(&sd,381), //Skill Failed. [%s] requires %dx %s.
 						skill_get_desc(skill_id),
 						require.ammo_qty,
-						itemdb_ename(sd.inventory.u.items_inventory[i].nameid));
+						// NEED Phase 0.13 : same recipient language as the template above
+						item_display_name(sd.inventory.u.items_inventory[i].nameid, sd.need_lang));
 			clif_messagecolor(&sd,color_table[COLOR_RED],e_msg,false,SELF);
 			return false;
 		}

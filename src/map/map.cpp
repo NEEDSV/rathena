@@ -145,6 +145,18 @@ static int32 bl_list_count = 0;
 	#define MAP_MAX_MSG 1900
 #endif
 
+/**
+ * NEED Phase 0.13 : the English message table for EN sessions, loaded into the
+ * MSG_LANG_NEED_EN slot (see src/common/msg_conf.hpp).
+ *
+ * Not a `cli.hpp` extern on purpose: the langtype tables are overridable from the command
+ * line because they are rAthena's own multilanguage feature, while this one is a NEED
+ * session-language table with exactly one location. It holds ONLY reviewed ids; anything
+ * missing falls back to the default table in map_msg_txt(), so the file's content is what
+ * controls the scope of the English routing.
+ */
+static const char* const MSG_CONF_NAME_NEED_EN = "conf/msg_conf/map_msg_need_en.conf";
+
 struct map_data map[MAX_MAP_PER_SERVER];
 int32 map_num = 0;
 
@@ -5253,7 +5265,28 @@ void map_do_init_msg(void){
 		if(test == 1) msg_config_read(listelang[i],i); //if enabled read it and assign i to langtype
 		i++;
 	}
+
+	/**
+	 * NEED Phase 0.13 : the English table for EN sessions.
+	 *
+	 * Loaded into MSG_LANG_NEED_EN, a slot outside rAthena's 0..9 langtype range, so nothing
+	 * that goes through `langtype` can ever reach it. It holds ONLY the ids that have a
+	 * reviewed English text; every other id falls through to the existing table in
+	 * map_msg_txt(), which is why adding this file cannot change an unreviewed message.
+	 *
+	 * The whole table is OPTIONAL. _msg_config_read() would report a missing file as an
+	 * [Error], so the file is checked first and its absence is reported as information -
+	 * deleting it is a complete rollback to the pre-Phase-0.13 behaviour.
+	 */
+	if( FILE* f = fopen( MSG_CONF_NAME_NEED_EN, "r" ) ){
+		fclose( f );
+		msg_config_read( MSG_CONF_NAME_NEED_EN, MSG_LANG_NEED_EN );
+	}else{
+		ShowInfo( "No NEED English message table loaded ('" CL_WHITE "%s" CL_RESET "' is absent) - every session uses the default table.\n", MSG_CONF_NAME_NEED_EN );
+	}
+
 }
+
 void map_do_final_msg(void){
 	DBIterator *iter = db_iterator(map_msg_db);
 	struct msg_data *mdb;
@@ -5287,6 +5320,30 @@ int32 map_msg_config_read(const char *cfgName, int32 lang){
 const char* map_msg_txt(const map_session_data* sd, int32 msg_number){
 	struct msg_data *mdb;
 	uint8 lang = 0; //default
+
+	/**
+	 * NEED Phase 0.13 : an EN session is served from the NEED English table first, and only
+	 * for the ids that table actually defines.
+	 *
+	 * This is the single language-selection point of the whole message system, so putting the
+	 * branch here means no call site changes and - because the same `sd` decides the item
+	 * name via item_display_name() - a message and the item name inside it can never end up
+	 * in different languages.
+	 *
+	 * Everything else keeps running exactly the pre-Phase-0.13 code below: a KR session, an
+	 * id the English table does not have, a session with no need_lang, and `sd == nullptr`
+	 * (console, broadcast, timer, background event).
+	 */
+	if( sd != nullptr && sd->need_lang == NEED_LANG_EN &&
+		( mdb = map_lang2msgdb( MSG_LANG_NEED_EN ) ) != nullptr ){
+		const char* en = _msg_txt( msg_number, MAP_MAX_MSG, mdb->msg );
+
+		if( strcmp( en, "??" ) != 0 ){
+			return en;
+		}
+		// no English text for this id -> fall through to the table below (KR fallback)
+	}
+
 	if(sd && sd->langtype) lang = sd->langtype;
 
 	if( (mdb = map_lang2msgdb(lang)) != nullptr){

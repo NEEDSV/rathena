@@ -37,6 +37,7 @@ using namespace rathena;
 ComboDatabase itemdb_combo;
 ItemGroupDatabase itemdb_group;
 NeedLuckyEggDatabase need_lucky_egg_db;
+NeedItemNameEnDatabase need_item_name_en_db;
 
 struct s_roulette_db rd;
 
@@ -610,6 +611,131 @@ const std::string ItemDatabase::getDefaultLocation() {
 
 const std::string NeedLuckyEggDatabase::getDefaultLocation() {
 	return std::string(db_path) + "/need/lucky_egg_db.yml";
+}
+
+/*==========================================
+ * NEED Phase 0.11 : English item display names
+ *
+ * See the class comment in itemdb.hpp for why this is a load-time augmentation of the
+ * display-only item_data::ename_en field instead of a second name column in item_db.
+ *------------------------------------------*/
+
+void NeedItemNameEnDatabase::clear() {
+	// No own store to free - the names live in the item_data objects that item_db.clear()
+	// destroys. Only the counters used for the start-up report are reset here.
+	this->applied = 0;
+	this->skipped = 0;
+}
+
+const std::string NeedItemNameEnDatabase::getDefaultLocation() {
+	return std::string(db_path) + "/need/item_name_en.yml";
+}
+
+/**
+ * The whole database is OPTIONAL: with no file at all every item simply keeps printing its
+ * Korean `Name:`, which is the pre-Phase-0.11 behaviour. YamlDatabase::load() would report a
+ * missing file as an [Error], so the absence is checked here and reported as information -
+ * that also makes "delete one file" a complete, error-free rollback.
+ */
+bool NeedItemNameEnDatabase::load() {
+	const std::string path = this->getDefaultLocation();
+	FILE* f = fopen( path.c_str(), "r" );
+
+	if( f == nullptr ){
+		this->clear();
+		ShowInfo( "No English item display names loaded ('" CL_WHITE "%s" CL_RESET "' is absent) - every item keeps its database name.\n", path.c_str() );
+		return true;
+	}
+
+	fclose( f );
+
+	return YamlDatabase::load();
+}
+
+uint64 NeedItemNameEnDatabase::parseBodyNode( const ryml::NodeRef& node ) {
+	t_itemid nameid;
+
+	if( !this->asUInt32( node, "Id", nameid ) ){
+		this->skipped++;
+		return 0;
+	}
+
+	std::shared_ptr<item_data> id = item_db.find( nameid );
+
+	if( id == nullptr ){
+		this->invalidWarning( node["Id"], "Unknown item ID %u, skipping.\n", nameid );
+		this->skipped++;
+		return 0;
+	}
+
+	// AegisName is optional and is NEVER written anywhere - it is only there so a human
+	// editing this file can see which item a row belongs to, and so a row that has drifted
+	// away from item_db is reported instead of silently renaming the wrong item.
+	if( this->nodeExists( node, "AegisName" ) ){
+		std::string aegis;
+
+		if( this->asString( node, "AegisName", aegis ) && aegis != id->name ){
+			this->invalidWarning( node["AegisName"], "AegisName \"%s\" does not match item ID %u (\"%s\"), skipping.\n", aegis.c_str(), nameid, id->name.c_str() );
+			this->skipped++;
+			return 0;
+		}
+	}
+
+	std::string name;
+
+	if( !this->asString( node, "NameEN", name ) ){
+		this->skipped++;
+		return 0;
+	}
+
+	if( name.empty() ){
+		this->invalidWarning( node["NameEN"], "Empty English name for item ID %u, skipping.\n", nameid );
+		this->skipped++;
+		return 0;
+	}
+
+	// getitemname() hands the name back through a buffer of ITEM_NAME_LENGTH bytes, so a
+	// longer name would be cut mid-word. Refuse it here instead of shipping the truncation.
+	if( name.length() >= ITEM_NAME_LENGTH ){
+		this->invalidWarning( node["NameEN"], "English name \"%s\" for item ID %u is %u bytes, maximum is %d, skipping.\n", name.c_str(), nameid, (uint32)name.length(), ITEM_NAME_LENGTH - 1 );
+		this->skipped++;
+		return 0;
+	}
+
+	id->ename_en = name;
+	this->applied++;
+
+	return 1;
+}
+
+void NeedItemNameEnDatabase::loadingFinished() {
+	ShowStatus( "Done applying '" CL_WHITE "%u" CL_RESET "' English item display names ('" CL_WHITE "%u" CL_RESET "' skipped).\n", this->applied, this->skipped );
+
+	YamlDatabase::loadingFinished();
+}
+
+const char* item_display_name( const item_data* id, e_need_lang lang ) {
+	if( id == nullptr ){
+		return "";
+	}
+
+	if( lang == NEED_LANG_EN && !id->ename_en.empty() ){
+		return id->ename_en.c_str();
+	}
+
+	// KR session, or no trusted English name for this item: the Korean `Name:` the server
+	// has always printed stays in use. Never an invented translation, never a blank.
+	return id->ename.c_str();
+}
+
+const char* item_display_name( const std::shared_ptr<item_data>& id, e_need_lang lang ) {
+	return item_display_name( id.get(), lang );
+}
+
+const char* item_display_name( t_itemid nameid, e_need_lang lang ) {
+	std::shared_ptr<item_data> id = item_db.find( nameid );
+
+	return item_display_name( id, lang );
 }
 
 uint64 NeedLuckyEggDatabase::parseBodyNode(const ryml::NodeRef& node) {
@@ -2024,7 +2150,7 @@ std::string ItemDatabase::create_item_link(struct item& item) {
 	return this->create_item_link(item, data);
 }
 
-std::string ItemDatabase::create_item_link_for_mes( std::shared_ptr<item_data>& data, bool use_brackets, const char* name ){
+std::string ItemDatabase::create_item_link_for_mes( std::shared_ptr<item_data>& data, bool use_brackets, const char* name, e_need_lang lang ){
 	if( data == nullptr ){
 		return "Unknown item";
 	}
@@ -2056,8 +2182,8 @@ std::string ItemDatabase::create_item_link_for_mes( std::shared_ptr<item_data>& 
 			// Name was forcefully overwritten
 			itemstr += name;
 		}else{
-			// Use database name
-			itemstr += data->ename;
+			// Use database name (NEED Phase 0.11: English for an EN recipient)
+			itemstr += item_display_name( data, lang );
 		}
 
 		if( use_brackets || battle_config.feature_mesitemlink_brackets ){
@@ -2079,12 +2205,12 @@ std::string ItemDatabase::create_item_link_for_mes( std::shared_ptr<item_data>& 
 		// Name was forcefully overwritten
 		return name;
 	}else{
-		// Use database name
-		return data->ename;
+		// Use database name (NEED Phase 0.11: English for an EN recipient)
+		return item_display_name( data, lang );
 	}
 }
 
-std::string ItemDatabase::create_item_icon_for_mes( std::shared_ptr<item_data>& data, const char* name ){
+std::string ItemDatabase::create_item_icon_for_mes( std::shared_ptr<item_data>& data, const char* name, e_need_lang lang ){
 	if( data == nullptr ){
 		return "Unknown item";
 	}
@@ -2095,8 +2221,8 @@ std::string ItemDatabase::create_item_icon_for_mes( std::shared_ptr<item_data>& 
 			// Name was forcefully overwritten
 			return name;
 		}else{
-			// Use database name
-			return data->ename;
+			// Use database name (NEED Phase 0.11: English for an EN recipient)
+			return item_display_name( data, lang );
 		}
 	}
 
@@ -5645,7 +5771,12 @@ static void itemdb_read(void) {
 		itemdb_read_sqldb();
 	else
 		item_db.load();
-	
+
+	// NEED Phase 0.11 : English display names are an augmentation of the items just loaded,
+	// so this has to run after item_db and inside itemdb_read() - the one function both
+	// start-up and @reloaditemdb go through, which is what makes the field reload-safe.
+	need_item_name_en_db.load();
+
 	for(i=0; i<ARRAYLENGTH(dbsubpath); i++){
 		uint8 n1 = (uint8)(strlen(db_path)+strlen(dbsubpath[i])+1);
 		uint8 n2 = (uint8)(strlen(db_path)+strlen(DBPATH)+strlen(dbsubpath[i])+1);
@@ -5765,6 +5896,7 @@ void do_final_itemdb(void) {
 	itemdb_combo.clear();
 	itemdb_group.clear();
 	need_lucky_egg_db.clear();
+	need_item_name_en_db.clear();
 	random_option_db.clear();
 	random_option_group.clear();
 	laphine_synthesis_db.clear();

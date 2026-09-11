@@ -32,42 +32,42 @@ payon,139,233,3	duplicate(Shopping Board)	노점 검색#alb	4_BOARD3
 
 payon,139,236,4	script	구매 담당자#Buying	59,{
 	if (checkweight(1201,1) == 0 || MaxWeight - Weight < 2400) {
-		mes "- 소지한 아이템이 너무 많아 대화하거나 퀘스트를 진행할 수 없습니다. -";
+		mes needtr("- 소지한 아이템이 너무 많아 대화하거나 퀘스트를 진행할 수 없습니다. -", "- You cannot converse or perform the quest because you are carrying too many items. -");
 		close;
 	}
-	mes "[휴]";
+	mes needtr("[휴]", "[Mr. Hugh]");
 	if (BaseClass == Job_Merchant && getskilllv("MC_VENDING") >= 1) {
 		if (getskilllv("ALL_BUYING_STORE") == 1) {
-			mes "구매 담당자 휴입니다.";
-			mes "무엇을 도와드릴까요?";
+			mes needtr("구매 담당자 휴입니다.", "I'm Hugh from the Purchasing Team.");
+			mes needtr("무엇을 도와드릴까요?", "How may I help you today?");
 			next;
-			if(select("구매 노점 개설 허가증 구입:그만두기") == 2) {
-				mes "[휴]";
-				mes "구매 노점 개설 허가증이 필요하시면 언제든 말씀해 주세요.";
-				mes "다음에 또 찾아주세요~";
+			if(select(needtr("구매 노점 개설 허가증 구입:그만두기", "Purchase Bulk Buyer Shop License:Quit")) == 2) {
+				mes needtr("[휴]", "[Mr. Hugh]");
+				mes needtr("구매 노점 개설 허가증이 필요하시면 언제든 말씀해 주세요.", "Please feel free to ask me if you need any Bulk Buyer Shop Licenses.");
+				mes needtr("다음에 또 찾아주세요~", "Come again~");
 				close;
 			}
-			mes "[휴]";
-			mes "구매 노점 개설 허가증은 한 장당 200 제니이며,";
-			mes "한 번에 최대 50장까지 구입할 수 있습니다.";
-			mes "몇 장이 필요하신가요?";
+			mes needtr("[휴]", "[Mr. Hugh]");
+			mes needtr("구매 노점 개설 허가증은 한 장당 200 제니이며,", "It's 200 zeny for each Bulk Buyer Shop");
+			mes needtr("한 번에 최대 50장까지 구입할 수 있습니다.", "License, and you may purchase up to 50 at a");
+			mes needtr("몇 장이 필요하신가요?", "time. How many licenses do you need?");
 			next;
 			while(1) {
 				input .@input;
-				mes "[휴]";
+				mes needtr("[휴]", "[Mr. Hugh]");
 				if (.@input == 0) {
-					mes "거래를 취소하셨습니다.";
-					mes "좋은 하루 보내세요.";
+					mes needtr("거래를 취소하셨습니다.", "You have cancelled the trade.");
+					mes needtr("좋은 하루 보내세요.", "Now you have a nice day.");
 					close;
 				} else if (.@input > 50) {
-					mes "50 이하의 수량을 입력해 주세요.";
+					mes needtr("50 이하의 수량을 입력해 주세요.", "Please enter a value of 50 or less.");
 					next;
 				} else {
-					mes "허가증 "+.@input+"장의 가격은 총 "+(.@input*200)+" 제니입니다.";
+					mes needtr("허가증 ", "The price for ")+.@input+needtr("장의 가격은 총 ", " licenses is ")+(.@input*200)+needtr(" 제니입니다.", " zeny in total.");
 					if (Zeny < (.@input*200)) {
-						mes "하지만 소지하신 제니가 부족한 것 같습니다.";
+						mes needtr("하지만 소지하신 제니가 부족한 것 같습니다.", "but you don't seem to have enough money.");
 					} else {
-						mes "이용해 주셔서 감사합니다.";
+						mes needtr("이용해 주셔서 감사합니다.", "Thank you for your patronage.");
 						getitem 6377,.@input; //Buy_Market_Permit
 						set Zeny,Zeny-(.@input*200);
 					}
@@ -75,118 +75,118 @@ payon,139,236,4	script	구매 담당자#Buying	59,{
 				}
 			}
 		} else {
-			mes "알베르타 상인 길드 구매 담당자 휴입니다.";
-			mes "당신은...";
+			mes needtr("알베르타 상인 길드 구매 담당자 휴입니다.", "I'm Hugh from the Purchasing Team at the Alberta Merchant Guild.");
+			mes needtr("당신은...", "You're...");
 			next;
-			mes "[휴]";
-			mes "우리 길드에서 개인이 다른 사람의 물건을 구매할 수 있도록";
-			mes "새로운 허가 제도를 만들었다는 사실을 알고 계신가요?";
+			mes needtr("[휴]", "[Mr. Hugh]");
+			mes needtr("우리 길드에서 개인이 다른 사람의 물건을 구매할 수 있도록", "Did you know? Our guild has issued a license to");
+			mes needtr("새로운 허가 제도를 만들었다는 사실을 알고 계신가요?", "allow individuals to buy goods from others.");
 			next;
-			select("물건을 사는 데 불편했던 적은 없는데...");
-			mes "[휴]";
-			mes "맞는 말씀이지만, 이렇게 생각해 보세요.";
-			mes "물건을 대량으로 구매하려다 어려움을 겪은 적은 없으신가요?";
-			mes "원하는 물건을 가진 사람을 일일이 찾아가 대화해야 하죠.";
-			mes "상당히 불편하지 않습니까?";
+			select(needtr("물건을 사는 데 불편했던 적은 없는데...", "I've never had problems buying items..."));
+			mes needtr("[휴]", "[Mr. Hugh]");
+			mes needtr("맞는 말씀이지만, 이렇게 생각해 보세요.", "You're right, but think about it:");
+			mes needtr("물건을 대량으로 구매하려다 어려움을 겪은 적은 없으신가요?", "haven't you had a hard time buying in bulk?");
+			mes needtr("원하는 물건을 가진 사람을 일일이 찾아가 대화해야 하죠.", "You'd have to find and talk to everyone that has an item you want.");
+			mes needtr("상당히 불편하지 않습니까?", "Pretty inconvenient, isn't it?");
 			next;
-			mes "[휴]";
-			mes "대량 구매는 우리 상인들에게 매우 중요한 문제이기 때문에,";
-			mes "저는 10년 동안 물건을 구매하며 쌓은 경험을 바탕으로";
-			mes "길드에 혁신적인 계획을 제안했습니다.";
+			mes needtr("[휴]", "[Mr. Hugh]");
+			mes needtr("대량 구매는 우리 상인들에게 매우 중요한 문제이기 때문에,", "Since buying in bulk is an important issue to us Merchants,");
+			mes needtr("저는 10년 동안 물건을 구매하며 쌓은 경험을 바탕으로", "I've proposed an innovative plan to our guild, based on my 10");
+			mes needtr("길드에 혁신적인 계획을 제안했습니다.", "years of experience in making purchases.");
 			next;
-			mes "[휴]";
-			mes "'누구나 자유롭게";
-			mes "구매 노점을 열 수 있게 하자!'";
-			mes "바로 이것이 제 제안서의 제목입니다.";
-			mes "직접 읽어 보시면 아시겠지만...";
+			mes needtr("[휴]", "[Mr. Hugh]");
+			mes needtr("'누구나 자유롭게", "'Let Individuals Open");
+			mes needtr("구매 노점을 열 수 있게 하자!'", "a Bulk Buyer Shop!'");
+			mes needtr("바로 이것이 제 제안서의 제목입니다.", "That's the title of my proposal.");
+			mes needtr("직접 읽어 보시면 아시겠지만...", "You'll see, when you read it...");
 			next;
-			mes "[휴]";
+			mes needtr("[휴]", "[Mr. Hugh]");
 			mes "...";
-			mes "...(휴가 세부 내용을 끝없이 설명하고 있다.)";
+			mes needtr("...(휴가 세부 내용을 끝없이 설명하고 있다.)", "...(Mr. Hugh yammers on and on with all the details.)");
 			next;
-			select("그래서 결론이 뭔가요?");
-			mes "[휴]";
-			mes "아, 그렇군요. 간단히 정리하자면,";
-			mes "노점 기능을 이용해 특정 아이템을 대량으로 구매할 수 있습니다.";
+			select(needtr("그래서 결론이 뭔가요?", "Alright, what's your point?"));
+			mes needtr("[휴]", "[Mr. Hugh]");
+			mes needtr("아, 그렇군요. 간단히 정리하자면,", "Oh, yes. In summary,");
+			mes needtr("노점 기능을 이용해 특정 아이템을 대량으로 구매할 수 있습니다.", "you can buy certain items in bulk through Vending.");
 			next;
-			mes "[휴]";
-			mes "구매 노점을 열려면 상인 길드에서 발급하는 허가증이 필요합니다.";
+			mes needtr("[휴]", "[Mr. Hugh]");
+			mes needtr("구매 노점을 열려면 상인 길드에서 발급하는 허가증이 필요합니다.", "In order to open a Bulk Buyer Shop, you need a license issued from the Merchant Guild.");
 			next;
-			mes "[휴]";
-			mes "노점을 개설할 때마다 허가증 한 장이 필요합니다.";
-			mes "이 새로운 허가 제도를 통해 상당한 수익 증가를 기대하고 있죠.";
+			mes needtr("[휴]", "[Mr. Hugh]");
+			mes needtr("노점을 개설할 때마다 허가증 한 장이 필요합니다.", "You need it every time you open the shop.");
+			mes needtr("이 새로운 허가 제도를 통해 상당한 수익 증가를 기대하고 있죠.", "We're expecting a significant increase in profits through this new kind of licensing.");
 			next;
-			mes "[휴]";
-			mes "그게 바로 제 제안의 핵심입니다!";
-			mes "큰돈을 벌 수 있다는 말에 길드장님도 무척 기뻐하셨습니다!";
+			mes needtr("[휴]", "[Mr. Hugh]");
+			mes needtr("그게 바로 제 제안의 핵심입니다!", "That's the point of my proposal!");
+			mes needtr("큰돈을 벌 수 있다는 말에 길드장님도 무척 기뻐하셨습니다!", "Our president was so happy to hear that we're going to make big bucks!");
 			next;
 			mes "["+strcharinfo(0)+"]";
-			mes "그러니까 결론부터 말해 주세요!";
+			mes needtr("그러니까 결론부터 말해 주세요!", "Please get to the point already!");
 			next;
-			mes "[휴]";
-			mes "그렇게 서두르지 마세요.";
-			mes "결론은, 노점 개설 스킬을 배운 분이라면";
-			mes "구매 노점을 열 수 있도록 해드린다는 것입니다.";
+			mes needtr("[휴]", "[Mr. Hugh]");
+			mes needtr("그렇게 서두르지 마세요.", "Don't be so impatient, alright? My point");
+			mes needtr("결론은, 노점 개설 스킬을 배운 분이라면", "is, we can let you open the Bulk Buyer");
+			mes needtr("구매 노점을 열 수 있도록 해드린다는 것입니다.", "Shop if you've learned Vending.");
 			next;
-			mes "[휴]";
-			mes "물론 최초 등록 수수료로 10,000 제니를 받고 있습니다.";
-			mes "구매 노점을 열 때마다 ^4A4AFF구매 노점 개설 허가증^000000도 필요합니다.";
+			mes needtr("[휴]", "[Mr. Hugh]");
+			mes needtr("물론 최초 등록 수수료로 10,000 제니를 받고 있습니다.", "Of course, we charge 10,000 zeny as a one-time registration fee.");
+			mes needtr("구매 노점을 열 때마다 ^4A4AFF구매 노점 개설 허가증^000000도 필요합니다.", "You will need the ^4A4AFFBulk Buyer Shop License^000000 every time you open the shop.");
 			next;
-			mes "[휴]";
-			mes "지금 등록하시겠습니까?";
-			mes "등록하시면 구매 노점을 여는 방법을 알려드리겠습니다.";
+			mes needtr("[휴]", "[Mr. Hugh]");
+			mes needtr("지금 등록하시겠습니까?", "Say, would you like to register now?");
+			mes needtr("등록하시면 구매 노점을 여는 방법을 알려드리겠습니다.", "If you do, I'll teach you how to open the Bulk Buyer Shop.");
 			next;
-			if(select("구매 노점 개설 방법 배우기:취소") == 2) {
-				mes "[휴]";
-				mes "아, 아쉽군요!";
-				mes "대량 구매 기능은 사업에 여러모로 도움이 될 텐데,";
-				mes "결정은 본인의 몫이니까요.";
-				mes "상담이 필요하시면 언제든 다시 찾아주세요!";
+			if(select(needtr("구매 노점 개설 방법 배우기:취소", "Learn how to open Bulk Buyer Shop:Cancel")) == 2) {
+				mes needtr("[휴]", "[Mr. Hugh]");
+				mes needtr("아, 아쉽군요!", "Man, that's disappointing! Using this bulk");
+				mes needtr("대량 구매 기능은 사업에 여러모로 도움이 될 텐데,", "buyer option can benefit your business in");
+				mes needtr("결정은 본인의 몫이니까요.", "many ways, but it's your call. I'm always");
+				mes needtr("상담이 필요하시면 언제든 다시 찾아주세요!", "open for consultation!");
 				close;
 			}
-			mes "[휴]";
+			mes needtr("[휴]", "[Mr. Hugh]");
 			if (Zeny < 10000) {
-				mes "등록 수수료는 10,000 제니입니다.";
-				mes "먼저 수수료를 준비해 주세요.";
+				mes needtr("등록 수수료는 10,000 제니입니다.", "The registration fee is 10,000 zeny.");
+				mes needtr("먼저 수수료를 준비해 주세요.", "Please have the fee ready first.");
 				close;
 			} else {
-				mes "좋은 결정을 하셨습니다.";
-				mes "등록 수수료를 내시고 이곳에 서명해 주세요....";
+				mes needtr("좋은 결정을 하셨습니다.", "You've made a good decision.");
+				mes needtr("등록 수수료를 내시고 이곳에 서명해 주세요....", "Please give me the registration fee, and sign right here....");
 				next;
 				input .@name$;
-				mes "[휴]";
+				mes needtr("[휴]", "[Mr. Hugh]");
 				mes .@name$+"....";
-				mes "글씨체가 마음에 드는군요.";
-				mes "좋습니다. 이제 구매 노점을 열 수 있도록 승인되었습니다.";
+				mes needtr("글씨체가 마음에 드는군요.", "I like your handwriting.");
+				mes needtr("좋습니다. 이제 구매 노점을 열 수 있도록 승인되었습니다.", "Okay, you're now approved to open the Bulk Buyer Shop.");
 				set Zeny,Zeny-10000;
 				getitem 6377,5; //Buy_Stall_Permit
 				skill "ALL_BUYING_STORE",1,SKILL_PERM_GRANT;
 				next;
-				mes "[휴]";
-				mes "현재는 장비, 일부 포션, 제작 아이템을 ^8C2121제외^000000한";
-				mes "일반 아이템만 대량 구매할 수 있습니다.";
-				mes "그래도 활용 방법에 따라 사업에 큰 도움이 될 겁니다.";
+				mes needtr("[휴]", "[Mr. Hugh]");
+				mes needtr("현재는 장비, 일부 포션, 제작 아이템을 ^8C2121제외^000000한", "Currently, only normal items ^8C2121EXCEPT^000000 equipment, certain potions,");
+				mes needtr("일반 아이템만 대량 구매할 수 있습니다.", "and hand-crafted items can be purchased in bulk, but this can still be very");
+				mes needtr("그래도 활용 방법에 따라 사업에 큰 도움이 될 겁니다.", "beneficial to you, depending on how you use it.");
 				next;
-				mes "[휴]";
-				mes "그리고 구매하려는 아이템은 인벤토리에 최소 1개 이상 가지고 있어야 합니다.";
-				mes "구매 노점에 견본으로 보여줄 아이템이 필요하기 때문입니다.";
+				mes needtr("[휴]", "[Mr. Hugh]");
+				mes needtr("그리고 구매하려는 아이템은 인벤토리에 최소 1개 이상 가지고 있어야 합니다.", "Oh, and you need at least one of the item that you want to buy in your");
+				mes needtr("구매 노점에 견본으로 보여줄 아이템이 필요하기 때문입니다.", "inventory because you have to show it to other through your shop.");
 				next;
-				mes "[휴]";
-				mes "스킬 창에 구매 노점 스킬이 등록되었을 겁니다.";
-				mes "보이지 않는다면 스킬 목록을 접었다 펼친 뒤";
-				mes "3차 직업 탭을 확인해 보세요.";
+				mes needtr("[휴]", "[Mr. Hugh]");
+				mes needtr("스킬 창에 구매 노점 스킬이 등록되었을 겁니다.", "Your skill should now be registered in your skill window.");
+				mes needtr("보이지 않는다면 스킬 목록을 접었다 펼친 뒤", "If you can't see it you probably have to minimize your");
+				mes needtr("3차 직업 탭을 확인해 보세요.", "Skill List and check the 3rd Job Tab.");
 				next;
-				mes "[휴]";
-				mes "시험 삼아 사용할 수 있도록 구매 노점 개설 허가증 5장을 드렸습니다.";
-				mes "즐거운 거래 되세요!";
+				mes needtr("[휴]", "[Mr. Hugh]");
+				mes needtr("시험 삼아 사용할 수 있도록 구매 노점 개설 허가증 5장을 드렸습니다.", "I've given you 5 Bulk Buyer Shop Licenses for your trial.");
+				mes needtr("즐거운 거래 되세요!", "Enjoy shopping!");
 				close;
 			}
 		}
 	}
-	mes "알베르타 상인 길드 구매 담당자 휴입니다.";
-	mes "이야기를 나누고 싶지만 지금은 너무 바쁘군요.";
+	mes needtr("알베르타 상인 길드 구매 담당자 휴입니다.", "I'm Hugh from the Purchasing Team at the Alberta Merchant Guild.");
+	mes needtr("이야기를 나누고 싶지만 지금은 너무 바쁘군요.", "I'd love to chat, but I'm too busy at the moment.");
 	next;
-	mes "[휴]";
-	mes "제 시간은 오직 상인 고객 여러분을 위해 사용하고 있습니다.";
+	mes needtr("[휴]", "[Mr. Hugh]");
+	mes needtr("제 시간은 오직 상인 고객 여러분을 위해 사용하고 있습니다.", "My time is solely dedicated to our customers in the Merchant industry.");
 	close;
 }

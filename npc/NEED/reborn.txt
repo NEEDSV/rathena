@@ -1,7 +1,7 @@
 lasagna,175,131,4	script	환생 관리자	811,{
-	mes "[환생 관리자]";
-	mes "환생을 통해 특별한 보상을 획득할 수 있습니다.";
-	mes "환생은 장기 성장과 수집을 위한 콘텐츠입니다.";
+	mes needtr("[환생 관리자]", "[Rebirth Manager]");
+	mes needtr("환생을 통해 특별한 보상을 획득할 수 있습니다.", "Rebirthing earns you special rewards.");
+	mes needtr("환생은 장기 성장과 수집을 위한 콘텐츠입니다.", "Rebirth is long-term progression and collection content.");
 	setdialogsize(300,200);
 	// 주간 상점 구매 횟수 갱신
 	callsub S_ResetRebirthShopWeek;
@@ -13,20 +13,20 @@ lasagna,175,131,4	script	환생 관리자	811,{
 		.@count = getd(.CountVar$);
 		.@point = getd(.PointVar$);
 
-		mes "[환생 관리자]";
-		mes "현재 환생 횟수: ^0055FF" + .@count + "회^000000";
-		mes "보유 환생 포인트: ^00AA00" + .@point + "점^000000";
-		mes "환생 조건: Base Lv." + .NeedBaseLv + " / Job Lv." + .NeedJobLv;
-		mes "소모 아이템: " + callsub(S_ItemName, .TicketItemID) + " " + .TicketAmount + "개";
+		mes needtr("[환생 관리자]", "[Rebirth Manager]");
+		mes needtr("현재 환생 횟수: ^0055FF", "Rebirth count: ^0055FF") + .@count + needtr("회^000000", "^000000");
+		mes needtr("보유 환생 포인트: ^00AA00", "Rebirth points: ^00AA00") + .@point + needtr("점^000000", "^000000");
+		mes needtr("환생 조건: Base Lv.", "Requirement: Base Lv.") + .NeedBaseLv + " / Job Lv." + .NeedJobLv;
+		mes needtr("소모 아이템: ", "Item consumed: ") + callsub(S_ItemName, .TicketItemID) + " " + .TicketAmount + needtr("개", "");
 		next;
 		
 		.@menu = select(
-			"환생하기",
-			"환생 상점",
-			"환생 보상 보기",
-			"미수령 구간 보상 확인",
-			"의상 미리보기",
-			"닫기"
+			needtr("환생하기", "Rebirth"),
+			needtr("환생 상점", "Rebirth Shop"),
+			needtr("환생 보상 보기", "View Rebirth Rewards"),
+			needtr("미수령 구간 보상 확인", "Unclaimed Milestone Rewards"),
+			needtr("의상 미리보기", "Costume Preview"),
+			needtr("닫기", "Close")
 		);
 
 		switch (.@menu) {
@@ -48,8 +48,8 @@ lasagna,175,131,4	script	환생 관리자	811,{
 				close;
 
 			case 5:
-				mes "[환생 관리자]";
-				mes "환생 의상 미리보기는 우측 NPC를 확인해주세요.";
+				mes needtr("[환생 관리자]", "[Rebirth Manager]");
+				mes needtr("환생 의상 미리보기는 우측 NPC를 확인해주세요.", "For the costume preview please use the NPCs to the right.");
 				close;
 
 			case 6:
@@ -61,43 +61,43 @@ S_DoRebirth:
 	.@count = getd(.CountVar$);
 
 	if (BaseLevel < .NeedBaseLv) {
-		mes "[환생 관리자]";
-		mes "Base Lv." + .NeedBaseLv + " 이상부터 환생할 수 있습니다.";
-		mes "현재 Base Lv.: " + BaseLevel;
+		mes needtr("[환생 관리자]", "[Rebirth Manager]");
+		mes "Base Lv." + .NeedBaseLv + needtr(" 이상부터 환생할 수 있습니다.", " or higher is required to rebirth.");
+		mes needtr("현재 Base Lv.: ", "Your Base Lv.: ") + BaseLevel;
 		return;
 	}
 
 	if (JobLevel < .NeedJobLv) {
-		mes "[환생 관리자]";
-		mes "Job Lv." + .NeedJobLv + " 이상부터 환생할 수 있습니다.";
-		mes "현재 Job Lv.: " + JobLevel;
+		mes needtr("[환생 관리자]", "[Rebirth Manager]");
+		mes "Job Lv." + .NeedJobLv + needtr(" 이상부터 환생할 수 있습니다.", " or higher is required to rebirth.");
+		mes needtr("현재 Job Lv.: ", "Your Job Lv.: ") + JobLevel;
 		return;
 	}
 
 	if (.TicketItemID <= 0) {
-		mes "[환생 관리자]";
-		mes "^FF0000환생 티켓 아이템 ID가 설정되지 않았습니다.^000000";
-		mes "NPC OnInit의 .TicketItemID 값을 설정해주세요.";
+		mes needtr("[환생 관리자]", "[Rebirth Manager]");
+		mes needtr("^FF0000환생 티켓 아이템 ID가 설정되지 않았습니다.^000000", "^FF0000The rebirth ticket item ID is not configured.^000000");
+		mes needtr("NPC OnInit의 .TicketItemID 값을 설정해주세요.", "Please set .TicketItemID in the NPC's OnInit.");
 		return;
 	}
 
 	if (countitem(.TicketItemID) < .TicketAmount) {
-		mes "[환생 관리자]";
-		mes "환생에는 " + callsub(S_ItemName, .TicketItemID) + " " + .TicketAmount + "개가 필요합니다.";
+		mes needtr("[환생 관리자]", "[Rebirth Manager]");
+		mes needtr("환생에는 ", "Rebirth requires ") + callsub(S_ItemName, .TicketItemID) + " " + .TicketAmount + needtr("개가 필요합니다.", ".");
 		return;
 	}
 
-	mes "[환생 관리자]";
-	mes "환생을 진행하시겠습니까?";
-	mes "환생 시 환생 티켓이 소모되고, 환생 횟수가 1회 증가합니다.";
+	mes needtr("[환생 관리자]", "[Rebirth Manager]");
+	mes needtr("환생을 진행하시겠습니까?", "Do you want to rebirth?");
+	mes needtr("환생 시 환생 티켓이 소모되고, 환생 횟수가 1회 증가합니다.", "Rebirthing consumes the ticket and raises your rebirth count by 1.");
 	mes " ";
-	mes "현재 환생 횟수: ^0055FF" + .@count + "회^000000";
-	mes "환생 후 횟수: ^0055FF" + (.@count + 1) + "회^000000";
+	mes needtr("현재 환생 횟수: ^0055FF", "Rebirth count: ^0055FF") + .@count + needtr("회^000000", "^000000");
+	mes needtr("환생 후 횟수: ^0055FF", "Count after rebirth: ^0055FF") + (.@count + 1) + needtr("회^000000", "^000000");
 	next;
 
-	if (select("환생한다", "취소") == 2) {
-		mes "[환생 관리자]";
-		mes "환생을 취소했습니다.";
+	if (select(needtr("환생한다", "Rebirth"), needtr("취소", "Cancel")) == 2) {
+		mes needtr("[환생 관리자]", "[Rebirth Manager]");
+		mes needtr("환생을 취소했습니다.", "Rebirth cancelled.");
 		return;
 	}
 
@@ -111,13 +111,13 @@ S_DoRebirth:
 		setd .PointVar$, getd(.PointVar$) + .PointPerRebirth;
 	}
 
-	mes "[환생 관리자]";
-	mes "환생이 완료되었습니다.";
-	mes "현재 환생 횟수: ^0055FF" + .@new_count + "회^000000";
+	mes needtr("[환생 관리자]", "[Rebirth Manager]");
+	mes needtr("환생이 완료되었습니다.", "Rebirth complete.");
+	mes needtr("현재 환생 횟수: ^0055FF", "Rebirth count: ^0055FF") + .@new_count + needtr("회^000000", "^000000");
 
 	if (.PointPerRebirth > 0) {
-		mes "환생 포인트: ^00AA00+" + .PointPerRebirth + "점^000000";
-		mes "보유 포인트: ^00AA00" + getd(.PointVar$) + "점^000000";
+		mes needtr("환생 포인트: ^00AA00+", "Rebirth points: ^00AA00+") + .PointPerRebirth + needtr("점^000000", "^000000");
+		mes needtr("보유 포인트: ^00AA00", "Points held: ^00AA00") + getd(.PointVar$) + needtr("점^000000", "^000000");
 	}
 		if (.@new_count == .Cnt_EffectStone ||
 		.@new_count == .Cnt_UpperCostume ||
@@ -203,9 +203,9 @@ S_MigrateRebirthCount:
 
 S_OpenRebirthShop:
 	if (!.ShopConfigValid) {
-		mes "[환생 상점]";
-		mes "^FF0000상점 배열 설정에 오류가 있습니다.^000000";
-		mes "서버 콘솔의 환생 상점 설정 오류를 확인해주세요.";
+		mes needtr("[환생 상점]", "[Rebirth Shop]");
+		mes needtr("^FF0000상점 배열 설정에 오류가 있습니다.^000000", "^FF0000The shop array configuration is broken.^000000");
+		mes needtr("서버 콘솔의 환생 상점 설정 오류를 확인해주세요.", "Please check the rebirth shop configuration errors on the server console.");
 		next;
 		return;
 	}
@@ -213,9 +213,9 @@ S_OpenRebirthShop:
 	while (true) {
 		callsub S_ResetRebirthShopWeek;
 
-		mes "[환생 상점]";
-		mes "보유 환생 포인트: ^00AA00" + getd(.PointVar$) + "점^000000";
-		mes "구매할 상품을 선택해주세요.";
+		mes needtr("[환생 상점]", "[Rebirth Shop]");
+		mes needtr("보유 환생 포인트: ^00AA00", "Rebirth points: ^00AA00") + getd(.PointVar$) + needtr("점^000000", "^000000");
+		mes needtr("구매할 상품을 선택해주세요.", "Please choose what to buy.");
 		next;
 
 		.@menu$ = "";
@@ -227,25 +227,25 @@ S_OpenRebirthShop:
 			.@used = getd(.ShopCountPrefix$ + .Shop_ItemID[.@i]);
 
 			if (.Shop_WeeklyLimit[.@i] == 0) {
-				.@limit_text$ = "주간 제한 없음";
+				.@limit_text$ = needtr("주간 제한 없음", "no weekly limit");
 			} else {
 				.@remaining = .Shop_WeeklyLimit[.@i] - .@used;
 				if (.@remaining < 0)
 					.@remaining = 0;
 
-				.@limit_text$ = "주 " + .@remaining + "회 남음";
+				.@limit_text$ = needtr("주 ", "this week ") + .@remaining + needtr("회 남음", " left");
 			}
 
 			.@menu$ = .@menu$
 				+ callsub(S_ItemName, .Shop_ItemID[.@i])
-				+ " " + .Shop_Amount[.@i] + "개"
+				+ " " + .Shop_Amount[.@i] + needtr("개", "")
 				+ " (" + .@limit_text$ + ")";
 		}
 
 		if (.ShopCount > 0)
 			.@menu$ = .@menu$ + ":";
 
-		.@menu$ = .@menu$ + "뒤로";
+		.@menu$ = .@menu$ + needtr("뒤로", "Back");
 		.@shop_menu = select(.@menu$);
 
 		if (.@shop_menu > .ShopCount)
@@ -258,8 +258,8 @@ S_BuyRebirthShopItem:
 	.@index = getarg(0);
 
 	if (.@index < 0 || .@index >= .ShopCount) {
-		mes "[환생 상점]";
-		mes "^FF0000존재하지 않는 상품입니다.^000000";
+		mes needtr("[환생 상점]", "[Rebirth Shop]");
+		mes needtr("^FF0000존재하지 않는 상품입니다.^000000", "^FF0000That product does not exist.^000000");
 		next;
 		return;
 	}
@@ -282,67 +282,67 @@ S_BuyRebirthShopItem:
 			.@remaining = 0;
 	}
 
-	mes "[환생 상점]";
-	mes "판매 상품: " + callsub(S_ItemName, .@item_id) + " " + .@amount + "개";
+	mes needtr("[환생 상점]", "[Rebirth Shop]");
+	mes needtr("판매 상품: ", "Product: ") + callsub(S_ItemName, .@item_id) + " " + .@amount + needtr("개", "");
 	mes " ";
-	mes "필요 환생 포인트: ^00AA00" + .@point_cost + "점^000000";
-	mes "필요 제니: ^FF8800" + callfunc("F_InsertComma", .@zeny_cost) + " Zeny^000000";
+	mes needtr("필요 환생 포인트: ^00AA00", "Rebirth points needed: ^00AA00") + .@point_cost + needtr("점^000000", "^000000");
+	mes needtr("필요 제니: ^FF8800", "Zeny needed: ^FF8800") + callfunc("F_InsertComma", .@zeny_cost) + " Zeny^000000";
 	mes " ";
-	mes "보유 환생 포인트: " + getd(.PointVar$) + "점";
+	mes needtr("보유 환생 포인트: ", "Rebirth points held: ") + getd(.PointVar$) + needtr("점", "");
 
 	if (.@weekly_limit == 0)
-		mes "주간 구매 제한: 없음";
+		mes needtr("주간 구매 제한: 없음", "Weekly purchase limit: none");
 	else
-		mes "이번 주 구매 가능: " + .@remaining + "회";
+		mes needtr("이번 주 구매 가능: ", "Purchases left this week: ") + .@remaining + needtr("회", "");
 
 	next;
 
-	if (select("구매한다:상품 목록으로") == 2)
+	if (select(needtr("구매한다:상품 목록으로", "Buy:Back to Products")) == 2)
 		return;
 
 	// 배열 설정 검증
 	if (.@item_id <= 0 || .@amount <= 0) {
-		mes "[환생 상점]";
-		mes "^FF0000상품 아이템 ID 또는 지급 수량이 올바르지 않습니다.^000000";
+		mes needtr("[환생 상점]", "[Rebirth Shop]");
+		mes needtr("^FF0000상품 아이템 ID 또는 지급 수량이 올바르지 않습니다.^000000", "^FF0000The product's item ID or amount is invalid.^000000");
 		next;
 		return;
 	}
 
 	if (.@weekly_limit < 0 || .@point_cost < 0 || .@zeny_cost < 0) {
-		mes "[환생 상점]";
-		mes "^FF0000상품의 구매 제한 또는 가격 설정이 올바르지 않습니다.^000000";
+		mes needtr("[환생 상점]", "[Rebirth Shop]");
+		mes needtr("^FF0000상품의 구매 제한 또는 가격 설정이 올바르지 않습니다.^000000", "^FF0000The product's purchase limit or price is invalid.^000000");
 		next;
 		return;
 	}
 
 	// 0은 주간 제한 없음, 1 이상은 주간 구매 횟수 제한
 	if (.@weekly_limit > 0 && .@remaining <= 0) {
-		mes "[환생 상점]";
-		mes "이번 주 구매 가능 횟수를 모두 사용했습니다.";
+		mes needtr("[환생 상점]", "[Rebirth Shop]");
+		mes needtr("이번 주 구매 가능 횟수를 모두 사용했습니다.", "You have used all of this week's purchases.");
 		next;
 		return;
 	}
 
 	if (getd(.PointVar$) < .@point_cost) {
-		mes "[환생 상점]";
-		mes "환생 포인트가 부족합니다.";
-		mes "필요 포인트: " + .@point_cost + "점";
-		mes "보유 포인트: " + getd(.PointVar$) + "점";
+		mes needtr("[환생 상점]", "[Rebirth Shop]");
+		mes needtr("환생 포인트가 부족합니다.", "You do not have enough rebirth points.");
+		mes needtr("필요 포인트: ", "Points needed: ") + .@point_cost + needtr("점", "");
+		mes needtr("보유 포인트: ", "Points held: ") + getd(.PointVar$) + needtr("점", "");
 		next;
 		return;
 	}
 
 	if (Zeny < .@zeny_cost) {
-		mes "[환생 상점]";
-		mes "제니가 부족합니다.";
-		mes "필요 제니: " + callfunc("F_InsertComma", .@zeny_cost) + " Zeny";
+		mes needtr("[환생 상점]", "[Rebirth Shop]");
+		mes needtr("제니가 부족합니다.", "You do not have enough zeny.");
+		mes needtr("필요 제니: ", "Zeny needed: ") + callfunc("F_InsertComma", .@zeny_cost) + " Zeny";
 		next;
 		return;
 	}
 
 	if (!checkweight(.@item_id, .@amount)) {
-		mes "[환생 상점]";
-		mes "소지 무게 또는 인벤토리 공간을 확인해주세요.";
+		mes needtr("[환생 상점]", "[Rebirth Shop]");
+		mes needtr("소지 무게 또는 인벤토리 공간을 확인해주세요.", "Please check your weight and inventory space.");
 		next;
 		return;
 	}
@@ -353,19 +353,19 @@ S_BuyRebirthShopItem:
 	getitem .@item_id, .@amount;
 	setd .@count_var$, .@used + 1;
 
-	mes "[환생 상점]";
-	mes callsub(S_ItemName, .@item_id) + " " + .@amount + "개를 구매했습니다.";
+	mes needtr("[환생 상점]", "[Rebirth Shop]");
+	mes callsub(S_ItemName, .@item_id) + " " + .@amount + needtr("개를 구매했습니다.", " purchased.");
 	mes " ";
-	mes "남은 환생 포인트: ^00AA00" + getd(.PointVar$) + "점^000000";
+	mes needtr("남은 환생 포인트: ^00AA00", "Rebirth points left: ^00AA00") + getd(.PointVar$) + needtr("점^000000", "^000000");
 
 	if (.@weekly_limit == 0) {
-		mes "주간 구매 제한: ^0055FF없음^000000";
+		mes needtr("주간 구매 제한: ^0055FF없음^000000", "Weekly purchase limit: ^0055FFnone^000000");
 	} else {
 		.@remaining = .@weekly_limit - getd(.@count_var$);
 		if (.@remaining < 0)
 			.@remaining = 0;
 
-		mes "이번 주 남은 구매 횟수: ^0055FF" + .@remaining + "회^000000";
+		mes needtr("이번 주 남은 구매 횟수: ^0055FF", "Purchases left this week: ^0055FF") + .@remaining + needtr("회^000000", "^000000");
 	}
 
 	next;
@@ -413,29 +413,29 @@ S_ValidateRebirthConfig:
 S_GiveEveryReward:
 	.@count = getarg(0);
 
-	mes "[환생 보상]";
-	mes "환생 " + .@count + "회 기본 보상을 지급합니다.";
+	mes needtr("[환생 보상]", "[Rebirth Rewards]");
+	mes needtr("환생 ", "Base rewards granted for rebirth #") + .@count + needtr("회 기본 보상을 지급합니다.", ".");
 
 	if (.Every_CostumeBox_ID > 0 && .Every_CostumeBox_Amount > 0) {
 		callsub S_GiveItem, .Every_CostumeBox_ID, .Every_CostumeBox_Amount;
-		mes "- " + callsub(S_ItemName, .Every_CostumeBox_ID) + " " + .Every_CostumeBox_Amount + "개";
+		mes "- " + callsub(S_ItemName, .Every_CostumeBox_ID) + " " + .Every_CostumeBox_Amount + needtr("개", "");
 	}
 
 	if (.Every_RebirthCoin_ID > 0 && .Every_RebirthCoin_Amount > 0) {
 		callsub S_GiveItem, .Every_RebirthCoin_ID, .Every_RebirthCoin_Amount;
-		mes "- " + callsub(S_ItemName, .Every_RebirthCoin_ID) + " " + .Every_RebirthCoin_Amount + "개";
+		mes "- " + callsub(S_ItemName, .Every_RebirthCoin_ID) + " " + .Every_RebirthCoin_Amount + needtr("개", "");
 	}
 
 	if (.Every_ExpManual_ID > 0 && .Every_ExpManual_Amount > 0) {
 		callsub S_GiveItem, .Every_ExpManual_ID, .Every_ExpManual_Amount;
-		mes "- " + callsub(S_ItemName, .Every_ExpManual_ID) + " " + .Every_ExpManual_Amount + "개";
+		mes "- " + callsub(S_ItemName, .Every_ExpManual_ID) + " " + .Every_ExpManual_Amount + needtr("개", "");
 	}
 	
 	if (.Every_GoldBox_ID > 0 && .Every_GoldBox_Amount > 0) {
 		.@rand = rand(1,5);
 		callsub S_GiveItem, .Every_GoldBox_ID, .Every_GoldBox_Amount + .@rand;
 		.@textcount = .Every_GoldBox_Amount + .@rand;
-		mes "- " + callsub(S_ItemName, .Every_GoldBox_ID) + " " + .@textcount + "개";
+		mes "- " + callsub(S_ItemName, .Every_GoldBox_ID) + " " + .@textcount + needtr("개", "");
 	}
 
 	return;
@@ -452,8 +452,8 @@ S_GiveEveryNReward:
 	if (.EveryN_ItemID <= 0 || .EveryN_Amount <= 0)
 		return;
 
-	mes .EveryN_Count + "회마다 지급되는 추가 보상입니다.";
-	mes "- " + callsub(S_ItemName, .EveryN_ItemID) + " " + .EveryN_Amount + "개";
+	mes needtr(.EveryN_Count + "회마다 지급되는 추가 보상입니다.", "Extra reward granted every " + .EveryN_Count + " rebirths.");
+	mes "- " + callsub(S_ItemName, .EveryN_ItemID) + " " + .EveryN_Amount + needtr("개", "");
 	callsub S_GiveItem, .EveryN_ItemID, .EveryN_Amount;
 
 	return;
@@ -462,8 +462,8 @@ S_GiveUnclaimedMiles:
 	.@count = getd(.CountVar$);
 	.@given = 0;
 
-	mes "[환생 관리자]";
-	mes "현재 환생 횟수 기준으로 미수령 구간 보상을 확인합니다.";
+	mes needtr("[환생 관리자]", "[Rebirth Manager]");
+	mes needtr("현재 환생 횟수 기준으로 미수령 구간 보상을 확인합니다.", "Checking unclaimed milestone rewards for your current rebirth count.");
 	next;
 
 	for (.@i = 0; .@i < getarraysize(.Milestone_Count); .@i++) {
@@ -480,8 +480,8 @@ S_GiveUnclaimedMiles:
 	}
 
 	if (.@given == 0) {
-		mes "[환생 관리자]";
-		mes "수령 가능한 미수령 구간 보상이 없습니다.";
+		mes needtr("[환생 관리자]", "[Rebirth Manager]");
+		mes needtr("수령 가능한 미수령 구간 보상이 없습니다.", "You have no unclaimed milestone rewards.");
 	}
 
 	return;
@@ -493,7 +493,7 @@ S_GiveMilestoneByCount:
 		return;
 
 	if (.@count == .Cnt_EffectStone) {
-		callsub S_GiveMilestoneFixed, .@count, .Item_EffectStone, .Amount_EffectStone, "환생 전용 이펙트 스톤";
+		callsub S_GiveMilestoneFixed, .@count, .Item_EffectStone, .Amount_EffectStone, needtr("환생 전용 이펙트 스톤", "Rebirth Effect Stone");
 		return;
 	}
 
@@ -503,7 +503,7 @@ S_GiveMilestoneByCount:
 	}
 
 	if (.@count == .Cnt_FootprintStone) {
-		callsub S_GiveMilestoneFixed, .@count, .Item_FootprintStone, .Amount_FootprintStone, "환생 전용 발자국 이펙트 스톤";
+		callsub S_GiveMilestoneFixed, .@count, .Item_FootprintStone, .Amount_FootprintStone, needtr("환생 전용 발자국 이펙트 스톤", "Rebirth Footprint Effect Stone");
 		return;
 	}
 
@@ -513,7 +513,7 @@ S_GiveMilestoneByCount:
 	}
 
 	if (.@count == .Cnt_EffectStoneTicket) {
-		callsub S_GiveMilestoneFixed, .@count, .Item_EffectStoneTicket, .Amount_EffectStoneTicket, "이펙트 스톤 선택권";
+		callsub S_GiveMilestoneFixed, .@count, .Item_EffectStoneTicket, .Amount_EffectStoneTicket, needtr("이펙트 스톤 선택권", "Effect Stone Voucher");
 		return;
 	}
 
@@ -523,7 +523,7 @@ S_GiveMilestoneByCount:
 	}
 
 	if (.@count == .Cnt_FootprintTicket) {
-		callsub S_GiveMilestoneFixed, .@count, .Item_FootprintTicket, .Amount_FootprintTicket, "발자국 이펙트 스톤 선택권";
+		callsub S_GiveMilestoneFixed, .@count, .Item_FootprintTicket, .Amount_FootprintTicket, needtr("발자국 이펙트 스톤 선택권", "Footprint Effect Stone Voucher");
 		return;
 	}
 
@@ -533,17 +533,17 @@ S_GiveMilestoneByCount:
 	}
 
 	if (.@count == .Cnt_Aura) {
-		callsub S_GiveMilestoneFixed, .@count, .Item_Aura, .Amount_Aura, "환생 전용 오라";
+		callsub S_GiveMilestoneFixed, .@count, .Item_Aura, .Amount_Aura, needtr("환생 전용 오라", "Rebirth Aura");
 		return;
 	}
 
 	if (.@count == .Cnt_Title) {
-		callsub S_GiveMilestoneFixed, .@count, .Item_Title, .Amount_Title, "환생 전용 칭호";
+		callsub S_GiveMilestoneFixed, .@count, .Item_Title, .Amount_Title, needtr("환생 전용 칭호", "Rebirth Title");
 		return;
 	}
 
 	if (.@count == .Cnt_FinalEffect) {
-		callsub S_GiveMilestoneFixed, .@count, .Item_FinalEffect, .Amount_FinalEffect, "환생 전용 이펙트";
+		callsub S_GiveMilestoneFixed, .@count, .Item_FinalEffect, .Amount_FinalEffect, needtr("환생 전용 이펙트", "Rebirth Effect");
 		return;
 	}
 
@@ -555,13 +555,13 @@ S_GiveMilestoneFixed:
 	.@amount = getarg(2);
 	.@reward_name$ = getarg(3);
 
-	mes "[환생 구간 보상]";
-	mes "환생 " + .@count + "회 보상을 지급합니다.";
-	mes "보상: " + .@reward_name$;
+	mes needtr("[환생 구간 보상]", "[Rebirth Milestone Reward]");
+	mes needtr("환생 ", "Reward for rebirth #") + .@count + needtr("회 보상을 지급합니다.", ".");
+	mes needtr("보상: ", "Reward: ") + .@reward_name$;
 
 	if (.@item_id <= 0) {
-		mes "^FF0000아이템 ID가 설정되지 않았습니다.^000000";
-		mes "OnInit 설정을 확인해주세요.";
+		mes needtr("^FF0000아이템 ID가 설정되지 않았습니다.^000000", "^FF0000The item ID is not configured.^000000");
+		mes needtr("OnInit 설정을 확인해주세요.", "Please check the OnInit configuration.");
 		next;
 		return;
 	}
@@ -569,7 +569,7 @@ S_GiveMilestoneFixed:
 	callsub S_GiveItem, .@item_id, .@amount;
 	setd .ClaimPrefix$ + .@count, 1;
 
-	mes "- " + callsub(S_ItemName, .@item_id) + " " + .@amount + "개";
+	mes "- " + callsub(S_ItemName, .@item_id) + " " + .@amount + needtr("개", "");
 	next;
 	return;
 
@@ -579,15 +579,15 @@ S_GiveCostumeChoice:
 
 	callsub S_LoadCostumeChoice, .@type;
 
-	mes "[환생 구간 보상]";
-	mes "환생 " + .@count + "회 보상입니다.";
-	mes .ChoiceTitle$ + " 3종 중 1개를 선택할 수 있습니다.";
+	mes needtr("[환생 구간 보상]", "[Rebirth Milestone Reward]");
+	mes needtr("환생 ", "Reward for rebirth #") + .@count + needtr("회 보상입니다.", ".");
+	mes .ChoiceTitle$ + needtr(" 3종 중 1개를 선택할 수 있습니다.", " - choose 1 of 3.");
 	next;
 
 	while (true) {
-		mes "[의상 선택]";
+		mes needtr("[의상 선택]", "[Costume Choice]");
 		mes .ChoiceTitle$;
-		mes "원하는 보상을 선택해주세요.";
+		mes needtr("원하는 보상을 선택해주세요.", "Please choose the reward you want.");
 		mes " ";
 
 		for (.@i = 0; .@i < 3; .@i++) {
@@ -598,13 +598,13 @@ S_GiveCostumeChoice:
 
 		if (.UsePreviewCutin) {
 			.@menu = select(
-				"1번 미리보기",
-				"2번 미리보기",
-				"3번 미리보기",
-				"1번 선택",
-				"2번 선택",
-				"3번 선택",
-				"취소"
+				needtr("1번 미리보기", "Preview 1"),
+				needtr("2번 미리보기", "Preview 2"),
+				needtr("3번 미리보기", "Preview 3"),
+				needtr("1번 선택", "Choose 1"),
+				needtr("2번 선택", "Choose 2"),
+				needtr("3번 선택", "Choose 3"),
+				needtr("취소", "Cancel")
 			);
 
 			if (.@menu >= 1 && .@menu <= 3) {
@@ -614,32 +614,32 @@ S_GiveCostumeChoice:
 					cutin .ChoicePreview$[.@idx], 2;
 				}
 
-				mes "[의상 미리보기]";
+				mes needtr("[의상 미리보기]", "[Costume Preview]");
 				mes .ChoiceName$[.@idx];
-				mes "미리보기 이미지를 확인했습니다.";
+				mes needtr("미리보기 이미지를 확인했습니다.", "Preview shown.");
 				next;
 				continue;
 			}
 
 			if (.@menu == 7) {
 				cutin "", 255;
-				mes "[환생 관리자]";
-				mes "구간 보상은 수령 전까지 다시 받을 수 있습니다.";
+				mes needtr("[환생 관리자]", "[Rebirth Manager]");
+				mes needtr("구간 보상은 수령 전까지 다시 받을 수 있습니다.", "A milestone reward stays available until you claim it.");
 				return;
 			}
 
 			.@idx = .@menu - 4;
 		} else {
 			.@menu = select(
-				"1번 선택",
-				"2번 선택",
-				"3번 선택",
-				"취소"
+				needtr("1번 선택", "Choose 1"),
+				needtr("2번 선택", "Choose 2"),
+				needtr("3번 선택", "Choose 3"),
+				needtr("취소", "Cancel")
 			);
 
 			if (.@menu == 4) {
-				mes "[환생 관리자]";
-				mes "구간 보상은 수령 전까지 다시 받을 수 있습니다.";
+				mes needtr("[환생 관리자]", "[Rebirth Manager]");
+				mes needtr("구간 보상은 수령 전까지 다시 받을 수 있습니다.", "A milestone reward stays available until you claim it.");
 				return;
 			}
 
@@ -648,27 +648,27 @@ S_GiveCostumeChoice:
 
 		cutin "", 255;
 
-		mes "[의상 선택]";
-		mes "선택한 보상:";
+		mes needtr("[의상 선택]", "[Costume Choice]");
+		mes needtr("선택한 보상:", "Selected reward:");
 		mes "^0055FF" + .ChoiceName$[.@idx] + "^000000";
 		mes callsub(S_ItemName, .ChoiceItem[.@idx]);
 		next;
 
-		if (select("이 보상으로 확정", "다시 선택") == 2)
+		if (select(needtr("이 보상으로 확정", "Confirm this reward"), needtr("다시 선택", "Choose again")) == 2)
 			continue;
 
 		if (.ChoiceItem[.@idx] <= 0) {
-			mes "[환생 관리자]";
-			mes "^FF0000선택 보상 아이템 ID가 설정되지 않았습니다.^000000";
-			mes "OnInit 설정을 확인해주세요.";
+			mes needtr("[환생 관리자]", "[Rebirth Manager]");
+			mes needtr("^FF0000선택 보상 아이템 ID가 설정되지 않았습니다.^000000", "^FF0000The choice reward item ID is not configured.^000000");
+			mes needtr("OnInit 설정을 확인해주세요.", "Please check the OnInit configuration.");
 			return;
 		}
 
 		callsub S_GiveItem, .ChoiceItem[.@idx], 1;
 		setd .ClaimPrefix$ + .@count, 1;
 
-		mes "[환생 관리자]";
-		mes "보상이 지급되었습니다.";
+		mes needtr("[환생 관리자]", "[Rebirth Manager]");
+		mes needtr("보상이 지급되었습니다.", "The reward has been granted.");
 		mes "- " + .ChoiceName$[.@idx];
 		mes "- " + callsub(S_ItemName, .ChoiceItem[.@idx]);
 		next;
@@ -683,7 +683,7 @@ S_LoadCostumeChoice:
 	deletearray .ChoicePreview$[0], getarraysize(.ChoicePreview$);
 
 	if (.@type == 1) {
-		.ChoiceTitle$ = "환생 전용 희귀 의상 (상단)";
+		.ChoiceTitle$ = needtr("환생 전용 희귀 의상 (상단)", "Rebirth Rare Costume (Upper)");
 		copyarray .ChoiceItem[0], .Upper_Item[0], 3;
 		copyarray .ChoiceName$[0], .Upper_Name$[0], 3;
 		copyarray .ChoicePreview$[0], .Upper_Preview$[0], 3;
@@ -691,7 +691,7 @@ S_LoadCostumeChoice:
 	}
 
 	if (.@type == 2) {
-		.ChoiceTitle$ = "환생 전용 희귀 의상 (중단)";
+		.ChoiceTitle$ = needtr("환생 전용 희귀 의상 (중단)", "Rebirth Rare Costume (Middle)");
 		copyarray .ChoiceItem[0], .Middle_Item[0], 3;
 		copyarray .ChoiceName$[0], .Middle_Name$[0], 3;
 		copyarray .ChoicePreview$[0], .Middle_Preview$[0], 3;
@@ -699,7 +699,7 @@ S_LoadCostumeChoice:
 	}
 
 	if (.@type == 3) {
-		.ChoiceTitle$ = "환생 전용 희귀 의상 (하단)";
+		.ChoiceTitle$ = needtr("환생 전용 희귀 의상 (하단)", "Rebirth Rare Costume (Lower)");
 		copyarray .ChoiceItem[0], .Lower_Item[0], 3;
 		copyarray .ChoiceName$[0], .Lower_Name$[0], 3;
 		copyarray .ChoicePreview$[0], .Lower_Preview$[0], 3;
@@ -707,7 +707,7 @@ S_LoadCostumeChoice:
 	}
 
 	if (.@type == 4) {
-		.ChoiceTitle$ = "환생 전용 희귀 의상 (걸칠것)";
+		.ChoiceTitle$ = needtr("환생 전용 희귀 의상 (걸칠것)", "Rebirth Rare Costume (Garment)");
 		copyarray .ChoiceItem[0], .Garment_Item[0], 3;
 		copyarray .ChoiceName$[0], .Garment_Name$[0], 3;
 		copyarray .ChoicePreview$[0], .Garment_Preview$[0], 3;
@@ -717,30 +717,30 @@ S_LoadCostumeChoice:
 	return;
 
 S_ShowRewardInfo:
-	mes "[환생 보상]";
-	mes "1회마다: 환생 포인트 " + .PointPerRebirth + "점";
-	mes "1회마다: 의상 상자 10개, 300% 교범 1개";
-	mes "1회마다: 행운 금화 주머니 5개 + (1 ~ 5개)";
-	mes .EveryN_Count + "회마다: 3배 풍선껌 1개";
+	mes needtr("[환생 보상]", "[Rebirth Rewards]");
+	mes needtr("1회마다: 환생 포인트 ", "Per rebirth: +") + .PointPerRebirth + needtr("점", " rebirth points");
+	mes needtr("1회마다: 의상 상자 10개, 300% 교범 1개", "Per rebirth: Costume Box x10, 300% Battle Manual x1");
+	mes needtr("1회마다: 행운 금화 주머니 5개 + (1 ~ 5개)", "Per rebirth: Lucky Gold Coin Pouch x5 + (1-5)");
+	mes needtr(.EveryN_Count + "회마다: 3배 풍선껌 1개", "Every " + .EveryN_Count + " rebirths: Triple Bubble Gum x1");
 	mes " ";
-	mes .Cnt_EffectStone + "회: 환생 전용 이펙트 스톤";
-	mes .Cnt_UpperCostume + "회: 환생 전용 희귀 의상 (상단)";
-	mes .Cnt_FootprintStone + "회: 환생 전용 발자국 이펙트 스톤";
-	mes .Cnt_MiddleCostume + "회: 환생 전용 희귀 의상 (중단)";
-	mes .Cnt_EffectStoneTicket + "회: 이펙트 스톤 선택권";
-	mes .Cnt_LowerCostume + "회: 환생 전용 희귀 의상 (하단)";
-	mes .Cnt_FootprintTicket + "회: 발자국 이펙트 스톤 선택권";
-	mes .Cnt_GarmentCostume + "회: 환생 전용 희귀 의상 (걸칠것)";
-	mes .Cnt_Aura + "회: 환생 전용 오라";
-	mes .Cnt_Title + "회: 환생 전용 칭호";
-	mes .Cnt_FinalEffect + "회: 환생 전용 이펙트";
+	mes .Cnt_EffectStone + needtr("회: 환생 전용 이펙트 스톤", " rebirths: Rebirth Effect Stone");
+	mes .Cnt_UpperCostume + needtr("회: 환생 전용 희귀 의상 (상단)", " rebirths: Rebirth Rare Costume (Upper)");
+	mes .Cnt_FootprintStone + needtr("회: 환생 전용 발자국 이펙트 스톤", " rebirths: Rebirth Footprint Effect Stone");
+	mes .Cnt_MiddleCostume + needtr("회: 환생 전용 희귀 의상 (중단)", " rebirths: Rebirth Rare Costume (Middle)");
+	mes .Cnt_EffectStoneTicket + needtr("회: 이펙트 스톤 선택권", " rebirths: Effect Stone Voucher");
+	mes .Cnt_LowerCostume + needtr("회: 환생 전용 희귀 의상 (하단)", " rebirths: Rebirth Rare Costume (Lower)");
+	mes .Cnt_FootprintTicket + needtr("회: 발자국 이펙트 스톤 선택권", " rebirths: Footprint Effect Stone Voucher");
+	mes .Cnt_GarmentCostume + needtr("회: 환생 전용 희귀 의상 (걸칠것)", " rebirths: Rebirth Rare Costume (Garment)");
+	mes .Cnt_Aura + needtr("회: 환생 전용 오라", " rebirths: Rebirth Aura");
+	mes .Cnt_Title + needtr("회: 환생 전용 칭호", " rebirths: Rebirth Title");
+	mes .Cnt_FinalEffect + needtr("회: 환생 전용 이펙트", " rebirths: Rebirth Effect");
 	setdialogsize(300,350);
 	next;
 
-	mes "[세트 보너스]";
-	mes .Cnt_EffectStone + "회 + " + .Cnt_FootprintStone + "회 세트 장착 시 보너스";
-	mes .Cnt_UpperCostume + "회 + " + .Cnt_MiddleCostume + "회 + " + .Cnt_LowerCostume + "회 + " + .Cnt_GarmentCostume + "회 세트 장착 시 보너스";
-	mes .Cnt_Aura + "회 + " + .Cnt_Title + "회 + " + .Cnt_FinalEffect + "회 세트 장착 시 보너스";
+	mes needtr("[세트 보너스]", "[Set Bonus]");
+	mes .Cnt_EffectStone + needtr("회 + ", " + ") + .Cnt_FootprintStone + needtr("회 세트 장착 시 보너스", " rebirths: set bonus while all pieces are worn");
+	mes .Cnt_UpperCostume + needtr("회 + ", " + ") + .Cnt_MiddleCostume + needtr("회 + ", " + ") + .Cnt_LowerCostume + needtr("회 + ", " + ") + .Cnt_GarmentCostume + needtr("회 세트 장착 시 보너스", " rebirths: set bonus while all pieces are worn");
+	mes .Cnt_Aura + needtr("회 + ", " + ") + .Cnt_Title + needtr("회 + ", " + ") + .Cnt_FinalEffect + needtr("회 세트 장착 시 보너스", " rebirths: set bonus while all pieces are worn");
 	return;
 
 S_GiveItem:
@@ -748,7 +748,7 @@ S_GiveItem:
 	.@amount = getarg(1);
 
 	if (.@item_id <= 0 || .@amount <= 0) {
-		dispbottom "[환생] 미설정 보상이 있어 지급하지 않았습니다. item_id=" + .@item_id + " amount=" + .@amount;
+		dispbottom needtr("[환생] 미설정 보상이 있어 지급하지 않았습니다. item_id=", "[Rebirth] A reward is not configured and was not granted. item_id=") + .@item_id + " amount=" + .@amount;
 		return;
 	}
 
@@ -759,7 +759,7 @@ S_ItemName:
 	.@item_id = getarg(0);
 
 	if (.@item_id <= 0)
-		return "아이템ID 미설정";
+		return needtr("아이템ID 미설정", "item ID not set");
 
 	return getitemname(.@item_id);
 
@@ -1019,8 +1019,8 @@ function	script	F_NEED_Rebirth_ResetCharacter	{
 	.@first_job = callfunc("F_NEED_Rebirth_GetFirstJob", .@old_class);
 
 	if (.@first_job == 0) {
-		mes "[환생]";
-		mes "현재 직업은 환생을 진행할 수 없는 직업입니다.";
+		mes needtr("[환생]", "[Rebirth]");
+		mes needtr("현재 직업은 환생을 진행할 수 없는 직업입니다.", "Your current job cannot rebirth.");
 		close;
 	}
 
@@ -1046,7 +1046,7 @@ function	script	F_NEED_Rebirth_ResetCharacter	{
 	// 환생 전 세컨드 코스튬 상태였다면 외형 초기화 후 티켓 반환
 	if (.@old_body_style != .@old_class) {
 		getitem 6959, 1;
-		dispbottom "[환생] 세컨드 코스튬 티켓 1개가 지급되었습니다.";
+		dispbottom needtr("[환생] 세컨드 코스튬 티켓 1개가 지급되었습니다.", "[Rebirth] You received 1 Second Costume Ticket.");
 	}
 
 	percentheal 100,100;
@@ -1169,13 +1169,13 @@ function	script	F_NEED_Rebirth_GetFirstJob	{
 }
 
 lasagna,180,131,4	script	환생 의상 미리보기 1#rb_preview	-1,{
-	mes "[환생 의상 미리보기]";
-	mes "1번 의상 미리보기입니다.";
+	mes needtr("[환생 의상 미리보기]", "[Rebirth Costume Preview]");
+	mes needtr("1번 의상 미리보기입니다.", "Costume preview 1.");
 	mes " ";
-	mes "상단 : ^i[" + 20401 + "] " + mesitemlink(20401);
-	mes "중단 : ^i[" + 420016 + "] " + mesitemlink(420016);
-	mes "하단 : ^i[" + 420552 + "] " + mesitemlink(420552);
-	mes "걸칠것 : ^i[" + 480069 + "] " + mesitemlink(480069);
+	mes needtr("상단 : ^i[", "Upper : ^i[") + 20401 + "] " + mesitemlink(20401);
+	mes needtr("중단 : ^i[", "Middle : ^i[") + 420016 + "] " + mesitemlink(420016);
+	mes needtr("하단 : ^i[", "Lower : ^i[") + 420552 + "] " + mesitemlink(420552);
+	mes needtr("걸칠것 : ^i[", "Garment : ^i[") + 480069 + "] " + mesitemlink(480069);
 	setdialogsize(320,250);
 	close;
 
@@ -1196,13 +1196,13 @@ OnInit:
 }
 
 lasagna,181,131,4	script	환생 의상 미리보기 1#rb_preview2	-1,{
-	mes "[환생 의상 미리보기]";
-	mes "1번 의상 미리보기입니다.";
+	mes needtr("[환생 의상 미리보기]", "[Rebirth Costume Preview]");
+	mes needtr("1번 의상 미리보기입니다.", "Costume preview 1.");
 	mes " ";
-	mes "상단 : ^i[" + 20401 + "] " + mesitemlink(20401);
-	mes "중단 : ^i[" + 420016 + "] " + mesitemlink(420016);
-	mes "하단 : ^i[" + 420552 + "] " + mesitemlink(420552);
-	mes "걸칠것 : ^i[" + 480069 + "] " + mesitemlink(480069);
+	mes needtr("상단 : ^i[", "Upper : ^i[") + 20401 + "] " + mesitemlink(20401);
+	mes needtr("중단 : ^i[", "Middle : ^i[") + 420016 + "] " + mesitemlink(420016);
+	mes needtr("하단 : ^i[", "Lower : ^i[") + 420552 + "] " + mesitemlink(420552);
+	mes needtr("걸칠것 : ^i[", "Garment : ^i[") + 480069 + "] " + mesitemlink(480069);
 	setdialogsize(320,250);
 	close;
 
@@ -1223,13 +1223,13 @@ OnInit:
 }
 
 lasagna,189,131,4	script	환생 의상 미리보기 2#rb_preview3	-1,{
-	mes "[환생 의상 미리보기]";
-	mes "2번 의상 미리보기입니다.";
+	mes needtr("[환생 의상 미리보기]", "[Rebirth Costume Preview]");
+	mes needtr("2번 의상 미리보기입니다.", "Costume preview 2.");
 	mes " ";
-	mes "상단 : ^i[" + 31783 + "] " + mesitemlink(31783);
-	mes "중단 : ^i[" + 31047 + "] " + mesitemlink(31047);
-	mes "하단 : ^i[" + 31251 + "] " + mesitemlink(31251);
-	mes "걸칠것 : ^i[" + 20522 + "] " + mesitemlink(20522);
+	mes needtr("상단 : ^i[", "Upper : ^i[") + 31783 + "] " + mesitemlink(31783);
+	mes needtr("중단 : ^i[", "Middle : ^i[") + 31047 + "] " + mesitemlink(31047);
+	mes needtr("하단 : ^i[", "Lower : ^i[") + 31251 + "] " + mesitemlink(31251);
+	mes needtr("걸칠것 : ^i[", "Garment : ^i[") + 20522 + "] " + mesitemlink(20522);
 	setdialogsize(320,250);
 	close;
 
@@ -1250,13 +1250,13 @@ OnInit:
 }
 
 lasagna,190,131,4	script	환생 의상 미리보기 2#rb_preview4	-1,{
-	mes "[환생 의상 미리보기]";
-	mes "2번 의상 미리보기입니다.";
+	mes needtr("[환생 의상 미리보기]", "[Rebirth Costume Preview]");
+	mes needtr("2번 의상 미리보기입니다.", "Costume preview 2.");
 	mes " ";
-	mes "상단 : ^i[" + 31783 + "] " + mesitemlink(31783);
-	mes "중단 : ^i[" + 31047 + "] " + mesitemlink(31047);
-	mes "하단 : ^i[" + 31251 + "] " + mesitemlink(31251);
-	mes "걸칠것 : ^i[" + 20522 + "] " + mesitemlink(20522);
+	mes needtr("상단 : ^i[", "Upper : ^i[") + 31783 + "] " + mesitemlink(31783);
+	mes needtr("중단 : ^i[", "Middle : ^i[") + 31047 + "] " + mesitemlink(31047);
+	mes needtr("하단 : ^i[", "Lower : ^i[") + 31251 + "] " + mesitemlink(31251);
+	mes needtr("걸칠것 : ^i[", "Garment : ^i[") + 20522 + "] " + mesitemlink(20522);
 	setdialogsize(320,250);
 	close;
 
@@ -1277,13 +1277,13 @@ OnInit:
 }
 
 lasagna,185,131,4	script	환생 의상 미리보기 3#rb_preview6	-1,{
-	mes "[환생 의상 미리보기]";
-	mes "3번 의상 미리보기입니다.";
+	mes needtr("[환생 의상 미리보기]", "[Rebirth Costume Preview]");
+	mes needtr("3번 의상 미리보기입니다.", "Costume preview 3.");
 	mes " ";
-	mes "상단 : ^i[" + 31979 + "] " + mesitemlink(31979);
-	mes "중단 : ^i[" + 410081 + "] " + mesitemlink(410081);
-	mes "하단 : ^i[" + 31719 + "] " + mesitemlink(31719);
-	mes "걸칠것 : ^i[" + 480107 + "] " + mesitemlink(480107);
+	mes needtr("상단 : ^i[", "Upper : ^i[") + 31979 + "] " + mesitemlink(31979);
+	mes needtr("중단 : ^i[", "Middle : ^i[") + 410081 + "] " + mesitemlink(410081);
+	mes needtr("하단 : ^i[", "Lower : ^i[") + 31719 + "] " + mesitemlink(31719);
+	mes needtr("걸칠것 : ^i[", "Garment : ^i[") + 480107 + "] " + mesitemlink(480107);
 	setdialogsize(320,250);
 	close;
 
@@ -1304,11 +1304,11 @@ OnInit:
 }
 
 lasagna,179,128,4	script	환생 이펙트/발자국#foot_test2	-1,{
-	mes "[환생 이펙트/발자국 미리보기]";
-	mes "이펙트/발자국 미리보기입니다.";
+	mes needtr("[환생 이펙트/발자국 미리보기]", "[Rebirth Effect / Footprint Preview]");
+	mes needtr("이펙트/발자국 미리보기입니다.", "Effect and footprint preview.");
 	mes " ";
-	mes "이펙트 : ^i[" + 25136 + "] " + mesitemlink(25136);
-	mes "발자국 : ^i[" + 1001617 + "] " + mesitemlink(1001617);
+	mes needtr("이펙트 : ^i[", "Effect : ^i[") + 25136 + "] " + mesitemlink(25136);
+	mes needtr("발자국 : ^i[", "Footprint : ^i[") + 1001617 + "] " + mesitemlink(1001617);
 	setdialogsize(320,250);
 	close;
 

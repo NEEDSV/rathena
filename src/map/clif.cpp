@@ -424,6 +424,51 @@ static bool clif_session_isValid(const map_session_data* sd) {
  * - AREA_WOS (AREA WITHOUT SELF) : Not run for self
  * - AREA_CHAT_WOC : Everyone in the area of your chat without a chat
  *------------------------------------------*/
+/**
+ * NEED Phase 0.32 : recipient-language filter for the EXISTING clif_send recipient loops.
+ *
+ * The problem: `needtr(KR,EN)` picks ONE string using the caller's RID, and an AREA/MAP
+ * broadcast then hands that one string to every recipient - so a mixed KR/EN area sees
+ * whichever language the caller happened to be.
+ *
+ * The fix deliberately does NOT add a new recipient loop. `clif_send_sub` already applies
+ * four per-recipient rules that a hand-written loop would silently drop:
+ *
+ *   1. `session_isActive(sd->fd)`                 - a disconnecting recipient is skipped
+ *   2. AREA_WOS / AREA_WOC / AREA_WOSC exclusions - the source, and chatroom members
+ *   3. `npc_is_hidden_dynamicnpc()`               - per-recipient dynamic NPC visibility
+ *   4. the `clif_ally_only` / intravision enemy-position rule
+ *
+ * So the buffer is built TWICE - once per language - and each build goes through the real
+ * `clif_send` with a filter that skips sessions of the other language. The recipient set is
+ * therefore exactly the set the single-buffer path would have reached, and the cost is two
+ * packet builds no matter how many recipients there are (request §20's two-group split).
+ *
+ * The filter is a file-static because `clif_send_sub` is reached through
+ * `map_foreachinallarea`'s va_list and the map-server runs one thread. `clif_lang_scope`
+ * saves and restores, so a nested send cannot leak the filter and an early return inside
+ * `clif_send` cannot either. A nested `clif_send(..., SELF)` - the "source misses the
+ * packet" case at AREA - is covered because the SELF branch honours the same filter.
+ */
+static int32 clif_lang_filter = -1;
+
+struct clif_lang_scope {
+	int32 saved;
+	clif_lang_scope( int32 lang ) : saved( clif_lang_filter ){ clif_lang_filter = lang; }
+	~clif_lang_scope(){ clif_lang_filter = saved; }
+};
+
+/// true when a language filter is active and this session is NOT of that language
+static inline bool clif_lang_skip( const map_session_data* sd ){
+	return clif_lang_filter >= 0 && sd != nullptr && (int32)sd->need_lang != clif_lang_filter;
+}
+
+int32 clif_send_lang( const void* buf, int32 len, const block_list* bl, enum send_target type, int32 lang ){
+	clif_lang_scope guard( lang );
+
+	return clif_send( buf, len, bl, type );
+}
+
 static int32 clif_send_sub(block_list *bl, va_list ap)
 {
 	block_list *src_bl;
@@ -436,6 +481,11 @@ static int32 clif_send_sub(block_list *bl, va_list ap)
 
 	// Don't send to disconnected clients.
 	if( !session_isActive( fd = sd->fd ) ){
+		return 0;
+	}
+
+	// NEED Phase 0.32 : this buffer carries one language only
+	if( clif_lang_skip( sd ) ){
 		return 0;
 	}
 
@@ -519,7 +569,7 @@ int32 clif_send(const void* buf, int32 len, const block_list* bl, enum send_targ
 	case ALL_CLIENT: //All player clients.
 		iter = mapit_getallusers();
 		while( ( tsd = static_cast<const map_session_data*>(mapit_next( iter )) ) != nullptr ){
-			if( session_isActive( fd = tsd->fd ) ){
+			if( session_isActive( fd = tsd->fd ) && !clif_lang_skip( tsd ) ){
 				WFIFOHEAD( fd, len );
 				memcpy( WFIFOP( fd, 0 ), buf, len );
 				WFIFOSET( fd, len );
@@ -531,7 +581,7 @@ int32 clif_send(const void* buf, int32 len, const block_list* bl, enum send_targ
 	case ALL_SAMEMAP: //All players on the same map
 		iter = mapit_getallusers();
 		while( ( tsd = static_cast<const map_session_data*>(mapit_next( iter )) ) != nullptr ){
-			if( bl->m == tsd->m && session_isActive( fd = tsd->fd ) ){
+			if( bl->m == tsd->m && session_isActive( fd = tsd->fd ) && !clif_lang_skip( tsd ) ){
 				WFIFOHEAD( fd, len );
 				memcpy( WFIFOP( fd, 0 ), buf, len );
 				WFIFOSET( fd, len );
@@ -646,7 +696,7 @@ int32 clif_send(const void* buf, int32 len, const block_list* bl, enum send_targ
 		break;
 
 	case SELF:
-		if( clif_session_isValid(sd) ){
+		if( clif_session_isValid(sd) && !clif_lang_skip( sd ) ){
 			fd = sd->fd;
 			WFIFOHEAD(fd,len);
 			memcpy(WFIFOP(fd,0), buf, len);
@@ -1064,6 +1114,73 @@ static int32 clif_setlevel(const block_list* bl) {
 /*==========================================
  * Prepares 'unit standing/spawning' packet
  *------------------------------------------*/
+/**
+ * NEED Phase 0.6 : temporary diagnostics for the three NPC name paths.
+ * MUST be 0 in a release build. Set to 1 only to trace which packet feeds which UI element.
+ */
+#ifndef NEED_NPCNAME_DEBUG
+	#define NEED_NPCNAME_DEBUG 0
+#endif
+
+#if NEED_NPCNAME_DEBUG
+	#define NEED_NPCNAME_LOG(fmt, ...) \
+		do { ShowNotice( fmt, __VA_ARGS__ ); fflush( stdout ); } while( 0 )
+#else
+	#define NEED_NPCNAME_LOG(fmt, ...) do {} while( 0 )
+#endif
+
+/**
+ * NEED Phase 0.6 : the NPC display name to put into a packet that is being built for ONE
+ * recipient.
+ *
+ * The three places an NPC name reaches the screen are:
+ *   overhead / actor cache : the name field of the unit idle / walking packet
+ *   mouseover tooltip      : ZC_ACK_REQNAMEALL_NPC, answered per request
+ *   dialog window title    : the client's own actor cache - ZC_SAY_DIALOG carries no name
+ * All three read the same server string (`nd->name`, via status_get_name for the unit packets),
+ * which is why they were all Korean.
+ *
+ * This returns the English name ONLY when every condition holds:
+ *   - the unit really is an NPC and a script gave it an English name (nd->name_en)
+ *   - the packet is being built for a single known recipient
+ *   - that recipient's session is EN (Phase 0.2's map_session_data::need_lang)
+ * Otherwise it returns exactly what the server returned before, so KR sessions and every
+ * area-wide packet are bit-for-bit unchanged.
+ */
+static const char* clif_display_name( const block_list& bl, const block_list* recipient ){
+	// NEED Phase 0.21 : monsters get the same treatment as NPCs, through a display-only
+	// English name that is registered in no lookup path (see mob_display_name).
+	if( bl.type == BL_MOB ){
+		const mob_data& md = reinterpret_cast<const mob_data&>( bl );
+
+		if( recipient == nullptr || recipient->type != BL_PC ){
+			return md.name;
+		}
+
+		const map_session_data& tsd = reinterpret_cast<const map_session_data&>( *recipient );
+
+		return mob_display_name( md, tsd.need_lang );
+	}
+
+	if( bl.type != BL_NPC ){
+		return status_get_name( bl );
+	}
+
+	const npc_data& nd = reinterpret_cast<const npc_data&>( bl );
+
+	if( nd.name_en[0] == '\0' || recipient == nullptr || recipient->type != BL_PC ){
+		return nd.name;
+	}
+
+	const map_session_data& tsd = reinterpret_cast<const map_session_data&>( *recipient );
+
+	if( tsd.need_lang != NEED_LANG_EN ){
+		return nd.name;
+	}
+
+	return nd.name_en;
+}
+
 static void clif_set_unit_idle( const block_list* bl, bool walking, send_target target, const block_list* tbl ){
 	nullpo_retv( bl );
 
@@ -1216,7 +1333,16 @@ static void clif_set_unit_idle( const block_list* bl, bool walking, send_target 
 #endif
 /* Might be earlier, this is when the named item bug began */
 #if PACKETVER >= 20131223
-	safestrncpy(p.name, status_get_name( *bl ), NAME_LENGTH);
+	// NEED Phase 0.6 : only a SELF packet has a single known recipient; anything else keeps the
+	// previous behaviour untouched.
+	safestrncpy(p.name, clif_display_name( *bl, ( target == SELF ) ? tbl : nullptr ), NAME_LENGTH);
+	// only the PoC NPCs (those with an English name registered) are logged, otherwise this
+	// would fire for every NPC in view range of every player
+	if( bl->type == BL_NPC && ( (const npc_data*)bl )->name_en[0] != '\0' ){
+		NEED_NPCNAME_LOG( "[NPC NAME][OVERHEAD/CACHE] gid=%d target=%d sent=\"%s\" nd->name=\"%s\" en=\"%s\"\n",
+			bl->id, (int32)target, p.name, ( (const npc_data*)bl )->name,
+			( (const npc_data*)bl )->name_en );
+	}
 #endif
 
 	clif_send( &p, sizeof( p ), tbl, target );
@@ -1236,7 +1362,8 @@ static void clif_set_unit_idle( const block_list* bl, bool walking, send_target 
 	}
 }
 
-static void clif_spawn_unit( const block_list* bl, enum send_target target ){
+static void clif_spawn_unit( const block_list* bl, enum send_target target,
+	struct packet_spawn_unit* out = nullptr ){
 	nullpo_retv( bl );
 
 	const map_session_data* sd = BL_CAST(BL_PC,bl);
@@ -1366,6 +1493,16 @@ static void clif_spawn_unit( const block_list* bl, enum send_target target ){
 	safestrncpy( p.name, status_get_name( *bl ), NAME_LENGTH );
 #endif
 
+	// NEED Phase 0.24 : hand the built packet back instead of sending it, so a monster spawn
+	// can be sent once per recipient LANGUAGE out of a SINGLE construction. Only
+	// clif_spawn_unit_lang passes this, and only for BL_MOB - which can never be disguised
+	// (disguised() requires BL_PC, clif.cpp:279), so the branch below is not skipped for any
+	// unit that would have needed it.
+	if( out != nullptr ){
+		memcpy( out, &p, sizeof( p ) );
+		return;
+	}
+
 	if( disguised( bl ) ){
 		nullpo_retv( sd );
 
@@ -1471,7 +1608,8 @@ static void clif_set_unit_walking( const block_list& bl, const map_session_data*
 #endif
 /* Might be earlier, this is when the named item bug began */
 #if PACKETVER >= 20131223
-	safestrncpy(p.name, status_get_name( bl ), NAME_LENGTH);
+	// NEED Phase 0.6 : same rule as clif_set_unit_idle - one known recipient only.
+	safestrncpy(p.name, clif_display_name( bl, ( target == SELF ) ? tsd : nullptr ), NAME_LENGTH);
 #endif
 
 	clif_send( &p, sizeof(p), tsd ? tsd : &bl, target );
@@ -1700,6 +1838,107 @@ void clif_refresh_clothcolor( const block_list& bl, enum send_target target, blo
 #endif
 }
 
+#if PACKETVER >= 20131223
+/**
+ * NEED Phase 0.24 : one recipient of the initial monster spawn packet.
+ *
+ * This is `clif_send()`'s AREA_WOS recipient set reproduced for ONE packet type, so that the
+ * generic transport keeps knowing nothing about mob packets. The filters below mirror
+ * `clif_send_sub` (clif.cpp:427-495) case by case; the ones that cannot apply to a monster
+ * source are still written out, because dropping them would make the two recipient sets
+ * differ on paper even though they agree in practice.
+ *
+ * The area rectangle and the BL_PC filter are passed by the caller and are the same
+ * `map_foreachinallarea( ..., bl->x +- AREA_SIZE, bl->y +- AREA_SIZE, BL_PC, ... )` that
+ * clif_send uses for AREA_WOS (clif.cpp:549).
+ */
+static int32 clif_spawn_unit_lang_sub( block_list* bl, va_list ap ){
+	const block_list* src = va_arg( ap, const block_list* );
+	const void* kr = va_arg( ap, const void* );
+	const void* en = va_arg( ap, const void* );
+	int32 len = va_arg( ap, int32 );
+
+	if( bl == nullptr || bl->type != BL_PC ){
+		return 0;
+	}
+
+	// AREA_WOS: the source never receives its own packet (clif_send_sub, case AREA_WOS).
+	// A monster is never a BL_PC recipient, so this can only be false here.
+	if( bl == src ){
+		return 0;
+	}
+
+	map_session_data* tsd = reinterpret_cast<map_session_data*>( bl );
+
+	// clif_send_sub's one content-independent suppression (clif.cpp:478): while
+	// clif_ally_only is set, an enemy unit is withheld from players who cannot see it. That
+	// flag is only ever raised inside clif_move (clif.cpp:2188-2222) and is therefore always
+	// false during a spawn - reproduced rather than assumed.
+	if( !battle_config.update_enemy_position && clif_ally_only && !tsd->special_state.intravision &&
+		!tsd->sc.getSCE( SC_INTRAVISION ) && battle_check_target( src, bl, BCT_ENEMY ) > 0 ){
+		return 0;
+	}
+
+	// The session-validity check and the FIFO write stay inside clif_send's SELF branch
+	// (clif.cpp), so the transport is used unchanged. All this line does is choose which of
+	// two already-built buffers this recipient gets.
+	clif_send( tsd->need_lang == NEED_LANG_EN ? en : kr, len, bl, SELF );
+
+	return 0;
+}
+
+/**
+ * NEED Phase 0.24 : the initial spawn packet of a monster, language-routed per recipient.
+ *
+ * From PACKETVER 20131223 the display name travels INSIDE the spawn packet
+ * (packets_struct.hpp:687, `char name[NAME_LENGTH]`) and clif_send's AREA path memcpy's ONE
+ * pre-built buffer to every recipient (clif_send_sub, clif.cpp:493) - so a single AREA_WOS
+ * send can only ever carry one language. That is why an English session used to read a
+ * Korean name from the moment a monster appeared until its first name request.
+ *
+ * The name is also the ONLY field of that packet that depends on the recipient: everything
+ * else comes from the block list, its status_change, its view_data or the monster database.
+ * Instead of assuming that, the English buffer is built as a byte copy of the Korean one with
+ * the name field rewritten, which makes "identical except the name" true by construction.
+ *
+ *     names equal  -> one buffer, one AREA_WOS send: byte for byte the previous behaviour
+ *     names differ -> two buffers out of ONE construction, then one SELF send per recipient
+ *
+ * Only 145 of 2,689 monster ids can currently produce a different English name (13 mob_db
+ * rows + 132 override mappings), so the first branch is what almost every spawn takes.
+ */
+static void clif_spawn_unit_lang( const mob_data& md ){
+	const block_list& bl = md;
+
+	// mob_display_name returns a pointer INTO md.name, into s_mob_db::jname_en or into the
+	// override table's std::string. @reloadmobdb can replace the latter two, so both strings
+	// are copied out here and the packet never holds one of those pointers.
+	char kr_name[NAME_LENGTH];
+	char en_name[NAME_LENGTH];
+
+	safestrncpy( kr_name, mob_display_name( md, NEED_LANG_KR ), NAME_LENGTH );
+	safestrncpy( en_name, mob_display_name( md, NEED_LANG_EN ), NAME_LENGTH );
+
+	if( strncmp( kr_name, en_name, NAME_LENGTH ) == 0 ){
+		// nothing to separate - keep the single AREA_WOS send exactly as before
+		clif_spawn_unit( &bl, AREA_WOS );
+		return;
+	}
+
+	struct packet_spawn_unit kr_p;
+	struct packet_spawn_unit en_p;
+
+	// built ONCE, by the same function every other spawn goes through
+	clif_spawn_unit( &bl, AREA_WOS, &kr_p );
+	memcpy( &en_p, &kr_p, sizeof( en_p ) );
+	safestrncpy( en_p.name, en_name, NAME_LENGTH );
+
+	map_foreachinallarea( clif_spawn_unit_lang_sub, bl.m, bl.x - AREA_SIZE, bl.y - AREA_SIZE,
+		bl.x + AREA_SIZE, bl.y + AREA_SIZE, BL_PC, &bl, (const void*)&kr_p,
+		(const void*)&en_p, (int32)sizeof( kr_p ) );
+}
+#endif
+
 /**
  * Main function to spawn a unit on the client (player/mob/pet/etc)
  **/
@@ -1719,7 +1958,16 @@ int32 clif_spawn( const block_list* bl, bool walking ){
 
 	if( bl->type == BL_NPC && !vd->dead_sit ){
 		clif_set_unit_idle( bl, walking, AREA_WOS, bl );
-	}else{
+	}
+#if PACKETVER >= 20131223
+	// NEED Phase 0.24 : from PACKETVER 20131223 the display name travels inside the spawn
+	// packet, so a monster's INITIAL spawn has to be language-routed like every other mob
+	// name surface. Every other unit type keeps the single AREA_WOS send unchanged.
+	else if( bl->type == BL_MOB ){
+		clif_spawn_unit_lang( *reinterpret_cast<const mob_data*>( bl ) );
+	}
+#endif
+	else{
 		clif_spawn_unit( bl, AREA_WOS );
 	}
 
@@ -1761,7 +2009,8 @@ int32 clif_spawn( const block_list* bl, bool walking ){
 				clif_specialeffect(md,EF_BABYBODY2,AREA);
 			if ( md->special_state.ai == AI_ABR || md->special_state.ai == AI_BIONIC )
 				clif_summon_init(*md);
-			clif_name_area(md);
+			// NEED Phase 0.21 : per-recipient so KR and EN players see their own name.
+			clif_name_area_lang(md);
 		}
 		break;
 	case BL_NPC:
@@ -2510,6 +2759,23 @@ void clif_scriptmes( const map_session_data& sd, uint32 npcid, const char *mes )
 	p->PacketLength = sizeof( *p ) + length;
 	p->NpcID = npcid;
 	safestrncpy( p->message, mes, length );
+
+	// NEED Phase 0.6 : ZC_SAY_DIALOG has NO name field - the dialog window title is taken from
+	// the client's own actor cache for NpcID, which is fed by the unit idle/walking packet and
+	// by ZC_ACK_REQNAMEALL_NPC. Logged here only to show which name the client must already
+	// hold at this moment.
+#if NEED_NPCNAME_DEBUG
+	{
+		const block_list* dbl = map_id2bl( npcid );
+
+		if( dbl != nullptr && dbl->type == BL_NPC ){
+			const npc_data* dnd = (const npc_data*)dbl;
+
+			NEED_NPCNAME_LOG( "[NPC NAME][DIALOG] gid=%u recipient=%s need_lang=%d nd->name=\"%s\" en=\"%s\" (packet carries no name)\n",
+				npcid, sd.status.name, (int32)sd.need_lang, dnd->name, dnd->name_en );
+		}
+	}
+#endif
 
 	clif_send( p, p->PacketLength, &sd, SELF );
 }
@@ -4577,11 +4843,7 @@ static uint16 clif_chat_usercount( const chat_data& cd ){
 
 /// Display a chat above the owner.
 /// 00d7 <packet len>.W <owner id>.L <char id>.L <limit>.W <users>.W <type>.B <title>.?B (ZC_ROOM_NEWENTRY)
-void clif_dispchat( const chat_data& cd ){
-	if( cd.owner == nullptr ){
-		return;
-	}
-
+static PACKET_ZC_ROOM_NEWENTRY* clif_dispchat_build( const chat_data& cd, const char* title ){
 	PACKET_ZC_ROOM_NEWENTRY* p = reinterpret_cast<PACKET_ZC_ROOM_NEWENTRY*>( packet_buffer );
 
 	p->packetType = HEADER_ZC_ROOM_NEWENTRY;
@@ -4593,11 +4855,48 @@ void clif_dispchat( const chat_data& cd ){
 	p->type = clif_chat_status( cd );
 
 	// not zero-terminated
-	size_t max = safestrnlen( cd.title, CHATROOM_TITLE_SIZE );
-	strncpy( p->title, cd.title, max );
+	size_t max = safestrnlen( title, CHATROOM_TITLE_SIZE );
+	strncpy( p->title, title, max );
 	p->packetSize += static_cast<decltype(p->packetSize)>( max );
 
+	return p;
+}
+
+void clif_dispchat( const chat_data& cd ){
+	if( cd.owner == nullptr ){
+		return;
+	}
+
+	PACKET_ZC_ROOM_NEWENTRY* p = clif_dispchat_build( cd, cd.title );
+
 	clif_send( p, p->packetSize, cd.owner, AREA_WOSC );
+}
+
+/**
+ * NEED Phase 0.8 : the room entry for ONE recipient (used when a player comes into view of an
+ * NPC that owns a waiting room). The Korean title in chat_data is untouched; when the recipient's
+ * session is EN and the owning NPC has an English title registered with setwaitingroomen, that
+ * title is sent instead. Every broadcast path (creation, join/leave refresh) still uses the
+ * AREA overload above and therefore still sends the Korean title - see the Phase 0.8 report.
+ */
+void clif_dispchat( const chat_data& cd, map_session_data& tsd ){
+	if( cd.owner == nullptr ){
+		return;
+	}
+
+	const char* title = cd.title;
+
+	if( tsd.need_lang == NEED_LANG_EN && cd.owner->type == BL_NPC ){
+		const npc_data& nd = reinterpret_cast<const npc_data&>( *cd.owner );
+
+		if( nd.chattitle_en[0] != '\0' ){
+			title = nd.chattitle_en;
+		}
+	}
+
+	PACKET_ZC_ROOM_NEWENTRY* p = clif_dispchat_build( cd, title );
+
+	clif_send( p, p->packetSize, &tsd, SELF );
 }
 
 /// Chatroom properties adjustment.
@@ -5134,7 +5433,9 @@ void clif_getareachar_unit( map_session_data* sd,block_list *bl ){
 				chat_data* cd = map_id2cd( nd->chat_id );
 
 				if( cd != nullptr ){
-					clif_dispchat( *cd );
+					// NEED Phase 0.8 : this is "tell sd about the room", so send it to sd only
+					// (with the English title when sd is EN) instead of re-broadcasting to the area.
+					clif_dispchat( *cd, *sd );
 				}
 			}
 
@@ -5163,7 +5464,8 @@ void clif_getareachar_unit( map_session_data* sd,block_list *bl ){
 				}
 			}
 #endif
-		clif_name_area(md);
+		// NEED Phase 0.21 : per-recipient so KR and EN players see their own name.
+		clif_name_area_lang(md);
 		}
 		break;
 	case BL_PET:
@@ -9882,6 +10184,50 @@ void clif_messagecolor_target(const block_list* bl, unsigned long color, const c
 }
 
 /**
+ * NEED Phase 0.32 : the same NPC colour chat, chosen per recipient.
+ *
+ * Two buffers, two filtered sends, and the recipient enumeration is `clif_send`'s own - so
+ * the AREA radius, the chatroom exclusions, the dynamic-NPC visibility rule and the
+ * disconnect check all behave exactly as they do on the single-buffer path.
+ *
+ * When the two strings are identical there is nothing to split, so the original single send
+ * runs unchanged. That is the all-one-language fast path and it also covers a caller that
+ * passes the same text twice.
+ */
+void clif_messagecolor_lang( const block_list* bl, unsigned long color, const char* kr, const char* en, bool rgb2bgr, enum send_target type ){
+	nullpo_retv( bl );
+
+	if( en == nullptr || kr == nullptr || strcmp( kr, en ) == 0 ){
+		clif_messagecolor_target( bl, color, kr, rgb2bgr, type, nullptr );
+		return;
+	}
+
+	uint8 buf[CHAT_SIZE_MAX];
+	const char* text[NEED_LANG_MAX] = { kr, en };
+
+	for( int32 lang = 0; lang < NEED_LANG_MAX; lang++ ){
+		uint16 msg_len = (uint16)( strlen( text[lang] ) + 1 );
+		unsigned long c = color;
+
+		if( msg_len > sizeof( buf ) - 12 ){
+			ShowWarning("clif_messagecolor_lang: Truncating too long message '%s' (len=%u).\n", text[lang], msg_len);
+			msg_len = sizeof( buf ) - 12;
+		}
+
+		if( rgb2bgr )
+			c = (c & 0x0000FF) << 16 | (c & 0x00FF00) | (c & 0xFF0000) >> 16; // RGB to BGR
+
+		WBUFW(buf,0) = 0x2C1;
+		WBUFW(buf,2) = msg_len + 12;
+		WBUFL(buf,4) = bl->id;
+		WBUFL(buf,8) = c;
+		memcpy( WBUFCP(buf,12), text[lang], msg_len );
+
+		clif_send_lang( buf, WBUFW(buf,2), bl, type, lang );
+	}
+}
+
+/**
  * Notifies the client that the storage window is still open
  *
  * Should only be used in cases where the client closed the 
@@ -10004,6 +10350,32 @@ void clif_refresh(map_session_data *sd)
 /// 0095 <id>.L <char name>.24B (ZC_ACK_REQNAME)
 /// 0195 <id>.L <char name>.24B <party name>.24B <guild name>.24B <position name>.24B (ZC_ACK_REQNAMEALL)
 /// 0a30 <id>.L <char name>.24B <party name>.24B <guild name>.24B <position name>.24B <title ID>.L (ZC_ACK_REQNAMEALL2)
+/**
+ * NEED Phase 0.21 : send a monster's name to every player in the area INDIVIDUALLY.
+ *
+ * clif_send()'s AREA path (clif_send_sub) iterates recipients but memcpy's one pre-built
+ * buffer, so a single AREA call can only ever carry one language. The two callers that
+ * matter - clif_spawn (a mob appears) and clif_getareachar_unit (someone walks into view) -
+ * therefore loop here instead, and each iteration goes through the normal SELF path so the
+ * recipient-aware resolver applies. Same packet, same content, one send per player.
+ */
+static int32 clif_name_area_lang_sub( block_list* bl, va_list ap ){
+	block_list* target = va_arg( ap, block_list* );
+
+	if( bl != nullptr && bl->type == BL_PC ){
+		clif_name( bl, target, SELF );
+	}
+
+	return 0;
+}
+
+void clif_name_area_lang( block_list* bl ){
+	nullpo_retv( bl );
+
+	map_foreachinallarea( clif_name_area_lang_sub, bl->m, bl->x - AREA_SIZE,
+		bl->y - AREA_SIZE, bl->x + AREA_SIZE, bl->y + AREA_SIZE, BL_PC, bl );
+}
+
 void clif_name( const block_list* src, const block_list* bl, send_target target ){
 	nullpo_retv( src );
 	nullpo_retv( bl );
@@ -10082,7 +10454,16 @@ void clif_name( const block_list* src, const block_list* bl, send_target target 
 					safestrncpy(packet.name, static_cast<const pet_data*>(bl)->pet.name, NAME_LENGTH);
 					break;
 				case BL_NPC:
-					safestrncpy(packet.name, static_cast<const npc_data*>(bl)->name, NAME_LENGTH);
+					// NEED Phase 0.6 : this is the mouseover tooltip path. It is answered per
+					// request (clif_parse_NameRequest -> clif_name(sd, bl, SELF)), so the
+					// recipient is always known and `src` is that player.
+					safestrncpy(packet.name,
+						clif_display_name( *bl, ( target == SELF ) ? src : nullptr ),
+						NAME_LENGTH);
+					NEED_NPCNAME_LOG( "[NPC NAME][HOVER] gid=%d target=%d sent=\"%s\" nd->name=\"%s\" en=\"%s\"\n",
+						bl->id, (int32)target, packet.name,
+						static_cast<const npc_data*>(bl)->name,
+						static_cast<const npc_data*>(bl)->name_en );
 					break;
 				case BL_ELEM:
 					safestrncpy(packet.name, static_cast<const s_elemental_data*>(bl)->db->name.c_str(), NAME_LENGTH);
@@ -10103,13 +10484,15 @@ void clif_name( const block_list* src, const block_list* bl, send_target target 
 			break;
 		case BL_MOB: {
 			const mob_data* md = static_cast<const mob_data*>(bl);
+			// NEED Phase 0.21 : one known recipient only, exactly like the NPC branch.
+			const char* display = clif_display_name( *bl, ( target == SELF ) ? src : nullptr );
 
 			if( md->guardian_data && md->guardian_data->guild_id ){
 				PACKET_ZC_ACK_REQNAMEALL packet = { 0 };
 
 				packet.packet_id = HEADER_ZC_ACK_REQNAMEALL;
 				packet.gid = bl->id;
-				safestrncpy( packet.name, md->name, NAME_LENGTH );
+				safestrncpy( packet.name, display, NAME_LENGTH );
 				safestrncpy( packet.guild_name, md->guardian_data->guild_name, NAME_LENGTH );
 				safestrncpy( packet.position_name, md->guardian_data->castle->castle_name, NAME_LENGTH );
 
@@ -10119,7 +10502,7 @@ void clif_name( const block_list* src, const block_list* bl, send_target target 
 
 				packet.packet_id = HEADER_ZC_ACK_REQNAMEALL;
 				packet.gid = bl->id;
-				safestrncpy( packet.name, md->name, NAME_LENGTH );
+				safestrncpy( packet.name, display, NAME_LENGTH );
 
 				char mobhp[50], *str_p = mobhp;
 
@@ -10147,7 +10530,7 @@ void clif_name( const block_list* src, const block_list* bl, send_target target 
 
 				packet.packet_id = HEADER_ZC_ACK_REQNAMEALL_NPC;
 				packet.gid = bl->id;
-				safestrncpy(packet.name, md->name, NAME_LENGTH);
+				safestrncpy(packet.name, display, NAME_LENGTH);
 
 #if PACKETVER_MAIN_NUM >= 20180207 || PACKETVER_RE_NUM >= 20171129 || PACKETVER_ZERO_NUM >= 20171130
 				const unit_data* ud = unit_bl2ud(bl);
@@ -10224,6 +10607,66 @@ void clif_disp_overhead_( const block_list* bl, const char* mes, enum send_targe
 		WBUFW(buf, 2) = len_mes + 4;
 		safestrncpy(WBUFCP(buf,4), mes, len_mes);
 		clif_send(buf, WBUFW(buf,2), bl, SELF);
+	}
+}
+
+/**
+ * NEED Phase 0.32 : the same overhead chat line, chosen per recipient.
+ *
+ * `unittalk` is the surface Phase 0.31 found had never been classified at all: its
+ * implementation sets `send_target = AREA` and only `bc_self` makes it SELF, so 199 sites
+ * that already carried a `needtr()` were broadcasting the CALLER's language to everyone in
+ * range. This splits the AREA half into one buffer per language; the speaker's own echo
+ * (0x8e, SELF) is sent in the speaker's own language, which is what a `bc_self` call would
+ * have done anyway.
+ *
+ * `AREA_CHAT_WOC` is preserved exactly - it is a NARROWER radius than AREA
+ * (`AREA_SIZE - 5`) and it drops chatroom members and the source, all of which is decided
+ * inside `clif_send`/`clif_send_sub`, not here.
+ */
+void clif_disp_overhead_lang( const block_list* bl, const char* kr, const char* en, enum send_target flag )
+{
+	nullpo_retv( bl );
+
+	if( en == nullptr || kr == nullptr || strcmp( kr, en ) == 0 ){
+		clif_disp_overhead_( bl, kr, flag );
+		return;
+	}
+
+	unsigned char buf[256];
+	const char* text[NEED_LANG_MAX] = { kr, en };
+
+	if( flag == AREA ){
+		for( int32 lang = 0; lang < NEED_LANG_MAX; lang++ ){
+			int16 len_mes = static_cast<int16>( strlen( text[lang] ) + 1 );
+
+			if( len_mes > (int16)( sizeof( buf ) - 8 ) ){
+				ShowError("clif_disp_overhead_lang: Message too long (length %d)\n", len_mes);
+				len_mes = (int16)( sizeof( buf ) - 8 );
+			}
+
+			WBUFW(buf,0) = 0x8d;
+			WBUFW(buf,2) = len_mes + 8;
+			WBUFL(buf,4) = bl->id;
+			safestrncpy( WBUFCP(buf,8), text[lang], len_mes );
+			clif_send_lang( buf, WBUFW(buf,2), bl, AREA_CHAT_WOC, lang );
+		}
+	}
+
+	// the speaker's own echo goes in the speaker's own language
+	if( bl->type == BL_PC ){
+		const map_session_data& ssd = reinterpret_cast<const map_session_data&>( *bl );
+		const char* own = text[ need_lang_sanitize( (uint8)ssd.need_lang ) ];
+		int16 len_mes = static_cast<int16>( strlen( own ) + 1 );
+
+		if( len_mes > (int16)( sizeof( buf ) - 4 ) ){
+			len_mes = (int16)( sizeof( buf ) - 4 );
+		}
+
+		WBUFW(buf,0) = 0x8e;
+		WBUFW(buf,2) = len_mes + 4;
+		safestrncpy( WBUFCP(buf,4), own, len_mes );
+		clif_send( buf, WBUFW(buf,2), bl, SELF );
 	}
 }
 
@@ -20755,26 +21198,110 @@ void clif_notify_bindOnEquip( const map_session_data& sd, int16 index ){
 * [Ind/Hercules]
 * 08b3 <Length>.W <id>.L <message>.?B (ZC_SHOWSCRIPT)
 **/
-void clif_showscript(const block_list* bl, const char* message, enum send_target flag) {
+static void clif_showscript_build( char* buf, const block_list& bl, const char* message ){
+	size_t len = strlen( message ) + 1;
+
+	if( len > 256 - 8 ){
+		ShowWarning("clif_showscript: Truncating too long message '%s' (len=%" PRIuPTR ").\n", message, len);
+		len = 256 - 8;
+	}
+
+	WBUFW(buf,0) = 0x8b3;
+	WBUFW(buf,2) = (uint16)(len+8);
+	WBUFL(buf,4) = bl.id;
+	safestrncpy(WBUFCP(buf,8), message, len);
+}
+
+/**
+ * NEED Phase 0.33 : one floating label, chosen per RECIPIENT, for arbitrary text.
+ *
+ * Phase 0.9 solved this for one narrow case - "the message IS the NPC's own Korean display
+ * name" - with a hand-written `map_foreachinallarea` loop that sent each recipient its own
+ * `SELF` packet. That loop is NOT reused here, and the Phase 0.9 case now routes through this
+ * function too, because the loop silently dropped per-recipient rules that `clif_send_sub`
+ * applies to a plain AREA send with a BL_NPC source:
+ *
+ *   - `npc_is_hidden_dynamicnpc( src, sd )` : a per-player dynamic NPC's label was shown to
+ *     players who cannot see that NPC at all
+ *   - the `clif_ally_only` / intravision enemy-position rule
+ *
+ * Instead the buffer is built once per language and each build goes through the REAL
+ * `clif_send` with the Phase 0.32 language filter (`clif_send_lang`), so:
+ *
+ *   - no recipient loop is written here at all
+ *   - the recipient set is, by construction, the set the single-buffer send would reach
+ *   - the cost is exactly two packet builds no matter how many recipients there are
+ *
+ * `en == nullptr`, an empty `en`, or `kr == en` collapses to the original single send, byte
+ * for byte - that is the all-one-language fast path and also what an unregistered
+ * `getnpcnameen()` produces.
+ */
+void clif_showscript_lang( const block_list* bl, const char* kr, const char* en, enum send_target flag ){
 	char buf[256];
-	size_t len;
+
+	nullpo_retv( bl );
+
+	if( kr == nullptr ){
+		return;
+	}
+
+	// nothing to choose between: the original single send
+	if( en == nullptr || *en == '\0' || strcmp( kr, en ) == 0 ){
+		clif_showscript_build( buf, *bl, kr );
+		clif_send( (unsigned char*)buf, WBUFW(buf,2), bl, flag );
+		return;
+	}
+
+	// an explicit single recipient (bc_self): that recipient's own language, one send
+	if( flag == SELF ){
+		const map_session_data* sd = BL_CAST( BL_PC, bl );
+
+		clif_showscript_build( buf, *bl,
+			( sd != nullptr && need_lang_sanitize( (uint8)sd->need_lang ) == NEED_LANG_EN ) ? en : kr );
+		clif_send( (unsigned char*)buf, WBUFW(buf,2), bl, flag );
+		return;
+	}
+
+	// one build per language, each through the real clif_send
+	for( int32 lang = 0; lang < NEED_LANG_MAX; lang++ ){
+		clif_showscript_build( buf, *bl, ( lang == NEED_LANG_EN ) ? en : kr );
+		clif_send_lang( (unsigned char*)buf, WBUFW(buf,2), bl, flag, lang );
+	}
+}
+
+void clif_showscript(const block_list* bl, const char* message, enum send_target flag) {
 	nullpo_retv(bl);
 
 	if(!message)
 		return;
 
-	len = strlen(message)+1;
+	/**
+	 * NEED Phase 0.9 : a few NPCs repeat their OWN Korean display name as a floating label on a
+	 * 2.5 second timer (npc/NEED/buff.txt, npc/custom/warper.txt, npc/battleground/need_bg_fever.txt).
+	 * The call sits in OnInit / OnTimer, so there is no attached player and needtr() would always
+	 * return Korean. When the message IS the NPC's Korean display name and that NPC has an English
+	 * display name registered (setnpcnameen, Phase 0.7 / 0.8), the label is delivered per player in
+	 * range: EN sessions get name_en, everyone else the original message.
+	 *
+	 * Phase 0.33 note: this test is `strcmp( message, nd.name )`, and `npc_parsename` keeps any
+	 * `#tag` inside `nd->name`, so it fails on every `duplicate()` instance - measured at 9 of
+	 * 89 site x instance rows in the loaded tree. Scripts that need the label on duplicates too
+	 * say so explicitly with `showscriptlang <kr>, getnpcnameen()`; this branch is kept so that
+	 * un-migrated callers keep working exactly as before.
+	 *
+	 * Every other showscript - dialogue lines, non-NPC sources, an explicit target - keeps the
+	 * byte-identical single send.
+	 */
+	if( bl->type == BL_NPC && flag == AREA ){
+		const npc_data& nd = reinterpret_cast<const npc_data&>( *bl );
 
-	if( len > sizeof(buf)-8 ) {
-		ShowWarning("clif_showscript: Truncating too long message '%s' (len=%" PRIuPTR ").\n", message, len);
-		len = sizeof(buf)-8;
+		if( nd.name_en[0] != '\0' && strcmp( message, nd.name ) == 0 ){
+			clif_showscript_lang( bl, message, nd.name_en, flag );
+			return;
+		}
 	}
 
-	WBUFW(buf,0) = 0x8b3;
-	WBUFW(buf,2) = (uint16)(len+8);
-	WBUFL(buf,4) = bl->id;
-	safestrncpy(WBUFCP(buf,8), message, len);
-	clif_send((unsigned char *) buf, WBUFW(buf,2), bl, flag);
+	clif_showscript_lang( bl, message, nullptr, flag );
 }
 
 /**

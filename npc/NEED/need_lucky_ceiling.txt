@@ -57,28 +57,28 @@ lasagna,167,195,4	script	행운의 알 교환소#need_lucky_ceil	4_F_KAFRA6,{
 	callsub S_NormalizeAll;
 
 	while (1) {
-		mes "[행운의 알 교환소]";
-		mes "모아둔 행운의 포인트로";
-		mes "원하는 상품을 확정 교환할 수 있습니다.";
+		mes needtr("[행운의 알 교환소]", "[Lucky Egg Exchange]");
+		mes needtr("모아둔 행운의 포인트로", "Spend the luck points you saved up");
+		mes needtr("원하는 상품을 확정 교환할 수 있습니다.", "to trade for exactly the item you want.");
 		mes " ";
-		mes "보유 " + getitemname(.PointItem) + " : ^0055FF" + countitem(.PointItem) + " P^000000";
-		mes "보유 Zeny : ^0055FF" + callfunc("F_InsertComma", Zeny) + "^000000";
+		mes needtr("보유 ", "You have ") + getitemname(.PointItem) + " : ^0055FF" + countitem(.PointItem) + " P^000000";
+		mes needtr("보유 Zeny : ^0055FF", "Zeny held : ^0055FF") + callfunc("F_InsertComma", Zeny) + "^000000";
 
 		if (!.SqlReady) {
 			mes " ";
-			mes "^FF0000현재 재고 시스템 점검 중이라^000000";
-			mes "^FF0000수량 제한 상품을 판매할 수 없습니다.^000000";
+			mes needtr("^FF0000현재 재고 시스템 점검 중이라^000000", "^FF0000The stock system is under maintenance so^000000");
+			mes needtr("^FF0000수량 제한 상품을 판매할 수 없습니다.^000000", "^FF0000limited-stock items cannot be sold.^000000");
 		}
 
 		setdialogsize(340,340);
 		next;
 
 		switch (select(
-			"시즌 한정 아이템 천장:" +
-			"공용 희귀 아이템:" +
-			"기존 행운 포인트 상점:" +
-			"교환 규칙 안내:" +
-			"닫기"
+			needtr("시즌 한정 아이템 천장:", "Season Limited Ceiling:") +
+			needtr("공용 희귀 아이템:", "Shared Rare Items:") +
+			needtr("기존 행운 포인트 상점:", "Classic Luck Point Shop:") +
+			needtr("교환 규칙 안내:", "Exchange Rules:") +
+			needtr("닫기", "Close")
 		)) {
 
 		case 1:
@@ -135,11 +135,11 @@ S_SeasonEggList:
 	}
 
 	if (.@ecount <= 0) {
-		mes "[행운의 알 교환소]";
-		mes "현재 판매 중인 시즌 천장 상품이 없습니다.";
+		mes needtr("[행운의 알 교환소]", "[Lucky Egg Exchange]");
+		mes needtr("현재 판매 중인 시즌 천장 상품이 없습니다.", "No season ceiling item is on sale right now.");
 		mes " ";
-		mes "시즌 천장은 해당 행운의 알 판매가";
-		mes "종료된 뒤에 열립니다.";
+		mes needtr("시즌 천장은 해당 행운의 알 판매가", "A season ceiling opens only after that");
+		mes needtr("종료된 뒤에 열립니다.", "Lucky Egg has finished its sale run.");
 		next;
 		return;
 	}
@@ -171,23 +171,23 @@ S_SeasonEggList:
 
 			if (.@pcount > 0)
 				.@menu$ += ":";
-			.@menu$ += getitemname(.@eggid[.@k]) + " (" + .@ecnt[.@k] + "종)";
+			.@menu$ += getitemname(.@eggid[.@k]) + " (" + .@ecnt[.@k] + needtr("종)", "kinds)");
 			.@pcount++;
 		}
 
-		mes "[행운의 알 교환소]";
-		mes "^FF8800시즌 한정 아이템 천장^000000";
-		mes "행운의 알 " + .@ecount + "종"
-			+ "   (페이지 " + (.@page + 1) + " / " + .@pages + ")";
+		mes needtr("[행운의 알 교환소]", "[Lucky Egg Exchange]");
+		mes needtr("^FF8800시즌 한정 아이템 천장^000000", "^FF8800Season Limited Ceiling^000000");
+		mes needtr("행운의 알 ", "Lucky Eggs : ") + .@ecount + needtr("종", "")
+			+ needtr("   (페이지 ", "   (page ") + (.@page + 1) + " / " + .@pages + ")";
 		mes " ";
-		mes "확정 교환을 원하는";
-		mes "^0055FF행운의 알^000000을 먼저 선택해주세요.";
+		mes needtr("확정 교환을 원하는", "First choose the");
+		mes needtr("^0055FF행운의 알^000000을 먼저 선택해주세요.", "^0055FFLucky Egg^000000 you want to trade for.");
 		mes " ";
-		mes "해당 시즌 행운의 알 ^FF0000실물 100개^000000가 필요하며";
-		mes "지급품은 ^FF0000계정 귀속^000000으로 처리됩니다.";
+		mes needtr("해당 시즌 행운의 알 ^FF0000실물 100개^000000가 필요하며", "It costs ^FF0000100 actual eggs^000000 of that season and");
+		mes needtr("지급품은 ^FF0000계정 귀속^000000으로 처리됩니다.", "the item is delivered ^FF0000account bound^000000.");
 		next;
 
-		.@sel = select(.@menu$ + ":-- 다음 페이지 --:-- 이전 페이지 --:뒤로") - 1;
+		.@sel = select(.@menu$ + needtr(":-- 다음 페이지 --:-- 이전 페이지 --:뒤로", ":-- Next Page --:-- Prev Page --:Back")) - 1;
 
 		if (.@sel == .@pcount) {
 			.@page = .@page + 1;
@@ -234,20 +234,20 @@ S_SeasonProducts:
 		}
 
 		if (.@count <= 0) {
-			mes "[행운의 알 교환소]";
-			mes "이 행운의 알의 천장 상품이 없습니다.";
+			mes needtr("[행운의 알 교환소]", "[Lucky Egg Exchange]");
+			mes needtr("이 행운의 알의 천장 상품이 없습니다.", "This Lucky Egg has no ceiling item.");
 			next;
 			return;
 		}
 
 		mes "[" + getitemname(.@egg) + "]";
-		mes "이 행운의 알로 교환할 수 있는";
-		mes "시즌 천장 상품 ^0055FF" + .@count + "종^000000입니다.";
+		mes needtr("이 행운의 알로 교환할 수 있는", "Ceiling items you can trade this");
+		mes needtr("시즌 천장 상품 ^0055FF", "Lucky Egg for : ^0055FF") + .@count + needtr("종^000000입니다.", "^000000");
 		mes " ";
-		mes "괄호 안은 ^0055FF서버 전체 남은 재고^000000입니다.";
+		mes needtr("괄호 안은 ^0055FF서버 전체 남은 재고^000000입니다.", "The bracket shows the ^0055FFserver-wide stock left^000000.");
 		next;
 
-		.@sel = select(.@menu$ + ":뒤로") - 1;
+		.@sel = select(.@menu$ + needtr(":뒤로", ":Back")) - 1;
 		if (.@sel < 0 || .@sel >= .@count)
 			return;
 
@@ -286,27 +286,27 @@ S_Category:
 		}
 
 		if (.@count <= 0) {
-			mes "[행운의 알 교환소]";
-			mes "현재 판매 중인 상품이 없습니다.";
+			mes needtr("[행운의 알 교환소]", "[Lucky Egg Exchange]");
+			mes needtr("현재 판매 중인 상품이 없습니다.", "No item is on sale right now.");
 			next;
 			return;
 		}
 
-		mes "[행운의 알 교환소]";
+		mes needtr("[행운의 알 교환소]", "[Lucky Egg Exchange]");
 		if (.@cat == 1) {
-			mes "^FF8800시즌 한정 아이템 천장^000000";
-			mes "해당 시즌 행운의 알 ^FF0000실물^000000이 필요합니다.";
-			mes "지급품은 ^FF0000계정 귀속^000000으로 처리될 수 있습니다.";
+			mes needtr("^FF8800시즌 한정 아이템 천장^000000", "^FF8800Season Limited Ceiling^000000");
+			mes needtr("해당 시즌 행운의 알 ^FF0000실물^000000이 필요합니다.", "Requires the ^FF0000actual eggs^000000 of that season.");
+			mes needtr("지급품은 ^FF0000계정 귀속^000000으로 처리될 수 있습니다.", "The item may be delivered ^FF0000account bound^000000.");
 		}
 		else {
-			mes "^0055FF공용 희귀 아이템^000000";
-			mes "행운의 알 없이 교환할 수 있는 상품입니다.";
+			mes needtr("^0055FF공용 희귀 아이템^000000", "^0055FFShared Rare Items^000000");
+			mes needtr("행운의 알 없이 교환할 수 있는 상품입니다.", "These can be traded without any Lucky Egg.");
 		}
 		mes " ";
-		mes "괄호 안은 ^0055FF서버 전체 남은 재고^000000입니다.";
+		mes needtr("괄호 안은 ^0055FF서버 전체 남은 재고^000000입니다.", "The bracket shows the ^0055FFserver-wide stock left^000000.");
 		next;
 
-		.@sel = select(.@menu$ + ":뒤로") - 1;
+		.@sel = select(.@menu$ + needtr(":뒤로", ":Back")) - 1;
 		if (.@sel < 0 || .@sel >= .@count)
 			return;
 
@@ -333,79 +333,79 @@ S_Detail:
 
 	mes "[" + .Name$[.@i] + "]";
 	mes " ";
-	mes "^0055FF교환 아이템^000000";
+	mes needtr("^0055FF교환 아이템^000000", "^0055FFExchange Item^000000");
 
 	// mesitemlink() : 대화창에서 클릭하면 아이템 상세/옵션 창이 열린다.
 	// conf/battle/feature.conf 의 feature.mesitemlink 가 on 이어야 한다.
 	if (.@nparts > 0) {
-		mes "구성 파츠 ^0055FF" + .@nparts + "종^000000 중 1종을 선택합니다.";
+		mes needtr("구성 파츠 ^0055FF", "Choose 1 of ^0055FF") + .@nparts + needtr("종^000000 중 1종을 선택합니다.", "^000000 parts.");
 		for (.@k = 0; .@k < .@nparts; .@k++)
 			mes "  ▶ " + mesitemlink(atoi(.@parts$[.@k]));
-		mes "지급 수량 : " + .RewardAmt[.@i] + "개";
+		mes needtr("지급 수량 : ", "You receive : ") + .RewardAmt[.@i] + needtr("개", "");
 	}
 	else {
 		mes "  ▶ " + mesitemlink(.Reward[.@i]) + " x " + .RewardAmt[.@i];
 	}
-	mes "^999999※ 아이템명을 클릭하면 옵션을 확인할 수 있습니다.^000000";
+	mes needtr("^999999※ 아이템명을 클릭하면 옵션을 확인할 수 있습니다.^000000", "^999999* Click an item name to inspect its options.^000000");
 	mes " ";
 
 	if (.RateText$[.@i] != "")
-		mes "행알 등장 확률 : ^0055FF" + .RateText$[.@i] + "^000000";
+		mes needtr("행알 등장 확률 : ^0055FF", "Egg drop chance : ^0055FF") + .RateText$[.@i] + "^000000";
 
-	mes "^FF0000[필요 재료]^000000";
+	mes needtr("^FF0000[필요 재료]^000000", "^FF0000[Materials Needed]^000000");
 	mes "- " + getitemname(.PointItem) + " : " + .Point[.@i] + " P"
-		+ "  (보유 " + countitem(.PointItem) + ")";
+		+ needtr("  (보유 ", "  (have ") + countitem(.PointItem) + ")";
 
 	if (.EggId[.@i] > 0)
-		mes "- " + mesitemlink(.EggId[.@i]) + " : " + .EggAmt[.@i] + "개"
-			+ "  (보유 " + countitem(.EggId[.@i]) + ")";
+		mes "- " + mesitemlink(.EggId[.@i]) + " : " + .EggAmt[.@i] + needtr("개", "")
+			+ needtr("  (보유 ", "  (have ") + countitem(.EggId[.@i]) + ")";
 	else
-		mes "- 행운의 알 : 필요 없음";
+		mes needtr("- 행운의 알 : 필요 없음", "- Lucky Egg : not required");
 
 	mes "- Zeny : " + callfunc("F_InsertComma", .Zeny[.@i])
-		+ "  (보유 " + callfunc("F_InsertComma", Zeny) + ")";
+		+ needtr("  (보유 ", "  (have ") + callfunc("F_InsertComma", Zeny) + ")";
 	mes " ";
 
-	mes "^0055FF[서버 재고]^000000";
+	mes needtr("^0055FF[서버 재고]^000000", "^0055FF[Server Stock]^000000");
 	if (.Cycle[.@i] == 0) {
-		mes "- 재고 제한 없음";
+		mes needtr("- 재고 제한 없음", "- no stock limit");
 	}
 	else if (!.SqlReady) {
-		mes "- ^FF0000재고 시스템 점검 중^000000";
+		mes needtr("- ^FF0000재고 시스템 점검 중^000000", "- ^FF0000stock system under maintenance^000000");
 	}
 	else {
-		mes "- 남은 수량 : " + $NeedLPStock[.@pid] + " / " + .Stock[.@i]
-			+ " (" + ((.Cycle[.@i] == 1) ? "주간" : "월간") + ")";
-		mes "- 다음 재입고 : " + callsub(S_NextResetStr, .@i);
+		mes needtr("- 남은 수량 : ", "- stock left : ") + $NeedLPStock[.@pid] + " / " + .Stock[.@i]
+			+ " (" + ((.Cycle[.@i] == 1) ? needtr("주간", "weekly") : needtr("월간", "monthly")) + ")";
+		mes needtr("- 다음 재입고 : ", "- next restock : ") + callsub(S_NextResetStr, .@i);
 	}
 	mes " ";
 
 	if (.Bound[.@i]) {
-		mes "^FF0000[거래 제한]^000000";
-		mes "계정 귀속으로 지급됩니다.";
-		mes "거래 / 우편 / 노점 / 드랍 / 길드 창고 불가";
-		mes "^0055FF계정 창고 이동은 가능^000000합니다.";
+		mes needtr("^FF0000[거래 제한]^000000", "^FF0000[Trade Restriction]^000000");
+		mes needtr("계정 귀속으로 지급됩니다.", "Delivered account bound.");
+		mes needtr("거래 / 우편 / 노점 / 드랍 / 길드 창고 불가", "No trade / mail / vending / drop / guild storage");
+		mes needtr("^0055FF계정 창고 이동은 가능^000000합니다.", "^0055FFAccount storage is allowed^000000.");
 	}
 	else {
-		mes "[거래 제한]";
-		mes "해당 아이템의 기본 정책을 따릅니다.";
+		mes needtr("[거래 제한]", "[Trade Restriction]");
+		mes needtr("해당 아이템의 기본 정책을 따릅니다.", "Follows the item's own default policy.");
 	}
 	next;
 
 	if (.Cycle[.@i] != 0 && !.SqlReady) {
-		mes "[행운의 알 교환소]";
-		mes "^FF0000현재 재고 시스템 점검 중입니다.^000000";
-		mes "잠시 후 다시 이용해주세요.";
+		mes needtr("[행운의 알 교환소]", "[Lucky Egg Exchange]");
+		mes needtr("^FF0000현재 재고 시스템 점검 중입니다.^000000", "^FF0000The stock system is under maintenance.^000000");
+		mes needtr("잠시 후 다시 이용해주세요.", "Please come back in a little while.");
 		next;
 		return;
 	}
 
 	if (.Cycle[.@i] != 0 && $NeedLPStock[.@pid] <= 0) {
-		mes "[행운의 알 교환소]";
-		mes "^FF0000이번 " + ((.Cycle[.@i] == 1) ? "주" : "달") + " 준비된 수량이";
-		mes "모두 소진되었습니다.^000000";
+		mes needtr("[행운의 알 교환소]", "[Lucky Egg Exchange]");
+		mes needtr("^FF0000이번 ", "^FF0000All of this ") + ((.Cycle[.@i] == 1) ? needtr("주", "week") : needtr("달", "month")) + needtr(" 준비된 수량이", "'s prepared stock");
+		mes needtr("모두 소진되었습니다.^000000", "has been used up.^000000");
 		mes " ";
-		mes "다음 재입고 : " + callsub(S_NextResetStr, .@i);
+		mes needtr("다음 재입고 : ", "Next restock : ") + callsub(S_NextResetStr, .@i);
 		next;
 		return;
 	}
@@ -421,13 +421,13 @@ S_Detail:
 		}
 
 		mes "[" + .Name$[.@i] + "]";
-		mes "받으실 파츠를 선택해주세요.";
+		mes needtr("받으실 파츠를 선택해주세요.", "Please choose the part you want.");
 		mes " ";
-		mes "어떤 파츠를 선택하더라도";
-		mes "^FF0000공용 재고 1개^000000가 차감됩니다.";
+		mes needtr("어떤 파츠를 선택하더라도", "Whichever part you pick it still");
+		mes needtr("^FF0000공용 재고 1개^000000가 차감됩니다.", "uses up ^FF00001 shared stock^000000.");
 		next;
 
-		.@sel = select(.@pmenu$ + ":취소") - 1;
+		.@sel = select(.@pmenu$ + needtr(":취소", ":Cancel")) - 1;
 		if (.@sel < 0 || .@sel >= .@nparts)
 			return;
 
@@ -438,81 +438,81 @@ S_Detail:
 		.@reward = .Reward[.@i];
 	}
 
-	mes "[최종 확인]";
-	mes "지급 : ^0055FF" + mesitemlink(.@reward) + " x " + .RewardAmt[.@i] + "^000000";
+	mes needtr("[최종 확인]", "[Final Check]");
+	mes needtr("지급 : ^0055FF", "You get : ^0055FF") + mesitemlink(.@reward) + " x " + .RewardAmt[.@i] + "^000000";
 	mes " ";
-	mes "소모 :";
+	mes needtr("소모 :", "You pay :");
 	mes "- " + getitemname(.PointItem) + " " + .Point[.@i] + " P";
 	if (.EggId[.@i] > 0)
-		mes "- " + mesitemlink(.EggId[.@i]) + " " + .EggAmt[.@i] + "개";
+		mes "- " + mesitemlink(.EggId[.@i]) + " " + .EggAmt[.@i] + needtr("개", "");
 	mes "- Zeny " + callfunc("F_InsertComma", .Zeny[.@i]);
 	mes " ";
-	mes "^999999※ 아이템명을 클릭해 옵션을 확인한 뒤 결정하세요.^000000";
-	mes "^FF0000교환한 재료는 되돌릴 수 없습니다.^000000";
+	mes needtr("^999999※ 아이템명을 클릭해 옵션을 확인한 뒤 결정하세요.^000000", "^999999* Click the item name to check its options before deciding.^000000");
+	mes needtr("^FF0000교환한 재료는 되돌릴 수 없습니다.^000000", "^FF0000Spent materials cannot be recovered.^000000");
 	next;
 
-	if (select("교환한다:취소") == 2)
+	if (select(needtr("교환한다:취소", "Exchange:Cancel")) == 2)
 		return;
 
 	.@ret = callsub(S_Buy, .@i, .@choice);
 
-	mes "[행운의 알 교환소]";
+	mes needtr("[행운의 알 교환소]", "[Lucky Egg Exchange]");
 	switch (.@ret) {
 	case 0:
 		mes "^0055FF" + mesitemlink(.@reward) + " x " + .RewardAmt[.@i] + "^000000";
-		mes "교환했습니다.";
+		mes needtr("교환했습니다.", "Exchange complete.");
 		mes " ";
 		if (.Cycle[.@i] != 0)
-			mes "서버 남은 수량 : " + $NeedLPStock[.@pid] + " / " + .Stock[.@i];
+			mes needtr("서버 남은 수량 : ", "Server stock left : ") + $NeedLPStock[.@pid] + " / " + .Stock[.@i];
 		if (.Bound[.@i])
-			mes "^FF0000계정 귀속 상태로 지급되었습니다.^000000";
+			mes needtr("^FF0000계정 귀속 상태로 지급되었습니다.^000000", "^FF0000Delivered account bound.^000000");
 		break;
 
 	case 1:
-		mes "^FF0000해당 상품의 판매가 종료되었습니다.^000000";
+		mes needtr("^FF0000해당 상품의 판매가 종료되었습니다.^000000", "^FF0000This item's sale has ended.^000000");
 		break;
 
 	case 2:
-		mes "^FF0000방금 다른 유저가 마지막 수량을 가져갔습니다.^000000";
-		mes "다음 재입고를 기다려주세요.";
+		mes needtr("^FF0000방금 다른 유저가 마지막 수량을 가져갔습니다.^000000", "^FF0000Someone just took the last one.^000000");
+		mes needtr("다음 재입고를 기다려주세요.", "Please wait for the next restock.");
 		break;
 
 	case 3:
-		mes "^FF0000" + getitemname(.PointItem) + "이(가) 부족합니다.^000000";
-		mes "필요 : " + .Point[.@i] + " P / 보유 : " + countitem(.PointItem) + " P";
+		mes "^FF0000" + getitemname(.PointItem) + needtr("이(가) 부족합니다.^000000", " is missing.^000000");
+		mes needtr("필요 : ", "Needed : ") + .Point[.@i] + needtr(" P / 보유 : ", " P / have : ") + countitem(.PointItem) + " P";
 		break;
 
 	case 4:
-		mes "^FF0000" + getitemname(.EggId[.@i]) + "이(가) 부족합니다.^000000";
-		mes "필요 : " + .EggAmt[.@i] + "개 / 보유 : " + countitem(.EggId[.@i]) + "개";
+		mes "^FF0000" + getitemname(.EggId[.@i]) + needtr("이(가) 부족합니다.^000000", " is missing.^000000");
+		mes needtr("필요 : ", "Needed : ") + .EggAmt[.@i] + needtr("개 / 보유 : ", " / have : ") + countitem(.EggId[.@i]) + needtr("개", "");
 		break;
 
 	case 5:
-		mes "^FF0000Zeny가 부족합니다.^000000";
-		mes "필요 : " + callfunc("F_InsertComma", .Zeny[.@i]);
+		mes needtr("^FF0000Zeny가 부족합니다.^000000", "^FF0000You do not have enough Zeny.^000000");
+		mes needtr("필요 : ", "Needed : ") + callfunc("F_InsertComma", .Zeny[.@i]);
 		break;
 
 	case 6:
-		mes "^FF0000소지 무게 또는 인벤토리 공간이 부족합니다.^000000";
-		mes "정리 후 다시 시도해주세요.";
+		mes needtr("^FF0000소지 무게 또는 인벤토리 공간이 부족합니다.^000000", "^FF0000Not enough weight capacity or inventory space.^000000");
+		mes needtr("정리 후 다시 시도해주세요.", "Please make room and try again.");
 		break;
 
 	case 8:
-		mes "^FF0000현재 재고 시스템 점검 중입니다.^000000";
-		mes "잠시 후 다시 시도해주세요.";
+		mes needtr("^FF0000현재 재고 시스템 점검 중입니다.^000000", "^FF0000The stock system is under maintenance.^000000");
+		mes needtr("잠시 후 다시 시도해주세요.", "Please try again in a little while.");
 		mes " ";
-		mes "재화는 전혀 소모되지 않았습니다.";
+		mes needtr("재화는 전혀 소모되지 않았습니다.", "Nothing was spent.");
 		break;
 
 	case 9:
-		mes "^FF0000재고 처리에 실패해 교환을 취소했습니다.^000000";
-		mes "잠시 후 다시 시도해주세요.";
+		mes needtr("^FF0000재고 처리에 실패해 교환을 취소했습니다.^000000", "^FF0000The stock update failed so the exchange was cancelled.^000000");
+		mes needtr("잠시 후 다시 시도해주세요.", "Please try again in a little while.");
 		mes " ";
-		mes "재화는 전혀 소모되지 않았습니다.";
+		mes needtr("재화는 전혀 소모되지 않았습니다.", "Nothing was spent.");
 		break;
 
 	default:
-		mes "^FF0000상품 설정이 변경되어 교환을 취소했습니다.^000000";
+		mes needtr("^FF0000상품 설정이 변경되어 교환을 취소했습니다.^000000", "^FF0000The item setup changed so the exchange was cancelled.^000000");
 		break;
 	}
 	next;
@@ -637,42 +637,42 @@ S_Buy:
 // 교환 규칙 안내
 //============================================================
 S_Rules:
-	mes "[교환 규칙 안내]";
-	mes "^FF88001. 시즌 한정 아이템 천장^000000";
-	mes "- 해당 시즌 행운의 알 ^FF0000미개봉 실물^000000이 필요합니다.";
-	mes "- 개봉 횟수가 아니라 아이템을 직접 소모합니다.";
-	mes "- 시즌 천장은 ^0055FF행운의 알 판매 시작 7일 후^000000부터 이용할 수 있습니다.";
-	mes "- 즉, ^0055FF판매 2주차부터^000000 천장 교환이 개방됩니다.";
+	mes needtr("[교환 규칙 안내]", "[Exchange Rules]");
+	mes needtr("^FF88001. 시즌 한정 아이템 천장^000000", "^FF88001. Season Limited Ceiling^000000");
+	mes needtr("- 해당 시즌 행운의 알 ^FF0000미개봉 실물^000000이 필요합니다.", "- Requires ^FF0000unopened actual eggs^000000 of that season.");
+	mes needtr("- 개봉 횟수가 아니라 아이템을 직접 소모합니다.", "- It consumes the items themselves - not your open count.");
+	mes needtr("- 시즌 천장은 ^0055FF행운의 알 판매 시작 7일 후^000000부터 이용할 수 있습니다.", "- A season ceiling opens ^0055FF7 days after that egg goes on sale^000000.");
+	mes needtr("- 즉, ^0055FF판매 2주차부터^000000 천장 교환이 개방됩니다.", "- In other words it opens ^0055FFin the second week of the sale^000000.");
 	next;
 
-	mes "[교환 규칙 안내]";
-	mes "^0055FF2. 공용 희귀 아이템^000000";
-	mes "- 여러 행운의 알에서 반복 등장하는 상품입니다.";
-	mes "- 행운의 알 없이 포인트와 Zeny로만 교환합니다.";
+	mes needtr("[교환 규칙 안내]", "[Exchange Rules]");
+	mes needtr("^0055FF2. 공용 희귀 아이템^000000", "^0055FF2. Shared Rare Items^000000");
+	mes needtr("- 여러 행운의 알에서 반복 등장하는 상품입니다.", "- Items that show up in several Lucky Eggs.");
+	mes needtr("- 행운의 알 없이 포인트와 Zeny로만 교환합니다.", "- Traded with points and Zeny only - no egg needed.");
 	next;
 
-	mes "[교환 규칙 안내]";
-	mes "^0055FF3. 서버 공용 재고^000000";
-	mes "- 개인/계정 제한이 아니라 ^FF0000서버 전체 수량^000000입니다.";
-	mes "- 주간 상품 : 매주 ^0055FF토요일 22:00^000000 초기화";
-	mes "- 월간 상품 : 매월 ^0055FF첫 번째 토요일 22:00^000000 초기화";
-	mes "- 남은 수량은 다음 주기로 이월되지 않습니다.";
+	mes needtr("[교환 규칙 안내]", "[Exchange Rules]");
+	mes needtr("^0055FF3. 서버 공용 재고^000000", "^0055FF3. Server-Wide Stock^000000");
+	mes needtr("- 개인/계정 제한이 아니라 ^FF0000서버 전체 수량^000000입니다.", "- Not a personal or account limit but a ^FF0000server-wide quantity^000000.");
+	mes needtr("- 주간 상품 : 매주 ^0055FF토요일 22:00^000000 초기화", "- Weekly items : reset every ^0055FFSaturday 22:00^000000");
+	mes needtr("- 월간 상품 : 매월 ^0055FF첫 번째 토요일 22:00^000000 초기화", "- Monthly items : reset on the ^0055FFfirst Saturday 22:00^000000");
+	mes needtr("- 남은 수량은 다음 주기로 이월되지 않습니다.", "- Leftover stock does not carry over to the next cycle.");
 	next;
 
-	mes "[교환 규칙 안내]";
-	mes "^FF00004. 거래 제한^000000";
-	mes "- 천장으로 확정 교환한 아이템은 계정 귀속입니다.";
-	mes "- 거래 / 우편 / 노점 / 드랍 / 길드 창고 불가";
-	mes "- 계정 창고 이동은 가능합니다.";
+	mes needtr("[교환 규칙 안내]", "[Exchange Rules]");
+	mes needtr("^FF00004. 거래 제한^000000", "^FF00004. Trade Restriction^000000");
+	mes needtr("- 천장으로 확정 교환한 아이템은 계정 귀속입니다.", "- Items traded through the ceiling are account bound.");
+	mes needtr("- 거래 / 우편 / 노점 / 드랍 / 길드 창고 불가", "- No trade / mail / vending / drop / guild storage");
+	mes needtr("- 계정 창고 이동은 가능합니다.", "- Account storage is allowed.");
 	mes " ";
-	mes "- 행운의 알을 직접 열어서 얻은 아이템은";
-	mes "  기존 정책 그대로 유지됩니다.";
+	mes needtr("- 행운의 알을 직접 열어서 얻은 아이템은", "- Items you get by opening a Lucky Egg yourself");
+	mes needtr("  기존 정책 그대로 유지됩니다.", "  keep their existing policy.");
 	next;
 
-	mes "[교환 규칙 안내]";
-	mes "^0055FF5. 세트형 상품^000000";
-	mes "- 파츠를 선택하는 상품은 파츠별 재고가 아니라";
-	mes "  ^FF0000공용 재고 1개^000000를 차감합니다.";
+	mes needtr("[교환 규칙 안내]", "[Exchange Rules]");
+	mes needtr("^0055FF5. 세트형 상품^000000", "^0055FF5. Set Items^000000");
+	mes needtr("- 파츠를 선택하는 상품은 파츠별 재고가 아니라", "- An item where you pick a part has no per-part stock -");
+	mes needtr("  ^FF0000공용 재고 1개^000000를 차감합니다.", "  it uses ^FF00001 shared stock^000000.");
 	next;
 	return;
 
@@ -703,12 +703,12 @@ S_StockTag:
 		return "";
 
 	if (!.SqlReady)
-		return " (점검중)";
+		return needtr(" (점검중)", " (maintenance)");
 
 	.@pid = .Pid[.@i];
 
 	if ($NeedLPStock[.@pid] <= 0)
-		return " (품절)";
+		return needtr(" (품절)", " (sold out)");
 
 	return " (" + $NeedLPStock[.@pid] + "/" + .Stock[.@i] + ")";
 
@@ -953,7 +953,7 @@ S_NextResetStr:
 		if (.@fwd == 0 && gettime(DT_HOUR) >= 22)
 			.@fwd = 7;
 
-		return gettimestr("%Y-%m-%d", 11, gettimetick(2) + .@fwd * 86400) + " (토) 22:00";
+		return gettimestr("%Y-%m-%d", 11, gettimetick(2) + .@fwd * 86400) + needtr(" (토) 22:00", " (Sat) 22:00");
 	}
 
 	if (.Cycle[.@i] == 2) {
@@ -979,7 +979,7 @@ S_NextResetStr:
 		if (.@fs < 10)
 			.@ds$ = "0" + .@fs;
 
-		return .@y + "-" + .@ms$ + "-" + .@ds$ + " (첫째 토요일) 22:00";
+		return .@y + "-" + .@ms$ + "-" + .@ds$ + needtr(" (첫째 토요일) 22:00", " (first Saturday) 22:00");
 	}
 
 	return "-";
@@ -1018,9 +1018,9 @@ OnAdmin:
 			if (.@count > 0)
 				.@menu$ += ":";
 
-			.@state$ = "판매중";
+			.@state$ = needtr("판매중", "on sale");
 			if (!callsub(S_IsOpen, .@i))
-				.@state$ = "중지";
+				.@state$ = needtr("중지", "stopped");
 
 			.@menu$ += "[" + .Pid[.@i] + "] " + .Name$[.@i]
 				+ " / " + .@state$
@@ -1029,29 +1029,29 @@ OnAdmin:
 			.@count++;
 		}
 
-		mes "[행운의 알 교환소 - 운영자]";
-		mes "등록 상품 : " + .@total + "개"
-			+ "   (페이지 " + (.@page + 1) + " / " + .@pages + ")";
+		mes needtr("[행운의 알 교환소 - 운영자]", "[Lucky Egg Exchange - GM]");
+		mes needtr("등록 상품 : ", "Registered items : ") + .@total + needtr("개", "")
+			+ needtr("   (페이지 ", "   (page ") + (.@page + 1) + " / " + .@pages + ")";
 		mes " ";
 
 		if (.SqlReady) {
-			mes "재고 저장소 : ^0055FF정상^000000 (need_lucky_ceiling_stock)";
+			mes needtr("재고 저장소 : ^0055FF정상^000000 (need_lucky_ceiling_stock)", "Stock store : ^0055FFOK^000000 (need_lucky_ceiling_stock)");
 		}
 		else {
-			mes "재고 저장소 : ^FF0000오류^000000";
-			mes "^FF0000재고 상품 판매가 전부 차단된 상태입니다.^000000";
-			mes "sql-files/need_lucky_ceiling.sql 적용 여부를 확인하세요.";
+			mes needtr("재고 저장소 : ^FF0000오류^000000", "Stock store : ^FF0000ERROR^000000");
+			mes needtr("^FF0000재고 상품 판매가 전부 차단된 상태입니다.^000000", "^FF0000All limited-stock sales are blocked.^000000");
+			mes needtr("sql-files/need_lucky_ceiling.sql 적용 여부를 확인하세요.", "Check whether sql-files/need_lucky_ceiling.sql has been applied.");
 		}
 
 		mes " ";
-		mes "주간 주기 키 : " + callsub(S_WeekKey);
-		mes "월간 주기 키 : " + callsub(S_MonthKey);
+		mes needtr("주간 주기 키 : ", "Weekly cycle key : ") + callsub(S_WeekKey);
+		mes needtr("월간 주기 키 : ", "Monthly cycle key : ") + callsub(S_MonthKey);
 		mes " ";
-		mes "관리할 상품을 선택해주세요.";
+		mes needtr("관리할 상품을 선택해주세요.", "Please choose the item to manage.");
 		next;
 
-		.@sel = select(.@menu$ + ":-- 다음 페이지 --:-- 이전 페이지 --"
-			+ ":재고 저장소 재연결:닫기") - 1;
+		.@sel = select(.@menu$ + needtr(":-- 다음 페이지 --:-- 이전 페이지 --", ":-- Next Page --:-- Prev Page --")
+			+ needtr(":재고 저장소 재연결:닫기", ":Reconnect Stock Store:Close")) - 1;
 
 		if (.@sel == .@count) {
 			.@page = .@page + 1;
@@ -1064,15 +1064,15 @@ OnAdmin:
 		}
 
 		if (.@sel == .@count + 2) {
-			mes "[재고 저장소 재연결]";
+			mes needtr("[재고 저장소 재연결]", "[Reconnect Stock Store]");
 
 			if (callsub(S_SqlLoad)) {
-				mes "^0055FF정상적으로 다시 읽었습니다.^000000";
+				mes needtr("^0055FF정상적으로 다시 읽었습니다.^000000", "^0055FFReloaded successfully.^000000");
 				callsub S_NormalizeAll;
 			}
 			else {
-				mes "^FF0000여전히 읽을 수 없습니다.^000000";
-				mes "need_lucky_ceiling_stock 테이블과 DB 상태를 확인하세요.";
+				mes needtr("^FF0000여전히 읽을 수 없습니다.^000000", "^FF0000Still cannot read it.^000000");
+				mes needtr("need_lucky_ceiling_stock 테이블과 DB 상태를 확인하세요.", "Check the need_lucky_ceiling_stock table and the DB status.");
 			}
 
 			logmes "[LuckyCeilAdmin] sql reload ready=" + .SqlReady;
@@ -1096,50 +1096,50 @@ S_AdminItem:
 		callsub S_Normalize, .@i;
 
 		mes "[" + .Name$[.@i] + "]";
-		mes "상품 ID : " + .@pid + " (" + .Code$[.@i] + ")";
-		mes "분류 : " + ((.Cat[.@i] == 1) ? "시즌 천장" : "공용 희귀");
-		mes "스크립트 설정 : " + ((.Enabled[.@i]) ? "판매" : "중지");
+		mes needtr("상품 ID : ", "Item ID : ") + .@pid + " (" + .Code$[.@i] + ")";
+		mes needtr("분류 : ", "Category : ") + ((.Cat[.@i] == 1) ? needtr("시즌 천장", "Season Ceiling") : needtr("공용 희귀", "Shared Rare"));
+		mes needtr("스크립트 설정 : ", "Script setting : ") + ((.Enabled[.@i]) ? needtr("판매", "on sale") : needtr("중지", "stopped"));
 
 		if ($NeedLPMode[.@pid] == 1)
-			mes "운영자 지정 : ^FF0000강제 판매중지^000000";
+			mes needtr("운영자 지정 : ^FF0000강제 판매중지^000000", "GM override : ^FF0000force stop^000000");
 		else if ($NeedLPMode[.@pid] == 2)
-			mes "운영자 지정 : ^0055FF강제 판매^000000";
+			mes needtr("운영자 지정 : ^0055FF강제 판매^000000", "GM override : ^0055FFforce sale^000000");
 		else
-			mes "운영자 지정 : 없음 (설정값 사용)";
+			mes needtr("운영자 지정 : 없음 (설정값 사용)", "GM override : none (uses the script setting)");
 
 		.@open = callsub(S_IsOpen, .@i);
-		mes "현재 상태 : " + ((.@open) ? "^0055FF판매중^000000" : "^FF0000중지^000000");
+		mes needtr("현재 상태 : ", "Current state : ") + ((.@open) ? needtr("^0055FF판매중^000000", "^0055FFon sale^000000") : needtr("^FF0000중지^000000", "^FF0000stopped^000000"));
 		mes " ";
 
 		if (.Cycle[.@i] == 0) {
-			mes "재고 : 제한 없음";
+			mes needtr("재고 : 제한 없음", "Stock : no limit");
 		}
 		else {
-			mes "재고 : " + $NeedLPStock[.@pid] + " / " + .Stock[.@i]
-				+ " (" + ((.Cycle[.@i] == 1) ? "주간" : "월간") + ")";
-			mes "주기 값 : " + $NeedLPCyc[.@pid];
-			mes "다음 재입고 : " + callsub(S_NextResetStr, .@i);
+			mes needtr("재고 : ", "Stock : ") + $NeedLPStock[.@pid] + " / " + .Stock[.@i]
+				+ " (" + ((.Cycle[.@i] == 1) ? needtr("주간", "weekly") : needtr("월간", "monthly")) + ")";
+			mes needtr("주기 값 : ", "Cycle value : ") + $NeedLPCyc[.@pid];
+			mes needtr("다음 재입고 : ", "Next restock : ") + callsub(S_NextResetStr, .@i);
 		}
 		next;
 
 		switch (select(
-			"재고 직접 수정:" +
-			"기본 재고로 즉시 초기화:" +
-			"판매 강제 ON:" +
-			"판매 강제 OFF:" +
-			"운영자 지정 해제:" +
-			"뒤로"
+			needtr("재고 직접 수정:", "Set Stock Directly:") +
+			needtr("기본 재고로 즉시 초기화:", "Reset to Default Stock:") +
+			needtr("판매 강제 ON:", "Force Sale ON:") +
+			needtr("판매 강제 OFF:", "Force Sale OFF:") +
+			needtr("운영자 지정 해제:", "Clear GM Override:") +
+			needtr("뒤로", "Back")
 		)) {
 
 		case 1:
 			if (.Cycle[.@i] == 0) {
-				mes "재고 제한이 없는 상품입니다.";
+				mes needtr("재고 제한이 없는 상품입니다.", "This item has no stock limit.");
 				next;
 				break;
 			}
-			mes "[재고 직접 수정]";
-			mes "변경할 최종 재고를 입력해주세요.";
-			mes "현재 : " + $NeedLPStock[.@pid];
+			mes needtr("[재고 직접 수정]", "[Set Stock Directly]");
+			mes needtr("변경할 최종 재고를 입력해주세요.", "Please enter the new stock value.");
+			mes needtr("현재 : ", "Now : ") + $NeedLPStock[.@pid];
 			next;
 
 			input .@new, 0, 100000;
@@ -1148,9 +1148,9 @@ S_AdminItem:
 
 			// SQL 에 먼저 확정하고 성공했을 때만 인메모리 값을 바꾼다
 			if (!callsub(S_SaveStock, .@i, $NeedLPCyc[.@pid], .@new)) {
-				mes "[재고 직접 수정]";
-				mes "^FF0000재고 저장에 실패했습니다. 변경하지 않았습니다.^000000";
-				mes "현재 재고 : " + .@old;
+				mes needtr("[재고 직접 수정]", "[Set Stock Directly]");
+				mes needtr("^FF0000재고 저장에 실패했습니다. 변경하지 않았습니다.^000000", "^FF0000Saving the stock failed - nothing was changed.^000000");
+				mes needtr("현재 재고 : ", "Current stock : ") + .@old;
 				next;
 				break;
 			}
@@ -1159,24 +1159,24 @@ S_AdminItem:
 
 			logmes "[LuckyCeilAdmin] pid=" + .@pid + " stock " + .@old + " -> " + .@new + " (saved)";
 
-			mes "[재고 직접 수정]";
-			mes .@old + "개 -> ^009900" + $NeedLPStock[.@pid] + "개^000000";
-			mes "^0055FF즉시 영구 저장되었습니다.^000000";
+			mes needtr("[재고 직접 수정]", "[Set Stock Directly]");
+			mes .@old + needtr("개 -> ^009900", " -> ^009900") + $NeedLPStock[.@pid] + needtr("개^000000", "^000000");
+			mes needtr("^0055FF즉시 영구 저장되었습니다.^000000", "^0055FFSaved permanently right away.^000000");
 			next;
 			break;
 
 		case 2:
 			if (.Cycle[.@i] == 0) {
-				mes "재고 제한이 없는 상품입니다.";
+				mes needtr("재고 제한이 없는 상품입니다.", "This item has no stock limit.");
 				next;
 				break;
 			}
 			.@old = $NeedLPStock[.@pid];
 
 			if (!callsub(S_SaveStock, .@i, $NeedLPCyc[.@pid], .Stock[.@i])) {
-				mes "[재고 초기화]";
-				mes "^FF0000재고 저장에 실패했습니다. 변경하지 않았습니다.^000000";
-				mes "현재 재고 : " + .@old;
+				mes needtr("[재고 초기화]", "[Reset Stock]");
+				mes needtr("^FF0000재고 저장에 실패했습니다. 변경하지 않았습니다.^000000", "^FF0000Saving the stock failed - nothing was changed.^000000");
+				mes needtr("현재 재고 : ", "Current stock : ") + .@old;
 				next;
 				break;
 			}
@@ -1185,9 +1185,9 @@ S_AdminItem:
 
 			logmes "[LuckyCeilAdmin] pid=" + .@pid + " reset " + .@old + " -> " + .Stock[.@i] + " (saved)";
 
-			mes "[재고 초기화]";
-			mes .@old + "개 -> ^009900" + $NeedLPStock[.@pid] + "개^000000";
-			mes "^0055FF즉시 영구 저장되었습니다.^000000";
+			mes needtr("[재고 초기화]", "[Reset Stock]");
+			mes .@old + needtr("개 -> ^009900", " -> ^009900") + $NeedLPStock[.@pid] + needtr("개^000000", "^000000");
+			mes needtr("^0055FF즉시 영구 저장되었습니다.^000000", "^0055FFSaved permanently right away.^000000");
 			next;
 			break;
 
@@ -1222,8 +1222,8 @@ S_AdminSetMode:
 	.@old = $NeedLPMode[.@pid];
 
 	if (!callsub(S_SaveMode, .@pid, .@mode)) {
-		mes "[판매 상태 변경]";
-		mes "^FF0000저장에 실패해 변경하지 않았습니다.^000000";
+		mes needtr("[판매 상태 변경]", "[Change Sale State]");
+		mes needtr("^FF0000저장에 실패해 변경하지 않았습니다.^000000", "^FF0000Saving failed - nothing was changed.^000000");
 		next;
 		return;
 	}
@@ -1232,16 +1232,16 @@ S_AdminSetMode:
 
 	logmes "[LuckyCeilAdmin] pid=" + .@pid + " mode " + .@old + " -> " + .@mode + " (saved)";
 
-	mes "[판매 상태 변경]";
+	mes needtr("[판매 상태 변경]", "[Change Sale State]");
 	if (.@mode == 2)
-		mes "^0055FF강제 판매^000000로 지정했습니다.";
+		mes needtr("^0055FF강제 판매^000000로 지정했습니다.", "Set to ^0055FFforce sale^000000.");
 	else if (.@mode == 1)
-		mes "^FF0000강제 판매중지^000000로 지정했습니다.";
+		mes needtr("^FF0000강제 판매중지^000000로 지정했습니다.", "Set to ^FF0000force stop^000000.");
 	else {
-		mes "운영자 지정을 해제했습니다.";
-		mes "스크립트 설정값을 따릅니다.";
+		mes needtr("운영자 지정을 해제했습니다.", "The GM override has been cleared.");
+		mes needtr("스크립트 설정값을 따릅니다.", "It now follows the script setting.");
 	}
-	mes "^0055FF즉시 영구 저장되었습니다.^000000";
+	mes needtr("^0055FF즉시 영구 저장되었습니다.^000000", "^0055FFSaved permanently right away.^000000");
 	next;
 	return;
 

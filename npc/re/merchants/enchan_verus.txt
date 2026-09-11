@@ -11,57 +11,57 @@
 lasa_in01,187,47,5	script	양산형 찰스턴#2::Mass Charleston#2	4_F_CHARLESTON01,{
 	disable_items;
 	if (!checkweight(1201,1)) {
-		mes "소지한 아이템 종류가 너무 많습니다. 인벤토리를 정리한 뒤 다시 이용해 주세요.";
+		mes needtr("소지한 아이템 종류가 너무 많습니다. 인벤토리를 정리한 뒤 다시 이용해 주세요.", "You have too many types of items. Lighten your inventory first.");
 		close;
 	}
 	if ((MaxWeight - Weight) < 10000) {
-		mes "소지 무게가 너무 무겁습니다. 무게를 줄인 뒤 다시 이용해 주세요.";
+		mes needtr("소지 무게가 너무 무겁습니다. 무게를 줄인 뒤 다시 이용해 주세요.", "The items in your inventory are weighing you down. Lighten your weight first.");
 		close;
 	}
 	cutin "dalle01.bmp",2;
-	mes "[양산형 찰스턴]";
-	mes "찰스턴 공장에서 생산된 장비를 인챈트할 수 있습니다. 필요한 작업을 선택해 주세요.";
+	mes needtr("[양산형 찰스턴]", "[Mass Charleston]");
+	mes needtr("찰스턴 공장에서 생산된 장비를 인챈트할 수 있습니다. 필요한 작업을 선택해 주세요.", "I can upgrade the Charleston Factory products. Let me know if you're interested.");
 	next;
-	switch( select( "이용 방법 확인", "장비에 능력 부여", "장비 인챈트 초기화", "인챈트 리스트 확인" ) ) {
+	switch( select( needtr("이용 방법 확인", "How It Works"), needtr("장비에 능력 부여", "Enchant Equipment"), needtr("장비 인챈트 초기화", "Reset Equipment Enchant"), needtr("인챈트 리스트 확인", "Check the enchant list") ) ) {
 	case 1:
-		mes "[양산형 찰스턴]";
-		mes "능력 부여 또는 초기화 1회당 100,000 제니와 " + getitemname(6752) + " 1개가 필요합니다.";
+		mes needtr("[양산형 찰스턴]", "[Mass Charleston]");
+		mes needtr("능력 부여 또는 초기화 1회당 100,000 제니와 ", "Each enchant or reset attempt requires 100,000 zeny and ") + getitemname(6752) + needtr(" 1개가 필요합니다.", " x1.");
 		next;
-		mes "[양산형 찰스턴]";
-		mes "^ff0000+9 이상^000000 제련된 찰스턴 장비는 더욱 강력한 인챈트 계열을 선택할 수 있습니다.";
+		mes needtr("[양산형 찰스턴]", "[Mass Charleston]");
+		mes needtr("^ff0000+9 이상^000000 제련된 찰스턴 장비는 더욱 강력한 인챈트 계열을 선택할 수 있습니다.", "I also provide a wider selection of Upgrade options for Charleston Equipment at ^ff0000+9^000000 or above.");
 		next;
-		mes "[양산형 찰스턴]";
-		mes "인챈트 과정에서 장비의 제련도와 장착된 카드는 유지됩니다.";
+		mes needtr("[양산형 찰스턴]", "[Mass Charleston]");
+		mes needtr("인챈트 과정에서 장비의 제련도와 장착된 카드는 유지됩니다.", "Rest assured, my Upgrade technology does not involve accidental damage on the item's Upgrade level or equipped cards.");
 		close3;
 	case 2:
 		.@type_action = 1;
-		.@string$ = "인챈트";
+		.@string$ = needtr("인챈트", "Enchanting");
 		break;
 	case 3:
 		.@type_action = 2;
-		.@string$ = "초기화";
+		.@string$ = needtr("초기화", "Resetting");
 		break;
 	case 4:
 		callfunc "F_ShowCharlestonEnchantList";
 		end;
 	}
 	if (Zeny < 100000 || countitem(6752) < 1) {
-		mes "[양산형 찰스턴]";
-		mes .@string$ + " 작업에는 " + getitemname(6752) + " 1개와 100,000 제니가 필요합니다.";
+		mes needtr("[양산형 찰스턴]", "[Mass Charleston]");
+		mes .@string$ + needtr(" 작업에는 ", " requires ") + getitemname(6752) + needtr(" 1개와 100,000 제니가 필요합니다.", " x1 and 100,000 zeny.");
 		close3;
 	}
-	mes "[양산형 찰스턴]";
-	mes "인챈트할 장비를 착용한 상태에서 부위를 선택해 주세요.";
+	mes needtr("[양산형 찰스턴]", "[Mass Charleston]");
+	mes needtr("인챈트할 장비를 착용한 상태에서 부위를 선택해 주세요.", "Please make sure you're equipped with the Equipment you want to upgrade.");
 	next;
-	.@s = select( "장비를 착용하고 오기", "신발", "걸칠것", "갑옷", "액세서리" ) - 2;
+	.@s = select( needtr("장비를 착용하고 오기", "Let me go equip it."), needtr("신발", "Footgear"), needtr("걸칠것", "Garment"), needtr("갑옷", "Clothes"), needtr("액세서리", "Accessory") ) - 2;
 	if (.@s == -1) {
-		mes "[양산형 찰스턴]";
-		mes "장비를 착용한 뒤 다시 찾아와 주세요.";
+		mes needtr("[양산형 찰스턴]", "[Mass Charleston]");
+		mes needtr("장비를 착용한 뒤 다시 찾아와 주세요.", "Sure, please come back after you do.");
 		close3;
 	}
 	if (Zeny < 100000 || countitem(6752) < 1) {
-		mes "[양산형 찰스턴]";
-		mes "인챈트에 필요한 재료 또는 제니가 부족합니다.";
+		mes needtr("[양산형 찰스턴]", "[Mass Charleston]");
+		mes needtr("인챈트에 필요한 재료 또는 제니가 부족합니다.", "Things needed for commodity upgrades seem inadequate!");
 		close3;
 	}
 	setarray .@eq_num[0], EQI_SHOES, EQI_GARMENT, EQI_ARMOR, EQI_ACC_R;
@@ -74,8 +74,8 @@ lasa_in01,187,47,5	script	양산형 찰스턴#2::Mass Charleston#2	4_F_CHARLESTON01,{
 
 	switch(.@item_id) {
 	case -1:
-		mes "[양산형 찰스턴]";
-		mes "인챈트할 장비가 장착되어 있지 않습니다.";
+		mes needtr("[양산형 찰스턴]", "[Mass Charleston]");
+		mes needtr("인챈트할 장비가 장착되어 있지 않습니다.", "Because it is a customized upgrade be sure to wear equipment.");
 		close3;
 	case 15111:	// Upgrade_Part_Plate
 		.@en_type = 3;
@@ -118,9 +118,9 @@ lasa_in01,187,47,5	script	양산형 찰스턴#2::Mass Charleston#2	4_F_CHARLESTON01,{
 		.@max_slot = 2;
 		break;
 	default:
-		mes "[양산형 찰스턴]";
+		mes needtr("[양산형 찰스턴]", "[Mass Charleston]");
 		mes "^990099" + getequipname(.@part) + "^000000??";
-		mes "이 장비에는 인챈트할 수 없습니다.";
+		mes needtr("이 장비에는 인챈트할 수 없습니다.", "I'm not interested in this Equipment.");
 		close3;
 	}
 
@@ -128,58 +128,58 @@ lasa_in01,187,47,5	script	양산형 찰스턴#2::Mass Charleston#2	4_F_CHARLESTON01,{
 	case 1:	// Add abilities
 		if (.@refine >= 9) {
 			setarray .@menu_en_type$[1],
-				"공격 강화",
-				"방어 강화",
-				"가속 강화",
-				"걸칠것 강화",
-				"고급 걸칠것 강화",
-				"신발 강화",
-				"고급 신발 강화",
-				"액세서리 강화";
+				needtr("공격 강화", "Attack enhancement"),
+				needtr("방어 강화", "Defense enhancement"),
+				needtr("가속 강화", "Acceleration enhancements"),
+				needtr("걸칠것 강화", "Garment upgrade"),
+				needtr("고급 걸칠것 강화", "Advanced Garment upgrade"),
+				needtr("신발 강화", "Shoes upgrade"),
+				needtr("고급 신발 강화", "Advanced Shoes upgrade"),
+				needtr("액세서리 강화", "Accessory upgrade");
 			if (.@menu_en_type$[.@en_type] == "" || .@menu_en_type$[.@en_type_9] == "") {
-				mes "[양산형 찰스턴]";
-				mes "인챈트 설정에 문제가 발생했습니다.";
+				mes needtr("[양산형 찰스턴]", "[Mass Charleston]");
+				mes needtr("인챈트 설정에 문제가 발생했습니다.", "Something's not right!");
 				close3;
 			}
-			mes "[양산형 찰스턴]";
-			mes "이 장비는 +9 이상 제련되어 고급 인챈트 계열을 선택할 수 있습니다. 원하는 계열을 선택해 주세요.";
+			mes needtr("[양산형 찰스턴]", "[Mass Charleston]");
+			mes needtr("이 장비는 +9 이상 제련되어 고급 인챈트 계열을 선택할 수 있습니다. 원하는 계열을 선택해 주세요.", "This is a considerable level of enhanced equipment, this type can give enhanced expansion performance, choose from the following series of desirable to strengthen it!");
 			next;
 			if (select( .@menu_en_type$[.@en_type], .@menu_en_type$[.@en_type_9] ) == 2)
 				.@en_type = .@en_type_9;
 		}
 		if (.@card[3] < 1 && .@max_slot < 4) {
 			.@slot = 4;
-			mes "[양산형 찰스턴]";
-			mes "첫 번째 인챈트를 부여합니다. 장비의 제련도와 장착된 카드는 유지됩니다. 계속하시겠습니까?";
+			mes needtr("[양산형 찰스턴]", "[Mass Charleston]");
+			mes needtr("첫 번째 인챈트를 부여합니다. 장비의 제련도와 장착된 카드는 유지됩니다. 계속하시겠습니까?", "I'll be Upgrading the first ability. The existing Upgrade level and cards will not be damaged. Do you want to continue?");
 			next;
-			if (select( "나중에 다시 오기", "계속 진행" ) == 1) {
-				mes "[양산형 찰스턴]";
-				mes "마음이 바뀌면 다시 찾아와 주세요.";
+			if (select( needtr("나중에 다시 오기", "I'll come back later."), needtr("계속 진행", "Continue.") ) == 1) {
+				mes needtr("[양산형 찰스턴]", "[Mass Charleston]");
+				mes needtr("마음이 바뀌면 다시 찾아와 주세요.", "No problem. Come back if you change your mind.");
 				close3;
 			}
 		}
 		else if (.@card[2] < 1 && .@max_slot < 3) {
 			.@slot = 3;
-			mes "[양산형 찰스턴]";
-			mes "두 번째 인챈트를 부여합니다. 장비의 제련도와 장착된 카드는 유지됩니다.";
+			mes needtr("[양산형 찰스턴]", "[Mass Charleston]");
+			mes needtr("두 번째 인챈트를 부여합니다. 장비의 제련도와 장착된 카드는 유지됩니다.", "I'll be Upgrading the second ability. The existing Upgrade level and cards will not be damaged.");
 			next;
-			mes "[양산형 찰스턴]";
-			mes "실패할 경우 이번에 시도한 슬롯의 인챈트가 부여되지 않을 수 있습니다. 계속하시겠습니까?";
+			mes needtr("[양산형 찰스턴]", "[Mass Charleston]");
+			mes needtr("실패할 경우 이번에 시도한 슬롯의 인챈트가 부여되지 않을 수 있습니다. 계속하시겠습니까?", "Though there is a slight chance of failure, in which case the existing Upgrade level will be reset. What would you like to do?");
 			next;
-			if (select( "나중에 다시 오기", "계속 진행" ) == 1) {
-				mes "[양산형 찰스턴]";
-				mes "마음이 바뀌면 다시 찾아와 주세요.";
+			if (select( needtr("나중에 다시 오기", "I'll come back later."), needtr("계속 진행", "Continue.") ) == 1) {
+				mes needtr("[양산형 찰스턴]", "[Mass Charleston]");
+				mes needtr("마음이 바뀌면 다시 찾아와 주세요.", "No problem. Come back if you change your mind.");
 				close3;
 			}
 		}
 		else if (.@card[1] < 1 && .@max_slot < 2) {
 			.@slot = 2;
-			mes "[양산형 찰스턴]";
-			mes "세 번째 인챈트를 부여합니다. 이 단계에서는 ^990000장비가 파괴되거나 이번 슬롯의 인챈트가 실패할 수 있습니다.^000000 계속하시겠습니까?";
+			mes needtr("[양산형 찰스턴]", "[Mass Charleston]");
+			mes needtr("세 번째 인챈트를 부여합니다. 이 단계에서는 ^990000장비가 파괴되거나 이번 슬롯의 인챈트가 실패할 수 있습니다.^000000 계속하시겠습니까?", "I'll be Upgrading the 3rd ability. This highest Upgrade stage incurs a  chance of ^990000destroying the Equipment or resetting its existing Upgrade level.^000000 Do you want to continue?");
 			next;
-			if (select( "나중에 다시 오기", "계속 진행" ) == 1) {
-				mes "[양산형 찰스턴]";
-				mes "마음이 바뀌면 다시 찾아와 주세요.";
+			if (select( needtr("나중에 다시 오기", "I'll come back later."), needtr("계속 진행", "Continue.") ) == 1) {
+				mes needtr("[양산형 찰스턴]", "[Mass Charleston]");
+				mes needtr("마음이 바뀌면 다시 찾아와 주세요.", "No problem. Come back if you change your mind.");
 				close3;
 			}
 		}
@@ -187,8 +187,8 @@ lasa_in01,187,47,5	script	양산형 찰스턴#2::Mass Charleston#2	4_F_CHARLESTON01,{
 			.@slot = 1;
 		else {
 			cutin "dalle02.bmp",2;
-			mes "[양산형 찰스턴]";
-			mes "이 장비는 더 이상 인챈트할 수 없습니다. 다른 장비를 준비해 주세요.";
+			mes needtr("[양산형 찰스턴]", "[Mass Charleston]");
+			mes needtr("이 장비는 더 이상 인챈트할 수 없습니다. 다른 장비를 준비해 주세요.", "This Equipment is Upgraded to the maximum level. Please bring something else.");
 			close3;
 		}
 		switch(.@en_type) {
@@ -206,8 +206,8 @@ lasa_in01,187,47,5	script	양산형 찰스턴#2::Mass Charleston#2	4_F_CHARLESTON01,{
 				.@en_brk2 = 300;
 			}
 			else {
-				mes "[양산형 찰스턴]";
-				mes "알 수 없는 오류가 발생했습니다.";
+				mes needtr("[양산형 찰스턴]", "[Mass Charleston]");
+				mes needtr("알 수 없는 오류가 발생했습니다.", "An unknown error has occurred.");
 				close3;
 			}
 			.@r = rand( .@en_brk1, .@en_brk2 );
@@ -262,8 +262,8 @@ lasa_in01,187,47,5	script	양산형 찰스턴#2::Mass Charleston#2	4_F_CHARLESTON01,{
 				.@en_brk2 = 310;
 			}
 			else {
-				mes "[양산형 찰스턴]";
-				mes "알 수 없는 오류가 발생했습니다.";
+				mes needtr("[양산형 찰스턴]", "[Mass Charleston]");
+				mes needtr("알 수 없는 오류가 발생했습니다.", "An unknown error has occurred.");
 				close3;
 			}
 			.@r = rand( .@en_brk1, .@en_brk2 );
@@ -318,8 +318,8 @@ lasa_in01,187,47,5	script	양산형 찰스턴#2::Mass Charleston#2	4_F_CHARLESTON01,{
 				.@en_brk2 = 310;
 			}
 			else {
-				mes "[양산형 찰스턴]";
-				mes "알 수 없는 오류가 발생했습니다.";
+				mes needtr("[양산형 찰스턴]", "[Mass Charleston]");
+				mes needtr("알 수 없는 오류가 발생했습니다.", "An unknown error has occurred.");
 				close3;
 			}
 			.@r = rand( .@en_brk1, .@en_brk2 );
@@ -372,8 +372,8 @@ lasa_in01,187,47,5	script	양산형 찰스턴#2::Mass Charleston#2	4_F_CHARLESTON01,{
 				.@en_brk2 = 310;
 			}
 			else {
-				mes "[양산형 찰스턴]";
-				mes "알 수 없는 오류가 발생했습니다.";
+				mes needtr("[양산형 찰스턴]", "[Mass Charleston]");
+				mes needtr("알 수 없는 오류가 발생했습니다.", "An unknown error has occurred.");
 				close3;
 			}
 			.@r = rand( .@en_brk1, .@en_brk2 );
@@ -435,8 +435,8 @@ lasa_in01,187,47,5	script	양산형 찰스턴#2::Mass Charleston#2	4_F_CHARLESTON01,{
 				.@en_brk2 = 310;
 			}
 			else {
-				mes "[양산형 찰스턴]";
-				mes "알 수 없는 오류가 발생했습니다.";
+				mes needtr("[양산형 찰스턴]", "[Mass Charleston]");
+				mes needtr("알 수 없는 오류가 발생했습니다.", "An unknown error has occurred.");
 				close3;
 			}
 			.@r = rand( .@en_brk1, .@en_brk2 );
@@ -501,8 +501,8 @@ lasa_in01,187,47,5	script	양산형 찰스턴#2::Mass Charleston#2	4_F_CHARLESTON01,{
 				.@en_brk2 = 310;
 			}
 			else {
-				mes "[양산형 찰스턴]";
-				mes "알 수 없는 오류가 발생했습니다.";
+				mes needtr("[양산형 찰스턴]", "[Mass Charleston]");
+				mes needtr("알 수 없는 오류가 발생했습니다.", "An unknown error has occurred.");
 				close3;
 			}
 			.@r = rand( .@en_brk1, .@en_brk2 );
@@ -555,8 +555,8 @@ lasa_in01,187,47,5	script	양산형 찰스턴#2::Mass Charleston#2	4_F_CHARLESTON01,{
 				.@en_brk2 = 310;
 			}
 			else {
-				mes "[양산형 찰스턴]";
-				mes "알 수 없는 오류가 발생했습니다.";
+				mes needtr("[양산형 찰스턴]", "[Mass Charleston]");
+				mes needtr("알 수 없는 오류가 발생했습니다.", "An unknown error has occurred.");
 				close3;
 			}
 			.@r = rand( .@en_brk1, .@en_brk2 );
@@ -615,8 +615,8 @@ lasa_in01,187,47,5	script	양산형 찰스턴#2::Mass Charleston#2	4_F_CHARLESTON01,{
 				.@en_brk2 = 111;
 			}
 			else {
-				mes "[양산형 찰스턴]";
-				mes "알 수 없는 오류가 발생했습니다.";
+				mes needtr("[양산형 찰스턴]", "[Mass Charleston]");
+				mes needtr("알 수 없는 오류가 발생했습니다.", "An unknown error has occurred.");
 				close3;
 			}
 			.@r = rand( .@en_brk1, .@en_brk2 );
@@ -635,13 +635,13 @@ lasa_in01,187,47,5	script	양산형 찰스턴#2::Mass Charleston#2	4_F_CHARLESTON01,{
 			else .@en_name = 0;
 			break;
 		default:
-			mes "[양산형 찰스턴]";
-			mes "알 수 없는 오류가 발생했습니다.";
+			mes needtr("[양산형 찰스턴]", "[Mass Charleston]");
+			mes needtr("알 수 없는 오류가 발생했습니다.", "An unknown error has occurred.");
 			close3;
 		}
 		if (Zeny < 100000 || countitem(6752) < 1) {
-			mes "[양산형 찰스턴]";
-			mes "인챈트에 필요한 재료 또는 제니가 부족합니다.";
+			mes needtr("[양산형 찰스턴]", "[Mass Charleston]");
+			mes needtr("인챈트에 필요한 재료 또는 제니가 부족합니다.", "Things needed for commodity upgrades seem inadequate!");
 			close3;
 		}
 
@@ -649,8 +649,8 @@ lasa_in01,187,47,5	script	양산형 찰스턴#2::Mass Charleston#2	4_F_CHARLESTON01,{
 		if (callfunc("F_IsEquipIDHack", .@part, .@item_id) ||
 				callfunc("F_IsEquipCardHack", .@part, .@card_saved[0], .@card_saved[1], .@card_saved[2], .@card_saved[3]) ||
 				callfunc("F_IsEquipRefineHack", .@part, .@refine)) {
-			mes "[양산형 찰스턴]";
-			mes "알 수 없는 오류가 발생했습니다.";
+			mes needtr("[양산형 찰스턴]", "[Mass Charleston]");
+			mes needtr("알 수 없는 오류가 발생했습니다.", "An unknown error has occurred.");
 			close3;
 		}
 
@@ -663,21 +663,21 @@ lasa_in01,187,47,5	script	양산형 찰스턴#2::Mass Charleston#2	4_F_CHARLESTON01,{
 		case 0:
 			cutin "dalle02.bmp",2;
 			specialeffect2 EF_SHIELDCHARGE;
-			mes "[양산형 찰스턴]";
-			mes "인챈트에 실패했습니다. 이번 슬롯에는 능력이 부여되지 않았습니다. 다음에 다시 시도해 주세요.";// unknown text
+			mes needtr("[양산형 찰스턴]", "[Mass Charleston]");
+			mes needtr("인챈트에 실패했습니다. 이번 슬롯에는 능력이 부여되지 않았습니다. 다음에 다시 시도해 주세요.", "Since the balance of power does not match, the given existing ability has been destroyed. It is unfortunate but please try again next time.");// unknown text
 			getitem2 .@item_id,1,1,.@refine,0, .@card[0], .@card[1], .@card[2], .@card[3];
 			close3;
 		case 9:
 			cutin "dalle04.bmp",2;
 			specialeffect2 EF_SUI_EXPLOSION;
-			mes "[양산형 찰스턴]";
-			mes "이런!";
-			mes "죄송하지만 인챈트 도중 장비가 파괴되었습니다.";// unknown text
+			mes needtr("[양산형 찰스턴]", "[Mass Charleston]");
+			mes needtr("이런!", "This!");
+			mes needtr("죄송하지만 인챈트 도중 장비가 파괴되었습니다.", "I'm sorry but the equipment has been destroyed.");// unknown text
 			close3;
 		default:
 			specialeffect2 EF_REPAIRWEAPON;
-			mes "[양산형 찰스턴]";
-			mes "^990000슬롯 " + .@slot + "^000000에 인챈트가 부여되었습니다.";
+			mes needtr("[양산형 찰스턴]", "[Mass Charleston]");
+			mes needtr("^990000슬롯 ", "^990000Socket") + .@slot + needtr("^000000에 인챈트가 부여되었습니다.", "^000000 will be Upgrade.");
 			getitem2 .@item_id,1,1,.@refine,0, .@card[0], .@card[1], .@card[2], .@card[3];
 			close3;
 		}
@@ -688,16 +688,16 @@ lasa_in01,187,47,5	script	양산형 찰스턴#2::Mass Charleston#2	4_F_CHARLESTON01,{
 		if (getiteminfo(.@card[2], ITEMINFO_SUBTYPE) == CARD_ENCHANT) .@card[2] = 0;
 		if (getiteminfo(.@card[3], ITEMINFO_SUBTYPE) == CARD_ENCHANT) .@card[3] = 0;
 		specialeffect2 EF_REPAIRWEAPON;
-		mes "[양산형 찰스턴]";
-		mes "장비에 부여된 인챈트를 초기화했습니다.";
+		mes needtr("[양산형 찰스턴]", "[Mass Charleston]");
+		mes needtr("장비에 부여된 인챈트를 초기화했습니다.", "Reset the product's abilities.");
 		delitem 6752,1;	// Charleston_Parts
 		Zeny -= 100000;
 		delequip .@part;
 		getitem2 .@item_id,1,1,.@refine,0, .@card[0], .@card[1], .@card[2], .@card[3];
 		close3;
 	default:
-		mes "[양산형 찰스턴]";
-		mes "알 수 없는 오류가 발생했습니다.";
+		mes needtr("[양산형 찰스턴]", "[Mass Charleston]");
+		mes needtr("알 수 없는 오류가 발생했습니다.", "An unknown error has occurred.");
 		close3;
 	}
 	end;
@@ -714,46 +714,46 @@ OnInit:
 // 실패(0) 및 장비 파괴(9)는 목록에서 제외합니다.
 //============================================================
 function	script	F_ShowCharlestonEnchantList	{
-	mes "[양산형 찰스턴]";
-	mes "찰스턴 장비에 부여될 수 있는 인챈트 목록입니다.";
-	mes "^FF0000+9 이상 장비는 기본 계열과 고급 계열 중 하나를 선택할 수 있습니다.^000000";
-	mes "인챈트 단계에 따라 실패하거나 장비가 파괴될 수 있습니다.";
+	mes needtr("[양산형 찰스턴]", "[Mass Charleston]");
+	mes needtr("찰스턴 장비에 부여될 수 있는 인챈트 목록입니다.", "This is the list of enchants that can be applied to Charleston equipment.");
+	mes needtr("^FF0000+9 이상 장비는 기본 계열과 고급 계열 중 하나를 선택할 수 있습니다.^000000", "^FF0000Equipment refined to +9 or higher may choose between the basic and the advanced series.^000000");
+	mes needtr("인챈트 단계에 따라 실패하거나 장비가 파괴될 수 있습니다.", "Depending on the enchant step, the attempt may fail or the equipment may be destroyed.");
 	next;
 
 	while (true) {
 		switch(select(
-			"공격 강화 (+9 플레이트)",
-			"방어 강화 (+9 보조 파츠 STR)",
-			"가속 강화 (플레이트/보조 파츠 STR)",
-			"걸칠것 강화",
-			"고급 걸칠것 강화 (+9)",
-			"신발 강화",
-			"고급 신발 강화 (+9)",
-			"액세서리 강화",
-			"닫기"
+			needtr("공격 강화 (+9 플레이트)", "Attack enhancement (+9 Plate)"),
+			needtr("방어 강화 (+9 보조 파츠 STR)", "Defense enhancement (+9 Supplement Part STR)"),
+			needtr("가속 강화 (플레이트/보조 파츠 STR)", "Acceleration enhancements (Plate/Supplement Part STR)"),
+			needtr("걸칠것 강화", "Garment upgrade"),
+			needtr("고급 걸칠것 강화 (+9)", "Advanced Garment upgrade (+9)"),
+			needtr("신발 강화", "Shoes upgrade"),
+			needtr("고급 신발 강화 (+9)", "Advanced Shoes upgrade (+9)"),
+			needtr("액세서리 강화", "Accessory upgrade"),
+			needtr("닫기", "Close")
 			)) {
 
 		case 1:
 			setdialogsize(300,300);
 			callfunc "F_ShowEnchantGroup","STR",4700,4701,4702;
 			callfunc "F_ShowEnchantGroup","DEX",4720,4721,4722;
-			callfunc "F_ShowEnchantGroup","명궁",4832,4833,4834;
-			callfunc "F_ShowEnchantGroup","투지",4811,4810,4809;
+			callfunc "F_ShowEnchantGroup",needtr("명궁", "Archery"),4832,4833,4834;
+			callfunc "F_ShowEnchantGroup",needtr("투지", "Fighting Spirit"),4811,4810,4809;
 			break;
 
 		case 2:
 			setdialogsize(300,300);
 			callfunc "F_ShowEnchantGroup","VIT",4740,4741,4742;
 			callfunc "F_ShowEnchantGroup","DEF",4791,4792,4793;
-			callfunc "F_ShowEnchantGroup","무속성 내성",4933,4934,4935;
-			callfunc "F_ShowEnchantGroup","최대 HP",4861,4862,4867;
+			callfunc "F_ShowEnchantGroup",needtr("무속성 내성", "Neutral Resistance"),4933,4934,4935;
+			callfunc "F_ShowEnchantGroup",needtr("최대 HP", "Max HP"),4861,4862,4867;
 			break;
 
 		case 3:
 			setdialogsize(300,300);
-			callfunc "F_ShowEnchantGroup","회피",4860,4762,4763;
+			callfunc "F_ShowEnchantGroup",needtr("회피", "Flee"),4860,4762,4763;
 			callfunc "F_ShowEnchantGroup","LUK",4750,4751,4752;
-			callfunc "F_ShowEnchantGroup","공격 후 딜레이",4869,4872;
+			callfunc "F_ShowEnchantGroup",needtr("공격 후 딜레이", "After Attack Delay"),4869,4872;
 			callfunc "F_ShowEnchantGroup","AGI",4730,4731,4732;
 			break;
 
@@ -765,7 +765,7 @@ function	script	F_ShowCharlestonEnchantList	{
 			callfunc "F_ShowEnchantGroup","VIT",4740,4741;
 			callfunc "F_ShowEnchantGroup","LUK",4750,4751;
 			callfunc "F_ShowEnchantGroup","INT",4710,4711;
-			callfunc "F_ShowEnchantGroup","명궁",4832;
+			callfunc "F_ShowEnchantGroup",needtr("명궁", "Archery"),4832;
 			break;
 
 		case 5:
@@ -776,7 +776,7 @@ function	script	F_ShowCharlestonEnchantList	{
 			callfunc "F_ShowEnchantGroup","VIT",4741,4742;
 			callfunc "F_ShowEnchantGroup","LUK",4751,4752;
 			callfunc "F_ShowEnchantGroup","INT",4711,4712;
-			callfunc "F_ShowEnchantGroup","명궁",4832,4833,4834;
+			callfunc "F_ShowEnchantGroup",needtr("명궁", "Archery"),4832,4833,4834;
 			break;
 
 		case 6:
@@ -785,8 +785,8 @@ function	script	F_ShowCharlestonEnchantList	{
 			callfunc "F_ShowEnchantGroup","DEX",4720,4721;
 			callfunc "F_ShowEnchantGroup","AGI",4730,4731;
 			callfunc "F_ShowEnchantGroup","VIT",4740,4741;
-			callfunc "F_ShowEnchantGroup","공격 후 딜레이",4869;
-			callfunc "F_ShowEnchantGroup","마력",4815;
+			callfunc "F_ShowEnchantGroup",needtr("공격 후 딜레이", "After Attack Delay"),4869;
+			callfunc "F_ShowEnchantGroup",needtr("마력", "Spell"),4815;
 			break;
 
 		case 7:
@@ -795,8 +795,8 @@ function	script	F_ShowCharlestonEnchantList	{
 			callfunc "F_ShowEnchantGroup","DEX",4721,4722;
 			callfunc "F_ShowEnchantGroup","AGI",4731,4732;
 			callfunc "F_ShowEnchantGroup","VIT",4741,4742;
-			callfunc "F_ShowEnchantGroup","공격 후 딜레이",4869,4872;
-			callfunc "F_ShowEnchantGroup","마력",4815,4814;
+			callfunc "F_ShowEnchantGroup",needtr("공격 후 딜레이", "After Attack Delay"),4869,4872;
+			callfunc "F_ShowEnchantGroup",needtr("마력", "Spell"),4815,4814;
 			break;
 
 		case 8:
@@ -806,8 +806,8 @@ function	script	F_ShowCharlestonEnchantList	{
 			callfunc "F_ShowEnchantGroup","AGI",4730,4731;
 			callfunc "F_ShowEnchantGroup","VIT",4740,4741;
 			callfunc "F_ShowEnchantGroup","INT",4710,4711;
-			callfunc "F_ShowEnchantGroup","공격 후 딜레이",4869;
-			callfunc "F_ShowEnchantGroup","마력",4815;
+			callfunc "F_ShowEnchantGroup",needtr("공격 후 딜레이", "After Attack Delay"),4869;
+			callfunc "F_ShowEnchantGroup",needtr("마력", "Spell"),4815;
 			break;
 
 		case 9:
@@ -820,45 +820,45 @@ function	script	F_ShowCharlestonEnchantList	{
 lasa_in01,189,52,4	script	PLUTO_09#pa0829	4_SCR_AT_ROBOTS,{
 	disable_items;
 	if (checkweight(1201,1) == 0 || (MaxWeight - Weight) < 10000) {
-		mes "^ff0000소지품이 너무 많거나 남은 무게가 부족합니다. 소지품을 정리한 뒤 다시 이용해 주세요.^000000";
+		mes needtr("^ff0000소지품이 너무 많거나 남은 무게가 부족합니다. 소지품을 정리한 뒤 다시 이용해 주세요.^000000", "^ff0000You have carried too many items, please reduce it and come back later.^000000");
 		close;
 	}
 	if (isbegin_quest(12368) < 2) {
-		mes "^0000ffLCD 화면은 여전히 어둡고, 아무런 반응도 없습니다.^000000";
+		mes needtr("^0000ffLCD 화면은 여전히 어둡고, 아무런 반응도 없습니다.^000000", "^0000ffAlthough the LCD still dim, but does not seem to work anymore.^000000");
 		close;
 	}
-	mes "^0000ff화면에 이상한 공룡 그림과 함께 안내 화면이 나타납니다.^000000";
+	mes needtr("^0000ff화면에 이상한 공룡 그림과 함께 안내 화면이 나타납니다.^000000", "^0000ffWhen the strange dinosaur pattern appears, go to the introduction screen.^000000");
 	next;
 	mes "[PLUTO_09]";
-	mes strcharinfo(0) + " 님,";
-	mes "안녕하세요. 무엇을 도와드릴까요?";
+	mes strcharinfo(0) + needtr(" 님,", ",");
+	mes needtr("안녕하세요. 무엇을 도와드릴까요?", "Hello. How may I help you?");
 	next;
-	switch( select( "안내 확인", "장비 제작", "인챈트 설계도 제작" ) ) {
+	switch( select( needtr("안내 확인", "Note"), needtr("장비 제작", "Old Fuel and Huge Metal Scrap to exchange for gear."), needtr("인챈트 설계도 제작", "Design drawings for the production of Enchantment") ) ) {
 	case 1:
-		mes "^0000ff화면에 공룡 그림이 나타나고 귀여운 소녀의 음성이 흘러나옵니다.^000000";
+		mes needtr("^0000ff화면에 공룡 그림이 나타나고 귀여운 소녀의 음성이 흘러나옵니다.^000000", "^0000ffDinosaur forward screen appears and a description of the cute girl voice.^000000");
 		next;
 		mes "[PLUTO_09]";
-		mes "신형 PLUTO_09가 제작된 지 100년이 되었습니다.";
+		mes needtr("신형 PLUTO_09가 제작된 지 100년이 되었습니다.", "This is 100 years since the genesis of the new PLUTO_09.");
 		next;
 		mes "[PLUTO_09]";
-		mes getitemname(6961) + "과(와) " + getitemname(6962) + "을(를) 가져오시면 유용한 장비를 제작해 드립니다~";
+		mes getitemname(6961) + needtr("과(와) ", " and ") + getitemname(6962) + needtr("을(를) 가져오시면 유용한 장비를 제작해 드립니다~", ": bring them to me and I will craft useful equipment for you~");
 		next;
 		mes "[PLUTO_09]";
-		mes "인챈트 장비가 필요하신가요? " + getitemname(6962) + "을(를) 가져오시면 인챈트 설계도 제작을 시도해 드립니다. 행운을 빌어요!";
+		mes needtr("인챈트 장비가 필요하신가요? ", "Need enchanted equipment? Bring me some ") + getitemname(6962) + needtr("을(를) 가져오시면 인챈트 설계도 제작을 시도해 드립니다. 행운을 빌어요!", " and I will try to craft an enchant blueprint for you. Good luck!");
 		next;
 		mes "[PLUTO_09]";
-		mes "이 공룡은 동화에 등장하는 티라노사우루스입니다. 정말 멋지죠... (지루한 공룡 이야기가 계속됩니다.)";
+		mes needtr("이 공룡은 동화에 등장하는 티라노사우루스입니다. 정말 멋지죠... (지루한 공룡 이야기가 계속됩니다.)", "This is the Tyrannosaurus rex that appeared in the dinosaur fairy tale, very beautiful... (Continue to appear boring dinosaur story)");
 		next;
-		mes "^0000ff안내 내용을 보니 이 로봇을 만든 사람은 공룡을 무척 좋아했던 모양입니다.^000000";
+		mes needtr("^0000ff안내 내용을 보니 이 로봇을 만든 사람은 공룡을 무척 좋아했던 모양입니다.^000000", "^0000ffIn this introduction to the screen, presumed that the psychological state of the robot maker is extremely unstable.^000000");
 		close;
 	case 2:
 		setarray .@id[0],20773,15128; // Excelion_Wing, Excelion_Suit
 		mes "[PLUTO_09]";
-		mes "장비 제작에는 " + getitemname(6961) + " 10개와 " + getitemname(6962) + " 5개가 필요합니다.";
+		mes needtr("장비 제작에는 ", "Crafting equipment requires ") + getitemname(6961) + needtr(" 10개와 ", " x10 and ") + getitemname(6962) + needtr(" 5개가 필요합니다.", " x5.");
 		next;
-		switch( select( "그만두기", "엑셀리온 윙 제작", "엑셀리온 슈츠 제작") ) {
+		switch( select( needtr("그만두기", "Quit"), needtr("엑셀리온 윙 제작", "Craft Excellion Wing"), needtr("엑셀리온 슈츠 제작", "Craft Excellion Suit")) ) {
 		case 1:
-			mes "^0000ff화면 속 공룡이 잠시 눈을 감은 뒤 이쪽을 바라봅니다.^000000";
+			mes needtr("^0000ff화면 속 공룡이 잠시 눈을 감은 뒤 이쪽을 바라봅니다.^000000", "^0000ffDinosaurs gazed at the picture here after staying a bit closed.^000000");
 			close;
 		case 2:
 			.@item_id = .@id[0];
@@ -869,7 +869,7 @@ lasa_in01,189,52,4	script	PLUTO_09#pa0829	4_SCR_AT_ROBOTS,{
 		}
 		if (countitem(6961) < 10 || countitem(6962) < 5) {
 			mes "[PLUTO_09]";
-			mes "장비 제작에는 ^0000ff" + getitemname(6961) + " 10개와 " + getitemname(6962) + " 5개^000000가 필요합니다. 재료가 부족합니다.";
+			mes needtr("장비 제작에는 ^0000ff", "I have already talked about the production equipment needs ^0000ff10 ") + getitemname(6961) + needtr(" 10개와 ", " and 5 ") + getitemname(6962) + needtr(" 5개^000000가 필요합니다. 재료가 부족합니다.", "^000000, you don't have enough.");
 			close;
 		}
 		specialeffect EF_SPELLBREAKER;
@@ -877,21 +877,21 @@ lasa_in01,189,52,4	script	PLUTO_09#pa0829	4_SCR_AT_ROBOTS,{
 		delitem 6961,10;// LargeScrap
 		getitem .@item_id,1;
 		mes "[PLUTO_09]";
-		mes "장비 제작이 완료되었습니다. 인벤토리를 확인해 주세요.";
+		mes needtr("장비 제작이 완료되었습니다. 인벤토리를 확인해 주세요.", "Your equipment is ready. Let's see if it fits.");
 		close;
 	case 3:
 		while(1) {
 			if (countitem(6962) < 5)
-				.@string$ = "^aaaaaa설계도 제작에 필요한 연료가 부족합니다.^000000";
+				.@string$ = needtr("^aaaaaa설계도 제작에 필요한 연료가 부족합니다.^000000", "^aaaaaaNot enough fuel to craft a blueprint.^000000");
 			else
-				.@string$ = "설계도 제작 (^ff0000성공률 30%^000000)";
+				.@string$ = needtr("설계도 제작 (^ff0000성공률 30%^000000)", "Craft Blueprint (^ff0000success rate 30%^000000)");
 			mes "[PLUTO_09]";
-			mes getitemname(6962) + " 5개를 사용해 인챈트 설계도 제작을 시도할 수 있습니다!";
+			mes getitemname(6962) + needtr(" 5개를 사용해 인챈트 설계도 제작을 시도할 수 있습니다!", " x5 can be used to attempt crafting an enchant blueprint!");
 			mes "----------";
-			mes "^0000ff화면 속 작은 공룡이 이리저리 뛰어다닙니다.^000000";
+			mes needtr("^0000ff화면 속 작은 공룡이 이리저리 뛰어다닙니다.^000000", "^0000ffLittle dinosaur running around on the screen.^000000");
 			next;
-			if (select( "그만두기", .@string$ ) == 1) {
-				mes "^0000ff공룡들이 배불리 먹는 장면이 나타난 뒤 화면이 종료됩니다.^000000";
+			if (select( needtr("그만두기", "Quit."), .@string$ ) == 1) {
+				mes needtr("^0000ff공룡들이 배불리 먹는 장면이 나타난 뒤 화면이 종료됩니다.^000000", "^0000ffIt's over after showing that the dinosaurs are stuffing themselves.^000000");
 				close;
 			}
 			.@fail = false;
@@ -933,22 +933,22 @@ lasa_in01,189,52,4	script	PLUTO_09#pa0829	4_SCR_AT_ROBOTS,{
 					.@en_name = 7054;	// Brigan
 			}
 			if (countitem(6962) < 5)
-				mes "^0000ff화면 속 공룡이 빈 그릇을 바라봅니다. 재료가 부족한 것 같습니다.^000000";
+				mes needtr("^0000ff화면 속 공룡이 빈 그릇을 바라봅니다. 재료가 부족한 것 같습니다.^000000", "^0000ffThe picture shows the dinosaur silently looking at the empty bowl, it may be an error message when the material is insufficient!^000000");
 			else {
 				specialeffect EF_SPELLBREAKER;
 				delitem 6962,5;// OldTank
 				getitem .@en_name,1;
 				mes "[PLUTO_09]";
 				if (.@fail)
-					mes "아쉽지만 설계도 제작에 실패했습니다.";
+					mes needtr("아쉽지만 설계도 제작에 실패했습니다.", "What a pity, the design failed.");
 				else
-					mes "설계도 제작이 완료되었습니다.";
+					mes needtr("설계도 제작이 완료되었습니다.", "Great, the design was made.");
 			}
 			next;
 		}
 		end;
 	default:
-		mes "^0000ff공룡이 명령을 이해하지 못한 듯 울부짖는 화면이 나타납니다.^000000";
+		mes needtr("^0000ff공룡이 명령을 이해하지 못한 듯 울부짖는 화면이 나타납니다.^000000", "^0000ffA screen showing howling that a dinosaur may not understand the command.^000000");
 		close;
 	}
 	end;
@@ -960,63 +960,63 @@ OnInit:
 lasa_in01,189,54,4	script	MARS_01#pa0829	4_SCR_MT_ROBOTS,{
 	disable_items;
 	if (checkweight(1201,1) == 0 || (MaxWeight - Weight) < 10000) {
-		mes "^ff0000소지품이 너무 많거나 남은 무게가 부족합니다. 소지품을 정리한 뒤 다시 이용해 주세요.^000000";
+		mes needtr("^ff0000소지품이 너무 많거나 남은 무게가 부족합니다. 소지품을 정리한 뒤 다시 이용해 주세요.^000000", "^ff0000You have carried too many items, please reduce it and come back later.^000000");
 		close;
 	}
 	switch( isbegin_quest(12368) ) {
 	case 0:
-		mes "흐릿한 LCD 화면이 심하게 흔들립니다. 전력이 부족해 정상적으로 작동하지 않는 것 같습니다.";
+		mes needtr("흐릿한 LCD 화면이 심하게 흔들립니다. 전력이 부족해 정상적으로 작동하지 않는 것 같습니다.", "Blurred LCD screen may be frightened or happy and intense shaking, perhaps due to lack of power and can not complete the presentation.");
 		next;
-		if (select( "무시한다", "버튼을 모두 눌러본다" ) == 1) {
-			mes "곧 폐기될 낡은 로봇처럼 보입니다. 굳이 신경 쓸 필요는 없을 것 같습니다.";
+		if (select( needtr("무시한다", "Just ignore it."), needtr("버튼을 모두 눌러본다", "Press every button.") ) == 1) {
+			mes needtr("곧 폐기될 낡은 로봇처럼 보입니다. 굳이 신경 쓸 필요는 없을 것 같습니다.", "It may be a pre-scrap robot that is common everywhere and doesn't require much attention.");
 			close;
 		}
 		mes "[?????]";
-		mes "안녕하세요! 탐사 로봇 MARS_01입니다. 전력 절약을 위해 현재 휴면 모드로 전환되어 있습니다.";
+		mes needtr("안녕하세요! 탐사 로봇 MARS_01입니다. 전력 절약을 위해 현재 휴면 모드로 전환되어 있습니다.", "Hello! I'm MARS_01, an exploration robot. Currently, I have entered hibernation mode to save power. The related functions are set as follows.");
 		next;
-		if (select( "작동 중단", "연료 공급" ) == 1) {
-			mes "희미한 소리와 함께 로봇이 다시 휴면 모드로 들어갑니다.";
+		if (select( needtr("작동 중단", "Interrupt the machine"), needtr("연료 공급", "Supply of fuel") ) == 1) {
+			mes needtr("희미한 소리와 함께 로봇이 다시 휴면 모드로 들어갑니다.", "The robot re-enters hibernation mode after a faint sound.");
 			close;
 		}
 		mes "[MARS_01]";
-		mes "저와 동료 PLUTO_09는 " + getitemname(6962) + " 1개만 있으면 필요한 전력을 확보할 수 있습니다.";
+		mes needtr("저와 동료 PLUTO_09는 ", "My colleague PLUTO_09 and I only need ") + getitemname(6962) + needtr(" 1개만 있으면 필요한 전력을 확보할 수 있습니다.", " x1 to secure the power we require.");
 		next;
 		mes "[MARS_01]";
-		mes getitemname(6962) + "을(를) 구하셨다면 화면 아래쪽의 연료 주입구에 넣어주세요. 휴면 모드를 해제할 수 있습니다.";
+		mes getitemname(6962) + needtr("을(를) 구하셨다면 화면 아래쪽의 연료 주입구에 넣어주세요. 휴면 모드를 해제할 수 있습니다.", ": if you have found one, please insert it into the fuel inlet below the screen. That will lift hibernation mode.");
 		setquest 12368;	// Operate the old robot
 		close;
 	case 1:
 		if (countitem(6962) < 1) {
 			mes "[MARS_01]";
-			mes getitemname(6962) + " 1개를 구하셨다면 화면 아래쪽의 연료 주입구에 넣어주세요.";
+			mes getitemname(6962) + needtr(" 1개를 구하셨다면 화면 아래쪽의 연료 주입구에 넣어주세요.", " x1: if you have found one, please insert it into the fuel inlet below the screen.");
 			close;
 		}
-		mes "연료를 찾는 동안 전력이 완전히 소진된 것 같습니다. 연료를 넣으시겠습니까?";
+		mes needtr("연료를 찾는 동안 전력이 완전히 소진된 것 같습니다. 연료를 넣으시겠습니까?", "Maybe we ran out of power when we went looking for fuel. should we put in the fuel?");
 		next;
-		if (select( "그만두기", "연료를 넣는다" ) == 1) {
-			mes "로봇의 전력이 완전히 소진되어 아무런 반응도 없습니다.";
+		if (select( needtr("그만두기", "Quit."), needtr("연료를 넣는다", "Put in the fuel") ) == 1) {
+			mes needtr("로봇의 전력이 완전히 소진되어 아무런 반응도 없습니다.", "The old robot may be running out of power and not responding at all.");
 			close;
 		}
-		mes "연료를 넣자 차단판이 열리고 기계음이 들려옵니다.";
-		npctalk "뭐, 뭐야?! 움직이잖아!!!", "Grandpa picking up scrap iron";
+		mes needtr("연료를 넣자 차단판이 열리고 기계음이 들려옵니다.", "When the fuel is put in, the sound screen opens.");
+		npctalklang "뭐, 뭐야?! 움직이잖아!!!", "Whoa, whoa?! It moves!!!", "Grandpa picking up scrap iron";
 		next;
 		mes "[MARS_01]";
-		mes "점검 시스템을 가동하여 각 부품의 손상 상태를 확인합니다.";
+		mes needtr("점검 시스템을 가동하여 각 부품의 손상 상태를 확인합니다.", "Start the inspection system and confirm the damage of each part.");
 		next;
 		mes "[MARS_01]";
-		mes "전력계 10%, 계기판 정상, 본체 골격 손상 13%. 채굴 작업 수행에 문제없습니다.";
+		mes needtr("전력계 10%, 계기판 정상, 본체 골격 손상 13%. 채굴 작업 수행에 문제없습니다.", "Power meter 10%, dashboard normal, body skeleton 13%, perform mining operations well.");
 		next;
 		mes "[MARS_01]";
-		mes "채굴 보조 로봇 PLUTO_09에 에너지 공급을 시작합니다.";
-		npctalk "에너지 반응을 확인했습니다. 정상적으로 작동합니다.", "PLUTO_09#pa0829";
+		mes needtr("채굴 보조 로봇 PLUTO_09에 에너지 공급을 시작합니다.", "Pluto_09 began to inject energy for mining auxiliary robot.");
+		npctalklang "에너지 반응을 확인했습니다. 정상적으로 작동합니다.", "Energy response confirmed. It's working.", "PLUTO_09#pa0829";
 		next;
 		mes "[MARS_01]";
-		mes "시스템을 재가동해 주셔서 감사합니다. 재가동한 사용자를 관리자로 등록합니다.";
+		mes needtr("시스템을 재가동해 주셔서 감사합니다. 재가동한 사용자를 관리자로 등록합니다.", "Thank you for getting me started, I will reset the person who started me to be a manager.");
 		next;
-		select("이름을 입력한다.");
+		select(needtr("이름을 입력한다.", "Enter a name."));
 		mes "[MARS_01]";
-		mes strcharinfo(0) + " 님,";
-		mes "안녕하세요! 연료 충전이 완료되었습니다.";
+		mes strcharinfo(0) + needtr(" 님,", ",");
+		mes needtr("안녕하세요! 연료 충전이 완료되었습니다.", "Hello! The fuel has been fully charged.");
 		delitem 6962,1;// OldTank
 		completequest 12368;
 		close;
@@ -1024,24 +1024,24 @@ lasa_in01,189,54,4	script	MARS_01#pa0829	4_SCR_MT_ROBOTS,{
 		break;
 	}
 	mes "[MARS_01]";
-	mes strcharinfo(0) + " 님,";
-	mes "안녕하세요! 무엇을 도와드릴까요?";
+	mes strcharinfo(0) + needtr(" 님,", ",");
+	mes needtr("안녕하세요! 무엇을 도와드릴까요?", "Hello! How may I help you?");
 	next;
-	switch( select( "안내 확인", "엑셀리온 윙 인챈트", "엑셀리온 슈트 인챈트", "인챈트 리스트 확인" ) ) {	// Excelion_Wing, Excelion_Suit
+	switch( select( needtr("안내 확인", "Note"), needtr("엑셀리온 윙 인챈트", "Excellion Wing Enchant"), needtr("엑셀리온 슈트 인챈트", "Excellion Suit Enchant"), needtr("인챈트 리스트 확인", "Check the enchant list") ) ) {	// Excelion_Wing, Excelion_Suit
 	case 1:
-		mes "^0000ff곧 안내가 시작됩니다.^000000";
+		mes needtr("^0000ff곧 안내가 시작됩니다.^000000", "^0000ffSoon the instructions again.^000000");
 		next;
 		mes "[MARS_01]";
-		mes "새로운 관리자를 기다리는 동안 최신 기능으로 계속 업데이트해 왔습니다.";
+		mes needtr("새로운 관리자를 기다리는 동안 최신 기능으로 계속 업데이트해 왔습니다.", "While waiting for the new owner, we continue to update to the latest version.");
 		next;
 		mes "[MARS_01]";
-		mes getitemname(20773) + " 또는 " + getitemname(15128) + "과(와) 인챈트 설계도를 가져오시면 설계 내용에 따라 장비를 인챈트해 드립니다.";
+		mes getitemname(20773) + needtr(" 또는 ", " or ") + getitemname(15128) + needtr("과(와) 인챈트 설계도를 가져오시면 설계 내용에 따라 장비를 인챈트해 드립니다.", " plus an enchant blueprint: bring them and I will enchant the equipment according to the blueprint.");
 		next;
 		mes "[MARS_01]";
-		mes "인챈트 과정에서 장비는 파괴되지 않지만, 장비와 설계도 종류에 따라 부여 가능한 최대 횟수가 다릅니다.";
+		mes needtr("인챈트 과정에서 장비는 파괴되지 않지만, 장비와 설계도 종류에 따라 부여 가능한 최대 횟수가 다릅니다.", "According to the standard design drawings of the operation, the equipment will not be damaged during the process, but the number of maximum upgrade will change depending on the type of equipment.");
 		next;
 		mes "[MARS_01]";
-		mes "필요하실 때 다시 찾아와 주세요~";
+		mes needtr("필요하실 때 다시 찾아와 주세요~", "Come back next time you need me~");
 		close;
 	case 2:
 		.@part = EQI_GARMENT;
@@ -1079,25 +1079,25 @@ lasa_in01,189,54,4	script	MARS_01#pa0829	4_SCR_MT_ROBOTS,{
 		6986, 4991, 1,1,0;	// Reactor_A_ASPD_		Reactor_A_ASPD
 	.@size = getarraysize(.@list);
 
-	.@menu$ = "그만두기";
+	.@menu$ = needtr("그만두기", "Quit.");
 
 	for (.@i = 0; .@i < .@size; .@i += 5) {
 		.@menu$ += ":";
 
 		if (countitem(.@list[.@i]) < 1)
-			.@menu$ += "^aaaaaa" + getitemname(.@list[.@i]) + " (미소지)^000000";
+			.@menu$ += "^aaaaaa" + getitemname(.@list[.@i]) + needtr(" (미소지)^000000", " (not owned)^000000");
 		else
 			.@menu$ += getitemname(.@list[.@i]);
 	}
 
 	mes "[MARS_01]";
-	mes strcharinfo(0) + " 님,";
-	mes "사용할 인챈트 설계도를 선택해 주세요!";
+	mes strcharinfo(0) + needtr(" 님,", ",");
+	mes needtr("사용할 인챈트 설계도를 선택해 주세요!", "Please select the enchant blueprint to use!");
 	next;
 	.@s = select(.@menu$) - 2;
 	if (.@s < 0) {
 		mes "[MARS_01]";
-		mes "다음에 다시 이용해 주세요.";
+		mes needtr("다음에 다시 이용해 주세요.", "So far.");
 		close;
 	}
 	.@s *= 5;
@@ -1111,7 +1111,7 @@ lasa_in01,189,54,4	script	MARS_01#pa0829	4_SCR_MT_ROBOTS,{
 
 	if (countitem(.@item_req) < 1) {
 		mes "[MARS_01]";
-		mes "다음에 다시 이용해 주세요.";
+		mes needtr("다음에 다시 이용해 주세요.", "So far.");
 		close;
 	}
 	if (.@part == EQI_ARMOR)
@@ -1120,14 +1120,14 @@ lasa_in01,189,54,4	script	MARS_01#pa0829	4_SCR_MT_ROBOTS,{
 		.@max_num_enchant = .@list[.@s+3];
 	else {
 		mes "[MARS_01]";
-		mes "관리자에게 문의해 주세요.";
+		mes needtr("관리자에게 문의해 주세요.", "Please contact the administrator.");
 		close;
 	}
 
 	// anti-hack
 	if (callfunc("F_IsEquipIDHack", .@part, .@equip_id) || callfunc("F_IsEquipCardHack", .@part, .@card[0], .@card[1], .@card[2], .@card[3]) || callfunc("F_IsEquipRefineHack", .@part, .@equip_refine)) {
 		mes "[MARS_01]";
-		mes "진행 도중 장비 상태가 변경되었습니다.";
+		mes needtr("진행 도중 장비 상태가 변경되었습니다.", "Did you remove your gear?");
 		close;
 	}
 
@@ -1152,29 +1152,29 @@ lasa_in01,189,54,4	script	MARS_01#pa0829	4_SCR_MT_ROBOTS,{
 
 	if (.@max_num_enchant < 1) {
 		mes "[MARS_01]";
-		mes "선택한 설계도는 해당 장비에 사용할 수 없습니다.";
+		mes needtr("선택한 설계도는 해당 장비에 사용할 수 없습니다.", "The design you choose is incompatible with the equipment.");
 		close;
 	}
 	if (.@first_slot_only > 0 && .@card[3] != 0) {
 		mes "[MARS_01]";
-		mes "이 설계도는 첫 번째 인챈트 슬롯에만 사용할 수 있습니다. 다른 설계도를 선택해 주세요.";
+		mes needtr("이 설계도는 첫 번째 인챈트 슬롯에만 사용할 수 있습니다. 다른 설계도를 선택해 주세요.", "This design is only for the first time to strengthen the use, but the equipment has other performance, please use other design to strengthen it!");
 		close;
 	}
 	if (.@slot_sum >= .@max_num_enchant) {
 		mes "[MARS_01]";
-		mes "동일한 인챈트의 최대 부여 횟수는 " + .@max_num_enchant + "회입니다. 이미 최대치에 도달했습니다.";
+		mes needtr("동일한 인챈트의 최대 부여 횟수는 ", "The maximum number of enchants is ") + .@max_num_enchant + needtr("회입니다. 이미 최대치에 도달했습니다.", ". The item has reached the upper limit.");
 		close;
 	}
 	if (.@card[1] != 0) {
 		mes "[MARS_01]";
-		mes "장비의 인챈트 슬롯이 모두 사용되었습니다.";
+		mes needtr("장비의 인챈트 슬롯이 모두 사용되었습니다.", "The number of equipment has reached the limit.");
 		close;
 	}
 
 	// anti-hack
 	if (callfunc("F_IsEquipIDHack", .@part, .@equip_id) || callfunc("F_IsEquipCardHack", .@part, .@card[0], .@card[1], .@card[2], .@card[3]) || callfunc("F_IsEquipRefineHack", .@part, .@equip_refine)) {
 		mes "[MARS_01]";
-		mes "진행 도중 장비 상태가 변경되었습니다.";
+		mes needtr("진행 도중 장비 상태가 변경되었습니다.", "Please pay special attention if the equipment will be removed.");
 		close;
 	}
 
@@ -1184,19 +1184,19 @@ lasa_in01,189,54,4	script	MARS_01#pa0829	4_SCR_MT_ROBOTS,{
 		break;
 	default:
 		mes "[MARS_01]";
-		mes "이 장비는 엑셀리온 장비가 아니므로 인챈트할 수 없습니다.";
+		mes needtr("이 장비는 엑셀리온 장비가 아니므로 인챈트할 수 없습니다.", "The product does not have a serial number, does not meet the specifications of the product can not be strengthened.");
 		close;
 	}
 	mes "[MARS_01]^0000ff";
-	mes "선택한 장비: " + getequipname(.@part) + " / 설계도: " + getitemname(.@item_req);
+	mes needtr("선택한 장비: ", "Selected equipment: ") + getequipname(.@part) + needtr(" / 설계도: ", " / Blueprint: ") + getitemname(.@item_req);
 	mes "^000000------------------";
-	mes "현재 장비 인챈트: ^0000ff" + .@enchant_total + "/3회^000000";
-	mes "선택한 설계도 부여 횟수: ^0000ff" + .@slot_sum + "/" + .@max_num_enchant + "회^000000";
-	mes "계속하시겠습니까?";
+	mes needtr("현재 장비 인챈트: ^0000ff", "Current enchants on equipment: ^0000ff") + .@enchant_total + needtr("/3회^000000", "/3^000000");
+	mes needtr("선택한 설계도 부여 횟수: ^0000ff", "Times the selected blueprint is applied: ^0000ff") + .@slot_sum + "/" + .@max_num_enchant + needtr("회^000000", "^000000");
+	mes needtr("계속하시겠습니까?", "Do you wish to continue?");
 	next;
-	if (select( "취소", "계속 진행" ) == 1) {
+	if (select( needtr("취소", "I'll think about it..."), needtr("계속 진행", "Go on.") ) == 1) {
 		mes "[MARS_01]";
-		mes "필요하실 때 다시 찾아와 주세요~";
+		mes needtr("필요하실 때 다시 찾아와 주세요~", "Come back next time you need me~");
 		close;
 	}
 
@@ -1218,15 +1218,15 @@ lasa_in01,189,54,4	script	MARS_01#pa0829	4_SCR_MT_ROBOTS,{
 	}
 	else {
 		mes "[MARS_01]";
-		mes "장비의 인챈트 슬롯이 모두 사용되었습니다.";
+		mes needtr("장비의 인챈트 슬롯이 모두 사용되었습니다.", "The equipment has reached the upper limit of strengthening Hello!");
 		close;
 	}
 	specialeffect2 EF_REPAIRWEAPON;
 	mes "[MARS_01]";
 	if (.@enchant_count < 5)
-		mes "장비에 ^990000" + .@enchant_count + "번째 인챈트가 부여되었습니다.^000000";
+		mes needtr("장비에 ^990000", "The first equipment has been upgraded ^990000") + .@enchant_count + needtr("번째 인챈트가 부여되었습니다.^000000", " times^000000.");
 	else
-		mes "장비 인챈트가 완료되었습니다.";	// never displayed
+		mes needtr("장비 인챈트가 완료되었습니다.", "For additional performance equipment^990000 ^000000 upgrade.");	// never displayed
 
 	delitem .@item_req, 1;
 	delequip .@part;
@@ -1270,12 +1270,12 @@ function	script	F_ShowExcelionEnchantList	{
 		setdialogsize(300,300);
 
 		mes "[MARS_01]";
-		mes "확인할 장비의 인챈트 목록을 선택해 주세요.";
+		mes needtr("확인할 장비의 인챈트 목록을 선택해 주세요.", "Please select the equipment whose enchant list you want to check.");
 		next;
 
 		// 구버전/커스텀 소스에서도 메뉴 구분이 확실하도록
 		// 하나의 문자열에 ':' 구분자를 사용하는 방식으로 통일합니다.
-		switch(select("엑셀리온 윙:엑셀리온 슈트:닫기")) {
+		switch(select(needtr("엑셀리온 윙:엑셀리온 슈트:닫기", "Excellion Wing:Excellion Suit:Close"))) {
 		case 1:
 			.@max_index = 3;	// 윙
 			.@title$ = getitemname(20773);
@@ -1301,36 +1301,36 @@ function	script	F_ShowExcelionEnchantList	{
 		// --------------------------------------------------------
 		clear;
 		mes "[MARS_01]";
-		mes "^0000ff" + .@title$ + " 인챈트 가능 설계도^000000";
-		mes "괄호 안 숫자는 동일 인챈트의 최대 부여 횟수입니다.";
+		mes "^0000ff" + .@title$ + needtr(" 인챈트 가능 설계도^000000", " - Enchantable Blueprints^000000");
+		mes needtr("괄호 안 숫자는 동일 인챈트의 최대 부여 횟수입니다.", "The number in parentheses is the maximum times the same enchant can be applied.");
 		mes "------------------------------";
 
 		if (.@max_index == 3)
-			mes "^0000ff[T 계열]^000000";
+			mes needtr("^0000ff[T 계열]^000000", "^0000ff[T Series]^000000");
 		else
-			mes "^0000ff[P 계열]^000000";
+			mes needtr("^0000ff[P 계열]^000000", "^0000ff[P Series]^000000");
 
 		for (.@i = .@first_start * 5; .@i < .@first_end * 5; .@i += 5) {
 			.@max = .@list[.@i + .@max_index];
 			if (.@max < 1)
 				continue;
 
-			.@line$ = " - " + getitemname(.@list[.@i]) + " ^777777(최대 " + .@max + "회)^000000";
+			.@line$ = " - " + getitemname(.@list[.@i]) + needtr(" ^777777(최대 ", " ^777777(max ") + .@max + needtr("회)^000000", ")^000000");
 			if (.@list[.@i+4] > 0)
-				.@line$ += " ^ff0000[첫 슬롯 전용]^000000";
+				.@line$ += needtr(" ^ff0000[첫 슬롯 전용]^000000", " ^ff0000[First Slot Only]^000000");
 
 			mes .@line$;
 		}
 
 		mes " ";
-		mes "^0000ff[Cure 계열]^000000";
+		mes needtr("^0000ff[Cure 계열]^000000", "^0000ff[Cure Series]^000000");
 
 		for (.@i = 8 * 5; .@i < 12 * 5; .@i += 5) {
 			.@max = .@list[.@i + .@max_index];
 			if (.@max < 1)
 				continue;
 
-			mes " - " + getitemname(.@list[.@i]) + " ^777777(최대 " + .@max + "회)^000000";
+			mes " - " + getitemname(.@list[.@i]) + needtr(" ^777777(최대 ", " ^777777(max ") + .@max + needtr("회)^000000", ")^000000");
 		}
 
 		next;
@@ -1341,8 +1341,8 @@ function	script	F_ShowExcelionEnchantList	{
 		// --------------------------------------------------------
 		clear;
 		mes "[MARS_01]";
-		mes "^0000ff" + .@title$ + " 인챈트 가능 설계도^000000";
-		mes "^0000ff[A 계열]^000000";
+		mes "^0000ff" + .@title$ + needtr(" 인챈트 가능 설계도^000000", " - Enchantable Blueprints^000000");
+		mes needtr("^0000ff[A 계열]^000000", "^0000ff[A Series]^000000");
 		mes "------------------------------";
 
 		for (.@i = 12 * 5; .@i < .@size; .@i += 5) {
@@ -1350,11 +1350,11 @@ function	script	F_ShowExcelionEnchantList	{
 			if (.@max < 1)
 				continue;
 
-			mes " - " + getitemname(.@list[.@i]) + " ^777777(최대 " + .@max + "회)^000000";
+			mes " - " + getitemname(.@list[.@i]) + needtr(" ^777777(최대 ", " ^777777(max ") + .@max + needtr("회)^000000", ")^000000");
 		}
 
 		mes " ";
-		mes "^777777※ [첫 슬롯 전용] 설계도는 첫 번째 인챈트 슬롯에만 사용할 수 있습니다.^000000";
+		mes needtr("^777777※ [첫 슬롯 전용] 설계도는 첫 번째 인챈트 슬롯에만 사용할 수 있습니다.^000000", "^777777* [First Slot Only] blueprints can only be used on the first enchant slot.^000000");
 		next;
 	}
 }

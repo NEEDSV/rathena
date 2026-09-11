@@ -24,23 +24,23 @@ lasagna,178,162,3	script	리노#2012hat::Reno#2012hat	64,{
 
 	//custom translation -  all checks below
 	if (checkweight(1301,1) == 0 || MaxWeight - Weight < 800) {
-		mes "- 소지품이 너무 많아 더 이상 진행할 수 없습니다. -";
+		mes needtr("- 소지품이 너무 많아 더 이상 진행할 수 없습니다. -", "- Carrying too many items, cannot proceed. -");
 		close;
 	}
 
-	setarray .@type$[0],"하급","중급","상급","최상급";
-	setarray .@crystal$[0],"가공되지 않은","정제된","고순도";
+	setarray .@type$[0],needtr("하급", "lower"),needtr("중급", "intermediate"),needtr("상급", "advanced"),needtr("최상급", "highest");
+	setarray .@crystal$[0],needtr("가공되지 않은", "Rough"),needtr("정제된", "Purified"),needtr("고순도", "High");
 
 	// playtime checks
 	setarray .@quests_playtime[0],5161,5169,5174,5225,5226,5227;
 	for (set .@i,0; .@i<6; set .@i,.@i+1) {
 		if (checkquest(.@quests_playtime[.@i],PLAYTIME) == 2) {
 			erasequest .@quests_playtime[.@i];
-			mes "[리노]";
+			mes needtr("[리노]", "[Reno]");
 			if (.@i < 3)	// hunting quest wait time
-				mes "수집 퀘스트의 대기 시간이 "+.@type$[.@i]+" 모두 지났습니다. 이제 새로운 의뢰를 받으실 수 있어요.";
+				mes needtr("수집 퀘스트의 대기 시간이 ", "The waiting time for a ")+.@type$[.@i]+needtr(" 모두 지났습니다. 이제 새로운 의뢰를 받으실 수 있어요.", " collection quest has expired. You can now take another request.");
 			else        	// buff wait time
-				mes "에너지 크리스탈의 축적 대기 시간이 "+.@crystal$[.@i]+" 모두 지났습니다. 이제 다시 축적을 시작하실 수 있어요.";
+				mes needtr("에너지 크리스탈의 축적 대기 시간이 ", "The waiting time for storing ")+.@crystal$[.@i]+needtr(" 모두 지났습니다. 이제 다시 축적을 시작하실 수 있어요.", " Energy Crystals has expired. You can now store them again.");
 			close;
 		}
 	}
@@ -58,52 +58,52 @@ lasagna,178,162,3	script	리노#2012hat::Reno#2012hat	64,{
 			if (isbegin_quest(.@i + 5222)) {
 				set .@item, 6623 + .@i;
 				set .@amount, 2 + rand(3);
-				mes "[리노]";
-				mes getitemname(.@item)+" 모든 축적이 완료되었습니다.";
+				mes needtr("[리노]", "[Reno]");
+				mes getitemname(.@item)+needtr(" 모든 축적이 완료되었습니다.", " storage is now complete.");
 				next;
 				setquest 5225 + .@i;
 				erasequest 5222 + .@i;
 				getitem .@item,.@amount;
-				mes "[리노]";
-				mes "^0000FF"+.@amount+" "+getitemname(.@item)+"개를 성공적으로 추출해냈습니다.^000000";
+				mes needtr("[리노]", "[Reno]");
+				mes "^0000FF"+.@amount+" "+getitemname(.@item)+needtr("개를 성공적으로 추출해냈습니다.^000000", "s^000000 were extracted.");
 				close;
 			}
 		}
 	}
 
-	mes "[리노]";
-	mes "안녕하세요? 저는 에너지 크리스탈 연구 연합, 줄여서 ECRA에서 나온 리노라고 합니다.";
+	mes needtr("[리노]", "[Reno]");
+	mes needtr("안녕하세요? 저는 에너지 크리스탈 연구 연합, 줄여서 ECRA에서 나온 리노라고 합니다.", "Hi? I am Reno from the Energy Crystal Research Association, or ECRA.");
 	next;
-	switch(select("ECRA란 무엇인가요?:에너지 크리스탈 획득 퀘스트:에너지 크리스탈 버프 받기:에너지 크리스탈 압축하기:크리스탈을 장비로 교환:랜덤 장비 기부 및 교환" + ((.@features_iRO)?":교환 가능한 장비 목록 확인":""))) {
+	switch(select(needtr("ECRA란 무엇인가요?:에너지 크리스탈 획득 퀘스트:에너지 크리스탈 버프 받기:에너지 크리스탈 압축하기:크리스탈을 장비로 교환:랜덤 장비 기부 및 교환", "ECRA?:Quest to get Energy Crystals:Energy Crystal Buffs:Compress Energy Crystals:Exchange Crystals for Headgear:Random Gear for Crystals") + ((.@features_iRO)?needtr(":교환 가능한 장비 목록 확인", ":See Equipment List"):""))) {
 	case 1:
-		mes "[리노]";
-		mes "ECRA는 에너지 부족으로 어려움을 겪는 룬 미드가르츠 왕국을 위해 대체 에너지인 '^0000FF에너지 크리스탈^000000'을 연구하는 단체입니다.";
+		mes needtr("[리노]", "[Reno]");
+		mes needtr("ECRA는 에너지 부족으로 어려움을 겪는 룬 미드가르츠 왕국을 위해 대체 에너지인 '^0000FF에너지 크리스탈^000000'을 연구하는 단체입니다.", "ECRA is the institute that researches '^0000FFEnergy Crystals^000000' that shall be used as an alternative energy source in the Rune-Midgarts Kingdom, which suffers from a shortage of energy.");
 		next;
-		select("이 일을 하는 이유가 궁금하신가요?");
-		mes "[리노]";
-		mes "이유를 설명하기에 앞서, 저희가 당면한 과제에서 도망치려 핑계를 대는 게 아니라는 걸 말씀드리고 싶어요. 절대 아니니 끝까지 들어주세요!";
+		select(needtr("이 일을 하는 이유가 궁금하신가요?", "The reason for doing this?"));
+		mes needtr("[리노]", "[Reno]");
+		mes needtr("이유를 설명하기에 앞서, 저희가 당면한 과제에서 도망치려 핑계를 대는 게 아니라는 걸 말씀드리고 싶어요. 절대 아니니 끝까지 들어주세요!", "I would like to explain that we are not trying to make an excuse to get away from facing problem before I explain the reason. Never! So please let me finish.");
 		next;
-		mes "[리노]";
-		mes "최근 본부 연구팀으로부터 새로운 조사 결과를 전달받았습니다.";
+		mes needtr("[리노]", "[Reno]");
+		mes needtr("최근 본부 연구팀으로부터 새로운 조사 결과를 전달받았습니다.", "The Research Team has sent me the results they found.");
 		next;
-		mes "[리노]";
-		mes "조사 결과, 에너지 크리스탈은 ^0000FF특정 몬스터의 체내에서 생성^000000된다는 사실이 밝혀졌어요. 강한 몬스터일수록 더 높은 등급의 크리스탈을 품고 있죠.";
+		mes needtr("[리노]", "[Reno]");
+		mes needtr("조사 결과, 에너지 크리스탈은 ^0000FF특정 몬스터의 체내에서 생성^000000된다는 사실이 밝혀졌어요. 강한 몬스터일수록 더 높은 등급의 크리스탈을 품고 있죠.", "Energy Crystals turned out to be ^0000FFgenerated inside the bodies of some monsters^000000, and according to the research, stronger monsters generate higher-class energy crystals in their bodies.");
 		next;
-		mes "[리노]";
-		mes "그래서 저희 연구팀은 모험가분들께 의뢰를 드리고 보상을 제공하여 크리스탈을 수집하기로 했습니다. 그것이 가장 ^FF0000효율적인^000000 수집 방법이니까요.";
+		mes needtr("[리노]", "[Reno]");
+		mes needtr("그래서 저희 연구팀은 모험가분들께 의뢰를 드리고 보상을 제공하여 크리스탈을 수집하기로 했습니다. 그것이 가장 ^FF0000효율적인^000000 수집 방법이니까요.", "The Research Team decided to collect Energy Crystals by giving requests to adventurers, with appropriate rewards. That enables us to collect better and be more ^FF0000efficient^000000.");
 		next;
-		mes "[리노]";
-		mes "여러분이 사냥을 통해 모아주신 크리스탈은 귀중한 연구 자료로 쓰이며, ^0000FF그중 일부는 다시 모험가 여러분의 성장을 위해 환원될 예정입니다.^000000";
+		mes needtr("[리노]", "[Reno]");
+		mes needtr("여러분이 사냥을 통해 모아주신 크리스탈은 귀중한 연구 자료로 쓰이며, ^0000FF그중 일부는 다시 모험가 여러분의 성장을 위해 환원될 예정입니다.^000000", "Energy Crystals, accumulated through hunting monsters by my request, shall be used for my research. ^0000FFSome of them are planned to be returned to adventurers.^000000");
 		next;
-		mes "[리노]";
-		mes "수집한 에너지 크리스탈을 저에게 가져오시면 ^FF0000강력한 장비로 업그레이드^000000하는 데 사용하실 수 있습니다.";
+		mes needtr("[리노]", "[Reno]");
+		mes needtr("수집한 에너지 크리스탈을 저에게 가져오시면 ^FF0000강력한 장비로 업그레이드^000000하는 데 사용하실 수 있습니다.", "Adventurers can use collected Energy Crystals for ^FF0000upgrading equipments^000000 through me.");
 		next;
-		mes "[리노]";
-		mes "이 계획이 잘 진행된다면 ECRA와 모험가님 모두에게 서로 좋은 결과가 될 것 같네요.";
+		mes needtr("[리노]", "[Reno]");
+		mes needtr("이 계획이 잘 진행된다면 ECRA와 모험가님 모두에게 서로 좋은 결과가 될 것 같네요.", "If it works well, it seems to be good for both ECRA and adventurers.");
 		close;
 	case 2:
-		mes "[리노]";
-		mes "토벌 의뢰는 등급별로 하급, 중급, 상급, 최상급으로 나뉘며 하루에 한 번씩만 수행하실 수 있습니다. 각자 자신의 실력에 맞는 의뢰를 선택해 주세요.";
+		mes needtr("[리노]", "[Reno]");
+		mes needtr("토벌 의뢰는 등급별로 하급, 중급, 상급, 최상급으로 나뉘며 하루에 한 번씩만 수행하실 수 있습니다. 각자 자신의 실력에 맞는 의뢰를 선택해 주세요.", "The hunting quests are ranked by monster level and difficulty. The ranges are lower, intermediate, high quests and can only be taken once per day.");
 		next;
 
 		setarray .@quest_status[0],
@@ -112,81 +112,81 @@ lasagna,178,162,3	script	리노#2012hat::Reno#2012hat	64,{
 			isbegin_quest(5175) + isbegin_quest(5176) + isbegin_quest(5177) + isbegin_quest(5178) + isbegin_quest(5179) + isbegin_quest(5180) + isbegin_quest(5181) + isbegin_quest(5182);
 		setarray .@quest_index[0],5161,5169,5174;
 
-		set .@select, select("하급 토벌 의뢰 [레벨 61-80]:중급 토벌 의뢰 [레벨 80-99]:상급 및 최상급 토벌 의뢰 [레벨 90 이상]:진행 중인 의뢰를 포기한다.") - 1;
+		set .@select, select(needtr("하급 토벌 의뢰 [레벨 61-80]:중급 토벌 의뢰 [레벨 80-99]:상급 및 최상급 토벌 의뢰 [레벨 90 이상]:진행 중인 의뢰를 포기한다.", "Lower level hunting [61-80]:Intermediate level hunting [80-99]:High level hunting [90 and up]:Cancel my current quest.")) - 1;
 		if (.@select < 3) {
 			setarray .@min_level[0],60,80,90,100;
 			if (BaseLevel < .@min_level[.@select]) {
-				mes "[리노]";
-				mes "정말 죄송하지만, 선택하신 등급의 "+.@type$[.@select]+" 의뢰는 정해진 레벨 이상인 분들만 "+.@min_level[.@select]+" 이상의 숙련된 모험가분들만 수락하실 수 있습니다.";
+				mes needtr("[리노]", "[Reno]");
+				mes needtr("정말 죄송하지만, 선택하신 등급의 ", "I am sorry but the request for the ")+.@type$[.@select]+needtr(" 의뢰는 정해진 레벨 이상인 분들만 ", " collection is only available for those level ")+.@min_level[.@select]+needtr(" 이상의 숙련된 모험가분들만 수락하실 수 있습니다.", " and higher. You do not seem to be capable of carrying out this request.");
 				close;
 			}
 			if (.@quest_status[.@select]) {
-				mes "[리노]";
-				mes "이미 다른 수집 의뢰를 수행 중이시네요. "+.@type$[.@select]+" 수행 중인 일이 너무 버겁다면 ^FF0000진행 중인 의뢰를 포기^000000하고 새로 받아보시겠어요?";
+				mes needtr("[리노]", "[Reno]");
+				mes needtr("이미 다른 수집 의뢰를 수행 중이시네요. ", "You seem to be under the other request of ")+.@type$[.@select]+needtr(" 수행 중인 일이 너무 버겁다면 ^FF0000진행 중인 의뢰를 포기^000000하고 새로 받아보시겠어요?", " collection. If the quest seems to be too hard... how about you ^FF0000give up on the request^000000?");
 				close;
 			}
 			set .@playtime, checkquest(.@quest_index[.@select],PLAYTIME);
 			if (.@playtime == 0 || .@playtime == 1) {
-				mes "[리노]";
-				mes "수집 임무의 대기 시간입니다. "+.@type$[.@select]+" 등급별 임무는 하루에 한 번만 완료할 수 있으니 내일 다시 찾아와 주세요."; //custom translation
+				mes needtr("[리노]", "[Reno]");
+				mes needtr("수집 임무의 대기 시간입니다. ", "Currently waiting for the ")+.@type$[.@select]+needtr(" 등급별 임무는 하루에 한 번만 완료할 수 있으니 내일 다시 찾아와 주세요.", " collection commission. Tasks in each collection can only be completed once per day."); //custom translation
 				close;
 			}
-			mes "[리노]";
-			mes "등급의 몬스터 토벌을 선택하셨군요. "+.@type$[.@select]+" 해당 몬스터들을 모두 처치하고 돌아오시면 보상으로 "+((.@features_iRO)?"10 ":"")+"^0000FF"+.@crystal$[.@select]+" 에너지 크리스탈^000000을 지급해 드리겠습니다.";
+			mes needtr("[리노]", "[Reno]");
+			mes needtr("등급의 몬스터 토벌을 선택하셨군요. ", "You selected to hunt a monster from the ")+.@type$[.@select]+needtr(" 해당 몬스터들을 모두 처치하고 돌아오시면 보상으로 ", " collection. After hunting these monsters you will receive ")+((.@features_iRO)?"10 ":"")+"^0000FF"+.@crystal$[.@select]+needtr(" 에너지 크리스탈^000000을 지급해 드리겠습니다.", " Energy Crystals^000000 when you return to me.");
 			next;
-			mes "[리노]";
-			mes "목록 중에서 상대하기 가장 수월해 보이는 몬스터를 선택해 주세요.";
+			mes needtr("[리노]", "[Reno]");
+			mes needtr("목록 중에서 상대하기 가장 수월해 보이는 몬스터를 선택해 주세요.", "Please select the monster that you think you can easily hunt from the list.");
 			next;
 			switch (.@select) {
 			case 0:
 				set .@quest, select(
-					"[하급] 레퀴엠",
-					"[하급] 바소리",
-					"[하급] 스프링 래빗",
-					"[하급] 슬리퍼",
-					"[하급] 이블 드루이드",
-					"[하급] 지상 쁘띠",
-					"[하급] 클락"
+					needtr("[하급] 레퀴엠", "[Lower class] Requiem"),
+					needtr("[하급] 바소리", "[Lower class] Bathory"),
+					needtr("[하급] 스프링 래빗", "[Lower class] Spring Rabbit"),
+					needtr("[하급] 슬리퍼", "[Lower class] Sleeper"),
+					needtr("[하급] 이블 드루이드", "[Lower class] Evil Druid"),
+					needtr("[하급] 지상 쁘띠", "[Lower class] Ground Petite"),
+					needtr("[하급] 클락", "[Lower class] Clock")
 				);
 				break;
 			case 1:
 				set .@quest, select(
-					"[중급] 시로마",
-					"[중급] 다크 프리스트",
-					"[중급] 스타포",
-					"[중급] 솔리더"
+					needtr("[중급] 시로마", "[Intermediate class] Siroma"),
+					needtr("[중급] 다크 프리스트", "[Intermediate class] Dark Priest"),
+					needtr("[중급] 스타포", "[Intermediate class] Stapo"),
+					needtr("[중급] 솔리더", "[Intermediate class] Solider")
 				);
 				break;
 			case 2:
 				set .@quest, select(
-					"[상급] 데저트 울프",
-					"[상급] 메두사",
-					"[상급] 핀귀큘라",
-					"[상급] 메이저우로스",
-					"[최상급] 레이드릭",
-					"[최상급] 나가",
-					"[최상급] 에인션트 미이라",
-					"[최상급] 에인션트 미믹"
+					needtr("[상급] 데저트 울프", "[Advanced] Desert Wolf"),
+					needtr("[상급] 메두사", "[Advanced] Medusa"),
+					needtr("[상급] 핀귀큘라", "[Advanced] Pinguicula"),
+					needtr("[상급] 메이저우로스", "[Advanced] Majoruros"),
+					needtr("[최상급] 레이드릭", "[Highest] Raydric"),
+					needtr("[최상급] 나가", "[Highest] Naga"),
+					needtr("[최상급] 에인션트 미이라", "[Highest] Ancient Mummy"),
+					needtr("[최상급] 에인션트 미믹", "[Highest] Ancient Mimic")
 				);
 				if (.@quest > 4 && BaseLevel < .@min_level[3]) {
-					mes "[리노]";
-					mes "죄송합니다만, 최상급 토벌 의뢰는 베이스 레벨 "+.@min_level[3]+" 이상의 숙련된 모험가분들만 수락하실 수 있습니다.";
+					mes needtr("[리노]", "[Reno]");
+					mes needtr("죄송합니다만, 최상급 토벌 의뢰는 베이스 레벨 ", "I am sorry but the request for the most advanced collection is only available for those level ")+.@min_level[3]+needtr(" 이상의 숙련된 모험가분들만 수락하실 수 있습니다.", " and higher. You do not seem to be capable of carrying out this request.");
 					close;
 				}
 				break;
 			}
 			setquest .@quest_index[.@select] + .@quest;
-			mes "[리노]";
-			mes "의뢰하신 "+.@type$[.@select]+" 등급의 토벌 명령서가 발급되었습니다. 자세한 내용은 퀘스트 창을 확인해 주세요.";
+			mes needtr("[리노]", "[Reno]");
+			mes needtr("의뢰하신 ", "The request for ")+.@type$[.@select]+needtr(" 등급의 토벌 명령서가 발급되었습니다. 자세한 내용은 퀘스트 창을 확인해 주세요.", " collection monsters has been issued. Please check the details on the issued document.");
 			close;
 		} else {
 			setarray .@quest_count[0],7,4,8;
 			for (set .@i,0; .@i<3; set .@i,.@i+1) {
 				if (.@quest_status[.@i]) {
-					mes "[리노]";
-					mes "현재 수행 중이신 의뢰는 "+.@type$[.@i]+" 등급의 임무입니다. 지금 포기하시면 지금까지의 기록이 모두 사라집니다. 정말 그만두시겠어요?";
+					mes needtr("[리노]", "[Reno]");
+					mes needtr("현재 수행 중이신 의뢰는 ", "You are currently under the request of the ")+.@type$[.@i]+needtr(" 등급의 임무입니다. 지금 포기하시면 지금까지의 기록이 모두 사라집니다. 정말 그만두시겠어요?", " collection. If you give up now, all your history will be lost. Do you really want to give up?");
 					next;
-					set .@erase_quest, select("네, 포기합니다:아니요, 계속할게요");
+					set .@erase_quest, select(needtr("네, 포기합니다:아니요, 계속할게요", "Yes:No"));
 					switch (.@erase_quest) {
 					case 1:
 						for (set .@quest,.@quest_index[.@i]+1; .@quest<=.@quest_index[.@i]+.@quest_count[.@i]; set.@quest,.@quest+1) {
@@ -201,34 +201,34 @@ lasagna,178,162,3	script	리노#2012hat::Reno#2012hat	64,{
 			}
 			switch (.@erase_quest) {
 			case 0:
-				mes "[리노]";
-				mes "현재 진행 중인 의뢰가 없으시네요.";
+				mes needtr("[리노]", "[Reno]");
+				mes needtr("현재 진행 중인 의뢰가 없으시네요.", "You are not under any request.");
 				close;
 			case 1:
-				mes "[리노]";
-				mes "알겠습니다. 진행 중이던 토벌 의뢰를 공식적으로 철회했습니다.";
+				mes needtr("[리노]", "[Reno]");
+				mes needtr("알겠습니다. 진행 중이던 토벌 의뢰를 공식적으로 철회했습니다.", "The written request for you has been withdrawn.");
 				close;
 			case 2:
-				mes "[리노]";
-				mes "포기하지 말고 힘내주세요!";
+				mes needtr("[리노]", "[Reno]");
+				mes needtr("포기하지 말고 힘내주세요!", "Please keep up on it.");
 				close;
 			}
 		}
 	case 3:
-		mes "[리노]";
-		mes "체내에 에너지 크리스탈 기운을 축적하여 특별한 버프를 받으시겠어요?";
+		mes needtr("[리노]", "[Reno]");
+		mes needtr("체내에 에너지 크리스탈 기운을 축적하여 특별한 버프를 받으시겠어요?", "Do you want to accumulate Energy Crystals inside of your body to receive a buff?");
 		next;
-		set .@select, select("에너지 크리스탈 축적이란?:가공되지 않은 크리스탈 축적:정제된 크리스탈 축적:고순도 크리스탈 축적");
+		set .@select, select(needtr("에너지 크리스탈 축적이란?:가공되지 않은 크리스탈 축적:정제된 크리스탈 축적:고순도 크리스탈 축적", "Accumulating Energy Crystals?:Accumulate Rough Energy Crystal:Accumulate Purified Energy Crystal:Accumulate High Energy Crystal"));
 		switch (.@select) {
 		case 1:
-			mes "[리노]";
-			mes "저희가 지정해 드린 몬스터를 사냥하시면 그 마력이 몸 안에 조금씩 쌓이게 됩니다.";
+			mes needtr("[리노]", "[Reno]");
+			mes needtr("저희가 지정해 드린 몬스터를 사냥하시면 그 마력이 몸 안에 조금씩 쌓이게 됩니다.", "Energy Crystals are accumulated in your body when you hunt the monsters we ask you to.");
 			next;
-			mes "[리노]";
-			mes "저희 연구에 따르면, 특정 자극을 통해 인간의 몸에 이 마력을 축적하고 이를 버프 형태로 유지할 수 있답니다.";
+			mes needtr("[리노]", "[Reno]");
+			mes needtr("저희 연구에 따르면, 특정 자극을 통해 인간의 몸에 이 마력을 축적하고 이를 버프 형태로 유지할 수 있답니다.", "Our research shows that some methods enable humans to accumulate the energy crystals inside of the body in the form of a buff.");
 			next;
-			mes "[리노]";
-			mes "버프를 유지하며 3시간 정도 활동하시면 소량의 에너지 크리스탈을 정제해낼 수 있습니다. 자, 축적을 시작하시겠어요?";
+			mes needtr("[리노]", "[Reno]");
+			mes needtr("버프를 유지하며 3시간 정도 활동하시면 소량의 에너지 크리스탈을 정제해낼 수 있습니다. 자, 축적을 시작하시겠어요?", "If you spend about 3 hours, you will be able to gain a small amount of Energy Crystals. So do you want to receive the buff?");
 			close;
 		case 2:
 			set .@playtime, checkquest(5225,PLAYTIME);
@@ -253,64 +253,64 @@ lasagna,178,162,3	script	리노#2012hat::Reno#2012hat	64,{
 			break;
 		}
 		if (.@playtime == 0 || .@playtime == 1) {
-			mes "[리노]";
-			mes "축적에 성공하셨나요? 다른 종류의 기운을 섞는 건 괜찮지만, 같은 종류의 기운을 무리하게 중첩하면 몸에 해로울 수 있으니 주의하세요."; //custom translation
+			mes needtr("[리노]", "[Reno]");
+			mes needtr("축적에 성공하셨나요? 다른 종류의 기운을 섞는 건 괜찮지만, 같은 종류의 기운을 무리하게 중첩하면 몸에 해로울 수 있으니 주의하세요.", "Were you successful? While storing other Energy Crystals will not have much effect on your body, storing the same one may cause you harm."); //custom translation
 			close;
 		}
 		if (BaseLevel < .@min_level) {
-			mes "[리노]";
-			mes "지금의 신체 능력으로는 크리스탈 기운을 "+.@crystal$[.@select-2]+" 감당하실 수 없어요. 베이스 레벨 "+.@min_level+" 이상이 되어야만 몸을 상하지 않고 축적할 수 있습니다."; //custom translation
+			mes needtr("[리노]", "[Reno]");
+			mes needtr("지금의 신체 능력으로는 크리스탈 기운을 ", "With a body like that, you can't accumulate ")+.@crystal$[.@select-2]+needtr(" 감당하실 수 없어요. 베이스 레벨 ", " Energy Crystals. You must be level ")+.@min_level+needtr(" 이상이 되어야만 몸을 상하지 않고 축적할 수 있습니다.", " or your body will be harmed in the process."); //custom translation
 			close;
 		}
 		if (.@energy_buf00) {
-			mes "[리노]";
-			mes "이미 에너지 크리스탈 축적이 진행 중이시네요. 아쉽지만 한 번에 두 가지 기운을 동시에 축적하는 것은 불가능합니다.";
+			mes needtr("[리노]", "[Reno]");
+			mes needtr("이미 에너지 크리스탈 축적이 진행 중이시네요. 아쉽지만 한 번에 두 가지 기운을 동시에 축적하는 것은 불가능합니다.", "Accumulating Energy Crystal has already begun. I am sorry but it is impossible to accumulate two different types of Energy Crystals at a time.");
 			close;
 		}
 		if (isbegin_quest(.@quest) > 0) {
 			erasequest .@quest;
-			mes "[리노]";
-			mes "오류가 발생했습니다. 이용에 불편을 드려 대단히 죄송합니다."; //custom translation
+			mes needtr("[리노]", "[Reno]");
+			mes needtr("오류가 발생했습니다. 이용에 불편을 드려 대단히 죄송합니다.", "An error has occurred. Please forgive me for the inconvenience."); //custom translation
 			close;
 		}
-		mes "[리노]";
-		mes "기운을 정제하는 데는 3시간 정도 걸리며, 보상으로 2~4개의 "+.@crystal$[.@select-2]+" 에너지 크리스탈을 얻게 됩니다. 시작하시겠습니까?";
+		mes needtr("[리노]", "[Reno]");
+		mes needtr("기운을 정제하는 데는 3시간 정도 걸리며, 보상으로 2~4개의 ", "It takes 3 hours for your body to accumulate 2 to 4 ")+.@crystal$[.@select-2]+needtr(" 에너지 크리스탈을 얻게 됩니다. 시작하시겠습니까?", " Energy Crystals. Do you want to start?");
 		next;
-		if(select("취소:시작하기") == 1) {
-			mes "[리노]";
-			mes "시간이 나실 때 틈틈이 에너지 크리스탈을 축적해 보시는 걸 추천드려요.";
+		if(select(needtr("취소:시작하기", "Cancel:Start")) == 1) {
+			mes needtr("[리노]", "[Reno]");
+			mes needtr("시간이 나실 때 틈틈이 에너지 크리스탈을 축적해 보시는 걸 추천드려요.", "I recommend that you try to ccumulate Energy Crystal when you have time.");
 			close;
 		}
-		mes "[리노]";
-		mes "몸이 살짝 따끔거릴 수도 있어요. 잠시만 참으세요!";
+		mes needtr("[리노]", "[Reno]");
+		mes needtr("몸이 살짝 따끔거릴 수도 있어요. 잠시만 참으세요!", "You might feel a slight tingle.");
 		next;
 		specialeffect2 EF_BASH3D;
 		percentheal .@rate * -5,0;
 		//consumeitem ??; //Keep_Connection_[.@rate]
 		sc_start .@buff,10800000,.@rate;	// Atk/Matk + 5*rate (+5, +10, +15)
 		setquest .@quest;
-		mes "[리노]";
-		mes "- 푹! -";
+		mes needtr("[리노]", "[Reno]");
+		mes needtr("- 푹! -", "- Puck -");
 		next;
-		mes "[리노]";
-		mes "모든 준비가 끝났습니다. 에너지 크리스탈 축적을 시작할게요. "+.@crystal$[.@select-2]+" 정확히 3시간 후에 저에게 돌아오셔야만 결과물을 "+.@crystal$[.@select-2]+" 받으실 수 있다는 걸 잊지 마세요.";
+		mes needtr("[리노]", "[Reno]");
+		mes needtr("모든 준비가 끝났습니다. 에너지 크리스탈 축적을 시작할게요. ", "Everything seems to be in order. Let's start accumulating ")+.@crystal$[.@select-2]+needtr(" 정확히 3시간 후에 저에게 돌아오셔야만 결과물을 ", " Energy Crystals. Remember to come back to me after 3 hours to get the ")+.@crystal$[.@select-2]+needtr(" 받으실 수 있다는 걸 잊지 마세요.", " Energy Crystals.");
 		close;
 	case 4:
-		mes "[리노]";
-		mes "가지고 계신 에너지 크리스탈을 더 높은 등급으로 압축하시겠어요?";
+		mes needtr("[리노]", "[Reno]");
+		mes needtr("가지고 계신 에너지 크리스탈을 더 높은 등급으로 압축하시겠어요?", "Do you want to compress the Energy Crystals?");
 		next;
-		switch(select("압축하면 무엇이 좋은가요?:하급을 중급으로 압축:중급을 상급으로 압축")) {
+		switch(select(needtr("압축하면 무엇이 좋은가요?:하급을 중급으로 압축:중급을 상급으로 압축", "What does compressing do?:Compress Rough to Purified Crystal:Compress Purified to High Crystal"))) {
 		case 1:
-			mes "[리노]";
-			mes "압축에 대해 궁금하시군요? 여러 개의 하급 등급 크리스탈을 모아 더 가치 있는 상급 등급으로 합쳐드리는 작업이에요.";
+			mes needtr("[리노]", "[Reno]");
+			mes needtr("압축에 대해 궁금하시군요? 여러 개의 하급 등급 크리스탈을 모아 더 가치 있는 상급 등급으로 합쳐드리는 작업이에요.", "Are you curious about Energy Crystal compression? I can compress lower level Energy Crystals into higher ones.");
 			next;
-			mes "[리노]";
-			mes "제가 해드릴 수 있는 공정은 다음과 같습니다.";
-			mes "^FF0000가공되지 않은 크리스탈 10개^000000 = ^FF0000정제된 크리스탈 1개^000000";
-			mes "^FF0000정제된 크리스탈 5개^000000 = ^FF0000고순도 크리스탈 1개^000000";
+			mes needtr("[리노]", "[Reno]");
+			mes needtr("제가 해드릴 수 있는 공정은 다음과 같습니다.", "Here is what I can make.");
+			mes needtr("^FF0000가공되지 않은 크리스탈 10개^000000 = ^FF0000정제된 크리스탈 1개^000000", "^FF000010 Rough Energy Crystals^000000 = ^FF00001 Purified Energy Crystal^000000");
+			mes needtr("^FF0000정제된 크리스탈 5개^000000 = ^FF0000고순도 크리스탈 1개^000000", "^FF00005 Purified Energy Crystals^000000 = ^FF00001 High Energy Crystal^000000");
 			next;
-			mes "[리노]";
-			mes "상위 등급 크리스탈을 구하기 힘들 때, 비교적 구하기 쉬운 하위 등급을 모아 압축하는 게 아주 좋은 방법이 될 수 있죠.";
+			mes needtr("[리노]", "[Reno]");
+			mes needtr("상위 등급 크리스탈을 구하기 힘들 때, 비교적 구하기 쉬운 하위 등급을 모아 압축하는 게 아주 좋은 방법이 될 수 있죠.", "If you need higher grade Energy Crystals, this is a good way to get them since the lower ones are easier to get.");
 			close;
 		case 2:
 			set .@crystal,6623;  //Rough_Energy_Crystal
@@ -330,20 +330,20 @@ lasagna,178,162,3	script	리노#2012hat::Reno#2012hat	64,{
 		.@crystal_pack_name$ = getitemname(.@crystal_);
 
 		if (.@crystal_name$ == "")
-			.@crystal_name$ = "알 수 없는 아이템";
+			.@crystal_name$ = needtr("알 수 없는 아이템", "Unknown item");
 
 		if (.@crystal_pack_name$ == "")
-			.@crystal_pack_name$ = "알 수 없는 아이템";
-		mes "[리노]";
-		mes "^FF0000" + .@rate + "개의 " + .@crystal_name$ + "^000000를 사용하여 ^FF00001개의 " + .@crystal_pack_name$ + "^000000를 만듭니다.";
+			.@crystal_pack_name$ = needtr("알 수 없는 아이템", "Unknown item");
+		mes needtr("[리노]", "[Reno]");
+		mes "^FF0000" + .@rate + needtr("개의 ", " x ") + .@crystal_name$ + needtr("^000000를 사용하여 ^FF00001개의 ", "^000000 = ^FF00001 x ") + .@crystal_pack_name$ + needtr("^000000를 만듭니다.", "^000000.");
 		next;
-		mes "[리노]";
-		mes "가지고 계신 " + .@crystal_count + "개의 " + .@crystal_name$ + "를 압축하여 " + .@crystal_get + "개의 " + .@crystal_pack_name$ + "로 교환합니다.";
-		mes "지금 바로 압축 공정을 시작할까요?";
+		mes needtr("[리노]", "[Reno]");
+		mes needtr("가지고 계신 ", "Your ") + .@crystal_count + needtr("개의 ", " x ") + .@crystal_name$ + needtr("를 압축하여 ", " will be compressed into ") + .@crystal_get + needtr("개의 ", " x ") + .@crystal_pack_name$ + needtr("로 교환합니다.", ".");
+		mes needtr("지금 바로 압축 공정을 시작할까요?", "Do you want to compress?");
 		next;
-		if(select("계속 압축하기:그만하기") == 2) {
-			mes "[리노]";
-			mes "알겠습니다. 나중에 마음이 바뀌거나 크리스탈이 더 모이면 다시 와주세요.";
+		if(select(needtr("계속 압축하기:그만하기", "Compress:Stop")) == 2) {
+			mes needtr("[리노]", "[Reno]");
+			mes needtr("알겠습니다. 나중에 마음이 바뀌거나 크리스탈이 더 모이면 다시 와주세요.", "Okay, please contact if you need me in the future.");
 			close;
 		}
 		while(1) {
@@ -352,32 +352,32 @@ lasagna,178,162,3	script	리노#2012hat::Reno#2012hat	64,{
 				getitem .@crystal_,1;
 				set .@crystal_count, countitem(.@crystal);
 				set .@crystal_get, .@crystal_count / .@rate;
-				mes "[리노]";
-				mes "압축 작업이 성공적으로 끝났습니다!";
-				mes "아직 가방에 "+.@crystal_count+" 개의 크리스탈이 남아있네요. 추가로 "+.@crystal_get+" 개를 더 만드실 수 있는데, 계속 진행할까요?";
+				mes needtr("[리노]", "[Reno]");
+				mes needtr("압축 작업이 성공적으로 끝났습니다!", "The compression was very successful.");
+				mes needtr("아직 가방에 ", "There are ")+.@crystal_count+needtr(" 개의 크리스탈이 남아있네요. 추가로 ", " Energy Crystals left, which can compress into ")+.@crystal_get+needtr(" 개를 더 만드실 수 있는데, 계속 진행할까요?", " Energy Crystals. Do you want to continue?");
 				next;
-				if(select("계속 압축하기:그만하기") == 2)
+				if(select(needtr("계속 압축하기:그만하기", "Compress:Stop")) == 2)
 					break;
 			} else {
-				mes "[리노]";
-				mes "압축에 필요한 "+getitemname(.@crystal)+"원하시는 장비를 선택해 주세요.";
+				mes needtr("[리노]", "[Reno]");
+				mes needtr("압축에 필요한 ", "You don't have enough ")+getitemname(.@crystal)+needtr("원하시는 장비를 선택해 주세요.", "s.");
 				next;
 				break;
 			}
 		}
-		mes "[리노]";
-		mes "모든 압축 공정이 완료되었습니다.";
+		mes needtr("[리노]", "[Reno]");
+		mes needtr("모든 압축 공정이 완료되었습니다.", "Compression completed.");
 		close;
 	case 5:
 		disable_items;
-		mes "[리노]";
-		mes "에너지 크리스탈을 특수 장비로 교환하시겠어요? 먼저 어떤 등급의 크리스탈을 사용할지 선택해 주세요.";
+		mes needtr("[리노]", "[Reno]");
+		mes needtr("에너지 크리스탈을 특수 장비로 교환하시겠어요? 먼저 어떤 등급의 크리스탈을 사용할지 선택해 주세요.", "Do you want to exchange Energy Crystals for equipment? Please select the type of Energy Crystal that you wish to exchange.");
 		next;
 		setarray .@crystals[0], countitem(6623), countitem(6624), countitem(6625);
-		switch(select("교환 가능한 장비 목록 확인:["+.@crystals[0]+"] 가공되지 않은 에너지 크리스탈:["+.@crystals[1]+"] 정제된 에너지 크리스탈:["+.@crystals[2]+"] 고순도 에너지 크리스탈")) {
+		switch(select(needtr("교환 가능한 장비 목록 확인:[", "See Equipment List:[")+.@crystals[0]+needtr("] 가공되지 않은 에너지 크리스탈:[", "] Rough Energy Crystal:[")+.@crystals[1]+needtr("] 정제된 에너지 크리스탈:[", "] Purified Energy Crystal:[")+.@crystals[2]+needtr("] 고순도 에너지 크리스탈", "] High Energy Crystal"))) {
 		case 1:
-			mes "[리노]";
-			mes "저희 연구소에서 제공하는 특수 장비 강화 안내 책자입니다. 유용한 정보가 많으니 확인해 보세요.";
+			mes needtr("[리노]", "[Reno]");
+			mes needtr("저희 연구소에서 제공하는 특수 장비 강화 안내 책자입니다. 유용한 정보가 많으니 확인해 보세요.", "This is the brochure regarding the equipment upgrade that our Energy Crystal research association provides. Please take a look around.");
 			close2;
 			readbook 11060,1; //Energy_Xtal_Combi_Book
 			end;
@@ -410,19 +410,19 @@ lasagna,178,162,3	script	리노#2012hat::Reno#2012hat	64,{
 			setarray .@rewards[0],  18765,18768,18766,18767,18767,22014,2957,2958,15068,2183,22015,20710,18776;
 			break;
 		}
-		mes "[리노]";
-		mes getitemname(.@crystal)+"을 사용하여 교환할 장비를 선택해 주세요.";
+		mes needtr("[리노]", "[Reno]");
+		mes getitemname(.@crystal)+needtr("을 사용하여 교환할 장비를 선택해 주세요.", " - please select the equipment to exchange for it.");
 		next;
 		set .@crystal_count, countitem(.@crystal);
 		set .@menu$,"";
 		for (set .@i,0; .@i<getarraysize(.@materials); set .@i,.@i+1) {
 			set .@item_name$, getitemname(.@materials[.@i]) + ((.@showslot[.@i] > -1)?"["+.@showslot[.@i]+"]":"");
 			if (.@item_name$ == "")
-				.@item_name$ = "알 수 없는 아이템";
+				.@item_name$ = needtr("알 수 없는 아이템", "Unknown item");
 
 			set .@material_count, countitem(.@materials[.@i]);
 			// select()의 메뉴 구분자는 ':'이므로 항목 설명 내부에는 ':'을 사용하지 않는다.
-			set .@menu$, .@menu$ + .@item_name$ + " (장비 " + .@material_count + " / 결정 " + .@crystal_count + "/" + .@costs[.@i] + "):";
+			set .@menu$, .@menu$ + .@item_name$ + needtr(" (장비 ", " (Gear ") + .@material_count + needtr(" / 결정 ", " / Crystal ") + .@crystal_count + "/" + .@costs[.@i] + "):";
 		}
 		set .@index, select(.@menu$) - 1;
 		set .@material, .@materials[.@index];
@@ -434,39 +434,39 @@ lasagna,178,162,3	script	리노#2012hat::Reno#2012hat	64,{
 		if (.@material == 2615) {  // Special case: Safety Ring
 			if (countitem(2615) < 1 || countitem(2621) < 1 || countitem(2622) < 1 || countitem(2624) < 1 ||
 			    countitem(2625) < 1 || countitem(2623) < 1 || countitem(2626) < 1 || countitem(.@crystal) < .@cost) {
-				mes "[리노]";
-				mes "세이프티 링[1]을 제작하기 위한 재료가 부족합니다. 소지품을 다시 한번 확인해 보세요.";
+				mes needtr("[리노]", "[Reno]");
+				mes needtr("세이프티 링[1]을 제작하기 위한 재료가 부족합니다. 소지품을 다시 한번 확인해 보세요.", "The materials to make a Safety Ring[1] are insufficient. Please check your inventory.");
 				close;
 			}
-			mes "[리노]";
-			mes "세이프티 링의 성능을 강화하기 전에 ^FF0000중요한 주의사항^000000을 꼭 들어주세요.";
+			mes needtr("[리노]", "[Reno]");
+			mes needtr("세이프티 링의 성능을 강화하기 전에 ^FF0000중요한 주의사항^000000을 꼭 들어주세요.", "Before upgrading your Safety Ring, please listen to these ^FF0000precautions^000000.");
 			next;
-			mes "[리노]";
-			mes "^FF0000업그레이드 시 기존 재료에 장착된 카드와 제련 수치는 모두 소멸하게 됩니다.^000000";
+			mes needtr("[리노]", "[Reno]");
+			mes needtr("^FF0000업그레이드 시 기존 재료에 장착된 카드와 제련 수치는 모두 소멸하게 됩니다.^000000", "^FF0000In addition to the Safety Ring, all refinements and cards of the required materials will also disappear.^000000");
 			next;
 		} else {
 			if (countitem(.@material) < 1 || countitem(.@crystal) < .@cost) {
-				mes "[리노]";
-				mes "재료가 아직 부족하네요. 필요한 품목들을 다시 한번 체크해 주시겠어요?";
+				mes needtr("[리노]", "[Reno]");
+				mes needtr("재료가 아직 부족하네요. 필요한 품목들을 다시 한번 체크해 주시겠어요?", "The materials are insufficient. Please check your materials.");
 				close;
 			}
-			mes "[리노]";
-			mes "장비 업그레이드를 시작하기 전에 저희 연구소의 ^FF0000안전 수칙^000000을 먼저 확인해 주세요.";
+			mes needtr("[리노]", "[Reno]");
+			mes needtr("장비 업그레이드를 시작하기 전에 저희 연구소의 ^FF0000안전 수칙^000000을 먼저 확인해 주세요.", "Before upgrading your equipment, please listen to these ^FF0000precautions^000000.");
 			next;
-			mes "[리노]";
-			mes "^FF0000에너지 크리스탈의 강력한 마력 때문에 기존 장비의 제련도, 인챈트, 카드는 모두 파괴됩니다.^000000";
+			mes needtr("[리노]", "[Reno]");
+			mes needtr("^FF0000에너지 크리스탈의 강력한 마력 때문에 기존 장비의 제련도, 인챈트, 카드는 모두 파괴됩니다.^000000", "^FF0000When using Energy Crystals to upgrade equipment, all previous refinements, enchantments, and cards will be lost.^000000");
 			next;
 		}
-		mes "[리노]";
-		mes "제가 설명해 드린 ^FF0000위험 요소^000000를 충분히 이해하고 동의하시나요?";
+		mes needtr("[리노]", "[Reno]");
+		mes needtr("제가 설명해 드린 ^FF0000위험 요소^000000를 충분히 이해하고 동의하시나요?", "Are you familiar with the ^FF0000precautions^000000?");
 		next;
-		if(select("네, 동의합니다.:아니요, 그만둘래요.") == 2) {
-			mes "[리노]";
-			mes "알겠습니다. 소중한 장비니까 신중하게 결정하시는 게 좋겠죠.";
+		if(select(needtr("네, 동의합니다.:아니요, 그만둘래요.", "I am.:No.")) == 2) {
+			mes needtr("[리노]", "[Reno]");
+			mes needtr("알겠습니다. 소중한 장비니까 신중하게 결정하시는 게 좋겠죠.", "Okay. Next time, then.");
 			close;
 		}
-		mes "[리노]";
-		mes "좋습니다. 바로 장비 강화를 시작하도록 하죠. "+.@item_name$+".";
+		mes needtr("[리노]", "[Reno]");
+		mes needtr("좋습니다. 바로 장비 강화를 시작하도록 하죠. ", "Then let's begin to upgrade ")+.@item_name$+".";
 		next;
 		specialeffect2 EF_REPAIRWEAPON;
 		progressbar "ffff00",2;
@@ -481,48 +481,48 @@ lasagna,178,162,3	script	리노#2012hat::Reno#2012hat	64,{
 		}
 		delitem .@crystal,.@cost;
 		getitem .@reward,1;
-		mes "[리노]";
-		mes "업그레이드가 완벽하게 끝났습니다! 기부해 주신 크리스탈은 저희 연구에 아주 소중하게 쓰일 거예요.";
+		mes needtr("[리노]", "[Reno]");
+		mes needtr("업그레이드가 완벽하게 끝났습니다! 기부해 주신 크리스탈은 저희 연구에 아주 소중하게 쓰일 거예요.", "The upgrade was successful. Your Energy Crystals will help our research greatly.");
 		close;
 	case 6:
-		mes "[리노]";
-		mes "에너지 크리스탈을 기부하고, 보답으로 새로운 의상 장비를 받아보시겠어요?";
+		mes needtr("[리노]", "[Reno]");
+		mes needtr("에너지 크리스탈을 기부하고, 보답으로 새로운 의상 장비를 받아보시겠어요?", "Do you want to donate Energy Crystals to get a random new headgear?");
 		next;
-		switch(select("에너지 크리스탈을 기부하시겠습니까?:가공되지 않은 크리스탈 300개 기부:정제된 크리스탈 600개 기부:고순도 크리스탈 900개 기부")) {
+		switch(select(needtr("에너지 크리스탈을 기부하시겠습니까?:가공되지 않은 크리스탈 300개 기부:정제된 크리스탈 600개 기부:고순도 크리스탈 900개 기부", "Donate Energy Crystals?:Donate 300 Rough Energy Crystals.:Donate 600 Purified Energy Crystals.:Donate 900 High Energy Crystals."))) {
 		case 1:
-			mes "[리노]";
-			mes "저희는 모험가분들께 더 다채로운 장비를 제공하기 위해 에너지 크리스탈의 조합법을 연구 중입니다.";
+			mes needtr("[리노]", "[Reno]");
+			mes needtr("저희는 모험가분들께 더 다채로운 장비를 제공하기 위해 에너지 크리스탈의 조합법을 연구 중입니다.", "We are collecting Energy Crystals so that we can research more combinations of headgears for adventurers.");
 			next;
-			mes "[리노]";
-			mes "여러분의 적극적인 기부와 지지 덕분에 저희 연구가 중단되지 않고 계속 나아갈 수 있어요.";
+			mes needtr("[리노]", "[Reno]");
+			mes needtr("여러분의 적극적인 기부와 지지 덕분에 저희 연구가 중단되지 않고 계속 나아갈 수 있어요.", "Thanks to the support of adventurers we can use these Energy Crystals to further our research.");
 			next;
-			mes "[리노]";
-			mes "등급에 따라 최소 300개에서 최대 900개까지의 크리스탈을 기부받고 있으며, 그에 따른 특별한 보상을 드리고 있습니다.";
-			mes "기부를 결정하신다면 보답으로 희귀한 신상 머리 장비 중 하나를 무작위로 드리겠습니다.";
+			mes needtr("[리노]", "[Reno]");
+			mes needtr("등급에 따라 최소 300개에서 최대 900개까지의 크리스탈을 기부받고 있으며, 그에 따른 특별한 보상을 드리고 있습니다.", "So we receive a minimum of 300 Rough Energy Crystals, 600");
+			mes needtr("기부를 결정하신다면 보답으로 희귀한 신상 머리 장비 중 하나를 무작위로 드리겠습니다.", "Purified Energy Crystals, and 900 High Energy Crystals.");
 			next;
 			setdialogsize(300,400);
 			setarray .@list[0],18760,18761,18762,18763,18764,18769,18770,18771;
-			mes "[리노]";
-			mes "가공되지 않은 크리스탈 300개 보상";
+			mes needtr("[리노]", "[Reno]");
+			mes needtr("가공되지 않은 크리스탈 300개 보상", "Rewards for 300 Rough Energy Crystals");
 				for (.@i = 0; .@i < getarraysize(.@list); .@i++)
 					mes "^i["+.@list[.@i]+"]" + mesitemlink(.@list[.@i]);
 			next;
 			setarray .@list[0],18772,18773,18774,18775,2956,15068,2183,22015,20710,18776;
-			mes "[리노]";
-			mes "정제된 크리스탈 600개 보상";
+			mes needtr("[리노]", "[Reno]");
+			mes needtr("정제된 크리스탈 600개 보상", "Rewards for 600 Purified Energy Crystals");
 				for (.@i = 0; .@i < getarraysize(.@list); .@i++)
 					mes "^i["+.@list[.@i]+"]" + mesitemlink(.@list[.@i]);
 			next;
 			setarray .@list[0],18765,18768,18766,22014,2957,2958;
-			mes "[리노]";
-			mes "고순도 크리스탈 900개 보상";
+			mes needtr("[리노]", "[Reno]");
+			mes needtr("고순도 크리스탈 900개 보상", "Rewards for 900 High Energy Crystals");
 				for (.@i = 0; .@i < getarraysize(.@list); .@i++)
 					mes "^i["+.@list[.@i]+"]" + mesitemlink(.@list[.@i]);
 			close;
 		case 2:
 			if (countitem(6623) < 300) {
-				mes "[리노]";
-				mes "기부해 주시려는 마음은 감사하지만, 가공되지 않은 크리스탈 300개가 필요합니다.";
+				mes needtr("[리노]", "[Reno]");
+				mes needtr("기부해 주시려는 마음은 감사하지만, 가공되지 않은 크리스탈 300개가 필요합니다.", "Thank for your support, but we need 300 Rough Energy Crystals.");
 				close;
 			}
 			delitem 6623,300; //Rough_Energy_Crystal
@@ -538,8 +538,8 @@ lasagna,178,162,3	script	리노#2012hat::Reno#2012hat	64,{
 			break;
 		case 3:
 			if (countitem(6624) < 600) {
-				mes "[리노]";
-				mes "지지해 주셔서 감사합니다만, 정제된 크리스탈 600개를 가져오셔야 합니다.";
+				mes needtr("[리노]", "[Reno]");
+				mes needtr("지지해 주셔서 감사합니다만, 정제된 크리스탈 600개를 가져오셔야 합니다.", "Thank for your support, but we need 600 Purified Energy Crystals.");
 				close;
 			}
 			delitem 6624,600; //Purified_Energy_Crystal
@@ -557,8 +557,8 @@ lasagna,178,162,3	script	리노#2012hat::Reno#2012hat	64,{
 			break;
 		case 4:
 			if (countitem(6625) < 900) {
-				mes "[리노]";
-				mes "정말 감사합니다만, 이번 연구에는 고순도 크리스탈 900개가 필요해요.";
+				mes needtr("[리노]", "[Reno]");
+				mes needtr("정말 감사합니다만, 이번 연구에는 고순도 크리스탈 900개가 필요해요.", "Thank for your support, but we need 900 High Energy Crystals.");
 				close;
 			}
 			delitem 6625,900; //High_Purity_Energy_Xtal
@@ -571,12 +571,12 @@ lasagna,178,162,3	script	리노#2012hat::Reno#2012hat	64,{
 			else                getitem 2958,1;  //Good_Ring_Of_Resonance
 			break;
 		}
-		mes "[리노]";
-		mes "대단히 감사합니다! 기부해 주신 크리스탈은 저희 연구에 천군만마와 같은 힘이 될 거예요. 자, 약속드린 보상입니다."; //custom translation
+		mes needtr("[리노]", "[Reno]");
+		mes needtr("대단히 감사합니다! 기부해 주신 크리스탈은 저희 연구에 천군만마와 같은 힘이 될 거예요. 자, 약속드린 보상입니다.", "Thank you very much. The Energy Crystals you donated will be greatly helpful for our research. This is your reward for your donation."); //custom translation
 		close;
 	case 7:  // iRO only
-		mes "[리노]";
-		mes "저희 연구소에서 제공하는 특수 장비 강화 안내 책자입니다. 유용한 정보가 많으니 확인해 보세요.";
+		mes needtr("[리노]", "[Reno]");
+		mes needtr("저희 연구소에서 제공하는 특수 장비 강화 안내 책자입니다. 유용한 정보가 많으니 확인해 보세요.", "This is the brochure regarding the equipment upgrade that our Energy Crystal research association provides. Please take a look around.");
 		close2;
 		readbook 11060,1; //Energy_Xtal_Combi_Book
 		end;
@@ -586,13 +586,13 @@ lasagna,178,162,3	script	리노#2012hat::Reno#2012hat	64,{
 L_CheckHunting:
 	for (set .@quest,getarg(0)+1; .@quest<getarg(1)+getarg(2); set .@quest,.@quest+1) {
 		if (checkquest(.@quest,HUNTING) == 2) {
-			mes "[리노]";
-			mes "성공적으로 "+getarg(3)+" 등급의 토벌 의뢰를 모두 완료하셨습니다!";
+			mes needtr("[리노]", "[Reno]");
+			mes needtr("성공적으로 ", "Finished ")+getarg(3)+needtr(" 등급의 토벌 의뢰를 모두 완료하셨습니다!", " collection hunting quest.");
 			next;
 			setquest getarg(0);
 			erasequest .@quest;
 			getitem getarg(4),getarg(5);
-			mes "의뢰 완료 보상으로 "+getarg(5)+" "+getitemname(getarg(4))+"에너지 크리스탈 "+getarg(3)+" 개를 지급해 드렸습니다.";
+			mes needtr("의뢰 완료 보상으로 ", "You receive ")+getarg(5)+" "+getitemname(getarg(4))+needtr("에너지 크리스탈 ", "s as the ")+getarg(3)+needtr(" 개를 지급해 드렸습니다.", " collection reward.");
 			close;
 		}
 	}

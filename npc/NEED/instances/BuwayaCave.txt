@@ -18,10 +18,10 @@
 //============================================================
 ma_fild02,312,317,5	script	경비병#buwaya_cave	570,{
 	if (BaseLevel < 130) {
-		mes "[경비병]";
-		mes "^ff0000레벨 130^000000 미만은";
-		mes "이곳에 들어올 수 없습니다.";
-		mes "이곳은 위험합니다. 돌아가 주세요.";
+		mes needtr("[경비병]", "[Guard]");
+		mes needtr("^ff0000레벨 130^000000 미만은", "People under ^ff0000level 130^000000");
+		mes needtr("이곳에 들어올 수 없습니다.", "cannot enter this place.");
+		mes needtr("이곳은 위험합니다. 돌아가 주세요.", "This place is dangerous. Please go back.");
 		close;
 	}
 
@@ -29,36 +29,36 @@ ma_fild02,312,317,5	script	경비병#buwaya_cave	570,{
 	set .@md_name$,"부여워 동굴";
 
 	if (!.@party_id) {
-		mes "[경비병]";
-		mes "부여워는 위험합니다.";
-		mes "다른 사람들과 함께";
-		mes "팀을 꾸린 뒤 다시 와 주세요.";
+		mes needtr("[경비병]", "[Guard]");
+		mes needtr("부여워는 위험합니다.", "Buwaya is dangerous.");
+		mes needtr("다른 사람들과 함께", "Please come back after you form a");
+		mes needtr("팀을 꾸린 뒤 다시 와 주세요.", "team with other people.");
 		close;
 	}
 	if (is_party_leader() == true) {
-		mes "[경비병]";
-		mes "이곳은 위험합니다. 돌아가 주세요.";
-		mes "볼일이 없다면 돌아가 주세요.";
+		mes needtr("[경비병]", "[Guard]");
+		mes needtr("이곳은 위험합니다. 돌아가 주세요.", "This place is dangerous. Please go back.");
+		mes needtr("볼일이 없다면 돌아가 주세요.", "If you dont have any business here, please go back.");
 		next;
 		while(1) {
-			switch(select("왜 그렇게 위험한가?:부여워를 처치하러 왔다.:대화를 마친다.")) {
+			switch(select(needtr("왜 그렇게 위험한가?:부여워를 처치하러 왔다.:대화를 마친다.", "Why is it so dangerous?:I'm here to hunt down Buwaya.:End conversation."))) {
 			case 1:
-				mes "[경비병]";
-				mes "최근";
-				mes "마을 사람들이 사라지는 사건이 발생했습니다.";
-				mes "흔적을 조사한 결과,";
-				mes "거대한 괴물 부여워가";
-				mes "그 원인이라는 사실을 알아냈습니다.";
+				mes needtr("[경비병]", "[Guard]");
+				mes needtr("최근", "Recently, there has been a case");
+				mes needtr("마을 사람들이 사라지는 사건이 발생했습니다.", "where villagers have disappeared.");
+				mes needtr("흔적을 조사한 결과,", "After investigating the tracks, ");
+				mes needtr("거대한 괴물 부여워가", "we found out the giant monster Buwaya");
+				mes needtr("그 원인이라는 사실을 알아냈습니다.", "was responsible.");
 				next;
-				mes "[경비병]";
-				mes "부여워를 토벌하기 위해";
-				mes "병사들과 용병들이 파견되었지만,";
-				mes "완전한 성공을 거두지는 못했습니다.";
+				mes needtr("[경비병]", "[Guard]");
+				mes needtr("부여워를 토벌하기 위해", "Soldiers and mercenaries have been dispatched to ");
+				mes needtr("병사들과 용병들이 파견되었지만,", "hunt down Buwaya, but were never");
+				mes needtr("완전한 성공을 거두지는 못했습니다.", "completely successful.");
 				next;
-				mes "[경비병]";
-				mes "부여워는 지금도";
-				mes "마을 사람들을 납치하고 있습니다.";
-				mes "부여워를 처치할 사람들을 모아 주세요.";
+				mes needtr("[경비병]", "[Guard]");
+				mes needtr("부여워는 지금도", "Buwaya is still kidnapping");
+				mes needtr("마을 사람들을 납치하고 있습니다.", "the villagers to this day.");
+				mes needtr("부여워를 처치할 사람들을 모아 주세요.", "Please gather some people to get rid of Buwaya.");
 				next;
 				break;
 			case 2:
@@ -66,37 +66,37 @@ ma_fild02,312,317,5	script	경비병#buwaya_cave	570,{
 				if (.@playtime == -1) {
 					// fall through
 				} else if (.@playtime == 0 || .@playtime == 1) {
-					mes "[경비병]";
-					mes "부여워는 아직 숨어 있습니다.";
-					mes "지금 들어가도 부여워는 나오지 않을 것입니다.";
-					mes "나중에 다시 와 주세요.";
+					mes needtr("[경비병]", "[Guard]");
+					mes needtr("부여워는 아직 숨어 있습니다.", "Buwaya is still hiding.");
+					mes needtr("지금 들어가도 부여워는 나오지 않을 것입니다.", "Even if you enter now, Buwaya will not come out. ");
+					mes needtr("나중에 다시 와 주세요.", "Please come back later.");
 					close;
 				} else {
 					erasequest 4229;
 					// fall through
 				}
 				if (instance_create(.@md_name$) < 0) {
-					mes "[경비병]";
-					mes "파티 이름은..."+getpartyname(.@party_id)+".";
-					mes "파티장은..."+strcharinfo(0);
+					mes needtr("[경비병]", "[Guard]");
+					mes needtr("파티 이름은...", "Party name is... ")+getpartyname(.@party_id)+".";
+					mes needtr("파티장은...", "Party leader is... ")+strcharinfo(0);
 					mes "^0000ff"+.@md_name$+"^000000 cannot be opened now.";
-					mes "잠시 후 다시 시도해 주세요.";
+					mes needtr("잠시 후 다시 시도해 주세요.", "Please try a moment later.");
 					close;
 				}
-				mes "[경비병]";
-				mes "^0000ff로 가는 통로를 열겠습니다."+.@md_name$+"^000000.";
-				mes "행운을 빕니다.";
+				mes needtr("[경비병]", "[Guard]");
+				mes needtr("^0000ff로 가는 통로를 열겠습니다.", "I will open up the tunnel to ^0000ff")+.@md_name$+"^000000.";
+				mes needtr("행운을 빕니다.", "I wish you good luck.");
 				close;
 			case 3:
-				mes "[경비병]";
-				mes "이곳은 위험합니다. 들어갈 수 없습니다.";
+				mes needtr("[경비병]", "[Guard]");
+				mes needtr("이곳은 위험합니다. 들어갈 수 없습니다.", "This place is dangerous. You cannot enter.");
 				close;
 			}
 		}
 	} else {
-		mes "[경비병]";
-		mes "파티장과 이야기하게 해 주세요.";
-		mes "파티장을 불러와 주세요.";
+		mes needtr("[경비병]", "[Guard]");
+		mes needtr("파티장과 이야기하게 해 주세요.", "Let me talk with the party leader.");
+		mes needtr("파티장을 불러와 주세요.", "Please call forth the leader.");
 		close;
 	}
 }
@@ -105,20 +105,20 @@ ma_fild02,315,323,0	script	동굴 입구#buwaya	45,2,2,{
 	end;
 OnTouch:
 	if (BaseLevel < 130) {
-		mes "[경비병]";
-		mes "^ff0000레벨 130^000000 미만은";
-		mes "이곳에 들어올 수 없습니다.";
-		mes "이곳은 위험합니다. 돌아가 주세요.";
+		mes needtr("[경비병]", "[Guard]");
+		mes needtr("^ff0000레벨 130^000000 미만은", "People under ^ff0000level 130^000000");
+		mes needtr("이곳에 들어올 수 없습니다.", "cannot enter this place.");
+		mes needtr("이곳은 위험합니다. 돌아가 주세요.", "This place is dangerous. Please go back.");
 		close;
 	}
 	set .@playtime, checkquest(4229,PLAYTIME);
 	if (.@playtime == -1) {
 		// fall through
 	} else if (.@playtime == 0 || .@playtime == 1) {
-		mes "[경비병]";
-		mes "부여워는 아직 숨어 있습니다.";
-		mes "지금 들어가도 부여워는 나오지 않을 것입니다.";
-		mes "나중에 다시 와 주세요.";
+		mes needtr("[경비병]", "[Guard]");
+		mes needtr("부여워는 아직 숨어 있습니다.", "Buwaya is still hiding.");
+		mes needtr("지금 들어가도 부여워는 나오지 않을 것입니다.", "Even if you enter now, Buwaya will not come out.");
+		mes needtr("나중에 다시 와 주세요.", "Please come back later.");
 		close;
 	} else {
 		erasequest 4229;
@@ -128,28 +128,28 @@ OnTouch:
 	case 1:
 		switch(instance_enter(.@md_name$)) {
 		case IE_OTHER:
-			mes "[경비병]";
-			mes "아, 지금은 때가 좋지 않습니다.";
-			mes "잠시 후 다시 시도해 주세요.";
+			mes needtr("[경비병]", "[Guard]");
+			mes needtr("아, 지금은 때가 좋지 않습니다.", "Oh, now is not a good time.");
+			mes needtr("잠시 후 다시 시도해 주세요.", "Please try again a moment later.");
 			close;
 		case IE_NOINSTANCE:
 		case IE_NOMEMBER:
-			mes "[경비병]";
-			mes "이곳은 위험합니다. 들어가지 말아 주세요.";
+			mes needtr("[경비병]", "[Guard]");
+			mes needtr("이곳은 위험합니다. 들어가지 말아 주세요.", "This place is dangerous. Please do not enter.");
 			close;
 		case IE_OK:
-			mapannounce "ma_fild02",getpartyname(getcharid(1))+"파티의"+strcharinfo(0)+" member began hunting Buwaya in Buwaya Cave.",bc_map,"0x00ff99"; //FW_NORMAL 12 0 0
+			mapannouncelang "ma_fild02",getpartyname(getcharid(1))+"파티의"+strcharinfo(0)+" member began hunting Buwaya in Buwaya Cave.", getpartyname(getcharid(1))+" party's "+strcharinfo(0)+" member began hunting Buwaya in Buwaya Cave.",bc_map,"0x00ff99"; //FW_NORMAL 12 0 0
 			setquest 4229;
 			//warp "1@ma_c",35,57;
 			end;
 		default:
-			mes "- 정체를 알 수 없는 힘 때문에 들어갈 수 없었습니다. -";
+			mes needtr("- 정체를 알 수 없는 힘 때문에 들어갈 수 없었습니다. -", "- Could not enter due to an unidentified force. -");
 			close;
 		}
 	case 2:
-		mes "[경비병]";
-		mes "목숨을 소중히 여기십시오.";
-		mes "행동하기 전에 신중히 생각하는 편이 좋습니다.";
+		mes needtr("[경비병]", "[Guard]");
+		mes needtr("목숨을 소중히 여기십시오.", "You must value your life.");
+		mes needtr("행동하기 전에 신중히 생각하는 편이 좋습니다.", "It is better to think carefully before you act.");
 		close;
 	}
 }
@@ -179,25 +179,25 @@ OnTouch:
 }
 
 1@ma_c,29,110,5	script	납치된 사람#1	575,{
-	mes "[납치된 주민]";
-	mes "부여워가 날뛰고 있었고,";
-	mes "새로운 사람들이 붙잡혀 왔습니다.";
-	mes "우리는 평생 이곳에 갇혀 있게 될 겁니다.";
+	mes needtr("[납치된 주민]", "[Kidnapped Residents]");
+	mes needtr("부여워가 날뛰고 있었고,", "Buwaya was running around,");
+	mes needtr("새로운 사람들이 붙잡혀 왔습니다.", "and new people got caught.");
+	mes needtr("우리는 평생 이곳에 갇혀 있게 될 겁니다.", "We will be stuck in here for the rest of our lives.");
 	next;
-	switch(select("여기서 나가게 해줘!!:도...도망칠 수 없는 건가...?")) {
+	switch(select(needtr("여기서 나가게 해줘!!:도...도망칠 수 없는 건가...?", "Get me outta here!!:Ca...can't escape?"))) {
 	case 1:
-		mes "[납치된 주민]";
-		mes "우리 힘으로는 부술 수 없지만, 부여워에게는 약점이 있습니다.";
-		mes "저쪽 벽을 보세요.";
-		mes "그곳을 두드리면 부여워가 고통을 느끼고 당신을 뱉어낼 겁니다.";
+		mes needtr("[납치된 주민]", "[Kidnapped Residents]");
+		mes needtr("우리 힘으로는 부술 수 없지만, 부여워에게는 약점이 있습니다.", "We don't have enough power to destroy it but Buwaya has a weakness.");
+		mes needtr("저쪽 벽을 보세요.", "Look at the wall over there.");
+		mes needtr("그곳을 두드리면 부여워가 고통을 느끼고 당신을 뱉어낼 겁니다.", "If you knock there, Buywaya will feel pain and spit you out.");
 		donpcevent instance_npcname("#box_mob_call")+"::OnEnable";
 		close2;
 		disablenpc instance_npcname("납치된 사람#1");
 		end;
 	case 2:
-		mes "[납치된 사람들]";
-		mes "여긴 뭔가 이상합니다...";
-		mes "이런 일을 겪어본 적이 있습니까?";
+		mes needtr("[납치된 사람들]", "[Kidnapped People]");
+		mes needtr("여긴 뭔가 이상합니다...", "Somthing is wrong here...");
+		mes needtr("이런 일을 겪어본 적이 있습니까?", "Have you experienced this before?");
 		close;
 	}
 	end;
@@ -211,28 +211,28 @@ OnEnable:
 }
 
 1@ma_c,36,110,5	script	납치된 사람#2	574,{
-	mes "[납치된 주민]";
-	mes "아아! 내게 조금만 더 힘이 있었다면...";
-	mes "저는 놈의 약점을 알고 있습니다...";
+	mes needtr("[납치된 주민]", "[Kidnapped Residents]");
+	mes needtr("아아! 내게 조금만 더 힘이 있었다면...", "Ahaa! I wish I had a little more power...");
+	mes needtr("저는 놈의 약점을 알고 있습니다...", "I know its weakness...");
 	next;
-	switch(select("알고 있는 걸 말해봐.:정말 알고 있다는 거냐?")) {
+	switch(select(needtr("알고 있는 걸 말해봐.:정말 알고 있다는 거냐?", "Tell me.:Do you really know?"))) {
 	case 1:
-		mes "[납치된 주민]";
-		mes "정말 할 수 있겠습니까...?";
-		mes "좋습니다, 잘 들으세요.";
-		mes "놈의 약점은...";
+		mes needtr("[납치된 주민]", "[Kidnapped Residents]");
+		mes needtr("정말 할 수 있겠습니까...?", "Are you sure you can do it...?");
+		mes needtr("좋습니다, 잘 들으세요.", "Ok, listen carefully,");
+		mes needtr("놈의 약점은...", "its weakness is...");
 		next;
-		mes "[납치된 주민]";
-		mes "...우리 뒤쪽 벽에 있습니다.";
+		mes needtr("[납치된 주민]", "[Kidnapped Residents]");
+		mes needtr("...우리 뒤쪽 벽에 있습니다.", "...behind us on the walls.");
 		sc_start SC_ATKPOTION,60000,45;
 		sc_start SC_MATKPOTION,60000,45;
 		disablenpc instance_npcname("납치된 사람#2");
 		close;
 	case 2:
-		mes "[납치된 주민]";
-		mes "뭐라고?!";
-		mes "나를 무시하는 겁니까?";
-		mes "내가 여기 붙잡혀 있다고 해서요?";
+		mes needtr("[납치된 주민]", "[Kidnapped Residents]");
+		mes needtr("뭐라고?!", "WHAT?!");
+		mes needtr("나를 무시하는 겁니까?", "Are you ignoring me");
+		mes needtr("내가 여기 붙잡혀 있다고 해서요?", "because I'm captured in here?");
 		close;
 	}
 	end;
@@ -289,7 +289,7 @@ OnInstanceInit:
 	initnpctimer;
 	end;
 OnTimer30000:
-	mapannounce instance_mapname("1@ma_c"),"부여워 : 너희를 내 보물상자에 넣어주마!",bc_map,"0x00ff99"; //FW_NORMAL 12 0 0
+	mapannouncelang instance_mapname("1@ma_c"),"부여워 : 너희를 내 보물상자에 넣어주마!", "Buwaya : I will put you in my treasure box!",bc_map,"0x00ff99"; //FW_NORMAL 12 0 0
 	// Should execute OnTimer33000, but client doesn't render the effect fast enough.
 	for(set .@i,1; .@i<=9; set .@i,.@i+1)
 		donpcevent instance_npcname("#yunobi"+.@i)+"::OnEnable";
@@ -342,19 +342,19 @@ OnInstanceInit:
 	initnpctimer;
 	end;
 OnTimer58000:
-	mapannounce instance_mapname("1@ma_c"),"부여워 : 이제 충분하다, 끝까지 가보자!",bc_map,"0x00ff99"; //FW_NORMAL 12 0 0
+	mapannouncelang instance_mapname("1@ma_c"),"부여워 : 이제 충분하다, 끝까지 가보자!", "Buwaya : I had enough with this, let's go till the end!",bc_map,"0x00ff99"; //FW_NORMAL 12 0 0
 	end;
 OnTimer61000:
-	mapannounce instance_mapname("1@ma_c"),"부여워 : 이것은!",bc_map,"0x00ff99"; //FW_NORMAL 12 0 0
+	mapannouncelang instance_mapname("1@ma_c"),"부여워 : 이것은!", "Buwaya : This is!",bc_map,"0x00ff99"; //FW_NORMAL 12 0 0
 	end;
 OnTimer62000:
-	mapannounce instance_mapname("1@ma_c"),"부여워 : 이것은...나의!",bc_map,"0x00ff99"; //FW_NORMAL 12 0 0
+	mapannouncelang instance_mapname("1@ma_c"),"부여워 : 이것은...나의!", "Buwaya : This is...MY!",bc_map,"0x00ff99"; //FW_NORMAL 12 0 0
 	end;
 OnTimer63000:
-	mapannounce instance_mapname("1@ma_c"),"부여워 : 이것은...나의...치명적인!",bc_map,"0x00ff99"; //FW_NORMAL 12 0 0
+	mapannouncelang instance_mapname("1@ma_c"),"부여워 : 이것은...나의...치명적인!", "Buwaya : This is...MY...Deadly!",bc_map,"0x00ff99"; //FW_NORMAL 12 0 0
 	end;
 OnTimer64000:
-	mapannounce instance_mapname("1@ma_c"),"부여워 : 이것은...나의...치명적인...공격이다!",bc_map,"0x00ff99"; //FW_NORMAL 12 0 0
+	mapannouncelang instance_mapname("1@ma_c"),"부여워 : 이것은...나의...치명적인...공격이다!", "Buwaya : This is...MY...Deadly... ATTACK!",bc_map,"0x00ff99"; //FW_NORMAL 12 0 0
 	end;
 OnTimer65000:
 	set .@label$, instance_npcname("#bunshin")+"::OnMyMobDead";
@@ -365,7 +365,7 @@ OnTimer65000:
 	areamonster .@map$,72,89,82,99,"Buwaya",2332,1,.@label$;
 	end;
 OnTimer66000:
-	mapannounce instance_mapname("1@ma_c"),"부여워 : 겁먹었느냐?",bc_map,"0x00ff99"; //FW_NORMAL 12 0 0
+	mapannouncelang instance_mapname("1@ma_c"),"부여워 : 겁먹었느냐?", "Buwaya : Are you scared?",bc_map,"0x00ff99"; //FW_NORMAL 12 0 0
 	end;
 OnTimer105000:
 	killmonster instance_mapname("1@ma_c"),instance_npcname("#bunshin")+"::OnMyMobDead";
@@ -397,7 +397,7 @@ OnMyMobDead:
 		donpcevent instance_npcname("#bunshin")+"::OnDisable";
 		donpcevent instance_npcname("#exit_mob")+"::OnDisable";
 		donpcevent instance_npcname("#cave_out")+"::OnEnable";
-		mapannounce .@map$,"경비병 : 훌륭히 해내셨습니다. 서둘러 들어왔던 길로 탈출하세요!",bc_map,"0x00ff99"; //FW_NORMAL 12 0 0
+		mapannouncelang .@map$,"경비병 : 훌륭히 해내셨습니다. 서둘러 들어왔던 길로 탈출하세요!", "Guard : You did great work. Please hurry up and escape to the way you came in!",bc_map,"0x00ff99"; //FW_NORMAL 12 0 0
 	}
 	end;
 }
@@ -436,9 +436,9 @@ OnEnable:
 	enablenpc instance_npcname("#cave_out");
 	end;
 OnTouch:
-	mes "밖으로 나가시겠습니까?";
+	mes needtr("밖으로 나가시겠습니까?", "Would like to go out?");
 	next;
-	if(select("좋아, 나가자!:아니, 여기 남아 있겠다.") == 1)
+	if(select(needtr("좋아, 나가자!:아니, 여기 남아 있겠다.", "Yes!:No, I will stay.")) == 1)
 		warp "ma_fild02",315,315;
 	close;
 }

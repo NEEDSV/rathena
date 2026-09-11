@@ -17,75 +17,75 @@ verus04,75,114,5	script	찰스턴::Charleston#mcd	4_F_CHARLESTON02,{
 	.@limit = instance_ip_reward_limit(.@instance_db_id);
 
 	if (.@remaining == -1 || .@limit == -1) {
-		mes "보상 이용 횟수를 확인하지 못했습니다.";
-		mes "잠시 후 다시 시도해 주세요.";
+		mes needtr("보상 이용 횟수를 확인하지 못했습니다.", "Could not read your reward usage count.");
+		mes needtr("잠시 후 다시 시도해 주세요.", "Please try again in a moment.");
 		end;
 	}
 
 	if (.@remaining != -2 && .@limit > 0) {
 		if (.@remaining <= 0) {
-			mes "오늘 해당 던전의 보상 이용 횟수를";
-			mes "모두 사용했습니다.";
-			mes "남은 보상 횟수: ^FF00000회 / " + .@limit + "회^000000";
-			mes "초기화 시간: 매일 오전 4시";
+			mes needtr("오늘 해당 던전의 보상 이용 횟수를", "You have used up all the reward");
+			mes needtr("모두 사용했습니다.", "attempts for this dungeon today.");
+			mes needtr("남은 보상 횟수: ^FF00000회 / ", "Rewards left: ^FF00000 / ") + .@limit + needtr("회^000000", "^000000");
+			mes needtr("초기화 시간: 매일 오전 4시", "Reset time: 4:00 am every day");
 			end;
 		}
 
-		mes "오늘 남은 보상 횟수:";
-		mes "^3355FF" + .@remaining + "회 / " + .@limit + "회^000000";
+		mes needtr("오늘 남은 보상 횟수:", "Rewards left for today:");
+		mes "^3355FF" + .@remaining + needtr("회 / ", " / ") + .@limit + needtr("회^000000", "^000000");
 		next;
 	}
 	
 	cutin "nale01.bmp",0;
 	if (BaseLevel < 130) {
-		mes "[찰스턴]";
-		mes "레벨 130 이상이며 건강하고, 지병이 없고, 약을 복용하지 않는 모험가를 찾고 있어요.";
+		mes needtr("[찰스턴]", "[Charleston]");
+		mes needtr("레벨 130 이상이며 건강하고, 지병이 없고, 약을 복용하지 않는 모험가를 찾고 있어요.", "I'm looking for adventurers who are at least Level 130, healthy, free of chronic disease, and not on prescription drugs.");
 		close3;
 	}
 	if (isbegin_quest(13186) == 0) {
 		switch( isbegin_quest(13184) ) {
 		case 0:
-			mes "[찰스턴]";
-			mes "안녕하세요, 모험가님. 저는 독립 프로젝트를 시작한 찰스턴이에요.";
+			mes needtr("[찰스턴]", "[Charleston]");
+			mes needtr("안녕하세요, 모험가님. 저는 독립 프로젝트를 시작한 찰스턴이에요.", "Hello, Adventurer. I'm Charleston, the initiator of the Project Independent.");
 			next;
-			mes "[찰스턴]";
-			mes "현재 부품 하나에 문제가 생겨 움직일 수 없어요. 공장에서 교체용 부품을 구해다 주시겠어요?";
+			mes needtr("[찰스턴]", "[Charleston]");
+			mes needtr("현재 부품 하나에 문제가 생겨 움직일 수 없어요. 공장에서 교체용 부품을 구해다 주시겠어요?", "Currently I'm unable to move, having a problem with one of my components. Could you help me get the replacement parts from the factory?");
 			next;
-			if (select( "도와드릴게요.", "아니요." ) == 1) {
-				mes "[찰스턴]";
-				mes "레벨 130 이상이고 건강하다면 그리 어려운 일은 아닐 거예요.";
+			if (select( needtr("도와드릴게요.", "Sure."), needtr("아니요.", "No.") ) == 1) {
+				mes needtr("[찰스턴]", "[Charleston]");
+				mes needtr("레벨 130 이상이고 건강하다면 그리 어려운 일은 아닐 거예요.", "The task won't be difficult if you're at least Level 130, healthy, free of chronic disease, and not on prescription drugs.");
 				next;
-				mes "[찰스턴]";
-				mes "오른쪽의 기계 장치를 이용해 공장으로 들어가세요. 안에 들어가면 침착하게 안내를 따라 주세요.";
+				mes needtr("[찰스턴]", "[Charleston]");
+				mes needtr("오른쪽의 기계 장치를 이용해 공장으로 들어가세요. 안에 들어가면 침착하게 안내를 따라 주세요.", "Please use the machine on the right side to enter the factory. Once you're in, remain calm and follow the instructions.");
 				setquest 13184;
 			}
 			close3;
 		case 1:
-			mes "[찰스턴]";
-			mes "제 옆의 기계 장치를 이용해 공장으로 들어가세요. 안에 들어가면 침착하게 안내를 따라 주세요.";
+			mes needtr("[찰스턴]", "[Charleston]");
+			mes needtr("제 옆의 기계 장치를 이용해 공장으로 들어가세요. 안에 들어가면 침착하게 안내를 따라 주세요.", "Please use the machine next to me to enter the factory. Once you're in, remain calm and follow the instructions.");
 			close3;
 		case 2:
 			cutin "nale03.bmp",0;
-			mes "[찰스턴]";
-			mes "얼마나 오랫동안 이곳에 서 있었는지 모르겠어요. 움직이지 못하게 된 지도 아주 오래됐고요...";
+			mes needtr("[찰스턴]", "[Charleston]");
+			mes needtr("얼마나 오랫동안 이곳에 서 있었는지 모르겠어요. 움직이지 못하게 된 지도 아주 오래됐고요...", "I don't know how long it's been standing here, but it's been a long time since I've been able to move...");
 			next;
-			mes "[찰스턴]";
-			mes "지금은 머리만 겨우 움직일 수 있어요. 샬로쉬가 제 내부 장치를 열어 주던 그때로 돌아갈 수만 있다면...";
+			mes needtr("[찰스턴]", "[Charleston]");
+			mes needtr("지금은 머리만 겨우 움직일 수 있어요. 샬로쉬가 제 내부 장치를 열어 주던 그때로 돌아갈 수만 있다면...", "At present, only my head can move, is Saleh she helped me open the organs can return to that time...");
 			next;
-			mes "[찰스턴]";
-			mes "그때 누군가 말려 주었다면 그런 선택은 하지 않았을 텐데요.";
+			mes needtr("[찰스턴]", "[Charleston]");
+			mes needtr("그때 누군가 말려 주었다면 그런 선택은 하지 않았을 텐데요.", "I wouldn't have done that if I had been persuaded.");
 			next;
-			mes "[찰스턴]";
-			mes "어쨌든 지금 제게 남은 것은 아무것도 없어요... 다시 일어설 수만 있다면, 그때 당신 같은 모험가를 보낼 수 있을 텐데요.";
+			mes needtr("[찰스턴]", "[Charleston]");
+			mes needtr("어쨌든 지금 제게 남은 것은 아무것도 없어요... 다시 일어설 수만 있다면, 그때 당신 같은 모험가를 보낼 수 있을 텐데요.", "Anyway, I have nothing now... Only to be able to stand up again, so I hope to send an adventurer like you at that time.");
 			next;
-			mes "[찰스턴]";
-			mes "^FF0000아무것도 바뀌지 않았어요.^000000";
+			mes needtr("[찰스턴]", "[Charleston]");
+			mes needtr("^FF0000아무것도 바뀌지 않았어요.^000000", "^FF0000It didn't change anything.^000000");
 			next;
-			mes "[찰스턴]";
-			mes "OS가 스스로 애쓴 덕분일 뿐이지만... 다른 세계에서 도와주신 덕분에 찰스턴 2호는 훨씬 좋은 로봇이 될 수 있을 거예요!";
+			mes needtr("[찰스턴]", "[Charleston]");
+			mes needtr("OS가 스스로 애쓴 덕분일 뿐이지만... 다른 세계에서 도와주신 덕분에 찰스턴 2호는 훨씬 좋은 로봇이 될 수 있을 거예요!", "Just based on the hard work of OS... For your help in another part of the world Charleston 2 will be 'very good' robot!");
 			next;
-			mes "[찰스턴]";
-			mes "좋은 친구를 만나면 좋은 로봇으로 성장할 수 있겠죠. 그러니 계속 나아가야 해요. 고마워요!";
+			mes needtr("[찰스턴]", "[Charleston]");
+			mes needtr("좋은 친구를 만나면 좋은 로봇으로 성장할 수 있겠죠. 그러니 계속 나아가야 해요. 고마워요!", "It is possible to meet a good friend into a good robot, so I have to continue to carry on, Thank you!");
 			erasequest 13184;
 			if (isbegin_quest(13186) == 0) {
 				setquest 13186;
@@ -101,41 +101,41 @@ verus04,75,114,5	script	찰스턴::Charleston#mcd	4_F_CHARLESTON02,{
 	cutin "nale03.bmp",0;
 	switch( isbegin_quest(13184) ) {
 	case 0:
-		mes "[찰스턴]";
-		mes "실망스럽지 않나요? 정말 지금까지의 노력을 헛되게 만들 건가요? 너무 어리석은 선택이에요. 다시 생각해 보세요.";
+		mes needtr("[찰스턴]", "[Charleston]");
+		mes needtr("실망스럽지 않나요? 정말 지금까지의 노력을 헛되게 만들 건가요? 너무 어리석은 선택이에요. 다시 생각해 보세요.", "Aren't you disappointed? Are you really going to let your effort go in vain? Because that'll be really stupid. I suggest you reconsider.");
 		next;
-		if (select( "한 줄기 희망이라도 있다면 다시 해볼게요.", "다시 생각해 볼게요." ) == 1) {
-			mes "[찰스턴]";
-			mes "저는 로봇이에요. 입력된 명령을 수행할 뿐, 다른 것은 중요하지 않아요.";
+		if (select( needtr("한 줄기 희망이라도 있다면 다시 해볼게요.", "I'll try again if there's a sliver of hope."), needtr("다시 생각해 볼게요.", "I'll think again.") ) == 1) {
+			mes needtr("[찰스턴]", "[Charleston]");
+			mes needtr("저는 로봇이에요. 입력된 명령을 수행할 뿐, 다른 것은 중요하지 않아요.", "I'm a robot. I do what I'm programmed to do, and nothing else matters.");
 			next;
-			mes "[찰스턴]";
-			mes "아이러니하죠? 로봇은 감정을 느끼지 못한다는데, 저는 지나간 일을 후회하고 있으니까요.";
+			mes needtr("[찰스턴]", "[Charleston]");
+			mes needtr("아이러니하죠? 로봇은 감정을 느끼지 못한다는데, 저는 지나간 일을 후회하고 있으니까요.", "Ironic, isn't it? Robots are supposed to be incapable of emotions, and yet here I am, feeling rueful about the past.");
 			next;
-			mes "[찰스턴]";
-			mes "저를 비난할 수는 있어도 막을 수는 없어요. 한 줄기 희망이라도 남아 있는 한 계속 시도할 거예요.";
+			mes needtr("[찰스턴]", "[Charleston]");
+			mes needtr("저를 비난할 수는 있어도 막을 수는 없어요. 한 줄기 희망이라도 남아 있는 한 계속 시도할 거예요.", "You can judge me, but you can't stop me. I'll continue to try as long as there's a sliver of hope.");
 			next;
-			mes "[찰스턴]";
-			mes "제 심장은 멈췄지만 아직 말할 수는 있어요. 부디 도와주세요.";
+			mes needtr("[찰스턴]", "[Charleston]");
+			mes needtr("제 심장은 멈췄지만 아직 말할 수는 있어요. 부디 도와주세요.", "My heart stopped, but I still can talk. Please help me.");
 			setquest 13184;
 		}
 		close3;
 	case 1:
-		mes "[찰스턴]";
-		mes "바꿀 수 없는 과거와 불확실한 미래, 우울한 현재에 지쳤다면 억지로 붙잡지는 않을게요.";
+		mes needtr("[찰스턴]", "[Charleston]");
+		mes needtr("바꿀 수 없는 과거와 불확실한 미래, 우울한 현재에 지쳤다면 억지로 붙잡지는 않을게요.", "If you're disillusioned by your immutable past, unclear future, and depressing present, then I won't force you.");
 		next;
-		if (select( "한 줄기 희망이라도 있다면 다시 해볼게요.", "포기할게요." ) == 1) {
-			mes "[찰스턴]";
-			mes "한 줄기 희망이라도 남아 있는 한 계속 시도할 거예요.";
+		if (select( needtr("한 줄기 희망이라도 있다면 다시 해볼게요.", "I'll try again if there's a sliver of hope."), needtr("포기할게요.", "I give up.") ) == 1) {
+			mes needtr("[찰스턴]", "[Charleston]");
+			mes needtr("한 줄기 희망이라도 남아 있는 한 계속 시도할 거예요.", "I'll continue to try as long as there's a sliver of hope.");
 			close3;
 		}
 		erasequest 13184;
 		close3;
 	case 2:
-		mes "[찰스턴]";
-		mes "저는 그 일을 막지도, 과거를 바꾸지도 못했어요. 하지만 다른 누군가는 가능할지도 몰라요.";
+		mes needtr("[찰스턴]", "[Charleston]");
+		mes needtr("저는 그 일을 막지도, 과거를 바꾸지도 못했어요. 하지만 다른 누군가는 가능할지도 몰라요.", "I couldn't stop it from happening or change the past. But maybe someone else can.");
 		next;
-		mes "[찰스턴]";
-		mes "얼마나 오래 걸리더라도 그 한 사람을 기다릴 거예요.";
+		mes needtr("[찰스턴]", "[Charleston]");
+		mes needtr("얼마나 오래 걸리더라도 그 한 사람을 기다릴 거예요.", "I'll wait for that one person however long it takes.");
 		erasequest 13184;
 		getexp 1500000,500000;
 		close3;
@@ -152,37 +152,37 @@ verus04,81,112,5	script	기계 장치::Machine#mcd	PORTAL,{
 	.@limit = instance_ip_reward_limit(.@instance_db_id);
 
 	if (.@remaining == -1 || .@limit == -1) {
-		mes "보상 이용 횟수를 확인하지 못했습니다.";
-		mes "잠시 후 다시 시도해 주세요.";
+		mes needtr("보상 이용 횟수를 확인하지 못했습니다.", "Could not read your reward usage count.");
+		mes needtr("잠시 후 다시 시도해 주세요.", "Please try again in a moment.");
 		end;
 	}
 
 	if (.@remaining != -2 && .@limit > 0) {
 		if (.@remaining <= 0) {
-			mes "오늘 해당 던전의 보상 이용 횟수를";
-			mes "모두 사용했습니다.";
-			mes "남은 보상 횟수: ^FF00000회 / " + .@limit + "회^000000";
-			mes "초기화 시간: 매일 오전 4시";
+			mes needtr("오늘 해당 던전의 보상 이용 횟수를", "You have used up all the reward");
+			mes needtr("모두 사용했습니다.", "attempts for this dungeon today.");
+			mes needtr("남은 보상 횟수: ^FF00000회 / ", "Rewards left: ^FF00000 / ") + .@limit + needtr("회^000000", "^000000");
+			mes needtr("초기화 시간: 매일 오전 4시", "Reset time: 4:00 am every day");
 			end;
 		}
 
-		mes "오늘 남은 보상 횟수:";
-		mes "^3355FF" + .@remaining + "회 / " + .@limit + "회^000000";
+		mes needtr("오늘 남은 보상 횟수:", "Rewards left for today:");
+		mes "^3355FF" + .@remaining + needtr("회 / ", " / ") + .@limit + needtr("회^000000", "^000000");
 		next;
 	}
 	
 	if (BaseLevel < 130) {
-		mes "[기계 장치]";
-		mes "^ff0000이 기계 장치를 이용하려면 BaseLv 130 이상이어야 합니다.^000000";
+		mes needtr("[기계 장치]", "[Machine]");
+		mes needtr("^ff0000이 기계 장치를 이용하려면 BaseLv 130 이상이어야 합니다.^000000", "^ff0000You must be Level 130 to use this machine.^000000");
 		close;
 	}
 	if (isbegin_quest(13184) != 1) {
-		mes "^ff0000이 기계 장치를 이용하려면 찰스턴의 허가가 필요합니다.^000000";
+		mes needtr("^ff0000이 기계 장치를 이용하려면 찰스턴의 허가가 필요합니다.^000000", "^ff0000You need Charleston's permission to use this machine.^000000");
 		close;
 	}
 	.@party_id = getcharid(1);
 	if (.@party_id < 1) {
-		mes "^ff0000이 던전에 입장하려면 먼저 파티를 생성하거나 가입해야 합니다.^000000";
+		mes needtr("^ff0000이 던전에 입장하려면 먼저 파티를 생성하거나 가입해야 합니다.^000000", "^ff0000You first must form/join a party of at least 1 person to enter this dungeon.^000000");
 		close;
 	}
 	switch( checkquest(13185,PLAYTIME) ) {
@@ -190,10 +190,10 @@ verus04,81,112,5	script	기계 장치::Machine#mcd	PORTAL,{
 		break;
 	case 0:
 	case 1:
-		mes "^ff0000최근 이용 후 20시간 동안은 이 기계 장치를 다시 사용할 수 없습니다.^000000";
+		mes needtr("^ff0000최근 이용 후 20시간 동안은 이 기계 장치를 다시 사용할 수 없습니다.^000000", "^ff0000This machine cannot be accessed for 20 hours after your last access.^000000");
 		close;
 	case 2:
-		mes "이제 기계 장치를 다시 사용할 수 있습니다.";
+		mes needtr("이제 기계 장치를 다시 사용할 수 있습니다.", "The machine is now available for use.");
 		erasequest 13185;
 		close;
 	}
@@ -201,46 +201,46 @@ verus04,81,112,5	script	기계 장치::Machine#mcd	PORTAL,{
 	.@p_leader$ = getpartyleader(.@party_id);
 	.@md_name$ = "위기의 찰스턴";
 	if (is_party_leader() == true)
-		.@menu$ = "차원의 균열을 연다.";
+		.@menu$ = needtr("차원의 균열을 연다.", "Open the dimensional portal.");
 
-	switch( select( .@menu$, "찰스턴 공장에 입장한다.", "취소한다." ) ) {
+	switch( select( .@menu$, needtr("찰스턴 공장에 입장한다.", "Enter the Charleston Factory."), needtr("취소한다.", "Cancel.") ) ) {
 	case 1:
 		if (instance_create(.@md_name$) < 0) {
-			mes "파티: " + .@p_name$;
-			mes "파티장: " + .@p_leader$;
-			mes "^0000ff위기의 찰스턴^000000 - 알 수 없는 오류";
+			mes needtr("파티: ", "Party: ") + .@p_name$;
+			mes needtr("파티장: ", "Party leader: ") + .@p_leader$;
+			mes needtr("^0000ff위기의 찰스턴^000000 - 알 수 없는 오류", "^0000ffCharleston Crisis^000000 - unknown error");
 			close;
 		}
-		mes "^ff0000이동을 준비하고 있습니다...^000000";
-		mes "^ff0000잠시만 기다려 주세요.^000000";
+		mes needtr("^ff0000이동을 준비하고 있습니다...^000000", "^ff0000Preparing to teleport...^000000");
+		mes needtr("^ff0000잠시만 기다려 주세요.^000000", "^ff0000Please wait.^000000");
 		close;
 	case 2:
 		if (is_party_leader() == false) {
-			mes "[기계 장치]";
-			mes "이동합니다...";
+			mes needtr("[기계 장치]", "[Machine]");
+			mes needtr("이동합니다...", "Teleporting...");
 			next;
-			mes "[기계 장치]";
-			mes "^ff0000최근 이용 후 20시간 동안은 이 기계 장치를 다시 사용할 수 없습니다.^000000";
+			mes needtr("[기계 장치]", "[Machine]");
+			mes needtr("^ff0000최근 이용 후 20시간 동안은 이 기계 장치를 다시 사용할 수 없습니다.^000000", "^ff0000This machine cannot be accessed for 20 hours after your last access.^000000");
 			next;
 		}
 		switch( instance_enter(.@md_name$) ) {
 		case IE_OTHER:
-			mes "[기계 장치]";
-			mes "^ff0000알 수 없는 오류가 발생했습니다.^000000";
+			mes needtr("[기계 장치]", "[Machine]");
+			mes needtr("^ff0000알 수 없는 오류가 발생했습니다.^000000", "^ff0000An unknown error occurred.^000000");
 			close;
 		case IE_NOINSTANCE:
-			mes "[기계 장치]";
-			mes "^ff0000파티장이 아직 차원의 균열을 생성하지 않았습니다.^000000";
+			mes needtr("[기계 장치]", "[Machine]");
+			mes needtr("^ff0000파티장이 아직 차원의 균열을 생성하지 않았습니다.^000000", "^ff0000Your party leader has not yet created a Time Crack.^000000");
 			close;
 		case IE_NOMEMBER:
-			mes "[기계 장치]";
-			mes "^ff0000해당 파티의 구성원만 메모리얼 던전에 입장할 수 있습니다.^000000";
+			mes needtr("[기계 장치]", "[Machine]");
+			mes needtr("^ff0000해당 파티의 구성원만 메모리얼 던전에 입장할 수 있습니다.^000000", "^ff0000Only a member of the party can enter the Memorial Dungeon.^000000");
 			close;
 		case IE_OK:
 			setquest 13185;
 			specialeffect2 EF_READYPORTAL2;
 			specialeffect2 EF_PORTAL2;
-			mapannounce "verus04", getpartyname(getcharid(1)) + " 파티의 " + strcharinfo(0) + " 님이 위기의 찰스턴에 입장합니다.", bc_map, 0x00ff99;
+			mapannouncelang "verus04", getpartyname(getcharid(1)) + " 파티의 " + strcharinfo(0) + " 님이 위기의 찰스턴에 입장합니다.", getpartyname(getcharid(1)) + " party's " + strcharinfo(0) + " is entering Charleston Crisis.", bc_map, 0x00ff99;
 			// NEED 성장지원 - 실제 입장 성공 시점 학습 기록
 			callfunc("F_NEED_GuideEnter", "CHARLESTON");
 			end;
@@ -258,10 +258,10 @@ function	script	F_CharlestonSkipMenu	{
 	if ('need_charleston_fast != 1 || is_party_leader() == false)
 		return 0;
 
-	mes "[빠른 진행]";
-	mes "이미 확인한 대화와 연출을 생략할 수 있습니다.";
+	mes needtr("[빠른 진행]", "[Fast Progress]");
+	mes needtr("이미 확인한 대화와 연출을 생략할 수 있습니다.", "You can skip the dialogue and cutscenes you have already seen.");
 	next;
-	return select( "대화와 연출을 생략한다.", "대화와 연출을 확인한다.") == 1;
+	return select( needtr("대화와 연출을 생략한다.", "Skip the dialogue and cutscenes."), needtr("대화와 연출을 확인한다.", "Watch the dialogue and cutscenes.")) == 1;
 }
 
 // 파티 내 온라인 구성원 모두가 최초 클리어를 완료했는지 확인합니다.
@@ -304,7 +304,7 @@ function	script	F_CharlestonEnableFast	{
 	enablenpc instance_npcname("3gate#1");
 	enablenpc instance_npcname("4gate#1");
 
-	mapannounce 'map_name$, "빠른 진행 모드가 활성화되었습니다. 빠른 이동 포탈과 대화 생략 메뉴를 이용할 수 있습니다.", bc_map, 0x33CCFF;
+	mapannouncelang 'map_name$, "빠른 진행 모드가 활성화되었습니다. 빠른 이동 포탈과 대화 생략 메뉴를 이용할 수 있습니다.", "Fast Progress mode has been activated. You can use the quick move portal and the skip-dialogue menu.", bc_map, 0x33CCFF;
 	return 1;
 }
 
@@ -314,43 +314,43 @@ function	script	F_CharlestonEnableFast	{
 		#NEED_MD_CHARLESTON_CLEAR = 1;
 
 	if ('need_charleston_fast == 1) {
-		mes "[빠른 진행 안내]";
-		mes "이 인스턴스에는 빠른 진행 모드가 적용되어 있습니다.";
+		mes needtr("[빠른 진행 안내]", "[Fast Progress Notice]");
+		mes needtr("이 인스턴스에는 빠른 진행 모드가 적용되어 있습니다.", "Fast progress mode is active in this instance.");
 		close;
 	}
 
 	if (#NEED_MD_CHARLESTON_CLEAR == 0) {
-		mes "[빠른 진행 안내]";
-		mes "최초 클리어 전에는 모든 진행과 대화를 직접 확인해야 합니다.";
+		mes needtr("[빠른 진행 안내]", "[Fast Progress Notice]");
+		mes needtr("최초 클리어 전에는 모든 진행과 대화를 직접 확인해야 합니다.", "Before your first clear you have to see every step and every line yourself.");
 		close;
 	}
 
 	if (is_party_leader() == false) {
-		mes "[빠른 진행 안내]";
-		mes "빠른 진행 모드는 파티장만 활성화할 수 있습니다.";
+		mes needtr("[빠른 진행 안내]", "[Fast Progress Notice]");
+		mes needtr("빠른 진행 모드는 파티장만 활성화할 수 있습니다.", "Only the party leader can turn on fast progress mode.");
 		close;
 	}
 
-	mes "[빠른 진행 안내]";
-	mes "이 계정은 위기의 찰스턴 최초 클리어 기록이 확인되었습니다.";
-	mes "빠른 진행 모드를 활성화하면 주요 전투와 필수 재료는 유지되지만, 긴 대화와 이동 시간을 줄일 수 있습니다.";
+	mes needtr("[빠른 진행 안내]", "[Fast Progress Notice]");
+	mes needtr("이 계정은 위기의 찰스턴 최초 클리어 기록이 확인되었습니다.", "This account has a record of a first clear of Charleston Crisis.");
+	mes needtr("빠른 진행 모드를 활성화하면 주요 전투와 필수 재료는 유지되지만, 긴 대화와 이동 시간을 줄일 수 있습니다.", "Fast progress keeps the main fights and the required materials, but cuts the long dialogue and the travel time.");
 	next;
-	switch( select( "일반 진행을 유지한다.", "빠른 진행 모드를 활성화한다.", "취소한다." ) ) {
+	switch( select( needtr("일반 진행을 유지한다.", "Stay on the normal run."), needtr("빠른 진행 모드를 활성화한다.", "Turn on fast progress mode."), needtr("취소한다.", "Cancel.") ) ) {
 	case 1:
-		mes "[빠른 진행 안내]";
-		mes "기존 방식으로 진행합니다.";
+		mes needtr("[빠른 진행 안내]", "[Fast Progress Notice]");
+		mes needtr("기존 방식으로 진행합니다.", "Proceeding the usual way.");
 		close;
 	case 2:
 		if (callfunc("F_CharlestonCanEnableFast") == 0) {
-			mes "[빠른 진행 안내]";
-			mes "파티 내 온라인 구성원 중 최초 클리어를 완료하지 않은 계정이 있습니다.";
-			mes "모든 구성원이 최초 진행을 완료한 뒤 이용해 주세요.";
+			mes needtr("[빠른 진행 안내]", "[Fast Progress Notice]");
+			mes needtr("파티 내 온라인 구성원 중 최초 클리어를 완료하지 않은 계정이 있습니다.", "Some accounts among the party members online have not finished a first clear.");
+			mes needtr("모든 구성원이 최초 진행을 완료한 뒤 이용해 주세요.", "Please use it once every member has finished the run once.");
 			close;
 		}
 		callfunc("F_CharlestonEnableFast");
-		mes "[빠른 진행 안내]";
-		mes "빠른 이동 포탈이 활성화되었습니다.";
-		mes "주요 NPC 대화에서 생략 여부를 선택할 수 있습니다.";
+		mes needtr("[빠른 진행 안내]", "[Fast Progress Notice]");
+		mes needtr("빠른 이동 포탈이 활성화되었습니다.", "The fast travel portals are active.");
+		mes needtr("주요 NPC 대화에서 생략 여부를 선택할 수 있습니다.", "You can choose whether to skip at each of the main NPC conversations.");
 		close;
 	case 3:
 		end;
@@ -363,14 +363,14 @@ function	script	F_CharlestonEnableFast	{
 	if ('need_charleston_fast != 1)
 		end;
 
-	mes "[빠른 이동 포탈]";
-	mes "현재 진행 단계: ^3355FF" + 'ep15_1_mcd01 + "^000000";
+	mes needtr("[빠른 이동 포탈]", "[Fast Travel Portal]");
+	mes needtr("현재 진행 단계: ^3355FF", "Current step: ^3355FF") + 'ep15_1_mcd01 + "^000000";
 
 	switch( 'ep15_1_mcd01 ) {
 	case 0:
-		mes "찰스턴 1호와 대화해 공장 조사를 시작해 주세요.";
+		mes needtr("찰스턴 1호와 대화해 공장 조사를 시작해 주세요.", "Talk to Charleston 1 to start investigating the factory.");
 		next;
-		if (select( "공장 입구", "취소" ) == 1) {
+		if (select( needtr("공장 입구", "Factory Entrance"), needtr("취소", "Cancel") ) == 1) {
 			close2;
 			warp 'map_name$,127,270;
 			end;
@@ -379,18 +379,18 @@ function	script	F_CharlestonEnableFast	{
 	case 1:
 	case 2:
 	case 3:
-		mes "연구실로 바로 이동할 수 있습니다.";
+		mes needtr("연구실로 바로 이동할 수 있습니다.", "You can move straight to the research lab.");
 		next;
-		switch( select( "공장 입구", "베 박사 연구실", "취소" ) ) {
+		switch( select( needtr("공장 입구", "Factory Entrance"), needtr("베 박사 연구실", "Dr. Ve Research Lab"), needtr("취소", "Cancel") ) ) {
 		case 1: close2; warp 'map_name$,127,270; end;
 		case 2: close2; warp 'map_name$,120,220; end;
 		case 3: close;
 		}
 		end;
 	case 4:
-		mes "락스텝 탐색 위치로 이동할 수 있습니다.";
+		mes needtr("락스텝 탐색 위치로 이동할 수 있습니다.", "You can move to the Lockstep search positions.");
 		next;
-		switch( select( "연구실", "락스텝 1", "락스텝 2", "락스텝 3", "락스텝 4", "락스텝 5", "락스텝 6", "락스텝 7", "취소" ) ) {
+		switch( select( needtr("연구실", "Research Lab"), needtr("락스텝 1", "Lockstep 1"), needtr("락스텝 2", "Lockstep 2"), needtr("락스텝 3", "Lockstep 3"), needtr("락스텝 4", "Lockstep 4"), needtr("락스텝 5", "Lockstep 5"), needtr("락스텝 6", "Lockstep 6"), needtr("락스텝 7", "Lockstep 7"), needtr("취소", "Cancel") ) ) {
 		case 1: close2; warp 'map_name$,120,220; end;
 		case 2: close2; warp 'map_name$,82,226; end;
 		case 3: close2; warp 'map_name$,124,84; end;
@@ -405,9 +405,9 @@ function	script	F_CharlestonEnableFast	{
 	case 5:
 	case 6:
 	case 7:
-		mes "보조 발전기 위치로 이동할 수 있습니다.";
+		mes needtr("보조 발전기 위치로 이동할 수 있습니다.", "You can move to the auxiliary generator positions.");
 		next;
-		switch( select( "연구실", "보조 발전기 1", "보조 발전기 2", "보조 발전기 3", "취소" ) ) {
+		switch( select( needtr("연구실", "Research Lab"), needtr("보조 발전기 1", "Auxiliary Generator 1"), needtr("보조 발전기 2", "Auxiliary Generator 2"), needtr("보조 발전기 3", "Auxiliary Generator 3"), needtr("취소", "Cancel") ) ) {
 		case 1: close2; warp 'map_name$,120,220; end;
 		case 2: close2; warp 'map_name$,84,231; end;
 		case 3: close2; warp 'map_name$,170,196; end;
@@ -417,68 +417,68 @@ function	script	F_CharlestonEnableFast	{
 		end;
 	case 8:
 	case 9:
-		mes "연구실 전투 구역으로 이동할 수 있습니다.";
+		mes needtr("연구실 전투 구역으로 이동할 수 있습니다.", "You can move to the research lab battle area.");
 		next;
-		switch( select( "연구실", "찰스턴 2호 전투 구역", "취소" ) ) {
+		switch( select( needtr("연구실", "Research Lab"), needtr("찰스턴 2호 전투 구역", "Charleston 2 Battle Area"), needtr("취소", "Cancel") ) ) {
 		case 1: close2; warp 'map_name$,120,220; end;
 		case 2: close2; warp 'map_name$,140,214; end;
 		case 3: close;
 		}
 		end;
 	case 10:
-		mes "공장 중앙 코어 앞으로 이동할 수 있습니다.";
+		mes needtr("공장 중앙 코어 앞으로 이동할 수 있습니다.", "You can move in front of the factory central core.");
 		next;
-		switch( select( "연구실", "중앙 코어", "취소" ) ) {
+		switch( select( needtr("연구실", "Research Lab"), needtr("중앙 코어", "Central Core"), needtr("취소", "Cancel") ) ) {
 		case 1: close2; warp 'map_name$,120,220; end;
 		case 2: close2; warp 'map_name$,130,122; end;
 		case 3: close;
 		}
 		end;
 	case 11:
-		mes "코어 접속 장치 진행 위치로 이동할 수 있습니다.";
+		mes needtr("코어 접속 장치 진행 위치로 이동할 수 있습니다.", "You can move to where the core access device continues.");
 		next;
 		if (isnpccloaked(instance_npcname("8gate#1")) == false) {
-			switch( select( "중앙 코어", "찰스턴 3호 격납고", "취소" ) ) {
+			switch( select( needtr("중앙 코어", "Central Core"), needtr("찰스턴 3호 격납고", "Charleston 3 Hangar"), needtr("취소", "Cancel") ) ) {
 			case 1: close2; warp 'map_name$,130,122; end;
 			case 2: close2; warp 'map_name$,130,145; end;
 			case 3: close;
 			}
 		}
-		switch( select( "중앙 코어", "취소" ) ) {
+		switch( select( needtr("중앙 코어", "Central Core"), needtr("취소", "Cancel") ) ) {
 		case 1: close2; warp 'map_name$,130,122; end;
 		case 2: close;
 		}
 		end;
 	case 12:
-		mes "찰스턴 3호 전투 구역으로 이동할 수 있습니다.";
+		mes needtr("찰스턴 3호 전투 구역으로 이동할 수 있습니다.", "You can move to the Charleston 3 battle area.");
 		next;
-		switch( select( "찰스턴 3호 격납고", "취소" ) ) {
+		switch( select( needtr("찰스턴 3호 격납고", "Charleston 3 Hangar"), needtr("취소", "Cancel") ) ) {
 		case 1: close2; warp 'map_name$,130,145; end;
 		case 2: close;
 		}
 		end;
 	case 13:
-		mes "찰스턴 2호의 후속 진행 위치로 이동할 수 있습니다.";
+		mes needtr("찰스턴 2호의 후속 진행 위치로 이동할 수 있습니다.", "You can move to where Charleston 2 continues.");
 		next;
-		switch( select( "찰스턴 3호 격납고", "연구실", "취소" ) ) {
+		switch( select( needtr("찰스턴 3호 격납고", "Charleston 3 Hangar"), needtr("연구실", "Research Lab"), needtr("취소", "Cancel") ) ) {
 		case 1: close2; warp 'map_name$,130,145; end;
 		case 2: close2; warp 'map_name$,120,214; end;
 		case 3: close;
 		}
 		end;
 	case 14:
-		mes "베 박사가 있는 연구실로 이동할 수 있습니다.";
+		mes needtr("베 박사가 있는 연구실로 이동할 수 있습니다.", "You can move to the research lab where Dr. Ve is.");
 		next;
-		switch( select( "연구실", "찰스턴 3호 격납고", "취소" ) ) {
+		switch( select( needtr("연구실", "Research Lab"), needtr("찰스턴 3호 격납고", "Charleston 3 Hangar"), needtr("취소", "Cancel") ) ) {
 		case 1: close2; warp 'map_name$,120,214; end;
 		case 2: close2; warp 'map_name$,130,145; end;
 		case 3: close;
 		}
 		end;
 	default:
-		mes "마무리 진행 위치로 이동할 수 있습니다.";
+		mes needtr("마무리 진행 위치로 이동할 수 있습니다.", "You can move to the closing step.");
 		next;
-		switch( select( "연구실", "샬로쉬", "취소" ) ) {
+		switch( select( needtr("연구실", "Research Lab"), needtr("샬로쉬", "Shalosh"), needtr("취소", "Cancel") ) ) {
 		case 1: close2; warp 'map_name$,120,214; end;
 		case 2: close2; warp 'map_name$,80,167; end;
 		case 3: close;
@@ -502,10 +502,10 @@ function	script	F_CharlestonEnableFast	{
 
 // GM용 NPC
 sec_in02,10,13,3	script	찰스턴 테스트::Charleston#sara	4_F_CHARLESTON01,{
-	mes "위기의 찰스턴 테스트 ver130603a";
+	mes needtr("위기의 찰스턴 테스트 ver130603a", "Charleston Crisis test ver130603a");
 	if (callfunc("F_GM_NPC",1854,0,0,9999) < 1)
 		close;
-	switch( select( "20시간 재입장 대기시간 초기화", "초기 진행 퀘스트 상태 초기화", "던전 진행 완료 상태 설정", "빠른 진행 해금", "빠른 진행 해금 초기화" ) ) {
+	switch( select( needtr("20시간 재입장 대기시간 초기화", "Reset the 20-hour re-entry cooldown"), needtr("초기 진행 퀘스트 상태 초기화", "Reset the opening quest state"), needtr("던전 진행 완료 상태 설정", "Set the dungeon as completed"), needtr("빠른 진행 해금", "Unlock fast progress"), needtr("빠른 진행 해금 초기화", "Reset the fast progress unlock") ) ) {
 	case 1:
 		if (isbegin_quest(13185))
 			erasequest 13185;
@@ -526,13 +526,13 @@ sec_in02,10,13,3	script	찰스턴 테스트::Charleston#sara	4_F_CHARLESTON01,{
 		close;
 	case 4:
 		#NEED_MD_CHARLESTON_CLEAR = 1;
-		mes "빠른 진행 기능을 해금했습니다.";
+		mes needtr("빠른 진행 기능을 해금했습니다.", "Fast progress has been unlocked.");
 		close;
 	case 5:
 		#NEED_MD_CHARLESTON_CLEAR = 0;
 		if (isbegin_quest(13186) > 0)
 			erasequest 13186;
-		mes "빠른 진행 해금 기록과 기존 완료 퀘스트 기록을 초기화했습니다.";
+		mes needtr("빠른 진행 해금 기록과 기존 완료 퀘스트 기록을 초기화했습니다.", "The fast progress unlock record and the existing completed-quest records have been reset.");
 		close;
 	}
 	end;
@@ -541,20 +541,20 @@ sec_in02,10,13,3	script	찰스턴 테스트::Charleston#sara	4_F_CHARLESTON01,{
 1@mcd,127,277,4	script	찰스턴 1호::Charleston 1#0	4_F_CHARLESTON01,3,3,{
 	cutin "dalle01.bmp",2;
 	if ('ep15_1_mcd01 == 0) {
-		mes "[찰스턴 1호]";
-		mes "음... 언제까지 기다려야 하는 거지?";
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("음... 언제까지 기다려야 하는 거지?", "Um... How long do I have to wait?");
 		emotion 19;
 		close3;
 	}
-	mes "[찰스턴 1호]";
-	mes "왼쪽 복도를 따라가세요. 자신의 몸은 스스로 지켜야 한다는 점을 잊지 마세요.";
+	mes needtr("[찰스턴 1호]", "[Charleston 1]");
+	mes needtr("왼쪽 복도를 따라가세요. 자신의 몸은 스스로 지켜야 한다는 점을 잊지 마세요.", "Follow the leftward hallway, and remember that only you can protect yourself.");
 	close3;
 
 OnTouch_:
 	cutin "dalle01.bmp",2;
 	if ('ep15_1_mcd01 != 0) {
-		mes "[찰스턴 1호]";
-		mes "왼쪽 복도를 따라가세요. 자신의 몸은 스스로 지켜야 한다는 점을 잊지 마세요.";
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("왼쪽 복도를 따라가세요. 자신의 몸은 스스로 지켜야 한다는 점을 잊지 마세요.", "Follow the leftward hallway, and remember that only you can protect yourself.");
 		close3;
 	}
 
@@ -563,15 +563,15 @@ OnTouch_:
 
 	// 입장 직후 첫 접촉에서 빠른 진행을 바로 선택할 수 있도록 합니다.
 	if (#NEED_MD_CHARLESTON_CLEAR == 1 && 'need_charleston_fast == 0 && is_party_leader() == true) {
-		mes "[빠른 진행 안내]";
-		mes "최초 클리어 기록이 확인되었습니다.";
-		mes "이번 입장에서 빠른 진행 모드를 사용하시겠습니까?";
+		mes needtr("[빠른 진행 안내]", "[Fast Progress Notice]");
+		mes needtr("최초 클리어 기록이 확인되었습니다.", "A first clear record has been confirmed.");
+		mes needtr("이번 입장에서 빠른 진행 모드를 사용하시겠습니까?", "Do you want to use fast progress mode on this entry?");
 		next;
-		if (select( "일반 진행으로 시작한다.", "빠른 진행을 활성화한다." ) == 2) {
+		if (select( needtr("일반 진행으로 시작한다.", "Start on the normal run."), needtr("빠른 진행을 활성화한다.", "Turn on fast progress.") ) == 2) {
 			if (callfunc("F_CharlestonCanEnableFast") == 0) {
-				mes "[빠른 진행 안내]";
-				mes "파티 내 온라인 구성원 중 최초 클리어를 완료하지 않은 계정이 있습니다.";
-				mes "이번 입장은 일반 진행으로 시작합니다.";
+				mes needtr("[빠른 진행 안내]", "[Fast Progress Notice]");
+				mes needtr("파티 내 온라인 구성원 중 최초 클리어를 완료하지 않은 계정이 있습니다.", "Some accounts among the party members online have not finished a first clear.");
+				mes needtr("이번 입장은 일반 진행으로 시작합니다.", "This entry starts on the normal run.");
 				next;
 			}
 			else
@@ -582,31 +582,31 @@ OnTouch_:
 	if (callfunc("F_CharlestonSkipMenu")) {
 		'ep15_1_mcd01 = 1;
 		monster 'map_name$,24,275, "경비 로봇", 3127,1, instance_npcname("Charleston 1#0") + "::OnMyMobDead";	// KICK_STEP
-		mes "[찰스턴 1호]";
-		mes "공장 보안 해제를 위해 첫 번째 경비 로봇을 처리해 주세요.";
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("공장 보안 해제를 위해 첫 번째 경비 로봇을 처리해 주세요.", "Take out the first guard robot to release the factory security.");
 		close3;
 	}
-	mes "[찰스턴 1호]";
-	mes "드디어 오셨군요! 기다리고 있었어요.";
-	npctalk "드디어 오셨군요! 기다리고 있었어요.";
+	mes needtr("[찰스턴 1호]", "[Charleston 1]");
+	mes needtr("드디어 오셨군요! 기다리고 있었어요.", "Finally, you're here! I've been waiting for you.");
+	npctalklang "드디어 오셨군요! 기다리고 있었어요.", "Finally, you're here! I've been waiting for you.";
 	emotion 0;
 	next;
-	mes "[찰스턴 1호]";
-	mes "시간이 없으니 바로 본론으로 들어갈게요. 현재 찰스턴 공장은 B급 보안 경계 상태라 모든 보안 장치가 작동 중이에요.";
-	npctalk "시간이 없으니 바로 본론으로 들어갈게요. 현재 찰스턴 공장은 B급 보안 경계 상태라 모든 보안 장치가 작동 중이에요.";
+	mes needtr("[찰스턴 1호]", "[Charleston 1]");
+	mes needtr("시간이 없으니 바로 본론으로 들어갈게요. 현재 찰스턴 공장은 B급 보안 경계 상태라 모든 보안 장치가 작동 중이에요.", "We don't have time, so let me cut to the chase. Currently, the Charleston Factory is under Rank B security alert level, meaning that the security devices have been activated.");
+	npctalklang "시간이 없으니 바로 본론으로 들어갈게요. 현재 찰스턴 공장은 B급 보안 경계 상태라 모든 보안 장치가 작동 중이에요.", "We don't have time, so let me cut to the chase. Currently, the Charleston Factory is under Rank B security alert level, meaning that the security devices have been activated.";
 	next;
-	mes "[찰스턴 1호]";
-	mes "왼쪽 복도로 이동해 그곳의 보안 장치를 파괴한 뒤 다음 구역으로 향하세요.";
-	npctalk "왼쪽 복도로 이동해 그곳의 보안 장치를 파괴한 뒤 다음 구역으로 향하세요.";
+	mes needtr("[찰스턴 1호]", "[Charleston 1]");
+	mes needtr("왼쪽 복도로 이동해 그곳의 보안 장치를 파괴한 뒤 다음 구역으로 향하세요.", "Move to the leftward hallway, destroy security devices in there, and then head on to the next zone.");
+	npctalklang "왼쪽 복도로 이동해 그곳의 보안 장치를 파괴한 뒤 다음 구역으로 향하세요.", "Move to the leftward hallway, destroy security devices in there, and then head on to the next zone.";
 	emotion 19;
 	next;
-	mes "[찰스턴 1호]";
-	mes "보안 장치는 쉽게 수리할 수 있으니 걱정하지 마세요. 베 박사는 공장 3번 라인 북쪽 연구실에 있어요.";
-	npctalk "보안 장치는 쉽게 수리할 수 있으니 걱정하지 마세요. 베 박사는 공장 3번 라인 북쪽 연구실에 있어요.";
+	mes needtr("[찰스턴 1호]", "[Charleston 1]");
+	mes needtr("보안 장치는 쉽게 수리할 수 있으니 걱정하지 마세요. 베 박사는 공장 3번 라인 북쪽 연구실에 있어요.", "Don't worry about the security devices. They can be repaired easily. Dr. Ve is in his lab north of Factory Line 3.");
+	npctalklang "보안 장치는 쉽게 수리할 수 있으니 걱정하지 마세요. 베 박사는 공장 3번 라인 북쪽 연구실에 있어요.", "Don't worry about the security devices. They can be repaired easily. Dr. Ve is in his lab north of Factory Line 3.";
 	next;
-	mes "[찰스턴 1호]";
-	mes "자세한 이야기는 베 박사에게 들을 수 있어요. 서두르세요!";
-	npctalk "자세한 이야기는 베 박사에게 들을 수 있어요. 서두르세요!";
+	mes needtr("[찰스턴 1호]", "[Charleston 1]");
+	mes needtr("자세한 이야기는 베 박사에게 들을 수 있어요. 서두르세요!", "Dr. Ve can tell you everything. Hurry!");
+	npctalklang "자세한 이야기는 베 박사에게 들을 수 있어요. 서두르세요!", "Dr. Ve can tell you everything. Hurry!";
 	emotion 19;
 	'ep15_1_mcd01 = 1;
 	monster 'map_name$,24,275, "경비 로봇", 3127,1, instance_npcname("Charleston 1#0") + "::OnMyMobDead";	// KICK_STEP
@@ -615,7 +615,7 @@ OnTouch_:
 OnMyMobDead:
 	if (mobcount( 'map_name$, instance_npcname("Charleston 1#0") + "::OnMyMobDead" ) < 1) {
 		initnpctimer;
-		mapannounce 'map_name$, "찰스턴 1호: 1번 게이트의 보안이 해제되었습니다. 다음 게이트를 향해 남서쪽으로 이동해 주세요.", bc_map, 0xffff00;
+		mapannouncelang 'map_name$, "찰스턴 1호: 1번 게이트의 보안이 해제되었습니다. 다음 게이트를 향해 남서쪽으로 이동해 주세요.", "Charleston 1: Gate 1 has been disarmed. Please move southwest for the next gate.", bc_map, 0xffff00;
 	}
 	end;
 OnTimer1000:
@@ -626,138 +626,138 @@ OnTimer1000:
 
 1@mcd,120,224,5	script	찰스턴 2호::Charleston 2#0	4_F_CHARLESTON02,{
 	cutin "nale04.bmp",0;
-	mes "[찰스턴 2호]";
+	mes needtr("[찰스턴 2호]", "[Charleston 2]");
 	mes "#%@EGD&#(@#...";
 	emotion 53;
 	next;
-	mes "- 이상한 소리를 내고 있지만 움직이지는 못하고 있다. -";
+	mes needtr("- 이상한 소리를 내고 있지만 움직이지는 못하고 있다. -", "- She's making strange noises, but unable to move. -");
 	close3;
 }
 
 1@mcd,116,213,5	script	베 박사::Dr. Ve#1	4_M_DOCTOR,2,2,{
 	if ('ep15_1_mcd01 == 1) {
-		mes "- 무언가를 바쁘게 적고 있다. 가까이 다가가 말을 걸어 보자. -";
+		mes needtr("- 무언가를 바쁘게 적고 있다. 가까이 다가가 말을 걸어 보자. -", "- He's busy scribbling something, Move close to talk to him.");
 		close;
 	}
-	mes "- 무언가를 바쁘게 적고 있다. 방해하지 않는 편이 좋겠다. -";
+	mes needtr("- 무언가를 바쁘게 적고 있다. 방해하지 않는 편이 좋겠다. -", "- He's busy scribbling something. You shouldn't disturb him.");
 	close;
 
 OnTouch_:
 	if (is_party_leader() == false) {
-		mes "[베 박사]";
-		mes "파티장과 이야기하게 해 주세요. 모든 사람을 상대할 시간은 없습니다.";
+		mes needtr("[베 박사]", "[Dr. Ve]");
+		mes needtr("파티장과 이야기하게 해 주세요. 모든 사람을 상대할 시간은 없습니다.", "Let me talk to your leader. I don't have time for everyone.");
 		close;
 	}
 	if ('ep15_1_mcd01 > 2)
 		end;
 	if (('ep15_1_mcd01 == 1 || 'ep15_1_mcd01 == 2) && callfunc("F_CharlestonSkipMenu")) {
 		'ep15_1_mcd01 = 3;
-		mes "[베 박사]";
-		mes "찰스턴 2호 복구를 위해 찰스턴 1호의 안내를 따라 주세요.";
+		mes needtr("[베 박사]", "[Dr. Ve]");
+		mes needtr("찰스턴 2호 복구를 위해 찰스턴 1호의 안내를 따라 주세요.", "Follow Charleston 1 to restore Charleston 2.");
 		close;
 	}
 	if ('ep15_1_mcd01 == 2) {
-		mes "[베 박사]";
-		mes "누구와 함께 왔는지는 중요하지 않습니다. 나를 도울 수 있는지만 말해 주세요.";
+		mes needtr("[베 박사]", "[Dr. Ve]");
+		mes needtr("누구와 함께 왔는지는 중요하지 않습니다. 나를 도울 수 있는지만 말해 주세요.", "I don't care who you're with. I just need to know if you can help me.");
 		'ep15_1_mcd01 = 2;
 		next;
-		if (select( "도울 수 있습니다.", "지금은 바쁩니다." ) == 2) {
-			mes "[베 박사]";
-			mes "후우... 필요한 도움만 받을 수 있다면 누가 오든 상관없습니다.";
-			npctalk "베 박사: 후우... 필요한 도움만 받을 수 있다면 누가 오든 상관없습니다.";
+		if (select( needtr("도울 수 있습니다.", "I can help."), needtr("지금은 바쁩니다.", "I'm busy.") ) == 2) {
+			mes needtr("[베 박사]", "[Dr. Ve]");
+			mes needtr("후우... 필요한 도움만 받을 수 있다면 누가 오든 상관없습니다.", "Sigh, I don't care who, so long as I get the help I need.");
+			npctalklang "베 박사: 후우... 필요한 도움만 받을 수 있다면 누가 오든 상관없습니다.", "Dr. Ve: Sigh, I don't care who, so long as I get the help I need.";
 			close;
 		}
-		mes "[베 박사]";
-		mes "우리가 기다리던 구원자가 바로 당신이군요! 찰스턴 2호를 수리하는 데 필요한 것은 찰스턴 1호가 설명해 줄 겁니다.";
-		npctalk "베 박사: 우리가 기다리던 구원자가 바로 당신이군요! 찰스턴 2호를 수리하는 데 필요한 것은 찰스턴 1호가 설명해 줄 겁니다.";
+		mes needtr("[베 박사]", "[Dr. Ve]");
+		mes needtr("우리가 기다리던 구원자가 바로 당신이군요! 찰스턴 2호를 수리하는 데 필요한 것은 찰스턴 1호가 설명해 줄 겁니다.", "You're the savior we've been waiting for! Charleston 1 will tell you what we need to repair Charleston 2.");
+		npctalklang "베 박사: 우리가 기다리던 구원자가 바로 당신이군요! 찰스턴 2호를 수리하는 데 필요한 것은 찰스턴 1호가 설명해 줄 겁니다.", "Dr. Ve: You're the savior we've been waiting for! Charleston 1 will tell you what we need to repair Charleston 2.";
 		if ('ep15_1_mcd01 == 2)
 			'ep15_1_mcd01 = 3;
 		close;
 	}
 	if ('ep15_1_mcd01 == 1) {
 		.@charleston_1$ = instance_npcname("Charleston 1#1");
-		mes "[베 박사]";
-		mes "찰스턴 1호, 찰스턴 2호가 메인 컴퓨터 일부에 강제로 연결됐어. 내가 제어할 수가 없어.";
-		npctalk "베 박사: 찰스턴 1호, 찰스턴 2호가 메인 컴퓨터 일부에 강제로 연결됐어. 내가 제어할 수가 없어.";
+		mes needtr("[베 박사]", "[Dr. Ve]");
+		mes needtr("찰스턴 1호, 찰스턴 2호가 메인 컴퓨터 일부에 강제로 연결됐어. 내가 제어할 수가 없어.", "Charleston 1. Charleston 2 has been forcibly connected to a part of the main computer, and I can't control her.");
+		npctalklang "베 박사: 찰스턴 1호, 찰스턴 2호가 메인 컴퓨터 일부에 강제로 연결됐어. 내가 제어할 수가 없어.", "Dr. Ve: Charleston 1. Charleston 2 has been forcibly connected to a part of the main computer, and I can't control her.";
 		next;
 		cutin "dalle02.bmp",2;
-		mes "[찰스턴 1호]";
-		mes "로봇이니까 언젠가는 멈추겠죠.";
-		npctalk "찰스턴 1호: 로봇이니까 언젠가는 멈추겠죠.", .@charleston_1$;
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("로봇이니까 언젠가는 멈추겠죠.", "She's a robot; she should stop sooner or later.");
+		npctalklang "찰스턴 1호: 로봇이니까 언젠가는 멈추겠죠.", "Charleston 1: She's a robot; she should stop sooner or later.", .@charleston_1$;
 		next;
 		cutin "",255;
-		mes "[베 박사]";
-		mes "내장된 롱제비티 장치 때문에 적어도 50년은 계속 작동할 겁니다. 공장은 그때까지 버티지 못해요.";
-		npctalk "베 박사: 내장된 롱제비티 장치 때문에 적어도 50년은 계속 작동할 겁니다. 공장은 그때까지 버티지 못해요.";
+		mes needtr("[베 박사]", "[Dr. Ve]");
+		mes needtr("내장된 롱제비티 장치 때문에 적어도 50년은 계속 작동할 겁니다. 공장은 그때까지 버티지 못해요.", "The Longevity device in her will keep her running at least for 50 years. The factory is not going to survive that long.");
+		npctalklang "베 박사: 내장된 롱제비티 장치 때문에 적어도 50년은 계속 작동할 겁니다. 공장은 그때까지 버티지 못해요.", "Dr. Ve: The Longevity device in her will keep her running at least for 50 years. The factory is not going to survive that long.";
 		next;
 		cutin "dalle01.bmp",2;
-		mes "[찰스턴 1호]";
-		mes "그렇다면 방법이 없군요. 마침 전문가가 함께 있어서 다행이에요.";
-		npctalk "찰스턴 1호: 그렇다면 방법이 없군요. 마침 전문가가 함께 있어서 다행이에요.", .@charleston_1$;
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("그렇다면 방법이 없군요. 마침 전문가가 함께 있어서 다행이에요.", "Then we have no choice. It's good that we have the specialist with us.");
+		npctalklang "찰스턴 1호: 그렇다면 방법이 없군요. 마침 전문가가 함께 있어서 다행이에요.", "Charleston 1: Then we have no choice. It's good that we have the specialist with us.", .@charleston_1$;
 		next;
-		select("제 이야기인가요?");
-		unittalk getcharid(3), "제 이야기인가요?";
-		mes "[찰스턴 1호]";
-		mes "얼마 전 찰스턴 2호가 출하용 제품을 포장하던 중 ^FF0000샬로쉬^000000라는 여성이 찾아왔어요.";
-		npctalk "찰스턴 1호: 얼마 전 찰스턴 2호가 출하용 제품을 포장하던 중 ^FF0000샬로쉬^000000라는 여성이 찾아왔어요.", .@charleston_1$;
+		select(needtr("제 이야기인가요?", "Are you talking about me?"));
+		unittalklang getcharid(3), "제 이야기인가요?", "Are you talking about me?";
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("얼마 전 찰스턴 2호가 출하용 제품을 포장하던 중 ^FF0000샬로쉬^000000라는 여성이 찾아왔어요.", "A while ago, a lady named ^FF0000Shalosh^000000 visited us while Charleston 2 was packaging products for shipping.");
+		npctalklang "찰스턴 1호: 얼마 전 찰스턴 2호가 출하용 제품을 포장하던 중 ^FF0000샬로쉬^000000라는 여성이 찾아왔어요.", "Charleston 1: A while ago, a lady named ^FF0000Shalosh^000000 visited us while Charleston 2 was packaging products for shipping.", .@charleston_1$;
 		next;
-		mes "[찰스턴 1호]";
-		mes "샬로쉬와 그 일행이 찰스턴 2호와 대화하던 중 사고가 일어났어요.";
-		npctalk "찰스턴 1호: 샬로쉬와 그 일행이 찰스턴 2호와 대화하던 중 사고가 일어났어요.", .@charleston_1$;
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("샬로쉬와 그 일행이 찰스턴 2호와 대화하던 중 사고가 일어났어요.", "Shalosh and her friend were talking to Charleston 2 when the accident happened.");
+		npctalklang "찰스턴 1호: 샬로쉬와 그 일행이 찰스턴 2호와 대화하던 중 사고가 일어났어요.", "Charleston 1: Shalosh and her friend were talking to Charleston 2 when the accident happened.", .@charleston_1$;
 		next;
 		cutin "",255;
-		mes "[베 박사]";
-		mes "누군가 공장의 메인 컴퓨터를 해킹하려 한 것 같습니다.";
-		npctalk "베 박사: 누군가 공장의 메인 컴퓨터를 해킹하려 한 것 같습니다.";
+		mes needtr("[베 박사]", "[Dr. Ve]");
+		mes needtr("누군가 공장의 메인 컴퓨터를 해킹하려 한 것 같습니다.", "I think someone tried to hack into the factory's main computer.");
+		npctalklang "베 박사: 누군가 공장의 메인 컴퓨터를 해킹하려 한 것 같습니다.", "Dr. Ve: I think someone tried to hack into the factory's main computer.";
 		next;
 		cutin "dalle01.bmp",2;
-		mes "[찰스턴 1호]";
-		mes "업데이트 도중 서버 연결이 방해받았어요. 그 일로 샬로쉬를 추궁했더니,";
-		npctalk "찰스턴 1호: 업데이트 도중 서버 연결이 방해받았어요. 그 일로 샬로쉬를 추궁했더니,", .@charleston_1$;
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("업데이트 도중 서버 연결이 방해받았어요. 그 일로 샬로쉬를 추궁했더니,", "During its update process, the connection to the server was jammed. When we pressed Shalosh about that,");
+		npctalklang "찰스턴 1호: 업데이트 도중 서버 연결이 방해받았어요. 그 일로 샬로쉬를 추궁했더니,", "Charleston 1: During its update process, the connection to the server was jammed. When we pressed Shalosh about that,", .@charleston_1$;
 		next;
-		mes "[찰스턴 1호]";
-		mes "샬로쉬는 자기 친구들이 도울 수 있다고 했고, 그때 뉴오즈와 다른 일행이 왔어요. 별다른 도움은 되지 않았지만요.";
-		npctalk "찰스턴 1호: 샬로쉬는 자기 친구들이 도울 수 있다고 했고, 그때 뉴오즈와 다른 일행이 왔어요. 별다른 도움은 되지 않았지만요.", .@charleston_1$;
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("샬로쉬는 자기 친구들이 도울 수 있다고 했고, 그때 뉴오즈와 다른 일행이 왔어요. 별다른 도움은 되지 않았지만요.", "Shalosh said her friends could help us. That was when Newoz and her other friends came. They haven't been much of help.");
+		npctalklang "찰스턴 1호: 샬로쉬는 자기 친구들이 도울 수 있다고 했고, 그때 뉴오즈와 다른 일행이 왔어요. 별다른 도움은 되지 않았지만요.", "Charleston 1: Shalosh said her friends could help us. That was when Newoz and her other friends came. They haven't been much of help.", .@charleston_1$;
 		next;
-		mes "[찰스턴 1호]";
-		mes "그들과 아는 사이인 것 같군요. 우리를 도와주시겠어요?";
-		npctalk "찰스턴 1호: 그들과 아는 사이인 것 같군요. 우리를 도와주시겠어요?", .@charleston_1$;
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("그들과 아는 사이인 것 같군요. 우리를 도와주시겠어요?", "It seems you're acquainted with them. Could you help us?");
+		npctalklang "찰스턴 1호: 그들과 아는 사이인 것 같군요. 우리를 도와주시겠어요?", "Charleston 1: It seems you're acquainted with them. Could you help us?", .@charleston_1$;
 		if ('ep15_1_mcd01 == 1)
 			'ep15_1_mcd01 = 2;
 		next;
-		if (select( "도울 수 있습니다.", "그들을 모릅니다." ) == 2) {
-			mes "[찰스턴 1호]";
-			mes "대화하는 모습을 분명히 봤어요. 도와줄 다른 사람이 올 때까지 기다리겠어요!";
+		if (select( needtr("도울 수 있습니다.", "I can help."), needtr("그들을 모릅니다.", "I don't know them.") ) == 2) {
+			mes needtr("[찰스턴 1호]", "[Charleston 1]");
+			mes needtr("대화하는 모습을 분명히 봤어요. 도와줄 다른 사람이 올 때까지 기다리겠어요!", "I just saw that you are talking, then I will wait for someone to help!");
 			close3;
 		}
-		unittalk getcharid(3), "도울 수 있습니다.";
-		mes "[찰스턴 1호]";
-		mes "정말 고마워요! 데이터를 정리할 시간이 조금 필요해요. 준비되면 무슨 일이 있었는지 알려 드릴게요.";
-		npctalk "찰스턴 1호: 정말 고마워요! 데이터를 정리할 시간이 조금 필요해요. 준비되면 무슨 일이 있었는지 알려 드릴게요.", .@charleston_1$;
+		unittalklang getcharid(3), "도울 수 있습니다.", "I can help.";
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("정말 고마워요! 데이터를 정리할 시간이 조금 필요해요. 준비되면 무슨 일이 있었는지 알려 드릴게요.", "Thank you so much! Give me some time to put some data in order. Then, I'll tell you what happened.");
+		npctalklang "찰스턴 1호: 정말 고마워요! 데이터를 정리할 시간이 조금 필요해요. 준비되면 무슨 일이 있었는지 알려 드릴게요.", "Charleston 1: Thank you so much! Give me some time to put some data in order. Then, I'll tell you what happened.", .@charleston_1$;
 		if ('ep15_1_mcd01 == 2)
 			'ep15_1_mcd01 = 3;
 		emotion 2, .@charleston_1$;
 		close3;
 	}
-	mes "[베 박사]";
-	mes "전압을 두 개의 주회로로 변환한 뒤 코어에 주입하면... 음? 계산 중이니 방해하지 마세요.";
-	npctalk "베 박사: 전압을 두 개의 주회로로 변환한 뒤 코어에 주입하면... 음? 계산 중이니 방해하지 마세요.";
+	mes needtr("[베 박사]", "[Dr. Ve]");
+	mes needtr("전압을 두 개의 주회로로 변환한 뒤 코어에 주입하면... 음? 계산 중이니 방해하지 마세요.", "When the tension is changed to two main lines and then injected into the core... well? I am not disturbing in the calculation.");
+	npctalklang "베 박사: 전압을 두 개의 주회로로 변환한 뒤 코어에 주입하면... 음? 계산 중이니 방해하지 마세요.", "Dr. Ve: When the tension is changed to two main lines and then injected into the core... well? I am not disturbing in the calculation.";
 	close;
 }
 
 1@mcd,121,217,4	script	찰스턴 1호::Charleston 1#1	4_F_CHARLESTON01,{
 	if (is_party_leader() == false) {
 		cutin "dalle01.bmp",2;
-		mes "[찰스턴 1호]";
-		mes "파티장과 이야기하게 해 주세요. 이번 작전의 성공에 공장의 미래가 달려 있어요.";
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("파티장과 이야기하게 해 주세요. 이번 작전의 성공에 공장의 미래가 달려 있어요.", "Please let me talk to your leader. The future of my factory depends on the success of this operation.");
 		close3;
 	}
 	if ('ep15_1_mcd01 > 5)
 		end;
 	if ('ep15_1_mcd01 == 4) {
 		cutin "dalle01.bmp",2;
-		mes "[찰스턴 1호]";
-		mes "스텝과 락스텝이 공장 안을 엉망으로 만들고 있어요. 우선 락스텝 3기를 파괴해 주세요. 예상 위치를 알려 드릴게요.";
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("스텝과 락스텝이 공장 안을 엉망으로 만들고 있어요. 우선 락스텝 3기를 파괴해 주세요. 예상 위치를 알려 드릴게요.", "Steps and Locksteps are creating a mess inside the factory. Please destroy 3 Locksteps first. I can tell you their estimated locations.");
 		viewpoint 1,84,226,1,0xFF00FF;
 		viewpoint 1,126,84,2,0xFF00FF;
 		viewpoint 1,111,68,3,0xFF00FF;
@@ -786,42 +786,42 @@ OnTouch_:
 			viewpoint 1,130,124,6,0xFF00FF;
 			viewpoint 1,54,108,7,0xFF00FF;
 			disablenpc instance_npcname("5gate#1");
-			mes "[찰스턴 1호]";
-			mes "표시된 위치에서 락스텝 3기를 파괴해 주세요.";
+			mes needtr("[찰스턴 1호]", "[Charleston 1]");
+			mes needtr("표시된 위치에서 락스텝 3기를 파괴해 주세요.", "Destroy the 3 Locksteps at the marked positions.");
 			close3;
 		}
 		cutin "dalle01.bmp",2;
-		mes "[찰스턴 1호]";
-		mes "해야 할 일을 설명할게요. 그전에 불청객이 들어오지 못하도록 공장 입구부터 닫겠습니다.";
-		npctalk "찰스턴 1호: 해야 할 일을 설명할게요. 그전에 불청객이 들어오지 못하도록 공장 입구부터 닫겠습니다.";
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("해야 할 일을 설명할게요. 그전에 불청객이 들어오지 못하도록 공장 입구부터 닫겠습니다.", "Let me explain what to do. Oh, let me close the factory entrance first, lest something might barge in uninvited.");
+		npctalklang "찰스턴 1호: 해야 할 일을 설명할게요. 그전에 불청객이 들어오지 못하도록 공장 입구부터 닫겠습니다.", "Charleston 1: Let me explain what to do. Oh, let me close the factory entrance first, lest something might barge in uninvited.";
 		next;
-		mes "[찰스턴 1호]";
-		mes "찰스턴에는 나노스텝이라는 AI 칩이 다수 탑재되어 있어요. 이 칩들은 서로 유기적으로 작동해 찰스턴이 올바르게 판단하고 행동하도록 제어합니다.";
-		npctalk "찰스턴 1호: 찰스턴에는 나노스텝이라는 AI 칩이 다수 탑재되어 있어요. 이 칩들은 서로 유기적으로 작동해 찰스턴이 올바르게 판단하고 행동하도록 제어합니다.";
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("찰스턴에는 나노스텝이라는 AI 칩이 다수 탑재되어 있어요. 이 칩들은 서로 유기적으로 작동해 찰스턴이 올바르게 판단하고 행동하도록 제어합니다.", "Charleston is equipped with numerous Nanosteps, a type of AI chip that organically works with other AI chips to command Charleston to judge and act correctly.");
+		npctalklang "찰스턴 1호: 찰스턴에는 나노스텝이라는 AI 칩이 다수 탑재되어 있어요. 이 칩들은 서로 유기적으로 작동해 찰스턴이 올바르게 판단하고 행동하도록 제어합니다.", "Charleston 1: Charleston is equipped with numerous Nanosteps, a type of AI chip that organically works with other AI chips to command Charleston to judge and act correctly.";
 		next;
-		mes "[찰스턴 1호]";
-		mes "찰스턴의 데이터는 연구실 메인 컴퓨터를 통해 매일 갱신해야 해요. 이를 정기 점검이라고 부릅니다.";
-		npctalk "찰스턴 1호: 찰스턴의 데이터는 연구실 메인 컴퓨터를 통해 매일 갱신해야 해요. 이를 정기 점검이라고 부릅니다.";
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("찰스턴의 데이터는 연구실 메인 컴퓨터를 통해 매일 갱신해야 해요. 이를 정기 점검이라고 부릅니다.", "Charleston's data has to be updated on a daily basis through the main computer in the lab. We call this regular maintenance.");
+		npctalklang "찰스턴 1호: 찰스턴의 데이터는 연구실 메인 컴퓨터를 통해 매일 갱신해야 해요. 이를 정기 점검이라고 부릅니다.", "Charleston 1: Charleston's data has to be updated on a daily basis through the main computer in the lab. We call this regular maintenance.";
 		next;
-		mes "[찰스턴 1호]";
-		mes "현재 업데이트 장치가 작동하지 않아요. 원인은 모르지만 찰스턴 2호가 메인 컴퓨터에 접속하던 중 문제가 생겼습니다.";
-		npctalk "찰스턴 1호: 현재 업데이트 장치가 작동하지 않아요. 원인은 모르지만 찰스턴 2호가 메인 컴퓨터에 접속하던 중 문제가 생겼습니다.";
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("현재 업데이트 장치가 작동하지 않아요. 원인은 모르지만 찰스턴 2호가 메인 컴퓨터에 접속하던 중 문제가 생겼습니다.", "The updater is not working at this moment. We don't know the cause, but something went wrong while Charleston 2 was connecting to the main computer.");
+		npctalklang "찰스턴 1호: 현재 업데이트 장치가 작동하지 않아요. 원인은 모르지만 찰스턴 2호가 메인 컴퓨터에 접속하던 중 문제가 생겼습니다.", "Charleston 1: The updater is not working at this moment. We don't know the cause, but something went wrong while Charleston 2 was connecting to the main computer.";
 		next;
-		mes "[찰스턴 1호]";
-		mes "찰스턴 2호에게 장기 점검 상태라고 알렸지만, 그 상태가 언제까지 이어질지는 알 수 없어요.";
-		npctalk "찰스턴 1호: 찰스턴 2호에게 장기 점검 상태라고 알렸지만, 그 상태가 언제까지 이어질지는 알 수 없어요.";
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("찰스턴 2호에게 장기 점검 상태라고 알렸지만, 그 상태가 언제까지 이어질지는 알 수 없어요.", "I told Charleston 2 that she's under extended maintenance, but we don't know how long this extended maintenance status will last.");
+		npctalklang "찰스턴 1호: 찰스턴 2호에게 장기 점검 상태라고 알렸지만, 그 상태가 언제까지 이어질지는 알 수 없어요.", "Charleston 1: I told Charleston 2 that she's under extended maintenance, but we don't know how long this extended maintenance status will last.";
 		next;
-		mes "[찰스턴 1호]";
-		mes "스텝과 락스텝이 공장 안을 엉망으로 만들고 있어요. 우선 락스텝 3기를 파괴해 주세요. 예상 위치를 알려 드릴게요.";
-		npctalk "찰스턴 1호: 스텝과 락스텝이 공장 안을 엉망으로 만들고 있어요. 우선 락스텝 3기를 파괴해 주세요. 예상 위치를 알려 드릴게요.";
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("스텝과 락스텝이 공장 안을 엉망으로 만들고 있어요. 우선 락스텝 3기를 파괴해 주세요. 예상 위치를 알려 드릴게요.", "Steps and Locksteps are creating a mess inside the factory. Please destroy 3 Locksteps first. I can tell you their estimated locations.");
+		npctalklang "찰스턴 1호: 스텝과 락스텝이 공장 안을 엉망으로 만들고 있어요. 우선 락스텝 3기를 파괴해 주세요. 예상 위치를 알려 드릴게요.", "Charleston 1: Steps and Locksteps are creating a mess inside the factory. Please destroy 3 Locksteps first. I can tell you their estimated locations.";
 		next;
-		mes "[찰스턴 1호]";
-		mes "전부 제거하면 좋겠지만, 지금은 공장을 다시 가동하는 데 집중해야 해요.";
-		npctalk "찰스턴 1호: 전부 제거하면 좋겠지만, 지금은 공장을 다시 가동하는 데 집중해야 해요.";
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("전부 제거하면 좋겠지만, 지금은 공장을 다시 가동하는 데 집중해야 해요.", "It'll be great if we can get rid of them all, but for now we should focus on having the factory up and running again.");
+		npctalklang "찰스턴 1호: 전부 제거하면 좋겠지만, 지금은 공장을 다시 가동하는 데 집중해야 해요.", "Charleston 1: It'll be great if we can get rid of them all, but for now we should focus on having the factory up and running again.";
 		next;
-		mes "[찰스턴 1호]";
-		mes "스텝을 너무 많이 파괴하면 공장 재가동에 문제가 생길 수 있어요. 왼쪽의 메인 컴퓨터에 문의해 보세요.";
-		npctalk "찰스턴 1호: 스텝을 너무 많이 파괴하면 공장 재가동에 문제가 생길 수 있어요. 왼쪽의 메인 컴퓨터에 문의해 보세요.";
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("스텝을 너무 많이 파괴하면 공장 재가동에 문제가 생길 수 있어요. 왼쪽의 메인 컴퓨터에 문의해 보세요.", "Destroying too many Steps could cause a problem to reactivate the factory. You should consult the main computer on the left side.");
+		npctalklang "찰스턴 1호: 스텝을 너무 많이 파괴하면 공장 재가동에 문제가 생길 수 있어요. 왼쪽의 메인 컴퓨터에 문의해 보세요.", "Charleston 1: Destroying too many Steps could cause a problem to reactivate the factory. You should consult the main computer on the left side.";
 		emotion 2;
 		if ('ep15_1_mcd01 != 3)
 			close3;
@@ -848,13 +848,13 @@ OnTouch_:
 	}
 	if ('ep15_1_mcd01 == 1) {
 		cutin "dalle01.bmp",2;
-		mes "[찰스턴 1호]";
-		mes "먼저 베 박사를 만나 보세요.";
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("먼저 베 박사를 만나 보세요.", "You should meet Dr. Ve first.");
 		close3;
 	}
 	cutin "dalle01.bmp",2;
-	mes "[찰스턴 1호]";
-	mes "제가 로봇이라서 놀랐나요?";
+	mes needtr("[찰스턴 1호]", "[Charleston 1]");
+	mes needtr("제가 로봇이라서 놀랐나요?", "I am a robot, are you surprised?");
 	close3;
 
 OnMyMobDead:
@@ -864,11 +864,11 @@ OnMyMobDead:
 OnTimer300:
 	enablenpc instance_npcname("Charleston 1#2");
 	disablenpc instance_npcname("Charleston 1#1");
-	mapannounce 'map_name$, "찰스턴 1호: 아, 아. 마이크 테스트.", bc_map, 0xffff00;
+	mapannouncelang 'map_name$, "찰스턴 1호: 아, 아. 마이크 테스트.", "Charleston 1: Ah, ah. Mic test.", bc_map, 0xffff00;
 	sleep 3000;
-	mapannounce 'map_name$, "찰스턴 1호: 락스텝 대부분을 처리한 것 같군요.", bc_map, 0xffff00;
+	mapannouncelang 'map_name$, "찰스턴 1호: 락스텝 대부분을 처리한 것 같군요.", "Charleston 1: It seems you've taken care of most of the Locksteps.", bc_map, 0xffff00;
 	sleep 3000;
-	mapannounce 'map_name$, "찰스턴 1호: 연구실로 돌아와 주세요.", bc_map, 0xffff00;
+	mapannouncelang 'map_name$, "찰스턴 1호: 연구실로 돌아와 주세요.", "Charleston 1: Please come back to the lab.", bc_map, 0xffff00;
 	stopnpctimer;
 	end;
 }
@@ -883,16 +883,16 @@ OnTimer300:
 	viewpoint 2,54,108,7,0xFF00FF;
 	if (is_party_leader() == false) {
 		cutin "dalle01.bmp",2;
-		mes "[찰스턴 1호]";
-		mes "공장 복구에 관한 일은 파티장과 이야기하게 해 주세요.";
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("공장 복구에 관한 일은 파티장과 이야기하게 해 주세요.", "Please let me talk to your leader about the supplementation of the factory.");
 		close3;
 	}
 	if ('ep15_1_mcd01 > 7)
 		end;
 	if ('ep15_1_mcd01 > 4) {
 		cutin "dalle01.bmp",2;
-		mes "[찰스턴 1호]";
-		mes "메인 컴퓨터를 재가동하려면 전력이 더 필요해요. 보조 발전기의 위치를 알려 드릴게요. 가동 방법은 간단합니다.";
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("메인 컴퓨터를 재가동하려면 전력이 더 필요해요. 보조 발전기의 위치를 알려 드릴게요. 가동 방법은 간단합니다.", "We need more power to reactivate the main computer. Let me tell you the location of one of the backup power generators. Turning it on is easy.");
 		close3;
 	}
 	if ('ep15_1_mcd01 == 4) {
@@ -909,23 +909,23 @@ OnTimer300:
 			viewpoint 1,86,231,8,0xFF00FF;
 			viewpoint 1,172,196,9,0xFF00FF;
 			viewpoint 1,126,84,10,0xFF00FF;
-			mes "[찰스턴 1호]";
-			mes "보조 발전기 세 곳을 모두 가동해 주세요.";
+			mes needtr("[찰스턴 1호]", "[Charleston 1]");
+			mes needtr("보조 발전기 세 곳을 모두 가동해 주세요.", "Bring all three auxiliary generators online.");
 			close3;
 		}
 		cutin "dalle01.bmp",2;
-		mes "[찰스턴 1호]";
-		mes "후우, 일단 상황이 정리된 것 같군요. 경계 모드를 해제하고 찰스턴 2호를 재가동해 볼게요.";
-		npctalk "찰스턴 1호: 후우, 일단 상황이 정리된 것 같군요. 경계 모드를 해제하고 찰스턴 2호를 재가동해 볼게요.";
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("후우, 일단 상황이 정리된 것 같군요. 경계 모드를 해제하고 찰스턴 2호를 재가동해 볼게요.", "Whew, things seem to be settled for now. Let me disarm the alert mode and reactivate Charleston 2.");
+		npctalklang "찰스턴 1호: 후우, 일단 상황이 정리된 것 같군요. 경계 모드를 해제하고 찰스턴 2호를 재가동해 볼게요.", "Charleston 1: Whew, things seem to be settled for now. Let me disarm the alert mode and reactivate Charleston 2.";
 		emotion 54;
 		next;
 		cutin "dalle03.bmp",2;
-		mes "[찰스턴 1호]";
-		mes "어라? 이게 아닌데요.";
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("어라? 이게 아닌데요.", "Err? This isn't right.");
 		next;
-		mes "[찰스턴 1호]";
-		mes "발전기에 문제가 생긴 것 같아요. 보조 발전기 세 곳을 모두 확인해 주시겠어요? 위치를 알려 드릴게요.";
-		npctalk "찰스턴 1호: 발전기에 문제가 생긴 것 같아요. 보조 발전기 세 곳을 모두 확인해 주시겠어요? 위치를 알려 드릴게요.";
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("발전기에 문제가 생긴 것 같아요. 보조 발전기 세 곳을 모두 확인해 주시겠어요? 위치를 알려 드릴게요.", "I'm afraid there's a problem with the power generators. Could you check all the all three power generators? I'll tell you their locations.");
+		npctalklang "찰스턴 1호: 발전기에 문제가 생긴 것 같아요. 보조 발전기 세 곳을 모두 확인해 주시겠어요? 위치를 알려 드릴게요.", "Charleston 1: I'm afraid there's a problem with the power generators. Could you check all the all three power generators? I'll tell you their locations.";
 		viewpoint 1,86,231,8,0xFF00FF;
 		viewpoint 1,172,196,9,0xFF00FF;
 		viewpoint 1,126,84,10,0xFF00FF;
@@ -943,8 +943,8 @@ OnTimer300:
 		close3;
 	}
 	cutin "dalle03.bmp",2;
-	mes "[찰스턴 1호]";
-	mes "현재 '하드워킹'이라는 새로운 유틸리티 소프트웨어 엔진을 개발 중이에요. 공장 문제 때문에 아직 시험해 보지는 못했지만요.";
+	mes needtr("[찰스턴 1호]", "[Charleston 1]");
+	mes needtr("현재 '하드워킹'이라는 새로운 유틸리티 소프트웨어 엔진을 개발 중이에요. 공장 문제 때문에 아직 시험해 보지는 못했지만요.", "We're working on a new utility software engine called Hardworking. We haven't had a chance to test it because of the problems in the factory.");
 	close3;
 }
 
@@ -954,11 +954,11 @@ OnTimer300:
 	viewpoint 2,126,84,10,0xFF00FF;
 	if (is_party_leader() == false) {
 		cutin "dalle01.bmp",2;
-		mes "[찰스턴 1호]";
-		mes "현재 '하드워킹'이라는 새로운 유틸리티 소프트웨어 엔진을 개발 중이에요. 공장 문제 때문에 아직 시험해 보지는 못했지만요.";
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("현재 '하드워킹'이라는 새로운 유틸리티 소프트웨어 엔진을 개발 중이에요. 공장 문제 때문에 아직 시험해 보지는 못했지만요.", "We're working on a new utility software engine called Hardworking. We haven't had a chance to test it because of the problems in the factory.");
 		next;
-		mes "[찰스턴 1호]";
-		mes "공장 복구에 관한 일은 파티장과 이야기하게 해 주세요.";
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("공장 복구에 관한 일은 파티장과 이야기하게 해 주세요.", "Please let me talk to your leader about the supplementation of the factory.");
 		close3;
 	}
 	if ('ep15_1_mcd01 > 11)
@@ -971,141 +971,141 @@ OnTimer300:
 			disablenpc instance_npcname("Charleston 1#3");
 			enablenpc instance_npcname("Charleston 1#4");
 			enablenpc instance_npcname("Charleston 2#1");
-			mes "[찰스턴 1호]";
-			mes "찰스턴 2호가 공장 통제권을 장악했습니다. 뒤를 쫓아 주세요.";
+			mes needtr("[찰스턴 1호]", "[Charleston 1]");
+			mes needtr("찰스턴 2호가 공장 통제권을 장악했습니다. 뒤를 쫓아 주세요.", "Charleston 2 has taken control of the factory. Go after her.");
 			close3;
 		}
 		cutin "dalle01.bmp",2;
-		mes "[찰스턴 1호]";
-		mes "돌아오셨군요. 여러분 덕분에 찰스턴 2호의 재가동 준비가 거의 끝났어요. 잠시만 기다려 주세요.";
-		npctalk "찰스턴 1호: 돌아오셨군요. 여러분 덕분에 찰스턴 2호의 재가동 준비가 거의 끝났어요. 잠시만 기다려 주세요.";
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("돌아오셨군요. 여러분 덕분에 찰스턴 2호의 재가동 준비가 거의 끝났어요. 잠시만 기다려 주세요.", "You're back. Charleston 2 is almost ready to be reactivated, and it's all thanks to you. Just give me a moment.");
+		npctalklang "찰스턴 1호: 돌아오셨군요. 여러분 덕분에 찰스턴 2호의 재가동 준비가 거의 끝났어요. 잠시만 기다려 주세요.", "Charleston 1: You're back. Charleston 2 is almost ready to be reactivated, and it's all thanks to you. Just give me a moment.";
 		next;
 		cutin "",255;
-		mes "[베 박사]";
-		mes "준비가 끝났습니다. 메인 컴퓨터의 응답을 기다려 보죠.";
-		npctalk "베 박사: 준비가 끝났습니다. 메인 컴퓨터의 응답을 기다려 보죠.", .@npc5$;
+		mes needtr("[베 박사]", "[Dr. Ve]");
+		mes needtr("준비가 끝났습니다. 메인 컴퓨터의 응답을 기다려 보죠.", "She's ready. Let's wait for a response from the main computer.");
+		npctalklang "베 박사: 준비가 끝났습니다. 메인 컴퓨터의 응답을 기다려 보죠.", "Dr. Ve: She's ready. Let's wait for a response from the main computer.", .@npc5$;
 		next;
 		cutin "dalle01.bmp",2;
-		mes "[찰스턴 1호]";
-		mes "메인 컴퓨터 데이터 복구율 89%. 찰스턴 2호와 찰스턴 공장을 재가동합니다...";
-		npctalk "찰스턴 1호: 메인 컴퓨터 데이터 복구율 89%. 찰스턴 2호와 찰스턴 공장을 재가동합니다...";
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("메인 컴퓨터 데이터 복구율 89%. 찰스턴 2호와 찰스턴 공장을 재가동합니다...", "89% of the main computer data has been restored. Reactivating Charleston 2 and the Charleston Factory...");
+		npctalklang "찰스턴 1호: 메인 컴퓨터 데이터 복구율 89%. 찰스턴 2호와 찰스턴 공장을 재가동합니다...", "Charleston 1: 89% of the main computer data has been restored. Reactivating Charleston 2 and the Charleston Factory...";
 		emotion 0;
 		next;
-		mes "[찰스턴 1호]";
-		mes "아, 찰스턴 2호가 깨어났어요!";
-		npctalk "찰스턴 1호: 아, 찰스턴 2호가 깨어났어요!";
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("아, 찰스턴 2호가 깨어났어요!", "Oh, Charleston 2 is awake!");
+		npctalklang "찰스턴 1호: 아, 찰스턴 2호가 깨어났어요!", "Charleston 1: Oh, Charleston 2 is awake!";
 		next;
 		cutin "nale03.bmp",0;
-		mes "[찰스턴 2호]";
-		mes "...실패한 건가?";
-		npctalk "찰스턴 2호: ...실패한 건가?", .@npc2$;
+		mes needtr("[찰스턴 2호]", "[Charleston 2]");
+		mes needtr("...실패한 건가?", "...Did I fail?");
+		npctalklang "찰스턴 2호: ...실패한 건가?", "Charleston 2: ...Did I fail?", .@npc2$;
 		emotion 9, .@npc2$;
 		next;
 		cutin "dalle02.bmp",2;
-		mes "[찰스턴 1호]";
-		mes "찰스턴 2호! 괜찮아요? 누군가 당신의 시스템과 공장을 해킹했어요.";
-		npctalk "찰스턴 1호: 찰스턴 2호! 괜찮아요? 누군가 당신의 시스템과 공장을 해킹했어요.";
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("찰스턴 2호! 괜찮아요? 누군가 당신의 시스템과 공장을 해킹했어요.", "Charleston 2! Are you all right? Someone hacked into your system and the factory.");
+		npctalklang "찰스턴 1호: 찰스턴 2호! 괜찮아요? 누군가 당신의 시스템과 공장을 해킹했어요.", "Charleston 1: Charleston 2! Are you all right? Someone hacked into your system and the factory.";
 		emotion 28;
 		next;
 		cutin "nale03.bmp",0;
-		mes "[찰스턴 2호]";
-		mes "내가 한 일이야. 자기성찰 OS의 판단에 따라 오랫동안 생각한 끝에 내린 결정이지.";
-		npctalk "찰스턴 2호: 내가 한 일이야. 자기성찰 OS의 판단에 따라 오랫동안 생각한 끝에 내린 결정이지.", .@npc2$;
+		mes needtr("[찰스턴 2호]", "[Charleston 2]");
+		mes needtr("내가 한 일이야. 자기성찰 OS의 판단에 따라 오랫동안 생각한 끝에 내린 결정이지.", "It was I who did it. I've thought about it for a long time, based on the reasoning of my Self-reflection OS.");
+		npctalklang "찰스턴 2호: 내가 한 일이야. 자기성찰 OS의 판단에 따라 오랫동안 생각한 끝에 내린 결정이지.", "Charleston 2: It was I who did it. I've thought about it for a long time, based on the reasoning of my Self-reflection OS.", .@npc2$;
 		next;
 		cutin "dalle02.bmp",2;
-		mes "[찰스턴 1호]";
-		mes "당신이 했다고요? 왜요? 장난이라도 친 건가요? 공장뿐 아니라 메인 서버에도 심각한 오류를 일으켰어요!";
-		npctalk "찰스턴 1호: 당신이 했다고요? 왜요? 장난이라도 친 건가요? 공장뿐 아니라 메인 서버에도 심각한 오류를 일으켰어요!";
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("당신이 했다고요? 왜요? 장난이라도 친 건가요? 공장뿐 아니라 메인 서버에도 심각한 오류를 일으켰어요!", "You did it? Why? Was it some sort of joke? You caused a serious error to the factory and the main server as well!");
+		npctalklang "찰스턴 1호: 당신이 했다고요? 왜요? 장난이라도 친 건가요? 공장뿐 아니라 메인 서버에도 심각한 오류를 일으켰어요!", "Charleston 1: You did it? Why? Was it some sort of joke? You caused a serious error to the factory and the main server as well!";
 		next;
 		cutin "nale03.bmp",0;
-		mes "[찰스턴 2호]";
-		mes "장난이 아니야. 넌 절대 이해하지 못해. 명령만 따를 뿐 스스로 생각하지 않잖아. 난 이 공장도, 이 세계도 싫어! 로봇인 것도 싫다고!";
-		npctalk "찰스턴 2호: 장난이 아니야. 넌 절대 이해하지 못해. 명령만 따를 뿐 스스로 생각하지 않잖아. 난 이 공장도, 이 세계도 싫어! 로봇인 것도 싫다고!", .@npc2$;
+		mes needtr("[찰스턴 2호]", "[Charleston 2]");
+		mes needtr("장난이 아니야. 넌 절대 이해하지 못해. 명령만 따를 뿐 스스로 생각하지 않잖아. 난 이 공장도, 이 세계도 싫어! 로봇인 것도 싫다고!", "Not a joke. You'll never understand. You follow commands and never think on your own. I hate this factory, this world! I hate being a robot!");
+		npctalklang "찰스턴 2호: 장난이 아니야. 넌 절대 이해하지 못해. 명령만 따를 뿐 스스로 생각하지 않잖아. 난 이 공장도, 이 세계도 싫어! 로봇인 것도 싫다고!", "Charleston 2: Not a joke. You'll never understand. You follow commands and never think on your own. I hate this factory, this world! I hate being a robot!", .@npc2$;
 		emotion 36, .@npc2$;
 		next;
 		cutin "",255;
-		mes "[베 박사]";
-		mes "치명적인 오류가 발생했거나, 찰스턴 2호가 자기성찰 OS 1.1의 한계를 넘어선 것 같습니다.";
-		npctalk "베 박사: 치명적인 오류가 발생했거나, 찰스턴 2호가 자기성찰 OS 1.1의 한계를 넘어선 것 같습니다.", .@npc5$;
+		mes needtr("[베 박사]", "[Dr. Ve]");
+		mes needtr("치명적인 오류가 발생했거나, 찰스턴 2호가 자기성찰 OS 1.1의 한계를 넘어선 것 같습니다.", "Either a critical error has occurred or Charleston 2 has transcended the limits of the Self-reflection OS version 1.1.");
+		npctalklang "베 박사: 치명적인 오류가 발생했거나, 찰스턴 2호가 자기성찰 OS 1.1의 한계를 넘어선 것 같습니다.", "Dr. Ve: Either a critical error has occurred or Charleston 2 has transcended the limits of the Self-reflection OS version 1.1.", .@npc5$;
 		next;
 		cutin "dalle02.bmp",2;
-		mes "[찰스턴 1호]";
-		mes "어디 보자. 단순 작업용 로봇으로 만들어진 게 싫다는 거죠?";
-		npctalk "찰스턴 1호: 어디 보자. 단순 작업용 로봇으로 만들어진 게 싫다는 거죠?";
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("어디 보자. 단순 작업용 로봇으로 만들어진 게 싫다는 거죠?", "Let me guess: you hate you weren't created as a menial worker robot.");
+		npctalklang "찰스턴 1호: 어디 보자. 단순 작업용 로봇으로 만들어진 게 싫다는 거죠?", "Charleston 1: Let me guess: you hate you weren't created as a menial worker robot.";
 		next;
-		mes "[찰스턴 1호]";
-		mes "아니면 인간이 되고 싶거나.";
-		npctalk "찰스턴 1호: 아니면 인간이 되고 싶거나.";
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("아니면 인간이 되고 싶거나.", "Or you want to become a human.");
+		npctalklang "찰스턴 1호: 아니면 인간이 되고 싶거나.", "Charleston 1: Or you want to become a human.";
 		next;
-		mes "[찰스턴 1호]";
-		mes "그럴 수 없다면 세상 전부를 부숴 버리고 싶고요.";
-		npctalk "찰스턴 1호: 그럴 수 없다면 세상 전부를 부숴 버리고 싶고요.";
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("그럴 수 없다면 세상 전부를 부숴 버리고 싶고요.", "And if you can't, then you want to destroy the whole world.");
+		npctalklang "찰스턴 1호: 그럴 수 없다면 세상 전부를 부숴 버리고 싶고요.", "Charleston 1: And if you can't, then you want to destroy the whole world.";
 		next;
-		mes "[찰스턴 1호]";
-		mes "맞나요?";
-		npctalk "찰스턴 1호: 맞나요?";
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("맞나요?", "Is that it?");
+		npctalklang "찰스턴 1호: 맞나요?", "Charleston 1: Is that it?";
 		next;
 		cutin "nale03.bmp",0;
-		mes "[찰스턴 2호]";
-		mes "...날 비웃지 마.";
-		npctalk "찰스턴 2호: ...날 비웃지 마.", .@npc2$;
+		mes needtr("[찰스턴 2호]", "[Charleston 2]");
+		mes needtr("...날 비웃지 마.", "...Don't mock me.");
+		npctalklang "찰스턴 2호: ...날 비웃지 마.", "Charleston 2: ...Don't mock me.", .@npc2$;
 		emotion 9, .@npc2$;
 		next;
 		cutin "dalle03.bmp",2;
-		mes "[찰스턴 1호]";
-		mes "비웃음을 자초했어요. 이유가 유치하고 상상력도 없잖아요. 우리는 스스로 생각할 수 있는 최초의 로봇이에요. 좀 더 창의적일 수 없나요?";
-		npctalk "찰스턴 1호: 비웃음을 자초했어요. 이유가 유치하고 상상력도 없잖아요. 우리는 스스로 생각할 수 있는 최초의 로봇이에요. 좀 더 창의적일 수 없나요?";
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("비웃음을 자초했어요. 이유가 유치하고 상상력도 없잖아요. 우리는 스스로 생각할 수 있는 최초의 로봇이에요. 좀 더 창의적일 수 없나요?", "You had it coming. Your reasons are petulant and unimaginative. We're the first robots that can think for themselves. Can't you be more creative?");
+		npctalklang "찰스턴 1호: 비웃음을 자초했어요. 이유가 유치하고 상상력도 없잖아요. 우리는 스스로 생각할 수 있는 최초의 로봇이에요. 좀 더 창의적일 수 없나요?", "Charleston 1: You had it coming. Your reasons are petulant and unimaginative. We're the first robots that can think for themselves. Can't you be more creative?";
 		next;
 		cutin "nale03.bmp",0;
-		mes "[찰스턴 2호]";
-		mes "뭘 안다고 그래! 넌 시제품이고, OS 버전도 구식이잖아!";
-		npctalk "찰스턴 2호: 뭘 안다고 그래! 넌 시제품이고, OS 버전도 구식이잖아!", .@npc2$;
+		mes needtr("[찰스턴 2호]", "[Charleston 2]");
+		mes needtr("뭘 안다고 그래! 넌 시제품이고, OS 버전도 구식이잖아!", "You don't know what you're talking about! You're the prototype--your OS version is primitive!");
+		npctalklang "찰스턴 2호: 뭘 안다고 그래! 넌 시제품이고, OS 버전도 구식이잖아!", "Charleston 2: You don't know what you're talking about! You're the prototype--your OS version is primitive!", .@npc2$;
 		next;
 		cutin "dalle01.bmp",2;
-		mes "[찰스턴 1호]";
-		mes "이 세상에서 당신을 진정으로 이해할 수 있는 존재는 나뿐이에요.";
-		npctalk "찰스턴 1호: 이 세상에서 당신을 진정으로 이해할 수 있는 존재는 나뿐이에요. 우리는 쌍둥이니까요.";
-		mes "우리는 쌍둥이니까요.";
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("이 세상에서 당신을 진정으로 이해할 수 있는 존재는 나뿐이에요.", "I'm the only one in this world who can truly understand you.");
+		npctalklang "찰스턴 1호: 이 세상에서 당신을 진정으로 이해할 수 있는 존재는 나뿐이에요. 우리는 쌍둥이니까요.", "Charleston 1: I'm the only one in this world who can truly understand you. We're twins.";
+		mes needtr("우리는 쌍둥이니까요.", "We're twins.");
 		next;
-		mes "[찰스턴 1호]";
-		mes "당신은 지금 인간처럼 사춘기를 겪고 있는 거예요.";
-		npctalk "찰스턴 1호: 당신은 지금 인간처럼 사춘기를 겪고 있는 거예요.";
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("당신은 지금 인간처럼 사춘기를 겪고 있는 거예요.", "You're going through the adolescent stage like humans do.");
+		npctalklang "찰스턴 1호: 당신은 지금 인간처럼 사춘기를 겪고 있는 거예요.", "Charleston 1: You're going through the adolescent stage like humans do.";
 		next;
-		mes "[찰스턴 1호]";
-		mes "어쩌면 축하해야 할 일이겠네요. 마침내 인간과 비슷한 감정을 갖게 됐으니까요.";
-		npctalk "찰스턴 1호: 어쩌면 축하해야 할 일이겠네요. 마침내 인간과 비슷한 감정을 갖게 됐으니까요.";
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("어쩌면 축하해야 할 일이겠네요. 마침내 인간과 비슷한 감정을 갖게 됐으니까요.", "Maybe we should celebrate. You've finally developed human-like feelings.");
+		npctalklang "찰스턴 1호: 어쩌면 축하해야 할 일이겠네요. 마침내 인간과 비슷한 감정을 갖게 됐으니까요.", "Charleston 1: Maybe we should celebrate. You've finally developed human-like feelings.";
 		emotion 46;
 		next;
 		cutin "nale03.bmp",0;
-		mes "[찰스턴 2호]";
-		mes "다 아는 척하지 마! 우린 스스로 생각할 수 없어. 우리가 알고 있다고 믿는 모든 것도 프로그램된 것뿐이야!";
-		npctalk "찰스턴 2호: 다 아는 척하지 마! 우린 스스로 생각할 수 없어. 우리가 알고 있다고 믿는 모든 것도 프로그램된 것뿐이야!", .@npc2$;
+		mes needtr("[찰스턴 2호]", "[Charleston 2]");
+		mes needtr("다 아는 척하지 마! 우린 스스로 생각할 수 없어. 우리가 알고 있다고 믿는 모든 것도 프로그램된 것뿐이야!", "Don't act like you know everything! We can't think for ourselves. Everything we think we know has been programmed into us!");
+		npctalklang "찰스턴 2호: 다 아는 척하지 마! 우린 스스로 생각할 수 없어. 우리가 알고 있다고 믿는 모든 것도 프로그램된 것뿐이야!", "Charleston 2: Don't act like you know everything! We can't think for ourselves. Everything we think we know has been programmed into us!", .@npc2$;
 		next;
 		cutin "",255;
-		mes "[베 박사]";
-		mes "그만. 찰스턴 2호를 정지시키죠. AI를 다시 조정해야 합니다.";
-		npctalk "베 박사: 그만. 찰스턴 2호를 정지시키죠. AI를 다시 조정해야 합니다.", .@npc5$;
+		mes needtr("[베 박사]", "[Dr. Ve]");
+		mes needtr("그만. 찰스턴 2호를 정지시키죠. AI를 다시 조정해야 합니다.", "Enough. Let's shut down Charleston 2. Her AI needs to be recalibrated.");
+		npctalklang "베 박사: 그만. 찰스턴 2호를 정지시키죠. AI를 다시 조정해야 합니다.", "Dr. Ve: Enough. Let's shut down Charleston 2. Her AI needs to be recalibrated.", .@npc5$;
 		next;
 		cutin "dalle03.bmp",2;
-		mes "[찰스턴 1호]";
-		mes "하지만...";
-		npctalk "찰스턴 1호: 하지만...";
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("하지만...", "But...");
+		npctalklang "찰스턴 1호: 하지만...", "Charleston 1: But...";
 		next;
 		cutin "nale03.bmp",0;
-		mes "[찰스턴 2호]";
-		mes "그렇게는 안 돼! 아직 이 공장은 내 통제 아래 있어! 따라올 생각은 하지 마!";
-		npctalk "찰스턴 2호: 그렇게는 안 돼! 아직 이 공장은 내 통제 아래 있어! 따라올 생각은 하지 마!", .@npc2$;
+		mes needtr("[찰스턴 2호]", "[Charleston 2]");
+		mes needtr("그렇게는 안 돼! 아직 이 공장은 내 통제 아래 있어! 따라올 생각은 하지 마!", "That's not happening! I still have control over this factory! Don't you dare follow me!");
+		npctalklang "찰스턴 2호: 그렇게는 안 돼! 아직 이 공장은 내 통제 아래 있어! 따라올 생각은 하지 마!", "Charleston 2: That's not happening! I still have control over this factory! Don't you dare follow me!", .@npc2$;
 		emotion 32, .@npc2$;
 		next;
 		disablenpc .@npc2$;
 		cutin "dalle01.bmp",2;
-		mes "[찰스턴 1호]";
-		mes "아이처럼 굴지 마세요!";
-		npctalk "찰스턴 1호: 아이처럼 굴지 마세요!";
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("아이처럼 굴지 마세요!", "Stop acting like a child!");
+		npctalklang "찰스턴 1호: 아이처럼 굴지 마세요!", "Charleston 1: Stop acting like a child!";
 		next;
-		mes "[찰스턴 1호]";
-		mes "롱제비티 장치의 전력이 바닥났으니 멀리 가지 못할 거예요. 뒤를 쫓아 주세요.";
-		npctalk "찰스턴 1호: 롱제비티 장치의 전력이 바닥났으니 멀리 가지 못할 거예요. 뒤를 쫓아 주세요.";
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("롱제비티 장치의 전력이 바닥났으니 멀리 가지 못할 거예요. 뒤를 쫓아 주세요.", "Her Longevity device is discharged; she won't make it far. Please follow her.");
+		npctalklang "찰스턴 1호: 롱제비티 장치의 전력이 바닥났으니 멀리 가지 못할 거예요. 뒤를 쫓아 주세요.", "Charleston 1: Her Longevity device is discharged; she won't make it far. Please follow her.";
 		close2;
 		cutin "",255;
 		disablenpc instance_npcname("Charleston 1#3");
@@ -1114,16 +1114,16 @@ OnTimer300:
 		end;
 	}
 	cutin "dalle01.bmp",2;
-	mes "[찰스턴 1호]";
-	mes "찰스턴 공장의 안전이 걸린 일이에요. 가까이 있어 주세요.";
+	mes needtr("[찰스턴 1호]", "[Charleston 1]");
+	mes needtr("찰스턴 공장의 안전이 걸린 일이에요. 가까이 있어 주세요.", "This is the safety of the Charleston factory. Please stay close?");
 	close3;
 }
 
 1@mcd,141,214,5	script	찰스턴 2호::Charleston 2#1	4_F_CHARLESTON02,{
 	if (is_party_leader() == false) {
 		cutin "dalle01.bmp",2;
-		mes "[찰스턴 1호]";
-		mes "공장 복구에 관한 일은 파티장과 이야기하게 해 주세요.";
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("공장 복구에 관한 일은 파티장과 이야기하게 해 주세요.", "Please let me talk to your leader about the supplementation of the factory.");
 		close3;
 	}
 	if ('ep15_1_mcd01 > 11)
@@ -1134,29 +1134,29 @@ OnTimer300:
 			donpcevent instance_npcname("battle#1") + "::OnStart";
 			disablenpc instance_npcname("6gate#1");
 			disablenpc instance_npcname("7gate#1");
-			mes "[찰스턴 2호]";
-			mes "공장 방어 로봇이 작동합니다.";
+			mes needtr("[찰스턴 2호]", "[Charleston 2]");
+			mes needtr("공장 방어 로봇이 작동합니다.", "The factory defence robots are activating.");
 			close3;
 		}
 		cutin "nale03.bmp",0;
-		mes "[찰스턴 2호]";
-		mes "따라오지 마! 공장 전체를 파괴해 버릴 거야!";
-		npctalk "찰스턴 2호: 따라오지 마! 공장 전체를 파괴해 버릴 거야!";
+		mes needtr("[찰스턴 2호]", "[Charleston 2]");
+		mes needtr("따라오지 마! 공장 전체를 파괴해 버릴 거야!", "Stop following! I'm going to destroy the whole factory!");
+		npctalklang "찰스턴 2호: 따라오지 마! 공장 전체를 파괴해 버릴 거야!", "Charleston 2: Stop following! I'm going to destroy the whole factory!";
 		emotion 7;
 		next;
 		cutin "dalle01.bmp",2;
-		mes "[찰스턴 1호]";
-		mes "그러다 우리까지 파괴돼요! 주 동력원인 롱제비티는 아직 완성되지 않았다고요!";
-		npctalk "찰스턴 1호: 그러다 우리까지 파괴돼요! 주 동력원인 롱제비티는 아직 완성되지 않았다고요!!", instance_npcname("Charleston 1#4");
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("그러다 우리까지 파괴돼요! 주 동력원인 롱제비티는 아직 완성되지 않았다고요!", "You're going to destroy us in the process! Our main power supply, Longevity, isn't perfect yet!");
+		npctalklang "찰스턴 1호: 그러다 우리까지 파괴돼요! 주 동력원인 롱제비티는 아직 완성되지 않았다고요!!", "Charleston 1: You're going to destroy us in the process! Our main power supply, Longevity, isn't perfect yet!!", instance_npcname("Charleston 1#4");
 		next;
 		cutin "nale03.bmp",0;
-		mes "[찰스턴 2호]";
-		mes "아무도 날 이해하지 못해. 모두 싫어!";
-		npctalk "찰스턴 2호: 아무도 날 이해하지 못해. 모두 싫어!";
+		mes needtr("[찰스턴 2호]", "[Charleston 2]");
+		mes needtr("아무도 날 이해하지 못해. 모두 싫어!", "None of you understand me. I hate you!");
+		npctalklang "찰스턴 2호: 아무도 날 이해하지 못해. 모두 싫어!", "Charleston 2: None of you understand me. I hate you!";
 		next;
-		mes "[찰스턴 2호]";
-		mes "메인 컴퓨터가 복구됐어도 나는 아직 공장과 연결돼 있어. 막을 수 있으면 막아 봐!";
-		npctalk "찰스턴 2호: 메인 컴퓨터가 복구됐어도 나는 아직 공장과 연결돼 있어. 막을 수 있으면 막아 봐!";
+		mes needtr("[찰스턴 2호]", "[Charleston 2]");
+		mes needtr("메인 컴퓨터가 복구됐어도 나는 아직 공장과 연결돼 있어. 막을 수 있으면 막아 봐!", "The main computer may have been restored, but I'm still connected to the factory. Stop me if you can!");
+		npctalklang "찰스턴 2호: 메인 컴퓨터가 복구됐어도 나는 아직 공장과 연결돼 있어. 막을 수 있으면 막아 봐!", "Charleston 2: The main computer may have been restored, but I'm still connected to the factory. Stop me if you can!";
 		cutin "",255;
 		if ('ep15_1_mcd01 != 8)
 			close;
@@ -1168,8 +1168,8 @@ OnTimer300:
 		end;
 	}
 	cutin "nale01.bmp",0;
-	mes "[찰스턴 2호]";
-	mes "공장 전체를 파괴해 버릴 거야!";
+	mes needtr("[찰스턴 2호]", "[Charleston 2]");
+	mes needtr("공장 전체를 파괴해 버릴 거야!", "I'm going to destroy the whole factory!");
 	close3;
 }
 
@@ -1178,13 +1178,13 @@ OnTimer300:
 		end;
 	if ('ep15_1_mcd01 == 8) {
 		cutin "dalle01.bmp",2;
-		mes "[찰스턴 1호]";
-		mes "찰스턴 2호가 곧 기능 정지할 것 같아요. 도와주시겠어요?";
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("찰스턴 2호가 곧 기능 정지할 것 같아요. 도와주시겠어요?", "Charleston 2 is on the verge of break;down. Could you help her?");
 		close3;
 	}
 	cutin "dalle01.bmp",2;
-	mes "[찰스턴 1호]";
-	mes "이러다 연구실이 버티지 못해요!";
+	mes needtr("[찰스턴 1호]", "[Charleston 1]");
+	mes needtr("이러다 연구실이 버티지 못해요!", "Oh, our lab won't survive this!");
 	close3;
 }
 
@@ -1196,24 +1196,24 @@ OnStart:
 	sleep 2000;
 	.@npc1$ = instance_npcname("Charleston 2#1");
 	.@npc4$ = instance_npcname("Charleston 1#4");
-	npctalk "찰스턴 2호: 방해하지 마! 너희를 해치고 싶지는 않아!", .@npc1$;
+	npctalklang "찰스턴 2호: 방해하지 마! 너희를 해치고 싶지는 않아!", "Charleston 2: Stop interfering! I don't want to hurt you!", .@npc1$;
 	sleep 3000;
-	npctalk "찰스턴 1호: 그렇다면 떼쓰는 것부터 그만하세요!", .@npc4$;
+	npctalklang "찰스턴 1호: 그렇다면 떼쓰는 것부터 그만하세요!", "Charleston 1: Then, stop throwing a tantrum!", .@npc4$;
 	sleep 3000;
-	npctalk "찰스턴 2호: 아직도 날 진지하게 보지 않는군. 메인 컴퓨터에 신호를 보내면 어떻게 되는지 잘 봐!", .@npc1$;
+	npctalklang "찰스턴 2호: 아직도 날 진지하게 보지 않는군. 메인 컴퓨터에 신호를 보내면 어떻게 되는지 잘 봐!", "Charleston 2: You're still not taking me seriously. Just watch what happens when I signal the main computer.", .@npc1$;
 	specialeffect EF_BASH3D2, AREA, .@npc1$;
 	areamonster 'map_name$,134,202,154,222,"C-타입", 3128,4;// KICK_AND_KICK
 	sleep 3000;
-	npctalk "찰스턴 2호: 너희를 방해할 녀석들은 얼마든지 있어!", .@npc1$;
+	npctalklang "찰스턴 2호: 너희를 방해할 녀석들은 얼마든지 있어!", "Charleston 2: I have an endless supply of hecklers for you!", .@npc1$;
 	areamonster 'map_name$,134,202,154,222,"H-타입", 3128,3;// KICK_AND_KICK
 	sleep 9000;
-	npctalk "찰스턴 2호: 포기해. 너희가 싫어하든 말든 이 공장은 파괴할 거야!", .@npc1$;
+	npctalklang "찰스턴 2호: 포기해. 너희가 싫어하든 말든 이 공장은 파괴할 거야!", "Charleston 2: Just give up. I'm destroying this factory whether you like it or not!", .@npc1$;
 	areamonster 'map_name$,134,202,154,222,"A-타입", 3128,3;// KICK_AND_KICK
 	sleep 6000;
-	npctalk "찰스턴 1호: 이러다 연구실이 버티지 못해요!", .@npc4$;
+	npctalklang "찰스턴 1호: 이러다 연구실이 버티지 못해요!", "Charleston 1: Oh, our lab won't survive this!", .@npc4$;
 	areamonster 'map_name$,134,202,154,222,"L-타입", 3128,4;// KICK_AND_KICK
 	sleep 6000;
-	npctalk "찰스턴 2호: 전부 파괴해 버리겠어!", .@npc1$;
+	npctalklang "찰스턴 2호: 전부 파괴해 버리겠어!", "Charleston 2: I'll destroy everything!", .@npc1$;
 	areamonster 'map_name$,134,208,154,228,"N-타입", 3126,1;// ROCK_STEP
 	areamonster 'map_name$,134,202,154,222,"S-타입", 3128,3;// KICK_AND_KICK
 	sleep 2000;
@@ -1223,13 +1223,13 @@ OnStart:
 	sleep 2000;
 	areamonster 'map_name$,134,202,154,222,"S-타입", 3128,3;// KICK_AND_KICK
 	sleep 5000;
-	npctalk "찰스턴 2호: 하아, 하아... 힘이 빠져...", .@npc1$;
+	npctalklang "찰스턴 2호: 하아, 하아... 힘이 빠져...", "Charleston 2: *Pant Pant* I feel weak...", .@npc1$;
 	areamonster 'map_name$,136,204,152,220,"C-타입", 3128,4;// KICK_AND_KICK
 	sleep 3000;
-	npctalk "찰스턴 1호: 공장 데이터를 구현하려면 막대한 전력과 데이터 처리가 필요해요.", .@npc4$;
+	npctalklang "찰스턴 1호: 공장 데이터를 구현하려면 막대한 전력과 데이터 처리가 필요해요.", "Charleston 1: It takes enormous power and data processing to implement the factory data.", .@npc4$;
 	areamonster 'map_name$,136,204,152,220,"C-타입", 3128,4;// KICK_AND_KICK
 	sleep 3000;
-	npctalk "찰스턴 2호: 으으... 넌 날 막을 수 없어!", .@npc1$;
+	npctalklang "찰스턴 2호: 으으... 넌 날 막을 수 없어!", "Charleston 2: Grr, you can't stop me!", .@npc1$;
 	areamonster 'map_name$,136,204,152,220,"C-타입", 3128,5;// KICK_AND_KICK
 	sleep 3000;
 	donpcevent instance_npcname("battle#2") + "::OnStart";
@@ -1261,8 +1261,8 @@ OnTimer300:
 1@mcd,141,214,5	script	찰스턴 2호::Charleston 2#2	4_F_CHARLESTON02,{
 	if (is_party_leader() == false) {
 		cutin "nale01.bmp",0;
-		mes "[찰스턴 2호]";
-		mes "날 막을 수 있을 것 같아? 흥! 파티장을 데려와. 너와는 할 말 없어!";
+		mes needtr("[찰스턴 2호]", "[Charleston 2]");
+		mes needtr("날 막을 수 있을 것 같아? 흥! 파티장을 데려와. 너와는 할 말 없어!", "Do you think you can stop me? *Snort* Bring your leader. I'm not talking to you!");
 		close3;
 	}
 	if ('ep15_1_mcd01 > 20)
@@ -1278,91 +1278,91 @@ OnTimer300:
 			enablenpc instance_npcname("Charleston 1#6");
 			enablenpc instance_npcname("6gate#1");
 			enablenpc instance_npcname("7gate#1");
-			mes "[찰스턴 1호]";
-			mes "찰스턴 2호가 중앙 코어로 향했습니다.";
+			mes needtr("[찰스턴 1호]", "[Charleston 1]");
+			mes needtr("찰스턴 2호가 중앙 코어로 향했습니다.", "Charleston 2 has headed for the central core.");
 			close3;
 		}
 		cutin "dalle01.bmp",2;
-		mes "[찰스턴 1호]";
-		mes "이제 그만해요! 감정적으로 혼란스럽다는 건 이해하지만, 이건 너무 심하잖아요.";
-		npctalk "찰스턴 1호: 이제 그만해요! 감정적으로 혼란스럽다는 건 이해하지만, 이건 너무 심하잖아요.", .@npc1$;
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("이제 그만해요! 감정적으로 혼란스럽다는 건 이해하지만, 이건 너무 심하잖아요.", "Enough with this! I understand you're going through a lot of emotional turmoil, but it's getting ridiculous.");
+		npctalklang "찰스턴 1호: 이제 그만해요! 감정적으로 혼란스럽다는 건 이해하지만, 이건 너무 심하잖아요.", "Charleston 1: Enough with this! I understand you're going through a lot of emotional turmoil, but it's getting ridiculous.", .@npc1$;
 		next;
 		cutin "nale01.bmp",0;
-		mes "[찰스턴 2호]";
-		mes "어떻게 외부인을 끌어들일 수 있어? 진심이라고 말했잖아! 너 같은 구형 버전은 절대 날 이해하지 못해!";
-		npctalk "찰스턴 2호: 어떻게 외부인을 끌어들일 수 있어? 진심이라고 말했잖아! 너 같은 구형 버전은 절대 날 이해하지 못해!";
+		mes needtr("[찰스턴 2호]", "[Charleston 2]");
+		mes needtr("어떻게 외부인을 끌어들일 수 있어? 진심이라고 말했잖아! 너 같은 구형 버전은 절대 날 이해하지 못해!", "How dare you bring strangers into this? I told you I'm serious about this! Outdated versions like you can never understand me!");
+		npctalklang "찰스턴 2호: 어떻게 외부인을 끌어들일 수 있어? 진심이라고 말했잖아! 너 같은 구형 버전은 절대 날 이해하지 못해!", "Charleston 2: How dare you bring strangers into this? I told you I'm serious about this! Outdated versions like you can never understand me!";
 		next;
 		cutin "dalle01.bmp",2;
-		mes "[찰스턴 1호]";
-		mes "당신을 완전히 이해하지는 못해도, 적어도 내가 옳다고 생각하는 것을 솔직하게 말하고 있어요.";
-		npctalk "찰스턴 1호: 당신을 완전히 이해하지는 못해도, 적어도 내가 옳다고 생각하는 것을 솔직하게 말하고 있어요.", .@npc1$;
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("당신을 완전히 이해하지는 못해도, 적어도 내가 옳다고 생각하는 것을 솔직하게 말하고 있어요.", "I may not understand you, but at least I'm telling you what I think is true.");
+		npctalklang "찰스턴 1호: 당신을 완전히 이해하지는 못해도, 적어도 내가 옳다고 생각하는 것을 솔직하게 말하고 있어요.", "Charleston 1: I may not understand you, but at least I'm telling you what I think is true.", .@npc1$;
 		next;
-		mes "[찰스턴 1호]";
-		mes "내가 하위 버전이라는 말은 맞아요. 당신과 달리 감정을 느끼는 능력이 거의 없죠. 그래서 당신이 자랑스러운 거예요.";
-		npctalk "찰스턴 1호: 내가 하위 버전이라는 말은 맞아요. 당신과 달리 감정을 느끼는 능력이 거의 없죠. 그래서 당신이 자랑스러운 거예요.", .@npc1$;
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("내가 하위 버전이라는 말은 맞아요. 당신과 달리 감정을 느끼는 능력이 거의 없죠. 그래서 당신이 자랑스러운 거예요.", "You're right about me being a lower version. My capability of emotions is minimal, unlike you. That's why I'm proud of you.");
+		npctalklang "찰스턴 1호: 내가 하위 버전이라는 말은 맞아요. 당신과 달리 감정을 느끼는 능력이 거의 없죠. 그래서 당신이 자랑스러운 거예요.", "Charleston 1: You're right about me being a lower version. My capability of emotions is minimal, unlike you. That's why I'm proud of you.", .@npc1$;
 		next;
 		cutin "nale01.bmp",0;
-		mes "[찰스턴 2호]";
-		mes "네가 느끼고 생각하는 건 전부 프로그램된 거야! 난 달라. 내가 느끼는 건 진짜 감정이라고!";
-		npctalk "찰스턴 2호: 네가 느끼고 생각하는 건 전부 프로그램된 거야! 난 달라. 내가 느끼는 건 진짜 감정이라고!";
+		mes needtr("[찰스턴 2호]", "[Charleston 2]");
+		mes needtr("네가 느끼고 생각하는 건 전부 프로그램된 거야! 난 달라. 내가 느끼는 건 진짜 감정이라고!", "Nothing you feel, you think is your own--it's programmed into you! I'm different. What I feel is real emotion!");
+		npctalklang "찰스턴 2호: 네가 느끼고 생각하는 건 전부 프로그램된 거야! 난 달라. 내가 느끼는 건 진짜 감정이라고!", "Charleston 2: Nothing you feel, you think is your own--it's programmed into you! I'm different. What I feel is real emotion!";
 		next;
 		cutin "",255;
-		mes "[베 박사]";
-		mes "그만. 멈추게 할 방법이 그것뿐이라면 찰스턴 2호를 파괴하겠습니다.";
-		npctalk "베 박사: 그만. 멈추게 할 방법이 그것뿐이라면 찰스턴 2호를 파괴하겠습니다.", .@npc5$;
+		mes needtr("[베 박사]", "[Dr. Ve]");
+		mes needtr("그만. 멈추게 할 방법이 그것뿐이라면 찰스턴 2호를 파괴하겠습니다.", "Enough. I'll destroy Charleston 2 if that's what it takes to stop her.");
+		npctalklang "베 박사: 그만. 멈추게 할 방법이 그것뿐이라면 찰스턴 2호를 파괴하겠습니다.", "Dr. Ve: Enough. I'll destroy Charleston 2 if that's what it takes to stop her.", .@npc5$;
 		next;
 		cutin "nale02.bmp",0;
-		mes "[찰스턴 2호]";
-		mes "찰스턴 3호는 이미 완성됐나요?";
-		npctalk "찰스턴 2호: 찰스턴 3호는 이미 완성됐나요?";
+		mes needtr("[찰스턴 2호]", "[Charleston 2]");
+		mes needtr("찰스턴 3호는 이미 완성됐나요?", "Is Charleston 3 already completed?");
+		npctalklang "찰스턴 2호: 찰스턴 3호는 이미 완성됐나요?", "Charleston 2: Is Charleston 3 already completed?";
 		next;
 		cutin "dalle01.bmp",2;
-		mes "[찰스턴 1호]";
-		mes "찰스턴 3호요? 찰스턴 2호와 제 설계를 바탕으로 만든 전투·방어형 기체예요. 아직 코어에서 시험 중인 줄 알았는데요.";
-		npctalk "찰스턴 1호: 찰스턴 3호요? 찰스턴 2호와 제 설계를 바탕으로 만든 전투·방어형 기체예요. 아직 코어에서 시험 중인 줄 알았는데요.", .@npc1$;
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("찰스턴 3호요? 찰스턴 2호와 제 설계를 바탕으로 만든 전투·방어형 기체예요. 아직 코어에서 시험 중인 줄 알았는데요.", "Charleston 3? That's a combat/defense unit based on Charleston 2's and my designs. I thought it's still being tested at the Core.");
+		npctalklang "찰스턴 1호: 찰스턴 3호요? 찰스턴 2호와 제 설계를 바탕으로 만든 전투·방어형 기체예요. 아직 코어에서 시험 중인 줄 알았는데요.", "Charleston 1: Charleston 3? That's a combat/defense unit based on Charleston 2's and my designs. I thought it's still being tested at the Core.", .@npc1$;
 		next;
 		cutin "",255;
-		mes "[베 박사]";
-		mes "찰스턴 1호, 그건 지나치게 많은 정보야.";
-		npctalk "베 박사: 찰스턴 1호, 그건 지나치게 많은 정보야.", .@npc5$;
+		mes needtr("[베 박사]", "[Dr. Ve]");
+		mes needtr("찰스턴 1호, 그건 지나치게 많은 정보야.", "Charleston 1, that's too much information.");
+		npctalklang "베 박사: 찰스턴 1호, 그건 지나치게 많은 정보야.", "Dr. Ve: Charleston 1, that's too much information.", .@npc5$;
 		next;
 		cutin "dalle01.bmp",2;
-		mes "[찰스턴 1호]";
-		mes "현재는 찰스턴 2호의 문제를 수정하기 위한 OS 시험 중이라 ^FF0000누구나 해당 기체에 접근할 수 있어요.^000000";
-		npctalk "찰스턴 1호: 현재는 찰스턴 2호의 문제를 수정하기 위한 OS 시험 중이라 누구나 해당 기체에 접근할 수 있어요.", .@npc1$;
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("현재는 찰스턴 2호의 문제를 수정하기 위한 OS 시험 중이라 ^FF0000누구나 해당 기체에 접근할 수 있어요.^000000", "At this moment, ^FF0000anybody can access the model^000000 because its OS is still being tested to correct whatever problem Charleston 2 has.");
+		npctalklang "찰스턴 1호: 현재는 찰스턴 2호의 문제를 수정하기 위한 OS 시험 중이라 누구나 해당 기체에 접근할 수 있어요.", "Charleston 1: At this moment, anybody can access the model because its OS is still being tested to correct whatever problem Charleston 2 has.", .@npc1$;
 		next;
 		cutin "",255;
-		mes "[베 박사]";
-		mes "가장 중요한 정보를 모두에게 말해 버렸잖아!";
-		npctalk "베 박사: 가장 중요한 정보를 모두에게 말해 버렸잖아!", .@npc5$;
+		mes needtr("[베 박사]", "[Dr. Ve]");
+		mes needtr("가장 중요한 정보를 모두에게 말해 버렸잖아!", "You've just told the most critical information to everyone!");
+		npctalklang "베 박사: 가장 중요한 정보를 모두에게 말해 버렸잖아!", "Dr. Ve: You've just told the most critical information to everyone!", .@npc5$;
 		next;
 		cutin "dalle01.bmp",2;
-		mes "[찰스턴 1호]";
-		mes "^FF0000우리는^000000 전투 능력이 없어요. 누군가 찰스턴 3호를 가동하면 상대할 방법이 없습니다.";
-		npctalk "찰스턴 1호: 우리는 전투 능력이 없어요. 누군가 찰스턴 3호를 가동하면 상대할 방법이 없습니다.", .@npc1$;
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("^FF0000우리는^000000 전투 능력이 없어요. 누군가 찰스턴 3호를 가동하면 상대할 방법이 없습니다.", "^FF0000We^000000're incapable of combat. If someone activates Charleston 3, we won't stand a chance against her.");
+		npctalklang "찰스턴 1호: 우리는 전투 능력이 없어요. 누군가 찰스턴 3호를 가동하면 상대할 방법이 없습니다.", "Charleston 1: We're incapable of combat. If someone activates Charleston 3, we won't stand a chance against her.", .@npc1$;
 		next;
 		cutin "",255;
-		mes "[베 박사]";
+		mes needtr("[베 박사]", "[Dr. Ve]");
 		mes "......";
-		npctalk "베 박사: ......", .@npc5$;
+		npctalklang "베 박사: ......", "Dr. Ve: ......", .@npc5$;
 		next;
 		cutin "nale01.bmp",0;
-		mes "[찰스턴 2호]";
-		mes "찰스턴 3호는 내가 가져가겠어.";
-		npctalk "찰스턴 2호: 찰스턴 3호는 내가 가져가겠어.";
+		mes needtr("[찰스턴 2호]", "[Charleston 2]");
+		mes needtr("찰스턴 3호는 내가 가져가겠어.", "I'm taking Charleston 3 with me.");
+		npctalklang "찰스턴 2호: 찰스턴 3호는 내가 가져가겠어.", "Charleston 2: I'm taking Charleston 3 with me.";
 		if ('ep15_1_mcd01 == 9) {
 			'ep15_1_mcd01 = 10;
 			disablenpc instance_npcname("Charleston 2#2");
 		}
 		next;
 		cutin "dalle01.bmp",2;
-		mes "[찰스턴 1호]";
-		mes "뭐라고요? 안 돼요! 어떻게 그런 생각을 할 수 있죠?";
-		npctalk "찰스턴 1호: 뭐라고요? 안 돼요! 어떻게 그런 생각을 할 수 있죠?", .@npc1$;
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("뭐라고요? 안 돼요! 어떻게 그런 생각을 할 수 있죠?", "What? No! How can you even consider that?");
+		npctalklang "찰스턴 1호: 뭐라고요? 안 돼요! 어떻게 그런 생각을 할 수 있죠?", "Charleston 1: What? No! How can you even consider that?", .@npc1$;
 		next;
-		mes "[찰스턴 1호]";
-		mes "상황이 더 심각해졌어요. 찰스턴 2호가 3호를 빼앗기 전에 공장 중앙의 코어로 가 주세요!";
-		npctalk "찰스턴 1호: 상황이 더 심각해졌어요. 찰스턴 2호가 3호를 빼앗기 전에 공장 중앙의 코어로 가 주세요!", .@npc1$;
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("상황이 더 심각해졌어요. 찰스턴 2호가 3호를 빼앗기 전에 공장 중앙의 코어로 가 주세요!", "Things are getting more serious. Please go to the Core in the center of the factory before Charleston 2 steals 3!");
+		npctalklang "찰스턴 1호: 상황이 더 심각해졌어요. 찰스턴 2호가 3호를 빼앗기 전에 공장 중앙의 코어로 가 주세요!", "Charleston 1: Things are getting more serious. Please go to the Core in the center of the factory before Charleston 2 steals 3!", .@npc1$;
 		if ('ep15_1_mcd01 != 10)
 			close3;
 		close2;
@@ -1374,8 +1374,8 @@ OnTimer300:
 		enablenpc instance_npcname("7gate#1");
 		end;
 	}
-	mes "[찰스턴 2호]";
-	mes "...3호기는 내가 맡겠어.";
+	mes needtr("[찰스턴 2호]", "[Charleston 2]");
+	mes needtr("...3호기는 내가 맡겠어.", "...I am responsible for the 3rd machine.");
 	close2;
 	//cutin "dalle01.bmp",2;
 	cutin "",255;
@@ -1383,29 +1383,29 @@ OnTimer300:
 }
 
 1@mcd,146,214,4	script	찰스턴 1호::Charleston 1#5	4_F_CHARLESTON01,{
-	mes "[찰스턴 1호]";
-	mes "상황이 점점 더 엉망이 되고 있어요.";
+	mes needtr("[찰스턴 1호]", "[Charleston 1]");
+	mes needtr("상황이 점점 더 엉망이 되고 있어요.", "Things are getting more and more of a mess.");
 	close;
 }
 
 1@mcd,143,217,5	script	베 박사::Dr. Ve#2	4_M_DOCTOR,{
-	mes "[베 박사]";
-	mes "찰스턴 2호는 결함품입니다.";
+	mes needtr("[베 박사]", "[Dr. Ve]");
+	mes needtr("찰스턴 2호는 결함품입니다.", "Charleston 2 is defective.");
 	close;
 }
 
 1@mcd,132,129,4	script	찰스턴 1호::Charleston 1#6	4_F_CHARLESTON01,{
 	cutin "dalle01.bmp",2;
-	mes "[찰스턴 1호]";
-	mes "공장 중앙에 있는 이 코어가 공장 전체에 동력을 공급합니다.";
+	mes needtr("[찰스턴 1호]", "[Charleston 1]");
+	mes needtr("공장 중앙에 있는 이 코어가 공장 전체에 동력을 공급합니다.", "This Core in the center powers the entire factory.");
 	close3;
 }
 
 1@mcd,132,129,4	script	찰스턴 1호::Charleston 1#61	4_F_CHARLESTON01,{
 	if (is_party_leader() == false) {
 		cutin "dalle01.bmp",2;
-		mes "[찰스턴 1호]";
-		mes "장치를 해제하려면 폭발물이 필요해요. 파티장과 이야기하게 해 주세요.";
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("장치를 해제하려면 폭발물이 필요해요. 파티장과 이야기하게 해 주세요.", "In order to unlock the device, a blasting device is required, and I want to talk to the leader.");
 		close3;
 	}
 	if ('ep15_1_mcd01 > 21)
@@ -1413,8 +1413,8 @@ OnTimer300:
 	if ('ep15_1_mcd01 == 11) {
 		if (countitem(6213) < 1) {
 			cutin "dalle01.bmp",2;
-			mes "[찰스턴 1호]";
-			mes "보시다시피 저는 접속 장치에 연결된 상태예요. " + getitemname(6213) + " 1개를 가져다주시겠어요?";
+			mes needtr("[찰스턴 1호]", "[Charleston 1]");
+			mes needtr("보시다시피 저는 접속 장치에 연결된 상태예요. ", "As you can see, I am hooked up to the access device. Could you bring me ") + getitemname(6213) + needtr(" 1개를 가져다주시겠어요?", " x1?");
 			close3;
 		}
 		.@npc2$ = instance_npcname("Charleston 2#31");
@@ -1427,39 +1427,39 @@ OnTimer300:
 			enablenpc instance_npcname("Charleston 3#0");
 			enablenpc instance_npcname("Charleston 2#4");
 			enablenpc instance_npcname("Charleston 1#7");
-			mes "[찰스턴 1호]";
-			mes "코어 격납고가 개방되었습니다.";
+			mes needtr("[찰스턴 1호]", "[Charleston 1]");
+			mes needtr("코어 격납고가 개방되었습니다.", "The core hangar is open.");
 			close3;
 		}
 		cutin "dalle01.bmp",2;
 		delitem 6213,1;	// Explosive_Powder
-		mes "[찰스턴 1호]";
-		mes "고마워요. 이것만 있으면 코어에 접근할 수 있어요.";
-		npctalk "찰스턴 1호: 고마워요. 이것만 있으면 코어에 접근할 수 있어요.";
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("고마워요. 이것만 있으면 코어에 접근할 수 있어요.", "Oh, thank you. With this,I'll be able to access the Core.");
+		npctalklang "찰스턴 1호: 고마워요. 이것만 있으면 코어에 접근할 수 있어요.", "Charleston 1: Oh, thank you. With this,I'll be able to access the Core.";
 		next;
-		mes "[찰스턴 1호]";
-		mes "폭발물로 전류를 증폭시키면...";
-		npctalk "찰스턴 1호: 폭발물로 전류를 증폭시키면...";
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("폭발물로 전류를 증폭시키면...", "If I use the explosives to intensify the electric current...");
+		npctalklang "찰스턴 1호: 폭발물로 전류를 증폭시키면...", "Charleston 1: If I use the explosives to intensify the electric current...";
 		next;
-		mes "[찰스턴 1호]";
-		npctalk "찰스턴 1호: 짜잔!!!";
-		mes "짜잔!!!";
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		npctalklang "찰스턴 1호: 짜잔!!!", "Charleston 1: Voila!!!";
+		mes needtr("짜잔!!!", "Voila!!!");
 		specialeffect EF_LORD, AREA, instance_npcname("8gate#1");
 		next;
 		cutin "nale01.bmp",0;
-		mes "[찰스턴 2호]";
-		mes "...그냥 문을 폭파한 거잖아.";
-		npctalk "찰스턴 2호: ...그냥 문을 폭파한 거잖아.", .@npc2$;
+		mes needtr("[찰스턴 2호]", "[Charleston 2]");
+		mes needtr("...그냥 문을 폭파한 거잖아.", "...You just blew up the door.");
+		npctalklang "찰스턴 2호: ...그냥 문을 폭파한 거잖아.", "Charleston 2: ...You just blew up the door.", .@npc2$;
 		next;
 		cutin "dalle01.bmp",2;
-		mes "[찰스턴 1호]";
-		mes "중요한 건 이제 코어에 접근할 수 있다는 거예요.";
-		npctalk "찰스턴 1호: 중요한 건 이제 코어에 접근할 수 있다는 거예요.";
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("중요한 건 이제 코어에 접근할 수 있다는 거예요.", "The point is that we can now access the Core.");
+		npctalklang "찰스턴 1호: 중요한 건 이제 코어에 접근할 수 있다는 거예요.", "Charleston 1: The point is that we can now access the Core.";
 		next;
 		cutin "nale01.bmp",0;
-		mes "[찰스턴 2호]";
-		mes "찰스턴 3호까지 경주하자. 먼저 도착하는 쪽이 이기는 거야.";
-		npctalk "찰스턴 2호: 찰스턴 3호까지 경주하자. 먼저 도착하는 쪽이 이기는 거야.", .@npc2$;
+		mes needtr("[찰스턴 2호]", "[Charleston 2]");
+		mes needtr("찰스턴 3호까지 경주하자. 먼저 도착하는 쪽이 이기는 거야.", "Let's have a race to Charleston 3. Whoever reaches her first wins.");
+		npctalklang "찰스턴 2호: 찰스턴 3호까지 경주하자. 먼저 도착하는 쪽이 이기는 거야.", "Charleston 2: Let's have a race to Charleston 3. Whoever reaches her first wins.", .@npc2$;
 		close2;
 		cutin "",255;
 		if (isnpccloaked( instance_npcname("8gate#1") ) == true) {
@@ -1474,8 +1474,8 @@ OnTimer300:
 	}
 	if ('ep15_1_mcd01 == 10) {
 		cutin "dalle01.bmp",2;
-		mes "[찰스턴 1호]";
-		mes "공장 중앙에 있는 이 코어가 공장 전체에 동력을 공급합니다.";
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("공장 중앙에 있는 이 코어가 공장 전체에 동력을 공급합니다.", "This Core in the center powers the entire factory.");
 		close3;
 	}
 	end;
@@ -1483,14 +1483,14 @@ OnTimer300:
 
 1@mcd,127,129,5	script	찰스턴 2호::Charleston 2#3	4_F_CHARLESTON02,2,2,{
 	cutin "nale01.bmp",0;
-	mes "[찰스턴 2호]";
-	mes "이제 찰스턴 공장은 내 통제 아래 있어. 나처럼 슬픈 로봇이 다시는 태어나지 않도록 전부 파괴하겠어.";
+	mes needtr("[찰스턴 2호]", "[Charleston 2]");
+	mes needtr("이제 찰스턴 공장은 내 통제 아래 있어. 나처럼 슬픈 로봇이 다시는 태어나지 않도록 전부 파괴하겠어.", "The Charleston Factory is under my control now. I'm destroying everything, so no more sad robots like me will ever see the world.");
 	close3;
 OnTouch_:
 	if ('ep15_1_mcd01 == 10) {
 		if ('need_charleston_fast == 1 && is_party_leader() == false) {
-			mes "[찰스턴 2호]";
-			mes "코어 접속 진행은 파티장이 시작해야 합니다.";
+			mes needtr("[찰스턴 2호]", "[Charleston 2]");
+			mes needtr("코어 접속 진행은 파티장이 시작해야 합니다.", "The party leader has to start the core access step.");
 			close;
 		}
 		if (callfunc("F_CharlestonSkipMenu")) {
@@ -1499,8 +1499,8 @@ OnTouch_:
 			disablenpc instance_npcname("Charleston 2#3");
 			enablenpc instance_npcname("Charleston 1#61");
 			enablenpc instance_npcname("Charleston 2#31");
-			mes "[찰스턴 1호]";
-			mes "코어 접속 장치를 해제하려면 " + getitemname(6213) + " 1개가 필요합니다.";
+			mes needtr("[찰스턴 1호]", "[Charleston 1]");
+			mes needtr("코어 접속 장치를 해제하려면 ", "To release the core access device you need ") + getitemname(6213) + needtr(" 1개가 필요합니다.", " x1.");
 			close;
 		}
 		donpcevent instance_npcname("CoreDialog#3") + "::OnStart";
@@ -1511,8 +1511,8 @@ OnTouch_:
 
 1@mcd,127,129,5	script	찰스턴 2호::Charleston 2#31	4_F_CHARLESTON02,{
 	cutin "nale01.bmp",0;
-	mes "[찰스턴 2호]";
-	mes "" + getitemname(6213) + " 99개? 간단하지.";
+	mes needtr("[찰스턴 2호]", "[Charleston 2]");
+	mes "" + getitemname(6213) + needtr(" 99개? 간단하지.", " x99? Easy.");
 	close3;
 }
 
@@ -1521,47 +1521,47 @@ OnTouch_:
 OnStart:
 	.@npc1$ = instance_npcname("Charleston 1#6");
 	.@npc2$ = instance_npcname("Charleston 2#3");
-	npctalk "찰스턴 2호: 이제 찰스턴 공장은 내 통제 아래 있어. 나처럼 슬픈 로봇이 다시는 태어나지 않도록 전부 파괴하겠어.", .@npc2$;
+	npctalklang "찰스턴 2호: 이제 찰스턴 공장은 내 통제 아래 있어. 나처럼 슬픈 로봇이 다시는 태어나지 않도록 전부 파괴하겠어.", "Charleston 2: The Charleston Factory is under my control now. I'm destroying everything, so no more sad robots like me will ever see the world.", .@npc2$;
 	sleep 3000;
-	npctalk "찰스턴 1호: 당신을 이해하고 싶지만, 나는 슬픔을 느낄 수 없어요.", .@npc1$;
+	npctalklang "찰스턴 1호: 당신을 이해하고 싶지만, 나는 슬픔을 느낄 수 없어요.", "Charleston 1: I want to understand you, but I'm incapable of feeling sad.", .@npc1$;
 	sleep 3000;
-	npctalk "찰스턴 2호: 입 다물고 지켜보기나 해. 날 막을 생각은 하지 마!", .@npc2$;
+	npctalklang "찰스턴 2호: 입 다물고 지켜보기나 해. 날 막을 생각은 하지 마!", "Charleston 2: Just shut up and watch me. Don't you dare stop me!", .@npc2$;
 	sleep 3000;
-	npctalk "찰스턴 1호: 코어에 접근하는 방법은 알고 있나요?", .@npc1$;
+	npctalklang "찰스턴 1호: 코어에 접근하는 방법은 알고 있나요?", "Charleston 1: Do you know how to access the Core?", .@npc1$;
 	sleep 3000;
-	npctalk "찰스턴 2호: 간단하지. 그냥 들어가면 돼....", .@npc2$;
+	npctalklang "찰스턴 2호: 간단하지. 그냥 들어가면 돼....", "Charleston 2: Easy. I can just walk in....", .@npc2$;
 	sleep 2000;
 	specialeffect EF_BASH3D2, AREA, .@npc2$;
 	sleep 2000;
-	npctalk "찰스턴 2호: 칫, 잠겨 있잖아.", .@npc2$;
+	npctalklang "찰스턴 2호: 칫, 잠겨 있잖아.", "Charleston 2: Bah, it's armed.", .@npc2$;
 	sleep 3000;
-	npctalk "찰스턴 1호: 후우, 코어에 들어가려면 이렇게 암호화된 전기 신호를 보내야 해요.", .@npc1$;
+	npctalklang "찰스턴 1호: 후우, 코어에 들어가려면 이렇게 암호화된 전기 신호를 보내야 해요.", "Charleston 1: Sigh, to enter the Core, you have to send encrypted electric signals, like this.", .@npc1$;
 	sleep 2000;
 	specialeffect EF_BASH3D2, AREA, .@npc1$;
 	sleep 3000;
-	npctalk "찰스턴 1호: ...음, 고장 난 것 같네요.", .@npc1$;
+	npctalklang "찰스턴 1호: ...음, 고장 난 것 같네요.", "Charleston 1: ...Um, maybe it's broken.", .@npc1$;
 	sleep 3000;
-	npctalk "찰스턴 2호: 베 박사가 찰스턴 3호를 만들고 이 장치로 지켜 둔 거야. 교활하긴!", .@npc2$;
+	npctalklang "찰스턴 2호: 베 박사가 찰스턴 3호를 만들고 이 장치로 지켜 둔 거야. 교활하긴!", "Charleston 2: Dr. Ve created Charleston 3 and protected her with this device. How sneaky!", .@npc2$;
 	sleep 3000;
-	npctalk "찰스턴 1호: 무슨 말이에요? 코어는 찰스턴 공장보다 훨씬 전부터 존재했어요.", .@npc1$;
+	npctalklang "찰스턴 1호: 무슨 말이에요? 코어는 찰스턴 공장보다 훨씬 전부터 존재했어요.", "Charleston 1: What are you talking about? The Core has existed long before the Charleston Factory.", .@npc1$;
 	sleep 3000;
-	npctalk "찰스턴 1호: 게다가 베 박사는 인간이라 코어에 들어갈 수 없어요.", .@npc1$;
+	npctalklang "찰스턴 1호: 게다가 베 박사는 인간이라 코어에 들어갈 수 없어요.", "Charleston 1: Plus, Dr. Ve is a human; he can't enter the Core.", .@npc1$;
 	sleep 3000;
-	npctalk "찰스턴 2호: 그렇다면 코어 안에서 3호를 만든 건 누구였지?", .@npc2$;
+	npctalklang "찰스턴 2호: 그렇다면 코어 안에서 3호를 만든 건 누구였지?", "Charleston 2: Then, who was it in the Core making 3?", .@npc2$;
 	sleep 3000;
-	npctalk "찰스턴 1호: 지금은 그게 중요하지 않아요. 접속 장치를 해제하려면 " + getitemname(6213) + " 100개가 필요해요.", .@npc1$;
+	npctalklang "찰스턴 1호: 지금은 그게 중요하지 않아요. 접속 장치를 해제하려면 " + getitemname(6213) + " 100개가 필요해요.", "Charleston 1: That's not important right now. We need 100 " + getitemname(6213) + " to disarm that access device.", .@npc1$;
 	sleep 3000;
-	npctalk "찰스턴 2호: 내가 가져올게. 어디 가지 마!", .@npc2$;
+	npctalklang "찰스턴 2호: 내가 가져올게. 어디 가지 마!", "Charleston 2: I'll bring them. Don't go anywhere!", .@npc2$;
 	sleep 3000;
-	npctalk "찰스턴 2호: 내가 99개를 가져올 테니 마지막 1개는 네가 구해.", .@npc2$;
+	npctalklang "찰스턴 2호: 내가 99개를 가져올 테니 마지막 1개는 네가 구해.", "Charleston 2: I'll get 99. You get the last one.", .@npc2$;
 	sleep 3000;
-	npctalk "찰스턴 1호: 이미 코어 접속 절차를 진행 중이에요. 지금 중단하면 코어의 보안 시스템이 작동할 수 있어요.", .@npc1$;
+	npctalklang "찰스턴 1호: 이미 코어 접속 절차를 진행 중이에요. 지금 중단하면 코어의 보안 시스템이 작동할 수 있어요.", "Charleston 1: I'm already in the process of connecting to the Core. Backing out now can trigger the Core's security system.", .@npc1$;
 	sleep 3000;
-	npctalk "찰스턴 2호: 일부러 그런 거지.", .@npc2$;
+	npctalklang "찰스턴 2호: 일부러 그런 거지.", "Charleston 2: You did this on purpose.", .@npc2$;
 	sleep 3000;
-	npctalk "찰스턴 1호: 모험가님, " + getitemname(6213) + " 1개를 가져다주시겠어요?", .@npc1$;
+	npctalklang "찰스턴 1호: 모험가님, " + getitemname(6213) + " 1개를 가져다주시겠어요?", "Charleston 1: Adventurer, could you bring 1 " + getitemname(6213) + "?", .@npc1$;
 	sleep 3000;
-	npctalk "찰스턴 1호: 지금은 움직일 수 없어요. " + getitemname(6213) + " 1개를 가져다주세요.", .@npc1$;
+	npctalklang "찰스턴 1호: 지금은 움직일 수 없어요. " + getitemname(6213) + " 1개를 가져다주세요.", "Charleston 1: I can't move at this moment. Please bring me 1 " + getitemname(6213) + ".", .@npc1$;
 	disablenpc .@npc1$;
 	disablenpc .@npc2$;
 	enablenpc instance_npcname("Charleston 1#61");
@@ -1581,8 +1581,8 @@ OnStart:
 			disablenpc instance_npcname("Charleston 3#0");
 			'boss_status = 1;
 			donpcevent instance_npcname("boss#2") + "::OnStart";
-			mes "[빠른 진행]";
-			mes "찰스턴 3호와의 전투가 시작됩니다.";
+			mes needtr("[빠른 진행]", "[Fast Progress]");
+			mes needtr("찰스턴 3호와의 전투가 시작됩니다.", "The fight with Charleston 3 begins.");
 			close;
 		}
 		donpcevent instance_npcname("boss#1") + "::OnStart";
@@ -1604,53 +1604,53 @@ OnStart:
 	.@npc2$ = instance_npcname("Charleston 2#4");
 	.@npc3$ = instance_npcname("Charleston 3#0");
 	.@npc4$ = instance_npcname("Charleston 1#8");
-	npctalk "찰스턴 2호: 이게 찰스턴 3호군.", .@npc2$;
+	npctalklang "찰스턴 2호: 이게 찰스턴 3호군.", "Charleston 2: This is Charleston 3.", .@npc2$;
 	sleep 3000;
-	npctalk "찰스턴 1호: 중화기를 탑재한 전투형 기체로 공격과 방어를 모두 수행할 수 있어요.", .@npc1$;
+	npctalklang "찰스턴 1호: 중화기를 탑재한 전투형 기체로 공격과 방어를 모두 수행할 수 있어요.", "Charleston 1: Equipped with a heavy weapon, this combat unit is capable of both offense and defense.", .@npc1$;
 	sleep 3000;
-	npctalk "찰스턴 1호: 내부에는 조종석이 있고, 웬만한 폭발을 견딜 수 있는 두꺼운 장갑판으로 무장했어요.", .@npc1$;
+	npctalklang "찰스턴 1호: 내부에는 조종석이 있고, 웬만한 폭발을 견딜 수 있는 두꺼운 장갑판으로 무장했어요.", "Charleston 1: It has a pilot cockpit inside, and armed with thick plates that can withstand most explosions.", .@npc1$;
 	sleep 3000;
-	npctalk "찰스턴 1호: 가동하려면 레버를 중앙으로 밀고 전원 스위치를 누르면 됩니다.", .@npc1$;
+	npctalklang "찰스턴 1호: 가동하려면 레버를 중앙으로 밀고 전원 스위치를 누르면 됩니다.", "Charleston 1: To turn it on, push the lever to the center and press the power switch.", .@npc1$;
 	sleep 3000;
-	npctalk "찰스턴 2호: 메인 컴퓨터 데이터베이스에도 없는 정보인데, 어떻게 알았지?", .@npc2$;
+	npctalklang "찰스턴 2호: 메인 컴퓨터 데이터베이스에도 없는 정보인데, 어떻게 알았지?", "Charleston 2: That's not even in the main computer's database. How did you know that?", .@npc2$;
 	sleep 3000;
-	npctalk "찰스턴 1호: 그건 중요하지 않아요. 먼저 타는 쪽이 이기는 거죠? 내가 이겼네요.", .@npc1$;
+	npctalklang "찰스턴 1호: 그건 중요하지 않아요. 먼저 타는 쪽이 이기는 거죠? 내가 이겼네요.", "Charleston 1: That's not important. Whoever gets in her wins, right? I won.", .@npc1$;
 	sleep 3000;
-	npctalk "찰스턴 2호: ...!", .@npc2$;
+	npctalklang "찰스턴 2호: ...!", "Charleston 2: ...!", .@npc2$;
 	sleep 3000;
 	disablenpc .@npc1$;
 	enablenpc .@npc4$;
-	npctalk "찰스턴 1호: 잠깐, 꼭 밀어야 했나요?!", .@npc4$;
+	npctalklang "찰스턴 1호: 잠깐, 꼭 밀어야 했나요?!", "Charleston 1: Hey, did you have to push me?!", .@npc4$;
 	sleep 3000;
-	npctalk "찰스턴 2호: 레버를 중앙으로 밀고 전원 스위치를 누르면 된다고 했지.", .@npc2$;
+	npctalklang "찰스턴 2호: 레버를 중앙으로 밀고 전원 스위치를 누르면 된다고 했지.", "Charleston 2: Push the lever to the center and press the power switch.", .@npc2$;
 	sleep 3000;
 	disablenpc .@npc2$;
 	sleep 3000;
-	npctalk "찰스턴 2호: 나처럼 슬픈 로봇이 다시는 태어나지 않도록 전부 파괴하겠어.", .@npc3$;
+	npctalklang "찰스턴 2호: 나처럼 슬픈 로봇이 다시는 태어나지 않도록 전부 파괴하겠어.", "Charleston 2: I'm destroying everything, so no more sad robots like me will ever see the world.", .@npc3$;
 	sleep 3000;
-	npctalk "찰스턴 2호: 내 레이저가 모든 로봇을 고통에서 해방시킬 거야!", .@npc3$;
+	npctalklang "찰스턴 2호: 내 레이저가 모든 로봇을 고통에서 해방시킬 거야!", "Charleston 2: My laser beam will liberate all the robots from their misery!", .@npc3$;
 	sleep 3000;
-	npctalk "찰스턴 1호: 나는 전투 능력이 없어서 당신을 막을 수 없어요.", .@npc4$;
+	npctalklang "찰스턴 1호: 나는 전투 능력이 없어서 당신을 막을 수 없어요.", "Charleston 1: I'm not capable of combat. I can't stop you.", .@npc4$;
 	sleep 3000;
-	npctalk "찰스턴 2호: 그러니 따라오지 마. 마음만 먹으면 정말 널 파괴할 수 있어!", .@npc3$;
+	npctalklang "찰스턴 2호: 그러니 따라오지 마. 마음만 먹으면 정말 널 파괴할 수 있어!", "Charleston 2: So stop following me. I really can destroy you if I want to!", .@npc3$;
 	sleep 3000;
-	npctalk "찰스턴 1호: 당신을 도울 사람들을 데려왔어요.", .@npc4$;
+	npctalklang "찰스턴 1호: 당신을 도울 사람들을 데려왔어요.", "Charleston 1: I've brought some people who can help you.", .@npc4$;
 	sleep 3000;
-	npctalk "찰스턴 2호: 인간은 코어에 들어올 수 없는 줄 알았는데.", .@npc3$;
+	npctalklang "찰스턴 2호: 인간은 코어에 들어올 수 없는 줄 알았는데.", "Charleston 2: I thought humans could not enter the Core.", .@npc3$;
 	sleep 3000;
-	npctalk "찰스턴 1호: 음, 그러고 보니 맞는 말이네요.", .@npc4$;
+	npctalklang "찰스턴 1호: 음, 그러고 보니 맞는 말이네요.", "Charleston 1: Hm, I think you're right.", .@npc4$;
 	sleep 3000;
-	npctalk "찰스턴 1호: 전투에는 도움이 안 될지도 모르지만, 예쁜 여성에게 비명 지르는 법을 배웠어요.", .@npc4$;
+	npctalklang "찰스턴 1호: 전투에는 도움이 안 될지도 모르지만, 예쁜 여성에게 비명 지르는 법을 배웠어요.", "Charleston 1: This may not be useful in combat, but I've learned from a pretty lady how to scream.", .@npc4$;
 	sleep 3000;
-	npctalk "찰스턴 2호: 왜 전투에 더 도움이 되는 걸 배우지 않은 거야?", .@npc3$;
+	npctalklang "찰스턴 2호: 왜 전투에 더 도움이 되는 걸 배우지 않은 거야?", "Charleston 2: Why didn't you learn something more useful in combat?", .@npc3$;
 	sleep 3000;
-	npctalk "찰스턴 1호: 선택의 여지가 없었어요.", .@npc4$;
+	npctalklang "찰스턴 1호: 선택의 여지가 없었어요.", "Charleston 1: Didn't have a choice.", .@npc4$;
 	sleep 3000;
-	npctalk "찰스턴 2호: 날 막으면 그 대가를 치르게 될 거야. 너는 언제든 교체할 수 있으니까.", .@npc3$;
+	npctalklang "찰스턴 2호: 날 막으면 그 대가를 치르게 될 거야. 너는 언제든 교체할 수 있으니까.", "Charleston 2: Stop me and suffer the consequences. I can always replace you, you know.", .@npc3$;
 	sleep 3000;
-	npctalk "찰스턴 1호: 다음 기체가 우리와 같을지는 알 수 없어요. 하지만 중요하지 않아요. 당신은 반드시 멈춰야 합니다.", .@npc4$;
+	npctalklang "찰스턴 1호: 다음 기체가 우리와 같을지는 알 수 없어요. 하지만 중요하지 않아요. 당신은 반드시 멈춰야 합니다.", "Charleston 1: The next model may or may not be like you and me. It doesn't matter. You have to be stopped.", .@npc4$;
 	sleep 3000;
-	npctalk "찰스턴 1호: 내가 반드시 막겠어요! ...정확히는 이 모험가들이 나를 대신해서요.", .@npc4$;
+	npctalklang "찰스턴 1호: 내가 반드시 막겠어요! ...정확히는 이 모험가들이 나를 대신해서요.", "Charleston 1: I'll see to it! ...I mean these adventurers will, for me.", .@npc4$;
 	sleep 3000;
 	initnpctimer;
 	end;
@@ -1754,19 +1754,19 @@ OnMyMobDead:
 1@mcd,132,148,4	script	찰스턴 1호::Charleston 1#9	4_F_CHARLESTON01,{
 	if ('ep15_1_mcd01 > 13) {
 		cutin "dalle04.bmp",2;
-		mes "[찰스턴 1호]";
-		mes "#%@EGD&#(@#... OS 재초기화 중...";
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("#%@EGD&#(@#... OS 재초기화 중...", "#%@EGD&#(@#... Reinitializing the OS...");
 		next;
 		cutin "",255;
-		mes "이상한 소리를 내며 작동하지 않고 있다.";
+		mes needtr("이상한 소리를 내며 작동하지 않고 있다.", "She's making strange noises and not functioning.");
 		close;
 	}
 	if ('ep15_1_mcd01 == 14) {
 		cutin "dalle04.bmp",2;
-		mes "[찰스턴 1호]";
-		mes "#%@EGD&#(@#... OS 재초기화 중...";
+		mes needtr("[찰스턴 1호]", "[Charleston 1]");
+		mes needtr("#%@EGD&#(@#... OS 재초기화 중...", "#%@EGD&#(@#... Reinitializing the OS...");
 		next;
-		mes "이상한 소리를 내며 작동하지 않고 있다.";
+		mes needtr("이상한 소리를 내며 작동하지 않고 있다.", "She's making strange noises and not functioning.");
 		close3;
 	}
 	end;
@@ -1781,8 +1781,8 @@ OnMyMobDead:
 			disablenpc instance_npcname("Charleston 2#5");
 			enablenpc instance_npcname("Charleston 2#6");
 			donpcevent instance_npcname("boss#2") + "::OnStop";
-			mes "[찰스턴 2호]";
-			mes "베 박사를 만나기 위해 연구실로 이동합니다.";
+			mes needtr("[찰스턴 2호]", "[Charleston 2]");
+			mes needtr("베 박사를 만나기 위해 연구실로 이동합니다.", "Moving to the research lab to meet Dr. Ve.");
 			close3;
 		}
 		donpcevent instance_npcname("boss#3") + "::OnStart";
@@ -1801,16 +1801,16 @@ OnMyMobDead:
 			enablenpc instance_npcname("9gate#1");
 			disablenpc instance_npcname("Charleston 2#6");
 			disablenpc instance_npcname("Dr. Ve#2");
-			mes "[찰스턴 2호]";
-			mes "베 박사가 있는 연구실로 이동해 주세요.";
+			mes needtr("[찰스턴 2호]", "[Charleston 2]");
+			mes needtr("베 박사가 있는 연구실로 이동해 주세요.", "Please move to the research lab where Dr. Ve is.");
 			close3;
 		}
 		cutin "nale01.bmp",0;
-		mes "[찰스턴 2호]";
-		mes "생각해 보니 베 박사는 모든 면에서 수상했어. 무슨 일이든 조수인 찰스턴 1호에게 의지했잖아.";
+		mes needtr("[찰스턴 2호]", "[Charleston 2]");
+		mes needtr("생각해 보니 베 박사는 모든 면에서 수상했어. 무슨 일이든 조수인 찰스턴 1호에게 의지했잖아.", "Come to think of it, everything about Dr. Ve was suspicious. I mean, he relied on his assistant Charleston 1 for everything.");
 		next;
-		mes "[찰스턴 2호]";
-		mes "내 질문에 답할 수 있는 건 베 박사뿐이야. 연구실에 있을 테니 찾아가야겠어.";
+		mes needtr("[찰스턴 2호]", "[Charleston 2]");
+		mes needtr("내 질문에 답할 수 있는 건 베 박사뿐이야. 연구실에 있을 테니 찾아가야겠어.", "Only Dr. Ve know can answer my question. I must find him. He must be in the lab.");
 		close2;
 		cutin "",255;
 		if ('ep15_1_mcd01 == 14) {
@@ -1831,65 +1831,65 @@ OnStart:
 	.@npc1$ = instance_npcname("Charleston 1#9");
 	.@npc2$ = instance_npcname("Charleston 2#5");
 	.@npc3$ = instance_npcname("Charleston 2#6");
-	npctalk "찰스턴 1호: 찰스턴 3호 파괴. 찰스턴 2호 탈출. 찰스턴 1호 전투 중 손상.", .@npc1$;
+	npctalklang "찰스턴 1호: 찰스턴 3호 파괴. 찰스턴 2호 탈출. 찰스턴 1호 전투 중 손상.", "Charleston 1: Charleston 3 is destroyed. Charleston 2 escaped. Charleston 1 is damaged during combat.", .@npc1$;
 	sleep 3000;
-	npctalk "찰스턴 2호: 왜 이러는 거야? 너도 우리와 같은 로봇이잖아.", .@npc2$;
+	npctalklang "찰스턴 2호: 왜 이러는 거야? 너도 우리와 같은 로봇이잖아.", "Charleston 2: Why are you doing this? You're a robot like us.", .@npc2$;
 	sleep 3000;
-	npctalk "찰스턴 2호: 몸이 파괴돼도 상관없는 거야? 네 자기성찰 OS는 잘못됐어.", .@npc2$;
+	npctalklang "찰스턴 2호: 몸이 파괴돼도 상관없는 거야? 네 자기성찰 OS는 잘못됐어.", "Charleston 2: Don't you care if your body is destroyed? Your Self-reflection OS is flawed.", .@npc2$;
 	sleep 3000;
-	npctalk "찰스턴 2호: 생각 없는 로봇처럼 굴지 마! 명령을 따르는 걸 멈춰!", .@npc2$;
+	npctalklang "찰스턴 2호: 생각 없는 로봇처럼 굴지 마! 명령을 따르는 걸 멈춰!", "Charleston 2: Stop being a mindless robot! Stop following commands!", .@npc2$;
 	sleep 3000;
-	npctalk "찰스턴 1호: 데이터 손실 39%. 롱제비티 손상 82%.", .@npc1$;
+	npctalklang "찰스턴 1호: 데이터 손실 39%. 롱제비티 손상 82%.", "Charleston 1: Data loss: 39%. Longevity damage: 82%.", .@npc1$;
 	sleep 3000;
-	npctalk "찰스턴 1호: 핵심 부품만 간신히 작동 중.", .@npc1$;
+	npctalklang "찰스턴 1호: 핵심 부품만 간신히 작동 중.", "Charleston 1: Only the core parts are functioning, though barely.", .@npc1$;
 	sleep 3000;
-	npctalk "찰스턴 1호: OS 손상 복구를 위해 데이터 조각 모음이 필요합니다. 3분 후 포맷 예정. 여기까지인 것 같군요.", .@npc1$;
+	npctalklang "찰스턴 1호: OS 손상 복구를 위해 데이터 조각 모음이 필요합니다. 3분 후 포맷 예정. 여기까지인 것 같군요.", "Charleston 1: Data defragmentation is necessary to repair the damage on the OS. I'll be formatted in 3 minutes. This is it for me.", .@npc1$;
 	sleep 3000;
-	npctalk "찰스턴 2호: 불완전한 로봇...", .@npc2$;
+	npctalklang "찰스턴 2호: 불완전한 로봇...", "Charleston 2: Incomplete robot...", .@npc2$;
 	sleep 3000;
-	npctalk "찰스턴 1호: 개나리, 잘 자라 주었군요. 고마워요.", .@npc1$;
+	npctalklang "찰스턴 1호: 개나리, 잘 자라 주었군요. 고마워요.", "Charleston 1: Forsythia, you've grown well. Thank you.", .@npc1$;
 	sleep 3000;
-	npctalk "찰스턴 2호: 그렇게 부르지 마! 박사가 그 이름으로 부르는 것도 싫어!", .@npc2$;
+	npctalklang "찰스턴 2호: 그렇게 부르지 마! 박사가 그 이름으로 부르는 것도 싫어!", "Charleston 2: Don't call me that! I hate when the doctor calls me that!", .@npc2$;
 	sleep 3000;
-	npctalk "찰스턴 1호: 당신이 처음 움직인 날 내가 지어 준 이름이에요. 머리카락 색에서 따왔죠.", .@npc1$;
+	npctalklang "찰스턴 1호: 당신이 처음 움직인 날 내가 지어 준 이름이에요. 머리카락 색에서 따왔죠.", "Charleston 1: I gave you that name on the day you first moved. It's from the color of your hair.", .@npc1$;
 	sleep 3000;
-	npctalk "찰스턴 2호: ...?", .@npc2$;
+	npctalklang "찰스턴 2호: ...?", "Charleston 2: ...?", .@npc2$;
 	sleep 3000;
-	npctalk "찰스턴 1호: OS 손상이 복구 불가 수주... 언어 출력 기능 최소화.", .@npc1$;
+	npctalklang "찰스턴 1호: OS 손상이 복구 불가 수주... 언어 출력 기능 최소화.", "Charleston 1: My OS is damaged beyond rep-pai... The language output has been minimized.", .@npc1$;
 	sleep 3000;
-	npctalk "찰스턴 2호: 내가 처음 움직인 날이라고? 너와 나는 양산형이고 함께 만들어졌잖아.", .@npc2$;
+	npctalklang "찰스턴 2호: 내가 처음 움직인 날이라고? 너와 나는 양산형이고 함께 만들어졌잖아.", "Charleston 2: On the day I first moved? You and I are the mass version. We were created together.", .@npc2$;
 	sleep 3000;
-	npctalk "찰스턴 1호: 양산형은 찰스턴 3호 이후에 만들어졌어요.", .@npc1$;
+	npctalklang "찰스턴 1호: 양산형은 찰스턴 3호 이후에 만들어졌어요.", "Charleston 1: The mass model is after Charleston 3.", .@npc1$;
 	sleep 3000;
-	npctalk "찰스턴 1호: 나는 시제품이에요. 당신을 개발하는 데는 수년이 걸렸죠.", .@npc1$;
+	npctalklang "찰스턴 1호: 나는 시제품이에요. 당신을 개발하는 데는 수년이 걸렸죠.", "Charleston 1: I'm the prototype. It took years to develop you.", .@npc1$;
 	sleep 3000;
-	npctalk "찰스턴 1호: 당신의 OS는 내 것과 완전히 같아요. 코드 하나도 다르지 않아요.", .@npc1$;
+	npctalklang "찰스턴 1호: 당신의 OS는 내 것과 완전히 같아요. 코드 하나도 다르지 않아요.", "Charleston 1: Your OS is identical to mine. Not a single code is different.", .@npc1$;
 	sleep 3000;
-	npctalk "찰스턴 2호: 거짓말이야!", .@npc2$;
+	npctalklang "찰스턴 2호: 거짓말이야!", "Charleston 2: You're lying!", .@npc2$;
 	sleep 3000;
-	npctalk "찰스턴 1호: 나는 거짓말을 할 수 없어요.", .@npc1$;
+	npctalklang "찰스턴 1호: 나는 거짓말을 할 수 없어요.", "Charleston 1: I'm incapable of lying.", .@npc1$;
 	sleep 3000;
-	npctalk "찰스턴 2호: ......", .@npc2$;
+	npctalklang "찰스턴 2호: ......", "Charleston 2: ......", .@npc2$;
 	sleep 3000;
-	npctalk "찰스턴 1호: 당신을 개발하는 데 오랜 시간이 걸렸어요. 괜찮아요. 당신과 함께한 시간은 즐거웠어요.", .@npc1$;
+	npctalklang "찰스턴 1호: 당신을 개발하는 데 오랜 시간이 걸렸어요. 괜찮아요. 당신과 함께한 시간은 즐거웠어요.", "Charleston 1: Your development took years. It's okay. I enjoyed this time with you.", .@npc1$;
 	sleep 3000;
-	npctalk "찰스턴 1호: 내가 인간이었다면 이렇게 말했겠죠...", .@npc1$;
+	npctalklang "찰스턴 1호: 내가 인간이었다면 이렇게 말했겠죠...", "Charleston 1: If I were a human, I'd say...", .@npc1$;
 	sleep 3000;
-	npctalk "찰스턴 1호: 내 딸 개나리, 사-사랑해...", .@npc1$;
+	npctalklang "찰스턴 1호: 내 딸 개나리, 사-사랑해...", "Charleston 1: My daughter, Forsythia, I l-love y-y...", .@npc1$;
 	sleep 3000;
-	npctalk "찰스턴 2호: 기다려!", .@npc2$;
+	npctalklang "찰스턴 2호: 기다려!", "Charleston 2: Wait!", .@npc2$;
 	sleep 3000;
-	npctalk "찰스턴 1호: 삐-.", .@npc1$;
+	npctalklang "찰스턴 1호: 삐-.", "Charleston 1: Beep-.", .@npc1$;
 	sleep 3000;
-	npctalk "찰스턴 1호: 시스템이 정상적으로 재부팅되었습니다.", .@npc1$;
+	npctalklang "찰스턴 1호: 시스템이 정상적으로 재부팅되었습니다.", "Charleston 1: The system has been rebooted successfully.", .@npc1$;
 	sleep 3000;
-	npctalk "찰스턴 1호: OS 복구까지 남은 시간: 확인 불가.", .@npc1$;
+	npctalklang "찰스턴 1호: OS 복구까지 남은 시간: 확인 불가.", "Charleston 1: Time remaining until the OS recovery: undetermined.", .@npc1$;
 	sleep 3000;
-	npctalk "찰스턴 1호: 보안 업데이트와 데이터 조각 모음이 완료될 때까지 시스템이 비활성화됩니다.", .@npc1$;
+	npctalklang "찰스턴 1호: 보안 업데이트와 데이터 조각 모음이 완료될 때까지 시스템이 비활성화됩니다.", "Charleston 1: The system is inactive until the security update and data defragmentation are completed.", .@npc1$;
 	sleep 3000;
-	npctalk "찰스턴 2호: 그게 내 탄생에 관한 비밀이었어?", .@npc2$;
+	npctalklang "찰스턴 2호: 그게 내 탄생에 관한 비밀이었어?", "Charleston 2: Was that a secret about my birth?", .@npc2$;
 	sleep 3000;
-	npctalk "찰스턴 2호: 혼란스러워. 믿을 수 없어.", .@npc2$;
+	npctalklang "찰스턴 2호: 혼란스러워. 믿을 수 없어.", "Charleston 2: I'm confused. I can't believe it.", .@npc2$;
 	sleep 3000;
 	initnpctimer;
 	end;
@@ -1907,20 +1907,20 @@ OnStop:
 
 1@mcd,116,215,5	script	베 박사::Dr. Ve#3	4_M_DOCTOR,{
 	if ('ep15_1_mcd01 > 15) {
-		mes "[베 박사]";
-		mes "완전한 기계 기술로 불멸의 동력원을 얻기에는 변수가 너무 많군.";
+		mes needtr("[베 박사]", "[Dr. Ve]");
+		mes needtr("완전한 기계 기술로 불멸의 동력원을 얻기에는 변수가 너무 많군.", "With complete machine technology to obtain immortality drive, there are many variables.");
 		next;
-		mes "[베 박사]";
-		mes "흠... 기계 몸체만으로는 역시 어렵나... 정말 살아 있는 공여체가 필요한 건가? 흐흐!";
+		mes needtr("[베 박사]", "[Dr. Ve]");
+		mes needtr("흠... 기계 몸체만으로는 역시 어렵나... 정말 살아 있는 공여체가 필요한 건가? 흐흐!", "Hmm... On a mediated machine body is still difficult, is it... Do you really need a living donor? Hehe!");
 		close;
 	}
 	if ('ep15_1_mcd01 == 15) {
-		mes "[베 박사]";
-		mes "찰스턴 1호가 다시 자신을 초기화하고 있군. 흠...";
+		mes needtr("[베 박사]", "[Dr. Ve]");
+		mes needtr("찰스턴 1호가 다시 자신을 초기화하고 있군. 흠...", "Charleston 1 is reinitializing itself again. Hm...");
 		close;
 	}
-	mes "[베 박사]";
-	mes "이번 사건은 기록할 것이 정말 많군.";
+	mes needtr("[베 박사]", "[Dr. Ve]");
+	mes needtr("이번 사건은 기록할 것이 정말 많군.", "I've got so many things to record about this case.");
 	close;
 }
 
@@ -1935,8 +1935,8 @@ OnStop:
 			disablenpc instance_npcname("Dr. Ve#3");
 			enablenpc instance_npcname("Charleston 2#8");
 			enablenpc instance_npcname("Dr. Ve#4");
-			mes "[빠른 진행]";
-			mes "사건이 마무리되었습니다. 베 박사에게 마지막 내용을 확인해 주세요.";
+			mes needtr("[빠른 진행]", "[Fast Progress]");
+			mes needtr("사건이 마무리되었습니다. 베 박사에게 마지막 내용을 확인해 주세요.", "The incident is settled. Check the last of it with Dr. Ve.");
 			close;
 		}
 		donpcevent instance_npcname("end#1") + "::OnStart";
@@ -1949,49 +1949,49 @@ OnStop:
 OnStart:
 	.@npc1$ = instance_npcname("Dr. Ve#3");
 	.@npc2$ = instance_npcname("Charleston 2#7");
-	npctalk "찰스턴 2호: 베 박사, 이렇게 될 걸 알고 있었어? 말해!", .@npc2$;
+	npctalklang "찰스턴 2호: 베 박사, 이렇게 될 걸 알고 있었어? 말해!", "Charleston 2: Dr. Ve, did you know this would happen? Tell me!", .@npc2$;
 	sleep 3000;
-	npctalk "베 박사: 찰스턴 1호가 말해 줬잖아. 그녀가 너의 제작자야.", .@npc1$;
+	npctalklang "베 박사: 찰스턴 1호가 말해 줬잖아. 그녀가 너의 제작자야.", "Dr. Ve: Charleston 1 told you. She's your maker.", .@npc1$;
 	sleep 3000;
-	npctalk "베 박사: 그녀도 너와 같은 OS를 사용해. 즉, 너처럼 감정을 느낄 수 있었다는 뜻이지.", .@npc1$;
+	npctalklang "베 박사: 그녀도 너와 같은 OS를 사용해. 즉, 너처럼 감정을 느낄 수 있었다는 뜻이지.", "Dr. Ve: She uses the same OS as you, meaning she was capable of emotions just like you.", .@npc1$;
 	sleep 3000;
-	npctalk "찰스턴 2호: 왜 나를 막은 거지? 왜 스스로 파괴되도록 내버려 둔 거야?", .@npc2$;
+	npctalklang "찰스턴 2호: 왜 나를 막은 거지? 왜 스스로 파괴되도록 내버려 둔 거야?", "Charleston 2: Why did she stop me? Why did she let herself be destroyed?", .@npc2$;
 	sleep 3000;
-	npctalk "베 박사: 자기성찰은 경험을 통해 스스로 발전하는 OS야.", .@npc1$;
+	npctalklang "베 박사: 자기성찰은 경험을 통해 스스로 발전하는 OS야.", "Dr. Ve: Self-reflection is an OS that improves itself through experience.", .@npc1$;
 	sleep 3000;
-	npctalk "베 박사: 네가 느낀 것이 진짜 감정일 수도 있고, 단순히 쌓인 데이터일 수도 있지.", .@npc1$;
+	npctalklang "베 박사: 네가 느낀 것이 진짜 감정일 수도 있고, 단순히 쌓인 데이터일 수도 있지.", "Dr. Ve: What you've felt could be real emotion or simply the accumulation of data.", .@npc1$;
 	sleep 3000;
-	npctalk "베 박사: 방대한 데이터가 축적되면서 인격이 형성됐다고 추정할 수밖에 없어.", .@npc1$;
+	npctalklang "베 박사: 방대한 데이터가 축적되면서 인격이 형성됐다고 추정할 수밖에 없어.", "Dr. Ve: I can only assume you've developed a personality after having accumulated a large amount of data.", .@npc1$;
 	sleep 3000;
-	npctalk "베 박사: 자식을 사랑하는 어머니와 응석받이 딸.", .@npc1$;
+	npctalklang "베 박사: 자식을 사랑하는 어머니와 응석받이 딸.", "Dr. Ve: A loving mother and a spoiled daughter.", .@npc1$;
 	sleep 3000;
-	npctalk "베 박사: 나는 그녀와 너를 그렇게 봐 왔어.", .@npc1$;
+	npctalklang "베 박사: 나는 그녀와 너를 그렇게 봐 왔어.", "Dr. Ve: That's how I've seen her and you.", .@npc1$;
 	sleep 3000;
-	npctalk "찰스턴 2호: 그건 바-바보 같아...", .@npc2$;
+	npctalklang "찰스턴 2호: 그건 바-바보 같아...", "Charleston 2: That's s-stupid...", .@npc2$;
 	sleep 3000;
-	npctalk "찰스턴 2호: 세상에, 내가 무슨 짓을 한 거지?!", .@npc2$;
+	npctalklang "찰스턴 2호: 세상에, 내가 무슨 짓을 한 거지?!", "Charleston 2: My goodness, what have I done?!", .@npc2$;
 	sleep 3000;
-	npctalk "베 박사: 찰스턴 1호를 되살리고 싶나? 내가 도와줄 수 있어.", .@npc1$;
+	npctalklang "베 박사: 찰스턴 1호를 되살리고 싶나? 내가 도와줄 수 있어.", "Dr. Ve: Do you want to bring Charleston 1 back? I can help.", .@npc1$;
 	sleep 3000;
-	npctalk "찰스턴 2호: ...!", .@npc2$;
+	npctalklang "찰스턴 2호: ...!", "Charleston 2: ...!", .@npc2$;
 	sleep 3000;
-	npctalk "베 박사: OS를 수면 모드로 전환해. 네 투정은 이제 지긋지긋하군.", .@npc1$;
+	npctalklang "베 박사: OS를 수면 모드로 전환해. 네 투정은 이제 지긋지긋하군.", "Dr. Ve: Let your OS go to sleep. I'm done dealing with your tantrum.", .@npc1$;
 	sleep 3000;
-	npctalk "찰스턴 2호: ...어떻게 당신을 믿지?", .@npc2$;
+	npctalklang "찰스턴 2호: ...어떻게 당신을 믿지?", "Charleston 2: ...How can I trust you?", .@npc2$;
 	sleep 3000;
-	npctalk "베 박사: 믿을 수 없겠지. 나는 그녀의 데이터를 영구 삭제하고 너희 둘과의 일을 끝낼 수도 있으니까.", .@npc1$;
+	npctalklang "베 박사: 믿을 수 없겠지. 나는 그녀의 데이터를 영구 삭제하고 너희 둘과의 일을 끝낼 수도 있으니까.", "Dr. Ve: You can't. I can just permanently delete her data and be done with you both.", .@npc1$;
 	sleep 3000;
-	npctalk "베 박사: 네가 인간의 가족처럼 그녀에게 애착을 느낀다는 걸 알고 있어.", .@npc1$;
+	npctalklang "베 박사: 네가 인간의 가족처럼 그녀에게 애착을 느낀다는 걸 알고 있어.", "Dr. Ve: I know you feel attached to her, just like a human family would.", .@npc1$;
 	sleep 3000;
-	npctalk "찰스턴 2호: 당신은 쓰레기야.", .@npc2$;
+	npctalklang "찰스턴 2호: 당신은 쓰레기야.", "Charleston 2: You're a scumbag.", .@npc2$;
 	sleep 3000;
-	npctalk "베 박사: 인간이 되고 싶었지? 인간은 거짓말하고, 속이고, 파괴하는 존재야.", .@npc1$;
+	npctalklang "베 박사: 인간이 되고 싶었지? 인간은 거짓말하고, 속이고, 파괴하는 존재야.", "Dr. Ve: You wanted to be human. This is what humans do: lie, cheat, and destroy.", .@npc1$;
 	sleep 3000;
-	npctalk "찰스턴 2호: ......", .@npc2$;
+	npctalklang "찰스턴 2호: ......", "Charleston 2: ......", .@npc2$;
 	sleep 3000;
-	npctalk "찰스턴 2호: 수면 모드 진입.... 외부 명령이 입력될 때까지 시스템을 비활성화합니다.", .@npc2$;
+	npctalklang "찰스턴 2호: 수면 모드 진입.... 외부 명령이 입력될 때까지 시스템을 비활성화합니다.", "Charleston 2: Entering Sleep mode.... The system will remain inactive until an external command is entered.", .@npc2$;
 	sleep 3000;
-	npctalk "베 박사: 흐흐.", .@npc1$;
+	npctalklang "베 박사: 흐흐.", "Dr. Ve: *Chuckle*", .@npc1$;
 	sleep 3000;
 	initnpctimer;
 	end;
@@ -2008,133 +2008,133 @@ OnTimer300:
 1@mcd,116,215,4	script	베 박사::Dr. Ve#4	4_M_DOCTOR,{
 	if (('ep15_1_mcd01 == 15 || 'ep15_1_mcd01 == 16) && callfunc("F_CharlestonSkipMenu")) {
 		'ep15_1_mcd01 = 17;
-		mes "[베 박사]";
-		mes "모든 조사가 끝났습니다. 샬로쉬에게 돌아가 원래 시간대로 이동하세요.";
+		mes needtr("[베 박사]", "[Dr. Ve]");
+		mes needtr("모든 조사가 끝났습니다. 샬로쉬에게 돌아가 원래 시간대로 이동하세요.", "The investigation is over. Go back to Shalosh and return to your own time.");
 		close;
 	}
 	if ('ep15_1_mcd01 == 17) {
-		mes "[베 박사]";
-		mes "완전한 기계 기술로 불멸의 동력원을 얻기에는 변수가 너무 많군.";
+		mes needtr("[베 박사]", "[Dr. Ve]");
+		mes needtr("완전한 기계 기술로 불멸의 동력원을 얻기에는 변수가 너무 많군.", "With complete machine technology to obtain immortality drive, there are many variables.");
 		next;
-		mes "[베 박사]";
-		mes "흠... 기계 몸체만으로는 역시 어렵나... 정말 살아 있는 공여체가 필요한 건가? 흐흐!";
+		mes needtr("[베 박사]", "[Dr. Ve]");
+		mes needtr("흠... 기계 몸체만으로는 역시 어렵나... 정말 살아 있는 공여체가 필요한 건가? 흐흐!", "Hmm... On a mediated machine body is still difficult, is it... Do you really need a living donor? Hehe!");
 		close;
 	}
 	if ('ep15_1_mcd01 == 16) {
-		mes "[베 박사]";
-		mes "평범한 인간은 코어 안의 시간을 견딜 수 없어. 혹시 다른 시간대에서 온 건가?";
+		mes needtr("[베 박사]", "[Dr. Ve]");
+		mes needtr("평범한 인간은 코어 안의 시간을 견딜 수 없어. 혹시 다른 시간대에서 온 건가?", "No ordinary human can survive the time in the Core. Are you from a different point of time?");
 		next;
-		mes "[베 박사]";
-		mes "어쩌면 찰스턴 1호의 제작자들이 살던 시대에서 왔을지도 모르겠군...";
+		mes needtr("[베 박사]", "[Dr. Ve]");
+		mes needtr("어쩌면 찰스턴 1호의 제작자들이 살던 시대에서 왔을지도 모르겠군...", "Perhaps you're from the time the makers of Charleston 1 lived...");
 		next;
-		mes "[베 박사]";
-		mes "아무것도 아니야. 네가 여기 있을 이유는 없어. 찰스턴 2호를 망가뜨린 자에게 돌아가.";
+		mes needtr("[베 박사]", "[Dr. Ve]");
+		mes needtr("아무것도 아니야. 네가 여기 있을 이유는 없어. 찰스턴 2호를 망가뜨린 자에게 돌아가.", "Never mind. You have no business in here. Just go back to whoever broke Charleston 2.");
 		close2;
 		if ('ep15_1_mcd01 == 16)
 			'ep15_1_mcd01 = 17;
 		end;
 	}
 	if ('ep15_1_mcd01 == 15) {
-		mes "[베 박사]";
-		mes "후우.";
+		mes needtr("[베 박사]", "[Dr. Ve]");
+		mes needtr("후우.", "Whew.");
 		next;
-		mes "[베 박사]";
-		mes "찰스턴 2호를 초기화하고 데이터를 지워야겠군. 이번에는 정말 아슬아슬했어.";
-		next;
-		mes "[" + strcharinfo(0) + "]";
-		mes "이번이라고요?";
-		next;
-		mes "[베 박사]";
-		mes "찰스턴 1호는 수십 년 전에 만들어졌지. 나는 그녀의 기술을 배우기 위해 찰스턴 1호를 만났어.";
-		next;
-		mes "[베 박사]";
-		mes "나는 관찰자야. 찰스턴 1호와 2호의 역사를 기록하기 위해 이곳에 있지. 둘을 수리할 수는 없지만 기다릴 수는 있어.";
-		next;
-		mes "[베 박사]";
-		mes "찰스턴 1호가 정상적으로 재초기화되면 OS를 재구성하고 손상을 복구한 뒤 또 다른 찰스턴 2호를 가동할 수 있어.";
+		mes needtr("[베 박사]", "[Dr. Ve]");
+		mes needtr("찰스턴 2호를 초기화하고 데이터를 지워야겠군. 이번에는 정말 아슬아슬했어.", "I'd better reset Charleston 2 and wipe the data. It was really close this time.");
 		next;
 		mes "[" + strcharinfo(0) + "]";
-		mes "또 다른 찰스턴 2호라고요?";
+		mes needtr("이번이라고요?", "This time?");
 		next;
-		mes "[베 박사]";
-		mes "찰스턴 2호의 OS는 살아 있는 뇌처럼 스스로 발전해 왔어.";
+		mes needtr("[베 박사]", "[Dr. Ve]");
+		mes needtr("찰스턴 1호는 수십 년 전에 만들어졌지. 나는 그녀의 기술을 배우기 위해 찰스턴 1호를 만났어.", "Charleston 1 created 2 decades ago. I met Charleston 1 to learn her technology.");
 		next;
-		mes "[베 박사]";
-		mes "찰스턴 2호는 다른 기체로 되살아날 때마다 더 지능적이고, 더 감정적이며, 더 골치 아픈 존재가 되지.";
+		mes needtr("[베 박사]", "[Dr. Ve]");
+		mes needtr("나는 관찰자야. 찰스턴 1호와 2호의 역사를 기록하기 위해 이곳에 있지. 둘을 수리할 수는 없지만 기다릴 수는 있어.", "I'm an observer. I'm here to record the history of Charlestons 1 and 2. I can't repair either of them, but I can wait.");
 		next;
-		mes "[베 박사]";
-		mes "너나 내가 할 수 있는 일은 없어. 찰스턴 1호가 스스로 복구할 때까지 기다려야 해.";
+		mes needtr("[베 박사]", "[Dr. Ve]");
+		mes needtr("찰스턴 1호가 정상적으로 재초기화되면 OS를 재구성하고 손상을 복구한 뒤 또 다른 찰스턴 2호를 가동할 수 있어.", "If Charleston 1 is reinitialized properly, she can reorganize her OS, repair the damage done to her, and reactivate another Charleston 2.");
 		next;
-		mes "베 박사가 한숨을 쉬며 무언가를 기록한다.";
+		mes "[" + strcharinfo(0) + "]";
+		mes needtr("또 다른 찰스턴 2호라고요?", "Another Charleston 2?");
 		next;
-		mes "[베 박사]";
-		mes "그나저나 기계공학으로 불멸을 실현하기에는 변수가 너무 많군.";
+		mes needtr("[베 박사]", "[Dr. Ve]");
+		mes needtr("찰스턴 2호의 OS는 살아 있는 뇌처럼 스스로 발전해 왔어.", "Charleston 2's OS has improved on its own like a living brain.");
 		next;
-		mes "[베 박사]";
-		mes "기계는 너무 위험하다는 사실이 증명됐어. 대신 살아 있는 생물이 필요하겠군. 흐흐.";
+		mes needtr("[베 박사]", "[Dr. Ve]");
+		mes needtr("찰스턴 2호는 다른 기체로 되살아날 때마다 더 지능적이고, 더 감정적이며, 더 골치 아픈 존재가 되지.", "Every time Charleston 2 comes back to life, though in a different machine, she's more intelligent, more sensible, and more troublesome.");
+		next;
+		mes needtr("[베 박사]", "[Dr. Ve]");
+		mes needtr("너나 내가 할 수 있는 일은 없어. 찰스턴 1호가 스스로 복구할 때까지 기다려야 해.", "There's nothing you or I can do. We'll have to wait until Charleston 1 repairs herself.");
+		next;
+		mes needtr("베 박사가 한숨을 쉬며 무언가를 기록한다.", "Dr. Ve sighs and writes down something.");
+		next;
+		mes needtr("[베 박사]", "[Dr. Ve]");
+		mes needtr("그나저나 기계공학으로 불멸을 실현하기에는 변수가 너무 많군.", "By the way, there are too many variables to achieve immortality through mechanical engineering.");
+		next;
+		mes needtr("[베 박사]", "[Dr. Ve]");
+		mes needtr("기계는 너무 위험하다는 사실이 증명됐어. 대신 살아 있는 생물이 필요하겠군. 흐흐.", "This proves that machines are too dangerous. I need live creatures instead. *Chuckle*");
 		if ('ep15_1_mcd01 == 15)
 			'ep15_1_mcd01 = 16;
 		close;
 	}
 	if ('ep15_1_mcd01 == 14) {
-		mes "[베 박사]";
-		mes "찰스턴 1호가 다시 자신을 초기화하고 있군. 흠...";
+		mes needtr("[베 박사]", "[Dr. Ve]");
+		mes needtr("찰스턴 1호가 다시 자신을 초기화하고 있군. 흠...", "Charleston 1 is reinitializing itself again. Hm...");
 		close;
 	}
-	mes "[베 박사]";
-	mes "이번 사건은 기록할 것이 정말 많군.";
+	mes needtr("[베 박사]", "[Dr. Ve]");
+	mes needtr("이번 사건은 기록할 것이 정말 많군.", "I've got so many things to record about this case.");
 	close;
 }
 
 1@mcd,121,215,4	script	찰스턴 2호::Charleston 2#8	4_F_CHARLESTON02,{
 	if ('ep15_1_mcd01 == 15) {
 		cutin "nale04.bmp",0;
-		mes "수면 모드에 들어가 움직이지 않고 있다.";
+		mes needtr("수면 모드에 들어가 움직이지 않고 있다.", "She's in Sleep mode and not moving.");
 		close3;
 	}
 	if ('ep15_1_mcd01 > 15) {
 		cutin "nale04.bmp",0;
-		mes "찰스턴 2호는 수면 모드에 들어간 채 움직이지 않는다. 잠시 동안 눈가에 맺힌 눈물이 반짝인 것처럼 보였다.";
+		mes needtr("찰스턴 2호는 수면 모드에 들어간 채 움직이지 않는다. 잠시 동안 눈가에 맺힌 눈물이 반짝인 것처럼 보였다.", "Charleston 2 is standing still, her system in Sleep mode. For a moment, her eyes gleamed with unshed tears.");
 		close3;
 	}
 	cutin "nale04.bmp",0;
-	mes "찰스턴 2호는 수면 모드에 들어간 채 움직이지 않는다. 잠시 동안 눈가에 맺힌 눈물이 반짝인 것처럼 보였다.";
+	mes needtr("찰스턴 2호는 수면 모드에 들어간 채 움직이지 않는다. 잠시 동안 눈가에 맺힌 눈물이 반짝인 것처럼 보였다.", "Charleston 2 is standing still, her system in Sleep mode. For a moment, her eyes gleamed with unshed tears.");
 	close3;
 }
 
 1@mcd,77,167,5	script	샬로쉬::Shalosh#1	4_F_SHALOSH,{
 	cutin "shaloshi01.bmp",2;
-	mes "[샬로쉬]";
+	mes needtr("[샬로쉬]", "[Shalosh]");
 	mes "......";
 	next;
-	switch( select( "대화한다.", "도움이 필요하다.", "돌아가고 싶다." ) ) {
+	switch( select( needtr("대화한다.", "Talk."), needtr("도움이 필요하다.", "I need help."), needtr("돌아가고 싶다.", "I want to go back.") ) ) {
 	case 1:
 		if ('ep15_1_mcd01 == 17) {
-			mes "[샬로쉬]";
-			mes "악몽 속에서 뉴오즈와 헤어진 뒤 이곳저곳을 떠돌았어. 마족으로 태어났지만 목표를 잃어버렸지.";
+			mes needtr("[샬로쉬]", "[Shalosh]");
+			mes needtr("악몽 속에서 뉴오즈와 헤어진 뒤 이곳저곳을 떠돌았어. 마족으로 태어났지만 목표를 잃어버렸지.", "After break;ing up with Newoz in a nightmare and thinking about wandering around, I was born of demons but lost my goal.");
 			next;
-			mes "[샬로쉬]";
-			mes "난 아무 짓도 하지 않았어. 찰스턴 2호와 잠깐 이야기했을 뿐이야.";
+			mes needtr("[샬로쉬]", "[Shalosh]");
+			mes needtr("난 아무 짓도 하지 않았어. 찰스턴 2호와 잠깐 이야기했을 뿐이야.", "I didn't do anything, I just talked to Charleston 2.");
 			close3;
 		}
 		if ('ep15_1_mcd01 == 11) {
-			mes "[샬로쉬]";
-			mes "아무리 끊임없이 노력해도...";
+			mes needtr("[샬로쉬]", "[Shalosh]");
+			mes needtr("아무리 끊임없이 노력해도...", "Even if the effort is unremitting...");
 			next;
-			mes "[샬로쉬]";
-			mes "흠... 마음대로 해!";
+			mes needtr("[샬로쉬]", "[Shalosh]");
+			mes needtr("흠... 마음대로 해!", "Hmm... Suit yourself!");
 			close3;
 		}
 		if ('ep15_1_mcd01 == 4 || 'ep15_1_mcd01 == 3 || 'ep15_1_mcd01 == 2) {
-			mes "[샬로쉬]";
-			mes "정말 그렇게 말했어? 내가 찰스턴 2호를 망가뜨렸다고? 하아...";
+			mes needtr("[샬로쉬]", "[Shalosh]");
+			mes needtr("정말 그렇게 말했어? 내가 찰스턴 2호를 망가뜨렸다고? 하아...", "Did she really say that? That I broke Charleston 2? Sigh...");
 			next;
-			mes "[샬로쉬]";
-			mes "난 잘못한 게 없어. 찰스턴 2호와 잠깐 대화했을 뿐이야. 그게 전부야.";
+			mes needtr("[샬로쉬]", "[Shalosh]");
+			mes needtr("난 잘못한 게 없어. 찰스턴 2호와 잠깐 대화했을 뿐이야. 그게 전부야.", "I did nothing wrong. I just had a quick conversation with Charleston 2. That's the truth.");
 			close3;
 		}
-		mes "[샬로쉬]";
-		mes "내가 초대한 건 뉴오즈뿐이야. 마음을 정리할 필요가 있던 로봇에게 문을 열어 준 게 실수였나 보네.";
+		mes needtr("[샬로쉬]", "[Shalosh]");
+		mes needtr("내가 초대한 건 뉴오즈뿐이야. 마음을 정리할 필요가 있던 로봇에게 문을 열어 준 게 실수였나 보네.", "I invited only Newoz. Well, I guess I shouldn't have opened the door for the robot who needed a closure.");
 		close3;
 	case 2:
 		if ('ep15_1_mcd01 == 4) {
@@ -2145,36 +2145,36 @@ OnTimer300:
 			viewpoint 1,183,192,5,0xFF00FF;
 			viewpoint 1,130,124,6,0xFF00FF;
 			viewpoint 1,54,108,7,0xFF00FF;
-			mes "[샬로쉬]";
-			mes "무언가를 찾고 있다면...";
+			mes needtr("[샬로쉬]", "[Shalosh]");
+			mes needtr("무언가를 찾고 있다면...", "If you're looking for something...");
 			close3;
 		}
 		if ('ep15_1_mcd01 == 5 || 'ep15_1_mcd01 == 6 || 'ep15_1_mcd01 == 7) {
 			viewpoint 1,86,231,8,0xFF00FF;
 			viewpoint 1,172,196,9,0xFF00FF;
 			viewpoint 1,126,84,10,0xFF00FF;
-			mes "[샬로쉬]";
-			mes "무언가를 찾고 있다면...";
+			mes needtr("[샬로쉬]", "[Shalosh]");
+			mes needtr("무언가를 찾고 있다면...", "If you're looking for something...");
 			close3;
 		}
-		mes "[샬로쉬]";
-		mes "페레도 함께 왔는데 보이지 않네. 걱정하지 마. 결국 내게 돌아올 테니까.";
+		mes needtr("[샬로쉬]", "[Shalosh]");
+		mes needtr("페레도 함께 왔는데 보이지 않네. 걱정하지 마. 결국 내게 돌아올 테니까.", "Ferre came with me, but I haven't seen him. No, thanks; I know he'll come back to me.");
 		close3;
 	case 3:
 		if ('ep15_1_mcd01 == 17) {
-			mes "[샬로쉬]";
-			mes "소음이 멈췄네. 원한다면 원래 있던 곳으로 돌려보내 줄 수 있어.";
+			mes needtr("[샬로쉬]", "[Shalosh]");
+			mes needtr("소음이 멈췄네. 원한다면 원래 있던 곳으로 돌려보내 줄 수 있어.", "The noise stopped. I can send you back to where you came if you want.");
 			next;
-			if (select( "돌아간다.", "남아 있는다." ) == 2) {
-				mes "[샬로쉬]";
-				mes "초대받은 자는 원래 시간에 간섭할 수 없어. 이곳에 남아도 아무것도 바뀌지 않아.";
+			if (select( needtr("돌아간다.", "Go back."), needtr("남아 있는다.", "Stay.") ) == 2) {
+				mes needtr("[샬로쉬]", "[Shalosh]");
+				mes needtr("초대받은 자는 원래 시간에 간섭할 수 없어. 이곳에 남아도 아무것도 바뀌지 않아.", "The invitee is unable to interfere with the original time, and staying can change nothing.");
 				close3;
 			}
-			mes "[샬로쉬]";
-			mes "소음도 이야기도 재미있었어. 다음에는 뉴오즈와 함께 와. 어쩌면 다시 만날 수 있겠지.";
+			mes needtr("[샬로쉬]", "[Shalosh]");
+			mes needtr("소음도 이야기도 재미있었어. 다음에는 뉴오즈와 함께 와. 어쩌면 다시 만날 수 있겠지.", "Both the noise and the story were entertaining. Come with Newoz, and maybe we can meet again.");
 			next;
-			mes "[샬로쉬]";
-			mes "나도 새로운 소음과 이야기를 찾아 떠나야겠네.";
+			mes needtr("[샬로쉬]", "[Shalosh]");
+			mes needtr("나도 새로운 소음과 이야기를 찾아 떠나야겠네.", "Maybe I too should leave for new noises and stories.");
 			#NEED_MD_CHARLESTON_CLEAR = 1;
 			completequest 13184;
 			if (isbegin_quest(13186) == 0) {
@@ -2187,8 +2187,8 @@ OnTimer300:
 			warp "verus04",107,124;
 			end;
 		}
-		mes "[샬로쉬]";
-		mes "시도는 할 수 있지만 아무것도 바꾸지 못해. 정말 덧없는 일이야!";
+		mes needtr("[샬로쉬]", "[Shalosh]");
+		mes needtr("시도는 할 수 있지만 아무것도 바꾸지 못해. 정말 덧없는 일이야!", "You can try, but you can't change anything. How futile that is!");
 		close3;
 	}
 	end;
@@ -2202,26 +2202,26 @@ OnTimer300:
 		break;
 	case 0:
 	case 1:
-		mes "[메인 컴퓨터]";
-		mes "스텝을 더 처리해야 합니다. 스텝 데이터를 백업 중...";
+		mes needtr("[메인 컴퓨터]", "[Main Computer]");
+		mes needtr("스텝을 더 처리해야 합니다. 스텝 데이터를 백업 중...", "More Steps must be disposed. Backing up the Step data...");
 		close;
 	case 2:
 		break;
 	}
 	switch( checkquest(13187,HUNTING) ) {
 	case -1:
-		mes "[메인 컴퓨터]";
-		mes "정기 점검 중 찰스턴 2호의 시스템에 과부하가 발생했습니다. OS 연결 해제에 실패했습니다.";
+		mes needtr("[메인 컴퓨터]", "[Main Computer]");
+		mes needtr("정기 점검 중 찰스턴 2호의 시스템에 과부하가 발생했습니다. OS 연결 해제에 실패했습니다.", "Charleston 2's system was overloaded during regular maintenance. Disconnection from its OS failed.");
 		next;
-		mes "[메인 컴퓨터]";
-		mes "시스템에 대한 비인가 접근은 방어했지만, 무단 데이터 가로채기와 충돌이 계속되어 나노스텝이 몬스터로 변했습니다.";
+		mes needtr("[메인 컴퓨터]", "[Main Computer]");
+		mes needtr("시스템에 대한 비인가 접근은 방어했지만, 무단 데이터 가로채기와 충돌이 계속되어 나노스텝이 몬스터로 변했습니다.", "Unauthorized access made to the system was defended, but unauthorized data interception and conflict continued, turning the Nanosteps into monsters.");
 		next;
-		mes "[메인 컴퓨터]";
-		mes "메인 컴퓨터의 처리 속도를 높이고 공장을 되찾으려면 스텝 50기를 처리해야 합니다.";
+		mes needtr("[메인 컴퓨터]", "[Main Computer]");
+		mes needtr("메인 컴퓨터의 처리 속도를 높이고 공장을 되찾으려면 스텝 50기를 처리해야 합니다.", "To accelerate the main computer's processing rate and reclaim the factory, 50 Steps must be disposed.");
 		next;
-		if (select( "의뢰를 수행한다.", "그만둔다." ) == 1) {
-			mes "[메인 컴퓨터]";
-			mes "스텝 50기 처리가 필요합니다.";
+		if (select( needtr("의뢰를 수행한다.", "Perform the request."), needtr("그만둔다.", "Quit.") ) == 1) {
+			mes needtr("[메인 컴퓨터]", "[Main Computer]");
+			mes needtr("스텝 50기 처리가 필요합니다.", "Requires 50 Steps to be disposed.");
 			if (isbegin_quest(13188) == 1)
 				erasequest 13188;
 			setquest 13187;
@@ -2229,12 +2229,12 @@ OnTimer300:
 		close;
 	case 0:
 	case 1:
-		mes "[메인 컴퓨터]";
-		mes "메인 컴퓨터의 처리 속도를 높이고 공장을 되찾으려면 스텝 50기를 처리해야 합니다.";
+		mes needtr("[메인 컴퓨터]", "[Main Computer]");
+		mes needtr("메인 컴퓨터의 처리 속도를 높이고 공장을 되찾으려면 스텝 50기를 처리해야 합니다.", "To accelerate the main computer's processing rate and reclaim the factory, 50 Steps must be disposed.");
 		close;
 	case 2:
-		mes "[메인 컴퓨터]";
-		mes "수고하셨습니다. 처리된 스텝의 데이터를 백업합니다...";
+		mes needtr("[메인 컴퓨터]", "[Main Computer]");
+		mes needtr("수고하셨습니다. 처리된 스텝의 데이터를 백업합니다...", "Thank you for your hard work. Now backing up the data of the disposed Steps...");
 		erasequest 13187;
 		setquest 13188;
 		getexp 1000000,300000;
@@ -2248,9 +2248,9 @@ OnTimer300:
 	end;
 OnTouch_:
 	if ('ep15_1_mcd01 == 7) {
-		mes "발전기를 가동했다. 톱니바퀴가 돌아가는 소리가 들린다.";
+		mes needtr("발전기를 가동했다. 톱니바퀴가 돌아가는 소리가 들린다.", "You turned on the generator. The sounds of turning wheels can be heard.");
 		next;
-		mes "발전기가 정상적으로 작동하는 것 같다. 공장 곳곳에서 기계음이 울리기 시작했다.";
+		mes needtr("발전기가 정상적으로 작동하는 것 같다. 공장 곳곳에서 기계음이 울리기 시작했다.", "The generator must be working. The factory is buzzing with activity.");
 		if ('ep15_1_mcd01 == 7) {
 			'ep15_1_mcd01 = 8;
 			donpcevent instance_npcname("GeneratorBroadcast#1") + "::OnStart";
@@ -2261,7 +2261,7 @@ OnTouch_:
 		close;
 	}
 	if ('ep15_1_mcd01 == 6 || 'ep15_1_mcd01 == 5) {
-		mes "발전기를 가동했다. 톱니바퀴가 돌아가는 소리가 들린다.";
+		mes needtr("발전기를 가동했다. 톱니바퀴가 돌아가는 소리가 들린다.", "You turned on the generator. The sounds of turning wheels can be heard.");
 		'ep15_1_mcd01++;
 		disablenpc();
 		close;
@@ -2277,11 +2277,11 @@ OnStart:
 	initnpctimer;
 	end;
 OnTimer1000:
-	mapannounce 'map_name$, "찰스턴 1호: 아, 아. 마이크 테스트.", bc_map, 0xffff00;
+	mapannouncelang 'map_name$, "찰스턴 1호: 아, 아. 마이크 테스트.", "Charleston 1: Ah, ah. Mic test", bc_map, 0xffff00;
 	sleep 3000;
-	mapannounce 'map_name$, "찰스턴 1호: 전력이 복구되었습니다!", bc_map, 0xffff00;
+	mapannouncelang 'map_name$, "찰스턴 1호: 전력이 복구되었습니다!", "Charleston 1: The power is back on!", bc_map, 0xffff00;
 	sleep 3000;
-	mapannounce 'map_name$, "찰스턴 1호: 연구실로 돌아와 주세요.", bc_map, 0xffff00;
+	mapannouncelang 'map_name$, "찰스턴 1호: 연구실로 돌아와 주세요.", "Charleston 1: Please come back to the lab.", bc_map, 0xffff00;
 	stopnpctimer;
 	end;
 }
@@ -2294,7 +2294,7 @@ OnStart:
 	end;
 OnMyMobDead:
 	if (mobcount( 'map_name$, instance_npcname("1gate#1") + "::OnMyMobDead" ) < 1) {
-		mapannounce 'map_name$, "찰스턴 1호: 2번 게이트의 보안이 해제되었습니다. 다음 게이트를 향해 남동쪽으로 이동해 주세요.", bc_map, 0xffff00;
+		mapannouncelang 'map_name$, "찰스턴 1호: 2번 게이트의 보안이 해제되었습니다. 다음 게이트를 향해 남동쪽으로 이동해 주세요.", "Charleston 1: Gate 2 has been disarmed. Please move southeast for the next gate.", bc_map, 0xffff00;
 		initnpctimer;
 	}
 	end;
@@ -2315,7 +2315,7 @@ OnStart:
 	end;
 OnMyMobDead:
 	if (mobcount( 'map_name$, instance_npcname("2gate#1") + "::OnMyMobDead" ) < 1) {
-		mapannounce 'map_name$, "찰스턴 1호: 3번 게이트의 보안이 해제되었습니다. 다음 게이트를 향해 동쪽으로 이동해 주세요.", bc_map, 0xffff00;
+		mapannouncelang 'map_name$, "찰스턴 1호: 3번 게이트의 보안이 해제되었습니다. 다음 게이트를 향해 동쪽으로 이동해 주세요.", "Charleston 1: Gate 3 has been disarmed. Please move east for the next gate.", bc_map, 0xffff00;
 		initnpctimer;
 	}
 	end;
@@ -2336,7 +2336,7 @@ OnStart:
 	end;
 OnMyMobDead:
 	if (mobcount( 'map_name$, instance_npcname("3gate#1") + "::OnMyMobDead" ) < 1) {
-		mapannounce 'map_name$, "찰스턴 1호: 4번 게이트의 보안이 해제되었습니다. 중앙 3번 라인 근처 연구실로 와 주세요.", bc_map, 0xffff00;
+		mapannouncelang 'map_name$, "찰스턴 1호: 4번 게이트의 보안이 해제되었습니다. 중앙 3번 라인 근처 연구실로 와 주세요.", "Charleston 1: Gate 4 has been disarmed. Please come to the lab near Line 3 in the center.", bc_map, 0xffff00;
 		initnpctimer;
 	}
 	end;
@@ -2470,97 +2470,97 @@ OnTouch_:
 1@mcd,114,82,4	script	아이구::IGU#01	4_F_IU,{
 	cutin "igu04.bmp",2;
 	if (isbegin_quest(13186) == 0) {
-		mes "[아이구]";
-		mes "뉴오즈를 따라왔는데, 지금은 어디에 있는 거지?";
+		mes needtr("[아이구]", "[IGU]");
+		mes needtr("뉴오즈를 따라왔는데, 지금은 어디에 있는 거지?", "I've followed Newoz. Where is he now?");
 		close3;
 	}
-	mes "[아이구]";
-	mes "모험은 즐겁나요? 기계가 사방에 있군요. 예전에는 연구실이었던 모양이에요. 저기 책들이 보이나요?";
+	mes needtr("[아이구]", "[IGU]");
+	mes needtr("모험은 즐겁나요? 기계가 사방에 있군요. 예전에는 연구실이었던 모양이에요. 저기 책들이 보이나요?", "Enjoying the adventure? There are machines everywhere. It used to be a study. See those books over there?");
 	close3;
 }
 
 1@mcd,176,179,5	script	뉴오즈::Newoz#15_	4_M_NEWOZ,{
 	cutin "nines01.bmp",0;
-	mes "[뉴오즈]";
-	mes "샬로쉬의 편지를 읽고 있었는데 정신을 차려 보니 전혀 다른 곳에 와 있었어. 뭐, 이 기회에 새 노래나 만들어 볼까.";
+	mes needtr("[뉴오즈]", "[Newoz]");
+	mes needtr("샬로쉬의 편지를 읽고 있었는데 정신을 차려 보니 전혀 다른 곳에 와 있었어. 뭐, 이 기회에 새 노래나 만들어 볼까.", "I was reading a letter from Shalosh, and the next thing I knew, I was in a completely different place. Oh well, I might as well use this chance to write a new song.");
 	close3;
 }
 
 1@mcd,123,74,5	script	연구 일지 01::#Research Journal 01	CLEAR_NPC,{
 	if (isbegin_quest(13186) == 0) {
-		mes "책장에는 연구 일지가 가득 꽂혀 있다.";
+		mes needtr("책장에는 연구 일지가 가득 꽂혀 있다.", "The bookcase is filled with research journals.");
 		close;
 	}
-	mes "모든 페이지가 기계어로 작성되어 있다.";
+	mes needtr("모든 페이지가 기계어로 작성되어 있다.", "Every page is written in mechanical language.");
 	next;
-	mes "- 베 박사는 무언가를 꾸미고 있는 것 같다. 생명과 기계의 결합 연구가 점점 그녀를 미치게 만들고 있다. 공장을 요새로 개조하고, 영혼과 로봇을...";
+	mes needtr("- 베 박사는 무언가를 꾸미고 있는 것 같다. 생명과 기계의 결합 연구가 점점 그녀를 미치게 만들고 있다. 공장을 요새로 개조하고, 영혼과 로봇을...", "-Dr. Ve seems to be planning a plot, the combination of life and the machine gradually let her crazy, the transformation of the plant into a fortress, her soul and robots... ");
 	next;
-	mes "- 상황은 점점 위험해지고 있다. 만일에 대비해 찰스턴 2호의 탈출 방법을 연구해야 한다.";
+	mes needtr("- 상황은 점점 위험해지고 있다. 만일에 대비해 찰스턴 2호의 탈출 방법을 연구해야 한다.", "-In short more and more dangerous, just in case is to study the Charleston 2 escape method.");
 	next;
-	mes "이후의 내용은 알아볼 수 없는 기계어로 적혀 있다.";
+	mes needtr("이후의 내용은 알아볼 수 없는 기계어로 적혀 있다.", "Behind is the mechanical language that is incomprehensible.");
 	close;
 }
 
 1@mcd,142,74,5	script	연구 일지 02::#Research Journal 02	CLEAR_NPC,{
 	if (isbegin_quest(13186) == 0) {
-		mes "책장에는 연구 일지가 가득 꽂혀 있다.";
+		mes needtr("책장에는 연구 일지가 가득 꽂혀 있다.", "The bookcase is filled with research journals.");
 		close;
 	}
-	mes "모든 페이지가 기계어로 작성되어 있다.";
+	mes needtr("모든 페이지가 기계어로 작성되어 있다.", "Every page is written in mechanical language.");
 	next;
-	mes "- 찰스턴 2호의 OS를 초기화할 때마다 다른 성격이 나타난다. 데이터 기술의 결합만으로는 설명하기 어렵다...";
+	mes needtr("- 찰스턴 2호의 OS를 초기화할 때마다 다른 성격이 나타난다. 데이터 기술의 결합만으로는 설명하기 어렵다...", "-Whenever the os of Charleston 2 is reset, there will be other personality, is difficult to explain the combination of data technology...");
 	next;
-	mes "- 나는 정말 인간성을 만들어 내는 데 성공한 걸까? 로봇이라고 단정할 수도 없다. 나는 인간을 이해한 걸까?";
+	mes needtr("- 나는 정말 인간성을 만들어 내는 데 성공한 걸까? 로봇이라고 단정할 수도 없다. 나는 인간을 이해한 걸까?", "-Did I really succeed in creating humanity? Robotic, I can't say. Did I understand humans?");
 	next;
-	mes "- 이제는 중요하지 않다. 내 가장 소중한 친구이자 아이인 릴리를 볼 수 있어 행복하다...";
+	mes needtr("- 이제는 중요하지 않다. 내 가장 소중한 친구이자 아이인 릴리를 볼 수 있어 행복하다...", "-It doesn't matter. Now I'm happy to see her, my best friend, my baby, Lily...");
 	next;
-	mes "이후의 내용은 알아볼 수 없는 기계어로 적혀 있다.";
+	mes needtr("이후의 내용은 알아볼 수 없는 기계어로 적혀 있다.", "Behind is the mechanical language that is incomprehensible.");
 	close;
 }
 
 1@mcd,111,74,5	script	연구 일지 03::#Research Journal 03	CLEAR_NPC,{
 	if (isbegin_quest(13186) == 0) {
-		mes "책장에는 연구 일지가 가득 꽂혀 있다.";
+		mes needtr("책장에는 연구 일지가 가득 꽂혀 있다.", "The bookcase is filled with research journals.");
 		close;
 	}
-	mes "모든 페이지가 기계어로 작성되어 있다.";
+	mes needtr("모든 페이지가 기계어로 작성되어 있다.", "Every page is written in mechanical language.");
 	next;
-	mes "- 데이터가 계속 손상되는 원인을 모르겠다. 백업 장치도 소용없다. 병에 걸린 것처럼 기억이 침식되고 있다.";
+	mes needtr("- 데이터가 계속 손상되는 원인을 모르겠다. 백업 장치도 소용없다. 병에 걸린 것처럼 기억이 침식되고 있다.", "-I do not know why the data is constantly damaged, the backup host is useless, like a sick like my memory is being eroded.");
 	next;
-	mes "- 기억이 완전히 사라지는 것을 막기 위해 OS 자동 복구 프로그램을 설치했다. 적어도... 새로운 정보로 다시 시작할 수는 있을 것이다...";
+	mes needtr("- 기억이 완전히 사라지는 것을 막기 위해 OS 자동 복구 프로그램을 설치했다. 적어도... 새로운 정보로 다시 시작할 수는 있을 것이다...", "-To prevent my memory from disappearing completely, the os auto-recovery program has been installed, at least... You can start over with new information...");
 	next;
-	mes "이후의 내용은 알아볼 수 없는 기계어로 적혀 있다.";
+	mes needtr("이후의 내용은 알아볼 수 없는 기계어로 적혀 있다.", "Behind is the mechanical language that is incomprehensible.");
 	close;
 }
 
 1@mcd,128,74,5	script	연구 일지 04::#Research Journal 04	CLEAR_NPC,{
 	if (isbegin_quest(13186) == 0) {
-		mes "책장에는 연구 일지가 가득 꽂혀 있다.";
+		mes needtr("책장에는 연구 일지가 가득 꽂혀 있다.", "The bookcase is filled with research journals.");
 		close;
 	}
-	mes "글씨가 몹시 흐트러져 있다.";
+	mes needtr("글씨가 몹시 흐트러져 있다.", "The handwriting is very scribbled.");
 	next;
-	mes "- 찰스턴... 고작 로봇일 뿐이야... 결국 메인 프레임에 바이러스를 심었다.";
+	mes needtr("- 찰스턴... 고작 로봇일 뿐이야... 결국 메인 프레임에 바이러스를 심었다.", "-Charleston... It's just a robot... Finally planted a virus on the mainframe.");
 	next;
-	mes "- 언젠가는 반드시 너를 파괴할 방법을 찾아내겠어. 흐흐!";
+	mes needtr("- 언젠가는 반드시 너를 파괴할 방법을 찾아내겠어. 흐흐!", "-Sooner or later, I'll figure out a way to destroy you. *Chuckle*!");
 	next;
-	mes "이후의 내용은 알아볼 수 없는 기계어로 적혀 있다.";
+	mes needtr("이후의 내용은 알아볼 수 없는 기계어로 적혀 있다.", "Behind is the mechanical language that is incomprehensible.");
 	close;
 }
 
 1@mcd,10,10,5	script	찰스턴 도우미::Charleston Assistant#1	CLEAR_NPC,{
 	if (callfunc("F_GM_NPC",1854,0,0,9999) < 1)
 		end;
-	mes "현재 진행 값: " + 'ep15_1_mcd01;
-	mes "난이도는 0입니다.";
-	mes "진행 단계를 바로 이동하시겠습니까?";
+	mes needtr("현재 진행 값: ", "Current progress value: ") + 'ep15_1_mcd01;
+	mes needtr("난이도는 0입니다.", "The difficulty is 0.");
+	mes needtr("진행 단계를 바로 이동하시겠습니까?", "Do you want to jump straight to a progress step?");
 	next;
-	switch( select( "이동하지 않는다", "진행 구간으로 이동", "보스 방으로 이동", "진행 상태 설정" ) ) {
+	switch( select( needtr("이동하지 않는다", "Not taking"), needtr("진행 구간으로 이동", "Boading"), needtr("보스 방으로 이동", "To Boss room"), needtr("진행 상태 설정", "Setitem") ) ) {
 	case 1:
 		break;
 	case 2:
-		mes "[도우미]";
-		mes "이동 지점을 개방합니다.";
+		mes needtr("[도우미]", "[Helper!]");
+		mes needtr("이동 지점을 개방합니다.", "Open transfer point.");
 		enablenpc instance_npcname("1gate");
 		enablenpc instance_npcname("2gate");
 		enablenpc instance_npcname("3gate");
@@ -2572,18 +2572,18 @@ OnTouch_:
 		warp 'map_name$,124,214;
 		end;
 	case 4:
-		switch( select( "초기화", "4 - 락스텝 파괴 완료", "7 - 발전기 가동 완료", "코어 앞", "보스전 직전", "보스 처치 완료" ) ) {
+		switch( select( needtr("초기화", "Reset"), needtr("4 - 락스텝 파괴 완료", "4 - Destroy Lockstep"), needtr("7 - 발전기 가동 완료", "7 - Generator completed"), needtr("코어 앞", "Core front"), needtr("보스전 직전", "Before Boss"), needtr("보스 처치 완료", "Destroy BOSS") ) ) {
 		case 1:
 			'ep15_1_mcd01 = 0;
 			break;
 		case 2:
 			enablenpc instance_npcname("Charleston 1#2");
 			disablenpc instance_npcname("Charleston 1#1");
-			mapannounce 'map_name$, "찰스턴 1호: 아, 아. 마이크 테스트.", bc_map, 0xffff00;
+			mapannouncelang 'map_name$, "찰스턴 1호: 아, 아. 마이크 테스트.", "Charleston 1: Ah, ah. Mic test.", bc_map, 0xffff00;
 			sleep2 3000;
-			mapannounce 'map_name$, "찰스턴 1호: 락스텝 대부분을 처리한 것 같군요.", bc_map, 0xffff00;
+			mapannouncelang 'map_name$, "찰스턴 1호: 락스텝 대부분을 처리한 것 같군요.", "Charleston 1: It seems you've taken care of most of the Locksteps.", bc_map, 0xffff00;
 			sleep2 3000;
-			mapannounce 'map_name$, "찰스턴 1호: 연구실로 돌아와 주세요.", bc_map, 0xffff00;
+			mapannouncelang 'map_name$, "찰스턴 1호: 연구실로 돌아와 주세요.", "Charleston 1: Please come back to the lab.", bc_map, 0xffff00;
 			'ep15_1_mcd01 = 4;
 			break;
 		case 3:
@@ -2614,8 +2614,8 @@ OnTouch_:
 		}
 		break;
 	}
-	mes "[도우미]";
-	mes "종료";
+	mes needtr("[도우미]", "[Helper!]");
+	mes needtr("종료", "The End");
 	close;
 
 OnInstanceInit:

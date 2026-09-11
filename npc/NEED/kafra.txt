@@ -28,66 +28,66 @@ S_Menu:
 	}
 
 Reset:
-	mes "[카프라]";
-	mes "149레벨 이하 모험가님께";
-	mes "스텟/스킬 초기화를 무료로 도와드리고 있습니다.";
+	mes needtr("[카프라]", "[Kafra]");
+	mes needtr("149레벨 이하 모험가님께", "For adventurers of level 149 and below,");
+	mes needtr("스텟/스킬 초기화를 무료로 도와드리고 있습니다.", "I reset stats and skills free of charge.");
 	next;
 
 	if (BaseLevel > .MaxFreeBaseLv) {
-		mes "[카프라]";
-		mes "죄송합니다.";
-		mes "무료 초기화는 ^FF0000" + .MaxFreeBaseLv + "레벨 이하^000000까지만 이용할 수 있습니다.";
-		mes "현재 레벨: ^FF0000" + BaseLevel + "^000000";
+		mes needtr("[카프라]", "[Kafra]");
+		mes needtr("죄송합니다.", "I'm sorry.");
+		mes needtr("무료 초기화는 ^FF0000", "The free reset is only available up to level ^FF0000") + .MaxFreeBaseLv + needtr("레벨 이하^000000까지만 이용할 수 있습니다.", "^000000.");
+		mes needtr("현재 레벨: ^FF0000", "Current level: ^FF0000") + BaseLevel + "^000000";
 		close;
 	}
 
-	mes "[카프라]";
-	mes "무엇을 초기화하시겠습니까?";
-	mes "현재 레벨: ^0000FF" + BaseLevel + "^000000";
+	mes needtr("[카프라]", "[Kafra]");
+	mes needtr("무엇을 초기화하시겠습니까?", "What would you like to reset?");
+	mes needtr("현재 레벨: ^0000FF", "Current level: ^0000FF") + BaseLevel + "^000000";
 	next;
 
-	switch (select("스텟 초기화:스킬 초기화:스텟 + 스킬 초기화:취소")) {
+	switch (select(needtr("스텟 초기화:스킬 초기화:스텟 + 스킬 초기화:취소", "Reset Stats:Reset Skills:Reset Stats + Skills:Cancel"))) {
 	case 1:
-		mes "[카프라]";
-		mes "스텟을 초기화하시겠습니까?";
+		mes needtr("[카프라]", "[Kafra]");
+		mes needtr("스텟을 초기화하시겠습니까?", "Do you want to reset your stats?");
 		next;
-		if (select("초기화한다:취소") == 2)
+		if (select(needtr("초기화한다:취소", "Reset:Cancel")) == 2)
 			close;
 
 		resetstatus;
 		specialeffect2 EF_ANGEL2;
 
-		mes "[카프라]";
-		mes "스텟 초기화가 완료되었습니다.";
+		mes needtr("[카프라]", "[Kafra]");
+		mes needtr("스텟 초기화가 완료되었습니다.", "Your stats have been reset.");
 		close;
 
 	case 2:
-		mes "[카프라]";
-		mes "스킬을 초기화하시겠습니까?";
+		mes needtr("[카프라]", "[Kafra]");
+		mes needtr("스킬을 초기화하시겠습니까?", "Do you want to reset your skills?");
 		next;
-		if (select("초기화한다:취소") == 2)
+		if (select(needtr("초기화한다:취소", "Reset:Cancel")) == 2)
 			close;
 
 		resetskill;
 		specialeffect2 EF_ANGEL2;
 
-		mes "[카프라]";
-		mes "스킬 초기화가 완료되었습니다.";
+		mes needtr("[카프라]", "[Kafra]");
+		mes needtr("스킬 초기화가 완료되었습니다.", "Your skills have been reset.");
 		close;
 
 	case 3:
-		mes "[카프라]";
-		mes "스텟과 스킬을 모두 초기화하시겠습니까?";
+		mes needtr("[카프라]", "[Kafra]");
+		mes needtr("스텟과 스킬을 모두 초기화하시겠습니까?", "Do you want to reset both stats and skills?");
 		next;
-		if (select("초기화한다:취소") == 2)
+		if (select(needtr("초기화한다:취소", "Reset:Cancel")) == 2)
 			close;
 
 		resetstatus;
 		resetskill;
 		specialeffect2 EF_ANGEL2;
 
-		mes "[카프라]";
-		mes "스텟과 스킬 초기화가 완료되었습니다.";
+		mes needtr("[카프라]", "[Kafra]");
+		mes needtr("스텟과 스킬 초기화가 완료되었습니다.", "Your stats and skills have been reset.");
 		close;
 
 	case 4:
@@ -98,19 +98,19 @@ S_01: //세이브
 	// 현재 위치 저장
 	getmapxy(.@map$, .@x, .@y);
 	savepoint .@map$, .@x, .@y;
-	mes "[카프라]";
-	mes "^FF0000현재 위치로 저장했습니다.^000000";
-	mes "이용해주셔서 감사합니다.";
+	mes needtr("[카프라]", "[Kafra]");
+	mes needtr("^FF0000현재 위치로 저장했습니다.^000000", "^FF0000Your respawn point has been saved here.^000000");
+	mes needtr("이용해주셔서 감사합니다.", "Thank you for using our service.");
 	goto M_Exit;
 
 EXIT:
-	mes "[카프라]";
-	mes "저희 카프라 서비스는 보다 완벽한";
-	mes "서비스와 관리 업무를 목표로 하여";
-	mes "안심하고 이용 하실 수 있도록";
-	mes "언제나 최선을 다하고 있습니다.";
-	mes "(주)카프라 서비스를 이용해주셔서";
-	mes "감사합니다.";
+	mes needtr("[카프라]", "[Kafra]");
+	mes needtr("저희 카프라 서비스는 보다 완벽한", "We at Kafra Services always do our best");
+	mes needtr("서비스와 관리 업무를 목표로 하여", "to provide ever better service");
+	mes needtr("안심하고 이용 하실 수 있도록", "and care so that you can use it");
+	mes needtr("언제나 최선을 다하고 있습니다.", "with complete peace of mind.");
+	mes needtr("(주)카프라 서비스를 이용해주셔서", "Thank you for using");
+	mes needtr("감사합니다.", "Kafra Corporation Services.");
 	goto M_Exit;
 	
 All:
@@ -123,14 +123,14 @@ All:
 	);
 
 	if (ismounting()) {
-		message strcharinfo(0),"탑승을 제거 해야합니다.";
+		message strcharinfo(0),needtr("탑승을 제거 해야합니다.", "You have to dismount first.");
 		end;
 	}
 	else if (((eaclass()&EAJ_THIRDMASK)==EAJ_RANGER) && !countitem(6124))
 	{
 		if (!checkfalcon() && getskilllv("HT_FALCON") && !checkwug())
 		{
-			if(select(" ~ 팔콘: ~ 워그")==1)
+			if(select(needtr(" ~ 팔콘: ~ 워그", " ~ Falcon: ~ Warg"))==1)
 				setfalcon;
 			else
 				getitem 6124,1; //Wolf's_Flute
@@ -140,7 +140,7 @@ All:
 	}
 	else if (((eaclass()&EAJ_THIRDMASK)==EAJ_MECHANIC) && !checkcart() && getskilllv("MC_PUSHCART")) {
 		if (!checkmadogear() && getskilllv("NC_MADOLICENCE") && !.@block_mado_body2) {
-			if(select(" ~ 카트: ~ 마도")==1)
+			if(select(needtr(" ~ 카트: ~ 마도", " ~ Cart: ~ Mado Gear"))==1)
 				setcart;
 			else
 				setmadogear;
@@ -156,7 +156,7 @@ All:
 	}
 	else if (!checkriding() && !checkdragon() && getskilllv("KN_RIDING")) {
 		if ((eaclass()&EAJ_THIRDMASK)==EAJ_RUNE_KNIGHT)
-			if(select(" ~ 드래곤: ~ 페코페코")==1)
+			if(select(needtr(" ~ 드래곤: ~ 페코페코", " ~ Dragon: ~ PecoPeco"))==1)
 				setdragon;
 			else
 				setriding;
@@ -168,9 +168,9 @@ All:
 	}
 	else {
 		if (.@block_mado_body2 && getskilllv("NC_MADOLICENCE")) {
-			message strcharinfo(0),"블랙스미스 또는 화이트스미스 직업 코스튬 상태에서는 마도기어를 대여할 수 없습니다.";
+			message strcharinfo(0),needtr("블랙스미스 또는 화이트스미스 직업 코스튬 상태에서는 마도기어를 대여할 수 없습니다.", "A Mado Gear cannot be rented while wearing a Blacksmith or Whitesmith job costume.");
 		} else {
-			message strcharinfo(0),"대여 요건을 충족하지 못합니다.";
+			message strcharinfo(0),needtr("대여 요건을 충족하지 못합니다.", "You do not meet the rental requirements.");
 		}
 		end;
 	}
@@ -179,9 +179,9 @@ All:
 	end;
 	
 Exchange:
-	mes "[카프라]";
-	mes "보유 캐시: ^0055FF" + callfunc("F_InsertComma", #CASHPOINTS) + "^000000";
-	mes "환전할 주화를 선택해주세요.";
+	mes needtr("[카프라]", "[Kafra]");
+	mes needtr("보유 캐시: ^0055FF", "Cash points: ^0055FF") + callfunc("F_InsertComma", #CASHPOINTS) + "^000000";
+	mes needtr("환전할 주화를 선택해주세요.", "Please choose the coin to exchange for.");
 	next;
 
 	.@item_id = 399990;
@@ -191,16 +191,16 @@ Exchange:
 	.@max = #CASHPOINTS / .@cash;
 
 	if (.@max <= 0) {
-		mes "[카프라]";
-		mes "보유 캐시가 부족합니다.";
-		mes .@name$ + " 1개 환전에 필요한 캐시: ^FF0000" + .@cash + "^000000";
+		mes needtr("[카프라]", "[Kafra]");
+		mes needtr("보유 캐시가 부족합니다.", "You do not have enough cash points.");
+		mes .@name$ + needtr(" 1개 환전에 필요한 캐시: ^FF0000", " - cash points per unit: ^FF0000") + .@cash + "^000000";
 		close;
 	}
 
-	mes "[카프라]";
-	mes .@name$ + " 1개 = ^0055FF" + .@cash + " 캐시^000000";
-	mes "현재 최대 환전 가능 수량: ^0055FF" + callfunc("F_InsertComma", .@max) + "개^000000";
-	mes "환전할 수량을 입력해주세요.";
+	mes needtr("[카프라]", "[Kafra]");
+	mes .@name$ + needtr(" 1개 = ^0055FF", " - 1 unit = ^0055FF") + .@cash + needtr(" 캐시^000000", " cash points^000000");
+	mes needtr("현재 최대 환전 가능 수량: ^0055FF", "Maximum you can exchange now: ^0055FF") + callfunc("F_InsertComma", .@max) + needtr("개^000000", "^000000");
+	mes needtr("환전할 수량을 입력해주세요.", "Please enter the amount to exchange.");
 	next;
 
 	input .@amount, 1, .@max;
@@ -208,35 +208,35 @@ Exchange:
 	.@total_cash = .@amount * .@cash;
 
 	if (#CASHPOINTS < .@total_cash) {
-		mes "[카프라]";
-		mes "캐시가 부족합니다.";
+		mes needtr("[카프라]", "[Kafra]");
+		mes needtr("캐시가 부족합니다.", "You do not have enough cash points.");
 		close;
 	}
 
 	if (!checkweight(.@item_id, .@amount)) {
-		mes "[카프라]";
-		mes "인벤토리 무게가 부족합니다.";
-		mes "소지 무게를 비운 후 다시 이용해주세요.";
+		mes needtr("[카프라]", "[Kafra]");
+		mes needtr("인벤토리 무게가 부족합니다.", "You do not have enough inventory weight.");
+		mes needtr("소지 무게를 비운 후 다시 이용해주세요.", "Please free up some weight and try again.");
 		close;
 	}
 
-	mes "[카프라]";
-	mes .@name$ + " ^0055FF" + callfunc("F_InsertComma", .@amount) + "개^000000로 환전합니다.";
-	mes "소모 캐시: ^FF0000" + callfunc("F_InsertComma", .@total_cash) + "^000000";
-	mes "진행하시겠습니까?";
+	mes needtr("[카프라]", "[Kafra]");
+	mes .@name$ + " ^0055FF" + callfunc("F_InsertComma", .@amount) + needtr("개^000000로 환전합니다.", "^000000 will be exchanged.");
+	mes needtr("소모 캐시: ^FF0000", "Cash points spent: ^FF0000") + callfunc("F_InsertComma", .@total_cash) + "^000000";
+	mes needtr("진행하시겠습니까?", "Shall I proceed?");
 	next;
 
-	if (select("환전한다:취소") == 2)
+	if (select(needtr("환전한다:취소", "Exchange:Cancel")) == 2)
 		close;
 
 	#CASHPOINTS -= .@total_cash;
 	getitem .@item_id, .@amount;
 
-	mes "[카프라]";
-	mes "환전이 완료되었습니다.";
-	mes "획득: ^0055FF" + .@name$ + " " + callfunc("F_InsertComma", .@amount) + "개^000000";
-	mes "남은 캐시: ^0055FF" + callfunc("F_InsertComma", #CASHPOINTS) + "^000000";
-	dispbottom .@name$ + " " + callfunc("F_InsertComma", .@amount) + "개를 획득했습니다. 남은 캐시: " + callfunc("F_InsertComma", #CASHPOINTS) + "";
+	mes needtr("[카프라]", "[Kafra]");
+	mes needtr("환전이 완료되었습니다.", "The exchange is complete.");
+	mes needtr("획득: ^0055FF", "Received: ^0055FF") + .@name$ + " " + callfunc("F_InsertComma", .@amount) + needtr("개^000000", "^000000");
+	mes needtr("남은 캐시: ^0055FF", "Cash points left: ^0055FF") + callfunc("F_InsertComma", #CASHPOINTS) + "^000000";
+	dispbottom .@name$ + " " + callfunc("F_InsertComma", .@amount) + needtr("개를 획득했습니다. 남은 캐시: ", " received. Cash points left: ") + callfunc("F_InsertComma", #CASHPOINTS) + "";
 	close;
 	
 Cart: //카트
@@ -290,9 +290,9 @@ Check_Option: //체크
 	if (zeny < @setPrice) goto No_Zeny;
 	if (getskilllv(@checkSkill) == 0) goto W_Needskill;
 
-	mes "[카프라]";
-	mes "선택하신 서비스는 ^ff0000" + @servName$ + "^000000 서비스 입니다.";
-	mes "이용해주셔서 감사합니다.";
+	mes needtr("[카프라]", "[Kafra]");
+	mes needtr("선택하신 서비스는 ^ff0000", "The service you chose is ^ff0000") + @servName$ + needtr("^000000 서비스 입니다.", "^000000.");
+	mes needtr("이용해주셔서 감사합니다.", "Thank you for using our service.");
 	if (@setServ == 0) setcart;
 	if (@setServ == 1) setriding;
 	if (@setServ == 2) setfalcon;
@@ -303,30 +303,30 @@ Check_Option: //체크
 	goto M_Exit;
 
 No_Zeny: //제니 체크
-	mes "[카프라]";
-	mes "죄송합니다. ^FF3300제니^000000가 부족합니다.";
+	mes needtr("[카프라]", "[Kafra]");
+	mes needtr("죄송합니다. ^FF3300제니^000000가 부족합니다.", "Sorry, you do not have enough ^FF3300zeny^000000.");
 	emotion 23;
 	goto M_Exit;
 
 W_Needskill: //스킬 체크
-	mes "[카프라]";
-	mes "^FF3300" + @earnName$ + "^000000 스킬을 배우고 오세요.";
+	mes needtr("[카프라]", "[Kafra]");
+	mes "^FF3300" + @earnName$ + needtr("^000000 스킬을 배우고 오세요.", "^000000 - please learn that skill first.");
 	emotion 23;
 	goto M_Exit;
 
 
 QPlat: // 퀘스트 스킬 배우기
-	mes "[카프라]";
-	mes "현재 직업에 맞는 퀘스트 스킬을 지급합니다.";
+	mes needtr("[카프라]", "[Kafra]");
+	mes needtr("현재 직업에 맞는 퀘스트 스킬을 지급합니다.", "I will grant the quest skills for your current job.");
 	next;
 	callfunc "F_GetPlatinumSkills"; // rAthena 전역 함수 호출
-	mes "퀘스트 스킬이 지급되었습니다.";
+	mes needtr("퀘스트 스킬이 지급되었습니다.", "The quest skills have been granted.");
 	goto M_Exit;
 
 S_OS:
-	mes "[카프라]";
-	mes "어느 창고를 여시겠어요?";
-	switch(select(" - 1번 창고"," - 2번 창고"," - 3번 창고")) {
+	mes needtr("[카프라]", "[Kafra]");
+	mes needtr("어느 창고를 여시겠어요?", "Which storage shall I open?");
+	switch(select(needtr(" - 1번 창고", " - Storage 1"),needtr(" - 2번 창고", " - Storage 2"),needtr(" - 3번 창고", " - Storage 3"))) {
 	case 1: close2; openstorage; end;              // ID 0
 	case 2: close2; openstorage2(1, STOR_MODE_GET|STOR_MODE_PUT); end; // ID 1
 	case 3: close2; openstorage2(2, STOR_MODE_GET|STOR_MODE_PUT); end; // ID 2
@@ -334,39 +334,39 @@ S_OS:
 	
 S_GOS:
 	if (!getcharid(2)) {
-		mes "[카프라]";
-		mes "길드 가입이 필요합니다.";
+		mes needtr("[카프라]", "[Kafra]");
+		mes needtr("길드 가입이 필요합니다.", "You need to be in a guild.");
 		goto M_Exit;
 	}
 
 	// 2) 권한 체크(길드원 권한에 '창고 사용'이 있어야 함)
 	if (!guild_has_permission(GUILD_PERM_STORAGE)) {
-		mes "[카프라]";
-		mes "길드 창고 사용 권한이 없습니다.";
-		mes "길드 마스터에게 권한을 요청하세요.";
+		mes needtr("[카프라]", "[Kafra]");
+		mes needtr("길드 창고 사용 권한이 없습니다.", "You do not have permission to use the guild storage.");
+		mes needtr("길드 마스터에게 권한을 요청하세요.", "Please ask your guild master for permission.");
 		goto M_Exit;
 	}
 
 	// 3) 열기 전 안내 -> 대화창 닫고 시도
-	mes "[카프라]";
-	mes "길드 창고를 열어 드리겠습니다.";
+	mes needtr("[카프라]", "[Kafra]");
+	mes needtr("길드 창고를 열어 드리겠습니다.", "I will open the guild storage for you.");
 	close2;
 
 	// 4) 길드창고 오픈 시도 + 실패 사유별 메시지(대화창 닫힌 상태이므로 dispbottom 사용)
 	.@r = guildopenstorage();
 	if (.@r != GSTORAGE_OPEN) {
 		if (.@r == GSTORAGE_NO_STORAGE) {
-			dispbottom "길드 스킬 'Guild Storage Expansion'이 필요합니다.";
+			dispbottom needtr("길드 스킬 'Guild Storage Expansion'이 필요합니다.", "The guild skill 'Guild Storage Expansion' is required.");
 		} else if (.@r == GSTORAGE_NO_PERMISSION) {
-			dispbottom "길드 창고 사용 권한이 없습니다.";
+			dispbottom needtr("길드 창고 사용 권한이 없습니다.", "You do not have permission to use the guild storage.");
 		} else if (.@r == GSTORAGE_ALREADY_OPEN) {
-			dispbottom "이미 길드 창고가 열려 있습니다.";
+			dispbottom needtr("이미 길드 창고가 열려 있습니다.", "The guild storage is already open.");
 		} else if (.@r == GSTORAGE_STORAGE_ALREADY_OPEN) {
-			dispbottom "개인 창고가 열린 상태에서는 길드 창고를 열 수 없습니다.";
+			dispbottom needtr("개인 창고가 열린 상태에서는 길드 창고를 열 수 없습니다.", "The guild storage cannot be opened while your personal storage is open.");
 		} else if (.@r == GSTORAGE_NO_GUILD) {
-			dispbottom "길드에 가입되어 있지 않습니다.";
+			dispbottom needtr("길드에 가입되어 있지 않습니다.", "You are not in a guild.");
 		} else {
-			dispbottom "길드 창고를 열 수 없습니다. 코드: " + .@r;
+			dispbottom needtr("길드 창고를 열 수 없습니다. 코드: ", "The guild storage could not be opened. Code: ") + .@r;
 		}
 		end;
 	}

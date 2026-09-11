@@ -14,30 +14,30 @@ moc_para01,26,95,5	script	로엘#sara	4_M_ROEL,{
 	.@limit = instance_ip_reward_limit(.@instance_db_id);
 
 	if (.@remaining == -1 || .@limit == -1) {
-		mes "보상 이용 횟수를 확인하지 못했습니다.";
-		mes "잠시 후 다시 시도해 주세요.";
+		mes needtr("보상 이용 횟수를 확인하지 못했습니다.", "Could not read your reward usage count.");
+		mes needtr("잠시 후 다시 시도해 주세요.", "Please try again in a moment.");
 		end;
 	}
 
 	if (.@remaining != -2 && .@limit > 0) {
 		if (.@remaining <= 0) {
-			mes "오늘 해당 던전의 보상 이용 횟수를";
-			mes "모두 사용했습니다.";
-			mes "남은 보상 횟수: ^FF00000회 / " + .@limit + "회^000000";
-			mes "초기화 시간: 매일 오전 4시";
+			mes needtr("오늘 해당 던전의 보상 이용 횟수를", "You have used up all the reward");
+			mes needtr("모두 사용했습니다.", "attempts for this dungeon today.");
+			mes needtr("남은 보상 횟수: ^FF00000회 / ", "Rewards left: ^FF00000 / ") + .@limit + needtr("회^000000", "^000000");
+			mes needtr("초기화 시간: 매일 오전 4시", "Reset time: 4:00 am every day");
 			end;
 		}
 
-		mes "오늘 남은 보상 횟수:";
-		mes "^3355FF" + .@remaining + "회 / " + .@limit + "회^000000";
+		mes needtr("오늘 남은 보상 횟수:", "Rewards left for today:");
+		mes "^3355FF" + .@remaining + needtr("회 / ", " / ") + .@limit + needtr("회^000000", "^000000");
 		next;
 	}
 	
 	cutin "roel01",0;
 	if (BaseLevel < 120) {
-		mes "[로엘]";
-		mes "새로운 모험에 참여하려면";
-		mes "베이스 레벨 120 이상이어야 합니다.";
+		mes needtr("[로엘]", "[Roel]");
+		mes needtr("새로운 모험에 참여하려면", "To join a new adventure you must be");
+		mes needtr("베이스 레벨 120 이상이어야 합니다.", "Base Level 120 or higher.");
 		close3;
 	}
 
@@ -45,28 +45,28 @@ moc_para01,26,95,5	script	로엘#sara	4_M_ROEL,{
 	case 0:
 		switch (isbegin_quest(13181)) {
 		case 0:
-			mes "[로엘]";
-			mes "저는 하얀 날개 길드의 신입 로엘입니다.";
-			mes "실종된 전 길드장 뉴오즈의 흔적을 찾았습니다.";
+			mes needtr("[로엘]", "[Roel]");
+			mes needtr("저는 하얀 날개 길드의 신입 로엘입니다.", "I'm Roel, a new member of the White Wings Guild.");
+			mes needtr("실종된 전 길드장 뉴오즈의 흔적을 찾았습니다.", "We have found a trace of Newoz, our missing former guild master.");
 			next;
-			mes "[로엘]";
-			mes "뉴오즈를 찾는 원정에 함께하시겠습니까?";
-			if (select("참여한다.:참여하지 않는다.") == 1) {
-				mes "[로엘]";
-				mes "루나인이 마지막 흔적을 기억해 두었습니다.";
-				mes "옆의 루나인에게 차원의 균열을 열어 달라고 해주세요.";
+			mes needtr("[로엘]", "[Roel]");
+			mes needtr("뉴오즈를 찾는 원정에 함께하시겠습니까?", "Will you join the expedition to find Newoz?");
+			if (select(needtr("참여한다.:참여하지 않는다.", "I will join.:I will not join.")) == 1) {
+				mes needtr("[로엘]", "[Roel]");
+				mes needtr("루나인이 마지막 흔적을 기억해 두었습니다.", "Runane has memorized the last trace.");
+				mes needtr("옆의 루나인에게 차원의 균열을 열어 달라고 해주세요.", "Ask Runane beside me to open the Dimensional Crack.");
 				setquest 13181;
 			}
 			close3;
 		case 1:
-			mes "[로엘]";
-			mes "입장 준비가 되었다면 루나인에게 말해주세요.";
+			mes needtr("[로엘]", "[Roel]");
+			mes needtr("입장 준비가 되었다면 루나인에게 말해주세요.", "If you're interested in joining us, please talk to Runane.");
 			close3;
 		case 2:
 			cutin "roel03",0;
-			mes "[로엘]";
-			mes "첫 원정을 무사히 마치셨군요.";
-			mes "다음 모험도 기대하겠습니다!";
+			mes needtr("[로엘]", "[Roel]");
+			mes needtr("첫 원정을 무사히 마치셨군요.", "It was my first adventure as a member of White");
+			mes needtr("다음 모험도 기대하겠습니다!", "Wings. I can't wait for the next one!");
 			erasequest 13181;
 			setquest 13183;
 			completequest 13183;
@@ -79,31 +79,31 @@ moc_para01,26,95,5	script	로엘#sara	4_M_ROEL,{
 	case 2:
 		switch (isbegin_quest(13181)) {
 		case 0:
-			mes "[로엘]";
-			mes "샬로시를 만났던 공간은 같은 사건이 반복되는";
-			mes "시간의 고리에 갇혀 있다고 합니다.";
+			mes needtr("[로엘]", "[Roel]");
+			mes needtr("샬로시를 만났던 공간은 같은 사건이 반복되는", "The space where we met Shaloshi is caught in a loop of time");
+			mes needtr("시간의 고리에 갇혀 있다고 합니다.", "where the same events repeat over and over.");
 			next;
-			mes "[로엘]";
-			mes "같은 원정을 다시 경험하시겠습니까?";
-			if (select("다시 도전한다.:그만둔다.") == 1) {
+			mes needtr("[로엘]", "[Roel]");
+			mes needtr("같은 원정을 다시 경험하시겠습니까?", "Would you like to go through the same expedition again?");
+			if (select(needtr("다시 도전한다.:그만둔다.", "Try again.:Quit.")) == 1) {
 				setquest 13181;
-				mes "[로엘]";
-				mes "루나인에게 차원의 균열을 열어 달라고 해주세요.";
+				mes needtr("[로엘]", "[Roel]");
+				mes needtr("루나인에게 차원의 균열을 열어 달라고 해주세요.", "Ask Runane to open the Dimensional Crack.");
 			}
 			close3;
 		case 1:
-			mes "[로엘]";
-			mes "원정을 포기하시겠습니까?";
-			if (select("계속 진행한다.:포기한다.") == 2) {
+			mes needtr("[로엘]", "[Roel]");
+			mes needtr("원정을 포기하시겠습니까?", "Are you ready yet? You can give up if you're not confident.");
+			if (select(needtr("계속 진행한다.:포기한다.", "Keep going.:Give up.")) == 2) {
 				erasequest 13181;
-				mes "[로엘]";
-				mes "원정 신청을 취소했습니다.";
+				mes needtr("[로엘]", "[Roel]");
+				mes needtr("원정 신청을 취소했습니다.", "Your expedition application has been cancelled.");
 			}
 			close3;
 		case 2:
 			cutin "roel03",0;
-			mes "[로엘]";
-			mes "이번 원정도 수고하셨습니다.";
+			mes needtr("[로엘]", "[Roel]");
+			mes needtr("이번 원정도 수고하셨습니다.", "Adventuring is always fun. Be a great adventurer, okay?");
 			erasequest 13181;
 			getexp 1500000,500000;
 			close3;
@@ -114,13 +114,13 @@ moc_para01,26,95,5	script	로엘#sara	4_M_ROEL,{
 moc_para01,29,95,5	script	루나인#sara	4_F_RUNAIN,{
 	cutin "lunain01",0;
 	if (BaseLevel < 120) {
-		mes "[루나인]";
-		mes "^ff0000베이스 레벨 120 이상만 이용할 수 있습니다.^000000";
+		mes needtr("[루나인]", "[Runane]");
+		mes needtr("^ff0000베이스 레벨 120 이상만 이용할 수 있습니다.^000000", "^ff0000You must be Level 120.^000000");
 		close3;
 	}
 	if (isbegin_quest(13181) != 1) {
-		mes "[루나인]";
-		mes "먼저 로엘에게 원정 참가 신청을 해주세요.";
+		mes needtr("[루나인]", "[Runane]");
+		mes needtr("먼저 로엘에게 원정 참가 신청을 해주세요.", "^ff0000If you want to use my dimensional portal, then you first have to talk to Roel. The portal is not open for everyone.^000000");
 		close3;
 	}
 
@@ -128,8 +128,8 @@ moc_para01,29,95,5	script	루나인#sara	4_F_RUNAIN,{
 	.@md_name$ = "악몽의 지터벅";
 
 	if (.@party_id < 1) {
-		mes "[루나인]";
-		mes "파티를 구성한 뒤 다시 찾아와 주세요.";
+		mes needtr("[루나인]", "[Runane]");
+		mes needtr("파티를 구성한 뒤 다시 찾아와 주세요.", "^ff0000You first must form/join a party of at least 1 person to enter this dungeon.^000000");
 		close3;
 	}
 
@@ -138,56 +138,56 @@ moc_para01,29,95,5	script	루나인#sara	4_F_RUNAIN,{
 		break;
 	case 0:
 	case 1:
-		mes "[루나인]";
-		mes "^ff0000마지막 입장 후 20시간 동안 다시 입장할 수 없습니다.^000000";
+		mes needtr("[루나인]", "[Runane]");
+		mes needtr("^ff0000마지막 입장 후 20시간 동안 다시 입장할 수 없습니다.^000000", "^ff0000This dimensional portal cannot be accessed for 20 hours after your last access.^000000");
 		close3;
 	case 2:
 		erasequest 13182;
-		mes "[루나인]";
-		mes "입장 제한 시간이 종료되었습니다.";
+		mes needtr("[루나인]", "[Runane]");
+		mes needtr("입장 제한 시간이 종료되었습니다.", "The entry time limit has expired.");
 		close3;
 	}
 
 	if (is_party_leader())
-		.@choice = select("차원의 균열을 연다.:악몽의 지터벅에 입장한다.:취소한다.");
+		.@choice = select(needtr("차원의 균열을 연다.:악몽의 지터벅에 입장한다.:취소한다.", "Open the Dimensional Crack.:Enter Nightmarish Jitterbug.:Cancel."));
 	else
-		.@choice = select("악몽의 지터벅에 입장한다.:취소한다.") + 1;
+		.@choice = select(needtr("악몽의 지터벅에 입장한다.:취소한다.", "Enter Nightmarish Jitterbug.:Cancel.")) + 1;
 
 	switch (.@choice) {
 	case 1:
 		if (!is_party_leader()) {
-			mes "[루나인]";
-			mes "차원의 균열은 파티장만 생성할 수 있습니다.";
+			mes needtr("[루나인]", "[Runane]");
+			mes needtr("차원의 균열은 파티장만 생성할 수 있습니다.", "Only the party leader can open the Dimensional Crack.");
 			close3;
 		}
 		if (instance_create(.@md_name$) < 0) {
-			mes "[루나인]";
-			mes "메모리얼 던전 생성에 실패했습니다.";
+			mes needtr("[루나인]", "[Runane]");
+			mes needtr("메모리얼 던전 생성에 실패했습니다.", "Failed to create the Memorial Dungeon.");
 			close3;
 		}
-		mes "[루나인]";
-		mes "차원의 균열을 열었습니다.";
-		mes "다시 말을 걸어 입장해 주세요.";
+		mes needtr("[루나인]", "[Runane]");
+		mes needtr("차원의 균열을 열었습니다.", "^ff0000Preparing the dimensional portal...^000000");
+		mes needtr("다시 말을 걸어 입장해 주세요.", "^ff0000Please wait.^000000");
 		close3;
 
 	case 2:
 		switch (instance_enter(.@md_name$)) {
 		case IE_NOMEMBER:
-			mes "[루나인]";
-			mes "해당 파티의 구성원만 입장할 수 있습니다.";
+			mes needtr("[루나인]", "[Runane]");
+			mes needtr("해당 파티의 구성원만 입장할 수 있습니다.", "Only party members can enter the Memorial Dungeon.");
 			close3;
 		case IE_NOINSTANCE:
-			mes "[루나인]";
-			mes "파티장이 아직 차원의 균열을 생성하지 않았습니다.";
+			mes needtr("[루나인]", "[Runane]");
+			mes needtr("파티장이 아직 차원의 균열을 생성하지 않았습니다.", "The party leader has not opened the Dimensional Crack yet.");
 			close3;
 		case IE_OTHER:
-			mes "[루나인]";
-			mes "알 수 없는 오류가 발생했습니다.";
+			mes needtr("[루나인]", "[Runane]");
+			mes needtr("알 수 없는 오류가 발생했습니다.", "An unknown error has occurred.");
 			close3;
 		case IE_OK:
 			setquest 13182;
 			mapannounce "moc_para01",
-				getpartyname(getcharid(1)) + " 파티의 " + strcharinfo(0) + " 님이 악몽의 지터벅에 입장합니다.",
+				getpartyname(getcharid(1)) + needtr(" 파티의 ", " party's ") + strcharinfo(0) + needtr(" 님이 악몽의 지터벅에 입장합니다.", " is entering Nightmarish Jitterbug."),
 				bc_map,0xFF99;
 			specialeffect2 EF_READYPORTAL2;
 			specialeffect2 EF_PORTAL2;
@@ -237,8 +237,8 @@ OnTouch_:
 // Room 1 : Entrance
 1@jtb,28,30,5	script	뉴오즈#01	4_M_NEWOZ,{
 	if ('room != 1) {
-		mes "[뉴오즈]";
-		mes "이미 모험이 시작되었거나 다른 파티원이 진행 중이야.";
+		mes needtr("[뉴오즈]", "[Newoz]");
+		mes needtr("이미 모험이 시작되었거나 다른 파티원이 진행 중이야.", "The adventure has already started, or another party member is going through it.");
 		close;
 	}
 
@@ -248,12 +248,12 @@ OnTouch_:
 
 	// 반복 클리어 계정은 시작 시 빠른 진행 방식을 선택할 수 있습니다.
 	if (isbegin_quest(13183) == 2) {
-		mes "[뉴오즈]";
-		mes "이 공간은 같은 사건을 반복하고 있어.";
-		mes "이번에는 어떻게 진행할까?";
+		mes needtr("[뉴오즈]", "[Newoz]");
+		mes needtr("이 공간은 같은 사건을 반복하고 있어.", "This space keeps repeating the same events.");
+		mes needtr("이번에는 어떻게 진행할까?", "How shall we go through it this time?");
 		next;
 
-		switch (select("^3355FF빠른 진행 - 추가 지터벅 없음^000000:^FF5500빠른 진행 - 추가 지터벅 모두 등장^000000:일반 진행 - 대화 축약")) {
+		switch (select(needtr("^3355FF빠른 진행 - 추가 지터벅 없음^000000:^FF5500빠른 진행 - 추가 지터벅 모두 등장^000000:일반 진행 - 대화 축약", "^3355FFFast Progress - no extra Jitterbugs^000000:^FF5500Fast Progress - all extra Jitterbugs appear^000000:Normal progress - shortened dialogue"))) {
 		case 1:
 			.@fast_mode = 1;
 			.@options = 0;
@@ -270,17 +270,17 @@ OnTouch_:
 	}
 
 	if (.@fast_mode) {
-		mes "[뉴오즈]";
-		mes "이야기 구간을 생략합니다.";
+		mes needtr("[뉴오즈]", "[Newoz]");
+		mes needtr("이야기 구간을 생략합니다.", "The story sections will be skipped.");
 		if (.@options == 31)
-			mes "추가 지터벅 전투는 모두 활성화됩니다.";
+			mes needtr("추가 지터벅 전투는 모두 활성화됩니다.", "Every extra Jitterbug fight will be activated.");
 		else
-			mes "추가 지터벅 전투는 발생하지 않습니다.";
+			mes needtr("추가 지터벅 전투는 발생하지 않습니다.", "No extra Jitterbug fights will happen.");
 		next;
 
 		if ('room != 1 || 'jitter_transition) {
-			mes "[뉴오즈]";
-			mes "다른 파티원이 먼저 모험을 시작했습니다.";
+			mes needtr("[뉴오즈]", "[Newoz]");
+			mes needtr("다른 파티원이 먼저 모험을 시작했습니다.", "Another party member started the adventure first.");
 			close;
 		}
 		'jitter_transition = true;
@@ -302,17 +302,17 @@ OnTouch_:
 		close;
 	}
 
-	mes "[뉴오즈]";
-	mes "드디어 모두 모였군!";
-	mes "이곳은 길과 풍경이 계속 뒤틀리는 수상한 공간이야.";
+	mes needtr("[뉴오즈]", "[Newoz]");
+	mes needtr("드디어 모두 모였군!", "Everyone's finally here!");
+	mes needtr("이곳은 길과 풍경이 계속 뒤틀리는 수상한 공간이야.", "This is a strange space where the paths and the scenery keep twisting.");
 	next;
-	mes "[로터]";
-	mes "뉴오즈를 찾는 데 시간을 너무 많이 썼다.";
-	mes "우선 출구를 찾으며 이 공간의 정체를 조사하자.";
+	mes needtr("[로터]", "[Roter]");
+	mes needtr("뉴오즈를 찾는 데 시간을 너무 많이 썼다.", "We spent far too much time looking for Newoz.");
+	mes needtr("우선 출구를 찾으며 이 공간의 정체를 조사하자.", "Let's look for the exit first and find out what this space really is.");
 	next;
-	mes "[밍민]";
-	mes "공기와 땅에서 비정상적인 기운이 느껴져.";
-	mes "몬스터가 나타날 수 있으니 조심해.";
+	mes needtr("[밍민]", "[Mingmin]");
+	mes needtr("공기와 땅에서 비정상적인 기운이 느껴져.", "I feel an abnormal energy in the air and in the ground.");
+	mes needtr("몬스터가 나타날 수 있으니 조심해.", "Monsters may appear, so be careful.");
 	next;
 
 	if ('room == 1 && !'jitter_transition) {
@@ -322,62 +322,62 @@ OnTouch_:
 		donpcevent 'jitterbug_main$ + "::OnNextIs2";
 	}
 
-	mes "[뉴오즈]";
-	mes "좋아, 새로운 모험을 시작하자!";
+	mes needtr("[뉴오즈]", "[Newoz]");
+	mes needtr("좋아, 새로운 모험을 시작하자!", "All right, let's start a new adventure!");
 	close;
 }
 
 1@jtb,34,22,4	script	로엘#01	4_M_ROEL,{
-	mes "[로엘]";
-	mes "하얀 날개 길드의 신입 로엘입니다. 잘 부탁드립니다.";
+	mes needtr("[로엘]", "[Roel]");
+	mes needtr("하얀 날개 길드의 신입 로엘입니다. 잘 부탁드립니다.", "I'm Roel, a new member of the White Wings Guild. Nice to meet you.");
 	close;
 }
 
 1@jtb,28,21,5	script	멜로디 잭#01	CLEAR_NPC,{
-	mes "[멜로디 잭]";
-	mes "숨어 있는 중이니 너무 신경 쓰지 마.";
+	mes needtr("[멜로디 잭]", "[Melody-Jack]");
+	mes needtr("숨어 있는 중이니 너무 신경 쓰지 마.", "Stop bothering me. Can't you see I'm hiding?!");
 	close;
 }
 
 1@jtb,31,24,4	script	아랑#01	4_F_TAEKWON,{
-	mes "[아랑]";
-	mes "안녕! 재미있는 모험이 되겠네!";
+	mes needtr("[아랑]", "[Arang]");
+	mes needtr("안녕! 재미있는 모험이 되겠네!", "Hi! This is going to be a fun adventure!");
 	close;
 }
 
 1@jtb,33,26,4	script	라기#01	4_M_RAGI,{
-	mes "[라기]";
-	mes "아이구를 따라 여기까지 왔습니다.";
+	mes needtr("[라기]", "[Lagi]");
+	mes needtr("아이구를 따라 여기까지 왔습니다.", "I followed Aigu all the way here.");
 	close;
 }
 
 1@jtb,31,28,4	script	아이구#01	4_F_IU,{
-	mes "[아이구]";
-	mes "처음 보는 얼굴이네. 잘 부탁해!";
+	mes needtr("[아이구]", "[Aigu]");
+	mes needtr("처음 보는 얼굴이네. 잘 부탁해!", "I haven't seen you before. Nice to meet you!");
 	close;
 }
 
 1@jtb,25,24,5	script	밍민#01	4_F_GENETIC,{
-	mes "[밍민]";
-	mes "뉴오즈가 있는 곳에는 언제나 사고가 따라다니지.";
+	mes needtr("[밍민]", "[Mingmin]");
+	mes needtr("뉴오즈가 있는 곳에는 언제나 사고가 따라다니지.", "Trouble always follows wherever Newoz goes.");
 	close;
 }
 
 1@jtb,23,22,5	script	루나인#01	4_F_RUNAIN,{
-	mes "[루나인]";
-	mes "저 사람이 유명한 뉴오즈군요.";
+	mes needtr("[루나인]", "[Runane]");
+	mes needtr("저 사람이 유명한 뉴오즈군요.", "Oh, is he the famous Newoz?");
 	close;
 }
 
 1@jtb,23,26,5	script	겔카#01	4_F_GELKA,{
-	mes "[겔카]";
-	mes "이곳은 불길한 느낌이 듭니다.";
+	mes needtr("[겔카]", "[Gelka]");
+	mes needtr("이곳은 불길한 느낌이 듭니다.", "This place gives me a bad feeling.");
 	close;
 }
 
 1@jtb,25,28,5	script	로터#01	4_M_ROTERT,{
-	mes "[로터]";
-	mes "드디어 뉴오즈를 찾았군.";
+	mes needtr("[로터]", "[Roter]");
+	mes needtr("드디어 뉴오즈를 찾았군.", "We finally found Newoz.");
 	close;
 }
 
@@ -385,19 +385,19 @@ OnTouch_:
 // Room 2
 1@jtb,123,45,4	script	루나인#02	4_F_RUNAIN,{
 	if ('room != 2) {
-		mes "[루나인]";
-		mes "지금은 앞으로 나아갈 때가 아닙니다.";
+		mes needtr("[루나인]", "[Runane]");
+		mes needtr("지금은 앞으로 나아갈 때가 아닙니다.", "This is not the time to move forward.");
 		close;
 	}
 
-	mes "[루나인]";
-	mes "안개 속에서 낯선 소녀를 발견했어.";
+	mes needtr("[루나인]", "[Runane]");
+	mes needtr("안개 속에서 낯선 소녀를 발견했어.", "I found a strange girl in the fog.");
 	next;
-	mes "[아이구]";
-	mes "기억을 잃은 것 같아. 우선 함께 이동하자.";
+	mes needtr("[아이구]", "[Aigu]");
+	mes needtr("기억을 잃은 것 같아. 우선 함께 이동하자.", "She seems to have lost her memory. Let's take her with us for now.");
 	next;
 	mes "[???]";
-	mes "노래하는 사람을 찾고 있어.";
+	mes needtr("노래하는 사람을 찾고 있어.", "I'm looking for the one who sings.");
 
 	if ('room == 2 && !'jitter_transition) {
 		'jitter_transition = true;
@@ -409,8 +409,8 @@ OnTouch_:
 1@jtb,121,47,4	script	???#02	4_F_SHALOSH,{ end; }
 
 1@jtb,118,45,5	script	아이구#02	4_F_IU,{
-	mes "[아이구]";
-	mes "수수께끼로 가득한 공간이야.";
+	mes needtr("[아이구]", "[Aigu]");
+	mes needtr("수수께끼로 가득한 공간이야.", "This space is full of riddles.");
 	close;
 }
 
@@ -418,16 +418,16 @@ OnTouch_:
 // Room 3
 1@jtb,198,31,5	script	로터#03	4_M_ROTERT,{
 	if ('room != 3) {
-		mes "[로터]";
-		mes "지금은 앞으로 나아갈 때가 아닙니다.";
+		mes needtr("[로터]", "[Roter]");
+		mes needtr("지금은 앞으로 나아갈 때가 아닙니다.", "This is not the time to move forward.");
 		close;
 	}
 
-	mes "[겔카]";
-	mes "앞쪽에서 강한 몬스터 반응이 감지됩니다.";
+	mes needtr("[겔카]", "[Gelka]");
+	mes needtr("앞쪽에서 강한 몬스터 반응이 감지됩니다.", "I detect a strong monster presence up ahead.");
 	next;
-	mes "[로터]";
-	mes "쓸데없는 연출은 그만하고 전투를 준비해.";
+	mes needtr("[로터]", "[Roter]");
+	mes needtr("쓸데없는 연출은 그만하고 전투를 준비해.", "Enough with the pointless theatrics - get ready to fight.");
 
 	if ('room == 3 && !'jitter_transition) {
 		'jitter_transition = true;
@@ -437,8 +437,8 @@ OnTouch_:
 }
 
 1@jtb,205,31,4	script	겔카#03	4_F_GELKA,{
-	mes "[겔카]";
-	mes "언제 몬스터가 튀어나올지 모릅니다.";
+	mes needtr("[겔카]", "[Gelka]");
+	mes needtr("언제 몬스터가 튀어나올지 모릅니다.", "A monster could jump out at any moment.");
 	close;
 }
 
@@ -447,18 +447,18 @@ OnTouch_:
 1@jtb,292,22,4	script	???#04	4_F_SHALOSH,{
 	if ('room != 4) {
 		mes "[???]";
-		mes "지금은 앞으로 나아갈 때가 아닙니다.";
+		mes needtr("지금은 앞으로 나아갈 때가 아닙니다.", "This is not the time to move forward.");
 		close;
 	}
 
 	mes "[???]";
-	mes "나는 혼자가 아니야.";
+	mes needtr("나는 혼자가 아니야.", "I'm not alone.");
 	next;
 	mes "[???]";
-	mes "아이구와 루나인이 함께 있어 줬어.";
+	mes needtr("아이구와 루나인이 함께 있어 줬어.", "Aigu and Runane stayed with me.");
 	next;
 	mes "[???]";
-	mes "아직 기억은 잘 나지 않아.";
+	mes needtr("아직 기억은 잘 나지 않아.", "I still can't remember much.");
 
 	if ('room == 4 && !'jitter_transition) {
 		'jitter_transition = true;
@@ -472,22 +472,22 @@ OnTouch_:
 // Room 6
 1@jtb,20,108,5	script	뉴오즈#06	4_M_NEWOZ,{
 	if ('room != 6) {
-		mes "[뉴오즈]";
-		mes "지금은 앞으로 나아갈 때가 아닙니다.";
+		mes needtr("[뉴오즈]", "[Newoz]");
+		mes needtr("지금은 앞으로 나아갈 때가 아닙니다.", "This is not the time to move forward.");
 		close;
 	}
 
-	mes "[아이구]";
-	mes "뉴오즈, 또 길을 잃은 거야?";
+	mes needtr("[아이구]", "[Aigu]");
+	mes needtr("뉴오즈, 또 길을 잃은 거야?", "Newoz, did you get lost again?");
 	next;
-	mes "[뉴오즈]";
-	mes "미안해. 이곳은 길이 계속 바뀌는 미로 같아.";
+	mes needtr("[뉴오즈]", "[Newoz]");
+	mes needtr("미안해. 이곳은 길이 계속 바뀌는 미로 같아.", "Aigu and Runane are good. ???: Aigu and Runane are good.");
 	next;
-	mes "[샬로시]";
-	mes "나는 샬로시. 노래를 들려줘.";
+	mes needtr("[샬로시]", "[Shaloshi]");
+	mes needtr("나는 샬로시. 노래를 들려줘.", "Ask many questions. ???: Ask many questions.");
 	next;
-	mes "[뉴오즈]";
-	mes "좋아. 이곳을 빠져나가면 꼭 노래해 줄게.";
+	mes needtr("[뉴오즈]", "[Newoz]");
+	mes needtr("좋아. 이곳을 빠져나가면 꼭 노래해 줄게.", "Can't answer. ???: Can't answer.");
 
 	if ('room == 6 && !'jitter_transition) {
 		'jitter_transition = true;
@@ -497,20 +497,20 @@ OnTouch_:
 }
 
 1@jtb,25,110,4	script	아이구#06	4_F_IU,{
-	mes "[아이구]";
-	mes "몬스터의 수가 빠르게 늘어나고 있어.";
+	mes needtr("[아이구]", "[Aigu]");
+	mes needtr("몬스터의 수가 빠르게 늘어나고 있어.", "The number of monsters is growing fast.");
 	close;
 }
 
 1@jtb,27,108,4	script	샬로시#06	4_F_SHALOSH,{
-	mes "[샬로시]";
+	mes needtr("[샬로시]", "[Shaloshi]");
 	mes "...";
 	close;
 }
 
 1@jtb,25,104,4	script	아랑#06	4_F_TAEKWON,{
-	mes "[아랑]";
-	mes "난 무섭지 않아!";
+	mes needtr("[아랑]", "[Arang]");
+	mes needtr("난 무섭지 않아!", "I'm not scared!");
 	close;
 }
 
@@ -518,19 +518,19 @@ OnTouch_:
 // Room 7
 1@jtb,111,115,5	script	로엘#07	4_M_ROEL,{
 	if ('room != 7) {
-		mes "[로엘]";
-		mes "지금은 앞으로 나아갈 때가 아닙니다.";
+		mes needtr("[로엘]", "[Roel]");
+		mes needtr("지금은 앞으로 나아갈 때가 아닙니다.", "This is not the time to move forward.");
 		close;
 	}
 
-	mes "[루나인]";
-	mes "안개가 걷혔지만 모두 흩어졌어.";
+	mes needtr("[루나인]", "[Runane]");
+	mes needtr("안개가 걷혔지만 모두 흩어졌어.", "The fog lifted, but everyone got scattered.");
 	next;
-	mes "[아이구]";
-	mes "샬로시도 사라졌어. 서둘러 찾아야 해.";
+	mes needtr("[아이구]", "[Aigu]");
+	mes needtr("샬로시도 사라졌어. 서둘러 찾아야 해.", "Shaloshi is gone too. We have to find her quickly.");
 	next;
-	mes "[로엘]";
-	mes "앞장서겠습니다. 제가 모두를 지키겠습니다!";
+	mes needtr("[로엘]", "[Roel]");
+	mes needtr("앞장서겠습니다. 제가 모두를 지키겠습니다!", "I'll take the lead. I'll protect everyone!");
 
 	if ('room == 7 && !'jitter_transition) {
 		'jitter_transition = true;
@@ -540,14 +540,14 @@ OnTouch_:
 }
 
 1@jtb,116,117,4	script	루나인#07	4_F_RUNAIN,{
-	mes "[루나인]";
-	mes "뉴오즈는 또 어디로 간 걸까요?";
+	mes needtr("[루나인]", "[Runane]");
+	mes needtr("뉴오즈는 또 어디로 간 걸까요?", "Where has Newoz wandered off to this time?");
 	close;
 }
 
 1@jtb,115,113,4	script	아이구#07	4_F_IU,{
-	mes "[아이구]";
-	mes "오랜만의 모험이라 기분이 좋아.";
+	mes needtr("[아이구]", "[Aigu]");
+	mes needtr("오랜만의 모험이라 기분이 좋아.", "It's been a while since my last adventure, and it feels good.");
 	close;
 }
 
@@ -555,22 +555,22 @@ OnTouch_:
 // Room 8
 1@jtb,206,107,5	script	밍민#08	4_F_GENETIC,{
 	if ('room != 8) {
-		mes "[밍민]";
-		mes "지금은 앞으로 나아갈 때가 아닙니다.";
+		mes needtr("[밍민]", "[Mingmin]");
+		mes needtr("지금은 앞으로 나아갈 때가 아닙니다.", "This is not the time to move forward.");
 		close;
 	}
 
-	mes "[밍민]";
-	mes "뉴오즈, 그 소녀는 누구야?";
+	mes needtr("[밍민]", "[Mingmin]");
+	mes needtr("뉴오즈, 그 소녀는 누구야?", "Newoz, who is that girl?");
 	next;
-	mes "[뉴오즈]";
-	mes "이곳에서 만난 샬로시야. 기억을 잃은 것 같아.";
+	mes needtr("[뉴오즈]", "[Newoz]");
+	mes needtr("이곳에서 만난 샬로시야. 기억을 잃은 것 같아.", "Can't remember a thing. ???: Can't remember a thing.");
 	next;
-	mes "[샬로시]";
-	mes "몬스터들이 오고 있어.";
+	mes needtr("[샬로시]", "[Shaloshi]");
+	mes needtr("몬스터들이 오고 있어.", "But I'm not alone. ???: But I'm not alone.");
 	next;
-	mes "[밍민]";
-	mes "질문은 나중에 하지. 먼저 전투를 준비하자.";
+	mes needtr("[밍민]", "[Mingmin]");
+	mes needtr("질문은 나중에 하지. 먼저 전투를 준비하자.", "Save the questions for later. Let's get ready to fight first.");
 
 	if ('room == 8 && !'jitter_transition) {
 		'jitter_transition = true;
@@ -580,14 +580,14 @@ OnTouch_:
 }
 
 1@jtb,206,114,5	script	샬로시#08	4_F_SHALOSH,{
-	mes "[샬로시]";
-	mes "뉴오즈의 손은 따뜻해.";
+	mes needtr("[샬로시]", "[Shaloshi]");
+	mes needtr("뉴오즈의 손은 따뜻해.", "Newoz's hand is warm.");
 	close;
 }
 
 1@jtb,203,112,5	script	뉴오즈#08	4_M_NEWOZ,{
-	mes "[뉴오즈]";
-	mes "이 길 끝에는 무엇이 기다리고 있을까?";
+	mes needtr("[뉴오즈]", "[Newoz]");
+	mes needtr("이 길 끝에는 무엇이 기다리고 있을까?", "What is waiting at the end of this path?");
 	close;
 }
 
@@ -595,21 +595,21 @@ OnTouch_:
 // Room 9 (menu affects the boss encounter in the next room)
 1@jtb,285,114,5	script	뉴오즈#09	4_M_NEWOZ,{
 	if ('room != 9) {
-		mes "[뉴오즈]";
-		mes "노래는 언제나 즐겁지.";
+		mes needtr("[뉴오즈]", "[Newoz]");
+		mes needtr("노래는 언제나 즐겁지.", "Singing is always fun.");
 		close;
 	}
 
-	mes "[뉴오즈]";
-	mes "샬로시가 노래를 좋아하는 것 같아.";
-	mes "너는 어떤 노래가 가장 좋아?";
+	mes needtr("[뉴오즈]", "[Newoz]");
+	mes needtr("샬로시가 노래를 좋아하는 것 같아.", "Shaloshi seems to like songs.");
+	mes needtr("너는 어떤 노래가 가장 좋아?", "Which song do you like best?");
 	next;
 
-	.@enable_extra = (select("아이구의 데뷔곡 - 길 잃은 포링:아이구의 싱글 - 카드첩을 몰랐던 건 나뿐:뉴오즈의 빨간 포션:라기의 자작곡 - 우연한 달빛") == 3);
+	.@enable_extra = (select(needtr("아이구의 데뷔곡 - 길 잃은 포링:아이구의 싱글 - 카드첩을 몰랐던 건 나뿐:뉴오즈의 빨간 포션:라기의 자작곡 - 우연한 달빛", "Aigu's debut song - The Lost Poring:Aigu's single - I Was the Only One Who Didn't Know the Card Album:Newoz's Red Potion:Lagi's own song - Accidental Moonlight")) == 3);
 
-	mes "[라기]";
-	mes "노래는 나중에 더 들려드리죠.";
-	mes "앞쪽에서 몬스터가 나타나고 있습니다.";
+	mes needtr("[라기]", "[Lagi]");
+	mes needtr("노래는 나중에 더 들려드리죠.", "I'll sing more for you later.");
+	mes needtr("앞쪽에서 몬스터가 나타나고 있습니다.", "Monsters are appearing up ahead.");
 	next;
 
 	if ('room == 9 && !'jitter_transition) {
@@ -627,36 +627,36 @@ OnTouch_:
 }
 
 1@jtb,290,114,4	script	라기#09	4_M_RAGI,{
-	mes "[라기]";
-	mes "모험은 익숙하지 않지만 꽤 즐겁습니다.";
+	mes needtr("[라기]", "[Lagi]");
+	mes needtr("모험은 익숙하지 않지만 꽤 즐겁습니다.", "I'm not used to adventuring, but it is quite fun.");
 	close;
 }
 
 1@jtb,286,117,5	script	샬로시#09	4_F_SHALOSH,{
-	mes "[샬로시]";
-	mes "휘파람은 어려워.";
+	mes needtr("[샬로시]", "[Shaloshi]");
+	mes needtr("휘파람은 어려워.", "Whistling is hard.");
 	close;
 }
 
 // Room 10
 1@jtb,375,117,4	script	뉴오즈#10	4_M_NEWOZ,{
 	if ('room != 10) {
-		mes "[뉴오즈]";
-		mes "지금은 앞으로 나아갈 때가 아닙니다.";
+		mes needtr("[뉴오즈]", "[Newoz]");
+		mes needtr("지금은 앞으로 나아갈 때가 아닙니다.", "This is not the time to move forward.");
 		close;
 	}
 
-	mes "[뉴오즈]";
-	mes "몬스터를 벌써 전부 처리했어? 나도 싸우고 싶었는데!";
+	mes needtr("[뉴오즈]", "[Newoz]");
+	mes needtr("몬스터를 벌써 전부 처리했어? 나도 싸우고 싶었는데!", "You took care of every monster already? I wanted to fight too!");
 	next;
-	mes "[로엘]";
-	mes "작아 보여도 매우 사나운 몬스터들입니다.";
+	mes needtr("[로엘]", "[Roel]");
+	mes needtr("작아 보여도 매우 사나운 몬스터들입니다.", "They look small, but they are very fierce monsters.");
 	next;
-	mes "[샬로시]";
-	mes "페르들이 우리를 따라오고 있어.";
+	mes needtr("[샬로시]", "[Shaloshi]");
+	mes needtr("페르들이 우리를 따라오고 있어.", "The Ferres are following us.");
 	next;
-	mes "[루나인]";
-	mes "친구가 아니라 몬스터야. 방심하지 마.";
+	mes needtr("[루나인]", "[Runane]");
+	mes needtr("친구가 아니라 몬스터야. 방심하지 마.", "They're monsters, not friends. Don't let your guard down.");
 
 	if ('room == 10 && !'jitter_transition) {
 		'jitter_transition = true;
@@ -666,20 +666,20 @@ OnTouch_:
 }
 
 1@jtb,374,110,4	script	샬로시#10	4_F_SHALOSH,{
-	mes "[샬로시]";
-	mes "위험하지 않아. 걱정하지 마.";
+	mes needtr("[샬로시]", "[Shaloshi]");
+	mes needtr("위험하지 않아. 걱정하지 마.", "They're not dangerous. Don't worry.");
 	close;
 }
 
 1@jtb,369,117,5	script	로엘#10	4_M_ROEL,{
-	mes "[로엘]";
-	mes "충분히 훈련했습니다. 도움이 될 수 있습니다.";
+	mes needtr("[로엘]", "[Roel]");
+	mes needtr("충분히 훈련했습니다. 도움이 될 수 있습니다.", "I have trained enough. I can be of help.");
 	close;
 }
 
 1@jtb,368,111,5	script	루나인#10	4_F_RUNAIN,{
-	mes "[루나인]";
-	mes "모험 중에는 절대 방심하지 마세요.";
+	mes needtr("[루나인]", "[Runane]");
+	mes needtr("모험 중에는 절대 방심하지 마세요.", "Never let your guard down on an adventure.");
 	close;
 }
 
@@ -687,22 +687,22 @@ OnTouch_:
 // Room 11
 1@jtb,26,201,5	script	루나인#11	4_F_RUNAIN,{
 	if ('room != 11) {
-		mes "[루나인]";
-		mes "지금은 앞으로 나아갈 때가 아닙니다.";
+		mes needtr("[루나인]", "[Runane]");
+		mes needtr("지금은 앞으로 나아갈 때가 아닙니다.", "This is not the time to move forward.");
 		close;
 	}
 
-	mes "[루나인]";
-	mes "가위바위보에서 진 아랑이 초록 포션을 마실 차례야.";
+	mes needtr("[루나인]", "[Runane]");
+	mes needtr("가위바위보에서 진 아랑이 초록 포션을 마실 차례야.", "Arang lost at rock-paper-scissors, so it is her turn to drink the Green Potion.");
 	next;
-	mes "[아랑]";
-	mes "싫어! 너무 써!";
+	mes needtr("[아랑]", "[Arang]");
+	mes needtr("싫어! 너무 써!", "No way! It is too bitter!");
 	next;
-	mes "[밍민]";
-	mes "상태 이상이 없으면 아무 효과도 없어. 빨리 마셔.";
+	mes needtr("[밍민]", "[Mingmin]");
+	mes needtr("상태 이상이 없으면 아무 효과도 없어. 빨리 마셔.", "Hm... Mingmin: Hm...");
 	next;
-	mes "[로엘]";
-	mes "저는 주변의 위험을 확인하고 오겠습니다.";
+	mes needtr("[로엘]", "[Roel]");
+	mes needtr("저는 주변의 위험을 확인하고 오겠습니다.", "It has almost no taste. Mingmin: It has almost no taste.");
 
 	if ('room == 11 && !'jitter_transition) {
 		'jitter_transition = true;
@@ -712,26 +712,26 @@ OnTouch_:
 }
 
 1@jtb,32,198,4	script	로엘#11	4_M_ROEL,{
-	mes "[로엘]";
-	mes "어디선가 물이 흐르기 시작했습니다.";
+	mes needtr("[로엘]", "[Roel]");
+	mes needtr("어디선가 물이 흐르기 시작했습니다.", "Water has started flowing somewhere.");
 	close;
 }
 
 1@jtb,28,197,4	script	아랑#11	4_F_TAEKWON,{
-	mes "[아랑]";
-	mes "초록 포션은 너무 써!";
+	mes needtr("[아랑]", "[Arang]");
+	mes needtr("초록 포션은 너무 써!", "The Green Potion is far too bitter!");
 	close;
 }
 
 1@jtb,25,196,5	script	아이구#11	4_F_IU,{
-	mes "[아이구]";
-	mes "어깨를 들썩이며 노래하자~";
+	mes needtr("[아이구]", "[Aigu]");
+	mes needtr("어깨를 들썩이며 노래하자~", "Let's sing and sway our shoulders~");
 	close;
 }
 
 1@jtb,23,200,5	script	밍민#11	4_F_GENETIC,{
-	mes "[밍민]";
-	mes "분위기가 점점 이상해지는군.";
+	mes needtr("[밍민]", "[Mingmin]");
+	mes needtr("분위기가 점점 이상해지는군.", "The mood is getting stranger and stranger.");
 	close;
 }
 
@@ -739,19 +739,19 @@ OnTouch_:
 // Room 12
 1@jtb,106,198,5	script	밍민#12	4_F_GENETIC,{
 	if ('room != 12) {
-		mes "[밍민]";
-		mes "지금은 앞으로 나아갈 때가 아닙니다.";
+		mes needtr("[밍민]", "[Mingmin]");
+		mes needtr("지금은 앞으로 나아갈 때가 아닙니다.", "This is not the time to move forward.");
 		close;
 	}
 
-	mes "[밍민]";
-	mes "숲처럼 보이던 공간이 갑자기 동굴로 변했어.";
+	mes needtr("[밍민]", "[Mingmin]");
+	mes needtr("숲처럼 보이던 공간이 갑자기 동굴로 변했어.", "The space that looked like a forest suddenly turned into a cave.");
 	next;
-	mes "[밍민]";
-	mes "지형도 식물도 모두 뒤죽박죽이군.";
+	mes needtr("[밍민]", "[Mingmin]");
+	mes needtr("지형도 식물도 모두 뒤죽박죽이군.", "The terrain and the plants are all jumbled together.");
 	next;
-	mes "[밍민]";
-	mes "버섯 조사는 나중에 하고 먼저 앞으로 가자.";
+	mes needtr("[밍민]", "[Mingmin]");
+	mes needtr("버섯 조사는 나중에 하고 먼저 앞으로 가자.", "I should try one. Mingmin: I should try one.");
 
 	if ('room == 12 && !'jitter_transition) {
 		'jitter_transition = true;
@@ -763,19 +763,19 @@ OnTouch_:
 // Room 13
 1@jtb,195,206,4	script	뉴오즈#13	4_M_NEWOZ,{
 	if ('room != 13) {
-		mes "[뉴오즈]";
-		mes "지금은 앞으로 나아갈 때가 아닙니다.";
+		mes needtr("[뉴오즈]", "[Newoz]");
+		mes needtr("지금은 앞으로 나아갈 때가 아닙니다.", "This is not the time to move forward.");
 		close;
 	}
 
-	mes "[멜로디 잭]";
-	mes "뉴오즈, 길드장 계약은 이미 끝났지만 약속은 지키겠다.";
+	mes needtr("[멜로디 잭]", "[Melody-Jack]");
+	mes needtr("뉴오즈, 길드장 계약은 이미 끝났지만 약속은 지키겠다.", "Newoz, the guild master contract is over, but I will keep my promise.");
 	next;
-	mes "[뉴오즈]";
-	mes "고마워. 역시 믿을 만한 동료야.";
+	mes needtr("[뉴오즈]", "[Newoz]");
+	mes needtr("고마워. 역시 믿을 만한 동료야.", "Thank you. You really are a comrade I can count on.");
 	next;
-	mes "[멜로디 잭]";
-	mes "착각하지 마. 내가 원하는 대가가 있어서 돕는 거야.";
+	mes needtr("[멜로디 잭]", "[Melody-Jack]");
+	mes needtr("착각하지 마. 내가 원하는 대가가 있어서 돕는 거야.", "Don't get the wrong idea. I'm helping because there is something I want in return.");
 
 	if ('room == 13 && !'jitter_transition) {
 		'jitter_transition = true;
@@ -785,8 +785,8 @@ OnTouch_:
 }
 
 1@jtb,191,206,5	script	멜로디 잭#13	CLEAR_NPC,{
-	mes "[멜로디 잭]";
-	mes "이유가 있으니 숨어 있는 거야.";
+	mes needtr("[멜로디 잭]", "[Melody-Jack]");
+	mes needtr("이유가 있으니 숨어 있는 거야.", "Please don't talk to me--I'm hiding for a reason.");
 	close;
 }
 
@@ -794,24 +794,24 @@ OnTouch_:
 // Room 14 (menu affects the boss encounter in the next room)
 1@jtb,282,194,5	script	뉴오즈#14	4_M_NEWOZ,{
 	if ('room != 14) {
-		mes "[뉴오즈]";
-		mes "이곳에 다른 누군가가 있을지도 몰라.";
+		mes needtr("[뉴오즈]", "[Newoz]");
+		mes needtr("이곳에 다른 누군가가 있을지도 몰라.", "There may be someone else in here.");
 		close;
 	}
 
-	mes "[샬로시]";
-	mes "조금 기억났어.";
-	mes "어둠 속에서 낮고 긴 목소리를 들었어.";
+	mes needtr("[샬로시]", "[Shaloshi]");
+	mes needtr("조금 기억났어.", "I remembered a little.");
+	mes needtr("어둠 속에서 낮고 긴 목소리를 들었어.", "I heard a low, long voice in the darkness.");
 	next;
-	mes "[뉴오즈]";
-	mes "내 노래를 듣기 전부터 들린 목소리라면";
-	mes "이곳에 다른 존재가 있다는 뜻일지도 몰라.";
+	mes needtr("[뉴오즈]", "[Newoz]");
+	mes needtr("내 노래를 듣기 전부터 들린 목소리라면", "They did nothing but croaked.");
+	mes needtr("이곳에 다른 존재가 있다는 뜻일지도 몰라.", "Shaloshi: They did nothing but croaked.");
 	next;
-	mes "[밍민]";
-	mes "그 목소리는 무엇이었을까?";
+	mes needtr("[밍민]", "[Mingmin]");
+	mes needtr("그 목소리는 무엇이었을까?", "What could that voice have been?");
 	next;
 
-	.@enable_extra = (select("샬로시 자신의 생각이었다.:누군가와 대화하고 있었다.") == 2);
+	.@enable_extra = (select(needtr("샬로시 자신의 생각이었다.:누군가와 대화하고 있었다.", "It was Shaloshi's own thought.:She was talking with someone.")) == 2);
 
 	if ('room == 14 && !'jitter_transition) {
 		'jitter_transition = true;
@@ -824,38 +824,38 @@ OnTouch_:
 		donpcevent 'jitterbug_main$ + "::OnNextIs15";
 	}
 
-	mes "[아이구]";
-	mes "기억이 더 돌아올 때까지 천천히 기다려 주자.";
+	mes needtr("[아이구]", "[Aigu]");
+	mes needtr("기억이 더 돌아올 때까지 천천히 기다려 주자.", "Let's wait patiently until more of her memory comes back.");
 	close;
 }
 
 1@jtb,285,191,1	script	샬로시#14	4_F_SHALOSH,{
-	mes "[샬로시]";
-	mes "누군가 내 소원을 이루어 준 것 같아.";
+	mes needtr("[샬로시]", "[Shaloshi]");
+	mes needtr("누군가 내 소원을 이루어 준 것 같아.", "It feels like someone granted my wish.");
 	close;
 }
 
 1@jtb,285,195,4	script	라기#14	4_M_RAGI,{
-	mes "[라기]";
-	mes "내 농담이 재미있으면 그냥 웃어주세요.";
+	mes needtr("[라기]", "[Lagi]");
+	mes needtr("내 농담이 재미있으면 그냥 웃어주세요.", "If you find my jokes funny, just laugh.");
 	close;
 }
 
 1@jtb,287,194,4	script	아이구#14	4_F_IU,{
-	mes "[아이구]";
-	mes "라기의 농담은 격려하지 않는 편이 좋아.";
+	mes needtr("[아이구]", "[Aigu]");
+	mes needtr("라기의 농담은 격려하지 않는 편이 좋아.", "It's better not to encourage Lagi's jokes.");
 	close;
 }
 
 1@jtb,289,191,4	script	로엘#14	4_M_ROEL,{
-	mes "[로엘]";
-	mes "샬로시의 기억이 빨리 돌아오면 좋겠습니다.";
+	mes needtr("[로엘]", "[Roel]");
+	mes needtr("샬로시의 기억이 빨리 돌아오면 좋겠습니다.", "I hope Shaloshi's memory comes back soon.");
 	close;
 }
 
 1@jtb,280,191,8	script	밍민#14	4_F_GENETIC,{
-	mes "[밍민]";
-	mes "신입들을 챙기는 것도 보통 일이 아니군.";
+	mes needtr("[밍민]", "[Mingmin]");
+	mes needtr("신입들을 챙기는 것도 보통 일이 아니군.", "Looking after the new members is no small task either.");
 	close;
 }
 
@@ -863,22 +863,22 @@ OnTouch_:
 // Room 15
 1@jtb,380,219,5	script	뉴오즈#15	4_M_NEWOZ,{
 	if ('room != 15) {
-		mes "[뉴오즈]";
-		mes "지금은 앞으로 나아갈 때가 아닙니다.";
+		mes needtr("[뉴오즈]", "[Newoz]");
+		mes needtr("지금은 앞으로 나아갈 때가 아닙니다.", "This is not the time to move forward.");
 		close;
 	}
 
-	mes "[뉴오즈]";
-	mes "아랑, 샬로시! 무사했구나.";
+	mes needtr("[뉴오즈]", "[Newoz]");
+	mes needtr("아랑, 샬로시! 무사했구나.", "Arang, Shaloshi! You are both safe.");
 	next;
-	mes "[샬로시]";
-	mes "뉴오즈는 생각보다 강하지 않아.";
+	mes needtr("[샬로시]", "[Shaloshi]");
+	mes needtr("뉴오즈는 생각보다 강하지 않아.", "Newoz is not as strong as you think.");
 	next;
-	mes "[밍민]";
-	mes "이제 다른 사람의 생각까지 읽는 건가? 흥미롭군.";
+	mes needtr("[밍민]", "[Mingmin]");
+	mes needtr("이제 다른 사람의 생각까지 읽는 건가? 흥미롭군.", "So now she reads other people's thoughts too? Interesting.");
 	next;
-	mes "[로터]";
-	mes "잡담은 그만하고 다음 구역으로 이동한다.";
+	mes needtr("[로터]", "[Roter]");
+	mes needtr("잡담은 그만하고 다음 구역으로 이동한다.", "Enough chatting - we move to the next area.");
 
 	if ('room == 15 && !'jitter_transition) {
 		'jitter_transition = true;
@@ -888,44 +888,44 @@ OnTouch_:
 }
 
 1@jtb,382,211,4	script	밍민#15	4_F_GENETIC,{
-	mes "[밍민]";
-	mes "지금은 별로 신경 쓰고 싶지 않아.";
+	mes needtr("[밍민]", "[Mingmin]");
+	mes needtr("지금은 별로 신경 쓰고 싶지 않아.", "I don't feel like worrying about it right now.");
 	close;
 }
 
 1@jtb,378,211,5	script	겔카#15	4_F_GELKA,{
-	mes "[겔카]";
-	mes "훈련을 게을리하지 않습니다.";
+	mes needtr("[겔카]", "[Gelka]");
+	mes needtr("훈련을 게을리하지 않습니다.", "I never slack off on my training.");
 	close;
 }
 
 1@jtb,385,214,4	script	샬로시#15	4_F_SHALOSH,{
-	mes "[샬로시]";
-	mes "다른 사람의 생각이 들리지 않아?";
+	mes needtr("[샬로시]", "[Shaloshi]");
+	mes needtr("다른 사람의 생각이 들리지 않아?", "Can't you hear other people's thoughts?");
 	close;
 }
 
 1@jtb,383,216,5	script	아랑#15	4_F_TAEKWON,{
-	mes "[아랑]";
-	mes "얍! 얍!";
+	mes needtr("[아랑]", "[Arang]");
+	mes needtr("얍! 얍!", "Yap! Yap!");
 	close;
 }
 
 1@jtb,384,218,4	script	루나인#15	4_F_RUNAIN,{
-	mes "[루나인]";
-	mes "쉬는 날에는 빵을 굽고 뜨개질도 해요.";
+	mes needtr("[루나인]", "[Runane]");
+	mes needtr("쉬는 날에는 빵을 굽고 뜨개질도 해요.", "On my days off I bake bread and knit.");
 	close;
 }
 
 1@jtb,375,214,5	script	로터#15	4_M_ROTERT,{
-	mes "[로터]";
-	mes "내가 가장 강한 건 사실이다.";
+	mes needtr("[로터]", "[Roter]");
+	mes needtr("내가 가장 강한 건 사실이다.", "It is a fact that I am the strongest.");
 	close;
 }
 
 1@jtb,376,218,5	script	로엘#15	4_M_ROEL,{
-	mes "[로엘]";
-	mes "동료는 가장 좋은 친구가 되어야 합니다.";
+	mes needtr("[로엘]", "[Roel]");
+	mes needtr("동료는 가장 좋은 친구가 되어야 합니다.", "A comrade should become your best friend.");
 	close;
 }
 
@@ -933,22 +933,22 @@ OnTouch_:
 // Room 16
 1@jtb,25,280,5	script	뉴오즈#16	4_M_NEWOZ,{
 	if ('room != 16) {
-		mes "[뉴오즈]";
-		mes "지금은 앞으로 나아갈 때가 아닙니다.";
+		mes needtr("[뉴오즈]", "[Newoz]");
+		mes needtr("지금은 앞으로 나아갈 때가 아닙니다.", "This is not the time to move forward.");
 		close;
 	}
 
-	mes "[뉴오즈]";
-	mes "로터와 밍민을 보니 예전 모험이 떠오르는군.";
+	mes needtr("[뉴오즈]", "[Newoz]");
+	mes needtr("로터와 밍민을 보니 예전 모험이 떠오르는군.", "Seeing Roter and Mingmin reminds me of our old adventures.");
 	next;
-	mes "[밍민]";
-	mes "좋은 추억보다 사고 친 기억이 훨씬 많지만 말이지.";
+	mes needtr("[밍민]", "[Mingmin]");
+	mes needtr("좋은 추억보다 사고 친 기억이 훨씬 많지만 말이지.", "Though I remember far more trouble than good memories.");
 	next;
-	mes "[로터]";
-	mes "그런 이야기는 지금 하지 않아도 된다.";
+	mes needtr("[로터]", "[Roter]");
+	mes needtr("그런 이야기는 지금 하지 않아도 된다.", "There is no need to bring that up now.");
 	next;
-	mes "[뉴오즈]";
-	mes "하하, 그래도 모두 즐거운 추억이야.";
+	mes needtr("[뉴오즈]", "[Newoz]");
+	mes needtr("하하, 그래도 모두 즐거운 추억이야.", "Haha, they are all fond memories anyway.");
 
 	if ('room == 16 && !'jitter_transition) {
 		'jitter_transition = true;
@@ -958,14 +958,14 @@ OnTouch_:
 }
 
 1@jtb,30,279,4	script	밍민#16	4_F_GENETIC,{
-	mes "[밍민]";
-	mes "길드장 자리를 두고 다투다니 여전히 철이 없군.";
+	mes needtr("[밍민]", "[Mingmin]");
+	mes needtr("길드장 자리를 두고 다투다니 여전히 철이 없군.", "Fighting over the guild master seat - still as childish as ever.");
 	close;
 }
 
 1@jtb,30,284,4	script	로터#16	4_M_ROTERT,{
-	mes "[로터]";
-	mes "소문에 속지 마라. 나는 남문 최고의 퇴마 비숍이다!";
+	mes needtr("[로터]", "[Roter]");
+	mes needtr("소문에 속지 마라. 나는 남문 최고의 퇴마 비숍이다!", "Don't believe the rumours. I am the finest exorcist bishop at the South Gate!");
 	close;
 }
 
@@ -973,20 +973,20 @@ OnTouch_:
 // Room 17 (menu affects the boss encounter in the next room)
 1@jtb,110,281,5	script	샬로시#17	4_F_SHALOSH,{
 	if ('room != 17) {
-		mes "[샬로시]";
-		mes "친구... 경쟁... 동료...";
+		mes needtr("[샬로시]", "[Shaloshi]");
+		mes needtr("친구... 경쟁... 동료...", "Friends... rivalry... comrades...");
 		close;
 	}
 
-	mes "[루나인]";
-	mes "뉴오즈는 모험 말고는 관심이 없는 것 같아.";
+	mes needtr("[루나인]", "[Runane]");
+	mes needtr("뉴오즈는 모험 말고는 관심이 없는 것 같아.", "Newoz does not seem interested in anything but adventure.");
 	next;
-	mes "[아이구]";
-	mes "그래도 건전한 경쟁은 나쁘지 않지.";
-	mes "모험가님은 연애가 잘되고 있어?";
+	mes needtr("[아이구]", "[Aigu]");
+	mes needtr("그래도 건전한 경쟁은 나쁘지 않지.", "Still, a healthy rivalry is not a bad thing.");
+	mes needtr("모험가님은 연애가 잘되고 있어?", "Adventurer, how is your love life going?");
 	next;
 
-	.@enable_extra = (select("연인이 있는지부터 물어봐야지.:짝사랑 중이다.:행복하게 만나고 있다.") == 3);
+	.@enable_extra = (select(needtr("연인이 있는지부터 물어봐야지.:짝사랑 중이다.:행복하게 만나고 있다.", "You should ask whether I have someone first.:I have a one-sided crush.:I am happily seeing someone.")) == 3);
 
 	if ('room == 17 && !'jitter_transition) {
 		'jitter_transition = true;
@@ -999,20 +999,20 @@ OnTouch_:
 		donpcevent 'jitterbug_main$ + "::OnNextIs18";
 	}
 
-	mes "[샬로시]";
-	mes "친구와 경쟁하는 것도 인간의 관계구나.";
+	mes needtr("[샬로시]", "[Shaloshi]");
+	mes needtr("친구와 경쟁하는 것도 인간의 관계구나.", "So competing with a friend is also a human relationship.");
 	close;
 }
 
 1@jtb,113,285,4	script	루나인#17	4_F_RUNAIN,{
-	mes "[루나인]";
-	mes "지금은 휴전이지만 뉴오즈는 포기하지 않을 거예요.";
+	mes needtr("[루나인]", "[Runane]");
+	mes needtr("지금은 휴전이지만 뉴오즈는 포기하지 않을 거예요.", "We have a truce for now, but Newoz will not give up.");
 	close;
 }
 
 1@jtb,108,285,5	script	아이구#17	4_F_IU,{
-	mes "[아이구]";
-	mes "경쟁도 좋지만 오래가는 우정이 더 중요해.";
+	mes needtr("[아이구]", "[Aigu]");
+	mes needtr("경쟁도 좋지만 오래가는 우정이 더 중요해.", "Rivalry is fine, but a friendship that lasts matters more.");
 	close;
 }
 
@@ -1020,22 +1020,22 @@ OnTouch_:
 // Room 18
 1@jtb,198,282,5	script	샬로시#18	4_F_SHALOSH,{
 	if ('room != 18) {
-		mes "[샬로시]";
-		mes "지금은 앞으로 나아갈 때가 아닙니다.";
+		mes needtr("[샬로시]", "[Shaloshi]");
+		mes needtr("지금은 앞으로 나아갈 때가 아닙니다.", "This is not the time to move forward.");
 		close;
 	}
 
-	mes "[샬로시]";
-	mes "페르들은 나보다 먼저 이곳에 나타났어.";
+	mes needtr("[샬로시]", "[Shaloshi]");
+	mes needtr("페르들은 나보다 먼저 이곳에 나타났어.", "The Ferres appeared here before I did.");
 	next;
-	mes "[샬로시]";
-	mes "아무것도 하지 않고 울기만 해서 친구가 되었어.";
+	mes needtr("[샬로시]", "[Shaloshi]");
+	mes needtr("아무것도 하지 않고 울기만 해서 친구가 되었어.", "They did nothing but cry, so we became friends.");
 	next;
-	mes "[루나인]";
-	mes "하지만 지금은 우리를 공격하고 있어. 조심해야 해.";
+	mes needtr("[루나인]", "[Runane]");
+	mes needtr("하지만 지금은 우리를 공격하고 있어. 조심해야 해.", "But now they are attacking us. We have to be careful.");
 	next;
-	mes "[로엘]";
-	mes "샬로시를 지키면서 앞으로 이동하죠.";
+	mes needtr("[로엘]", "[Roel]");
+	mes needtr("샬로시를 지키면서 앞으로 이동하죠.", "Let's move forward while protecting Shaloshi.");
 
 	if ('room == 18 && !'jitter_transition) {
 		'jitter_transition = true;
@@ -1045,14 +1045,14 @@ OnTouch_:
 }
 
 1@jtb,203,281,4	script	루나인#18	4_F_RUNAIN,{
-	mes "[루나인]";
-	mes "진짜 친구는 선언하지 않아도 자연스럽게 친구가 되는 거야.";
+	mes needtr("[루나인]", "[Runane]");
+	mes needtr("진짜 친구는 선언하지 않아도 자연스럽게 친구가 되는 거야.", "Real friends become friends naturally, without ever declaring it.");
 	close;
 }
 
 1@jtb,199,278,8	script	로엘#18	4_M_ROEL,{
-	mes "[로엘]";
-	mes "샬로시를 지킬 수 있다면 괜찮습니다.";
+	mes needtr("[로엘]", "[Roel]");
+	mes needtr("샬로시를 지킬 수 있다면 괜찮습니다.", "As long as I can protect Shaloshi, I am fine.");
 	close;
 }
 
@@ -1060,22 +1060,22 @@ OnTouch_:
 // Room 19
 1@jtb,28,377,5	script	뉴오즈#19	4_M_NEWOZ,{
 	if ('room != 19) {
-		mes "[뉴오즈]";
-		mes "지금은 앞으로 나아갈 때가 아닙니다.";
+		mes needtr("[뉴오즈]", "[Newoz]");
+		mes needtr("지금은 앞으로 나아갈 때가 아닙니다.", "This is not the time to move forward.");
 		close;
 	}
 
-	mes "[뉴오즈]";
-	mes "공간의 분위기가 갑자기 달라졌어.";
+	mes needtr("[뉴오즈]", "[Newoz]");
+	mes needtr("공간의 분위기가 갑자기 달라졌어.", "The mood of this space changed all at once.");
 	next;
-	mes "[밍민]";
-	mes "형태가 무너지고 있어. 이 장소가 사라지는 것 같아.";
+	mes needtr("[밍민]", "[Mingmin]");
+	mes needtr("형태가 무너지고 있어. 이 장소가 사라지는 것 같아.", "Its shape is collapsing. This place seems to be disappearing.");
 	next;
-	mes "[멜로디 잭]";
-	mes "낯선 기운도 강해지고 있다. 오래 머물면 위험해.";
+	mes needtr("[멜로디 잭]", "[Melody-Jack]");
+	mes needtr("낯선 기운도 강해지고 있다. 오래 머물면 위험해.", "The strange energy is growing stronger too. It is dangerous to stay long.");
 	next;
-	mes "[아랑]";
-	mes "샬로시가 보이지 않아! 모두 흩어져서 찾아보자.";
+	mes needtr("[아랑]", "[Arang]");
+	mes needtr("샬로시가 보이지 않아! 모두 흩어져서 찾아보자.", "I can't see Shaloshi! Let's split up and look for her.");
 
 	if ('room == 19 && !'jitter_transition) {
 		'jitter_transition = true;
@@ -1085,44 +1085,44 @@ OnTouch_:
 }
 
 1@jtb,30,377,5	script	멜로디 잭#19	CLEAR_NPC,{
-	mes "[멜로디 잭]";
-	mes "뉴오즈는 언제나 눈치가 부족해.";
+	mes needtr("[멜로디 잭]", "[Melody-Jack]");
+	mes needtr("뉴오즈는 언제나 눈치가 부족해.", "Newoz is never tactful.");
 	close;
 }
 
 1@jtb,30,373,4	script	로터#19	4_M_ROTERT,{
-	mes "[로터]";
-	mes "뉴오즈가 또 사고를 칠 것 같은 예감이 든다.";
+	mes needtr("[로터]", "[Roter]");
+	mes needtr("뉴오즈가 또 사고를 칠 것 같은 예감이 든다.", "I have a feeling Newoz is about to cause trouble again.");
 	close;
 }
 
 1@jtb,25,373,5	script	밍민#19	4_F_GENETIC,{
-	mes "[밍민]";
-	mes "더 위험해지기 전에 출구를 찾아야 해.";
+	mes needtr("[밍민]", "[Mingmin]");
+	mes needtr("더 위험해지기 전에 출구를 찾아야 해.", "We have to find the exit before it gets more dangerous.");
 	close;
 }
 
 1@jtb,24,376,5	script	아이구#19	4_F_IU,{
-	mes "[아이구]";
-	mes "뉴오즈의 모험심은 늘 지나치지만 싫지는 않아.";
+	mes needtr("[아이구]", "[Aigu]");
+	mes needtr("뉴오즈의 모험심은 늘 지나치지만 싫지는 않아.", "Newoz's thirst for adventure is always excessive, but I don't dislike it.");
 	close;
 }
 
 1@jtb,26,380,5	script	아랑#19	4_F_TAEKWON,{
-	mes "[아랑]";
-	mes "귀엽고 약한 포링 같은 몬스터면 좋겠어!";
+	mes needtr("[아랑]", "[Arang]");
+	mes needtr("귀엽고 약한 포링 같은 몬스터면 좋겠어!", "I hope they are cute, weak monsters like Porings!");
 	close;
 }
 
 1@jtb,31,380,4	script	라기#19	4_M_RAGI,{
-	mes "[라기]";
-	mes "늘 다투지만 정말 좋은 친구들 같군요.";
+	mes needtr("[라기]", "[Lagi]");
+	mes needtr("늘 다투지만 정말 좋은 친구들 같군요.", "They argue all the time, but they really do seem like good friends.");
 	close;
 }
 
 1@jtb,33,376,4	script	겔카#19	4_F_GELKA,{
-	mes "[겔카]";
-	mes "위기의 순간에 활약하기 위해 꾸준히 훈련합니다.";
+	mes needtr("[겔카]", "[Gelka]");
+	mes needtr("위기의 순간에 활약하기 위해 꾸준히 훈련합니다.", "I train steadily so that I can act when the crisis comes.");
 	close;
 }
 
@@ -1130,24 +1130,24 @@ OnTouch_:
 // Room 20 (menu affects the boss encounter in the next room)
 1@jtb,105,377,5	script	로엘#20	4_M_ROEL,{
 	if ('room != 20) {
-		mes "[로엘]";
-		mes "겔카와 합동 기술을 연습하고 있습니다.";
+		mes needtr("[로엘]", "[Roel]");
+		mes needtr("겔카와 합동 기술을 연습하고 있습니다.", "I am practising a combination technique with Gelka.");
 		close;
 	}
 
-	mes "[겔카]";
-	mes "적에게 포위된 영웅의 마지막 방어선을 재현하겠습니다!";
+	mes needtr("[겔카]", "[Gelka]");
+	mes needtr("적에게 포위된 영웅의 마지막 방어선을 재현하겠습니다!", "We will re-enact a hero's last line of defence, surrounded by enemies!");
 	next;
-	mes "[로엘]";
-	mes "철벽 방어와 최후의 보루!";
+	mes needtr("[로엘]", "[Roel]");
+	mes needtr("철벽 방어와 최후의 보루!", "Iron wall defence and the last bastion!");
 	next;
 	specialeffect EF_KEEPING;
 	specialeffect EF_BOTTOM_BASILICA,AREA,instance_npcname("겔카#20");
-	mes "[로엘과 겔카]";
-	mes "합동 기술 완료!";
+	mes needtr("[로엘과 겔카]", "[Roel & Gelka]");
+	mes needtr("합동 기술 완료!", "Combination technique complete!");
 	next;
 
-	.@enable_extra = (select("멋진 기술이다!:이름만 그럴듯하게 붙인 것 같다.") == 2);
+	.@enable_extra = (select(needtr("멋진 기술이다!:이름만 그럴듯하게 붙인 것 같다.", "What a great technique!:It sounds like only the name is impressive.")) == 2);
 
 	if ('room == 20 && !'jitter_transition) {
 		'jitter_transition = true;
@@ -1160,14 +1160,14 @@ OnTouch_:
 		donpcevent 'jitterbug_main$ + "::OnNextIs21";
 	}
 
-	mes "[겔카]";
-	mes "실전에서도 반드시 도움이 될 겁니다.";
+	mes needtr("[겔카]", "[Gelka]");
+	mes needtr("실전에서도 반드시 도움이 될 겁니다.", "It will surely help in a real fight as well.");
 	close;
 }
 
 1@jtb,110,377,4	script	겔카#20	4_F_GELKA,{
-	mes "[겔카]";
-	mes "전투는 모험가 훈련의 필수 과정입니다.";
+	mes needtr("[겔카]", "[Gelka]");
+	mes needtr("전투는 모험가 훈련의 필수 과정입니다.", "Combat is an essential part of an adventurer's training.");
 	close;
 }
 
@@ -1175,19 +1175,19 @@ OnTouch_:
 // Room 21 (menu affects the boss encounter in the next room)
 1@jtb,198,369,5	script	뉴오즈#21	4_M_NEWOZ,{
 	if ('room != 21) {
-		mes "[뉴오즈]";
-		mes "샬로시를 찾아야 해.";
+		mes needtr("[뉴오즈]", "[Newoz]");
+		mes needtr("샬로시를 찾아야 해.", "We have to find Shaloshi.");
 		close;
 	}
 
-	mes "[샬로시]";
-	mes "페르들이 화가 났어. 나를 지키려고 하고 있어.";
+	mes needtr("[샬로시]", "[Shaloshi]");
+	mes needtr("페르들이 화가 났어. 나를 지키려고 하고 있어.", "The Ferres are angry. They are trying to protect me.");
 	next;
-	mes "[루나인]";
-	mes "친구라면 서로 공격하지 않아.";
+	mes needtr("[루나인]", "[Runane]");
+	mes needtr("친구라면 서로 공격하지 않아.", "Friends do not attack each other.");
 	next;
-	mes "[샬로시]";
-	mes "페르?";
+	mes needtr("[샬로시]", "[Shaloshi]");
+	mes needtr("페르?", "Ferre?");
 	next;
 
 	enablenpc instance_npcname("페르#21");
@@ -1198,11 +1198,11 @@ OnTouch_:
 	disablenpc instance_npcname("페르#21");
 	disablenpc instance_npcname("페르#22");
 
-	mes "[로터]";
-	mes "공간이 무너지고 있다. 뉴오즈와 샬로시를 찾아야 한다.";
+	mes needtr("[로터]", "[Roter]");
+	mes needtr("공간이 무너지고 있다. 뉴오즈와 샬로시를 찾아야 한다.", "The space is collapsing. We have to find Newoz and Shaloshi.");
 	next;
 
-	.@enable_extra = (select("로터와 겔카를 따라간다.:혼자 수색한다.") == 2);
+	.@enable_extra = (select(needtr("로터와 겔카를 따라간다.:혼자 수색한다.", "Follow Roter and Gelka.:Search alone.")) == 2);
 
 	if ('room == 21 && !'jitter_transition) {
 		'jitter_transition = true;
@@ -1215,62 +1215,62 @@ OnTouch_:
 		donpcevent 'jitterbug_main$ + "::OnNextIs22";
 	}
 
-	mes "[밍민]";
-	mes "두 팀으로 나누어 샬로시를 찾자.";
+	mes needtr("[밍민]", "[Mingmin]");
+	mes needtr("두 팀으로 나누어 샬로시를 찾자.", "Let's split into two teams and look for Shaloshi.");
 	close;
 }
 
 1@jtb,202,367,5	script	멜로디 잭#21	CLEAR_NPC,{
-	mes "[멜로디 잭]";
-	mes "이럴 줄 알았는데 아이구가 내 말을 듣지 않았어.";
+	mes needtr("[멜로디 잭]", "[Melody-Jack]");
+	mes needtr("이럴 줄 알았는데 아이구가 내 말을 듣지 않았어.", "I knew this would happen, and Aigu didn't listen to me!");
 	close;
 }
 
 1@jtb,204,366,4	script	아랑#21	4_F_TAEKWON,{
-	mes "[아랑]";
-	mes "하압!";
+	mes needtr("[아랑]", "[Arang]");
+	mes needtr("하압!", "Haap!");
 	close;
 }
 
 1@jtb,201,365,4	script	겔카#21	4_F_GELKA,{
-	mes "[겔카]";
-	mes "길드장님을 믿습니다!";
+	mes needtr("[겔카]", "[Gelka]");
+	mes needtr("길드장님을 믿습니다!", "I trust our guild master!");
 	close;
 }
 
 1@jtb,202,363,4	script	밍민#21	4_F_GENETIC,{
-	mes "[밍민]";
-	mes "어쩌다 이런 일에 휘말린 거지?";
+	mes needtr("[밍민]", "[Mingmin]");
+	mes needtr("어쩌다 이런 일에 휘말린 거지?", "How did I get dragged into this?");
 	close;
 }
 
 1@jtb,195,365,5	script	루나인#21	4_F_RUNAIN,{
-	mes "[루나인]";
-	mes "뉴오즈와 샬로시를 먼저 찾아야 해요.";
+	mes needtr("[루나인]", "[Runane]");
+	mes needtr("뉴오즈와 샬로시를 먼저 찾아야 해요.", "We have to find Newoz and Shaloshi first.");
 	close;
 }
 
 1@jtb,194,363,5	script	로엘#21	4_M_ROEL,{
-	mes "[로엘]";
-	mes "어디까지든 함께 가겠습니다.";
+	mes needtr("[로엘]", "[Roel]");
+	mes needtr("어디까지든 함께 가겠습니다.", "I will go with you, however far it is.");
 	close;
 }
 
 1@jtb,194,367,5	script	라기#21	4_M_RAGI,{
-	mes "[라기]";
-	mes "오늘이 마지막 연주가 아니었으면 좋겠군요.";
+	mes needtr("[라기]", "[Lagi]");
+	mes needtr("오늘이 마지막 연주가 아니었으면 좋겠군요.", "I hope today is not my last performance.");
 	close;
 }
 
 1@jtb,195,368,5	script	아이구#21	4_F_IU,{
-	mes "[아이구]";
-	mes "난 뉴오즈를 따라갈 거야.";
+	mes needtr("[아이구]", "[Aigu]");
+	mes needtr("난 뉴오즈를 따라갈 거야.", "I am going with Newoz.");
 	close;
 }
 
 1@jtb,201,369,4	script	로터#21	4_M_ROTERT,{
-	mes "[로터]";
-	mes "길드장다운 지휘력을 보여주겠다!";
+	mes needtr("[로터]", "[Roter]");
+	mes needtr("길드장다운 지휘력을 보여주겠다!", "I will show you the leadership of a true guild master!");
 	close;
 }
 
@@ -1286,8 +1286,8 @@ OnTouch_:
 // Room 23 (Boss Room entrance)
 1@jtb,320,323,5	script	뉴오즈#23	4_M_NEWOZ,{
 	if ('room != 23) {
-		mes "[뉴오즈]";
-		mes "샬로시를 찾았다. 이제 페르를 진정시켜야 해.";
+		mes needtr("[뉴오즈]", "[Newoz]");
+		mes needtr("샬로시를 찾았다. 이제 페르를 진정시켜야 해.", "We found Shaloshi. Now we have to calm Ferre down.");
 		close;
 	}
 
@@ -1295,14 +1295,14 @@ OnTouch_:
 	.@ferre_23$ = instance_npcname("페르#23");
 	.@ferre_24$ = instance_npcname("페르#24");
 
-	mes "[뉴오즈]";
-	mes "샬로시, 무사해서 다행이야.";
+	mes needtr("[뉴오즈]", "[Newoz]");
+	mes needtr("샬로시, 무사해서 다행이야.", "Shaloshi, I am glad you are safe.");
 	next;
-	mes "[샬로시]";
-	mes "페르가 화가 났어. 우리를 지키려는 것 같아.";
+	mes needtr("[샬로시]", "[Shaloshi]");
+	mes needtr("페르가 화가 났어. 우리를 지키려는 것 같아.", "Ferre is angry. It seems to be trying to protect us.");
 	next;
-	mes "[페르]";
-	mes "페르! 페르! 페르!";
+	mes needtr("[페르]", "[Ferre]");
+	mes needtr("페르! 페르! 페르!", "FERRE! FERRE! FERRE!");
 	next;
 
 	disablenpc .@ferre_23$;
@@ -1310,14 +1310,14 @@ OnTouch_:
 	specialeffect EF_LORD,AREA,.@ferre_24$;
 	specialeffect EF_SUI_EXPLOSION,AREA,.@ferre_24$;
 
-	mes "[샬로시]";
-	mes "페르가 본래 모습으로 변했어!";
+	mes needtr("[샬로시]", "[Shaloshi]");
+	mes needtr("페르가 본래 모습으로 변했어!", "Ferre has changed into its true form!");
 	next;
-	mes "^FF0000강력한 적이 나타났습니다!^000000";
+	mes needtr("^FF0000강력한 적이 나타났습니다!^000000", "^FF0000A powerful enemy has appeared!^000000");
 	next;
-	mes "[뉴오즈]";
-	mes "말로 해결할 수 없다면 싸워서 진정시키는 수밖에 없어.";
-	mes "모험가님, 힘을 빌려줘!";
+	mes needtr("[뉴오즈]", "[Newoz]");
+	mes needtr("말로 해결할 수 없다면 싸워서 진정시키는 수밖에 없어.", "If words will not settle this, the only way is to fight it calm.");
+	mes needtr("모험가님, 힘을 빌려줘!", "Adventurer, lend us your strength!");
 	next;
 
 	if ('room == 23 && !'jitter_transition) {
@@ -1341,22 +1341,22 @@ OnTouch_:
 	end;
 OnStart:
 	enablenpc instance_npcname("뉴오즈#boss");
-	npctalk "뉴오즈: 걱정하지 마! 나도 도와줄게!";
+	npctalklang "뉴오즈: 걱정하지 마! 나도 도와줄게!", "Newoz: Don't worry. I'll help you!";
 	initnpctimer;
 	end;
 
 OnTimer30000:
 	.@r = rand(5);
 	if (.@r == 0)
-		npctalk "뉴오즈: 고추가 참견하면? 할라피뇨!";
+		npctalklang "뉴오즈: 고추가 참견하면? 할라피뇨!", "Newoz: What does a nosy pepper do? Gets jalapeno business!";
 	else if (.@r == 1)
-		npctalk "뉴오즈: 바나나는 왜 선크림을 바를까? 껍질이 벗겨지니까!";
+		npctalklang "뉴오즈: 바나나는 왜 선크림을 바를까? 껍질이 벗겨지니까!", "Newoz: Why do bananas wear suntan lotion? Because they peel!";
 	else if (.@r == 2)
-		npctalk "뉴오즈: 음악을 하는 물고기는? 피아노 참치!";
+		npctalklang "뉴오즈: 음악을 하는 물고기는? 피아노 참치!", "What do you call a fish musician? A piano tuna.";
 	else if (.@r == 3)
-		npctalk "뉴오즈: 우쿨렐레 줄이 끊어졌네. 대신 노래로 도와줄게!";
+		npctalklang "뉴오즈: 우쿨렐레 줄이 끊어졌네. 대신 노래로 도와줄게!", "Um, hold on. One of the ukulele strings snapped. How about I sing instead?";
 	else
-		npctalk "뉴오즈: 초록 호박에게 농부가 한 말은? 왜 주황색이 아니야?";
+		npctalklang "뉴오즈: 초록 호박에게 농부가 한 말은? 왜 주황색이 아니야?", "Newoz: What did the farmer say to the green pumpkin? Why orange you orange?";
 
 	emotion ET_DELIGHT;
 	initnpctimer;
@@ -1364,7 +1364,7 @@ OnTimer30000:
 	if ('boss_id) {
 		getunitdata 'boss_id,.@data;
 		npcskilleffect "WZ_STORMGUST",1,.@data[UMOB_X],.@data[UMOB_Y];
-		unittalk 'boss_id,"페르! 페르!";
+		unittalklang 'boss_id,"페르! 페르!", "FERRE! FERRE!";
 
 		getpartymember 'party_id,1,.@char_id;
 		getpartymember 'party_id,2,.@account_id;
@@ -1389,32 +1389,32 @@ OnStop:
 // Room 23 - After Boss dead
 1@jtb,320,323,5	script	뉴오즈#24	4_M_NEWOZ,{
 	if ('room != 24) {
-		mes "[뉴오즈]";
-		mes "샬로시와 마지막 이야기를 나누고 있어.";
+		mes needtr("[뉴오즈]", "[Newoz]");
+		mes needtr("샬로시와 마지막 이야기를 나누고 있어.", "I am having a last talk with Shaloshi.");
 		close;
 	}
 
-	mes "[샬로시]";
-	mes "페르가 만든 공간은 곧 무너질 거야.";
-	mes "내가 페르를 데리고 떠나면 출구가 나타날 거야.";
+	mes needtr("[샬로시]", "[Shaloshi]");
+	mes needtr("페르가 만든 공간은 곧 무너질 거야.", "The space Ferre made will collapse soon.");
+	mes needtr("내가 페르를 데리고 떠나면 출구가 나타날 거야.", "Once I leave with Ferre, the exit will appear.");
 	next;
-	mes "[샬로시]";
-	mes "이제 모든 기억이 돌아왔어.";
-	mes "나는 모로크의 세 번째 사도이자 마음을 읽는 마족, 샬로시야.";
+	mes needtr("[샬로시]", "[Shaloshi]");
+	mes needtr("이제 모든 기억이 돌아왔어.", "All of my memory has come back now.");
+	mes needtr("나는 모로크의 세 번째 사도이자 마음을 읽는 마족, 샬로시야.", "I am Shaloshi, the third apostle of Morocc and a demon who reads minds.");
 	next;
-	mes "[로터]";
-	mes "모로크의 사도라고?";
+	mes needtr("[로터]", "[Roter]");
+	mes needtr("모로크의 사도라고?", "An apostle of Morocc?");
 	next;
-	mes "[샬로시]";
-	mes "지금은 자유지만 내가 마족이라는 사실은 변하지 않아.";
-	mes "다시 만나면 우리는 적이 될까?";
+	mes needtr("[샬로시]", "[Shaloshi]");
+	mes needtr("지금은 자유지만 내가 마족이라는 사실은 변하지 않아.", "I am free now, but the fact that I am a demon does not change.");
+	mes needtr("다시 만나면 우리는 적이 될까?", "If we meet again, will we be enemies?");
 	next;
-	mes "[뉴오즈]";
-	mes "아니. 오늘부터 너도 하얀 날개 길드의 동료야.";
+	mes needtr("[뉴오즈]", "[Newoz]");
+	mes needtr("아니. 오늘부터 너도 하얀 날개 길드의 동료야.", "No. From today you are a comrade of the White Wings Guild too.");
 	next;
-	mes "[샬로시]";
-	mes "고마워. 다음에 재미있는 장소를 찾으면 다시 초대할게.";
-	mes "안녕, 친구들.";
+	mes needtr("[샬로시]", "[Shaloshi]");
+	mes needtr("고마워. 다음에 재미있는 장소를 찾으면 다시 초대할게.", "Thank you. When I find another interesting place, I will invite you again.");
+	mes needtr("안녕, 친구들.", "Goodbye, my friends.");
 	next;
 
 	specialeffect EF_PORTAL2,AREA,instance_npcname("샬로시#24");
@@ -1427,8 +1427,8 @@ OnStop:
 		donpcevent 'jitterbug_main$ + "::OnNextIs5";
 	}
 
-	mes "[뉴오즈]";
-	mes "출구가 열렸어. 모두 밖으로 나가자.";
+	mes needtr("[뉴오즈]", "[Newoz]");
+	mes needtr("출구가 열렸어. 모두 밖으로 나가자.", "The exit is open. Let's all get out of here.");
 	close;
 }
 
@@ -1449,28 +1449,28 @@ OnStop:
 // Room 5 (Exit)
 1@jtb,379,31,4	script	뉴오즈#05	4_M_NEWOZ,{
 	if ('room != 25) {
-		mes "[뉴오즈]";
-		mes "오랜만에 정말 즐거운 모험이었어.";
+		mes needtr("[뉴오즈]", "[Newoz]");
+		mes needtr("오랜만에 정말 즐거운 모험이었어.", "That was a truly enjoyable adventure after a long time.");
 		if ('room >= 25 && isbegin_quest(13181) == 1)
 			completequest 13181;
 		close;
 	}
 
-	mes "[뉴오즈]";
-	mes "오랜 친구들과 새로운 동료가 함께한 멋진 모험이었어.";
+	mes needtr("[뉴오즈]", "[Newoz]");
+	mes needtr("오랜 친구들과 새로운 동료가 함께한 멋진 모험이었어.", "It was a wonderful adventure with old friends and new comrades.");
 	next;
-	mes "[로터]";
-	mes "참고로 지금 길드장은 나다.";
-	mes "길드 이름도 새로 정할 거야.";
+	mes needtr("[로터]", "[Roter]");
+	mes needtr("참고로 지금 길드장은 나다.", "For the record, I am the guild master now.");
+	mes needtr("길드 이름도 새로 정할 거야.", "I am going to pick a new guild name too.");
 	next;
-	mes "[아이구]";
-	mes "이상한 이름만 아니면 돼.";
+	mes needtr("[아이구]", "[Aigu]");
+	mes needtr("이상한 이름만 아니면 돼.", "As long as it is not a strange name.");
 	next;
-	mes "[밍민]";
-	mes "그냥 하얀 날개 길드로 유지하는 게 가장 낫겠군.";
+	mes needtr("[밍민]", "[Mingmin]");
+	mes needtr("그냥 하얀 날개 길드로 유지하는 게 가장 낫겠군.", "Keeping it as the White Wings Guild would be best after all.");
 	next;
-	mes "[로터]";
-	mes "좋아, 오늘 원정은 여기까지다. 모두 해산!";
+	mes needtr("[로터]", "[Roter]");
+	mes needtr("좋아, 오늘 원정은 여기까지다. 모두 해산!", "All right, that is it for today's expedition. Dismissed!");
 
 	if (isbegin_quest(13181) == 1)
 		completequest 13181;
@@ -1486,50 +1486,50 @@ OnStop:
 }
 
 1@jtb,363,11,5	script	멜로디 잭#05	CLEAR_NPC,{
-	mes "[멜로디 잭]";
-	mes "약속은 끝났어. 이제 받을 대가를 생각해 봐야겠군.";
+	mes needtr("[멜로디 잭]", "[Melody-Jack]");
+	mes needtr("약속은 끝났어. 이제 받을 대가를 생각해 봐야겠군.", "Our deal is done. Let me think about what I want in return...");
 	close;
 }
 
 1@jtb,358,25,5	script	겔카#05	4_F_GELKA,{
-	mes "[겔카]";
-	mes "앞으로도 더 열심히 훈련하겠습니다!";
+	mes needtr("[겔카]", "[Gelka]");
+	mes needtr("앞으로도 더 열심히 훈련하겠습니다!", "I will train even harder from now on!");
 	close;
 }
 
 1@jtb,385,20,5	script	루나인#05	4_F_RUNAIN,{
-	mes "[루나인]";
-	mes "집에 가서 씻고 따뜻한 빵을 먹고 싶어요.";
+	mes needtr("[루나인]", "[Runane]");
+	mes needtr("집에 가서 씻고 따뜻한 빵을 먹고 싶어요.", "I want to go home, wash up and eat some warm bread.");
 	close;
 }
 
 1@jtb,375,31,5	script	로터#05	4_M_ROTERT,{
-	mes "[로터]";
-	mes "아직은 신입이다. 길드를 위해 열심히 노력해라.";
+	mes needtr("[로터]", "[Roter]");
+	mes needtr("아직은 신입이다. 길드를 위해 열심히 노력해라.", "You are still new. Work hard for the guild.");
 	close;
 }
 
 1@jtb,380,28,4	script	아이구#05	4_F_IU,{
-	mes "[아이구]";
-	mes "다시는 뉴오즈를 놓치지 않을 거야!";
+	mes needtr("[아이구]", "[Aigu]");
+	mes needtr("다시는 뉴오즈를 놓치지 않을 거야!", "I will never lose track of Newoz again!");
 	close;
 }
 
 1@jtb,359,43,5	script	라기#05	4_M_RAGI,{
-	mes "[라기]";
-	mes "이번 모험에서 새로운 곡의 영감을 많이 얻었습니다.";
+	mes needtr("[라기]", "[Lagi]");
+	mes needtr("이번 모험에서 새로운 곡의 영감을 많이 얻었습니다.", "I got a lot of inspiration for new songs on this adventure.");
 	close;
 }
 
 1@jtb,378,47,5	script	아랑#05	4_F_TAEKWON,{
-	mes "[아랑]";
-	mes "로엘과도 이제 친구가 됐어.";
+	mes needtr("[아랑]", "[Arang]");
+	mes needtr("로엘과도 이제 친구가 됐어.", "Roel and I are friends now too.");
 	close;
 }
 
 1@jtb,381,47,4	script	로엘#05	4_M_ROEL,{
-	mes "[로엘]";
-	mes "저도 아이구처럼 멋지게 춤추고 싶습니다.";
+	mes needtr("[로엘]", "[Roel]");
+	mes needtr("저도 아이구처럼 멋지게 춤추고 싶습니다.", "I want to dance as well as Aigu does.");
 	close;
 }
 
@@ -1538,57 +1538,57 @@ OnStop:
 	disable_items;
 
 	if (!checkweight(18122,1) || (MaxWeight - Weight) < 1000) {
-		mes "[밍민]";
-		mes "소지품이 너무 많습니다.";
-		mes "인벤토리를 정리한 뒤 다시 이용해 주세요.";
+		mes needtr("[밍민]", "[Mingmin]");
+		mes needtr("소지품이 너무 많습니다.", "You have too much stuff.");
+		mes needtr("인벤토리를 정리한 뒤 다시 이용해 주세요.", "Please tidy up your inventory and come back.");
 		close;
 	}
 
-	mes "[밍민]";
-	mes "샬로시와 페르를 연구하면서";
-	mes "장신구 조합과 지터벅 이빨의 활용법을 알아냈어.";
+	mes needtr("[밍민]", "[Mingmin]");
+	mes needtr("샬로시와 페르를 연구하면서", "While studying Shaloshi and Ferre");
+	mes needtr("장신구 조합과 지터벅 이빨의 활용법을 알아냈어.", "I worked out how to combine accessories and how to use Jitterbug Teeth.");
 	next;
 
-	switch (select("기묘한 펜던트 조합:지터벅 이빨 교환:그만둔다.")) {
+	switch (select(needtr("기묘한 펜던트 조합:지터벅 이빨 교환:그만둔다.", "Strange pendant combination:Jitterbug Teeth exchange:Quit."))) {
 	case 1:
-		mes "[밍민]";
-		mes "조화의 펜던트와 혼돈의 펜던트를 합치면";
-		mes "소용돌이의 펜던트를 만들 수 있어.";
+		mes needtr("[밍민]", "[Mingmin]");
+		mes needtr("조화의 펜던트와 혼돈의 펜던트를 합치면", "Have you seen");
+		mes needtr("소용돌이의 펜던트를 만들 수 있어.", "this pendant?");
 		next;
-		mes "[밍민]";
-		mes "조합에는 각 펜던트가 1개씩 필요하며";
-		mes "장착 중인 장비는 재료로 사용할 수 없어.";
+		mes needtr("[밍민]", "[Mingmin]");
+		mes needtr("조합에는 각 펜던트가 1개씩 필요하며", "I think I can fit Pendant of Harmony");
+		mes needtr("장착 중인 장비는 재료로 사용할 수 없어.", "and Pendant of Chaos together.");
 		next;
 
 		if ((countitem(2990) - isequippedcnt(2990)) < 1
 		 || (countitem(2991) - isequippedcnt(2991)) < 1) {
-			mes "[밍민]";
-			mes "조화의 펜던트와 혼돈의 펜던트를";
-			mes "인벤토리에 각각 1개씩 준비해 줘.";
+			mes needtr("[밍민]", "[Mingmin]");
+			mes needtr("조화의 펜던트와 혼돈의 펜던트를", "Have 1 Pendant of Harmony and 1 Pendant of Chaos");
+			mes needtr("인벤토리에 각각 1개씩 준비해 줘.", "ready in your inventory.");
 			break;
 		}
 
-		if (select("조합하지 않는다.:조합한다.") == 2) {
+		if (select(needtr("조합하지 않는다.:조합한다.", "Do not combine.:Combine.")) == 2) {
 			delitem 2990,1;
 			delitem 2991,1;
 			getitem 2992,1;
 			specialeffect EF_PHARMACY_FAIL;
-			mes "[밍민]";
-			mes "조합이 완료됐어.";
-			mes "소용돌이의 펜던트를 확인해 봐.";
+			mes needtr("[밍민]", "[Mingmin]");
+			mes needtr("조합이 완료됐어.", "The combination is done.");
+			mes needtr("소용돌이의 펜던트를 확인해 봐.", "Take a look at your Pendant of Maelstrom.");
 		}
 		break;
 
 	case 2:
-		mes "[밍민]";
-		mes "지터벅 이빨 50개를 가져오면";
-		mes "이 공간에서 발견한 물품 중 하나로 무작위 교환해 줄게.";
+		mes needtr("[밍민]", "[Mingmin]");
+		mes needtr("지터벅 이빨 50개를 가져오면", "Do you have");
+		mes needtr("이 공간에서 발견한 물품 중 하나로 무작위 교환해 줄게.", "Jitterbug Teeth?");
 		next;
 
-		if (select("교환하지 않는다.:50개를 교환한다.") == 2) {
+		if (select(needtr("교환하지 않는다.:50개를 교환한다.", "Do not exchange.:Exchange 50.")) == 2) {
 			if (countitem(6719) < 50) {
-				mes "[밍민]";
-				mes "지터벅 이빨이 50개보다 적어.";
+				mes needtr("[밍민]", "[Mingmin]");
+				mes needtr("지터벅 이빨이 50개보다 적어.", "I won't accept anything less than 50 Jitterbug Teeth.");
 				break;
 			}
 
@@ -1609,9 +1609,9 @@ OnStop:
 			);
 			getitem .@item_id,1;
 
-			mes "[밍민]";
-			mes "교환이 완료됐어.";
-			mes "획득한 아이템을 확인해 봐.";
+			mes needtr("[밍민]", "[Mingmin]");
+			mes needtr("교환이 완료됐어.", "Enjoy your item. Bring more Jitterbug");
+			mes needtr("획득한 아이템을 확인해 봐.", "Teeth if you want more items.");
 		}
 		break;
 
@@ -1619,8 +1619,8 @@ OnStop:
 		break;
 	}
 
-	mes "[밍민]";
-	mes "이곳에는 아직 연구할 것이 많이 남아 있어.";
+	mes needtr("[밍민]", "[Mingmin]");
+	mes needtr("이곳에는 아직 연구할 것이 많이 남아 있어.", "This place is still full of things to study.");
 	close;
 }
 

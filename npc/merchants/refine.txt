@@ -22,12 +22,12 @@
 // Weapon/Armor Refiners
 //============================================================
 lasa_in01,161,67,6	script	홀그렌	4_M_03,{
-	mes "[홀그렌]";
-	mes "저는 무기와 장비를 제련할 수 있는 대장장이입니다.";
-	mes "어떤 제련 서비스를 이용하시겠습니까?";
+	mes needtr("[홀그렌]", "[Hollgrehenn]");
+	mes needtr("저는 무기와 장비를 제련할 수 있는 대장장이입니다.", "I am a blacksmith who can refine weapons and equipment.");
+	mes needtr("어떤 제련 서비스를 이용하시겠습니까?", "Which refine service would you like to use?");
 	next;
 
-	switch(select("일반 제련","안전 제련","제련권 사용","취소"))
+	switch(select(needtr("일반 제련", "Normal Refine"),needtr("안전 제련", "Safe Refine"),needtr("제련권 사용", "Use a Refine Ticket"),needtr("취소", "Cancel")))
 	{
 		case 1:
 			if (getbattleflag("feature.refineui")) {
@@ -150,22 +150,22 @@ function	script	F_NeedSafeRefine	{
 	}
 
 	if (.@count <= 0) {
-		mes "[홀그렌]";
-		mes "현재 장착 중인 장비 중";
-		mes "안전 제련이 가능한 장비가 없습니다.";
+		mes needtr("[홀그렌]", "[Hollgrehenn]");
+		mes needtr("현재 장착 중인 장비 중", "None of the equipment you are wearing");
+		mes needtr("안전 제련이 가능한 장비가 없습니다.", "can be safe refined.");
 		mes " ";
-		mes "제련 가능한 장비를 장착하거나,";
-		mes "이미 안전 제련 한계에 도달했는지 확인해주세요.";
+		mes needtr("제련 가능한 장비를 장착하거나,", "Please equip a refinable item or check");
+		mes needtr("이미 안전 제련 한계에 도달했는지 확인해주세요.", "whether it has already reached the safe refine limit.");
 		close;
 	}
 
-	.@menu$ += "취소";
+	.@menu$ += needtr("취소", "Cancel");
 
-	mes "[홀그렌]";
-	mes "안전 제련할 장비를 선택해주세요.";
+	mes needtr("[홀그렌]", "[Hollgrehenn]");
+	mes needtr("안전 제련할 장비를 선택해주세요.", "Please choose the equipment to safe refine.");
 	mes " ";
-	mes "현재 제련도에서 안전 제련 한계까지";
-	mes "필요한 재료와 제니를 한 번에 사용합니다.";
+	mes needtr("현재 제련도에서 안전 제련 한계까지", "All the materials and zeny needed to go from the current");
+	mes needtr("필요한 재료와 제니를 한 번에 사용합니다.", "refine level up to the safe limit are spent at once.");
 	next;
 
 	.@select = select(.@menu$) - 1;
@@ -177,9 +177,9 @@ function	script	F_NeedSafeRefine	{
 	.@safe_refine = .@target_list[.@select];
 
 	if (!getequipisequiped(.@part) || !getequipisenableref(.@part)) {
-		mes "[홀그렌]";
-		mes "선택한 장비의 착용 상태가 변경되었습니다.";
-		mes "다시 시도해주세요.";
+		mes needtr("[홀그렌]", "[Hollgrehenn]");
+		mes needtr("선택한 장비의 착용 상태가 변경되었습니다.", "The equipped state of the selected item has changed.");
+		mes needtr("다시 시도해주세요.", "Please try again.");
 		close;
 	}
 
@@ -216,8 +216,8 @@ function	script	F_NeedSafeRefine	{
 				break;
 
 			default:
-				mes "[홀그렌]";
-				mes "지원하지 않는 무기 레벨입니다.";
+				mes needtr("[홀그렌]", "[Hollgrehenn]");
+				mes needtr("지원하지 않는 무기 레벨입니다.", "That weapon level is not supported.");
 				close;
 		}
 	}
@@ -235,22 +235,22 @@ function	script	F_NeedSafeRefine	{
 		.@zeny_per_refine = getequiprefinecost(.@part, REFINE_COST_NORMAL, REFINE_ZENY_COST);
 
 		if (.@material_id <= 0) {
-			mes "[홀그렌]";
-			mes "이 쉐도우 장비의 제련 재료 정보를 확인할 수 없습니다.";
-			mes "refine DB 설정을 확인해주세요.";
+			mes needtr("[홀그렌]", "[Hollgrehenn]");
+			mes needtr("이 쉐도우 장비의 제련 재료 정보를 확인할 수 없습니다.", "I cannot read the refine material data for this Shadow gear.");
+			mes needtr("refine DB 설정을 확인해주세요.", "Please check the refine DB settings.");
 			close;
 		}
 	}
 	else {
-		mes "[홀그렌]";
-		mes "안전 제련을 지원하지 않는 장비입니다.";
+		mes needtr("[홀그렌]", "[Hollgrehenn]");
+		mes needtr("안전 제련을 지원하지 않는 장비입니다.", "This equipment does not support safe refining.");
 		close;
 	}
 
 	if (.@current_refine >= .@safe_refine) {
-		mes "[홀그렌]";
-		mes "이 장비는 이미 안전 제련 한계에 도달했습니다.";
-		mes "현재 제련도: ^0055FF+" + .@current_refine + "^000000";
+		mes needtr("[홀그렌]", "[Hollgrehenn]");
+		mes needtr("이 장비는 이미 안전 제련 한계에 도달했습니다.", "This equipment has already reached the safe refine limit.");
+		mes needtr("현재 제련도: ^0055FF+", "Current refine: ^0055FF+") + .@current_refine + "^000000";
 		close;
 	}
 
@@ -266,25 +266,25 @@ function	script	F_NeedSafeRefine	{
 		getequipcardid(.@part, 2),
 		getequipcardid(.@part, 3);
 
-	mes "[홀그렌]";
-	mes "선택 장비: ^0055FF" + getequipname(.@part) + "^000000";
-	mes "현재 제련도: ^FF8000+" + .@current_refine + "^000000";
-	mes "목표 제련도: ^00AAFF+" + .@safe_refine + "^000000";
+	mes needtr("[홀그렌]", "[Hollgrehenn]");
+	mes needtr("선택 장비: ^0055FF", "Selected: ^0055FF") + getequipname(.@part) + "^000000";
+	mes needtr("현재 제련도: ^FF8000+", "Current refine: ^FF8000+") + .@current_refine + "^000000";
+	mes needtr("목표 제련도: ^00AAFF+", "Target refine: ^00AAFF+") + .@safe_refine + "^000000";
 	mes " ";
-	mes "필요 제련 횟수: ^FF8000" + .@refine_count + "회^000000";
-	mes "필요 재료: ^FF8000" + getitemname(.@material_id) + " " + .@refine_count + "개^000000";
-	mes "필요 제니: ^FF8000" + callfunc("F_InsertComma", .@total_zeny) + " 제니^000000";
+	mes needtr("필요 제련 횟수: ^FF8000", "Refine attempts needed: ^FF8000") + .@refine_count + needtr("회^000000", "x^000000");
+	mes needtr("필요 재료: ^FF8000", "Materials needed: ^FF8000") + getitemname(.@material_id) + " " + .@refine_count + needtr("개^000000", " ea^000000");
+	mes needtr("필요 제니: ^FF8000", "Zeny needed: ^FF8000") + callfunc("F_InsertComma", .@total_zeny) + needtr(" 제니^000000", " zeny^000000");
 	mes " ";
-	mes "^00AA00실패 없이 안전 한계까지 한 번에 제련됩니다.^000000";
+	mes needtr("^00AA00실패 없이 안전 한계까지 한 번에 제련됩니다.^000000", "^00AA00Refines up to the safe limit at once with no chance of failure.^000000");
 	next;
 
-	if (select("안전 제련한다:취소") == 2)
+	if (select(needtr("안전 제련한다:취소", "Safe refine it:Cancel")) == 2)
 		close;
 
 	// 결제 및 제련 직전 재검사
 	if (!getequipisequiped(.@part) || !getequipisenableref(.@part)) {
-		mes "[홀그렌]";
-		mes "장비의 착용 상태가 변경되었습니다.";
+		mes needtr("[홀그렌]", "[Hollgrehenn]");
+		mes needtr("장비의 착용 상태가 변경되었습니다.", "The equipped state of the item has changed.");
 		close;
 	}
 
@@ -292,27 +292,27 @@ function	script	F_NeedSafeRefine	{
 		callfunc("F_IsEquipRefineHack", .@part, .@saved_refine) ||
 		callfunc("F_IsEquipCardHack", .@part,
 			.@saved_card[0], .@saved_card[1], .@saved_card[2], .@saved_card[3])) {
-		mes "[홀그렌]";
+		mes needtr("[홀그렌]", "[Hollgrehenn]");
 		emotion ET_FRET;
-		mes "잠시만요...";
-		mes "제련을 진행하는 사이 장비가 변경되었습니다.";
-		mes "처음부터 다시 시도해주세요.";
+		mes needtr("잠시만요...", "Wait a second...");
+		mes needtr("제련을 진행하는 사이 장비가 변경되었습니다.", "The equipment changed while the refining was in progress.");
+		mes needtr("처음부터 다시 시도해주세요.", "Please start over.");
 		close;
 	}
 
 	if (countitem(.@material_id) < .@refine_count) {
-		mes "[홀그렌]";
-		mes "제련 재료가 부족합니다.";
-		mes "필요: ^FF0000" + getitemname(.@material_id) + " " + .@refine_count + "개^000000";
-		mes "보유: ^0055FF" + countitem(.@material_id) + "개^000000";
+		mes needtr("[홀그렌]", "[Hollgrehenn]");
+		mes needtr("제련 재료가 부족합니다.", "You do not have enough refine materials.");
+		mes needtr("필요: ^FF0000", "Needed: ^FF0000") + getitemname(.@material_id) + " " + .@refine_count + needtr("개^000000", " ea^000000");
+		mes needtr("보유: ^0055FF", "You have: ^0055FF") + countitem(.@material_id) + needtr("개^000000", " ea^000000");
 		close;
 	}
 
 	if (Zeny < .@total_zeny) {
-		mes "[홀그렌]";
-		mes "제련 비용이 부족합니다.";
-		mes "필요: ^FF0000" + callfunc("F_InsertComma", .@total_zeny) + " 제니^000000";
-		mes "보유: ^0055FF" + callfunc("F_InsertComma", Zeny) + " 제니^000000";
+		mes needtr("[홀그렌]", "[Hollgrehenn]");
+		mes needtr("제련 비용이 부족합니다.", "You do not have enough zeny for the refine fee.");
+		mes needtr("필요: ^FF0000", "Needed: ^FF0000") + callfunc("F_InsertComma", .@total_zeny) + needtr(" 제니^000000", " zeny^000000");
+		mes needtr("보유: ^0055FF", "You have: ^0055FF") + callfunc("F_InsertComma", Zeny) + needtr(" 제니^000000", " zeny^000000");
 		close;
 	}
 
@@ -324,10 +324,10 @@ function	script	F_NeedSafeRefine	{
 
 	next;
 	emotion ET_DELIGHT;
-	mes "[홀그렌]";
-	mes "안전 제련이 완료되었습니다!";
+	mes needtr("[홀그렌]", "[Hollgrehenn]");
+	mes needtr("안전 제련이 완료되었습니다!", "Safe refining complete!");
 	mes "^0055FF" + getequipname(.@part) + "^000000";
-	mes "제련 결과: ^00AAFF+" + getequiprefinerycnt(.@part) + "^000000";
+	mes needtr("제련 결과: ^00AAFF+", "Result: ^00AAFF+") + getequiprefinerycnt(.@part) + "^000000";
 	close;
 }
 
@@ -434,41 +434,41 @@ function	script	F_RefineTime	{
 		.@check = 1;
 
 	if (.@check == 0) {
-			mes "[홀그렌]";
-			mes "사실, 제가 제련을 해 드리는 경우가 있기는 합니다만, 제련 보장권티켓을 가진 분들이 ^006400장착할 수 있는 장비^000000만을 제련해 드리죠.";
-			mes "그럼 안녕히~!";
+			mes needtr("[홀그렌]", "[Hollgrehenn]");
+			mes needtr("사실, 제가 제련을 해 드리는 경우가 있기는 합니다만, 제련 보장권티켓을 가진 분들이 ^006400장착할 수 있는 장비^000000만을 제련해 드리죠.", "Well, I do refine things now and then, but only ^006400equipment you can actually wear^000000, and only for people holding a refine ticket.");
+			mes needtr("그럼 안녕히~!", "So long~!");
 			close;
 	}
 	emotion ET_SURPRISE;
-	mes "[홀그렌]";
-	mes "^006400당신의 티켓과 같은 레벨로^000000 아이템을 제련 할수 있습니다.";
-	mes "걱정하지 마세요!. 아이템이 파괴 될 가능성은 없습니다.";
+	mes needtr("[홀그렌]", "[Hollgrehenn]");
+	mes needtr("^006400당신의 티켓과 같은 레벨로^000000 아이템을 제련 할수 있습니다.", "I can refine an item ^006400up to the level printed on your ticket^000000.");
+	mes needtr("걱정하지 마세요!. 아이템이 파괴 될 가능성은 없습니다.", "Don't worry! There is no chance of the item breaking.");
 	next;
-	if(select("다시오겠습니다.:티켓으로 제련을 한다.") == 1) {
-		mes "[홀그렌]";
-		mes "오케이.";
-		mes "다음에 다시 오세요.";
+	if(select(needtr("다시오겠습니다.:티켓으로 제련을 한다.", "I'll come back later.:Refine with a ticket.")) == 1) {
+		mes needtr("[홀그렌]", "[Hollgrehenn]");
+		mes needtr("오케이.", "Okay.");
+		mes needtr("다음에 다시 오세요.", "Come again next time.");
 		close;
 	}
-	mes "[홀그렌]";
-	mes "제련하고 싶은 장비는 무엇인가요?";
+	mes needtr("[홀그렌]", "[Hollgrehenn]");
+	mes needtr("제련하고 싶은 장비는 무엇인가요?", "Which equipment would you like to refine?");
 	next;
-	setarray .@position$[1],"상단","갑옷","왼손","오른손","걸칠것","신발","악세사리(L)","악세사리(R)","중단","하단";
+	setarray .@position$[1],needtr("상단", "Upper"),needtr("갑옷", "Armor"),needtr("왼손", "Left Hand"),needtr("오른손", "Right Hand"),needtr("걸칠것", "Garment"),needtr("신발", "Shoes"),needtr("악세사리(L)", "Accessory (L)"),needtr("악세사리(R)", "Accessory (R)"),needtr("중단", "Middle"),needtr("하단", "Lower");
 	setarray .@indices[1], EQI_HEAD_TOP, EQI_ARMOR, EQI_HAND_L, EQI_HAND_R, EQI_GARMENT, EQI_SHOES, EQI_ACC_L, EQI_ACC_R, EQI_HEAD_MID, EQI_HEAD_LOW;
 	for ( .@i = 1; .@i <= 10; ++.@i )
-		.@menu$ += (getequipisequiped(.@indices[.@i]) ? getequipname(.@indices[.@i]) : .@position$[.@i] + "- [없음]") + ":";
+		.@menu$ += (getequipisequiped(.@indices[.@i]) ? getequipname(.@indices[.@i]) : .@position$[.@i] + needtr("- [없음]", " - [None]")) + ":";
 
 	.@part = .@indices[ select(.@menu$) ];
 	if (!getequipisequiped(.@part)) {
-		mes "[홀그렌]";
-		mes "제련할려는 장비는 장착을해야 합니다..";
+		mes needtr("[홀그렌]", "[Hollgrehenn]");
+		mes needtr("제련할려는 장비는 장착을해야 합니다..", "The equipment you want to refine has to be equipped.");
 		close;
 	}
 	if (!getequipisenableref(.@part)) {
 		emotion ET_OTL;
-		mes "[홀그렌]";
-		mes "죄송합니다..";
-		mes "이아이템은 제련을 할 수 없습니다.";
+		mes needtr("[홀그렌]", "[Hollgrehenn]");
+		mes needtr("죄송합니다..", "refine this item at all...");
+		mes needtr("이아이템은 제련을 할 수 없습니다.", "This item cannot be refined.");
 		close;
 	}
 	.@refineitemid = getequipid(.@part); // save id of the item
@@ -525,22 +525,22 @@ function	script	F_RefineTime	{
 		// 25428 만 가지고 일반 장비를 고른 경우를 따로 안내한다.
 		if (countitem(.@rebeginer_ticket) > 0) {
 			emotion ET_THINK;
-			mes "[홀그렌]";
-			mes "보유 중인 ^006400초심자 무기 제련권^000000은";
-			mes "이 장비에 사용할 수 없습니다.";
+			mes needtr("[홀그렌]", "[Hollgrehenn]");
+			mes needtr("보유 중인 ^006400초심자 무기 제련권^000000은", "The ^006400Beginner Weapon Refine Ticket^000000 you are holding");
+			mes needtr("이 장비에 사용할 수 없습니다.", "cannot be used on this equipment.");
 			mes "";
-			mes "초심자 무기를 장착한 뒤";
-			mes "다시 이용해주세요.";
+			mes needtr("초심자 무기를 장착한 뒤", "Please equip a beginner weapon");
+			mes needtr("다시 이용해주세요.", "and come back.");
 			close;
 		}
 		emotion ET_THINK;
-		mes "[홀그렌]";
+		mes needtr("[홀그렌]", "[Hollgrehenn]");
 		mes "If you want to refine this ^006400"+.@type$+"^000000, please come along with ^006400"+.@type$+" Refine Ticket^000000.";
 		mes "See you later!";
 		close;
 	}
-	mes "[홀그렌]";
-	mes "이 ^006400"+.@type$+"^000000을 제련하려면 ^006400"+.@type$+" 제련권^000000이 필요합니다.";
+	mes needtr("[홀그렌]", "[Hollgrehenn]");
+	mes needtr("이 ^006400", "To refine this ^006400")+.@type$+needtr("^000000을 제련하려면 ^006400", "^000000 you need a ^006400")+.@type$+needtr(" 제련권^000000이 필요합니다.", " Refine Ticket^000000.");
 	next;
 	.@menu$ = "";
 	for ( .@i = 0; .@i < .@size_list; ++.@i )
@@ -557,61 +557,61 @@ function	script	F_RefineTime	{
 
 	if (countitem(.@ticket_id) == 0) {
 		emotion ET_QUESTION;
-		mes "[홀그렌]";
-		mes getitemname(.@ticket_id)+" 이 인벤토리에 없습니다. 창고에 있는거 아닌가요?";
-		mes "다시 한번 확인해주세요.";
-		mes "다음에 다시 방문해주세요!";
+		mes needtr("[홀그렌]", "[Hollgrehenn]");
+		mes getitemname(.@ticket_id)+needtr(" 이 인벤토리에 없습니다. 창고에 있는거 아닌가요?", " is not in your inventory. Is it in your storage?");
+		mes needtr("다시 한번 확인해주세요.", "Please check again.");
+		mes needtr("다음에 다시 방문해주세요!", "Please visit me again!");
 		close;
 	}
 	if (getequiprefinerycnt(.@part) >= .@ticket_lv) {
 		emotion ET_PROFUSELY_SWEAT;
-		mes "[홀그렌]";
+		mes needtr("[홀그렌]", "[Hollgrehenn]");
 		if (.@ticket_id == .@rebeginer_ticket) {
-			mes "이 초심자 무기는 이미 ^006400+7 이상^000000입니다.";
-			mes "해당 제련권을 사용할 수 없습니다.";
+			mes needtr("이 초심자 무기는 이미 ^006400+7 이상^000000입니다.", "This beginner weapon is already ^006400+7 or higher^000000.");
+			mes needtr("해당 제련권을 사용할 수 없습니다.", "That refine ticket cannot be used.");
 		}
 		else {
-			mes "^8B4513이 장비는 제련보장권 만큼 이미 제련이 되었습니다.^000000";
-			mes "제련보장권 이하의 제련된 장비를 가져오세요.";
+			mes needtr("^8B4513이 장비는 제련보장권 만큼 이미 제련이 되었습니다.^000000", "^8B4513This equipment is already refined as high as the ticket allows.^000000");
+			mes needtr("제련보장권 이하의 제련된 장비를 가져오세요.", "Please bring equipment refined below the ticket's level.");
 		}
 		close;
 	}
-	mes "[홀그렌]";
-	mes "^006400"+getequipname(.@part)+"^8B4513을(를) ^006400"+getitemname(.@ticket_id)+"^000000으로 제련합니다.";
-	mes "목표 제련 수치: ^006400+"+.@ticket_lv+"^000000";
-	mes "필요 비용: ^FF0000"+callfunc("F_InsertComma", .@ticket_fee)+" 제니^000000";
-	mes "진행해도 될까요??";
+	mes needtr("[홀그렌]", "[Hollgrehenn]");
+	mes "^006400"+getequipname(.@part)+needtr("^8B4513을(를) ^006400", "^8B4513 will be refined with ^006400")+getitemname(.@ticket_id)+needtr("^000000으로 제련합니다.", "^000000.");
+	mes needtr("목표 제련 수치: ^006400+", "Target refine level: ^006400+")+.@ticket_lv+"^000000";
+	mes needtr("필요 비용: ^FF0000", "Cost: ^FF0000")+callfunc("F_InsertComma", .@ticket_fee)+needtr(" 제니^000000", " zeny^000000");
+	mes needtr("진행해도 될까요??", "Shall I go ahead?");
 	next;
-	if(select("아뇨.:예.") == 1) {
+	if(select(needtr("아뇨.:예.", "No.:Yes.")) == 1) {
 		emotion ET_THINK;
-		mes "[홀그렌]";
-		mes "아, 마음을 바꾸었군요.";
-		mes "오케이.";
-		mes "다음에 다시 오세요.";
+		mes needtr("[홀그렌]", "[Hollgrehenn]");
+		mes needtr("아, 마음을 바꾸었군요.", "Ah, you changed your mind.");
+		mes needtr("오케이.", "Okay.");
+		mes needtr("다음에 다시 오세요.", "Come again next time.");
 		close;
 	}
 	if (Zeny < .@ticket_fee) {
 		emotion ET_MONEY;
-		mes "[홀그렌]";
-		mes "제련 비용이 부족합니다.";
-		mes "필요 비용: ^FF0000"+callfunc("F_InsertComma",.@ticket_fee)+" 제니^000000";
+		mes needtr("[홀그렌]", "[Hollgrehenn]");
+		mes needtr("제련 비용이 부족합니다.", "You do not have enough zeny for the refine fee.");
+		mes needtr("필요 비용: ^FF0000", "Cost: ^FF0000")+callfunc("F_InsertComma",.@ticket_fee)+needtr(" 제니^000000", " zeny^000000");
 		close;
 	}
-	mes "[홀그렌]";
-	mes "좋습니다.";
+	mes needtr("[홀그렌]", "[Hollgrehenn]");
+	mes needtr("좋습니다.", "Very well.");
 	mes "As you wish!";
-	mes "나만의 특별한 제련 방법이 있습니다.";
+	mes needtr("나만의 특별한 제련 방법이 있습니다.", "I have my own special way of refining.");
 	specialeffect EF_SUI_EXPLOSION;
 	if (countitem(.@ticket_id) < 1) {
 		next;
-		mes "에러!";
-		mes "이것을 보고헤주세요.";
+		mes needtr("에러!", "Error!");
+		mes needtr("이것을 보고헤주세요.", "Take a look at this.");
 		close;
 	}
 	if (Zeny < .@ticket_fee) {
 		next;
-		mes "에러!";
-		mes "제련 비용이 부족합니다.";
+		mes needtr("에러!", "Error!");
+		mes needtr("제련 비용이 부족합니다.", "You do not have enough zeny for the refine fee.");
 		close;
 	}
 	// 25428 전용 경로는 티켓 / 제니를 소비하기 전에 모든 조건을 다시 본다.
@@ -626,9 +626,9 @@ function	script	F_RefineTime	{
 			callfunc("F_IsEquipCardHack", .@part, .@card[0], .@card[1], .@card[2], .@card[3])) {
 			emotion ET_FRET;
 			next;
-			mes "[홀그렌]";
-			mes "장비 상태가 처음과 달라졌습니다.";
-			mes "제련권을 사용하지 않고 중단합니다.";
+			mes needtr("[홀그렌]", "[Hollgrehenn]");
+			mes needtr("장비 상태가 처음과 달라졌습니다.", "The equipment is not in the state it started in.");
+			mes needtr("제련권을 사용하지 않고 중단합니다.", "Stopping without using the refine ticket.");
 			close;
 		}
 	}
@@ -639,29 +639,29 @@ function	script	F_RefineTime	{
 	// anti-hack
 	if (callfunc("F_IsEquipIDHack", .@part, .@refineitemid) ||
 		callfunc("F_IsEquipRefineHack", .@part, .@refinerycnt) || callfunc("F_IsEquipCardHack", .@part, .@card[0], .@card[1], .@card[2], .@card[3])) {
-		mes "[홀그렌]";
+		mes needtr("[홀그렌]", "[Hollgrehenn]");
 		emotion ET_FRET;
-		mes "잠시만요...";
-		mes "내가 멍청하다고 생각하나요?!";
-		mes "내가 보지 않는사이에 아이템을 바꾸다니! 여기서 나가!";
+		mes needtr("잠시만요...", "Wait a second...");
+		mes needtr("내가 멍청하다고 생각하나요?!", "Do you think I'm a fool?!");
+		mes needtr("내가 보지 않는사이에 아이템을 바꾸다니! 여기서 나가!", "Swapping the item while I wasn't looking! Get out of here!");
 		close;
 	}
 	successrefitem .@part, .@ticket_lv - getequiprefinerycnt(.@part);
 	next;
 	emotion ET_DELIGHT;
 	if (.@ticket_id == .@rebeginer_ticket) {
-		mes "[홀그렌]";
-		mes "초심자 무기 제련이 완료되었습니다.";
+		mes needtr("[홀그렌]", "[Hollgrehenn]");
+		mes needtr("초심자 무기 제련이 완료되었습니다.", "Beginner weapon refining complete.");
 		mes "";
-		mes "대상 무기 : ^006400" + getequipname(.@part) + "^000000";
-		mes "제련 결과 : ^006400+7^000000";
+		mes needtr("대상 무기 : ^006400", "Target weapon: ^006400") + getequipname(.@part) + "^000000";
+		mes needtr("제련 결과 : ^006400+7^000000", "Result: ^006400+7^000000");
 		close;
 	}
-	mes "[홀그렌]";
-	mes "좋습니다, 여기 있습니다~";
-	mes "^0000FF"+strcharinfo(0)+"^000000님!";
-	mes "축하합니다."+.@type$+"가 되었습니다.";
-	mes "멋지게 생겼군요!";
-	mes "안녕히 가세요~!";
+	mes needtr("[홀그렌]", "[Hollgrehenn]");
+	mes needtr("좋습니다, 여기 있습니다~", "Alright, here you go~");
+	mes "^0000FF"+strcharinfo(0)+needtr("^000000님!", "^000000!");
+	mes needtr("축하합니다.", "Congratulations, your ")+.@type$+needtr("가 되었습니다.", " is refined.");
+	mes needtr("멋지게 생겼군요!", "Cry Hammer!! Cry!!!");
+	mes needtr("안녕히 가세요~!", "Goodbye~!");
 	close;
 }

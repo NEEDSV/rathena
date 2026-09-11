@@ -1,0 +1,103 @@
+//===== NEED Phase 0.11 - item display name PoC ==============================
+//= TEST ONLY. Loaded only by conf/import/need_lang_test/map_a.conf and
+//= map_verify.conf - never by conf/map_athena.conf.
+//=
+//= One NPC that prints the SAME 12 item ids through every server-side output
+//= path, so one KR screenshot and one EN screenshot answer the whole PoC:
+//=
+//=   1  getitemname()                bare return value
+//=   2  mes + getitemname()          concatenated into a dialog line
+//=   3  sprintf + getitemname()      through a format string
+//=   4  dynamic select() string      concatenated into a menu, ':' count intact
+//=   5  dispbottom + getitemname()   chat window
+//=   6  mesitemlink()                <ITEM>[label]<INFO>id</INFO></ITEM>  - label is SERVER text
+//=   7  itemlink()                   <ITEML> encoded, carries NO name - client renders it
+//=   8  getequipname()               display name of what the player is wearing
+//=
+//= Expected: 1-6 and 8 are Korean in the KR client and English in the EN client
+//= for the 12 ids that are in db/need/item_name_en.yml; the four negative ids
+//= stay Korean in BOTH clients (no trusted English name, or refused by the
+//= loader). 7 is English in the EN client with or without this Phase.
+//============================================================================
+
+lasagna,175,140,4	script	NEED Phase11 ItemName PoC	4_F_KAFRA1,{
+	mes "[Phase 0.11 Item Display Name PoC]";
+	mes "getneedlang() = " + getneedlang() + "   (0 = KR, 1 = EN)";
+	next;
+	switch (select("1-3. getitemname / mes / sprintf:4. dynamic menu:5. dispbottom:6-7. mesitemlink vs itemlink:8. getequipname:Close")) {
+	case 1: callsub S_Plain; break;
+	case 2: callsub S_Menu; break;
+	case 3: callsub S_Bottom; break;
+	case 4: callsub S_Link; break;
+	case 5: callsub S_Equip; break;
+	}
+	close;
+
+S_Plain:
+	mes "[1] getitemname(<id>)";
+	for (.@i = 0; .@i < getarraysize(.Poc); .@i++)
+		mes .Poc[.@i] + " : " + getitemname(.Poc[.@i]);
+	next;
+	mes "[2] mes + getitemname()";
+	mes "You need " + getitemname(6919) + " x600 and " + getitemname(399905) + " x30.";
+	mes "Reward : " + getitemname(1002294) + " / " + getitemname(9530);
+	next;
+	mes "[3] sprintf + getitemname()";
+	mes sprintf("%s : %d held, %d needed", getitemname(900106), 0, 30);
+	mes sprintf("%s -> %s", getitemname(15146), getitemname(15147));
+	next;
+	mes "[negative] these must stay Korean in BOTH clients";
+	mes "12931 : " + getitemname(12931) + "   (EN itemInfo is still Korean)";
+	mes "20549 : " + getitemname(20549) + "   (not in the EN itemInfo at all)";
+	mes "23345 : " + getitemname(23345) + "   (EN name is 56 bytes, refused)";
+	mes "12673 : " + getitemname(12673) + "   (official ID reused by NEED)";
+	return;
+
+S_Menu:
+	mes "[4] a select() string built from getitemname()";
+	mes "The option count and order must be identical in both clients.";
+	next;
+	.@m$ = "";
+	for (.@i = 0; .@i < 6; .@i++)
+		.@m$ += getitemname(.Poc[.@i]) + ":";
+	.@m$ += "Back";
+	.@s = select(.@m$);
+	if (.@s <= 6)
+		mes "You picked option " + .@s + " : " + getitemname(.Poc[.@s - 1]);
+	else
+		mes "You picked option " + .@s + " : Back";
+	return;
+
+S_Bottom:
+	mes "[5] dispbottom - look at the chat window";
+	for (.@i = 0; .@i < getarraysize(.Poc); .@i++)
+		dispbottom "[PoC] " + .Poc[.@i] + " = " + getitemname(.Poc[.@i]);
+	return;
+
+S_Link:
+	mes "[6] mesitemlink() - the label is server text";
+	for (.@i = 0; .@i < 6; .@i++)
+		mes .Poc[.@i] + " : " + mesitemlink(.Poc[.@i]);
+	next;
+	mes "[7] itemlink() - the <ITEML> tag carries no name at all,";
+	mes "so the client renders these from its OWN itemInfo. English in an";
+	mes "EN client with or without this Phase - that is the difference.";
+	mes "6919 : " + itemlink(6919);
+	mes "9530 : " + itemlink(9530);
+	return;
+
+S_Equip:
+	mes "[8] getequipname(<slot>) - what you are wearing";
+	mes "Head top    : " + getequipname(EQI_HEAD_TOP);
+	mes "Armor       : " + getequipname(EQI_ARMOR);
+	mes "Right hand  : " + getequipname(EQI_HAND_R);
+	mes "Garment     : " + getequipname(EQI_GARMENT);
+	mes "Costume top : " + getequipname(EQI_COSTUME_HEAD_TOP);
+	return;
+
+OnInit:
+	// the 12 ids of db/need/item_name_en.yml, in the order of phase11_poc_items.csv
+	setarray .Poc[0], 6919, 7720, 399905, 900106, 12654, 12685,
+	                  15146, 15147, 1002294, 9530, 20990, 420576;
+	end;
+}

@@ -4859,6 +4859,55 @@ ACMD_FUNC(reloadmsgconf){
 	return 0;
 }
 
+/**
+ * NEED Phase 0.32 : TEST ONLY - override this session's language.
+ *
+ *   @needlang          show the current value
+ *   @needlang 0        this session behaves as a KR client
+ *   @needlang 1        this session behaves as an EN client
+ *
+ * `map_session_data::need_lang` normally arrives from the char-server at login (Phase 0.2)
+ * and nothing else writes it. It is per-connection, never persisted, and no cached state
+ * derives from it, so flipping it mid-session is exactly what a language toggle would do.
+ *
+ * Why this exists: the acceptance test for recipient-aware broadcast (request §8/§26) needs
+ * two sessions of DIFFERENT languages in one area. Without this the operator would have to
+ * run a KR client and a separately built EN client side by side. With it, one client is
+ * already decisive - a broken filter shows BOTH language lines to a single session, a
+ * working one shows exactly the session's own.
+ *
+ * Keep it at group 99.
+ */
+ACMD_FUNC(needlang){
+	nullpo_retr(-1, sd);
+
+	char output[CHAT_SIZE_MAX];
+
+	if( !message || !*message ){
+		safesnprintf(output, sizeof(output), "[needlang] this session is %s (%d).",
+			need_lang_name( sd->need_lang ), (int32)sd->need_lang);
+		clif_displaymessage(fd, output);
+		clif_displaymessage(fd, "[needlang] usage: @needlang <0=KR|1=EN>  (TEST ONLY)");
+		return 0;
+	}
+
+	int32 value = atoi( message );
+
+	if( value < 0 || value >= NEED_LANG_MAX ){
+		safesnprintf(output, sizeof(output), "[needlang] out of range - use 0 (KR) or %d (EN).",
+			(int32)NEED_LANG_EN);
+		clif_displaymessage(fd, output);
+		return -1;
+	}
+
+	sd->need_lang = need_lang_sanitize( (uint8)value );
+	safesnprintf(output, sizeof(output), "[needlang] this session is now %s (%d).",
+		need_lang_name( sd->need_lang ), (int32)sd->need_lang);
+	clif_displaymessage(fd, output);
+
+	return 0;
+}
+
 ACMD_FUNC(reloadinstancedb){
 	nullpo_retr(-1, sd);
 
@@ -6945,7 +6994,7 @@ ACMD_FUNC(storeexclude)
 	char output[CHAT_SIZE_MAX];
 
 	if (need_store_exclude_contains(exclude_list, nameid)) {
-		safesnprintf(output, sizeof(output), msg_txt(sd,1627), id->ename.c_str(), nameid);
+		safesnprintf(output, sizeof(output), msg_txt(sd,1627), item_display_name(id, sd->need_lang), nameid);
 		clif_displaymessage(fd, output);
 		return 0;
 	}
@@ -6962,7 +7011,7 @@ ACMD_FUNC(storeexclude)
 		return -1;
 	}
 
-	safesnprintf(output, sizeof(output), msg_txt(sd,1630), id->ename.c_str(), nameid);
+	safesnprintf(output, sizeof(output), msg_txt(sd,1630), item_display_name(id, sd->need_lang), nameid);
 	clif_displaymessage(fd, output);
 	return 0;
 }
@@ -6991,7 +7040,7 @@ ACMD_FUNC(storeexcludelist)
 		if (id == nullptr)
 			safesnprintf(output, sizeof(output), msg_txt(sd,1633), nameid);
 		else
-			safesnprintf(output, sizeof(output), msg_txt(sd,1634), nameid, id->ename.c_str());
+			safesnprintf(output, sizeof(output), msg_txt(sd,1634), nameid, item_display_name(id, sd->need_lang));
 
 		clif_displaymessage(fd, output);
 	}
@@ -7025,7 +7074,7 @@ ACMD_FUNC(storeexcludeoff)
 	char output[CHAT_SIZE_MAX];
 
 	if (it == exclude_list.end()) {
-		safesnprintf(output, sizeof(output), msg_txt(sd,1637), id->ename.c_str(), nameid);
+		safesnprintf(output, sizeof(output), msg_txt(sd,1637), item_display_name(id, sd->need_lang), nameid);
 		clif_displaymessage(fd, output);
 		return 0;
 	}
@@ -7037,7 +7086,7 @@ ACMD_FUNC(storeexcludeoff)
 		return -1;
 	}
 
-	safesnprintf(output, sizeof(output), msg_txt(sd,1639), id->ename.c_str(), nameid);
+	safesnprintf(output, sizeof(output), msg_txt(sd,1639), item_display_name(id, sd->need_lang), nameid);
 	clif_displaymessage(fd, output);
 	return 0;
 }
@@ -10197,7 +10246,7 @@ ACMD_FUNC(itemrate)
 		if (displayed_item)
 			clif_displaymessage(fd, msg_txt(sd, 1874));
 
-		safesnprintf(atcmd_output, sizeof(atcmd_output), msg_txt(sd, 1843), item->ename.c_str());
+		safesnprintf(atcmd_output, sizeof(atcmd_output), msg_txt(sd, 1843), item_display_name(item, sd != nullptr ? sd->need_lang : NEED_LANG_KR));
 		clif_displaymessage(fd, atcmd_output);
 		displayed_item = true;
 		size_t item_option_index = 1;
@@ -13177,6 +13226,8 @@ void atcommand_basecommands(void) {
 		ACMD_DEF(reloadmotd),
 		ACMD_DEF(reloadquestdb),
 		ACMD_DEF(reloadmsgconf),
+		// NEED Phase 0.32 : TEST ONLY session language override - keep at group 99
+		ACMD_DEF(needlang),
 		ACMD_DEF(reloadinstancedb),
 		ACMD_DEF(reloadachievementdb),
 		ACMD_DEF(reloadattendancedb),

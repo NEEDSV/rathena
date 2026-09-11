@@ -337,7 +337,9 @@ ACMD_FUNC(performancemode) {
 	}
 
 	if (map_getmapflag(sd->m, MF_BATTLEGROUND)) {
-		clif_displaymessage(fd, msg_txt(sd,1883));
+		// NEED Phase 0.19 : 1883 is the VENDING currency prompt - this guard needs
+		// its own message. See phase19_msgid_allocation.csv for why 1599.
+		clif_displaymessage(fd, msg_txt(sd,1599));
 		return -1;
 	}
 

@@ -200,7 +200,9 @@ static void vending_show_registered_items(map_session_data& sd)
 		if (const size_t price_placeholder = message.rfind("%u"); price_placeholder != std::string::npos)
 			message.replace(price_placeholder, 2, "%s");
 
-		safesnprintf(output, sizeof(output), message.c_str(), itemdb_ename(cart_item.nameid), vending.amount, price.c_str());
+		// NEED Phase 0.13 : `message` already came from msg_txt(&sd, ...), so the item name
+		// has to use the same recipient's language
+		safesnprintf(output, sizeof(output), message.c_str(), item_display_name(cart_item.nameid, sd.need_lang), vending.amount, price.c_str());
 		clif_displaymessage(sd.fd, output);
 	}
 }

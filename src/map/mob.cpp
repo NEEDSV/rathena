@@ -7575,6 +7575,366 @@ static void mob_load(void)
  */
 void mob_db_load(bool is_reload){
 	mob_load();
+	// NEED Phase 0.21 : after the mob database itself, so every row can be validated against
+	// a real id. Both do_init_mob() and mob_reload() reach this line.
+	need_mob_name_en_db.load();
+	// NEED Phase 0.22 : the spawn-override English names, same lifecycle (startup and
+	// @reloadmobdb both arrive here). Order does not matter - the two tables are independent.
+	need_mob_name_override_en_db.load();
+}
+
+/*==========================================
+ * NEED Phase 0.21 : display-only English monster names
+ *------------------------------------------*/
+NeedMobNameEnDatabase need_mob_name_en_db;
+
+const std::string NeedMobNameEnDatabase::getDefaultLocation(){
+	return std::string( db_path ) + "/need/mob_name_en.yml";
+}
+
+/**
+ * The file is OPTIONAL. YamlDatabase::load() treats a missing file as an error, so its
+ * existence is checked first - that way "delete one file" is a clean rollback that produces
+ * an [Info] line instead of an [Error].
+ */
+bool NeedMobNameEnDatabase::load(){
+	this->applied = 0;
+	this->skipped = 0;
+
+	// NEED Phase 0.26 : replacement semantics. YamlDatabase::load() does NOT clear first -
+	// only reload() does (database.cpp:78 vs 86) - and mob_db_load() calls load(), which is
+	// the path @reloadmobdb takes. Without this line a row DELETED from the file kept its
+	// old jname_en, and deleting the whole file left every English name in place. Clearing
+	// here rather than switching mob_db_load to reload() keeps the "missing file is an
+	// [Info], not an [Error]" contract that makes deleting the file a clean rollback.
+	this->clear();
+
+	std::string path = std::string( db_path ) + "/" + this->getDefaultLocation();
+	FILE* fp = fopen( this->getDefaultLocation().c_str(), "rb" );
+
+	if( fp == nullptr ){
+		ShowInfo( "NEED: no English monster name table (%s) - every session keeps the Korean names.\n",
+			this->getDefaultLocation().c_str() );
+		return false;
+	}
+
+	fclose( fp );
+	YamlDatabase::load();
+	return true;
+}
+
+void NeedMobNameEnDatabase::clear(){
+	for( const auto& pair : mob_db ){
+		if( pair.second != nullptr ){
+			pair.second->jname_en.clear();
+		}
+	}
+}
+
+uint64 NeedMobNameEnDatabase::parseBodyNode( const ryml::NodeRef& node ){
+	uint32 mob_id;
+
+	if( !this->asUInt32( node, "Id", mob_id ) ){
+		this->skipped++;
+		return 0;
+	}
+
+	std::shared_ptr<s_mob_db> mob = mob_db.find( mob_id );
+
+	if( mob == nullptr ){
+		this->invalidWarning( node["Id"], "Unknown monster ID %u, skipping.\n", mob_id );
+		this->skipped++;
+		return 0;
+	}
+
+	// AegisName is checked and never stored: it is only here so a row that has drifted away
+	// from mob_db is reported instead of being applied to the wrong monster.
+	if( this->nodeExists( node, "AegisName" ) ){
+		std::string aegis;
+
+		if( !this->asString( node, "AegisName", aegis ) ){
+			this->skipped++;
+			return 0;
+		}
+
+		// MobDatabase::parseBodyNode does name.resize(NAME_LENGTH) (mob.cpp:5361), so
+		// mob->sprite is a NUL-PADDED 24-byte std::string - comparing it to a 6-character
+		// "PORING" with != can never match. Compare as C strings.
+		if( strncmp( aegis.c_str(), mob->sprite.c_str(), NAME_LENGTH ) != 0 ){
+			this->invalidWarning( node["AegisName"],
+				"AegisName \"%s\" does not match monster %u (\"%s\"), skipping.\n",
+				aegis.c_str(), mob_id, mob->sprite.c_str() );
+			this->skipped++;
+			return 0;
+		}
+	}
+
+	std::string name;
+
+	if( !this->asString( node, "NameEN", name ) ){
+		this->skipped++;
+		return 0;
+	}
+
+	if( name.empty() ){
+		this->invalidWarning( node["NameEN"], "Empty NameEN for monster %u, skipping.\n", mob_id );
+		this->skipped++;
+		return 0;
+	}
+
+	if( name.length() >= NAME_LENGTH ){
+		this->invalidWarning( node["NameEN"],
+			"NameEN \"%s\" for monster %u is %u bytes, the limit is %d, skipping.\n",
+			name.c_str(), mob_id, (uint32)name.length(), NAME_LENGTH - 1 );
+		this->skipped++;
+		return 0;
+	}
+
+	mob->jname_en = name;
+	this->applied++;
+	return 1;
+}
+
+void NeedMobNameEnDatabase::loadingFinished(){
+	ShowStatus( "NEED: %u English monster names applied, %u skipped.\n",
+		this->applied, this->skipped );
+	YamlDatabase::loadingFinished();
+}
+
+/*==========================================
+ * NEED Phase 0.22 : English names for spawn-time override literals
+ *------------------------------------------*/
+NeedMobNameOverrideEnDatabase need_mob_name_override_en_db;
+
+const std::string NeedMobNameOverrideEnDatabase::getDefaultLocation(){
+	return std::string( db_path ) + "/need/mob_name_override_en.yml";
+}
+
+/**
+ * The file is OPTIONAL, same contract as the Phase 0.21 table: YamlDatabase::load() reports a
+ * missing file as an error, so its existence is checked first and "delete one file" stays a
+ * clean rollback that produces an [Info] line.
+ */
+bool NeedMobNameOverrideEnDatabase::load(){
+	this->applied = 0;
+	this->skipped = 0;
+
+	// NEED Phase 0.26 : replacement semantics, same reason as the table above - and here the
+	// old behaviour was worse than stale data: parseBodyNode's duplicate-(id, KrName) check
+	// rejected all 132 rows on an in-process reload (applied 0 / skipped 132), so ADD,
+	// MODIFY and DELETE all did nothing and 132 error lines were printed.
+	this->clear();
+
+	FILE* fp = fopen( this->getDefaultLocation().c_str(), "rb" );
+
+	if( fp == nullptr ){
+		ShowInfo( "NEED: no English spawn-override name table (%s) - every session keeps the spawn literals.\n",
+			this->getDefaultLocation().c_str() );
+		return false;
+	}
+
+	fclose( fp );
+	YamlDatabase::load();
+	return true;
+}
+
+void NeedMobNameOverrideEnDatabase::clear(){
+	this->table.clear();
+}
+
+const std::string* NeedMobNameOverrideEnDatabase::find( uint32 mob_id, const char* kr_name ) const{
+	const auto it = this->table.find( mob_id );
+
+	if( it == this->table.end() ){
+		return nullptr;
+	}
+
+	for( const auto& entry : it->second ){
+		// md.name is a NAME_LENGTH char array that may not be NUL terminated when the literal
+		// filled it completely, so the comparison is bounded exactly like every other
+		// mob_data::name comparison in this file.
+		if( strncmp( entry.first.c_str(), kr_name, NAME_LENGTH ) == 0 ){
+			return &entry.second;
+		}
+	}
+
+	return nullptr;
+}
+
+uint64 NeedMobNameOverrideEnDatabase::parseBodyNode( const ryml::NodeRef& node ){
+	uint32 mob_id;
+
+	if( !this->asUInt32( node, "MobId", mob_id ) ){
+		this->skipped++;
+		return 0;
+	}
+
+	std::shared_ptr<s_mob_db> mob = mob_db.find( mob_id );
+
+	if( mob == nullptr ){
+		this->invalidWarning( node["MobId"], "Unknown monster ID %u, skipping.\n", mob_id );
+		this->skipped++;
+		return 0;
+	}
+
+	// AegisName is checked and never stored - it exists so that a row which has drifted away
+	// from mob_db is reported instead of silently renaming a different monster. mob->sprite is
+	// a NUL-PADDED NAME_LENGTH string (MobDatabase::parseBodyNode resizes it), so it has to be
+	// compared as a C string.
+	if( this->nodeExists( node, "AegisName" ) ){
+		std::string aegis;
+
+		if( !this->asString( node, "AegisName", aegis ) ){
+			this->skipped++;
+			return 0;
+		}
+
+		if( strncmp( aegis.c_str(), mob->sprite.c_str(), NAME_LENGTH ) != 0 ){
+			this->invalidWarning( node["AegisName"],
+				"AegisName \"%s\" does not match monster %u (\"%s\"), skipping.\n",
+				aegis.c_str(), mob_id, mob->sprite.c_str() );
+			this->skipped++;
+			return 0;
+		}
+	}
+
+	std::string kr_name, en_name;
+
+	if( !this->asString( node, "KrName", kr_name ) || !this->asString( node, "EnName", en_name ) ){
+		this->skipped++;
+		return 0;
+	}
+
+	if( kr_name.empty() || en_name.empty() ){
+		this->invalidWarning( node["MobId"], "Empty KrName or EnName for monster %u, skipping.\n",
+			mob_id );
+		this->skipped++;
+		return 0;
+	}
+
+	// Both sides live in a NAME_LENGTH buffer at some point: KrName has to match md.name,
+	// which is what the spawn file wrote there, and EnName is copied into a name packet.
+	if( kr_name.length() >= NAME_LENGTH || en_name.length() >= NAME_LENGTH ){
+		this->invalidWarning( node["MobId"],
+			"KrName/EnName for monster %u is longer than %d bytes, skipping.\n",
+			mob_id, NAME_LENGTH - 1 );
+		this->skipped++;
+		return 0;
+	}
+
+	// A row that maps a literal onto itself is refused: it would look like an English override
+	// while showing Korean, and it would hide a copy/paste mistake in the table.
+	if( kr_name == en_name ){
+		this->invalidWarning( node["MobId"],
+			"KrName and EnName are identical for monster %u, skipping.\n", mob_id );
+		this->skipped++;
+		return 0;
+	}
+
+	// The KR literal is a spawn-time override BY DEFINITION - if it equals the database
+	// display name then this monster is handled by the Phase 0.21 table instead, and a row
+	// here would never be reached. Reporting it keeps the two tables from overlapping.
+	if( strncmp( kr_name.c_str(), mob->jname.c_str(), NAME_LENGTH ) == 0 ){
+		this->invalidWarning( node["KrName"],
+			"KrName for monster %u is the database display name, not a spawn override - "
+			"use mob_name_en.yml for that, skipping.\n", mob_id );
+		this->skipped++;
+		return 0;
+	}
+
+	std::vector<std::pair<std::string, std::string>>& list = this->table[mob_id];
+
+	for( const auto& entry : list ){
+		if( entry.first == kr_name ){
+			this->invalidWarning( node["KrName"],
+				"Duplicate (monster %u, KrName) pair, skipping.\n", mob_id );
+			this->skipped++;
+			return 0;
+		}
+	}
+
+	list.emplace_back( kr_name, en_name );
+	this->applied++;
+	return 1;
+}
+
+void NeedMobNameOverrideEnDatabase::loadingFinished(){
+	ShowStatus( "NEED: %u English spawn-override names applied, %u skipped.\n",
+		this->applied, this->skipped );
+	YamlDatabase::loadingFinished();
+}
+
+/**
+ * NEED Phase 0.26 : is mob_data::name still the DATABASE display name, or was it overridden at
+ * spawn time?
+ *
+ * mob_data::name is a NAME_LENGTH char array that is NOT guaranteed to be NUL terminated, and
+ * the tree fills it by two different rules:
+ *
+ *   spawn       mob_parse_dataset does safestrncpy( data->name, db->jname.c_str(),
+ *               NAME_LENGTH ) (mob.cpp:463), i.e. NAME_LENGTH-1 bytes plus a NUL, and
+ *               mob_spawn_dataset then memcpy's the whole field across (mob.cpp:486)
+ *   class swap  mob_change_class memcpy's NAME_LENGTH raw bytes straight out of db->jname
+ *               (mob.cpp:4189), with no NUL
+ *
+ * MobDatabase::parseBodyNode resizes jname to exactly NAME_LENGTH (mob.cpp:5390), so a display
+ * name SHORTER than the field is NUL-padded and both rules store identical bytes. A name that
+ * FILLS the field does not: 23 bytes + NUL versus 24 raw bytes. One strncmp against db->jname
+ * therefore mis-classified monster 3199 (24 cp949 bytes) as a spawn override and denied it its
+ * English name.
+ *
+ * Both rules are accepted here. No monster id is special-cased, and NAME_LENGTH-1 is NOT used
+ * as a blanket comparison length: that would treat any override literal sharing the database
+ * name's first NAME_LENGTH-1 bytes as a database default for EVERY monster, instead of only
+ * for the three whose display name fills the field.
+ */
+static bool mob_name_is_db_default( const mob_data& md ){
+	const char* jname = md.db->jname.c_str();
+
+	// The overwhelmingly common case, and byte for byte the comparison the guard used before
+	// Phase 0.26: a display name shorter than the field is NUL-padded by
+	// MobDatabase::parseBodyNode (mob.cpp:5390), so both storage rules write identical bytes
+	// and this answers on its own. It also covers mob_change_class's raw rule for a name that
+	// fills the field, because then neither side holds a NUL inside the compared span.
+	// Testing it first keeps the cost of the common path exactly what it was.
+	if( strncmp( md.name, jname, NAME_LENGTH ) == 0 ){
+		return true;
+	}
+
+	// It differs. If the database name is NUL terminated inside the field there is nothing
+	// else to consider - md.name really is something other than the database name.
+	if( memchr( jname, '\0', NAME_LENGTH ) != nullptr ){
+		return false;
+	}
+
+	// The database name FILLS the field, so the spawn path stored NAME_LENGTH-1 bytes plus a
+	// NUL where db->jname carries a data byte. That is the only way the two can disagree here
+	// and still be the same name - monster 3199's case.
+	return md.name[NAME_LENGTH - 1] == '\0'
+		&& memcmp( md.name, jname, NAME_LENGTH - 1 ) == 0;
+}
+
+const char* mob_display_name( const mob_data& md, e_need_lang lang ){
+	if( lang != NEED_LANG_EN || md.db == nullptr ){
+		return md.name;
+	}
+
+	// A spawn-time override wins. With override_mob_names: 0 a spawn-file or script literal
+	// is copied into md.name verbatim (mob.cpp:486), and that is a deliberate rename - the
+	// DATABASE name must never replace it. NEED Phase 0.22 : it may be replaced by the
+	// override's own English name, looked up by (monster id, that very literal), and by
+	// nothing else. No mapping -> the literal stands, exactly as in Phase 0.21.
+	if( !mob_name_is_db_default( md ) ){
+		const std::string* en = need_mob_name_override_en_db.find( md.mob_id, md.name );
+
+		return en != nullptr ? en->c_str() : md.name;
+	}
+
+	if( md.db->jname_en.empty() ){
+		return md.name;
+	}
+
+	return md.db->jname_en.c_str();
 }
 
 /**

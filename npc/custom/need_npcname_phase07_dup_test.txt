@@ -1,0 +1,53 @@
+//===== NEED Phase 0.7 - dynamic duplicate name_en inheritance test ==========
+//= TEST ONLY. Loaded by conf/import/need_lang_test/map_verify.conf.
+//=
+//= Phase 0.6 left npc_duplicate_npc() without name_en inheritance. Phase 0.7 added it, but
+//= ONLY when the duplicate keeps the source's display name - because the caller may pass its
+//= own name:
+//=
+//=   npc.cpp  npc_duplicate_dynamic()  passes nd.name       -> inherit
+//=   script.cpp `duplicate` command    passes its own name  -> must NOT inherit
+//=
+//= This script exercises both branches at start-up and prints the outcome, so the behaviour is
+//= verified rather than assumed. It creates two throwaway NPCs on prt_church and removes them
+//= again immediately.
+//============================================================================
+
+-	script	NEED NpcName DupTest	-1,{
+	end;
+
+OnInit:
+	.@src$ = "메리 해피f#w";                 // an NPC the bulk file registers
+	.@en$  = getnpcnameen( .@src$ );
+
+	if ( .@en$ == "" ) {
+		debugmes "[NPC NAME][DUPTEST] source has no english name - test skipped";
+		end;
+	}
+	debugmes "[NPC NAME][DUPTEST] source " + .@src$ + " -> \"" + .@en$ + "\"";
+
+	// ---- case A : same display name (this is what npc_duplicate_dynamic does) ----
+	.@a$ = duplicate( .@src$, "prt_church", 95, 110 );
+	if ( .@a$ == "" ) {
+		debugmes "[NPC NAME][DUPTEST] case A: duplicate() failed";
+	} else {
+		.@ga$ = getnpcnameen( .@a$ );
+		debugmes "[NPC NAME][DUPTEST] case A same-name  unique=" + .@a$
+		       + " name_en=\"" + .@ga$ + "\" expect=\"" + .@en$ + "\" -> "
+		       + ( ( .@ga$ == .@en$ ) ? "PASS" : "FAIL" );
+		disablenpc .@a$;
+	}
+
+	// ---- case B : caller supplies a DIFFERENT display name -> must not inherit ----
+	.@b$ = duplicate( .@src$, "prt_church", 96, 110, "테스트 다른이름" );
+	if ( .@b$ == "" ) {
+		debugmes "[NPC NAME][DUPTEST] case B: duplicate() failed";
+	} else {
+		.@gb$ = getnpcnameen( .@b$ );
+		debugmes "[NPC NAME][DUPTEST] case B other-name unique=" + .@b$
+		       + " name_en=\"" + .@gb$ + "\" expect=\"\" -> "
+		       + ( ( .@gb$ == "" ) ? "PASS" : "FAIL" );
+		disablenpc .@b$;
+	}
+	end;
+}

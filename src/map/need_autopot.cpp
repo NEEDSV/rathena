@@ -201,6 +201,21 @@ bool item_usable_now(map_session_data* sd, const item_data* data)
 	return !itemdb_isNoEquip(data, sd->m);
 }
 
+/**
+ * NEED Phase 0.13 : display name of a known item for THIS session's language.
+ *
+ * Every string this file prints comes from msg_txt(sd, ...), so an item name embedded in one
+ * of those templates has to be resolved with the SAME sd - otherwise an EN session gets an
+ * English sentence with a Korean item name in it. The AegisName fallback for an item whose
+ * `Name:` is empty is the pre-existing behaviour and is kept.
+ */
+std::string display_name(const map_session_data* sd, const std::shared_ptr<item_data>& data)
+{
+	std::string name = item_display_name(data, sd != nullptr ? sd->need_lang : NEED_LANG_KR);
+
+	return name.empty() ? data->name : name;
+}
+
 const char* item_name(map_session_data* sd, t_itemid item_id, std::string& storage)
 {
 	std::shared_ptr<item_data> data = item_db.find(item_id);
@@ -208,7 +223,7 @@ const char* item_name(map_session_data* sd, t_itemid item_id, std::string& stora
 		storage = msg_txt(sd, NEED_AUTOPOT_MSG_UNKNOWN_ITEM);
 		return storage.c_str();
 	}
-	storage = data->ename.empty() ? data->name : data->ename;
+	storage = display_name(sd, data);
 	return storage.c_str();
 }
 
@@ -277,7 +292,8 @@ void list_inventory(map_session_data* sd)
 			continue;
 
 		char output[CHAT_SIZE_MAX] = {};
-		const std::string& name = data->ename.empty() ? data->name : data->ename;
+		// NEED Phase 0.13 : same recipient language as the msg_txt template below
+		const std::string name = display_name( sd, data );
 		safesnprintf(output, sizeof(output), msg_txt(sd, NEED_AUTOPOT_MSG_ITEM_LIST_ROW),
 			static_cast<uint32>(inventory_item.nameid), name.c_str(), inventory_item.amount);
 		formatted_message(sd, output);

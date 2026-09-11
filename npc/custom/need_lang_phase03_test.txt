@@ -1,0 +1,185 @@
+//===== NEED Phase 0.3 Script Language API - PoC test NPC =====================
+//= TEST ONLY. Not loaded by any release configuration.
+//=
+//= Load it explicitly:
+//=   conf/import/need_lang_test/map_a.conf / map_b.conf  ->  npc: <this file>
+//=
+//= Verifies the two primitives added in Phase 0.3:
+//=   getneedlang()             -> NEED_LANG_KR (0) / NEED_LANG_EN (1)
+//=   needtr("<kr>","<en>")     -> picks one of the two strings for this session
+//=
+//= T1 getneedlang / T2 mes / T3 menu+select branch identity / T4 dispbottom
+//= T5 colour + item link / T6 '%' + '\n' + empty string / T7 no-RID context
+//=
+//= The dialog lives in a function so the very same code can be reached from
+//=   - the clickable NPC on prontera  (map-server A), and
+//=   - the bound test command @needlangpoc, usable on any map
+//= which is how the "language survives a map-server change" check is done without placing a
+//= second copy on izlude (map-server A does not own izlude, so a duplicate there would fail
+//= to load on A).
+//============================================================================
+
+function	script	F_NeedLangPoC	{
+
+	// ---- T1 : getneedlang() -------------------------------------------------
+	.@lang = getneedlang();
+
+	mes "[NEED Phase 0.3]";
+	mes needtr( "T1) 현재 언어: KR", "T1) Current language: EN" );
+	mes "T1) getneedlang() = " + .@lang;
+	mes "T1) map = " + strcharinfo(3);
+
+	// server-side proof of what the primitives actually returned for this session
+	debugmes "[NEED LANG PoC][T1] name=" + strcharinfo(0) + " map=" + strcharinfo(3)
+	       + " getneedlang()=" + .@lang
+	       + " needtr()=[" + needtr( "KR-TEXT", "EN-TEXT" ) + "]";
+
+	// the constants must be usable instead of a magic number
+	if( .@lang == NEED_LANG_EN ) {
+		mes "T1) NEED_LANG_EN branch taken";
+	} else if( .@lang == NEED_LANG_KR ) {
+		mes "T1) NEED_LANG_KR branch taken";
+	} else {
+		mes "T1) *** UNEXPECTED VALUE ***";
+	}
+	next;
+
+	// ---- T2 : mes -----------------------------------------------------------
+	mes "[NEED Phase 0.3]";
+	mes needtr( "T2) 안녕하세요. 무엇을 도와드릴까요?", "T2) Hello. How may I help you?" );
+	next;
+
+	// ---- T5 : colour code + item link --------------------------------------
+	mes "[NEED Phase 0.3]";
+	mes needtr( "T5) ^FF0000빨간색^000000 그리고 ^0000FF파란색^000000",
+	            "T5) ^FF0000red^000000 and ^0000FFblue^000000" );
+	mes needtr( "T5) 아이템: <ITEM>붉은 포션<INFO>501</INFO></ITEM>",
+	            "T5) Item: <ITEM>Red Potion<INFO>501</INFO></ITEM>" );
+
+	// ---- T6 : '%', '\n', empty string --------------------------------------
+	mes needtr( "T6) 확률 100% / 줄바꿈:\n두 번째 줄",
+	            "T6) rate 100% / newline:\nsecond line" );
+	mes "T6) empty EN arg -> [" + needtr( "KR", "" ) + "]";
+	mes "T6) empty KR arg -> [" + needtr( "", "EN" ) + "]";
+
+	debugmes "[NEED LANG PoC][T6] empty-EN=[" + needtr( "KR", "" ) + "]"
+	       + " empty-KR=[" + needtr( "", "EN" ) + "]"
+	       + " pct=[" + needtr( "100% KR", "100% EN" ) + "]"
+	       + " colour=[" + needtr( "^FF0000KR^000000", "^FF0000EN^000000" ) + "]";
+	next;
+
+	// ---- T3 : select() branch identity -------------------------------------
+	// The label text is translated but the returned index must NOT change.
+	mes "[NEED Phase 0.3]";
+	mes needtr( "T3) 항목을 선택하세요.", "T3) Pick an entry." );
+
+	.@sel = select(
+		needtr( "저장", "Save" ) + ":" +
+		needtr( "창고", "Storage" ) + ":" +
+		needtr( "취소", "Cancel" ) );
+
+	mes "[NEED Phase 0.3]";
+	mes "T3) select() returned " + .@sel;
+	debugmes "[NEED LANG PoC][T3] select() index = " + .@sel
+	       + " (must match the position the player clicked, in both languages)";
+
+	switch( .@sel ) {
+		case 1: mes needtr( "T3) 저장 선택 (index 1)", "T3) Save chosen (index 1)" ); break;
+		case 2: mes needtr( "T3) 창고 선택 (index 2)", "T3) Storage chosen (index 2)" ); break;
+		case 3: mes needtr( "T3) 취소 선택 (index 3)", "T3) Cancel chosen (index 3)" ); break;
+		default: mes "T3) *** UNEXPECTED INDEX ***"; break;
+	}
+	next;
+
+	// ---- T3b : menu() label binding ----------------------------------------
+	// Same check for `menu`, where each position is bound to an explicit label.
+	mes "[NEED Phase 0.3]";
+	mes needtr( "T3b) menu 라벨 테스트", "T3b) menu label test" );
+	menu needtr( "첫 번째", "First" ), L_First,
+	     needtr( "두 번째", "Second" ), L_Second,
+	     needtr( "그만", "Quit" ), L_Quit;
+
+L_First:
+	mes "[NEED Phase 0.3]";
+	mes "T3b) label L_First (position 1)";
+	debugmes "[NEED LANG PoC][T3b] menu jumped to L_First (position 1)";
+	goto L_Bottom;
+
+L_Second:
+	mes "[NEED Phase 0.3]";
+	mes "T3b) label L_Second (position 2)";
+	debugmes "[NEED LANG PoC][T3b] menu jumped to L_Second (position 2)";
+	goto L_Bottom;
+
+L_Quit:
+	mes "[NEED Phase 0.3]";
+	mes "T3b) label L_Quit (position 3)";
+	debugmes "[NEED LANG PoC][T3b] menu jumped to L_Quit (position 3)";
+	goto L_Bottom;
+
+L_Bottom:
+	// ---- T4 : dispbottom ---------------------------------------------------
+	dispbottom needtr( "T4) 하단 메시지 (KR)", "T4) bottom message (EN)" );
+	dispbottom needtr( "T4) ^FF0000색상 유지^000000", "T4) ^FF0000colour kept^000000" );
+
+	mes needtr( "T4) dispbottom 을 확인하세요.", "T4) check the bottom of your screen." );
+	close;
+	return;
+}
+
+//============================================================================
+//= T7 : no-RID context.
+//=
+//= OnInit and OnTimer run with no player attached. Both primitives must return the KR
+//= fallback quietly - no "player not attached" error and no aborted script - otherwise every
+//= existing Korean script that reaches them from an event would stop mid-way.
+//============================================================================
+-	script	NEED Lang Phase03 NoRID	-1,{
+	end;
+
+OnInit:
+	// reachable from any map / either map-server, for the post-map-change re-check
+	bindatcmd "needlangpoc","NEED Lang Phase03 NoRID::OnAtcmd";
+	// TEST ONLY cross-map-server hop. @warp cannot do it: ACMD_FUNC(mapmove) bails out with
+	// "Map not found" for a map owned by another map-server, before it ever reaches pc_setpos
+	// (and its warp_get_suggestions() then offers izlude_a, which stays on server A). The
+	// script warp command goes through pc_setpos -> chrif_changemapserver like a real portal.
+	bindatcmd "needlangwarp","NEED Lang Phase03 NoRID::OnAtcmdWarp";
+
+	.@lang = getneedlang();
+	.@txt$ = needtr( "KR-fallback", "EN-should-not-appear" );
+
+	debugmes "[NEED LANG PoC][T7 OnInit] getneedlang() = " + .@lang
+	       + " (expect " + NEED_LANG_KR + ")";
+	debugmes "[NEED LANG PoC][T7 OnInit] needtr() = " + .@txt$
+	       + " (expect KR-fallback)";
+	// prove the script really keeps running past both calls
+	debugmes "[NEED LANG PoC][T7 OnInit] script continued past both primitives";
+
+	initnpctimer;
+	end;
+
+OnTimer3000:
+	.@lang = getneedlang();
+	.@txt$ = needtr( "KR-fallback", "EN-should-not-appear" );
+
+	debugmes "[NEED LANG PoC][T7 OnTimer] getneedlang() = " + .@lang
+	       + " / needtr() = " + .@txt$ + " (expect 0 / KR-fallback)";
+
+	stopnpctimer;
+	end;
+
+OnAtcmd:
+	callfunc "F_NeedLangPoC";
+	end;
+
+OnAtcmdWarp:
+	if( strcharinfo(3) == "izlude" ) {
+		dispbottom "[NEED LANG PoC] hopping to prontera (map-server A)";
+		warp "prontera",155,180;
+	} else {
+		dispbottom "[NEED LANG PoC] hopping to izlude (map-server B)";
+		warp "izlude",128,100;
+	}
+	end;
+}

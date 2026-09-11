@@ -1,0 +1,83 @@
+//===== NEED Phase 0.6 - NPC display-name EN path PoC ========================
+//= TEST ONLY. Loaded only by conf/import/need_lang_test/map_a.conf.
+//=
+//= It does NOT edit a single operational script. It addresses existing NPCs by their UNIQUE
+//= name and sets an ENGLISH DISPLAY name for them:
+//=
+//=     setnpcnameen "<english>","<npc unique name>";
+//=
+//= What that changes (Phase 0.6, src/map/clif.cpp clif_display_name):
+//=   mouseover tooltip  ZC_ACK_REQNAMEALL_NPC   -> English for EN sessions only
+//=   client actor cache unit idle/walking name  -> English for EN sessions only
+//=                      (and therefore the NPC dialog window title, because ZC_SAY_DIALOG
+//=                       carries no name field at all)
+//=
+//= What it does NOT change:
+//=   nd->exname, npcname_db, event labels, doevent / donpcevent, duplicate(), OnTouch,
+//=   quest/warp interaction - the unique name and every reference stay byte-identical.
+//=   KR sessions receive exactly the bytes they received before.
+//=
+//= English names are NOT invented here. Each one comes from data already in the repository:
+//=   - Phase 0.5's official-identity recovery (phase05_display_name_probe.csv), i.e. the
+//=     official rAthena script for the same map/x/y/dir/sprite, or
+//=   - the script's own "::<unique name>" slot when that slot is already English, or
+//=   - established official terminology (Kafra).
+//=
+//= @npcnamepoc prints the server-side state so the operator can compare it with the screen.
+//============================================================================
+
+-	script	NEED NpcName Phase06	-1,{
+	end;
+
+OnInit:
+	bindatcmd "npcnamepoc","NEED NpcName Phase06::OnReport";
+
+	// ---- official town / battleground guides (both carry a #tag) ----------------
+	setnpcnameen "Lieutenant Ator","기욤 대기실#bat_b01";
+	setnpcnameen "Lieutenant Thelokus","크루아 대기실#bat_b01";
+
+	// ---- official quest NPCs (display name differs from the unique name) --------
+	setnpcnameen "Vincent","Vincent#ra_in01";
+	setnpcnameen "Logan","Logan#ra_in01";
+	setnpcnameen "Manson","Manson#ra_in01";
+
+	// ---- instance NPCs ----------------------------------------------------------
+	setnpcnameen "Point Merchant","Point Merchant#gef_m";
+	setnpcnameen "Dimensional Device","Dimensional Device#gefma";
+
+	// ---- official merchant ------------------------------------------------------
+	setnpcnameen "Black Beard Joe","Black Beard Joe#pa0829";
+
+	// ---- other / custom ---------------------------------------------------------
+	setnpcnameen "Wedding Staff","메리 해피f#w";
+	setnpcnameen "Bishop","보마스#w";
+	setnpcnameen "Single Army","솔로부대#Prontera";
+
+	// ---- NEED custom (established official term for this role) ------------------
+	setnpcnameen "Kafra","카프라";
+
+	debugmes "[NPC NAME][POC] english display names registered";
+	end;
+
+OnReport:
+	mes "[NEED Phase 0.6 PoC]";
+	mes needtr( "세션 언어: ", "session language: " ) + getneedlang()
+	    + needtr( " (0=KR / 1=EN)", " (0=KR / 1=EN)" );
+	mes " ";
+	mes "unique name  ->  EN display name";
+	mes "^777777(빈 값이면 등록 안 됨)^000000";
+	next;
+	mes "[NEED Phase 0.6 PoC]";
+	mes "기욤 대기실#bat_b01 -> " + getnpcnameen( "기욤 대기실#bat_b01" );
+	mes "Vincent#ra_in01 -> " + getnpcnameen( "Vincent#ra_in01" );
+	mes "Logan#ra_in01 -> " + getnpcnameen( "Logan#ra_in01" );
+	mes "Manson#ra_in01 -> " + getnpcnameen( "Manson#ra_in01" );
+	mes "Point Merchant#gef_m -> " + getnpcnameen( "Point Merchant#gef_m" );
+	next;
+	mes "[NEED Phase 0.6 PoC]";
+	mes "Dimensional Device#gefma -> " + getnpcnameen( "Dimensional Device#gefma" );
+	mes "Black Beard Joe#pa0829 -> " + getnpcnameen( "Black Beard Joe#pa0829" );
+	mes "메리 해피f#w -> " + getnpcnameen( "메리 해피f#w" );
+	mes "카프라 -> " + getnpcnameen( "카프라" );
+	close;
+}

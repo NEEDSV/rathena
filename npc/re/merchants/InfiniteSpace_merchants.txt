@@ -12,46 +12,46 @@
 // Equipment Enchanter
 lasa_in01,189,56,3	script	유물 강화사#pa0829_01	4_F_JOB_BLACKSMITH,{
 	if (!checkweight(1201,1) || (MaxWeight - Weight) < 1000) {
-		mes "아이템이 너무 많아서 대화를 진행할 수 없습니다.";
-		mes "물품들을 정리하신 후 다시 시도해 주세요.";
+		mes needtr("아이템이 너무 많아서 대화를 진행할 수 없습니다.", "You can't proceed with the conversation because you have a large quantity of items.");
+		mes needtr("물품들을 정리하신 후 다시 시도해 주세요.", "Please organize your items and try again.");
 		close;
 	}
 	disable_items;
 	.@stone_id = 6905;
 	.@stone_name$ = getitemname(.@stone_id);
 	function equip_check;
-	mes "[유물 강화사]";
-	mes "무한의 공간에서 획득한 장비를 강화하고 싶다면 잘 찾아오셨습니다.";
-	mes .@stone_name$ + "을 가지고 계신가요?";
+	mes needtr("[유물 강화사]", "[ Artifact Enhancer ]");
+	mes needtr("무한의 공간에서 획득한 장비를 강화하고 싶다면 잘 찾아오셨습니다.", "If you're looking to strengthen the equipment that you've obtained in the Infinite Space, you have come to the right place.");
+	mes .@stone_name$ + needtr("을 가지고 계신가요?", " - do you have any?");
 	next;
-	switch (select("인챈트 방법을 듣는다:장비를 인챈트한다:인챈트를 초기화한다:인챈트 리스트 확인")) {
+	switch (select(needtr("인챈트 방법을 듣는다:장비를 인챈트한다:인챈트를 초기화한다:인챈트 리스트 확인", "How do I enchant my equipment?:Enchant equipment.:Initialize equipment's enchant.:Check the enchant list"))) {
 		case 1:
-			mes "[유물 강화사]";
-			mes .@stone_name$ + "은 파로스 등대 아래의 무한의 공간을 탐험하면 얻을 수 있습니다.";
+			mes needtr("[유물 강화사]", "[ Artifact Enhancer ]");
+			mes .@stone_name$ + needtr("은 파로스 등대 아래의 무한의 공간을 탐험하면 얻을 수 있습니다.", " can be obtained by exploring the Infinite Space beneath the Pharos Lighthouse.");
 			next;
-			mes "[유물 강화사]";
-			mes "그 재료를 가져오시면 무한의 공간에서 얻은 장비에 특별한 힘을 부여해 드릴 수 있습니다.";
+			mes needtr("[유물 강화사]", "[ Artifact Enhancer ]");
+			mes needtr("그 재료를 가져오시면 무한의 공간에서 얻은 장비에 특별한 힘을 부여해 드릴 수 있습니다.", "For that material, I can reinforce the equipment that you got from the Infinite Space.");
 			next;
-			mes "[유물 강화사]";
-			mes "인챈트는 세 번째와 네 번째 슬롯에만 부여할 수 있습니다.";
+			mes needtr("[유물 강화사]", "[ Artifact Enhancer ]");
+			mes needtr("인챈트는 세 번째와 네 번째 슬롯에만 부여할 수 있습니다.", "I can only enchant the 3rd and the 4th slot.");
 			next;
-			mes "[유물 강화사]";
-			mes "인챈트할 때 장비가 파괴되지는 않지만, 인챈트를 초기화할 때는 장비가 파괴될 수 있습니다.";
+			mes needtr("[유물 강화사]", "[ Artifact Enhancer ]");
+			mes needtr("인챈트할 때 장비가 파괴되지는 않지만, 인챈트를 초기화할 때는 장비가 파괴될 수 있습니다.", "There is no chance of the equipment being destroyed during the enchanting process, but there's a high probability that it will be destroyed when initializing the enchants.");
 			next;
-			mes "[유물 강화사]";
-			mes "인챈트가 필요할 때 언제든 다시 찾아오세요.";
+			mes needtr("[유물 강화사]", "[ Artifact Enhancer ]");
+			mes needtr("인챈트가 필요할 때 언제든 다시 찾아오세요.", "Then come visit me when you want to enchant the equipment.");
 			break;
 
 		case 2:
 			.@stone_id = 6905;
 			.@fee = 20;
-			mes "[유물 강화사]";
-			mes "인챈트할 장비가 장착된 부위를 선택해 주세요.";
+			mes needtr("[유물 강화사]", "[ Artifact Enhancer ]");
+			mes needtr("인챈트할 장비가 장착된 부위를 선택해 주세요.", "Please select the equipment that you want to enchant.");
 			next;
-			switch (select("취소:무기:갑옷:신발:걸칠것:투구")) {
+			switch (select(needtr("취소:무기:갑옷:신발:걸칠것:투구", "Cancel:Weapon:Armor:Shoes:Garment:Helm"))) {
 				case 1:
-					mes "[유물 강화사]";
-					mes "인챈트가 필요할 때 언제든 다시 찾아오세요.";
+					mes needtr("[유물 강화사]", "[ Artifact Enhancer ]");
+					mes needtr("인챈트가 필요할 때 언제든 다시 찾아오세요.", "Then come visit me when you want to enchant the equipment.");
 					close;
 
 				case 2:
@@ -82,8 +82,8 @@ lasa_in01,189,56,3	script	유물 강화사#pa0829_01	4_F_JOB_BLACKSMITH,{
 				.@check[.@i] = getequipcardid(.@part,.@i);
 			}
 			if (.@card[2] > 0) {
-				mes "[유물 강화사]";
-				mes "이 장비에는 이미 인챈트가 두 개 부여되어 있어 더 이상 인챈트할 수 없습니다.";
+				mes needtr("[유물 강화사]", "[ Artifact Enhancer ]");
+				mes needtr("이 장비에는 이미 인챈트가 두 개 부여되어 있어 더 이상 인챈트할 수 없습니다.", "I can only enchant up to the third slot. Your equipment can't be further enchanted.");
 				close;
 			}
 			switch (.@part) {
@@ -109,31 +109,31 @@ lasa_in01,189,56,3	script	유물 강화사#pa0829_01	4_F_JOB_BLACKSMITH,{
 			}
 			.@slot = (.@card[3] > 0 ? 2 : 3);
 			.@index = (.@slot == 3 ? 0 : 1);
-			mes "[유물 강화사]";
-			mes "인챈트 계열은 물리, 마법, 원거리 중 하나를 선택할 수 있습니다. 비용은 " + .@stone_name$ + " " + .@fee + "개입니다.";
-			mes "인챈트 자체는 실패하거나 장비가 파괴되지 않습니다.";
+			mes needtr("[유물 강화사]", "[ Artifact Enhancer ]");
+			mes needtr("인챈트 계열은 물리, 마법, 원거리 중 하나를 선택할 수 있습니다. 비용은 ", "You can choose one of the Physical, Magical or Ranged series. The fee is ") + .@stone_name$ + " " + .@fee + needtr("개입니다.", " pcs.");
+			mes needtr("인챈트 자체는 실패하거나 장비가 파괴되지 않습니다.", "The enchant itself never fails and never destroys the equipment.");
 			next;
-			.@type = select("취소:물리:마법:원거리");
+			.@type = select(needtr("취소:물리:마법:원거리", "Cancel:Physical:Magical:Ranged"));
 			if (.@type == 1) {
-				mes "[유물 강화사]";
-				mes "인챈트가 필요할 때 언제든 다시 찾아오세요.";
+				mes needtr("[유물 강화사]", "[ Artifact Enhancer ]");
+				mes needtr("인챈트가 필요할 때 언제든 다시 찾아오세요.", "Then come visit me when you want to enchant the equipment.");
 				close;
 			}
 			.@type -= 2;
-			mes "[유물 강화사]";
+			mes needtr("[유물 강화사]", "[ Artifact Enhancer ]");
 			if (.@slot == 3)
-				mes "그럼 첫 번째 인챈트를 진행하겠습니다.";
+				mes needtr("그럼 첫 번째 인챈트를 진행하겠습니다.", "Okay, let's begin the first enchantment.");
 			else
-				mes "그럼 두 번째 인챈트를 진행하겠습니다.";
+				mes needtr("그럼 두 번째 인챈트를 진행하겠습니다.", "Okay, let's proceed with the second enchantment.");
 			next;
-			if (select("나중에 다시 온다:계속 진행한다") == 1) {
-				mes "[유물 강화사]";
-				mes "마음이 바뀌면 언제든 다시 찾아오세요.";
+			if (select(needtr("나중에 다시 온다:계속 진행한다", "I'll return later.:Please proceed.")) == 1) {
+				mes needtr("[유물 강화사]", "[ Artifact Enhancer ]");
+				mes needtr("마음이 바뀌면 언제든 다시 찾아오세요.", "If you change your mind, just return to me.");
 				close;
 			}
 			if (countitem(.@stone_id) < .@fee) {
-				mes "[유물 강화사]";
-				mes .@stone_name$ + "이 부족합니다.";
+				mes needtr("[유물 강화사]", "[ Artifact Enhancer ]");
+				mes .@stone_name$ + needtr("이 부족합니다.", " - you do not have enough.");
 				close;
 			}
 			explode(.@T$,.@enchant$[.@index],":");
@@ -146,21 +146,21 @@ lasa_in01,189,56,3	script	유물 강화사#pa0829_01	4_F_JOB_BLACKSMITH,{
 			delequip .@part;
 			getitem2 .@equip_id,1,1,.@refine,0,.@card[0],.@card[1],.@card[2],.@card[3];
 			specialeffect2 EF_REPAIRWEAPON;
-			mes "[유물 강화사]";
-			mes "완료되었습니다. 장비를 확인해 보세요.";
+			mes needtr("[유물 강화사]", "[ Artifact Enhancer ]");
+			mes needtr("완료되었습니다. 장비를 확인해 보세요.", "Hm. It was well done. Check your equipment at once.");
 			break;
 		
 		case 3:
 			.@stone_id = 6905;
 			.@fee = 30;
 			.@break_chance = 30;
-			mes "[유물 강화사]";
-			mes "인챈트를 초기화할 장비가 장착된 부위를 선택해 주세요.";
+			mes needtr("[유물 강화사]", "[ Artifact Enhancer ]");
+			mes needtr("인챈트를 초기화할 장비가 장착된 부위를 선택해 주세요.", "Please select the equipment that you want to enchant.");
 			next;
-			switch (select("취소:무기:갑옷:신발:걸칠것:투구")) {
+			switch (select(needtr("취소:무기:갑옷:신발:걸칠것:투구", "Cancel:Weapon:Armor:Shoes:Garment:Helm"))) {
 				case 1:
-					mes "[유물 강화사]";
-					mes "인챈트가 필요할 때 언제든 다시 찾아오세요.";
+					mes needtr("[유물 강화사]", "[ Artifact Enhancer ]");
+					mes needtr("인챈트가 필요할 때 언제든 다시 찾아오세요.", "Then come visit me when you want to enchant the equipment.");
 					close;
 
 				case 2:
@@ -191,22 +191,22 @@ lasa_in01,189,56,3	script	유물 강화사#pa0829_01	4_F_JOB_BLACKSMITH,{
 				.@check[.@i] = .@card[.@i];
 			}
 			if (.@card[3] == 0) {
-				mes "[유물 강화사]";
-				mes "이 장비에는 초기화할 인챈트가 없습니다.";
+				mes needtr("[유물 강화사]", "[ Artifact Enhancer ]");
+				mes needtr("이 장비에는 초기화할 인챈트가 없습니다.", "Your equipment doesn't have any enchant on it.");
 				close;
 			}
-			mes "[유물 강화사]";
-			mes "초기화에는 " + .@stone_name$ + " " + .@fee + "개가 필요하며, ^FF000030% 확률로 장비가 파괴^000000됩니다.";
-			mes "그래도 진행하시겠습니까?";
+			mes needtr("[유물 강화사]", "[ Artifact Enhancer ]");
+			mes needtr("초기화에는 ", "Initializing takes ") + .@stone_name$ + " " + .@fee + needtr("개가 필요하며, ^FF000030% 확률로 장비가 파괴^000000됩니다.", " pcs, and there is a ^FF000030% chance the equipment is destroyed^000000.");
+			mes needtr("그래도 진행하시겠습니까?", "Still want to proceed?");
 			next;
-			if (select("취소:초기화한다") == 1) {
-				mes "[유물 강화사]";
-				mes "마음이 바뀌면 언제든 다시 찾아오세요.";
+			if (select(needtr("취소:초기화한다", "Quit:Proceed")) == 1) {
+				mes needtr("[유물 강화사]", "[ Artifact Enhancer ]");
+				mes needtr("마음이 바뀌면 언제든 다시 찾아오세요.", "If you change your mind, just return to me.");
 				close;
 			}
 			if (countitem(.@stone_id) < .@fee) {
-				mes "[유물 강화사]";
-				mes .@stone_name$ + "이 부족합니다.";
+				mes needtr("[유물 강화사]", "[ Artifact Enhancer ]");
+				mes .@stone_name$ + needtr("이 부족합니다.", " - you do not have enough.");
 				close;
 			}
 			delitem .@stone_id,.@fee;
@@ -216,12 +216,12 @@ lasa_in01,189,56,3	script	유물 강화사#pa0829_01	4_F_JOB_BLACKSMITH,{
 			if (rand(1,100) > .@break_chance) {
 				getitem2 .@equip_id,1,1,.@refine,0,.@card[0],.@card[1],0,0;
 				specialeffect2 EF_REPAIRWEAPON;
-				mes "[유물 강화사]";
-				mes "완료되었습니다. 장비를 확인해 보세요.";
+				mes needtr("[유물 강화사]", "[ Artifact Enhancer ]");
+				mes needtr("완료되었습니다. 장비를 확인해 보세요.", "Hm. It was well done. Check your equipment at once.");
 			} else {
 				specialeffect2 EF_REFINEFAIL;
-				mes "[유물 강화사]";
-				mes "경고드렸던 대로 장비가 파괴되었습니다.";
+				mes needtr("[유물 강화사]", "[ Artifact Enhancer ]");
+				mes needtr("경고드렸던 대로 장비가 파괴되었습니다.", "Well, I did warn you. You aren't lucky, eh?");
 			}
 			break;
 
@@ -234,13 +234,13 @@ lasa_in01,189,56,3	script	유물 강화사#pa0829_01	4_F_JOB_BLACKSMITH,{
 	function	equip_check	{
 		setarray .@equip_id,1994,1938,13323,13126,28703,2024,16038,21014,28105,18128,15141,22075,20779,19033;
 		if (!getarg(0)) {
-			mes "[유물 강화사]";
-			mes "선택한 부위에 장비가 착용되어 있지 않습니다.";
+			mes needtr("[유물 강화사]", "[ Artifact Enhancer ]");
+			mes needtr("선택한 부위에 장비가 착용되어 있지 않습니다.", "Did you take off your equipment?");
 			close;
 		}
 		if (inarray(.@equip_id,getarg(0)) == -1) {
-			mes "[유물 강화사]";
-			mes "이 장비는 인챈트할 수 없습니다. 무한의 공간에서 획득하는 무한/균열 장비만 인챈트할 수 있습니다.";
+			mes needtr("[유물 강화사]", "[ Artifact Enhancer ]");
+			mes needtr("이 장비는 인챈트할 수 없습니다. 무한의 공간에서 획득하는 무한/균열 장비만 인챈트할 수 있습니다.", "This equipment is not suitable for enchanting. Don't forget that only the infinite equipment series can be enchanted.");
 			close;
 		}
 		return;
@@ -250,103 +250,103 @@ Oninit:
 	end;
 }
 function	script	F_ShowInfiniteSpaceEnchantList	{
-	mes "[유물 강화사]";
-	mes "장비 종류별로 실제 부여될 수 있는 인챈트 옵션을 확인할 수 있습니다.";
-	mes "각 단계에서 선택한 ^0000FF물리 / 마법 / 원거리^000000 계열 안의 옵션 중 하나가 무작위로 부여됩니다.";
+	mes needtr("[유물 강화사]", "[ Artifact Enhancer ]");
+	mes needtr("장비 종류별로 실제 부여될 수 있는 인챈트 옵션을 확인할 수 있습니다.", "You can check the enchant options that can actually be granted for each equipment type.");
+	mes needtr("각 단계에서 선택한 ^0000FF물리 / 마법 / 원거리^000000 계열 안의 옵션 중 하나가 무작위로 부여됩니다.", "At each step, one option from the ^0000FFPhysical / Magical / Ranged^000000 series you chose is granted at random.");
 	next;
 
 	while (true) {
 		switch(select(
-			"무기",
-			"갑옷",
-			"신발",
-			"걸칠것",
-			"투구",
-			"닫기"
+			needtr("무기", "Weapon"),
+			needtr("갑옷", "Clothes"),
+			needtr("신발", "Shoes"),
+			needtr("걸칠것", "Garment"),
+			needtr("투구", "Headgear"),
+			needtr("닫기", "Close")
 			)) {
 
 		case 1:
 			setdialogsize(330,420);
-			mes "[유물 강화사]";
-			mes "^0000FF[무기 - 첫 번째 인챈트]^000000";
-			callfunc "F_ShowInfiniteSpaceEnchantGroup","물리",4700,4701;
-			callfunc "F_ShowInfiniteSpaceEnchantGroup","마법",4710,4711;
-			callfunc "F_ShowInfiniteSpaceEnchantGroup","원거리",4720,4721;
+			mes needtr("[유물 강화사]", "[ Artifact Enhancer ]");
+			mes needtr("^0000FF[무기 - 첫 번째 인챈트]^000000", "^0000FF[Weapon - 1st enchant]^000000");
+			callfunc "F_ShowInfiniteSpaceEnchantGroup",needtr("물리", "Physical"),4700,4701;
+			callfunc "F_ShowInfiniteSpaceEnchantGroup",needtr("마법", "Magical"),4710,4711;
+			callfunc "F_ShowInfiniteSpaceEnchantGroup",needtr("원거리", "Ranged"),4720,4721;
 			next;
 
-			mes "[유물 강화사]";
-			mes "^0000FF[무기 - 두 번째 인챈트]^000000";
-			callfunc "F_ShowInfiniteSpaceEnchantGroup","물리",4811,4810,4809,4808,4820,4821,4822,4823;
-			callfunc "F_ShowInfiniteSpaceEnchantGroup","마법",4815,4814,4813,4812,4826,4827,4828,4829;
-			callfunc "F_ShowInfiniteSpaceEnchantGroup","원거리",4832,4833,4834,4835,4836,4837,4838,4839;
+			mes needtr("[유물 강화사]", "[ Artifact Enhancer ]");
+			mes needtr("^0000FF[무기 - 두 번째 인챈트]^000000", "^0000FF[Weapon - 2nd enchant]^000000");
+			callfunc "F_ShowInfiniteSpaceEnchantGroup",needtr("물리", "Physical"),4811,4810,4809,4808,4820,4821,4822,4823;
+			callfunc "F_ShowInfiniteSpaceEnchantGroup",needtr("마법", "Magical"),4815,4814,4813,4812,4826,4827,4828,4829;
+			callfunc "F_ShowInfiniteSpaceEnchantGroup",needtr("원거리", "Ranged"),4832,4833,4834,4835,4836,4837,4838,4839;
 			next;
 			break;
 
 		case 2:
 			setdialogsize(330,420);
-			mes "[유물 강화사]";
-			mes "^0000FF[갑옷 - 첫 번째 인챈트]^000000";
-			callfunc "F_ShowInfiniteSpaceEnchantGroup","물리",4700,4701,4702,4703;
-			callfunc "F_ShowInfiniteSpaceEnchantGroup","마법",4710,4711,4712,4713;
-			callfunc "F_ShowInfiniteSpaceEnchantGroup","원거리",4720,4721,4722,4723;
+			mes needtr("[유물 강화사]", "[ Artifact Enhancer ]");
+			mes needtr("^0000FF[갑옷 - 첫 번째 인챈트]^000000", "^0000FF[Armor - 1st enchant]^000000");
+			callfunc "F_ShowInfiniteSpaceEnchantGroup",needtr("물리", "Physical"),4700,4701,4702,4703;
+			callfunc "F_ShowInfiniteSpaceEnchantGroup",needtr("마법", "Magical"),4710,4711,4712,4713;
+			callfunc "F_ShowInfiniteSpaceEnchantGroup",needtr("원거리", "Ranged"),4720,4721,4722,4723;
 			next;
 
-			mes "[유물 강화사]";
-			mes "^0000FF[갑옷 - 두 번째 인챈트]^000000";
-			callfunc "F_ShowInfiniteSpaceEnchantGroup","물리",4795,4796,4797;
-			callfunc "F_ShowInfiniteSpaceEnchantGroup","마법",4870,4871,4800;
-			callfunc "F_ShowInfiniteSpaceEnchantGroup","원거리",4870,4871,4800;
+			mes needtr("[유물 강화사]", "[ Artifact Enhancer ]");
+			mes needtr("^0000FF[갑옷 - 두 번째 인챈트]^000000", "^0000FF[Armor - 2nd enchant]^000000");
+			callfunc "F_ShowInfiniteSpaceEnchantGroup",needtr("물리", "Physical"),4795,4796,4797;
+			callfunc "F_ShowInfiniteSpaceEnchantGroup",needtr("마법", "Magical"),4870,4871,4800;
+			callfunc "F_ShowInfiniteSpaceEnchantGroup",needtr("원거리", "Ranged"),4870,4871,4800;
 			next;
 			break;
 
 		case 3:
 			setdialogsize(330,420);
-			mes "[유물 강화사]";
-			mes "^0000FF[신발 - 첫 번째 인챈트]^000000";
-			callfunc "F_ShowInfiniteSpaceEnchantGroup","물리",4700,4701,4702,4703;
-			callfunc "F_ShowInfiniteSpaceEnchantGroup","마법",4710,4711,4712,4713;
-			callfunc "F_ShowInfiniteSpaceEnchantGroup","원거리",4720,4721,4722,4723;
+			mes needtr("[유물 강화사]", "[ Artifact Enhancer ]");
+			mes needtr("^0000FF[신발 - 첫 번째 인챈트]^000000", "^0000FF[Shoes - 1st enchant]^000000");
+			callfunc "F_ShowInfiniteSpaceEnchantGroup",needtr("물리", "Physical"),4700,4701,4702,4703;
+			callfunc "F_ShowInfiniteSpaceEnchantGroup",needtr("마법", "Magical"),4710,4711,4712,4713;
+			callfunc "F_ShowInfiniteSpaceEnchantGroup",needtr("원거리", "Ranged"),4720,4721,4722,4723;
 			next;
 
-			mes "[유물 강화사]";
-			mes "^0000FF[신발 - 두 번째 인챈트]^000000";
-			callfunc "F_ShowInfiniteSpaceEnchantGroup","물리",4795,4796,4797;
-			callfunc "F_ShowInfiniteSpaceEnchantGroup","마법",4870,4871,4800;
-			callfunc "F_ShowInfiniteSpaceEnchantGroup","원거리",4870,4871,4800;
+			mes needtr("[유물 강화사]", "[ Artifact Enhancer ]");
+			mes needtr("^0000FF[신발 - 두 번째 인챈트]^000000", "^0000FF[Shoes - 2nd enchant]^000000");
+			callfunc "F_ShowInfiniteSpaceEnchantGroup",needtr("물리", "Physical"),4795,4796,4797;
+			callfunc "F_ShowInfiniteSpaceEnchantGroup",needtr("마법", "Magical"),4870,4871,4800;
+			callfunc "F_ShowInfiniteSpaceEnchantGroup",needtr("원거리", "Ranged"),4870,4871,4800;
 			next;
 			break;
 
 		case 4:
 			setdialogsize(330,420);
-			mes "[유물 강화사]";
-			mes "^0000FF[걸칠것 - 첫 번째 인챈트]^000000";
-			callfunc "F_ShowInfiniteSpaceEnchantGroup","물리",4700,4701,4702,4703;
-			callfunc "F_ShowInfiniteSpaceEnchantGroup","마법",4710,4711,4712,4713;
-			callfunc "F_ShowInfiniteSpaceEnchantGroup","원거리",4720,4721,4722,4723;
+			mes needtr("[유물 강화사]", "[ Artifact Enhancer ]");
+			mes needtr("^0000FF[걸칠것 - 첫 번째 인챈트]^000000", "^0000FF[Garment - 1st enchant]^000000");
+			callfunc "F_ShowInfiniteSpaceEnchantGroup",needtr("물리", "Physical"),4700,4701,4702,4703;
+			callfunc "F_ShowInfiniteSpaceEnchantGroup",needtr("마법", "Magical"),4710,4711,4712,4713;
+			callfunc "F_ShowInfiniteSpaceEnchantGroup",needtr("원거리", "Ranged"),4720,4721,4722,4723;
 			next;
 
-			mes "[유물 강화사]";
-			mes "^0000FF[걸칠것 - 두 번째 인챈트]^000000";
-			callfunc "F_ShowInfiniteSpaceEnchantGroup","물리",4861,4862,4867,4868,4900;
-			callfunc "F_ShowInfiniteSpaceEnchantGroup","마법",4861,4862,4867,4868,4900;
-			callfunc "F_ShowInfiniteSpaceEnchantGroup","원거리",4861,4862,4867,4868,4900;
+			mes needtr("[유물 강화사]", "[ Artifact Enhancer ]");
+			mes needtr("^0000FF[걸칠것 - 두 번째 인챈트]^000000", "^0000FF[Garment - 2nd enchant]^000000");
+			callfunc "F_ShowInfiniteSpaceEnchantGroup",needtr("물리", "Physical"),4861,4862,4867,4868,4900;
+			callfunc "F_ShowInfiniteSpaceEnchantGroup",needtr("마법", "Magical"),4861,4862,4867,4868,4900;
+			callfunc "F_ShowInfiniteSpaceEnchantGroup",needtr("원거리", "Ranged"),4861,4862,4867,4868,4900;
 			next;
 			break;
 
 		case 5:
 			setdialogsize(330,420);
-			mes "[유물 강화사]";
-			mes "^0000FF[투구 - 첫 번째 인챈트]^000000";
-			callfunc "F_ShowInfiniteSpaceEnchantGroup","물리",4700,4701,4702,4703;
-			callfunc "F_ShowInfiniteSpaceEnchantGroup","마법",4710,4711,4712,4713;
-			callfunc "F_ShowInfiniteSpaceEnchantGroup","원거리",4720,4721,4722,4723;
+			mes needtr("[유물 강화사]", "[ Artifact Enhancer ]");
+			mes needtr("^0000FF[투구 - 첫 번째 인챈트]^000000", "^0000FF[Helm - 1st enchant]^000000");
+			callfunc "F_ShowInfiniteSpaceEnchantGroup",needtr("물리", "Physical"),4700,4701,4702,4703;
+			callfunc "F_ShowInfiniteSpaceEnchantGroup",needtr("마법", "Magical"),4710,4711,4712,4713;
+			callfunc "F_ShowInfiniteSpaceEnchantGroup",needtr("원거리", "Ranged"),4720,4721,4722,4723;
 			next;
 
-			mes "[유물 강화사]";
-			mes "^0000FF[투구 - 두 번째 인챈트]^000000";
-			callfunc "F_ShowInfiniteSpaceEnchantGroup","물리",4861,4862,4867,4868,4900;
-			callfunc "F_ShowInfiniteSpaceEnchantGroup","마법",4861,4862,4867,4868,4900;
-			callfunc "F_ShowInfiniteSpaceEnchantGroup","원거리",4861,4862,4867,4868,4900;
+			mes needtr("[유물 강화사]", "[ Artifact Enhancer ]");
+			mes needtr("^0000FF[투구 - 두 번째 인챈트]^000000", "^0000FF[Helm - 2nd enchant]^000000");
+			callfunc "F_ShowInfiniteSpaceEnchantGroup",needtr("물리", "Physical"),4861,4862,4867,4868,4900;
+			callfunc "F_ShowInfiniteSpaceEnchantGroup",needtr("마법", "Magical"),4861,4862,4867,4868,4900;
+			callfunc "F_ShowInfiniteSpaceEnchantGroup",needtr("원거리", "Ranged"),4861,4862,4867,4868,4900;
 			next;
 			break;
 

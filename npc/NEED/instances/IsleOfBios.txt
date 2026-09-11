@@ -9,16 +9,16 @@
 
 moro_cav,50,64,5	script	노란 씨앗#bios	CLEAR_NPC,{
 	if (BaseLevel < 160) {
-		mes "^ff0000Base 레벨 160 미만인 캐릭터는 이 던전에 입장할 수 없습니다.^000000";
+		mes needtr("^ff0000Base 레벨 160 미만인 캐릭터는 이 던전에 입장할 수 없습니다.^000000", "^ff0000Characters below Level 160 cannot enter this dungeon.^000000");
 		close;
 	}
 	if (isbegin_quest(15006) == 0) {
-		mes "^ff0000먼저 방황하는 노인을 만나야 이 던전에 입장할 수 있습니다.^000000";
+		mes needtr("^ff0000먼저 방황하는 노인을 만나야 이 던전에 입장할 수 있습니다.^000000", "^ff0000You first must meet Wandering Old Man to gain access to this dungeon.^000000");
 		close;
 	}
 	.@party_id = getcharid(1);
 	if (.@party_id < 1) {
-		mes "^ff0000이 던전에 입장하려면 1명 이상의 파티를 생성하거나 가입해야 합니다.^000000";
+		mes needtr("^ff0000이 던전에 입장하려면 1명 이상의 파티를 생성하거나 가입해야 합니다.^000000", "^ff0000You first must form/join a party of at least 1 person to enter this dungeon.^000000");
 		close;
 	}
 	switch( checkquest(15005,PLAYTIME) ) {
@@ -27,7 +27,7 @@ moro_cav,50,64,5	script	노란 씨앗#bios	CLEAR_NPC,{
 	case 0:
 	case 1:
 		if (checkquest(15007,PLAYTIME) == 2) {// 재입장 유예 시간 5분
-			mes "^ff0000마지막 입장 후 23시간 동안 이 메모리얼 던전에 입장할 수 없습니다.^000000";
+			mes needtr("^ff0000마지막 입장 후 23시간 동안 이 메모리얼 던전에 입장할 수 없습니다.^000000", "^ff0000This Memorial Dungeon cannot be accessed for 23 hours after your last visit.^000000");
 			close;
 		}
 		switch( checkquest(15008,PLAYTIME) ) {
@@ -35,7 +35,7 @@ moro_cav,50,64,5	script	노란 씨앗#bios	CLEAR_NPC,{
 			break;
 		case 0:
 		case 1:
-			mes "^0000ff마지막 입장 후 23시간 동안 이 메모리얼 던전에 입장할 수 없습니다.^000000";
+			mes needtr("^0000ff마지막 입장 후 23시간 동안 이 메모리얼 던전에 입장할 수 없습니다.^000000", "^0000ffThis Memorial Dungeon cannot be accessed for 23 hours after your last visit.^000000");
 			close;
 		case 2:
 			break;
@@ -49,12 +49,12 @@ moro_cav,50,64,5	script	노란 씨앗#bios	CLEAR_NPC,{
 		break;
 	}
 	if (is_party_leader() == true)
-		.@create$ = "메모리얼 던전 생성";
-	switch( select( .@create$, "비오스의 섬 입장", "취소" ) ) {
+		.@create$ = needtr("메모리얼 던전 생성", "Create Memorial dungeon.");
+	switch( select( .@create$, needtr("비오스의 섬 입장", "Enter Isle of Bios."), needtr("취소", "Cancel.") ) ) {
 	case 1:
 		instance_create("비오스의 섬");
-		mes "^ff0000메모리얼 던전을 생성했습니다.^000000";
-		mes "^ff0000다시 말을 걸어 입장해 주세요.^000000";
+		mes needtr("^ff0000메모리얼 던전을 생성했습니다.^000000", "^ff0000Created the Memorial dungeon.^000000");
+		mes needtr("^ff0000다시 말을 걸어 입장해 주세요.^000000", "^ff0000Please click and press Enter again.^000000");
 		close;
 	case 2:
 		switch( instance_enter("비오스의 섬") ) {
@@ -62,13 +62,13 @@ moro_cav,50,64,5	script	노란 씨앗#bios	CLEAR_NPC,{
 		case IE_NOINSTANCE:
 		case IE_OTHER:
 			if (is_party_leader(.@party_id) == false) {
-				mes "^ff0000마지막 입장 후 23시간 동안 이 메모리얼 던전에 입장할 수 없습니다.^000000";
+				mes needtr("^ff0000마지막 입장 후 23시간 동안 이 메모리얼 던전에 입장할 수 없습니다.^000000", "^ff0000Please note that This Memorial Dungeon cannot be accessed for 23 hours after your last visit.^000000");
 				next;
 			}
-			mes "^ff0000파티장이 아직 차원의 균열을 생성하지 않았습니다.^000000";
+			mes needtr("^ff0000파티장이 아직 차원의 균열을 생성하지 않았습니다.^000000", "^ff0000Your party leader has not yet created a Crack of Time.^000000");
 			close;
 		case IE_OK:
-			mapannounce "moro_cav", getpartyname( getcharid(1) ) + " 파티의 " + strcharinfo(0) + " 님이 비오스의 섬에 입장합니다.",bc_map,"0x00FF99";
+			mapannouncelang "moro_cav", getpartyname( getcharid(1) ) + " 파티의 " + strcharinfo(0) + " 님이 비오스의 섬에 입장합니다.", getpartyname( getcharid(1) ) + " party's " + strcharinfo(0) + " is entering Isle of Bios.",bc_map,"0x00FF99";
 			if (isbegin_quest(15005) == 0) {
 				setquest 15005;// 메모리얼 던전: 비오스의 섬
 				setquest 15007;// 메모리얼 던전: 비오스의 섬
@@ -90,45 +90,45 @@ OnInit:
 
 moro_cav,45,60,5	script	방황 노인#sara	4_M_EINOLD,{
 	if (BaseLevel < 160) {
-		mes "[방황하는 노인]";
+		mes needtr("[방황하는 노인]", "[Wandering Old Man]");
 		mes "...";
-		mes "아직은 이곳에 들어갈 준비가 되지 않은 것 같군.";
-		mes "Base 레벨 160 이상이 되어야 하네.";
+		mes needtr("아직은 이곳에 들어갈 준비가 되지 않은 것 같군.", "I'm afraid you're not up for this yet.");
+		mes needtr("Base 레벨 160 이상이 되어야 하네.", "You have to be at least Level 160.");
 		close;
 	}
 	if (isbegin_quest(15006) == 0) {
-		mes "[방황하는 노인]";
-		mes "...여긴 어디지?";
+		mes needtr("[방황하는 노인]", "[Wandering Old Man]");
+		mes needtr("...여긴 어디지?", "...Where am I?");
 		next;
-		mes "[방황하는 노인]";
-		mes "언제부터였는지는 모르겠네...";
-		mes "오랫동안 같은 악몽이 나를 괴롭히고 있다네.";
+		mes needtr("[방황하는 노인]", "[Wandering Old Man]");
+		mes needtr("언제부터였는지는 모르겠네...", "I don't know when it began...");
+		mes needtr("오랫동안 같은 악몽이 나를 괴롭히고 있다네.", "The same nightmare has been plaguing me for a long time.");
 		next;
-		mes "[방황하는 노인]";
-		mes "꿈속에서 마왕 모로크는 백 년의 잠에서 깨어나 세상을 어둠과 공포로 뒤덮었지.";
+		mes needtr("[방황하는 노인]", "[Wandering Old Man]");
+		mes needtr("꿈속에서 마왕 모로크는 백 년의 잠에서 깨어나 세상을 어둠과 공포로 뒤덮었지.", "In my nightmare, Demon King Morocc awakens from his century-long slumber and fills the world with darkness and horror.");
 		next;
-		mes "[방황하는 노인]";
-		mes "그 악몽에서 본 선명한 광경을 떨쳐낼 수 없었네. 미친 사람처럼 정처 없이 헤매다 결국 이곳에 도착했지.";
+		mes needtr("[방황하는 노인]", "[Wandering Old Man]");
+		mes needtr("그 악몽에서 본 선명한 광경을 떨쳐낼 수 없었네. 미친 사람처럼 정처 없이 헤매다 결국 이곳에 도착했지.", "I couldn't shake off the vivid images I saw in that nightmare. I've wandered off and around like a madman and finally arrived here.");
 		next;
-		mes "[방황하는 노인]";
-		mes "꿈에서 이곳을 보았네. 마신 모로크가 잠에서 깨어나는 장소였지. 내 꿈은 앞으로 일어날지도 모르는 미래를 보여 준 것 같네.";
+		mes needtr("[방황하는 노인]", "[Wandering Old Man]");
+		mes needtr("꿈에서 이곳을 보았네. 마신 모로크가 잠에서 깨어나는 장소였지. 내 꿈은 앞으로 일어날지도 모르는 미래를 보여 준 것 같네.", "I saw this place in my dream. It's where Demon God Morocc awakens from his slumber. My dream was showing me a possible future.");
 		next;
-		mes "[방황하는 노인]";
-		mes "내 꿈이 정말 예지몽이라면, 저 노란 씨앗 안에는 마신 모로크의 세력이 도사리고 있을 걸세.";
+		mes needtr("[방황하는 노인]", "[Wandering Old Man]");
+		mes needtr("내 꿈이 정말 예지몽이라면, 저 노란 씨앗 안에는 마신 모로크의 세력이 도사리고 있을 걸세.", "If my dream really is a premonition, the forces of Demon God Morocc's are within that yellow seed.");
 		next;
-		mes "[방황하는 노인]";
-		mes "나도 씨앗 안으로 들어가 보려 했지만 소용없었네. 이 늙고 약한 몸으로는 무리였지. 하지만 자네라면 가능할지도 모르겠군.";
+		mes needtr("[방황하는 노인]", "[Wandering Old Man]");
+		mes needtr("나도 씨앗 안으로 들어가 보려 했지만 소용없었네. 이 늙고 약한 몸으로는 무리였지. 하지만 자네라면 가능할지도 모르겠군.", "I tried to enter the seed, but to no avail: I'm just too old and weak. But perhaps you can.");
 		next;
-		mes "[방황하는 노인]";
-		mes "부디 저 노란 씨앗을 조사해 주게.";
-		mes "혼자 가기에는 너무 위험하니, 반드시 동료와 함께 가게.";
+		mes needtr("[방황하는 노인]", "[Wandering Old Man]");
+		mes needtr("부디 저 노란 씨앗을 조사해 주게.", "Please investigate that yellow seed.");
+		mes needtr("혼자 가기에는 너무 위험하니, 반드시 동료와 함께 가게.", "It's too dangerous for you to go alone. You should take at least one comrade with you.");
 		setquest 15006;// 비오스의 섬 탐사
 		completequest 15006;// 비오스의 섬 탐사
 		close;
 	}
-	mes "[방황하는 노인]";
-	mes "부디 저 노란 씨앗을 조사해 주게.";
-	mes "혼자 가기에는 너무 위험하니, 반드시 동료와 함께 가게.";
+	mes needtr("[방황하는 노인]", "[Wandering Old Man]");
+	mes needtr("부디 저 노란 씨앗을 조사해 주게.", "Please investigate that yellow seed.");
+	mes needtr("혼자 가기에는 너무 위험하니, 반드시 동료와 함께 가게.", "It's too dangerous for you to go alone. You should take at least one comrade with you.");
 	close;
 }
 
@@ -144,18 +144,18 @@ moro_cav,45,60,5	script	방황 노인#sara	4_M_EINOLD,{
 		#NEED_MD_BIOS_CLEAR = 1;
 
 	if (!#NEED_MD_BIOS_CLEAR) {
-		mes "[빠른 이동 포탈]";
-		mes "비오스의 섬을 한 번 이상 완료한 계정만";
-		mes "이 포탈을 이용할 수 있습니다.";
+		mes needtr("[빠른 이동 포탈]", "[Quick Move Portal]");
+		mes needtr("비오스의 섬을 한 번 이상 완료한 계정만", "Only an account that has cleared Isle of Bios");
+		mes needtr("이 포탈을 이용할 수 있습니다.", "at least once can use this portal.");
 		close;
 	}
 
-	mes "[빠른 이동 포탈]";
-	mes "첫 번째와 두 번째 구역을 건너뛰고";
-	mes "최종 구역으로 바로 이동하시겠습니까?";
+	mes needtr("[빠른 이동 포탈]", "[Quick Move Portal]");
+	mes needtr("첫 번째와 두 번째 구역을 건너뛰고", "Do you want to skip the first and second zones");
+	mes needtr("최종 구역으로 바로 이동하시겠습니까?", "and move straight to the final zone?");
 	next;
 
-	if (select("^3355FF최종 구역으로 이동한다^000000:기존 진행을 계속한다") == 2)
+	if (select(needtr("^3355FF최종 구역으로 이동한다^000000:기존 진행을 계속한다", "^3355FFMove to the final zone^000000:Continue where you left off")) == 2)
 		close;
 
 	// 첫 사용 시에만 3층 시작 NPC를 활성화합니다.
@@ -172,7 +172,7 @@ moro_cav,45,60,5	script	방황 노인#sara	4_M_EINOLD,{
 			enablenpc instance_npcname("event_boss#bios3");
 
 		mapannounce 'map_dth1$,
-			"시스템: 반복 클리어 빠른 이동 포탈이 활성화되었습니다.",
+			needtr("시스템: 반복 클리어 빠른 이동 포탈이 활성화되었습니다.", "System: The repeat-clear Quick Move Portal has been activated."),
 			bc_map,"0xFFFF00";
 	}
 
@@ -195,90 +195,90 @@ OnTouch_:
 	'vrid$ = instance_npcname("브리드#bios1");
 	'reaper$ = instance_npcname("사신 안쿠#bios1");
 	initnpctimer;
-	npctalk "브리드: 오, 또 누군가가 왔군.", 'vrid$;
+	npctalklang "브리드: 오, 또 누군가가 왔군.", "Vrid: Ah, someone else has come to join us.", 'vrid$;
 	end;
 OnTimer2500:
-	npctalk "브리드: 당신도 모로크의 부활을 막으러 온 건가?", 'vrid$;
+	npctalklang "브리드: 당신도 모로크의 부활을 막으러 온 건가?", "Vrid: Did you also come to stop Morocc's resurrection?", 'vrid$;
 	end;
 OnTimer5000:
-	npctalk "브리드: 나는 브리드, 이쪽은 제이스야. 프론테라에서 왔고, 정의를 위해 세계 곳곳을 여행하고 있지.", 'vrid$;
+	npctalklang "브리드: 나는 브리드, 이쪽은 제이스야. 프론테라에서 왔고, 정의를 위해 세계 곳곳을 여행하고 있지.", "Vrid: I'm Vrid and this is Zeith, from Prontera. We've been traveling around the world, fighting for justice.", 'vrid$;
 	end;
 OnTimer7500:
-	npctalk "브리드: 이봐, 제이스. 뭐라도 말해 봐.", 'vrid$;
+	npctalklang "브리드: 이봐, 제이스. 뭐라도 말해 봐.", "Vrid: Hey, Zeith. Say something.", 'vrid$;
 	end;
 OnTimer10000:
-	npctalk "제이스: ...", 'zeith$;
+	npctalklang "제이스: ...", "Zeith: ...", 'zeith$;
 	end;
 OnTimer12500:
-	npctalk "제이스: 나는 제이스다.", 'zeith$;
+	npctalklang "제이스: 나는 제이스다.", "Zeith: I'm Zeith.", 'zeith$;
 	end;
 OnTimer15000:
-	npctalk "제이스: ...", 'zeith$;
+	npctalklang "제이스: ...", "Zeith: ...", 'zeith$;
 	end;
 OnTimer17500:
-	npctalk "브리드: 신경 쓰지 마. 둘만 있을 때는 이렇게 조용한 녀석이 아니야.", 'vrid$;
+	npctalklang "브리드: 신경 쓰지 마. 둘만 있을 때는 이렇게 조용한 녀석이 아니야.", "Vrid: Don't mind him. He's not so quiet when there are only two of us.", 'vrid$;
 	end;
 OnTimer19500:
-	npctalk "제이스: ...네가 두 사람 몫까지 떠들고 있으니까.", 'zeith$;
+	npctalklang "제이스: ...네가 두 사람 몫까지 떠들고 있으니까.", "Zeith: ...You talk enough for both of us.", 'zeith$;
 	end;
 OnTimer21000:
-	npctalk "브리드: 아래에 있던 노인이 모로크가 부활한다며 계속 중얼거리기에 여기까지 온 거야.", 'vrid$;
+	npctalklang "브리드: 아래에 있던 노인이 모로크가 부활한다며 계속 중얼거리기에 여기까지 온 거야.", "Vrid: We only came because the old geezer down below kept rambling about Morocc's resurrection.", 'vrid$;
 	end;
 OnTimer23500:
-	npctalk "브리드: 어라, 여긴 어디지? 씨앗에 손을 댔을 뿐인데 갑자기 풍경이 바뀌었어.", 'vrid$;
+	npctalklang "브리드: 어라, 여긴 어디지? 씨앗에 손을 댔을 뿐인데 갑자기 풍경이 바뀌었어.", "Vrid: Err, what's this place? I just touched the seed, and suddenly the scenery changed.", 'vrid$;
 	end;
 OnTimer26000:
-	npctalk "브리드: 세상에, 우리 지금 하늘을 날고 있는 거야?!", 'vrid$;
+	npctalklang "브리드: 세상에, 우리 지금 하늘을 날고 있는 거야?!", "Vrid: Holy cow, are we flying in the sky?!", 'vrid$;
 	end;
 OnTimer28500:
-	npctalk "???: 후후후... 여기가 어디인지 궁금한가?", 'reaper$;
+	npctalklang "???: 후후후... 여기가 어디인지 궁금한가?", "???: *Chuckle* Do you want to know where you are?", 'reaper$;
 	end;
 OnTimer31000:
-	npctalk "제이스: 누구냐?!", 'zeith$;
+	npctalklang "제이스: 누구냐?!", "Zeith: Who's there?!", 'zeith$;
 	end;
 OnTimer33500:
 	enablenpc 'reaper$;
-	npctalk "사신 안쿠: 후후후... 이곳은 내가 마음속으로 만들어 낸 환상의 공간, 비오스의 섬이다.", 'reaper$;
+	npctalklang "사신 안쿠: 후후후... 이곳은 내가 마음속으로 만들어 낸 환상의 공간, 비오스의 섬이다.", "Grim Reaper Ankou: *Chuckle* This is the Isle of Bios, a place I conjured up in my mind.", 'reaper$;
 	end;
 OnTimer36000:
-	npctalk "사신 안쿠: 스스로 함정에 걸어 들어와 모로크 님을 위한 제물이 되다니. 죽음이 두렵지도 않은가?", 'reaper$;
+	npctalklang "사신 안쿠: 스스로 함정에 걸어 들어와 모로크 님을 위한 제물이 되다니. 죽음이 두렵지도 않은가?", "Grim Reaper Ankou: You've walked into the trap, making yourself willing sacrifices for my Lord Morocc. Aren't you afraid of dying?", 'reaper$;
 	end;
 OnTimer38500:
-	npctalk "브리드: 흥! 죽음이 두려웠다면 애초에 제 발로 오지도 않았겠지!", 'vrid$;
+	npctalklang "브리드: 흥! 죽음이 두려웠다면 애초에 제 발로 오지도 않았겠지!", "Vrid: Pah! If I was I wouldn't have come willingly, would I?", 'vrid$;
 	end;
 OnTimer41000:
-	npctalk "브리드: 네가 누구든, 우리를 해치기 전에 먼저 쓰러뜨려 주겠어!", 'vrid$;
+	npctalklang "브리드: 네가 누구든, 우리를 해치기 전에 먼저 쓰러뜨려 주겠어!", "Vrid: Whoever you are, we'll kill you before you do!", 'vrid$;
 	end;
 OnTimer43500:
-	npctalk "사신 안쿠: 나를 자극하지 마라, 인간.", 'reaper$;
+	npctalklang "사신 안쿠: 나를 자극하지 마라, 인간.", "Grim Reaper Ankou: Don't tempt me, human.", 'reaper$;
 	end;
 OnTimer46000:
-	npctalk "사신 안쿠: 천천히 고통받으며 죽어 가는 모습을 지켜봐 주마. 후후후...", 'reaper$;
+	npctalklang "사신 안쿠: 천천히 고통받으며 죽어 가는 모습을 지켜봐 주마. 후후후...", "Grim Reaper Ankou: I want to watch you die slowly and painfully. *Chuckle*", 'reaper$;
 	end;
 OnTimer48500:
 	disablenpc 'reaper$;
 	end;
 OnTimer51000:
-	npctalk "브리드: 저 녀석은 누구지? 정말 모로크를 부활시키려는 건가?", 'vrid$;
+	npctalklang "브리드: 저 녀석은 누구지? 정말 모로크를 부활시키려는 건가?", "Vrid: Who's he? Is he trying to resurrect Morocc? ", 'vrid$;
 	end;
 OnTimer53500:
-	npctalk "브리드: 뒤쫓자! 제이스, 서둘러!", 'vrid$;
+	npctalklang "브리드: 뒤쫓자! 제이스, 서둘러!", "Vrid: Let's chase him! Zeith, hurry!", 'vrid$;
 	end;
 OnTimer54000:
 	disablenpc 'vrid$;
 	end;
 OnTimer56000:
-	npctalk "제이스: ...알았어.", 'zeith$;
+	npctalklang "제이스: ...알았어.", "Zeith: ...Ack.", 'zeith$;
 	end;
 OnTimer58500:
-	npctalk "제이스: 뛰는 건 질색인데.", 'zeith$;
+	npctalklang "제이스: 뛰는 건 질색인데.", "Zeith: I hate running.", 'zeith$;
 	end;
 OnTimer61000:
 	disablenpc 'zeith$;
 	end;
 OnTimer66000:
 	stopnpctimer;
-	mapannounce 'map_dth1$, "시스템: 섬의 모든 적을 처치한 뒤 반대편 출구를 통해 다음 구역으로 이동하세요.",bc_map,"0xFFFF00";
+	mapannouncelang 'map_dth1$, "시스템: 섬의 모든 적을 처치한 뒤 반대편 출구를 통해 다음 구역으로 이동하세요.", "System: Eliminate all the enemies on the island and exit through the door on the other side to move on to the next area.",bc_map,"0xFFFF00";
 	'zeith$ = 'vrid$ = 'reaper$ = "";
 	end;
 }
@@ -317,11 +317,11 @@ OnStart:
 OnMyMobDead:
 	.@count = mobcount( 'map_dth1$,instance_npcname("mobs#bios1") + "::OnMyMobDead" );
 	if (.@count == 10 || .@count == 5)
-		mapannounce 'map_dth1$, "시스템: 섬에 몬스터 " + .@count + "마리가 남았습니다.",bc_map,"0xFFFF00";
+		mapannouncelang 'map_dth1$, "시스템: 섬에 몬스터 " + .@count + "마리가 남았습니다.", "System: " + .@count + " monsters remain on the island.",bc_map,"0xFFFF00";
 	else if (.@count == 1)
-		mapannounce 'map_dth1$, "시스템: 섬에 마지막 몬스터 1마리가 남았습니다.",bc_map,"0xFFFF00";
+		mapannouncelang 'map_dth1$, "시스템: 섬에 마지막 몬스터 1마리가 남았습니다.", "System: 1 last monster remains on the island.",bc_map,"0xFFFF00";
 	else if (.@count == 0) {
-		mapannounce 'map_dth1$, "시스템: 모든 몬스터를 처치했습니다. 3시 방향의 출구를 이용해 다음 구역으로 이동하세요.",bc_map,"0xFFFF00";
+		mapannouncelang 'map_dth1$, "시스템: 모든 몬스터를 처치했습니다. 3시 방향의 출구를 이용해 다음 구역으로 이동하세요.", "System: You have eliminated all the monsters. Use the exit at 3 o'clock to move on to the next area.",bc_map,"0xFFFF00";
 		disablenpc instance_npcname("mobs#bios1");
 		enablenpc instance_npcname("warp1#bios1");
 		enablenpc instance_npcname("start1#bios2");
@@ -335,7 +335,7 @@ OnMyMobDead:
 	end;
 OnTouch_:
 	disablenpc instance_npcname("start1#bios2");
-	mapannounce 'map_dth2$, "시스템: 섬의 모든 적을 처치한 뒤 반대편 출구를 통해 다음 구역으로 이동하세요.",bc_map,"0xFFFF00";
+	mapannouncelang 'map_dth2$, "시스템: 섬의 모든 적을 처치한 뒤 반대편 출구를 통해 다음 구역으로 이동하세요.", "System: Eliminate all the enemies on the island and exit through the door on the other side to move on to the next area.",bc_map,"0xFFFF00";
 	end;
 }
 
@@ -374,11 +374,11 @@ OnStart:
 OnMyMobDead:
 	.@count = mobcount( 'map_dth2$,instance_npcname("mobs#bios2") + "::OnMyMobDead" );
 	if (.@count == 10 || .@count == 5)
-		mapannounce 'map_dth2$, "시스템: 섬에 몬스터 " + .@count + "마리가 남았습니다.",bc_map,"0xFFFF00";
+		mapannouncelang 'map_dth2$, "시스템: 섬에 몬스터 " + .@count + "마리가 남았습니다.", "System: " + .@count + " monsters remain on the island.",bc_map,"0xFFFF00";
 	else if (.@count == 1)
-		mapannounce 'map_dth2$, "시스템: 섬에 마지막 몬스터 1마리가 남았습니다.",bc_map,"0xFFFF00";
+		mapannouncelang 'map_dth2$, "시스템: 섬에 마지막 몬스터 1마리가 남았습니다.", "System: 1 last monster remains on the island.",bc_map,"0xFFFF00";
 	else if (.@count == 0) {
-		mapannounce 'map_dth2$, "시스템: 모든 몬스터를 처치했습니다. 3시 방향의 출구를 이용해 다음 구역으로 이동하세요.",bc_map,"0xFFFF00";
+		mapannouncelang 'map_dth2$, "시스템: 모든 몬스터를 처치했습니다. 3시 방향의 출구를 이용해 다음 구역으로 이동하세요.", "System: You have eliminated all the monsters. Use the exit at 3 o'clock to move on to the next area.",bc_map,"0xFFFF00";
 		disablenpc instance_npcname("mobs#bios2");
 		enablenpc instance_npcname("warp1#bios2");
 		enablenpc instance_npcname("제이스#bios3");
@@ -392,12 +392,12 @@ OnMyMobDead:
 // 1@dth3,64,74,5	script	브리드#bios3	4_M_KNIGHT_BLACK,5,7,{// 공식
 1@dth3,64,74,5	script	브리드#bios3	4_M_KNIGHT_BLACK,{
 	if ('reward == 1) {
-		mes "[브리드]";
-		mes "우연히 " + getitemname(6684) + " 하나를 얻게 되었어.";
-		mes "당신이라면 받을 자격이 충분하니 선물하고 싶어.";
+		mes needtr("[브리드]", "[Vrid]");
+		mes needtr("우연히 ", "I came by this ") + getitemname(6684) + needtr(" 하나를 얻게 되었어.", " by accident.");
+		mes needtr("당신이라면 받을 자격이 충분하니 선물하고 싶어.", "I want to give it to you. You deserve it.");
 		next;
-		mes "[브리드]";
-		mes "이 으스스한 곳에서 어서 나가자!";
+		mes needtr("[브리드]", "[Vrid]");
+		mes needtr("이 으스스한 곳에서 어서 나가자!", "Let's get out of this creepy place!");
 		close2;
 		getitem 6684,1;// 영웅의 증표
 		#NEED_MD_BIOS_CLEAR = 1;
@@ -432,55 +432,55 @@ OnStart:
 	'zeith3$ = instance_npcname("제이스#bios3");
 	'vrid3$ = instance_npcname("브리드#bios3");
 	initnpctimer;
-	npctalk "브리드: 여기까지 무사히 왔군. 나는 미로에 들어가자마자 완전히 길을 잃었어.", 'vrid3$;
+	npctalklang "브리드: 여기까지 무사히 왔군. 나는 미로에 들어가자마자 완전히 길을 잃었어.", "Vrid: You're lucky to be here. I got totally lost the moment I entered that maze.", 'vrid3$;
 	end;
 OnTimer2500:
-	npctalk "브리드: 제이스가 아니었다면 아직도 그 안을 헤매고 있었을 거야. 고맙다, 제이스.", 'vrid3$;
+	npctalklang "브리드: 제이스가 아니었다면 아직도 그 안을 헤매고 있었을 거야. 고맙다, 제이스.", "Vrid: If it weren't for Zeith, I'd still be in there, wandering. Thanks, Zeith.", 'vrid3$;
 	end;
 OnTimer5000:
-	npctalk "제이스: ...계속 마음에 걸리는 게 있어.", 'zeith3$;
+	npctalklang "제이스: ...계속 마음에 걸리는 게 있어.", "Zeith: ...Something's been bothering me.", 'zeith3$;
 	end;
 OnTimer7500:
-	npctalk "브리드: 무슨 일인데?", 'vrid3$;
+	npctalklang "브리드: 무슨 일인데?", "Vrid: What's up?", 'vrid3$;
 	end;
 OnTimer10000:
-	npctalk "제이스: 시간이 흐를수록 몬스터들이 점점 강해지고 있다는 느낌이 들어.", 'zeith3$;
+	npctalklang "제이스: 시간이 흐를수록 몬스터들이 점점 강해지고 있다는 느낌이 들어.", "Zeith: I've got the feeling that the monsters were growing stronger with time.", 'zeith3$;
 	end;
 OnTimer12500:
-	npctalk "제이스: 마치 아이가 자라 어른이 되는 것처럼.", 'zeith3$;
+	npctalklang "제이스: 마치 아이가 자라 어른이 되는 것처럼.", "Zeith: Just like children growing up into adults.", 'zeith3$;
 	end;
 OnTimer15000:
-	npctalk "브리드: 음, 듣고 보니 그런 것 같네.", 'vrid3$;
+	npctalklang "브리드: 음, 듣고 보니 그런 것 같네.", "Vrid: Um, I think you're right.", 'vrid3$;
 	end;
 OnTimer17500:
-	npctalk "브리드: 처음에는 모두 작았는데, 갈수록 더 크고 강한 녀석들이 나타났지.", 'vrid3$;
+	npctalklang "브리드: 처음에는 모두 작았는데, 갈수록 더 크고 강한 녀석들이 나타났지.", "Vrid: They're all small in the beginning, and then we faced bigger and stronger ones over time.", 'vrid3$;
 	end;
 OnTimer20000:
-	npctalk "브리드: 그건 자연스러운 일처럼 들리는데, 뭐가 걱정인 거야?", 'vrid3$;
+	npctalklang "브리드: 그건 자연스러운 일처럼 들리는데, 뭐가 걱정인 거야?", "Vrid: To me, that sounds natural. What are you worried about?", 'vrid3$;
 	end;
 OnTimer22500:
-	npctalk "제이스: 지금부터 상대하게 될 몬스터가 궁금해.", 'zeith3$;
+	npctalklang "제이스: 지금부터 상대하게 될 몬스터가 궁금해.", "Zeith: Well, I'm curious about the monster we'll face now.", 'zeith3$;
 	end;
 OnTimer25000:
-	npctalk "제이스: 기존 모습에서 더 강해진 존재일지, 아니면 전혀 다른 무언가일지 말이야.", 'zeith3$;
+	npctalklang "제이스: 기존 모습에서 더 강해진 존재일지, 아니면 전혀 다른 무언가일지 말이야.", "Zeith: Whether they're stronger versions of their original selves, or something completely different.", 'zeith3$;
 	end;
 OnTimer27000:
 	enablenpc 'reaper3$;
 	end;
 OnTimer27500:
-	npctalk "사신 안쿠: 후후후... 그래도 그중 한 명은 머리가 제법 돌아가는군.", 'reaper3$;
+	npctalklang "사신 안쿠: 후후후... 그래도 그중 한 명은 머리가 제법 돌아가는군.", "Grim Reaper Ankou: *Chuckle* At least one of you has a good head on his shoulders.", 'reaper3$;
 	end;
 OnTimer30000:
-	npctalk "브리드: 또 너냐?", 'vrid3$;
+	npctalklang "브리드: 또 너냐?", "Vrid: You again?", 'vrid3$;
 	end;
 OnTimer32500:
-	npctalk "사신 안쿠: 다음에 상대할 적이 궁금한가?", 'reaper3$;
+	npctalklang "사신 안쿠: 다음에 상대할 적이 궁금한가?", "Grim Reaper Ankou: Are you curious about your next adversaries?", 'reaper3$;
 	end;
 OnTimer35000:
-	npctalk "사신 안쿠: 너희 앞에는 불사의 군대가 기다리고 있다.", 'reaper3$;
+	npctalklang "사신 안쿠: 너희 앞에는 불사의 군대가 기다리고 있다.", "Grim Reaper Ankou: Ahead of you is an army of the immortal.", 'reaper3$;
 	end;
 OnTimer37500:
-	npctalk "사신 안쿠: 후후후... 나와라, 나의 병사들이여!", 'reaper3$;
+	npctalklang "사신 안쿠: 후후후... 나와라, 나의 병사들이여!", "Grim Reaper Ankou: *Chuckle* Come out, my soldiers!", 'reaper3$;
 	end;
 OnTimer37700:
 	specialeffect EF_READYPORTAL,AREA,'reaper3$;
@@ -492,16 +492,16 @@ OnTimer40000:
 	}
 	end;
 OnTimer42000:
-	npctalk "브리드: 닥쳐, 이 악당아! 네 졸개들과 놀아 줄 시간은 없어!", 'vrid3$;
+	npctalklang "브리드: 닥쳐, 이 악당아! 네 졸개들과 놀아 줄 시간은 없어!", "Vrid: Shut up, you fiend! We don't have time for your lackeys!", 'vrid3$;
 	end;
 OnTimer45000:
-	npctalk "브리드: 내가 직접 널 해치워 주겠어!", 'vrid3$;
+	npctalklang "브리드: 내가 직접 널 해치워 주겠어!", "Vrid: I'll get rid of you myself!", 'vrid3$;
 	end;
 OnTimer47500:
-	npctalk "사신 안쿠: 그 말 그대로 돌려주마, 허풍쟁이.", 'reaper3$;
+	npctalklang "사신 안쿠: 그 말 그대로 돌려주마, 허풍쟁이.", "Grim Reaper Ankou: Right back at you, bigmouth.", 'reaper3$;
 	end;
 OnTimer50000:
-	npctalk "사신 안쿠: 공포 앞에서 아무것도 할 수 없는 무력감이 얼마나 끔찍한지 가르쳐 주마!", 'reaper3$;
+	npctalklang "사신 안쿠: 공포 앞에서 아무것도 할 수 없는 무력감이 얼마나 끔찍한지 가르쳐 주마!", "Grim Reaper Ankou: I'll teach you how terrifying it is to be helpless in the face of horror!", 'reaper3$;
 	end;
 OnTimer52500:
 	specialeffect EF_STORMGUST,AREA,'reaper3$;
@@ -526,38 +526,38 @@ OnTimer52700:
 	}
 	end;
 OnTimer55000:
-	npctalk "브리드: 윽! 무, 무슨 일이야?! 모, 몸이 움직이지 않아!", 'vrid3$;
+	npctalklang "브리드: 윽! 무, 무슨 일이야?! 모, 몸이 움직이지 않아!", "Vrid: Ugh! W-what's going on?! I-I can't move!", 'vrid3$;
 	end;
 OnTimer57500:
-	npctalk "제이스: 나, 나도 그래! 발이 움직이지 않아!", 'zeith3$;
+	npctalklang "제이스: 나, 나도 그래! 발이 움직이지 않아!", "Zeith: N-neither can I! I can't move my feet!", 'zeith3$;
 	end;
 OnTimer60000:
-	npctalk "사신 안쿠: 비오스의 섬에서는 하루가 곧 하나의 생애다.", 'reaper3$;
+	npctalklang "사신 안쿠: 비오스의 섬에서는 하루가 곧 하나의 생애다.", "Grim Reaper Ankou: On the Isle of Bios, each day is a lifetime.", 'reaper3$;
 	end;
 OnTimer62500:
-	npctalk "사신 안쿠: 해가 지기도 전에 내 병사들이 성장했다는 사실을 눈치챘겠지.", 'reaper3$;
+	npctalklang "사신 안쿠: 해가 지기도 전에 내 병사들이 성장했다는 사실을 눈치챘겠지.", "Grim Reaper Ankou: You must have noticed my soldiers have grown up before the sunset.", 'reaper3$;
 	end;
 OnTimer65000:
-	npctalk "사신 안쿠: 밤이 찾아오면 녀석들은 성장의 마지막 단계, 죽음을 넘어선 삶에 도달한다.", 'reaper3$;
+	npctalklang "사신 안쿠: 밤이 찾아오면 녀석들은 성장의 마지막 단계, 죽음을 넘어선 삶에 도달한다.", "Grim Reaper Ankou: After nightfall, they've reached the final stage of their development: life beyond death.", 'reaper3$;
 	end;
 OnTimer67500:
-	npctalk "사신 안쿠: 그렇다. 이제 너희가 죽음을 경험할 차례다.", 'reaper3$;
+	npctalklang "사신 안쿠: 그렇다. 이제 너희가 죽음을 경험할 차례다.", "Grim Reaper Ankou: That's right. It's time for you to experience death.", 'reaper3$;
 	end;
 OnTimer70000:
-	npctalk "사신 안쿠: 죽음의 공포를 느낄 준비를 해라! 후후후...", 'reaper3$;
+	npctalklang "사신 안쿠: 죽음의 공포를 느낄 준비를 해라! 후후후...", "Grim Reaper Ankou: Get ready to feel the fear of death! *Chuckle*", 'reaper3$;
 	// 참고: 플레이어 빙결 해제
 	end;
 OnTimer72000:
 	disablenpc 'reaper3$;
 	end;
 OnTimer72500:
-	npctalk "브리드: 젠장, 언데드들이 몰려오는데 발이 움직이지 않아 싸울 수가 없어!", 'vrid3$;
+	npctalklang "브리드: 젠장, 언데드들이 몰려오는데 발이 움직이지 않아 싸울 수가 없어!", "Vrid: Damn it, the undead are coming, but I can't fight because I can't move my feet!", 'vrid3$;
 	end;
 OnTimer75000:
-	npctalk "브리드: 으악, 죽고 싶지 않아!", 'vrid3$;
+	npctalklang "브리드: 으악, 죽고 싶지 않아!", "Vrid: Ack, I don't want to die!", 'vrid3$;
 	end;
 OnTimer77500:
-	npctalk "제이스: ...윽...", 'zeith3$;
+	npctalklang "제이스: ...윽...", "Zeith: ...Ugh...", 'zeith3$;
 	end;
 OnTimer80000:
 	stopnpctimer;
@@ -584,10 +584,10 @@ OnMyMobDead:
 OnStart:
 	enablenpc instance_npcname("verit#bios3");
 	initnpctimer;
-	npctalk "브리드: 와, 정말 대단해! 전부 처치한 거야?", 'vrid3$;
+	npctalklang "브리드: 와, 정말 대단해! 전부 처치한 거야?", "Vrid: Wow, you're amazing! Did you kill them all?", 'vrid3$;
 	end;
 OnTimer2500:
-	npctalk "제이스: 아직이야. 더 오고 있어!", 'zeith3$;
+	npctalklang "제이스: 아직이야. 더 오고 있어!", "Zeith: Not yet. More are coming!", 'zeith3$;
 	end;
 OnTimer5000:
 	stopnpctimer;
@@ -610,10 +610,10 @@ OnMyMobDead:
 OnStart:
 	enablenpc instance_npcname("megalodon#bios3");
 	initnpctimer;
-	npctalk "브리드: 이번에는 정말 마지막이었으면 좋겠는데.", 'vrid3$;
+	npctalklang "브리드: 이번에는 정말 마지막이었으면 좋겠는데.", "Vrid: I hope that really was the last of them.", 'vrid3$;
 	end;
 OnTimer2500:
-	npctalk "제이스: 아니, 운이 그렇게 좋지는 않은 모양이야. 또 오고 있어!", 'zeith3$;
+	npctalklang "제이스: 아니, 운이 그렇게 좋지는 않은 모양이야. 또 오고 있어!", "Zeith: Nope, we aren't so lucky--more is on the way!", 'zeith3$;
 	end;
 OnTimer5000:
 	stopnpctimer;
@@ -638,13 +638,13 @@ OnStart:
 	initnpctimer;
 	end;
 OnTimer500:
-	npctalk "사신 안쿠: 너희를 과소평가했거나, 내 병사들이 생각보다 약했던 모양이군.", 'reaper3$;
+	npctalklang "사신 안쿠: 너희를 과소평가했거나, 내 병사들이 생각보다 약했던 모양이군.", "Grim Reaper Ankou: I underestimated you, or my soldiers aren't as strong as I thought.", 'reaper3$;
 	end;
 OnTimer3000:
-	npctalk "브리드: 비겁하잖아! 우리를 풀어 주고 정정당당하게 싸워!", 'vrid3$;
+	npctalklang "브리드: 비겁하잖아! 우리를 풀어 주고 정정당당하게 싸워!", "Vrid: You're cheating! Release us and fight fairly!", 'vrid3$;
 	end;
 OnTimer5500:
-	npctalk "사신 안쿠: 아직도 입을 놀리는군. 내가 직접 죽여서 끝내 주마!", 'reaper3$;
+	npctalklang "사신 안쿠: 아직도 입을 놀리는군. 내가 직접 죽여서 끝내 주마!", "Grim Reaper Ankou: You're still talking. I'll just kill you myself and get it over with!", 'reaper3$;
 	end;
 OnTimer7500:
 	disablenpc 'reaper3$;
@@ -674,13 +674,13 @@ OnMyBossDead:
 	initnpctimer;
 	end;
 OnTimer3000:
-	npctalk "사신 안쿠: 강하군...", 'reaper3$;
+	npctalklang "사신 안쿠: 강하군...", "Grim Reaper Ankou: You're strong...", 'reaper3$;
 	end;
 OnTimer6500:
-	npctalk "사신 안쿠: 하지만 내 목적은 이미 이루어졌다... 이걸로 끝이라고 생각하지 마라.", 'reaper3$;
+	npctalklang "사신 안쿠: 하지만 내 목적은 이미 이루어졌다... 이걸로 끝이라고 생각하지 마라.", "Grim Reaper Ankou: But my goal has been accomplished... Don't think this is over.", 'reaper3$;
 	end;
 OnTimer8000:
-	npctalk "사신 안쿠: 곧 모로크 님께서 돌아오신다. 후후후... 죽음의 공포는 어디까지나 너희를 따라다닐 것이다.", 'reaper3$;
+	npctalklang "사신 안쿠: 곧 모로크 님께서 돌아오신다. 후후후... 죽음의 공포는 어디까지나 너희를 따라다닐 것이다.", "Grim Reaper Ankou: Soon Lord Morocc will return. *Chuckle* The fear of death will follow you wherever you go.", 'reaper3$;
 	end;
 OnTimer10500:
 	disablenpc 'reaper3$;
@@ -690,20 +690,20 @@ OnTimer10500:
 	setnpcdisplay( 'zeith3$, 4_M_GUILLOTINE );
 	end;
 OnTimer13000:
-	npctalk "브리드: 아, 드디어 움직일 수 있어!", 'vrid3$;
+	npctalklang "브리드: 아, 드디어 움직일 수 있어!", "Vrid: Ah, finally I can move!", 'vrid3$;
 	end;
 OnTimer16500:
-	npctalk "제이스: 흠... 이렇게 무력한 모습을 보이다니 부끄럽군...", 'zeith3$;
+	npctalklang "제이스: 흠... 이렇게 무력한 모습을 보이다니 부끄럽군...", "Zeith: Hmpf, I'm ashamed of myself for being so weak...", 'zeith3$;
 	end;
 OnTimer18000:
-	npctalk "브리드: 휴, 저 사신은 나와 제이스를 합친 것보다 훨씬 강했어.", 'vrid3$;
+	npctalklang "브리드: 휴, 저 사신은 나와 제이스를 합친 것보다 훨씬 강했어.", "Vrid: Whew, that reaper was much stronger than me and Zeith combined.", 'vrid3$;
 	end;
 OnTimer20500:
-	npctalk "브리드: 당신이 아니었다면 우리는 죽었을 거야.", 'vrid3$;
+	npctalklang "브리드: 당신이 아니었다면 우리는 죽었을 거야.", "Vrid: We could have died if it weren't for you.", 'vrid3$;
 	end;
 OnTimer23000:
 	stopnpctimer;
-	npctalk "브리드: 우리 목숨을 구해 준 답례로 주고 싶은 게 있어. 받을 준비가 되면 다시 말을 걸어 줘.", 'vrid3$;
+	npctalklang "브리드: 우리 목숨을 구해 준 답례로 주고 싶은 게 있어. 받을 준비가 되면 다시 말을 걸어 줘.", "Vrid: I want to give you something for saving our lives. Talk to me again when you're ready to accept it.", 'vrid3$;
 	'reward = 1;
 	disablenpc instance_npcname("boss#bios3");
 	end;
@@ -717,15 +717,15 @@ OnStart:
 OnTimer15000:
 	.@r = rand(7);
 	if (.@r == 0)
-		npctalk "제이스: 윽... 이렇게 무력할 수가...", 'zeith3$;
+		npctalklang "제이스: 윽... 이렇게 무력할 수가...", "Zeith: Ugh... I feel so helpless...", 'zeith3$;
 	else if (.@r == 1)
-		npctalk "제이스: 안쿠에게서 위험한 기운이 느껴져. 녀석이 스킬을 사용하기 시작하면 바로 움직이는 게 좋겠어.", 'zeith3$;
+		npctalklang "제이스: 안쿠에게서 위험한 기운이 느껴져. 녀석이 스킬을 사용하기 시작하면 바로 움직이는 게 좋겠어.", "Zeith: That guy Ankou smells dangerous. You better move once he starts using a skill.", 'zeith3$;
 	else if (.@r == 2)
-		npctalk "브리드: 윽, 도와주지 못해서 미안해.", 'vrid3$;
+		npctalklang "브리드: 윽, 도와주지 못해서 미안해.", "Vrid: Ack, I'm sorry we can't help.", 'vrid3$;
 	else if (.@r == 3)
-		npctalk "브리드: 비겁한 녀석, 정정당당하게 싸워!", 'vrid3$;
+		npctalklang "브리드: 비겁한 녀석, 정정당당하게 싸워!", "Vrid: You cheater, fight fairly!", 'vrid3$;
 	else if (.@r == 4)
-		npctalk "브리드: 젠장, 움직일 수가 없어...", 'vrid3$;
+		npctalklang "브리드: 젠장, 움직일 수가 없어...", "Vrid: Damn it, I can't move...", 'vrid3$;
 	initnpctimer;
 	end;
 OnStop:
@@ -741,13 +741,13 @@ OnStart:
 OnTimer13000:
 	.@r = rand(6);
 	if (.@r == 0)
-		unittalk 'boss_id, "사신 안쿠: 후후후...";
+		unittalklang 'boss_id, "사신 안쿠: 후후후...", "Grim Reaper Ankou: *Chuckle*";
 	else if (.@r == 1)
-		unittalk 'boss_id, "사신 안쿠: 죽음의 공포를 느껴라!";
+		unittalklang 'boss_id, "사신 안쿠: 죽음의 공포를 느껴라!", "Grim Reaper Ankou: Feel the fear of death!";
 	else if (.@r == 2)
-		unittalk 'boss_id, "사신 안쿠: 곧 모로크 님께서 돌아오신다.";
+		unittalklang 'boss_id, "사신 안쿠: 곧 모로크 님께서 돌아오신다.", "Grim Reaper Ankou: Lord Morocc will return soon.";
 	else if (.@r == 3)
-		unittalk 'boss_id, "사신 안쿠: 고작 이 정도인가? 인간이란 참으로 나약한 존재로군.";
+		unittalklang 'boss_id, "사신 안쿠: 고작 이 정도인가? 인간이란 참으로 나약한 존재로군.", "Grim Reaper Ankou: Is this the best you can do? Such weak creatures, you humans.";
 	initnpctimer;
 	end;;
 OnStop:

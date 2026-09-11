@@ -1,0 +1,33 @@
+//===== NEED Phase 0.13 - msg_conf reload probe ==============================
+//= TEST ONLY. Loaded only by conf/import/need_lang_test/map_verify.conf.
+//=
+//= rAthena DOES support reloading the message tables at runtime:
+//=   @reloadmsgconf -> ACMD_FUNC(reloadmsgconf) (atcommand.cpp:4853)
+//=                  -> map_msg_reload() (map.cpp)
+//=                  -> map_do_final_msg() + map_do_init_msg()
+//= and map_do_init_msg() is where the NEED English table is loaded, so the
+//= English table is reload-safe for the same structural reason the Phase 0.11
+//= item names are: there is exactly one loader and both paths go through it.
+//=
+//= This probe runs it for real. dummy_sd carries group_id 99 (script.cpp:4946),
+//= so a script with no attached player may run a GM atcommand.
+//=
+//= The delay is long on purpose: the verification swaps the .conf file while the
+//= server is up, so the reload has to pick up content that did not exist at
+//= start-up. Watch the "Done reading 'N' messages in map_msg_need_en.conf" line.
+//============================================================================
+
+-	script	NEED Phase13 Reload	-1,{
+	end;
+
+OnInit:
+	initnpctimer;
+	end;
+
+OnTimer20000:
+	stopnpctimer;
+	debugmes "[P13][RELOAD] running @reloadmsgconf ...";
+	atcommand "@reloadmsgconf";
+	debugmes "[P13][RELOAD] done - compare the 'Done reading' counts above and the re-written selftest file";
+	end;
+}

@@ -6,6 +6,8 @@
 
 #include <deque>
 #include <vector>
+#include <unordered_map>
+#include <utility>
 
 #include <common/database.hpp>
 #include <common/mmo.hpp> // struct item
@@ -279,6 +281,12 @@ struct s_mob_db {
 	uint16 damagetaken;
 	int32 group_id;
 	std::string title;
+	/// NEED Phase 0.21 : player-visible ENGLISH display name, or empty when no trusted
+	/// English name exists for this id. DISPLAY ONLY - deliberately NOT compared by
+	/// mob_db_searchname / mob_db_searchname_array (mob.cpp:279-292), which match `sprite`,
+	/// `name` and `jname`. Adding it to any of those would make an English string a lookup
+	/// key, which is the trap Phase 0.11 hit with item_data::ename.
+	std::string jname_en;
 
 	e_mob_bosstype get_bosstype() const;
 	s_mob_db();
@@ -567,6 +575,89 @@ int32 mob_clone_spawn(map_session_data *sd, int16 m, int16 x, int16 y, const cha
 int32 mob_clone_delete(mob_data *md);
 
 void mob_reload_itemmob_data(void);
+
+/**
+ * NEED Phase 0.21 : optional English display names for monsters.
+ *
+ * Loaded from db/need/mob_name_en.yml by mob_db_load(), which is the single function both
+ * start-up (do_init_mob) and @reloadmobdb (mob_reload) go through, so the table can never
+ * drift from the mob database. The file is OPTIONAL: deleting it is a complete rollback.
+ */
+class NeedMobNameEnDatabase : public YamlDatabase {
+public:
+	NeedMobNameEnDatabase() : YamlDatabase( "NEED_MOB_NAME_EN_DB", 1 ) {
+	}
+
+	bool load();                     ///< skips silently when the file is absent
+	void clear() override;
+	const std::string getDefaultLocation() override;
+	uint64 parseBodyNode( const ryml::NodeRef& node ) override;
+	void loadingFinished() override;
+
+	uint32 applied = 0;      ///< names written into s_mob_db::jname_en
+	uint32 skipped = 0;      ///< rows dropped (unknown id / identity mismatch / empty / long)
+};
+extern NeedMobNameEnDatabase need_mob_name_en_db;
+
+/**
+ * NEED Phase 0.22 : English names for SPAWN-TIME OVERRIDE literals.
+ *
+ * `override_mob_names: 0` (conf/battle/monster.conf:123) means a spawn-file or script literal
+ * beats the database name (mob_parse_dataset / mob.cpp:486), and 3,751 of the 3,775 name sites
+ * in loaded files use that. 902 of them name the monster something other than its database
+ * display name, and Phase 0.21's guard deliberately refuses to touch those - which left them
+ * Korean for an English session.
+ *
+ * This table gives such a site its own English name, keyed by the pair
+ * (monster id, the Korean literal that is actually on screen). The Korean literal is never
+ * modified: it stays the key, and it stays what a Korean session sees.
+ *
+ * Loaded from db/need/mob_name_override_en.yml by mob_db_load(), the one function both
+ * do_init_mob() and mob_reload() (@reloadmobdb) go through. The file is OPTIONAL - deleting it
+ * returns every session to the Korean literal, i.e. exactly the Phase 0.21 state.
+ */
+class NeedMobNameOverrideEnDatabase : public YamlDatabase {
+public:
+	NeedMobNameOverrideEnDatabase() : YamlDatabase( "NEED_MOB_NAME_OVERRIDE_EN_DB", 1 ) {
+	}
+
+	bool load();                     ///< skips silently when the file is absent
+	void clear() override;
+	const std::string getDefaultLocation() override;
+	uint64 parseBodyNode( const ryml::NodeRef& node ) override;
+	void loadingFinished() override;
+
+	/**
+	 * monster id -> [ (KR literal exactly as the spawn writes it, its English name) ].
+	 *
+	 * One hash probe on the id, then at most a couple of strncmp inside that id's own list
+	 * (measured maximum 2). There is deliberately no container that would have to be scanned
+	 * as a whole, and a lookup allocates nothing.
+	 */
+	std::unordered_map<uint32, std::vector<std::pair<std::string, std::string>>> table;
+
+	/// nullptr when this (id, KR literal) pair has no English override
+	const std::string* find( uint32 mob_id, const char* kr_name ) const;
+
+	uint32 applied = 0;      ///< (id, KR literal) pairs registered
+	uint32 skipped = 0;      ///< rows dropped (unknown id / identity mismatch / empty / long)
+};
+extern NeedMobNameOverrideEnDatabase need_mob_name_override_en_db;
+
+/**
+ * Player-visible display name of a monster for ONE recipient's language.
+ *
+ * Returns the English name only when ALL of these hold:
+ *   - the recipient's session is EN (Phase 0.2's map_session_data::need_lang)
+ *   - this monster id has a non-empty jname_en
+ *   - the spawned unit's name has NOT been overridden at spawn time, i.e. md.name still
+ *     equals the database jname. `override_mob_names: 0` (conf/battle/monster.conf) means a
+ *     spawn-file or script literal wins (mob.cpp:461-464), and such a literal is a
+ *     deliberate rename - a Wolfchev lab mob spawned as "Human Experiment" must not
+ *     silently become the generic monster name of its base id.
+ * In every other case it returns exactly what the server returned before.
+ */
+const char* mob_display_name( const mob_data& md, e_need_lang lang );
 void mob_reload(void);
 void mob_add_spawn(uint16 mob_id, const struct spawn_info& new_spawn);
 const std::vector<spawn_info> mob_get_spawns(uint16 mob_id);

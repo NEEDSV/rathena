@@ -3584,6 +3584,53 @@ public:
 	uint64 parseBodyNode(const ryml::NodeRef& node) override;
 };
 
+/**
+ * NEED Phase 0.11 : English item display names.
+ *
+ * The server prints an item name from item_data::ename, which is the `Name:` field of the
+ * item_db yaml chain - and 22,015 of the 29,488 entries on this branch have a KOREAN `Name:`.
+ * That is correct for a Korean session and wrong inside an English dialog.
+ *
+ * This database does NOT keep item state of its own: it copies each English name into the
+ * display-only item_data::ename_en field of an item that item_db has already loaded. So
+ *   - Id / AegisName / Name and every lookup map stay exactly as item_db defined them,
+ *   - one std::string per item is the whole runtime cost and display costs no extra lookup,
+ *   - itemdb_read() (startup AND @reloaditemdb) re-applies it right after item_db.load(),
+ *     which is the only place item_data objects are ever created.
+ * An id that item_db does not know, or an empty name, is skipped with a warning instead of
+ * being invented - the Korean name then stays in use for that id.
+ */
+class NeedItemNameEnDatabase : public YamlDatabase {
+public:
+	NeedItemNameEnDatabase() : YamlDatabase( "NEED_ITEM_NAME_EN_DB", 1 ) {
+	}
+
+	bool load();                     ///< skips silently when the file is absent (see below)
+	void clear() override;
+	const std::string getDefaultLocation() override;
+	uint64 parseBodyNode( const ryml::NodeRef& node ) override;
+	void loadingFinished() override;
+
+	uint32 applied = 0;      ///< names written into item_data::ename_en
+	uint32 skipped = 0;      ///< rows dropped (unknown id / empty name / too long)
+};
+extern NeedItemNameEnDatabase need_item_name_en_db;
+
+/**
+ * Player-visible display name of an item for ONE language.
+ *
+ * NEED_LANG_EN returns item_data::ename_en when a trusted English name was loaded for this
+ * id; every other case - a Korean session, no English name, an empty English name, a null
+ * item - falls back to the Korean `Name:` the server has always printed. So a missing or
+ * unreviewed translation degrades to today's behaviour instead of to a blank or a crash.
+ *
+ * Never returns nullptr; the returned pointer belongs to the item_data and stays valid until
+ * the next itemdb_read().
+ */
+const char* item_display_name( const item_data* id, e_need_lang lang );
+const char* item_display_name( const std::shared_ptr<item_data>& id, e_need_lang lang );
+const char* item_display_name( t_itemid nameid, e_need_lang lang );
+
 /// Struct of Roulette db
 struct s_roulette_db {
 	t_itemid *nameid[MAX_ROULETTE_LEVEL]; /// Item ID
@@ -3654,6 +3701,14 @@ struct item_data
 {
 	t_itemid nameid;
 	std::string name, ename;
+	/// NEED Phase 0.11 : player-visible ENGLISH display name, or empty when no trusted English
+	/// name exists for this id. DISPLAY ONLY - unlike `name` (AegisName) and `ename` (the
+	/// `Name:` field) this is deliberately NOT registered in aegisNameToItemDataMap /
+	/// nameToItemDataMap, so it can never become a lookup key and can never change what
+	/// getitem "<name>", searchname() or any script constant resolves to.
+	/// Filled by need_item_name_en_db from db/need/item_name_en.yml after item_db has loaded,
+	/// and re-filled on every @reloaditemdb because both go through itemdb_read().
+	std::string ename_en;
 
 	uint32 value_buy;
 	uint32 value_sell;
@@ -3786,8 +3841,11 @@ public:
 	std::string create_item_link(t_itemid nameid);
 	std::string create_item_link(struct item& item);
 	std::string create_item_link( std::shared_ptr<item_data>& data );
-	std::string create_item_link_for_mes( std::shared_ptr<item_data>& data, bool use_brackets, const char* name );
-	std::string create_item_icon_for_mes( std::shared_ptr<item_data>& data, const char* name );
+	// NEED Phase 0.11 : `lang` picks the display name for the ONE recipient this string is
+	// being built for (mes/mesitemlink always target the attached player). It defaults to
+	// NEED_LANG_KR so every existing caller keeps its current behaviour byte for byte.
+	std::string create_item_link_for_mes( std::shared_ptr<item_data>& data, bool use_brackets, const char* name, e_need_lang lang = NEED_LANG_KR );
+	std::string create_item_icon_for_mes( std::shared_ptr<item_data>& data, const char* name, e_need_lang lang = NEED_LANG_KR );
 };
 
 extern ItemDatabase item_db;

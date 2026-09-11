@@ -1,0 +1,108 @@
+# NEED Phase 0.22 - English names for SPAWN-TIME OVERRIDE literals.
+#
+# override_mob_names: 0 (conf/battle/monster.conf:123) makes a spawn-file or script literal
+# beat the mob_db display name, so 902 loaded name sites show something other than the
+# database name. This table gives such a site its own English name for an EN session only.
+#
+# Key: (MobId, KrName), where KrName is the literal EXACTLY as the spawn file writes it -
+# that is the string the server holds in mob_data::name at display time. The Korean literal is
+# never modified anywhere; it is the key, and it stays what a Korean session reads.
+#
+# ENCODING: cp949, like db/re/mob_db.yml. KrName is compared byte for byte against bytes that
+# came out of a cp949 spawn file, so this file must not be saved as UTF-8.
+#
+# Nothing here is a lookup key: mob_db_searchname / @mobinfo / @monster never see these
+# strings. Deleting this file is a complete rollback - every session falls back to the Korean
+# literal, i.e. the Phase 0.21 state.
+#
+# Full inventory and the reason for every row:
+#   NEEDResoruce_EN/en_build/script_localization/phase22_override_unique_mappings.csv
+#
+# NOTE: no "---" document marker. rAthena's YamlDatabase (rapidyaml) kills the whole process
+# with STATUS_STACK_BUFFER_OVERRUN (0xC0000409) when a database file begins with one - measured
+# by bisecting this very file, see phase22_validation_report.md. No stock db/*.yml has one.
+Header:
+  Type: NEED_MOB_NAME_OVERRIDE_EN_DB
+  Version: 1
+
+Body:
+  - MobId: 1204
+    AegisName: TIRFING
+    KrName: 오우거 투스
+    EnName: Ogretooth
+    # intentional rename | B_INTENTIONAL_RENAME | db says Tirfing; both KR and upstream call this spawn Ogretooth
+  - MobId: 2083
+    AegisName: HORN_SCARABA
+    KrName: 외뿔 스카라바
+    EnName: One-Horned Scaraba
+    # intentional rename | B_INTENTIONAL_RENAME | db collapses 2083/2084 into "Scaraba"; the site keeps the one-horn / two-horn split
+  - MobId: 2084
+    AegisName: HORN_SCARABA2
+    KrName: 쌍뿔 스카라바
+    EnName: Two-Horned Scaraba
+    # intentional rename | B_INTENTIONAL_RENAME | the other half of the same split
+  - MobId: 3255
+    AegisName: GHOUL_H
+    KrName: 악취나는 구울
+    EnName: Smelly Ghoul
+    # intentional rename | B_INTENTIONAL_RENAME | db name "Ghoul H" is AegisName-derived; the site has a real name
+  - MobId: 3256
+    AegisName: ZOMBIE_H
+    KrName: 악취나는 좀비
+    EnName: Smelly Zombie
+    # intentional rename | B_INTENTIONAL_RENAME | db name "Zombie H" is AegisName-derived
+  - MobId: 1911
+    AegisName: OBJ_NEUTRAL
+    KrName: 중립 깃발
+    EnName: Neutrality Flag
+    # object/flag | C_ROLE_OR_OBJECT_LABEL | the Tierra battleground neutral flag - an object, not a creature
+  - MobId: 3455
+    AegisName: GLASS_PLATE
+    KrName: 접시
+    EnName: Plate
+    # object/flag | C_ROLE_OR_OBJECT_LABEL | an object (a plate) spawned in prt_cas
+  - MobId: 3742
+    AegisName: PURPLESTONE
+    KrName: 보랏빛 광석
+    EnName: Purple Ore
+    # object/flag | C_ROLE_OR_OBJECT_LABEL | an ore vein in Rock Ridge
+  - MobId: 2244
+    AegisName: QUEST_CHEN
+    KrName: 인간 실험체
+    EnName: Human Guinea pig
+    # event/quest | D_EVENT_OR_QUEST_LABEL | Wolfchev Laboratory instance - the db name Champion Chen would leak an identity the KR client never shows
+  - MobId: 1708
+    AegisName: THANATOS
+    KrName: 타나토스의 환영
+    EnName: Thanatos Phantom
+    # event/quest | D_EVENT_OR_QUEST_LABEL | thana_quest summon
+  - MobId: 1779
+    AegisName: KTULLANUX
+    KrName: 크툴라눅스
+    EnName: Ktullanux
+    # event/quest | D_EVENT_OR_QUEST_LABEL | quests_rachel summon; the db KR name is spelled 크툴라낙스
+  - MobId: 1012
+    AegisName: RODA_FROG
+    KrName: 로다프로그
+    EnName: Roda Frog
+    # custom NEED | F_CUSTOM_NEED | npc/NEED/chobozone.txt - the only override file with no counterpart at the fork point
+  - MobId: 1097
+    AegisName: ANT_EGG
+    KrName: 개미알
+    EnName: Ant Egg
+    # custom NEED | F_CUSTOM_NEED | same file; db KR is 개미 알 with a space
+  - MobId: 1698
+    AegisName: DEATHWORD
+    KrName: 데스워드
+    EnName: Death Word
+    # db-equivalent | A_DB_EQUIVALENT_VARIANT | db Deathword / upstream Death Word - the same name
+  - MobId: 1078
+    AegisName: RED_PLANT
+    KrName: 빨간풀
+    EnName: Red Plant
+    # db-equivalent | A_DB_EQUIVALENT_VARIANT | the literal drops the space in the db name 빨간 풀 - a pure orthographic variant
+  - MobId: 3444
+    AegisName: WATCHER
+    KrName: '와쳐 '
+    EnName: Watcher
+    # whitespace edge case | A_DB_EQUIVALENT_VARIANT | prt_prison spawns 3444 as "와쳐 " with a trailing space, which is the only reason it counts as an override at all

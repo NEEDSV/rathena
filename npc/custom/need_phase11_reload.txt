@@ -1,0 +1,43 @@
+//===== NEED Phase 0.11 - item DB reload probe ===============================
+//= TEST ONLY. Loaded only by conf/import/need_lang_test/map_verify.conf.
+//=
+//= Request section 13 asks whether the English display data survives an item DB
+//= reload. It does by construction - @reloaditemdb calls itemdb_reload(), which
+//= calls do_final_itemdb() (item_db.clear() destroys every item_data, so every
+//= ename_en goes with it) and then itemdb_read(), which is the ONE function that
+//= loads item_db and need_item_name_en_db together. This probe runs that path for
+//= real and re-checks the same three properties afterwards.
+//=
+//= It runs from OnTimer, not OnInit: reloading the item DB while the server is
+//= still executing its OnInit events would be testing something else entirely.
+//============================================================================
+
+-	script	NEED Phase11 Reload	-1,{
+	end;
+
+OnInit:
+	initnpctimer;
+	end;
+
+OnTimer5000:
+	stopnpctimer;
+	debugmes "[ITEMNAME][RELOAD] --- before reload ---";
+	debugmes "[ITEMNAME][RELOAD] 6919 name=" + getitemname(6919) + " aegis=" + getiteminfo(6919, ITEMINFO_AEGISNAME);
+
+	// dummy_sd carries group_id 99, so a no-RID script may run this (script.cpp:4946)
+	atcommand "@reloaditemdb";
+
+	debugmes "[ITEMNAME][RELOAD] --- after reload ---";
+	.@bad = 0;
+	// 1. the Korean name is still what a no-RID / KR session gets
+	if (getitemname(6919) != "명예의 증표") { .@bad++; debugmes "[ITEMNAME][RELOAD] KR name changed -> " + getitemname(6919); }
+	if (getitemname(399905) != "행운 포인트") { .@bad++; debugmes "[ITEMNAME][RELOAD] KR name changed -> " + getitemname(399905); }
+	if (getitemname(9530) != "NEED 의상 상자") { .@bad++; debugmes "[ITEMNAME][RELOAD] KR name changed -> " + getitemname(9530); }
+	// 2. identity survives
+	if (getiteminfo(6919, ITEMINFO_AEGISNAME) != "TokenOfHonor") { .@bad++; debugmes "[ITEMNAME][RELOAD] AegisName changed"; }
+	if (getitemname("명예의 증표") != "명예의 증표") { .@bad++; debugmes "[ITEMNAME][RELOAD] korean-name lookup broke"; }
+	// 3. the item is still usable as an item
+	if (getiteminfo(6919, ITEMINFO_TYPE) < 0) { .@bad++; debugmes "[ITEMNAME][RELOAD] item vanished from item_db"; }
+	debugmes "[ITEMNAME][RELOAD] post-reload checks bad=" + .@bad + " (expect 0; the 'Done applying' line above must repeat the start-up count with 0 skipped)";
+	end;
+}

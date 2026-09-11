@@ -20,15 +20,15 @@
 //============================================================
 lasa_in01,160,45,5	script	코인 교환기 CX-1	564,{
 	if (checkweight(1201,1) == 0) {
-		mes "객체의 종류가 너무 많습니다. 객체 수를 줄인 후에 계속 진행해 보겠습니다.";
+		mes needtr("객체의 종류가 너무 많습니다. 객체 수를 줄인 후에 계속 진행해 보겠습니다.", "You have too many kinds of objects. Let's try to continue after reducing those objects.");
 		close;
 	}
 	if (MaxWeight - Weight < 10000) {
-		mes "무거운 물건이 너무 많아서 계속할 수 없습니다. 무게를 줄인 후에 다시 시도해 보겠습니다.";
+		mes needtr("무거운 물건이 너무 많아서 계속할 수 없습니다. 무게를 줄인 후에 다시 시도해 보겠습니다.", "Can't continue because you have too many heavy objects. Let's try to continue after reducing the weight.");
 		close;
 	}
-	mes "[코인교환기 CX-1]";
-	mes "CX-1에 오신 것을 환영합니다. 보유하고 계신 동전을 등급이 높거나 낮은 동전으로 교환하실 수 있습니다.";
+	mes needtr("[코인교환기 CX-1]", "[Coin Exchanger CX-1]");
+	mes needtr("CX-1에 오신 것을 환영합니다. 보유하고 계신 동전을 등급이 높거나 낮은 동전으로 교환하실 수 있습니다.", "Welcome to CX-1. If you have coins, you can exchange them to high or low grade coins.");
 	next;
 	setarray .@coins[1],
 		6909, //Silvervine
@@ -37,7 +37,7 @@ lasa_in01,160,45,5	script	코인 교환기 CX-1	564,{
 		6420, //Cgrade_Coin
 		6421, //Dgrade_Coin
 		6422; //Egrade_Coin
-	.@menu$ = "멈추다:";
+	.@menu$ = needtr("멈추다:", "Stop:");
 	for(.@i = 1; .@i<=6; .@i++) {
 		if (countitem(.@coins[.@i]))
 			.@menu$ = .@menu$ + getitemname(.@coins[.@i]) + ":";
@@ -47,8 +47,8 @@ lasa_in01,160,45,5	script	코인 교환기 CX-1	564,{
 	.@i = select(.@menu$);
 	switch(.@i) {
 	case 1:
-		mes "[코인교환기 CX-1]";
-		mes "와주셔서 감사합니다.";
+		mes needtr("[코인교환기 CX-1]", "[Coin Exchanger CX-1]");
+		mes needtr("와주셔서 감사합니다.", "Thank you for coming.");
 		close;
 	default:
 		.@coin = .@coins[.@i-1];
@@ -56,65 +56,65 @@ lasa_in01,160,45,5	script	코인 교환기 CX-1	564,{
 		break;
 	}
 	if (countitem(.@coin) == 0) {
-		mes "[코인교환기 CX-1]";
-		mes "당신은 자신이 가지고 있지 않은 동전을 선택했습니다.";
-		mes "와주셔서 감사합니다.";
+		mes needtr("[코인교환기 CX-1]", "[Coin Exchanger CX-1]");
+		mes needtr("당신은 자신이 가지고 있지 않은 동전을 선택했습니다.", "You chose a coin that you don't have.");
+		mes needtr("와주셔서 감사합니다.", "Thank you for coming.");
 		close;
 	}
-	mes "[코인교환기 CX-1]";
-	mes "환율";
-	mes "더 높은 환율 - 30 대 10";
-	mes "환율 하락 - 10~30";
+	mes needtr("[코인교환기 CX-1]", "[Coin Exchanger CX-1]");
+	mes needtr("환율", "----Rate of exchange----");
+	mes needtr("더 높은 환율 - 30 대 10", "Higher exchange - 30 to 10");
+	mes needtr("환율 하락 - 10~30", "Lower exchange - 10 to 30");
 	mes "------------------------";
-	mes "^ff3333교환 시 현재 시장 가격에 따라 수수료가 부과됩니다.^000000";
+	mes needtr("^ff3333교환 시 현재 시장 가격에 따라 수수료가 부과됩니다.^000000", "^ff3333When you exchange, we charge a fee according to the current market price.^000000");
 	next;
-	setarray .@exchange_name$[0],"상위","하위";
+	setarray .@exchange_name$[0],needtr("상위", "higher"),needtr("하위", "lower");
 	setarray .@exchange_rate[0],30,10;
 	setarray .@exchange_id[0],.@coins[.@coin_select-1],.@coins[.@coin_select+1];
 	if (.@exchange_id[0] == .@coins[1]) .@exchange_id[0] = 0; // Cannot exchange for Silvervine.
-	.@menu$ = "중단:";
+	.@menu$ = needtr("중단:", "Cancel:");
 	for(.@i = 0; .@i<2; .@i++) {
 		if (.@exchange_id[.@i] == 0)
-			.@menu$ = .@menu$ + "^ff3333"+.@exchange_name$[.@i]+" 코인은 교환 불가^000000:";
+			.@menu$ = .@menu$ + "^ff3333"+.@exchange_name$[.@i]+needtr(" 코인은 교환 불가^000000:", " coin - exchange unavailable^000000:");
 		else if (countitem(.@coin) < .@exchange_rate[.@i])
-			.@menu$ = .@menu$ + "^aaaaaa"+.@exchange_name$[.@i]+" 코인으로 교환 (없음)^000000:";
+			.@menu$ = .@menu$ + "^aaaaaa"+.@exchange_name$[.@i]+needtr(" 코인으로 교환 (없음)^000000:", " coin exchange (none)^000000:");
 		else
-			.@menu$ = .@menu$ + ""+.@exchange_name$[.@i]+" 코인 - "+getitemname(.@coin)+" ("+.@exchange_rate[.@i]+"개 사용):";
+			.@menu$ = .@menu$ + ""+.@exchange_name$[.@i]+needtr(" 코인 - ", " coin - ")+getitemname(.@coin)+" ("+.@exchange_rate[.@i]+needtr("개 사용):", " needed):");
 	}
 	.@i = select(.@menu$)-2;
 	if (.@i == -1) {
-		mes "[코인교환기 CX-1]";
-		mes "와주셔서 감사합니다.";
+		mes needtr("[코인교환기 CX-1]", "[Coin Exchanger CX-1]");
+		mes needtr("와주셔서 감사합니다.", "Thank you for coming.");
 		close;
 	}
 	if (.@exchange_id[.@i] == 0) {
-		mes "[코인교환기 CX-1]";
-		mes " 이 코인은 다른 코인으로 교환할 수 없습니다."+.@exchange_name$[.@i]+" coin.";
-		mes "와주셔서 감사합니다.";
+		mes needtr("[코인교환기 CX-1]", "[Coin Exchanger CX-1]");
+		mes needtr(" 이 코인은 다른 코인으로 교환할 수 없습니다.", "This coin is not available to exchange to ")+.@exchange_name$[.@i]+" coin.";
+		mes needtr("와주셔서 감사합니다.", "Thank you for coming.");
 		close;
 	}
 	if (countitem(.@coin) < .@exchange_rate[.@i]) {
-		mes "[코인교환기 CX-1]";
-		mes "교환에 필요한 코인이 부족합니다.";
-		mes "와주셔서 감사합니다.";
+		mes needtr("[코인교환기 CX-1]", "[Coin Exchanger CX-1]");
+		mes needtr("교환에 필요한 코인이 부족합니다.", "You don't have enough coins for the exchange.");
+		mes needtr("와주셔서 감사합니다.", "Thank you for coming.");
 		close;
 	}
 
 	.@max_exchange = countitem(.@coin) / .@exchange_rate[.@i];
-	mes "[코인교환기 CX-1]";
-	mes "몇 회 교환하시겠습니까?";
-	mes "1회당 ^003399"+.@exchange_rate[.@i]+"^000000개의 ^003399"+getitemname(.@coin)+"^000000이 필요합니다.";
-	mes "현재 최대 ^003399"+.@max_exchange+"회^000000까지 교환할 수 있습니다.";
+	mes needtr("[코인교환기 CX-1]", "[Coin Exchanger CX-1]");
+	mes needtr("몇 회 교환하시겠습니까?", "How many times would you like to exchange?");
+	mes needtr("1회당 ^003399", "^003399")+.@exchange_rate[.@i]+needtr("^000000개의 ^003399", "^000000 unit(s) of ^003399 ")+getitemname(.@coin)+needtr("^000000이 필요합니다.", "^000000 taken.");
+	mes needtr("현재 최대 ^003399", "Right now you can exchange up to ^003399")+.@max_exchange+needtr("회^000000까지 교환할 수 있습니다.", " time(s)^000000.");
 	input .@exchange_count;
 
 	if (.@exchange_count <= 0) {
-		mes "[코인교환기 CX-1]";
-		mes "교환을 취소했습니다.";
+		mes needtr("[코인교환기 CX-1]", "[Coin Exchanger CX-1]");
+		mes needtr("교환을 취소했습니다.", "The exchange has been cancelled.");
 		close;
 	}
 	if (.@exchange_count > .@max_exchange) {
-		mes "[코인교환기 CX-1]";
-		mes "보유한 코인으로는 최대 ^003399"+.@max_exchange+"회^000000까지만 교환할 수 있습니다.";
+		mes needtr("[코인교환기 CX-1]", "[Coin Exchanger CX-1]");
+		mes needtr("보유한 코인으로는 최대 ^003399", "With the coins you have, you can exchange at most ^003399")+.@max_exchange+needtr("회^000000까지만 교환할 수 있습니다.", " time(s)^000000.");
 		close;
 	}
 
@@ -132,26 +132,26 @@ lasa_in01,160,45,5	script	코인 교환기 CX-1	564,{
 	.@exchange_loss_total = .@exchange_base_total - .@exchange_total;
 
 	if (checkweight(.@exchange_id[.@i], .@exchange_total) == 0) {
-		mes "[코인교환기 CX-1]";
-		mes "교환 결과물을 받을 수 없습니다.";
-		mes "소지 무게나 인벤토리 공간을 확보한 후 다시 시도해 주세요.";
+		mes needtr("[코인교환기 CX-1]", "[Coin Exchanger CX-1]");
+		mes needtr("교환 결과물을 받을 수 없습니다.", "You cannot receive the exchanged coins.");
+		mes needtr("소지 무게나 인벤토리 공간을 확보한 후 다시 시도해 주세요.", "Please free up some weight or inventory space and try again.");
 		close;
 	}
 
 	// 입력 이후 아이템 수량이 변했을 가능성까지 다시 확인합니다.
 	if (countitem(.@coin) < .@exchange_cost) {
-		mes "[코인교환기 CX-1]";
-		mes "교환에 필요한 코인이 부족합니다.";
+		mes needtr("[코인교환기 CX-1]", "[Coin Exchanger CX-1]");
+		mes needtr("교환에 필요한 코인이 부족합니다.", "You don't have enough coins for the exchange.");
 		close;
 	}
 
 	delitem .@coin, .@exchange_cost;
 	getitem .@exchange_id[.@i], .@exchange_total;
-	mes "[코인교환기 CX-1]";
-	mes "^003399"+getitemname(.@coin)+"^000000 "+.@exchange_cost+"개를 사용하여";
-	mes "^003399"+.@exchange_count+"회^000000 교환을 완료했습니다.";
-	mes "^003399"+getitemname(.@exchange_id[.@i])+"^000000 "+.@exchange_total+"개를 획득했습니다.";
-	mes "총 수수료 차감량: ^ff3333"+.@exchange_loss_total+"개^000000";
+	mes needtr("[코인교환기 CX-1]", "[Coin Exchanger CX-1]");
+	mes "^003399"+getitemname(.@coin)+"^000000 "+.@exchange_cost+needtr("개를 사용하여", " unit(s) used,");
+	mes "^003399"+.@exchange_count+needtr("회^000000 교환을 완료했습니다.", " exchange(s)^000000 completed.");
+	mes "^003399"+getitemname(.@exchange_id[.@i])+"^000000 "+.@exchange_total+needtr("개를 획득했습니다.", ".");
+	mes needtr("총 수수료 차감량: ^ff3333", "Total fee deducted: ^ff3333")+.@exchange_loss_total+needtr("개^000000", "^000000");
 	close;
 	
 OnInit:
@@ -161,45 +161,45 @@ OnInit:
 
 lasa_in01,161,50,5	script	Dark Merchant K	554,{
 	if (checkweight(1201,1) == 0) {
-		mes "소지품이 너무 많은 것 같습니다. 소지품 일부를 정리하신 후 다시 시도해 보겠습니다.";
+		mes needtr("소지품이 너무 많은 것 같습니다. 소지품 일부를 정리하신 후 다시 시도해 보겠습니다.", "It seems you have too much in your inventory. Let's try again after getting rid of some of your belongings.");
 		close;
 	}
 	if (MaxWeight - Weight < 1000) {
-		mes "현재 소지품이 너무 많습니다. 소지품 일부를 정리하고 다시 오세요.";
+		mes needtr("현재 소지품이 너무 많습니다. 소지품 일부를 정리하고 다시 오세요.", "Your inventory is too heavy now. Please come back after getting rid of some of your belongings.");
 		close;
 	}
-	mes "[상인 K]";
-	mes "거래해 주셔서 감사합니다.";
-	mes "^ff000010개의 C등급 코인^000000을 ^3333ff모라 주화 1개^000000로 교환하겠습니다. 그럼 시작할까요?";
+	mes needtr("[상인 K]", "[Merchant K]");
+	mes needtr("거래해 주셔서 감사합니다.", "Thank you for the trade.");
+	mes needtr("^ff000010개의 C등급 코인^000000을 ^3333ff모라 주화 1개^000000로 교환하겠습니다. 그럼 시작할까요?", "We exchange ^ff000010 C Grade Coin^000000 to ^3333ff1 Mora Coin^000000. Shall we begin then?");
 	next;
 	setarray .@coin_amount[0],10,100,500,1000;
 	while(1) {
 		.@menu$ = "";
 		for(.@i = 0; .@i<getarraysize(.@coin_amount); .@i++) {
 			if (countitem(6420) >= .@coin_amount[.@i])
-				.@menu$ = .@menu$ + ""+(.@coin_amount[.@i]/10)+"개 모라 주화 교환:";
+				.@menu$ = .@menu$ + ""+(.@coin_amount[.@i]/10)+needtr("개 모라 주화 교환:", " Mora Coin exchange:");
 			else
-				.@menu$ = .@menu$ + "^aaaaaa"+(.@coin_amount[.@i]/10)+"개 모라 주화 교환 (재료 부족)^000000:";
+				.@menu$ = .@menu$ + "^aaaaaa"+(.@coin_amount[.@i]/10)+needtr("개 모라 주화 교환 (재료 부족)^000000:", " Mora Coin exchange (not enough)^000000:");
 		}
-		.@i = select(.@menu$+"종료")-1;
+		.@i = select(.@menu$+needtr("종료", "Quit"))-1;
 		if (.@i == getarraysize(.@coin_amount)) {
-			mes "[상인 K]";
-			mes "다음에 다시 이야기해요.";
+			mes needtr("[상인 K]", "[Merchant K]");
+			mes needtr("다음에 다시 이야기해요.", "Let's exchange some other time.");
 			close;
 		}
 		if (countitem(6420) < .@coin_amount[.@i]) {
-			mes "[상인 K]";
-			mes "^ff0000이 필요합니다"+.@coin_amount[.@i]+"^000000 C 등급 동전으로 교환을 진행해야 합니다. 하지만 현재 충분한 양이 없는 것 같습니다.";
+			mes needtr("[상인 K]", "[Merchant K]");
+			mes needtr("^ff0000이 필요합니다", "You need ^ff0000")+.@coin_amount[.@i]+needtr("^000000 C 등급 동전으로 교환을 진행해야 합니다. 하지만 현재 충분한 양이 없는 것 같습니다.", "^000000 C Grade Coin to perform the exchange. But you don't seem to have enough now.");
 			close;
 		}
 		delitem 6420,.@coin_amount[.@i]; //Cgrade_Coin
 		getitem 6380,.@coin_amount[.@i]/10; //Mora_Coin
-		mes "[상인 K]";
-		mes "C등급 코인 ^003399"+.@coin_amount[.@i]+"^000000 개를 받았습니다."; //FIXME: Dialogue.
-		mes "^003399"+(.@coin_amount[.@i]/10)+"^000000 개 모라 주화로 교환했습니다.";
+		mes needtr("[상인 K]", "[Merchant K]");
+		mes needtr("C등급 코인 ^003399", "C Grade Coin ^003399")+.@coin_amount[.@i]+needtr("^000000 개를 받았습니다.", "^000000 well received."); //FIXME: Dialogue.
+		mes "^003399"+(.@coin_amount[.@i]/10)+needtr("^000000 개 모라 주화로 교환했습니다.", "^000000 Mora Coin.");
 		next;
-		mes "[상인 K]";
-		mes "계속하시겠습니까?";
+		mes needtr("[상인 K]", "[Merchant K]");
+		mes needtr("계속하시겠습니까?", "Would you like to continue?");
 		next;
 	}
 	
@@ -216,65 +216,65 @@ function	script	F_mal_coin	{
 	if (getarg(0) == 0) {
 		if (getarg(2) != 2 && BaseLevel < 50) {
 			mes .@npc_name$;
-			mes "아하아~";
-			mes "이 물건을 사고 싶으시다면,";
-			mes "저와 이야기하셔도 됩니다";
-			mes "네가 좀 더 크면.";
-			mes "이 물건은 너무 비싸요";
-			mes "아이를 위해~";
+			mes needtr("아하아~", "Ahaaa~");
+			mes needtr("이 물건을 사고 싶으시다면,", "If you want to buy this stuff,");
+			mes needtr("저와 이야기하셔도 됩니다", "you can talk to me");
+			mes needtr("네가 좀 더 크면.", "when you grow up a little more.");
+			mes needtr("이 물건은 너무 비싸요", "This stuff is too expensive");
+			mes needtr("아이를 위해~", "for a child~");
 			close;
 		}
 		mes .@npc_name$;
-		mes "만나서 반가워요~~";
-		mes "맞아요! 네~~ 맞아요!";
-		mes "저는 특별한 물건들을 판매합니다";
-		mes "오직 야옹야옹 섬에서만 볼 수 있는 것들이에요!";
+		mes needtr("만나서 반가워요~~", "Nice to meet you~~");
+		mes needtr("맞아요! 네~~ 맞아요!", "I am! YES~~ That's right!");
+		mes needtr("저는 특별한 물건들을 판매합니다", "I'm selling special stuff");
+		mes needtr("오직 야옹야옹 섬에서만 볼 수 있는 것들이에요!", "which you can see only here on Meow Meow Island!");
 		next;
 		mes .@npc_name$;
-		mes "어때요? 뭘 기다리고 계세요?";
-		mes "한번 살펴보시는 건 어떠세요?";
-		mes "내가 가진 물건들은 어떤 종류인가요?";
+		mes needtr("어때요? 뭘 기다리고 계세요?", "How about it? What are you waiting for?");
+		mes needtr("한번 살펴보시는 건 어떠세요?", "Why don't you take a look at");
+		mes needtr("내가 가진 물건들은 어떤 종류인가요?", "what kinds of stuff I have?");
 		next;
 		switch(getarg(2)) {
 		case 1:
-			mes "[떠돌이 상인]";
-			mes "오~";
-			mes "이 제품들은 대여 상품이므로, 1시간 대여 버전인지 7일 대여 버전인지 꼭 확인하세요.";
+			mes needtr("[떠돌이 상인]", "[Wandering Merchant]");
+			mes needtr("오~", "Oh~");
+			mes needtr("이 제품들은 대여 상품이므로, 1시간 대여 버전인지 7일 대여 버전인지 꼭 확인하세요.", "These are rental items, so make sure you know if you have the ^0000FF1 hour^000000 or ^0000FF7 day^000000 version.");
 			next;
 			break;
 		case 2:
 			break;
 		case 3:
-			mes "[떠돌이 상인]";
-			mes "참고로 알려드립니다.";
-			mes "쥐며느리, 불가사리, 말린 오징어, 날치는 1시간 동안 사용할 수 있는 아이템입니다.";
+			mes needtr("[떠돌이 상인]", "[Roving Merchant]");
+			mes needtr("참고로 알려드립니다.", "Just for your information,");
+			mes needtr("쥐며느리, 불가사리, 말린 오징어, 날치는 1시간 동안 사용할 수 있는 아이템입니다.", "Sow Bug, Starfish, Dried Squid, and Flying Fish are the items which you can use for 1 hour.");
 			next;
 			break;
 		}
 		mes .@npc_name$;
-		mes "그럼, 제가 지금 가지고 있는 걸 한번 보시겠어요?";
+		mes needtr("그럼, 제가 지금 가지고 있는 걸 한번 보시겠어요?", "Well then, do you want to take a look at what I have now?");
 		next;
 		switch(select("Yes:No")) {
 		case 1:
 			if (checkweight(1201,1) == 0) {
 				mes .@npc_name$;
-				mes "인벤토리에 아이템이 너무 많은 것 같습니다.";
-				mes "자리 비워두시고 다시 오세요~";
+				mes needtr("인벤토리에 아이템이 너무 많은 것 같습니다.", "It seems that there are too many items in your inventory.");
+				mes needtr("자리 비워두시고 다시 오세요~", "Please make space and come back again~");
 				close;
 			}
 			if (MaxWeight - Weight < 2500) {
 				mes .@npc_name$;
-				mes "당신은 과체중인 것 같습니다.";
-				mes "체중을 줄이시고 다시 오세요~";
+				mes needtr("당신은 과체중인 것 같습니다.", "It seems that you're overweight.");
+				mes needtr("체중을 줄이시고 다시 오세요~", "Please reduce your weight and come back again~");
 				close;
 			}
 			mes .@npc_name$;
-			mes "자, 잘 살펴보세요~~~";
+			mes needtr("자, 잘 살펴보세요~~~", "Well, take a good look at them~~~");
 			next;
 			return;
 		case 2:
 			mes .@npc_name$;
-			mes "그럼 다음에 뵙겠습니다.";
+			mes needtr("그럼 다음에 뵙겠습니다.", "Well, then. I'll see you next time.");
 			mes "Goodbye.";
 			close;
 		}
@@ -284,28 +284,28 @@ function	script	F_mal_coin	{
 // -- callfunc "F_mal_coin",1,"[<NPC Name>]","<Display Name>",<Item ID>,<Egrade_Coin>,<Malang_Sp_Can>,<Silvervine>
 	if (getarg(0) == 1) {
 		mes .@npc_name$;
-		mes "^0000FF의 가격["+getarg(2)+"]^000000은";
+		mes needtr("^0000FF의 가격[", "The price of ^0000FF[")+getarg(2)+needtr("]^000000은", "]^000000 is");
 		if (getarg(4) && getarg(5)) { // Type 1: Egrade_Coin or Malang_Sp_Can
-			mes getarg(4)+" E 등급 동전 또는"+getarg(5)+" 말랑도 통조림 특산품.";
+			mes getarg(4)+needtr(" E 등급 동전 또는", " E Grade Coin or ")+getarg(5)+needtr(" 말랑도 통조림 특산품.", " Malangdo Canned Specialties.");
 			.@type = 1;
-			.@menu$ = "네.:아니요, 캔으로 구매하겠습니다.:구매하고 싶지 않습니다.";
+			.@menu$ = needtr("네.:아니요, 캔으로 구매하겠습니다.:구매하고 싶지 않습니다.", "Yes.:No, I'll purchase with cans.:I don't want to purchase any.");
 		} else if (getarg(5)) { // Type 2: Malang_Sp_Can only
-			mes getarg(5)+" 말랑도 통조림 특산품.";
+			mes getarg(5)+needtr(" 말랑도 통조림 특산품.", " Malangdo Canned Specialties.");
 			.@type = 2;
-			.@menu$ = "예.::아니요.";
+			.@menu$ = needtr("예.::아니요.", "Yes.::No.");
 		} else { // Type 3: Silvervine only
-			mes getarg(6)+" 실버바인 과일.";
+			mes getarg(6)+needtr(" 실버바인 과일.", " Silvervine Fruit.");
 			.@type = 3;
-			.@menu$ = "네.::저는 아무것도 구매하고 싶지 않습니다.";
+			.@menu$ = needtr("네.::저는 아무것도 구매하고 싶지 않습니다.", "Yes.::I don't want to purchase any.");
 		}
 		next;
 		mes .@npc_name$;
 		if (.@type == 1) {
-			mes "구매하시겠습니까?";
-			mes "^0000FF["+getarg(2)+"]^000000 E 등급 동전으로?";
+			mes needtr("구매하시겠습니까?", "Would you like to purchase");
+			mes "^0000FF["+getarg(2)+needtr("]^000000 E 등급 동전으로?", "]^000000 with E Grade Coins?");
 		} else {
-			mes "원하시나요?";
-			mes "구매 ^0000FF["+getarg(2)+"]^000000?";
+			mes needtr("원하시나요?", "Would you like to");
+			mes needtr("구매 ^0000FF[", "purchase ^0000FF[")+getarg(2)+"]^000000?";
 		}
 		next;
 		switch(select(.@menu$)) {
@@ -331,24 +331,24 @@ function	script	F_mal_coin	{
 			}
 			if (countitem(.@item) < .@amount) {
 				mes .@npc_name$;
-				mes " 죄송하지만, 더 필요하세요?"+.@str$+".";
+				mes needtr(" 죄송하지만, 더 필요하세요?", "I'm sorry, you need more ")+.@str$+".";
 				close;
 			}
 			if (MaxWeight - Weight < getiteminfo(getarg(3), ITEMINFO_WEIGHT)) {
 				mes .@npc_name$;
-				mes "죄송합니다. 너무 많이 구매하셨습니다.";
-				mes "인벤토리 공간을 확보해야 합니다. 나중에 다시 시도해 주세요.";
+				mes needtr("죄송합니다. 너무 많이 구매하셨습니다.", "Sorry, you've purchased too many.");
+				mes needtr("인벤토리 공간을 확보해야 합니다. 나중에 다시 시도해 주세요.", "You need to make more space in your inventory. Please come back later.");
 				close;
 			}
 			mes .@npc_name$;
-			mes "감사합니다.";
+			mes needtr("감사합니다.", "Thank you.");
 			delitem .@item,.@amount;
 			getitem getarg(3),1;
 			return;
 		case 3:
 			mes .@npc_name$;
-			mes "항상 조심하세요";
-			mes "상품을 구매하실 때.";
+			mes needtr("항상 조심하세요", "Always be careful");
+			mes needtr("상품을 구매하실 때.", "when you purchase items.");
 			close;
 		}
 	}
