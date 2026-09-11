@@ -582,6 +582,12 @@ void mvptomb_destroy(mob_data *md);
 
 void mob_setdropitem_option( item& itm, const std::shared_ptr<s_mob_drop>& mobdrop );
 
+struct item_data;
+
+bool mob_is_drop_disabled( t_itemid nameid );
+bool mob_rare_drop_announce_allowed( uint32 rate, e_mob_bosstype bosstype );
+bool mob_rare_drop_announce( const map_session_data& sd, const char* mob_name, const item_data& id, uint32 rate, e_mob_bosstype bosstype );
+
 #define CHK_MOBSIZE(size) ((size) >= SZ_SMALL && (size) < SZ_MAX) /// Check valid Monster Size
 
 #endif /* MOB_HPP */
