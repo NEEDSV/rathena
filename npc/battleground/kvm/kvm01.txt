@@ -121,26 +121,6 @@ function	script	F_KvM_SetPartyTeam	{
 	return;
 }
 
-function	script	F_KvM_JoinPartyToBG	{
-	.@party_id = getarg(0);
-	.@bg_id = getarg(1);
-	.@team = getarg(2);
-
-	if (.@team == 1) {
-		.@x = 52;
-		.@y = 129;
-	}
-	else {
-		.@x = 147;
-		.@y = 55;
-	}
-
-	.@result = callfunc("F_BG_RM_JoinCyclePartyToBG",
-		.@party_id, .@bg_id, .@team, "bat_c01", .@x, .@y);
-
-	return .@result;
-}
-
 function	script	F_KvM_RollbackPartyBG	{
 	.@party_id = getarg(0);
 	.@bg_id = getarg(1);
@@ -363,51 +343,58 @@ OnPartyReady:
 	$@KvM01BG = 1;
 	$@KvM01BG_Victory = 0;
 	callfunc "F_KvM_ClearReadyState";
-	if ($@BG_RM_CYCLE_ACTIVE) {
-		// 랜덤 매칭은 최초 매칭 명단에 포함된 현재 온라인/대기존 인원만 직접 편입합니다.
-		// party2bg를 그대로 사용하면 중간에 추가된 신규 파티원이 함께 들어갈 수 있으므로 사용하지 않습니다.
-		$@KvM01BG_id1 = bg_create("bat_c01",52,129,"KvM01_BG::OnGuillaumeQuit","KvM01_BG::OnGuillaumeDie");
-		$@KvM01BG_id2 = bg_create("bat_c01",147,55,"KvM01_BG::OnCroixQuit","KvM01_BG::OnCroixDie");
+	// v12.1 KVM 안정화:
+	// 기존 서버에서 정상 동작하던 party2bg 경로를 복구합니다.
+	// v11의 bg_create + 개별 bg_join 경로는 커스텀/구형 포크에서
+	// 진영 전투 판정 또는 전장 진행 연결이 달라질 가능성이 있어 사용하지 않습니다.
+	debugmes "[BG RM][KVM] party2bg start"
+		+ " G_party=" + $BG_GUILLAUME_PARTY_ID
+		+ " C_party=" + $BG_CROIX_PARTY_ID
+		+ " needG=" + $BG_Guillaume_Count
+		+ " needC=" + $BG_Croix_Count
+		+ " random=" + $@BG_RM_CYCLE_ACTIVE;
 
-		if (!$@KvM01BG_id1 || !$@KvM01BG_id2) {
-			mapannounce "bat_room", "[KVM] 랜덤 매칭 BG 팀 생성에 실패했습니다.", bc_map, "0xFF6666";
-			donpcevent "KvM01_BG::OnPartyEntryFail";
-			end;
-		}
+	$@KvM01BG_id1 = party2bg(
+		$BG_GUILLAUME_PARTY_ID,
+		"bat_c01",52,129,
+		"KvM01_BG::OnGuillaumeQuit",
+		"KvM01_BG::OnGuillaumeDie"
+	);
 
-		.@joined_g = callfunc("F_KvM_JoinPartyToBG", $BG_GUILLAUME_PARTY_ID, $@KvM01BG_id1, 1);
-		if (.@joined_g < 0) {
-			mapannounce "bat_room", "[KVM] 기욤 팀 가입 실패: " + $@BG_RM_Join_FailReason$ + (($@BG_RM_Join_FailName$ == "") ? "" : " (" + $@BG_RM_Join_FailName$ + ")"), bc_map, "0xFF6666";
-			donpcevent "KvM01_BG::OnPartyEntryFail";
-			end;
-		}
-
-		.@joined_c = callfunc("F_KvM_JoinPartyToBG", $BG_CROIX_PARTY_ID, $@KvM01BG_id2, 2);
-		if (.@joined_c < 0) {
-			mapannounce "bat_room", "[KVM] 크루아 팀 가입 실패: " + $@BG_RM_Join_FailReason$ + (($@BG_RM_Join_FailName$ == "") ? "" : " (" + $@BG_RM_Join_FailName$ + ")"), bc_map, "0xFF6666";
-			donpcevent "KvM01_BG::OnPartyEntryFail";
-			end;
-		}
+	if (!$@KvM01BG_id1) {
+		mapannounce "bat_room", "[KVM] 기욤 BG 팀 생성에 실패했습니다.", bc_map, "0xFF6666";
+		donpcevent "KvM01_BG::OnPartyEntryFail";
+		end;
 	}
-	else {
-		$@KvM01BG_id1 = party2bg($BG_GUILLAUME_PARTY_ID,"bat_c01",52,129,"KvM01_BG::OnGuillaumeQuit","KvM01_BG::OnGuillaumeDie");
-		if (!$@KvM01BG_id1) {
-			mapannounce "bat_room", "[KVM] 기욤 BG 팀 생성에 실패했습니다.", bc_map, "0xFF6666";
-			donpcevent "KvM01_BG::OnPartyEntryFail";
-			end;
-		}
 
-		$@KvM01BG_id2 = party2bg($BG_CROIX_PARTY_ID,"bat_c01",147,55,"KvM01_BG::OnCroixQuit","KvM01_BG::OnCroixDie");
-		if (!$@KvM01BG_id2) {
-			mapannounce "bat_room", "[KVM] 크루아 BG 팀 생성에 실패했습니다.", bc_map, "0xFF6666";
-			donpcevent "KvM01_BG::OnPartyEntryFail";
-			end;
-		}
+	$@KvM01BG_id2 = party2bg(
+		$BG_CROIX_PARTY_ID,
+		"bat_c01",147,55,
+		"KvM01_BG::OnCroixQuit",
+		"KvM01_BG::OnCroixDie"
+	);
 
-		.@joined_g = bg_get_data($@KvM01BG_id1,0);
-		.@joined_c = bg_get_data($@KvM01BG_id2,0);
+	if (!$@KvM01BG_id2) {
+		mapannounce "bat_room", "[KVM] 크루아 BG 팀 생성에 실패했습니다.", bc_map, "0xFF6666";
+		donpcevent "KvM01_BG::OnPartyEntryFail";
+		end;
 	}
+
+	.@joined_g = bg_get_data($@KvM01BG_id1,0);
+	.@joined_c = bg_get_data($@KvM01BG_id2,0);
+
+	debugmes "[BG RM][KVM] party2bg result"
+		+ " G_bg=" + $@KvM01BG_id1
+		+ " C_bg=" + $@KvM01BG_id2
+		+ " joinedG=" + .@joined_g
+		+ " joinedC=" + .@joined_c
+		+ " needG=" + $BG_Guillaume_Count
+		+ " needC=" + $BG_Croix_Count;
+
 	if (.@joined_g != $BG_Guillaume_Count || .@joined_c != $BG_Croix_Count) {
+		debugmes "[BG RM][KVM] party2bg count mismatch"
+			+ " joinedG=" + .@joined_g + " needG=" + $BG_Guillaume_Count
+			+ " joinedC=" + .@joined_c + " needC=" + $BG_Croix_Count;
 		mapannounce "bat_room", "[KVM] BG 가입 인원 검증에 실패하여 자동 입장을 취소했습니다.", bc_map, "0xFF6666";
 		donpcevent "KvM01_BG::OnPartyEntryFail";
 		end;
