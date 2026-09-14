@@ -16456,6 +16456,9 @@ static void pc_macro_detector_set_pending(map_session_data &sd) {
 static constexpr uint16 macro_detector_block_actions = PCBLOCK_ALL | PCBLOCK_IMMUNE;
 static constexpr t_tick macro_detector_quiet_window = 500;
 static constexpr t_tick macro_detector_max_damage_wait = 3000;
+// A warp/map load is waited out instead of cancelling the captcha: up to 10 seconds.
+static constexpr t_tick macro_detector_display_retry_delay = 500;
+static constexpr uint16 macro_detector_max_display_retry = 20;
 
 static const char *pc_macro_detector_phase_name(s_macro_detect::e_macro_detect_phase phase) {
 	switch (phase) {
@@ -16538,6 +16541,27 @@ static void pc_macro_detector_delete_timeout_timer(map_session_data &sd) {
 	const int32 tid = sd.macro_detect.timer;
 	sd.macro_detect.timer = INVALID_TIMER;
 	delete_timer(tid, pc_macro_detector_timeout);
+}
+
+/**
+ * Re-arm the answer timeout as an absolute deadline.
+ * addtick_timer() adds to the timer's current expiry instead of replacing it, so
+ * passing gettick()+timeout pushed the deadline roughly one server uptime into the
+ * future and left the captcha running without a reachable timeout.
+ * The hard deadline must always exist, so a failed re-arm creates a fresh timer.
+ * @param sd: Player data
+ */
+static void pc_macro_detector_rearm_timeout(map_session_data &sd) {
+	const t_tick deadline = gettick() + battle_config.macro_detection_timeout;
+
+	if (sd.macro_detect.timer != INVALID_TIMER) {
+		if (settick_timer(sd.macro_detect.timer, deadline) != -1)
+			return;
+		// The timer id is no longer usable, drop it and build a fresh one below.
+		sd.macro_detect.timer = INVALID_TIMER;
+	}
+
+	sd.macro_detect.timer = add_timer(deadline, pc_macro_detector_timeout, sd.id, sd.macro_detect.generation);
 }
 
 static void pc_macro_detector_success_immunity_log(const map_session_data &sd, const char *state,
@@ -16993,6 +17017,17 @@ static TIMER_FUNC(pc_macro_detector_display_timer) {
 	sd->macro_detect.display_timer = INVALID_TIMER;
 
 	if (!pc_macro_detector_session_ready(*sd)) {
+		// A warp or map load is a short transition, not a reason to throw the captcha
+		// away. Cancelling here restarted the whole challenge every second and released
+		// the action block in between, which is what made captchas appear repeatedly
+		// for players that teleport constantly.
+		if (sd->macro_detect.display_retry < macro_detector_max_display_retry) {
+			++sd->macro_detect.display_retry;
+			sd->macro_detect.display_timer = add_timer(gettick() + macro_detector_display_retry_delay,
+				pc_macro_detector_display_timer, sd->id, generation);
+			pc_macro_detector_debug_log(*sd, "session_not_ready_wait");
+			return 0;
+		}
 		pc_macro_detector_cancel_and_requeue(*sd, "session_not_ready");
 		return 0;
 	}
@@ -17095,7 +17130,7 @@ void pc_macro_detector_process_ack(map_session_data &sd) {
 	sd.macro_detect.ack_received = true;
 	sd.macro_detect.answer_window_shown = true;
 	clif_macro_detector_request_show(sd);
-	addtick_timer(sd.macro_detect.timer, gettick() + battle_config.macro_detection_timeout);
+	pc_macro_detector_rearm_timeout(sd);
 	pc_macro_detector_debug_log(sd, "IMAGE_SENT->ACTIVE");
 }
 
@@ -17139,7 +17174,7 @@ TIMER_FUNC(pc_macro_detector_timeout) {
 	pc_macro_detector_debug_log(*sd, "answer_timeout");
 	pc_macro_detect_log(*sd, "timeout", sd->macro_detect.retry);
 
-	if (sd->macro_detect.retry == 0) {
+	if (sd->macro_detect.retry <= 0) {
 		// All attempts have been exhausted, punish the user
 		pc_macro_punishment(*sd, MCD_TIMEOUT);
 	} else {
@@ -17227,7 +17262,7 @@ void pc_macro_detector_process_answer(map_session_data &sd, const char captcha_a
 		clif_macro_detector_request_show(sd);
 
 		// Reset the timer
-		addtick_timer(sd.macro_detect.timer, gettick() + battle_config.macro_detection_timeout);
+		pc_macro_detector_rearm_timeout(sd);
 	}
 }
 

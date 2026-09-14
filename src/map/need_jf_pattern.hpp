@@ -9,6 +9,7 @@
 #include <common/timer.hpp>
 
 class map_session_data;
+struct mob_data;
 
 // Message ids 1904~1987 are reserved by conf/msg_conf/map_msg_need_summer.conf and
 // 1988~1995 by the pet autofeed command. 1996~1999 are the last free slots
@@ -31,8 +32,14 @@ struct s_need_jf_pattern {
 	t_tick last_pattern_tick;	///< Last completed skill->teleport pattern
 	t_tick last_decay_tick;		///< Reference tick of the lazy suspicion decay
 	t_tick avg_interval;		///< Smoothed interval between patterns in ms
-	uint32 pattern_count;		///< Patterns inside the running window
-	uint32 suspicion_score;
+	t_tick steal_window_start_tick;	///< Start of the steal pattern aggregation window
+	uint32 pattern_count;		///< Plain skill->teleport patterns in the window (statistics only)
+	uint32 steal_count;			///< Steal patterns confirmed inside the steal window
+	uint32 cast_hit_count;		///< Monsters hit by the cast currently being resolved
+	uint32 cast_foreign_count;	///< Of those, monsters an outsider was already fighting
+	uint32 last_cast_hit_count;		///< Same two values for the last completed pattern (@jfcheck)
+	uint32 last_cast_foreign_count;
+	uint32 suspicion_score;		///< Steal score; plain Jack Frost + Teleport never raises it
 	uint32 penalty_count;		///< Cached account penalty counter
 	time_t penalty_last;		///< Cached unix time of the last penalty
 	time_t autoloot_until;		///< Cached unix time the penalty ends
@@ -45,6 +52,9 @@ struct s_need_jf_pattern {
 void need_jf_pattern_on_login( map_session_data& sd );
 void need_jf_pattern_on_logout( map_session_data& sd );
 void need_jf_pattern_record_skill( map_session_data& sd, uint16 skill_id );
+/// Called once per monster actually damaged by the watched skill. Flags the cast when
+/// the monster is already being fought by someone outside the caster's party.
+void need_jf_pattern_record_skill_hit( map_session_data& sd, const mob_data& md, uint16 skill_id );
 void need_jf_pattern_record_teleport( map_session_data& sd );
 void need_jf_pattern_on_captcha_success( map_session_data& sd );
 

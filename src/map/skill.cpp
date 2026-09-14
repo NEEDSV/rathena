@@ -2846,6 +2846,18 @@ int64 skill_attack (int32 attack_type, block_list* src, block_list *dsrc, block_
 	if (status_bl_has_mode(bl,MD_SKILLIMMUNE) || (status_get_class(bl) == MOBID_EMPERIUM && !skill_get_inf2(skill_id, INF2_TARGETEMPERIUM)))
 		return 0;
 
+	// Pattern detection only, guarded by an integer compare so every other skill is
+	// unaffected. This runs before the damage is applied on purpose: a monster that
+	// dies to the hit never reaches skill_additional_effect().
+	if (battle_config.need_jf_pattern_skill_id > 0 && skill_id == static_cast<uint16>(battle_config.need_jf_pattern_skill_id) &&
+		src->type == BL_PC && bl->type == BL_MOB) {
+		map_session_data *jf_sd = BL_CAST(BL_PC, src);
+		mob_data *jf_md = BL_CAST(BL_MOB, bl);
+
+		if (jf_sd != nullptr && jf_md != nullptr)
+			need_jf_pattern_record_skill_hit(*jf_sd, *jf_md, skill_id);
+	}
+
 	if (skill_id > 0
 		&& bl->type == BL_PC
 		&& attack_type == BF_MAGIC
