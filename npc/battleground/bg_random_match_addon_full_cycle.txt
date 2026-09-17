@@ -1,5 +1,5 @@
 //============================================================
-// NEED 전장 랜덤 매칭 시스템 - 티에라/플라비우스/KVM 풀사이클 v12.1-hotfix-admin-priority-split-v2
+// NEED 전장 랜덤 매칭 시스템 - 티에라/플라비우스/KVM 풀사이클 v12.3-global-queue
 // - 한 번의 매칭으로 티에라 -> 플라비우스 -> KVM 전체 사이클 진행
 // - 최초 티에라는 자동 입장, 이후 전장은 양 팀 파티장의 입장 준비로 진행
 // - 티에라/플라비우스 종료 후 파티 유지, KVM 종료 후에만 자동 해체
@@ -163,6 +163,77 @@ function	script	F_BG_RM_ClearArrays	{
 	$@BG_RM_C_COUNT = 0;
 	return;
 }
+
+//============================================================
+// 전장 글로벌 대기열
+// - 실제 랜덤 매칭 참가 배열과 완전히 분리
+// - 어느 맵에서든 등록 가능
+// - 최소 인원이 모이면 기존 자동매칭 팀 편성으로 넘김
+//============================================================
+function	script	F_BG_RM_QueueFind	{
+	.@aid = getarg(0);
+	.@cid = getarg(1);
+
+	for (.@i = 0; .@i < $@BG_RM_QUEUE_COUNT; .@i++) {
+		if (
+			$@BG_RM_QUEUE_AID[.@i] == .@aid &&
+			$@BG_RM_QUEUE_CID[.@i] == .@cid
+		)
+			return .@i;
+	}
+
+	return -1;
+}
+
+function	script	F_BG_RM_QueueRemoveSlot	{
+	.@slot = getarg(0);
+
+	if (.@slot < 0 || .@slot >= $@BG_RM_QUEUE_COUNT)
+		return 0;
+
+	for (.@i = .@slot; .@i < $@BG_RM_QUEUE_COUNT - 1; .@i++) {
+		$@BG_RM_QUEUE_AID[.@i] = $@BG_RM_QUEUE_AID[.@i + 1];
+		$@BG_RM_QUEUE_CID[.@i] = $@BG_RM_QUEUE_CID[.@i + 1];
+		$@BG_RM_QUEUE_CLASS[.@i] = $@BG_RM_QUEUE_CLASS[.@i + 1];
+		$@BG_RM_QUEUE_NAME$[.@i] = $@BG_RM_QUEUE_NAME$[.@i + 1];
+	}
+
+	if ($@BG_RM_QUEUE_COUNT > 0) {
+		.@last = $@BG_RM_QUEUE_COUNT - 1;
+		$@BG_RM_QUEUE_AID[.@last] = 0;
+		$@BG_RM_QUEUE_CID[.@last] = 0;
+		$@BG_RM_QUEUE_CLASS[.@last] = 0;
+		$@BG_RM_QUEUE_NAME$[.@last] = "";
+		$@BG_RM_QUEUE_COUNT--;
+	}
+
+	return 1;
+}
+
+function	script	F_BG_RM_QueueClear	{
+	cleararray $@BG_RM_QUEUE_AID[0], 0, 48;
+	cleararray $@BG_RM_QUEUE_CID[0], 0, 48;
+	cleararray $@BG_RM_QUEUE_CLASS[0], 0, 48;
+	cleararray $@BG_RM_QUEUE_NAME$[0], "", 48;
+
+	$@BG_RM_QUEUE_COUNT = 0;
+	$@BG_RM_QUEUE_LOCK = 0;
+	$@BG_RM_QUEUE_READY_TICK = 0;
+	$@BG_RM_QUEUE_TOKEN++;
+	return;
+}
+
+function	script	F_BG_RM_QueueNotifyAll	{
+	.@msg$ = getarg(0);
+
+	for (.@i = 0; .@i < $@BG_RM_QUEUE_COUNT; .@i++) {
+		if ($@BG_RM_QUEUE_NAME$[.@i] != "")
+			message $@BG_RM_QUEUE_NAME$[.@i], .@msg$;
+	}
+
+	return;
+}
+
 
 
 // 모집 명단에서 지정된 슬롯을 제거하고 뒤의 데이터를 앞으로 당깁니다.
@@ -1111,10 +1182,10 @@ OnInit:
 	bindatcmd "전장현황", strnpcinfo(3) + "::OnCommandStatus", 0, 99;
 
 	//========================================================
-	// 내부 테스트 설정: 총 4명 모집 = 2 vs 2
-	// 운영 전환 시 아래 두 값을 10 / (.MaxPartyMembers * 2)로 복구
+	// 랜덤 매칭 운영 설정
+	// 최소 8명 = 4 vs 4부터 매칭 가능
 	//========================================================
-	.MinPlayers = 10;
+	.MinPlayers = 8;
 	.MaxPartyMembers = MAX_PARTY;
 	.MaxPlayers = .MaxPartyMembers * 2;
 	.RecruitSeconds = 300;
@@ -1124,8 +1195,10 @@ OnInit:
 	.MinJoinLevel = 150;
 	.MaxBaseLevel = 175;
 
-	// 별도 감시 NPC/함수에서도 같은 기준을 사용하도록 공개합니다.
+	// 별도 감시 NPC/대기열에서도 같은 기준을 사용하도록 공개합니다.
 	$@BG_RM_MIN_JOIN_LEVEL = .MinJoinLevel;
+	$@BG_RM_MIN_PLAYERS = .MinPlayers;
+	$@BG_RM_MAX_PLAYERS = .MaxPlayers;
 
 	// 랜덤 매칭 "미신청자" NPC 안내 제외 캐릭터명
 	// 운영자/테스트 캐릭터가 bat_room에 있어도 미신청 명단에 노출되지 않습니다.
@@ -1163,6 +1236,103 @@ OnInit:
 	$@BG_RM_REWARD_KEY = 0;
 	callfunc "F_BG_RM_ClearArrays";
 	end;
+
+OnQueueLaunch:
+	if ($@BG_RM_QUEUE_COUNT < .MinPlayers) {
+		$@BG_RM_QUEUE_LOCK = 0;
+		$@BG_RM_QUEUE_READY_TICK = 0;
+		end;
+	}
+
+	// 다른 전장/랜덤매칭/수동 준비가 진행 중이면 대기열은 그대로 유지합니다.
+	if (
+		$@BG_RM_STATE ||
+		$@BG_RM_ACTIVE ||
+		$@BG_RM_CYCLE_ACTIVE ||
+		$@TierraBG1 ||
+		$@FlaviusBG1 ||
+		$@KvM01BG ||
+		callfunc("F_BG_RM_ManualReadyActive") ||
+		$BG_GUILLAUME_PARTY_ID ||
+		$BG_CROIX_PARTY_ID
+	) {
+		$@BG_RM_QUEUE_LOCK = 0;
+		$@BG_RM_QUEUE_READY_TICK = 0;
+		end;
+	}
+
+	callfunc "F_BG_RM_ClearArrays";
+	$@BG_RM_KVM_PARTY_DESTROYED = 0;
+	$@BG_RM_MISSING_CURSOR = 0;
+
+	$@BG_RM_TOKEN++;
+	$@BG_RM_STATE = 1;
+	$@BG_RM_MODE = 1;
+	$@BG_RM_END_TICK = gettimetick(2) + 5;
+
+	.@count = 0;
+	.@queue_count = $@BG_RM_QUEUE_COUNT;
+
+	for (.@i = 0; .@i < .@queue_count; .@i++) {
+		.@aid = $@BG_RM_QUEUE_AID[.@i];
+		.@cid = $@BG_RM_QUEUE_CID[.@i];
+		.@name$ = $@BG_RM_QUEUE_NAME$[.@i];
+
+		if (.@aid <= 0 || .@cid <= 0 || .@name$ == "")
+			continue;
+		if (!isloggedin(.@aid,.@cid))
+			continue;
+		if (!attachrid(.@aid))
+			continue;
+		if (getcharid(0) != .@cid) {
+			detachrid;
+			continue;
+		}
+		if (BaseLevel < .MinJoinLevel || getcharid(1) || getcharid(4)) {
+			detachrid;
+			continue;
+		}
+		if (.@count >= .MaxPlayers) {
+			detachrid;
+			break;
+		}
+
+		$@BG_RM_AID[.@count] = .@aid;
+		$@BG_RM_CID[.@count] = .@cid;
+		$@BG_RM_CLASS[.@count] = Class;
+		$@BG_RM_NAME$[.@count] = strcharinfo(0);
+		.@count++;
+
+		announce "[전장] 전장 대기 인원이 충족되어 자동매칭 대기실로 이동합니다.", bc_self, "0x66FF66";
+		warp "bat_room",154,150;
+		detachrid;
+	}
+
+	$@BG_RM_COUNT = .@count;
+	callfunc "F_BG_RM_QueueClear";
+
+	if ($@BG_RM_COUNT < .MinPlayers) {
+		callfunc "F_BG_RM_CancelRecruit",
+			"전장 대기열 이동 직전 참가 조건을 다시 확인한 결과 최소 인원 " + .MinPlayers + "명을 충족하지 못했습니다. (" + $@BG_RM_COUNT + "명)";
+		end;
+	}
+
+	callfunc "F_BG_RM_SetWaitingRooms", 0;
+	callfunc "F_BG_RM_SetManager", 0;
+
+	mapannounce "bat_room",
+		"[전장 대기열] 최소 인원이 충족되어 " + $@BG_RM_COUNT + "명이 입장했습니다. 5초 후 팀 편성을 시작합니다.",
+		bc_map, "0x66FF99";
+	mapannounce "bat_room",
+		"[전장 대기열] 추가 참가를 원하는 유저는 5초 이내에 @전장참가를 사용할 수 있습니다.",
+		bc_map, "0x99DDFF";
+
+	sleep 5000;
+
+	if ($@BG_RM_STATE != 1)
+		end;
+
+	goto OnFinalize;
 
 OnCommandStart:
 	if (strcharinfo(3) != "bat_room") {
@@ -3015,6 +3185,253 @@ OnPCLoginEvent:
 	NEED_SOLO_PERFORMANCE_MODE = NEED_BG_RM_PERFORMANCE_RESTORE - 1;
 	NEED_BG_RM_PERFORMANCE_RESTORE = 0;
 	dispbottom "[전장] 이전 랜덤 매칭의 @모드전환 설정을 원래 상태로 복구했습니다.";
+	end;
+}
+
+
+//============================================================
+// 전장 글로벌 대기열
+//
+// @전장대기       : 어느 맵에서든 다음 자동매칭 대기
+// @전장대기취소   : 대기열 취소
+// @전장대기현황   : 현재 대기 인원 확인
+//
+// 기존 @전장참가는 변경하지 않습니다.
+//============================================================
+-	script	NEED_BG_RM_GlobalQueue	-1,{
+	end;
+
+OnInit:
+	bindatcmd "전장대기", strnpcinfo(3) + "::OnCommandQueue", 0, 99;
+	bindatcmd "전장대기취소", strnpcinfo(3) + "::OnCommandQueueCancel", 0, 99;
+	bindatcmd "전장대기현황", strnpcinfo(3) + "::OnCommandQueueStatus", 0, 99;
+
+	if ($@BG_RM_QUEUE_COUNT < 0)
+		$@BG_RM_QUEUE_COUNT = 0;
+
+	$@BG_RM_QUEUE_LOCK = 0;
+	$@BG_RM_QUEUE_READY_TICK = 0;
+
+	stopnpctimer;
+	initnpctimer;
+	end;
+
+OnCommandQueue:
+	if (!#NEED_BG_RULE_AGREE) {
+		dispbottom "[전장] 전장 이용 규칙 동의 후 대기 신청할 수 있습니다.";
+		end;
+	}
+
+	if ($@BG_RM_MIN_JOIN_LEVEL <= 0)
+		$@BG_RM_MIN_JOIN_LEVEL = 150;
+	if ($@BG_RM_MIN_PLAYERS <= 0)
+		$@BG_RM_MIN_PLAYERS = 8;
+	if ($@BG_RM_MAX_PLAYERS <= 0)
+		$@BG_RM_MAX_PLAYERS = 48;
+
+	if (BaseLevel < $@BG_RM_MIN_JOIN_LEVEL) {
+		dispbottom "[전장] 전장 대기는 BaseLevel " + $@BG_RM_MIN_JOIN_LEVEL + " 이상부터 신청할 수 있습니다. (현재 " + BaseLevel + ")";
+		end;
+	}
+
+	if (getcharid(1) || getcharid(4)) {
+		dispbottom "[전장] 파티 또는 전장 팀에 가입된 상태에서는 전장 대기를 신청할 수 없습니다.";
+		end;
+	}
+
+	if ($@BG_RM_STATE == 1 || $@BG_RM_STATE == 2) {
+		dispbottom "[전장] 현재 랜덤 매칭 모집이 진행 중입니다. bat_room에서 @전장참가를 이용해 주세요.";
+		end;
+	}
+
+	.@slot = callfunc("F_BG_RM_QueueFind", getcharid(3), getcharid(0));
+	if (.@slot >= 0) {
+		announce "[전장] 이미 다음 자동매칭 대기열에 등록되어 있습니다.", bc_self, "0x66FF66";
+		dispbottom "[전장] 현재 대기 " + $@BG_RM_QUEUE_COUNT + "명 / 시작 " + $@BG_RM_MIN_PLAYERS + "명";
+		end;
+	}
+
+	if ($@BG_RM_QUEUE_LOCK) {
+		dispbottom "[전장] 현재 대기 인원이 충족되어 출발 준비 중입니다. 잠시 후 다시 시도해주세요.";
+		end;
+	}
+
+	if ($@BG_RM_QUEUE_COUNT >= $@BG_RM_MAX_PLAYERS) {
+		dispbottom "[전장] 전장 대기열 정원 " + $@BG_RM_MAX_PLAYERS + "명이 모두 찼습니다.";
+		end;
+	}
+
+	.@slot = $@BG_RM_QUEUE_COUNT;
+	$@BG_RM_QUEUE_AID[.@slot] = getcharid(3);
+	$@BG_RM_QUEUE_CID[.@slot] = getcharid(0);
+	$@BG_RM_QUEUE_CLASS[.@slot] = Class;
+	$@BG_RM_QUEUE_NAME$[.@slot] = strcharinfo(0);
+	$@BG_RM_QUEUE_COUNT++;
+
+	announce "[전장] 다음 자동매칭 대기 신청이 완료되었습니다.", bc_self, "0x66FF66";
+	dispbottom "[전장] 다른 맵에서 플레이해도 대기가 유지됩니다.";
+	dispbottom "[전장] 최소 " + $@BG_RM_MIN_PLAYERS + "명 충족 시 10초 전에 안내 후 전장 대기실로 자동 이동합니다.";
+	dispbottom "[전장] 대기 취소: @전장대기취소 / 현황: @전장대기현황";
+
+	announce "[전장 대기열] " + strcharinfo(0) + "님 대기 등록. 현재 "
+		+ $@BG_RM_QUEUE_COUNT + "/" + $@BG_RM_MIN_PLAYERS + "명", bc_all, "0x99DDFF";
+	end;
+
+OnCommandQueueCancel:
+	.@slot = callfunc("F_BG_RM_QueueFind", getcharid(3), getcharid(0));
+
+	if (.@slot < 0) {
+		dispbottom "[전장] 현재 전장 대기열에 등록되어 있지 않습니다.";
+		end;
+	}
+
+	callfunc "F_BG_RM_QueueRemoveSlot", .@slot;
+
+	$@BG_RM_QUEUE_LOCK = 0;
+	$@BG_RM_QUEUE_READY_TICK = 0;
+
+	announce "[전장] 자동매칭 대기 신청을 취소했습니다.", bc_self, "0xFFAA55";
+	announce "[전장 대기열] 현재 대기 " + $@BG_RM_QUEUE_COUNT + "/" + $@BG_RM_MIN_PLAYERS + "명",
+		bc_all, "0xFFCC99";
+	end;
+
+OnCommandQueueStatus:
+	.@slot = callfunc("F_BG_RM_QueueFind", getcharid(3), getcharid(0));
+
+	if (.@slot >= 0)
+		announce "[전장] 내 상태: 자동매칭 대기 중", bc_self, "0x66FF66";
+	else
+		announce "[전장] 내 상태: 전장 대기 미신청", bc_self, "0xFFCC66";
+
+	dispbottom "[전장] 현재 대기 " + $@BG_RM_QUEUE_COUNT + "명 / 시작 " + $@BG_RM_MIN_PLAYERS + "명";
+
+	if ($@BG_RM_QUEUE_LOCK && $@BG_RM_QUEUE_READY_TICK > 0) {
+		.@remain = $@BG_RM_QUEUE_READY_TICK - gettimetick(2);
+		if (.@remain < 0)
+			.@remain = 0;
+		dispbottom "[전장] 출발 준비 중 / 자동 이동까지 약 " + .@remain + "초";
+	}
+	end;
+
+OnPCLogoutEvent:
+	.@slot = callfunc("F_BG_RM_QueueFind", getcharid(3), getcharid(0));
+
+	if (.@slot < 0)
+		end;
+
+	.@name$ = strcharinfo(0);
+	callfunc "F_BG_RM_QueueRemoveSlot", .@slot;
+
+	$@BG_RM_QUEUE_LOCK = 0;
+	$@BG_RM_QUEUE_READY_TICK = 0;
+
+	announce "[전장 대기열] " + .@name$ + "님이 로그아웃하여 대기에서 제외되었습니다. 현재 "
+		+ $@BG_RM_QUEUE_COUNT + "/" + $@BG_RM_MIN_PLAYERS + "명",
+		bc_all, "0xFFCC99";
+	end;
+
+OnTimer1000:
+	stopnpctimer;
+
+	if ($@BG_RM_MIN_JOIN_LEVEL <= 0)
+		$@BG_RM_MIN_JOIN_LEVEL = 150;
+	if ($@BG_RM_MIN_PLAYERS <= 0)
+		$@BG_RM_MIN_PLAYERS = 8;
+	if ($@BG_RM_MAX_PLAYERS <= 0)
+		$@BG_RM_MAX_PLAYERS = 48;
+
+	for (.@i = $@BG_RM_QUEUE_COUNT - 1; .@i >= 0; .@i--) {
+		.@aid = $@BG_RM_QUEUE_AID[.@i];
+		.@cid = $@BG_RM_QUEUE_CID[.@i];
+		.@name$ = $@BG_RM_QUEUE_NAME$[.@i];
+		.@remove = 0;
+		.@reason$ = "";
+
+		if (!isloggedin(.@aid,.@cid)) {
+			.@remove = 1;
+			.@reason$ = "로그아웃";
+		}
+		else if (!attachrid(.@aid)) {
+			.@remove = 1;
+			.@reason$ = "접속 상태 확인 실패";
+		}
+		else {
+			if (getcharid(0) != .@cid) {
+				.@remove = 1;
+				.@reason$ = "캐릭터 변경";
+			}
+			else if (BaseLevel < $@BG_RM_MIN_JOIN_LEVEL) {
+				.@remove = 1;
+				.@reason$ = "참가 레벨 미달";
+			}
+			else if (getcharid(1) || getcharid(4)) {
+				.@remove = 1;
+				.@reason$ = "파티 또는 전장 팀 가입";
+			}
+			detachrid;
+		}
+
+		if (!.@remove)
+			continue;
+
+		callfunc "F_BG_RM_QueueRemoveSlot", .@i;
+
+		if (isloggedin(.@aid,.@cid))
+			message .@name$, "[전장] " + .@reason$ + " 상태로 자동매칭 대기열에서 제외되었습니다.";
+
+		$@BG_RM_QUEUE_LOCK = 0;
+		$@BG_RM_QUEUE_READY_TICK = 0;
+	}
+
+	if ($@BG_RM_STATE == 1 || $@BG_RM_STATE == 2) {
+		initnpctimer;
+		end;
+	}
+
+	.@busy = 0;
+	if ($@BG_RM_ACTIVE || $@BG_RM_CYCLE_ACTIVE)
+		.@busy = 1;
+	if ($@TierraBG1 || $@FlaviusBG1 || $@KvM01BG)
+		.@busy = 1;
+	if ($BG_GUILLAUME_PARTY_ID || $BG_CROIX_PARTY_ID)
+		.@busy = 1;
+	if (callfunc("F_BG_RM_ManualReadyActive"))
+		.@busy = 1;
+
+	if (.@busy) {
+		$@BG_RM_QUEUE_LOCK = 0;
+		$@BG_RM_QUEUE_READY_TICK = 0;
+		initnpctimer;
+		end;
+	}
+
+	if (!$@BG_RM_QUEUE_LOCK && $@BG_RM_QUEUE_COUNT >= $@BG_RM_MIN_PLAYERS) {
+		$@BG_RM_QUEUE_LOCK = 1;
+		$@BG_RM_QUEUE_READY_TICK = gettimetick(2) + 10;
+		$@BG_RM_QUEUE_TOKEN++;
+
+		callfunc "F_BG_RM_QueueNotifyAll",
+			"[전장] 전장 최소 인원이 충족되었습니다. 10초 후 전장 대기실로 자동 이동합니다.";
+
+		announce "[전장 대기열] 최소 인원 " + $@BG_RM_MIN_PLAYERS
+			+ "명이 충족되었습니다. 10초 후 자동매칭을 시작합니다.",
+			bc_all, "0x66FF99";
+	}
+
+	if ($@BG_RM_QUEUE_LOCK && $@BG_RM_QUEUE_READY_TICK > 0) {
+		if (gettimetick(2) >= $@BG_RM_QUEUE_READY_TICK) {
+			if ($@BG_RM_QUEUE_COUNT < $@BG_RM_MIN_PLAYERS) {
+				$@BG_RM_QUEUE_LOCK = 0;
+				$@BG_RM_QUEUE_READY_TICK = 0;
+				callfunc "F_BG_RM_QueueNotifyAll",
+					"[전장] 출발 전 대기 인원이 부족해져 자동 이동이 취소되었습니다. 대기는 그대로 유지됩니다.";
+			}
+			else
+				donpcevent "NEED_BG_RM_Core::OnQueueLaunch";
+		}
+	}
+
+	initnpctimer;
 	end;
 }
 
