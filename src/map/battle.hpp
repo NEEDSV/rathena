@@ -788,6 +788,11 @@ struct Battle_Config
 	int32 need_jf_pattern_max_avg_interval;
 	int32 need_jf_pattern_min_duration;
 	int32 need_jf_pattern_score;
+	int32 need_jf_steal_score;
+	int32 need_jf_steal_enable;
+	int32 need_jf_steal_min_foreign_mobs;
+	int32 need_jf_steal_min_patterns;
+	int32 need_jf_steal_owner_range;
 	int32 need_jf_warn_score;
 	int32 need_jf_captcha_score;
 	int32 need_jf_penalty_score;

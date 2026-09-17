@@ -15,6 +15,7 @@
 #include "chrif.hpp"
 #include "clif.hpp"
 #include "map.hpp"
+#include "mob.hpp"
 #include "pc.hpp"
 
 namespace {
@@ -73,12 +74,22 @@ void need_jf_pattern_clear_stored_score( map_session_data& sd ) {
 	sd.need_jf.score_stored = false;
 }
 
-/**
- * Records a state change to the main SQL database.
- * Mirrors the macro detector logging contract: only state changes are stored and a
- * failing query must never interrupt the calling flow.
- */
+void need_jf_pattern_steal_log( map_session_data& sd, const char* event, uint32 hit_count,
+	uint32 foreign_count, t_tick teleport_gap, uint32 penalty_duration );
+
+/// Stage changes reuse the steal logger so every row carries the same columns.
 void need_jf_pattern_log( map_session_data& sd, const char* event, uint32 penalty_duration ) {
+	need_jf_pattern_steal_log( sd, event, sd.need_jf.last_cast_hit_count,
+		sd.need_jf.last_cast_foreign_count, 0, penalty_duration );
+}
+
+/**
+ * Records a confirmed steal pattern (or a stage change caused by one).
+ * Never called per monster hit - only once a cast plus teleport has been accepted as
+ * a steal pattern, or when a stage changes.
+ */
+void need_jf_pattern_steal_log( map_session_data& sd, const char* event, uint32 hit_count,
+	uint32 foreign_count, t_tick teleport_gap, uint32 penalty_duration ) {
 	if( mmysql_handle == nullptr )
 		return;
 
@@ -93,16 +104,15 @@ void need_jf_pattern_log( map_session_data& sd, const char* event, uint32 penalt
 	Sql_EscapeString( mmysql_handle, esc_map, map_name );
 	Sql_EscapeString( mmysql_handle, esc_event, event );
 
-	// A penalty always restricts both features for the same period, so both flags
-	// are stored and an operator can read the effect straight from the log row.
 	const int32 blocked = penalty_duration > 0 ? 1 : 0;
 
 	if( SQL_ERROR == Sql_Query( mmysql_handle,
 		"INSERT INTO `need_jf_pattern_log` "
-		"(`account_id`, `char_id`, `char_name`, `map`, `x`, `y`, `event`, `pattern_count`, `suspicion_score`, `stage`, `penalty_count`, `penalty_duration`, `autoloot_blocked`, `world_drop_blocked`, `created_at`) "
-		"VALUES ('%d', '%d', '%s', '%s', '%d', '%d', '%s', '%u', '%u', '%hu', '%u', '%u', '%d', '%d', NOW())",
+		"(`account_id`, `char_id`, `char_name`, `map`, `x`, `y`, `event`, `pattern_count`, `suspicion_score`, `stage`, `penalty_count`, `penalty_duration`, `autoloot_blocked`, `world_drop_blocked`, `jf_hit_count`, `foreign_hit_count`, `steal_pattern_count`, `teleport_gap`, `created_at`) "
+		"VALUES ('%d', '%d', '%s', '%s', '%d', '%d', '%s', '%u', '%u', '%hu', '%u', '%u', '%d', '%d', '%u', '%u', '%u', '%d', NOW())",
 		sd.status.account_id, sd.status.char_id, esc_char_name, esc_map, sd.x, sd.y, esc_event,
-		jf.pattern_count, jf.suspicion_score, jf.stage, jf.penalty_count, penalty_duration, blocked, blocked ) ) {
+		jf.pattern_count, jf.suspicion_score, jf.stage, jf.penalty_count, penalty_duration, blocked, blocked,
+		hit_count, foreign_count, jf.steal_count, static_cast<int32>( teleport_gap ) ) ) {
 		Sql_ShowDebug( mmysql_handle );
 	}
 }
@@ -114,10 +124,12 @@ void need_jf_pattern_debug_log( const map_session_data& sd, const char* event, t
 	const s_need_jf_pattern& jf = sd.need_jf;
 	const map_data* mapdata = sd.m >= 0 ? map_getmapdata( sd.m ) : nullptr;
 
-	ShowInfo( "NeedJfPattern: aid=%d cid=%d map=%s x=%d y=%d event=%s gap_ms=%lld avg_ms=%lld pattern_count=%u score=%u stage=%hu penalty_count=%u\n",
+	ShowInfo( "NeedJfPattern: aid=%d cid=%d map=%s x=%d y=%d event=%s gap_ms=%lld avg_ms=%lld pattern_count=%u steal_count=%u hits=%u foreign=%u score=%u stage=%hu captcha_issued=%d macro_phase=%d macro_timer=%d penalty_count=%u\n",
 		sd.status.account_id, sd.status.char_id, mapdata != nullptr ? mapdata->name : "", sd.x, sd.y, event,
 		static_cast<long long>( gap ), static_cast<long long>( jf.avg_interval ),
-		jf.pattern_count, jf.suspicion_score, jf.stage, jf.penalty_count );
+		jf.pattern_count, jf.steal_count, jf.last_cast_hit_count, jf.last_cast_foreign_count,
+		jf.suspicion_score, jf.stage, jf.captcha_issued ? 1 : 0,
+		static_cast<int32>( sd.macro_detect.phase ), sd.macro_detect.timer, jf.penalty_count );
 }
 
 /// Drops the stage back to whatever the current score justifies, so a decayed or
@@ -168,6 +180,52 @@ void need_jf_pattern_decay( map_session_data& sd, t_tick now ) {
 	jf.suspicion_score = amount >= jf.suspicion_score ? 0 : jf.suspicion_score - amount;
 	jf.last_decay_tick += static_cast<t_tick>( steps ) * interval;
 	need_jf_pattern_sync_stage( jf );
+}
+
+/**
+ * Is this monster already being fought by somebody outside the caster's party?
+ *
+ * Reads only the damage log the monster already carries - no area search, no mob
+ * search. The log holds at most DAMAGELOG_SIZE entries and in practice one or two.
+ *
+ * mob_log_damage() resolves homunculus, mercenary, pet, elemental and summoned mobs
+ * to their master's char_id before storing, so comparing against our own char_id
+ * already excludes every object we own.
+ *
+ * The log carries no timestamp, so recency is approximated: the previous attacker
+ * must still be online, on the same map and close to the monster. Someone who tagged
+ * it and walked away is not hunting it any more.
+ */
+bool need_jf_pattern_mob_contested( const map_session_data& sd, const mob_data& md ) {
+	const int32 range = battle_config.need_jf_steal_owner_range;
+
+	for( const s_dmglog& entry : md.dmglog ) {
+		// Own damage, and by extension every pet/homunculus/mercenary/summon we own.
+		if( entry.id == 0 || entry.id == sd.status.char_id )
+			continue;
+
+		map_session_data* other = map_charid2sd( entry.id );
+
+		// Offline or gone: cannot tell whose hunt this was, so do not count it.
+		if( other == nullptr )
+			continue;
+
+		// Same party is cooperation, not stealing.
+		if( sd.status.party_id != 0 && other->status.party_id == sd.status.party_id )
+			continue;
+
+		// Stale entry: the attacker left the map or the area, so this is not an
+		// ongoing fight any more.
+		if( other->m != md.m )
+			continue;
+
+		if( range > 0 && ( abs( other->x - md.x ) > range || abs( other->y - md.y ) > range ) )
+			continue;
+
+		return true;
+	}
+
+	return false;
 }
 
 void need_jf_pattern_disable_autoloot( map_session_data& sd ) {
@@ -250,12 +308,28 @@ void need_jf_pattern_evaluate( map_session_data& sd ) {
 	// score drifting just under and over the threshold cannot re-issue it; only a drop
 	// below the warning threshold starts a new cycle (see need_jf_pattern_sync_stage).
 	if( !jf.captcha_issued && battle_config.need_jf_captcha_score > 0 && jf.suspicion_score >= static_cast<uint32>( battle_config.need_jf_captcha_score ) ) {
+		// A captcha that is already running must never be replaced or have its timer
+		// restarted; pc_macro_reporter_process() refuses in that case and the flag
+		// stays clear so the next opportunity can raise one.
+		if( sd.macro_detect.phase != s_macro_detect::e_macro_detect_phase::NONE || sd.macro_detect.cd != nullptr ) {
+			need_jf_pattern_debug_log( sd, "captcha_skip_active", 0 );
+			return;
+		}
+
+		// Reward-less captcha: the reason is what suppresses the bonus script on success.
+		pc_macro_reporter_process( sd, -1, MACRO_CAPTCHA_REASON_JF_PATTERN );
+
+		if( sd.macro_detect.phase == s_macro_detect::e_macro_detect_phase::NONE ) {
+			// Refused (map excluded, empty captcha database, ...). Do not burn the
+			// one captcha of this cycle on an attempt that never reached the player.
+			need_jf_pattern_debug_log( sd, "captcha_not_started", 0 );
+			return;
+		}
+
 		jf.stage = 2;
 		jf.captcha_issued = true;
 		need_jf_pattern_log( sd, "captcha", 0 );
 		need_jf_pattern_debug_log( sd, "captcha", 0 );
-		// Reward-less captcha: the reason is what suppresses the bonus script on success.
-		pc_macro_reporter_process( sd, -1, MACRO_CAPTCHA_REASON_JF_PATTERN );
 		return;
 	}
 
@@ -272,7 +346,7 @@ void need_jf_pattern_evaluate( map_session_data& sd ) {
  * A skill to teleport pair completed. Counting pairs alone would also hit legitimate
  * players, so the score only grows while the pairs are frequent, repeated and sustained.
  */
-void need_jf_pattern_on_pattern( map_session_data& sd, t_tick now ) {
+void need_jf_pattern_on_pattern( map_session_data& sd, t_tick now, uint32 hit_count, uint32 foreign_count, t_tick since_skill ) {
 	s_need_jf_pattern& jf = sd.need_jf;
 
 	// While a penalty is running the character is already restricted. Stop scoring so
@@ -284,6 +358,8 @@ void need_jf_pattern_on_pattern( map_session_data& sd, t_tick now ) {
 
 	const int32 window = battle_config.need_jf_pattern_window;
 
+	// Plain skill->teleport statistics. These never raise the score on their own; they
+	// only let an operator tell a heavy Jack Frost hunter from an actual thief.
 	if( jf.window_start_tick == 0 || ( window > 0 && DIFF_TICK( now, jf.window_start_tick ) > window ) ) {
 		jf.window_start_tick = now;
 		jf.pattern_count = 0;
@@ -296,26 +372,45 @@ void need_jf_pattern_on_pattern( map_session_data& sd, t_tick now ) {
 	jf.last_pattern_tick = now;
 	jf.pattern_count++;
 
-	if( gap > 0 ) {
-		// Smoothed average so a single pause does not reset the picture and a single
-		// fast pair does not create one.
+	if( gap > 0 )
 		jf.avg_interval = jf.avg_interval != 0 ? ( jf.avg_interval * 3 + gap ) / 4 : gap;
-	}
 
-	const bool repeated = battle_config.need_jf_pattern_min_count <= 0 ||
-		jf.pattern_count >= static_cast<uint32>( battle_config.need_jf_pattern_min_count );
-	const bool fast = jf.avg_interval > 0 && ( battle_config.need_jf_pattern_max_avg_interval <= 0 ||
-		jf.avg_interval <= battle_config.need_jf_pattern_max_avg_interval );
-	const bool sustained = battle_config.need_jf_pattern_min_duration <= 0 ||
-		DIFF_TICK( now, jf.window_start_tick ) >= battle_config.need_jf_pattern_min_duration;
+	// An occasional foreign monster caught by a wide area skill is not stealing, so a
+	// cast only counts when it swept at least need_jf_steal_min_foreign_mobs of them.
+	const int32 min_foreign = battle_config.need_jf_steal_min_foreign_mobs;
 
-	if( !repeated || !fast || !sustained ) {
-		need_jf_pattern_debug_log( sd, "pattern_ignored", gap );
+	if( battle_config.need_jf_steal_enable == 0 || min_foreign <= 0 ||
+		foreign_count < static_cast<uint32>( min_foreign ) ) {
+		need_jf_pattern_debug_log( sd, foreign_count > 0 ? "incidental_foreign_hit" : "pattern_observed", gap );
 		return;
 	}
 
-	jf.suspicion_score += static_cast<uint32>( battle_config.need_jf_pattern_score );
-	need_jf_pattern_debug_log( sd, "pattern_scored", gap );
+	// Steal patterns are aggregated in their own window.
+	if( jf.steal_window_start_tick == 0 || ( window > 0 && DIFF_TICK( now, jf.steal_window_start_tick ) > window ) ) {
+		jf.steal_window_start_tick = now;
+		jf.steal_count = 0;
+	}
+
+	jf.steal_count++;
+
+	// One sweep is not a habit. The score only starts moving once the same behaviour
+	// repeats inside the window.
+	if( battle_config.need_jf_steal_min_patterns > 0 &&
+		jf.steal_count < static_cast<uint32>( battle_config.need_jf_steal_min_patterns ) ) {
+		need_jf_pattern_debug_log( sd, "steal_pattern_below_min", gap );
+		return;
+	}
+
+	const uint32 gain = static_cast<uint32>( battle_config.need_jf_steal_score );
+
+	if( gain == 0 ) {
+		need_jf_pattern_debug_log( sd, "steal_pattern_unscored", gap );
+		return;
+	}
+
+	jf.suspicion_score += gain;
+	need_jf_pattern_debug_log( sd, "steal_pattern_scored", gap );
+	need_jf_pattern_steal_log( sd, "steal_pattern", hit_count, foreign_count, since_skill, 0 );
 	need_jf_pattern_evaluate( sd );
 }
 
@@ -413,6 +508,37 @@ void need_jf_pattern_record_skill( map_session_data& sd, uint16 skill_id ) {
 
 	need_jf_pattern_decay( sd, now );
 	sd.need_jf.last_skill_tick = now;
+	// A fresh cast starts with empty hit counters; the damage path fills them in.
+	sd.need_jf.cast_hit_count = 0;
+	sd.need_jf.cast_foreign_count = 0;
+}
+
+/**
+ * One monster took damage from the watched skill.
+ * Uses only the damage log the monster already keeps - no area or mob search is done.
+ * @param sd: Caster
+ * @param md: Monster that was hit
+ * @param skill_id: Skill that dealt the damage
+ */
+void need_jf_pattern_record_skill_hit( map_session_data& sd, const mob_data& md, uint16 skill_id ) {
+	if( !need_jf_pattern_enabled() || battle_config.need_jf_pattern_skill_id <= 0 )
+		return;
+
+	if( skill_id != static_cast<uint16>( battle_config.need_jf_pattern_skill_id ) )
+		return;
+
+	s_need_jf_pattern& jf = sd.need_jf;
+
+	// Only count hits that belong to a cast we are tracking.
+	if( jf.last_skill_tick == 0 )
+		return;
+
+	jf.cast_hit_count++;
+
+	if( !need_jf_pattern_mob_contested( sd, md ) )
+		return;
+
+	jf.cast_foreign_count++;
 }
 
 /**
@@ -431,16 +557,26 @@ void need_jf_pattern_record_teleport( map_session_data& sd ) {
 
 	const t_tick now = gettick();
 	const t_tick since_skill = DIFF_TICK( now, jf.last_skill_tick );
+	const uint32 hit_count = jf.cast_hit_count;
+	const uint32 foreign_count = jf.cast_foreign_count;
 
 	// One cast can only complete one pattern.
 	jf.last_skill_tick = 0;
+	jf.cast_hit_count = 0;
+	jf.cast_foreign_count = 0;
+
+	// Kept for @jfcheck and the logs so an operator can see what the last cast swept.
+	jf.last_cast_hit_count = hit_count;
+	jf.last_cast_foreign_count = foreign_count;
 
 	need_jf_pattern_decay( sd, now );
 
+	// Sweeping other people's monsters only matters when the caster leaves right after.
+	// Staying and fighting is not the behaviour being targeted.
 	if( battle_config.need_jf_teleport_window > 0 && since_skill > battle_config.need_jf_teleport_window )
 		return;
 
-	need_jf_pattern_on_pattern( sd, now );
+	need_jf_pattern_on_pattern( sd, now, hit_count, foreign_count, since_skill );
 }
 
 /**
@@ -454,10 +590,13 @@ void need_jf_pattern_on_captcha_success( map_session_data& sd ) {
 	if( jf.suspicion_score == 0 )
 		return;
 
-	const uint32 target = static_cast<uint32>( battle_config.need_jf_captcha_success_score );
+	// Solving a captcha answers "is a human at the keyboard", not "did you stop taking
+	// other people's monsters". The steal score is therefore kept by default
+	// (need_jf_captcha_success_score = 0); a positive value caps it instead.
+	const int32 target = battle_config.need_jf_captcha_success_score;
 
-	if( jf.suspicion_score > target )
-		jf.suspicion_score = target;
+	if( target > 0 && jf.suspicion_score > static_cast<uint32>( target ) )
+		jf.suspicion_score = static_cast<uint32>( target );
 
 	jf.last_decay_tick = gettick();
 	need_jf_pattern_sync_stage( jf );
@@ -520,11 +659,19 @@ void need_jf_pattern_status_report( map_session_data& sd, map_session_data& targ
 
 	safesnprintf( output, sizeof( output ), "Character: %s", target.status.name );
 	clif_displaymessage( sd.fd, output );
+	// Plain Jack Frost + Teleport count is statistics only - a high number here with
+	// zero steal patterns is a heavy hunter, not a thief.
 	safesnprintf( output, sizeof( output ), "Recent JF-Teleport: %u", jf.pattern_count );
+	clif_displaymessage( sd.fd, output );
+	safesnprintf( output, sizeof( output ), "Recent Steal Patterns: %u", jf.steal_count );
+	clif_displaymessage( sd.fd, output );
+	safesnprintf( output, sizeof( output ), "Last JF Total Hits: %u", jf.last_cast_hit_count );
+	clif_displaymessage( sd.fd, output );
+	safesnprintf( output, sizeof( output ), "Last JF Foreign Hits: %u", jf.last_cast_foreign_count );
 	clif_displaymessage( sd.fd, output );
 	safesnprintf( output, sizeof( output ), "Average Interval: %lld ms", static_cast<long long>( jf.avg_interval ) );
 	clif_displaymessage( sd.fd, output );
-	safesnprintf( output, sizeof( output ), "Suspicion Score: %u", jf.suspicion_score );
+	safesnprintf( output, sizeof( output ), "Steal Score: %u", jf.suspicion_score );
 	clif_displaymessage( sd.fd, output );
 	safesnprintf( output, sizeof( output ), "Warning Stage: %hu", jf.stage );
 	clif_displaymessage( sd.fd, output );

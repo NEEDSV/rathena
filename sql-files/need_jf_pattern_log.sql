@@ -19,6 +19,10 @@ CREATE TABLE IF NOT EXISTS `need_jf_pattern_log` (
   `penalty_duration` int(11) unsigned NOT NULL DEFAULT '0',
   `autoloot_blocked` tinyint(1) unsigned NOT NULL DEFAULT '0',
   `world_drop_blocked` tinyint(1) unsigned NOT NULL DEFAULT '0',
+  `jf_hit_count` int(11) unsigned NOT NULL DEFAULT '0',
+  `foreign_hit_count` int(11) unsigned NOT NULL DEFAULT '0',
+  `steal_pattern_count` int(11) unsigned NOT NULL DEFAULT '0',
+  `teleport_gap` int(11) NOT NULL DEFAULT '0',
   `created_at` datetime NOT NULL,
   PRIMARY KEY (`id`),
   KEY `account_id` (`account_id`),
@@ -31,4 +35,8 @@ CREATE TABLE IF NOT EXISTS `need_jf_pattern_log` (
 -- Safe to run repeatedly on MariaDB 10.0+; remove the IF NOT EXISTS on older MySQL.
 ALTER TABLE `need_jf_pattern_log`
   ADD COLUMN IF NOT EXISTS `autoloot_blocked` tinyint(1) unsigned NOT NULL DEFAULT '0' AFTER `penalty_duration`,
-  ADD COLUMN IF NOT EXISTS `world_drop_blocked` tinyint(1) unsigned NOT NULL DEFAULT '0' AFTER `autoloot_blocked`;
+  ADD COLUMN IF NOT EXISTS `world_drop_blocked` tinyint(1) unsigned NOT NULL DEFAULT '0' AFTER `autoloot_blocked`,
+  ADD COLUMN IF NOT EXISTS `jf_hit_count` int(11) unsigned NOT NULL DEFAULT '0' AFTER `world_drop_blocked`,
+  ADD COLUMN IF NOT EXISTS `foreign_hit_count` int(11) unsigned NOT NULL DEFAULT '0' AFTER `jf_hit_count`,
+  ADD COLUMN IF NOT EXISTS `steal_pattern_count` int(11) unsigned NOT NULL DEFAULT '0' AFTER `foreign_hit_count`,
+  ADD COLUMN IF NOT EXISTS `teleport_gap` int(11) NOT NULL DEFAULT '0' AFTER `steal_pattern_count`;
