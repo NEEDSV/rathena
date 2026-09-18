@@ -1,4 +1,4 @@
-// Copyright (c) rAthena Dev Teams - Licensed under GNU GPL
+﻿// Copyright (c) rAthena Dev Teams - Licensed under GNU GPL
 // For more information, see LICENCE in the main folder
 
 #include "mob.hpp"
@@ -3234,7 +3234,12 @@ static void need_world_drop_on_kill(const need_world_drop_owner& owner, mob_data
 	}
 
 	const int32 level_rate = lv * tier->rate_per_level;
-	const int32 rate_before_event = need_world_drop_clamp_rate(static_cast<int64>(tier->base_rate) + level_rate);
+	// NEED: 사냥 캐시(금화 / 미스릴화) 전역 배율.
+	//       10000 = 배율 없음, 15000 = 1.5배. 정수 나눗셈(버림)으로 계산한다.
+	//       티어 드롭에만 적용하며 의상 상자 bonus / MVP 백금화는 대상이 아니다.
+	//       금화 이벤트 배율은 이 값 위에 다시 곱해지므로 중복 적용에 주의할 것.
+	const int32 rate_before_event = need_world_drop_clamp_rate(
+		(static_cast<int64>(tier->base_rate) + level_rate) * battle_config.need_world_drop_rate_multiplier / 10000);
 
 	need_world_drop_try_reward(owner, md, tier->name, tier->item_id, tier->amount, tier->base_rate, level_rate, rate_before_event, true);
 }

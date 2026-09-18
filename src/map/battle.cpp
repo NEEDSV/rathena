@@ -1,4 +1,4 @@
-// Copyright (c) rAthena Dev Teams - Licensed under GNU GPL
+﻿// Copyright (c) rAthena Dev Teams - Licensed under GNU GPL
 // For more information, see LICENCE in the main folder
 
 #include "battle.hpp"
@@ -8982,6 +8982,7 @@ static const struct _battle_data {
 	{ "need_world_drop_allow_gm",           &battle_config.need_world_drop_allow_gm,        1,      0,      1,              },
 	{ "need_world_drop_gm_exclude_level",   &battle_config.need_world_drop_gm_exclude_level, 60,    0,      INT_MAX,        },
 	{ "need_world_drop_rate_scale",         &battle_config.need_world_drop_rate_scale,      10000,  10000,  10000,          },
+	{ "need_world_drop_rate_multiplier",    &battle_config.need_world_drop_rate_multiplier, 10000,  0,      1000000,        },
 	{ "need_world_drop_tier1_enable",       &battle_config.need_world_drop_tier1_enable,    1,      0,      1,              },
 	{ "need_world_drop_tier1_min_level",    &battle_config.need_world_drop_tier1_min_level, 30,     0,      INT_MAX,        },
 	{ "need_world_drop_tier1_max_level",    &battle_config.need_world_drop_tier1_max_level, 98,     0,      INT_MAX,        },

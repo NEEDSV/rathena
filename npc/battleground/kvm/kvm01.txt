@@ -716,7 +716,8 @@ function	script	F_KvM_GrantReward	{
 	.@victory = getarg(0);
 	.@team = getarg(1);
 	.@char_id = getcharid(0);
-	.@bonusmount = ($BG_User_Count - 5) * 2;
+	// NEED: 전장 캐시 1.5배. 기본 금화 상수와 인원 보정을 함께 1.5배로 올린다.
+	.@bonusmount = ($BG_User_Count - 5) * 3;
 	.@partyleaderbonus = 0;
 
 	// 랜덤 매칭의 자동 파티장은 직접 모집한 파티장이 아니므로 기존처럼 추가 보상 제외.
@@ -732,7 +733,7 @@ function	script	F_KvM_GrantReward	{
 		else
 			getitem 7773,3 + .@partyleaderbonus;
 
-		.@gold_amount = 20 + .@bonusmount;
+		.@gold_amount = 30 + .@bonusmount;
 	}
 	else {
 		if ($NEED_EVENT_BG_BADGE_ON)
@@ -740,7 +741,7 @@ function	script	F_KvM_GrantReward	{
 		else
 			getitem 7773,2 + .@partyleaderbonus;
 
-		.@gold_amount = 15 + .@bonusmount;
+		.@gold_amount = 23 + .@bonusmount;
 	}
 
 	.@gold_amount = callfunc("F_NEED_GoldEvent_BGAmount", .@gold_amount);
@@ -816,7 +817,7 @@ function	script	F_KvM_AutoRewardRandom	{
 //============================================================
 bat_c01,51,130,5	script	KVM 담당관#KVM01A	419,{
 	.@char_id = getcharid(0);
-	.@bonusmount = ($BG_User_Count - 5) * 2;
+	.@bonusmount = ($BG_User_Count - 5) * 3;
 	.@partyleaderbonus = 0;
 	if (!$@BG_RM_CYCLE_ACTIVE && ($BG_CROIX_LEADER_CID == .@char_id || $BG_GUILLAUME_LEADER_CID == .@char_id))
 		.@partyleaderbonus = 3;

@@ -1,4 +1,4 @@
-// Copyright (c) rAthena Dev Teams - Licensed under GNU GPL
+﻿// Copyright (c) rAthena Dev Teams - Licensed under GNU GPL
 // For more information, see LICENCE in the main folder
 
 #ifndef BATTLE_HPP
@@ -810,6 +810,7 @@ struct Battle_Config
 	int32 need_world_drop_allow_gm;
 	int32 need_world_drop_gm_exclude_level;
 	int32 need_world_drop_rate_scale;
+	int32 need_world_drop_rate_multiplier;
 	int32 need_world_drop_tier1_enable;
 	int32 need_world_drop_tier1_min_level;
 	int32 need_world_drop_tier1_max_level;
