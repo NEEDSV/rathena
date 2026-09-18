@@ -1764,3 +1764,23 @@ Body:
     ArmorLevel: 1
     EquipLevelMin: 1
     View: 3077
+# 룬 타블렛 보조 - 불안정한 룬 상자
+#   행운의 알 개봉 시 10% 보너스 롤로 지급된다 (conf/battle/need_lucky_egg.conf).
+#   사용 시 불안정한 룬(1001282) 1~100개를 균등 확률로 지급한다.
+  - Id: 900124
+    AegisName: Need_Unstable_Rune_Box
+    Name: 불안정한 룬 상자
+    Type: Usable
+    Buy: 20
+    Weight: 0
+    Flags:
+      Container: true
+    Script: |
+      .@amount = rand(1,100);
+      if (checkweight(1001282,.@amount) == 0) {
+        getitem 900124,1;
+        dispbottom "소지 무게나 공간이 부족해 불안정한 룬 상자를 돌려드렸습니다. 정리한 뒤 다시 사용해 주세요.";
+        end;
+      }
+      getitem 1001282,.@amount;
+      dispbottom "불안정한 룬 " + .@amount + "개를 획득했습니다.";

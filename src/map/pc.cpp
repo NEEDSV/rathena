@@ -1,4 +1,4 @@
-// Copyright (c) rAthena Dev Teams - Licensed under GNU GPL
+﻿// Copyright (c) rAthena Dev Teams - Licensed under GNU GPL
 // For more information, see LICENCE in the main folder
 
 #include "pc.hpp"
@@ -6708,6 +6708,65 @@ static bool pc_use_change_gender_card(map_session_data* sd, int32 index, t_tick 
 	return true;
 }
 
+/**
+ * NEED: 행운의 알 개봉 보너스.
+ *
+ * db/need/lucky_egg_db.yml 에 등록된 행운의 알을 사용했을 때, 기존 구성품
+ * 지급이 모두 끝난 뒤 별도의 롤을 한 번 더 굴려 보너스 아이템을 지급한다.
+ * 기존 item_group 의 구성이나 확률은 전혀 건드리지 않으므로 핵심 구성품의
+ * 상대 비중이 희석되지 않는다.
+ *
+ * 판정 대상을 lucky_egg_db 로 잡았기 때문에 신규 행운의 알을 그 DB 에
+ * 등록하기만 하면 별도 수작업 없이 자동으로 보너스가 적용된다.
+ *
+ * @param sd 행운의 알을 사용한 플레이어
+ * @param nameid 사용한 아이템 ID
+ */
+static void need_lucky_egg_bonus_roll( map_session_data& sd, t_itemid nameid ){
+	if( battle_config.need_lucky_egg_bonus_enable == 0 ){
+		return;
+	}
+
+	if( battle_config.need_lucky_egg_bonus_rate <= 0 || battle_config.need_lucky_egg_bonus_item_id <= 0 || battle_config.need_lucky_egg_bonus_amount <= 0 ){
+		return;
+	}
+
+	if( !lucky_egg_exists( nameid ) ){
+		return;
+	}
+
+	// 분모 10000 고정. 1000 = 10%.
+	if( rnd() % 10000 >= static_cast<uint32>( battle_config.need_lucky_egg_bonus_rate ) ){
+		return;
+	}
+
+	std::shared_ptr<item_data> id = item_db.find( static_cast<t_itemid>( battle_config.need_lucky_egg_bonus_item_id ) );
+
+	if( id == nullptr ){
+		ShowError( "need_lucky_egg_bonus_roll: invalid need_lucky_egg_bonus_item_id %d.\n", battle_config.need_lucky_egg_bonus_item_id );
+		return;
+	}
+
+	item it = {};
+
+	it.nameid = id->nameid;
+	it.identify = 1;
+
+	int32 get_count = itemdb_isstackable2( id.get() ) ? battle_config.need_lucky_egg_bonus_amount : 1;
+
+	for( int32 i = 0; i < battle_config.need_lucky_egg_bonus_amount; i += get_count ){
+		e_additem_result flag = pc_additem( &sd, &it, get_count, LOG_TYPE_SCRIPT );
+
+		if( flag != ADDITEM_SUCCESS ){
+			clif_additem( &sd, 0, 0, flag );
+			ShowWarning( "need_lucky_egg_bonus_roll: failed to add item. result=%d aid=%d cid=%d egg_id=%u item_id=%u amount=%d weight=%u/%u\n",
+				flag, sd.status.account_id, sd.status.char_id, static_cast<unsigned int>( nameid ), static_cast<unsigned int>( it.nameid ),
+				get_count, sd.weight, sd.max_weight );
+			return;
+		}
+	}
+}
+
 int32 pc_useitem(map_session_data *sd,int32 n)
 {
 	t_tick tick = gettick();
@@ -6839,6 +6898,10 @@ int32 pc_useitem(map_session_data *sd,int32 n)
 	}
 
 	potion_flag = 0;
+
+	// NEED: 행운의 알 구성품 지급이 끝난 뒤 보너스 롤을 굴린다.
+	need_lucky_egg_bonus_roll( *sd, nameid );
+
 	return 1;
 }
 
