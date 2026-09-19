@@ -1,0 +1,621 @@
+//===== NEED Script ==========================================
+//= NEED 초보자 전장 장비 V1 (900125~900155)
+//===== Description: =========================================
+//= 신규지원 대상 캐릭터가 Base Lv.175 / Job Lv.60 달성 후
+//= 전장 입문용 장비 31종을 무료로 선택 / 무제한 교환하는 시스템.
+//=
+//= 진입점: npc/NEED/need_beginner.txt 의 낙원단 성장 지원관 메뉴
+//=         -> callfunc "F_NEED_NBG_Menu";
+//=
+//= 모든 장비는 캐릭터 귀속(Bound_Char)으로 지급되며
+//= 커스텀 옵션은 전장(mf_battleground) 맵에서만 적용된다.
+//============================================================
+
+//============================================================
+// 전장 맵 공용 판정
+//   아이템 스크립트는 status_calc_pc 안에서 매우 자주 실행되므로
+//   callfunc 오버헤드를 피하기 위해 item_db 쪽에서는 같은 판정을
+//   인라인(getmapflag ... mf_battleground)으로 사용한다.
+//   NPC / 스크립트에서 전장 여부가 필요할 때는 이 함수를 쓴다.
+//============================================================
+function	script	F_NEED_IsBattlegroundMap	{
+	.@map$ = getarg(0, strcharinfo(3));
+	if (.@map$ == "")
+		return 0;
+	return (getmapflag(.@map$, mf_battleground) > 0);
+}
+
+//============================================================
+// 초보자 전장 장비 이용 자격
+//   신규지원 대상 계정 + 성장지원 졸업 조건(Base 175 / Job 60).
+//   기존 175 보상 수령 여부(NEED_BEGINNER_REWARD_175)와 무관하다.
+//============================================================
+function	script	F_NEED_NBG_CanUse	{
+	if (!callfunc("F_NEED_IsBeginnerAccount"))
+		return 0;
+	if (BaseLevel < 175 || JobLevel < 60)
+		return 0;
+	return 1;
+}
+
+//============================================================
+// 안전 교환 공용 함수
+//   getarg(0)      지급할 아이템 ID
+//   getarg(1)      지급 수량
+//   getarg(2)      해제할 장착 부위 1 (없으면 -1)
+//   getarg(3)      해제할 장착 부위 2 (없으면 -1)
+//   getarg(4...)   같은 카테고리에서 회수할 아이템 ID 목록
+//
+//   반환 0 = 성공 / 1 = 소지 무게·공간 부족
+//
+//   처리 순서: 공간 확인 -> 장착 해제 -> 회수 -> 지급
+//   공간 확인을 먼저 하므로 "회수만 되고 지급이 실패" 하는 경우가 없다.
+//============================================================
+function	script	F_NEED_NBG_Swap	{
+	.@give = getarg(0);
+	.@amount = getarg(1);
+	.@slot1 = getarg(2);
+	.@slot2 = getarg(3);
+	.@argc = getargcount();
+
+	// 1) 지급 공간 확인 (회수 전에 먼저 확인한다)
+	if (checkweight(.@give, .@amount) == 0)
+		return 1;
+
+	// 2) 회수 대상이 장착 중이면 먼저 해제한다
+	for (.@s = 2; .@s <= 3; ++.@s) {
+		.@slot = getarg(.@s);
+		if (.@slot < 0)
+			continue;
+		if (!getequipisequiped(.@slot))
+			continue;
+		.@worn = getequipid(.@slot);
+		for (.@i = 4; .@i < .@argc; ++.@i) {
+			if (.@worn == getarg(.@i)) {
+				unequip .@slot;
+				break;
+			}
+		}
+	}
+
+	// 3) 같은 카테고리 기존 장비 회수
+	for (.@i = 4; .@i < .@argc; ++.@i) {
+		.@id = getarg(.@i);
+		.@have = countitem(.@id);
+		if (.@have > 0)
+			delitem .@id, .@have;
+	}
+
+	// 4) 신규 지급
+	getitembound .@give, .@amount, Bound_Char;
+	return 0;
+}
+
+//============================================================
+// 보유 현황 문자열
+//============================================================
+function	script	F_NEED_NBG_Owned	{
+	.@argc = getargcount();
+	for (.@i = 0; .@i < .@argc; ++.@i) {
+		if (countitem(getarg(.@i)) > 0)
+			return getarg(.@i);
+	}
+	return 0;
+}
+
+//============================================================
+// 메인 메뉴
+//============================================================
+function	script	F_NEED_NBG_Menu	{
+	if (!callfunc("F_NEED_NBG_CanUse")) {
+		clear;
+		setdialogsize(440,260);
+		mes "^00AAFF[NEED 초보자 전장 장비]^000000";
+		mes "";
+		mes "^FF0000Base Lv.175 / Job Lv.60^000000 달성 후";
+		mes "신규지원 대상 캐릭터가 이용할 수 있습니다.";
+		mes "";
+		mes "현재: Base ^0055FF" + BaseLevel + "^000000 / Job ^0055FF" + JobLevel + "^000000";
+		next;
+		return;
+	}
+
+L_NBG_Main:
+	clear;
+	setdialogsize(460,380);
+	mes "^00AAFF[NEED 초보자 전장 장비]^000000";
+	mes "";
+	mes "전장 입문을 위한 ^0055FF캐릭터 귀속^000000 장비를";
+	mes "^FF9900무료^000000로 지급하고 언제든 교환해 드립니다.";
+	mes "";
+	mes "^FF0000※ 추가 옵션은 전장 안에서만 적용됩니다.^000000";
+	next;
+
+	switch (select(
+		"처음 이용 안내",
+		"기본 방어 세트 선택 / 교환",
+		"모자 선택 / 교환",
+		"중하단 선택 / 교환",
+		"배낭 선택 / 교환",
+		"신발 선택 / 교환",
+		"악세서리 선택 / 교환",
+		"방패 선택 / 교환",
+		"딜 갑옷 선택 / 교환",
+		"추천 세팅 안내",
+		"장비 시스템 설명",
+		"종료"
+	)) {
+	case 1: callsub S_NBG_Intro; goto L_NBG_Main;
+	case 2: callsub S_NBG_BaseSet; goto L_NBG_Main;
+	case 3: callsub S_NBG_Hat; goto L_NBG_Main;
+	case 4: callsub S_NBG_MidLow; goto L_NBG_Main;
+	case 5: callsub S_NBG_Bag; goto L_NBG_Main;
+	case 6: callsub S_NBG_Shoes; goto L_NBG_Main;
+	case 7: callsub S_NBG_Acc; goto L_NBG_Main;
+	case 8: callsub S_NBG_Shield; goto L_NBG_Main;
+	case 9: callsub S_NBG_DealArmor; goto L_NBG_Main;
+	case 10: callsub S_NBG_Recommend; goto L_NBG_Main;
+	case 11: callsub S_NBG_About; goto L_NBG_Main;
+	default:
+		return;
+	}
+
+//------------------------------------------------------------
+S_NBG_Intro:
+	clear;
+	setdialogsize(460,380);
+	mes "^00AAFF[처음 이용 안내]^000000";
+	mes "";
+	mes "1. 기본 방어 세트를 먼저 고릅니다.";
+	mes "   ^777777로브 / 슈츠 / 플레이트 중 하나 (3부위 동시 지급)^000000";
+	mes "";
+	mes "2. 모자 · 중하단 · 악세서리 · 방패를 고릅니다.";
+	mes "";
+	mes "3. 익숙해지면 배낭 · 신발 · 딜 갑옷을 추가로 받아";
+	mes "   ^0055FF전장 안에서 직접 갈아끼우며 비교^000000해 보세요.";
+	next;
+	mes "^00AAFF[처음 이용 안내]^000000";
+	mes "";
+	mes "^FF9900교환은 언제든 무료입니다.^000000";
+	mes "제니 · 캐시 · 재료가 들지 않습니다.";
+	mes "";
+	mes "^777777모든 장비는 캐릭터 귀속이라";
+	mes "거래 · 창고 · 우편으로 옮길 수 없습니다.^000000";
+	next;
+	return;
+
+//------------------------------------------------------------
+S_NBG_About:
+	clear;
+	setdialogsize(460,380);
+	mes "^00AAFF[장비 시스템 설명]^000000";
+	mes "";
+	mes "^FF0000이 장비의 추가 옵션은 전장에서만 적용됩니다.^000000";
+	mes "마을 · 필드 · 인스턴스에서는 켜지지 않습니다.";
+	mes "";
+	mes "전장에 들어가고 나오는 것만으로 자동 적용 / 해제되며";
+	mes "^777777장비를 다시 착용할 필요는 없습니다.^000000";
+	next;
+	mes "^00AAFF[장비 시스템 설명]^000000";
+	mes "";
+	mes "세트 옵션은 ^0055FF같은 계열 3부위^000000를 모두 착용해야 켜집니다.";
+	mes "로브 갑옷 + 슈츠 망토처럼 섞으면 세트 옵션이 없습니다.";
+	mes "";
+	mes "배낭과 신발은 ^0055FF종류가 달라도^000000 함께 착용하면";
+	mes "공통 세트 옵션이 적용됩니다.";
+	next;
+	mes "^00AAFF[장비 시스템 설명]^000000";
+	mes "";
+	mes "^777777이 장비는 제련 · 카드 · 인챈트를 할 수 없습니다.";
+	mes "정식 PvP 장비를 하나씩 구하면서";
+	mes "초보자 장비를 교체해 나가는 것이 목표입니다.^000000";
+	next;
+	return;
+
+//------------------------------------------------------------
+S_NBG_Recommend:
+	clear;
+	setdialogsize(460,380);
+	mes "^00AAFF[추천 세팅 안내]^000000";
+	mes "^777777강제가 아니라 방향을 잡기 위한 참고입니다.^000000";
+	next;
+	switch (select("근접 물리", "원거리 물리", "마법", "생존 / 지원", "돌아가기")) {
+	case 1:
+		clear;
+		mes "^00AAFF[근접 물리 추천]^000000";
+		mes "";
+		mes "기본 세트 : ^0055FF플레이트^000000";
+		mes "모자 : 물리 / 중하단 : 물리 / 악세서리 : 물리";
+		mes "방패 : 상대 공격 속성에 맞춰 교체";
+		mes "";
+		mes "이후 ^FF9900물리 배낭 · 물리 신발 · 물리 딜 갑옷^000000을 시험해 보세요.";
+		next;
+		break;
+	case 2:
+		clear;
+		mes "^00AAFF[원거리 물리 추천]^000000";
+		mes "";
+		mes "기본 세트 : ^0055FF슈츠^000000";
+		mes "모자 : 물리 / 중하단 : 물리 / 악세서리 : 물리";
+		mes "방패 : 상대 공격 속성에 맞춰 교체";
+		mes "";
+		mes "이후 ^FF9900원거리 배낭 · 원거리 신발^000000을 시험해 보세요.";
+		next;
+		break;
+	case 3:
+		clear;
+		mes "^00AAFF[마법 추천]^000000";
+		mes "";
+		mes "기본 세트 : ^0055FF로브^000000";
+		mes "모자 : 마법 / 중하단 : 마법 / 악세서리 : 마법";
+		mes "방패 : 상대 공격 속성에 맞춰 교체";
+		mes "";
+		mes "이후 ^FF9900마법 배낭 · 마법 신발 · 마법 딜 갑옷^000000을 시험해 보세요.";
+		next;
+		break;
+	case 4:
+		clear;
+		mes "^00AAFF[생존 / 지원 추천]^000000";
+		mes "";
+		mes "기본 세트 : ^0055FF슈츠 또는 플레이트^000000";
+		mes "모자 : 생존 / 중하단 : 생존 / 악세서리 : 생존";
+		mes "방패 : 상대 공격 속성에 맞춰 교체";
+		next;
+		break;
+	default:
+		break;
+	}
+	return;
+
+//------------------------------------------------------------
+// 기본 방어 세트 (3부위 동시 지급)
+//------------------------------------------------------------
+S_NBG_BaseSet:
+	clear;
+	setdialogsize(460,380);
+	.@cur = callfunc("F_NEED_NBG_Owned", 900125, 900128, 900131);
+	mes "^00AAFF[기본 방어 세트]^000000";
+	mes "";
+	if (.@cur)
+		mes "현재 보유 : ^00AA00" + getitemname(.@cur) + " 계열^000000";
+	else
+		mes "현재 보유 : ^777777없음^000000";
+	mes "";
+	mes "^0055FF로브^000000";
+	mes " 마법계 또는 체력이 낮은 직업 추천.";
+	mes " MDEF와 원거리 피해 감소가 높은 생존 세트입니다.";
+	mes "";
+	mes "^0055FF슈츠^000000";
+	mes " 범용형. HP / 원거리 피해 감소 / 캐스팅의 균형.";
+	mes "";
+	mes "^0055FF플레이트^000000";
+	mes " 근접 또는 생존 중심 직업 추천. 높은 MaxHP 확보.";
+	next;
+
+	switch (select("상세 옵션 보기", "로브 세트 받기", "슈츠 세트 받기", "플레이트 세트 받기", "돌아가기")) {
+	case 1:
+		clear;
+		mes "^00AAFF[기본 방어 세트 - 풀세트 최종]^000000";
+		mes "";
+		mes "^0055FF로브^000000  인간형 피해 12% 감소 / MaxHP +20% +600";
+		mes "        MDEF +40 / 무속성 10% / 원거리 20% / ASPD +1 / 동빙 방지";
+		mes "";
+		mes "^0055FF슈츠^000000  인간형 피해 12% 감소 / MaxHP +25%";
+		mes "        MDEF +15 / 무속성 10% / 원거리 20% / 변캐 10% / 동빙 방지";
+		mes "";
+		mes "^0055FF플레이트^000000  인간형 피해 12% 감소 / MaxHP +30%";
+		mes "        무속성 10% / 원거리 10% / 동빙 방지";
+		next;
+		return;
+	case 2: setarray .@pick[0], 900125, 900126, 900127; .@nm$ = "로브"; break;
+	case 3: setarray .@pick[0], 900128, 900129, 900130; .@nm$ = "슈츠"; break;
+	case 4: setarray .@pick[0], 900131, 900132, 900133; .@nm$ = "플레이트"; break;
+	default: return;
+	}
+
+	if (.@cur == .@pick[0]) {
+		clear;
+		mes "^00AAFF[기본 방어 세트]^000000";
+		mes "";
+		mes "이미 ^00AA00" + .@nm$ + " 세트^000000를 보유하고 있습니다.";
+		next;
+		return;
+	}
+
+	// 갑옷 -> 망토 -> 신발 순서로 각 부위를 교환한다.
+	.@fail = 0;
+	.@fail += callfunc("F_NEED_NBG_Swap", .@pick[0], 1, EQI_ARMOR, -1, 900125, 900128, 900131);
+	.@fail += callfunc("F_NEED_NBG_Swap", .@pick[1], 1, EQI_GARMENT, -1, 900126, 900129, 900132);
+	.@fail += callfunc("F_NEED_NBG_Swap", .@pick[2], 1, EQI_SHOES, -1, 900127, 900130, 900133);
+
+	clear;
+	mes "^00AAFF[기본 방어 세트]^000000";
+	mes "";
+	if (.@fail) {
+		mes "^FF0000소지 무게나 인벤토리 공간이 부족합니다.^000000";
+		mes "정리한 뒤 다시 시도해 주세요.";
+	}
+	else {
+		mes "^00AA00" + .@nm$ + " 세트 3부위^000000를 지급했습니다.";
+		mes "";
+		mes "^777777기존 기본 방어 세트는 회수되었습니다.^000000";
+	}
+	next;
+	return;
+
+//------------------------------------------------------------
+S_NBG_Hat:
+	clear;
+	setdialogsize(460,360);
+	.@cur = callfunc("F_NEED_NBG_Owned", 900146, 900147, 900148);
+	mes "^00AAFF[모자 선택]^000000";
+	mes "";
+	mes "현재 보유 : " + ((.@cur) ? "^00AA00" + getitemname(.@cur) + "^000000" : "^777777없음^000000");
+	mes "";
+	mes "^0055FFA. 물리^000000  ATK 중심. 물리 공격 직업 추천";
+	mes "^0055FFB. 마법^000000  MATK 중심. 마법 공격 직업 추천";
+	mes "^0055FFC. 생존^000000  인간형 피해 감소. 오래 버티는 역할 추천";
+	next;
+	switch (select("상세 옵션 보기", "A. 물리", "B. 마법", "C. 생존", "돌아가기")) {
+	case 1:
+		clear;
+		mes "^00AAFF[모자 상세]^000000";
+		mes "";
+		mes "^0055FFA. 물리^000000  ATK +8% / MaxHP +5% / MaxSP +5%";
+		mes "^0055FFB. 마법^000000  MATK +8% / MaxHP +5%";
+		mes "^0055FFC. 생존^000000  인간형 플레이어에게 받는 피해 10% 감소";
+		next;
+		return;
+	case 2: .@id = 900146; break;
+	case 3: .@id = 900147; break;
+	case 4: .@id = 900148; break;
+	default: return;
+	}
+	callsub S_NBG_Result, callfunc("F_NEED_NBG_Swap", .@id, 1, EQI_HEAD_TOP, -1, 900146, 900147, 900148), .@id, 1;
+	return;
+
+//------------------------------------------------------------
+S_NBG_MidLow:
+	clear;
+	setdialogsize(460,360);
+	.@cur = callfunc("F_NEED_NBG_Owned", 900149, 900150, 900151);
+	mes "^00AAFF[중하단 선택]^000000";
+	mes "";
+	mes "현재 보유 : " + ((.@cur) ? "^00AA00" + getitemname(.@cur) + "^000000" : "^777777없음^000000");
+	mes "";
+	mes "^0055FFA. 물리^000000  인간형 상대 물리 데미지 증가";
+	mes "^0055FFB. 마법^000000  MATK 증가";
+	mes "^0055FFC. 생존^000000  인간형 피해 감소";
+	mes "  ^FF0000C는 뉴비 전장 갑옷을 함께 착용해야 발동합니다.^000000";
+	next;
+	switch (select("상세 옵션 보기", "A. 물리", "B. 마법", "C. 생존", "돌아가기")) {
+	case 1:
+		clear;
+		mes "^00AAFF[중하단 상세]^000000";
+		mes "";
+		mes "^0055FFA. 물리^000000  인간형 플레이어에게 주는 물리 데미지 +5% / ATK +15";
+		mes "^0055FFB. 마법^000000  MATK +4% / MATK +20";
+		mes "^0055FFC. 생존^000000  인간형 플레이어에게 받는 피해 3% 감소";
+		mes "";
+		mes "^FF0000C 옵션은 아래 갑옷을 착용한 경우에만 적용됩니다.^000000";
+		mes "^777777로브 / 슈츠 / 플레이트 갑옷, 딜 갑옷 4종^000000";
+		next;
+		return;
+	case 2: .@id = 900149; break;
+	case 3: .@id = 900150; break;
+	case 4: .@id = 900151; break;
+	default: return;
+	}
+	callsub S_NBG_Result, callfunc("F_NEED_NBG_Swap", .@id, 1, EQI_HEAD_MID, EQI_HEAD_LOW, 900149, 900150, 900151), .@id, 1;
+	return;
+
+//------------------------------------------------------------
+S_NBG_Bag:
+	clear;
+	setdialogsize(460,360);
+	.@cur = callfunc("F_NEED_NBG_Owned", 900134, 900135, 900136);
+	mes "^00AAFF[배낭 선택]^000000";
+	mes "";
+	mes "현재 보유 : " + ((.@cur) ? "^00AA00" + getitemname(.@cur) + "^000000" : "^777777없음^000000");
+	mes "";
+	mes "^0055FFA. 물리형^000000";
+	mes "  STR을 사용하는 물리 공격 직업 추천";
+	mes "  ATK / 캐스팅 / 공격속도 지원";
+	mes "^0055FFB. 마법형^000000";
+	mes "  INT를 사용하는 마법 공격 직업 추천";
+	mes "  MATK / 캐스팅 지원";
+	mes "^0055FFC. 원거리형^000000";
+	mes "  활 / 총기 등 원거리 물리 직업 추천";
+	mes "  원거리 데미지 / 캐스팅 지원";
+	next;
+	switch (select("상세 옵션 보기", "A. 물리형", "B. 마법형", "C. 원거리형", "돌아가기")) {
+	case 1:
+		clear;
+		mes "^00AAFF[배낭 상세]^000000";
+		mes "^777777조건은 장비를 뺀 기본 스탯 기준입니다.^000000";
+		mes "";
+		mes "^0055FFA. 물리형^000000  기본 STR 10당 ATK +5";
+		mes "  기본 STR 100 이상: 변캐 12% 감소 / ATK +15 / ASPD +1";
+		mes "^0055FFB. 마법형^000000  기본 INT 10당 MATK +5";
+		mes "  기본 INT 100 이상: 변캐 16% 감소 / MATK +25";
+		mes "^0055FFC. 원거리형^000000";
+		mes "  기본 DEX 100 이상: 원거리 물리 +18% / 변캐 8% 감소";
+		mes "";
+		mes "^777777공통^000000  기본 VIT 100 이상: 무속성 피해 10% 감소";
+		mes "^777777신발과 함께 착용 시 공통 세트 옵션이 추가됩니다.^000000";
+		next;
+		return;
+	case 2: .@id = 900134; break;
+	case 3: .@id = 900135; break;
+	case 4: .@id = 900136; break;
+	default: return;
+	}
+	callsub S_NBG_Result, callfunc("F_NEED_NBG_Swap", .@id, 1, EQI_GARMENT, -1, 900134, 900135, 900136), .@id, 1;
+	return;
+
+//------------------------------------------------------------
+S_NBG_Shoes:
+	clear;
+	setdialogsize(460,360);
+	.@cur = callfunc("F_NEED_NBG_Owned", 900137, 900138, 900139);
+	mes "^00AAFF[신발 선택]^000000";
+	mes "";
+	mes "현재 보유 : " + ((.@cur) ? "^00AA00" + getitemname(.@cur) + "^000000" : "^777777없음^000000");
+	mes "";
+	mes "^0055FFA. 물리형^000000  기본 STR이 높은 물리 직업 추천";
+	mes "^0055FFB. 마법형^000000  기본 INT가 높은 마법 직업 추천";
+	mes "^0055FFC. 원거리형^000000  기본 DEX가 높은 원거리 직업 추천";
+	mes "";
+	mes "^777777배낭과 함께 착용하면 종류가 달라도";
+	mes "공통 세트 옵션이 적용됩니다.^000000";
+	next;
+	switch (select("상세 옵션 보기", "A. 물리형", "B. 마법형", "C. 원거리형", "돌아가기")) {
+	case 1:
+		clear;
+		mes "^00AAFF[신발 상세]^000000";
+		mes "^777777조건은 장비를 뺀 기본 스탯 기준입니다.^000000";
+		mes "";
+		mes "^0055FFA. 물리형^000000  기본 STR 120 이상: ATK +65 / MaxHP +3%";
+		mes "^0055FFB. 마법형^000000  기본 INT 120 이상: MATK +85 / 변캐 12% 감소";
+		mes "^0055FFC. 원거리형^000000  기본 DEX 120 이상:";
+		mes "  고정 캐스팅 0.4초 감소 / 변캐 6% 감소 / 원거리 물리 +4%";
+		mes "";
+		mes "^777777공통^000000  MaxHP +5% / MaxHP +1,000 / MaxSP +10%";
+		mes "^0055FF배낭 세트^000000  변캐 12% 감소 / ASPD +1 / MaxHP +5%";
+		next;
+		return;
+	case 2: .@id = 900137; break;
+	case 3: .@id = 900138; break;
+	case 4: .@id = 900139; break;
+	default: return;
+	}
+	callsub S_NBG_Result, callfunc("F_NEED_NBG_Swap", .@id, 1, EQI_SHOES, -1, 900137, 900138, 900139), .@id, 1;
+	return;
+
+//------------------------------------------------------------
+S_NBG_Acc:
+	clear;
+	setdialogsize(460,360);
+	.@cur = callfunc("F_NEED_NBG_Owned", 900140, 900141, 900142);
+	mes "^00AAFF[악세서리 선택]^000000";
+	mes "";
+	mes "현재 보유 : " + ((.@cur) ? "^00AA00" + getitemname(.@cur) + " 2개^000000" : "^777777없음^000000");
+	mes "";
+	mes "^0055FFA. 물리^000000  ATK 증가";
+	mes "^0055FFB. 마법^000000  MATK 증가";
+	mes "^0055FFC. 생존^000000  MaxHP / 원거리 피해 감소";
+	mes "";
+	mes "^FF9900선택한 종류를 2개 한 세트로 지급합니다.^000000";
+	mes "^777777두 개를 동시에 착용하면 2개분이 합산됩니다.^000000";
+	next;
+	switch (select("상세 옵션 보기", "A. 물리", "B. 마법", "C. 생존", "돌아가기")) {
+	case 1:
+		clear;
+		mes "^00AAFF[악세서리 상세] ^777777(1개당)^000000";
+		mes "";
+		mes "^0055FFA. 물리^000000  ATK +3% / ATK +15 / 변캐 3% 감소";
+		mes "^0055FFB. 마법^000000  MATK +3% / MATK +15 / 변캐 3% 감소";
+		mes "^0055FFC. 생존^000000  MaxHP +3% / MaxHP +150";
+		mes "         원거리 물리 피해 3% 감소 / 변캐 3% 감소";
+		next;
+		return;
+	case 2: .@id = 900140; break;
+	case 3: .@id = 900141; break;
+	case 4: .@id = 900142; break;
+	default: return;
+	}
+	callsub S_NBG_Result, callfunc("F_NEED_NBG_Swap", .@id, 2, EQI_ACC_L, EQI_ACC_R, 900140, 900141, 900142), .@id, 2;
+	return;
+
+//------------------------------------------------------------
+S_NBG_Shield:
+	clear;
+	setdialogsize(460,360);
+	.@cur = callfunc("F_NEED_NBG_Owned", 900143, 900144, 900145);
+	mes "^00AAFF[방패 선택]^000000";
+	mes "";
+	mes "현재 보유 : " + ((.@cur) ? "^00AA00" + getitemname(.@cur) + "^000000" : "^777777없음^000000");
+	mes "";
+	mes "^FF9900상대의 공격 속성에 따라^000000";
+	mes "^FF9900방패를 바꾸어 사용하는 장비입니다.^000000";
+	mes "";
+	mes "^0055FFA^000000  화 / 수 / 암 속성 상대";
+	mes "^0055FFB^000000  성 속성 상대";
+	mes "^0055FFC^000000  무속성(일반 물리) 상대";
+	next;
+	switch (select("상세 옵션 보기", "A. 화/수/암", "B. 성속성", "C. 무속성", "돌아가기")) {
+	case 1:
+		clear;
+		mes "^00AAFF[방패 상세]^000000";
+		mes "";
+		mes "^0055FFA^000000  화속성 15% / 수속성 15% / 암속성 15% 피해 감소";
+		mes "^0055FFB^000000  성속성 20% 피해 감소 / MDEF +10";
+		mes "^0055FFC^000000  무속성 5% 피해 감소 / MDEF +5";
+		mes "";
+		mes "^777777교환은 무료이니 상대에 맞춰 자주 바꿔 보세요.^000000";
+		next;
+		return;
+	case 2: .@id = 900143; break;
+	case 3: .@id = 900144; break;
+	case 4: .@id = 900145; break;
+	default: return;
+	}
+	callsub S_NBG_Result, callfunc("F_NEED_NBG_Swap", .@id, 1, EQI_HAND_L, -1, 900143, 900144, 900145), .@id, 1;
+	return;
+
+//------------------------------------------------------------
+S_NBG_DealArmor:
+	clear;
+	setdialogsize(460,360);
+	.@cur = callfunc("F_NEED_NBG_Owned", 900152, 900153, 900154, 900155);
+	mes "^00AAFF[딜 갑옷 선택]^000000";
+	mes "";
+	mes "현재 보유 : " + ((.@cur) ? "^00AA00" + getitemname(.@cur) + "^000000" : "^777777없음^000000");
+	mes "";
+	mes "기본 방어 세트의 갑옷 대신 착용해";
+	mes "^0055FF공격 성능을 더 확보^000000하는 선택지입니다.";
+	mes "";
+	mes "^777777기본 세트 갑옷과 함께 보유할 수 있습니다.";
+	mes "전장 안에서 갈아끼워 비교해 보세요.^000000";
+	next;
+	switch (select("상세 옵션 보기", "물리 / HP", "물리 / 동빙", "마법 / HP", "마법 / 동빙", "돌아가기")) {
+	case 1:
+		clear;
+		mes "^00AAFF[딜 갑옷 상세]^000000";
+		mes "";
+		mes "^0055FF물리 / HP^000000    MaxHP +10% / MaxHP +500 / ATK +60";
+		mes "^0055FF물리 / 동빙^000000  동빙 방지 / MaxHP +500 / ATK +60";
+		mes "^0055FF마법 / HP^000000    MaxHP +10% / MaxHP +500 / MATK +60";
+		mes "^0055FF마법 / 동빙^000000  동빙 방지 / MaxHP +500 / MATK +60";
+		next;
+		return;
+	case 2: .@id = 900152; break;
+	case 3: .@id = 900153; break;
+	case 4: .@id = 900154; break;
+	case 5: .@id = 900155; break;
+	default: return;
+	}
+	callsub S_NBG_Result, callfunc("F_NEED_NBG_Swap", .@id, 1, EQI_ARMOR, -1, 900152, 900153, 900154, 900155), .@id, 1;
+	return;
+
+//------------------------------------------------------------
+// getarg(0) 교환 결과 / getarg(1) 지급 아이템 / getarg(2) 수량
+S_NBG_Result:
+	clear;
+	setdialogsize(440,260);
+	mes "^00AAFF[NEED 초보자 전장 장비]^000000";
+	mes "";
+	if (getarg(0)) {
+		mes "^FF0000소지 무게나 인벤토리 공간이 부족합니다.^000000";
+		mes "정리한 뒤 다시 시도해 주세요.";
+		mes "";
+		mes "^777777기존 장비는 그대로 유지되었습니다.^000000";
+	}
+	else {
+		mes "^00AA00" + getitemname(getarg(1)) + "^000000 " + getarg(2) + "개를 지급했습니다.";
+		mes "";
+		mes "^777777같은 부위의 기존 초보자 장비는 회수되었습니다.^000000";
+	}
+	next;
+	return;
+}
