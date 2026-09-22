@@ -1062,3 +1062,22 @@ BUILDIN_FUNC(storageshopprepare)
 	script_pushint(st, need_storage_shop_prepare(sd, stor_id));
 	return SCRIPT_CMD_SUCCESS;
 }
+
+// NEED 2026 chuseok event: claim the honey songpyun through the shared daily ledger.
+// needchuseokhoney({"<source>"}) - source defaults to "BG".
+// Returns 1 delivered, 0 account daily limit, -1 ip daily limit,
+// -2 inventory unavailable, -3 database error, -4 feature disabled.
+BUILDIN_FUNC(needchuseokhoney)
+{
+	map_session_data* sd = nullptr;
+
+	if (!script_rid2sd(sd)) {
+		script_pushint(st, NEED_CHUSEOK_HONEY_ERROR);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	const char* source = script_hasdata(st, 2) ? script_getstr(st, 2) : "BG";
+
+	script_pushint(st, need_chuseok_honey_grant(sd, source, nullptr));
+	return SCRIPT_CMD_SUCCESS;
+}

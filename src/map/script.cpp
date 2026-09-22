@@ -58,6 +58,7 @@
 #include "mapreg.hpp"
 #include "mercenary.hpp"
 #include "mob.hpp"
+#include "need_chuseok_hunt.hpp"
 #include "need_equipment_build.hpp"
 #include "need_fishing.hpp"
 #include "need_jf_pattern.hpp"

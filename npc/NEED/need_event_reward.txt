@@ -1,0 +1,127 @@
+//============================================================
+// NEED 시즌 이벤트 공통 보상 함수
+//============================================================
+//= 여름 이벤트(황금 수박)에서 쓰던 랜덤 제니/캐시 보상과 보상 로그를
+//= 이벤트별로 복제하지 않고 파라미터화해서 재사용한다.
+//=
+//= 사용처
+//=  - 황금 수박 (399927) : F_NEED_Summer_GoldenWatermelon
+//=  - 꿀송편   (6532)    : F_NEED_Chuseok_HoneySongpyun
+//============================================================
+
+//------------------------------------------------------------
+// 랜덤 제니 / 캐시 보상
+//
+// getarg(0) 소비할 아이템 ID
+// getarg(1) event_id (보상 로그용)
+// getarg(2) 안내 문구 앞에 붙는 이벤트 이름   예) "추석 이벤트"
+// getarg(3) 보상을 준 아이템 이름             예) "꿀송편"
+//
+// 반환 1 = 지급 완료 / 0 = 미지급(아이템 미보유 또는 한도 초과)
+//
+// 확률표(1~10000)
+//    1 ~  200 : 제니 1억      (전체 공지)
+//  201 ~ 1400 : 제니 5000만
+// 1401 ~ 6400 : 제니 1000만
+// 6401 ~ 6500 : 캐시 10만     (전체 공지)
+// 6501 ~ 7500 : 캐시 5만
+// 7501 ~10000 : 캐시 1만
+//------------------------------------------------------------
+function	script	F_NEED_Event_RandomCashReward	{
+	.@item_id = getarg(0);
+	.@event_id = getarg(1);
+	.@label$ = getarg(2);
+	.@source$ = getarg(3);
+	.@max_cash = 2147483647;
+
+	if (countitem(.@item_id) < 1)
+		return 0;
+
+	// 보상 판정 후 지급에 실패하면 다시 뽑는 문제가 생기므로
+	// 최대 제니 / 캐시 보상을 받을 수 있는 여유가 있을 때만 추첨한다.
+	if (Zeny > MAX_ZENY - 100000000) {
+		dispbottom "[" + .@label$ + "] 제니를 1억 이상 받을 수 있는 여유가 필요합니다.";
+		return 0;
+	}
+
+	if (#CASHPOINTS > .@max_cash - 100000) {
+		dispbottom "[" + .@label$ + "] 캐시 포인트를 10만 이상 받을 수 있는 여유가 필요합니다.";
+		return 0;
+	}
+
+	.@roll = rand(1, 10000);
+
+	if (.@roll <= 200) {
+		.@reward_type = 1;
+		.@amount = 100000000;
+	}
+	else if (.@roll <= 1400) {
+		.@reward_type = 1;
+		.@amount = 50000000;
+	}
+	else if (.@roll <= 6400) {
+		.@reward_type = 1;
+		.@amount = 10000000;
+	}
+	else if (.@roll <= 6500) {
+		.@reward_type = 2;
+		.@amount = 100000;
+	}
+	else if (.@roll <= 7500) {
+		.@reward_type = 2;
+		.@amount = 50000;
+	}
+	else {
+		.@reward_type = 2;
+		.@amount = 10000;
+	}
+
+	// 모든 검사를 통과하고 보상이 정해진 뒤에만 소비한다.
+	delitem .@item_id,1;
+
+	if (.@reward_type == 1) {
+		.@before = Zeny;
+		Zeny += .@amount;
+		.@granted = Zeny - .@before;
+		if (.@granted > 0)
+			callfunc "F_NEED_Event_RewardLog", .@event_id, .@item_id, 1, .@granted;
+		dispbottom "[" + .@label$ + "] " + .@source$ + "에서 제니 " + callfunc("F_InsertComma", .@amount) + "을 획득했습니다.";
+
+		if (.@amount == 100000000)
+			announce "[" + .@label$ + "] " + strcharinfo(0) + " 님이 " + .@source$ + "에서 1억 제니를 획득했습니다!", bc_all;
+	}
+	else {
+		.@before = #CASHPOINTS;
+		#CASHPOINTS += .@amount;
+		.@granted = #CASHPOINTS - .@before;
+		if (.@granted > 0)
+			callfunc "F_NEED_Event_RewardLog", .@event_id, .@item_id, 2, .@granted;
+		dispbottom "[" + .@label$ + "] " + .@source$ + "에서 캐시 포인트 " + callfunc("F_InsertComma", .@amount) + "을 획득했습니다.";
+
+		if (.@amount == 100000)
+			announce "[" + .@label$ + "] " + strcharinfo(0) + " 님이 " + .@source$ + "에서 캐시 10만 포인트를 획득했습니다!", bc_all;
+	}
+
+	return 1;
+}
+
+//------------------------------------------------------------
+// 이벤트 보상 Origin Log (Zeny/Cash)
+//
+// getarg(0) event_id
+// getarg(1) 보상을 발생시킨 아이템 ID
+// getarg(2) reward_type  1=ZENY, 2=CASH
+// getarg(3) 실제 지급량
+//
+// ITEM(reward_type 3)은 C++ (need_summer_reward_log.cpp) 에서 기록한다.
+// 로그가 실패해도 이미 지급된 보상은 유지한다(query_sql 실패 무시).
+//------------------------------------------------------------
+function	script	F_NEED_Event_RewardLog	{
+	.@event_id = getarg(0);
+	.@src = getarg(1);
+	.@rt = getarg(2);
+	.@amt = getarg(3);
+
+	query_sql( "INSERT INTO `need_summer_reward_log` (`event_id`,`source_item_id`,`account_id`,`char_id`,`ip`,`reward_type`,`reward_item_id`,`reward_amount`,`unique_id`,`created_at`) VALUES (" + .@event_id + "," + .@src + "," + getcharid(3) + "," + getcharid(0) + ",'" + escape_sql(getcharip()) + "'," + .@rt + ",0," + .@amt + ",0,NOW())" );
+	return;
+}

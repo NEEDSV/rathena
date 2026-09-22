@@ -9036,6 +9036,11 @@ static const struct _battle_data {
 	{ "need_summer_hunt_fragment_enable",    &battle_config.need_summer_hunt_fragment_enable, 0,      0,      1,              },
 	{ "need_summer_hunt_golden_enable",      &battle_config.need_summer_hunt_golden_enable,   0,      0,      1,              },
 
+	// NEED 2026 chuseok event field hunting rewards. All switches are fail-safe off by default.
+	{ "need_chuseok_hunt_enable",            &battle_config.need_chuseok_hunt_enable,         0,      0,      1,              },
+	{ "need_chuseok_hunt_material_enable",   &battle_config.need_chuseok_hunt_material_enable, 0,     0,      1,              },
+	{ "need_chuseok_hunt_honey_enable",      &battle_config.need_chuseok_hunt_honey_enable,   0,      0,      1,              },
+
 	// NEED summer event fishing system (stage 1: technical validation). Off by default.
 	{ "need_summer_fishing_enable",         &battle_config.need_summer_fishing_enable,      0,      0,      1,              },
 	{ "need_summer_fishing_debug",          &battle_config.need_summer_fishing_debug,       0,      0,      1,              },

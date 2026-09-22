@@ -40,6 +40,7 @@
 #include "mercenary.hpp"
 #include "need_jf_pattern.hpp"
 #include "need_summer_hunt.hpp"
+#include "need_chuseok_hunt.hpp"
 #include "npc.hpp"
 #include "party.hpp"
 #include "path.hpp"
@@ -3984,6 +3985,9 @@ int32 mob_dead(mob_data *md, block_list *src, int32 type)
 		}
 		if (need_summer_highest_damage_sd != nullptr && src != nullptr && !md->state.npc_killmonster)
 			need_summer_hunt_on_kill(need_summer_highest_damage_sd, md, type);
+
+		if (need_summer_highest_damage_sd != nullptr && src != nullptr && !md->state.npc_killmonster)
+			need_chuseok_hunt_on_kill(need_summer_highest_damage_sd, md, type);
 
 		if( md->npc_event[0] && !md->state.npc_killmonster ) {
 			if( sd && battle_config.mob_npc_event_type ) {

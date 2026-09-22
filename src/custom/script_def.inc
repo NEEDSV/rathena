@@ -35,6 +35,9 @@ BUILDIN_DEF(need_claim_equipment_build_reward,"i"),
 
 BUILDIN_DEF(clearmapskillunits, "s"),
 
+// NEED 2026 chuseok event: shared honey songpyun daily ledger (hunt + battleground).
+BUILDIN_DEF(needchuseokhoney,"?"),
+
 BUILDIN_DEF(instance_ip_complete,"i"),
 BUILDIN_DEF(instance_ip_reward_remaining,"?"),
 BUILDIN_DEF(instance_ip_reward_limit,"?"),

@@ -77,3 +77,24 @@ Body:
       NoDispell: true
       NoBanishingBuster: true
       NoClearance: true
+
+# NEED 2026 chuseok event: the shining defense scroll (23204 / SC_M_DEFSCROLL)
+# grants DEF +500 / MDEF +200. That stacks with the existing pvp damage
+# reduction, so the bonus is disabled on battleground / pvp / woe maps.
+# The buff itself is kept (no item loss) - only its effect is dropped, and
+# status_calc_pc re-runs on every map change so it comes back on normal maps.
+  - Status: M_DefScroll
+    Icon: EFST_M_DEFSCROLL
+    Flags:
+      NoClearbuff: true
+      NoDispell: true
+      NoBanishingBuster: true
+      NoClearance: true
+    Script: |
+      .@map$ = strcharinfo(3);
+      if (getmapflag(.@map$, mf_battleground) || getmapflag(.@map$, mf_pvp) ||
+          getmapflag(.@map$, mf_gvg) || getmapflag(.@map$, mf_gvg_castle) ||
+          getmapflag(.@map$, mf_gvg_dungeon) || getmapflag(.@map$, mf_gvg_te) ||
+          getmapflag(.@map$, mf_gvg_te_castle)) end;
+      bonus bDef, getstatus(SC_M_DEFSCROLL, 1);
+      bonus bMdef, getstatus(SC_M_DEFSCROLL, 2);
