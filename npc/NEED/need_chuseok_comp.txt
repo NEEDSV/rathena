@@ -1,0 +1,177 @@
+//============================================================
+// NEED 2026 추석 - 꿀송편 미지급 보상 (일회성)
+//============================================================
+//= 2026-09-23 꿀송편이 원장 스키마 미임포트로 fail-closed 되어
+//= 하루 종일 지급되지 않은 건에 대한 보상 발송 도구입니다.
+//=
+//= 대상 : sql-files/need_chuseok_compensation.sql 로 미리 시드
+//=        (그날 이벤트 재료를 실제로 먹은 계정)
+//= 지급 : 꿀송편 1개 우편 발송
+//= 원장 : need_chuseok_honey_claim / _ip_daily / _log 에
+//=        logical_date 를 보상 대상일로 고정 기록 → 그날 몫 소모 처리
+//=
+//= 한 번에 .Batch 건씩 처리하고, 중단되어도 다시 실행하면 이어서 발송합니다.
+//= 이미 발송한 계정은 status=1 이라 중복 발송되지 않습니다.
+//=
+//= 이벤트 종료 후 이 파일과 scripts_need.conf 등록 줄을 삭제하세요.
+//============================================================
+
+-	script	need_chuseok_comp	-1,{
+	if (getgmlevel() < 99) {
+		mes "[추석 보상 발송]";
+		mes "GM(99) 전용 기능입니다.";
+		close;
+	}
+	callsub S_Main;
+	end;
+
+OnCommand:
+	if (getgmlevel() < 99) end;
+	callsub S_Main;
+	end;
+
+OnInit:
+	.EventId = 202609;
+	.ItemId = 6532;			// 꿀송편
+	.Batch = 100;			// 1회 실행당 발송 건수
+	.LogicalDate$ = "2026-09-23";	// 보상 대상일 (원장에 이 날짜로 기록)
+	.Sender$ = "NEED";
+	.Title$ = "추석 이벤트 보상 안내";
+	bindatcmd "chuseokcomp", "need_chuseok_comp::OnCommand", 99, 99;
+	end;
+
+S_Main:
+	while (1) {
+		callsub S_Counts;
+
+		mes "[추석 보상 발송]";
+		mes "대상일 : ^0055FF" + .LogicalDate$ + "^000000";
+		mes "지급품 : " + getitemname(.ItemId) + " 1개 (우편)";
+		mes "^999999----------------------------^000000";
+		mes "발송 대기 : ^FF9900" + @cnt_wait + "^000000 계정";
+		mes "발송 완료 : ^009900" + @cnt_done + "^000000 계정";
+		mes "제외(기수령) : " + @cnt_skip + " 계정";
+		if (@cnt_done > 0)
+			mes "우편함 확인 : ^0055FF" + @cnt_inbox + "^000000 / " + @cnt_done + " 건";
+		next;
+
+		.@sel = select(
+			"발송 실행 (최대 " + .Batch + "건)",
+			"발송 결과 검증",
+			"대상 목록 미리보기",
+			"닫기");
+
+		if (.@sel == 1) callsub S_Send;
+		else if (.@sel == 2) callsub S_Verify;
+		else if (.@sel == 3) callsub S_Preview;
+		else break;
+	}
+	return;
+
+// 현황 집계. 캐릭터 임시변수로 돌려준다 (callsub 는 .@ 를 공유하지 않는다).
+S_Counts:
+	query_sql("SELECT COUNT(*) FROM `need_chuseok_compensation` WHERE `status`=0", @cnt_wait);
+	query_sql("SELECT COUNT(*) FROM `need_chuseok_compensation` WHERE `status`=1", @cnt_done);
+	query_sql("SELECT COUNT(*) FROM `need_chuseok_compensation` WHERE `status`=2", @cnt_skip);
+	query_sql("SELECT COUNT(DISTINCT nc.`account_id`) FROM `need_chuseok_compensation` nc JOIN `mail` m ON m.`dest_id`=nc.`char_id` JOIN `mail_attachments` a ON a.`id`=m.`id` AND a.`nameid`=" + .ItemId + " WHERE nc.`status`=1", @cnt_inbox);
+	return;
+
+S_Preview:
+	.@n = query_sql("SELECT `account_id`,`char_name`,`ip` FROM `need_chuseok_compensation` WHERE `status`=0 ORDER BY `account_id` LIMIT 10", .@aid, .@cn$, .@ip$);
+
+	mes "[추석 보상 발송] 대기 목록 (최대 10건)";
+	if (.@n < 1)
+		mes "발송 대기 중인 계정이 없습니다.";
+	else {
+		for (.@i = 0; .@i < .@n; .@i++)
+			mes " " + .@aid[.@i] + " / " + .@cn$[.@i] + " / " + ((.@ip$[.@i] == "") ? "-" : .@ip$[.@i]);
+	}
+	next;
+	return;
+
+S_Send:
+	.@n = query_sql("SELECT `account_id`,`char_id`,`char_name`,`ip` FROM `need_chuseok_compensation` WHERE `status`=0 ORDER BY `account_id` LIMIT " + .Batch, .@aid, .@cid, .@cn$, .@ip$);
+
+	if (.@n < 1) {
+		mes "[추석 보상 발송]";
+		mes "발송할 대상이 없습니다.";
+		next;
+		return;
+	}
+
+	mes "[추석 보상 발송]";
+	mes "^FF0000" + .@n + "계정^000000 에게 " + getitemname(.ItemId) + " 1개를 우편 발송합니다.";
+	mes "원장에는 " + .LogicalDate$ + " 몫으로 기록됩니다.";
+	mes " ";
+	mes "진행하시겠습니까?";
+	next;
+	if (select("발송한다:취소") == 2)
+		return;
+
+	freeloop(1);
+	.@sent = 0;
+
+	for (.@i = 0; .@i < .@n; .@i++) {
+		if (.@cid[.@i] <= 0) {
+			query_sql("UPDATE `need_chuseok_compensation` SET `status`=2,`note`='NO_CHAR' WHERE `account_id`=" + .@aid[.@i]);
+			continue;
+		}
+
+		.@name$ = escape_sql(.@cn$[.@i]);
+		// last_ip 가 비었거나 형식이 깨졌으면 0.0.0.0 으로 기록한다 (ip 컬럼이 NOT NULL).
+		.@ipexpr$ = "COALESCE(INET6_ATON('" + escape_sql(.@ip$[.@i]) + "'),INET6_ATON('0.0.0.0'))";
+
+		// 1) 계정 일일 원장 - 이미 있으면 그대로 둔다
+		query_sql("INSERT IGNORE INTO `need_chuseok_honey_claim` (`event_id`,`logical_date`,`account_id`,`char_id`,`char_name`,`ip`,`source`,`map_name`,`x`,`y`,`mob_id`,`player_level`,`status`,`delivered_at`) VALUES (" + .EventId + ",'" + .LogicalDate$ + "'," + .@aid[.@i] + "," + .@cid[.@i] + ",'" + .@name$ + "'," + .@ipexpr$ + ",'COMPENSATION','',0,0,0,0,1,NOW())");
+
+		// 2) IP 일일 원장 - 같은 IP 가 이미 잡혀 있으면 첫 계정을 유지한다
+		query_sql("INSERT IGNORE INTO `need_chuseok_honey_ip_daily` (`event_id`,`logical_date`,`ip`,`first_account_id`,`first_char_id`,`source`) VALUES (" + .EventId + ",'" + .LogicalDate$ + "'," + .@ipexpr$ + "," + .@aid[.@i] + "," + .@cid[.@i] + ",'COMPENSATION')");
+
+		// 3) 지급 이력
+		query_sql("INSERT INTO `need_chuseok_honey_log` (`claim_id`,`event_id`,`logical_date`,`account_id`,`char_id`,`char_name`,`ip`,`source`,`map_name`,`x`,`y`,`mob_id`,`player_level`,`result`,`failure_code`) VALUES (0," + .EventId + ",'" + .LogicalDate$ + "'," + .@aid[.@i] + "," + .@cid[.@i] + ",'" + .@name$ + "'," + .@ipexpr$ + ",'COMPENSATION','',0,0,0,0,'DELIVERED','')");
+
+		// 4) 우편 발송
+		setarray .@mitem[0], .ItemId;
+		setarray .@mamt[0], 1;
+		mail .@cid[.@i], .Sender$, .Title$,
+			"안녕하세요. NEED 운영팀입니다.\n\n" + .LogicalDate$ + " 꿀송편이 정상적으로 지급되지 않는 문제가 있어, 보상으로 꿀송편 1개를 보내드립니다.\n\n우편함이 가득 차 있으면 받을 수 없으니 정리 후 수령해 주세요.\n\n이용에 불편을 드려 죄송합니다.",
+			0, .@mitem, .@mamt;
+
+		query_sql("UPDATE `need_chuseok_compensation` SET `status`=1,`sent_at`=NOW() WHERE `account_id`=" + .@aid[.@i]);
+		.@sent++;
+	}
+
+	freeloop(0);
+
+	logmes "[ChuseokComp] sent=" + .@sent + " date=" + .LogicalDate$;
+	debugmes "[ChuseokComp] 발송 " + .@sent + "건 (대상일 " + .LogicalDate$ + ")";
+
+	mes "[추석 보상 발송]";
+	mes "^009900" + .@sent + "건^000000 발송했습니다.";
+	mes "남은 대기 건이 있으면 다시 실행해 주세요.";
+	next;
+	return;
+
+S_Verify:
+	callsub S_Counts;
+
+	query_sql("SELECT COUNT(*) FROM `need_chuseok_honey_claim` WHERE `event_id`=" + .EventId + " AND `logical_date`='" + .LogicalDate$ + "' AND `source`='COMPENSATION'", .@claims);
+	.@missing = @cnt_done - @cnt_inbox;
+	if (.@missing < 0)
+		.@missing = 0;
+
+	mes "[추석 보상 발송] 검증";
+	mes "발송 완료 처리 : " + @cnt_done + " 계정";
+	mes "우편함에 존재 : ^0055FF" + @cnt_inbox + "^000000 건";
+	mes "원장 기록(COMPENSATION) : " + .@claims + " 건";
+	mes " ";
+	if (.@missing > 0) {
+		mes "^FF0000우편이 확인되지 않는 계정 : " + .@missing + "건^000000";
+		mes "^999999우편함 30통 초과이거나 이미 수령한 경우입니다.^000000";
+		mes "^999999수령 후에는 mail 테이블에서 사라지므로 정상일 수 있습니다.^000000";
+	}
+	else
+		mes "^009900미확인 건 없음^000000";
+	next;
+	return;
+}
