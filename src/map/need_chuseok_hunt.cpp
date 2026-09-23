@@ -36,7 +36,7 @@ constexpr int32 NEED_CHUSEOK_DOUGH_RATE = 400;   // 4.00%
 constexpr uint16 NEED_CHUSEOK_DOUGH_AMOUNT = 4;
 constexpr int32 NEED_CHUSEOK_PINE_RATE = 400;    // 4.00%
 constexpr uint16 NEED_CHUSEOK_PINE_AMOUNT = 1;
-constexpr int32 NEED_CHUSEOK_HONEY_RATE = 5;     // 0.05%
+constexpr int32 NEED_CHUSEOK_HONEY_RATE = 10;     // 0.05%
 constexpr int32 NEED_CHUSEOK_LEVEL_DIFFERENCE = 15;
 constexpr uint32 NEED_CHUSEOK_EVENT_ID = 202609;
 
