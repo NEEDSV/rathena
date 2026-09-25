@@ -6,37 +6,40 @@
 //============================================================
 
 itemmall,29,74,4	script	이브 패터#costex	4_F_01,{
-	mes "[이브 패터]";
-	mes "안녕하세요.";
-	mes "^3131FF의상 교환쿠폰^000000과 지정된 투구를 가져오시면";
-	mes "해당 투구를 의상 장비로 교환해 드립니다.";
+	mes needtr("[이브 패터]","[Eve Patter]");
+	mes needtr("안녕하세요.","Hello.");
+	mes needtr("^3131FF의상 교환쿠폰^000000과 지정된 투구를 가져오시면","Bring me a ^3131FFCostume Exchange Coupon^000000 and a designated headgear,");
+	mes needtr("해당 투구를 의상 장비로 교환해 드립니다.","and I will exchange that headgear for costume equipment.");
 	mes "";
-	mes "교환 시 기존 장비는 사라지며,";
-	mes "^FF0000제련도, 카드, 인챈트 및 랜덤 옵션은 이전되지 않습니다.^000000";
+	mes needtr("교환 시 기존 장비는 사라지며,","The original equipment is lost in the exchange, and");
+	mes needtr("^FF0000제련도, 카드, 인챈트 및 랜덤 옵션은 이전되지 않습니다.^000000","^FF0000refine level, cards, enchants and random options are not carried over.^000000");
 	mes "";
-	mes "추가로 교환이 필요한 아이템이 있다면";
-	mes "^3B48CC디스코드 건의게시판^000000에 남겨 주세요.";
+	mes needtr("추가로 교환이 필요한 아이템이 있다면","If there is another item you would like exchanged,");
+	mes needtr("^3B48CC디스코드 건의게시판^000000에 남겨 주세요.","please leave it on the ^3B48CCDiscord suggestion board^000000.");
 	setdialogsize(400,200);
 	next;
 
-	switch (select("의상 장비로 교환한다:교환 가능 목록을 확인한다:그만둔다")) {
+	switch (select(needtr("의상 장비로 교환한다:교환 가능 목록을 확인한다:그만둔다","Exchange for costume equipment:Check the exchangeable list:Never mind"))) {
 	case 1:
 		if (countitem(.CouponItem) < 1) {
-			mes "[이브 패터]";
-			mes "교환에는 ^3131FF의상 교환쿠폰^000000 1개가 필요합니다.";
+			mes needtr("[이브 패터]","[Eve Patter]");
+			mes needtr("교환에는 ^3131FF의상 교환쿠폰^000000 1개가 필요합니다.","An exchange requires 1 ^3131FFCostume Exchange Coupon^000000.");
 			close;
 		}
 
-		mes "[이브 패터]";
-		mes "어떤 장비를 의상으로 교환하시겠어요?";
+		mes needtr("[이브 패터]","[Eve Patter]");
+		mes needtr("어떤 장비를 의상으로 교환하시겠어요?","Which equipment would you like to exchange for a costume?");
 		next;
 
 		.@menu$ = "";
+		.@menu_en$ = "";
 		for (.@i = 0; .@i < getarraysize(.NormalItem); ++.@i)
 			.@menu$ += .NormalName$[.@i] + ":";
+		for (.@i = 0; .@i < getarraysize(.NormalItem); ++.@i) .@menu_en$ += .NormalName_en$[.@i] + ":";
 		.@menu$ += "취소";
+		.@menu_en$ += "Cancel";
 
-		.@type = select(.@menu$) - 1;
+		.@type = select(needtr(.@menu$, .@menu_en$)) - 1;
 		if (.@type >= getarraysize(.NormalItem))
 			close;
 
@@ -49,6 +52,7 @@ itemmall,29,74,4	script	이브 패터#costex	4_F_01,{
 		.@equipped = 0;
 		.@rental = 0;
 		.@item_menu$ = "";
+		.@item_menu_en$ = "";
 
 		for (.@i = 0; .@i < @inventorylist_count; ++.@i) {
 			if (@inventorylist_id[.@i] != .@normal_id)
@@ -72,26 +76,31 @@ itemmall,29,74,4	script	이브 패터#costex	4_F_01,{
 				.@item_menu$ += "+" + @inventorylist_refine[.@i] + " " + .NormalName$[.@type] + ":";
 			else
 				.@item_menu$ += .NormalName$[.@type] + ":";
+			if (@inventorylist_refine[.@i] > 0)
+				.@item_menu_en$ += "+" + @inventorylist_refine[.@i] + " " + .NormalName_en$[.@type] + ":";
+			else
+				.@item_menu_en$ += .NormalName_en$[.@type] + ":";
 
 			.@found++;
 		}
 
 		if (!.@found) {
-			mes "[이브 패터]";
-			mes "교환 가능한 ^3131FF" + .NormalName$[.@type] + "^000000을 찾지 못했습니다.";
+			mes needtr("[이브 패터]","[Eve Patter]");
+			mes needtr("교환 가능한 ^3131FF", "No exchangeable ^3131FF") + needtr(.NormalName$[.@type], .NormalName_en$[.@type]) + needtr("^000000을 찾지 못했습니다.", "^000000 was found.");
 			if (.@equipped)
-				mes "장착 중인 장비는 해제한 뒤 다시 시도해 주세요.";
+				mes needtr("장착 중인 장비는 해제한 뒤 다시 시도해 주세요.","Please unequip the item and try again.");
 			if (.@rental)
-				mes "대여 장비는 교환할 수 없습니다.";
+				mes needtr("대여 장비는 교환할 수 없습니다.","Rental equipment cannot be exchanged.");
 			close;
 		}
 
 		.@item_menu$ += "취소";
-		mes "[이브 패터]";
-		mes "교환할 장비를 선택해 주세요.";
+		.@item_menu_en$ += "Cancel";
+		mes needtr("[이브 패터]","[Eve Patter]");
+		mes needtr("교환할 장비를 선택해 주세요.","Please select the equipment to exchange.");
 		next;
 
-		.@pick = select(.@item_menu$) - 1;
+		.@pick = select(needtr(.@item_menu$, .@item_menu_en$)) - 1;
 		if (.@pick >= .@found)
 			close;
 
@@ -99,50 +108,50 @@ itemmall,29,74,4	script	이브 패터#costex	4_F_01,{
 		.@inv_index = .@inventory_index[.@pick];
 		.@bound = @inventorylist_bound[.@list];
 
-		mes "[이브 패터]";
-		mes "다음과 같이 교환합니다.";
+		mes needtr("[이브 패터]","[Eve Patter]");
+		mes needtr("다음과 같이 교환합니다.","The exchange will be as follows.");
 		mes "";
-		mes "^3131FF[소모]^000000";
-		mes "ㆍ" + mesitemlink(.@normal_id) + " 1개";
-		mes "ㆍ" + mesitemlink(.CouponItem) + " 1개";
+		mes needtr("^3131FF[소모]^000000","^3131FF[Consumed]^000000");
+		mes needtr("ㆍ", "- ") + mesitemlink(.@normal_id) + needtr(" 1개", " x1");
+		mes needtr("ㆍ", "- ") + mesitemlink(.CouponItem) + needtr(" 1개", " x1");
 		mes "";
-		mes "^008000[획득]^000000";
-		mes "ㆍ" + mesitemlink(.@costume_id) + " 1개";
+		mes needtr("^008000[획득]^000000","^008000[Received]^000000");
+		mes needtr("ㆍ", "- ") + mesitemlink(.@costume_id) + needtr(" 1개", " x1");
 		mes "";
 
 		if (@inventorylist_refine[.@list] > 0)
-			mes "선택한 장비의 제련도: ^FF0000+" + @inventorylist_refine[.@list] + "^000000";
+			mes needtr("선택한 장비의 제련도: ^FF0000+", "Refine level of the selected equipment: ^FF0000+") + @inventorylist_refine[.@list] + "^000000";
 
 		if (@inventorylist_card1[.@list] || @inventorylist_card2[.@list] || @inventorylist_card3[.@list] || @inventorylist_card4[.@list])
-			mes "^FF0000선택한 장비에 카드 또는 특수 정보가 들어 있습니다.^000000";
+			mes needtr("^FF0000선택한 장비에 카드 또는 특수 정보가 들어 있습니다.^000000","^FF0000The selected equipment contains cards or special data.^000000");
 
 		if (@inventorylist_option_id1[.@list] || @inventorylist_option_id2[.@list] || @inventorylist_option_id3[.@list] || @inventorylist_option_id4[.@list] || @inventorylist_option_id5[.@list])
-			mes "^FF0000선택한 장비에 랜덤 옵션이 들어 있습니다.^000000";
+			mes needtr("^FF0000선택한 장비에 랜덤 옵션이 들어 있습니다.^000000","^FF0000The selected equipment contains random options.^000000");
 
 		if (@inventorylist_enchantgrade[.@list])
-			mes "^FF0000선택한 장비에 등급 강화가 적용되어 있습니다.^000000";
+			mes needtr("^FF0000선택한 장비에 등급 강화가 적용되어 있습니다.^000000","^FF0000The selected equipment has a grade enhancement applied.^000000");
 
 		if (.@bound)
-			mes "선택한 장비의 귀속 상태는 결과 의상에 유지됩니다.";
+			mes needtr("선택한 장비의 귀속 상태는 결과 의상에 유지됩니다.","The bound state of the selected equipment is kept on the resulting costume.");
 
-		mes "^FF0000기존 장비의 모든 정보는 사라지고 의상에 이전되지 않습니다.^000000";
+		mes needtr("^FF0000기존 장비의 모든 정보는 사라지고 의상에 이전되지 않습니다.^000000","^FF0000All data on the original equipment is lost and is not carried over to the costume.^000000");
 		next;
 
-		if (select("교환한다:취소") == 2)
+		if (select(needtr("교환한다:취소","Exchange:Cancel")) == 2)
 			close;
 
 		// 확인 창 이후 상태가 바뀌었을 가능성에 대비해 재검사합니다.
 		if (countitem(.CouponItem) < 1) {
-			mes "[이브 패터]";
-			mes "의상 교환쿠폰이 부족합니다.";
+			mes needtr("[이브 패터]","[Eve Patter]");
+			mes needtr("의상 교환쿠폰이 부족합니다.","You do not have enough Costume Exchange Coupons.");
 			close;
 		}
 
 		// 선택한 인벤토리 개체만 정확히 삭제합니다.
 		if (!delitemidx(.@inv_index, 1)) {
-			mes "[이브 패터]";
-			mes "선택한 장비를 확인할 수 없습니다.";
-			mes "장비를 다시 확인한 뒤 재시도해 주세요.";
+			mes needtr("[이브 패터]","[Eve Patter]");
+			mes needtr("선택한 장비를 확인할 수 없습니다.","The selected equipment could not be found.");
+			mes needtr("장비를 다시 확인한 뒤 재시도해 주세요.","Please check your equipment and try again.");
 			close;
 		}
 
@@ -155,21 +164,21 @@ itemmall,29,74,4	script	이브 패터#costex	4_F_01,{
 			getitem .@costume_id, 1;
 
 		specialeffect2 EF_COIN;
-		mes "[이브 패터]";
-		mes "교환이 완료되었습니다.";
+		mes needtr("[이브 패터]","[Eve Patter]");
+		mes needtr("교환이 완료되었습니다.","The exchange is complete.");
 		mes "";
-		mes "획득: " + mesitemlink(.@costume_id) + " 1개";
+		mes needtr("획득: ", "Received: ") + mesitemlink(.@costume_id) + needtr(" 1개", " x1");
 		close;
 
 	case 2:
-		mes "[이브 패터]";
-		mes "현재 교환 가능한 아이템은 다음과 같습니다.";
+		mes needtr("[이브 패터]","[Eve Patter]");
+		mes needtr("현재 교환 가능한 아이템은 다음과 같습니다.","These are the items that can be exchanged right now.");
 		mes "";
 		for (.@i = 0; .@i < getarraysize(.NormalItem); ++.@i)
-			mes "ㆍ^3131FF" + .NormalName$[.@i] + "^000000 → " + mesitemlink(.CostumeItem[.@i]);
+			mes needtr("ㆍ^3131FF", "- ^3131FF") + needtr(.NormalName$[.@i], .NormalName_en$[.@i]) + "^000000 → " + mesitemlink(.CostumeItem[.@i]);
 		mes "";
-		mes "각 교환에는 ^3131FF의상 교환쿠폰 1개^000000가 필요합니다.";
-		mes "추가 품목이 필요하다면 디스코드 건의게시판에 남겨 주세요.";
+		mes needtr("각 교환에는 ^3131FF의상 교환쿠폰 1개^000000가 필요합니다.","Each exchange requires ^3131FF1 Costume Exchange Coupon^000000.");
+		mes needtr("추가 품목이 필요하다면 디스코드 건의게시판에 남겨 주세요.","If you need more items, please leave it on the Discord suggestion board.");
 		close;
 
 	case 3:
@@ -208,5 +217,13 @@ OnInit:
 		"마제스틱 고우트",
 		"커세어",
 		"가부키가면";
+	setarray .NormalName_en$[0],
+		"Crown",
+		"Angel Wing Ears",
+		"Angel Wings",
+		"Evil Wings",
+		"Majestic Goat",
+		"Corsair",
+		"Kabuki Mask";
 	end;
 }

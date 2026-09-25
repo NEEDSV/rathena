@@ -1,0 +1,557 @@
+//============================================================
+// NEED 2026 추석 송편 이벤트
+//============================================================
+//= 사용 아이템
+//=   7613    작은 찹쌀반죽 (제작 재료)
+//=   1001827 솔잎          (제작 재료)
+//=   663     송편          (교환 재화)
+//=   6635    대축          (송편 100개 / 계정·IP 각 주 5개, 토요일 22:00 초기화)
+//=   399935  아리아 의상 선택 상자 (송편 300개 / 계정·IP 각 이벤트 기간 1개)
+//=   6532    꿀송편        (랜덤 제니/캐시, 계정+IP 하루 1개)
+//=
+//= 사냥 월드 드롭과 꿀송편 일일 제한은 C++ (need_chuseok_hunt.cpp) 가
+//= 담당하고, 여기에서는 전장 지급 / 제작 / 교환 / 아이템 사용을 처리한다.
+//=
+//= 운영 스위치
+//=   $NEED_CHUSEOK_EVENT_ON       추석 이벤트 전체
+//=   $NEED_CHUSEOK_BG_MATERIAL_ON 전장 송편 재료 지급
+//=   $NEED_CHUSEOK_BG_HONEY_ON    전장 꿀송편 판정
+//=   $NEED_CHUSEOK_CRAFT_ON       송편 제작 NPC
+//=   $NEED_CHUSEOK_SHOP_ON        송편 교환 NPC
+//=   need_chuseok_hunt_enable          (battle conf) 사냥 전체
+//=   need_chuseok_hunt_material_enable (battle conf) 재료 월드 드롭
+//=   need_chuseok_hunt_honey_enable    (battle conf) 꿀송편 사냥 드롭
+//============================================================
+
+//------------------------------------------------------------
+// 공통 상수 / 상태
+//------------------------------------------------------------
+function	script	F_NEED_Chuseok_Active	{
+	return ($NEED_CHUSEOK_EVENT_ON != 0);
+}
+
+//------------------------------------------------------------
+// 꿀송편 사용 (item 6532)
+// 여름 황금 수박과 동일한 공통 보상 함수를 그대로 사용한다.
+//------------------------------------------------------------
+function	script	F_NEED_Chuseok_HoneySongpyun	{
+	return callfunc("F_NEED_Event_RandomCashReward", 6532, 202609, "추석 이벤트", "꿀송편", "Chuseok Event", "Honey Rice Cake");
+}
+
+//------------------------------------------------------------
+// 전장 종료 보상 - 송편 재료 지급 + 풀사이클 꿀송편 판정
+//
+// getarg(0) 1=티에라 / 2=플라비우스 / 3=KVM
+//
+// 기존 전장 정상 보상 지급 대상자 판정을 그대로 사용한다.
+// (bg_common.txt F_BG_Badge, kvm01.txt F_KvM_GrantReward 에서 호출)
+// 승리팀 / 패배팀 지급량 차이는 두지 않는다.
+//------------------------------------------------------------
+function	script	F_NEED_Chuseok_BG_Reward	{
+	.@stage = getarg(0);
+
+	if (.@stage < 1 || .@stage > 3)
+		return;
+	if (!$NEED_CHUSEOK_EVENT_ON)
+		return;
+
+	// 송편 2개분 / 2개분 / 3개분 = 한 사이클 송편 7개분
+	setarray .@dough[1], 8, 8, 12;
+	setarray .@pine[1], 2, 2, 3;
+
+	if ($NEED_CHUSEOK_BG_MATERIAL_ON) {
+		getitem 7613, .@dough[.@stage];
+		getitem 1001827, .@pine[.@stage];
+		dispbottom needtr("[추석 이벤트] 송편 재료를 받았습니다. (작은 찹쌀반죽 ", "[Chuseok Event] You received Korean Rice Cake ingredients. (Small Rice Cake Dough x") + .@dough[.@stage] + needtr("개 / 솔잎 ", " / Pine Needles x") + .@pine[.@stage] + needtr("개)", ")");
+	}
+
+	// 풀사이클 추적.
+	// 랜덤 매칭이면 사이클 토큰으로, 수동 진행이면 티에라 참여를 기준으로 초기화한다.
+	.@token = ($@BG_RM_CYCLE_ACTIVE) ? $@BG_RM_TOKEN : 0;
+	if (@NEED_CHUSEOK_BG_TOKEN != .@token || .@stage == 1) {
+		@NEED_CHUSEOK_BG_TOKEN = .@token;
+		@NEED_CHUSEOK_BG_MASK = 0;
+	}
+	@NEED_CHUSEOK_BG_MASK = @NEED_CHUSEOK_BG_MASK | (1 << (.@stage - 1));
+
+	// 꿀송편 판정은 KVM 까지 정상 완료한 캐릭터에 한해 사이클당 1회.
+	if (.@stage != 3)
+		return;
+
+	.@full = ((@NEED_CHUSEOK_BG_MASK & 7) == 7);
+	@NEED_CHUSEOK_BG_MASK = 0;
+
+	if (!.@full)
+		return;
+	if (!$NEED_CHUSEOK_BG_HONEY_ON)
+		return;
+	if (rand(10000) >= 500)		// 5%
+		return;
+
+	// 사냥 꿀송편과 계정 + IP 일일 제한을 공유한다.
+	// 1=지급 / 0=계정 제한 / -1=IP 제한 / -2=인벤토리 / -3=DB 오류 / -4=기능 정지
+	.@result = needchuseokhoney("BG");
+	if (.@result == 1)
+		dispbottom needtr("[추석 이벤트] 전장 풀사이클 보상으로 꿀송편 1개를 획득했습니다.", "[Chuseok Event] You obtained 1 Honey Rice Cake as a Battleground full-cycle reward.");
+
+	return;
+}
+
+//------------------------------------------------------------
+// 송편 제작 NPC
+// 보유 재료로 만들 수 있는 최대 수량을 한 번에 제작한다.
+//------------------------------------------------------------
+lasagna,144,172,4	script	송편 빚는 아낙#chuseok2026	4_F_01,{
+	mes needtr("[송편 빚는 아낙]", "[Rice Cake Maker]");
+
+	if (!callfunc("F_NEED_Chuseok_Active") || !$NEED_CHUSEOK_CRAFT_ON) {
+		mes needtr("지금은 송편을 빚지 않아요.", "I'm not making rice cakes right now.");
+		mes needtr("다음 한가위를 기다려 주세요.", "Please wait for the next Chuseok.");
+		close;
+	}
+
+	mes needtr("한가위엔 역시 송편이지요.", "Nothing says Chuseok like rice cakes.");
+	mes needtr("^0055FF작은 찹쌀반죽 4개^000000 와 ^0055FF솔잎 1개^000000 를 가져오시면", "Bring me ^0055FF4 Small Rice Cake Dough^000000 and ^0055FF1 Pine Needles^000000");
+	mes needtr("송편 1개를 빚어 드려요.", "and I'll make you 1 Korean Rice Cake.");
+	next;
+
+	.@dough = countitem(7613);
+	.@pine = countitem(1001827);
+	.@make = .@dough / 4;
+	if (.@pine < .@make)
+		.@make = .@pine;
+
+	mes needtr("[송편 빚는 아낙]", "[Rice Cake Maker]");
+	mes needtr("지금 가지고 계신 재료는", "The ingredients you have now:");
+	mes needtr("작은 찹쌀반죽 ^0055FF", "Small Rice Cake Dough ^0055FF") + .@dough + needtr("^000000 개,", "^000000,");
+	mes needtr("솔잎 ^0055FF", "Pine Needles ^0055FF") + .@pine + needtr("^000000 개 네요.", "^000000.");
+
+	if (.@make < 1) {
+		mes " ";
+		mes needtr("^FF0000송편을 한 개도 빚을 수 없어요.^000000", "^FF0000You don't have enough to make even one rice cake.^000000");
+		if (.@dough < 4)
+			mes needtr("- 작은 찹쌀반죽이 ", "- You need ") + (4 - .@dough) + needtr("개 더 필요해요.", " more Small Rice Cake Dough.");
+		if (.@pine < 1)
+			mes needtr("- 솔잎이 ", "- You need ") + (1 - .@pine) + needtr("개 더 필요해요.", " more Pine Needles.");
+		close;
+	}
+
+	mes " ";
+	mes needtr("한 번에 ^0055FF", "You can make ^0055FF") + .@make + needtr("개^000000 를 빚을 수 있어요.", "^000000 at a time.");
+	mes needtr("찹쌀반죽 ", "Uses ") + (.@make * 4) + needtr("개, 솔잎 ", " Small Rice Cake Dough and ") + .@make + needtr("개를 사용합니다.", " Pine Needles.");
+	next;
+
+	if (select("송편을 빚는다:다음에 올게요") == 2) {
+		mes needtr("[송편 빚는 아낙]", "[Rice Cake Maker]");
+		mes needtr("언제든 다시 오세요.", "Come back anytime.");
+		close;
+	}
+
+	// 대화 중에 재료가 바뀌었을 수 있으므로 다시 계산한다.
+	.@dough = countitem(7613);
+	.@pine = countitem(1001827);
+	.@make = .@dough / 4;
+	if (.@pine < .@make)
+		.@make = .@pine;
+
+	if (.@make < 1) {
+		mes needtr("[송편 빚는 아낙]", "[Rice Cake Maker]");
+		mes needtr("재료가 모자라네요. 다시 확인해 주세요.", "You're short on ingredients. Please check again.");
+		close;
+	}
+
+	if (!checkweight(663, .@make)) {
+		mes needtr("[송편 빚는 아낙]", "[Rice Cake Maker]");
+		mes needtr("^FF0000짐이 너무 많아서 송편을 담아 드릴 수 없어요.^000000", "^FF0000You're carrying too much for me to hand you the rice cakes.^000000");
+		mes needtr("가방을 정리하고 다시 오세요.", "Please make room in your inventory and come back.");
+		close;
+	}
+
+	delitem 7613, .@make * 4;
+	delitem 1001827, .@make;
+	getitem 663, .@make;
+
+	mes needtr("[송편 빚는 아낙]", "[Rice Cake Maker]");
+	mes needtr("송편 ^0055FF", "I made ^0055FF") + .@make + needtr("개^000000 를 빚었어요.", "^000000 Korean Rice Cakes for you.");
+	mes needtr("맛있게 드시고, 교환소도 들러 보세요.", "Enjoy them, and drop by the exchange too.");
+	close;
+}
+
+//------------------------------------------------------------
+// 계정 + IP 단위 교환 한도
+//
+// 주간 주기 기준은 행운의 알 천장(need_lucky_ceiling.txt S_WeekKey)과 동일하게
+// 매주 토요일 22:00 이다.
+//
+// 꿀송편 일일 제한과 같은 방식으로 계정과 접속 IP 를 모두 본다. 둘 중 하나라도
+// 한도에 걸리면 교환되지 않으므로, 다중 계정으로 우회할 수 없다.
+//
+//   scope      : 'ACCOUNT' 또는 'IP'
+//   subject    : ACCOUNT 는 account_id, IP 는 접속 IP 문자열
+//   product    : 'DAECHUK' 대축(6635) / 'ARIA' 아리아 의상 선택 상자(399935)
+//   period_key : 주간 상품은 직전 토요일 22:00 의 YYYYMMDD, 시즌 상품은 0
+//------------------------------------------------------------
+
+// 매주 토요일 22:00 기준 주기 키 (YYYYMMDD)
+function	script	F_NEED_Chuseok_WeekKey	{
+	.@dow = gettime(DT_DAYOFWEEK);		// 0 = 일 ... 6 = 토
+	.@back = (.@dow + 1) % 7;			// 직전 토요일까지 며칠 전인가
+
+	if (.@back == 0 && gettime(DT_HOUR) < 22)
+		.@back = 7;						// 토요일 21:59 까지는 지난 주기
+
+	return atoi(gettimestr("%Y%m%d", 11, gettimetick(2) - .@back * 86400));
+}
+
+// 다음 주간 초기화 시점 안내 문자열
+function	script	F_NEED_Chuseok_WeekResetStr$	{
+	.@dow = gettime(DT_DAYOFWEEK);
+	.@fwd = (6 - .@dow + 7) % 7;
+
+	if (.@fwd == 0 && gettime(DT_HOUR) >= 22)
+		.@fwd = 7;
+
+	return gettimestr("%Y-%m-%d", 11, gettimetick(2) + .@fwd * 86400) + needtr(" (토) 22:00", " (Sat) 22:00");
+}
+
+// 현재 주기에서 이 대상(scope+subject)이 사용한 횟수. 조회 실패 시 -1.
+// getarg(0) scope$ / getarg(1) subject$ / getarg(2) product$ / getarg(3) period_key
+function	script	F_NEED_Chuseok_LimitUsed	{
+	.@rows = query_sql("SELECT `used` FROM `need_chuseok_exchange_limit` WHERE `event_id`=202609 AND `scope`='" + escape_sql(getarg(0)) + "' AND `subject`='" + escape_sql(getarg(1)) + "' AND `product`='" + escape_sql(getarg(2)) + "' AND `period_key`=" + getarg(3), .@used);
+
+	if (.@rows < 0)
+		return -1;
+	if (.@rows < 1)
+		return 0;
+
+	return .@used;
+}
+
+// 한 쪽(scope) 한도를 예약한다. 성공하면 갱신된 사용량, 한도 초과면 -1.
+// getarg(0) scope$ / getarg(1) subject$ / getarg(2) product$
+// getarg(3) period_key / getarg(4) 한도 / getarg(5) 수량
+function	script	F_NEED_Chuseok_LimitReserve	{
+	.@scope$ = getarg(0);
+	.@subject$ = getarg(1);
+	.@product$ = getarg(2);
+	.@period = getarg(3);
+	.@cap = getarg(4);
+	.@amount = getarg(5);
+
+	.@before = callfunc("F_NEED_Chuseok_LimitUsed", .@scope$, .@subject$, .@product$, .@period);
+	if (.@before < 0 || .@before + .@amount > .@cap)
+		return -1;
+
+	// 한도를 넘기는 갱신은 SQL 쪽에서도 한 번 더 막는다.
+	query_sql("INSERT INTO `need_chuseok_exchange_limit` (`event_id`,`scope`,`subject`,`product`,`period_key`,`used`) VALUES (202609,'" + escape_sql(.@scope$) + "','" + escape_sql(.@subject$) + "','" + escape_sql(.@product$) + "'," + .@period + "," + .@amount + ") ON DUPLICATE KEY UPDATE `used` = IF(`used` + " + .@amount + " <= " + .@cap + ", `used` + " + .@amount + ", `used`)");
+
+	.@after = callfunc("F_NEED_Chuseok_LimitUsed", .@scope$, .@subject$, .@product$, .@period);
+	if (.@after != .@before + .@amount)
+		return -1;			// 예약되지 않았다.
+
+	return .@after;
+}
+
+// 예약을 되돌린다. 한쪽만 예약된 채로 끝나는 일이 없도록 쓴다.
+function	script	F_NEED_Chuseok_LimitRelease	{
+	query_sql("UPDATE `need_chuseok_exchange_limit` SET `used` = IF(`used` >= " + getarg(4) + ", `used` - " + getarg(4) + ", 0) WHERE `event_id`=202609 AND `scope`='" + escape_sql(getarg(0)) + "' AND `subject`='" + escape_sql(getarg(1)) + "' AND `product`='" + escape_sql(getarg(2)) + "' AND `period_key`=" + getarg(3));
+	return;
+}
+
+// 한도가 걸린 교환 처리.
+//
+// getarg(0) product 문자열 / getarg(1) period_key / getarg(2) 한도
+// getarg(3) 지급 아이템 ID / getarg(4) 개당 송편 소모량 / getarg(5) 교환 수량
+//
+// 반환  1 = 성공
+//       0 = 계정 한도 초과
+//      -1 = 송편 부족
+//      -2 = 무게·슬롯 부족
+//      -3 = 접속 IP 확인 불가
+//      -4 = 원장 조회 실패
+//      -5 = IP 한도 초과
+//
+// 검사부터 차감까지 사이에 next / input 이 없다. 스크립트는 그 사이에 다른
+// 스크립트로 양보하지 않으므로 같은 계정·IP 의 다른 캐릭터가 끼어들 수 없다.
+function	script	F_NEED_Chuseok_LimitedExchange	{
+	.@product$ = getarg(0);
+	.@period = getarg(1);
+	.@cap = getarg(2);
+	.@item = getarg(3);
+	.@cost = getarg(4);
+	.@amount = getarg(5);
+
+	if (.@amount < 1 || .@amount > .@cap)
+		return 0;
+
+	.@acc$ = "" + getcharid(3);
+	.@ip$ = getcharip();
+
+	// IP 를 못 읽으면 IP 한도를 강제할 수 없으므로 지급하지 않는다.
+	if (.@ip$ == "")
+		return -3;
+
+	.@used_acc = callfunc("F_NEED_Chuseok_LimitUsed", "ACCOUNT", .@acc$, .@product$, .@period);
+	.@used_ip = callfunc("F_NEED_Chuseok_LimitUsed", "IP", .@ip$, .@product$, .@period);
+	if (.@used_acc < 0 || .@used_ip < 0)
+		return -4;
+	if (.@used_acc + .@amount > .@cap)
+		return 0;
+	if (.@used_ip + .@amount > .@cap)
+		return -5;
+
+	.@need = .@cost * .@amount;
+	if (countitem(663) < .@need)
+		return -1;
+	if (!checkweight(.@item, .@amount))
+		return -2;
+
+	.@after_acc = callfunc("F_NEED_Chuseok_LimitReserve", "ACCOUNT", .@acc$, .@product$, .@period, .@cap, .@amount);
+	if (.@after_acc < 0)
+		return 0;
+
+	.@after_ip = callfunc("F_NEED_Chuseok_LimitReserve", "IP", .@ip$, .@product$, .@period, .@cap, .@amount);
+	if (.@after_ip < 0) {
+		// 계정 쪽만 잡힌 상태로 남지 않도록 되돌린다. 아직 아무것도 차감하지 않았다.
+		callfunc "F_NEED_Chuseok_LimitRelease", "ACCOUNT", .@acc$, .@product$, .@period, .@amount;
+		return -5;
+	}
+
+	delitem 663, .@need;
+	getitem .@item, .@amount;
+
+	query_sql("INSERT INTO `need_chuseok_exchange_log` (`event_id`,`account_id`,`char_id`,`char_name`,`ip`,`product`,`period_key`,`amount`,`songpyun_spent`,`used_after`,`ip_used_after`,`created_at`) VALUES (202609," + getcharid(3) + "," + getcharid(0) + ",'" + escape_sql(strcharinfo(0)) + "','" + escape_sql(.@ip$) + "','" + escape_sql(.@product$) + "'," + .@period + "," + .@amount + "," + .@need + "," + .@after_acc + "," + .@after_ip + ",NOW())");
+
+	return 1;
+}
+
+// 한도 교환 실패 사유 안내. getarg(0) 반환값, getarg(1) 주간 여부(1=주간)
+function	script	F_NEED_Chuseok_LimitFailMes	{
+	.@r = getarg(0);
+	.@weekly = getarg(1);
+
+	if (.@r == -1)
+		mes needtr("^FF0000송편이 모자랍니다.^000000", "^FF0000You don't have enough Korean Rice Cakes.^000000");
+	else if (.@r == -2)
+		mes needtr("^FF0000짐이 너무 많아 받으실 수 없습니다.^000000", "^FF0000You're carrying too much to receive it.^000000");
+	else if (.@r == -3)
+		mes needtr("^FF0000접속 정보를 확인할 수 없어 교환할 수 없습니다.^000000", "^FF0000Your connection could not be verified, so you cannot exchange.^000000");
+	else if (.@r == -4)
+		mes needtr("^FF0000교환 기록을 확인할 수 없습니다. 잠시 후 다시 시도해 주세요.^000000", "^FF0000The exchange record could not be checked. Please try again shortly.^000000");
+	else if (.@r == -5)
+		mes needtr("^FF0000현재 접속 IP의 ", "^FF0000Your current IP has used up its ") + ((.@weekly) ? needtr("이번 주 ", "weekly ") : "") + needtr("교환 한도를 모두 사용했습니다.^000000", "exchange limit.^000000");
+	else
+		mes needtr("^FF0000이 계정의 ", "^FF0000This account has used up its ") + ((.@weekly) ? needtr("이번 주 ", "weekly ") : "") + needtr("교환 한도를 모두 사용했습니다.^000000", "exchange limit.^000000");
+	return;
+}
+
+//------------------------------------------------------------
+// 송편 교환 NPC
+//
+// 소비품 8종 : 교환 횟수 제한 없음 (바터 상점 need_chuseok_exchange)
+// 대축       : 송편 100개, 계정·IP 각각 주 5개 (토요일 22:00 초기화)
+// 아리아 상자 : 송편 300개, 계정·IP 각각 이벤트 기간 1개
+//------------------------------------------------------------
+lasagna,146,172,4	script	한가위 교환상 달이#chuseok2026	4_M_ORIENT01,{
+	mes needtr("[한가위 교환상 달이]", "[Chuseok Trader Dali]");
+
+	if (!callfunc("F_NEED_Chuseok_Active") || !$NEED_CHUSEOK_SHOP_ON) {
+		mes needtr("추석 교환 행사가 끝났습니다.", "The Chuseok exchange event has ended.");
+		mes needtr("다음 한가위에 다시 뵙지요.", "See you again next Chuseok.");
+		close;
+	}
+
+	mes needtr("송편을 가져오시면 좋은 물건과 바꿔 드립니다.", "Bring me Korean Rice Cakes and I'll trade you something good.");
+	mes needtr("현재 보유 송편 : ^0055FF", "Korean Rice Cakes held : ^0055FF") + countitem(663) + needtr("^000000 개", "^000000");
+	next;
+
+	switch (select(
+		needtr("일반 교환품 (횟수 제한 없음)", "Regular items (no limit)"),
+		needtr("대축 교환 (송편 100개 / 주 5개)", "Blacksmith's Blessing (100 cakes / 5 per week)"),
+		needtr("아리아 의상 선택 상자 (송편 300개 / 1회)", "Aria Costume Selection Box (300 cakes / once)"),
+		needtr("교환 목록을 듣는다", "Hear the exchange list"),
+		needtr("다음에 오겠소", "I'll come back later"))) {
+
+	case 1:
+		close2;
+		callshop "need_chuseok_exchange", 1;
+		end;
+
+	case 2:
+		callsub S_Daechuk;
+		end;
+
+	case 3:
+		callsub S_Aria;
+		end;
+
+	case 4:
+		mes needtr("[한가위 교환상 달이]", "[Chuseok Trader Dali]");
+		mes needtr("송편 4개 - 빛나는 방어 스크롤", "4 Korean Rice Cakes - Brilliant Protection Scroll");
+		mes needtr("송편 6개 - 레드 부스터", "6 Korean Rice Cakes - Red Booster");
+		mes needtr("송편 8개 - 소형 마나수", "8 Korean Rice Cakes - Small Mana Potion");
+		mes needtr("송편 24개 - 파워 부스터", "24 Korean Rice Cakes - Limited Power Booster");
+		mes needtr("송편 24개 - 인피니티 드링크", "24 Korean Rice Cakes - Infinity Drink");
+		mes needtr("송편 24개 - 진 ASPD 강화 포션", "24 Korean Rice Cakes - True Enhanced ASPD Potion");
+		next;
+		mes needtr("[한가위 교환상 달이]", "[Chuseok Trader Dali]");
+		mes needtr("송편 40개 - 진 레드 부스터", "40 Korean Rice Cakes - True Red Booster");
+		mes needtr("송편 50개 - 진 소형 마나수", "50 Korean Rice Cakes - True Small Mana Potion");
+		mes needtr("^0055FF송편 100개 - 대축 (계정·IP당 주 5개)^000000", "^0055FF100 Korean Rice Cakes - Blacksmith's Blessing (5 per week per account/IP)^000000");
+		mes needtr("^0055FF송편 300개 - 아리아 의상 선택 상자 (계정·IP당 1회)^000000", "^0055FF300 Korean Rice Cakes - Aria Costume Selection Box (once per account/IP)^000000");
+		next;
+		mes needtr("[한가위 교환상 달이]", "[Chuseok Trader Dali]");
+		mes needtr("대축과 아리아 의상 상자를 뺀 나머지는", "Everything except the Blacksmith's Blessing and the Aria box");
+		mes needtr("가진 송편만큼 얼마든지 바꾸실 수 있어요.", "can be traded as many times as your rice cakes allow.");
+		mes " ";
+		mes needtr("대축 주간 횟수는 ^0055FF매주 토요일 22:00^000000 에 초기화되고,", "The weekly Blacksmith's Blessing count resets ^0055FFevery Saturday at 22:00^000000,");
+		mes needtr("^FF0000계정과 접속 IP 를 함께 확인^000000 합니다.", "and ^FF0000both your account and your connection IP are checked^000000.");
+		mes needtr("같은 IP 에서 다른 계정을 쓰셔도 횟수를 함께 씁니다.", "Other accounts on the same IP share the same count.");
+		mes " ";
+		mes needtr("^FF0000빛나는 방어 스크롤은 전장 / PvP / 공성 지역에서는", "^FF0000The Brilliant Protection Scroll has no effect");
+		mes needtr("효과가 적용되지 않습니다.^000000", "in Battleground / PvP / siege areas.^000000");
+		close;
+
+	default:
+		mes needtr("[한가위 교환상 달이]", "[Chuseok Trader Dali]");
+		mes needtr("그럼 또 오시지요.", "Come again, then.");
+		close;
+	}
+
+//------------------------------------------------------------
+// 대축 : 송편 100개, 계정·IP 각각 주 5개
+//------------------------------------------------------------
+S_Daechuk:
+	.@period = callfunc("F_NEED_Chuseok_WeekKey");
+	.@cap = 5;
+	.@cost = 100;
+	.@ip$ = getcharip();
+	.@used_acc = callfunc("F_NEED_Chuseok_LimitUsed", "ACCOUNT", "" + getcharid(3), "DAECHUK", .@period);
+	.@used_ip = callfunc("F_NEED_Chuseok_LimitUsed", "IP", .@ip$, "DAECHUK", .@period);
+
+	mes needtr("[한가위 교환상 달이]", "[Chuseok Trader Dali]");
+	if (.@ip$ == "" || .@used_acc < 0 || .@used_ip < 0) {
+		mes needtr("지금은 교환 기록을 확인할 수 없습니다.", "The exchange record cannot be checked right now.");
+		mes needtr("잠시 후 다시 찾아와 주세요.", "Please come back in a moment.");
+		close;
+	}
+
+	.@used = (.@used_acc > .@used_ip) ? .@used_acc : .@used_ip;
+
+	mes needtr("^FFCC00대축 주간 교환 가능 횟수^000000", "^FFCC00Weekly Blacksmith's Blessing exchanges^000000");
+	mes "^0055FF" + .@used + " / " + .@cap + needtr("^000000  (남은 횟수 ", "^000000  (") + (.@cap - .@used) + needtr("개)", " left)");
+	mes needtr("^999999- 이 계정 ", "^999999- This account ") + .@used_acc + " / " + .@cap + needtr("   - 접속 IP ", "   - Connection IP ") + .@used_ip + " / " + .@cap + "^000000";
+	mes needtr("다음 초기화 : ^0055FF", "Next reset : ^0055FF") + callfunc("F_NEED_Chuseok_WeekResetStr$") + "^000000";
+	mes " ";
+	mes needtr("대축 1개당 송편 ", "Each Blacksmith's Blessing costs ") + .@cost + needtr("개가 필요합니다.", " Korean Rice Cakes.");
+	mes needtr("현재 보유 송편 : ^0055FF", "Korean Rice Cakes held : ^0055FF") + countitem(663) + needtr("^000000 개", "^000000");
+
+	if (.@used >= .@cap) {
+		mes " ";
+		if (.@used_ip >= .@cap && .@used_acc < .@cap)
+			mes needtr("^FF0000현재 접속 IP의 이번 주 교환 한도를 모두 사용했습니다.^000000", "^FF0000Your current IP has used up this week's exchange limit.^000000");
+		else
+			mes needtr("^FF0000이번 주 교환 한도를 모두 사용했습니다.^000000", "^FF0000You have used up this week's exchange limit.^000000");
+		close;
+	}
+
+	.@left = .@cap - .@used;
+	.@can = countitem(663) / .@cost;
+	if (.@can > .@left)
+		.@can = .@left;
+
+	if (.@can < 1) {
+		mes " ";
+		mes needtr("^FF0000송편이 ", "^FF0000You need ") + (.@cost - countitem(663)) + needtr("개 더 필요합니다.^000000", " more Korean Rice Cakes.^000000");
+		close;
+	}
+
+	next;
+	mes needtr("[한가위 교환상 달이]", "[Chuseok Trader Dali]");
+	mes needtr("몇 개를 교환하시겠습니까?", "How many would you like to exchange?");
+	mes "1 ~ ^0055FF" + .@can + needtr("^000000 개 (0 입력 시 취소)", "^000000 (enter 0 to cancel)");
+	input .@want, 0, .@can;
+
+	if (.@want < 1) {
+		mes needtr("[한가위 교환상 달이]", "[Chuseok Trader Dali]");
+		mes needtr("그럼 다음에 오시지요.", "Then come back another time.");
+		close;
+	}
+
+	.@result = callfunc("F_NEED_Chuseok_LimitedExchange", "DAECHUK", .@period, .@cap, 6635, .@cost, .@want);
+
+	mes needtr("[한가위 교환상 달이]", "[Chuseok Trader Dali]");
+	if (.@result == 1) {
+		mes needtr("대축 ^0055FF", "Here you go: ^0055FF") + .@want + needtr("개^000000 를 드렸습니다.", "^000000 Blacksmith's Blessing(s).");
+		mes needtr("송편 ", "I took ") + (.@cost * .@want) + needtr("개를 받았습니다.", " Korean Rice Cakes.");
+		mes " ";
+		mes needtr("이번 주 교환 : ^0055FF", "This week : ^0055FF") + (.@used + .@want) + " / " + .@cap + "^000000";
+	}
+	else
+		callfunc "F_NEED_Chuseok_LimitFailMes", .@result, 1;
+	close;
+
+//------------------------------------------------------------
+// 아리아 의상 선택 상자 : 송편 300개, 계정·IP 각각 이벤트 기간 1개
+//------------------------------------------------------------
+S_Aria:
+	.@cap = 1;
+	.@cost = 300;
+	.@ip$ = getcharip();
+	.@used_acc = callfunc("F_NEED_Chuseok_LimitUsed", "ACCOUNT", "" + getcharid(3), "ARIA", 0);
+	.@used_ip = callfunc("F_NEED_Chuseok_LimitUsed", "IP", .@ip$, "ARIA", 0);
+
+	mes needtr("[한가위 교환상 달이]", "[Chuseok Trader Dali]");
+	if (.@ip$ == "" || .@used_acc < 0 || .@used_ip < 0) {
+		mes needtr("지금은 교환 기록을 확인할 수 없습니다.", "The exchange record cannot be checked right now.");
+		mes needtr("잠시 후 다시 찾아와 주세요.", "Please come back in a moment.");
+		close;
+	}
+
+	.@used = (.@used_acc > .@used_ip) ? .@used_acc : .@used_ip;
+
+	mes needtr("^FFCC00아리아 의상 선택 상자^000000", "^FFCC00Aria Costume Selection Box^000000");
+	mes needtr("이벤트 기간 교환 : ^0055FF", "Exchanged this event : ^0055FF") + .@used + " / " + .@cap + "^000000";
+	mes needtr("^999999- 이 계정 ", "^999999- This account ") + .@used_acc + " / " + .@cap + needtr("   - 접속 IP ", "   - Connection IP ") + .@used_ip + " / " + .@cap + "^000000";
+	mes " ";
+	mes needtr("필요 송편 : ", "Korean Rice Cakes needed : ") + .@cost + needtr("개", "");
+	mes needtr("현재 보유 송편 : ^0055FF", "Korean Rice Cakes held : ^0055FF") + countitem(663) + needtr("^000000 개", "^000000");
+
+	if (.@used >= .@cap) {
+		mes " ";
+		if (.@used_ip >= .@cap && .@used_acc < .@cap)
+			mes needtr("^FF0000현재 접속 IP에서 이미 교환되었습니다. 이벤트 기간 중 IP당 1개까지입니다.^000000", "^FF0000This IP has already exchanged one. The limit is 1 per IP during the event.^000000");
+		else
+			mes needtr("^FF0000이미 교환하셨습니다. 이벤트 기간 중 계정당 1개까지입니다.^000000", "^FF0000You have already exchanged one. The limit is 1 per account during the event.^000000");
+		close;
+	}
+
+	if (countitem(663) < .@cost) {
+		mes " ";
+		mes needtr("^FF0000송편이 ", "^FF0000You need ") + (.@cost - countitem(663)) + needtr("개 더 필요합니다.^000000", " more Korean Rice Cakes.^000000");
+		close;
+	}
+
+	next;
+	mes needtr("[한가위 교환상 달이]", "[Chuseok Trader Dali]");
+	mes needtr("송편 ", "Trade ") + .@cost + needtr("개로 아리아 의상 선택 상자를 교환하시겠습니까?", " Korean Rice Cakes for the Aria Costume Selection Box?");
+	mes needtr("^FF0000계정과 접속 IP 각각 이벤트 기간 1개까지만 가능합니다.^000000", "^FF0000Only 1 per account and 1 per connection IP during the event.^000000");
+	next;
+
+	if (select("교환한다:그만둔다") == 2) {
+		mes needtr("[한가위 교환상 달이]", "[Chuseok Trader Dali]");
+		mes needtr("그럼 다음에 오시지요.", "Then come back another time.");
+		close;
+	}
+
+	.@result = callfunc("F_NEED_Chuseok_LimitedExchange", "ARIA", 0, .@cap, 399935, .@cost, 1);
+
+	mes needtr("[한가위 교환상 달이]", "[Chuseok Trader Dali]");
+	if (.@result == 1) {
+		mes needtr("아리아 의상 선택 상자를 드렸습니다.", "Here is your Aria Costume Selection Box.");
+		mes needtr("송편 ", "I took ") + .@cost + needtr("개를 받았습니다.", " Korean Rice Cakes.");
+	}
+	else
+		callfunc "F_NEED_Chuseok_LimitFailMes", .@result, 0;
+	close;
+}

@@ -46,12 +46,14 @@ function	script	F_KvM_AnnounceWaitingRoom	{
 	.@g = getwaitingroomstate(0,"KvM01R_Guillaume");
 	.@c = getwaitingroomstate(0,"KvM01R_Croix");
 
-	areaannounce "bat_room",159,219,179,233,
+	areaannouncelang "bat_room",159,219,179,233,
 		"[KVM] 현재 대기 인원 - 기욤 " + .@g + "/" + $BG_Guillaume_Count + "명, 크루아 " + .@c + "/" + $BG_Croix_Count + "명",
+		"[KVM] Waiting players - Guillaume " + .@g + "/" + $BG_Guillaume_Count + ", Croix " + .@c + "/" + $BG_Croix_Count,
 		bc_area,"0x99CCFF";
 
-	areaannounce "bat_room",159,198,179,212,
+	areaannouncelang "bat_room",159,198,179,212,
 		"[KVM] 현재 대기 인원 - 기욤 " + .@g + "/" + $BG_Guillaume_Count + "명, 크루아 " + .@c + "/" + $BG_Croix_Count + "명",
+		"[KVM] Waiting players - Guillaume " + .@g + "/" + $BG_Guillaume_Count + ", Croix " + .@c + "/" + $BG_Croix_Count,
 		bc_area,"0x99CCFF";
 
 	return;
@@ -63,7 +65,7 @@ function	script	F_KvM_AnnounceWaitingRoom	{
 //============================================================
 bat_room,169,226,5	script	KVM 기욤 대기실::KvM01R_Guillaume	418,{
 	mes "[KVM]";
-	mes "전장 관리인의 '전장 입장 준비' 메뉴를 이용해주세요.";
+	mes needtr("전장 관리인의 '전장 입장 준비' 메뉴를 이용해주세요.", "Please use the Battleground Manager's battleground entry preparation menu.");
 	close;
 OnInit:
 OnRefresh:
@@ -73,7 +75,7 @@ OnRefresh:
 
 bat_room,169,205,3	script	KVM 크루아 대기실::KvM01R_Croix	414,{
 	mes "[KVM]";
-	mes "전장 관리인의 '전장 입장 준비' 메뉴를 이용해주세요.";
+	mes needtr("전장 관리인의 '전장 입장 준비' 메뉴를 이용해주세요.", "Please use the Battleground Manager's battleground entry preparation menu.");
 	close;
 OnInit:
 OnRefresh:
@@ -119,26 +121,6 @@ function	script	F_KvM_SetPartyTeam	{
 		detachrid;
 	}
 	return;
-}
-
-function	script	F_KvM_JoinPartyToBG	{
-	.@party_id = getarg(0);
-	.@bg_id = getarg(1);
-	.@team = getarg(2);
-
-	if (.@team == 1) {
-		.@x = 52;
-		.@y = 129;
-	}
-	else {
-		.@x = 147;
-		.@y = 55;
-	}
-
-	.@result = callfunc("F_BG_RM_JoinCyclePartyToBG",
-		.@party_id, .@bg_id, .@team, "bat_c01", .@x, .@y);
-
-	return .@result;
 }
 
 function	script	F_KvM_RollbackPartyBG	{
@@ -266,7 +248,7 @@ OnGuillaumeQuit:
 	if ($@KvM01BG == 2) {
 		.Croix_Kill = .Croix_Kill + 1;
 		bg_updatescore "bat_c01",.Guillaume_Kill,.Croix_Kill;
-		mapannounce "bat_c01","기욤 팀원이 전장을 이탈했습니다. 크루아가 1킬을 획득합니다. 현재 점수 - 기욤 " + .Guillaume_Kill + "킬, 크루아 " + .Croix_Kill + "킬",bc_map,"0x00ff00";
+		mapannouncelang "bat_c01","기욤 팀원이 전장을 이탈했습니다. 크루아가 1킬을 획득합니다. 현재 점수 - 기욤 " + .Guillaume_Kill + "킬, 크루아 " + .Croix_Kill + "킬","A Guillaume member left the battleground, so Croix gains 1 kill. Current score - Guillaume " + .Guillaume_Kill + " kills, Croix " + .Croix_Kill + " kills",bc_map,"0x00ff00";
 	}
 	bg_leave;
 	end;
@@ -276,7 +258,7 @@ OnGuillaumeDie:
 		.Croix_Kill = .Croix_Kill + 1;
 		bg_updatescore "bat_c01",.Guillaume_Kill,.Croix_Kill;
 
-		mapannounce "bat_c01","크루아가 1킬을 획득했습니다. 현재 점수 - 기욤 " + .Guillaume_Kill + "킬, 크루아 " + .Croix_Kill + "킬",bc_map,"0x00ff00";
+		mapannouncelang "bat_c01","크루아가 1킬을 획득했습니다. 현재 점수 - 기욤 " + .Guillaume_Kill + "킬, 크루아 " + .Croix_Kill + "킬","Croix scored 1 kill. Current score - Guillaume " + .Guillaume_Kill + " kills, Croix " + .Croix_Kill + " kills",bc_map,"0x00ff00";
 
 		// 종료 직전 사망한 경우에도 부활시켜 보상 구역으로 이동합니다.
 		sleep2 3000;
@@ -302,7 +284,7 @@ OnCroixQuit:
 	if ($@KvM01BG == 2) {
 		.Guillaume_Kill = .Guillaume_Kill + 1;
 		bg_updatescore "bat_c01",.Guillaume_Kill,.Croix_Kill;
-		mapannounce "bat_c01","크루아 팀원이 전장을 이탈했습니다. 기욤이 1킬을 획득합니다. 현재 점수 - 기욤 " + .Guillaume_Kill + "킬, 크루아 " + .Croix_Kill + "킬",bc_map,"0x00ff00";
+		mapannouncelang "bat_c01","크루아 팀원이 전장을 이탈했습니다. 기욤이 1킬을 획득합니다. 현재 점수 - 기욤 " + .Guillaume_Kill + "킬, 크루아 " + .Croix_Kill + "킬","A Croix member left the battleground, so Guillaume gains 1 kill. Current score - Guillaume " + .Guillaume_Kill + " kills, Croix " + .Croix_Kill + " kills",bc_map,"0x00ff00";
 	}
 	bg_leave;
 	end;
@@ -312,7 +294,7 @@ OnCroixDie:
 		.Guillaume_Kill = .Guillaume_Kill + 1;
 		bg_updatescore "bat_c01",.Guillaume_Kill,.Croix_Kill;
 
-		mapannounce "bat_c01","기욤이 1킬을 획득했습니다. 현재 점수 - 기욤 " + .Guillaume_Kill + "킬, 크루아 " + .Croix_Kill + "킬",bc_map,"0x00ff00";
+		mapannouncelang "bat_c01","기욤이 1킬을 획득했습니다. 현재 점수 - 기욤 " + .Guillaume_Kill + "킬, 크루아 " + .Croix_Kill + "킬","Guillaume scored 1 kill. Current score - Guillaume " + .Guillaume_Kill + " kills, Croix " + .Croix_Kill + " kills",bc_map,"0x00ff00";
 
 		// 종료 직전 사망한 경우에도 부활시켜 보상 구역으로 이동합니다.
 		sleep2 3000;
@@ -343,19 +325,21 @@ OnCroixActive:
 
 OnPartyReady:
 	if ($@KvM01BG) {
-		mapannounce "bat_room", "[KVM] 이미 전장 상태가 활성화되어 자동 입장을 중단합니다.", bc_map, "0xFF6666";
+		mapannouncelang "bat_room", "[KVM] 이미 전장 상태가 활성화되어 자동 입장을 중단합니다.", "[KVM] A battleground is already active, so automatic entry has been stopped.", bc_map, "0xFF6666";
 		callfunc "F_KvM_ClearReadyState";
 		end;
 	}
 
 	callfunc "F_KvM_NormalizeCount";
 	if (!callfunc("F_KvM_CheckRegisteredParty", $BG_GUILLAUME_PARTY_ID, $BG_Guillaume_Count, $BG_GUILLAUME_LEADER_CID, $BG_GUILLAUME_LEADER_NAME$)) {
-		mapannounce "bat_room", "[KVM] 기욤 팀 입장 직전 검사 실패: " + $@KvMCheck_Reason$ + (($@KvMCheck_Name$ == "") ? "" : " (" + $@KvMCheck_Name$ + ")"), bc_map, "0xFF6666";
+		mapannouncelang "bat_room", "[KVM] 기욤 팀 입장 직전 검사 실패: " + $@KvMCheck_Reason$ + (($@KvMCheck_Name$ == "") ? "" : " (" + $@KvMCheck_Name$ + ")"),
+			"[KVM] The Guillaume team failed the pre-entry check: " + $@KvMCheck_Reason_EN$ + (($@KvMCheck_Name$ == "") ? "" : " (" + $@KvMCheck_Name$ + ")"), bc_map, "0xFF6666";
 		callfunc "F_KvM_ClearReadyState";
 		end;
 	}
 	if (!callfunc("F_KvM_CheckRegisteredParty", $BG_CROIX_PARTY_ID, $BG_Croix_Count, $BG_CROIX_LEADER_CID, $BG_CROIX_LEADER_NAME$)) {
-		mapannounce "bat_room", "[KVM] 크루아 팀 입장 직전 검사 실패: " + $@KvMCheck_Reason$ + (($@KvMCheck_Name$ == "") ? "" : " (" + $@KvMCheck_Name$ + ")"), bc_map, "0xFF6666";
+		mapannouncelang "bat_room", "[KVM] 크루아 팀 입장 직전 검사 실패: " + $@KvMCheck_Reason$ + (($@KvMCheck_Name$ == "") ? "" : " (" + $@KvMCheck_Name$ + ")"),
+			"[KVM] The Croix team failed the pre-entry check: " + $@KvMCheck_Reason_EN$ + (($@KvMCheck_Name$ == "") ? "" : " (" + $@KvMCheck_Name$ + ")"), bc_map, "0xFF6666";
 		callfunc "F_KvM_ClearReadyState";
 		end;
 	}
@@ -363,52 +347,59 @@ OnPartyReady:
 	$@KvM01BG = 1;
 	$@KvM01BG_Victory = 0;
 	callfunc "F_KvM_ClearReadyState";
-	if ($@BG_RM_CYCLE_ACTIVE) {
-		// 랜덤 매칭은 최초 매칭 명단에 포함된 현재 온라인/대기존 인원만 직접 편입합니다.
-		// party2bg를 그대로 사용하면 중간에 추가된 신규 파티원이 함께 들어갈 수 있으므로 사용하지 않습니다.
-		$@KvM01BG_id1 = bg_create("bat_c01",52,129,"KvM01_BG::OnGuillaumeQuit","KvM01_BG::OnGuillaumeDie");
-		$@KvM01BG_id2 = bg_create("bat_c01",147,55,"KvM01_BG::OnCroixQuit","KvM01_BG::OnCroixDie");
+	// v12.1 KVM 안정화:
+	// 기존 서버에서 정상 동작하던 party2bg 경로를 복구합니다.
+	// v11의 bg_create + 개별 bg_join 경로는 커스텀/구형 포크에서
+	// 진영 전투 판정 또는 전장 진행 연결이 달라질 가능성이 있어 사용하지 않습니다.
+	debugmes "[BG RM][KVM] party2bg start"
+		+ " G_party=" + $BG_GUILLAUME_PARTY_ID
+		+ " C_party=" + $BG_CROIX_PARTY_ID
+		+ " needG=" + $BG_Guillaume_Count
+		+ " needC=" + $BG_Croix_Count
+		+ " random=" + $@BG_RM_CYCLE_ACTIVE;
 
-		if (!$@KvM01BG_id1 || !$@KvM01BG_id2) {
-			mapannounce "bat_room", "[KVM] 랜덤 매칭 BG 팀 생성에 실패했습니다.", bc_map, "0xFF6666";
-			donpcevent "KvM01_BG::OnPartyEntryFail";
-			end;
-		}
+	$@KvM01BG_id1 = party2bg(
+		$BG_GUILLAUME_PARTY_ID,
+		"bat_c01",52,129,
+		"KvM01_BG::OnGuillaumeQuit",
+		"KvM01_BG::OnGuillaumeDie"
+	);
 
-		.@joined_g = callfunc("F_KvM_JoinPartyToBG", $BG_GUILLAUME_PARTY_ID, $@KvM01BG_id1, 1);
-		if (.@joined_g < 0) {
-			mapannounce "bat_room", "[KVM] 기욤 팀 가입 실패: " + $@BG_RM_Join_FailReason$ + (($@BG_RM_Join_FailName$ == "") ? "" : " (" + $@BG_RM_Join_FailName$ + ")"), bc_map, "0xFF6666";
-			donpcevent "KvM01_BG::OnPartyEntryFail";
-			end;
-		}
-
-		.@joined_c = callfunc("F_KvM_JoinPartyToBG", $BG_CROIX_PARTY_ID, $@KvM01BG_id2, 2);
-		if (.@joined_c < 0) {
-			mapannounce "bat_room", "[KVM] 크루아 팀 가입 실패: " + $@BG_RM_Join_FailReason$ + (($@BG_RM_Join_FailName$ == "") ? "" : " (" + $@BG_RM_Join_FailName$ + ")"), bc_map, "0xFF6666";
-			donpcevent "KvM01_BG::OnPartyEntryFail";
-			end;
-		}
+	if (!$@KvM01BG_id1) {
+		mapannouncelang "bat_room", "[KVM] 기욤 BG 팀 생성에 실패했습니다.", "[KVM] The Guillaume BG team could not be created.", bc_map, "0xFF6666";
+		donpcevent "KvM01_BG::OnPartyEntryFail";
+		end;
 	}
-	else {
-		$@KvM01BG_id1 = party2bg($BG_GUILLAUME_PARTY_ID,"bat_c01",52,129,"KvM01_BG::OnGuillaumeQuit","KvM01_BG::OnGuillaumeDie");
-		if (!$@KvM01BG_id1) {
-			mapannounce "bat_room", "[KVM] 기욤 BG 팀 생성에 실패했습니다.", bc_map, "0xFF6666";
-			donpcevent "KvM01_BG::OnPartyEntryFail";
-			end;
-		}
 
-		$@KvM01BG_id2 = party2bg($BG_CROIX_PARTY_ID,"bat_c01",147,55,"KvM01_BG::OnCroixQuit","KvM01_BG::OnCroixDie");
-		if (!$@KvM01BG_id2) {
-			mapannounce "bat_room", "[KVM] 크루아 BG 팀 생성에 실패했습니다.", bc_map, "0xFF6666";
-			donpcevent "KvM01_BG::OnPartyEntryFail";
-			end;
-		}
+	$@KvM01BG_id2 = party2bg(
+		$BG_CROIX_PARTY_ID,
+		"bat_c01",147,55,
+		"KvM01_BG::OnCroixQuit",
+		"KvM01_BG::OnCroixDie"
+	);
 
-		.@joined_g = bg_get_data($@KvM01BG_id1,0);
-		.@joined_c = bg_get_data($@KvM01BG_id2,0);
+	if (!$@KvM01BG_id2) {
+		mapannouncelang "bat_room", "[KVM] 크루아 BG 팀 생성에 실패했습니다.", "[KVM] The Croix BG team could not be created.", bc_map, "0xFF6666";
+		donpcevent "KvM01_BG::OnPartyEntryFail";
+		end;
 	}
+
+	.@joined_g = bg_get_data($@KvM01BG_id1,0);
+	.@joined_c = bg_get_data($@KvM01BG_id2,0);
+
+	debugmes "[BG RM][KVM] party2bg result"
+		+ " G_bg=" + $@KvM01BG_id1
+		+ " C_bg=" + $@KvM01BG_id2
+		+ " joinedG=" + .@joined_g
+		+ " joinedC=" + .@joined_c
+		+ " needG=" + $BG_Guillaume_Count
+		+ " needC=" + $BG_Croix_Count;
+
 	if (.@joined_g != $BG_Guillaume_Count || .@joined_c != $BG_Croix_Count) {
-		mapannounce "bat_room", "[KVM] BG 가입 인원 검증에 실패하여 자동 입장을 취소했습니다.", bc_map, "0xFF6666";
+		debugmes "[BG RM][KVM] party2bg count mismatch"
+			+ " joinedG=" + .@joined_g + " needG=" + $BG_Guillaume_Count
+			+ " joinedC=" + .@joined_c + " needC=" + $BG_Croix_Count;
+		mapannouncelang "bat_room", "[KVM] BG 가입 인원 검증에 실패하여 자동 입장을 취소했습니다.", "[KVM] The BG join headcount check failed, so automatic entry has been cancelled.", bc_map, "0xFF6666";
 		donpcevent "KvM01_BG::OnPartyEntryFail";
 		end;
 	}
@@ -424,7 +415,7 @@ OnPartyReady:
 	bg_warp $@KvM01BG_id1,"bat_c01",53,128;
 	bg_warp $@KvM01BG_id2,"bat_c01",146,55;
 
-	announce "[전장 안내] KVM 기욤 " + .@joined_g + "명 vs 크루아 " + .@joined_c + "명이 내부 준비 구역에 입장했습니다.", bc_all;
+	announcelang "[전장 안내] KVM 기욤 " + .@joined_g + "명 vs 크루아 " + .@joined_c + "명이 내부 준비 구역에 입장했습니다.", "[Battleground Notice] KVM Guillaume " + .@joined_g + " vs Croix " + .@joined_c + " have entered the staging area.", bc_all;
 	donpcevent "KvM01_BG::OnStart";
 	end;
 
@@ -443,7 +434,7 @@ OnPartyEntryFail:
 	$@KvM01BG = 0;
 	$@KvM01BG_Victory = 0;
 	callfunc "F_KvM_ClearReadyState";
-	mapannounce "bat_room", "[KVM] 자동 입장이 취소되었습니다. 파티 상태를 확인한 뒤 다시 준비해주세요.", bc_map, "0xFF6666";
+	mapannouncelang "bat_room", "[KVM] 자동 입장이 취소되었습니다. 파티 상태를 확인한 뒤 다시 준비해주세요.", "[KVM] Automatic entry has been cancelled. Check your party state and get ready again.", bc_map, "0xFF6666";
 	end;
 
 OnStart:
@@ -456,7 +447,7 @@ OnStart:
 	.Guillaume_Count = 0;
 	.Croix_Count = 0;
 
-	mapannounce "bat_c01","KVM 전장에 입장했습니다. 30초 동안 전투를 준비해주세요.",bc_map,"0x00ff00";
+	mapannouncelang "bat_c01","KVM 전장에 입장했습니다. 30초 동안 전투를 준비해주세요.","You have entered the KVM battleground. Prepare for battle for 30 seconds.",bc_map,"0x00ff00";
 	stopnpctimer;
 	initnpctimer;
 	end;
@@ -467,7 +458,7 @@ OnCancel:
 	$@KvM01BG = 0;
 	$@KvM01BG_Victory = 0;
 
-	mapannounce "bat_c01","전투를 시작하기에 충분한 인원이 없어 KVM이 취소되었습니다.",bc_map,"0x696969";
+	mapannouncelang "bat_c01","전투를 시작하기에 충분한 인원이 없어 KVM이 취소되었습니다.","There were not enough players to start the battle, so KVM was cancelled.",bc_map,"0x696969";
 	mapwarp "bat_c01","bat_room",154,150;
 
 	if ($@KvM01BG_id1) {
@@ -484,15 +475,15 @@ OnCancel:
 	end;
 
 OnTimer1000:
-	mapannounce "bat_c01","KVM 전투는 30초 후 시작됩니다.",bc_map,"0x00ff00";
+	mapannouncelang "bat_c01","KVM 전투는 30초 후 시작됩니다.","The KVM battle starts in 30 seconds.",bc_map,"0x00ff00";
 	end;
 
 OnTimer3000:
-	mapannounce "bat_c01","KVM 전투의 제한 시간은 5분입니다.",bc_map,"0x00ff00";
+	mapannouncelang "bat_c01","KVM 전투의 제한 시간은 5분입니다.","The maximum time for a KVM battle is 5 minutes.",bc_map,"0x00ff00";
 	end;
 
 OnTimer6000:
-	mapannounce "bat_c01","전투 시작 전까지 아군을 강화할 수 있습니다.",bc_map,"0x00ff00";
+	mapannouncelang "bat_c01","전투 시작 전까지 아군을 강화할 수 있습니다.","You can buff your allies until the battle starts.",bc_map,"0x00ff00";
 	donpcevent "#A_camp_start01::OnEnable";
 	donpcevent "#B_camp_start01::OnEnable";
 	end;
@@ -503,22 +494,22 @@ OnTimer13000:
 	end;
 
 OnTimer15000:
-	mapannounce "bat_c01","KVM 전투 시작까지 15초 남았습니다.",bc_map,"0x00ff00";
+	mapannouncelang "bat_c01","KVM 전투 시작까지 15초 남았습니다.","15 seconds remaining until the KVM battle starts.",bc_map,"0x00ff00";
 	donpcevent "::OnKvM01One";
 	end;
 
 OnTimer20000:
-	mapannounce "bat_c01","KVM 전투 시작까지 10초 남았습니다.",bc_map,"0x00ff00";
+	mapannouncelang "bat_c01","KVM 전투 시작까지 10초 남았습니다.","10 seconds remaining until the KVM battle starts.",bc_map,"0x00ff00";
 	donpcevent "::OnKvM01Two";
 	end;
 
 OnTimer25000:
-	mapannounce "bat_c01","KVM 전투 시작까지 5초 남았습니다.",bc_map,"0x00ff00";
+	mapannouncelang "bat_c01","KVM 전투 시작까지 5초 남았습니다.","5 seconds remaining until the KVM battle starts.",bc_map,"0x00ff00";
 	donpcevent "::OnKvM01One";
 	end;
 
 OnTimer29000:
-	mapannounce "bat_c01","KVM 전투가 곧 시작됩니다.",bc_map,"0x00ff00";
+	mapannouncelang "bat_c01","KVM 전투가 곧 시작됩니다.","The KVM battle is about to begin.",bc_map,"0x00ff00";
 	donpcevent "::OnKvM01Two";
 	end;
 
@@ -549,37 +540,37 @@ OnTimer30000:
 
 	$@KvM01BG = 2;
 
-	mapannounce "bat_c01","KVM 킬카운트 전투가 시작되었습니다!",bc_map,"0x00ff00";
-	mapannounce "bat_c01","제한 시간 5분 동안 더 많은 킬을 기록한 팀이 승리합니다.",bc_map,"0x00ff00";
-	announce "[전장 안내] KVM 전장이 기욤 " + .Guillaume_Count + "명 vs 크루아 " + .Croix_Count + "명으로 시작되었습니다.",bc_all;
+	mapannouncelang "bat_c01","KVM 킬카운트 전투가 시작되었습니다!","The KVM kill-count battle has begun!",bc_map,"0x00ff00";
+	mapannouncelang "bat_c01","제한 시간 5분 동안 더 많은 킬을 기록한 팀이 승리합니다.","The team with more kills within the 5 minute limit wins.",bc_map,"0x00ff00";
+	announcelang "[전장 안내] KVM 전장이 기욤 " + .Guillaume_Count + "명 vs 크루아 " + .Croix_Count + "명으로 시작되었습니다.", "[Battleground Notice] The KVM battleground has begun with Guillaume " + .Guillaume_Count + " vs Croix " + .Croix_Count + ".",bc_all;
 
 	bg_warp $@KvM01BG_id1,"bat_c01",61,120;
 	bg_warp $@KvM01BG_id2,"bat_c01",138,63;
 	end;
 
 OnTimer270000:
-	mapannounce "bat_c01","KVM 전투 종료까지 1분 남았습니다.",bc_map,"0x00ff00";
+	mapannouncelang "bat_c01","KVM 전투 종료까지 1분 남았습니다.","1 minute remaining until the KVM battle ends.",bc_map,"0x00ff00";
 	end;
 
 OnTimer300000:
-	mapannounce "bat_c01","KVM 전투 종료까지 30초 남았습니다.",bc_map,"0x00ff00";
+	mapannouncelang "bat_c01","KVM 전투 종료까지 30초 남았습니다.","30 seconds remaining until the KVM battle ends.",bc_map,"0x00ff00";
 	end;
 
 OnTimer315000:
-	mapannounce "bat_c01","KVM 전투 종료까지 15초 남았습니다.",bc_map,"0x00ff00";
+	mapannouncelang "bat_c01","KVM 전투 종료까지 15초 남았습니다.","15 seconds remaining until the KVM battle ends.",bc_map,"0x00ff00";
 	end;
 
 OnTimer320000:
-	mapannounce "bat_c01","KVM 전투 종료까지 10초 남았습니다.",bc_map,"0x00ff00";
+	mapannouncelang "bat_c01","KVM 전투 종료까지 10초 남았습니다.","10 seconds remaining until the KVM battle ends.",bc_map,"0x00ff00";
 	end;
 
 OnTimer325000:
-	mapannounce "bat_c01","KVM 전투 종료까지 5초 남았습니다.",bc_map,"0x00ff00";
+	mapannouncelang "bat_c01","KVM 전투 종료까지 5초 남았습니다.","5 seconds remaining until the KVM battle ends.",bc_map,"0x00ff00";
 	end;
 
 OnTimer330000:
-	mapannounce "bat_c01","KVM 전투 시간이 종료되었습니다.",bc_map,"0x00ff00";
-	mapannounce "bat_c01","최종 킬 점수 - 기욤 " + .Guillaume_Kill + "킬, 크루아 " + .Croix_Kill + "킬",bc_map,"0x00ff00";
+	mapannouncelang "bat_c01","KVM 전투 시간이 종료되었습니다.","The KVM battle time is over.",bc_map,"0x00ff00";
+	mapannouncelang "bat_c01","최종 킬 점수 - 기욤 " + .Guillaume_Kill + "킬, 크루아 " + .Croix_Kill + "킬","Final kill score - Guillaume " + .Guillaume_Kill + " kills, Croix " + .Croix_Kill + " kills",bc_map,"0x00ff00";
 
 	if (.Croix_Kill > .Guillaume_Kill) {
 		donpcevent "KvM01_BG::OnCroixWin";
@@ -591,7 +582,7 @@ OnTimer330000:
 		$@KvM01BG = 3;
 		$@KvM01BG_Victory = 3;
 
-		mapannounce "bat_c01","이번 KVM 전투는 무승부로 종료되었습니다.",bc_map,"0x00ff00";
+		mapannouncelang "bat_c01","이번 KVM 전투는 무승부로 종료되었습니다.","This KVM battle has ended in a draw.",bc_map,"0x00ff00";
 
 		donpcevent "KvM01_BG::OnStop";
 	}
@@ -601,10 +592,10 @@ OnGuillaumeWin:
 	$@KvM01BG = 3;
 	$@KvM01BG_Victory = 1;
 
-	announce "KVM 기욤 팀이 승리했습니다!",bc_all,"0x00ff00";
-	mapannounce "bat_c01","최종 킬 점수 - 기욤 " + .Guillaume_Kill + "킬, 크루아 " + .Croix_Kill + "킬",bc_map,"0x00ff00";
-	mapannounce "bat_c01","기욤 팀원 여러분, 축하드립니다.",bc_map,"0x00ff00";
-	mapannounce "bat_c01","잠시 후 출발 지점으로 이동됩니다.",bc_map,"0x00ff00";
+	announcelang "KVM 기욤 팀이 승리했습니다!", "The KVM Guillaume team has won!",bc_all,"0x00ff00";
+	mapannouncelang "bat_c01","최종 킬 점수 - 기욤 " + .Guillaume_Kill + "킬, 크루아 " + .Croix_Kill + "킬","Final kill score - Guillaume " + .Guillaume_Kill + " kills, Croix " + .Croix_Kill + " kills",bc_map,"0x00ff00";
+	mapannouncelang "bat_c01","기욤 팀원 여러분, 축하드립니다.","Congratulations to the Guillaume team.",bc_map,"0x00ff00";
+	mapannouncelang "bat_c01","잠시 후 출발 지점으로 이동됩니다.","You will be moved to the starting point shortly.",bc_map,"0x00ff00";
 
 	donpcevent "KvM01_BG::OnStop";
 	end;
@@ -613,10 +604,10 @@ OnCroixWin:
 	$@KvM01BG = 3;
 	$@KvM01BG_Victory = 2;
 
-	announce "KVM 크루아 팀이 승리했습니다!",bc_all,"0x00ff00";
-	mapannounce "bat_c01","최종 킬 점수 - 기욤 " + .Guillaume_Kill + "킬, 크루아 " + .Croix_Kill + "킬",bc_map,"0x00ff00";
-	mapannounce "bat_c01","크루아 팀원 여러분, 축하드립니다.",bc_map,"0x00ff00";
-	mapannounce "bat_c01","잠시 후 출발 지점으로 이동됩니다.",bc_map,"0x00ff00";
+	announcelang "KVM 크루아 팀이 승리했습니다!", "The KVM Croix team has won!",bc_all,"0x00ff00";
+	mapannouncelang "bat_c01","최종 킬 점수 - 기욤 " + .Guillaume_Kill + "킬, 크루아 " + .Croix_Kill + "킬","Final kill score - Guillaume " + .Guillaume_Kill + " kills, Croix " + .Croix_Kill + " kills",bc_map,"0x00ff00";
+	mapannouncelang "bat_c01","크루아 팀원 여러분, 축하드립니다.","Congratulations to the Croix team.",bc_map,"0x00ff00";
+	mapannouncelang "bat_c01","잠시 후 출발 지점으로 이동됩니다.","You will be moved to the starting point shortly.",bc_map,"0x00ff00";
 
 	donpcevent "KvM01_BG::OnStop";
 	end;
@@ -653,28 +644,28 @@ OnBegin:
 	end;
 
 OnTimer1000:
-	mapannounce "bat_c01","KVM 포인트를 받으려면 담당관에게 말을 걸어주세요.",bc_map,"0x00ff00";
+	mapannouncelang "bat_c01","KVM 포인트를 받으려면 담당관에게 말을 걸어주세요.","Talk to the Officer to receive your KVM points.",bc_map,"0x00ff00";
 	end;
 
 OnTimer3000:
-	mapannounce "bat_c01","담당관은 60초 동안 보상을 지급합니다.",bc_map,"0x00ff00";
+	mapannouncelang "bat_c01","담당관은 60초 동안 보상을 지급합니다.","The Officer will hand out rewards for 60 seconds.",bc_map,"0x00ff00";
 	if ($@BG_RM_CYCLE_ACTIVE)
-		mapannounce "bat_c01","미수령 상태로 60초가 지나면 기존 보상이 자동 지급된 뒤 대기실로 이동됩니다.",bc_map,"0x00ff00";
+		mapannouncelang "bat_c01","미수령 상태로 60초가 지나면 기존 보상이 자동 지급된 뒤 대기실로 이동됩니다.","If 60 seconds pass without claiming, your pending rewards are granted automatically and you are moved to the waiting room.",bc_map,"0x00ff00";
 	else
-		mapannounce "bat_c01","시간이 지나면 전장 대기실로 이동됩니다.",bc_map,"0x00ff00";
+		mapannouncelang "bat_c01","시간이 지나면 전장 대기실로 이동됩니다.","When the time is up you will be moved to the battleground waiting room.",bc_map,"0x00ff00";
 	end;
 
 OnTimer5000:
 	if ($@BG_RM_CYCLE_ACTIVE)
-		mapannounce "bat_c01","직접 수령하거나 자동 지급까지 기다릴 수 있습니다. 중복 지급은 되지 않습니다.",bc_map,"0x00ff00";
+		mapannouncelang "bat_c01","직접 수령하거나 자동 지급까지 기다릴 수 있습니다. 중복 지급은 되지 않습니다.","You can claim them yourself or wait for the automatic payout. They are never granted twice.",bc_map,"0x00ff00";
 	else {
-		mapannounce "bat_c01","담당관에게 말을 걸지 않으면 보상을 받을 수 없습니다.",bc_map,"0x00ff00";
-		mapannounce "bat_c01","보상을 잊지 말고 수령해주세요.",bc_map,"0x00ff00";
+		mapannouncelang "bat_c01","담당관에게 말을 걸지 않으면 보상을 받을 수 없습니다.","You cannot receive the reward unless you talk to the Officer.",bc_map,"0x00ff00";
+		mapannouncelang "bat_c01","보상을 잊지 말고 수령해주세요.","Please do not forget to claim your reward.",bc_map,"0x00ff00";
 	}
 	end;
 
 OnTimer55000:
-	mapannounce "bat_c01","잠시 후 전장 대기실로 이동됩니다.",bc_map,"0x00ff00";
+	mapannouncelang "bat_c01","잠시 후 전장 대기실로 이동됩니다.","You will be moved to the battleground waiting room shortly.",bc_map,"0x00ff00";
 	end;
 
 OnTimer60000:
@@ -729,7 +720,8 @@ function	script	F_KvM_GrantReward	{
 	.@victory = getarg(0);
 	.@team = getarg(1);
 	.@char_id = getcharid(0);
-	.@bonusmount = ($BG_User_Count - 5) * 2;
+	// NEED: 전장 캐시 1.5배. 기본 금화 상수와 인원 보정을 함께 1.5배로 올린다.
+	.@bonusmount = ($BG_User_Count - 5) * 3;
 	.@partyleaderbonus = 0;
 
 	// 랜덤 매칭의 자동 파티장은 직접 모집한 파티장이 아니므로 기존처럼 추가 보상 제외.
@@ -745,7 +737,7 @@ function	script	F_KvM_GrantReward	{
 		else
 			getitem 7773,3 + .@partyleaderbonus;
 
-		.@gold_amount = 20 + .@bonusmount;
+		.@gold_amount = 30 + .@bonusmount;
 	}
 	else {
 		if ($NEED_EVENT_BG_BADGE_ON)
@@ -753,7 +745,7 @@ function	script	F_KvM_GrantReward	{
 		else
 			getitem 7773,2 + .@partyleaderbonus;
 
-		.@gold_amount = 15 + .@bonusmount;
+		.@gold_amount = 23 + .@bonusmount;
 	}
 
 	.@gold_amount = callfunc("F_NEED_GoldEvent_BGAmount", .@gold_amount);
@@ -766,6 +758,9 @@ function	script	F_KvM_GrantReward	{
 		($BG_CROIX_LEADER_CID == .@char_id || $BG_GUILLAUME_LEADER_CID == .@char_id)
 	)
 		set #BATTLEGROUND_POINT, #BATTLEGROUND_POINT + 5;
+
+	// NEED 2026 추석 이벤트 : 송편 재료 지급 + 풀사이클 꿀송편 판정
+	callfunc "F_NEED_Chuseok_BG_Reward", 3;
 
 	return;
 }
@@ -808,7 +803,7 @@ function	script	F_KvM_AutoRewardRandom	{
 			if (getcharid(4))
 				bg_leave;
 			Bat_Team = 0;
-			dispbottom "[전장] KVM 보상 수령 제한시간이 지나 기존 보상이 자동 지급되었습니다.";
+			dispbottom needtr("[전장] KVM 보상 수령 제한시간이 지나 기존 보상이 자동 지급되었습니다.", "[Battleground] The KVM reward claim window expired, so your pending rewards were granted automatically.");
 			warp "bat_room",154,150;
 			.@rewarded++;
 			detachrid;
@@ -829,34 +824,34 @@ function	script	F_KvM_AutoRewardRandom	{
 //============================================================
 bat_c01,51,130,5	script	KVM 담당관#KVM01A	419,{
 	.@char_id = getcharid(0);
-	.@bonusmount = ($BG_User_Count - 5) * 2;
+	.@bonusmount = ($BG_User_Count - 5) * 3;
 	.@partyleaderbonus = 0;
 	if (!$@BG_RM_CYCLE_ACTIVE && ($BG_CROIX_LEADER_CID == .@char_id || $BG_GUILLAUME_LEADER_CID == .@char_id))
 		.@partyleaderbonus = 3;
 
 	if ($@KvM01BG_Victory) {
-		mes "[KVM 담당관]";
+		mes needtr("[KVM 담당관]", "[KVM Officer]");
 
 		if ($@KvM01BG_Victory == Bat_Team) {
-			mes "멋진 경기였습니다.";
-			mes "KVM의 영광이 함께하길 바랍니다.";
-			mes "승리 보상으로 전투휘장 3개를 획득했습니다.";
+			mes needtr("멋진 경기였습니다.", "That was a fine match.");
+			mes needtr("KVM의 영광이 함께하길 바랍니다.", "May the glory of KVM be with you.");
+			mes needtr("승리 보상으로 전투휘장 3개를 획득했습니다.", "You received 3 War Badges as the victory reward.");
 			if (.@partyleaderbonus > 0)
-				mes "파티장 보너스로 3개를 추가 획득했습니다.";
+				mes needtr("파티장 보너스로 3개를 추가 획득했습니다.", "You received 3 more as the party leader bonus.");
 			close2;
 		}
 		else if ($@KvM01BG_Victory == 3) {
-			mes "이번 경기는 무승부로 종료되었습니다.";
-			mes "참여 보상으로 전투휘장 3개를 획득했습니다.";
+			mes needtr("이번 경기는 무승부로 종료되었습니다.", "This match has ended in a draw.");
+			mes needtr("참여 보상으로 전투휘장 3개를 획득했습니다.", "You received 3 War Badges as the participation reward.");
 			if (.@partyleaderbonus > 0)
-				mes "파티장 보너스로 3개를 추가 획득했습니다.";
+				mes needtr("파티장 보너스로 3개를 추가 획득했습니다.", "You received 3 more as the party leader bonus.");
 			close2;
 		}
 		else {
-			mes "아쉽지만 다음 전투에서는 더 좋은 결과가 있기를 바랍니다.";
-			mes "패배 보상으로 전투휘장 2개를 획득했습니다.";
+			mes needtr("아쉽지만 다음 전투에서는 더 좋은 결과가 있기를 바랍니다.", "A shame - may the next battle go better for you.");
+			mes needtr("패배 보상으로 전투휘장 2개를 획득했습니다.", "You received 2 War Badges as the defeat reward.");
 			if (.@partyleaderbonus > 0)
-				mes "파티장 보너스로 3개를 추가 획득했습니다.";
+				mes needtr("파티장 보너스로 3개를 추가 획득했습니다.", "You received 3 more as the party leader bonus.");
 			close2;
 		}
 
@@ -879,7 +874,7 @@ bat_c01,51,130,5	script	KVM 담당관#KVM01A	419,{
 		if (!$@BG_RM_CYCLE_ACTIVE && getcharid(1)) {
 			if (getcharid(0) == getpartyleader(getcharid(1), 2)) {
 				if (party_destroy(getcharid(1))) {
-					dispbottom "파티가 해체되었습니다.";
+					dispbottom needtr("파티가 해체되었습니다.", "The party has been disbanded.");
 				}
 			}
 		}

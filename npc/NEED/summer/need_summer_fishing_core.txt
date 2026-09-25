@@ -75,14 +75,14 @@ OnFishResolve:
 	if ( @nff_force_fish > 0 ) callfunc( "F_NeedFishById", @nff_force_fish );
 	else callfunc( "F_NeedFishDraw", @need_fishing_spot_id );
 	set @nff_force_fish, 0;
-	if ( $@nff_out_fish <= 0 ) { dispbottom "[한여름 낚시] 물고기 추첨에 실패했습니다."; need_fishing_cancel(); end; }
+	if ( $@nff_out_fish <= 0 ) { dispbottom needtr("[한여름 낚시] 물고기 추첨에 실패했습니다.","[Midsummer Fishing] The fish draw failed."); need_fishing_cancel(); end; }
 	need_fishing_complete_catch( $@nff_out_fish, $@nff_out_rarity, $@nff_out_len, $@nff_out_wt, "NEED_Summer_Fishing_Core::OnFishFinal" );
 	end;
 
 // ---- 최종 결과: 성공(8)이면 보상/SQL, 실패면 안내만 ----
 OnFishFinal:
 	if ( @need_fishing_result_code != 8 ) {
-		dispbottom "[한여름 낚시] 실패: " + callfunc( "F_NeedFishCodeName", @need_fishing_result_code ) + " (코드 " + @need_fishing_result_code + ") / 실패 라운드 " + @need_fishing_failed_round;
+		dispbottom needtr("[한여름 낚시] 실패: ","[Midsummer Fishing] Failed: ") + callfunc( "F_NeedFishCodeNameLang", @need_fishing_result_code , getneedlang() ) + needtr(" (코드 "," (code ") + @need_fishing_result_code + needtr(") / 실패 라운드 ",") / failed round ") + @need_fishing_failed_round;
 		set @nff_bait_mode, 0;
 		end;
 	}
@@ -121,28 +121,28 @@ S_HandleSuccess:
 	.@newfish = $@nff_col_first;
 	.@rweek = callfunc( "F_NeedFishRankWeek" );
 	if ( .@rweek >= 1 && .@fish == callfunc( "F_NeedFishRankTarget", .@rweek ) ) callfunc( "F_NeedFishRankTopChange", .@rweek, .@fish, .@aid, .@cid, .@cname$, .@len, .@wt, .@rms );
-	dispbottom "[한여름 낚시] [" + callfunc( "F_NeedFishNameById", .@fish ) + "]을(를) 낚았습니다! [" + callfunc( "F_NeedFishRarityName", .@rar ) + "] 길이 " + callfunc( "F_NeedFishLenCm", .@len ) + "cm / 무게 " + callfunc( "F_NeedFishWtKg", .@wt ) + "kg";
+	dispbottom needtr("[한여름 낚시] [","[Midsummer Fishing] [") + callfunc( "F_NeedFishNameByIdLang", .@fish , getneedlang() ) + needtr("]을(를) 낚았습니다! [","] caught! [") + callfunc( "F_NeedFishRarityNameLang", .@rar , getneedlang() ) + needtr("] 길이 ","] length ") + callfunc( "F_NeedFishLenCm", .@len ) + needtr("cm / 무게 ","cm / weight ") + callfunc( "F_NeedFishWtKg", .@wt ) + "kg";
 	if ( .@bait ) {
-		dispbottom "[한여름 낚시] 오늘의 기본 보상 횟수를 모두 사용했으므로 코코넛 토큰은 지급되지 않습니다.";
-		dispbottom "이번 기록은 최대어 및 랭킹에 정상 반영됩니다.";
+		dispbottom needtr("[한여름 낚시] 오늘의 기본 보상 횟수를 모두 사용했으므로 코코넛 토큰은 지급되지 않습니다.","[Midsummer Fishing] You have used every base reward attempt today, so no Coconut Token is given.");
+		dispbottom needtr("이번 기록은 최대어 및 랭킹에 정상 반영됩니다.","This catch still counts towards your biggest catch and the ranking.");
 	} else if ( .@rewarded ) {
-		dispbottom "[한여름 낚시] 오늘의 보상 획득: " + .@accnow + " / 10";
-		dispbottom "코코넛 토큰 " + .@tok + "개를 획득했습니다.";
+		dispbottom needtr("[한여름 낚시] 오늘의 보상 획득: ","[Midsummer Fishing] Rewards earned today: ") + .@accnow + " / 10";
+		dispbottom needtr("코코넛 토큰 ","Received ") + .@tok + needtr("개를 획득했습니다."," Coconut Tokens.");
 		if ( .@accnow >= 10 ) {
-			dispbottom "[한여름 낚시] 오늘의 기본 낚시 보상을 모두 획득했습니다.";
-			dispbottom "이후에도 「한여름 낚시 미끼」를 사용하면 계속 최대어와 랭킹에 도전할 수 있습니다.";
+			dispbottom needtr("[한여름 낚시] 오늘의 기본 낚시 보상을 모두 획득했습니다.","[Midsummer Fishing] You have claimed every base reward for fishing today.");
+			dispbottom needtr("이후에도 「한여름 낚시 미끼」를 사용하면 계속 최대어와 랭킹에 도전할 수 있습니다.","You can still go for the biggest catch and the ranking by using 「 Midsummer Fishing Bait 」.");
 		}
 	} else {
-		dispbottom "[한여름 낚시] 기본 보상을 지급하지 못했습니다(한도 도달 또는 인벤 초과). 기록은 반영됩니다.";
+		dispbottom needtr("[한여름 낚시] 기본 보상을 지급하지 못했습니다(한도 도달 또는 인벤 초과). 기록은 반영됩니다.","[Midsummer Fishing] The base reward could not be given (limit reached or inventory full). The record still counts.");
 	}
 	if ( .@newfish == 1 ) {
 		callfunc( "F_NeedFishShowCutin", .@fish );
-		mes "[한여름 낚시]";
-		mes "새로운 물고기가 도감에 등록되었습니다!";
+		mes needtr("[한여름 낚시]","[Midsummer Fishing]");
+		mes needtr("새로운 물고기가 도감에 등록되었습니다!","A new fish has been added to your Fishing Log!");
 		mes " ";
-		mes "No." + ( .@fish < 10 ? "0" + .@fish : "" + .@fish ) + " " + callfunc( "F_NeedFishNameById", .@fish );
-		mes "길이 : " + callfunc( "F_NeedFishLenCm", .@len ) + "cm";
-		mes "무게 : " + callfunc( "F_NeedFishWtKg", .@wt ) + "kg";
+		mes "No." + ( .@fish < 10 ? "0" + .@fish : "" + .@fish ) + " " + callfunc( "F_NeedFishNameByIdLang", .@fish , getneedlang() );
+		mes needtr("길이 : ","Length : ") + callfunc( "F_NeedFishLenCm", .@len ) + "cm";
+		mes needtr("무게 : ","Weight : ") + callfunc( "F_NeedFishWtKg", .@wt ) + "kg";
 		close2;
 		cutin "", 255;
 	}
@@ -153,7 +153,7 @@ S_Rotate:
 	.@ok = callsub( S_Generate, $@nsf_region );
 	if ( !.@ok ) return;
 	callsub S_MarkersRefresh;
-	mapannounce "comodo", "[한여름 낚시] 새로운 어군이 코모도 해안에 나타났습니다. 미니맵에서 현재 해안을 확인해보세요!", bc_map;
+	mapannouncelang "comodo", "[한여름 낚시] 새로운 어군이 코모도 해안에 나타났습니다. 미니맵에서 현재 해안을 확인해보세요!", "[Midsummer Fishing] A new fish school has appeared on the Comodo shore. Check the minimap for the current shore!", bc_map;
 	return;
 
 S_MarkersRefresh:
@@ -216,14 +216,14 @@ S_PlaceSign:
 
 // 현장 어군 오브젝트 (보이는 sprite). 클릭해도 낚시 시작 안 함.
 comodo,1,1,4	script	한여름 어군#nsf_school	4_SEA_OTTER,{
-	mes "[한여름 어군]";
-	mes "수면 아래로 물고기 떼가 모여 있는 것이 보인다.";
-	mes "이 근처에서 「한여름 낚싯대」를 사용하면 낚시를 시작할 수 있다.";
+	mes needtr("[한여름 어군]","[Midsummer Fish School]");
+	mes needtr("수면 아래로 물고기 떼가 모여 있는 것이 보인다.","You can see a shoal gathering below the surface.");
+	mes needtr("이 근처에서 「한여름 낚싯대」를 사용하면 낚시를 시작할 수 있다.","Use the 「 Midsummer Fishing Rod 」 near here to start fishing.");
 	mes " ";
-	mes "어군은 일정 시간이 지나면 코모도의 다른 해안으로 이동한다.";
+	mes needtr("어군은 일정 시간이 지나면 코모도의 다른 해안으로 이동한다.","After a while the fish school moves to another shore of Comodo.");
 	if ( $@nsf_active ) {
 		.@left = ( $@nsf_next_rotate - gettimetick(2) ) / 60; if ( .@left < 0 ) .@left = 0;
-		mes "현재 어군 이동까지 남은 시간: 약 " + .@left + "분";
+		mes needtr("현재 어군 이동까지 남은 시간: 약 ","Time left until the fish school moves: about ") + .@left + needtr("분"," min");
 	}
 	.@dw = 400; .@dh = 200;
 	setdialogsize( .@dw, .@dh );
@@ -232,67 +232,67 @@ comodo,1,1,4	script	한여름 어군#nsf_school	4_SEA_OTTER,{
 
 // 고정 낚시 안내판 (방법/현재 어군/오늘 현황/미끼 구입)
 comodo,186,157,6	script	한여름 낚시 안내#nsf_board	4_BOARD3,{
-	mes "[한여름 낚시 안내]";
-	mes "- 코모도 해안에는 한 번에 하나의 어군이 나타납니다.";
+	mes needtr("[한여름 낚시 안내]","[Midsummer Fishing Info]");
+	mes needtr("- 코모도 해안에는 한 번에 하나의 어군이 나타납니다.","- Only one fish school appears on the Comodo shore at a time.");
 	mes " ";
-	mes "- 어군은 약 1시간마다 다른 해안으로 이동합니다.";
+	mes needtr("- 어군은 약 1시간마다 다른 해안으로 이동합니다.","- The fish school moves to another shore about every 1 hour.");
 	mes " ";
-	mes "- 미니맵의 표시를 따라 현재 해안으로 이동합니다.";
+	mes needtr("- 미니맵의 표시를 따라 현재 해안으로 이동합니다.","- Follow the marker on the minimap to reach the current shore.");
 	mes " ";
-	mes "- 물고기 떼가 보이는 곳 근처에서 한여름 낚싯대를 사용합니다.";
+	mes needtr("- 물고기 떼가 보이는 곳 근처에서 한여름 낚싯대를 사용합니다.","- Use the Midsummer Fishing Rod near where you see the shoal.");
 	mes " ";
-	mes "- 입질 신호가 나타나면 다시 낚싯대를 사용해 줄을 당깁니다.";
+	mes needtr("- 입질 신호가 나타나면 다시 낚싯대를 사용해 줄을 당깁니다.","- When the bite signal appears, use the rod again to pull the line.");
 	mes " ";
-	mes "- 희귀한 물고기는 여러 차례 줄을 감아야 할 수 있습니다.";
+	mes needtr("- 희귀한 물고기는 여러 차례 줄을 감아야 할 수 있습니다.","- A rare fish may take several reels.");
 	mes " ";
-	mes "- 하루 기본 보상은 최종 성공 10회까지이며, 이후에는 미끼가 필요합니다.";
+	mes needtr("- 하루 기본 보상은 최종 성공 10회까지이며, 이후에는 미끼가 필요합니다.","- Base rewards cover up to 10 successful catches a day; after that you need bait.");
 	.@dw = 400; .@dh = 400;
 	setdialogsize( .@dw, .@dh );
 	next;
-	switch ( select( "낚시 방법","현재 어군 정보", "오늘의 낚시 현황", "낚시 도감", "주간 낚시 랭킹", "한여름 낚시 미끼 구입", "그만 보기" ) ) {
+	switch ( select( needtr("낚시 방법","How to fish"),needtr("현재 어군 정보","Current fish school"), needtr("오늘의 낚시 현황","Today's fishing status"), needtr("낚시 도감","Fishing Log"), needtr("주간 낚시 랭킹","Weekly Fishing Ranking"), needtr("한여름 낚시 미끼 구입","Buy Midsummer Fishing Bait"), needtr("그만 보기","Stop looking") ) ) {
 	case 1:
 		clear;
-		mes "[한여름 낚시 안내]";
-		mes "낚시를 즐기려면 먼저";
-		mes "^FF8C00[한여름 낚싯대]^000000를 단축키에 등록해주세요.";
+		mes needtr("[한여름 낚시 안내]","[Midsummer Fishing Info]");
+		mes needtr("낚시를 즐기려면 먼저","To enjoy fishing, first register");
+		mes needtr("^FF8C00[한여름 낚싯대]^000000를 단축키에 등록해주세요.","the ^FF8C00[Midsummer Fishing Rod]^000000 to a hotkey.");
 		mes " ";
-		mes "^0099FF■ 낚시 방법^000000";
-		mes "① 해변에 있는 ^FF8C00낚시 포인트^000000 근처로 이동합니다.";
-		mes "② 단축키에 등록한 ^FF8C00[한여름 낚싯대]^000000를 사용하면 낚시를 시작합니다.";
-		mes "③ 물고기가 입질하면 낚싯대를 ^FF0000다시 사용^000000하여 줄을 당겨주세요!";
-		mes "④ 물고기의 종류에 따라 한 번에 잡히지 않을 수도 있습니다.";
+		mes needtr("^0099FF■ 낚시 방법^000000","^0099FF■ How to fish^000000");
+		mes needtr("① 해변에 있는 ^FF8C00낚시 포인트^000000 근처로 이동합니다.","① Move near a ^FF8C00fishing spot^000000 on the beach.");
+		mes needtr("② 단축키에 등록한 ^FF8C00[한여름 낚싯대]^000000를 사용하면 낚시를 시작합니다.","② Use the ^FF8C00[Midsummer Fishing Rod]^000000 on your hotkey and fishing begins.");
+		mes needtr("③ 물고기가 입질하면 낚싯대를 ^FF0000다시 사용^000000하여 줄을 당겨주세요!","③ When a fish bites, ^FF0000use the rod again^000000 to pull the line!");
+		mes needtr("④ 물고기의 종류에 따라 한 번에 잡히지 않을 수도 있습니다.","④ Depending on the fish, it may not come in on the first try.");
 		mes " ";
-		mes "희귀한 물고기일수록 쉽게 잡히지 않으니";
-		mes "물고기의 움직임을 잘 보고 타이밍에 맞춰 낚싯대를 사용해보세요.";
+		mes needtr("희귀한 물고기일수록 쉽게 잡히지 않으니","The rarer the fish, the harder it is to land, so");
+		mes needtr("물고기의 움직임을 잘 보고 타이밍에 맞춰 낚싯대를 사용해보세요.","watch how it moves and use the rod on the right beat.");
 		mes " ";
-		mes "^0099FF※ 낚시 포인트를 클릭하는 것이 아니라,";
-		mes "낚시 포인트 근처에서 낚싯대를 직접 사용해야 합니다.^000000";
+		mes needtr("^0099FF※ 낚시 포인트를 클릭하는 것이 아니라,","^0099FF※ Do not click the fishing spot -");
+		mes needtr("낚시 포인트 근처에서 낚싯대를 직접 사용해야 합니다.^000000","stand near it and use the rod itself.^000000");
 		mes " ";
-		mes "그럼, 월척을 낚아보세요!";
+		mes needtr("그럼, 월척을 낚아보세요!","Now go land a big one!");
 		close;
 	case 2:
-		mes "[한여름 낚시 안내]";
-		if ( !$@nsf_active ) { mes "현재 활성 어군이 없습니다."; close; }
+		mes needtr("[한여름 낚시 안내]","[Midsummer Fishing Info]");
+		if ( !$@nsf_active ) { mes needtr("현재 활성 어군이 없습니다.","There is no active fish school right now."); close; }
 		.@left = ( $@nsf_next_rotate - gettimetick(2) ) / 60; if ( .@left < 0 ) .@left = 0;
-		mes "현재 어군: 제 " + $@nsf_region + " 해안 구역";
-		mes "다음 이동까지: 약 " + .@left + "분";
+		mes needtr("현재 어군: 제 ","Current fish school: zone ") + $@nsf_region + needtr(" 해안 구역"," of the shore");
+		mes needtr("다음 이동까지: 약 ","Next move in: about ") + .@left + needtr("분"," min");
 		if ( $NSF_DEBUG ) {
 			mes " ";
-			mes "[테스트 정보]";
-			mes "실제 좌표: " + $@nsf_x + ", " + $@nsf_y;
-			mes "낚시 가능 거리: " + $NSF_MAX_DIST + "셀";
-			mes "다음 교체까지: " + ( $@nsf_next_rotate - gettimetick(2) ) + "초";
+			mes needtr("[테스트 정보]","[Test Info]");
+			mes needtr("실제 좌표: ","Actual coordinates: ") + $@nsf_x + ", " + $@nsf_y;
+			mes needtr("낚시 가능 거리: ","Fishing range: ") + $NSF_MAX_DIST + needtr("셀"," cells");
+			mes needtr("다음 교체까지: ","Next rotation in: ") + ( $@nsf_next_rotate - gettimetick(2) ) + needtr("초"," sec");
 		}
 		close;
 	case 3:
 		clear;
 		.@ld = atoi( gettimestr( "%Y%m%d", 9, gettimetick(2) - 14400 ) );
 		callfunc "F_NeedFishRewardStatus", getcharid(3), getcharip(), .@ld;
-		mes "[오늘의 낚시 현황]";
-		mes "기본 보상 획득: " + $@nfr_acc_cnt + " / 10";
-		mes "보유 한여름 낚시 미끼: " + countitem(399970) + "개";
-		if ( $@nfr_free ) mes "아직 기본 보상을 받을 수 있습니다.";
-		else mes "기본 보상을 모두 획득했습니다. 미끼로 최대어/랭킹에 계속 도전할 수 있습니다.";
+		mes needtr("[오늘의 낚시 현황]","[Today's Fishing Status]");
+		mes needtr("기본 보상 획득: ","Base rewards earned: ") + $@nfr_acc_cnt + " / 10";
+		mes needtr("보유 한여름 낚시 미끼: ","Midsummer Fishing Bait: ") + countitem(399970) + needtr("개"," held");
+		if ( $@nfr_free ) mes needtr("아직 기본 보상을 받을 수 있습니다.","You can still receive base rewards.");
+		else mes needtr("기본 보상을 모두 획득했습니다. 미끼로 최대어/랭킹에 계속 도전할 수 있습니다.","You have claimed every base reward. Use bait to keep going for the biggest catch and the ranking.");
 		if ( $NSF_DEBUG ) mes "[DEBUG] account="+$@nfr_acc_cnt+" ip="+$@nfr_ip_cnt+" family="+$@nfr_family;
 		close;
 	case 4:
@@ -303,20 +303,20 @@ comodo,186,157,6	script	한여름 낚시 안내#nsf_board	4_BOARD3,{
 		close;
 	case 6:
 		clear;
-		mes "[한여름 낚시 미끼]";
-		mes "1개 = 100,000 Zeny";
-		mes "구입 수량을 선택하세요.";
+		mes needtr("[한여름 낚시 미끼]","[Midsummer Fishing Bait]");
+		mes needtr("1개 = 100,000 Zeny","1 for 100,000 Zeny");
+		mes needtr("구입 수량을 선택하세요.","Choose how many to buy.");
 		next;
-		.@q = select( "1개", "10개", "50개", "100개", "취소" );
+		.@q = select( needtr("1개","1"), needtr("10개","10"), needtr("50개","50"), needtr("100개","100"), needtr("취소","Cancel") );
 		if ( .@q == 5 ) close;
 		setarray .@amts[1], 1, 10, 50, 100;
 		.@amt = .@amts[.@q];
 		.@cost = .@amt * 100000;
-		if ( Zeny < .@cost ) { mes "Zeny가 부족합니다. (필요: " + .@cost + " Zeny)"; close; }
-		if ( !checkweight( 399970, .@amt ) ) { mes "인벤토리 공간 또는 무게가 부족합니다."; close; }
+		if ( Zeny < .@cost ) { mes needtr("Zeny가 부족합니다. (필요: ","Not enough Zeny. (need: ") + .@cost + " Zeny)"; close; }
+		if ( !checkweight( 399970, .@amt ) ) { mes needtr("인벤토리 공간 또는 무게가 부족합니다.","Not enough inventory space or weight capacity."); close; }
 		set Zeny, Zeny - .@cost;
 		getitem 399970, .@amt;
-		mes "한여름 낚시 미끼 " + .@amt + "개를 구입했습니다. (" + .@cost + " Zeny)";
+		mes needtr("한여름 낚시 미끼 ","Bought ") + .@amt + needtr("개를 구입했습니다. ("," Midsummer Fishing Bait. (") + .@cost + " Zeny)";
 		close;
 	case 7:
 		close;
@@ -331,9 +331,9 @@ L_DexLoad:
 	.@aid = getcharid(3);
 	.@rows = query_sql( "SELECT `fish_id`,`catch_count`,`max_length_mm`,`max_length_weight_g`,DATE_FORMAT(`max_length_caught_at`,'%Y-%m-%d'),`max_weight_g`,`max_weight_length_mm`,DATE_FORMAT(`max_weight_caught_at`,'%Y-%m-%d'),DATE_FORMAT(`first_caught_at`,'%Y-%m-%d'),DATE_FORMAT(`last_caught_at`,'%Y-%m-%d') FROM `need_summer_fishing_collection` WHERE `event_id`=202608 AND `account_id`=" + .@aid + " ORDER BY `fish_id`", .@rf, .@rcc, .@rml, .@rmlw, .@rmld$, .@rmw, .@rmwl, .@rmwd$, .@rfd$, .@rld$ );
 	if ( .@rows < 0 ) {
-		mes "[한여름 낚시 도감]";
-		mes "낚시 도감 정보를 불러오지 못했습니다.";
-		mes "잠시 후 다시 이용해주세요.";
+		mes needtr("[한여름 낚시 도감]","[Midsummer Fishing Log]");
+		mes needtr("낚시 도감 정보를 불러오지 못했습니다.","The Fishing Log could not be loaded.");
+		mes needtr("잠시 후 다시 이용해주세요.","Please try again shortly.");
 		debugmes "need_fishing_dex: select failed aid=" + .@aid;
 		close;
 	}
@@ -355,11 +355,11 @@ L_DexLoad:
 
 L_DexMain:
 	clear;
-	mes "[한여름 낚시 도감]";
-	mes "수집 현황 : " + .@have + " / " + .@active;
-	mes "전체 낚은 횟수 : " + .@totalcc + "회";
+	mes needtr("[한여름 낚시 도감]","[Midsummer Fishing Log]");
+	mes needtr("수집 현황 : ","Collected : ") + .@have + " / " + .@active;
+	mes needtr("전체 낚은 횟수 : ","Total catches : ") + .@totalcc + needtr("회"," times");
 	mes " ";
-	mes "어종을 선택해주세요.";
+	mes needtr("어종을 선택해주세요.","Please choose a species.");
 	next;
 
 L_DexList:
@@ -369,14 +369,14 @@ L_DexList:
 	if ( .@page >= .@pages ) .@page = .@pages - 1;
 	.@s = .@page * .@psize;
 	.@e = .@s + .@psize; if ( .@e > .@active ) .@e = .@active;
-	mes "[한여름 낚시 도감 " + ( .@page + 1 ) + " / " + .@pages + "]";
+	mes needtr("[한여름 낚시 도감 ","[Midsummer Fishing Log ") + ( .@page + 1 ) + " / " + .@pages + "]";
 	.@mc = 0;
 	.@opt$ = "";
 	for ( .@k = .@s; .@k < .@e; .@k++ ) {
 		.@ix = .@ord[.@k];
 		.@fid = $@nff_id[.@ix];
 		.@no$ = ( .@fid < 10 ? "0" + .@fid : "" + .@fid );
-		if ( .@H[.@fid] ) .@row$ = "^00AEEFNo." + .@no$ + " " + $@nff_name$[.@ix] + "^000000 ^00CC66[획득]^000000";
+		if ( .@H[.@fid] ) .@row$ = "^00AEEFNo." + .@no$ + " " + callfunc( "F_NeedFishNameByIndexLang", .@ix, getneedlang() ) + "^000000 ^00CC66[획득]^000000";
 		else .@row$ = "^777777No." + .@no$ + " ?? [미획득]^000000";
 		mes " " + .@row$;
 		.@msel[.@mc] = .@fid;
@@ -404,38 +404,38 @@ L_DexDetail:
 	if ( !.@H[.@fid] ) {
 		mes "[No." + .@no$ + " ??]";
 		mes " ";
-		mes "아직 발견하지 못한 물고기입니다.";
-		mes "코모도 해안에서 낚시에 도전해보세요.";
+		mes needtr("아직 발견하지 못한 물고기입니다.","You have not discovered this fish yet.");
+		mes needtr("코모도 해안에서 낚시에 도전해보세요.","Try your luck on the Comodo shore.");
 		next;
-		select( "도감 목록으로 돌아가기" );
+		select( needtr("도감 목록으로 돌아가기","Back to the log list") );
 		goto L_DexList;
 	}
-	mes "[No." + .@no$ + " " + $@nff_name$[.@ix] + "]";
-	mes "희귀도 : " + callfunc( "F_NeedFishRarityName", $@nff_rarity[.@ix] );
-	mes "총 획득 : " + .@CC[.@fid] + "회";
-	mes "최초 획득 : " + ( .@FD$[.@fid] == "" ? "-" : .@FD$[.@fid] );
-	mes "최근 획득 : " + ( .@LD$[.@fid] == "" ? "-" : .@LD$[.@fid] );
+	mes "[No." + .@no$ + " " + callfunc( "F_NeedFishNameByIndexLang", .@ix, getneedlang() ) + "]";
+	mes needtr("희귀도 : ","Rarity : ") + callfunc( "F_NeedFishRarityNameLang", $@nff_rarity[.@ix] , getneedlang() );
+	mes needtr("총 획득 : ","Total caught : ") + .@CC[.@fid] + needtr("회"," times");
+	mes needtr("최초 획득 : ","First caught : ") + ( .@FD$[.@fid] == "" ? "-" : .@FD$[.@fid] );
+	mes needtr("최근 획득 : ","Last caught : ") + ( .@LD$[.@fid] == "" ? "-" : .@LD$[.@fid] );
 	mes " ";
-	mes "[개인 최대 길이]";
+	mes needtr("[개인 최대 길이]","[Personal Best Length]");
 	mes " " + callfunc( "F_NeedFishLenCm", .@ML[.@fid] ) + " cm";
-	mes " 당시 무게 : " + callfunc( "F_NeedFishWtKg", .@MLW[.@fid] ) + " kg";
-	mes " 기록일 : " + ( .@MLD$[.@fid] == "" ? "-" : .@MLD$[.@fid] );
+	mes needtr(" 당시 무게 : "," Weight at the time : ") + callfunc( "F_NeedFishWtKg", .@MLW[.@fid] ) + " kg";
+	mes needtr(" 기록일 : "," Recorded on : ") + ( .@MLD$[.@fid] == "" ? "-" : .@MLD$[.@fid] );
 	mes " ";
-	mes "[개인 최대 무게]";
+	mes needtr("[개인 최대 무게]","[Personal Best Weight]");
 	mes " " + callfunc( "F_NeedFishWtKg", .@MW[.@fid] ) + " kg";
-	mes " 당시 길이 : " + callfunc( "F_NeedFishLenCm", .@MWL[.@fid] ) + " cm";
-	mes " 기록일 : " + ( .@MWD$[.@fid] == "" ? "-" : .@MWD$[.@fid] );
+	mes needtr(" 당시 길이 : "," Length at the time : ") + callfunc( "F_NeedFishLenCm", .@MWL[.@fid] ) + " cm";
+	mes needtr(" 기록일 : "," Recorded on : ") + ( .@MWD$[.@fid] == "" ? "-" : .@MWD$[.@fid] );
 	next;
-	switch ( select( "물고기 이미지 보기", "도감 목록으로 돌아가기" ) ) {
+	switch ( select( needtr("물고기 이미지 보기","View the fish image"), needtr("도감 목록으로 돌아가기","Back to the log list") ) ) {
 	case 1: goto L_DexImage;
 	case 2: goto L_DexList;
 	}
 
 L_DexImage:
 	callfunc( "F_NeedFishShowCutin", .@fid );
-	mes "[한여름 낚시 도감]";
-	mes "No." + .@no$ + " " + $@nff_name$[.@ix];
-	mes "희귀도 : " + callfunc( "F_NeedFishRarityName", $@nff_rarity[.@ix] );
+	mes needtr("[한여름 낚시 도감]","[Midsummer Fishing Log]");
+	mes "No." + .@no$ + " " + callfunc( "F_NeedFishNameByIndexLang", .@ix, getneedlang() );
+	mes needtr("희귀도 : ","Rarity : ") + callfunc( "F_NeedFishRarityNameLang", $@nff_rarity[.@ix] , getneedlang() );
 	next;
 	cutin "", 255;
 	goto L_DexDetail;
@@ -461,10 +461,10 @@ function	script	F_NeedFishRewardStatus	{
 
 // ---- 운영용 낚싯대 사용 함수 (아이템 399936 UseScript 에서 IDLE 시 호출) ----
 function	script	F_NeedSummerFishingRodUse	{
-	if ( strcharinfo(3) != "comodo" ) { dispbottom "이곳에서는 낚시를 할 수 없습니다."; return; }
-	if ( !$@nsf_active ) { dispbottom "현재 낚시 포인트를 찾을 수 없습니다. 잠시 후 다시 시도해주세요."; return; }
+	if ( strcharinfo(3) != "comodo" ) { dispbottom needtr("이곳에서는 낚시를 할 수 없습니다.","You cannot fish here."); return; }
+	if ( !$@nsf_active ) { dispbottom needtr("현재 낚시 포인트를 찾을 수 없습니다. 잠시 후 다시 시도해주세요.","No fishing spot can be found right now. Please try again in a moment."); return; }
 	getmapxy( .@m$, .@px, .@py, BL_PC );
-	if ( distance( .@px, .@py, $@nsf_x, $@nsf_y ) > $NSF_MAX_DIST ) { dispbottom "근처에서 물고기 떼의 기척이 느껴지지 않습니다. 해안을 조금 더 둘러보세요."; return; }
+	if ( distance( .@px, .@py, $@nsf_x, $@nsf_y ) > $NSF_MAX_DIST ) { dispbottom needtr("근처에서 물고기 떼의 기척이 느껴지지 않습니다. 해안을 조금 더 둘러보세요.","You sense no shoal nearby. Look a little further along the shore."); return; }
 	.@ld = atoi( gettimestr( "%Y%m%d", 9, gettimetick(2) - 14400 ) );
 	callfunc "F_NeedFishRewardStatus", getcharid(3), getcharip(), .@ld;
 	if ( $@nfr_free ) {
@@ -474,14 +474,14 @@ function	script	F_NeedSummerFishingRodUse	{
 	}
 	// 기본 보상 소진 → 추가 모드(미끼 필요)
 	if ( countitem(399970) < 1 ) {
-		dispbottom "[한여름 낚시] 오늘 받을 수 있는 기본 보상을 모두 획득했습니다.";
-		dispbottom "계속 낚시하려면 「한여름 낚시 미끼」가 필요합니다. (안내판에서 개당 100,000 Zeny)";
+		dispbottom needtr("[한여름 낚시] 오늘 받을 수 있는 기본 보상을 모두 획득했습니다.","[Midsummer Fishing] You have claimed every base reward available today.");
+		dispbottom needtr("계속 낚시하려면 「한여름 낚시 미끼」가 필요합니다. (안내판에서 개당 100,000 Zeny)","To keep fishing you need 「 Midsummer Fishing Bait 」. (100,000 Zeny each at the board)");
 		return;
 	}
 	set @nff_bait_mode, 1;
 	if ( !need_fishing_start( 1, "NEED_Summer_Fishing_Core::OnFishResult" ) ) { set @nff_bait_mode, 0; return; }
 	delitem 399970, 1;   // start 성공 후에만 미끼 1개 소비(실패해도 반환 없음)
-	dispbottom "[한여름 낚시] 한여름 낚시 미끼 1개를 사용했습니다.";
+	dispbottom needtr("[한여름 낚시] 한여름 낚시 미끼 1개를 사용했습니다.","[Midsummer Fishing] 1 Midsummer Fishing Bait used.");
 	return;
 }
 
@@ -583,6 +583,19 @@ function	script	F_NeedFishFmtDur	{
 	if ( .@d >= 1 ) return .@d + "일 " + .@h + "시간";
 	return .@h + "시간 " + .@mi + "분";
 }
+
+// F_NeedFishFmtDurLang(<seconds>,<lang>) : Phase 0.88. Same two fields, same order,
+//  same arithmetic; the Korean branch is copied verbatim from F_NeedFishFmtDur.
+function	script	F_NeedFishFmtDurLang	{
+	.@s = getarg(0); if ( .@s < 0 ) .@s = 0;
+	.@d = .@s / 86400; .@h = ( .@s % 86400 ) / 3600; .@mi = ( .@s % 3600 ) / 60;
+	if ( getarg(1) == NEED_LANG_EN ) {
+		if ( .@d >= 1 ) return .@d + "d " + .@h + "h";
+		return .@h + "h " + .@mi + "m";
+	}
+	if ( .@d >= 1 ) return .@d + "일 " + .@h + "시간";
+	return .@h + "시간 " + .@mi + "분";
+}
 // 순위 색상(1 금 / 2 은 / 3 동 / 그 외 기본)
 function	script	F_NeedFishRankColor	{
 	switch ( getarg(0) ) {
@@ -643,12 +656,12 @@ function	script	F_NeedFishRankingUI	{
 	.@curld = callfunc( "F_NeedFishCurLD" );
 	.@aid = getcharid(3);
 	if ( .@curld < $@nfrk_event_start_ld ) {
-		mes "[한여름 주간 낚시 랭킹]";
+		mes needtr("[한여름 주간 낚시 랭킹]","[Midsummer Weekly Fishing Ranking]");
 		mes " ";
-		mes "주간 랭킹은 8월 15일 오전 4시부터 시작됩니다.";
+		mes needtr("주간 랭킹은 8월 15일 오전 4시부터 시작됩니다.","The weekly ranking starts on 8/15 at 4 AM.");
 		mes " ";
 		.@tf = $@nfrk_target[1];
-		mes "1주차 대상 어종 : No." + callfunc( "F_NeedFishNo2", .@tf ) + " " + callfunc( "F_NeedFishNameById", .@tf );
+		mes needtr("1주차 대상 어종 : No.","Week 1 target species : No.") + callfunc( "F_NeedFishNo2", .@tf ) + " " + callfunc( "F_NeedFishNameByIdLang", .@tf , getneedlang() );
 		close;
 	}
 	.@ended = ( .@curld >= $@nfrk_event_end_ld );
@@ -666,20 +679,20 @@ function	script	F_NeedFishRankingUI	{
 	.@remsec = ( .@ended ? 0 : callfunc( "F_NeedFishRankRemainSec", .@week ) );
 
 L_RankMain:
-	mes "[한여름 주간 낚시 랭킹]";
+	mes needtr("[한여름 주간 낚시 랭킹]","[Midsummer Weekly Fishing Ranking]");
 	if ( .@ended ) {
-		mes "이번 한여름 낚시 랭킹이 종료되었습니다.";
-		mes "4주차 최종 결과를 확인할 수 있습니다.";
+		mes needtr("이번 한여름 낚시 랭킹이 종료되었습니다.","This Midsummer Fishing ranking has ended.");
+		mes needtr("4주차 최종 결과를 확인할 수 있습니다.","You can check the final results for week 4.");
 	} else {
-		mes .@week + "주차";
-		mes "대상 어종 : No." + callfunc( "F_NeedFishNo2", .@fish ) + " " + callfunc( "F_NeedFishNameById", .@fish ) + " [" + callfunc( "F_NeedFishRarityName", callfunc( "F_NeedFishRarityById", .@fish ) ) + "]";
-		mes "남은 시간 : " + callfunc( "F_NeedFishFmtDur", .@remsec );
+		mes needtr(.@week + "주차", "Week " + .@week);
+		mes needtr("대상 어종 : No.","Target species : No.") + callfunc( "F_NeedFishNo2", .@fish ) + " " + callfunc( "F_NeedFishNameByIdLang", .@fish , getneedlang() ) + " [" + callfunc( "F_NeedFishRarityNameLang", callfunc( "F_NeedFishRarityById", .@fish ) , getneedlang() ) + "]";
+		mes needtr("남은 시간 : ","Time left : ") + callfunc( "F_NeedFishFmtDurLang", .@remsec , getneedlang() );
 	}
 	mes " ";
-	mes "순위는 대상 어종의 최대 길이로 결정됩니다.";
-	mes "길이가 같으면 더 무거운 기록, 그마저 같으면 먼저 잡은 기록이 우선합니다.";
+	mes needtr("순위는 대상 어종의 최대 길이로 결정됩니다.","Rank is decided by the greatest length of the target species.");
+	mes needtr("길이가 같으면 더 무거운 기록, 그마저 같으면 먼저 잡은 기록이 우선합니다.","On equal length the heavier record wins; on equal weight, the earlier catch.");
 	next;
-	switch ( select( "TOP 10 보기", "내 기록 보기", "주간 보상", "돌아가기" ) ) {
+	switch ( select( needtr("TOP 10 보기","View the TOP 10"), needtr("내 기록 보기","View my record"), needtr("주간 보상","Weekly rewards"), needtr("돌아가기","Back") ) ) {
 	case 1: goto L_RankTop;
 	case 2: goto L_RankMine;
 	case 3: goto L_RankReward;
@@ -687,47 +700,48 @@ L_RankMain:
 	}
 
 L_RankTop:
-	mes "[" + .@week + "주차 - " + callfunc( "F_NeedFishNameById", .@fish ) + "]";
+	.@p87_fish$ = callfunc( "F_NeedFishNameByIdLang", .@fish , getneedlang() );
+	mes needtr("[" + .@week + "주차 - " + .@p87_fish$ + "]", "[Week " + .@week + " - " + .@p87_fish$ + "]");
 	mes " ";
-	if ( .@n <= 0 ) mes "아직 기록이 없습니다.";
+	if ( .@n <= 0 ) mes needtr("아직 기록이 없습니다.","There are no records yet.");
 	for ( .@i = 0; .@i < .@n; .@i++ ) {
-		mes callfunc( "F_NeedFishRankColor", .@i + 1 ) + ( .@i + 1 ) + "위^000000  " + .@tn$[.@i] + "  " + callfunc( "F_NeedFishLenCm", .@tl[.@i] ) + "cm / " + callfunc( "F_NeedFishWtKg", .@tw[.@i] ) + "kg";
+		mes callfunc( "F_NeedFishRankColor", .@i + 1 ) + ( .@i + 1 ) + needtr("위^000000  ","^000000  ") + .@tn$[.@i] + "  " + callfunc( "F_NeedFishLenCm", .@tl[.@i] ) + "cm / " + callfunc( "F_NeedFishWtKg", .@tw[.@i] ) + "kg";
 	}
 	next;
-	select( "돌아가기" );
+	select( needtr("돌아가기","Back") );
 	goto L_RankMain;
 
 L_RankMine:
-	mes "[내 주간 기록]";
-	mes "대상 어종 : No." + callfunc( "F_NeedFishNo2", .@fish ) + " " + callfunc( "F_NeedFishNameById", .@fish );
+	mes needtr("[내 주간 기록]","[My Weekly Record]");
+	mes needtr("대상 어종 : No.","Target species : No.") + callfunc( "F_NeedFishNo2", .@fish ) + " " + callfunc( "F_NeedFishNameByIdLang", .@fish , getneedlang() );
 	mes " ";
 	if ( .@myn <= 0 ) {
-		mes "이번 주 랭킹 기록이 없습니다.";
-		mes "대상 어종을 낚아 기록에 도전해보세요!";
+		mes needtr("이번 주 랭킹 기록이 없습니다.","You have no ranking record this week.");
+		mes needtr("대상 어종을 낚아 기록에 도전해보세요!","Catch the target species and set a record!");
 	} else {
-		mes "최고 길이 : " + callfunc( "F_NeedFishLenCm", .@ml[0] ) + "cm";
-		mes "당시 무게 : " + callfunc( "F_NeedFishWtKg", .@mw[0] ) + "kg";
-		mes "기록 캐릭터 : " + .@mc$[0];
-		mes "기록일 : " + .@md$[0];
+		mes needtr("최고 길이 : ","Best length : ") + callfunc( "F_NeedFishLenCm", .@ml[0] ) + "cm";
+		mes needtr("당시 무게 : ","Weight at the time : ") + callfunc( "F_NeedFishWtKg", .@mw[0] ) + "kg";
+		mes needtr("기록 캐릭터 : ","Character : ") + .@mc$[0];
+		mes needtr("기록일 : ","Recorded on : ") + .@md$[0];
 		mes " ";
-		mes "현재 순위 : " + .@myrank + "위";
+		mes needtr("현재 순위 : ","Current rank : ") + .@myrank + needtr("위",".");
 	}
 	next;
-	select( "돌아가기" );
+	select( needtr("돌아가기","Back") );
 	goto L_RankMain;
 
 L_RankReward:
-	mes "[주간 랭킹 보상]";
+	mes needtr("[주간 랭킹 보상]","[Weekly Ranking Rewards]");
 	mes " ";
-	mes "^E7A70F1위^000000  코코넛 토큰 50개";
-	mes "^9AA0A82위^000000  코코넛 토큰 30개";
-	mes "^C87A3A3위^000000  코코넛 토큰 20개";
-	mes "4 ~ 10위  코코넛 토큰 10개";
+	mes needtr("^E7A70F1위^000000  코코넛 토큰 50개","^E7A70F1st^000000  50 Coconut Tokens");
+	mes needtr("^9AA0A82위^000000  코코넛 토큰 30개","^9AA0A82nd^000000  30 Coconut Tokens");
+	mes needtr("^C87A3A3위^000000  코코넛 토큰 20개","^C87A3A3rd^000000  20 Coconut Tokens");
+	mes needtr("4 ~ 10위  코코넛 토큰 10개","4 ~ 10th  10 Coconut Tokens");
 	mes " ";
-	mes "주차 종료 후 최종 순위를 기준으로";
-	mes "시스템 우편을 통해 지급됩니다.";
+	mes needtr("주차 종료 후 최종 순위를 기준으로","Based on the final rank once the week ends,");
+	mes needtr("시스템 우편을 통해 지급됩니다.","they are sent through system mail.");
 	next;
-	select( "돌아가기" );
+	select( needtr("돌아가기","Back") );
 	goto L_RankMain;
 }
 
@@ -769,7 +783,7 @@ function	script	F_NeedFishRankTopChange	{
 	.@new1 = 0;
 	query_sql( "SELECT `account_id` FROM `need_summer_fishing_weekly_best` WHERE `event_id`=202608 AND `week_no`=" + .@w + " AND `fish_id`=" + .@f + " ORDER BY `length_mm` DESC,`weight_g` DESC,`caught_at` ASC,`account_id` ASC LIMIT 1", .@new1 );
 	if ( .@new1 == .@aid && .@new1 != .@old1 ) {
-		announce "[한여름 낚시] " + .@cn$ + "님이 " + callfunc( "F_NeedFishNameById", .@f ) + " " + callfunc( "F_NeedFishLenCm", .@len ) + "cm 기록으로 " + .@w + "주차 랭킹 1위에 올랐습니다!", bc_all, 0x00CCFF;
+		announcelang "[한여름 낚시] " + .@cn$ + "님이 " + callfunc( "F_NeedFishNameById", .@f ) + " " + callfunc( "F_NeedFishLenCm", .@len ) + "cm 기록으로 " + .@w + "주차 랭킹 1위에 올랐습니다!", "[Midsummer Fishing] " + .@cn$ + " set a record of " + callfunc( "F_NeedFishNameById", .@f ) + " " + callfunc( "F_NeedFishLenCm", .@len ) + "cm and took first place in the week " + .@w + " ranking!", bc_all, 0x00CCFF;
 	}
 	return;
 }

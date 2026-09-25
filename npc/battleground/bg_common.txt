@@ -115,6 +115,7 @@ function	script	F_BG_RM_CheckCycleParty	{
 	.@caller_aid = getattachedrid();
 
 	$@BG_RM_Check_Reason$ = "";
+	$@BG_RM_Check_Reason_EN$ = "";
 	$@BG_RM_Check_Name$ = "";
 	$@BG_RM_Check_Count = 0;
 
@@ -122,6 +123,7 @@ function	script	F_BG_RM_CheckCycleParty	{
 
 	if (.@party_id <= 0 || .@party_id != .@expected_party) {
 		$@BG_RM_Check_Reason$ = "자동매칭에서 생성된 파티 정보가 일치하지 않습니다.";
+		$@BG_RM_Check_Reason_EN$ = "The auto-matched party information does not match.";
 		return 0;
 	}
 
@@ -130,6 +132,7 @@ function	script	F_BG_RM_CheckCycleParty	{
 		getpartyleader(.@party_id, 2) != .@leader_cid
 	) {
 		$@BG_RM_Check_Reason$ = "등록된 파티장과 현재 파티장이 다릅니다. 파티장 승계 메뉴를 이용해주세요.";
+		$@BG_RM_Check_Reason_EN$ = "The registered party leader is not the current party leader. Please use the party leader succession menu.";
 		return 0;
 	}
 
@@ -140,6 +143,7 @@ function	script	F_BG_RM_CheckCycleParty	{
 	getpartymember .@party_id, 1;
 	if ($@partymembercount != .@count) {
 		$@BG_RM_Check_Reason$ = "파티원 정보를 불러오는 중 변경이 감지되었습니다.";
+		$@BG_RM_Check_Reason_EN$ = "A change was detected while the party member list was being read.";
 		return 0;
 	}
 	copyarray .@cid[0], $@partymembercid[0], .@count;
@@ -147,12 +151,14 @@ function	script	F_BG_RM_CheckCycleParty	{
 	getpartymember .@party_id, 2;
 	if ($@partymembercount != .@count) {
 		$@BG_RM_Check_Reason$ = "파티원 정보를 불러오는 중 변경이 감지되었습니다.";
+		$@BG_RM_Check_Reason_EN$ = "A change was detected while the party member list was being read.";
 		return 0;
 	}
 	copyarray .@aid[0], $@partymemberaid[0], .@count;
 
 	if (.@count <= 0) {
 		$@BG_RM_Check_Reason$ = "현재 파티에 남아 있는 인원이 없습니다.";
+		$@BG_RM_Check_Reason_EN$ = "No one is left in the party.";
 		return 0;
 	}
 
@@ -166,6 +172,7 @@ function	script	F_BG_RM_CheckCycleParty	{
 		if (!.@original) {
 			$@BG_RM_Check_Name$ = .@name$[.@i];
 			$@BG_RM_Check_Reason$ = "최초 자동매칭에 포함되지 않은 캐릭터가 파티에 추가되어 있습니다.";
+			$@BG_RM_Check_Reason_EN$ = "A character who was not in the original auto-match has been added to the party.";
 			if (.@caller_aid)
 				attachrid .@caller_aid;
 			else
@@ -207,11 +214,13 @@ function	script	F_BG_RM_CheckCycleParty	{
 
 	if (.@active <= 0) {
 		$@BG_RM_Check_Reason$ = "현재 다음 전장에 입장 가능한 파티원이 없습니다.";
+		$@BG_RM_Check_Reason_EN$ = "No party member can enter the next battleground right now.";
 		return 0;
 	}
 
 	if (!.@leader_active) {
 		$@BG_RM_Check_Reason$ = "등록 파티장이 현재 진행 가능한 상태가 아닙니다. 파티장 승계 메뉴를 이용해주세요.";
+		$@BG_RM_Check_Reason_EN$ = "The registered party leader cannot continue right now. Please use the party leader succession menu.";
 		return 0;
 	}
 
@@ -232,6 +241,7 @@ function	script	F_BG_RM_JoinCyclePartyToBG	{
 
 	$@BG_RM_Join_FailName$ = "";
 	$@BG_RM_Join_FailReason$ = "";
+	$@BG_RM_Join_FailReason_EN$ = "";
 
 	getpartymember .@party_id, 0;
 	.@count = $@partymembercount;
@@ -239,12 +249,14 @@ function	script	F_BG_RM_JoinCyclePartyToBG	{
 	getpartymember .@party_id, 1;
 	if ($@partymembercount != .@count) {
 		$@BG_RM_Join_FailReason$ = "파티원 CID 정보 수가 일치하지 않습니다.";
+		$@BG_RM_Join_FailReason_EN$ = "The party member CID count does not match.";
 		return -1;
 	}
 	copyarray .@cid[0], $@partymembercid[0], .@count;
 	getpartymember .@party_id, 2;
 	if ($@partymembercount != .@count) {
 		$@BG_RM_Join_FailReason$ = "파티원 AID 정보 수가 일치하지 않습니다.";
+		$@BG_RM_Join_FailReason_EN$ = "The party member AID count does not match.";
 		return -1;
 	}
 	copyarray .@aid[0], $@partymemberaid[0], .@count;
@@ -256,6 +268,7 @@ function	script	F_BG_RM_JoinCyclePartyToBG	{
 		if (!.@original) {
 			$@BG_RM_Join_FailName$ = .@name$[.@i];
 			$@BG_RM_Join_FailReason$ = "최초 자동매칭에 포함되지 않은 캐릭터가 파티에 있습니다.";
+			$@BG_RM_Join_FailReason_EN$ = "The party contains a character who was not in the original auto-match.";
 			if (.@caller_aid)
 				attachrid .@caller_aid;
 			else
@@ -292,6 +305,7 @@ function	script	F_BG_RM_JoinCyclePartyToBG	{
 		if (!bg_join(.@bg_id, .@map$, .@x, .@y, .@cid[.@i])) {
 			$@BG_RM_Join_FailName$ = strcharinfo(0);
 			$@BG_RM_Join_FailReason$ = "BG 팀 가입 명령이 실패했습니다.";
+			$@BG_RM_Join_FailReason_EN$ = "The battleground team join command failed.";
 			detachrid;
 			if (.@caller_aid)
 				attachrid .@caller_aid;
@@ -386,7 +400,7 @@ function	script	F_BG_RM_AutoRewardBadge	{
 			if (getcharid(4))
 				bg_leave;
 			Bat_Team = 0;
-			dispbottom "[전장] 보상 수령 제한시간이 지나 기존 전장 보상이 자동 지급되었습니다.";
+			dispbottom needtr("[전장] 보상 수령 제한시간이 지나 기존 전장 보상이 자동 지급되었습니다.","[Battleground] The reward claim window expired, so your pending battleground reward was paid automatically.");
 			warp "bat_room",154,150;
 			.@rewarded++;
 			detachrid;
@@ -405,21 +419,21 @@ function	script	F_BG_RM_AutoRewardBadge	{
 // 기존 자동 생성 파티/진영은 그대로 유지하고 파티장만 변경합니다.
 function	script	F_BG_RM_ChangeLeaderMenu	{
 	if (!$@BG_RM_CYCLE_ACTIVE) {
-		mes "[전장 관리인]";
-		mes "현재 진행 중인 랜덤 매칭 풀사이클이 없습니다.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("현재 진행 중인 랜덤 매칭 풀사이클이 없습니다.","There is no random match full cycle running right now.");
 		return;
 	}
 
 	if ($@BG_RM_STATE != 4 || $@TierraBG1 || $@FlaviusBG1 || $@KvM01BG) {
-		mes "[전장 관리인]";
-		mes "파티장 승계는 전장과 전장 사이의 다음 라운드 준비 단계에서만 가능합니다.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("파티장 승계는 전장과 전장 사이의 다음 라운드 준비 단계에서만 가능합니다.","Leader succession is only possible during the round preparation between battlegrounds.");
 		return;
 	}
 
 	.@party_id = getcharid(1);
 	if (.@party_id <= 0) {
-		mes "[전장 관리인]";
-		mes "현재 자동매칭 파티에 속해 있지 않습니다.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("현재 자동매칭 파티에 속해 있지 않습니다.","You are not in an auto-matched party right now.");
 		return;
 	}
 
@@ -428,8 +442,8 @@ function	script	F_BG_RM_ChangeLeaderMenu	{
 	else if (.@party_id == $@BG_RM_PARTY_C)
 		.@team = 2;
 	else {
-		mes "[전장 관리인]";
-		mes "자동매칭에서 생성된 파티가 아닙니다.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("자동매칭에서 생성된 파티가 아닙니다.","This party was not created by auto-matching.");
 		return;
 	}
 
@@ -439,8 +453,8 @@ function	script	F_BG_RM_ChangeLeaderMenu	{
 	.@original = callfunc("F_BG_RM_IsOriginalMember", .@team, .@my_aid, .@my_cid);
 
 	if (!.@original) {
-		mes "[전장 관리인]";
-		mes "최초 자동매칭 참가자만 파티장을 승계할 수 있습니다.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("최초 자동매칭 참가자만 파티장을 승계할 수 있습니다.","Only an original auto-match participant can take over as party leader.");
 		return;
 	}
 
@@ -458,8 +472,8 @@ function	script	F_BG_RM_ChangeLeaderMenu	{
 	}
 
 	if (.@old_cid == .@my_cid) {
-		mes "[전장 관리인]";
-		mes "이미 현재 등록된 파티장입니다.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("이미 현재 등록된 파티장입니다.","You are already the registered party leader.");
 		return;
 	}
 
@@ -485,22 +499,23 @@ function	script	F_BG_RM_ChangeLeaderMenu	{
 	if (.@old_available && $@BG_RM_STAGE_WAIT_TICK > 0) {
 		.@remain = ($@BG_RM_STAGE_WAIT_TICK + 60) - gettimetick(2);
 		if (.@remain > 0) {
-			mes "[전장 관리인]";
-			mes "현재 파티장이 접속 중이며 대기존에 있습니다.";
-			mes "잠수 대응 승계는 다음 라운드 전환 후 60초가 지나면 가능합니다.";
-			mes "남은 시간: ^0055FF" + .@remain + "초^000000";
+			mes needtr("[전장 관리인]","[Battleground Manager]");
+			mes needtr("현재 파티장이 접속 중이며 대기존에 있습니다.","The current party leader is online and in the waiting zone.");
+			mes needtr("잠수 대응 승계는 다음 라운드 전환 후 60초가 지나면 가능합니다.","Succession for an idle leader becomes possible 60 seconds after the round changes.");
+			mes needtr("남은 시간: ^0055FF","Time remaining: ^0055FF") + .@remain + needtr("초^000000","s^000000");
 			return;
 		}
 	}
 
-	mes "[전장 관리인]";
-	mes "^0055FF" + .@team_name$ + "^000000 진영 파티장을 승계합니다.";
-	mes "기존 진영 및 최초 자동매칭 참가자 정보는 그대로 유지됩니다.";
-	mes "기존 파티장: " + .@old_name$;
-	mes "새 파티장: " + .@my_name$;
+	.@p95_team_name_en$ = ((.@team_name$ == "기욤") ? "Guillaume" : ((.@team_name$ == "크루아") ? "Croix" : .@team_name$));
+	mes needtr("[전장 관리인]","[Battleground Manager]");
+	mes needtr("^0055FF" + .@team_name$ + "^000000 진영 파티장을 승계합니다.", "You are taking over as party leader of the ^0055FF" + .@p95_team_name_en$ + "^000000 side.");
+	mes needtr("기존 진영 및 최초 자동매칭 참가자 정보는 그대로 유지됩니다.","The existing side and original auto-match participant records are kept.");
+	mes needtr("기존 파티장: " + .@old_name$, "Previous party leader: " + .@old_name$);
+	mes needtr("새 파티장: " + .@my_name$, "New party leader: " + .@my_name$);
 	next;
 
-	if (select("파티장 승계:취소") == 2)
+	if (select(needtr("파티장 승계:취소","Take over as party leader:Cancel")) == 2)
 		return;
 
 	callfunc "F_BG_ClearAllReadyState";
@@ -519,9 +534,9 @@ function	script	F_BG_RM_ChangeLeaderMenu	{
 		}
 
 		if (!.@verified) {
-			mes "[전장 관리인]";
-			mes "파티장 변경 명령을 확인하지 못했습니다.";
-			mes "파티 상태를 확인한 뒤 다시 시도해주세요.";
+			mes needtr("[전장 관리인]","[Battleground Manager]");
+			mes needtr("파티장 변경 명령을 확인하지 못했습니다.","The party leader change command could not be confirmed.");
+			mes needtr("파티 상태를 확인한 뒤 다시 시도해주세요.","Please check your party state and try again.");
 			return;
 		}
 	}
@@ -537,13 +552,11 @@ function	script	F_BG_RM_ChangeLeaderMenu	{
 		$BG_CROIX_LEADER_NAME$ = .@my_name$;
 	}
 
-	mapannounce "bat_room",
-		"[전장 랜덤 매칭] " + .@team_name$ + " 진영 파티장이 "
-		+ .@my_name$ + "님으로 승계되었습니다.",
-		bc_map, "0x99FF99";
+	mapannouncelang "bat_room", "[전장 랜덤 매칭] " + .@team_name$ + " 진영 파티장이 " + .@my_name$ + "님으로 승계되었습니다.",
+		"[Battleground Random Match] The " + .@p95_team_name_en$ + " side's party leader has been taken over by " + .@my_name$ + ".", bc_map, "0x99FF99";
 
-	mes "[전장 관리인]";
-	mes "파티장 승계가 완료되었습니다.";
+	mes needtr("[전장 관리인]","[Battleground Manager]");
+	mes needtr("파티장 승계가 완료되었습니다.","The party leader succession is complete.");
 	return;
 }
 
@@ -552,39 +565,39 @@ function	script	F_BG_RM_ChangeLeaderMenu	{
 //============================================================
 function	script	F_BG_RM_AdminMenu	{
 	if (getgmlevel() < 60) {
-		mes "[전장 관리인]";
-		mes "관리자만 사용할 수 있습니다.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("관리자만 사용할 수 있습니다.","Only an administrator can use this.");
 		close;
 	}
 
-	mes "[전장 관리인]";
-	mes "^0055FF[랜덤 매칭 운영]^000000";
-	mes "상태: " + $@BG_RM_STATE;
-	mes "현재 신청: " + $@BG_RM_COUNT + "명";
-	mes "사이클 단계: " + $@BG_RM_CYCLE_STAGE + "/3";
+	mes needtr("[전장 관리인]","[Battleground Manager]");
+	mes needtr("^0055FF[랜덤 매칭 운영]^000000","^0055FF[Random Match Operation]^000000");
+	mes needtr("상태: " + $@BG_RM_STATE, "State: " + $@BG_RM_STATE);
+	mes needtr("현재 신청: ","Current applications: ") + $@BG_RM_COUNT + needtr("명"," players");
+	mes needtr("사이클 단계: ","Cycle stage: ") + $@BG_RM_CYCLE_STAGE + "/3";
 	next;
 
-	switch(select("모집 즉시 마감 및 시작:랜덤 매칭 강제 종료:취소")) {
+	switch(select(needtr("모집 즉시 마감 및 시작:랜덤 매칭 강제 종료:취소","Close recruitment and start now:Force-end the random match:Cancel"))) {
 	case 1:
 		if ($@BG_RM_STATE != 1) {
-			mes "[전장 관리인]";
-			mes "현재 참가자를 모집 중인 랜덤 매칭이 없습니다.";
+			mes needtr("[전장 관리인]","[Battleground Manager]");
+			mes needtr("현재 참가자를 모집 중인 랜덤 매칭이 없습니다.","No random match is recruiting participants right now.");
 			close;
 		}
 
-		mes "[전장 관리인]";
-		mes "남은 모집 시간을 무시하고 즉시 마감합니다.";
-		mes "최소 참가 인원 조건은 그대로 적용됩니다.";
-		mes "현재 신청: ^0055FF" + $@BG_RM_COUNT + "^000000명";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("남은 모집 시간을 무시하고 즉시 마감합니다.","Recruitment will close immediately, ignoring the time left.");
+		mes needtr("최소 참가 인원 조건은 그대로 적용됩니다.","The minimum participant requirement still applies.");
+		mes needtr("현재 신청: ^0055FF","Currently applied: ^0055FF") + $@BG_RM_COUNT + needtr("^000000명","^000000 players");
 		next;
 
-		if (select("즉시 시작:취소") == 2)
+		if (select(needtr("즉시 시작:취소","Start now:Cancel")) == 2)
 			close;
 
 		$@BG_RM_ADMIN_NAME$ = strcharinfo(0);
 		donpcevent "NEED_BG_RM_Core::OnAdminForceStart";
-		mes "[전장 관리인]";
-		mes "즉시 시작을 요청했습니다.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("즉시 시작을 요청했습니다.","An immediate start has been requested.");
 		close;
 
 	case 2:
@@ -593,24 +606,24 @@ function	script	F_BG_RM_AdminMenu	{
 			!$@BG_RM_ACTIVE &&
 			!$@BG_RM_CYCLE_ACTIVE
 		) {
-			mes "[전장 관리인]";
-			mes "현재 진행 중인 랜덤 매칭이 없습니다.";
+			mes needtr("[전장 관리인]","[Battleground Manager]");
+			mes needtr("현재 진행 중인 랜덤 매칭이 없습니다.","There is no random match running right now.");
 			close;
 		}
 
-		mes "[전장 관리인]";
-		mes "^FF0000현재 랜덤 매칭을 즉시 종료합니다.^000000";
-		mes "모집 중이거나 전장 진행 중이어도 종료됩니다.";
-		mes "자동 생성 파티/BG 팀/입장 준비 상태를 정리합니다.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("^FF0000현재 랜덤 매칭을 즉시 종료합니다.^000000","^FF0000The current random match will be ended immediately.^000000");
+		mes needtr("모집 중이거나 전장 진행 중이어도 종료됩니다.","It ends even while recruiting or while a battleground is running.");
+		mes needtr("자동 생성 파티/BG 팀/입장 준비 상태를 정리합니다.","Auto-created parties, BG teams and entry preparation states are cleared.");
 		next;
 
-		if (select("강제 종료:취소") == 2)
+		if (select(needtr("강제 종료:취소","Force end:Cancel")) == 2)
 			close;
 
 		$@BG_RM_ADMIN_NAME$ = strcharinfo(0);
 		donpcevent "NEED_BG_RM_Core::OnAdminForceStop";
-		mes "[전장 관리인]";
-		mes "랜덤 매칭 강제 종료를 요청했습니다.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("랜덤 매칭 강제 종료를 요청했습니다.","A forced end of the random match has been requested.");
 		close;
 
 	case 3:
@@ -620,20 +633,20 @@ function	script	F_BG_RM_AdminMenu	{
 		
 
 function	script	F_BG_Reward	{
-	mes "[전장 관리인]";
-	mes "티에라/플라비우스/KvM 참여 시 전장 포인트 + 9";
+	mes needtr("[전장 관리인]","[Battleground Manager]");
+	mes needtr("티에라/플라비우스/KvM 참여 시 전장 포인트 + 9","Battleground Points + 9 for joining Tierra / Flavius / KvM");
 	mes " ";
-	mes "티에라 승 : 금화 10개, 용맹휘장 2개";
-	mes "티에라 패 : 금화 7개, 용맹휘장 1개";
+	mes needtr("티에라 승 : 금화 10개, 용맹휘장 2개","Tierra win : 10 Gold, 2 Bravery Badges");
+	mes needtr("티에라 패 : 금화 7개, 용맹휘장 1개","Tierra loss : 7 Gold, 1 Bravery Badge");
 	mes " ";
-	mes "플라비우스 승 : 금화 20개, 특공휘장 3개";
-	mes "플라비우스 패 : 금화 15개, 특공휘장 2개";
+	mes needtr("플라비우스 승 : 금화 20개, 특공휘장 3개","Flavius win : 20 Gold, 3 Valor Badges");
+	mes needtr("플라비우스 패 : 금화 15개, 특공휘장 2개","Flavius loss : 15 Gold, 2 Valor Badges");
 	mes " ";
-	mes "KvM 승 : 금화 20개, 전투휘장 3개";
-	mes "KvM 패 : 금화 15개, 전투휘장 2개";
+	mes needtr("KvM 승 : 금화 20개, 전투휘장 3개","KvM win : 20 Gold, 3 War Badges");
+	mes needtr("KvM 패 : 금화 15개, 전투휘장 2개","KvM loss : 15 Gold, 2 War Badges");
 	mes " ";
-	mes "6명부터는 1명당 금화 2개씩 추가 지급.";
-	mes "^FF0000파티장이 되어 진행할 경우 모든 휘장 3개, 전장 포인트 +5 추가 지급^000000";
+	mes needtr("6명부터는 1명당 금화 2개씩 추가 지급.","From 6 players on, 2 extra Gold are paid per player.");
+	mes needtr("^FF0000파티장이 되어 진행할 경우 모든 휘장 3개, 전장 포인트 +5 추가 지급^000000","^FF0000Run it as the party leader for 3 of every badge and +5 extra Battleground Points^000000");
 	setdialogsize(400,400);
 	close;
 }
@@ -646,21 +659,22 @@ function	script	F_BG_Menu_DiceRoll	{
 	.@my_team$ = callfunc("F_BG_GetMyRegisteredTeam$");
 
 	if (.@my_team$ == "") {
-		mes "[전장 관리인]";
-		mes "주사위는 등록된 기욤 또는 크루아 팀 파티장만 굴릴 수 있습니다.";
-		mes "현재 파티의 파티장 상태와 등록 정보를 확인해주세요.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("주사위는 등록된 기욤 또는 크루아 팀 파티장만 굴릴 수 있습니다.","Only a registered Guillaume or Croix party leader can roll the dice.");
+		mes needtr("현재 파티의 파티장 상태와 등록 정보를 확인해주세요.","Please check your party leader status and registration.");
 		close;
 	}
 
 	.@dice = rand(1, 6);
 
-	mapannounce "bat_room",
-		"[전장 주사위] " + .@my_team$ + " 팀 파티장 " + strcharinfo(0) + "님 주사위 [" + .@dice + "]",
-		bc_map, 0x00FFFF;
+	.@p95_my_team_en$ = ((.@my_team$ == "기욤") ? "Guillaume" : ((.@my_team$ == "크루아") ? "Croix" : .@my_team$));
+	.@p95_name$ = strcharinfo(0);
+	mapannouncelang "bat_room", "[전장 주사위] " + .@my_team$ + " 팀 파티장 " + .@p95_name$ + "님 주사위 [" + .@dice + "]",
+		"[Battleground Dice] " + .@p95_my_team_en$ + " team party leader " + .@p95_name$ + " rolled [" + .@dice + "]", bc_map, 0x00FFFF;
 
-	mes "[전장 관리인]";
-	mes "주사위를 굴렸습니다.";
-	mes "결과: ^FF0000" + .@dice + "^000000";
+	mes needtr("[전장 관리인]","[Battleground Manager]");
+	mes needtr("주사위를 굴렸습니다.","You rolled the dice.");
+	mes needtr("결과: ^FF0000","Result: ^FF0000") + .@dice + "^000000";
 	close;
 }
 
@@ -673,48 +687,48 @@ function	script	F_BG_Menu_RegisterLeader	{
 	.@party_id = getcharid(1);
 
 	if ($@BG_RM_CYCLE_ACTIVE) {
-		mes "[전장 관리인]";
-		mes "랜덤 매칭 풀사이클 진행 중에는 파티장 등록을 변경할 수 없습니다.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("랜덤 매칭 풀사이클 진행 중에는 파티장 등록을 변경할 수 없습니다.","Party leader registration cannot be changed while a random match full cycle is running.");
 		close;
 	}
 
 	if ($@BG_READY_TYPE) {
-		mes "[전장 관리인]";
-		mes "전장 입장 준비가 진행 중이라 등록 정보를 변경할 수 없습니다.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("전장 입장 준비가 진행 중이라 등록 정보를 변경할 수 없습니다.","Battleground entry preparation is under way, so the registration cannot be changed.");
 		close;
 	}
 
 	if ($@TierraBG1 || $@FlaviusBG1 || $@KvM01BG || $@BG_READY_TYPE)
 	{
-		mes "[전장 관리인]";
-		mes "진행 중엔 등록할 수 없습니다.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("진행 중엔 등록할 수 없습니다.","You cannot register while it is running.");
 		close;
 	}
 	
 	if (.@party_id <= 0) {
-		mes "[전장 관리인]";
-		mes "파티에 가입된 상태에서만 등록할 수 있습니다.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("파티에 가입된 상태에서만 등록할 수 있습니다.","You can only register while you are in a party.");
 		close;
 	}
 
 	if (getpartyleader(.@party_id, 0) != strcharinfo(0)) {
-		mes "[전장 관리인]";
-		mes "전장 파티장 등록은 현재 파티의 파티장만 가능합니다.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("전장 파티장 등록은 현재 파티의 파티장만 가능합니다.","Only the leader of your current party can register as a battleground leader.");
 		close;
 	}
 
-	mes "[전장 관리인]";
-	mes "전장 팀 파티장을 등록합니다.";
-	mes "파티명은 중복될 수 있으므로,";
-	mes "등록된 파티ID와 캐릭터ID를 기준으로 검증합니다.";
+	mes needtr("[전장 관리인]","[Battleground Manager]");
+	mes needtr("전장 팀 파티장을 등록합니다.","Registering a battleground team party leader.");
+	mes needtr("파티명은 중복될 수 있으므로,","Party names can be duplicated, so");
+	mes needtr("등록된 파티ID와 캐릭터ID를 기준으로 검증합니다.","the registered party ID and character ID are used for verification.");
 	next;
 
-	mes "[현재 등록 정보]";
-	mes "기욤 파티장: " + (($BG_GUILLAUME_LEADER_NAME$ == "") ? "^777777미등록^000000" : "^0055FF" + $BG_GUILLAUME_LEADER_NAME$ + "^000000");
-	mes "크루아 파티장: " + (($BG_CROIX_LEADER_NAME$ == "") ? "^777777미등록^000000" : "^0055FF" + $BG_CROIX_LEADER_NAME$ + "^000000");
+	mes needtr("[현재 등록 정보]","[Current Registrations]");
+	mes needtr("기욤 파티장: " + (($BG_GUILLAUME_LEADER_NAME$ == "") ? "^777777미등록^000000" : "^0055FF" + $BG_GUILLAUME_LEADER_NAME$ + "^000000"), "Guillaume leader: " + (($BG_GUILLAUME_LEADER_NAME$ == "") ? "^777777Not registered^000000" : "^0055FF" + $BG_GUILLAUME_LEADER_NAME$ + "^000000"));
+	mes needtr("크루아 파티장: " + (($BG_CROIX_LEADER_NAME$ == "") ? "^777777미등록^000000" : "^0055FF" + $BG_CROIX_LEADER_NAME$ + "^000000"), "Croix leader: " + (($BG_CROIX_LEADER_NAME$ == "") ? "^777777Not registered^000000" : "^0055FF" + $BG_CROIX_LEADER_NAME$ + "^000000"));
 	next;
 
-	switch(select("기욤 파티장으로 등록:크루아 파티장으로 등록:내 등록 해제:관리자 초기화:취소")) {
+	switch(select(needtr("기욤 파티장으로 등록:크루아 파티장으로 등록:내 등록 해제:관리자 초기화:취소","Register as Guillaume leader:Register as Croix leader:Release my registration:Administrator reset:Cancel"))) {
 	case 1:
 		callfunc "F_BG_RegisterLeader", "기욤";
 		close;
@@ -729,29 +743,29 @@ function	script	F_BG_Menu_RegisterLeader	{
 
 	case 4:
 		if (getgmlevel() < 60) {
-			mes "[전장 관리인]";
-			mes "관리자만 사용할 수 있습니다.";
+			mes needtr("[전장 관리인]","[Battleground Manager]");
+			mes needtr("관리자만 사용할 수 있습니다.","Only an administrator can use this.");
 			close;
 		}
 
-		mes "[전장 관리인]";
-		mes "전장 파티장 등록 정보를 모두 초기화하시겠습니까?";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("전장 파티장 등록 정보를 모두 초기화하시겠습니까?","Do you want to reset every battleground party leader registration?");
 		next;
 
-		if (select("초기화한다:취소한다") == 2) {
-			mes "[전장 관리인]";
+		if (select(needtr("초기화한다:취소한다","Reset:Cancel")) == 2) {
+			mes needtr("[전장 관리인]","[Battleground Manager]");
 			mes needtr("취소했습니다.", "Cancelled.");
 			close;
 		}
 
 		callfunc "F_BG_ClearLeaderRegister";
 
-		mes "[전장 관리인]";
-		mes "전장 파티장 등록 정보가 초기화되었습니다.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("전장 파티장 등록 정보가 초기화되었습니다.","The battleground party leader registrations have been reset.");
 		close;
 
 	case 5:
-		mes "[전장 관리인]";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
 		mes needtr("취소했습니다.", "Cancelled.");
 		close;
 	}
@@ -769,32 +783,33 @@ function	script	F_BG_RegisterLeader	{
 	.@name$ = strcharinfo(0);
 
 	if (.@party_id <= 0) {
-		mes "[전장 관리인]";
-		mes "파티에 가입된 상태에서만 등록할 수 있습니다.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("파티에 가입된 상태에서만 등록할 수 있습니다.","You can only register while you are in a party.");
 		close;
 	}
 
 	if (getpartyleader(.@party_id, 0) != .@name$) {
-		mes "[전장 관리인]";
-		mes "현재 파티의 파티장만 등록할 수 있습니다.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("현재 파티의 파티장만 등록할 수 있습니다.","Only the leader of your current party can register.");
 		close;
 	}
 
 	.@my_team$ = callfunc("F_BG_GetMyRegisteredTeam$");
 
 	if (.@my_team$ != "" && .@my_team$ != .@team$) {
-		mes "[전장 관리인]";
-		mes "이미 ^0055FF" + .@my_team$ + "^000000 팀 파티장으로 등록되어 있습니다.";
-		mes "먼저 기존 등록을 해제해주세요.";
+		.@p95_my_team_en$ = ((.@my_team$ == "기욤") ? "Guillaume" : ((.@my_team$ == "크루아") ? "Croix" : .@my_team$));
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("이미 ^0055FF" + .@my_team$ + "^000000 팀 파티장으로 등록되어 있습니다.", "You are already registered as the party leader of the ^0055FF" + .@p95_my_team_en$ + "^000000 team.");
+		mes needtr("먼저 기존 등록을 해제해주세요.","Please release your existing registration first.");
 		close;
 	}
 
 	if (.@team$ == "기욤") {
 		if ($BG_GUILLAUME_LEADER_CID > 0 && $BG_GUILLAUME_LEADER_CID != .@char_id) {
-			mes "[전장 관리인]";
-			mes "기욤 팀 파티장이 이미 등록되어 있습니다.";
-			mes "등록자: ^0055FF" + $BG_GUILLAUME_LEADER_NAME$ + "^000000";
-			mes "초기화가 필요하면 관리자에게 문의해주세요.";
+			mes needtr("[전장 관리인]","[Battleground Manager]");
+			mes needtr("기욤 팀 파티장이 이미 등록되어 있습니다.","A Guillaume team party leader is already registered.");
+			mes needtr("등록자: ^0055FF" + $BG_GUILLAUME_LEADER_NAME$ + "^000000", "Registered by: ^0055FF" + $BG_GUILLAUME_LEADER_NAME$ + "^000000");
+			mes needtr("초기화가 필요하면 관리자에게 문의해주세요.","If it needs to be reset, please contact an administrator.");
 			close;
 		}
 
@@ -805,10 +820,10 @@ function	script	F_BG_RegisterLeader	{
 	}
 	else if (.@team$ == "크루아") {
 		if ($BG_CROIX_LEADER_CID > 0 && $BG_CROIX_LEADER_CID != .@char_id) {
-			mes "[전장 관리인]";
-			mes "크루아 팀 파티장이 이미 등록되어 있습니다.";
-			mes "등록자: ^0055FF" + $BG_CROIX_LEADER_NAME$ + "^000000";
-			mes "초기화가 필요하면 관리자에게 문의해주세요.";
+			mes needtr("[전장 관리인]","[Battleground Manager]");
+			mes needtr("크루아 팀 파티장이 이미 등록되어 있습니다.","A Croix team party leader is already registered.");
+			mes needtr("등록자: ^0055FF" + $BG_CROIX_LEADER_NAME$ + "^000000", "Registered by: ^0055FF" + $BG_CROIX_LEADER_NAME$ + "^000000");
+			mes needtr("초기화가 필요하면 관리자에게 문의해주세요.","If it needs to be reset, please contact an administrator.");
 			close;
 		}
 
@@ -818,16 +833,18 @@ function	script	F_BG_RegisterLeader	{
 		$BG_CROIX_LEADER_NAME$ = .@name$;
 	}
 	else {
-		mes "[전장 관리인]";
-		mes "알 수 없는 팀입니다.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("알 수 없는 팀입니다.","Unknown team.");
 		close;
 	}
 
-	announce "[전장 안내] " + .@name$ + "님이 " + .@team$ + " 팀 파티장으로 등록되었습니다.", bc_map;
+	.@p95_team_en$ = ((.@team$ == "기욤") ? "Guillaume" : ((.@team$ == "크루아") ? "Croix" : .@team$));
+	mapannouncelang strcharinfo(3), "[전장 안내] " + .@name$ + "님이 " + .@team$ + " 팀 파티장으로 등록되었습니다.",
+		"[Battleground Notice] " + .@name$ + " has been registered as the " + .@p95_team_en$ + " team party leader.", bc_map;
 
-	mes "[전장 관리인]";
-	mes "^0055FF" + .@team$ + "^000000 팀 파티장으로 등록되었습니다.";
-	mes "이제 전장 인원 조정 및 인원 부족 완화 신청을 사용할 수 있습니다.";
+	mes needtr("[전장 관리인]","[Battleground Manager]");
+	mes needtr("^0055FF" + .@team$ + "^000000 팀 파티장으로 등록되었습니다.", "You have been registered as the ^0055FF" + .@p95_team_en$ + "^000000 team party leader.");
+	mes needtr("이제 전장 인원 조정 및 인원 부족 완화 신청을 사용할 수 있습니다.","You can now use the battleground headcount adjustment and the headcount relief request.");
 	close;
 }
 
@@ -836,8 +853,8 @@ function	script	F_BG_RegisterLeader	{
 //============================================================
 function	script	F_BG_UnregisterMyLeader	{
 	if ($@BG_RM_CYCLE_ACTIVE) {
-		mes "[전장 관리인]";
-		mes "랜덤 매칭 풀사이클 진행 중에는 자동 파티장 등록을 해제할 수 없습니다.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("랜덤 매칭 풀사이클 진행 중에는 자동 파티장 등록을 해제할 수 없습니다.","The automatic party leader registration cannot be released while a random match full cycle is running.");
 		close;
 	}
 
@@ -864,15 +881,17 @@ function	script	F_BG_UnregisterMyLeader	{
 	}
 
 	if (!.@removed) {
-		mes "[전장 관리인]";
-		mes "현재 등록된 전장 파티장 정보가 없습니다.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("현재 등록된 전장 파티장 정보가 없습니다.","There is no battleground party leader registered right now.");
 		close;
 	}
 
-	announce "[전장 안내] " + strcharinfo(0) + "님의 전장 파티장 등록이 해제되었습니다.", bc_map;
+	.@p95_name$ = strcharinfo(0);
+	mapannouncelang strcharinfo(3), "[전장 안내] " + .@p95_name$ + "님의 전장 파티장 등록이 해제되었습니다.",
+		"[Battleground Notice] " + .@p95_name$ + "'s battleground party leader registration has been released.", bc_map;
 
-	mes "[전장 관리인]";
-	mes "전장 파티장 등록이 해제되었습니다.";
+	mes needtr("[전장 관리인]","[Battleground Manager]");
+	mes needtr("전장 파티장 등록이 해제되었습니다.","Your battleground party leader registration has been released.");
 	close;
 }
 
@@ -956,8 +975,8 @@ function	script	F_BG_IsRegisteredLeader	{
 //============================================================
 function	script	F_BG_Menu_BattleReady	{
 	if ($@TierraBG1 || $@FlaviusBG1 || $@KvM01BG) {
-		mes "[전장 관리인]";
-		mes "현재 전장이 진행 중입니다.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("현재 전장이 진행 중입니다.","A battleground is running right now.");
 		close;
 	}
 
@@ -972,8 +991,8 @@ function	script	F_BG_Menu_BattleReady	{
 			return;
 		}
 
-		mes "[전장 관리인]";
-		mes "현재 랜덤 매칭 전장이 진행 중이거나 다음 단계 전환을 기다리고 있습니다.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("현재 랜덤 매칭 전장이 진행 중이거나 다음 단계 전환을 기다리고 있습니다.","A random match battleground is running, or it is waiting for the next stage.");
 		close;
 	}
 
@@ -991,11 +1010,11 @@ function	script	F_BG_Menu_BattleReady	{
 		return;
 	}
 
-	mes "[전장 관리인]";
-	mes "입장 준비를 진행할 전장을 선택해주세요.";
+	mes needtr("[전장 관리인]","[Battleground Manager]");
+	mes needtr("입장 준비를 진행할 전장을 선택해주세요.","Please choose the battleground to prepare for.");
 	next;
 
-	switch(select("티에라 협곡:플라비우스:KVM:취소")) {
+	switch(select(needtr("티에라 협곡:플라비우스:KVM:취소","Tierra Valley:Flavius:KVM:Cancel"))) {
 	case 1:
 		callfunc "F_BG_Menu_TierraReady";
 		return;
@@ -1026,6 +1045,7 @@ function	script	F_Tierra_CheckRegisteredParty	{
 	.@caller_aid = getattachedrid();
 
 	$@TierraCheck_Reason$ = "";
+	$@TierraCheck_Reason_EN$ = "";
 	$@TierraCheck_Name$ = "";
 	$@TierraCheck_Count = 0;
 
@@ -1037,11 +1057,13 @@ function	script	F_Tierra_CheckRegisteredParty	{
 			.@team = 2;
 		else {
 			$@TierraCheck_Reason$ = "현재 파티가 등록된 자동매칭 진영 파티가 아닙니다.";
+			$@TierraCheck_Reason_EN$ = "Your current party is not the registered auto-match side party.";
 			return 0;
 		}
 
 		.@ok = callfunc("F_BG_RM_CheckCycleParty", .@party_id, .@team, .@leader_cid, .@leader_name$);
 		$@TierraCheck_Reason$ = $@BG_RM_Check_Reason$;
+		$@TierraCheck_Reason_EN$ = $@BG_RM_Check_Reason_EN$;
 		$@TierraCheck_Name$ = $@BG_RM_Check_Name$;
 		$@TierraCheck_Count = $@BG_RM_Check_Count;
 
@@ -1057,11 +1079,13 @@ function	script	F_Tierra_CheckRegisteredParty	{
 
 	if (.@party_id <= 0) {
 		$@TierraCheck_Reason$ = "등록된 파티 정보가 없습니다.";
+		$@TierraCheck_Reason_EN$ = "There is no registered party information.";
 		return 0;
 	}
 
 	if (getpartyleader(.@party_id, 0) != .@leader_name$ || getpartyleader(.@party_id, 2) != .@leader_cid) {
 		$@TierraCheck_Reason$ = "등록 이후 파티장이 변경되었습니다.";
+		$@TierraCheck_Reason_EN$ = "The party leader has changed since registration.";
 		return 0;
 	}
 
@@ -1072,6 +1096,7 @@ function	script	F_Tierra_CheckRegisteredParty	{
 	getpartymember .@party_id, 1;
 	if ($@partymembercount != .@count) {
 		$@TierraCheck_Reason$ = "파티원 정보를 불러오는 중 변경이 감지되었습니다.";
+		$@TierraCheck_Reason_EN$ = "A change was detected while the party member list was being read.";
 		return 0;
 	}
 	copyarray .@cid[0], $@partymembercid[0], .@count;
@@ -1079,6 +1104,7 @@ function	script	F_Tierra_CheckRegisteredParty	{
 	getpartymember .@party_id, 2;
 	if ($@partymembercount != .@count) {
 		$@TierraCheck_Reason$ = "파티원 정보를 불러오는 중 변경이 감지되었습니다.";
+		$@TierraCheck_Reason_EN$ = "A change was detected while the party member list was being read.";
 		return 0;
 	}
 	copyarray .@aid[0], $@partymemberaid[0], .@count;
@@ -1088,6 +1114,7 @@ function	script	F_Tierra_CheckRegisteredParty	{
 	// 자동 입장은 파티 전체를 대상으로 하므로 설정 인원과 정확히 일치해야 합니다.
 	if (.@count != .@need) {
 		$@TierraCheck_Reason$ = "파티원 수가 티에라 필요 인원과 일치하지 않습니다. 현재 " + .@count + "명 / 필요 " + .@need + "명";
+		$@TierraCheck_Reason_EN$ = "The party size does not match the Tierra requirement: now " + .@count + ", needed " + .@need;
 		return 0;
 	}
 
@@ -1095,6 +1122,7 @@ function	script	F_Tierra_CheckRegisteredParty	{
 		if (!isloggedin(.@aid[.@i], .@cid[.@i])) {
 			$@TierraCheck_Name$ = .@name$[.@i];
 			$@TierraCheck_Reason$ = "로그인하지 않은 파티원이 있습니다.";
+			$@TierraCheck_Reason_EN$ = "A party member is not logged in.";
 			if (.@caller_aid)
 				attachrid .@caller_aid;
 			else
@@ -1105,6 +1133,7 @@ function	script	F_Tierra_CheckRegisteredParty	{
 		if (!attachrid(.@aid[.@i]) || getcharid(0) != .@cid[.@i]) {
 			$@TierraCheck_Name$ = .@name$[.@i];
 			$@TierraCheck_Reason$ = "파티원 접속 정보를 확인할 수 없습니다.";
+			$@TierraCheck_Reason_EN$ = "A party member connection state cannot be read.";
 			if (.@caller_aid)
 				attachrid .@caller_aid;
 			else
@@ -1115,6 +1144,7 @@ function	script	F_Tierra_CheckRegisteredParty	{
 		if (getcharid(1) != .@party_id) {
 			$@TierraCheck_Name$ = strcharinfo(0);
 			$@TierraCheck_Reason$ = "등록된 파티에서 이탈한 파티원이 있습니다.";
+			$@TierraCheck_Reason_EN$ = "A party member has left the registered party.";
 			if (.@caller_aid)
 				attachrid .@caller_aid;
 			else
@@ -1125,6 +1155,7 @@ function	script	F_Tierra_CheckRegisteredParty	{
 		if (strcharinfo(3) != "bat_room") {
 			$@TierraCheck_Name$ = strcharinfo(0);
 			$@TierraCheck_Reason$ = "전장 대기맵 bat_room에 없는 파티원이 있습니다.";
+			$@TierraCheck_Reason_EN$ = "A party member is not in the battleground waiting map bat_room.";
 			if (.@caller_aid)
 				attachrid .@caller_aid;
 			else
@@ -1135,6 +1166,7 @@ function	script	F_Tierra_CheckRegisteredParty	{
 		if (HP <= 0) {
 			$@TierraCheck_Name$ = strcharinfo(0);
 			$@TierraCheck_Reason$ = "사망 상태인 파티원이 있습니다.";
+			$@TierraCheck_Reason_EN$ = "A party member is dead.";
 			if (.@caller_aid)
 				attachrid .@caller_aid;
 			else
@@ -1145,6 +1177,7 @@ function	script	F_Tierra_CheckRegisteredParty	{
 		if (getcharid(4)) {
 			$@TierraCheck_Name$ = strcharinfo(0);
 			$@TierraCheck_Reason$ = "이미 다른 전장 팀에 참가 중인 파티원이 있습니다.";
+			$@TierraCheck_Reason_EN$ = "A party member is already in another battleground team.";
 			if (.@caller_aid)
 				attachrid .@caller_aid;
 			else
@@ -1223,26 +1256,26 @@ function	script	F_Tierra_ClearReadyState	{
 }
 
 function	script	F_Tierra_ShowCheckFailure	{
-	mes "[전장 관리인]";
-	mes "티에라 입장 준비를 완료할 수 없습니다.";
+	mes needtr("[전장 관리인]","[Battleground Manager]");
+	mes needtr("티에라 입장 준비를 완료할 수 없습니다.","Tierra entry preparation cannot be completed.");
 	mes "";
-	mes "^FF0000" + $@TierraCheck_Reason$ + "^000000";
+	mes needtr("^FF0000" + $@TierraCheck_Reason$ + "^000000", "^FF0000" + $@TierraCheck_Reason_EN$ + "^000000");
 	if ($@TierraCheck_Name$ != "")
-		mes "대상 파티원: ^0055FF" + $@TierraCheck_Name$ + "^000000";
+		mes needtr("대상 파티원: ^0055FF" + $@TierraCheck_Name$ + "^000000", "Affected party member: ^0055FF" + $@TierraCheck_Name$ + "^000000");
 	return;
 }
 
 function	script	F_BG_Menu_TierraReady	{
 	if ($@TierraBG1 || $@FlaviusBG1 || $@KvM01BG || $@TierraReady_Starting) {
-		mes "[전장 관리인]";
-		mes "현재 전장이 진행 중이거나 입장 처리 중입니다.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("현재 전장이 진행 중이거나 입장 처리 중입니다.","A battleground is running, or entry is being processed.");
 		close;
 	}
 
 	.@team$ = callfunc("F_BG_GetMyRegisteredTeam$");
 	if (.@team$ == "") {
-		mes "[전장 관리인]";
-		mes "등록된 기욤 또는 크루아 파티장만 준비할 수 있습니다.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("등록된 기욤 또는 크루아 파티장만 준비할 수 있습니다.","Only a registered Guillaume or Croix party leader can get ready.");
 		close;
 	}
 
@@ -1263,18 +1296,20 @@ function	script	F_BG_Menu_TierraReady	{
 		.@already_ready = $@TierraReady_Croix;
 	}
 
+	.@p95_team_en$ = ((.@team$ == "기욤") ? "Guillaume" : ((.@team$ == "크루아") ? "Croix" : .@team$));
 	if (.@already_ready) {
-		mes "[전장 관리인]";
-		mes "이미 ^0055FF" + .@team$ + "^000000 팀의 티에라 입장 준비가 완료되었습니다.";
-		mes "준비를 취소하면 양 팀의 준비 상태가 모두 초기화됩니다.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("이미 ^0055FF" + .@team$ + "^000000 팀의 티에라 입장 준비가 완료되었습니다.", "The ^0055FF" + .@p95_team_en$ + "^000000 team's Tierra entry preparation is already complete.");
+		mes needtr("준비를 취소하면 양 팀의 준비 상태가 모두 초기화됩니다.","Cancelling the preparation resets the preparation state of both teams.");
 		next;
-		if (select("준비 취소:유지") == 2)
+		if (select(needtr("준비 취소:유지","Cancel the preparation:Keep it")) == 2)
 			close;
 
-		announce "[티에라 협곡] " + .@team$ + " 팀 파티장이 입장 준비를 취소했습니다.", bc_map;
+		mapannouncelang strcharinfo(3), "[티에라 협곡] " + .@team$ + " 팀 파티장이 입장 준비를 취소했습니다.",
+			"[Tierra Valley] The " + .@p95_team_en$ + " team's party leader cancelled the entry preparation.", bc_map;
 		callfunc "F_Tierra_ClearReadyState";
-		mes "[전장 관리인]";
-		mes "티에라 입장 준비를 취소했습니다.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("티에라 입장 준비를 취소했습니다.","Tierra entry preparation has been cancelled.");
 		close;
 	}
 
@@ -1283,14 +1318,14 @@ function	script	F_BG_Menu_TierraReady	{
 		close;
 	}
 
-	mes "[전장 관리인]";
-	mes "^0055FF" + .@team$ + "^000000 팀의 티에라 입장 준비를 완료합니다.";
+	mes needtr("[전장 관리인]","[Battleground Manager]");
+	mes needtr("^0055FF" + .@team$ + "^000000 팀의 티에라 입장 준비를 완료합니다.", "Completing the ^0055FF" + .@p95_team_en$ + "^000000 team's Tierra entry preparation.");
 	mes "";
-	mes "준비 완료 후에는 파티원 전원이 이동·아이템·명령어 사용이 잠깁니다.";
-	mes "상대 팀도 준비를 완료하면 자동으로 티에라 내부 준비 구역에 입장합니다.";
+	mes needtr("준비 완료 후에는 파티원 전원이 이동·아이템·명령어 사용이 잠깁니다.","Once preparation is complete, every party member is locked out of movement, items and commands.");
+	mes needtr("상대 팀도 준비를 완료하면 자동으로 티에라 내부 준비 구역에 입장합니다.","When the opposing team is ready as well, you enter the Tierra staging area automatically.");
 	next;
 
-	if (select("입장 준비 완료:취소") == 2)
+	if (select(needtr("입장 준비 완료:취소","Ready to enter:Cancel")) == 2)
 		close;
 
 	// 대화 중 파티 변경을 막기 위해 확정 직전에 다시 검사합니다.
@@ -1300,8 +1335,8 @@ function	script	F_BG_Menu_TierraReady	{
 	}
 
 	if ($@BG_READY_TYPE && $@BG_READY_TYPE != 1) {
-		mes "[전장 관리인]";
-		mes "다른 전장의 입장 준비가 진행 중입니다.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("다른 전장의 입장 준비가 진행 중입니다.","Entry preparation for another battleground is under way.");
 		close;
 	}
 	$@BG_READY_TYPE = 1;
@@ -1317,40 +1352,44 @@ function	script	F_BG_Menu_TierraReady	{
 	callfunc "F_Tierra_SetPartyReadyLock", .@party_id, .@leader_aid, 1;
 	donpcevent "티에라 준비 감시#bat_room::OnStart";
 
-	announce "[티에라 협곡] " + .@team$ + " 팀이 입장 준비를 완료했습니다.", bc_map;
+	mapannouncelang strcharinfo(3), "[티에라 협곡] " + .@team$ + " 팀이 입장 준비를 완료했습니다.",
+		"[Tierra Valley] The " + .@p95_team_en$ + " team has completed entry preparation.", bc_map;
 
 	if (!$@TierraReady_Guillaume || !$@TierraReady_Croix) {
-		mes "[전장 관리인]";
-		mes "입장 준비가 완료되었습니다.";
-		mes "상대 팀 파티장의 준비를 기다립니다.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("입장 준비가 완료되었습니다.","Entry preparation is complete.");
+		mes needtr("상대 팀 파티장의 준비를 기다립니다.","Waiting for the opposing party leader to get ready.");
 		close;
 	}
 
 	// 양 팀 준비 완료 시 양쪽 파티를 다시 검사합니다.
 	if (!callfunc("F_Tierra_CheckRegisteredParty", $BG_GUILLAUME_PARTY_ID, callfunc("F_Tierra_GetGuillaumeNeed"), $BG_GUILLAUME_LEADER_CID, $BG_GUILLAUME_LEADER_NAME$)) {
-		announce "[티에라 협곡] 기욤 팀 재검사 실패: " + $@TierraCheck_Reason$ + (($@TierraCheck_Name$ == "") ? "" : " (" + $@TierraCheck_Name$ + ")"), bc_map;
+		mapannouncelang strcharinfo(3), "[티에라 협곡] 기욤 팀 재검사 실패: " + $@TierraCheck_Reason$ + (($@TierraCheck_Name$ == "") ? "" : " (" + $@TierraCheck_Name$ + ")"),
+			"[Tierra Valley] The Guillaume team failed the re-check: " + $@TierraCheck_Reason_EN$ + (($@TierraCheck_Name$ == "") ? "" : " (" + $@TierraCheck_Name$ + ")"), bc_map;
 		callfunc "F_Tierra_ClearReadyState";
-		mes "[전장 관리인]";
-		mes "기욤 팀 상태가 변경되어 양 팀 준비를 취소했습니다.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("기욤 팀 상태가 변경되어 양 팀 준비를 취소했습니다.","The Guillaume team state changed, so both teams had their preparation cancelled.");
 		close;
 	}
 
 	if (!callfunc("F_Tierra_CheckRegisteredParty", $BG_CROIX_PARTY_ID, callfunc("F_Tierra_GetCroixNeed"), $BG_CROIX_LEADER_CID, $BG_CROIX_LEADER_NAME$)) {
-		announce "[티에라 협곡] 크루아 팀 재검사 실패: " + $@TierraCheck_Reason$ + (($@TierraCheck_Name$ == "") ? "" : " (" + $@TierraCheck_Name$ + ")"), bc_map;
+		mapannouncelang strcharinfo(3), "[티에라 협곡] 크루아 팀 재검사 실패: " + $@TierraCheck_Reason$ + (($@TierraCheck_Name$ == "") ? "" : " (" + $@TierraCheck_Name$ + ")"),
+			"[Tierra Valley] The Croix team failed the re-check: " + $@TierraCheck_Reason_EN$ + (($@TierraCheck_Name$ == "") ? "" : " (" + $@TierraCheck_Name$ + ")"), bc_map;
 		callfunc "F_Tierra_ClearReadyState";
-		mes "[전장 관리인]";
-		mes "크루아 팀 상태가 변경되어 양 팀 준비를 취소했습니다.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("크루아 팀 상태가 변경되어 양 팀 준비를 취소했습니다.","The Croix team state changed, so both teams had their preparation cancelled.");
 		close;
 	}
 
 	$@TierraReady_Starting = 1;
 	donpcevent "티에라 준비 감시#bat_room::OnStop";
-	announce "[티에라 협곡] 양 팀의 준비가 완료되어 자동 입장을 시작합니다.", bc_map;
+	mapannouncelang strcharinfo(3), "[티에라 협곡] 양 팀의 준비가 완료되어 자동 입장을 시작합니다.",
+		"[Tierra Valley] Both teams are ready, so automatic entry is starting.", bc_map;
 	donpcevent "티에라 진행#bat_a01::OnPartyReady";
 
-	mes "[전장 관리인]";
-	mes "양 팀의 준비가 완료되었습니다.";
-	mes "티에라 협곡으로 이동합니다.";
+	mes needtr("[전장 관리인]","[Battleground Manager]");
+	mes needtr("양 팀의 준비가 완료되었습니다.","Both teams are ready.");
+	mes needtr("티에라 협곡으로 이동합니다.","Moving to Tierra Valley.");
 	close;
 }
 
@@ -1381,19 +1420,21 @@ OnTimer1000:
 		end;
 
 	if ($@TierraReady_Time && $@TierraReady_Time + 120 <= gettimetick(2)) {
-		mapannounce "bat_room", "[티에라 협곡] 상대 팀 준비 대기시간 120초가 지나 입장 준비가 취소되었습니다.", bc_map, "0xFF6666";
+		mapannouncelang "bat_room", "[티에라 협곡] 상대 팀 준비 대기시간 120초가 지나 입장 준비가 취소되었습니다.", "[Tierra Valley] The opposing team did not get ready within 120 seconds, so entry preparation has been cancelled.", bc_map, "0xFF6666";
 		callfunc "F_Tierra_ClearReadyState";
 		end;
 	}
 
 	if ($@TierraReady_Guillaume && !callfunc("F_Tierra_CheckRegisteredParty", $BG_GUILLAUME_PARTY_ID, callfunc("F_Tierra_GetGuillaumeNeed"), $BG_GUILLAUME_LEADER_CID, $BG_GUILLAUME_LEADER_NAME$)) {
-		mapannounce "bat_room", "[티에라 협곡] 기욤 팀 준비가 취소되었습니다: " + $@TierraCheck_Reason$ + (($@TierraCheck_Name$ == "") ? "" : " (" + $@TierraCheck_Name$ + ")"), bc_map, "0xFF6666";
+		mapannouncelang "bat_room", "[티에라 협곡] 기욤 팀 준비가 취소되었습니다: " + $@TierraCheck_Reason$ + (($@TierraCheck_Name$ == "") ? "" : " (" + $@TierraCheck_Name$ + ")"),
+			"[Tierra Valley] The Guillaume team had its preparation cancelled: " + $@TierraCheck_Reason_EN$ + (($@TierraCheck_Name$ == "") ? "" : " (" + $@TierraCheck_Name$ + ")"), bc_map, "0xFF6666";
 		callfunc "F_Tierra_ClearReadyState";
 		end;
 	}
 
 	if ($@TierraReady_Croix && !callfunc("F_Tierra_CheckRegisteredParty", $BG_CROIX_PARTY_ID, callfunc("F_Tierra_GetCroixNeed"), $BG_CROIX_LEADER_CID, $BG_CROIX_LEADER_NAME$)) {
-		mapannounce "bat_room", "[티에라 협곡] 크루아 팀 준비가 취소되었습니다: " + $@TierraCheck_Reason$ + (($@TierraCheck_Name$ == "") ? "" : " (" + $@TierraCheck_Name$ + ")"), bc_map, "0xFF6666";
+		mapannouncelang "bat_room", "[티에라 협곡] 크루아 팀 준비가 취소되었습니다: " + $@TierraCheck_Reason$ + (($@TierraCheck_Name$ == "") ? "" : " (" + $@TierraCheck_Name$ + ")"),
+			"[Tierra Valley] The Croix team had its preparation cancelled: " + $@TierraCheck_Reason_EN$ + (($@TierraCheck_Name$ == "") ? "" : " (" + $@TierraCheck_Name$ + ")"), bc_map, "0xFF6666";
 		callfunc "F_Tierra_ClearReadyState";
 		end;
 	}
@@ -1418,6 +1459,7 @@ function	script	F_Flavius_CheckRegisteredParty	{
 	.@caller_aid = getattachedrid();
 
 	$@FlaviusCheck_Reason$ = "";
+	$@FlaviusCheck_Reason_EN$ = "";
 	$@FlaviusCheck_Name$ = "";
 	$@FlaviusCheck_Count = 0;
 
@@ -1429,11 +1471,13 @@ function	script	F_Flavius_CheckRegisteredParty	{
 			.@team = 2;
 		else {
 			$@FlaviusCheck_Reason$ = "현재 파티가 등록된 자동매칭 진영 파티가 아닙니다.";
+			$@FlaviusCheck_Reason_EN$ = "Your current party is not the registered auto-match side party.";
 			return 0;
 		}
 
 		.@ok = callfunc("F_BG_RM_CheckCycleParty", .@party_id, .@team, .@leader_cid, .@leader_name$);
 		$@FlaviusCheck_Reason$ = $@BG_RM_Check_Reason$;
+		$@FlaviusCheck_Reason_EN$ = $@BG_RM_Check_Reason_EN$;
 		$@FlaviusCheck_Name$ = $@BG_RM_Check_Name$;
 		$@FlaviusCheck_Count = $@BG_RM_Check_Count;
 
@@ -1449,11 +1493,13 @@ function	script	F_Flavius_CheckRegisteredParty	{
 
 	if (.@party_id <= 0) {
 		$@FlaviusCheck_Reason$ = "등록된 파티 정보가 없습니다.";
+		$@FlaviusCheck_Reason_EN$ = "There is no registered party information.";
 		return 0;
 	}
 
 	if (getpartyleader(.@party_id, 0) != .@leader_name$ || getpartyleader(.@party_id, 2) != .@leader_cid) {
 		$@FlaviusCheck_Reason$ = "등록 이후 파티장이 변경되었습니다.";
+		$@FlaviusCheck_Reason_EN$ = "The party leader has changed since registration.";
 		return 0;
 	}
 
@@ -1464,6 +1510,7 @@ function	script	F_Flavius_CheckRegisteredParty	{
 	getpartymember .@party_id, 1;
 	if ($@partymembercount != .@count) {
 		$@FlaviusCheck_Reason$ = "파티원 정보를 불러오는 중 변경이 감지되었습니다.";
+		$@FlaviusCheck_Reason_EN$ = "A change was detected while the party member list was being read.";
 		return 0;
 	}
 	copyarray .@cid[0], $@partymembercid[0], .@count;
@@ -1471,6 +1518,7 @@ function	script	F_Flavius_CheckRegisteredParty	{
 	getpartymember .@party_id, 2;
 	if ($@partymembercount != .@count) {
 		$@FlaviusCheck_Reason$ = "파티원 정보를 불러오는 중 변경이 감지되었습니다.";
+		$@FlaviusCheck_Reason_EN$ = "A change was detected while the party member list was being read.";
 		return 0;
 	}
 	copyarray .@aid[0], $@partymemberaid[0], .@count;
@@ -1480,6 +1528,7 @@ function	script	F_Flavius_CheckRegisteredParty	{
 	// 자동 입장은 파티 전체를 대상으로 하므로 설정 인원과 정확히 일치해야 합니다.
 	if (.@count != .@need) {
 		$@FlaviusCheck_Reason$ = "파티원 수가 플라비우스 필요 인원과 일치하지 않습니다. 현재 " + .@count + "명 / 필요 " + .@need + "명";
+		$@FlaviusCheck_Reason_EN$ = "The party size does not match the Flavius requirement: now " + .@count + ", needed " + .@need;
 		return 0;
 	}
 
@@ -1487,6 +1536,7 @@ function	script	F_Flavius_CheckRegisteredParty	{
 		if (!isloggedin(.@aid[.@i], .@cid[.@i])) {
 			$@FlaviusCheck_Name$ = .@name$[.@i];
 			$@FlaviusCheck_Reason$ = "로그인하지 않은 파티원이 있습니다.";
+			$@FlaviusCheck_Reason_EN$ = "A party member is not logged in.";
 			if (.@caller_aid)
 				attachrid .@caller_aid;
 			else
@@ -1497,6 +1547,7 @@ function	script	F_Flavius_CheckRegisteredParty	{
 		if (!attachrid(.@aid[.@i]) || getcharid(0) != .@cid[.@i]) {
 			$@FlaviusCheck_Name$ = .@name$[.@i];
 			$@FlaviusCheck_Reason$ = "파티원 접속 정보를 확인할 수 없습니다.";
+			$@FlaviusCheck_Reason_EN$ = "A party member connection state cannot be read.";
 			if (.@caller_aid)
 				attachrid .@caller_aid;
 			else
@@ -1507,6 +1558,7 @@ function	script	F_Flavius_CheckRegisteredParty	{
 		if (getcharid(1) != .@party_id) {
 			$@FlaviusCheck_Name$ = strcharinfo(0);
 			$@FlaviusCheck_Reason$ = "등록된 파티에서 이탈한 파티원이 있습니다.";
+			$@FlaviusCheck_Reason_EN$ = "A party member has left the registered party.";
 			if (.@caller_aid)
 				attachrid .@caller_aid;
 			else
@@ -1517,6 +1569,7 @@ function	script	F_Flavius_CheckRegisteredParty	{
 		if (strcharinfo(3) != "bat_room") {
 			$@FlaviusCheck_Name$ = strcharinfo(0);
 			$@FlaviusCheck_Reason$ = "전장 대기맵 bat_room에 없는 파티원이 있습니다.";
+			$@FlaviusCheck_Reason_EN$ = "A party member is not in the battleground waiting map bat_room.";
 			if (.@caller_aid)
 				attachrid .@caller_aid;
 			else
@@ -1527,6 +1580,7 @@ function	script	F_Flavius_CheckRegisteredParty	{
 		if (HP <= 0) {
 			$@FlaviusCheck_Name$ = strcharinfo(0);
 			$@FlaviusCheck_Reason$ = "사망 상태인 파티원이 있습니다.";
+			$@FlaviusCheck_Reason_EN$ = "A party member is dead.";
 			if (.@caller_aid)
 				attachrid .@caller_aid;
 			else
@@ -1537,6 +1591,7 @@ function	script	F_Flavius_CheckRegisteredParty	{
 		if (getcharid(4)) {
 			$@FlaviusCheck_Name$ = strcharinfo(0);
 			$@FlaviusCheck_Reason$ = "이미 다른 전장 팀에 참가 중인 파티원이 있습니다.";
+			$@FlaviusCheck_Reason_EN$ = "A party member is already in another battleground team.";
 			if (.@caller_aid)
 				attachrid .@caller_aid;
 			else
@@ -1615,26 +1670,26 @@ function	script	F_Flavius_ClearReadyState	{
 }
 
 function	script	F_Flavius_ShowCheckFailure	{
-	mes "[전장 관리인]";
-	mes "플라비우스 입장 준비를 완료할 수 없습니다.";
+	mes needtr("[전장 관리인]","[Battleground Manager]");
+	mes needtr("플라비우스 입장 준비를 완료할 수 없습니다.","Flavius entry preparation cannot be completed.");
 	mes "";
-	mes "^FF0000" + $@FlaviusCheck_Reason$ + "^000000";
+	mes needtr("^FF0000" + $@FlaviusCheck_Reason$ + "^000000", "^FF0000" + $@FlaviusCheck_Reason_EN$ + "^000000");
 	if ($@FlaviusCheck_Name$ != "")
-		mes "대상 파티원: ^0055FF" + $@FlaviusCheck_Name$ + "^000000";
+		mes needtr("대상 파티원: ^0055FF" + $@FlaviusCheck_Name$ + "^000000", "Affected party member: ^0055FF" + $@FlaviusCheck_Name$ + "^000000");
 	return;
 }
 
 function	script	F_BG_Menu_FlaviusReady	{
 	if ($@TierraBG1 || $@FlaviusBG1 || $@KvM01BG || $@FlaviusReady_Starting) {
-		mes "[전장 관리인]";
-		mes "현재 전장이 진행 중이거나 입장 처리 중입니다.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("현재 전장이 진행 중이거나 입장 처리 중입니다.","A battleground is running, or entry is being processed.");
 		close;
 	}
 
 	.@team$ = callfunc("F_BG_GetMyRegisteredTeam$");
 	if (.@team$ == "") {
-		mes "[전장 관리인]";
-		mes "등록된 기욤 또는 크루아 파티장만 준비할 수 있습니다.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("등록된 기욤 또는 크루아 파티장만 준비할 수 있습니다.","Only a registered Guillaume or Croix party leader can get ready.");
 		close;
 	}
 
@@ -1655,18 +1710,20 @@ function	script	F_BG_Menu_FlaviusReady	{
 		.@already_ready = $@FlaviusReady_Croix;
 	}
 
+	.@p95_team_en$ = ((.@team$ == "기욤") ? "Guillaume" : ((.@team$ == "크루아") ? "Croix" : .@team$));
 	if (.@already_ready) {
-		mes "[전장 관리인]";
-		mes "이미 ^0055FF" + .@team$ + "^000000 팀의 플라비우스 입장 준비가 완료되었습니다.";
-		mes "준비를 취소하면 양 팀의 준비 상태가 모두 초기화됩니다.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("이미 ^0055FF" + .@team$ + "^000000 팀의 플라비우스 입장 준비가 완료되었습니다.", "The ^0055FF" + .@p95_team_en$ + "^000000 team's Flavius entry preparation is already complete.");
+		mes needtr("준비를 취소하면 양 팀의 준비 상태가 모두 초기화됩니다.","Cancelling the preparation resets the preparation state of both teams.");
 		next;
-		if (select("준비 취소:유지") == 2)
+		if (select(needtr("준비 취소:유지","Cancel the preparation:Keep it")) == 2)
 			close;
 
-		announce "[플라비우스] " + .@team$ + " 팀 파티장이 입장 준비를 취소했습니다.", bc_map;
+		mapannouncelang strcharinfo(3), "[플라비우스] " + .@team$ + " 팀 파티장이 입장 준비를 취소했습니다.",
+			"[Flavius] The " + .@p95_team_en$ + " team's party leader cancelled the entry preparation.", bc_map;
 		callfunc "F_Flavius_ClearReadyState";
-		mes "[전장 관리인]";
-		mes "플라비우스 입장 준비를 취소했습니다.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("플라비우스 입장 준비를 취소했습니다.","Flavius entry preparation has been cancelled.");
 		close;
 	}
 
@@ -1675,14 +1732,14 @@ function	script	F_BG_Menu_FlaviusReady	{
 		close;
 	}
 
-	mes "[전장 관리인]";
-	mes "^0055FF" + .@team$ + "^000000 팀의 플라비우스 입장 준비를 완료합니다.";
+	mes needtr("[전장 관리인]","[Battleground Manager]");
+	mes needtr("^0055FF" + .@team$ + "^000000 팀의 플라비우스 입장 준비를 완료합니다.", "Completing the ^0055FF" + .@p95_team_en$ + "^000000 team's Flavius entry preparation.");
 	mes "";
-	mes "준비 완료 후에는 파티원 전원이 이동·아이템·명령어 사용이 잠깁니다.";
-	mes "상대 팀도 준비를 완료하면 자동으로 플라비우스 내부 준비 구역에 입장합니다.";
+	mes needtr("준비 완료 후에는 파티원 전원이 이동·아이템·명령어 사용이 잠깁니다.","Once preparation is complete, every party member is locked out of movement, items and commands.");
+	mes needtr("상대 팀도 준비를 완료하면 자동으로 플라비우스 내부 준비 구역에 입장합니다.","When the opposing team is ready as well, you enter the Flavius staging area automatically.");
 	next;
 
-	if (select("입장 준비 완료:취소") == 2)
+	if (select(needtr("입장 준비 완료:취소","Ready to enter:Cancel")) == 2)
 		close;
 
 	// 대화 중 파티 변경을 막기 위해 확정 직전에 다시 검사합니다.
@@ -1692,8 +1749,8 @@ function	script	F_BG_Menu_FlaviusReady	{
 	}
 
 	if ($@BG_READY_TYPE && $@BG_READY_TYPE != 2) {
-		mes "[전장 관리인]";
-		mes "다른 전장의 입장 준비가 진행 중입니다.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("다른 전장의 입장 준비가 진행 중입니다.","Entry preparation for another battleground is under way.");
 		close;
 	}
 	$@BG_READY_TYPE = 2;
@@ -1709,40 +1766,44 @@ function	script	F_BG_Menu_FlaviusReady	{
 	callfunc "F_Flavius_SetPartyReadyLock", .@party_id, .@leader_aid, 1;
 	donpcevent "플라비우스 준비 감시#bat_room::OnStart";
 
-	announce "[플라비우스] " + .@team$ + " 팀이 입장 준비를 완료했습니다.", bc_map;
+	mapannouncelang strcharinfo(3), "[플라비우스] " + .@team$ + " 팀이 입장 준비를 완료했습니다.",
+		"[Flavius] The " + .@p95_team_en$ + " team has completed entry preparation.", bc_map;
 
 	if (!$@FlaviusReady_Guillaume || !$@FlaviusReady_Croix) {
-		mes "[전장 관리인]";
-		mes "입장 준비가 완료되었습니다.";
-		mes "상대 팀 파티장의 준비를 기다립니다.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("입장 준비가 완료되었습니다.","Entry preparation is complete.");
+		mes needtr("상대 팀 파티장의 준비를 기다립니다.","Waiting for the opposing party leader to get ready.");
 		close;
 	}
 
 	// 양 팀 준비 완료 시 양쪽 파티를 다시 검사합니다.
 	if (!callfunc("F_Flavius_CheckRegisteredParty", $BG_GUILLAUME_PARTY_ID, callfunc("F_Flavius_GetGuillaumeNeed"), $BG_GUILLAUME_LEADER_CID, $BG_GUILLAUME_LEADER_NAME$)) {
-		announce "[플라비우스] 기욤 팀 재검사 실패: " + $@FlaviusCheck_Reason$ + (($@FlaviusCheck_Name$ == "") ? "" : " (" + $@FlaviusCheck_Name$ + ")"), bc_map;
+		mapannouncelang strcharinfo(3), "[플라비우스] 기욤 팀 재검사 실패: " + $@FlaviusCheck_Reason$ + (($@FlaviusCheck_Name$ == "") ? "" : " (" + $@FlaviusCheck_Name$ + ")"),
+			"[Flavius] The Guillaume team failed the re-check: " + $@FlaviusCheck_Reason_EN$ + (($@FlaviusCheck_Name$ == "") ? "" : " (" + $@FlaviusCheck_Name$ + ")"), bc_map;
 		callfunc "F_Flavius_ClearReadyState";
-		mes "[전장 관리인]";
-		mes "기욤 팀 상태가 변경되어 양 팀 준비를 취소했습니다.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("기욤 팀 상태가 변경되어 양 팀 준비를 취소했습니다.","The Guillaume team state changed, so both teams had their preparation cancelled.");
 		close;
 	}
 
 	if (!callfunc("F_Flavius_CheckRegisteredParty", $BG_CROIX_PARTY_ID, callfunc("F_Flavius_GetCroixNeed"), $BG_CROIX_LEADER_CID, $BG_CROIX_LEADER_NAME$)) {
-		announce "[플라비우스] 크루아 팀 재검사 실패: " + $@FlaviusCheck_Reason$ + (($@FlaviusCheck_Name$ == "") ? "" : " (" + $@FlaviusCheck_Name$ + ")"), bc_map;
+		mapannouncelang strcharinfo(3), "[플라비우스] 크루아 팀 재검사 실패: " + $@FlaviusCheck_Reason$ + (($@FlaviusCheck_Name$ == "") ? "" : " (" + $@FlaviusCheck_Name$ + ")"),
+			"[Flavius] The Croix team failed the re-check: " + $@FlaviusCheck_Reason_EN$ + (($@FlaviusCheck_Name$ == "") ? "" : " (" + $@FlaviusCheck_Name$ + ")"), bc_map;
 		callfunc "F_Flavius_ClearReadyState";
-		mes "[전장 관리인]";
-		mes "크루아 팀 상태가 변경되어 양 팀 준비를 취소했습니다.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("크루아 팀 상태가 변경되어 양 팀 준비를 취소했습니다.","The Croix team state changed, so both teams had their preparation cancelled.");
 		close;
 	}
 
 	$@FlaviusReady_Starting = 1;
 	donpcevent "플라비우스 준비 감시#bat_room::OnStop";
-	announce "[플라비우스] 양 팀의 준비가 완료되어 자동 입장을 시작합니다.", bc_map;
+	mapannouncelang strcharinfo(3), "[플라비우스] 양 팀의 준비가 완료되어 자동 입장을 시작합니다.",
+		"[Flavius] Both teams are ready, so automatic entry is starting.", bc_map;
 	donpcevent "start#bat_b01::OnPartyReady";
 
-	mes "[전장 관리인]";
-	mes "양 팀의 준비가 완료되었습니다.";
-	mes "플라비우스으로 이동합니다.";
+	mes needtr("[전장 관리인]","[Battleground Manager]");
+	mes needtr("양 팀의 준비가 완료되었습니다.","Both teams are ready.");
+	mes needtr("플라비우스으로 이동합니다.","Moving to Flavius.");
 	close;
 }
 
@@ -1773,19 +1834,21 @@ OnTimer1000:
 		end;
 
 	if ($@FlaviusReady_Time && $@FlaviusReady_Time + 120 <= gettimetick(2)) {
-		mapannounce "bat_room", "[플라비우스] 상대 팀 준비 대기시간 120초가 지나 입장 준비가 취소되었습니다.", bc_map, "0xFF6666";
+		mapannouncelang "bat_room", "[플라비우스] 상대 팀 준비 대기시간 120초가 지나 입장 준비가 취소되었습니다.", "[Flavius] The opposing team did not get ready within 120 seconds, so entry preparation has been cancelled.", bc_map, "0xFF6666";
 		callfunc "F_Flavius_ClearReadyState";
 		end;
 	}
 
 	if ($@FlaviusReady_Guillaume && !callfunc("F_Flavius_CheckRegisteredParty", $BG_GUILLAUME_PARTY_ID, callfunc("F_Flavius_GetGuillaumeNeed"), $BG_GUILLAUME_LEADER_CID, $BG_GUILLAUME_LEADER_NAME$)) {
-		mapannounce "bat_room", "[플라비우스] 기욤 팀 준비가 취소되었습니다: " + $@FlaviusCheck_Reason$ + (($@FlaviusCheck_Name$ == "") ? "" : " (" + $@FlaviusCheck_Name$ + ")"), bc_map, "0xFF6666";
+		mapannouncelang "bat_room", "[플라비우스] 기욤 팀 준비가 취소되었습니다: " + $@FlaviusCheck_Reason$ + (($@FlaviusCheck_Name$ == "") ? "" : " (" + $@FlaviusCheck_Name$ + ")"),
+			"[Flavius] The Guillaume team had its preparation cancelled: " + $@FlaviusCheck_Reason_EN$ + (($@FlaviusCheck_Name$ == "") ? "" : " (" + $@FlaviusCheck_Name$ + ")"), bc_map, "0xFF6666";
 		callfunc "F_Flavius_ClearReadyState";
 		end;
 	}
 
 	if ($@FlaviusReady_Croix && !callfunc("F_Flavius_CheckRegisteredParty", $BG_CROIX_PARTY_ID, callfunc("F_Flavius_GetCroixNeed"), $BG_CROIX_LEADER_CID, $BG_CROIX_LEADER_NAME$)) {
-		mapannounce "bat_room", "[플라비우스] 크루아 팀 준비가 취소되었습니다: " + $@FlaviusCheck_Reason$ + (($@FlaviusCheck_Name$ == "") ? "" : " (" + $@FlaviusCheck_Name$ + ")"), bc_map, "0xFF6666";
+		mapannouncelang "bat_room", "[플라비우스] 크루아 팀 준비가 취소되었습니다: " + $@FlaviusCheck_Reason$ + (($@FlaviusCheck_Name$ == "") ? "" : " (" + $@FlaviusCheck_Name$ + ")"),
+			"[Flavius] The Croix team had its preparation cancelled: " + $@FlaviusCheck_Reason_EN$ + (($@FlaviusCheck_Name$ == "") ? "" : " (" + $@FlaviusCheck_Name$ + ")"), bc_map, "0xFF6666";
 		callfunc "F_Flavius_ClearReadyState";
 		end;
 	}
@@ -1810,6 +1873,7 @@ function	script	F_KvM_CheckRegisteredParty	{
 	.@caller_aid = getattachedrid();
 
 	$@KvMCheck_Reason$ = "";
+	$@KvMCheck_Reason_EN$ = "";
 	$@KvMCheck_Name$ = "";
 	$@KvMCheck_Count = 0;
 
@@ -1821,11 +1885,13 @@ function	script	F_KvM_CheckRegisteredParty	{
 			.@team = 2;
 		else {
 			$@KvMCheck_Reason$ = "현재 파티가 등록된 자동매칭 진영 파티가 아닙니다.";
+			$@KvMCheck_Reason_EN$ = "Your current party is not the registered auto-match side party.";
 			return 0;
 		}
 
 		.@ok = callfunc("F_BG_RM_CheckCycleParty", .@party_id, .@team, .@leader_cid, .@leader_name$);
 		$@KvMCheck_Reason$ = $@BG_RM_Check_Reason$;
+		$@KvMCheck_Reason_EN$ = $@BG_RM_Check_Reason_EN$;
 		$@KvMCheck_Name$ = $@BG_RM_Check_Name$;
 		$@KvMCheck_Count = $@BG_RM_Check_Count;
 
@@ -1841,11 +1907,13 @@ function	script	F_KvM_CheckRegisteredParty	{
 
 	if (.@party_id <= 0) {
 		$@KvMCheck_Reason$ = "등록된 파티 정보가 없습니다.";
+		$@KvMCheck_Reason_EN$ = "There is no registered party information.";
 		return 0;
 	}
 
 	if (getpartyleader(.@party_id, 0) != .@leader_name$ || getpartyleader(.@party_id, 2) != .@leader_cid) {
 		$@KvMCheck_Reason$ = "등록 이후 파티장이 변경되었습니다.";
+		$@KvMCheck_Reason_EN$ = "The party leader has changed since registration.";
 		return 0;
 	}
 
@@ -1856,6 +1924,7 @@ function	script	F_KvM_CheckRegisteredParty	{
 	getpartymember .@party_id, 1;
 	if ($@partymembercount != .@count) {
 		$@KvMCheck_Reason$ = "파티원 정보를 불러오는 중 변경이 감지되었습니다.";
+		$@KvMCheck_Reason_EN$ = "A change was detected while the party member list was being read.";
 		return 0;
 	}
 	copyarray .@cid[0], $@partymembercid[0], .@count;
@@ -1863,6 +1932,7 @@ function	script	F_KvM_CheckRegisteredParty	{
 	getpartymember .@party_id, 2;
 	if ($@partymembercount != .@count) {
 		$@KvMCheck_Reason$ = "파티원 정보를 불러오는 중 변경이 감지되었습니다.";
+		$@KvMCheck_Reason_EN$ = "A change was detected while the party member list was being read.";
 		return 0;
 	}
 	copyarray .@aid[0], $@partymemberaid[0], .@count;
@@ -1872,6 +1942,7 @@ function	script	F_KvM_CheckRegisteredParty	{
 	// 자동 입장은 파티 전체를 대상으로 하므로 설정 인원과 정확히 일치해야 합니다.
 	if (.@count != .@need) {
 		$@KvMCheck_Reason$ = "파티원 수가 KVM 필요 인원과 일치하지 않습니다. 현재 " + .@count + "명 / 필요 " + .@need + "명";
+		$@KvMCheck_Reason_EN$ = "The party size does not match the KVM requirement: now " + .@count + ", needed " + .@need;
 		return 0;
 	}
 
@@ -1879,6 +1950,7 @@ function	script	F_KvM_CheckRegisteredParty	{
 		if (!isloggedin(.@aid[.@i], .@cid[.@i])) {
 			$@KvMCheck_Name$ = .@name$[.@i];
 			$@KvMCheck_Reason$ = "로그인하지 않은 파티원이 있습니다.";
+			$@KvMCheck_Reason_EN$ = "A party member is not logged in.";
 			if (.@caller_aid)
 				attachrid .@caller_aid;
 			else
@@ -1889,6 +1961,7 @@ function	script	F_KvM_CheckRegisteredParty	{
 		if (!attachrid(.@aid[.@i]) || getcharid(0) != .@cid[.@i]) {
 			$@KvMCheck_Name$ = .@name$[.@i];
 			$@KvMCheck_Reason$ = "파티원 접속 정보를 확인할 수 없습니다.";
+			$@KvMCheck_Reason_EN$ = "A party member connection state cannot be read.";
 			if (.@caller_aid)
 				attachrid .@caller_aid;
 			else
@@ -1899,6 +1972,7 @@ function	script	F_KvM_CheckRegisteredParty	{
 		if (getcharid(1) != .@party_id) {
 			$@KvMCheck_Name$ = strcharinfo(0);
 			$@KvMCheck_Reason$ = "등록된 파티에서 이탈한 파티원이 있습니다.";
+			$@KvMCheck_Reason_EN$ = "A party member has left the registered party.";
 			if (.@caller_aid)
 				attachrid .@caller_aid;
 			else
@@ -1909,6 +1983,7 @@ function	script	F_KvM_CheckRegisteredParty	{
 		if (strcharinfo(3) != "bat_room") {
 			$@KvMCheck_Name$ = strcharinfo(0);
 			$@KvMCheck_Reason$ = "전장 대기맵 bat_room에 없는 파티원이 있습니다.";
+			$@KvMCheck_Reason_EN$ = "A party member is not in the battleground waiting map bat_room.";
 			if (.@caller_aid)
 				attachrid .@caller_aid;
 			else
@@ -1919,6 +1994,7 @@ function	script	F_KvM_CheckRegisteredParty	{
 		if (HP <= 0) {
 			$@KvMCheck_Name$ = strcharinfo(0);
 			$@KvMCheck_Reason$ = "사망 상태인 파티원이 있습니다.";
+			$@KvMCheck_Reason_EN$ = "A party member is dead.";
 			if (.@caller_aid)
 				attachrid .@caller_aid;
 			else
@@ -1929,6 +2005,7 @@ function	script	F_KvM_CheckRegisteredParty	{
 		if (getcharid(4)) {
 			$@KvMCheck_Name$ = strcharinfo(0);
 			$@KvMCheck_Reason$ = "이미 다른 전장 팀에 참가 중인 파티원이 있습니다.";
+			$@KvMCheck_Reason_EN$ = "A party member is already in another battleground team.";
 			if (.@caller_aid)
 				attachrid .@caller_aid;
 			else
@@ -2007,26 +2084,26 @@ function	script	F_KvM_ClearReadyState	{
 }
 
 function	script	F_KvM_ShowCheckFailure	{
-	mes "[전장 관리인]";
-	mes "KVM 입장 준비를 완료할 수 없습니다.";
+	mes needtr("[전장 관리인]","[Battleground Manager]");
+	mes needtr("KVM 입장 준비를 완료할 수 없습니다.","KVM entry preparation cannot be completed.");
 	mes "";
-	mes "^FF0000" + $@KvMCheck_Reason$ + "^000000";
+	mes needtr("^FF0000" + $@KvMCheck_Reason$ + "^000000", "^FF0000" + $@KvMCheck_Reason_EN$ + "^000000");
 	if ($@KvMCheck_Name$ != "")
-		mes "대상 파티원: ^0055FF" + $@KvMCheck_Name$ + "^000000";
+		mes needtr("대상 파티원: ^0055FF" + $@KvMCheck_Name$ + "^000000", "Affected party member: ^0055FF" + $@KvMCheck_Name$ + "^000000");
 	return;
 }
 
 function	script	F_BG_Menu_KvMReady	{
 	if ($@TierraBG1 || $@FlaviusBG1 || $@KvM01BG || $@KvMReady_Starting) {
-		mes "[전장 관리인]";
-		mes "현재 전장이 진행 중이거나 입장 처리 중입니다.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("현재 전장이 진행 중이거나 입장 처리 중입니다.","A battleground is running, or entry is being processed.");
 		close;
 	}
 
 	.@team$ = callfunc("F_BG_GetMyRegisteredTeam$");
 	if (.@team$ == "") {
-		mes "[전장 관리인]";
-		mes "등록된 기욤 또는 크루아 파티장만 준비할 수 있습니다.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("등록된 기욤 또는 크루아 파티장만 준비할 수 있습니다.","Only a registered Guillaume or Croix party leader can get ready.");
 		close;
 	}
 
@@ -2047,18 +2124,20 @@ function	script	F_BG_Menu_KvMReady	{
 		.@already_ready = $@KvMReady_Croix;
 	}
 
+	.@p95_team_en$ = ((.@team$ == "기욤") ? "Guillaume" : ((.@team$ == "크루아") ? "Croix" : .@team$));
 	if (.@already_ready) {
-		mes "[전장 관리인]";
-		mes "이미 ^0055FF" + .@team$ + "^000000 팀의 KVM 입장 준비가 완료되었습니다.";
-		mes "준비를 취소하면 양 팀의 준비 상태가 모두 초기화됩니다.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("이미 ^0055FF" + .@team$ + "^000000 팀의 KVM 입장 준비가 완료되었습니다.", "The ^0055FF" + .@p95_team_en$ + "^000000 team's KVM entry preparation is already complete.");
+		mes needtr("준비를 취소하면 양 팀의 준비 상태가 모두 초기화됩니다.","Cancelling the preparation resets the preparation state of both teams.");
 		next;
-		if (select("준비 취소:유지") == 2)
+		if (select(needtr("준비 취소:유지","Cancel the preparation:Keep it")) == 2)
 			close;
 
-		announce "[KVM] " + .@team$ + " 팀 파티장이 입장 준비를 취소했습니다.", bc_map;
+		mapannouncelang strcharinfo(3), "[KVM] " + .@team$ + " 팀 파티장이 입장 준비를 취소했습니다.",
+			"[KVM] The " + .@p95_team_en$ + " team's party leader cancelled the entry preparation.", bc_map;
 		callfunc "F_KvM_ClearReadyState";
-		mes "[전장 관리인]";
-		mes "KVM 입장 준비를 취소했습니다.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("KVM 입장 준비를 취소했습니다.","KVM entry preparation has been cancelled.");
 		close;
 	}
 
@@ -2067,14 +2146,14 @@ function	script	F_BG_Menu_KvMReady	{
 		close;
 	}
 
-	mes "[전장 관리인]";
-	mes "^0055FF" + .@team$ + "^000000 팀의 KVM 입장 준비를 완료합니다.";
+	mes needtr("[전장 관리인]","[Battleground Manager]");
+	mes needtr("^0055FF" + .@team$ + "^000000 팀의 KVM 입장 준비를 완료합니다.", "Completing the ^0055FF" + .@p95_team_en$ + "^000000 team's KVM entry preparation.");
 	mes "";
-	mes "준비 완료 후에는 파티원 전원이 이동·아이템·명령어 사용이 잠깁니다.";
-	mes "상대 팀도 준비를 완료하면 자동으로 KVM 내부 준비 구역에 입장합니다.";
+	mes needtr("준비 완료 후에는 파티원 전원이 이동·아이템·명령어 사용이 잠깁니다.","Once preparation is complete, every party member is locked out of movement, items and commands.");
+	mes needtr("상대 팀도 준비를 완료하면 자동으로 KVM 내부 준비 구역에 입장합니다.","When the opposing team is ready as well, you enter the KVM staging area automatically.");
 	next;
 
-	if (select("입장 준비 완료:취소") == 2)
+	if (select(needtr("입장 준비 완료:취소","Ready to enter:Cancel")) == 2)
 		close;
 
 	// 대화 중 파티 변경을 막기 위해 확정 직전에 다시 검사합니다.
@@ -2084,8 +2163,8 @@ function	script	F_BG_Menu_KvMReady	{
 	}
 
 	if ($@BG_READY_TYPE && $@BG_READY_TYPE != 3) {
-		mes "[전장 관리인]";
-		mes "다른 전장의 입장 준비가 진행 중입니다.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("다른 전장의 입장 준비가 진행 중입니다.","Entry preparation for another battleground is under way.");
 		close;
 	}
 	$@BG_READY_TYPE = 3;
@@ -2101,40 +2180,44 @@ function	script	F_BG_Menu_KvMReady	{
 	callfunc "F_KvM_SetPartyReadyLock", .@party_id, .@leader_aid, 1;
 	donpcevent "KVM 준비 감시#bat_room::OnStart";
 
-	announce "[KVM] " + .@team$ + " 팀이 입장 준비를 완료했습니다.", bc_map;
+	mapannouncelang strcharinfo(3), "[KVM] " + .@team$ + " 팀이 입장 준비를 완료했습니다.",
+		"[KVM] The " + .@p95_team_en$ + " team has completed entry preparation.", bc_map;
 
 	if (!$@KvMReady_Guillaume || !$@KvMReady_Croix) {
-		mes "[전장 관리인]";
-		mes "입장 준비가 완료되었습니다.";
-		mes "상대 팀 파티장의 준비를 기다립니다.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("입장 준비가 완료되었습니다.","Entry preparation is complete.");
+		mes needtr("상대 팀 파티장의 준비를 기다립니다.","Waiting for the opposing party leader to get ready.");
 		close;
 	}
 
 	// 양 팀 준비 완료 시 양쪽 파티를 다시 검사합니다.
 	if (!callfunc("F_KvM_CheckRegisteredParty", $BG_GUILLAUME_PARTY_ID, callfunc("F_KvM_GetGuillaumeNeed"), $BG_GUILLAUME_LEADER_CID, $BG_GUILLAUME_LEADER_NAME$)) {
-		announce "[KVM] 기욤 팀 재검사 실패: " + $@KvMCheck_Reason$ + (($@KvMCheck_Name$ == "") ? "" : " (" + $@KvMCheck_Name$ + ")"), bc_map;
+		mapannouncelang strcharinfo(3), "[KVM] 기욤 팀 재검사 실패: " + $@KvMCheck_Reason$ + (($@KvMCheck_Name$ == "") ? "" : " (" + $@KvMCheck_Name$ + ")"),
+			"[KVM] The Guillaume team failed the re-check: " + $@KvMCheck_Reason_EN$ + (($@KvMCheck_Name$ == "") ? "" : " (" + $@KvMCheck_Name$ + ")"), bc_map;
 		callfunc "F_KvM_ClearReadyState";
-		mes "[전장 관리인]";
-		mes "기욤 팀 상태가 변경되어 양 팀 준비를 취소했습니다.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("기욤 팀 상태가 변경되어 양 팀 준비를 취소했습니다.","The Guillaume team state changed, so both teams had their preparation cancelled.");
 		close;
 	}
 
 	if (!callfunc("F_KvM_CheckRegisteredParty", $BG_CROIX_PARTY_ID, callfunc("F_KvM_GetCroixNeed"), $BG_CROIX_LEADER_CID, $BG_CROIX_LEADER_NAME$)) {
-		announce "[KVM] 크루아 팀 재검사 실패: " + $@KvMCheck_Reason$ + (($@KvMCheck_Name$ == "") ? "" : " (" + $@KvMCheck_Name$ + ")"), bc_map;
+		mapannouncelang strcharinfo(3), "[KVM] 크루아 팀 재검사 실패: " + $@KvMCheck_Reason$ + (($@KvMCheck_Name$ == "") ? "" : " (" + $@KvMCheck_Name$ + ")"),
+			"[KVM] The Croix team failed the re-check: " + $@KvMCheck_Reason_EN$ + (($@KvMCheck_Name$ == "") ? "" : " (" + $@KvMCheck_Name$ + ")"), bc_map;
 		callfunc "F_KvM_ClearReadyState";
-		mes "[전장 관리인]";
-		mes "크루아 팀 상태가 변경되어 양 팀 준비를 취소했습니다.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("크루아 팀 상태가 변경되어 양 팀 준비를 취소했습니다.","The Croix team state changed, so both teams had their preparation cancelled.");
 		close;
 	}
 
 	$@KvMReady_Starting = 1;
 	donpcevent "KVM 준비 감시#bat_room::OnStop";
-	announce "[KVM] 양 팀의 준비가 완료되어 자동 입장을 시작합니다.", bc_map;
+	mapannouncelang strcharinfo(3), "[KVM] 양 팀의 준비가 완료되어 자동 입장을 시작합니다.",
+		"[KVM] Both teams are ready, so automatic entry is starting.", bc_map;
 	donpcevent "KvM01_BG::OnPartyReady";
 
-	mes "[전장 관리인]";
-	mes "양 팀의 준비가 완료되었습니다.";
-	mes "KVM으로 이동합니다.";
+	mes needtr("[전장 관리인]","[Battleground Manager]");
+	mes needtr("양 팀의 준비가 완료되었습니다.","Both teams are ready.");
+	mes needtr("KVM으로 이동합니다.","Moving to KVM.");
 	close;
 }
 
@@ -2165,19 +2248,21 @@ OnTimer1000:
 		end;
 
 	if ($@KvMReady_Time && $@KvMReady_Time + 120 <= gettimetick(2)) {
-		mapannounce "bat_room", "[KVM] 상대 팀 준비 대기시간 120초가 지나 입장 준비가 취소되었습니다.", bc_map, "0xFF6666";
+		mapannouncelang "bat_room", "[KVM] 상대 팀 준비 대기시간 120초가 지나 입장 준비가 취소되었습니다.", "[KVM] The opposing team did not get ready within 120 seconds, so entry preparation has been cancelled.", bc_map, "0xFF6666";
 		callfunc "F_KvM_ClearReadyState";
 		end;
 	}
 
 	if ($@KvMReady_Guillaume && !callfunc("F_KvM_CheckRegisteredParty", $BG_GUILLAUME_PARTY_ID, callfunc("F_KvM_GetGuillaumeNeed"), $BG_GUILLAUME_LEADER_CID, $BG_GUILLAUME_LEADER_NAME$)) {
-		mapannounce "bat_room", "[KVM] 기욤 팀 준비가 취소되었습니다: " + $@KvMCheck_Reason$ + (($@KvMCheck_Name$ == "") ? "" : " (" + $@KvMCheck_Name$ + ")"), bc_map, "0xFF6666";
+		mapannouncelang "bat_room", "[KVM] 기욤 팀 준비가 취소되었습니다: " + $@KvMCheck_Reason$ + (($@KvMCheck_Name$ == "") ? "" : " (" + $@KvMCheck_Name$ + ")"),
+			"[KVM] The Guillaume team had its preparation cancelled: " + $@KvMCheck_Reason_EN$ + (($@KvMCheck_Name$ == "") ? "" : " (" + $@KvMCheck_Name$ + ")"), bc_map, "0xFF6666";
 		callfunc "F_KvM_ClearReadyState";
 		end;
 	}
 
 	if ($@KvMReady_Croix && !callfunc("F_KvM_CheckRegisteredParty", $BG_CROIX_PARTY_ID, callfunc("F_KvM_GetCroixNeed"), $BG_CROIX_LEADER_CID, $BG_CROIX_LEADER_NAME$)) {
-		mapannounce "bat_room", "[KVM] 크루아 팀 준비가 취소되었습니다: " + $@KvMCheck_Reason$ + (($@KvMCheck_Name$ == "") ? "" : " (" + $@KvMCheck_Name$ + ")"), bc_map, "0xFF6666";
+		mapannouncelang "bat_room", "[KVM] 크루아 팀 준비가 취소되었습니다: " + $@KvMCheck_Reason$ + (($@KvMCheck_Name$ == "") ? "" : " (" + $@KvMCheck_Name$ + ")"),
+			"[KVM] The Croix team had its preparation cancelled: " + $@KvMCheck_Reason_EN$ + (($@KvMCheck_Name$ == "") ? "" : " (" + $@KvMCheck_Name$ + ")"), bc_map, "0xFF6666";
 		callfunc "F_KvM_ClearReadyState";
 		end;
 	}
@@ -2263,32 +2348,32 @@ function	script	F_BG_Menu_Promotion	{
 
 	if (@BG_PROMOTION_COOLDOWN > .@now) {
 		.@remain = @BG_PROMOTION_COOLDOWN - .@now;
-		mes "[전장 관리인]";
-		mes "전장 홍보는 아직 사용할 수 없습니다.";
-		mes "남은 시간: ^FF0000" + .@remain + "^000000초";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("전장 홍보는 아직 사용할 수 없습니다.","The battleground shout is not available yet.");
+		mes needtr("남은 시간: ^FF0000","Time remaining: ^FF0000") + .@remain + needtr("^000000초","^000000s");
 		close;
 	}
 
-	mes "[전장 관리인]";
-	mes "전체 채팅으로 출력할 전장 홍보 문구를 입력해주세요.";
-	mes "부적절한 문구 입력 시 제재될 수 있습니다.";
+	mes needtr("[전장 관리인]","[Battleground Manager]");
+	mes needtr("전체 채팅으로 출력할 전장 홍보 문구를 입력해주세요.","Please enter the battleground shout to send to the global chat.");
+	mes needtr("부적절한 문구 입력 시 제재될 수 있습니다.","Inappropriate wording may be penalised.");
 	next;
 
 	input .@msg$, 1, 80;
 
 	if (.@msg$ == "") {
-		mes "[전장 관리인]";
-		mes "홍보 문구가 입력되지 않았습니다.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("홍보 문구가 입력되지 않았습니다.","No shout text was entered.");
 		close;
 	}
 
 	@BG_PROMOTION_COOLDOWN = .@now + 60;
 
-	announce "[전장 홍보] "+ .@msg$, bc_all;
+	announcelang "[전장 홍보] "+ .@msg$, "[Battleground Shout] "+ .@msg$, bc_all;
 
-	mes "[전장 관리인]";
-	mes "전장 홍보가 완료되었습니다.";
-	mes "다음 홍보는 60초 후 가능합니다.";
+	mes needtr("[전장 관리인]","[Battleground Manager]");
+	mes needtr("전장 홍보가 완료되었습니다.","The battleground shout has been sent.");
+	mes needtr("다음 홍보는 60초 후 가능합니다.","The next shout is possible in 60 seconds.");
 	close;
 }
 
@@ -2299,46 +2384,46 @@ function	script	F_BG_Menu_Promotion	{
 //============================================================
 function	script	F_BG_Menu_CountAdjust	{
 	if ($@BG_RM_CYCLE_ACTIVE) {
-		mes "[전장 관리인]";
-		mes "랜덤 매칭 풀사이클 진행 중에는 전장 인원을 변경할 수 없습니다.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("랜덤 매칭 풀사이클 진행 중에는 전장 인원을 변경할 수 없습니다.","The battleground headcount cannot be changed while a random match full cycle is running.");
 		close;
 	}
 
 	if ($@BG_READY_TYPE) {
-		mes "[전장 관리인]";
-		mes "전장 입장 준비 중에는 전장 인원을 변경할 수 없습니다.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("전장 입장 준비 중에는 전장 인원을 변경할 수 없습니다.","The battleground headcount cannot be changed during entry preparation.");
 		close;
 	}
 
 	if (!callfunc("F_BG_IsRegisteredLeader")) {
-		mes "[전장 관리인]";
-		mes "전장 인원 조정은 파티장만 가능합니다.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("전장 인원 조정은 파티장만 가능합니다.","Only a party leader can adjust the battleground headcount.");
 		close;
 	}
 	
 	if ($@TierraBG1 || $@FlaviusBG1 || $@KvM01BG || $@BG_READY_TYPE)
 	{
-		mes "[전장 관리인]";
-		mes "진행 중엔 인원을 수정할 수 없습니다.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("진행 중엔 인원을 수정할 수 없습니다.","You cannot change the headcount while it is running.");
 		close;
 	}
 
-	mes "[전장 관리인]";
-	mes "전장 시작에 필요한 기본 인원을 조정합니다.";
-	mes "티에라, 플라비우스, KVM에 통합 적용됩니다.";
-	mes "현재 설정 인원: ^0055FF" + $BG_User_Count + "^000000명";
+	mes needtr("[전장 관리인]","[Battleground Manager]");
+	mes needtr("전장 시작에 필요한 기본 인원을 조정합니다.","Adjusting the base headcount needed to start a battleground.");
+	mes needtr("티에라, 플라비우스, KVM에 통합 적용됩니다.","It applies to Tierra, Flavius and KVM together.");
+	mes needtr("현재 설정 인원: ^0055FF","Current setting: ^0055FF") + $BG_User_Count + needtr("^000000명","^000000 players");
 	next;
 
-	mes "[전장 관리인]";
-	mes "변경할 인원을 입력해주세요.";
-	mes "예: 10 입력 시 10 vs 10 기준";
+	mes needtr("[전장 관리인]","[Battleground Manager]");
+	mes needtr("변경할 인원을 입력해주세요.","Please enter the headcount you want.");
+	mes needtr("예: 10 입력 시 10 vs 10 기준","Example: enter 10 for a 10 vs 10 match");
 	next;
 
 	input .@count;
 
 	if (.@count < 0 || .@count > 30) {
-		mes "[전장 관리인]";
-		mes "인원은 5명 이상 30명 이하로 입력해주세요.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("인원은 5명 이상 30명 이하로 입력해주세요.","Please enter a headcount from 5 to 30 players.");
 		close;
 	}
 
@@ -2355,15 +2440,16 @@ function	script	F_BG_Menu_CountAdjust	{
 	$BG_SHORT_REQ_NAME$ = "";
 	$BG_SHORT_REQ_TIME = 0;
 
-	announce "[전장 안내] 전장 시작 인원이 " + $BG_User_Count + " vs " + $BG_User_Count + " 으로 조정되었습니다.", bc_map;
+	mapannouncelang strcharinfo(3), "[전장 안내] 전장 시작 인원이 " + $BG_User_Count + " vs " + $BG_User_Count + " 으로 조정되었습니다.",
+		"[Battleground Notice] The battleground start headcount has been adjusted to " + $BG_User_Count + " vs " + $BG_User_Count + ".", bc_map;
 	donpcevent "티에라 대기실 갱신#bat_a01::OnRefresh";
 	donpcevent "플라비우스 대기실 갱신#bat_b01::OnRefresh";
 	donpcevent "KVM 대기실 갱신#bat_c01::OnRefresh";
-	mes "[전장 관리인]";
-	mes "전장 시작 인원이 조정되었습니다.";
-	mes "기본 필요 인원: ^0055FF" + $BG_User_Count + "^000000명";
-	mes "기욤 필요 인원: ^0055FF" + $BG_Guillaume_Count + "^000000명";
-	mes "크루아 필요 인원: ^0055FF" + $BG_Croix_Count + "^000000명";
+	mes needtr("[전장 관리인]","[Battleground Manager]");
+	mes needtr("전장 시작 인원이 조정되었습니다.","The battleground start headcount has been adjusted.");
+	mes needtr("기본 필요 인원: ^0055FF","Base requirement: ^0055FF") + $BG_User_Count + needtr("^000000명","^000000 players");
+	mes needtr("기욤 필요 인원: ^0055FF","Guillaume requirement: ^0055FF") + $BG_Guillaume_Count + needtr("^000000명","^000000 players");
+	mes needtr("크루아 필요 인원: ^0055FF","Croix requirement: ^0055FF") + $BG_Croix_Count + needtr("^000000명","^000000 players");
 	close;
 }
 
@@ -2376,44 +2462,44 @@ function	script	F_BG_Menu_CountAdjust	{
 //============================================================
 function	script	F_BG_Menu_ShortStart	{
 	if ($@BG_RM_CYCLE_ACTIVE) {
-		mes "[전장 관리인]";
-		mes "랜덤 매칭 풀사이클 진행 중에는 인원 부족 완화 설정을 변경할 수 없습니다.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("랜덤 매칭 풀사이클 진행 중에는 인원 부족 완화 설정을 변경할 수 없습니다.","The headcount relief setting cannot be changed while a random match full cycle is running.");
 		close;
 	}
 
 	if ($@BG_READY_TYPE) {
-		mes "[전장 관리인]";
-		mes "전장 입장 준비 중에는 인원 부족 완화 신청을 변경할 수 없습니다.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("전장 입장 준비 중에는 인원 부족 완화 신청을 변경할 수 없습니다.","The headcount relief request cannot be changed during battleground entry preparation.");
 		close;
 	}
 
 	if (!callfunc("F_BG_IsRegisteredLeader")) {
-		mes "[전장 관리인]";
-		mes "인원 부족 완화 신청은 파티장만 가능합니다.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("인원 부족 완화 신청은 파티장만 가능합니다.","Only a party leader can request headcount relief.");
 		close;
 	}
 	
 	if ($@TierraBG1 || $@FlaviusBG1 || $@KvM01BG || $@BG_READY_TYPE)
 	{
-		mes "[전장 관리인]";
-		mes "진행 중엔 등록할 수 없습니다.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("진행 중엔 등록할 수 없습니다.","You cannot register while it is running.");
 		close;
 	}
 
 	if ($BG_User_Count <= 0) {
-		mes "[전장 관리인]";
-		mes "전장 기본 인원이 설정되어 있지 않습니다.";
-		mes "먼저 '전장 인원 조정' 메뉴에서 인원을 설정해주세요.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("전장 기본 인원이 설정되어 있지 않습니다.","The base battleground headcount has not been set.");
+		mes needtr("먼저 '전장 인원 조정' 메뉴에서 인원을 설정해주세요.","Please set it first in the 'Adjust Battleground Headcount' menu.");
 		close;
 	}
 
 	.@my_team$ = callfunc("F_BG_GetMyRegisteredTeam$");
 
 	if (.@my_team$ == "") {
-		mes "[전장 관리인]";
-		mes "등록된 전장 파티장만 사용할 수 있습니다.";
-		mes "먼저 '전장 파티장 등록' 메뉴에서";
-		mes "기욤 또는 크루아 팀 파티장으로 등록해주세요.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("등록된 전장 파티장만 사용할 수 있습니다.","Only a registered battleground party leader can use this.");
+		mes needtr("먼저 '전장 파티장 등록' 메뉴에서","First, in the 'Register Battleground Party Leader' menu,");
+		mes needtr("기욤 또는 크루아 팀 파티장으로 등록해주세요.","please register as a Guillaume or Croix team party leader.");
 		close;
 	}
 
@@ -2430,13 +2516,16 @@ function	script	F_BG_Menu_ShortStart	{
 
 	// 이미 상대 팀에서 신청한 상태라면 승낙/거절 처리
 	if ($BG_SHORT_PENDING && $BG_SHORT_TARGET_TEAM$ == .@my_team$) {
-		mes "[전장 관리인]";
-		mes "^0055FF" + $BG_SHORT_REQ_TEAM$ + "^000000 팀에서";
-		mes "인원 부족 완화 시작을 신청했습니다.";
-		mes "신청자: ^0055FF" + $BG_SHORT_REQ_NAME$ + "^000000";
+		.@p95_req_team_en$ = (($BG_SHORT_REQ_TEAM$ == "기욤") ? "Guillaume" : (($BG_SHORT_REQ_TEAM$ == "크루아") ? "Croix" : $BG_SHORT_REQ_TEAM$));
+		.@p95_short_target_en$ = (($BG_SHORT_TARGET_TEAM$ == "기욤") ? "Guillaume" : (($BG_SHORT_TARGET_TEAM$ == "크루아") ? "Croix" : $BG_SHORT_TARGET_TEAM$));
+		.@p95_my_team_en$ = ((.@my_team$ == "기욤") ? "Guillaume" : ((.@my_team$ == "크루아") ? "Croix" : .@my_team$));
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("^0055FF" + $BG_SHORT_REQ_TEAM$ + "^000000 팀에서", "The ^0055FF" + .@p95_req_team_en$ + "^000000 team");
+		mes needtr("인원 부족 완화 시작을 신청했습니다.","has requested to start headcount relief.");
+		mes needtr("신청자: ^0055FF" + $BG_SHORT_REQ_NAME$ + "^000000", "Requested by: ^0055FF" + $BG_SHORT_REQ_NAME$ + "^000000");
 		next;
 
-		switch(select("승낙한다:거절한다")) {
+		switch(select(needtr("승낙한다:거절한다","Accept:Decline"))) {
 		case 1:
 			if ($BG_SHORT_REQ_TEAM$ == "기욤") {
 				$BG_Guillaume_Count = $BG_User_Count - 1;
@@ -2447,13 +2536,15 @@ function	script	F_BG_Menu_ShortStart	{
 				$BG_Guillaume_Count = $BG_User_Count;
 			}
 			else {
-				mes "[전장 관리인]";
-				mes "신청 팀 정보가 올바르지 않습니다.";
+				mes needtr("[전장 관리인]","[Battleground Manager]");
+				mes needtr("신청 팀 정보가 올바르지 않습니다.","The requesting team information is not valid.");
 				close;
 			}
 
-			announce "[전장 안내] " + $BG_SHORT_TARGET_TEAM$ + " 팀 파티장이 인원 부족 완화 시작을 승인했습니다.", bc_map;
-			announce "[전장 안내] " + $BG_SHORT_REQ_TEAM$ + " 팀은 필요 인원이 1명 완화됩니다.", bc_map;
+			mapannouncelang strcharinfo(3), "[전장 안내] " + $BG_SHORT_TARGET_TEAM$ + " 팀 파티장이 인원 부족 완화 시작을 승인했습니다.",
+				"[Battleground Notice] The " + .@p95_short_target_en$ + " team's party leader approved the start of headcount relief.", bc_map;
+			mapannouncelang strcharinfo(3), "[전장 안내] " + $BG_SHORT_REQ_TEAM$ + " 팀은 필요 인원이 1명 완화됩니다.",
+				"[Battleground Notice] The " + .@p95_req_team_en$ + " team's requirement is lowered by 1 player.", bc_map;
 
 			$BG_SHORT_PENDING = 0;
 			$BG_SHORT_REQ_TEAM$ = "";
@@ -2465,15 +2556,16 @@ function	script	F_BG_Menu_ShortStart	{
 			donpcevent "플라비우스 대기실 갱신#bat_b01::OnRefresh";
 			donpcevent "KVM 대기실 갱신#bat_c01::OnRefresh";
 
-			mes "[전장 관리인]";
-			mes "인원 부족 완화 신청을 승인했습니다.";
-			mes "현재 필요 인원";
-			mes "기욤: ^0055FF" + $BG_Guillaume_Count + "^000000명";
-			mes "크루아: ^0055FF" + $BG_Croix_Count + "^000000명";
+			mes needtr("[전장 관리인]","[Battleground Manager]");
+			mes needtr("인원 부족 완화 신청을 승인했습니다.","You approved the headcount relief request.");
+			mes needtr("현재 필요 인원","Current requirement");
+			mes needtr("기욤: ^0055FF","Guillaume: ^0055FF") + $BG_Guillaume_Count + needtr("^000000명","^000000 players");
+			mes needtr("크루아: ^0055FF","Croix: ^0055FF") + $BG_Croix_Count + needtr("^000000명","^000000 players");
 			close;
 
 		case 2:
-			announce "[전장 안내] " + .@my_team$ + " 팀 파티장이 인원 부족 완화 신청을 거절했습니다.", bc_map;
+			mapannouncelang strcharinfo(3), "[전장 안내] " + .@my_team$ + " 팀 파티장이 인원 부족 완화 신청을 거절했습니다.",
+				"[Battleground Notice] The " + .@p95_my_team_en$ + " team's party leader declined the headcount relief request.", bc_map;
 
 			$BG_SHORT_PENDING = 0;
 			$BG_SHORT_REQ_TEAM$ = "";
@@ -2481,25 +2573,27 @@ function	script	F_BG_Menu_ShortStart	{
 			$BG_SHORT_REQ_NAME$ = "";
 			$BG_SHORT_REQ_TIME = 0;
 
-			mes "[전장 관리인]";
-			mes "인원 부족 완화 신청을 거절했습니다.";
+			mes needtr("[전장 관리인]","[Battleground Manager]");
+			mes needtr("인원 부족 완화 신청을 거절했습니다.","You declined the headcount relief request.");
 			close;
 		}
 	}
 
 	// 본인이 이미 신청한 상태
 	if ($BG_SHORT_PENDING && $BG_SHORT_REQ_TEAM$ == .@my_team$) {
-		mes "[전장 관리인]";
-		mes "이미 상대 팀의 승낙을 기다리고 있습니다.";
-		mes "신청 팀: ^0055FF" + $BG_SHORT_REQ_TEAM$ + "^000000";
-		mes "승낙 대기 팀: ^0055FF" + $BG_SHORT_TARGET_TEAM$ + "^000000";
+		.@p95_req_team_en$ = (($BG_SHORT_REQ_TEAM$ == "기욤") ? "Guillaume" : (($BG_SHORT_REQ_TEAM$ == "크루아") ? "Croix" : $BG_SHORT_REQ_TEAM$));
+		.@p95_short_target_en$ = (($BG_SHORT_TARGET_TEAM$ == "기욤") ? "Guillaume" : (($BG_SHORT_TARGET_TEAM$ == "크루아") ? "Croix" : $BG_SHORT_TARGET_TEAM$));
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("이미 상대 팀의 승낙을 기다리고 있습니다.","You are already waiting for the opposing team to accept.");
+		mes needtr("신청 팀: ^0055FF" + $BG_SHORT_REQ_TEAM$ + "^000000", "Requesting team: ^0055FF" + .@p95_req_team_en$ + "^000000");
+		mes needtr("승낙 대기 팀: ^0055FF" + $BG_SHORT_TARGET_TEAM$ + "^000000", "Waiting for acceptance from: ^0055FF" + .@p95_short_target_en$ + "^000000");
 		close;
 	}
 
 	// 다른 신청이 이미 존재
 	if ($BG_SHORT_PENDING) {
-		mes "[전장 관리인]";
-		mes "이미 처리 대기 중인 인원 부족 완화 신청이 있습니다.";
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("이미 처리 대기 중인 인원 부족 완화 신청이 있습니다.","There is already a headcount relief request waiting to be handled.");
 		close;
 	}
 
@@ -2509,26 +2603,28 @@ function	script	F_BG_Menu_ShortStart	{
 	else if (.@my_team$ == "크루아")
 		.@target_team$ = "기욤";
 
-	mes "[전장 관리인]";
-	mes "현재 전장 기본 인원은";
-	mes "^0055FF" + $BG_User_Count + " vs " + $BG_User_Count + "^000000 입니다.";
+	mes needtr("[전장 관리인]","[Battleground Manager]");
+	mes needtr("현재 전장 기본 인원은","The current base battleground headcount is");
+	mes "^0055FF" + $BG_User_Count + " vs " + $BG_User_Count + needtr("^000000 입니다.","^000000.");
 	next;
 
-	mes "[전장 관리인]";
-	mes "인원 부족 완화 신청을 진행하면,";
-	mes "상대 팀 파티장의 승낙을 받아";
-	mes "내 팀의 필요 인원을 1명 낮출 수 있습니다.";
+	mes needtr("[전장 관리인]","[Battleground Manager]");
+	mes needtr("인원 부족 완화 신청을 진행하면,","If you go ahead with the headcount relief request,");
+	mes needtr("상대 팀 파티장의 승낙을 받아","and the opposing party leader accepts,");
+	mes needtr("내 팀의 필요 인원을 1명 낮출 수 있습니다.","your team's requirement can be lowered by 1 player.");
 	next;
 
-	mes "[전장 관리인]";
-	mes "신청 팀: ^0055FF" + .@my_team$ + "^000000";
-	mes "승낙 필요 팀: ^0055FF" + .@target_team$ + "^000000";
-	mes "진행하시겠습니까?";
+	.@p95_my_team_en$ = ((.@my_team$ == "기욤") ? "Guillaume" : ((.@my_team$ == "크루아") ? "Croix" : .@my_team$));
+	.@p95_target_team_en$ = ((.@target_team$ == "기욤") ? "Guillaume" : ((.@target_team$ == "크루아") ? "Croix" : .@target_team$));
+	mes needtr("[전장 관리인]","[Battleground Manager]");
+	mes needtr("신청 팀: ^0055FF" + .@my_team$ + "^000000", "Requesting team: ^0055FF" + .@p95_my_team_en$ + "^000000");
+	mes needtr("승낙 필요 팀: ^0055FF" + .@target_team$ + "^000000", "Acceptance needed from: ^0055FF" + .@p95_target_team_en$ + "^000000");
+	mes needtr("진행하시겠습니까?","Do you want to proceed?");
 	next;
 
-	if (select("신청한다:취소한다") == 2) {
-		mes "[전장 관리인]";
-		mes "신청을 취소했습니다.";
+	if (select(needtr("신청한다:취소한다","Request it:Cancel")) == 2) {
+		mes needtr("[전장 관리인]","[Battleground Manager]");
+		mes needtr("신청을 취소했습니다.","The request has been cancelled.");
 		close;
 	}
 
@@ -2538,12 +2634,14 @@ function	script	F_BG_Menu_ShortStart	{
 	$BG_SHORT_REQ_NAME$ = strcharinfo(0);
 	$BG_SHORT_REQ_TIME = .@now;
 
-	announce "[전장 안내] " + .@my_team$ + " 팀에서 인원 부족 완화 시작을 신청했습니다.", bc_map;
-	announce "[전장 안내] " + .@target_team$ + " 팀 파티장은 전장 관리인을 통해 승인 또는 거절할 수 있습니다.", bc_map;
+	mapannouncelang strcharinfo(3), "[전장 안내] " + .@my_team$ + " 팀에서 인원 부족 완화 시작을 신청했습니다.",
+		"[Battleground Notice] The " + .@p95_my_team_en$ + " team has requested to start headcount relief.", bc_map;
+	mapannouncelang strcharinfo(3), "[전장 안내] " + .@target_team$ + " 팀 파티장은 전장 관리인을 통해 승인 또는 거절할 수 있습니다.",
+		"[Battleground Notice] The " + .@p95_target_team_en$ + " team's party leader can approve or decline through the Battleground Manager.", bc_map;
 
-	mes "[전장 관리인]";
-	mes "인원 부족 완화 신청이 완료되었습니다.";
-	mes "^0055FF" + .@target_team$ + "^000000 팀 파티장의 승낙을 기다려주세요.";
+	mes needtr("[전장 관리인]","[Battleground Manager]");
+	mes needtr("인원 부족 완화 신청이 완료되었습니다.","Your headcount relief request has been submitted.");
+	mes needtr("^0055FF" + .@target_team$ + "^000000 팀 파티장의 승낙을 기다려주세요.", "Please wait for the ^0055FF" + .@p95_target_team_en$ + "^000000 team's party leader to accept.");
 	close;
 }
 
@@ -2594,18 +2692,18 @@ function	script	F_BG_GetMyTeamName$	{
 }
 
 -	script	Maroll Battle Recruiter::BatRecruit	728,{
-	mes "[마롤 전투 모집관]";
+	mes needtr("[마롤 전투 모집관]","[Maroll Battle Recruiter]");
 	mes needtr("안녕하세요, 모험가님.", "Good day, adventurer.");
-	mes "저는 머나먼 나라 마롤 왕국에서 온 기사입니다.";
+	mes needtr("저는 머나먼 나라 마롤 왕국에서 온 기사입니다.","I'm a knight from a far country called Maroll Kingdom.");
 	next;
-	mes "[마롤 전투 모집관]";
-	mes "현재 왕국의 두 왕자가 마롤 왕좌를 놓고 다투고 있으며, 당신과 같은 경험 많은 병사가 필요합니다.";
-	mes "마롤 왕국의 왕자 중 한 명에게 당신의 힘을 빌려주는 건 어떠세요?";
+	mes needtr("[마롤 전투 모집관]","[Maroll Battle Recruiter]");
+	mes needtr("현재 왕국의 두 왕자가 마롤 왕좌를 놓고 다투고 있으며, 당신과 같은 경험 많은 병사가 필요합니다.","The two princes of the kingdom are now battling for the throne of Maroll, and are in need of experienced soldiers like you.");
+	mes needtr("마롤 왕국의 왕자 중 한 명에게 당신의 힘을 빌려주는 건 어떠세요?","How would you like to lend your power to one of the princes in the Maroll Kingdom?");
 	next;
-	switch(select("Join:가입하지 마세요")) {
+	switch(select(needtr("Join:가입하지 마세요","Join:Don't Join"))) {
 	case 1:
-		mes "[마롤 전투 모집관]";
-		mes "전쟁의 신이 당신을 축복하길.";
+		mes needtr("[마롤 전투 모집관]","[Maroll Battle Recruiter]");
+		mes needtr("전쟁의 신이 당신을 축복하길.","May the war god bless you.");
 		close2;
 		getmapxy(.@mapname$,.@x,.@y,BL_NPC);
 		if (.@mapname$ == "prontera")
@@ -2629,8 +2727,8 @@ function	script	F_BG_GetMyTeamName$	{
 		warp "bat_room",154,150;
 		break;
 	case 2:
-		mes "[마롤 전투 모집관]";
-		mes "저는 더 많은 병사들을 위해 항상 이곳에 주둔할 것입니다. 언제든 관심 있으시면 편하게 다시 오세요.";
+		mes needtr("[마롤 전투 모집관]","[Maroll Battle Recruiter]");
+		mes needtr("저는 더 많은 병사들을 위해 항상 이곳에 주둔할 것입니다. 언제든 관심 있으시면 편하게 다시 오세요.","I will always be stationed here looking for more soldiers. Come back any time you are interested.");
 		close;
 	}
 	end;
@@ -2776,9 +2874,9 @@ bat_room,1,151,3	script	Switch#batgnd	81,{
 	} else if (.@i == 0) {
 		end;
 	} else {
-		mes "도와드릴까요?";
+		mes needtr("도와드릴까요?","May I help you?");
 		next;
-		switch(select("근접전장:개방된 전장:a01을 재설정합니다:b01 재설정:a02를 재설정합니다:b02 재설정")) {
+		switch(select(needtr("근접전장:개방된 전장:a01을 재설정합니다:b01 재설정:a02를 재설정합니다:b02 재설정","Closed battlegrounds:Opened battlegrounds:Reset a01:Reset b01:Reset a02:Reset b02"))) {
 		case 1:
 			disablenpc "Tierra Gorge Officer#01a";
 			disablenpc "Tierra Gorge Officer#02a";
@@ -2831,14 +2929,14 @@ function	script	F_BG_Badge	{
 		set .@badge,7828; //BF_Badge1
 		set .@amount_win, 2;
 		set .@amount_lose,1;
-		set .@amount_win_cash, 10;
-		set .@amount_lose_cash, 7;
+		set .@amount_win_cash, 15;
+		set .@amount_lose_cash, 11;
 	} else if (.@bg_type$ == "Flavius") {
 		set .@badge,7829; //BF_Badge2
 		set .@amount_win,3;
 		set .@amount_lose,2;
-		set .@amount_win_cash, 20;
-		set .@amount_lose_cash, 15;
+		set .@amount_win_cash, 30;
+		set .@amount_lose_cash, 23;
 	} else
 		return;
 
@@ -2847,37 +2945,44 @@ function	script	F_BG_Badge	{
 		set .@cashamount, .@amount_win_cash;
 		if (.@team$ == "Guillaume") {
 			mes needtr("[액슬 로즈]", "[Axl Rose]");
-			mes "복되신 기욤이시여!";
+			mes needtr("복되신 기욤이시여!","Blessed Guillaume!");
 		} else if (.@team$ == "Croix") {
-			mes "[스완데리]";
-			mes "축복받은 크루아!";
+			mes needtr("[스완데리]","[Swandery]");
+			mes needtr("축복받은 크루아!","Blessed Croix!");
 		}
-		mes "우리의 영광스러운 승리를 만끽합시다!";
-		mes strcharinfo(0)+"그것은 승리를 나타내는 표시입니다.";
+		mes needtr("우리의 영광스러운 승리를 만끽합시다!","Let's enjoy our glorious victory!");
+		.@p95_name$ = strcharinfo(0);
+		mes needtr(.@p95_name$+"그것은 승리를 나타내는 표시입니다.", .@p95_name$ + ", it's a sign reflecting victory.");
 	} else {
 		set .@amount, .@amount_lose;
 		set .@cashamount, .@amount_lose_cash;
 		set #BATTLEGROUND_POINT, #BATTLEGROUND_POINT + 3;
 		if (.@team$ == "Guillaume") {
 			mes needtr("[액슬 로즈]", "[Axl Rose]");
-			mes "당신은 졌지만, 이 싸움에 대한 당신의 헌신은 훌륭합니다.";
-			mes "이것은 기욤 마롤로가 당신의 헌신적인 노력에 대한 보상으로 주는 것입니다!";
-			mes "이번 패배를 교훈 삼아 다음번엔 반드시 이길 수 있을 거야.";
+			mes needtr("당신은 졌지만, 이 싸움에 대한 당신의 헌신은 훌륭합니다.","You lost, but you're dedicated to this battle.");
+			mes needtr("이것은 기욤 마롤로가 당신의 헌신적인 노력에 대한 보상으로 주는 것입니다!","This is a reward for your great dedication by Guillaume Marollo!");
+			mes needtr("이번 패배를 교훈 삼아 다음번엔 반드시 이길 수 있을 거야.","Learn from this defeat and you will surely win next time.");
 		} else if (.@team$ == "Croix") {
-			mes "[스완데리]";
-			mes "Oh, "+strcharinfo(0)+" 슬퍼하지 마세요.";
-			mes "비록 이기지는 못했지만, 우리는 최선을 다했습니다.";
-			mes "이것은 크루아에서 보낸 왕실 선물입니다. 이번 전투를 잊지 마십시오. 다음 전투에서는 반드시 승리할 것입니다.";
+			mes needtr("[스완데리]","[Swandery]");
+			.@p95_name$ = strcharinfo(0);
+			mes needtr("Oh, "+.@p95_name$+" 슬퍼하지 마세요.", "Oh, " + .@p95_name$ + " Don't be sad.");
+			mes needtr("비록 이기지는 못했지만, 우리는 최선을 다했습니다.","Even though we didn't win, we did our best.");
+			mes needtr("이것은 크루아에서 보낸 왕실 선물입니다. 이번 전투를 잊지 마십시오. 다음 전투에서는 반드시 승리할 것입니다.","This is a Royal gift from Croix, and please don't forget this battle. We will win the next one.");
 		}
 	}
 	close2;
 
-	.@bonusmount = ($BG_User_Count - 5) * 2;
+	// NEED: 전장 캐시 1.5배. 기본 금화 상수와 인원 보정을 함께 1.5배로 올린다.
+	.@bonusmount = ($BG_User_Count - 5) * 3;
 	getitem .@badge,.@amount + .@partyleaderbonus;
 
 	.@gold_amount = .@cashamount + .@bonusmount;
 	.@gold_amount = callfunc("F_NEED_GoldEvent_BGAmount", .@gold_amount);
 	getitem 399990, .@gold_amount;
+
+	// NEED 2026 추석 이벤트 : 송편 재료 지급 + 풀사이클 진행 기록
+	.@chuseok_stage = (.@bg_type$ == "Tierra") ? 1 : 2;
+	callfunc "F_NEED_Chuseok_BG_Reward", .@chuseok_stage;
 
 	return;
 }
@@ -2888,43 +2993,43 @@ OnTouch:
 	if (#NEED_BG_RULE_AGREE)
 		end;
 		
-	mes "[전장 이용 안내]";
-	mes "NEED 서버는 전장의 밸런스를 위해 다음 아이템은 전장에서 제한 됩니다.";
+	mes needtr("[전장 이용 안내]","[Battleground Guide]");
+	mes needtr("NEED 서버는 전장의 밸런스를 위해 다음 아이템은 전장에서 제한 됩니다.","For battleground balance, the NEED server restricts the following items in battlegrounds.");
 	mes " ";
-	mes "^FF00001. 보스 카드";
-	mes "2. 장비 쉐도우";
-	mes "3. 인챈트 스톤^000000";
+	mes needtr("^FF00001. 보스 카드","^FF00001. Boss Cards");
+	mes needtr("2. 장비 쉐도우","2. Shadow Gear");
+	mes needtr("3. 인챈트 스톤^000000","3. Enchant Stones^000000");
 	next;
-	mes "[전장 이용 안내]";
-	mes "전장 콘텐츠 이용 전";
-	mes "아래 내용을 반드시 확인해주세요.";
+	mes needtr("[전장 이용 안내]","[Battleground Guide]");
+	mes needtr("전장 콘텐츠 이용 전","Before you use battleground content,");
+	mes needtr("아래 내용을 반드시 확인해주세요.","please read the following carefully.");
 	mes "";
-	mes "^FF0000다음 행위는 경고 없이 제재 처리될 수 있습니다.^000000";
+	mes needtr("^FF0000다음 행위는 경고 없이 제재 처리될 수 있습니다.^000000","^FF0000The following may be penalised without warning.^000000");
 	mes "";
-	mes "1. 불법 프로그램 사용";
-	mes "2. 게임 진행 방해";
-	mes "3. 다중 클라이언트 사용";
-	mes "4. 기타 비매너 행동";
+	mes needtr("1. 불법 프로그램 사용","1. Using illegal programs");
+	mes needtr("2. 게임 진행 방해","2. Obstructing play");
+	mes needtr("3. 다중 클라이언트 사용","3. Using multiple clients");
+	mes needtr("4. 기타 비매너 행동","4. Other unsportsmanlike behaviour");
 	setdialogsize(250,250);
 	next;
 
-	mes "[전장 이용 안내]";
-	mes "위 내용을 확인하였으며,";
-	mes "전장 이용 규칙에 동의하시는 경우";
-	mes "아래 입력창에";
+	mes needtr("[전장 이용 안내]", "[Battleground Guide]");
+	mes needtr("위 내용을 확인하였으며,", "If you have read the above and");
+	mes needtr("전장 이용 규칙에 동의하시는 경우", "agree to the battleground rules,");
+	mes needtr("아래 입력창에", "type the following into the input box below,");
 	mes "";
-	mes "^0000FF동의합니다^000000";
+	mes needtr("^0000FF동의합니다^000000", "^0000FFI agree^000000");
 	mes "";
-	mes "를 정확히 입력해주세요.";
+	mes needtr("를 정확히 입력해주세요.", "exactly as shown.");
 	next;
 	input .@agree$;
 
-	if (.@agree$ != "동의합니다") {
-		mes "[전장 이용 안내]";
-		mes "입력 문구가 일치하지 않습니다.";
+	if (.@agree$ != "동의합니다" && .@agree$ != "I agree") {
+		mes needtr("[전장 이용 안내]","[Battleground Guide]");
+		mes needtr("입력 문구가 일치하지 않습니다.","The text you entered does not match.");
 		mes "";
-		mes "전장 이용 규칙에 동의하지 않아";
-		mes "이전 위치로 이동됩니다.";
+		mes needtr("전장 이용 규칙에 동의하지 않아","Because you did not agree to the battleground rules,");
+		mes needtr("이전 위치로 이동됩니다.","you are being moved back to your previous location.");
 		close2;
 		warp "SavePoint",0,0;
 		end;
@@ -2932,9 +3037,9 @@ OnTouch:
 
 	#NEED_BG_RULE_AGREE = 1;
 
-	mes "[전장 이용 안내]";
-	mes "동의가 완료되었습니다.";
+	mes needtr("[전장 이용 안내]","[Battleground Guide]");
+	mes needtr("동의가 완료되었습니다.","Your agreement is complete.");
 	mes "";
-	mes "이제 전장 대기실을 이용할 수 있습니다.";
+	mes needtr("이제 전장 대기실을 이용할 수 있습니다.","You can now use the battleground waiting room.");
 	close;
 }

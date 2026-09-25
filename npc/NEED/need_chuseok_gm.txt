@@ -1,0 +1,200 @@
+//============================================================
+// NEED 2026 추석 송편 이벤트 - 운영 스위치 관리
+//============================================================
+//= GM(60+) 전용 @chuseokgm.
+//= 여름 이벤트 @summergm 과 동일하게 현재 런타임 상태를 그대로 보여주고,
+//= 운영 중 즉시 켜고 끌 수 있는 스위치만 토글한다.
+//=
+//= battle conf (conf/battle/need_world_drop.conf)
+//=   need_chuseok_hunt_enable           사냥 전체
+//=   need_chuseok_hunt_material_enable  송편 재료 월드 드롭
+//=   need_chuseok_hunt_honey_enable     꿀송편 사냥 드롭
+//=   -> setbattleflag 로 즉시 반영된다. 서버 재시작 후에도 유지하려면
+//=      conf 파일 값도 함께 수정해야 한다.
+//=
+//= script 전역
+//=   $NEED_CHUSEOK_EVENT_ON       추석 이벤트 전체
+//=   $NEED_CHUSEOK_BG_MATERIAL_ON 전장 송편 재료 지급
+//=   $NEED_CHUSEOK_BG_HONEY_ON    전장 꿀송편 판정
+//=   $NEED_CHUSEOK_CRAFT_ON       송편 제작 NPC
+//=   $NEED_CHUSEOK_SHOP_ON        송편 교환 NPC
+//============================================================
+
+-	script	need_chuseok_gm	-1,{
+	if (getgmlevel() < 60) {
+		mes "[NEED 추석 이벤트 관리]";
+		mes "GM(60+) 전용 기능입니다.";
+		close;
+	}
+	callsub S_Main;
+	end;
+
+OnCommand:
+	if (getgmlevel() < 60) end;
+	callsub S_Main;
+	end;
+
+OnInit:
+	bindatcmd "chuseokgm", "need_chuseok_gm::OnCommand", 60, 60;
+	end;
+
+S_Main:
+	while (1) {
+		.@sel = select(
+			"[전체 상태 보기]",
+			"[추석 이벤트 전체 ON/OFF]",
+			"[사냥 보상 관리]",
+			"[전장 보상 관리]",
+			"[NPC 관리]",
+			"[닫기]" );
+		if (.@sel == 1) callsub S_Board;
+		else if (.@sel == 2) callsub S_Master;
+		else if (.@sel == 3) callsub S_Hunt;
+		else if (.@sel == 4) callsub S_BG;
+		else if (.@sel == 5) callsub S_Npc;
+		else break;
+	}
+	return;
+
+S_Board:
+	.@hunt = getbattleflag("need_chuseok_hunt_enable");
+	.@mat = getbattleflag("need_chuseok_hunt_material_enable");
+	.@honey = getbattleflag("need_chuseok_hunt_honey_enable");
+	.@mateff = (.@hunt && .@mat);
+	.@honeyeff = (.@hunt && .@honey);
+
+	.@wc = 0;
+	if (!$NEED_CHUSEOK_EVENT_ON) {
+		if (.@mateff) { .@warn$[.@wc] = "이벤트 전체가 OFF 인데 재료 월드 드롭이 활성입니다."; .@wc++; }
+		if (.@honeyeff) { .@warn$[.@wc] = "이벤트 전체가 OFF 인데 꿀송편 사냥 드롭이 활성입니다."; .@wc++; }
+	}
+	else {
+		if (!.@mateff) { .@warn$[.@wc] = "이벤트 진행 중이지만 재료 월드 드롭이 비활성입니다."; .@wc++; }
+		if (!$NEED_CHUSEOK_CRAFT_ON) { .@warn$[.@wc] = "이벤트 진행 중이지만 제작 NPC 가 OFF 입니다."; .@wc++; }
+		if (!$NEED_CHUSEOK_SHOP_ON) { .@warn$[.@wc] = "이벤트 진행 중이지만 교환 NPC 가 OFF 입니다."; .@wc++; }
+	}
+
+	mes "[NEED 추석 이벤트 관리]";
+	mes "서버 시각 : " + gettimestr("%Y-%m-%d %H:%M:%S", 21);
+	mes "추석 이벤트 전체 : " + callfunc("F_NCGM_OO", $NEED_CHUSEOK_EVENT_ON);
+	if (.@wc > 0) mes "현재 경고 : ^FF9900" + .@wc + "건^000000";
+	else mes "현재 경고 : 0건";
+	mes "^999999----------------------------^000000";
+	mes "^FFCC00[사냥]^000000";
+	mes " [CONFIG] 사냥 전체     : " + callfunc("F_NCGM_OO", .@hunt);
+	mes " [CONFIG] 재료 월드드롭 : " + callfunc("F_NCGM_OO", .@mat) + " / 실제 " + callfunc("F_NCGM_ST", .@mateff);
+	mes " [CONFIG] 꿀송편 드롭   : " + callfunc("F_NCGM_OO", .@honey) + " / 실제 " + callfunc("F_NCGM_ST", .@honeyeff);
+	mes "   ^999999재료 : 찹쌀반죽 4% x4 / 솔잎 4% x1, 꿀송편 0.05%^000000";
+	mes "^FFCC00[전장]^000000";
+	mes " [전역] 송편 재료 지급 : " + callfunc("F_NCGM_OO", $NEED_CHUSEOK_BG_MATERIAL_ON);
+	mes " [전역] 꿀송편 판정    : " + callfunc("F_NCGM_OO", $NEED_CHUSEOK_BG_HONEY_ON);
+	mes "   ^999999티에라/플라비우스 2개분, KVM 3개분 / 풀사이클 5%^000000";
+	mes "^FFCC00[교환 한도]^000000";
+	mes " 대축 : 송편 100개 / 계정·IP 각 주 5개";
+	mes "   ^999999초기화 " + callfunc("F_NEED_Chuseok_WeekResetStr$") + " (현재 주기 " + callfunc("F_NEED_Chuseok_WeekKey") + ")^000000";
+	mes " 아리아 의상 상자 : 송편 300개 / 계정·IP 각 이벤트 1개";
+	mes "   ^999999원장 need_chuseok_exchange_limit / 이력 need_chuseok_exchange_log^000000";
+	mes "^FFCC00[NPC]^000000";
+	mes " [전역] 송편 제작 NPC : " + callfunc("F_NCGM_OO", $NEED_CHUSEOK_CRAFT_ON);
+	mes " [전역] 송편 교환 NPC : " + callfunc("F_NCGM_OO", $NEED_CHUSEOK_SHOP_ON);
+	if (.@wc > 0) {
+		mes "^999999----------------------------^000000";
+		mes "^FF9900[경고 목록]^000000";
+		for (.@i = 0; .@i < .@wc; .@i++)
+			mes " - ^FF9900" + .@warn$[.@i] + "^000000";
+	}
+	next;
+	return;
+
+S_Master:
+	mes "[추석 이벤트 전체]";
+	mes "현재 상태 : " + callfunc("F_NCGM_OO", $NEED_CHUSEOK_EVENT_ON);
+	mes " ";
+	mes "전체 스위치를 바꾸면 아래 항목이 한 번에 같은 값으로 설정됩니다.";
+	mes "- 전장 송편 재료 / 전장 꿀송편";
+	mes "- 송편 제작 NPC / 송편 교환 NPC";
+	mes "- 사냥 전체 / 재료 월드드롭 / 꿀송편 사냥 드롭 (battle conf)";
+	mes " ";
+	mes "^FF9900개별 조정은 각 하위 메뉴에서 다시 할 수 있습니다.^000000";
+	next;
+	if (select("상태 변경:돌아가기") == 1) {
+		.@on = !$NEED_CHUSEOK_EVENT_ON;
+		$NEED_CHUSEOK_EVENT_ON = .@on;
+		$NEED_CHUSEOK_BG_MATERIAL_ON = .@on;
+		$NEED_CHUSEOK_BG_HONEY_ON = .@on;
+		$NEED_CHUSEOK_CRAFT_ON = .@on;
+		$NEED_CHUSEOK_SHOP_ON = .@on;
+		setbattleflag("need_chuseok_hunt_enable", .@on);
+		setbattleflag("need_chuseok_hunt_material_enable", .@on);
+		setbattleflag("need_chuseok_hunt_honey_enable", .@on);
+		mes "[추석 이벤트 전체]";
+		mes "변경됨 : " + callfunc("F_NCGM_OO", .@on);
+		mes "^999999battle conf 값은 재시작하면 파일 값으로 돌아갑니다.^000000";
+		next;
+	}
+	return;
+
+S_Hunt:
+	while (1) {
+		.@hunt = getbattleflag("need_chuseok_hunt_enable");
+		.@mat = getbattleflag("need_chuseok_hunt_material_enable");
+		.@honey = getbattleflag("need_chuseok_hunt_honey_enable");
+
+		mes "[추석 사냥 보상]";
+		mes "사냥 전체     : " + callfunc("F_NCGM_OO", .@hunt);
+		mes "재료 월드드롭 : " + callfunc("F_NCGM_OO", .@mat);
+		mes "꿀송편 드롭   : " + callfunc("F_NCGM_OO", .@honey);
+		mes " ";
+		mes "^999999재료/꿀송편은 사냥 전체가 ON 일 때만 동작합니다.^000000";
+		mes "^FF9900setbattleflag 는 즉시 반영되지만 재시작하면 conf 값으로 돌아갑니다.^000000";
+		next;
+		.@sel = select("사냥 전체 변경:재료 월드드롭 변경:꿀송편 드롭 변경:돌아가기");
+		if (.@sel == 4)
+			break;
+		if (.@sel == 1) setbattleflag("need_chuseok_hunt_enable", !.@hunt);
+		else if (.@sel == 2) setbattleflag("need_chuseok_hunt_material_enable", !.@mat);
+		else setbattleflag("need_chuseok_hunt_honey_enable", !.@honey);
+	}
+	return;
+
+S_BG:
+	while (1) {
+		mes "[추석 전장 보상]";
+		mes "송편 재료 지급 : " + callfunc("F_NCGM_OO", $NEED_CHUSEOK_BG_MATERIAL_ON);
+		mes "꿀송편 판정    : " + callfunc("F_NCGM_OO", $NEED_CHUSEOK_BG_HONEY_ON);
+		mes " ";
+		mes "^999999티에라 8/2, 플라비우스 8/2, KVM 12/3 (찹쌀반죽/솔잎)^000000";
+		mes "^999999풀사이클 완료 시 5%, 사냥 꿀송편과 일일 제한 공유^000000";
+		next;
+		.@sel = select("송편 재료 지급 변경:꿀송편 판정 변경:돌아가기");
+		if (.@sel == 3)
+			break;
+		if (.@sel == 1) $NEED_CHUSEOK_BG_MATERIAL_ON = !$NEED_CHUSEOK_BG_MATERIAL_ON;
+		else $NEED_CHUSEOK_BG_HONEY_ON = !$NEED_CHUSEOK_BG_HONEY_ON;
+	}
+	return;
+
+S_Npc:
+	while (1) {
+		mes "[추석 NPC]";
+		mes "송편 제작 NPC : " + callfunc("F_NCGM_OO", $NEED_CHUSEOK_CRAFT_ON);
+		mes "송편 교환 NPC : " + callfunc("F_NCGM_OO", $NEED_CHUSEOK_SHOP_ON);
+		mes " ";
+		mes "^999999두 NPC 모두 추석 이벤트 전체가 ON 이어야 동작합니다.^000000";
+		next;
+		.@sel = select("제작 NPC 변경:교환 NPC 변경:돌아가기");
+		if (.@sel == 3)
+			break;
+		if (.@sel == 1) $NEED_CHUSEOK_CRAFT_ON = !$NEED_CHUSEOK_CRAFT_ON;
+		else $NEED_CHUSEOK_SHOP_ON = !$NEED_CHUSEOK_SHOP_ON;
+	}
+	return;
+}
+
+function	script	F_NCGM_OO	{
+	return (getarg(0)) ? "^009900ON^000000" : "^FF0000OFF^000000";
+}
+
+function	script	F_NCGM_ST	{
+	return (getarg(0)) ? needtr("^009900활성^000000", "^009900Active^000000") : needtr("^FF0000비활성^000000", "^FF0000Inactive^000000");
+}

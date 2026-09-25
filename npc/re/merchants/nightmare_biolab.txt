@@ -214,12 +214,12 @@ lhz_dun_n,143,269,4	script	억울한 혼의 사념#1	4_M_DEATH2,{
 
 S_Exchange:
 	.@size = getargcount();
-	.@menu$ = "이전 메뉴로 돌아간다.:";
+	.@menu$ = needtr("이전 메뉴로 돌아간다.:", "Go back to the previous menu.:");
 	for (.@i = 0; .@i < .@size; .@i++) {
 		if (countitem(getarg(.@i)) < 1)
 			.@menu$ += "^999999" + getitemname(getarg(.@i)) + needtr(" 없음^000000:", ".^000000:");
 		else
-			.@menu$ += getitemname(getarg(.@i)) + " 보유 중:";
+			.@menu$ += getitemname(getarg(.@i)) + needtr(" 보유 중:", " - in stock:");
 	}
 	.@s = select(.@menu$) - 2;
 	if (.@s == -1)
@@ -455,7 +455,7 @@ lhz_dun_n,136,269,6	script	서글픈 혼의 사념#1	4_M_DEATH,{
 			continue;
 		}
 
-		.@menu$ = "이전 메뉴로 돌아간다.:";
+		.@menu$ = needtr("이전 메뉴로 돌아간다.:", "Go back to the previous menu.:");
 		for (.@i = 0; .@i < getarraysize(.@reward); .@i++)
 			.@menu$ += getitemname(.@reward[.@i]) + ":";
 		.@s = select(.@menu$) - 2;
@@ -496,12 +496,12 @@ S_SoulExchange:
 	mes needtr("^FF0000※ 나머지 5종의 혼 중 1종이 동일한 확률로 등장합니다.^000000", "^FF0000* One of the other 5 kinds appears, each with the same chance.^000000");
 	next;
 
-	.@menu$ = "그만둔다.:";
+	.@menu$ = needtr("그만둔다.:", "Quit:");
 	for (.@i = 0; .@i < getarraysize(.@soul_list); ++.@i) {
 		if (countitem(.@soul_list[.@i]) < 2)
-			.@menu$ += "^777777" + getitemname(.@soul_list[.@i]) + " - 2개 미만^000000:";
+			.@menu$ += "^777777" + getitemname(.@soul_list[.@i]) + needtr(" - 2개 미만^000000:", " - fewer than 2^000000:");
 		else
-			.@menu$ += getitemname(.@soul_list[.@i]) + " 2개를 건넨다.:";
+			.@menu$ += getitemname(.@soul_list[.@i]) + needtr(" 2개를 건넨다.:", " - hand over 2:");
 	}
 
 	.@choice = select(.@menu$) - 1;
@@ -593,13 +593,13 @@ S_Make:
 	if (.@is_cloak) {
 		.@material_misc = 20;  // Ghost Chill
 		.@material_energy = 100;
-		.@material_name$ = "망자의 한기";
+		.@material_name$ = needtr("망자의 한기", "Ghost Chill");
 		.@equipment_name$ = "전사자의 망토";
 	}
 	else {
 		.@material_misc = 1;   // Class Soul
 		.@material_energy = 20;
-		.@material_name$ = "혼";
+		.@material_name$ = needtr("혼", "Soul");
 		.@equipment_name$ = "의상 투구";
 	}
 

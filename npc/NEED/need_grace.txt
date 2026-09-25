@@ -24,12 +24,12 @@
 
 lasagna,164,163,6	script	NEED의 은총 관리인	4_F_ARUNA_POP,{
 	while (1) {
-		mes "[NEED의 은총 관리인]";
-		mes "NEED의 은총, 골드 PC방 은총과 주간 편의 이용권을 관리합니다.";
-		mes "원하시는 메뉴를 선택해주세요.";
+		mes needtr("[NEED의 은총 관리인]","[NEED Grace Manager]");
+		mes needtr("NEED의 은총, 골드 PC방 은총과 주간 편의 이용권을 관리합니다.","I look after NEED Grace, Gold PC Room Grace and the weekly convenience passes.");
+		mes needtr("원하시는 메뉴를 선택해주세요.","Please choose a menu.");
 		next;
 
-		switch(select("NEED의 은총 버프:골드 PC방 은총:주간 은총 이용권 구매:보유 은총 확인:이용권 안내:취소")) {
+		switch(select(needtr("NEED의 은총 버프:골드 PC방 은총:주간 은총 이용권 구매:보유 은총 확인:이용권 안내:취소","NEED Grace Buff:Gold PC Room Grace:Buy a Weekly Grace Pass:Check My Grace:Pass Guide:Cancel"))) {
 		case 1:
 			callfunc "NeedGrace_BuffMenu";
 			break;
@@ -98,24 +98,24 @@ function	script	NeedGrace_BuffMenu	{
 	set .@now, gettimetick(2);
 	set .@coin, $@NeedGraceCoin;
 
-	mes "[NEED의 은총]";
-	mes "골드코인으로 캐릭터 단위 기간제 버프를 활성화하거나 연장할 수 있습니다.";
-	mes "골드코인 ^FF00001개당 6시간^000000이 적용됩니다.";
-	mes "보유 골드코인: ^FF0000" + countitem(.@coin) + "개^000000";
+	mes needtr("[NEED의 은총]","[NEED Grace]");
+	mes needtr("골드코인으로 캐릭터 단위 기간제 버프를 활성화하거나 연장할 수 있습니다.","Spend Gold Coins to activate or extend a timed buff on this character.");
+	mes needtr("골드코인 ^FF00001개당 6시간^000000이 적용됩니다.","Each ^FF00001 Gold Coin = 6 hours^000000.");
+	mes needtr("보유 골드코인: ^FF0000", "Gold Coins held: ^FF0000") + countitem(.@coin) + needtr("개^000000", "^000000");
 	next;
 
 	if (NeedGraceUntil > .@now) {
-		mes "[NEED의 은총]";
-		mes "현재 남은 시간:";
-		callfunc "NeedGrace_ShowRemainLine", "NEED의 은총 버프", NeedGraceUntil;
+		mes needtr("[NEED의 은총]","[NEED Grace]");
+		mes needtr("현재 남은 시간:","Current time remaining:");
+		callfunc "NeedGrace_ShowRemainLine", needtr("NEED의 은총 버프","NEED Grace Buff"), NeedGraceUntil;
 		next;
 	}
 
-	switch(select("골드코인 사용하기:뒤로가기")) {
+	switch(select(needtr("골드코인 사용하기:뒤로가기","Use Gold Coins:Back"))) {
 	case 1:
-		mes "[NEED의 은총]";
-		mes "사용할 골드코인 개수를 입력해주세요.";
-		mes "1개 = 6시간";
+		mes needtr("[NEED의 은총]","[NEED Grace]");
+		mes needtr("사용할 골드코인 개수를 입력해주세요.","Enter how many Gold Coins to use.");
+		mes needtr("1개 = 6시간","1 coin = 6 hours");
 		next;
 
 		input .@amount;
@@ -142,44 +142,44 @@ function	script	NeedGrace_GoldPCMenu	{
 
 	set .@available_units, (.@max_seconds - .@remain_seconds) / .@unit_seconds;
 
-	mes "[골드 PC방 은총]";
-	mes "일부 장비의 골드 PC방 전용 옵션을 활성화합니다.";
-	mes "^FF000030분당 " + callfunc("F_InsertComma", .@unit_cost) + " 제니^000000";
-	mes "최대 ^FF000024시간^000000까지 누적할 수 있습니다.";
-	mes "로그아웃 중에는 이용 시간이 감소하지 않습니다.";
+	mes needtr("[골드 PC방 은총]","[Gold PC Room Grace]");
+	mes needtr("일부 장비의 골드 PC방 전용 옵션을 활성화합니다.","Activates the Gold PC Room-only options on some equipment.");
+	mes needtr("^FF000030분당 ", "^FF0000") + callfunc("F_InsertComma", .@unit_cost) + needtr(" 제니^000000", " Zeny per 30 minutes^000000");
+	mes needtr("최대 ^FF000024시간^000000까지 누적할 수 있습니다.","You can stack up to ^FF000024 hours^000000.");
+	mes needtr("로그아웃 중에는 이용 시간이 감소하지 않습니다.","The time does not tick down while you are logged out.");
 	next;
 
-	mes "[골드 PC방 은총]";
-	callfunc "NeedGrace_ShowStatusRemainLine", "현재 남은 시간", .@remain_ms;
+	mes needtr("[골드 PC방 은총]","[Gold PC Room Grace]");
+	callfunc "NeedGrace_ShowStatusRemainLine", needtr("현재 남은 시간","Current time remaining"), .@remain_ms;
 
 	if (.@available_units <= 0) {
-		mes "이미 최대 이용 시간인 24시간이 적용되어 있습니다.";
+		mes needtr("이미 최대 이용 시간인 24시간이 적용되어 있습니다.","You already have the maximum of 24 hours.");
 		return;
 	}
 
-	mes "현재 추가 구매 가능: ^FF0000" + (.@available_units * 30) + "분^000000";
+	mes needtr("현재 추가 구매 가능: ^FF0000","You can still buy: ^FF0000") + (.@available_units * 30) + needtr("분^000000","m^000000");
 	next;
 
-	switch(select("이용 시간 구매:뒤로가기")) {
+	switch(select(needtr("이용 시간 구매:뒤로가기","Buy time:Back"))) {
 	case 1:
-		mes "[골드 PC방 은총]";
-		mes "구매할 30분 단위 횟수를 입력해주세요.";
-		mes "1회 = 30분 / 5,000,000 제니";
-		mes "입력 가능 범위: 1 ~ " + .@available_units + "회";
+		mes needtr("[골드 PC방 은총]","[Gold PC Room Grace]");
+		mes needtr("구매할 30분 단위 횟수를 입력해주세요.","Enter how many 30-minute units to buy.");
+		mes needtr("1회 = 30분 / 5,000,000 제니","1 unit = 30 min / 5,000,000 Zeny");
+		mes needtr("입력 가능 범위: 1 ~ ","Valid range: 1 ~ ") + .@available_units + needtr("회"," units");
 		next;
 
 		input .@amount;
 
 		if (.@amount <= 0 || .@amount > 48) {
-			mes "[골드 PC방 은총]";
-			mes "1회 이상, 최대 48회까지만 입력할 수 있습니다.";
+			mes needtr("[골드 PC방 은총]","[Gold PC Room Grace]");
+			mes needtr("1회 이상, 최대 48회까지만 입력할 수 있습니다.","Enter between 1 and 48 units.");
 			close;
 		}
 
 		if (.@amount > .@available_units) {
-			mes "[골드 PC방 은총]";
-			mes "현재 남은 시간을 포함하여 최대 24시간까지만 구매할 수 있습니다.";
-			mes "현재 추가 구매 가능: ^FF0000" + .@available_units + "회 (" + (.@available_units * 30) + "분)^000000";
+			mes needtr("[골드 PC방 은총]","[Gold PC Room Grace]");
+			mes needtr("현재 남은 시간을 포함하여 최대 24시간까지만 구매할 수 있습니다.","Including the time you already have, you can hold at most 24 hours.");
+			mes needtr("현재 추가 구매 가능: ^FF0000","You can still buy: ^FF0000") + .@available_units + needtr("회 ("," units (") + (.@available_units * 30) + needtr("분)^000000","m)^000000");
 			close;
 		}
 
@@ -187,19 +187,19 @@ function	script	NeedGrace_GoldPCMenu	{
 		set .@add_ms, .@add_seconds * 1000;
 		set .@cost, .@amount * .@unit_cost;
 
-		mes "[골드 PC방 은총]";
-		mes "구매 시간: ^FF0000" + (.@amount * 30) + "분^000000";
-		mes "필요 제니: ^FF0000" + callfunc("F_InsertComma", .@cost) + " z^000000";
+		mes needtr("[골드 PC방 은총]","[Gold PC Room Grace]");
+		mes needtr("구매 시간: ^FF0000","Time purchased: ^FF0000") + (.@amount * 30) + needtr("분^000000","m^000000");
+		mes needtr("필요 제니: ^FF0000", "Zeny required: ^FF0000") + callfunc("F_InsertComma", .@cost) + " z^000000";
 		mes needtr("구매하시겠습니까?", "Would you like to purchase");
 		next;
 
-		if (select("구매한다:취소") == 2)
+		if (select(needtr("구매한다:취소","Buy:Cancel")) == 2)
 			close;
 
 		if (Zeny < .@cost) {
-			mes "[골드 PC방 은총]";
-			mes "제니가 부족합니다.";
-			mes "필요 제니: ^FF0000" + callfunc("F_InsertComma", .@cost) + " z^000000";
+			mes needtr("[골드 PC방 은총]","[Gold PC Room Grace]");
+			mes needtr("제니가 부족합니다.","You do not have enough Zeny.");
+			mes needtr("필요 제니: ^FF0000", "Zeny required: ^FF0000") + callfunc("F_InsertComma", .@cost) + " z^000000";
 			close;
 		}
 
@@ -212,17 +212,17 @@ function	script	NeedGrace_GoldPCMenu	{
 		set .@max_ms, .@max_seconds * 1000;
 
 		if (.@new_ms > .@max_ms) {
-			mes "[골드 PC방 은총]";
-			mes "현재 남은 시간을 포함하여 최대 24시간까지만 구매할 수 있습니다.";
+			mes needtr("[골드 PC방 은총]","[Gold PC Room Grace]");
+			mes needtr("현재 남은 시간을 포함하여 최대 24시간까지만 구매할 수 있습니다.","Including the time you already have, you can hold at most 24 hours.");
 			close;
 		}
 
 		Zeny -= .@cost;
 		sc_start SC_NEED_GOLDPC, .@new_ms, 1;
 
-		mes "[골드 PC방 은총]";
-		mes "골드 PC방 은총이 적용되었습니다.";
-		callfunc "NeedGrace_ShowStatusRemainLine", "남은 시간", .@new_ms;
+		mes needtr("[골드 PC방 은총]","[Gold PC Room Grace]");
+		mes needtr("골드 PC방 은총이 적용되었습니다.","Gold PC Room Grace has been applied.");
+		callfunc "NeedGrace_ShowStatusRemainLine", needtr("남은 시간","Time remaining"), .@new_ms;
 		close;
 	default:
 		return;
@@ -230,17 +230,17 @@ function	script	NeedGrace_GoldPCMenu	{
 }
 
 function	script	NeedGrace_TicketMenu	{
-	mes "[주간 은총 이용권]";
-	mes "주간 은총 이용권은 캐릭터 단위 임대 티켓으로 지급됩니다.";
-	mes "티켓을 우클릭하면 남은 기간을 확인할 수 있습니다.";
+	mes needtr("[주간 은총 이용권]","[Weekly Grace Pass]");
+	mes needtr("주간 은총 이용권은 캐릭터 단위 임대 티켓으로 지급됩니다.","The Weekly Grace Pass is given as a per-character rental ticket.");
+	mes needtr("티켓을 우클릭하면 남은 기간을 확인할 수 있습니다.","Right-click the ticket to see how long it has left.");
 	next;
 
-	mes "[주간 은총 이용권]";
-	mes "1개 이용권: ^FF000010,000,000 제니 / 7일^000000";
-	mes "종합 이용권: ^FF000025,000,000 제니 / 7일^000000";
+	mes needtr("[주간 은총 이용권]","[Weekly Grace Pass]");
+	mes needtr("1개 이용권: ^FF000010,000,000 제니 / 7일^000000","1 pass: ^FF000010,000,000 Zeny / 7 days^000000");
+	mes needtr("종합 이용권: ^FF000025,000,000 제니 / 7일^000000","Full pass: ^FF000025,000,000 Zeny / 7 days^000000");
 	next;
 
-	switch(select("거래 은총 이용권:속성 은총 이용권:보관 은총 이용권:종합 은총 이용권:뒤로가기")) {
+	switch(select(needtr("거래 은총 이용권:속성 은총 이용권:보관 은총 이용권:종합 은총 이용권:뒤로가기","Grace of Trade Pass:Grace of Attribute Pass:Grace of Storage Pass:Full Grace Pass:Back"))) {
 	case 1:
 		callfunc "NeedGrace_BuyTicket", 1;
 		close;
@@ -259,56 +259,56 @@ function	script	NeedGrace_TicketMenu	{
 }
 
 function	script	NeedGrace_StatusMenu	{
-	mes "[보유 은총 확인]";
-	mes "현재 캐릭터의 은총 상태입니다.";
+	mes needtr("[보유 은총 확인]","[Check My Grace]");
+	mes needtr("현재 캐릭터의 은총 상태입니다.","This is the Grace status of this character.");
 	next;
 
-	mes "[보유 은총 확인]";
-	callfunc "NeedGrace_ShowRemainLine", "NEED의 은총 버프", NeedGraceUntil;
-	callfunc "NeedGrace_ShowStatusRemainLine", "골드 PC방 은총", getstatus(SC_NEED_GOLDPC, 5);
-	callfunc "NeedGrace_ShowRemainLine", "거래 은총", callfunc("NeedGrace_GetEffectiveUntil", 1);
-	callfunc "NeedGrace_ShowRemainLine", "속성 은총", callfunc("NeedGrace_GetEffectiveUntil", 2);
-	callfunc "NeedGrace_ShowRemainLine", "보관 은총", callfunc("NeedGrace_GetEffectiveUntil", 3);
-	callfunc "NeedGrace_ShowRemainLine", "종합 은총", NeedGracePackageUntil;
+	mes needtr("[보유 은총 확인]","[Check My Grace]");
+	callfunc "NeedGrace_ShowRemainLine", needtr("NEED의 은총 버프","NEED Grace Buff"), NeedGraceUntil;
+	callfunc "NeedGrace_ShowStatusRemainLine", needtr("골드 PC방 은총","Gold PC Room Grace"), getstatus(SC_NEED_GOLDPC, 5);
+	callfunc "NeedGrace_ShowRemainLine", needtr("거래 은총","Grace of Trade"), callfunc("NeedGrace_GetEffectiveUntil", 1);
+	callfunc "NeedGrace_ShowRemainLine", needtr("속성 은총","Grace of Attribute"), callfunc("NeedGrace_GetEffectiveUntil", 2);
+	callfunc "NeedGrace_ShowRemainLine", needtr("보관 은총","Grace of Storage"), callfunc("NeedGrace_GetEffectiveUntil", 3);
+	callfunc "NeedGrace_ShowRemainLine", needtr("종합 은총","Full Grace"), NeedGracePackageUntil;
 	close;
 }
 
 function	script	NeedGrace_InfoMenu	{
-	mes "[은총 이용권 안내]";
-	mes "골드 PC방 은총";
-	mes "- 일부 장비의 골드 PC방 전용 옵션 활성화";
-	mes "- 30분당 5,000,000 제니";
-	mes "- 최대 24시간까지 누적 가능";
-	mes "- 로그아웃 중에는 이용 시간 미감소";
+	mes needtr("[은총 이용권 안내]","[Grace Pass Guide]");
+	mes needtr("골드 PC방 은총","Gold PC Room Grace");
+	mes needtr("- 일부 장비의 골드 PC방 전용 옵션 활성화","- Activates the Gold PC Room-only options on some equipment");
+	mes needtr("- 30분당 5,000,000 제니","- 5,000,000 Zeny per 30 minutes");
+	mes needtr("- 최대 24시간까지 누적 가능","- Stacks up to 24 hours");
+	mes needtr("- 로그아웃 중에는 이용 시간 미감소","- Does not tick down while logged out");
 	next;
 
-	mes "[은총 이용권 안내]";
-	mes "거래 은총 이용권";
-	mes "- 오버챠지 / 디스카운트 편의 기능 이용";
+	mes needtr("[은총 이용권 안내]","[Grace Pass Guide]");
+	mes needtr("거래 은총 이용권","Grace of Trade Pass");
+	mes needtr("- 오버챠지 / 디스카운트 편의 기능 이용","- Use the Overcharge / Discount convenience features");
 	next;
 
-	mes "[은총 이용권 안내]";
-	mes "속성 은총 이용권";
-	mes "- 속성 부여 기능 이용";
-	mes "- 마을에서 @속부 입력";
+	mes needtr("[은총 이용권 안내]","[Grace Pass Guide]");
+	mes needtr("속성 은총 이용권","Grace of Attribute Pass");
+	mes needtr("- 속성 부여 기능 이용","- Use the Property endow feature");
+	mes needtr("- 마을에서 @속부 입력","- Type @element in a town");
 	next;
 
-	mes "[은총 이용권 안내]";
-	mes "보관 은총 이용권";
-	mes "- @창고보관 기능 이용";
-	mes "- 소모품/기타/카드 중 창고에 이미 같은 아이템이 있는 경우 자동 보관";
+	mes needtr("[은총 이용권 안내]","[Grace Pass Guide]");
+	mes needtr("보관 은총 이용권","Grace of Storage Pass");
+	mes needtr("- @창고보관 기능 이용","- Use the @autostorage feature");
+	mes needtr("- 소모품/기타/카드 중 창고에 이미 같은 아이템이 있는 경우 자동 보관","- Auto-stores Usable / Etc / Card items you already keep in storage");
 	next;
 
-	mes "[은총 이용권 안내]";
-	mes "종합 은총 이용권";
-	mes "- 거래 / 속성 / 보관 은총을 모두 이용할 수 있습니다.";
+	mes needtr("[은총 이용권 안내]","[Grace Pass Guide]");
+	mes needtr("종합 은총 이용권","Full Grace Pass");
+	mes needtr("- 거래 / 속성 / 보관 은총을 모두 이용할 수 있습니다.","- Includes Grace of Trade, Grace of Attribute and Grace of Storage.");
 	next;
 
-	mes "[은총 이용권 안내]";
-	mes "자동 창고 보관 제외 명령어";
-	mes "- @창고제외 <아이템ID>";
-	mes "- @창고제외목록";
-	mes "- @창고제외해제 <아이템ID>";
+	mes needtr("[은총 이용권 안내]","[Grace Pass Guide]");
+	mes needtr("자동 창고 보관 제외 명령어","Auto-storage exclusion commands");
+	mes needtr("- @창고제외 <아이템ID>","- @창고제외 <item ID>");
+	mes needtr("- @창고제외목록", "- @창고제외목록");
+	mes needtr("- @창고제외해제 <아이템ID>","- @창고제외해제 <item ID>");
 	close;
 }
 
@@ -322,15 +322,15 @@ function	script	NeedGrace_ApplyBuff	{
 	set .@now, gettimetick(2);
 
 	if (.@amount <= 0) {
-		mes "[NEED의 은총]";
-		mes "1개 이상 입력해주세요.";
+		mes needtr("[NEED의 은총]","[NEED Grace]");
+		mes needtr("1개 이상 입력해주세요.","Enter at least 1.");
 		close;
 	}
 
 	if (countitem(.@coin) < .@amount) {
-		mes "[NEED의 은총]";
-		mes "골드코인이 부족합니다.";
-		mes "보유 골드코인: ^FF0000" + countitem(.@coin) + "개^000000";
+		mes needtr("[NEED의 은총]","[NEED Grace]");
+		mes needtr("골드코인이 부족합니다.","You do not have enough Gold Coins.");
+		mes needtr("보유 골드코인: ^FF0000", "Gold Coins held: ^FF0000") + countitem(.@coin) + needtr("개^000000", "^000000");
 		close;
 	}
 
@@ -338,17 +338,17 @@ function	script	NeedGrace_ApplyBuff	{
 	set .@days, .@total_hours / 24;
 	set .@hours, .@total_hours % 24;
 
-	mes "[NEED의 은총]";
-	mes "골드코인 ^FF0000" + .@amount + "개^000000를 사용하시겠습니까?";
-	mes "연장 시간: ^FF0000" + .@total_hours + "시간^000000";
+	mes needtr("[NEED의 은총]","[NEED Grace]");
+	mes needtr("골드코인 ^FF0000","Use ^FF0000") + .@amount + needtr("개^000000를 사용하시겠습니까?"," Gold Coin(s)^000000?");
+	mes needtr("연장 시간: ^FF0000","Extension: ^FF0000") + .@total_hours + needtr("시간^000000","h^000000");
 
 	if (.@days > 0)
-		mes "환산 시간: " + .@days + "일 " + .@hours + "시간";
+		mes needtr("환산 시간: ","That is: ") + .@days + needtr("일 ","d ") + .@hours + needtr("시간","h");
 
-	mes "진행하시겠습니까?";
+	mes needtr("진행하시겠습니까?","Do you want to proceed?");
 	next;
 
-	if (select("연장한다:취소") == 2)
+	if (select(needtr("연장한다:취소","Extend:Cancel")) == 2)
 		close;
 
 	delitem .@coin, .@amount;
@@ -360,9 +360,9 @@ function	script	NeedGrace_ApplyBuff	{
 
 	sc_start SC_NEED_GRACE, (NeedGraceUntil - .@now) * 1000, 1;
 
-	mes "[NEED의 은총]";
-	mes "NEED의 은총이 적용되었습니다.";
-	callfunc "NeedGrace_ShowRemainLine", "남은 시간", NeedGraceUntil;
+	mes needtr("[NEED의 은총]","[NEED Grace]");
+	mes needtr("NEED의 은총이 적용되었습니다.","NEED Grace has been applied.");
+	callfunc "NeedGrace_ShowRemainLine", needtr("남은 시간","Time remaining"), NeedGraceUntil;
 	close;
 }
 
@@ -384,57 +384,57 @@ function	script	NeedGrace_BuyTicket	{
 	case 1:
 		set .@item, $@NeedGraceTradeTicket;
 		set .@cost, $@NeedGraceTradeCost;
-		set .@label$, "거래 은총 이용권";
-		set .@effect$, "오버챠지 / 디스카운트 편의 기능";
+		set .@label$, needtr("거래 은총 이용권","Grace of Trade Pass");
+		set .@effect$, needtr("오버챠지 / 디스카운트 편의 기능", "Overcharge / Discount convenience");
 		set .@old_until, NeedGraceTradeUntil;
 		break;
 	case 2:
 		set .@item, $@NeedGraceElementTicket;
 		set .@cost, $@NeedGraceElementCost;
-		set .@label$, "속성 은총 이용권";
-		set .@effect$, "속성 부여 기능";
+		set .@label$, needtr("속성 은총 이용권","Grace of Attribute Pass");
+		set .@effect$, needtr("속성 부여 기능", "Attribute endowment");
 		set .@old_until, NeedGraceElementUntil;
 		break;
 	case 3:
 		set .@item, $@NeedGraceStorageTicket;
 		set .@cost, $@NeedGraceStorageCost;
-		set .@label$, "보관 은총 이용권";
-		set .@effect$, "@창고보관 기능";
+		set .@label$, needtr("보관 은총 이용권","Grace of Storage Pass");
+		set .@effect$, needtr("@창고보관 기능", "@창고보관 storage access");
 		set .@old_until, NeedGraceStorageUntil;
 		break;
 	case 4:
 		set .@item, $@NeedGracePackageTicket;
 		set .@cost, $@NeedGracePackageCost;
-		set .@label$, "종합 은총 이용권";
-		set .@effect$, "거래 / 속성 / 보관 은총 전체";
+		set .@label$, needtr("종합 은총 이용권","Full Grace Pass");
+		set .@effect$, needtr("거래 / 속성 / 보관 은총 전체", "All of Trade / Attribute / Storage Grace");
 		set .@old_until, NeedGracePackageUntil;
 		break;
 	default:
-		mes "[주간 은총 이용권]";
-		mes "잘못된 이용권입니다.";
+		mes needtr("[주간 은총 이용권]","[Weekly Grace Pass]");
+		mes needtr("잘못된 이용권입니다.","That is not a valid pass.");
 		close;
 	}
 
 	if (.@item <= 0) {
-		mes "[주간 은총 이용권]";
-		mes "이용권 아이템 ID가 설정되지 않았습니다.";
-		mes "스크립트 OnInit의 티켓 아이템 ID를 확인해주세요.";
+		mes needtr("[주간 은총 이용권]","[Weekly Grace Pass]");
+		mes needtr("이용권 아이템 ID가 설정되지 않았습니다.","The pass item ID has not been set.");
+		mes needtr("스크립트 OnInit의 티켓 아이템 ID를 확인해주세요.","Please check the ticket item IDs in the script OnInit.");
 		close;
 	}
 
-	mes "[주간 은총 이용권]";
-	mes .@label$ + "을 구매하시겠습니까?";
-	mes "효과: " + .@effect$;
-	mes "기간: 7일";
-	mes "비용: 	^FF0000" + callfunc("F_InsertComma", .@cost) + "^000000 z";
+	mes needtr("[주간 은총 이용권]","[Weekly Grace Pass]");
+	mes .@label$ + needtr("을 구매하시겠습니까?", " - would you like to purchase?");
+	mes needtr("효과: ", "Effect: ") + .@effect$;
+	mes needtr("기간: 7일","Duration: 7 days");
+	mes needtr("비용: 	^FF0000", "Cost: 	^FF0000") + callfunc("F_InsertComma", .@cost) + "^000000 z";
 	next;
 
-	if (select("구매한다:취소") == 2)
+	if (select(needtr("구매한다:취소","Buy:Cancel")) == 2)
 		close;
 
 	if (Zeny < .@cost) {
-		mes "[주간 은총 이용권]";
-		mes "제니가 부족합니다.";
+		mes needtr("[주간 은총 이용권]","[Weekly Grace Pass]");
+		mes needtr("제니가 부족합니다.","You do not have enough Zeny.");
 		close;
 	}
 
@@ -462,10 +462,10 @@ function	script	NeedGrace_BuyTicket	{
 
 	callfunc "NeedGrace_RefreshRentalTicket", .@item, .@new_until;
 
-	mes "[주간 은총 이용권]";
-	mes .@label$ + "이 지급되었습니다.";
-	mes "기존 이용 기간이 남아있다면 남은 기간에 7일이 추가됩니다.";
-	callfunc "NeedGrace_ShowRemainLine", "남은 시간", .@new_until;
+	mes needtr("[주간 은총 이용권]","[Weekly Grace Pass]");
+	mes .@label$ + needtr("이 지급되었습니다.", " has been granted.");
+	mes needtr("기존 이용 기간이 남아있다면 남은 기간에 7일이 추가됩니다.","If the pass is still running, 7 days are added to the time it has left.");
+	callfunc "NeedGrace_ShowRemainLine", needtr("남은 시간","Time remaining"), .@new_until;
 	close;
 }
 
@@ -594,7 +594,7 @@ function	script	NeedGrace_ShowStatusRemainLine	{
 	set .@remain_ms, getarg(1);
 
 	if (.@remain_ms <= 0) {
-		mes .@label$ + ": 이용 중 아님";
+		mes .@label$ + needtr(": 이용 중 아님",": Not active");
 		return;
 	}
 
@@ -604,13 +604,13 @@ function	script	NeedGrace_ShowStatusRemainLine	{
 	set .@minutes, (.@left % 3600) / 60;
 
 	if (.@days > 0)
-		mes .@label$ + ": " + .@days + "일 " + .@hours + "시간 " + .@minutes + "분";
+		mes .@label$ + ": " + .@days + needtr("일 ","d ") + .@hours + needtr("시간 ","h ") + .@minutes + needtr("분","m");
 	else if (.@hours > 0)
-		mes .@label$ + ": " + .@hours + "시간 " + .@minutes + "분";
+		mes .@label$ + ": " + .@hours + needtr("시간 ","h ") + .@minutes + needtr("분","m");
 	else if (.@minutes > 0)
-		mes .@label$ + ": " + .@minutes + "분";
+		mes .@label$ + ": " + .@minutes + needtr("분","m");
 	else
-		mes .@label$ + ": 1분 미만";
+		mes .@label$ + needtr(": 1분 미만",": Under 1m");
 
 	return;
 }
@@ -621,7 +621,7 @@ function	script	NeedGrace_ShowRemainLine	{
 	set .@now, gettimetick(2);
 
 	if (.@until <= .@now) {
-		mes .@label$ + ": 이용 중 아님";
+		mes .@label$ + needtr(": 이용 중 아님",": Not active");
 		return;
 	}
 
@@ -630,7 +630,7 @@ function	script	NeedGrace_ShowRemainLine	{
 	set .@hours, (.@left % 86400) / 3600;
 	set .@minutes, (.@left % 3600) / 60;
 
-	mes .@label$ + ": " + .@days + "일 " + .@hours + "시간 " + .@minutes + "분";
+	mes .@label$ + ": " + .@days + needtr("일 ","d ") + .@hours + needtr("시간 ","h ") + .@minutes + needtr("분","m");
 	return;
 }
 
@@ -663,8 +663,8 @@ OnStorePut:
 	// ============================================================
 
 	if (rentalcountitem(.StorageTicket) <= 0 && rentalcountitem(.PackageTicket) <= 0) {
-		dispbottom "[창고 정리] 보관 은총 이용권 또는 종합 은총 이용권이 필요합니다.";
-		dispbottom "[창고 정리] 이용권은 NEED의 은총 관리인에게서 구매할 수 있습니다.";
+		dispbottom needtr("[창고 정리] 보관 은총 이용권 또는 종합 은총 이용권이 필요합니다.","[Auto Storage] A Grace of Storage Pass or a Full Grace Pass is required.");
+		dispbottom needtr("[창고 정리] 이용권은 NEED의 은총 관리인에게서 구매할 수 있습니다.","[Auto Storage] Passes are sold by the NEED Grace Manager.");
 		end;
 	}
 
@@ -675,7 +675,7 @@ OnStorePut:
 	.@map$ = strcharinfo(3);
 
 	if (!getmapflag(strcharinfo(3), mf_town) && .@map$ != "turbo_room") {
-		dispbottom "[창고 정리] 이 명령어는 마을에서만 사용할 수 있습니다.";
+		dispbottom needtr("[창고 정리] 이 명령어는 마을에서만 사용할 수 있습니다.","[Auto Storage] This command can only be used in a town.");
 		end;
 	}
 
@@ -685,44 +685,44 @@ OnStorePut:
 	// ============================================================
 
 	if (#NeedStorePutNotice == 0) {
-		mes "[창고 정리]";
-		mes "@창고넣기는 인벤토리의 아이템 중";
-		mes "조건에 맞는 아이템만 자동으로 창고에 보관하는 기능입니다.";
+		mes needtr("[창고 정리]","[Auto Storage]");
+		mes needtr("@창고넣기는 인벤토리의 아이템 중","@autostorage automatically moves the items in your inventory");
+		mes needtr("조건에 맞는 아이템만 자동으로 창고에 보관하는 기능입니다.","that match the conditions into Storage.");
 		next;
 
-		mes "[창고 정리]";
-		mes "자동 보관 대상:";
-		mes "- 소모품";
-		mes "- 기타 아이템";
-		mes "- 카드";
+		mes needtr("[창고 정리]","[Auto Storage]");
+		mes needtr("자동 보관 대상:","Auto Storage covers:");
+		mes needtr("- 소모품","- Usable items");
+		mes needtr("- 기타 아이템","- Etc items");
+		mes needtr("- 카드","- Cards");
 		next;
 
-		mes "[창고 정리]";
-		mes "단, 창고에 이미 같은 아이템이 있는 경우에만 보관됩니다.";
-		mes "창고에 없는 아이템은 새로 보관하지 않습니다.";
+		mes needtr("[창고 정리]","[Auto Storage]");
+		mes needtr("단, 창고에 이미 같은 아이템이 있는 경우에만 보관됩니다.","Only items you already have in Storage are moved.");
+		mes needtr("창고에 없는 아이템은 새로 보관하지 않습니다.","Items that are not in Storage yet are never added.");
 		next;
 
-		mes "[창고 정리]";
-		mes "아래 아이템은 자동 보관되지 않습니다.";
-		mes "- 장비";
-		mes "- 의상";
-		mes "- 쉐도우 장비";
-		mes "- 보관 불가 아이템";
-		mes "- 제외 목록에 등록한 아이템";
+		mes needtr("[창고 정리]","[Auto Storage]");
+		mes needtr("아래 아이템은 자동 보관되지 않습니다.","These items are never moved by Auto Storage.");
+		mes needtr("- 장비","- Equipment");
+		mes needtr("- 의상","- Costumes");
+		mes needtr("- 쉐도우 장비","- Shadow Equipment");
+		mes needtr("- 보관 불가 아이템","- Items that cannot be stored");
+		mes needtr("- 제외 목록에 등록한 아이템","- Items on your Exclusion List");
 		next;
 
-		mes "[창고 정리]";
-		mes "자주 들고 다니는 아이템은 아래 명령어로 제외할 수 있습니다.";
-		mes "- @창고제외 <아이템ID>";
-		mes "- @창고제외목록";
-		mes "- @창고제외해제 <아이템ID>";
+		mes needtr("[창고 정리]","[Auto Storage]");
+		mes needtr("자주 들고 다니는 아이템은 아래 명령어로 제외할 수 있습니다.","Use the commands below to exclude items you carry often.");
+		mes needtr("- @창고제외 <아이템ID>","- @창고제외 <item ID>");
+		mes needtr("- @창고제외목록", "- @창고제외목록");
+		mes needtr("- @창고제외해제 <아이템ID>","- @창고제외해제 <item ID>");
 		next;
 
-		mes "[창고 정리]";
-		mes "이 안내는 계정당 1회만 표시됩니다.";
+		mes needtr("[창고 정리]","[Auto Storage]");
+		mes needtr("이 안내는 계정당 1회만 표시됩니다.","This notice is shown 1 time per account.");
 		mes needtr("계속 진행하시겠습니까?", "Do you still want to proceed?");
 
-		if (select("동의하고 사용한다:취소") == 2)
+		if (select(needtr("동의하고 사용한다:취소","Agree and use:Cancel")) == 2)
 			close;
 
 		#NeedStorePutNotice = 1;
@@ -765,8 +765,8 @@ OnEndow:
 	// ============================================================
 
 	if (rentalcountitem(.ElementTicket) <= 0 && rentalcountitem(.PackageTicket) <= 0) {
-		dispbottom "[속성 은총] 속성 은총 이용권 또는 종합 은총 이용권이 필요합니다.";
-		dispbottom "[속성 은총] 이용권은 NEED의 은총 관리인에게서 구매할 수 있습니다.";
+		dispbottom needtr("[속성 은총] 속성 은총 이용권 또는 종합 은총 이용권이 필요합니다.","[Grace of Attribute] A Grace of Attribute Pass or a Full Grace Pass is required.");
+		dispbottom needtr("[속성 은총] 이용권은 NEED의 은총 관리인에게서 구매할 수 있습니다.","[Grace of Attribute] Passes are sold by the NEED Grace Manager.");
 		end;
 	}
 
@@ -777,7 +777,7 @@ OnEndow:
 	if (getmapflag(strcharinfo(3), mf_pvp)
 	 || getmapflag(strcharinfo(3), mf_gvg)
 	 || getmapflag(strcharinfo(3), mf_battleground)) {
-		dispbottom "[속성 은총] 이 지역에서는 사용할 수 없습니다.";
+		dispbottom needtr("[속성 은총] 이 지역에서는 사용할 수 없습니다.","[Grace of Attribute] You cannot use this here.");
 		end;
 	}
 
@@ -785,23 +785,23 @@ OnEndow:
 	// 3. 속성 선택
 	// ============================================================
 
-	mes "[속성 은총]";
-	mes "무기에 부여할 속성을 선택해주세요.";
-	mes "속성 부여는 30분 동안 유지됩니다.";
+	mes needtr("[속성 은총]","[Grace of Attribute]");
+	mes needtr("무기에 부여할 속성을 선택해주세요.","Choose the Property to endow on your weapon.");
+	mes needtr("속성 부여는 30분 동안 유지됩니다.","The endow lasts 30 minutes.");
 	next;
 
-	switch(select("수 속성 부여:풍 속성 부여:지 속성 부여:화 속성 부여:취소")) {
+	switch(select(needtr("수 속성 부여:풍 속성 부여:지 속성 부여:화 속성 부여:취소","Water Property:Wind Property:Earth Property:Fire Property:Cancel"))) {
 	case 1:
-		callfunc "NeedGrace_EndowApply", SC_WATERWEAPON, "수";
+		callfunc "NeedGrace_EndowApply", SC_WATERWEAPON, needtr("수","Water");
 		close;
 	case 2:
-		callfunc "NeedGrace_EndowApply", SC_WINDWEAPON, "풍";
+		callfunc "NeedGrace_EndowApply", SC_WINDWEAPON, needtr("풍","Wind");
 		close;
 	case 3:
-		callfunc "NeedGrace_EndowApply", SC_EARTHWEAPON, "지";
+		callfunc "NeedGrace_EndowApply", SC_EARTHWEAPON, needtr("지","Earth");
 		close;
 	case 4:
-		callfunc "NeedGrace_EndowApply", SC_FIREWEAPON, "화";
+		callfunc "NeedGrace_EndowApply", SC_FIREWEAPON, needtr("화","Fire");
 		close;
 	default:
 		close;
@@ -822,9 +822,9 @@ function	script	NeedGrace_EndowApply	{
 	// 신규 속성 부여
 	sc_start .@sc, 1800000, 1;
 
-	mes "[속성 은총]";
-	mes .@name$ + " 속성이 부여되었습니다.";
-	mes "지속시간: 30분";
+	mes needtr("[속성 은총]","[Grace of Attribute]");
+	mes .@name$ + needtr(" 속성이 부여되었습니다."," Property has been granted.");
+	mes needtr("지속시간: 30분","Duration: 30 minutes");
 	close;
 }
 

@@ -23,7 +23,7 @@
 
 
 bat_room,160,146,3	script	전장 장비 담당관#a	734,{
-	switch( select( "용맹휘장","특공휘장","전투휘장","시즈 방어구") ){
+	switch( select( needtr("용맹휘장", "Bravery Badge"),needtr("특공휘장", "Valor Badge"),needtr("전투휘장", "KVM Badge"),needtr("시즈 방어구", "Siege Armor")) ){
 	case 1:
 		callshop "BB";
 		end;
@@ -46,14 +46,14 @@ bat_room,160,153,3	script	전장 소비 담당관#a	749,{
 }
 
 bat_room,160,150,3	script	전장 교환 담당관#a	-1,{
-		mes "[전장 교환 담당관]";
-		mes "전장 포인트는 전장에 참여하거나,";
-		mes "전장 팀 리더로 선발되어 전장을 진행할 경우 획득할 수 있습니다.";
+		mes needtr("[전장 교환 담당관]", "[Battleground Exchange Officer]");
+		mes needtr("전장 포인트는 전장에 참여하거나,", "Battleground Points are earned by taking part in a battleground,");
+		mes needtr("전장 팀 리더로 선발되어 전장을 진행할 경우 획득할 수 있습니다.", "or by being chosen as a battleground team leader and running one.");
 		next;
-		mes "[전장 교환 담당관]";
-		mes "획득한 전장 포인트는 이곳에서";
-		mes "다양한 전장 보상 아이템으로 교환할 수 있습니다.";
-		mes "현재 보유 전장 포인트: ^0055FF" + #BATTLEGROUND_POINT + "^000000점";
+		mes needtr("[전장 교환 담당관]", "[Battleground Exchange Officer]");
+		mes needtr("획득한 전장 포인트는 이곳에서", "The Battleground Points you earn can be exchanged here");
+		mes needtr("다양한 전장 보상 아이템으로 교환할 수 있습니다.", "for a variety of battleground reward items.");
+		mes needtr("현재 보유 전장 포인트: ^0055FF", "Battleground Points held: ^0055FF") + #BATTLEGROUND_POINT + needtr("^000000점", "^000000");
 		close2;
 		callshop "POINT";
 		end;
@@ -128,7 +128,7 @@ S_ApplyCostume:
 		setunitdata .@npc_id, UNPC_HEADBOTTOM, .Costume1_HeadBottom;
 		setunitdata .@npc_id, UNPC_ROBE, .Costume1_Robe;
 		hateffect HAT_EF_C_VALKYRIE_WING, true, .@npc_id;
-		npctalk  "1번 의상으로 변경되었습니다.";
+		npctalklang  "1번 의상으로 변경되었습니다.", "Changed to costume 1.";
 		
 	} else {
 		setunitdata .@npc_id, UNPC_HEADTOP, .Costume2_HeadTop;
@@ -136,7 +136,7 @@ S_ApplyCostume:
 		setunitdata .@npc_id, UNPC_HEADBOTTOM, .Costume2_HeadBottom;
 		setunitdata .@npc_id, UNPC_ROBE, .Costume2_Robe;
 		hateffect HAT_EF_C_VALKYRIE_WING, false, .@npc_id;
-		npctalk  "2번 의상으로 변경되었습니다.";
+		npctalklang  "2번 의상으로 변경되었습니다.", "Changed to costume 2.";
 	}
 
 	return;

@@ -12,20 +12,20 @@
 //============================================================
 //= NEED: EP16.1 반복 일일퀘스트 공용 계산 / 즉시 완료 처리
 //=
-//= 반복 일일퀘스트 15종(총 66개)만 취급합니다.
+//= 반복 일일퀘스트 15종(총 132개)만 취급합니다.
 //= 메인 스토리 · 최초 퀘스트 · 지하감옥 구역/보정(ep16_fix) ·
 //= #NEED_RC_CLEAR · ep16_royal / ep16_wig / ep16_lug 는 일절 건드리지 않습니다.
 //============================================================
 
 // NEED: 오늘의 반복 일일퀘스트 진행 상황을 계산합니다.
-//   반환값            : 오늘 아직 받지 못한 명예의 증표 수 (0~66)
+//   반환값            : 오늘 아직 받지 못한 명예의 증표 수 (0~132)
 //   $@ep161_done      : 오늘 완료한 반복 일일퀘스트 수 (0~15)
 //   $@ep161_remain    : 남은 증표 수 (반환값과 동일)
 //   $@ep161_pend[]    : 아직 완료하지 않은 쿨타임 퀘스트 ID 목록
 //   $@ep161_pend_amt[]: 각 항목의 증표 수
 // 판정 기준은 각 반복 일일퀘스트의 쿨타임 퀘스트 checkquest(id,PLAYTIME) 입니다.
 function	script	F_NEED_EP161_DailyStatus	{
-	// 쿨타임 퀘스트 15종 / 각 증표 수 (10 + 4*14 = 66)
+	// 쿨타임 퀘스트 15종 / 각 증표 수 (20 + 8*14 = 132)
 	setarray .@cd[0],
 		 7706,	// 의식의 방
 		11425,	// 왕궁 주방 - 그리폰 구이
@@ -37,10 +37,10 @@ function	script	F_NEED_EP161_DailyStatus	{
 		 5452,	// 침공당한 프론테라
 		 5426, 5429, 5433, 5437, 5440, 5443, 5446;	// 지하감옥 A B C E F G H
 	setarray .@amt[0],
-		10,
-		 4, 4, 4,
-		 4, 4, 4, 4,
-		 4, 4, 4, 4, 4, 4, 4;
+		20,
+		 8, 8, 8,
+		 8, 8, 8, 8,
+		 8, 8, 8, 8, 8, 8, 8;
 
 	.@size = getarraysize(.@cd);
 	deletearray $@ep161_pend[0];
@@ -447,14 +447,14 @@ L_Status:
 	// (아래 상태 문자열은 위에서 만든 값을 그대로 사용합니다)
 	.@remain = callfunc("F_NEED_EP161_DailyStatus");
 	.@done = $@ep161_done;
-	.@earned = 66 - .@remain;
+	.@earned = 132 - .@remain;
 
 	mes needtr("[오늘의 EP16.1 일퀘 현황]", "[Today's EP16.1 Daily Status]");
 	mes needtr("현재 보유 명예의 증표: ^4d4dff", "Token of Honor held: ^4d4dff") + countitem(6919) + needtr("개^000000", "^000000");
 	mes needtr("오늘 완료: ^00AA00", "Finished today: ^00AA00") + .@done + needtr(" / 15개 반복 퀘스트^000000", " / 15 repeat quests^000000");
 	mes needtr("왕궁 주방 일퀘: ^00AA00", "Palace Kitchen dailies: ^00AA00") + .@kitchen_done + " / 3^000000";
 	mes needtr("왕가 객실 일퀘: ^00AA00", "Royal Guest Room dailies: ^00AA00") + .@family_done + " / 3^000000";
-	mes needtr("오늘 반복 일퀘 보상 완료분: ^00AA00", "Repeat daily rewards earned today: ^00AA00") + .@earned + needtr(" / 66개^000000", " / 66^000000");
+	mes needtr("오늘 반복 일퀘 보상 완료분: ^00AA00", "Repeat daily rewards earned today: ^00AA00") + .@earned + needtr(" / 132개^000000", " / 132^000000");
 	mes needtr("오늘 남은 반복 보상: ^FF0000", "Repeat rewards left today: ^FF0000") + .@remain + needtr("개^000000", "^000000");
 	mes needtr("핵심 50개 루트 중 남은 보상: ^FF9900", "Left on the core 50 route: ^FF9900") + .@core_remain + needtr("개^000000", "^000000");
 	next;
@@ -467,7 +467,7 @@ L_Status:
 	mes needtr("왕궁 주방       ", "Palace Kitchen    ") + .@kitchen_story$;
 	mes needtr("뢰겐부르그 가문 ", "Roegenburg Family ") + .@agnes_story$;
 	mes needtr("위그너 가문     ", "Wigner Family     ") + .@jurgen_story$;
-	mes needtr("※ 최초 1회 보상은 ^FF9900오늘의 66개 반복 일퀘 집계에 포함되지 않습니다.^000000", "* First-time rewards are ^FF9900not counted in today's 66 repeat dailies.^000000");
+	mes needtr("※ 최초 1회 보상은 ^FF9900오늘의 132개 반복 일퀘 집계에 포함되지 않습니다.^000000", "* First-time rewards are ^FF9900not counted in today's 132 repeat dailies.^000000");
 	next;
 
 	mes needtr("[핵심 루트]", "[Core Route]");
@@ -557,7 +557,7 @@ L_Instant:
 	mes "^00AA00" + .@done + " / 15^000000";
 	mes "";
 	mes needtr("오늘 획득 완료", "Earned today");
-	mes "^00AA00" + (66 - .@remain) + " / 66^000000";
+	mes "^00AA00" + (132 - .@remain) + " / 132^000000";
 	mes "";
 	mes needtr("남은 보상", "Reward left");
 	mes needtr("^FF9900명예의 증표 ", "^FF9900Token of Honor x") + .@remain + needtr("개^000000", "^000000");
@@ -571,9 +571,9 @@ L_Instant:
 		goto L_Main;
 	}
 
-	// 가격 계산: 비례 모드면 기준가 × 남은 증표 / 66 (올림), 아니면 고정가
-	if (.InstantDailyProrate && .@remain < 66)
-		.@price = (.InstantDailyCash * .@remain + 65) / 66;
+	// 가격 계산: 비례 모드면 기준가 × 남은 증표 / 132 (올림), 아니면 고정가
+	if (.InstantDailyProrate && .@remain < 132)
+		.@price = (.InstantDailyCash * .@remain + 131) / 132;
 	else
 		.@price = .InstantDailyCash;
 
@@ -623,9 +623,9 @@ L_Instant:
 		goto L_Main;
 	}
 
-	// 가격 계산: 비례 모드면 기준가 × 남은 증표 / 66 (올림), 아니면 고정가
-	if (.InstantDailyProrate && .@remain < 66)
-		.@price = (.InstantDailyCash * .@remain + 65) / 66;
+	// 가격 계산: 비례 모드면 기준가 × 남은 증표 / 132 (올림), 아니면 고정가
+	if (.InstantDailyProrate && .@remain < 132)
+		.@price = (.InstantDailyCash * .@remain + 131) / 132;
 	else
 		.@price = .InstantDailyCash;
 
@@ -665,7 +665,7 @@ L_Instant:
 	mes needtr("남은 캐시: ^4d4dff", "Cash left: ^4d4dff") + callfunc("F_InsertComma", #CASHPOINTS) + " Cash^000000";
 	next;
 	mes needtr("[EP16.1 통합 안내]", "[EP16.1 Guide]");
-	mes needtr("오늘의 일퀘 현황은 ^00AA0015 / 15^000000 · ^00AA0066 / 66^000000 으로 표시됩니다.", "Today's status now reads ^00AA0015 / 15^000000 and ^00AA0066 / 66^000000.");
+	mes needtr("오늘의 일퀘 현황은 ^00AA0015 / 15^000000 · ^00AA00132 / 132^000000 으로 표시됩니다.", "Today's status now reads ^00AA0015 / 15^000000 and ^00AA00132 / 132^000000.");
 	mes needtr("내일 04시에 다시 초기화됩니다.", "It resets tomorrow at 04:00.");
 	next;
 	goto L_Main;
@@ -676,19 +676,19 @@ L_Today:
 	mes needtr("일일퀘스트로 증표를 모아 장비 교환과 인챈트에 사용합니다.", "Collect tokens from dailies and spend them on gear and enchants.");
 	next;
 	mes needtr("[추천 핵심 루트]", "[Recommended Core Route]");
-	mes needtr("왕궁 지하감옥 7종 : ^4d4dff28개^000000", "Palace Prison x7  : ^4d4dff28 tokens^000000");
-	mes needtr("왕궁 주방 3종     : ^4d4dff12개^000000", "Palace Kitchen x3 : ^4d4dff12 tokens^000000");
-	mes needtr("의식의 방          : ^4d4dff10개^000000", "Room of Consciousness : ^4d4dff10 tokens^000000");
+	mes needtr("왕궁 지하감옥 7종 : ^4d4dff56개^000000", "Palace Prison x7  : ^4d4dff56 tokens^000000");
+	mes needtr("왕궁 주방 3종     : ^4d4dff24개^000000", "Palace Kitchen x3 : ^4d4dff24 tokens^000000");
+	mes needtr("의식의 방          : ^4d4dff20개^000000", "Room of Consciousness : ^4d4dff20 tokens^000000");
 	mes "----------------------------";
 	mes needtr("^FF0000핵심 루트 합계      : 50개^000000", "^FF0000Core route total  : 50 tokens^000000");
 	next;
 	mes needtr("[추가 일일퀘스트]", "[Extra Dailies]");
-	mes needtr("아그네스 뢰겐부르그 : 4개", "Agnes Roegenburg  : 4 tokens");
-	mes needtr("리하르트 전사 수련  : 4개", "Richard combat drill : 4 tokens");
-	mes needtr("유르겐 위그너       : 4개", "Jurgen Wigner     : 4 tokens");
-	mes needtr("침공당한 프론테라   : 4개", "Invaded Prontera  : 4 tokens");
+	mes needtr("아그네스 뢰겐부르그 : 8개", "Agnes Roegenburg  : 8 tokens");
+	mes needtr("리하르트 전사 수련  : 8개", "Richard combat drill : 8 tokens");
+	mes needtr("유르겐 위그너       : 8개", "Jurgen Wigner     : 8 tokens");
+	mes needtr("침공당한 프론테라   : 8개", "Invaded Prontera  : 8 tokens");
 	mes "----------------------------";
-	mes needtr("^4d4dff반복 일일퀘스트를 통해 하루 최대 66개의^000000", "^4d4dffRepeat dailies give up to 66 Token of Honor^000000");
+	mes needtr("^4d4dff반복 일일퀘스트를 통해 하루 최대 132개의^000000", "^4d4dffRepeat dailies give up to 132 Token of Honor^000000");
 	mes needtr("^4d4dff명예의 증표를 획득할 수 있습니다.^000000", "^4d4dffper day.^000000");
 	mes "";
 	mes needtr("EP16.1 메인 및 최초 퀘스트 진행 중에는", "While playing the EP16.1 main and first quests you can");
@@ -698,7 +698,7 @@ L_Today:
 	mes needtr("[EP16.1 통합 안내]", "[EP16.1 Guide]");
 	mes needtr("모든 일일퀘스트를 반드시 할 필요는 없습니다.", "You do not have to do every daily.");
 	mes needtr("원하는 콘텐츠만 골라 진행해도 됩니다.", "Pick only the content you enjoy.");
-	mes needtr("※ 메인 및 최초 퀘스트의 1회성 보상은 위 66개에 포함되지 않습니다.", "* One-time rewards from the main and first quests are not part of those 66.");
+	mes needtr("※ 메인 및 최초 퀘스트의 1회성 보상은 위 132개에 포함되지 않습니다.", "* One-time rewards from the main and first quests are not part of those 132.");
 	next;
 	switch( select(needtr("오늘의 일퀘 현황 보기", "See today's daily status"),needtr("일일퀘스트 메뉴로 이동", "Go to the Daily Menu"),needtr("메인 메뉴로 돌아가기", "Back to Main Menu")) ) {
 	case 1: goto L_Status;
@@ -712,11 +712,11 @@ L_Daily:
 	mes needtr("퀘스트 NPC 바로 앞으로 이동시키지는 않습니다.", "It does not drop you right in front of the quest NPC.");
 	next;
 	switch( select(
-		needtr("의식의 방 일일퀘 - 10개", "Room of Consciousness daily - 10"),
-		needtr("왕궁 주방 3종 - 총 12개", "Palace Kitchen x3 - 12 total"),
-		needtr("왕가 객실 3종 - 총 12개", "Royal Guest Room x3 - 12 total"),
-		needtr("침공당한 프론테라 - 4개", "Invaded Prontera - 4"),
-		needtr("왕궁 지하감옥 7종 - 총 28개", "Palace Prison x7 - 28 total"),
+		needtr("의식의 방 일일퀘 - 20개", "Room of Consciousness daily - 20"),
+		needtr("왕궁 주방 3종 - 총 24개", "Palace Kitchen x3 - 24 total"),
+		needtr("왕가 객실 3종 - 총 24개", "Royal Guest Room x3 - 24 total"),
+		needtr("침공당한 프론테라 - 8개", "Invaded Prontera - 8"),
+		needtr("왕궁 지하감옥 7종 - 총 56개", "Palace Prison x7 - 56 total"),
 		needtr("메인 메뉴로 돌아가기", "Back to Main Menu")
 	) ) {
 	case 1:
@@ -729,7 +729,7 @@ L_Daily:
 		mes needtr("[의식의 방 일일퀘]", "[Room of Consciousness Daily]");
 		mes needtr("왕가 객실의 ^4d4dff프리드리히 S. 하이네^000000에게", "Take the daily from ^4d4dffFriedrich S. Heine^000000");
 		mes needtr("일일 임무를 받은 뒤 의식의 방을 진행합니다.", "in the Royal Guest Room and then run the dungeon.");
-		mes needtr("완료 보상: ^4d4dff명예의 증표 10개^000000", "Reward: ^4d4dffToken of Honor x10^000000");
+		mes needtr("완료 보상: ^4d4dff명예의 증표 20개^000000", "Reward: ^4d4dffToken of Honor x20^000000");
 		next;
 		if (select(needtr("하이네 별궁 입구로 이동", "Go to the Heine Annex entrance"),needtr("돌아간다.", "Go back.")) == 1) {
 			close2;
@@ -747,10 +747,10 @@ L_Daily:
 		}
 		mes needtr("[왕궁 주방]", "[Palace Kitchen]");
 		mes needtr("반복 일퀘 보상은 아래와 같습니다.", "The repeat daily rewards are:");
-		mes needtr("그리폰 구이 : 4개", "Grilled Griffon : 4 tokens");
-		mes needtr("소스 만들기 : 4개", "Make Sauce      : 4 tokens");
-		mes needtr("접시 수거   : 4개", "Collect Dishes  : 4 tokens");
-		mes needtr("총 ^4d4dff12개^000000의 명예의 증표를 획득합니다.", "That is ^4d4dff12 Token of Honor^000000 in total.");
+		mes needtr("그리폰 구이 : 8개", "Grilled Griffon : 8 tokens");
+		mes needtr("소스 만들기 : 8개", "Make Sauce      : 8 tokens");
+		mes needtr("접시 수거   : 8개", "Collect Dishes  : 8 tokens");
+		mes needtr("총 ^4d4dff24개^000000의 명예의 증표를 획득합니다.", "That is ^4d4dff24 Token of Honor^000000 in total.");
 		next;
 		mes needtr("[처음 방문한 경우]", "[First Visit]");
 		mes needtr("메인 스토리로 처음 진행하면 위 3종과 비슷한", "If you come through the main story you first play the");
@@ -786,7 +786,7 @@ L_Daily:
 		mes needtr("뢰겐부르그/위그너 가문 스토리 완료 시", "on finishing the Roegenburg / Wigner family stories");
 		mes needtr("^FF9900별도의 1회성 명예의 증표 보상^000000을 받을 수 있습니다.", "- ^FF9900a separate one-time Token of Honor reward^000000.");
 		mes needtr("리하르트는 1회성 보상 없이 반복 일퀘만 제공합니다.", "Richard has no one-time reward - only the repeat daily.");
-		mes needtr("이후 세 NPC의 반복 일퀘 4개 보상은 별도입니다.", "The 4-token repeat reward from each of the three NPCs is separate.");
+		mes needtr("이후 세 NPC의 반복 일퀘 8개 보상은 별도입니다.", "The 8-token repeat reward from each of the three NPCs is separate.");
 		next;
 		if (select(needtr("오른쪽 별궁 입구로 이동", "Go to the right annex entrance"),needtr("돌아간다.", "Go back.")) == 1) {
 			close2;
@@ -805,7 +805,7 @@ L_Daily:
 		mes needtr("[침공당한 프론테라]", "[Invaded Prontera]");
 		mes needtr("수비대장 슈피겔에게서", "Take one of four resident-rescue missions");
 		mes needtr("4종의 주민 구조 임무 중 하나를 받아 진행합니다.", "from Guard Captain Spiegel.");
-		mes needtr("완료 보상: ^4d4dff명예의 증표 4개^000000", "Reward: ^4d4dffToken of Honor x4^000000");
+		mes needtr("완료 보상: ^4d4dff명예의 증표 8개^000000", "Reward: ^4d4dffToken of Honor x8^000000");
 		next;
 		if (select(needtr("침공당한 프론테라 입구로 이동", "Go to the Invaded Prontera entrance"),needtr("돌아간다.", "Go back.")) == 1) {
 			close2;
@@ -823,8 +823,8 @@ L_Daily:
 		}
 		mes needtr("[왕궁 지하감옥]", "[Palace Prison]");
 		mes needtr("A/B/C/E/F/G/H 구역에 각각 1개의 일일퀘스트가 있습니다.", "Zones A/B/C/E/F/G/H each hold one daily quest.");
-		mes needtr("각 퀘스트 보상: 명예의 증표 4개", "Each quest gives Token of Honor x4.");
-		mes needtr("7개 완료 시 총 ^4d4dff28개^000000를 획득합니다.", "All seven give ^4d4dff28^000000 in total.");
+		mes needtr("각 퀘스트 보상: 명예의 증표 8개", "Each quest gives Token of Honor x8.");
+		mes needtr("7개 완료 시 총 ^4d4dff56개^000000를 획득합니다.", "All seven give ^4d4dff56^000000 in total.");
 		next;
 		if (select(needtr("지하감옥 입구로 이동", "Go to the prison entrance"),needtr("돌아간다.", "Go back.")) == 1) {
 			close2;
@@ -854,7 +854,7 @@ L_MD:
 		next;
 		mes needtr("[의식의 방]", "[Room of Consciousness]");
 		mes needtr("비쥬를 처치한 뒤 프리드리히에게 보고하면", "Beat Bijou and report to Friedrich to receive");
-		mes needtr("^4d4dff명예의 증표 10개^000000와 경험치를 받고", "^4d4dffToken of Honor x10^000000 plus experience -");
+		mes needtr("^4d4dff명예의 증표 20개^000000와 경험치를 받고", "^4d4dffToken of Honor x20^000000 plus experience -");
 		mes needtr("그 ^FF0000보고 완료 시점부터 재입장 대기시간(7706)^000000이 시작됩니다.", "the ^FF0000re-entry cooldown (7706) starts at that report^000000.");
 		next;
 		switch( select(needtr("하이네 별궁 입구로 이동", "Go to the Heine Annex entrance"),needtr("과거 왕가의 기억으로 이동", "Go to Memory of the Royal Family"),needtr("돌아가기", "Go back")) ) {
@@ -1069,10 +1069,10 @@ L_Story:
 
 OnInit:
 	// NEED: EP16.1 일일퀘스트 즉시 완료 설정
-	//   .InstantDailyCash     반복 일퀘 66개가 모두 남았을 때의 기준 캐시 가격 (0 = 기능 비활성화)
+	//   .InstantDailyCash     반복 일퀘 132개가 모두 남았을 때의 기준 캐시 가격 (0 = 기능 비활성화)
 	//   .InstantDailyProrate  1 = 남은 보상량에 비례해 가격 감소 / 0 = 고정 가격
 	//   .InstantDailyMinLevel 기능 사용 최소 Base Level
-	.InstantDailyCash = 50000;
+	.InstantDailyCash = 10000;
 	.InstantDailyProrate = 0;
 	.InstantDailyMinLevel = 140;
 	end;

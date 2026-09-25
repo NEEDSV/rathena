@@ -5,16 +5,19 @@
 //   @eggadmin
 //
 // 기능:
-// 1. 랜덤 상품 즉시 갱신
+// 1. 판매 그룹 즉시 갱신
 //    - 메인 NPC의 OnClock1200 이벤트를 직접 호출
-//    - 메인 스크립트의 활성 목록 / 가격 / 재고 규칙을 그대로 사용
+//    - 메인 스크립트의 셔플/그룹 규칙, 활성 목록, 가격, 재고 규칙을
+//      그대로 사용한다. (다음 그룹으로 전진, 마지막 그룹이면 재셔플)
 //
 // 2. 현재 판매 재고 변경
-//    - 현재 남은 서버 재고를 운영자가 직접 지정
+//    - 이번 회차 판매 상품 중 하나를 골라 남은 서버 재고를 직접 지정
 //
 // 주의:
 // - 이 스크립트는 메인 행운의 알 스크립트와 별도 파일로 사용한다.
 // - 메인 NPC 이름이 변경되면 .MainNpcEvent$만 수정하면 된다.
+// - 회차 상태는 전부 $NeedPastEgg* 전역 변수에 있으므로
+//   여기서는 활성 목록/그룹 규칙을 중복 작성하지 않는다.
 //============================================================
 
 -	script	NEED_LuckyEgg_Admin	-1,{
@@ -30,70 +33,78 @@ OnInit:
 
 OnAdmin:
 	while (1) {
-		mes "[행운의 알 운영자 메뉴]";
+		.@n = getarraysize($NeedPastEggSaleId);
 
-		if ($NeedPastEggMarketItem > 0) {
-			mes "현재 상품: ^0055FF" + getitemname($NeedPastEggMarketItem) + "^000000";
-			mes "Item ID: " + $NeedPastEggMarketItem;
-			mes "현재 가격: ^FF8800" + $NeedPastEggMarketUnitPrice + " Cash^000000";
-			mes "가격 배율: " + $NeedPastEggMarketRate + "%";
-			mes "현재 재고: ^009900" + $NeedPastEggMarketStock + "개^000000";
-			mes "회차 키: " + $NeedPastEggRotation$;
+		mes "[행운의 알 운영자 메뉴]";
+		mes "회차 키: ^0055FF" + $NeedPastEggSaleKey$ + "^000000";
+		mes "셔플 사이클: " + $NeedPastEggCycle
+			+ " / 그룹: ^0055FF" + ($NeedPastEggGroup + 1) + " of 3^000000";
+		mes "사이클 풀: " + getarraysize($NeedPastEggOrder) + "종";
+		mes " ";
+
+		if (.@n > 0) {
+			mes "^009900이번 회차 판매 " + .@n + "종^000000";
+			for (.@i = 0; .@i < .@n; .@i++) {
+				mes " " + (.@i + 1) + ". " + getitemname($NeedPastEggSaleId[.@i])
+					+ " / " + $NeedPastEggSalePrice[.@i] + "C"
+					+ " (" + $NeedPastEggSaleRate[.@i] + "%)"
+					+ " / 재고 " + $NeedPastEggSaleStock[.@i]
+					+ " / " + $NeedPastEggSaleInit[.@i];
+			}
 		}
 		else {
 			mes "^FF0000현재 설정된 판매 상품이 없습니다.^000000";
 		}
 
+		setdialogsize(460,420);
 		next;
 
 		switch (select(
-			"랜덤 상품 즉시 갱신:" +
+			"판매 그룹 즉시 갱신:" +
 			"현재 재고 변경:" +
 			"닫기"
 		)) {
 
 		//====================================================
-		// 랜덤 상품 즉시 갱신
+		// 판매 그룹 즉시 갱신
 		//====================================================
 		case 1:
-			mes "[랜덤 상품 즉시 갱신]";
-			mes "현재 판매 상품을 즉시 다시 추첨합니다.";
+			mes "[판매 그룹 즉시 갱신]";
+			mes "현재 판매 목록을 즉시 다음 그룹으로 넘깁니다.";
 			mes " ";
 			mes "메인 스크립트에 설정된";
-			mes "^0055FF활성 행운의 알 목록^000000에서 상품을 다시 뽑고,";
+			mes "^0055FF셔플 순서의 다음 그룹^000000이 판매되며,";
+			mes "마지막 그룹이었다면 전체를 다시 셔플합니다.";
 			mes "가격과 서버 재고도 함께 재추첨됩니다.";
 			mes " ";
-			mes "^FF0000현재 남아 있는 재고는 사라집니다.^000000";
+			mes "^FF0000현재 남아 있는 재고는 사라지고,^000000";
+			mes "^FF0000계정별 회차 구매량도 초기화됩니다.^000000";
 			next;
 
 			if (select("즉시 갱신한다:취소") == 2)
 				break;
 
-			.@old_item = $NeedPastEggMarketItem;
-			.@old_price = $NeedPastEggMarketUnitPrice;
-			.@old_stock = $NeedPastEggMarketStock;
+			.@old_group = $NeedPastEggGroup + 1;
+			.@old_n = getarraysize($NeedPastEggSaleId);
 
 			// 메인 스크립트의 실제 갱신 이벤트 호출.
-			// 따라서 활성/비활성 목록을 이 운영 스크립트에 중복 작성할 필요가 없다.
+			// 따라서 활성/비활성 목록과 그룹 규칙을 이 운영 스크립트에
+			// 중복 작성할 필요가 없다.
 			donpcevent .MainNpcEvent$;
 
 			// 이벤트 처리 후 표시 갱신 여유
 			sleep2 100;
 
-			mes "[랜덤 상품 즉시 갱신]";
+			mes "[판매 그룹 즉시 갱신]";
 			mes "갱신이 완료되었습니다.";
 			mes " ";
+			mes "이전: 그룹 " + .@old_group + " / " + .@old_n + "종";
+			mes "현재: 그룹 ^0055FF" + ($NeedPastEggGroup + 1) + "^000000 / "
+				+ getarraysize($NeedPastEggSaleId) + "종";
+			mes "셔플 사이클: " + $NeedPastEggCycle;
 
-			if (.@old_item > 0)
-				mes "이전: " + getitemname(.@old_item) + " / " + .@old_price + " Cash / 재고 " + .@old_stock;
-
-			if ($NeedPastEggMarketItem > 0) {
-				mes "현재: ^0055FF" + getitemname($NeedPastEggMarketItem) + "^000000";
-				mes "가격: ^FF8800" + $NeedPastEggMarketUnitPrice + " Cash^000000";
-				mes "배율: " + $NeedPastEggMarketRate + "%";
-				mes "재고: ^009900" + $NeedPastEggMarketStock + "개^000000";
-			}
-			else {
+			if (getarraysize($NeedPastEggSaleId) <= 0) {
+				mes " ";
 				mes "^FF0000갱신 후 판매 상품이 설정되지 않았습니다.^000000";
 				mes "메인 스크립트의 활성 목록을 확인해주세요.";
 			}
@@ -106,16 +117,37 @@ OnAdmin:
 		// 현재 판매 재고 직접 변경
 		//====================================================
 		case 2:
-			if ($NeedPastEggMarketItem <= 0) {
+			.@n = getarraysize($NeedPastEggSaleId);
+
+			if (.@n <= 0) {
 				mes "[현재 재고 변경]";
 				mes "먼저 판매 상품을 갱신해주세요.";
 				next;
 				break;
 			}
 
+			.@menu$ = "";
+			for (.@i = 0; .@i < .@n; .@i++) {
+				if (.@i > 0)
+					.@menu$ += ":";
+				.@menu$ += getitemname($NeedPastEggSaleId[.@i])
+					+ " (재고 " + $NeedPastEggSaleStock[.@i] + ")";
+			}
+
 			mes "[현재 재고 변경]";
-			mes "상품: ^0055FF" + getitemname($NeedPastEggMarketItem) + "^000000";
-			mes "현재 재고: ^009900" + $NeedPastEggMarketStock + "개^000000";
+			mes "재고를 변경할 상품을 선택해주세요.";
+			next;
+
+			.@sel = select(.@menu$ + ":취소") - 1;
+			if (.@sel < 0 || .@sel >= .@n)
+				break;
+
+			.@item = $NeedPastEggSaleId[.@sel];
+
+			mes "[현재 재고 변경]";
+			mes "상품: ^0055FF" + getitemname(.@item) + "^000000";
+			mes "현재 재고: ^009900" + $NeedPastEggSaleStock[.@sel] + "개^000000";
+			mes "최초 재고: " + $NeedPastEggSaleInit[.@sel] + "개";
 			mes " ";
 			mes "변경할 ^FF0000최종 재고 수량^000000을 입력해주세요.";
 			mes "0을 입력하면 품절 상태로 만들 수 있습니다.";
@@ -124,8 +156,8 @@ OnAdmin:
 			input .@new_stock, 0, 100000;
 
 			mes "[현재 재고 변경]";
-			mes "상품: ^0055FF" + getitemname($NeedPastEggMarketItem) + "^000000";
-			mes "기존 재고: " + $NeedPastEggMarketStock + "개";
+			mes "상품: ^0055FF" + getitemname(.@item) + "^000000";
+			mes "기존 재고: " + $NeedPastEggSaleStock[.@sel] + "개";
 			mes "변경 재고: ^009900" + .@new_stock + "개^000000";
 			mes " ";
 			mes "변경하시겠습니까?";
@@ -134,13 +166,21 @@ OnAdmin:
 			if (select("변경한다:취소") == 2)
 				break;
 
-			.@old_stock = $NeedPastEggMarketStock;
-			$NeedPastEggMarketStock = .@new_stock;
+			if ($NeedPastEggSaleId[.@sel] != .@item) {
+				mes "[현재 재고 변경]";
+				mes "^FF0000대화 중 판매 목록이 갱신되었습니다.^000000";
+				next;
+				break;
+			}
+
+			.@old_stock = $NeedPastEggSaleStock[.@sel];
+			$NeedPastEggSaleStock[.@sel] = .@new_stock;
 
 			mes "[현재 재고 변경]";
+			mes "상품: ^0055FF" + getitemname(.@item) + "^000000";
 			mes "재고를 변경했습니다.";
 			mes " ";
-			mes .@old_stock + "개 -> ^009900" + $NeedPastEggMarketStock + "개^000000";
+			mes .@old_stock + "개 -> ^009900" + $NeedPastEggSaleStock[.@sel] + "개^000000";
 			next;
 			break;
 

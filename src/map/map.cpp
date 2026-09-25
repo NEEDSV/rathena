@@ -53,6 +53,7 @@
 #include "need_summer_attendance.hpp"
 #include "need_summer_fishing_reward.hpp"
 #include "need_summer_hunt.hpp"
+#include "need_chuseok_hunt.hpp"
 #ifndef MAP_GENERATOR
 #include "needwiki.hpp"
 #endif
@@ -5103,6 +5104,7 @@ void MapServer::finalize(){
 
 	do_final_atcommand();
 	need_summer_hunt_final();
+	need_chuseok_hunt_final();
 	need_summer_attendance_final();
 	need_summer_fishing_reward_final();
 	need_autopot_final();
@@ -5549,6 +5551,7 @@ bool MapServer::initialize( int32 argc, char *argv[] ){
 	do_init_mob();
 	do_init_pc();
 	need_summer_hunt_init();
+	need_chuseok_hunt_init();
 	need_summer_attendance_init();
 	need_summer_fishing_reward_init();
 	need_autopot_init();

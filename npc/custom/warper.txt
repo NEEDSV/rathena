@@ -25,13 +25,13 @@ function FavoriteMenu; function FavoriteRegister; function FavoriteUnlock; funct
 // --------------------------------------------------
 
 menu	needtr("마지막 이동 ^777777[", "Last Warp ^777777[")+lastwarp$+"]^000000",-,
-		" ~ 나만의 워프포탈",Favorites,
+		needtr(" ~ 나만의 워프포탈"," ~ Favorites"),Favorites,
     	needtr(" ~ 마을", " ~ Towns"),Towns,
     	needtr(" ~ 필드", " ~ Fields"),Fields,
     	needtr(" ~ 던전", " ~ Dungeons"),Dungeons,
 //    	" ~ Guild Castles",Castles,
     	needtr(" ~ 길드 던전", " ~ Guild Dungeons"),Guild_Dungeons,
-    	" ~ 메모리얼",Instances;
+    	needtr(" ~ 메모리얼"," ~ Instances"),Instances;
 //    	" ~ 특수 지역",Special;
 
 	if (lastwarp$ == "")
@@ -73,7 +73,7 @@ function Go {
 
 	// 뒤틀린 시간의 시계탑 2·3층은 Base Lv. 150 이상만 입장할 수 있습니다.
 	if ((.@map$ == "c_tower2_" || .@map$ == "c_tower3_") && BaseLevel < 150) {
-		message strcharinfo(0),"뒤틀린 시간의 시계탑은 Base Lv. 150 이상부터 입장할 수 있습니다.";
+		message strcharinfo(0),needtr("뒤틀린 시간의 시계탑은 Base Lv. 150 이상부터 입장할 수 있습니다.", "The Nightmare Clock Tower can only be entered from Base Lv. 150.");
 		end;
 	}
 
@@ -114,7 +114,7 @@ function Pick {
 		set .@map$, getarg(0)+((.@i<10)?"0":"")+.@i;
 	}
 	if (.@warp_block & (1<<.@select)) {
-		message strcharinfo(0)," 이 지도는 현재 활성화되어 있지 않습니다."+((checkre(0))?"":"Pre-")+"Renewal.";
+		message strcharinfo(0),needtr(" 이 지도는 현재 활성화되어 있지 않습니다.", "This map is not enabled in ")+((checkre(0))?"":"Pre-")+"Renewal.";
 		end;
 	}
 	set .@x, @c[.@i*2];
@@ -134,7 +134,7 @@ function FavoriteMenu {
 		.@menu$ = "";
 		for (.@i = 0; .@i < WARP_FAV_SLOTS; .@i += 1) {
 			if (#WARP_FAV_MAP$[.@i] == "")
-				.@menu$ += "^777777[빈 슬롯 "+(.@i + 1)+"]^000000:";
+				.@menu$ += needtr("^777777[빈 슬롯 ", "^777777[Empty Slot ")+(.@i + 1)+"]^000000:";
 			else
 				.@menu$ += "["+(.@i + 1)+"] "+#WARP_FAV_NAME$[.@i]+":";
 		}
@@ -144,26 +144,26 @@ function FavoriteMenu {
 		.@delete_index = 0;
 		.@back_index = 0;
 
-		.@menu$ += "^00AAFF최근 이동지 등록^000000:";
+		.@menu$ += needtr("^00AAFF최근 이동지 등록^000000:", "^00AAFFRegister Recent Warp^000000:");
 		if (WARP_FAV_SLOTS < .FavoriteMaxSlots) {
 			.@unlock_index = .@register_index + 1;
-			.@menu$ += "^FFD700즐겨찾기 슬롯 해금^000000:";
+			.@menu$ += needtr("^FFD700즐겨찾기 슬롯 해금^000000:", "^FFD700Unlock Favorite Slot^000000:");
 			.@delete_index = .@unlock_index + 1;
 		} else
 			.@delete_index = .@register_index + 1;
 
-		.@menu$ += "즐겨찾기 삭제:";
+		.@menu$ += needtr("즐겨찾기 삭제:", "Delete Favorite:");
 		.@back_index = .@delete_index + 1;
-		.@menu$ += "돌아가기";
+		.@menu$ += needtr("돌아가기", "Back");
 
 		.@select = select(.@menu$);
 
 		if (.@select <= WARP_FAV_SLOTS) {
 			.@slot = .@select - 1;
 			if (#WARP_FAV_MAP$[.@slot] == "") {
-				mes "[워프 도우미]";
-				mes "비어 있는 즐겨찾기 슬롯입니다.";
-				mes "최근 이동지 등록 메뉴에서 목적지를 등록해 주세요.";
+				mes needtr("[워프 도우미]","[Warp Helper]");
+				mes needtr("비어 있는 즐겨찾기 슬롯입니다.","This favorite slot is empty.");
+				mes needtr("최근 이동지 등록 메뉴에서 목적지를 등록해 주세요.","Register a destination from the recent-warp menu.");
 				close2;
 				return;
 			}
@@ -193,10 +193,10 @@ function FavoriteRegister {
 	if (WARP_FAV_SLOTS < 1)
 		WARP_FAV_SLOTS = 1;
 
-	mes "[워프 도우미]";
+	mes needtr("[워프 도우미]","[Warp Helper]");
 	if (lastwarp$ == "") {
-		mes "최근에 워프한 목적지가 없습니다.";
-		mes "먼저 원하는 장소로 이동한 뒤 다시 등록해 주세요.";
+		mes needtr("최근에 워프한 목적지가 없습니다.","You have not warped anywhere recently.");
+		mes needtr("먼저 원하는 장소로 이동한 뒤 다시 등록해 주세요.","Warp somewhere first, then register it here.");
 		close2;
 		return;
 	}
@@ -205,7 +205,7 @@ function FavoriteRegister {
 		if (.@i == .@fixed_slot)
 			continue;
 		if (#WARP_FAV_MAP$[.@i] == lastwarp$ && #WARP_FAV_X[.@i] == lastwarpx && #WARP_FAV_Y[.@i] == lastwarpy) {
-			mes "해당 목적지는 이미 ^0055FF"+#WARP_FAV_NAME$[.@i]+"^000000 이름으로 등록되어 있습니다.";
+			mes needtr("해당 목적지는 이미 ^0055FF", "This destination is already registered as ^0055FF")+#WARP_FAV_NAME$[.@i]+needtr("^000000 이름으로 등록되어 있습니다.", "^000000.");
 			close2;
 			return;
 		}
@@ -217,15 +217,15 @@ function FavoriteRegister {
 		.@slot_menu$ = "";
 		for (.@i = 0; .@i < WARP_FAV_SLOTS; .@i += 1) {
 			if (#WARP_FAV_MAP$[.@i] == "")
-				.@slot_menu$ += "[빈 슬롯 "+(.@i + 1)+"]:";
+				.@slot_menu$ += needtr("[빈 슬롯 ", "[Empty Slot ")+(.@i + 1)+"]:";
 			else
-				.@slot_menu$ += "["+(.@i + 1)+"] "+#WARP_FAV_NAME$[.@i]+" ^FF0000(덮어쓰기)^000000:";
+				.@slot_menu$ += "["+(.@i + 1)+"] "+#WARP_FAV_NAME$[.@i]+needtr(" ^FF0000(덮어쓰기)^000000:", " ^FF0000(Overwrite)^000000:");
 		}
-		.@slot_menu$ += "취소";
+		.@slot_menu$ += needtr("취소", "Cancel");
 
-		mes "최근 이동한 목적지:";
+		mes needtr("최근 이동한 목적지:","Most recent destination:");
 		mes "^0055FF"+lastwarp$+"^000000 ("+lastwarpx+", "+lastwarpy+")";
-		mes "등록할 슬롯을 선택해 주세요.";
+		mes needtr("등록할 슬롯을 선택해 주세요.","Choose a slot to register it in.");
 		next;
 		.@select = select(.@slot_menu$);
 		if (.@select > WARP_FAV_SLOTS)
@@ -233,18 +233,18 @@ function FavoriteRegister {
 		.@slot = .@select - 1;
 	}
 
-	mes "[워프 도우미]";
-	mes "즐겨찾기에 표시할 이름을 입력해 주세요.";
-	mes "예: 유페로스 중심부, 생체 3층";
+	mes needtr("[워프 도우미]","[Warp Helper]");
+	mes needtr("즐겨찾기에 표시할 이름을 입력해 주세요.","Enter the name to show in your favorites.");
+	mes needtr("예: 유페로스 중심부, 생체 3층","Example: Juperos Core, Biolab 3F");
 	input .@name$;
 	if (.@name$ == "")
 		.@name$ = lastwarp$;
 
 	if (#WARP_FAV_MAP$[.@slot] != "") {
-		mes "슬롯 "+(.@slot + 1)+"에는 ^0055FF"+#WARP_FAV_NAME$[.@slot]+"^000000이 등록되어 있습니다.";
-		mes "현재 목적지로 덮어쓰시겠습니까?";
+		mes needtr("슬롯 ", "Slot ")+(.@slot + 1)+needtr("에는 ^0055FF", " already holds ^0055FF")+#WARP_FAV_NAME$[.@slot]+needtr("^000000이 등록되어 있습니다.", "^000000.");
+		mes needtr("현재 목적지로 덮어쓰시겠습니까?","Overwrite it with the current destination?");
 		next;
-		if (select("덮어쓴다:취소") == 2)
+		if (select(needtr("덮어쓴다:취소","Overwrite:Cancel")) == 2)
 			return;
 	}
 
@@ -253,8 +253,8 @@ function FavoriteRegister {
 	#WARP_FAV_X[.@slot] = lastwarpx;
 	#WARP_FAV_Y[.@slot] = lastwarpy;
 
-	mes "[워프 도우미]";
-	mes "^0055FF"+.@name$+"^000000 목적지를 즐겨찾기 슬롯 "+(.@slot + 1)+"에 등록했습니다.";
+	mes needtr("[워프 도우미]","[Warp Helper]");
+	mes "^0055FF"+.@name$+needtr("^000000 목적지를 즐겨찾기 슬롯 ", "^000000 has been registered in favorite slot ")+(.@slot + 1)+needtr("에 등록했습니다.", ".");
 	close2;
 	return;
 }
@@ -264,8 +264,8 @@ function FavoriteUnlock {
 		WARP_FAV_SLOTS = 1;
 
 	if (WARP_FAV_SLOTS >= .FavoriteMaxSlots) {
-		mes "[워프 도우미]";
-		mes "모든 즐겨찾기 슬롯을 해금했습니다.";
+		mes needtr("[워프 도우미]","[Warp Helper]");
+		mes needtr("모든 즐겨찾기 슬롯을 해금했습니다.","You have already unlocked every favorite slot.");
 		close2;
 		return;
 	}
@@ -273,32 +273,32 @@ function FavoriteUnlock {
 	.@next_slot = WARP_FAV_SLOTS + 1;
 	.@cost = .FavoriteUnlockCost[.@next_slot];
 
-	mes "[워프 도우미]";
+	mes needtr("[워프 도우미]","[Warp Helper]");
 	if (.@cost <= 0) {
-		mes "슬롯 "+.@next_slot+"의 해금 비용이 설정되어 있지 않습니다.";
+		mes needtr("슬롯 ","Slot ")+.@next_slot+needtr("의 해금 비용이 설정되어 있지 않습니다."," has no unlock cost configured.");
 		mes needtr("관리자에게 문의해 주세요.", "Please contact the administrator.");
 		close2;
 		return;
 	}
 
-	mes "즐겨찾기 슬롯 "+.@next_slot+"을 해금하시겠습니까?";
-	mes "필요 제니: ^FF0000"+callfunc("F_InsertComma", .@cost)+" Zeny^000000";
-	mes "보유 제니: "+callfunc("F_InsertComma", Zeny)+" Zeny";
+	mes needtr("즐겨찾기 슬롯 ","Favorite slot ")+.@next_slot+needtr("을 해금하시겠습니까?"," - unlock it?");
+	mes needtr("필요 제니: ^FF0000", "Zeny required: ^FF0000")+callfunc("F_InsertComma", .@cost)+" Zeny^000000";
+	mes needtr("보유 제니: ", "Zeny you have: ")+callfunc("F_InsertComma", Zeny)+" Zeny";
 	next;
-	if (select("해금한다:취소") == 2)
+	if (select(needtr("해금한다:취소","Unlock:Cancel")) == 2)
 		return;
 
 	if (Zeny < .@cost) {
-		mes "[워프 도우미]";
-		mes "제니가 부족합니다.";
+		mes needtr("[워프 도우미]","[Warp Helper]");
+		mes needtr("제니가 부족합니다.","You do not have enough Zeny.");
 		close2;
 		return;
 	}
 
 	Zeny -= .@cost;
 	WARP_FAV_SLOTS = .@next_slot;
-	mes "[워프 도우미]";
-	mes "즐겨찾기 슬롯 "+.@next_slot+"을 해금했습니다.";
+	mes needtr("[워프 도우미]","[Warp Helper]");
+	mes needtr("즐겨찾기 슬롯 ","Favorite slot ")+.@next_slot+needtr("을 해금했습니다."," is now unlocked.");
 	close2;
 	return;
 }
@@ -320,15 +320,15 @@ function FavoriteDelete {
 			.@count += 1;
 		}
 
-		mes "[워프 도우미]";
+		mes needtr("[워프 도우미]","[Warp Helper]");
 		if (.@count == 0) {
-			mes "삭제할 즐겨찾기가 없습니다.";
+			mes needtr("삭제할 즐겨찾기가 없습니다.","You have no favorites to delete.");
 			close2;
 			return;
 		}
 
-		.@menu$ += "취소";
-		mes "삭제할 즐겨찾기를 선택해 주세요.";
+		.@menu$ += needtr("취소", "Cancel");
+		mes needtr("삭제할 즐겨찾기를 선택해 주세요.","Choose a favorite to delete.");
 		next;
 		.@select = select(.@menu$);
 		if (.@select > .@count)
@@ -337,16 +337,16 @@ function FavoriteDelete {
 	}
 
 	if (#WARP_FAV_MAP$[.@slot] == "") {
-		mes "[워프 도우미]";
-		mes "이미 비어 있는 슬롯입니다.";
+		mes needtr("[워프 도우미]","[Warp Helper]");
+		mes needtr("이미 비어 있는 슬롯입니다.","That slot is already empty.");
 		close2;
 		return;
 	}
 
-	mes "[워프 도우미]";
-	mes "^FF0000"+#WARP_FAV_NAME$[.@slot]+"^000000 즐겨찾기를 삭제하시겠습니까?";
+	mes needtr("[워프 도우미]","[Warp Helper]");
+	mes "^FF0000"+#WARP_FAV_NAME$[.@slot]+needtr("^000000 즐겨찾기를 삭제하시겠습니까?", "^000000 - delete this favorite?");
 	next;
-	if (select("삭제한다:취소") == 2)
+	if (select(needtr("삭제한다:취소","Delete:Cancel")) == 2)
 		return;
 
 	#WARP_FAV_NAME$[.@slot] = "";
@@ -354,8 +354,8 @@ function FavoriteDelete {
 	#WARP_FAV_X[.@slot] = 0;
 	#WARP_FAV_Y[.@slot] = 0;
 
-	mes "[워프 도우미]";
-	mes "즐겨찾기를 삭제했습니다.";
+	mes needtr("[워프 도우미]","[Warp Helper]");
+	mes needtr("즐겨찾기를 삭제했습니다.","The favorite has been deleted.");
 	close2;
 	return;
 }
@@ -378,7 +378,7 @@ function Restrict {
 			for (set .@i,1; .@i<getargcount(); set .@i,.@i+1)
 				set @warp_block, @warp_block | (1<<getarg(.@i));
 		} else {
-			message strcharinfo(0)," 이 지도는 현재 활성화되어 있지 않습니다."+((checkre(0))?"":"Pre-")+"Renewal.";
+			message strcharinfo(0),needtr(" 이 지도는 현재 활성화되어 있지 않습니다.", "This map is not enabled in ")+((checkre(0))?"":"Pre-")+"Renewal.";
 			end;
 		}
 	}
@@ -389,13 +389,13 @@ function Restrict {
 	Towns:
 // --------------------------------------------------
 // "락 릿지",T36, "미드가르드 연합 주둔지",T27, "바르문트 저택 정원",T41, "이스가르드 얼음의 성",T15,"특수경계지역 코르",T37,  "토르 화산 병참기지",T39, "회색늑대 마을",T44, 
-menu	"라자냐(수도)",T20,"프론테라",T1, "게펜",T13, "니플헤임",T33,"데와타",T8, "라헬",T35,"루티에",T23, 
-		"리히타르젠",T21, "마누크",T26, "말랑도",T24, "모라",T28, "모르코",T29, "모스코비아",T30, "무명섬(Day)",T31, 
-		"무명섬(Night)",T32, "베인스",T42, "베루스 발굴지",T43, 
-		"브라질리스",T6, "스플랑디드",T38, "아마쯔",T4, "아요타야",T5, "아인베흐",T10, "아인브로크",T11, "알데바란",T3, 
-		"알베르타",T2, "에클라쥬",T9, "엘 디카스테스",T12, "용지성",T22,"움발라",T40, "유노",T18, 
-		"이즈루드",T16, "자와이",T17, "코모도",T7, "쿤룬",T19,
-		"페이욘",T34, "포트 말라야",T25, "휘겔",T14;
+menu	needtr("라자냐(수도)","Lasagna"),T20,needtr("프론테라","Prontera"),T1, needtr("게펜","Geffen"),T13, needtr("니플헤임","Niflheim"),T33,needtr("데와타","Dewata"),T8, needtr("라헬","Rachel"),T35,needtr("루티에","Lutie"),T23, 
+		needtr("리히타르젠","Lighthalzen"),T21, needtr("마누크","Manuk"),T26, needtr("말랑도","Malangdo"),T24, needtr("모라","Mora"),T28, needtr("모르코","Morocc"),T29, needtr("모스코비아","Moscovia"),T30, needtr("무명섬(Day)","Nameless Island (Day)"),T31, 
+		needtr("무명섬(Night)","Nameless Island (Night)"),T32, needtr("베인스","Veins"),T42, needtr("베루스 발굴지","Verus Findspot"),T43, 
+		needtr("브라질리스","Brasilis"),T6, needtr("스플랑디드","Splendide"),T38, needtr("아마쯔","Amatsu"),T4, needtr("아요타야","Ayothaya"),T5, needtr("아인베흐","Einbech"),T10, needtr("아인브로크","Einbroch"),T11, needtr("알데바란","Aldebaran"),T3, 
+		needtr("알베르타","Alberta"),T2, needtr("에클라쥬","Eclage"),T9, needtr("엘 디카스테스","El Dicastes"),T12, needtr("용지성","Luoyang"),T22,needtr("움발라","Umbala"),T40, needtr("유노","Juno"),T18, 
+		needtr("이즈루드","Izlude"),T16, needtr("자와이","Jawaii"),T17, needtr("코모도","Comodo"),T7, needtr("쿤룬","Kunlun"),T19,
+		needtr("페이욘","Payon"),T34, needtr("포트 말라야","Malaya"),T25, needtr("휘겔","Hugel"),T14;
 
 T1: Go("prontera",155,183);
 T2: Go("alberta",28,234);
@@ -461,189 +461,189 @@ T44: Restrict("RE");
 // --------------------------------------------------
 @f = true;
 // "회색늑대의 숲",F12, "키와와 사막",F15,"얼어붙은 비늘",F10, 
-menu	"게펜 필드",F11, "니플헤임 필드",F25, "데와타 필드",F6, "라자냐 필드",F17,
-		"라헬 필드",F28, "루티에 필드",F20, "리히타르젠 필드",F18, "마누크 필드",F22,
-		"모스코비아 필드",F24, "묘르닐 산맥",F23, "베인스 필드",F32, "브라질리스 필드",F4,
-		"비프로스트 필드",F3, "소그라트 사막",F29, "스플랑디드 필드",F30, "아마츠 필드",F1,
-		"아요타야 필드",F2, "아인브로크 필드",F8, "에클라쥬 필드",F7,
-		"엘 디스카테스 필드",F9, "용지성 필드",F19, "움발라 필드",F31, "유노 필드",F14,
-		"코모도 필드",F5, "쿤룬 필드",F16, "페이욘 숲 속",F26,
-		"포트 말라야 필드",F21, "프론테라 필드",F27, "휘겔 필드",F13;
+menu	needtr("게펜 필드","Geffen Fields"),F11, needtr("니플헤임 필드","Niflheim Fields"),F25, needtr("데와타 필드","Dewata Fields"),F6, needtr("라자냐 필드","Lasagna Fields"),F17,
+		needtr("라헬 필드","Rachel Fields"),F28, needtr("루티에 필드","Lutie Field"),F20, needtr("리히타르젠 필드","Lighthalzen Fields"),F18, needtr("마누크 필드","Manuk Fields"),F22,
+		needtr("모스코비아 필드","Moscovia Fields"),F24, needtr("묘르닐 산맥","Mjolnir Fields"),F23, needtr("베인스 필드","Veins Fields"),F32, needtr("브라질리스 필드","Brasilis Fields"),F4,
+		needtr("비프로스트 필드","Bifrost Fields"),F3, needtr("소그라트 사막","Sograt Deserts"),F29, needtr("스플랑디드 필드","Splendide Fields"),F30, needtr("아마츠 필드","Amatsu Fields"),F1,
+		needtr("아요타야 필드","Ayothaya Fields"),F2, needtr("아인브로크 필드","Einbroch Fields"),F8, needtr("에클라쥬 필드","Eclage Fields"),F7,
+		needtr("엘 디스카테스 필드","El Dicastes Fields"),F9, needtr("용지성 필드","Luoyang Field"),F19, needtr("움발라 필드","Umbala Fields"),F31, needtr("유노 필드","Juno Fields"),F14,
+		needtr("코모도 필드","Comodo Fields"),F5, needtr("쿤룬 필드","Kunlun Fields"),F16, needtr("페이욘 숲 속","Payon Forests"),F26,
+		needtr("포트 말라야 필드","Malaya Fields"),F21, needtr("프론테라 필드","Prontera Fields"),F27, needtr("휘겔 필드","Hugel Fields"),F13;
 
 F1: setarray @c[2],190,197;
-	Disp("아마쯔 필드",1,1); Pick("ama_fild");
+	Disp(needtr("아마쯔 필드", "Amatsu Field"),1,1); Pick("ama_fild");
 F2: setarray @c[2],173,134,212,150;
-	Disp("아요타야 필드",1,2); Pick("ayo_fild");
+	Disp(needtr("아요타야 필드", "Ayothaya Field"),1,2); Pick("ayo_fild");
 F3: Restrict("RE");
 	setarray @c[2],193,220,220,187;
-	Disp("비프로스트 필드",1,2); Pick("bif_fild");
+	Disp(needtr("비프로스트 필드", "Bifrost Field"),1,2); Pick("bif_fild");
 F4: Restrict("Brasilis");
 	setarray @c[2],74,32;
-	Disp("브라질리스 필드",1,1); Pick("bra_fild");
+	Disp(needtr("브라질리스 필드", "Brasilis Field"),1,1); Pick("bra_fild");
 F5: Restrict("Pre-RE",5);
 	setarray @c[2],180,178,231,160,191,172,228,194,224,203,190,223,234,177,194,175,172,172;
-	Disp("코모도 필드",1,9); Pick("cmd_fild");
+	Disp(needtr("코모도 필드", "Comodo Field"),1,9); Pick("cmd_fild");
 F6: Restrict("RE");
 	setarray @c[2],371,212;
-	Disp("데와타 필드",1,1); Pick("dew_fild");
+	Disp(needtr("데와타 필드", "Dewata Field"),1,1); Pick("dew_fild");
 F7: Restrict("RE");
 	setarray @c[2],97,314;
-	Disp("에클라쥬 필드",1,1); Pick("ecl_fild");
+	Disp(needtr("에클라쥬 필드", "Eclage Field"),1,1); Pick("ecl_fild");
 F8: Restrict("Pre-RE",2,10);
 	setarray @c[2],142,225,182,141,187,228,185,173,216,173,195,148,272,220,173,214,207,174,196,200;
-	Disp("아인브로크 필드",1,10); Pick("ein_fild");
+	Disp(needtr("아인브로크 필드", "Einbroch Field"),1,10); Pick("ein_fild");
 F9: Restrict("RE");
 	setarray @c[2],143,132,143,217;
-	Disp("엘 디스카테스 필드",1,2); Pick("dic_fild");
+	Disp(needtr("엘 디스카테스 필드", "El Dicastes Field"),1,2); Pick("dic_fild");
 F10: Restrict("RE");
 	 setarray @c[2],378,223,223,18,365,241,140,280;
 	 Disp("얼어붙은 비늘 언덕:얼어붙은 비늘 평원:얼어붙은 비늘 빙하:얼어붙은 꼬리"); Pick("","jor_back1","jor_back2","jor_back3","jor_tail");
 F11: Restrict("Pre-RE",13,15);
 	 setarray @c[0],46,199,213,204,195,212,257,192,188,171,166,263,248,158,195,191,186,183,221,117,178,218,136,328,240,181,235,235,211,185;
-	 Disp("게펜 필드",0,14); Pick("gef_fild",1);
+	 Disp(needtr("게펜 필드", "Geffen Field"),0,14); Pick("gef_fild",1);
 F12: Restrict("RE");
 	 setarray @c[2],22,315,122,388;
 	 Disp("회색늑대의 숲",1,2); Pick("gw_fild");
 F13: Restrict("Pre-RE",3,7);
 	 setarray @c[2],268,101,222,193,232,185,252,189,196,106,216,220,227,197;
-	 Disp("휘겔 필드",1,7); Pick("hu_fild");
+	 Disp(needtr("휘겔 필드", "Hugel Field"),1,7); Pick("hu_fild");
 F14: Restrict("Pre-RE",5,10);
 	 setarray @c[2],189,224,192,207,221,157,226,199,223,177,187,232,231,174,196,203,183,214,200,124,195,226,210,304;
-	 Disp("유노 필드",1,12); Pick("yuno_fild");
+	 Disp(needtr("유노 필드", "Juno Field"),1,12); Pick("yuno_fild");
 F15: Restrict("RE");
 	 setarray @c[2],38,246,31,207;
 	 Disp("키와와 사막",1,2); Pick("","rockrdg1","rockrdg2");
 F16: setarray @c[2],220,227;
-	 Disp("쿤룬 필드",1,1); Pick("gon_fild");
+	 Disp(needtr("쿤룬 필드", "Kunlun Field"),1,1); Pick("gon_fild");
 F17: Restrict("RE");
 	 setarray @c[2],344,371,20,98;
-	 Disp("라자냐 필드",1,2); Pick("lasa_fild");	 
+	 Disp(needtr("라자냐 필드", "Lasagna Field"),1,2); Pick("lasa_fild");	 
 F18: setarray @c[2],240,179,185,235,240,226;
-	 Disp("리히타르젠 필드",1,3); Pick("lhz_fild");
+	 Disp(needtr("리히타르젠 필드", "Lighthalzen Field"),1,3); Pick("lhz_fild");
 F19: setarray @c[2],229,187;
-	 Disp("용지성 필드",1,1); Pick("lou_fild");
+	 Disp(needtr("용지성 필드", "Luoyang Field"),1,1); Pick("lou_fild");
 F20: setarray @c[2],115,145;
-	 Disp("루티에 필드",1,1); Pick("xmas_fild");
+	 Disp(needtr("루티에 필드", "Lutie Field"),1,1); Pick("xmas_fild");
 F21: Restrict("RE");
 	 setarray @c[2],40,272,207,180;
-	 Disp("포트 말랴야 필드",1,2); Pick("ma_fild");
+	 Disp(needtr("포트 말랴야 필드", "Malaya Field"),1,2); Pick("ma_fild");
 F22: setarray @c[2],35,236,35,262,84,365;
-	 Disp("마누크 필드",1,3); Pick("man_fild");
+	 Disp(needtr("마누크 필드", "Manuk Field"),1,3); Pick("man_fild");
 F23: setarray @c[2],204,120,175,193,208,213,179,180,181,240,195,270,235,202,188,215,205,144,245,223,180,206,196,208;
-	 Disp("묘르닐 산맥",1,12); Pick("mjolnir_");
+	 Disp(needtr("묘르닐 산맥", "Mjolnir Field"),1,12); Pick("mjolnir_");
 F24: setarray @c[2],82,104,131,147;
-	 Disp("모스코비아 필드",1,2); Pick("mosk_fild");
+	 Disp(needtr("모스코비아 필드", "Moscovia Field"),1,2); Pick("mosk_fild");
 F25: setarray @c[2],215,229,167,234;
-	 Disp("니플헤임 필드",1,2); Pick("nif_fild");
+	 Disp(needtr("니플헤임 필드", "Niflheim Field"),1,2); Pick("nif_fild");
 F26: Restrict("Pre-RE",5,11);
 	 setarray @c[2],158,206,151,219,205,148,186,247,134,204,193,235,200,177,137,189,201,224,160,205,194,150;
-	 Disp("페이욘 숲 속",1,11); Pick("pay_fild");
+	 Disp(needtr("페이욘 숲 속", "Payon Forest"),1,11); Pick("pay_fild");
 F27: setarray @c[0],208,227,190,206,240,206,190,143,307,252,239,213,185,188,193,194,187,218,210,183,195,149,198,164;
-	 Disp("프론테라 필드",0,11); Pick("prt_fild",1);
+	 Disp(needtr("프론테라 필드", "Prontera Field"),0,11); Pick("prt_fild",1);
 F28: Restrict("Pre-RE",2,7,9,10,11,13);
 	 setarray @c[2],192,162,235,166,202,206,202,208,225,202,202,214,263,196,217,201,87,121,277,181,221,185,175,200,174,197;
-	 Disp("라헬 필드",1,13); Pick("ra_fild");
+	 Disp(needtr("라헬 필드", "Rachel Field"),1,13); Pick("ra_fild");
 F29: if(.Satan_Morocc){
 	 setarray @c[2],219,205,177,206,194,182,224,170,198,216,156,187,185,263,206,228,208,238,209,223,85,97,207,202,31,195,38,195;
-	 Disp("소그라트 사막 1:소그라트 사막 2:소그라트 사막 3:소그라트 사막 7:소그라트 사막 11:소그라트 사막 12:소그라트 사막 13:소그라트 사막 16:소그라트 사막 17:소그라트 사막 18:소그라트 사막 19:소그라트 사막 20:소그라트 사막 21:소그라트 사막 22");
+	 Disp(needtr("소그라트 사막 1:소그라트 사막 2:소그라트 사막 3:소그라트 사막 7:소그라트 사막 11:소그라트 사막 12:소그라트 사막 13:소그라트 사막 16:소그라트 사막 17:소그라트 사막 18:소그라트 사막 19:소그라트 사막 20:소그라트 사막 21:소그라트 사막 22", "Sograt Desert 1:Sograt Desert 2:Sograt Desert 3:Sograt Desert 7:Sograt Desert 11:Sograt Desert 12:Sograt Desert 13:Sograt Desert 16:Sograt Desert 17:Sograt Desert 18:Sograt Desert 19:Sograt Desert 20:Sograt Desert 21:Sograt Desert 22"));
 	 Pick("","moc_fild01","moc_fild02","moc_fild03","moc_fild07","moc_fild11","moc_fild12","moc_fild13","moc_fild16","moc_fild17","moc_fild18","moc_fild19","moc_fild20","moc_fild21","moc_fild22");
 	 }else{
 	 setarray @c[2],219,205,177,206,194,182,146,297,204,197,275,302,224,170,139,123,101,110,341,39,198,216,156,187,185,263,223,222,170,257,206,228,208,238,209,223,85,97;
-	 Disp("소그라트 사막",1,19); Pick("moc_fild");
+	 Disp(needtr("소그라트 사막", "Sograt Desert"),1,19); Pick("moc_fild");
 	 }
 F30: setarray @c[2],175,186,236,184,188,204;
-	 Disp("스플랑디드 필드",1,3); Pick("spl_fild");
+	 Disp(needtr("스플랑디드 필드", "Splendide Field"),1,3); Pick("spl_fild");
 F31: setarray @c[2],217,206,223,221,237,215,202,197;
-	 Disp("움발라 필드",1,4); Pick("um_fild");
+	 Disp(needtr("움발라 필드", "Umbala Field"),1,4); Pick("um_fild");
 F32: Restrict("Pre-RE",5);
 	 setarray @c[2],186,175,196,370,222,45,51,250,202,324,150,223,149,307;
-	 Disp("베인스 필드",1,7); Pick("ve_fild");
+	 Disp(needtr("베인스 필드", "Veins Field"),1,7); Pick("ve_fild");
 
 // --------------------------------------------------
 	Dungeons:
 // --------------------------------------------------
 @d = true;
 // "락 릿지 던전",D42, "루두스 던전",D43,"일루전 던전",D23,"화염분지",D17,
-menu	"개미 지옥",D4, "거북섬 던전",D50, "게페니아",D18, "게펜 던전",D19,
-		"광산 던전",D16, "글래스트 헤임",D20, "난파선",D46, "니드호그 던전",D33,
-		"니플헤임 던전",D34, "데와타 던전",D15, "라자냐 던전",D28, "라헬 신전",D41,
-		"말랑도 던전",D31, "모스코비아 던전",D32,
-		"미궁 숲",D21, 
-		"베루스 지역",D53, "브라질리스 던전",D9, "비프로스트 탑",D7, "생체실험 던전",D8, "스카라바 홀",D44,
-		"스핑크스 던전",D45, "시계탑",D11, "아마쯔 던전",D3, "아요타야 던전",D5,
-		"어비스 호수",D2, "얼음 던전",D22, "오딘 신전",D35, 
-		"오크 던전",D36, "용암 던전",D30, "용지성 던전",D29, "움발라 던전",D51,
-		"유페로스",D25, "이름없는 성 수도원",D14, "이즈루드 던전",D10,
-		"장난감 던전",D49, "지하수로 던전",D13, "코모도 던전",D6,
-		"쿤룬 던전",D27, "킬 하이르 학원",D26, "타나토스 타워",D47, "토르 화산",D48,
-		"페이욘 던전",D38, "폐광 던전",D12,  "피라미드 던전",D40,"프론테라 왕성",D39;
+menu	needtr("개미 지옥","Anthell"),D4, needtr("거북섬 던전","Turtle Dungeon"),D50, needtr("게페니아","Gefenia"),D18, needtr("게펜 던전","Geffen Dungeon"),D19,
+		needtr("광산 던전","Einbroch Dungeon"),D16, needtr("글래스트 헤임","Glast Heim"),D20, needtr("난파선","Sunken Ship"),D46, needtr("니드호그 던전","Nidhogg's Dungeon"),D33,
+		needtr("니플헤임 던전","Niflheim Dungeon"),D34, needtr("데와타 던전","Dewata Dungeon"),D15, needtr("라자냐 던전","Lasagna Dungeon"),D28, needtr("라헬 신전","Rachel Sanctuary"),D41,
+		needtr("말랑도 던전","Malangdo Dungeon"),D31, needtr("모스코비아 던전","Moscovia Dungeon"),D32,
+		needtr("미궁 숲","Hidden Dungeon"),D21, 
+		needtr("베루스 지역","Verus Area"),D53, needtr("브라질리스 던전","Brasilis Dungeon"),D9, needtr("비프로스트 탑","Bifrost Tower"),D7, needtr("생체실험 던전","Bio Labs"),D8, needtr("스카라바 홀","Scaraba Hole"),D44,
+		needtr("스핑크스 던전","Sphinx"),D45, needtr("시계탑","Clock Tower"),D11, needtr("아마쯔 던전","Amatsu Dungeon"),D3, needtr("아요타야 던전","Ayothaya Dungeon"),D5,
+		needtr("어비스 호수","Abyss Lakes"),D2, needtr("얼음 던전","Ice Dungeon"),D22, needtr("오딘 신전","Odin Temple"),D35, 
+		needtr("오크 던전","Orc Dungeon"),D36, needtr("용암 던전","Magma Dungeon"),D30, needtr("용지성 던전","Luoyang Dungeon"),D29, needtr("움발라 던전","Umbala Dungeon"),D51,
+		needtr("유페로스","Juperos"),D25, needtr("이름없는 성 수도원","Cursed Abbey"),D14, needtr("이즈루드 던전","Byalan Dungeon"),D10,
+		needtr("장난감 던전","Toy Factory"),D49, needtr("지하수로 던전","Culvert"),D13, needtr("코모도 던전","Beach Dungeon"),D6,
+		needtr("쿤룬 던전","Kunlun Dungeon"),D27, needtr("킬 하이르 학원","Kiel Dungeon"),D26, needtr("타나토스 타워","Thanatos Tower"),D47, needtr("토르 화산","Thor Volcano"),D48,
+		needtr("페이욘 던전","Payon Dungeon"),D38, needtr("폐광 던전","Coal Mines"),D12,  needtr("피라미드 던전","Pyramids"),D40,needtr("프론테라 왕성","Prontera Underground"),D39;
 
 D1: Restrict("RE");
 	setarray @c[2],253,244,145,278;
-	Disp("1층 버려진 연구소:2층 집중배양실"); Pick("","amicitia1","amicitia2");
+	Disp(needtr("1층 버려진 연구소:2층 집중배양실", "1st Floor - Comprehensive Lab:2nd Floor - Intensive Culture Room")); Pick("","amicitia1","amicitia2");
 D2: Restrict("RE",4);
 	setarray @c[2],261,272,275,270,116,27,169,159;
 	//Disp("Abyss Lakes",1,4); Pick("abyss_");
-	Disp("어비스 동굴",1,3); Pick("abyss_");
+	Disp(needtr("어비스 동굴", "Abyss Lakes"),1,3); Pick("abyss_");
 D3: setarray @c[2],228,11,34,41,119,14;
-	Disp("아마쯔 던전",1,3); Pick("ama_dun");
+	Disp(needtr("아마쯔 던전", "Amatsu Dungeon"),1,3); Pick("ama_dun");
 D4: setarray @c[2],35,262,168,170;
-	Disp("개미지옥",1,2); Pick("anthell");
+	Disp(needtr("개미지옥", "Anthell"),1,2); Pick("anthell");
 D5: setarray @c[2],275,19,24,26;
-	Disp("아요타와 고대신전 미궁:아요타와 고대신전 내부"); Pick("ayo_dun");
+	Disp(needtr("아요타와 고대신전 미궁:아요타와 고대신전 내부", "Ancient Shrine Maze:Inside Ancient Shrine")); Pick("ayo_dun");
 D6: setarray @c[2],266,67,255,244,23,260;
-	Disp("코모도 던전",1,3); Pick("","beach_dun","beach_dun2","beach_dun3");
+	Disp(needtr("코모도 던전", "Beach Dungeon"),1,3); Pick("","beach_dun","beach_dun2","beach_dun3");
 D7: Restrict("RE");
 	setarray @c[2],57,13,64,88,45,14,26,23;
-	Disp("비프로스트 타워",1,4); Pick("ecl_tdun");
+	Disp(needtr("비프로스트 타워", "Bifrost Tower"),1,4); Pick("ecl_tdun");
 D8: Restrict("RE",4,5);
 	setarray @c[2],150,288,150,18,140,134,244,52,100,202;
-	Disp("생체실험 연구소 1:생체실험 연구소 2:생체실험 연구소 3:생체실험 연구소 4"); Pick("","lhz_dun01","lhz_dun02","lhz_dun03","lhz_dun04");
+	Disp(needtr("생체실험 연구소 1:생체실험 연구소 2:생체실험 연구소 3:생체실험 연구소 4", "Bio Lab 1:Bio Lab 2:Bio Lab 3:Bio Lab 4")); Pick("","lhz_dun01","lhz_dun02","lhz_dun03","lhz_dun04");
 D9: Restrict("Brasilis");
 	setarray @c[2],87,47,262,262;
-	Disp("브라질리스 던전",1,2); Pick("bra_dun");
+	Disp(needtr("브라질리스 던전", "Brasilis Dungeon"),1,2); Pick("bra_dun");
 D10: Restrict("RE",6);
 	 setarray @c[0],168,168,253,252,236,204,32,63,26,27,141,187;
-	 Disp("이즈루드 던전",1,6); Pick("iz_dun",1);
+	 Disp(needtr("이즈루드 던전", "Byalan Dungeon"),1,6); Pick("iz_dun",1);
 D11: Restrict("RE",9,10,11);
 	 setarray @c[2],199,159,148,283,65,147,56,155,297,25,127,169,277,178,268,74,266,27,60,142,79,39;
 	 //Disp("시계탑 1층:시계탑 2층:시계탑 3층:시계탑 4층:시계탑 지하 1층:시계탑 지하 2층:시계탑 지하 3층:시계탑 지하 4층:뒤틀린 시간의 시계탑 2층:뒤틀린 시간의 시계탑 3층:시계탑 미지의 지하층");
 	 //Pick("","c_tower1","c_tower2","c_tower3","c_tower4","alde_dun01","alde_dun02","alde_dun03","alde_dun04","c_tower2_","c_tower3_","clock_01");
-	 Disp("시계탑 1층:시계탑 2층:시계탑 3층:시계탑 4층:시계탑 지하 1층:시계탑 지하 2층:시계탑 지하 3층:시계탑 지하 4층:뒤틀린 시간의 시계탑 2층(150↑):뒤틀린 시간의 시계탑 3층(150↑)");
+	 Disp(needtr("시계탑 1층:시계탑 2층:시계탑 3층:시계탑 4층:시계탑 지하 1층:시계탑 지하 2층:시계탑 지하 3층:시계탑 지하 4층:뒤틀린 시간의 시계탑 2층(150↑):뒤틀린 시간의 시계탑 3층(150↑)", "Clock Tower 1:Clock Tower 2:Clock Tower 3:Clock Tower 4:Basement 1:Basement 2:Basement 3:Basement 4:Nightmare Clock Tower, 2nd Floor (150↑):Nightmare Clock Tower, 3rd Floor (150↑)"));
 	 Pick("","c_tower1","c_tower2","c_tower3","c_tower4","alde_dun01","alde_dun02","alde_dun03","alde_dun04","c_tower2_","c_tower3_");
 D12: setarray @c[2],52,17,381,343,302,262;
-	 Disp("묘르닐 폐광",1,3); Pick("mjo_dun");
+	 Disp(needtr("묘르닐 폐광", "Coal Mines"),1,3); Pick("mjo_dun");
 D13: setarray @c[2],131,247,19,19,180,169,100,92;
-	 Disp("지하수로",1,4); Pick("","prt_sewb1","prt_sewb2","prt_sewb3","prt_sewb4");
+	 Disp(needtr("지하수로", "Culvert"),1,4); Pick("","prt_sewb1","prt_sewb2","prt_sewb3","prt_sewb4");
 D14: setarray @c[2],51,14,150,11,120,10;
-	 Disp("이름 없는 섬 수도원",1,3); Pick("abbey");
+	 Disp(needtr("이름 없는 섬 수도원", "Cursed Abbey"),1,3); Pick("abbey");
 D15: Restrict("RE");
 	 setarray @c[2],285,160,299,29;
-	 Disp("데와타 던전",1,2); Pick("dew_dun");
+	 Disp(needtr("데와타 던전", "Dewata Dungeon"),1,2); Pick("dew_dun");
 D16: Restrict("RE",3);
 	 setarray @c[2],22,14,292,290,269,279;
 	 //Disp("광산 던전",1,3); Pick("ein_dun");
-	 Disp("광산 던전",1,2); Pick("ein_dun");
+	 Disp(needtr("광산 던전", "Einbroch Dungeon"),1,2); Pick("ein_dun");
 D17: Restrict("RE");
 	 Go("베루스",97,107);
 D18: setarray @c[2],40,103,203,34,266,168,130,272;
-	 Disp("게페니아",1,4); Pick("gefenia",0);
+	 Disp(needtr("게페니아", "Gefenia"),1,4); Pick("gefenia",0);
 D19: setarray @c[0],104,99,115,236,106,132,203,200;
-	 Disp("게펜 던전",1,4); Pick("gef_dun",1);
+	 Disp(needtr("게펜 던전", "Geffen Dungeon"),1,4); Pick("gef_dun",1);
 D20: Restrict("RE",17,18,19);
 	 setarray @c[2],370,304,199,29,104,25,150,15,157,287,147,15,258,255,108,291,171,283,68,277,156,7,12,7,133,271,224,274,14,70,150,14,104,31,148,144,199,29;
-	 Disp("글래스트헤임:성 1층:성 2층:기사단 1층:기사단 2층:지하묘지:지하수로 1층:지하수로 2층:지하수로 3층:지하수로 4층:수도원:계단 던전:지하 동굴 1층:지하 동굴 2층:지하 감옥 1층:지하 감옥 2층:고성 2층 회랑:고성 수도원 묘지");
+	 Disp(needtr("글래스트헤임:성 1층:성 2층:기사단 1층:기사단 2층:지하묘지:지하수로 1층:지하수로 2층:지하수로 3층:지하수로 4층:수도원:계단 던전:지하 동굴 1층:지하 동굴 2층:지하 감옥 1층:지하 감옥 2층:고성 2층 회랑:고성 수도원 묘지", "Entrance:Castle 1:Castle 2:Chivalry 1:Chivalry 2:Churchyard:Culvert 1:Culvert 2:Culvert 3:Culvert 4:St. Abbey:Staircase Dungeon:Underground Cave 1:Underground Cave 2:Underground Prison 1:Underground Prison 2:Castle 2 - Nightmare Mode:Churchyard - Nightmare Mode"));
 	 Pick("","glast_01","gl_cas01","gl_cas02","gl_knt01","gl_knt02","gl_chyard","gl_sew01","gl_sew02","gl_sew03","gl_sew04","gl_church","gl_step","gl_dun01","gl_dun02","gl_prison","gl_prison1","gl_cas02_","gl_chyard_");
 D21: setarray @c[2],99,31,93,20,182,88;
-	 Disp("미궁 숲",1,3); Pick("prt_maze");
+	 Disp(needtr("미궁 숲", "Hidden Dungeon"),1,3); Pick("prt_maze");
 D22: setarray @c[2],157,14,151,155,149,22,33,158;
-	 Disp("얼음 던전",1,4); Pick("ice_dun");
+	 Disp(needtr("얼음 던전", "Ice Dungeon"),1,4); Pick("ice_dun");
 D23: menu	needtr("일루전 오브 구양궁", "Illusion of Abyss"),SubD1, needtr("일루전 오브 프로즌", "Illusion of Frozen"),SubD2, needtr("일루전 오브 라비린스", "Illusion of Labyrinth"),SubD3,
 			needtr("일루전 오브 루안다", "Illusion of Luanda"),SubD4, needtr("일루전 오브 문라이트", "Illusion of Moonlight"),SubD5, needtr("일루전 오브 테디베어", "Illusion of Teddy Bear"),SubD6,
 			needtr("일루전 오브 트윈스", "Illusion of Twins"),SubD7, needtr("일루전 오브 언더워터", "Illusion of Underwater"),SubD8, needtr("일루전 오브 뱀파이어", "Illusion of Vampire"),SubD9;
 	SubD1: Restrict("RE");
 		   setarray @c[2],132,189,99,186;
-		   Disp("쓸쓸한 양거촌:스산한 구양궁"); Pick("","tur_d03_i","tur_d04_i");
+		   Disp(needtr("쓸쓸한 양거촌:스산한 구양궁", "Desolate Village:Bleak Turtle Palace")); Pick("","tur_d03_i","tur_d04_i");
 	SubD2: Restrict("RE");
 		   Go("ice_d03_i",149,22);
 	SubD3: Restrict("RE");
@@ -658,7 +658,7 @@ D23: menu	needtr("일루전 오브 구양궁", "Illusion of Abyss"),SubD1, needtr("일루�
 		   Go("ant_d02_i",168,170);
 	SubD8: Restrict("RE");
 		   setarray @c[2],130,230,141,188;
-		   Disp("심연의 해저동굴 상층:심연의 해저동굴 하층"); Pick("","iz_d04_i","iz_d05_i");
+		   Disp(needtr("심연의 해저동굴 상층:심연의 해저동굴 하층", "Deep Sea Cave 1:Deep Sea Cave 2")); Pick("","iz_d04_i","iz_d05_i");
 	SubD9: Restrict("RE");
 		   Go("gef_d01_i",114,216);
 D24: Restrict("RE");
@@ -666,51 +666,51 @@ D24: Restrict("RE");
 	 Disp("버려진 구덩이 1층:버려진 구덩이 2층:뱀신의 온기 1층:뱀신의 온기 2층"); Pick("","jor_ab01","jor_ab02","jor_dun01","jor_dun02");
 D25: Restrict("RE",5);
 	 setarray @c[2],140,51,53,247,37,63,150,285,146,215;
-	 Disp("유페로스 동굴입구:유페로스 폐허 외부:유페로스 폐허 내부:유페로스 중심부:유페로스 동쪽페허");
+	 Disp(needtr("유페로스 동굴입구:유페로스 폐허 외부:유페로스 폐허 내부:유페로스 중심부:유페로스 동쪽페허", "Entrance:Juperos 1:Juperos 2:Core:Eastern Ruins of Juperos"));
 	 Pick("","jupe_cave","juperos_01","juperos_02","jupe_core","ver_eju");
 D26: setarray @c[2],28,226,41,198;
-	 Disp("기계인형공장 1층:기계인형공장 2층"); Pick("","kh_dun01","kh_dun02");
+	 Disp(needtr("기계인형공장 1층:기계인형공장 2층", "Kiel Dungeon 1:Kiel Dungeon 2")); Pick("","kh_dun01","kh_dun02");
 D27: setarray @c[2],153,53,28,113,68,16;
-	 Disp("서왕모 신전:신선의 바둑판:무릉도원"); Pick("","gon_dun01","gon_dun02","gon_dun03");
+	 Disp(needtr("서왕모 신전:신선의 바둑판:무릉도원", "Kunlun Dungeon 1:Kunlun Dungeon 2:Kunlun Dungeon 3")); Pick("","gon_dun01","gon_dun02","gon_dun03");
 D28: Restrict("RE");
 	 setarray @c[2],24,143,22,171,190,18;
-	 Disp("용의둥지 1층:용의 둥지 2층:용의 둥지 3층"); Pick("","lasa_dun01","lasa_dun02","lasa_dun03");
+	 Disp(needtr("용의둥지 1층:용의 둥지 2층:용의 둥지 3층", "Lasagna Dungeon 1:Lasagna Dungeon 2:Lasagna Dungeon 3")); Pick("","lasa_dun01","lasa_dun02","lasa_dun03");
 D29: setarray @c[2],218,196,282,20,165,38;
-	 Disp("용지성 왕릉:용지성 왕릉 내부:용지성 센양궁"); Pick("","lou_dun01","lou_dun02","lou_dun03");
+	 Disp(needtr("용지성 왕릉:용지성 왕릉 내부:용지성 센양궁", "The Royal Tomb:Inside the Royal Tomb:Suei Long Gon")); Pick("","lou_dun01","lou_dun02","lou_dun03");
 D30: Restrict("RE",3);
 	 setarray @c[2],126,68,47,30,118,113;
 //	 Disp("노그로드 1층:노그로드 2층:노그로드 3층"); Pick("","mag_dun01","mag_dun02","mag_dun03");
-	 Disp("노그로드 1층:노그로드 2층"); Pick("","mag_dun01","mag_dun02");
+	 Disp(needtr("노그로드 1층:노그로드 2층", "Magma Dungeon 1:Magma Dungeon 2")); Pick("","mag_dun01","mag_dun02");
 D31: Restrict("RE");
 	 setarray @c[2],33,230;
-	 Disp("별빛산호지대",1,1); Pick("mal_dun");
+	 Disp(needtr("별빛산호지대", "Malangdo Dungeon"),1,1); Pick("mal_dun");
 D32: setarray @c[2],189,48,165,30,32,135;
-	 Disp("모스코비아 숲:깊은 숲:깊고 깊은 숲"); Pick("","mosk_dun01","mosk_dun02","mosk_dun03");
+	 Disp(needtr("모스코비아 숲:깊은 숲:깊고 깊은 숲", "Moscovia Dungeon 1:Moscovia Dungeon 2:Moscovia Dungeon 3")); Pick("","mosk_dun01","mosk_dun02","mosk_dun03");
 D33: setarray @c[2],61,239,60,271;
-	 Disp("난폭자의 상처 1층:난폭자의 상처 2층"); Pick("","nyd_dun01","nyd_dun02");
+	 Disp(needtr("난폭자의 상처 1층:난폭자의 상처 2층", "Nidhogg's Dungeon 1:Nidhogg's Dungeon 2")); Pick("","nyd_dun01","nyd_dun02");
 D34: Restrict("RE");
 	 setarray @c[2],145,90,150,20;
-	 Disp("니플헤임 던전 1층:니플헤임 던전 2층"); Pick("nif_dun");
+	 Disp(needtr("니플헤임 던전 1층:니플헤임 던전 2층", "Niflheim Dungeon - 1st Floor:Niflheim Dungeon - 2nd Floor")); Pick("nif_dun");
 D35: Restrict("RE",4);
 	 setarray @c[2],298,167,224,149,266,280,276,236;
 	 //Disp("오딘 신전 서쪽:오딘 신전 남쪽:오딘 신전 북쪽:고대 오딘 신전"); Pick("","odin_tem01","odin_tem02","odin_tem03","odin_past");
-	 Disp("오딘 신전 서쪽:오딘 신전 남쪽:오딘 신전 북쪽"); Pick("","odin_tem01","odin_tem02","odin_tem03");
+	 Disp(needtr("오딘 신전 서쪽:오딘 신전 남쪽:오딘 신전 북쪽", "Odin Temple 1:Odin Temple 2:Odin Temple 3")); Pick("","odin_tem01","odin_tem02","odin_tem03");
 D36: setarray @c[2],32,170,21,185;
-	 Disp("오크 지하 동굴 1층:오크 지하 동굴 2층"); Pick("orcsdun");
+	 Disp(needtr("오크 지하 동굴 1층:오크 지하 동굴 2층", "Orc Dungeon 1:Orc Dungeon 2")); Pick("orcsdun");
 D37: Restrict("RE");
 	 setarray @c[2],21,191,141,277;
 	 Disp("오즈의 미로 1층:오즈의 미로 2층"); Pick("oz_dun");
 D38: setarray @c[0],21,183,19,33,19,63,155,159,201,204;
-	 Disp("페이욘 동굴 1층:페이욘 동굴 2층:페이욘 동굴 3층:페이욘 동굴 4층:페이욘 동굴 5층"); Pick("","pay_dun00","pay_dun01","pay_dun02","pay_dun03","pay_dun04");
+	 Disp(needtr("페이욘 동굴 1층:페이욘 동굴 2층:페이욘 동굴 3층:페이욘 동굴 4층:페이욘 동굴 5층", "Payon Dungeon 1:Payon Dungeon 2:Payon Dungeon 3:Payon Dungeon 4:Payon Dungeon 5")); Pick("","pay_dun00","pay_dun01","pay_dun02","pay_dun03","pay_dun04");
 D39: Restrict("RE");
 	 setarray @c[2],159,289,155,353;
-	 Disp("지하 감옥:침공당한 프론테라"); Pick("","prt_prison","prt_q");
+	 Disp(needtr("지하 감옥:침공당한 프론테라", "Prontera Underground Prison:Prontera Invasion")); Pick("","prt_prison","prt_q");
 D40: Restrict("RE",7,8);
 	 setarray @c[2],192,9,10,192,100,92,181,11,94,96,192,8,94,96,192,8;
-	 Disp("피라미드 1층:피라미드 2층:피라미드 3층:피라미드 4층:피라미드 지하 1층:피라미드 지하 2층:피라미드 지하 1층 - Nightmare:피라미드 지하 2층 - Nightmare");
+	 Disp(needtr("피라미드 1층:피라미드 2층:피라미드 3층:피라미드 4층:피라미드 지하 1층:피라미드 지하 2층:피라미드 지하 1층 - Nightmare:피라미드 지하 2층 - Nightmare", "Pyramids 1:Pyramids 2:Pyramids 3:Pyramids 4:Basement 1:Basement 2:Basement 1 - Nightmare Mode:Basement 2 - Nightmare Mode"));
 	 Pick("","moc_pryd01","moc_pryd02","moc_pryd03","moc_pryd04","moc_pryd05","moc_pryd06","moc_prydn1","moc_prydn2");
 D41: setarray @c[2],140,11,32,21,8,149,204,218,150,9;
-	 Disp("성역 1층 북쪽 구역:성역 1층 서쪽 구역:성역 1층 동쪽 구역:성역 1층 남쪽 구역:성역 2층 중앙 구역"); Pick("","ra_san01","ra_san02","ra_san03","ra_san04","ra_san05");
+	 Disp(needtr("성역 1층 북쪽 구역:성역 1층 서쪽 구역:성역 1층 동쪽 구역:성역 1층 남쪽 구역:성역 2층 중앙 구역", "Rachel Sanctuary 1:Rachel Sanctuary 2:Rachel Sanctuary 3:Rachel Sanctuary 4:Rachel Sanctuary 5")); Pick("","ra_san01","ra_san02","ra_san03","ra_san04","ra_san05");
 D42: Restrict("RE");
 	 setarray @c[2],247,19,281,104;
 	 Disp("락 릿지 광산 1층:락 릿지 지하수로"); Pick("","rockmi1","harboro2");
@@ -719,22 +719,22 @@ D43: Restrict("RE");
 	 Disp("루두스 1층:루두스 2층:루두스 3층:루두스 4층"); Pick("","sp_rudus","sp_rudus2","sp_rudus3","sp_rudus4");
 D44: Restrict("RE");
 	 setarray @c[2],364,44,101,141,101,141;
-	 Disp("카디널 터널:스카라바 홀:스카라바 홀 2층"); Pick("","dic_dun01","dic_dun02","dic_dun03");
+	 Disp(needtr("카디널 터널:스카라바 홀:스카라바 홀 2층", "Scaraba Hole 1:Scaraba Hole 2:Scaraba Hole 3")); Pick("","dic_dun01","dic_dun02","dic_dun03");
 D45: setarray @c[2],288,9,149,81,210,54,10,222,100,99;
-	 Disp("스핑크스 지하 1층:스핑크스 지하 2층:스핑크스 지하 3층:스핑크스 지하 4층:스핑크스 지하 5층"); Pick("","in_sphinx1","in_sphinx2","in_sphinx3","in_sphinx4","in_sphinx5");
+	 Disp(needtr("스핑크스 지하 1층:스핑크스 지하 2층:스핑크스 지하 3층:스핑크스 지하 4층:스핑크스 지하 5층", "Sphinx 1:Sphinx 2:Sphinx 3:Sphinx 4:Sphinx 5")); Pick("","in_sphinx1","in_sphinx2","in_sphinx3","in_sphinx4","in_sphinx5");
 D46: setarray @c[2],69,24,102,27;
-	 Disp("난파선 1층:난파선 2층"); Pick("","treasure01","treasure02");
+	 Disp(needtr("난파선 1층:난파선 2층", "Sunken Ship 1:Sunken Ship 2")); Pick("","treasure01","treasure02");
 D47: setarray @c[2],150,39,150,136,220,158,59,143,62,11,89,221,35,166,93,148,29,107,159,138,19,20,130,52;
-	 Disp("타나토스 타워",1,12); Pick("tha_t");
+	 Disp(needtr("타나토스 타워", "Thanatos Tower"),1,12); Pick("tha_t");
 D48: setarray @c[2],21,228,75,205,34,272;
-	 Disp("토르 화산 던전 1층:토르 화산 던전 2층:토르 화산 던전 3층"); Pick("","thor_v01","thor_v02","thor_v03");
+	 Disp(needtr("토르 화산 던전 1층:토르 화산 던전 2층:토르 화산 던전 3층", "Thor Volcano 1:Thor Volcano 2:Thor Volcano 3")); Pick("","thor_v01","thor_v02","thor_v03");
 D49: setarray @c[2],205,15,129,133;
-	 Disp("장난감 공장 창고:장난감 분류소"); Pick("","xmas_dun01","xmas_dun02");
+	 Disp(needtr("장난감 공장 창고:장난감 분류소", "Toy Factory 1:Toy Factory 2")); Pick("","xmas_dun01","xmas_dun02");
 D50: setarray @c[2],154,49,148,261,132,189,100,192;
-	 Disp("거북이 섬:거북이 섬 던전:양거촌:구양궁"); Pick("tur_dun");
+	 Disp(needtr("거북이 섬:거북이 섬 던전:양거촌:구양궁", "Entrance:Turtle Dungeon 1:Turtle Dungeon 2:Turtle Dungeon 3")); Pick("tur_dun");
 D51: Restrict("Pre-RE",1,2);
 	 setarray @c[2],42,31,48,30,204,78;
-	 Disp("나무 속 목공소:나무 속 통로:흐베르겔미르의 샘");
+	 Disp(needtr("나무 속 목공소:나무 속 통로:흐베르겔미르의 샘", "Carpenter's Shop in the Tree:Passage to a Foreign World:Hvergermil's Fountain"));
 	 Pick("","um_dun01","um_dun02","yggdrasil01");
 D52: Restrict("RE");
 	 setarray @c[2],275,21,15,115,15,115,159,27,162,36,159,11,156,33,337,333,314,64,163,18,156,20,39,81;
@@ -742,7 +742,7 @@ D52: Restrict("RE");
 	 Pick("","ba_pw02","ba_pw01","ba_pw03","ba_bath","ba_lost","ba_lib","ba_2whs01","ba_2whs02","bl_death","bl_lava","bl_grass","bl_ice");
 D53: Restrict("RE");
 	 setarray @c[2],244,61,72,20,122,22;
-	 Disp("실험동-OPTATIO:연구동-WISH:중앙광장"); Pick("verus");
+	 Disp(needtr("실험동-OPTATIO:연구동-WISH:중앙광장", "Lab-OPTATIO:R&D-WISH:Verus Center Square")); Pick("verus");
 
 // --------------------------------------------------
 	Castles:
@@ -787,19 +787,19 @@ menu	needtr("청림호수", "Baldur"),G1, needtr("루이나", "Luina"),G2, needtr("발키
 
 G1: Restrict("RE",2,3);
 	setarray @c[2],119,93,119,93,120,130;
-	Disp("청림호수 지하 던전 1층:청림호수 지하 던전 2층:심연의 회랑");
+	Disp(needtr("청림호수 지하 던전 1층:청림호수 지하 던전 2층:심연의 회랑", "Baldur F1:Baldur F2:Hall of Abyss"));
 	Pick("","gld_dun01","gld_dun01_2","gld2_pay");
 G2: Restrict("RE",2,3);
 	setarray @c[2],39,161,39,161,147,155;
-	Disp("루이나 지하 던전 1층:루이나 지하 던전 2층:심연의 회랑");
+	Disp(needtr("루이나 지하 던전 1층:루이나 지하 던전 2층:심연의 회랑", "Luina F1:Luina F2:Hall of Abyss"));
 	Pick("","gld_dun02","gld_dun02_2","gld2_ald");
 G3: Restrict("RE",2,3);
 	setarray @c[2],50,44,50,44,140,132;
-	Disp("발키리 렐름 지하 던전 1층:발키리 렐름 지하 던전 2층:심연의 회랑");
+	Disp(needtr("발키리 렐름 지하 던전 1층:발키리 렐름 지하 던전 2층:심연의 회랑", "Valkyrie F1:Valkyrie F2:Hall of Abyss"));
 	Pick("","gld_dun03","gld_dun03_2","gld2_prt");
 G4: Restrict("RE",2,3);
 	setarray @c[2],116,45,116,45,152,118;
-	Disp("브리토리아 지하 던전 1층:브리토리아 지하 던전 2층:심연의 회랑");
+	Disp(needtr("브리토리아 지하 던전 1층:브리토리아 지하 던전 2층:심연의 회랑", "Britoniah F1:Britoniah F2:Hall of Abyss"));
 	Pick("","gld_dun04","gld_dun04_2","gld2_gef");
 G5: Go("arug_dun01",199,195);
 G6: Go("schg_dun01",200,124);
@@ -812,35 +812,35 @@ G8: Restrict("RE");
 	Instances:
 // --------------------------------------------------
 //"Eclage Interior",I5, "Hazy Forest",I10,  
-menu	"엔들리스 타워",I6,
-		"문어 동굴",I14,
-		"니드호그의 둥지(70↑)",I13,
-		"바포메트 봉인 신전(75↑)",I19,
-		"보르세브 연구실(80↑)",I20,
-		"게펜 마법 대회(90↑)",I8,
-		"사라의 기억(99↑)",I21,
-		"벙웅곳 병원 2층(100↑)",I2,
-		"무한의 공간(100↑)",I32,
-		"의식의 방(100↑)^FF0000NEW^000000",I34,
-		"저주의 검사(120↑)",I9,
-		"악몽의 지터벅(120↑)",I27,
-		"비공정 습격(125↑)",I29,
-		"부여워 동굴(130↑)",I3,
-		"옛 글래스트 헤임(130↑)",I15,
-		"마신의 탑(130↑)",I4,
-		"위기의 찰스턴(130↑)",I23,
-		"호러 장난감 던전(140↑)",I11,
-		"지하 배수로(140↑)",I22,
-		"페이스웜의 둥지(140↑)",I7,
-		"버코너워 호수(140↑)",I1,
-		"중앙 실험실(140↑)",I31,
-		"펜릴과 사라(145↑)",I17,
-		"공중요새 침공(145↑)^FF0000NEW^000000",I33,
-		"마지막 방(150↑)",I30,
-		"비오스의 섬(160↑)",I24,
-		"모르스의 동굴(160↑)",I25,
-		"옛 글래스트 헤임(상급)(160↑)",I26,
-		"마신전(160↑)",I28;
+menu	needtr("엔들리스 타워","Endless Tower"),I6,
+		needtr("문어 동굴","Octopus Cave"),I14,
+		needtr("니드호그의 둥지(70↑)","Nidhoggur's Nest (70↑)"),I13,
+		needtr("바포메트 봉인 신전(75↑)","Sealed Shrine (75↑)"),I19,
+		needtr("보르세브 연구실(80↑)","Wolfchev's Laboratory (80↑)"),I20,
+		needtr("게펜 마법 대회(90↑)","Geffen Magic Tournament (90↑)"),I8,
+		needtr("사라의 기억(99↑)","Sara's Memories (99↑)"),I21,
+		needtr("벙웅곳 병원 2층(100↑)","Bangungot Hospital 2F (100↑)"),I2,
+		needtr("무한의 공간(100↑)","Infinite Space (100↑)"),I32,
+		needtr("의식의 방(100↑)^FF0000NEW^000000","Room of Consciousness (100↑)^FF0000NEW^000000"),I34,
+		needtr("저주의 검사(120↑)","Ghost Palace (120↑)"),I9,
+		needtr("악몽의 지터벅(120↑)","Nightmarish Jitterbug (120↑)"),I27,
+		needtr("비공정 습격(125↑)","Assault on the Airship (125↑)"),I29,
+		needtr("부여워 동굴(130↑)","Buwaya Cave (130↑)"),I3,
+		needtr("옛 글래스트 헤임(130↑)","Old Glast Heim (130↑)"),I15,
+		needtr("마신의 탑(130↑)","Devil Tower (130↑)"),I4,
+		needtr("위기의 찰스턴(130↑)","Charleston in Distress (130↑)"),I23,
+		needtr("호러 장난감 던전(140↑)","Horror Toy Factory (140↑)"),I11,
+		needtr("지하 배수로(140↑)","Culvert (140↑)"),I22,
+		needtr("페이스웜의 둥지(140↑)","Faceworms Nest (140↑)"),I7,
+		needtr("버코너워 호수(140↑)","Bakonawa Lake (140↑)"),I1,
+		needtr("중앙 실험실(140↑)","Central Laboratory (140↑)"),I31,
+		needtr("펜릴과 사라(145↑)","Sarah and Fenrir (145↑)"),I17,
+		needtr("공중요새 침공(145↑)^FF0000NEW^000000","Sky Fortress Invasion (145↑)^FF0000NEW^000000"),I33,
+		needtr("마지막 방(150↑)","Last Room (150↑)"),I30,
+		needtr("비오스의 섬(160↑)","Isle of Bios (160↑)"),I24,
+		needtr("모르스의 동굴(160↑)","Morse's Cave (160↑)"),I25,
+		needtr("옛 글래스트 헤임(상급)(160↑)","Old Glast Heim (Advanced) (160↑)"),I26,
+		needtr("마신전(160↑)","Temple of the Demon God (160↑)"),I28;
 
 I1: Restrict("RE");
 	Go("ma_scene01",172,175);

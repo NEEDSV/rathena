@@ -131,9 +131,9 @@ S_DoRebirth:
 		.@new_count == .Cnt_Title ||
 		.@new_count == .Cnt_FinalEffect) {
 
-		announce .AnnouncePrefix$ + " 축하합니다! " + strcharinfo(0) + "님이 " + .@new_count + "회 환생 구간 보상을 달성했습니다!", bc_all;
+		announcelang .AnnouncePrefix$ + " 축하합니다! " + strcharinfo(0) + "님이 " + .@new_count + "회 환생 구간 보상을 달성했습니다!", .AnnouncePrefix_en$ + " Congratulations! " + strcharinfo(0) + " has reached the " + .@new_count + " Rebirth milestone reward!", bc_all;
 	} else {
-		announce .AnnouncePrefix$ + " " + strcharinfo(0) + "님이 " + .@new_count + "회 환생을 달성했습니다!", bc_all;
+		announcelang .AnnouncePrefix$ + " " + strcharinfo(0) + "님이 " + .@new_count + "회 환생을 달성했습니다!", .AnnouncePrefix_en$ + " " + strcharinfo(0) + " has reached Rebirth " + .@new_count + "!", bc_all;
 	}
 	next;
 
@@ -187,10 +187,6 @@ S_MigrateRebirthCount:
 		switch (.Shop_ItemID[.@i]) {
 			case 6635:
 				.@legacy_count = getd("NEED_REBIRTH_BLESSING_WEEK_COUNT");
-				break;
-
-			case 399919:
-				.@legacy_count = getd("NEED_REBIRTH_PONG_WEEK_COUNT");
 				break;
 		}
 
@@ -591,7 +587,7 @@ S_GiveCostumeChoice:
 		mes " ";
 
 		for (.@i = 0; .@i < 3; .@i++) {
-			mes (.@i + 1) + ". " + .ChoiceName$[.@i] + " - " + callsub(S_ItemName, .ChoiceItem[.@i]);
+			mes (.@i + 1) + ". " + needtr(.ChoiceName$[.@i], .ChoiceName_en$[.@i]) + " - " + callsub(S_ItemName, .ChoiceItem[.@i]);
 		}
 
 		next;
@@ -615,7 +611,7 @@ S_GiveCostumeChoice:
 				}
 
 				mes needtr("[의상 미리보기]", "[Costume Preview]");
-				mes .ChoiceName$[.@idx];
+				mes needtr(.ChoiceName$[.@idx], .ChoiceName_en$[.@idx]);
 				mes needtr("미리보기 이미지를 확인했습니다.", "Preview shown.");
 				next;
 				continue;
@@ -650,7 +646,7 @@ S_GiveCostumeChoice:
 
 		mes needtr("[의상 선택]", "[Costume Choice]");
 		mes needtr("선택한 보상:", "Selected reward:");
-		mes "^0055FF" + .ChoiceName$[.@idx] + "^000000";
+		mes "^0055FF" + needtr(.ChoiceName$[.@idx], .ChoiceName_en$[.@idx]) + "^000000";
 		mes callsub(S_ItemName, .ChoiceItem[.@idx]);
 		next;
 
@@ -669,7 +665,7 @@ S_GiveCostumeChoice:
 
 		mes needtr("[환생 관리자]", "[Rebirth Manager]");
 		mes needtr("보상이 지급되었습니다.", "The reward has been granted.");
-		mes "- " + .ChoiceName$[.@idx];
+		mes "- " + needtr(.ChoiceName$[.@idx], .ChoiceName_en$[.@idx]);
 		mes "- " + callsub(S_ItemName, .ChoiceItem[.@idx]);
 		next;
 		return;
@@ -680,12 +676,14 @@ S_LoadCostumeChoice:
 
 	deletearray .ChoiceItem[0], getarraysize(.ChoiceItem);
 	deletearray .ChoiceName$[0], getarraysize(.ChoiceName$);
+	deletearray .ChoiceName_en$[0], getarraysize(.ChoiceName_en$);
 	deletearray .ChoicePreview$[0], getarraysize(.ChoicePreview$);
 
 	if (.@type == 1) {
 		.ChoiceTitle$ = needtr("환생 전용 희귀 의상 (상단)", "Rebirth Rare Costume (Upper)");
 		copyarray .ChoiceItem[0], .Upper_Item[0], 3;
 		copyarray .ChoiceName$[0], .Upper_Name$[0], 3;
+		copyarray .ChoiceName_en$[0], .Upper_Name_en$[0], 3;
 		copyarray .ChoicePreview$[0], .Upper_Preview$[0], 3;
 		return;
 	}
@@ -694,6 +692,7 @@ S_LoadCostumeChoice:
 		.ChoiceTitle$ = needtr("환생 전용 희귀 의상 (중단)", "Rebirth Rare Costume (Middle)");
 		copyarray .ChoiceItem[0], .Middle_Item[0], 3;
 		copyarray .ChoiceName$[0], .Middle_Name$[0], 3;
+		copyarray .ChoiceName_en$[0], .Middle_Name_en$[0], 3;
 		copyarray .ChoicePreview$[0], .Middle_Preview$[0], 3;
 		return;
 	}
@@ -702,6 +701,7 @@ S_LoadCostumeChoice:
 		.ChoiceTitle$ = needtr("환생 전용 희귀 의상 (하단)", "Rebirth Rare Costume (Lower)");
 		copyarray .ChoiceItem[0], .Lower_Item[0], 3;
 		copyarray .ChoiceName$[0], .Lower_Name$[0], 3;
+		copyarray .ChoiceName_en$[0], .Lower_Name_en$[0], 3;
 		copyarray .ChoicePreview$[0], .Lower_Preview$[0], 3;
 		return;
 	}
@@ -710,6 +710,7 @@ S_LoadCostumeChoice:
 		.ChoiceTitle$ = needtr("환생 전용 희귀 의상 (걸칠것)", "Rebirth Rare Costume (Garment)");
 		copyarray .ChoiceItem[0], .Garment_Item[0], 3;
 		copyarray .ChoiceName$[0], .Garment_Name$[0], 3;
+		copyarray .ChoiceName_en$[0], .Garment_Name_en$[0], 3;
 		copyarray .ChoicePreview$[0], .Garment_Preview$[0], 3;
 		return;
 	}
@@ -779,7 +780,7 @@ OnInit:
 	.PointVar$ = "NEED_REBIRTH_POINT";
 	.PointPerRebirth = 1;                 // 업데이트 이후 환생 1회당 지급 포인트
 
-	.AnnouncePrefix$ = "[NEED 환생]";
+	.AnnouncePrefix$ = "[NEED 환생]"; .AnnouncePrefix_en$ = "[NEED Rebirth]";
 	// 구간 보상 수령 체크 변수 prefix
 	// 계정 단위: "#NEED_REBIRTH_CLAIM_"
 	// 캐릭터 단위: "NEED_REBIRTH_CLAIM_"
@@ -820,27 +821,22 @@ OnInit:
 
 	setarray .Shop_ItemID[0],
 		6635,       // 대장장이의 축복
-		399919,     // 봉인된 실릿 퐁
 		1001592;	// 응축된 마력의 룬 스톤
 
 	setarray .Shop_Amount[0],
 		1,          // 대장장이의 축복 지급 수량
-		1,          // 봉인된 실릿 퐁 지급 수량
 		1;
 
 	setarray .Shop_WeeklyLimit[0],
 		5,          // 대장장이의 축복: 주 5회
-		1,          // 봉인된 실릿 퐁: 주 1회
 		1;
 
 	setarray .Shop_PointCost[0],
 		3,          // 대장장이의 축복: 환생 포인트 3점
-		10,         // 봉인된 실릿 퐁: 환생 포인트 10점
 		5;
 
 	setarray .Shop_ZenyCost[0],
 		100000000,  // 대장장이의 축복: 100,000,000 Zeny
-		100000000,  // 봉인된 실릿 퐁: 100,000,000 Zeny
 		300000000;
 
 	// 캐릭터 단위 주간 구매 기록
@@ -943,6 +939,10 @@ OnInit:
 		"의상 천사의 인도",
 		"의상 도람 풍선",
 		"의상 금빛 화염의 거인";
+	setarray .Upper_Name_en$[0],
+		"Costume Angel Guidance",
+		"Costume Doram Ballon",
+		"Costume Golden Flame Giant";
 
 	// cutin 이미지 파일명
 	// 예: rebirth_upper_01
@@ -965,6 +965,10 @@ OnInit:
 		"의상 액막이 종이인형",
 		"의상 첫사랑 볼",
 		"의상 해방된 대지";
+	setarray .Middle_Name_en$[0],
+		"Costume Amulet Paper Doll",
+		"Costume First Love Cheek",
+		"Costume Released Ground";
 
 	setarray .Middle_Preview$[0],
 		"rebirth_middle_01",
@@ -984,6 +988,10 @@ OnInit:
 		"의상 신성한 하늘로의 초대",
 		"의상 고양이 입",
 		"의상 화염의 마스터";
+	setarray .Lower_Name_en$[0],
+		"Costume Invitation to the Divine Sky",
+		"Costume Cat's Mouth",
+		"Costume Flame Master";
 
 	setarray .Lower_Preview$[0],
 		"rebirth_lower_01",
@@ -1003,6 +1011,10 @@ OnInit:
 		"의상 하늘하늘한 천사의 날개",
 		"의상 영혼의 축복",
 		"의상 영광과 파멸의 쌍검";
+	setarray .Garment_Name_en$[0],
+		"Costume Heavenly Angel Wings",
+		"Costume Spiritual Blessings",
+		"Costume Twin Swords of Glory and Doom";
 
 	setarray .Garment_Preview$[0],
 		"rebirth_garment_01",

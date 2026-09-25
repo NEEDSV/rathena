@@ -58,6 +58,7 @@
 #include "mapreg.hpp"
 #include "mercenary.hpp"
 #include "mob.hpp"
+#include "need_chuseok_hunt.hpp"
 #include "need_equipment_build.hpp"
 #include "need_fishing.hpp"
 #include "need_jf_pattern.hpp"
@@ -12155,6 +12156,22 @@ static int32 buildin_announce_sub(block_list *bl, va_list ap)
 }
 
 /**
+ * NEED Phase 1.57 : the ONE place the announce family chooses between the two strings.
+ *
+ * Every recipient-aware broadcast asks the same question, and it has to be the same question:
+ * a second copy of this expression is a second rule the day one of them is edited. Both
+ * per-recipient callbacks below call this and nothing else decides the language.
+ */
+static const char* buildin_announce_lang_pick( map_session_data* tsd, const char* kr, const char* en )
+{
+	if( tsd != nullptr && need_lang_sanitize( (uint8)tsd->need_lang ) == NEED_LANG_EN && en != nullptr ){
+		return en;
+	}
+
+	return kr;
+}
+
+/**
  * NEED Phase 0.32 : the per-recipient half of the announce family.
  *
  * `buildin_announce_sub` already runs ONCE PER PLAYER - `map_foreachinmap(..., BL_PC, ...)`
@@ -12180,13 +12197,45 @@ static int32 buildin_announce_lang_sub(block_list *bl, va_list ap)
 		return 0;
 	}
 
-	const char* mes = ( need_lang_sanitize( (uint8)tsd->need_lang ) == NEED_LANG_EN && en != nullptr ) ? en : kr;
+	const char* mes = buildin_announce_lang_pick( tsd, kr, en );
 	int32 len = (int32)strlen( mes ) + 1;
 
 	if (fontColor)
 		clif_broadcast2(bl, mes, len, strtol(fontColor, (char **)nullptr, 0), fontType, fontSize, fontAlign, fontY, SELF);
 	else
 		clif_broadcast(bl, mes, len, type, SELF);
+	return 0;
+}
+
+/**
+ * NEED Phase 1.57 : the same callback for the GLOBAL form.
+ *
+ * `map_foreachpc` hands out a `map_session_data*` rather than a `block_list*`, which is the
+ * only reason this is a separate function - the language rule is the shared picker above and
+ * the send is the same `SELF` broadcast the map and area forms use.
+ */
+static int32 buildin_announce_lang_pc_sub(map_session_data* sd, va_list ap)
+{
+	char *kr        = va_arg(ap, char *);
+	char *en        = va_arg(ap, char *);
+	int32  type      = va_arg(ap, int32);
+	char *fontColor = va_arg(ap, char *);
+	int16 fontType  = (int16)va_arg(ap, int32);
+	int16 fontSize  = (int16)va_arg(ap, int32);
+	int16 fontAlign = (int16)va_arg(ap, int32);
+	int16 fontY     = (int16)va_arg(ap, int32);
+
+	if( sd == nullptr ){
+		return 0;
+	}
+
+	const char* mes = buildin_announce_lang_pick( sd, kr, en );
+	int32 len = (int32)strlen( mes ) + 1;
+
+	if (fontColor)
+		clif_broadcast2(sd, mes, len, strtol(fontColor, (char **)nullptr, 0), fontType, fontSize, fontAlign, fontY, SELF);
+	else
+		clif_broadcast(sd, mes, len, type, SELF);
 	return 0;
 }
 
@@ -12242,6 +12291,7 @@ BUILDIN_FUNC(areaannounce)
  *   mapannouncelang "<map>","<KR>","<EN>",<flag>{,<color>{,<type>{,<size>{,<align>{,<y>}}}}};
  *   areaannouncelang "<map>",<x0>,<y0>,<x1>,<y1>,"<KR>","<EN>",<flag>{,...};
  *   instanceannouncelang <instance id>,"<KR>","<EN>",<flag>{,...};
+ *   announcelang "<KR>","<EN>",<flag>{,...};                        NEED Phase 1.57
  *
  * Argument order, flag, colour and font handling are identical to the non-lang commands -
  * only the single message argument becomes an adjacent KR/EN pair, which is what makes the
@@ -12290,6 +12340,62 @@ BUILDIN_FUNC(areaannouncelang)
 
 	map_foreachinallarea(buildin_announce_lang_sub, m, x0, y0, x1, y1, BL_PC,
 		kr, en, flag&BC_COLOR_MASK, fontColor, fontType, fontSize, fontAlign, fontY);
+	return SCRIPT_CMD_SUCCESS;
+}
+
+/**
+ * NEED Phase 1.57 : the GLOBAL member the Phase 0.32 family was missing.
+ *
+ *   announcelang "<KR>","<EN>",<flag>{,<color>{,<type>{,<size>{,<align>{,<y>}}}}};
+ *
+ * WHY IT IS A DIFFERENT SHAPE FROM ITS SIBLINGS. map / area / instance each iterate a set this
+ * map-server owns, so they can pick per recipient and be exact. `announce ..., bc_all` does not
+ * iterate at all: it hands one finished string to `intif_broadcast`, which sends it locally and
+ * then forwards it through the char-server to every OTHER map-server (intif.cpp:208-237). A
+ * string chosen before that point cannot be chosen per player, which is why 111 `bc_all` sites
+ * on this branch have sat in ARCHITECTURE_HOLD since Phase 0.32.
+ *
+ * SO THE COMMAND IS EXACT WHEN IT CAN BE AND FALLS BACK WHEN IT CANNOT. With no other
+ * map-server connected this server holds every recipient, `map_foreachpc` reaches exactly the
+ * set `clif_broadcast(nullptr, ..., ALL_CLIENT)` reaches, and each player is sent their own
+ * language. With other map-servers connected their players cannot be selected for from here, so
+ * the command delivers the KR string to everyone through the ordinary broadcast path - byte for
+ * byte what `announce ..., bc_all` does today. It never reaches fewer players than `announce`.
+ *
+ * FLAGS. Only the global target is accepted. A target mask means the caller wants map, area or
+ * self delivery, and those already have their own commands; answering a `bc_map` with a global
+ * shout would be a silent change of audience, so it is refused and named.
+ */
+BUILDIN_FUNC(announcelang)
+{
+	const char *kr        = script_getstr(st,2);
+	const char *en        = script_getstr(st,3);
+	int32         flag      = script_getnum(st,4);
+	const char *fontColor = script_hasdata(st,5) ? script_getstr(st,5) : nullptr;
+	int32         fontType  = script_hasdata(st,6) ? script_getnum(st,6) : FW_NORMAL;
+	int32         fontSize  = script_hasdata(st,7) ? script_getnum(st,7) : 12;
+	int32         fontAlign = script_hasdata(st,8) ? script_getnum(st,8) : 0;
+	int32         fontY     = script_hasdata(st,9) ? script_getnum(st,9) : 0;
+
+	if( (flag&BC_TARGET_MASK) != BC_ALL ){
+		ShowError( "buildin_announcelang: only bc_all is supported; use mapannouncelang, areaannouncelang or instanceannouncelang for a narrower target.\n" );
+		script_reportsrc( st );
+		return SCRIPT_CMD_FAILURE;
+	}
+
+	if( other_mapserver_count > 0 ){
+		// Another map-server holds recipients this one cannot select a language for. Deliver
+		// the KR string the ordinary way rather than reaching only half the audience.
+		if( fontColor )
+			intif_broadcast2( kr, strlen(kr)+1, strtol(fontColor, (char **)nullptr, 0), (int16)fontType, (int16)fontSize, (int16)fontAlign, (int16)fontY );
+		else
+			intif_broadcast( kr, strlen(kr)+1, flag&BC_COLOR_MASK );
+
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	map_foreachpc( buildin_announce_lang_pc_sub,
+			kr, en, flag&BC_COLOR_MASK, fontColor, fontType, fontSize, fontAlign, fontY );
 	return SCRIPT_CMD_SUCCESS;
 }
 
@@ -16607,6 +16713,33 @@ BUILDIN_FUNC(message)
 	if((pl_sd=map_nick2sd((char *) player,false)) == nullptr)
 		return SCRIPT_CMD_SUCCESS;
 	clif_displaymessage(pl_sd->fd, msg);
+
+	return SCRIPT_CMD_SUCCESS;
+}
+
+/*==========================================
+ * NEED Phase 1.97 : recipient-aware message.
+ *
+ *   messagelang "<character name>","<KR>","<EN>";
+ *
+ * `message` sends to the character NAMED by its first argument, not to the attached
+ * player - most callers run from a timer or an admin event with no RID at all - so
+ * needtr(), which resolves against the script RID, cannot choose that recipient's
+ * language. This form looks the recipient up exactly as `message` does and lets the
+ * announce family's one picker choose from the recipient's own session. The name is
+ * still the map_nick2sd() lookup key and is never translated; a name that is not online
+ * on this map-server is the same silent no-op `message` has.
+ *------------------------------------------*/
+BUILDIN_FUNC(messagelang)
+{
+	const char* player = script_getstr(st,2);
+	const char* kr = script_getstr(st,3);
+	const char* en = script_getstr(st,4);
+	TBL_PC *pl_sd = map_nick2sd((char *) player,false);
+
+	if( pl_sd == nullptr )
+		return SCRIPT_CMD_SUCCESS;
+	clif_displaymessage( pl_sd->fd, buildin_announce_lang_pick( pl_sd, kr, en ) );
 
 	return SCRIPT_CMD_SUCCESS;
 }
@@ -29394,6 +29527,7 @@ struct script_function buildin_func[] = {
 	BUILDIN_DEF(detachnpctimer,"?"), // detached the player id from the npc timer [Celest]
 	BUILDIN_DEF(playerattached,""), // returns id of the current attached player. [Skotlex]
 	BUILDIN_DEF(announce,"si??????"),
+	BUILDIN_DEF(announcelang,"ssi?????"),
 	BUILDIN_DEF(mapannounce,"ssi?????"),
 	// NEED Phase 0.32 : recipient-aware announce family - one extra string argument
 	BUILDIN_DEF(mapannouncelang,"sssi?????"),
@@ -29526,6 +29660,8 @@ struct script_function buildin_func[] = {
 	BUILDIN_DEF2(atcommand,"charcommand","s"), // [MouseJstr]
 	BUILDIN_DEF(movenpc,"sii?"), // [MouseJstr]
 	BUILDIN_DEF(message,"ss"), // [MouseJstr]
+	// NEED Phase 1.97 : arg 2 is still the map_nick2sd key, arg 3/4 are the KR/EN pair
+	BUILDIN_DEF(messagelang,"sss"),
 	BUILDIN_DEF(npctalk,"s???"), // [Valaris]
 	// NEED Phase 0.32 : arg 2/3 are the KR/EN pair, arg 4 is still the npc_name2id key
 	BUILDIN_DEF(npctalklang,"ss???"),

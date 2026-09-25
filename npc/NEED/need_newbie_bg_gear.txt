@@ -1,0 +1,621 @@
+//===== NEED Script ==========================================
+//= NEED 초보자 전장 장비 V1 (900125~900155)
+//===== Description: =========================================
+//= 신규지원 대상 캐릭터가 Base Lv.175 / Job Lv.60 달성 후
+//= 전장 입문용 장비 31종을 무료로 선택 / 무제한 교환하는 시스템.
+//=
+//= 진입점: npc/NEED/need_beginner.txt 의 낙원단 성장 지원관 메뉴
+//=         -> callfunc "F_NEED_NBG_Menu";
+//=
+//= 모든 장비는 캐릭터 귀속(Bound_Char)으로 지급되며
+//= 커스텀 옵션은 전장(mf_battleground) 맵에서만 적용된다.
+//============================================================
+
+//============================================================
+// 전장 맵 공용 판정
+//   아이템 스크립트는 status_calc_pc 안에서 매우 자주 실행되므로
+//   callfunc 오버헤드를 피하기 위해 item_db 쪽에서는 같은 판정을
+//   인라인(getmapflag ... mf_battleground)으로 사용한다.
+//   NPC / 스크립트에서 전장 여부가 필요할 때는 이 함수를 쓴다.
+//============================================================
+function	script	F_NEED_IsBattlegroundMap	{
+	.@map$ = getarg(0, strcharinfo(3));
+	if (.@map$ == "")
+		return 0;
+	return (getmapflag(.@map$, mf_battleground) > 0);
+}
+
+//============================================================
+// 초보자 전장 장비 이용 자격
+//   신규지원 대상 계정 + 성장지원 졸업 조건(Base 175 / Job 60).
+//   기존 175 보상 수령 여부(NEED_BEGINNER_REWARD_175)와 무관하다.
+//============================================================
+function	script	F_NEED_NBG_CanUse	{
+	if (!callfunc("F_NEED_IsBeginnerAccount"))
+		return 0;
+	if (BaseLevel < 175 || JobLevel < 60)
+		return 0;
+	return 1;
+}
+
+//============================================================
+// 안전 교환 공용 함수
+//   getarg(0)      지급할 아이템 ID
+//   getarg(1)      지급 수량
+//   getarg(2)      해제할 장착 부위 1 (없으면 -1)
+//   getarg(3)      해제할 장착 부위 2 (없으면 -1)
+//   getarg(4...)   같은 카테고리에서 회수할 아이템 ID 목록
+//
+//   반환 0 = 성공 / 1 = 소지 무게·공간 부족
+//
+//   처리 순서: 공간 확인 -> 장착 해제 -> 회수 -> 지급
+//   공간 확인을 먼저 하므로 "회수만 되고 지급이 실패" 하는 경우가 없다.
+//============================================================
+function	script	F_NEED_NBG_Swap	{
+	.@give = getarg(0);
+	.@amount = getarg(1);
+	.@slot1 = getarg(2);
+	.@slot2 = getarg(3);
+	.@argc = getargcount();
+
+	// 1) 지급 공간 확인 (회수 전에 먼저 확인한다)
+	if (checkweight(.@give, .@amount) == 0)
+		return 1;
+
+	// 2) 회수 대상이 장착 중이면 먼저 해제한다
+	for (.@s = 2; .@s <= 3; ++.@s) {
+		.@slot = getarg(.@s);
+		if (.@slot < 0)
+			continue;
+		if (!getequipisequiped(.@slot))
+			continue;
+		.@worn = getequipid(.@slot);
+		for (.@i = 4; .@i < .@argc; ++.@i) {
+			if (.@worn == getarg(.@i)) {
+				unequip .@slot;
+				break;
+			}
+		}
+	}
+
+	// 3) 같은 카테고리 기존 장비 회수
+	for (.@i = 4; .@i < .@argc; ++.@i) {
+		.@id = getarg(.@i);
+		.@have = countitem(.@id);
+		if (.@have > 0)
+			delitem .@id, .@have;
+	}
+
+	// 4) 신규 지급
+	getitembound .@give, .@amount, Bound_Char;
+	return 0;
+}
+
+//============================================================
+// 보유 현황 문자열
+//============================================================
+function	script	F_NEED_NBG_Owned	{
+	.@argc = getargcount();
+	for (.@i = 0; .@i < .@argc; ++.@i) {
+		if (countitem(getarg(.@i)) > 0)
+			return getarg(.@i);
+	}
+	return 0;
+}
+
+//============================================================
+// 메인 메뉴
+//============================================================
+function	script	F_NEED_NBG_Menu	{
+	if (!callfunc("F_NEED_NBG_CanUse")) {
+		clear;
+		setdialogsize(440,260);
+		mes needtr("^00AAFF[NEED 초보자 전장 장비]^000000", "^00AAFF[NEED Newbie Battleground Gear]^000000");
+		mes "";
+		mes needtr("^FF0000Base Lv.175 / Job Lv.60^000000 달성 후", "Once you reach ^FF0000Base Lv.175 / Job Lv.60^000000,");
+		mes needtr("신규지원 대상 캐릭터가 이용할 수 있습니다.", "a character eligible for new-player support can use this.");
+		mes "";
+		mes needtr("현재: Base ^0055FF", "Current: Base ^0055FF") + BaseLevel + "^000000 / Job ^0055FF" + JobLevel + "^000000";
+		next;
+		return;
+	}
+
+L_NBG_Main:
+	clear;
+	setdialogsize(460,380);
+	mes needtr("^00AAFF[NEED 초보자 전장 장비]^000000", "^00AAFF[NEED Newbie Battleground Gear]^000000");
+	mes "";
+	mes needtr("전장 입문을 위한 ^0055FF캐릭터 귀속^000000 장비를", "We hand out ^0055FFcharacter-bound^000000 gear for Battleground beginners,");
+	mes needtr("^FF9900무료^000000로 지급하고 언제든 교환해 드립니다.", "^FF9900free of charge^000000, and you can exchange it any time.");
+	mes "";
+	mes needtr("^FF0000※ 추가 옵션은 전장 안에서만 적용됩니다.^000000", "^FF0000* Extra options apply only inside the Battleground.^000000");
+	next;
+
+	switch (select(
+		needtr("처음 이용 안내", "First-time Guide"),
+		needtr("기본 방어 세트 선택 / 교환", "Basic Defense Set - Choose / Exchange"),
+		needtr("모자 선택 / 교환", "Headgear - Choose / Exchange"),
+		needtr("중하단 선택 / 교환", "Mid-Lower - Choose / Exchange"),
+		needtr("배낭 선택 / 교환", "Backpack - Choose / Exchange"),
+		needtr("신발 선택 / 교환", "Boots - Choose / Exchange"),
+		needtr("악세서리 선택 / 교환", "Accessory - Choose / Exchange"),
+		needtr("방패 선택 / 교환", "Shield - Choose / Exchange"),
+		needtr("딜 갑옷 선택 / 교환", "Armor - Choose / Exchange"),
+		needtr("추천 세팅 안내", "Recommended Setups"),
+		needtr("장비 시스템 설명", "About the Gear System"),
+		needtr("종료", "Exit")
+	)) {
+	case 1: callsub S_NBG_Intro; goto L_NBG_Main;
+	case 2: callsub S_NBG_BaseSet; goto L_NBG_Main;
+	case 3: callsub S_NBG_Hat; goto L_NBG_Main;
+	case 4: callsub S_NBG_MidLow; goto L_NBG_Main;
+	case 5: callsub S_NBG_Bag; goto L_NBG_Main;
+	case 6: callsub S_NBG_Shoes; goto L_NBG_Main;
+	case 7: callsub S_NBG_Acc; goto L_NBG_Main;
+	case 8: callsub S_NBG_Shield; goto L_NBG_Main;
+	case 9: callsub S_NBG_DealArmor; goto L_NBG_Main;
+	case 10: callsub S_NBG_Recommend; goto L_NBG_Main;
+	case 11: callsub S_NBG_About; goto L_NBG_Main;
+	default:
+		return;
+	}
+
+//------------------------------------------------------------
+S_NBG_Intro:
+	clear;
+	setdialogsize(460,380);
+	mes needtr("^00AAFF[처음 이용 안내]^000000", "^00AAFF[First-time Guide]^000000");
+	mes "";
+	mes needtr("1. 기본 방어 세트를 먼저 고릅니다.", "1. Choose your Basic Defense Set first.");
+	mes needtr("   ^777777로브 / 슈츠 / 플레이트 중 하나 (3부위 동시 지급)^000000", "   ^777777One of Robe / Suit / Plate - all three slots at once^000000");
+	mes "";
+	mes needtr("2. 모자 · 중하단 · 악세서리 · 방패를 고릅니다.", "2. Then pick Headgear, Mid-Lower, Accessory and Shield.");
+	mes "";
+	mes needtr("3. 익숙해지면 배낭 · 신발 · 딜 갑옷을 추가로 받아", "3. Once you are used to it, add a Backpack, Boots and Armor");
+	mes needtr("   ^0055FF전장 안에서 직접 갈아끼우며 비교^000000해 보세요.", "   and ^0055FFswap them inside the Battleground to compare^000000.");
+	next;
+	mes needtr("^00AAFF[처음 이용 안내]^000000", "^00AAFF[First-time Guide]^000000");
+	mes "";
+	mes needtr("^FF9900교환은 언제든 무료입니다.^000000", "^FF9900Exchanging is always free.^000000");
+	mes needtr("제니 · 캐시 · 재료가 들지 않습니다.", "It costs no Zeny, Cash or materials.");
+	mes "";
+	mes needtr("^777777모든 장비는 캐릭터 귀속이라", "^777777Every piece is character-bound, so it cannot be");
+	mes needtr("거래 · 창고 · 우편으로 옮길 수 없습니다.^000000", "moved by trade, storage or mail.^000000");
+	next;
+	return;
+
+//------------------------------------------------------------
+S_NBG_About:
+	clear;
+	setdialogsize(460,380);
+	mes needtr("^00AAFF[장비 시스템 설명]^000000", "^00AAFF[About the Gear System]^000000");
+	mes "";
+	mes needtr("^FF0000이 장비의 추가 옵션은 전장에서만 적용됩니다.^000000", "^FF0000The extra options on this gear apply only in the Battleground.^000000");
+	mes needtr("마을 · 필드 · 인스턴스에서는 켜지지 않습니다.", "They do not turn on in towns, fields or instances.");
+	mes "";
+	mes needtr("전장에 들어가고 나오는 것만으로 자동 적용 / 해제되며", "They switch on and off automatically as you enter and leave,");
+	mes needtr("^777777장비를 다시 착용할 필요는 없습니다.^000000", "^777777so there is no need to re-equip anything.^000000");
+	next;
+	mes needtr("^00AAFF[장비 시스템 설명]^000000", "^00AAFF[About the Gear System]^000000");
+	mes "";
+	mes needtr("세트 옵션은 ^0055FF같은 계열 3부위^000000를 모두 착용해야 켜집니다.", "A set bonus needs ^0055FFall three pieces of the same set^000000.");
+	mes needtr("로브 갑옷 + 슈츠 망토처럼 섞으면 세트 옵션이 없습니다.", "Mixing a Robe armor with a Suit manteau gives no set bonus.");
+	mes "";
+	mes needtr("배낭과 신발은 ^0055FF종류가 달라도^000000 함께 착용하면", "Backpack and Boots work together ^0055FFeven if their types differ^000000,");
+	mes needtr("공통 세트 옵션이 적용됩니다.", "giving a shared set bonus.");
+	next;
+	mes needtr("^00AAFF[장비 시스템 설명]^000000", "^00AAFF[About the Gear System]^000000");
+	mes "";
+	mes needtr("^777777이 장비는 제련 · 카드 · 인챈트를 할 수 없습니다.", "^777777This gear cannot be refined, carded or enchanted.");
+	mes needtr("정식 PvP 장비를 하나씩 구하면서", "The goal is to collect proper PvP gear piece by piece");
+	mes needtr("초보자 장비를 교체해 나가는 것이 목표입니다.^000000", "and retire this beginner gear as you go.^000000");
+	next;
+	return;
+
+//------------------------------------------------------------
+S_NBG_Recommend:
+	clear;
+	setdialogsize(460,380);
+	mes needtr("^00AAFF[추천 세팅 안내]^000000", "^00AAFF[Recommended Setups]^000000");
+	mes needtr("^777777강제가 아니라 방향을 잡기 위한 참고입니다.^000000", "^777777These are suggestions, not requirements.^000000");
+	next;
+	switch (select(needtr("근접 물리", "Melee Physical"), needtr("원거리 물리", "Ranged Physical"), needtr("마법", "Magic"), needtr("생존 / 지원", "Defense / Support"), needtr("돌아가기", "Back"))) {
+	case 1:
+		clear;
+		mes needtr("^00AAFF[근접 물리 추천]^000000", "^00AAFF[Melee Physical Setup]^000000");
+		mes "";
+		mes needtr("기본 세트 : ^0055FF플레이트^000000", "Basic set : ^0055FFPlate^000000");
+		mes needtr("모자 : 물리 / 중하단 : 물리 / 악세서리 : 물리", "Headgear : Physical / Mid-Lower : Physical / Accessory : Physical");
+		mes needtr("방패 : 상대 공격 속성에 맞춰 교체", "Shield : swap to match the enemy's attack element");
+		mes "";
+		mes needtr("이후 ^FF9900물리 배낭 · 물리 신발 · 물리 딜 갑옷^000000을 시험해 보세요.", "Then try the ^FF9900Physical Backpack, Boots and Armor^000000.");
+		next;
+		break;
+	case 2:
+		clear;
+		mes needtr("^00AAFF[원거리 물리 추천]^000000", "^00AAFF[Ranged Physical Setup]^000000");
+		mes "";
+		mes needtr("기본 세트 : ^0055FF슈츠^000000", "Basic set : ^0055FFSuit^000000");
+		mes needtr("모자 : 물리 / 중하단 : 물리 / 악세서리 : 물리", "Headgear : Physical / Mid-Lower : Physical / Accessory : Physical");
+		mes needtr("방패 : 상대 공격 속성에 맞춰 교체", "Shield : swap to match the enemy's attack element");
+		mes "";
+		mes needtr("이후 ^FF9900원거리 배낭 · 원거리 신발^000000을 시험해 보세요.", "Then try the ^FF9900Ranged Backpack and Boots^000000.");
+		next;
+		break;
+	case 3:
+		clear;
+		mes needtr("^00AAFF[마법 추천]^000000", "^00AAFF[Magic Setup]^000000");
+		mes "";
+		mes needtr("기본 세트 : ^0055FF로브^000000", "Basic set : ^0055FFRobe^000000");
+		mes needtr("모자 : 마법 / 중하단 : 마법 / 악세서리 : 마법", "Headgear : Magic / Mid-Lower : Magic / Accessory : Magic");
+		mes needtr("방패 : 상대 공격 속성에 맞춰 교체", "Shield : swap to match the enemy's attack element");
+		mes "";
+		mes needtr("이후 ^FF9900마법 배낭 · 마법 신발 · 마법 딜 갑옷^000000을 시험해 보세요.", "Then try the ^FF9900Magic Backpack, Boots and Armor^000000.");
+		next;
+		break;
+	case 4:
+		clear;
+		mes needtr("^00AAFF[생존 / 지원 추천]^000000", "^00AAFF[Defense / Support Setup]^000000");
+		mes "";
+		mes needtr("기본 세트 : ^0055FF슈츠 또는 플레이트^000000", "Basic set : ^0055FFSuit or Plate^000000");
+		mes needtr("모자 : 생존 / 중하단 : 생존 / 악세서리 : 생존", "Headgear : Defense / Mid-Lower : Defense / Accessory : Defense");
+		mes needtr("방패 : 상대 공격 속성에 맞춰 교체", "Shield : swap to match the enemy's attack element");
+		next;
+		break;
+	default:
+		break;
+	}
+	return;
+
+//------------------------------------------------------------
+// 기본 방어 세트 (3부위 동시 지급)
+//------------------------------------------------------------
+S_NBG_BaseSet:
+	clear;
+	setdialogsize(460,380);
+	.@cur = callfunc("F_NEED_NBG_Owned", 900125, 900128, 900131);
+	mes needtr("^00AAFF[기본 방어 세트]^000000", "^00AAFF[Basic Defense Set]^000000");
+	mes "";
+	if (.@cur)
+		mes needtr("현재 보유 : ^00AA00", "Currently held : ^00AA00") + getitemname(.@cur) + needtr(" 계열^000000", " set^000000");
+	else
+		mes needtr("현재 보유 : ^777777없음^000000", "Currently held : ^777777none^000000");
+	mes "";
+	mes needtr("^0055FF로브^000000", "^0055FFRobe^000000");
+	mes needtr(" 마법계 또는 체력이 낮은 직업 추천.", " For magic classes or jobs with low HP.");
+	mes needtr(" MDEF와 원거리 피해 감소가 높은 생존 세트입니다.", " A survival set with high MDEF and ranged damage reduction.");
+	mes "";
+	mes needtr("^0055FF슈츠^000000", "^0055FFSuit^000000");
+	mes needtr(" 범용형. HP / 원거리 피해 감소 / 캐스팅의 균형.", " All-rounder. Balances HP, ranged damage reduction and casting.");
+	mes "";
+	mes needtr("^0055FF플레이트^000000", "^0055FFPlate^000000");
+	mes needtr(" 근접 또는 생존 중심 직업 추천. 높은 MaxHP 확보.", " For melee or defensive jobs. Secures high MaxHP.");
+	next;
+
+	switch (select(needtr("상세 옵션 보기", "View Detailed Options"), needtr("로브 세트 받기", "Get the Robe Set"), needtr("슈츠 세트 받기", "Get the Suit Set"), needtr("플레이트 세트 받기", "Get the Plate Set"), needtr("돌아가기", "Back"))) {
+	case 1:
+		clear;
+		mes needtr("^00AAFF[기본 방어 세트 - 풀세트 최종]^000000", "^00AAFF[Basic Defense Set - Full Set Totals]^000000");
+		mes "";
+		mes needtr("^0055FF로브^000000  인간형 피해 12% 감소 / MaxHP +20% +600", "^0055FFRobe^000000  Demi-Human damage -12% / MaxHP +20% +600");
+		mes needtr("        MDEF +40 / 무속성 10% / 원거리 20% / ASPD +1 / 동빙 방지", "        MDEF +40 / Neutral 10% / Ranged 20% / ASPD +1 / Freeze immunity");
+		mes "";
+		mes needtr("^0055FF슈츠^000000  인간형 피해 12% 감소 / MaxHP +25%", "^0055FFSuit^000000  Demi-Human damage -12% / MaxHP +25%");
+		mes needtr("        MDEF +15 / 무속성 10% / 원거리 20% / 변캐 10% / 동빙 방지", "        MDEF +15 / Neutral 10% / Ranged 20% / Variable Cast 10% / Freeze immunity");
+		mes "";
+		mes needtr("^0055FF플레이트^000000  인간형 피해 12% 감소 / MaxHP +30%", "^0055FFPlate^000000  Demi-Human damage -12% / MaxHP +30%");
+		mes needtr("        무속성 10% / 원거리 10% / 동빙 방지", "        Neutral 10% / Ranged 10% / Freeze immunity");
+		next;
+		return;
+	case 2: setarray .@pick[0], 900125, 900126, 900127; .@nm$ = needtr("로브", "Robe"); break;
+	case 3: setarray .@pick[0], 900128, 900129, 900130; .@nm$ = needtr("슈츠", "Suit"); break;
+	case 4: setarray .@pick[0], 900131, 900132, 900133; .@nm$ = needtr("플레이트", "Plate"); break;
+	default: return;
+	}
+
+	if (.@cur == .@pick[0]) {
+		clear;
+		mes needtr("^00AAFF[기본 방어 세트]^000000", "^00AAFF[Basic Defense Set]^000000");
+		mes "";
+		mes needtr("이미 ^00AA00", "You already have the ^00AA00") + .@nm$ + needtr(" 세트^000000를 보유하고 있습니다.", " set^000000.");
+		next;
+		return;
+	}
+
+	// 갑옷 -> 망토 -> 신발 순서로 각 부위를 교환한다.
+	.@fail = 0;
+	.@fail += callfunc("F_NEED_NBG_Swap", .@pick[0], 1, EQI_ARMOR, -1, 900125, 900128, 900131);
+	.@fail += callfunc("F_NEED_NBG_Swap", .@pick[1], 1, EQI_GARMENT, -1, 900126, 900129, 900132);
+	.@fail += callfunc("F_NEED_NBG_Swap", .@pick[2], 1, EQI_SHOES, -1, 900127, 900130, 900133);
+
+	clear;
+	mes needtr("^00AAFF[기본 방어 세트]^000000", "^00AAFF[Basic Defense Set]^000000");
+	mes "";
+	if (.@fail) {
+		mes needtr("^FF0000소지 무게나 인벤토리 공간이 부족합니다.^000000", "^FF0000You do not have enough carry weight or inventory space.^000000");
+		mes needtr("정리한 뒤 다시 시도해 주세요.", "Please make room and try again.");
+	}
+	else {
+		mes "^00AA00" + .@nm$ + needtr(" 세트 3부위^000000를 지급했습니다.", " set - all three pieces^000000 have been granted.");
+		mes "";
+		mes needtr("^777777기존 기본 방어 세트는 회수되었습니다.^000000", "^777777Your previous Basic Defense Set was collected.^000000");
+	}
+	next;
+	return;
+
+//------------------------------------------------------------
+S_NBG_Hat:
+	clear;
+	setdialogsize(460,360);
+	.@cur = callfunc("F_NEED_NBG_Owned", 900146, 900147, 900148);
+	mes needtr("^00AAFF[모자 선택]^000000", "^00AAFF[Choose a Headgear]^000000");
+	mes "";
+	mes needtr("현재 보유 : ", "Currently held : ") + ((.@cur) ? "^00AA00" + getitemname(.@cur) + "^000000" : needtr("^777777없음^000000", "^777777none^000000"));
+	mes "";
+	mes needtr("^0055FFA. 물리^000000  ATK 중심. 물리 공격 직업 추천", "^0055FFA. Physical^000000  ATK focused. For physical attackers");
+	mes needtr("^0055FFB. 마법^000000  MATK 중심. 마법 공격 직업 추천", "^0055FFB. Magic^000000  MATK focused. For magic attackers");
+	mes needtr("^0055FFC. 생존^000000  인간형 피해 감소. 오래 버티는 역할 추천", "^0055FFC. Defense^000000  Demi-Human damage reduction. For staying alive");
+	next;
+	switch (select(needtr("상세 옵션 보기", "View Detailed Options"), needtr("A. 물리", "A. Physical"), needtr("B. 마법", "B. Magic"), needtr("C. 생존", "C. Defense"), needtr("돌아가기", "Back"))) {
+	case 1:
+		clear;
+		mes needtr("^00AAFF[모자 상세]^000000", "^00AAFF[Headgear Details]^000000");
+		mes "";
+		mes needtr("^0055FFA. 물리^000000  ATK +8% / MaxHP +5% / MaxSP +5%", "^0055FFA. Physical^000000  ATK +8% / MaxHP +5% / MaxSP +5%");
+		mes needtr("^0055FFB. 마법^000000  MATK +8% / MaxHP +5%", "^0055FFB. Magic^000000  MATK +8% / MaxHP +5%");
+		mes needtr("^0055FFC. 생존^000000  인간형 플레이어에게 받는 피해 10% 감소", "^0055FFC. Defense^000000  Damage taken from Demi-Human players -10%");
+		next;
+		return;
+	case 2: .@id = 900146; break;
+	case 3: .@id = 900147; break;
+	case 4: .@id = 900148; break;
+	default: return;
+	}
+	callsub S_NBG_Result, callfunc("F_NEED_NBG_Swap", .@id, 1, EQI_HEAD_TOP, -1, 900146, 900147, 900148), .@id, 1;
+	return;
+
+//------------------------------------------------------------
+S_NBG_MidLow:
+	clear;
+	setdialogsize(460,360);
+	.@cur = callfunc("F_NEED_NBG_Owned", 900149, 900150, 900151);
+	mes needtr("^00AAFF[중하단 선택]^000000", "^00AAFF[Choose a Mid-Lower]^000000");
+	mes "";
+	mes needtr("현재 보유 : ", "Currently held : ") + ((.@cur) ? "^00AA00" + getitemname(.@cur) + "^000000" : needtr("^777777없음^000000", "^777777none^000000"));
+	mes "";
+	mes needtr("^0055FFA. 물리^000000  인간형 상대 물리 데미지 증가", "^0055FFA. Physical^000000  More physical damage to Demi-Human targets");
+	mes needtr("^0055FFB. 마법^000000  MATK 증가", "^0055FFB. Magic^000000  More MATK");
+	mes needtr("^0055FFC. 생존^000000  인간형 피해 감소", "^0055FFC. Defense^000000  Demi-Human damage reduction");
+	mes needtr("  ^FF0000C는 뉴비 전장 갑옷을 함께 착용해야 발동합니다.^000000", "  ^FF0000C only works with a Newbie Battleground armor equipped.^000000");
+	next;
+	switch (select(needtr("상세 옵션 보기", "View Detailed Options"), needtr("A. 물리", "A. Physical"), needtr("B. 마법", "B. Magic"), needtr("C. 생존", "C. Defense"), needtr("돌아가기", "Back"))) {
+	case 1:
+		clear;
+		mes needtr("^00AAFF[중하단 상세]^000000", "^00AAFF[Mid-Lower Details]^000000");
+		mes "";
+		mes needtr("^0055FFA. 물리^000000  인간형 플레이어에게 주는 물리 데미지 +5% / ATK +15", "^0055FFA. Physical^000000  Physical damage to Demi-Human players +5% / ATK +15");
+		mes needtr("^0055FFB. 마법^000000  MATK +4% / MATK +20", "^0055FFB. Magic^000000  MATK +4% / MATK +20");
+		mes needtr("^0055FFC. 생존^000000  인간형 플레이어에게 받는 피해 3% 감소", "^0055FFC. Defense^000000  Damage taken from Demi-Human players -3%");
+		mes "";
+		mes needtr("^FF0000C 옵션은 아래 갑옷을 착용한 경우에만 적용됩니다.^000000", "^FF0000The C option applies only with one of the armors below.^000000");
+		mes needtr("^777777로브 / 슈츠 / 플레이트 갑옷, 딜 갑옷 4종^000000", "^777777Robe / Suit / Plate armor, or any of the 4 Armors^000000");
+		next;
+		return;
+	case 2: .@id = 900149; break;
+	case 3: .@id = 900150; break;
+	case 4: .@id = 900151; break;
+	default: return;
+	}
+	callsub S_NBG_Result, callfunc("F_NEED_NBG_Swap", .@id, 1, EQI_HEAD_MID, EQI_HEAD_LOW, 900149, 900150, 900151), .@id, 1;
+	return;
+
+//------------------------------------------------------------
+S_NBG_Bag:
+	clear;
+	setdialogsize(460,360);
+	.@cur = callfunc("F_NEED_NBG_Owned", 900134, 900135, 900136);
+	mes needtr("^00AAFF[배낭 선택]^000000", "^00AAFF[Choose a Backpack]^000000");
+	mes "";
+	mes needtr("현재 보유 : ", "Currently held : ") + ((.@cur) ? "^00AA00" + getitemname(.@cur) + "^000000" : needtr("^777777없음^000000", "^777777none^000000"));
+	mes "";
+	mes needtr("^0055FFA. 물리형^000000", "^0055FFA. Physical Type^000000");
+	mes needtr("  STR을 사용하는 물리 공격 직업 추천", "  For physical attackers who build STR");
+	mes needtr("  ATK / 캐스팅 / 공격속도 지원", "  Supports ATK, casting and attack speed");
+	mes needtr("^0055FFB. 마법형^000000", "^0055FFB. Magic Type^000000");
+	mes needtr("  INT를 사용하는 마법 공격 직업 추천", "  For magic attackers who build INT");
+	mes needtr("  MATK / 캐스팅 지원", "  Supports MATK and casting");
+	mes needtr("^0055FFC. 원거리형^000000", "^0055FFC. Ranged Type^000000");
+	mes needtr("  활 / 총기 등 원거리 물리 직업 추천", "  For ranged physical jobs such as bow or gun users");
+	mes needtr("  원거리 데미지 / 캐스팅 지원", "  Supports ranged damage and casting");
+	next;
+	switch (select(needtr("상세 옵션 보기", "View Detailed Options"), needtr("A. 물리형", "A. Physical Type"), needtr("B. 마법형", "B. Magic Type"), needtr("C. 원거리형", "C. Ranged Type"), needtr("돌아가기", "Back"))) {
+	case 1:
+		clear;
+		mes needtr("^00AAFF[배낭 상세]^000000", "^00AAFF[Backpack Details]^000000");
+		mes needtr("^777777조건은 장비를 뺀 기본 스탯 기준입니다.^000000", "^777777The thresholds use base stats, without equipment.^000000");
+		mes "";
+		mes needtr("^0055FFA. 물리형^000000  기본 STR 10당 ATK +5", "^0055FFA. Physical Type^000000  ATK +5 per 10 base STR");
+		mes needtr("  기본 STR 100 이상: 변캐 12% 감소 / ATK +15 / ASPD +1", "  base STR 100 or more: Variable Cast -12% / ATK +15 / ASPD +1");
+		mes needtr("^0055FFB. 마법형^000000  기본 INT 10당 MATK +5", "^0055FFB. Magic Type^000000  MATK +5 per 10 base INT");
+		mes needtr("  기본 INT 100 이상: 변캐 16% 감소 / MATK +25", "  base INT 100 or more: Variable Cast -16% / MATK +25");
+		mes needtr("^0055FFC. 원거리형^000000", "^0055FFC. Ranged Type^000000");
+		mes needtr("  기본 DEX 100 이상: 원거리 물리 +18% / 변캐 8% 감소", "  base DEX 100 or more: ranged physical +18% / Variable Cast -8%");
+		mes "";
+		mes needtr("^777777공통^000000  기본 VIT 100 이상: 무속성 피해 10% 감소", "^777777Common^000000  base VIT 100 or more: Neutral damage -10%");
+		mes needtr("^777777신발과 함께 착용 시 공통 세트 옵션이 추가됩니다.^000000", "^777777Worn with Boots it adds a shared set bonus.^000000");
+		next;
+		return;
+	case 2: .@id = 900134; break;
+	case 3: .@id = 900135; break;
+	case 4: .@id = 900136; break;
+	default: return;
+	}
+	callsub S_NBG_Result, callfunc("F_NEED_NBG_Swap", .@id, 1, EQI_GARMENT, -1, 900134, 900135, 900136), .@id, 1;
+	return;
+
+//------------------------------------------------------------
+S_NBG_Shoes:
+	clear;
+	setdialogsize(460,360);
+	.@cur = callfunc("F_NEED_NBG_Owned", 900137, 900138, 900139);
+	mes needtr("^00AAFF[신발 선택]^000000", "^00AAFF[Choose Boots]^000000");
+	mes "";
+	mes needtr("현재 보유 : ", "Currently held : ") + ((.@cur) ? "^00AA00" + getitemname(.@cur) + "^000000" : needtr("^777777없음^000000", "^777777none^000000"));
+	mes "";
+	mes needtr("^0055FFA. 물리형^000000  기본 STR이 높은 물리 직업 추천", "^0055FFA. Physical Type^000000  For physical jobs with high base STR");
+	mes needtr("^0055FFB. 마법형^000000  기본 INT가 높은 마법 직업 추천", "^0055FFB. Magic Type^000000  For magic jobs with high base INT");
+	mes needtr("^0055FFC. 원거리형^000000  기본 DEX가 높은 원거리 직업 추천", "^0055FFC. Ranged Type^000000  For ranged jobs with high base DEX");
+	mes "";
+	mes needtr("^777777배낭과 함께 착용하면 종류가 달라도", "^777777Worn with a Backpack they give a shared set bonus,");
+	mes needtr("공통 세트 옵션이 적용됩니다.^000000", "even if their types differ.^000000");
+	next;
+	switch (select(needtr("상세 옵션 보기", "View Detailed Options"), needtr("A. 물리형", "A. Physical Type"), needtr("B. 마법형", "B. Magic Type"), needtr("C. 원거리형", "C. Ranged Type"), needtr("돌아가기", "Back"))) {
+	case 1:
+		clear;
+		mes needtr("^00AAFF[신발 상세]^000000", "^00AAFF[Boots Details]^000000");
+		mes needtr("^777777조건은 장비를 뺀 기본 스탯 기준입니다.^000000", "^777777The thresholds use base stats, without equipment.^000000");
+		mes "";
+		mes needtr("^0055FFA. 물리형^000000  기본 STR 120 이상: ATK +65 / MaxHP +3%", "^0055FFA. Physical Type^000000  base STR 120 or more: ATK +65 / MaxHP +3%");
+		mes needtr("^0055FFB. 마법형^000000  기본 INT 120 이상: MATK +85 / 변캐 12% 감소", "^0055FFB. Magic Type^000000  base INT 120 or more: MATK +85 / Variable Cast -12%");
+		mes needtr("^0055FFC. 원거리형^000000  기본 DEX 120 이상:", "^0055FFC. Ranged Type^000000  base DEX 120 or more:");
+		mes needtr("  고정 캐스팅 0.4초 감소 / 변캐 6% 감소 / 원거리 물리 +4%", "  Fixed Cast -0.4s / Variable Cast -6% / ranged physical +4%");
+		mes "";
+		mes needtr("^777777공통^000000  MaxHP +5% / MaxHP +1,000 / MaxSP +10%", "^777777Common^000000  MaxHP +5% / MaxHP +1,000 / MaxSP +10%");
+		mes needtr("^0055FF배낭 세트^000000  변캐 12% 감소 / ASPD +1 / MaxHP +5%", "^0055FFBackpack set^000000  Variable Cast -12% / ASPD +1 / MaxHP +5%");
+		next;
+		return;
+	case 2: .@id = 900137; break;
+	case 3: .@id = 900138; break;
+	case 4: .@id = 900139; break;
+	default: return;
+	}
+	callsub S_NBG_Result, callfunc("F_NEED_NBG_Swap", .@id, 1, EQI_SHOES, -1, 900137, 900138, 900139), .@id, 1;
+	return;
+
+//------------------------------------------------------------
+S_NBG_Acc:
+	clear;
+	setdialogsize(460,360);
+	.@cur = callfunc("F_NEED_NBG_Owned", 900140, 900141, 900142);
+	mes needtr("^00AAFF[악세서리 선택]^000000", "^00AAFF[Choose an Accessory]^000000");
+	mes "";
+	mes needtr("현재 보유 : ", "Currently held : ") + ((.@cur) ? "^00AA00" + getitemname(.@cur) + needtr(" 2개^000000", " x2^000000") : needtr("^777777없음^000000", "^777777none^000000"));
+	mes "";
+	mes needtr("^0055FFA. 물리^000000  ATK 증가", "^0055FFA. Physical^000000  More ATK");
+	mes needtr("^0055FFB. 마법^000000  MATK 증가", "^0055FFB. Magic^000000  More MATK");
+	mes needtr("^0055FFC. 생존^000000  MaxHP / 원거리 피해 감소", "^0055FFC. Defense^000000  MaxHP / ranged damage reduction");
+	mes "";
+	mes needtr("^FF9900선택한 종류를 2개 한 세트로 지급합니다.^000000", "^FF9900The type you choose is handed over as a set of two.^000000");
+	mes needtr("^777777두 개를 동시에 착용하면 2개분이 합산됩니다.^000000", "^777777Wearing both stacks the effect twice.^000000");
+	next;
+	switch (select(needtr("상세 옵션 보기", "View Detailed Options"), needtr("A. 물리", "A. Physical"), needtr("B. 마법", "B. Magic"), needtr("C. 생존", "C. Defense"), needtr("돌아가기", "Back"))) {
+	case 1:
+		clear;
+		mes needtr("^00AAFF[악세서리 상세] ^777777(1개당)^000000", "^00AAFF[Accessory Details] ^777777(per piece)^000000");
+		mes "";
+		mes needtr("^0055FFA. 물리^000000  ATK +3% / ATK +15 / 변캐 3% 감소", "^0055FFA. Physical^000000  ATK +3% / ATK +15 / Variable Cast -3%");
+		mes needtr("^0055FFB. 마법^000000  MATK +3% / MATK +15 / 변캐 3% 감소", "^0055FFB. Magic^000000  MATK +3% / MATK +15 / Variable Cast -3%");
+		mes needtr("^0055FFC. 생존^000000  MaxHP +3% / MaxHP +150", "^0055FFC. Defense^000000  MaxHP +3% / MaxHP +150");
+		mes needtr("         원거리 물리 피해 3% 감소 / 변캐 3% 감소", "         ranged physical damage -3% / Variable Cast -3%");
+		next;
+		return;
+	case 2: .@id = 900140; break;
+	case 3: .@id = 900141; break;
+	case 4: .@id = 900142; break;
+	default: return;
+	}
+	callsub S_NBG_Result, callfunc("F_NEED_NBG_Swap", .@id, 2, EQI_ACC_L, EQI_ACC_R, 900140, 900141, 900142), .@id, 2;
+	return;
+
+//------------------------------------------------------------
+S_NBG_Shield:
+	clear;
+	setdialogsize(460,360);
+	.@cur = callfunc("F_NEED_NBG_Owned", 900143, 900144, 900145);
+	mes needtr("^00AAFF[방패 선택]^000000", "^00AAFF[Choose a Shield]^000000");
+	mes "";
+	mes needtr("현재 보유 : ", "Currently held : ") + ((.@cur) ? "^00AA00" + getitemname(.@cur) + "^000000" : needtr("^777777없음^000000", "^777777none^000000"));
+	mes "";
+	mes needtr("^FF9900상대의 공격 속성에 따라^000000", "^FF9900Swap between these shields^000000");
+	mes needtr("^FF9900방패를 바꾸어 사용하는 장비입니다.^000000", "^FF9900to match the element your opponent attacks with.^000000");
+	mes "";
+	mes needtr("^0055FFA^000000  화 / 수 / 암 속성 상대", "^0055FFA^000000  against Fire / Water / Dark");
+	mes needtr("^0055FFB^000000  성 속성 상대", "^0055FFB^000000  against Holy");
+	mes needtr("^0055FFC^000000  무속성(일반 물리) 상대", "^0055FFC^000000  against Neutral (plain physical)");
+	next;
+	switch (select(needtr("상세 옵션 보기", "View Detailed Options"), needtr("A. 화/수/암", "A. Fire / Water / Dark"), needtr("B. 성속성", "B. Holy"), needtr("C. 무속성", "C. Neutral"), needtr("돌아가기", "Back"))) {
+	case 1:
+		clear;
+		mes needtr("^00AAFF[방패 상세]^000000", "^00AAFF[Shield Details]^000000");
+		mes "";
+		mes needtr("^0055FFA^000000  화속성 15% / 수속성 15% / 암속성 15% 피해 감소", "^0055FFA^000000  Fire 15% / Water 15% / Dark 15% damage reduction");
+		mes needtr("^0055FFB^000000  성속성 20% 피해 감소 / MDEF +10", "^0055FFB^000000  Holy 20% damage reduction / MDEF +10");
+		mes needtr("^0055FFC^000000  무속성 5% 피해 감소 / MDEF +5", "^0055FFC^000000  Neutral 5% damage reduction / MDEF +5");
+		mes "";
+		mes needtr("^777777교환은 무료이니 상대에 맞춰 자주 바꿔 보세요.^000000", "^777777Exchanging is free, so switch as often as your opponent does.^000000");
+		next;
+		return;
+	case 2: .@id = 900143; break;
+	case 3: .@id = 900144; break;
+	case 4: .@id = 900145; break;
+	default: return;
+	}
+	callsub S_NBG_Result, callfunc("F_NEED_NBG_Swap", .@id, 1, EQI_HAND_L, -1, 900143, 900144, 900145), .@id, 1;
+	return;
+
+//------------------------------------------------------------
+S_NBG_DealArmor:
+	clear;
+	setdialogsize(460,360);
+	.@cur = callfunc("F_NEED_NBG_Owned", 900152, 900153, 900154, 900155);
+	mes needtr("^00AAFF[딜 갑옷 선택]^000000", "^00AAFF[Choose a DPS Armor]^000000");
+	mes "";
+	mes needtr("현재 보유 : ", "Currently held : ") + ((.@cur) ? "^00AA00" + getitemname(.@cur) + "^000000" : needtr("^777777없음^000000", "^777777none^000000"));
+	mes "";
+	mes needtr("기본 방어 세트의 갑옷 대신 착용해", "Worn instead of the Basic Defense Set armor,");
+	mes needtr("^0055FF공격 성능을 더 확보^000000하는 선택지입니다.", "it trades defence for ^0055FFmore attack^000000.");
+	mes "";
+	mes needtr("^777777기본 세트 갑옷과 함께 보유할 수 있습니다.", "^777777You may hold it alongside the basic set armor.");
+	mes needtr("전장 안에서 갈아끼워 비교해 보세요.^000000", "Swap between them inside the Battleground to compare.^000000");
+	next;
+	switch (select(needtr("상세 옵션 보기", "View Detailed Options"), needtr("물리 / HP", "Physical / HP"), needtr("물리 / 동빙", "Physical / Freeze"), needtr("마법 / HP", "Magic / HP"), needtr("마법 / 동빙", "Magic / Freeze"), needtr("돌아가기", "Back"))) {
+	case 1:
+		clear;
+		mes needtr("^00AAFF[딜 갑옷 상세]^000000", "^00AAFF[DPS Armor Details]^000000");
+		mes "";
+		mes needtr("^0055FF물리 / HP^000000    MaxHP +10% / MaxHP +500 / ATK +60", "^0055FFPhysical / HP^000000    MaxHP +10% / MaxHP +500 / ATK +60");
+		mes needtr("^0055FF물리 / 동빙^000000  동빙 방지 / MaxHP +500 / ATK +60", "^0055FFPhysical / Freeze^000000  Freeze immunity / MaxHP +500 / ATK +60");
+		mes needtr("^0055FF마법 / HP^000000    MaxHP +10% / MaxHP +500 / MATK +60", "^0055FFMagic / HP^000000    MaxHP +10% / MaxHP +500 / MATK +60");
+		mes needtr("^0055FF마법 / 동빙^000000  동빙 방지 / MaxHP +500 / MATK +60", "^0055FFMagic / Freeze^000000  Freeze immunity / MaxHP +500 / MATK +60");
+		next;
+		return;
+	case 2: .@id = 900152; break;
+	case 3: .@id = 900153; break;
+	case 4: .@id = 900154; break;
+	case 5: .@id = 900155; break;
+	default: return;
+	}
+	callsub S_NBG_Result, callfunc("F_NEED_NBG_Swap", .@id, 1, EQI_ARMOR, -1, 900152, 900153, 900154, 900155), .@id, 1;
+	return;
+
+//------------------------------------------------------------
+// getarg(0) 교환 결과 / getarg(1) 지급 아이템 / getarg(2) 수량
+S_NBG_Result:
+	clear;
+	setdialogsize(440,260);
+	mes needtr("^00AAFF[NEED 초보자 전장 장비]^000000", "^00AAFF[NEED Newbie Battleground Gear]^000000");
+	mes "";
+	if (getarg(0)) {
+		mes needtr("^FF0000소지 무게나 인벤토리 공간이 부족합니다.^000000", "^FF0000You do not have enough carry weight or inventory space.^000000");
+		mes needtr("정리한 뒤 다시 시도해 주세요.", "Please make room and try again.");
+		mes "";
+		mes needtr("^777777기존 장비는 그대로 유지되었습니다.^000000", "^777777Your existing gear was left as it is.^000000");
+	}
+	else {
+		mes "^00AA00" + getitemname(getarg(1)) + "^000000 " + getarg(2) + needtr("개를 지급했습니다.", " handed over.");
+		mes "";
+		mes needtr("^777777같은 부위의 기존 초보자 장비는 회수되었습니다.^000000", "^777777The beginner gear you had in the same slot was collected.^000000");
+	}
+	next;
+	return;
+}

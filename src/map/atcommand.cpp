@@ -1840,6 +1840,191 @@ ACMD_FUNC(luckygrantcheck)
 	return 0;
 }
 
+static void fakebossdrop_log(map_session_data* sd, uint32 mob_id, t_itemid item_id, int32 give, const char* result, const char* reason)
+{
+	// ShowNotice, not ShowInfo: conf/map_athena.conf runs with console_silent 3,
+	// which hides every MSG_INFORMATION line from the operator console.
+	ShowNotice("[NEED_FAKE_BOSS_DROP] GM=%s AID=%u CID=%u MOB=%u ITEM=%u GIVE=%d Result=%s%s%s\n",
+		sd->status.name, sd->status.account_id, sd->status.char_id, mob_id, item_id, give,
+		result, reason != nullptr ? " Reason=" : "", reason != nullptr ? reason : "");
+}
+
+/// Parse a strictly decimal, non negative argument.
+static bool fakebossdrop_parse_u32(const char* str, uint32& out)
+{
+	char* end = nullptr;
+
+	errno = 0;
+
+	unsigned long value = strtoul(str, &end, 10);
+
+	if (end == str || end == nullptr || *end != '\0' || errno == ERANGE || value > UINT32_MAX)
+		return false;
+
+	out = static_cast<uint32>(value);
+	return true;
+}
+
+/**
+ * Reproduce the rare drop broadcast of a monster card without touching the
+ * monster death path: no spawn, no kill, no drop routine, no MVP reward and no
+ * death event is executed. The broadcast itself comes from the very same
+ * mob_rare_drop_announce() that mob_dead() uses on a real drop.
+ */
+ACMD_FUNC(fakebossdrop)
+{
+	static const char* usage = "Usage: @fakebossdrop <mob_id> [give:0/1] [item_id]";
+
+	char arg1[16] = {}, arg2[16] = {}, arg3[16] = {}, extra[16] = {};
+	uint32 mob_id = 0;
+	uint32 item_id = 0;
+	uint32 give_value = 0;
+
+	nullpo_retr(-1, sd);
+
+	int32 parsed = message != nullptr ? sscanf(message, "%15s %15s %15s %15s", arg1, arg2, arg3, extra) : 0;
+
+	if (parsed < 1 || parsed > 3) {
+		clif_displaymessage(fd, usage);
+		fakebossdrop_log(sd, mob_id, item_id, -1, "FAILED", "INVALID_INPUT");
+		return -1;
+	}
+
+	if (!fakebossdrop_parse_u32(arg1, mob_id)) {
+		clif_displaymessage(fd, usage);
+		fakebossdrop_log(sd, mob_id, item_id, -1, "FAILED", "INVALID_INPUT");
+		return -1;
+	}
+
+	if (parsed >= 2 && (!fakebossdrop_parse_u32(arg2, give_value) || (give_value != 0 && give_value != 1))) {
+		clif_displaymessage(fd, usage);
+		fakebossdrop_log(sd, mob_id, item_id, -1, "FAILED", "INVALID_GIVE");
+		return -1;
+	}
+
+	int32 give = static_cast<int32>(give_value);
+
+	if (parsed >= 3 && !fakebossdrop_parse_u32(arg3, item_id)) {
+		clif_displaymessage(fd, usage);
+		fakebossdrop_log(sd, mob_id, item_id, give, "FAILED", "INVALID_ITEM_INPUT");
+		return -1;
+	}
+
+	std::shared_ptr<s_mob_db> mob = mob_db.find(mob_id);
+
+	if (mob == nullptr) {
+		clif_displaymessage(fd, "Invalid monster ID.");
+		fakebossdrop_log(sd, mob_id, item_id, give, "FAILED", "INVALID_MOB");
+		return -1;
+	}
+
+	// An explicitly given item id still has to be a card, the drop list check below
+	// then makes sure no arbitrary card can be broadcast for an unrelated monster.
+	if (item_id != 0) {
+		std::shared_ptr<item_data> id = item_db.find(item_id);
+
+		if (id == nullptr || id->type != IT_CARD) {
+			clif_displaymessage(fd, "The specified item ID is not a card.");
+			fakebossdrop_log(sd, mob_id, item_id, give, "FAILED", "ITEM_NOT_CARD");
+			return -1;
+		}
+	}
+
+	std::shared_ptr<s_mob_drop> target = nullptr;
+	size_t cards = 0;
+
+	for (const std::shared_ptr<s_mob_drop>& entry : mob->dropitem) {
+		if (entry == nullptr || entry->nameid == 0)
+			continue;
+
+		// Items on the no drop list can never drop, so they can never announce either.
+		if (mob_is_drop_disabled(entry->nameid))
+			continue;
+
+		std::shared_ptr<item_data> id = item_db.find(entry->nameid);
+
+		if (id == nullptr || id->type != IT_CARD)
+			continue;
+
+		cards++;
+
+		if (item_id == 0)
+			target = entry;
+		else if (entry->nameid == item_id)
+			target = entry;
+	}
+
+	if (cards == 0) {
+		clif_displaymessage(fd, "No card item was found in this monster's drop list.");
+		fakebossdrop_log(sd, mob_id, item_id, give, "FAILED", "NO_CARD_DROP");
+		return -1;
+	}
+
+	if (item_id == 0 && cards > 1) {
+		clif_displaymessage(fd, "This monster has more than one card drop. Specify the item ID.");
+		clif_displaymessage(fd, usage);
+		fakebossdrop_log(sd, mob_id, item_id, give, "FAILED", "MULTIPLE_CARD_DROPS");
+		return -1;
+	}
+
+	if (target == nullptr) {
+		clif_displaymessage(fd, "The specified item ID is not in this monster's drop list.");
+		fakebossdrop_log(sd, mob_id, item_id, give, "FAILED", "ITEM_NOT_IN_DROP_LIST");
+		return -1;
+	}
+
+	item_id = target->nameid;
+
+	std::shared_ptr<item_data> reward = item_db.find(item_id);
+
+	if (reward == nullptr) {
+		clif_displaymessage(fd, "The specified item ID is invalid.");
+		fakebossdrop_log(sd, mob_id, item_id, give, "FAILED", "INVALID_ITEM");
+		return -1;
+	}
+
+	// Checked before anything is granted so that a card is never handed out for a
+	// drop the server would not broadcast anyway.
+	if (!mob_rare_drop_announce_allowed(target->rate, mob->get_bosstype())) {
+		clif_displaymessage(fd, "This drop does not qualify for the rare drop announce (MVP boss and rate <= battle_config.rare_drop_announce are required).");
+		fakebossdrop_log(sd, mob_id, item_id, give, "FAILED", "ANNOUNCE_NOT_ALLOWED");
+		return -1;
+	}
+
+	if (give == 1) {
+		struct item item_tmp = {};
+
+		item_tmp.nameid = item_id;
+		item_tmp.identify = itemdb_isidentified(item_id);
+
+		e_additem_result flag = pc_additem(sd, &item_tmp, 1, LOG_TYPE_COMMAND);
+
+		if (flag != ADDITEM_SUCCESS) {
+			clif_additem(sd, 0, 0, flag);
+			clif_displaymessage(fd, "Item delivery failed; no announcement was sent.");
+			fakebossdrop_log(sd, mob_id, item_id, give, "FAILED", "ITEM_DELIVERY_FAILED");
+			return -1;
+		}
+	}
+
+	// mob_dead() broadcasts md->name, which mob_class_change() fills the same way.
+	const char* mob_name = battle_config.override_mob_names == 1 ? mob->name.c_str() : mob->jname.c_str();
+
+	if (!mob_rare_drop_announce(*sd, mob_name, *reward, target->rate, mob->get_bosstype())) {
+		clif_displaymessage(fd, "The rare drop announce was refused by the server configuration.");
+		fakebossdrop_log(sd, mob_id, item_id, give, "FAILED", "ANNOUNCE_REFUSED");
+		return -1;
+	}
+
+	char output[CHAT_SIZE_MAX];
+
+	safesnprintf(output, sizeof(output), "Sent the rare drop announcement for %s (%s)%s.",
+		reward->ename.c_str(), mob_name, give == 1 ? " and granted the card" : " without granting the card");
+	clif_displaymessage(fd, output);
+	fakebossdrop_log(sd, mob_id, item_id, give, "SUCCESS", nullptr);
+	return 0;
+}
+
 ACMD_FUNC(item2)
 {
 	char item_name[100];
@@ -13139,6 +13324,7 @@ void atcommand_basecommands(void) {
 		ACMD_DEF(item),
 		ACMD_DEFR(luckygrant, ATCMD_NOCONSOLE),
 		ACMD_DEFR(luckygrantcheck, ATCMD_NOCONSOLE),
+		ACMD_DEFR(fakebossdrop, ATCMD_NOCONSOLE),
 		ACMD_DEF(item2),
 		ACMD_DEF2("itembound",item),
 		ACMD_DEF2("itembound2",item2),

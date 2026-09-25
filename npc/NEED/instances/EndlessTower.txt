@@ -206,7 +206,7 @@ alberta,214,77,6	script	함장 얀센	709,{
 e_tower,81,105,0	script	탑의 수호석	406,{
 
 	set .@party_id,getcharid(1);
-	set .@md_name$,"엔들리스 타워";
+	set .@md_name$,"엔들리스 타워"; set .@md_name_en$,"Endless Tower";
 
 	set .@etower_timer,checkquest(12070,PLAYTIME); // 1 week
 	set .@etower_timer2,checkquest(12070,PLAYTIME); // 4 hours
@@ -219,15 +219,15 @@ e_tower,81,105,0	script	탑의 수호석	406,{
 		if (getcharid(0) == getpartyleader(.@party_id,2)) {
 			mes needtr("파티 생성을 확인했습니다. ", "Party confirmed. Would you like to reserve entry to the tower? (")+.md_name$+needtr("입장을 위한 예약을 하시겠습니까?", ")");
 			next;
-			switch(select(.@md_name$+needtr(" 던전 생성:던전 입장:알베르타로 복귀:취소", " - generate dungeon:Enter the dungeon:Return to Alberta:Cancel"))) {
+			switch(select(needtr(.@md_name$, .@md_name_en$)+needtr(" 던전 생성:던전 입장:알베르타로 복귀:취소", " - generate dungeon:Enter the dungeon:Return to Alberta:Cancel"))) {
 			case 1:
 				if (instance_create(.@md_name$) < 0) {
 					mes "Party Name: "+ getpartyname(.@party_id);
 					mes "Party Leader: "+strcharinfo(0);
-					mes "^0000ff"+.@md_name$+needtr(" ^000000- 예약 실패!", " ^000000- Reservation Failed!");
+					mes "^0000ff"+needtr(.@md_name$, .@md_name_en$)+needtr(" ^000000- 예약 실패!", " ^000000- Reservation Failed!");
 					close;
 				}
-				mes "^0000ff"+.@md_name$+needtr("^000000 - 예약을 시도합니다.", "^000000 - Try to reserve");
+				mes "^0000ff"+needtr(.@md_name$, .@md_name_en$)+needtr("^000000 - 예약을 시도합니다.", "^000000 - Try to reserve");
 				mes needtr("예약에 성공하신 뒤에는 NPC 에게 다시 말을 걸어 메모리얼 던전 입장 메뉴를 선택하셔서 입장하실 수 있습니다.", "After making a reservation, you have to talk to NPC behind and select the menu 'Enter the Dungeon' to enter the dungeon.");
 				close;
 			case 2:
@@ -241,7 +241,7 @@ e_tower,81,105,0	script	탑의 수호석	406,{
 				close;
 			}
 		}
-		switch(select(.@md_name$+needtr(" 던전 입장:알베르타로 복귀:취소", " - enter the dungeon:Return to Alberta:Cancel"))) {
+		switch(select(needtr(.@md_name$, .@md_name_en$)+needtr(" 던전 입장:알베르타로 복귀:취소", " - enter the dungeon:Return to Alberta:Cancel"))) {
 		case 1:
 			callsub L_Enter,1,1;
 		case 2:
@@ -255,7 +255,7 @@ e_tower,81,105,0	script	탑의 수호석	406,{
 	} else if ((.@etower_timer >= 0) && (.@etower_timer2 < 2)) {
 		mes needtr("던전을 생성했었다면 바로 들어가실 수 있습니다. ", "If you have the dungeon generated already, you can enter it. ");
 		next;
-		switch(select(.@md_name$+needtr(" 던전 입장:알베르타로 복귀:취소", " - enter the dungeon:Return to Alberta:Cancel"))) {
+		switch(select(needtr(.@md_name$, .@md_name_en$)+needtr(" 던전 입장:알베르타로 복귀:취소", " - enter the dungeon:Return to Alberta:Cancel"))) {
 		case 1:
 			callsub L_Enter,0,0;
 		case 2:

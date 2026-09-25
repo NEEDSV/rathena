@@ -22,12 +22,12 @@ OnCommand:
 //============================================================
 S_Main:
 	while (1) {
-		mes "[오토큐어]";
-		mes "자동 물약 설정을 관리합니다.";
-		mes "원하는 항목을 선택해주세요.";
+		mes needtr("[오토큐어]", "[Auto Cure]");
+		mes needtr("자동 물약 설정을 관리합니다.", "Manage your auto-potion settings.");
+		mes needtr("원하는 항목을 선택해주세요.", "Please choose what you want to do.");
 		next;
 
-		switch(select("HP 자동 물약 설정:SP 자동 물약 설정:HP / SP 활성화 관리:사용 속도 설정:프리셋 관리:현재 설정 확인:전체 비활성화:종료")) {
+		switch(select(needtr("HP 자동 물약 설정:SP 자동 물약 설정:HP / SP 활성화 관리:사용 속도 설정:프리셋 관리:현재 설정 확인:전체 비활성화:종료", "HP auto-potion setup:SP auto-potion setup:Manage HP / SP activation:Response speed:Manage presets:Check current settings:Disable everything:Exit"))) {
 		case 1:
 			callsub S_SetPotion, "hp";
 			break;
@@ -54,11 +54,11 @@ S_Main:
 			end;
 
 		case 7:
-			mes "[오토큐어]";
-			mes "HP와 SP 자동 물약을 모두 비활성화하시겠습니까?";
+			mes needtr("[오토큐어]", "[Auto Cure]");
+			mes needtr("HP와 SP 자동 물약을 모두 비활성화하시겠습니까?", "Disable both the HP and SP auto-potion?");
 			next;
 
-			if (select("비활성화:취소") == 2)
+			if (select(needtr("비활성화:취소", "Disable:Cancel")) == 2)
 				break;
 
 			close2;
@@ -84,28 +84,28 @@ S_SetPotion:
 	if (.@item <= 0)
 		return;
 
-	mes "[오토큐어]";
-	mes "선택한 아이템:";
+	mes needtr("[오토큐어]", "[Auto Cure]");
+	mes needtr("선택한 아이템:", "Selected item:");
 	mes "^0055FF" + getitemname(.@item) + "^000000";
-	mes "보유 수량: " + countitem(.@item) + "개";
+	mes needtr("보유 수량: ", "You have ") + countitem(.@item) + needtr("개", ".");
 	next;
 
-	mes "[오토큐어]";
+	mes needtr("[오토큐어]", "[Auto Cure]");
 	if (.@type$ == "hp")
-		mes "HP가 몇 % 미만일 때 사용할까요?";
+		mes needtr("HP가 몇 % 미만일 때 사용할까요?", "Use it when HP falls below what %?");
 	else
-		mes "SP가 몇 % 미만일 때 사용할까요?";
+		mes needtr("SP가 몇 % 미만일 때 사용할까요?", "Use it when SP falls below what %?");
 
-	mes "1 ~ 100 사이의 숫자를 입력해주세요.";
+	mes needtr("1 ~ 100 사이의 숫자를 입력해주세요.", "Please enter a number between 1 and 100.");
 	input .@percent, 1, 100;
 	next;
 
-	mes "[오토큐어]";
-	mes "자동 물약 반응 속도를 선택해주세요.";
-	mes "현재 서버 허용 범위: 100 ~ 2000ms";
+	mes needtr("[오토큐어]", "[Auto Cure]");
+	mes needtr("자동 물약 반응 속도를 선택해주세요.", "Please choose the auto-potion response speed.");
+	mes needtr("현재 서버 허용 범위: 100 ~ 2000ms", "Server allows: 100 ~ 2000ms");
 	next;
 
-	switch(select("매우 빠름 - 100ms:빠름 - 300ms:보통 - 500ms:여유 - 1000ms:직접 입력:취소")) {
+	switch(select(needtr("매우 빠름 - 100ms:빠름 - 300ms:보통 - 500ms:여유 - 1000ms:직접 입력:취소", "Very fast - 100ms:Fast - 300ms:Normal - 500ms:Relaxed - 1000ms:Enter a value:Cancel"))) {
 	case 1:
 		.@delay = 100;
 		break;
@@ -123,8 +123,8 @@ S_SetPotion:
 		break;
 
 	case 5:
-		mes "[오토큐어]";
-		mes "100 ~ 2000 사이의 값을 입력해주세요.";
+		mes needtr("[오토큐어]", "[Auto Cure]");
+		mes needtr("100 ~ 2000 사이의 값을 입력해주세요.", "Please enter a value between 100 and 2000.");
 		input .@delay, 100, 2000;
 		break;
 
@@ -132,21 +132,21 @@ S_SetPotion:
 		return;
 	}
 
-	mes "[오토큐어]";
-	mes "다음과 같이 설정합니다.";
+	mes needtr("[오토큐어]", "[Auto Cure]");
+	mes needtr("다음과 같이 설정합니다.", "These are the settings to apply.");
 	mes " ";
 
 	if (.@type$ == "hp")
-		mes "구분: ^FF0000HP^000000";
+		mes needtr("구분: ^FF0000HP^000000", "Type: ^FF0000HP^000000");
 	else
-		mes "구분: ^0055FFSP^000000";
+		mes needtr("구분: ^0055FFSP^000000", "Type: ^0055FFSP^000000");
 
-	mes "물약: " + getitemname(.@item);
-	mes "사용 기준: " + .@percent + "% 미만";
-	mes "반응 속도: " + .@delay + "ms";
+	mes needtr("물약: ", "Potion: ") + getitemname(.@item);
+	mes needtr("사용 기준: ", "Trigger: below ") + .@percent + needtr("% 미만", "%");
+	mes needtr("반응 속도: ", "Response speed: ") + .@delay + "ms";
 	next;
 
-	if (select("적용:취소") == 2)
+	if (select(needtr("적용:취소", "Apply:Cancel")) == 2)
 		return;
 
 	.@command$ =
@@ -192,28 +192,28 @@ S_SelectHealingItem:
 
 		.@menu$ +=
 			.@name$ +
-			" (" + countitem(.@item) + "개):";
+			" (" + countitem(.@item) + needtr("개):", "):");
 
 		.@count++;
 	}
 
 	if (.@count <= 0) {
-		mes "[오토큐어]";
-		mes "인벤토리에 설정 가능한";
-		mes "회복 아이템이 없습니다.";
+		mes needtr("[오토큐어]", "[Auto Cure]");
+		mes needtr("인벤토리에 설정 가능한", "There are no recovery items");
+		mes needtr("회복 아이템이 없습니다.", "in your inventory to set up.");
 		next;
 		return 0;
 	}
 
-	mes "[오토큐어]";
-	mes "사용할 회복 아이템을 선택해주세요.";
+	mes needtr("[오토큐어]", "[Auto Cure]");
+	mes needtr("사용할 회복 아이템을 선택해주세요.", "Please choose a recovery item to use.");
 
 	if (.@count >= 20)
-		mes "^777777※ 최대 20종까지만 표시됩니다.^000000";
+		mes needtr("^777777※ 최대 20종까지만 표시됩니다.^000000", "^777777※ Only the first 20 kinds are shown.^000000");
 
 	next;
 
-	.@selected = select(.@menu$ + "취소") - 1;
+	.@selected = select(.@menu$ + needtr("취소", "Cancel")) - 1;
 
 	if (.@selected >= .@count)
 		return 0;
@@ -225,11 +225,11 @@ S_SelectHealingItem:
 // HP / SP ON/OFF
 //============================================================
 S_Toggle:
-	mes "[오토큐어]";
-	mes "활성화 상태를 변경합니다.";
+	mes needtr("[오토큐어]", "[Auto Cure]");
+	mes needtr("활성화 상태를 변경합니다.", "Change the activation state.");
 	next;
 
-	switch(select("HP 활성화:HP 비활성화:SP 활성화:SP 비활성화:HP / SP 모두 비활성화:뒤로가기")) {
+	switch(select(needtr("HP 활성화:HP 비활성화:SP 활성화:SP 비활성화:HP / SP 모두 비활성화:뒤로가기", "Enable HP:Disable HP:Enable SP:Disable SP:Disable both HP / SP:Back"))) {
 	case 1:
 		close2;
 		atcommand "@autopot hp on";
@@ -264,12 +264,12 @@ S_Toggle:
 // 전체 딜레이 변경
 //============================================================
 S_Delay:
-	mes "[오토큐어]";
-	mes "자동 물약 검사 속도를 설정합니다.";
-	mes "현재 허용 범위는 100 ~ 2000ms입니다.";
+	mes needtr("[오토큐어]", "[Auto Cure]");
+	mes needtr("자동 물약 검사 속도를 설정합니다.", "Set the auto-potion check interval.");
+	mes needtr("현재 허용 범위는 100 ~ 2000ms입니다.", "The allowed range is 100 ~ 2000ms.");
 	next;
 
-	switch(select("매우 빠름 - 100ms:빠름 - 300ms:보통 - 500ms:여유 - 1000ms:직접 입력:뒤로가기")) {
+	switch(select(needtr("매우 빠름 - 100ms:빠름 - 300ms:보통 - 500ms:여유 - 1000ms:직접 입력:뒤로가기", "Very fast - 100ms:Fast - 300ms:Normal - 500ms:Relaxed - 1000ms:Enter a value:Back"))) {
 	case 1:
 		.@delay = 100;
 		break;
@@ -287,8 +287,8 @@ S_Delay:
 		break;
 
 	case 5:
-		mes "[오토큐어]";
-		mes "100 ~ 2000 사이의 값을 입력해주세요.";
+		mes needtr("[오토큐어]", "[Auto Cure]");
+		mes needtr("100 ~ 2000 사이의 값을 입력해주세요.", "Please enter a value between 100 and 2000.");
 		input .@delay, 100, 2000;
 		break;
 
@@ -306,12 +306,12 @@ S_Delay:
 //============================================================
 S_Preset:
 	while (1) {
-		mes "[오토큐어 프리셋]";
-		mes "현재 설정을 최대 5개까지";
-		mes "계정 단위로 저장할 수 있습니다.";
+		mes needtr("[오토큐어 프리셋]", "[Auto Cure Preset]");
+		mes needtr("현재 설정을 최대 5개까지", "You can save up to five of your");
+		mes needtr("계정 단위로 저장할 수 있습니다.", "current settings per account.");
 		next;
 
-		switch(select("프리셋 목록 확인:프리셋 저장:프리셋 불러오기:프리셋 삭제:뒤로가기")) {
+		switch(select(needtr("프리셋 목록 확인:프리셋 저장:프리셋 불러오기:프리셋 삭제:뒤로가기", "List presets:Save preset:Load preset:Delete preset:Back"))) {
 		case 1:
 			close2;
 			atcommand "@autopot preset";
@@ -341,24 +341,24 @@ S_Preset:
 // 프리셋 저장
 //============================================================
 S_PresetSave:
-	mes "[오토큐어 프리셋]";
-	mes "저장할 슬롯을 선택해주세요.";
+	mes needtr("[오토큐어 프리셋]", "[Auto Cure Preset]");
+	mes needtr("저장할 슬롯을 선택해주세요.", "Please choose a slot to save to.");
 	next;
 
-	.@slot = select("1번:2번:3번:4번:5번:취소");
+	.@slot = select(needtr("1번:2번:3번:4번:5번:취소", "Slot 1:Slot 2:Slot 3:Slot 4:Slot 5:Cancel"));
 	if (.@slot > 5)
 		return;
 
-	mes "[오토큐어 프리셋]";
-	mes "프리셋 이름을 입력해주세요.";
-	mes "^7777771 ~ 24바이트^000000";
+	mes needtr("[오토큐어 프리셋]", "[Auto Cure Preset]");
+	mes needtr("프리셋 이름을 입력해주세요.", "Please enter a name for the preset.");
+	mes needtr("^7777771 ~ 24바이트^000000", "^7777771 ~ 24 bytes^000000");
 	next;
 
 	input .@name$;
 
 	if (.@name$ == "") {
-		mes "[오토큐어 프리셋]";
-		mes "이름을 입력해주세요.";
+		mes needtr("[오토큐어 프리셋]", "[Auto Cure Preset]");
+		mes needtr("이름을 입력해주세요.", "Please enter a name.");
 		next;
 		return;
 	}
@@ -372,11 +372,11 @@ S_PresetSave:
 // 프리셋 불러오기
 //============================================================
 S_PresetLoad:
-	mes "[오토큐어 프리셋]";
-	mes "불러올 슬롯을 선택해주세요.";
+	mes needtr("[오토큐어 프리셋]", "[Auto Cure Preset]");
+	mes needtr("불러올 슬롯을 선택해주세요.", "Please choose a slot to load.");
 	next;
 
-	.@slot = select("1번:2번:3번:4번:5번:취소");
+	.@slot = select(needtr("1번:2번:3번:4번:5번:취소", "Slot 1:Slot 2:Slot 3:Slot 4:Slot 5:Cancel"));
 
 	if (.@slot > 5)
 		return;
@@ -390,18 +390,18 @@ S_PresetLoad:
 // 프리셋 삭제
 //============================================================
 S_PresetDelete:
-	mes "[오토큐어 프리셋]";
-	mes "삭제할 슬롯을 선택해주세요.";
+	mes needtr("[오토큐어 프리셋]", "[Auto Cure Preset]");
+	mes needtr("삭제할 슬롯을 선택해주세요.", "Please choose a slot to delete.");
 	next;
-	.@slot = select("1번:2번:3번:4번:5번:취소");
+	.@slot = select(needtr("1번:2번:3번:4번:5번:취소", "Slot 1:Slot 2:Slot 3:Slot 4:Slot 5:Cancel"));
 	if (.@slot > 5)
 		return;
 
-	mes "[오토큐어 프리셋]";
-	mes .@slot + "번 프리셋을 삭제하시겠습니까?";
+	mes needtr("[오토큐어 프리셋]", "[Auto Cure Preset]");
+	mes .@slot + needtr("번 프리셋을 삭제하시겠습니까?", ". Delete this preset?");
 	next;
 
-	if (select("삭제:취소") == 2)
+	if (select(needtr("삭제:취소", "Delete:Cancel")) == 2)
 		return;
 
 	close2;

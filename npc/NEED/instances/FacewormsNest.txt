@@ -326,7 +326,7 @@ dali,80,60,4	script	마법 학자	4_M_SAGE_C,{
 		close;
 	}
 	.@party_id = getcharid(1);
-	.@md_name$ = "페이스웜의 둥지";
+	.@md_name$ = "페이스웜의 둥지"; .@md_name_en$ = "Faceworm's Nest";
 	if (.@party_id < 1) {
 		mes needtr("[마법 학자]", "[Magic Scholar]");
 		mes needtr("파티가 없으신가요? 비록 혼자 도전하더라도 반드시 파티를 생성한 후에 다시 말을 걸어주세요.", "You don't have a party? Please come back again after creating a party even if you've come alone.");
@@ -342,7 +342,7 @@ dali,80,60,4	script	마법 학자	4_M_SAGE_C,{
 			case 1:
 				switch( instance_create(.@md_name$) ) {
 				case -3:
-					dispbottom needtr("메모리얼 던전, '", "Memorial Dungeon, '") + .@md_name$ + needtr("'이(가) 이미 진행 중입니다.", "' is already in progress."),0xFFFFFF;
+					dispbottom needtr("메모리얼 던전, '", "Memorial Dungeon, '") + needtr(.@md_name$, .@md_name_en$) + needtr("'이(가) 이미 진행 중입니다.", "' is already in progress."),0xFFFFFF;
 					break;
 				case -4:
 				case -2:
@@ -397,7 +397,7 @@ dali,72,55,4	script	차원 이동 장치	CLEAR_NPC,{
 		close;
 	}
 	.@party_id = getcharid(1);
-	.@md_name$ = "페이스웜의 둥지";
+	.@md_name$ = "페이스웜의 둥지"; .@md_name_en$ = "Faceworm's Nest";
 	if (.@party_id < 1) {
 		mes needtr("[차원 이동 장치]", "[Interdimensional Device]");
 		mes needtr("등록된 파티가 없습니다. 혼자라도 파티를 구성한 후에 다시 접근해 주십시오.", "No party? Please come back again after creating a party even if you've come alone.");
@@ -419,7 +419,7 @@ dali,72,55,4	script	차원 이동 장치	CLEAR_NPC,{
 			mes needtr("이 장치에 접근할 권한이 없습니다.", "You are not allowed to access the device.");
 			close;
 		case IE_OK:
-			mapannouncelang "dali", getpartyname(.@party_id) + " 파티의 파티원이 " + strcharinfo(0) + " 입장합니다. " + .@md_name$ + ".", getpartyname(.@party_id) + " party's party member " + strcharinfo(0) + " enters " + .@md_name$ + ".",bc_map,"0x00ff99";
+			mapannouncelang "dali", getpartyname(.@party_id) + " 파티의 파티원이 " + strcharinfo(0) + " 입장합니다. " + .@md_name$ + ".", getpartyname(.@party_id) + " party's party member " + strcharinfo(0) + " enters " + .@md_name_en$ + ".",bc_map,"0x00ff99";
 			setquest 12325;// Faceworm's Nest after-effects
 			//warp "1@face",112,374;
 			end;
@@ -2375,7 +2375,7 @@ OnT_s2:
 		if (!.@face_member)
 			announce .@winner_name$ + needtr(" 페이스웜의 둥지 최고 기록을 갈아치웠습니다! (", " beat the best record for completing the Faceworm's Nest (") + .@time_txt$ + ").",bc_all,"0xffff33",FW_NORMAL,15;
 		else
-			announce .@winner_name$ + " 총 " + .@face_member + " 명의 " + ( .@face_member > 1 ? "함께)" : "함께)" ) + " 페이스웜의 둥지 최고 기록을 갈아치웠습니다! (" + .@time_txt$ + ").",bc_all,"0xffff33",FW_NORMAL,15;
+			announcelang .@winner_name$ + " 총 " + .@face_member + " 명의 " + ( .@face_member > 1 ? "함께)" : "함께)" ) + " 페이스웜의 둥지 최고 기록을 갈아치웠습니다! (" + .@time_txt$ + ").", .@winner_name$ + " with " + .@face_member + " party " + ( .@face_member > 1 ? "members" : "members" ) + " beat the best record for completing the Faceworm's Nest (" + .@time_txt$ + ").",bc_all,"0xffff33",FW_NORMAL,15;
 		$120719_str_face$ = .@winner_name$;
 		$120719_num_face = .@current_timer;
 		$120903_num_face = .@face_member;

@@ -1,0 +1,253 @@
+//============================================================
+// NEED Summer Event - Lasagna Festival Guide
+// 라자냐 → 코모도 한여름 축제 안내 NPC
+//
+// 기능
+// 1. 여름 이벤트 활성 상태 확인
+// 2. 최초 코모도 이동 시 한여름 낚싯대(399936) 지급
+// 3. 계정당 최초 1회 지급
+// 4. 이후에는 워프 기능만 제공
+//
+// 작성: NEED Summer 2026
+//============================================================
+
+
+//------------------------------------------------------------
+// 한여름 축제 안내인
+//
+// ※ NPC 좌표는 필요하면 변경
+// ※ sprite는 현재 임시값이므로 원하는 NPC sprite로 변경 가능
+//------------------------------------------------------------
+lasagna,170,147,4	script	한여름 축제 안내인	4_F_RACING,{
+
+	//========================================================
+	// 이벤트 ON/OFF 체크
+	//
+	// TODO:
+	// 아래 $NEED_SUMMER_EVENT_ENABLED 를
+	// 현재 여름 이벤트 GM 관리 시스템에서 사용하는
+	// 실제 전역 변수명으로 변경할 것.
+	//========================================================
+//	if (!$NEED_SUMMER_EVENT_ENABLED) {
+//		mes "[한여름 축제 안내인]";
+//		mes "아직 축제 준비가 한창인 것 같아요.";
+//		mes "";
+//		mes "코모도의 바닷바람이";
+//		mes "조금만 더 기다려 달라고 하네요.";
+//		mes "";
+//		mes "조금 뒤에 다시 찾아와 주세요!";
+//		close;
+//	}
+
+
+	//--------------------------------------------------------
+	// 이미 낚싯대를 지급받은 계정
+	//--------------------------------------------------------
+	if (#NEED_SUMMER_FISHING_ROD) {
+
+		mes needtr("[한여름 축제 안내인]","[Midsummer Festival Guide]");
+		mes needtr("어머, 다시 오셨네요!","Oh, you came back!");
+		mes "";
+		mes needtr("코모도에서는 아직도","Over in Comodo, the");
+		mes needtr("^0099FFNEED가르드 한여름 축제^000000가","^0099FFNEEDgard Midsummer Festival^000000");
+		mes needtr("한창이에요.","is still in full swing.");
+		next;
+
+		mes needtr("[한여름 축제 안내인]","[Midsummer Festival Guide]");
+		mes needtr("시원한 바닷바람도 불고,","There is a cool sea breeze,");
+		mes needtr("낚시하기에도 딱 좋은 날씨랍니다.","and the weather is perfect for fishing.");
+		mes "";
+		mes needtr("다시 축제장으로 가시겠어요?","Shall I take you back to the festival?");
+		next;
+
+		switch(select(
+			needtr("코모도로 이동한다.","Go to Comodo."),
+			needtr("조금 더 둘러본다.","Look around a little longer.")
+		)) {
+
+			case 1:
+				mes needtr("[한여름 축제 안내인]","[Midsummer Festival Guide]");
+				mes needtr("좋아요!", "That's right!");
+				mes "";
+				mes needtr("그럼 코모도까지","Then let me take you");
+				mes needtr("안전하게 모셔다 드릴게요.","safely to Comodo.");
+				mes "";
+				mes needtr("^0099FF즐거운 한여름 축제 되세요!^000000","^0099FFEnjoy the Midsummer Festival!^000000");
+				close2;
+
+				// TODO: 실제 이벤트 중심 좌표에 맞춰 변경 가능
+				warp "comodo",188,153;
+				end;
+
+			case 2:
+				mes needtr("[한여름 축제 안내인]","[Midsummer Festival Guide]");
+				mes needtr("후후, 천천히 둘러보세요.","Hehe, take your time looking around.");
+				mes "";
+				mes needtr("떠나고 싶어지면","When you feel like leaving,");
+				mes needtr("언제든 다시 찾아와 주세요!","come back and see me any time!");
+				close;
+		}
+	}
+
+
+	//--------------------------------------------------------
+	// 최초 방문
+	//--------------------------------------------------------
+	mes needtr("[한여름 축제 안내인]","[Midsummer Festival Guide]");
+	mes needtr("안녕하세요, 모험가님!","Hello there, adventurer!");
+	mes "";
+	mes needtr("요즘 정말 덥죠?","It has been so hot lately, has it not?");
+	mes "";
+	mes needtr("이렇게 햇살이 뜨거운 날에는","On a day with sunshine this fierce,");
+	mes needtr("역시 시원한 바다가 최고랍니다.","nothing beats the cool sea.");
+	next;
+
+	mes needtr("[한여름 축제 안내인]","[Midsummer Festival Guide]");
+	mes needtr("마침 지금 코모도에서는","And right now, over in Comodo, the");
+	mes "";
+	mes needtr("^0099FFNEED가르드 한여름 축제^000000가","^0099FFNEEDgard Midsummer Festival^000000");
+	mes needtr("한창이에요!","is in full swing!");
+	next;
+
+	mes needtr("[한여름 축제 안내인]","[Midsummer Festival Guide]");
+	mes needtr("반짝이는 모래사장,","Glittering sand,");
+	mes needtr("시원한 바닷바람,","a cool sea breeze,");
+	mes "";
+	mes needtr("그리고 이번 여름에만 만날 수 있는","and, only this summer,");
+	mes needtr("^FF8C00특별한 물고기들^000000까지!","^FF8C00special fish^000000 to catch!");
+	next;
+
+	mes needtr("[한여름 축제 안내인]","[Midsummer Festival Guide]");
+	mes needtr("듣자 하니 코모도 해변 곳곳에서","They say strange fish are turning up");
+	mes needtr("신기한 물고기들이","all over the Comodo beach");
+	mes needtr("나타나고 있다던데...","these days...");
+	mes "";
+	mes needtr("낚시를 좋아하신다면","If you enjoy fishing,");
+	mes needtr("놓칠 수 없겠죠?","you cannot miss it, right?");
+	next;
+
+	mes needtr("[한여름 축제 안내인]","[Midsummer Festival Guide]");
+	mes needtr("마침 코모도로 향하는 배가","As it happens, a ship bound for Comodo");
+	mes needtr("곧 출발할 예정이에요.","is about to leave.");
+	mes "";
+	mes needtr("함께 가보시겠어요?","Shall we go together?");
+
+	switch(select(
+		needtr("코모도로 떠난다.","Set off for Comodo."),
+		needtr("조금 더 둘러본다.","Look around a little longer.")
+	)) {
+
+		case 1:
+			break;
+
+		case 2:
+			clear;
+			mes needtr("[한여름 축제 안내인]","[Midsummer Festival Guide]");
+			mes needtr("괜찮아요!", "I-It's alright!");
+			mes "";
+			mes needtr("마음의 준비가 되시면","When you are ready,");
+			mes needtr("언제든 다시 찾아와 주세요.","come back and see me any time.");
+			close;
+	}
+
+
+	//--------------------------------------------------------
+	// 최초 이동 전 낚싯대 지급
+	//--------------------------------------------------------
+	clear;
+	mes needtr("[한여름 축제 안내인]","[Midsummer Festival Guide]");
+	mes needtr("좋아요!", "That's right!");
+	mes "";
+	mes needtr("아, 잠깐만요!","Oh, wait a moment!");
+	next;
+
+	mes needtr("[한여름 축제 안내인]","[Midsummer Festival Guide]");
+	mes needtr("코모도에 가신다면","If you are heading to Comodo,");
+	mes needtr("이건 꼭 챙겨가셔야 해요.","you must take this with you.");
+	mes "";
+	mes needtr("요즘 해변에서 낚시를 즐기는","So many adventurers are fishing");
+	mes needtr("모험가들이 아주 많거든요.","on the beach these days.");
+	next;
+
+	mes needtr("[한여름 축제 안내인]","[Midsummer Festival Guide]");
+	mes needtr("축제를 제대로 즐기려면","To enjoy the festival properly,");
+	mes needtr("낚싯대 하나쯤은 있어야겠죠?","you will want a fishing rod, right?");
+	mes "";
+	mes needtr("제가 특별히 준비해 둔 게 있답니다!","I have one set aside just for you!");
+
+
+	//--------------------------------------------------------
+	// 인벤토리 체크
+	//--------------------------------------------------------
+	if (!checkweight(399936,1)) {
+		next;
+		mes needtr("[한여름 축제 안내인]","[Midsummer Festival Guide]");
+		mes needtr("앗!", "Ahk!");
+		mes "";
+		mes needtr("짐이 너무 많은 것 같아요.","You seem to be carrying too much.");
+		mes "";
+		mes needtr("낚싯대를 넣을 공간을 조금 마련한 뒤","Make a little room for the fishing rod");
+		mes needtr("다시 말을 걸어주세요!","and talk to me again!");
+		close;
+	}
+
+
+	//--------------------------------------------------------
+	// 낚싯대 지급
+	//--------------------------------------------------------
+	getitem 399936,1;
+
+	// 계정 단위 최초 지급 기록
+	#NEED_SUMMER_FISHING_ROD = 1;
+
+
+	next;
+
+	mes needtr("[한여름 축제 안내인]","[Midsummer Festival Guide]");
+	mes needtr("^FF8C00[한여름 낚싯대]^000000를","^FF8C00[Midsummer Fishing Rod]^000000");
+	mes needtr("받았습니다!","has been added to your inventory!");
+	next;
+
+	mes needtr("[한여름 축제 안내인]","[Midsummer Festival Guide]");
+	mes needtr("코모도 해변에서","When you find a fishing spot");
+	mes needtr("낚시 포인트를 발견하면","on the Comodo beach,");
+	mes "";
+	mes needtr("방금 받은 낚싯대를","try using the rod");
+	mes needtr("사용해 보세요.","you just received.");
+	next;
+
+	mes needtr("[한여름 축제 안내인]","[Midsummer Festival Guide]");
+	mes needtr("물고기가 입질하면","When a fish bites,");
+	mes needtr("낚싯대를 ^FF0000다시 사용^000000해서 릴을 감아주세요.","^FF0000use the rod again^000000 to reel it in.");
+	mes "";
+	mes needtr("물고기에 따라 여러 번 감아야 할 수도 있으니","Some fish need several reels,");
+	mes needtr("안내 메시지를 보며 타이밍을 맞추면 돼요.","so watch the messages and time it right.");
+	mes "";
+	mes needtr("^0099FF※ 낚시 포인트를 클릭하는 게 아니라,","^0099FF※ Do not click the fishing spot -");
+	mes needtr("근처에서 낚싯대를 직접 사용해야 해요.^000000","stand near it and use the rod itself.^000000");
+	next;
+
+	mes needtr("[한여름 축제 안내인]","[Midsummer Festival Guide]");
+	mes needtr("어떤 물고기가 기다리고 있을지는","What is waiting on the hook");
+	mes needtr("직접 낚아보기 전까진 모른답니다.","is anyone's guess until you catch it.");
+	mes "";
+	mes needtr("후후...", "~Chuckles~");
+	next;
+
+	mes needtr("[한여름 축제 안내인]","[Midsummer Festival Guide]");
+	mes needtr("그럼 출발할게요!","Off we go, then!");
+	mes "";
+	mes needtr("^0099FF시원하고 즐거운","^0099FFHave a cool and");
+	mes needtr("한여름 축제 되세요!^000000","wonderful Midsummer Festival!^000000");
+	close2;
+
+
+	//--------------------------------------------------------
+	// 코모도 이벤트 지역 이동
+	//--------------------------------------------------------
+	// TODO:
+	// 현재 197,149는 임시 목적지.
+	// 실제 여름 이벤트 메인 NPC/낚시 지역에 맞게 변경 가능.
+	warp "comodo",188,153;
+	end;
+}

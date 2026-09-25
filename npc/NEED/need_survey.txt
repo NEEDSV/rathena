@@ -1,0 +1,891 @@
+//============================================================
+// NEED 인게임 설문조사 (로그인 자동 설문 + 설문 NPC)
+//============================================================
+//= 테이블   : sql-files/need_survey.sql
+//=            need_survey_complete (완료 / 보상 기록, 계정·IP 중복을 DB 키로 차단)
+//=            need_survey_answer   (문항별 응답 / 사유, 문항마다 즉시 저장)
+//= 운영 확인 : @surveygm (GM 60+) - 참여자 수 / 문항별 통계 / 사유 원문
+//=
+//= 새 설문을 진행하는 방법
+//=   1. 아래 NEED_Survey 의 OnInit 에서 .SurveyID 를 새 번호로 바꾼다.
+//=   2. 제목 / 문항 / 보상을 수정한다.
+//=   3. .SurveyEnabled = 1 로 두고 @reloadscript 또는 서버 재시작.
+//=
+//=   진행 중인 설문의 문항 순서나 선택지 순서를 바꾸면 이미 저장된 답변과
+//=   번호가 어긋난다. 내용을 바꿀 때는 반드시 .SurveyID 도 함께 바꾼다.
+//=
+//= 참여 조건
+//=   Base Level >= .MinLevel 이고, 현재 .SurveyID 에 대해
+//=   같은 계정의 완료 기록도, 현재 접속 IP 의 완료 기록도 없을 것.
+//=
+//= 완료 처리
+//=   마지막 문항까지 답한 뒤 "설문 제출하기" 를 눌러야만 완료 / 보상.
+//=   중간에 창을 닫거나 접속을 끊으면 완료되지 않고, 답한 문항까지는
+//=   저장되어 다음 접속 때 이어서 진행한다.
+//============================================================
+
+-	script	NEED_Survey	-1,{
+	end;
+
+OnInit:
+	//--------------------------------------------------------
+	// [운영 설정] 설문을 바꿀 때는 이 구역만 수정한다.
+	//--------------------------------------------------------
+	.SurveyEnabled = 0;			// 1 = 진행 / 0 = 중지 (중지 시 로그인 때 DB 조회도 하지 않음)
+	.SurveyID = 1;				// 바꾸면 새로운 설문 (과거 참여자도 다시 참여 가능)
+	.SurveyTitle$ = "NEED 서버 만족도 조사";
+
+	.MinLevel = 175;			// 이 Base Level 이상만 참여
+	.PopupDelay = 1500;			// 로그인 후 설문창을 띄우기까지 대기 시간 (ms)
+
+	.ReasonMinLen = 5;			// 사유 최소 글자 수 (공백 제외, 한글·영문·숫자 모두 1자)
+	.ReasonMaxLen = 150;		// 사유 최대 글자 수 (최대 255)
+
+	// 완료 보상 - 아이템 ID 와 수량을 같은 순서로 적는다. 보상이 없으면 두 줄 모두 비운다.
+	setarray .RewardItem[0],   399990;
+	setarray .RewardAmount[0], 100;
+
+	// 문항 - .Question$[번호] = 질문, .Choice$[번호] = 선택지 (':' 로 구분, 2~10개)
+	//        번호는 1 부터 빠짐없이 이어서 쓴다. 문항 수 제한은 없다.
+	.Question$[1] = "현재 서버에서 가장 개선이 필요하다고 생각하는 콘텐츠는?";
+	.Choice$[1]   = "사냥:전장:인던:장비 성장:이벤트:기타";
+
+	.Question$[2] = "현재 서버 난이도에 대해 어떻게 생각하시나요?";
+	.Choice$[2]   = "매우 쉬움:쉬움:적당함:어려움:매우 어려움";
+
+	.Question$[3] = "NEED 서버를 주변에 추천할 의향이 있으신가요?";
+	.Choice$[3]   = "적극 추천:추천:보통:비추천:적극 비추천";
+
+	//--------------------------------------------------------
+	// 설정 검증 (수정 불필요)
+	// 설정에 문제가 있으면 설문을 켜지 않고 map-server 로그에 사유를 남긴다.
+	//--------------------------------------------------------
+	.Active = 0;
+	.QuestionCount = 0;
+	.ErrorCount = 0;
+
+	while (.Question$[.QuestionCount + 1] != "")
+		.QuestionCount++;
+
+	if (.QuestionCount < 1)
+		callsub L_Err,"no question (.Question$[1] is empty)";
+	if (getarraysize(.Question$) != .QuestionCount + 1)
+		callsub L_Err,"question numbers must be continuous from 1 (gap after Q" + .QuestionCount + ")";
+	if (getarraysize(.Choice$) > .QuestionCount + 1)
+		callsub L_Err,".Choice$ has more entries than .Question$";
+
+	for (.@q = 1; .@q <= .QuestionCount; .@q++) {
+		deletearray .@opt$;
+		explode(.@opt$, .Choice$[.@q], ":");
+		.@n = getarraysize(.@opt$);
+		.ChoiceCount[.@q] = .@n;
+
+		if (.Choice$[.@q] == "" || countstr(.Choice$[.@q], ":") + 1 != .@n)
+			callsub L_Err,"Q" + .@q + " has an empty choice";
+		else if (.@n < 2 || .@n > 10)
+			callsub L_Err,"Q" + .@q + " needs 2~10 choices (now " + .@n + ")";
+
+		for (.@i = 0; .@i < .@n; .@i++) {
+			if (.@opt$[.@i] == "" || callfunc("F_NEED_Survey_Len", .@opt$[.@i], 0) > 100)
+				callsub L_Err,"Q" + .@q + " choice " + (.@i + 1) + " is empty or longer than 100";
+		}
+		if (callfunc("F_NEED_Survey_Len", .Question$[.@q], 0) > 255)
+			callsub L_Err,"Q" + .@q + " text is longer than 255";
+	}
+
+	.RewardCount = getarraysize(.RewardItem);
+	if (.RewardCount != getarraysize(.RewardAmount))
+		callsub L_Err,".RewardItem / .RewardAmount size mismatch";
+	for (.@i = 0; .@i < .RewardCount; .@i++) {
+		if (getitemname(.RewardItem[.@i]) == "null")
+			callsub L_Err,"reward item " + .RewardItem[.@i] + " does not exist";
+		if (.RewardAmount[.@i] < 1 || .RewardAmount[.@i] > 30000)
+			callsub L_Err,"reward amount of " + .RewardItem[.@i] + " must be 1~30000";
+	}
+
+	if (.SurveyID < 1)
+		callsub L_Err,".SurveyID must be 1 or more";
+	if (.MinLevel < 1)
+		callsub L_Err,".MinLevel must be 1 or more";
+	if (.PopupDelay < 100 || .PopupDelay > 60000)
+		callsub L_Err,".PopupDelay must be 100~60000";
+	if (.ReasonMinLen < 1 || .ReasonMaxLen > 255 || .ReasonMinLen > .ReasonMaxLen)
+		callsub L_Err,"reason length must be 1 <= min <= max <= 255";
+
+	// 켜져 있을 때만 테이블을 확인한다. (OFF 상태에서는 DB 를 건드리지 않는다)
+	.@done = 0;
+	if (.SurveyEnabled && .ErrorCount == 0) {
+		if (query_sql("SELECT COUNT(*) FROM `need_survey_complete` WHERE `survey_id`=" + .SurveyID, .@done) < 0
+		 || query_sql("SELECT COUNT(*) FROM `need_survey_answer` WHERE `survey_id`=" + .SurveyID, .@tmp) < 0)
+			callsub L_Err,"survey tables missing - import sql-files/need_survey.sql";
+	}
+
+	for (.@i = 0; .@i < .ErrorCount; .@i++)
+		errormes "[NEED_SURVEY] config error: " + .Error$[.@i];
+
+	.Active = (.SurveyEnabled && .ErrorCount == 0);
+	debugmes "[NEED_SURVEY] id=" + .SurveyID + " enabled=" + .SurveyEnabled + " active=" + .Active + " questions=" + .QuestionCount + " rewards=" + .RewardCount + " errors=" + .ErrorCount + " completed=" + .@done;
+	end;
+
+L_Err:
+	.Error$[.ErrorCount] = getarg(0);
+	.ErrorCount++;
+	return;
+
+OnPCLoginEvent:
+	// OFF 이거나 레벨 미달이면 DB 를 조회하지 않고 끝낸다.
+	if (!.Active)
+		end;
+	if (BaseLevel < .MinLevel)
+		end;
+
+	// 맵 로딩 / 다른 로그인 안내와 겹치지 않도록 잠시 뒤에 띄운다.
+	// 그 사이 다른 대화창이 열려 있으면 이벤트는 대기열에 들어가 그 창이 닫힌 뒤 실행된다.
+	addtimer .PopupDelay, "NEED_Survey::OnPopup";
+	end;
+
+OnPopup:
+	if (!.Active || BaseLevel < .MinLevel)
+		end;
+	if (checkvending() & 2)		// 자동 상점 캐릭터
+		end;
+	callfunc "F_NEED_Survey", 1;
+	end;
+}
+
+//------------------------------------------------------------
+// 설문 직접 참여 NPC
+//------------------------------------------------------------
+lasagna,148,172,4	script	설문 조사원#need_survey	4_F_02,{
+	callfunc "F_NEED_Survey", 0;
+	end;
+}
+
+//------------------------------------------------------------
+// 설문 진행
+// getarg(0) 1 = 로그인 자동 팝업 / 0 = NPC 직접 접근
+//
+// 팝업은 클래스 없는 NPC(NEED_Survey) 에서 열리므로 어느 맵에서나 대화가 이어진다.
+// 팝업 모드에서는 참여 대상이 아니면 아무 창도 띄우지 않는다.
+//------------------------------------------------------------
+function	script	F_NEED_Survey	{
+	.@popup = getarg(0);
+	.@npc$ = "NEED_Survey";
+	.@hd$ = "[설문조사]";
+
+	if (!getvariableofnpc(.Active, .@npc$)) {
+		if (.@popup)
+			return;
+		mes .@hd$;
+		mes "현재 진행 중인 설문이 없습니다.";
+		close;
+	}
+
+	.@sid = getvariableofnpc(.SurveyID, .@npc$);
+	.@minlv = getvariableofnpc(.MinLevel, .@npc$);
+	.@qn = getvariableofnpc(.QuestionCount, .@npc$);
+	.@title$ = getvariableofnpc(.SurveyTitle$, .@npc$);
+	.@rn = getvariableofnpc(.RewardCount, .@npc$);
+
+	if (BaseLevel < .@minlv) {
+		if (.@popup)
+			return;
+		mes .@hd$;
+		mes "현재 진행 중인 설문은";
+		mes "^0055FFBase Lv." + .@minlv + " 이상^000000 캐릭터만 참여할 수 있습니다.";
+		close;
+	}
+
+	.@aid = getcharid(3);
+	.@ip$ = getcharip();
+	.@st = (.@ip$ == "") ? -1 : callfunc("F_NEED_Survey_Status", .@sid, .@aid, .@ip$);
+
+	if (.@st < 0) {
+		if (.@popup)
+			return;
+		mes .@hd$;
+		mes "지금은 설문 정보를 확인할 수 없습니다.";
+		mes "잠시 후 다시 찾아와 주세요.";
+		close;
+	}
+	if (.@st > 0) {
+		if (.@popup)
+			return;
+		mes .@hd$;
+		mes "이미 해당 설문에 참여하셨습니다.";
+		mes "설문에 참여해주셔서 감사합니다.";
+		if (.@st == 2) {
+			mes " ";
+			mes "^777777현재 접속 IP 에서 이미 참여가 완료된 설문입니다.";
+			mes "설문은 계정·IP 당 1회만 참여할 수 있습니다.^000000";
+		}
+		close;
+	}
+
+	// 이전에 답한 문항 불러오기 (중간에 종료했던 경우)
+	.@rows = query_sql("SELECT `question_id`,`selected_answer` FROM `need_survey_answer` WHERE `survey_id`=" + .@sid + " AND `account_id`=" + .@aid, .@lq, .@la);
+	if (.@rows < 0) {
+		if (.@popup)
+			return;
+		mes .@hd$;
+		mes "지금은 설문 정보를 확인할 수 없습니다.";
+		mes "잠시 후 다시 찾아와 주세요.";
+		close;
+	}
+	.@saved = 0;
+	for (.@i = 0; .@i < .@rows; .@i++) {
+		.@q = .@lq[.@i];
+		if (.@q < 1 || .@q > .@qn)
+			continue;
+		if (.@la[.@i] < 1 || .@la[.@i] > getvariableofnpc(.ChoiceCount[.@q], .@npc$))
+			continue;
+		.@sel[.@q] = .@la[.@i];
+		.@saved++;
+	}
+
+	mes .@hd$;
+	mes "^0055FF" + .@title$ + "^000000";
+	mes " ";
+	mes "문항 수 : " + .@qn + "개";
+	mes "각 문항마다 답을 고른 뒤, 그렇게 생각하신 이유를 직접 입력해 주세요.";
+	if (.@rn > 0) {
+		mes " ";
+		mes "모든 문항을 제출하시면 아래 보상을 드립니다.";
+		for (.@i = 0; .@i < .@rn; .@i++)
+			mes "- " + getitemname(getvariableofnpc(.RewardItem[.@i], .@npc$)) + " " + getvariableofnpc(.RewardAmount[.@i], .@npc$) + "개";
+	}
+	if (.@saved > 0) {
+		mes " ";
+		mes "^FF7700이전에 답변하신 " + .@saved + " / " + .@qn + " 문항이 저장되어 있습니다.^000000";
+	}
+	mes " ";
+	mes "현재 진행 중인 설문에 참여하시겠습니까?";
+
+	if (.@saved > 0)
+		.@m = select("이어서 참여하기:처음부터 다시 답변하기:다음에 참여하기");
+	else
+		.@m = select("설문에 참여하기::다음에 참여하기");
+
+	if (.@m == 3) {
+		clear;
+		mes .@hd$;
+		if (.@popup)
+			mes "다음 접속 시 다시 안내해 드리겠습니다.";
+		else
+			mes "언제든 다시 찾아와 주세요.";
+		if (.@saved > 0)
+			mes "답변하신 내용은 저장되어 있습니다.";
+		close;
+	}
+	if (.@m == 2)
+		deletearray .@sel;
+
+L_Questions:
+	for (.@q = 1; .@q <= .@qn; .@q++) {
+		if (.@sel[.@q])
+			continue;
+
+		.@r = callsub(S_Ask, .@npc$, .@hd$, .@sid, .@aid, .@ip$, .@q, .@qn);
+
+		if (.@r == 0) {
+			clear;
+			mes .@hd$;
+			mes "설문을 잠시 중단합니다.";
+			mes "지금까지 답변하신 내용은 저장되었습니다.";
+			mes "다음 접속 시 이어서 진행하실 수 있습니다.";
+			close;
+		}
+		if (.@r < 0) {
+			clear;
+			mes .@hd$;
+			mes "^FF0000답변을 저장하지 못했습니다.^000000";
+			mes "잠시 후 다시 시도해 주세요.";
+			close;
+		}
+		.@sel[.@q] = .@r;
+	}
+
+	// 제출 확인
+	clear;
+	mes .@hd$;
+	mes "모든 문항에 답변하셨습니다.";
+	mes " ";
+	for (.@q = 1; .@q <= .@qn; .@q++) {
+		deletearray .@opt$;
+		explode(.@opt$, getvariableofnpc(.Choice$[.@q], .@npc$), ":");
+		mes "Q" + .@q + ". ^0055FF" + .@opt$[.@sel[.@q] - 1] + "^000000";
+	}
+	mes " ";
+	mes "제출하시면 설문이 완료되며, 이후에는 답변을 수정할 수 없습니다.";
+
+	.@m = select("설문 제출하기:처음부터 다시 답변하기:다음에 제출하기");
+	if (.@m == 2) {
+		deletearray .@sel;
+		goto L_Questions;
+	}
+	if (.@m == 3) {
+		clear;
+		mes .@hd$;
+		mes "답변하신 내용은 저장되어 있습니다.";
+		mes "다음 접속 시 바로 제출하실 수 있습니다.";
+		close;
+	}
+
+	// 검사부터 보상 지급까지 next / menu / input 이 없다.
+	// 그 사이 다른 스크립트로 양보하지 않으므로 연속 클릭이나 같은 IP 의
+	// 다른 계정이 끼어들 수 없고, 마지막 방어선으로 DB 키가 한 번 더 막는다.
+	.@res = callfunc("F_NEED_Survey_Commit", .@sid, .@aid, .@ip$, .@qn);
+
+	clear;
+	mes .@hd$;
+	switch (.@res) {
+	case 1:
+		mes "설문에 참여해주셔서 감사합니다.";
+		if (.@rn > 0) {
+			mes " ";
+			mes "참여 보상이 지급되었습니다.";
+			for (.@i = 0; .@i < .@rn; .@i++)
+				mes "- " + getitemname(getvariableofnpc(.RewardItem[.@i], .@npc$)) + " " + getvariableofnpc(.RewardAmount[.@i], .@npc$) + "개";
+		}
+		break;
+	case 0:
+		mes "이미 해당 설문에 참여하셨습니다.";
+		mes "설문에 참여해주셔서 감사합니다.";
+		break;
+	case -5:
+		mes "현재 접속 IP 에서 이미 참여가 완료된 설문입니다.";
+		mes "설문은 계정·IP 당 1회만 참여할 수 있습니다.";
+		break;
+	case -2:
+		mes "^FF0000소지품이 가득 차서 보상을 받으실 수 없습니다.^000000";
+		mes "소지품을 정리한 뒤 다시 제출해 주세요.";
+		mes "답변은 저장되어 있어 바로 제출 단계로 이어집니다.";
+		break;
+	case -6:
+		mes "^FF0000일부 답변이 저장되지 않았습니다.^000000";
+		mes "설문을 다시 열어 남은 문항에 답변해 주세요.";
+		break;
+	case -7:
+		mes "설문이 종료되었거나 새로운 설문으로 바뀌었습니다.";
+		mes "설문 조사원에게 다시 말을 걸어 주세요.";
+		break;
+	default:
+		mes "^FF0000설문을 제출하지 못했습니다.^000000";
+		mes "잠시 후 다시 시도해 주세요.";
+		break;
+	}
+	close;
+
+//------------------------------------------------------------
+// 문항 하나 진행 : 선택지 선택 -> 사유 입력 -> 확인 -> 저장
+// 반환 : 선택 번호(1~) / 0 = 설문 중단 / -1 = 저장 실패
+//
+// 서버의 NPC 입력 버퍼가 70바이트(한글 약 35자)라서 한 번에 받을 수 있는
+// 길이가 짧다. 그래서 "이어서 쓰기" 로 여러 번 나누어 입력받아 붙인다.
+//------------------------------------------------------------
+S_Ask:
+	.@npc$ = getarg(0);
+	.@hd$ = getarg(1);
+	.@sid = getarg(2);
+	.@aid = getarg(3);
+	.@ip$ = getarg(4);
+	.@q = getarg(5);
+	.@qn = getarg(6);
+
+	.@qtext$ = getvariableofnpc(.Question$[.@q], .@npc$);
+	.@choices$ = getvariableofnpc(.Choice$[.@q], .@npc$);
+	.@cn = getvariableofnpc(.ChoiceCount[.@q], .@npc$);
+	.@rmin = getvariableofnpc(.ReasonMinLen, .@npc$);
+	.@rmax = getvariableofnpc(.ReasonMaxLen, .@npc$);
+	explode(.@opt$, .@choices$, ":");
+
+L_Pick:
+	clear;
+	mes .@hd$ + " 문항 " + .@q + " / " + .@qn;
+	mes "^0055FFQ" + .@q + ". " + .@qtext$ + "^000000";
+	.@pick = select(.@choices$ + ":설문 잠시 중단하기 (다음에 이어서)");
+	if (.@pick < 1 || .@pick > .@cn)
+		return 0;
+	.@reason$ = "";
+
+L_Reason:
+	clear;
+	mes .@hd$ + " 문항 " + .@q + " / " + .@qn;
+	mes "선택 : ^0055FF" + .@opt$[.@pick - 1] + "^000000";
+	mes " ";
+	if (.@reason$ == "") {
+		mes "[선택하신 이유를 입력해주세요.]";
+	}
+	else {
+		mes "지금까지 입력한 사유 :";
+		mes .@reason$;
+		mes " ";
+		mes "[이어서 쓸 내용을 입력해주세요.]";
+	}
+	mes "^777777공백 제외 " + .@rmin + "자 이상, 전체 " + .@rmax + "자까지";
+	mes "한 번에 한글 약 35자까지 입력됩니다.^000000";
+	input .@in$;
+
+	.@in$ = callfunc("F_NEED_Survey_Clean$", .@in$);
+	.@len = callfunc("F_NEED_Survey_Len", .@reason$ + .@in$, 0);
+	if (.@len > .@rmax) {
+		clear;
+		mes .@hd$ + " 문항 " + .@q + " / " + .@qn;
+		mes "^FF0000사유는 최대 " + .@rmax + "자까지 입력할 수 있습니다.^000000";
+		mes "(입력하신 내용을 합치면 " + .@len + "자)";
+		mes "방금 입력한 내용은 반영되지 않았습니다.";
+		next;
+		goto L_Reason;
+	}
+	.@reason$ = .@reason$ + .@in$;
+
+L_Confirm:
+	.@len = callfunc("F_NEED_Survey_Len", .@reason$, 0);
+	.@solid = callfunc("F_NEED_Survey_Len", .@reason$, 1);
+	clear;
+	mes .@hd$ + " 문항 " + .@q + " / " + .@qn;
+	mes "선택 : ^0055FF" + .@opt$[.@pick - 1] + "^000000";
+	mes "사유 : " + ((.@reason$ == "") ? "(없음)" : .@reason$);
+	mes "^777777(공백 제외 " + .@solid + "자 / 전체 " + .@len + "자, 최대 " + .@rmax + "자)^000000";
+
+	if (.@solid < .@rmin) {
+		mes " ";
+		mes "^FF0000사유를 공백 제외 " + .@rmin + "자 이상 입력해 주세요.^000000";
+		.@c = select("이어서 쓰기:사유 다시 쓰기:선택지 다시 고르기");
+		if (.@c == 1)
+			goto L_Reason;
+		if (.@c == 2) {
+			.@reason$ = "";
+			goto L_Reason;
+		}
+		goto L_Pick;
+	}
+
+	.@c = select(((.@q < .@qn) ? "이 답변으로 저장하고 다음 문항으로" : "이 답변으로 저장하고 제출 단계로") + ":" + ((.@len < .@rmax) ? "이어서 쓰기" : "") + ":사유 다시 쓰기:선택지 다시 고르기");
+	if (.@c == 2)
+		goto L_Reason;
+	if (.@c == 3) {
+		.@reason$ = "";
+		goto L_Reason;
+	}
+	if (.@c == 4)
+		goto L_Pick;
+
+	if (!callfunc("F_NEED_Survey_SaveAnswer", .@sid, .@aid, .@ip$, .@q, .@qtext$, .@pick, .@opt$[.@pick - 1], .@reason$))
+		return -1;
+	return .@pick;
+}
+
+//------------------------------------------------------------
+// 참여 여부 조회
+// getarg(0) survey_id / getarg(1) account_id / getarg(2) 접속 IP
+// 반환 : 0 = 미참여 / 1 = 이 계정이 완료 / 2 = 이 IP 에서 다른 계정이 완료 / -1 = 조회 실패
+//------------------------------------------------------------
+function	script	F_NEED_Survey_Status	{
+	.@sid = getarg(0);
+	.@aid = getarg(1);
+
+	.@rows = query_sql("SELECT `account_id` FROM `need_survey_complete` WHERE `survey_id`=" + .@sid + " AND (`account_id`=" + .@aid + " OR `ip_address`='" + escape_sql(getarg(2)) + "') ORDER BY (`account_id`=" + .@aid + ") DESC LIMIT 1", .@done_aid);
+	if (.@rows < 0)
+		return -1;
+	if (.@rows == 0)
+		return 0;
+	return (.@done_aid == .@aid) ? 1 : 2;
+}
+
+//------------------------------------------------------------
+// 문항 응답 저장 (같은 문항은 덮어쓴다)
+// 이미 완료한 계정의 응답은 바뀌지 않도록 완료 기록이 없을 때만 쓴다.
+// getarg : survey_id, account_id, ip, question_id, 질문, 선택 번호, 선택지, 사유
+// 반환 : 1 = 저장 확인 / 0 = 실패
+//------------------------------------------------------------
+function	script	F_NEED_Survey_SaveAnswer	{
+	.@sid = getarg(0);
+	.@aid = getarg(1);
+	.@q = getarg(3);
+	.@pick = getarg(5);
+
+	.@r = query_sql("INSERT INTO `need_survey_answer` (`survey_id`,`account_id`,`question_id`,`char_id`,`char_name`,`ip_address`,`question_text`,`selected_answer`,`selected_text`,`reason`,`answered_at`) "
+		+ "SELECT " + .@sid + "," + .@aid + "," + .@q + "," + getcharid(0) + ",'" + escape_sql(strcharinfo(0)) + "','" + escape_sql(getarg(2)) + "','" + escape_sql(getarg(4)) + "'," + .@pick + ",'" + escape_sql(getarg(6)) + "','" + escape_sql(getarg(7)) + "',NOW() FROM DUAL "
+		+ "WHERE NOT EXISTS (SELECT 1 FROM `need_survey_complete` WHERE `survey_id`=" + .@sid + " AND `account_id`=" + .@aid + ") "
+		+ "ON DUPLICATE KEY UPDATE `char_id`=VALUES(`char_id`),`char_name`=VALUES(`char_name`),`ip_address`=VALUES(`ip_address`),`question_text`=VALUES(`question_text`),"
+		+ "`selected_answer`=VALUES(`selected_answer`),`selected_text`=VALUES(`selected_text`),`reason`=VALUES(`reason`),`answered_at`=VALUES(`answered_at`)");
+	if (.@r < 0)
+		return 0;
+
+	.@rows = query_sql("SELECT `selected_answer` FROM `need_survey_answer` WHERE `survey_id`=" + .@sid + " AND `account_id`=" + .@aid + " AND `question_id`=" + .@q, .@chk);
+	return (.@rows == 1 && .@chk == .@pick);
+}
+
+//------------------------------------------------------------
+// 설문 완료 + 보상 지급
+// getarg(0) survey_id / getarg(1) account_id / getarg(2) 접속 IP / getarg(3) 문항 수
+//
+// 반환  1 = 완료, 보상 지급
+//       0 = 이 계정은 이미 완료
+//      -2 = 소지품 무게·칸 부족 (완료 처리하지 않음)
+//      -3 = 접속 IP 확인 불가
+//      -4 = DB 조회/기록 실패 (완료 처리하지 않음)
+//      -5 = 이 IP 에서 다른 계정이 이미 완료
+//      -6 = 저장된 답변이 모자람
+//      -7 = 대화 도중 설문이 꺼졌거나 SurveyID 가 바뀜
+//
+// 완료 행을 먼저 넣고, 그 행이 내 것임을 되읽어 확인한 뒤에만 보상을 준다.
+// (survey_id, account_id) PK 와 (survey_id, ip_address) UNIQUE 가 있어서
+// 어떤 경로로든 두 번째 완료 행은 들어가지 않는다.
+//------------------------------------------------------------
+function	script	F_NEED_Survey_Commit	{
+	.@npc$ = "NEED_Survey";
+	.@sid = getarg(0);
+	.@aid = getarg(1);
+	.@ip$ = getarg(2);
+	.@qn = getarg(3);
+	.@cid = getcharid(0);
+
+	if (!getvariableofnpc(.Active, .@npc$) || getvariableofnpc(.SurveyID, .@npc$) != .@sid || getvariableofnpc(.QuestionCount, .@npc$) != .@qn)
+		return -7;
+	if (.@ip$ == "")
+		return -3;
+
+	.@st = callfunc("F_NEED_Survey_Status", .@sid, .@aid, .@ip$);
+	if (.@st < 0)
+		return -4;
+	if (.@st == 1)
+		return 0;
+	if (.@st == 2)
+		return -5;
+
+	// 모든 문항이 올바른 선택 번호로 저장되어 있는지 확인
+	.@rows = query_sql("SELECT `question_id`,`selected_answer` FROM `need_survey_answer` WHERE `survey_id`=" + .@sid + " AND `account_id`=" + .@aid + " AND `question_id` BETWEEN 1 AND " + .@qn, .@lq, .@la);
+	if (.@rows < 0)
+		return -4;
+	.@ok = 0;
+	for (.@i = 0; .@i < .@rows; .@i++) {
+		if (.@la[.@i] >= 1 && .@la[.@i] <= getvariableofnpc(.ChoiceCount[.@lq[.@i]], .@npc$))
+			.@ok++;
+	}
+	if (.@ok != .@qn)
+		return -6;
+
+	.@rn = getvariableofnpc(.RewardCount, .@npc$);
+	if (.@rn > 0) {
+		copyarray .@ritem[0], getvariableofnpc(.RewardItem[0], .@npc$), .@rn;
+		copyarray .@ramt[0], getvariableofnpc(.RewardAmount[0], .@npc$), .@rn;
+		if (!checkweight2(.@ritem, .@ramt))
+			return -2;
+	}
+
+	query_sql("INSERT IGNORE INTO `need_survey_complete` (`survey_id`,`account_id`,`char_id`,`char_name`,`ip_address`,`completed`,`reward_claimed`,`completed_at`) VALUES (" + .@sid + "," + .@aid + "," + .@cid + ",'" + escape_sql(strcharinfo(0)) + "','" + escape_sql(.@ip$) + "',1,0,NOW())");
+
+	.@rows = query_sql("SELECT `reward_claimed` FROM `need_survey_complete` WHERE `survey_id`=" + .@sid + " AND `account_id`=" + .@aid + " AND `char_id`=" + .@cid + " AND `ip_address`='" + escape_sql(.@ip$) + "'", .@claimed);
+	if (.@rows != 1 || .@claimed != 0) {
+		logmes "NEED_SURVEY commit_fail sid=" + .@sid + " rows=" + .@rows + " ip=" + .@ip$;
+		return -4;
+	}
+
+	for (.@i = 0; .@i < .@rn; .@i++)
+		getitem .@ritem[.@i], .@ramt[.@i];
+
+	query_sql("UPDATE `need_survey_complete` SET `reward_claimed`=1, `reward_claimed_at`=NOW() WHERE `survey_id`=" + .@sid + " AND `account_id`=" + .@aid + " AND `reward_claimed`=0");
+	logmes "NEED_SURVEY complete sid=" + .@sid + " questions=" + .@qn + " rewards=" + .@rn + " ip=" + .@ip$;
+	return 1;
+}
+
+//------------------------------------------------------------
+// CP949 문자열 길이
+// getarg(0) 문자열
+// getarg(1) 0 = 글자 수 / 1 = 공백 제외 글자 수 / 2 = 온전한 바이트 길이
+//
+// 한글은 2바이트(첫 바이트 0x81~0xFE)지만 1글자로 센다.
+// 입력 버퍼(70바이트) 끝에서 한글이 반으로 잘리면 앞 바이트만 남는데,
+// 그 바이트는 DB 문자셋 변환에서 오류가 나므로 2 번 모드로 잘라낸다.
+//------------------------------------------------------------
+function	script	F_NEED_Survey_Len	{
+	.@s$ = getarg(0);
+	.@len = getstrlen(.@s$);
+	.@chars = 0;
+	.@solid = 0;
+	.@i = 0;
+
+	freeloop(1);
+	while (.@i < .@len) {
+		if (preg_match("^[\\x81-\\xFE]$", charat(.@s$, .@i))) {
+			if (.@i + 1 >= .@len)
+				break;					// 반쪽 한글
+			.@chars++;
+			if (!preg_match("^\\xA1\\xA1$", substr(.@s$, .@i, .@i + 1)))
+				.@solid++;				// 전각 공백은 공백으로 본다
+			.@i += 2;
+			continue;
+		}
+		.@chars++;
+		if (charat(.@s$, .@i) != " ")
+			.@solid++;
+		.@i++;
+	}
+	freeloop(0);
+
+	switch (getarg(1)) {
+	case 1:
+		return .@solid;
+	case 2:
+		return .@i;
+	default:
+		return .@chars;
+	}
+}
+
+// 끝에 반쪽 한글이 붙어 있으면 떼어 낸다.
+function	script	F_NEED_Survey_Clean$	{
+	.@s$ = getarg(0);
+	.@ok = callfunc("F_NEED_Survey_Len", .@s$, 2);
+
+	if (.@ok >= getstrlen(.@s$))
+		return .@s$;
+	if (.@ok <= 0)
+		return "";
+	return substr(.@s$, 0, .@ok - 1);
+}
+
+//------------------------------------------------------------
+// 운영자 확인 - @surveygm (GM 60+)
+// 완료자(need_survey_complete) 기준으로만 집계한다.
+//------------------------------------------------------------
+-	script	NEED_Survey_GM	-1,{
+	end;
+
+OnInit:
+	bindatcmd "surveygm", "NEED_Survey_GM::OnCommand", 60, 60;
+	end;
+
+OnCommand:
+	if (getgmlevel() < 60)
+		end;
+
+	.@npc$ = "NEED_Survey";
+	.@hd$ = "[설문조사 관리]";
+
+	while (1) {
+		.@cur = getvariableofnpc(.SurveyID, .@npc$);
+		mes .@hd$;
+		mes "현재 설문 : #" + .@cur + " " + getvariableofnpc(.SurveyTitle$, .@npc$);
+		if (getvariableofnpc(.Active, .@npc$))
+			mes "상태 : ^00AA00진행 중^000000";
+		else if (getvariableofnpc(.SurveyEnabled, .@npc$))
+			mes "상태 : ^FF0000설정 오류로 중지^000000 (" + getvariableofnpc(.ErrorCount, .@npc$) + "건)";
+		else
+			mes "상태 : ^777777OFF^000000";
+
+		.@m = select("현재 설정 보기:결과 통계 보기:사유 원문 보기:보상 미확인 완료자 보기:닫기");
+		clear;
+		if (.@m == 5)
+			break;
+		if (.@m == 1) {
+			callsub S_Config, .@npc$, .@hd$;
+			continue;
+		}
+
+		// 조회할 설문 번호
+		mes .@hd$;
+		mes "조회할 설문을 고르세요.";
+		if (select("현재 설문 (#" + .@cur + "):다른 설문 번호 입력") == 1)
+			.@sid = .@cur;
+		else {
+			input .@sid, 1, 2147483647;
+		}
+		clear;
+
+		if (.@m == 2)
+			callsub S_Stats, .@npc$, .@hd$, .@sid, .@cur;
+		else if (.@m == 3)
+			callsub S_Reasons, .@npc$, .@hd$, .@sid, .@cur;
+		else
+			callsub S_Unclaimed, .@hd$, .@sid;
+		clear;
+	}
+	close;
+
+S_Config:
+	.@npc$ = getarg(0);
+	mes getarg(1);
+	mes "SurveyEnabled : " + getvariableofnpc(.SurveyEnabled, .@npc$) + " / Active : " + getvariableofnpc(.Active, .@npc$);
+	mes "SurveyID : " + getvariableofnpc(.SurveyID, .@npc$);
+	mes "제목 : " + getvariableofnpc(.SurveyTitle$, .@npc$);
+	mes "참여 레벨 : Base Lv." + getvariableofnpc(.MinLevel, .@npc$) + " 이상";
+	mes "사유 길이 : " + getvariableofnpc(.ReasonMinLen, .@npc$) + " ~ " + getvariableofnpc(.ReasonMaxLen, .@npc$) + "자";
+	mes "팝업 지연 : " + getvariableofnpc(.PopupDelay, .@npc$) + "ms";
+	.@rn = getvariableofnpc(.RewardCount, .@npc$);
+	mes "보상 : " + ((.@rn > 0) ? "" : "없음");
+	for (.@i = 0; .@i < .@rn; .@i++)
+		mes "- " + getitemname(getvariableofnpc(.RewardItem[.@i], .@npc$)) + " (" + getvariableofnpc(.RewardItem[.@i], .@npc$) + ") x " + getvariableofnpc(.RewardAmount[.@i], .@npc$);
+	.@ec = getvariableofnpc(.ErrorCount, .@npc$);
+	if (.@ec > 0) {
+		mes " ";
+		mes "^FF0000설정 오류 " + .@ec + "건^000000";
+		for (.@i = 0; .@i < .@ec; .@i++)
+			mes "- " + getvariableofnpc(.Error$[.@i], .@npc$);
+	}
+	next;
+	.@qn = getvariableofnpc(.QuestionCount, .@npc$);
+	for (.@q = 1; .@q <= .@qn; .@q++) {
+		mes getarg(1) + " 문항 " + .@q + " / " + .@qn;
+		mes "Q" + .@q + ". " + getvariableofnpc(.Question$[.@q], .@npc$);
+		deletearray .@opt$;
+		explode(.@opt$, getvariableofnpc(.Choice$[.@q], .@npc$), ":");
+		for (.@i = 0; .@i < getarraysize(.@opt$); .@i++)
+			mes "  " + (.@i + 1) + ". " + .@opt$[.@i];
+		next;
+	}
+	return;
+
+S_Stats:
+	.@npc$ = getarg(0);
+	.@hd$ = getarg(1);
+	.@sid = getarg(2);
+	.@cur = (getarg(2) == getarg(3));
+	.@join$ = "FROM `need_survey_answer` a JOIN `need_survey_complete` c ON c.`survey_id`=a.`survey_id` AND c.`account_id`=a.`account_id` AND c.`completed`=1 WHERE a.`survey_id`=" + .@sid;
+
+	if (query_sql("SELECT COUNT(*), IFNULL(SUM(`reward_claimed`=1),0) FROM `need_survey_complete` WHERE `survey_id`=" + .@sid + " AND `completed`=1", .@total, .@claimed) < 0) {
+		mes .@hd$;
+		mes "^FF0000DB 조회에 실패했습니다.^000000";
+		next;
+		return;
+	}
+
+	// 문항 목록 : 현재 설문은 스크립트 설정, 지난 설문은 DB 에 남은 질문 스냅샷
+	if (.@cur) {
+		.@qn = getvariableofnpc(.QuestionCount, .@npc$);
+		for (.@q = 1; .@q <= .@qn; .@q++) {
+			.@qid[.@q - 1] = .@q;
+			.@qt$[.@q - 1] = getvariableofnpc(.Question$[.@q], .@npc$);
+		}
+	}
+	else
+		.@qn = query_sql("SELECT a.`question_id`, MAX(a.`question_text`) " + .@join$ + " GROUP BY a.`question_id` ORDER BY a.`question_id`", .@qid, .@qt$);
+
+	mes .@hd$ + " 설문 #" + .@sid;
+	mes "총 참여자 수 : ^0055FF" + .@total + "명^000000";
+	mes "보상 지급 확인 : " + .@claimed + "명";
+	if (.@total > .@claimed)
+		mes "^FF0000보상 미확인 : " + (.@total - .@claimed) + "명^000000";
+	mes "문항 수 : " + ((.@qn > 0) ? .@qn : 0) + "개";
+	next;
+
+	for (.@k = 0; .@k < .@qn; .@k++) {
+		.@q = .@qid[.@k];
+		deletearray .@sa;
+		deletearray .@stx$;
+		deletearray .@cnt;
+		.@rows = query_sql("SELECT a.`selected_answer`, MAX(a.`selected_text`), COUNT(*) " + .@join$ + " AND a.`question_id`=" + .@q + " GROUP BY a.`selected_answer` ORDER BY a.`selected_answer`", .@sa, .@stx$, .@cnt);
+
+		mes .@hd$ + " 설문 #" + .@sid + " (" + (.@k + 1) + " / " + .@qn + ")";
+		mes "^0055FFQ" + .@q + ". " + .@qt$[.@k] + "^000000";
+
+		if (.@cur) {
+			// 현재 설문은 응답이 0명인 선택지도 함께 보여 준다.
+			deletearray .@opt$;
+			explode(.@opt$, getvariableofnpc(.Choice$[.@q], .@npc$), ":");
+			.@on = getarraysize(.@opt$);
+			for (.@i = 0; .@i < .@on; .@i++) {
+				.@c = 0;
+				for (.@j = 0; .@j < .@rows; .@j++) {
+					if (.@sa[.@j] == .@i + 1)
+						.@c = .@cnt[.@j];
+				}
+				mes "" + (.@i + 1) + ". " + .@opt$[.@i] + " : " + .@c + "명" + callfunc("F_NEED_Survey_Pct$", .@c, .@total);
+			}
+		}
+		else {
+			for (.@j = 0; .@j < .@rows; .@j++)
+				mes .@sa[.@j] + ". " + .@stx$[.@j] + " : " + .@cnt[.@j] + "명" + callfunc("F_NEED_Survey_Pct$", .@cnt[.@j], .@total);
+			if (.@rows < 1)
+				mes "(응답 없음)";
+		}
+		next;
+	}
+	return;
+
+S_Reasons:
+	.@npc$ = getarg(0);
+	.@hd$ = getarg(1);
+	.@sid = getarg(2);
+	.@cur = (getarg(2) == getarg(3));
+	.@join$ = "FROM `need_survey_answer` a JOIN `need_survey_complete` c ON c.`survey_id`=a.`survey_id` AND c.`account_id`=a.`account_id` AND c.`completed`=1 WHERE a.`survey_id`=" + .@sid;
+
+	if (.@cur) {
+		.@qn = getvariableofnpc(.QuestionCount, .@npc$);
+		for (.@q = 1; .@q <= .@qn; .@q++)
+			.@qid[.@q - 1] = .@q;
+	}
+	else
+		.@qn = query_sql("SELECT DISTINCT a.`question_id` " + .@join$ + " ORDER BY a.`question_id`", .@qid);
+
+	if (.@qn < 1) {
+		mes .@hd$;
+		mes "설문 #" + .@sid + " 의 응답이 없습니다.";
+		next;
+		return;
+	}
+
+	.@menu$ = "";
+	for (.@k = 0; .@k < .@qn; .@k++)
+		.@menu$ = .@menu$ + "Q" + .@qid[.@k] + ":";
+	mes .@hd$ + " 설문 #" + .@sid;
+	mes "사유를 볼 문항을 고르세요.";
+	.@k = select(.@menu$ + "돌아가기") - 1;
+	if (.@k >= .@qn)
+		return;
+	.@q = .@qid[.@k];
+
+	.@page = 0;
+	while (1) {
+		clear;
+		deletearray .@name$;
+		deletearray .@stx$;
+		deletearray .@rs$;
+		deletearray .@dt$;
+		query_sql("SELECT COUNT(*) " + .@join$ + " AND a.`question_id`=" + .@q, .@all);
+		.@rows = query_sql("SELECT a.`char_name`, a.`selected_text`, a.`reason`, DATE_FORMAT(c.`completed_at`,'%m/%d %H:%i') " + .@join$ + " AND a.`question_id`=" + .@q + " ORDER BY c.`completed_at` DESC, a.`account_id` LIMIT " + (.@page * 5) + ",5", .@name$, .@stx$, .@rs$, .@dt$);
+
+		mes .@hd$ + " #" + .@sid + " Q" + .@q + " (" + (.@page * 5 + ((.@rows > 0) ? 1 : 0)) + "~" + (.@page * 5 + ((.@rows > 0) ? .@rows : 0)) + " / " + .@all + "건)";
+		for (.@i = 0; .@i < .@rows; .@i++) {
+			mes "^0055FF" + .@dt$[.@i] + " " + .@name$[.@i] + " [" + .@stx$[.@i] + "]^000000";
+			mes .@rs$[.@i];
+		}
+		if (.@rows < 1)
+			mes "(표시할 응답이 없습니다)";
+
+		.@c = select(((.@page * 5 + .@rows < .@all) ? "다음 페이지" : "") + ":" + ((.@page > 0) ? "이전 페이지" : "") + ":돌아가기");
+		if (.@c == 1)
+			.@page++;
+		else if (.@c == 2)
+			.@page--;
+		else
+			break;
+	}
+	return;
+
+S_Unclaimed:
+	.@hd$ = getarg(0);
+	.@sid = getarg(1);
+	.@rows = query_sql("SELECT `account_id`, `char_name`, `ip_address`, DATE_FORMAT(`completed_at`,'%Y/%m/%d %H:%i') FROM `need_survey_complete` WHERE `survey_id`=" + .@sid + " AND `reward_claimed`=0 ORDER BY `completed_at` LIMIT 20", .@aid, .@name$, .@ip$, .@dt$);
+
+	mes .@hd$ + " 설문 #" + .@sid;
+	mes "완료 기록은 있으나 보상 지급이 확인되지 않은 계정";
+	mes "(보상 지급 직전에 서버가 종료된 경우 등, 최대 20건)";
+	mes " ";
+	for (.@i = 0; .@i < .@rows; .@i++)
+		mes .@dt$[.@i] + " " + .@name$[.@i] + " (AID " + .@aid[.@i] + ", " + .@ip$[.@i] + ")";
+	if (.@rows < 1)
+		mes "없음";
+	next;
+	return;
+}
+
+// 비율 문자열 " (12.5%)"
+function	script	F_NEED_Survey_Pct$	{
+	if (getarg(1) < 1)
+		return "";
+	.@p = getarg(0) * 1000 / getarg(1);
+	return " (" + (.@p / 10) + "." + (.@p % 10) + "%)";
+}

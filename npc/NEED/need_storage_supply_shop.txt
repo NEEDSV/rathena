@@ -18,21 +18,21 @@ lasagna,161,141,6	script	창고 보급 상점	558,{
 	.@m_total = storageshopcategories();
 
 	if (.@m_total < 1 || .@m_total > getarraysize(.cat_name$)) {
-		mes "[창고 보급 상점]";
-		mes "상점 설정에 문제가 있어 지금은 이용할 수 없습니다.";
-		mes "운영자에게 문의해주세요.";
+		mes needtr("[창고 보급 상점]","[Storage Supply Shop]");
+		mes needtr("상점 설정에 문제가 있어 지금은 이용할 수 없습니다.","There is a problem with the shop setup, so it cannot be used right now.");
+		mes needtr("운영자에게 문의해주세요.","Please contact an operator.");
 		close;
 	}
 
-	mes "[창고 보급 상점]";
-	mes "이곳에서 구매한 물품은 인벤토리를 거치지 않고";
-	mes "^0000FF선택한 개인 창고^000000로 바로 들어갑니다.";
+	mes needtr("[창고 보급 상점]","[Storage Supply Shop]");
+	mes needtr("이곳에서 구매한 물품은 인벤토리를 거치지 않고","Anything you buy here skips your inventory and goes");
+	mes needtr("^0000FF선택한 개인 창고^000000로 바로 들어갑니다.","straight into ^0000FFthe personal Storage you chose^000000.");
 	next;
 
-	mes "[창고 보급 상점]";
-	mes "대신 창고 직행 편의를 제공하는 대가로";
-	mes "^FF0000상인 할인(디스카운트)이 적용되지 않습니다.^000000";
-	mes "누구나 동일하게 할인 전 판매가로 구매합니다.";
+	mes needtr("[창고 보급 상점]","[Storage Supply Shop]");
+	mes needtr("대신 창고 직행 편의를 제공하는 대가로","In exchange for delivering straight to Storage, however,");
+	mes needtr("^FF0000상인 할인(디스카운트)이 적용되지 않습니다.^000000","^FF0000the Merchant discount does not apply.^000000");
+	mes needtr("누구나 동일하게 할인 전 판매가로 구매합니다.","Everyone pays the same undiscounted price.");
 	next;
 
 	while (1) {
@@ -43,17 +43,17 @@ lasagna,161,141,6	script	창고 보급 상점	558,{
 		if (@storageshop_target_reset) {
 			@storageshop_target_reset = 0;
 
-			mes "[창고 보급 상점]";
-			mes "기존에 선택한 지급 창고를 현재 이용할 수 없어";
-			mes "지급 위치가 ^0000FF" + .stor_name$[0] + "^000000 (으)로 변경되었습니다.";
+			mes needtr("[창고 보급 상점]","[Storage Supply Shop]");
+			mes needtr("기존에 선택한 지급 창고를 현재 이용할 수 없어","The delivery Storage you chose is unavailable at the moment, so");
+			mes needtr("지급 위치가 ^0000FF","The delivery location has been changed to ^0000FF") + needtr(.stor_name$[0], .stor_name_en$[0]) + needtr("^000000 (으)로 변경되었습니다.","^000000.");
 			next;
 		}
 
-		mes "[창고 보급 상점]";
-		mes "현재 지급 창고 : ^0000FF" + .stor_name$[.@m_target] + "^000000";
+		mes needtr("[창고 보급 상점]","[Storage Supply Shop]");
+		mes needtr("현재 지급 창고 : ^0000FF","Current delivery Storage : ^0000FF") + needtr(.stor_name$[.@m_target], .stor_name_en$[.@m_target]) + "^000000";
 		next;
 
-		switch (select("물품 구매", "지급 창고 변경", "종료")) {
+		switch (select(needtr("물품 구매","Buy supplies"), needtr("지급 창고 변경","Change delivery Storage"), needtr("종료","Exit"))) {
 		case 1:
 			callsub S_Categories;
 			break;
@@ -63,8 +63,8 @@ lasagna,161,141,6	script	창고 보급 상점	558,{
 			break;
 
 		default:
-			mes "[창고 보급 상점]";
-			mes "또 이용해주세요.";
+			mes needtr("[창고 보급 상점]","[Storage Supply Shop]");
+			mes needtr("또 이용해주세요.","Please come again.");
 			close;
 		}
 	}
@@ -77,6 +77,7 @@ lasagna,161,141,6	script	창고 보급 상점	558,{
 // =========================
 S_ChangeTarget:
 	.@t_menu$ = "";
+	.@t_menu_en$ = "";
 	.@t_count = 0;
 
 	for (.@t_i = 0; .@t_i <= .StorageMax; .@t_i++) {
@@ -85,24 +86,26 @@ S_ChangeTarget:
 
 		.@t_ids[.@t_count] = .@t_i;
 		.@t_menu$ += .stor_name$[.@t_i] + ":";
+		.@t_menu_en$ += .stor_name_en$[.@t_i] + ":";
 		.@t_count++;
 	}
 
 	if (.@t_count < 1) {
-		mes "[지급 창고 변경]";
-		mes "이용할 수 있는 창고가 없습니다.";
+		mes needtr("[지급 창고 변경]","[Change Delivery Storage]");
+		mes needtr("이용할 수 있는 창고가 없습니다.","There is no Storage you can use.");
 		next;
 		return;
 	}
 
 	.@t_menu$ += "이전으로";
+	.@t_menu_en$ += "Back";
 
-	mes "[지급 창고 변경]";
-	mes "구매한 물품을 받을 창고를 선택해주세요.";
-	mes "창고 2 / 창고 3 은 해금한 계정에만 표시됩니다.";
+	mes needtr("[지급 창고 변경]","[Change Delivery Storage]");
+	mes needtr("구매한 물품을 받을 창고를 선택해주세요.","Choose the Storage that will receive what you buy.");
+	mes needtr("창고 2 / 창고 3 은 해금한 계정에만 표시됩니다.","Storage 2 and Storage 3 only appear on accounts that have unlocked them.");
 	next;
 
-	.@t_sel = select(.@t_menu$);
+	.@t_sel = select(needtr(.@t_menu$, .@t_menu_en$));
 
 	if (.@t_sel < 1 || .@t_sel > .@t_count)
 		return;
@@ -111,15 +114,15 @@ S_ChangeTarget:
 
 	// 서버에서 다시 개방 여부를 확인하고 저장한다.
 	if (!storageshopsettarget(.@t_pick)) {
-		mes "[지급 창고 변경]";
-		mes "해당 창고는 아직 이용할 수 없습니다.";
-		mes "창고를 개방한 후 다시 이용해주세요.";
+		mes needtr("[지급 창고 변경]","[Change Delivery Storage]");
+		mes needtr("해당 창고는 아직 이용할 수 없습니다.","That Storage is not available yet.");
+		mes needtr("창고를 개방한 후 다시 이용해주세요.","Please open the Storage first and come back.");
 		next;
 		return;
 	}
 
-	mes "[지급 창고 변경]";
-	mes "지급 창고가 ^0000FF" + .stor_name$[.@t_pick] + "^000000 (으)로 변경되었습니다.";
+	mes needtr("[지급 창고 변경]","[Change Delivery Storage]");
+	mes needtr("지급 창고가 ^0000FF","Your delivery Storage has been changed to ^0000FF") + needtr(.stor_name$[.@t_pick], .stor_name_en$[.@t_pick]) + needtr("^000000 (으)로 변경되었습니다.","^000000.");
 	next;
 	return;
 
@@ -143,18 +146,18 @@ S_Prepare:
 
 // 준비 실패 사유 안내
 S_PrepareError:
-	mes "[창고 보급 상점]";
+	mes needtr("[창고 보급 상점]","[Storage Supply Shop]");
 
 	if (.@p_ret == -1) {
-		mes "해당 창고는 아직 이용할 수 없습니다.";
-		mes "창고를 개방한 후 다시 이용해주세요.";
+		mes needtr("해당 창고는 아직 이용할 수 없습니다.","That Storage is not available yet.");
+		mes needtr("창고를 개방한 후 다시 이용해주세요.","Please open the Storage first and come back.");
 	} else if (.@p_ret == -2) {
-		mes "지금은 창고를 사용할 수 없습니다.";
-		mes "창고 창을 닫고 거래나 노점을 종료한 뒤";
-		mes "다시 시도해주세요.";
+		mes needtr("지금은 창고를 사용할 수 없습니다.","Storage cannot be used right now.");
+		mes needtr("창고 창을 닫고 거래나 노점을 종료한 뒤","Close the Storage window, end any trade or vending, and");
+		mes needtr("다시 시도해주세요.","try again.");
 	} else {
-		mes .stor_name$[.@p_target] + " 정보를 불러오지 못했습니다.";
-		mes "잠시 후 다시 시도해주세요.";
+		mes needtr(.stor_name$[.@p_target], .stor_name_en$[.@p_target]) + needtr(" 정보를 불러오지 못했습니다."," information could not be loaded.");
+		mes needtr("잠시 후 다시 시도해주세요.","Please try again in a moment.");
 	}
 
 	next;
@@ -178,18 +181,21 @@ S_Categories:
 
 	while (1) {
 		.@g_menu$ = "";
+		.@g_menu_en$ = "";
 
 		for (.@g_i = 0; .@g_i < .@g_total; .@g_i++)
 			.@g_menu$ += .cat_name$[.@g_i] + ":";
+		for (.@g_i = 0; .@g_i < .@g_total; .@g_i++) .@g_menu_en$ += .cat_name_en$[.@g_i] + ":";
 
 		.@g_menu$ += "이전으로";
+		.@g_menu_en$ += "Back";
 
-		mes "[창고 보급 상점]";
-		mes "지급 창고 : ^0000FF" + .stor_name$[.@g_target] + "^000000";
-		mes "어떤 품목을 보시겠습니까?";
+		mes needtr("[창고 보급 상점]","[Storage Supply Shop]");
+		mes needtr("지급 창고 : ^0000FF","Delivery Storage : ^0000FF") + needtr(.stor_name$[.@g_target], .stor_name_en$[.@g_target]) + "^000000";
+		mes needtr("어떤 품목을 보시겠습니까?","Which items would you like to see?");
 		next;
 
-		.@g_sel = select(.@g_menu$);
+		.@g_sel = select(needtr(.@g_menu$, .@g_menu_en$));
 
 		if (.@g_sel < 1 || .@g_sel > .@g_total)
 			return;
@@ -209,8 +215,8 @@ S_Category:
 	.@c_count = storageshopitemcount(.@c_cat);
 
 	if (.@c_count < 1) {
-		mes "[" + .cat_name$[.@c_cat] + "]";
-		mes "현재 판매 중인 품목이 없습니다.";
+		mes "[" + needtr(.cat_name$[.@c_cat], .cat_name_en$[.@c_cat]) + "]";
+		mes needtr("현재 판매 중인 품목이 없습니다.","There are no items on sale right now.");
 		next;
 		return;
 	}
@@ -242,17 +248,17 @@ S_Category:
 		}
 
 		if (.@c_shown < 1) {
-			mes "[" + .cat_name$[.@c_cat] + "]";
-			mes "현재 판매 중인 품목이 없습니다.";
+			mes "[" + needtr(.cat_name$[.@c_cat], .cat_name_en$[.@c_cat]) + "]";
+			mes needtr("현재 판매 중인 품목이 없습니다.","There are no items on sale right now.");
 			next;
 			return;
 		}
 
-		.@c_menu$ += "이전 페이지:다음 페이지:이전 메뉴로";
+		.@c_menu$ += needtr("이전 페이지:다음 페이지:이전 메뉴로", "Prev Page:Next Page:Back to Menu");
 
-		mes "[" + .cat_name$[.@c_cat] + "]";
-		mes "구매할 품목을 선택해주세요.";
-		mes "페이지 : " + (.@c_page + 1) + " / " + (.@c_last + 1);
+		mes "[" + needtr(.cat_name$[.@c_cat], .cat_name_en$[.@c_cat]) + "]";
+		mes needtr("구매할 품목을 선택해주세요.","Choose the item you want to buy.");
+		mes needtr("페이지 : ","Page : ") + (.@c_page + 1) + " / " + (.@c_last + 1);
 		next;
 
 		.@c_sel = select(.@c_menu$);
@@ -292,8 +298,8 @@ S_Buy:
 	.@b_max = storageshopmaxqty(.@b_id);
 
 	if (.@b_id <= 0 || .@b_price <= 0 || .@b_max <= 0) {
-		mes "[창고 보급 상점]";
-		mes "지금은 판매하지 않는 품목입니다.";
+		mes needtr("[창고 보급 상점]","[Storage Supply Shop]");
+		mes needtr("지금은 판매하지 않는 품목입니다.","That item is not on sale right now.");
 		next;
 		return;
 	}
@@ -305,21 +311,21 @@ S_Buy:
 		if (.@b_afford > .@b_max)
 			.@b_afford = .@b_max;
 
-		mes "[창고 보급 상점]";
-		mes "품목 : ^0000FF" + getitemname(.@b_id) + "^000000";
-		mes "지급 위치 : ^0000FF" + .stor_name$[.@b_target] + "^000000";
-		mes "개당 가격 : " + callfunc("F_InsertComma", .@b_price) + " Zeny";
-		mes "1회 최대 구매 : " + callfunc("F_InsertComma", .@b_max) + " 개";
-		mes "보유 제니 : " + callfunc("F_InsertComma", Zeny) + " Zeny";
+		mes needtr("[창고 보급 상점]","[Storage Supply Shop]");
+		mes needtr("품목 : ^0000FF","Item : ^0000FF") + getitemname(.@b_id) + "^000000";
+		mes needtr("지급 위치 : ^0000FF","Delivery location : ^0000FF") + needtr(.stor_name$[.@b_target], .stor_name_en$[.@b_target]) + "^000000";
+		mes needtr("개당 가격 : ","Price each : ") + callfunc("F_InsertComma", .@b_price) + " Zeny";
+		mes needtr("1회 최대 구매 : ","Max per purchase : ") + callfunc("F_InsertComma", .@b_max) + needtr(" 개",".");
+		mes needtr("보유 제니 : ","Your Zeny : ") + callfunc("F_InsertComma", Zeny) + " Zeny";
 		next;
 
 		.@b_sel = select(
-			"100 개",
-			"1,000 개",
-			"10,000 개",
-			"최대 구매 가능 수량 (" + callfunc("F_InsertComma", .@b_afford) + " 개)",
-			"직접 입력",
-			"이전으로"
+			needtr("100 개","100"),
+			needtr("1,000 개","1,000"),
+			needtr("10,000 개","10,000"),
+			needtr("최대 구매 가능 수량 (","Max you can afford (") + callfunc("F_InsertComma", .@b_afford) + needtr(" 개)",")"),
+			needtr("직접 입력","Enter manually"),
+			needtr("이전으로","Back")
 		);
 
 		.@b_amount = 0;
@@ -342,14 +348,14 @@ S_Buy:
 			break;
 
 		case 5:
-			mes "[창고 보급 상점]";
-			mes "구매할 수량을 입력해주세요.";
-			mes "입력 가능 범위 : 1 ~ " + callfunc("F_InsertComma", .@b_max);
+			mes needtr("[창고 보급 상점]","[Storage Supply Shop]");
+			mes needtr("구매할 수량을 입력해주세요.","Enter the quantity you want to buy.");
+			mes needtr("입력 가능 범위 : 1 ~ ","Valid range : 1 ~ ") + callfunc("F_InsertComma", .@b_max);
 			next;
 
 			if (input(.@b_amount, 1, .@b_max) != 0) {
-				mes "[창고 보급 상점]";
-				mes "1 이상 " + callfunc("F_InsertComma", .@b_max) + " 이하의 수량만 입력할 수 있습니다.";
+				mes needtr("[창고 보급 상점]","[Storage Supply Shop]");
+				mes needtr("1 이상 ","You can only enter a quantity from 1 to ") + callfunc("F_InsertComma", .@b_max) + needtr(" 이하의 수량만 입력할 수 있습니다.",".");
 				next;
 				continue;
 			}
@@ -363,12 +369,12 @@ S_Buy:
 		// 입력값은 서버(storageshopbuy)에서 다시 검증하지만,
 		// 안내를 위해 스크립트에서도 범위를 확인한다.
 		if (.@b_amount < 1 || .@b_amount > .@b_max) {
-			mes "[창고 보급 상점]";
+			mes needtr("[창고 보급 상점]","[Storage Supply Shop]");
 
 			if (.@b_afford < 1 && .@b_sel == 4)
-				mes "제니가 부족하여 구매할 수 없습니다.";
+				mes needtr("제니가 부족하여 구매할 수 없습니다.","You do not have enough Zeny to buy that.");
 			else
-				mes "구매 수량이 올바르지 않습니다.";
+				mes needtr("구매 수량이 올바르지 않습니다.","That purchase quantity is not valid.");
 
 			next;
 			continue;
@@ -376,18 +382,18 @@ S_Buy:
 
 		.@b_total = .@b_amount * .@b_price;
 
-		mes "[창고 보급 상점]";
+		mes needtr("[창고 보급 상점]","[Storage Supply Shop]");
 		mes "^0000FF" + getitemname(.@b_id) + "^000000";
 		mes " ";
-		mes "구매 수량 : " + callfunc("F_InsertComma", .@b_amount) + " 개";
-		mes "개당 가격 : " + callfunc("F_InsertComma", .@b_price) + " Zeny";
-		mes "총 가격 : ^FF0000" + callfunc("F_InsertComma", .@b_total) + "^000000 Zeny";
-		mes "지급 위치 : ^0000FF" + .stor_name$[.@b_target] + "^000000";
+		mes needtr("구매 수량 : ","Quantity : ") + callfunc("F_InsertComma", .@b_amount) + needtr(" 개",".");
+		mes needtr("개당 가격 : ","Price each : ") + callfunc("F_InsertComma", .@b_price) + " Zeny";
+		mes needtr("총 가격 : ^FF0000","Total price : ^FF0000") + callfunc("F_InsertComma", .@b_total) + "^000000 Zeny";
+		mes needtr("지급 위치 : ^0000FF","Delivery location : ^0000FF") + needtr(.stor_name$[.@b_target], .stor_name_en$[.@b_target]) + "^000000";
 		mes " ";
 		mes needtr("구매하시겠습니까?", "Would you like to purchase");
 		next;
 
-		if (select("구매", "취소") == 2)
+		if (select(needtr("구매","Buy"), needtr("취소","Cancel")) == 2)
 			continue;
 
 		// 결제 직전에 목적 창고가 아직 준비 상태인지 다시 확인한다.
@@ -400,60 +406,60 @@ S_Buy:
 
 		.@b_result = storageshopbuy(.@b_id, .@b_amount, .@b_target);
 
-		mes "[창고 보급 상점]";
+		mes needtr("[창고 보급 상점]","[Storage Supply Shop]");
 
 		switch (.@b_result) {
 		case 1:
 			// 실제로 창고에 들어간 수량은 서버가 @storageshop_amount 로 알려준다.
-			mes getitemname(.@b_id) + " " + callfunc("F_InsertComma", @storageshop_amount) + "개를";
-			mes "^0000FF" + .stor_name$[.@b_target] + "^000000에 보관했습니다.";
-			mes callfunc("F_InsertComma", @storageshop_total) + " Zeny를 사용했습니다.";
+			mes getitemname(.@b_id) + " " + callfunc("F_InsertComma", @storageshop_amount) + needtr("개를"," stored in");
+			mes "^0000FF" + needtr(.stor_name$[.@b_target], .stor_name_en$[.@b_target]) + needtr("^000000에 보관했습니다.","^000000.");
+			mes callfunc("F_InsertComma", @storageshop_total) + needtr(" Zeny를 사용했습니다."," Zeny spent.");
 			break;
 
 		case -1:
-			mes "지금은 판매하지 않는 품목입니다.";
+			mes needtr("지금은 판매하지 않는 품목입니다.","That item is not on sale right now.");
 			break;
 
 		case -2:
-			mes "구매 수량이 올바르지 않습니다.";
+			mes needtr("구매 수량이 올바르지 않습니다.","That purchase quantity is not valid.");
 			break;
 
 		case -3:
-			mes "제니가 부족하여 구매할 수 없습니다.";
+			mes needtr("제니가 부족하여 구매할 수 없습니다.","You do not have enough Zeny to buy that.");
 			break;
 
 		case -4:
-			mes .stor_name$[.@b_target] + "의 공간이 부족하여 구매할 수 없습니다.";
-			mes "필요한 공간을 확보한 후 다시 시도해주세요.";
+			mes needtr(.stor_name$[.@b_target], .stor_name_en$[.@b_target]) + needtr("의 공간이 부족하여 구매할 수 없습니다."," does not have enough space, so you cannot buy that.");
+			mes needtr("필요한 공간을 확보한 후 다시 시도해주세요.","Please make the space you need and try again.");
 			break;
 
 		case -5:
-			mes "지금은 창고를 사용할 수 없습니다.";
-			mes "창고 창을 닫고 거래나 노점을 종료한 뒤";
-			mes "다시 시도해주세요.";
+			mes needtr("지금은 창고를 사용할 수 없습니다.","Storage cannot be used right now.");
+			mes needtr("창고 창을 닫고 거래나 노점을 종료한 뒤","Close the Storage window, end any trade or vending, and");
+			mes needtr("다시 시도해주세요.","try again.");
 			break;
 
 		case -6:
-			mes "창고에 보관할 수 없는 아이템입니다.";
+			mes needtr("창고에 보관할 수 없는 아이템입니다.","That item cannot be kept in Storage.");
 			break;
 
 		case -7:
-			mes "총 구매 금액이 너무 커서 구매할 수 없습니다.";
-			mes "수량을 줄여서 다시 시도해주세요.";
+			mes needtr("총 구매 금액이 너무 커서 구매할 수 없습니다.","The total price is too high to buy.");
+			mes needtr("수량을 줄여서 다시 시도해주세요.","Please lower the quantity and try again.");
 			break;
 
 		case -8:
-			mes "해당 창고는 아직 이용할 수 없습니다.";
-			mes "창고를 개방한 후 다시 이용해주세요.";
+			mes needtr("해당 창고는 아직 이용할 수 없습니다.","That Storage is not available yet.");
+			mes needtr("창고를 개방한 후 다시 이용해주세요.","Please open the Storage first and come back.");
 			break;
 
 		case -9:
-			mes .stor_name$[.@b_target] + " 정보를 불러오지 못했습니다.";
-			mes "잠시 후 다시 시도해주세요.";
+			mes needtr(.stor_name$[.@b_target], .stor_name_en$[.@b_target]) + needtr(" 정보를 불러오지 못했습니다."," information could not be loaded.");
+			mes needtr("잠시 후 다시 시도해주세요.","Please try again in a moment.");
 			break;
 
 		default:
-			mes "구매에 실패했습니다.";
+			mes needtr("구매에 실패했습니다.","The purchase failed.");
 			break;
 		}
 
@@ -476,6 +482,10 @@ OnInit:
 		"창고 1",
 		"창고 2",
 		"창고 3";
+	setarray .stor_name_en$[0],
+		"Storage 1",
+		"Storage 2",
+		"Storage 3";
 
 	// 표시명 순서는 need_storage_shop.cpp 의 CATEGORIES 테이블 순서와 같아야 한다.
 	setarray .cat_name$[0],
@@ -486,5 +496,13 @@ OnInit:
 		"총알",
 		"캐논볼",
 		"기타 탄환";
+	setarray .cat_name_en$[0],
+		"Recovery / Convenience",
+		"Pharmacy / Crafting Materials",
+		"Skill Consumables",
+		"Arrows",
+		"Bullets",
+		"Cannon Balls",
+		"Other Ammunition";
 	end;
 }

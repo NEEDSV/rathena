@@ -20,6 +20,7 @@
 #include "log.hpp"
 #include "map.hpp"
 #include "mob.hpp"
+#include "need_event_hunt.hpp"
 #include "pc.hpp"
 
 namespace {
@@ -66,10 +67,6 @@ bool golden_schema_checked = false;
 bool golden_schema_available = false;
 bool golden_fail_closed = false;
 
-struct need_summer_hunt_date {
-	char sql_date[11] = {};
-};
-
 bool need_summer_hunt_fragment_ready() {
 	if (fragment_item_checked)
 		return fragment_item_ready;
@@ -80,27 +77,6 @@ bool need_summer_hunt_fragment_ready() {
 		ShowError(msg_txt(nullptr, MSG_SUMMER_HUNT_ITEM_UNAVAILABLE), NEED_SUMMER_FRAGMENT_ITEM_ID);
 
 	return fragment_item_ready;
-}
-
-bool need_summer_hunt_sql_uint32(uint32 column, uint32& value) {
-	char* data = nullptr;
-	if (SQL_SUCCESS != Sql_GetData(mmysql_handle, column, &data, nullptr) || data == nullptr)
-		return false;
-	value = static_cast<uint32>(strtoul(data, nullptr, 10));
-	return true;
-}
-
-bool need_summer_hunt_logical_date(need_summer_hunt_date& result) {
-	time_t shifted = time(nullptr) - (4 * 60 * 60);
-	struct tm* local = localtime(&shifted);
-	return local != nullptr && strftime(result.sql_date, sizeof(result.sql_date), "%Y-%m-%d", local) == 10;
-}
-
-bool need_summer_hunt_client_ip(map_session_data* sd, char (&ip)[16]) {
-	if (sd == nullptr || sd->fd <= 0 || !session_isActive(sd->fd) || session[sd->fd]->client_addr == 0)
-		return false;
-	snprintf(ip, sizeof(ip), "%u.%u.%u.%u", CONVIP(session[sd->fd]->client_addr));
-	return true;
 }
 
 void need_summer_hunt_console_log(const map_session_data* sd, const mob_data* md, const char* ip,
@@ -171,7 +147,7 @@ bool need_summer_hunt_golden_schema_ready() {
 		return false;
 	}
 	uint32 innodb_tables = 0;
-	bool ready = need_summer_hunt_sql_uint32(0, innodb_tables) && innodb_tables == 6;
+	bool ready = need_event_hunt_sql_uint32(0, innodb_tables) && innodb_tables == 6;
 	Sql_FreeResult(mmysql_handle);
 	if (!ready) {
 		ShowError("%s\n", msg_txt(nullptr, MSG_SUMMER_HUNT_SCHEMA_UNAVAILABLE));
@@ -181,56 +157,6 @@ bool need_summer_hunt_golden_schema_ready() {
 
 	golden_schema_available = true;
 	return true;
-}
-
-bool need_summer_hunt_normal_field_target(const map_session_data* sd, const mob_data* md, int32 type) {
-	if (sd == nullptr || md == nullptr || (type & 1) != 0 || md->state.npc_killmonster)
-		return false;
-	if (md->db == nullptr || md->mob_id <= 0 || md->level <= 0)
-		return false;
-
-	const map_data* mapdata = map_getmapdata(md->m);
-	if (mapdata == nullptr || mapdata->instance_id > 0 || mapdata_flag_vs2(mapdata))
-		return false;
-
-	// Boss-type / boss-mode field mobs are allowed to drop the fragment (fising.md sec.3),
-	// e.g. lhz_dun_n. WoE guardians and battleground mobs remain excluded (not field mobs).
-	if (md->guardian_data != nullptr || md->bg_id != 0)
-		return false;
-	if (md->master_id != 0 || md->special_state.ai != AI_NONE || md->special_state.clone)
-		return false;
-	if (md->spawn == nullptr || md->deletetimer != INVALID_TIMER)
-		return false;
-
-	const int64 level_difference = static_cast<int64>(sd->status.base_level) - static_cast<int64>(md->level);
-	return level_difference >= -NEED_SUMMER_LEVEL_DIFFERENCE && level_difference <= NEED_SUMMER_LEVEL_DIFFERENCE;
-}
-
-bool need_summer_hunt_add_fragment(map_session_data* sd) {
-	std::shared_ptr<item_data> item_data = item_db.find(NEED_SUMMER_FRAGMENT_ITEM_ID);
-	if (item_data == nullptr)
-		return false;
-
-	if (sd->weight + item_data->weight > sd->max_weight)
-		return false;
-
-	char add_check = pc_checkadditem(sd, NEED_SUMMER_FRAGMENT_ITEM_ID, 1);
-	if (add_check == CHKADDITEM_OVERAMOUNT || (add_check == CHKADDITEM_NEW && pc_inventoryblank(sd) == 0))
-		return false;
-
-	struct item reward = {};
-	reward.nameid = NEED_SUMMER_FRAGMENT_ITEM_ID;
-	return pc_additem(sd, &reward, 1, LOG_TYPE_PICKDROP_MONSTER) == ADDITEM_SUCCESS;
-}
-
-bool need_summer_hunt_inventory_ready(map_session_data* sd, t_itemid item_id) {
-	std::shared_ptr<item_data> item_data = item_db.find(item_id);
-	if (item_data == nullptr)
-		return false;
-	if (static_cast<uint64>(sd->weight) + static_cast<uint64>(item_data->weight) > static_cast<uint64>(sd->max_weight))
-		return false;
-	char add_check = pc_checkadditem(sd, item_id, 1);
-	return add_check != CHKADDITEM_OVERAMOUNT && (add_check != CHKADDITEM_NEW || pc_inventoryblank(sd) > 0);
 }
 
 bool need_summer_hunt_record_log(map_session_data* sd, mob_data* md, const char* ip,
@@ -274,14 +200,14 @@ void need_summer_hunt_try_golden(map_session_data* sd, mob_data* md) {
 	}
 
 	char ip[16] = {};
-	need_summer_hunt_date logical_date;
-	if (!need_summer_hunt_client_ip(sd, ip) || !need_summer_hunt_logical_date(logical_date)) {
+	need_event_hunt_date logical_date;
+	if (!need_event_hunt_client_ip(sd, ip) || !need_event_hunt_logical_date(logical_date)) {
 		if (need_summer_hunt_golden_schema_ready())
 			need_summer_hunt_log_after_rollback(sd, md, "0.0.0.0", "1970-01-01", 0, 0, RESULT_FAILED, ERROR_INVALID_SESSION);
 		return;
 	}
 
-	if (!need_summer_hunt_inventory_ready(sd, NEED_SUMMER_GOLDEN_ITEM_ID)) {
+	if (!need_event_hunt_inventory_ready(sd, NEED_SUMMER_GOLDEN_ITEM_ID, 1)) {
 		clif_displaymessage(sd->fd, msg_txt(sd, MSG_SUMMER_HUNT_INVENTORY_FULL));
 		if (need_summer_hunt_golden_schema_ready())
 			need_summer_hunt_log_after_rollback(sd, md, ip, logical_date.sql_date, 0, 0, RESULT_FAILED, ERROR_INVENTORY);
@@ -339,7 +265,7 @@ void need_summer_hunt_try_golden(map_session_data* sd, mob_data* md) {
 		return;
 	}
 	if (Sql_NumRows(mmysql_handle) > 0 &&
-		(SQL_SUCCESS != Sql_NextRow(mmysql_handle) || !need_summer_hunt_sql_uint32(0, family_group_id))) {
+		(SQL_SUCCESS != Sql_NextRow(mmysql_handle) || !need_event_hunt_sql_uint32(0, family_group_id))) {
 		Sql_FreeResult(mmysql_handle);
 		transaction_failure();
 		return;
@@ -362,7 +288,7 @@ void need_summer_hunt_try_golden(map_session_data* sd, mob_data* md) {
 			"SELECT `family_group_id`,`first_account_id` FROM `need_summer_hunt_golden_ip_daily` "
 			"WHERE `event_id`='%u' AND `logical_date`='%s' AND `ip`=INET6_ATON('%s') FOR UPDATE",
 			NEED_SUMMER_EVENT_ID, logical_date.sql_date, ip) || SQL_SUCCESS != Sql_NextRow(mmysql_handle) ||
-			!need_summer_hunt_sql_uint32(0, occupied_group) || !need_summer_hunt_sql_uint32(1, first_account_id)) {
+			!need_event_hunt_sql_uint32(0, occupied_group) || !need_event_hunt_sql_uint32(1, first_account_id)) {
 			Sql_FreeResult(mmysql_handle);
 			transaction_failure();
 			return;
@@ -444,13 +370,13 @@ int32 need_summer_fragment_rate(const map_session_data* sd) {
 }  // namespace
 
 void need_summer_hunt_on_kill(map_session_data* sd, mob_data* md, int32 type) {
-	if (battle_config.need_summer_hunt_enable == 0 || !need_summer_hunt_normal_field_target(sd, md, type))
+	if (battle_config.need_summer_hunt_enable == 0 || !need_event_hunt_normal_field_target(sd, md, type, NEED_SUMMER_LEVEL_DIFFERENCE))
 		return;
 
 	if (battle_config.need_summer_hunt_fragment_enable != 0 && need_summer_hunt_fragment_ready() &&
 		rnd_chance<int32>(need_summer_fragment_rate(sd), NEED_SUMMER_RATE_SCALE)) {
 		// Frequent inventory failures are intentionally silent. pc_additem records successful grants in picklog.
-		need_summer_hunt_add_fragment(sd);
+		need_event_hunt_add_item(sd, NEED_SUMMER_FRAGMENT_ITEM_ID, 1);
 	}
 
 	if (battle_config.need_summer_hunt_golden_enable != 0 && !golden_fail_closed &&

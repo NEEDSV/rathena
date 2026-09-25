@@ -395,14 +395,6 @@ static void needwiki_record_code_failure(map_session_data* sd)
 	++attempts.failures;
 }
 
-static void needwiki_display_utf8(map_session_data* sd, const char* message)
-{
-	if (sd == nullptr || message == nullptr)
-		return;
-	const std::string converted = needwiki_utf8_to_cp949(message);
-	clif_displaymessage(sd->fd, converted.c_str());
-}
-
 int32 needwiki_bind_code(map_session_data* sd, const char* code)
 {
 	if (sd != nullptr && sd->state.autotrade) {
@@ -417,25 +409,25 @@ int32 needwiki_bind_code(map_session_data* sd, const char* code)
 
 	if (needwiki_code_rate_limited(sd)) {
 		NEEDWIKI_DIAG("[NeedWiki] wikicode bind: RATE_LIMITED\n");
-		needwiki_display_utf8(sd, "인증 시도 횟수를 초과했습니다. 잠시 후 다시 시도해주세요.");
+		clif_displaymessage(sd->fd, msg_txt(sd, 1541));
 		return -1;
 	}
 	if (!needwiki_code_format_valid(code)) {
 		NEEDWIKI_DIAG("[NeedWiki] wikicode bind: INVALID_CODE\n");
 		needwiki_record_code_failure(sd);
-		needwiki_display_utf8(sd, "존재하지 않거나 만료된 Wiki 인증 코드입니다.");
+		clif_displaymessage(sd->fd, msg_txt(sd, 1542));
 		return -1;
 	}
 	if (mmysql_handle == nullptr) {
 		NEEDWIKI_DIAG("[NeedWiki] wikicode bind: DB_ERROR\n");
-		needwiki_display_utf8(sd, "Wiki 인증 처리 중 오류가 발생했습니다.");
+		clif_displaymessage(sd->fd, msg_txt(sd, 1543));
 		return -1;
 	}
 
 	const std::string code_hash = needwiki_crypto::sha256_hex(code);
 	if (SQL_ERROR == Sql_QueryStr(mmysql_handle, "START TRANSACTION")) {
 		NEEDWIKI_DIAG("[NeedWiki] wikicode bind: DB_ERROR\n");
-		needwiki_display_utf8(sd, "Wiki 인증 처리 중 오류가 발생했습니다.");
+		clif_displaymessage(sd->fd, msg_txt(sd, 1543));
 		return -1;
 	}
 	if (SQL_ERROR == Sql_Query(mmysql_handle,
@@ -443,7 +435,7 @@ int32 needwiki_bind_code(map_session_data* sd, const char* code)
 		"WHERE code_hash='%s' LIMIT 1 FOR UPDATE", code_hash.c_str())) {
 		NEEDWIKI_DIAG("[NeedWiki] wikicode bind: DB_ERROR\n");
 		Sql_QueryStr(mmysql_handle, "ROLLBACK");
-		needwiki_display_utf8(sd, "Wiki 인증 처리 중 오류가 발생했습니다.");
+		clif_displaymessage(sd->fd, msg_txt(sd, 1543));
 		return -1;
 	}
 
@@ -463,7 +455,7 @@ int32 needwiki_bind_code(map_session_data* sd, const char* code)
 		Sql_QueryStr(mmysql_handle, "ROLLBACK");
 		NEEDWIKI_DIAG("[NeedWiki] wikicode bind: INVALID_CODE\n");
 		needwiki_record_code_failure(sd);
-		needwiki_display_utf8(sd, "존재하지 않거나 만료된 Wiki 인증 코드입니다.");
+		clif_displaymessage(sd->fd, msg_txt(sd, 1542));
 		return -1;
 	}
 	if (status != NEEDWIKI_BINDING_WAITING) {
@@ -473,9 +465,7 @@ int32 needwiki_bind_code(map_session_data* sd, const char* code)
 		else
 			NEEDWIKI_DIAG("[NeedWiki] wikicode bind: ALREADY_USED\n");
 		needwiki_record_code_failure(sd);
-		needwiki_display_utf8(sd, status == NEEDWIKI_BINDING_EXPIRED
-			? "존재하지 않거나 만료된 Wiki 인증 코드입니다."
-			: "이미 사용된 Wiki 인증 코드입니다.");
+		clif_displaymessage(sd->fd, msg_txt(sd, status == NEEDWIKI_BINDING_EXPIRED ? 1542 : 1544));
 		return -1;
 	}
 	if (code_expires_at < now) {
@@ -484,7 +474,7 @@ int32 needwiki_bind_code(map_session_data* sd, const char* code)
 		Sql_QueryStr(mmysql_handle, "COMMIT");
 		NEEDWIKI_DIAG("[NeedWiki] wikicode bind: EXPIRED\n");
 		needwiki_record_code_failure(sd);
-		needwiki_display_utf8(sd, "존재하지 않거나 만료된 Wiki 인증 코드입니다.");
+		clif_displaymessage(sd->fd, msg_txt(sd, 1542));
 		return -1;
 	}
 
@@ -505,14 +495,14 @@ int32 needwiki_bind_code(map_session_data* sd, const char* code)
 		SQL_ERROR == Sql_QueryStr(mmysql_handle, "COMMIT")) {
 		Sql_QueryStr(mmysql_handle, "ROLLBACK");
 		NEEDWIKI_DIAG("[NeedWiki] wikicode bind: DB_ERROR\n");
-		needwiki_display_utf8(sd, "Wiki 인증 처리 중 오류가 발생했습니다.");
+		clif_displaymessage(sd->fd, msg_txt(sd, 1543));
 		return -1;
 	}
 
 	needwiki_code_attempts.erase(sd->needwiki_session_generation);
 	NEEDWIKI_DIAG("[NeedWiki] wikicode bind: READY aid=*** cid=*** generation=%" PRIu64 "\n",
 		sd->needwiki_session_generation);
-	needwiki_display_utf8(sd, "Wiki 인증이 완료되었습니다.");
+	clif_displaymessage(sd->fd, msg_txt(sd, 1545));
 	return 0;
 }
 

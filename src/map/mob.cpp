@@ -1,4 +1,4 @@
-// Copyright (c) rAthena Dev Teams - Licensed under GNU GPL
+﻿// Copyright (c) rAthena Dev Teams - Licensed under GNU GPL
 // For more information, see LICENCE in the main folder
 
 #include "mob.hpp"
@@ -40,6 +40,7 @@
 #include "mercenary.hpp"
 #include "need_jf_pattern.hpp"
 #include "need_summer_hunt.hpp"
+#include "need_chuseok_hunt.hpp"
 #include "npc.hpp"
 #include "party.hpp"
 #include "path.hpp"
@@ -2915,6 +2916,51 @@ static const std::set<t_itemid> no_drop_items = {
 	4576,27221,4302,4493,4441,4539,4403,4480,4610,4580,4399,4577
 };
 
+/**
+ * Check whether an item is excluded from monster drops server wide.
+ * Single source of truth for no_drop_items, so operator tools can tell a
+ * database entry that can never drop apart from a valid one.
+ * @param nameid: Item to check
+ * @return true if the item never drops
+ */
+bool mob_is_drop_disabled( t_itemid nameid ){
+	return no_drop_items.count( nameid ) > 0;
+}
+
+/**
+ * Check whether a drop qualifies for the rare drop global announce.
+ * @param rate: Base drop rate of the drop entry (1/10000)
+ * @param bosstype: Boss type of the monster the drop belongs to
+ * @return true if the broadcast would be sent
+ */
+bool mob_rare_drop_announce_allowed( uint32 rate, e_mob_bosstype bosstype ){
+	return rate <= static_cast<uint32>( battle_config.rare_drop_announce ) && bosstype == BOSSTYPE_MVP;
+}
+
+/**
+ * A Rare Drop Global Announce by Lupus
+ * Kept in one place so the real drop routine and any operator command that has
+ * to reproduce the broadcast always emit the very same message.
+ * @param sd: Player credited with the drop
+ * @param mob_name: Display name of the monster, exactly as the killer sees it
+ * @param id: Item that dropped
+ * @param rate: Base drop rate of the drop entry (1/10000)
+ * @param bosstype: Boss type of the monster
+ * @return true if the broadcast was sent
+ */
+bool mob_rare_drop_announce( const map_session_data& sd, const char* mob_name, const item_data& id, uint32 rate, e_mob_bosstype bosstype ){
+	if( !mob_rare_drop_announce_allowed( rate, bosstype ) )
+		return false;
+
+	char message[128];
+
+	sprintf( message, msg_txt( nullptr, 541 ), sd.status.name, mob_name, id.ename.c_str() );
+	//MSG: "'%s' won %s's %s (chance: %0.02f%%)"
+	intif_broadcast( message, strlen( message ) + 1, BC_DEFAULT );
+
+	return true;
+}
+
 struct need_world_drop_tier {
 	const char *name;
 	int32 enable;
@@ -3189,7 +3235,12 @@ static void need_world_drop_on_kill(const need_world_drop_owner& owner, mob_data
 	}
 
 	const int32 level_rate = lv * tier->rate_per_level;
-	const int32 rate_before_event = need_world_drop_clamp_rate(static_cast<int64>(tier->base_rate) + level_rate);
+	// NEED: 사냥 캐시(금화 / 미스릴화) 전역 배율.
+	//       10000 = 배율 없음, 15000 = 1.5배. 정수 나눗셈(버림)으로 계산한다.
+	//       티어 드롭에만 적용하며 의상 상자 bonus / MVP 백금화는 대상이 아니다.
+	//       금화 이벤트 배율은 이 값 위에 다시 곱해지므로 중복 적용에 주의할 것.
+	const int32 rate_before_event = need_world_drop_clamp_rate(
+		(static_cast<int64>(tier->base_rate) + level_rate) * battle_config.need_world_drop_rate_multiplier / 10000);
 
 	need_world_drop_try_reward(owner, md, tier->name, tier->item_id, tier->amount, tier->base_rate, level_rate, rate_before_event, true);
 }
@@ -3620,7 +3671,7 @@ int32 mob_dead(mob_data *md, block_list *src, int32 type)
 			if (entry->nameid == 0)
 				continue;
 
-			if (no_drop_items.count(entry->nameid))
+			if (mob_is_drop_disabled(entry->nameid))
 			{
 				continue;
 			}
@@ -3644,13 +3695,8 @@ int32 mob_dead(mob_data *md, block_list *src, int32 type)
 			std::shared_ptr<s_item_drop> ditem = mob_setdropitem(entry, 1, md->mob_id);
 
 			//A Rare Drop Global Announce by Lupus
-			if (first_sd != nullptr && entry->rate <= battle_config.rare_drop_announce && md->get_bosstype() == BOSSTYPE_MVP)
-			{
-				char message[128];
-				sprintf(message, msg_txt(nullptr, 541), first_sd->status.name, md->name, it->ename.c_str());
-				//MSG: "'%s' won %s's %s (chance: %0.02f%%)"
-				intif_broadcast(message, strlen(message) + 1, BC_DEFAULT);
-			}
+			if (first_sd != nullptr)
+				mob_rare_drop_announce(*first_sd, md->name, *it, entry->rate, md->get_bosstype());
 			// Announce first, or else ditem will be freed. [Lance]
 			// By popular demand, use base drop rate for autoloot code. [Skotlex]
 			mob_item_drop(md, dlist, ditem, 0, battle_config.autoloot_adjust ? drop_rate : entry->rate, homkillonly || merckillonly);
@@ -3785,7 +3831,7 @@ int32 mob_dead(mob_data *md, block_list *src, int32 type)
 				if(entry->nameid == 0)
 					continue;
 
-				if (no_drop_items.count(entry->nameid))
+				if (mob_is_drop_disabled(entry->nameid))
 				{
 					continue;
 				}
@@ -3939,6 +3985,9 @@ int32 mob_dead(mob_data *md, block_list *src, int32 type)
 		}
 		if (need_summer_highest_damage_sd != nullptr && src != nullptr && !md->state.npc_killmonster)
 			need_summer_hunt_on_kill(need_summer_highest_damage_sd, md, type);
+
+		if (need_summer_highest_damage_sd != nullptr && src != nullptr && !md->state.npc_killmonster)
+			need_chuseok_hunt_on_kill(need_summer_highest_damage_sd, md, type);
 
 		if( md->npc_event[0] && !md->state.npc_killmonster ) {
 			if( sd && battle_config.mob_npc_event_type ) {

@@ -171,7 +171,7 @@ dali,139,118,4	script	차원 이동 장치#sara	10007,{
 
 		set .@party_id,getcharid(1);
 		set .@p_name$,getpartyname(.@party_id);
-		set .@md_name$,"사라의 기억";
+		set .@md_name$,"사라의 기억"; set .@md_name_en$,"Sara's Memories";
 
 		if (!.@party_id) {
 			mes needtr("[모험가 레온]", "[Adventurer Leon]");
@@ -189,7 +189,7 @@ dali,139,118,4	script	차원 이동 장치#sara	10007,{
 			if (instance_create(.@md_name$) < 0) {
 				mes needtr("파티명: ", "Party Name: ")+.@p_name$;
 				mes needtr("파티장: ", "Party Leader: ")+strcharinfo(0);
-				mes "^0000ff"+.@md_name$+needtr(" ^000000- 생성 예약 실패!", " ^000000- Reservation Failed!");
+				mes "^0000ff"+needtr(.@md_name$, .@md_name_en$)+needtr(" ^000000- 생성 예약 실패!", " ^000000- Reservation Failed!");
 				close;
 			}
 			mes needtr("^FF0000차원 이동 장치가 정상적으로 가동되었습니다. 장치를 사용하여 시공간의 균열로 입장하십시오.^000000", "^FF0000The dimensional device boots up cleanly. Use the device to enter the crack in space and time.^000000");
@@ -200,14 +200,14 @@ dali,139,118,4	script	차원 이동 장치#sara	10007,{
 				mes needtr("알 수 없는 오류가 발생했습니다.", "An unknown error has occurred.");
 				close;
 			case IE_NOINSTANCE:
-				mes needtr("해당 메모리얼 던전이 ", "The memorial dungeon ")+.@md_name$+needtr(" 존재하지 않습니다.", " does not exist.");
+				mes needtr("해당 메모리얼 던전이 ", "The memorial dungeon ")+needtr(.@md_name$, .@md_name_en$)+needtr(" 존재하지 않습니다.", " does not exist.");
 				mes needtr("파티장이 아직 던전을 생성하지 않았습니다.", "The party leader did not generate the dungeon yet.");
 				close;
 			case IE_NOMEMBER:
-				mes needtr("등록된 파티원만 인스턴스 던전에 입장할 수 있습니다. ", "Only the registered members can enter the instance ")+.@md_name$+".";
+				mes needtr("등록된 파티원만 인스턴스 던전에 입장할 수 있습니다. ", "Only the registered members can enter the instance ")+needtr(.@md_name$, .@md_name_en$)+".";
 				close;
 			case IE_OK:
-				mapannouncelang "dali",strcharinfo(0)+" 파티원이 "+.@p_name$+" 인스턴스에 입장했습니다. "+.@md_name$+".", strcharinfo(0)+", member of the party "+.@p_name$+" entered the instance "+.@md_name$+".",bc_map,"0x00ff99";
+				mapannouncelang "dali",strcharinfo(0)+" 파티원이 "+.@p_name$+" 인스턴스에 입장했습니다. "+.@md_name$+".", strcharinfo(0)+", member of the party "+.@p_name$+" entered the instance "+.@md_name_en$+".",bc_map,"0x00ff99";
 				setquest 15002;
 				// NEED 성장지원 - 실제 입장 성공 시점 학습 기록
 				callfunc("F_NEED_GuideEnter", "SARA");

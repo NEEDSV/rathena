@@ -1,0 +1,73 @@
+//============================================================
+// NEED 2026 여름 이벤트 사용 아이템
+//============================================================
+
+//------------------------------------------------------------
+// 황금 수박
+//------------------------------------------------------------
+function	script	F_NEED_Summer_GoldenWatermelon	{
+	// 랜덤 제니/캐시 보상은 시즌 공통 함수(need_event_reward.txt)를 그대로 사용한다.
+	return callfunc("F_NEED_Event_RandomCashReward", 399927, 202608, "여름 이벤트", "황금 수박");
+}
+
+//------------------------------------------------------------
+// 1억 제니 주머니
+//------------------------------------------------------------
+function	script	F_NEED_Summer_ZenyPouch	{
+	.@item_id = 399929;
+	.@amount = 100000000;
+
+	if (countitem(.@item_id) < 1)
+		return 0;
+
+	if (Zeny > MAX_ZENY - .@amount) {
+		dispbottom needtr("[여름 이벤트] 제니 보유 한도를 초과하여 사용할 수 없습니다.", "[Summer Event] Cannot be used - it would exceed your Zeny holding limit.");
+		return 0;
+	}
+
+	delitem .@item_id,1;
+	.@before = Zeny;
+	Zeny += .@amount;
+	.@granted = Zeny - .@before;
+	if ( .@granted > 0 ) callfunc "F_NEED_Summer_RewardLog", .@item_id, 1, .@granted;
+
+	dispbottom needtr("[여름 이벤트] 제니 1억을 획득했습니다.", "[Summer Event] You obtained 100,000,000 Zeny.");
+	return 1;
+}
+
+
+//------------------------------------------------------------
+// 캐시 10만 포인트 교환권
+//------------------------------------------------------------
+function	script	F_NEED_Summer_CashTicket	{
+	.@item_id = 399930;
+	.@amount = 100000;
+	.@max_cash = 2147483647;
+
+	if (countitem(.@item_id) < 1)
+		return 0;
+
+	if (#CASHPOINTS > .@max_cash - .@amount) {
+		dispbottom needtr("[여름 이벤트] 캐시 포인트 보유 한도를 초과하여 사용할 수 없습니다.", "[Summer Event] Cannot be used - it would exceed your Cash Point holding limit.");
+		return 0;
+	}
+
+	delitem .@item_id,1;
+	.@before = #CASHPOINTS;
+	#CASHPOINTS += .@amount;
+	.@granted = #CASHPOINTS - .@before;
+	if ( .@granted > 0 ) callfunc "F_NEED_Summer_RewardLog", .@item_id, 2, .@granted;
+
+	dispbottom needtr("[여름 이벤트] 캐시 포인트 10만을 획득했습니다.", "[Summer Event] You obtained 100,000 Cash Points.");
+	return 1;
+}
+
+//------------------------------------------------------------
+// 이벤트 보상 Origin Log (Zeny/Cash). ITEM(399931)은 C++ 훅에서 기록.
+//  reward_type: 1=ZENY, 2=CASH. 지급 성공 후 1건 INSERT. 실패해도 보상은 유지(query_sql 오류 무시).
+//------------------------------------------------------------
+function	script	F_NEED_Summer_RewardLog	{
+	// 여름 전용 래퍼. 실제 기록은 시즌 공통 함수가 담당한다.
+	callfunc "F_NEED_Event_RewardLog", 202608, getarg(0), getarg(1), getarg(2);
+	return;
+}

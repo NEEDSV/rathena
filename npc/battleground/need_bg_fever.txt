@@ -166,8 +166,8 @@ function	script	F_NEED_BG_Fever_ClaimReward	{
 
 		#BATTLEGROUND_POINT += .@reward;
 
-		dispbottom "[전장 피버] 기부 랭킹 보상으로 전장 포인트 "
-			+ .@reward + "점을 받았습니다.";
+		dispbottom needtr("[전장 피버] 기부 랭킹 보상으로 전장 포인트 ", "[Battleground Fever] You received ")
+			+ .@reward + needtr("점을 받았습니다.", " Battleground Points as the donation ranking reward.");
 	}
 
 
@@ -345,8 +345,8 @@ function	script	F_NEED_BG_Fever_CheckStage	{
 		$NEED_BG_Fever_PendingStage = .@new;
 
 
-	announce "[전장 피버] 피버 " + .@new
-		+ "단계가 달성되었습니다!", bc_all;
+	announcelang "[전장 피버] 피버 " + .@new
+		+ "단계가 달성되었습니다!", "[Battleground Fever] Fever Stage " + .@new + " has been reached!", bc_all;
 
 
 	//--------------------------------------------------------
@@ -411,36 +411,36 @@ function	script	F_NEED_BG_Fever_CheckStage	{
 		// 실제 기부량은 공개하지 않음.
 		//----------------------------------------------------
 
-		announce "[전장 피버] 피버 3단계가 완성되었습니다!",
+		announcelang "[전장 피버] 피버 3단계가 완성되었습니다!", "[Battleground Fever] Fever Stage 3 is complete!",
 			bc_all;
 
 
 		if ($NEED_BG_Fever_Rank1_AID > 0)
-			announce "[전장 피버] 기부 1위 : "
+			announcelang "[전장 피버] 기부 1위 : "
 				+ $NEED_BG_Fever_Rank1_Name$
 				+ " / 전장 포인트 "
 				+ $NEED_BG_Fever_RankPoint1
-				+ "점", bc_all;
+				+ "점", "[Battleground Fever] Donation rank 1: " + $NEED_BG_Fever_Rank1_Name$ + " / " + $NEED_BG_Fever_RankPoint1 + " Battleground Points", bc_all;
 
 
 		if ($NEED_BG_Fever_Rank2_AID > 0)
-			announce "[전장 피버] 기부 2위 : "
+			announcelang "[전장 피버] 기부 2위 : "
 				+ $NEED_BG_Fever_Rank2_Name$
 				+ " / 전장 포인트 "
 				+ $NEED_BG_Fever_RankPoint2
-				+ "점", bc_all;
+				+ "점", "[Battleground Fever] Donation rank 2: " + $NEED_BG_Fever_Rank2_Name$ + " / " + $NEED_BG_Fever_RankPoint2 + " Battleground Points", bc_all;
 
 
 		if ($NEED_BG_Fever_Rank3_AID > 0)
-			announce "[전장 피버] 기부 3위 : "
+			announcelang "[전장 피버] 기부 3위 : "
 				+ $NEED_BG_Fever_Rank3_Name$
 				+ " / 전장 포인트 "
 				+ $NEED_BG_Fever_RankPoint3
-				+ "점", bc_all;
+				+ "점", "[Battleground Fever] Donation rank 3: " + $NEED_BG_Fever_Rank3_Name$ + " / " + $NEED_BG_Fever_RankPoint3 + " Battleground Points", bc_all;
 
 
-		announce "[전장 피버] 3단계 피버가 적용될 때까지 "
-			+ "추가 기부가 잠시 중단됩니다.",
+		announcelang "[전장 피버] 3단계 피버가 적용될 때까지 "
+			+ "추가 기부가 잠시 중단됩니다.", "[Battleground Fever] Until Fever Stage 3 takes effect, " + "further donations are paused.",
 			bc_all;
 	}
 
@@ -460,10 +460,10 @@ bat_room,148,147,4	script	전장 피버 관리인	4_F_KAFRA1,{
 	callfunc "F_NEED_BG_Fever_ClaimReward";
 
 
-	mes "[전장 피버 관리인]";
-	mes "전장에서 획득한 휘장을 기부하여";
-	mes "모두가 함께 ^FF8000전장 피버^000000를";
-	mes "활성화할 수 있습니다.";
+	mes needtr("[전장 피버 관리인]", "[BG Fever Manager]");
+	mes needtr("전장에서 획득한 휘장을 기부하여", "Donate the badges you earn in battlegrounds");
+	mes needtr("모두가 함께 ^FF8000전장 피버^000000를", "and everyone can raise ^FF8000Battleground Fever^000000");
+	mes needtr("활성화할 수 있습니다.", "together.");
 	setdialogsize(300,300);
 	next;
 
@@ -473,14 +473,14 @@ bat_room,148,147,4	script	전장 피버 관리인	4_F_KAFRA1,{
 		// 현재 단계 표시
 		//----------------------------------------------------
 
-		mes "[전장 피버]";
+		mes needtr("[전장 피버]", "[Battleground Fever]");
 
 		if ($NEED_BG_Fever_Level == 0)
-			mes "현재 전장 피버: ^777777준비 단계^000000";
+			mes needtr("현재 전장 피버: ^777777준비 단계^000000", "Current Battleground Fever: ^777777Preparing^000000");
 		else
-			mes "현재 전장 피버: ^FF8000"
+			mes needtr("현재 전장 피버: ^FF8000", "Current Battleground Fever: ^FF8000Stage ")
 				+ $NEED_BG_Fever_Level
-				+ "단계^000000";
+				+ needtr("단계^000000", "^000000");
 
 
 		//----------------------------------------------------
@@ -533,44 +533,44 @@ bat_room,148,147,4	script	전장 피버 관리인	4_F_KAFRA1,{
 					.@bar$ += "□";
 			}
 
-			mes "다음 단계 진행도:";
+			mes needtr("다음 단계 진행도:", "Progress to the next stage:");
 			mes "^00AAFF" + .@bar$ + "^000000 "
 				+ .@percent + "%";
 
 		}
 		else {
-			mes "진행도: ^00AAFF피버 3단계 완료^000000";
+			mes needtr("진행도: ^00AAFF피버 3단계 완료^000000", "Progress: ^00AAFFFever Stage 3 complete^000000");
 		}
 
 
 		mes " ";
-		mes "나의 이번 피버 누적 기부량:";
-		mes "^00AAFF" + #NEED_BG_FEVER_DONATE + "개^000000";
+		mes needtr("나의 이번 피버 누적 기부량:", "My donations this cycle:");
+		mes "^00AAFF" + #NEED_BG_FEVER_DONATE + needtr("개^000000", "^000000");
 		mes " ";
 
 
 		if ($NEED_BG_Fever_ActiveStage > 0)
-			mes "이번 주말 적용 피버: ^FF8000"
+			mes needtr("이번 주말 적용 피버: ^FF8000", "Fever this weekend: ^FF8000Stage ")
 				+ $NEED_BG_Fever_ActiveStage
-				+ "단계^000000";
+				+ needtr("단계^000000", "^000000");
 		else if ($NEED_BG_Fever_PendingStage > 0)
-			mes "다음 주말 예정 피버: ^FF8000"
+			mes needtr("다음 주말 예정 피버: ^FF8000", "Fever next weekend: ^FF8000Stage ")
 				+ $NEED_BG_Fever_PendingStage
-				+ "단계^000000";
+				+ needtr("단계^000000", "^000000");
 
 
 		mes " ";
-		mes "^777777※ 기부자 순위는 피버 3단계";
-		mes "달성 후 공개됩니다.^000000";
+		mes needtr("^777777※ 기부자 순위는 피버 3단계", "^777777* Donor rankings are revealed once Fever Stage 3");
+		mes needtr("달성 후 공개됩니다.^000000", "has been reached.^000000");
 
 		next;
 
 
 		.@menu = select(
-			"휘장 기부",
-			"피버 단계별 혜택",
-			"기부 시스템 안내",
-			"종료"
+			needtr("휘장 기부", "Donate badges"),
+			needtr("피버 단계별 혜택", "Fever stage benefits"),
+			needtr("기부 시스템 안내", "About the donation system"),
+			needtr("종료", "Exit")
 		);
 
 
@@ -579,24 +579,24 @@ bat_room,148,147,4	script	전장 피버 관리인	4_F_KAFRA1,{
 		case 1:
 
 			if ($NEED_BG_Fever_Locked) {
-				mes "[전장 피버 관리인]";
-				mes "현재 피버 3단계가 완성되어";
-				mes "기부 접수가 잠시 중단되었습니다.";
+				mes needtr("[전장 피버 관리인]", "[BG Fever Manager]");
+				mes needtr("현재 피버 3단계가 완성되어", "Fever Stage 3 is complete, so donations are");
+				mes needtr("기부 접수가 잠시 중단되었습니다.", "paused for the moment.");
 				mes " ";
-				mes "3단계 피버 적용이 종료된 후";
-				mes "새로운 기부가 시작됩니다.";
+				mes needtr("3단계 피버 적용이 종료된 후", "Donations reopen once the Stage 3 Fever");
+				mes needtr("새로운 기부가 시작됩니다.", "has finished being applied.");
 				next;
 				break;
 			}
 
-			mes "[전장 피버 관리인]";
-			mes "어떤 휘장을 기부하시겠습니까?";
+			mes needtr("[전장 피버 관리인]", "[BG Fever Manager]");
+			mes needtr("어떤 휘장을 기부하시겠습니까?", "Which badge would you like to donate?");
 			next;
 
 			.@sel = select(
 				getitemname($NEED_BG_Fever_Item1),
 				getitemname($NEED_BG_Fever_Item2),
-				"취소"
+				needtr("취소", "Cancel")
 			);
 
 			if (.@sel == 3)
@@ -612,29 +612,29 @@ bat_room,148,147,4	script	전장 피버 관리인	4_F_KAFRA1,{
 			.@have = countitem(.@item);
 
 			if (.@have <= 0) {
-				mes "[전장 피버 관리인]";
+				mes needtr("[전장 피버 관리인]", "[BG Fever Manager]");
 				mes getitemname(.@item)
-					+ "을 보유하고 있지 않습니다.";
+					+ needtr("을 보유하고 있지 않습니다.", " is not in your inventory.");
 				next;
 				break;
 			}
 
 
-			mes "[전장 피버 관리인]";
-			mes "보유 수량: ^00AAFF"
-				+ .@have + "개^000000";
+			mes needtr("[전장 피버 관리인]", "[BG Fever Manager]");
+			mes needtr("보유 수량: ^00AAFF", "In your inventory: ^00AAFF")
+				+ .@have + needtr("개^000000", "^000000");
 			mes " ";
-			mes "기부할 수량을 선택해주세요.";
+			mes needtr("기부할 수량을 선택해주세요.", "Please choose how many to donate.");
 			next;
 
 
 			.@amount_sel = select(
-				"10개",
-				"50개",
-				"100개",
-				"직접 입력",
-				"전부 기부",
-				"취소"
+				needtr("10개", "10"),
+				needtr("50개", "50"),
+				needtr("100개", "100"),
+				needtr("직접 입력", "Enter manually"),
+				needtr("전부 기부", "Donate all"),
+				needtr("취소", "Cancel")
 			);
 
 
@@ -653,8 +653,8 @@ bat_room,148,147,4	script	전장 피버 관리인	4_F_KAFRA1,{
 				break;
 
 			case 4:
-				mes "[전장 피버 관리인]";
-				mes "기부할 수량을 입력해주세요.";
+				mes needtr("[전장 피버 관리인]", "[BG Fever Manager]");
+				mes needtr("기부할 수량을 입력해주세요.", "Please enter how many to donate.");
 				input .@amount, 1, .@have;
 				break;
 
@@ -672,24 +672,24 @@ bat_room,148,147,4	script	전장 피버 관리인	4_F_KAFRA1,{
 
 
 			if (countitem(.@item) < .@amount) {
-				mes "[전장 피버 관리인]";
-				mes "휘장이 부족합니다.";
+				mes needtr("[전장 피버 관리인]", "[BG Fever Manager]");
+				mes needtr("휘장이 부족합니다.", "You do not have enough badges.");
 				next;
 				break;
 			}
 
 
-			mes "[전장 피버 관리인]";
+			mes needtr("[전장 피버 관리인]", "[BG Fever Manager]");
 			mes getitemname(.@item)
 				+ " ^FF8000"
 				+ .@amount
-				+ "개^000000를 기부하시겠습니까?";
+				+ needtr("개^000000를 기부하시겠습니까?", "^000000. Donate this many?");
 			mes " ";
-			mes "^FF0000기부한 휘장은 되돌릴 수 없습니다.^000000";
+			mes needtr("^FF0000기부한 휘장은 되돌릴 수 없습니다.^000000", "^FF0000Donated badges cannot be taken back.^000000");
 			next;
 
 
-			if (select("기부한다","취소") == 2)
+			if (select(needtr("기부한다", "Donate"),needtr("취소", "Cancel")) == 2)
 				break;
 
 
@@ -698,15 +698,15 @@ bat_room,148,147,4	script	전장 피버 관리인	4_F_KAFRA1,{
 			//------------------------------------------------
 
 			if ($NEED_BG_Fever_Locked) {
-				mes "[전장 피버 관리인]";
-				mes "이미 피버 3단계가 달성되었습니다.";
+				mes needtr("[전장 피버 관리인]", "[BG Fever Manager]");
+				mes needtr("이미 피버 3단계가 달성되었습니다.", "Fever Stage 3 has already been reached.");
 				next;
 				break;
 			}
 
 			if (countitem(.@item) < .@amount) {
-				mes "[전장 피버 관리인]";
-				mes "휘장 수량이 변경되어 기부할 수 없습니다.";
+				mes needtr("[전장 피버 관리인]", "[BG Fever Manager]");
+				mes needtr("휘장 수량이 변경되어 기부할 수 없습니다.", "Your badge count changed, so the donation cannot go through.");
 				next;
 				break;
 			}
@@ -722,13 +722,13 @@ bat_room,148,147,4	script	전장 피버 관리인	4_F_KAFRA1,{
 			callfunc "F_NEED_BG_Fever_CheckStage";
 
 
-			mes "[전장 피버 관리인]";
+			mes needtr("[전장 피버 관리인]", "[BG Fever Manager]");
 			mes "^00AAFF" + .@amount
-				+ "개^000000의 휘장을 기부했습니다.";
+				+ needtr("개^000000의 휘장을 기부했습니다.", "^000000 badges donated.");
 			mes " ";
-			mes "나의 누적 기부량: ^00AAFF"
+			mes needtr("나의 누적 기부량: ^00AAFF", "My total donated: ^00AAFF")
 				+ #NEED_BG_FEVER_DONATE
-				+ "개^000000";
+				+ needtr("개^000000", "^000000");
 
 			next;
 			break;
@@ -736,48 +736,48 @@ bat_room,148,147,4	script	전장 피버 관리인	4_F_KAFRA1,{
 
 		case 2:
 
-			mes "[전장 피버 혜택]";
-			mes "^00AAFF피버 1단계^000000";
-			mes "주말 핫타임 금화 최종 ^FF80002.3배^000000";
+			mes needtr("[전장 피버 혜택]", "[Battleground Fever Benefits]");
+			mes needtr("^00AAFF피버 1단계^000000", "^00AAFFFever Stage 1^000000");
+			mes needtr("주말 핫타임 금화 최종 ^FF80002.3배^000000", "Weekend hot time Gold, final ^FF80002.3x^000000");
 			mes " ";
-			mes "^00AAFF피버 2단계^000000";
-			mes "주말 핫타임 금화 최종 ^FF80002.5배^000000";
+			mes needtr("^00AAFF피버 2단계^000000", "^00AAFFFever Stage 2^000000");
+			mes needtr("주말 핫타임 금화 최종 ^FF80002.5배^000000", "Weekend hot time Gold, final ^FF80002.5x^000000");
 			mes " ";
-			mes "^00AAFF피버 3단계^000000";
-			mes "주말 핫타임 금화 최종 ^FF80002.5배^000000";
-			mes "전투 휘장 최종 ^FF80003배^000000";
+			mes needtr("^00AAFF피버 3단계^000000", "^00AAFFFever Stage 3^000000");
+			mes needtr("주말 핫타임 금화 최종 ^FF80002.5배^000000", "Weekend hot time Gold, final ^FF80002.5x^000000");
+			mes needtr("전투 휘장 최종 ^FF80003배^000000", "War Badges, final ^FF80003x^000000");
 			next;
 			break;
 
 
 		case 3:
 
-			mes "[전장 피버 관리인]";
-			mes "용맹의 휘장과 특공의 휘장을";
-			mes "기부하여 서버 전체 피버를";
-			mes "올릴 수 있습니다.";
+			mes needtr("[전장 피버 관리인]", "[BG Fever Manager]");
+			mes needtr("용맹의 휘장과 특공의 휘장을", "Donate Bravery Badges and Valor Badges");
+			mes needtr("기부하여 서버 전체 피버를", "to raise the Fever for the whole");
+			mes needtr("올릴 수 있습니다.", "server.");
 			mes " ";
-			mes "단계에 도달하지 못해도";
-			mes "^00AAFF기부 진행도는 초기화되지 않습니다.^000000";
+			mes needtr("단계에 도달하지 못해도", "Even if a stage is not reached,");
+			mes needtr("^00AAFF기부 진행도는 초기화되지 않습니다.^000000", "^00AAFFdonation progress is never reset.^000000");
 			mes " ";
-			mes "단계 달성 시 해당 피버가";
-			mes "주말 전장 핫타임에 적용됩니다.";
+			mes needtr("단계 달성 시 해당 피버가", "When a stage is reached, that Fever applies");
+			mes needtr("주말 전장 핫타임에 적용됩니다.", "to the weekend battleground hot time.");
 			mes " ";
-			mes "3단계 달성 시 한 사이클이 완료되며";
-			mes "전체 누적 기부량을 기준으로";
-			mes "TOP 3 기부자가 결정됩니다.";
+			mes needtr("3단계 달성 시 한 사이클이 완료되며", "Reaching Stage 3 completes a cycle, and the");
+			mes needtr("전체 누적 기부량을 기준으로", "TOP 3 donors are decided on total");
+			mes needtr("TOP 3 기부자가 결정됩니다.", "donations across the cycle.");
 			next;
 
-			mes "[랭킹 보상]";
-			mes "1위 : 전장 포인트 ^FF8000"
-				+ $NEED_BG_Fever_RankPoint1 + "점^000000";
-			mes "2위 : 전장 포인트 ^FF8000"
-				+ $NEED_BG_Fever_RankPoint2 + "점^000000";
-			mes "3위 : 전장 포인트 ^FF8000"
-				+ $NEED_BG_Fever_RankPoint3 + "점^000000";
+			mes needtr("[랭킹 보상]", "[Ranking Rewards]");
+			mes needtr("1위 : 전장 포인트 ^FF8000", "1st : Battleground Points ^FF8000")
+				+ $NEED_BG_Fever_RankPoint1 + needtr("점^000000", "^000000");
+			mes needtr("2위 : 전장 포인트 ^FF8000", "2nd : Battleground Points ^FF8000")
+				+ $NEED_BG_Fever_RankPoint2 + needtr("점^000000", "^000000");
+			mes needtr("3위 : 전장 포인트 ^FF8000", "3rd : Battleground Points ^FF8000")
+				+ $NEED_BG_Fever_RankPoint3 + needtr("점^000000", "^000000");
 			mes " ";
-			mes "진행 중인 기부 순위와";
-			mes "다른 유저의 기부량은 공개되지 않습니다.";
+			mes needtr("진행 중인 기부 순위와", "Live donation rankings and other players'");
+			mes needtr("다른 유저의 기부량은 공개되지 않습니다.", "donation totals are not shown.");
 			next;
 			break;
 
@@ -866,10 +866,10 @@ OnClock0400:
 
 			$NEED_BG_Fever_PendingStage = 0;
 
-			announce "[전장 피버] 이번 주말 전장 핫타임에 "
+			announcelang "[전장 피버] 이번 주말 전장 핫타임에 "
 				+ "피버 "
 				+ $NEED_BG_Fever_ActiveStage
-				+ "단계가 적용됩니다!", bc_all;
+				+ "단계가 적용됩니다!", "[Battleground Fever] During the battleground hot time this weekend, " + "Fever Stage " + $NEED_BG_Fever_ActiveStage + " will be applied!", bc_all;
 		}
 
 		end;
@@ -921,8 +921,8 @@ OnClock0400:
 			$NEED_BG_Fever_Rank3_Name$ = "";
 
 
-			announce "[전장 피버] 새로운 전장 피버 기부가 "
-				+ "시작되었습니다!", bc_all;
+			announcelang "[전장 피버] 새로운 전장 피버 기부가 "
+				+ "시작되었습니다!", "[Battleground Fever] A new Battleground Fever donation drive has " + "begun!", bc_all;
 		}
 
 		end;

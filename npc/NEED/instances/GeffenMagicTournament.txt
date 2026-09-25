@@ -266,7 +266,7 @@ OnInstanceInit:
 //1@gef,196,111,3	shop	요리사#gef_0et::Cook#gef_0et	85,7482:-1
 
 1@gef,131,58,4	script	게펜 코인 교환원#g	4_F_ZONDAGIRL,{ // 55149
-	.@n$ = "[ 게펜 코인 교환원 ]";
+	.@n$ = needtr("[ 게펜 코인 교환원 ]", "[ Geffen Coin Operator ]");
 	mes .@n$,needtr("마법 대회 코인을 다양한 장비로 교환해 드리고 있습니다.", "I exchange Magic Tournament Coins for Equipment."); next;
 	goto L_Menu;
 	end;
@@ -683,9 +683,9 @@ OnTouch_:
 }
 
 dali,100,147,3	script	차원 이동 장치#gefma::Dimensional Device#gefma	PORTAL,{
-	.@n$ = "[ 차원 이동 장치 ]";
+	.@n$ = needtr("[ 차원 이동 장치 ]", "[ Dimensional Device ]");
 	.@instance_db_id = 15;
-	.@md_name$ = "게펜 마법 대회";
+	.@md_name$ = "게펜 마법 대회"; .@md_name_en$ = "Geffen Magic Tournament";
 
 	// 퀘스트 9316 쿨타임 확인
 	.@cooldown = checkquest(9316, PLAYTIME);
@@ -800,14 +800,14 @@ dali,100,147,3	script	차원 이동 장치#gefma::Dimensional Device#gefma	PORTAL,{
 				case 1:
 					mes .@n$;
 					mes needtr("등록된 모험가님만", "Only adventurers registered for");
-					mes .@md_name$ + needtr("에 입장하실 수 있습니다.", " may enter.");
+					mes needtr(.@md_name$, .@md_name_en$) + needtr("에 입장하실 수 있습니다.", " may enter.");
 					end;
 
 				case 0:
 					mapannouncelang "dali02",
 						strcharinfo(0) + " 파티원 중 한 명이 " +
 						.@p_name$ + " 대회장으로 " +
-						.@md_name$ + "에 진입 중입니다.", strcharinfo(0) + ", a member of the party " + .@p_name$ + ", is entering the " + .@md_name$ + " arena.",
+						.@md_name$ + "에 진입 중입니다.", strcharinfo(0) + ", a member of the party " + .@p_name$ + ", is entering the " + .@md_name_en$ + " arena.",
 						bc_map;
 
 					// 실제 입장 성공 시에만 쿨타임 시작
@@ -824,9 +824,9 @@ dali,100,147,3	script	차원 이동 장치#gefma::Dimensional Device#gefma	PORTAL,{
 }
 
 dali,98,141,3	script	에밋 화이트	4_M_KHKYEL,{
-	.@n$ = "[ 시간 여행 연구가 ]";
+	.@n$ = needtr("[ 시간 여행 연구가 ]", "[ Time Travel Researcher ]");
 	.@instance_db_id = 15;
-	.@md_name$ = "게펜 마법 대회";
+	.@md_name$ = "게펜 마법 대회"; .@md_name_en$ = "Geffen Magic Tournament";
 
 	// 업데이트 이전에 완료 퀘스트가 남아 있는 계정은 빠른 진행을 소급 해금합니다.
 	if (checkquest(9308) != -1 || checkquest(9309) != -1)
@@ -1011,7 +1011,7 @@ dali,98,141,3	script	에밋 화이트	4_M_KHKYEL,{
 				mes .@n$;
 				mes needtr("파티 이름: ", "Party Name: ") + .@p_name$;
 				mes needtr("파티장: ", "Party Leader: ") + strcharinfo(0);
-				mes "^0000FF" + .@md_name$ + "^000000";
+				mes "^0000FF" + needtr(.@md_name$, .@md_name_en$) + "^000000";
 				mes needtr("예약에 실패했습니다!", "Reservation failed!");
 				end;
 			}
@@ -1095,7 +1095,7 @@ OnInstanceInit:
 
 1@gef,123,203,4	script	대회 안내원#gfmg	705,{
 	cutin "gef_soldier.bmp",2;
-	.@n$ = "[ 대회 안내원 ]";
+	.@n$ = needtr("[ 대회 안내원 ]", "[ Tournament Guide ]");
 	mes .@n$,needtr("마법의 도시 ^8B4513게펜^000000에 오신 것을 환영합니다.", "Welcome to the Magical city of ^8B4513Geffen^000000.");
 	next;
 	mes .@n$,needtr("^55CC55마법 대회^000000를 관람하고 싶으시다면 게펜 남쪽 분수대로 가보세요.", "If you want to watch the ^55CC55Magic Tournament^000000 go to the southern fountain of Geffen.");
@@ -1118,7 +1118,7 @@ OnEnable:
 
 1@gef,122,58,4	script	접수원#1_0et	4_M_ARUNA_NFM1,{
 
-	.@n$ = "[ 대회 접수원 ]";
+	.@n$ = needtr("[ 대회 접수원 ]", "[ Tournament Receptionist ]");
 
 	if ( checkquest(9309) != -1 ) {
 		mes .@n$;
@@ -1543,7 +1543,7 @@ end;
 
 OnTouch_:
 	ignoretimeout 1;
-	.@n$ = "[ 게펜 학원장 ]";
+	.@n$ = needtr("[ 게펜 학원장 ]", "[ Geffen Academy Master ]");
 
 	if ('GMT_1QUE < 11) {
 		if (#NEED_MD_GEFFEN_CLEAR && !'GMT_MODE_SELECTED) {
@@ -1630,7 +1630,7 @@ OnInstanceInit:
 }
 
 1@ge_st,107,57,4	script	대회 안내원#gefMT	4_M_HUMAN_02,{
-	.@n$ = "[ 대회 안내원 ]";
+	.@n$ = needtr("[ 대회 안내원 ]", "[ Tournament Guide ]");
 	ignoretimeout 1;
 	if (checkquest(9308) != -1) {
 		#NEED_MD_GEFFEN_CLEAR = 1;
@@ -1643,7 +1643,7 @@ OnInstanceInit:
 				mes needtr("그건 그렇고, 학원장님께서", "By the way, the Academy Master has"),needtr("전하실 말씀이 있다고 하시네요!", "something to tell you!");
 				next;
 				cutin "acamaster_a.bmp",2;
-				.@n2$ = "[ 게펜 학원장 ]";
+				.@n2$ = needtr("[ 게펜 학원장 ]", "[ Geffen Academy Master ]");
 				mes .@n2$,
 				needtr("진심으로 축하하네!", "Congratulations!"),
 				needtr("이번 대회는 역대 그 어느 때보다", "This has been the best pool of"),
@@ -1697,11 +1697,11 @@ OnInstanceInit:
 	mes .@n$;
 	if ('GMT_1QUE <22) {
 		mes needtr("축하합니다! 무려 ", "Congratulations on winning the ")+callfunc("F_GetNumSuffix",('GMT_1QUE-10))+needtr(" 라운드에서 승리하셨군요!", " round!");
-		.@menu$ = "자, 그럼 "+callfunc("F_GetNumSuffix",('GMT_1QUE-9))+" 매치를 시작하시겠습니까?";
+		.@menu$ = needtr("자, 그럼 ", "Shall we begin the ")+callfunc("F_GetNumSuffix",('GMT_1QUE-9))+needtr(" 매치를 시작하시겠습니까?", " match?");
 	}
 	else {
 		mes needtr("대단해요! 드디어 A조의 모든 상대를 꺾고 올라오셨군요! 결승전에서도 건투를 빕니다!", "Congratulations! You've defeated every other opponent in Group A! Good luck on the final!");
-		.@menu$ = "영광의 결승전을 시작하겠습니다.";
+		.@menu$ = needtr("영광의 결승전을 시작하겠습니다.", "Let's begin the glorious final match.");
 	}
 	next;
 	
@@ -2403,80 +2403,80 @@ OnTimeout2:
 		case 11:
 			enablenpc instance_npcname("아르히#1");
 			donpcevent instance_npcname("아르히#1")+"::OnVictory";
-			.@defeat$ = "노비스, 아르히!";
+			.@defeat$ = "노비스, 아르히!"; .@defeat_en$ = "The Novice, Arhi!";
 			break;
 		case 12:
 			enablenpc instance_npcname("디오 아네모스#1");
 			donpcevent instance_npcname("디오 아네모스#1")+"::OnVictory";
-			.@defeat$ = "마법사 지망생, 디오 아네모스!";
+			.@defeat$ = "마법사 지망생, 디오 아네모스!"; .@defeat_en$ = "The Magician Apprentice, Dio Anemos!";
 			break;
 		case 13:
 			if ('GMTQuest == 1) {
 				enablenpc instance_npcname("게펜 건달#n1");
 				donpcevent instance_npcname("게펜 건달#n1")+"::OnVictory";
-				.@defeat$ = "게펜 건달!";
+				.@defeat$ = "게펜 건달!"; .@defeat_en$ = "Geffen Gangster!";
 			} else if ('GMTQuest == 2) {
 				enablenpc instance_npcname("게펜 양아치#n1");
 				donpcevent instance_npcname("게펜 양아치#n1")+"::OnVictory";
-				.@defeat$ = "게펜 양아치!";
+				.@defeat$ = "게펜 양아치!"; .@defeat_en$ = "Gefen Bully!";
 				break;
 			} else {
 				enablenpc instance_npcname("게펜 소매치기#n1");
 				donpcevent instance_npcname("게펜 소매치기#n1")+"::OnVictory";
-				.@defeat$ = "게펜 소매치기!";
+				.@defeat$ = "게펜 소매치기!"; .@defeat_en$ = "Geffen Shoplifter!";
 				break;
 			}
 			break;
 		case 14:
 			enablenpc instance_npcname("페이몬트#1");
 			donpcevent instance_npcname("페이몬트#1")+"::OnVictory";
-			.@defeat$ = "Prontera's pride and style, Feymont!";
+			.@defeat$ = "Prontera's pride and style, Feymont!"; .@defeat_en$ = "Prontera's pride and style, Feymont!";
 			break;
 		case 15:
 			enablenpc instance_npcname("오르드르#1");
 			donpcevent instance_npcname("오르드르#1")+"::OnVictory";
-			.@defeat$ = "자칭 전투의 달인, 오르드르!";
+			.@defeat$ = "자칭 전투의 달인, 오르드르!"; .@defeat_en$ = "Self proclaimed Master of Battle, Ordre!";
 			break;
 		case 16:
 			enablenpc instance_npcname("블루트 하제#1");
 			donpcevent instance_npcname("블루트 하제#1")+"::OnVictory";
-			.@defeat$ = "피로 물든 토끼귀~!! 블루트 하제!";
+			.@defeat$ = "피로 물든 토끼귀~!! 블루트 하제!"; .@defeat_en$ = "Bloody Rabbit Ears~!! Blut Hase!";
 			break;
 		case 17:
 			enablenpc instance_npcname("쿠로 아쿠마#1");
 			donpcevent instance_npcname("쿠로 아쿠마#1")+"::OnVictory";
-			.@defeat$ = "악마의 송곳니! 쿠로 아쿠마!";
+			.@defeat$ = "악마의 송곳니! 쿠로 아쿠마!"; .@defeat_en$ = "The Devil's Tooth! Kuro Akuma!";
 			break;
 		case 18:
 			enablenpc instance_npcname("이포데스#1");
 			donpcevent instance_npcname("이포데스#1")+"::OnVictory";
-			.@defeat$ = "룬 미드가르츠의 광인! 이포데스!";
+			.@defeat$ = "룬 미드가르츠의 광인! 이포데스!"; .@defeat_en$ = "The Maniac of Rune Mindgard! Ifodes!";
 			break;
 		case 19:
 			enablenpc instance_npcname("레케니에스#1");
 			donpcevent instance_npcname("레케니에스#1")+"::OnVictory";
-			.@defeat$ = "죽음의 여인! 레케니에스!";
+			.@defeat$ = "죽음의 여인! 레케니에스!"; .@defeat_en$ = "The Lady of Death! Licheniyes!";
 			break;
 		case 20:
 			enablenpc instance_npcname("오도릭#1");
 			donpcevent instance_npcname("오도릭#1")+"::OnVictory";
-			.@defeat$ = "죽음의 가희! 오도릭!";
+			.@defeat$ = "죽음의 가희! 오도릭!"; .@defeat_en$ = "The Songstress of Death! Odoric!";
 			break;
 		case 21:
 			enablenpc instance_npcname("쥬#1");
 			donpcevent instance_npcname("쥬#1")+"::OnVictory";
-			.@defeat$ = "힘과 속도의 지배자! 쥬!";
+			.@defeat$ = "힘과 속도의 지배자! 쥬!"; .@defeat_en$ = "Master of power and speed! Ju!";
 			break;
 		case 22:
 			if ('half) {
 				enablenpc instance_npcname("드와이#1");
 				donpcevent instance_npcname("드와이#1")+"::OnVictory";
-				.@defeat$ = "지전투와 지략의 사령관! 드와이!";
+				.@defeat$ = "지전투와 지략의 사령관! 드와이!"; .@defeat_en$ = "Commander of battle and wits! Dwigh!";
 				break;
 			} else {
 				enablenpc instance_npcname("페이 카나비안#1");
 				donpcevent instance_npcname("페이 카나비안#1")+"::OnVictory";
-				.@defeat$ = "페이 카나비안과 호문클루스 알폰스!";
+				.@defeat$ = "페이 카나비안과 호문클루스 알폰스!"; .@defeat_en$ = "Fay Kanavian and her homunculus Alphonse!";
 				
 				if ('HomID) {
 					killmonster instance_mapname("1@ge_st"),instance_npcname("#GMTHomun")+"::OnHomJR";
@@ -2489,11 +2489,11 @@ OnTimeout2:
 		case 23:
 			enablenpc instance_npcname("펜릴#f");
 			donpcevent instance_npcname("펜릴#f")+"::OnVictory";
-			.@defeat$ = "푸른 마법사! 펜리스 펜릴~!!";
+			.@defeat$ = "푸른 마법사! 펜리스 펜릴~!!"; .@defeat_en$ = "The Blue Wizard! Fenris Fenrir~!!";
 			break;
 	}
 	
-	npctalklang "심사위원 판정 결과, "+callfunc("F_GetNumSuffix",('GMT_1QUE-10))+" 매치의 최종 승자는 바로...! "+.@defeat$, "The winner of the "+callfunc("F_GetNumSuffix",('GMT_1QUE-10))+" match in Group A by judge's decision is...! "+.@defeat$, "게펜 학원장";
+	npctalklang "심사위원 판정 결과, "+callfunc("F_GetNumSuffix",('GMT_1QUE-10))+" 매치의 최종 승자는 바로...! "+.@defeat$, "The winner of the "+callfunc("F_GetNumSuffix",('GMT_1QUE-10))+" match in Group A by judge's decision is...! "+.@defeat_en$, "게펜 학원장";
 	sleep callfunc("F_GMT_RoundDelay",1500);
 	//donpcevent instance_npcname("#DEATHGMT")+"::OnLoseRound";
 	npctalklang "패배한 선수에게도 아낌없는 격려의 박수를 보내주세요.", "Give a warm round of applause to the losing competitor.", "게펜 학원장";
@@ -2702,13 +2702,16 @@ OnRndtalk:
 	for (.@i = 0; .@i <.@iter ;.@i++) {
 	.@group = rand(30);
 	if (.@group <18) {
-		showscript 'audience$[rand(.@audience_count)],getnpcid(0,instance_npcname("대회 관람객#"+rand(70,257)));
-		showscript 'audience$[rand(.@audience_count)],getnpcid(0,instance_npcname("대회 관람객#"+rand(70,257)));
+		.@p127_idx_2705 = rand(.@audience_count);
+		showscriptlang 'audience$[.@p127_idx_2705], 'audience_en$[.@p127_idx_2705],getnpcid(0,instance_npcname("대회 관람객#"+rand(70,257)));
+		.@p127_idx_2706 = rand(.@audience_count);
+		showscriptlang 'audience$[.@p127_idx_2706], 'audience_en$[.@p127_idx_2706],getnpcid(0,instance_npcname("대회 관람객#"+rand(70,257)));
 	} else if (.@group <23) {
-		showscript 'student$[rand(.@student_count)],getnpcid(0,instance_npcname("마법 학원 학생#" + rand(1,5)));
+		.@p127_idx_2708 = rand(.@student_count);
+		showscriptlang 'student$[.@p127_idx_2708], 'student_en$[.@p127_idx_2708],getnpcid(0,instance_npcname("마법 학원 학생#" + rand(1,5)));
 	} else {
 		.@id = rand(.@tourist_count);
-		showscript 'touristname2$[.@id]+'tourist$[.@id],getnpcid(0,instance_npcname('touristname$[.@id]));
+		showscriptlang 'touristname2$[.@id]+'tourist$[.@id], 'touristname2_en$[.@id]+'tourist_en$[.@id],getnpcid(0,instance_npcname('touristname$[.@id]));
 	}
 	sleep rand(2,5) * 100;
 	}
@@ -2732,13 +2735,16 @@ OnTimer13000:
 			.@group = rand(30);
 			
 				if ( .@group <18) {
-					showscript 'audience$[rand(.@audience_count)],getnpcid(0,instance_npcname("대회 관람객#"+rand(70,257)));
-					showscript 'audience$[rand(.@audience_count)],getnpcid(0,instance_npcname("대회 관람객#"+rand(70,257)));
+					.@p127_idx_2735 = rand(.@audience_count);
+					showscriptlang 'audience$[.@p127_idx_2735], 'audience_en$[.@p127_idx_2735],getnpcid(0,instance_npcname("대회 관람객#"+rand(70,257)));
+					.@p127_idx_2736 = rand(.@audience_count);
+					showscriptlang 'audience$[.@p127_idx_2736], 'audience_en$[.@p127_idx_2736],getnpcid(0,instance_npcname("대회 관람객#"+rand(70,257)));
 				} else if (.@group <23) {
-					showscript 'student$[rand(.@student_count)],getnpcid(0,instance_npcname("마법 학원 학생#" + rand(1,5)));
+					.@p127_idx_2738 = rand(.@student_count);
+					showscriptlang 'student$[.@p127_idx_2738], 'student_en$[.@p127_idx_2738],getnpcid(0,instance_npcname("마법 학원 학생#" + rand(1,5)));
 				} else {
 					.@id = rand(.@tourist_count);
-					showscript 'touristname2$[.@id]+'tourist$[.@id],getnpcid(0,instance_npcname('touristname$[.@id]));
+					showscriptlang 'touristname2$[.@id]+'tourist$[.@id], 'touristname2_en$[.@id]+'tourist_en$[.@id],getnpcid(0,instance_npcname('touristname$[.@id]));
 				}
 					
 	
@@ -2771,11 +2777,39 @@ OnInstanceInit:
 		"대회 관람객 : 구경만 해도 이렇게 재밌을 수가 없네!",
 		"대회 관람객 : 와, 손에 땀이 다 나네...",
 		"대회 관람객 : 자, 승부를 내라!";
+	setarray 'audience_en$,
+		"Tournament Spectator : I've been watiing for this round!",
+		"Tournament Spectator : Hope this round's an interesting match up!",
+		"Tournament Spectator : Oh! Ah! Oh! Ah!",
+		"Tournament Spectator : Oooh, finally started!",
+		"Tournament Spectator : Start already! Fight! Come on, start!",
+		"Tournament Spectator : Is this that guy's first time? I feel he's very powerful, ah!",
+		"Tournament Spectator : Who do you think will win?",
+		"Tournament Spectator : Come on, start!",
+		"Tournament Spectator : Get it on already!",
+		"Tournament Spectator : I feel like I'm in danger...",
+		"Tournament Spectator : I'm counting on that "+('sex ? "guy" : "girl")+" to lose!",
+		"Tournament Spectator : Gotta feel sorry for that guy! Come on!",
+		"Tournament Spectator : He's terrific! You've got this! Come on!",
+		"Tournament Spectator : I'm having such a great time here!",
+		"Tournament Spectator : Come on!~~",
+		"Tournament Spectator : Let's see what you've got "+'charname$+"!",
+		"Tournament Spectator : He's probably going to lose this round.",
+		"Tournament Spectator : This contest has a lot of good participants.",
+		"Tournament Spectator : Do not be afraid, come on!",
+		"Tournament Spectator : Almost to start huh?",
+		"Tournament Spectator : Even just watching this is fun!",
+		"Tournament Spectator : My hands are sweating...",
+		"Tournament Spectator : Come on let's go!";
 
 	setarray 'student$,
 		"마법 학원 학생: 야~ 호~",
 		"마법 학원 학생: 우와, 나까지 가슴이 떨려!",
 		"마법 학원 학생: 두 분 다 힘내세요! 파이팅!";
+	setarray 'student_en$,
+		"Magic Academy Student: Ya~ Hoo~",
+		"Magic Academy Student: Wow, I'm so nervous!",
+		"Magic Academy Student: Both of you please! Come on!";
 
 	setarray 'tourist$,
 		" : 오, 열기가 대단해지기 시작하는데...",
@@ -2786,6 +2820,15 @@ OnInstanceInit:
 		" : 참가자들 기운이 정말 펄펄 넘치는군!",
 		" : 그건 참 다행이야...",
 		" : 너무 금방 지지 마라! 오!~";
+	setarray 'tourist_en$,
+		" : Oh, the atmosphere's starting to heat up...",
+		" : This is so energizing!",
+		" : There's no Payon contestants are there?",
+		" : The atmosphere here is great!",
+		" : Oooh! Come on!",
+		" : These participants are so energetic!",
+		" : Good thing too...",
+		" : Don't lose too quickly! Oh!~";
 
 	setarray 'touristname$,
 		"프론테라 관람객#a1",
@@ -2806,6 +2849,15 @@ OnInstanceInit:
 		"알베르타 관람객",
 		"베인스 관람객",
 		"코모도 관람객";
+	setarray 'touristname2_en$,
+		"Prontera Spectator",
+		"Prontera Spectator",
+		"Payon Spectator",
+		"Payon Spectator",
+		"Alberta Spectator",
+		"Alberta Spectator",
+		"Veins Spectator",
+		"Comodo Spectator";
 		end;
 
 }
@@ -4000,61 +4052,61 @@ OnLoseRound:
 		
 	switch ('GMT_1QUE) {
 		case 11:
-			.@defeat$ = "아르히";
+			.@defeat$ = "아르히"; .@defeat_en$ = "Arhi";
 			break;
 		case 12:
-			.@defeat$ = "디오 아네모스";
+			.@defeat$ = "디오 아네모스"; .@defeat_en$ = "Dio Anemos";
 			break;
 		case 13:
 			if ('GMTQuest == 1) {
-				.@defeat$ = "게펜 건달";
+				.@defeat$ = "게펜 건달"; .@defeat_en$ = "Geffen Gangster";
 			}
 			else if ('GMTQuest == 2) {
-				.@defeat$ = "게펜 양아치";
+				.@defeat$ = "게펜 양아치"; .@defeat_en$ = "Gefen Bully";
 			}
 			else {
-				.@defeat$ = "게펜 소매치기";
+				.@defeat$ = "게펜 소매치기"; .@defeat_en$ = "Geffen Shoplifter";
 			}
 			break;
 		case 14:
-			.@defeat$ = "페이몬트";
+			.@defeat$ = "페이몬트"; .@defeat_en$ = "Feymont";
 			break;
 		case 15:
-			.@defeat$ = "오르드르";
+			.@defeat$ = "오르드르"; .@defeat_en$ = "Ordre";
 			break;
 		case 16:
-			.@defeat$ = "블루트 하제";
+			.@defeat$ = "블루트 하제"; .@defeat_en$ = "Blut Hase";
 			break;
 		case 17:
-			.@defeat$ = "쿠로 아쿠마";
+			.@defeat$ = "쿠로 아쿠마"; .@defeat_en$ = "Kuro Akuma";
 			break;
 		case 18:
-			.@defeat$ = "이포데스";
+			.@defeat$ = "이포데스"; .@defeat_en$ = "Ifodes";
 			break;
 		case 19:
-			.@defeat$ = "레케니에스";
+			.@defeat$ = "레케니에스"; .@defeat_en$ = "Licheniyes";
 			break;
 		case 20:
-			.@defeat$ = "오도릭";
+			.@defeat$ = "오도릭"; .@defeat_en$ = "Odoric";
 			break;
 		case 21:
-			.@defeat$ = "쥬";
+			.@defeat$ = "쥬"; .@defeat_en$ = "Ju";
 			break;
 		case 22:
 			if ('half) {
-				.@defeat$ = "드와이";
+				.@defeat$ = "드와이"; .@defeat_en$ = "Dwigh";
 			} else {
-				.@defeat$ = "페이 카나비안";
+				.@defeat$ = "페이 카나비안"; .@defeat_en$ = "Fay Kanavian";
 			}
 			break;
 		case 23:
-			.@defeat$ = "펜릴";
+			.@defeat$ = "펜릴"; .@defeat_en$ = "Fenrir";
 			break;
 		default:
 			break;
 	}
 	
-	npctalklang ""+.@defeat$+" 님이 A그룹 "+callfunc("F_GetNumSuffix",('GMT_1QUE-10))+" 라운드에서 승리했습니다!", ""+.@defeat$+" has won the "+callfunc("F_GetNumSuffix",('GMT_1QUE-10))+" Round of Group A!", instance_npcname("게펜 학원장");
+	npctalklang ""+.@defeat$+" 님이 A그룹 "+callfunc("F_GetNumSuffix",('GMT_1QUE-10))+" 라운드에서 승리했습니다!", ""+.@defeat_en$+" has won the "+callfunc("F_GetNumSuffix",('GMT_1QUE-10))+" Round of Group A!", instance_npcname("게펜 학원장");
 	
 		switch ('GMT_1QUE) {
 			case 11:
@@ -4141,7 +4193,7 @@ OnLoseRound:
 }
 
 1@gef,115,105,6	script	로키#e1	4_M_ROKI2,{
-	.@n$ = "[ 로키 ]";
+	.@n$ = needtr("[ 로키 ]", "[ Loki ]");
 		
 	if(checkquest(9314) != -1) {
 		cutin "ep14_roki01.bmp", 2;
@@ -4177,7 +4229,7 @@ OnEnable:
 
 1@gef,117,108,6	script	리디아#e1	4_F_LYDIA,{
 
-	.@n$ = "[ 리디아 ]";
+	.@n$ = needtr("[ 리디아 ]", "[ Lydia ]");
 		
 	if(checkquest(9312) != -1) {
 		cutin "lydia_a.bmp",2;
@@ -4210,7 +4262,7 @@ OnEnable:
 
 1@gef,125,105,4	script	아이리스#e1	4_F_IRIS,{
 
-	.@n$ = "[ 아이리스 ]";
+	.@n$ = needtr("[ 아이리스 ]", "[ Iris ]");
 		
 	if(checkquest(9310) != -1) {
 		cutin "hero_iris_01.bmp",2;
@@ -4246,7 +4298,7 @@ OnEnable:
 
 1@gef,123,108,4	script	카오스#e1	4_M_CHAOS,{
 
-	.@n$ = "[ 카오스 ]";
+	.@n$ = needtr("[ 카오스 ]", "[ Chaos ]");
 	
 		if(checkquest(9311) != -1) {
 			cutin "hero_chaos_01.bmp",2;
@@ -4281,7 +4333,7 @@ OnEnable:
 
 1@gef,120,108,4	script	펜릴#e1	4_F_FENRIR,{
 
-	.@n$ = "[ 펜릴 ]";
+	.@n$ = needtr("[ 펜릴 ]", "[ Fenrir ]");
 	
 	if(checkquest(9313) != -1) {
 		cutin "fenrir_a.bmp",2;

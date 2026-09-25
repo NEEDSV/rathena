@@ -105,7 +105,7 @@ dali02,40,134,5	script	차원 이동 장치#dk	PORTAL,{
 		close;
 	}
 
-	.@md_name$ = "망령의 왕궁";
+	.@md_name$ = "망령의 왕궁"; .@md_name_en$ = "Ghost Palace";
 	switch( instance_enter(.@md_name$) ) {
 	case IE_OTHER:
 		mes needtr("알 수 없는 오류가 발생했습니다.", "An unknown error occurred.");
@@ -114,7 +114,7 @@ dali02,40,134,5	script	차원 이동 장치#dk	PORTAL,{
 		mes needtr("^ff0000장치 안쪽으로 칠흑 같은 구멍이 보입니다. 입장하려면 먼저 근위병에게 허가를 받아야 합니다.^000000", "^ff0000Inside the devices you see a dark hole. If you wish to enter you must to talk to the Unpleasent Royal Guard first.^000000");
 		close;
 	case IE_NOMEMBER:
-		mes needtr("인가된 대원들만이 해당 ", "Only registered members can enter the ") + .@md_name$ + needtr(" 구역에 진입할 수 있습니다.", " instance.");
+		mes needtr("인가된 대원들만이 해당 ", "Only registered members can enter the ") + needtr(.@md_name$, .@md_name_en$) + needtr(" 구역에 진입할 수 있습니다.", " instance.");
 		close;
 	case IE_OK:
 		mapannouncelang "dali", "" + strcharinfo(0) + " 파티의 " + getpartyname(.@party_id) + " 님이 유령 궁전에 진입합니다.", "" + strcharinfo(0) + " of the party, " + getpartyname(.@party_id) + ", is entering the Ghost Palace.", bc_map, 0x00ff99;
@@ -907,15 +907,15 @@ OnTimer28500:
 	mes needtr("부디 사크라이의 영혼을 구원할 수 있게 도와주게.", "Please help me save the soul of Sakray.");
 	next;
 	setarray .@item_name$[0],
-		"타노스의 검", "타노스의 대검", "타노스의 창", "타노스의 투핸드 스피어", "타노스의 지팡이",
-		"타노스의 양손 지팡이", "타노스의 활", "타노스의 단검", "타노스의 카타르", "타노스의 너클",
-		"타노스의 해머", "타노스의 도끼", "타노스의 바이올린", "타노스의 채찍",
-		"그레이 쉴드", "그레이 아머", "그레이 로브", "그레이 클록", "그레이 슈즈", "그레이 헬름";
+		needtr("타노스의 검", "Thanos Sword"), needtr("타노스의 대검", "Thanos Broadsword"), needtr("타노스의 창", "Thanos Spear"), needtr("타노스의 투핸드 스피어", "Thanos Two-Handed Spear"), needtr("타노스의 지팡이", "Thanos Staff"),
+		needtr("타노스의 양손 지팡이", "Thanos Two-Handed Staff"), needtr("타노스의 활", "Thanos Bow"), needtr("타노스의 단검", "Thanos Dagger"), needtr("타노스의 카타르", "Thanos Katar"), needtr("타노스의 너클", "Thanos Knuckle"),
+		needtr("타노스의 해머", "Thanos Hammer"), needtr("타노스의 도끼", "Thanos Axe"), needtr("타노스의 바이올린", "Thanos Violin"), needtr("타노스의 채찍", "Thanos Whip"),
+		needtr("그레이 쉴드", "Gray Shield"), needtr("그레이 아머", "Gray Armor"), needtr("그레이 로브", "Gray Robe"), needtr("그레이 클록", "Gray Manteau"), needtr("그레이 슈즈", "Gray Boots"), needtr("그레이 헬름", "Gray Helmet");
 	setarray .@items_list[0],13441,21009,1438,1496,1669,2023,18119,13093,28000,1836,16028,28100,1933,1988,2187,15090,15091,20721,22033,18820;
 
 	for ( .@i = 0; .@i < 20; .@i++ )
 		.@menu$ += .@item_name$[.@i] + ":";
-	.@menu$ += "취소";
+	.@menu$ += needtr("취소", "Cancel");
 
 	while(true) {
 		.@s = select(.@menu$) - 1;

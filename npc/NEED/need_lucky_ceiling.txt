@@ -229,7 +229,7 @@ S_SeasonProducts:
 			if (.@count > 0)
 				.@menu$ += ":";
 
-			.@menu$ += .Name$[.@i] + callsub(S_StockTag, .@i);
+			.@menu$ += needtr(.Name$[.@i], .Name_en$[.@i]) + callsub(S_StockTag, .@i);
 			.@count++;
 		}
 
@@ -281,7 +281,7 @@ S_Category:
 			if (.@count > 0)
 				.@menu$ += ":";
 
-			.@menu$ += .Name$[.@i] + callsub(S_StockTag, .@i);
+			.@menu$ += needtr(.Name$[.@i], .Name_en$[.@i]) + callsub(S_StockTag, .@i);
 			.@count++;
 		}
 
@@ -331,7 +331,7 @@ S_Detail:
 		.@nparts = getarraysize(.@parts$);
 	}
 
-	mes "[" + .Name$[.@i] + "]";
+	mes "[" + needtr(.Name$[.@i], .Name_en$[.@i]) + "]";
 	mes " ";
 	mes needtr("^0055FF교환 아이템^000000", "^0055FFExchange Item^000000");
 
@@ -420,7 +420,7 @@ S_Detail:
 			.@pmenu$ += getitemname(atoi(.@parts$[.@k]));
 		}
 
-		mes "[" + .Name$[.@i] + "]";
+		mes "[" + needtr(.Name$[.@i], .Name_en$[.@i]) + "]";
 		mes needtr("받으실 파츠를 선택해주세요.", "Please choose the part you want.");
 		mes " ";
 		mes needtr("어떤 파츠를 선택하더라도", "Whichever part you pick it still");
@@ -581,8 +581,13 @@ S_Buy:
 	if (.Point[.@i] > 0 && countitem(.PointItem) < .Point[.@i])
 		return 3;
 
-	if (.EggId[.@i] > 0 && .EggAmt[.@i] > 0 && countitem(.EggId[.@i]) < .EggAmt[.@i])
-		return 4;
+	// 스크립트 엔진의 && 는 단축 평가를 하지 않는다(op_2 로 양쪽을 먼저 계산).
+	// 한 줄로 쓰면 EggId 가 0 인 공용 희귀 상품에서도 countitem(0) 이 실행돼
+	// 구매할 때마다 "buildin_countitem: Invalid item '0'" 가 로그에 쌓인다.
+	if (.EggId[.@i] > 0 && .EggAmt[.@i] > 0) {
+		if (countitem(.EggId[.@i]) < .EggAmt[.@i])
+			return 4;
+	}
 
 	if (.Zeny[.@i] > 0 && Zeny < .Zeny[.@i])
 		return 5;
@@ -1022,7 +1027,7 @@ OnAdmin:
 			if (!callsub(S_IsOpen, .@i))
 				.@state$ = needtr("중지", "stopped");
 
-			.@menu$ += "[" + .Pid[.@i] + "] " + .Name$[.@i]
+			.@menu$ += "[" + .Pid[.@i] + "] " + needtr(.Name$[.@i], .Name_en$[.@i])
 				+ " / " + .@state$
 				+ callsub(S_StockTag, .@i);
 
@@ -1095,7 +1100,7 @@ S_AdminItem:
 	while (1) {
 		callsub S_Normalize, .@i;
 
-		mes "[" + .Name$[.@i] + "]";
+		mes "[" + needtr(.Name$[.@i], .Name_en$[.@i]) + "]";
 		mes needtr("상품 ID : ", "Item ID : ") + .@pid + " (" + .Code$[.@i] + ")";
 		mes needtr("분류 : ", "Category : ") + ((.Cat[.@i] == 1) ? needtr("시즌 천장", "Season Ceiling") : needtr("공용 희귀", "Shared Rare"));
 		mes needtr("스크립트 설정 : ", "Script setting : ") + ((.Enabled[.@i]) ? needtr("판매", "on sale") : needtr("중지", "stopped"));
@@ -1109,6 +1114,14 @@ S_AdminItem:
 
 		.@open = callsub(S_IsOpen, .@i);
 		mes needtr("현재 상태 : ", "Current state : ") + ((.@open) ? needtr("^0055FF판매중^000000", "^0055FFon sale^000000") : needtr("^FF0000중지^000000", "^FF0000stopped^000000"));
+		mes " ";
+
+		mes "Point : ^0055FF" + .Point[.@i] + " P^000000";
+		mes "Zeny : " + callfunc("F_InsertComma", .Zeny[.@i]);
+		if (.EggId[.@i] > 0)
+			mes needtr("행운의 알 : ", "Lucky Egg : ") + getitemname(.EggId[.@i]) + " " + .EggAmt[.@i] + needtr("개", "");
+		if (.RateText$[.@i] != "")
+			mes needtr("행알 등장 확률 : ", "Egg drop chance : ") + .RateText$[.@i];
 		mes " ";
 
 		if (.Cycle[.@i] == 0) {
@@ -1255,10 +1268,10 @@ OnClock2200:
 	if (gettime(DT_DAYOFWEEK) != SATURDAY)
 		end;
 
-	announce "[행운의 알 교환소] 주간 확정 교환 재고가 초기화되었습니다.", bc_all;
+	announcelang "[행운의 알 교환소] 주간 확정 교환 재고가 초기화되었습니다.", "[Lucky Egg Exchange] The weekly guaranteed-exchange stock has been reset.", bc_all;
 
 	if (gettime(DT_DAYOFMONTH) == callsub(S_FirstSat, gettime(DT_YEAR), gettime(DT_MONTH)))
-		announce "[행운의 알 교환소] 월간 확정 교환 재고가 초기화되었습니다.", bc_all;
+		announcelang "[행운의 알 교환소] 월간 확정 교환 재고가 초기화되었습니다.", "[Lucky Egg Exchange] The monthly guaranteed-exchange stock has been reset.", bc_all;
 
 	end;
 
@@ -1374,7 +1387,11 @@ OnInit:
 		248,	// 248 봉인된 인장 스크롤 II / SHADOW 1%
 		249,	// 249 봉인된 인장 스크롤 II / SHADOW 1%
 		250,	// 250 봉인된 인장 스크롤 II / SHADOW 1%
-		251;	// 251 봉인된인장 스크롤 III / EQUIPMENT 0.1%
+		251,	// 251 봉인된인장 스크롤 III / EQUIPMENT 0.1%
+		252,	// 252 해피벌룬 스크롤 / EQUIPMENT 1%
+		253,	// 253 피아멧트 스크롤 / EQUIPMENT 1%
+		254,	// 254 피아멧트 스크롤 / EQUIPMENT 2%
+		255;	// 255 매드바니 스크롤 / EQUIPMENT 1%
 
 	setarray .Code$[0],
 		"BS_BLESSING",	// 100 대장장이의 축복
@@ -1430,7 +1447,11 @@ OnInit:
 		"SEASON_SH_24243",	// 248 봉인된 인장 스크롤 II / SHADOW 1%
 		"SEASON_SH_24244",	// 249 봉인된 인장 스크롤 II / SHADOW 1%
 		"SEASON_SH_24245",	// 250 봉인된 인장 스크롤 II / SHADOW 1%
-		"SEASON_SH_18536";	// 251 봉인된인장 스크롤 III / EQUIPMENT 0.1%
+		"SEASON_SH_18536",	// 251 봉인된인장 스크롤 III / EQUIPMENT 0.1%
+		"SEASON_EQ_19095",	// 252 해피벌룬 스크롤 / EQUIPMENT 1%
+		"SEASON_EQ_19097",	// 253 피아멧트 스크롤 / EQUIPMENT 1%
+		"SEASON_EQ_19098",	// 254 피아멧트 스크롤 / EQUIPMENT 2%
+		"SEASON_EQ_28902";	// 255 매드바니 스크롤 / EQUIPMENT 1%
 
 	setarray .Name$[0],
 		"대장장이의 축복",	// 100 대장장이의 축복
@@ -1486,7 +1507,70 @@ OnInit:
 		"리로드 슈즈 쉐도우",	// 248 봉인된 인장 스크롤 II / SHADOW 1%
 		"리로드 쉴드 쉐도우",	// 249 봉인된 인장 스크롤 II / SHADOW 1%
 		"리로드 아머 쉐도우",	// 250 봉인된 인장 스크롤 II / SHADOW 1%
-		"강아지 풀";	// 251 봉인된인장 스크롤 III / EQUIPMENT 0.1%
+		"강아지 풀",	// 251 봉인된인장 스크롤 III / EQUIPMENT 0.1%
+		"해피 벌룬",	// 252 해피벌룬 스크롤 / EQUIPMENT 1%
+		"피아멧트의 리본",	// 253 피아멧트 스크롤 / EQUIPMENT 1%
+		"피아멧트의 두건",	// 254 피아멧트 스크롤 / EQUIPMENT 2%
+		"매드바니";	// 255 매드바니 스크롤 / EQUIPMENT 1%
+	setarray .Name_en$[0],
+		"Blacksmith's Blessing",	// 100 대장장이의 축복
+		"Sealed Seal Card",	// 101 봉인된인장 카드
+		"+9 Refine Exchange Voucher",	// 102 +9 제련 교환권
+		"Heart Wings Hairband",	// 200 소녀의 마음 / EQUIPMENT 1%
+		"Red Marching Hat",	// 202 행운의 알Ⅸ / EQUIPMENT 3.5%
+		"Evil Marching Hat",	// 203 행운의 알Ⅹ / EQUIPMENT 1.838384%
+		"Gryphon Hat",	// 204 그리폰의 알 / EQUIPMENT 1.4%
+		"Cat Ear Beret",	// 205 2011 RWC 스크롤 / EQUIPMENT 1.5%
+		"Red Pom Band",	// 206 2011 RWC 스크롤 / EQUIPMENT 1.5%
+		"Drooping Neko Crew",	// 207 크루 스크롤 / EQUIPMENT 1.5%
+		"Lord of Death Helm",	// 208 언데드의 핵 / EQUIPMENT 1%
+		"Ring of Protection",	// 209 교황스크롤 / EQUIPMENT 0.6%
+		"RWC Commemorative Pin",	// 210 2012 RWC 스크롤 / EQUIPMENT 1.4%
+		"RWC Memory Staff",	// 211 2012 RWC 스크롤 / EQUIPMENT 1.5%
+		"RWC Memory Knife",	// 212 2012 RWC 스크롤 / EQUIPMENT 1.5%
+		"RWC Memory Mace",	// 213 2012 RWC 스크롤 / EQUIPMENT 1.5%
+		"Buffalo Horns",	// 214 황금 보물상자 / EQUIPMENT 0.75015%
+		"Ring of Recovery",	// 215 황금 보물상자 / EQUIPMENT 2.0004%
+		"Thief Handcuffs",	// 216 크리스마스 스크롤 / EQUIPMENT 1.5%
+		"Immune Shadow Armor",	// 217 봉인된 다크로드 스크롤 / SHADOW 1.5%
+		"Safeguard Shadow Shield",	// 218 봉인된 베르제브브 스크롤 / SHADOW 1%
+		"Cranial Shadow Shield",	// 219 봉인된 베르제브브 스크롤 / SHADOW 1.5%
+		"Liberation Shadow Shoes",	// 220 봉인된 키엘-D-01 스크롤 / SHADOW 1%
+		"Bloody Shadow Shoes",	// 221 봉인된 키엘-D-01 스크롤 / SHADOW 1.5%
+		"Unfreezing Shadow Weapon",	// 222 봉인된 이프리트 스크롤 / SHADOW 1.5%
+		"Neutral Shadow Weapon",	// 223 2013 RWC 스크롤 / SHADOW 1.5%
+		"Spell Flow Shadow Armor",	// 224 봉인된 터틀 제네럴 스크롤 / SHADOW 1.5%
+		"Executioner Shadow Weapon",	// 225 봉인된 보스이그니젬 스크롤 / SHADOW 1%
+		"Exorcist Shadow Weapon",	// 226 봉인된 보스이그니젬 스크롤 / SHADOW 1%
+		"Penetration Shadow Earring",	// 227 봉인된 보스이그니젬 스크롤 / SHADOW 1%
+		"Penetration Shadow Pendant",	// 228 봉인된 보스이그니젬 스크롤 / SHADOW 1%
+		"Tempest Shadow Earring",	// 229 봉인된 베스퍼 스크롤 / SHADOW 1%
+		"Tempest Shadow Pendant",	// 230 봉인된 베스퍼 스크롤 / SHADOW 1%
+		"Magic Executioner Shadow Weapon",	// 231 봉인된 베스퍼 스크롤 / SHADOW 1%
+		"Magic Exorcist Shadow Weapon",	// 232 봉인된 베스퍼 스크롤 / SHADOW 1%
+		"Attack Shadow Armor",	// 233 안심제련 스크롤 / SHADOW 0.5%
+		"Wandering Wolf King Helmet",	// 234 늑대왕 스크롤 / EQUIPMENT 0.75%
+		"Imp Hat",	// 235 늑대왕 스크롤 / EQUIPMENT 0.75%
+		"Infinity Shadow Earring",	// 236 봉인된 월야화 스크롤 / SHADOW 1.5%
+		"Hasty Shadow Shoes",	// 237 봉인된 스나이퍼 스크롤 / SHADOW 1.5%
+		"Hasty Shadow Armor",	// 238 봉인된 스나이퍼 스크롤 / SHADOW 1.5%
+		"Expert Shadow Shoes",	// 239 봉인된인장 스크롤 / SHADOW 1.1%
+		"Expert Shadow Shield",	// 240 봉인된인장 스크롤 / SHADOW 1.1%
+		"Enhanced Force Shadow Weapon",	// 241 봉인된 드라큐라 스크롤Ⅱ / SHADOW 0.5%
+		"Enhanced Soul Shadow Weapon",	// 242 봉인된 드라큐라 스크롤Ⅱ / SHADOW 0.5%
+		"Blitz Shadow Shoes",	// 243 봉인된 베르제브브 스크롤Ⅱ / SHADOW 0.5%
+		"Blitz Shadow Shield",	// 244 봉인된 베르제브브 스크롤Ⅱ / SHADOW 0.5%
+		"Caster Shadow Shoes",	// 245 신년 스크롤 / SHADOW 1%
+		"Caster Shadow Shield",	// 246 신년 스크롤 / SHADOW 1%
+		"Caster Shadow Armor",	// 247 신년 스크롤 / SHADOW 1%
+		"Reload Shadow Shoes",	// 248 봉인된 인장 스크롤 II / SHADOW 1%
+		"Reload Shadow Shield",	// 249 봉인된 인장 스크롤 II / SHADOW 1%
+		"Reload Shadow Armor",	// 250 봉인된 인장 스크롤 II / SHADOW 1%
+		"Foxtail",
+		"Happy Balloon",	// 252 해피벌룬 스크롤 / EQUIPMENT 1%
+		"Piamette Ribbon",	// 253 피아멧트 스크롤 / EQUIPMENT 1%
+		"Piamette Hood",	// 254 피아멧트 스크롤 / EQUIPMENT 2%
+		"Mad Bunny";	// 255 매드바니 스크롤 / EQUIPMENT 1%
 
 	// 공용 3종만 판매(ON). 시즌 천장 44종은 전부 기본 OFF 로 등록한다.
 	// ShowRate:true 만으로는 현재 판매 중인지 종료됐는지 알 수 없으므로,
@@ -1539,13 +1623,17 @@ OnInit:
 		1,	// 242 봉인된 드라큐라 스크롤Ⅱ / SHADOW 0.5%
 		1,	// 243 봉인된 베르제브브 스크롤Ⅱ / SHADOW 0.5%
 		1,	// 244 봉인된 베르제브브 스크롤Ⅱ / SHADOW 0.5%
-		0,	// 245 신년 스크롤 / SHADOW 1%
-		0,	// 246 신년 스크롤 / SHADOW 1%
-		0,	// 247 신년 스크롤 / SHADOW 1%
-		0,	// 248 봉인된 인장 스크롤 II / SHADOW 1%
-		0,	// 249 봉인된 인장 스크롤 II / SHADOW 1%
-		0,	// 250 봉인된 인장 스크롤 II / SHADOW 1%
-		0;	// 251 봉인된인장 스크롤 III / EQUIPMENT 0.1%
+		1,	// 245 신년 스크롤 / SHADOW 1%
+		1,	// 246 신년 스크롤 / SHADOW 1%
+		1,	// 247 신년 스크롤 / SHADOW 1%
+		1,	// 248 봉인된 인장 스크롤 II / SHADOW 1%
+		1,	// 249 봉인된 인장 스크롤 II / SHADOW 1%
+		1,	// 250 봉인된 인장 스크롤 II / SHADOW 1%
+		1,	// 251 봉인된인장 스크롤 III / EQUIPMENT 0.1%
+		1,	// 252 해피벌룬 스크롤 / EQUIPMENT 1%
+		1,	// 253 피아멧트 스크롤 / EQUIPMENT 1%
+		1,	// 254 피아멧트 스크롤 / EQUIPMENT 2%
+		1;	// 255 매드바니 스크롤 / EQUIPMENT 1%
 
 	setarray .Cat[0],
 		2,	// 100 대장장이의 축복
@@ -1601,68 +1689,76 @@ OnInit:
 		1,	// 248 봉인된 인장 스크롤 II / SHADOW 1%
 		1,	// 249 봉인된 인장 스크롤 II / SHADOW 1%
 		1,	// 250 봉인된 인장 스크롤 II / SHADOW 1%
-		1;	// 251 봉인된인장 스크롤 III / EQUIPMENT 0.1%
+		1,	// 251 봉인된인장 스크롤 III / EQUIPMENT 0.1%
+		1,	// 252 해피벌룬 스크롤 / EQUIPMENT 1%
+		1,	// 253 피아멧트 스크롤 / EQUIPMENT 1%
+		1,	// 254 피아멧트 스크롤 / EQUIPMENT 2%
+		1;	// 255 매드바니 스크롤 / EQUIPMENT 1%
 
 	setarray .Point[0],
-		500,	// 100 대장장이의 축복
-		10000,	// 101 봉인된인장 카드
-		30000,	// 102 +9 제련 교환권
-		400,	// 200 소녀의 마음 / EQUIPMENT 1%
-		200,	// 202 행운의 알Ⅸ / EQUIPMENT 3.5%
-		200,	// 203 행운의 알Ⅹ / EQUIPMENT 1.838384%
-		300,	// 204 그리폰의 알 / EQUIPMENT 1.4%
-		300,	// 205 2011 RWC 스크롤 / EQUIPMENT 1.5%
-		300,	// 206 2011 RWC 스크롤 / EQUIPMENT 1.5%
-		300,	// 207 크루 스크롤 / EQUIPMENT 1.5%
-		400,	// 208 언데드의 핵 / EQUIPMENT 1%
-		400,	// 209 교황스크롤 / EQUIPMENT 0.6%
-		300,	// 210 2012 RWC 스크롤 / EQUIPMENT 1.4%
-		300,	// 211 2012 RWC 스크롤 / EQUIPMENT 1.5%
-		300,	// 212 2012 RWC 스크롤 / EQUIPMENT 1.5%
-		300,	// 213 2012 RWC 스크롤 / EQUIPMENT 1.5%
-		400,	// 214 황금 보물상자 / EQUIPMENT 0.75015%
-		200,	// 215 황금 보물상자 / EQUIPMENT 2.0004%
-		300,	// 216 크리스마스 스크롤 / EQUIPMENT 1.5%
-		300,	// 217 봉인된 다크로드 스크롤 / SHADOW 1.5%
-		400,	// 218 봉인된 베르제브브 스크롤 / SHADOW 1%
-		300,	// 219 봉인된 베르제브브 스크롤 / SHADOW 1.5%
-		400,	// 220 봉인된 키엘-D-01 스크롤 / SHADOW 1%
-		300,	// 221 봉인된 키엘-D-01 스크롤 / SHADOW 1.5%
-		300,	// 222 봉인된 이프리트 스크롤 / SHADOW 1.5%
-		300,	// 223 2013 RWC 스크롤 / SHADOW 1.5%
-		300,	// 224 봉인된 터틀 제네럴 스크롤 / SHADOW 1.5%
-		400,	// 225 봉인된 보스이그니젬 스크롤 / SHADOW 1%
-		400,	// 226 봉인된 보스이그니젬 스크롤 / SHADOW 1%
-		400,	// 227 봉인된 보스이그니젬 스크롤 / SHADOW 1%
-		400,	// 228 봉인된 보스이그니젬 스크롤 / SHADOW 1%
-		400,	// 229 봉인된 베스퍼 스크롤 / SHADOW 1%
-		400,	// 230 봉인된 베스퍼 스크롤 / SHADOW 1%
-		400,	// 231 봉인된 베스퍼 스크롤 / SHADOW 1%
-		400,	// 232 봉인된 베스퍼 스크롤 / SHADOW 1%
-		800,	// 233 안심제련 스크롤 / SHADOW 0.5%
-		400,	// 234 늑대왕 스크롤 / EQUIPMENT 0.75%
-		400,	// 235 늑대왕 스크롤 / EQUIPMENT 0.75%
-		300,	// 236 봉인된 월야화 스크롤 / SHADOW 1.5%
-		300,	// 237 봉인된 스나이퍼 스크롤 / SHADOW 1.5%
-		300,	// 238 봉인된 스나이퍼 스크롤 / SHADOW 1.5%
-		300,	// 239 봉인된인장 스크롤 / SHADOW 1.1%
-		300,	// 240 봉인된인장 스크롤 / SHADOW 1.1%
-		800,	// 241 봉인된 드라큐라 스크롤Ⅱ / SHADOW 0.5%
-		800,	// 242 봉인된 드라큐라 스크롤Ⅱ / SHADOW 0.5%
-		800,	// 243 봉인된 베르제브브 스크롤Ⅱ / SHADOW 0.5%
-		800,	// 244 봉인된 베르제브브 스크롤Ⅱ / SHADOW 0.5%
-		400,	// 245 신년 스크롤 / SHADOW 1%
-		400,	// 246 신년 스크롤 / SHADOW 1%
-		400,	// 247 신년 스크롤 / SHADOW 1%
-		400,	// 248 봉인된 인장 스크롤 II / SHADOW 1%
-		400,	// 249 봉인된 인장 스크롤 II / SHADOW 1%
-		400,	// 250 봉인된 인장 스크롤 II / SHADOW 1%
-		10000;	// 251 봉인된인장 스크롤 III / EQUIPMENT 0.1%
+		200,	// 100 대장장이의 축복
+		3000,	// 101 봉인된인장 카드
+		5000,	// 102 +9 제련 교환권
+		200,	// 200 소녀의 마음 / EQUIPMENT 1%
+		100,	// 202 행운의 알Ⅸ / EQUIPMENT 3.5%
+		100,	// 203 행운의 알Ⅹ / EQUIPMENT 1.838384%
+		150,	// 204 그리폰의 알 / EQUIPMENT 1.4%
+		150,	// 205 2011 RWC 스크롤 / EQUIPMENT 1.5%
+		150,	// 206 2011 RWC 스크롤 / EQUIPMENT 1.5%
+		150,	// 207 크루 스크롤 / EQUIPMENT 1.5%
+		200,	// 208 언데드의 핵 / EQUIPMENT 1%
+		200,	// 209 교황스크롤 / EQUIPMENT 0.6%
+		150,	// 210 2012 RWC 스크롤 / EQUIPMENT 1.4%
+		150,	// 211 2012 RWC 스크롤 / EQUIPMENT 1.5%
+		150,	// 212 2012 RWC 스크롤 / EQUIPMENT 1.5%
+		150,	// 213 2012 RWC 스크롤 / EQUIPMENT 1.5%
+		200,	// 214 황금 보물상자 / EQUIPMENT 0.75015%
+		100,	// 215 황금 보물상자 / EQUIPMENT 2.0004%
+		150,	// 216 크리스마스 스크롤 / EQUIPMENT 1.5%
+		150,	// 217 봉인된 다크로드 스크롤 / SHADOW 1.5%
+		200,	// 218 봉인된 베르제브브 스크롤 / SHADOW 1%
+		150,	// 219 봉인된 베르제브브 스크롤 / SHADOW 1.5%
+		200,	// 220 봉인된 키엘-D-01 스크롤 / SHADOW 1%
+		150,	// 221 봉인된 키엘-D-01 스크롤 / SHADOW 1.5%
+		150,	// 222 봉인된 이프리트 스크롤 / SHADOW 1.5%
+		150,	// 223 2013 RWC 스크롤 / SHADOW 1.5%
+		150,	// 224 봉인된 터틀 제네럴 스크롤 / SHADOW 1.5%
+		200,	// 225 봉인된 보스이그니젬 스크롤 / SHADOW 1%
+		200,	// 226 봉인된 보스이그니젬 스크롤 / SHADOW 1%
+		200,	// 227 봉인된 보스이그니젬 스크롤 / SHADOW 1%
+		200,	// 228 봉인된 보스이그니젬 스크롤 / SHADOW 1%
+		200,	// 229 봉인된 베스퍼 스크롤 / SHADOW 1%
+		200,	// 230 봉인된 베스퍼 스크롤 / SHADOW 1%
+		200,	// 231 봉인된 베스퍼 스크롤 / SHADOW 1%
+		200,	// 232 봉인된 베스퍼 스크롤 / SHADOW 1%
+		400,	// 233 안심제련 스크롤 / SHADOW 0.5%
+		200,	// 234 늑대왕 스크롤 / EQUIPMENT 0.75%
+		200,	// 235 늑대왕 스크롤 / EQUIPMENT 0.75%
+		150,	// 236 봉인된 월야화 스크롤 / SHADOW 1.5%
+		150,	// 237 봉인된 스나이퍼 스크롤 / SHADOW 1.5%
+		150,	// 238 봉인된 스나이퍼 스크롤 / SHADOW 1.5%
+		150,	// 239 봉인된인장 스크롤 / SHADOW 1.1%
+		150,	// 240 봉인된인장 스크롤 / SHADOW 1.1%
+		400,	// 241 봉인된 드라큐라 스크롤Ⅱ / SHADOW 0.5%
+		400,	// 242 봉인된 드라큐라 스크롤Ⅱ / SHADOW 0.5%
+		400,	// 243 봉인된 베르제브브 스크롤Ⅱ / SHADOW 0.5%
+		400,	// 244 봉인된 베르제브브 스크롤Ⅱ / SHADOW 0.5%
+		200,	// 245 신년 스크롤 / SHADOW 1%
+		200,	// 246 신년 스크롤 / SHADOW 1%
+		200,	// 247 신년 스크롤 / SHADOW 1%
+		200,	// 248 봉인된 인장 스크롤 II / SHADOW 1%
+		200,	// 249 봉인된 인장 스크롤 II / SHADOW 1%
+		200,	// 250 봉인된 인장 스크롤 II / SHADOW 1%
+		2000,	// 251 봉인된인장 스크롤 III / EQUIPMENT 0.1%
+		200,	// 252 해피벌룬 스크롤 / EQUIPMENT 1%
+		200,	// 253 피아멧트 스크롤 / EQUIPMENT 1%
+		100,	// 254 피아멧트 스크롤 / EQUIPMENT 2%
+		200;	// 255 매드바니 스크롤 / EQUIPMENT 1%
 
 	setarray .Zeny[0],
 		100000000,	// 100 대장장이의 축복
-		1000000000,	// 101 봉인된인장 카드
-		2000000000,	// 102 +9 제련 교환권
+		300000000,	// 101 봉인된인장 카드
+		500000000,	// 102 +9 제련 교환권
 		200000000,	// 200 소녀의 마음 / EQUIPMENT 1%
 		100000000,	// 202 행운의 알Ⅸ / EQUIPMENT 3.5%
 		100000000,	// 203 행운의 알Ⅹ / EQUIPMENT 1.838384%
@@ -1713,7 +1809,11 @@ OnInit:
 		200000000,	// 248 봉인된 인장 스크롤 II / SHADOW 1%
 		200000000,	// 249 봉인된 인장 스크롤 II / SHADOW 1%
 		200000000,	// 250 봉인된 인장 스크롤 II / SHADOW 1%
-		1000000000;	// 251 봉인된인장 스크롤 III / EQUIPMENT 0.1%
+		1000000000,	// 251 봉인된인장 스크롤 III / EQUIPMENT 0.1%
+		100000000,	// 252 해피벌룬 스크롤 / EQUIPMENT 1%
+		100000000,	// 253 피아멧트 스크롤 / EQUIPMENT 1%
+		100000000,	// 254 피아멧트 스크롤 / EQUIPMENT 2%
+		100000000;	// 255 매드바니 스크롤 / EQUIPMENT 1%
 
 	setarray .EggId[0],
 		0,	// 100 대장장이의 축복
@@ -1769,7 +1869,11 @@ OnInit:
 		22902,	// 248 봉인된 인장 스크롤 II / SHADOW 1%
 		22902,	// 249 봉인된 인장 스크롤 II / SHADOW 1%
 		22902,	// 250 봉인된 인장 스크롤 II / SHADOW 1%
-		22906;	// 251 봉인된인장 스크롤 III / EQUIPMENT 0.1%
+		22906,	// 251 봉인된인장 스크롤 III / EQUIPMENT 0.1%
+		14781,	// 252 해피벌룬 스크롤 / EQUIPMENT 1%
+		23024,	// 253 피아멧트 스크롤 / EQUIPMENT 1%
+		23024,	// 254 피아멧트 스크롤 / EQUIPMENT 2%
+		22971;	// 255 매드바니 스크롤 / EQUIPMENT 1%
 
 	setarray .EggAmt[0],
 		0,	// 100 대장장이의 축복
@@ -1825,7 +1929,11 @@ OnInit:
 		100,	// 248 봉인된 인장 스크롤 II / SHADOW 1%
 		100,	// 249 봉인된 인장 스크롤 II / SHADOW 1%
 		100,	// 250 봉인된 인장 스크롤 II / SHADOW 1%
-		100;	// 251 봉인된인장 스크롤 III / EQUIPMENT 0.1%
+		100,	// 251 봉인된인장 스크롤 III / EQUIPMENT 0.1%
+		100,	// 252 해피벌룬 스크롤 / EQUIPMENT 1%
+		100,	// 253 피아멧트 스크롤 / EQUIPMENT 1%
+		100,	// 254 피아멧트 스크롤 / EQUIPMENT 2%
+		100;	// 255 매드바니 스크롤 / EQUIPMENT 1%
 
 	setarray .Stock[0],
 		100,	// 100 대장장이의 축복
@@ -1881,7 +1989,11 @@ OnInit:
 		5,	// 248 봉인된 인장 스크롤 II / SHADOW 1%
 		5,	// 249 봉인된 인장 스크롤 II / SHADOW 1%
 		5,	// 250 봉인된 인장 스크롤 II / SHADOW 1%
-		1;	// 251 봉인된인장 스크롤 III / EQUIPMENT 0.1%
+		1,	// 251 봉인된인장 스크롤 III / EQUIPMENT 0.1%
+		5,	// 252 해피벌룬 스크롤 / EQUIPMENT 1%
+		5,	// 253 피아멧트 스크롤 / EQUIPMENT 1%
+		5,	// 254 피아멧트 스크롤 / EQUIPMENT 2%
+		5;	// 255 매드바니 스크롤 / EQUIPMENT 1%
 
 	setarray .Cycle[0],
 		1,	// 100 대장장이의 축복
@@ -1937,7 +2049,11 @@ OnInit:
 		1,	// 248 봉인된 인장 스크롤 II / SHADOW 1%
 		1,	// 249 봉인된 인장 스크롤 II / SHADOW 1%
 		1,	// 250 봉인된 인장 스크롤 II / SHADOW 1%
-		1;	// 251 봉인된인장 스크롤 III / EQUIPMENT 0.1%
+		1,	// 251 봉인된인장 스크롤 III / EQUIPMENT 0.1%
+		1,	// 252 해피벌룬 스크롤 / EQUIPMENT 1%
+		1,	// 253 피아멧트 스크롤 / EQUIPMENT 1%
+		1,	// 254 피아멧트 스크롤 / EQUIPMENT 2%
+		1;	// 255 매드바니 스크롤 / EQUIPMENT 1%
 
 	setarray .Bound[0],
 		0,	// 100 대장장이의 축복
@@ -1993,7 +2109,11 @@ OnInit:
 		1,	// 248 봉인된 인장 스크롤 II / SHADOW 1%
 		1,	// 249 봉인된 인장 스크롤 II / SHADOW 1%
 		1,	// 250 봉인된 인장 스크롤 II / SHADOW 1%
-		1;	// 251 봉인된인장 스크롤 III / EQUIPMENT 0.1%
+		1,	// 251 봉인된인장 스크롤 III / EQUIPMENT 0.1%
+		1,	// 252 해피벌룬 스크롤 / EQUIPMENT 1%
+		1,	// 253 피아멧트 스크롤 / EQUIPMENT 1%
+		1,	// 254 피아멧트 스크롤 / EQUIPMENT 2%
+		1;	// 255 매드바니 스크롤 / EQUIPMENT 1%
 
 	setarray .Reward[0],
 		6635,	// 100 대장장이의 축복
@@ -2049,7 +2169,11 @@ OnInit:
 		24243,	// 248 봉인된 인장 스크롤 II / SHADOW 1%
 		24244,	// 249 봉인된 인장 스크롤 II / SHADOW 1%
 		24245,	// 250 봉인된 인장 스크롤 II / SHADOW 1%
-		18536;	// 251 봉인된인장 스크롤 III / EQUIPMENT 0.1%
+		18536,	// 251 봉인된인장 스크롤 III / EQUIPMENT 0.1%
+		19095,	// 252 해피벌룬 스크롤 / EQUIPMENT 1%
+		19097,	// 253 피아멧트 스크롤 / EQUIPMENT 1%
+		19098,	// 254 피아멧트 스크롤 / EQUIPMENT 2%
+		28902;	// 255 매드바니 스크롤 / EQUIPMENT 1%
 
 	setarray .RewardAmt[0],
 		1,	// 100 대장장이의 축복
@@ -2105,7 +2229,11 @@ OnInit:
 		1,	// 248 봉인된 인장 스크롤 II / SHADOW 1%
 		1,	// 249 봉인된 인장 스크롤 II / SHADOW 1%
 		1,	// 250 봉인된 인장 스크롤 II / SHADOW 1%
-		1;	// 251 봉인된인장 스크롤 III / EQUIPMENT 0.1%
+		1,	// 251 봉인된인장 스크롤 III / EQUIPMENT 0.1%
+		1,	// 252 해피벌룬 스크롤 / EQUIPMENT 1%
+		1,	// 253 피아멧트 스크롤 / EQUIPMENT 1%
+		1,	// 254 피아멧트 스크롤 / EQUIPMENT 2%
+		1;	// 255 매드바니 스크롤 / EQUIPMENT 1%
 
 	setarray .Choice$[0],
 		"",	// 100 대장장이의 축복
@@ -2161,7 +2289,11 @@ OnInit:
 		"",	// 248 봉인된 인장 스크롤 II / SHADOW 1%
 		"",	// 249 봉인된 인장 스크롤 II / SHADOW 1%
 		"",	// 250 봉인된 인장 스크롤 II / SHADOW 1%
-		"";	// 251 봉인된인장 스크롤 III / EQUIPMENT 0.1%
+		"",	// 251 봉인된인장 스크롤 III / EQUIPMENT 0.1%
+		"",	// 252 해피벌룬 스크롤 / EQUIPMENT 1%
+		"",	// 253 피아멧트 스크롤 / EQUIPMENT 1%
+		"",	// 254 피아멧트 스크롤 / EQUIPMENT 2%
+		"";	// 255 매드바니 스크롤 / EQUIPMENT 1%
 
 	// 표시용 확률 문자열. 구매 로직에는 쓰지 않는다(표시 전용).
 	setarray .RateText$[0],
@@ -2218,7 +2350,11 @@ OnInit:
 		"1%",	// 248 봉인된 인장 스크롤 II / SHADOW 1%
 		"1%",	// 249 봉인된 인장 스크롤 II / SHADOW 1%
 		"1%",	// 250 봉인된 인장 스크롤 II / SHADOW 1%
-		"0.1%";	// 251 봉인된인장 스크롤 III / EQUIPMENT 0.1%
+		"0.1%",	// 251 봉인된인장 스크롤 III / EQUIPMENT 0.1%
+		"1%",	// 252 해피벌룬 스크롤 / EQUIPMENT 1%
+		"1%",	// 253 피아멧트 스크롤 / EQUIPMENT 1%
+		"2%",	// 254 피아멧트 스크롤 / EQUIPMENT 2%
+		"1%";	// 255 매드바니 스크롤 / EQUIPMENT 1%
 
 	callsub S_SqlLoad;
 

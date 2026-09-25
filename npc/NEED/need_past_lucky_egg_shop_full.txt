@@ -1,13 +1,19 @@
 //============================================================
 // NEED - 과거 행운의 알 상점
 //
-// 1단계
+// 1단계 (랜덤 한정 판매)
 // - 매일 00:00 / 12:00 갱신
-// - 활성화된 과거 행운의 알 중 1종 랜덤 판매
-// - 기본가 1,000 Cash
-// - 랜덤 판매가: 110 / 120 / 130 / 140 / 150%
-// - 서버 재고: 300~500개
-// - 계정당 회차 구매 제한: 10개
+// - 활성화된 과거 행운의 알을 무작위 셔플 후 3개 그룹으로 나누고,
+//   회차마다 그 중 한 그룹(활성 풀의 약 1/3)을 통째로 판매한다.
+//   예) 활성 36종 -> 12 / 12 / 12
+//       활성 35종 -> 12 / 12 / 11
+//       활성 37종 -> 13 / 12 / 12
+//   3그룹을 모두 소진하면 다시 전체를 셔플한다.
+//   => 한 사이클(12시간 x 3회) 동안 활성 행알이 정확히 한 번씩 등장한다.
+// - 상품별 기본가 1,000 Cash
+// - 상품별 랜덤 판매가: 110 / 120 / 130 / 140 / 150%
+// - 상품별 서버 재고: 300~500개
+// - 계정당 회차 구매 제한: 상품별 10개
 //
 // 2단계
 // - 추억의 행운 조각(900106) 30개
@@ -21,6 +27,46 @@
 //
 // 갱신 10분 전 전체 공지
 // - 11:50 / 23:50
+//
+//------------------------------------------------------------
+// [로테이션 영속화]
+// 같은 12시간 슬롯 안에서는 map-server 재시작 / @reloadscript 가
+// 발생해도 판매 목록·가격·재고가 그대로 유지되어야 한다.
+// 그래서 회차 상태를 전부 $ (mapreg) 전역 변수에 저장한다.
+//
+//   $NeedPastEggRotation$   현재 12시간 슬롯 키 "YYYY-M-D-슬롯"
+//   $NeedPastEggSaleKey$    회차 식별 키 (슬롯 키 + "#" + 갱신 일련번호)
+//   $NeedPastEggSerial      갱신 일련번호. 갱신될 때마다 +1
+//   $NeedPastEggCycle       셔플 사이클 번호. 전체 재셔플마다 +1
+//   $NeedPastEggOrder[]     현재 사이클의 셔플 결과
+//                           (활성 행알의 .EggId[] 인덱스 전체)
+//   $NeedPastEggListSig     셔플 당시의 .EggId[] 서명. 목록 자체가 바뀌면 재셔플
+//   $NeedPastEggGroup       현재 판매 중인 그룹 번호 (0 ~ 2)
+//
+//   $NeedPastEggSaleIdx[]   이번 회차 판매 상품의 .EggId[] 인덱스
+//   $NeedPastEggSaleId[]    이번 회차 판매 상품 ItemID
+//   $NeedPastEggSaleRate[]  상품별 가격 배율 %
+//   $NeedPastEggSalePrice[] 상품별 개당 Cash 가격
+//   $NeedPastEggSaleStock[] 상품별 남은 서버 재고
+//   $NeedPastEggSaleInit[]  상품별 최초 재고 (90% 공지 판정용)
+//   $NeedPastEggSaleN90[]   상품별 90% 공지 완료 플래그
+//   $NeedPastEggSaleOut[]   상품별 품절 공지 완료 플래그
+//
+//   #NeedPastEggRotation$   계정이 마지막으로 본 회차 키
+//   #NeedPastEggBought[]    계정의 상품별 이번 회차 구매량
+//
+// OnInit 은 S_EnsureRotation 만 부른다. 슬롯 키가 같으면 아무것도
+// 다시 뽑지 않으므로 재시작/리로드로 목록이 바뀌지 않는다.
+// 그룹 전진은 OnClock0000 / OnClock1200 (그리고 @eggadmin 강제 갱신)
+// 에서만 일어난다.
+//
+// [중요] conf/script_athena.conf 의 check_gotocount 가 2048 이라
+// 한 번에 도는 루프 총량을 작게 유지해야 한다. 그래서 셔플 결과를
+// ItemID 가 아니라 .EggId[] 인덱스로 저장한다.
+// 덕분에 "저장된 순서가 현재 활성 풀과 같은가" 검사를
+// .EggEnabled[인덱스] 조회 한 번(O(1))으로 끝낼 수 있다.
+// ItemID 로 저장하면 매 회차 O(n^2) 역조회가 필요해
+// infinity loop 오류로 갱신이 통째로 중단된다.
 //============================================================
 
 lasagna,169,195,4	script	추억의 행운의 알 상인#need_past_egg	4_F_KAFRA6,{
@@ -34,13 +80,13 @@ lasagna,169,195,4	script	추억의 행운의 알 상인#need_past_egg	4_F_KAFRA6,{
 		mes needtr("다시 만날 수 있는 특별 판매소입니다.", "Lucky Eggs from past seasons again.");
 		mes " ";
 
-		if ($NeedPastEggMarketItem > 0) {
-			mes needtr("현재 한정 판매:", "Current limited sale:");
-			mes "^0055FF" + getitemname($NeedPastEggMarketItem) + "^000000";
-			mes needtr("판매가: ^FF8800", "Price: ^FF8800") + $NeedPastEggMarketUnitPrice + " Cash^000000";
-			mes needtr("가격 배율: ", "Price rate: ") + $NeedPastEggMarketRate + "%";
-			mes needtr("남은 서버 재고: ", "Server stock left: ") + $NeedPastEggMarketStock + needtr("개", "");
-			mes needtr("내 구매량: ", "My purchases: ") + #NeedPastEggBought + " / " + .BuyLimit + needtr("개", "");
+		.@list_n = getarraysize($NeedPastEggSaleId);
+
+		if (.@list_n > 0) {
+			mes needtr("이번 회차 한정 판매: ^0055FF", "This round's limited sale: ^0055FF") + .@list_n + needtr("종^000000", " items^000000");
+			mes needtr("(전체 활성 행알의 약 1/3)", "(about 1/3 of all active eggs)");
+			mes needtr("갱신: ^0055FF00:00 / 12:00^000000", "Refresh: ^0055FF00:00 / 12:00^000000");
+			mes needtr("계정 구매 제한: 상품별 ", "Account purchase limit: ") + .BuyLimit + needtr("개", " per item");
 		}
 		else {
 			mes needtr("^FF0000현재 판매 가능한 행운의 알이 없습니다.^000000", "^FF0000No Lucky Egg is on sale right now.^000000");
@@ -62,14 +108,28 @@ lasagna,169,195,4	script	추억의 행운의 알 상인#need_past_egg	4_F_KAFRA6,{
 			mes needtr("랜덤 한정 판매는 매일", "The random limited sale refreshes every day");
 			mes needtr("^0055FF00:00 / 12:00^000000에 갱신됩니다.", "at ^0055FF00:00 / 12:00^000000.");
 			mes " ";
-			mes needtr("상품, 판매 가격, 서버 재고가", "The product, the price and the server stock");
-			mes needtr("갱신 시마다 새롭게 결정됩니다.", "are all rerolled at every refresh.");
+			mes needtr("활성화된 과거 행운의 알 전체를 무작위로 섞어", "All active past Lucky Eggs are shuffled at random");
+			mes needtr("^0055FF3개의 그룹^000000으로 나눈 뒤,", "and split into ^0055FF3 groups^000000,");
+			mes needtr("회차마다 한 그룹씩 판매합니다.", "and one group is sold each round.");
 			next;
 
 			mes needtr("[추억의 행운의 알 상인]", "[Memory Lucky Egg Seller]");
-			mes needtr("한정 판매 상품은 계정당", "The limited sale is limited per account");
-			mes needtr("회차별 최대 ", "to at most ") + .BuyLimit + needtr("개까지 구매할 수 있습니다.", " per round.");
+			mes needtr("3개의 그룹을 모두 판매하고 나면", "Once all 3 groups have been sold,");
+			mes needtr("다시 전체를 섞어 새로운 순서를 만듭니다.", "everything is shuffled again into a new order.");
 			mes " ";
+			mes needtr("덕분에 같은 알이 계속 반복되거나", "That way the same egg doesn't keep repeating,");
+			mes needtr("특정 알이 오랫동안 나오지 않는 일이 없습니다.", "and no egg stays away for a long time.");
+			next;
+
+			mes needtr("[추억의 행운의 알 상인]", "[Memory Lucky Egg Seller]");
+			mes needtr("판매 가격과 서버 재고는", "The sale price and the server stock");
+			mes needtr("상품마다 따로 결정됩니다.", "are decided separately for each item.");
+			mes " ";
+			mes needtr("한정 판매 상품은 계정당", "The limited sale is limited per account");
+			mes needtr("^0055FF상품별 최대 ", "You can buy ^0055FFup to ") + .BuyLimit + needtr("개^000000까지 구매할 수 있습니다.", " of each item^000000.");
+			next;
+
+			mes needtr("[추억의 행운의 알 상인]", "[Memory Lucky Egg Seller]");
 			mes needtr("원하는 과거 행운의 알을 직접 구매할 경우", "To buy a specific past Lucky Egg you need");
 			mes "^FF0000" + getitemname(.MemoryFragment) + " " + .SelectFragmentCost + needtr("개^000000", "^000000");
 			mes "+ ^FF8800" + .SelectCashPrice + needtr(" Cash^000000가 필요합니다.", " Cash^000000.");
@@ -84,61 +144,125 @@ lasagna,169,195,4	script	추억의 행운의 알 상인#need_past_egg	4_F_KAFRA6,{
 
 
 //============================================================
-// 1단계 - 랜덤 한정 판매
+// 1단계 - 랜덤 한정 판매 (이번 회차 그룹 전체 목록)
 //============================================================
 S_RandomShop:
 	callsub S_EnsureRotation;
 	callsub S_SyncAccountRotation;
 
-	if ($NeedPastEggMarketItem <= 0 || $NeedPastEggMarketUnitPrice <= 0) {
+	while (1) {
+		deletearray .@slot[0];
+		.@menu$ = "";
+		.@cnt = 0;
+		.@size = getarraysize($NeedPastEggSaleId);
+
+		for (.@i = 0; .@i < .@size; .@i++) {
+			.@id = $NeedPastEggSaleId[.@i];
+			if (.@id <= 0 || $NeedPastEggSalePrice[.@i] <= 0)
+				continue;
+
+			// 회차 도중 운영자가 비활성으로 바꾼 행알은 노출하지 않는다.
+			.@x = $NeedPastEggSaleIdx[.@i];
+			if (.EggId[.@x] != .@id || !.EggEnabled[.@x])
+				continue;
+
+			.@slot[.@cnt] = .@i;
+
+			if (.@cnt > 0)
+				.@menu$ += ":";
+
+			.@menu$ += getitemname(.@id)
+				+ " " + $NeedPastEggSalePrice[.@i] + "C"
+				+ " (재고 " + $NeedPastEggSaleStock[.@i]
+				+ " / 내구매 " + #NeedPastEggBought[.@i] + ")";
+
+			.@cnt++;
+		}
+
+		if (.@cnt <= 0) {
+			mes needtr("[추억의 행운의 알 상인]", "[Memory Lucky Egg Seller]");
+			mes needtr("현재 판매 가능한 상품이 없습니다.", "There is no product on sale right now.");
+			next;
+			return;
+		}
+
+		mes needtr("[추억의 행운의 알 한정 판매]", "[Memory Lucky Egg Limited Sale]");
+		mes needtr("이번 회차 상품 ^0055FF", "This round has ^0055FF") + .@cnt + needtr("종^000000입니다.", " items^000000.");
+		mes " ";
+		mes needtr("구매할 상품을 선택해주세요.", "Please choose an item to buy.");
+		mes needtr("계정당 ^0055FF상품별 ", "Each account can buy ^0055FFup to ") + .BuyLimit + needtr("개^000000까지 구매할 수 있습니다.", " of each item^000000.");
+		setdialogsize(420,340);
+		next;
+
+		.@sel = select(.@menu$ + needtr(":돌아가기", ":Back")) - 1;
+		if (.@sel < 0 || .@sel >= .@cnt)
+			return;
+
+		callsub S_BuyOne, .@slot[.@sel];
+	}
+	return;
+
+
+//============================================================
+// 한정 판매 상품 1종 구매
+//
+// getarg(0) : $NeedPastEggSale* 배열의 index
+//============================================================
+S_BuyOne:
+	.@b_idx = getarg(0);
+	.@b_key$ = $NeedPastEggSaleKey$;
+	.@b_item = $NeedPastEggSaleId[.@b_idx];
+	.@b_price = $NeedPastEggSalePrice[.@b_idx];
+
+	if (.@b_item <= 0 || .@b_price <= 0) {
 		mes needtr("[추억의 행운의 알 상인]", "[Memory Lucky Egg Seller]");
 		mes needtr("현재 판매 가능한 상품이 없습니다.", "There is no product on sale right now.");
 		next;
 		return;
 	}
 
-	if ($NeedPastEggMarketStock <= 0) {
+	if ($NeedPastEggSaleStock[.@b_idx] <= 0) {
 		mes needtr("[추억의 행운의 알 상인]", "[Memory Lucky Egg Seller]");
-		mes needtr("^FF0000현재 회차의 상품이 모두 판매되었습니다.^000000", "^FF0000This round's stock is sold out.^000000");
+		mes "^FF0000" + getitemname(.@b_item) + "^000000";
+		mes needtr("^FF0000은(는) 이번 회차 수량이 모두 판매되었습니다.^000000", "^FF0000is sold out for this round.^000000");
 		mes needtr("다음 갱신을 기다려주세요.", "Please wait for the next refresh.");
 		next;
 		return;
 	}
 
-	.@remaining = .BuyLimit - #NeedPastEggBought;
-	if (.@remaining <= 0) {
+	.@b_remain = .BuyLimit - #NeedPastEggBought[.@b_idx];
+	if (.@b_remain <= 0) {
 		mes needtr("[추억의 행운의 알 상인]", "[Memory Lucky Egg Seller]");
-		mes needtr("이번 회차의 계정 구매 가능 수량을", "You have used up your account's purchases");
+		mes "^0055FF" + getitemname(.@b_item) + "^000000";
+		mes needtr("의 이번 회차 계정 구매 가능 수량을", "You have used up your account's purchases of it");
 		mes needtr("모두 사용했습니다.", "for this round.");
 		next;
 		return;
 	}
 
-	.@max = $NeedPastEggMarketStock;
-	if (.@remaining < .@max)
-		.@max = .@remaining;
+	.@b_max = $NeedPastEggSaleStock[.@b_idx];
+	if (.@b_remain < .@b_max)
+		.@b_max = .@b_remain;
 
 	mes needtr("[추억의 행운의 알 상인]", "[Memory Lucky Egg Seller]");
-	mes needtr("상품: ^0055FF", "Product: ^0055FF") + getitemname($NeedPastEggMarketItem) + "^000000";
-	mes needtr("개당 가격: ^FF8800", "Price each: ^FF8800") + $NeedPastEggMarketUnitPrice + " Cash^000000";
-	mes needtr("남은 서버 재고: ", "Server stock left: ") + $NeedPastEggMarketStock + needtr("개", "");
-	mes needtr("내 구매 가능: ", "I can still buy: ") + .@remaining + needtr("개", "");
+	mes needtr("상품: ^0055FF", "Product: ^0055FF") + getitemname(.@b_item) + "^000000";
+	mes needtr("개당 가격: ^FF8800", "Price each: ^FF8800") + .@b_price + " Cash^000000";
+	mes needtr("가격 배율: ", "Price rate: ") + $NeedPastEggSaleRate[.@b_idx] + "%";
+	mes needtr("남은 서버 재고: ", "Server stock left: ") + $NeedPastEggSaleStock[.@b_idx] + needtr("개", "");
+	mes needtr("내 구매 가능: ", "I can still buy: ") + .@b_remain + needtr("개", "");
 	mes " ";
 	mes needtr("구매할 수량을 입력해주세요.", "Please enter how many you want.");
-	mes "(1 ~ " + .@max + ")";
+	mes "(1 ~ " + .@b_max + ")";
 	next;
 
-	input .@amount, 1, .@max;
+	input .@b_amount, 1, .@b_max;
 
-	.@rotation$ = $NeedPastEggRotation$;
-	.@item = $NeedPastEggMarketItem;
-	.@unit_price = $NeedPastEggMarketUnitPrice;
-	.@total = .@unit_price * .@amount;
+	.@b_total = .@b_price * .@b_amount;
 
 	mes needtr("[추억의 행운의 알 상인]", "[Memory Lucky Egg Seller]");
-	mes needtr("상품: ^0055FF", "Product: ^0055FF") + getitemname(.@item) + "^000000";
-	mes needtr("수량: ", "Amount: ") + .@amount + needtr("개", "");
-	mes needtr("필요 Cash: ^FF8800", "Cash needed: ^FF8800") + .@total + "^000000";
+	mes needtr("상품: ^0055FF", "Product: ^0055FF") + getitemname(.@b_item) + "^000000";
+	mes needtr("수량: ", "Amount: ") + .@b_amount + needtr("개", "");
+	mes needtr("필요 Cash: ^FF8800", "Cash needed: ^FF8800") + .@b_total + "^000000";
 	mes " ";
 	mes needtr("구매하시겠습니까?", "Would you like to purchase");
 	next;
@@ -149,9 +273,9 @@ S_RandomShop:
 	callsub S_EnsureRotation;
 	callsub S_SyncAccountRotation;
 
-	if ($NeedPastEggRotation$ != .@rotation$ ||
-		$NeedPastEggMarketItem != .@item ||
-		$NeedPastEggMarketUnitPrice != .@unit_price) {
+	if ($NeedPastEggSaleKey$ != .@b_key$ ||
+		$NeedPastEggSaleId[.@b_idx] != .@b_item ||
+		$NeedPastEggSalePrice[.@b_idx] != .@b_price) {
 		mes needtr("[추억의 행운의 알 상인]", "[Memory Lucky Egg Seller]");
 		mes needtr("^FF0000대화 중 판매 상품이 갱신되었습니다.^000000", "^FF0000The sale refreshed while we were talking.^000000");
 		mes needtr("현재 상품을 다시 확인해주세요.", "Please check the current product again.");
@@ -159,53 +283,53 @@ S_RandomShop:
 		return;
 	}
 
-	.@remaining = .BuyLimit - #NeedPastEggBought;
-	if (.@remaining <= 0 || .@amount > .@remaining) {
+	.@b_remain = .BuyLimit - #NeedPastEggBought[.@b_idx];
+	if (.@b_remain <= 0 || .@b_amount > .@b_remain) {
 		mes needtr("[추억의 행운의 알 상인]", "[Memory Lucky Egg Seller]");
 		mes needtr("계정 구매 가능 수량이 부족합니다.", "Your account does not have enough purchases left.");
 		next;
 		return;
 	}
 
-	if ($NeedPastEggMarketStock < .@amount) {
+	if ($NeedPastEggSaleStock[.@b_idx] < .@b_amount) {
 		mes needtr("[추억의 행운의 알 상인]", "[Memory Lucky Egg Seller]");
 		mes needtr("^FF0000다른 모험가의 구매로 재고가 부족해졌습니다.^000000", "^FF0000Another adventurer bought some and the stock ran short.^000000");
-		mes needtr("현재 남은 재고: ", "Stock left now: ") + $NeedPastEggMarketStock + needtr("개", "");
+		mes needtr("현재 남은 재고: ", "Stock left now: ") + $NeedPastEggSaleStock[.@b_idx] + needtr("개", "");
 		next;
 		return;
 	}
 
-	.@total = .@unit_price * .@amount;
+	.@b_total = .@b_price * .@b_amount;
 
-	if (#CASHPOINTS < .@total) {
+	if (#CASHPOINTS < .@b_total) {
 		mes needtr("[추억의 행운의 알 상인]", "[Memory Lucky Egg Seller]");
 		mes needtr("Cash가 부족합니다.", "You do not have enough Cash.");
-		mes needtr("필요 Cash: ", "Cash needed: ") + .@total;
+		mes needtr("필요 Cash: ", "Cash needed: ") + .@b_total;
 		mes needtr("보유 Cash: ", "Cash held: ") + #CASHPOINTS;
 		next;
 		return;
 	}
 
-	if (!checkweight(.@item, .@amount)) {
+	if (!checkweight(.@b_item, .@b_amount)) {
 		mes needtr("[추억의 행운의 알 상인]", "[Memory Lucky Egg Seller]");
 		mes needtr("소지 무게 또는 인벤토리 공간을 확인해주세요.", "Please check your weight and inventory space.");
 		next;
 		return;
 	}
 
-	#CASHPOINTS -= .@total;
-	$NeedPastEggMarketStock -= .@amount;
-	callsub S_CheckStockNotice;
-	#NeedPastEggBought += .@amount;
-	getitem .@item, .@amount;
-	getitem .MemoryFragment, .@amount;
+	#CASHPOINTS -= .@b_total;
+	$NeedPastEggSaleStock[.@b_idx] = $NeedPastEggSaleStock[.@b_idx] - .@b_amount;
+	callsub S_CheckStockNotice, .@b_idx;
+	#NeedPastEggBought[.@b_idx] = #NeedPastEggBought[.@b_idx] + .@b_amount;
+	getitem .@b_item, .@b_amount;
+	getitem .MemoryFragment, .@b_amount;
 
 	mes needtr("[추억의 행운의 알 상인]", "[Memory Lucky Egg Seller]");
-	mes "^0055FF" + getitemname(.@item) + "^000000 " + .@amount + needtr("개를 구매했습니다.", " purchased.");
-	mes needtr("사용 Cash: ^FF8800", "Cash spent: ^FF8800") + .@total + "^000000";
+	mes "^0055FF" + getitemname(.@b_item) + "^000000 " + .@b_amount + needtr("개를 구매했습니다.", " purchased.");
+	mes needtr("사용 Cash: ^FF8800", "Cash spent: ^FF8800") + .@b_total + "^000000";
 	mes needtr("남은 Cash: ", "Cash left: ") + #CASHPOINTS;
-	mes needtr("남은 서버 재고: ", "Server stock left: ") + $NeedPastEggMarketStock + needtr("개", "");
-	mes needtr("이번 회차 내 구매량: ", "My purchases this round: ") + #NeedPastEggBought + " / " + .BuyLimit;
+	mes needtr("남은 서버 재고: ", "Server stock left: ") + $NeedPastEggSaleStock[.@b_idx] + needtr("개", "");
+	mes needtr("이번 회차 내 구매량: ", "My purchases this round: ") + #NeedPastEggBought[.@b_idx] + " / " + .BuyLimit;
 	next;
 	return;
 
@@ -318,67 +442,175 @@ S_SelectShop:
 
 //============================================================
 // 현재 12시간 회차 보정
+//
+// 슬롯이 바뀌었을 때만 다음 그룹으로 전진한다.
+// map-server 재시작 / @reloadscript 로 OnInit 이 다시 돌아도
+// 슬롯 키가 같으면 판매 목록·가격·재고가 그대로 유지된다.
+//
+// [주의] callsub 은 .@ 스코프를 공유하지 않는다(script.cpp:5578 에서
+// 새 scope 를 새로 할당한다). 슬롯 키를 별도 서브루틴에서 만들어
+// .@ 로 돌려받으면 항상 빈 문자열이 되어 매 OnInit 마다 그룹이
+// 전진해 버린다. 그래서 키 계산은 여기서 직접 한다.
+// sprintf 는 서식 사이의 구분자가 사라지는 문제가 있어 직접 조립한다.
 //============================================================
 S_EnsureRotation:
-	.@slot = 0;
+	.@ens_slot = 0;
 	if (gettime(3) >= 12)
-		.@slot = 1;
+		.@ens_slot = 1;
 
-	.@key$ = sprintf("%04d%02d%02d-%d",
-		gettime(7), gettime(6), gettime(5), .@slot);
+	.@ens_key$ = "" + gettime(7) + "-" + gettime(6) + "-" + gettime(5)
+		+ "-" + .@ens_slot;
 
-	if ($NeedPastEggRotation$ != .@key$ || $NeedPastEggMarketItem <= 0)
-		callsub S_Rotate;
+	if ($NeedPastEggRotation$ != .@ens_key$) {
+		callsub S_Rotate, 1;
+		return;
+	}
+
+	// 슬롯은 같은데 판매 목록이 비어 있는 경우(최초 도입 등)만 재구성.
+	// 그룹은 전진시키지 않는다.
+	if (getarraysize($NeedPastEggSaleId) <= 0)
+		callsub S_Rotate, 0;
 
 	return;
 
 
 //============================================================
-// 랜덤 회차 생성
+// 회차 갱신
+//
+// getarg(0) : 1 = 다음 그룹으로 전진 / 0 = 현재 그룹 그대로 재구성
+//
+// 활성 풀이 바뀌었거나(수 변화 / 구성 변화) 3그룹을 모두 소진했으면
+// 전체를 다시 셔플하고 0번 그룹부터 시작한다.
 //============================================================
 S_Rotate:
-	.@slot = 0;
+	.@rot_adv = getarg(0);
+
+	.@rot_slot = 0;
 	if (gettime(3) >= 12)
-		.@slot = 1;
+		.@rot_slot = 1;
 
-	.@key$ = sprintf("%04d%02d%02d-%d",
-		gettime(7), gettime(6), gettime(5), .@slot);
+	.@rot_key$ = "" + gettime(7) + "-" + gettime(6) + "-" + gettime(5)
+		+ "-" + .@rot_slot;
 
-	.@count = 0;
-
-	for (.@i = 0; .@i < getarraysize(.EggId); .@i++) {
-		if (!.EggEnabled[.@i])
+	// --- 현재 활성 행알 인덱스 수집 ---
+	.@rot_total = getarraysize(.EggId);
+	.@rot_n = 0;
+	deletearray .@rot_act[0];
+	for (.@rot_i = 0; .@rot_i < .@rot_total; .@rot_i++) {
+		if (!.EggEnabled[.@rot_i])
 			continue;
-
-		.@eligible_index[.@count] = .@i;
-		.@count++;
+		.@rot_act[.@rot_n] = .@rot_i;
+		.@rot_n++;
 	}
 
-	if (.@count <= 0) {
-		$NeedPastEggRotation$ = .@key$;
-		$NeedPastEggMarketItem = 0;
-		$NeedPastEggMarketRate = 0;
-		$NeedPastEggMarketUnitPrice = 0;
-		$NeedPastEggMarketStock = 0;
+	deletearray $NeedPastEggSaleIdx[0];
+	deletearray $NeedPastEggSaleId[0];
+	deletearray $NeedPastEggSaleRate[0];
+	deletearray $NeedPastEggSalePrice[0];
+	deletearray $NeedPastEggSaleStock[0];
+	deletearray $NeedPastEggSaleInit[0];
+	deletearray $NeedPastEggSaleN90[0];
+	deletearray $NeedPastEggSaleOut[0];
+
+	$NeedPastEggRotation$ = .@rot_key$;
+	$NeedPastEggSerial = $NeedPastEggSerial + 1;
+	$NeedPastEggSaleKey$ = .@rot_key$ + "#" + $NeedPastEggSerial;
+
+	if (.@rot_n <= 0) {
+		deletearray $NeedPastEggOrder[0];
+		$NeedPastEggGroup = 0;
 		return;
 	}
 
-	.@pick = .@eligible_index[rand(.@count)];
+	// --- 저장된 셔플이 현재 활성 풀과 같은지 검사 ---
+	//
+	// 저장된 값은 서로 다른 인덱스들이므로,
+	//   (개수가 같다) + (전부 현재 활성이다)  =>  같은 집합
+	// 이 성립한다. 인덱스 조회라서 O(n) 으로 끝난다.
+	.@rot_new = 0;
 
-	$NeedPastEggRotation$ = .@key$;
-	$NeedPastEggMarketItem = .EggId[.@pick];
+	if (getarraysize($NeedPastEggOrder) != .@rot_n)
+		.@rot_new = 1;
 
-	$NeedPastEggMarketRate = 110 + (rand(5) * 10);
-	$NeedPastEggMarketUnitPrice = (.BaseCashPrice * $NeedPastEggMarketRate) / 100;
+	if ($NeedPastEggListSig != .ListSig)
+		.@rot_new = 1;
 
-	$NeedPastEggMarketStock = rand(.StockMin, .StockMax);
-	
-	// 판매율 계산용 최초 재고 저장
-	$NeedPastEggMarketInitialStock = $NeedPastEggMarketStock;
-	
-	// 회차별 알림 플래그 초기화
-	$NeedPastEggStock90Notice = 0;
-	$NeedPastEggSoldOutNotice = 0;
+	if ($NeedPastEggGroup < 0 || $NeedPastEggGroup >= .GroupCount)
+		.@rot_new = 1;
+
+	if (!.@rot_new) {
+		for (.@rot_i = 0; .@rot_i < .@rot_n; .@rot_i++) {
+			.@rot_x = $NeedPastEggOrder[.@rot_i];
+			if (.@rot_x < 0 || .@rot_x >= .@rot_total || !.EggEnabled[.@rot_x]) {
+				.@rot_new = 1;
+				break;
+			}
+		}
+	}
+
+	// --- 다음 그룹 결정 ---
+	if (.@rot_new) {
+		.@rot_next = 0;
+	}
+	else if (.@rot_adv) {
+		.@rot_next = $NeedPastEggGroup + 1;
+		if (.@rot_next >= .GroupCount) {
+			.@rot_new = 1;
+			.@rot_next = 0;
+		}
+	}
+	else {
+		.@rot_next = $NeedPastEggGroup;
+	}
+
+	// --- 전체 재셔플 (Fisher-Yates) ---
+	if (.@rot_new) {
+		deletearray $NeedPastEggOrder[0];
+
+		for (.@rot_i = 0; .@rot_i < .@rot_n; .@rot_i++)
+			$NeedPastEggOrder[.@rot_i] = .@rot_act[.@rot_i];
+
+		for (.@rot_i = .@rot_n - 1; .@rot_i > 0; .@rot_i--) {
+			.@rot_j = rand(.@rot_i + 1);
+			.@rot_tmp = $NeedPastEggOrder[.@rot_i];
+			$NeedPastEggOrder[.@rot_i] = $NeedPastEggOrder[.@rot_j];
+			$NeedPastEggOrder[.@rot_j] = .@rot_tmp;
+		}
+
+		$NeedPastEggListSig = .ListSig;
+		$NeedPastEggCycle = $NeedPastEggCycle + 1;
+	}
+
+	$NeedPastEggGroup = .@rot_next;
+
+	// --- 그룹 구간 계산 (최대한 균등 분배, 앞 그룹부터 나머지 배분) ---
+	.@rot_base = .@rot_n / .GroupCount;
+	.@rot_rem = .@rot_n % .GroupCount;
+	.@rot_g = $NeedPastEggGroup;
+
+	.@rot_start = .@rot_g * .@rot_base + ((.@rot_g < .@rot_rem) ? .@rot_g : .@rot_rem);
+	.@rot_size = .@rot_base + ((.@rot_g < .@rot_rem) ? 1 : 0);
+
+	// --- 이번 회차 판매 목록 생성 ---
+	.@rot_k = 0;
+	.@rot_end = .@rot_start + .@rot_size;
+	for (.@rot_i = .@rot_start; .@rot_i < .@rot_end; .@rot_i++) {
+		.@rot_x = $NeedPastEggOrder[.@rot_i];
+		.@rot_id = .EggId[.@rot_x];
+		if (.@rot_id <= 0)
+			continue;
+
+		$NeedPastEggSaleIdx[.@rot_k] = .@rot_x;
+		$NeedPastEggSaleId[.@rot_k] = .@rot_id;
+		$NeedPastEggSaleRate[.@rot_k] = 110 + (rand(5) * 10);
+		$NeedPastEggSalePrice[.@rot_k] = (.BaseCashPrice * $NeedPastEggSaleRate[.@rot_k]) / 100;
+		$NeedPastEggSaleStock[.@rot_k] = rand(.StockMin, .StockMax);
+		$NeedPastEggSaleInit[.@rot_k] = $NeedPastEggSaleStock[.@rot_k];
+		$NeedPastEggSaleN90[.@rot_k] = 0;
+		$NeedPastEggSaleOut[.@rot_k] = 0;
+
+		.@rot_k++;
+	}
 
 	return;
 
@@ -387,9 +619,9 @@ S_Rotate:
 // 계정 회차 구매량 동기화
 //============================================================
 S_SyncAccountRotation:
-	if (#NeedPastEggRotation$ != $NeedPastEggRotation$) {
-		#NeedPastEggRotation$ = $NeedPastEggRotation$;
-		#NeedPastEggBought = 0;
+	if (#NeedPastEggRotation$ != $NeedPastEggSaleKey$) {
+		#NeedPastEggRotation$ = $NeedPastEggSaleKey$;
+		deletearray #NeedPastEggBought[0];
 	}
 	return;
 
@@ -398,11 +630,11 @@ S_SyncAccountRotation:
 // 갱신 10분 전 전체 공지
 //============================================================
 OnClock1150:
-	announce "[행운의 알] 10분 후 과거 행운의 알이 새롭게 입고됩니다! 구매처 : 마을 중앙 12시", bc_all;
+	announcelang "[행운의 알] 10분 후 과거 행운의 알이 새롭게 입고됩니다! 구매처 : 마을 중앙 12시", "[Lucky Egg] New past Lucky Eggs arrive in 10 minutes! Where to buy: town center, 12 o'clock", bc_all;
 	end;
 
 OnClock2350:
-	announce "[행운의 알] 10분 후 과거 행운의 알이 새롭게 입고됩니다! 구매처 : 마을 중앙 12시", bc_all;
+	announcelang "[행운의 알] 10분 후 과거 행운의 알이 새롭게 입고됩니다! 구매처 : 마을 중앙 12시", "[Lucky Egg] New past Lucky Eggs arrive in 10 minutes! Where to buy: town center, 12 o'clock", bc_all;
 	end;
 
 
@@ -410,46 +642,49 @@ OnClock2350:
 // 자동 갱신
 //============================================================
 OnClock0000:
-	announce "[행운의 알] 과거 행운의 알 한정 판매가 시작되었습니다! 추억의 행운의 알 상인을 확인해주세요. 구매처 : 마을 중앙 12시", bc_all;
-	callsub S_Rotate;
+	announcelang "[행운의 알] 과거 행운의 알 한정 판매가 시작되었습니다! 추억의 행운의 알 상인을 확인해주세요. 구매처 : 마을 중앙 12시", "[Lucky Egg] The past Lucky Egg limited sale has begun! Check the Memory Lucky Egg Seller. Where to buy: town center, 12 o'clock", bc_all;
+	callsub S_Rotate, 1;
 	end;
 
 OnClock1200:
-	announce "[행운의 알] 과거 행운의 알 한정 판매가 시작되었습니다! 추억의 행운의 알 상인을 확인해주세요. 구매처 : 마을 중앙 12시", bc_all;
-	callsub S_Rotate;
+	announcelang "[행운의 알] 과거 행운의 알 한정 판매가 시작되었습니다! 추억의 행운의 알 상인을 확인해주세요. 구매처 : 마을 중앙 12시", "[Lucky Egg] The past Lucky Egg limited sale has begun! Check the Memory Lucky Egg Seller. Where to buy: town center, 12 o'clock", bc_all;
+	callsub S_Rotate, 1;
 	end;
 
 //============================================================
 // 판매 재고 알림
+//
+// getarg(0) : $NeedPastEggSale* 배열의 index
 //============================================================
 S_CheckStockNotice:
+	.@n_idx = getarg(0);
 
 	// 품절
-	if ($NeedPastEggMarketStock <= 0) {
-		$NeedPastEggMarketStock = 0;
+	if ($NeedPastEggSaleStock[.@n_idx] <= 0) {
+		$NeedPastEggSaleStock[.@n_idx] = 0;
 
-		if (!$NeedPastEggSoldOutNotice) {
-			$NeedPastEggSoldOutNotice = 1;
+		if (!$NeedPastEggSaleOut[.@n_idx]) {
+			$NeedPastEggSaleOut[.@n_idx] = 1;
 
-			announce "[행운의 알] "
-				+ getitemname($NeedPastEggMarketItem)
-				+ "의 준비된 수량이 모두 판매되었습니다!", bc_all;
+			announcelang "[행운의 알] "
+				+ getitemname($NeedPastEggSaleId[.@n_idx])
+				+ "의 준비된 수량이 모두 판매되었습니다!", "[Lucky Egg] " + getitemname($NeedPastEggSaleId[.@n_idx]) + " has sold out of its prepared stock!", bc_all;
 		}
 
 		return;
 	}
 
 	// 약 90% 판매 완료 = 최초 재고의 10% 이하 남음
-	if (!$NeedPastEggStock90Notice &&
-		$NeedPastEggMarketInitialStock > 0 &&
-		$NeedPastEggMarketStock * 10 <= $NeedPastEggMarketInitialStock) {
+	if (!$NeedPastEggSaleN90[.@n_idx] &&
+		$NeedPastEggSaleInit[.@n_idx] > 0 &&
+		$NeedPastEggSaleStock[.@n_idx] * 10 <= $NeedPastEggSaleInit[.@n_idx]) {
 
-		$NeedPastEggStock90Notice = 1;
+		$NeedPastEggSaleN90[.@n_idx] = 1;
 
-		announce "[행운의 알] "
-			+ getitemname($NeedPastEggMarketItem)
+		announcelang "[행운의 알] "
+			+ getitemname($NeedPastEggSaleId[.@n_idx])
 			+ "의 준비된 수량이 얼마 남지 않았습니다! 남은 수량: "
-			+ $NeedPastEggMarketStock + "개", bc_all;
+			+ $NeedPastEggSaleStock[.@n_idx] + "개", "[Lucky Egg] " + getitemname($NeedPastEggSaleId[.@n_idx]) + " is running low on prepared stock! Remaining: " + $NeedPastEggSaleStock[.@n_idx] + " left", bc_all;
 	}
 
 	return;
@@ -460,14 +695,24 @@ S_CheckStockNotice:
 OnInit:
 	.MemoryFragment = 900106;		// 추억의 행운 조각
 	.BaseCashPrice = 1000;			// 행운의 알 1개 기존 기본가
-	.StockMin = 300;				// 회차 최소 서버 재고
-	.StockMax = 500;				// 회차 최대 서버 재고
-	.BuyLimit = 10;					// 계정당 회차 구매 제한
+	.StockMin = 300;				// 상품별 최소 서버 재고
+	.StockMax = 500;				// 상품별 최대 서버 재고
+	.BuyLimit = 10;					// 계정당 회차 구매 제한 (상품별)
+	.GroupCount = 3;				// 로테이션 그룹 수 (활성 풀의 1/3씩 판매)
 
 	.SelectFragmentCost = 30;		// 선택 교환 필요 조각
 	.SelectEggAmount = 10;			// 선택 교환 지급 수량
 	.SelectCashRate = 110;			// 10개 기본가의 110%
 	.SelectCashPrice = (.BaseCashPrice * .SelectEggAmount * .SelectCashRate) / 100; // 11,000 Cash
+
+	// 1종 판매 시절에 쓰던 전역 변수 정리 (0 을 넣으면 mapreg 에서 삭제된다)
+	$NeedPastEggMarketItem = 0;
+	$NeedPastEggMarketRate = 0;
+	$NeedPastEggMarketUnitPrice = 0;
+	$NeedPastEggMarketStock = 0;
+	$NeedPastEggMarketInitialStock = 0;
+	$NeedPastEggStock90Notice = 0;
+	$NeedPastEggSoldOutNotice = 0;
 
 	// ---------------------------------------------------------
 	// 과거 행운의 알 전체 목록
@@ -576,21 +821,21 @@ OnInit:
 		1,	// 14725 봉인된 백소진 스크롤
 		1,	// 14733 봉인된 파라오 스크롤
 		1,	// 22735 봉인된 월야화 스크롤
-		0,	// 14739 봉인된보스이그니젬스크롤
-		0,	// 14740 봉인된 베스퍼 스크롤
-		0,	// 22842 봉인된 드라큐라 스크롤 II
-		0,	// 22823 봉인된 스나이퍼 스크롤
-		0,	// 22828 봉인된 인장스크롤
-		0,	// 14758 안심 제련 스크롤
-		0,	// 22873 봉인된 베르제브브 스크롤 II
-		0,	// 22888 신년 스크롤
-		0,	// 22902 봉인된 인장 스크롤 II
-		0,	// 22906 봉인된인장 스크롤 III
-		0,	// 22946 스테이터스 감소 스크롤
-		0,	// 22971 매드바니 스크롤
-		0,	// 14780 영혼의 뚫어뻥 스크롤
-		0,	// 14781 해피벌룬 스크롤
-		0,	// 23024 피아멧트 스크롤
+		1,	// 14739 봉인된보스이그니젬스크롤
+		1,	// 14740 봉인된 베스퍼 스크롤
+		1,	// 22842 봉인된 드라큐라 스크롤 II
+		1,	// 22823 봉인된 스나이퍼 스크롤
+		1,	// 22828 봉인된 인장스크롤
+		1,	// 14758 안심 제련 스크롤
+		1,	// 22873 봉인된 베르제브브 스크롤 II
+		1,	// 22888 신년 스크롤
+		1,	// 22902 봉인된 인장 스크롤 II
+		1,	// 22906 봉인된인장 스크롤 III
+		1,	// 22946 스테이터스 감소 스크롤
+		1,	// 22971 매드바니 스크롤
+		1,	// 14780 영혼의 뚫어뻥 스크롤
+		1,	// 14781 해피벌룬 스크롤
+		1,	// 23024 피아멧트 스크롤
 		0,	// 23034 인비지블 스크롤
 		0,	// 23051 신상모자 스크롤
 		0,	// 23069 2015 스페셜 스크롤
@@ -625,6 +870,13 @@ OnInit:
 		0,	// 23765 5월의 레인보우 스크롤
 		0,	// 23804 영혼의 뚫어뻥 스크롤 II
 		0;	// 23878 별과 영혼의 스크롤
+
+	// .EggId[] 목록 자체가 바뀌면(추가/삭제/순서 변경) 저장된 셔플의
+	// 인덱스 의미가 달라지므로, 서명을 만들어 두고 다르면 재셔플한다.
+	.ListSig = 0;
+	for (.@i = 0; .@i < getarraysize(.EggId); .@i++)
+		.ListSig = .ListSig + (.@i + 1) * .EggId[.@i];
+	.ListSig = .ListSig + getarraysize(.EggId) * 7919;
 
 	callsub S_EnsureRotation;
 	end;

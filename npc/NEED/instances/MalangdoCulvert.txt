@@ -399,7 +399,7 @@ mal_in01,160,34,4	script	청소부 미싱	545,{
 		close;
 	}
 	set .@party_id,getcharid(1);
-	set .@md_name$,"지하 배수로";
+	set .@md_name$,"지하 배수로"; set .@md_name_en$,"Culvert";
 	if (!.@party_id) {
 		mes needtr("^0000ff 2인 이상의 파티를 구성하거나", "^0000ffYou have to organize a party of");
 		mes needtr("파티에 가입한 상태로", "more than 1 member or be a member");
@@ -421,10 +421,10 @@ mal_in01,160,34,4	script	청소부 미싱	545,{
 				if (instance_create(.@md_name$) < 0) {
 					mes needtr("파티명: ", "Party name: ")+getpartyname(.@party_id);
 					mes needtr("파티장: ", "Party leader: ")+strcharinfo(0);
-					mes "^0000ff"+.@md_name$+needtr("^000000 - 예약 실패!", "^000000 - Reservation Failed!");
+					mes "^0000ff"+needtr(.@md_name$, .@md_name_en$)+needtr("^000000 - 예약 실패!", "^000000 - Reservation Failed!");
 					close;
 				}
-				mes "^3333FF"+.@md_name$+needtr("^000000 - 예약 중", "^000000 - Reserving");
+				mes "^3333FF"+needtr(.@md_name$, .@md_name_en$)+needtr("^000000 - 예약 중", "^000000 - Reserving");
 				mes needtr("예약을 마친 후에는", "After making the reservation, you");
 				mes needtr("'수로 입장'을 선택해야 합니다.", "have to select Enter the Culvert.");
 				close;
@@ -691,7 +691,7 @@ OnTimer450000:
 OnTimer515000:
 	set .@map$, instance_mapname("1@pump");
 	set .@mob_dead_num, mobcount(.@map$,instance_npcname("청소부 미싱#n")+"::OnMyMobDead");
-	mapannounce .@map$,"오염된 해초 제거: .@mob_dead_num 개. 곧 미싱이 도착하여 청소 결과를 확인할 예정입니다.",bc_map,"0xff3333",FW_NORMAL,20;
+	mapannouncelang .@map$,"오염된 해초 제거: .@mob_dead_num 개. 곧 미싱이 도착하여 청소 결과를 확인할 예정입니다.", "Contaminated Seaweed removed: .@mob_dead_num. Missing will arrive shortly to check the cleaning result.",bc_map,"0xff3333",FW_NORMAL,20;
 	end;
 OnTimer520000:
 	stopnpctimer;

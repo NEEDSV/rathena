@@ -52,7 +52,8 @@ function	script	F_Tierra_ResetTeamNeed	{
 
 function	script	F_Tierra_AnnounceWaitingRoom	{
 	.@msg$ = "[티에라 협곡] 현재 파티장 준비 상태 - 기욤 " + ($@TierraReady_Guillaume ? "완료" : "대기") + ", 크루아 " + ($@TierraReady_Croix ? "완료" : "대기");
-	mapannounce "bat_room", .@msg$, bc_map, "0x99CCFF";
+	.@msg_EN$ = "[Tierra Valley] Party leader ready state - Guillaume " + ($@TierraReady_Guillaume ? "Ready" : "Waiting") + ", Croix " + ($@TierraReady_Croix ? "Ready" : "Waiting");
+	mapannouncelang "bat_room", .@msg$, .@msg_EN$, bc_map, "0x99CCFF";
 	return;
 }
 
@@ -64,9 +65,9 @@ function	script	F_Tierra_AnnounceWaitingRoom	{
 //============================================================
 
 bat_room,58,227,5	script	기욤 대기실#bat_a01	418,{
-	mes "[티에라 협곡]";
-	mes "티에라는 현재 파티장 준비 방식으로 시험 운영 중입니다.";
-	mes "전장 관리인의 '전장 입장 준비' 메뉴를 이용해주세요.";
+	mes needtr("[티에라 협곡]", "[Tierra Valley]");
+	mes needtr("티에라는 현재 파티장 준비 방식으로 시험 운영 중입니다.", "Tierra is currently running a trial of the party-leader readiness system.");
+	mes needtr("전장 관리인의 '전장 입장 준비' 메뉴를 이용해주세요.", "Please use the Battleground Manager's battleground entry preparation menu.");
 	close;
 
 OnInit:
@@ -79,9 +80,9 @@ OnRefresh:
 }
 
 bat_room,58,204,1	script	크루아 대기실#bat_a01	414,{
-	mes "[티에라 협곡]";
-	mes "티에라는 현재 파티장 준비 방식으로 시험 운영 중입니다.";
-	mes "전장 관리인의 '전장 입장 준비' 메뉴를 이용해주세요.";
+	mes needtr("[티에라 협곡]", "[Tierra Valley]");
+	mes needtr("티에라는 현재 파티장 준비 방식으로 시험 운영 중입니다.", "Tierra is currently running a trial of the party-leader readiness system.");
+	mes needtr("전장 관리인의 '전장 입장 준비' 메뉴를 이용해주세요.", "Please use the Battleground Manager's battleground entry preparation menu.");
 	close;
 
 OnInit:
@@ -178,24 +179,28 @@ function	script	F_Tierra_JoinPartyToBG	{
 		if (!isloggedin(.@aid[.@i], .@cid[.@i])) {
 			$@TierraJoin_FailName$ = .@name$[.@i];
 			$@TierraJoin_FailReason$ = "입장 직전에 접속이 종료되었습니다.";
+			$@TierraJoin_FailReason_EN$ = "Disconnected just before entry.";
 			return 0;
 		}
 
 		if (!bg_join(.@bg_id, .@map$, .@x, .@y, .@cid[.@i])) {
 			$@TierraJoin_FailName$ = .@name$[.@i];
 			$@TierraJoin_FailReason$ = "BG 팀 가입 명령이 실패했습니다.";
+			$@TierraJoin_FailReason_EN$ = "The battleground team join command failed.";
 			return 0;
 		}
 
 		if (!attachrid(.@aid[.@i]) || getcharid(0) != .@cid[.@i]) {
 			$@TierraJoin_FailName$ = .@name$[.@i];
 			$@TierraJoin_FailReason$ = "가입 후 캐릭터 정보를 확인할 수 없습니다.";
+			$@TierraJoin_FailReason_EN$ = "Character information could not be read after joining.";
 			return 0;
 		}
 
 		if (getcharid(4) != .@bg_id) {
 			$@TierraJoin_FailName$ = strcharinfo(0);
 			$@TierraJoin_FailReason$ = "가입된 BG 팀 ID가 일치하지 않습니다.";
+			$@TierraJoin_FailReason_EN$ = "The joined battleground team ID does not match.";
 			detachrid;
 			return 0;
 		}
@@ -292,7 +297,7 @@ OnCroixQuit:
 
 OnPartyReady:
 	if ($@TierraBG1) {
-		mapannounce "bat_room", "[티에라 협곡] 이미 티에라 전장 상태가 활성화되어 자동 입장을 중단합니다.", bc_map, "0xFF6666";
+		mapannouncelang "bat_room", "[티에라 협곡] 이미 티에라 전장 상태가 활성화되어 자동 입장을 중단합니다.", "[Tierra Valley] A Tierra battleground is already active, so automatic entry has been stopped.", bc_map, "0xFF6666";
 		callfunc "F_Tierra_ClearReadyState";
 		end;
 	}
@@ -304,12 +309,14 @@ OnPartyReady:
 
 	// 실제 BG 생성 직전 양 팀을 마지막으로 다시 검사합니다.
 	if (!callfunc("F_Tierra_CheckRegisteredParty", $BG_GUILLAUME_PARTY_ID, $BG_Guillaume_Count, $BG_GUILLAUME_LEADER_CID, $BG_GUILLAUME_LEADER_NAME$)) {
-		mapannounce "bat_room", "[티에라 협곡] 기욤 팀 입장 직전 검사 실패: " + $@TierraCheck_Reason$ + (($@TierraCheck_Name$ == "") ? "" : " (" + $@TierraCheck_Name$ + ")"), bc_map, "0xFF6666";
+		mapannouncelang "bat_room", "[티에라 협곡] 기욤 팀 입장 직전 검사 실패: " + $@TierraCheck_Reason$ + (($@TierraCheck_Name$ == "") ? "" : " (" + $@TierraCheck_Name$ + ")"),
+			"[Tierra Valley] The Guillaume team failed the pre-entry check: " + $@TierraCheck_Reason_EN$ + (($@TierraCheck_Name$ == "") ? "" : " (" + $@TierraCheck_Name$ + ")"), bc_map, "0xFF6666";
 		callfunc "F_Tierra_ClearReadyState";
 		end;
 	}
 	if (!callfunc("F_Tierra_CheckRegisteredParty", $BG_CROIX_PARTY_ID, $BG_Croix_Count, $BG_CROIX_LEADER_CID, $BG_CROIX_LEADER_NAME$)) {
-		mapannounce "bat_room", "[티에라 협곡] 크루아 팀 입장 직전 검사 실패: " + $@TierraCheck_Reason$ + (($@TierraCheck_Name$ == "") ? "" : " (" + $@TierraCheck_Name$ + ")"), bc_map, "0xFF6666";
+		mapannouncelang "bat_room", "[티에라 협곡] 크루아 팀 입장 직전 검사 실패: " + $@TierraCheck_Reason$ + (($@TierraCheck_Name$ == "") ? "" : " (" + $@TierraCheck_Name$ + ")"),
+			"[Tierra Valley] The Croix team failed the pre-entry check: " + $@TierraCheck_Reason_EN$ + (($@TierraCheck_Name$ == "") ? "" : " (" + $@TierraCheck_Name$ + ")"), bc_map, "0xFF6666";
 		callfunc "F_Tierra_ClearReadyState";
 		end;
 	}
@@ -318,12 +325,13 @@ OnPartyReady:
 	$@TierraBG1_Victory = 0;
 	$@TierraJoin_FailName$ = "";
 	$@TierraJoin_FailReason$ = "";
+	$@TierraJoin_FailReason_EN$ = "";
 
 	$@TierraBG1_id1 = bg_create("bat_a01",50,374,"티에라 진행#bat_a01::OnGuillaumeQuit","");
 	$@TierraBG1_id2 = bg_create("bat_a01",42,16,"티에라 진행#bat_a01::OnCroixQuit","");
 
 	if (!$@TierraBG1_id1 || !$@TierraBG1_id2) {
-		mapannounce "bat_room", "[티에라 협곡] BG 팀 생성에 실패하여 자동 입장을 취소했습니다.", bc_map, "0xFF6666";
+		mapannouncelang "bat_room", "[티에라 협곡] BG 팀 생성에 실패하여 자동 입장을 취소했습니다.", "[Tierra Valley] The BG team could not be created, so automatic entry has been cancelled.", bc_map, "0xFF6666";
 		donpcevent "티에라 진행#bat_a01::OnPartyEntryFail";
 		end;
 	}
@@ -332,12 +340,14 @@ OnPartyReady:
 		.@joined_g = callfunc("F_BG_RM_JoinCyclePartyToBG", $BG_GUILLAUME_PARTY_ID, $@TierraBG1_id1, 1, "bat_a01", 50, 374);
 		$@TierraJoin_FailName$ = $@BG_RM_Join_FailName$;
 		$@TierraJoin_FailReason$ = $@BG_RM_Join_FailReason$;
+		$@TierraJoin_FailReason_EN$ = $@BG_RM_Join_FailReason_EN$;
 	}
 	else
 		.@joined_g = callfunc("F_Tierra_JoinPartyToBG", $BG_GUILLAUME_PARTY_ID, $@TierraBG1_id1, 1, "bat_a01", 50, 374);
 
 	if (.@joined_g != $BG_Guillaume_Count) {
-		mapannounce "bat_room", "[티에라 협곡] 기욤 팀 자동 입장 실패: " + $@TierraJoin_FailReason$ + (($@TierraJoin_FailName$ == "") ? "" : " (" + $@TierraJoin_FailName$ + ")"), bc_map, "0xFF6666";
+		mapannouncelang "bat_room", "[티에라 협곡] 기욤 팀 자동 입장 실패: " + $@TierraJoin_FailReason$ + (($@TierraJoin_FailName$ == "") ? "" : " (" + $@TierraJoin_FailName$ + ")"),
+			"[Tierra Valley] The Guillaume team failed to enter automatically: " + $@TierraJoin_FailReason_EN$ + (($@TierraJoin_FailName$ == "") ? "" : " (" + $@TierraJoin_FailName$ + ")"), bc_map, "0xFF6666";
 		donpcevent "티에라 진행#bat_a01::OnPartyEntryFail";
 		end;
 	}
@@ -346,19 +356,21 @@ OnPartyReady:
 		.@joined_c = callfunc("F_BG_RM_JoinCyclePartyToBG", $BG_CROIX_PARTY_ID, $@TierraBG1_id2, 2, "bat_a01", 42, 16);
 		$@TierraJoin_FailName$ = $@BG_RM_Join_FailName$;
 		$@TierraJoin_FailReason$ = $@BG_RM_Join_FailReason$;
+		$@TierraJoin_FailReason_EN$ = $@BG_RM_Join_FailReason_EN$;
 	}
 	else
 		.@joined_c = callfunc("F_Tierra_JoinPartyToBG", $BG_CROIX_PARTY_ID, $@TierraBG1_id2, 2, "bat_a01", 42, 16);
 
 	if (.@joined_c != $BG_Croix_Count) {
-		mapannounce "bat_room", "[티에라 협곡] 크루아 팀 자동 입장 실패: " + $@TierraJoin_FailReason$ + (($@TierraJoin_FailName$ == "") ? "" : " (" + $@TierraJoin_FailName$ + ")"), bc_map, "0xFF6666";
+		mapannouncelang "bat_room", "[티에라 협곡] 크루아 팀 자동 입장 실패: " + $@TierraJoin_FailReason$ + (($@TierraJoin_FailName$ == "") ? "" : " (" + $@TierraJoin_FailName$ + ")"),
+			"[Tierra Valley] The Croix team failed to enter automatically: " + $@TierraJoin_FailReason_EN$ + (($@TierraJoin_FailName$ == "") ? "" : " (" + $@TierraJoin_FailName$ + ")"), bc_map, "0xFF6666";
 		donpcevent "티에라 진행#bat_a01::OnPartyEntryFail";
 		end;
 	}
 
 	// 가입된 실제 BG 인원을 다시 확인합니다.
 	if (bg_get_data($@TierraBG1_id1,0) != $BG_Guillaume_Count || bg_get_data($@TierraBG1_id2,0) != $BG_Croix_Count) {
-		mapannounce "bat_room", "[티에라 협곡] BG 가입 인원 검증에 실패하여 자동 입장을 취소했습니다.", bc_map, "0xFF6666";
+		mapannouncelang "bat_room", "[티에라 협곡] BG 가입 인원 검증에 실패하여 자동 입장을 취소했습니다.", "[Tierra Valley] The BG join headcount check failed, so automatic entry has been cancelled.", bc_map, "0xFF6666";
 		donpcevent "티에라 진행#bat_a01::OnPartyEntryFail";
 		end;
 	}
@@ -367,7 +379,7 @@ OnPartyReady:
 	callfunc "F_Tierra_ClearReadyState";
 	$@TierraReady_Starting = 0;
 
-	announce "[티에라 협곡] 기욤 " + .@joined_g + "명 vs 크루아 " + .@joined_c + "명이 내부 준비 구역에 입장했습니다.", bc_all;
+	announcelang "[티에라 협곡] 기욤 " + .@joined_g + "명 vs 크루아 " + .@joined_c + "명이 내부 준비 구역에 입장했습니다.", "[Tierra Valley] Guillaume " + .@joined_g + " vs Croix " + .@joined_c + " have entered the staging area.", bc_all;
 	stopnpctimer;
 	initnpctimer;
 	end;
@@ -389,7 +401,7 @@ OnPartyEntryFail:
 	$@TierraBG1 = 0;
 	$@TierraBG1_Victory = 0;
 	callfunc "F_Tierra_ClearReadyState";
-	mapannounce "bat_room", "[티에라 협곡] 자동 입장이 취소되었습니다. 파티 상태를 확인한 뒤 다시 준비해주세요.", bc_map, "0xFF6666";
+	mapannouncelang "bat_room", "[티에라 협곡] 자동 입장이 취소되었습니다. 파티 상태를 확인한 뒤 다시 준비해주세요.", "[Tierra Valley] Automatic entry has been cancelled. Check your party state and get ready again.", bc_map, "0xFF6666";
 	end;
 
 OnCancel:
@@ -398,7 +410,7 @@ OnCancel:
 	$@TierraBG1 = 0;
 	$@TierraBG1_Victory = 0;
 
-	mapannounce "bat_a01","준비시간 중 참가 인원이 부족해 티에라 협곡 전장이 취소되었습니다.",bc_map,"0x696969";
+	mapannouncelang "bat_a01","준비시간 중 참가 인원이 부족해 티에라 협곡 전장이 취소되었습니다.","There were not enough participants during the preparation time, so the Tierra Valley battleground was cancelled.",bc_map,"0x696969";
 	mapwarp "bat_a01","bat_room",154,150;
 
 	if ($@TierraBG1_id1) {
@@ -418,7 +430,7 @@ OnTimer1000:
 	callfunc "F_Tierra_NormalizeCount";
 
 	if (!$@TierraBG1_id1 || !$@TierraBG1_id2) {
-		mapannounce "bat_room","[티에라 협곡] 전장 내부 준비 구역 입장에 실패했습니다. 잠시 후 다시 시도해주세요.",bc_map,"0xFF6666";
+		mapannouncelang "bat_room","[티에라 협곡] 전장 내부 준비 구역 입장에 실패했습니다. 잠시 후 다시 시도해주세요.","[Tierra Valley] Entry to the battleground staging area failed. Please try again in a moment.",bc_map,"0xFF6666";
 		donpcevent "티에라 진행#bat_a01::OnCancel";
 		end;
 	}
@@ -428,7 +440,7 @@ OnTimer1000:
 
 	if ($@BG_RM_CYCLE_ACTIVE) {
 		if (.@EnteredGuillaume < 1 || .@EnteredCroix < 1) {
-			mapannounce "bat_room","[티에라 협곡] 한 진영의 참가자가 모두 이탈하여 전장을 시작할 수 없습니다.",bc_map,"0xFF6666";
+			mapannouncelang "bat_room","[티에라 협곡] 한 진영의 참가자가 모두 이탈하여 전장을 시작할 수 없습니다.","[Tierra Valley] Every participant on one side has left, so the battleground cannot start.",bc_map,"0xFF6666";
 			donpcevent "티에라 진행#bat_a01::OnCancel";
 			end;
 		}
@@ -436,28 +448,28 @@ OnTimer1000:
 		$BG_Croix_Count = .@EnteredCroix;
 	}
 	else if (.@EnteredGuillaume < $BG_Guillaume_Count || .@EnteredCroix < $BG_Croix_Count) {
-		mapannounce "bat_room","[티에라 협곡] 입장 인원이 부족합니다. 기욤 " + .@EnteredGuillaume + "/" + $BG_Guillaume_Count + "명, 크루아 " + .@EnteredCroix + "/" + $BG_Croix_Count + "명",bc_map,"0xFF6666";
+		mapannouncelang "bat_room","[티에라 협곡] 입장 인원이 부족합니다. 기욤 " + .@EnteredGuillaume + "/" + $BG_Guillaume_Count + "명, 크루아 " + .@EnteredCroix + "/" + $BG_Croix_Count + "명","[Tierra Valley] Not enough players have entered. Guillaume " + .@EnteredGuillaume + "/" + $BG_Guillaume_Count + ", Croix " + .@EnteredCroix + "/" + $BG_Croix_Count,bc_map,"0xFF6666";
 		donpcevent "티에라 진행#bat_a01::OnCancel";
 		end;
 	}
 
-	mapannounce "bat_a01","티에라 협곡 전장 내부 준비 구역에 입장했습니다. 잠시 후 전투가 시작됩니다.",bc_map,"0x33CCFF";
+	mapannouncelang "bat_a01","티에라 협곡 전장 내부 준비 구역에 입장했습니다. 잠시 후 전투가 시작됩니다.","You have entered the Tierra Valley battleground staging area. The battle starts shortly.",bc_map,"0x33CCFF";
 	end;
 
 OnTimer30000:
-	mapannounce "bat_a01","티에라 협곡 전투 시작까지 15초 남았습니다.",bc_map,"0x33CCFF";
+	mapannouncelang "bat_a01","티에라 협곡 전투 시작까지 15초 남았습니다.","15 seconds remaining until the Tierra Valley battle starts.",bc_map,"0x33CCFF";
 	end;
 
 OnTimer35000:
-	mapannounce "bat_a01","티에라 협곡 전투 시작까지 10초 남았습니다.",bc_map,"0x33CCFF";
+	mapannouncelang "bat_a01","티에라 협곡 전투 시작까지 10초 남았습니다.","10 seconds remaining until the Tierra Valley battle starts.",bc_map,"0x33CCFF";
 	end;
 
 OnTimer40000:
-	mapannounce "bat_a01","티에라 협곡 전투 시작까지 5초 남았습니다.",bc_map,"0x33CCFF";
+	mapannouncelang "bat_a01","티에라 협곡 전투 시작까지 5초 남았습니다.","5 seconds remaining until the Tierra Valley battle starts.",bc_map,"0x33CCFF";
 	end;
 
 OnTimer44000:
-	mapannounce "bat_a01","티에라 협곡 전투가 곧 시작됩니다.",bc_map,"0x33CCFF";
+	mapannouncelang "bat_a01","티에라 협곡 전투가 곧 시작됩니다.","The Tierra Valley battle is about to begin.",bc_map,"0x33CCFF";
 	end;
 
 OnTimer45000:
@@ -485,7 +497,7 @@ OnTimer45000:
 	bg_warp $@TierraBG1_id1,"bat_a01",352,342;
 	bg_warp $@TierraBG1_id2,"bat_a01",353,52;
 
-	mapannounce "bat_a01","티에라 협곡 전투가 시작되었습니다!",bc_map,"0x33CCFF";
+	mapannouncelang "bat_a01","티에라 협곡 전투가 시작되었습니다!","The Tierra Valley battle has begun!",bc_map,"0x33CCFF";
 	donpcevent "티에라 정리 타이머#bat_a01::OnEnable";
 	end;
 }
@@ -517,7 +529,7 @@ OnMyMobDead:
 		if ($@BG_RM_CYCLE_ACTIVE)
 			donpcevent "티에라 종료 타이머#bat_a01::OnStart";
 
-		announce "크루아 빈트나르 스완더리: 기욤의 식량 창고를 파괴했습니다! 우리가 승리했습니다!",bc_map,"0xFFCE00";
+		mapannouncelang "bat_a01","크루아 빈트나르 스완더리: 기욤의 식량 창고를 파괴했습니다! 우리가 승리했습니다!","Croix Vintenar Swandery: We destroyed Guillaume's Food Storage! We won!",bc_map,"0xFFCE00";
 
 		bg_warp $@TierraBG1_id1,"bat_a01",50,374;
 		bg_warp $@TierraBG1_id2,"bat_a01",42,16;
@@ -548,7 +560,7 @@ OnMyMobDead:
 		if ($@BG_RM_CYCLE_ACTIVE)
 			donpcevent "티에라 종료 타이머#bat_a01::OnStart";
 
-		announce "기욤 빈테나르 액슬 로즈: 크루아의 식량 창고를 파괴했다! 우리가 승리했다!",bc_map,"0xFFCE00";
+		mapannouncelang "bat_a01","기욤 빈테나르 액슬 로즈: 크루아의 식량 창고를 파괴했다! 우리가 승리했다!","Guillaume Vintenar Axl Rose: We destroyed Croix's Food Storage! We won!",bc_map,"0xFFCE00";
 
 		bg_warp $@TierraBG1_id1,"bat_a01",50,374;
 		bg_warp $@TierraBG1_id2,"bat_a01",42,16;
@@ -583,7 +595,7 @@ OnMyMobDead:
 			delwall "bat_a01_c1";
 
 		enablenpc "기욤 대장장이#a01";
-		mapannounce "bat_a01","기욤 빈테나르 액슬 로즈: 협곡의 바리케이드가 파괴됐다! 대장장이를 불러 바리케이드를 다시 세워야 한다!",bc_map,"0xFFCE00";
+		mapannouncelang "bat_a01","기욤 빈테나르 액슬 로즈: 협곡의 바리케이드가 파괴됐다! 대장장이를 불러 바리케이드를 다시 세워야 한다!","Guillaume Vintenar Axl Rose: The Barricade in the valley has been destroyed! Call the Blacksmith - we have to rebuild the Barricade!",bc_map,"0xFFCE00";
 	}
 	end;
 }
@@ -609,7 +621,7 @@ OnMyMobDead:
 			delwall "bat_a01_g1";
 
 		enablenpc "크루아 대장장이#bat_a01";
-		mapannounce "bat_a01","크루아 빈테나르 스완더리: 협곡의 바리케이드가 파괴됐습니다! 대장장이를 불러 바리케이드를 다시 세워야 합니다!",bc_map,"0xFFCE00";
+		mapannouncelang "bat_a01","크루아 빈테나르 스완더리: 협곡의 바리케이드가 파괴됐습니다! 대장장이를 불러 바리케이드를 다시 세워야 합니다!","Croix Vintenar Swandery: The Barricade in the valley has been destroyed! Call the Blacksmith - we have to rebuild the Barricade!",bc_map,"0xFFCE00";
 	}
 	end;
 }
@@ -634,11 +646,11 @@ OnMyMobDead:
 
 		if (getcharid(4) == $@TierraBG1_id1) {
 			donpcevent "기욤 수호병#bat_a01::OnEnable";
-			mapannounce "bat_a01","기욤 진영이 중립 깃발을 점령했습니다. 기욤 진영이 유리한 위치를 확보했습니다.",bc_map,"0xFFCE00";
+			mapannouncelang "bat_a01","기욤 진영이 중립 깃발을 점령했습니다. 기욤 진영이 유리한 위치를 확보했습니다.","Guillaume captured a Neutrality Flag. Guillaume now holds the advantage.",bc_map,"0xFFCE00";
 		}
 		else {
 			donpcevent "크루아 수호병#bat_a01::OnEnable";
-			mapannounce "bat_a01","크루아 진영이 중립 깃발을 점령했습니다. 크루아 진영이 유리한 위치를 확보했습니다.",bc_map,"0xFFCE00";
+			mapannouncelang "bat_a01","크루아 진영이 중립 깃발을 점령했습니다. 크루아 진영이 유리한 위치를 확보했습니다.","Croix captured a Neutrality Flag. Croix now holds the advantage.",bc_map,"0xFFCE00";
 		}
 	}
 	end;
@@ -686,8 +698,8 @@ OnMyMobDead:
 bat_a01,185,270,1	script	기욤 대장장이#a01	851,{
 	if (getcharid(4) == $@TierraBG1_id1) {
 		mes needtr("[기욤 대장장이]", "[Guillaume Blacksmith]");
-		mes "긴급 상황입니다!";
-		mes "바리케이드가 파괴되었습니다!";
+		mes needtr("긴급 상황입니다!", "We are in urgency!");
+		mes needtr("바리케이드가 파괴되었습니다!", "The Barricade has been destroyed!");
 		mes needtr("수리에는 돌 50개가 필요합니다.", "We have it all except for the 50 Stones!");
 		next;
 
@@ -695,13 +707,13 @@ bat_a01,185,270,1	script	기욤 대장장이#a01	851,{
 		case 1:
 			if (countitem(7049) < 50) {
 				mes needtr("[기욤 대장장이]", "[Guillaume Blacksmith]");
-				mes "돌이 부족합니다.";
-				mes "^3131FF돌 50개^000000를 가져와 주세요.";
+				mes needtr("돌이 부족합니다.", "You don't have enough Stones.");
+				mes needtr("^3131FF돌 50개^000000를 가져와 주세요.", "Please bring ^3131FF50 Stones^000000.");
 				close;
 			}
 
 			mes needtr("[기욤 대장장이]", "[Guillaume Blacksmith]");
-			mes "좋습니다. 바로 수리하겠습니다.";
+			mes needtr("좋습니다. 바로 수리하겠습니다.", "Good. I will repair it right away.");
 			next;
 
 			mes "......";
@@ -719,7 +731,7 @@ bat_a01,185,270,1	script	기욤 대장장이#a01	851,{
 			}
 
 			mes needtr("[기욤 대장장이]", "[Guillaume Blacksmith]");
-			mes "바리케이드 수리가 완료되었습니다.";
+			mes needtr("바리케이드 수리가 완료되었습니다.", "The Barricade has been repaired.");
 			close2;
 			disablenpc "기욤 대장장이#a01";
 			end;
@@ -744,8 +756,8 @@ OnInit:
 bat_a01,170,121,5	script	크루아 대장장이#bat_a01	851,{
 	if (getcharid(4) == $@TierraBG1_id2) {
 		mes needtr("[크루아 대장장이]", "[Croix Blacksmith]");
-		mes "긴급 상황입니다!";
-		mes "바리케이드가 파괴되었습니다!";
+		mes needtr("긴급 상황입니다!", "We are in urgency!");
+		mes needtr("바리케이드가 파괴되었습니다!", "The Barricade has been destroyed!");
 		mes needtr("수리에는 돌 50개가 필요합니다.", "We have it all except for the 50 Stones!");
 		next;
 
@@ -753,13 +765,13 @@ bat_a01,170,121,5	script	크루아 대장장이#bat_a01	851,{
 		case 1:
 			if (countitem(7049) < 50) {
 				mes needtr("[크루아 대장장이]", "[Croix Blacksmith]");
-				mes "돌이 부족합니다.";
-				mes "^3131FF돌 50개^000000를 가져와 주세요.";
+				mes needtr("돌이 부족합니다.", "You don't have enough Stones.");
+				mes needtr("^3131FF돌 50개^000000를 가져와 주세요.", "Please bring ^3131FF50 Stones^000000.");
 				close;
 			}
 
 			mes needtr("[크루아 대장장이]", "[Croix Blacksmith]");
-			mes "좋습니다. 바로 수리하겠습니다.";
+			mes needtr("좋습니다. 바로 수리하겠습니다.", "Good. I will repair it right away.");
 			next;
 
 			mes "......";
@@ -777,7 +789,7 @@ bat_a01,170,121,5	script	크루아 대장장이#bat_a01	851,{
 			}
 
 			mes needtr("[크루아 대장장이]", "[Croix Blacksmith]");
-			mes "바리케이드 수리가 완료되었습니다.";
+			mes needtr("바리케이드 수리가 완료되었습니다.", "The Barricade has been repaired.");
 			close2;
 			disablenpc "크루아 대장장이#bat_a01";
 			end;
@@ -806,9 +818,9 @@ OnInit:
 
 bat_a01,53,377,3	script	전투 치료사#a01_a	95,{
 	specialeffect2 EF_HEAL;
-	mes "[전투 치료사]";
-	mes "눈을 감고 깊게 숨을 쉬세요.";
-	mes "곧 다시 전장으로 복귀할 수 있습니다.";
+	mes needtr("[전투 치료사]","[Battle Therapist]");
+	mes needtr("눈을 감고 깊게 숨을 쉬세요.", "Close your eyes and breathe deeply.");
+	mes needtr("곧 다시 전장으로 복귀할 수 있습니다.", "You will be able to return to the battleground soon.");
 	close;
 
 OnInit:
@@ -840,9 +852,9 @@ OnTimer26500:
 
 bat_a01,45,19,3	script	전투 치료사#a01_b	95,{
 	specialeffect2 EF_HEAL;
-	mes "[전투 치료사]";
-	mes "눈을 감고 깊게 숨을 쉬세요.";
-	mes "곧 다시 전장으로 복귀할 수 있습니다.";
+	mes needtr("[전투 치료사]","[Battle Therapist]");
+	mes needtr("눈을 감고 깊게 숨을 쉬세요.", "Close your eyes and breathe deeply.");
+	mes needtr("곧 다시 전장으로 복귀할 수 있습니다.", "You will be able to return to the battleground soon.");
 	close;
 
 OnInit:
@@ -1076,7 +1088,7 @@ OnStop:
 
 OnTimer55000:
 	if ($@BG_RM_CYCLE_ACTIVE && $@TierraBG1 && $@TierraBG1_Victory)
-		mapannounce "bat_a01","5초 후 미수령 보상이 자동 지급되고 전장 대기실로 이동됩니다.",bc_map,"0xFFCC66";
+		mapannouncelang "bat_a01","5초 후 미수령 보상이 자동 지급되고 전장 대기실로 이동됩니다.","In 5 seconds your unclaimed rewards will be granted automatically and you will be moved to the battleground waiting room.",bc_map,"0xFFCC66";
 	end;
 
 OnTimer60000:
@@ -1129,35 +1141,35 @@ OnStop:
 	end;
 
 OnTimer7000:
-	mapannounce "bat_a01","기욤 빈테나르 액슬 로즈: 크루아의 식량 창고를 불태워버리자!",bc_map,"0xFF9900";
+	mapannouncelang "bat_a01","기욤 빈테나르 액슬 로즈: 크루아의 식량 창고를 불태워버리자!","Guillaume Vintenar Axl Rose: Let's burn down Croix's Food Storage!",bc_map,"0xFF9900";
 	end;
 
 OnTimer8000:
-	mapannounce "bat_a01","크루아 빈테나르 스완더리: 발할라의 주인이시여, 저희에게 흔들리지 않는 믿음과 용기를 주소서!",bc_map,"0xFF99CC";
+	mapannouncelang "bat_a01","크루아 빈테나르 스완더리: 발할라의 주인이시여, 저희에게 흔들리지 않는 믿음과 용기를 주소서!","Croix Vintenar Swandery: Master of Valhalla, grant us unfailing faith and courage!",bc_map,"0xFF99CC";
 	end;
 
 OnTimer1800000:
-	mapannounce "bat_a01","마롤로 7세: 기욤 마롤로, 크루아 마롤로, 그리고 마롤로 왕국의 전사들이여!",bc_map,"0x99CC00";
+	mapannouncelang "bat_a01","마롤로 7세: 기욤 마롤로, 크루아 마롤로, 그리고 마롤로 왕국의 전사들이여!","Marollo VII: Guillaume Marollo, Croix Marollo, and warriors of the Marollo kingdom!",bc_map,"0x99CC00";
 	end;
 
 OnTimer1803000:
-	mapannounce "bat_a01","마롤로 7세: 두 진영 모두 물러서지 않는군. 이대로라면 어느 쪽도 쉽게 무너지지 않을 것이다.",bc_map,"0x99CC00";
+	mapannouncelang "bat_a01","마롤로 7세: 두 진영 모두 물러서지 않는군. 이대로라면 어느 쪽도 쉽게 무너지지 않을 것이다.","Marollo VII: Neither camp will give ground. At this rate neither side will fall easily.",bc_map,"0x99CC00";
 	end;
 
 OnTimer1808000:
-	mapannounce "bat_a01","마롤로 7세: 전투를 종료하고 무승부로 처리하는 것이 좋겠소.",bc_map,"0x99CC00";
+	mapannouncelang "bat_a01","마롤로 7세: 전투를 종료하고 무승부로 처리하는 것이 좋겠소.","Marollo VII: I think we had better end the battle and call it a draw.",bc_map,"0x99CC00";
 	end;
 
 OnTimer1822000:
-	mapannounce "bat_a01","마롤로 7세: 왕족으로서의 자존심은 잠시 접어두고, 티에라 협곡 전투를 마무리하자.",bc_map,"0x99CC00";
+	mapannouncelang "bat_a01","마롤로 7세: 왕족으로서의 자존심은 잠시 접어두고, 티에라 협곡 전투를 마무리하자.","Marollo VII: Set royal pride aside for a moment and let us settle the battle of Tierra Valley.",bc_map,"0x99CC00";
 	end;
 
 OnTimer1825000:
-	mapannounce "bat_a01","액슬 로즈, 스완더리: 예, 알겠습니다.",bc_map,"0x99CC00";
+	mapannouncelang "bat_a01","액슬 로즈, 스완더리: 예, 알겠습니다.","Axl Rose, Swandery: Yes, sir.",bc_map,"0x99CC00";
 	end;
 
 OnTimer1830000:
-	mapannounce "bat_a01","티에라 협곡 전투가 시간 초과로 종료되었습니다.",bc_map,"0x99CC00";
+	mapannouncelang "bat_a01","티에라 협곡 전투가 시간 초과로 종료되었습니다.","The Tierra Valley battle has ended on time-out.",bc_map,"0x99CC00";
 	mapwarp "bat_a01","bat_room",154,150;
 
 	if ($@TierraBG1_id1) {

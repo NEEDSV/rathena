@@ -12,16 +12,16 @@
 
 lasa_in01,172,60,2	script	쉐도우 재활용 관리인#need_shadow	4_M_REPAIR,{
 
-	mes "[쉐도우 재활용 관리인]";
-	mes "불필요한 쉐도우 장비를";
-	mes "^0055FF" + getitemname(.CoinItemId) + "^000000로";
-	mes "변환하여 보관해 드리고 있습니다.";
+	mes needtr("[쉐도우 재활용 관리인]", "[Shadow Recycle Manager]");
+	mes needtr("불필요한 쉐도우 장비를", "Shadow Gear you no longer need can be turned into");
+	mes "^0055FF" + getitemname(.CoinItemId) + needtr("^000000로", "^000000");
+	mes needtr("변환하여 보관해 드리고 있습니다.", "and kept here for you.");
 	next;
 
 	switch (select(
-		"쉐도우 장비 일괄 변환:" +
-		"쉐도우 재활용 코인 사용처 안내:" +
-		"대화를 종료한다"
+		needtr("쉐도우 장비 일괄 변환:", "Bulk Convert Shadow Gear:") +
+		needtr("쉐도우 재활용 코인 사용처 안내:", "About the Shadow Recycling Coin:") +
+		needtr("대화를 종료한다", "End Conversation.")
 	)) {
 		case 1:
 			goto L_Convert;
@@ -79,26 +79,26 @@ L_Convert:
 		.@convertable += @inventorylist_amount[.@i];
 	}
 
-	mes "[쉐도우 재활용 관리인]";
-	mes "장착하지 않은 쉐도우 장비를";
-	mes "일괄적으로 변환합니다.";
+	mes needtr("[쉐도우 재활용 관리인]", "[Shadow Recycle Manager]");
+	mes needtr("장착하지 않은 쉐도우 장비를", "All Shadow Gear you are not wearing");
+	mes needtr("일괄적으로 변환합니다.", "is converted in one go.");
 	mes " ";
-	mes "^FF0000카드, 랜덤 옵션 및 귀속 정보는";
-	mes "보존되지 않습니다.^000000";
-	mes "^00AA00개인탭(잠금) 및 +1 이상 제련 장비는 제외됩니다.^000000";
+	mes needtr("^FF0000카드, 랜덤 옵션 및 귀속 정보는", "^FF0000Cards, random options and bound state");
+	mes needtr("보존되지 않습니다.^000000", "are not preserved.^000000");
+	mes needtr("^00AA00개인탭(잠금) 및 +1 이상 제련 장비는 제외됩니다.^000000", "^00AA00Gear in the Favorites tab (locked) and gear refined to +1 or above is excluded.^000000");
 	mes " ";
-	mes "변환 가능: ^0055FF" + .@convertable + "개^000000";
-	mes "획득 예정: ^0055FF" + getitemname(.CoinItemId) + " " + .@convertable + "개^000000";
+	mes needtr("변환 가능: ^0055FF", "Convertible: ^0055FF") + .@convertable + needtr("개^000000", "^000000");
+	mes needtr("획득 예정: ^0055FF", "You will receive: ^0055FF") + getitemname(.CoinItemId) + " " + .@convertable + needtr("개^000000", "^000000");
 	mes " ";
-	mes "제외된 장비";
-	mes "장착 중: " + .@equipped + "개";
-	mes "기간제: " + .@rental + "개";
-	mes "개인탭(잠금): " + .@favorite + "개";
-	mes "제련 장비(+1 이상): " + .@refined + "개";
+	mes needtr("제외된 장비", "Excluded gear");
+	mes needtr("장착 중: ", "Equipped: ") + .@equipped + needtr("개", " items");
+	mes needtr("기간제: ", "Rental: ") + .@rental + needtr("개", " items");
+	mes needtr("개인탭(잠금): ", "Favorites tab (locked): ") + .@favorite + needtr("개", " items");
+	mes needtr("제련 장비(+1 이상): ", "Refined (+1 or above): ") + .@refined + needtr("개", " items");
 
 	if (.@convertable <= 0) {
 		mes " ";
-		mes "현재 변환할 수 있는 쉐도우 장비가 없습니다.";
+		mes needtr("현재 변환할 수 있는 쉐도우 장비가 없습니다.", "You have no Shadow Gear that can be converted right now.");
 		close;
 	}
 
@@ -106,15 +106,15 @@ L_Convert:
 
 	next;
 
-	mes "[쉐도우 재활용 관리인]";
-	mes "쉐도우 장비 ^0055FF" + .@preview_count + "개^000000를 소모하여";
-	mes "^0055FF" + getitemname(.CoinItemId) + " " + .@preview_count + "개^000000를 획득합니다.";
+	mes needtr("[쉐도우 재활용 관리인]", "[Shadow Recycle Manager]");
+	mes needtr("쉐도우 장비 ^0055FF", "Shadow Gear ^0055FF") + .@preview_count + needtr("개^000000를 소모하여", "^000000 will be consumed to grant");
+	mes "^0055FF" + getitemname(.CoinItemId) + " " + .@preview_count + needtr("개^000000를 획득합니다.", "^000000.");
 	mes " ";
-	mes "^FF0000변환된 쉐도우 장비는 복구할 수 없습니다.^000000";
-	mes "필요한 장비는 개인탭에 잠그거나";
-	mes "창고에 보관한 뒤 진행해 주세요.";
+	mes needtr("^FF0000변환된 쉐도우 장비는 복구할 수 없습니다.^000000", "^FF0000Converted Shadow Gear cannot be restored.^000000");
+	mes needtr("필요한 장비는 개인탭에 잠그거나", "Lock anything you still need in the Favorites tab,");
+	mes needtr("창고에 보관한 뒤 진행해 주세요.", "or put it in storage, before you continue.");
 
-	if (select("일괄 변환한다:취소한다") != 1)
+	if (select(needtr("일괄 변환한다:취소한다", "Convert All:Cancel")) != 1)
 		close;
 
 
@@ -147,17 +147,17 @@ L_Convert:
 
 	// 확인 도중 쉐도우 수량이 변경된 경우 취소
 	if (.@current_count != .@preview_count) {
-		mes "[쉐도우 재활용 관리인]";
-		mes "확인 도중 인벤토리의";
-		mes "쉐도우 장비 수량이 변경되었습니다.";
-		mes "처음부터 다시 진행해 주세요.";
+		mes needtr("[쉐도우 재활용 관리인]", "[Shadow Recycle Manager]");
+		mes needtr("확인 도중 인벤토리의", "The amount of Shadow Gear in your inventory");
+		mes needtr("쉐도우 장비 수량이 변경되었습니다.", "changed while you were confirming.");
+		mes needtr("처음부터 다시 진행해 주세요.", "Please start again from the beginning.");
 		close;
 	}
 
 	if (!checkweight(.CoinItemId, .@current_count)) {
-		mes "[쉐도우 재활용 관리인]";
-		mes "보상 아이템을 받을 수 있는";
-		mes "무게 또는 인벤토리 공간이 부족합니다.";
+		mes needtr("[쉐도우 재활용 관리인]", "[Shadow Recycle Manager]");
+		mes needtr("보상 아이템을 받을 수 있는", "You do not have enough weight or inventory");
+		mes needtr("무게 또는 인벤토리 공간이 부족합니다.", "space to receive the reward item.");
 		close;
 	}
 
@@ -191,9 +191,9 @@ L_Convert:
 	}
 
 	if (.@converted <= 0) {
-		mes "[쉐도우 재활용 관리인]";
-		mes "변환할 수 있는 쉐도우 장비가 없어";
-		mes "작업을 취소했습니다.";
+		mes needtr("[쉐도우 재활용 관리인]", "[Shadow Recycle Manager]");
+		mes needtr("변환할 수 있는 쉐도우 장비가 없어", "There was no Shadow Gear left to convert,");
+		mes needtr("작업을 취소했습니다.", "so the operation was cancelled.");
 		close;
 	}
 
@@ -208,10 +208,10 @@ L_Convert:
 		+ " CID:" + getcharid(0)
 		+ " converted:" + .@converted;
 
-	mes "[쉐도우 재활용 관리인]";
-	mes "쉐도우 장비 ^0055FF" + .@converted + "개^000000를";
-	mes "^0055FF" + getitemname(.CoinItemId) + " " + .@converted + "개^000000로";
-	mes "변환했습니다.";
+	mes needtr("[쉐도우 재활용 관리인]", "[Shadow Recycle Manager]");
+	mes needtr("쉐도우 장비 ^0055FF", "Shadow Gear ^0055FF") + .@converted + needtr("개^000000를", "^000000 was converted into");
+	mes "^0055FF" + getitemname(.CoinItemId) + " " + .@converted + needtr("개^000000로", "^000000.");
+	mes needtr("변환했습니다.", "The conversion is complete.");
 	close;
 
 
@@ -220,23 +220,23 @@ L_Convert:
 //------------------------------------------------------------
 L_Guide:
 
-	mes "[쉐도우 재활용 관리인]";
-	mes "^0055FF" + getitemname(.CoinItemId) + "^000000는";
-	mes "현재 사용할 수 없는 임시 보관 재화입니다.";
+	mes needtr("[쉐도우 재활용 관리인]", "[Shadow Recycle Manager]");
+	mes "^0055FF" + getitemname(.CoinItemId) + needtr("^000000는", "^000000");
+	mes needtr("현재 사용할 수 없는 임시 보관 재화입니다.", "is a holding currency that cannot be spent yet.");
 	mes " ";
-	mes "쉐도우 장비 1개는";
-	mes "^0055FF" + getitemname(.CoinItemId) + " 1개^000000로 환산됩니다.";
+	mes needtr("쉐도우 장비 1개는", "One piece of Shadow Gear converts to");
+	mes "^0055FF" + getitemname(.CoinItemId) + needtr(" 1개^000000로 환산됩니다.", " 1^000000.");
 	mes " ";
-	mes "추후 쉐도우 뚝딱상자가 도입되면";
-	mes "^0055FF코인 3개를 쉐도우 장비 3개와";
-	mes "동일한 재료로 사용할 수 있도록 연동됩니다.^000000";
+	mes needtr("추후 쉐도우 뚝딱상자가 도입되면", "Once the Shadow crafting box arrives,");
+	mes needtr("^0055FF코인 3개를 쉐도우 장비 3개와", "^0055FF3 Coins will count as 3 Shadow Gear");
+	mes needtr("동일한 재료로 사용할 수 있도록 연동됩니다.^000000", "when used as a material.^000000");
 	mes " ";
-	mes "기간제 쉐도우 장비는";
-	mes "영구 재화로 변환될 수 있어 제외됩니다.";
+	mes needtr("기간제 쉐도우 장비는", "Rental Shadow Gear is excluded because it could");
+	mes needtr("영구 재화로 변환될 수 있어 제외됩니다.", "otherwise become a permanent currency.");
 	mes " ";
-	mes "개인탭(잠금) 장비와";
-	mes "+1 이상 제련된 쉐도우 장비도";
-	mes "실수 방지를 위해 변환 대상에서 제외됩니다.";
+	mes needtr("개인탭(잠금) 장비와", "Gear in the Favorites tab (locked) and Shadow Gear");
+	mes needtr("+1 이상 제련된 쉐도우 장비도", "refined to +1 or above are also left out,");
+	mes needtr("실수 방지를 위해 변환 대상에서 제외됩니다.", "so that nothing is converted by mistake.");
 	close;
 
 

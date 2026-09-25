@@ -884,7 +884,7 @@ lasa_in01,189,52,4	script	PLUTO_09#pa0829	4_SCR_AT_ROBOTS,{
 			if (countitem(6962) < 5)
 				.@string$ = needtr("^aaaaaa설계도 제작에 필요한 연료가 부족합니다.^000000", "^aaaaaaNot enough fuel to craft a blueprint.^000000");
 			else
-				.@string$ = needtr("설계도 제작 (^ff0000성공률 30%^000000)", "Craft Blueprint (^ff0000success rate 30%^000000)");
+				.@string$ = needtr("설계도 제작 (^ff0000성공률 100%^000000)", "Craft Blueprint (^ff0000success rate 100%^000000)");
 			mes "[PLUTO_09]";
 			mes getitemname(6962) + needtr(" 5개를 사용해 인챈트 설계도 제작을 시도할 수 있습니다!", " x5 can be used to attempt crafting an enchant blueprint!");
 			mes "----------";
@@ -894,8 +894,9 @@ lasa_in01,189,52,4	script	PLUTO_09#pa0829	4_SCR_AT_ROBOTS,{
 				mes needtr("^0000ff공룡들이 배불리 먹는 장면이 나타난 뒤 화면이 종료됩니다.^000000", "^0000ffIt's over after showing that the dinosaurs are stuffing themselves.^000000");
 				close;
 			}
-			.@fail = false;
-			.@reac_rnd = rand(1,10000);
+			// NEED: 설계도 제작 성공률 100%. 추첨 범위를 성공 구간(1~3000)으로 한정해
+			//       리액토 종류별 기존 상대 비중은 그대로 유지한다.
+			.@reac_rnd = rand(1,3000);
 			if (.@reac_rnd < 26)		.@en_name = 6977;	// Reactor_A_STR_
 			else if (.@reac_rnd < 51)	.@en_name = 6978;	// Reactor_A_INT_
 			else if (.@reac_rnd < 251)	.@en_name = 6979;	// Reactor_A_DEF_
@@ -918,20 +919,6 @@ lasa_in01,189,52,4	script	PLUTO_09#pa0829	4_SCR_AT_ROBOTS,{
 			else if (.@reac_rnd < 2851)	.@en_name = 6967;	// Reactor_P_GROUND_
 			else if (.@reac_rnd < 2926)	.@en_name = 6965;	// Reactor_P_FIRE_
 			else if (.@reac_rnd < 3001)	.@en_name = 6968;	// Reactor_P_WIND_
-			else {
-				.@fail = true;
-				.@reac_rnd2 = rand(1,13000);
-				if (.@reac_rnd2 < 2)
-					.@en_name = 969;	// Gold
-				else if (.@reac_rnd2 < 1002)
-					.@en_name = 999;	// Steel
-				else if (.@reac_rnd2 < 3002)
-					.@en_name = 998;	// Iron
-				else if (.@reac_rnd2 < 8002)
-					.@en_name = 1002;	// Iron_Ore
-				else
-					.@en_name = 7054;	// Brigan
-			}
 			if (countitem(6962) < 5)
 				mes needtr("^0000ff화면 속 공룡이 빈 그릇을 바라봅니다. 재료가 부족한 것 같습니다.^000000", "^0000ffThe picture shows the dinosaur silently looking at the empty bowl, it may be an error message when the material is insufficient!^000000");
 			else {
@@ -939,10 +926,7 @@ lasa_in01,189,52,4	script	PLUTO_09#pa0829	4_SCR_AT_ROBOTS,{
 				delitem 6962,5;// OldTank
 				getitem .@en_name,1;
 				mes "[PLUTO_09]";
-				if (.@fail)
-					mes needtr("아쉽지만 설계도 제작에 실패했습니다.", "What a pity, the design failed.");
-				else
-					mes needtr("설계도 제작이 완료되었습니다.", "Great, the design was made.");
+				mes needtr("설계도 제작이 완료되었습니다.", "The blueprint has been crafted.");
 			}
 			next;
 		}

@@ -1,0 +1,60 @@
+// NEED 2026 summer exchange and token shop. Defaults are intentionally off.
+comodo,191,157,4	script	바캉스 상인 코코#summer2026	4_F_STARFISHGIRL,{
+	mes needtr("[바캉스 상인 코코]","[Vacation Merchant Coco]");
+	if (!callfunc("F_NeedSummerShopActive")) {
+		mes needtr("아직 교환 준비 중이에요.","The exchange is still being set up.");
+		close;
+	}
+//	.@logical_date = atoi(gettimestr("%Y%m%d", 9, gettimetick(2) - 14400));
+//	if (.@logical_date < 20260815 || .@logical_date >= 20260919) {
+//		mes "여름 교환 행사가 끝났어요.";
+//		close;
+//	}
+	mes needtr("파도 소리가 들리면 여름이 왔다는 뜻이에요.","When you hear the waves, you know summer has come.");
+	next;
+	switch (select(needtr("수박 조각을 교환한다:코코넛 상점을 둘러본다:교환 안내를 듣는다:다음에 올게요","Exchange Watermelon Fragments:Browse the Coconut shop:Hear how the exchange works:I will come back later"))) {
+	case 1:
+		if (!callfunc("F_NeedSummerShopActive")) {
+			mes needtr("[바캉스 상인 코코]","[Vacation Merchant Coco]");
+			mes needtr("수박 조각 교환은 지금 준비 중이에요.","The Watermelon Fragment exchange is still being set up.");
+			close;
+		}
+		close2;
+		callshop "need_summer_fragment_exchange", 1;
+		end;
+	case 2:
+		if (!callfunc("F_NeedSummerShopActive")) {
+			mes needtr("[바캉스 상인 코코]","[Vacation Merchant Coco]");
+			mes needtr("코코넛 상점은 지금 준비 중이에요.","The Coconut shop is still being set up.");
+			close;
+		}
+		close2;
+		callshop "need_summer_token_shop", 1;
+		end;
+	case 3:
+		mes needtr("[바캉스 상인 코코]","[Vacation Merchant Coco]");
+		mes needtr("수박 조각 20개를 코코넛 토큰 10개로 바꿔 드려요.","I will trade 20 Watermelon Fragments for 10 Coconut Tokens.");
+		mes needtr("교환은 계정과 접속 IP를 기준으로 하루 3회까지 가능해요.","You may exchange up to 3 times a day, counted by account and connecting IP.");
+		next;
+		mes needtr("[바캉스 상인 코코]","[Vacation Merchant Coco]");
+		mes needtr("주간 상품은 매주 2개까지 살 수 있고, 쓰지 않은 횟수는 다음 주로 넘어가지 않아요.","You can buy up to 2 weekly goods each week, and unused purchases do not carry over.");
+		mes needtr("교환과 상점은 9월 19일 오전 4시에 닫혀요.","The exchange and the shop close on 9/19 at 4 AM.");
+		close;
+	default:
+		close;
+	}
+
+OnInit:
+	// Shop opens automatically by event date window.
+	// For testing outside the window, a GM sets $NS_SHOP_TEST via @summergm.
+	end;
+}
+
+// Shop active when a GM test override is set OR the current logical date
+// (04:00 boundary) is within the event/exchange window 2026-08-15 ~ 2026-09-18.
+function	script	F_NeedSummerShopActive	{
+	if ( $NS_SHOP_TEST ) return 1;
+	.@ld = atoi( gettimestr("%Y%m%d", 9, gettimetick(2) - 14400) );
+	if ( .@ld >= 20260815 && .@ld <= 20260918 ) return 1;
+	return 0;
+}

@@ -66,7 +66,7 @@ function	script	NEED_WeddingObjection_Start	{
 	deletearray $@NEED_Wedding_VoteCid[0], getarraysize($@NEED_Wedding_VoteCid);
 	deletearray $@NEED_Wedding_VoteValue[0], getarraysize($@NEED_Wedding_VoteValue);
 
-	announce "[결혼식] 이 결혼에 이의가 있다면 3분 안에 결혼식장에서 @이결혼반댈세 를 외쳐주세요.",bc_all;
+	announcelang "[결혼식] 이 결혼에 이의가 있다면 3분 안에 결혼식장에서 @이결혼반댈세 를 외쳐주세요.", "[Wedding] If you object to this marriage, shout @이결혼반댈세 in the wedding hall within 3 minutes.",bc_all;
 	return;
 }
 
@@ -131,9 +131,9 @@ OnObjection:
 	deletearray $@NEED_Wedding_VoteCid[0], getarraysize($@NEED_Wedding_VoteCid);
 	deletearray $@NEED_Wedding_VoteValue[0], getarraysize($@NEED_Wedding_VoteValue);
 
-	announce "[긴급] "+strcharinfo(0)+" 님이 외쳤습니다. '이 결혼 반댈세!'",bc_all;
-	announce "[결혼 찬반투표] 60초 동안 @찬성 / @반대 로 투표해주세요.",bc_all;
-	announce "[안내] @찬성 = 이 결혼 반대 / @반대 = 결혼 진행",bc_all;
+	announcelang "[긴급] "+strcharinfo(0)+" 님이 외쳤습니다. '이 결혼 반댈세!'", "[Urgent] "+strcharinfo(0)+" has objected to this marriage!",bc_all;
+	announcelang "[결혼 찬반투표] 60초 동안 @찬성 / @반대 로 투표해주세요.", "[Wedding Vote] Vote with @찬성 (object) or @반대 (proceed) for 60 seconds.",bc_all;
+	announcelang "[안내] @찬성 = 이 결혼 반대 / @반대 = 결혼 진행", "[Notice] @찬성 = object to this marriage / @반대 = let it proceed",bc_all;
 
 	stopnpctimer;
 	setnpctimer 0;
@@ -200,17 +200,17 @@ OnVoteEnd:
 	$@NEED_Wedding_Objection_Voting = 0;
 	$@NEED_Wedding_Objection_Ready = 0;
 
-	announce "[결혼 찬반투표 종료] 이 결혼 반대 "+$@NEED_Wedding_Yes+"표 / 결혼 진행 "+$@NEED_Wedding_No+"표",bc_all;
+	announcelang "[결혼 찬반투표 종료] 이 결혼 반대 "+$@NEED_Wedding_Yes+"표 / 결혼 진행 "+$@NEED_Wedding_No+"표", "[Wedding Vote Closed] Object: "+$@NEED_Wedding_Yes+" votes / Proceed: "+$@NEED_Wedding_No+" votes",bc_all;
 
 	if ($@NEED_Wedding_Yes >= .MinYes && $@NEED_Wedding_Yes > $@NEED_Wedding_No) {
-		announce "[결혼식] 많은 반대가 있었지만, 이 결혼은 강행되었습니다.",bc_all;
-		announce "[결혼식] "+$@NEED_Wedding_GroomName$+" 님과 "+$@NEED_Wedding_BrideName$+" 님은 앞으로 10분간 시선집중 상태가 됩니다.",bc_all;
+		announcelang "[결혼식] 많은 반대가 있었지만, 이 결혼은 강행되었습니다.", "[Wedding] Despite many objections, this wedding went ahead.",bc_all;
+		announcelang "[결혼식] "+$@NEED_Wedding_GroomName$+" 님과 "+$@NEED_Wedding_BrideName$+" 님은 앞으로 10분간 시선집중 상태가 됩니다.", "[Wedding] "+$@NEED_Wedding_GroomName$+" and "+$@NEED_Wedding_BrideName$+" will be in the spotlight for the next 10 minutes.",bc_all;
 
 		callsub S_StartShameEffect,$@NEED_Wedding_GroomAid,$@NEED_Wedding_GroomCid;
 		callsub S_StartShameEffect,$@NEED_Wedding_BrideAid,$@NEED_Wedding_BrideCid;
 		callsub S_FireworkForObjectors;
 	} else {
-		announce "[결혼식] 반대 의견은 있었지만 큰 여론은 형성되지 않았습니다. 결혼은 평화롭게 진행됩니다.",bc_all;
+		announcelang "[결혼식] 반대 의견은 있었지만 큰 여론은 형성되지 않았습니다. 결혼은 평화롭게 진행됩니다.", "[Wedding] There were objections, but they did not carry. The wedding proceeds peacefully.",bc_all;
 	}
 	end;
 

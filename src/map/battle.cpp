@@ -1,4 +1,4 @@
-// Copyright (c) rAthena Dev Teams - Licensed under GNU GPL
+﻿// Copyright (c) rAthena Dev Teams - Licensed under GNU GPL
 // For more information, see LICENCE in the main folder
 
 #include "battle.hpp"
@@ -8959,17 +8959,22 @@ static const struct _battle_data {
 	{ "need_jf_pattern_min_count",          &battle_config.need_jf_pattern_min_count,       5,      0,      INT_MAX,        },
 	{ "need_jf_pattern_max_avg_interval",   &battle_config.need_jf_pattern_max_avg_interval, 15000, 0,      INT_MAX,        },
 	{ "need_jf_pattern_min_duration",       &battle_config.need_jf_pattern_min_duration,    60000,  0,      INT_MAX,        },
-	{ "need_jf_pattern_score",              &battle_config.need_jf_pattern_score,           5,      0,      INT_MAX,        },
+	{ "need_jf_pattern_score",              &battle_config.need_jf_pattern_score,           0,      0,      INT_MAX,        },
+	{ "need_jf_steal_score",                &battle_config.need_jf_steal_score,             10,     0,      INT_MAX,        },
+	{ "need_jf_steal_enable",               &battle_config.need_jf_steal_enable,            1,      0,      1,              },
+	{ "need_jf_steal_min_foreign_mobs",     &battle_config.need_jf_steal_min_foreign_mobs,  3,      0,      INT_MAX,        },
+	{ "need_jf_steal_min_patterns",         &battle_config.need_jf_steal_min_patterns,      3,      0,      INT_MAX,        },
+	{ "need_jf_steal_owner_range",          &battle_config.need_jf_steal_owner_range,       14,     0,      INT_MAX,        },
 	{ "need_jf_warn_score",                 &battle_config.need_jf_warn_score,              50,     0,      INT_MAX,        },
 	{ "need_jf_captcha_score",              &battle_config.need_jf_captcha_score,           100,    0,      INT_MAX,        },
 	{ "need_jf_penalty_score",              &battle_config.need_jf_penalty_score,           150,    0,      INT_MAX,        },
 	{ "need_jf_decay_score",                &battle_config.need_jf_decay_score,             5,      0,      INT_MAX,        },
 	{ "need_jf_decay_interval",             &battle_config.need_jf_decay_interval,          60000,  0,      INT_MAX,        },
-	{ "need_jf_captcha_success_score",      &battle_config.need_jf_captcha_success_score,   30,     0,      INT_MAX,        },
+	{ "need_jf_captcha_success_score",      &battle_config.need_jf_captcha_success_score,   0,      0,      INT_MAX,        },
 	{ "need_jf_penalty_reset_score",        &battle_config.need_jf_penalty_reset_score,     90,     0,      INT_MAX,        },
-	{ "need_jf_autoloot_penalty1",          &battle_config.need_jf_autoloot_penalty1,       600,    0,      INT_MAX,        },
-	{ "need_jf_autoloot_penalty2",          &battle_config.need_jf_autoloot_penalty2,       1800,   0,      INT_MAX,        },
-	{ "need_jf_autoloot_penalty3",          &battle_config.need_jf_autoloot_penalty3,       3600,   0,      INT_MAX,        },
+	{ "need_jf_autoloot_penalty1",          &battle_config.need_jf_autoloot_penalty1,       6000,   0,      INT_MAX,        },
+	{ "need_jf_autoloot_penalty2",          &battle_config.need_jf_autoloot_penalty2,       18000,  0,      INT_MAX,        },
+	{ "need_jf_autoloot_penalty3",          &battle_config.need_jf_autoloot_penalty3,       36000,  0,      INT_MAX,        },
 	{ "need_jf_penalty_count_reset",        &battle_config.need_jf_penalty_count_reset,     86400,  0,      INT_MAX,        },
 	{ "need_jf_pattern_debug",              &battle_config.need_jf_pattern_debug,           0,      0,      1,              },
 	{ "need_world_drop_enable",             &battle_config.need_world_drop_enable,          1,      0,      1,              },
@@ -8977,6 +8982,7 @@ static const struct _battle_data {
 	{ "need_world_drop_allow_gm",           &battle_config.need_world_drop_allow_gm,        1,      0,      1,              },
 	{ "need_world_drop_gm_exclude_level",   &battle_config.need_world_drop_gm_exclude_level, 60,    0,      INT_MAX,        },
 	{ "need_world_drop_rate_scale",         &battle_config.need_world_drop_rate_scale,      10000,  10000,  10000,          },
+	{ "need_world_drop_rate_multiplier",    &battle_config.need_world_drop_rate_multiplier, 10000,  0,      1000000,        },
 	{ "need_world_drop_tier1_enable",       &battle_config.need_world_drop_tier1_enable,    1,      0,      1,              },
 	{ "need_world_drop_tier1_min_level",    &battle_config.need_world_drop_tier1_min_level, 30,     0,      INT_MAX,        },
 	{ "need_world_drop_tier1_max_level",    &battle_config.need_world_drop_tier1_max_level, 98,     0,      INT_MAX,        },
@@ -9022,9 +9028,18 @@ static const struct _battle_data {
 	{ "need_world_drop_event_target_item_id", &battle_config.need_world_drop_event_target_item_id, 399990, 0, INT_MAX,       },
 	{ "need_world_drop_event_debug_message", &battle_config.need_world_drop_event_debug_message, 0, 0,      1,              },
 	{ "need_world_drop_event_debug_gm_level", &battle_config.need_world_drop_event_debug_gm_level, 60, 0,   INT_MAX,        },
+	{ "need_lucky_egg_bonus_enable",        &battle_config.need_lucky_egg_bonus_enable,     1,      0,      1,              },
+	{ "need_lucky_egg_bonus_rate",          &battle_config.need_lucky_egg_bonus_rate,       1000,   0,      10000,          },
+	{ "need_lucky_egg_bonus_item_id",       &battle_config.need_lucky_egg_bonus_item_id,    900124, 0,      INT_MAX,        },
+	{ "need_lucky_egg_bonus_amount",        &battle_config.need_lucky_egg_bonus_amount,     1,      0,      MAX_AMOUNT,     },
 	{ "need_summer_hunt_enable",             &battle_config.need_summer_hunt_enable,          0,      0,      1,              },
 	{ "need_summer_hunt_fragment_enable",    &battle_config.need_summer_hunt_fragment_enable, 0,      0,      1,              },
 	{ "need_summer_hunt_golden_enable",      &battle_config.need_summer_hunt_golden_enable,   0,      0,      1,              },
+
+	// NEED 2026 chuseok event field hunting rewards. All switches are fail-safe off by default.
+	{ "need_chuseok_hunt_enable",            &battle_config.need_chuseok_hunt_enable,         0,      0,      1,              },
+	{ "need_chuseok_hunt_material_enable",   &battle_config.need_chuseok_hunt_material_enable, 0,     0,      1,              },
+	{ "need_chuseok_hunt_honey_enable",      &battle_config.need_chuseok_hunt_honey_enable,   0,      0,      1,              },
 
 	// NEED summer event fishing system (stage 1: technical validation). Off by default.
 	{ "need_summer_fishing_enable",         &battle_config.need_summer_fishing_enable,      0,      0,      1,              },

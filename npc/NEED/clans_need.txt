@@ -8,46 +8,46 @@
 
 lasagna,169,163,5	script	NEED 클랜 관리자	10058,{
 	cutin "laperm01.bmp", 2;
-	mes "[NEED 클랜 관리자]";
-	mes "안녕하세요. 신규 모험가들의 교류를 돕는 ^3131FFNEED 클랜^000000입니다.";
+	mes needtr("[NEED 클랜 관리자]","[NEED Clan Manager]");
+	mes needtr("안녕하세요. 신규 모험가들의 교류를 돕는 ^3131FFNEED 클랜^000000입니다.","Hello. This is the ^3131FFNEED Clan^000000, here to help new adventurers connect.");
 	next;
 
-	switch (select("클랜 안내:가입한다.:탈퇴한다.:채팅 방법")) {
+	switch (select(needtr("클랜 안내:가입한다.:탈퇴한다.:채팅 방법","Clan Information:Join.:Leave.:How to Chat"))) {
 		case 1:
-			mes "[NEED 클랜 관리자]";
-			mes "NEED 클랜은 특정 직업군을 위한 클랜이 아닙니다.";
-			mes "근거리, 원거리, 마법, 보조 직업을 포함한 ^3131FF모든 직업이 함께 이용^000000합니다.";
+			mes needtr("[NEED 클랜 관리자]","[NEED Clan Manager]");
+			mes needtr("NEED 클랜은 특정 직업군을 위한 클랜이 아닙니다.","The NEED Clan is not a clan for one particular job group.");
+			mes needtr("근거리, 원거리, 마법, 보조 직업을 포함한 ^3131FF모든 직업이 함께 이용^000000합니다.","Melee, ranged, magic and support jobs - ^3131FFevery job uses it together^000000.");
 			next;
-			mes "[NEED 클랜 관리자]";
-			mes "클랜원에게는 다음과 같은 소소한 능력치 보너스가 적용됩니다.";
-			mes "^FF0000<모든 스테이터스 +1, ATK +30, MATK +30>^000000";
+			mes needtr("[NEED 클랜 관리자]","[NEED Clan Manager]");
+			mes needtr("클랜원에게는 다음과 같은 소소한 능력치 보너스가 적용됩니다.","Clan members receive the following small stat bonus.");
+			mes needtr("^FF0000<모든 스테이터스 +1, ATK +30, MATK +30>^000000","^FF0000<All Stats +1, ATK +30, MATK +30>^000000");
 			next;
-			mes "[NEED 클랜 관리자]";
-			mes "클랜은 신규 유저 간의 질문, 정보 공유 및 파티 모집을 위한 공간입니다.";
-			mes "다른 모험가를 배려하며 즐겁게 이용해 주세요.";
+			mes needtr("[NEED 클랜 관리자]","[NEED Clan Manager]");
+			mes needtr("클랜은 신규 유저 간의 질문, 정보 공유 및 파티 모집을 위한 공간입니다.","The clan is a place for new players to ask questions, share information and find parties.");
+			mes needtr("다른 모험가를 배려하며 즐겁게 이용해 주세요.","Please be considerate of other adventurers and enjoy it.");
 			break;
 
 		case 2:
-			mes "[NEED 클랜 관리자]";
+			mes needtr("[NEED 클랜 관리자]","[NEED Clan Manager]");
 			if (getcharid(2)) {
-				mes "현재 길드에 가입되어 있어 NEED 클랜에 가입할 수 없습니다.";
-				mes "길드에서 탈퇴한 뒤 다시 찾아와 주세요.";
+				mes needtr("현재 길드에 가입되어 있어 NEED 클랜에 가입할 수 없습니다.","You are in a guild at the moment, so you cannot join the NEED Clan.");
+				mes needtr("길드에서 탈퇴한 뒤 다시 찾아와 주세요.","Please leave your guild and come back.");
 				break;
 			}
 
 			if (getcharid(5) == SWORDCLAN) {
-				mes "이미 ^3131FFNEED 클랜^000000에 가입되어 있습니다.";
+				mes needtr("이미 ^3131FFNEED 클랜^000000에 가입되어 있습니다.","You have already joined the ^3131FFNEED Clan^000000.");
 				next;
-				mes "[NEED 클랜 관리자]";
-				mes "클랜 채팅: ^3131FF/cl 할 말^000000";
-				mes "클랜 정보 확인: ^3131FFCtrl+G^000000";
+				mes needtr("[NEED 클랜 관리자]","[NEED Clan Manager]");
+				mes needtr("클랜 채팅: ^3131FF/cl 할 말^000000","Clan chat: ^3131FF/cl <message>^000000");
+				mes needtr("클랜 정보 확인: ^3131FFCtrl+G^000000","Check clan information: ^3131FFCtrl+G^000000");
 				break;
 			}
 
 			// 기존 클랜 소속자는 NEED 클랜으로 통합합니다.
 			if (getcharid(5) != 0) {
 				if (!clan_leave()) {
-					mes "기존 클랜 탈퇴 처리 중 오류가 발생했습니다.";
+					mes needtr("기존 클랜 탈퇴 처리 중 오류가 발생했습니다.","Something went wrong while leaving your previous clan.");
 					break;
 				}
 				sc_end SC_ARCWANDCLAN;
@@ -59,57 +59,57 @@ lasagna,169,163,5	script	NEED 클랜 관리자	10058,{
 				NEED_Clan_OptOut = 0;
 				sc_start2 SC_SWORDCLAN, INFINITE_TICK, 0, SWORDCLAN;
 				cutin "laperm02.bmp", 2;
-				mes "[NEED 클랜 관리자]";
-				mes "^3131FFNEED 클랜^000000에 가입되었습니다!";
+				mes needtr("[NEED 클랜 관리자]","[NEED Clan Manager]");
+				mes needtr("^3131FFNEED 클랜^000000에 가입되었습니다!","You have joined the ^3131FFNEED Clan^000000!");
 				next;
-				mes "[NEED 클랜 관리자]";
-				mes "클랜 채팅은 ^3131FF/cl 할 말^000000로 이용할 수 있습니다.";
-				mes "우측 하단 대화 채널을 ^3131FF클랜^000000으로 설정해도 됩니다.";
+				mes needtr("[NEED 클랜 관리자]","[NEED Clan Manager]");
+				mes needtr("클랜 채팅은 ^3131FF/cl 할 말^000000로 이용할 수 있습니다.","You can use clan chat with ^3131FF/cl <message>^000000.");
+				mes needtr("우측 하단 대화 채널을 ^3131FF클랜^000000으로 설정해도 됩니다.","You can also set the chat channel at the bottom right to ^3131FFClan^000000.");
 				next;
-				mes "[NEED 클랜 관리자]";
-				mes "^3131FFCtrl+G^000000를 누르면 클랜 정보를 확인할 수 있습니다.";
+				mes needtr("[NEED 클랜 관리자]","[NEED Clan Manager]");
+				mes needtr("^3131FFCtrl+G^000000를 누르면 클랜 정보를 확인할 수 있습니다.","Press ^3131FFCtrl+G^000000 to check your clan information.");
 			} else {
-				mes "클랜 가입 처리 중 오류가 발생했습니다.";
+				mes needtr("클랜 가입 처리 중 오류가 발생했습니다.","Something went wrong while joining the clan.");
 			}
 			break;
 
 		case 3:
-			mes "[NEED 클랜 관리자]";
+			mes needtr("[NEED 클랜 관리자]","[NEED Clan Manager]");
 			if (getcharid(5) == 0) {
-				mes "현재 가입된 클랜이 없습니다.";
+				mes needtr("현재 가입된 클랜이 없습니다.","You are not in any clan at the moment.");
 				break;
 			}
 			if (getcharid(5) != SWORDCLAN) {
-				mes "현재 NEED 클랜 소속이 아닙니다.";
+				mes needtr("현재 NEED 클랜 소속이 아닙니다.","You are not a member of the NEED Clan at the moment.");
 				break;
 			}
 
-			mes "NEED 클랜에서 탈퇴하시겠습니까?";
-			mes "탈퇴 후에는 자동 가입 대상에서 제외됩니다.";
+			mes needtr("NEED 클랜에서 탈퇴하시겠습니까?","Do you want to leave the NEED Clan?");
+			mes needtr("탈퇴 후에는 자동 가입 대상에서 제외됩니다.","Once you leave, you will no longer be enrolled automatically.");
 			next;
-			if (select("탈퇴한다.:취소한다.") == 1) {
+			if (select(needtr("탈퇴한다.:취소한다.","Leave.:Cancel.")) == 1) {
 				if (clan_leave()) {
 					NEED_Clan_OptOut = 1;
 					sc_end SC_SWORDCLAN;
-					mes "[NEED 클랜 관리자]";
-					mes "NEED 클랜에서 탈퇴했습니다.";
-					mes "다시 가입하려면 언제든 찾아와 주세요.";
+					mes needtr("[NEED 클랜 관리자]","[NEED Clan Manager]");
+					mes needtr("NEED 클랜에서 탈퇴했습니다.","You have left the NEED Clan.");
+					mes needtr("다시 가입하려면 언제든 찾아와 주세요.","Come back any time if you want to join again.");
 				} else {
-					mes "클랜 탈퇴 처리 중 오류가 발생했습니다.";
+					mes needtr("클랜 탈퇴 처리 중 오류가 발생했습니다.","Something went wrong while leaving the clan.");
 				}
 			}
 			break;
 
 		case 4:
-			mes "[NEED 클랜 관리자]";
-			mes "채팅창에 다음과 같이 입력해 주세요.";
-			mes "^3131FF/cl 할 말^000000";
+			mes needtr("[NEED 클랜 관리자]","[NEED Clan Manager]");
+			mes needtr("채팅창에 다음과 같이 입력해 주세요.","Please type the following in the chat window.");
+			mes needtr("^3131FF/cl 할 말^000000","^3131FF/cl <message>^000000");
 			next;
-			mes "[NEED 클랜 관리자]";
-			mes "또는 화면 우측 하단의 대화 채널을 ^3131FF클랜^000000으로 변경한 뒤 채팅을 입력하면 됩니다.";
+			mes needtr("[NEED 클랜 관리자]","[NEED Clan Manager]");
+			mes needtr("또는 화면 우측 하단의 대화 채널을 ^3131FF클랜^000000으로 변경한 뒤 채팅을 입력하면 됩니다.","Or change the chat channel at the bottom right of the screen to ^3131FFClan^000000 and type as usual.");
 			next;
-			mes "[NEED 클랜 관리자]";
-			mes "클랜 정보와 접속 중인 클랜원은 ^3131FFCtrl+G^000000로 확인할 수 있습니다.";
+			mes needtr("[NEED 클랜 관리자]","[NEED Clan Manager]");
+			mes needtr("클랜 정보와 접속 중인 클랜원은 ^3131FFCtrl+G^000000로 확인할 수 있습니다.","You can check clan information and which clan members are online with ^3131FFCtrl+G^000000.");
 			break;
 	}
 
@@ -191,36 +191,36 @@ OnJoinGuide:
 	if (getcharid(5) != SWORDCLAN)
 		end;
 
-	announce "[NEED 클랜] 신규 모험가를 위한 통합 클랜에 가입되었습니다!", bc_self | bc_blue;
+	announce needtr("[NEED 클랜] 신규 모험가를 위한 통합 클랜에 가입되었습니다!", "[NEED Clan] You have joined the unified clan for new adventurers!"), bc_self | bc_blue;
 
-	mes "[^3131FFNEED 클랜^000000]";
-	mes "신규 모험가분들의 소통과";
-	mes "정보 공유를 위해";
-	mes "^3131FFNEED 클랜^000000에 자동 가입되었습니다.";
+	mes needtr("[^3131FFNEED 클랜^000000]","[^3131FFNEED Clan^000000]");
+	mes needtr("신규 모험가분들의 소통과","To help new adventurers talk to each other");
+	mes needtr("정보 공유를 위해","and share information,");
+	mes needtr("^3131FFNEED 클랜^000000에 자동 가입되었습니다.","you have been enrolled in the ^3131FFNEED Clan^000000 automatically.");
 	next;
 
-	mes "[^3131FFNEED 클랜^000000]";
-	mes "클랜 가입 중에는 다음 효과가 적용됩니다.";
+	mes needtr("[^3131FFNEED 클랜^000000]","[^3131FFNEED Clan^000000]");
+	mes needtr("클랜 가입 중에는 다음 효과가 적용됩니다.","While you are in the clan the following effect applies.");
 	mes "";
-	mes "^FF0000모든 스테이터스 +1^000000";
+	mes needtr("^FF0000모든 스테이터스 +1^000000","^FF0000All Stats +1^000000");
 	mes "^FF0000ATK +30 / MATK +30^000000";
 	next;
 
-	mes "[^3131FF클랜 채팅 이용 방법^000000]";
-	mes "채팅창에 아래와 같이 입력해 주세요.";
+	mes needtr("[^3131FF클랜 채팅 이용 방법^000000]","[^3131FFHow to Use Clan Chat^000000]");
+	mes needtr("채팅창에 아래와 같이 입력해 주세요.","Please type the following in the chat window.");
 	mes "";
-	mes "^3131FF/cl 할 말^000000";
+	mes needtr("^3131FF/cl 할 말^000000","^3131FF/cl <message>^000000");
 	mes "";
-	mes "또는 화면 우측 하단의";
-	mes "대화 채널을 ^3131FF클랜 대화^000000로 설정할 수 있습니다.";
+	mes needtr("또는 화면 우측 하단의","Or you can set the chat channel");
+	mes needtr("대화 채널을 ^3131FF클랜 대화^000000로 설정할 수 있습니다.","at the bottom right of the screen to ^3131FFClan Chat^000000.");
 	next;
 
-	mes "[^3131FFNEED 클랜^000000]";
-	mes "^3131FFCtrl+G^000000를 누르면";
-	mes "클랜 정보와 접속 중인 클랜원을";
-	mes "확인할 수 있습니다.";
+	mes needtr("[^3131FFNEED 클랜^000000]","[^3131FFNEED Clan^000000]");
+	mes needtr("^3131FFCtrl+G^000000를 누르면","Press ^3131FFCtrl+G^000000 to check");
+	mes needtr("클랜 정보와 접속 중인 클랜원을","your clan information and which");
+	mes needtr("확인할 수 있습니다.","clan members are online.");
 	close;
 
-	dispbottom "[NEED 클랜] 채팅: /cl 할 말  |  클랜 정보: Ctrl+G";
+	dispbottom needtr("[NEED 클랜] 채팅: /cl 할 말  |  클랜 정보: Ctrl+G","[NEED Clan] Chat: /cl <message>  |  Clan info: Ctrl+G");
 	end;
 }

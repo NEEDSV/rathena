@@ -1,4 +1,4 @@
-// Copyright (c) rAthena Dev Teams - Licensed under GNU GPL
+﻿// Copyright (c) rAthena Dev Teams - Licensed under GNU GPL
 // For more information, see LICENCE in the main folder
 
 #ifndef BATTLE_HPP
@@ -788,6 +788,11 @@ struct Battle_Config
 	int32 need_jf_pattern_max_avg_interval;
 	int32 need_jf_pattern_min_duration;
 	int32 need_jf_pattern_score;
+	int32 need_jf_steal_score;
+	int32 need_jf_steal_enable;
+	int32 need_jf_steal_min_foreign_mobs;
+	int32 need_jf_steal_min_patterns;
+	int32 need_jf_steal_owner_range;
 	int32 need_jf_warn_score;
 	int32 need_jf_captcha_score;
 	int32 need_jf_penalty_score;
@@ -805,6 +810,7 @@ struct Battle_Config
 	int32 need_world_drop_allow_gm;
 	int32 need_world_drop_gm_exclude_level;
 	int32 need_world_drop_rate_scale;
+	int32 need_world_drop_rate_multiplier;
 	int32 need_world_drop_tier1_enable;
 	int32 need_world_drop_tier1_min_level;
 	int32 need_world_drop_tier1_max_level;
@@ -850,9 +856,16 @@ struct Battle_Config
 	int32 need_world_drop_event_target_item_id;
 	int32 need_world_drop_event_debug_message;
 	int32 need_world_drop_event_debug_gm_level;
+	int32 need_lucky_egg_bonus_enable;
+	int32 need_lucky_egg_bonus_rate;
+	int32 need_lucky_egg_bonus_item_id;
+	int32 need_lucky_egg_bonus_amount;
 	int32 need_summer_hunt_enable;
 	int32 need_summer_hunt_fragment_enable;
 	int32 need_summer_hunt_golden_enable;
+	int32 need_chuseok_hunt_enable;
+	int32 need_chuseok_hunt_material_enable;
+	int32 need_chuseok_hunt_honey_enable;
 	// NEED summer event fishing system (stage 1: technical validation)
 	int32 need_summer_fishing_enable;
 	int32 need_summer_fishing_debug;

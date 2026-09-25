@@ -20,13 +20,13 @@ pvp_n_2-5,0,0,0,0	monster	페코페코	1019,5,1000,1000
 
 // 마을 -> 초보존 NPC
 -	script	svbase_chobo	-1,{
-	switch( select( "- 낙원단 성장지원", "- 초보존","- 노점존","- 허수아비(데미지 테스트)", "- PVP","- GVG", "- 고목존", "- 버프존" ) ){
+	switch( select( needtr("- 낙원단 성장지원", "- Eden Group Growth Support"), needtr("- 초보존", "- Novice Zone"),needtr("- 노점존", "- Vending Zone"),needtr("- 허수아비(데미지 테스트)", "- Scarecrow (Damage Test)"), "- PVP","- GVG", needtr("- 고목존", "- Old Tree Zone"), needtr("- 버프존", "- Buff Zone") ) ){
 	case 1:
 		warp "moc_para01",28,30;
 		end;		
 	case 2:
 		if (BaseLevel >= .limitlv) {
-			message strcharinfo(0),""+.limitlv+"레벨 까지만 입장 가능합니다.";
+			messagelang strcharinfo(0),""+.limitlv+"레벨 까지만 입장 가능합니다.", "Entry is only allowed up to level "+.limitlv+".";
 			end;
 		}
 		warp "pvp_n_2-5",99,132;
@@ -72,7 +72,7 @@ pvp_n_2-5,100,100,4	script	버프#hide_chobo	4_F_NYDHOG,{
 	.@now = gettimetick(2);
 	if (#BUFF_CD_END > .@now)
 	{
-		dispbottom "쿨타임 ^FF0000" + (#BUFF_CD_END - .@now) + "초^000000 남았습니다.";
+		dispbottom needtr("쿨타임 ^FF0000", "Cooldown: ^FF0000") + (#BUFF_CD_END - .@now) + needtr("초^000000 남았습니다.", "s^000000 remaining.");
 		end;
 	}
 	#BUFF_CD_END = gettimetick(2) + .CD; // 성공 사용: 30초 쿨타임 시작

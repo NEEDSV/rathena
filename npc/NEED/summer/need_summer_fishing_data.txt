@@ -22,6 +22,7 @@ OnInit:
 	setarray $@nff_spot1[0], 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000;
 	setarray $@nff_active[0],   1,    1,    1,    1,    1,    1,    1,    1,    1,    1,    1,    1;
 	setarray $@nff_name$[0], "작은 정어리","코모도 꽃게","통통한 복어","은빛 고등어","무지개 도미","대왕 문어","산호 해마","진주 가오리","황금 참치","코모도 청새치","심해의 유령어","한여름의 황금 고래";
+	setarray $@nff_name_en$[0], "Small Sardine","Comodo Blue Crab","Plump Pufferfish","Silver Mackerel","Rainbow Snapper","Giant Octopus","Coral Seahorse","Pearl Stingray","Golden Tuna","Comodo Marlin","Deep-Sea Ghostfish","Midsummer Golden Whale";
 	setarray $@nff_cutin$[0], "need_fish_01","need_fish_02","need_fish_03","need_fish_04","need_fish_05","need_fish_06","need_fish_07","need_fish_08","need_fish_09","need_fish_10","need_fish_11","need_fish_12";
 	$@nff_count = 12;
 	if ( $NEED_FISHING_FEVER_RATE <= 0 ) $NEED_FISHING_FEVER_RATE = 10000;
@@ -188,6 +189,75 @@ function	script	F_NeedFishNameById	{
 	.@i = callfunc( "F_NeedFishIndexById", getarg(0) );
 	if ( .@i < 0 ) return "?";
 	return $@nff_name$[.@i];
+}
+
+// ===== Phase 0.88 : explicit-language display helpers =====
+//  These take the language as an ARGUMENT and read no RID. The caller decides whose
+//  language it is, which is why a *lang buildin can ask for both halves and the
+//  bc_all broadcast can ask for Korean. The Korean half below is copied verbatim
+//  from the helper above it; p88_apply compares the two byte for byte.
+function	script	F_NeedFishCodeNameLang	{
+	if ( getarg(1) == NEED_LANG_EN ) {
+		switch( getarg(0) ) {
+		case 1: return "First hookset succeeded";
+		case 2: return "First input too early";
+		case 3: return "First wait timed out";
+		case 4: return "Cancelled by the player";
+		case 5: return "Cancelled by an action";
+		case 6: return "Feature disabled";
+		case 7: return "Internal error";
+		case 8: return "Final catch succeeded";
+		case 9: return "Reel input too early";
+		case 10: return "Reel wait timed out";
+		case 11: return "Fish record registration failed";
+		case 12: return "Result event handling failed";
+		default: return "None";
+		}
+	}
+	switch( getarg(0) ) {
+	case 1: return "최초 챔질 성공";
+	case 2: return "최초 입력 너무 빠름";
+	case 3: return "최초 대기 시간 초과";
+	case 4: return "사용자 취소";
+	case 5: return "행동 취소";
+	case 6: return "기능 비활성";
+	case 7: return "내부 오류";
+	case 8: return "최종 낚시 성공";
+	case 9: return "릴 입력 너무 빠름";
+	case 10: return "릴 대기 시간 초과";
+	case 11: return "물고기 정보 등록 실패";
+	case 12: return "결과 이벤트 처리 실패";
+	default: return "없음";
+	}
+}
+function	script	F_NeedFishRarityNameLang	{
+	if ( getarg(1) == NEED_LANG_EN ) {
+		switch( getarg(0) ) {
+		case 1: return "Common";
+		case 2: return "Uncommon";
+		case 3: return "Rare";
+		case 4: return "Legendary";
+		default: return "-";
+		}
+	}
+	switch( getarg(0) ) {
+	case 1: return "일반";
+	case 2: return "고급";
+	case 3: return "희귀";
+	case 4: return "전설";
+	default: return "-";
+	}
+}
+// F_NeedFishNameByIndexLang(<array index>,<lang>) : the KR array is untouched; the
+//  EN array is additive and indexed at the same position.
+function	script	F_NeedFishNameByIndexLang	{
+	.@i = getarg(0);
+	if ( .@i < 0 ) return "?";
+	if ( getarg(1) == NEED_LANG_EN ) return $@nff_name_en$[.@i];
+	return $@nff_name$[.@i];
+}
+function	script	F_NeedFishNameByIdLang	{
+	return callfunc( "F_NeedFishNameByIndexLang", callfunc( "F_NeedFishIndexById", getarg(0) ), getarg(1) );
 }
 // F_NeedFishRarityById(<fish_id>) : 희귀도(1~4, 없으면 0)
 function	script	F_NeedFishRarityById	{

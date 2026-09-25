@@ -7,9 +7,11 @@
 //=
 //= 성장 보상:
 //=   Lv.1       : 메탈 무기 상자 (101454)
+//=   캐릭터 1회 : 300% 전투교범 5개 (14545, 캐릭터 귀속)
 //=   Lv.100     : 초심자 무기/방어구/쉐도우 + 종합 은총 이용권
 //=   Lv.150     : 초심자 무기 7제련 이용권 (25428)
-//=   Lv.175/60  : 전장 지원 시즈 세트 3종 (900115~900117, 14일)
+//=   Lv.175/60  : 초보자 전장 장비 NPC 메뉴 개방 (900125~900155)
+//=                기존 14일 기간제 시즈 세트 지급은 중단됨
 //=
 //= 7일 초보자 소모품 지원:
 //=   소형 생명수 100 / 중형 생명수 100 / 신묘한 생명수 100 / 올마이티 10
@@ -113,8 +115,8 @@ function	script	F_NEED_GuideEnter	{
 		"NEED_GUIDE_SARA", "NEED_GUIDE_OGH", "NEED_GUIDE_INFINITE",
 		"NEED_GUIDE_CHARLESTON", "NEED_GUIDE_TOY", "NEED_GUIDE_OGH_HARD";
 	setarray .@names$[0],
-		"사라의 기억", "옛 글래스트헤임", "무한의 공간",
-		"위기의 찰스턴", "호러 장난감 공장", "옛 글래스트헤임 상급";
+		needtr("사라의 기억","Sara's Memory"), needtr("옛 글래스트헤임","Old Glast Heim"), needtr("무한의 공간","Infinite Space"),
+		needtr("위기의 찰스턴","Charleston Crisis"), needtr("호러 장난감 공장","Horror Toy Factory"), needtr("옛 글래스트헤임 상급","Old Glast Heim Hard");
 	setarray .@minlv[0],
 		100, 150, 150, 150, 150, 150;
 
@@ -130,7 +132,7 @@ function	script	F_NEED_GuideEnter	{
 		return 0;
 
 	setd .@vars$[.@idx], 1;
-	dispbottom "[NEED 성장지원] " + .@names$[.@idx] + " 입장 학습을 완료했습니다.";
+	dispbottom needtr("[NEED 성장지원] ","[NEED Growth Support] ") + .@names$[.@idx] + needtr(" 입장 학습을 완료했습니다."," entry study complete.");
 	return 1;
 }
 
@@ -151,12 +153,12 @@ function	script	F_NEED_BeginnerSupply	{
 	if (.@elapsed < 0 || .@elapsed >= 604800) {
 		if (.@show) {
 			setdialogsize(440,260);
-			mes "^00AAFF[7일 초보자 지원]^000000";
+			mes needtr("^00AAFF[7일 초보자 지원]^000000","^00AAFF[7-Day Beginner Support]^000000");
 			mes "";
-			mes "^777777초보자 소모품 지원 기간이 종료되었습니다.^000000";
+			mes needtr("^777777초보자 소모품 지원 기간이 종료되었습니다.^000000","^777777The beginner supply support period has ended.^000000");
 			mes "";
-			mes "이후 필요한 소모품은";
-			mes "^FF9900금화 / 캐시샵^000000을 통해 구매할 수 있습니다.";
+			mes needtr("이후 필요한 소모품은","You can buy any supplies you need");
+			mes needtr("^FF9900금화 / 캐시샵^000000을 통해 구매할 수 있습니다.","from the ^FF9900Gold Coin / Cash Shop^000000.");
 		}
 		return 0;
 	}
@@ -166,11 +168,11 @@ function	script	F_NEED_BeginnerSupply	{
 	if (#NEED_BEGINNER_SUPPLY_DAY >= .@day) {
 		if (.@show) {
 			setdialogsize(440,260);
-			mes "^00AAFF[7일 초보자 지원]^000000";
+			mes needtr("^00AAFF[7일 초보자 지원]^000000","^00AAFF[7-Day Beginner Support]^000000");
 			mes "";
-			mes "오늘의 소모품 보충은 ^00AA00완료^000000되었습니다.";
+			mes needtr("오늘의 소모품 보충은 ^00AA00완료^000000되었습니다.","Today's supply refill is already ^00AA00complete^000000.");
 			mes "";
-			mes "^777777지원 " + .@day + "일차 / 총 7일^000000";
+			mes needtr("^777777지원 ","^777777Support day ") + .@day + needtr("일차 / 총 7일^000000"," of 7 total^000000");
 		}
 		return 0;
 	}
@@ -193,16 +195,16 @@ function	script	F_NEED_BeginnerSupply	{
 
 	if (.@show) {
 		setdialogsize(440,260);
-		mes "^00AAFF[7일 초보자 지원]^000000";
+		mes needtr("^00AAFF[7일 초보자 지원]^000000","^00AAFF[7-Day Beginner Support]^000000");
 		mes "";
-		mes "^00AA00오늘의 소모품 보충이 완료되었습니다.^000000";
+		mes needtr("^00AA00오늘의 소모품 보충이 완료되었습니다.^000000","^00AA00Today's supply refill is complete.^000000");
 		mes "";
-		mes "소형 생명수    ^FF9900최대 100개^000000";
-		mes "중형 생명수    ^FF9900최대 100개^000000";
-		mes "신묘한 생명수  ^FF9900최대 100개^000000";
-		mes "올마이티        ^FF9900최대 10개^000000";
+		mes needtr("소형 생명수    ^FF9900최대 100개^000000","Small Life Potion      ^FF9900up to 100^000000");
+		mes needtr("중형 생명수    ^FF9900최대 100개^000000","Medium Life Potion     ^FF9900up to 100^000000");
+		mes needtr("신묘한 생명수  ^FF9900최대 100개^000000","Mysterious Life Potion ^FF9900up to 100^000000");
+		mes needtr("올마이티        ^FF9900최대 10개^000000","Almighty               ^FF9900up to 10^000000");
 		mes "";
-		mes "^777777지원 " + .@day + "일차 / 총 7일^000000";
+		mes needtr("^777777지원 ","^777777Support day ") + .@day + needtr("일차 / 총 7일^000000"," of 7 total^000000");
 	}
 	return 1;
 }
@@ -211,14 +213,14 @@ moc_para01,27,35,4	script	낙원단 성장 지원관#need_beginner	4_M_ZONDAOYAJI,{
 	setdialogsize(440,320);
 
 	if (!callfunc("F_NEED_IsBeginnerAccount")) {
-		mes "^00AAFF[낙원단 성장 지원관]^000000";
+		mes needtr("^00AAFF[낙원단 성장 지원관]^000000","^00AAFF[Eden Growth Supporter]^000000");
 		mes "";
-		mes "신규 모험가를 위한 ^0055FF성장 지원 안내소^000000입니다.";
+		mes needtr("신규 모험가를 위한 ^0055FF성장 지원 안내소^000000입니다.","This is the ^0055FFGrowth Support desk^000000 for new adventurers.");
 		mes "";
-		mes "^777777현재 계정은 신규 성장지원 대상이 아닙니다.^000000";
+		mes needtr("^777777현재 계정은 신규 성장지원 대상이 아닙니다.^000000","^777777This account is not eligible for new-adventurer Growth Support.^000000");
 		mes "";
-		mes "일반 성장 정보는 ^00AA00Ctrl + F1^000000";
-		mes "NEED Wiki에서 확인할 수 있습니다.";
+		mes needtr("일반 성장 정보는 ^00AA00Ctrl + F1^000000","General growth information is in the ^00AA00Ctrl + F1^000000");
+		mes needtr("NEED Wiki에서 확인할 수 있습니다.","NEED Wiki.");
 		close;
 	}
 
@@ -227,20 +229,20 @@ moc_para01,27,35,4	script	낙원단 성장 지원관#need_beginner	4_M_ZONDAOYAJI,{
 		#NEED_BEGINNER_START = gettimetick(2);
 		#NEED_BEGINNER_SUPPLY_DAY = 0;
 
-		mes "^00AAFF[낙원단 성장 지원관]^000000";
+		mes needtr("^00AAFF[낙원단 성장 지원관]^000000","^00AAFF[Eden Growth Supporter]^000000");
 		mes "";
-		mes "^00AA00신규 모험가 성장지원^000000";
-		mes "^00AA00대상자로 등록되었습니다.^000000";
+		mes needtr("^00AA00신규 모험가 성장지원^000000","^00AA00You are registered for new adventurer^000000");
+		mes needtr("^00AA00대상자로 등록되었습니다.^000000","^00AA00Growth Support.^000000");
 		mes "";
-		mes "앞으로 성장 과정에서";
-		mes "무엇을 해야 할지 모르겠다면";
-		mes "^0055FF이곳 낙원단 성장 지원관^000000을 찾아주세요.";
+		mes needtr("앞으로 성장 과정에서","If at any point in your growth");
+		mes needtr("무엇을 해야 할지 모르겠다면","you are not sure what to do next,");
+		mes needtr("^0055FF이곳 낙원단 성장 지원관^000000을 찾아주세요.","come back to ^0055FFthe Eden Growth Supporter here^000000.");
 		mes "";
-		mes "^777777처음에는 모든 시스템을";
-		mes "이해하지 않아도 됩니다.";
-		mes "우선 사냥과 전직부터 익혀보세요.^000000";
+		mes needtr("^777777처음에는 모든 시스템을","^777777You do not need to understand every");
+		mes needtr("이해하지 않아도 됩니다.","system at the start.");
+		mes needtr("우선 사냥과 전직부터 익혀보세요.^000000","Begin with hunting and your job change.^000000");
 		mes "";
-		mes "<TIPBOX>▶ 처음 시작하기 가이드<INFO>8010</INFO></TIPBOX>";
+		mes needtr("<TIPBOX>▶ 처음 시작하기 가이드<INFO>8010</INFO></TIPBOX>","<TIPBOX>▶ Getting Started Guide<INFO>8010</INFO></TIPBOX>");
 		next;
 
 		callfunc("F_NEED_BeginnerSupply", 1);
@@ -259,24 +261,24 @@ L_Main:
 
 L_MainDraw:
 	setdialogsize(440,260);
-	mes "^00AAFF[낙원단 성장 지원관]^000000";
+	mes needtr("^00AAFF[낙원단 성장 지원관]^000000","^00AAFF[Eden Growth Supporter]^000000");
 	mes "";
 	callsub S_CurrentStage;
 	mes "";
-	mes "무엇을 도와드릴까요?";
+	mes needtr("무엇을 도와드릴까요?","How can I help you?");
 
 	// 이동 메뉴 추천 방향도 목표 안내와 같은 단계 기준을 사용한다.
 	// stage 4 = 1차 전직 완료 + Base Lv.40 이상 (초보 구간 졸업)
 	.@stage = callfunc("F_NEED_GetBeginnerStage");
 
 	if (.@stage != 4) {
-		.@menu$ = "^FF9900성장 지원 보상^000000:"
-			+ "^0055FF현재 성장 목표^000000:"
-			+ "^00AAFF초보존으로 이동^000000:"
-			+ "7일 초보자 지원:"
-			+ "초보자 도움말:"
+		.@menu$ = needtr("^FF9900성장 지원 보상^000000:","^FF9900Growth Support Rewards^000000:")
+			+ needtr("^0055FF현재 성장 목표^000000:","^0055FFCurrent Growth Goal^000000:")
+			+ needtr("^00AAFF초보존으로 이동^000000:","^00AAFFGo to the Newbie Zone^000000:")
+			+ needtr("7일 초보자 지원:","7-Day Beginner Support:")
+			+ needtr("초보자 도움말:","Beginner Help:")
 			+ "NEED Wiki:"
-			+ "그만두기";
+			+ needtr("그만두기","Quit");
 		switch(select(.@menu$)) {
 		case 1: goto L_Reward;
 		case 2: goto L_Goal;
@@ -288,26 +290,28 @@ L_MainDraw:
 		}
 	}
 	else {
-		.@menu$ = "^FF9900성장 지원 보상^000000:"
-			+ "^0055FF현재 성장 목표^000000:"
-			+ ((BaseLevel >= 100) ? "^00AA00성장 학습 현황^000000" : "") + ":"
-			+ ((BaseLevel >= 120) ? "^00AAFF성장 학습하기^000000" : "") + ":"
-			+ ((BaseLevel >= 175 && JobLevel >= 60) ? "^FF9900175 이후 콘텐츠 안내^000000" : "") + ":"
-			+ "^00AAFF라자냐로 이동^000000:"
-			+ "7일 초보자 지원:"
-			+ "초보자 도움말:"
+		.@menu$ = needtr("^FF9900성장 지원 보상^000000:","^FF9900Growth Support Rewards^000000:")
+			+ needtr("^0055FF현재 성장 목표^000000:","^0055FFCurrent Growth Goal^000000:")
+			+ ((BaseLevel >= 100) ? needtr("^00AA00성장 학습 현황^000000","^00AA00Growth Study Status^000000") : "") + ":"
+			+ ((BaseLevel >= 120) ? needtr("^00AAFF성장 학습하기^000000","^00AAFFGrowth Study^000000") : "") + ":"
+			+ ((BaseLevel >= 175 && JobLevel >= 60) ? needtr("^FF9900175 이후 콘텐츠 안내^000000","^FF9900Content After 175^000000") : "") + ":"
+			+ ((BaseLevel >= 175 && JobLevel >= 60) ? needtr("^FF9900초보자 전장 장비^000000","^FF9900Newbie Battleground Gear^000000") : "") + ":"
+			+ needtr("^00AAFF라자냐로 이동^000000:","^00AAFFGo to Lasagna^000000:")
+			+ needtr("7일 초보자 지원:","7-Day Beginner Support:")
+			+ needtr("초보자 도움말:","Beginner Help:")
 			+ "NEED Wiki:"
-			+ "그만두기";
+			+ needtr("그만두기","Quit");
 		switch(select(.@menu$)) {
 		case 1: goto L_Reward;
 		case 2: goto L_Goal;
 		case 3: goto L_Guide;
 		case 4: goto L_Study;
 		case 5: goto L_After175;
-		case 6: goto L_Lasagna;
-		case 7: goto L_Supply;
-		case 8: goto L_Help;
-		case 9: goto L_Wiki;
+		case 6: goto L_NewbieBGGear;
+		case 7: goto L_Lasagna;
+		case 8: goto L_Supply;
+		case 9: goto L_Help;
+		case 10: goto L_Wiki;
 		default: close;
 		}
 	}
@@ -315,47 +319,48 @@ L_MainDraw:
 L_Reward:
 	clear;
 	setdialogsize(460,360);
-	mes "^00AAFF[성장 지원 보상]^000000";
+	mes needtr("^00AAFF[성장 지원 보상]^000000","^00AAFF[Growth Support Rewards]^000000");
 	mes "";
-	mes "성장 단계에 따라 장비가 지급됩니다.";
-	mes "^777777각 보상은 캐릭터당 1회만 받을 수 있습니다.^000000";
+	mes needtr("성장 단계에 따라 장비가 지급됩니다.","Gear is granted according to your growth stage.");
+	mes needtr("^777777각 보상은 캐릭터당 1회만 받을 수 있습니다.^000000","^777777Each reward is limited to 1 per character.^000000");
 	mes "";
-	mes "<TIPBOX>▶ 성장 지원 시스템 안내<INFO>8011</INFO></TIPBOX>";
+	mes needtr("<TIPBOX>▶ 성장 지원 시스템 안내<INFO>8011</INFO></TIPBOX>","<TIPBOX>▶ Growth Support System Guide<INFO>8011</INFO></TIPBOX>");
 	mes "";
 
-	.@menu$ = "Lv.1 - 메탈 무기 상자:"
-		+ "Lv.100 - 초심자 장비 / 종합 은총:"
-		+ "Lv.150 - 초심자 무기 +7 제련권:"
-		+ "Lv.175/60 - 전장 지원 시즈 세트 (14일):"
-		+ "돌아가기";
+	.@menu$ = needtr("Lv.1 - 메탈 무기 상자:","Lv.1 - Metal Weapon Box:")
+		+ needtr("Lv.100 - 초심자 장비 / 종합 은총:","Lv.100 - Beginner Gear / Full Grace:")
+		+ needtr("Lv.150 - 초심자 무기 +7 제련권:","Lv.150 - Beginner Weapon +7 Refine Ticket:")
+		+ needtr("Lv.175/60 - 환생 티켓:","Lv.175/60 - Rebirth Ticket:")
+		+ needtr("신규 지원 - 300% 전투교범 5개 (캐릭터당 1회):", "New Player Support - 5 Battle Manual X3 (once per character):")
+		+ needtr("돌아가기","Back");
 	switch(select(.@menu$)) {
 	case 1:
 		// 메뉴 선택으로 새 화면에 진입하므로 이전 대사를 지운다.
 		clear;
 		if (NEED_BEGINNER_REWARD_1) {
-			mes "^00AAFF[Lv.1 성장 보상]^000000";
+			mes needtr("^00AAFF[Lv.1 성장 보상]^000000","^00AAFF[Lv.1 Growth Reward]^000000");
 			mes "";
-			mes "이미 ^00AA00수령 완료^000000한 보상입니다.";
+			mes needtr("이미 ^00AA00수령 완료^000000한 보상입니다.","You have already ^00AA00claimed^000000 this reward.");
 			next;
 			goto L_Reward;
 		}
 		if (!checkweight(101454,1)) {
-			mes "^FF0000소지 무게를 비운 뒤 다시 시도해주세요.^000000";
+			mes needtr("^FF0000소지 무게를 비운 뒤 다시 시도해주세요.^000000","^FF0000Free up some carry weight and try again.^000000");
 			close;
 		}
 		getitem 101454,1;
 		NEED_BEGINNER_REWARD_1 = 1;
 
-		mes "^00AAFF[Lv.1 성장 보상]^000000";
+		mes needtr("^00AAFF[Lv.1 성장 보상]^000000","^00AAFF[Lv.1 Growth Reward]^000000");
 		mes "";
-		mes "^FF9900메탈 무기 상자 1개^000000를 지급했습니다.";
+		mes needtr("^FF9900메탈 무기 상자 1개^000000를 지급했습니다.","Granted ^FF99001 Metal Weapon Box^000000.");
 		mes "";
-		mes "상자를 사용하면 원하는 메탈 무기를";
-		mes "직접 선택할 수 있습니다.";
+		mes needtr("상자를 사용하면 원하는 메탈 무기를","Open the box to pick the Metal weapon");
+		mes needtr("직접 선택할 수 있습니다.","you want yourself.");
 		mes "";
-		mes "^777777어떤 무기를 골라야 할지 모르겠다면";
-		mes "전직할 직업을 먼저 정한 뒤";
-		mes "선택하는 것을 권장합니다.^000000";
+		mes needtr("^777777어떤 무기를 골라야 할지 모르겠다면","^777777If you are not sure which weapon to take,");
+		mes needtr("전직할 직업을 먼저 정한 뒤","decide the job you will change to first,");
+		mes needtr("선택하는 것을 권장합니다.^000000","then choose.^000000");
 		next;
 		goto L_Main;
 
@@ -363,24 +368,24 @@ L_Reward:
 		// 메뉴 선택으로 새 화면에 진입하므로 이전 대사를 지운다.
 		clear;
 		if (BaseLevel < 100) {
-			mes "^00AAFF[Lv.100 성장 보상]^000000";
+			mes needtr("^00AAFF[Lv.100 성장 보상]^000000","^00AAFF[Lv.100 Growth Reward]^000000");
 			mes "";
-			mes "이 보상은 ^FF0000Base Lv.100 이상^000000부터";
-			mes "받을 수 있습니다.";
+			mes needtr("이 보상은 ^FF0000Base Lv.100 이상^000000부터","This reward requires ^FF0000Base Lv.100 or higher^000000");
+			mes needtr("받을 수 있습니다.","to claim.");
 			next;
 			goto L_Reward;
 		}
 		if (NEED_BEGINNER_REWARD_100) {
-			mes "^00AAFF[Lv.100 성장 보상]^000000";
+			mes needtr("^00AAFF[Lv.100 성장 보상]^000000","^00AAFF[Lv.100 Growth Reward]^000000");
 			mes "";
-			mes "이미 ^00AA00수령 완료^000000한 보상입니다.";
+			mes needtr("이미 ^00AA00수령 완료^000000한 보상입니다.","You have already ^00AA00claimed^000000 this reward.");
 			next;
 			goto L_Reward;
 		}
 		// 399904 는 무게 0 의 임대 티켓으로 지급되므로 무게 검사 대상이 아니다.
 		if (!checkweight(399908,1) || !checkweight(23583,1) ||
 			!checkweight(23584,1)) {
-			mes "^FF0000소지 무게를 비운 뒤 다시 시도해주세요.^000000";
+			mes needtr("^FF0000소지 무게를 비운 뒤 다시 시도해주세요.^000000","^FF0000Free up some carry weight and try again.^000000");
 			close;
 		}
 
@@ -394,8 +399,8 @@ L_Reward:
 
 		// 은총 기간이 실제로 설정된 뒤에만 수령 기록을 남긴다.
 		if (.@grace_until <= gettimetick(2)) {
-			mes "^FF0000종합 은총 활성화에 실패했습니다.^000000";
-			mes "^FF0000잠시 후 다시 시도해주세요.^000000";
+			mes needtr("^FF0000종합 은총 활성화에 실패했습니다.^000000","^FF0000Failed to activate Full Grace.^000000");
+			mes needtr("^FF0000잠시 후 다시 시도해주세요.^000000","^FF0000Please try again in a moment.^000000");
 			close;
 		}
 
@@ -405,31 +410,31 @@ L_Reward:
 		if (rentalcountitem(399904) > 0)
 			NEED_BEGINNER_GRACE_FIX = 1;
 
-		mes "^00AAFF[Lv.100 성장 보상]^000000";
+		mes needtr("^00AAFF[Lv.100 성장 보상]^000000","^00AAFF[Lv.100 Growth Reward]^000000");
 		mes "";
-		mes "^FF9900초심자 무기 상자^000000";
-		mes "^FF9900초심자 방어구 상자^000000";
-		mes "^FF9900초심자 전용 쉐도우 박스^000000";
-		mes "^FF99007일 종합 은총 이용권^000000";
+		mes needtr("^FF9900초심자 무기 상자^000000","^FF9900Beginner Weapon Box^000000");
+		mes needtr("^FF9900초심자 방어구 상자^000000","^FF9900Beginner's Armor Box^000000");
+		mes needtr("^FF9900초심자 전용 쉐도우 박스^000000","^FF9900Beginner's Shadow Box^000000");
+		mes needtr("^FF99007일 종합 은총 이용권^000000","^FF99007-Day Full Grace Pass^000000");
 		mes "";
-		mes "총 4종을 지급했습니다.";
+		mes needtr("총 4종을 지급했습니다.","4 items in total have been granted.");
 		next;
 
-		mes "^00AAFF[은총 시스템]^000000";
+		mes needtr("^00AAFF[은총 시스템]^000000","^00AAFF[Grace System]^000000");
 		mes "";
-		mes "NEED의 은총은 총 ^0055FF3종^000000으로 나뉩니다.";
+		mes needtr("NEED의 은총은 총 ^0055FF3종^000000으로 나뉩니다.","NEED's Grace comes in ^0055FF3 kinds^000000.");
 		mes "";
-		mes "^FF9900보관의 은총^000000 - 창고보관 커맨드";
-		mes "^FF9900속성의 은총^000000 - 속부 커맨드";
-		mes "^FF9900거래의 은총^000000 - 오버챠지 / 디스카운트";
+		mes needtr("^FF9900보관의 은총^000000 - 창고보관 커맨드","^FF9900Grace of Storage^000000 - @autostorage command");
+		mes needtr("^FF9900속성의 은총^000000 - 속부 커맨드","^FF9900Grace of Attribute^000000 - @element command");
+		mes needtr("^FF9900거래의 은총^000000 - 오버챠지 / 디스카운트","^FF9900Grace of Trade^000000 - Overcharge / Discount");
 		mes "";
-		mes "자세한 사용법은 ^00AAFF마을 중앙 은총 관리인^000000 또는";
-		mes "^00AA00NEED Wiki^000000에서 확인할 수 있습니다.";
+		mes needtr("자세한 사용법은 ^00AAFF마을 중앙 은총 관리인^000000 또는","^00AAFFThe Grace Manager in the town centre^000000 or");
+		mes needtr("^00AA00NEED Wiki^000000에서 확인할 수 있습니다.","the ^00AA00NEED Wiki^000000 has the details.");
 		mes "";
-		mes "<TIPBOX>▶ Lv.100 성장 가이드<INFO>8410</INFO></TIPBOX>";
-		mes "<TIPBOX>▶ 쉐도우 장비 가이드<INFO>8412</INFO></TIPBOX>";
-		mes "<TIPBOX>▶ 은총 시스템 가이드<INFO>8413</INFO></TIPBOX>";
-		mes "<TIPBOX>▶ 메모리얼 던전 가이드<INFO>8414</INFO></TIPBOX>";
+		mes needtr("<TIPBOX>▶ Lv.100 성장 가이드<INFO>8410</INFO></TIPBOX>","<TIPBOX>▶ Lv.100 Growth Guide<INFO>8410</INFO></TIPBOX>");
+		mes needtr("<TIPBOX>▶ 쉐도우 장비 가이드<INFO>8412</INFO></TIPBOX>","<TIPBOX>▶ Shadow Gear Guide<INFO>8412</INFO></TIPBOX>");
+		mes needtr("<TIPBOX>▶ 은총 시스템 가이드<INFO>8413</INFO></TIPBOX>","<TIPBOX>▶ Grace System Guide<INFO>8413</INFO></TIPBOX>");
+		mes needtr("<TIPBOX>▶ 메모리얼 던전 가이드<INFO>8414</INFO></TIPBOX>","<TIPBOX>▶ Memorial Dungeon Guide<INFO>8414</INFO></TIPBOX>");
 		next;
 		goto L_Main;
 
@@ -437,38 +442,38 @@ L_Reward:
 		// 메뉴 선택으로 새 화면에 진입하므로 이전 대사를 지운다.
 		clear;
 		if (BaseLevel < 150) {
-			mes "^00AAFF[Lv.150 성장 보상]^000000";
+			mes needtr("^00AAFF[Lv.150 성장 보상]^000000","^00AAFF[Lv.150 Growth Reward]^000000");
 			mes "";
-			mes "이 보상은 ^FF0000Base Lv.150 이상^000000부터";
-			mes "받을 수 있습니다.";
+			mes needtr("이 보상은 ^FF0000Base Lv.150 이상^000000부터","This reward requires ^FF0000Base Lv.150 or higher^000000");
+			mes needtr("받을 수 있습니다.","to claim.");
 			next;
 			goto L_Reward;
 		}
 		if (NEED_BEGINNER_REWARD_150) {
-			mes "^00AAFF[Lv.150 성장 보상]^000000";
+			mes needtr("^00AAFF[Lv.150 성장 보상]^000000","^00AAFF[Lv.150 Growth Reward]^000000");
 			mes "";
-			mes "이미 ^00AA00수령 완료^000000한 보상입니다.";
+			mes needtr("이미 ^00AA00수령 완료^000000한 보상입니다.","You have already ^00AA00claimed^000000 this reward.");
 			next;
 			goto L_Reward;
 		}
 		if (!checkweight(25428,1)) {
-			mes "^FF0000소지 무게를 비운 뒤 다시 시도해주세요.^000000";
+			mes needtr("^FF0000소지 무게를 비운 뒤 다시 시도해주세요.^000000","^FF0000Free up some carry weight and try again.^000000");
 			close;
 		}
 
 		getitem 25428,1;
 		NEED_BEGINNER_REWARD_150 = 1;
 
-		mes "^00AAFF[Lv.150 성장 보상]^000000";
+		mes needtr("^00AAFF[Lv.150 성장 보상]^000000","^00AAFF[Lv.150 Growth Reward]^000000");
 		mes "";
-		mes "^FF9900초심자 무기 7제련 이용권^000000";
-		mes "1개를 지급했습니다.";
+		mes needtr("^FF9900초심자 무기 7제련 이용권^000000","^FF9900Beginner's Safe to 7 Weapon Certificate^000000");
+		mes needtr("1개를 지급했습니다.","1 has been granted.");
 		mes "";
-		mes "직접 제련 시스템을 이용하여";
-		mes "초심자 무기를 ^0055FF+7^000000로 강화해보세요.";
+		mes needtr("직접 제련 시스템을 이용하여","Use the Refine System yourself to");
+		mes needtr("초심자 무기를 ^0055FF+7^000000로 강화해보세요.","upgrade the Beginner weapon to ^0055FF+7^000000.");
 		mes "";
-		mes "^0055FF라자냐 홀그렌^000000의 ^00AA00제련권 사용^000000에서";
-		mes "초심자 무기를 +7로 강화할 수 있습니다.";
+		mes needtr("^0055FF라자냐 홀그렌^000000의 ^00AA00제련권 사용^000000에서","At ^0055FFLasagna Hollgrehenn^000000, choose ^00AA00Use a Refine Ticket^000000");
+		mes needtr("초심자 무기를 +7로 강화할 수 있습니다.","to upgrade the Beginner weapon to +7.");
 		next;
 		goto L_Main;
 
@@ -476,27 +481,27 @@ L_Reward:
 		// 메뉴 선택으로 새 화면에 진입하므로 이전 대사를 지운다.
 		clear;
 		if (BaseLevel < 175 || JobLevel < 60) {
-			mes "^00AAFF[성장 지원 졸업 보상]^000000";
+			mes needtr("^00AAFF[성장 지원 졸업 보상]^000000","^00AAFF[Growth Support Graduation Reward]^000000");
 			mes "";
-			mes "졸업 조건은";
-			mes "^FF0000Base Lv.175 / Job Lv.60^000000 입니다.";
+			mes needtr("졸업 조건은","The graduation requirement is");
+			mes needtr("^FF0000Base Lv.175 / Job Lv.60^000000 입니다.","^FF0000Base Lv.175 / Job Lv.60^000000.");
 			mes "";
-			mes "현재: Base ^0055FF" + BaseLevel + "^000000 / Job ^0055FF" + JobLevel + "^000000";
+			mes needtr("현재: Base ^0055FF","Current: Base ^0055FF") + BaseLevel + "^000000 / Job ^0055FF" + JobLevel + "^000000";
 			next;
 			goto L_Reward;
 		}
 		if (NEED_BEGINNER_REWARD_175) {
-			mes "^00AAFF[성장 지원 졸업 보상]^000000";
+			mes needtr("^00AAFF[성장 지원 졸업 보상]^000000","^00AAFF[Growth Support Graduation Reward]^000000");
 			mes "";
-			mes "이미 ^00AA00수령 완료^000000한 보상입니다.";
+			mes needtr("이미 ^00AA00수령 완료^000000한 보상입니다.","You have already ^00AA00claimed^000000 this reward.");
 
 			// 16차 이전 졸업자에게 환생 티켓만 1회 추가 지급한다.
 			// (Base Lv.175 / Job Lv.60 조건은 위 분기에서 이미 확인됨)
 			if (!NEED_BEGINNER_REBIRTH_TICKET) {
 				if (!checkweight(399992,1)) {
 					mes "";
-					mes "^FF0000소지 무게와 인벤토리를 비운 뒤^000000";
-					mes "^FF0000다시 시도해주세요.^000000";
+					mes needtr("^FF0000소지 무게와 인벤토리를 비운 뒤^000000","^FF0000Free up carry weight and inventory space,^000000");
+					mes needtr("^FF0000다시 시도해주세요.^000000","^FF0000then try again.^000000");
 					next;
 					goto L_Reward;
 				}
@@ -505,25 +510,23 @@ L_Reward:
 				NEED_BEGINNER_REBIRTH_TICKET = 1;
 
 				mes "";
-				mes "^FF9900NEED 환생 티켓 1개^000000를 지급했습니다.";
-				mes "^777777첫 환생을 경험해보세요.^000000";
+				mes needtr("^FF9900NEED 환생 티켓 1개^000000를 지급했습니다.","^FF99001 NEED Rebirth Ticket^000000 has been granted.");
+				mes needtr("^777777첫 환생을 경험해보세요.^000000","^777777Try out your first Rebirth.^000000");
 			}
 			mes "";
-			mes "<TIPBOX>▶ NEED 전장 입문 가이드<INFO>8400</INFO></TIPBOX>";
-			mes "<TIPBOX>▶ 전사자의 무덤 가이드<INFO>8440</INFO></TIPBOX>";
+			mes needtr("<TIPBOX>▶ NEED 전장 입문 가이드<INFO>8400</INFO></TIPBOX>","<TIPBOX>▶ NEED Battleground Starter Guide<INFO>8400</INFO></TIPBOX>");
+			mes needtr("<TIPBOX>▶ 전사자의 무덤 가이드<INFO>8440</INFO></TIPBOX>","<TIPBOX>▶ Tomb of the Fallen Guide<INFO>8440</INFO></TIPBOX>");
 			next;
 			goto L_Reward;
 		}
-		if (!checkweight(900115,1) || !checkweight(900116,1) ||
-			!checkweight(900117,1) || !checkweight(399992,1)) {
-			mes "^FF0000소지 무게를 비운 뒤 다시 시도해주세요.^000000";
+		if (!checkweight(399992,1)) {
+			mes needtr("^FF0000소지 무게를 비운 뒤 다시 시도해주세요.^000000","^FF0000Free up some carry weight and try again.^000000");
 			close;
 		}
 
-		// 14일 = 1,209,600초
-		rentitem 900115,1209600;	// [기간제] 전장 지원 시즈 플레이트
-		rentitem 900116,1209600;	// [기간제] 전장 지원 시즈 망토
-		rentitem 900117,1209600;	// [기간제] 전장 지원 시즈 그리브
+		// NEED 3차: 14일 기간제 전장 지원 시즈 세트(900115~900117) 신규 지급 중단.
+		//   전장 입문 지원은 '초보자 전장 장비' NPC 메뉴로 대체되었다.
+		//   아이템 DB 와 기존 보유분은 그대로 두며, 여기서 더 이상 지급만 하지 않는다.
 
 		// 환생 티켓은 졸업 보상 변수와 분리해 별도 1회 변수로 관리한다.
 		// (16차 이전 졸업자에게도 나중에 1회 지급할 수 있어야 한다)
@@ -537,44 +540,78 @@ L_Reward:
 
 		NEED_BEGINNER_REWARD_175 = 1;
 
-		mes "^00AAFF[성장 지원 과정 완료]^000000";
+		mes needtr("^00AAFF[성장 지원 과정 완료]^000000","^00AAFF[Growth Support Course Complete]^000000");
 		mes "";
-		mes "^00AA00축하합니다!^000000";
+		mes needtr("^00AA00축하합니다!^000000","^00AA00Congratulations!^000000");
 		mes "";
-		mes "전장에 바로 입문할 수 있도록";
-		mes "^FF990014일 기간제 전장 지원 시즈 세트^000000를";
-		mes "지급했습니다.";
+		mes needtr("전장에 바로 입문할 수 있도록","So you can step straight into the Battleground,");
+		mes needtr("^FF9900초보자 전장 장비^000000를 준비해 두었습니다.","^FF9900Newbie Battleground Gear^000000 is ready for you.");
 		mes "";
-		mes "^0055FF[기간제] 전장 지원 시즈 플레이트^000000";
-		mes "^0055FF[기간제] 전장 지원 시즈 망토^000000";
-		mes "^0055FF[기간제] 전장 지원 시즈 그리브^000000";
+		mes needtr("메뉴의 ^0055FF초보자 전장 장비^000000에서","From ^0055FFNewbie Battleground Gear^000000 in the menu");
+		mes needtr("기본 방어 세트와 부위별 장비를","you can pick the basic defense set and gear for each slot");
+		mes needtr("^FF9900무료로 선택하고 언제든 교환^000000할 수 있습니다.","^FF9900free of charge, and exchange them any time^000000.");
 		mes "";
-		mes "^FF0000※ 지급일로부터 14일 동안^000000";
-		mes "^FF0000사용할 수 있습니다.^000000";
+		mes needtr("^FF0000※ 추가 옵션은 전장 안에서만 적용됩니다.^000000","^FF0000* Extra options apply only inside the Battleground.^000000");
 
 		if (.@rb_given) {
 			mes "";
-			mes "^FF9900NEED 환생 티켓 1개^000000도 함께 지급했습니다.";
+			mes needtr("^FF9900NEED 환생 티켓 1개^000000도 함께 지급했습니다.","^FF99001 NEED Rebirth Ticket^000000 was granted as well.");
 		}
 		next;
 
-		mes "^00AAFF[전장 입문 지원]^000000";
+		mes needtr("^00AAFF[전장 입문 지원]^000000","^00AAFF[Battleground Starter Support]^000000");
 		mes "";
-		mes "이 장비는";
-		mes "^FF9900전장 입문을 위한 임시 지원 장비^000000입니다.";
-		mes "지원 기간 동안 전장을 직접 경험하면서";
-		mes "이후 사용할 PvP 장비를 준비해보세요.";
+		mes needtr("이 장비는","This gear is");
+		mes needtr("^FF9900전장 입문을 위한 임시 지원 장비^000000입니다.","^FF9900temporary support gear for entering the Battleground^000000.");
+		mes needtr("지원 기간 동안 전장을 직접 경험하면서","Experience the Battleground while the support lasts,");
+		mes needtr("이후 사용할 PvP 장비를 준비해보세요.","and prepare the PvP gear you will use afterwards.");
 		mes "";
-		mes "^777777거래 / 창고 / 우편 /";
-		mes "제련 / 카드 변경 제한은";
-		mes "아이템 자체 설정에 따라 적용됩니다.^000000";
+		mes needtr("^777777거래 / 창고 / 우편 /","^777777Trade / storage / mail /");
+		mes needtr("제련 / 카드 변경 제한은","refine / card change restrictions follow");
+		mes needtr("아이템 자체 설정에 따라 적용됩니다.^000000","the item's own settings.^000000");
 		mes "";
-		mes "이제부터는 전장, EP16.1, 메모리얼,";
-		mes "장비 세팅 등 원하는 콘텐츠를";
-		mes "선택해 성장할 수 있습니다.";
+		mes needtr("이제부터는 전장, EP16.1, 메모리얼,","From here on you can pick Battleground, EP16.1, Memorials,");
+		mes needtr("장비 세팅 등 원하는 콘텐츠를","gear building, or any other content");
+		mes needtr("선택해 성장할 수 있습니다.","and grow the way you like.");
 		mes "";
-		mes "<TIPBOX>▶ NEED 전장 입문 가이드<INFO>8400</INFO></TIPBOX>";
-		mes "<TIPBOX>▶ 전사자의 무덤 가이드<INFO>8440</INFO></TIPBOX>";
+		mes needtr("<TIPBOX>▶ NEED 전장 입문 가이드<INFO>8400</INFO></TIPBOX>","<TIPBOX>▶ NEED Battleground Starter Guide<INFO>8400</INFO></TIPBOX>");
+		mes needtr("<TIPBOX>▶ 전사자의 무덤 가이드<INFO>8440</INFO></TIPBOX>","<TIPBOX>▶ Tomb of the Fallen Guide<INFO>8440</INFO></TIPBOX>");
+		next;
+		goto L_Main;
+
+	case 5:
+		// 메뉴 선택으로 새 화면에 진입하므로 이전 대사를 지운다.
+		clear;
+		if (NEED_BEGINNER_MANUAL_X3) {
+			mes needtr("^00AAFF[신규 지원 - 300% 전투교범]^000000", "^00AAFF[New Player Support - Battle Manual X3]^000000");
+			mes "";
+			mes needtr("이미 ^00AA00수령 완료^000000한 보상입니다.","You have already ^00AA00claimed^000000 this reward.");
+			mes "";
+			mes needtr("^777777이 보상은 캐릭터당 1회만 지급됩니다.^000000", "^777777This reward is given only once per character.^000000");
+			next;
+			goto L_Reward;
+		}
+		if (!checkweight(14545,5)) {
+			mes needtr("^FF0000소지 무게를 비운 뒤 다시 시도해주세요.^000000","^FF0000Free up some carry weight and try again.^000000");
+			close;
+		}
+		// 캐릭터 귀속으로 지급해 거래 / 개인창고 / 길드창고 / 우편 /
+		// 노점 / 구매노점 이동을 모두 차단한다. 원본 아이템 속성은 건드리지 않는다.
+		getitembound 14545,5,Bound_Char;
+		NEED_BEGINNER_MANUAL_X3 = 1;
+
+		mes needtr("^00AAFF[신규 지원 - 300% 전투교범]^000000", "^00AAFF[New Player Support - Battle Manual X3]^000000");
+		mes "";
+		mes needtr("^FF9900300% 전투교범 5개^000000를 지급했습니다.", "You received ^FF99005 Battle Manual X3^000000.");
+		mes "";
+		mes needtr("사용하면 ^0055FF30분 동안 획득 경험치가 3배^000000가 됩니다.", "Using one ^0055FFtriples the EXP you gain for 30 minutes^000000.");
+		mes "";
+		mes needtr("^FF0000※ 캐릭터 귀속 아이템입니다.^000000", "^FF0000* This is a character-bound item.^000000");
+		mes needtr("^FF0000거래 / 개인창고 / 길드창고 / 우편 /^000000", "^FF0000It cannot be moved by trade / Storage / Guild Storage / mail /^000000");
+		mes needtr("^FF0000노점으로 옮길 수 없습니다.^000000", "^FF0000vending.^000000");
+		mes "";
+		mes needtr("^777777계정당 1회가 아니라 캐릭터당 1회 지급이므로", "^777777It is given once per character, not once per account,");
+		mes needtr("새로 만든 캐릭터도 각각 받을 수 있습니다.^000000", "so every new character can receive it too.^000000");
 		next;
 		goto L_Main;
 
@@ -585,14 +622,14 @@ L_Reward:
 L_Goal:
 	clear;
 	setdialogsize(460,400);
-	mes "^00AAFF[현재 성장 목표]^000000";
+	mes needtr("^00AAFF[현재 성장 목표]^000000","^00AAFF[Current Growth Goal]^000000");
 	mes "";
 	callsub S_ShowGoal;
 	mes "";
 	if (BaseLevel < 100)
-		mes "<TIPBOX>▶ 처음 시작하기 가이드<INFO>8010</INFO></TIPBOX>";
+		mes needtr("<TIPBOX>▶ 처음 시작하기 가이드<INFO>8010</INFO></TIPBOX>","<TIPBOX>▶ Getting Started Guide<INFO>8010</INFO></TIPBOX>");
 	else
-		mes "<TIPBOX>▶ Lv.100 성장 가이드<INFO>8410</INFO></TIPBOX>";
+		mes needtr("<TIPBOX>▶ Lv.100 성장 가이드<INFO>8410</INFO></TIPBOX>","<TIPBOX>▶ Lv.100 Growth Guide<INFO>8410</INFO></TIPBOX>");
 
 	// 추천 사냥터 안내 + 이동 (Base Lv.175 이상은 내부에서 스스로 건너뛴다)
 	callsub S_HuntingGuide;
@@ -602,36 +639,36 @@ L_Goal:
 L_Guide:
 	clear;
 	setdialogsize(500,420);
-	mes "^00AAFF[성장 학습 현황]^000000";
+	mes needtr("^00AAFF[성장 학습 현황]^000000","^00AAFF[Growth Study Status]^000000");
 	mes "";
 
-	.@ok$ = "^00AA00[완료]^000000";
-	.@no$ = "^FF9900[미완료]^000000";
+	.@ok$ = needtr("^00AA00[완료]^000000","^00AA00[Done]^000000");
+	.@no$ = needtr("^FF9900[미완료]^000000","^FF9900[Not done]^000000");
 
 	.@equip$ = (NEED_BEGINNER_REWARD_100) ? .@ok$ : .@no$;
 	.@sara$ = (NEED_GUIDE_SARA) ? .@ok$ : .@no$;
 
-	mes "^0055FF[Lv.100 성장 학습]^000000";
-	mes .@equip$ + " 초심자 장비 수령";
-	mes .@sara$ + " 사라의 기억 입장";
+	mes needtr("^0055FF[Lv.100 성장 학습]^000000","^0055FF[Lv.100 Growth Study]^000000");
+	mes .@equip$ + needtr(" 초심자 장비 수령"," Claim the Beginner gear");
+	mes .@sara$ + needtr(" 사라의 기억 입장"," Enter Sara's Memory");
 
 	// Lv.120 이후 장비 성장 / 경제 학습
 	if (BaseLevel >= 120) {
 		.@card$ = (NEED_GUIDE_CARD) ? .@ok$ : .@no$;
 
 		mes "";
-		mes "^0055FF[장비 성장]^000000";
-		mes .@card$ + " 카드 시스템";
+		mes needtr("^0055FF[장비 성장]^000000","^0055FF[Gear Growth]^000000");
+		mes .@card$ + needtr(" 카드 시스템"," Card System");
 
 		if (BaseLevel >= 140) {
 			.@refine$ = (NEED_GUIDE_REFINE) ? .@ok$ : .@no$;
-			mes .@refine$ + " 제련 시스템";
+			mes .@refine$ + needtr(" 제련 시스템"," Refine System");
 		}
 		if (BaseLevel >= 150) {
 			.@exc$ = (NEED_GUIDE_EXCELION) ? .@ok$ : .@no$;
 			.@cash$ = (NEED_GUIDE_CASH) ? .@ok$ : .@no$;
-			mes .@exc$ + " 엑셀리온 인챈트";
-			mes .@cash$ + " 금화 / 캐시 시스템";
+			mes .@exc$ + needtr(" 엑셀리온 인챈트"," Excellion Enchant");
+			mes .@cash$ + needtr(" 금화 / 캐시 시스템"," Gold Coin / Cash System");
 		}
 	}
 
@@ -643,38 +680,38 @@ L_Guide:
 		.@oghh$ = (NEED_GUIDE_OGH_HARD) ? .@ok$ : .@no$;
 
 		mes "";
-		mes "^0055FF[추천 메모리얼]^000000";
-		mes .@ogh$ + " 옛 글래스트헤임 일반";
-		mes .@inf$ + " 무한의 공간";
-		mes .@cha$ + " 위기의 찰스턴";
-		mes .@toy$ + " 호러 장난감 공장";
-		mes .@oghh$ + " 옛 글래스트헤임 상급";
+		mes needtr("^0055FF[추천 메모리얼]^000000","^0055FF[Recommended Memorials]^000000");
+		mes .@ogh$ + needtr(" 옛 글래스트헤임 일반"," Old Glast Heim Normal");
+		mes .@inf$ + needtr(" 무한의 공간"," Infinite Space");
+		mes .@cha$ + needtr(" 위기의 찰스턴"," Charleston Crisis");
+		mes .@toy$ + needtr(" 호러 장난감 공장"," Horror Toy Factory");
+		mes .@oghh$ + needtr(" 옛 글래스트헤임 상급"," Old Glast Heim Hard");
 	}
 	else {
 		mes "";
-		mes "^777777추천 메모리얼 학습은^000000";
-		mes "^777777Base Lv.150부터 표시됩니다.^000000";
+		mes needtr("^777777추천 메모리얼 학습은^000000","^777777Recommended Memorial study appears^000000");
+		mes needtr("^777777Base Lv.150부터 표시됩니다.^000000","^777777from Base Lv.150.^000000");
 	}
 
 	// Lv.149 카프라 무료 초기화 종료 임박 경고
 	if (BaseLevel == 149) {
 		mes "";
-		mes "^FF0000[중요 안내]^000000";
-		mes "마을 카프라의 무료 스탯 / 스킬 초기화는";
-		mes "^FF0000Base Lv.149까지만 이용할 수 있습니다.^000000";
-		mes "Lv.150 달성 전 현재";
-		mes "스탯과 스킬 세팅을 확인해주세요.";
-		mes "<TIPBOX>▶ 스탯 / 스킬 초기화 가이드<INFO>8422</INFO></TIPBOX>";
+		mes needtr("^FF0000[중요 안내]^000000","^FF0000[Important]^000000");
+		mes needtr("마을 카프라의 무료 스탯 / 스킬 초기화는","The town Kafra's free Stat / Skill Reset is");
+		mes needtr("^FF0000Base Lv.149까지만 이용할 수 있습니다.^000000","^FF0000available only up to Base Lv.149.^000000");
+		mes needtr("Lv.150 달성 전 현재","Before you reach Lv.150, please check");
+		mes needtr("스탯과 스킬 세팅을 확인해주세요.","your current stat and skill build.");
+		mes needtr("<TIPBOX>▶ 스탯 / 스킬 초기화 가이드<INFO>8422</INFO></TIPBOX>","<TIPBOX>▶ Stat / Skill Reset Guide<INFO>8422</INFO></TIPBOX>");
 	}
 
 	mes "";
-	mes "^FF0000※ 성장 학습은 선택사항입니다.^000000";
-	mes "^777777   완료하지 않아도^000000";
-	mes "^777777   성장 보상을 받을 수 있습니다.^000000";
+	mes needtr("^FF0000※ 성장 학습은 선택사항입니다.^000000","^FF0000* Growth Study is optional.^000000");
+	mes needtr("^777777   완료하지 않아도^000000","^777777   You can still claim your^000000");
+	mes needtr("^777777   성장 보상을 받을 수 있습니다.^000000","^777777   Growth Rewards without completing it.^000000");
 	mes "";
-	mes "<TIPBOX>▶ 메모리얼 던전 가이드<INFO>8414</INFO></TIPBOX>";
+	mes needtr("<TIPBOX>▶ 메모리얼 던전 가이드<INFO>8414</INFO></TIPBOX>","<TIPBOX>▶ Memorial Dungeon Guide<INFO>8414</INFO></TIPBOX>");
 	if (BaseLevel >= 150)
-		mes "<TIPBOX>▶ Lv.150 성장 가이드<INFO>8430</INFO></TIPBOX>";
+		mes needtr("<TIPBOX>▶ Lv.150 성장 가이드<INFO>8430</INFO></TIPBOX>","<TIPBOX>▶ Lv.150 Growth Guide<INFO>8430</INFO></TIPBOX>");
 	next;
 	goto L_Main;
 
@@ -687,22 +724,22 @@ L_Guide:
 L_Study:
 	clear;
 	setdialogsize(460,260);
-	mes "^00AAFF[성장 학습하기]^000000";
+	mes needtr("^00AAFF[성장 학습하기]^000000","^00AAFF[Growth Study]^000000");
 	mes "";
-	mes "익히고 싶은 항목을 선택해주세요.";
+	mes needtr("익히고 싶은 항목을 선택해주세요.","Please choose a topic to study.");
 	mes "";
-	mes "^777777학습은 선택사항이며 완료하지 않아도";
-	mes "성장 보상 수령에 영향을 주지 않습니다.^000000";
+	mes needtr("^777777학습은 선택사항이며 완료하지 않아도","^777777Studying is optional; not completing it");
+	mes needtr("성장 보상 수령에 영향을 주지 않습니다.^000000","does not affect your growth rewards.^000000");
 
-	.@ok$ = " ^00AA00[완료]^000000";
+	.@ok$ = needtr(" ^00AA00[완료]^000000"," ^00AA00[Done]^000000");
 
-	.@menu$ = "^00AAFF카드 시스템^000000" + ((NEED_GUIDE_CARD) ? .@ok$ : "") + ":"
-		+ ((BaseLevel >= 140) ? "^00AAFF제련 시스템^000000" + ((NEED_GUIDE_REFINE) ? .@ok$ : "") : "") + ":"
-		+ ((BaseLevel >= 150) ? "^00AAFF엑셀리온 인챈트^000000" + ((NEED_GUIDE_EXCELION) ? .@ok$ : "") : "") + ":"
-		+ ((BaseLevel >= 150) ? "^00AAFF금화 / 캐시 시스템^000000" + ((NEED_GUIDE_CASH) ? .@ok$ : "") : "") + ":"
-		+ ((BaseLevel >= 150) ? "^0055FF추천 필드 안내^000000" : "") + ":"
-		+ "스탯 / 스킬 초기화 안내:"
-		+ "돌아가기";
+	.@menu$ = needtr("^00AAFF카드 시스템^000000","^00AAFFCard System^000000") + ((NEED_GUIDE_CARD) ? .@ok$ : "") + ":"
+		+ ((BaseLevel >= 140) ? needtr("^00AAFF제련 시스템^000000","^00AAFFRefine System^000000") + ((NEED_GUIDE_REFINE) ? .@ok$ : "") : "") + ":"
+		+ ((BaseLevel >= 150) ? needtr("^00AAFF엑셀리온 인챈트^000000","^00AAFFExcellion Enchant^000000") + ((NEED_GUIDE_EXCELION) ? .@ok$ : "") : "") + ":"
+		+ ((BaseLevel >= 150) ? needtr("^00AAFF금화 / 캐시 시스템^000000","^00AAFFGold Coin / Cash System^000000") + ((NEED_GUIDE_CASH) ? .@ok$ : "") : "") + ":"
+		+ ((BaseLevel >= 150) ? needtr("^0055FF추천 필드 안내^000000","^0055FFRecommended Fields^000000") : "") + ":"
+		+ needtr("스탯 / 스킬 초기화 안내:","Stat / Skill Reset:")
+		+ needtr("돌아가기","Back");
 
 	switch(select(.@menu$)) {
 	case 1: goto L_StudyCard;
@@ -717,35 +754,35 @@ L_Study:
 L_StudyCard:
 	clear;
 	setdialogsize(460,300);
-	mes "^00AAFF[카드 시스템 학습]^000000";
+	mes needtr("^00AAFF[카드 시스템 학습]^000000","^00AAFF[Card System Study]^000000");
 	mes "";
-	mes "카드는 슬롯이 있는 장비에 장착하여";
-	mes "추가 효과를 얻는 시스템입니다.";
+	mes needtr("카드는 슬롯이 있는 장비에 장착하여","Cards are inserted into equipment with slots");
+	mes needtr("추가 효과를 얻는 시스템입니다.","to gain extra effects.");
 	mes "";
-	mes "초반에는 필요한 카드를 직접 파밍하고";
-	mes "사용할 장비에 장착해보는 것을 권장합니다.";
+	mes needtr("초반에는 필요한 카드를 직접 파밍하고","Early on we recommend farming the cards you need");
+	mes needtr("사용할 장비에 장착해보는 것을 권장합니다.","and inserting them into gear you will actually use.");
 	mes "";
-	mes "^FF0000※ 카드 장착 전^000000";
-	mes "^FF0000해당 장비를 오래 사용할지 확인해주세요.^000000";
+	mes needtr("^FF0000※ 카드 장착 전^000000","^FF0000* Before inserting a card^000000");
+	mes needtr("^FF0000해당 장비를 오래 사용할지 확인해주세요.^000000","^FF0000make sure you will use that gear for a while.^000000");
 	mes "";
-	mes "<TIPBOX>▶ 카드 시스템 가이드<INFO>8420</INFO></TIPBOX>";
+	mes needtr("<TIPBOX>▶ 카드 시스템 가이드<INFO>8420</INFO></TIPBOX>","<TIPBOX>▶ Card System Guide<INFO>8420</INFO></TIPBOX>");
 	next;
 
 	if (NEED_GUIDE_CARD) {
-		mes "^00AAFF[카드 시스템 학습]^000000";
+		mes needtr("^00AAFF[카드 시스템 학습]^000000","^00AAFF[Card System Study]^000000");
 		mes "";
-		mes "이 학습은 이미 ^00AA00완료^000000했습니다.";
+		mes needtr("이 학습은 이미 ^00AA00완료^000000했습니다.","You have already ^00AA00completed^000000 this study.");
 		mes "";
-		mes "^777777가이드는 언제든 다시 확인할 수 있습니다.^000000";
+		mes needtr("^777777가이드는 언제든 다시 확인할 수 있습니다.^000000","^777777You can review the guide at any time.^000000");
 		next;
 		goto L_Study;
 	}
 
-	if (select("^00AA00학습 내용 확인 완료^000000:나중에 확인한다") == 1) {
+	if (select(needtr("^00AA00학습 내용 확인 완료^000000:나중에 확인한다","^00AA00Finished reading^000000:Check it later")) == 1) {
 		NEED_GUIDE_CARD = 1;
-		mes "^00AAFF[카드 시스템 학습]^000000";
+		mes needtr("^00AAFF[카드 시스템 학습]^000000","^00AAFF[Card System Study]^000000");
 		mes "";
-		mes "^00AA00카드 시스템 학습을 완료했습니다.^000000";
+		mes needtr("^00AA00카드 시스템 학습을 완료했습니다.^000000","^00AA00Card System study complete.^000000");
 		next;
 	}
 	goto L_Study;
@@ -753,45 +790,45 @@ L_StudyCard:
 L_StudyRefine:
 	clear;
 	if (BaseLevel < 140) {
-		mes "^00AAFF[제련 시스템 학습]^000000";
+		mes needtr("^00AAFF[제련 시스템 학습]^000000","^00AAFF[Refine System Study]^000000");
 		mes "";
-		mes "이 학습은 ^FF0000Base Lv.140 이상^000000부터";
-		mes "열람할 수 있습니다.";
+		mes needtr("이 학습은 ^FF0000Base Lv.140 이상^000000부터","^FF0000Base Lv.140 or higher^000000 is required");
+		mes needtr("열람할 수 있습니다.","to view this study.");
 		next;
 		goto L_Study;
 	}
 
 	setdialogsize(460,320);
-	mes "^00AAFF[제련 시스템 학습]^000000";
+	mes needtr("^00AAFF[제련 시스템 학습]^000000","^00AAFF[Refine System Study]^000000");
 	mes "";
-	mes "제련은 장비의 제련 수치를 올려";
-	mes "성능을 강화하는 시스템입니다.";
+	mes needtr("제련은 장비의 제련 수치를 올려","Refining raises the refine level of your gear");
+	mes needtr("성능을 강화하는 시스템입니다.","to strengthen its performance.");
 	mes "";
-	mes "제련 재료를 직접 획득한 뒤";
-	mes "^FF9900방어구를 +4 정도까지^000000";
-	mes "제련해보는 것을 권장합니다.";
+	mes needtr("제련 재료를 직접 획득한 뒤","We recommend gathering refine materials yourself");
+	mes needtr("^FF9900방어구를 +4 정도까지^000000","^FF9900and refining armour to about +4^000000");
+	mes needtr("제련해보는 것을 권장합니다.","as a first goal.");
 	mes "";
-	mes "^777777성공률은 장비 등급과^000000";
-	mes "^777777현재 제련 수치에 따라 다릅니다.^000000";
+	mes needtr("^777777성공률은 장비 등급과^000000","^777777The success rate depends on the gear grade^000000");
+	mes needtr("^777777현재 제련 수치에 따라 다릅니다.^000000","^777777and on its current refine level.^000000");
 	mes "";
-	mes "<TIPBOX>▶ 제련 시스템 가이드<INFO>8421</INFO></TIPBOX>";
+	mes needtr("<TIPBOX>▶ 제련 시스템 가이드<INFO>8421</INFO></TIPBOX>","<TIPBOX>▶ Refine System Guide<INFO>8421</INFO></TIPBOX>");
 	next;
 
 	if (NEED_GUIDE_REFINE) {
-		mes "^00AAFF[제련 시스템 학습]^000000";
+		mes needtr("^00AAFF[제련 시스템 학습]^000000","^00AAFF[Refine System Study]^000000");
 		mes "";
-		mes "이 학습은 이미 ^00AA00완료^000000했습니다.";
+		mes needtr("이 학습은 이미 ^00AA00완료^000000했습니다.","You have already ^00AA00completed^000000 this study.");
 		mes "";
-		mes "^777777가이드는 언제든 다시 확인할 수 있습니다.^000000";
+		mes needtr("^777777가이드는 언제든 다시 확인할 수 있습니다.^000000","^777777You can review the guide at any time.^000000");
 		next;
 		goto L_Study;
 	}
 
-	if (select("^00AA00학습 내용 확인 완료^000000:나중에 확인한다") == 1) {
+	if (select(needtr("^00AA00학습 내용 확인 완료^000000:나중에 확인한다","^00AA00Finished reading^000000:Check it later")) == 1) {
 		NEED_GUIDE_REFINE = 1;
-		mes "^00AAFF[제련 시스템 학습]^000000";
+		mes needtr("^00AAFF[제련 시스템 학습]^000000","^00AAFF[Refine System Study]^000000");
 		mes "";
-		mes "^00AA00제련 시스템 학습을 완료했습니다.^000000";
+		mes needtr("^00AA00제련 시스템 학습을 완료했습니다.^000000","^00AA00Refine System study complete.^000000");
 		next;
 	}
 	goto L_Study;
@@ -799,54 +836,54 @@ L_StudyRefine:
 L_StudyExcelion:
 	clear;
 	if (BaseLevel < 150) {
-		mes "^00AAFF[엑셀리온 인챈트 학습]^000000";
+		mes needtr("^00AAFF[엑셀리온 인챈트 학습]^000000","^00AAFF[Excellion Enchant Study]^000000");
 		mes "";
-		mes "이 학습은 ^FF0000Base Lv.150 이상^000000부터";
-		mes "열람할 수 있습니다.";
+		mes needtr("이 학습은 ^FF0000Base Lv.150 이상^000000부터","^FF0000Base Lv.150 or higher^000000 is required");
+		mes needtr("열람할 수 있습니다.","to view this study.");
 		next;
 		goto L_Study;
 	}
 
 	setdialogsize(480,420);
-	mes "^00AAFF[엑셀리온 인챈트 학습]^000000";
+	mes needtr("^00AAFF[엑셀리온 인챈트 학습]^000000","^00AAFF[Excellion Enchant Study]^000000");
 	mes "";
-	mes "엑셀리온 장비는";
-	mes "베루스 지역 재료로 제작하고";
-	mes "^FF9900리액터 설계도^000000로";
-	mes "옵션을 부여하는 장비입니다.";
+	mes needtr("엑셀리온 장비는","Excellion gear is crafted");
+	mes needtr("베루스 지역 재료로 제작하고","from materials found in the Verus area,");
+	mes needtr("^FF9900리액터 설계도^000000로","and a ^FF9900Reactor Blueprint^000000 is what");
+	mes needtr("옵션을 부여하는 장비입니다.","grants its options.");
 	mes "";
-	mes "담당 NPC는 ^0055FF라자냐 실내^000000에 있습니다.";
-	mes "  ^00AAFFMARS_01^000000 - 로봇 가동 / 엑셀리온 인챈트";
-	mes "  ^00AAFFPLUTO_09^000000 - 장비 제작 / 설계도 제작";
+	mes needtr("담당 NPC는 ^0055FF라자냐 실내^000000에 있습니다.","The NPCs for this are ^0055FFInside Lasagna^000000.");
+	mes needtr("  ^00AAFFMARS_01^000000 - 로봇 가동 / 엑셀리온 인챈트","  ^00AAFFMARS_01^000000 - Robot activation / Excellion Enchant");
+	mes needtr("  ^00AAFFPLUTO_09^000000 - 장비 제작 / 설계도 제작","  ^00AAFFPLUTO_09^000000 - Gear crafting / Blueprint crafting");
 	mes "";
-	mes "① ^FF9900낡은 연료통^000000 1개를";
-	mes "   MARS_01에게 넣어 로봇을 가동";
-	mes "② ^0055FF베루스 중앙광장^000000에서";
-	mes "   ^FF9900커다란 고철^000000 / ^FF9900낡은 연료통^000000 파밍";
-	mes "③ PLUTO_09에서 엑셀리온 윙 / 슈츠 제작";
-	mes "④ PLUTO_09에서 리액터 설계도 제작";
-	mes "⑤ 장비를 착용하고 MARS_01에서 인챈트";
+	mes needtr("① ^FF9900낡은 연료통^000000 1개를","① Put 1 ^FF9900Old Fuel Tank^000000");
+	mes needtr("   MARS_01에게 넣어 로봇을 가동","   into MARS_01 to start the robot");
+	mes needtr("② ^0055FF베루스 중앙광장^000000에서","② At the ^0055FFVerus Central Plaza^000000,");
+	mes needtr("   ^FF9900커다란 고철^000000 / ^FF9900낡은 연료통^000000 파밍","   farm ^FF9900Large Iron Scrap^000000 / ^FF9900Old Fuel Tank^000000");
+	mes needtr("③ PLUTO_09에서 엑셀리온 윙 / 슈츠 제작","③ Craft Excellion Wing / Suit at PLUTO_09");
+	mes needtr("④ PLUTO_09에서 리액터 설계도 제작","④ Craft a Reactor Blueprint at PLUTO_09");
+	mes needtr("⑤ 장비를 착용하고 MARS_01에서 인챈트","⑤ Equip the gear and enchant at MARS_01");
 	mes "";
-	mes "^777777인챈트로 장비가 파괴되지는 않습니다.^000000";
+	mes needtr("^777777인챈트로 장비가 파괴되지는 않습니다.^000000","^777777Enchanting will not destroy the gear.^000000");
 	mes "";
-	mes "<TIPBOX>▶ 엑셀리온 인챈트 가이드<INFO>8432</INFO></TIPBOX>";
+	mes needtr("<TIPBOX>▶ 엑셀리온 인챈트 가이드<INFO>8432</INFO></TIPBOX>","<TIPBOX>▶ Excellion Enchant Guide<INFO>8432</INFO></TIPBOX>");
 	next;
 
 	if (NEED_GUIDE_EXCELION) {
-		mes "^00AAFF[엑셀리온 인챈트 학습]^000000";
+		mes needtr("^00AAFF[엑셀리온 인챈트 학습]^000000","^00AAFF[Excellion Enchant Study]^000000");
 		mes "";
-		mes "이 학습은 이미 ^00AA00완료^000000했습니다.";
+		mes needtr("이 학습은 이미 ^00AA00완료^000000했습니다.","You have already ^00AA00completed^000000 this study.");
 		mes "";
-		mes "^777777가이드는 언제든 다시 확인할 수 있습니다.^000000";
+		mes needtr("^777777가이드는 언제든 다시 확인할 수 있습니다.^000000","^777777You can review the guide at any time.^000000");
 		next;
 		goto L_Study;
 	}
 
-	if (select("^00AA00학습 내용 확인 완료^000000:나중에 확인한다") == 1) {
+	if (select(needtr("^00AA00학습 내용 확인 완료^000000:나중에 확인한다","^00AA00Finished reading^000000:Check it later")) == 1) {
 		NEED_GUIDE_EXCELION = 1;
-		mes "^00AAFF[엑셀리온 인챈트 학습]^000000";
+		mes needtr("^00AAFF[엑셀리온 인챈트 학습]^000000","^00AAFF[Excellion Enchant Study]^000000");
 		mes "";
-		mes "^00AA00엑셀리온 인챈트 학습을 완료했습니다.^000000";
+		mes needtr("^00AA00엑셀리온 인챈트 학습을 완료했습니다.^000000","^00AA00Excellion Enchant study complete.^000000");
 		next;
 	}
 	goto L_Study;
@@ -854,50 +891,50 @@ L_StudyExcelion:
 L_StudyCash:
 	clear;
 	if (BaseLevel < 150) {
-		mes "^00AAFF[금화 / 캐시 시스템 학습]^000000";
+		mes needtr("^00AAFF[금화 / 캐시 시스템 학습]^000000","^00AAFF[Gold Coin / Cash System Study]^000000");
 		mes "";
-		mes "이 학습은 ^FF0000Base Lv.150 이상^000000부터";
-		mes "열람할 수 있습니다.";
+		mes needtr("이 학습은 ^FF0000Base Lv.150 이상^000000부터","^FF0000Base Lv.150 or higher^000000 is required");
+		mes needtr("열람할 수 있습니다.","to view this study.");
 		next;
 		goto L_Study;
 	}
 
 	setdialogsize(460,360);
-	mes "^00AAFF[금화 / 캐시 시스템 학습]^000000";
+	mes needtr("^00AAFF[금화 / 캐시 시스템 학습]^000000","^00AAFF[Gold Coin / Cash System Study]^000000");
 	mes "";
-	mes "NEED의 기본 경제 흐름입니다.";
+	mes needtr("NEED의 기본 경제 흐름입니다.","This is the basic economy flow on NEED.");
 	mes "";
-	mes "^0055FF사냥^000000 → ^FF9900주화 획득^000000 → ^FF9900캐시 전환^000000 → ^0055FF캐시 사용^000000";
+	mes needtr("^0055FF사냥^000000 → ^FF9900주화 획득^000000 → ^FF9900캐시 전환^000000 → ^0055FF캐시 사용^000000","^0055FFHunt^000000 → ^FF9900get coins^000000 → ^FF9900convert to Cash^000000 → ^0055FFspend Cash^000000");
 	mes "";
-	mes "사냥 중 몬스터 레벨에 따라";
-	mes "금화 / 미스릴화가 드랍되고";
-	mes "주화를 ^FF9900사용^000000하면 캐시로 전환됩니다.";
+	mes needtr("사냥 중 몬스터 레벨에 따라","Depending on the monster level while hunting,");
+	mes needtr("금화 / 미스릴화가 드랍되고","Gold Coins / Mythril Coins drop,");
+	mes needtr("주화를 ^FF9900사용^000000하면 캐시로 전환됩니다.","and ^FF9900using^000000 a coin converts it into Cash.");
 	mes "";
-	mes "캐시는 라자냐의 ^00AAFF캐쉬 판매 안내인^000000을 통해";
-	mes "아이템몰에서 소모품 등을";
-	mes "구매할 때 사용합니다.";
+	mes needtr("캐시는 라자냐의 ^00AAFF캐쉬 판매 안내인^000000을 통해","Cash is spent through the ^00AAFFCash Sales Guide^000000 in Lasagna");
+	mes needtr("아이템몰에서 소모품 등을","to buy consumables and more");
+	mes needtr("구매할 때 사용합니다.","at the Item Mall.");
 	mes "";
-	mes "^777777행운의 알은 선택적인 소비처이며";
-	mes "성장에 필수적인 콘텐츠는 아닙니다.^000000";
+	mes needtr("^777777행운의 알은 선택적인 소비처이며","^777777Lucky Eggs are an optional way to spend it");
+	mes needtr("성장에 필수적인 콘텐츠는 아닙니다.^000000","and are not required for growth.^000000");
 	mes "";
-	mes "<TIPBOX>▶ 금화 / 캐시 시스템 가이드<INFO>8433</INFO></TIPBOX>";
+	mes needtr("<TIPBOX>▶ 금화 / 캐시 시스템 가이드<INFO>8433</INFO></TIPBOX>","<TIPBOX>▶ Gold Coin / Cash System Guide<INFO>8433</INFO></TIPBOX>");
 	next;
 
 	if (NEED_GUIDE_CASH) {
-		mes "^00AAFF[금화 / 캐시 시스템 학습]^000000";
+		mes needtr("^00AAFF[금화 / 캐시 시스템 학습]^000000","^00AAFF[Gold Coin / Cash System Study]^000000");
 		mes "";
-		mes "이 학습은 이미 ^00AA00완료^000000했습니다.";
+		mes needtr("이 학습은 이미 ^00AA00완료^000000했습니다.","You have already ^00AA00completed^000000 this study.");
 		mes "";
-		mes "^777777가이드는 언제든 다시 확인할 수 있습니다.^000000";
+		mes needtr("^777777가이드는 언제든 다시 확인할 수 있습니다.^000000","^777777You can review the guide at any time.^000000");
 		next;
 		goto L_Study;
 	}
 
-	if (select("^00AA00학습 내용 확인 완료^000000:나중에 확인한다") == 1) {
+	if (select(needtr("^00AA00학습 내용 확인 완료^000000:나중에 확인한다","^00AA00Finished reading^000000:Check it later")) == 1) {
 		NEED_GUIDE_CASH = 1;
-		mes "^00AAFF[금화 / 캐시 시스템 학습]^000000";
+		mes needtr("^00AAFF[금화 / 캐시 시스템 학습]^000000","^00AAFF[Gold Coin / Cash System Study]^000000");
 		mes "";
-		mes "^00AA00금화 / 캐시 시스템 학습을 완료했습니다.^000000";
+		mes needtr("^00AA00금화 / 캐시 시스템 학습을 완료했습니다.^000000","^00AA00Gold Coin / Cash System study complete.^000000");
 		next;
 	}
 	goto L_Study;
@@ -909,41 +946,41 @@ L_StudyCash:
 L_Field:
 	clear;
 	setdialogsize(460,320);
-	mes "^00AAFF[Lv.150 추천 필드]^000000";
+	mes needtr("^00AAFF[Lv.150 추천 필드]^000000","^00AAFF[Lv.150 Recommended Fields]^000000");
 	mes "";
-	mes "^0055FF[레벨업 / 재료]^000000";
-	mes "  용의 둥지 2층";
-	mes "  뒤틀린 시간의 시계탑 3층";
-	mes "  베루스 중앙광장";
+	mes needtr("^0055FF[레벨업 / 재료]^000000","^0055FF[Levelling / Materials]^000000");
+	mes needtr("  용의 둥지 2층","  Dragon Nest F2");
+	mes needtr("  뒤틀린 시간의 시계탑 3층","  Twisted Clock Tower F3");
+	mes needtr("  베루스 중앙광장","  Verus Central Plaza");
 	mes "";
-	mes "^0055FF[금화 / 주화]^000000";
-	mes "  노그로드 2층";
-	mes "  유페로스 폐허 외부";
+	mes needtr("^0055FF[금화 / 주화]^000000","^0055FF[Gold Coins / Coins]^000000");
+	mes needtr("  노그로드 2층","  Nogg Road Dungeon F2");
+	mes needtr("  유페로스 폐허 외부","  Outside of the Juperos Ruins");
 	mes "";
-	mes "^777777각 지역의 몬스터 레벨과 획득 주화는";
-	mes "아래 가이드에서 확인할 수 있습니다.^000000";
+	mes needtr("^777777각 지역의 몬스터 레벨과 획득 주화는","^777777The monster level and coins for each area");
+	mes needtr("아래 가이드에서 확인할 수 있습니다.^000000","are listed in the guide below.^000000");
 	mes "";
-	mes "<TIPBOX>▶ Lv.150 추천 필드<INFO>8431</INFO></TIPBOX>";
-	mes "<TIPBOX>▶ 메모리얼 던전 가이드<INFO>8414</INFO></TIPBOX>";
+	mes needtr("<TIPBOX>▶ Lv.150 추천 필드<INFO>8431</INFO></TIPBOX>","<TIPBOX>▶ Lv.150 Recommended Fields<INFO>8431</INFO></TIPBOX>");
+	mes needtr("<TIPBOX>▶ 메모리얼 던전 가이드<INFO>8414</INFO></TIPBOX>","<TIPBOX>▶ Memorial Dungeon Guide<INFO>8414</INFO></TIPBOX>");
 	next;
 	goto L_Study;
 
 L_StudyReset:
 	clear;
 	setdialogsize(460,320);
-	mes "^00AAFF[스탯 / 스킬 초기화]^000000";
+	mes needtr("^00AAFF[스탯 / 스킬 초기화]^000000","^00AAFF[Stat / Skill Reset]^000000");
 	mes "";
-	mes "마을 카프라에서 무료 스탯 / 스킬 초기화를";
-	mes "이용할 수 있습니다.";
+	mes needtr("마을 카프라에서 무료 스탯 / 스킬 초기화를","The Kafra in town offers a free Stat / Skill Reset");
+	mes needtr("이용할 수 있습니다.","that you can use.");
 	mes "";
-	mes "^FF0000무료 초기화는 Base Lv.149까지만^000000";
-	mes "^FF0000이용할 수 있습니다.^000000";
+	mes needtr("^FF0000무료 초기화는 Base Lv.149까지만^000000","^FF0000The free reset can only be used up to Base Lv.149^000000");
+	mes needtr("^FF0000이용할 수 있습니다.^000000","^FF0000and no further.^000000");
 	mes "";
-	mes "^777777반드시 초기화해야 하는 것은 아닙니다.";
-	mes "현재 세팅이 문제없으면";
-	mes "그대로 진행해도 됩니다.^000000";
+	mes needtr("^777777반드시 초기화해야 하는 것은 아닙니다.","^777777You do not have to reset at all.");
+	mes needtr("현재 세팅이 문제없으면","If your current build is fine,");
+	mes needtr("그대로 진행해도 됩니다.^000000","just carry on with it.^000000");
 	mes "";
-	mes "<TIPBOX>▶ 스탯 / 스킬 초기화 가이드<INFO>8422</INFO></TIPBOX>";
+	mes needtr("<TIPBOX>▶ 스탯 / 스킬 초기화 가이드<INFO>8422</INFO></TIPBOX>","<TIPBOX>▶ Stat / Skill Reset Guide<INFO>8422</INFO></TIPBOX>");
 	next;
 	goto L_Study;
 
@@ -957,16 +994,16 @@ L_StudyReset:
 L_A175Rebirth:
 	clear;
 	setdialogsize(460,280);
-	mes "^00AAFF[환생]^000000";
+	mes needtr("^00AAFF[환생]^000000","^00AAFF[Rebirth]^000000");
 	mes "";
-	mes "^FF9900Base Lv.175 / Job Lv.60^000000 이후에는";
-	mes "환생으로 다시 성장할 수 있습니다.";
+	mes needtr("^FF9900Base Lv.175 / Job Lv.60^000000 이후에는","From ^FF9900Base Lv.175 / Job Lv.60^000000 onwards");
+	mes needtr("환생으로 다시 성장할 수 있습니다.","you can grow again through Rebirth.");
 	mes "";
-	mes "^0055FF환생 관리자^000000 - 라자냐 (175,131)";
+	mes needtr("^0055FF환생 관리자^000000 - 라자냐 (175,131)","^0055FFRebirth Manager^000000 - Lasagna (175,131)");
 	mes "";
-	mes "^777777환생 조건 / 초기화 범위 / 보상은^000000";
-	mes "^777777아래 가이드에서 확인해주세요.^000000";
-	mes "<TIPBOX>▶ 환생 가이드<INFO>8441</INFO></TIPBOX>";
+	mes needtr("^777777환생 조건 / 초기화 범위 / 보상은^000000","^777777Rebirth requirements, what is reset and the rewards^000000");
+	mes needtr("^777777아래 가이드에서 확인해주세요.^000000","^777777are listed in the guide below.^000000");
+	mes needtr("<TIPBOX>▶ 환생 가이드<INFO>8441</INFO></TIPBOX>","<TIPBOX>▶ Rebirth Guide<INFO>8441</INFO></TIPBOX>");
 	next;
 	goto L_After175;
 
@@ -978,29 +1015,29 @@ L_A175Rebirth:
 L_After175:
 	clear;
 	setdialogsize(480,260);
-	mes "^00AAFF[175 이후 콘텐츠 안내]^000000";
+	mes needtr("^00AAFF[175 이후 콘텐츠 안내]^000000","^00AAFF[Content After 175]^000000");
 	mes "";
-	mes "^00AA00성장지원 과정을 졸업했습니다.^000000";
+	mes needtr("^00AA00성장지원 과정을 졸업했습니다.^000000","^00AA00You have graduated from the Growth Support course.^000000");
 	mes "";
-	mes "이제 정해진 순서 없이 원하는 콘텐츠를";
-	mes "자유롭게 선택해 성장할 수 있습니다.";
+	mes needtr("이제 정해진 순서 없이 원하는 콘텐츠를","From here there is no fixed order - pick whatever");
+	mes needtr("자유롭게 선택해 성장할 수 있습니다.","content you like and keep growing.");
 	mes "";
-	mes "^777777이 안내는 정보 제공용이며";
-	mes "열람 여부가 보상에 영향을 주지 않습니다.^000000";
+	mes needtr("^777777이 안내는 정보 제공용이며","^777777This guide is for information only;");
+	mes needtr("열람 여부가 보상에 영향을 주지 않습니다.^000000","reading it does not affect any reward.^000000");
 
-	.@menu$ = "^FF9900뭘 해야 할지 모르겠어요^000000:"
-		+ "^FF9900환생을 하고 싶어요^000000:"
-		+ "장비를 맞추고 싶어요:"
-		+ "^00AAFF전사자의 무덤을 진행하고 싶어요^000000:"
-		+ "EP16.1을 진행하고 싶어요:"
-		+ "메모리얼 던전을 돌고 싶어요:"
-		+ "전장을 해보고 싶어요:"
-		+ "금화 / 캐시를 모으고 싶어요:"
-		+ "쉐도우 장비가 궁금해요:"
-		+ "인챈트에 대해 알고 싶어요:"
-		+ "부캐릭터를 키우고 싶어요:"
-		+ "NEED Wiki 열기:"
-		+ "그만두기";
+	.@menu$ = needtr("^FF9900뭘 해야 할지 모르겠어요^000000:","^FF9900I don't know where to start^000000:")
+		+ needtr("^FF9900환생을 하고 싶어요^000000:","^FF9900I want to do a Rebirth^000000:")
+		+ needtr("장비를 맞추고 싶어요:","I want to build my gear:")
+		+ needtr("^00AAFF전사자의 무덤을 진행하고 싶어요^000000:","^00AAFFI want to run the Tomb of the Fallen^000000:")
+		+ needtr("EP16.1을 진행하고 싶어요:","I want to do EP16.1:")
+		+ needtr("메모리얼 던전을 돌고 싶어요:","I want to run Memorial Dungeons:")
+		+ needtr("전장을 해보고 싶어요:","I want to try Battlegrounds:")
+		+ needtr("금화 / 캐시를 모으고 싶어요:","I want to collect Gold Coins / Cash:")
+		+ needtr("쉐도우 장비가 궁금해요:","I want to know about Shadow gear:")
+		+ needtr("인챈트에 대해 알고 싶어요:","I want to learn about Enchanting:")
+		+ needtr("부캐릭터를 키우고 싶어요:","I want to raise an alt:")
+		+ needtr("NEED Wiki 열기:","Open the NEED Wiki:")
+		+ needtr("그만두기","Quit");
 	switch(select(.@menu$)) {
 	case 1: goto L_A175What;
 	case 2: goto L_A175Rebirth;
@@ -1020,82 +1057,82 @@ L_After175:
 L_A175What:
 	clear;
 	setdialogsize(480,400);
-	mes "^00AAFF[무엇부터 할까요]^000000";
+	mes needtr("^00AAFF[무엇부터 할까요]^000000","^00AAFF[Where Do I Start]^000000");
 	mes "";
-	mes "하고 싶은 방향을 먼저 정해보세요.";
-	mes "^777777환생 / 장비 성장 / 전장 / EP16.1 /^000000";
-	mes "^777777메모리얼 등을 진행할 수 있습니다.^000000";
+	mes needtr("하고 싶은 방향을 먼저 정해보세요.","First decide which direction you want to take.");
+	mes needtr("^777777환생 / 장비 성장 / 전장 / EP16.1 /^000000","^777777Rebirth / gear growth / Battlegrounds / EP16.1 /^000000");
+	mes needtr("^777777메모리얼 등을 진행할 수 있습니다.^000000","^777777Memorial Dungeons and more are all open to you.^000000");
 	mes "";
-	mes "^0055FFPvP를 해보고 싶다면^000000";
-	mes "  졸업 보상 전장 지원 시즈 세트를 착용";
-	mes "  → 전장 자동매칭 참여";
-	mes "  → 전장 보상으로 실제 PvP 장비 준비";
+	mes needtr("^0055FFPvP를 해보고 싶다면^000000","^0055FFIf you want to try PvP^000000");
+	mes needtr("  졸업 보상 전장 지원 시즈 세트를 착용","  Wear the graduation reward Battleground Support Siege Set");
+	mes needtr("  → 전장 자동매칭 참여","  → join Battleground auto-matching");
+	mes needtr("  → 전장 보상으로 실제 PvP 장비 준비","  → use Battleground rewards to build real PvP gear");
 	mes "";
-	mes "^0055FFPvE 장비를 성장시키고 싶다면^000000";
-	mes "  전사자의 무덤 진행";
-	mes "  → 직업별 투구 제작";
-	mes "  → 제련 / 카드로 강화";
+	mes needtr("^0055FFPvE 장비를 성장시키고 싶다면^000000","^0055FFIf you want to grow PvE gear^000000");
+	mes needtr("  전사자의 무덤 진행","  Run the Tomb of the Fallen");
+	mes needtr("  → 직업별 투구 제작","  → craft the headgear for your job");
+	mes needtr("  → 제련 / 카드로 강화","  → strengthen it with Refine / Cards");
 	mes "";
-	mes "^0055FF최신 에피소드를 진행하고 싶다면^000000";
-	mes "  EP16.1 콘텐츠";
+	mes needtr("^0055FF최신 에피소드를 진행하고 싶다면^000000","^0055FFIf you want the latest episode^000000");
+	mes needtr("  EP16.1 콘텐츠","  EP16.1 content");
 	mes "";
-	mes "^0055FF기존 파밍을 계속하고 싶다면^000000";
-	mes "  추천 메모리얼 / 추천 필드 / 금화 파밍";
+	mes needtr("^0055FF기존 파밍을 계속하고 싶다면^000000","^0055FFIf you want to keep farming as before^000000");
+	mes needtr("  추천 메모리얼 / 추천 필드 / 금화 파밍","  recommended Memorials / fields / Gold Coin farming");
 	mes "";
-	mes "<TIPBOX>▶ 전사자의 무덤 가이드<INFO>8440</INFO></TIPBOX>";
-	mes "<TIPBOX>▶ NEED 전장 입문 가이드<INFO>8400</INFO></TIPBOX>";
-	mes "<TIPBOX>▶ Lv.150 성장 가이드<INFO>8430</INFO></TIPBOX>";
+	mes needtr("<TIPBOX>▶ 전사자의 무덤 가이드<INFO>8440</INFO></TIPBOX>","<TIPBOX>▶ Tomb of the Fallen Guide<INFO>8440</INFO></TIPBOX>");
+	mes needtr("<TIPBOX>▶ NEED 전장 입문 가이드<INFO>8400</INFO></TIPBOX>","<TIPBOX>▶ NEED Battleground Starter Guide<INFO>8400</INFO></TIPBOX>");
+	mes needtr("<TIPBOX>▶ Lv.150 성장 가이드<INFO>8430</INFO></TIPBOX>","<TIPBOX>▶ Lv.150 Growth Guide<INFO>8430</INFO></TIPBOX>");
 	next;
 	goto L_After175;
 
 L_A175Gear:
 	clear;
 	setdialogsize(460,340);
-	mes "^00AAFF[장비를 맞추고 싶어요]^000000";
+	mes needtr("^00AAFF[장비를 맞추고 싶어요]^000000","^00AAFF[I Want to Build My Gear]^000000");
 	mes "";
-	mes "목적에 따라 방향이 나뉩니다.";
+	mes needtr("목적에 따라 방향이 나뉩니다.","The path depends on what you want it for.");
 	mes "";
-	mes "^0055FFPvE 장비 성장^000000";
-	mes "  전사자의 무덤 →";
-	mes "  직업별 투구 / 전사자의 망토";
+	mes needtr("^0055FFPvE 장비 성장^000000","^0055FFPvE gear growth^000000");
+	mes needtr("  전사자의 무덤 →","  Tomb of the Fallen →");
+	mes needtr("  직업별 투구 / 전사자의 망토","  job headgear / Fallen Warrior Manteau");
 	mes "";
-	mes "^0055FFPvP 장비^000000";
-	mes "  전장 참여 보상으로 준비";
+	mes needtr("^0055FFPvP 장비^000000","^0055FFPvP gear^000000");
+	mes needtr("  전장 참여 보상으로 준비","  build it with Battleground participation rewards");
 	mes "";
-	mes "^0055FFEP16.1 장비^000000";
-	mes "  EP16.1 콘텐츠 진행";
+	mes needtr("^0055FFEP16.1 장비^000000","^0055FFEP16.1 gear^000000");
+	mes needtr("  EP16.1 콘텐츠 진행","  progress through EP16.1 content");
 	mes "";
-	mes "^FF9900직업별 상세 세팅^000000은";
-	mes "^00AA00Ctrl + F1^000000 NEED Wiki에서 확인해주세요.";
+	mes needtr("^FF9900직업별 상세 세팅^000000은","For ^FF9900detailed builds by job^000000,");
+	mes needtr("^00AA00Ctrl + F1^000000 NEED Wiki에서 확인해주세요.","see the NEED Wiki with ^00AA00Ctrl + F1^000000.");
 	mes "";
-	mes "<TIPBOX>▶ 전사자의 무덤 가이드<INFO>8440</INFO></TIPBOX>";
-	mes "<TIPBOX>▶ 쉐도우 장비 가이드<INFO>8412</INFO></TIPBOX>";
+	mes needtr("<TIPBOX>▶ 전사자의 무덤 가이드<INFO>8440</INFO></TIPBOX>","<TIPBOX>▶ Tomb of the Fallen Guide<INFO>8440</INFO></TIPBOX>");
+	mes needtr("<TIPBOX>▶ 쉐도우 장비 가이드<INFO>8412</INFO></TIPBOX>","<TIPBOX>▶ Shadow Gear Guide<INFO>8412</INFO></TIPBOX>");
 	next;
 	goto L_After175;
 
 L_A175Tomb:
 	clear;
 	setdialogsize(480,380);
-	mes "^00AAFF[전사자의 무덤]^000000";
+	mes needtr("^00AAFF[전사자의 무덤]^000000","^00AAFF[Tomb of the Fallen]^000000");
 	mes "";
-	mes "175 이후 대표적인";
-	mes "^FF9900PvE 장비 성장 콘텐츠^000000입니다.";
+	mes needtr("175 이후 대표적인","After 175 this is the flagship");
+	mes needtr("^FF9900PvE 장비 성장 콘텐츠^000000입니다.","^FF9900PvE gear growth content^000000.");
 	mes "";
-	mes "입장 : 라자냐의 ^00AAFF전사자의 무덤^000000 NPC";
-	mes "  Base Lv.150 이상 / 입장료 200,000 Zeny";
-	mes "  재입장 대기시간 3분";
+	mes needtr("입장 : 라자냐의 ^00AAFF전사자의 무덤^000000 NPC","Entry : the ^00AAFFTomb of the Fallen^000000 NPC in Lasagna");
+	mes needtr("  Base Lv.150 이상 / 입장료 200,000 Zeny","  Base Lv.150 or higher / entry fee 200,000 Zeny");
+	mes needtr("  재입장 대기시간 3분","  Re-entry cooldown 3 minutes");
 	mes "";
-	mes "무덤 안에서는";
-	mes "  일반 몬스터에서 ^FF9900의상 투구^000000와 ^FF9900혼^000000";
-	mes "  MVP에서 ^FF9900혼을 대량^000000 획득합니다.";
+	mes needtr("무덤 안에서는","Inside the tomb you get");
+	mes needtr("  일반 몬스터에서 ^FF9900의상 투구^000000와 ^FF9900혼^000000","  ^FF9900costume headgear^000000 and ^FF9900souls^000000 from normal monsters,");
+	mes needtr("  MVP에서 ^FF9900혼을 대량^000000 획득합니다.","  and ^FF9900a lot of souls^000000 from the MVP.");
 	mes "";
-	mes "모은 재료로 무덤 안 NPC에게";
-	mes "^0055FF직업별 투구^000000와 ^0055FF전사자의 망토^000000를 제작합니다.";
+	mes needtr("모은 재료로 무덤 안 NPC에게","With the materials you gather, an NPC inside the tomb");
+	mes needtr("^0055FF직업별 투구^000000와 ^0055FF전사자의 망토^000000를 제작합니다.","crafts ^0055FFjob headgear^000000 and the ^0055FFFallen Warrior Manteau^000000.");
 	mes "";
-	mes "^777777제작 재료와 확률은^000000";
-	mes "^777777아래 가이드에서 확인해주세요.^000000";
+	mes needtr("^777777제작 재료와 확률은^000000","^777777The crafting materials and rates^000000");
+	mes needtr("^777777아래 가이드에서 확인해주세요.^000000","^777777are listed in the guide below.^000000");
 	mes "";
-	mes "<TIPBOX>▶ 전사자의 무덤 가이드<INFO>8440</INFO></TIPBOX>";
+	mes needtr("<TIPBOX>▶ 전사자의 무덤 가이드<INFO>8440</INFO></TIPBOX>","<TIPBOX>▶ Tomb of the Fallen Guide<INFO>8440</INFO></TIPBOX>");
 	next;
 	goto L_After175;
 
@@ -1104,172 +1141,172 @@ L_A175EP161:
 	setdialogsize(460,340);
 	mes "^00AAFF[EP16.1]^000000";
 	mes "";
-	mes "라자냐에 EP16.1 전용 안내 NPC가 있습니다.";
+	mes needtr("라자냐에 EP16.1 전용 안내 NPC가 있습니다.","Lasagna has NPCs dedicated to EP16.1.");
 	mes "";
-	mes "^00AAFFEP16.1 통합 안내^000000";
-	mes "  일일퀘스트 / 메모리얼 / 명예의 증표 교환";
-	mes "  인챈트 안내와";
-	mes "  각 콘텐츠 입구 이동을 제공합니다.";
+	mes needtr("^00AAFFEP16.1 통합 안내^000000","^00AAFFEP16.1 Central Guide^000000");
+	mes needtr("  일일퀘스트 / 메모리얼 / 명예의 증표 교환","  daily quests / Memorials / Token of Honor exchange");
+	mes needtr("  인챈트 안내와","  enchant information and");
+	mes needtr("  각 콘텐츠 입구 이동을 제공합니다.","  warps to each content entrance.");
 	mes "";
-	mes "^00AAFFEP16.1 일일퀘 이동^000000";
-	mes "  명예의 증표 일일퀘스트 구역으로";
-	mes "  바로 이동합니다.";
+	mes needtr("^00AAFFEP16.1 일일퀘 이동^000000","^00AAFFEP16.1 Daily Quest Warp^000000");
+	mes needtr("  명예의 증표 일일퀘스트 구역으로","  takes you straight to the Token of Honor");
+	mes needtr("  바로 이동합니다.","  daily quest area.");
 	mes "";
-	mes "^777777두 NPC 모두 라자냐 중앙 부근에 있습니다.^000000";
+	mes needtr("^777777두 NPC 모두 라자냐 중앙 부근에 있습니다.^000000","^777777Both NPCs are near the centre of Lasagna.^000000");
 	next;
 	goto L_After175;
 
 L_A175MD:
 	clear;
 	setdialogsize(460,320);
-	mes "^00AAFF[메모리얼 던전]^000000";
+	mes needtr("^00AAFF[메모리얼 던전]^000000","^00AAFF[Memorial Dungeons]^000000");
 	mes "";
-	mes "성장지원에서 안내한 추천 메모리얼은";
-	mes "졸업 이후에도 계속 이용할 수 있습니다.";
+	mes needtr("성장지원에서 안내한 추천 메모리얼은","The Memorials recommended during Growth Support");
+	mes needtr("졸업 이후에도 계속 이용할 수 있습니다.","stay available after you graduate.");
 	mes "";
-	mes "  옛 글래스트헤임 일반 / 상급";
-	mes "  무한의 공간";
-	mes "  위기의 찰스턴";
-	mes "  호러 장난감 공장";
+	mes needtr("  옛 글래스트헤임 일반 / 상급","  Old Glast Heim Normal / Hard");
+	mes needtr("  무한의 공간","  Infinite Space");
+	mes needtr("  위기의 찰스턴","  Charleston Crisis");
+	mes needtr("  호러 장난감 공장","  Horror Toy Factory");
 	mes "";
-	mes "^777777EP16.1 메모리얼은 EP16.1 통합 안내 NPC에서";
-	mes "함께 확인할 수 있습니다.^000000";
+	mes needtr("^777777EP16.1 메모리얼은 EP16.1 통합 안내 NPC에서","^777777EP16.1 Memorials are listed at the EP16.1 Central Guide");
+	mes needtr("함께 확인할 수 있습니다.^000000","NPC as well.^000000");
 	mes "";
-	mes "<TIPBOX>▶ 메모리얼 던전 가이드<INFO>8414</INFO></TIPBOX>";
+	mes needtr("<TIPBOX>▶ 메모리얼 던전 가이드<INFO>8414</INFO></TIPBOX>","<TIPBOX>▶ Memorial Dungeon Guide<INFO>8414</INFO></TIPBOX>");
 	next;
 	goto L_After175;
 
 L_A175BG:
 	clear;
 	setdialogsize(460,320);
-	mes "^00AAFF[전장]^000000";
+	mes needtr("^00AAFF[전장]^000000","^00AAFF[Battlegrounds]^000000");
 	mes "";
-	mes "졸업 보상으로 받은 ^FF9900전장 지원 시즈 세트^000000를";
-	mes "착용하고 바로 참여할 수 있습니다.";
+	mes needtr("졸업 보상으로 받은 ^FF9900전장 지원 시즈 세트^000000를","Wear the ^FF9900Battleground Support Siege Set^000000 you");
+	mes needtr("착용하고 바로 참여할 수 있습니다.","received as a graduation reward and join right away.");
 	mes "";
-	mes "전장 대기실에서 매칭 커맨드를 사용하면";
-	mes "^0055FF티에라 협곡 → 플라비우스 → KVM^000000 순서로";
-	mes "전체 사이클이 진행됩니다.";
+	mes needtr("전장 대기실에서 매칭 커맨드를 사용하면","Use the matching command in the Battleground waiting room");
+	mes needtr("^0055FF티에라 협곡 → 플라비우스 → KVM^000000 순서로","^0055FFTierra Valley → Flavian → KVM^000000 in that order,");
+	mes needtr("전체 사이클이 진행됩니다.","and the whole cycle runs through.");
 	mes "";
-	mes "^777777참가 조건과 커맨드는^000000";
-	mes "^777777아래 가이드에서 확인해주세요.^000000";
+	mes needtr("^777777참가 조건과 커맨드는^000000","^777777The entry requirements and the command^000000");
+	mes needtr("^777777아래 가이드에서 확인해주세요.^000000","^777777are listed in the guide below.^000000");
 	mes "";
-	mes "<TIPBOX>▶ NEED 전장 입문 가이드<INFO>8400</INFO></TIPBOX>";
+	mes needtr("<TIPBOX>▶ NEED 전장 입문 가이드<INFO>8400</INFO></TIPBOX>","<TIPBOX>▶ NEED Battleground Starter Guide<INFO>8400</INFO></TIPBOX>");
 	next;
 	goto L_After175;
 
 L_A175Cash:
 	clear;
 	setdialogsize(460,360);
-	mes "^00AAFF[금화 / 캐시]^000000";
+	mes needtr("^00AAFF[금화 / 캐시]^000000","^00AAFF[Gold Coins / Cash]^000000");
 	mes "";
-	mes "사냥 중 몬스터 레벨에 따라";
-	mes "주화가 드랍되고,";
-	mes "주화를 ^FF9900사용^000000하면 캐시로 전환됩니다.";
+	mes needtr("사냥 중 몬스터 레벨에 따라","Depending on the monster level while hunting,");
+	mes needtr("주화가 드랍되고,","coins drop,");
+	mes needtr("주화를 ^FF9900사용^000000하면 캐시로 전환됩니다.","and ^FF9900using^000000 a coin converts it into Cash.");
 	mes "";
-	mes "175 이후에는 MVP 처치로";
-	mes "^FF9900백금화^000000도 노릴 수 있습니다.";
-	mes "전사자의 무덤 MVP도 대상입니다.";
+	mes needtr("175 이후에는 MVP 처치로","After 175 you can also aim for");
+	mes needtr("^FF9900백금화^000000도 노릴 수 있습니다.","^FF9900Platinum Coins^000000 by killing MVPs.");
+	mes needtr("전사자의 무덤 MVP도 대상입니다.","The Tomb of the Fallen MVP counts too.");
 	mes "";
-	mes "^777777주화 종류와 캐시 사용처는^000000";
-	mes "^777777아래 가이드에서 확인해주세요.^000000";
+	mes needtr("^777777주화 종류와 캐시 사용처는^000000","^777777The coin types and where Cash is spent^000000");
+	mes needtr("^777777아래 가이드에서 확인해주세요.^000000","^777777are listed in the guide below.^000000");
 	mes "";
-	mes "<TIPBOX>▶ 금화 / 캐시 시스템 가이드<INFO>8433</INFO></TIPBOX>";
-	mes "<TIPBOX>▶ Lv.150 추천 필드<INFO>8431</INFO></TIPBOX>";
+	mes needtr("<TIPBOX>▶ 금화 / 캐시 시스템 가이드<INFO>8433</INFO></TIPBOX>","<TIPBOX>▶ Gold Coin / Cash System Guide<INFO>8433</INFO></TIPBOX>");
+	mes needtr("<TIPBOX>▶ Lv.150 추천 필드<INFO>8431</INFO></TIPBOX>","<TIPBOX>▶ Lv.150 Recommended Fields<INFO>8431</INFO></TIPBOX>");
 	next;
 	goto L_After175;
 
 L_A175Shadow:
 	clear;
 	setdialogsize(460,300);
-	mes "^00AAFF[쉐도우 장비]^000000";
+	mes needtr("^00AAFF[쉐도우 장비]^000000","^00AAFF[Shadow Gear]^000000");
 	mes "";
-	mes "쉐도우 장비는 일반 무기 / 방어구와 별도로";
-	mes "장착하는 보조 장비입니다.";
+	mes needtr("쉐도우 장비는 일반 무기 / 방어구와 별도로","Shadow gear is worn separately from your");
+	mes needtr("장착하는 보조 장비입니다.","normal weapon / armour as support gear.");
 	mes "";
-	mes "175 이후에는 직업과 콘텐츠에 맞춰";
-	mes "쉐도우 세트를 골라 맞추게 됩니다.";
+	mes needtr("175 이후에는 직업과 콘텐츠에 맞춰","After 175 you pick a Shadow set to match");
+	mes needtr("쉐도우 세트를 골라 맞추게 됩니다.","your job and the content you run.");
 	mes "";
-	mes "^777777직업별 추천 쉐도우 구성은^000000";
-	mes "^00AA00Ctrl + F1^000000 ^777777NEED Wiki에서 확인해주세요.^000000";
+	mes needtr("^777777직업별 추천 쉐도우 구성은^000000","^777777For the recommended Shadow setup for your job^000000");
+	mes needtr("^00AA00Ctrl + F1^000000 ^777777NEED Wiki에서 확인해주세요.^000000","^00AA00Ctrl + F1^000000 ^777777opens the NEED Wiki.^000000");
 	mes "";
-	mes "<TIPBOX>▶ 쉐도우 장비 가이드<INFO>8412</INFO></TIPBOX>";
+	mes needtr("<TIPBOX>▶ 쉐도우 장비 가이드<INFO>8412</INFO></TIPBOX>","<TIPBOX>▶ Shadow Gear Guide<INFO>8412</INFO></TIPBOX>");
 	next;
 	goto L_After175;
 
 L_A175Enchant:
 	clear;
 	setdialogsize(460,340);
-	mes "^00AAFF[인챈트]^000000";
+	mes needtr("^00AAFF[인챈트]^000000","^00AAFF[Enchanting]^000000");
 	mes "";
-	mes "현재 이용할 수 있는 인챈트 계열입니다.";
+	mes needtr("현재 이용할 수 있는 인챈트 계열입니다.","These are the enchant lines available right now.");
 	mes "";
-	mes "^0055FF엑셀리온^000000";
-	mes "  베루스 재료로 장비를 제작하고";
-	mes "  리액터 설계도로 옵션을 부여합니다.";
+	mes needtr("^0055FF엑셀리온^000000","^0055FFExcellion^000000");
+	mes needtr("  베루스 재료로 장비를 제작하고","  Craft the gear from Verus materials");
+	mes needtr("  리액터 설계도로 옵션을 부여합니다.","  and grant options with a Reactor Blueprint.");
 	mes "";
-	mes "^0055FFEP16.1 인챈트^000000";
-	mes "  EP16.1 통합 안내 NPC에서";
-	mes "  확인할 수 있습니다.";
+	mes needtr("^0055FFEP16.1 인챈트^000000","^0055FFEP16.1 Enchant^000000");
+	mes needtr("  EP16.1 통합 안내 NPC에서","  Available at the EP16.1 Central Guide");
+	mes needtr("  확인할 수 있습니다.","  NPC.");
 	mes "";
-	mes "^777777전사자의 무덤 투구는 전용 인챈트 대신";
-	mes "제련과 카드로 성장시킵니다.^000000";
+	mes needtr("^777777전사자의 무덤 투구는 전용 인챈트 대신","^777777Tomb of the Fallen headgear has no enchant of its own;");
+	mes needtr("제련과 카드로 성장시킵니다.^000000","grow it with Refine and Cards instead.^000000");
 	mes "";
-	mes "<TIPBOX>▶ 엑셀리온 인챈트 가이드<INFO>8432</INFO></TIPBOX>";
-	mes "<TIPBOX>▶ 전사자의 무덤 가이드<INFO>8440</INFO></TIPBOX>";
+	mes needtr("<TIPBOX>▶ 엑셀리온 인챈트 가이드<INFO>8432</INFO></TIPBOX>","<TIPBOX>▶ Excellion Enchant Guide<INFO>8432</INFO></TIPBOX>");
+	mes needtr("<TIPBOX>▶ 전사자의 무덤 가이드<INFO>8440</INFO></TIPBOX>","<TIPBOX>▶ Tomb of the Fallen Guide<INFO>8440</INFO></TIPBOX>");
 	next;
 	goto L_After175;
 
 L_A175Sub:
 	clear;
 	setdialogsize(460,340);
-	mes "^00AAFF[부캐릭터 육성]^000000";
+	mes needtr("^00AAFF[부캐릭터 육성]^000000","^00AAFF[Raising an Alt]^000000");
 	mes "";
-	mes "성장지원은 ^FF9900캐릭터 단위^000000로 제공됩니다.";
-	mes "새 캐릭터도 낙원단에서";
-	mes "같은 안내를 받을 수 있습니다.";
+	mes needtr("성장지원은 ^FF9900캐릭터 단위^000000로 제공됩니다.","Growth Support is granted ^FF9900per character^000000.");
+	mes needtr("새 캐릭터도 낙원단에서","A new character can get the same guidance");
+	mes needtr("같은 안내를 받을 수 있습니다.","at the Eden Group.");
 	mes "";
-	mes "^777777단, 7일 초보자 소모품 지원은";
-	mes "계정 단위이므로 이미 기간이 지났다면";
-	mes "다시 제공되지 않습니다.^000000";
+	mes needtr("^777777단, 7일 초보자 소모품 지원은","^777777However, the 7-day beginner consumable support");
+	mes needtr("계정 단위이므로 이미 기간이 지났다면","is per account, so once the period has passed");
+	mes needtr("다시 제공되지 않습니다.^000000","it is not granted again.^000000");
 	mes "";
-	mes "라자냐의 ^00AAFF환생 관리자^000000 를 통해";
-	mes "환생 관련 콘텐츠도 확인할 수 있습니다.";
+	mes needtr("라자냐의 ^00AAFF환생 관리자^000000 를 통해","The ^00AAFFRebirth Manager^000000 in Lasagna also covers");
+	mes needtr("환생 관련 콘텐츠도 확인할 수 있습니다.","the Rebirth-related content.");
 	mes "";
-	mes "<TIPBOX>▶ NEED 초보자 성장 가이드<INFO>8000</INFO></TIPBOX>";
+	mes needtr("<TIPBOX>▶ NEED 초보자 성장 가이드<INFO>8000</INFO></TIPBOX>","<TIPBOX>▶ NEED Beginner Growth Guide<INFO>8000</INFO></TIPBOX>");
 	next;
 	goto L_After175;
 
 L_Supply:
 	clear;
 	setdialogsize(460,320);
-	mes "^00AAFF[7일 초보자 지원]^000000";
+	mes needtr("^00AAFF[7일 초보자 지원]^000000","^00AAFF[7-Day Beginner Support]^000000");
 	mes "";
 
 	.@now = gettimetick(2);
 	.@elapsed = .@now - #NEED_BEGINNER_START;
 
 	if (.@elapsed < 0 || .@elapsed >= 604800) {
-		mes "^777777초보자 소모품 지원 기간이 종료되었습니다.^000000";
+		mes needtr("^777777초보자 소모품 지원 기간이 종료되었습니다.^000000","^777777The beginner supply support period has ended.^000000");
 		mes "";
-		mes "이후 필요한 소모품은";
-		mes "^FF9900금화 / 캐시샵^000000을 통해 구매할 수 있습니다.";
+		mes needtr("이후 필요한 소모품은","You can buy any supplies you need");
+		mes needtr("^FF9900금화 / 캐시샵^000000을 통해 구매할 수 있습니다.","from the ^FF9900Gold Coin / Cash Shop^000000.");
 		next;
 		goto L_Main;
 	}
 
 	.@day = (.@elapsed / 86400) + 1;
-	mes "현재 지원 기간 : ^0055FF" + .@day + "일차 / 7일^000000";
+	mes needtr("현재 지원 기간 : ^0055FF","Support period : ^0055FFDay ") + .@day + needtr("일차 / 7일^000000"," of 7^000000");
 	mes "";
-	mes "매일 다음 수량까지 부족분을 보충합니다.";
+	mes needtr("매일 다음 수량까지 부족분을 보충합니다.","Each day the shortfall is topped up to these amounts.");
 	mes "";
-	mes "소형 생명수    ^FF9900100개^000000";
-	mes "중형 생명수    ^FF9900100개^000000";
-	mes "신묘한 생명수  ^FF9900100개^000000";
-	mes "올마이티        ^FF990010개^000000";
+	mes needtr("소형 생명수    ^FF9900100개^000000","Small Life Potion      ^FF9900100^000000");
+	mes needtr("중형 생명수    ^FF9900100개^000000","Medium Life Potion     ^FF9900100^000000");
+	mes needtr("신묘한 생명수  ^FF9900100개^000000","Mysterious Life Potion ^FF9900100^000000");
+	mes needtr("올마이티        ^FF990010개^000000","Almighty               ^FF990010^000000");
 	mes "";
-	mes "^777777계정 단위 지원이며,^000000";
-	mes "^777777해당 일차에는 1회만 보충됩니다.^000000";
+	mes needtr("^777777계정 단위 지원이며,^000000","^777777The support is per account,^000000");
+	mes needtr("^777777해당 일차에는 1회만 보충됩니다.^000000","^777777and each day is topped up only 1 time.^000000");
 	next;
 
 	callfunc("F_NEED_BeginnerSupply", 1);
@@ -1279,83 +1316,83 @@ L_Supply:
 L_Help:
 	clear;
 	setdialogsize(440,300);
-	mes "^00AAFF[초보자 도움말]^000000";
+	mes needtr("^00AAFF[초보자 도움말]^000000","^00AAFF[Beginner Help]^000000");
 	mes "";
-	mes "궁금한 항목을 선택해주세요.";
+	mes needtr("궁금한 항목을 선택해주세요.","Choose the topic you want to know about.");
 	mes "";
-	mes "<TIPBOX>▶ NEED 초보자 성장 가이드<INFO>8000</INFO></TIPBOX>";
-	mes "<TIPBOX>▶ 성장 지원 시스템 안내<INFO>8011</INFO></TIPBOX>";
+	mes needtr("<TIPBOX>▶ NEED 초보자 성장 가이드<INFO>8000</INFO></TIPBOX>","<TIPBOX>▶ NEED Beginner Growth Guide<INFO>8000</INFO></TIPBOX>");
+	mes needtr("<TIPBOX>▶ 성장 지원 시스템 안내<INFO>8011</INFO></TIPBOX>","<TIPBOX>▶ Growth Support System Guide<INFO>8011</INFO></TIPBOX>");
 
-	.@menu$ = "전직 도우미:"
-		+ "버프 도우미:"
-		+ "클랜 채팅:"
-		+ "초보존 / 라자냐:"
-		+ "돌아가기";
+	.@menu$ = needtr("전직 도우미:","Job Master:")
+		+ needtr("버프 도우미:","Buff Helper:")
+		+ needtr("클랜 채팅:","Clan Chat:")
+		+ needtr("초보존 / 라자냐:","Newbie Zone / Lasagna:")
+		+ needtr("돌아가기","Back");
 	switch(select(.@menu$)) {
 	case 1:
 		// 메뉴 선택으로 새 화면에 진입하므로 이전 대사를 지운다.
 		clear;
-		mes "^00AAFF[전직 도우미]^000000";
+		mes needtr("^00AAFF[전직 도우미]^000000","^00AAFF[Job Master]^000000");
 		mes "";
-		mes "성장 지원관 ^0055FF왼쪽^000000에 전직 도우미가 있습니다.";
+		mes needtr("성장 지원관 ^0055FF왼쪽^000000에 전직 도우미가 있습니다.","The Job Master is to the ^0055FFleft^000000 of the Growth Supporter.");
 		mes "";
-		mes "전직 조건을 달성했다면";
-		mes "전직 도우미를 통해";
-		mes "다음 직업으로 전직할 수 있습니다.";
+		mes needtr("전직 조건을 달성했다면","Once you meet the job change requirements,");
+		mes needtr("전직 도우미를 통해","the Job Master can change you");
+		mes needtr("다음 직업으로 전직할 수 있습니다.","into your next job.");
 		mes "";
-		mes "^FF9900첫 목표 : Job Lv.10 달성 후 1차 전직^000000";
+		mes needtr("^FF9900첫 목표 : Job Lv.10 달성 후 1차 전직^000000","^FF9900First goal : reach Job Lv.10, then the 1st Job Change^000000");
 		mes "";
-		mes "<TIPBOX>▶ 전직 / 버프 도우미 가이드<INFO>8013</INFO></TIPBOX>";
+		mes needtr("<TIPBOX>▶ 전직 / 버프 도우미 가이드<INFO>8013</INFO></TIPBOX>","<TIPBOX>▶ Job / Buff Helper Guide<INFO>8013</INFO></TIPBOX>");
 		next;
 		goto L_Help;
 
 	case 2:
 		// 메뉴 선택으로 새 화면에 진입하므로 이전 대사를 지운다.
 		clear;
-		mes "^00AAFF[버프 도우미]^000000";
+		mes needtr("^00AAFF[버프 도우미]^000000","^00AAFF[Buff Helper]^000000");
 		mes "";
-		mes "성장 지원관 ^0055FF오른쪽^000000에";
-		mes "버프 도우미가 있습니다.";
+		mes needtr("성장 지원관 ^0055FF오른쪽^000000에","To the ^0055FFright^000000 of the Growth Supporter");
+		mes needtr("버프 도우미가 있습니다.","you will find the Buff Helper.");
 		mes "";
-		mes "사망하거나 사냥 도중 버프가 사라졌다면";
-		mes "^FF9900무료 버프^000000를 다시 받을 수 있습니다.";
+		mes needtr("사망하거나 사냥 도중 버프가 사라졌다면","If you die or lose your buffs while hunting,");
+		mes needtr("^FF9900무료 버프^000000를 다시 받을 수 있습니다.","you can get ^FF9900free buffs^000000 again.");
 		mes "";
-		mes "<TIPBOX>▶ 전직 / 버프 도우미 가이드<INFO>8013</INFO></TIPBOX>";
+		mes needtr("<TIPBOX>▶ 전직 / 버프 도우미 가이드<INFO>8013</INFO></TIPBOX>","<TIPBOX>▶ Job / Buff Helper Guide<INFO>8013</INFO></TIPBOX>");
 		next;
 		goto L_Help;
 
 	case 3:
 		// 메뉴 선택으로 새 화면에 진입하므로 이전 대사를 지운다.
 		clear;
-		mes "^00AAFF[클랜 채팅]^000000";
+		mes needtr("^00AAFF[클랜 채팅]^000000","^00AAFF[Clan Chat]^000000");
 		mes "";
-		mes "채팅창에";
-		mes "^FF9900~할말^000000";
-		mes "형태로 입력하면";
-		mes "클랜 채팅을 이용할 수 있습니다.";
+		mes needtr("채팅창에","Type");
+		mes needtr("^FF9900~할말^000000","^FF9900~message^000000");
+		mes needtr("형태로 입력하면","in the chat window to");
+		mes needtr("클랜 채팅을 이용할 수 있습니다.","use Clan Chat.");
 		mes "";
-		mes "게임 진행 중 궁금한 점이 있다면";
-		mes "다른 모험가들에게 질문해보세요.";
+		mes needtr("게임 진행 중 궁금한 점이 있다면","If you have a question while playing,");
+		mes needtr("다른 모험가들에게 질문해보세요.","ask the other adventurers.");
 		mes "";
-		mes "<TIPBOX>▶ 클랜 채팅 가이드<INFO>8012</INFO></TIPBOX>";
+		mes needtr("<TIPBOX>▶ 클랜 채팅 가이드<INFO>8012</INFO></TIPBOX>","<TIPBOX>▶ Clan Chat Guide<INFO>8012</INFO></TIPBOX>");
 		next;
 		goto L_Help;
 
 	case 4:
 		// 메뉴 선택으로 새 화면에 진입하므로 이전 대사를 지운다.
 		clear;
-		mes "^00AAFF[초보존 / 라자냐]^000000";
+		mes needtr("^00AAFF[초보존 / 라자냐]^000000","^00AAFF[Newbie Zone / Lasagna]^000000");
 		mes "";
-		mes "Base Lv.39까지는";
-		mes "^0055FF초보존^000000을 이용할 수 있습니다.";
+		mes needtr("Base Lv.39까지는","Up to Base Lv.39 you can");
+		mes needtr("^0055FF초보존^000000을 이용할 수 있습니다.","use the ^0055FFNewbie Zone^000000.");
 		mes "";
-		mes "Base Lv.40을 달성하면 초보존을 졸업하고";
-		mes "^FF9900라자냐^000000를 생활 거점으로 이용하게 됩니다.";
+		mes needtr("Base Lv.40을 달성하면 초보존을 졸업하고","At Base Lv.40 you graduate from the Newbie Zone and");
+		mes needtr("^FF9900라자냐^000000를 생활 거점으로 이용하게 됩니다.","make ^FF9900Lasagna^000000 your home base.");
 		mes "";
-		mes "^777777성장 보상과 가이드가 필요할 때는";
-		mes "언제든 낙원단으로 돌아오면 됩니다.^000000";
+		mes needtr("^777777성장 보상과 가이드가 필요할 때는","^777777Whenever you need Growth Rewards or guidance,");
+		mes needtr("언제든 낙원단으로 돌아오면 됩니다.^000000","you can come back to the Eden Group.^000000");
 		mes "";
-		mes "<TIPBOX>▶ 처음 시작하기 가이드<INFO>8010</INFO></TIPBOX>";
+		mes needtr("<TIPBOX>▶ 처음 시작하기 가이드<INFO>8010</INFO></TIPBOX>","<TIPBOX>▶ Getting Started Guide<INFO>8010</INFO></TIPBOX>");
 		next;
 		goto L_Help;
 
@@ -1368,71 +1405,77 @@ L_Wiki:
 	setdialogsize(440,280);
 	mes "^00AAFF[NEED Wiki]^000000";
 	mes "";
-	mes "게임 중 장비, 사냥터, 콘텐츠가 궁금하다면";
+	mes needtr("게임 중 장비, 사냥터, 콘텐츠가 궁금하다면","If you want to know about gear, hunting grounds or content,");
 	mes "";
 	mes "^FF9900Ctrl + F1^000000";
 	mes "";
-	mes "을 눌러 NEED Wiki를 열 수 있습니다.";
+	mes needtr("을 눌러 NEED Wiki를 열 수 있습니다.","press that to open the NEED Wiki.");
 	mes "";
-	mes "간단한 성장 안내는";
-	mes "아래 팁에서도 다시 볼 수 있습니다.";
-	mes "<TIPBOX>▶ NEED 초보자 성장 가이드<INFO>8000</INFO></TIPBOX>";
+	mes needtr("간단한 성장 안내는","A short growth guide is also");
+	mes needtr("아래 팁에서도 다시 볼 수 있습니다.","available in the tip below.");
+	mes needtr("<TIPBOX>▶ NEED 초보자 성장 가이드<INFO>8000</INFO></TIPBOX>","<TIPBOX>▶ NEED Beginner Growth Guide<INFO>8000</INFO></TIPBOX>");
 	next;
 	goto L_Main;
 
 L_NewbieZone:
 	clear;
 	if (BaseLevel >= 40) {
-		mes "^00AAFF[초보존]^000000";
+		mes needtr("^00AAFF[초보존]^000000","^00AAFF[Newbie Zone]^000000");
 		mes "";
-		mes "Base Lv.40부터는 ^FF0000초보존을 졸업^000000합니다.";
+		mes needtr("Base Lv.40부터는 ^FF0000초보존을 졸업^000000합니다.","At Base Lv.40 you ^FF0000graduate from the Newbie Zone^000000.");
 		mes "";
-		mes "이제 라자냐에서";
-		mes "본격적인 모험을 시작해보세요.";
+		mes needtr("이제 라자냐에서","Now, in Lasagna,");
+		mes needtr("본격적인 모험을 시작해보세요.","start your real adventure.");
 		next;
 		goto L_Main;
 	}
 
-	mes "^00AAFF[초보존 이동]^000000";
+	mes needtr("^00AAFF[초보존 이동]^000000","^00AAFF[Go to the Newbie Zone]^000000");
 	mes "";
-	mes "초보존에서는 기본적인 사냥과";
-	mes "직업 성장에 익숙해질 수 있습니다.";
+	mes needtr("초보존에서는 기본적인 사냥과","The Newbie Zone is where you get used to");
+	mes needtr("직업 성장에 익숙해질 수 있습니다.","basic hunting and growing your job.");
 	mes "";
-	mes "버프가 필요하면 초보존의 ^FF9900버프 NPC^000000 또는";
-	mes "낙원단의 ^FF9900버프 도우미^000000를 이용해주세요.";
+	mes needtr("버프가 필요하면 초보존의 ^FF9900버프 NPC^000000 또는","If you need buffs, use the ^FF9900Buff NPC^000000 in the Newbie Zone");
+	mes needtr("낙원단의 ^FF9900버프 도우미^000000를 이용해주세요.","or the Eden Group ^FF9900Buff Helper^000000.");
 	mes "";
-	mes "<TIPBOX>▶ 처음 시작하기 가이드<INFO>8010</INFO></TIPBOX>";
+	mes needtr("<TIPBOX>▶ 처음 시작하기 가이드<INFO>8010</INFO></TIPBOX>","<TIPBOX>▶ Getting Started Guide<INFO>8010</INFO></TIPBOX>");
 	next;
 
-	if (select("^00AAFF초보존으로 이동^000000:돌아가기") == 1) {
+	if (select(needtr("^00AAFF초보존으로 이동^000000:돌아가기","^00AAFFGo to the Newbie Zone^000000:Back")) == 1) {
 		close2;
 		warp "pvp_n_2-5",100,133;
 		end;
 	}
 	goto L_Main;
 
+L_NewbieBGGear:
+	// NEED 3차: 초보자 전장 장비 (900125~900155)
+	// 기존 175 보상 수령 여부와 무관하게 진입할 수 있다.
+	callfunc "F_NEED_NBG_Menu";
+	goto L_Main;
+
 L_Lasagna:
 	clear;
 	if (BaseLevel < 40) {
-		mes "^00AAFF[라자냐 이동]^000000";
+		mes needtr("^00AAFF[라자냐 이동]^000000","^00AAFF[Go to Lasagna]^000000");
 		mes "";
-		mes "라자냐 이동은";
-		mes "^FF0000Base Lv.40 이상^000000부터 안내합니다.";
+		mes needtr("라자냐 이동은","Go to Lasagna is available");
+		mes needtr("^FF0000Base Lv.40 이상^000000부터 안내합니다.","from ^FF0000Base Lv.40 or higher^000000.");
 		next;
 		goto L_Main;
 	}
 
-	mes "^00AAFF[초보존 졸업]^000000";
+	mes needtr("^00AAFF[초보존 졸업]^000000","^00AAFF[Newbie Zone Graduation]^000000");
 	mes "";
-	mes "^00AA00기초 성장 과정을 완료했습니다.^000000";
+	mes needtr("^00AA00기초 성장 과정을 완료했습니다.^000000","^00AA00You have completed the basic growth course.^000000");
 	mes "";
-	mes "이제 NEED의 생활 거점인";
-	mes "^FF9900라자냐^000000에서 본격적인 모험을 시작해보세요.";
+	mes needtr("이제 NEED의 생활 거점인","Start your real adventure in");
+	mes needtr("^FF9900라자냐^000000에서 본격적인 모험을 시작해보세요.","^FF9900Lasagna^000000, NEED's home base town.");
 	mes "";
-	mes "이동 후 저장 위치도 라자냐로 변경됩니다.";
+	mes needtr("이동 후 저장 위치도 라자냐로 변경됩니다.","Your save point moves to Lasagna as well.");
 	next;
 
-	if (select("^00AAFF라자냐로 이동^000000:돌아가기") == 1) {
+	if (select(needtr("^00AAFF라자냐로 이동^000000:돌아가기","^00AAFFGo to Lasagna^000000:Back")) == 1) {
 		NEED_BEGINNER_LASAGNA = 1;
 		savepoint "lasagna",170,151;
 		close2;
@@ -1459,108 +1502,108 @@ S_GoalLine:
 	// stage 4 = 1차 전직 완료 + Base Lv.40 이상 (초보 구간 졸업)
 	if (.@stage != 4) {
 		if (.@stage == 1) {
-			mes .@pre$ + " : ^FF9900Job Lv.10 달성^000000";
+			mes .@pre$ + needtr(" : ^FF9900Job Lv.10 달성^000000"," : ^FF9900Reach Job Lv.10^000000");
 			return 1;
 		}
 		if (.@stage == 2) {
-			mes .@pre$ + " : ^FF99001차 전직^000000";
+			mes .@pre$ + needtr(" : ^FF99001차 전직^000000"," : ^FF99001st Job Change^000000");
 			return 2;
 		}
-		mes .@pre$ + " : ^FF9900Base Lv.40 달성^000000";
+		mes .@pre$ + needtr(" : ^FF9900Base Lv.40 달성^000000"," : ^FF9900Reach Base Lv.40^000000");
 		return 3;
 	}
 
 	// Base Lv.40 ~ 99
 	if (BaseLevel < 100) {
-		mes .@pre$ + " : ^FF9900Base Lv.100 달성^000000";
+		mes .@pre$ + needtr(" : ^FF9900Base Lv.100 달성^000000"," : ^FF9900Reach Base Lv.100^000000");
 		return 4;
 	}
 
 	// Base Lv.100 ~ 119 : Lv.100 보상 -> 사라의 기억 -> Base Lv.120
 	if (BaseLevel < 120) {
 		if (!NEED_BEGINNER_REWARD_100) {
-			mes .@pre$ + " : ^FF9900Lv.100 성장 지원 보상 받기^000000";
+			mes .@pre$ + needtr(" : ^FF9900Lv.100 성장 지원 보상 받기^000000"," : ^FF9900Claim the Lv.100 Growth Support Rewards^000000");
 			return 5;
 		}
 		if (!NEED_GUIDE_SARA) {
-			mes .@pre$ + " : ^FF9900사라의 기억 입장^000000";
+			mes .@pre$ + needtr(" : ^FF9900사라의 기억 입장^000000"," : ^FF9900Enter Sara's Memory^000000");
 			return 6;
 		}
-		mes .@pre$ + " : ^FF9900Base Lv.120 달성^000000";
+		mes .@pre$ + needtr(" : ^FF9900Base Lv.120 달성^000000"," : ^FF9900Reach Base Lv.120^000000");
 		return 7;
 	}
 
 	// Base Lv.120 ~ 139 : 카드 학습 -> Base Lv.140
 	if (BaseLevel < 140) {
 		if (!NEED_GUIDE_CARD) {
-			mes .@pre$ + " : ^FF9900카드 시스템 학습^000000";
+			mes .@pre$ + needtr(" : ^FF9900카드 시스템 학습^000000"," : ^FF9900Card System Study^000000");
 			return 8;
 		}
-		mes .@pre$ + " : ^FF9900Base Lv.140 달성^000000";
+		mes .@pre$ + needtr(" : ^FF9900Base Lv.140 달성^000000"," : ^FF9900Reach Base Lv.140^000000");
 		return 9;
 	}
 
 	// Base Lv.140 ~ 148 : 제련 학습 -> Base Lv.149
 	if (BaseLevel < 149) {
 		if (!NEED_GUIDE_REFINE) {
-			mes .@pre$ + " : ^FF9900제련 시스템 학습^000000";
+			mes .@pre$ + needtr(" : ^FF9900제련 시스템 학습^000000"," : ^FF9900Refine System Study^000000");
 			return 10;
 		}
-		mes .@pre$ + " : ^FF9900Base Lv.149 달성^000000";
+		mes .@pre$ + needtr(" : ^FF9900Base Lv.149 달성^000000"," : ^FF9900Reach Base Lv.149^000000");
 		return 11;
 	}
 
 	// Base Lv.149 : 무료 초기화 마지막 구간이지만 목표는 멈추지 않는다
 	if (BaseLevel < 150) {
-		mes .@pre$ + " : ^FF9900Base Lv.150 달성^000000";
+		mes .@pre$ + needtr(" : ^FF9900Base Lv.150 달성^000000"," : ^FF9900Reach Base Lv.150^000000");
 		return 12;
 	}
 
 	// Base Lv.150 ~ 174 : Lv.150 보상 -> 미완료 학습 -> Base Lv.175 / Job Lv.60
 	if (BaseLevel < 175) {
 		if (!NEED_BEGINNER_REWARD_150) {
-			mes .@pre$ + " : ^FF9900Lv.150 성장 지원 보상 받기^000000";
+			mes .@pre$ + needtr(" : ^FF9900Lv.150 성장 지원 보상 받기^000000"," : ^FF9900Claim the Lv.150 Growth Support Rewards^000000");
 			return 13;
 		}
 
 		// 미완료 학습이 있으면 그중 하나만 대표 목표로 보여준다.
 		// 전부 필수처럼 보이지 않도록 한 번에 한 항목만 노출한다.
 		if (!NEED_GUIDE_EXCELION)
-			.@rep$ = "엑셀리온 인챈트 학습";
+			.@rep$ = needtr("엑셀리온 인챈트 학습","Excellion Enchant Study");
 		else if (!NEED_GUIDE_CASH)
-			.@rep$ = "금화 / 캐시 시스템 학습";
+			.@rep$ = needtr("금화 / 캐시 시스템 학습","Gold Coin / Cash System Study");
 		else if (!NEED_GUIDE_OGH)
-			.@rep$ = "옛 글래스트헤임 입장";
+			.@rep$ = needtr("옛 글래스트헤임 입장","Enter Old Glast Heim");
 		else if (!NEED_GUIDE_INFINITE)
-			.@rep$ = "무한의 공간 입장";
+			.@rep$ = needtr("무한의 공간 입장","Enter Infinite Space");
 		else if (!NEED_GUIDE_CHARLESTON)
-			.@rep$ = "위기의 찰스턴 입장";
+			.@rep$ = needtr("위기의 찰스턴 입장","Enter Charleston Crisis");
 		else if (!NEED_GUIDE_TOY)
-			.@rep$ = "호러 장난감 공장 입장";
+			.@rep$ = needtr("호러 장난감 공장 입장","Enter Horror Toy Factory");
 		else if (!NEED_GUIDE_OGH_HARD)
-			.@rep$ = "옛 글래스트헤임 상급 입장";
+			.@rep$ = needtr("옛 글래스트헤임 상급 입장","Enter Old Glast Heim Hard");
 
 		if (.@rep$ != "") {
 			mes .@pre$ + " : ^FF9900" + .@rep$ + "^000000";
 			return 14;
 		}
 
-		mes .@pre$ + " : ^FF9900Base Lv.175 / Job Lv.60 달성^000000";
+		mes .@pre$ + needtr(" : ^FF9900Base Lv.175 / Job Lv.60 달성^000000"," : ^FF9900Reach Base Lv.175 / Job Lv.60^000000");
 		return 15;
 	}
 
 	// Base Lv.175 이상
 	if (JobLevel < 60) {
-		mes .@pre$ + " : ^FF9900Job Lv.60 달성^000000";
+		mes .@pre$ + needtr(" : ^FF9900Job Lv.60 달성^000000"," : ^FF9900Reach Job Lv.60^000000");
 		return 16;
 	}
 
 	if (!NEED_BEGINNER_REWARD_175) {
-		mes .@pre$ + " : ^FF9900성장지원 졸업 보상 받기^000000";
+		mes .@pre$ + needtr(" : ^FF9900성장지원 졸업 보상 받기^000000"," : ^FF9900Claim the Growth Support graduation reward^000000");
 		return 17;
 	}
 
-	mes .@pre$ + " : ^00AA00성장지원 졸업 완료^000000";
+	mes .@pre$ + needtr(" : ^00AA00성장지원 졸업 완료^000000"," : ^00AA00Growth Support graduated^000000");
 	return 18;
 
 S_CurrentStage:
@@ -1569,235 +1612,235 @@ S_CurrentStage:
 
 	// stage 4 = 1차 전직 완료 + Base Lv.40 이상 (초보 구간 졸업)
 	if (.@stage != 4)
-		mes "현재 단계 : ^0055FF초보 모험가^000000";
+		mes needtr("현재 단계 : ^0055FF초보 모험가^000000","Current stage : ^0055FFNovice Adventurer^000000");
 	else if (BaseLevel < 100)
-		mes "현재 단계 : ^0055FF초급 모험가^000000";
+		mes needtr("현재 단계 : ^0055FF초급 모험가^000000","Current stage : ^0055FFBeginner Adventurer^000000");
 	else if (BaseLevel < 150)
-		mes "현재 단계 : ^0055FF견습 모험가^000000";
+		mes needtr("현재 단계 : ^0055FF견습 모험가^000000","Current stage : ^0055FFApprentice Adventurer^000000");
 	else if (BaseLevel < 175 || JobLevel < 60)
-		mes "현재 단계 : ^0055FF숙련 모험가^000000";
+		mes needtr("현재 단계 : ^0055FF숙련 모험가^000000","Current stage : ^0055FFSeasoned Adventurer^000000");
 	else
-		mes "현재 단계 : ^00AA00정식 모험가^000000";
+		mes needtr("현재 단계 : ^00AA00정식 모험가^000000","Current stage : ^00AA00Full Adventurer^000000");
 
 	// 반환된 목표 코드는 메인 화면에서 사용하지 않는다.
-	.@goal = callsub(S_GoalLine, "다음 목표");
+	.@goal = callsub(S_GoalLine, needtr("다음 목표","Next goal"));
 	return;
 
 S_ShowGoal:
 	// 목표 한 줄은 S_GoalLine 이 출력한다. (메인 화면과 항상 동일)
-	.@goal = callsub(S_GoalLine, "현재 목표");
+	.@goal = callsub(S_GoalLine, needtr("현재 목표","Current goal"));
 	mes "";
 
 	if (.@goal == 1) {
-		mes "① 성장 지원 보상에서";
-		mes "   메탈 무기 상자를 받습니다.";
-		mes "② 초보자 지역에서 사냥하며";
-		mes "   Job Lv.10을 달성합니다.";
+		mes needtr("① 성장 지원 보상에서","① From Growth Support Rewards,");
+		mes needtr("   메탈 무기 상자를 받습니다.","   claim the Metal Weapon Box.");
+		mes needtr("② 초보자 지역에서 사냥하며","② Hunt in the beginner areas and");
+		mes needtr("   Job Lv.10을 달성합니다.","   reach Job Lv.10.");
 		mes "";
-		mes "Job Lv.10이 되면";
-		mes "^0055FF1차 전직^000000을 진행할 수 있습니다.";
+		mes needtr("Job Lv.10이 되면","Once you reach Job Lv.10,");
+		mes needtr("^0055FF1차 전직^000000을 진행할 수 있습니다.","you can take your ^0055FF1st Job Change^000000.");
 		return;
 	}
 
 	if (.@goal == 2) {
-		mes "^00AA00Job Lv.10을 달성했습니다.^000000";
+		mes needtr("^00AA00Job Lv.10을 달성했습니다.^000000","^00AA00You have reached Job Lv.10.^000000");
 		mes "";
-		mes "성장 지원관 ^0055FF왼쪽^000000의 ^00AAFF전직 도우미^000000를 이용해";
-		mes "원하는 직업으로 전직해보세요.";
+		mes needtr("성장 지원관 ^0055FF왼쪽^000000의 ^00AAFF전직 도우미^000000를 이용해","To the ^0055FFleft^000000 of the Growth Supporter, use the ^00AAFFJob Master^000000");
+		mes needtr("원하는 직업으로 전직해보세요.","to change to the job you want.");
 		if (BaseLevel >= 40) {
 			mes "";
-			mes "^FF0000Base Lv.40을 넘었지만^000000";
-			mes "^FF0000아직 전직하지 않았습니다.^000000";
-			mes "^777777전직을 먼저 마쳐야^000000";
-			mes "^777777이후 성장 구간을 진행할 수 있습니다.^000000";
+			mes needtr("^FF0000Base Lv.40을 넘었지만^000000","^FF0000You are past Base Lv.40,^000000");
+			mes needtr("^FF0000아직 전직하지 않았습니다.^000000","^FF0000but you have not changed jobs yet.^000000");
+			mes needtr("^777777전직을 먼저 마쳐야^000000","^777777Finish your job change first^000000");
+			mes needtr("^777777이후 성장 구간을 진행할 수 있습니다.^000000","^777777to move on to the next growth stage.^000000");
 		}
 		return;
 	}
 
 	if (.@goal == 3) {
-		mes "^00AA001차 전직을 완료했습니다.^000000";
+		mes needtr("^00AA001차 전직을 완료했습니다.^000000","^00AA00You have completed your 1st Job Change.^000000");
 		mes "";
-		mes "이제 초보자 지역과 일반 사냥을 통해";
-		mes "Base Lv.40까지 성장해보세요.";
+		mes needtr("이제 초보자 지역과 일반 사냥을 통해","Now hunt in the beginner areas and the open field");
+		mes needtr("Base Lv.40까지 성장해보세요.","to grow up to Base Lv.40.");
 		mes "";
-		mes "Lv.40부터는 ^00AAFF라자냐^000000를";
-		mes "생활 거점으로 이용합니다.";
+		mes needtr("Lv.40부터는 ^00AAFF라자냐^000000를","From Lv.40 you will use ^00AAFFLasagna^000000");
+		mes needtr("생활 거점으로 이용합니다.","as your home base.");
 		return;
 	}
 
 	if (.@goal == 4) {
-		mes "라자냐를 거점으로 사냥을 계속해주세요.";
-		mes "전직 조건을 달성할 때마다";
-		mes "낙원단의 ^00AAFF전직 도우미^000000를 이용할 수 있습니다.";
+		mes needtr("라자냐를 거점으로 사냥을 계속해주세요.","Keep hunting with Lasagna as your base.");
+		mes needtr("전직 조건을 달성할 때마다","Whenever you meet a job change requirement,");
+		mes needtr("낙원단의 ^00AAFF전직 도우미^000000를 이용할 수 있습니다.","you can use the Eden Group ^00AAFFJob Master^000000.");
 		mes "";
-		mes "Lv.100 달성 시";
-		mes "^FF9900초심자 장비와 종합 은총^000000이 지급됩니다.";
+		mes needtr("Lv.100 달성 시","When you reach Lv.100,");
+		mes needtr("^FF9900초심자 장비와 종합 은총^000000이 지급됩니다.","^FF9900Beginner gear and Full Grace^000000 are granted.");
 		return;
 	}
 
 	if (.@goal == 5) {
-		mes "^00AA00Base Lv.100을 달성했습니다.^000000";
+		mes needtr("^00AA00Base Lv.100을 달성했습니다.^000000","^00AA00You have reached Base Lv.100.^000000");
 		mes "";
-		mes "^FF9900성장 지원 보상^000000 메뉴에서";
-		mes "초심자 무기 / 방어구 / 쉐도우와";
-		mes "종합 은총 이용권을 받아주세요.";
+		mes needtr("^FF9900성장 지원 보상^000000 메뉴에서","From the ^FF9900Growth Support Rewards^000000 menu,");
+		mes needtr("초심자 무기 / 방어구 / 쉐도우와","claim the Beginner weapon / armor / shadow gear");
+		mes needtr("종합 은총 이용권을 받아주세요.","and the Full Grace pass.");
 		mes "";
-		mes "^777777캐릭터당 1회만 받을 수 있습니다.^000000";
+		mes needtr("^777777캐릭터당 1회만 받을 수 있습니다.^000000","^777777Limited to 1 per character.^000000");
 		return;
 	}
 
 	if (.@goal == 6) {
-		mes "^00AA00Lv.100 성장 보상을 받았습니다.^000000";
+		mes needtr("^00AA00Lv.100 성장 보상을 받았습니다.^000000","^00AA00You have claimed the Lv.100 Growth Reward.^000000");
 		mes "";
-		mes "다음은 ^00AAFF사라의 기억^000000 메모리얼입니다.";
+		mes needtr("다음은 ^00AAFF사라의 기억^000000 메모리얼입니다.","Next is the ^00AAFFSara's Memory^000000 Memorial.");
 		mes "";
-		mes "메모리얼 던전에 직접 입장하면";
-		mes "학습이 자동으로 기록됩니다.";
-		mes "^777777클리어는 필요하지 않습니다.^000000";
+		mes needtr("메모리얼 던전에 직접 입장하면","Entering the Memorial Dungeon yourself");
+		mes needtr("학습이 자동으로 기록됩니다.","records the study automatically.");
+		mes needtr("^777777클리어는 필요하지 않습니다.^000000","^777777You do not need to clear it.^000000");
 		return;
 	}
 
 	if (.@goal == 7) {
-		mes "^00AA00Lv.100 성장 학습을 완료했습니다.^000000";
+		mes needtr("^00AA00Lv.100 성장 학습을 완료했습니다.^000000","^00AA00You have completed the Lv.100 Growth Study.^000000");
 		mes "";
-		mes "다음 학습은 ^FF9900Base Lv.120^000000부터";
-		mes "시작됩니다.";
+		mes needtr("다음 학습은 ^FF9900Base Lv.120^000000부터","The next study begins from ^FF9900Base Lv.120^000000");
+		mes needtr("시작됩니다.","onward.");
 		mes "";
-		mes "Lv.120부터 ^00AAFF카드 시스템^000000을";
-		mes "배워볼 수 있습니다.";
-		mes "^777777지금은 레벨업에 집중해보세요.^000000";
+		mes needtr("Lv.120부터 ^00AAFF카드 시스템^000000을","From Lv.120, the ^00AAFFCard System^000000 is");
+		mes needtr("배워볼 수 있습니다.","available to learn.");
+		mes needtr("^777777지금은 레벨업에 집중해보세요.^000000","^777777For now, focus on leveling up.^000000");
 		return;
 	}
 
 	if (.@goal == 8) {
-		mes "^00AA00Base Lv.120을 달성했습니다.^000000";
+		mes needtr("^00AA00Base Lv.120을 달성했습니다.^000000","^00AA00You have reached Base Lv.120.^000000");
 		mes "";
-		mes "^00AAFF성장 학습하기^000000 메뉴에서";
-		mes "카드 시스템을 확인해보세요.";
+		mes needtr("^00AAFF성장 학습하기^000000 메뉴에서","From the ^00AAFFGrowth Study^000000 menu,");
+		mes needtr("카드 시스템을 확인해보세요.","take a look at the Card System.");
 		mes "";
-		mes "^777777학습은 선택 사항이며^000000";
-		mes "^777777실제 카드 장착을 요구하지 않습니다.^000000";
+		mes needtr("^777777학습은 선택 사항이며^000000","^777777Studying is optional and^000000");
+		mes needtr("^777777실제 카드 장착을 요구하지 않습니다.^000000","^777777does not require actually socketing a card.^000000");
 		return;
 	}
 
 	if (.@goal == 9) {
-		mes "^00AA00카드 시스템 학습을 완료했습니다.^000000";
+		mes needtr("^00AA00카드 시스템 학습을 완료했습니다.^000000","^00AA00Card System study complete.^000000");
 		mes "";
-		mes "다음 학습은 ^FF9900Base Lv.140^000000부터";
-		mes "시작됩니다.";
+		mes needtr("다음 학습은 ^FF9900Base Lv.140^000000부터","The next study begins from ^FF9900Base Lv.140^000000");
+		mes needtr("시작됩니다.","onward.");
 		mes "";
-		mes "Lv.140부터 ^00AAFF제련 시스템^000000을";
-		mes "배워볼 수 있습니다.";
+		mes needtr("Lv.140부터 ^00AAFF제련 시스템^000000을","From Lv.140, the ^00AAFFRefine System^000000 is");
+		mes needtr("배워볼 수 있습니다.","available to learn.");
 		return;
 	}
 
 	if (.@goal == 10) {
-		mes "^00AA00Base Lv.140을 달성했습니다.^000000";
+		mes needtr("^00AA00Base Lv.140을 달성했습니다.^000000","^00AA00You have reached Base Lv.140.^000000");
 		mes "";
-		mes "^00AAFF성장 학습하기^000000 메뉴에서";
-		mes "제련 시스템을 확인해보세요.";
+		mes needtr("^00AAFF성장 학습하기^000000 메뉴에서","From the ^00AAFFGrowth Study^000000 menu,");
+		mes needtr("제련 시스템을 확인해보세요.","take a look at the Refine System.");
 		mes "";
-		mes "에르늄 파밍과 방어구 +4 제련 등";
-		mes "기본 제련 흐름을 익혀보세요.";
-		mes "^777777실제 제련 성공은 필요하지 않습니다.^000000";
+		mes needtr("에르늄 파밍과 방어구 +4 제련 등","Farm Elunium, refine armor to +4,");
+		mes needtr("기본 제련 흐름을 익혀보세요.","and get used to the basic refine flow.");
+		mes needtr("^777777실제 제련 성공은 필요하지 않습니다.^000000","^777777A successful refine is not required.^000000");
 		return;
 	}
 
 	if (.@goal == 11) {
-		mes "^00AA00제련 시스템 학습을 완료했습니다.^000000";
+		mes needtr("^00AA00제련 시스템 학습을 완료했습니다.^000000","^00AA00Refine System study complete.^000000");
 		mes "";
-		mes "^FF0000※ 마을 카프라의 무료 스탯 / 스킬^000000";
-		mes "^FF0000   초기화는 Base Lv.149까지만^000000";
-		mes "^FF0000   이용할 수 있습니다.^000000";
+		mes needtr("^FF0000※ 마을 카프라의 무료 스탯 / 스킬^000000","^FF0000* The town Kafra's free Stat / Skill^000000");
+		mes needtr("^FF0000   초기화는 Base Lv.149까지만^000000","^FF0000   Reset can be used only up to Base Lv.149^000000");
+		mes needtr("^FF0000   이용할 수 있습니다.^000000","^FF0000   and not beyond.^000000");
 		mes "";
-		mes "^777777Lv.150 전에 현재 세팅을^000000";
-		mes "^777777확인해두면 좋습니다.^000000";
+		mes needtr("^777777Lv.150 전에 현재 세팅을^000000","^777777Before Lv.150 it is worth checking^000000");
+		mes needtr("^777777확인해두면 좋습니다.^000000","^777777your current build.^000000");
 		return;
 	}
 
 	if (.@goal == 12) {
-		mes "^FF0000※ Base Lv.149는 무료 스탯 / 스킬^000000";
-		mes "^FF0000   초기화를 이용할 수 있는^000000";
-		mes "^FF0000   마지막 구간입니다.^000000";
+		mes needtr("^FF0000※ Base Lv.149는 무료 스탯 / 스킬^000000","^FF0000* Base Lv.149 is the last stage where^000000");
+		mes needtr("^FF0000   초기화를 이용할 수 있는^000000","^FF0000   you can still use the free Stat / Skill^000000");
+		mes needtr("^FF0000   마지막 구간입니다.^000000","^FF0000   Reset.^000000");
 		mes "";
-		mes "필요하다면 Lv.150 달성 전에";
-		mes "마을 카프라에서 초기화해주세요.";
-		mes "^777777초기화는 필수가 아닙니다.^000000";
+		mes needtr("필요하다면 Lv.150 달성 전에","If you need it, do it before you reach Lv.150,");
+		mes needtr("마을 카프라에서 초기화해주세요.","at the town Kafra.");
+		mes needtr("^777777초기화는 필수가 아닙니다.^000000","^777777Resetting is not required.^000000");
 		if (!NEED_GUIDE_REFINE) {
 			mes "";
-			mes "^777777제련 시스템 학습은 아직 미완료입니다.^000000";
+			mes needtr("^777777제련 시스템 학습은 아직 미완료입니다.^000000","^777777Refine System study is not finished yet.^000000");
 		}
 		return;
 	}
 
 	if (.@goal == 13) {
-		mes "^00AA00Base Lv.150을 달성했습니다.^000000";
+		mes needtr("^00AA00Base Lv.150을 달성했습니다.^000000","^00AA00You have reached Base Lv.150.^000000");
 		mes "";
-		mes "^FF9900성장 지원 보상^000000 메뉴에서";
-		mes "초심자 무기 +7 제련 이용권을";
-		mes "받아주세요.";
+		mes needtr("^FF9900성장 지원 보상^000000 메뉴에서","From the ^FF9900Growth Support Rewards^000000 menu,");
+		mes needtr("초심자 무기 +7 제련 이용권을","the Beginner's Safe to 7 Weapon Certificate is waiting.");
+		mes needtr("받아주세요.","Please claim it.");
 		mes "";
-		mes "^777777캐릭터당 1회만 받을 수 있습니다.^000000";
+		mes needtr("^777777캐릭터당 1회만 받을 수 있습니다.^000000","^777777Limited to 1 per character.^000000");
 		return;
 	}
 
 	if (.@goal == 14) {
-		mes "Lv.150부터 여러 콘텐츠를";
-		mes "자유롭게 병행할 수 있습니다.";
+		mes needtr("Lv.150부터 여러 콘텐츠를","From Lv.150 you can freely mix");
+		mes needtr("자유롭게 병행할 수 있습니다.","several kinds of content.");
 		mes "";
-		mes "^FF9900아직 익히지 않은 성장 콘텐츠가 있습니다.^000000";
-		mes "^00AAFF성장 학습 현황^000000에서 전체를 볼 수 있습니다.";
+		mes needtr("^FF9900아직 익히지 않은 성장 콘텐츠가 있습니다.^000000","^FF9900There is growth content you have not learned yet.^000000");
+		mes needtr("^00AAFF성장 학습 현황^000000에서 전체를 볼 수 있습니다.","You can see it all in ^00AAFFGrowth Study Status^000000.");
 		mes "";
-		mes "^777777학습 콘텐츠는 선택 사항입니다.^000000";
-		mes "^777777원하는 콘텐츠를 진행하며^000000";
-		mes "^777777Lv.175 / Job Lv.60을 목표로 해도 됩니다.^000000";
+		mes needtr("^777777학습 콘텐츠는 선택 사항입니다.^000000","^777777Study content is optional.^000000");
+		mes needtr("^777777원하는 콘텐츠를 진행하며^000000","^777777You may simply play the content you like^000000");
+		mes needtr("^777777Lv.175 / Job Lv.60을 목표로 해도 됩니다.^000000","^777777and aim for Lv.175 / Job Lv.60.^000000");
 		return;
 	}
 
 	if (.@goal == 15) {
-		mes "^00AA00추천 성장 학습을 모두 완료했습니다.^000000";
+		mes needtr("^00AA00추천 성장 학습을 모두 완료했습니다.^000000","^00AA00You have completed every recommended Growth Study.^000000");
 		mes "";
-		mes "이제 원하는 콘텐츠를 진행하며";
-		mes "^FF9900Base Lv.175 / Job Lv.60^000000을";
-		mes "목표로 성장해보세요.";
+		mes needtr("이제 원하는 콘텐츠를 진행하며","Now play the content you like -");
+		mes needtr("^FF9900Base Lv.175 / Job Lv.60^000000을","^FF9900Base Lv.175 / Job Lv.60^000000 is");
+		mes needtr("목표로 성장해보세요.","your next goal.");
 		mes "";
-		mes "^777777학습 완료가 졸업 조건은 아닙니다.^000000";
-		mes "^777777단순한 다음 추천 목표입니다.^000000";
+		mes needtr("^777777학습 완료가 졸업 조건은 아닙니다.^000000","^777777Finishing the studies is not a graduation requirement.^000000");
+		mes needtr("^777777단순한 다음 추천 목표입니다.^000000","^777777It is simply the next recommended goal.^000000");
 		return;
 	}
 
 	if (.@goal == 16) {
-		mes "^00AA00Base Lv.175를 달성했습니다.^000000";
+		mes needtr("^00AA00Base Lv.175를 달성했습니다.^000000","^00AA00You have reached Base Lv.175.^000000");
 		mes "";
-		mes "남은 조건은 ^FF9900Job Lv.60^000000입니다.";
+		mes needtr("남은 조건은 ^FF9900Job Lv.60^000000입니다.","The remaining requirement is ^FF9900Job Lv.60^000000.");
 		mes "";
-		mes "현재: Base ^0055FF" + BaseLevel + "^000000 / Job ^0055FF" + JobLevel + "^000000";
+		mes needtr("현재: Base ^0055FF","Current: Base ^0055FF") + BaseLevel + "^000000 / Job ^0055FF" + JobLevel + "^000000";
 		mes "";
-		mes "^777777Job 경험치는 사냥으로 함께 오릅니다.^000000";
+		mes needtr("^777777Job 경험치는 사냥으로 함께 오릅니다.^000000","^777777Job experience rises as you hunt.^000000");
 		return;
 	}
 
 	if (.@goal == 17) {
-		mes "^00AA00성장지원 졸업 조건을 달성했습니다.^000000";
+		mes needtr("^00AA00성장지원 졸업 조건을 달성했습니다.^000000","^00AA00You have met the Growth Support graduation requirements.^000000");
 		mes "";
-		mes "^FF9900성장 지원 보상^000000 메뉴에서";
-		mes "^FF990014일 전장 지원 시즈 세트^000000를";
-		mes "받아주세요.";
+		mes needtr("^FF9900성장 지원 보상^000000 메뉴에서","From the ^FF9900Growth Support Rewards^000000 menu,");
+		mes needtr("^FF990014일 전장 지원 시즈 세트^000000를","the ^FF990014-Day Battleground Support Siege Set^000000 is waiting.");
+		mes needtr("받아주세요.","Please claim it.");
 		mes "";
-		mes "^777777수령 후 175 이후 콘텐츠 안내가^000000";
-		mes "^777777메인 메뉴에 표시됩니다.^000000";
+		mes needtr("^777777수령 후 175 이후 콘텐츠 안내가^000000","^777777Once claimed, Content After 175 appears^000000");
+		mes needtr("^777777메인 메뉴에 표시됩니다.^000000","^777777in the main menu.^000000");
 		return;
 	}
 
 	// .@goal == 18 : 성장지원 졸업 완료
-	mes "^00AA00성장지원 과정을 모두 완료했습니다.^000000";
+	mes needtr("^00AA00성장지원 과정을 모두 완료했습니다.^000000","^00AA00You have completed the entire Growth Support course.^000000");
 	mes "";
-	mes "이제 정해진 순서 없이";
-	mes "원하는 콘텐츠를 진행할 수 있습니다.";
+	mes needtr("이제 정해진 순서 없이","From now on there is no set order -");
+	mes needtr("원하는 콘텐츠를 진행할 수 있습니다.","play whatever content you like.");
 	mes "";
-	mes "메인 메뉴의 ^FF9900175 이후 콘텐츠 안내^000000에서";
-	mes "방향을 다시 확인할 수 있습니다.";
-	mes "^777777성장지원관은 계속 이용할 수 있습니다.^000000";
+	mes needtr("메인 메뉴의 ^FF9900175 이후 콘텐츠 안내^000000에서","The ^FF9900Content After 175^000000 entry in the main menu");
+	mes needtr("방향을 다시 확인할 수 있습니다.","can point you in a direction again.");
+	mes needtr("^777777성장지원관은 계속 이용할 수 있습니다.^000000","^777777The Growth Supporter stays available.^000000");
 	return;
 
 //============================================================
@@ -1826,14 +1869,14 @@ S_HuntingGuide:
 		return;
 
 	setarray .@hg_name$[0],
-		"초보존",
-		"개미지옥 1층",
-		"오크 지하 동굴 1층",
-		"루이나 지하 던전 1층",
-		"노그로드 2층",
-		"용의 둥지 2층",
-		"용의 둥지 3층",
-		"뒤틀린 시간의 시계탑 3층";
+		needtr("초보존","Newbie Zone"),
+		needtr("개미지옥 1층","Ant Hell Dungeon F1"),
+		needtr("오크 지하 동굴 1층","Orc Dungeon F1"),
+		needtr("루이나 지하 던전 1층","Luina Guild Dungeon F1"),
+		needtr("노그로드 2층","Nogg Road Dungeon F2"),
+		needtr("용의 둥지 2층","Dragon Nest F2"),
+		needtr("용의 둥지 3층","Dragon Nest F3"),
+		needtr("뒤틀린 시간의 시계탑 3층","Twisted Clock Tower F3");
 	setarray .@hg_min[0],   1,  20,  40,  60, 100, 110, 130, 160;
 	setarray .@hg_max[0],  19,  39,  59,  99, 109, 129, 159, 174;
 	setarray .@hg_map$[0],
@@ -1855,20 +1898,20 @@ S_HuntingGuide:
 		.@cur += 1;
 
 	mes "";
-	mes "^0055FF[추천 레벨업 사냥터]^000000 ^777777(참고용)^000000";
-	mes "^777777현재 추천^000000";
+	mes needtr("^0055FF[추천 레벨업 사냥터]^000000 ^777777(참고용)^000000","^0055FF[Recommended Leveling Spots]^000000 ^777777(for reference)^000000");
+	mes needtr("^777777현재 추천^000000","^777777Current recommendation^000000");
 	mes "^00AAFF" + .@hg_name$[.@cur] + "^000000";
-	mes "^777777권장 구간 : Base Lv." + .@hg_min[.@cur] + " ~ " + .@hg_max[.@cur] + "^000000";
+	mes needtr("^777777권장 구간 : Base Lv.","^777777Recommended range : Base Lv.") + .@hg_min[.@cur] + " ~ " + .@hg_max[.@cur] + "^000000";
 
-	if (select("^00AAFF추천 사냥터 목록 / 이동^000000:돌아가기") == 2)
+	if (select(needtr("^00AAFF추천 사냥터 목록 / 이동^000000:돌아가기","^00AAFFRecommended hunting grounds / Go^000000:Back")) == 2)
 		return;
 
 	// 메뉴 선택으로 새 화면에 진입하므로 이전 대사를 지운다.
 	clear;
-	mes "^00AAFF[추천 사냥터 이동]^000000";
+	mes needtr("^00AAFF[추천 사냥터 이동]^000000","^00AAFF[Go to a Recommended Hunting Ground]^000000");
 	mes "";
-	mes "원하는 사냥터를 선택해주세요.";
-	mes "^777777괄호 안의 레벨은 권장 구간입니다.^000000";
+	mes needtr("원하는 사냥터를 선택해주세요.","Choose the hunting ground you want.");
+	mes needtr("^777777괄호 안의 레벨은 권장 구간입니다.^000000","^777777The levels in brackets are the recommended range.^000000");
 
 	// 현재 추천 구간만 색상과 별표로 구분한다. 선택 제한은 두지 않는다.
 	.@menu$ = "";
@@ -1879,7 +1922,7 @@ S_HuntingGuide:
 		else
 			.@menu$ += .@line$ + ":";
 	}
-	.@menu$ += "돌아가기";
+	.@menu$ += needtr("돌아가기","Back");
 
 	.@sel = select(.@menu$) - 1;
 	if (.@sel < 0 || .@sel >= .@hg_size)
@@ -1899,15 +1942,15 @@ pvp_n_2-5,102,132,4	script	초보존 안내원#need_beginner	637,{
 
 	// 기존 계정은 예전 초보존 동선을 그대로 사용
 	if (!callfunc("F_NEED_IsBeginnerAccount")) {
-		mes "^00AAFF[초보존 안내원]^000000";
+		mes needtr("^00AAFF[초보존 안내원]^000000","^00AAFF[Newbie Zone Guide]^000000");
 		mes "";
-		mes "초보자 지역을 이용 중입니다.";
+		mes needtr("초보자 지역을 이용 중입니다.","You are in the beginner area.");
 		mes "";
-		mes "사냥을 마쳤다면";
-		mes "^FF9900라자냐^000000로 이동할 수 있습니다.";
+		mes needtr("사냥을 마쳤다면","When you are done hunting,");
+		mes needtr("^FF9900라자냐^000000로 이동할 수 있습니다.","you can move to ^FF9900Lasagna^000000.");
 		next;
 
-		if (select("^00AAFF라자냐로 이동^000000:계속 사냥한다") == 1) {
+		if (select(needtr("^00AAFF라자냐로 이동^000000:계속 사냥한다","^00AAFFGo to Lasagna^000000:Keep hunting")) == 1) {
 			savepoint "lasagna",170,151;
 			close2;
 			warp "lasagna",170,151;
@@ -1918,33 +1961,33 @@ pvp_n_2-5,102,132,4	script	초보존 안내원#need_beginner	637,{
 
 	// 신규 계정이 아직 성장지원 등록 전인 경우
 	if (!#NEED_BEGINNER) {
-		mes "^00AAFF[초보존 안내원]^000000";
+		mes needtr("^00AAFF[초보존 안내원]^000000","^00AAFF[Newbie Zone Guide]^000000");
 		mes "";
-		mes "낙원단의 ^0055FF성장 지원관^000000에게 먼저";
-		mes "신규 성장 안내를 받아주세요.";
+		mes needtr("낙원단의 ^0055FF성장 지원관^000000에게 먼저","Please see the Eden Group ^0055FFGrowth Supporter^000000 first");
+		mes needtr("신규 성장 안내를 받아주세요.","for your new-adventurer guidance.");
 		close;
 	}
 
 	// 1차 전직을 마치고 Base Lv.40 이상이 된 경우에만 졸업 안내를 한다.
 	// (노비스 상태로 Lv.40 을 넘긴 캐릭터는 아래에서 전직 안내를 먼저 받는다.)
 	if (callfunc("F_NEED_GetBeginnerStage") == 4) {
-		mes "^00AAFF[초보존 안내원]^000000";
+		mes needtr("^00AAFF[초보존 안내원]^000000","^00AAFF[Newbie Zone Guide]^000000");
 		mes "";
-		mes "^00AA00Base Lv.40을 달성했습니다!^000000";
+		mes needtr("^00AA00Base Lv.40을 달성했습니다!^000000","^00AA00You have reached Base Lv.40!^000000");
 		mes "";
-		mes "이제 초보존을 졸업하고";
-		mes "NEED의 생활 거점인 ^FF9900라자냐^000000로";
-		mes "이동할 수 있습니다.";
+		mes needtr("이제 초보존을 졸업하고","You can now graduate from the Newbie Zone");
+		mes needtr("NEED의 생활 거점인 ^FF9900라자냐^000000로","and move to ^FF9900Lasagna^000000, NEED's");
+		mes needtr("이동할 수 있습니다.","home base town.");
 		mes "";
-		mes "성장 보상이나 전직 안내가 필요하다면";
-		mes "언제든 ^0055FF낙원단^000000으로 돌아가면 됩니다.";
+		mes needtr("성장 보상이나 전직 안내가 필요하다면","If you need Growth Rewards or job change guidance,");
+		mes needtr("언제든 ^0055FF낙원단^000000으로 돌아가면 됩니다.","you can return to the ^0055FFEden Group^000000 any time.");
 		mes "";
-		mes "<TIPBOX>▶ 처음 시작하기 가이드<INFO>8010</INFO></TIPBOX>";
+		mes needtr("<TIPBOX>▶ 처음 시작하기 가이드<INFO>8010</INFO></TIPBOX>","<TIPBOX>▶ Getting Started Guide<INFO>8010</INFO></TIPBOX>");
 		next;
 
-		.@menu$ = "^00AAFF라자냐로 이동^000000:"
-			+ "낙원단으로 이동:"
-			+ "계속 머문다";
+		.@menu$ = needtr("^00AAFF라자냐로 이동^000000:","^00AAFFGo to Lasagna^000000:")
+			+ needtr("낙원단으로 이동:","Go to the Eden Group:")
+			+ needtr("계속 머문다","Stay here");
 		switch(select(.@menu$)) {
 		case 1:
 			NEED_BEGINNER_LASAGNA = 1;
@@ -1961,46 +2004,46 @@ pvp_n_2-5,102,132,4	script	초보존 안내원#need_beginner	637,{
 		}
 	}
 
-	mes "^00AAFF[초보존 안내원]^000000";
+	mes needtr("^00AAFF[초보존 안내원]^000000","^00AAFF[Newbie Zone Guide]^000000");
 	mes "";
 
 	.@stage = callfunc("F_NEED_GetBeginnerStage");
 	if (.@stage == 1) {
-		mes "현재 목표는 ^FF9900Job Lv.10 달성^000000입니다.";
+		mes needtr("현재 목표는 ^FF9900Job Lv.10 달성^000000입니다.","Your current goal is ^FF9900Job Lv.10^000000.");
 		mes "";
-		mes "이곳에서 사냥하며";
-		mes "Job Lv.10을 달성해보세요.";
-		mes "Job Lv.10이 되면";
-		mes "^0055FF1차 전직^000000을 진행할 수 있습니다.";
+		mes needtr("이곳에서 사냥하며","Hunt here and");
+		mes needtr("Job Lv.10을 달성해보세요.","reach Job Lv.10.");
+		mes needtr("Job Lv.10이 되면","Once you reach Job Lv.10,");
+		mes needtr("^0055FF1차 전직^000000을 진행할 수 있습니다.","you can take your ^0055FF1st Job Change^000000.");
 	}
 	else if (.@stage == 2) {
-		mes "^00AA00Job Lv.10을 달성했습니다!^000000";
+		mes needtr("^00AA00Job Lv.10을 달성했습니다!^000000","^00AA00You have reached Job Lv.10!^000000");
 		mes "";
-		mes "현재 목표는 ^FF99001차 전직^000000입니다.";
-		mes "낙원단의 ^00AAFF전직 도우미^000000를 통해";
-		mes "원하는 직업으로 전직해보세요.";
+		mes needtr("현재 목표는 ^FF99001차 전직^000000입니다.","Your current goal is your ^FF99001st Job Change^000000.");
+		mes needtr("낙원단의 ^00AAFF전직 도우미^000000를 통해","Use the Eden Group ^00AAFFJob Master^000000");
+		mes needtr("원하는 직업으로 전직해보세요.","to change to the job you want.");
 		if (BaseLevel >= 40) {
 			mes "";
-			mes "^FF0000Base Lv.40을 넘었지만^000000";
-			mes "^FF0000아직 전직하지 않았습니다.^000000";
-			mes "^777777먼저 전직을 마친 뒤^000000";
-			mes "^777777라자냐로 이동하는 것을 권장합니다.^000000";
+			mes needtr("^FF0000Base Lv.40을 넘었지만^000000","^FF0000You are past Base Lv.40,^000000");
+			mes needtr("^FF0000아직 전직하지 않았습니다.^000000","^FF0000but you have not changed jobs yet.^000000");
+			mes needtr("^777777먼저 전직을 마친 뒤^000000","^777777Finish your job change first,^000000");
+			mes needtr("^777777라자냐로 이동하는 것을 권장합니다.^000000","^777777then move to Lasagna.^000000");
 		}
 	}
 	else {
-		mes "현재 목표는 ^FF9900Base Lv.40 달성^000000입니다.";
+		mes needtr("현재 목표는 ^FF9900Base Lv.40 달성^000000입니다.","Your current goal is ^FF9900Base Lv.40^000000.");
 		mes "";
-		mes "^00AA001차 전직을 완료했습니다.^000000";
-		mes "이곳에서 Base Lv.40까지 성장해보세요.";
+		mes needtr("^00AA001차 전직을 완료했습니다.^000000","^00AA00You have completed your 1st Job Change.^000000");
+		mes needtr("이곳에서 Base Lv.40까지 성장해보세요.","Grow here up to Base Lv.40.");
 	}
 
 	mes "";
-	mes "전직이 필요하거나";
-	mes "성장지원 내용을 다시 확인하려면";
-	mes "^0055FF낙원단^000000으로 돌아갈 수 있습니다.";
+	mes needtr("전직이 필요하거나","If you need a job change, or want to");
+	mes needtr("성장지원 내용을 다시 확인하려면","check the Growth Support details again,");
+	mes needtr("^0055FF낙원단^000000으로 돌아갈 수 있습니다.","you can return to the ^0055FFEden Group^000000.");
 	next;
 
-	if (select("^00AAFF낙원단으로 이동^000000:계속 사냥한다") == 1) {
+	if (select(needtr("^00AAFF낙원단으로 이동^000000:계속 사냥한다","^00AAFFGo to the Eden Group^000000:Keep hunting")) == 1) {
 		close2;
 		warp "moc_para01",28,30;
 		end;
@@ -2034,7 +2077,7 @@ OnPCLoginEvent:
 
 			callfunc("NeedGrace_GrantPackage", 604800);
 			NEED_BEGINNER_GRACE_FIX = 1;
-			dispbottom "[NEED 성장지원] Lv.100 종합 은총을 7일 기간제로 보정했습니다.";
+			dispbottom needtr("[NEED 성장지원] Lv.100 종합 은총을 7일 기간제로 보정했습니다.","[NEED Growth Support] Your Lv.100 Full Grace has been corrected to a 7-day rental.");
 		}
 		else if (NeedGracePackageUntil > .@now && rentalcountitem(399904) <= 0) {
 			// 기간은 남아 있는데 임대 티켓만 없는 경우 동기화만 복구한다.
@@ -2046,7 +2089,7 @@ OnPCLoginEvent:
 
 	.@result = callfunc("F_NEED_BeginnerSupply", 0);
 	if (.@result)
-		dispbottom "[NEED 성장지원] 오늘의 초보자 소모품이 보충되었습니다.";
+		dispbottom needtr("[NEED 성장지원] 오늘의 초보자 소모품이 보충되었습니다.","[NEED Growth Support] Today's beginner supplies have been topped up.");
 	end;
 
 OnPCBaseLvUpEvent:
@@ -2058,19 +2101,19 @@ OnPCBaseLvUpEvent:
 
 	switch(BaseLevel) {
 	case 40:
-		dispbottom "[NEED 성장지원] 초보존 졸업 레벨에 도달했습니다. 라자냐로 이동해보세요.";
+		dispbottom needtr("[NEED 성장지원] 초보존 졸업 레벨에 도달했습니다. 라자냐로 이동해보세요.","[NEED Growth Support] You have reached the Newbie Zone Graduation level. Go to Lasagna.");
 		break;
 	case 100:
-		dispbottom "[NEED 성장지원] Lv.100 성장 보상을 받을 수 있습니다. 낙원단 성장 지원관을 찾아가세요.";
+		dispbottom needtr("[NEED 성장지원] Lv.100 성장 보상을 받을 수 있습니다. 낙원단 성장 지원관을 찾아가세요.","[NEED Growth Support] Your Lv.100 Growth Reward is ready. Visit the Eden Growth Supporter.");
 		break;
 	case 149:
-		dispbottom "[중요] 카프라 무료 스탯/스킬 초기화는 Base Lv.149까지 이용할 수 있습니다.";
+		dispbottom needtr("[중요] 카프라 무료 스탯/스킬 초기화는 Base Lv.149까지 이용할 수 있습니다.","[Important] The Kafra free Stat/Skill Reset is available only up to Base Lv.149.");
 		break;
 	case 150:
-		dispbottom "[NEED 성장지원] 초심자 무기 +7 제련 이용권을 받을 수 있습니다.";
+		dispbottom needtr("[NEED 성장지원] 초심자 무기 +7 제련 이용권을 받을 수 있습니다.","[NEED Growth Support] Your Beginner's Safe to 7 Weapon Certificate is ready.");
 		break;
 	case 175:
-		dispbottom "[NEED 성장지원] Job Lv.60까지 달성하면 성장지원 졸업 보상을 받을 수 있습니다.";
+		dispbottom needtr("[NEED 성장지원] Job Lv.60까지 달성하면 성장지원 졸업 보상을 받을 수 있습니다.","[NEED Growth Support] Reach Job Lv.60 to claim the Growth Support graduation reward.");
 		break;
 	}
 	end;
@@ -2086,11 +2129,11 @@ OnPCJobLvUpEvent:
 	// 레벨업 이벤트는 수치가 오를 때만 호출되므로 별도 변수가 필요 없다.
 	// 단계 판정은 F_NEED_GetBeginnerStage 로 통일한다. (2 = 1차 전직 진행)
 	if (JobLevel == 10 && callfunc("F_NEED_GetBeginnerStage") == 2) {
-		dispbottom "[NEED 성장지원] Job Lv.10을 달성했습니다! 낙원단 전직 도우미를 통해 1차 전직을 진행해보세요.";
+		dispbottom needtr("[NEED 성장지원] Job Lv.10을 달성했습니다! 낙원단 전직 도우미를 통해 1차 전직을 진행해보세요.","[NEED Growth Support] You have reached Job Lv.10! Use the Eden Group Job Master to take your 1st Job Change.");
 		end;
 	}
 
 	if (BaseLevel >= 175 && JobLevel >= 60)
-		dispbottom "[NEED 성장지원] 졸업 조건을 달성했습니다. 낙원단 성장 지원관을 찾아가세요.";
+		dispbottom needtr("[NEED 성장지원] 졸업 조건을 달성했습니다. 낙원단 성장 지원관을 찾아가세요.","[NEED Growth Support] You have met the graduation requirements. Visit the Eden Growth Supporter.");
 	end;
 }

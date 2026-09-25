@@ -23,36 +23,36 @@ OnInit:
 	end;
 
 OnSupplySetting:
-	mes "[자동 보충 세팅]";
-	mes "설정할 프리셋을 선택하세요.";
+	mes needtr("[자동 보충 세팅]","[Auto Supply Setup]");
+	mes needtr("설정할 프리셋을 선택하세요.","Choose a preset to set up.");
 	next;
 
 	.@name1$ = Supply_Name_1$;
 	if (.@name1$ == "")
-		.@name1$ = "프리셋 1";
-	.@menu1$ = .@name1$ + " [무료]";
+		.@name1$ = needtr("프리셋 1", "Preset 1");
+	.@menu1$ = .@name1$ + needtr(" [무료]", " [Free]");
 
 	.@name2$ = Supply_Name_2$;
 	if (.@name2$ == "")
-		.@name2$ = "프리셋 2";
+		.@name2$ = needtr("프리셋 2", "Preset 2");
 	if (Supply_Unlocked_2)
 		.@menu2$ = .@name2$;
 	else
-		.@menu2$ = .@name2$ + " [캐시 해금]";
+		.@menu2$ = .@name2$ + needtr(" [캐시 해금]", " [Unlock with Cash]");
 
 	.@name3$ = Supply_Name_3$;
 	if (.@name3$ == "")
-		.@name3$ = "프리셋 3";
+		.@name3$ = needtr("프리셋 3", "Preset 3");
 	if (Supply_Unlocked_3)
 		.@menu3$ = .@name3$;
 	else
-		.@menu3$ = .@name3$ + " [아이템 해금]";
+		.@menu3$ = .@name3$ + needtr(" [아이템 해금]", " [Unlock with an item]");
 
 	.@sel = select(
 		.@menu1$,
 		.@menu2$,
 		.@menu3$,
-		"자동 보충 도움말"
+		needtr("자동 보충 도움말","Auto Supply help")
 	);
 
 	if (.@sel == 4) {
@@ -72,8 +72,8 @@ OnSupplyRecent:
 	.@preset = Supply_LastPreset;
 
 	if (.@preset < 1 || .@preset > .MaxPreset) {
-		dispbottom "[자동 보충] 최근 사용한 프리셋이 없습니다.";
-		dispbottom "[자동 보충] 먼저 @보충1, @보충2, @보충3 중 하나를 사용해주세요.";
+		dispbottom needtr("[자동 보충] 최근 사용한 프리셋이 없습니다.","[Auto Supply] You have not used a preset yet.");
+		dispbottom needtr("[자동 보충] 먼저 @보충1, @보충2, @보충3 중 하나를 사용해주세요.","[Auto Supply] Use @보충1, @보충2 or @보충3 first.");
 		end;
 	}
 
@@ -105,37 +105,37 @@ OnSupply3:
 // 도움말
 // =========================
 S_Help:
-	mes "[자동 보충 도움말]";
-	mes "자동 보충은 설정한 목표 수량만큼";
-	mes "부족한 아이템을 창고에서 자동으로 꺼내주는 편의 기능입니다.";
+	mes needtr("[자동 보충 도움말]","[Auto Supply Help]");
+	mes needtr("자동 보충은 설정한 목표 수량만큼","Auto Supply tops your inventory up to the target");
+	mes needtr("부족한 아이템을 창고에서 자동으로 꺼내주는 편의 기능입니다.","quantity you set, pulling what is missing from Storage.");
 	next;
 
-	mes "[사용 방법]";
-	mes "1. @자동보충 입력";
-	mes "2. 프리셋 선택";
-	mes "3. 아이템 등록 및 목표 수량 설정";
-	mes "4. @보충1, @보충2, @보충3 사용";
-	mes "5. 이후 @보충으로 최근 프리셋 재사용";
+	mes needtr("[사용 방법]","[How to use]");
+	mes needtr("1. @자동보충 입력","1. Enter @자동보충");
+	mes needtr("2. 프리셋 선택","2. Choose a preset");
+	mes needtr("3. 아이템 등록 및 목표 수량 설정","3. Register items and set target quantities");
+	mes needtr("4. @보충1, @보충2, @보충3 사용","4. Use @보충1, @보충2 or @보충3");
+	mes needtr("5. 이후 @보충으로 최근 프리셋 재사용","5. Later, @보충 reuses your most recent preset");
 	next;
 
-	mes "[예시]";
-	mes "파리의 날개 목표 수량 100개";
-	mes "현재 인벤토리 35개 보유";
-	mes "@보충1 입력 시 창고에서 65개를 자동 보충합니다.";
+	mes needtr("[예시]","[Example]");
+	mes needtr("파리의 날개 목표 수량 100개","Fly Wing target quantity 100");
+	mes needtr("현재 인벤토리 35개 보유","Currently 35 in your inventory");
+	mes needtr("@보충1 입력 시 창고에서 65개를 자동 보충합니다.","@보충1 auto-supplies 65 from Storage.");
 	next;
 
-	mes "[프리셋 안내]";
-	mes "@보충1 : 기본 무료 프리셋";
-	mes "@보충2 : 캐시로 해금";
-	mes "@보충3 : 지정 아이템으로 해금";
-	mes "@보충 : 최근 사용 프리셋 실행";
+	mes needtr("[프리셋 안내]","[Presets]");
+	mes needtr("@보충1 : 기본 무료 프리셋","@보충1 : the free default preset");
+	mes needtr("@보충2 : 캐시로 해금","@보충2 : unlocked with Cash");
+	mes needtr("@보충3 : 지정 아이템으로 해금","@보충3 : unlocked with a specific item");
+	mes needtr("@보충 : 최근 사용 프리셋 실행","@보충 : run your most recent preset");
 	next;
 
-	mes "[주의 사항]";
-	mes "자동 보충은 마을에서만 사용할 수 있습니다.";
-	mes "창고 수량, 무게 또는 인벤토리 공간이 부족하면";
-	mes "일부 아이템 보충에 실패할 수 있습니다.";
-	mes "실패한 아이템은 채팅창에 안내됩니다.";
+	mes needtr("[주의 사항]","[Notes]");
+	mes needtr("자동 보충은 마을에서만 사용할 수 있습니다.","Auto Supply only works in a town.");
+	mes needtr("창고 수량, 무게 또는 인벤토리 공간이 부족하면","If Storage stock, weight or inventory space runs short,");
+	mes needtr("일부 아이템 보충에 실패할 수 있습니다.","some items may fail to be supplied.");
+	mes needtr("실패한 아이템은 채팅창에 안내됩니다.","Failed items are listed in your chat window.");
 	return;
 
 // =========================
@@ -148,20 +148,20 @@ S_EditPreset:
 		.@name$ = getd("Supply_Name_" + .@preset + "$");
 
 		if (.@name$ == "")
-			.@name$ = "프리셋 " + .@preset;
+			.@name$ = needtr("프리셋 ", "Preset ") + .@preset;
 
-		mes "[자동 보충 세팅]";
-		mes "현재 프리셋 : ^0000FF" + .@name$ + "^000000";
+		mes needtr("[자동 보충 세팅]","[Auto Supply Setup]");
+		mes needtr("현재 프리셋 : ^0000FF","Current preset : ^0000FF") + .@name$ + "^000000";
 		next;
 
 		.@sel = select(
-			"프리셋 이름 수정",
-			"아이템 등록",
-			"등록 목록 보기",
-			"목표 수량 변경 / 삭제",
-			"다른 프리셋에서 복사",
-			"프리셋 초기화",
-			"종료"
+			needtr("프리셋 이름 수정","Rename preset"),
+			needtr("아이템 등록","Register items"),
+			needtr("등록 목록 보기","View registered items"),
+			needtr("목표 수량 변경 / 삭제","Change or delete a target quantity"),
+			needtr("다른 프리셋에서 복사","Copy from another preset"),
+			needtr("프리셋 초기화","Reset preset"),
+			needtr("종료","Exit")
 		);
 
 		switch (.@sel) {
@@ -201,39 +201,39 @@ S_EditPreset:
 S_ChangeName:
 	.@preset = getarg(0);
 
-	mes "[프리셋 이름 수정]";
-	mes "새 이름을 입력하세요.";
-	mes "예: 사냥 세팅, 전장 세팅, MVP 세팅";
-	mes "':' 및 '^' 문자는 사용할 수 없습니다.";
+	mes needtr("[프리셋 이름 수정]","[Rename Preset]");
+	mes needtr("새 이름을 입력하세요.","Enter a new name.");
+	mes needtr("예: 사냥 세팅, 전장 세팅, MVP 세팅","Example: Hunting, Battleground, MVP");
+	mes needtr("':' 및 '^' 문자는 사용할 수 없습니다.","The ':' and '^' characters cannot be used.");
 	next;
 
 	.@input_ret = input(.@name$, 1, 12);
 
 	if (.@input_ret != 0) {
-		mes "[프리셋 이름 수정]";
-		mes "프리셋 이름은 1~12자로 입력해주세요.";
+		mes needtr("[프리셋 이름 수정]","[Rename Preset]");
+		mes needtr("프리셋 이름은 1~12자로 입력해주세요.","A preset name must be 1 to 12 characters.");
 		next;
 		return;
 	}
 
 	if (.@name$ == "") {
-		mes "이름을 입력하지 않았습니다.";
+		mes needtr("이름을 입력하지 않았습니다.","You did not enter a name.");
 		next;
 		return;
 	}
 
 	if (strpos(.@name$, ":") != -1 || strpos(.@name$, "^") != -1) {
-		mes "[프리셋 이름 수정]";
-		mes "사용할 수 없는 문자가 포함되어 있습니다.";
-		mes "':' 및 '^' 문자를 제외하고 입력해주세요.";
+		mes needtr("[프리셋 이름 수정]","[Rename Preset]");
+		mes needtr("사용할 수 없는 문자가 포함되어 있습니다.","That name contains a character you cannot use.");
+		mes needtr("':' 및 '^' 문자를 제외하고 입력해주세요.","Enter it without the ':' and '^' characters.");
 		next;
 		return;
 	}
 
 	setd "Supply_Name_" + .@preset + "$", .@name$;
 
-	mes "프리셋 이름이 변경되었습니다.";
-	mes "새 이름 : ^0000FF" + .@name$ + "^000000";
+	mes needtr("프리셋 이름이 변경되었습니다.","The preset has been renamed.");
+	mes needtr("새 이름 : ^0000FF","New name : ^0000FF") + .@name$ + "^000000";
 	next;
 	return;
 
@@ -252,8 +252,8 @@ S_RegisterItem:
 	}
 
 	if (.@free_slot < 0) {
-		mes "[아이템 등록]";
-		mes "이 프리셋은 최대 " + .MaxSlot + "종까지 등록할 수 있습니다.";
+		mes needtr("[아이템 등록]","[Register Items]");
+		mes needtr("이 프리셋은 최대 ","This preset holds up to ") + .MaxSlot + needtr("종까지 등록할 수 있습니다."," item types.");
 		next;
 		return;
 	}
@@ -308,8 +308,8 @@ S_RegisterItem:
 	}
 
 	if (.@count == 0) {
-		mes "[아이템 등록]";
-		mes "등록 가능한 아이템이 없습니다.";
+		mes needtr("[아이템 등록]","[Register Items]");
+		mes needtr("등록 가능한 아이템이 없습니다.","There is no item you can register.");
 		next;
 		return;
 	}
@@ -330,7 +330,7 @@ S_RegisterItem_Page:
 
 	// 현재 페이지의 아이템만 select() 메뉴에 구성
 	for (.@i = .@start; .@i < .@end; .@i++) {
-		.@menu$ += getitemname(.@item[.@i]) + " [" + countitem(.@item[.@i]) + "개 보유]:";
+		.@menu$ += getitemname(.@item[.@i]) + " [" + countitem(.@item[.@i]) + needtr("개 보유]:", " held]:");
 
 		// action 0 = 아이템 선택
 		.@menu_action[.@menu_count] = 0;
@@ -339,27 +339,27 @@ S_RegisterItem_Page:
 	}
 
 	if (.@page > 0) {
-		.@menu$ += "<< 이전 페이지:";
+		.@menu$ += needtr("<< 이전 페이지:", "<< Prev Page:");
 		.@menu_action[.@menu_count] = 1;
 		.@menu_value[.@menu_count] = 0;
 		.@menu_count++;
 	}
 
 	if (.@page < .@max_page) {
-		.@menu$ += "다음 페이지 >>:";
+		.@menu$ += needtr("다음 페이지 >>:", "Next Page >>:");
 		.@menu_action[.@menu_count] = 2;
 		.@menu_value[.@menu_count] = 0;
 		.@menu_count++;
 	}
 
-	.@menu$ += "취소:";
+	.@menu$ += needtr("취소:", "Cancel:");
 	.@menu_action[.@menu_count] = 3;
 	.@menu_value[.@menu_count] = 0;
 	.@menu_count++;
 
-	mes "[아이템 등록]";
-	mes "등록할 아이템을 선택하세요.";
-	mes "페이지 : ^0000FF" + (.@page + 1) + " / " + (.@max_page + 1) + "^000000";
+	mes needtr("[아이템 등록]","[Register Items]");
+	mes needtr("등록할 아이템을 선택하세요.","Choose an item to register.");
+	mes needtr("페이지 : ^0000FF","Page : ^0000FF") + (.@page + 1) + " / " + (.@max_page + 1) + "^000000";
 	next;
 
 	.@sel = select(.@menu$) - 1;
@@ -382,13 +382,13 @@ S_RegisterItem_Page:
 	.@item_id = .@item[.@idx];
 
 	mes "[" + getitemname(.@item_id) + "]";
-	mes "몇 개까지 자동 보충할까요?";
+	mes needtr("몇 개까지 자동 보충할까요?","How many should Auto Supply keep?");
 	next;
 
 	input .@amount, 1, 30000;
 
 	if (.@amount <= 0) {
-		mes "잘못된 수량입니다.";
+		mes needtr("잘못된 수량입니다.","That quantity is not valid.");
 		next;
 		return;
 	}
@@ -396,8 +396,8 @@ S_RegisterItem_Page:
 	setd "Supply_Item_" + .@preset + "_" + .@free_slot, .@item_id;
 	setd "Supply_Amount_" + .@preset + "_" + .@free_slot, .@amount;
 
-	mes "등록 완료!";
-	mes getitemname(.@item_id) + " : " + .@amount + "개";
+	mes needtr("등록 완료!","Registered!");
+	mes getitemname(.@item_id) + " : " + .@amount + needtr("개",".");
 	next;
 	return;
 
@@ -409,9 +409,9 @@ S_ShowPreset:
 	.@name$ = getd("Supply_Name_" + .@preset + "$");
 
 	if (.@name$ == "")
-		.@name$ = "프리셋 " + .@preset;
+		.@name$ = needtr("프리셋 ", "Preset ") + .@preset;
 
-	mes "[등록 목록]";
+	mes needtr("[등록 목록]","[Registered Items]");
 	mes "^0000FF" + .@name$ + "^000000";
 
 	.@has = 0;
@@ -423,12 +423,12 @@ S_ShowPreset:
 		if (.@item_id <= 0)
 			continue;
 
-		mes "- " + getitemname(.@item_id) + " : " + .@amount + "개";
+		mes "- " + getitemname(.@item_id) + " : " + .@amount + needtr("개",".");
 		.@has = 1;
 	}
 
 	if (!.@has)
-		mes "등록된 아이템이 없습니다.";
+		mes needtr("등록된 아이템이 없습니다.","No items are registered.");
 
 	next;
 	return;
@@ -449,20 +449,20 @@ S_EditAmount:
 		if (.@item_id <= 0)
 			continue;
 
-		.@menu$ += getitemname(.@item_id) + " [" + .@amount + "개]:";
+		.@menu$ += getitemname(.@item_id) + " [" + .@amount + needtr("개]:", "]:");
 		.@slot[.@count] = .@i;
 		.@count++;
 	}
 
 	if (.@count == 0) {
-		mes "[목표 수량 변경]";
-		mes "변경할 아이템이 없습니다.";
+		mes needtr("[목표 수량 변경]","[Change Target Quantity]");
+		mes needtr("변경할 아이템이 없습니다.","There is no item to change.");
 		next;
 		return;
 	}
 
-	mes "[목표 수량 변경]";
-	mes "변경할 아이템을 선택하세요.";
+	mes needtr("[목표 수량 변경]","[Change Target Quantity]");
+	mes needtr("변경할 아이템을 선택하세요.","Choose an item to change.");
 	next;
 
 	.@sel = select(.@menu$);
@@ -471,9 +471,9 @@ S_EditAmount:
 	.@old_amount = getd("Supply_Amount_" + .@preset + "_" + .@idx);
 
 	mes "[" + getitemname(.@item_id) + "]";
-	mes "현재 목표 수량 : " + .@old_amount + "개";
-	mes "새 목표 수량을 입력하세요.";
-	mes "0을 입력하면 등록 목록에서 삭제됩니다.";
+	mes needtr("현재 목표 수량 : ","Current target quantity : ") + .@old_amount + needtr("개",".");
+	mes needtr("새 목표 수량을 입력하세요.","Enter the new target quantity.");
+	mes needtr("0을 입력하면 등록 목록에서 삭제됩니다.","Enter 0 to remove it from the list.");
 	next;
 
 	input .@amount, 0, 30000;
@@ -482,17 +482,17 @@ S_EditAmount:
 		setd "Supply_Item_" + .@preset + "_" + .@idx, 0;
 		setd "Supply_Amount_" + .@preset + "_" + .@idx, 0;
 
-		mes "[목표 수량 변경]";
-		mes getitemname(.@item_id) + " 아이템이 삭제되었습니다.";
+		mes needtr("[목표 수량 변경]","[Change Target Quantity]");
+		mes getitemname(.@item_id) + needtr(" 아이템이 삭제되었습니다."," has been removed.");
 		next;
 		return;
 	}
 
 	setd "Supply_Amount_" + .@preset + "_" + .@idx, .@amount;
 
-	mes "[목표 수량 변경]";
-	mes getitemname(.@item_id) + "의 목표 수량이 변경되었습니다.";
-	mes .@old_amount + "개 → " + .@amount + "개";
+	mes needtr("[목표 수량 변경]","[Change Target Quantity]");
+	mes getitemname(.@item_id) + needtr("의 목표 수량이 변경되었습니다."," has a new target quantity.");
+	mes .@old_amount + needtr("개 → "," → ") + .@amount + needtr("개",".");
 	next;
 	return;
 
@@ -503,13 +503,13 @@ S_EditAmount:
 S_CopyPreset:
 	.@target = getarg(0);
 
-	mes "[프리셋 복사]";
-	mes "복사할 원본 프리셋을 선택하세요.";
-	mes "현재 프리셋의 이름은 유지되며,";
-	mes "등록 아이템과 목표 수량만 덮어씁니다.";
+	mes needtr("[프리셋 복사]","[Copy Preset]");
+	mes needtr("복사할 원본 프리셋을 선택하세요.","Choose the preset to copy from.");
+	mes needtr("현재 프리셋의 이름은 유지되며,","The current preset keeps its name;");
+	mes needtr("등록 아이템과 목표 수량만 덮어씁니다.","only its items and target quantities are overwritten.");
 	next;
 
-	.@sel = select("프리셋 1", "프리셋 2", "프리셋 3", "취소");
+	.@sel = select(needtr("프리셋 1","Preset 1"), needtr("프리셋 2","Preset 2"), needtr("프리셋 3","Preset 3"), needtr("취소","Cancel"));
 
 	if (.@sel == 4)
 		return;
@@ -517,25 +517,25 @@ S_CopyPreset:
 	.@source = .@sel;
 
 	if (.@source == .@target) {
-		mes "[프리셋 복사]";
-		mes "현재 프리셋과 같은 프리셋은 선택할 수 없습니다.";
+		mes needtr("[프리셋 복사]","[Copy Preset]");
+		mes needtr("현재 프리셋과 같은 프리셋은 선택할 수 없습니다.","You cannot copy a preset onto itself.");
 		next;
 		return;
 	}
 
 	if (!callsub(S_CheckPresetAccess, .@source, 0)) {
-		mes "[프리셋 복사]";
-		mes "해금되지 않은 프리셋은 복사할 수 없습니다.";
+		mes needtr("[프리셋 복사]","[Copy Preset]");
+		mes needtr("해금되지 않은 프리셋은 복사할 수 없습니다.","A preset you have not unlocked cannot be copied.");
 		next;
 		return;
 	}
 
-	mes "[프리셋 복사]";
-	mes "현재 프리셋의 등록 내용이 모두 교체됩니다.";
-	mes "계속하시겠습니까?";
+	mes needtr("[프리셋 복사]","[Copy Preset]");
+	mes needtr("현재 프리셋의 등록 내용이 모두 교체됩니다.","Everything registered in the current preset will be replaced.");
+	mes needtr("계속하시겠습니까?","Continue?");
 	next;
 
-	if (select("취소", "복사하기") == 1)
+	if (select(needtr("취소","Cancel"), needtr("복사하기","Copy")) == 1)
 		return;
 
 	for (.@i = 0; .@i < .MaxSlot; .@i++) {
@@ -546,8 +546,8 @@ S_CopyPreset:
 		setd "Supply_Amount_" + .@target + "_" + .@i, .@amount;
 	}
 
-	mes "[프리셋 복사]";
-	mes "프리셋 " + .@source + "의 등록 내용을 복사했습니다.";
+	mes needtr("[프리셋 복사]","[Copy Preset]");
+	mes needtr("프리셋 ","Copied everything from preset ") + .@source + needtr("의 등록 내용을 복사했습니다.",".");
 	next;
 	return;
 
@@ -557,11 +557,11 @@ S_CopyPreset:
 S_ClearPreset:
 	.@preset = getarg(0);
 
-	mes "[프리셋 초기화]";
-	mes "정말 초기화하시겠습니까?";
+	mes needtr("[프리셋 초기화]","[Reset Preset]");
+	mes needtr("정말 초기화하시겠습니까?","Really reset it?");
 	next;
 
-	if (select("취소", "초기화") == 1)
+	if (select(needtr("취소","Cancel"), needtr("초기화","Reset")) == 1)
 		return;
 
 	for (.@i = 0; .@i < .MaxSlot; .@i++) {
@@ -574,7 +574,7 @@ S_ClearPreset:
 	if (Supply_LastPreset == .@preset)
 		Supply_LastPreset = 0;
 
-	mes "초기화되었습니다.";
+	mes needtr("초기화되었습니다.","The preset has been reset.");
 	next;
 	return;
 
@@ -595,26 +595,26 @@ S_CheckPresetAccess:
 		return 1;
 
 	if (!.@setting) {
-		dispbottom "[자동 보충] 프리셋 " + .@preset + "은 아직 해금되지 않았습니다.";
-		dispbottom "[자동 보충] @자동보충에서 먼저 해금해주세요.";
+		dispbottom needtr("[자동 보충] 프리셋 ","[Auto Supply] Preset ") + .@preset + needtr("은 아직 해금되지 않았습니다."," is not unlocked yet.");
+		dispbottom needtr("[자동 보충] @자동보충에서 먼저 해금해주세요.","[Auto Supply] Unlock it in @자동보충 first.");
 		return 0;
 	}
 
 	// 프리셋 2: 캐시 해금
 	if (.@preset == 2) {
-		mes "[프리셋 해금]";
-		mes "프리셋 2는 캐시 해금이 필요합니다.";
-		mes "해금 비용 : ^FF0000" + .UnlockCash2 + " 캐시^000000";
+		mes needtr("[프리셋 해금]","[Unlock Preset]");
+		mes needtr("프리셋 2는 캐시 해금이 필요합니다.","Preset 2 is unlocked with Cash.");
+		mes needtr("해금 비용 : ^FF0000","Unlock cost : ^FF0000") + .UnlockCash2 + needtr(" 캐시^000000"," Cash^000000");
 		next;
 
-		if (select("취소", "해금하기") == 1)
+		if (select(needtr("취소","Cancel"), needtr("해금하기","Unlock")) == 1)
 			return 0;
 
 		if (#CASHPOINTS < .UnlockCash2) {
-			mes "[프리셋 해금]";
-			mes "캐시가 부족합니다.";
-			mes "필요 캐시 : " + .UnlockCash2;
-			mes "보유 캐시 : " + #CASHPOINTS;
+			mes needtr("[프리셋 해금]","[Unlock Preset]");
+			mes needtr("캐시가 부족합니다.","You do not have enough Cash.");
+			mes needtr("필요 캐시 : ","Cash required : ") + .UnlockCash2;
+			mes needtr("보유 캐시 : ","Your Cash : ") + #CASHPOINTS;
 			next;
 			return 0;
 		}
@@ -622,8 +622,8 @@ S_CheckPresetAccess:
 		#CASHPOINTS -= .UnlockCash2;
 		Supply_Unlocked_2 = 1;
 
-		mes "[프리셋 해금]";
-		mes "프리셋 2가 해금되었습니다.";
+		mes needtr("[프리셋 해금]","[Unlock Preset]");
+		mes needtr("프리셋 2가 해금되었습니다.","Preset 2 is now unlocked.");
 		next;
 		return 1;
 	}
@@ -631,9 +631,9 @@ S_CheckPresetAccess:
 	// 프리셋 3: 특정 아이템 해금
 	if (.@preset == 3) {
 		if (.UnlockItem3 <= 0 || .UnlockItem3Amount <= 0) {
-			mes "[프리셋 해금]";
-			mes "프리셋 3 해금 아이템이 설정되지 않았습니다.";
-			mes "관리자에게 문의해주세요.";
+			mes needtr("[프리셋 해금]","[Unlock Preset]");
+			mes needtr("프리셋 3 해금 아이템이 설정되지 않았습니다.","No unlock item is configured for preset 3.");
+			mes needtr("관리자에게 문의해주세요.","Please contact an administrator.");
 			next;
 			return 0;
 		}
@@ -641,23 +641,23 @@ S_CheckPresetAccess:
 		.@item_name$ = getitemname(.UnlockItem3);
 		.@owned = countitem(.UnlockItem3);
 
-		mes "[프리셋 해금]";
-		mes "프리셋 3는 지정 아이템 해금이 필요합니다.";
-		mes "필요 아이템 : ^0000FF" + .@item_name$ + "^000000";
-		mes "필요 수량 : ^FF0000" + .UnlockItem3Amount + "개^000000";
-		mes "보유 수량 : " + .@owned + "개";
-		mes "^FF0000해당 아이템은 전장에서 전장포인트로 구매하실 수 있습니다.^000000";
+		mes needtr("[프리셋 해금]","[Unlock Preset]");
+		mes needtr("프리셋 3는 지정 아이템 해금이 필요합니다.","Preset 3 is unlocked with a specific item.");
+		mes needtr("필요 아이템 : ^0000FF","Required item : ^0000FF") + .@item_name$ + "^000000";
+		mes needtr("필요 수량 : ^FF0000","Required : ^FF0000") + .UnlockItem3Amount + needtr("개^000000","^000000");
+		mes needtr("보유 수량 : ","In your inventory : ") + .@owned + needtr("개",".");
+		mes needtr("^FF0000해당 아이템은 전장에서 전장포인트로 구매하실 수 있습니다.^000000","^FF0000You can buy that item with Battleground Points in the Battleground.^000000");
 		next;
 
-		if (select("취소", "아이템 사용") == 1)
+		if (select(needtr("취소","Cancel"), needtr("아이템 사용","Use the item")) == 1)
 			return 0;
 
 		// 확인창 이후 수량을 다시 검사하여 중복 처리나 수량 변동을 방지
 		if (countitem(.UnlockItem3) < .UnlockItem3Amount) {
-			mes "[프리셋 해금]";
-			mes "해금 아이템이 부족합니다.";
-			mes "필요 아이템 : " + .@item_name$ + " " + .UnlockItem3Amount + "개";
-			mes "보유 수량 : " + countitem(.UnlockItem3) + "개";
+			mes needtr("[프리셋 해금]","[Unlock Preset]");
+			mes needtr("해금 아이템이 부족합니다.","You do not have enough of the unlock item.");
+			mes needtr("필요 아이템 : ","Required item : ") + .@item_name$ + " " + .UnlockItem3Amount + needtr("개",".");
+			mes needtr("보유 수량 : ","In your inventory : ") + countitem(.UnlockItem3) + needtr("개",".");
 			next;
 			return 0;
 		}
@@ -665,9 +665,9 @@ S_CheckPresetAccess:
 		delitem .UnlockItem3, .UnlockItem3Amount;
 		Supply_Unlocked_3 = 1;
 
-		mes "[프리셋 해금]";
-		mes "프리셋 3가 해금되었습니다.";
-		mes .@item_name$ + " " + .UnlockItem3Amount + "개를 사용했습니다.";
+		mes needtr("[프리셋 해금]","[Unlock Preset]");
+		mes needtr("프리셋 3가 해금되었습니다.","Preset 3 is now unlocked.");
+		mes .@item_name$ + " " + .UnlockItem3Amount + needtr("개를 사용했습니다."," used.");
 		next;
 		return 1;
 	}
@@ -684,7 +684,7 @@ S_Supply:
 	.@map$ = strcharinfo(3);
 
 	if (!getmapflag(.@map$, mf_town) && .@map$ != "bat_room" && .@map$ != "turbo_room") {
-		dispbottom "[자동 보충] 자동 보충은 마을 또는 전장 대기실에서만 사용할 수 있습니다.";
+		dispbottom needtr("[자동 보충] 자동 보충은 마을 또는 전장 대기실에서만 사용할 수 있습니다.","[Auto Supply] Auto Supply only works in a town or a Battleground waiting room.");
 		end;
 	}
 
@@ -699,10 +699,10 @@ S_Supply:
 
 	.@name$ = getd("Supply_Name_" + .@preset + "$");
 	if (.@name$ == "")
-		.@name$ = "프리셋 " + .@preset;
+		.@name$ = needtr("프리셋 ", "Preset ") + .@preset;
 
 	if (!.@has_item) {
-		dispbottom "[자동 보충] " + .@name$ + "에 등록된 아이템이 없습니다.";
+		dispbottom needtr("[자동 보충] ","[Auto Supply] ") + .@name$ + needtr("에 등록된 아이템이 없습니다."," has no registered items.");
 		end;
 	}
 
@@ -710,7 +710,7 @@ S_Supply:
 	.@now_tick = gettimetick(2);
 	if (Supply_LastUseTick > 0 && .@now_tick < Supply_LastUseTick + .Cooldown) {
 		.@remain = (Supply_LastUseTick + .Cooldown) - .@now_tick;
-		dispbottom "[자동 보충] " + .@remain + "초 후 다시 사용할 수 있습니다.";
+		dispbottom needtr("[자동 보충] ","[Auto Supply] You can use it again in ") + .@remain + needtr("초 후 다시 사용할 수 있습니다."," seconds.");
 		end;
 	}
 	Supply_LastUseTick = .@now_tick;
@@ -719,7 +719,7 @@ S_Supply:
 	.@fail = 0;
 	.@skip = 0;
 
-	dispbottom "[자동 보충] " + .@name$ + " 보충을 시작합니다.";
+	dispbottom needtr("[자동 보충] ","[Auto Supply] ") + .@name$ + needtr(" 보충을 시작합니다."," is now being supplied.");
 
 	for (.@i = 0; .@i < .MaxSlot; .@i++) {
 		.@item_id = getd("Supply_Item_" + .@preset + "_" + .@i);
@@ -740,27 +740,27 @@ S_Supply:
 		.@ret = storagegetitem(.@item_id, .@need);
 
 		if (.@ret == 1) {
-			dispbottom "[보충 완료] " + getitemname(.@item_id) + " " + .@need + "개";
+			dispbottom needtr("[보충 완료] ","[Supply Complete] ") + getitemname(.@item_id) + " " + .@need + needtr("개",".");
 			.@success++;
 		}
 		else if (.@ret == -1) {
-			dispbottom "[자동 보충] 현재 창고에서 아이템을 꺼낼 수 없는 상태입니다.";
-			dispbottom "[자동 보충] 잠시 후 다시 시도해주세요.";
+			dispbottom needtr("[자동 보충] 현재 창고에서 아이템을 꺼낼 수 없는 상태입니다.","[Auto Supply] Storage cannot be accessed right now.");
+			dispbottom needtr("[자동 보충] 잠시 후 다시 시도해주세요.","[Auto Supply] Please try again shortly.");
 			end;
 		}
 		else if (.@ret == -2) {
-			dispbottom "[자동 보충] 창고 창을 닫은 뒤 다시 사용해주세요.";
+			dispbottom needtr("[자동 보충] 창고 창을 닫은 뒤 다시 사용해주세요.","[Auto Supply] Close the Storage window and try again.");
 			end;
 		}
 		else {
-			dispbottom "[보충 실패] " + getitemname(.@item_id) + " " + .@need + "개";
-			dispbottom "[보충 실패] 창고 수량, 무게 또는 인벤토리 공간을 확인해주세요.";
+			dispbottom needtr("[보충 실패] ","[Supply Failed] ") + getitemname(.@item_id) + " " + .@need + needtr("개",".");
+			dispbottom needtr("[보충 실패] 창고 수량, 무게 또는 인벤토리 공간을 확인해주세요.","[Supply Failed] Check Storage stock, your weight and your inventory space.");
 			.@fail++;
 		}
 	}
 
 	Supply_LastPreset = .@preset;
 
-	dispbottom "[자동 보충] 완료: " + .@success + "종 / 실패: " + .@fail + "종 / 이미 충분: " + .@skip + "종";
+	dispbottom needtr("[자동 보충] 완료: ","[Auto Supply] Supplied: ") + .@success + needtr("종 / 실패: "," / Failed: ") + .@fail + needtr("종 / 이미 충분: "," / Already enough: ") + .@skip + needtr("종",".");
 	end;
 }
