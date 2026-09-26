@@ -24,12 +24,6 @@ KR_TABLES = ['conf/msg_conf/map_msg.conf', 'conf/msg_conf/import/map_msg_eng_con
 EN_TABLE = 'conf/msg_conf/map_msg_need_en.conf'
 WIKI_MSG_IDS = [1541, 1542, 1543, 1544, 1545, 1598, 1604, 1605, 1606, 1607, 1608, 1609, 1610, 1611]
 
-# Wiki label vs yml Name differences that are known and waiting for an operator decision.
-LABEL_EXCEPTIONS = {
-    # yml keeps the "(slot)" suffix that tells it apart from Time_boots; the article uses the
-    # same label for both groups. Not in the approved W4-B list - see the W4-B report.
-    'Time_boots_': ('시간의 부츠 시리즈(슬롯)', '시간의 부츠 시리즈'),
-}
 
 def read_bytes(path):
     with open(path, 'rb') as f:
@@ -114,18 +108,20 @@ class ItemGroupNamesMatchWikiLabels(unittest.TestCase):
     def test_labels(self):
         groups = parse_groups(read_bytes(YML).decode('cp949'))
         labels = collections.defaultdict(set)
+        unlabelled = []
         for path in glob.glob(os.path.join(NEEDWIKI, 'articles', '*.json')):
-            for gid, label in re.findall(r'\[ITEMGROUP:([^|\]]+)\|([^\]]*)\]', read_text(path, 'utf-8-sig')):
-                labels[gid].add(label)
-        self.assertEqual(len(labels), 21)
+            text = read_text(path, 'utf-8-sig')
+            for gid, label in re.findall(r'\[ITEMGROUP:([^|\]]+)\|([^\]]*)\]', text):
+                labels[gid].add(label.strip())
+            unlabelled += re.findall(r'\[ITEMGROUP:([^|\]]+)\]', text)
+        self.assertEqual(unlabelled, [])
+        self.assertEqual(sorted(labels), sorted(groups))          # every group is used, no unknown group
         for gid, used in labels.items():
             with self.subTest(group=gid):
-                self.assertIn(gid, groups)
-                name = groups[gid]['Name']
-                if gid in LABEL_EXCEPTIONS:
-                    self.assertEqual((name, sorted(used)), (LABEL_EXCEPTIONS[gid][0], [LABEL_EXCEPTIONS[gid][1]]))
-                else:
-                    self.assertEqual(sorted(used), [name])
+                # one label per group (a group used in several articles reads the same everywhere) == yml Name
+                self.assertEqual(sorted(used), [groups[gid]['Name']])
+        names = [g['Name'] for g in groups.values()]
+        self.assertEqual(len(names), len(set(names)), 'two groups share a display name')   # e.g. Time_boots vs Time_boots_
 
 
 class WikiMessages(unittest.TestCase):
