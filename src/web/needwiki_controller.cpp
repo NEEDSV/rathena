@@ -8,7 +8,9 @@
 #include <cstring>
 #include <cctype>
 #include <chrono>
+#include <cinttypes>
 #include <ctime>
+#include <filesystem>
 #include <fstream>
 #include <iomanip>
 #include <mutex>
@@ -32,8 +34,10 @@
 #endif
 
 #include <common/cbasetypes.hpp>
+#include <common/core.hpp>
 #include <common/needwiki_crypto.hpp>
 #include <common/needwiki_diagnostics.hpp>
+#include <common/needwiki_item_group.hpp>
 #include <common/showmsg.hpp>
 #include <common/socket.hpp>
 #include <common/sql.hpp>
@@ -53,8 +57,6 @@ static constexpr uint16 NEEDWIKI_TOKEN_HASH_LEN = 64;
 static constexpr uint16 NEEDWIKI_PACKET_HEADER_LEN = 6 + NEEDWIKI_TOKEN_HASH_LEN;
 static constexpr uint64 NEEDWIKI_CODE_TTL_SECONDS = 120;
 static constexpr size_t NEEDWIKI_BOOTSTRAP_LIMIT_PER_MINUTE = 10;
-static constexpr const char* NEEDWIKI_ITEM_GROUP_DB_TYPE = "NEED_WIKI_ITEM_GROUP_DB";
-static constexpr uint16 NEEDWIKI_ITEM_GROUP_DB_VERSION = 1;
 static constexpr const char* NEEDWIKI_AUTH_HEADER = "Authorization";
 
 enum NeedWikiActionResult : uint16 {
@@ -558,58 +560,459 @@ HANDLER_FUNC(needwiki_showgroup)
 	needwiki_set_action_result(res, needwiki_send_packet(token_hash, NEEDWIKI_ACTION_SHOW_GROUP, group_id));
 }
 
+/**
+ * Builds the /api/wiki/itemgroups body from the raw item group DB bytes.
+ * The file is CP949 (see common/needwiki_item_group.hpp); every Name is converted to UTF-8
+ * here, at the HTTP boundary, before it reaches nlohmann::json. The response shape is the
+ * historic {"<group id>": "<Korean name>"} object.
+ */
+static bool needwiki_build_itemgroups_body(const std::string& path, const std::string& bytes, std::string& body, std::string& error)
+{
+	try {
+		std::vector<std::string> warnings;
+		const std::vector<needwiki_item_group::Group> sources = needwiki_item_group::parse(path, bytes, warnings);
+
+		for (const std::string& warning : warnings)
+			ShowWarning("[NeedWiki] %s\n", warning.c_str());
+
+		nlohmann::json groups = nlohmann::json::object();
+		for (const needwiki_item_group::Group& source : sources) {
+			std::string name_utf8;
+
+			if (!needwiki_item_group::cp949_to_utf8(source.name, name_utf8))
+				throw std::runtime_error("Name of item group '" + source.id + "' is not valid CP949");
+
+			groups[source.id] = name_utf8;
+		}
+
+		body = groups.dump();
+		return true;
+	} catch (const std::exception& exception) {
+		error = exception.what();
+		return false;
+	}
+}
+
+struct NeedWikiItemGroupCache {
+	bool valid = false;
+	std::filesystem::file_time_type mtime{};
+	uintmax_t size = 0;
+	bool ok = false;
+	std::string body;
+};
+
+static std::mutex needwiki_itemgroups_mutex;
+static NeedWikiItemGroupCache needwiki_itemgroups_cache;
+
 HANDLER_FUNC(needwiki_itemgroups)
 {
-	const std::string path = "db/import/wiki_item_group.yml";
-	std::ifstream input(path, std::ios::binary);
-	if (!input) {
+	const std::string path = needwiki_item_group::db_file(db_path);
+	std::error_code ec;
+	const auto mtime = std::filesystem::last_write_time(path, ec);
+	const uintmax_t size = ec ? 0 : std::filesystem::file_size(path, ec);
+
+	if (ec) {
 		res.status = HTTP_NOT_FOUND;
 		res.set_content("Item group DB not found", "text/plain");
 		return;
 	}
 
-	std::ostringstream stream;
-	stream << input.rdbuf();
-	const std::string yaml = stream.str();
+	std::lock_guard<std::mutex> guard(needwiki_itemgroups_mutex);
+	NeedWikiItemGroupCache& cache = needwiki_itemgroups_cache;
 
-	try {
-		ryml::Parser parser;
-		ryml::Tree tree = parser.parse_in_arena(c4::to_csubstr(path), c4::to_csubstr(yaml));
-		const ryml::NodeRef root = tree.rootref();
-		if (!root.has_child("Header"))
-			throw std::runtime_error("Header node not found");
-
-		const ryml::NodeRef header = root["Header"];
-		if (!header.has_child("Type") || !header.has_child("Version"))
-			throw std::runtime_error("Header requires Type and Version");
-
-		std::string type;
-		uint16 version = 0;
-		header["Type"] >> type;
-		header["Version"] >> version;
-		if (type != NEEDWIKI_ITEM_GROUP_DB_TYPE || version != NEEDWIKI_ITEM_GROUP_DB_VERSION)
-			throw std::runtime_error("Unsupported item group DB header");
-
-		if (!root.has_child("Groups"))
-			throw std::runtime_error("Groups node not found");
-
-		nlohmann::json groups = nlohmann::json::object();
-		for (const ryml::NodeRef& node : root["Groups"]) {
-			if (!node.has_child("Id") || !node.has_child("Name"))
-				continue;
-
-			std::string id;
-			std::string name;
-			node["Id"] >> id;
-			node["Name"] >> name;
-			if (!id.empty() && !name.empty())
-				groups[id] = name;
+	// Reuse the previous result while the file is unchanged (same mtime and size). A failed
+	// load is cached too, so a broken file is reported once per change instead of per request.
+	if (!cache.valid || cache.mtime != mtime || cache.size != size) {
+		std::ifstream input(path, std::ios::binary);
+		if (!input) {
+			res.status = HTTP_NOT_FOUND;
+			res.set_content("Item group DB not found", "text/plain");
+			return;
 		}
 
-		res.set_content(groups.dump(), "application/json; charset=utf-8");
-	} catch (const std::exception& error) {
-		ShowError("[NeedWiki] Failed to serve item group metadata: %s\n", error.what());
+		std::ostringstream stream;
+		stream << input.rdbuf();
+
+		std::string body;
+		std::string error;
+		cache.ok = needwiki_build_itemgroups_body(path, stream.str(), body, error);
+		cache.body = cache.ok ? body : std::string();
+		cache.mtime = mtime;
+		cache.size = size;
+		cache.valid = true;
+
+		if (!cache.ok)
+			ShowError("[NeedWiki] Failed to serve item group metadata '%s': %s\n", path.c_str(), error.c_str());
+	}
+
+	if (!cache.ok) {
 		res.status = 500;
 		res.set_content("Failed to load item group DB", "text/plain");
+		return;
 	}
+
+	res.set_content(cache.body, "application/json; charset=utf-8");
+}
+
+/*==========================================
+ * NEED Wiki article reports (POST /api/wiki/report)
+ *
+ * Anonymous, limited per client IP (req.remote_addr only - X-Forwarded-For is not trusted).
+ * Stored in `needwiki_reports` (sql-files/main.sql). The web-server's SQL connection uses
+ * default_codepage (euckr on NEED), so the UTF-8 text is bound as binary and converted by
+ * the query itself (CONVERT(? USING utf8mb4)) - no connection setting is changed.
+ *------------------------------------------*/
+
+static constexpr size_t NEEDWIKI_REPORT_MAX_BODY_BYTES = 16 * 1024;
+static constexpr size_t NEEDWIKI_REPORT_ARTICLE_ID_MAX = 128;
+static constexpr size_t NEEDWIKI_REPORT_TITLE_MAX_CHARS = 255;      // varchar(255)
+static constexpr size_t NEEDWIKI_REPORT_MESSAGE_MIN_UNITS = 5;      // same as the DLL (UTF-16 units)
+static constexpr size_t NEEDWIKI_REPORT_MESSAGE_MAX_UNITS = 1000;   // same as the DLL (EM_LIMITTEXT)
+static constexpr size_t NEEDWIKI_REPORT_MESSAGE_MAX_BYTES = 4096;
+static constexpr size_t NEEDWIKI_REPORT_TYPE_RAW_MAX_BYTES = 64;
+static constexpr uint64 NEEDWIKI_REPORT_WINDOW_SECONDS = 10 * 60;
+static constexpr uint64 NEEDWIKI_REPORT_LIMIT_PER_WINDOW = 5;
+static constexpr const char* NEEDWIKI_REPORT_PATH = "/api/wiki/report";
+
+static void needwiki_report_reply(Response& res, int http_status, const char* status, uint64 id = 0)
+{
+	nlohmann::json body;
+	body["status"] = status;
+	if (id != 0)
+		body["id"] = id;
+	res.status = http_status;
+	res.set_content(body.dump(), "application/json; charset=utf-8");
+}
+
+/// Maps the stable codes and the legacy DLL / documentation strings to a stable code.
+static const char* needwiki_report_type_code(const std::string& raw)
+{
+	static const std::vector<std::pair<std::string, const char*>> map = {
+		{ "incorrect_info", "incorrect_info" },
+		{ "missing_content", "missing_content" },
+		{ "typo", "typo" },
+		{ "other", "other" },
+		// Legacy Korean values, written as UTF-8 bytes so the source encoding does not matter.
+		{ "\xEC\xA0\x95\xEB\xB3\xB4 \xEC\x98\xA4\xEB\xA5\x98", "incorrect_info" },   // "jeongbo oryu" (info error)
+		{ "\xEB\x82\xB4\xEC\x9A\xA9 \xEC\xB6\x94\xEA\xB0\x80", "missing_content" },  // "naeyong chuga" (add content)
+		{ "\xEC\x98\xA4\xED\x83\x80\xEC\x9E\x90", "typo" },   // "otaja": what the DLL has sent since the feature was added
+		{ "\xEC\x98\xA4\xED\x83\x88\xEC\x9E\x90", "typo" },   // "otalja": what the documentation listed
+		{ "\xEA\xB8\xB0\xED\x83\x80", "other" },              // "gita" (other)
+	};
+
+	for (const auto& entry : map) {
+		if (entry.first == raw)
+			return entry.second;
+	}
+
+	return nullptr;
+}
+
+static bool needwiki_report_valid_article_id(const std::string& id)
+{
+	if (id.empty() || id.size() > NEEDWIKI_REPORT_ARTICLE_ID_MAX)
+		return false;
+
+	for (const char ch : id) {
+		if ((ch < 'a' || ch > 'z') && (ch < 'A' || ch > 'Z') && (ch < '0' || ch > '9') && ch != '_')
+			return false;
+	}
+
+	return true;
+}
+
+/// Decodes valid UTF-8 (nlohmann::json::parse has already rejected ill-formed input).
+static std::vector<uint32> needwiki_utf8_code_points(const std::string& text)
+{
+	std::vector<uint32> points;
+	for (size_t i = 0; i < text.size();) {
+		const unsigned char c = static_cast<unsigned char>(text[i]);
+		size_t len = c < 0x80 ? 1 : c < 0xE0 ? 2 : c < 0xF0 ? 3 : 4;
+		uint32 cp = len == 1 ? c : len == 2 ? (c & 0x1F) : len == 3 ? (c & 0x0F) : (c & 0x07);
+
+		for (size_t k = 1; k < len && i + k < text.size(); ++k)
+			cp = (cp << 6) | (static_cast<unsigned char>(text[i + k]) & 0x3F);
+
+		points.push_back(cp);
+		i += len;
+	}
+	return points;
+}
+
+static bool needwiki_report_is_space(uint32 cp)
+{
+	return cp == ' ' || cp == '\t' || cp == '\r' || cp == '\n' || cp == '\v' || cp == '\f' || cp == 0x3000;
+}
+
+/// Trims surrounding white space (like the DLL's iswspace trim). Returns the trimmed text,
+/// its length in UTF-16 code units (what the DLL counts) and whether it holds a control
+/// character other than TAB/CR/LF.
+static std::string needwiki_report_trim(const std::string& text, size_t& utf16_units, bool& has_control, bool allow_newlines)
+{
+	const std::vector<uint32> points = needwiki_utf8_code_points(text);
+	size_t first = 0;
+	size_t last = points.size();
+
+	while (first < last && needwiki_report_is_space(points[first]))
+		++first;
+	while (last > first && needwiki_report_is_space(points[last - 1]))
+		--last;
+
+	utf16_units = 0;
+	has_control = false;
+
+	size_t byte_begin = 0;
+	size_t byte_end = 0;
+	size_t offset = 0;
+	for (size_t i = 0; i < points.size(); ++i) {
+		const uint32 cp = points[i];
+		const size_t len = cp < 0x80 ? 1 : cp < 0x800 ? 2 : cp < 0x10000 ? 3 : 4;
+
+		if (i == first)
+			byte_begin = offset;
+		offset += len;
+		if (i + 1 == last)
+			byte_end = offset;
+
+		if (i < first || i >= last)
+			continue;
+
+		utf16_units += cp >= 0x10000 ? 2 : 1;
+
+		const bool newline = cp == '\r' || cp == '\n' || cp == '\t';
+		if ((cp < 0x20 && !(allow_newlines && newline)) || cp == 0x7F || (cp >= 0x80 && cp < 0xA0))
+			has_control = true;
+	}
+
+	return first < last ? text.substr(byte_begin, byte_end - byte_begin) : std::string();
+}
+
+/**
+ * Pre-routing guard: runs BEFORE cpp-httplib reads the request body, so an oversized report
+ * is refused without buffering it. Other routes are untouched (no global payload cap).
+ */
+bool needwiki_report_pre_routing(const Request& req, Response& res)
+{
+	if (req.path != NEEDWIKI_REPORT_PATH || req.method != "POST")
+		return false;
+
+	if (!req.has_header("Content-Length")) {
+		// Chunked or unsized bodies could be of any size.
+		needwiki_report_reply(res, 411, "LENGTH_REQUIRED");
+		return true;
+	}
+
+	const std::string value = req.get_header_value("Content-Length");
+	char* end = nullptr;
+	const unsigned long long length = strtoull(value.c_str(), &end, 10);
+
+	if (value.empty() || end == value.c_str() || *end != '\0' || length > NEEDWIKI_REPORT_MAX_BODY_BYTES) {
+		needwiki_report_reply(res, 413, "PAYLOAD_TOO_LARGE");
+		return true;
+	}
+
+	return false;
+}
+
+HANDLER_FUNC(needwiki_report)
+{
+	const std::string ip = needwiki_remote_ip(req);
+
+	if (req.body.size() > NEEDWIKI_REPORT_MAX_BODY_BYTES) {
+		needwiki_report_reply(res, 413, "PAYLOAD_TOO_LARGE");
+		return;
+	}
+
+	nlohmann::json root;
+	try {
+		// Also rejects ill-formed UTF-8 inside strings.
+		root = nlohmann::json::parse(req.body);
+	} catch (const std::exception&) {
+		needwiki_report_reply(res, HTTP_BAD_REQUEST, "INVALID_JSON");
+		return;
+	}
+
+	if (!root.is_object()) {
+		needwiki_report_reply(res, HTTP_BAD_REQUEST, "INVALID_JSON");
+		return;
+	}
+
+	// article_id: required. Both the DLL and the web viewer send it.
+	const auto article_it = root.find("article_id");
+	if (article_it == root.end() || !article_it->is_string() ||
+		!needwiki_report_valid_article_id(article_it->get<std::string>())) {
+		needwiki_report_reply(res, HTTP_BAD_REQUEST, "INVALID_ARTICLE_ID");
+		return;
+	}
+	const std::string article_id = article_it->get<std::string>();
+
+	// article_title: optional; the web viewer sends "title".
+	std::string article_title;
+	{
+		auto title_it = root.find("article_title");
+		if (title_it == root.end() || title_it->is_null())
+			title_it = root.find("title");
+
+		if (title_it != root.end() && !title_it->is_null()) {
+			size_t units = 0;
+			bool has_control = false;
+
+			if (!title_it->is_string()) {
+				needwiki_report_reply(res, HTTP_BAD_REQUEST, "INVALID_ARTICLE_TITLE");
+				return;
+			}
+
+			article_title = needwiki_report_trim(title_it->get<std::string>(), units, has_control, false);
+			if (has_control || needwiki_utf8_code_points(article_title).size() > NEEDWIKI_REPORT_TITLE_MAX_CHARS) {
+				needwiki_report_reply(res, HTTP_BAD_REQUEST, "INVALID_ARTICLE_TITLE");
+				return;
+			}
+		}
+	}
+
+	// report_type: absent -> other (web viewer); unknown -> 400.
+	std::string report_type_raw;
+	const char* report_type = "other";
+	{
+		const auto type_it = root.find("report_type");
+		if (type_it != root.end() && !type_it->is_null()) {
+			if (!type_it->is_string()) {
+				needwiki_report_reply(res, HTTP_BAD_REQUEST, "INVALID_REPORT_TYPE");
+				return;
+			}
+
+			report_type_raw = type_it->get<std::string>();
+			report_type = needwiki_report_type_code(report_type_raw);
+			if (report_type == nullptr || report_type_raw.size() > NEEDWIKI_REPORT_TYPE_RAW_MAX_BYTES) {
+				needwiki_report_reply(res, HTTP_BAD_REQUEST, "INVALID_REPORT_TYPE");
+				return;
+			}
+		}
+	}
+
+	// message: required, 5..1000 UTF-16 units after trimming (the DLL's own rule), <= 4 KiB.
+	std::string message;
+	{
+		const auto message_it = root.find("message");
+		if (message_it == root.end() || !message_it->is_string()) {
+			needwiki_report_reply(res, HTTP_BAD_REQUEST, "MESSAGE_REQUIRED");
+			return;
+		}
+
+		size_t units = 0;
+		bool has_control = false;
+		message = needwiki_report_trim(message_it->get<std::string>(), units, has_control, true);
+
+		if (message.empty()) {
+			needwiki_report_reply(res, HTTP_BAD_REQUEST, "MESSAGE_REQUIRED");
+			return;
+		}
+		if (has_control) {
+			needwiki_report_reply(res, HTTP_BAD_REQUEST, "INVALID_MESSAGE");
+			return;
+		}
+		if (units < NEEDWIKI_REPORT_MESSAGE_MIN_UNITS) {
+			needwiki_report_reply(res, HTTP_BAD_REQUEST, "MESSAGE_TOO_SHORT");
+			return;
+		}
+		if (units > NEEDWIKI_REPORT_MESSAGE_MAX_UNITS || message.size() > NEEDWIKI_REPORT_MESSAGE_MAX_BYTES) {
+			needwiki_report_reply(res, HTTP_BAD_REQUEST, "MESSAGE_TOO_LONG");
+			return;
+		}
+	}
+
+	const std::string message_hash = needwiki_crypto::sha256_hex(message);
+	const uint64 now = static_cast<uint64>(time(nullptr));
+	const uint64 window_start = now - NEEDWIKI_REPORT_WINDOW_SECONDS;
+	std::string type_code = report_type;
+
+	// One lock for the duplicate check, the rate limit and the insert: every web-server SQL
+	// access shares this mutex, so two requests cannot both pass the checks.
+	SQLLock lock(MAP_SQL_LOCK);
+	lock.lock();
+	auto handle = lock.getHandle();
+
+	uint64 duplicate_id = 0;
+	uint64 recent = 0;
+	{
+		SqlStmt stmt{ *handle };
+		if (SQL_SUCCESS != stmt.PrepareStr(
+				"SELECT `id` FROM `needwiki_reports` WHERE `remote_ip`=? AND `created_at`>=? "
+				"AND `article_id`=? AND `report_type`=? AND `message_hash`=? ORDER BY `id` DESC LIMIT 1")
+			|| SQL_SUCCESS != stmt.BindParam(0, SQLDT_STRING, const_cast<char*>(ip.c_str()), ip.size())
+			|| SQL_SUCCESS != stmt.BindParam(1, SQLDT_UINT64, const_cast<uint64*>(&window_start), sizeof(window_start))
+			|| SQL_SUCCESS != stmt.BindParam(2, SQLDT_STRING, const_cast<char*>(article_id.c_str()), article_id.size())
+			|| SQL_SUCCESS != stmt.BindParam(3, SQLDT_STRING, const_cast<char*>(type_code.c_str()), type_code.size())
+			|| SQL_SUCCESS != stmt.BindParam(4, SQLDT_STRING, const_cast<char*>(message_hash.c_str()), message_hash.size())
+			|| SQL_SUCCESS != stmt.Execute()
+			|| SQL_SUCCESS != stmt.BindColumn(0, SQLDT_UINT64, &duplicate_id, sizeof(duplicate_id))) {
+			lock.unlock();
+			ShowError("[NeedWiki] report DB_ERROR (duplicate check) ip=%s\n", ip.c_str());
+			needwiki_report_reply(res, 500, "DB_ERROR");
+			return;
+		}
+		if (stmt.NumRows() == 0 || SQL_SUCCESS != stmt.NextRow())
+			duplicate_id = 0;
+	}
+
+	if (duplicate_id != 0) {
+		lock.unlock();
+		ShowNotice("[NeedWiki] report duplicate id=%" PRIu64 " ip=%s article=%s type=%s\n", duplicate_id, ip.c_str(), article_id.c_str(), type_code.c_str());
+		needwiki_report_reply(res, 200, "DUPLICATE", duplicate_id);
+		return;
+	}
+
+	{
+		SqlStmt stmt{ *handle };
+		if (SQL_SUCCESS != stmt.PrepareStr(
+				"SELECT COUNT(*) FROM `needwiki_reports` WHERE `remote_ip`=? AND `created_at`>=?")
+			|| SQL_SUCCESS != stmt.BindParam(0, SQLDT_STRING, const_cast<char*>(ip.c_str()), ip.size())
+			|| SQL_SUCCESS != stmt.BindParam(1, SQLDT_UINT64, const_cast<uint64*>(&window_start), sizeof(window_start))
+			|| SQL_SUCCESS != stmt.Execute()
+			|| SQL_SUCCESS != stmt.BindColumn(0, SQLDT_UINT64, &recent, sizeof(recent))
+			|| SQL_SUCCESS != stmt.NextRow()) {
+			lock.unlock();
+			ShowError("[NeedWiki] report DB_ERROR (rate check) ip=%s\n", ip.c_str());
+			needwiki_report_reply(res, 500, "DB_ERROR");
+			return;
+		}
+	}
+
+	if (recent >= NEEDWIKI_REPORT_LIMIT_PER_WINDOW) {
+		lock.unlock();
+		ShowWarning("[NeedWiki] report RATE_LIMITED ip=%s recent=%" PRIu64 "\n", ip.c_str(), recent);
+		needwiki_report_reply(res, 429, "RATE_LIMITED");
+		return;
+	}
+
+	uint64 id = 0;
+	{
+		SqlStmt stmt{ *handle };
+		// Text columns are bound as binary and reinterpreted as UTF-8 by the server, so the
+		// connection's default_codepage (euckr) never re-encodes them.
+		if (SQL_SUCCESS != stmt.PrepareStr(
+				"INSERT INTO `needwiki_reports` (`created_at`,`remote_ip`,`article_id`,`article_title`,"
+				"`report_type`,`report_type_raw`,`message`,`message_hash`) VALUES "
+				"(?,?,?,CONVERT(? USING utf8mb4),?,CONVERT(? USING utf8mb4),CONVERT(? USING utf8mb4),?)")
+			|| SQL_SUCCESS != stmt.BindParam(0, SQLDT_UINT64, const_cast<uint64*>(&now), sizeof(now))
+			|| SQL_SUCCESS != stmt.BindParam(1, SQLDT_STRING, const_cast<char*>(ip.c_str()), ip.size())
+			|| SQL_SUCCESS != stmt.BindParam(2, SQLDT_STRING, const_cast<char*>(article_id.c_str()), article_id.size())
+			|| SQL_SUCCESS != stmt.BindParam(3, SQLDT_BLOB, const_cast<char*>(article_title.c_str()), article_title.size())
+			|| SQL_SUCCESS != stmt.BindParam(4, SQLDT_STRING, const_cast<char*>(type_code.c_str()), type_code.size())
+			|| SQL_SUCCESS != stmt.BindParam(5, SQLDT_BLOB, const_cast<char*>(report_type_raw.c_str()), report_type_raw.size())
+			|| SQL_SUCCESS != stmt.BindParam(6, SQLDT_BLOB, const_cast<char*>(message.c_str()), message.size())
+			|| SQL_SUCCESS != stmt.BindParam(7, SQLDT_STRING, const_cast<char*>(message_hash.c_str()), message_hash.size())
+			|| SQL_SUCCESS != stmt.Execute()) {
+			lock.unlock();
+			ShowError("[NeedWiki] report DB_ERROR (insert) ip=%s article=%s\n", ip.c_str(), article_id.c_str());
+			needwiki_report_reply(res, 500, "DB_ERROR");
+			return;
+		}
+		id = stmt.LastInsertId();
+	}
+	lock.unlock();
+
+	// Never the title or the message (log injection, personal data) - they are in the DB.
+	ShowNotice("[NeedWiki] report stored id=%" PRIu64 " ip=%s article=%s type=%s\n", id, ip.c_str(), article_id.c_str(), type_code.c_str());
+	needwiki_report_reply(res, 200, "OK", id);
 }

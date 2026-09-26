@@ -18,8 +18,10 @@
 #include <ryml_std.hpp>
 
 #include <common/cbasetypes.hpp>
+#include <common/core.hpp>
 #include <common/needwiki_crypto.hpp>
 #include <common/needwiki_diagnostics.hpp>
+#include <common/needwiki_item_group.hpp>
 #include <common/random.hpp>
 #include <common/showmsg.hpp>
 #include <common/socket.hpp>
@@ -60,8 +62,6 @@ static constexpr uint32 NEEDWIKI_MAX_CODE_FAILURES = 5;
 static constexpr int32 NEEDWIKI_CODE_FAILURE_WINDOW_MS = 60 * 1000;
 static constexpr int32 NEEDWIKI_DUPLICATE_WINDOW_MS = 500;
 static constexpr int32 NEEDWIKI_DUPLICATE_CLEANUP_MS = 3000;
-static constexpr const char* NEEDWIKI_ITEM_GROUP_DB_TYPE = "NEED_WIKI_ITEM_GROUP_DB";
-static constexpr uint16 NEEDWIKI_ITEM_GROUP_DB_VERSION = 1;
 
 static int32 needwiki_fd = -1;
 static std::unordered_map<std::string, t_tick> needwiki_recent_requests;
@@ -97,7 +97,7 @@ struct NeedWikiCodeAttempts {
 static std::unordered_map<uint64, NeedWikiCodeAttempts> needwiki_code_attempts;
 
 struct NeedWikiItemGroup {
-	std::string name;
+	needwiki_item_group::Group source;  // Name / NameEN are CP949 bytes, sent to the client as-is
 	std::vector<t_itemid> items;
 };
 
@@ -105,21 +105,12 @@ static std::unordered_map<std::string, NeedWikiItemGroup> needwiki_item_groups;
 
 static bool needwiki_valid_group_id(const std::string& id)
 {
-	if (id.empty() || id.size() > 64)
-		return false;
-
-	for (const char ch : id) {
-		if ((ch < 'a' || ch > 'z') && (ch < 'A' || ch > 'Z') &&
-			(ch < '0' || ch > '9') && ch != '_' && ch != '-')
-			return false;
-	}
-
-	return true;
+	return needwiki_item_group::valid_group_id(id);
 }
 
 bool needwiki_reload_item_groups(void)
 {
-	const std::string path = "db/import/wiki_item_group.yml";
+	const std::string path = needwiki_item_group::db_file(db_path);
 	std::ifstream input(path, std::ios::binary);
 
 	if (!input) {
@@ -130,73 +121,40 @@ bool needwiki_reload_item_groups(void)
 	std::ostringstream stream;
 	stream << input.rdbuf();
 	const std::string yaml = stream.str();
-	ryml::Parser parser;
-	ryml::Tree tree;
+	std::vector<std::string> warnings;
+	std::vector<needwiki_item_group::Group> sources;
 
 	try {
-		tree = parser.parse_in_arena(c4::to_csubstr(path), c4::to_csubstr(yaml));
-	} catch (const std::runtime_error& error) {
-		ShowError("[NeedWiki] Failed to parse item group DB '%s': %s\n", path.c_str(), error.what());
+		sources = needwiki_item_group::parse(path, yaml, warnings);
+	} catch (const std::exception& error) {
+		ShowError("[NeedWiki] Failed to load item group DB '%s': %s\n", path.c_str(), error.what());
 		return false;
 	}
 
-	const ryml::NodeRef root = tree.rootref();
-	if (!root.has_child("Header")) {
-		ShowError("[NeedWiki] Item group DB has no Header node: '%s'.\n", path.c_str());
-		return false;
-	}
-
-	const ryml::NodeRef header = root["Header"];
-	if (!header.has_child("Type") || !header.has_child("Version")) {
-		ShowError("[NeedWiki] Item group DB Header requires Type and Version: '%s'.\n", path.c_str());
-		return false;
-	}
-
-	std::string type;
-	uint16 version = 0;
-	header["Type"] >> type;
-	header["Version"] >> version;
-
-	if (type != NEEDWIKI_ITEM_GROUP_DB_TYPE || version != NEEDWIKI_ITEM_GROUP_DB_VERSION) {
-		ShowError("[NeedWiki] Unsupported item group DB header type='%s' version=%hu.\n", type.c_str(), version);
-		return false;
-	}
-
-	if (!root.has_child("Groups")) {
-		ShowError("[NeedWiki] Item group DB has no Groups node: '%s'.\n", path.c_str());
-		return false;
-	}
+	for (const std::string& warning : warnings)
+		ShowWarning("[NeedWiki] %s\n", warning.c_str());
 
 	std::unordered_map<std::string, NeedWikiItemGroup> loaded;
-	for (const ryml::NodeRef& node : root["Groups"]) {
-		if (!node.has_child("Id") || !node.has_child("Name") || !node.has_child("Items")) {
-			ShowWarning("[NeedWiki] Skipping item group with missing Id, Name, or Items.\n");
+	for (needwiki_item_group::Group& source : sources) {
+		if (source.items.empty()) {
+			ShowWarning("[NeedWiki] Skipping item group '%s' without Items.\n", source.id.c_str());
 			continue;
 		}
 
-		std::string id;
 		NeedWikiItemGroup group;
-		node["Id"] >> id;
-		node["Name"] >> group.name;
-
-		if (!needwiki_valid_group_id(id) || group.name.empty()) {
-			ShowWarning("[NeedWiki] Skipping invalid item group id='%s'.\n", id.c_str());
-			continue;
-		}
-
-		for (const ryml::NodeRef& item_node : node["Items"]) {
-			std::string aegis_name;
-			item_node >> aegis_name;
+		for (const std::string& aegis_name : source.items) {
 			std::shared_ptr<item_data> data = item_db.search_aegisname(aegis_name.c_str());
 
 			if (data == nullptr) {
-				ShowWarning("[NeedWiki] Unknown item '%s' in group '%s'.\n", aegis_name.c_str(), id.c_str());
+				ShowWarning("[NeedWiki] Unknown item '%s' in group '%s'.\n", aegis_name.c_str(), source.id.c_str());
 				continue;
 			}
 
 			group.items.push_back(data->nameid);
 		}
 
+		const std::string id = source.id;
+		group.source = std::move(source);
 		loaded[id] = std::move(group);
 	}
 
@@ -667,8 +625,10 @@ static int32 needwiki_parse(int32 fd)
 				} else {
 					const NeedWikiItemGroup& group = group_it->second;
 					char output[CHAT_SIZE_MAX];
-					const std::string cp949_name = needwiki_utf8_to_cp949(group.name);
-					safesnprintf(output, sizeof(output), msg_txt(sd, 1610), cp949_name.c_str());
+					// The item group DB is CP949 like the client chat, so the stored bytes are
+					// sent unchanged on every OS (no UTF-8 round trip).
+					const std::string& name = needwiki_item_group::display_name(group.source, sd->need_lang == NEED_LANG_EN);
+					safesnprintf(output, sizeof(output), msg_txt(sd, 1610), name.c_str());
 					clif_displaymessage(sd->fd, output);
 
 					for (const t_itemid item_id : group.items) {

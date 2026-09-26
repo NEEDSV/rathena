@@ -7789,7 +7789,7 @@ ACMD_FUNC(wikicode) {
 	char code[9] = {};
 	char extra[2] = {};
 	if (message == nullptr || sscanf(message, "%8s %1s", code, extra) != 1) {
-		clif_displaymessage(fd, "Usage: @wikicode <code>");
+		clif_displaymessage(fd, msg_txt(sd, 1598)); // Usage: @wikicode <code>
 		return -1;
 	}
 
