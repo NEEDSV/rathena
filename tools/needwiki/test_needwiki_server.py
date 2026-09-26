@@ -7,6 +7,7 @@ wiki labels (when the NeedWiki checkout is next to this repo), the wiki msg ids 
 EN tables (presence, placeholders, no id collision) and the call sites that must not return.
 """
 import collections
+import json
 import glob
 import os
 import re
@@ -122,6 +123,34 @@ class ItemGroupNamesMatchWikiLabels(unittest.TestCase):
                 self.assertEqual(sorted(used), [groups[gid]['Name']])
         names = [g['Name'] for g in groups.values()]
         self.assertEqual(len(names), len(set(names)), 'two groups share a display name')   # e.g. Time_boots vs Time_boots_
+
+
+class ItemGroupNameEN(unittest.TestCase):
+    """W5: every group has an English display name for EN sessions (the map-server's ITEMGROUP chat)."""
+    groups = parse_groups(read_bytes(YML).decode('cp949'))
+
+    def test_nameen_present_ascii_unique(self):
+        self.assertEqual(len(self.groups), 21)
+        names = []
+        for gid, fields in self.groups.items():
+            with self.subTest(group=gid):
+                en = fields.get('NameEN', '')
+                self.assertTrue(en, 'NameEN missing or empty')
+                self.assertRegex(en, r'^[\x20-\x7e]+$')
+                self.assertEqual(en, en.strip())
+                names.append(en)
+        self.assertEqual(len(names), len(set(names)), 'two groups share an English name')
+        self.assertNotEqual(self.groups['Time_boots']['NameEN'], self.groups['Time_boots_']['NameEN'])
+
+    @unittest.skipUnless(os.path.isfile(os.path.join(NEEDWIKI, 'i18n', 'en', 'glossary.json')), 'NeedWiki glossary not found')
+    def test_nameen_equals_wiki_glossary(self):
+        # the wiki's EN ITEMGROUP labels must equal NameEN (NeedWiki validator); both come from its glossary
+        glossary = json.loads(read_text(os.path.join(NEEDWIKI, 'i18n', 'en', 'glossary.json')))['itemgroups']
+        self.assertEqual(sorted(glossary), sorted(self.groups))
+        for gid, fields in self.groups.items():
+            with self.subTest(group=gid):
+                self.assertEqual(fields['NameEN'], glossary[gid]['en'])
+                self.assertEqual(fields['Name'], glossary[gid]['kr'])
 
 
 class WikiMessages(unittest.TestCase):

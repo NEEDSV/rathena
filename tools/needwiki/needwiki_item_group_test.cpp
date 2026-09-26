@@ -2,7 +2,7 @@
 // Built and run by tools/needwiki/run_tests.py:
 //   needwiki_item_group_test <wiki_item_group.yml> <expected.tsv>
 // expected.tsv (written by the runner from Python's own cp949 codec), one group per line:
-//   <id> TAB <Name as CP949 hex> TAB <Name as UTF-8 hex>
+//   <id> TAB <Name as CP949 hex> TAB <Name as UTF-8 hex> TAB <NameEN as hex, empty when the group has none>
 
 #include <cstdio>
 #include <fstream>
@@ -70,18 +70,20 @@ int main(int argc, char** argv)
 
 	// ---- the real CP949 source ---------------------------------------------------------
 	const std::string source = read_file(argv[1]);
-	std::map<std::string, std::pair<std::string, std::string>> expected;  // id -> (cp949, utf8)
+	struct Expected { std::string cp949, utf8, name_en; };
+	std::map<std::string, Expected> expected;
 	{
 		std::istringstream lines(read_file(argv[2]));
 		std::string line;
 		while (std::getline(lines, line)) {
 			std::istringstream cols(line);
-			std::string id, cp949_hex, utf8_hex;
+			std::string id, cp949_hex, utf8_hex, en_hex;
 			std::getline(cols, id, '\t');
 			std::getline(cols, cp949_hex, '\t');
 			std::getline(cols, utf8_hex, '\t');
+			std::getline(cols, en_hex, '\t');
 			if (!id.empty())
-				expected[id] = { unhex(cp949_hex), unhex(utf8_hex) };
+				expected[id] = { unhex(cp949_hex), unhex(utf8_hex), unhex(en_hex) };
 		}
 	}
 
@@ -98,7 +100,7 @@ int main(int argc, char** argv)
 	CHECK(groups.size() == 21 && expected.size() == 21, "real file: 21 groups");
 	CHECK(warnings.empty(), "real file: no warnings");
 
-	size_t web_ok = 0, chat_ok = 0, fallback_ok = 0, items_ok = 0;
+	size_t web_ok = 0, chat_ok = 0, en_ok = 0, with_en = 0, items_ok = 0;
 	nlohmann::json body = nlohmann::json::object();
 	for (const nig::Group& g : groups) {
 		const auto it = expected.find(g.id);
@@ -106,22 +108,26 @@ int main(int argc, char** argv)
 			continue;
 
 		std::string utf8;
-		if (nig::cp949_to_utf8(g.name, utf8) && utf8 == it->second.second)
+		if (nig::cp949_to_utf8(g.name, utf8) && utf8 == it->second.utf8)
 			++web_ok;
 		body[g.id] = utf8;
 
-		// KR session: the chat gets the stored CP949 bytes unchanged.
-		if (nig::display_name(g, false) == it->second.first)
+		// KR session: the chat gets the stored CP949 bytes unchanged (NameEN never leaks into KR).
+		if (nig::display_name(g, false) == it->second.cp949)
 			++chat_ok;
-		// EN session without NameEN: falls back to the same Korean bytes.
-		if (g.name_en.empty() && nig::display_name(g, true) == it->second.first)
-			++fallback_ok;
+		// EN session: NameEN when the group has one, otherwise the same Korean bytes.
+		const std::string& want_en = it->second.name_en.empty() ? it->second.cp949 : it->second.name_en;
+		if (g.name_en == it->second.name_en && nig::display_name(g, true) == want_en)
+			++en_ok;
+		if (!g.name_en.empty())
+			++with_en;
 		if (!g.items.empty())
 			++items_ok;
 	}
 	CHECK(web_ok == 21, "CP949 Name -> UTF-8 equals Python's cp949 decode (21/21)");
 	CHECK(chat_ok == 21, "KR chat name bytes == CP949 source bytes (21/21)");
-	CHECK(fallback_ok == 21, "EN session without NameEN -> KR Name fallback (21/21)");
+	CHECK(en_ok == 21, "EN session name == NameEN, or the KR Name when a group has none (21/21)");
+	std::printf("INFO  groups with NameEN: %zu/21\n", with_en);
 	CHECK(items_ok == 21, "every real group has items");
 
 	bool dump_ok = false;

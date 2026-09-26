@@ -24,15 +24,21 @@ def vcvars():
 
 
 def expected_tsv(path):
-    lines = []
+    """<id> TAB <Name CP949 hex> TAB <Name UTF-8 hex> TAB <NameEN hex or empty>, from Python's own reading."""
+    rows = {}
+    order = []
     cur = None
     for line in open(YML, 'rb').read().split(b'\n'):
         if line.startswith(b'  - Id: '):
             cur = line[8:].strip().decode('ascii')
+            order.append(cur)
+            rows[cur] = ['', '', '']
         elif line.startswith(b'    Name: ') and cur:
             name = line[10:]
-            lines.append(f"{cur}\t{name.hex()}\t{name.decode('cp949').encode('utf-8').hex()}")
-    open(path, 'w', encoding='ascii').write('\n'.join(lines) + '\n')
+            rows[cur][0], rows[cur][1] = name.hex(), name.decode('cp949').encode('utf-8').hex()
+        elif line.startswith(b'    NameEN: ') and cur:
+            rows[cur][2] = line[12:].strip().hex()
+    open(path, 'w', encoding='ascii').write('\n'.join('\t'.join([g] + rows[g]) for g in order) + '\n')
 
 
 def main():
