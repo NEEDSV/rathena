@@ -214,6 +214,24 @@ function	script	F_NEED_Chuseok_WeekResetStr$	{
 	return gettimestr("%Y-%m-%d", 11, gettimetick(2) + .@fwd * 86400) + needtr(" (토) 22:00", " (Sat) 22:00");
 }
 
+// 운영자가 승인한 가족 그룹 번호. 없거나 조회 불가면 0.
+//
+// 명단은 여름 이벤트 테이블(need_summer_attendance_family_*)을 event_id 202609 로
+// 재사용한다. 테이블이 없으면 $NEED_CHUSEOK_FAMILY_READY 가 0 이라 아예 조회하지
+// 않는다. query_sql 은 없는 테이블을 치면 스크립트를 통째로 끊어버리므로 선행
+// 확인이 반드시 필요하다.
+function	script	F_NEED_Chuseok_FamilyGroup	{
+	if (!$NEED_CHUSEOK_FAMILY_READY)
+		return 0;
+
+	.@rows = query_sql("SELECT m.`family_group_id` FROM `need_summer_attendance_family_member` m JOIN `need_summer_attendance_family_group` g ON g.`event_id`=m.`event_id` AND g.`family_group_id`=m.`family_group_id` WHERE m.`event_id`=202609 AND m.`account_id`=" + getcharid(3) + " AND m.`active`=1 AND g.`active`=1 LIMIT 1", .@gid);
+
+	if (.@rows < 1)
+		return 0;
+
+	return .@gid;
+}
+
 // 현재 주기에서 이 대상(scope+subject)이 사용한 횟수. 조회 실패 시 -1.
 // getarg(0) scope$ / getarg(1) subject$ / getarg(2) product$ / getarg(3) period_key
 function	script	F_NEED_Chuseok_LimitUsed	{
@@ -291,13 +309,19 @@ function	script	F_NEED_Chuseok_LimitedExchange	{
 	if (.@ip$ == "")
 		return -3;
 
+	// 운영자가 승인한 가족은 같은 집 IP 를 함께 쓰는 게 정상이므로
+	// IP 한도를 면제하고 계정 한도만 적용한다.
+	.@family = callfunc("F_NEED_Chuseok_FamilyGroup");
+
 	.@used_acc = callfunc("F_NEED_Chuseok_LimitUsed", "ACCOUNT", .@acc$, .@product$, .@period);
 	.@used_ip = callfunc("F_NEED_Chuseok_LimitUsed", "IP", .@ip$, .@product$, .@period);
 	if (.@used_acc < 0 || .@used_ip < 0)
 		return -4;
 	if (.@used_acc + .@amount > .@cap)
 		return 0;
-	if (.@used_ip + .@amount > .@cap)
+	// 가족은 IP 한도 "검사"만 면제받는다. 카운터는 그대로 올려서, 같은 IP 를 쓰는
+	// 무관한 계정이 새 한도를 얻는 일이 없게 한다.
+	if (!.@family && .@used_ip + .@amount > .@cap)
 		return -5;
 
 	.@need = .@cost * .@amount;
@@ -310,7 +334,10 @@ function	script	F_NEED_Chuseok_LimitedExchange	{
 	if (.@after_acc < 0)
 		return 0;
 
-	.@after_ip = callfunc("F_NEED_Chuseok_LimitReserve", "IP", .@ip$, .@product$, .@period, .@cap, .@amount);
+	// IP 카운터는 가족도 똑같이 올린다. 다만 가족은 한도에 걸리지 않도록
+	// 예약 시 상한만 사실상 무제한으로 넘긴다.
+	.@ipcap = (.@family) ? 999999 : .@cap;
+	.@after_ip = callfunc("F_NEED_Chuseok_LimitReserve", "IP", .@ip$, .@product$, .@period, .@ipcap, .@amount);
 	if (.@after_ip < 0) {
 		// 계정 쪽만 잡힌 상태로 남지 않도록 되돌린다. 아직 아무것도 차감하지 않았다.
 		callfunc "F_NEED_Chuseok_LimitRelease", "ACCOUNT", .@acc$, .@product$, .@period, .@amount;
@@ -320,7 +347,7 @@ function	script	F_NEED_Chuseok_LimitedExchange	{
 	delitem 663, .@need;
 	getitem .@item, .@amount;
 
-	query_sql("INSERT INTO `need_chuseok_exchange_log` (`event_id`,`account_id`,`char_id`,`char_name`,`ip`,`product`,`period_key`,`amount`,`songpyun_spent`,`used_after`,`ip_used_after`,`created_at`) VALUES (202609," + getcharid(3) + "," + getcharid(0) + ",'" + escape_sql(strcharinfo(0)) + "','" + escape_sql(.@ip$) + "','" + escape_sql(.@product$) + "'," + .@period + "," + .@amount + "," + .@need + "," + .@after_acc + "," + .@after_ip + ",NOW())");
+	query_sql("INSERT INTO `need_chuseok_exchange_log` (`event_id`,`account_id`,`char_id`,`char_name`,`ip`,`product`,`period_key`,`family_group_id`,`amount`,`songpyun_spent`,`used_after`,`ip_used_after`,`created_at`) VALUES (202609," + getcharid(3) + "," + getcharid(0) + ",'" + escape_sql(strcharinfo(0)) + "','" + escape_sql(.@ip$) + "','" + escape_sql(.@product$) + "'," + .@period + "," + .@family + "," + .@amount + "," + .@need + "," + .@after_acc + "," + .@after_ip + ",NOW())");
 
 	return 1;
 }
@@ -426,8 +453,9 @@ S_Daechuk:
 	.@cap = 5;
 	.@cost = 100;
 	.@ip$ = getcharip();
+	.@family = callfunc("F_NEED_Chuseok_FamilyGroup");
 	.@used_acc = callfunc("F_NEED_Chuseok_LimitUsed", "ACCOUNT", "" + getcharid(3), "DAECHUK", .@period);
-	.@used_ip = callfunc("F_NEED_Chuseok_LimitUsed", "IP", .@ip$, "DAECHUK", .@period);
+	.@used_ip = (.@family) ? 0 : callfunc("F_NEED_Chuseok_LimitUsed", "IP", .@ip$, "DAECHUK", .@period);
 
 	mes needtr("[한가위 교환상 달이]", "[Chuseok Trader Dali]");
 	if (.@ip$ == "" || .@used_acc < 0 || .@used_ip < 0) {
@@ -437,10 +465,16 @@ S_Daechuk:
 	}
 
 	.@used = (.@used_acc > .@used_ip) ? .@used_acc : .@used_ip;
+	// 가족 해제 등으로 IP 사용량이 한도를 넘어도 안내가 음수로 보이지 않게 묶는다.
+	if (.@used > .@cap)
+		.@used = .@cap;
 
 	mes needtr("^FFCC00대축 주간 교환 가능 횟수^000000", "^FFCC00Weekly Blacksmith's Blessing exchanges^000000");
 	mes "^0055FF" + .@used + " / " + .@cap + needtr("^000000  (남은 횟수 ", "^000000  (") + (.@cap - .@used) + needtr("개)", " left)");
-	mes needtr("^999999- 이 계정 ", "^999999- This account ") + .@used_acc + " / " + .@cap + needtr("   - 접속 IP ", "   - Connection IP ") + .@used_ip + " / " + .@cap + "^000000";
+	if (.@family)
+		mes needtr("^999999- 이 계정 ", "^999999- This account ") + .@used_acc + " / " + .@cap + needtr("   ^009900(가족 승인: IP 제한 면제)^000000", "   ^009900(approved family: IP limit waived)^000000");
+	else
+		mes needtr("^999999- 이 계정 ", "^999999- This account ") + .@used_acc + " / " + .@cap + needtr("   - 접속 IP ", "   - Connection IP ") + .@used_ip + " / " + .@cap + "^000000";
 	mes needtr("다음 초기화 : ^0055FF", "Next reset : ^0055FF") + callfunc("F_NEED_Chuseok_WeekResetStr$") + "^000000";
 	mes " ";
 	mes needtr("대축 1개당 송편 ", "Each Blacksmith's Blessing costs ") + .@cost + needtr("개가 필요합니다.", " Korean Rice Cakes.");
@@ -498,8 +532,9 @@ S_Aria:
 	.@cap = 1;
 	.@cost = 300;
 	.@ip$ = getcharip();
+	.@family = callfunc("F_NEED_Chuseok_FamilyGroup");
 	.@used_acc = callfunc("F_NEED_Chuseok_LimitUsed", "ACCOUNT", "" + getcharid(3), "ARIA", 0);
-	.@used_ip = callfunc("F_NEED_Chuseok_LimitUsed", "IP", .@ip$, "ARIA", 0);
+	.@used_ip = (.@family) ? 0 : callfunc("F_NEED_Chuseok_LimitUsed", "IP", .@ip$, "ARIA", 0);
 
 	mes needtr("[한가위 교환상 달이]", "[Chuseok Trader Dali]");
 	if (.@ip$ == "" || .@used_acc < 0 || .@used_ip < 0) {
@@ -509,10 +544,16 @@ S_Aria:
 	}
 
 	.@used = (.@used_acc > .@used_ip) ? .@used_acc : .@used_ip;
+	// 가족 해제 등으로 IP 사용량이 한도를 넘어도 안내가 음수로 보이지 않게 묶는다.
+	if (.@used > .@cap)
+		.@used = .@cap;
 
 	mes needtr("^FFCC00아리아 의상 선택 상자^000000", "^FFCC00Aria Costume Selection Box^000000");
 	mes needtr("이벤트 기간 교환 : ^0055FF", "Exchanged this event : ^0055FF") + .@used + " / " + .@cap + "^000000";
-	mes needtr("^999999- 이 계정 ", "^999999- This account ") + .@used_acc + " / " + .@cap + needtr("   - 접속 IP ", "   - Connection IP ") + .@used_ip + " / " + .@cap + "^000000";
+	if (.@family)
+		mes needtr("^999999- 이 계정 ", "^999999- This account ") + .@used_acc + " / " + .@cap + needtr("   ^009900(가족 승인: IP 제한 면제)^000000", "   ^009900(approved family: IP limit waived)^000000");
+	else
+		mes needtr("^999999- 이 계정 ", "^999999- This account ") + .@used_acc + " / " + .@cap + needtr("   - 접속 IP ", "   - Connection IP ") + .@used_ip + " / " + .@cap + "^000000";
 	mes " ";
 	mes needtr("필요 송편 : ", "Korean Rice Cakes needed : ") + .@cost + needtr("개", "");
 	mes needtr("현재 보유 송편 : ^0055FF", "Korean Rice Cakes held : ^0055FF") + countitem(663) + needtr("^000000 개", "^000000");
@@ -554,4 +595,17 @@ S_Aria:
 	else
 		callfunc "F_NEED_Chuseok_LimitFailMes", .@result, 0;
 	close;
+
+//------------------------------------------------------------
+// 가족 명단 테이블 존재 여부를 기동 시 한 번만 확인한다.
+// query_sql 은 없는 테이블을 치면 스크립트를 끊어버리므로, 조회 전에 이 플래그로
+// 먼저 거른다. information_schema 는 항상 있어서 이 확인 자체는 안전하다.
+// 테이블이 없어도 이벤트는 그대로 돌아간다 (가족 예외만 꺼짐).
+//------------------------------------------------------------
+OnInit:
+	.@rows = query_sql("SELECT COUNT(*) FROM `information_schema`.`TABLES` WHERE `TABLE_SCHEMA`=DATABASE() AND `TABLE_NAME` IN ('need_summer_attendance_family_group','need_summer_attendance_family_member')", .@found);
+	$NEED_CHUSEOK_FAMILY_READY = (.@rows > 0 && .@found == 2);
+	if (!$NEED_CHUSEOK_FAMILY_READY)
+		debugmes "[Chuseok] family group tables missing - family IP exception disabled, IP limit still applies.";
+	end;
 }

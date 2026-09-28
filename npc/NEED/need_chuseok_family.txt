@@ -1,0 +1,293 @@
+//============================================================
+// NEED 2026 추석 - 가족 그룹 관리 (@chuseokfamily)
+//============================================================
+//= 같은 집에서 여러 계정을 쓰는 가족을 운영자가 승인하면, 그 계정들은
+//= 꿀송편 하루 1개와 대축/아리아 교환 한도의 IP 검사를 면제받고
+//= 계정 한도만 적용받습니다. (가족 3명 = 꿀송편 하루 3개, 대축 주 15개)
+//=
+//= 명단은 여름 이벤트 테이블을 event_id 202609 로 재사용합니다.
+//=   need_summer_attendance_family_group   그룹
+//=   need_summer_attendance_family_member  그룹 <-> 계정
+//=   need_summer_attendance_family_audit   승인/해제 이력
+//=
+//= 테이블이 없으면 메뉴가 열리지 않고 안내만 합니다.
+//= sql-files/need_chuseok_family_upgrade.sql 을 임포트하세요.
+//============================================================
+
+-	script	need_chuseok_family	-1,{
+	if (getgmlevel() < 99) {
+		mes "[추석 가족 관리]";
+		mes "GM(99) 전용 기능입니다.";
+		close;
+	}
+	callsub S_Main;
+	end;
+
+OnCommand:
+	if (getgmlevel() < 99) end;
+	callsub S_Main;
+	end;
+
+OnInit:
+	.EventId = 202609;
+	bindatcmd "chuseokfamily", "need_chuseok_family::OnCommand", 99, 99;
+	end;
+
+S_Main:
+	if (!$NEED_CHUSEOK_FAMILY_READY) {
+		mes "[추석 가족 관리]";
+		mes "^FF0000가족 명단 테이블이 없습니다.^000000";
+		mes " ";
+		mes "sql-files/need_chuseok_family_upgrade.sql 을";
+		mes "임포트한 뒤 맵서버를 재기동해 주세요.";
+		mes " ";
+		mes "^999999테이블이 없어도 이벤트는 정상 동작합니다.";
+		mes "가족 예외만 꺼진 상태입니다.^000000";
+		close;
+	}
+
+	while (1) {
+		query_sql("SELECT COUNT(*) FROM `need_summer_attendance_family_group` WHERE `event_id`=" + .EventId + " AND `active`=1", .@groups);
+		query_sql("SELECT COUNT(*) FROM `need_summer_attendance_family_member` WHERE `event_id`=" + .EventId + " AND `active`=1", .@members);
+
+		mes "[추석 가족 관리]";
+		mes "활성 그룹 : ^0055FF" + .@groups + "^000000 개";
+		mes "활성 계정 : ^0055FF" + .@members + "^000000 개";
+		mes " ";
+		mes "^999999가족으로 승인된 계정은 IP 제한을 면제받고";
+		mes "계정 한도만 적용됩니다.^000000";
+		next;
+
+		.@sel = select(
+			"그룹 목록 보기",
+			"새 그룹 만들기",
+			"그룹에 계정 추가",
+			"계정 조회 / 해제",
+			"그룹 비활성화",
+			"닫기");
+
+		if (.@sel == 1) callsub S_List;
+		else if (.@sel == 2) callsub S_NewGroup;
+		else if (.@sel == 3) callsub S_AddMember;
+		else if (.@sel == 4) callsub S_Account;
+		else if (.@sel == 5) callsub S_DisableGroup;
+		else break;
+	}
+	close;
+
+//------------------------------------------------------------
+S_List:
+	.@n = query_sql("SELECT g.`family_group_id`, g.`group_name`, g.`approved_by`, (SELECT COUNT(*) FROM `need_summer_attendance_family_member` m WHERE m.`event_id`=g.`event_id` AND m.`family_group_id`=g.`family_group_id` AND m.`active`=1) FROM `need_summer_attendance_family_group` g WHERE g.`event_id`=" + .EventId + " AND g.`active`=1 ORDER BY g.`family_group_id` LIMIT 20", .@gid, .@gname$, .@by$, .@cnt);
+
+	mes "[추석 가족 관리] 그룹 목록";
+	if (.@n < 1)
+		mes "등록된 그룹이 없습니다.";
+	else {
+		for (.@i = 0; .@i < .@n; .@i++)
+			mes " ^0055FF#" + .@gid[.@i] + "^000000 " + .@gname$[.@i] + " (" + .@cnt[.@i] + "명, 승인 " + .@by$[.@i] + ")";
+		if (.@n == 20)
+			mes "^999999... 최대 20개까지만 표시합니다.^000000";
+	}
+	next;
+	return;
+
+//------------------------------------------------------------
+S_NewGroup:
+	mes "[추석 가족 관리] 새 그룹";
+	mes "그룹 이름을 입력해 주세요.";
+	mes "^999999예: 홍길동 가족 / 203호 3형제^000000";
+	next;
+	input .@gname$;
+
+	if (getstrlen(.@gname$) < 2) {
+		mes "[추석 가족 관리]";
+		mes "이름이 너무 짧습니다. 취소합니다.";
+		next;
+		return;
+	}
+
+	mes "[추석 가족 관리]";
+	mes "승인 사유를 입력해 주세요.";
+	mes "^999999예: 본인 확인 완료 / 문의 12345^000000";
+	next;
+	input .@reason$;
+
+	mes "[추석 가족 관리]";
+	mes "그룹 이름 : ^0055FF" + .@gname$ + "^000000";
+	mes "사유 : " + .@reason$;
+	mes " ";
+	mes "이대로 만들까요?";
+	next;
+	if (select("만든다:취소") == 2)
+		return;
+
+	query_sql("INSERT INTO `need_summer_attendance_family_group` (`event_id`,`group_name`,`active`,`approved_by`,`reason`) VALUES (" + .EventId + ",'" + escape_sql(.@gname$) + "',1,'" + escape_sql(strcharinfo(0)) + "','" + escape_sql(.@reason$) + "')");
+	query_sql("SELECT `family_group_id` FROM `need_summer_attendance_family_group` WHERE `event_id`=" + .EventId + " AND `group_name`='" + escape_sql(.@gname$) + "' ORDER BY `family_group_id` DESC LIMIT 1", .@newid);
+
+	query_sql("INSERT INTO `need_summer_attendance_family_audit` (`event_id`,`family_group_id`,`account_id`,`action`,`operator`,`reason`) VALUES (" + .EventId + "," + .@newid + ",0,'GROUP_ADD','" + escape_sql(strcharinfo(0)) + "','" + escape_sql(.@reason$) + "')");
+
+	logmes "[ChuseokFamily] GROUP_ADD id=" + .@newid + " name=" + .@gname$;
+
+	mes "[추석 가족 관리]";
+	mes "그룹 ^0055FF#" + .@newid + "^000000 을 만들었습니다.";
+	mes "이제 [그룹에 계정 추가] 로 계정을 넣어 주세요.";
+	next;
+	return;
+
+//------------------------------------------------------------
+S_AddMember:
+	mes "[추석 가족 관리] 계정 추가";
+	mes "넣을 그룹 번호를 입력해 주세요.";
+	mes "^999999[그룹 목록 보기] 에서 #번호를 확인할 수 있습니다.^000000";
+	next;
+	input .@gid, 0, 2000000000;
+	if (.@gid <= 0)
+		return;
+
+	.@n = query_sql("SELECT `group_name` FROM `need_summer_attendance_family_group` WHERE `event_id`=" + .EventId + " AND `family_group_id`=" + .@gid + " AND `active`=1", .@gname$);
+	if (.@n < 1) {
+		mes "[추석 가족 관리]";
+		mes "^FF0000그 번호의 활성 그룹이 없습니다.^000000";
+		next;
+		return;
+	}
+
+	mes "[추석 가족 관리]";
+	mes "그룹 ^0055FF#" + .@gid + " " + .@gname$ + "^000000";
+	mes " ";
+	mes "추가할 ^0055FFAccount ID^000000 를 입력해 주세요.";
+	mes "^999999캐릭터 ID 가 아니라 계정 번호입니다.^000000";
+	next;
+	input .@aid, 0, 2000000000;
+	if (.@aid <= 0)
+		return;
+
+	.@n = query_sql("SELECT `userid` FROM `login` WHERE `account_id`=" + .@aid, .@userid$);
+	if (.@n < 1) {
+		mes "[추석 가족 관리]";
+		mes "^FF0000계정 " + .@aid + " 를 찾을 수 없습니다.^000000";
+		next;
+		return;
+	}
+
+	.@n = query_sql("SELECT `family_group_id`,`active` FROM `need_summer_attendance_family_member` WHERE `event_id`=" + .EventId + " AND `account_id`=" + .@aid, .@curgid, .@curactive);
+	if (.@n > 0 && .@curactive && .@curgid != .@gid) {
+		mes "[추석 가족 관리]";
+		mes "^FF0000이 계정은 이미 그룹 #" + .@curgid + " 에 속해 있습니다.^000000";
+		mes "먼저 [계정 조회 / 해제] 에서 빼 주세요.";
+		next;
+		return;
+	}
+
+	mes "[추석 가족 관리]";
+	mes "계정 ^0055FF" + .@aid + "^000000 (" + .@userid$ + ")";
+	mes "그룹 ^0055FF#" + .@gid + " " + .@gname$ + "^000000 에 추가합니다.";
+	mes " ";
+	mes "승인 사유를 입력해 주세요.";
+	next;
+	input .@reason$;
+
+	query_sql("INSERT INTO `need_summer_attendance_family_member` (`event_id`,`account_id`,`family_group_id`,`active`,`approved_by`,`reason`) VALUES (" + .EventId + "," + .@aid + "," + .@gid + ",1,'" + escape_sql(strcharinfo(0)) + "','" + escape_sql(.@reason$) + "') ON DUPLICATE KEY UPDATE `family_group_id`=" + .@gid + ",`active`=1,`approved_by`='" + escape_sql(strcharinfo(0)) + "',`reason`='" + escape_sql(.@reason$) + "'");
+
+	query_sql("INSERT INTO `need_summer_attendance_family_audit` (`event_id`,`family_group_id`,`account_id`,`action`,`operator`,`reason`) VALUES (" + .EventId + "," + .@gid + "," + .@aid + ",'MEMBER_ADD','" + escape_sql(strcharinfo(0)) + "','" + escape_sql(.@reason$) + "')");
+
+	logmes "[ChuseokFamily] MEMBER_ADD group=" + .@gid + " account=" + .@aid;
+
+	mes "[추석 가족 관리]";
+	mes "^009900추가했습니다.^000000";
+	mes "이 계정은 이제 IP 제한을 면제받습니다.";
+	next;
+	return;
+
+//------------------------------------------------------------
+S_Account:
+	mes "[추석 가족 관리] 계정 조회";
+	mes "조회할 Account ID 를 입력해 주세요.";
+	next;
+	input .@aid, 0, 2000000000;
+	if (.@aid <= 0)
+		return;
+
+	.@n = query_sql("SELECT m.`family_group_id`, g.`group_name`, m.`active`, m.`approved_by`, m.`reason` FROM `need_summer_attendance_family_member` m LEFT JOIN `need_summer_attendance_family_group` g ON g.`event_id`=m.`event_id` AND g.`family_group_id`=m.`family_group_id` WHERE m.`event_id`=" + .EventId + " AND m.`account_id`=" + .@aid, .@gid, .@gname$, .@active, .@by$, .@reason$);
+
+	mes "[추석 가족 관리]";
+	mes "계정 ^0055FF" + .@aid + "^000000";
+	if (.@n < 1) {
+		mes "가족 그룹에 속해 있지 않습니다.";
+		next;
+		return;
+	}
+
+	mes "그룹 : #" + .@gid + " " + .@gname$;
+	mes "상태 : " + ((.@active) ? "^009900활성^000000" : "^FF0000해제됨^000000");
+	mes "승인 : " + .@by$;
+	mes "사유 : " + .@reason$;
+	next;
+
+	if (!.@active)
+		return;
+
+	if (select("이 계정을 가족에서 해제:그대로 둔다") == 2)
+		return;
+
+	mes "[추석 가족 관리]";
+	mes "해제 사유를 입력해 주세요.";
+	next;
+	input .@why$;
+
+	query_sql("UPDATE `need_summer_attendance_family_member` SET `active`=0,`approved_by`='" + escape_sql(strcharinfo(0)) + "',`reason`='" + escape_sql(.@why$) + "' WHERE `event_id`=" + .EventId + " AND `account_id`=" + .@aid);
+	query_sql("INSERT INTO `need_summer_attendance_family_audit` (`event_id`,`family_group_id`,`account_id`,`action`,`operator`,`reason`) VALUES (" + .EventId + "," + .@gid + "," + .@aid + ",'MEMBER_DEL','" + escape_sql(strcharinfo(0)) + "','" + escape_sql(.@why$) + "')");
+
+	logmes "[ChuseokFamily] MEMBER_DEL group=" + .@gid + " account=" + .@aid;
+
+	mes "[추석 가족 관리]";
+	mes "^009900해제했습니다.^000000";
+	mes "이 계정은 다시 IP 제한을 받습니다.";
+	next;
+	return;
+
+//------------------------------------------------------------
+S_DisableGroup:
+	mes "[추석 가족 관리] 그룹 비활성화";
+	mes "비활성화할 그룹 번호를 입력해 주세요.";
+	mes "^999999그룹을 끄면 소속 계정 전원이 IP 제한을 다시 받습니다.^000000";
+	next;
+	input .@gid, 0, 2000000000;
+	if (.@gid <= 0)
+		return;
+
+	.@n = query_sql("SELECT `group_name` FROM `need_summer_attendance_family_group` WHERE `event_id`=" + .EventId + " AND `family_group_id`=" + .@gid + " AND `active`=1", .@gname$);
+	if (.@n < 1) {
+		mes "[추석 가족 관리]";
+		mes "^FF0000그 번호의 활성 그룹이 없습니다.^000000";
+		next;
+		return;
+	}
+
+	query_sql("SELECT COUNT(*) FROM `need_summer_attendance_family_member` WHERE `event_id`=" + .EventId + " AND `family_group_id`=" + .@gid + " AND `active`=1", .@cnt);
+
+	mes "[추석 가족 관리]";
+	mes "그룹 ^0055FF#" + .@gid + " " + .@gname$ + "^000000";
+	mes "소속 계정 " + .@cnt + "개가 함께 해제됩니다.";
+	mes " ";
+	mes "정말 비활성화할까요?";
+	next;
+	if (select("비활성화:취소") == 2)
+		return;
+
+	mes "[추석 가족 관리]";
+	mes "사유를 입력해 주세요.";
+	next;
+	input .@why$;
+
+	query_sql("UPDATE `need_summer_attendance_family_group` SET `active`=0,`approved_by`='" + escape_sql(strcharinfo(0)) + "',`reason`='" + escape_sql(.@why$) + "' WHERE `event_id`=" + .EventId + " AND `family_group_id`=" + .@gid);
+	query_sql("UPDATE `need_summer_attendance_family_member` SET `active`=0 WHERE `event_id`=" + .EventId + " AND `family_group_id`=" + .@gid);
+	query_sql("INSERT INTO `need_summer_attendance_family_audit` (`event_id`,`family_group_id`,`account_id`,`action`,`operator`,`reason`) VALUES (" + .EventId + "," + .@gid + ",0,'GROUP_DEL','" + escape_sql(strcharinfo(0)) + "','" + escape_sql(.@why$) + "')");
+
+	logmes "[ChuseokFamily] GROUP_DEL id=" + .@gid + " members=" + .@cnt;
+
+	mes "[추석 가족 관리]";
+	mes "^009900비활성화했습니다.^000000";
+	next;
+	return;
+}

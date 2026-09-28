@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS `need_chuseok_exchange_log` (
   `ip` varchar(45) NOT NULL DEFAULT '',
   `product` varchar(16) CHARACTER SET ascii COLLATE ascii_general_ci NOT NULL,
   `period_key` int unsigned NOT NULL DEFAULT 0,
+  `family_group_id` int unsigned NOT NULL DEFAULT 0,
   `amount` int unsigned NOT NULL,
   `songpyun_spent` int unsigned NOT NULL,
   `used_after` int unsigned NOT NULL COMMENT 'account side',
