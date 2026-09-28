@@ -174,6 +174,9 @@ void set_cors_headers(Response& res, const std::string& origin) {
 }
 
 static httplib::Server::HandlerResponse cors_handler(const httplib::Request& req, httplib::Response& res) {  
+	if (needwiki_report_pre_routing(req, res))
+		return httplib::Server::HandlerResponse::Handled;
+
 	if (web_config.allowed_origin_cors.empty()) {
 		// CORS not allowed
 		return httplib::Server::HandlerResponse::Unhandled;
@@ -512,6 +515,7 @@ bool WebServer::initialize( int32 argc, char* argv[] ){
 	http_server->Get("/api/wiki/showitem", needwiki_showitem);
 	http_server->Get("/api/wiki/showgroup", needwiki_showgroup);
 	http_server->Get("/api/wiki/itemgroups", needwiki_itemgroups);
+	http_server->Post("/api/wiki/report", needwiki_report);
 
 	// set up logger
 	http_server->set_logger(logger);
