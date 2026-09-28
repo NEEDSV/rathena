@@ -37,6 +37,14 @@ slabw01,233,92,3	duplicate(dummy_cloaked_npc_ep162_wl)	겁먹은 연구원#ep162::Scar
 
 // Werner Laboratory central room (solo instance)
 slabw01,236,91,3	script	신병#ep162_04::Rookie#ep162_04	4_M_ROOKIE,{
+	// NEED: 메인 20~22 스토리와 잔당 소탕(7742 진행 중)이 겹치면 선택합니다.
+	if (terra_gloria_main >= 20 && terra_gloria_main <= 22 && (checkquest(7742,HUNTING) == 0 || checkquest(7742,HUNTING) == 1)) {
+		mes needtr("[신병]","[Rookie]");
+		mes needtr("무슨 일로 오셨나요?","What brings you here?");
+		next;
+		if (select(needtr("이야기를 계속한다 (스토리)","Continue the story"), needtr("잔당 소탕 (중추실 입장 준비)","Sweeping the Remnants (Central Room)")) == 2)
+			goto L_NEED_Daily;
+	}
 	if (terra_gloria_main == 20) {
 		mes needtr("[신병]","[Rookie]");
 		mes needtr("이것 좀 보세요.","Take a look at this.");
@@ -110,6 +118,7 @@ slabw01,236,91,3	script	신병#ep162_04::Rookie#ep162_04	4_M_ROOKIE,{
 		mes needtr("물건은 되찾았어요?","Have you reclaimed the stuff?");
 		close;
 	}
+L_NEED_Daily:
 	switch( checkquest(7742,HUNTING) ) {
 	case -1:
 		mes needtr("[신병]","[Rookie]");
@@ -170,7 +179,7 @@ OnInit:
 }
 
 slabw01,246,88,3	script	중추실 입구#evt_gate01::Central_room#evt_gate01	PORTAL,{
-	if (terra_gloria_main != 21 && terra_gloria_main < 23 && !callfunc("F_NEED_EP162_DailyRoute",7743))	// NEED: 스토리 미진행 캐릭터도 반복용 중추실 입장
+	if (terra_gloria_main != 21 && terra_gloria_main < 23 && !callfunc("F_NEED_EP162_DailyOpen",7743))	// NEED: Lv.100 이상은 스토리 진행과 무관하게 반복용 중추실 입장
 		end;
 	if (getcharid(1) < 1) {	// NEED: 원본은 메인 21 파티원의 입장을 막아 파티원이 진행하지 못했음
 		mes needtr("^4d4dffMD 현재는 파티장만 [중추실]에 입장할 수 있습니다.^000000","^4d4dffMD Only the party leader can enter [Central room] now.^000000");
@@ -183,11 +192,18 @@ slabw01,246,88,3	script	중추실 입구#evt_gate01::Central_room#evt_gate01	PORTAL,{
 		mes needtr("아... 매번 켜 줘야 하다니. 너무 불편하잖아요!","Oh ... I have to turn it on every time. It's so inconvenient!");
 		close;
 	}
-	if (terra_gloria_main == 21)
+	// NEED: 파티가 만든 중추실로 입장합니다 (원본은 본인 진행도로 이름을 골라 진행도가 다른 파티원은 입장 불가).
+	//       스토리용은 메인 21 / 7739 진행 중 캐릭터만 입장합니다.
+	.@md_name$ = "베르너 연구소 중추실";
+	.@iid = instance_id(IM_PARTY);
+	if (.@iid > 0 && instance_live_info(ILI_NAME, .@iid) == "베르너 연구소 중추실 [스토리]") {
+		if (terra_gloria_main != 21 || isbegin_quest(7739) != 1) {
+			mes needtr("^4d4dff이 중추실은 축복의 별을 찾는 스토리 진행용입니다.^000000","^4d4dffThis central room is for the Blessing Star story.^000000");
+			close;
+		}
 		.@md_name$ = "베르너 연구소 중추실 [스토리]";
-	else
-		.@md_name$ = "베르너 연구소 중추실";	// officially player without the daily hunting quest can enter in the instance, allowing to spam the instance without delay
-	.@md_en$ = (terra_gloria_main == 21) ? "Werner Laboratory Central Room [Story]" : "Werner Laboratory Central Room";	// NEED: 영문 표시명
+	}
+	.@md_en$ = (.@md_name$ == "베르너 연구소 중추실 [스토리]") ? "Werner Laboratory Central Room [Story]" : "Werner Laboratory Central Room";	// NEED: 영문 표시명
 	switch( instance_enter(.@md_name$) ) {
 	case IE_NOMEMBER:
 		end;
@@ -224,7 +240,7 @@ OnTouch:
 		end;
 	disablenpc instance_npcname("#sl_evt01");
 	// NEED: 간소화 진행 여부 (반복용 중추실 + 파티장의 선택 + 클리어 기록)
-	'need_md_simple = (instance_live_info(ILI_NAME) == "베르너 연구소 중추실" && @NEED_MD_WERNER_SIMPLE && #NEED_MD_WERNER_CLEAR) ? 1 : 0;
+	'need_md_simple = (instance_live_info(ILI_NAME) == "베르너 연구소 중추실" && @NEED_MD_WERNER_SIMPLE && #NEED_MD_WERNER_CLEAR && callfunc("F_NEED_EP162_PartyAllClear", 2)) ? 1 : 0;	// NEED: 켜는 시점에 파티 전원 클리어 재확인
 	if (instance_live_info(ILI_NAME) == "베르너 연구소 중추실 [스토리]")	// terra_gloria_main == 21
 		enablenpc instance_npcname("Eisen Werner#werner01");
 	else {

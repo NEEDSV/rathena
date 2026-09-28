@@ -2326,7 +2326,7 @@ que_swat,150,58,3	script	신병#ep162_03::Rookie#ep162_03	4_M_ROOKIE,{
 		mes needtr("- 소지한 아이템이 너무 많아 퀘스트를 진행할 수 없다. -","- Cannot progress with quest because you have too many items in your possession. -");
 		close;
 	}
-	if (terra_gloria_main < 22 && !callfunc("F_NEED_EP162_DailyRoute",7743)) {	// NEED: 스토리 미진행 캐릭터는 반복 일일퀘스트로 바로 진행
+	if (terra_gloria_main < 22 && !callfunc("F_NEED_EP162_DailyOpen",7743)) {	// NEED: Lv.100 이상은 스토리 진행과 무관하게 일퀘 이용
 		cutin "16loo_01.bmp",2;
 		mes needtr("[신병]","[Rookie]");
 		mes needtr("^4d4dff중앙 구역^000000은 이 연구소의 ^4d4dff건물 지하 깊은 곳^000000에 있는 것 같아요.","The ^4d4dffcentral area^000000 seems to be located in this laboratory, ^4d4dffdeep inside the building's basement^000000.");
@@ -2346,6 +2346,14 @@ que_swat,150,58,3	script	신병#ep162_03::Rookie#ep162_03	4_M_ROOKIE,{
 		mes needtr("[신병]","[Rookie]");
 		mes needtr("아무튼 찾으시는 걸 하루빨리 찾으셨으면 좋겠네요.","After all, I hope you will find what you are looking for as soon as possible.");
 		close3;
+	}
+	// NEED: 메인 22/23 스토리와 일일 의뢰(잔당 소탕)가 겹치면 선택합니다.
+	if ((terra_gloria_main == 22 || terra_gloria_main == 23) && callfunc("F_NEED_EP162_DailyOpen",7743)) {
+		mes needtr("[신병]","[Rookie]");
+		mes needtr("무슨 일로 오셨나요?","What brings you here?");
+		next;
+		if (select(needtr("이야기를 계속한다 (스토리)","Continue the story"), needtr("일일 의뢰 (잔당 소탕)","Daily request (Sweeping the Remnants)")) == 2)
+			goto L_NEED_Daily;
 	}
 	if (terra_gloria_main == 22) {
 		cutin "16loo_01.bmp",2;
@@ -2406,7 +2414,7 @@ que_swat,150,58,3	script	신병#ep162_03::Rookie#ep162_03	4_M_ROOKIE,{
 		warp "ein_in01",273,276;	// NEED: 원본 ein_fild04 -> 여관으로 바로 이동
 		end;
 	}
-	if (terra_gloria_main == 24) {
+	if (terra_gloria_main == 24 && !callfunc("F_NEED_EP162_DailyOpen",7743)) {	// NEED: 메인 24 는 이 NPC 에 스토리가 없으므로 일퀘로
 		npctalklang "... 이제 들어가 볼까?", "... Shall I go in now?", "", bc_self;
 		end;
 	}
@@ -2414,6 +2422,7 @@ que_swat,150,58,3	script	신병#ep162_03::Rookie#ep162_03	4_M_ROOKIE,{
 	mes needtr("이제 나갈까요?","Shall we leave now?");
 	cutin "16loo_01.bmp",2;
 	next;
+L_NEED_Daily:
 	switch( select( needtr("중추실의 몬스터에 대해","About the monster in the central room"), needtr("나간다.","Leave."), needtr("남는다.","Stay."), needtr("YSF01에 대해","About YSF01") ) ) {
 	case 1:
 		break;
@@ -2533,12 +2542,20 @@ que_swat,145,57,3	script	필로폰테스#ep162_04::Philopontess#ep162_04	4_M_PHILOFON
 		mes needtr("- 소지한 아이템이 너무 많아 퀘스트를 진행할 수 없다. -","- Cannot progress with quest because you have too many items in your possession. -");
 		close;
 	}
-	if (terra_gloria_main < 24 && !callfunc("F_NEED_EP162_DailyRoute",7745)) {	// NEED: 스토리 미진행 캐릭터는 반복 일일퀘스트로 바로 진행
+	if (terra_gloria_main < 24 && !callfunc("F_NEED_EP162_DailyOpen",7745)) {	// NEED: Lv.100 이상은 스토리 진행과 무관하게 일퀘 이용
 		cutin "ep16_tes01.bmp",2;
 		mes needtr("[테스]","[Tess]");
 		mes needtr("... 슈바르츠발트에 이런 시설이 대체 얼마나 더 있는 걸까요?","... How many more facilities like this are there in Schwaltzvalt?");
 		mes needtr("하아 ...","Haa ...");
 		close3;
+	}
+	// NEED: 메인 24 스토리와 일일 의뢰(숨어있는 연구원)가 겹치면 선택합니다.
+	if (terra_gloria_main == 24 && callfunc("F_NEED_EP162_DailyOpen",7745)) {
+		mes needtr("[테스]","[Tess]");
+		mes needtr("무슨 일로 오셨나요?","What brings you here?");
+		next;
+		if (select(needtr("이야기를 계속한다 (스토리)","Continue the story"), needtr("일일 의뢰 (숨어있는 연구원)","Daily request (Hiding Researcher)")) == 2)
+			goto L_NEED_Daily;
 	}
 	if (terra_gloria_main == 24) {
 		cutin "ep16_tes01.bmp",2;
@@ -2581,6 +2598,7 @@ que_swat,145,57,3	script	필로폰테스#ep162_04::Philopontess#ep162_04	4_M_PHILOFON
 		npctalklang "아, 잠깐 이리 와 보세요.", "Oh, please come here for a moment.", "Rookie#ep162_03", bc_self;
 		end;
 	}
+L_NEED_Daily:
 	switch( checkquest(7745,PLAYTIME) ) {
 	case -1:
 		switch( isbegin_quest(7744) ) {
@@ -2700,7 +2718,7 @@ que_swat,161,53,3	script	유슬란#ep162_1::Yuslan#ep162_1	4_M_GUNSLINGER3,{
 		mes needtr("- 소지한 아이템이 너무 많아 퀘스트를 진행할 수 없다. -","- Cannot progress with quest because you have too many items in your possession. -");
 		close;
 	}
-	if (terra_gloria_main < 20 && !callfunc("F_NEED_EP162_DailyRoute",7762))	// NEED: 스토리 미진행 캐릭터는 반복 일일퀘스트로 바로 진행
+	if (terra_gloria_main < 20 && !callfunc("F_NEED_EP162_DailyOpen",7762))	// NEED: Lv.100 이상은 스토리 진행과 무관하게 일퀘 이용
 		end;
 	switch( checkquest(7762,PLAYTIME) ) {
 	case -1:
@@ -2778,7 +2796,7 @@ OnInit:
 
 // Part Elena - Fight
 rebel_in,70,78,3	script	엘레나 볼코바#16.2rm::Elena Volkova#16.2rm	4_F_ELENA,{
-	if (terra_gloria_main < 16 && !callfunc("F_NEED_EP162_DailyRoute",16010)) {	// NEED: 스토리 미진행 캐릭터는 반복 일일퀘스트로 바로 진행
+	if (terra_gloria_main < 16 && !callfunc("F_NEED_EP162_DailyOpen",16010)) {	// NEED: Lv.100 이상은 스토리 진행과 무관하게 일퀘 이용
 		cutin "162elena_01.bmp",2;
 		mes needtr("[USU 사령관 엘레나]","[USU commander Elena]");
 		mes needtr("USU한테 함부로 시비 걸지 마세요.","Don't pick a fight with USU recklessly.");
@@ -2886,6 +2904,9 @@ rebel_in,70,78,3	script	엘레나 볼코바#16.2rm::Elena Volkova#16.2rm	4_F_ELENA,{
 			if (select( needtr("엘레나와 싸운다.","Fight Elena."), needtr("나보다 약한 사람 말은 안 들어요.","I don't listen to someone weaker than me.") ) == 1) {
 				mes "[" + strcharinfo(0) + "]";
 				mes needtr("(어쩔 수 없지. 싸울 준비를 하고 엘레나 볼코바에게 다시 말을 걸자.)","(I have no choice. Let's prepare for the fight and talk to Elena Volkova again.)");
+				if (isbegin_quest(16009) > 0) erasequest 16009;	// NEED: 진행 중이던 반복 결투 정리 (첫 결투와 16011/16061 공유)
+				if (isbegin_quest(16011) > 0) erasequest 16011;
+				if (isbegin_quest(16061) > 0) erasequest 16061;
 				setquest 16060;	// Fighting is the language of warmonger
 				setquest 16061;	// Fair and equitable result
 				close3;
@@ -2906,6 +2927,9 @@ rebel_in,70,78,3	script	엘레나 볼코바#16.2rm::Elena Volkova#16.2rm	4_F_ELENA,{
 			cutin "162elena_02.bmp",2;
 			mes needtr("[USU 사령관 엘레나]","[USU commander Elena]");
 			mes needtr("좋아요. 준비되면 말해요.","Great. Tell me when you are ready.");
+			if (isbegin_quest(16009) > 0) erasequest 16009;	// NEED: 진행 중이던 반복 결투 정리 (첫 결투와 16011/16061 공유)
+			if (isbegin_quest(16011) > 0) erasequest 16011;
+			if (isbegin_quest(16061) > 0) erasequest 16061;
 			setquest 16060;	// Fighting is the language of warmonger
 			setquest 16061;	// Fair and equitable result
 			close3;
@@ -2931,6 +2955,7 @@ rebel_in,70,78,3	script	엘레나 볼코바#16.2rm::Elena Volkova#16.2rm	4_F_ELENA,{
 						mes needtr("[USU 사령관 엘레나]","[USU commander Elena]");
 						mes needtr("싸우다가 항복하고 싶으면 이반 옆에 있는 ^0000CD소리타^000000에게 말하세요.","If you want to surrender during the fight, tell ^0000CDSorita^000000 beside Ivan.");
 						mes needtr("그럼 한 소리 듣게 될 거예요.","Then you're going to be told off.");
+						if (isbegin_quest(16061) == 0) setquest 16061;	// NEED: 결과 퀘스트 보장 (포기 후 재도전 소프트락 방지)
 						setquest 16011;// Arena entrance
 						close2;
 						warp "rebel_in",184,28;
@@ -3029,6 +3054,7 @@ rebel_in,70,78,3	script	엘레나 볼코바#16.2rm::Elena Volkova#16.2rm	4_F_ELENA,{
 					mes needtr("이게 어디에 쓰이는지 알고 싶다면 계단 아래에 있는 '슈트라세'라는 고집쟁이에게 물어보세요.","If you want to know what this is for, ask the stubborn guy named 'Strasse' below the stairs.");
 					erasequest 16060;	// Fighting is the language of warmonger
 					erasequest 16061;	// Fair and equitable result
+					if (isbegin_quest(16010) > 0) erasequest 16010;	// NEED: 같은 날 반복 결투를 했어도 첫 결투 보고 가능
 					setquest 16010;// Battle in great condition
 					completequest 14602;// Hunter on second floor
 					getitem 25155,10;	// Swz_Honor_Token
@@ -3073,6 +3099,7 @@ rebel_in,70,78,3	script	엘레나 볼코바#16.2rm::Elena Volkova#16.2rm	4_F_ELENA,{
 						mes needtr("안에서는 이반이 안내해 줄 거예요.","Ivan will guide you inside.");
 						mes needtr("싸우는 도중에 항복하고 싶으면 소리타에게 말하세요.","If you want to surrender during a fight, tell Sorita.");
 						mes needtr("시작하죠!","Let's do it!");
+						if (isbegin_quest(16061) == 0) setquest 16061;	// NEED: 결과 퀘스트 보장
 						close2;
 						warp "rebel_in",184,28;
 						end;
@@ -3099,6 +3126,7 @@ rebel_in,70,78,3	script	엘레나 볼코바#16.2rm::Elena Volkova#16.2rm	4_F_ELENA,{
 					mes needtr("썩 꺼지세요.","Get lost.");
 					erasequest 16011;// Arena entrance
 					erasequest 16061;	// Fair and equitable result
+					erasequest 16060;	// NEED: 원본은 16060 을 남겨 재도전 시 16061 이 다시 발급되지 않았음 (메인 16 진행 불가)
 					close3;
 				}
 				cutin "162elena_02.bmp",2;
@@ -3161,6 +3189,7 @@ rebel_in,70,78,3	script	엘레나 볼코바#16.2rm::Elena Volkova#16.2rm	4_F_ELENA,{
 				erasequest 16011;// Arena entrance
 				erasequest 16060;	// Fighting is the language of warmonger
 				erasequest 16061;	// Fair and equitable result
+				if (isbegin_quest(16010) > 0) erasequest 16010;	// NEED: 같은 날 반복 결투를 했어도 첫 결투 보고 가능
 				setquest 16010;// Battle in great condition
 				completequest 14602;// Hunter on second floor
 				getexp 200000,200000;
@@ -3414,6 +3443,16 @@ rebel_in,70,78,3	script	엘레나 볼코바#16.2rm::Elena Volkova#16.2rm	4_F_ELENA,{
 			mes needtr("한가하다고요? 잘됐네요.","Not busy? That's good.");
 			mes needtr("그럴 수 있을 때 즐겨 두세요.","Enjoy it while you can.");
 			close3;
+		}
+		// NEED: 오늘의 아이 돌보기(16021~16031) 진행 중에는 쌍둥이 서브를 시작하지 않습니다 (수제 쿠키/전달 NPC 공유).
+		if (lebedev_quest_16_2 == 0) {
+			for (.@q = 16021; .@q <= 16031; .@q++) {
+				if (isbegin_quest(.@q) == 1) {
+					mes needtr("[USU 사령관 엘레나]","[USU commander Elena]");
+					mes needtr("야나가 부탁한 일을 먼저 마무리해 주세요. 쌍둥이 이야기는 그다음에 하죠.","Please finish what Jana asked you first. We can talk about the twins after that.");
+					close;
+				}
+			}
 		}
 		if (lebedev_quest_16_2 == 0) {
 			mes needtr("[USU 사령관 엘레나]","[USU commander Elena]");
@@ -5439,10 +5478,18 @@ rebel_in,162,87,5	script	리벨리온 경비대장#2::Rebellion Guard leader#2	4_M_REBEL
 		close;
 	}
 	disable_items;
-	if (terra_gloria_lady_part < 12 && !callfunc("F_NEED_EP162_DailyRoute",11466)) {	// NEED: 스토리 미진행 캐릭터는 반복 일일퀘스트로 바로 진행
+	if (terra_gloria_lady_part < 12 && !callfunc("F_NEED_EP162_DailyOpen",11466)) {	// NEED: Lv.100 이상은 스토리 진행과 무관하게 일퀘 이용
 		mes needtr("[리벨리온 경비대장 라르시스]","[Rebellion Guard leader Larcis]");
 		mes needtr("안에서 조용히 해!!","Quiet inside!!");
 		close;
+	}
+	// NEED: 파티 준비 보고(스토리 서브)와 일일 부탁이 겹치면 선택합니다.
+	if (terra_gloria_lady_part == 12 && callfunc("F_NEED_EP162_DailyOpen",11466)) {
+		mes needtr("[리벨리온 경비대장]","[Rebellion Guard leader]");
+		mes needtr("무슨 일로 오셨나요?","What brings you here?");
+		next;
+		if (select(needtr("파티 준비 보고 (스토리)","Report the party preparation (story)"), needtr("부탁 목록 (일일)","Requests (daily)")) == 2)
+			goto L_NEED_Daily;
 	}
 	if (terra_gloria_lady_part == 12) {
 		mes needtr("[리벨리온 경비대장 라르시스]","[Rebellion Guard leader Larcis]");
@@ -5477,6 +5524,7 @@ rebel_in,162,87,5	script	리벨리온 경비대장#2::Rebellion Guard leader#2	4_M_REBEL
 	mes needtr("왔구나!","You're here!");
 	mes needtr("그럼 디엔 님, 리드쉬 님, 코트네스 님이 맡기신 일을 한번 봐 주겠어?","Then would you please have a look at the tasks given by Dien, Ridsh and Cotnes?");
 	next;
+L_NEED_Daily:
 	setarray .@quest_id[0], 11465, 11467, 11469;
 	setarray .@item_id[0], 25165, 25167, 25166;
 	setarray .@amount[0], 1, 1, 4;
@@ -6893,7 +6941,7 @@ einbroch,260,40,0	duplicate(dummy_cloaked_npc)	텔레포트 금지장치#4::Teleport Pro
 
 
 rebel_in,91,67,3	script	에릭슨 아들러#16.2rm::Ericsson Adler#16.2rm	4_MAL_CAPTAIN,{
-	if (terra_gloria_main < 17 && !callfunc("F_NEED_EP162_DailyRoute",16049)) {	// NEED: 스토리 미진행 캐릭터는 반복 일일퀘스트로 바로 진행
+	if (terra_gloria_main < 17 && !callfunc("F_NEED_EP162_DailyOpen",16049)) {	// NEED: Lv.100 이상은 스토리 진행과 무관하게 일퀘 이용
 		mes needtr("[분견대 사령관 에릭슨]","[Detached Force commander Ericsson]");
 		mes needtr("당신은...?","You...?");
 		close;
@@ -6964,6 +7012,19 @@ rebel_in,91,67,3	script	에릭슨 아들러#16.2rm::Ericsson Adler#16.2rm	4_MAL_CAPTAI
 	}
 
 	// Veteran's small memorial service quest
+	// NEED: 최초 추모(16045~16048, 메인 17 이상 스토리 캐릭터)와 일일 추모(16050~16053)를 선택으로 분리합니다.
+	//       최초 추모는 일일 쿨타임과 관계없이 진행할 수 있고, 일일은 스토리 진행과 관계없이 이용할 수 있습니다.
+	.@need_mode = 2;	// 1 = 최초 추모, 2 = 일일 추모
+	if (terra_gloria_main >= 17 && isbegin_quest(16048) != 2) {
+		mes needtr("[분견대 사령관 에릭슨]","[Detached Force commander Ericsson]");
+		mes needtr("무슨 일로 오셨나요?","What brings you here?");
+		next;
+		if (select(needtr("작은 추모식 (최초 의뢰)","The small memorial (first request)"), needtr("추모의 시간 (일일)","Tribute hour (daily)")) == 2)
+			goto L_NEED_EricssonDaily;
+		.@need_mode = 1;
+		goto L_NEED_EricssonFirst;
+	}
+L_NEED_EricssonDaily:
 	switch( checkquest(16049,PLAYTIME) ) {
 	case -1:
 		break;
@@ -6979,10 +7040,13 @@ rebel_in,91,67,3	script	에릭슨 아들러#16.2rm::Ericsson Adler#16.2rm	4_MAL_CAPTAI
 		erasequest 16049;// Quiet dawn
 		break;
 	}
-	// NEED: 스토리 미진행(NEED 경로) 캐릭터는 최초 추모(16045~16048) 없이 반복 일퀘(16050~)로 진행합니다.
-	//       16045~16048 은 변경하지 않으므로 이후 스토리를 진행하면 최초 추모와 최초 보상을 정상적으로 받을 수 있습니다.
+L_NEED_EricssonFirst:
+	// NEED: 일일 추모를 고른 캐릭터(또는 메인 17 미만)는 최초 추모 없이 반복 추모(16050~)로 진행합니다.
+	//       16045~16048 은 변경하지 않으므로 이후에도 최초 추모와 최초 보상을 받을 수 있습니다.
 	.@need_s = isbegin_quest(16050);
-	if (.@need_s == 0 && isbegin_quest(16045) == 0 && callfunc("F_NEED_EP162_DailyRoute",16049))
+	if (.@need_mode == 1)
+		.@need_s = 0;
+	else if (.@need_s == 0)
 		.@need_s = 1;
 	switch( .@need_s ) {
 	case 0:// first time
@@ -7078,6 +7142,8 @@ rebel_in,91,67,3	script	에릭슨 아들러#16.2rm::Ericsson Adler#16.2rm	4_MAL_CAPTAI
 			mes needtr("다녀와 줘서 고맙습니다.","Thank you for going.");
 			mes needtr("괜찮으시다면, 가끔 들러서 꽃을 놓아 주시겠습니까?","If you do not mind, will you stop by sometimes and put down some flowers?");
 			completequest 16048;// Traces of old story
+			if (isbegin_quest(16049) > 0)	// NEED: 같은 날 일일 추모를 이미 했어도 최초 보고 가능
+				erasequest 16049;
 			setquest 16049;// Quiet dawn
 			getitem 25155,10;// Swz_Honor_Token
 			getexp 200000,200000;
@@ -7420,7 +7486,7 @@ OnInit:
 
 // Daily Quest - Mason Bender Business
 rebel_in,19,48,5	script	메이슨 벤더#16.2rm::Mason Bender#16.2rm	4_M_KHMAN,{
-	if (terra_gloria_main < 17 && !callfunc("F_NEED_EP162_DailyRoute",16058)) {	// NEED: 스토리 미진행 캐릭터는 반복 일일퀘스트로 바로 진행
+	if (terra_gloria_main < 17 && !callfunc("F_NEED_EP162_DailyOpen",16058)) {	// NEED: Lv.100 이상은 스토리 진행과 무관하게 일퀘 이용
 		mes needtr("[메이슨 벤더]","[Mason Bender]");
 		mes needtr("어서 오세요. 이곳은 무기점, 클라나 네미에리입니다.","Welcome. This is a weapon store, Clana Nemieri.");
 		next;
@@ -7510,10 +7576,25 @@ rebel_in,19,48,5	script	메이슨 벤더#16.2rm::Mason Bender#16.2rm	4_M_KHMAN,{
 		close;
 	}
 
+	// NEED: 최초 광고(16054)는 메인 17 이상 스토리 캐릭터에게, 반복 광고 진행 중이 아닐 때 열립니다.
+	//       원본은 쿨타임 기록이 한 번도 없을 때(-1)만 최초를 줘서, 반복을 먼저 하면 최초 보상을 영구히 받을 수 없었습니다.
+	.@need_first = (terra_gloria_main >= 17 && isbegin_quest(16054) != 2 && isbegin_quest(16059) != 1);
+	if (.@need_first && isbegin_quest(16054) == 0) {
+		mes needtr("[메이슨 벤더]","[Mason Bender]");
+		mes needtr("무슨 일로 오셨나요?","What brings you here?");
+		next;
+		if (select(needtr("광고 전략 (최초 의뢰)","Advertising strategy (first request)"), needtr("차별화 광고 전략 (일일)","Differentiated advertising (daily)")) == 2)
+			goto L_NEED_MasonDaily;
+	}
+	if (0) {
+L_NEED_MasonDaily:
+		.@need_first = 0;
+	}
+	if (.@need_first && checkquest(16058,PLAYTIME) == 2)
+		erasequest 16058;	// 만료된 쿨타임 정리 -> 최초 광고 진행
 	switch( checkquest(16058,PLAYTIME) ) {
 	case -1:
-		// NEED: 스토리 미진행(NEED 경로) 캐릭터는 최초 광고(16054)를 건너뛰고 반복 일퀘로 진행합니다 (16054 는 변경하지 않음).
-		switch( (isbegin_quest(16054) == 0 && callfunc("F_NEED_EP162_DailyRoute",16058)) ? 2 : isbegin_quest(16054) ) {
+		switch( .@need_first ? isbegin_quest(16054) : 2 ) {	// NEED: 일일을 고르면 최초를 건너뜀 (16054 는 변경하지 않음)
 		case 0:
 			mes needtr("[메이슨 벤더]","[Mason Bender]");
 			mes needtr("어서 오세요. 이곳은 무기점, 클라나 네미에리입니다.","Welcome. This is a weapon store, Clana Nemieri.");
@@ -7910,7 +7991,7 @@ OnInit:
 
 // Milo Quests
 rebel_in,108,27,3	script	밀로 리버#16.2rm::Milo River#16.2rm	4_M_GUNSLINGER2,{
-	if (terra_gloria_main < 17 && !callfunc("F_NEED_EP162_DailyRoute",16034)) {	// NEED: 스토리 미진행 캐릭터는 반복 일일퀘스트로 바로 진행
+	if (terra_gloria_main < 17 && !callfunc("F_NEED_EP162_DailyOpen",16034)) {	// NEED: Lv.100 이상은 스토리 진행과 무관하게 일퀘 이용
 		mes needtr("[밀로 리버]","[Milo River]");
 		mes needtr("밥이 맛없는 건 제 탓이 아니에요.","It's not my fault that our meals are terrible.");
 		mes needtr("시간이랑 예산만 더 주면 훨씬 맛있는 요리를 할 수 있다고요.","If they give me more time and budget, I can cook much better food.");
@@ -8475,7 +8556,7 @@ einbech,34,203,7	duplicate(dummy_cloaked_npc)	채리티#16.2rmb2::Charity#16.2rmb2	
 einbech,141,98,5	duplicate(dummy_cloaked_npc)	채리티#16.2rmb3::Charity#16.2rmb3	4_CAT
 
 rebel_in,90,51,5	script	레이첼 스미스#16.2rm::Rachel Smith#16.2rm	4_F_GUNSLINGER2,{
-	if (terra_gloria_main < 17 && !callfunc("F_NEED_EP162_DailyRoute",16037)) {	// NEED: 스토리 미진행 캐릭터는 반복 일일퀘스트로 바로 진행
+	if (terra_gloria_main < 17 && !callfunc("F_NEED_EP162_DailyOpen",16037)) {	// NEED: Lv.100 이상은 스토리 진행과 무관하게 일퀘 이용
 		mes needtr("[레이첼 스미스]","[Rachel Smith]");
 		mes needtr("저는 여기서 수리를 담당하고 있어요. 보급은 저쪽에서 담당해요.","I'm charge of repairing here. The supply is handled there.");
 		next;
@@ -8502,7 +8583,17 @@ rebel_in,90,51,5	script	레이첼 스미스#16.2rm::Rachel Smith#16.2rm	4_F_GUNSLINGER
 		close;
 	}
 
-	if (rachel_quest_16_2 == 0 && !callfunc("F_NEED_EP162_DailyRoute",16037)) {	// NEED: 스토리 미진행 캐릭터는 최초 의뢰 없이 반복 일퀘로
+	// NEED: 권총 의뢰(최초 서브, 메인 17 이상)와 하루 한 번 재료 수집(일일)을 선택으로 분리합니다.
+	if (rachel_quest_16_2 < 3) {
+		if (terra_gloria_main < 17)
+			goto L_NEED_Daily;
+		mes needtr("[레이첼 스미스]","[Rachel Smith]");
+		mes needtr("무슨 일로 오셨나요?","What brings you here?");
+		next;
+		if (select(needtr("권총 의뢰 (최초 의뢰)","The revolver request (first request)"), needtr("하루 한 번 재료 수집 (일일)","Material collection (daily)")) == 2)
+			goto L_NEED_Daily;
+	}
+	if (rachel_quest_16_2 == 0) {
 		mes needtr("[레이첼 스미스]","[Rachel Smith]");
 		mes needtr("또예요? 무기를 부숴 놓고 잃어버린 척하는 거라면, 꿈도 꾸지 마세요.","Again? If you broke your weapon and are pretending that you lost it, don't even think about it.");
 		next;
@@ -8619,6 +8710,7 @@ rebel_in,90,51,5	script	레이첼 스미스#16.2rm::Rachel Smith#16.2rm	4_F_GUNSLINGER
 		rachel_quest_16_2 = 3;
 		close;
 	}
+L_NEED_Daily:
 	switch( checkquest(16037,PLAYTIME) ) {
 	case -1:
 		break;
@@ -9242,87 +9334,12 @@ rebel_in,99,51,3	script	임페리얼 담당관#ext162::Imperial Operator#ext162	4_M_REP
 	mes needtr(mesitemlink( 25155, false ) + "로 교환할 수 있는 ^4d4dff임페리얼^000000 장비가 있습니다.", "We have ^4d4dffImperial^000000 equipment that can be exchanged for " + mesitemlink( 25155, false ) + ".");
 	mes needtr("직업에 맞는 아이템 교환을 안내해 드리겠습니다.","I will guide you to exchange items according to your job.");
 	close2;
-	switch( eaclass() & EAJ_THIRDMASK ) {
-	case EAJ_RUNE_KNIGHT:
-		.@str$ = "JOB_RUNE_KNIGHT";
-		break;
-	case EAJ_WARLOCK:
-		.@str$ = "JOB_WARLOCK";
-		break;
-	case EAJ_RANGER:
-		.@str$ = "JOB_RANGER";
-		break;
-	case EAJ_ARCH_BISHOP:
-		.@str$ = "JOB_ARCH_BISHOP";
-		break;
-	case EAJ_MECHANIC:
-		.@str$ = "JOB_MECHANIC";
-		break;
-	case EAJ_GUILLOTINE_CROSS:
-		.@str$ = "JOB_GUILLOTINE_CROSS";
-		break;
-	case EAJ_ROYAL_GUARD:
-		.@str$ = "JOB_ROYAL_GUARD";
-		break;
-	case EAJ_SORCERER:
-		.@str$ = "JOB_SORCERER";
-		break;
-	case EAJ_MINSTRELWANDERER:
-		.@str$ = "JOB_MINSTREL";
-		break;
-	case EAJ_SURA:
-		.@str$ = "JOB_SURA";
-		break;
-	case EAJ_GENETIC:
-		.@str$ = "JOB_GENETIC";
-		break;
-	case EAJ_SHADOW_CHASER:
-		.@str$ = "JOB_SHADOW_CHASER";
-		break;
-	default:
-		switch( Class ) {
-		case JOB_SUPER_NOVICE_E:
-		case JOB_SUPER_BABY_E:
-		case JOB_HYPER_NOVICE:
-			.@str$ = "JOB_SUPER_NOVICE_E";
-			break;
-		case JOB_KAGEROU:
-		case JOB_OBORO:
-		case JOB_BABY_KAGEROU:
-		case JOB_BABY_OBORO:
-		case JOB_SHINKIRO:
-		case JOB_SHIRANUI:
-			.@str$ = "JOB_KAGEROU";
-			break;
-		case JOB_REBELLION:
-		case JOB_BABY_REBELLION:
-		case JOB_NIGHT_WATCH:
-			.@str$ = "JOB_REBELLION";
-			break;
-		case JOB_SUMMONER:
-		case JOB_BABY_SUMMONER:
-		case JOB_SPIRIT_HANDLER:
-			.@str$ = "JOB_SUMMONER";
-			break;
-		case JOB_STAR_EMPEROR:
-		case JOB_BABY_STAR_EMPEROR:
-		case JOB_STAR_EMPEROR2:
-		case JOB_BABY_STAR_EMPEROR2:
-		case JOB_SKY_EMPEROR:
-		case JOB_SKY_EMPEROR2:
-			.@str$ = "JOB_STAR_EMPEROR";
-			break;
-		case JOB_SOUL_REAPER:
-		case JOB_BABY_SOUL_REAPER:
-		case JOB_SOUL_ASCETIC:
-			.@str$ = "JOB_SOUL_REAPER";
-			break;
-		default:
-			end;
-		}
-		break;
-	}
-	callshop "shop_ext162_" + .@str$;
+	// NEED: 직업 -> 상점 매핑은 F_NEED_EP162_ImperialShop (npc/NEED/need_ep162_manager.txt) 한 곳에서 관리합니다.
+	//       라사냐 교환 자판기의 EP16.2 메뉴도 같은 함수를 사용합니다.
+	.@shop$ = callfunc("F_NEED_EP162_ImperialShop");
+	if (.@shop$ == "")
+		end;
+	callshop .@shop$;
 	end;
 }
 
@@ -9383,7 +9400,7 @@ rebel_in,108,36,3	script	마스터#16nego02::Master#16nego02	4_F_HUWOMAN,{
 		mes needtr("소지품이 너무 많네요. 좀 가볍게 하고 다시 오는 게 어때요? 너무 무거워 보여요.","You have too many items in your inventory. Why don't you come back after making it lighter? It looks too heavy.");
 		close;
 	}
-	if (terra_gloria_main < 17 && !callfunc("F_NEED_EP162_DailyRoute",14612)) {	// NEED: 스토리 미진행 캐릭터는 반복 일일퀘스트로 바로 진행
+	if (terra_gloria_main < 17 && !callfunc("F_NEED_EP162_DailyOpen",14612)) {	// NEED: Lv.100 이상은 스토리 진행과 무관하게 일퀘 이용
 		mes needtr("[마스터]","[Master]");
 		mes needtr("관계자 외 출입 금지예요. 물러나 주세요.","Authorized Personnel Only. Stay away.");
 		close;
@@ -9822,7 +9839,7 @@ rebel_in,88,61,5	script	신병#16nego02::Rookie#16nego02	4_M_ROOKIE,{
 		mes needtr("뭘 그렇게 많이 들고 다녀요? 남한테 줄 거 아니면 가방 좀 가볍게 하고 와요.","Why do you carry so many stuffs? Unless you want to give them away, make your bag lighter and come back.");
 		close;
 	}
-	if (terra_gloria_main < 16 && !callfunc("F_NEED_EP162_DailyRoute",14609)) {	// NEED: 스토리 미진행 캐릭터는 반복 일일퀘스트로 바로 진행
+	if (terra_gloria_main < 16 && !callfunc("F_NEED_EP162_DailyOpen",14609)) {	// NEED: Lv.100 이상은 스토리 진행과 무관하게 일퀘 이용
 		cutin "16loo_03.bmp",2;
 		mes needtr("[신병]","[Rookie]");
 		mes needtr("목숨이 아까우면 여기 사람들 자극하지 마요. 다들 성질이 급하거든요.","If you value your life, don't stimulate the people here. Many of them are short-tempered.");
@@ -9831,7 +9848,7 @@ rebel_in,88,61,5	script	신병#16nego02::Rookie#16nego02	4_M_ROOKIE,{
 		mes needtr("약속한 대로 차 한 잔만 마시고 돌아가요.","As you promised me, just drink a cup of tea and go back.");
 		close3;
 	}
-	if (terra_gloria_main == 16) {
+	if (terra_gloria_main == 16 && !callfunc("F_NEED_EP162_DailyOpen",14609)) {	// NEED: 안내 대사만 있는 구간이라 일퀘 우선
 		if (isbegin_quest(14602) != 2 || terra_gloria_lady_part < 14) {
 			cutin "16loo_01.bmp",2;
 			mes needtr("[신병]","[Rookie]");
@@ -11537,7 +11554,7 @@ rebel_in,105,54,5	script	일리야 레베데프#16.2rm::Ilya Lebedev#16.2rm	4_M_ILYA,{
 }
 
 rebel_in,109,54,3	script	야나 레베데바#16.2rm::Jana Levedeva#16.2rm	4_F_ANYA,{
-	if (lebedev_quest_16_2 == 0 && !callfunc("F_NEED_EP162_DailyRoute",16020)) {	// NEED: 스토리 미진행 캐릭터는 반복 일일퀘스트로 바로 진행
+	if (lebedev_quest_16_2 == 0 && !callfunc("F_NEED_EP162_DailyOpen",16020)) {	// NEED: Lv.100 이상은 스토리 진행과 무관하게 일퀘 이용
 		mes needtr("[야나 레베데바]","[Jana Levedeva]");
 		mes needtr("애 취급 받기 싫어요.","I don't want to be treated as a child.");
 		mes needtr("머리 쓰다듬지 마세요.","Do not stroke my head.");

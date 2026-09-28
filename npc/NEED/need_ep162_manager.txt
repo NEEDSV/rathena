@@ -8,10 +8,11 @@
 //= NEED 정책
 //=   - 메인 스토리는 선택 사항. ep16_royal / terra_gloria_main 을
 //=     개방 목적으로 절대 변경하지 않습니다.
-//=   - 반복 일일퀘스트는 스토리가 해당 NPC 단계에 도달하기 전이면
-//=     "NEED 경로"로 바로 이용할 수 있습니다 (F_NEED_EP162_DailyRoute).
-//=   - 스토리가 해당 단계를 지난 캐릭터는 원본 조건으로 이용합니다
-//=     (F_NEED_EP162_DailyStory).
+//=   - 반복 일일퀘스트 15종은 Base Lv.100 이상이면 스토리 진행과 무관하게 이용합니다
+//=     (F_NEED_EP162_DailyOpen). 스토리를 진행해도 다시 잠기지 않습니다.
+//=   - 같은 NPC 의 스토리 / 최초 서브와는 대화 선택지로 분리합니다.
+//=   - 최초 버전이 반복 버전과 같은 퀘스트를 쓰는 경우(F_NEED_EP162_FirstBusy)에만
+//=     최초 버전이 그날의 일퀘를 대신하며, 즉시 완료에서 제외합니다.
 //=   - 반복 보상은 원본의 2배 (3 -> 6, 10 -> 20, 하루 104개).
 //=
 //= 배치 위치: lasagna,192,173 (EP16.1 통합 안내 옆)
@@ -38,97 +39,47 @@ function	script	F_NEED_EP162_CanUseArea	{
 	return (BaseLevel >= callfunc("F_NEED_EP162_MinLv"));
 }
 
-// NEED: 원본 조건으로 해당 반복 일일퀘스트가 열려 있는지 (스토리 진행 캐릭터).
+// NEED: EP16.2 반복 일일퀘스트 이용 가능 여부 (v2).
+//   원칙: 스토리 진행 여부는 일퀘 이용권을 잃는 조건이 아닙니다 (EP16.1 과 같음).
+//         Base Lv.100 이상이면 15종 모두 이용 가능하며, 스토리를 진행해도 다시 잠기지 않습니다.
+//   예외: 엘레나 첫 결투(메인 16, 14602 진행 중)는 반복 결투와 같은 퀘스트(16011/16061)를 쓰고
+//         완료 시 반복 결투 쿨타임(16010)도 설정하므로, 그동안에는 첫 결투가 그날의 결투를 대신합니다.
+//   같은 NPC 의 스토리 / 최초 서브와는 NPC 대화에서 선택지로 분리합니다 (quests_16_2.txt 의 NEED 주석).
 //   getarg(0) : 반복 일퀘 대기(쿨타임) 퀘스트 ID
-function	script	F_NEED_EP162_DailyStory	{
-	switch (getarg(0)) {
-	case 7743:	// 잔당 소탕
-	case 7745:	// 숨어있는 연구원
-		return (terra_gloria_main >= 25);
-	case 7762:	// 키메라 진압
-		return (terra_gloria_main >= 20);
-	case 16010:	// 최상의 컨디션으로 대결 (엘레나)
-		return (terra_gloria_main >= 16 && isbegin_quest(14602) == 2);
-	case 11466:	// 디엔의 고급 차
-	case 11468:	// 리드쉬의 오래된 편지
-	case 11470:	// 콘테스의 빛나는 반지
-		return (terra_gloria_lady_part >= 13);
-	case 16049:	// 추모의 시간
-		return (terra_gloria_main >= 17 && isbegin_quest(16048) == 2);
-	case 16058:	// 차별화 광고 전략
-		return (terra_gloria_main >= 17 && isbegin_quest(16054) == 2);
-	case 16034:	// 어르신 다과
-	case 16042:	// 채리티 데려오기
-	case 14612:	// 총기 재활용
-	case 14609:	// 신병의 부탁
-		return (terra_gloria_main >= 17);
-	case 16037:	// 하루 한 번 재료 수집
-		return (terra_gloria_main >= 17 && rachel_quest_16_2 >= 3);
-	case 16020:	// 오늘의 아이 돌보기
-		return (lebedev_quest_16_2 == 11);
-	}
-	return 0;
-}
-
-// NEED: 스토리를 거치지 않는 "NEED 경로"로 보낼지 판정합니다.
-// 스토리가 아직 해당 NPC 의 스토리 단계에 도달하지 않은 Lv.100 이상 캐릭터만 1 을 돌려줍니다.
-// 스토리 진행 중(해당 NPC 의 스토리 구간)에는 0 이라 원본 스토리 분기가 우선합니다.
-//   getarg(0) : 반복 일퀘 대기(쿨타임) 퀘스트 ID
-function	script	F_NEED_EP162_DailyRoute	{
+function	script	F_NEED_EP162_DailyOpen	{
 	if (BaseLevel < callfunc("F_NEED_EP162_MinLv"))
 		return 0;
-	switch (getarg(0)) {
-	case 7743:	// 신병(que_swat) 은 메인 22~24 에 스토리 분기가 있음
-		return (terra_gloria_main < 22);
-	case 7745:	// 테스(que_swat) 는 메인 24 에 스토리 분기가 있음
-		return (terra_gloria_main < 24);
-	case 7762:
-		return (terra_gloria_main < 20);
-	case 16010:	// 엘레나는 메인 16 에 첫 결투(스토리)가 있음
-		return (terra_gloria_main < 16);
-	case 11466:
-	case 11468:
-	case 11470:	// 부인 파트는 메인 16 부터 시작
-		return (terra_gloria_main < 16);
-	case 14609:	// 신병(기지) 은 메인 16 에 안내 대사가 있음
-		return (terra_gloria_main < 16);
-	case 16049:
-	case 16058:
-	case 16034:
-	case 16042:
-	case 16037:
-	case 14612:
-	case 16020:
-		return (terra_gloria_main < 17);
-	}
-	return 0;
+	if (getarg(0) == 16010 && terra_gloria_main == 16 && isbegin_quest(14602) == 1)
+		return 0;
+	return 1;
 }
 
-// NEED: 현재 이용 가능한 반복 일일퀘스트인지 (스토리 조건 또는 NEED 경로).
-function	script	F_NEED_EP162_DailyOpen	{
-	if (callfunc("F_NEED_EP162_DailyStory", getarg(0)))
-		return 1;
-	if (callfunc("F_NEED_EP162_DailyRoute", getarg(0)))
-		return 1;
-	return 0;
-}
-
-// NEED: 최초 진행 퀘스트가 진행 중이라 즉시 완료에서 제외해야 하는지.
-// 해당 NPC 가 대기 퀘스트를 최초 분기보다 먼저 검사하므로,
-// 최초 진행 중에 대기 퀘스트가 생기면 그날 최초 보고가 막힐 수 있습니다.
+// NEED: 최초 버전(1회성)이 진행 중이라 같은 날 반복 버전을 따로 처리할 수 없는 상태.
+// 이 상태에서는 NPC 가 최초 버전을 진행하며(완료 시 같은 쿨타임 설정), 즉시 완료에서는 제외합니다.
+//   반환값 0 = 아님, 1 = 최초 진행 중, 2 = 결투장 입장 중
 function	script	F_NEED_EP162_FirstBusy	{
 	switch (getarg(0)) {
-	case 16042:	// 채리티 최초 16041
+	case 16042:	// 채리티 최초 16041 (포획 16044 를 반복과 공유)
 		return (isbegin_quest(16041) == 1);
-	case 14612:	// 총기 재활용 최초 14610
+	case 14612:	// 총기 재활용 최초 14610 (보상·쿨타임 동일)
 		return (isbegin_quest(14610) == 1);
-	case 14609:	// 신병 최초 14603~14605
+	case 14609:	// 신병 최초 14603~14605 (보상·쿨타임 동일)
 		return (isbegin_quest(14603) == 1 || isbegin_quest(14604) == 1 || isbegin_quest(14605) == 1);
+	case 16058:	// 최초 광고 16054 (전단 퀘스트 16055~16057 을 반복과 공유)
+		return (isbegin_quest(16054) == 1);
+	case 16020:	// 레베데프 쌍둥이 서브 진행 중 (수제 쿠키 25161 을 반복과 공유)
+		return (lebedev_quest_16_2 >= 1 && lebedev_quest_16_2 <= 10);
 	case 16010:	// 투기장 입장 중 (대기실/결투)
-		return (isbegin_quest(16011) == 1 && checkquest(16061,HUNTING) != 2 && strcharinfo(3) == "rebel_in" && getmapxy(.@m$, .@x, .@y) == 0 && .@x >= 170 && .@y <= 40);
+		if (isbegin_quest(16011) == 1 && checkquest(16061,HUNTING) != 2 && strcharinfo(3) == "rebel_in") {
+			getmapxy(.@m$, .@x, .@y);
+			if (.@x >= 170 && .@y <= 40)
+				return 2;
+		}
+		return 0;
 	}
 	return 0;
 }
+
 
 // NEED: 오늘의 EP16.2 반복 일일퀘스트 진행 상황을 계산합니다.
 //   반환값             : 오늘 아직 받지 못한 슈발츠 명예의 증표 수 (개방된 일퀘 기준)
@@ -340,23 +291,27 @@ function	script	F_NEED_EP162_PartyAllClear	{
 }
 
 // NEED: 파티장이 일반 / 간소화 진행을 고릅니다. 반환값 1 = 간소화.
-// 파티장 본인과 온라인 파티원 모두에게 클리어 기록이 있을 때만 간소화를 고를 수 있습니다.
+// 정책 (기존 NEED 메모리얼 던전 - 마지막 방 / 의식의 방 과 동일):
+//   - 파티장 본인 + 온라인 파티원 전원에게 클리어 기록이 있을 때만 선택지를 보여 줍니다.
+//   - 한 명이라도 기록이 없으면 선택지 없이 일반 진행으로 시작합니다.
+//   - 오프라인 파티원은 판정에서 제외합니다 (F_LastRoomCanEnableSimple 과 동일).
+//   - 인던 안에서 간소화를 실제로 켜는 시점에 한 번 더 확인합니다 (F_NEED_EP162_PartyAllClear).
 function	script	F_NEED_EP162_MDChooseMode	{
 	.@type = getarg(0);
 	if (callfunc("F_NEED_EP162_MDClear", .@type) == 0)
 		return 0;
+	if (callfunc("F_NEED_EP162_PartyAllClear", .@type) == 0) {
+		mes needtr("[NEED 메모리얼 던전]", "[NEED Memorial Dungeon]");
+		mes needtr("온라인 파티원 중 이 메모리얼 던전을 아직 클리어하지 않은 계정이 있어 일반 진행으로 시작합니다.", "Some online party members have not cleared this memorial dungeon yet, so it starts as a normal run.");
+		next;
+		return 0;
+	}
 	mes needtr("[NEED 메모리얼 던전]", "[NEED Memorial Dungeon]");
-	mes needtr("이미 이 메모리얼 던전을 클리어한 기록이 있습니다.", "You have already cleared this memorial dungeon once.");
+	mes needtr("파티원 모두 이 메모리얼 던전을 클리어한 기록이 있습니다.", "Every party member has cleared this memorial dungeon before.");
 	mes needtr("^4d4dff간소화 진행^000000은 대화/대기/퍼즐을 줄이고 전투와 보스는 그대로 진행합니다.", "The ^4d4dffsimplified run^000000 cuts dialogue, waiting and puzzles but keeps all fights and the boss.");
 	next;
 	if (select(needtr("일반 진행", "Normal run"), needtr("간소화 진행", "Simplified run")) == 1)
 		return 0;
-	if (callfunc("F_NEED_EP162_PartyAllClear", .@type) == 0) {
-		mes needtr("[NEED 메모리얼 던전]", "[NEED Memorial Dungeon]");
-		mes needtr("온라인 파티원 중 최초 클리어를 하지 않은 계정이 있어 일반 진행으로 시작합니다.", "Some online party members have not cleared it yet, so this run starts as a normal run.");
-		next;
-		return 0;
-	}
 	return 1;
 }
 
@@ -552,15 +507,15 @@ L_Status:
 	mes needtr("[반복 일퀘 목록]", "[Repeat Dailies]");
 	for (.@i = 0; .@i < getarraysize($@ep162_cd); ++.@i) {
 		.@cd = $@ep162_cd[.@i];
-		if (!callfunc("F_NEED_EP162_DailyOpen", .@cd))
+		.@state = checkquest(.@cd,PLAYTIME);
+		if (.@state == 0 || .@state == 1)
+			.@st$ = needtr("^00AA00[완료]^000000", "^00AA00[Done]^000000");
+		else if (!callfunc("F_NEED_EP162_DailyOpen", .@cd))
 			.@st$ = needtr("^888888[미개방]^000000", "^888888[Locked]^000000");
-		else {
-			.@state = checkquest(.@cd,PLAYTIME);
-			if (.@state == 0 || .@state == 1)
-				.@st$ = needtr("^00AA00[완료]^000000", "^00AA00[Done]^000000");
-			else
-				.@st$ = needtr("^4d4dff[진행 가능]^000000", "^4d4dff[Available]^000000");
-		}
+		else if (callfunc("F_NEED_EP162_FirstBusy", .@cd))
+			.@st$ = needtr("^FF9900[최초 진행 중]^000000", "^FF9900[First run]^000000");
+		else
+			.@st$ = needtr("^4d4dff[진행 가능]^000000", "^4d4dff[Available]^000000");
 		mes .@st$ + " " + callfunc("F_NEED_EP162_DailyName", .@cd) + " (" + $@ep162_amt[.@i] + ")";
 		if (.@i == 7)
 			next;
@@ -569,7 +524,8 @@ L_Status:
 	mes needtr("[상태 안내]", "[Status Legend]");
 	mes needtr("^4d4dff[진행 가능]^000000 오늘 보상을 아직 받지 않았습니다.", "^4d4dff[Available]^000000 You have not taken today's reward yet.");
 	mes needtr("^00AA00[완료]^000000 오늘 반복 보상을 이미 받았습니다.", "^00AA00[Done]^000000 Today's repeat reward has been claimed.");
-	mes needtr("^888888[미개방]^000000 스토리/서브 퀘스트 진행이 필요합니다.", "^888888[Locked]^000000 Needs story / sub quest progress.");
+	mes needtr("^FF9900[최초 진행 중]^000000 최초 의뢰가 오늘의 일퀘를 대신합니다 (즉시 완료 제외).", "^FF9900[First run]^000000 The first request stands in for today's daily (no instant finish).");
+	mes needtr("^888888[미개방]^000000 Base Lv.100 이상 또는 엘레나 첫 결투 완료가 필요합니다.", "^888888[Locked]^000000 Needs Base Lv.100, or Elena's first duel finished.");
 	mes needtr("※ 쿨타임은 매일 04시에 초기화됩니다.", "* Cooldowns reset every day at 04:00.");
 	mes needtr("※ 최초 1회 보상은 반복 보상 집계에 포함되지 않습니다.", "* First-time rewards are not counted in the repeat rewards.");
 	next;

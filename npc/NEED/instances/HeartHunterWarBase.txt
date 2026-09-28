@@ -60,11 +60,19 @@ ein_fild04,275,342,5	script	스트라이커 부대 지휘관#::Striker Unit Commander#	4_M
 	mes needtr("[스트라이커 부대 지휘관]","[Striker Unit Commander]");
 	mes needtr("작전 준비가 끝나면 나와 함께 그곳에 들어가게 될 거다.","Once we are ready for the operation, you will get in there with me.");
 	next;
-	if (terra_gloria_main == 19)
+	// NEED: 파티가 만든 기지 외곽으로 입장합니다. 원본은 본인 진행도로 이름을 골라, 진행도가 다른 파티원은 입장할 수 없었습니다.
+	//       스토리용은 메인 19 캐릭터만 입장합니다 (다른 진행도의 캐릭터가 스토리 보상/진행을 받지 않도록).
+	.@md_name$ = "하트헌터 기지 외곽";
+	.@iid = instance_id(IM_PARTY);
+	if (.@iid > 0 && instance_live_info(ILI_NAME, .@iid) == "하트헌터 기지 외곽 [스토리]") {
+		if (terra_gloria_main != 19) {
+			mes needtr("[스트라이커 부대 지휘관]","[Striker Unit Commander]");
+			mes needtr("이번 작전은 기지 점령 작전 참가자만 들어갈 수 있다.","Only those taking part in the base occupation can go in this time.");
+			close;
+		}
 		.@md_name$ = "하트헌터 기지 외곽 [스토리]";
-	else
-		.@md_name$ = "하트헌터 기지 외곽";
-	.@md_en$ = (terra_gloria_main == 19) ? "Heart Hunter War Base [Story]" : "Heart Hunter War Base";	// NEED: 영문 표시명
+	}
+	.@md_en$ = (.@md_name$ == "하트헌터 기지 외곽 [스토리]") ? "Heart Hunter War Base [Story]" : "Heart Hunter War Base";	// NEED: 영문 표시명
 	switch( instance_enter(.@md_name$) ) {
 	case IE_NOMEMBER:
 		mes needtr("^0000ff소속 부대(파티)가 없는 모험가는 입장할 수 없는 것 같다.^000000","^0000ffSeems like an adventurer without his/her unit (party) cannot enter.^000000");
@@ -217,11 +225,20 @@ ein_fild04,281,337,3	script	줄리안#ep16.2::Julian#ep16.2	4_M_REBELLION2,{
 		}
 		break;
 	}
-	// NEED: 최초 클리어 이후에는 반복용 기지 외곽을 간소화 진행으로 시작할 수 있습니다.
+	// NEED: 메인 19 캐릭터는 스토리(기지 점령 작전) / 반복(방어 훈련)을 고를 수 있습니다.
+	//       반복용은 최초 클리어 이후 간소화 진행을 고를 수 있습니다 (파티 전원 클리어 필요).
+	.@story = (terra_gloria_main == 19);
+	if (.@story && callfunc("F_NEED_EP162_CanUseArea")) {
+		mes needtr("[줄리안]","[Julian]");
+		mes needtr("어느 작전으로 준비할까?","Which operation should I prepare?");
+		next;
+		if (select(needtr("기지 점령 작전 (스토리)","Base occupation (story)"), needtr("기지 방어 훈련 (반복)","Base defense training (repeat)")) == 2)
+			.@story = 0;
+	}
 	@NEED_MD_HHWB_SIMPLE = 0;
-	if (terra_gloria_main != 19)
+	if (!.@story)
 		@NEED_MD_HHWB_SIMPLE = callfunc("F_NEED_EP162_MDChooseMode", 1);
-	if (terra_gloria_main == 19)
+	if (.@story)
 		instance_create("하트헌터 기지 외곽 [스토리]");
 	else
 		instance_create("하트헌터 기지 외곽");
@@ -1198,7 +1215,7 @@ OnTimer40000:
 		end;
 	mes needtr("[줄리안]","[Julian]");
 	mes needtr("흠. 기술자들이 점령한 기지를 수리해야 한다. 전투 병력은 밖으로 나갈 시간이다.","Hmm. The engineers need to repair the occupied base. It's time for battle force step outside.");
-	if (isbegin_quest(12374) == 1) {
+	if (isbegin_quest(12374) == 1 && terra_gloria_main == 19) {	// NEED: 스토리 진행 캐릭터만 (메인 19 -> 20)
 		getitem 25155,10;// Swz_Honor_Token
 		completequest 12374;// Heart Hunter Base occupation
 		terra_gloria_main = 20;
@@ -1280,7 +1297,7 @@ OnInstanceInit:
 	mes needtr("" + strcharinfo(0) + ", 여기는 처음인가?", "" + strcharinfo(0) + ", is this your first visit here?");
 	next;
 	// NEED: 간소화 진행은 파티장이 기지 외곽을 만들 때 선택합니다 (F_NEED_EP162_MDChooseMode).
-	'need_md_simple = (@NEED_MD_HHWB_SIMPLE && #NEED_MD_HHWB_CLEAR) ? 1 : 0;
+	'need_md_simple = (@NEED_MD_HHWB_SIMPLE && #NEED_MD_HHWB_CLEAR && callfunc("F_NEED_EP162_PartyAllClear", 1)) ? 1 : 0;	// NEED: 켜는 시점에 파티 전원 클리어 재확인
 	if ('need_md_simple)
 		.@s = 2;
 	else
