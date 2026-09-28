@@ -3217,8 +3217,10 @@ static std::bitset<NK_MAX> battle_skill_get_damage_properties(uint16 skill_id, i
 	} else {
 		std::bitset<NK_MAX> nk = skill_db.find(skill_id)->nk;
 		if (skill_id == RK_DRAGONBREATH || skill_id == RK_DRAGONBREATH_WATER) {
+			// NEED: 2017 브레스 복원분. 공격측 카드는 계속 무시한다.
+			// NK_SIMPLEDEFENSE 는 건드리지 않는다 - 브레스는 skill_db.yml 의 SimpleDefense: true 대로
+			// DEF+DEF2 평면 차감을 써야 하며, 일반 Renewal DEF 비율 감소 공식을 타면 안 된다.
 			nk.set(NK_IGNOREATKCARD);
-			nk.reset(NK_SIMPLEDEFENSE);
 		}
 		return nk;
 	}
