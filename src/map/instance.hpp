@@ -98,6 +98,7 @@ struct s_instance_data {
 struct s_instance_db {
 	int32 id; ///< Instance DB ID
 	std::string name; ///< Instance name
+	std::string name_en; ///< NEED Phase 3.1: English display name for EN sessions (memorial-dungeon window only; `name` stays the key)
 	int64 limit, ///< Duration limit
 		timeout; ///< Timeout limit
 	bool nonpc;

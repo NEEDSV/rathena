@@ -647,7 +647,8 @@ int32 clif_send(const void* buf, int32 len, const block_list* bl, enum send_targ
 				if( (sd = p->data[i].sd) == nullptr )
 					continue;
 
-				if( !session_isActive( fd = sd->fd ) )
+				// NEED Phase 3.1 : the Phase 0.32 language filter reaches the party members too
+				if( !session_isActive( fd = sd->fd ) || clif_lang_skip( sd ) )
 					continue;
 
 				if( sd->id == bl->id && (type == PARTY_WOS || type == PARTY_SAMEMAP_WOS || type == PARTY_AREA_WOS) )
@@ -668,7 +669,7 @@ int32 clif_send(const void* buf, int32 len, const block_list* bl, enum send_targ
 
 			iter = mapit_getallusers();
 			while( ( tsd = static_cast<const map_session_data*>(mapit_next( iter )) ) != nullptr ){
-				if( tsd->partyspy == p->party.party_id && session_isActive( fd = tsd->fd ) ){
+				if( tsd->partyspy == p->party.party_id && session_isActive( fd = tsd->fd ) && !clif_lang_skip( tsd ) ){
 					WFIFOHEAD( fd, len );
 					memcpy( WFIFOP( fd, 0 ), buf, len );
 					WFIFOSET( tsd->fd, len );
@@ -686,7 +687,7 @@ int32 clif_send(const void* buf, int32 len, const block_list* bl, enum send_targ
 		while( ( tsd = static_cast<const map_session_data*>(mapit_next( iter )) ) != nullptr ){
 			if( type == DUEL_WOS && bl->id == tsd->id )
 				continue;
-			if( sd->duel_group == tsd->duel_group && session_isActive( fd = tsd->fd ) ){
+			if( sd->duel_group == tsd->duel_group && session_isActive( fd = tsd->fd ) && !clif_lang_skip( tsd ) ){
 				WFIFOHEAD( fd, len );
 				memcpy( WFIFOP( fd, 0 ), buf, len );
 				WFIFOSET( fd, len );
@@ -723,7 +724,7 @@ int32 clif_send(const void* buf, int32 len, const block_list* bl, enum send_targ
 		const auto &g = sd->guild->guild;
 		for(i = 0; i < g.max_member; i++) {
 			if( (sd = g.member[i].sd) != nullptr ){
-				if( !session_isActive( fd = sd->fd ) )
+				if( !session_isActive( fd = sd->fd ) || clif_lang_skip( sd ) )
 					continue;
 
 				if( type == GUILD_NOBG && sd->bg_id )
@@ -748,7 +749,7 @@ int32 clif_send(const void* buf, int32 len, const block_list* bl, enum send_targ
 
 		iter = mapit_getallusers();
 		while( ( tsd = static_cast<const map_session_data*>(mapit_next( iter )) ) != nullptr ){
-			if( tsd->guildspy == g.guild_id && session_isActive( fd = tsd->fd ) ){
+			if( tsd->guildspy == g.guild_id && session_isActive( fd = tsd->fd ) && !clif_lang_skip( tsd ) ){
 				WFIFOHEAD( fd, len );
 				memcpy( WFIFOP( fd, 0 ), buf, len );
 				WFIFOSET( fd, len );
@@ -771,7 +772,7 @@ int32 clif_send(const void* buf, int32 len, const block_list* bl, enum send_targ
 		if( sd && sd->bg_id > 0 && (bg = util::umap_find(bg_team_db, sd->bg_id)))
 		{
 			for (const auto &member : bg->members) {
-				if( ( sd = member.sd ) == nullptr || !session_isActive( fd = sd->fd ) )
+				if( ( sd = member.sd ) == nullptr || !session_isActive( fd = sd->fd ) || clif_lang_skip( sd ) )
 					continue;
 				if(sd->id == bl->id && (type == BG_WOS || type == BG_SAMEMAP_WOS || type == BG_AREA_WOS) )
 					continue;
@@ -790,7 +791,7 @@ int32 clif_send(const void* buf, int32 len, const block_list* bl, enum send_targ
 			struct clan* clan = sd->clan;
 
 			for( i = 0; i < clan->max_member; i++ ){
-				if( ( sd = clan->members[i] ) == nullptr || !session_isActive( fd = sd->fd ) ){
+				if( ( sd = clan->members[i] ) == nullptr || !session_isActive( fd = sd->fd ) || clif_lang_skip( sd ) ){
 					continue;
 				}
 
@@ -804,7 +805,7 @@ int32 clif_send(const void* buf, int32 len, const block_list* bl, enum send_targ
 
 			iter = mapit_getallusers();
 			while( ( tsd = static_cast<const map_session_data*>(mapit_next( iter )) ) != nullptr ){
-				if( tsd->clanspy == clan->id && session_isActive( fd = tsd->fd ) ){
+				if( tsd->clanspy == clan->id && session_isActive( fd = tsd->fd ) && !clif_lang_skip( tsd ) ){
 					WFIFOHEAD(fd, len);
 					memcpy(WFIFOP(fd, 0), buf, len);
 					WFIFOSET(fd, len);
@@ -19403,6 +19404,25 @@ void clif_font(const map_session_data* sd)
 }
 
 
+/// NEED Phase 3.1 : the memorial-dungeon window shows the instance NAME the packet carries (bytes 2..62).
+/// That name is also the instance key every script uses (instance_create / instance_enter / instance_info),
+/// so it stays Korean in instance_db; `NameEn` (s_instance_db::name_en) is the DISPLAY name an EN session
+/// receives instead. `buf` arrives built with the Korean name; with an English name it is sent twice through
+/// the Phase 0.32 language filter (the KR set, then the EN set with the name rewritten), which reaches the same
+/// recipients the single send would have. Without an English name nothing changes.
+static void clif_instance_send_named( unsigned char* buf, int32 len, map_session_data* sd, send_target target,
+                                      const s_instance_db& db ){
+	if( db.name_en.empty() ){
+		clif_send( buf, len, sd, target );
+		return;
+	}
+
+	clif_send_lang( buf, len, sd, target, NEED_LANG_KR );
+	memset( WBUFP(buf,2), 0, INSTANCE_NAME_LENGTH );
+	safestrncpy( WBUFCP(buf,2), db.name_en.c_str(), INSTANCE_NAME_LENGTH );
+	clif_send_lang( buf, len, sd, target, NEED_LANG_EN );
+}
+
 /// Required to start the instancing information window on Client
 /// This window re-appears each "refresh" of client automatically until the keep_limit reaches 0.
 /// S 0x2cb <Instance name>.61B <Standby Position>.W
@@ -19426,7 +19446,7 @@ void clif_instance_create( int32 instance_id, size_t num ){
 	safestrncpy(WBUFCP(buf,2), db->name.c_str(), INSTANCE_NAME_LENGTH);
 	WBUFW( buf, 63 ) = static_cast<int16>( num );
 
-	clif_send(buf,packet_len(0x2cb),sd,target);
+	clif_instance_send_named( buf, packet_len(0x2cb), sd, target, *db );
 #endif
 }
 
@@ -19475,7 +19495,7 @@ void clif_instance_status(int32 instance_id, uint32 limit1, uint32 limit2)
 	safestrncpy(WBUFCP(buf,2), db->name.c_str(), INSTANCE_NAME_LENGTH);
 	WBUFL(buf,63) = limit1;
 	WBUFL(buf,67) = limit2;
-	clif_send(buf,packet_len(0x2cd),sd,target);
+	clif_instance_send_named( buf, packet_len(0x2cd), sd, target, *db );
 #endif
 
 	return;

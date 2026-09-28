@@ -90,6 +90,22 @@ uint64 InstanceDatabase::parseBodyNode(const ryml::NodeRef& node) {
 		instance->name = name;
 	}
 
+	// NEED Phase 3.1: the English display name of the memorial-dungeon window (clif_instance_send_named).
+	// Display only - scripts keep addressing the instance by Name.
+	if (this->nodeExists(node, "NameEn")) {
+		std::string name_en;
+
+		if (!this->asString(node, "NameEn", name_en))
+			return 0;
+
+		if (name_en.length() >= INSTANCE_NAME_LENGTH) {
+			this->invalidWarning(node["NameEn"], "NameEn %s is longer than %d characters, capping.\n", name_en.c_str(), INSTANCE_NAME_LENGTH - 1);
+			name_en.resize(INSTANCE_NAME_LENGTH - 1);
+		}
+
+		instance->name_en = name_en;
+	}
+
 	if (this->nodeExists(node, "TimeLimit")) {
 		int64 limit;
 
