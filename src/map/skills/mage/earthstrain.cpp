@@ -124,6 +124,19 @@ void SkillEarthStrain::castendPos2(block_list* src, int32 x, int32 y, uint16 ski
 	int32 w, wave = skill_lv + 4, dir = map_calc_dir(src,x,y);
 	int32 sx = x = src->x, sy = y = src->y; // Store first caster's location to avoid glitch on unit setting
 
+	// NEED: each wave below becomes its own skill unit group, and the hit-dedup tickset keys UF_NOOVERLAP
+	// skills by skill_id - which makes every Earth Strain on a target share one entry, so a cast fired while
+	// an earlier one is still running loses its damage (Reading Spellbook -> Release chains). Tag every wave
+	// of this cast with one identifier; skill_timerskill copies it into the group and
+	// skill_unitgrouptickset_search keys on it, keeping the per-cast dedup while separating the casts.
+	// The offset keeps the value clear of skill_id / group_id, the other two key spaces of that tickset.
+	static int32 cast_serial = 0;
+
+	if (++cast_serial > 0x00FFFFFF)
+		cast_serial = 1;
+
+	int32 cast_id = 0x40000000 | cast_serial;
+
 	for( w = 1; w <= wave; w++ )
 	{
 		switch( dir ){
@@ -132,7 +145,9 @@ void SkillEarthStrain::castendPos2(block_list* src, int32 x, int32 y, uint16 ski
 			case 2: sx = x - w; break;
 			case 6: sx = x + w; break;
 		}
-		skill_addtimerskill(src,gettick() + (140 * w),0,sx,sy,getSkillId(),skill_lv,dir,flag&2);
+		// dir is not read back from the timer: skill_get_unit_layout() recomputes it from src -> (sx,sy),
+		// so the 'type' slot carries the cast identifier instead.
+		skill_addtimerskill(src,gettick() + (140 * w),0,sx,sy,getSkillId(),skill_lv,cast_id,flag&2);
 	}
 }
 

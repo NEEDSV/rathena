@@ -403,6 +403,10 @@ struct s_skill_unit_group {
 	char *valstr; /// String value, used for HT_TALKIEBOX & RG_GRAFFITI
 	int32 unit_id; /// Unit ID (for client effect)
 	int32 group_id; /// Skill Group ID
+	/// NEED: Identifies the single skill cast this group belongs to, for skills that spawn one group per
+	/// wave (WL_EARTHSTRAIN). Used by skill_unitgrouptickset_search so that waves of the same cast share
+	/// their hit-dedup entry while separate casts keep their own. 0 = unused (normal group_id/skill_id key).
+	int32 cast_id;
 	int32 link_group_id; /// Linked group that should be deleted if this one is deleted
 	int32 unit_count, /// Number of unit at this group
 		alive_count; /// Number of alive unit

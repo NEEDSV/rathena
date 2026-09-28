@@ -4096,9 +4096,21 @@ TIMER_FUNC(skill_timerskill){
 						int32 dummy = 1, i = skill_get_unit_range(skl->skill_id,skl->skill_lv);
 						map_foreachinarea(skill_cell_overlap, src->m, skl->x-i, skl->y-i, skl->x+i, skl->y+i, BL_SKILL, skl->skill_id, &dummy, src);
 					}
-					[[fallthrough]];
-				case WL_EARTHSTRAIN:
 					skill_unitsetting(src,skl->skill_id,skl->skill_lv,skl->x,skl->y,(skl->type<<16)|skl->flag);
+					break;
+				case WL_EARTHSTRAIN: {
+						// NEED: every wave of one Earth Strain cast spawns its own unit group, so keying the
+						// hit-dedup tickset by skill_id (what UF_NOOVERLAP does) makes separate casts share it
+						// and swallow each other's damage - visible when Reading Spellbook/Release fires them
+						// back to back. skl->type carries this cast's identifier (see SkillEarthStrain::castendPos2);
+						// hand it to the group so only waves of the same cast share the entry.
+						// The high word of the old flag (skl->type<<16) was never read by skill_unitsetting,
+						// which only checks flag&1 / flag&UNIT_NOCONSUME_AMMO, so dropping it changes nothing.
+						std::shared_ptr<s_skill_unit_group> group = skill_unitsetting(src,skl->skill_id,skl->skill_lv,skl->x,skl->y,skl->flag);
+
+						if (group != nullptr)
+							group->cast_id = skl->type;
+					}
 					break;
 				case RL_FIRE_RAIN: {
 						int32 dummy = 1, i = skill_get_splash(skl->skill_id,skl->skill_lv);
@@ -12334,6 +12346,7 @@ std::shared_ptr<s_skill_unit_group> skill_initunitgroup(block_list* src, int32 c
 	group->guild_id   = status_get_guild_id(src);
 	group->bg_id      = bg_team_get_id(src);
 	group->group_id   = skill_get_new_group_id();
+	group->cast_id    = 0;
 	group->link_group_id = 0;
 	group->unit       = (skill_unit *)aCalloc(count, sizeof(skill_unit));
 	group->unit_count = count;
@@ -12571,7 +12584,11 @@ struct skill_unit_group_tickset *skill_unitgrouptickset_search(block_list *bl, s
 
 	set = ud->skillunittick;
 
-	if (skill_get_unit_flag(group->skill_id, UF_NOOVERLAP))
+	// NEED: groups that carry a cast identifier (WL_EARTHSTRAIN) key on it, so waves of one cast still
+	// share their dedup entry but separate casts do not block each other.
+	if (group->cast_id != 0)
+		id = s = group->cast_id;
+	else if (skill_get_unit_flag(group->skill_id, UF_NOOVERLAP))
 		id = s = group->skill_id;
 	else
 		id = s = group->group_id;
