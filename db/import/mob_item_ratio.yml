@@ -32,59 +32,63 @@ Header:
   Type: MOB_ITEM_RATIO_DB
   Version: 1
 
-#===== NEED Tomb of the Fallen - 2013 Drop Cleanup ===========
-# 2015/2017 이후 추가된 일반 전사자 드롭 제거
+#===== NEED Tomb of the Fallen - 2015 Drop Cleanup ===========
+# 2015-12 대개편 기준 전사자의 무덤 드롭 차단 목록.
+#
+# 2013 -> 2015 에서 차단 해제 (이 파일에서 항목 삭제):
+#   - Particles_Of_Energy5 (타락한 에너지파편) : 일반 전사자 13종
+#       base Rate 1000 x 보스 배율 10 -> NEED 배율 적용 결과 100% / 공식 확률 미확정
+#   - Real_*_Card (진 전사자 카드) 13종         : 일반 전사자 13종
+#   - Crystal_Of_Grudge (원념의 결정)          : MVP 13종 (2015-12-30)
+#       base Rate 3000 x MVP 배율 10 -> NEED 배율 적용 결과 100% / 공식 확률 미확정
+#   MVP 카드 13종은 원래 이 파일이 아니라 db/import/mob_db.yml 의
+#   placeholder 로 막혀 있었고, 그쪽에서 Index 7 로 복구했다.
+#
+#   - Pieces_Of_Grudge (원념의 파편) 일반 13종 차단 해제
+#       Rate 20 슬롯 1개만 남김 -> 최종 2% (보스 배율 x10). Rate 40 슬롯은 mob_db import 에서 제거.
+#
+# 계속 차단:
+#   - Pieces_Of_Grudge : MVP 13종 (db/import/mob_db.yml placeholder 용)
+#   - Crystal_Of_Grudge : 일반 3종 에레메스/셰실/랜달 (placeholder 용)
+#   - 후기 추가 의상 3종 (2015 근거 없음)
+#
+# [NEED] 이 Body 는 2026-09-21(7dabd429e) DormantBody -> Body 로 되돌려
+# 실제로 로드되고 있다. (UTF-8 BOM 을 붙이면 Body 가 0건으로 조용히 무시된다)
 #=============================================================
-
-#=====================================================================
-# [NEED] 아래 블록은 "휴면" 상태입니다 - 로더가 읽지 않습니다.
-#
-# 이 파일도 UTF-8 BOM 때문에 여태 0건으로 로드되고 있었습니다. 아래
-# 드롭 차단 19종(봉인 보스카드 13 / 의상 3 / 원념의 조각 등 3)은 지금까지
-# 적용된 적이 없습니다. 2026-09-18 BOM 을 제거했지만 그대로 살리면
-# 전사자의 무덤 드롭 구성이 즉시 바뀌므로(요청 범위 밖) 키 이름을
-# Body -> DormantBody 로 바꿔 휴면 상태를 유지했습니다.
-#
-# 실제로 적용하려면 "DormantBody_TombOfTheFallen:" 를 "Body:" 로 되돌리고
-# 파일 맨 아래의 현재 "Body:" 항목을 그 아래로 합치면 됩니다.
-#=====================================================================
 Body:
   #-----------------------------------------------------------
-  # 후기 공통 재료
+  # 원념의 파편 - MVP 13종 placeholder 전용 차단
+  #   db/import/mob_db.yml 의 MVP MvpDrops 0~2 / Drops 4~6 placeholder.
+  #   일반 13종은 차단 해제 (Rate 20 슬롯 1개만 남겨 최종 2%).
   #-----------------------------------------------------------
   - Item: Pieces_Of_Grudge
     Ratio: 0
     List:
-      V_EREMES: true
-      V_MAGALETA: true
-      V_KATRINN: true
-      V_SHECIL: true
-      V_HARWORD: true
-      V_SEYREN: true
-      V_RANDEL: true
-      V_FLAMEL: true
-      V_CELIA: true
-      V_CHEN: true
-      V_GERTIE: true
-      V_ALPHOCCIO: true
-      V_TRENTINI: true
+      V_B_EREMES: true
+      V_B_MAGALETA: true
+      V_B_SHECIL: true
+      V_B_HARWORD: true
+      V_B_KATRINN: true
+      V_B_SEYREN: true
+      V_B_RANDEL: true
+      V_B_FLAMEL: true
+      V_B_CELIA: true
+      V_B_CHEN: true
+      V_B_GERTIE: true
+      V_B_ALPHOCCIO: true
+      V_B_TRENTINI: true
 
-  - Item: Particles_Of_Energy5
+  #-----------------------------------------------------------
+  # 원념의 결정 - 일반 3종 placeholder 전용 차단
+  #   db/import/mob_db.yml 에서 원념의 파편 Rate 40 슬롯을 덮어쓴 placeholder.
+  #   MVP 의 원념의 결정 드롭과는 무관 (이 3종에만 적용).
+  #-----------------------------------------------------------
+  - Item: Crystal_Of_Grudge
     Ratio: 0
     List:
       V_EREMES: true
-      V_MAGALETA: true
-      V_KATRINN: true
       V_SHECIL: true
-      V_HARWORD: true
-      V_SEYREN: true
       V_RANDEL: true
-      V_FLAMEL: true
-      V_CELIA: true
-      V_CHEN: true
-      V_GERTIE: true
-      V_ALPHOCCIO: true
-      V_TRENTINI: true
 
   #-----------------------------------------------------------
   # 후기 추가 의상
@@ -103,99 +107,6 @@ Body:
     Ratio: 0
     List:
       V_RANDEL: true
-
-  #-----------------------------------------------------------
-  # 진 전사자 카드
-  # 현재 기본 DB에서 주석 처리된 카드도 포함.
-  # 향후 기본 mob_db 최신화 시 다시 살아나도 2013판에서는 제거됨.
-  #-----------------------------------------------------------
-  - Item: Real_Eremes_Card
-    Ratio: 0
-    List:
-      V_EREMES: true
-
-  - Item: Real_Magaleta_Card
-    Ratio: 0
-    List:
-      V_MAGALETA: true
-
-  - Item: Real_Katrinn_Card
-    Ratio: 0
-    List:
-      V_KATRINN: true
-
-  - Item: Real_Shecil_Card
-    Ratio: 0
-    List:
-      V_SHECIL: true
-
-  - Item: Real_Harword_Card
-    Ratio: 0
-    List:
-      V_HARWORD: true
-
-  - Item: Real_Seyren_Card
-    Ratio: 0
-    List:
-      V_SEYREN: true
-
-  - Item: Real_Randel_Card
-    Ratio: 0
-    List:
-      V_RANDEL: true
-
-  - Item: Real_Flamel_Card
-    Ratio: 0
-    List:
-      V_FLAMEL: true
-
-  - Item: Real_Ceila_Card
-    Ratio: 0
-    List:
-      V_CELIA: true
-
-  - Item: Real_Chen_Card
-    Ratio: 0
-    List:
-      V_CHEN: true
-
-  - Item: Real_Gertie_Card
-    Ratio: 0
-    List:
-      V_GERTIE: true
-
-  - Item: Real_Alphoccio_Card
-    Ratio: 0
-    List:
-      V_ALPHOCCIO: true
-
-  - Item: Real_Trentini_Card
-    Ratio: 0
-    List:
-      V_TRENTINI: true
-
-  # ============================================================
-  # Tomb of the Fallen - 2013 MVP drop cleanup
-  # Crystal_Of_Grudge is used as a disabled placeholder
-  # for obsolete MvpDrops / Drops slots.
-  # ============================================================
-
-  - Item: Crystal_Of_Grudge
-    Ratio: 0
-    List:
-      V_B_EREMES: true
-      V_B_MAGALETA: true
-      V_B_SHECIL: true
-      V_B_HARWORD: true
-      V_B_KATRINN: true
-      V_B_SEYREN: true
-      V_B_RANDEL: true
-      V_B_FLAMEL: true
-      V_B_CELIA: true
-      V_B_CHEN: true
-      V_B_GERTIE: true
-      V_B_ALPHOCCIO: true
-      V_B_TRENTINI: true
 
   #-----------------------------------------------------------
   # NEED 완화 2차 - 옛 글래스트헤임(상급) 오염된 마력
