@@ -1,0 +1,866 @@
+//===== NEED Script ==========================================
+//= EP16.2 테라 글로리아 통합 안내 NPC / 공용 함수
+//===== Description: =========================================
+//= EP16.1 통합 안내(need_ep161_manager.txt)와 같은 운영 방식으로
+//= EP16.2 반복 일일퀘스트 현황 / 즉시 완료 / 지역 이동 /
+//= 슈발츠 명예의 증표 교환 / 메모리얼 던전 안내를 제공합니다.
+//=
+//= NEED 정책
+//=   - 메인 스토리는 선택 사항. ep16_royal / terra_gloria_main 을
+//=     개방 목적으로 절대 변경하지 않습니다.
+//=   - 반복 일일퀘스트는 스토리가 해당 NPC 단계에 도달하기 전이면
+//=     "NEED 경로"로 바로 이용할 수 있습니다 (F_NEED_EP162_DailyRoute).
+//=   - 스토리가 해당 단계를 지난 캐릭터는 원본 조건으로 이용합니다
+//=     (F_NEED_EP162_DailyStory).
+//=   - 반복 보상은 원본의 2배 (3 -> 6, 10 -> 20, 하루 104개).
+//=
+//= 배치 위치: lasagna,192,173 (EP16.1 통합 안내 옆)
+//============================================================
+
+// NEED: EP16.2 콘텐츠 이용 최소 레벨 (시작 / NEED 경로 공통).
+function	script	F_NEED_EP162_MinLv	{
+	return 100;
+}
+
+// NEED: EP16.2 를 시작할 수 있는지 판정합니다.
+// 원본 조건(ep16_royal >= 17) 을 만족하거나, NEED 정책상 Base Lv.100 이상이면 시작 가능합니다.
+// EP16.1 스토리 변수(ep16_royal)는 읽기만 하고 절대 변경하지 않습니다.
+function	script	F_NEED_EP162_CanStart	{
+	if (ep16_royal >= 17)
+		return 1;
+	if (BaseLevel >= callfunc("F_NEED_EP162_MinLv"))
+		return 1;
+	return 0;
+}
+
+// NEED: 스토리 진행과 무관하게 리벨리온 기지 / 연구소 구역을 이용할 수 있는지 판정합니다.
+function	script	F_NEED_EP162_CanUseArea	{
+	return (BaseLevel >= callfunc("F_NEED_EP162_MinLv"));
+}
+
+// NEED: 원본 조건으로 해당 반복 일일퀘스트가 열려 있는지 (스토리 진행 캐릭터).
+//   getarg(0) : 반복 일퀘 대기(쿨타임) 퀘스트 ID
+function	script	F_NEED_EP162_DailyStory	{
+	switch (getarg(0)) {
+	case 7743:	// 잔당 소탕
+	case 7745:	// 숨어있는 연구원
+		return (terra_gloria_main >= 25);
+	case 7762:	// 키메라 진압
+		return (terra_gloria_main >= 20);
+	case 16010:	// 최상의 컨디션으로 대결 (엘레나)
+		return (terra_gloria_main >= 16 && isbegin_quest(14602) == 2);
+	case 11466:	// 디엔의 고급 차
+	case 11468:	// 리드쉬의 오래된 편지
+	case 11470:	// 콘테스의 빛나는 반지
+		return (terra_gloria_lady_part >= 13);
+	case 16049:	// 추모의 시간
+		return (terra_gloria_main >= 17 && isbegin_quest(16048) == 2);
+	case 16058:	// 차별화 광고 전략
+		return (terra_gloria_main >= 17 && isbegin_quest(16054) == 2);
+	case 16034:	// 어르신 다과
+	case 16042:	// 채리티 데려오기
+	case 14612:	// 총기 재활용
+	case 14609:	// 신병의 부탁
+		return (terra_gloria_main >= 17);
+	case 16037:	// 하루 한 번 재료 수집
+		return (terra_gloria_main >= 17 && rachel_quest_16_2 >= 3);
+	case 16020:	// 오늘의 아이 돌보기
+		return (lebedev_quest_16_2 == 11);
+	}
+	return 0;
+}
+
+// NEED: 스토리를 거치지 않는 "NEED 경로"로 보낼지 판정합니다.
+// 스토리가 아직 해당 NPC 의 스토리 단계에 도달하지 않은 Lv.100 이상 캐릭터만 1 을 돌려줍니다.
+// 스토리 진행 중(해당 NPC 의 스토리 구간)에는 0 이라 원본 스토리 분기가 우선합니다.
+//   getarg(0) : 반복 일퀘 대기(쿨타임) 퀘스트 ID
+function	script	F_NEED_EP162_DailyRoute	{
+	if (BaseLevel < callfunc("F_NEED_EP162_MinLv"))
+		return 0;
+	switch (getarg(0)) {
+	case 7743:	// 신병(que_swat) 은 메인 22~24 에 스토리 분기가 있음
+		return (terra_gloria_main < 22);
+	case 7745:	// 테스(que_swat) 는 메인 24 에 스토리 분기가 있음
+		return (terra_gloria_main < 24);
+	case 7762:
+		return (terra_gloria_main < 20);
+	case 16010:	// 엘레나는 메인 16 에 첫 결투(스토리)가 있음
+		return (terra_gloria_main < 16);
+	case 11466:
+	case 11468:
+	case 11470:	// 부인 파트는 메인 16 부터 시작
+		return (terra_gloria_main < 16);
+	case 14609:	// 신병(기지) 은 메인 16 에 안내 대사가 있음
+		return (terra_gloria_main < 16);
+	case 16049:
+	case 16058:
+	case 16034:
+	case 16042:
+	case 16037:
+	case 14612:
+	case 16020:
+		return (terra_gloria_main < 17);
+	}
+	return 0;
+}
+
+// NEED: 현재 이용 가능한 반복 일일퀘스트인지 (스토리 조건 또는 NEED 경로).
+function	script	F_NEED_EP162_DailyOpen	{
+	if (callfunc("F_NEED_EP162_DailyStory", getarg(0)))
+		return 1;
+	if (callfunc("F_NEED_EP162_DailyRoute", getarg(0)))
+		return 1;
+	return 0;
+}
+
+// NEED: 최초 진행 퀘스트가 진행 중이라 즉시 완료에서 제외해야 하는지.
+// 해당 NPC 가 대기 퀘스트를 최초 분기보다 먼저 검사하므로,
+// 최초 진행 중에 대기 퀘스트가 생기면 그날 최초 보고가 막힐 수 있습니다.
+function	script	F_NEED_EP162_FirstBusy	{
+	switch (getarg(0)) {
+	case 16042:	// 채리티 최초 16041
+		return (isbegin_quest(16041) == 1);
+	case 14612:	// 총기 재활용 최초 14610
+		return (isbegin_quest(14610) == 1);
+	case 14609:	// 신병 최초 14603~14605
+		return (isbegin_quest(14603) == 1 || isbegin_quest(14604) == 1 || isbegin_quest(14605) == 1);
+	case 16010:	// 투기장 입장 중 (대기실/결투)
+		return (isbegin_quest(16011) == 1 && checkquest(16061,HUNTING) != 2 && strcharinfo(3) == "rebel_in" && getmapxy(.@m$, .@x, .@y) == 0 && .@x >= 170 && .@y <= 40);
+	}
+	return 0;
+}
+
+// NEED: 오늘의 EP16.2 반복 일일퀘스트 진행 상황을 계산합니다.
+//   반환값             : 오늘 아직 받지 못한 슈발츠 명예의 증표 수 (개방된 일퀘 기준)
+//   $@ep162_done       : 오늘 완료한 반복 일퀘 수
+//   $@ep162_open       : 개방된 반복 일퀘 수
+//   $@ep162_total      : 개방된 반복 일퀘의 하루 증표 합계
+//   $@ep162_pend[]     : 즉시 완료 대상 쿨타임 퀘스트 ID
+//   $@ep162_pend_amt[] : 각 항목의 증표 수
+// 판정 기준은 각 반복 일퀘의 쿨타임 퀘스트 checkquest(id,PLAYTIME) 입니다.
+function	script	F_NEED_EP162_DailyStatus	{
+	callfunc "F_NEED_EP162_DailyList";
+	.@size = getarraysize($@ep162_cd);
+	deletearray $@ep162_pend[0], getarraysize($@ep162_pend);
+	deletearray $@ep162_pend_amt[0], getarraysize($@ep162_pend_amt);
+	$@ep162_done = 0;
+	$@ep162_open = 0;
+	$@ep162_total = 0;
+	.@remain = 0;
+	.@n = 0;
+	for (.@i = 0; .@i < .@size; ++.@i) {
+		.@cd = $@ep162_cd[.@i];
+		if (!callfunc("F_NEED_EP162_DailyOpen", .@cd))
+			continue;
+		$@ep162_open++;
+		$@ep162_total += $@ep162_amt[.@i];
+		.@state = checkquest(.@cd,PLAYTIME);
+		if (.@state == 0 || .@state == 1) {	// 오늘 이미 완료
+			$@ep162_done++;
+			continue;
+		}
+		if (callfunc("F_NEED_EP162_FirstBusy", .@cd))
+			continue;
+		$@ep162_pend[.@n] = .@cd;
+		$@ep162_pend_amt[.@n] = $@ep162_amt[.@i];
+		.@remain += $@ep162_amt[.@i];
+		.@n++;
+	}
+	return .@remain;
+}
+
+// NEED: 반복 일퀘 15종의 쿨타임 퀘스트 / NEED 보상량 (원본 3 -> 6, 채리티 10 -> 20).
+function	script	F_NEED_EP162_DailyList	{
+	setarray $@ep162_cd[0],
+		 7743,	// 잔당 소탕
+		 7745,	// 숨어있는 연구원
+		 7762,	// 키메라 진압
+		16010,	// 최상의 컨디션으로 대결
+		11466,	// 디엔의 고급 차
+		11468,	// 리드쉬의 오래된 편지
+		11470,	// 콘테스의 빛나는 반지
+		16049,	// 추모의 시간
+		16058,	// 차별화 광고 전략
+		16034,	// 어르신 다과
+		16042,	// 채리티 데려오기
+		16037,	// 하루 한 번 재료 수집
+		14612,	// 총기 재활용
+		14609,	// 신병의 부탁
+		16020;	// 오늘의 아이 돌보기
+	setarray $@ep162_amt[0], 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 20, 6, 6, 6, 6;
+	return;
+}
+
+// NEED: 반복 일일퀘스트 이름 (현황 표시용).
+function	script	F_NEED_EP162_DailyName	{
+	switch (getarg(0)) {
+	case 7743:	return needtr("잔당 소탕", "Sweeping the Remnants");
+	case 7745:	return needtr("숨어있는 연구원", "Hiding Researcher");
+	case 7762:	return needtr("키메라 진압", "Put the Chimeras to Rest");
+	case 16010:	return needtr("엘레나와의 대결", "Duel with Elena");
+	case 11466:	return needtr("디엔의 고급 차", "Dien's High Class Tea");
+	case 11468:	return needtr("리드쉬의 오래된 편지", "Ridsh's Old Letter");
+	case 11470:	return needtr("코트네스의 빛나는 반지", "Cotnes's Shining Ring");
+	case 16049:	return needtr("추모의 시간", "Tribute Hour");
+	case 16058:	return needtr("차별화 광고 전략", "Differentiated Advertising");
+	case 16034:	return needtr("어르신 다과", "Sweets for the Elders");
+	case 16042:	return needtr("채리티 데려오기", "Bring Back Charity");
+	case 16037:	return needtr("레이첼의 재료 수집", "Rachel's Materials");
+	case 14612:	return needtr("총기 재활용", "Gun Recycling");
+	case 14609:	return needtr("신병의 부탁", "Rookie's Request");
+	case 16020:	return needtr("오늘의 아이 돌보기", "Daily Babysitting");
+	}
+	return "";
+}
+
+// NEED: 진행 중이던 반복 퀘스트와 그 퀘스트 전용 아이템을 정리합니다.
+// 최초/스토리 퀘스트(14602, 16060, 16045~16048, 16054, 16035, 16036, 16041,
+// 14610, 14603~14605, 16012~16019, 11463, 11464 등)는 절대 건드리지 않습니다.
+function	script	F_NEED_EP162_DelItemAll	{
+	.@c = countitem(getarg(0));
+	if (.@c > 0)
+		delitem getarg(0), .@c;
+	return;
+}
+
+function	script	F_NEED_EP162_InstantApply	{
+	.@size = getarraysize($@ep162_pend);
+	for (.@i = 0; .@i < .@size; ++.@i) {
+		.@cd = $@ep162_pend[.@i];
+		deletearray .@q[0], getarraysize(.@q);
+		deletearray .@it[0], getarraysize(.@it);
+		switch (.@cd) {
+		case 7743:
+			setarray .@q[0], 7742;
+			break;
+		case 7745:
+			setarray .@q[0], 7744, 7760, 7752, 7753, 7754, 7755, 7756, 7757, 7758, 7759;
+			break;
+		case 7762:
+			setarray .@q[0], 7761;
+			break;
+		case 16010:	// 16060(첫 결투)은 제외
+			setarray .@q[0], 16009, 16011, 16061;
+			break;
+		case 11466:
+			setarray .@q[0], 11465;
+			setarray .@it[0], 25165;	// High_Class_Tea
+			break;
+		case 11468:
+			setarray .@q[0], 11467;
+			setarray .@it[0], 25167;	// Old_Letter
+			break;
+		case 11470:
+			setarray .@q[0], 11469;
+			setarray .@it[0], 25166;	// Very_Shining_Ring
+			break;
+		case 16049:	// 16045~16048(최초 추모)은 제외
+			setarray .@q[0], 16050, 16051, 16052, 16053;
+			break;
+		case 16058:	// 16054(최초 광고)는 제외
+			setarray .@q[0], 16055, 16056, 16057, 16059;
+			setarray .@it[0], 25163;	// Arms_Shop_AD
+			break;
+		case 16034:	// 첫 회 표식은 정상 보고와 같이 완료 처리
+			if (isbegin_quest(16032) == 1)
+				completequest 16032;
+			break;
+		case 16042:	// 16041(최초)은 제외
+			setarray .@q[0], 16043, 16044;
+			setarray .@it[0], 25162;	// Anchovy_cookie
+			break;
+		case 16037:
+			setarray .@q[0], 16038, 16039, 16040;
+			break;
+		case 14612:	// 14610(최초)은 제외
+			setarray .@q[0], 14611;
+			setarray .@it[0], 25153;	// Broken_Gun_Wreck
+			break;
+		case 14609:	// 14603~14605(최초)는 제외
+			setarray .@q[0], 14606, 14607, 14608;
+			break;
+		case 16020:	// 16012~16019(쌍둥이 서브)는 제외
+			setarray .@q[0], 16021, 16022, 16023, 16024, 16025, 16026, 16027, 16028, 16029, 16030, 16031;
+			setarray .@it[0], 25160, 25161;	// Borrow_Book, Handmade_cookie2
+			break;
+		}
+		for (.@j = 0; .@j < getarraysize(.@q); ++.@j) {
+			if (isbegin_quest(.@q[.@j]) > 0)
+				erasequest .@q[.@j];
+		}
+		for (.@j = 0; .@j < getarraysize(.@it); ++.@j)
+			callfunc "F_NEED_EP162_DelItemAll", .@it[.@j];
+
+		// 만료되어 남아 있는 쿨타임 기록을 정리한 뒤 오늘 쿨타임을 새로 설정합니다.
+		if (isbegin_quest(.@cd) > 0)
+			erasequest .@cd;
+		setquest .@cd;
+	}
+	return;
+}
+
+//============================================================
+//= NEED: EP16.2 메모리얼 던전 공용 (최초 클리어 기록 / 간소화 / 파티원 진행)
+//=   클리어 기록은 기존 NEED 메모리얼 던전과 같이 계정 변수입니다.
+//=     #NEED_MD_HHWB_CLEAR   : 하트헌터 기지 외곽 (스토리 또는 반복) 클리어
+//=     #NEED_MD_WERNER_CLEAR : 베르너 연구소 중추실 (스토리 또는 반복) 클리어
+//=   getarg(0) 종류 : 1 = 하트헌터 기지 외곽, 2 = 베르너 연구소 중추실
+//============================================================
+function	script	F_NEED_EP162_MDClear	{
+	if (getarg(0) == 1)
+		return #NEED_MD_HHWB_CLEAR;
+	return #NEED_MD_WERNER_CLEAR;
+}
+
+// NEED: 파티 내 온라인 구성원 모두가 최초 클리어를 완료했는지 (마지막 방 F_LastRoomCanEnableSimple 과 같은 방식).
+function	script	F_NEED_EP162_PartyAllClear	{
+	.@type = getarg(0);
+	.@caller_aid = getcharid(3);
+	.@party_id = getcharid(1);
+	if (.@party_id < 1)
+		return 0;
+	getpartymember .@party_id,1;
+	.@member_count = $@partymembercount;
+	copyarray .@member_cid[0],$@partymembercid[0],.@member_count;
+	getpartymember .@party_id,2;
+	copyarray .@member_aid[0],$@partymemberaid[0],.@member_count;
+	.@allowed = 1;
+	for (.@i = 0; .@i < .@member_count; .@i++) {
+		if (!isloggedin(.@member_aid[.@i], .@member_cid[.@i]))
+			continue;
+		if (attachrid(.@member_aid[.@i]) == 0)
+			continue;
+		if (callfunc("F_NEED_EP162_MDClear", .@type) == 0) {
+			.@allowed = 0;
+			break;
+		}
+	}
+	attachrid(.@caller_aid);
+	return .@allowed;
+}
+
+// NEED: 파티장이 일반 / 간소화 진행을 고릅니다. 반환값 1 = 간소화.
+// 파티장 본인과 온라인 파티원 모두에게 클리어 기록이 있을 때만 간소화를 고를 수 있습니다.
+function	script	F_NEED_EP162_MDChooseMode	{
+	.@type = getarg(0);
+	if (callfunc("F_NEED_EP162_MDClear", .@type) == 0)
+		return 0;
+	mes needtr("[NEED 메모리얼 던전]", "[NEED Memorial Dungeon]");
+	mes needtr("이미 이 메모리얼 던전을 클리어한 기록이 있습니다.", "You have already cleared this memorial dungeon once.");
+	mes needtr("^4d4dff간소화 진행^000000은 대화/대기/퍼즐을 줄이고 전투와 보스는 그대로 진행합니다.", "The ^4d4dffsimplified run^000000 cuts dialogue, waiting and puzzles but keeps all fights and the boss.");
+	next;
+	if (select(needtr("일반 진행", "Normal run"), needtr("간소화 진행", "Simplified run")) == 1)
+		return 0;
+	if (callfunc("F_NEED_EP162_PartyAllClear", .@type) == 0) {
+		mes needtr("[NEED 메모리얼 던전]", "[NEED Memorial Dungeon]");
+		mes needtr("온라인 파티원 중 최초 클리어를 하지 않은 계정이 있어 일반 진행으로 시작합니다.", "Some online party members have not cleared it yet, so this run starts as a normal run.");
+		next;
+		return 0;
+	}
+	return 1;
+}
+
+// NEED: 인스턴스 소유 파티의 온라인 구성원 중 해당 맵에 있는 계정에 클리어 기록을 남깁니다.
+// 몬스터 처치 이벤트처럼 플레이어가 붙어 있지 않은 상황에서도 호출할 수 있습니다.
+//   getarg(0) 종류, getarg(1) 인스턴스 맵 이름
+function	script	F_NEED_EP162_MDSetClear	{
+	.@type = getarg(0);
+	.@map$ = getarg(1);
+	.@party_id = instance_live_info(ILI_OWNER);
+	if (instance_live_info(ILI_MODE) != IM_PARTY || .@party_id < 1)
+		return;
+	.@orig = playerattached();
+	getpartymember .@party_id,1;
+	.@member_count = $@partymembercount;
+	copyarray .@member_cid[0],$@partymembercid[0],.@member_count;
+	getpartymember .@party_id,2;
+	copyarray .@member_aid[0],$@partymemberaid[0],.@member_count;
+	for (.@i = 0; .@i < .@member_count; .@i++) {
+		if (!isloggedin(.@member_aid[.@i], .@member_cid[.@i]))
+			continue;
+		if (attachrid(.@member_aid[.@i]) == 0)
+			continue;
+		if (strcharinfo(3) != .@map$)
+			continue;
+		if (.@type == 1)
+			#NEED_MD_HHWB_CLEAR = 1;
+		else
+			#NEED_MD_WERNER_CLEAR = 1;
+	}
+	if (.@orig)
+		attachrid(.@orig);
+	else
+		detachrid;
+	return;
+}
+
+// NEED: 베르너 연구소 중추실 [스토리] 종료 시 진행도를 지급합니다.
+// 원본은 파티장에게만 지급해 함께 들어간 파티원은 메인 21 에 남았습니다.
+// 인스턴스 맵에 있는 파티원 중 메인 21 / 7739 진행 중인 캐릭터 모두에게 원본과 같은 보상을 지급합니다.
+//   getarg(0) 인스턴스 맵 이름
+function	script	F_NEED_EP162_WernerStoryReward	{
+	.@map$ = getarg(0);
+	.@leader_aid = getcharid(3);
+	.@party_id = getcharid(1);
+	getpartymember .@party_id,1;
+	.@member_count = $@partymembercount;
+	copyarray .@member_cid[0],$@partymembercid[0],.@member_count;
+	getpartymember .@party_id,2;
+	copyarray .@member_aid[0],$@partymemberaid[0],.@member_count;
+	for (.@i = 0; .@i < .@member_count; .@i++) {
+		if (!isloggedin(.@member_aid[.@i], .@member_cid[.@i]))
+			continue;
+		if (attachrid(.@member_aid[.@i]) == 0)
+			continue;
+		if (strcharinfo(3) != .@map$ || getcharid(0) != .@member_cid[.@i])
+			continue;
+		if (terra_gloria_main != 21 || isbegin_quest(7739) != 1)
+			continue;
+		getitem 25179,1;	// Blessing_Star
+		getitem 23087,1;	// Small_Leather_Bag
+		erasequest 7739;// Find Star of Blessing!
+		setquest 7740;// Star of Blessing obtained
+		terra_gloria_main = 22;
+		#NEED_MD_WERNER_CLEAR = 1;
+		if (getcharid(3) != .@leader_aid) {
+			dispbottom needtr("[베르너 연구소 중추실] 축복의 별을 손에 넣었습니다. 연구소 밖으로 이동합니다.", "[Werner Laboratory Central Room] You obtained the Blessing Star. Moving out of the laboratory.");
+			warp "que_swat",155,50;
+		}
+	}
+	attachrid(.@leader_aid);
+	return;
+}
+
+// NEED: 직업별 Imperial 교환 상점 키를 돌려줍니다 (원본 Imperial Operator 와 동일한 매핑).
+//   "" : 교환 대상 직업이 아님 (3차 직업 / 확장 직업만 가능)
+// 반환값은 barter 상점 이름(내부 키)이므로 절대 번역하지 않습니다.
+function	script	F_NEED_EP162_ImperialShop	{
+	switch( eaclass() & EAJ_THIRDMASK ) {
+	case EAJ_RUNE_KNIGHT:		return "shop_ext162_JOB_RUNE_KNIGHT";
+	case EAJ_WARLOCK:		return "shop_ext162_JOB_WARLOCK";
+	case EAJ_RANGER:		return "shop_ext162_JOB_RANGER";
+	case EAJ_ARCH_BISHOP:		return "shop_ext162_JOB_ARCH_BISHOP";
+	case EAJ_MECHANIC:		return "shop_ext162_JOB_MECHANIC";
+	case EAJ_GUILLOTINE_CROSS:	return "shop_ext162_JOB_GUILLOTINE_CROSS";
+	case EAJ_ROYAL_GUARD:		return "shop_ext162_JOB_ROYAL_GUARD";
+	case EAJ_SORCERER:		return "shop_ext162_JOB_SORCERER";
+	case EAJ_MINSTRELWANDERER:	return "shop_ext162_JOB_MINSTREL";
+	case EAJ_SURA:			return "shop_ext162_JOB_SURA";
+	case EAJ_GENETIC:		return "shop_ext162_JOB_GENETIC";
+	case EAJ_SHADOW_CHASER:		return "shop_ext162_JOB_SHADOW_CHASER";
+	}
+	switch( Class ) {
+	case JOB_SUPER_NOVICE_E:
+	case JOB_SUPER_BABY_E:
+	case JOB_HYPER_NOVICE:
+		return "shop_ext162_JOB_SUPER_NOVICE_E";
+	case JOB_KAGEROU:
+	case JOB_OBORO:
+	case JOB_BABY_KAGEROU:
+	case JOB_BABY_OBORO:
+	case JOB_SHINKIRO:
+	case JOB_SHIRANUI:
+		return "shop_ext162_JOB_KAGEROU";
+	case JOB_REBELLION:
+	case JOB_BABY_REBELLION:
+	case JOB_NIGHT_WATCH:
+		return "shop_ext162_JOB_REBELLION";
+	case JOB_SUMMONER:
+	case JOB_BABY_SUMMONER:
+	case JOB_SPIRIT_HANDLER:
+		return "shop_ext162_JOB_SUMMONER";
+	case JOB_STAR_EMPEROR:
+	case JOB_BABY_STAR_EMPEROR:
+	case JOB_STAR_EMPEROR2:
+	case JOB_BABY_STAR_EMPEROR2:
+	case JOB_SKY_EMPEROR:
+	case JOB_SKY_EMPEROR2:
+		return "shop_ext162_JOB_STAR_EMPEROR";
+	case JOB_SOUL_REAPER:
+	case JOB_BABY_SOUL_REAPER:
+	case JOB_SOUL_ASCETIC:
+		return "shop_ext162_JOB_SOUL_REAPER";
+	}
+	return "";
+}
+
+// NEED: 라사냐 교환 자판기(shop.txt) "EP16.2" 메뉴.
+function	script	F_NEED_EP162_ExchangeMenu	{
+	switch( select( needtr("슈발츠 명예의 증표 교환", "Schwartz Honor Token Exchange"), needtr("임페리얼 장비 (직업별)", "Imperial Gear (by job)"), needtr("취소", "Cancel") ) ) {
+	case 1:
+		callshop "ep162_swz_exchange";
+		end;
+	case 2:
+		.@shop$ = callfunc("F_NEED_EP162_ImperialShop");
+		if (.@shop$ == "") {
+			mes needtr("[교환 자판기]", "[Exchange Machine]");
+			mes needtr("임페리얼 장비는 3차 직업과 확장 직업만 교환할 수 있습니다.", "Imperial gear can only be exchanged by 3rd classes and expanded classes.");
+			close;
+		}
+		callshop .@shop$;
+		end;
+	}
+	end;
+}
+
+lasagna,192,173,4	script	EP16.2 통합 안내#need_ep162_mgr	4_M_JOB_KNIGHT1,{
+L_Main:
+	setdialogsize(440,380);
+	mes needtr("[EP16.2 통합 안내]", "[EP16.2 Guide]");
+	mes needtr("^4d4dffEPISODE 16.2 - 테라 글로리아^000000", "^4d4dffEPISODE 16.2 - Terra Gloria^000000");
+	mes needtr("일일퀘스트, 메모리얼 던전,", "Daily quests, memorial dungeons,");
+	mes needtr("슈발츠 명예의 증표 교환을 안내합니다.", "and the Schwartz Honor Token exchange.");
+	next;
+	mes needtr("[EP16.2 통합 안내]", "[EP16.2 Guide]");
+	mes needtr("NEED 서버에서는 ^FF0000메인 스토리를 진행하지 않아도^000000", "On NEED you do ^FF0000not need to play the main story^000000");
+	mes needtr("Base Lv." + callfunc("F_NEED_EP162_MinLv") + " 이상이면 주요 일일 콘텐츠를 이용할 수 있습니다.", "to use the main daily content from Base Lv." + callfunc("F_NEED_EP162_MinLv") + ".");
+	mes needtr("스토리를 보고 싶다면 기존 메인 퀘스트도 그대로 진행할 수 있습니다.", "If you want the story you can still play the original main quest.");
+	next;
+	mes needtr("[EP16.2 통합 안내]", "[EP16.2 Guide]");
+	mes needtr("현재 보유 중인 ^4d4dff" + getitemname(25155) + ": " + countitem(25155) + "개^000000", "You currently hold ^4d4dff" + getitemname(25155) + " x" + countitem(25155) + "^000000");
+	next;
+
+	switch( select(
+		needtr("오늘의 일퀘 현황", "Today's Daily Status"),
+		needtr("일일퀘스트 즉시 완료", "Instantly Finish Dailies"),
+		needtr("일일퀘스트 안내", "Daily Quest Guide"),
+		needtr("메모리얼 던전", "Memorial Dungeons"),
+		needtr("슈발츠 명예의 증표 교환", "Schwartz Honor Token Exchange"),
+		needtr("EP16.2 지역 이동", "EP16.2 Travel"),
+		needtr("메인 스토리 안내", "Main Story Info"),
+		needtr("그만두기", "Quit")
+	) ) {
+	case 1: goto L_Status;
+	case 2: goto L_Instant;
+	case 3: goto L_Daily;
+	case 4: goto L_MD;
+	case 5: goto L_Exchange;
+	case 6: goto L_Region;
+	case 7: goto L_Story;
+	default: close;
+	}
+
+L_Status:
+	setdialogsize(480,430);
+	.@remain = callfunc("F_NEED_EP162_DailyStatus");
+	mes needtr("[오늘의 EP16.2 일퀘 현황]", "[Today's EP16.2 Daily Status]");
+	mes needtr("개방된 반복 일퀘: ^4d4dff", "Unlocked repeat dailies: ^4d4dff") + $@ep162_open + " / 15^000000";
+	mes needtr("오늘 완료: ^00AA00", "Finished today: ^00AA00") + $@ep162_done + " / " + $@ep162_open + "^000000";
+	mes needtr("오늘 남은 반복 보상: ^FF0000", "Repeat rewards left today: ^FF0000") + .@remain + needtr("개^000000", "^000000");
+	next;
+	callfunc "F_NEED_EP162_DailyList";
+	mes needtr("[반복 일퀘 목록]", "[Repeat Dailies]");
+	for (.@i = 0; .@i < getarraysize($@ep162_cd); ++.@i) {
+		.@cd = $@ep162_cd[.@i];
+		if (!callfunc("F_NEED_EP162_DailyOpen", .@cd))
+			.@st$ = needtr("^888888[미개방]^000000", "^888888[Locked]^000000");
+		else {
+			.@state = checkquest(.@cd,PLAYTIME);
+			if (.@state == 0 || .@state == 1)
+				.@st$ = needtr("^00AA00[완료]^000000", "^00AA00[Done]^000000");
+			else
+				.@st$ = needtr("^4d4dff[진행 가능]^000000", "^4d4dff[Available]^000000");
+		}
+		mes .@st$ + " " + callfunc("F_NEED_EP162_DailyName", .@cd) + " (" + $@ep162_amt[.@i] + ")";
+		if (.@i == 7)
+			next;
+	}
+	next;
+	mes needtr("[상태 안내]", "[Status Legend]");
+	mes needtr("^4d4dff[진행 가능]^000000 오늘 보상을 아직 받지 않았습니다.", "^4d4dff[Available]^000000 You have not taken today's reward yet.");
+	mes needtr("^00AA00[완료]^000000 오늘 반복 보상을 이미 받았습니다.", "^00AA00[Done]^000000 Today's repeat reward has been claimed.");
+	mes needtr("^888888[미개방]^000000 스토리/서브 퀘스트 진행이 필요합니다.", "^888888[Locked]^000000 Needs story / sub quest progress.");
+	mes needtr("※ 쿨타임은 매일 04시에 초기화됩니다.", "* Cooldowns reset every day at 04:00.");
+	mes needtr("※ 최초 1회 보상은 반복 보상 집계에 포함되지 않습니다.", "* First-time rewards are not counted in the repeat rewards.");
+	next;
+	goto L_Main;
+
+L_Instant:
+	setdialogsize(480,420);
+	if (.InstantDailyCash <= 0) {
+		mes needtr("[EP16.2 통합 안내]", "[EP16.2 Guide]");
+		mes needtr("일일퀘스트 즉시 완료는 현재 이용할 수 없습니다.", "Instantly finishing dailies is not available right now.");
+		next;
+		goto L_Main;
+	}
+	if (BaseLevel < .InstantDailyMinLevel) {
+		mes needtr("[EP16.2 통합 안내]", "[EP16.2 Guide]");
+		mes needtr("즉시 완료는 ^FF0000Base Lv.", "Instant finish needs ^FF0000Base Lv.") + .InstantDailyMinLevel + needtr(" 이상^000000부터 이용할 수 있습니다.", " or higher^000000.");
+		next;
+		goto L_Main;
+	}
+	.@remain = callfunc("F_NEED_EP162_DailyStatus");
+	.@price = callfunc("F_NEED_EP162_InstantPrice", .@remain, .InstantDailyCash, .InstantDailyProrate);
+
+	mes needtr("[EP16.2 일일퀘스트 즉시 완료]", "[EP16.2 Instant Daily Finish]");
+	mes needtr("개방된 반복 일퀘 ^4d4dff", "Unlocked repeat dailies ^4d4dff") + $@ep162_open + "^000000" + needtr("개 중 오늘 완료 ^00AA00", ", finished today ^00AA00") + $@ep162_done + needtr("개^000000", "^000000");
+	mes needtr("즉시 완료 대상: ^FF9900", "Instant finish targets: ^FF9900") + getarraysize($@ep162_pend) + needtr("개^000000", "^000000");
+	mes needtr("획득: ^FF9900" + getitemname(25155) + " " + .@remain + "개^000000", "You get: ^FF9900" + getitemname(25155) + " x" + .@remain + "^000000");
+	next;
+	if (.@remain <= 0) {
+		mes needtr("[EP16.2 통합 안내]", "[EP16.2 Guide]");
+		mes needtr("오늘 즉시 완료할 수 있는 반복 일일퀘스트가 없습니다.", "There are no repeat dailies you can finish instantly today.");
+		mes needtr("^777777캐시는 차감되지 않았습니다.^000000", "^777777No Cash was charged.^000000");
+		next;
+		goto L_Main;
+	}
+	mes needtr("[EP16.2 일일퀘스트 즉시 완료]", "[EP16.2 Instant Daily Finish]");
+	mes needtr("남아 있는 반복 일일퀘스트를 오늘 완료 상태로 처리합니다.", "All remaining repeat dailies will be marked finished for today.");
+	mes "";
+	mes needtr("캐시 비용: ^FF0000", "Cash cost: ^FF0000") + callfunc("F_InsertComma", .@price) + " Cash^000000";
+	mes needtr("현재 보유 캐시: ^4d4dff", "Cash you hold: ^4d4dff") + callfunc("F_InsertComma", #CASHPOINTS) + " Cash^000000";
+	next;
+	mes needtr("[EP16.2 통합 안내]", "[EP16.2 Guide]");
+	mes needtr("※ 진행 중이던 반복 일일퀘스트와 그 전용 아이템은 정리되고 쿨타임이 설정됩니다.", "* Repeat dailies in progress and their quest items are cleared and put on cooldown.");
+	mes needtr("※ 메인 스토리, 서브 퀘스트, 최초 보상은 변경되지 않습니다.", "* Main story, sub quests and first-time rewards are not touched.");
+	mes needtr("※ 지급되는 것은 ^4d4dff" + getitemname(25155) + "^000000뿐이며 경험치는 지급되지 않습니다.", "* Only ^4d4dff" + getitemname(25155) + "^000000 is granted - no experience.");
+	mes needtr("※ 최초 퀘스트를 진행 중인 일퀘는 대상에서 제외됩니다.", "* Dailies whose first quest is in progress are excluded.");
+	next;
+	if (select(needtr("취소", "Cancel"), needtr("캐시를 사용해 즉시 완료", "Spend Cash and finish now")) == 1) {
+		mes needtr("[EP16.2 통합 안내]", "[EP16.2 Guide]");
+		mes needtr("취소했습니다. 캐시는 차감되지 않았습니다.", "Cancelled. No Cash was charged.");
+		next;
+		goto L_Main;
+	}
+
+	// ── 결제 직전 최종 재검증 ──────────────────────────────
+	.@remain = callfunc("F_NEED_EP162_DailyStatus");
+	if (.@remain <= 0) {
+		mes needtr("[EP16.2 통합 안내]", "[EP16.2 Guide]");
+		mes needtr("오늘 즉시 완료할 수 있는 반복 일일퀘스트가 없습니다.", "There are no repeat dailies you can finish instantly today.");
+		mes needtr("^777777캐시는 차감되지 않았습니다.^000000", "^777777No Cash was charged.^000000");
+		next;
+		goto L_Main;
+	}
+	.@price = callfunc("F_NEED_EP162_InstantPrice", .@remain, .InstantDailyCash, .InstantDailyProrate);
+	if (checkweight(25155, .@remain) == 0) {
+		mes needtr("[EP16.2 통합 안내]", "[EP16.2 Guide]");
+		mes needtr("소지품이 가득 차서 증표를 받을 수 없습니다.", "Your inventory cannot hold the tokens.");
+		mes needtr("^777777캐시는 차감되지 않았습니다.^000000", "^777777No Cash was charged.^000000");
+		next;
+		goto L_Main;
+	}
+	if (#CASHPOINTS < .@price) {
+		mes needtr("[EP16.2 통합 안내]", "[EP16.2 Guide]");
+		mes needtr("캐시가 부족합니다.", "You do not have enough Cash.");
+		mes needtr("필요 캐시: ^FF0000", "Cash needed: ^FF0000") + callfunc("F_InsertComma", .@price) + "^000000";
+		mes needtr("보유 캐시: ^4d4dff", "Cash held: ^4d4dff") + callfunc("F_InsertComma", #CASHPOINTS) + "^000000";
+		next;
+		goto L_Main;
+	}
+
+	// ── 결제 및 처리 ───────────────────────────────────────
+	.@cash_before = #CASHPOINTS;
+	.@count = getarraysize($@ep162_pend);
+	#CASHPOINTS -= .@price;
+	getitem 25155, .@remain;// Swz_Honor_Token
+	callfunc "F_NEED_EP162_InstantApply";
+
+	logmes "[NEED-EP162-INSTANT] aid=" + getcharid(3) + " cid=" + getcharid(0)
+		+ " name=" + strcharinfo(0) + " cost=" + .@price + " reward=" + .@remain
+		+ " quests=" + .@count + " done_before=" + $@ep162_done + " open=" + $@ep162_open
+		+ " cash_before=" + .@cash_before + " cash_after=" + #CASHPOINTS;
+
+	mes needtr("[EP16.2 통합 안내]", "[EP16.2 Guide]");
+	mes needtr("남은 반복 일일퀘스트를 모두 완료 처리했습니다.", "All remaining repeat dailies have been marked finished.");
+	mes "";
+	mes needtr("지급: ^FF9900" + getitemname(25155) + " " + .@remain + "개^000000", "Granted: ^FF9900" + getitemname(25155) + " x" + .@remain + "^000000");
+	mes needtr("차감: ^FF0000", "Charged: ^FF0000") + callfunc("F_InsertComma", .@price) + " Cash^000000";
+	mes needtr("남은 캐시: ^4d4dff", "Cash left: ^4d4dff") + callfunc("F_InsertComma", #CASHPOINTS) + " Cash^000000";
+	mes needtr("내일 04시에 다시 초기화됩니다.", "It resets tomorrow at 04:00.");
+	next;
+	goto L_Main;
+
+L_Daily:
+	mes needtr("[EP16.2 일일퀘스트]", "[EP16.2 Dailies]");
+	mes needtr("반복 일일퀘스트는 모두 15종이며, 매일 04시에 초기화됩니다.", "There are 15 repeat dailies. They reset every day at 04:00.");
+	mes needtr("하루 최대 ^4d4dff" + getitemname(25155) + " 104개^000000를 획득할 수 있습니다.", "You can earn up to ^4d4dff104 " + getitemname(25155) + "^000000 per day.");
+	next;
+	mes needtr("[리벨리온 기지]", "[Rebellion Base]");
+	mes needtr("엘레나 결투 / 추모의 시간 / 광고 전략 / 어르신 다과", "Elena duel / Tribute Hour / Advertising / Sweets");
+	mes needtr("채리티(20개) / 재료 수집 / 총기 재활용 / 신병의 부탁", "Charity (20) / Materials / Gun Recycling / Rookie's Request");
+	mes needtr("아이 돌보기 / 경비대장의 부탁 3종", "Babysitting / 3 requests of the Guard Leader");
+	next;
+	mes needtr("[연구소 전초기지]", "[Laboratory Outpost]");
+	mes needtr("잔당 소탕 / 숨어있는 연구원 / 키메라 진압", "Sweeping the Remnants / Hiding Researcher / Chimeras");
+	mes needtr("※ 잔당 소탕은 베르너 연구소 중추실,", "* Sweeping the Remnants uses Werner Laboratory Central Room,");
+	mes needtr("   경비대장의 부탁 3종은 하트헌터 기지 외곽을 이용합니다.", "   the Guard Leader's requests use Heart Hunter War Base.");
+	next;
+	mes needtr("[EP16.2 통합 안내]", "[EP16.2 Guide]");
+	mes needtr("일부 일퀘는 해당 NPC 의 ^FF9900최초 의뢰^000000를 먼저 마쳐야 합니다.", "Some dailies need the NPC's ^FF9900first request^000000 first.");
+	mes needtr("스토리를 진행하지 않은 캐릭터는 최초 의뢰 없이 바로 반복 일퀘를 받습니다.", "Characters without the story get the repeat daily directly.");
+	next;
+	goto L_Main;
+
+L_MD:
+	mes needtr("[메모리얼 던전]", "[Memorial Dungeons]");
+	mes needtr("^4d4dff하트헌터 기지 외곽^000000", "^4d4dffHeart Hunter War Base^000000");
+	mes needtr("- 아인브로크 필드(ein_fild04)의 줄리안이 입장을 담당합니다.", "- Julian in ein_fild04 handles entry.");
+	mes needtr("- 파티 필수, 입장 시 하루 1회 제한(04시 초기화).", "- Party required, once per day (resets 04:00).");
+	next;
+	mes needtr("^4d4dff베르너 연구소 중추실^000000", "^4d4dffWerner Laboratory Central Room^000000");
+	mes needtr("- 베르너 연구소 안쪽의 신병이 입장을 담당합니다.", "- The Rookie deep inside Werner Laboratory handles entry.");
+	mes needtr("- 파티 필수, '잔당 소탕' 의뢰를 받은 뒤 입장합니다.", "- Party required. Take 'Sweeping the Remnants' first.");
+	mes needtr("- 최초 클리어 이후에는 퍼즐/대화가 간소화됩니다.", "- After your first clear, puzzles and dialogue are shortened.");
+	next;
+	goto L_Main;
+
+L_Exchange:
+	mes needtr("[슈발츠 명예의 증표 교환]", "[Schwartz Honor Token Exchange]");
+	mes needtr("의제의 로브 / 협의의 로브 : ^FF0000700개^000000", "Agenda Robe / Consultation Robe : ^FF0000700^000000");
+	mes needtr("공화국의 모자 : ^FF00001,500개^000000", "Republic Hat : ^FF00001,500^000000");
+	mes needtr("용병의 반지 A/B, 의상 전투의 흔적 : ^FF00001,050개^000000", "Mercenary Ring A/B, Costume Combat Vestige : ^FF00001,050^000000");
+	mes needtr("임페리얼 장비는 직업별로 교환할 수 있습니다.", "Imperial gear can be exchanged by job.");
+	next;
+	mes needtr("[슈발츠 명예의 증표 교환]", "[Schwartz Honor Token Exchange]");
+	mes needtr("교환은 라사냐 ^4d4dff교환 자판기^000000의 'EP16.2' 메뉴에서도 할 수 있습니다.", "You can also exchange at the Lasagna ^4d4dffExchange Machine^000000 ('EP16.2').");
+	mes needtr("로브/반지 인챈트는 리벨리온 기지의 ^4d4dff호가르^000000가 담당합니다.", "Robe / ring enchants: ^4d4dffHogar^000000 in the Rebellion base.");
+	next;
+	callfunc "F_NEED_EP162_ExchangeMenu";
+	end;
+
+L_Region:
+	mes needtr("[EP16.2 지역 이동]", "[EP16.2 Travel]");
+	mes needtr("각 콘텐츠의 ^4d4dff입구^000000로 이동합니다.", "You will be moved to each content's ^4d4dffentrance^000000.");
+	next;
+	.@menu = select(
+		needtr("프론테라 성 영웅의 방 (EP16.2 시작)", "Prontera Castle Heroes' Room (EP16.2 start)"),
+		needtr("리벨리온 기지", "Rebellion Base"),
+		needtr("아인베흐 (기지 입구)", "Einbech (base entrance)"),
+		needtr("하트헌터 기지 외곽 입구", "Heart Hunter War Base entrance"),
+		needtr("연구소 전초기지", "Laboratory Outpost"),
+		needtr("베르너 연구소 입구", "Werner Laboratory entrance"),
+		needtr("베르너 연구소 중추실 앞", "Werner Laboratory Central Room gate"),
+		needtr("메인 메뉴로 돌아가기", "Back to Main Menu")
+	);
+	if (.@menu == 8)
+		goto L_Main;
+	if (.@menu == 1) {
+		if (!callfunc("F_NEED_EP162_CanStart")) {
+			mes needtr("[EP16.2 통합 안내]", "[EP16.2 Guide]");
+			mes needtr("EP16.2 는 ^FF0000Base Lv." + callfunc("F_NEED_EP162_MinLv") + " 이상^000000부터 시작할 수 있습니다.", "EP16.2 starts from ^FF0000Base Lv." + callfunc("F_NEED_EP162_MinLv") + "^000000.");
+			next;
+			goto L_Region;
+		}
+	}
+	else if (!callfunc("F_NEED_EP162_CanUseArea") && terra_gloria_main < 14) {
+		mes needtr("[EP16.2 통합 안내]", "[EP16.2 Guide]");
+		mes needtr("^FF0000Base Lv." + callfunc("F_NEED_EP162_MinLv") + " 이상^000000부터 이용할 수 있습니다.", "Requires ^FF0000Base Lv." + callfunc("F_NEED_EP162_MinLv") + "^000000.");
+		next;
+		goto L_Region;
+	}
+	close2;
+	switch (.@menu) {
+	case 1: warp "prt_cas_q",30,28; end;
+	case 2: warp "rebel_in",100,40; end;
+	case 3: warp "einbech",215,80; end;
+	case 4: warp "ein_fild04",279,339; end;
+	case 5: warp "que_swat",155,50; end;
+	case 6: warp "slabw01",14,88; end;
+	case 7: warp "slabw01",233,88; end;
+	}
+	end;
+
+L_Story:
+	mes needtr("[EP16.2 메인 스토리]", "[EP16.2 Main Story]");
+	mes needtr("NEED 서버에서는 메인 스토리가", "On NEED the main story is");
+	mes needtr("^4d4dff일일 콘텐츠 이용의 필수 조건이 아닙니다.^000000", "^4d4dffnot required to use the daily content.^000000");
+	next;
+	mes needtr("[메인 스토리 시작]", "[Starting the Main Story]");
+	mes needtr("프론테라 성 ^4d4dff영웅의 방^000000에서 니힐에게 말을 걸면 시작됩니다.", "Talk to ^4d4dffNihil^000000 in the Heroes' Room of Prontera Castle to begin.");
+	mes needtr("EP16.1 을 진행하지 않았더라도 Base Lv." + callfunc("F_NEED_EP162_MinLv") + " 이상이면 시작할 수 있습니다.", "Even without EP16.1 you can begin from Base Lv." + callfunc("F_NEED_EP162_MinLv") + ".");
+	next;
+	mes needtr("[EP16.2 통합 안내]", "[EP16.2 Guide]");
+	mes needtr("현재 진행도: ^4d4dff", "Current progress: ^4d4dff") + terra_gloria_main + " / 25^000000";
+	if (terra_gloria_main >= 25) {
+		mes needtr("^00AA00EP16.2 메인 스토리를 완료했습니다.^000000", "^00AA00You have finished the EP16.2 main story.^000000");
+		next;
+		goto L_Main;
+	}
+	if (!callfunc("F_NEED_EP162_CanStart")) {
+		mes needtr("EP16.2 는 ^FF0000Base Lv." + callfunc("F_NEED_EP162_MinLv") + " 이상^000000부터 시작할 수 있습니다.", "EP16.2 starts from ^FF0000Base Lv." + callfunc("F_NEED_EP162_MinLv") + "^000000.");
+		next;
+		goto L_Main;
+	}
+	// NEED: 메인 스토리 다음 장소로 바로 이동 (도시 사이 반복 왕복 단축). 진행도는 변경하지 않습니다.
+	callfunc "F_NEED_EP162_NextStop";
+	mes needtr("다음 장소: ^4d4dff", "Next place: ^4d4dff") + $@ep162_next_name$ + "^000000";
+	next;
+	if (select(needtr("다음 장소로 이동", "Go to the next place"), needtr("메인 메뉴로 돌아가기", "Back to Main Menu")) == 2)
+		goto L_Main;
+	callfunc "F_NEED_EP162_NextStop";
+	.@map$ = $@ep162_next_map$;
+	.@x = $@ep162_next_x;
+	.@y = $@ep162_next_y;
+	close2;
+	warp .@map$, .@x, .@y;
+	end;
+
+OnInit:
+	// NEED: EP16.2 일일퀘스트 즉시 완료 설정
+	//   .InstantDailyCash     반복 일퀘 104개 전체 기준 캐시 가격 (0 = 기능 비활성화)
+	//                         EP16.1 (132개 = 10,000 캐시) 과 증표당 같은 체감이 되도록 7,900
+	//   .InstantDailyProrate  1 = 남은 보상량에 비례 (개방 상태가 캐릭터마다 달라 비례가 기본)
+	//   .InstantDailyMinLevel 기능 사용 최소 Base Level (EP16.1 과 동일)
+	.InstantDailyCash = 7900;
+	.InstantDailyProrate = 1;
+	.InstantDailyMinLevel = 140;
+	end;
+}
+
+// NEED: 메인 스토리(terra_gloria_main) 다음 장소. 결과는 $@ep162_next_* 에 담습니다 (호출 직후 사용).
+function	script	F_NEED_EP162_NextStop	{
+	switch (terra_gloria_main) {
+	case 0: case 1: case 2: case 6: case 23:
+		.@m$ = "prt_cas_q"; .@x = 30; .@y = 28; .@n$ = needtr("프론테라 성 영웅의 방", "Prontera Castle Heroes' Room"); break;
+	case 3:
+		.@m$ = "lhz_airport"; .@x = 189; .@y = 36; .@n$ = needtr("리히타르젠 공항 (크룩스)", "Lighthalzen Airport (Crux)"); break;
+	case 4:
+		.@m$ = "lighthalzen"; .@x = 186; .@y = 290; .@n$ = needtr("리히타르젠 북쪽 거리", "North of Lighthalzen"); break;
+	case 5:
+		.@m$ = "lighthalzen"; .@x = 305; .@y = 263; .@n$ = needtr("리히타르젠 동쪽 거리", "East of Lighthalzen"); break;
+	case 7:
+		.@m$ = "y_airport"; .@x = 168; .@y = 38; .@n$ = needtr("주노 공항 (크룩스)", "Juno Airport (Crux)"); break;
+	case 8:
+		.@m$ = "lhz_in02"; .@x = 238; .@y = 145; .@n$ = needtr("리히타르젠 건물 안 (테스)", "Lighthalzen building (Tess)"); break;
+	case 9:
+		.@m$ = "einbroch"; .@x = 239; .@y = 265; .@n$ = needtr("아인브로크 (수상한 사람)", "Einbroch (Unusual person)"); break;
+	case 10:
+		.@m$ = "einbroch"; .@x = 267; .@y = 265; .@n$ = needtr("아인브로크 (레이지)", "Einbroch (Lazy)"); break;
+	case 11:
+		.@m$ = "einbech"; .@x = 44; .@y = 205; .@n$ = needtr("아인베흐 (레이지)", "Einbech (Lazy)"); break;
+	case 12:
+		.@m$ = "einbech"; .@x = 74; .@y = 129; .@n$ = needtr("아인베흐 (레이지)", "Einbech (Lazy)"); break;
+	case 13:
+		.@m$ = "einbech"; .@x = 215; .@y = 80; .@n$ = needtr("아인베흐 (기지 입구)", "Einbech (base entrance)"); break;
+	case 14:
+		.@m$ = "rebel_in"; .@x = 21; .@y = 41; .@n$ = needtr("리벨리온 기지 입구", "Rebellion base entrance"); break;
+	case 15:
+		.@m$ = "rebel_in"; .@x = 40; .@y = 43; .@n$ = needtr("리벨리온 기지", "Rebellion base"); break;
+	case 16: case 17:
+		.@m$ = "rebel_in"; .@x = 100; .@y = 40; .@n$ = needtr("리벨리온 기지", "Rebellion base"); break;
+	case 18: case 22:
+		.@m$ = "ein_in01"; .@x = 273; .@y = 276; .@n$ = needtr("아인브로크 여관", "Einbroch Inn"); break;
+	case 19:
+		.@m$ = "ein_fild04"; .@x = 279; .@y = 339; .@n$ = needtr("하트헌터 기지 외곽 입구 (줄리안)", "Heart Hunter War Base entrance (Julian)"); break;
+	case 20:
+		.@m$ = "slabw01"; .@x = 233; .@y = 91; .@n$ = needtr("베르너 연구소 (신병)", "Werner Laboratory (Rookie)"); break;
+	case 21:
+		.@m$ = "slabw01"; .@x = 233; .@y = 88; .@n$ = needtr("베르너 연구소 중추실 앞", "Werner Laboratory Central Room gate"); break;
+	default:	// 24
+		.@m$ = "que_swat"; .@x = 155; .@y = 50; .@n$ = needtr("연구소 전초기지 (테스)", "Laboratory Outpost (Tess)"); break;
+	}
+	$@ep162_next_map$ = .@m$;
+	$@ep162_next_x = .@x;
+	$@ep162_next_y = .@y;
+	$@ep162_next_name$ = .@n$;
+	return;
+}
+
+// NEED: 즉시 완료 가격. 비례 모드면 기준가 x 남은 증표 / 104 (올림), 아니면 고정가.
+//   getarg(0) 남은 증표 / getarg(1) 기준가 / getarg(2) 비례 여부
+function	script	F_NEED_EP162_InstantPrice	{
+	if (getarg(2) && getarg(0) < 104)
+		return (getarg(1) * getarg(0) + 103) / 104;
+	return getarg(1);
+}

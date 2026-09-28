@@ -1,0 +1,1113 @@
+//===== rAthena Script =======================================
+//= Instances Werner Laboratory central room.
+//===== Description: =========================================
+//- [Walkthrough conversion]
+//- Require Terra Gloria main quest.
+//- Note: For now there are 2 instances (officially one) to
+//  avoid exploit, the warp entry being the same. The first
+//  (main quest) is a solo instance and the 2nd (daily) a
+//  a party instance. The instance is a basic version,
+//  KRO added Seyren boss fight in the next updates.
+//===== Changelogs: ==========================================
+//= 1.0 First version. [Capuche]
+//============================================================
+//============================================================
+//= NEED: 베르너 연구소 중추실 (EP16.2) - npc/re/instances/WernerLaboratoryCentralRoom.txt 기반
+//= - instance_db Name 36/37: "베르너 연구소 중추실 [스토리]" / "베르너 연구소 중추실" (NameEn 은 표시 전용)
+//=   instance_create / instance_enter / instance_live_info 는 반드시 이 이름과 같아야 합니다.
+//= - 한국어/영어 클라이언트 동시 지원
+//= - 스토리 진행: 메인 21 파티원도 입장 / 진행도 지급 (원본은 파티장만)
+//= - 게이트를 숨기지 않아 파티원도 입장 가능
+//= - 스토리 미진행 캐릭터도 반복용 중추실 이용 (잔당 소탕 일퀘)
+//= - 최초 클리어 기록 #NEED_MD_WERNER_CLEAR, 이후 파티장이 간소화 진행 선택 가능 (퀴즈 생략 / 전투 자동 선택)
+//============================================================
+
+// NEED: npc/NEED/instances 는 npc/re/other/global_npcs.txt 보다 먼저 로드되므로
+//       전역 dummy_npc / dummy_cloaked_npc 대신 이 파일 전용 dummy 를 사용합니다 (축복의 의식과 같은 방식).
+-	script	dummy_npc_ep162_wl	-1,{
+	end;
+}
+
+-	script(CLOAKED)	dummy_cloaked_npc_ep162_wl	-1,{
+	end;
+}
+
+slabw01,232,91,5	duplicate(dummy_cloaked_npc_ep162_wl)	스키아#ep162_06::Skia#ep162_06	4_EP16_SKIA
+slabw01,233,92,3	duplicate(dummy_cloaked_npc_ep162_wl)	겁먹은 연구원#ep162::Scared researcher#ep162	4_M_ALCHE_A
+
+// Werner Laboratory central room (solo instance)
+slabw01,236,91,3	script	신병#ep162_04::Rookie#ep162_04	4_M_ROOKIE,{
+	if (terra_gloria_main == 20) {
+		mes needtr("[신병]","[Rookie]");
+		mes needtr("이것 좀 보세요.","Take a look at this.");
+		mes needtr("설계도에 따르면 이 부분이 중추실과 연결되어 있는데... 수상한 문만 보이네요.","According to the design drawing, this part is connected to the central room... But I only see a suspicious gate.");
+		next;
+		mes needtr("[신병]","[Rookie]");
+		mes needtr("어쩐지 뭔가 믿는 구석이 있어 보이더라니.","No wonder it looked like they had something to back them up.");
+		mes needtr("폭약으로 날려 버릴까요?","Shall we use an explosive and blow it up?");
+		next;
+		cloakoffnpc( "Skia#ep162_06", getcharid(0) );
+		cloakoffnpc( "Scared researcher#ep162", getcharid(0) );
+		npctalklang "잠깐만요!","Wait!", "Skia#ep162_06", bc_self;
+		mes needtr("[스키아]","[Skia]");
+		mes needtr("그렇게 무식한 방법은 안 돼요!","Not in such a crude way!");
+		mes needtr("역시 제가 여기 오길 잘했네요.","Well, I made a great decision when I came here.");
+		mes needtr("이 사람한테 열라고 하세요.","Tell him to open this.");
+		next;
+		npctalklang "와! 이 아가씨 꽤 똑똑한데요!","Wow! This lady is quite smart!", "", bc_self;
+		npctalklang "왜... 왜 저한테 이러시는 거예요?!","Why ... why are you doing this to me?!", "Scared researcher#ep162", bc_self;
+		mes needtr("[스키아]","[Skia]");
+		mes needtr("여기 길을 아느냐고 물었더니 안다고 하더라고요. 그래서 데려왔어요.","I asked him whether he knows the paths here, and his answer was yes. So I brought him here.");
+		mes needtr("이 사람이 중추실로 가는 문을 작동시켜 줄 거예요.","He will activate the gate to the central room.");
+		next;
+		npctalklang "이렇게... 하면 됩니다.","This ... is the way to do it.", "Scared researcher#ep162", bc_self;
+		mes needtr("[신병]","[Rookie]");
+		mes needtr("흠, 그렇군요. 그렇게 작동시키는 거였네요.","Hmm, I see. That's the way to operate it.");
+		mes needtr("좋아요, 이제 알겠어요.","Great, now I got it.");
+		mes needtr("그럼 이 사람은 이제 필요 없겠네요.","And we don't need him anymore.");
+		next;
+		npctalklang "뭐... 뭐라고요?! 제발 죽이지 마세요!","Wh... what?! Please don't kill me!", "Scared researcher#ep162", bc_self;
+		mes needtr("[스키아]","[Skia]");
+		mes needtr("그래요? 그럼 이 연구원은 제가 밖에 있는 분대로 데려갈게요.","Really? Then I will bring this researcher to the squadron outside.");
+		mes needtr(strcharinfo(0) + "님, 중추실은 부탁드릴게요!", "About the central room, " + strcharinfo(0) + " I am counting on you!");
+		next;
+		cloakonnpc( "Skia#ep162_06", getcharid(0) );
+		cloakonnpc( "Scared researcher#ep162", getcharid(0) );
+		mes needtr("[신병]","[Rookie]");
+		mes needtr("하하, 중추실 문을 열 수 있게 됐어요!","Haha, they let us open the gate of the central room!");
+		mes needtr("들어갈 준비가 되면 다시 말을 걸어 주세요.","Please speak to me again once you are ready to go in here.");
+		next;
+		mes needtr("[신병]","[Rookie]");
+		mes needtr("문을 작동시킨 뒤에는 저희가 밖에서 지켜야 해요.","After activating the gate, we have to guard it from outside.");
+		mes needtr("그래서 같이 들어갈 수는 없어요.","So I cannot go in there with you.");
+		terra_gloria_main = 21;
+		close;
+	}
+	if (terra_gloria_main == 21) {
+		if (is_party_leader() == false) {
+			mes needtr("^4d4dff이 이벤트는 메모리얼 던전으로 진행됩니다.","^4d4dffThis event is proceeded to the Memorial.");
+			mes needtr("파티를 결성한 뒤 다시 시도해 주세요.^000000","Please try again after organizing a party.^000000");
+			close;
+		}
+		mes needtr("[신병]","[Rookie]");
+		mes needtr("준비됐어요?","Are you ready?");
+		mes needtr("지금 들어가실 거라면 문을 작동시킬게요.","If you are entering now, I will activate the gate.");
+		next;
+		if (select( needtr("지금 들어갈게요.","Enter now."), needtr("들어가지 않을게요.","Do not enter.") ) == 2) {
+			mes needtr("[신병]","[Rookie]");
+			mes needtr("우리 둘 다 이럴 시간 없다는 거 알잖아요?","We both know that we don't have time for this, don't we?");
+			close;
+		}
+		mes needtr("[신병]","[Rookie]");
+		mes needtr("와! 바로 이거예요! 역시 저는 뭐든 빨리 배운다니까요!","Wow! This is it! I always learn things quickly!");
+		mes needtr("자, 이제 들어가세요!","Well, please go in now!");
+		cloakoffnpc( "Central_room#evt_gate01", getcharid(0) );
+		instance_create("베르너 연구소 중추실 [스토리]");	// officially there is only one 'Werner Laboratory central room' instance
+		close;
+	}
+	if (terra_gloria_main == 22) {
+		mes needtr("[신병]","[Rookie]");
+		mes needtr("물건은 되찾았어요?","Have you reclaimed the stuff?");
+		close;
+	}
+	switch( checkquest(7742,HUNTING) ) {
+	case -1:
+		mes needtr("[신병]","[Rookie]");
+		mes needtr("중추실에서 이상한 현상이 발견됐어요. 지금은 조사하지 않고 있어요.","We have found a strange phenomenon in the central room. We are not investigating it.");
+		mes needtr("아마 안에 강력한 실험체가 남아 있었던 모양이에요.","Perhaps there was a strong experimental subject left inside.");
+		next;
+		mes needtr("[신병]","[Rookie]");
+		mes needtr("대체 여긴 뭐 하는 시설일까요?","What kind of facility is this?");
+		mes needtr("쓰읍.","Ssss.");
+		mes needtr("제대로 파악되면 처리를 부탁드릴지도 몰라요...","Once it is identified appropriately, I might ask you for a settlement ...");
+		mes needtr("저는 다시 중추실 문을 지켜야겠어요.","I will have to guard the gate of the central room again.");
+		close;
+	case 0:
+	case 1:
+		if (getcharid(1) < 1) {
+			mes needtr("^4d4dff이 이벤트는 메모리얼 던전으로 진행됩니다.","^4d4dffThis event is proceeded to the Memorial.");
+			mes needtr("파티를 결성한 뒤 다시 시도해 주세요.^000000","Please try again after organizing a party.^000000");
+			close;
+		}
+		if (is_party_leader() == false) {
+			mes needtr("[신병]","[Rookie]");
+			mes needtr("이미 작동된 문이 있다면 보일 거예요.","If there is a gate that has already been activated, you can see it.");
+			next;
+			mes needtr("[신병]","[Rookie]");
+			mes needtr("아니라면 파티장에게 입장을 부탁해 주세요.","Otherwise, please ask your party leader for entrance.");
+			close;
+		}
+		mes needtr("[신병]","[Rookie]");
+		mes needtr("준비됐어요?","Are you ready?");
+		mes needtr("지금 들어가실 거라면 문을 작동시킬게요.","If you are entering now, I will activate the gate.");
+		next;
+		if (select( needtr("지금 들어갈게요.","Enter now."), needtr("들어가지 않을게요.","Do not enter.") ) == 2) {
+			mes needtr("[신병]","[Rookie]");
+			mes needtr("우리 둘 다 이럴 시간 없다는 거 알잖아요?","We both know that we don't have time for this, don't we?");
+			close;
+		}
+		mes needtr("[신병]","[Rookie]");
+		mes needtr("와! 바로 이거예요! 역시 저는 뭐든 빨리 배운다니까요!","Wow! This is it! I always learn things quickly!");
+		mes needtr("자, 이제 들어가세요!","Well, please go in now!");
+		cloakoffnpc( "Central_room#evt_gate01", getcharid(0) );
+		// NEED: 최초 클리어 이후에는 반복용 중추실을 간소화 진행으로 시작할 수 있습니다.
+		@NEED_MD_WERNER_SIMPLE = callfunc("F_NEED_EP162_MDChooseMode", 2);
+		instance_create("베르너 연구소 중추실");
+		close;
+	case 2:
+		mes needtr("[신병]","[Rookie]");
+		mes needtr("그 아이젠 베르너라는 녀석이 만들고 버린 실험체가 얼마나 더 있는지 모르겠어요.","We are not sure how many more experimental subjects are there that were made and abandoned by that Eisen Werner guy.");
+		next;
+		mes needtr("[신병]","[Rookie]");
+		mes needtr("하지만 오늘은 이만하죠.","But let's call it a day.");
+		close;
+	}
+	end;
+
+OnInit:
+	questinfo( QTYPE_QUEST, QMARK_YELLOW, " checkquest(7742,HUNTING) == 0 || checkquest(7742,HUNTING) == 1 " );
+	end;
+}
+
+slabw01,246,88,3	script	중추실 입구#evt_gate01::Central_room#evt_gate01	PORTAL,{
+	if (terra_gloria_main != 21 && terra_gloria_main < 23 && !callfunc("F_NEED_EP162_DailyRoute",7743))	// NEED: 스토리 미진행 캐릭터도 반복용 중추실 입장
+		end;
+	if (getcharid(1) < 1) {	// NEED: 원본은 메인 21 파티원의 입장을 막아 파티원이 진행하지 못했음
+		mes needtr("^4d4dffMD 현재는 파티장만 [중추실]에 입장할 수 있습니다.^000000","^4d4dffMD Only the party leader can enter [Central room] now.^000000");
+		close;
+	}
+	mes needtr("중추실로 이동할 수 있다.","You can move to the central room.");
+	next;
+	if (select( needtr("들어간다.","Go in."), needtr("들어가지 않는다.","Do not go in.") ) == 2) {
+		mes needtr("[신병]","[Rookie]");
+		mes needtr("아... 매번 켜 줘야 하다니. 너무 불편하잖아요!","Oh ... I have to turn it on every time. It's so inconvenient!");
+		close;
+	}
+	if (terra_gloria_main == 21)
+		.@md_name$ = "베르너 연구소 중추실 [스토리]";
+	else
+		.@md_name$ = "베르너 연구소 중추실";	// officially player without the daily hunting quest can enter in the instance, allowing to spam the instance without delay
+	.@md_en$ = (terra_gloria_main == 21) ? "Werner Laboratory Central Room [Story]" : "Werner Laboratory Central Room";	// NEED: 영문 표시명
+	switch( instance_enter(.@md_name$) ) {
+	case IE_NOMEMBER:
+		end;
+	case IE_NOINSTANCE:
+		mes needtr("[신병]","[Rookie]");
+		mes needtr("지금 문이 오작동하고 있어요. 이대로는 위험해요...","The gate is malfunctioning now. It's dangerous like this ...");
+		mes needtr("잠시만 기다려 주세요.","Please wait for a while.");
+		close;
+	case IE_OTHER:
+		mes needtr("알 수 없는 오류가 발생했습니다.","An unknown error has occurred.");
+		close;
+	case IE_OK:
+		mapannouncelang "slabw01", "" + getpartyname( getcharid(1) ) + " 파티의 " + strcharinfo(0) + "님이 베르너 연구소 중추실에 입장합니다.", "" + strcharinfo(0) + " of the party, " + getpartyname( getcharid(1) ) + ", is entering the " + .@md_en$ + ".", bc_map, 0xFF99;
+		// warp "1@slw",187,24;
+		end;
+	}
+	end;
+
+OnInit:
+	// cloakonnpc( strnpcinfo(0) );	// NEED: 파티원도 게이트를 볼 수 있도록 숨기지 않음 (원본은 파티장에게만 보였음)
+	end;
+}
+
+// warps
+1@slw,187,170,0	warp	#slwwarp01	1,1,1@slw,71,32
+1@slw,71,77,0	warp	#slwwarp02	1,1,1@slw,54,134
+1@slw,55,150,0	warp	Emergency exit#exit_war	1,1,que_swat,155,58
+
+// Entrance - event type
+1@slw,187,25,0	script	#sl_evt01	HIDDEN_WARP_NPC,2,2,{
+	end;
+OnTouch:
+	if (is_party_leader() == false)
+		end;
+	disablenpc instance_npcname("#sl_evt01");
+	// NEED: 간소화 진행 여부 (반복용 중추실 + 파티장의 선택 + 클리어 기록)
+	'need_md_simple = (instance_live_info(ILI_NAME) == "베르너 연구소 중추실" && @NEED_MD_WERNER_SIMPLE && #NEED_MD_WERNER_CLEAR) ? 1 : 0;
+	if (instance_live_info(ILI_NAME) == "베르너 연구소 중추실 [스토리]")	// terra_gloria_main == 21
+		enablenpc instance_npcname("Eisen Werner#werner01");
+	else {
+		enablenpc instance_npcname("Guard#gard01");
+		enablenpc instance_npcname("Guard#gard02");
+		enablenpc instance_npcname("Guard#gard03");
+		enablenpc instance_npcname("Guard#gard04");
+	}
+	end;
+
+OnInstanceInit:
+	'device_state[0] = 'device_state[1] = 0;
+	'event_final = 0;
+
+	'map_slw$ = instance_mapname("1@slw");
+
+	disablenpc instance_npcname("#slwwarp01");
+	disablenpc instance_npcname("#slwwarp02");
+	disablenpc instance_npcname("Central Entrance#door");
+	disablenpc instance_npcname("Emergency exit#exit_war");
+
+	disablenpc instance_npcname("Eisen Werner#werner01");
+	disablenpc instance_npcname("Eisen Werner#werner02");
+	disablenpc instance_npcname("Eisen Werner#werner03");
+	disablenpc instance_npcname("Eisen Werner#werner04");
+	disablenpc instance_npcname("Eisen Werner#werner05");
+
+	disablenpc instance_npcname("Security device#switch01");
+	disablenpc instance_npcname("Security device#switch02");
+	disablenpc instance_npcname("Security device#switch11");
+	disablenpc instance_npcname("Security device#switch12");
+
+	disablenpc instance_npcname("Guard#gard01");
+	disablenpc instance_npcname("Guard#gard02");
+	disablenpc instance_npcname("Guard#gard03");
+	disablenpc instance_npcname("Guard#gard04");
+	disablenpc instance_npcname("Guard#gard05");
+	disablenpc instance_npcname("Guard#gard06");
+	disablenpc instance_npcname("Guard#gard07");
+
+	disablenpc instance_npcname("Seyren Windsor#seiren");
+	disablenpc instance_npcname("Pet child#boss_master");
+	disablenpc instance_npcname("#boss_master_dummy");
+	end;
+}
+
+// Room 1
+// * Samples and devices
+1@slw,174,145,3	script	전시된 샘플#01::Displayed sample#01	CLEAR_NPC,{
+	setarray .@sample$[0],
+		needtr("^ff0000순수^000000","^ff0000Purity^000000"), "MT-Wxx0s57b",
+		needtr("^4d4dff장미^000000","^4d4dffRose^000000"), "MT-Wxx00b21",
+		needtr("^4d4dff모순^000000","^4d4dffContradiction^000000"), "MT-Wxx023-f1",
+		needtr("^4d4dff기쁨^000000","^4d4dffJoy^000000"), "OT-Wxx01-c",
+		needtr("^4d4dff바다^000000","^4d4dffSea^000000"), "MT-Wxc1c1b",
+		needtr("^ff0000영원^000000","^ff0000Eternity^000000"), "MT-Wx267b",
+		needtr("^4d4dff귀갓길^000000","^4d4dffWay back home^000000"), "OTM-Wxff01",
+		needtr("^4d4dff외로움^000000","^4d4dffLoneliness^000000"), "MT-Wxx00c46",
+		needtr("^4d4dff빛^000000","^4d4dffGlow^000000"), "OT-Wxx4d4dff",
+		needtr("^ff0000새벽^000000","^ff0000Dawn^000000"), "MT-Wff_01v",
+		needtr("^4d4dff황혼^000000","^4d4dffTwilight^000000"), "OT-Wxx00c3b",
+		needtr("^4d4dff소녀^000000의 ^ff0000꿈^000000","^4d4dffGirl^000000's ^ff0000dream^000000"), "MT-Wxx0ax2-1";
+	.@num = (atoi(strnpcinfo(2)) - 1) * 2;
+	mes "[" + .@sample$[.@num] + "]";
+	mes needtr("실험 번호: " + .@sample$[.@num+1] + "", "Experiment_number: " + .@sample$[.@num+1] + "");
+	close;
+}
+1@slw,201,145,3	duplicate(Displayed sample#01)	전시된 샘플#02::Displayed sample#02	CLEAR_NPC
+1@slw,174,132,3	duplicate(Displayed sample#01)	전시된 샘플#03::Displayed sample#03	CLEAR_NPC
+1@slw,201,132,3	duplicate(Displayed sample#01)	전시된 샘플#04::Displayed sample#04	CLEAR_NPC
+1@slw,174,118,3	duplicate(Displayed sample#01)	전시된 샘플#05::Displayed sample#05	CLEAR_NPC
+1@slw,201,118,3	duplicate(Displayed sample#01)	전시된 샘플#06::Displayed sample#06	CLEAR_NPC
+1@slw,174,104,3	duplicate(Displayed sample#01)	전시된 샘플#07::Displayed sample#07	CLEAR_NPC
+1@slw,201,104,3	duplicate(Displayed sample#01)	전시된 샘플#08::Displayed sample#08	CLEAR_NPC
+1@slw,174,90,3	duplicate(Displayed sample#01)	전시된 샘플#09::Displayed sample#09	CLEAR_NPC
+1@slw,201,90,3	duplicate(Displayed sample#01)	전시된 샘플#10::Displayed sample#10	CLEAR_NPC
+1@slw,174,76,3	duplicate(Displayed sample#01)	전시된 샘플#11::Displayed sample#11	CLEAR_NPC
+1@slw,201,76,3	duplicate(Displayed sample#01)	전시된 샘플#12::Displayed sample#12	CLEAR_NPC
+
+// * Events - First entrance
+1@slw,188,42,3	script	아이젠 베르너#werner01::Eisen Werner#werner01	4_M_EISEN,{
+	if (is_party_leader() == false)
+		end;
+	cutin "ep16_eisen01.bmp",1;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("주인공께서 납셨군.","Here comes the main character.");
+	mes needtr("솔직히 감탄했어. 여기까지 올 줄은 꿈에도 몰랐거든.","Honestly, I'm impressed. I never expected you would come all the way here.");
+	next;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("뭐, 아무래도 좋아.","Well, whatever.");
+	mes needtr("환영하지.","Welcome.");
+	mes needtr("아이젠 베르너의 세계에 온 것을 환영한다.","Welcome to Eisen Werner's world.");
+	next;
+	cutin "ep16_eisen02.bmp",1;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("이렇게 갑자기 일이 벌어질 줄은 상상도 못 했지.","I never imagined that it would be done all of a sudden like this.");
+	mes needtr("뭐 어때. 알 게 뭐야?","Whatever. Who cares?");
+	next;
+	cutin "ep16_eisen01.bmp",1;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("어차피 이 연구소를 지키는 건 포기했어.","I've given up saving this laboratory anyway.");
+	mes needtr("한번 둘러보겠나?","Would you like to take a look?");
+	next;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("차원의 균열을 비롯해 여러 가지가 있었지.","There were many things, including cracks in dimensions, etc.");
+	mes needtr("어떤 세계에서는 시간의 흐름이 뒤틀려 있어.","In some worlds, the flow of time is twisted.");
+	next;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("평행 세계일까?","Is it a parallel world?");
+	mes needtr("아니면 누군가 과거의 어느 시점에 다녀온 걸까?","Or has someone been to a certain point in the past?");
+	next;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("시간이란 무엇일까? 생각해 본 적 있나?","What does time mean? Have you ever thought about it?");
+	mes needtr("그 흐름은 상대적이지.","Its flow is relative.");
+	next;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("저 녀석은 지금 멈춰 있어.","That guy has stopped now.");
+	mes needtr("생물학적으로 시간이 흐른다는 건 누군가 나이를 먹는다는 뜻이지.","If time goes biologically, it means someone gets older.");
+	next;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("그걸 강제로 멈춘 거야.","That was stopped by force.");
+	mes needtr("그럴 때는 이런 표현을 쓰지.","In that case, we use an expression such as this.");
+	next;
+	cutin "ep16_eisen02.bmp",1;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("시간이 멈췄다.","The time has stopped.");
+	next;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes "....";
+	next;
+	cutin "ep16_eisen01.bmp",1;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("안을 둘러보겠나?","Would you like to take a look inside?");
+	mes needtr("천천히 복도를 둘러보도록.","Take your time and look through the corridor.");
+	next;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("내가 안내하지.","I will guide you.");
+	close2;
+	cutin "",255;
+	if (is_party_leader() == true) {
+		disablenpc instance_npcname("Eisen Werner#werner01");
+		enablenpc instance_npcname("Eisen Werner#werner02");
+	}
+	end;
+}
+
+1@slw,189,164,3	script	아이젠 베르너#werner02::Eisen Werner#werner02	4_M_EISEN,{
+	if (is_party_leader() == false)
+		end;
+	cutin "ep16_eisen01.bmp",1;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("내 작품은 즐겁게 감상했나?","Did you enjoy my work?");
+	mes needtr("멍청한 녀석들은 처음부터 다시 하라고 돌려보냈지.","I sent the silly guys back to start over.");
+	next;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("뭐, 결코 쉽지는 않았어.","Well, it wasn't easy at all.");
+	mes "......";
+	next;
+	cutin "ep16_eisen02.bmp",1;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("그 아이가 돌아가기만 했어도, 그렇게 끝나지는 않았을 텐데...","If only that kid had gone back, he would not have ended that way...");
+	next;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("내 말은, 그가 멈추기만 했어도...","I mean, if only he stopped...");
+	next;
+	cutin "ep16_eisen01.bmp",1;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("회장님은... 아니, 그분은 과거에 집착하고 있어.","The chairman... I mean, that person is obsessed with the past.");
+	mes needtr("회장님 덕분에 나는 원하는 대로 연구를 할 수 있지.","Thanks to the chairman, I can do my research as I want.");
+	next;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("궁금하지 않나?","Aren't you curious about it?");
+	mes needtr("그가 왜 그렇게 과거에 집착하는지.","Why is he so obsessed with the past?");
+	next;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("그건 그렇고, 여기서 더 나아가려면 오른쪽과 왼쪽의 장치를 작동시켜야 해.... 할 수 있겠나?","By the way, you have to operate the instruments on the right and left if you want to go beyond this.... Can you do it?");
+	next;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("단순한 장치니까 할 수 있겠지.","Since it's a simple device, I guess you can.");
+	mes needtr("^ff0000빨간색^000000은 ^4d4dff파란색^000000으로 바꿔.","Change ^ff0000red^000000 to ^4d4dffblue^000000.");
+	mes needtr("그리고 ^4d4dff파란색^000000은 ^ff0000빨간색^000000으로 바꾸면 돼. 그게 다야.","And change ^4d4dffblue^000000 to ^ff0000red^000000. That's it.");
+	next;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("내 작품을 제대로 봤다면 무슨 말인지 알 거야.","If you looked at my work properly, you'll understand what I am saying.");
+	mes needtr("그럼 다음 구역에서 보지.","Then I'll see you in the next zone.");
+	close2;
+	cutin "",255;
+	if (is_party_leader() == true) {
+		disablenpc instance_npcname("Eisen Werner#werner02");
+		enablenpc instance_npcname("Security device#switch01");
+		enablenpc instance_npcname("Security device#switch02");
+	}
+	end;
+}
+
+1@slw,155,191,3	script	보안 장치#switch01::Security device#switch01	CLEAR_NPC,{
+	if (is_party_leader() == false)
+		end;
+	.@number = atoi( replacestr( strnpcinfo(2), "switch", "" ) );
+	.@type = (.@number < 10) ? 0 : 1;
+	.@npc_num = (.@number < 10) ? .@number : (.@number-10);
+	if ('device_state[.@type] & .@npc_num) {
+		mes needtr("이미 작동된 상태다.","It is already activated.");
+		close;
+	}
+	callsub S_Code, .@string$, .@answer;
+	mes needtr("보안 코드가 적혀 있다.","There are security codes written down.");
+	mes "[" + .@string$ + "]";
+	mes needtr("무엇을 입력할까?","What will you input?");
+	next;
+	if (!'need_md_simple && select( "^ff0000" + .@string$ + "^000000", "^4d4dff" + .@string$ + "^000000" ) != .@answer) {	// NEED: 간소화 진행은 퀴즈 생략
+		'device_state[.@type] = 0;
+		mes needtr("장치가 초기화되었다.","The device has been initialized.");
+		close;
+	}
+	if (is_party_leader() == false)
+		end;
+	'device_state[.@type] = 'device_state[.@type] | .@npc_num;
+	if ('device_state[.@type] != 3) {
+		mes needtr("보안 장치를 작동시켰다.","Operated the security device.");
+		mes needtr("보안 장치가 하나 더 있는 것 같다.","Seems like there is one more security device.");
+		close;
+	}
+	mes needtr("보안 장치를 작동시켰다.","Operated the security device.");
+	mes needtr("이제 문이 활성화되었다.","The gate is now activated.");
+	switch( .@type ) {
+	case 0:
+		enablenpc instance_npcname("#slwwarp01");
+		if (instance_live_info(ILI_NAME) == "베르너 연구소 중추실 [스토리]")	// terra_gloria_main == 21
+			enablenpc instance_npcname("Eisen Werner#werner03");
+		else {
+			enablenpc instance_npcname("Guard#gard05");
+			enablenpc instance_npcname("Guard#gard06");
+			enablenpc instance_npcname("Guard#gard07");
+		}
+		break;
+	case 1:
+		if (instance_live_info(ILI_NAME) == "베르너 연구소 중추실 [스토리]")
+			enablenpc instance_npcname("Eisen Werner#werner04");
+		else
+			enablenpc instance_npcname("Central Entrance#door");
+		enablenpc instance_npcname("#slwwarp02");
+		break;
+	}
+	close;
+
+S_Code:
+	setarray .@sample$[0],
+		needtr("순수","Purity"), 2,
+		needtr("영원","Eternity"), 2,
+		needtr("새벽","Dawn"), 2,
+		needtr("장미","Rose"), 1,
+		needtr("모순","Contradiction"), 1,
+		needtr("기쁨","Joy"), 1,
+		needtr("바다","Sea"), 1,
+		needtr("귀갓길","Way back home"), 1,
+		needtr("외로움","Loneliness"), 1,
+		needtr("빛","Glow"), 1,
+		needtr("황혼","Twilight"), 1;
+	.@size = getarraysize(.@sample$) / 2;
+	.@r = rand(.@size) * 2;
+	set getarg(0), .@sample$[.@r];
+	set getarg(1), .@sample$[.@r+1];
+	return;
+}
+1@slw,220,191,3	duplicate(Security device#switch01)	보안 장치#switch02::Security device#switch02	CLEAR_NPC
+1@slw,22,61,3	duplicate(Security device#switch01)	보안 장치#switch11::Security device#switch11	CLEAR_NPC
+1@slw,122,61,3	duplicate(Security device#switch01)	보안 장치#switch12::Security device#switch12	CLEAR_NPC
+
+
+// * Events - Daily
+1@slw,188,58,3	script	경비원#gard01::Guard#gard01	3622,4,4,{
+	end;
+OnTouch:
+	.@num = atoi( replacestr( strnpcinfo(2), "gard0", "" ) );
+	getmapxy .@map$,.@x,.@y, BL_NPC;
+	switch( .@num ) {
+	case 1:	// 2 spawn area
+		npctalklang ".. 젠장, 여기 어떻게 들어온 거지?",".. Dang, how did you get in here?";
+		areamonster .@map$, 186,92,190,94, "Special Guard", 3622,3;	// EP16_2_MM_S_GUARDS
+		.@mob_count = 3;
+		break;
+	case 2:	// 3 spawn area
+		npctalklang ".. 젠장, 여기 어떻게 들어온 거지?",".. Dang, how did you get in here?";
+		areamonster .@map$, 186,142,190,143, "Special Guard", 3622,3;	// EP16_2_MM_S_GUARDS
+		areamonster .@map$, 186,160,190,162, "Special Guard", 3622,3;
+		.@mob_count = 3;
+		break;
+	case 5:
+		npctalklang ".. 젠장, 여기 어떻게 들어온 거지?",".. Dang, how did you get in here?";
+		.@mob_count = 3;
+		break;
+	case 3:
+		npctalklang ".. 젠장, 여기 어떻게 들어온 거지?",".. Dang, how did you get in here?";
+		.@mob_count = 1;
+		.@label$ = instance_npcname("#security_device_lab") + "::OnLeft1";
+		break;
+	case 4:
+		npctalklang ".. 젠장, 여기 어떻게 들어온 거지?",".. Dang, how did you get in here?";
+		.@mob_count = 3;
+		.@label$ = instance_npcname("#security_device_lab") + "::OnRight1";
+		break;
+	case 6:
+		npctalklang "누구냐?","Who's there?";
+		.@mob_count = 3;
+		.@label$ = instance_npcname("#security_device_lab") + "::OnLeft2";
+		break;
+	case 7:
+		npctalklang "끝장내 주마!","Let me finish you!";
+		.@mob_count = 3;
+		.@label$ = instance_npcname("#security_device_lab") + "::OnRight2";
+		break;
+	}
+	disablenpc();
+	areamonster .@map$, (.@x-2), (.@y-2), (.@x+2), (.@y+2), "Special Guard", 3622, .@mob_count, .@label$;	// EP16_2_MM_S_GUARDS
+	end;
+}
+1@slw,189,117,3	duplicate(Guard#gard01)	경비원#gard02::Guard#gard02	3622,4,4
+1@slw,171,167,3	duplicate(Guard#gard01)	경비원#gard03::Guard#gard03	3622,4,4
+1@slw,206,167,3	duplicate(Guard#gard01)	경비원#gard04::Guard#gard04	3622,4,4
+1@slw,70,38,5	duplicate(Guard#gard01)	경비원#gard05::Guard#gard05	3622,4,4
+1@slw,33,52,3	duplicate(Guard#gard01)	경비원#gard06::Guard#gard06	3622,4,4
+1@slw,111,52,3	duplicate(Guard#gard01)	경비원#gard07::Guard#gard07	3622,4,4
+
+1@slw,1,1,3	script	#security_device_lab	HIDDEN_WARP_NPC,{
+	end;
+OnLeft1:
+	if (mobcount( 'map_slw$, instance_npcname("#security_device_lab") + "::OnLeft1" ) < 1) {
+		mapannouncelang 'map_slw$, "보안 장치 L-01이 활성화되었습니다.", "Security device L-01 has been activated.", bc_map,0xFF99;
+		enablenpc instance_npcname("Security device#switch01");
+	}
+	end;
+OnRight1:
+	if (mobcount( 'map_slw$, instance_npcname("#security_device_lab") + "::OnRight1" ) < 1) {
+		mapannouncelang 'map_slw$, "보안 장치 R-01이 활성화되었습니다.", "Security device R-01 has been activated.", bc_map,0xFF99;
+		enablenpc instance_npcname("Security device#switch02");
+	}
+	end;
+OnLeft2:
+	if (mobcount( 'map_slw$, instance_npcname("#security_device_lab") + "::OnLeft2" ) < 1) {
+		mapannouncelang 'map_slw$, "보안 장치 L-02가 활성화되었습니다.", "Security device L-02 has been activated.", bc_map,0xFF99;
+		enablenpc instance_npcname("Security device#switch11");
+	}
+	end;
+OnRight2:
+	if (mobcount( 'map_slw$, instance_npcname("#security_device_lab") + "::OnRight2" ) < 1) {
+		mapannouncelang 'map_slw$, "보안 장치 R-02가 활성화되었습니다.", "Security device R-02 has been activated.", bc_map,0xFF99;
+		enablenpc instance_npcname("Security device#switch12");
+	}
+	end;
+}
+
+
+// Room 2
+// * Events - First entrance
+1@slw,72,70,3	script	아이젠 베르너#werner03::Eisen Werner#werner03	4_M_EISEN,{
+	if (is_party_leader() == false)
+		end;
+	cutin "ep16_eisen01.bmp",1;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("생각보다 쉬웠나?","Easier than you thought?");
+	mes needtr("다음 보안 장치도 비슷하니, 다시 설명할 필요는 없겠지.","The next security devices are similar, so I won't have to explain again.");
+	next;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("여기를 둘러본 소감이 어떤가?","After looking around here, what do you think?");
+	mes needtr("놀랍지 않나?","Isn't it amazing?");
+	mes needtr("^4d4dff베루스^000000에 가 본 적 있나?","Have you been to ^4d4dffVerus^000000?");
+	next;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("그곳을 참고해서 내가 지은 연구소야.","That is the laboratory I built by referring to it.");
+	mes needtr("내 취향이었지.","It was my type.");
+	mes "......";
+	next;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("그때까지 우리가 가졌던 것과는 완전히 다른 기술이었어.","The technology was completely different from what we'd had until then.");
+	mes needtr("쓸 수 있는 건 전부 썼지.","We've used everything available.");
+	next;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("어때?","What do you say?");
+	mes needtr("그럴듯해 보이나?","Does it look good?");
+	next;
+	select(needtr("왜 나한테 이런 이야기를 하는 거지?","Do you wonder why I'm saying these things?"));
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("흠, 어차피 넌 여기서 죽을 테니까.","Hmm, that's because you're going to die here anyway.");
+	mes needtr("그러니 내 업적을 좀 자랑하고 싶었지.","So I would like to promote my achievements.");
+	next;
+	select(needtr("여기서 죽는다고? 내가?","Die here? Me?"));
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("물론이지. 넌 여기서 죽는다.","Certainly. You'll die here.");
+	mes needtr("내가 여기 혼자 남겨질 만큼 멍청하다고 생각하나?","Do you think I am just stupid enough to be left here alone?");
+	next;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("룬미드가츠 왕국의 일로 여기 온 거 알고 있어.","I know you've come here for the affair of Rune-Midgarts kingdom.");
+	mes needtr("그래서 준비한 게 있지.","So I've prepared something.");
+	next;
+	cutin "ep16_eisen02.bmp",1;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("아주 굉장한 걸로 말이야.","With a huge sensation.");
+	mes needtr("넌 죽는다. 바로 여기서.","You shall die. Right here.");
+	next;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("그러니 편하게 구경이나 하라고.","Therefore, just be my guest.");
+	mes needtr("다음 구역으로 가지.","Let's move to the next zone.");
+	close2;
+	cutin "",255;
+	if (is_party_leader() == true) {
+		disablenpc instance_npcname("Eisen Werner#werner03");
+		enablenpc instance_npcname("Security device#switch11");
+		enablenpc instance_npcname("Security device#switch12");
+	}
+	end;
+}
+
+
+// Room 3
+// * Events - First entrance
+1@slw,57,141,3	script	아이젠 베르너#werner04::Eisen Werner#werner04	4_M_EISEN,{
+	if (is_party_leader() == false)
+		end;
+	cutin "ep16_eisen01.bmp",1;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("이 벽 너머에 네가 얻으러 온 것이 있을 거다.","Beyond this wall, there will be something you have come to obtain.");
+	next;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("그래. 너희가 보석으로 깎아서 왕관 장식으로 쓰던 그것 말이야.","Right. That thing you carved into a gem and used as a decoration on the crown.");
+	mes needtr("그게 뭔지 알기나 하나?","Do you even know what it is?");
+	next;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("조각에 불과하지만, 그건 이미르의 심장 파편이야.","Although it is a scrap, it's the heart fragment of Ymir.");
+	mes needtr("모조품과는 비교도 안 되지.","It cannot be compared to an imitation.");
+	next;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("... 왕국의 바보들은 이미 가진 힘조차 활용하지 못해.","... The fools in the kingdom cannot even utilize the power they already have.");
+	mes needtr("안타까운 일이지.","What a pity.");
+	mes needtr("그래서 내가 쓰기로 했지...","So I decided to use it...");
+	next;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("되찾고 싶다고? 그건 전부 네 능력에 달렸어.","You want to reclaim it? It's all up to your capability.");
+	mes needtr("나도 빈손으로 기다리고 있던 건 아니니까.","I haven't been waiting with empty hands.");
+	next;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("다시 한번 말해 두지. 놀라지 마라.","Let me tell you once again. Don't be surprised.");
+	mes needtr("아니, 놀라 준다면 기쁘겠군.","No, I'd be glad if you were surprised.");
+	mes needtr("후후후후후....","Huhuhuhuhu....");
+	next;
+	cutin "ep16_eisen03.bmp",1;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("자, 내가 준비한 선물을 봐라.","Now, take a look at the gift I've prepared.");
+	close2;
+	cutin "",255;
+	if (is_party_leader() == true) {
+		disablenpc instance_npcname("Eisen Werner#werner04");
+		enablenpc instance_npcname("Central Entrance#door");
+	}
+	end;
+}
+
+1@slw,54,146,0	script	Central Entrance#door	WARPNPC,1,1,{
+	end;
+OnTouch:
+	if (is_party_leader() == false) {
+		warp 'map_slw$,55,153;
+		end;
+	}
+	if (instance_live_info(ILI_NAME) == "베르너 연구소 중추실 [스토리]") {
+		if ('event_final == 0) {
+			'event_final = 1;
+			enablenpc instance_npcname("Eisen Werner#werner05");
+		}
+		warp 'map_slw$,55,153;
+		end;
+	}
+	switch( 'event_final ) {
+	case 1:
+		mes needtr("스토리를 다시 진행합니다.","Replaying the story.");
+		close2;
+		warp 'map_slw$,55,153;
+		end;
+	case 2:
+		warp 'map_slw$,55,153;
+		end;
+	}
+	mes needtr("다음 구역에서는 두 가지 중 하나를 선택할 수 있습니다.","You have two choices in the next zone.");
+	mes needtr("세이렌 윈저의 이야기를 다시 보고 싶다면 ^4d4dff스토리 진행^000000을, 아이젠 베르너의 걸작을 보고 싶다면 ^4d4dff전투 진행^000000을 선택해 주세요.","If you want to replay the story of Seyren Windsor, please select ^4d4dffProceed with the story^000000. If you want to see the masterpiece of Eisen Werner, please select ^4d4dffProceed with the battle^000000.");
+	next;
+	if (!'need_md_simple && select( needtr("스토리 진행.","Proceed with the story."), needtr("전투 진행.","Proceed with the battle.") ) == 1) {	// NEED: 간소화 진행은 전투 자동 선택
+		mes needtr("스토리를 선택했습니다.","You've selected the story.");
+		close2;
+		if ('event_final == 0) {
+			'event_final = 1;
+			enablenpc instance_npcname("Eisen Werner#werner05");
+		}
+		warp 'map_slw$,55,153;
+		end;
+	}
+	mes needtr("전투를 선택했습니다.","You've selected the battle.");
+	close2;
+	if ('event_final == 0) {
+		'event_final = 2;
+		enablenpc instance_npcname("Pet child#boss_master");
+		enablenpc instance_npcname("#boss_master_dummy");
+	}
+	warp 'map_slw$,55,153;
+	end;
+}
+
+
+// Room Boss
+// * Story
+1@slw,56,171,3	duplicate(dummy_npc_ep162_wl)	세이렌 윈저#seiren::Seyren Windsor#seiren	4_M_SEIREN_UC
+
+1@slw,53,171,5	script	아이젠 베르너#werner05::Eisen Werner#werner05	4_M_EISEN,{
+	if (is_party_leader() == false) {
+		mes needtr("^4d4dff파티장만 이 이벤트를 진행할 수 있습니다.^000000","^4d4dffOnly the party leader can proceed with this event.^000000");
+		close;
+	}
+	if (checkweight(501,1) == 0) {
+		mes needtr("- 소지품이 너무 많아서 퀘스트를 진행할 수 없습니다. -","- Cannot progress with quest because you have too many items in your possession. -");
+		close;
+	}
+	.@seyren$ = instance_npcname("Seyren Windsor#seiren");
+	cutin "ep16_eisen01.bmp",1;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("이곳은 연구소의 핵심이자, 내 연구의 모든 것이 담긴 곳이다.","This place is the core of the laboratory, and contains everything of my research.");
+	npctalklang "이곳은 연구소의 핵심이자, 내 연구의 모든 것이 담긴 곳이다.","This place is the core of the laboratory, and contains everything of my research.";
+	next;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("세계를 구성하는 근원적인 힘을 지닌 이미르의 심장 파편이다. 생명의 근원 또한 품고 있지.","It is the heart fragment of Ymir that holds the fundamental power to constitute the world. It also holds the origin of life.");
+	npctalklang "세계를 구성하는 근원적인 힘을 지닌 이미르의 심장 파편이다. 생명의 근원 또한 품고 있지.","It is the heart fragment of Ymir that holds the fundamental power to constitute the world. It also holds the origin of life.";
+	next;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("잘 봐 둬라.","Look at this carefully.");
+	mes needtr("네가 되찾으러 온 것이 굉장한 일을 하고 있지!","What you've come to reclaim is doing something marvelous!");
+	npctalklang "잘 봐 둬라. 네가 되찾으러 온 것이 굉장한 일을 하고 있지!","Look at this carefully. What you've come to reclaim is doing something marvelous!";
+	next;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("여기서 추출한 에너지가 바닥의 마법진으로 흘러 들어가지... 하하하. 물론 이 마법진은 마법적으로 재해석한 것이지만.","The energy extracted from this flows into the magic circle on the ground... Ha ha ha. Of course, this magic circle has been reinterpreted magically.");
+	npctalklang "여기서 추출한 에너지가 바닥의 마법진으로 흘러 들어가지... 하하하. 물론 이 마법진은 마법적으로 재해석한 것이지만.","The energy extracted from this flows into the magic circle on the ground... Ha ha ha. Of course, this magic circle has been reinterpreted magically.";
+	next;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("어쨌든 그 에너지는 실험체에게 흘러 들어가지... 그 힘을 이용해서 놈들의 시간을 조정한 거다.","In any case, the energy goes into the experimental subject... Using that power, I've adjusted their time.");
+	next;
+	cutin "ep16_eisen03.bmp",1;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("... 물론, 세포가 갈라져서 죽는 놈들도 있지만. 하하!","... Certainly, some of them get killed due to chapped cells. Ha ha!");
+	next;
+	select(needtr("하고 싶은 말은 그게 다야?","Is that all you want to say?"));
+	unittalklang getcharid(3), "" + strcharinfo(0) + " : 하고 싶은 말은 그게 다야?", "" + strcharinfo(0) + " : Is that all you want to say?";
+	cutin "ep16_eisen02.bmp",1;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("아니! 그럴 리가!","No! Never!");
+	mes needtr("아까 내가 한 말을 벌써 잊었나?","Have you already forgotten what I told you earlier?");
+	mes needtr("선물을 준비했다고 했잖아.","I told you I'd prepared a gift.");
+	next;
+	cutin "ep16_eisen01.bmp",1;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("너를...","Something...");
+	mes needtr("놀라게 할 무언가를 말이야.","that will surprise you.");
+	close2;
+	setpcblock PCBLOCK_NPC, true;
+	cutin "",255;
+	sleep2 3000;
+	enablenpc .@seyren$;
+	npctalk "......", .@seyren$;
+	sleep2 1000;
+	setpcblock PCBLOCK_NPC, false;
+	unittalklang getcharid(3), "" + strcharinfo(0) + " : ... 세이렌?!", "" + strcharinfo(0) + " : ... Seyren?!";
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("내가 준비한 선물은 어떤가?!","How do you like the gift I've prepared?!");
+	mes needtr("마음에 드나?","Are you satisfied?");
+	cutin "ep16_eisen01.bmp",1;
+	next;
+	cutin "ep16_eisen01.bmp",1;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("이 녀석은 그 어리석은 왕가의 사절단 중 하나였지.","This fellow was among the delegation of that silly royal family.");
+	mes needtr("어떤 용감한 녀석의 실험 덕분에 이 대단한 물건을 손에 넣었어.","Thanks to the experiment of some brave guy, I have obtained this great stuff.");
+	next;
+	select(needtr("생체 실험 말하는 거야?","Are you talking about the In Vivo Experiment?"));
+	unittalklang getcharid(3), "" + strcharinfo(0) + " : 생체 실험 말하는 거야?", "" + strcharinfo(0) + " : Are you talking about the In Vivo Experiment?";
+	cutin "ep16_eisen02.bmp",1;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("그래, 바로 그거야.","Yeah, exactly.");
+	mes needtr("뭐, 그 녀석 말고도 생체 실험을 하는 놈들은 많지만, 살아 있는 생물을 강화할 만큼 용감했던 건 그 녀석이 처음이었지.","Well, there are plenty guys who do In Vivo Experiments apart from that fellow, but he was the first one brave enough to enhance a living creature.");
+	next;
+	cutin "ep16_eisen01.bmp",1;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("이미르의 심장 파편 모조품을 이용해서 말이야.","using the imitated heart fragment of Ymir");
+	mes needtr("생체 실험의 커다란 전환점이었지.","It was a great turning point for the In Vivo Experiments.");
+	next;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("난 그걸 여러 가지에 적용해 보려 했어.","I was trying to apply it to many kinds of stuff.");
+	next;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("그건 그렇고....","By the way....");
+	mes needtr("인사라도 해야지. 안 그래?","You should say hello to it. Right?");
+	next;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("아~. 맞다.","Ah~. That's right.");
+	mes needtr("인사할 필요도 없겠군. 둘 다 죽을 테니까!","You don't need to say hello, because both of you are going to die!");
+	cutin "ep16_eisen03.bmp",1;
+	next;
+	cutin "ep16_eisen02.bmp",1;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("세이렌, 이 손님들을 지옥으로 안내해라.","Seyren, escort these guests to hell.");
+	mes needtr("내 말 알아듣겠지?","Do you understand what I am saying?");
+	next;
+	cutin "ep16_seiren02.bmp",2;
+	mes needtr("[세이렌]","[Seyren]");
+	mes ".......";
+	npctalk "......", .@seyren$;
+	next;
+	cutin "ep16_evt_ws.bmp",4;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("음?","Hmm?");
+	mes needtr("이게 뭐지, 세이렌? 지금 부정 위상인 건가?","What is this, Seyren? Is it a negative phase now?");
+	next;
+	mes needtr("[세이렌]","[Seyren]");
+	mes needtr("긴 잠에서 깨어난 것 같습니다.","I feel like I've woken up from a long sleep.");
+	mes needtr("어쩌면 오늘을 위해서였는지도 모르겠군요.","Maybe it was for this day.");
+	npctalklang "긴 잠에서 깨어난 것 같습니다. 어쩌면 오늘을 위해서였는지도 모르겠군요.","I feel like I've woken up from a long sleep. Maybe it was for this day.", .@seyren$;
+	next;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("네 임무를 잊지 마라, 세이렌.","Do not forget your duty, Seyren.");
+	mes needtr("넌 무기야. 세이렌 윈저라는 기사의 옷을 입은 꼭두각시에 불과하다고.","You are a weapon. You are nothing more than a puppet with the outfit of a knight called Seyren Windsor.");
+	next;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("하나하나 설명해 줘야 하나?","Do you need me to explain step by step?");
+	mes needtr("이미르의 심장 모조품을 이식한 뒤, 몸이 그 힘을 견디지 못하고 결국 무너졌지.","After transplanting the dummy of Ymir's Heart, the body could not endure the power and eventually collapsed.");
+	next;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("그러자 그 영혼이 본체를 복제하며 계속해서 분열했어.","Then its spirit duplicated the main body and kept dividing over and over.");
+	mes needtr("그 과정에서 기억, 의식, 영혼, 정신, 자아가 모두 모래처럼 흩어졌지. 무의미해진 거야.","During that process, its memory, consciousness, soul, mind and ego were all scattered like sand. They became meaningless.");
+	next;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("강인한 정신과 육체를 지닌 자에게 이미르의 심장 모조품을 이식하면, 더 강한 생체 병기가 될 거라 기대했지.","When we transplanted the dummy of Ymir's Heart into someone with a strong mind and body, we expected that person would become a stronger biological weapon.");
+	next;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("스스로를 복제하며 끝없이 분열할 줄은 예상도 못 했어. 결국 그 실험은 실패로 간주됐지.","We never expected that it would duplicate itself and divide endlessly. As a result, that experiment was regarded as a failure.");
+	next;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("설상가상으로, 분노로만 가득 찬 통제 불가능한 존재였어.","To make things worse, it was an uncontrollable creature that was filled only with fury.");
+	next;
+	mes needtr("[세이렌]","[Seyren]");
+	mes needtr("저는 여기 있습니다.","I am here.");
+	npctalklang "저는 여기 있습니다.","I am here.", .@seyren$;
+	next;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("그거 아나? 놈들은 지금도 분열하고 있어.","You know what? They are still dividing now.");
+	mes needtr("본체를 흉내 내기만 하면서, 그 안에서 자라나기까지 하지.","Just imitating the main body, they are even growing inside it.");
+	next;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("지금은 불완전한 존재니까 완전해지고 싶어 하는 거야.","Since they are imperfect beings now, they want to become perfect.");
+	mes needtr("불완전한 존재이기에, 본체를 흉내 내며 허상으로 사는 게 아니라 완전한 존재가 되길 원하지.","They are imperfect beings now, so they want to become perfect, rather than just imitating the main body and living as a virtual image.");
+	next;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("단 하나의 존재로 남기를 바라는 거야.","They wish to exist as a singular entity.");
+	next;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("그리고 유일하게 성공한 실험체가 바로 너다. 지금 우리가 세이렌이라 부르는.","And the only successful experiment is you. We call you Seyren now.");
+	next;
+	cutin "ep16_seiren02.bmp",2;
+	mes needtr("[세이렌]","[Seyren]");
+	mes needtr("...... 그게 당신 뜻의 전부입니까?","...... Is it the end of your will?");
+	npctalklang "...... 그게 당신 뜻의 전부입니까?","...... Is it the end of your will?", .@seyren$;
+	next;
+	cutin "ep16_eisen03.bmp",0;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("이봐, 얘야? 나한테 이러면 안 되지.","Hey, baby? You can't do this to me.");
+	mes needtr("넌 내게 복종해야 해!","You must obey me!");
+	next;
+	cutin "ep16_eisen02.bmp",0;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("너를 그 지옥에서 여기까지 데려오느라 내가 얼마나 고생했는지 기억 안 나나?","Don't you remember how much I struggled to bring you here out of that hell?");
+	mes needtr("이미 죽은 자의 의식에 휘둘리지 마라.","Do not be swayed by the consciousness of someone who's already dead.");
+	next;
+	cutin "ep16_seiren02.bmp",2;
+	mes needtr("[세이렌]","[Seyren]");
+	mes needtr("... 아이젠 베르너.","... Eisen Werner.");
+	mes needtr("다시 묻겠습니다. 그게 당신 뜻의 전부입니까?","Let me ask you again. Is it the end of your will?");
+	npctalklang "... 아이젠 베르너. 다시 묻겠습니다. 그게 당신 뜻의 전부입니까?","... Eisen Werner. Let me ask you again. Is it the end of your will?", .@seyren$;
+	next;
+	cutin "ep16_eisen01.bmp",0;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("젠장!","Damn!");
+	mes needtr("이럴 줄은 몰랐는데!","I never expected this!");
+	mes needtr("세상 참 재미있지 않나? 하하하하하","Isn't this world a funny place? Ha ha ha ha ha");
+	next;
+	mes needtr("[아이젠 베르너]","[Eisen Werner]");
+	mes needtr("내가 여기서 끝났다고 생각하지 마라.","Never think that I'm finished here.");
+	mes needtr("패배자도 필요 없어.","I don't need a loser either.");
+	close2;
+	setpcblock PCBLOCK_NPC, true;
+	cutin "",255;
+	specialeffect EF_BEGINSPELL3;
+	sleep2 1000;
+	specialeffect EF_SCREEN_QUAKE;
+	sleep2 1000;
+	specialeffect EF_LORD;
+	disablenpc instance_npcname("Eisen Werner#werner05");
+	sleep2 2000;
+	setpcblock PCBLOCK_NPC, false;
+	npctalklang "오....","Oh....", .@seyren$;
+	mes needtr("[세이렌]","[Seyren]");
+	mes needtr("... 아이젠. 당신은 이렇게 모든 것을 버렸군요.","... Eisen. You have abandoned everything like this.");
+	npctalklang "... 아이젠. 당신은 이렇게 모든 것을 버렸군요.","... Eisen. You have abandoned everything like this.", .@seyren$;
+	specialeffect2 EF_DEVIL3;
+	cutin "ep16_seiren01.bmp",2;
+	next;
+	mes needtr("[세이렌]","[Seyren]");
+	mes needtr(".. 아...",".. Ah...");
+	npctalklang ".. 아...",".. Ah...", .@seyren$;
+	cutin "ep16_seiren02.bmp",2;
+	next;
+	mes needtr("[세이렌]","[Seyren]");
+	mes needtr("형체가 다시 약해지고 있군요.","The solidity is weakening again.");
+	mes needtr("이제 아이젠보다 당신에게 훨씬 더 급히 전할 말이 있습니다.","Now, I have a much more urgent message for you rather than for Eisen.");
+	npctalklang "형체가 다시 약해지고 있군요. 이제 아이젠보다 당신에게 훨씬 더 급히 전할 말이 있습니다.","The solidity is weakening again. Now, I have a much more urgent message for you rather than for Eisen.", .@seyren$;
+	next;
+	mes needtr("[세이렌]","[Seyren]");
+	mes needtr("오랫동안 당신을 기다려 왔습니다.","I've been waiting for you for a long time.");
+	mes needtr("아이젠의 말대로, 제가 세이렌인지 아닌지는 더 이상 중요하지 않습니다.","As Eisen said, it's no longer important whether I'm Seyren or not.");
+	npctalklang "오랫동안 당신을 기다려 왔습니다. 아이젠의 말대로, 제가 세이렌인지 아닌지는 더 이상 중요하지 않습니다.","I've been waiting for you for a long time. As Eisen said, it's no longer important whether I'm Seyren or not.", .@seyren$;
+	next;
+	mes needtr("[세이렌]","[Seyren]");
+	mes needtr("생각할 수 있게 된 이후로, 저는 제가 누구인지, 왜 존재하는지 알지 못했습니다.","Since I had the ability to think, I didn't know who I was nor why I existed.");
+	next;
+	specialeffect2 EF_DEVIL4;
+	mes needtr("[세이렌]","[Seyren]");
+	mes needtr("끝없는 분열이 저의 수많은 복제를 만들어 냈습니다.","The continuous division created countless copies of myself.");
+	next;
+	mes needtr("[세이렌]","[Seyren]");
+	mes needtr("이미르의 심장 모조품과 얽힌 힘은 저와 동료들의 의지에 반응했습니다. 그들은 하나가 되길 원했지만, 계속해서 분열할 뿐이었습니다.","The power entwined with the dummy of Ymir's Heart, which responded to my will and that of my companions. They wanted to unite, but kept dividing themselves over and over.");
+	next;
+	specialeffect2 EF_DEVIL5;
+	cutin "ep16_seiren01.bmp",2;
+	mes needtr("[세이렌]","[Seyren]");
+	mes needtr("지금까지 얼마나 많은 제 복제가 만들어졌을까요?","How many copies of myself have been created so far?");
+	next;
+	cutin "ep16_seiren02.bmp",2;
+	mes needtr("[세이렌]","[Seyren]");
+	mes needtr("끝없는 분열 끝에 자아를 잃었지만, 예전의 모습으로 다시 태어났습니다. 우연이라고는 생각하지 않습니다.","I lost the ego after continuous division, but was regenerated as the previous shape. I don't think it was a coincidence.");
+	next;
+	mes needtr("[세이렌]","[Seyren]");
+	mes needtr("분명 이유가 있을 거라고 생각했습니다.","I thought there must have been a reason.");
+	next;
+	mes needtr("[세이렌]","[Seyren]");
+	mes needtr("그리고 ^4d4dff테라 글로리아^000000를 보고 깨달았습니다.","And I realized it after looking at ^4d4dffTerra Gloria^000000.");
+	mes needtr("신이 제게 이런 기회를 준 이유를.","The reason why the god gave me this opportunity.");
+	next;
+	specialeffect2 EF_DEVIL6;
+	cutin "ep16_seiren01.bmp",2;
+	mes needtr("[세이렌]","[Seyren]");
+	mes needtr("이것을 되찾으러 오셨습니까?","Have you come to reclaim this?");
+	mes needtr("... 땅은 사라지고 별만 남았군요.","... The land is gone and only the star remains.");
+	next;
+	specialeffect2 EF_DEVIL7;
+	cutin "ep16_seiren02.bmp",2;
+	mes needtr("[세이렌]","[Seyren]");
+	mes needtr("아이젠의 말이 맞습니다. ^4d4dff세이렌 윈저는 더 이상 이 세상에 없습니다.^000000","Eisen is right. ^4d4dffSeyren Windsor is no longer in this world.^000000");
+	mes needtr("지금 제게 남은 것은 무언가를 계속해서 전하려는 강한 의지뿐입니다.","All I have now is the strong will to transfer something on and on.");
+	next;
+	specialeffect2 EF_SCREEN_QUAKE;
+	specialeffect2 EF_DEVIL8;
+	cutin "ep16_seiren01.bmp",2;
+	mes needtr("[세이렌]","[Seyren]");
+	mes needtr("어쩌면 그 작은 의지가 저를 존재하게 했는지도 모릅니다.","Maybe that bit of will made me exist.");
+	mes needtr("하지만 이제 끝났습니다.","But it's over now.");
+	cutin "ep16_seiren02.bmp",2;
+	next;
+	specialeffect2 EF_DEVIL9;
+	cutin "ep16_seiren01.bmp",2;
+	mes needtr("[세이렌]","[Seyren]");
+	mes ".....";
+	next;
+	mes needtr("[세이렌]","[Seyren]");
+	mes needtr("정말로 더 이상 시간이 없습니다.","I really don't have more time.");
+	mes needtr("이 순간이 지나면, 다시 ^4d4dff분열되어 흩어지게 될 겁니다.^000000","After this moment, ^4d4dffI will be divided and scattered.^000000 again.");
+	next;
+	mes needtr("[세이렌]","[Seyren]");
+	mes needtr("아직 제 의지가 남아 있는 동안, 당신께 전할 말이 하나 있습니다.","While I still have my will now, I have one message to give you.");
+	next;
+	if (instance_live_info(ILI_NAME) == "베르너 연구소 중추실 [스토리]") {
+		mes needtr("[세이렌]","[Seyren]");
+		mes needtr("부디, 앞으로 나아가 주십시오.","Please, go ahead.");
+		mes needtr("프론테라의 기사 세이렌 윈저는 임무에 실패했습니다.","Seyren Windsor, the knight of Prontera failed in the task.");
+		next;
+		mes needtr("[세이렌]","[Seyren]");
+		mes needtr("^4d4dff저와 제 동료들은 모두 오래전에 죽었습니다.","^4d4dffMe and all my companions died long ago.");
+		mes needtr("이미 죽은 몸들에게 정을 쏟지 마십시오.^000000","Please don't waste your affections on the bodies that are already dead.^000000");
+		next;
+		mes needtr("[세이렌]","[Seyren]");
+		mes needtr("그들은 껍데기를 뒤집어쓴 유령과 같습니다.","They are just like ghosts covered with peels.");
+		mes needtr("당신 앞에서 마지막 의지를 보일 수 있어서 다행이었습니다.","I was lucky to show my last will in front of you.");
+		next;
+		mes needtr("[세이렌]","[Seyren]");
+		mes needtr("이것은 저와 동료들의 ^4d4dff유품^000000입니다.","They are ^4d4dffrelics^000000 of me and my companions.");
+		mes needtr("저희 가족들에게 전해 주십시오.","Please give them to our families.");
+		// NEED: 원본은 파티장에게만 진행도를 지급해 함께 들어온 파티원은 메인 21 에 남았습니다.
+		//       인스턴스 안의 메인 21 / 7739 진행 중 파티원 모두에게 같은 보상을 지급합니다.
+		callfunc "F_NEED_EP162_WernerStoryReward", 'map_slw$;
+		close2;
+		setpcblock PCBLOCK_NPC, true;
+		cutin "",255;
+		specialeffect EF_ICECRASH, AREA, .@seyren$;
+		disablenpc .@seyren$;
+		// monster 'map_slw$,56,171, "Seyren", SEYREN, 1;
+		sleep2 1000;
+		specialeffect2 EF_SCREEN_QUAKE;
+		sleep2 1000;
+		setpcblock PCBLOCK_NPC, false;
+		specialeffect2 EF_SCREEN_QUAKE;
+		specialeffect2 EF_RAIN_PARTICLE2;
+		warp "que_swat",155,50;
+		end;
+	}
+	// daily
+	mes needtr("[세이렌]","[Seyren]");
+	mes needtr("마지막에 당신을 만날 수 있어서 정말 기뻤습니다.","It was great to see you at the end.");
+	mes needtr("고맙습니다... 안녕히.","Thank you... Bye.");
+	close2;
+	setpcblock PCBLOCK_NPC, true;
+	cutin "",255;
+	specialeffect EF_ICECRASH, AREA, .@seyren$;
+	cloakonnpc .@seyren$;
+	// monster 'map_slw$,56,171, "Seyren", SEYREN, 1;
+	sleep2 1000;
+	specialeffect2 EF_SCREEN_QUAKE;
+	sleep2 1000;
+	specialeffect2 EF_SCREEN_QUAKE;
+	specialeffect2 EF_RAIN_PARTICLE2;
+	setpcblock PCBLOCK_NPC, false;
+	if (is_party_leader() == true)
+		'event_final = 0;
+	mapannouncelang 'map_slw$, "중추실의 설정이 초기화되었습니다.", "The setting of the central room has been initialized.", bc_map,0xFF99;
+	warpparty 'map_slw$,54,134,getcharid(1),'map_slw$,2,2;
+	disablenpc .@seyren$;
+	end;
+}
+
+// * Battle
+1@slw,55,170,3	duplicate(dummy_npc_ep162_wl)	펫 차일드#boss_master::Pet child#boss_master	3621
+
+1@slw,55,170,3	script	#boss_master_dummy	HIDDEN_WARP_NPC,5,5,{
+	end;
+OnTouch:
+	if (is_party_leader() == false)	// officially player can spawn multiple boss changing party leader
+		end;
+	setpcblock PCBLOCK_NPC, true;
+	.@npc_name$ = instance_npcname("Pet child#boss_master");
+	npctalklang "감히 여길 들어오다니! 용감하구나!","How dare you come in! You're so brave!", .@npc_name$;
+	sleep2 ('need_md_simple ? 300 : 3000);	// NEED: 간소화 진행은 대기 단축
+	npctalklang "나랑 싸우게 된 걸 영광으로 알아!","You must be honored to fight me!", .@npc_name$;
+	sleep2 ('need_md_simple ? 300 : 3000);	// NEED: 간소화 진행은 대기 단축
+	npctalk ".......", .@npc_name$;
+	sleep2 ('need_md_simple ? 300 : 3000);	// NEED: 간소화 진행은 대기 단축
+	npctalklang ".. 망할 베르너. 왜 나를 늑대랑 섞은 거야?",".. Damn Werner. Why did you mix me with a wolf?", .@npc_name$;
+	sleep2 ('need_md_simple ? 300 : 3000);	// NEED: 간소화 진행은 대기 단축
+	npctalklang "어... 어쨌든, 너흰 이제 끝장이야.","A... anyway, you are dead meat.", .@npc_name$;
+	sleep2 ('need_md_simple ? 300 : 3000);	// NEED: 간소화 진행은 대기 단축
+	setpcblock PCBLOCK_NPC, false;
+	disablenpc instance_npcname("#boss_master_dummy");
+	npctalklang "각오해에에에!!!","Beeee prepared!!!", .@npc_name$;
+	specialeffect EF_DANCE_BLADE_ATK, AREA, instance_npcname("Pet child#boss_master");
+	specialeffect EF_ALL_FULL_THROTTLE, AREA, instance_npcname("Pet child#boss_master");
+	donpcevent instance_npcname("#boss_master_lab") + "::OnStart";
+	mapannouncelang 'map_slw$, "마법 필드가 활성화되었습니다.", "The Magic field has been activated.", bc_map,0xFF99;
+	cloakonnpc instance_npcname("Pet child#boss_master");
+	end;
+}
+
+1@slw,1,1,3	script	#boss_master_lab	HIDDEN_WARP_NPC,5,5,{
+	end;
+OnStart:
+	enablenpc instance_npcname("#boss_master_lab");
+	if (mobcount( 'map_slw$, instance_npcname("#boss_master_lab") + "::OnMobDead" ) < 1)
+		monster 'map_slw$,55,170, "Pet child", 3621, 1, instance_npcname("#boss_master_lab") + "::OnMobDead";	// EP16_2_MM_CUTIE
+	end;
+OnMobDead:
+	if (mobcount( 'map_slw$, instance_npcname("#boss_master_lab") + "::OnMobDead" ) < 1) {
+		mapannouncelang 'map_slw$, "마법 필드가 사라졌습니다. 입구가 생성되었습니다.", "The Magic field has been eliminated. An entrance has been created.", bc_map,0xFF99;
+		enablenpc instance_npcname("Emergency exit#exit_war");
+		callfunc "F_NEED_EP162_MDSetClear", 2, 'map_slw$;	// NEED: 최초 클리어 기록 (반복)
+		disablenpc instance_npcname("#boss_master_lab");
+	}
+	end;
+}
