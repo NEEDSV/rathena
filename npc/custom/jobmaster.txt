@@ -37,6 +37,196 @@ function	script	Get_Item	{
 
 lasagna,167,149,6	script	전직도우미	640,{
 function Get_Job_Equip;
+// NEED: the EN job name of a class for an EN session (script-only; generated from the server job_name()
+// mapping + conf/msg_conf/map_msg_need_en.conf). A KR session and an unknown class keep jobname().
+function	Need_JobName	{
+	.@c = getarg(0);
+	switch (.@c) {
+	case 0: .@en$ = "Novice"; break;	// JOB_NOVICE
+	case 1: .@en$ = "Swordsman"; break;	// JOB_SWORDMAN
+	case 2: .@en$ = "Magician"; break;	// JOB_MAGE
+	case 3: .@en$ = "Archer"; break;	// JOB_ARCHER
+	case 4: .@en$ = "Acolyte"; break;	// JOB_ACOLYTE
+	case 5: .@en$ = "Merchant"; break;	// JOB_MERCHANT
+	case 6: .@en$ = "Thief"; break;	// JOB_THIEF
+	case 7: .@en$ = "Knight"; break;	// JOB_KNIGHT
+	case 8: .@en$ = "Priest"; break;	// JOB_PRIEST
+	case 9: .@en$ = "Wizard"; break;	// JOB_WIZARD
+	case 10: .@en$ = "Blacksmith"; break;	// JOB_BLACKSMITH
+	case 11: .@en$ = "Hunter"; break;	// JOB_HUNTER
+	case 12: .@en$ = "Assassin"; break;	// JOB_ASSASSIN
+	case 13: .@en$ = "Knight"; break;	// JOB_KNIGHT2
+	case 14: .@en$ = "Crusader"; break;	// JOB_CRUSADER
+	case 15: .@en$ = "Monk"; break;	// JOB_MONK
+	case 16: .@en$ = "Sage"; break;	// JOB_SAGE
+	case 17: .@en$ = "Rogue"; break;	// JOB_ROGUE
+	case 18: .@en$ = "Alchemist"; break;	// JOB_ALCHEMIST
+	case 19: .@en$ = "Bard"; break;	// JOB_BARD
+	case 20: .@en$ = "Dancer"; break;	// JOB_DANCER
+	case 21: .@en$ = "Crusader"; break;	// JOB_CRUSADER2
+	case 22: .@en$ = "Wedding"; break;	// JOB_WEDDING
+	case 23: .@en$ = "Super Novice"; break;	// JOB_SUPER_NOVICE
+	case 24: .@en$ = "Gunslinger"; break;	// JOB_GUNSLINGER
+	case 25: .@en$ = "Ninja"; break;	// JOB_NINJA
+	case 26: .@en$ = "Christmas"; break;	// JOB_XMAS
+	case 27: .@en$ = "Summer"; break;	// JOB_SUMMER
+	case 28: .@en$ = "Hanbok"; break;	// JOB_HANBOK
+	case 29: .@en$ = "Oktoberfest"; break;	// JOB_OKTOBERFEST
+	case 30: .@en$ = "Summer"; break;	// JOB_SUMMER2
+	case 4001: .@en$ = "High Novice"; break;	// JOB_NOVICE_HIGH
+	case 4002: .@en$ = "High Swordsman"; break;	// JOB_SWORDMAN_HIGH
+	case 4003: .@en$ = "High Magician"; break;	// JOB_MAGE_HIGH
+	case 4004: .@en$ = "High Archer"; break;	// JOB_ARCHER_HIGH
+	case 4005: .@en$ = "High Acolyte"; break;	// JOB_ACOLYTE_HIGH
+	case 4006: .@en$ = "High Merchant"; break;	// JOB_MERCHANT_HIGH
+	case 4007: .@en$ = "High Thief"; break;	// JOB_THIEF_HIGH
+	case 4008: .@en$ = "Lord Knight"; break;	// JOB_LORD_KNIGHT
+	case 4009: .@en$ = "High Priest"; break;	// JOB_HIGH_PRIEST
+	case 4010: .@en$ = "High Wizard"; break;	// JOB_HIGH_WIZARD
+	case 4011: .@en$ = "Whitesmith"; break;	// JOB_WHITESMITH
+	case 4012: .@en$ = "Sniper"; break;	// JOB_SNIPER
+	case 4013: .@en$ = "Assassin Cross"; break;	// JOB_ASSASSIN_CROSS
+	case 4014: .@en$ = "Lord Knight"; break;	// JOB_LORD_KNIGHT2
+	case 4015: .@en$ = "Paladin"; break;	// JOB_PALADIN
+	case 4016: .@en$ = "Champion"; break;	// JOB_CHAMPION
+	case 4017: .@en$ = "Professor"; break;	// JOB_PROFESSOR
+	case 4018: .@en$ = "Stalker"; break;	// JOB_STALKER
+	case 4019: .@en$ = "Creator"; break;	// JOB_CREATOR
+	case 4020: .@en$ = "Clown"; break;	// JOB_CLOWN
+	case 4021: .@en$ = "Gypsy"; break;	// JOB_GYPSY
+	case 4022: .@en$ = "Paladin"; break;	// JOB_PALADIN2
+	case 4023: .@en$ = "Baby Novice"; break;	// JOB_BABY
+	case 4024: .@en$ = "Baby Swordsman"; break;	// JOB_BABY_SWORDMAN
+	case 4025: .@en$ = "Baby Magician"; break;	// JOB_BABY_MAGE
+	case 4026: .@en$ = "Baby Archer"; break;	// JOB_BABY_ARCHER
+	case 4027: .@en$ = "Baby Acolyte"; break;	// JOB_BABY_ACOLYTE
+	case 4028: .@en$ = "Baby Merchant"; break;	// JOB_BABY_MERCHANT
+	case 4029: .@en$ = "Baby Thief"; break;	// JOB_BABY_THIEF
+	case 4030: .@en$ = "Baby Knight"; break;	// JOB_BABY_KNIGHT
+	case 4031: .@en$ = "Baby Priest"; break;	// JOB_BABY_PRIEST
+	case 4032: .@en$ = "Baby Wizard"; break;	// JOB_BABY_WIZARD
+	case 4033: .@en$ = "Baby Blacksmith"; break;	// JOB_BABY_BLACKSMITH
+	case 4034: .@en$ = "Baby Hunter"; break;	// JOB_BABY_HUNTER
+	case 4035: .@en$ = "Baby Assassin"; break;	// JOB_BABY_ASSASSIN
+	case 4036: .@en$ = "Baby Knight"; break;	// JOB_BABY_KNIGHT2
+	case 4037: .@en$ = "Baby Crusader"; break;	// JOB_BABY_CRUSADER
+	case 4038: .@en$ = "Baby Monk"; break;	// JOB_BABY_MONK
+	case 4039: .@en$ = "Baby Sage"; break;	// JOB_BABY_SAGE
+	case 4040: .@en$ = "Baby Rogue"; break;	// JOB_BABY_ROGUE
+	case 4041: .@en$ = "Baby Alchemist"; break;	// JOB_BABY_ALCHEMIST
+	case 4042: .@en$ = "Baby Bard"; break;	// JOB_BABY_BARD
+	case 4043: .@en$ = "Baby Dancer"; break;	// JOB_BABY_DANCER
+	case 4044: .@en$ = "Baby Crusader"; break;	// JOB_BABY_CRUSADER2
+	case 4045: .@en$ = "Super Baby"; break;	// JOB_SUPER_BABY
+	case 4046: .@en$ = "Taekwon"; break;	// JOB_TAEKWON
+	case 4047: .@en$ = "Star Gladiator"; break;	// JOB_STAR_GLADIATOR
+	case 4048: .@en$ = "Star Gladiator"; break;	// JOB_STAR_GLADIATOR2
+	case 4049: .@en$ = "Soul Linker"; break;	// JOB_SOUL_LINKER
+	case 4050: .@en$ = "Gangsi"; break;	// JOB_GANGSI
+	case 4051: .@en$ = "Death Knight"; break;	// JOB_DEATH_KNIGHT
+	case 4052: .@en$ = "Dark Collector"; break;	// JOB_DARK_COLLECTOR
+	case 4054: .@en$ = "Rune Knight"; break;	// JOB_RUNE_KNIGHT
+	case 4055: .@en$ = "Warlock"; break;	// JOB_WARLOCK
+	case 4056: .@en$ = "Ranger"; break;	// JOB_RANGER
+	case 4057: .@en$ = "Arch Bishop"; break;	// JOB_ARCH_BISHOP
+	case 4058: .@en$ = "Mechanic"; break;	// JOB_MECHANIC
+	case 4059: .@en$ = "Guillotine Cross"; break;	// JOB_GUILLOTINE_CROSS
+	case 4060: .@en$ = "Rune Knight T"; break;	// JOB_RUNE_KNIGHT_T
+	case 4061: .@en$ = "Warlock T"; break;	// JOB_WARLOCK_T
+	case 4062: .@en$ = "Ranger T"; break;	// JOB_RANGER_T
+	case 4063: .@en$ = "Arch Bishop T"; break;	// JOB_ARCH_BISHOP_T
+	case 4064: .@en$ = "Mechanic T"; break;	// JOB_MECHANIC_T
+	case 4065: .@en$ = "Guillotine Cross T"; break;	// JOB_GUILLOTINE_CROSS_T
+	case 4066: .@en$ = "Royal Guard"; break;	// JOB_ROYAL_GUARD
+	case 4067: .@en$ = "Sorcerer"; break;	// JOB_SORCERER
+	case 4068: .@en$ = "Minstrel"; break;	// JOB_MINSTREL
+	case 4069: .@en$ = "Wanderer"; break;	// JOB_WANDERER
+	case 4070: .@en$ = "Sura"; break;	// JOB_SURA
+	case 4071: .@en$ = "Genetic"; break;	// JOB_GENETIC
+	case 4072: .@en$ = "Shadow Chaser"; break;	// JOB_SHADOW_CHASER
+	case 4073: .@en$ = "Royal Guard T"; break;	// JOB_ROYAL_GUARD_T
+	case 4074: .@en$ = "Sorcerer T"; break;	// JOB_SORCERER_T
+	case 4075: .@en$ = "Minstrel T"; break;	// JOB_MINSTREL_T
+	case 4076: .@en$ = "Wanderer T"; break;	// JOB_WANDERER_T
+	case 4077: .@en$ = "Sura T"; break;	// JOB_SURA_T
+	case 4078: .@en$ = "Genetic T"; break;	// JOB_GENETIC_T
+	case 4079: .@en$ = "Shadow Chaser T"; break;	// JOB_SHADOW_CHASER_T
+	case 4080: .@en$ = "Rune Knight"; break;	// JOB_RUNE_KNIGHT2
+	case 4081: .@en$ = "Rune Knight"; break;	// JOB_RUNE_KNIGHT_T2
+	case 4082: .@en$ = "Royal Guard"; break;	// JOB_ROYAL_GUARD2
+	case 4083: .@en$ = "Royal Guard"; break;	// JOB_ROYAL_GUARD_T2
+	case 4084: .@en$ = "Ranger"; break;	// JOB_RANGER2
+	case 4085: .@en$ = "Ranger"; break;	// JOB_RANGER_T2
+	case 4086: .@en$ = "Mechanic"; break;	// JOB_MECHANIC2
+	case 4087: .@en$ = "Mechanic"; break;	// JOB_MECHANIC_T2
+	case 4096: .@en$ = "Baby Rune Knight"; break;	// JOB_BABY_RUNE_KNIGHT
+	case 4097: .@en$ = "Baby Warlock"; break;	// JOB_BABY_WARLOCK
+	case 4098: .@en$ = "Baby Ranger"; break;	// JOB_BABY_RANGER
+	case 4099: .@en$ = "Baby Arch Bishop"; break;	// JOB_BABY_ARCH_BISHOP
+	case 4100: .@en$ = "Baby Mechanic"; break;	// JOB_BABY_MECHANIC
+	case 4101: .@en$ = "Baby Guillotine Cross"; break;	// JOB_BABY_GUILLOTINE_CROSS
+	case 4102: .@en$ = "Baby Royal Guard"; break;	// JOB_BABY_ROYAL_GUARD
+	case 4103: .@en$ = "Baby Sorcerer"; break;	// JOB_BABY_SORCERER
+	case 4104: .@en$ = "Baby Minstrel"; break;	// JOB_BABY_MINSTREL
+	case 4105: .@en$ = "Baby Wanderer"; break;	// JOB_BABY_WANDERER
+	case 4106: .@en$ = "Baby Sura"; break;	// JOB_BABY_SURA
+	case 4107: .@en$ = "Baby Genetic"; break;	// JOB_BABY_GENETIC
+	case 4108: .@en$ = "Baby Shadow Chaser"; break;	// JOB_BABY_SHADOW_CHASER
+	case 4109: .@en$ = "Baby Rune Knight"; break;	// JOB_BABY_RUNE_KNIGHT2
+	case 4110: .@en$ = "Baby Royal Guard"; break;	// JOB_BABY_ROYAL_GUARD2
+	case 4111: .@en$ = "Baby Ranger"; break;	// JOB_BABY_RANGER2
+	case 4112: .@en$ = "Baby Mechanic"; break;	// JOB_BABY_MECHANIC2
+	case 4190: .@en$ = "Expanded Super Novice"; break;	// JOB_SUPER_NOVICE_E
+	case 4191: .@en$ = "Expanded Super Baby"; break;	// JOB_SUPER_BABY_E
+	case 4211: .@en$ = "Kagerou"; break;	// JOB_KAGEROU
+	case 4212: .@en$ = "Oboro"; break;	// JOB_OBORO
+	case 4215: .@en$ = "Rebellion"; break;	// JOB_REBELLION
+	case 4218: .@en$ = "Summoner"; break;	// JOB_SUMMONER
+	case 4220: .@en$ = "Baby Summoner"; break;	// JOB_BABY_SUMMONER
+	case 4222: .@en$ = "Baby Ninja"; break;	// JOB_BABY_NINJA
+	case 4223: .@en$ = "Baby Kagerou"; break;	// JOB_BABY_KAGEROU
+	case 4224: .@en$ = "Baby Oboro"; break;	// JOB_BABY_OBORO
+	case 4225: .@en$ = "Baby Taekwon"; break;	// JOB_BABY_TAEKWON
+	case 4226: .@en$ = "Baby Star Gladiator"; break;	// JOB_BABY_STAR_GLADIATOR
+	case 4227: .@en$ = "Baby Soul Linker"; break;	// JOB_BABY_SOUL_LINKER
+	case 4228: .@en$ = "Baby Gunslinger"; break;	// JOB_BABY_GUNSLINGER
+	case 4229: .@en$ = "Baby Rebellion"; break;	// JOB_BABY_REBELLION
+	case 4238: .@en$ = "Baby Star Gladiator"; break;	// JOB_BABY_STAR_GLADIATOR2
+	case 4239: .@en$ = "Star Emperor"; break;	// JOB_STAR_EMPEROR
+	case 4240: .@en$ = "Soul Reaper"; break;	// JOB_SOUL_REAPER
+	case 4241: .@en$ = "Baby Star Emperor"; break;	// JOB_BABY_STAR_EMPEROR
+	case 4242: .@en$ = "Baby Soul Reaper"; break;	// JOB_BABY_SOUL_REAPER
+	case 4243: .@en$ = "Star Emperor"; break;	// JOB_STAR_EMPEROR2
+	case 4244: .@en$ = "Baby Star Emperor"; break;	// JOB_BABY_STAR_EMPEROR2
+	case 4252: .@en$ = "Dragon Knight"; break;	// JOB_DRAGON_KNIGHT
+	case 4253: .@en$ = "Meister"; break;	// JOB_MEISTER
+	case 4254: .@en$ = "Shadow Cross"; break;	// JOB_SHADOW_CROSS
+	case 4255: .@en$ = "Arch Mage"; break;	// JOB_ARCH_MAGE
+	case 4256: .@en$ = "Cardinal"; break;	// JOB_CARDINAL
+	case 4257: .@en$ = "Windhawk"; break;	// JOB_WINDHAWK
+	case 4258: .@en$ = "Imperial Guard"; break;	// JOB_IMPERIAL_GUARD
+	case 4259: .@en$ = "Biolo"; break;	// JOB_BIOLO
+	case 4260: .@en$ = "Abyss Chaser"; break;	// JOB_ABYSS_CHASER
+	case 4261: .@en$ = "Elemental Master"; break;	// JOB_ELEMENTAL_MASTER
+	case 4262: .@en$ = "Inquisitor"; break;	// JOB_INQUISITOR
+	case 4263: .@en$ = "Troubadour"; break;	// JOB_TROUBADOUR
+	case 4264: .@en$ = "Trouvere"; break;	// JOB_TROUVERE
+	case 4278: .@en$ = "Windhawk"; break;	// JOB_WINDHAWK2
+	case 4279: .@en$ = "Meister"; break;	// JOB_MEISTER2
+	case 4280: .@en$ = "Dragon Knight"; break;	// JOB_DRAGON_KNIGHT2
+	case 4281: .@en$ = "Imperial Guard"; break;	// JOB_IMPERIAL_GUARD2
+	case 4302: .@en$ = "Sky Emperor"; break;	// JOB_SKY_EMPEROR
+	case 4303: .@en$ = "Soul Ascetic"; break;	// JOB_SOUL_ASCETIC
+	case 4304: .@en$ = "Shinkiro"; break;	// JOB_SHINKIRO
+	case 4305: .@en$ = "Shiranui"; break;	// JOB_SHIRANUI
+	case 4306: .@en$ = "Night Watch"; break;	// JOB_NIGHT_WATCH
+	case 4307: .@en$ = "Hyper Novice"; break;	// JOB_HYPER_NOVICE
+	case 4308: .@en$ = "Spirit Handler"; break;	// JOB_SPIRIT_HANDLER
+	case 4316: .@en$ = "Sky Emperor"; break;	// JOB_SKY_EMPEROR2
+	default: .@en$ = jobname(.@c); break;
+	}
+	return needtr(jobname(.@c), .@en$);
+}
 // Checks if the Player has the required level.
 // closes if not, returns if yes
 function	Require_Level	{
@@ -358,9 +548,9 @@ function	Job_Menu	{
 			.@menu$ = "";
 			for (.@i = 0; .@i < .@opt_cnt; .@i++) {
 				if( getelementofarray(getarg(0), .@i) == Job_Novice_High)
-					.@jobname$ = "^FF0000전승(강력 추천)^000000";
+					.@jobname$ = needtr("^FF0000전승(강력 추천)^000000", "^FF0000Rebirth (Highly Recommended)^000000");
 				else
-					.@jobname$ = jobname(getelementofarray(getarg(0), .@i));
+					.@jobname$ = Need_JobName(getelementofarray(getarg(0), .@i));
 				.@menu$ = .@menu$ + " ~ " + .@jobname$ + ":";
 			}
 			.@menu$ = .@menu$+" ~ ^777777Cancel^000000";
@@ -378,7 +568,7 @@ function	Job_Menu	{
 			// changes. That's why the Level Requirement is after and not before
 			// the selection.
 			mes needtr(" 기본 수준", "Base level ") + .SNovice +
-				" is required to turn into a " + jobname(.@class) + ".";
+				" is required to turn into a " + Need_JobName(.@class) + ".";
 			return;
 		}
 		// Confirm the Class
@@ -395,7 +585,7 @@ function	Job_Change	{
 	.@to_cls = getarg(0);
 	next;
 	mes .NPCName$;
-	mes "" + callfunc("F_InsertArticle", jobname(.@to_cls)) + needtr("로 전직하셨습니다!", " is now your job!");
+	mes "" + callfunc("F_InsertArticle", Need_JobName(.@to_cls)) + needtr("로 전직하셨습니다!", " is now your job!");
 	if (.@to_cls == Job_Novice_High && .LastJob)
 		lastJob = Class; // Saves the lastJob for rebirth
 	jobchange .@to_cls;
@@ -439,10 +629,10 @@ function	Confirm_Change	{
 		mes needtr("알 수 없는 클래스 오류입니다.", "Unknown Class Error.");
 		close;
 	}
-	mes "^0055FF"+jobname(.@class)+needtr("^000000 로 전직하시겠습니까?", "^000000 class?");
-	.@job_option$ = " ~ ^0055FF"+jobname(.@class)+"^000000 로 전직";
+	mes "^0055FF"+Need_JobName(.@class)+needtr("^000000 로 전직하시겠습니까?", "^000000 class?");
+	.@job_option$ = " ~ ^0055FF"+Need_JobName(.@class)+needtr("^000000 로 전직", "^000000 (change job)");
 	if( .@class == Job_Novice_High)
-		.@job_option$ = " ~ ^0055FF전승^000000";
+		.@job_option$ = needtr(" ~ ^0055FF전승^000000", " ~ ^0055FFRebirth^000000");
 	
 	if (select(.@job_option$+": ~ ^777777" + 
 			((.@back) ?"Go back" : needtr("취소", "Cancel")) + "^000000") == 1) {
