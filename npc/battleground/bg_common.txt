@@ -33,9 +33,9 @@ bat_room,154,161,4	script	전장 관리인#2	953,{
 bat_room,184,164,4	script	전장 관리인	953,{
 	// 모집/편성 중 일반 유저는 홍보 메뉴만, GM 60 이상은 운영 메뉴도 표시
 	if ($@BG_RM_MANAGER_MENU_LOCK) {
-		.@menu$ = "전장 홍보하기";
+		.@menu$ = needtr("전장 홍보하기", "Battleground Shout");
 		if (getgmlevel() >= 60)
-			.@menu$ += ":랜덤 매칭 운영";
+			.@menu$ += needtr(":랜덤 매칭 운영", ":Random Match Operations");
 
 		.@sel = select(.@menu$);
 		if (.@sel == 1) {
@@ -49,17 +49,17 @@ bat_room,184,164,4	script	전장 관리인	953,{
 		close;
 	}
 
-	.@menu$ = "주사위 굴리기:전장 파티장 등록:전장 입장 준비:전장 홍보하기:전장 인원 조정:인원 부족 완화 신청:전장 보상 설명";
+	.@menu$ = needtr("주사위 굴리기:전장 파티장 등록:전장 입장 준비:전장 홍보하기:전장 인원 조정:인원 부족 완화 신청:전장 보상 설명", "Roll the Dice:Register Battleground Party Leader:Battleground Entry Preparation:Battleground Shout:Adjust Battleground Headcount:Request Headcount Relief:Battleground Rewards");
 	.@leader_menu = 0;
 	.@admin_menu = 0;
 
 	if ($@BG_RM_CYCLE_ACTIVE) {
-		.@menu$ += ":랜덤 매칭 파티장 승계";
+		.@menu$ += needtr(":랜덤 매칭 파티장 승계", ":Take Over as Random Match Party Leader");
 		.@leader_menu = 8;
 	}
 
 	if (getgmlevel() >= 60) {
-		.@menu$ += ":랜덤 매칭 운영";
+		.@menu$ += needtr(":랜덤 매칭 운영", ":Random Match Operations");
 		.@admin_menu = ($@BG_RM_CYCLE_ACTIVE ? 9 : 8);
 	}
 
