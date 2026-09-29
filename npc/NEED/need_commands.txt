@@ -1,0 +1,62 @@
+//===== NEED: @commands - player command guide in the chat window ===========
+//= @commands (@명령어)      : the commands a player can use, with a short
+//=                             description and an example (KR / EN by session)
+//= @commands all            : the original built-in @commands list
+//=
+//= bindatcmd runs before the built-in @commands (atcommand.cpp), so this
+//= replaces it for everyone; "all" hands over to the built-in one through
+//= the script atcommand (type 0, which never re-enters a binding).
+//= Every line names a command in the session's language (KR aliases for KR,
+//= English names for EN). Korean-only binds (전장*, 결혼 votes, 노점검색) and
+//= test / internal commands (needlang, wikicode) are not listed.
+//============================================================================
+-	script	NEED Commands	-1,{
+	end;
+
+OnInit:
+	bindatcmd "commands", strnpcinfo(3) + "::OnCommands", 0, 99;
+	bindatcmd "명령어", strnpcinfo(3) + "::OnCommands", 0, 99;
+	end;
+
+OnCommands:
+	if (.@atcmd_parameters$[0] == "all") {
+		atcommand "@commands";
+		end;
+	}
+	.@h = 0xFFCC00;	// section
+	.@c = 0xA0E0FF;	// command
+	dispbottom needtr("===== 사용 가능한 명령어 =====", "===== Available commands ====="), .@h;
+	dispbottom needtr("[기본]", "[Basics]"), .@h;
+	dispbottom needtr("@로드 - 저장 위치로 이동", "@load - warp to your save point"), .@c;
+	dispbottom needtr("@창고 - 창고 열기", "@storage - open storage"), .@c;
+	dispbottom needtr("@창고2 / @창고3 - 2, 3번 창고 열기 (캐시 해금 후)", "@storage2 / @storage3 - open storage 2 / 3 (after unlocking with Cash)"), .@c;
+	dispbottom needtr("@길드창고 - 길드창고 열기", "@guildstorage - open guild storage"), .@c;
+	dispbottom needtr("@접속유지 - 오프라인 상태로 노점 유지", "@autotrade - keep your vending shop open while offline"), .@c;
+	dispbottom needtr("[창고 정리]", "[Storage sorting]"), .@h;
+	dispbottom needtr("@창고보관 - 창고에 이미 있는 소모품/기타/카드를 자동 보관 (보관 은총 이용권, 마을에서만)", "@autostorage - moves usable / etc / card items already in Storage (Grace of Storage Pass, towns only)"), .@c;
+	dispbottom needtr("@storematch - 창고에 같은 아이템이 있는 소모품/기타/카드만 보관", "@storematch - stores usable / etc / card items only if Storage already has them"), .@c;
+	dispbottom needtr("@창고제외 <아이템> - 자동 보관 제외 등록 / 예: @창고제외 501", "@storeexclude <item> - never auto-store this item / e.g. @storeexclude 501"), .@c;
+	dispbottom needtr("@창고제외목록 - 제외 목록 보기", "@storeexcludelist - show your exclusion list"), .@c;
+	dispbottom needtr("@창고제외해제 <아이템> - 제외 해제 / 예: @창고제외해제 501", "@storeexcludeoff <item> - remove it from the list / e.g. @storeexcludeoff 501"), .@c;
+	dispbottom needtr("[루팅]", "[Looting]"), .@h;
+	dispbottom needtr("@오토루팅 [on|off|숫자] - 드랍률 N% 이하 자동 획득 / 예: @오토루팅 50", "@autoloot [on|off|#] - pick up drops of N% or less / e.g. @autoloot 50"), .@c;
+	dispbottom needtr("@선택루팅 +<아이템ID> / -<아이템ID> / reset - 지정 아이템 자동 획득 / 예: @선택루팅 +7444", "@autolootitem +<item ID> / -<item ID> / reset - loot only these items / e.g. @autolootitem +7444"), .@c;
+	dispbottom needtr("@타입루팅 +<번호> - 종류별 자동 획득 / 예: @타입루팅 +6", "@autoloottype +<type> - loot by item type / e.g. @autoloottype +6"), .@c;
+	dispbottom needtr("   0 물약 / 2 소모 / 3 기타 / 4 방어구 / 5 무기 / 6 카드 / 7 펫알 / 8 펫장신구 / 10 화살", "   0 Healing / 2 Usable / 3 Etc / 4 Armor / 5 Weapon / 6 Card / 7 Pet Egg / 8 Pet Accessory / 10 Ammo"), .@c;
+	dispbottom needtr("@안줍기 <아이템> / del / list / clear - 자동 획득 제외 / 예: @안줍기 909", "@noloot <item> / del / list / clear - exclude from autoloot / e.g. @noloot 909"), .@c;
+	dispbottom needtr("[정보]", "[Information]"), .@h;
+	dispbottom needtr("@몹정보 <몬스터> - 몬스터 정보 / 예: @몹정보 1002", "@mobinfo <monster> - monster stats, exp and drops / e.g. @mobinfo 1002"), .@c;
+	dispbottom needtr("@몹분포 <몬스터> - 몬스터 출현 맵 / 예: @몹분포 1002", "@whereis <monster> - maps where it spawns / e.g. @whereis 1002"), .@c;
+	dispbottom needtr("@템정보 <아이템> - 아이템 정보 / 예: @템정보 501", "@iteminfo <item> - item details / e.g. @iteminfo 501"), .@c;
+	dispbottom needtr("@누구드롭 <아이템> - 드롭 몬스터 / 예: @누구드롭 909", "@whodrops <item> - monsters that drop it / e.g. @whodrops 909"), .@c;
+	dispbottom needtr("@일정확률 <아이템> - 아이템의 확률 옵션 보기 / 예: @일정확률 501", "@itemrate <item> - show the item's chance-based options / e.g. @itemrate 501"), .@c;
+	dispbottom needtr("[편의]", "[Convenience]"), .@h;
+	dispbottom needtr("@오토큐어 [on|off] - 자동 물약 켜기/끄기, @오토큐어설정 - 설정 창", "@autopot [on|off] - auto potions on / off, @autopotui - settings window"), .@c;
+	dispbottom needtr("@자동보충 - 자동 보충 프리셋 설정", "@autosupply - set up auto supply presets"), .@c;
+	dispbottom needtr("@보충1 / @보충2 / @보충3 - 프리셋 사용, @보충 - 최근 프리셋", "@supply1 / @supply2 / @supply3 - use a preset, @supply - the last one"), .@c;
+	dispbottom needtr("@속부 - 무기 속성 부여 30분 (속성 은총 이용권)", "@element - endow your weapon for 30 min (Grace of Attribute Pass)"), .@c;
+	dispbottom needtr("@펫자동먹이 [on|off|info] - 큐펫 자동 먹이", "@petautofeed [on|off|info] - auto-feed your pet"), .@c;
+	dispbottom needtr("@모드전환 - 독주 스킬 적용 모드 전환", "@performancemode - switch how solo performance skills apply"), .@c;
+	dispbottom needtr("@잡 <할말> - 이름 없이 파란 공지 (50 캐시)", "@kamib <message> - blue broadcast without your name (50 Cash)"), .@c;
+	end;
+}
