@@ -881,27 +881,48 @@ lasa_in01,177,45,5	script	에이버 드 도쉬#cos_ect	4_WHITETIGER,{
 		mes needtr("저희의 다른 업그레이드 서비스도 확인해 보세요~", "Please check our other upgrading services~");
 		close;
 	}
+	// 소지한 스톤만 메뉴에 노출
 	.@size = getarraysize(.@stone_id);
-	.@max_menu_size = 2047;	// temporary fix the menu length until new data
-	.@i = 0;
-
-	do {
-		.@menu$ = "";
-		.@offset += .@i;
-
-		for ( .@i = .@offset; .@i < .@size; .@i += 2 ) {
-			.@str$ = ((.@i/2)+1) + ". " + getitemname(.@stone_id[.@i]) + needtr(" (", " (x") + countitem(.@stone_id[.@i]) + needtr("개):", "):");
-			if ((getstrlen(.@menu$ + .@str$) + 4) >= .@max_menu_size) {
-				.@menu$ += needtr("^0000ff다음^000000:", "^0000ffNext^000000:");
-				break;
-			}
-			.@menu$ += .@str$;
-		}
-		.@s = (select(.@menu$) - 1) * 2;
+	.@n = 0;
+	for ( .@i = 0; .@i < .@size; .@i += 2 ) {
+		if (countitem(.@stone_id[.@i]) > 0)
+			.@own[.@n++] = .@i;
 	}
-	while(.@i < .@size && .@i == .@s);
-
-	.@s += .@offset;
+	if (!.@n) {
+		mes needtr("[아베르 데 도쉬]", "[Aver De Dosh]");
+		mes needtr("이 위치에 사용할 수 있는 인챈트 스톤을 가지고 계시지 않네요.", "You don't have any enchant stone usable for this slot.");
+		close;
+	}
+	.@max_menu_size = 2047;
+	.@p = 0;
+	while (1) {
+		.@menu$ = "";
+		.@cnt = 0;
+		for ( .@k = .@p; .@k < .@n; .@k++ ) {
+			.@i = .@own[.@k];
+			.@str$ = (.@k+1) + ". " + getitemname(.@stone_id[.@i]) + needtr(" (", " (x") + countitem(.@stone_id[.@i]) + needtr("개):", "):");
+			if ((getstrlen(.@menu$ + .@str$) + 60) >= .@max_menu_size)
+				break;
+			.@menu$ += .@str$;
+			.@cnt++;
+		}
+		.@more = (.@k < .@n);
+		if (.@more)
+			.@menu$ += needtr("^0000ff다음^000000:", "^0000ffNext^000000:");
+		.@menu$ += needtr("취소", "Cancel");
+		.@sel = select(.@menu$);
+		if (.@sel == .@cnt + .@more + 1) {
+			mes needtr("[아베르 데 도쉬]", "[Aver De Dosh]");
+			mes needtr("저희의 다른 업그레이드 서비스도 확인해 보세요~", "Please check our other upgrading services~");
+			close;
+		}
+		if (.@more && .@sel == .@cnt + 1) {
+			.@p = .@k;
+			continue;
+		}
+		.@s = .@own[.@p + .@sel - 1];
+		break;
+	}
 
 	.@stone = .@stone_id[.@s];
 	.@enchant = .@stone_id[.@s+1];
@@ -1030,19 +1051,30 @@ lasa_in01,179,45,5	script	레이스 라 자드#cos_ect	4_FROG,{
 		1000296, 310257, "Increases damage of Ignition Break by 15%.",	// RuneknightStone_Robe2	Runeknight_Robe2
 		1000300, 310261, "Increases damage of Crazy Weed by 20%.",	// GeneticStone_Robe2	Genetic_Robe2
 		1000304, 310265, "Increases damage of Reverberation by 15%.";	// WanderMinsStone_Robe2	WandMinst_Robe2
+	// 소지한 스톤만 메뉴에 노출
 	.@size = getarraysize(.@data$);
+	.@n = 0;
 	for ( .@i = 0; .@i < .@size; .@i += 3 ) {
-		.@id = atoi(.@data$[.@i]);
-		.@menu$ += (.@j+1) + ". " + getitemname(.@id) + needtr(" (", " (x") + countitem(.@id) + needtr("개):", "):");
-		.@j++;
+		if (countitem(atoi(.@data$[.@i])) > 0)
+			.@own[.@n++] = .@i;
+	}
+	if (!.@n) {
+		mes needtr("[레이스 라 자드]", "[Lace La Zard]");
+		mes needtr("사용할 수 있는 걸칠것 스톤을 가지고 계시지 않네요.", "You don't have any garment enchant stone.");
+		close;
+	}
+	for ( .@k = 0; .@k < .@n; .@k++ ) {
+		.@id = atoi(.@data$[.@own[.@k]]);
+		.@menu$ += (.@k+1) + ". " + getitemname(.@id) + needtr(" (", " (x") + countitem(.@id) + needtr("개):", "):");
 	}
 	.@menu$ += needtr("대화를 종료한다", "End Conversation.");
-	.@s = (select(.@menu$) - 1) * 3;
-	if (.@s == .@size) {
+	.@sel = select(.@menu$);
+	if (.@sel == .@n + 1) {
 		mes needtr("[레이스 라 자드]", "[Lace La Zard]");
 		mes needtr("네? 혹시 마음이 바뀌셨나요?", "Yes? Do you want to keep looking?");
 		close;
 	}
+	.@s = .@own[.@sel - 1];
 	.@id = atoi(.@data$[.@s]);
 	.@enchant = atoi(.@data$[.@s+1]);
 	if (getequipid(.@part) < 0 || countitem(.@id) < 1) {
