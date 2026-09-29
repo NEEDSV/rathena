@@ -7,6 +7,12 @@ OnInit:
 	bindatcmd "보충1", strnpcinfo(3)+"::OnSupply1", 0, 99;
 	bindatcmd "보충2", strnpcinfo(3)+"::OnSupply2", 0, 99;
 	bindatcmd "보충3", strnpcinfo(3)+"::OnSupply3", 0, 99;
+	// NEED EN: English names of the same commands (the EN guide and the EN text below name them)
+	bindatcmd "autosupply", strnpcinfo(3)+"::OnSupplySetting", 0, 99;
+	bindatcmd "supply", strnpcinfo(3)+"::OnSupplyRecent", 0, 99;
+	bindatcmd "supply1", strnpcinfo(3)+"::OnSupply1", 0, 99;
+	bindatcmd "supply2", strnpcinfo(3)+"::OnSupply2", 0, 99;
+	bindatcmd "supply3", strnpcinfo(3)+"::OnSupply3", 0, 99;
 
 	.MaxPreset = 3;
 	.MaxSlot = 10;
@@ -73,7 +79,7 @@ OnSupplyRecent:
 
 	if (.@preset < 1 || .@preset > .MaxPreset) {
 		dispbottom needtr("[자동 보충] 최근 사용한 프리셋이 없습니다.","[Auto Supply] You have not used a preset yet.");
-		dispbottom needtr("[자동 보충] 먼저 @보충1, @보충2, @보충3 중 하나를 사용해주세요.","[Auto Supply] Use @보충1, @보충2 or @보충3 first.");
+		dispbottom needtr("[자동 보충] 먼저 @보충1, @보충2, @보충3 중 하나를 사용해주세요.","[Auto Supply] Use @supply1, @supply2 or @supply3 first.");
 		end;
 	}
 
@@ -111,24 +117,24 @@ S_Help:
 	next;
 
 	mes needtr("[사용 방법]","[How to use]");
-	mes needtr("1. @자동보충 입력","1. Enter @자동보충");
+	mes needtr("1. @자동보충 입력","1. Enter @autosupply");
 	mes needtr("2. 프리셋 선택","2. Choose a preset");
 	mes needtr("3. 아이템 등록 및 목표 수량 설정","3. Register items and set target quantities");
-	mes needtr("4. @보충1, @보충2, @보충3 사용","4. Use @보충1, @보충2 or @보충3");
-	mes needtr("5. 이후 @보충으로 최근 프리셋 재사용","5. Later, @보충 reuses your most recent preset");
+	mes needtr("4. @보충1, @보충2, @보충3 사용","4. Use @supply1, @supply2 or @supply3");
+	mes needtr("5. 이후 @보충으로 최근 프리셋 재사용","5. Later, @supply reuses your most recent preset");
 	next;
 
 	mes needtr("[예시]","[Example]");
 	mes needtr("파리의 날개 목표 수량 100개","Fly Wing target quantity 100");
 	mes needtr("현재 인벤토리 35개 보유","Currently 35 in your inventory");
-	mes needtr("@보충1 입력 시 창고에서 65개를 자동 보충합니다.","@보충1 auto-supplies 65 from Storage.");
+	mes needtr("@보충1 입력 시 창고에서 65개를 자동 보충합니다.","@supply1 auto-supplies 65 from Storage.");
 	next;
 
 	mes needtr("[프리셋 안내]","[Presets]");
-	mes needtr("@보충1 : 기본 무료 프리셋","@보충1 : the free default preset");
-	mes needtr("@보충2 : 캐시로 해금","@보충2 : unlocked with Cash");
-	mes needtr("@보충3 : 지정 아이템으로 해금","@보충3 : unlocked with a specific item");
-	mes needtr("@보충 : 최근 사용 프리셋 실행","@보충 : run your most recent preset");
+	mes needtr("@보충1 : 기본 무료 프리셋","@supply1 : the free default preset");
+	mes needtr("@보충2 : 캐시로 해금","@supply2 : unlocked with Cash");
+	mes needtr("@보충3 : 지정 아이템으로 해금","@supply3 : unlocked with a specific item");
+	mes needtr("@보충 : 최근 사용 프리셋 실행","@supply : run your most recent preset");
 	next;
 
 	mes needtr("[주의 사항]","[Notes]");
@@ -596,7 +602,7 @@ S_CheckPresetAccess:
 
 	if (!.@setting) {
 		dispbottom needtr("[자동 보충] 프리셋 ","[Auto Supply] Preset ") + .@preset + needtr("은 아직 해금되지 않았습니다."," is not unlocked yet.");
-		dispbottom needtr("[자동 보충] @자동보충에서 먼저 해금해주세요.","[Auto Supply] Unlock it in @자동보충 first.");
+		dispbottom needtr("[자동 보충] @자동보충에서 먼저 해금해주세요.","[Auto Supply] Unlock it in @autosupply first.");
 		return 0;
 	}
 
