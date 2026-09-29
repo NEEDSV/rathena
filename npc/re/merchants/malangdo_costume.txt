@@ -174,6 +174,90 @@ itemmall,23,74,5	script	헤이담 펠로우#eventhat	4_CAT_SAILOR5,{
 		20299,		// C_Face_Crusher
 		20300;		// C_Hill_Wind_Mask
 
+	mes needtr("[헤이담 펠로우]", "[Designer Heidam]");
+	mes needtr("교환할 의상이 많다면 한꺼번에 바꿔줄 수도 있어.", "If you have a lot of costumes, I can exchange them all at once.");
+	next;
+	if (select(needtr("소지한 의상 일괄 교환", "Exchange all at once"), needtr("하나씩 교환", "Exchange one by one")) == 1) {
+		// 의상 ID -> 상자 번호(+1) 매핑. 여러 상자에 중복된 의상은 앞선 상자를 우선한다.
+		freeloop(1);
+		for ( .@i = 0; .@i < 18; ++.@i ) {
+			if (getiteminfo(.@box_list[.@i], ITEMINFO_TYPE) == -1)
+				continue;
+			.@size = getarraysize( getd(".@item_list_" + .@i) );
+			for ( .@h = 0; .@h < .@size; ++.@h ) {
+				.@id = getd( ".@item_list_" + .@i + "[" + .@h + "]" );
+				if (getiteminfo(.@id, ITEMINFO_TYPE) == -1)
+					continue;
+				if (!.@boxof[.@id])
+					.@boxof[.@id] = .@i + 1;
+			}
+		}
+
+		// 0: 대상 조회 및 확인 / 1: 인벤토리를 다시 읽어 실제 교환
+		for ( .@pass = 0; .@pass < 2; ++.@pass ) {
+			getinventorylist;
+			deletearray .@sel_idx;
+			deletearray .@sel_box;
+			deletearray .@boxcnt;
+			.@cnt = 0;
+			for ( .@j = 0; .@j < @inventorylist_count; ++.@j ) {
+				.@b = .@boxof[@inventorylist_id[.@j]];
+				if (!.@b)
+					continue;
+				// 장착 중, 귀속, 잠금(즐겨찾기), 스톤(인챈트)이 부여된 의상은 제외
+				if (@inventorylist_equip[.@j] || @inventorylist_bound[.@j] || @inventorylist_favorite[.@j])
+					continue;
+				if (@inventorylist_card1[.@j] || @inventorylist_card2[.@j] || @inventorylist_card3[.@j] || @inventorylist_card4[.@j])
+					continue;
+				.@sel_idx[.@cnt] = @inventorylist_idx[.@j];
+				.@sel_box[.@cnt] = .@b - 1;
+				.@boxcnt[.@b - 1]++;
+				.@cnt++;
+			}
+
+			if (!.@cnt) {
+				mes needtr("[헤이담 펠로우]", "[Designer Heidam]");
+				mes needtr("교환 가능한 의상이 없네.", "You have no exchangeable costumes.");
+				mes needtr("장착 중이거나 귀속·잠금 상태인 의상,", "Equipped, bound or locked costumes,");
+				mes needtr("스톤이 부여된 의상은 교환할 수 없어.", "and costumes with an enchant stone cannot be exchanged.");
+				close;
+			}
+
+			if (.@pass == 0) {
+				mes needtr("[헤이담 펠로우]", "[Designer Heidam]");
+				mes needtr("교환 가능한 의상: ^3131FF", "Exchangeable costumes: ^3131FF") + .@cnt + needtr("개^000000", "^000000");
+				for ( .@i = 0; .@i < 18; ++.@i ) {
+					if (.@boxcnt[.@i])
+						mes " - " + getitemname(.@box_list[.@i]) + " x" + .@boxcnt[.@i];
+				}
+				mes needtr("^FF0000장착·귀속·잠금 의상과 스톤이 부여된 의상은 제외했어.^000000", "^FF0000Equipped, bound, locked and enchanted costumes are excluded.^000000");
+				mes needtr("모두 교환할까?", "Exchange them all?");
+				next;
+				if (select(needtr("교환한다", "Exchange"), needtr("그만둔다", "Quit")) == 2) {
+					mes needtr("[헤이담 펠로우]", "[Designer Heidam]");
+					mes needtr("다음에 또 봐!", "Bye~");
+					close;
+				}
+			}
+		}
+
+		.@ok = 0;
+		for ( .@k = 0; .@k < .@cnt; ++.@k ) {
+			.@box = .@box_list[.@sel_box[.@k]];
+			if (checkweight(.@box, 1) == 0)
+				break;
+			if (!delitemidx(.@sel_idx[.@k], 1))
+				continue;
+			getitem .@box, 1;
+			.@ok++;
+		}
+		mes needtr("[헤이담 펠로우]", "[Designer Heidam]");
+		mes needtr("교환 완료! ^3131FF", "Exchange complete! ^3131FF") + .@ok + needtr("개^000000를 상자로 바꿨어.", "^000000 costumes exchanged.");
+		if (.@ok < .@cnt)
+			mes needtr("소지품이 무거워서 ^FF0000" + (.@cnt - .@ok) + "개^000000는 남겨뒀어.", "Some costumes were left because you are carrying too much.");
+		close;
+	}
+
 	while(1) {
 		// 옷장 시스템 등으로 귀속된 의상은 교환 대상에서 제외한다.
 		// @inventorylist_bound[] == 0 인 비귀속 아이템만 인정한다.
