@@ -16,19 +16,46 @@
 -- 이 파일은 기존 설치본에 컬럼만 덧붙입니다. 신규 설치는
 -- need_chuseok_hunt.sql / need_chuseok_exchange.sql 에 이미 반영되어 있습니다.
 
-ALTER TABLE `need_chuseok_honey_claim`
-  ADD COLUMN IF NOT EXISTS `family_group_id` int unsigned NOT NULL DEFAULT 0 AFTER `source`,
-  ADD COLUMN IF NOT EXISTS `family_exception` tinyint unsigned NOT NULL DEFAULT 0 AFTER `family_group_id`;
+-- ADD COLUMN IF NOT EXISTS 는 MariaDB 전용이라, MySQL 8 에서도 돌아가도록
+-- information_schema 로 확인한 뒤 PREPARE/EXECUTE 합니다. 여러 번 실행해도 안전합니다.
 
-ALTER TABLE `need_chuseok_honey_ip_daily`
-  ADD COLUMN IF NOT EXISTS `family_group_id` int unsigned NOT NULL DEFAULT 0 AFTER `first_char_id`;
+SET @db := DATABASE();
 
-ALTER TABLE `need_chuseok_honey_log`
-  ADD COLUMN IF NOT EXISTS `family_group_id` int unsigned NOT NULL DEFAULT 0 AFTER `source`,
-  ADD COLUMN IF NOT EXISTS `family_exception` tinyint unsigned NOT NULL DEFAULT 0 AFTER `family_group_id`;
+SET @sql := IF((SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=@db
+                AND TABLE_NAME='need_chuseok_honey_claim' AND COLUMN_NAME='family_group_id') = 0,
+  'ALTER TABLE `need_chuseok_honey_claim` ADD COLUMN `family_group_id` int unsigned NOT NULL DEFAULT 0 AFTER `source`',
+  'DO 0');
+PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;
 
-ALTER TABLE `need_chuseok_exchange_log`
-  ADD COLUMN IF NOT EXISTS `family_group_id` int unsigned NOT NULL DEFAULT 0 AFTER `period_key`;
+SET @sql := IF((SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=@db
+                AND TABLE_NAME='need_chuseok_honey_claim' AND COLUMN_NAME='family_exception') = 0,
+  'ALTER TABLE `need_chuseok_honey_claim` ADD COLUMN `family_exception` tinyint unsigned NOT NULL DEFAULT 0 AFTER `family_group_id`',
+  'DO 0');
+PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;
+
+SET @sql := IF((SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=@db
+                AND TABLE_NAME='need_chuseok_honey_ip_daily' AND COLUMN_NAME='family_group_id') = 0,
+  'ALTER TABLE `need_chuseok_honey_ip_daily` ADD COLUMN `family_group_id` int unsigned NOT NULL DEFAULT 0 AFTER `first_char_id`',
+  'DO 0');
+PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;
+
+SET @sql := IF((SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=@db
+                AND TABLE_NAME='need_chuseok_honey_log' AND COLUMN_NAME='family_group_id') = 0,
+  'ALTER TABLE `need_chuseok_honey_log` ADD COLUMN `family_group_id` int unsigned NOT NULL DEFAULT 0 AFTER `source`',
+  'DO 0');
+PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;
+
+SET @sql := IF((SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=@db
+                AND TABLE_NAME='need_chuseok_honey_log' AND COLUMN_NAME='family_exception') = 0,
+  'ALTER TABLE `need_chuseok_honey_log` ADD COLUMN `family_exception` tinyint unsigned NOT NULL DEFAULT 0 AFTER `family_group_id`',
+  'DO 0');
+PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;
+
+SET @sql := IF((SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=@db
+                AND TABLE_NAME='need_chuseok_exchange_log' AND COLUMN_NAME='family_group_id') = 0,
+  'ALTER TABLE `need_chuseok_exchange_log` ADD COLUMN `family_group_id` int unsigned NOT NULL DEFAULT 0 AFTER `period_key`',
+  'DO 0');
+PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;
 
 -- 가족 명단 테이블이 아직 없다면(여름 이벤트 SQL 미임포트) 함께 만들어 둡니다.
 -- 이미 있으면 아무 일도 일어나지 않습니다.
