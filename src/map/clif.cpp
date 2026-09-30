@@ -1530,7 +1530,7 @@ static void clif_spawn_unit( const block_list* bl, enum send_target target,
 /*==========================================
  * Prepares 'unit walking' packet
  *------------------------------------------*/
-static void clif_set_unit_walking( const block_list& bl, const map_session_data* tsd, const unit_data& ud, enum send_target target ){
+static void clif_set_unit_walking( const block_list& bl, const map_session_data* tsd, const unit_data& ud, enum send_target target, struct packet_unit_walking* out = nullptr ){
 	struct packet_unit_walking p;
 
 	p.PacketType = unit_walkingType;
@@ -1612,6 +1612,13 @@ static void clif_set_unit_walking( const block_list& bl, const map_session_data*
 	// NEED Phase 0.6 : same rule as clif_set_unit_idle - one known recipient only.
 	safestrncpy(p.name, clif_display_name( bl, ( target == SELF ) ? tsd : nullptr ), NAME_LENGTH);
 #endif
+
+	// NEED Phase 3.5 : build only - clif_move_unit_lang routes the buffer per recipient.
+	// Only monsters take this path, and a monster is never disguised.
+	if( out != nullptr ){
+		memcpy( out, &p, sizeof( p ) );
+		return;
+	}
 
 	clif_send( &p, sizeof(p), tsd ? tsd : &bl, target );
 
@@ -1931,6 +1938,46 @@ static void clif_spawn_unit_lang( const mob_data& md ){
 
 	// built ONCE, by the same function every other spawn goes through
 	clif_spawn_unit( &bl, AREA_WOS, &kr_p );
+	memcpy( &en_p, &kr_p, sizeof( en_p ) );
+	safestrncpy( en_p.name, en_name, NAME_LENGTH );
+
+	map_foreachinallarea( clif_spawn_unit_lang_sub, bl.m, bl.x - AREA_SIZE, bl.y - AREA_SIZE,
+		bl.x + AREA_SIZE, bl.y + AREA_SIZE, BL_PC, &bl, (const void*)&kr_p,
+		(const void*)&en_p, (int32)sizeof( kr_p ) );
+}
+
+/**
+ * NEED Phase 3.5 : the WALKING packet of a monster, language-routed per recipient.
+ *
+ * ZC_NOTIFY_MOVEENTRY carries the display name as well (packet_unit_walking::name), and the
+ * client takes the name of every such packet. clif_move sent it as ONE AREA_WOS buffer built
+ * with no recipient, i.e. with md.name - so an English session got the English name at spawn
+ * (clif_spawn_unit_lang) and the Korean one back on the monster's first step. Since the KR
+ * sync gave mob_db Korean names, that is almost every field monster.
+ *
+ * Same construction and recipient set as clif_spawn_unit_lang: one build, the EN buffer is a
+ * byte copy with the name rewritten, clif_spawn_unit_lang_sub reproduces AREA_WOS including
+ * the clif_ally_only filter that clif_move raises for hidden / cloaked units.
+ *     names equal  -> the previous single AREA_WOS send, byte for byte
+ *     names differ -> one SELF send per recipient, KR or EN buffer
+ */
+static void clif_move_unit_lang( const mob_data& md, const unit_data& ud ){
+	const block_list& bl = md;
+	char kr_name[NAME_LENGTH];
+	char en_name[NAME_LENGTH];
+
+	safestrncpy( kr_name, mob_display_name( md, NEED_LANG_KR ), NAME_LENGTH );
+	safestrncpy( en_name, mob_display_name( md, NEED_LANG_EN ), NAME_LENGTH );
+
+	if( strncmp( kr_name, en_name, NAME_LENGTH ) == 0 ){
+		clif_set_unit_walking( bl, nullptr, ud, AREA_WOS );
+		return;
+	}
+
+	struct packet_unit_walking kr_p;
+	struct packet_unit_walking en_p;
+
+	clif_set_unit_walking( bl, nullptr, ud, AREA_WOS, &kr_p );
 	memcpy( &en_p, &kr_p, sizeof( en_p ) );
 	safestrncpy( en_p.name, en_name, NAME_LENGTH );
 
@@ -2359,6 +2406,12 @@ void clif_move( const struct unit_data& ud )
 	if ((sc = status_get_sc(bl)) && sc->option & (OPTION_HIDE | OPTION_CLOAK | OPTION_INVISIBLE | OPTION_CHASEWALK))
 		clif_ally_only = true;
 
+#if PACKETVER >= 20131223
+	// NEED Phase 3.5 : a monster's walking packet carries its name - route it per language
+	if( bl->type == BL_MOB ){
+		clif_move_unit_lang( *static_cast<const mob_data*>( bl ), ud );
+	}else
+#endif
 	clif_set_unit_walking( *bl, nullptr, ud, AREA_WOS );
 
 	clif_refresh_clothcolor( *bl, AREA_WOS );
