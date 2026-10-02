@@ -24,7 +24,8 @@ function FavoriteMenu; function FavoriteRegister; function FavoriteUnlock; funct
 //	Main Menu:
 // --------------------------------------------------
 
-menu	needtr("마지막 이동 ^777777[", "Last Warp ^777777[")+lastwarp$+"]^000000",-,
+menu	needtr("맵 이름으로 이동", "Warp by Map Name"),MapName,
+		needtr("마지막 이동 ^777777[", "Last Warp ^777777[")+lastwarp$+"]^000000",-,
 		needtr(" ~ 나만의 워프포탈"," ~ Favorites"),Favorites,
     	needtr(" ~ 마을", " ~ Towns"),Towns,
     	needtr(" ~ 필드", " ~ Fields"),Fields,
@@ -42,6 +43,26 @@ menu	needtr("마지막 이동 ^777777[", "Last Warp ^777777[")+lastwarp$+"]^000000",-
 
 Favorites:
 	FavoriteMenu();
+	end;
+
+MapName:
+	mes needtr("[워프 도우미]", "[Warp Helper]");
+	mes needtr("이동할 맵 이름을 입력해 주세요.", "Enter the name of the map you want to warp to.");
+	mes needtr("예: prontera, gef_fild00", "e.g. prontera, gef_fild00");
+	mes needtr("워퍼가 이동시켜 주는 맵만 입력할 수 있습니다.", "Only maps this warper can take you to are accepted.");
+	input .@map$;
+	.@map$ = strtolower(replacestr(.@map$, " ", ""));
+	if (.@map$ == "")
+		close;
+	.@idx = inarray(.ms_map$, .@map$);
+	if (.@idx < 0) {
+		mes needtr("[워프 도우미]", "[Warp Helper]");
+		mes "^FF0000"+.@map$+"^000000";
+		mes needtr("워퍼로 이동할 수 없는 맵이거나 존재하지 않는 맵입니다.", "This map does not exist or is not a warper destination.");
+		close;
+	}
+	close2;
+	Go(.ms_map$[.@idx], .ms_x[.@idx], .ms_y[.@idx]);
 	end;
 
 // ------------------- Functions -------------------
@@ -700,7 +721,7 @@ D36: setarray @c[2],32,170,21,185;
 D37: Restrict("RE");
 	 setarray @c[2],21,191,141,277;
 	 Disp("오즈의 미로 1층:오즈의 미로 2층"); Pick("oz_dun");
-D38: setarray @c[0],21,183,19,33,19,63,155,159,201,204;
+D38: setarray @c[2],21,183,19,33,19,63,155,159,201,204;
 	 Disp(needtr("페이욘 동굴 1층:페이욘 동굴 2층:페이욘 동굴 3층:페이욘 동굴 4층:페이욘 동굴 5층", "Payon Dungeon 1:Payon Dungeon 2:Payon Dungeon 3:Payon Dungeon 4:Payon Dungeon 5")); Pick("","pay_dun00","pay_dun01","pay_dun02","pay_dun03","pay_dun04");
 D39: Restrict("RE");
 	 setarray @c[2],159,289,155,353;
@@ -1642,6 +1663,125 @@ OnInit:
 	.FavoriteUnlockCost[8] = 10000000;
 	.FavoriteUnlockCost[9] = 10000000;
 	.FavoriteUnlockCost[10] = 10000000;
+
+	// --------------------------------------------------
+	// "맵 이름으로 이동" 허용 맵 목록 (메뉴 트리의 Go/Pick 대상과 동일해야 함)
+	// 워퍼 메뉴에 맵을 추가/제거하면 아래 목록도 함께 수정하세요.
+	// --------------------------------------------------
+	setarray .ms_map$[0],"prontera","alberta","aldebaran","amatsu","ayothaya","brasilis","comodo","dewata","ecl_in01","einbech","einbroch","dicastes01";
+	setarray .ms_x[0],155,28,140,198,208,196,209,200,48,63,64,198;
+	setarray .ms_y[0],183,234,131,84,166,217,143,180,53,35,200,187;
+	setarray .ms_map$[12],"geffen","hugel","icecastle","jawaii","yuno","gonryun","lasagna","lighthalzen","louyang","xmas","malangdo","malaya";
+	setarray .ms_x[12],119,96,185,251,157,160,193,158,217,147,140,231;
+	setarray .ms_y[12],59,145,212,132,51,120,182,92,100,134,114,200;
+	setarray .ms_map$[24],"manuk","mid_camp","mora","morocc","moscovia","nameless_i","nameless_n","niflheim","payon","rachel","harboro1","sp_cor";
+	setarray .ms_x[24],282,210,55,156,223,256,256,202,179,130,298,160;
+	setarray .ms_y[24],138,288,146,93,184,215,215,174,100,110,206,166;
+	setarray .ms_map$[36],"splendide","thor_camp","umbala","ba_maison","veins","verus04","wolfvill","ama_fild01","ayo_fild01","ayo_fild02","bif_fild01","bif_fild02";
+	setarray .ms_x[36],201,246,97,72,216,123,144,190,173,212,193,220;
+	setarray .ms_y[36],147,68,153,146,123,250,144,197,134,150,220,187;
+	setarray .ms_map$[48],"bra_fild01","cmd_fild01","cmd_fild02","cmd_fild03","cmd_fild04","cmd_fild05","cmd_fild06","cmd_fild07","cmd_fild08","cmd_fild09","dew_fild01","ecl_fild01";
+	setarray .ms_x[48],74,180,231,191,228,224,190,234,194,172,371,97;
+	setarray .ms_y[48],32,178,160,172,194,203,223,177,175,172,212,314;
+	setarray .ms_map$[60],"ein_fild01","ein_fild02","ein_fild03","ein_fild04","ein_fild05","ein_fild06","ein_fild07","ein_fild08","ein_fild09","ein_fild10","dic_fild01","dic_fild02";
+	setarray .ms_x[60],142,182,187,185,216,195,272,173,207,196,143,143;
+	setarray .ms_y[60],225,141,228,173,173,148,220,214,174,200,132,217;
+	setarray .ms_map$[72],"jor_back1","jor_back2","jor_back3","jor_tail","gef_fild00","gef_fild01","gef_fild02","gef_fild03","gef_fild04","gef_fild05","gef_fild06","gef_fild07";
+	setarray .ms_x[72],378,223,365,140,46,213,195,257,188,166,248,195;
+	setarray .ms_y[72],223,18,241,280,199,204,212,192,171,263,158,191;
+	setarray .ms_map$[84],"gef_fild08","gef_fild09","gef_fild10","gef_fild11","gef_fild12","gef_fild13","gef_fild14","gw_fild01","gw_fild02","hu_fild01","hu_fild02","hu_fild03";
+	setarray .ms_x[84],186,221,178,136,240,235,211,22,122,268,222,232;
+	setarray .ms_y[84],183,117,218,328,181,235,185,315,388,101,193,185;
+	setarray .ms_map$[96],"hu_fild04","hu_fild05","hu_fild06","hu_fild07","yuno_fild01","yuno_fild02","yuno_fild03","yuno_fild04","yuno_fild05","yuno_fild06","yuno_fild07","yuno_fild08";
+	setarray .ms_x[96],252,196,216,227,189,192,221,226,223,187,231,196;
+	setarray .ms_y[96],189,106,220,197,224,207,157,199,177,232,174,203;
+	setarray .ms_map$[108],"yuno_fild09","yuno_fild10","yuno_fild11","yuno_fild12","rockrdg1","rockrdg2","gon_fild01","lasa_fild01","lasa_fild02","lhz_fild01","lhz_fild02","lhz_fild03";
+	setarray .ms_x[108],183,200,195,210,38,31,220,344,20,240,185,240;
+	setarray .ms_y[108],214,124,226,304,246,207,227,371,98,179,235,226;
+	setarray .ms_map$[120],"lou_fild01","xmas_fild01","ma_fild01","ma_fild02","man_fild01","man_fild02","man_fild03","mjolnir_01","mjolnir_02","mjolnir_03","mjolnir_04","mjolnir_05";
+	setarray .ms_x[120],229,115,40,207,35,35,84,204,175,208,179,181;
+	setarray .ms_y[120],187,145,272,180,236,262,365,120,193,213,180,240;
+	setarray .ms_map$[132],"mjolnir_06","mjolnir_07","mjolnir_08","mjolnir_09","mjolnir_10","mjolnir_11","mjolnir_12","mosk_fild01","mosk_fild02","nif_fild01","nif_fild02","pay_fild01";
+	setarray .ms_x[132],195,235,188,205,245,180,196,82,131,215,167,158;
+	setarray .ms_y[132],270,202,215,144,223,206,208,104,147,229,234,206;
+	setarray .ms_map$[144],"pay_fild02","pay_fild03","pay_fild04","pay_fild05","pay_fild06","pay_fild07","pay_fild08","pay_fild09","pay_fild10","pay_fild11","prt_fild00","prt_fild01";
+	setarray .ms_x[144],151,205,186,134,193,200,137,201,160,194,208,190;
+	setarray .ms_y[144],219,148,247,204,235,177,189,224,205,150,227,206;
+	setarray .ms_map$[156],"prt_fild02","prt_fild03","prt_fild04","prt_fild05","prt_fild06","prt_fild07","prt_fild08","prt_fild09","prt_fild10","prt_fild11","ra_fild01","ra_fild02";
+	setarray .ms_x[156],240,190,307,239,185,193,187,210,195,198,192,235;
+	setarray .ms_y[156],206,143,252,213,188,194,218,183,149,164,162,166;
+	setarray .ms_map$[168],"ra_fild03","ra_fild04","ra_fild05","ra_fild06","ra_fild07","ra_fild08","ra_fild09","ra_fild10","ra_fild11","ra_fild12","ra_fild13","moc_fild01";
+	setarray .ms_x[168],202,202,225,202,263,217,87,277,221,175,174,219;
+	setarray .ms_y[168],206,208,202,214,196,201,121,181,185,200,197,205;
+	setarray .ms_map$[180],"moc_fild02","moc_fild03","moc_fild07","moc_fild11","moc_fild12","moc_fild13","moc_fild16","moc_fild17","moc_fild18","moc_fild19","moc_fild20","moc_fild21";
+	setarray .ms_x[180],177,194,224,198,156,185,206,208,209,85,207,31;
+	setarray .ms_y[180],206,182,170,216,187,263,228,238,223,97,202,195;
+	setarray .ms_map$[192],"moc_fild22","spl_fild01","spl_fild02","spl_fild03","um_fild01","um_fild02","um_fild03","um_fild04","ve_fild01","ve_fild02","ve_fild03","ve_fild04";
+	setarray .ms_x[192],38,175,236,188,217,223,237,202,186,196,222,51;
+	setarray .ms_y[192],195,186,184,204,206,221,215,197,175,370,45,250;
+	setarray .ms_map$[204],"ve_fild05","ve_fild06","ve_fild07","amicitia1","amicitia2","abyss_01","abyss_02","abyss_03","ama_dun01","ama_dun02","ama_dun03","anthell01";
+	setarray .ms_x[204],202,150,149,253,145,261,275,116,228,34,119,35;
+	setarray .ms_y[204],324,223,307,244,278,272,270,27,11,41,14,262;
+	setarray .ms_map$[216],"anthell02","ayo_dun01","ayo_dun02","beach_dun","beach_dun2","beach_dun3","ecl_tdun01","ecl_tdun02","ecl_tdun03","ecl_tdun04","lhz_dun01","lhz_dun02";
+	setarray .ms_x[216],168,275,24,266,255,23,57,64,45,26,150,150;
+	setarray .ms_y[216],170,19,26,67,244,260,13,88,14,23,288,18;
+	setarray .ms_map$[228],"lhz_dun03","lhz_dun04","bra_dun01","bra_dun02","iz_dun00","iz_dun01","iz_dun02","iz_dun03","iz_dun04","iz_dun05","c_tower1","c_tower2";
+	setarray .ms_x[228],140,244,87,262,168,253,236,32,26,141,199,148;
+	setarray .ms_y[228],134,52,47,262,168,252,204,63,27,187,159,283;
+	setarray .ms_map$[240],"c_tower3","c_tower4","alde_dun01","alde_dun02","alde_dun03","alde_dun04","c_tower2_","c_tower3_","mjo_dun01","mjo_dun02","mjo_dun03","prt_sewb1";
+	setarray .ms_x[240],65,56,297,127,277,268,266,60,52,381,302,131;
+	setarray .ms_y[240],147,155,25,169,178,74,27,142,17,343,262,247;
+	setarray .ms_map$[252],"prt_sewb2","prt_sewb3","prt_sewb4","abbey01","abbey02","abbey03","dew_dun01","dew_dun02","ein_dun01","ein_dun02","gefenia01","gefenia02";
+	setarray .ms_x[252],19,180,100,51,150,120,285,299,22,292,40,203;
+	setarray .ms_y[252],19,169,92,14,11,10,160,29,14,290,103,34;
+	setarray .ms_map$[264],"gefenia03","gefenia04","gef_dun00","gef_dun01","gef_dun02","gef_dun03","glast_01","gl_cas01","gl_cas02","gl_knt01","gl_knt02","gl_chyard";
+	setarray .ms_x[264],266,130,104,115,106,203,370,199,104,150,157,147;
+	setarray .ms_y[264],168,272,99,236,132,200,304,29,25,15,287,15;
+	setarray .ms_map$[276],"gl_sew01","gl_sew02","gl_sew03","gl_sew04","gl_church","gl_step","gl_dun01","gl_dun02","gl_prison","gl_prison1","gl_cas02_","gl_chyard_";
+	setarray .ms_x[276],258,108,171,68,156,12,133,224,14,150,104,148;
+	setarray .ms_y[276],255,291,283,277,7,7,271,274,70,14,31,144;
+	setarray .ms_map$[288],"prt_maze01","prt_maze02","prt_maze03","ice_dun01","ice_dun02","ice_dun03","ice_dun04","tur_d03_i","tur_d04_i","ice_d03_i","prt_mz03_i","com_d02_i";
+	setarray .ms_x[288],99,93,182,157,151,149,33,132,99,149,100,250;
+	setarray .ms_y[288],31,20,88,14,155,22,158,189,186,22,100,245;
+	setarray .ms_map$[300],"pay_d03_i","ein_d02_i","ant_d02_i","iz_d04_i","iz_d05_i","gef_d01_i","jor_ab01","jor_ab02","jor_dun01","jor_dun02","jupe_cave","juperos_01";
+	setarray .ms_x[300],140,164,168,130,141,114,112,280,112,274,140,53;
+	setarray .ms_y[300],44,184,170,230,188,216,15,87,12,85,51,247;
+	setarray .ms_map$[312],"juperos_02","jupe_core","ver_eju","kh_dun01","kh_dun02","gon_dun01","gon_dun02","gon_dun03","lasa_dun01","lasa_dun02","lasa_dun03","lou_dun01";
+	setarray .ms_x[312],37,150,146,28,41,153,28,68,24,22,190,218;
+	setarray .ms_y[312],63,285,215,226,198,53,113,16,143,171,18,196;
+	setarray .ms_map$[324],"lou_dun02","lou_dun03","mag_dun01","mag_dun02","mal_dun01","mosk_dun01","mosk_dun02","mosk_dun03","nyd_dun01","nyd_dun02","nif_dun01","nif_dun02";
+	setarray .ms_x[324],282,165,126,47,33,189,165,32,61,60,145,150;
+	setarray .ms_y[324],20,38,68,30,230,48,30,135,239,271,90,20;
+	setarray .ms_map$[336],"odin_tem01","odin_tem02","odin_tem03","orcsdun01","orcsdun02","oz_dun01","oz_dun02","pay_dun00","pay_dun01","pay_dun02","pay_dun03","pay_dun04";
+	setarray .ms_x[336],298,224,266,32,21,21,141,21,19,19,155,201;
+	setarray .ms_y[336],167,149,280,170,185,191,277,183,33,63,159,204;
+	setarray .ms_map$[348],"prt_prison","prt_q","moc_pryd01","moc_pryd02","moc_pryd03","moc_pryd04","moc_pryd05","moc_pryd06","moc_prydn1","moc_prydn2","ra_san01","ra_san02";
+	setarray .ms_x[348],159,155,192,10,100,181,94,192,94,192,140,32;
+	setarray .ms_y[348],289,353,9,192,92,11,96,8,96,8,11,21;
+	setarray .ms_map$[360],"ra_san03","ra_san04","ra_san05","rockmi1","harboro2","sp_rudus","sp_rudus2","sp_rudus3","sp_rudus4","dic_dun01","dic_dun02","dic_dun03";
+	setarray .ms_x[360],8,204,150,247,281,200,185,366,378,364,101,101;
+	setarray .ms_y[360],149,218,9,19,104,377,258,207,178,44,141,141;
+	setarray .ms_map$[372],"in_sphinx1","in_sphinx2","in_sphinx3","in_sphinx4","in_sphinx5","treasure01","treasure02","tha_t01","tha_t02","tha_t03","tha_t04","tha_t05";
+	setarray .ms_x[372],288,149,210,10,100,69,102,150,150,220,59,62;
+	setarray .ms_y[372],9,81,54,222,99,24,27,39,136,158,143,11;
+	setarray .ms_map$[384],"tha_t06","tha_t07","tha_t08","tha_t09","tha_t10","tha_t11","tha_t12","thor_v01","thor_v02","thor_v03","xmas_dun01","xmas_dun02";
+	setarray .ms_x[384],89,35,93,29,159,19,130,21,75,34,205,129;
+	setarray .ms_y[384],221,166,148,107,138,20,52,228,205,272,15,133;
+	setarray .ms_map$[396],"tur_dun01","tur_dun02","tur_dun03","tur_dun04","um_dun01","um_dun02","yggdrasil01","ba_pw02","ba_pw01","ba_pw03","ba_bath","ba_lost";
+	setarray .ms_x[396],154,148,132,100,42,48,204,275,15,15,159,162;
+	setarray .ms_y[396],49,261,189,192,31,30,78,21,115,115,27,36;
+	setarray .ms_map$[408],"ba_lib","ba_2whs01","ba_2whs02","bl_death","bl_lava","bl_grass","bl_ice","verus01","verus02","verus03","gld_dun01","gld_dun01_2";
+	setarray .ms_x[408],159,156,337,314,163,156,39,244,72,122,119,119;
+	setarray .ms_y[408],11,33,333,64,18,20,81,61,20,22,93,93;
+	setarray .ms_map$[420],"gld2_pay","gld_dun02","gld_dun02_2","gld2_ald","gld_dun03","gld_dun03_2","gld2_prt","gld_dun04","gld_dun04_2","gld2_gef","arug_dun01","schg_dun01";
+	setarray .ms_x[420],120,39,39,147,50,50,140,116,116,152,199,200;
+	setarray .ms_y[420],130,161,161,155,44,44,132,45,45,118,195,124;
+	setarray .ms_map$[432],"teg_dun01","teg_dun02","ma_scene01","ma_dun01","dali02","ecl_hub01","e_tower","dali","mal_in01","monk_test","moro_cav","moc_para01";
+	setarray .ms_x[432],42,26,172,151,137,129,72,85,164,306,50,25;
+	setarray .ms_y[432],36,160,175,8,115,12,112,64,21,143,64,95;
+	setarray .ms_map$[444],"un_myst","prt_lib";
+	setarray .ms_x[444],159,88;
+	setarray .ms_y[444],38,90;
 }
 
 // --------------------------------------------------
