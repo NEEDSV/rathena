@@ -95,3 +95,17 @@ map-server-enchanttest.exe --map-config <conf with another map_port> --need-ench
 - table count = official + NEED variants
 
 Installing the output into `db/` and packing the client files into the GRFs are operator steps.
+
+## Resource repos (Phase 2.1b)
+
+- KR: `install.py --from <out> --repo-kr E:\tools\Need\NEEDResoruce` copies EnchantList + ItemDBNameTbl into the
+  need_data.grf source tree (the operator packs need_data.grf).
+- EN: `install.py --from <out> --repo-en E:\tools\Need\NEEDResoruce_EN` copies the EN EnchantList; then, in the EN repo,
+  `python en_build\enchant_v2\verify_enchant_v2_enchantlist.py --write --tag <phase> --generated <out>` writes the
+  supersession record that lets `build_english.py` accept the new hash. The Phase 4.18 validator and stamp are never
+  run or edited.
+- The generator's EN base is the pinned Phase 4.18 file `en_build\enchant_v2\base\enchantlist_phase418.lub` (its sha256
+  must equal the 4.18 stamp's generated_hash), never the EN repo's live enchantlist.lub. Official inputs holding ids
+  >= 10001 are refused, so generated output can never be fed back in.
+- After an official client sync that changes data.grf's EnchantList, regenerate: the KR override in need_data.grf
+  would otherwise hide the new official groups.
