@@ -7,6 +7,10 @@
 --server      copies server/item_enchant.yml -> db/import/item_enchant.yml and
               server/enchant_rules.yml -> db/need/enchant_rules.yml. Refused while any rAthena server
               process runs from this machine (the db folder is shared with it), unless --force.
+--repo-kr     copies the KR EnchantList + ItemDBNameTbl into the KR resource repo (NEEDResoruce) data/...
+              (the source need_data.grf is packed from; packing stays an operator step).
+--repo-en     copies the EN EnchantList into the EN resource repo (NEEDResoruce_EN) data/...; then run
+              en_build/enchant_v2/verify_enchant_v2_enchantlist.py --write so build_english.py accepts it.
 --client-*    copies the client Lua files as loose files under <client>/data/... for a test client.
               Packing them into need_data.grf (KR, EnchantList + ItemDBNameTbl) and need_english.grf
               (EN EnchantList) stays an operator step.
@@ -42,6 +46,8 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('--from', dest='src', required=True)
     ap.add_argument('--server', action='store_true')
+    ap.add_argument('--repo-kr')
+    ap.add_argument('--repo-en')
     ap.add_argument('--client-kr')
     ap.add_argument('--client-en')
     ap.add_argument('--force', action='store_true')
@@ -61,6 +67,15 @@ def main(argv=None):
         copy(os.path.join(args.src, 'server', 'item_enchant.yml'), os.path.join(REPO, 'db', 'import', 'item_enchant.yml'))
         copy(os.path.join(args.src, 'server', 'enchant_rules.yml'), os.path.join(REPO, 'db', 'need', 'enchant_rules.yml'))
 
+    if args.repo_kr:
+        print('KR resource repo:')
+        copy(os.path.join(args.src, 'client_kr', LUA, 'enchant', 'enchantlist.lub'), os.path.join(args.repo_kr, LUA, 'enchant', 'enchantlist.lub'))
+        copy(os.path.join(args.src, 'client_common', LUA, 'itemdbnametbl.lub'), os.path.join(args.repo_kr, LUA, 'itemdbnametbl.lub'))
+    if args.repo_en:
+        print('EN resource repo:')
+        copy(os.path.join(args.src, 'client_en', LUA, 'enchant', 'enchantlist.lub'), os.path.join(args.repo_en, LUA, 'enchant', 'enchantlist.lub'))
+        print('  next: python en_build/enchant_v2/verify_enchant_v2_enchantlist.py --write --tag <phase> --generated %s'
+              % os.path.abspath(args.src))
     if args.client_kr:
         print('client KR:')
         copy(os.path.join(args.src, 'client_kr', LUA, 'enchant', 'enchantlist.lub'), os.path.join(args.client_kr, LUA, 'enchant', 'enchantlist.lub'))

@@ -18,7 +18,9 @@ Gates (any failure -> exit 1, nothing is installed by this tool):
   with zero MessageBox.
 """
 import argparse
+import hashlib
 import io
+import json
 import os
 import re
 import sys
@@ -37,6 +39,9 @@ OPTION_WEIGHT_MAX = 100000   # item_enchant.yml Items[].Chance is parsed with a 
 CLIENT_ID_MIN = 10001
 GRADE_BONUS_GRADES = (1, 2, 3)   # official tables declare these (all 0)
 LUA_DIR = r'data\luafiles514\lua files'
+EN_REPO = r'E:\tools\Need\NEEDResoruce_EN'
+EN_BASE = os.path.join(EN_REPO, 'en_build', 'enchant_v2', 'base', 'enchantlist_phase418.lub')
+EN_BASE_STAMP = os.path.join(EN_REPO, 'en_build', 'equipment_attribute', 'phase418_equipment_attribute_english.stamp.json')
 RESULTS = ('FAIL_KEEP', 'CLEAR_SLOTS', 'CLEAR_ENCHANTS', 'REFINE_DOWN', 'DESTROY', 'REWARD', 'DESTROY_WITH_REWARD')
 RESET_RESULTS = ('SUCCESS', 'FAIL_KEEP', 'DESTROY', 'REWARD', 'DESTROY_WITH_REWARD')
 UPGRADE_RESULTS = RESULTS + ('DOWNGRADE',)
@@ -587,7 +592,10 @@ def main(argv=None):
     ap.add_argument('--master', default=os.path.join(REPO, 'db', 'need', 'enchant_master.yml'))
     ap.add_argument('--registry', default=os.path.join(REPO, 'db', 'need', 'enchant_clientid_registry.yml'))
     ap.add_argument('--client-grf', default=r'E:\ttt\NEED_LIVE_0821\data.grf', help='official data.grf (KR base, EnchantList_f, ItemDBNameTbl)')
-    ap.add_argument('--en-enchantlist', default=r'E:\tools\Need\NEEDResoruce_EN\data\luafiles514\lua files\enchant\enchantlist.lub')
+    # The EN base is the Phase 4.18 file pinned in the EN repo, never the repo's live enchantlist.lub:
+    # that one is this generator's own output since Phase 2.1b and would feed NEED groups back in.
+    ap.add_argument('--en-enchantlist', default=EN_BASE)
+    ap.add_argument('--en-stamp', default=EN_BASE_STAMP, help='Phase 4.18 stamp whose enchantlist.lub generated_hash the EN base must match')
     ap.add_argument('--out', required=True)
     ap.add_argument('--commit-registry', action='store_true', help='write newly assigned ids back to the registry')
     args = ap.parse_args(argv)
@@ -602,8 +610,18 @@ def main(argv=None):
         el_f = nelib.grf_read(args.client_grf, LUA_DIR + r'\enchant\enchantlist_f.lub')
         idb = nelib.grf_read(args.client_grf, LUA_DIR + r'\itemdbnametbl.lub')
         el_en = io.open(args.en_enchantlist, 'rb').read()
+        en_stamp = json.load(io.open(args.en_stamp, encoding='utf-8')).get('enchantlist.lub') or {}
+        if en_stamp.get('status') != 'PASS' or hashlib.sha256(el_en).hexdigest() != en_stamp.get('generated_hash'):
+            raise GenError('EN base %s is not the Phase 4.18 stamped EnchantList (status %s, sha256 %s, stamped %s)' % (
+                display_path(args.en_enchantlist), en_stamp.get('status'), hashlib.sha256(el_en).hexdigest()[:12],
+                str(en_stamp.get('generated_hash'))[:12]))
         official_ids = set(int(x) for x in re.findall(rb'^Table\[(\d+)\] = CreateEnchantInfo', nelib.enchantlist_decompile(el_kr), re.M))
         server_ids = set(int(x) for x in re.findall(r'^  - Id: (\d+)', io.open(os.path.join(REPO, 'db/re/item_enchant.yml'), encoding='utf-8').read(), re.M))
+        en_text = nelib.enchantlist_decompile(el_en) if el_en[:4] == b'\x1bLua' else el_en
+        en_ids = set(int(x) for x in re.findall(rb'^Table\[(\d+)\] = CreateEnchantInfo', en_text, re.M))
+        own = sorted(i for i in official_ids | en_ids if i >= CLIENT_ID_MIN)
+        if own:
+            raise GenError('official EnchantList input already holds NEED-range ids %s (generated output fed back?)' % own[:10])
         forbidden = official_ids | server_ids
 
         registry, retired = load_registry(args.registry)
