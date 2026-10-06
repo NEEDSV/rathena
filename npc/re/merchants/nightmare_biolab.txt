@@ -269,6 +269,7 @@ OnInit:
 // Energy Fragment 50  -> Sentimental Fragment 1
 // Energy Fragment 666 -> Cursed Fragment 1
 // NEED: 원래 위치 lighthalzen,312,296 -> 라자냐 전사자의 무덤 입장 NPC 옆
+// NEED: 1개씩 교환 외에 일괄 교환(가능한 만큼 / 수량 지정) 추가 (2026-10-06)
 //============================================================
 lasagna,160,174,4	script	불량배#JCv2	4_M_LGTPOOR,{
 	disable_items;
@@ -301,30 +302,69 @@ lasagna,160,174,4	script	불량배#JCv2	4_M_LGTPOOR,{
 		close;
 	}
 	.@index = .@s * 3;
+	.@reward = .@exchange[.@index];
+	.@material = .@exchange[.@index+1];
+	.@cost = .@exchange[.@index+2];
+	.@max = countitem(.@material) / .@cost;		// 지금 재료로 교환 가능한 최대 수량
+	if (.@max > 30000)
+		.@max = 30000;	// 한 칸 최대 수량(MAX_AMOUNT)
+
 	mes needtr("[불량배]", "[Bully]");
-	mes "^330066" + getitemname(.@exchange[.@index+1]) + " " + .@exchange[.@index+2] + needtr("개^000000를 ^CC3333", "^000000 will be exchanged with ^CC3333") + getitemname(.@exchange[.@index]) + needtr(" 1개^000000와 교환할래?", " x1^000000. Are you sure?");
+	mes "^330066" + getitemname(.@material) + " " + .@cost + needtr("개^000000를 ^CC3333", "^000000 will be exchanged with ^CC3333") + getitemname(.@reward) + needtr(" 1개^000000와 교환할래?", " x1^000000. Are you sure?");
+	if (.@max > 0)
+		mes needtr("^777777※ 지금 가진 재료로 최대 ", "^777777* With what you have now, up to ") + .@max + needtr("개까지 교환할 수 있어.^000000", " can be exchanged.^000000");
+	else
+		mes needtr("^777777※ 재료가 모자라서 지금은 교환할 수 없어.^000000", "^777777* You don't have enough to exchange right now.^000000");
 	next;
-	if (select(needtr("교환한다.", "Exchange."), needtr("교환하지 않는다.", "Do not exchange.")) == 2) {
+	switch (select(
+		needtr("1개씩 교환한다.", "Exchange one at a time."),
+		(.@max > 1 ? "" : "^777777") + needtr("가능한 만큼 일괄 교환한다. (", "Exchange as many as possible. (") + .@max + needtr("개)", ")") + (.@max > 1 ? "" : "^000000"),
+		(.@max > 1 ? "" : "^777777") + needtr("수량을 정해서 교환한다.", "Choose how many to exchange.") + (.@max > 1 ? "" : "^000000"),
+		needtr("교환하지 않는다.", "Do not exchange."))) {
+	case 1:
+		break;
+	case 2:
+		callsub S_Bulk, .@reward, .@material, .@cost, .@max;
+		end;
+	case 3:
+		if (.@max < 1) {
+			emotion ET_SCRATCH;
+			mes needtr("[불량배]", "[Bully]");
+			mes needtr("아니... 아니... 바꿀 재료가 없잖아.", "No... No... you don't have anything to exchange.");
+			mes getitemname(.@material) + " " + .@cost + needtr("개가 있어야 1개로 바꿔 줄 수 있어.", " are needed for one.");
+			close;
+		}
+		mes needtr("[불량배]", "[Bully]");
+		mes needtr("몇 개로 바꿀래? (1 ~ ", "How many do you want? (1 - ") + .@max + ")";
+		next;
+		if (input(.@amount, 1, .@max) != 0) {
+			mes needtr("[불량배]", "[Bully]");
+			mes needtr("1개부터 ", "Pick a number from 1 to ") + .@max + needtr("개 사이로 말해.", ".");
+			close;
+		}
+		callsub S_Bulk, .@reward, .@material, .@cost, .@amount;
+		end;
+	case 4:
 		emotion ET_HNG;
 		mes needtr("[불량배]", "[Bully]");
 		mes needtr("흠... 마음에 안 들면 말고.", "Well... if you don't like it, never mind.");
 		close;
 	}
 	while (true) {
-		if (countitem(.@exchange[.@index+1]) < .@exchange[.@index+2]) {
+		if (countitem(.@material) < .@cost) {
 			emotion ET_SCRATCH;
 			mes needtr("[불량배]", "[Bully]");
 			mes needtr("아니... 아니... 이러면 곤란하지.", "No... No... you shouldn't do this.");
-			mes getitemname(.@exchange[.@index+1]) + " " + .@exchange[.@index+2] + needtr("개로 바꾸기로 했잖아.", " - that is what you told me you would exchange.");
+			mes getitemname(.@material) + " " + .@cost + needtr("개로 바꾸기로 했잖아.", " - that is what you told me you would exchange.");
 			close;
 		}
-		if (checkweight(.@exchange[.@index],1) == 0) {
+		if (checkweight(.@reward,1) == 0) {
 			mes needtr("[불량배]", "[Bully]");
 			mes needtr("가방이 꽉 찼잖아. 좀 비우고 와.", "Your bag is full. Empty it a little and come back.");
 			close;
 		}
-		delitem .@exchange[.@index+1], .@exchange[.@index+2];
-		getitem .@exchange[.@index], 1;
+		delitem .@material, .@cost;
+		getitem .@reward, 1;
 		emotion ET_SEXY;
 		mes needtr("[불량배]", "[Bully]");
 		mes needtr("오, 고마워. 또 바꾸고 싶은 거 있어?", "Oh thank you. Is there something else you want to exchange?");
@@ -336,6 +376,51 @@ lasagna,160,174,4	script	불량배#JCv2	4_M_LGTPOOR,{
 		}
 	}
 	end;
+
+// 일괄 교환: getarg(0) 결과 아이템, (1) 재료, (2) 1개당 재료 수, (3) 교환 수량
+// 재료 전체를 한 번에 빼고 결과를 한 번에 준다. 확인 직전에 재료/무게를 다시 검사한다.
+S_Bulk:
+	.@reward = getarg(0);
+	.@material = getarg(1);
+	.@cost = getarg(2);
+	.@amount = getarg(3);
+	if (.@amount < 1 || countitem(.@material) < .@cost * .@amount) {
+		emotion ET_SCRATCH;
+		mes needtr("[불량배]", "[Bully]");
+		mes needtr("아니... 아니... 재료가 모자라잖아.", "No... No... you don't have enough.");
+		mes getitemname(.@material) + " " + .@cost + needtr("개당 1개로 바꿔 줄 수 있어.", " are needed for each one.");
+		close;
+	}
+	mes needtr("[불량배]", "[Bully]");
+	mes "^330066" + getitemname(.@material) + " " + (.@cost * .@amount) + needtr("개^000000를", "^000000");
+	mes "^CC3333" + getitemname(.@reward) + " " + .@amount + needtr("개^000000로 한 번에 바꿔 줄게.", "^000000 - exchanged all at once.");
+	next;
+	if (select(needtr("일괄 교환한다.", "Exchange them all."), needtr("그만둔다.", "Never mind.")) == 2) {
+		emotion ET_HNG;
+		mes needtr("[불량배]", "[Bully]");
+		mes needtr("흠... 마음에 안 들면 말고.", "Well... if you don't like it, never mind.");
+		close;
+	}
+	// 대화 중에 인벤토리가 바뀌었을 수 있으므로 차감 직전에 다시 확인한다.
+	if (countitem(.@material) < .@cost * .@amount) {
+		emotion ET_SCRATCH;
+		mes needtr("[불량배]", "[Bully]");
+		mes needtr("어? 그새 재료가 줄었잖아. 다시 확인하고 와.", "Huh? You have less than before. Check again and come back.");
+		close;
+	}
+	if (checkweight(.@reward, .@amount) == 0) {
+		mes needtr("[불량배]", "[Bully]");
+		mes needtr("그걸 다 받기엔 가방이 너무 무겁거나 꽉 찼어.", "Your bag is too heavy or full to take all of that.");
+		mes needtr("^777777※ 무게나 소지품 칸을 비우거나 수량을 줄여서 다시 와.^000000", "^777777* Free up weight / inventory space or choose a smaller amount.^000000");
+		close;
+	}
+	delitem .@material, .@cost * .@amount;
+	getitem .@reward, .@amount;
+	emotion ET_SEXY;
+	mes needtr("[불량배]", "[Bully]");
+	mes needtr("자, ", "Here, ") + getitemname(.@reward) + " " + .@amount + needtr("개야. 거래 즐거웠어.", ". Pleasure doing business.");
+	mes needtr("에너지 조각이 남으면 또 찾아와.", "When you have some energy piece left, come to me again.");
+	close;
 
 OnInit:
 	setnpcnameen "Bully";
