@@ -8958,6 +8958,7 @@ static const struct _battle_data {
 	{ "need_jf_pattern_skill_id",           &battle_config.need_jf_pattern_skill_id,        2204,   0,      INT_MAX,        },
 	{ "need_jf_teleport_window",            &battle_config.need_jf_teleport_window,         3000,   0,      INT_MAX,        },
 	{ "need_jf_pattern_window",             &battle_config.need_jf_pattern_window,          300000, 0,      INT_MAX,        },
+	{ "need_privateairship_free",           &battle_config.need_privateairship_free,        0,      0,      1,              },
 	{ "need_jf_pattern_min_count",          &battle_config.need_jf_pattern_min_count,       5,      0,      INT_MAX,        },
 	{ "need_jf_pattern_max_avg_interval",   &battle_config.need_jf_pattern_max_avg_interval, 15000, 0,      INT_MAX,        },
 	{ "need_jf_pattern_min_duration",       &battle_config.need_jf_pattern_min_duration,    60000,  0,      INT_MAX,        },

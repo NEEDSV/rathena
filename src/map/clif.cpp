@@ -22944,18 +22944,21 @@ void clif_parse_private_airship_request( int32 fd, map_session_data* sd ){
 		return;
 	}
 
-	int32 idx = pc_search_inventory( sd, item_id );
+	// NEED: free private airship, skip the item requirement and consumption
+	if( !battle_config.need_privateairship_free ){
+		int32 idx = pc_search_inventory( sd, item_id );
 
-	// Check if the player has the item at all
-	if( idx < 0 ){
-		clif_private_airship_response( sd, PRIVATEAIRSHIP_ITEM_NOT_ENOUGH );
-		return;
-	}
+		// Check if the player has the item at all
+		if( idx < 0 ){
+			clif_private_airship_response( sd, PRIVATEAIRSHIP_ITEM_NOT_ENOUGH );
+			return;
+		}
 
-	// Delete the chosen item
-	if( pc_delitem( sd, idx, 1, 0, 0, LOG_TYPE_PRIVATE_AIRSHIP ) ){
-		clif_private_airship_response( sd, PRIVATEAIRSHIP_RETRY );
-		return;
+		// Delete the chosen item
+		if( pc_delitem( sd, idx, 1, 0, 0, LOG_TYPE_PRIVATE_AIRSHIP ) ){
+			clif_private_airship_response( sd, PRIVATEAIRSHIP_RETRY );
+			return;
+		}
 	}
 
 	// Warp the player to a random spot on the destination map

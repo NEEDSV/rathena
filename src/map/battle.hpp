@@ -784,6 +784,7 @@ struct Battle_Config
 	int32 need_jf_pattern_skill_id;
 	int32 need_jf_teleport_window;
 	int32 need_jf_pattern_window;
+	int32 need_privateairship_free;
 	int32 need_jf_pattern_min_count;
 	int32 need_jf_pattern_max_avg_interval;
 	int32 need_jf_pattern_min_duration;
