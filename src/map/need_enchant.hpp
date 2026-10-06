@@ -174,6 +174,7 @@ std::shared_ptr<s_need_enchant> need_enchant_find( uint64 group );
 #ifdef NEED_ENCHANT_TEST
 bool need_enchant_selftest();
 bool need_enchant_load_test_rules( const char* path );
+bool need_enchant_check_generated( const char* item_enchant_path, const char* rules_path );
 #endif
 
 #endif /* MAP_NEED_ENCHANT_HPP */

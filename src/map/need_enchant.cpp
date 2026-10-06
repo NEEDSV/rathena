@@ -1402,6 +1402,58 @@ bool need_enchant_selftest(){
 }
 
 /**
+ * NEED test only: parse generator output files into memory (never the db folder) and cross check them.
+ * map-server-enchanttest --need-enchant-check <item_enchant.yml> <enchant_rules.yml>
+ */
+bool need_enchant_check_generated( const char* item_enchant_path, const char* rules_path ){
+	std::ifstream in( item_enchant_path, std::ios::binary );
+
+	if( !in ){
+		ShowError( "[NEED enchant check] cannot open '%s'.\n", item_enchant_path );
+		return false;
+	}
+
+	std::stringstream buffer;
+
+	buffer << in.rdbuf();
+
+	std::string text = buffer.str();
+	ryml::Tree tree = ryml::parse_in_arena( c4::to_csubstr( text ) );
+	size_t groups = 0, failed = 0;
+	// Parse into a fresh database first: warnings about a foreign tree must not use the line table
+	// of the file the global database loaded last
+	ItemEnchantDatabase probe;
+
+	for( const ryml::NodeRef& node : tree["Body"] ){
+		groups++;
+
+		if( probe.parseBodyNode( node ) == 0 ){
+			failed++;
+		}
+	}
+
+	if( failed == 0 ){
+		for( const ryml::NodeRef& node : tree["Body"] ){
+			item_enchant_db.parseBodyNode( node );
+		}
+	}
+
+	ShowInfo( "[NEED enchant check] %s: %zu groups, %zu rejected\n", item_enchant_path, groups, failed );
+
+	need_enchant_rules_db.clear();
+
+	bool rules_ok = need_enchant_load_test_rules( rules_path );
+
+	ShowInfo( "[NEED enchant check] %s: %zu groups with rules, %s\n", rules_path, need_enchant_rules_db.size(), rules_ok ? "valid" : "INVALID" );
+
+	bool pass = failed == 0 && groups > 0 && rules_ok;
+
+	ShowStatus( "[NEED enchant check] result: %s\n", pass ? "PASS" : "FAIL" );
+
+	return pass;
+}
+
+/**
  * NEED test only: load a rules file on top of the current rules (@enchanttest rules <path>).
  */
 bool need_enchant_load_test_rules( const char* path ){
@@ -1419,9 +1471,19 @@ bool need_enchant_load_test_rules( const char* path ){
 	std::string text = buffer.str();
 	ryml::Tree tree = ryml::parse_in_arena( c4::to_csubstr( text ) );
 	bool ok = true;
+	// Parse into a fresh database first (see need_enchant_check_generated), then apply only a clean file
+	NeedEnchantRulesDatabase probe;
 
 	for( const ryml::NodeRef& node : tree["Body"] ){
-		ok &= need_enchant_rules_db.parseBodyNode( node ) != 0;
+		ok &= probe.parseBodyNode( node ) != 0;
+	}
+
+	if( !ok ){
+		return false;
+	}
+
+	for( const ryml::NodeRef& node : tree["Body"] ){
+		need_enchant_rules_db.parseBodyNode( node );
 	}
 
 	std::vector<uint64> invalid;

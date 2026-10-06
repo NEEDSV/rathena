@@ -5476,6 +5476,7 @@ bool MapServer::initialize( int32 argc, char *argv[] ){
 	// NEED test only: --need-enchant-selftest [dumpfile] runs the item enchant self test after the item databases are loaded, then exits
 	bool need_enchant_selftest_run = false;
 	const char* need_enchant_selftest_dump = nullptr;
+	const char* need_enchant_check_files[2] = { nullptr, nullptr };
 
 	for( int32 i = 1; i < argc; i++ ){
 		if( argv[i] != nullptr && strcmp( argv[i], "--need-enchant-selftest" ) == 0 ){
@@ -5486,6 +5487,13 @@ bool MapServer::initialize( int32 argc, char *argv[] ){
 				need_enchant_selftest_dump = argv[++i];
 				argv[i] = nullptr;
 			}
+		}else if( argv[i] != nullptr && strcmp( argv[i], "--need-enchant-check" ) == 0 && i + 2 < argc ){
+			// --need-enchant-check <item_enchant.yml> <enchant_rules.yml>: parse generator output in memory, then exit
+			argv[i] = nullptr;
+			need_enchant_check_files[0] = argv[++i];
+			argv[i] = nullptr;
+			need_enchant_check_files[1] = argv[++i];
+			argv[i] = nullptr;
 		}
 	}
 #endif
@@ -5568,6 +5576,10 @@ bool MapServer::initialize( int32 argc, char *argv[] ){
 		bool rules = need_enchant_selftest();
 
 		exit( engine && rules ? EXIT_SUCCESS : EXIT_FAILURE );
+	}
+
+	if( need_enchant_check_files[0] != nullptr ){
+		exit( need_enchant_check_generated( need_enchant_check_files[0], need_enchant_check_files[1] ) ? EXIT_SUCCESS : EXIT_FAILURE );
 	}
 #endif
 	do_init_costume_collection();
