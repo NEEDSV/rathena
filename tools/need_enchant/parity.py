@@ -101,7 +101,130 @@ def rand_window(lines, line):
     m = re.search(r'rand\s*\(\s*(\d+)\s*\)', s)
     if m:
         return 0, int(m.group(1)) - 1
-    raise ValueError('no rand() at line %d' % line)
+    # window prepared for a later `rand(.@range[0], .@range[1])`: setarray .@range[0], lo, hi;
+    m = re.match(r'^\s*setarray\s+\.@\w+\[0\]\s*,\s*(-?\d+)\s*,\s*(-?\d+)\s*;', s)
+    if m:
+        return int(m.group(1)), int(m.group(2))
+    raise ValueError('no rand() or window setarray at line %d' % line)
+
+
+def string_setarray(lines, line):
+    """`setarray .@x$, "a", "b", ...;` over several lines -> [strings]."""
+    text, i = '', line - 1
+    while i < len(lines):
+        text += ' ' + _strip(lines[i])
+        if re.search(r'"\s*;', text):
+            break
+        i += 1
+    if not re.match(r'^\s*setarray\s+\.@\w+\$', text):
+        raise ValueError('no string setarray at line %d' % line)
+    return re.findall(r'"([^"]*)"', text)
+
+
+def explode_pool(lines, setarray_line, index, field, pick_line):
+    """Infinite-Space style uniform pick:
+         setarray .@enchant$, "a,b:c,d:...", ...;   explode by ':' (field), then ',' ;
+         .@enchant = atoi(.@TT$[rand(getarraysize(.@TT$))]);
+    -> OrderedDict value -> 1 per occurrence (uniform)."""
+    if not re.search(r'\[\s*rand\s*\(\s*getarraysize\s*\(', _strip(lines[pick_line - 1])):
+        raise ValueError('line %d is not a uniform array pick' % pick_line)
+    pool = string_setarray(lines, setarray_line)[index].split(':')[field].split(',')
+    out = OrderedDict()
+    for v in pool:
+        v = int(v)
+        out[v] = out.get(v, 0) + 1
+    return out
+
+
+def array_pick(lines, array_line, pick_line):
+    """Uniform pick from an int setarray: `.@x = .@arr[ rand( getarraysize(.@arr) ) ];` or `.@arr[rand(.@size)]`
+    (Hero ring: .@size = getarraysize(.@arr)). -> OrderedDict value -> occurrences."""
+    var, values = setarray_values(lines, array_line)
+    s = _strip(lines[pick_line - 1])
+    m = re.search(re.escape(var) + r'\s*\[\s*rand\s*\(\s*(getarraysize\s*\(\s*' + re.escape(var) + r'\s*\)|\.@\w+|\d+)\s*\)\s*\]', s)
+    if not m:
+        raise ValueError('line %d does not pick %s[rand(...)]' % (pick_line, var))
+    arg = m.group(1)
+    if arg.isdigit() and int(arg) != len(values):
+        raise ValueError('line %d picks rand(%s) from %d values' % (pick_line, arg, len(values)))
+    out = OrderedDict()
+    for v in values:
+        out[v] = out.get(v, 0) + 1
+    return out
+
+
+_RE_EQ = re.compile(r'^if\s*\(\s*(\.@\w+)\s*==\s*(-?\d+)\s*\)\s*set\s+\.@\w+(?:\[\d+\])?\s*,\s*(\d+)\s*;$')
+
+
+def eq_table(lines, first_line, lo, hi):
+    """Fallen-Angel style: consecutive `if (.@r == k) set .@x[i], id;` lines (no else) -> value -> count over
+    r in [lo, hi]. Every r of the window must be covered exactly once."""
+    mapping, var, i = {}, None, first_line - 1
+    while i < len(lines):
+        m = _RE_EQ.match(_strip(lines[i]).strip())
+        if not m or (var is not None and m.group(1) != var):
+            break
+        var = m.group(1)
+        k = int(m.group(2))
+        if k in mapping:
+            raise ValueError('line %d repeats == %d' % (i + 1, k))
+        mapping[k] = int(m.group(3))
+        i += 1
+    if not mapping:
+        raise ValueError('no == chain at line %d' % first_line)
+    out = OrderedDict()
+    for r in range(lo, hi + 1):
+        if r not in mapping:
+            raise ValueError('== chain at line %d does not cover roll %d' % (first_line, r))
+        out[mapping[r]] = out.get(mapping[r], 0) + 1
+    return out
+
+
+def case_labels(lines, first_if_line):
+    """`case N:` lines directly above a line -> [N]."""
+    out, i = [], first_if_line - 2
+    while i >= 0:
+        m = re.match(r'^\s*case\s+(\d+)\s*:\s*$', _strip(lines[i]))
+        if not m:
+            break
+        out.insert(0, int(m.group(1)))
+        i -= 1
+    return out
+
+
+def frand(lines, line):
+    """`callfunc("F_Rand", a, b, ...)` (Global_Functions: getarg(rand(getargcount()))) -> uniform."""
+    m = re.search(r'callfunc\s*\(?\s*"F_Rand"\s*,\s*([-\d\s,]+)\)', _strip(lines[line - 1]))
+    if not m:
+        raise ValueError('no callfunc("F_Rand", ...) at line %d' % line)
+    out = OrderedDict()
+    for v in m.group(1).split(','):
+        v = int(v)
+        out[v] = out.get(v, 0) + 1
+    return out
+
+
+def inline_rand_cmp(lines, line, var_lines=None):
+    """`rand(a,b) OP N` or `rand(a,b) OP .@var` on a line (OP < <= > >=); .@var is read from its
+    integer assignment line in var_lines {name: line}. -> (hits, total) where hits = rolls making the
+    comparison true."""
+    s = _strip(lines[line - 1])
+    m = re.search(r'rand\s*\(\s*(-?\d+)\s*,\s*(-?\d+)\s*\)\s*(<=|<|>=|>)\s*(-?\d+|\.@\w+)', s)
+    if m:
+        lo, hi, op, rhs = int(m.group(1)), int(m.group(2)), m.group(3), m.group(4)
+    else:
+        m = re.search(r'rand\s*\(\s*(\d+)\s*\)\s*(<=|<|>=|>)\s*(-?\d+|\.@\w+)', s)   # rand(n) = 0..n-1
+        if not m:
+            raise ValueError('no inline rand comparison at line %d' % line)
+        lo, hi, op, rhs = 0, int(m.group(1)) - 1, m.group(2), m.group(3)
+    if rhs.startswith('.@'):
+        if not var_lines or rhs not in var_lines:
+            raise ValueError('line %d compares with %s; give its assignment line' % (line, rhs))
+        n = _int_assign(lines, int(var_lines[rhs]), rhs)
+    else:
+        n = int(rhs)
+    hits = sum(1 for r in range(lo, hi + 1) if _hit(op, n, r))
+    return hits, hi - lo + 1
 
 
 _RE_LOOP = re.compile(r'^for\s*\(\s*(\.@\w+)\s*=\s*0\s*;\s*\1\s*<\s*(\.@\w+)\s*&&\s*\(\s*(\.@\w+)\s*\*\s*\(\s*\1\s*\+\s*1\s*\)\s*\)'

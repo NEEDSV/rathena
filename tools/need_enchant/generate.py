@@ -220,7 +220,9 @@ def load_master(path, items):
                 'family': fkey, 'family_display': fam_display, 'key': key, 'display': v.get('Display') or {},
                 'targets': targets, 'min_refine': int(v.get('MinimumRefine', 0)), 'max_refine': int(v.get('MaximumRefine', 0)),
                 'allow_random': bool(v.get('AllowRandomOptions', True)), 'order': order, 'slots': slots,
-                'reset': reset, 'caution': caution, 'source': v.get('Source')})
+                'reset': reset, 'caution': caution, 'source': v.get('Source'),
+                # OrdinalOffset: the variant's first slot is the (offset+1)-th enchant of the item (caution text only)
+                'ordinal_offset': int(v.get('OrdinalOffset', 0))})
     return families, variants
 
 
@@ -340,7 +342,7 @@ def caution_text(v, items, lang):
             s = v['slots'][sl]
             if not s['options']:
                 continue
-            ordn = ORD_KR[n] if kr else ORD_EN[n]
+            ordn = ORD_KR[n + v['ordinal_offset']] if kr else ORD_EN[n + v['ordinal_offset']]
             opt = sum(s['options'].values())
             if s['failures']:
                 total = opt + sum(int(f['Weight']) for f in s['failures'])
