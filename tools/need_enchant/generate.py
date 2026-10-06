@@ -293,74 +293,89 @@ def pct(n, d):
 
 ORD_KR = {1: '1번째', 2: '2번째', 3: '3번째', 4: '4번째'}
 ORD_EN = {1: '1st', 2: '2nd', 3: '3rd', 4: '4th'}
-RESULT_KR = {'FAIL_KEEP': '실패(유지)', 'CLEAR_SLOTS': '실패(인챈트 일부 소멸)', 'CLEAR_ENCHANTS': '실패(인챈트 전부 소멸)',
-             'REFINE_DOWN': '실패(제련도 하락)', 'DESTROY': '장비 파괴', 'REWARD': '실패(보상 지급)',
-             'DESTROY_WITH_REWARD': '장비 파괴(보상 지급)', 'DOWNGRADE': '단계 하락'}
-RESULT_EN = {'FAIL_KEEP': 'fail (kept)', 'CLEAR_SLOTS': 'fail (some enchants lost)', 'CLEAR_ENCHANTS': 'fail (all enchants lost)',
-             'REFINE_DOWN': 'fail (refine lowered)', 'DESTROY': 'item destroyed', 'REWARD': 'fail (reward given)',
-             'DESTROY_WITH_REWARD': 'item destroyed (reward given)', 'DOWNGRADE': 'downgraded'}
+RESULT_KR = {'FAIL_KEEP': '유지', 'CLEAR_SLOTS': '일부 소멸', 'CLEAR_ENCHANTS': '인챈트 소멸',
+             'REFINE_DOWN': '제련 하락', 'DESTROY': '파괴', 'REWARD': '보상',
+             'DESTROY_WITH_REWARD': '파괴(보상)', 'DOWNGRADE': '하락'}
+RESULT_EN = {'FAIL_KEEP': 'kept', 'CLEAR_SLOTS': 'some lost', 'CLEAR_ENCHANTS': 'all lost',
+             'REFINE_DOWN': 'refine down', 'DESTROY': 'destroyed', 'REWARD': 'reward',
+             'DESTROY_WITH_REWARD': 'destroyed (reward)', 'DOWNGRADE': 'downgraded'}
+# The client's caution box shows 3 lines; the official data never uses more, nor more than 93 bytes a line
+CAUTION_MAX_LINES = 3
+CAUTION_MAX_BYTES = 93
+NEWLINE = chr(10)
+
+
+def pct_short(n, d):
+    """Up to 2 decimals; more only when 2 decimals would round a non-exact value to 0% or 100%."""
+    v = 100.0 * n / d
+    for digits in (2, 3, 4):
+        s = ('%.*f' % (digits, v)).rstrip('0').rstrip('.')
+        if (s not in ('0', '100')) or n in (0, d):
+            return s + '%'
+    return s + '%'
 
 
 def caution_text(v, items, lang):
+    kr = lang == 'KR'
     if v['caution'] != 'AUTO':
         text = (v['caution'] or {}).get(lang)
         if not text:
             raise GenError('%s: Caution.%s missing' % (v['key'], lang))
-        return text
-    names = [items[t].name_kr if lang == 'KR' else (items[t].name_en or items[t].aegis) for t in v['targets']]
-    head = ', '.join(names[:2]) + (' 외 %d종' % (len(names) - 2) if lang == 'KR' and len(names) > 2 else
-                                   ' and %d more' % (len(names) - 2) if len(names) > 2 else '')
-    lines = []
-    cond = ''
-    if lang == 'KR':
-        if v['min_refine'] and v['max_refine']:
-            cond = '%d~%d제련 ' % (v['min_refine'], v['max_refine'])
-        elif v['min_refine']:
-            cond = '%d제련 이상의 ' % v['min_refine']
-        elif v['max_refine']:
-            cond = '%d제련 이하의 ' % v['max_refine']
-        lines.append('%s%s 인챈트' % (cond, head))
     else:
+        lines = []
+        cond = ''
         if v['min_refine'] and v['max_refine']:
-            cond = ' (refine +%d to +%d)' % (v['min_refine'], v['max_refine'])
+            cond = ('[%d~%d제련] ' if kr else '[Refine +%d to +%d] ') % (v['min_refine'], v['max_refine'])
         elif v['min_refine']:
-            cond = ' (refine +%d or higher)' % v['min_refine']
+            cond = ('[%d제련 이상] ' if kr else '[Refine +%d or higher] ') % v['min_refine']
         elif v['max_refine']:
-            cond = ' (refine +%d or lower)' % v['max_refine']
-        lines.append('Enchant for %s%s' % (head, cond))
-    for n, sl in enumerate(v['order'], 1):
-        s = v['slots'][sl]
-        if not s['options']:
-            continue
-        opt = sum(s['options'].values())
-        if s['failures']:
-            total = opt + sum(int(f['Weight']) for f in s['failures'])
-            parts = [('성공 ' if lang == 'KR' else 'success ') + pct(opt, total)]
-            for f in s['failures']:
-                label = (RESULT_KR if lang == 'KR' else RESULT_EN)[f['Result']]
-                parts.append('%s %s' % (label, pct(int(f['Weight']), total)))
+            cond = ('[%d제련 이하] ' if kr else '[Refine +%d or lower] ') % v['max_refine']
+        rates, fails = [], []
+        for n, sl in enumerate(v['order'], 1):
+            s = v['slots'][sl]
+            if not s['options']:
+                continue
+            ordn = ORD_KR[n] if kr else ORD_EN[n]
+            opt = sum(s['options'].values())
+            if s['failures']:
+                total = opt + sum(int(f['Weight']) for f in s['failures'])
+                rates.append('%s %s' % (ordn, pct_short(opt, total)))
+                labels = RESULT_KR if kr else RESULT_EN
+                fails.append('%s %s' % (ordn, ('·' if kr else ', ').join(
+                    '%s %s' % (labels[f['Result']], pct_short(int(f['Weight']), total)) for f in s['failures'])))
+            else:
+                rates.append('%s %s' % (ordn, pct_short(s['chance'], CHANCE_BASE)))
+                if s['chance'] < CHANCE_BASE:
+                    fails.append('%s %s %s' % (ordn, '유지' if kr else 'kept', pct_short(CHANCE_BASE - s['chance'], CHANCE_BASE)))
+        if rates:
+            lines.append(cond + ('성공률: ' if kr else 'Success: ') + ' / '.join(rates))
+        elif cond:
+            lines.append(cond.strip())
+        if fails:
+            lines.append(('실패 시: ' if kr else 'On failure: ') + ' / '.join(fails))
+        r = v['reset']
+        if r is None:
+            lines.append('초기화 불가' if kr else 'Reset: not available')
         else:
-            parts = [('성공 ' if lang == 'KR' else 'success ') + pct(s['chance'], CHANCE_BASE)]
-        lines.append(('%s 인챈트: ' % ORD_KR[n] if lang == 'KR' else '%s enchant: ' % ORD_EN[n]) + ', '.join(parts))
-    r = v['reset']
-    if r is None:
-        lines.append('인챈트 초기화 불가' if lang == 'KR' else 'Reset is not available')
-    else:
-        if r['outcomes']:
-            total = sum(int(o['Weight']) for o in r['outcomes'])
-            parts = []
-            for o in r['outcomes']:
-                label = ('성공' if lang == 'KR' else 'success') if o['Result'] == 'SUCCESS' else (RESULT_KR if lang == 'KR' else RESULT_EN)[o['Result']]
-                parts.append('%s %s' % (label, pct(int(o['Weight']), total)))
-        else:
-            parts = [('성공 ' if lang == 'KR' else 'success ') + pct(r['chance'], CHANCE_BASE)]
-        extra = ''
-        if r['require_all']:
-            extra = (' (모든 슬롯 인챈트 시 가능)' if lang == 'KR' else ' (only when every slot is enchanted)')
-        lines.append(('인챈트 초기화: ' if lang == 'KR' else 'Reset: ') + ', '.join(parts) + extra)
-    text = '\n'.join(lines)
+            head = ('초기화(전 슬롯 인챈트 시): ' if kr else 'Reset (all slots filled): ') if r['require_all'] else ('초기화: ' if kr else 'Reset: ')
+            if r['outcomes']:
+                total = sum(int(o['Weight']) for o in r['outcomes'])
+                labels = RESULT_KR if kr else RESULT_EN
+                parts = ['%s %s' % (('성공' if kr else 'success') if o['Result'] == 'SUCCESS' else labels[o['Result']],
+                                    pct_short(int(o['Weight']), total)) for o in r['outcomes']]
+                lines.append(head + ', '.join(parts))
+            else:
+                lines.append(head + pct_short(r['chance'], CHANCE_BASE))
+        text = NEWLINE.join(lines)
     if lang == 'EN' and any(ord(ch) > 127 for ch in text):
-        raise GenError('%s: EN caution is not ASCII (missing English item name?): %r' % (v['key'], text))
+        raise GenError('%s: EN caution is not ASCII: %r' % (v['key'], text))
+    lines = text.split(NEWLINE)
+    if len(lines) > CAUTION_MAX_LINES:
+        raise GenError('%s: %s caution has %d lines (client shows %d)' % (v['key'], lang, len(lines), CAUTION_MAX_LINES))
+    for line in lines:
+        width = len(line.encode('cp949'))
+        if width > CAUTION_MAX_BYTES:
+            raise GenError('%s: %s caution line is %d bytes (max %d): %s' % (v['key'], lang, width, CAUTION_MAX_BYTES, line))
     return text
 
 
