@@ -45,6 +45,7 @@
 #include "mapreg.hpp"
 #include "mercenary.hpp"
 #include "mob.hpp"
+#include "need_enchant.hpp"
 #include "navi.hpp"
 #include "need_autopot.hpp"
 #include "need_fishing.hpp"
@@ -5473,12 +5474,12 @@ bool MapServer::initialize( int32 argc, char *argv[] ){
 #endif
 #ifdef NEED_ENCHANT_TEST
 	// NEED test only: --need-enchant-selftest [dumpfile] runs the item enchant self test after the item databases are loaded, then exits
-	bool need_enchant_selftest = false;
+	bool need_enchant_selftest_run = false;
 	const char* need_enchant_selftest_dump = nullptr;
 
 	for( int32 i = 1; i < argc; i++ ){
 		if( argv[i] != nullptr && strcmp( argv[i], "--need-enchant-selftest" ) == 0 ){
-			need_enchant_selftest = true;
+			need_enchant_selftest_run = true;
 			argv[i] = nullptr;
 
 			if( i + 1 < argc && argv[i + 1] != nullptr && argv[i + 1][0] != '-' ){
@@ -5562,8 +5563,11 @@ bool MapServer::initialize( int32 argc, char *argv[] ){
 	do_init_script();
 	do_init_itemdb();
 #ifdef NEED_ENCHANT_TEST
-	if( need_enchant_selftest ){
-		exit( itemdb_enchant_selftest( need_enchant_selftest_dump ) ? EXIT_SUCCESS : EXIT_FAILURE );
+	if( need_enchant_selftest_run ){
+		bool engine = itemdb_enchant_selftest( need_enchant_selftest_dump );
+		bool rules = need_enchant_selftest();
+
+		exit( engine && rules ? EXIT_SUCCESS : EXIT_FAILURE );
 	}
 #endif
 	do_init_costume_collection();

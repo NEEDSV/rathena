@@ -674,6 +674,9 @@ enum e_clif_messages : uint16 {
 	// Currently there is no attendance check event.
 	MSI_CHECK_ATTENDANCE_NOT_EVENT = 3474,
 
+	// NEED: Equipment has been destroyed. (enchant destroy result)
+	MSI_ITEM_GRADE_ENCHANT_FAIL_BREAK = 3705,
+
 	// The total amount of items to sell exceeds the amount of Zeny you can have. \nPlease modify the quantity and price.
 	MSI_MERCHANTSHOP_TOTA_LOVER_ZENY_ERR = 3826,
 
@@ -685,6 +688,12 @@ enum e_clif_messages : uint16 {
 
 	// Enchantment failed!
 	MSI_ENCHANT_FAILED = 3858,
+
+	// NEED: The RODEX cannot be used during an enchant.
+	MSI_CANNOT_OPEN_RODEX_DURING_ENCHANT = 3843,
+
+	// NEED: The enchant conditions are not met. (request refused before anything was paid)
+	MSI_NOT_SATISFIED_ENCHANT_CONDITION = 3860,
 
 	MSI_GENDER_CHANGE_FAILED_CAUSE_JOB = 4130,
 	MSI_GENDER_CHANGE_FAILED_CAUSE_GROUP = 4131,
@@ -1518,6 +1527,7 @@ void clif_item_reform_open( map_session_data& sd, t_itemid item );
 
 // Item Enchant UI
 void clif_enchantwindow_open( map_session_data& sd, uint64 clientLuaIndex );
+void clif_enchantwindow_result_message( map_session_data& sd, int32 msgId, t_itemid enchant = 0 );
 #ifdef NEED_ENCHANT_TEST
 void clif_enchantwindow_result_probe( map_session_data& sd, int32 msgId, t_itemid itid );
 #endif

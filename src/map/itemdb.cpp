@@ -28,6 +28,7 @@
 #include "intif.hpp"
 #include "log.hpp"
 #include "mob.hpp"
+#include "need_enchant.hpp"
 #include "pc.hpp"
 #include "status.hpp"
 
@@ -6252,6 +6253,7 @@ static void itemdb_read(void) {
 	laphine_upgrade_db.load();
 	item_reform_db.load();
 	item_enchant_db.load();
+	need_enchant_rules_db.load(); // NEED: V2 rules on top of item_enchant (optional file)
 	item_package_db.load();
 
 	if (battle_config.feature_roulette)
@@ -6348,6 +6350,7 @@ void do_final_itemdb(void) {
 	laphine_upgrade_db.clear();
 	item_reform_db.clear();
 	item_enchant_db.clear();
+	need_enchant_rules_db.clear();
 	item_package_db.clear();
 	if (battle_config.feature_roulette)
 		itemdb_roulette_free();

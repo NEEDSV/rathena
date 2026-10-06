@@ -48,6 +48,7 @@
 #include "instance.hpp"
 #include "intif.hpp"
 #include "itemdb.hpp" // MAX_ITEMGROUP
+#include "need_enchant.hpp"
 #include "cashshop.hpp"
 #include "log.hpp"
 #include "mail.hpp"
@@ -9196,7 +9197,7 @@ ACMD_FUNC(enchanttest)
 	}
 
 	if( !message || !*message || sscanf( message, "%31s", sub ) < 1 ){
-		clif_displaymessage( fd, "Usage: @enchanttest msg <msgId> [itid] | slotchance <group> <slot> <chance> | resetchance <group> <chance> | gradebonus <group> <slot> <grade> <chance> | restore" );
+		clif_displaymessage( fd, "Usage: @enchanttest msg <msgId> [itid] | slotchance <group> <slot> <chance> | resetchance <group> <chance> | gradebonus <group> <slot> <grade> <chance> | rules <file> | restore" );
 		return -1;
 	}
 
@@ -9214,8 +9215,24 @@ ACMD_FUNC(enchanttest)
 
 	if( strcmpi( sub, "restore" ) == 0 ){
 		item_enchant_db.reload();
-		clif_displaymessage( fd, "[enchanttest] item_enchant.yml reloaded" );
+		need_enchant_rules_db.reload();
+		clif_displaymessage( fd, "[enchanttest] item_enchant.yml and NEED enchant rules reloaded" );
 		return 0;
+	}
+
+	if( strcmpi( sub, "rules" ) == 0 ){
+		char path[256] = {};
+
+		if( sscanf( message, "%31s %255s", sub, path ) < 2 ){
+			clif_displaymessage( fd, "Usage: @enchanttest rules <file> (memory only, @enchanttest restore)" );
+			return -1;
+		}
+
+		bool ok = need_enchant_load_test_rules( path );
+
+		sprintf( atcmd_output, "[enchanttest] rules '%s' %s (%zu groups with rules)", path, ok ? "loaded" : "loaded WITH ERRORS (see map-server console)", need_enchant_rules_db.size() );
+		clif_displaymessage( fd, atcmd_output );
+		return ok ? 0 : -1;
 	}
 
 	if( sscanf( message, "%31s %" SCNu64 " %u %u %u", sub, &group_id, &a, &b, &c ) < 3 ){
