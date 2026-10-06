@@ -3337,7 +3337,8 @@ uint64 ItemEnchantDatabase::parseBodyNode( const ryml::NodeRef& node ){
 
 					uint32 chance;
 
-					if( !this->asUInt32Rate( slotNode, "Chance", chance, 100000 ) ){
+					// NEED: read the bonus entry's own Chance, not the slot's base Chance
+					if( !this->asUInt32Rate( enchantgradeNode, "Chance", chance, ITEM_ENCHANT_CHANCE_BASE ) ){
 						return 0;
 					}
 
@@ -3554,6 +3555,450 @@ uint64 ItemEnchantDatabase::parseBodyNode( const ryml::NodeRef& node ){
 }
 
 ItemEnchantDatabase item_enchant_db;
+
+/**
+ * NEED: Success chance of a normal enchant on the given slot for an item of the given enchant grade.
+ * Only the bonus of the item's own enchant grade is applied (matches the client's SetGradeBonus check).
+ * @return chance on ITEM_ENCHANT_CHANCE_BASE, capped at 100%
+ */
+uint32 itemdb_enchant_success_chance( const s_item_enchant_slot& slot, uint16 enchantgrade ){
+	uint64 chance = slot.normal.chance;
+	const auto bonus = slot.normal.enchantgradeChanceIncrease.find( enchantgrade );
+
+	if( bonus != slot.normal.enchantgradeChanceIncrease.end() ){
+		chance += bonus->second;
+	}
+
+	return static_cast<uint32>( std::min<uint64>( chance, ITEM_ENCHANT_CHANCE_BASE ) );
+}
+
+/**
+ * NEED: Roll a chance on ITEM_ENCHANT_CHANCE_BASE (0 = never, ITEM_ENCHANT_CHANCE_BASE = always).
+ */
+bool itemdb_enchant_roll( uint32 chance ){
+	return rnd_chance<uint32>( chance, ITEM_ENCHANT_CHANCE_BASE );
+}
+
+/**
+ * NEED: Sum of all enchant weights (Chance) of a pool.
+ */
+uint64 itemdb_enchant_total_weight( const s_item_enchant_normal& pool ){
+	uint64 total = 0;
+
+	for( const auto& entry : pool.enchants ){
+		total += entry.second->chance;
+	}
+
+	return total;
+}
+
+/**
+ * NEED: Weighted random pick of an enchant. Each Chance is a weight, the pool total is the denominator.
+ * @return the picked enchant or nullptr if the pool has no weight
+ */
+std::shared_ptr<s_item_enchant_normal_sub> itemdb_enchant_pick( const s_item_enchant_normal& pool ){
+	uint64 total = itemdb_enchant_total_weight( pool );
+
+	if( total == 0 ){
+		return nullptr;
+	}
+
+	uint64 roll = rnd_value<uint64>( 0, total - 1 );
+
+	for( const auto& entry : pool.enchants ){
+		if( roll < entry.second->chance ){
+			return entry.second;
+		}
+
+		roll -= entry.second->chance;
+	}
+
+	return nullptr;
+}
+
+#ifdef NEED_ENCHANT_TEST
+// Defined in clif.cpp
+bool clif_parse_enchant_basecheck( struct item& selected_item, std::shared_ptr<s_item_enchant> enchant );
+
+namespace{
+	const uint64 NEED_ENCHANT_TEST_SAMPLES = 1000000;
+	const uint64 NEED_ENCHANT_TEST_SAMPLES_ALL = 200000;
+	const uint64 NEED_ENCHANT_TEST_ROLLS = 10000000;
+	const double NEED_ENCHANT_TEST_Z = 3.29; // one-sided p ~ 0.0005 (single pool)
+	const double NEED_ENCHANT_TEST_Z_ALL = 4.42; // one-sided p ~ 0.000005 (every pool, ~200 comparisons)
+	const double NEED_ENCHANT_TEST_SIGMA = 5.0;
+
+	// Wilson-Hilferty approximation: chi-square with df degrees of freedom -> standard normal z
+	double need_enchant_chisq_z( double chisq, double df ){
+		double h = 2.0 / ( 9.0 * df );
+
+		return ( std::cbrt( chisq / df ) - ( 1.0 - h ) ) / std::sqrt( h );
+	}
+
+	// Replica of the pre-fix selection (uniform pick, acceptance on a 10000 scale, uniform fallback), for comparison only
+	std::shared_ptr<s_item_enchant_normal_sub> need_enchant_legacy_pick( s_item_enchant_slot& slot, s_item_enchant_normal& pool ){
+		size_t maximum = 3 * slot.normal.enchants.size();
+
+		for( size_t i = 0; i < maximum; i++ ){
+			std::shared_ptr<s_item_enchant_normal_sub> entry = util::umap_random( pool.enchants );
+
+			if( rnd_value( 0, 10000 ) < entry->chance ){
+				return entry;
+			}
+		}
+
+		return util::umap_random( pool.enchants );
+	}
+
+	// Chi-square of observed counts against the pool weights (bins with expectation < 5 are merged)
+	double need_enchant_pool_z( s_item_enchant_normal& pool, std::unordered_map<t_itemid, uint64>& counts, uint64 samples, double& max_dev ){
+		uint64 total = itemdb_enchant_total_weight( pool );
+		double chisq = 0, small_exp = 0, small_obs = 0;
+		int32 bins = 0;
+
+		max_dev = 0;
+
+		for( const auto& entry : pool.enchants ){
+			double expected = static_cast<double>( samples ) * entry.second->chance / total;
+			double observed = static_cast<double>( counts[entry.first] );
+
+			max_dev = std::max( max_dev, std::fabs( observed - expected ) / samples );
+
+			if( expected < 5 ){
+				small_exp += expected;
+				small_obs += observed;
+				continue;
+			}
+
+			chisq += ( observed - expected ) * ( observed - expected ) / expected;
+			bins++;
+		}
+
+		if( small_exp > 0 ){
+			chisq += ( small_obs - small_exp ) * ( small_obs - small_exp ) / std::max( small_exp, 1.0 );
+			bins++;
+		}
+
+		if( bins < 2 ){
+			return 0;
+		}
+
+		return need_enchant_chisq_z( chisq, bins - 1 );
+	}
+
+	bool need_enchant_test_pool( uint64 group_id, uint16 slot_id, uint16 grade, bool detail ){
+		std::shared_ptr<s_item_enchant> group = item_enchant_db.find( group_id );
+		std::shared_ptr<s_item_enchant_slot> slot = group ? util::umap_find( group->slots, slot_id ) : nullptr;
+		std::shared_ptr<s_item_enchant_normal> pool = slot ? util::umap_find( slot->normal.enchants, grade ) : nullptr;
+
+		if( pool == nullptr || pool->enchants.empty() ){
+			ShowError( "[NEED enchant test] pool %" PRIu64 "/%hu/%hu not found.\n", group_id, slot_id, grade );
+			return false;
+		}
+
+		uint64 samples = detail ? NEED_ENCHANT_TEST_SAMPLES : NEED_ENCHANT_TEST_SAMPLES_ALL;
+		std::unordered_map<t_itemid, uint64> fixed, legacy;
+
+		for( uint64 i = 0; i < samples; i++ ){
+			fixed[itemdb_enchant_pick( *pool )->item_id]++;
+			legacy[need_enchant_legacy_pick( *slot, *pool )->item_id]++;
+		}
+
+		double dev_fixed, dev_legacy;
+		double z_fixed = need_enchant_pool_z( *pool, fixed, samples, dev_fixed );
+		double z_legacy = need_enchant_pool_z( *pool, legacy, samples, dev_legacy );
+		bool pass = z_fixed < ( detail ? NEED_ENCHANT_TEST_Z : NEED_ENCHANT_TEST_Z_ALL );
+
+		if( detail ){
+			uint64 total = itemdb_enchant_total_weight( *pool );
+
+			ShowInfo( "[NEED enchant test] pool %" PRIu64 "/%hu/%hu: %zu options, weight total %" PRIu64 ", %" PRIu64 " samples\n", group_id, slot_id, grade, pool->enchants.size(), total, samples );
+
+			for( const auto& entry : pool->enchants ){
+				ShowInfo( "  %8u weight %6u  yaml %8.4f%%  fixed %8.4f%%  legacy %8.4f%%\n", entry.first, entry.second->chance,
+					100.0 * entry.second->chance / total, 100.0 * fixed[entry.first] / samples, 100.0 * legacy[entry.first] / samples );
+			}
+		}
+
+		ShowInfo( "[NEED enchant test] pool %" PRIu64 "/%hu/%hu fixed z=%.2f maxdev=%.4f%%p %s | legacy z=%.2f maxdev=%.4f%%p\n", group_id, slot_id, grade,
+			z_fixed, 100 * dev_fixed, pass ? "PASS" : "FAIL", z_legacy, 100 * dev_legacy );
+
+		return pass;
+	}
+
+	bool need_enchant_test_rolls(){
+		const uint32 chances[] = { 0, 1, ITEM_ENCHANT_CHANCE_BASE / 2, ITEM_ENCHANT_CHANCE_BASE - 1, ITEM_ENCHANT_CHANCE_BASE };
+		bool pass = true;
+
+		for( uint32 chance : chances ){
+			uint64 success = 0;
+
+			for( uint64 i = 0; i < NEED_ENCHANT_TEST_ROLLS; i++ ){
+				if( itemdb_enchant_roll( chance ) ){
+					success++;
+				}
+			}
+
+			double p = static_cast<double>( chance ) / ITEM_ENCHANT_CHANCE_BASE;
+			double mean = p * NEED_ENCHANT_TEST_ROLLS;
+			double sigma = std::sqrt( NEED_ENCHANT_TEST_ROLLS * p * ( 1 - p ) );
+			bool ok;
+
+			if( chance == 0 || chance == ITEM_ENCHANT_CHANCE_BASE ){
+				ok = success == static_cast<uint64>( mean );
+			}else{
+				ok = std::fabs( success - mean ) <= NEED_ENCHANT_TEST_SIGMA * sigma;
+			}
+
+			ShowInfo( "[NEED enchant test] chance %6u: %" PRIu64 "/%" PRIu64 " success (expected %.1f) %s\n", chance, success, NEED_ENCHANT_TEST_ROLLS, mean, ok ? "PASS" : "FAIL" );
+			pass &= ok;
+		}
+
+		return pass;
+	}
+
+	bool need_enchant_test_gradebonus(){
+		const char* yaml =
+			"Body:\n"
+			"  - Id: 999999901\n"
+			"    TargetItems:\n"
+			"      Gray_W_Suits: true\n"
+			"    Order:\n"
+			"      - Slot: 3\n"
+			"    Slots:\n"
+			"      - Slot: 3\n"
+			"        Chance: 50000\n"
+			"        EnchantgradeBonus:\n"
+			"          - Enchantgrade: 1\n"
+			"            Chance: 5000\n"
+			"          - Enchantgrade: 2\n"
+			"            Chance: 10000\n"
+			"        Enchants:\n"
+			"          - Enchantgrade: 0\n"
+			"            Items:\n"
+			"              - Item: Wolf_Orb_Str_1\n"
+			"                Chance: 100000\n";
+		ItemEnchantDatabase test_db;
+		ryml::Tree tree = ryml::parse_in_arena( c4::to_csubstr( yaml ) );
+
+		for( const ryml::NodeRef& node : tree["Body"] ){
+			test_db.parseBodyNode( node );
+		}
+
+		std::shared_ptr<s_item_enchant> group = test_db.find( 999999901 );
+		std::shared_ptr<s_item_enchant_slot> slot = group ? util::umap_find( group->slots, static_cast<uint16>( 3 ) ) : nullptr;
+
+		if( slot == nullptr ){
+			ShowError( "[NEED enchant test] grade bonus: test group was not parsed.\n" );
+			return false;
+		}
+
+		const uint32 expected[] = { 50000, 55000, 60000, 50000 };
+		bool pass = true;
+
+		for( uint16 grade = 0; grade < ARRAYLENGTH( expected ); grade++ ){
+			uint32 chance = itemdb_enchant_success_chance( *slot, grade );
+			bool ok = chance == expected[grade];
+
+			ShowInfo( "[NEED enchant test] grade bonus: grade %hu -> chance %u (expected %u) %s\n", grade, chance, expected[grade], ok ? "PASS" : "FAIL" );
+			pass &= ok;
+		}
+
+		// cap at 100%
+		slot->normal.chance = ITEM_ENCHANT_CHANCE_BASE - 1000;
+		bool capped = itemdb_enchant_success_chance( *slot, 2 ) == ITEM_ENCHANT_CHANCE_BASE;
+
+		ShowInfo( "[NEED enchant test] grade bonus: cap at 100%% %s\n", capped ? "PASS" : "FAIL" );
+
+		return pass && capped;
+	}
+
+	bool need_enchant_test_specialcard(){
+		std::shared_ptr<s_item_enchant> group = item_enchant_db.find( 1 );
+		std::shared_ptr<item_data> target = item_db.search_aegisname( "Gray_W_Suits" );
+
+		if( group == nullptr || target == nullptr ){
+			ShowError( "[NEED enchant test] special card: group 1 or Gray_W_Suits missing.\n" );
+			return false;
+		}
+
+		const t_itemid cards[] = { 0, CARD0_FORGE, CARD0_CREATE, CARD0_PET };
+		const bool expected[] = { true, false, false, false };
+		bool pass = true;
+
+		for( size_t i = 0; i < ARRAYLENGTH( cards ); i++ ){
+			struct item it = {};
+
+			it.nameid = target->nameid;
+			it.refine = static_cast<char>( group->minimumRefine );
+			it.identify = 1;
+			it.card[0] = cards[i];
+
+			bool result = clif_parse_enchant_basecheck( it, group );
+			bool ok = result == expected[i];
+
+			ShowInfo( "[NEED enchant test] special card: card0=%u basecheck=%s (expected %s) %s\n", cards[i], result ? "true" : "false", expected[i] ? "true" : "false", ok ? "PASS" : "FAIL" );
+			pass &= ok;
+		}
+
+		return pass;
+	}
+
+	// Canonical dump of the loaded item enchant database, compared against the YAML by an external script
+	void need_enchant_test_dump( const char* path ){
+		std::ofstream out( path );
+		std::vector<uint64> ids;
+
+		for( const auto& entry : item_enchant_db ){
+			ids.push_back( entry.first );
+		}
+
+		std::sort( ids.begin(), ids.end() );
+
+		auto mats = []( const std::unordered_map<t_itemid, uint16>& materials ){
+			std::map<t_itemid, uint16> sorted( materials.begin(), materials.end() );
+			std::string s;
+
+			for( const auto& m : sorted ){
+				s += " " + std::to_string( m.first ) + ":" + std::to_string( m.second );
+			}
+
+			return s;
+		};
+
+		for( uint64 id : ids ){
+			std::shared_ptr<s_item_enchant> e = item_enchant_db.find( id );
+			std::vector<t_itemid> targets = e->target_item_ids;
+
+			std::sort( targets.begin(), targets.end() );
+			out << "G " << id << " " << e->minimumRefine << " " << e->minimumEnchantgrade << " " << e->allowRandomOptions
+				<< " R " << e->reset.chance << " " << e->reset.zeny << mats( e->reset.materials ) << "\n";
+			out << "T";
+			for( t_itemid t : targets ){
+				out << " " << t;
+			}
+			out << "\nO";
+			for( uint16 o : e->order ){
+				out << " " << o;
+			}
+			out << "\n";
+
+			std::map<uint16, std::shared_ptr<s_item_enchant_slot>> slots( e->slots.begin(), e->slots.end() );
+
+			for( const auto& s : slots ){
+				out << "S " << s.first << " " << s.second->normal.zeny << " " << s.second->normal.chance << mats( s.second->normal.materials ) << "\n";
+
+				std::map<uint16, uint32> bonus( s.second->normal.enchantgradeChanceIncrease.begin(), s.second->normal.enchantgradeChanceIncrease.end() );
+
+				for( const auto& b : bonus ){
+					if( b.second != 0 ){
+						out << "B " << s.first << " " << b.first << " " << b.second << "\n";
+					}
+				}
+
+				std::map<uint16, std::shared_ptr<s_item_enchant_normal>> pools( s.second->normal.enchants.begin(), s.second->normal.enchants.end() );
+
+				for( const auto& p : pools ){
+					std::map<t_itemid, uint32> items;
+
+					for( const auto& i : p.second->enchants ){
+						items[i.first] = i.second->chance;
+					}
+
+					out << "E " << s.first << " " << p.first;
+					for( const auto& i : items ){
+						out << " " << i.first << ":" << i.second;
+					}
+					out << "\n";
+				}
+
+				std::map<t_itemid, std::shared_ptr<s_item_enchant_perfect>> perfect( s.second->perfect.enchants.begin(), s.second->perfect.enchants.end() );
+
+				for( const auto& p : perfect ){
+					out << "P " << s.first << " " << p.first << " " << p.second->zeny << mats( p.second->materials ) << "\n";
+				}
+
+				std::map<t_itemid, std::shared_ptr<s_item_enchant_upgrade>> upgrades( s.second->upgrade.enchants.begin(), s.second->upgrade.enchants.end() );
+
+				for( const auto& u : upgrades ){
+					out << "U " << s.first << " " << u.first << " " << u.second->upgrade_item_id << " " << u.second->zeny << mats( u.second->materials ) << "\n";
+				}
+			}
+		}
+
+		ShowInfo( "[NEED enchant test] dumped %zu groups to %s\n", ids.size(), path );
+	}
+}
+
+/**
+ * NEED: Item enchant engine self test (only built with NEED_ENCHANT_TEST).
+ * Run with: map-server --need-enchant-selftest <dumpfile>
+ */
+bool itemdb_enchant_selftest( const char* dump_path ){
+	bool pass = true;
+	uint64 pools = 0, pools_failed = 0, zero_weight = 0, zero_total = 0;
+
+	ShowStatus( "[NEED enchant test] start\n" );
+
+	// Static scan of every pool
+	for( const auto& group : item_enchant_db ){
+		for( const auto& slot : group.second->slots ){
+			for( const auto& pool : slot.second->normal.enchants ){
+				pools++;
+
+				if( itemdb_enchant_total_weight( *pool.second ) == 0 ){
+					zero_total++;
+					ShowWarning( "[NEED enchant test] pool %" PRIu64 "/%hu/%hu has total weight 0\n", group.first, slot.first, pool.first );
+				}
+
+				for( const auto& entry : pool.second->enchants ){
+					if( entry.second->chance == 0 ){
+						zero_weight++;
+					}
+				}
+			}
+		}
+	}
+
+	ShowInfo( "[NEED enchant test] static: %" PRIu64 " groups, %" PRIu64 " pools, %" PRIu64 " pools with total 0, %" PRIu64 " zero-weight options\n",
+		static_cast<uint64>( item_enchant_db.size() ), pools, zero_total, zero_weight );
+
+	// Representative pools with full detail (1,000,000 samples each)
+	pass &= need_enchant_test_pool( 1, 2, 0, true );  // rare options: 0.01% was ~1.04% before the fix
+	pass &= need_enchant_test_pool( 5, 1, 0, true );  // mixed 19.2% .. 0.08%
+	pass &= need_enchant_test_pool( 1, 1, 0, true );  // largest pool (55 options)
+
+	// Every pool (200,000 samples each)
+	for( const auto& group : item_enchant_db ){
+		for( const auto& slot : group.second->slots ){
+			for( const auto& pool : slot.second->normal.enchants ){
+				if( pool.second->enchants.size() < 2 ){
+					continue;
+				}
+
+				if( !need_enchant_test_pool( group.first, slot.first, pool.first, false ) ){
+					pools_failed++;
+				}
+			}
+		}
+	}
+
+	ShowInfo( "[NEED enchant test] all pools: %" PRIu64 " failed\n", pools_failed );
+	pass &= pools_failed == 0;
+
+	pass &= need_enchant_test_rolls();
+	pass &= need_enchant_test_gradebonus();
+	pass &= need_enchant_test_specialcard();
+
+	if( dump_path != nullptr ){
+		need_enchant_test_dump( dump_path );
+	}
+
+	ShowStatus( "[NEED enchant test] result: %s\n", pass ? "PASS" : "FAIL" );
+
+	return pass;
+}
+#endif
 
 const std::string ItemPackageDatabase::getDefaultLocation(){
 	return std::string( db_path ) + "/item_packages.yml";

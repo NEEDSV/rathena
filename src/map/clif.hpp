@@ -1518,6 +1518,9 @@ void clif_item_reform_open( map_session_data& sd, t_itemid item );
 
 // Item Enchant UI
 void clif_enchantwindow_open( map_session_data& sd, uint64 clientLuaIndex );
+#ifdef NEED_ENCHANT_TEST
+void clif_enchantwindow_result_probe( map_session_data& sd, int32 msgId, t_itemid itid );
+#endif
 
 // Enchanting Shadow / Shadow Scar Spirit
 void clif_enchantingshadow_spirit(const unit_data &ud);

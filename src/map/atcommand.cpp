@@ -1064,7 +1064,8 @@ ACMD_FUNC(storage)
 {
 	nullpo_retr(-1, sd);
 
-	if (sd->npc_id || sd->state.vending || sd->state.buyingstore || sd->state.trading || sd->state.storage_flag)
+	// NEED: also blocked while the item enchant window is open (it could move the selected item away)
+	if (sd->npc_id || sd->state.vending || sd->state.buyingstore || sd->state.trading || sd->state.storage_flag || sd->state.item_enchant_index)
 		return -1;
 
 	if (storage_storageopen(sd) == 1)
@@ -9178,6 +9179,90 @@ ACMD_FUNC(mute)
 	return 0;
 }
 
+#ifdef NEED_ENCHANT_TEST
+/*==========================================
+ * NEED test only: @enchanttest (item enchant engine probes, GM 99)
+ *------------------------------------------*/
+ACMD_FUNC(enchanttest)
+{
+	char sub[32] = {};
+	uint64 group_id = 0;
+	uint32 a = 0, b = 0, c = 0;
+
+	nullpo_retr(-1, sd);
+
+	if( pc_get_group_level( sd ) < 99 ){
+		return -1;
+	}
+
+	if( !message || !*message || sscanf( message, "%31s", sub ) < 1 ){
+		clif_displaymessage( fd, "Usage: @enchanttest msg <msgId> [itid] | slotchance <group> <slot> <chance> | resetchance <group> <chance> | gradebonus <group> <slot> <grade> <chance> | restore" );
+		return -1;
+	}
+
+	if( strcmpi( sub, "msg" ) == 0 ){
+		if( sscanf( message, "%31s %u %u", sub, &a, &b ) < 2 ){
+			clif_displaymessage( fd, "Usage: @enchanttest msg <msgId> [itid]" );
+			return -1;
+		}
+
+		clif_enchantwindow_result_probe( *sd, static_cast<int32>( a ), b );
+		sprintf( atcmd_output, "[enchanttest] sent ZC_RESPONSE_ENCHANT msgId=%u ITID=%u", a, b );
+		clif_displaymessage( fd, atcmd_output );
+		return 0;
+	}
+
+	if( strcmpi( sub, "restore" ) == 0 ){
+		item_enchant_db.reload();
+		clif_displaymessage( fd, "[enchanttest] item_enchant.yml reloaded" );
+		return 0;
+	}
+
+	if( sscanf( message, "%31s %" SCNu64 " %u %u %u", sub, &group_id, &a, &b, &c ) < 3 ){
+		clif_displaymessage( fd, "[enchanttest] missing arguments" );
+		return -1;
+	}
+
+	std::shared_ptr<s_item_enchant> group = item_enchant_db.find( group_id );
+
+	if( group == nullptr ){
+		clif_displaymessage( fd, "[enchanttest] unknown group" );
+		return -1;
+	}
+
+	if( strcmpi( sub, "resetchance" ) == 0 ){
+		group->reset.chance = a;
+		sprintf( atcmd_output, "[enchanttest] group %" PRIu64 " reset chance = %u (memory only, @enchanttest restore)", group_id, a );
+		clif_displaymessage( fd, atcmd_output );
+		return 0;
+	}
+
+	std::shared_ptr<s_item_enchant_slot> slot = util::umap_find( group->slots, static_cast<uint16>( a ) );
+
+	if( slot == nullptr ){
+		clif_displaymessage( fd, "[enchanttest] unknown slot" );
+		return -1;
+	}
+
+	if( strcmpi( sub, "slotchance" ) == 0 ){
+		slot->normal.chance = b;
+		sprintf( atcmd_output, "[enchanttest] group %" PRIu64 " slot %u chance = %u (memory only, @enchanttest restore)", group_id, a, b );
+		clif_displaymessage( fd, atcmd_output );
+		return 0;
+	}
+
+	if( strcmpi( sub, "gradebonus" ) == 0 ){
+		slot->normal.enchantgradeChanceIncrease[static_cast<uint16>( b )] = c;
+		sprintf( atcmd_output, "[enchanttest] group %" PRIu64 " slot %u grade %u bonus = %u (memory only, @enchanttest restore)", group_id, a, b, c );
+		clif_displaymessage( fd, atcmd_output );
+		return 0;
+	}
+
+	clif_displaymessage( fd, "[enchanttest] unknown subcommand" );
+	return -1;
+}
+#endif
+
 /*==========================================
  * @refresh (like @jumpto <<yourself>>)
  *------------------------------------------*/
@@ -13494,6 +13579,9 @@ void atcommand_basecommands(void) {
 		ACMD_DEF(changecharsex),
 		ACMD_DEF(mute),
 		ACMD_DEF(refresh),
+#ifdef NEED_ENCHANT_TEST
+		ACMD_DEF(enchanttest),
+#endif
 		ACMD_DEF(refreshall),
 		ACMD_DEF(identify),
 		ACMD_DEF(identifyall),

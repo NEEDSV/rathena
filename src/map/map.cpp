@@ -5471,6 +5471,23 @@ bool MapServer::initialize( int32 argc, char *argv[] ){
 #ifdef MAP_GENERATOR
 	mapgenerator_get_options(argc, argv);
 #endif
+#ifdef NEED_ENCHANT_TEST
+	// NEED test only: --need-enchant-selftest [dumpfile] runs the item enchant self test after the item databases are loaded, then exits
+	bool need_enchant_selftest = false;
+	const char* need_enchant_selftest_dump = nullptr;
+
+	for( int32 i = 1; i < argc; i++ ){
+		if( argv[i] != nullptr && strcmp( argv[i], "--need-enchant-selftest" ) == 0 ){
+			need_enchant_selftest = true;
+			argv[i] = nullptr;
+
+			if( i + 1 < argc && argv[i + 1] != nullptr && argv[i + 1][0] != '-' ){
+				need_enchant_selftest_dump = argv[++i];
+				argv[i] = nullptr;
+			}
+		}
+	}
+#endif
 	cli_get_options(argc,argv);
 
 	map_config_read(MAP_CONF_NAME);
@@ -5544,6 +5561,11 @@ bool MapServer::initialize( int32 argc, char *argv[] ){
 #endif
 	do_init_script();
 	do_init_itemdb();
+#ifdef NEED_ENCHANT_TEST
+	if( need_enchant_selftest ){
+		exit( itemdb_enchant_selftest( need_enchant_selftest_dump ) ? EXIT_SUCCESS : EXIT_FAILURE );
+	}
+#endif
 	do_init_costume_collection();
 	do_init_channel();
 	do_init_cashshop();
