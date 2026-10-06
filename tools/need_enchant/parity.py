@@ -21,7 +21,7 @@ import sys
 from collections import OrderedDict
 
 _COND = r'\(\s*(\.@\w+)\s*(<=|<|>=|>|==)\s*(-?\d+)\s*\)'
-_ASSIGN = r'(?:set\s+(\.@\w+)\s*,\s*(-?\d+)|(\.@\w+)\s*=\s*(-?\d+))\s*;'
+_ASSIGN = r'(?:set\s+(\.@\w+)\s*,\s*(-?\d+)|(\.@\w+)\s*=\s*(-?\d+)|(getitem)\s+(\d+)\s*,\s*(\d+))\s*;'
 _RE_IF = re.compile(r'^\s*(?:else\s+)?if\s*' + _COND + r'\s*' + _ASSIGN)
 _RE_ELSE = re.compile(r'^\s*else\s+' + _ASSIGN)
 
@@ -52,24 +52,44 @@ def extract_chain(lines, start):
         m = _RE_IF.match(s)
         if m and (var is None or m.group(1) == var):
             var = m.group(1)
-            avar, aval = (m.group(4), m.group(5)) if m.group(4) else (m.group(6), m.group(7))
+            avar, aval = _assigned(m, 4)
             if target is not None and avar != target:
                 break
             target = avar
             if chain and not s.startswith('else'):
                 break
-            chain.append((m.group(2), int(m.group(3)), int(aval)))
+            chain.append((m.group(2), int(m.group(3)), aval))
             i += 1
             continue
         m = _RE_ELSE.match(s)
         if m and chain:
-            avar, aval = (m.group(1), m.group(2)) if m.group(1) else (m.group(3), m.group(4))
+            avar, aval = _assigned(m, 1)
             if avar == target:
-                else_value = int(aval)
+                else_value = aval
         break
     if not chain:
         raise ValueError('no threshold chain at line %d' % start)
     return var, target, chain, else_value
+
+
+def _assigned(m, first):
+    """-> (assigned variable, value). `getitem id,n` counts as the pseudo variable 'getitem' with value 'id:n'."""
+    g = [m.group(first + i) for i in range(7)]
+    if g[0]:
+        return g[0], int(g[1])
+    if g[2]:
+        return g[2], int(g[3])
+    return 'getitem', '%s:%s' % (g[5], g[6])
+
+
+def inline_rand_lt(lines, line):
+    """`if (rand(a,b) < N)` on a line -> (hits, total) with exact counts."""
+    m = re.search(r'rand\s*\(\s*(-?\d+)\s*,\s*(-?\d+)\s*\)\s*(<=|<)\s*(-?\d+)', _strip(lines[line - 1]))
+    if not m:
+        raise ValueError('no inline rand comparison at line %d' % line)
+    lo, hi, op, n = int(m.group(1)), int(m.group(2)), m.group(3), int(m.group(4))
+    hits = sum(1 for r in range(lo, hi + 1) if (r < n if op == '<' else r <= n))
+    return hits, hi - lo + 1
 
 
 def _hit(op, n, r):
