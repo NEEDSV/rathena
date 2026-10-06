@@ -1434,6 +1434,11 @@ bool need_enchant_check_generated( const char* item_enchant_path, const char* ru
 
 	if( failed == 0 ){
 		for( const ryml::NodeRef& node : tree["Body"] ){
+			uint64 id = 0;
+
+			// Replace an already loaded group as a whole (no merge warnings on a foreign tree)
+			node["Id"] >> id;
+			item_enchant_db.erase( id );
 			item_enchant_db.parseBodyNode( node );
 		}
 	}
