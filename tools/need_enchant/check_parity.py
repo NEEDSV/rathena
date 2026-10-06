@@ -6,9 +6,15 @@
 Slot:  Parity: { Chain, Window: [lo, hi], Map: { value: RESULT | REROLL }, Empty: RESULT }
        -> option weights (enchant item -> count) and failure weights (result -> count) must equal
           the master's Options and Failures, integer for integer.
+       Parity: { WindowLine, ... } additionally requires `rand(lo, hi)` on that line to equal Window.
+Slot:  Parity: { Rand, Loop, Array, Size, Chance, Overflow: RESULT }   (Sarah-style counted pick loop)
+       -> array value counts are option weights, the loop running past Size is the Overflow failure.
 Reset: Parity: { SuccessLine, RewardChain, RewardWindow }
        -> SUCCESS : rest must equal the inline `rand(a,b) < N` split (cross-multiplied),
           the reward table must equal the getitem chain counts.
+Variant Source: { Callsub: [lines], Type, Bonus } (Mora): every listed `callsub L_Socket,type,bonus,allowed`
+       line must name a target with this type (or bonus type), the Order must follow `allowed`, and
+       no callsub line of the script with this type/allowed may be missing from the variant.
 Exit 1 on any mismatch; a variant without Parity is reported as NOT CHECKED.
 """
 import argparse
@@ -27,7 +33,22 @@ REPO = generate.REPO
 
 
 def slot_expected(script, spec, items_by_id):
+    if 'Loop' in spec:
+        lines = parity.read_lines(os.path.join(REPO, script))
+        dist = parity.loop_table(lines, int(spec['Rand']), int(spec['Loop']), int(spec['Array']),
+                                 int(spec['Size']), int(spec['Chance']))
+        opts, fails = Counter(), Counter()
+        for value, n in dist.items():
+            if value == 'OVERFLOW':
+                fails[spec['Overflow']] += n
+            else:
+                opts[items_by_id[value].aegis] += n
+        return opts, fails
     lo, hi = spec['Window']
+    if 'WindowLine' in spec:
+        got = parity.rand_window(parity.read_lines(os.path.join(REPO, script)), int(spec['WindowLine']))
+        if list(got) != [int(lo), int(hi)]:
+            raise ValueError('WindowLine %s has rand%s, master Window %s' % (spec['WindowLine'], got, spec['Window']))
     dist = parity.table(os.path.join(REPO, script), int(spec['Chain']), int(lo), int(hi))
     vmap = {int(k): v for k, v in (spec.get('Map') or {}).items()}
     opts, fails = Counter(), Counter()
@@ -44,6 +65,41 @@ def slot_expected(script, spec, items_by_id):
     return opts, fails
 
 
+def callsub_check(v, items_by_id):
+    """Mora targets: -> (ok, detail)."""
+    import import_legacy
+    src = v['Source']
+    lines = parity.read_lines(os.path.join(REPO, src['Script']))
+    subs = {ln: (iid, t, b, a) for ln, iid, t, b, a in import_legacy.mora_callsubs(lines)}
+    etype, bonus = int(src['Type']), bool(src['Bonus'])
+    listed = [int(x) for x in src['Callsub']]
+    problems = []
+    allowed = set()
+    for ln in listed:
+        if ln not in subs:
+            problems.append('line %d is not a callsub' % ln)
+            continue
+        iid, t, b, a = subs[ln]
+        if (b if bonus else t) != etype:
+            problems.append('line %d has type %d/%d' % (ln, t, b))
+        allowed.add(a)
+    if len(allowed) == 1:
+        a = allowed.pop()
+        if [int(x) for x in v['Order']] != import_legacy.mora_order(a):
+            problems.append('Order %s does not follow allowed %d' % (v['Order'], a))
+        missing = [ln for ln, (iid, t, b, aa) in subs.items() if (b if bonus else t) == etype and aa == a and ln not in listed]
+        if missing:
+            problems.append('callsub lines missing from the variant: %s' % missing)
+    else:
+        problems.append('mixed allowed slots %s' % sorted(allowed))
+    want = sorted(items_by_id[subs[ln][0]].aegis for ln in listed if ln in subs)
+    if sorted(v['TargetItems']) != want:
+        problems.append('TargetItems %s != script %s' % (sorted(v['TargetItems']), want))
+    if int(v.get('MinimumRefine', 0)) != (9 if bonus else 0):
+        problems.append('MinimumRefine %s (script: %d)' % (v.get('MinimumRefine', 0), 9 if bonus else 0))
+    return not problems, '; '.join(problems) or '%d targets, order %s' % (len(listed), v['Order'])
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument('--master', default=os.path.join(REPO, 'db', 'need', 'enchant_master.yml'))
@@ -54,6 +110,11 @@ def main(argv=None):
     for fam in doc.get('Body') or []:
         for v in fam.get('Variants') or []:
             script = (v.get('Source') or {}).get('Script')
+            if (v.get('Source') or {}).get('Callsub'):
+                ok, detail = callsub_check(v, items_by_id)
+                checked += 1
+                failed += not ok
+                print('%-48s %s  %s' % (v['Key'] + ' targets', 'PASS' if ok else 'FAIL', detail))
             for s in v.get('Slots') or []:
                 spec = s.get('Parity')
                 where = '%s slot %s' % (v['Key'], s['Slot'])
@@ -73,7 +134,7 @@ def main(argv=None):
                 failed += not ok
                 total = sum(opts.values()) + sum(fails.values())
                 print('%-48s %s  script %s:%s window %s  options %d/%d  failures %s' % (
-                    where, 'PASS' if ok else 'FAIL', script, spec['Chain'], spec['Window'],
+                    where, 'PASS' if ok else 'FAIL', script, spec.get('Chain', spec.get('Loop')), spec.get('Window', 'loop'),
                     sum(opts.values()), total, dict(fails) or '-'))
                 if not ok:
                     print('    script options-master: %s' % dict(opts - m_opts))

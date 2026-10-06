@@ -92,6 +92,70 @@ def inline_rand_lt(lines, line):
     return hits, hi - lo + 1
 
 
+def rand_window(lines, line):
+    """`rand(lo, hi)` on a line -> (lo, hi); `rand(n)` -> (0, n - 1)."""
+    s = _strip(lines[line - 1])
+    m = re.search(r'rand\s*\(\s*(-?\d+)\s*,\s*(-?\d+)\s*\)', s)
+    if m:
+        return int(m.group(1)), int(m.group(2))
+    m = re.search(r'rand\s*\(\s*(\d+)\s*\)', s)
+    if m:
+        return 0, int(m.group(1)) - 1
+    raise ValueError('no rand() at line %d' % line)
+
+
+_RE_LOOP = re.compile(r'^for\s*\(\s*(\.@\w+)\s*=\s*0\s*;\s*\1\s*<\s*(\.@\w+)\s*&&\s*\(\s*(\.@\w+)\s*\*\s*\(\s*\1\s*\+\s*1\s*\)\s*\)'
+                      r'\s*<\s*(\.@\w+)\s*;\s*\1\s*\+\+\s*\)\s*;$')
+_RE_INT_ASSIGN = re.compile(r'^(?:set\s+(\.@\w+)\s*,\s*(-?\d+)|(\.@\w+)\s*=\s*(-?\d+))\s*;$')
+
+
+def _int_assign(lines, line, var):
+    m = _RE_INT_ASSIGN.match(_strip(lines[line - 1]).strip())
+    if not m or (m.group(1) or m.group(3)) != var:
+        raise ValueError('line %d does not assign %s an integer' % (line, var))
+    return int(m.group(2) if m.group(1) else m.group(4))
+
+
+def setarray_values(lines, line):
+    """`setarray .@x[0], a, b, ...;` possibly over several lines -> (variable, [values])."""
+    text, i = '', line - 1
+    while i < len(lines):
+        text += ' ' + _strip(lines[i])
+        if ';' in text:
+            break
+        i += 1
+    m = re.match(r'^\s*setarray\s+(\.@\w+)\[0\]\s*,(.*?);', text)
+    if not m:
+        raise ValueError('no setarray at line %d' % line)
+    return m.group(1), [int(x) for x in m.group(2).split(',')]
+
+
+def loop_table(lines, rand_line, loop_line, array_line, size_line, chance_line):
+    """Sarah-style pick:  .@r = rand(N);  for (.@i = 0; .@i < .@size && (.@chance * (.@i+1)) < .@r; .@i++);
+    -> OrderedDict array value -> count, plus 'OVERFLOW' for .@i == .@size (the script's failure branch)."""
+    m = _RE_LOOP.match(_strip(lines[loop_line - 1]).strip())
+    if not m:
+        raise ValueError('line %d is not the counted pick loop' % loop_line)
+    _idx, size_var, chance_var, r_var = m.groups()
+    rm = re.match(r'^(\.@\w+)\s*=\s*rand\s*\(', _strip(lines[rand_line - 1]).strip()) or         re.match(r'^set\s+(\.@\w+)\s*,\s*rand\s*\(', _strip(lines[rand_line - 1]).strip())
+    if not rm or rm.group(1) != r_var:
+        raise ValueError('line %d does not assign %s = rand(...)' % (rand_line, r_var))
+    lo, hi = rand_window(lines, rand_line)
+    size = _int_assign(lines, size_line, size_var)
+    chance = _int_assign(lines, chance_line, chance_var)
+    _arr, values = setarray_values(lines, array_line)
+    if size > len(values):
+        raise ValueError('size %d exceeds the %d array values at line %d' % (size, len(values), array_line))
+    out = OrderedDict()
+    for r in range(lo, hi + 1):
+        i = 0
+        while i < size and chance * (i + 1) < r:
+            i += 1
+        value = 'OVERFLOW' if i == size else values[i]
+        out[value] = out.get(value, 0) + 1
+    return out
+
+
 def _hit(op, n, r):
     return {'<': r < n, '<=': r <= n, '>': r > n, '>=': r >= n, '==': r == n}[op]
 

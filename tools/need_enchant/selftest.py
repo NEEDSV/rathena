@@ -44,6 +44,17 @@ def main():
     check('parity: Upg physical rand(1,1300) fail 59, Expert_Archer4 200 (two ranges merged)',
           d.get(0) == 59 and d.get(4835) == 200 and d.get(4836) == 50)
 
+    sarah = parity.read_lines(os.path.join(REPO, 'npc/NEED/instances/SarahAndFenrir.txt'))
+    left = parity.loop_table(sarah, 537, 538, 457, 420, 421)
+    right = parity.loop_table(sarah, 537, 538, 457, 426, 427)
+    check('parity: Sarah left loop rand(100) = 21/20/20/20 + overflow 19',
+          list(left.values()) == [21, 20, 20, 20, 19] and left.get('OVERFLOW') == 19)
+    check('parity: Sarah right loop = 11 + 10x5 + overflow 39',
+          list(right.values()) == [11, 10, 10, 10, 10, 10, 39] and right.get('OVERFLOW') == 39)
+    mora = parity.read_lines(os.path.join(REPO, 'npc/re/merchants/enchan_mora.txt'))
+    check('parity: Mora rand window lines 898/900 = (1,525)/(451,750)',
+          parity.rand_window(mora, 898) == (1, 525) and parity.rand_window(mora, 900) == (451, 750))
+
     # 2. numbers
     for weights in ([1, 1, 1], [10001] * 6 + [2000] * 6 + [400] * 6, [180, 25, 5], [1, 99999], [3, 1]):
         n = generate.normalize(weights)

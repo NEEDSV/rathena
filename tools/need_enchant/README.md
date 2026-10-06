@@ -7,6 +7,9 @@ data from it, and refuses to write anything when a gate fails.
 |---|---|
 | `generate.py` | master + ClientId registry -> server yml, KR/EN EnchantList, ItemDBNameTbl, `variants.tsv`, `report.md` |
 | `parity.py` | exact outcome table of a legacy NPC `rand()` threshold chain (the parity source of truth) |
+| `check_parity.py` | re-derives every master `Parity` block from the scripts: threshold chains (with `WindowLine`), Sarah-style counted pick loops (`Loop`), reset splits/rewards, Mora target lists (`Source.Callsub`) |
+| `import_legacy.py` | one-time importer of the LIVE NPCs into the master (Charleston, EP16.1, Mora, Sarah) |
+| `install.py` | installs generator output (`--server` refused while servers run; `--client-kr/-en` loose files) |
 | `clientcheck.py` | replays the client's `EnchantList_f` load in real Lua 5.1 (lupa.lua51) |
 | `nelib.py` | GRF reader, Lua 5.1 chunk undump/redump, EnchantList decompiler, ItemDBNameTbl helpers |
 | `selftest.py` | tooling self test (parity numbers, normalisation, registry, generator gates) |
