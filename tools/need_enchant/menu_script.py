@@ -4,7 +4,7 @@
     python tools/need_enchant/menu_script.py [--out npc/NEED/need_enchant_v2.txt]
 
 The script (CP949, CRLF like every npc/NEED file) holds:
-  - NEED_EnchantV2_Data   data NPC: family list, per group label/condition/cost/quest, item -> groups
+  - NEED_EnchantV2_Data   data NPC: family list, per group label/condition/cost/access, item -> groups
   - F_NeedEnchantV2       menu function: "my gear" list (inventory scan) and the full catalogue;
                           picking a group closes the dialog and opens the 2025 Enchant UI (item_enchant).
                           callfunc "F_NeedEnchantV2", "<FAMILY>" shows one family only (legacy NPC hook).
@@ -43,6 +43,19 @@ def slot_costs(v):
 
 
 FUNCTION = r'''
+//= The unified NPC (operator decision 2026-10-07: lasa_in01 enchant hall; 176,57 = free 3x3 walkable cell,
+//= no NPC within 2 cells, found from the map cache)
+lasa_in01,176,57,4	script	통합 인챈트#needv2	4_M_SAGE_C,{
+	callfunc "F_NeedEnchantV2";
+	end;
+
+OnInit:
+	setnpcnameen "Unified Enchant";
+	waitingroom "통합 인챈트", 0;
+	setwaitingroomen "Unified Enchant";
+	end;
+}
+
 //= F_NeedEnchantV2 ( { "<FAMILY>" } )
 //=   no argument : my gear (inventory) or the full catalogue
 //=   "<FAMILY>"  : only the groups of that family (for an existing NPC's menu)
@@ -167,14 +180,18 @@ S_Cost:
 	}
 	return (.@cs$ == "" ? needtr("무료", "free") : .@cs$);
 
-// ---- quest condition, then the 2025 Enchant UI
+// ---- the original NPC's access condition, then the 2025 Enchant UI
+//      quest:<id>:<lowest state> or var:<character variable> (must be non-zero)
 S_Open:
 	.@og = getarg(0);
-	.@oq = getvariableofnpc(.gq[.@og], "NEED_EnchantV2_Data");
-	if (.@oq && isbegin_quest(.@oq) != 2) {
-		mes needtr("[통합 인챈트]", "[Unified Enchant]");
-		mes needtr("이 인챈트는 선행 퀘스트를 완료해야 이용할 수 있습니다.", "This enchant needs its prerequisite quest to be completed first.");
-		close;
+	.@oa$ = getvariableofnpc(.ga$[.@og], "NEED_EnchantV2_Data");
+	if (.@oa$ != "") {
+		explode(.@ap$, .@oa$, ":");
+		if ((.@ap$[0] == "quest" && isbegin_quest(atoi(.@ap$[1])) < atoi(.@ap$[2])) || (.@ap$[0] == "var" && getd(.@ap$[1]) == 0)) {
+			mes needtr("[통합 인챈트]", "[Unified Enchant]");
+			mes needtr("이 인챈트는 원래 NPC의 선행 조건(퀘스트·진행)을 먼저 충족해야 이용할 수 있습니다.", "This enchant needs the prerequisite of its original NPC (quest or progress) first.");
+			close;
+		}
 	}
 	close2;
 	item_enchant .@og;
@@ -245,7 +262,9 @@ def build(master, registry):
         else:
             zeny = costs[0][0]
             mats = ';'.join('%d/%d' % (items[m].id, a) for m, a in costs[0][1])
-        quest = int((v['source'] or {}).get('Quest', 0) or 0)
+        access = str((v['source'] or {}).get('Access', '') or '')
+        if access and not ((access.startswith('quest:') and len(access.split(':')) == 3) or access.startswith('var:')):
+            raise generate.GenError('%s: Access must be quest:<id>:<state> or var:<name>' % v['key'])
         L += ['\t.gfk$[%d] = %s;' % (g, q(v['family'])),
               '\t.gkr$[%d] = %s;' % (g, q(d.get('KR', v['key']))),
               '\t.gen$[%d] = %s;' % (g, q(d.get('EN', v['key']))),
@@ -253,8 +272,8 @@ def build(master, registry):
               '\t.grmax[%d] = %d;' % (g, v['max_refine']),
               '\t.gz[%d] = %d;' % (g, zeny),
               '\t.gm$[%d] = "%s";' % (g, mats)]
-        if quest:
-            L.append('\t.gq[%d] = %d;' % (g, quest))
+        if access:
+            L.append('\t.ga$[%d] = "%s";' % (g, access))
         for t in v['targets']:
             item_groups.setdefault(items[t].id, []).append(g)
     for iid, gs in item_groups.items():

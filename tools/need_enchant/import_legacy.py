@@ -115,7 +115,7 @@ def ep161(items_by_id):
          '    Variants:',
          '      - Key: EP161_ROBE',
          '        Display: { KR: "아첨/독설의 로브", EN: "Robe of Flattery / Vituperation" }',
-         '        Source: { Script: %s, Npc: "Dylan#pa0829" }' % Q161,
+         '        Source: { Script: %s, Npc: "Dylan#pa0829", Access: "quest:12369:2" }' % Q161,
          '        TargetItems: [ Robe_Of_Flattery, Robe_Of_Vituperation ]',
          '        Order: [ 3, 2 ]',
          '        Cost: { Materials: [ { Item: TokenOfHonor, Amount: 20 } ] }',
@@ -128,7 +128,7 @@ def ep161(items_by_id):
         L += chain_slot(items_by_id, Q161, 16687, 1, 961, card, {0: 'FAIL_KEEP'}, None)
     L += ['      - Key: EP161_BADGE',
           '        Display: { KR: "프론테라 배지", EN: "Prontera Badge" }',
-          '        Source: { Script: %s, Npc: "Dylan#pa0829" }' % Q161,
+          '        Source: { Script: %s, Npc: "Dylan#pa0829", Access: "quest:12369:2" }' % Q161,
           '        TargetItems: [ BadgeOfProntera_ ]',
           '        Order: [ 3, 2 ]',
           '        Cost: { Materials: [ { Item: TokenOfHonor, Amount: 5 } ] }',
@@ -267,7 +267,7 @@ def sarah(items_by_id):
         for fam, array_line, kr, en in SARAH_FAMILIES:
             L += ['      - Key: SARAH_%s_%s' % (side, fam),
                   '        Display: { KR: "%s - %s", EN: "%s - %s" }' % (side_kr, kr, side_en, en),
-                  '        Source: { Script: %s, Npc: "수석 조교#a1" }' % SARAH,
+                  '        Source: { Script: %s, Npc: "수석 조교#a1", Access: "var:sarah_fenrir" }' % SARAH,
                   '        TargetItems: [ %s ]' % item,
                   # L436-450: card[3] first, then card[2]; refused once card[2] is set
                   '        Order: [ 3, 2 ]',
@@ -648,7 +648,7 @@ def excellion(items_by_id):
                                      ('WING', '엑셀리온 윙', 'Excelion Wing', 'Excelion_Wing', 3)):
         L += ['      - Key: EXCELION_%s' % key,
               '        Display: { KR: "%s", EN: "%s" }' % (kr, en),
-              '        Source: { Script: %s, Npc: "MARS_01#pa0829", TargetLines: [ 1166, 1167 ], Quest: 12368 }' % VERUS,
+              '        Source: { Script: %s, Npc: "MARS_01#pa0829", TargetLines: [ 1166, 1167 ], Access: "quest:12368:2" }' % VERUS,
               '        TargetItems: [ %s ]' % target,
               '        Order: [ 3, 2, 1 ]',                         # L1191-1202
               '        Caution:',
