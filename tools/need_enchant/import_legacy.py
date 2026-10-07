@@ -849,6 +849,9 @@ def hidden_armor(items_by_id):
               '        TargetItems: [ %s ]' % names(items_by_id, targets),
               '        Order: [ 3 ]',
               '        Cost: { Zeny: 400000 }',                  # L101 (the script also takes the armor and hands out a new one)
+              # operator decision 2026-10-07: the script re-enchanted an enchanted armor (overwrite); V2 only fills
+              # empty slots, so a free 100% reset replaces it (not in the script)
+              '        Reset: { Chance: 100000 }',
               '        Slots:',
               '%s- Slot: 3' % pad,
               # operator decision 2026-10-06: keep the current behaviour - a success hands back refine 0 / no cards (L147)
