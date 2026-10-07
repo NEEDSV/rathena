@@ -25,6 +25,30 @@ import generate   # noqa: E402
 REPO = generate.REPO
 OUT = os.path.join(REPO, 'npc', 'NEED', 'need_enchant_v2.txt')
 
+# Menu order of the families: newest episode first (operator request 2026-10-07). Episodes follow the NEED
+# server roadmap (wiki roadmap_main); inside one episode the roadmap's own listing order. Families older than
+# the roadmap (before 14.2) follow the kRO release order, newest first. Every master family must be listed.
+FAMILY_ORDER = [
+    ('EP161_HONOR', '16.1'),           # 영웅을 위한 연회
+    ('OLD_HELM', '16.1'),              # 전사자의 무덤 대개편 (2015 overhaul)
+    ('EXCELION', '15.2'),              # 베루스 / 중앙 실험실
+    ('INFINITE_SPACE', '15.2'),        # 무한의 공간
+    ('SARAH_EARRING', '15.1'),         # 펜릴과 사라
+    ('TIME_BOOTS', '14.3-2'),          # 상급 옛 글래스트 헤임
+    ('HERO_RING', '14.3-1'),           # 비오스의 섬 / 모르스의 동굴
+    ('CHARLESTON', '14.3-1'),          # 위기의 찰스턴
+    ('HORROR_TOY_FACTORY', '14.2'),    # 호러 장난감 공장
+    ('MORA_ARTIFACT', 'pre-14.2'),     # EP14.1 비프로스트
+    ('BIO4_SORCERER', 'pre-14.2'),     # 생체 연구소 4층
+    ('TENE', 'pre-14.2'),              # 카게로우/오보로
+    ('MALANGDO_WEAPON', 'pre-14.2'),   # 말랑도
+    ('RWC_2012', 'pre-14.2'),
+    ('BROSNAN', 'pre-14.2'),
+    ('FALLEN_ANGEL_WING', 'pre-14.2'),
+    ('UPG_WEAPON', 'pre-14.2'),        # 2011-05
+    ('HIDDEN_ARMOR', 'pre-14.2'),
+]
+
 
 def q(s):
     """script string literal"""
@@ -232,6 +256,12 @@ def build(master, registry):
         if v['key'] not in ids:
             raise generate.GenError('%s has no ClientId (run generate.py --commit-registry first)' % v['key'])
         v['id'] = ids[v['key']]
+    rank = {f: n for n, (f, _ep) in enumerate(FAMILY_ORDER)}
+    fams = set(v['family'] for v in variants)
+    if fams != set(rank) or len(rank) != len(FAMILY_ORDER):
+        raise generate.GenError('FAMILY_ORDER does not match the master families: missing %s, unknown %s'
+                                % (sorted(fams - set(rank)), sorted(set(rank) - fams)))
+    variants = sorted(variants, key=lambda v: rank[v['family']])   # stable: master order inside a family
     fam_order = OrderedDict()
     for v in variants:
         fam_order.setdefault(v['family'], {'display': v['family_display'], 'groups': []})['groups'].append(v['id'])
