@@ -109,3 +109,10 @@ Installing the output into `db/` and packing the client files into the GRFs are 
   >= 10001 are refused, so generated output can never be fed back in.
 - After an official client sync that changes data.grf's EnchantList, regenerate: the KR override in need_data.grf
   would otherwise hide the new official groups.
+
+## Unified menu (Phase 3)
+
+`python tools/need_enchant/menu_script.py` regenerates `npc/NEED/need_enchant_v2.txt` (CP949, CRLF) from the master
+and the registry: data NPC `NEED_EnchantV2_Data` + function `F_NeedEnchantV2` ("my gear" inventory list and the full
+catalogue; picking a group opens the 2025 Enchant UI; `callfunc "F_NeedEnchantV2", "<FAMILY>"` limits it to one family).
+Regenerate after every master / registry change. The file is not in any conf until the Phase 3 LIVE gate.
