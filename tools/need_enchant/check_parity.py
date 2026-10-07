@@ -77,11 +77,24 @@ def slot_expected(script, spec, items_by_id):
         for v, n in dist.items():
             opts[repl[v] if v in repl else items_by_id[v].aegis] += n
         return opts, Counter()
+    if 'Switch' in spec:
+        lines = parity.read_lines(os.path.join(REPO, script))
+        lo, hi = spec['Window']
+        window_var_check(lines, spec)
+        dist = parity.switch_table(lines, int(spec['Switch']), int(lo), int(hi))
+        opts, fails = Counter(), Counter()
+        for v, n in dist.items():
+            if v == 'DEFAULT':
+                fails['DESTROY'] += n
+            else:
+                opts[items_by_id[v].aegis] += n
+        return opts, fails
     if 'Strings' in spec:
         lines = parity.read_lines(os.path.join(REPO, script))
         dist = parity.explode_pool(lines, int(spec['Strings']), int(spec['Index']), int(spec['Field']), int(spec['Pick']))
         return Counter({items_by_id[v].aegis: n for v, n in dist.items()}), Counter()
     lo, hi = spec['Window']
+    window_var_check(parity.read_lines(os.path.join(REPO, script)), spec)
     if 'WindowLine' in spec:
         got = parity.rand_window(parity.read_lines(os.path.join(REPO, script)), int(spec['WindowLine']))
         if list(got) != [int(lo), int(hi)]:
@@ -135,6 +148,18 @@ def callsub_check(v, items_by_id):
     if int(v.get('MinimumRefine', 0)) != (9 if bonus else 0):
         problems.append('MinimumRefine %s (script: %d)' % (v.get('MinimumRefine', 0), 9 if bonus else 0))
     return not problems, '; '.join(problems) or '%d targets, order %s' % (len(listed), v['Order'])
+
+
+def window_var_check(lines, spec):
+    """WindowVarLine: the rand upper bound is an integer variable (`.@j = 50;` / `set .@j,50;`) that must equal Window[1]."""
+    if 'WindowVarLine' not in spec:
+        return
+    m = re.match(r'^(?:set\s+(\.@\w+)\s*,|(\.@\w+)\s*=)', parity._strip(lines[int(spec['WindowVarLine']) - 1]).strip())
+    if not m:
+        raise ValueError('WindowVarLine %s assigns no variable' % spec['WindowVarLine'])
+    got = parity._int_assign(lines, int(spec['WindowVarLine']), m.group(1) or m.group(2))
+    if int(spec['Window'][0]) != 1 or got != int(spec['Window'][1]):
+        raise ValueError('WindowVarLine %s gives 1..%d, master Window %s' % (spec['WindowVarLine'], got, spec['Window']))
 
 
 def chance_fail(lines, spec):
@@ -199,6 +224,31 @@ def perfect_check(script, s, spec, items_by_id):
     return not problems, '; '.join(problems) or '%d perfect, %d upgrades' % (len(want), len(want_up))
 
 
+def upgrade_parity_check(script, s, items_by_id):
+    """UpgradeParity: { Bases, Costs, Rates, RollLine } - level L of each base upgrades to L+1 for Costs[L] grudge,
+    success = Rates[L] of rand(100) (`rate > rand(100)`), failure keeps Lv1 or drops one level."""
+    spec = s['UpgradeParity']
+    lines = parity.read_lines(os.path.join(REPO, script))
+    if not re.search(r'\.@\w+\s*>\s*rand\s*\(\s*100\s*\)', parity._strip(lines[int(spec['RollLine']) - 1])):
+        return False, 'RollLine %s is not `.@rate > rand(100)`' % spec['RollLine']
+    req = parity.setarray_values(lines, int(spec['Costs']))[1]
+    rate = parity.setarray_values(lines, int(spec['Rates']))[1]
+    aeg = lambda i: items_by_id[i].aegis  # noqa: E731
+    want = {}
+    for base in spec['Bases']:
+        for lv in range(1, len(rate) + 1):
+            ok = sum(1 for r in range(100) if rate[lv - 1] > r)
+            fail = {'Result': 'FAIL_KEEP', 'Weight': 100 - ok} if lv == 1 else {'Result': 'DOWNGRADE', 'To': aeg(base + lv - 2), 'Weight': 100 - ok}
+            want[aeg(base + lv - 1)] = {'To': aeg(base + lv), 'Cost': {'Materials': [{'Item': aeg(23016), 'Amount': req[lv - 1]}]},
+                                        'SuccessWeight': ok, 'Failures': [fail]}
+    got = {}
+    for u in s.get('Upgrades') or []:
+        got[u['Enchant']] = {'To': u['To'], 'Cost': u.get('Cost') or {}, 'SuccessWeight': int(u.get('SuccessWeight', 0)),
+                             'Failures': [dict(f, Weight=int(f['Weight'])) for f in u.get('Failures') or []]}
+    ok = got == want
+    return ok, '%d upgrades%s' % (len(want), '' if ok else ' DIFFER (master %d)' % len(got))
+
+
 def callsub_args_check(v, items_by_id):
     import import_legacy
     src = v['Source']
@@ -257,6 +307,11 @@ def main(argv=None):
                 print('%-48s %s  %s' % (v['Key'] + ' targets', 'PASS' if ok else 'FAIL', detail))
             for s in v.get('Slots') or []:
                 spec = s.get('Parity')
+                if s.get('UpgradeParity') and script:
+                    ok, detail = upgrade_parity_check(script, s, items_by_id)
+                    checked += 1
+                    failed += not ok
+                    print('%-48s %s  %s' % ('%s slot %s upgrades' % (v['Key'], s['Slot']), 'PASS' if ok else 'FAIL', detail))
                 if spec and ('Blueprints' in spec or 'Ladder' in spec):
                     ok, detail = perfect_check(script, s, spec, items_by_id)
                     checked += 1

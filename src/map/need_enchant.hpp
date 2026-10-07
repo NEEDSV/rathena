@@ -21,6 +21,8 @@
 //          - Slot               card[] index
 //            Enchants:          list of enchant item names
 //        MaxSame:               per-enchant cap on the item (capped options leave the roll)
+//        SuccessReset           a success resets the item: refine 0, every other card slot (real cards
+//                               included) emptied, only the new enchant stays (enchan_arm.txt) (Default: false)
 //          - Enchant            enchant item name
 //            Max                highest count
 //        Failures:              rolled together with the option weights of item_enchant.yml
@@ -38,7 +40,8 @@
 //            Failures:          as above, plus DOWNGRADE (To: item name)
 //    Reset:
 //      RequireAllFilled         every Order slot must hold an enchant (Default: false)
-//      Scope: - Slot            only these enchant slots are cleared (Default: every enchant slot)
+//      Scope: - Slot            only these enchant slots are cleared, and one of them must hold an enchant
+//                               (Default: every enchant slot)
 //      Outcomes:                SUCCESS | FAIL_KEEP | DESTROY | REWARD | DESTROY_WITH_REWARD with Weight
 //                               (the group's item_enchant Reset.Chance must stay 100000)
 
@@ -117,6 +120,7 @@ struct s_need_enchant_slot {
 	std::vector<std::shared_ptr<s_need_enchant_outcome>> failures;          ///< rolled together with the option weights
 	std::unordered_map<t_itemid, uint16> max_same;                         ///< enchant -> highest count allowed on the item
 	std::unordered_map<t_itemid, std::shared_ptr<s_need_enchant_upgrade>> upgrades;
+	bool success_reset;                                                     ///< a successful enchant resets the item: refine 0, every other card slot emptied
 };
 
 struct s_need_enchant {
@@ -168,6 +172,8 @@ uint16 need_enchant_count( const struct item& it, const item_data& data, t_itemi
 // Session side (packets, inventory)
 bool need_enchant_can_receive_rewards( map_session_data& sd, const s_item_enchant& group, uint16 slot, e_need_enchant_operation operation );
 void need_enchant_apply_failure( map_session_data& sd, uint16 index, const s_need_enchant_outcome* outcome, uint16 slot );
+bool need_enchant_success_resets( uint64 group, uint16 slot );
+void need_enchant_apply_success_reset( map_session_data& sd, uint16 index, uint16 slot, t_itemid enchant );
 std::shared_ptr<s_need_enchant_upgrade> need_enchant_find_upgrade( uint64 group, uint16 slot, t_itemid enchant );
 std::shared_ptr<s_need_enchant> need_enchant_find( uint64 group );
 

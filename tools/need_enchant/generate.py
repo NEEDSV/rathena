@@ -202,7 +202,7 @@ def load_master(path, items):
                     'cost': cost(s.get('Cost', default_cost), items, sw), 'options': opts, 'failures': failures,
                     'chance': chance, 'perfect': perfect, 'upgrades': upgrades,
                     'min_refine': int(s.get('MinimumRefine', 0)), 'require': s.get('Require') or [],
-                    'max_same': s.get('MaxSame') or []}
+                    'max_same': s.get('MaxSame') or [], 'success_reset': bool(s.get('SuccessReset', False))}
             missing = [x for x in order if x not in slots]
             if missing:
                 raise GenError('%s: Order slots without definition: %s' % (where, missing))
@@ -337,6 +337,8 @@ def caution_text(v, items, lang):
             cond = ('[%d제련 이상] ' if kr else '[Refine +%d or higher] ') % v['min_refine']
         elif v['max_refine']:
             cond = ('[%d제련 이하] ' if kr else '[Refine +%d or lower] ') % v['max_refine']
+        if any(sl['success_reset'] for sl in v['slots'].values()):
+            cond = ('[성공 시 제련·카드 초기화] ' if kr else '[Success resets refine/cards] ') + cond
         rates, fails = [], []
         for n, sl in enumerate(v['order'], 1):
             s = v['slots'][sl]
@@ -365,6 +367,9 @@ def caution_text(v, items, lang):
             lines.append('초기화 불가' if kr else 'Reset: not available')
         else:
             head = ('초기화(전 슬롯 인챈트 시): ' if kr else 'Reset (all slots filled): ') if r['require_all'] else ('초기화: ' if kr else 'Reset: ')
+            if r['scope'] and set(r['scope']) != set(v['order']):
+                pos = [v['order'].index(x) + 1 + v['ordinal_offset'] for x in r['scope'] if x in v['order']]
+                head = ('초기화(%s만): ' % '·'.join(ORD_KR[n] for n in pos)) if kr else ('Reset (%s only): ' % ', '.join(ORD_EN[n] for n in pos))
             if r['outcomes']:
                 total = sum(int(o['Weight']) for o in r['outcomes'])
                 labels = RESULT_KR if kr else RESULT_EN
@@ -484,6 +489,8 @@ def server_rules(variants):
             sL = []
             if s['min_refine']:
                 sL.append('        MinimumRefine: %d' % s['min_refine'])
+            if s['success_reset']:
+                sL.append('        SuccessReset: true')
             if s['require']:
                 sL.append('        Require:')
                 for rq in s['require']:

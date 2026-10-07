@@ -385,6 +385,12 @@ uint64 NeedEnchantRulesDatabase::parseBodyNode( const ryml::NodeRef& node ){
 
 			slot->minimum_refine = 0;
 
+			slot->success_reset = false;
+
+			if( this->nodeExists( slotNode, "SuccessReset" ) && !this->asBool( slotNode, "SuccessReset", slot->success_reset ) ){
+				return 0;
+			}
+
 			if( this->nodeExists( slotNode, "MinimumRefine" ) && !this->asUInt16( slotNode, "MinimumRefine", slot->minimum_refine ) ){
 				return 0;
 			}
@@ -687,6 +693,22 @@ bool need_enchant_check( const struct item& it, const item_data& data, const s_i
 				if( order_slot >= data.slots && it.card[order_slot] == 0 ){
 					return false;
 				}
+			}
+		}
+
+		// A scoped reset must have something to clear (Tene slot-3 reset, Bio4 per-slot reset refuse an empty slot)
+		if( !rules->reset.scope.empty() ){
+			bool any = false;
+
+			for( uint16 scope_slot : rules->reset.scope ){
+				if( scope_slot >= data.slots && scope_slot < MAX_SLOTS && it.card[scope_slot] != 0 ){
+					any = true;
+					break;
+				}
+			}
+
+			if( !any ){
+				return false;
 			}
 		}
 
@@ -1043,6 +1065,46 @@ void need_enchant_apply_failure( map_session_data& sd, uint16 index, const s_nee
 	}
 }
 
+/**
+ * NEED: Does a successful normal enchant of this slot reset the item (enchan_arm.txt)?
+ */
+bool need_enchant_success_resets( uint64 group, uint16 slot ){
+	std::shared_ptr<s_need_enchant> rules = need_enchant_rules_db.find( group );
+
+	if( rules == nullptr ){
+		return false;
+	}
+
+	std::shared_ptr<s_need_enchant_slot> slot_rules = util::umap_find( rules->slots, slot );
+
+	return slot_rules != nullptr && slot_rules->success_reset;
+}
+
+/**
+ * NEED: Successful enchant with SuccessReset: the item keeps only the new enchant (refine 0, every other card slot,
+ * real cards included, emptied), as enchan_arm.txt hands out a fresh armor. The result window message goes first,
+ * then the item is refreshed like the item reform UI (hide, change, show).
+ */
+void need_enchant_apply_success_reset( map_session_data& sd, uint16 index, uint16 slot, t_itemid enchant ){
+	struct item& it = sd.inventory.u.items_inventory[index];
+	struct item after = it;
+
+	after.refine = 0;
+
+	for( int32 i = 0; i < MAX_SLOTS; i++ ){
+		after.card[i] = 0;
+	}
+
+	after.card[slot] = enchant;
+
+	clif_enchantwindow_result_message( sd, MSI_ENCHANT_SUCCESS, enchant );
+	log_pick_pc( &sd, LOG_TYPE_ENCHANT, -1, &it );
+	clif_delitem( sd, index, 1, 0 );
+	it = after;
+	log_pick_pc( &sd, LOG_TYPE_ENCHANT, 1, &it );
+	clif_additem( &sd, index, 1, 0 );
+}
+
 /*==========================================
  * Test harness (only built with NEED_ENCHANT_TEST)
  *------------------------------------------*/
@@ -1092,6 +1154,21 @@ namespace{
 	bool need_enchant_rules_parse( const char* yaml ){
 		ryml::Tree tree = ryml::parse_in_arena( c4::to_csubstr( yaml ) );
 		bool ok = true;
+
+		// A fresh probe reports the errors first: the global database may hold a tree loaded from
+		// db/need/enchant_rules.yml, and its error path would resolve line numbers against that tree
+		// (fail-fast crash once a rules file is installed). Only error-free test rules reach the global one.
+		{
+			NeedEnchantRulesDatabase probe;
+
+			for( const ryml::NodeRef& node : tree["Body"] ){
+				ok &= probe.parseBodyNode( node ) != 0;
+			}
+		}
+
+		if( !ok ){
+			return false;
+		}
 
 		for( const ryml::NodeRef& node : tree["Body"] ){
 			ok &= need_enchant_rules_db.parseBodyNode( node ) != 0;
@@ -1269,6 +1346,31 @@ bool need_enchant_selftest(){
 		it.card[2] = str1->nameid;
 		it.card[1] = str1->nameid;
 		pass &= need_enchant_rules_expect( "cond: reset with all slots filled allowed", need_enchant_check( it, *pendant, *group4, 0, NEED_ENCHANT_OP_RESET, nullptr, 0 ), true );
+		need_enchant_rules_db.clear();
+	}
+
+	// ---- 4b. scoped reset needs an enchant inside the scope; SuccessReset flag
+	{
+		need_enchant_rules_parse(
+			"Body:\n"
+			"  - Id: 4\n"
+			"    Slots:\n"
+			"      - Slot: 3\n"
+			"        SuccessReset: true\n"
+			"    Reset:\n"
+			"      Scope:\n"
+			"        - Slot: 2\n" );
+
+		std::shared_ptr<item_data> str1 = item_db.search_aegisname( "Wolf_Orb_Str_1" );
+		struct item it = {};
+
+		it.nameid = pendant->nameid;
+		it.card[3] = str1->nameid;
+		pass &= need_enchant_rules_expect( "scope: reset of slot 2 refused while slot 2 is empty", need_enchant_check( it, *pendant, *group4, 0, NEED_ENCHANT_OP_RESET, nullptr, 0 ), false );
+		it.card[2] = str1->nameid;
+		pass &= need_enchant_rules_expect( "scope: reset of slot 2 allowed once slot 2 holds an enchant", need_enchant_check( it, *pendant, *group4, 0, NEED_ENCHANT_OP_RESET, nullptr, 0 ), true );
+		pass &= need_enchant_rules_expect( "SuccessReset: slot 3 resets the item", need_enchant_success_resets( 4, 3 ), true );
+		pass &= need_enchant_rules_expect( "SuccessReset: slot 2 does not", need_enchant_success_resets( 4, 2 ), false );
 		need_enchant_rules_db.clear();
 	}
 

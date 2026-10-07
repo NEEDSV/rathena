@@ -409,12 +409,17 @@ def old_helm(items_by_id):
          '        Source: { Script: %s, Npc: "nightmare_biolab L416", TargetRange: 438, TargetExact: true }' % BIOLAB,
          '        TargetItems: [ %s ]' % names(items_by_id, targets),
          '        Order: [ 3, 2, 1 ]',                       # L451-462
+         '        Caution:',
+         '          KR: "성공률: 1번째 100% / 2번째 100% / 3번째 100%\\n특수 인챈트 강화 80~20%, 실패 시 1단계 하락(Lv1 유지)\\n초기화: 100%"',
+         '          EN: "Success: 1st 100% / 2nd 100% / 3rd 100%\\nSpecial upgrade 80-20%, failure drops a level (Lv1 kept)\\nReset: 100%"',
          '        Cost: { Materials: [ { Item: %s, Amount: 10 } ] }' % items_by_id[23016].aegis,   # L446/L537
          # L647-708: 10 Pieces_Of_Sentiment, needs card[3], clears card[1..3]
          '        Reset: { Chance: 100000, Cost: { Materials: [ { Item: %s, Amount: 10 } ] } }' % items_by_id[22687].aegis,
          '        Slots:']
     for card, aline, pline in ((3, 542, 573), (2, 542, 573), (1, 576, 595)):
         L += uniform_slot(items_by_id, lines, card, 'Array: %d, Pick: %d' % (aline, pline), parity.array_pick(lines, aline, pline))
+    # Phase 2.4: the special upgrade Lv1-10 of the card[1] enchant (L467-619)
+    L += old_helm_upgrades(items_by_id, lines)
     return L
 
 
@@ -817,6 +822,124 @@ def tene(items_by_id):
     return L
 
 
+# ----------------------------------------------------------------------------- Phase 2.4: hidden armor (enchan_arm.txt 수습 세공사)
+
+ARM = 'npc/merchants/enchan_arm.txt'
+ARM_GROUPS = [   # key, KR, EN, setarray line, `set .@j,N` window line (L38-50)
+    ('NONSLOT', '슬롯 없는 갑옷', 'Non-slotted Armor', 40, 41),
+    ('SLOT', '슬롯 갑옷', 'Slotted Armor', 44, 45),
+    ('HIGH', '고급 갑옷', 'High Grade Armor', 49, 50),
+]
+ARM_SWITCH = 103   # switch (rand(1, .@failrate)) { case N: set .@addpart, ID; ... default: destroyed }
+
+
+def hidden_armor(items_by_id):
+    lines = parity.read_lines(os.path.join(REPO, ARM))
+    L = ['  - Family: HIDDEN_ARMOR',
+         '    Display: { KR: "히든 갑옷 인챈트", EN: "Hidden Armor Enchant" }',
+         '    Variants:']
+    for key, kr, en, aline, wline in ARM_GROUPS:
+        _v, targets = parity.setarray_values(lines, aline)
+        hi = parity._int_assign(lines, wline, '.@j')
+        dist = parity.switch_table(lines, ARM_SWITCH, 1, hi)
+        pad = ' ' * 10
+        L += ['      - Key: HIDDEN_ARMOR_%s' % key,
+              '        Display: { KR: "%s", EN: "%s" }' % (kr, en),
+              '        Source: { Script: %s, Npc: "수습 세공사", TargetLines: [ %d ], TargetExact: true }' % (ARM, aline),
+              '        TargetItems: [ %s ]' % names(items_by_id, targets),
+              '        Order: [ 3 ]',
+              '        Cost: { Zeny: 400000 }',                  # L101 (the script also takes the armor and hands out a new one)
+              '        Slots:',
+              '%s- Slot: 3' % pad,
+              # operator decision 2026-10-06: keep the current behaviour - a success hands back refine 0 / no cards (L147)
+              '%s  SuccessReset: true' % pad,
+              '%s  Parity: { Switch: %d, Window: [ 1, %d ], WindowVarLine: %d }' % (pad, ARM_SWITCH, hi, wline),
+              '%s  Options:' % pad]
+        L += ['%s    - { Enchant: %s, Weight: %d }' % (pad, items_by_id[v].aegis, n) for v, n in dist.items() if v != 'DEFAULT']
+        L += ['%s  Failures:' % pad, '%s    - { Result: DESTROY, Weight: %d }' % (pad, dist['DEFAULT'])]
+    return L
+
+
+# ----------------------------------------------------------------------------- Phase 2.4: Bio4 sorcerer (bio4_reward.txt 소서러#Bio4Reward)
+
+BIO4 = 'npc/re/merchants/bio4_reward.txt'
+BIO4_GROUPS = [   # key, KR, EN, chain first if (L640/676/712/748), window var line, target lines, exact
+    ('MELEE', '근거리', 'Melee', 640, 468, [469, 470, 471], False, [13069, 1291, 1392, 1393, 1435, 13070, 16017]),
+    ('MELEE_LANCE', '근거리 (자이언트 랜스)', 'Melee (Giant Lance)', 640, 474, [473], True, [1490]),
+    ('RANGED', '원거리', 'Ranged', 676, 468, [475], True, [18109, 18110, 18111]),
+    ('MAGIC', '마법', 'Magic', 712, 468, [477], True, [1584, 1659]),
+    ('ARMOR', '방어구', 'Armor', 748, 468, [479, 480, 481], False, [2160, 2161, 2162, 2892, 15044]),
+    ('ARMOR_WIDE', '방어구 (구조 망토 / 고대 금장식)', 'Armor (Salvage Cape / Ancient Gold Deco)', 748, 484, [483], True, [2582, 18570]),
+]
+BIO4_MATERIALS = [   # key, KR, EN, card, material id (L518-548; write L798 card[socket_type-1])
+    ('WILL', '전사의 의지', 'Will of Warrior', 3, 6469),
+    ('BLOOD', '피의 갈망', 'Thirst for Blood', 2, 6470),
+]
+
+
+def bio4(items_by_id):
+    lines = parity.read_lines(os.path.join(REPO, BIO4))
+    L = ['  - Family: BIO4_SORCERER',
+         '    Display: { KR: "생체 연구소 4층 장비 (소서러)", EN: "Bio Lab 4F Gear (Sorcerer)" }',
+         '    Variants:']
+    for gkey, gkr, gen, chain, wline, tlines, exact, targets in BIO4_GROUPS:
+        hi = parity._int_assign(lines, wline, '.@lhz_max_num')
+        for mkey, mkr, men, card, mat in BIO4_MATERIALS:
+            sl = chain_slot(items_by_id, BIO4, chain, 1, hi, card, {0: 'DESTROY'}, None)
+            sl[1] = sl[1].replace('Parity: { Chain', 'Parity: { WindowVarLine: %d, Chain' % wline)
+            L += ['      - Key: BIO4_%s_%s' % (gkey, mkey),
+                  '        Display: { KR: "%s - %s", EN: "%s - %s" }' % (gkr, mkr, gen, men),
+                  '        Source: { Script: %s, Npc: "소서러#Bio4Reward", TargetLines: [ %s ]%s }' % (
+                      BIO4, ', '.join(str(x) for x in tlines), ', TargetExact: true' if exact else ''),
+                  '        TargetItems: [ %s ]' % names(items_by_id, targets),
+                  '        Order: [ %d ]' % card,
+                  '        OrdinalOffset: %d' % (3 - card),
+                  '        Cost: { Materials: [ { Item: %s, Amount: 10 } ] }' % items_by_id[mat].aegis,     # L790/792
+                  # L575-607: 10 Goast_Chill clears only this material's slot (refused while it is empty)
+                  '        Reset: { Chance: 100000, Scope: [ %d ], Cost: { Materials: [ { Item: %s, Amount: 10 } ] } }' % (
+                      card, items_by_id[6471].aegis),
+                  '        Slots:'] + sl
+    return L
+
+
+# ----------------------------------------------------------------------------- Phase 2.4: Tene slot-3-only reset (K2a)
+
+def tene_slot3(items_by_id):
+    """Same enchant groups as tene(), reset limited to card[2] (L264-269: refused unless card[2] is an enchant)."""
+    L = tene(items_by_id)[3:]
+    out = []
+    for x in L:
+        if x.startswith('      - Key: TENE_'):
+            x += '_S3'
+        x = x.replace(' - 전체 초기화"', ' - 3번째 칸만 초기화"').replace(' - full reset"', ' - 3rd slot reset only"')
+        x = x.replace('        Reset: { Chance: 100000, Cost: { Zeny: 100000 } }',
+                      '        Reset: { Chance: 100000, Scope: [ 2 ], Cost: { Zeny: 100000 } }')
+        out.append(x)
+    return out
+
+
+# ----------------------------------------------------------------------------- Phase 2.4: old helmet special upgrade (C2)
+
+OLD_HELM_SPECIAL_BASES = [29061, 29071, 29081, 29091, 29101, 29111]   # L469-470: Mettle, MagicEssence, Acute, MasterArcher, Adamantine, Affection
+
+
+def old_helm_upgrades(items_by_id, lines, indent=12):
+    _v, req = parity.setarray_values(lines, 473)      # setarray .@req_table[1], ... (index = current level)
+    _v, rate = parity.setarray_values(lines, 474)
+    hits_per_level = [sum(1 for r in range(100) if rt > r) for rt in rate]   # L599 `.@enchant_rate > rand(100)`
+    pad = ' ' * indent
+    L = ['%sUpgradeParity: { Bases: [ %s ], Costs: 473, Rates: 474, RollLine: 599 }' % (pad, ', '.join(str(b) for b in OLD_HELM_SPECIAL_BASES)),
+         '%sUpgrades:' % pad]
+    for base in OLD_HELM_SPECIAL_BASES:
+        for lv in range(1, 10):
+            ok = hits_per_level[lv - 1]
+            fail = ('{ Result: FAIL_KEEP, Weight: %d }' % (100 - ok)) if lv == 1 else (
+                '{ Result: DOWNGRADE, To: %s, Weight: %d }' % (items_by_id[base + lv - 2].aegis, 100 - ok))
+            L.append('%s  - { Enchant: %s, To: %s, Cost: { Materials: [ { Item: %s, Amount: %d } ] }, SuccessWeight: %d, Failures: [ %s ] }' % (
+                pad, items_by_id[base + lv - 1].aegis, items_by_id[base + lv].aegis, items_by_id[23016].aegis, req[lv - 1], ok, fail))
+    return L
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument('--out', required=True)
@@ -842,6 +965,9 @@ def main(argv=None):
     L += time_boots(items_by_id)
     L += malangdo(items_by_id)
     L += tene(items_by_id)
+    L += hidden_armor(items_by_id)
+    L += bio4(items_by_id)
+    L += tene_slot3(items_by_id)
     io.open(args.out, 'w', encoding='utf-8', newline='\n').write('\n'.join(L) + '\n')
     print('wrote', args.out)
 

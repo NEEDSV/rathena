@@ -180,6 +180,34 @@ def eq_table(lines, first_line, lo, hi):
     return out
 
 
+def switch_table(lines, switch_line, lo, hi):
+    """enchan_arm style: `switch (rand(lo, .@x)) { case 1: case 2: set .@v, ID; break; ... default: ... }`
+    -> OrderedDict ID -> count over r in [lo, hi]; rolls without a case go to 'DEFAULT'."""
+    if not re.search(r'switch\s*\(\s*rand\s*\(', _strip(lines[switch_line - 1])):
+        raise ValueError('line %d is not switch (rand(...))' % switch_line)
+    mapping, pending, i = {}, [], switch_line
+    while i < len(lines):
+        s = _strip(lines[i]).strip()
+        i += 1
+        if s.startswith('default:') or s == '}':
+            break
+        for m in re.finditer(r'case\s+(\d+)\s*:', s):
+            pending.append(int(m.group(1)))
+        m = re.search(r'set\s+\.@\w+\s*,\s*(\d+)\s*;|\.@\w+\s*=\s*(\d+)\s*;', s)
+        if m:
+            value = int(m.group(1) or m.group(2))
+            for k in pending:
+                if k in mapping:
+                    raise ValueError('case %d repeated near line %d' % (k, i))
+                mapping[k] = value
+            pending = []
+    out = OrderedDict()
+    for r in range(lo, hi + 1):
+        v = mapping.get(r, 'DEFAULT')
+        out[v] = out.get(v, 0) + 1
+    return out
+
+
 def case_labels(lines, first_if_line):
     """`case N:` lines directly above a line -> [N]."""
     out, i = [], first_if_line - 2
@@ -247,7 +275,7 @@ def setarray_values(lines, line):
         if ';' in text:
             break
         i += 1
-    m = re.match(r'^\s*setarray\s+(\.@\w+)\[0\]\s*,(.*?);', text)
+    m = re.match(r'^\s*setarray\s+(\.@\w+)\[\d+\]\s*,(.*?);', text)
     if not m:
         raise ValueError('no setarray at line %d' % line)
     return m.group(1), [int(x) for x in m.group(2).split(',')]

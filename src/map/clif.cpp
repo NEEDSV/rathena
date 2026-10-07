@@ -25619,6 +25619,12 @@ void clif_parse_enchantwindow_general( int32 fd, map_session_data* sd ){
 		return;
 	}
 
+	// NEED: enchan_arm.txt behaviour - a success hands back the item with only the new enchant (refine 0, cards emptied)
+	if( need_enchant_success_resets( enchant->id, slot ) ){
+		need_enchant_apply_success_reset( *sd, index, slot, roll.enchant );
+		return;
+	}
+
 	// Log removal of item
 	log_pick_pc( sd, LOG_TYPE_ENCHANT, -1, &selected_item );
 
