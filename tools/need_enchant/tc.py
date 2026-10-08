@@ -205,6 +205,14 @@ def all_refine(v):
     return max([v['min_refine']] + [s['min_refine'] for s in v['slots'].values()])
 
 
+def test_refine(v, minimum):
+    """a refine above 0 where allowed, so refine-down, refine reset and refine preservation are visible:
+    the group maximum if it has one, else +7 (never below the minimum)"""
+    if v['max_refine']:
+        return max(minimum, v['max_refine']) if minimum <= v['max_refine'] else minimum
+    return max(minimum, 7)
+
+
 # ----------------------------------------------------------------------------- offline plan / verify
 
 def offline_states(m):
@@ -223,7 +231,7 @@ def offline_states(m):
             cards = fill(v, sl, m)
             if cards is None:
                 continue
-            r = slot_refine(v, sl)
+            r = test_refine(v, slot_refine(v, sl))
             if v['slots'][sl]['options']:
                 add('%d:n:%d' % (g, sl), cards, r, 'n', 0, N_NORMAL, dist_normal(v, sl, cards, r, ts, m), sl)
                 # a state where a MaxSame cap is reached on the earlier slots
@@ -241,12 +249,12 @@ def offline_states(m):
                 if cards is None:
                     continue
                 cards[sl] = m.iid(a)
-                r = all_refine(v)
+                r = test_refine(v, all_refine(v))
                 add('%d:u:%d:%d' % (g, sl, m.iid(a)), cards, r, 'u', sl, N_UPGRADE, dist_upgrade(u, r, m), sl)
         if v['reset']:
             cards = fill(v, None, m)
             if cards is not None:
-                r = all_refine(v)
+                r = test_refine(v, all_refine(v))
                 add('%d:r' % g, cards, r, 'r', 0, N_RESET, dist_reset(v['reset'], r, m), 0)
     return out
 
@@ -371,9 +379,7 @@ def ingame_plan(args):
         for i in range(ts):
             base[i] = TEST_CARD
         opt = TEST_OPTION if v['allow_random'] else (0, 0, 0)
-        r_all = all_refine(v)
-        if v['max_refine'] and r_all > v['max_refine']:
-            r_all = v['min_refine']
+        r_all = test_refine(v, all_refine(v))
         mats_used = set()
         for c in [s['cost'] for s in v['slots'].values()] + [x for s in v['slots'].values() for x in s['perfect'].values()] + \
                  [u['cost'] for s in v['slots'].values() for u in s['upgrades'].values()] + ([v['reset']['cost']] if v['reset'] else []):
@@ -447,7 +453,7 @@ def ingame_plan(args):
                     continue
                 for i in range(ts):
                     cards[i] = TEST_CARD
-                p.item('give', tid, slot_refine(v, sl), 1, cards, opt)
+                p.item('give', tid, test_refine(v, slot_refine(v, sl)), 1, cards, opt)
                 p.pay(v['slots'][sl]['perfect'][a], m)
                 p.tryop('%d:perfect:%d:%d' % (g, sl, m.iid(a)), 'p', g, tid, m.iid(a))
                 p.add('clear %d' % tid)
