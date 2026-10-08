@@ -399,14 +399,15 @@ BIOLAB = 'npc/re/merchants/nightmare_biolab.txt'
 
 
 def old_helm(items_by_id):
+    # line numbers: nightmare_biolab.txt after the ops merge of 2026-10-08 (+85 lines: bully bulk exchange)
     lines = parity.read_lines(os.path.join(REPO, BIOLAB))
-    targets = list(range(18971, 18985))   # L438: 18971 .. 18984
+    targets = list(range(18971, 18985))   # L523: 18971 .. 18984
     L = ['  - Family: OLD_HELM',
-         '    Display: { KR: "낡은 투구", EN: "Old Headgear" }',
+         '    Display: { KR: "낡은 투구 (전사자의 모자)", EN: "Old Headgear (Fallen Warrior Hat)" }',
          '    Variants:',
          '      - Key: OLD_HELM_BASIC',
          '        Display: { KR: "기본 인챈트", EN: "Basic Enchant" }',
-         '        Source: { Script: %s, Npc: "nightmare_biolab L416", TargetRange: 438, TargetExact: true }' % BIOLAB,
+         '        Source: { Script: %s, Npc: "nightmare_biolab L501", TargetRange: 523, TargetExact: true }' % BIOLAB,
          '        TargetItems: [ %s ]' % names(items_by_id, targets),
          '        Order: [ 3, 2, 1 ]',                       # L451-462
          '        Caution:',
@@ -416,7 +417,7 @@ def old_helm(items_by_id):
          # L647-708: 10 Pieces_Of_Sentiment, needs card[3], clears card[1..3]
          '        Reset: { Chance: 100000, Cost: { Materials: [ { Item: %s, Amount: 10 } ] } }' % items_by_id[22687].aegis,
          '        Slots:']
-    for card, aline, pline in ((3, 542, 573), (2, 542, 573), (1, 576, 595)):
+    for card, aline, pline in ((3, 627, 658), (2, 627, 658), (1, 661, 680)):
         L += uniform_slot(items_by_id, lines, card, 'Array: %d, Pick: %d' % (aline, pline), parity.array_pick(lines, aline, pline))
     # Phase 2.4: the special upgrade Lv1-10 of the card[1] enchant (L467-619)
     L += old_helm_upgrades(items_by_id, lines)
@@ -927,11 +928,11 @@ OLD_HELM_SPECIAL_BASES = [29061, 29071, 29081, 29091, 29101, 29111]   # L469-470
 
 
 def old_helm_upgrades(items_by_id, lines, indent=12):
-    _v, req = parity.setarray_values(lines, 473)      # setarray .@req_table[1], ... (index = current level)
-    _v, rate = parity.setarray_values(lines, 474)
-    hits_per_level = [sum(1 for r in range(100) if rt > r) for rt in rate]   # L599 `.@enchant_rate > rand(100)`
+    _v, req = parity.setarray_values(lines, 558)      # setarray .@req_table[1], ... (index = current level)
+    _v, rate = parity.setarray_values(lines, 559)
+    hits_per_level = [sum(1 for r in range(100) if rt > r) for rt in rate]   # L684 `.@enchant_rate > rand(100)`
     pad = ' ' * indent
-    L = ['%sUpgradeParity: { Bases: [ %s ], Costs: 473, Rates: 474, RollLine: 599 }' % (pad, ', '.join(str(b) for b in OLD_HELM_SPECIAL_BASES)),
+    L = ['%sUpgradeParity: { Bases: [ %s ], Costs: 558, Rates: 559, RollLine: 684 }' % (pad, ', '.join(str(b) for b in OLD_HELM_SPECIAL_BASES)),
          '%sUpgrades:' % pad]
     for base in OLD_HELM_SPECIAL_BASES:
         for lv in range(1, 10):

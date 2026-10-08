@@ -72,6 +72,18 @@ def load_items(repo):
                 f = re.search(r'^    %s: (.*)$' % name, body, re.M)
                 return f.group(1).strip() if f else default
 
+            old = items_by_id.get(int(m.group(1)))
+            if old is not None:
+                # an import entry updates only the fields it lists, like rAthena (e.g. Id + Script overrides)
+                if field('AegisName') and field('AegisName') != old.aegis:
+                    items_by_aegis.pop(old.aegis, None)
+                    old.aegis = field('AegisName')
+                    items_by_aegis[old.aegis] = old
+                old.name_kr = field('Name', old.name_kr)
+                old.slots = int(field('Slots', str(old.slots)))
+                old.type = field('Type', old.type)
+                old.subtype = field('SubType', old.subtype)
+                continue
             it = Item()
             it.id = int(m.group(1))
             it.aegis = field('AegisName')
