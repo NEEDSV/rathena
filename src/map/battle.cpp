@@ -5714,6 +5714,7 @@ static struct Damage battle_calc_weapon_attack(block_list *src, block_list *targ
 				ATK_ADD(wd.damage, wd.damage2, static_cast<int64>(sstatus->sp * bonus) + 10 * status_get_lv(src));
 		}
 			break;
+#ifndef NEED_2017_HOMUNCULUS_S // 2017: Tinder Breaker/C.B.C use a skill ratio, E.Q.C is misc damage
 		case MH_TINDER_BREAKER:
 			ATK_ADD(wd.damage, wd.damage2, 2500 * skill_lv + status_get_lv(src)); // !TODO: Confirm base level bonus
 			break;
@@ -5723,6 +5724,7 @@ static struct Damage battle_calc_weapon_attack(block_list *src, block_list *targ
 		case MH_EQC:
 			ATK_ADD(wd.damage, wd.damage2, 6000 * skill_lv + status_get_lv(src)); // !TODO: Confirm base level bonus
 			break;
+#endif
 		case NPC_MAXPAIN_ATK:
 			if (sc) {
 				auto * sce = sc->getSCE(SC_MAXPAIN);
@@ -6614,6 +6616,11 @@ struct Damage battle_calc_misc_attack(block_list *src,block_list *target,uint16 
 			if (status_bl_has_mode(target, MD_STATUSIMMUNE))
 				md.damage /= 10;
 			break;
+#ifdef NEED_2017_HOMUNCULUS_S
+		case MH_EQC: // 2017: target HP - own HP (signed, hp is unsigned)
+			md.damage = i64max(static_cast<int64>(tstatus->hp) - static_cast<int64>(sstatus->hp), 0);
+			break;
+#endif
 		case NPC_WIDESUCK:
 			md.damage = tstatus->max_hp * 15 / 100;
 			break;

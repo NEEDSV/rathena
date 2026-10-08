@@ -1440,6 +1440,11 @@ int32 skill_additional_effect( block_list* src, block_list *bl, uint16 skill_id,
 						else
 							clif_skill_fail( *sd, RG_SNATCHER );
 					}
+#ifdef NEED_2017_HOMUNCULUS_S
+					// 2017: Pyroclastic on the master autocasts Hammer Fall
+					if(sc && sc->getSCE(SC_PYROCLASTIC) && ((rnd()%100)<=sc->getSCE(SC_PYROCLASTIC)->val3) )
+						skill_castend_pos2(src, bl->x, bl->y, BS_HAMMERFALL,sc->getSCE(SC_PYROCLASTIC)->val1, tick, 0);
+#endif
 				}
 
 				if (sc) {
@@ -6446,9 +6451,11 @@ std::shared_ptr<s_skill_unit_group> skill_unitsetting(block_list *src, uint16 sk
 		val2 = y;
 		val3 = 0; // Suck target at n seconds.
 		break;
+#ifndef NEED_2017_HOMUNCULUS_S // 2017: a new Poison Mist / Lava Slide did not remove the previous one
 	case MH_POISON_MIST:
-	case MH_BLAST_FORGE:
 	case MH_LAVA_SLIDE:
+#endif
+	case MH_BLAST_FORGE:
 		skill_clear_group(src, 1);
 		break;
 	case MH_VOLCANIC_ASH:
@@ -7138,7 +7145,9 @@ int32 skill_unit_onplace_timer(skill_unit *unit, block_list *bl, t_tick tick)
 		case UNT_FIREWALK:
 		case UNT_ELECTRICWALK:
 		case UNT_PSYCHIC_WAVE:
+#ifndef NEED_2017_HOMUNCULUS_S
 		case UNT_LAVA_SLIDE:
+#endif
 		case UNT_MAKIBISHI:
 		case UNT_VENOMFOG:
 		case UNT_ICEMINE:
@@ -7873,9 +7882,20 @@ int32 skill_unit_onplace_timer(skill_unit *unit, block_list *bl, t_tick tick)
 				sc_start2(ss, bl,type,100,sg->val1,sg->val2,skill_get_time2(sg->skill_id, sg->skill_lv));
 			break;
 
+#ifdef NEED_2017_HOMUNCULUS_S
+		case UNT_LAVA_SLIDE:
+			skill_attack(BF_WEAPON, ss, unit, bl, sg->skill_id, sg->skill_lv, tick, 0);
+			if(++sg->val1 > 4) //after 5 stop hit and destroy me (2017)
+				sg->limit = DIFF_TICK(tick, sg->tick);
+			break;
+#endif
 		case UNT_POISON_MIST:
 			skill_attack(BF_MAGIC, ss, unit, bl, sg->skill_id, sg->skill_lv, tick, 0);
+#ifdef NEED_2017_HOMUNCULUS_S
+			status_change_start(ss, bl, SC_BLIND, (10 + 10 * sg->skill_lv)*100, sg->skill_lv, sg->skill_id, 0, 0, skill_get_time2(sg->skill_id, sg->skill_lv), SCSTART_NOTICKDEF|SCSTART_NORATEDEF);
+#else
 			status_change_start(ss, bl, SC_POISON_MIST, (10 + 10 * sg->skill_lv)*100, sg->skill_lv, sg->skill_id, 0, 0, skill_get_time2(sg->skill_id, sg->skill_lv), SCSTART_NOTICKDEF|SCSTART_NORATEDEF);
+#endif
 			break;
 
 		case UNT_CHAOSPANIC:
