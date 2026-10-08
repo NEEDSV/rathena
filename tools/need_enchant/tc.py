@@ -403,6 +403,22 @@ def ingame_plan(args):
                 p.tryop('%d:walk:%d:%d' % (g, rnd, i), 'n', g, tid)
         p.add('clear %d' % tid)
 
+        # slots that can lower the refine: 60 more requests on a fresh +r item each, so the rare failure shows up
+        for sl in v['order']:
+            s = v['slots'][sl]
+            if any(f['Result'] == 'REFINE_DOWN' for f in s['failures']) and s['options']:
+                cards = fill(v, sl, m)
+                if cards is None:
+                    continue
+                for i in range(ts):
+                    cards[i] = TEST_CARD
+                for k in range(60):
+                    p.add('clear %d' % tid)
+                    p.item('give', tid, r_all, 1, cards, opt)
+                    p.pay(s['cost'], m)
+                    p.tryop('%d:refdown:%d:%d' % (g, sl, k), 'n', g, tid)
+                p.add('clear %d' % tid)
+
         # refusals of the first slot (free): short zeny, short material, refine out of range, option not allowed
         c0 = v['slots'][first]['cost']
         z0, m0 = cost_ids(c0, m)
