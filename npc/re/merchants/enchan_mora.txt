@@ -48,12 +48,12 @@ lasa_in01,163,45,5	script	비밀의 수호자#pa082	495,{
 	mes needtr("지급받을 여섯 종류의 유물 중 하나를 선택하세요.", "Select one of the six kinds of relics to receive.");
 	next;
 	mes needtr("[제작소]", "[Artifice]");
-	mes needtr("각 종류에 해당하는 유물 중 원하는 장비를 직접 선택할 수 있습니다.", "I'll randomly give you one of 2 types of the equipment, depending upon the weather and my mood.");
+	mes needtr("각 종류에 해당하는 유물 중 원하는 장비를 직접 선택할 수 있습니다.", "You can pick the equipment you want from each type.");
 	next;
 	mes needtr("[제작소]", "[Artifice]");
 	mes needtr("유물을 드리기 위해 필요한 건 100만 제니뿐입니다!", "All I need is 1,000,000 zeny to grant you a relic!");
 	next;
-	switch(select(needtr("준비가 안 된 것 같네요.:유물을 교환할 준비가 되었습니다.", "I don't think I'm ready.:I'm ready to exchange zeny for a relic."))) {
+	switch(select(needtr("준비가 안 된 것 같네요.:유물을 교환할 준비가 되었습니다 (100만 제니).", "I don't think I'm ready.:I'm ready to exchange 1,000,000 zeny for a relic."))) {
 	case 1:
 		mes needtr("[제작소]", "[Artifice]");
 		mes needtr("다음에 또 봐요!", "See you next time!");
@@ -100,12 +100,12 @@ lasa_in01,163,45,5	script	비밀의 수호자#pa082	495,{
 			break;
 		}
 		mes needtr("[제작소]", "[Artifice]");
-		mes needtr("원하시는 유물을 직접 선택해 주세요.", "Please select the relic you want.");
+		mes needtr("원하시는 유물을 직접 선택해 주세요. (1개당 100만 제니)", "Please select the relic you want. (1,000,000 zeny each)");
 		next;
 
 		set .@item_menu$, needtr("교환하지 않습니다", "I'm not ready");
 		for (set .@i,0; .@i < getarraysize(.@items); set .@i,.@i+1) {
-			set .@item_menu$, .@item_menu$ + ":" + getitemname(.@items[.@i]);
+			set .@item_menu$, .@item_menu$ + ":" + getitemname(.@items[.@i]) + " (1,000,000z)";
 		}
 
 		set .@item_select, select(.@item_menu$);
@@ -392,8 +392,8 @@ lasa_in01,167,45,4	script	유물 수호자#p	495,{
 	mes needtr("지팡이, 오브, 신발, 그리고 로브.", "staffs, orbs, shoes, and robes.");
 	next;
 	mes needtr("[유물 수호자]", "[Guardian of Artifacts]");
-	mes needtr("각 유형별로 네 가지 유물이 준비되어 있으며,", "There are four options available for each type, but the item");
-	mes needtr("원하는 유물을 직접 선택할 수 있습니다.", "available will change day to day, depending on my mood.");
+	mes needtr("각 유형별로 네 가지 유물이 준비되어 있으며,", "There are four artifacts for each type,");
+	mes needtr("원하는 유물을 직접 선택할 수 있습니다.", "and you can pick the one you want.");
 	next;
 	mes needtr("[유물 수호자]", "[Guardian of Artifacts]");
 	mes needtr("100만 제니로 유물을 구매하시겠습니까?", "Do you want to buy an artifact for 1,000,000 zeny?");
@@ -431,12 +431,12 @@ lasa_in01,167,45,4	script	유물 수호자#p	495,{
 
 	mes needtr("[유물 수호자]", "[Guardian of Artifacts]");
 	mes needtr("선택하신 유형은 ^0055FF", "The type you selected is ^0055FF")+.@type$+needtr("^000000입니다.", "^000000.");
-	mes needtr("받고 싶은 유물을 선택해 주세요.", "Please select the artifact you want to receive.");
+	mes needtr("받고 싶은 유물을 선택해 주세요. (1개당 100만 제니)", "Please select the artifact you want to receive. (1,000,000 zeny each)");
 	next;
 
 	set .@menu$, needtr("취소", "Cancel");
 	for (set .@i,0; .@i < getarraysize(.@items); set .@i,.@i+1)
-		set .@menu$, .@menu$+":"+getitemname(.@items[.@i]);
+		set .@menu$, .@menu$+":"+getitemname(.@items[.@i])+" (1,000,000z)";
 
 	set .@select, select(.@menu$);
 	if (.@select == 1) {
@@ -656,7 +656,7 @@ lasa_in01,171,45,5	script	힘의 수호자#pa082	515,{
 	mes needtr("고대 유물을 받으실 준비가 된 것 같군요.", "I think that you're ready to receive the ancient artifacts.");
 	next;
 	mes needtr("[힘의 수호자]", "[Guardian of Power]");
-	mes needtr("지정하신 직업에 따라 다양한 유물을 이용하실 수 있습니다.", "Based on what class you specify, there are various artifacts available.");
+	mes needtr("지정하신 직업에 따라 다양한 유물을 이용하실 수 있습니다. 유물은 1개당 100만 제니입니다.", "Based on what class you specify, there are various artifacts available. Each artifact costs 1,000,000 zeny.");
 	next;
 	mes needtr("[힘의 수호자]", "[Guardian of Power]");
 	mes needtr("^ff0000이 유물들은 구하기가 쉽지 않으니 신중하게 선택하세요^000000. 어떤 직업의 물건을 원하시나요?", "^ff0000Choose carefully because these artifacts aren't easy to come by^000000. So what class do you want it for?");
@@ -670,27 +670,27 @@ lasa_in01,171,45,5	script	힘의 수호자#pa082	515,{
 	}
 	mes needtr("[힘의 수호자]", "[Guardian of Power]");
 	mes .@jobs$[.@job]+"?";
-	mes needtr("어떤 유물을 원하시나요?", "Which artifact do you want?");
+	mes needtr("어떤 유물을 원하시나요? (1개당 100만 제니)", "Which artifact do you want? (1,000,000 zeny each)");
 	next;
 	switch(.@job) {
 	case 0: // Rune Knight
 		setarray .@items[0],2475,2476,2574,2575;
-		set .@i, select(needtr("취소:우르의 부츠 (신발):퓨즈의 부츠 (신발):우르의 플레이트 (걸칠것):퓨즈의 플레이트 (걸칠것)", "Cancel:Ur's Greaves (Shoes):Peuz's Greaves (Shoes):Ur's Manteau (Garment):Peuz's Manteau (Garment)"))-2;
+		set .@i, select(needtr("취소", "Cancel")+":"+getitemname(.@items[0])+needtr(" (신발)", " (Shoes)")+":"+getitemname(.@items[1])+needtr(" (신발)", " (Shoes)")+":"+getitemname(.@items[2])+needtr(" (걸칠것)", " (Garment)")+":"+getitemname(.@items[3])+needtr(" (걸칠것)", " (Garment)"))-2; // NEED: real item names (the old hardcoded labels did not match the items)
 		break;
 	case 1: // Guillotine Cross
 		setarray .@items[0],2477,2478,2577,2578;
-		set .@i, select(needtr("취소:사파의 신발 (신발):나브의 신발 (신발):사파의 보선 (걸칠것):나브의 보선 (걸칠것)", "Cancel:Sapha Shoes (Shoes):Nab Shoes (Shoes):Sapha Hood (Garment):Nab Hood (Garment)"))-2;
+		set .@i, select(needtr("취소", "Cancel")+":"+getitemname(.@items[0])+needtr(" (신발)", " (Shoes)")+":"+getitemname(.@items[1])+needtr(" (신발)", " (Shoes)")+":"+getitemname(.@items[2])+needtr(" (걸칠것)", " (Garment)")+":"+getitemname(.@items[3])+needtr(" (걸칠것)", " (Garment)"))-2; // NEED: real item names (the old hardcoded labels did not match the items)
 		break;
 	case 2: // Ranger
 		setarray .@items[0],2479,2480,2580,2581;
-		set .@i, select(needtr("취소:화이트윙 부츠 (신발):블랙윙 부츠 (신발):화이트윙 슈츠 (걸칠것):블랙윙 슈츠 (걸칠것)", "Cancel:White Wing Boots (Shoes):Black Wing Boots (Shoes):White Wing Manteau (Garment):Black Wing Manteau (Garment)"))-2;
+		set .@i, select(needtr("취소", "Cancel")+":"+getitemname(.@items[0])+needtr(" (신발)", " (Shoes)")+":"+getitemname(.@items[1])+needtr(" (신발)", " (Shoes)")+":"+getitemname(.@items[2])+needtr(" (걸칠것)", " (Garment)")+":"+getitemname(.@items[3])+needtr(" (걸칠것)", " (Garment)"))-2; // NEED: real item names (the old hardcoded labels did not match the items)
 		break;
 	}
-	if (.@i == -1) {
-		mes needtr("[힘의 수호자]", "[Guardian of Power]");
-		mes needtr("그럼 나중에 얘기해요.", "Talk to me later then.");
-		close;
-	}
+	if (.@i == -1) { mes needtr("[힘의 수호자]", "[Guardian of Power]"); mes needtr("그럼 나중에 얘기해요.", "Talk to me later then."); close; }
+	mes needtr("[힘의 수호자]", "[Guardian of Power]");
+	mes "^aa00aa"+getitemname(.@items[.@i])+"^000000"+needtr(" - 100만 제니에 교환하시겠습니까?", " - exchange it for 1,000,000 zeny?");
+	next;
+	if (select(needtr("취소:교환합니다", "Cancel:Exchange")) == 1) { mes needtr("[힘의 수호자]", "[Guardian of Power]"); mes needtr("그럼 나중에 얘기해요.", "Talk to me later then."); close; }
 	if (Zeny < 1000000) {
 		mes needtr("[힘의 수호자]", "[Guardian of Power]");
 		mes needtr("100만 제니를 가져오라고 말씀드리지 않았나요?", "Didn't I tell you to bring 1,000,000 zeny?");
