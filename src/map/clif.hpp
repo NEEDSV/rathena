@@ -1530,6 +1530,7 @@ void clif_enchantwindow_open( map_session_data& sd, uint64 clientLuaIndex );
 void clif_enchantwindow_result_message( map_session_data& sd, int32 msgId, t_itemid enchant = 0 );
 #ifdef NEED_ENCHANT_TEST
 void clif_enchantwindow_result_probe( map_session_data& sd, int32 msgId, t_itemid itid );
+int32 clif_enchantwindow_test_request( map_session_data& sd, char op, uint64 group, uint16 index, uint32 arg );
 #endif
 
 // Enchanting Shadow / Shadow Scar Spirit

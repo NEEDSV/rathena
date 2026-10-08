@@ -5477,6 +5477,7 @@ bool MapServer::initialize( int32 argc, char *argv[] ){
 	bool need_enchant_selftest_run = false;
 	const char* need_enchant_selftest_dump = nullptr;
 	const char* need_enchant_check_files[2] = { nullptr, nullptr };
+	const char* need_enchant_plan_files[4] = { nullptr, nullptr, nullptr, nullptr };
 
 	for( int32 i = 1; i < argc; i++ ){
 		if( argv[i] != nullptr && strcmp( argv[i], "--need-enchant-selftest" ) == 0 ){
@@ -5494,6 +5495,13 @@ bool MapServer::initialize( int32 argc, char *argv[] ){
 			argv[i] = nullptr;
 			need_enchant_check_files[1] = argv[++i];
 			argv[i] = nullptr;
+		}else if( argv[i] != nullptr && strcmp( argv[i], "--need-enchant-plan" ) == 0 && i + 4 < argc ){
+			// --need-enchant-plan <item_enchant.yml> <enchant_rules.yml> <plan> <out>: offline roll distributions, then exit
+			argv[i] = nullptr;
+			for( int32 k = 0; k < 4; k++ ){
+				need_enchant_plan_files[k] = argv[++i];
+				argv[i] = nullptr;
+			}
 		}
 	}
 #endif
@@ -5576,6 +5584,10 @@ bool MapServer::initialize( int32 argc, char *argv[] ){
 		bool rules = need_enchant_selftest();
 
 		exit( engine && rules ? EXIT_SUCCESS : EXIT_FAILURE );
+	}
+
+	if( need_enchant_plan_files[0] != nullptr ){
+		exit( need_enchant_plan_offline( need_enchant_plan_files[0], need_enchant_plan_files[1], need_enchant_plan_files[2], need_enchant_plan_files[3] ) ? EXIT_SUCCESS : EXIT_FAILURE );
 	}
 
 	if( need_enchant_check_files[0] != nullptr ){

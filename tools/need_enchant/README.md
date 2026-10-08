@@ -116,3 +116,19 @@ Installing the output into `db/` and packing the client files into the GRFs are 
 and the registry: data NPC `NEED_EnchantV2_Data` + function `F_NeedEnchantV2` ("my gear" inventory list and the full
 catalogue; picking a group opens the 2025 Enchant UI; `callfunc "F_NeedEnchantV2", "<FAMILY>"` limits it to one family).
 Regenerate after every master / registry change. The file is not in any conf until the Phase 3 LIVE gate.
+
+## Automated test cases (`tc.py`)
+
+The master is the oracle; the harness build (`NEED_ENCHANT_TEST`) runs the real engine.
+
+- **Offline** (no client): `tc.py offline-plan --out <plan>`, then
+  `map-server-enchanttest --map-config <conf> --need-enchant-plan db/import/item_enchant.yml db/need/enchant_rules.yml <plan> <result>`,
+  then `tc.py offline-verify --result <result>`. Every slot / MaxSame state / upgrade / reset of every group is rolled
+  100,000 times (50,000 for upgrades) with the engine's own roll functions; each distribution is checked against the
+  master weights (chi-square, z < 4.75) and a result the master makes impossible fails at once.
+- **In game** (GM 99 **test character**): `tc.py ingame-plan --out <plan>`, then in game `@v2try <plan> <result>`
+  (paths relative to the server folder), then `tc.py ingame-verify --result <result>`. Every request goes through the
+  real packet handler (`clif_enchantwindow_test_request`), as if the client had sent it. The verifier recomputes from
+  the logged state whether the request had to be refused (and stay free) or pay exactly its cost, which results are
+  possible, and that bound status, random options, grade and real cards survive. The plan deletes the unequipped copies
+  of every target, material and reward item it uses; the character's zeny is given back at the end.

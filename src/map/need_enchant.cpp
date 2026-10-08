@@ -9,9 +9,11 @@
 #include <fstream>
 #include <map>
 #include <sstream>
+#include <unordered_map>
 
 #include <common/random.hpp>
 #include <common/showmsg.hpp>
+#include <common/timer.hpp>
 #include <common/utilities.hpp>
 
 #include "clif.hpp"
@@ -1606,5 +1608,524 @@ bool need_enchant_load_test_rules( const char* path ){
 	}
 
 	return ok && invalid.empty();
+}
+
+/*==========================================
+ * Test plans (tools/need_enchant/tc_plan.py writes them, tc_verify.py checks the output)
+ *------------------------------------------*/
+namespace{
+	std::string need_enchant_item_json( const struct item& it ){
+		std::string s = "{\"exists\":1,\"id\":" + std::to_string( it.nameid ) + ",\"refine\":" + std::to_string( static_cast<int32>( it.refine ) )
+			+ ",\"grade\":" + std::to_string( it.enchantgrade ) + ",\"bound\":" + std::to_string( static_cast<int32>( it.bound ) )
+			+ ",\"attr\":" + std::to_string( static_cast<int32>( it.attribute ) ) + ",\"equip\":" + std::to_string( it.equip ) + ",\"cards\":[";
+
+		for( int32 i = 0; i < MAX_SLOTS; i++ ){
+			s += ( i ? "," : "" ) + std::to_string( it.card[i] );
+		}
+
+		s += "],\"opts\":[";
+
+		for( int32 i = 0; i < MAX_ITEM_RDM_OPT; i++ ){
+			s += std::string( i ? "," : "" ) + "[" + std::to_string( it.option[i].id ) + "," + std::to_string( it.option[i].value ) + "," + std::to_string( static_cast<int32>( it.option[i].param ) ) + "]";
+		}
+
+		return s + "],\"uid\":" + std::to_string( it.unique_id ) + "}";
+	}
+
+	std::map<t_itemid, int64> need_enchant_inventory_counts( map_session_data& sd ){
+		std::map<t_itemid, int64> counts;
+
+		for( int32 i = 0; i < MAX_INVENTORY; i++ ){
+			if( sd.inventory_data[i] != nullptr && sd.inventory.u.items_inventory[i].nameid != 0 ){
+				counts[sd.inventory.u.items_inventory[i].nameid] += sd.inventory.u.items_inventory[i].amount;
+			}
+		}
+
+		return counts;
+	}
+
+	/// first unequipped stack of the item, -1 if none
+	int32 need_enchant_find_unequipped( map_session_data& sd, t_itemid nameid ){
+		for( int32 i = 0; i < MAX_INVENTORY; i++ ){
+			if( sd.inventory_data[i] != nullptr && sd.inventory.u.items_inventory[i].nameid == nameid && sd.inventory.u.items_inventory[i].equip == 0 ){
+				return i;
+			}
+		}
+
+		return -1;
+	}
+
+	void need_enchant_clear_unequipped( map_session_data& sd, t_itemid nameid ){
+		for( int32 i = need_enchant_find_unequipped( sd, nameid ); i >= 0; i = need_enchant_find_unequipped( sd, nameid ) ){
+			if( pc_delitem( &sd, i, sd.inventory.u.items_inventory[i].amount, 0, 0, LOG_TYPE_COMMAND ) != 0 ){
+				break;
+			}
+		}
+	}
+}
+
+namespace{
+	/// a plan in progress (one per character), worked off by need_enchant_plan_timer in small chunks
+	struct s_need_enchant_plan_job {
+		std::ifstream in;
+		std::ofstream out;
+		std::string out_path;
+		int32 lineno = 0, tries = 0, errors = 0;
+		int32 zeny = 0;   ///< zeny before the plan, given back at the end
+	};
+
+	const int32 NEED_ENCHANT_PLAN_LINES_PER_TICK = 40;
+	const t_tick NEED_ENCHANT_PLAN_INTERVAL = 100;
+
+	std::unordered_map<uint32, std::shared_ptr<s_need_enchant_plan_job>> need_enchant_plan_jobs;
+
+	/// <id> <refine> <bound> <grade> <c0> <c1> <c2> <c3> <optId> <optValue> <optParam>
+	bool need_enchant_plan_give( map_session_data& sd, const std::string& args ){
+		std::istringstream ss( args );
+		struct item it = {};
+		int32 refine = 0, bound = 0, grade = 0, opt_id = 0, opt_value = 0, opt_param = 0;
+
+		ss >> it.nameid >> refine >> bound >> grade >> it.card[0] >> it.card[1] >> it.card[2] >> it.card[3] >> opt_id >> opt_value >> opt_param;
+		it.identify = 1;
+		it.refine = static_cast<char>( refine );
+		it.bound = static_cast<char>( bound );
+		it.enchantgrade = static_cast<uint8>( grade );
+		it.option[0].id = static_cast<int16>( opt_id );
+		it.option[0].value = static_cast<int16>( opt_value );
+		it.option[0].param = static_cast<char>( opt_param );
+
+		return item_db.find( it.nameid ) != nullptr && pc_additem( &sd, &it, 1, LOG_TYPE_COMMAND ) == ADDITEM_SUCCESS;
+	}
+
+	void need_enchant_plan_line( map_session_data& sd, s_need_enchant_plan_job& job, const std::string& line ){
+		std::istringstream ss( line );
+		std::string cmd;
+		std::ofstream& out = job.out;
+
+		ss >> cmd;
+
+		std::string rest;
+
+		std::getline( ss, rest );
+
+		std::istringstream args( rest );
+
+		auto fail = [&]( const std::string& why ){
+			job.errors++;
+			out << "{\"line\":" << job.lineno << ",\"error\":\"" << why << "\"}\n";
+		};
+
+		if( cmd == "note" ){
+			out << "{\"line\":" << job.lineno << ",\"note\":\"" << rest << "\"}\n";
+		}else if( cmd == "clear" ){
+			t_itemid id = 0;
+
+			args >> id;
+			need_enchant_clear_unequipped( sd, id );
+		}else if( cmd == "have" ){
+			t_itemid id = 0;
+			int32 amount = 0;
+
+			args >> id >> amount;
+			need_enchant_clear_unequipped( sd, id );
+
+			if( amount > 0 ){
+				struct item it = {};
+
+				it.nameid = id;
+				it.identify = 1;
+
+				if( item_db.find( id ) == nullptr || pc_additem( &sd, &it, amount, LOG_TYPE_COMMAND ) != ADDITEM_SUCCESS ){
+					fail( "have " + std::to_string( id ) );
+				}
+			}
+		}else if( cmd == "zeny" ){
+			int64 amount = 0;
+
+			args >> amount;
+
+			if( amount > sd.status.zeny ){
+				pc_getzeny( &sd, static_cast<int32>( amount - sd.status.zeny ), LOG_TYPE_COMMAND );
+			}else if( amount < sd.status.zeny ){
+				pc_payzeny( &sd, static_cast<int32>( sd.status.zeny - amount ), LOG_TYPE_COMMAND );
+			}
+
+			if( sd.status.zeny != amount ){
+				fail( "zeny" );
+			}
+		}else if( cmd == "give" ){
+			if( !need_enchant_plan_give( sd, rest ) ){
+				fail( "give" );
+			}
+		}else if( cmd == "ensure" ){
+			// give only when no unequipped copy is left (the previous request destroyed it)
+			t_itemid id = 0;
+
+			args >> id;
+
+			if( need_enchant_find_unequipped( sd, id ) < 0 && !need_enchant_plan_give( sd, rest ) ){
+				fail( "ensure" );
+			}
+		}else if( cmd == "try" ){
+			std::string tag;
+			char op = 0;
+			uint64 group = 0;
+			t_itemid target = 0;
+			uint32 arg = 0;
+
+			args >> tag >> op >> group >> target >> arg;
+
+			int32 index = need_enchant_find_unequipped( sd, target );
+
+			if( index < 0 ){
+				fail( "no target for " + tag );
+				return;
+			}
+
+			struct item before = sd.inventory.u.items_inventory[index];
+			std::map<t_itemid, int64> counts = need_enchant_inventory_counts( sd );
+			std::string have;
+
+			for( const auto& entry : counts ){
+				have += ( have.empty() ? "\"" : ",\"" ) + std::to_string( entry.first ) + "\":" + std::to_string( entry.second );
+			}
+
+			int64 zeny = sd.status.zeny;
+			int32 msg = clif_enchantwindow_test_request( sd, op, group, static_cast<uint16>( index ), arg );
+			const struct item& now = sd.inventory.u.items_inventory[index];
+			bool exists = sd.inventory_data[index] != nullptr && now.nameid == before.nameid && ( before.unique_id == 0 || now.unique_id == before.unique_id );
+			std::map<t_itemid, int64> after = need_enchant_inventory_counts( sd );
+			std::string delta;
+
+			for( const auto& entry : after ){
+				counts[entry.first] -= entry.second;
+			}
+
+			for( const auto& entry : counts ){
+				if( entry.second != 0 ){
+					delta += ( delta.empty() ? "\"" : ",\"" ) + std::to_string( entry.first ) + "\":" + std::to_string( -entry.second );
+				}
+			}
+
+			job.tries++;
+			out << "{\"line\":" << job.lineno << ",\"tag\":\"" << tag << "\",\"op\":\"" << op << "\",\"group\":" << group << ",\"arg\":" << arg
+				<< ",\"msg\":" << msg << ",\"before\":" << need_enchant_item_json( before )
+				<< ",\"after\":" << ( exists ? need_enchant_item_json( now ) : std::string( "{\"exists\":0}" ) )
+				<< ",\"zeny\":[" << zeny << "," << sd.status.zeny << "],\"have\":{" << have << "},\"inv\":{" << delta << "}}\n";
+		}else{
+			fail( "unknown command " + cmd );
+		}
+	}
+
+	TIMER_FUNC( need_enchant_plan_timer ){
+		uint32 char_id = static_cast<uint32>( id );
+		auto found = need_enchant_plan_jobs.find( char_id );
+
+		if( found == need_enchant_plan_jobs.end() ){
+			return 0;
+		}
+
+		std::shared_ptr<s_need_enchant_plan_job> job = found->second;
+		map_session_data* sd = map_charid2sd( char_id );
+
+		if( sd == nullptr ){
+			job->out << "{\"error\":\"character left, plan stopped at line " << job->lineno << "\"}\n";
+			need_enchant_plan_jobs.erase( found );
+			return 0;
+		}
+
+		std::string line;
+		int32 start = job->lineno;
+
+		for( int32 n = 0; n < NEED_ENCHANT_PLAN_LINES_PER_TICK; ){
+			if( !std::getline( job->in, line ) ){
+				if( sd->status.zeny > job->zeny ){
+					pc_payzeny( sd, sd->status.zeny - job->zeny, LOG_TYPE_COMMAND );
+				}else if( sd->status.zeny < job->zeny ){
+					pc_getzeny( sd, job->zeny - sd->status.zeny, LOG_TYPE_COMMAND );
+				}
+
+				job->out <<"{\"done\":1,\"tries\":" << job->tries << ",\"errors\":" << job->errors << "}\n";
+				job->out.close();
+
+				char msg[CHAT_SIZE_MAX];
+
+				safesnprintf( msg, sizeof( msg ), "[v2try] done: %d requests, %d plan errors -> %s", job->tries, job->errors, job->out_path.c_str() );
+				clif_displaymessage( sd->fd, msg );
+				need_enchant_plan_jobs.erase( found );
+				return 0;
+			}
+
+			job->lineno++;
+
+			if( !line.empty() && line.back() == '\r' ){
+				line.pop_back();
+			}
+
+			if( line.empty() || line[0] == '#' ){
+				continue;
+			}
+
+			need_enchant_plan_line( *sd, *job, line );
+			n++;
+		}
+
+		job->out.flush();
+
+		if( job->lineno / 2000 != start / 2000 ){
+			char msg[CHAT_SIZE_MAX];
+
+			safesnprintf( msg, sizeof( msg ), "[v2try] line %d, %d requests so far", job->lineno, job->tries );
+			clif_displaymessage( sd->fd, msg );
+		}
+
+		add_timer( tick + NEED_ENCHANT_PLAN_INTERVAL, need_enchant_plan_timer, char_id, 0 );
+		return 0;
+	}
+}
+
+/**
+ * NEED test only: start a test plan on a logged in character (@v2try <plan> <out>); it runs in small chunks.
+ * Every "try" goes through the real packet handler (clif_enchantwindow_test_request) and writes one JSON line:
+ * the item before and after, the window answer, the zeny, the inventory before and its delta.
+ * The character's zeny is given back when the plan ends; the items it cleared are not.
+ * Plan lines: clear <id> | have <id> <amount> | zeny <amount> | note <text>
+ *             give|ensure <id> <refine> <bound> <grade> <c0> <c1> <c2> <c3> <optId> <optValue> <optParam>
+ *             try <tag> <n|p|u|r> <group> <targetId> <arg>
+ */
+bool need_enchant_plan_run( map_session_data& sd, const char* plan_path, const char* out_path, int32& tries, int32& errors ){
+	tries = errors = 0;
+
+	if( need_enchant_plan_jobs.find( sd.status.char_id ) != need_enchant_plan_jobs.end() ){
+		return false;
+	}
+
+	std::shared_ptr<s_need_enchant_plan_job> job = std::make_shared<s_need_enchant_plan_job>();
+
+	job->in.open( plan_path, std::ios::binary );
+	job->out.open( out_path, std::ios::binary | std::ios::trunc );
+	job->out_path = out_path;
+	job->zeny = sd.status.zeny;
+
+	if( !job->in || !job->out ){
+		return false;
+	}
+
+	static bool registered = false;
+
+	if( !registered ){
+		add_timer_func_list( need_enchant_plan_timer, "need_enchant_plan_timer" );
+		registered = true;
+	}
+
+	need_enchant_plan_jobs[sd.status.char_id] = job;
+	add_timer( gettick() + NEED_ENCHANT_PLAN_INTERVAL, need_enchant_plan_timer, sd.status.char_id, 0 );
+
+	return true;
+}
+
+/**
+ * NEED test only: offline roll distributions on the loaded groups and rules (no session, no packets).
+ * map-server-enchanttest --need-enchant-plan <item_enchant.yml> <enchant_rules.yml> <plan> <out>
+ * Plan lines: item <id> <refine> <grade> <c0> <c1> <c2> <c3>     (the item the next rolls use)
+ *             roll <tag> <n|u|r> <group> <arg> <count>          (arg = slot for 'u')
+ * Output: one JSON line per roll: whether the request passes the rule check, the slot, and the counts of
+ * E<enchant> / F<RESULT>[:<to>] / STOCK_FAIL / SUCCESS / FAIL, plus R<item>x<amount> reward picks and
+ * RD<refine> results of a REFINE_DOWN.
+ */
+bool need_enchant_plan_offline( const char* item_enchant_path, const char* rules_path, const char* plan_path, const char* out_path ){
+	if( !need_enchant_check_generated( item_enchant_path, rules_path ) ){
+		return false;
+	}
+
+	std::ifstream in( plan_path, std::ios::binary );
+	std::ofstream out( out_path, std::ios::binary | std::ios::trunc );
+
+	if( !in || !out ){
+		ShowError( "[NEED enchant plan] cannot open '%s' or '%s'.\n", plan_path, out_path );
+		return false;
+	}
+
+	struct item it = {};
+	std::string line;
+	size_t rolls = 0, errors = 0;
+
+	while( std::getline( in, line ) ){
+		if( !line.empty() && line.back() == '\r' ){
+			line.pop_back();
+		}
+
+		if( line.empty() || line[0] == '#' ){
+			continue;
+		}
+
+		std::istringstream ss( line );
+		std::string cmd;
+
+		ss >> cmd;
+
+		if( cmd == "item" ){
+			int32 refine = 0, grade = 0;
+
+			it = {};
+			ss >> it.nameid >> refine >> grade >> it.card[0] >> it.card[1] >> it.card[2] >> it.card[3];
+			it.identify = 1;
+			it.amount = 1;
+			it.refine = static_cast<char>( refine );
+			it.enchantgrade = static_cast<uint8>( grade );
+			continue;
+		}
+
+		if( cmd != "roll" ){
+			errors++;
+			out << "{\"error\":\"unknown command " << cmd << "\"}\n";
+			continue;
+		}
+
+		std::string tag;
+		char op = 0;
+		uint64 group_id = 0;
+		uint32 arg = 0;
+		uint64 count = 0;
+
+		ss >> tag >> op >> group_id >> arg >> count;
+
+		std::shared_ptr<s_item_enchant> group = item_enchant_db.find( group_id );
+		std::shared_ptr<item_data> data = item_db.find( it.nameid );
+		std::map<std::string, uint64> counts;
+		bool check = group != nullptr && data != nullptr && util::vector_exists( group->target_item_ids, it.nameid ) && it.refine >= group->minimumRefine;
+		int32 slot = -1;
+
+		auto add_reward = [&]( const s_need_enchant_outcome& outcome ){
+			if( need_enchant_has_reward( outcome.result ) ){
+				std::shared_ptr<s_need_enchant_reward> reward = need_enchant_pick_reward( outcome );
+
+				if( reward != nullptr ){
+					counts["R" + std::to_string( reward->item_id ) + "x" + std::to_string( reward->amount )]++;
+				}
+			}
+		};
+
+		auto add_outcome = [&]( const s_need_enchant_outcome& outcome ){
+			std::string key = std::string( "F" ) + need_enchant_result_name( outcome.result );
+
+			if( outcome.result == NEED_ENCHANT_DOWNGRADE ){
+				key += ":" + std::to_string( outcome.downgrade_to );
+			}
+
+			counts[key]++;
+			add_reward( outcome );
+
+			if( outcome.result == NEED_ENCHANT_REFINE_DOWN ){
+				struct item copy = it;
+
+				need_enchant_mutate( copy, *data, outcome, static_cast<uint16>( slot ) );
+				counts["RD" + std::to_string( static_cast<int32>( copy.refine ) )]++;
+			}
+		};
+
+		if( check && op == 'n' ){
+			for( uint16 next : group->order ){
+				if( it.card[next] == 0 ){
+					slot = next;
+					break;
+				}
+			}
+
+			std::shared_ptr<s_item_enchant_slot> enchant_slot = slot >= 0 ? util::umap_find( group->slots, static_cast<uint16>( slot ) ) : nullptr;
+			std::shared_ptr<s_item_enchant_normal> pool = enchant_slot != nullptr ? util::umap_find( enchant_slot->normal.enchants, static_cast<uint16>( it.enchantgrade ) ) : nullptr;
+
+			check = slot >= data->slots && pool != nullptr && itemdb_enchant_total_weight( *pool ) > 0
+				&& need_enchant_check( it, *data, *group, static_cast<uint16>( slot ), NEED_ENCHANT_OP_NORMAL, pool.get(), 0 );
+
+			for( uint64 i = 0; check && i < count; i++ ){
+				s_need_enchant_roll roll = need_enchant_roll_normal( it, *data, *group, *enchant_slot, *pool );
+
+				if( roll.enchant != 0 ){
+					counts["E" + std::to_string( roll.enchant )]++;
+				}else if( roll.failure != nullptr ){
+					add_outcome( *roll.failure );
+				}else{
+					counts["STOCK_FAIL"]++;
+				}
+			}
+		}else if( check && op == 'u' ){
+			slot = static_cast<int32>( arg );
+
+			std::shared_ptr<s_item_enchant_slot> enchant_slot = slot < MAX_SLOTS ? util::umap_find( group->slots, static_cast<uint16>( slot ) ) : nullptr;
+
+			check = enchant_slot != nullptr && slot >= data->slots && it.card[slot] != 0 && util::umap_find( enchant_slot->upgrade.enchants, it.card[slot] ) != nullptr
+				&& need_enchant_check( it, *data, *group, static_cast<uint16>( slot ), NEED_ENCHANT_OP_UPGRADE, nullptr, 0 );
+
+			std::shared_ptr<s_need_enchant_upgrade> rules = check ? need_enchant_find_upgrade( group_id, static_cast<uint16>( slot ), it.card[slot] ) : nullptr;
+
+			for( uint64 i = 0; check && i < count; i++ ){
+				if( rules == nullptr ){
+					counts["SUCCESS"]++;
+					continue;
+				}
+
+				bool success;
+				std::shared_ptr<s_need_enchant_outcome> outcome = need_enchant_roll_outcomes( rules->failures, rules->success_weight, success );
+
+				if( success ){
+					counts["SUCCESS"]++;
+				}else if( outcome != nullptr ){
+					add_outcome( *outcome );
+				}
+			}
+		}else if( check && op == 'r' ){
+			slot = 0;
+
+			bool enchanted = false;
+
+			for( int32 i = data->slots; i < MAX_SLOTS; i++ ){
+				enchanted |= it.card[i] != 0;
+			}
+
+			check = group->reset.chance > 0 && enchanted && it.enchantgrade >= group->minimumEnchantgrade
+				&& need_enchant_check( it, *data, *group, 0, NEED_ENCHANT_OP_RESET, nullptr, 0 );
+
+			std::shared_ptr<s_need_enchant> rules = need_enchant_find( group_id );
+
+			for( uint64 i = 0; check && i < count; i++ ){
+				if( rules != nullptr && !rules->reset.outcomes.empty() ){
+					bool success;
+					std::shared_ptr<s_need_enchant_outcome> outcome = need_enchant_roll_outcomes( rules->reset.outcomes, 0, success );
+
+					if( outcome == nullptr ){
+						continue;
+					}
+
+					if( success ){
+						counts["SUCCESS"]++;
+						add_reward( *outcome );
+					}else{
+						add_outcome( *outcome );
+					}
+				}else{
+					counts[itemdb_enchant_roll( group->reset.chance ) ? "SUCCESS" : "FAIL"]++;
+				}
+			}
+		}else if( check ){
+			check = false;
+		}
+
+		rolls++;
+		out << "{\"tag\":\"" << tag << "\",\"check\":" << ( check ? 1 : 0 ) << ",\"slot\":" << slot << ",\"n\":" << ( check ? count : 0 ) << ",\"counts\":{";
+
+		bool first = true;
+
+		for( const auto& entry : counts ){
+			out << ( first ? "\"" : ",\"" ) << entry.first << "\":" << entry.second;
+			first = false;
+		}
+
+		out << "}}\n";
+	}
+
+	ShowStatus( "[NEED enchant plan] %zu rolls written to '%s', %zu errors\n", rolls, out_path, errors );
+
+	return errors == 0;
 }
 #endif

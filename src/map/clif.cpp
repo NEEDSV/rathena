@@ -25388,6 +25388,11 @@ void clif_enchantwindow_open( map_session_data& sd, uint64 clientLuaIndex ){
 #endif
 }
 
+#ifdef NEED_ENCHANT_TEST
+/// NEED test only: msgId of the last enchant window answer (read by clif_enchantwindow_test_request)
+static int32 clif_enchantwindow_test_last_msg = 0;
+#endif
+
 /// NEED: result window answer with any msgstringtable id (the client shows the message and closes the window)
 void clif_enchantwindow_result_message( map_session_data& sd, int32 msgId, t_itemid enchant ){
 #if PACKETVER_RE_NUM >= 20211103 || PACKETVER_MAIN_NUM >= 20220330
@@ -25400,6 +25405,9 @@ void clif_enchantwindow_result_message( map_session_data& sd, int32 msgId, t_ite
 	clif_send( &p, sizeof( p ), &sd, SELF );
 
 	sd.state.item_enchant_index = 0;
+#endif
+#ifdef NEED_ENCHANT_TEST
+	clif_enchantwindow_test_last_msg = msgId;
 #endif
 }
 
@@ -26076,6 +26084,82 @@ void clif_parse_enchantwindow_close( int32 fd, map_session_data* sd ){
 	sd->state.item_enchant_index = 0;
 #endif
 }
+
+#ifdef NEED_ENCHANT_TEST
+/**
+ * NEED test only: run one enchant request through the real packet handler, exactly as if the client had sent it
+ * from an open window of this group. The session read buffer points at the built packet for the call only.
+ * @param op 'n' normal, 'p' perfect (arg = ITID), 'u' upgrade (arg = slot), 'r' reset
+ * @return msgId of the window answer, 0 if the handler answered nothing, -1 if the request could not be run
+ */
+int32 clif_enchantwindow_test_request( map_session_data& sd, char op, uint64 group, uint16 index, uint32 arg ){
+#if PACKETVER_MAIN_NUM >= 20201118 || PACKETVER_RE_NUM >= 20211103 || PACKETVER_ZERO_NUM >= 20221024
+	int32 fd = sd.fd;
+
+	if( !session_isActive( fd ) ){
+		return -1;
+	}
+
+	union{
+		PACKET_CZ_REQUEST_RANDOM_ENCHANT normal;
+		PACKET_CZ_REQUEST_PERFECT_ENCHANT perfect;
+		PACKET_CZ_REQUEST_UPGRADE_ENCHANT upgrade;
+		PACKET_CZ_REQUEST_RESET_ENCHANT reset;
+	} packet = {};
+	void (*handler)( int32, map_session_data* ) = nullptr;
+
+	switch( op ){
+		case 'n':
+			packet.normal.PacketType = HEADER_CZ_REQUEST_RANDOM_ENCHANT;
+			packet.normal.enchant_group = group;
+			packet.normal.index = client_index( index );
+			handler = clif_parse_enchantwindow_general;
+			break;
+		case 'p':
+			packet.perfect.PacketType = HEADER_CZ_REQUEST_PERFECT_ENCHANT;
+			packet.perfect.enchant_group = group;
+			packet.perfect.index = client_index( index );
+			packet.perfect.ITID = arg;
+			handler = clif_parse_enchantwindow_perfect;
+			break;
+		case 'u':
+			packet.upgrade.PacketType = HEADER_CZ_REQUEST_UPGRADE_ENCHANT;
+			packet.upgrade.enchant_group = group;
+			packet.upgrade.index = client_index( index );
+			packet.upgrade.slot = static_cast<int16>( arg );
+			handler = clif_parse_enchantwindow_upgrade;
+			break;
+		case 'r':
+			packet.reset.PacketType = HEADER_CZ_REQUEST_RESET_ENCHANT;
+			packet.reset.enchant_group = group;
+			packet.reset.index = client_index( index );
+			handler = clif_parse_enchantwindow_reset;
+			break;
+		default:
+			return -1;
+	}
+
+	unsigned char* rdata = session[fd]->rdata;
+	size_t rdata_pos = session[fd]->rdata_pos;
+	uint64 window = sd.state.item_enchant_index;
+
+	session[fd]->rdata = reinterpret_cast<unsigned char*>( &packet );
+	session[fd]->rdata_pos = 0;
+	sd.state.item_enchant_index = group;
+	clif_enchantwindow_test_last_msg = 0;
+
+	handler( fd, &sd );
+
+	session[fd]->rdata = rdata;
+	session[fd]->rdata_pos = rdata_pos;
+	sd.state.item_enchant_index = window;
+
+	return clif_enchantwindow_test_last_msg;
+#else
+	return -1;
+#endif
+}
+#endif
 
 void clif_parse_itempackage_select( int32 fd, map_session_data* sd ){
 #if PACKETVER_MAIN_NUM >= 20220216 || PACKETVER_ZERO_NUM >= 20220316

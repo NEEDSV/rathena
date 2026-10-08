@@ -9278,6 +9278,39 @@ ACMD_FUNC(enchanttest)
 	clif_displaymessage( fd, "[enchanttest] unknown subcommand" );
 	return -1;
 }
+
+/*==========================================
+ * NEED test only: @v2try <plan> <out> (GM 99)
+ * Runs an enchant test plan (tools/need_enchant/tc_plan.py) on this character through the real request handlers
+ * and writes one JSON line per request to <out> (checked by tools/need_enchant/tc_verify.py).
+ * The plan deletes and creates items and sets zeny: use a test character only.
+ *------------------------------------------*/
+ACMD_FUNC(v2try)
+{
+	char plan[256] = {}, out[256] = {};
+
+	nullpo_retr(-1, sd);
+
+	if( pc_get_group_level( sd ) < 99 ){
+		return -1;
+	}
+
+	if( !message || !*message || sscanf( message, "%255s %255s", plan, out ) < 2 ){
+		clif_displaymessage( fd, "Usage: @v2try <plan file> <output file>  (test character only: items and zeny are replaced)" );
+		return -1;
+	}
+
+	int32 tries = 0, errors = 0;
+
+	if( !need_enchant_plan_run( *sd, plan, out, tries, errors ) ){
+		clif_displaymessage( fd, "[v2try] cannot open the plan / output file, or a plan is already running" );
+		return -1;
+	}
+
+	sprintf( atcmd_output, "[v2try] started: %s -> %s (a message follows when it is done)", plan, out );
+	clif_displaymessage( fd, atcmd_output );
+	return 0;
+}
 #endif
 
 /*==========================================
@@ -13598,6 +13631,7 @@ void atcommand_basecommands(void) {
 		ACMD_DEF(refresh),
 #ifdef NEED_ENCHANT_TEST
 		ACMD_DEF(enchanttest),
+		ACMD_DEF(v2try),
 #endif
 		ACMD_DEF(refreshall),
 		ACMD_DEF(identify),

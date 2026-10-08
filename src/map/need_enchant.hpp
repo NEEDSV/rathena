@@ -181,6 +181,8 @@ std::shared_ptr<s_need_enchant> need_enchant_find( uint64 group );
 bool need_enchant_selftest();
 bool need_enchant_load_test_rules( const char* path );
 bool need_enchant_check_generated( const char* item_enchant_path, const char* rules_path );
+bool need_enchant_plan_run( map_session_data& sd, const char* plan_path, const char* out_path, int32& tries, int32& errors );
+bool need_enchant_plan_offline( const char* item_enchant_path, const char* rules_path, const char* plan_path, const char* out_path );
 #endif
 
 #endif /* MAP_NEED_ENCHANT_HPP */
