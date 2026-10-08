@@ -8,6 +8,13 @@
 #define NEED_2017_SKILL_FORMULA
 #define NEED_2017_SKILL_BEHAVIOR
 
+// NEED: 호문클루스 S 를 2017(rAthena 652d77eb0^, Genetic 직업개선 이전) 동작으로 고정한다.
+// Pyroclastic / Overed Boost / Light of Regene / Angriffs Modus / Pain Killer / Poison Mist /
+// Lava Slide / Stahl Horn / Needle of Paralyze / Silvervein Rush / Midnight Frenzy /
+// Tinder Breaker / C.B.C / E.Q.C 가 대상. 수치 데이터는 db/import/{skill_db,status,exp_homun}.yml,
+// 스킬 트리(후대 16종 제거, MaxLevel 5)는 db/re/homunculus_db.yml, 최대레벨 175 는 conf/import/battle_conf.txt
+#define NEED_2017_HOMUNCULUS_S
+
 // 모든 리뉴얼 옵션을 비활성화하는 빠른 옵션 (./configure에서 사용)
 //#define PRERE
 #ifndef PRERE

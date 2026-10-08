@@ -13,6 +13,17 @@ SkillEternalQuickCombo::SkillEternalQuickCombo() : SkillImpl(MH_EQC) {
 void SkillEternalQuickCombo::castendDamageId(block_list* src, block_list* target, uint16 skill_lv, t_tick tick, int32& flag) const {
 	int32 duration = max(skill_lv, (status_get_str(src) / 7 - status_get_str(target) / 10)) * 1000; //Yommy formula
 
+#ifdef NEED_2017_HOMUNCULUS_S
+	// 2017: cannot be used on status immune (boss) monsters
+	if (status_bl_has_mode(target, MD_STATUSIMMUNE)) {
+		homun_data* hd = BL_CAST(BL_HOM, src);
+
+		if (hd != nullptr && hd->master != nullptr)
+			clif_skill_fail(*hd->master, getSkillId(), USESKILL_FAIL_TOTARGET);
+		return;
+	}
+#endif
+
 	clif_skill_nodamage(src, *target, getSkillId(), skill_lv, sc_start4(src, target, SC_EQC, 100, skill_lv, src->id, 0, 0, duration));
 	skill_attack(skill_get_type(getSkillId()), src, src, target, getSkillId(), skill_lv, tick, flag);
 }

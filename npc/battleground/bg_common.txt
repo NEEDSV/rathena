@@ -636,16 +636,19 @@ function	script	F_BG_Reward	{
 	mes needtr("[전장 관리인]","[Battleground Manager]");
 	mes needtr("티에라/플라비우스/KvM 참여 시 전장 포인트 + 9","Battleground Points + 9 for joining Tierra / Flavius / KvM");
 	mes " ";
-	mes needtr("티에라 승 : 금화 10개, 용맹휘장 2개","Tierra win : 10 Gold, 2 Bravery Badges");
-	mes needtr("티에라 패 : 금화 7개, 용맹휘장 1개","Tierra loss : 7 Gold, 1 Bravery Badge");
+	mes needtr("티에라 승 : 금화 15개, 용맹휘장 2개","Tierra win : 15 Gold, 2 Bravery Badges");
+	mes needtr("티에라 패 : 금화 11개, 용맹휘장 1개","Tierra loss : 11 Gold, 1 Bravery Badge");
 	mes " ";
-	mes needtr("플라비우스 승 : 금화 20개, 특공휘장 3개","Flavius win : 20 Gold, 3 Valor Badges");
-	mes needtr("플라비우스 패 : 금화 15개, 특공휘장 2개","Flavius loss : 15 Gold, 2 Valor Badges");
+	mes needtr("플라비우스 승 : 금화 30개, 특공휘장 3개","Flavius win : 30 Gold, 3 Valor Badges");
+	mes needtr("플라비우스 패 : 금화 23개, 특공휘장 2개","Flavius loss : 23 Gold, 2 Valor Badges");
 	mes " ";
-	mes needtr("KvM 승 : 금화 20개, 전투휘장 3개","KvM win : 20 Gold, 3 War Badges");
-	mes needtr("KvM 패 : 금화 15개, 전투휘장 2개","KvM loss : 15 Gold, 2 War Badges");
+	mes needtr("KvM 승 : 금화 30개, 전투휘장 3개","KvM win : 30 Gold, 3 War Badges");
+	mes needtr("KvM 패 : 금화 23개, 전투휘장 2개","KvM loss : 23 Gold, 2 War Badges");
 	mes " ";
-	mes needtr("6명부터는 1명당 금화 2개씩 추가 지급.","From 6 players on, 2 extra Gold are paid per player.");
+	mes needtr("^0055FF대전 승리의 증표 : 티에라/플라비우스 1개, KvM 2개 (승패 무관)^000000","^0055FFToken of Victory War : 1 in Tierra / Flavius, 2 in KvM (win or lose)^000000");
+	mes needtr("^0055FF전장 장비 담당관에서 대축(50개) / +9 보장권(500개)으로 교환^000000","^0055FFTrade them at the Battleground Equipment Officer for a Blacksmith's Blessing (50) / +9 certificate (500)^000000");
+	mes " ";
+	mes needtr("6명부터는 1명당 금화 3개씩 추가 지급.","From 6 players on, 3 extra Gold are paid per player.");
 	mes needtr("^FF0000파티장이 되어 진행할 경우 모든 휘장 3개, 전장 포인트 +5 추가 지급^000000","^FF0000Run it as the party leader for 3 of every badge and +5 extra Battleground Points^000000");
 	setdialogsize(400,400);
 	close;
@@ -2975,6 +2978,9 @@ function	script	F_BG_Badge	{
 	// NEED: 전장 캐시 1.5배. 기본 금화 상수와 인원 보정을 함께 1.5배로 올린다.
 	.@bonusmount = ($BG_User_Count - 5) * 3;
 	getitem .@badge,.@amount + .@partyleaderbonus;
+
+	// NEED 2026-10-07: 대전 승리의 증표(6378) - 승패 무관 1개. 전장 장비 담당관에서 대축/+9 보장권 교환
+	getitem 6378, 1;
 
 	.@gold_amount = .@cashamount + .@bonusmount;
 	.@gold_amount = callfunc("F_NEED_GoldEvent_BGAmount", .@gold_amount);

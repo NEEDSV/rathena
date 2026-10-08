@@ -25,6 +25,7 @@ function FavoriteMenu; function FavoriteRegister; function FavoriteUnlock; funct
 // --------------------------------------------------
 
 menu	needtr("마지막 이동 ^777777[", "Last Warp ^777777[")+lastwarp$+"]^000000",-,
+		needtr("맵 이름으로 이동", "Warp by Map Name"),MapName,
 		needtr(" ~ 나만의 워프포탈"," ~ Favorites"),Favorites,
     	needtr(" ~ 마을", " ~ Towns"),Towns,
     	needtr(" ~ 필드", " ~ Fields"),Fields,
@@ -42,6 +43,26 @@ menu	needtr("마지막 이동 ^777777[", "Last Warp ^777777[")+lastwarp$+"]^000000",-
 
 Favorites:
 	FavoriteMenu();
+	end;
+
+MapName:
+	mes needtr("[워프 도우미]", "[Warp Helper]");
+	mes needtr("이동할 맵 이름을 입력해 주세요.", "Enter the name of the map you want to warp to.");
+	mes needtr("예: prontera, gef_fild00", "e.g. prontera, gef_fild00");
+	mes needtr("워퍼가 이동시켜 주는 맵만 입력할 수 있습니다.", "Only maps this warper can take you to are accepted.");
+	input .@map$;
+	.@map$ = strtolower(replacestr(.@map$, " ", ""));
+	if (.@map$ == "")
+		close;
+	.@idx = inarray(.ms_map$, .@map$);
+	if (.@idx < 0) {
+		mes needtr("[워프 도우미]", "[Warp Helper]");
+		mes "^FF0000"+.@map$+"^000000";
+		mes needtr("워퍼로 이동할 수 없는 맵이거나 존재하지 않는 맵입니다.", "This map does not exist or is not a warper destination.");
+		close;
+	}
+	close2;
+	Go(.ms_map$[.@idx], .ms_x[.@idx], .ms_y[.@idx]);
 	end;
 
 // ------------------- Functions -------------------
@@ -700,7 +721,7 @@ D36: setarray @c[2],32,170,21,185;
 D37: Restrict("RE");
 	 setarray @c[2],21,191,141,277;
 	 Disp("오즈의 미로 1층:오즈의 미로 2층"); Pick("oz_dun");
-D38: setarray @c[0],21,183,19,33,19,63,155,159,201,204;
+D38: setarray @c[2],21,183,19,33,19,63,155,159,201,204;
 	 Disp(needtr("페이욘 동굴 1층:페이욘 동굴 2층:페이욘 동굴 3층:페이욘 동굴 4층:페이욘 동굴 5층", "Payon Dungeon 1:Payon Dungeon 2:Payon Dungeon 3:Payon Dungeon 4:Payon Dungeon 5")); Pick("","pay_dun00","pay_dun01","pay_dun02","pay_dun03","pay_dun04");
 D39: Restrict("RE");
 	 setarray @c[2],159,289,155,353;
@@ -1642,6 +1663,110 @@ OnInit:
 	.FavoriteUnlockCost[8] = 10000000;
 	.FavoriteUnlockCost[9] = 10000000;
 	.FavoriteUnlockCost[10] = 10000000;
+
+	// --------------------------------------------------
+	// "맵 이름으로 이동" 허용 맵 목록 (메뉴에 실제로 노출되는 대상만, 주석 처리된 메뉴 항목은 제외)
+	// 워퍼 메뉴에 맵을 추가/제거하면 아래 목록도 함께 수정하세요.
+	// --------------------------------------------------
+	setarray .ms_map$[0],"prontera","alberta","aldebaran","amatsu","ayothaya","brasilis","comodo","dewata","ecl_in01","einbech","einbroch","dicastes01";
+	setarray .ms_x[0],155,28,140,198,208,196,209,200,48,63,64,198;
+	setarray .ms_y[0],183,234,131,84,166,217,143,180,53,35,200,187;
+	setarray .ms_map$[12],"geffen","hugel","jawaii","yuno","gonryun","lasagna","lighthalzen","louyang","xmas","malangdo","malaya","manuk";
+	setarray .ms_x[12],119,96,251,157,160,193,158,217,147,140,231,282;
+	setarray .ms_y[12],59,145,132,51,120,182,92,100,134,114,200,138;
+	setarray .ms_map$[24],"mora","morocc","moscovia","nameless_i","nameless_n","niflheim","payon","rachel","splendide","umbala","veins","verus04";
+	setarray .ms_x[24],55,156,223,256,256,202,179,130,201,97,216,123;
+	setarray .ms_y[24],146,93,184,215,215,174,100,110,147,153,123,250;
+	setarray .ms_map$[36],"ama_fild01","ayo_fild01","ayo_fild02","bif_fild01","bif_fild02","bra_fild01","cmd_fild01","cmd_fild02","cmd_fild03","cmd_fild04","cmd_fild05","cmd_fild06";
+	setarray .ms_x[36],190,173,212,193,220,74,180,231,191,228,224,190;
+	setarray .ms_y[36],197,134,150,220,187,32,178,160,172,194,203,223;
+	setarray .ms_map$[48],"cmd_fild07","cmd_fild08","cmd_fild09","dew_fild01","ecl_fild01","ein_fild01","ein_fild02","ein_fild03","ein_fild04","ein_fild05","ein_fild06","ein_fild07";
+	setarray .ms_x[48],234,194,172,371,97,142,182,187,185,216,195,272;
+	setarray .ms_y[48],177,175,172,212,314,225,141,228,173,173,148,220;
+	setarray .ms_map$[60],"ein_fild08","ein_fild09","ein_fild10","dic_fild01","dic_fild02","gef_fild00","gef_fild01","gef_fild02","gef_fild03","gef_fild04","gef_fild05","gef_fild06";
+	setarray .ms_x[60],173,207,196,143,143,46,213,195,257,188,166,248;
+	setarray .ms_y[60],214,174,200,132,217,199,204,212,192,171,263,158;
+	setarray .ms_map$[72],"gef_fild07","gef_fild08","gef_fild09","gef_fild10","gef_fild11","gef_fild12","gef_fild13","gef_fild14","hu_fild01","hu_fild02","hu_fild03","hu_fild04";
+	setarray .ms_x[72],195,186,221,178,136,240,235,211,268,222,232,252;
+	setarray .ms_y[72],191,183,117,218,328,181,235,185,101,193,185,189;
+	setarray .ms_map$[84],"hu_fild05","hu_fild06","hu_fild07","yuno_fild01","yuno_fild02","yuno_fild03","yuno_fild04","yuno_fild05","yuno_fild06","yuno_fild07","yuno_fild08","yuno_fild09";
+	setarray .ms_x[84],196,216,227,189,192,221,226,223,187,231,196,183;
+	setarray .ms_y[84],106,220,197,224,207,157,199,177,232,174,203,214;
+	setarray .ms_map$[96],"yuno_fild10","yuno_fild11","yuno_fild12","gon_fild01","lasa_fild01","lasa_fild02","lhz_fild01","lhz_fild02","lhz_fild03","lou_fild01","xmas_fild01","ma_fild01";
+	setarray .ms_x[96],200,195,210,220,344,20,240,185,240,229,115,40;
+	setarray .ms_y[96],124,226,304,227,371,98,179,235,226,187,145,272;
+	setarray .ms_map$[108],"ma_fild02","man_fild01","man_fild02","man_fild03","mjolnir_01","mjolnir_02","mjolnir_03","mjolnir_04","mjolnir_05","mjolnir_06","mjolnir_07","mjolnir_08";
+	setarray .ms_x[108],207,35,35,84,204,175,208,179,181,195,235,188;
+	setarray .ms_y[108],180,236,262,365,120,193,213,180,240,270,202,215;
+	setarray .ms_map$[120],"mjolnir_09","mjolnir_10","mjolnir_11","mjolnir_12","mosk_fild01","mosk_fild02","nif_fild01","nif_fild02","pay_fild01","pay_fild02","pay_fild03","pay_fild04";
+	setarray .ms_x[120],205,245,180,196,82,131,215,167,158,151,205,186;
+	setarray .ms_y[120],144,223,206,208,104,147,229,234,206,219,148,247;
+	setarray .ms_map$[132],"pay_fild05","pay_fild06","pay_fild07","pay_fild08","pay_fild09","pay_fild10","pay_fild11","prt_fild00","prt_fild01","prt_fild02","prt_fild03","prt_fild04";
+	setarray .ms_x[132],134,193,200,137,201,160,194,208,190,240,190,307;
+	setarray .ms_y[132],204,235,177,189,224,205,150,227,206,206,143,252;
+	setarray .ms_map$[144],"prt_fild05","prt_fild06","prt_fild07","prt_fild08","prt_fild09","prt_fild10","prt_fild11","ra_fild01","ra_fild02","ra_fild03","ra_fild04","ra_fild05";
+	setarray .ms_x[144],239,185,193,187,210,195,198,192,235,202,202,225;
+	setarray .ms_y[144],213,188,194,218,183,149,164,162,166,206,208,202;
+	setarray .ms_map$[156],"ra_fild06","ra_fild07","ra_fild08","ra_fild09","ra_fild10","ra_fild11","ra_fild12","ra_fild13","moc_fild01","moc_fild02","moc_fild03","moc_fild07";
+	setarray .ms_x[156],202,263,217,87,277,221,175,174,219,177,194,224;
+	setarray .ms_y[156],214,196,201,121,181,185,200,197,205,206,182,170;
+	setarray .ms_map$[168],"moc_fild11","moc_fild12","moc_fild13","moc_fild16","moc_fild17","moc_fild18","moc_fild19","moc_fild20","moc_fild21","moc_fild22","spl_fild01","spl_fild02";
+	setarray .ms_x[168],198,156,185,206,208,209,85,207,31,38,175,236;
+	setarray .ms_y[168],216,187,263,228,238,223,97,202,195,195,186,184;
+	setarray .ms_map$[180],"spl_fild03","um_fild01","um_fild02","um_fild03","um_fild04","ve_fild01","ve_fild02","ve_fild03","ve_fild04","ve_fild05","ve_fild06","ve_fild07";
+	setarray .ms_x[180],188,217,223,237,202,186,196,222,51,202,150,149;
+	setarray .ms_y[180],204,206,221,215,197,175,370,45,250,324,223,307;
+	setarray .ms_map$[192],"abyss_01","abyss_02","abyss_03","ama_dun01","ama_dun02","ama_dun03","anthell01","anthell02","ayo_dun01","ayo_dun02","beach_dun","beach_dun2";
+	setarray .ms_x[192],261,275,116,228,34,119,35,168,275,24,266,255;
+	setarray .ms_y[192],272,270,27,11,41,14,262,170,19,26,67,244;
+	setarray .ms_map$[204],"beach_dun3","ecl_tdun01","ecl_tdun02","ecl_tdun03","ecl_tdun04","lhz_dun01","lhz_dun02","lhz_dun03","lhz_dun04","bra_dun01","bra_dun02","iz_dun00";
+	setarray .ms_x[204],23,57,64,45,26,150,150,140,244,87,262,168;
+	setarray .ms_y[204],260,13,88,14,23,288,18,134,52,47,262,168;
+	setarray .ms_map$[216],"iz_dun01","iz_dun02","iz_dun03","iz_dun04","iz_dun05","c_tower1","c_tower2","c_tower3","c_tower4","alde_dun01","alde_dun02","alde_dun03";
+	setarray .ms_x[216],253,236,32,26,141,199,148,65,56,297,127,277;
+	setarray .ms_y[216],252,204,63,27,187,159,283,147,155,25,169,178;
+	setarray .ms_map$[228],"alde_dun04","c_tower2_","c_tower3_","mjo_dun01","mjo_dun02","mjo_dun03","prt_sewb1","prt_sewb2","prt_sewb3","prt_sewb4","abbey01","abbey02";
+	setarray .ms_x[228],268,266,60,52,381,302,131,19,180,100,51,150;
+	setarray .ms_y[228],74,27,142,17,343,262,247,19,169,92,14,11;
+	setarray .ms_map$[240],"abbey03","dew_dun01","dew_dun02","ein_dun01","ein_dun02","gefenia01","gefenia02","gefenia03","gefenia04","gef_dun00","gef_dun01","gef_dun02";
+	setarray .ms_x[240],120,285,299,22,292,40,203,266,130,104,115,106;
+	setarray .ms_y[240],10,160,29,14,290,103,34,168,272,99,236,132;
+	setarray .ms_map$[252],"gef_dun03","glast_01","gl_cas01","gl_cas02","gl_knt01","gl_knt02","gl_chyard","gl_sew01","gl_sew02","gl_sew03","gl_sew04","gl_church";
+	setarray .ms_x[252],203,370,199,104,150,157,147,258,108,171,68,156;
+	setarray .ms_y[252],200,304,29,25,15,287,15,255,291,283,277,7;
+	setarray .ms_map$[264],"gl_step","gl_dun01","gl_dun02","gl_prison","gl_prison1","gl_cas02_","gl_chyard_","prt_maze01","prt_maze02","prt_maze03","ice_dun01","ice_dun02";
+	setarray .ms_x[264],12,133,224,14,150,104,148,99,93,182,157,151;
+	setarray .ms_y[264],7,271,274,70,14,31,144,31,20,88,14,155;
+	setarray .ms_map$[276],"ice_dun03","ice_dun04","jupe_cave","juperos_01","juperos_02","jupe_core","ver_eju","kh_dun01","kh_dun02","gon_dun01","gon_dun02","gon_dun03";
+	setarray .ms_x[276],149,33,140,53,37,150,146,28,41,153,28,68;
+	setarray .ms_y[276],22,158,51,247,63,285,215,226,198,53,113,16;
+	setarray .ms_map$[288],"lasa_dun01","lasa_dun02","lasa_dun03","lou_dun01","lou_dun02","lou_dun03","mag_dun01","mag_dun02","mal_dun01","mosk_dun01","mosk_dun02","mosk_dun03";
+	setarray .ms_x[288],24,22,190,218,282,165,126,47,33,189,165,32;
+	setarray .ms_y[288],143,171,18,196,20,38,68,30,230,48,30,135;
+	setarray .ms_map$[300],"nyd_dun01","nyd_dun02","nif_dun01","nif_dun02","odin_tem01","odin_tem02","odin_tem03","orcsdun01","orcsdun02","pay_dun00","pay_dun01","pay_dun02";
+	setarray .ms_x[300],61,60,145,150,298,224,266,32,21,21,19,19;
+	setarray .ms_y[300],239,271,90,20,167,149,280,170,185,183,33,63;
+	setarray .ms_map$[312],"pay_dun03","pay_dun04","prt_prison","prt_q","moc_pryd01","moc_pryd02","moc_pryd03","moc_pryd04","moc_pryd05","moc_pryd06","moc_prydn1","moc_prydn2";
+	setarray .ms_x[312],155,201,159,155,192,10,100,181,94,192,94,192;
+	setarray .ms_y[312],159,204,289,353,9,192,92,11,96,8,96,8;
+	setarray .ms_map$[324],"ra_san01","ra_san02","ra_san03","ra_san04","ra_san05","dic_dun01","dic_dun02","dic_dun03","in_sphinx1","in_sphinx2","in_sphinx3","in_sphinx4";
+	setarray .ms_x[324],140,32,8,204,150,364,101,101,288,149,210,10;
+	setarray .ms_y[324],11,21,149,218,9,44,141,141,9,81,54,222;
+	setarray .ms_map$[336],"in_sphinx5","treasure01","treasure02","tha_t01","tha_t02","tha_t03","tha_t04","tha_t05","tha_t06","tha_t07","tha_t08","tha_t09";
+	setarray .ms_x[336],100,69,102,150,150,220,59,62,89,35,93,29;
+	setarray .ms_y[336],99,24,27,39,136,158,143,11,221,166,148,107;
+	setarray .ms_map$[348],"tha_t10","tha_t11","tha_t12","thor_v01","thor_v02","thor_v03","xmas_dun01","xmas_dun02","tur_dun01","tur_dun02","tur_dun03","tur_dun04";
+	setarray .ms_x[348],159,19,130,21,75,34,205,129,154,148,132,100;
+	setarray .ms_y[348],138,20,52,228,205,272,15,133,49,261,189,192;
+	setarray .ms_map$[360],"um_dun01","um_dun02","yggdrasil01","verus01","verus02","verus03","gld_dun01","gld_dun01_2","gld2_pay","gld_dun02","gld_dun02_2","gld2_ald";
+	setarray .ms_x[360],42,48,204,244,72,122,119,119,120,39,39,147;
+	setarray .ms_y[360],31,30,78,61,20,22,93,93,130,161,161,155;
+	setarray .ms_map$[372],"gld_dun03","gld_dun03_2","gld2_prt","gld_dun04","gld_dun04_2","gld2_gef","arug_dun01","schg_dun01","teg_dun01","teg_dun02","ma_scene01","ma_dun01";
+	setarray .ms_x[372],50,50,140,116,116,152,199,200,42,26,172,151;
+	setarray .ms_y[372],44,44,132,45,45,118,195,124,36,160,175,8;
+	setarray .ms_map$[384],"dali02","e_tower","dali","monk_test","mal_in01","moro_cav","moc_para01","un_myst","prt_lib";
+	setarray .ms_x[384],137,72,85,306,172,50,25,159,88;
+	setarray .ms_y[384],115,112,64,143,26,64,95,38,90;
 }
 
 // --------------------------------------------------

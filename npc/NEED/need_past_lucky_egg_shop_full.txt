@@ -13,7 +13,8 @@
 // - 상품별 기본가 1,000 Cash
 // - 상품별 랜덤 판매가: 110 / 120 / 130 / 140 / 150%
 // - 상품별 서버 재고: 300~500개
-// - 계정당 회차 구매 제한: 상품별 10개
+// - 계정당 회차 구매 제한: 없음 (.BuyLimit = 0). 서버 재고만 적용
+//   (.BuyLimit 에 숫자를 넣으면 상품별 계정 제한이 다시 걸린다)
 //
 // 2단계
 // - 추억의 행운 조각(900106) 30개
@@ -40,6 +41,10 @@
 //   $NeedPastEggCycle       셔플 사이클 번호. 전체 재셔플마다 +1
 //   $NeedPastEggOrder[]     현재 사이클의 셔플 결과
 //                           (활성 행알의 .EggId[] 인덱스 전체)
+//   $NeedPastEggOrderN      $NeedPastEggOrder 원소 수
+//   $NeedPastEggNextOrder[] 미리 만들어 둔 다음 사이클 셔플 (예정 목록 표시용)
+//   $NeedPastEggNextN       $NeedPastEggNextOrder 원소 수
+//   $NeedPastEggNextSig     다음 사이클 셔플을 만들 당시의 .ListSig
 //   $NeedPastEggListSig     셔플 당시의 .EggId[] 서명. 목록 자체가 바뀌면 재셔플
 //   $NeedPastEggGroup       현재 판매 중인 그룹 번호 (0 ~ 2)
 //
@@ -67,6 +72,18 @@
 // .EggEnabled[인덱스] 조회 한 번(O(1))으로 끝낼 수 있다.
 // ItemID 로 저장하면 매 회차 O(n^2) 역조회가 필요해
 // infinity loop 오류로 갱신이 통째로 중단된다.
+//
+// [원소 수를 따로 저장하는 이유]
+// 인덱스 0 (12654 행운의 알Ⅸ) 도 셔플 결과에 들어간다. 그런데 $ 변수에
+// 0 을 넣으면 그 원소가 삭제되므로, 셔플 결과의 마지막 원소가 0 이면
+// getarraysize() 가 1 작게 나온다. 예전에는 이 값으로 "활성 풀과 같은가" 를
+// 비교해서, 그런 사이클은 1회차 만에 끊기고 다시 셔플되었다.
+// 그래서 원소 수는 $NeedPastEggOrderN / $NeedPastEggNextN 에 따로 둔다.
+//
+// [다음 회차 예정 목록]
+// 사이클이 끝나는 회차에도 다음 회차 목록을 보여줄 수 있도록
+// 다음 사이클 셔플을 미리 만들어 두고, 실제 재셔플 때 그대로 사용한다.
+// 운영자가 행알 활성 구성을 바꾸면 미리 만든 셔플은 버리고 새로 섞는다.
 //============================================================
 
 lasagna,169,195,4	script	추억의 행운의 알 상인#need_past_egg	4_F_KAFRA6,{
@@ -86,7 +103,10 @@ lasagna,169,195,4	script	추억의 행운의 알 상인#need_past_egg	4_F_KAFRA6,{
 			mes needtr("이번 회차 한정 판매: ^0055FF", "This round's limited sale: ^0055FF") + .@list_n + needtr("종^000000", " items^000000");
 			mes needtr("(전체 활성 행알의 약 1/3)", "(about 1/3 of all active eggs)");
 			mes needtr("갱신: ^0055FF00:00 / 12:00^000000", "Refresh: ^0055FF00:00 / 12:00^000000");
-			mes needtr("계정 구매 제한: 상품별 ", "Account purchase limit: ") + .BuyLimit + needtr("개", " per item");
+			if (.BuyLimit > 0)
+				mes needtr("계정 구매 제한: 상품별 ", "Account purchase limit: ") + .BuyLimit + needtr("개", " per item");
+			else
+				mes needtr("계정 구매 제한: ^0055FF없음^000000 (서버 재고 내)", "Account purchase limit: ^0055FFnone^000000 (within server stock)");
 		}
 		else {
 			mes needtr("^FF0000현재 판매 가능한 행운의 알이 없습니다.^000000", "^FF0000No Lucky Egg is on sale right now.^000000");
@@ -94,7 +114,7 @@ lasagna,169,195,4	script	추억의 행운의 알 상인#need_past_egg	4_F_KAFRA6,{
 		setdialogsize(300,300);
 		next;
 
-		switch (select(needtr("랜덤 한정 판매 이용:과거 행운의 알 선택 구매:시스템 설명:닫기", "Random Limited Sale:Buy a Specific Past Egg:How It Works:Close"))) {
+		switch (select(needtr("랜덤 한정 판매 이용:과거 행운의 알 선택 구매:다음 회차 판매 예정:시스템 설명:닫기", "Random Limited Sale:Buy a Specific Past Egg:Upcoming Rounds:How It Works:Close"))) {
 		case 1:
 			callsub S_RandomShop;
 			break;
@@ -104,6 +124,10 @@ lasagna,169,195,4	script	추억의 행운의 알 상인#need_past_egg	4_F_KAFRA6,{
 			break;
 
 		case 3:
+			callsub S_Preview;
+			break;
+
+		case 4:
 			mes needtr("[추억의 행운의 알 상인]", "[Memory Lucky Egg Seller]");
 			mes needtr("랜덤 한정 판매는 매일", "The random limited sale refreshes every day");
 			mes needtr("^0055FF00:00 / 12:00^000000에 갱신됩니다.", "at ^0055FF00:00 / 12:00^000000.");
@@ -119,14 +143,23 @@ lasagna,169,195,4	script	추억의 행운의 알 상인#need_past_egg	4_F_KAFRA6,{
 			mes " ";
 			mes needtr("덕분에 같은 알이 계속 반복되거나", "That way the same egg doesn't keep repeating,");
 			mes needtr("특정 알이 오랫동안 나오지 않는 일이 없습니다.", "and no egg stays away for a long time.");
+			mes " ";
+			mes needtr("^0055FF다음 회차 판매 예정^000000 메뉴에서", "The ^0055FFUpcoming Rounds^000000 menu shows");
+			mes needtr("다음 두 회차에 나올 알을 미리 볼 수 있습니다.", "the eggs of the next two rounds in advance.");
 			next;
 
 			mes needtr("[추억의 행운의 알 상인]", "[Memory Lucky Egg Seller]");
 			mes needtr("판매 가격과 서버 재고는", "The sale price and the server stock");
 			mes needtr("상품마다 따로 결정됩니다.", "are decided separately for each item.");
 			mes " ";
-			mes needtr("한정 판매 상품은 계정당", "The limited sale is limited per account");
-			mes needtr("^0055FF상품별 최대 ", "You can buy ^0055FFup to ") + .BuyLimit + needtr("개^000000까지 구매할 수 있습니다.", " of each item^000000.");
+			if (.BuyLimit > 0) {
+				mes needtr("한정 판매 상품은 계정당", "The limited sale is limited per account");
+				mes needtr("^0055FF상품별 최대 ", "You can buy ^0055FFup to ") + .BuyLimit + needtr("개^000000까지 구매할 수 있습니다.", " of each item^000000.");
+			}
+			else {
+				mes needtr("한정 판매 상품은 계정 구매 제한 없이", "The limited sale has no per-account limit -");
+				mes needtr("^0055FF서버 재고가 남아 있는 만큼^000000 구매할 수 있습니다.", "you can buy ^0055FFas long as server stock remains^000000.");
+			}
 			next;
 
 			mes needtr("[추억의 행운의 알 상인]", "[Memory Lucky Egg Seller]");
@@ -190,7 +223,10 @@ S_RandomShop:
 		mes needtr("이번 회차 상품 ^0055FF", "This round has ^0055FF") + .@cnt + needtr("종^000000입니다.", " items^000000.");
 		mes " ";
 		mes needtr("구매할 상품을 선택해주세요.", "Please choose an item to buy.");
-		mes needtr("계정당 ^0055FF상품별 ", "Each account can buy ^0055FFup to ") + .BuyLimit + needtr("개^000000까지 구매할 수 있습니다.", " of each item^000000.");
+		if (.BuyLimit > 0)
+			mes needtr("계정당 ^0055FF상품별 ", "Each account can buy ^0055FFup to ") + .BuyLimit + needtr("개^000000까지 구매할 수 있습니다.", " of each item^000000.");
+		else
+			mes needtr("^0055FF서버 재고 내에서 제한 없이^000000 구매할 수 있습니다.", "You can buy ^0055FFwithout limit within server stock^000000.");
 		setdialogsize(420,340);
 		next;
 
@@ -230,7 +266,10 @@ S_BuyOne:
 		return;
 	}
 
-	.@b_remain = .BuyLimit - #NeedPastEggBought[.@b_idx];
+	// .BuyLimit 0 = 계정 제한 없음 -> 남은 서버 재고까지 구매 가능
+	.@b_remain = $NeedPastEggSaleStock[.@b_idx];
+	if (.BuyLimit > 0)
+		.@b_remain = .BuyLimit - #NeedPastEggBought[.@b_idx];
 	if (.@b_remain <= 0) {
 		mes needtr("[추억의 행운의 알 상인]", "[Memory Lucky Egg Seller]");
 		mes "^0055FF" + getitemname(.@b_item) + "^000000";
@@ -283,12 +322,15 @@ S_BuyOne:
 		return;
 	}
 
-	.@b_remain = .BuyLimit - #NeedPastEggBought[.@b_idx];
-	if (.@b_remain <= 0 || .@b_amount > .@b_remain) {
-		mes needtr("[추억의 행운의 알 상인]", "[Memory Lucky Egg Seller]");
-		mes needtr("계정 구매 가능 수량이 부족합니다.", "Your account does not have enough purchases left.");
-		next;
-		return;
+	// 계정 제한이 있을 때만 확인한다. 제한이 없으면 아래 재고 확인이 안내한다.
+	if (.BuyLimit > 0) {
+		.@b_remain = .BuyLimit - #NeedPastEggBought[.@b_idx];
+		if (.@b_remain <= 0 || .@b_amount > .@b_remain) {
+			mes needtr("[추억의 행운의 알 상인]", "[Memory Lucky Egg Seller]");
+			mes needtr("계정 구매 가능 수량이 부족합니다.", "Your account does not have enough purchases left.");
+			next;
+			return;
+		}
 	}
 
 	if ($NeedPastEggSaleStock[.@b_idx] < .@b_amount) {
@@ -329,7 +371,10 @@ S_BuyOne:
 	mes needtr("사용 Cash: ^FF8800", "Cash spent: ^FF8800") + .@b_total + "^000000";
 	mes needtr("남은 Cash: ", "Cash left: ") + #CASHPOINTS;
 	mes needtr("남은 서버 재고: ", "Server stock left: ") + $NeedPastEggSaleStock[.@b_idx] + needtr("개", "");
-	mes needtr("이번 회차 내 구매량: ", "My purchases this round: ") + #NeedPastEggBought[.@b_idx] + " / " + .BuyLimit;
+	if (.BuyLimit > 0)
+		mes needtr("이번 회차 내 구매량: ", "My purchases this round: ") + #NeedPastEggBought[.@b_idx] + " / " + .BuyLimit;
+	else
+		mes needtr("이번 회차 내 구매량: ", "My purchases this round: ") + #NeedPastEggBought[.@b_idx];
 	next;
 	return;
 
@@ -441,6 +486,115 @@ S_SelectShop:
 
 
 //============================================================
+// 다음 회차 판매 예정 목록
+//
+// 현재 사이클의 다음 그룹, 사이클이 끝나면 미리 만들어 둔
+// 다음 사이클 셔플($NeedPastEggNextOrder)의 그룹을 보여준다.
+// 가격 배율과 재고는 회차가 시작될 때 정해지므로 보여주지 않는다.
+//============================================================
+S_Preview:
+	callsub S_EnsureRotation;
+
+	.@pv_n = $NeedPastEggOrderN;
+
+	if (.@pv_n <= 0 || getarraysize($NeedPastEggSaleId) <= 0) {
+		mes needtr("[추억의 행운의 알 상인]", "[Memory Lucky Egg Seller]");
+		mes needtr("현재 판매 예정인 행운의 알이 없습니다.", "No Lucky Egg is scheduled right now.");
+		next;
+		return;
+	}
+
+	.@pv_base = .@pv_n / .GroupCount;
+	.@pv_rem = .@pv_n % .GroupCount;
+	.@pv_slot = 0;
+	if (gettime(3) >= 12)
+		.@pv_slot = 1;
+
+	for (.@pv_r = 1; .@pv_r <= 2; .@pv_r++) {
+		// 회차 시작 시각 : 지금 슬롯에서 .@pv_r 칸 뒤 (00:00 / 12:00)
+		.@pv_t = .@pv_slot + .@pv_r;
+		.@pv_when$ = needtr("오늘 ", "Today ");
+		if (.@pv_t >= 2)
+			.@pv_when$ = needtr("내일 ", "Tomorrow ");
+		if (.@pv_t % 2)
+			.@pv_when$ += "12:00";
+		else
+			.@pv_when$ += "00:00";
+
+		.@pv_g = $NeedPastEggGroup + .@pv_r;
+		.@pv_nc = 0;
+		if (.@pv_g >= .GroupCount) {
+			.@pv_g -= .GroupCount;
+			.@pv_nc = 1;
+		}
+
+		mes needtr("[다음 회차 판매 예정 ", "[Upcoming Round ") + .@pv_r + " / 2]";
+		mes needtr("판매 시작 : ^0055FF", "Sale starts : ^0055FF") + .@pv_when$ + "^000000";
+		mes " ";
+
+		if (.@pv_nc && ($NeedPastEggNextN != .@pv_n || $NeedPastEggNextSig != .ListSig)) {
+			mes needtr("새 사이클이 시작되는 회차라", "A new cycle starts this round, so");
+			mes needtr("판매 시작 때 목록이 정해집니다.", "the list is decided when the sale starts.");
+			next;
+			continue;
+		}
+
+		.@pv_start = .@pv_g * .@pv_base + ((.@pv_g < .@pv_rem) ? .@pv_g : .@pv_rem);
+		.@pv_end = .@pv_start + .@pv_base + ((.@pv_g < .@pv_rem) ? 1 : 0);
+
+		for (.@pv_i = .@pv_start; .@pv_i < .@pv_end; .@pv_i++) {
+			if (.@pv_nc)
+				.@pv_x = $NeedPastEggNextOrder[.@pv_i];
+			else
+				.@pv_x = $NeedPastEggOrder[.@pv_i];
+
+			if (.@pv_x < 0 || .@pv_x >= getarraysize(.EggId))
+				continue;
+			if (!.EggEnabled[.@pv_x])
+				continue;
+
+			mes "- " + getitemname(.EggId[.@pv_x]);
+		}
+
+		mes " ";
+		mes needtr("^999999※ 가격과 재고는 판매 시작 때 정해지며^000000", "^999999* Price and stock are set when the sale starts,^000000");
+		mes needtr("^999999   운영 사정에 따라 목록이 바뀔 수 있습니다.^000000", "^999999   and the list may change for operational reasons.^000000");
+		next;
+	}
+	return;
+
+
+//============================================================
+// 다음 사이클 셔플 미리 만들기
+//
+// 현재 사이클 셔플($NeedPastEggOrder)과 같은 활성 풀을 다시 섞는다.
+//============================================================
+S_BuildNext:
+	.@bn_n = $NeedPastEggOrderN;
+
+	deletearray $NeedPastEggNextOrder[0];
+	$NeedPastEggNextN = 0;
+	$NeedPastEggNextSig = 0;
+
+	if (.@bn_n <= 0)
+		return;
+
+	for (.@bn_i = 0; .@bn_i < .@bn_n; .@bn_i++)
+		$NeedPastEggNextOrder[.@bn_i] = $NeedPastEggOrder[.@bn_i];
+
+	for (.@bn_i = .@bn_n - 1; .@bn_i > 0; .@bn_i--) {
+		.@bn_j = rand(.@bn_i + 1);
+		.@bn_tmp = $NeedPastEggNextOrder[.@bn_i];
+		$NeedPastEggNextOrder[.@bn_i] = $NeedPastEggNextOrder[.@bn_j];
+		$NeedPastEggNextOrder[.@bn_j] = .@bn_tmp;
+	}
+
+	$NeedPastEggNextN = .@bn_n;
+	$NeedPastEggNextSig = .ListSig;
+	return;
+
+
+//============================================================
 // 현재 12시간 회차 보정
 //
 // 슬롯이 바뀌었을 때만 다음 그룹으로 전진한다.
@@ -468,8 +622,15 @@ S_EnsureRotation:
 
 	// 슬롯은 같은데 판매 목록이 비어 있는 경우(최초 도입 등)만 재구성.
 	// 그룹은 전진시키지 않는다.
-	if (getarraysize($NeedPastEggSaleId) <= 0)
+	if (getarraysize($NeedPastEggSaleId) <= 0) {
 		callsub S_Rotate, 0;
+		return;
+	}
+
+	// 예정 목록용 다음 사이클 셔플이 없거나(최초 도입 등) 목록이 바뀌었으면 만든다.
+	if ($NeedPastEggOrderN > 0
+		&& ($NeedPastEggNextN != $NeedPastEggOrderN || $NeedPastEggNextSig != .ListSig))
+		callsub S_BuildNext;
 
 	return;
 
@@ -518,7 +679,9 @@ S_Rotate:
 
 	if (.@rot_n <= 0) {
 		deletearray $NeedPastEggOrder[0];
+		$NeedPastEggOrderN = 0;
 		$NeedPastEggGroup = 0;
+		callsub S_BuildNext;
 		return;
 	}
 
@@ -529,7 +692,7 @@ S_Rotate:
 	// 이 성립한다. 인덱스 조회라서 O(n) 으로 끝난다.
 	.@rot_new = 0;
 
-	if (getarraysize($NeedPastEggOrder) != .@rot_n)
+	if ($NeedPastEggOrderN != .@rot_n)
 		.@rot_new = 1;
 
 	if ($NeedPastEggListSig != .ListSig)
@@ -563,22 +726,53 @@ S_Rotate:
 		.@rot_next = $NeedPastEggGroup;
 	}
 
-	// --- 전체 재셔플 (Fisher-Yates) ---
+	// --- 전체 재셔플 ---
+	// 미리 만들어 둔 다음 사이클 셔플이 지금 활성 풀과 같으면 그대로 쓴다.
+	// (예정 목록에 보여준 순서를 실제 판매에서 지키기 위해)
+	// 다르면 예전처럼 새로 섞는다 (Fisher-Yates).
 	if (.@rot_new) {
 		deletearray $NeedPastEggOrder[0];
 
-		for (.@rot_i = 0; .@rot_i < .@rot_n; .@rot_i++)
-			$NeedPastEggOrder[.@rot_i] = .@rot_act[.@rot_i];
+		.@rot_use = 1;
+		if ($NeedPastEggNextN != .@rot_n || $NeedPastEggNextSig != .ListSig)
+			.@rot_use = 0;
 
-		for (.@rot_i = .@rot_n - 1; .@rot_i > 0; .@rot_i--) {
-			.@rot_j = rand(.@rot_i + 1);
-			.@rot_tmp = $NeedPastEggOrder[.@rot_i];
-			$NeedPastEggOrder[.@rot_i] = $NeedPastEggOrder[.@rot_j];
-			$NeedPastEggOrder[.@rot_j] = .@rot_tmp;
+		if (.@rot_use) {
+			for (.@rot_i = 0; .@rot_i < .@rot_n; .@rot_i++) {
+				.@rot_x = $NeedPastEggNextOrder[.@rot_i];
+				if (.@rot_x < 0 || .@rot_x >= .@rot_total || !.EggEnabled[.@rot_x]) {
+					.@rot_use = 0;
+					break;
+				}
+			}
 		}
 
+		if (.@rot_use) {
+			for (.@rot_i = 0; .@rot_i < .@rot_n; .@rot_i++)
+				$NeedPastEggOrder[.@rot_i] = $NeedPastEggNextOrder[.@rot_i];
+		}
+		else {
+			for (.@rot_i = 0; .@rot_i < .@rot_n; .@rot_i++)
+				$NeedPastEggOrder[.@rot_i] = .@rot_act[.@rot_i];
+
+			for (.@rot_i = .@rot_n - 1; .@rot_i > 0; .@rot_i--) {
+				.@rot_j = rand(.@rot_i + 1);
+				.@rot_tmp = $NeedPastEggOrder[.@rot_i];
+				$NeedPastEggOrder[.@rot_i] = $NeedPastEggOrder[.@rot_j];
+				$NeedPastEggOrder[.@rot_j] = .@rot_tmp;
+			}
+		}
+
+		$NeedPastEggOrderN = .@rot_n;
 		$NeedPastEggListSig = .ListSig;
 		$NeedPastEggCycle = $NeedPastEggCycle + 1;
+
+		// 다음 사이클 셔플은 방금 썼거나 맞지 않으므로 새로 만든다.
+		callsub S_BuildNext;
+	}
+	else if ($NeedPastEggNextN != .@rot_n || $NeedPastEggNextSig != .ListSig) {
+		// 최초 도입 등으로 예정 목록용 셔플이 아직 없으면 만든다.
+		callsub S_BuildNext;
 	}
 
 	$NeedPastEggGroup = .@rot_next;
@@ -697,7 +891,7 @@ OnInit:
 	.BaseCashPrice = 1000;			// 행운의 알 1개 기존 기본가
 	.StockMin = 300;				// 상품별 최소 서버 재고
 	.StockMax = 500;				// 상품별 최대 서버 재고
-	.BuyLimit = 10;					// 계정당 회차 구매 제한 (상품별)
+	.BuyLimit = 0;					// 계정당 회차 구매 제한 (상품별). 0 = 제한 없음 (2026-10, 기존 10)
 	.GroupCount = 3;				// 로테이션 그룹 수 (활성 풀의 1/3씩 판매)
 
 	.SelectFragmentCost = 30;		// 선택 교환 필요 조각
@@ -877,6 +1071,12 @@ OnInit:
 	for (.@i = 0; .@i < getarraysize(.EggId); .@i++)
 		.ListSig = .ListSig + (.@i + 1) * .EggId[.@i];
 	.ListSig = .ListSig + getarraysize(.EggId) * 7919;
+
+	// $NeedPastEggOrderN 도입 전에 저장된 셔플은 원소 수가 따로 없다.
+	// getarraysize 로 채운다. 끝자리 0 이 빠져 1 작게 나온 경우에는
+	// 다음 갱신 때 한 번 재셔플되며, 이는 예전 동작과 같다.
+	if (!$NeedPastEggOrderN && getarraysize($NeedPastEggOrder) > 0)
+		$NeedPastEggOrderN = getarraysize($NeedPastEggOrder);
 
 	callsub S_EnsureRotation;
 	end;

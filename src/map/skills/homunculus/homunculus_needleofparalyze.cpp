@@ -23,5 +23,9 @@ void SkillNeedleOfParalyze::calculateSkillRatio(const Damage *wd, const block_li
 }
 
 void SkillNeedleOfParalyze::applyAdditionalEffects(block_list *src, block_list *target, uint16 skill_lv, t_tick tick, int32 attack_type, enum damage_lv dmg_lv) const {
+#ifdef NEED_2017_HOMUNCULUS_S
+	sc_start(src, target, SC_PARALYSIS, 40 + 5 * skill_lv, skill_lv, skill_get_time(getSkillId(), skill_lv));
+#else
 	sc_start(src, target, SC_PARALYSIS, 30 + 5 * skill_lv, skill_lv, skill_get_time(getSkillId(), skill_lv));
+#endif
 }

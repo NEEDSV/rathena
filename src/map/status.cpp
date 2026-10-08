@@ -7744,6 +7744,10 @@ static int16 status_calc_flee(block_list *bl, status_change *sc, int32 flee)
 		return 0;
 	if(sc->getSCE(SC_OVERED_BOOST)) //Should be final and unmodifiable by any means
 		return sc->getSCE(SC_OVERED_BOOST)->val2;
+#ifdef NEED_2017_HOMUNCULUS_S
+	if(sc->getSCE(SC_TINDER_BREAKER) || sc->getSCE(SC_TINDER_BREAKER2))
+		return 1; // 1 = min flee (2017)
+#endif
 
 	// Fixed value
 	if(sc->getSCE(SC_INCFLEE))
@@ -7812,8 +7816,10 @@ static int16 status_calc_flee(block_list *bl, status_change *sc, int32 flee)
 		flee -= 20 + 30 * sc->getSCE(SC_SATURDAYNIGHTFEVER)->val1;
 	if( sc->getSCE(SC_WIND_STEP_OPTION) )
 		flee += flee * sc->getSCE(SC_WIND_STEP_OPTION)->val2 / 100;
+#ifndef NEED_2017_HOMUNCULUS_S
 	if( sc->getSCE(SC_TINDER_BREAKER) || sc->getSCE(SC_TINDER_BREAKER2) )
 		flee -= flee * 50 / 100;
+#endif
 	if( sc->getSCE(SC_ZEPHYR) )
 		flee += sc->getSCE(SC_ZEPHYR)->val2;
 	if(sc->getSCE(SC_ASH))
@@ -7904,7 +7910,11 @@ static defType status_calc_def(block_list *bl, status_change *sc, int32 def)
 	if(sc->getSCE(SC_ODINS_POWER))
 		def -= 20 * sc->getSCE(SC_ODINS_POWER)->val1;
 	if( sc->getSCE(SC_ANGRIFFS_MODUS) )
+#ifdef NEED_2017_HOMUNCULUS_S
+		def -= 30 + 20 * sc->getSCE(SC_ANGRIFFS_MODUS)->val1;
+#else
 		def -= 20 + 10 * sc->getSCE(SC_ANGRIFFS_MODUS)->val1;
+#endif
 	if(sc->getSCE(SC_STONEHARDSKIN))
 		def += sc->getSCE(SC_STONEHARDSKIN)->val1;
 	if(sc->getSCE(SC_STONE))
@@ -8450,6 +8460,10 @@ static int16 status_calc_aspd(block_list *bl, status_change *sc, bool fixed)
 			bonus -= sc->getSCE(SC_MELON_BOMB)->val3;
 		if (sc->getSCE(SC_GOLDENE_FERSE))
 			bonus += sc->getSCE(SC_GOLDENE_FERSE)->val3;
+#ifdef NEED_2017_HOMUNCULUS_S
+		if (sc->getSCE(SC_PAIN_KILLER))
+			bonus -= sc->getSCE(SC_PAIN_KILLER)->val3;
+#endif
 		if (sc->getSCE(SC_INCASPDRATE))
 			bonus += sc->getSCE(SC_INCASPDRATE)->val1;
 		if (sc->getSCE(SC_GATLINGFEVER))
@@ -8646,6 +8660,10 @@ static int16 status_calc_aspd_rate(block_list *bl, status_change *sc, int32 aspd
 		aspd_rate -= sc->getSCE(SC_INCASPDRATE)->val1 * 10;
 	if( sc->getSCE(SC_GOLDENE_FERSE))
 		aspd_rate -= sc->getSCE(SC_GOLDENE_FERSE)->val3 * 10;
+#ifdef NEED_2017_HOMUNCULUS_S
+	if( sc->getSCE(SC_PAIN_KILLER))
+		aspd_rate += sc->getSCE(SC_PAIN_KILLER)->val3 * 10;
+#endif
 	if (sc->getSCE(SC_WIND_INSIGNIA) && sc->getSCE(SC_WIND_INSIGNIA)->val1 == 2)
 		aspd_rate -= 100;
 	if (sc->getSCE(SC_STARSTANCE))
@@ -8977,6 +8995,10 @@ unsigned char status_calc_attack_element(const block_list* bl, const status_chan
 		return ELE_GHOST;
 	if(sc->getSCE(SC_TIDAL_WEAPON_OPTION) || sc->getSCE(SC_TIDAL_WEAPON) )
 		return ELE_WATER;
+#ifdef NEED_2017_HOMUNCULUS_S
+	if(sc->getSCE(SC_PYROCLASTIC))
+		return ELE_FIRE;
+#endif
 	return (unsigned char)cap_value(element,0,UCHAR_MAX);
 }
 
@@ -11760,6 +11782,26 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 			status_zap(bl, status->hp-1, val2?0:status->sp-1);
 			return true;
 			break;
+#ifdef NEED_2017_HOMUNCULUS_S
+		case SC_TINDER_BREAKER2: // 2017: the homunculus is locked together with its target (same as Close Confine)
+		{
+			block_list *src2 = val2?map_id2bl(val2):nullptr;
+			status_change *sc2 = src2?status_get_sc(src2):nullptr;
+			struct status_change_entry *sce2 = sc2?sc2->getSCE(SC_TINDER_BREAKER):nullptr;
+
+			if (src2 && sc2) {
+				if (!sce2) // Start lock on caster.
+					sc_start4(src2,src2,SC_TINDER_BREAKER,100,val1,1,0,0,tick+1000);
+				else { // Increase count of locked enemies and refresh time.
+					(sce2->val2)++;
+					delete_timer(sce2->timer, status_change_timer);
+					sce2->timer = add_timer(gettick()+tick+1000, status_change_timer, src2->id, SC_TINDER_BREAKER);
+				}
+			} else // Status failed.
+				return false;
+		}
+			break;
+#endif
 		case SC_CLOSECONFINE2:
 		{
 			block_list *src2 = val2?map_id2bl(val2):nullptr;
@@ -12665,7 +12707,11 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 			break;
 		case SC_ANGRIFFS_MODUS:
 			val2 = 50 + 20 * val1; // atk bonus
+#ifdef NEED_2017_HOMUNCULUS_S
+			val3 = 40 + 20 * val1; // Flee reduction. (2017)
+#else
 			val3 = 25 + 10 * val1; // Flee reduction.
+#endif
 			val4 = tick/1000; // hp/sp reduction timer
 			tick_time = 1000;
 			break;
@@ -12679,8 +12725,13 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 			val3 = 30 * val1; // MDEF bonus
 			break;
 		case SC_OVERED_BOOST:
+#ifdef NEED_2017_HOMUNCULUS_S
+			val2 = 300 + 40 * val1; // flee bonus (2017)
+			val3 = 179 + 2 * val1; // aspd bonus (2017)
+#else
 			val2 = 400 + 40 * val1; // flee bonus
 			val3 = 180 + 2 * val1; // aspd bonus
+#endif
 			val4 = 50; // def reduc %
 			break;
 		case SC_GRANITIC_ARMOR:
@@ -12692,7 +12743,12 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 			val2 = 3*val1; // Activation chance
 			break;
 		case SC_PYROCLASTIC:
+#ifdef NEED_2017_HOMUNCULUS_S
+			val2 += 10*val1; // atk bonus (2017: homunculus level + 10 * skill level)
+			val3 = 2*val1; // Chance To AutoCast Hammer Fall %
+#else
 			val2 += 100 + 10*val1; // atk bonus // !TODO: Confirm formula
+#endif
 			break;
 		case SC_TEMPERING:
 			val2 += 5 + val1; // patk bonus
@@ -12712,6 +12768,9 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 			break;
 		case SC_PAIN_KILLER: // Yommy leak need confirm
 			val2 = min((( 200 * val1 ) * status_get_lv(src)) / 150, 1000); // dmg reduction linear. upto a maximum of 1000 [iRO Wiki]
+#ifdef NEED_2017_HOMUNCULUS_S
+			val3 = 10 * val1; // aspd reduction % (2017)
+#endif
 			if(sc->getSCE(SC_PARALYSIS))
 				sc_start(src,bl, SC_ENDURE, 100, val1, tick); // Start endure for same duration
 			break;
@@ -13890,6 +13949,14 @@ int32 status_change_end( block_list* bl, enum sc_type type, int32 tid ){
 				status_damage(nullptr,bl,damage,0,0,1,0);
 			}
 			break;
+#ifdef NEED_2017_HOMUNCULUS_S
+		case SC_PYROCLASTIC:
+			// 2017: the master's weapon breaks when Pyroclastic ends.
+			// bl->prev is null while logging out / changing map-server (unit_free), skip it there.
+			if (bl->type == BL_PC && bl->prev != nullptr)
+				skill_break_equip(bl, bl, EQP_WEAPON, 10000, BCT_SELF);
+			break;
+#endif
 		case SC_RUN:
 		{
 			struct unit_data *ud = unit_bl2ud(bl);
@@ -14027,6 +14094,26 @@ int32 status_change_end( block_list* bl, enum sc_type type, int32 tid ){
 					skill_castend_damage_id(src, bl, val2, val1, gettick(), SD_LEVEL );
 			}
 			break;
+#ifdef NEED_2017_HOMUNCULUS_S
+		case SC_TINDER_BREAKER2:
+			{
+				block_list *src = val2?map_id2bl(val2):nullptr;
+				status_change *sc2 = src?status_get_sc(src):nullptr;
+				if (src && sc2 && sc2->getSCE(SC_TINDER_BREAKER)) // Target released, free the homunculus too.
+					status_change_end(src, SC_TINDER_BREAKER);
+			}
+			[[fallthrough]];
+		case SC_TINDER_BREAKER:
+			if (val2 > 0) {
+				// Homunculus has been unlocked... nearby chars need to be unlocked.
+				int32 range = 1
+					+ skill_get_range2(bl, scdb->skill_id, val1, true)
+					+ skill_get_range2(bl, TF_BACKSLIDING, 1, true);
+				map_foreachinallarea(status_change_timer_sub,
+					bl->m, bl->x-range, bl->y-range, bl->x+range,bl->y+range,BL_CHAR,bl,nullptr,type,gettick());
+			}
+			break;
+#endif
 		case SC_CLOSECONFINE2:
 			{
 				block_list *src = val2?map_id2bl(val2):nullptr;
@@ -15740,6 +15827,15 @@ int32 status_change_timer_sub(block_list* bl, va_list ap)
 			status_change_end(bl, SC_CLOSECONFINE2);
 		}
 		break;
+#ifdef NEED_2017_HOMUNCULUS_S
+	case SC_TINDER_BREAKER:
+		// Homunculus has released the hold on everyone...
+		if (tsc && tsc->getSCE(SC_TINDER_BREAKER2) && tsc->getSCE(SC_TINDER_BREAKER2)->val2 == src->id) {
+			tsc->getSCE(SC_TINDER_BREAKER2)->val2 = 0;
+			status_change_end(bl, SC_TINDER_BREAKER2);
+		}
+		break;
+#endif
 	case SC_CURSEDCIRCLE_TARGET:
 		if( tsc && tsc->getSCE(SC_CURSEDCIRCLE_TARGET) && tsc->getSCE(SC_CURSEDCIRCLE_TARGET)->val2 == src->id ) {
 			clif_bladestop( *bl, tsc->getSCE(SC_CURSEDCIRCLE_TARGET)->val2, false );
