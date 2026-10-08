@@ -153,7 +153,15 @@ uint32 costume_collection_get_register_count(map_session_data* sd)
 	if (sd == nullptr)
 		return 0;
 
-	return static_cast<uint32>(sd->costume_collection.registered_collections.size());
+	// Wardrobe-only entries do not count toward the album progress.
+	uint32 count = 0;
+
+	for (const uint32 collection_id : sd->costume_collection.registered_collections) {
+		if (!costume_collection_is_closet_only(costume_collection_search_collectionid(collection_id)))
+			++count;
+	}
+
+	return count;
 }
 
 uint32 costume_collection_get_registered_collection_list(map_session_data* sd, uint32 part, uint32* values, uint32 max)

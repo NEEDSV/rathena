@@ -15214,7 +15214,8 @@ BUILDIN_FUNC(getregisteredcostumelist)
 	}
 
 	if (mode == 0) {
-		const uint32 registered_count = costume_collection_get_register_count(sd);
+		// Buffer covers every registered entry, wardrobe-only ones included.
+		const uint32 registered_count = static_cast<uint32>(sd->costume_collection.registered_collections.size());
 
 		if (registered_count == 0) {
 			script_pushint(st, 0);
@@ -15232,7 +15233,8 @@ BUILDIN_FUNC(getregisteredcostumelist)
 	}
 
 	if (mode == 1) {
-		const uint32 registered_count = costume_collection_get_register_count(sd);
+		// Buffer covers every registered entry, wardrobe-only ones included.
+		const uint32 registered_count = static_cast<uint32>(sd->costume_collection.registered_collections.size());
 
 		if (registered_count == 0) {
 			script_pushint(st, 0);
@@ -15267,6 +15269,24 @@ BUILDIN_FUNC(iscostumeregistered)
 	}
 
 	script_pushint(st, costume_collection_is_registered(sd, static_cast<uint32>(collection_id)) ? 1 : 0);
+	return SCRIPT_CMD_SUCCESS;
+}
+
+/*==========================================
+ * Returns 1 if the CollectionID is an enabled wardrobe-only entry (ClosetOnly: true).
+ * Such entries are excluded from getcostumeactivecount/getcostumeregistercount;
+ * scripts must skip them for bulk registration, the album page and the coin exchange.
+ *------------------------------------------*/
+BUILDIN_FUNC(iscostumeclosetonly)
+{
+	const int64 collection_id = script_getnum64(st, 2);
+
+	if (collection_id <= 0 || collection_id > UINT32_MAX) {
+		script_pushint(st, 0);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	script_pushint(st, costume_collection_is_closet_only(costume_collection_search_collectionid(static_cast<uint32>(collection_id))) ? 1 : 0);
 	return SCRIPT_CMD_SUCCESS;
 }
 
@@ -29626,6 +29646,7 @@ struct script_function buildin_func[] = {
 	BUILDIN_DEF(getcostumeactivecount,""),
 	BUILDIN_DEF(getregisteredcostumelist,"??"),
 	BUILDIN_DEF(iscostumeregistered,"i"),
+	BUILDIN_DEF(iscostumeclosetonly,"i"),
 	BUILDIN_DEF(registercostume,"i"),
 	BUILDIN_DEF(makepet,"i"),
 	BUILDIN_DEF(getexp,"ii?"),

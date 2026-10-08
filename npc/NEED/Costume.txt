@@ -587,12 +587,14 @@ L_CollectionMenu:
 		needtr("도감 보기", "View Album"),
 		needtr("도감 보상", "Album Rewards"),
 		needtr("의상 교환", "Exchange Costume"),
+		needtr("환생 전용 의상", "Rebirth Costumes"),
 		needtr("종료", "Exit")
 	)) {
 	case 1: goto L_Register;
 	case 2: goto L_ViewBook;
 	case 3: goto L_Reward;
 	case 4: goto L_Exchange;
+	case 5: goto L_ClosetOnlyMenu;
 	default: goto L_Main;
 	}
 
@@ -632,6 +634,10 @@ L_Register:
 		set .@cid, getcostumecollectionid(.@item_id);
 
 		if (.@cid <= 0)
+			continue;
+
+		// 환생 전용 의상은 '환생 전용 의상' 메뉴에서만 개별 등록
+		if (iscostumeclosetonly(.@cid))
 			continue;
 
 		set .@dup, 0;
@@ -983,6 +989,10 @@ L_ViewBookPage:
 		if (.@item_id <= 0)
 			continue;
 
+		// 환생 전용 의상은 도감 진행도에 포함되지 않으므로 목록에서 제외
+		if (iscostumeclosetonly(.@cid))
+			continue;
+
 		if (iscostumeregistered(.@cid))
 			mes .@cid + ". " + getcostumename(.@cid);
 		else
@@ -1191,7 +1201,8 @@ L_Exchange:
 
 	set .@item_id, getcostumeitemid(.@cid);
 
-	if (.@item_id <= 0) {
+	// 환생 전용 의상은 의상 코인으로 교환할 수 없다
+	if (.@item_id <= 0 || iscostumeclosetonly(.@cid)) {
 		mes needtr("[의상 교환]", "[Exchange Costume]");
 		mes needtr("존재하지 않는 도감 번호입니다.", "That album number does not exist.");
 		close;
@@ -1225,6 +1236,163 @@ L_Exchange:
 	mes needtr("[의상 교환]", "[Exchange Costume]");
 	mes needtr("교환이 완료되었습니다.", "The exchange is complete.");
 	mes needtr("아이템은 인벤토리에서 확인해주세요.", "Check your inventory for the item.");
+	close;
+
+// -------------------------------------------------------------------
+// 환생 전용 의상 (ClosetOnly)
+// costume_collection_master.yml 에서 ClosetOnly: true 인 의상.
+// 도감 진행도/100% 보상/의상 교환/일괄 등록에는 포함되지 않고,
+// 여기서 등록하면 옷장에 넣어 인챈트/이펙트 스톤 세팅을 적용할 수 있다.
+// -------------------------------------------------------------------
+L_ClosetOnlyMenu:
+	deletearray .@co_cid[0], getarraysize(.@co_cid);
+	deletearray .@co_reg_cid[0], getarraysize(.@co_reg_cid);
+	deletearray .@co_reg_amount[0], getarraysize(.@co_reg_amount);
+	set .@co_count, 0;
+	set .@co_reg_count, 0;
+	set .@last, getcostumelastcollectionid();
+	set .@bound_total, countbound(.ClosetBoundType);
+
+	freeloop(1);
+
+	for (set .@cid, 1; .@cid <= .@last; set .@cid, .@cid + 1) {
+		if (!iscostumeclosetonly(.@cid))
+			continue;
+
+		set .@co_cid[.@co_count], .@cid;
+		set .@co_count, .@co_count + 1;
+
+		if (iscostumeregistered(.@cid))
+			continue;
+
+		set .@item_id, getcostumeitemid(.@cid);
+
+		if (.@item_id <= 0 || countitem(.@item_id) <= 0)
+			continue;
+
+		// 일반 등록과 동일한 보호 규칙: 장착 중이거나 귀속 의상을 보유 중이면 제외
+		if (callsub(L_IsCostumeEquipped, .@item_id))
+			continue;
+
+		set .@bound_amount_check, 0;
+
+		for (set .@b, 0; .@b < .@bound_total; set .@b, .@b + 1) {
+			if (@bound_items[.@b] == .@item_id) {
+				set .@bound_amount_check, @bound_amount[.@b];
+				break;
+			}
+		}
+
+		if (.@bound_amount_check > 0)
+			continue;
+
+		set .@co_reg_cid[.@co_reg_count], .@cid;
+		set .@co_reg_amount[.@co_reg_count], countitem(.@item_id);
+		set .@co_reg_count, .@co_reg_count + 1;
+	}
+
+	freeloop(0);
+
+	mes needtr("[환생 전용 의상]", "[Rebirth Costumes]");
+	mes needtr("환생 보상 의상은 이 메뉴에서 등록하면", "Register a rebirth reward costume here to");
+	mes needtr("옷장에 넣고 인챈트/이펙트 스톤을 적용할 수 있습니다.", "store it in the wardrobe and apply enchant/effect stones.");
+	mes needtr("^777777도감 진행도와 의상 교환에는 포함되지 않습니다.^000000", "^777777They do not count toward the album and cannot be exchanged.^000000");
+	mes " ";
+
+	if (.@co_count <= 0) {
+		mes needtr("등록된 환생 전용 의상 데이터가 없습니다.", "No rebirth costume data is configured.");
+		close;
+	}
+
+	for (set .@i, 0; .@i < .@co_count; set .@i, .@i + 1) {
+		set .@cid, .@co_cid[.@i];
+		set .@item_id, getcostumeitemid(.@cid);
+
+		if (iscostumeregistered(.@cid))
+			mes "[" + .@cid + "] " + getitemname(.@item_id) + needtr(" ^00AA00(등록됨)^000000", " ^00AA00(registered)^000000");
+		else
+			mes "[" + .@cid + "] " + getitemname(.@item_id) + needtr(" ^777777(미등록)^000000", " ^777777(not registered)^000000");
+	}
+
+	next;
+
+	if (.@co_reg_count <= 0) {
+		mes needtr("[환생 전용 의상]", "[Rebirth Costumes]");
+		mes needtr("지금 등록할 수 있는 환생 전용 의상이 없습니다.", "You have no rebirth costume to register right now.");
+		mes " ";
+		mes needtr("^0055FF※ 미등록 환생 의상을 인벤토리에 가지고 있어야 합니다.^000000", "^0055FF* You must carry an unregistered rebirth costume.^000000");
+		mes needtr("^0055FF※ 착용 중이거나 귀속 상태인 의상은 제외됩니다.^000000", "^0055FF* Worn costumes and bound copies are left out.^000000");
+		close;
+	}
+
+	set .@menu$, "";
+
+	for (set .@i, 0; .@i < .@co_reg_count; set .@i, .@i + 1)
+		set .@menu$, .@menu$ + "[" + .@co_reg_cid[.@i] + "] " + getitemname(getcostumeitemid(.@co_reg_cid[.@i])) + ":";
+
+	set .@menu$, .@menu$ + needtr("취소", "Cancel");
+	set .@sel, select(.@menu$) - 1;
+
+	if (.@sel >= .@co_reg_count)
+		goto L_CollectionMenu;
+
+	set .@cid, .@co_reg_cid[.@sel];
+	set .@item_id, getcostumeitemid(.@cid);
+	set .@amount, .@co_reg_amount[.@sel];
+
+	mes needtr("[환생 전용 의상]", "[Rebirth Costumes]");
+	mes "^FF8000[" + .@cid + "] " + getitemname(.@item_id) + "^000000";
+	mes " ";
+	mes needtr("등록하면 보유 중인 이 의상 ^FF0000", "Registering deletes ^FF0000") + .@amount + needtr("개가 모두 삭제^000000되고", "^000000 held copies of this costume and");
+	mes needtr("삭제 수량만큼 의상 코인이 지급됩니다.", "gives one Costume Coin per deleted item.");
+	mes needtr("이후 옷장에서 귀속 의상으로 꺼내 착용할 수 있습니다.", "You can then take a bound copy from the wardrobe.");
+	mes " ";
+	mes needtr("^FF0000진행 후 의상 아이템은 복구할 수 없습니다.^000000", "^FF0000The costume items cannot be recovered afterwards.^000000");
+	next;
+
+	if (select(needtr("등록한다:취소", "Register:Cancel")) == 2)
+		goto L_CollectionMenu;
+
+	// 목록 확인 후 상태가 바뀌었을 수 있으므로 진행 직전 재검사
+	if (iscostumeregistered(.@cid) || callsub(L_IsCostumeEquipped, .@item_id)) {
+		mes needtr("[환생 전용 의상]", "[Rebirth Costumes]");
+		mes needtr("등록할 수 없는 상태입니다. 다시 시도해주세요.", "It cannot be registered right now. Please try again.");
+		close;
+	}
+
+	set .@bound_total, countbound(.ClosetBoundType);
+
+	for (set .@b, 0; .@b < .@bound_total; set .@b, .@b + 1) {
+		if (@bound_items[.@b] == .@item_id) {
+			mes needtr("[환생 전용 의상]", "[Rebirth Costumes]");
+			mes needtr("같은 의상의 귀속 아이템을 보유 중이라 등록할 수 없습니다.", "You hold a bound copy of this costume, so it cannot be registered.");
+			close;
+		}
+	}
+
+	set .@amount, countitem(.@item_id);
+
+	if (.@amount <= 0) {
+		mes needtr("[환생 전용 의상]", "[Rebirth Costumes]");
+		mes needtr("의상을 보유하고 있지 않습니다.", "You do not have the costume.");
+		close;
+	}
+
+	set .@ret, registercostume(.@item_id);
+
+	if (.@ret != 1) {
+		mes needtr("[환생 전용 의상]", "[Rebirth Costumes]");
+		mes needtr("^FF0000등록에 실패했습니다.^000000", "^FF0000Registration failed.^000000");
+		close;
+	}
+
+	delitem .@item_id, .@amount;
+	getitem .CostumeCoinID, .@amount;
+
+	mes needtr("[환생 전용 의상]", "[Rebirth Costumes]");
+	mes needtr("등록이 완료되었습니다.", "Registration complete.");
+	mes needtr("획득 의상 코인: ^FF8000", "Costume Coins gained: ^FF8000") + .@amount + needtr("^000000개", "^000000");
+	mes needtr("옷장 메뉴에서 옷장에 등록해 사용해주세요.", "Store it in the wardrobe from the Wardrobe menu.");
 	close;
 
 L_NotReady:

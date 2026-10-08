@@ -149,6 +149,7 @@ bool CostumeCollectionDatabase::load()
 	std::unordered_set<uint32> collection_ids;
 	uint32 max_collection_id = 0;
 	uint32 active_count = 0;
+	uint32 closet_only_count = 0;
 	uint64 count = 0;
 	bool failed = false;
 	const ryml::NodeRef& body = tree["Body"];
@@ -163,6 +164,15 @@ bool CostumeCollectionDatabase::load()
 			!costume_collection_read_node(node, "ItemID", entry.item_id, path) ||
 			!costume_collection_read_node(node, "Name", entry.name, path) ||
 			!costume_collection_read_node(node, "Enabled", entry.enabled, path)) {
+			failed = true;
+			break;
+		}
+
+		// Optional: ClosetOnly defaults to false.
+		entry.closet_only = false;
+
+		if (costume_collection_node_exists(node, "ClosetOnly") &&
+			!costume_collection_read_node(node, "ClosetOnly", entry.closet_only, path)) {
 			failed = true;
 			break;
 		}
@@ -193,8 +203,10 @@ bool CostumeCollectionDatabase::load()
 
 		collection_ids.insert(entry.collection_id);
 		max_collection_id = std::max(max_collection_id, entry.collection_id);
-		if (entry.enabled)
+		if (entry.enabled && !entry.closet_only)
 			++active_count;
+		if (entry.enabled && entry.closet_only)
+			++closet_only_count;
 		item_map.emplace(entry.item_id, std::move(entry));
 		++count;
 	}
@@ -220,9 +232,11 @@ bool CostumeCollectionDatabase::load()
 	this->m_active_count = active_count;
 
 	ShowStatus(
-		"Done reading '" CL_WHITE "%" PRIu64 CL_RESET "' costume collections. LastCollectionID=%u\n",
+		"Done reading '" CL_WHITE "%" PRIu64 CL_RESET "' costume collections. LastCollectionID=%u, Active=%u, ClosetOnly=%u\n",
 		count,
-		this->m_last_collection_id
+		this->m_last_collection_id,
+		active_count,
+		closet_only_count
 	);
 
 	aFree(buffer);
@@ -290,6 +304,11 @@ uint32 costume_collection_get_last_collection_id()
 uint32 costume_collection_get_active_count()
 {
 	return costume_collection_db.get_active_count();
+}
+
+bool costume_collection_is_closet_only(const s_costume_collection* costume)
+{
+	return costume != nullptr && costume->enabled && costume->closet_only;
 }
 
 bool costume_collection_reload()
