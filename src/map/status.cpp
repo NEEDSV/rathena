@@ -13949,14 +13949,9 @@ int32 status_change_end( block_list* bl, enum sc_type type, int32 tid ){
 				status_damage(nullptr,bl,damage,0,0,1,0);
 			}
 			break;
-#ifdef NEED_2017_HOMUNCULUS_S
-		case SC_PYROCLASTIC:
-			// 2017: the master's weapon breaks when Pyroclastic ends.
-			// bl->prev is null while logging out / changing map-server (unit_free), skip it there.
-			if (bl->type == BL_PC && bl->prev != nullptr)
-				skill_break_equip(bl, bl, EQP_WEAPON, 10000, BCT_SELF);
-			break;
-#endif
+		// NEED: SC_PYROCLASTIC no longer breaks the master's weapon when it ends. 2017 broke it at 100%, and
+		// on death status_change_clear ends SC_CP_WEAPON first (lower enum), so even a coated weapon broke.
+		// kRO later removed the break as well (rAthena 652d77eb0, kRO update seq=218).
 		case SC_RUN:
 		{
 			struct unit_data *ud = unit_bl2ud(bl);
