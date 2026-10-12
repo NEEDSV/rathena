@@ -610,12 +610,25 @@ L_Register:
 
 	freeloop(1);
 
+	// 즐겨찾기(개인) 탭 의상 목록. delitem 은 아이템 ID 기준이라 사본을 고를 수 없으므로
+	// 하나라도 즐겨찾기 탭에 있으면 해당 종류 전체를 보호한다
+	deletearray .@fav_list[0], getarraysize(.@fav_list);
+	set .@fav_count, 0;
+
+	for (set .@i, 0; .@i < @inventorylist_count; set .@i, .@i + 1) {
+		if (@inventorylist_favorite[.@i])
+			set .@fav_list[.@fav_count++], @inventorylist_id[.@i];
+	}
+
 	for (set .@i, 0; .@i < @inventorylist_count; set .@i, .@i + 1) {
 		set .@item_id, @inventorylist_id[.@i];
 
 		// 현재 장착 중인 의상은 일괄 등록 대상에서 제외
 		// 동일 아이템을 여러 개 보유해도 하나라도 장착 중이면 해당 종류 전체를 보호
 		if (callsub(L_IsCostumeEquipped, .@item_id))
+			continue;
+
+		if (.@fav_count > 0 && inarray(.@fav_list, .@item_id) != -1)
 			continue;
 
 		set .@bound_amount_check, 0;
@@ -682,6 +695,7 @@ L_Register:
 	mes needtr("^FF0000※ 같은 의상의 귀속 아이템을 보유 중이면 제외됩니다.^000000", "^FF0000* Excluded if you hold a bound copy of the same costume.^000000");
 	mes needtr("^0055FF※ 현재 장착 중인 의상은 일괄 등록 대상에서 제외됩니다.^000000", "^0055FF* A costume you are wearing is left out of the bulk run.^000000");
 	mes needtr("^0055FF※ 같은 아이템을 여러 개 보유해도 하나라도 장착 중이면 해당 종류 전체가 제외됩니다.^000000", "^0055FF* If even one copy is worn the whole kind is left out.^000000");
+	mes needtr("^0055FF※ 즐겨찾기(개인) 탭에 하나라도 넣어 둔 의상은 해당 종류 전체가 제외됩니다.^000000", "^0055FF* If even one copy is in the Favorite tab the whole kind is left out.^000000");
 	mes " ";
 
 	for (set .@i, 0; .@i < .@count; set .@i, .@i + 1) {
@@ -717,6 +731,16 @@ L_Register:
 
 	freeloop(1);
 
+	// 목록 확인 후 즐겨찾기 탭으로 옮겼을 수 있으므로 진행 직전 재수집
+	getinventorylist;
+	deletearray .@fav_list[0], getarraysize(.@fav_list);
+	set .@fav_count, 0;
+
+	for (set .@i, 0; .@i < @inventorylist_count; set .@i, .@i + 1) {
+		if (@inventorylist_favorite[.@i])
+			set .@fav_list[.@fav_count++], @inventorylist_id[.@i];
+	}
+
 	for (set .@i, 0; .@i < .@count; set .@i, .@i + 1) {
 		set .@item_id, .@item_list[.@i];
 		set .@cid, .@cid_list[.@i];
@@ -724,6 +748,11 @@ L_Register:
 
 		// 목록 확인 후 새로 장착했을 수 있으므로 진행 직전 재검사
 		if (callsub(L_IsCostumeEquipped, .@item_id)) {
+			set .@skip_count, .@skip_count + 1;
+			continue;
+		}
+
+		if (.@fav_count > 0 && inarray(.@fav_list, .@item_id) != -1) {
 			set .@skip_count, .@skip_count + 1;
 			continue;
 		}
@@ -1255,6 +1284,16 @@ L_ClosetOnlyMenu:
 
 	freeloop(1);
 
+	// 즐겨찾기(개인) 탭 의상은 일괄 등록과 같은 규칙으로 보호
+	getinventorylist;
+	deletearray .@fav_list[0], getarraysize(.@fav_list);
+	set .@fav_count, 0;
+
+	for (set .@i, 0; .@i < @inventorylist_count; set .@i, .@i + 1) {
+		if (@inventorylist_favorite[.@i])
+			set .@fav_list[.@fav_count++], @inventorylist_id[.@i];
+	}
+
 	for (set .@cid, 1; .@cid <= .@last; set .@cid, .@cid + 1) {
 		if (!iscostumeclosetonly(.@cid))
 			continue;
@@ -1270,8 +1309,11 @@ L_ClosetOnlyMenu:
 		if (.@item_id <= 0 || countitem(.@item_id) <= 0)
 			continue;
 
-		// 일반 등록과 동일한 보호 규칙: 장착 중이거나 귀속 의상을 보유 중이면 제외
+		// 일반 등록과 동일한 보호 규칙: 장착 중이거나 즐겨찾기 탭에 있거나 귀속 의상을 보유 중이면 제외
 		if (callsub(L_IsCostumeEquipped, .@item_id))
+			continue;
+
+		if (.@fav_count > 0 && inarray(.@fav_list, .@item_id) != -1)
 			continue;
 
 		set .@bound_amount_check, 0;
@@ -1322,6 +1364,7 @@ L_ClosetOnlyMenu:
 		mes " ";
 		mes needtr("^0055FF※ 미등록 환생 의상을 인벤토리에 가지고 있어야 합니다.^000000", "^0055FF* You must carry an unregistered rebirth costume.^000000");
 		mes needtr("^0055FF※ 착용 중이거나 귀속 상태인 의상은 제외됩니다.^000000", "^0055FF* Worn costumes and bound copies are left out.^000000");
+		mes needtr("^0055FF※ 즐겨찾기(개인) 탭에 넣어 둔 의상도 제외됩니다.^000000", "^0055FF* Costumes in the Favorite tab are left out too.^000000");
 		close;
 	}
 
@@ -1366,6 +1409,16 @@ L_ClosetOnlyMenu:
 		if (@bound_items[.@b] == .@item_id) {
 			mes needtr("[환생 전용 의상]", "[Rebirth Costumes]");
 			mes needtr("같은 의상의 귀속 아이템을 보유 중이라 등록할 수 없습니다.", "You hold a bound copy of this costume, so it cannot be registered.");
+			close;
+		}
+	}
+
+	getinventorylist;
+
+	for (set .@i, 0; .@i < @inventorylist_count; set .@i, .@i + 1) {
+		if (@inventorylist_id[.@i] == .@item_id && @inventorylist_favorite[.@i]) {
+			mes needtr("[환생 전용 의상]", "[Rebirth Costumes]");
+			mes needtr("즐겨찾기(개인) 탭에 있는 의상이라 등록할 수 없습니다.", "This costume is in the Favorite tab, so it cannot be registered.");
 			close;
 		}
 	}
