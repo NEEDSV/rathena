@@ -1794,10 +1794,13 @@ function	script	F_NeedEnchantV2	{
 		close;
 	}
 
-	// ---- my gear: one line per item id that has at least one group (of the filter family)
+	// ---- my gear: one line per item id that has at least one group (of the filter family);
+	//      equipped gear is left out (the Enchant UI only takes unequipped items)
 	getinventorylist;
 	.@n = 0;
 	for (.@i = 0; .@i < @inventorylist_count; .@i++) {
+		if (@inventorylist_equip[.@i])
+			continue;
 		.@id = @inventorylist_id[.@i];
 		.@gs$ = callsub(S_Groups, .@id, .@filter$);
 		if (.@gs$ == "")
@@ -1810,19 +1813,17 @@ function	script	F_NeedEnchantV2	{
 			.@grp$[.@n] = .@gs$;
 			.@n++;
 		}
-		if (!@inventorylist_equip[.@i])
-			.@free[.@j] = 1;
 	}
 	if (.@n == 0) {
 		mes .@title$;
-		mes needtr("인챈트할 수 있는 장비를 가지고 있지 않습니다.", "You have no gear that can be enchanted.");
+		mes needtr("착용을 해제한 인챈트 가능 장비가 없습니다.", "You have no unequipped gear that can be enchanted.");
 		mes needtr("'전체 인챈트 목록'에서 대상 장비를 확인할 수 있습니다.", "See 'All enchants' for the target gear.");
 		close;
 	}
 	.@menu$ = "";
 	for (.@j = 0; .@j < .@n; .@j++) {
 		explode(.@one$, .@grp$[.@j], ",");
-		.@menu$ += getitemname(.@ids[.@j]) + " (" + getarraysize(.@one$) + needtr("종)", " kinds)") + (.@free[.@j] ? "" : needtr(" [착용 중]", " [equipped]")) + ":";
+		.@menu$ += getitemname(.@ids[.@j]) + " (" + getarraysize(.@one$) + needtr("종)", " kinds)") + ":";
 		deletearray .@one$[0], getarraysize(.@one$);
 	}
 	mes .@title$;

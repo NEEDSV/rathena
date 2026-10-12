@@ -25396,6 +25396,22 @@ void clif_enchantwindow_open( map_session_data& sd, uint64 clientLuaIndex ){
 static int32 clif_enchantwindow_test_last_msg = 0;
 #endif
 
+/// NEED: set while a request runs without a real window (test harness), so no window is reopened
+static bool clif_enchantwindow_no_reopen = false;
+
+/// NEED: need_enchant_keep_window - reopen the window the answer closed, once the request has finished
+/// (DESTROY deletes the item after its answer). Skipped when the player is busy with something else by then.
+static TIMER_FUNC( clif_enchantwindow_reopen_timer ){
+	map_session_data* sd = map_id2sd( id );
+
+	if( sd == nullptr || pc_isdead( sd ) || pc_cant_act( sd ) ){
+		return 0;
+	}
+
+	clif_enchantwindow_open( *sd, static_cast<uint64>( data ) );
+	return 0;
+}
+
 /// NEED: result window answer with any msgstringtable id (the client shows the message and closes the window)
 void clif_enchantwindow_result_message( map_session_data& sd, int32 msgId, t_itemid enchant ){
 #if PACKETVER_RE_NUM >= 20211103 || PACKETVER_MAIN_NUM >= 20220330
@@ -25407,7 +25423,14 @@ void clif_enchantwindow_result_message( map_session_data& sd, int32 msgId, t_ite
 
 	clif_send( &p, sizeof( p ), &sd, SELF );
 
+	uint64 group = sd.state.item_enchant_index;
+
 	sd.state.item_enchant_index = 0;
+
+	// NEED: the client closes the window on this answer; open the same one again after the configured delay
+	if( battle_config.need_enchant_keep_window > 0 && group != 0 && !clif_enchantwindow_no_reopen ){
+		add_timer( gettick() + battle_config.need_enchant_keep_window, clif_enchantwindow_reopen_timer, sd.id, static_cast<intptr_t>( group ) );
+	}
 #endif
 #ifdef NEED_ENCHANT_TEST
 	clif_enchantwindow_test_last_msg = msgId;
@@ -26150,9 +26173,11 @@ int32 clif_enchantwindow_test_request( map_session_data& sd, char op, uint64 gro
 	session[fd]->rdata_pos = 0;
 	sd.state.item_enchant_index = group;
 	clif_enchantwindow_test_last_msg = 0;
+	clif_enchantwindow_no_reopen = true;
 
 	handler( fd, &sd );
 
+	clif_enchantwindow_no_reopen = false;
 	session[fd]->rdata = rdata;
 	session[fd]->rdata_pos = rdata_pos;
 	sd.state.item_enchant_index = window;
@@ -27529,6 +27554,7 @@ void do_init_clif(void) {
 	add_timer_func_list(clif_clearunit_delayed_sub, "clif_clearunit_delayed_sub");
 	add_timer_func_list(clif_delayquit, "clif_delayquit");
 	add_timer_func_list(clif_gender_change_effect_end_timer, "clif_gender_change_effect_end_timer");
+	add_timer_func_list(clif_enchantwindow_reopen_timer, "clif_enchantwindow_reopen_timer");
 
 #if PACKETVER_MAIN_NUM >= 20190403 || PACKETVER_RE_NUM >= 20190320
 	add_timer_func_list( clif_ping_timer, "clif_ping_timer" );
