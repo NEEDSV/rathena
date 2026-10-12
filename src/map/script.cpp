@@ -15136,6 +15136,9 @@ BUILDIN_FUNC(getcostumeitemid)
 
 /*==========================================
  * Returns costume display name by CollectionID.
+ * KR session: the collection db `Name:` as before.
+ * EN session: the item's English display name, same as getitemname, so the wardrobe lists,
+ * search and preview read like the EN client's inventory. Falls back to the collection name.
  *------------------------------------------*/
 BUILDIN_FUNC(getcostumename)
 {
@@ -15151,6 +15154,19 @@ BUILDIN_FUNC(getcostumename)
 	if (costume == nullptr || !costume->enabled) {
 		script_pushconststr(st, "");
 		return SCRIPT_CMD_SUCCESS;
+	}
+
+	if (script_need_lang(st) == NEED_LANG_EN) {
+		std::shared_ptr<item_data> id = item_db.find(costume->item_id);
+
+		if (id != nullptr) {
+			const char* name = item_display_name(id, NEED_LANG_EN);
+
+			if (name[0] != '\0') {
+				script_pushstrcopy(st, name);
+				return SCRIPT_CMD_SUCCESS;
+			}
+		}
 	}
 
 	script_pushstrcopy(st, costume->name.c_str());
