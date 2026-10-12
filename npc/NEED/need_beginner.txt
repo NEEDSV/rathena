@@ -9,12 +9,13 @@
 //=   Lv.1       : 메탈 무기 상자 (101454)
 //=   캐릭터 1회 : 300% 전투교범 5개 (14545, 캐릭터 귀속)
 //=   Lv.100     : 초심자 무기/방어구/쉐도우 + 종합 은총 이용권
-//=   Lv.150     : 초심자 무기 7제련 이용권 (25428)
+//=   Lv.125     : 초심자 무기 7제련 이용권 (25428)   (2026-10-12 Lv.150 -> 125)
 //=   Lv.175/60  : 초보자 전장 장비 NPC 메뉴 개방 (900125~900155)
 //=                기존 14일 기간제 시즈 세트 지급은 중단됨
 //=
 //= 7일 초보자 소모품 지원:
-//=   소형 생명수 100 / 중형 생명수 100 / 신묘한 생명수 100 / 올마이티 10
+//=   소형 생명수 100 / 중형 생명수 100 / 신묘한 생명수 100
+//=   (올마이티는 2026-10-12 부터 코스 Lv.150 지원으로 이동)
 //=   최초 성장지원 등록 시 시작, 24시간 단위 1회, 계정 단위
 //=
 //= 공용 판정:
@@ -35,6 +36,20 @@
 //=   S_CurrentStage / S_ShowGoal 같은 callsub 서브루틴과
 //=   F_NEED_* 공용 함수에는 clear; 를 넣지 않는다.
 //=   next; 로 이어지는 같은 화면의 연속 페이지에도 넣지 않는다.
+//=
+//= 낙원단 코스 (2026-10-12, CM 설계 1단계):
+//=   첫 대화에서 캐릭터별로 진행 여부를 고른다. (NEED_COURSE)
+//=     1  = 코스 진행 : 단계별 목표 / 사냥터 워프 + 버프 / 단계 시작 지급
+//=     -1 = 진행 안 함 : 300% 교범 5 + 메탈 무기 상자 + 초심자 장비 3종을
+//=          한 번에 받고 라자냐로 이동. 이후 레벨별 보상 없음 (175/60 졸업 보상은 유지)
+//=   단계 : 1 초보존 > 2 개미지옥(35) > 3 오크(2차 + 65) > 4 루이나/게펜6(99)
+//=          > 5 전승/3차(100) > [장비 착용] > 6 노그로드/베인스3(125) > [무기 +7]
+//=          > 7 용의 둥지 2층(140) > [쉐도우 +4] > 8 용의 둥지 3층 + 사라의 기억(졸업 레벨)
+//=          > 9 졸업
+//=   코스 진행 캐릭터 레벨 자동 지급 :
+//=     Lv.100 초심자 장비 (직업 무기 직접 지급) / Lv.125 무기 7제련권
+//=     Lv.150 올마이티 7일 동안 하루 10개까지 보충
+//=   직업별 대사 / 속성 부여 / NPC 안 전직은 2단계 (CM 대사 수령 후)
 //============================================================
 
 //============================================================
@@ -44,6 +59,9 @@
 -	script	NEED_Beginner_Config	-1,{
 OnInit:
 	$NEED_BEGINNER_ACCOUNT_MIN = 2000817;
+
+	// 낙원단 코스 졸업 레벨 (사라의 기억 클리어와 함께 확인)
+	$NEED_COURSE_GRAD_LV = 158;
 
 	// GM / 운영진 테스트 계정 예외 그룹 (conf/groups.yml 기준)
 	//    2  Support          (Level 1)
@@ -182,7 +200,6 @@ function	script	F_NEED_BeginnerSupply	{
 	.@small = 100 - countitem(14534);
 	.@medium = 100 - countitem(14535);
 	.@mysterious = 100 - countitem(12832);
-	.@almighty = 10 - countitem(12883);
 
 	if (.@small > 0)
 		getitembound 14534, .@small, BOUND_ACCOUNT;
@@ -190,8 +207,6 @@ function	script	F_NEED_BeginnerSupply	{
 		getitembound 14535, .@medium, BOUND_ACCOUNT;
 	if (.@mysterious > 0)
 		getitembound 12832, .@mysterious, BOUND_ACCOUNT;
-	if (.@almighty > 0)
-		getitembound 12883, .@almighty, BOUND_ACCOUNT;
 
 	if (.@show) {
 		setdialogsize(440,260);
@@ -202,10 +217,359 @@ function	script	F_NEED_BeginnerSupply	{
 		mes needtr("소형 생명수    ^FF9900최대 100개^000000","Small Life Potion      ^FF9900up to 100^000000");
 		mes needtr("중형 생명수    ^FF9900최대 100개^000000","Medium Life Potion     ^FF9900up to 100^000000");
 		mes needtr("신묘한 생명수  ^FF9900최대 100개^000000","Mysterious Life Potion ^FF9900up to 100^000000");
-		mes needtr("올마이티        ^FF9900최대 10개^000000","Almighty               ^FF9900up to 10^000000");
 		mes "";
 		mes needtr("^777777지원 ","^777777Support day ") + .@day + needtr("일차 / 총 7일^000000"," of 7 total^000000");
 	}
+	return 1;
+}
+
+//============================================================
+// 낙원단 코스 공용 함수 (2026-10-12)
+//   NEED_COURSE        : 0 미선택 / 1 진행 / -1 진행 안 함
+//   NEED_COURSE_GIFT   : 단계 시작 지급 비트 (캐릭터당 1회)
+//   NEED_COURSE_GEAR   : Lv.100 초심자 장비 착용 확인
+//   NEED_COURSE_W7     : 초심자 무기 +7 확인
+//   NEED_COURSE_S4     : 초심자 쉐도우 6부위 +4 확인
+//   NEED_COURSE_SARA   : 사라의 기억 클리어 (레온 보고 시점, SaraMemory.txt)
+//   NEED_COURSE_DONE   : 졸업 기록
+//   NEED_ALMIGHTY_START / NEED_ALMIGHTY_DAY : Lv.150 올마이티 7일 지원
+//============================================================
+
+// 초심자 무기 16종 여부 (refine.txt 7제련권 대상과 같은 목록)
+function	script	F_NEED_CourseIsBeginnerWeapon	{
+	switch (getarg(0)) {
+	case 1848: case 2046: case 13144: case 13341: case 13483: case 16075:
+	case 16076: case 18165: case 18166: case 21037: case 26015: case 26119:
+	case 26120: case 28027: case 28616: case 28740:
+		return 1;
+	}
+	return 0;
+}
+
+// 현재 직업에 맞는 초심자 무기 (없으면 0 -> 무기 상자로 지급)
+function	script	F_NEED_CourseClassWeapon	{
+	switch (Class) {
+	case JOB_SURA: case JOB_SURA_T: case JOB_BABY_SURA:
+		return 1848;
+	case JOB_WARLOCK: case JOB_WARLOCK_T: case JOB_BABY_WARLOCK:
+		return 2046;
+	case JOB_REBELLION:
+		return 13144;
+	case JOB_KAGEROU: case JOB_OBORO:
+		return 13341;
+	case JOB_GENETIC: case JOB_GENETIC_T: case JOB_BABY_GENETIC:
+		return 13483;
+	case JOB_MECHANIC: case JOB_MECHANIC_T: case JOB_MECHANIC2: case JOB_MECHANIC_T2:
+	case JOB_BABY_MECHANIC: case JOB_BABY_MECHANIC2:
+		return 16075;
+	case JOB_SUPER_NOVICE_E: case JOB_SUPER_BABY_E:
+		return 16076;
+	case JOB_RANGER: case JOB_RANGER_T: case JOB_RANGER2: case JOB_RANGER_T2:
+	case JOB_BABY_RANGER: case JOB_BABY_RANGER2:
+		return 18165;
+	case JOB_MINSTREL: case JOB_MINSTREL_T: case JOB_WANDERER: case JOB_WANDERER_T:
+	case JOB_BABY_MINSTREL: case JOB_BABY_WANDERER:
+		return 18166;
+	case JOB_RUNE_KNIGHT: case JOB_RUNE_KNIGHT_T: case JOB_RUNE_KNIGHT2: case JOB_RUNE_KNIGHT_T2:
+	case JOB_BABY_RUNE_KNIGHT: case JOB_BABY_RUNE_KNIGHT2:
+		return 21037;
+	case JOB_ROYAL_GUARD: case JOB_ROYAL_GUARD_T: case JOB_ROYAL_GUARD2: case JOB_ROYAL_GUARD_T2:
+	case JOB_BABY_ROYAL_GUARD: case JOB_BABY_ROYAL_GUARD2:
+		return 26015;
+	case JOB_SORCERER: case JOB_SORCERER_T: case JOB_BABY_SORCERER:
+		return 26119;
+	case JOB_SUMMONER: case JOB_BABY_SUMMONER:
+		return 26120;
+	case JOB_GUILLOTINE_CROSS: case JOB_GUILLOTINE_CROSS_T: case JOB_BABY_GUILLOTINE_CROSS:
+		return 28027;
+	case JOB_ARCH_BISHOP: case JOB_ARCH_BISHOP_T: case JOB_BABY_ARCH_BISHOP:
+		return 28616;
+	case JOB_SHADOW_CHASER: case JOB_SHADOW_CHASER_T: case JOB_BABY_SHADOW_CHASER:
+		return 28740;
+	}
+	return 0;
+}
+
+// Base Lv.100 이상으로 올라갈 수 있는 최종 직업인가
+//   3차 직업 + 리벨리온 / 카게로우 / 오보로 (서버 분류상 2차) + 도람(99 이상)
+function	script	F_NEED_CourseIsFinalClass	{
+	if (BaseLevel >= 100)
+		return 1;
+	if (eaclass() & EAJL_THIRD)
+		return 1;
+	switch (Class) {
+	case JOB_REBELLION: case JOB_KAGEROU: case JOB_OBORO:
+		return 1;
+	case JOB_SUMMONER: case JOB_BABY_SUMMONER:
+		return (BaseLevel >= 99);
+	}
+	return 0;
+}
+
+// 현재 코스 단계
+//   1~9 = 단계 / 60 = 장비 착용 관문 / 70 = 무기 +7 관문 / 80 = 쉐도우 +4 관문
+//   직업과 레벨만으로 판정하므로 전승 후에는 자연스럽게 1단계부터 다시 시작한다.
+function	script	F_NEED_CoursePhase	{
+	.@ea = eaclass();
+	.@base = .@ea & EAJ_BASEMASK;
+
+	if (callfunc("F_NEED_CourseIsFinalClass")) {
+		if (BaseLevel < 100)
+			return 5;
+		if (!NEED_COURSE_GEAR)
+			return 60;
+		if (BaseLevel < 125)
+			return 6;
+		if (!NEED_COURSE_W7)
+			return 70;
+		if (BaseLevel < 140)
+			return 7;
+		if (!NEED_COURSE_S4)
+			return 80;
+		if (BaseLevel < $NEED_COURSE_GRAD_LV || !NEED_COURSE_SARA)
+			return 8;
+		return 9;
+	}
+
+	// 노비스 (슈퍼노비스는 EAJL_2 가 있어 여기 걸리지 않는다)
+	if (.@base == EAJ_NOVICE && !(.@ea & EAJL_2))
+		return 1;
+
+	// 1차 직업
+	if (!(.@ea & EAJL_2)) {
+		if (BaseLevel < 35)
+			return 2;
+		// 2차 직업이 없는 1차 (건슬링거 / 닌자 / 도람) 는 레벨만 본다
+		if (.@base == EAJ_GUNSLINGER || .@base == EAJ_NINJA || .@base == EAJ_SUMMONER) {
+			if (BaseLevel < 65)
+				return 3;
+			if (BaseLevel < 99)
+				return 4;
+			return 5;
+		}
+		return 3;
+	}
+
+	// 2차 직업
+	if (BaseLevel < 65)
+		return 3;
+	if (BaseLevel < 99)
+		return 4;
+	return 5;
+}
+
+// 관문 확인 : 60 = 초심자 장비 착용 / 70 = 무기 +7 / 80 = 쉐도우 6부위 +4
+//   맞는 초심자 무기가 없는 직업(성제 / 소울리퍼 등)은 무기 조건을 건너뛴다.
+function	script	F_NEED_CourseGateOK	{
+	.@gate = getarg(0);
+	.@cw = callfunc("F_NEED_CourseClassWeapon");
+	.@wok = 1;
+	if (.@cw > 0)
+		.@wok = callfunc("F_NEED_CourseIsBeginnerWeapon", getequipid(EQI_HAND_R));
+
+	if (.@gate == 60) {
+		if (!.@wok)
+			return 0;
+		if (!isequipped(19310,15250,20906,22173,28566))
+			return 0;
+		return isequipped(24387,24388,24389,24390,24391,24392);
+	}
+	if (.@gate == 70) {
+		if (.@cw <= 0)
+			return 1;
+		if (!.@wok)
+			return 0;
+		return (getequiprefinerycnt(EQI_HAND_R) >= 7);
+	}
+	if (.@gate == 80) {
+		setarray .@slot[0], EQI_SHADOW_ARMOR, EQI_SHADOW_WEAPON, EQI_SHADOW_SHIELD,
+			EQI_SHADOW_SHOES, EQI_SHADOW_ACC_R, EQI_SHADOW_ACC_L;
+		for (.@i = 0; .@i < 6; .@i++) {
+			.@id = getequipid(.@slot[.@i]);
+			if (.@id < 24387 || .@id > 24392)
+				return 0;
+			if (getequiprefinerycnt(.@slot[.@i]) < 4)
+				return 0;
+		}
+		return 1;
+	}
+	return 0;
+}
+
+// Lv.100 초심자 장비 (성장 지원 보상 메뉴와 같은 변수 NEED_BEGINNER_REWARD_100)
+//   반환 1 = 지급 / 0 = 이미 받음 / -1 = 무게·공간 부족
+function	script	F_NEED_CourseGrant100	{
+	if (NEED_BEGINNER_REWARD_100)
+		return 0;
+
+	.@w = callfunc("F_NEED_CourseClassWeapon");
+	if (.@w <= 0)
+		.@w = 399908;	// 맞는 무기가 없으면 선택 상자
+
+	if (!checkweight(.@w,1,23583,1,23584,1)) {
+		dispbottom needtr("[낙원단] 소지 무게/공간이 부족해 Lv.100 장비를 받지 못했습니다. 정리한 뒤 낙원단 성장 지원관에게 말을 걸어주세요.","[Eden] Not enough weight or space for your Lv.100 gear. Make room and talk to the Eden Growth Supporter.");
+		return -1;
+	}
+
+	getitem .@w,1;
+	getitem 23583,1;
+	getitem 23584,1;
+	NEED_BEGINNER_REWARD_100 = 1;
+
+	.@grace_until = callfunc("NeedGrace_GrantPackage", 604800);
+	if (rentalcountitem(399904) > 0)
+		NEED_BEGINNER_GRACE_FIX = 1;
+
+	dispbottom needtr("[낙원단] Lv.100 달성! 초심자 무기 / 방어구 상자 / 쉐도우 상자와 7일 종합 은총을 지급했습니다.","[Eden] Lv.100! You received the Beginner weapon, armor box, shadow box and a 7-day Full Grace.");
+	dispbottom needtr("[낙원단] 상자를 열어 모두 착용한 뒤 낙원단 성장 지원관에게 말을 걸어주세요.","[Eden] Open the boxes, equip everything, then talk to the Eden Growth Supporter.");
+	if (.@grace_until <= gettimetick(2))
+		dispbottom needtr("[낙원단] 종합 은총 활성화에 실패했습니다. 운영진에게 알려주세요.","[Eden] Full Grace failed to activate. Please let the staff know.");
+	return 1;
+}
+
+// Lv.125 초심자 무기 7제련권 (메뉴와 같은 변수 NEED_BEGINNER_REWARD_150)
+function	script	F_NEED_CourseGrantW7	{
+	if (NEED_BEGINNER_REWARD_150)
+		return 0;
+	if (!checkweight(25428,1)) {
+		dispbottom needtr("[낙원단] 소지 무게/공간이 부족해 무기 +7 제련권을 받지 못했습니다. 정리한 뒤 성장 지원관에게 말을 걸어주세요.","[Eden] Not enough weight or space for the weapon +7 ticket. Make room and talk to the Growth Supporter.");
+		return -1;
+	}
+	getitem 25428,1;
+	NEED_BEGINNER_REWARD_150 = 1;
+	dispbottom needtr("[낙원단] Lv.125 달성! 초심자 무기 +7 제련권을 지급했습니다. 라자냐 홀그렌의 '제련권 사용'에서 사용하세요.","[Eden] Lv.125! You received a Beginner weapon +7 ticket. Use it at Lasagna Hollgrehenn under 'Use a Refine Ticket'.");
+	return 1;
+}
+
+// Lv.150 올마이티 지원 : 7일 동안 하루 1회, 10개까지 보충 (캐릭터 단위, 계정 귀속 지급)
+function	script	F_NEED_AlmightySupply	{
+	if (NEED_COURSE != 1 || BaseLevel < 150)
+		return 0;
+
+	.@now = gettimetick(2);
+	if (NEED_ALMIGHTY_START <= 0) {
+		NEED_ALMIGHTY_START = .@now;
+		NEED_ALMIGHTY_DAY = 0;
+		dispbottom needtr("[낙원단] Lv.150부터 버프 도우미의 버프가 줄어듭니다. 대신 올마이티를 드세요! (7일 동안 매일 10개까지 보충)","[Eden] From Lv.150 the Buff Helper gives fewer buffs. Eat Almighty instead! (topped up to 10 daily for 7 days)");
+	}
+
+	.@elapsed = .@now - NEED_ALMIGHTY_START;
+	if (.@elapsed < 0 || .@elapsed >= 604800)
+		return 0;
+
+	.@day = (.@elapsed / 86400) + 1;
+	if (NEED_ALMIGHTY_DAY >= .@day)
+		return 0;
+
+	.@need = 10 - countitem(12883);
+	if (.@need > 0 && !checkweight(12883,.@need))
+		return 0;
+
+	NEED_ALMIGHTY_DAY = .@day;
+	if (.@need > 0)
+		getitembound 12883, .@need, BOUND_ACCOUNT;
+	dispbottom needtr("[낙원단] 올마이티를 10개까지 보충했습니다. (","[Eden] Almighty topped up to 10. (Day ") + .@day + needtr("일차 / 7일)"," of 7)");
+	return 1;
+}
+
+// 레벨 보상 따라잡기 (레벨업 / 로그인 / 코스 화면에서 호출)
+function	script	F_NEED_CourseCatchUp	{
+	if (NEED_COURSE != 1)
+		return 0;
+	if (BaseLevel >= 100)
+		callfunc "F_NEED_CourseGrant100";
+	if (BaseLevel >= 125 && NEED_BEGINNER_REWARD_100)
+		callfunc "F_NEED_CourseGrantW7";
+	if (BaseLevel >= 150)
+		callfunc "F_NEED_AlmightySupply";
+	return 1;
+}
+
+// 단계 시작 지급 (대화창 안에서 호출, 캐릭터당 단계별 1회)
+//   반환 1 = 지급 / 0 = 해당 없음·이미 받음 / -1 = 무게·공간 부족
+function	script	F_NEED_CourseGift	{
+	.@code = getarg(0);
+	switch (.@code) {
+	case 2: case 3: case 4: case 6: case 7: case 8: case 9:
+		.@bit = .@code;
+		break;
+	case 80:
+		.@bit = 10;
+		break;
+	default:
+		return 0;
+	}
+	if (NEED_COURSE_GIFT & (1 << .@bit))
+		return 0;
+
+	switch (.@code) {
+	case 2:
+		break;
+	case 3:
+		.@ok = checkweight(14545,1,601,50);
+		break;
+	case 4:
+		.@ok = checkweight(14545,1,14534,50,14535,50,12832,50);
+		break;
+	case 8:
+		.@ok = checkweight(14545,1,7621,1,12215,5,12216,5);
+		break;
+	case 80:
+		.@ok = checkweight(984,4);
+		break;
+	default:
+		.@ok = checkweight(14545,1);
+		break;
+	}
+	if (.@code != 2 && !.@ok) {
+		mes "";
+		mes needtr("^FF0000소지 무게/공간이 부족해 단계 지원품을 받지 못했습니다.^000000","^FF0000Not enough weight or space for the stage support items.^000000");
+		mes needtr("^FF0000정리한 뒤 다시 말을 걸어주세요.^000000","^FF0000Make room and talk to me again.^000000");
+		return -1;
+	}
+
+	mes "";
+	mes needtr("^FF9900[단계 지원품]^000000","^FF9900[Stage Support Items]^000000");
+	switch (.@code) {
+	case 2:
+		Zeny += 100000;
+		mes "- 100,000 Zeny";
+		break;
+	case 3:
+		getitembound 14545,1,Bound_Char;
+		getitem 601,50;
+		mes needtr("- 300% 전투교범 1개","- 1 Battle Manual X3");
+		mes needtr("- 파리의 날개 50개 ^777777(맵 안 무작위 이동, 도구 상인에서도 판매)^000000","- 50 Fly Wings ^777777(random teleport on the map, also sold by the Tool Dealer)^000000");
+		break;
+	case 4:
+		getitembound 14545,1,Bound_Char;
+		getitembound 14534,50,BOUND_ACCOUNT;
+		getitembound 14535,50,BOUND_ACCOUNT;
+		getitembound 12832,50,BOUND_ACCOUNT;
+		mes needtr("- 300% 전투교범 1개","- 1 Battle Manual X3");
+		mes needtr("- 소형 / 중형 / 신묘한 생명수 각 50개","- 50 each of Small / Medium / Mysterious Life Potion");
+		break;
+	case 8:
+		getitembound 14545,1,Bound_Char;
+		getitem 7621,1;
+		getitem 12215,5;
+		getitem 12216,5;
+		mes needtr("- 300% 전투교범 1개","- 1 Battle Manual X3");
+		mes needtr("- 지크프리트의 증표 1개 ^777777(쓰러졌을 때 그 자리에서 부활)^000000","- 1 Token of Siegfried ^777777(revive on the spot)^000000");
+		mes needtr("- 블레싱 / 증속 스크롤 각 5개","- 5 each of Blessing / Increase AGI scrolls");
+		break;
+	case 80:
+		getitem 984,4;
+		Zeny += 240000;
+		mes needtr("- 오리데오콘 4개 ^777777(웨폰 쉐도우 제련용)^000000","- 4 Oridecon ^777777(for the shadow weapon)^000000");
+		mes needtr("- 240,000 Zeny ^777777(제련비 24회분)^000000","- 240,000 Zeny ^777777(24 refine fees)^000000");
+		break;
+	default:
+		getitembound 14545,1,Bound_Char;
+		mes needtr("- 300% 전투교범 1개","- 1 Battle Manual X3");
+		break;
+	}
+	NEED_COURSE_GIFT = NEED_COURSE_GIFT | (1 << .@bit);
 	return 1;
 }
 
@@ -260,6 +624,12 @@ L_Main:
 	clear;
 
 L_MainDraw:
+	// 낙원단 코스 (2026-10-12) : 진행 여부를 고르지 않았다면 먼저 묻고,
+	// 진행 중이면 코스 화면을 기본으로 보여준다. (다른 메뉴는 코스 화면에서 이동)
+	if (!NEED_COURSE && !.@course_menu)
+		goto L_CourseChoice;
+	if (NEED_COURSE == 1 && !.@course_menu)
+		goto L_Course;
 	setdialogsize(440,260);
 	mes needtr("^00AAFF[낙원단 성장 지원관]^000000","^00AAFF[Eden Growth Supporter]^000000");
 	mes "";
@@ -316,6 +686,203 @@ L_MainDraw:
 		}
 	}
 
+L_CourseChoice:
+	setdialogsize(460,360);
+	mes needtr("^00AAFF[낙원단 성장 지원관]^000000","^00AAFF[Eden Growth Supporter]^000000");
+	mes "";
+	mes needtr("낙원단 코스에서는 레벨에 맞는 ^0055FF목표^000000를 하나씩 정해 드리고","On the Eden Course I set you one ^0055FFgoal^000000 at a time for your level,");
+	mes needtr("^0055FF사냥터 이동과 버프^000000, 필요한 물품을 함께 챙겨 드립니다.","and take care of ^0055FFwarps, buffs^000000 and the items you need.");
+	mes "";
+	mes needtr("^777777따라오지 않아도 괜찮습니다.^000000","^777777You do not have to follow it.^000000");
+	mes needtr("^777777바로 라자냐에서 자유롭게 시작할 수도 있어요.^000000","^777777You can also start freely in Lasagna right away.^000000");
+	next;
+	switch (select(needtr("^00AAFF낙원단 코스를 진행한다^000000:진행하지 않고 바로 라자냐로 간다:나중에 정할게요","^00AAFFFollow the Eden Course^000000:Skip it and go straight to Lasagna:I will decide later"))) {
+	case 1:
+		clear;
+		NEED_COURSE = 1;
+		mes needtr("^00AAFF[낙원단 코스]^000000","^00AAFF[Eden Course]^000000");
+		mes "";
+		mes needtr("^00AA00좋습니다! 지금부터 함께 성장해봐요.^000000","^00AA00Great! Let us grow together from here.^000000");
+		if (!NEED_BEGINNER_REWARD_1 && checkweight(101454,1)) {
+			getitem 101454,1;
+			NEED_BEGINNER_REWARD_1 = 1;
+			mes "";
+			mes needtr("^FF9900메탈 무기 상자^000000를 드렸어요.","Here is a ^FF9900Metal Weapon Box^000000.");
+			mes needtr("열어서 원하는 무기를 골라 쓰세요.","Open it and pick the weapon you want.");
+		}
+		mes "";
+		mes needtr("^777777Lv.100 / 125 / 150 보상은 레벨을 달성하면^000000","^777777The Lv.100 / 125 / 150 rewards arrive^000000");
+		mes needtr("^777777자동으로 지급됩니다.^000000","^777777automatically when you reach the level.^000000");
+		next;
+		goto L_Main;
+
+	case 2:
+		clear;
+		mes needtr("^00AAFF[바로 라자냐로]^000000","^00AAFF[Straight to Lasagna]^000000");
+		mes "";
+		mes needtr("아래 물품을 지금 한 번에 드리고","I will give you the items below all at once");
+		mes needtr("라자냐로 보내드릴게요.","and send you to Lasagna.");
+		mes "";
+		mes needtr("- 300% 전투교범 5개","- 5 Battle Manual X3");
+		mes needtr("- 메탈 무기 상자","- Metal Weapon Box");
+		mes needtr("- 초심자 무기 / 방어구 / 쉐도우 상자 ^777777(Lv.100부터 착용)^000000","- Beginner weapon / armor / shadow boxes ^777777(wearable from Lv.100)^000000");
+		mes "";
+		mes needtr("^FF0000이후 낙원단 단계 안내와 레벨별 보상은 받을 수 없습니다.^000000","^FF0000You will not get Eden stage guidance or level rewards afterwards.^000000");
+		mes needtr("^777777(Lv.175 / Job 60 졸업 보상은 그대로 받을 수 있습니다.)^000000","^777777(The Lv.175 / Job 60 graduation reward stays available.)^000000");
+		next;
+		if (select(needtr("이대로 진행한다:다시 생각해볼게요","Go ahead:Let me think again")) != 1)
+			close;
+		if (!checkweight(14545,5,101454,1,399908,1,23583,1,23584,1)) {
+			mes needtr("^FF0000소지 무게/공간을 비운 뒤 다시 시도해주세요.^000000","^FF0000Free up weight and space, then try again.^000000");
+			close;
+		}
+		if (!NEED_BEGINNER_MANUAL_X3) {
+			getitembound 14545,5,Bound_Char;
+			NEED_BEGINNER_MANUAL_X3 = 1;
+		}
+		if (!NEED_BEGINNER_REWARD_1) {
+			getitem 101454,1;
+			NEED_BEGINNER_REWARD_1 = 1;
+		}
+		if (!NEED_BEGINNER_REWARD_100) {
+			getitem 399908,1;
+			getitem 23583,1;
+			getitem 23584,1;
+			NEED_BEGINNER_REWARD_100 = 1;
+		}
+		// 이후 레벨 보상(무기 7제련권)은 지급하지 않는다.
+		NEED_BEGINNER_REWARD_150 = 1;
+		NEED_COURSE = -1;
+		NEED_BEGINNER_LASAGNA = 1;
+		savepoint "lasagna",170,151;
+		close2;
+		warp "lasagna",170,151;
+		end;
+
+	default:
+		.@course_menu = 1;
+		goto L_Main;
+	}
+
+L_Course:
+	setdialogsize(480,420);
+	callfunc "F_NEED_CourseCatchUp";
+	.@p = callfunc("F_NEED_CoursePhase");
+
+	// 관문은 조건을 채웠으면 바로 통과 기록을 남기고 다음 단계로 넘어간다.
+	if (.@p == 60 && callfunc("F_NEED_CourseGateOK", 60)) {
+		NEED_COURSE_GEAR = 1;
+		.@p = callfunc("F_NEED_CoursePhase");
+	}
+	if (.@p == 70 && callfunc("F_NEED_CourseGateOK", 70)) {
+		NEED_COURSE_W7 = 1;
+		.@p = callfunc("F_NEED_CoursePhase");
+	}
+	if (.@p == 80 && callfunc("F_NEED_CourseGateOK", 80)) {
+		NEED_COURSE_S4 = 1;
+		.@p = callfunc("F_NEED_CoursePhase");
+	}
+	if (.@p == 9 && !NEED_COURSE_DONE)
+		NEED_COURSE_DONE = 1;
+
+	mes needtr("^00AAFF[낙원단 코스]^000000 ","^00AAFF[Eden Course]^000000 ") + callsub(S_CourseStepName, .@p);
+	mes "";
+	callsub S_CourseText, .@p;
+	callfunc "F_NEED_CourseGift", .@p;
+	next;
+
+	// 단계별 이동 목록 (표시 / 목적지가 같은 인덱스)
+	.@n = 0;
+	switch (.@p) {
+	case 1:
+		if (BaseLevel < 40) {
+			setarray .@lbl$[0], needtr("초보존으로 이동","Go to the Newbie Zone");
+			setarray .@wm$[0], "pvp_n_2-5";
+			setarray .@wx[0], 100;
+			setarray .@wy[0], 133;
+			.@n = 1;
+		}
+		break;
+	case 2:
+		setarray .@lbl$[0], needtr("개미지옥 1층으로 이동","Go to Ant Hell F1");
+		setarray .@wm$[0], "anthell01";
+		setarray .@wx[0], 35;
+		setarray .@wy[0], 262;
+		.@n = 1;
+		break;
+	case 3:
+		setarray .@lbl$[0], needtr("오크 지하 동굴 1층으로 이동","Go to Orc Dungeon F1");
+		setarray .@wm$[0], "orcsdun01";
+		setarray .@wx[0], 32;
+		setarray .@wy[0], 170;
+		.@n = 1;
+		break;
+	case 4:
+	case 5:
+		setarray .@lbl$[0], needtr("루이나 지하 던전 1층 ^777777(광역기가 있는 직업)^000000","Luina Guild Dungeon F1 ^777777(jobs with area skills)^000000"),
+			needtr("게펜 필드 6 ^777777(광역기가 없거나 몰이가 어려울 때)^000000","Geffen Field 6 ^777777(no area skills, or mobbing is hard)^000000");
+		setarray .@wm$[0], "gld_dun02", "gef_fild06";
+		setarray .@wx[0], 39, 248;
+		setarray .@wy[0], 161, 158;
+		.@n = 2;
+		break;
+	case 6:
+		setarray .@lbl$[0], needtr("노그로드 2층","Nogg Road F2"),
+			needtr("베인스 필드 3 ^777777(마그마링, 몹이 몰리는 게 버거울 때)^000000","Veins Field 3 ^777777(Magmaring, if mob swarms are too much)^000000");
+		setarray .@wm$[0], "mag_dun02", "ve_fild03";
+		setarray .@wx[0], 47, 222;
+		setarray .@wy[0], 30, 45;
+		.@n = 2;
+		break;
+	case 7:
+		setarray .@lbl$[0], needtr("용의 둥지 2층으로 이동","Go to Dragon Nest F2");
+		setarray .@wm$[0], "lasa_dun02";
+		setarray .@wx[0], 22;
+		setarray .@wy[0], 171;
+		.@n = 1;
+		break;
+	case 70:
+	case 80:
+		setarray .@lbl$[0], needtr("^00AAFF홀그렌 길 안내^000000","^00AAFFDirections to Hollgrehenn^000000"),
+			needtr("라자냐로 이동","Go to Lasagna");
+		setarray .@wm$[0], "#NAVI", "lasagna";
+		setarray .@wx[0], 0, 170;
+		setarray .@wy[0], 0, 151;
+		.@n = 2;
+		break;
+	case 8:
+		setarray .@lbl$[0], needtr("용의 둥지 3층으로 이동","Go to Dragon Nest F3"),
+			needtr("^00AAFF사라의 기억 입구로 이동 (달리)^000000","^00AAFFGo to the Sara's Memory entrance (Dali)^000000");
+		setarray .@wm$[0], "lasa_dun03", "dali";
+		setarray .@wx[0], 190, 133;
+		setarray .@wy[0], 18, 108;
+		.@n = 2;
+		break;
+	}
+
+	.@menu$ = "";
+	for (.@i = 0; .@i < .@n; .@i++)
+		.@menu$ += .@lbl$[.@i] + ":";
+	.@menu$ += needtr("다른 메뉴 보기:닫기","Other menus:Close");
+
+	.@sel = select(.@menu$) - 1;
+	if (.@sel >= 0 && .@sel < .@n) {
+		if (.@wm$[.@sel] == "#NAVI") {
+			close2;
+			navigateto("lasa_in01",161,67);
+			end;
+		}
+		close2;
+		callsub S_CourseBuff;
+		warp .@wm$[.@sel], .@wx[.@sel], .@wy[.@sel];
+		end;
+	}
+	if (.@sel == .@n) {
+		.@course_menu = 1;
+		goto L_Main;
+	}
+	close;
+
 L_Reward:
 	clear;
 	setdialogsize(460,360);
@@ -329,7 +896,7 @@ L_Reward:
 
 	.@menu$ = needtr("Lv.1 - 메탈 무기 상자:","Lv.1 - Metal Weapon Box:")
 		+ needtr("Lv.100 - 초심자 장비 / 종합 은총:","Lv.100 - Beginner Gear / Full Grace:")
-		+ needtr("Lv.150 - 초심자 무기 +7 제련권:","Lv.150 - Beginner Weapon +7 Refine Ticket:")
+		+ needtr("Lv.125 - 초심자 무기 +7 제련권:","Lv.125 - Beginner Weapon +7 Refine Ticket:")
 		+ needtr("Lv.175/60 - 환생 티켓:","Lv.175/60 - Rebirth Ticket:")
 		+ needtr("신규 지원 - 300% 전투교범 5개 (캐릭터당 1회):", "New Player Support - 5 Battle Manual X3 (once per character):")
 		+ needtr("돌아가기","Back");
@@ -441,16 +1008,24 @@ L_Reward:
 	case 3:
 		// 메뉴 선택으로 새 화면에 진입하므로 이전 대사를 지운다.
 		clear;
-		if (BaseLevel < 150) {
-			mes needtr("^00AAFF[Lv.150 성장 보상]^000000","^00AAFF[Lv.150 Growth Reward]^000000");
+		if (NEED_COURSE == -1) {
+			mes needtr("^00AAFF[Lv.125 성장 보상]^000000","^00AAFF[Lv.125 Growth Reward]^000000");
 			mes "";
-			mes needtr("이 보상은 ^FF0000Base Lv.150 이상^000000부터","This reward requires ^FF0000Base Lv.150 or higher^000000");
+			mes needtr("^777777'바로 라자냐로'를 선택한 캐릭터는^000000","^777777Characters that chose 'Straight to Lasagna'^000000");
+			mes needtr("^777777레벨별 보상을 받을 수 없습니다.^000000","^777777cannot receive level rewards.^000000");
+			next;
+			goto L_Reward;
+		}
+		if (BaseLevel < 125) {
+			mes needtr("^00AAFF[Lv.125 성장 보상]^000000","^00AAFF[Lv.125 Growth Reward]^000000");
+			mes "";
+			mes needtr("이 보상은 ^FF0000Base Lv.125 이상^000000부터","This reward requires ^FF0000Base Lv.125 or higher^000000");
 			mes needtr("받을 수 있습니다.","to claim.");
 			next;
 			goto L_Reward;
 		}
 		if (NEED_BEGINNER_REWARD_150) {
-			mes needtr("^00AAFF[Lv.150 성장 보상]^000000","^00AAFF[Lv.150 Growth Reward]^000000");
+			mes needtr("^00AAFF[Lv.125 성장 보상]^000000","^00AAFF[Lv.125 Growth Reward]^000000");
 			mes "";
 			mes needtr("이미 ^00AA00수령 완료^000000한 보상입니다.","You have already ^00AA00claimed^000000 this reward.");
 			next;
@@ -464,7 +1039,7 @@ L_Reward:
 		getitem 25428,1;
 		NEED_BEGINNER_REWARD_150 = 1;
 
-		mes needtr("^00AAFF[Lv.150 성장 보상]^000000","^00AAFF[Lv.150 Growth Reward]^000000");
+		mes needtr("^00AAFF[Lv.125 성장 보상]^000000","^00AAFF[Lv.125 Growth Reward]^000000");
 		mes "";
 		mes needtr("^FF9900초심자 무기 7제련 이용권^000000","^FF9900Beginner's Safe to 7 Weapon Certificate^000000");
 		mes needtr("1개를 지급했습니다.","1 has been granted.");
@@ -604,7 +1179,7 @@ L_Reward:
 		mes "";
 		mes needtr("^FF9900300% 전투교범 5개^000000를 지급했습니다.", "You received ^FF99005 Battle Manual X3^000000.");
 		mes "";
-		mes needtr("사용하면 ^0055FF30분 동안 획득 경험치가 3배^000000가 됩니다.", "Using one ^0055FFtriples the EXP you gain for 30 minutes^000000.");
+		mes needtr("사용하면 ^0055FF30분 동안 획득 경험치 +300% (총 4배)^000000가 됩니다.", "Using one gives ^0055FF+300% EXP (4x in total) for 30 minutes^000000.");
 		mes "";
 		mes needtr("^FF0000※ 캐릭터 귀속 아이템입니다.^000000", "^FF0000* This is a character-bound item.^000000");
 		mes needtr("^FF0000거래 / 개인창고 / 길드창고 / 우편 /^000000", "^FF0000It cannot be moved by trade / Storage / Guild Storage / mail /^000000");
@@ -1064,7 +1639,7 @@ L_A175What:
 	mes needtr("^777777메모리얼 등을 진행할 수 있습니다.^000000","^777777Memorial Dungeons and more are all open to you.^000000");
 	mes "";
 	mes needtr("^0055FFPvP를 해보고 싶다면^000000","^0055FFIf you want to try PvP^000000");
-	mes needtr("  졸업 보상 전장 지원 시즈 세트를 착용","  Wear the graduation reward Battleground Support Siege Set");
+	mes needtr("  성장 지원관 메뉴의 초보자 전장 장비를 착용","  Wear the Newbie Battleground Gear from the Growth Supporter menu");
 	mes needtr("  → 전장 자동매칭 참여","  → join Battleground auto-matching");
 	mes needtr("  → 전장 보상으로 실제 PvP 장비 준비","  → use Battleground rewards to build real PvP gear");
 	mes "";
@@ -1148,11 +1723,7 @@ L_A175EP161:
 	mes needtr("  인챈트 안내와","  enchant information and");
 	mes needtr("  각 콘텐츠 입구 이동을 제공합니다.","  warps to each content entrance.");
 	mes "";
-	mes needtr("^00AAFFEP16.1 일일퀘 이동^000000","^00AAFFEP16.1 Daily Quest Warp^000000");
-	mes needtr("  명예의 증표 일일퀘스트 구역으로","  takes you straight to the Token of Honor");
-	mes needtr("  바로 이동합니다.","  daily quest area.");
-	mes "";
-	mes needtr("^777777두 NPC 모두 라자냐 중앙 부근에 있습니다.^000000","^777777Both NPCs are near the centre of Lasagna.^000000");
+	mes needtr("^777777통합 안내 NPC는 라자냐 중앙 부근에 있습니다.^000000","^777777The Central Guide NPC is near the centre of Lasagna.^000000");
 	next;
 	goto L_After175;
 
@@ -1181,8 +1752,8 @@ L_A175BG:
 	setdialogsize(460,320);
 	mes needtr("^00AAFF[전장]^000000","^00AAFF[Battlegrounds]^000000");
 	mes "";
-	mes needtr("졸업 보상으로 받은 ^FF9900전장 지원 시즈 세트^000000를","Wear the ^FF9900Battleground Support Siege Set^000000 you");
-	mes needtr("착용하고 바로 참여할 수 있습니다.","received as a graduation reward and join right away.");
+	mes needtr("성장 지원관 메뉴의 ^FF9900초보자 전장 장비^000000를","Wear the ^FF9900Newbie Battleground Gear^000000 from the");
+	mes needtr("착용하고 바로 참여할 수 있습니다.","Growth Supporter menu and join right away.");
 	mes "";
 	mes needtr("전장 대기실에서 매칭 커맨드를 사용하면","Use the matching command in the Battleground waiting room");
 	mes needtr("^0055FF티에라 협곡 → 플라비우스 → KVM^000000 순서로","^0055FFTierra Valley → Flavian → KVM^000000 in that order,");
@@ -1249,8 +1820,8 @@ L_A175Enchant:
 	mes needtr("  EP16.1 통합 안내 NPC에서","  Available at the EP16.1 Central Guide");
 	mes needtr("  확인할 수 있습니다.","  NPC.");
 	mes "";
-	mes needtr("^777777전사자의 무덤 투구는 전용 인챈트 대신","^777777Tomb of the Fallen headgear has no enchant of its own;");
-	mes needtr("제련과 카드로 성장시킵니다.^000000","grow it with Refine and Cards instead.^000000");
+	mes needtr("^777777전사자의 무덤 투구는 무덤 안 '헤매는 사념'에서","^777777Tomb of the Fallen headgear can be enchanted by");
+	mes needtr("인챈트할 수 있습니다.^000000","the Wandering Thought inside the tomb.^000000");
 	mes "";
 	mes needtr("<TIPBOX>▶ 엑셀리온 인챈트 가이드<INFO>8432</INFO></TIPBOX>","<TIPBOX>▶ Excellion Enchant Guide<INFO>8432</INFO></TIPBOX>");
 	mes needtr("<TIPBOX>▶ 전사자의 무덤 가이드<INFO>8440</INFO></TIPBOX>","<TIPBOX>▶ Tomb of the Fallen Guide<INFO>8440</INFO></TIPBOX>");
@@ -1303,7 +1874,6 @@ L_Supply:
 	mes needtr("소형 생명수    ^FF9900100개^000000","Small Life Potion      ^FF9900100^000000");
 	mes needtr("중형 생명수    ^FF9900100개^000000","Medium Life Potion     ^FF9900100^000000");
 	mes needtr("신묘한 생명수  ^FF9900100개^000000","Mysterious Life Potion ^FF9900100^000000");
-	mes needtr("올마이티        ^FF990010개^000000","Almighty               ^FF990010^000000");
 	mes "";
 	mes needtr("^777777계정 단위 지원이며,^000000","^777777The support is per account,^000000");
 	mes needtr("^777777해당 일차에는 1회만 보충됩니다.^000000","^777777and each day is topped up only 1 time.^000000");
@@ -1533,8 +2103,12 @@ S_GoalLine:
 		return 7;
 	}
 
-	// Base Lv.120 ~ 139 : 카드 학습 -> Base Lv.140
+	// Base Lv.120 ~ 139 : (125 이상) 7제련권 -> 카드 학습 -> Base Lv.140
 	if (BaseLevel < 140) {
+		if (BaseLevel >= 125 && !NEED_BEGINNER_REWARD_150) {
+			mes .@pre$ + needtr(" : ^FF9900Lv.125 성장 지원 보상 받기^000000"," : ^FF9900Claim the Lv.125 Growth Support Rewards^000000");
+			return 13;
+		}
 		if (!NEED_GUIDE_CARD) {
 			mes .@pre$ + needtr(" : ^FF9900카드 시스템 학습^000000"," : ^FF9900Card System Study^000000");
 			return 8;
@@ -1774,7 +2348,7 @@ S_ShowGoal:
 	}
 
 	if (.@goal == 13) {
-		mes needtr("^00AA00Base Lv.150을 달성했습니다.^000000","^00AA00You have reached Base Lv.150.^000000");
+		mes needtr("^00AA00Base Lv.125를 달성했습니다.^000000","^00AA00You have reached Base Lv.125.^000000");
 		mes "";
 		mes needtr("^FF9900성장 지원 보상^000000 메뉴에서","From the ^FF9900Growth Support Rewards^000000 menu,");
 		mes needtr("초심자 무기 +7 제련 이용권을","the Beginner's Safe to 7 Weapon Certificate is waiting.");
@@ -1824,8 +2398,8 @@ S_ShowGoal:
 		mes needtr("^00AA00성장지원 졸업 조건을 달성했습니다.^000000","^00AA00You have met the Growth Support graduation requirements.^000000");
 		mes "";
 		mes needtr("^FF9900성장 지원 보상^000000 메뉴에서","From the ^FF9900Growth Support Rewards^000000 menu,");
-		mes needtr("^FF990014일 전장 지원 시즈 세트^000000를","the ^FF990014-Day Battleground Support Siege Set^000000 is waiting.");
-		mes needtr("받아주세요.","Please claim it.");
+		mes needtr("^FF9900환생 티켓과 초보자 전장 장비^000000를","the ^FF9900Rebirth Ticket and Newbie Battleground Gear^000000 are waiting.");
+		mes needtr("받아주세요.","Please claim them.");
 		mes "";
 		mes needtr("^777777수령 후 175 이후 콘텐츠 안내가^000000","^777777Once claimed, Content After 175 appears^000000");
 		mes needtr("^777777메인 메뉴에 표시됩니다.^000000","^777777in the main menu.^000000");
@@ -1868,28 +2442,33 @@ S_HuntingGuide:
 	if (BaseLevel >= 175)
 		return;
 
+	// 2026-10-12 : 낙원단 코스(CM 설계) 경로에 맞춤. 게펜 필드 6 / 베인스 필드 3 추가
 	setarray .@hg_name$[0],
 		needtr("초보존","Newbie Zone"),
 		needtr("개미지옥 1층","Ant Hell Dungeon F1"),
 		needtr("오크 지하 동굴 1층","Orc Dungeon F1"),
 		needtr("루이나 지하 던전 1층","Luina Guild Dungeon F1"),
+		needtr("게펜 필드 6","Geffen Field 6"),
 		needtr("노그로드 2층","Nogg Road Dungeon F2"),
+		needtr("베인스 필드 3","Veins Field 3"),
 		needtr("용의 둥지 2층","Dragon Nest F2"),
 		needtr("용의 둥지 3층","Dragon Nest F3"),
 		needtr("뒤틀린 시간의 시계탑 3층","Twisted Clock Tower F3");
-	setarray .@hg_min[0],   1,  20,  40,  60, 100, 110, 130, 160;
-	setarray .@hg_max[0],  19,  39,  59,  99, 109, 129, 159, 174;
+	setarray .@hg_min[0],   1,  20,  36,  66,  66, 100, 100, 126, 141, 159;
+	setarray .@hg_max[0],  19,  35,  65,  99,  99, 125, 125, 140, 158, 174;
 	setarray .@hg_map$[0],
 		"pvp_n_2-5",
 		"anthell01",
 		"orcsdun01",
 		"gld_dun02",
+		"gef_fild06",
 		"mag_dun02",
+		"ve_fild03",
 		"lasa_dun02",
 		"lasa_dun03",
 		"c_tower3_";
-	setarray .@hg_x[0], 100,  35,  32,  39,  47,  22, 190,  60;
-	setarray .@hg_y[0], 133, 262, 170, 161,  30, 171,  18, 142;
+	setarray .@hg_x[0], 100,  35,  32,  39, 248,  47, 222,  22, 190,  60;
+	setarray .@hg_y[0], 133, 262, 170, 161, 158,  30,  45, 171,  18, 142;
 	.@hg_size = getarraysize(.@hg_name$);
 
 	// 현재 레벨이 속한 추천 구간을 찾는다.
@@ -1931,6 +2510,197 @@ S_HuntingGuide:
 	close2;
 	warp .@hg_map$[.@sel], .@hg_x[.@sel], .@hg_y[.@sel];
 	end;
+
+//============================================================
+// 낙원단 코스 서브루틴 (2026-10-12)
+//============================================================
+S_CourseStepName:
+	switch (getarg(0)) {
+	case 1:  return needtr("1 / 9 : 초보존","1 / 9 : Newbie Zone");
+	case 2:  return needtr("2 / 9 : 개미지옥","2 / 9 : Ant Hell");
+	case 3:  return needtr("3 / 9 : 오크 던전","3 / 9 : Orc Dungeon");
+	case 4:  return needtr("4 / 9 : 루이나 / 게펜 필드 6","4 / 9 : Luina / Geffen Field 6");
+	case 5:  return needtr("5 / 9 : 전승 / 3차 전직","5 / 9 : Transcendence / 3rd Job");
+	case 60: return needtr("5 / 9 : Lv.100 장비 착용","5 / 9 : Equip the Lv.100 Gear");
+	case 6:  return needtr("6 / 9 : 노그로드 / 베인스 필드 3","6 / 9 : Nogg Road / Veins Field 3");
+	case 70: return needtr("6 / 9 : 무기 +7 제련","6 / 9 : Refine the Weapon to +7");
+	case 7:  return needtr("7 / 9 : 용의 둥지 2층","7 / 9 : Dragon Nest F2");
+	case 80: return needtr("7 / 9 : 쉐도우 +4 제련","7 / 9 : Refine the Shadows to +4");
+	case 8:  return needtr("8 / 9 : 용의 둥지 3층 + 사라의 기억","8 / 9 : Dragon Nest F3 + Sara's Memory");
+	}
+	return needtr("9 / 9 : 졸업","9 / 9 : Graduation");
+
+S_CourseText:
+	.@p = getarg(0);
+	switch (.@p) {
+	case 1:
+		mes needtr("목표 : ^FF9900Job Lv.10 달성 → 1차 전직^000000","Goal : ^FF9900Reach Job Lv.10 → 1st Job Change^000000");
+		mes "";
+		mes needtr("초보존에서 사냥하며 Job Lv.10을 달성하세요.","Hunt in the Newbie Zone until Job Lv.10.");
+		mes needtr("Job Lv.10이 되면 제 ^0055FF왼쪽 전직 도우미^000000에게서","At Job Lv.10, the ^0055FFJob Master on my left^000000");
+		mes needtr("1차 전직을 할 수 있어요.","can give you your 1st job.");
+		mes needtr("^777777스킬 포인트를 모두 써야 전직할 수 있습니다.^000000","^777777You must spend all skill points before changing jobs.^000000");
+		mes "";
+		mes needtr("현재 : Job Lv.^0055FF","Now : Job Lv.^0055FF") + JobLevel + "^000000 / 10";
+		break;
+	case 2:
+		mes needtr("목표 : ^FF9900Base Lv.35^000000","Goal : ^FF9900Base Lv.35^000000");
+		mes "";
+		mes needtr("1차 전직을 축하해요!","Congratulations on your 1st job!");
+		mes needtr("개미지옥 1층에서 Base Lv.35까지 키워보세요.","Grow to Base Lv.35 in Ant Hell F1.");
+		mes needtr("^777777사냥터로 보내드릴 때 버프도 걸어드려요.^000000","^777777I buff you whenever I send you to a hunting ground.^000000");
+		mes "";
+		mes needtr("현재 : Base Lv.^0055FF","Now : Base Lv.^0055FF") + BaseLevel + "^000000 / 35";
+		break;
+	case 3:
+		.@base = eaclass() & EAJ_BASEMASK;
+		if (!(eaclass() & EAJL_2) && .@base != EAJ_GUNSLINGER && .@base != EAJ_NINJA && .@base != EAJ_SUMMONER) {
+			mes needtr("목표 : ^FF99002차 전직 + Base Lv.65^000000","Goal : ^FF99002nd Job Change + Base Lv.65^000000");
+			mes "";
+			mes needtr("Job Lv.40부터 전직 도우미에서 2차 전직을 할 수 있어요.","From Job Lv.40 the Job Master can give you your 2nd job.");
+		}
+		else {
+			mes needtr("목표 : ^FF9900Base Lv.65^000000","Goal : ^FF9900Base Lv.65^000000");
+			mes "";
+		}
+		mes needtr("오크 지하 동굴 1층에서 Base Lv.65까지 키워보세요.","Grow to Base Lv.65 in Orc Dungeon F1.");
+		mes needtr("^777777파리의 날개는 맵 안에서 무작위로 이동하는 아이템이에요.^000000","^777777A Fly Wing teleports you to a random spot on the map.^000000");
+		mes "";
+		mes needtr("현재 : Base Lv.^0055FF","Now : Base Lv.^0055FF") + BaseLevel + "^000000 / 65";
+		break;
+	case 4:
+		mes needtr("목표 : ^FF9900Base Lv.99 / Job Lv.50^000000 ^777777(확장 직업 70)^000000","Goal : ^FF9900Base Lv.99 / Job Lv.50^000000 ^777777(expanded jobs 70)^000000");
+		mes "";
+		mes needtr("광역기가 있는 직업은 ^0055FF루이나 지하 던전 1층^000000,","Jobs with area skills: ^0055FFLuina Guild Dungeon F1^000000.");
+		mes needtr("광역기가 없거나 몰이가 어렵다면 ^0055FF게펜 필드 6^000000을 추천해요.","No area skills, or mobbing is hard: ^0055FFGeffen Field 6^000000.");
+		mes needtr("^777777마법 계열은 캐스팅 중에 맞기 쉬워 게펜 필드 6이 편할 수 있어요.^000000","^777777Casters get hit while casting, so Geffen Field 6 may be easier.^000000");
+		mes "";
+		mes needtr("현재 : Base Lv.^0055FF","Now : Base Lv.^0055FF") + BaseLevel + "^000000 / Job Lv.^0055FF" + JobLevel + "^000000";
+		break;
+	case 5:
+		if (callfunc("F_NEED_CourseIsFinalClass")) {
+			mes needtr("목표 : ^FF9900Base Lv.100^000000","Goal : ^FF9900Base Lv.100^000000");
+			mes "";
+			mes needtr("^00AA00전직을 축하해요!^000000","^00AA00Congratulations on your job change!^000000");
+			mes needtr("새 스킬을 찍고 이전 사냥터에서 Base Lv.100을 달성하세요.","Learn your new skills and reach Base Lv.100 at your previous ground.");
+			mes needtr("Lv.100이 되면 ^FF9900초심자 무기 / 방어구 / 쉐도우^000000가","At Lv.100 the ^FF9900Beginner weapon / armor / shadow gear^000000");
+			mes needtr("자동으로 지급됩니다.","arrives automatically.");
+			mes "";
+			mes needtr("현재 : Base Lv.^0055FF","Now : Base Lv.^0055FF") + BaseLevel + "^000000 / 100";
+			break;
+		}
+		mes needtr("목표 : ^FF9900전승 또는 3차 전직^000000","Goal : ^FF9900Transcendence or 3rd Job Change^000000");
+		mes "";
+		mes needtr("Base Lv.99와 Job 조건을 채우면 전직 도우미에서 진행할 수 있어요.","With Base Lv.99 and the Job requirement, the Job Master can do it.");
+		mes needtr("^0055FF전승^000000을 하면 1레벨부터 다시 키우지만, 3차 직업이 더 강해집니다.","^0055FFTranscending^000000 restarts you at Lv.1, but your 3rd job ends up stronger.");
+		mes needtr("^777777전승 후에는 이 코스를 처음 단계부터 다시 안내해 드려요.^000000","^777777After transcending, this course guides you again from step 1.^000000");
+		mes "";
+		mes needtr("^FF0000전승 없이 3차 전직을 하면, 나중에 다시 기회는^000000","^FF0000If you skip it and take the 3rd job, the only later chance is^000000");
+		mes needtr("^FF0000환생(환생 티켓 + 175레벨 한 바퀴)뿐입니다.^000000","^FF0000Rebirth (a Rebirth Ticket + another run to Lv.175).^000000");
+		mes needtr("^777777확장 직업은 전직 도우미에서 조건을 확인하세요.^000000","^777777Expanded jobs: check the requirements with the Job Master.^000000");
+		break;
+	case 60:
+		mes needtr("목표 : ^FF9900Lv.100 초심자 장비 모두 착용^000000","Goal : ^FF9900Equip all of the Lv.100 Beginner gear^000000");
+		mes "";
+		mes needtr("상자를 열어 장비를 꺼낸 뒤 모두 착용하고 다시 말을 걸어주세요.","Open the boxes, equip everything, then talk to me again.");
+		mes "";
+		.@cw = callfunc("F_NEED_CourseClassWeapon");
+		if (.@cw > 0)
+			mes needtr("무기 : ","Weapon : ") + ((callfunc("F_NEED_CourseIsBeginnerWeapon", getequipid(EQI_HAND_R))) ? needtr("^00AA00착용^000000","^00AA00worn^000000") : needtr("^FF0000미착용^000000","^FF0000not worn^000000"));
+		setarray .@gear[0], 19310, 15250, 20906, 22173, 28566, 24387, 24388, 24389, 24390, 24391, 24392;
+		for (.@i = 0; .@i < 11; .@i++)
+			mes getitemname(.@gear[.@i]) + " : " + ((isequipped(.@gear[.@i])) ? needtr("^00AA00착용^000000","^00AA00worn^000000") : needtr("^FF0000미착용^000000","^FF0000not worn^000000"));
+		break;
+	case 6:
+		mes needtr("목표 : ^FF9900Base Lv.125^000000","Goal : ^FF9900Base Lv.125^000000");
+		mes "";
+		mes needtr("노그로드 2층에서 Base Lv.125까지 키워보세요.","Grow to Base Lv.125 in Nogg Road F2.");
+		mes needtr("몹이 몰리는 게 버겁다면 ^0055FF베인스 필드 3(마그마링)^000000도 좋아요.","If mob swarms are too much, ^0055FFVeins Field 3 (Magmaring)^000000 works too.");
+		mes needtr("^777777Lv.125가 되면 무기 +7 제련권이 자동으로 지급됩니다.^000000","^777777At Lv.125 a weapon +7 ticket arrives automatically.^000000");
+		mes "";
+		mes needtr("현재 : Base Lv.^0055FF","Now : Base Lv.^0055FF") + BaseLevel + "^000000 / 125";
+		break;
+	case 70:
+		mes needtr("목표 : ^FF9900초심자 무기 +7^000000","Goal : ^FF9900Beginner weapon at +7^000000");
+		mes "";
+		mes needtr("^FF0000다음 사냥터부터 몬스터 체력이 크게 늘어납니다.^000000","^FF0000Monster HP jumps sharply from the next hunting ground.^000000");
+		mes needtr("^FF9900초심자 무기 +7 제련권^000000으로 라자냐 ^0055FF홀그렌^000000의","Use the ^FF9900Beginner weapon +7 ticket^000000 at Lasagna ^0055FFHollgrehenn^000000");
+		mes needtr("'제련권 사용'에서 무기를 +7로 만들어 오세요.","under 'Use a Refine Ticket' to make your weapon +7.");
+		mes needtr("^777777제련한 무기를 착용한 상태로 말을 걸어주세요.^000000","^777777Talk to me with the refined weapon equipped.^000000");
+		mes "";
+		mes needtr("현재 착용 무기 제련 : ^0055FF+","Equipped weapon refine : ^0055FF+") + getequiprefinerycnt(EQI_HAND_R) + "^000000";
+		break;
+	case 7:
+		mes needtr("목표 : ^FF9900Base Lv.140^000000","Goal : ^FF9900Base Lv.140^000000");
+		mes "";
+		mes needtr("용의 둥지 2층에서 Base Lv.140까지 키워보세요.","Grow to Base Lv.140 in Dragon Nest F2.");
+		mes needtr("^0055FF선택 루팅^000000으로 필요한 것만 자동으로 주워보세요.","Use ^0055FFselective looting^000000 to pick up only what you need.");
+		mes needtr("  ^FF9900@선택루팅 +607^000000 (이그드라실 열매)","  ^FF9900@autolootitem +607^000000 (Yggdrasil Berry)");
+		mes needtr("  ^FF9900@선택루팅 +12573^000000 (과일 바구니)","  ^FF9900@autolootitem +12573^000000 (Fruit Basket)");
+		mes needtr("  ^FF9900@선택루팅 +985^000000 (에르늄)","  ^FF9900@autolootitem +985^000000 (Elunium)");
+		mes needtr("^777777에르늄은 다음 단계 쉐도우 제련에 20개가 필요해요.^000000","^777777You need 20 Elunium for the shadow refine in the next step.^000000");
+		mes "";
+		mes needtr("현재 : Base Lv.^0055FF","Now : Base Lv.^0055FF") + BaseLevel + "^000000 / 140";
+		break;
+	case 80:
+		mes needtr("목표 : ^FF9900초심자 쉐도우 6부위 +4^000000","Goal : ^FF9900All 6 Beginner shadows at +4^000000");
+		mes "";
+		mes needtr("라자냐 ^0055FF홀그렌^000000에서 +4까지는 실패 없이 제련됩니다.","At Lasagna ^0055FFHollgrehenn^000000 refines up to +4 never fail.");
+		mes needtr("웨폰 쉐도우는 오리데오콘, 나머지 5부위는 에르늄을","The shadow weapon uses Oridecon, the other 5 parts use Elunium,");
+		mes needtr("부위당 4개씩 씁니다. ^777777(에르늄 총 20개)^000000","4 per part. ^777777(20 Elunium in total)^000000");
+		mes "";
+		setarray .@slot[0], EQI_SHADOW_ARMOR, EQI_SHADOW_WEAPON, EQI_SHADOW_SHIELD, EQI_SHADOW_SHOES, EQI_SHADOW_ACC_R, EQI_SHADOW_ACC_L;
+		for (.@i = 0; .@i < 6; .@i++) {
+			.@id = getequipid(.@slot[.@i]);
+			if (.@id < 24387 || .@id > 24392)
+				mes needtr("^FF0000(초심자 쉐도우 미착용)^000000","^FF0000(Beginner shadow not worn)^000000");
+			else
+				mes getitemname(.@id) + " : +" + getequiprefinerycnt(.@slot[.@i]);
+		}
+		break;
+	case 8:
+		mes needtr("목표 : ^FF9900Base Lv.","Goal : ^FF9900Base Lv.") + $NEED_COURSE_GRAD_LV + needtr(" + 사라의 기억 클리어^000000"," + clear Sara's Memory^000000");
+		mes "";
+		mes needtr("용의 둥지 3층에서 사냥하면서 ^0055FF사라의 기억^000000에 도전해보세요.","Hunt in Dragon Nest F3 and take on ^0055FFSara's Memory^000000.");
+		mes needtr("달리의 모험가 레온에게 의뢰를 받고 차원 이동 장치로 들어갑니다.","Take the request from Adventurer Leon in Dali and enter by the dimension device.");
+		mes needtr("^777777파티를 만들고 입장하세요. (/결성 파티이름)^000000","^777777Make a party before entering. (/organize partyname)^000000");
+		mes needtr("^777777도중에 마을로 나오면 다시 들어갈 수 없고, 하루 1회입니다.^000000","^777777If you leave mid-way you cannot go back in, and it is once a day.^000000");
+		mes needtr("^777777공략은 Ctrl+F1 위키의 '사라의 기억'에 있어요.^000000","^777777The walkthrough is under 'Sara's Memory' in the Ctrl+F1 wiki.^000000");
+		mes "";
+		mes needtr("^FF0000Lv.150부터 버프 도우미 버프가 줄어듭니다. 올마이티를 드세요.^000000","^FF0000From Lv.150 the Buff Helper gives fewer buffs - eat Almighty.^000000");
+		mes needtr("^FF0000무료 스탯 / 스킬 초기화는 Lv.149까지입니다.^000000","^FF0000The free Stat / Skill Reset ends at Lv.149.^000000");
+		mes "";
+		mes needtr("현재 : Base Lv.^0055FF","Now : Base Lv.^0055FF") + BaseLevel + "^000000 / " + $NEED_COURSE_GRAD_LV
+			+ needtr(" / 사라의 기억 "," / Sara's Memory ") + ((NEED_COURSE_SARA) ? needtr("^00AA00완료^000000","^00AA00done^000000") : needtr("^FF0000미완료^000000","^FF0000not yet^000000"));
+		break;
+	default:
+		mes needtr("^00AA00낙원단 코스를 모두 마쳤습니다! 축하해요!^000000","^00AA00You have finished the whole Eden Course! Congratulations!^000000");
+		mes "";
+		mes needtr("이제부터는 원하는 콘텐츠를 자유롭게 즐기세요.","From here on, enjoy whatever content you like.");
+		mes needtr("^777777시계탑 3층(빅벨) 사냥, 메모리얼 던전, EP16.1 일일퀘 등^000000","^777777Clock Tower F3 (Big Bell), Memorial Dungeons, EP16.1 dailies and more.^000000");
+		mes "";
+		mes needtr("궁금한 건 ^0055FF클랜 채팅(~메시지)^000000, 디스코드, ^0055FFCtrl+F1 위키^000000에 물어보세요.","Questions? Ask in ^0055FFClan Chat (~message)^000000, on Discord, or the ^0055FFCtrl+F1 wiki^000000.");
+		mes needtr("Lv.175 / Job 60을 달성하면 성장 지원 보상에서","At Lv.175 / Job 60 the Growth Support Rewards menu");
+		mes needtr("^FF9900졸업 보상(환생 티켓 + 초보자 전장 장비)^000000을 받을 수 있어요.","has your ^FF9900graduation reward (Rebirth Ticket + Newbie Battleground Gear)^000000.");
+		break;
+	}
+	return;
+
+S_CourseBuff:
+	// buff.txt 버프 도우미와 같은 구성 (Lv.150 미만 / 이상)
+	specialeffect2 EF_INCAGILITY;
+	sc_start SC_INCREASEAGI,1800000,10;
+	specialeffect2 EF_BLESSING;
+	sc_start SC_BLESSING,1800000,10;
+	specialeffect2 EF_HEAL2;
+	sc_start SC_MAGNIFICAT,1800000,5;
+	if (BaseLevel < 150) {
+		sc_start SC_IMPOSITIO,1800000,5;
+		sc_start SC_ANGELUS,1800000,10;
+		sc_start SC_ASSUMPTIO,1800000,5;
+	}
+	percentheal 100,0;
+	return;
 
 OnInit:
 	waitingroom "신규 성장 지원",0;
@@ -2090,6 +2860,10 @@ OnPCLoginEvent:
 	.@result = callfunc("F_NEED_BeginnerSupply", 0);
 	if (.@result)
 		dispbottom needtr("[NEED 성장지원] 오늘의 초보자 소모품이 보충되었습니다.","[NEED Growth Support] Today's beginner supplies have been topped up.");
+
+	// 낙원단 코스 : 놓친 레벨 보상과 Lv.150 올마이티 보충
+	if (NEED_COURSE == 1)
+		callfunc "F_NEED_CourseCatchUp";
 	end;
 
 OnPCBaseLvUpEvent:
@@ -2099,18 +2873,28 @@ OnPCBaseLvUpEvent:
 	if (!#NEED_BEGINNER)
 		end;
 
+	// 낙원단 코스 : 레벨 보상 자동 지급 + 단계 목표 달성 알림
+	if (NEED_COURSE == 1) {
+		callfunc "F_NEED_CourseCatchUp";
+		if (BaseLevel == 35 || BaseLevel == 65 || BaseLevel == 99 || BaseLevel == 125
+			|| BaseLevel == 140 || BaseLevel == $NEED_COURSE_GRAD_LV)
+			dispbottom needtr("[낙원단] 단계 목표 레벨을 달성했습니다! 낙원단 성장 지원관에게서 다음 단계를 확인하세요.","[Eden] You reached a stage goal level! Check the next step with the Eden Growth Supporter.");
+	}
+
 	switch(BaseLevel) {
 	case 40:
 		dispbottom needtr("[NEED 성장지원] 초보존 졸업 레벨에 도달했습니다. 라자냐로 이동해보세요.","[NEED Growth Support] You have reached the Newbie Zone Graduation level. Go to Lasagna.");
 		break;
 	case 100:
-		dispbottom needtr("[NEED 성장지원] Lv.100 성장 보상을 받을 수 있습니다. 낙원단 성장 지원관을 찾아가세요.","[NEED Growth Support] Your Lv.100 Growth Reward is ready. Visit the Eden Growth Supporter.");
+		if (NEED_COURSE != 1)
+			dispbottom needtr("[NEED 성장지원] Lv.100 성장 보상을 받을 수 있습니다. 낙원단 성장 지원관을 찾아가세요.","[NEED Growth Support] Your Lv.100 Growth Reward is ready. Visit the Eden Growth Supporter.");
+		break;
+	case 125:
+		if (NEED_COURSE == 0)
+			dispbottom needtr("[NEED 성장지원] 초심자 무기 +7 제련 이용권을 받을 수 있습니다.","[NEED Growth Support] Your Beginner's Safe to 7 Weapon Certificate is ready.");
 		break;
 	case 149:
 		dispbottom needtr("[중요] 카프라 무료 스탯/스킬 초기화는 Base Lv.149까지 이용할 수 있습니다.","[Important] The Kafra free Stat/Skill Reset is available only up to Base Lv.149.");
-		break;
-	case 150:
-		dispbottom needtr("[NEED 성장지원] 초심자 무기 +7 제련 이용권을 받을 수 있습니다.","[NEED Growth Support] Your Beginner's Safe to 7 Weapon Certificate is ready.");
 		break;
 	case 175:
 		dispbottom needtr("[NEED 성장지원] Job Lv.60까지 달성하면 성장지원 졸업 보상을 받을 수 있습니다.","[NEED Growth Support] Reach Job Lv.60 to claim the Growth Support graduation reward.");
