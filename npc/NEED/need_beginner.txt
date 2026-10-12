@@ -41,7 +41,7 @@
 //=   첫 대화에서 캐릭터별로 진행 여부를 고른다. (NEED_COURSE)
 //=     1  = 코스 진행 : 단계별 목표 / 사냥터 워프 + 버프 / 단계 시작 지급
 //=     -1 = 진행 안 함 : 300% 교범 5 + 메탈 무기 상자 + 초심자 장비 3종을
-//=          한 번에 받고 라자냐로 이동. 이후 레벨별 보상 없음 (175/60 졸업 보상은 유지)
+//=          한 번에 받고 구 페이욘으로 이동. 이후 레벨별 보상 없음 (175/60 졸업 보상은 유지)
 //=   단계 : 1 초보존 > 2 개미지옥(35) > 3 오크(2차 + 65) > 4 루이나/게펜6(99)
 //=          > 5 전승/3차(100) > [장비 착용] > 6 노그로드/베인스3(125) > [무기 +7]
 //=          > 7 용의 둥지 2층(140) > [쉐도우 +4] > 8 용의 둥지 3층 + 사라의 기억(졸업 레벨)
@@ -666,7 +666,7 @@ L_MainDraw:
 			+ ((BaseLevel >= 120) ? needtr("^00AAFF성장 학습하기^000000","^00AAFFGrowth Study^000000") : "") + ":"
 			+ ((BaseLevel >= 175 && JobLevel >= 60) ? needtr("^FF9900175 이후 콘텐츠 안내^000000","^FF9900Content After 175^000000") : "") + ":"
 			+ ((BaseLevel >= 175 && JobLevel >= 60) ? needtr("^FF9900초보자 전장 장비^000000","^FF9900Newbie Battleground Gear^000000") : "") + ":"
-			+ needtr("^00AAFF라자냐로 이동^000000:","^00AAFFGo to Lasagna^000000:")
+			+ needtr("^00AAFF구 페이욘으로 이동^000000:","^00AAFFGo to Old Payon^000000:")
 			+ needtr("7일 초보자 지원:","7-Day Beginner Support:")
 			+ needtr("초보자 도움말:","Beginner Help:")
 			+ "NEED Wiki:"
@@ -694,9 +694,9 @@ L_CourseChoice:
 	mes needtr("^0055FF사냥터 이동과 버프^000000, 필요한 물품을 함께 챙겨 드립니다.","and take care of ^0055FFwarps, buffs^000000 and the items you need.");
 	mes "";
 	mes needtr("^777777따라오지 않아도 괜찮습니다.^000000","^777777You do not have to follow it.^000000");
-	mes needtr("^777777바로 라자냐에서 자유롭게 시작할 수도 있어요.^000000","^777777You can also start freely in Lasagna right away.^000000");
+	mes needtr("^777777바로 구 페이욘에서 자유롭게 시작할 수도 있어요.^000000","^777777You can also start freely in Old Payon right away.^000000");
 	next;
-	switch (select(needtr("^00AAFF낙원단 코스를 진행한다^000000:진행하지 않고 바로 라자냐로 간다:나중에 정할게요","^00AAFFFollow the Eden Course^000000:Skip it and go straight to Lasagna:I will decide later"))) {
+	switch (select(needtr("^00AAFF낙원단 코스를 진행한다^000000:진행하지 않고 바로 구 페이욘으로 간다:나중에 정할게요","^00AAFFFollow the Eden Course^000000:Skip it and go straight to Old Payon:I will decide later"))) {
 	case 1:
 		clear;
 		NEED_COURSE = 1;
@@ -718,10 +718,10 @@ L_CourseChoice:
 
 	case 2:
 		clear;
-		mes needtr("^00AAFF[바로 라자냐로]^000000","^00AAFF[Straight to Lasagna]^000000");
+		mes needtr("^00AAFF[바로 구 페이욘으로]^000000","^00AAFF[Straight to Old Payon]^000000");
 		mes "";
 		mes needtr("아래 물품을 지금 한 번에 드리고","I will give you the items below all at once");
-		mes needtr("라자냐로 보내드릴게요.","and send you to Lasagna.");
+		mes needtr("구 페이욘으로 보내드릴게요.","and send you to Old Payon.");
 		mes "";
 		mes needtr("- 300% 전투교범 5개","- 5 Battle Manual X3");
 		mes needtr("- 메탈 무기 상자","- Metal Weapon Box");
@@ -754,9 +754,9 @@ L_CourseChoice:
 		NEED_BEGINNER_REWARD_150 = 1;
 		NEED_COURSE = -1;
 		NEED_BEGINNER_LASAGNA = 1;
-		savepoint "lasagna",170,151;
+		savepoint "payo2",86,126;
 		close2;
-		warp "lasagna",170,151;
+		warp "payo2",86,126;
 		end;
 
 	default:
@@ -844,10 +844,10 @@ L_Course:
 	case 70:
 	case 80:
 		setarray .@lbl$[0], needtr("^00AAFF홀그렌 길 안내^000000","^00AAFFDirections to Hollgrehenn^000000"),
-			needtr("라자냐로 이동","Go to Lasagna");
-		setarray .@wm$[0], "#NAVI", "lasagna";
-		setarray .@wx[0], 0, 170;
-		setarray .@wy[0], 0, 151;
+			needtr("구 페이욘으로 이동","Go to Old Payon");
+		setarray .@wm$[0], "#NAVI", "payo2";
+		setarray .@wx[0], 0, 86;
+		setarray .@wy[0], 0, 126;
 		.@n = 2;
 		break;
 	case 8:
@@ -1011,7 +1011,7 @@ L_Reward:
 		if (NEED_COURSE == -1) {
 			mes needtr("^00AAFF[Lv.125 성장 보상]^000000","^00AAFF[Lv.125 Growth Reward]^000000");
 			mes "";
-			mes needtr("^777777'바로 라자냐로'를 선택한 캐릭터는^000000","^777777Characters that chose 'Straight to Lasagna'^000000");
+			mes needtr("^777777'바로 구 페이욘으로'를 선택한 캐릭터는^000000","^777777Characters that chose 'Straight to Old Payon'^000000");
 			mes needtr("^777777레벨별 보상을 받을 수 없습니다.^000000","^777777cannot receive level rewards.^000000");
 			next;
 			goto L_Reward;
@@ -1485,7 +1485,7 @@ L_StudyCash:
 	mes needtr("금화 / 미스릴화가 드랍되고","Gold Coins / Mythril Coins drop,");
 	mes needtr("주화를 ^FF9900사용^000000하면 캐시로 전환됩니다.","and ^FF9900using^000000 a coin converts it into Cash.");
 	mes "";
-	mes needtr("캐시는 라자냐의 ^00AAFF캐쉬 판매 안내인^000000을 통해","Cash is spent through the ^00AAFFCash Sales Guide^000000 in Lasagna");
+	mes needtr("캐시는 구 페이욘의 ^00AAFF캐쉬 판매 안내인^000000을 통해","Cash is spent through the ^00AAFFCash Sales Guide^000000 in Old Payon");
 	mes needtr("아이템몰에서 소모품 등을","to buy consumables and more");
 	mes needtr("구매할 때 사용합니다.","at the Item Mall.");
 	mes "";
@@ -1562,7 +1562,7 @@ L_StudyReset:
 
 //============================================================
 // 환생 안내 (16차)
-//   실제 환생은 라자냐 「환생 관리자」(lasagna,175,131) 가 담당한다.
+//   실제 환생은 구 페이욘 「환생 관리자」(payo2,100,149) 가 담당한다.
 //   여기서는 위치와 개요만 알리고 상세는 TIPBOX 8441 로 연결한다.
 //   워프 기능은 제공하지 않는다.
 //============================================================
@@ -1574,7 +1574,7 @@ L_A175Rebirth:
 	mes needtr("^FF9900Base Lv.175 / Job Lv.60^000000 이후에는","From ^FF9900Base Lv.175 / Job Lv.60^000000 onwards");
 	mes needtr("환생으로 다시 성장할 수 있습니다.","you can grow again through Rebirth.");
 	mes "";
-	mes needtr("^0055FF환생 관리자^000000 - 라자냐 (175,131)","^0055FFRebirth Manager^000000 - Lasagna (175,131)");
+	mes needtr("^0055FF환생 관리자^000000 - 구 페이욘 (100,149)","^0055FFRebirth Manager^000000 - Old Payon (100,149)");
 	mes "";
 	mes needtr("^777777환생 조건 / 초기화 범위 / 보상은^000000","^777777Rebirth requirements, what is reset and the rewards^000000");
 	mes needtr("^777777아래 가이드에서 확인해주세요.^000000","^777777are listed in the guide below.^000000");
@@ -1693,7 +1693,7 @@ L_A175Tomb:
 	mes needtr("175 이후 대표적인","After 175 this is the flagship");
 	mes needtr("^FF9900PvE 장비 성장 콘텐츠^000000입니다.","^FF9900PvE gear growth content^000000.");
 	mes "";
-	mes needtr("입장 : 라자냐의 ^00AAFF전사자의 무덤^000000 NPC","Entry : the ^00AAFFTomb of the Fallen^000000 NPC in Lasagna");
+	mes needtr("입장 : 구 페이욘의 ^00AAFF전사자의 무덤^000000 NPC","Entry : the ^00AAFFTomb of the Fallen^000000 NPC in Old Payon");
 	mes needtr("  Base Lv.150 이상 / 입장료 200,000 Zeny","  Base Lv.150 or higher / entry fee 200,000 Zeny");
 	mes needtr("  재입장 대기시간 3분","  Re-entry cooldown 3 minutes");
 	mes "";
@@ -1716,14 +1716,14 @@ L_A175EP161:
 	setdialogsize(460,340);
 	mes "^00AAFF[EP16.1]^000000";
 	mes "";
-	mes needtr("라자냐에 EP16.1 전용 안내 NPC가 있습니다.","Lasagna has NPCs dedicated to EP16.1.");
+	mes needtr("구 페이욘에 EP16.1 전용 안내 NPC가 있습니다.","Old Payon has NPCs dedicated to EP16.1.");
 	mes "";
 	mes needtr("^00AAFFEP16.1 통합 안내^000000","^00AAFFEP16.1 Central Guide^000000");
 	mes needtr("  일일퀘스트 / 메모리얼 / 명예의 증표 교환","  daily quests / Memorials / Token of Honor exchange");
 	mes needtr("  인챈트 안내와","  enchant information and");
 	mes needtr("  각 콘텐츠 입구 이동을 제공합니다.","  warps to each content entrance.");
 	mes "";
-	mes needtr("^777777통합 안내 NPC는 라자냐 중앙 부근에 있습니다.^000000","^777777The Central Guide NPC is near the centre of Lasagna.^000000");
+	mes needtr("^777777통합 안내 NPC는 구 페이욘 중앙 부근에 있습니다.^000000","^777777The Central Guide NPC is near the centre of Old Payon.^000000");
 	next;
 	goto L_After175;
 
@@ -1841,7 +1841,7 @@ L_A175Sub:
 	mes needtr("계정 단위이므로 이미 기간이 지났다면","is per account, so once the period has passed");
 	mes needtr("다시 제공되지 않습니다.^000000","it is not granted again.^000000");
 	mes "";
-	mes needtr("라자냐의 ^00AAFF환생 관리자^000000 를 통해","The ^00AAFFRebirth Manager^000000 in Lasagna also covers");
+	mes needtr("구 페이욘의 ^00AAFF환생 관리자^000000 를 통해","The ^00AAFFRebirth Manager^000000 in Old Payon also covers");
 	mes needtr("환생 관련 콘텐츠도 확인할 수 있습니다.","the Rebirth-related content.");
 	mes "";
 	mes needtr("<TIPBOX>▶ NEED 초보자 성장 가이드<INFO>8000</INFO></TIPBOX>","<TIPBOX>▶ NEED Beginner Growth Guide<INFO>8000</INFO></TIPBOX>");
@@ -1896,7 +1896,7 @@ L_Help:
 	.@menu$ = needtr("전직 도우미:","Job Master:")
 		+ needtr("버프 도우미:","Buff Helper:")
 		+ needtr("클랜 채팅:","Clan Chat:")
-		+ needtr("초보존 / 라자냐:","Newbie Zone / Lasagna:")
+		+ needtr("초보존 / 구 페이욘:","Newbie Zone / Old Payon:")
 		+ needtr("돌아가기","Back");
 	switch(select(.@menu$)) {
 	case 1:
@@ -1951,13 +1951,13 @@ L_Help:
 	case 4:
 		// 메뉴 선택으로 새 화면에 진입하므로 이전 대사를 지운다.
 		clear;
-		mes needtr("^00AAFF[초보존 / 라자냐]^000000","^00AAFF[Newbie Zone / Lasagna]^000000");
+		mes needtr("^00AAFF[초보존 / 구 페이욘]^000000","^00AAFF[Newbie Zone / Old Payon]^000000");
 		mes "";
 		mes needtr("Base Lv.39까지는","Up to Base Lv.39 you can");
 		mes needtr("^0055FF초보존^000000을 이용할 수 있습니다.","use the ^0055FFNewbie Zone^000000.");
 		mes "";
 		mes needtr("Base Lv.40을 달성하면 초보존을 졸업하고","At Base Lv.40 you graduate from the Newbie Zone and");
-		mes needtr("^FF9900라자냐^000000를 생활 거점으로 이용하게 됩니다.","make ^FF9900Lasagna^000000 your home base.");
+		mes needtr("^FF9900구 페이욘^000000을 생활 거점으로 이용하게 됩니다.","make ^FF9900Old Payon^000000 your home base.");
 		mes "";
 		mes needtr("^777777성장 보상과 가이드가 필요할 때는","^777777Whenever you need Growth Rewards or guidance,");
 		mes needtr("언제든 낙원단으로 돌아오면 됩니다.^000000","you can come back to the Eden Group.^000000");
@@ -1994,7 +1994,7 @@ L_NewbieZone:
 		mes "";
 		mes needtr("Base Lv.40부터는 ^FF0000초보존을 졸업^000000합니다.","At Base Lv.40 you ^FF0000graduate from the Newbie Zone^000000.");
 		mes "";
-		mes needtr("이제 라자냐에서","Now, in Lasagna,");
+		mes needtr("이제 구 페이욘에서","Now, in Old Payon,");
 		mes needtr("본격적인 모험을 시작해보세요.","start your real adventure.");
 		next;
 		goto L_Main;
@@ -2027,9 +2027,9 @@ L_NewbieBGGear:
 L_Lasagna:
 	clear;
 	if (BaseLevel < 40) {
-		mes needtr("^00AAFF[라자냐 이동]^000000","^00AAFF[Go to Lasagna]^000000");
+		mes needtr("^00AAFF[구 페이욘 이동]^000000","^00AAFF[Go to Old Payon]^000000");
 		mes "";
-		mes needtr("라자냐 이동은","Go to Lasagna is available");
+		mes needtr("구 페이욘 이동은","Go to Old Payon is available");
 		mes needtr("^FF0000Base Lv.40 이상^000000부터 안내합니다.","from ^FF0000Base Lv.40 or higher^000000.");
 		next;
 		goto L_Main;
@@ -2040,16 +2040,16 @@ L_Lasagna:
 	mes needtr("^00AA00기초 성장 과정을 완료했습니다.^000000","^00AA00You have completed the basic growth course.^000000");
 	mes "";
 	mes needtr("이제 NEED의 생활 거점인","Start your real adventure in");
-	mes needtr("^FF9900라자냐^000000에서 본격적인 모험을 시작해보세요.","^FF9900Lasagna^000000, NEED's home base town.");
+	mes needtr("^FF9900구 페이욘^000000에서 본격적인 모험을 시작해보세요.","^FF9900Old Payon^000000, NEED's home base town.");
 	mes "";
-	mes needtr("이동 후 저장 위치도 라자냐로 변경됩니다.","Your save point moves to Lasagna as well.");
+	mes needtr("이동 후 저장 위치도 구 페이욘으로 변경됩니다.","Your save point moves to Old Payon as well.");
 	next;
 
-	if (select(needtr("^00AAFF라자냐로 이동^000000:돌아가기","^00AAFFGo to Lasagna^000000:Back")) == 1) {
+	if (select(needtr("^00AAFF구 페이욘으로 이동^000000:돌아가기","^00AAFFGo to Old Payon^000000:Back")) == 1) {
 		NEED_BEGINNER_LASAGNA = 1;
-		savepoint "lasagna",170,151;
+		savepoint "payo2",86,126;
 		close2;
-		warp "lasagna",170,151;
+		warp "payo2",86,126;
 		end;
 	}
 	goto L_Main;
@@ -2237,13 +2237,13 @@ S_ShowGoal:
 		mes needtr("이제 초보자 지역과 일반 사냥을 통해","Now hunt in the beginner areas and the open field");
 		mes needtr("Base Lv.40까지 성장해보세요.","to grow up to Base Lv.40.");
 		mes "";
-		mes needtr("Lv.40부터는 ^00AAFF라자냐^000000를","From Lv.40 you will use ^00AAFFLasagna^000000");
+		mes needtr("Lv.40부터는 ^00AAFF구 페이욘^000000을","From Lv.40 you will use ^00AAFFOld Payon^000000");
 		mes needtr("생활 거점으로 이용합니다.","as your home base.");
 		return;
 	}
 
 	if (.@goal == 4) {
-		mes needtr("라자냐를 거점으로 사냥을 계속해주세요.","Keep hunting with Lasagna as your base.");
+		mes needtr("구 페이욘을 거점으로 사냥을 계속해주세요.","Keep hunting with Old Payon as your base.");
 		mes needtr("전직 조건을 달성할 때마다","Whenever you meet a job change requirement,");
 		mes needtr("낙원단의 ^00AAFF전직 도우미^000000를 이용할 수 있습니다.","you can use the Eden Group ^00AAFFJob Master^000000.");
 		mes "";
@@ -2717,13 +2717,13 @@ pvp_n_2-5,102,132,4	script	초보존 안내원#need_beginner	637,{
 		mes needtr("초보자 지역을 이용 중입니다.","You are in the beginner area.");
 		mes "";
 		mes needtr("사냥을 마쳤다면","When you are done hunting,");
-		mes needtr("^FF9900라자냐^000000로 이동할 수 있습니다.","you can move to ^FF9900Lasagna^000000.");
+		mes needtr("^FF9900구 페이욘^000000으로 이동할 수 있습니다.","you can move to ^FF9900Old Payon^000000.");
 		next;
 
-		if (select(needtr("^00AAFF라자냐로 이동^000000:계속 사냥한다","^00AAFFGo to Lasagna^000000:Keep hunting")) == 1) {
-			savepoint "lasagna",170,151;
+		if (select(needtr("^00AAFF구 페이욘으로 이동^000000:계속 사냥한다","^00AAFFGo to Old Payon^000000:Keep hunting")) == 1) {
+			savepoint "payo2",86,126;
 			close2;
-			warp "lasagna",170,151;
+			warp "payo2",86,126;
 			end;
 		}
 		close;
@@ -2746,7 +2746,7 @@ pvp_n_2-5,102,132,4	script	초보존 안내원#need_beginner	637,{
 		mes needtr("^00AA00Base Lv.40을 달성했습니다!^000000","^00AA00You have reached Base Lv.40!^000000");
 		mes "";
 		mes needtr("이제 초보존을 졸업하고","You can now graduate from the Newbie Zone");
-		mes needtr("NEED의 생활 거점인 ^FF9900라자냐^000000로","and move to ^FF9900Lasagna^000000, NEED's");
+		mes needtr("NEED의 생활 거점인 ^FF9900구 페이욘^000000으로","and move to ^FF9900Old Payon^000000, NEED's");
 		mes needtr("이동할 수 있습니다.","home base town.");
 		mes "";
 		mes needtr("성장 보상이나 전직 안내가 필요하다면","If you need Growth Rewards or job change guidance,");
@@ -2755,15 +2755,15 @@ pvp_n_2-5,102,132,4	script	초보존 안내원#need_beginner	637,{
 		mes needtr("<TIPBOX>▶ 처음 시작하기 가이드<INFO>8010</INFO></TIPBOX>","<TIPBOX>▶ Getting Started Guide<INFO>8010</INFO></TIPBOX>");
 		next;
 
-		.@menu$ = needtr("^00AAFF라자냐로 이동^000000:","^00AAFFGo to Lasagna^000000:")
+		.@menu$ = needtr("^00AAFF구 페이욘으로 이동^000000:","^00AAFFGo to Old Payon^000000:")
 			+ needtr("낙원단으로 이동:","Go to the Eden Group:")
 			+ needtr("계속 머문다","Stay here");
 		switch(select(.@menu$)) {
 		case 1:
 			NEED_BEGINNER_LASAGNA = 1;
-			savepoint "lasagna",170,151;
+			savepoint "payo2",86,126;
 			close2;
-			warp "lasagna",170,151;
+			warp "payo2",86,126;
 			end;
 		case 2:
 			close2;
@@ -2797,7 +2797,7 @@ pvp_n_2-5,102,132,4	script	초보존 안내원#need_beginner	637,{
 			mes needtr("^FF0000Base Lv.40을 넘었지만^000000","^FF0000You are past Base Lv.40,^000000");
 			mes needtr("^FF0000아직 전직하지 않았습니다.^000000","^FF0000but you have not changed jobs yet.^000000");
 			mes needtr("^777777먼저 전직을 마친 뒤^000000","^777777Finish your job change first,^000000");
-			mes needtr("^777777라자냐로 이동하는 것을 권장합니다.^000000","^777777then move to Lasagna.^000000");
+			mes needtr("^777777구 페이욘으로 이동하는 것을 권장합니다.^000000","^777777then move to Old Payon.^000000");
 		}
 	}
 	else {
@@ -2883,7 +2883,7 @@ OnPCBaseLvUpEvent:
 
 	switch(BaseLevel) {
 	case 40:
-		dispbottom needtr("[NEED 성장지원] 초보존 졸업 레벨에 도달했습니다. 라자냐로 이동해보세요.","[NEED Growth Support] You have reached the Newbie Zone Graduation level. Go to Lasagna.");
+		dispbottom needtr("[NEED 성장지원] 초보존 졸업 레벨에 도달했습니다. 구 페이욘으로 이동해보세요.","[NEED Growth Support] You have reached the Newbie Zone Graduation level. Go to Old Payon.");
 		break;
 	case 100:
 		if (NEED_COURSE != 1)

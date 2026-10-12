@@ -813,7 +813,7 @@ ACMD_FUNC(who) {
 	if( *command_name == atcommand_symbol || *command_name == charcommand_symbol )
 		command_name++;
 	if( strcmpi(command_name, "who3") == 0 ) {
-		excluded_map_id = map_mapname2mapid("lasagna");
+		excluded_map_id = map_mapname2mapid("payo2");
 		excluded_map_id2 = map_mapname2mapid("payon");
 	}
 
