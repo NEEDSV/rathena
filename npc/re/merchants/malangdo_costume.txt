@@ -297,6 +297,11 @@ itemmall,23,74,5	script	헤이담 펠로우#eventhat	4_CAT_SAILOR5,{
 						continue;
 					if (@inventorylist_bound[.@j] != 0)
 						continue;
+					// 일괄 교환과 같은 기준: 장착 중, 잠금(즐겨찾기), 스톤이 부여된 의상은 제외
+					if (@inventorylist_equip[.@j] || @inventorylist_favorite[.@j])
+						continue;
+					if (@inventorylist_card1[.@j] || @inventorylist_card2[.@j] || @inventorylist_card3[.@j] || @inventorylist_card4[.@j])
+						continue;
 
 					.@inv_idx = @inventorylist_idx[.@j];
 					break;
@@ -325,6 +330,10 @@ itemmall,23,74,5	script	헤이담 펠로우#eventhat	4_CAT_SAILOR5,{
 							continue;
 						if (@inventorylist_bound[.@j] != 0)
 							continue;
+						if (@inventorylist_equip[.@j] || @inventorylist_favorite[.@j])
+							continue;
+						if (@inventorylist_card1[.@j] || @inventorylist_card2[.@j] || @inventorylist_card3[.@j] || @inventorylist_card4[.@j])
+							continue;
 
 						.@inv_idx = @inventorylist_idx[.@j];
 						break;
@@ -332,7 +341,8 @@ itemmall,23,74,5	script	헤이담 펠로우#eventhat	4_CAT_SAILOR5,{
 
 					if (.@inv_idx < 0) {
 						mes needtr("교환 가능한 비귀속 의상을 찾을 수 없어.", "I can't find an unbound costume that can be exchanged.");
-						mes needtr("귀속된 의상은 교환할 수 없어.", "Bound costumes cannot be exchanged.");
+						mes needtr("장착 중이거나 귀속·잠금 상태인 의상,", "Equipped, bound or locked costumes,");
+						mes needtr("스톤이 부여된 의상은 교환할 수 없어.", "and costumes with an enchant stone cannot be exchanged.");
 					}
 					else {
 						// 찾은 비귀속 인벤토리 슬롯만 정확히 1개 삭제한다.
@@ -759,14 +769,17 @@ lasa_in01,177,45,5	script	에이버 드 도쉬#cos_ect	4_WHITETIGER,{
 	}
 	if (.@eq_top > -1) {
 		.@part = EQI_COSTUME_HEAD_TOP;
+		.@eqp = EQP_COSTUME_HEAD_TOP;
 		.@equip_id = .@eq_top;
 	}
 	else if (.@eq_mid > -1) {
 		.@part = EQI_COSTUME_HEAD_MID;
+		.@eqp = EQP_COSTUME_HEAD_MID;
 		.@equip_id = .@eq_mid;
 	}
 	else if (.@eq_low > -1) {
 		.@part = EQI_COSTUME_HEAD_LOW;
+		.@eqp = EQP_COSTUME_HEAD_LOW;
 		.@equip_id = .@eq_low;
 	}
 
@@ -775,6 +788,18 @@ lasa_in01,177,45,5	script	에이버 드 도쉬#cos_ect	4_WHITETIGER,{
 	.@location = getiteminfo(.@equip_id, ITEMINFO_LOCATIONS);
 	.@equip_refine = getequiprefinerycnt(.@part);
 	setarray .@card[0], getequipcardid(.@part, 0), getequipcardid(.@part, 1), getequipcardid(.@part, 2), getequipcardid(.@part, 3);
+
+	// 귀속 의상(옷장 의상 등)은 인챈트할 수 없다.
+	// 재지급(getitem2) 과정에서 귀속이 풀려 헤이담 상자 교환에 악용됐다.
+	getinventorylist;
+	for ( .@j = 0; .@j < @inventorylist_count; ++.@j ) {
+		if ((@inventorylist_equip[.@j] & .@eqp) && @inventorylist_bound[.@j]) {
+			mes needtr("[에이버 드 도쉬]", "[Aver De Dosh]");
+			mes needtr("귀속된 의상은 인챈트할 수 없어요.", "Bound costumes cannot be enchanted.");
+			mes needtr("옷장 의상은 의상 도감의 '인챈트 스톤' 메뉴를 이용해 주세요.", "For wardrobe costumes, use the 'Enchant Stone' menu of the Costume Album.");
+			close;
+		}
+	}
 
 	mes needtr("[아베르 데 도쉬]", "[Aver De Dosh]");
 	mes needtr("와~ 이거 완전 대박이네", "Wow~ This ^0000FF") + getitemname(.@equip_id) + needtr("^000000!!! 정말 잘 어울려요!!", "^000000!!! looks great on you!!");
@@ -1094,6 +1119,7 @@ lasa_in01,179,45,5	script	레이스 라 자드#cos_ect	4_FROG,{
 		close;
 	}
 	.@part = EQI_COSTUME_GARMENT;
+	.@eqp = EQP_COSTUME_GARMENT;
 	.@equip_id = getequipid(.@part);
 	if (.@equip_id == -1) {
 		mes needtr("[레이스 라 자드]", "[Lace La Zard]");
@@ -1104,6 +1130,18 @@ lasa_in01,179,45,5	script	레이스 라 자드#cos_ect	4_FROG,{
 
 	.@equip_refine = getequiprefinerycnt(.@part);
 	setarray .@card[0], getequipcardid(.@part, 0), getequipcardid(.@part, 1), getequipcardid(.@part, 2), getequipcardid(.@part, 3);
+
+	// 귀속 의상(옷장 의상 등)은 인챈트할 수 없다.
+	// 재지급(getitem2) 과정에서 귀속이 풀려 헤이담 상자 교환에 악용됐다.
+	getinventorylist;
+	for ( .@j = 0; .@j < @inventorylist_count; ++.@j ) {
+		if ((@inventorylist_equip[.@j] & .@eqp) && @inventorylist_bound[.@j]) {
+			mes needtr("[레이스 라 자드]", "[Lace La Zard]");
+			mes needtr("귀속된 의상은 인챈트할 수 없어요.", "Bound costumes cannot be enchanted.");
+			mes needtr("옷장 의상은 의상 도감의 '인챈트 스톤' 메뉴를 이용해 주세요.", "For wardrobe costumes, use the 'Enchant Stone' menu of the Costume Album.");
+			close;
+		}
+	}
 
 	mes needtr("[레이스 라 자드]", "[Lace La Zard]");
 	mes needtr("와, 이 ^0000FF", "Wow a ^0000FF") + getitemname(.@equip_id) + needtr("^000000!!! 제법 안목이 있으신데요?", "^000000!!! You got some taste right there, don't you?");
