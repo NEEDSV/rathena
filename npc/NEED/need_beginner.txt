@@ -306,6 +306,43 @@ function	script	F_NEED_CourseIsFinalClass	{
 	return 0;
 }
 
+// 직업 안내용 키 : 구분 * 100 + 계열 (-1 = 안내 없음 : 확장 직업 / 슈퍼노비스 / 4차)
+// 구분 0 노비스 / 1 1차 / 2 2차 / 3 전승 2차 / 4 3차
+// 1차 계열 : 1 검사 2 상인 3 도둑 4 궁수 5 마법사 6 복사
+// 2차 이후 계열 : 1 나이트 2 크루세이더 3 블랙스미스 4 알케미스트 5 어쌔신 6 로그
+//                 7 헌터 8 바드 9 댄서 10 위자드 11 세이지 12 프리스트 13 몽크
+function	script	F_NEED_CourseJobKey	{
+	.@ea = eaclass();
+	.@base = .@ea & EAJ_BASEMASK;
+	if (.@ea & EAJL_FOURTH)
+		return -1;
+	if (.@base == EAJ_NOVICE)
+		return (.@ea & EAJL_2) ? -1 : 0;
+	switch (.@base) {
+	case EAJ_SWORDMAN: .@k = 1; break;
+	case EAJ_MERCHANT: .@k = 2; break;
+	case EAJ_THIEF:    .@k = 3; break;
+	case EAJ_ARCHER:   .@k = 4; break;
+	case EAJ_MAGE:     .@k = 5; break;
+	case EAJ_ACOLYTE:  .@k = 6; break;
+	default:
+		return -1;
+	}
+	if (!(.@ea & EAJL_2))
+		return 100 + .@k;
+
+	// 계열마다 2-1 / 2-2 순서. 궁수 2-2 는 성별로 바드 / 댄서를 나눈다.
+	setarray .@first[1], 1, 3, 5, 7, 10, 12;
+	.@k2 = .@first[.@k] + ((.@ea & EAJL_2_2) ? 1 : 0);
+	if (.@k == 4 && (.@ea & EAJL_2_2) && Sex == SEX_FEMALE)
+		.@k2 = 9;
+	if (.@ea & EAJL_THIRD)
+		return 400 + .@k2;
+	if (.@ea & EAJL_UPPER)
+		return 300 + .@k2;
+	return 200 + .@k2;
+}
+
 // 현재 코스 단계
 //   1~9 = 단계 / 60 = 장비 착용 관문 / 70 = 무기 +7 관문 / 80 = 쉐도우 +4 관문
 //   직업과 레벨만으로 판정하므로 전승 후에는 자연스럽게 1단계부터 다시 시작한다.
@@ -793,6 +830,7 @@ L_Course:
 
 	// 단계별 이동 목록 (표시 / 목적지가 같은 인덱스)
 	.@n = 0;
+	.@jk = callfunc("F_NEED_CourseJobKey");
 	switch (.@p) {
 	case 1:
 		if (BaseLevel < 40) {
@@ -825,6 +863,15 @@ L_Course:
 		setarray .@wx[0], 39, 248;
 		setarray .@wy[0], 161, 158;
 		.@n = 2;
+		// 1 루이나 / 2 게펜 6 / 3 둘 다 (나이트 ~ 몽크 순서)
+		if (.@jk / 100 == 2 || .@jk / 100 == 3) {
+			setarray .@grd[1], 3, 3, 3, 1, 2, 2, 1, 1, 1, 2, 2, 2, 2;
+			.@rec = .@grd[.@jk % 100];
+			if (.@rec & 1)
+				.@lbl$[0] = needtr("^00AA00[추천]^000000 ","^00AA00[Recommended]^000000 ") + .@lbl$[0];
+			if (.@rec & 2)
+				.@lbl$[1] = needtr("^00AA00[추천]^000000 ","^00AA00[Recommended]^000000 ") + .@lbl$[1];
+		}
 		break;
 	case 6:
 		setarray .@lbl$[0], needtr("노그로드 2층","Nogg Road F2"),
@@ -863,6 +910,7 @@ L_Course:
 	.@menu$ = "";
 	for (.@i = 0; .@i < .@n; .@i++)
 		.@menu$ += .@lbl$[.@i] + ":";
+	.@menu$ += ((.@jk >= 0) ? needtr("^0055FF직업 안내^000000","^0055FFJob Guide^000000") : "") + ":";
 	.@menu$ += needtr("다른 메뉴 보기:닫기","Other menus:Close");
 
 	.@sel = select(.@menu$) - 1;
@@ -877,7 +925,9 @@ L_Course:
 		warp .@wm$[.@sel], .@wx[.@sel], .@wy[.@sel];
 		end;
 	}
-	if (.@sel == .@n) {
+	if (.@sel == .@n)
+		goto L_CourseJob;
+	if (.@sel == .@n + 1) {
 		.@course_menu = 1;
 		goto L_Main;
 	}
@@ -2682,6 +2732,370 @@ S_CourseText:
 		mes needtr("궁금한 건 ^0055FF클랜 채팅(~메시지)^000000, 디스코드, ^0055FFCtrl+F1 위키^000000에 물어보세요.","Questions? Ask in ^0055FFClan Chat (~message)^000000, on Discord, or the ^0055FFCtrl+F1 wiki^000000.");
 		mes needtr("Lv.175 / Job 60을 달성하면 성장 지원 보상에서","At Lv.175 / Job 60 the Growth Support Rewards menu");
 		mes needtr("^FF9900졸업 보상(환생 티켓 + 초보자 전장 장비)^000000을 받을 수 있어요.","has your ^FF9900graduation reward (Rebirth Ticket + Newbie Battleground Gear)^000000.");
+		break;
+	}
+	return;
+
+L_CourseJob:
+	// 직업 안내 (CM 가이드라인 기준, 확장 직업은 안내하지 않는다)
+	.@jk = callfunc("F_NEED_CourseJobKey");
+	if (.@jk < 0)
+		goto L_Course;
+	.@t = .@jk / 100;
+	.@k = .@jk % 100;
+	if (.@t == 0)
+		goto L_CourseJobPick;
+	mes needtr("^00AAFF[직업 안내]^000000","^00AAFF[Job Guide]^000000");
+	mes "";
+	switch (.@t) {
+	case 1:
+		callsub S_CourseJob1, .@k;
+		break;
+	case 2:
+		callsub S_CourseJob2, .@k;
+		break;
+	case 3:
+		callsub S_CourseJob2, .@k;
+		next;
+		mes needtr("^00AAFF[직업 안내]^000000 전승 스킬","^00AAFF[Job Guide]^000000 Transcendent skills");
+		mes "";
+		callsub S_CourseJobTrans, .@k;
+		break;
+	case 4:
+		callsub S_CourseJob3, .@k;
+		break;
+	}
+	next;
+	goto L_Course;
+
+L_CourseJobPick:
+	mes needtr("^00AAFF[직업 안내]^000000 1차 직업 고르기","^00AAFF[Job Guide]^000000 Choosing a 1st job");
+	mes "";
+	mes needtr("Job Lv.10에 고를 1차 직업을 비교해 보세요.","Compare the 1st jobs you can pick at Job Lv.10.");
+	mes "";
+	mes needtr("궁수 ^FF9900★★★★★^000000 원거리 / 범위 공격","Archer ^FF9900★★★★★^000000 ranged / area attack");
+	mes needtr("도둑 ^FF9900★★★★☆^000000 근접 / 활 사용 가능 / 회피","Thief ^FF9900★★★★☆^000000 melee / can use bows / dodge");
+	mes needtr("검사 ^FF9900★★★☆☆^000000 근접 / 방어 / 범위 공격","Swordman ^FF9900★★★☆☆^000000 melee / defense / area attack");
+	mes needtr("마법사 ^FF9900★★☆☆☆^000000 마법 / 범위 공격","Mage ^FF9900★★☆☆☆^000000 magic / area attack");
+	mes needtr("상인 ^FF9900★☆☆☆☆^000000 근접 / 범위 공격","Merchant ^FF9900★☆☆☆☆^000000 melee / area attack");
+	mes needtr("복사 ^FF9900★☆☆☆☆^000000 보조","Acolyte ^FF9900★☆☆☆☆^000000 support");
+	mes "";
+	mes needtr("^777777★5 첫 캐릭터로 매우 추천 / ★3 첫 캐릭터로 조금 어려움^000000","^777777★5 great first character / ★3 a bit hard as a first character^000000");
+	mes needtr("^777777★2 첫 캐릭터로 굉장히 어려움 / ★1 첫 캐릭터로는 추천하지 않음^000000","^777777★2 very hard as a first character / ★1 not for a first character^000000");
+	next;
+	setarray .@pk[1], 4, 3, 1, 5, 2, 6;
+	.@s = select(needtr("궁수","Archer"), needtr("도둑","Thief"), needtr("검사","Swordman"), needtr("마법사","Mage"), needtr("상인","Merchant"), needtr("복사","Acolyte"), needtr("코스로 돌아가기","Back to the course"));
+	if (.@s == 7)
+		goto L_Course;
+	mes needtr("^00AAFF[직업 안내]^000000","^00AAFF[Job Guide]^000000");
+	mes "";
+	callsub S_CourseJob1, .@pk[.@s];
+	next;
+	goto L_CourseJobPick;
+
+S_CourseJob1:
+	switch (getarg(0)) {
+	case 1:
+		mes needtr("^0055FF검사^000000  초심자 추천 ^FF9900★★★☆☆^000000","^0055FFSwordman^000000  Beginner pick ^FF9900★★★☆☆^000000");
+		mes needtr("특징 : 근접 / 방어 / 범위 공격","Traits : melee / defense / area attack");
+		mes needtr("근접 직업이지만 범위 공격인 ^FF9900매그넘 브레이크^000000 덕분에","A melee job, but the area attack ^FF9900Magnum Break^000000");
+		mes needtr("쾌적하게 사냥할 수 있어요.","keeps hunting smooth.");
+		mes "";
+		mes needtr("^777777[3차 직업]^000000","^777777[3rd jobs]^000000");
+		mes needtr("^0055FF룬나이트^000000 : 창과 드래곤 브레스를 쓰는 직업이에요.","^0055FFRune Knight^000000 : uses spears and Dragon Breath.");
+		mes needtr("드래곤 브레스 빌드를 추천해요. 육성과 파밍은 쾌적하지만","The Dragon Breath build is recommended. Leveling and farming");
+		mes needtr("보스는 잡기 어려워요. 드래곤 브레스를 쓰기 시작하면","are smooth, but bosses are hard. Once you use Dragon Breath,");
+		mes needtr("근접 물리보다 마법사에 가깝게 싸운다는 점도 알아두세요.","it plays more like a mage than a melee fighter.");
+		mes needtr("^0055FF로열가드^000000 : 창 근접 공격, 성속성 마법 공격, 방어 보조","^0055FFRoyal Guard^000000 : spear melee, Holy magic attacks and");
+		mes needtr("스킬을 가진 직업이에요. 잠재력은 높지만 장비를 갖추기까지","defensive support. High potential, but farming and leveling");
+		mes needtr("파밍과 육성이 힘들어요.","are hard until the gear is in place.");
+		mes "";
+		mes needtr("권장 스킬 : ^FF9900배쉬, 매그넘 브레이크^000000","Skills : ^FF9900Bash, Magnum Break^000000");
+		mes needtr("권장 스탯 : ^FF9900STR, VIT^000000","Stats : ^FF9900STR, VIT^000000");
+		break;
+	case 2:
+		mes needtr("^0055FF상인^000000  초심자 추천 ^FF9900★☆☆☆☆^000000","^0055FFMerchant^000000  Beginner pick ^FF9900★☆☆☆☆^000000");
+		mes needtr("특징 : 근접 / 범위 공격","Traits : melee / area attack");
+		mes needtr("카트 레볼루션으로 3차 전직까지는 어떻게든 키울 수 있지만,","Cart Revolution can carry you to the 3rd job, but after that");
+		mes needtr("3차 이후 몬스터가 강해질수록 사냥이 점점 어려워져요.","hunting gets harder as monsters get stronger.");
+		mes needtr("^FF0000다른 직업을 먼저 키우고 두 번째 캐릭터부터 추천해요.^000000","^FF0000Better as a second character, after another job.^000000");
+		mes "";
+		mes needtr("^777777[3차 직업]^000000","^777777[3rd jobs]^000000");
+		mes needtr("^0055FF미케닉^000000 : 도끼(또는 둔기)와 마도기어(로봇)를 쓰는 직업이에요.","^0055FFMechanic^000000 : uses axes (or maces) and a Mado Gear (robot).");
+		mes needtr("마도기어는 근접 무기로 원거리 공격을 주로 해요.","The Mado Gear mostly attacks at range with a melee weapon.");
+		mes needtr("장비가 좋을수록 고점이 높아요.","The better the gear, the higher the ceiling.");
+		mes needtr("^0055FF제네릭^000000 : 검과 도끼를 쓰는 직업이에요.","^0055FFGenetic^000000 : uses swords and axes.");
+		mes needtr("원거리 물리 공격인 '카트 캐논'은 잠재력이 높은 스킬이지만","Cart Cannon is a ranged physical attack with high potential,");
+		mes needtr("필요한 아이템이 아주 많아요.","but it needs a great deal of gear.");
+		mes "";
+		mes needtr("권장 스킬 : ^FF9900매머나이트^000000","Skills : ^FF9900Mammonite^000000");
+		mes needtr("권장 스탯 : ^FF9900STR, VIT^000000","Stats : ^FF9900STR, VIT^000000");
+		break;
+	case 3:
+		mes needtr("^0055FF도둑^000000  초심자 추천 ^FF9900★★★★☆^000000","^0055FFThief^000000  Beginner pick ^FF9900★★★★☆^000000");
+		mes needtr("특징 : 근접 / 활 사용 가능 / 회피","Traits : melee / can use bows / dodge");
+		mes needtr("단일 공격 직업이에요. 회피와 더블 어택이 조금 도움이 되지만,","Single-target attacks. Dodge and Double Attack help a little,");
+		mes needtr("전승이나 3차까지 키우는 건 조금 버거울 수 있어요.","but reaching transcendence or the 3rd job can be a struggle.");
+		mes "";
+		mes needtr("^777777[3차 직업]^000000","^777777[3rd jobs]^000000");
+		mes needtr("^0055FF길로틴크로스^000000 : 카타르와 이도류를 쓰는 직업이에요.","^0055FFGuillotine Cross^000000 : uses katars and dual wielding.");
+		mes needtr("3차까지만 버티면 굉장히 다재다능하고,","Hold on until the 3rd job and it becomes very versatile,");
+		mes needtr("파밍과 사냥 모두 가성비가 매우 좋아요.","with great value for both farming and hunting.");
+		mes needtr("^0055FF쉐도우체이서^000000 : 다른 직업의 스킬을 빼앗아 쓰는 직업이에요.","^0055FFShadow Chaser^000000 : steals and uses other jobs' skills.");
+		mes needtr("물리 / 마법 빌드를 자유롭게 고를 수 있지만, 장비 착용 제한이","Physical or magic builds are both possible, but its gear limits");
+		mes needtr("있어 육성이 어려워요. 차라리 스킬을 빼앗을 직업을","make leveling hard. Raising the job you would steal from");
+		mes needtr("키우는 것을 추천해요.","is the better choice.");
+		mes "";
+		mes needtr("권장 스킬 : ^FF9900더블 어택, 회피율 증가^000000","Skills : ^FF9900Double Attack, Improve Dodge^000000");
+		mes needtr("권장 스탯 : ^FF9900STR, VIT, AGI^000000","Stats : ^FF9900STR, VIT, AGI^000000");
+		break;
+	case 4:
+		mes needtr("^0055FF궁수^000000  초심자 추천 ^FF9900★★★★★^000000","^0055FFArcher^000000  Beginner pick ^FF9900★★★★★^000000");
+		mes needtr("특징 : 원거리 / 범위 공격","Traits : ranged / area attack");
+		mes needtr("^FF9900애로우 샤워^000000로 굉장히 편하게 키울 수 있어요.","^FF9900Arrow Shower^000000 makes leveling very comfortable.");
+		mes "";
+		mes needtr("^777777[3차 직업]^000000","^777777[3rd jobs]^000000");
+		mes needtr("^0055FF레인저^000000 : 활을 쓰는 직업이에요. 장비 가성비가 가장 좋고","^0055FFRanger^000000 : uses bows. The best value for gear,");
+		mes needtr("육성과 파밍에 매우 적합해요. ^00AA00첫 캐릭터로 아주 강력하게 추천해요.^000000","great for leveling and farming. ^00AA00Strongly recommended as a first character.^000000");
+		mes needtr("^0055FF민스트럴 / 원더러^000000 : 활도 쓰지만 악기 연주(버프 스킬)를","^0055FFMinstrel / Wanderer^000000 : can use bows, but mainly play");
+		mes needtr("쓰는 직업이에요. 서비어 레인스톰으로 육성과 파밍은 수월하지만,","songs (buff skills). Severe Rainstorm makes leveling and farming easy,");
+		mes needtr("보조 계열인 만큼 솔로 플레이에는 한계가 있어요.","but as a support job it has limits when playing solo.");
+		mes "";
+		mes needtr("권장 스킬 : ^FF9900애로우 샤워, 집중력 향상^000000","Skills : ^FF9900Arrow Shower, Improve Concentration^000000");
+		mes needtr("권장 스탯 : ^FF9900DEX, AGI, VIT^000000","Stats : ^FF9900DEX, AGI, VIT^000000");
+		break;
+	case 5:
+		mes needtr("^0055FF마법사^000000  초심자 추천 ^FF9900★★☆☆☆^000000","^0055FFMage^000000  Beginner pick ^FF9900★★☆☆☆^000000");
+		mes needtr("특징 : 마법 / 범위 공격","Traits : magic / area attack");
+		mes needtr("체력이 낮고, 마법 캐스팅 시간 때문에 죽기 쉬워요.","Low HP and long cast times make it easy to die.");
+		mes "";
+		mes needtr("^777777[3차 직업]^000000","^777777[3rd jobs]^000000");
+		mes needtr("^0055FF워록^000000 : 여러 속성 마법을 쓰는 직업이에요.","^0055FFWarlock^000000 : casts magic of many elements.");
+		mes needtr("강력한 마법사 이미지와 달리 데미지가 조금 부족하고","Unlike the image of a mighty mage, its damage is a little low");
+		mes needtr("체력이 낮아 육성이 어려운 편이에요.","and its HP is low, so leveling is hard.");
+		mes needtr("^0055FF소서러^000000 : 속성 마법과 무속성 마법, 정령, 방어 / 보조","^0055FFSorcerer^000000 : elemental and Neutral magic, spirits,");
+		mes needtr("역할까지 할 수 있는 직업이에요. 최소한의 장비가 없으면","and defensive / support roles. Without minimum gear");
+		mes needtr("육성이 어렵고, 고점은 높지만 가성비는 낮아요.","leveling is hard. High ceiling, but low value for money.");
+		mes "";
+		mes needtr("권장 스킬 : ^FF9900화이어 볼, 화이어 월^000000","Skills : ^FF9900Fire Ball, Fire Wall^000000");
+		mes needtr("권장 스탯 : ^FF9900INT, DEX, VIT^000000","Stats : ^FF9900INT, DEX, VIT^000000");
+		break;
+	case 6:
+		mes needtr("^0055FF복사^000000  초심자 추천 ^FF9900★☆☆☆☆^000000","^0055FFAcolyte^000000  Beginner pick ^FF9900★☆☆☆☆^000000");
+		mes needtr("특징 : 보조","Traits : support");
+		mes needtr("2차 전직까지는 좋은 공격 스킬이 없어 굉장히 힘들 수 있어요.","Until the 2nd job there are no good attack skills, so it can be very hard.");
+		mes needtr("^FF0000어느 길이든 첫 캐릭터로는 추천하지 않아요.^000000","^FF0000Neither path is recommended for a first character.^000000");
+		mes "";
+		mes needtr("^777777[3차 직업]^000000","^777777[3rd jobs]^000000");
+		mes needtr("^0055FF아크비숍^000000 (프리스트) : 언데드를 잡으며 3차까지 갈 수 있지만,","^0055FFArch Bishop^000000 (Priest) : you can reach the 3rd job on undead,");
+		mes needtr("3차 이후에는 범위 공격이 없어 육성이 어려워요. 보조 직업 중","but after that there is no area attack. It has the most buffs");
+		mes needtr("버프가 가장 많고 다양한 디버프를 풀 수 있지만 혼자 키우기는 어려워요.","and cures many debuffs, but it is hard to raise alone.");
+		mes needtr("^0055FF수라^000000 (몽크) : 패시브 기본 공격으로 어느 정도 사냥할 수 있고,","^0055FFSura^000000 (Monk) : passive auto attacks let you hunt somewhat,");
+		mes needtr("3차 이후 '호포'로 사냥이 쉬워져요. 점점 다양한 공격 스킬을","and Tiger Cannon makes the 3rd job easier. It gains many attack");
+		mes needtr("얻지만 숙련도와 이해도가 필요한 직업이에요.","skills, but needs skill and understanding to play.");
+		mes "";
+		mes needtr("권장 스킬 (프리스트 지망) : ^FF9900안젤루스, 민첩성 증가, 블레싱^000000","Skills (for Priest) : ^FF9900Angelus, Increase Agility, Blessing^000000");
+		mes needtr("권장 스킬 (몽크 지망) : ^FF9900데몬베인, 디바인 프로텍션^000000","Skills (for Monk) : ^FF9900Demon Bane, Divine Protection^000000");
+		mes needtr("권장 스탯 : ^FF9900STR(또는 INT), DEX, VIT^000000","Stats : ^FF9900STR (or INT), DEX, VIT^000000");
+		break;
+	}
+	mes "";
+	mes needtr("^777777스탯은 채팅창에 ^FF9900/str+ 10^777777 처럼 입력하면 한 번에 올릴 수 있어요.^000000","^777777Type ^FF9900/str+ 10^777777 in chat to raise a stat several points at once.^000000");
+	mes needtr("^777777(agi, vit, int, dex, luk 도 같은 방식)^000000","^777777(agi, vit, int, dex and luk work the same way)^000000");
+	return;
+
+S_CourseJob2:
+	.@k = getarg(0);
+	setarray .@kr$[1], "나이트", "크루세이더", "블랙스미스", "알케미스트", "어쌔신", "로그", "헌터", "바드", "댄서", "위자드", "세이지", "프리스트", "몽크";
+	setarray .@en$[1], "Knight", "Crusader", "Blacksmith", "Alchemist", "Assassin", "Rogue", "Hunter", "Bard", "Dancer", "Wizard", "Sage", "Priest", "Monk";
+	mes "^0055FF" + needtr(.@kr$[.@k], .@en$[.@k]) + "^000000" + needtr(" 육성 안내"," leveling guide");
+	mes needtr("^777777사냥터는 Base Lv.65 이후 기준이에요.^000000","^777777Hunting grounds are for Base Lv.65 and up.^000000");
+	mes "";
+	switch (.@k) {
+	case 1:
+		mes needtr("사냥터 : ^0055FF루이나 지하 던전 1층, 게펜 필드 6^000000","Hunting : ^0055FFLuina Guild Dungeon F1, Geffen Field 6^000000");
+		mes needtr("사냥 스킬 : ^FF9900볼링 배쉬^000000 또는 ^FF9900매그넘 브레이크^000000","Skills : ^FF9900Bowling Bash^000000 or ^FF9900Magnum Break^000000");
+		mes needtr("스탯 : ^FF9900STR, VIT, DEX(30~40)^000000","Stats : ^FF9900STR, VIT, DEX (30-40)^000000");
+		break;
+	case 2:
+		mes needtr("사냥터 : ^0055FF루이나 지하 던전 1층, 게펜 필드 6^000000","Hunting : ^0055FFLuina Guild Dungeon F1, Geffen Field 6^000000");
+		mes needtr("사냥 스킬 : ^FF9900매그넘 브레이크^000000(추천), ^FF9900홀리 크로스^000000(단일 공격)","Skills : ^FF9900Magnum Break^000000 (recommended), ^FF9900Holy Cross^000000 (single target)");
+		mes needtr("스탯 : ^FF9900STR, VIT, DEX(30~40)^000000","Stats : ^FF9900STR, VIT, DEX (30-40)^000000");
+		break;
+	case 3:
+		mes needtr("사냥터 : ^0055FF루이나 지하 던전 1층, 게펜 필드 6^000000","Hunting : ^0055FFLuina Guild Dungeon F1, Geffen Field 6^000000");
+		mes needtr("사냥 스킬 : ^FF9900카트 레볼루션^000000","Skills : ^FF9900Cart Revolution^000000");
+		mes needtr("버프 : ^FF9900아드레날린 러쉬, 오버 트러스트, 맥시마이즈 파워^000000","Buffs : ^FF9900Adrenaline Rush, Power Thrust, Maximize Power^000000");
+		mes needtr("스탯 : ^FF9900STR, VIT^000000","Stats : ^FF9900STR, VIT^000000");
+		break;
+	case 4:
+		mes needtr("사냥터 : ^0055FF루이나 지하 던전 1층^000000","Hunting : ^0055FFLuina Guild Dungeon F1^000000");
+		mes needtr("사냥 스킬 : ^FF9900카트 레볼루션^000000","Skills : ^FF9900Cart Revolution^000000");
+		mes needtr("스탯 : ^FF9900STR, VIT^000000","Stats : ^FF9900STR, VIT^000000");
+		break;
+	case 5:
+		mes needtr("사냥터 : ^0055FF게펜 필드 6^000000","Hunting : ^0055FFGeffen Field 6^000000");
+		mes needtr("사냥 스킬 : ^FF9900기본 공격^000000, ^FF9900그림투스^000000(하이딩 후 사용)","Skills : ^FF9900auto attack^000000, ^FF9900Grimtooth^000000 (use while Hiding)");
+		mes needtr("스탯 : ^FF9900STR, AGI, VIT(30~40), DEX(30~40)^000000","Stats : ^FF9900STR, AGI, VIT (30-40), DEX (30-40)^000000");
+		break;
+	case 6:
+		mes needtr("사냥터 : ^0055FF게펜 필드 6^000000, 도작 10레벨 이후 ^0055FF루이나 지하 던전 1층^000000","Hunting : ^0055FFGeffen Field 6^000000, then ^0055FFLuina Guild Dungeon F1^000000 after Plagiarism Lv.10");
+		mes needtr("사냥 스킬 : ^FF9900더블 스트레이핑^000000 → 도작 10레벨 후 ^FF9900애로우 샤워^000000","Skills : ^FF9900Double Strafe^000000 → ^FF9900Arrow Shower^000000 after Plagiarism Lv.10");
+		mes needtr("스탯 : ^FF9900STR, AGI, VIT(30~40), DEX(30~40)^000000","Stats : ^FF9900STR, AGI, VIT (30-40), DEX (30-40)^000000");
+		mes "";
+		mes needtr("^777777[도작]^000000 나를 공격한 스킬을 복사해서 쓸 수 있어요.","^777777[Plagiarism]^000000 copies a skill used on you so you can use it.");
+		mes needtr("구 페이욘의 ^0055FF도작 도우미^000000가 원하는 스킬을 복사하게 도와줘요.","The ^0055FFPlagiarism Helper^000000 in Old Payon helps you copy the skill you want.");
+		mes needtr("^FF0000전승 후 프리저브를 배우기 전까지는 다른 스킬에 맞으면^000000","^FF0000Until you learn Preserve after transcending, being hit by another^000000");
+		mes needtr("^FF0000복사한 스킬이 바뀌니 다시 도작해야 해요.^000000","^FF0000skill replaces the copy, so you must copy it again.^000000");
+		break;
+	case 7:
+	case 8:
+	case 9:
+		mes needtr("사냥터 : ^0055FF루이나 지하 던전 1층^000000","Hunting : ^0055FFLuina Guild Dungeon F1^000000");
+		mes needtr("사냥 스킬 : ^FF9900애로우 샤워^000000","Skills : ^FF9900Arrow Shower^000000");
+		mes needtr("스탯 : ^FF9900DEX, VIT(30~40)^000000","Stats : ^FF9900DEX, VIT (30-40)^000000");
+		break;
+	case 10:
+	case 11:
+		mes needtr("사냥터 : ^0055FF게펜 필드 6^000000","Hunting : ^0055FFGeffen Field 6^000000");
+		mes needtr("사냥 스킬 : ^FF9900화이어 월, 화이어 볼트^000000","Skills : ^FF9900Fire Wall, Fire Bolt^000000");
+		mes needtr("스탯 : ^FF9900INT, DEX^000000","Stats : ^FF9900INT, DEX^000000");
+		break;
+	case 12:
+		mes needtr("^00AA00[기본 공격 빌드 (추천)]^000000","^00AA00[Auto-attack build (recommended)]^000000");
+		mes needtr("사냥터 : ^0055FF게펜 필드 6^000000","Hunting : ^0055FFGeffen Field 6^000000");
+		mes needtr("사냥 스킬 : ^FF9900임포시티오 마누스^000000","Skills : ^FF9900Impositio Manus^000000");
+		mes needtr("스탯 : ^FF9900STR, AGI, VIT(30~40), DEX(30~40)^000000","Stats : ^FF9900STR, AGI, VIT (30-40), DEX (30-40)^000000");
+		mes "";
+		mes needtr("^777777[구마 빌드 (처음이라면 조금 어려워요)]^000000","^777777[Exorcist build (a bit hard for newcomers)]^000000");
+		mes needtr("사냥터 : ^0055FF글래스트헤임 성당^000000","Hunting : ^0055FFGlast Heim Church^000000");
+		mes needtr("사냥 스킬 : ^FF9900턴 언데드, 마그누스 엑소르시스무스^000000","Skills : ^FF9900Turn Undead, Magnus Exorcismus^000000");
+		mes needtr("스탯 : ^FF9900INT, DEX^000000","Stats : ^FF9900INT, DEX^000000");
+		break;
+	case 13:
+		mes needtr("사냥터 : ^0055FF게펜 필드 6^000000","Hunting : ^0055FFGeffen Field 6^000000");
+		mes needtr("사냥 스킬 : ^FF9900육합권, 연환전신장^000000","Skills : ^FF9900Triple Attack, Chain Combo^000000");
+		mes needtr("스탯 : ^FF9900STR, AGI, VIT(30~40), DEX(30~40)^000000","Stats : ^FF9900STR, AGI, VIT (30-40), DEX (30-40)^000000");
+		break;
+	}
+	mes "";
+	mes needtr("^777777괄호 속 숫자는 맞춰 둘 스탯 수치예요.^000000","^777777Numbers in brackets are the stat values to aim for.^000000");
+	return;
+
+S_CourseJobTrans:
+	.@k = getarg(0);
+	setarray .@kr$[1], "로드나이트", "팔라딘", "화이트스미스", "크리에이터", "어쌔신크로스", "스토커", "스나이퍼", "클라운", "집시", "하이위자드", "프로페서", "하이프리스트", "챔피언";
+	setarray .@en$[1], "Lord Knight", "Paladin", "Whitesmith", "Creator", "Assassin Cross", "Stalker", "Sniper", "Clown", "Gypsy", "High Wizard", "Professor", "High Priest", "Champion";
+	mes needtr("전승 직업이 되면 새 스킬이 생겨요.","Transcendent jobs get new skills.");
+	mes "^0055FF" + needtr(.@kr$[.@k], .@en$[.@k]) + "^000000" + needtr(" : 육성할 때 쓸 만한 스킬"," : skills that help while leveling");
+	mes "";
+	switch (.@k) {
+	case 1:
+		mes needtr("^FF9900컨센트레이션, 오라 블레이드^000000","^FF9900Concentration, Aura Blade^000000");
+		break;
+	case 5:
+		mes needtr("^FF9900어드밴스드 카타르 연구, 메테오 어절트^000000","^FF9900Advanced Katar Mastery, Meteor Assault^000000");
+		break;
+	case 6:
+		mes needtr("^FF9900백 스탭, 프리저브^000000","^FF9900Back Stab, Preserve^000000");
+		mes needtr("^777777프리저브를 켜 두면 도작한 애로우 샤워가 바뀌지 않아요.^000000","^777777With Preserve on, your copied Arrow Shower is kept.^000000");
+		break;
+	case 7:
+		mes needtr("^FF9900트루 사이트^000000","^FF9900True Sight^000000");
+		break;
+	case 10:
+		mes needtr("^FF9900소울 드레인^000000 (마나 회복)","^FF9900Soul Drain^000000 (SP recovery)");
+		mes needtr("^FF9900마법력 증폭^000000 (버프, 안 써도 괜찮아요)","^FF9900Mystical Amplification^000000 (buff, optional)");
+		break;
+	case 11:
+		mes needtr("^FF9900라이프 치환^000000 (마나 회복)","^FF9900Indulge^000000 (SP recovery)");
+		break;
+	case 12:
+		mes needtr("^FF9900아숨프티오^000000 (방어 버프)","^FF9900Assumptio^000000 (defense buff)");
+		mes needtr("^FF9900마나 리차지^000000 (마나 회복)","^FF9900Mana Recharge^000000 (SP recovery)");
+		break;
+	case 13:
+		mes needtr("^FF9900광축기^000000","^FF9900Dangerous Soul Collect^000000");
+		break;
+	case 2:
+	case 8:
+	case 9:
+		mes needtr("육성에 꼭 필요한 새 스킬은 없어요.","No new skill is essential for leveling.");
+		mes needtr("2차 때 쓰던 스킬로 계속 사냥하면 돼요.","Keep hunting with your 2nd job skills.");
+		break;
+	default:
+		mes needtr("새로 생긴 스킬 설명을 읽어보고 필요한 스킬을 찍어보세요.","Read the new skill descriptions and pick the ones you need.");
+		break;
+	}
+	return;
+
+S_CourseJob3:
+	.@k = getarg(0);
+	setarray .@kr$[1], "룬나이트", "로열가드", "미케닉", "제네릭", "길로틴크로스", "쉐도우체이서", "레인저", "민스트럴", "원더러", "워록", "소서러", "아크비숍", "수라";
+	setarray .@en$[1], "Rune Knight", "Royal Guard", "Mechanic", "Genetic", "Guillotine Cross", "Shadow Chaser", "Ranger", "Minstrel", "Wanderer", "Warlock", "Sorcerer", "Arch Bishop", "Sura";
+	mes "^0055FF" + needtr(.@kr$[.@k], .@en$[.@k]) + "^000000" + needtr(" 추천 빌드"," recommended build");
+	mes "";
+	switch (.@k) {
+	case 1:
+		mes needtr("빌드 : ^FF9900드래곤 브레스^000000","Build : ^FF9900Dragon Breath^000000");
+		mes needtr("스탯 : ^FF9900DEX 120, VIT / INT 100 이상^000000","Stats : ^FF9900DEX 120, VIT / INT 100+^000000");
+		break;
+	case 2:
+		mes needtr("빌드 : ^FF9900오버 브랜드^000000","Build : ^FF9900Over Brand^000000");
+		mes needtr("스탯 : ^FF9900STR 120, VIT / DEX 80 이상^000000","Stats : ^FF9900STR 120, VIT / DEX 80+^000000");
+		break;
+	case 3:
+		mes needtr("빌드 : ^FF9900액스 토네이도, 부스트 너클^000000","Build : ^FF9900Axe Tornado, Knuckle Boost^000000");
+		mes needtr("^777777마도기어 부품을 구매한 뒤 사용하세요.^000000","^777777Buy the Mado Gear parts before using them.^000000");
+		mes needtr("스탯 : ^FF9900STR / DEX / AGI 100 내외, VIT 80 이상^000000","Stats : ^FF9900STR / DEX / AGI about 100, VIT 80+^000000");
+		break;
+	case 4:
+		mes needtr("빌드 : ^FF9900카트 캐논^000000","Build : ^FF9900Cart Cannon^000000");
+		mes needtr("스탯 : ^FF9900STR / DEX / INT 100 내외, VIT / AGI는 여유되는 만큼^000000","Stats : ^FF9900STR / DEX / INT about 100, VIT / AGI with the rest^000000");
+		break;
+	case 5:
+		mes needtr("빌드 : ^FF9900롤링 커터^000000","Build : ^FF9900Rolling Cutter^000000");
+		mes needtr("연타해서 쓰고, ^FF9900치명적인 독 부여^000000(전승 스킬)를 항상 유지하세요.","Spam it and keep ^FF9900Enchant Deadly Poison^000000 (transcendent skill) up.");
+		mes needtr("스탯 : ^FF9900STR / AGI 110 이상, DEX / VIT 80 이상^000000","Stats : ^FF9900STR / AGI 110+, DEX / VIT 80+^000000");
+		break;
+	case 6:
+		mes needtr("물리 빌드 : ^FF9900서비어 레인스톰^000000 / ^FF9900DEX 120^000000","Physical : ^FF9900Severe Rainstorm^000000 / ^FF9900DEX 120^000000");
+		mes needtr("마법 빌드 : ^FF9900사이킥 웨이브^000000 / ^FF9900INT / DEX 120^000000","Magic : ^FF9900Psychic Wave^000000 / ^FF9900INT / DEX 120^000000");
+		mes needtr("^777777두 스킬 모두 리프로듀스로 복사해서 써요.^000000","^777777Both skills are copied with Reproduce.^000000");
+		mes needtr("^777777구 페이욘의 도작 도우미가 복사를 도와줘요.^000000","^777777The Plagiarism Helper in Old Payon helps you copy them.^000000");
+		break;
+	case 7:
+		mes needtr("빌드 : ^FF9900애로우 스톰^000000","Build : ^FF9900Arrow Storm^000000");
+		mes needtr("^FF9900언리밋^000000은 쿨타임마다 사용하세요.","Use ^FF9900Unlimit^000000 every time it is off cooldown.");
+		mes needtr("스탯 : ^FF9900DEX 120^000000","Stats : ^FF9900DEX 120^000000");
+		break;
+	case 8:
+	case 9:
+		mes needtr("빌드 : ^FF9900서비어 레인스톰^000000","Build : ^FF9900Severe Rainstorm^000000");
+		mes needtr("쿨타임이 길어서 몹을 최대한 모은 뒤 사용하세요.","The cooldown is long, so gather as many monsters as you can first.");
+		mes needtr("스탯 : ^FF9900DEX 120^000000","Stats : ^FF9900DEX 120^000000");
+		break;
+	case 10:
+		mes needtr("빌드 : ^FF9900크림즌 록^000000","Build : ^FF9900Crimson Rock^000000");
+		mes needtr("^FF9900세이프티 월, 콰그마이어, 프로스트 노바^000000와 함께 쓰세요.","Combine it with ^FF9900Safety Wall, Quagmire and Frost Nova^000000.");
+		mes needtr("스탯 : ^FF9900INT / DEX 120^000000","Stats : ^FF9900INT / DEX 120^000000");
+		break;
+	case 11:
+		mes needtr("빌드 : ^FF9900사이킥 웨이브^000000 (마법)","Build : ^FF9900Psychic Wave^000000 (magic)");
+		mes needtr("^FF9900서몬 벤투스^000000 2레벨로 정령을 부른 뒤 ^FF9900정령 제어^000000 1레벨을 쓰세요.","Call a spirit with ^FF9900Summon Ventus^000000 Lv.2, then use ^FF9900Elemental Control^000000 Lv.1.");
+		mes needtr("^777777서몬 벤투스는 윈드 오브 버듀어가 필요하고,^000000","^777777Summon Ventus needs Wind of Verdure and requires^000000");
+		mes needtr("^777777바레티르 스피어 3 / 정령 제어 1을 먼저 배워야 해요.^000000","^777777Varetyr Spear Lv.3 / Elemental Control Lv.1 first.^000000");
+		mes needtr("^FF9900세이프티 월, 화이어 월^000000도 적극적으로 쓰세요.","Use ^FF9900Safety Wall and Fire Wall^000000 freely too.");
+		mes needtr("스탯 : ^FF9900INT / DEX 120^000000","Stats : ^FF9900INT / DEX 120^000000");
+		break;
+	case 12:
+		mes needtr("빌드 : ^FF9900아도라무스, 마그누스 엑소르시스무스^000000(2차 스킬)","Build : ^FF9900Adoramus, Magnus Exorcismus^000000 (2nd job skill)");
+		mes needtr("스탯 : ^FF9900INT / DEX 120^000000","Stats : ^FF9900INT / DEX 120^000000");
+		break;
+	case 13:
+		mes needtr("빌드 : ^FF9900섬광연격^000000 (자동 연계 스킬)","Build : ^FF9900Flash Combo^000000 (auto combo skill)");
+		mes needtr("^FF9900잠룡승천, 점혈-활^000000을 켜고, 몹을 모은 뒤 섬광연격으로 사냥하세요.","Turn on ^FF9900Rising Dragon and Gentle Touch-Revitalize^000000, gather monsters, then hunt with Flash Combo.");
+		mes needtr("스탯 : ^FF9900STR / VIT 100 이상, DEX 90 이상^000000","Stats : ^FF9900STR / VIT 100+, DEX 90+^000000");
 		break;
 	}
 	return;
