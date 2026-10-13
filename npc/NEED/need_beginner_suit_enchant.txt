@@ -1,0 +1,183 @@
+//===== NEED Script ==========================================
+//= 초심자의 슈츠 강화 (CM 개선안 2026-10-13)
+//===== Description: =========================================
+//= Base Lv.140 이상, 착용 중인 초심자의 슈츠(15250)에 인챈트 "초심자의 성장"
+//= (399932, ATK + 2% / MATK + 2%)을 퀘스트마다 1칸씩, 최대 2칸 부여한다.
+//=   주방   : 왕궁 주방 일일퀘스트 3종(그리폰 구이 / 소스 만들기 / 접시 수거)을
+//=            각각 1번 이상 완료. 쿨타임 퀘스트 11425 / 11422 / 11427 이
+//=            퀘스트 목록에 있는지로 판정한다. (need_ep161_manager.txt 와 같은 기준)
+//=   찰스톤 : 커다란 고철(6961) 10개 + 낡은 연료통(6962) 10개 제출.
+//=            위기의 찰스톤 잡몹(락 스텝 / 킥 스텝 / 킥 앤 킥)이 둘 다 떨어뜨린다.
+//= 인챈트는 4번째 칸, 3번째 칸 순서로 채우고 카드 칸(1번)은 건드리지 않는다.
+//= 어느 퀘스트로 받았는지는 캐릭터 변수 NEED_SUIT_ENC (비트 1 주방 / 2 찰스톤) 에 남긴다.
+//============================================================
+lasa_in01,172,66,2	script	초심자 장비 관리인#needsuit	4_M_REPAIR,{
+	.@npc$ = needtr("[초심자 장비 관리인]","[Beginner Gear Keeper]");
+	mes .@npc$;
+	mes needtr("초심자의 슈츠를 한 단계 더 키워드릴게요.","I can make your Beginner's Suit a step stronger.");
+	mes needtr("아래 퀘스트를 하나 마칠 때마다 슈츠에","For each quest below you finish, I add");
+	mes needtr("^0055FF초심자의 성장^000000(ATK + 2%, MATK + 2%)을 1칸씩 부여해요.","^0055FFBeginner's Growth^000000 (ATK + 2%, MATK + 2%) to the Suit,");
+	mes needtr("^777777(최대 2칸 / Base Lv.140 이상 / 슈츠를 착용한 상태)^000000","^777777(up to 2 slots / Base Lv.140+ / Suit equipped)^000000");
+	mes "";
+	mes needtr("[주방] 왕궁 주방 일일퀘스트 3종 : ","[Kitchen] 3 Royal Kitchen dailies : ") + callsub(S_Done, 1);
+	mes needtr("[찰스톤] 커다란 고철 / 낡은 연료통 10개씩 : ","[Charleston] 10 Large Scrap / 10 Old Fuel Tank : ") + callsub(S_Done, 2);
+	next;
+	switch (select(needtr("주방 퀘스트 보고하기","Report the kitchen quests"), needtr("찰스톤 재료 제출하기","Hand in the Charleston materials"), needtr("어디서 하나요?","Where do I do these?"), needtr("닫기","Close"))) {
+	case 1:
+		.@q = 1;
+		break;
+	case 2:
+		.@q = 2;
+		break;
+	case 3:
+		goto L_Where;
+	default:
+		close;
+	}
+
+	mes .@npc$;
+	if (NEED_SUIT_ENC & .@q) {
+		mes needtr("이 퀘스트로는 이미 강화를 받으셨어요.","You already got the enchant for this quest.");
+		close;
+	}
+	if (BaseLevel < 140) {
+		mes needtr("슈츠 강화는 ^FF0000Base Lv.140^000000부터 할 수 있어요.","The Suit enchant opens at ^FF0000Base Lv.140^000000.");
+		close;
+	}
+	.@slot = callsub(S_Slot);
+	if (.@slot == -1) {
+		mes needtr("^0055FF초심자의 슈츠^000000를 착용한 상태로 말을 걸어주세요.","Talk to me with the ^0055FFBeginner's Suit^000000 equipped.");
+		close;
+	}
+	if (.@slot == -2) {
+		mes needtr("슈츠에 더 이상 부여할 칸이 없어요.","The Suit has no free slot left.");
+		close;
+	}
+
+	if (.@q == 1) {
+		if (callsub(S_Kitchen) < 3) {
+			mes needtr("왕궁 주방 일일퀘스트 3종을 각각 한 번 이상 완료하고 오세요.","Finish each of the 3 Royal Kitchen dailies at least once.");
+			mes "";
+			callsub S_KitchenList;
+			close;
+		}
+	}
+	else if (countitem(6961) < 10 || countitem(6962) < 10) {
+		mes needtr("재료가 부족해요.","You are short of materials.");
+		mes "";
+		mes getitemname(6961) + " : " + countitem(6961) + " / 10";
+		mes getitemname(6962) + " : " + countitem(6962) + " / 10";
+		close;
+	}
+
+	if (.@q == 1)
+		mes needtr("주방 일을 모두 해내셨군요!","You handled every job in the kitchen!");
+	else
+		mes needtr("^0055FF커다란 고철^000000 10개와 ^0055FF낡은 연료통^000000 10개를 받을게요.","I will take 10 ^0055FFLarge Scrap^000000 and 10 ^0055FFOld Fuel Tank^000000.");
+	mes needtr("착용 중인 슈츠에 ^0055FF초심자의 성장^000000을 부여할까요?","Shall I add ^0055FFBeginner's Growth^000000 to the Suit you are wearing?");
+	mes needtr("^777777슈츠를 잠시 벗겼다가 다시 입혀 드려요.^000000","^777777I take the Suit off for a moment and put it back on.^000000");
+	next;
+	if (select(needtr("부여한다","Add it"), needtr("그만둔다","Not now")) == 2)
+		close;
+
+	// 대화 중에 장비가 바뀌었을 수 있으니 처리 직전에 다시 확인한다.
+	mes .@npc$;
+	.@slot = callsub(S_Slot);
+	if (.@slot < 0 || (NEED_SUIT_ENC & .@q) || BaseLevel < 140) {
+		mes needtr("장비 상태가 바뀌어 진행할 수 없어요. 다시 말을 걸어주세요.","Your equipment changed, so I stopped. Please talk to me again.");
+		close;
+	}
+	if (.@q == 1 && callsub(S_Kitchen) < 3) {
+		mes needtr("주방 퀘스트 상태가 바뀌어 진행할 수 없어요.","Your kitchen quest state changed, so I stopped.");
+		close;
+	}
+	if (.@q == 2) {
+		if (countitem(6961) < 10 || countitem(6962) < 10) {
+			mes needtr("재료가 부족해요.","You are short of materials.");
+			close;
+		}
+		delitem 6961, 10;
+		delitem 6962, 10;
+	}
+
+	for (.@i = 0; .@i < 4; .@i++)
+		.@c[.@i] = getequipcardid(EQI_ARMOR, .@i);
+	.@c[.@slot] = .ItemId;
+	.@ref = getequiprefinerycnt(EQI_ARMOR);
+	delequip EQI_ARMOR;
+	getitem2 15250, 1, 1, .@ref, 0, .@c[0], .@c[1], .@c[2], .@c[3];
+	equip 15250;
+	NEED_SUIT_ENC = NEED_SUIT_ENC | .@q;
+	specialeffect2 EF_REFINEOK;
+	logmes "[NEED-SUIT-ENC] quest=" + .@q + " slot=" + (.@slot + 1) + " cards=" + .@c[0] + "," + .@c[1] + "," + .@c[2] + "," + .@c[3];
+
+	mes needtr("^00AA00슈츠에 초심자의 성장이 부여되었어요!^000000","^00AA00Beginner's Growth was added to your Suit!^000000");
+	if (NEED_SUIT_ENC != 3)
+		mes needtr("남은 퀘스트도 마치면 한 칸 더 부여해 드릴게요.","Finish the other quest and I will add one more.");
+	close;
+
+L_Where:
+	mes .@npc$;
+	mes needtr("^0055FF[주방]^000000 EP16.1 왕궁 주방 일일퀘스트","^0055FF[Kitchen]^000000 EP16.1 Royal Kitchen dailies");
+	mes needtr("그리폰 구이 / 소스 만들기 / 접시 수거 3종이에요.","Griffon Roast / Sauce Making / Dish Collection.");
+	mes needtr("구 페이욘의 ^0055FFEP16.1 통합 안내^000000에서 이동할 수 있어요.","The ^0055FFEP16.1 Guide^000000 in Old Payon can send you there.");
+	mes "";
+	mes needtr("^0055FF[찰스톤]^000000 메모리얼 던전 '위기의 찰스톤'","^0055FF[Charleston]^000000 Memorial Dungeon 'Charleston in Crisis'");
+	mes needtr("안의 잡몹이 커다란 고철과 낡은 연료통을 떨어뜨려요.","Its regular monsters drop Large Scrap and Old Fuel Tank.");
+	mes needtr("^777777보스까지 가지 않아도 재료는 모을 수 있어요.^000000","^777777You can gather them without going to the boss.^000000");
+	next;
+	switch (select(needtr("EP16.1 통합 안내 길 안내","Directions to the EP16.1 Guide"), needtr("위기의 찰스톤 입구 길 안내","Directions to Charleston in Crisis"), needtr("닫기","Close"))) {
+	case 1:
+		close2;
+		navigateto("payo2", 102, 118);
+		end;
+	case 2:
+		close2;
+		navigateto("verus04", 75, 114);
+		end;
+	}
+	close;
+
+// 퀘스트 완료 표시 (getarg(0) = 1 주방 / 2 찰스톤)
+S_Done:
+	return (NEED_SUIT_ENC & getarg(0)) ? needtr("^00AA00부여 완료^000000","^00AA00added^000000") : needtr("^FF0000미완료^000000","^FF0000not yet^000000");
+
+// 인챈트를 넣을 칸 (3 = 4번째 칸, 2 = 3번째 칸) / -1 슈츠 미착용 / -2 빈 칸 없음
+S_Slot:
+	if (getequipid(EQI_ARMOR) != 15250)
+		return -1;
+	if (getequipcardid(EQI_ARMOR, 3) == 0)
+		return 3;
+	if (getequipcardid(EQI_ARMOR, 2) == 0)
+		return 2;
+	return -2;
+
+// 왕궁 주방 일일퀘스트 3종 중 완료한 수 (쿨타임 퀘스트가 목록에 있으면 완료한 것)
+S_Kitchen:
+	.@n = 0;
+	for (.@i = 0; .@i < 3; .@i++) {
+		.@s = checkquest(.Kitchen[.@i], PLAYTIME);
+		if (.@s == 0 || .@s == 1)
+			.@n++;
+	}
+	return .@n;
+
+S_KitchenList:
+	for (.@i = 0; .@i < 3; .@i++) {
+		.@s = checkquest(.Kitchen[.@i], PLAYTIME);
+		mes callsub(S_KitchenName, .@i) + " : " + ((.@s == 0 || .@s == 1) ? needtr("^00AA00완료^000000","^00AA00done^000000") : needtr("^FF0000미완료^000000","^FF0000not yet^000000"));
+	}
+	return;
+
+S_KitchenName:
+	switch (getarg(0)) {
+	case 0: return needtr("그리폰 구이","Griffon Roast");
+	case 1: return needtr("소스 만들기","Sauce Making");
+	}
+	return needtr("접시 수거","Dish Collection");
+
+OnInit:
+	.ItemId = 399932;	// 초심자의 성장 (ATK + 2%, MATK + 2%)
+	setarray .Kitchen[0], 11425, 11422, 11427;	// 그리폰 구이 / 소스 만들기 / 접시 수거
+	end;
+}
