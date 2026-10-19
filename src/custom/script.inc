@@ -1081,3 +1081,114 @@ BUILDIN_FUNC(needchuseokhoney)
 	script_pushint(st, need_chuseok_honey_grant(sd, source, nullptr));
 	return SCRIPT_CMD_SUCCESS;
 }
+
+// NEED stylist: change only the hair color by palette number from the NPC menu.
+// needstylistcolor(<palette>{,<mode>})
+// The purchase goes through clif_parse_stylist_buy_sub with the matching Hair_Color entry index,
+// so costs, checks and pay order are the same as the stylist UI (db/re/stylist.yml).
+// mode 0 (default): validate only, cost goes to @need_stylist_price/@need_stylist_item/@need_stylist_box.
+// mode 1: purchase.
+// mode 2: validate, then show the palette on the player's own client only (nothing saved or charged).
+//         With the current color it sends the real color back, so
+//         needstylistcolor(getlook(LOOK_HAIR_COLOR),2) clears a preview.
+// Returns 1 ok, 0 same as the current color (nothing charged), -1 stylist disabled or no player,
+// -2 outside 0~263, -3 outside min/max_hair_color, -4 not in the stylist db, -5 job not allowed,
+// -6 several stylist entries share the palette, -7 player busy, -8 purchase failed (zeny/item).
+BUILDIN_FUNC(needstylistcolor)
+{
+	constexpr int32 NEED_STYLIST_HAIR_COLOR_LIMIT = 263;
+	map_session_data* sd = nullptr;
+
+	if (!script_rid2sd(sd) || !battle_config.feature_stylist) {
+		script_pushint(st, -1);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	int32 palette = script_getnum(st, 2);
+	int32 mode = script_hasdata(st, 3) ? script_getnum(st, 3) : 0;
+
+	pc_setreg(sd, add_str("@need_stylist_price"), 0);
+	pc_setreg(sd, add_str("@need_stylist_item"), 0);
+	pc_setreg(sd, add_str("@need_stylist_box"), 0);
+
+	if (palette < 0 || palette > NEED_STYLIST_HAIR_COLOR_LIMIT) {
+		script_pushint(st, -2);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	if (palette < MIN_HAIR_COLOR || palette > MAX_HAIR_COLOR) {
+		script_pushint(st, -3);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	if (sd->status.hair_color == palette) {
+		if (mode == 2)
+			clif_sprite_change(sd, sd->id, LOOK_HAIR_COLOR, palette, 0, SELF);
+		script_pushint(st, 0);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	// Index is the client option id, Value is the palette (e.g. Index -1 = Value 0)
+	std::shared_ptr<s_stylist_list> list = stylist_db.find(LOOK_HAIR_COLOR);
+	std::shared_ptr<s_stylist_entry> entry = nullptr;
+	int32 matches = 0;
+
+	if (list != nullptr) {
+		for (const auto& it : list->entries) {
+			if (it.second->value == static_cast<uint32>(palette)) {
+				entry = it.second;
+				matches++;
+			}
+		}
+	}
+
+	if (entry == nullptr) {
+		script_pushint(st, -4);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	// The UI lets the player pick one of them, here we cannot tell which cost applies
+	if (matches > 1) {
+		ShowWarning("buildin_needstylistcolor: Hair_Color value %d is used by %d stylist entries, refused.\n", palette, matches);
+		script_pushint(st, -6);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	if (!entry->required_jobs.empty() && !util::vector_exists(entry->required_jobs, sd->status.class_)) {
+		script_pushint(st, -5);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	std::shared_ptr<s_stylist_costs> costs = ((sd->class_ & MAPID_FIRSTMASK) == MAPID_SUMMONER) ? entry->doram : entry->human;
+
+	if (costs != nullptr) {
+		pc_setreg(sd, add_str("@need_stylist_price"), costs->price);
+		pc_setreg(sd, add_str("@need_stylist_item"), costs->requiredItem);
+		pc_setreg(sd, add_str("@need_stylist_box"), costs->requiredItemBox);
+	}
+
+	if (pc_cant_act2(sd)) {
+		script_pushint(st, -7);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	if (mode == 2) {
+		// Client side only, sd->status.hair_color stays as it is
+		clif_sprite_change(sd, sd->id, LOOK_HAIR_COLOR, palette, 0, SELF);
+		script_pushint(st, 1);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	if (mode != 1) {
+		script_pushint(st, 1);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	if (!clif_parse_stylist_buy_sub(sd, LOOK_HAIR_COLOR, entry->index)) {
+		script_pushint(st, -8);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	script_pushint(st, 1);
+	return SCRIPT_CMD_SUCCESS;
+}

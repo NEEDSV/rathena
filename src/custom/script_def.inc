@@ -38,6 +38,9 @@ BUILDIN_DEF(clearmapskillunits, "s"),
 // NEED 2026 chuseok event: shared honey songpyun daily ledger (hunt + battleground).
 BUILDIN_DEF(needchuseokhoney,"?"),
 
+// NEED stylist: hair color by palette number, paid through the stylist UI purchase routine.
+BUILDIN_DEF(needstylistcolor,"i?"),
+
 BUILDIN_DEF(instance_ip_complete,"i"),
 BUILDIN_DEF(instance_ip_reward_remaining,"?"),
 BUILDIN_DEF(instance_ip_reward_limit,"?"),

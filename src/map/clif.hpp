@@ -1485,6 +1485,8 @@ enum out_ui_type : int8 {
 };
 
 void clif_ui_open( map_session_data& sd, enum out_ui_type ui_type, int32 data );
+// NEED: also used by buildin_needstylistcolor so the NPC hair color input pays exactly like the stylist UI.
+bool clif_parse_stylist_buy_sub( map_session_data* sd, enum _look look, int16 index );
 void clif_attendence_response( const map_session_data* sd, int32 data );
 
 void clif_weight_limit( const map_session_data* sd );
