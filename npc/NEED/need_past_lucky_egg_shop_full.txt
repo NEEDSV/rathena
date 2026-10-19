@@ -10,8 +10,7 @@
 //       활성 37종 -> 13 / 12 / 12
 //   3그룹을 모두 소진하면 다시 전체를 셔플한다.
 //   => 한 사이클(12시간 x 3회) 동안 활성 행알이 정확히 한 번씩 등장한다.
-// - 상품별 기본가 1,000 Cash
-// - 상품별 랜덤 판매가: 110 / 120 / 130 / 140 / 150%
+// - 상품별 판매가: 1,000 Cash 고정 (2026-10-19, 기존 110~150% 랜덤)
 // - 상품별 서버 재고: 300~500개
 // - 계정당 회차 구매 제한: 없음 (.BuyLimit = 0). 서버 재고만 적용
 //   (.BuyLimit 에 숫자를 넣으면 상품별 계정 제한이 다시 걸린다)
@@ -149,8 +148,8 @@ payo2,114,118,4	script	추억의 행운의 알 상인#need_past_egg	4_F_KAFRA6,{
 			next;
 
 			mes needtr("[추억의 행운의 알 상인]", "[Memory Lucky Egg Seller]");
-			mes needtr("판매 가격과 서버 재고는", "The sale price and the server stock");
-			mes needtr("상품마다 따로 결정됩니다.", "are decided separately for each item.");
+			mes needtr("판매 가격은 1개 ^FF8800", "The price is fixed at ^FF8800") + .BaseCashPrice + needtr(" Cash^000000로 고정이며,", " Cash^000000 each,");
+			mes needtr("서버 재고는 상품마다 따로 결정됩니다.", "and the server stock is decided separately for each item.");
 			mes " ";
 			if (.BuyLimit > 0) {
 				mes needtr("한정 판매 상품은 계정당", "The limited sale is limited per account");
@@ -286,7 +285,6 @@ S_BuyOne:
 	mes needtr("[추억의 행운의 알 상인]", "[Memory Lucky Egg Seller]");
 	mes needtr("상품: ^0055FF", "Product: ^0055FF") + getitemname(.@b_item) + "^000000";
 	mes needtr("개당 가격: ^FF8800", "Price each: ^FF8800") + .@b_price + " Cash^000000";
-	mes needtr("가격 배율: ", "Price rate: ") + $NeedPastEggSaleRate[.@b_idx] + "%";
 	mes needtr("남은 서버 재고: ", "Server stock left: ") + $NeedPastEggSaleStock[.@b_idx] + needtr("개", "");
 	mes needtr("내 구매 가능: ", "I can still buy: ") + .@b_remain + needtr("개", "");
 	mes " ";
@@ -557,7 +555,7 @@ S_Preview:
 		}
 
 		mes " ";
-		mes needtr("^999999※ 가격과 재고는 판매 시작 때 정해지며^000000", "^999999* Price and stock are set when the sale starts,^000000");
+		mes needtr("^999999※ 재고는 판매 시작 때 정해지며^000000", "^999999* Stock is set when the sale starts,^000000");
 		mes needtr("^999999   운영 사정에 따라 목록이 바뀔 수 있습니다.^000000", "^999999   and the list may change for operational reasons.^000000");
 		next;
 	}
@@ -796,8 +794,9 @@ S_Rotate:
 
 		$NeedPastEggSaleIdx[.@rot_k] = .@rot_x;
 		$NeedPastEggSaleId[.@rot_k] = .@rot_id;
-		$NeedPastEggSaleRate[.@rot_k] = 110 + (rand(5) * 10);
-		$NeedPastEggSalePrice[.@rot_k] = (.BaseCashPrice * $NeedPastEggSaleRate[.@rot_k]) / 100;
+		// 2026-10-19 : 랜덤 배율(110~150%) 폐지, 기본가 1,000 Cash 고정
+		$NeedPastEggSaleRate[.@rot_k] = 100;
+		$NeedPastEggSalePrice[.@rot_k] = .BaseCashPrice;
 		$NeedPastEggSaleStock[.@rot_k] = rand(.StockMin, .StockMax);
 		$NeedPastEggSaleInit[.@rot_k] = $NeedPastEggSaleStock[.@rot_k];
 		$NeedPastEggSaleN90[.@rot_k] = 0;
@@ -1079,5 +1078,15 @@ OnInit:
 		$NeedPastEggOrderN = getarraysize($NeedPastEggOrder);
 
 	callsub S_EnsureRotation;
+
+	// 2026-10-19 : 고정가 도입 전에 만들어진 회차(mapreg 에 랜덤 가격 저장)도
+	// 바로 고정가로 맞춘다. 대화 중이던 구매는 가격 비교에서 걸러져 다시 확인하게 된다.
+	.@fx_n = getarraysize($NeedPastEggSaleId);
+	for (.@fx_i = 0; .@fx_i < .@fx_n; .@fx_i++) {
+		if ($NeedPastEggSaleId[.@fx_i] <= 0 || $NeedPastEggSalePrice[.@fx_i] == .BaseCashPrice)
+			continue;
+		$NeedPastEggSaleRate[.@fx_i] = 100;
+		$NeedPastEggSalePrice[.@fx_i] = .BaseCashPrice;
+	}
 	end;
 }
