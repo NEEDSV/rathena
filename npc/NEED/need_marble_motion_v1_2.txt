@@ -1,0 +1,356 @@
+//===== NEED MARBLE v1.2 - GM movement-only test core =========
+// Board : need_marbl v1.0 art (NEEDResoruce 3e67729), map cache entry checked against the GAT.
+// Scope : NO rewards, NO costs, NO DB schema changes, NO map resource changes.
+// GM only (group level 99 = Admin in conf/groups.yml), no #charcommand form:
+//   @mbroll / @mbdice <1-6> / @mbstatus / @mbreset
+// Replaces need_marble_motion_v1_1.txt. Load only one of the two (same commands).
+//
+// Progress is per character (permanent char variables NMB_*). An account has at most one
+// character online, so nothing else writes these variables while a roll is running.
+//
+// NMB_STATE  0 IDLE / 1 MOVING / 2 PAUSED (at the committed tile) / 3 RECOVERY_REQUIRED
+// NMB_POS    last committed tile. Only S_Commit moves it, and only after the server saw the
+//            character on the expected tile. NMB_LEFT is decremented in the same place.
+// NMB_SEQ    roll token, never reset. @NMB_RUN is the roll this login is driving, so after a
+//            relog / map-server restart a MOVING state left behind is detected as stale.
+// @NMB_STEP  step token. @NMB_ARMED holds the step the single pending poll timer belongs to
+//            and is cleared when that timer runs, so a late or duplicated timer does nothing.
+// START pass = a committed 32 -> 0 step (arriving on START included).
+// Lap        = START pass after at least 33 committed steps since the previous one.
+//==============================================================
+
+-	script	NEED_MarbleMotion	-1,{
+OnInit:
+	setarray .x[0], 82, 86, 90, 94, 98, 102, 106, 110, 114, 118, 118, 118, 118, 118, 118, 118, 118, 118, 114, 110, 106, 102, 98, 94, 90, 86, 82, 82, 82, 82, 82, 82, 82;
+	setarray .y[0], 84, 84, 84, 84, 84, 84, 84, 84, 84, 84, 88, 92, 96, 100, 104, 108, 112, 116, 116, 116, 116, 116, 116, 116, 116, 116, 116, 112, 108, 104, 96, 92, 88;
+	setarray .tile$[0], "START", "Prontera", "Event", "Poring", "Payon", "Treasure", "Geffen", "Warp", "BONUS", "Morroc", "Monster", "Izlude", "Event", "Hugel", "Tax", "Amatsu", "BOSS", "Dungeon", "Treasure", "Comodo", "Event", "Niflheim", "Warp", "Monster", "Glast Heim", "JAIL", "Alberta", "Event", "Juno", "Treasure", "Rachel", "Monster", "Lutie";
+	.n = 33;
+	.map$ = "need_marbl";
+	.gm_level = 99;
+	.poll_ms = 300;      // position check interval while walking
+	.stall_ms = 1500;    // no progress for this long = walk interrupted (slowest walk is 1000 ms/cell)
+	.cell_cap_ms = 1000; // hard deadline per step: cells * this + 2000 ms
+	.log = 1;            // debugmes on roll / commit / pause / reset (char_id only)
+
+	// Refuse to run on a server where the board does not match (map missing, cells blocked,
+	// or two consecutive tiles not on one straight line).
+	.broken = 0;
+	for (.@i = 0; .@i < .n; .@i++) {
+		.@j = (.@i + 1) % .n;
+		if (!checkcell(.map$, .x[.@i], .y[.@i], CELL_CHKPASS))
+			.broken = 1;
+		if (.x[.@i] != .x[.@j] && .y[.@i] != .y[.@j])
+			.broken = 1;
+	}
+	if (getarraysize(.x) != .n || getarraysize(.y) != .n || getarraysize(.tile$) != .n)
+		.broken = 1;
+	if (.broken)
+		debugmes "NEED_MARBLE v1.2: board check failed on '" + .map$ + "', commands will refuse.";
+	else
+		debugmes "NEED_MARBLE v1.2: board ok (" + .n + " tiles on " + .map$ + "), GM level " + .gm_level + ".";
+
+	// level2 100: nobody can use the #command form (highest group level is 99)
+	bindatcmd "mbroll", strnpcinfo(3) + "::OnRoll", .gm_level, 100;
+	bindatcmd "mbdice", strnpcinfo(3) + "::OnDice", .gm_level, 100;
+	bindatcmd "mbstatus", strnpcinfo(3) + "::OnStatus", .gm_level, 100;
+	bindatcmd "mbreset", strnpcinfo(3) + "::OnReset", .gm_level, 100;
+	end;
+
+OnRoll:
+	callsub S_Roll, 0;
+	end;
+
+OnDice:
+	if (.@atcmd_numparameters < 1) {
+		dispbottom "[MARBLE TEST] Usage: @mbdice <1-6>";
+		end;
+	}
+	.@die = atoi(.@atcmd_parameters$[0]);
+	if (.@die < 1 || .@die > 6) {
+		dispbottom "[MARBLE TEST] Dice must be 1..6. Nothing changed.";
+		end;
+	}
+	callsub S_Roll, .@die;
+	end;
+
+S_Roll:
+	.@forced = getarg(0);
+	if (.broken) {
+		dispbottom "[MARBLE TEST] Board data check failed on this server. Commands disabled.";
+		return;
+	}
+	if (strcharinfo(3) != .map$) {
+		dispbottom "[MARBLE TEST] Only usable on " + .map$ + ". Nothing changed.";
+		return;
+	}
+	callsub S_Refresh;
+	if (NMB_INIT != 1) {
+		callsub S_ClearProgress;
+		NMB_INIT = 1;
+		dispbottom "[MARBLE TEST] First use: initialized at START (0). Use @mbroll again.";
+		callsub S_Log, "init";
+		warp .map$, .x[0], .y[0];
+		return;
+	}
+	if (NMB_STATE == 1) {
+		dispbottom "[MARBLE TEST] Still moving (roll #" + NMB_SEQ + ", " + NMB_LEFT + " left). Ignored, no new dice.";
+		return;
+	}
+	if (isdead()) {
+		dispbottom "[MARBLE TEST] Cannot roll while dead. Nothing changed.";
+		return;
+	}
+	if (Sitting) {
+		dispbottom "[MARBLE TEST] Stand up first. Nothing changed.";
+		return;
+	}
+	getmapxy(.@m$, .@px, .@py);
+	if (.@px != .x[NMB_POS] || .@py != .y[NMB_POS]) {
+		// A manual or partial position is never taken over: go back to the committed tile.
+		unitstopwalk getcharid(3), USW_FIXPOS|USW_FORCE_STOP;
+		if (NMB_STATE == 3)
+			NMB_STATE = 2;
+		dispbottom "[MARBLE TEST] Moved back to committed tile " + NMB_POS + " (" + .tile$[NMB_POS] + "). Use @mbroll again.";
+		callsub S_Log, "resync";
+		warp .map$, .x[NMB_POS], .y[NMB_POS];
+		return;
+	}
+	if (NMB_LEFT > 0) {
+		// Paused roll: continue the same roll from the committed tile, never a new dice.
+		if (.@forced)
+			dispbottom "[MARBLE TEST] A roll is pending, forced value " + .@forced + " ignored.";
+		dispbottom "[MARBLE TEST] Resume roll #" + NMB_SEQ + " (die " + NMB_DIE + "), " + NMB_LEFT + " left.";
+		callsub S_Log, "resume";
+		callsub S_Start;
+		return;
+	}
+	.@die = (.@forced > 0 ? .@forced : rand(1,6));
+	NMB_SEQ++;
+	NMB_DIE = .@die;
+	NMB_LEFT = .@die;
+	NMB_ROLLS++;
+	NMB_FAIL$ = "";
+	dispbottom "[MARBLE TEST] Roll #" + NMB_SEQ + ": dice " + .@die + (.@forced ? " (GM forced)" : "") + ". Moving one tile at a time.";
+	callsub S_Log, "roll";
+	callsub S_Start;
+	return;
+
+S_Start:
+	@NMB_RUN = NMB_SEQ;
+	NMB_STATE = 1;
+	NMB_FAIL$ = "";
+	callsub S_Step;
+	return;
+
+// Precondition: MOVING, NMB_LEFT > 0, character standing on the committed tile.
+S_Step:
+	.@next = (NMB_POS + 1) % .n;
+	NMB_EXPECT = .@next;
+	if (!checkcell(.map$, .x[.@next], .y[.@next], CELL_CHKPASS)) {
+		callsub S_Pause, "not_passable";
+		return;
+	}
+	// unitwalk refuses while an older interrupted walk still has force_walk set
+	unitstopwalk getcharid(3), USW_FORCE_STOP;
+	if (!unitwalk(getcharid(3), .x[.@next], .y[.@next])) {
+		callsub S_Pause, "unitwalk_failed";
+		return;
+	}
+	.@cells = (.x[.@next] - .x[NMB_POS]) + (.y[.@next] - .y[NMB_POS]);
+	if (.@cells < 0)
+		.@cells = -.@cells;
+	@NMB_STEP++;
+	@NMB_DIST = .@cells;
+	@NMB_MOVED_AT = gettimetick(0);
+	@NMB_DEADLINE = gettimetick(0) + .@cells * .cell_cap_ms + 2000;
+	@NMB_ARMED = @NMB_STEP;
+	deltimer strnpcinfo(3) + "::OnPoll";
+	addtimer .poll_ms, strnpcinfo(3) + "::OnPoll";
+	return;
+
+OnPoll:
+	if (@NMB_ARMED == 0 || @NMB_ARMED != @NMB_STEP)
+		end; // stale or duplicated timer
+	@NMB_ARMED = 0;
+	if (NMB_STATE != 1 || @NMB_RUN != NMB_SEQ || NMB_LEFT <= 0)
+		end;
+	if (strcharinfo(3) != .map$) {
+		callsub S_Pause, "left_map";
+		end;
+	}
+	if (isdead()) {
+		callsub S_Pause, "dead";
+		end;
+	}
+	getmapxy(.@m$, .@px, .@py);
+	.@tx = .x[NMB_EXPECT];
+	.@ty = .y[NMB_EXPECT];
+	if (.@px == .@tx && .@py == .@ty) {
+		callsub S_Commit;
+		end;
+	}
+	// Still on the straight line from the committed tile to the expected tile?
+	.@fx = .x[NMB_POS];
+	.@fy = .y[NMB_POS];
+	.@on = 0;
+	if (.@fx == .@tx && .@px == .@fx && ((.@py - .@fy) * (.@py - .@ty)) <= 0)
+		.@on = 1;
+	if (.@fy == .@ty && .@py == .@fy && ((.@px - .@fx) * (.@px - .@tx)) <= 0)
+		.@on = 1;
+	.@dist = (.@tx > .@px ? .@tx - .@px : .@px - .@tx) + (.@ty > .@py ? .@ty - .@py : .@py - .@ty);
+	if (!.@on || .@dist > @NMB_DIST) {
+		callsub S_Pause, "manual_move";
+		end;
+	}
+	.@now = gettimetick(0);
+	if (.@dist < @NMB_DIST) {
+		@NMB_DIST = .@dist;
+		@NMB_MOVED_AT = .@now;
+	} else if (.@now - @NMB_MOVED_AT > .stall_ms) {
+		callsub S_Pause, "stalled";
+		end;
+	}
+	if (.@now > @NMB_DEADLINE) {
+		callsub S_Pause, "timeout";
+		end;
+	}
+	@NMB_ARMED = @NMB_STEP;
+	addtimer .poll_ms, strnpcinfo(3) + "::OnPoll";
+	end;
+
+// The only place where NMB_POS / NMB_LEFT change during a roll.
+S_Commit:
+	if (NMB_EXPECT != (NMB_POS + 1) % .n || NMB_LEFT <= 0) {
+		callsub S_Pause, "commit_mismatch";
+		return;
+	}
+	NMB_POS = NMB_EXPECT;
+	NMB_LEFT--;
+	NMB_STEPS++;
+	NMB_LAPSTEPS++;
+	if (NMB_POS == 0) {
+		NMB_STARTPASS++;
+		if (NMB_LAPSTEPS >= .n)
+			NMB_LAPS++;
+		NMB_LAPSTEPS = 0;
+	}
+	callsub S_Log, "commit";
+	if (NMB_LEFT > 0) {
+		dispbottom "[MARBLE TEST] Tile " + NMB_POS + " (" + .tile$[NMB_POS] + "), " + NMB_LEFT + " left.";
+		callsub S_Step;
+		return;
+	}
+	NMB_STATE = 0;
+	NMB_EXPECT = NMB_POS;
+	@NMB_RUN = 0;
+	// Tile event hook: runs at most once per roll, only for a confirmed final arrival.
+	if (NMB_EVENT_SEQ != NMB_SEQ) {
+		NMB_EVENT_SEQ = NMB_SEQ;
+		dispbottom "[MARBLE TEST] Arrived: tile " + NMB_POS + " (" + .tile$[NMB_POS] + "), roll #" + NMB_SEQ + ". Tile event not implemented, no reward.";
+		callsub S_Log, "arrive";
+	}
+	return;
+
+// getarg(0): failure reason. Never moves NMB_POS / NMB_LEFT.
+S_Pause:
+	deltimer strnpcinfo(3) + "::OnPoll";
+	@NMB_ARMED = 0;
+	@NMB_RUN = 0;
+	NMB_FAIL$ = getarg(0);
+	NMB_STATE = 3;
+	if (strcharinfo(3) == .map$) {
+		unitstopwalk getcharid(3), USW_FIXPOS|USW_FORCE_STOP;
+		getmapxy(.@m$, .@px, .@py);
+		if (.@px == .x[NMB_POS] && .@py == .y[NMB_POS])
+			NMB_STATE = 2;
+	}
+	if (NMB_LEFT <= 0)
+		NMB_STATE = (NMB_STATE == 2 ? 0 : 3);
+	dispbottom "[MARBLE TEST] Movement stopped (" + NMB_FAIL$ + "). Committed tile " + NMB_POS + ", " + NMB_LEFT + " left. @mbroll to " + (NMB_STATE == 3 ? "resync" : "resume") + ".";
+	callsub S_Log, "pause";
+	return;
+
+// Detects a MOVING state that no timer is driving any more (relog, restart, lost timer).
+S_Refresh:
+	if (NMB_STATE != 1)
+		return;
+	if (@NMB_RUN != NMB_SEQ) {
+		callsub S_Pause, "stale_session";
+		return;
+	}
+	if (gettimetick(0) > @NMB_DEADLINE + 3000)
+		callsub S_Pause, "stale_timer";
+	return;
+
+S_ClearProgress:
+	NMB_STATE = 0;
+	NMB_POS = 0;
+	NMB_LEFT = 0;
+	NMB_DIE = 0;
+	NMB_EXPECT = 0;
+	NMB_ROLLS = 0;
+	NMB_STEPS = 0;
+	NMB_LAPS = 0;
+	NMB_LAPSTEPS = 0;
+	NMB_STARTPASS = 0;
+	NMB_FAIL$ = "";
+	// v1.1 prototype kept its progress per account; clear it so it is never read as v1.2 data.
+	#NMB_READY = 0;
+	#NMB_POS = 0;
+	#NMB_PENDING = 0;
+	#NMB_LEFT = 0;
+	#NMB_ROLLS = 0;
+	#NMB_LAPS = 0;
+	#NMB_EXPECT = 0;
+	#NMB_DIE = 0;
+	#NMB_STARTED = 0;
+	return;
+
+S_Log:
+	if (.log)
+		debugmes "NEED_MARBLE " + getarg(0) + " cid=" + getcharid(0) + " seq=" + NMB_SEQ + " step=" + @NMB_STEP + " state=" + NMB_STATE + " pos=" + NMB_POS + " left=" + NMB_LEFT + " exp=" + NMB_EXPECT + " laps=" + NMB_LAPS + " sp=" + NMB_STARTPASS + " fail=" + NMB_FAIL$;
+	return;
+
+OnStatus:
+	callsub S_Refresh;
+	setarray .@st$[0], "IDLE", "MOVING", "PAUSED", "RECOVERY_REQUIRED";
+	getmapxy(.@m$, .@px, .@py);
+	.@aid$ = "" + getcharid(3);
+	.@len = getstrlen(.@aid$);
+	.@mask$ = "***" + (.@len > 3 ? substr(.@aid$, .@len - 3, .@len - 1) : .@aid$);
+	dispbottom "[MARBLE TEST] account=" + .@mask$ + " char_id=" + getcharid(0) + " map=" + .@m$ + " x=" + .@px + " y=" + .@py + (.broken ? " BOARD_CHECK_FAILED" : "");
+	if (NMB_INIT != 1) {
+		dispbottom "[MARBLE TEST] state=NOT_INITIALIZED (on " + .map$ + ": @mbroll initializes at START)";
+		end;
+	}
+	dispbottom "[MARBLE TEST] state=" + .@st$[NMB_STATE] + " last_committed_tile=" + NMB_POS + "(" + .tile$[NMB_POS] + ") pending_roll=" + (NMB_LEFT > 0 ? "#" + NMB_SEQ : "none") + " die_value=" + NMB_DIE + " remaining_steps=" + NMB_LEFT + " expected_tile=" + NMB_EXPECT + "(" + .tile$[NMB_EXPECT] + ")";
+	dispbottom "[MARBLE TEST] lap_count=" + NMB_LAPS + " start_pass=" + NMB_STARTPASS + " lap_steps=" + NMB_LAPSTEPS + " rolls=" + NMB_ROLLS + " steps=" + NMB_STEPS + " movement_session_token=" + NMB_SEQ + "/" + @NMB_STEP + (@NMB_RUN == NMB_SEQ && NMB_STATE == 1 ? " (live)" : "") + " failure_reason=" + (NMB_FAIL$ == "" ? "-" : NMB_FAIL$);
+	end;
+
+OnReset:
+	if (.broken) {
+		dispbottom "[MARBLE TEST] Board data check failed on this server. Commands disabled.";
+		end;
+	}
+	if (strcharinfo(3) != .map$) {
+		dispbottom "[MARBLE TEST] Only usable on " + .map$ + ". Nothing changed.";
+		end;
+	}
+	deltimer strnpcinfo(3) + "::OnPoll";
+	@NMB_ARMED = 0;
+	@NMB_RUN = 0;
+	@NMB_STEP++;
+	unitstopwalk getcharid(3), USW_FIXPOS|USW_FORCE_STOP;
+	callsub S_ClearProgress;
+	NMB_INIT = 1;
+	dispbottom "[MARBLE TEST] Reset to START. Counters cleared, no rewards.";
+	callsub S_Log, "reset";
+	warp .map$, .x[0], .y[0];
+	end;
+}
+
+// Board-only map: no teleport / memo / branch / ice wall that could break or skip a walk.
+need_marbl	mapflag	noteleport
+need_marbl	mapflag	nomemo
+need_marbl	mapflag	nobranch
+need_marbl	mapflag	noicewall
