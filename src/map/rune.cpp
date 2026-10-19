@@ -30,6 +30,257 @@ RuneDecompoDatabase runedecompo_db;
 RuneBookDatabase runebook_db;
 RuneDatabase rune_db;
 
+// ---------------------------------------------------------------------------------------------
+// NEED rune tablet buff tooltip (display only). See tools/need_rune_tooltip/generate.py.
+// ---------------------------------------------------------------------------------------------
+
+// clif.cpp has no header declaration for this; the icon goes to the owner only (SELF).
+void clif_status_change_sub(const block_list* bl, int32 id, int32 type, int32 flag, t_tick tick, int32 val1, int32 val2, int32 val3, enum send_target target_type);
+
+static constexpr size_t RUNE_DISPLAY_BONUS_CAP = 8;
+
+struct s_rune_display_state {
+	int16 efst;
+	uint32 setid;
+	uint8 count;
+	s_rune_display_bonus bonus[RUNE_DISPLAY_BONUS_CAP];
+};
+
+struct s_rune_display_set {
+	uint16 tag;
+	uint32 setid;
+	uint64 script_hash;
+	int16 efst[16][7];	///< [grade][pieces] -> EFST, 0 = no icon
+};
+
+#include "rune_display_table.inc"
+
+static_assert( NEED_RUNE_DISPLAY_MAX_BONUS <= RUNE_DISPLAY_BONUS_CAP, "rune tooltip: raise RUNE_DISPLAY_BONUS_CAP" );
+static_assert( NEED_RUNE_DISPLAY_GRADES == 16 && NEED_RUNE_DISPLAY_PIECES == 7, "rune tooltip: grid size changed, update s_rune_display_set" );
+static_assert( EFST_MAX <= NEED_RUNE_DISPLAY_EFST_FIRST, "rune tooltip: official EFSTs reached the NEED rune tooltip block, move it (tools/need_rune_tooltip/config.yml)" );
+
+/// Sets whose loaded scripts still match the generated table (anything else shows no icon)
+static std::unordered_map<uint32, const s_rune_display_set*> rune_display_enabled;
+
+static uint64 rune_display_fnv1a( const std::string& data, uint64 h = 0xcbf29ce484222325ULL ){
+	for( unsigned char c : data ){
+		h ^= c;
+		h *= 0x100000001b3ULL;
+	}
+	return h;
+}
+
+/// Hash of one set script: lines trimmed of spaces/tabs/CR, empty lines dropped (same as generate.py)
+static uint64 rune_display_script_hash( const std::string& script ){
+	std::string norm, line;
+	size_t start = 0;
+
+	while( start <= script.size() ){
+		size_t end = script.find( '\n', start );
+		if( end == std::string::npos )
+			end = script.size();
+		line = script.substr( start, end - start );
+		size_t b = line.find_first_not_of( " \t\r" );
+		if( b != std::string::npos ){
+			size_t e = line.find_last_not_of( " \t\r" );
+			if( !norm.empty() )
+				norm += '\n';
+			norm += line.substr( b, e - b + 1 );
+		}
+		start = end + 1;
+	}
+	return rune_display_fnv1a( norm );
+}
+
+static uint64 rune_display_set_hash( const s_set_rune& set ){
+	std::string acc;
+	char buf[64];
+
+	for( const auto& it : set.display_script_hash ){
+		safesnprintf( buf, sizeof( buf ), "%u:%016llx\n", static_cast<uint32>( it.first ), static_cast<unsigned long long>( it.second ) );
+		acc += buf;
+	}
+	return rune_display_fnv1a( acc );
+}
+
+static const s_rune_display_state* rune_display_state_find( int32 efst ){
+	for( const auto& st : rune_display_states ){
+		if( st.efst == efst )
+			return &st;
+	}
+	return nullptr;
+}
+
+/// EFST of the current rune state, using exactly what rune_active_bonus used (tag, set, grade, pieces)
+static int32 rune_display_efst( const map_session_data* sd ){
+	const auto& d = sd->runeactivated_data;
+
+	if( d.tagID == 0 || d.runesetid == 0 )
+		return 0;
+
+	auto it = rune_display_enabled.find( d.runesetid );
+
+	if( it == rune_display_enabled.end() || it->second->tag != d.tagID )
+		return 0;
+	if( d.upgrade >= NEED_RUNE_DISPLAY_GRADES || d.bookNumber >= NEED_RUNE_DISPLAY_PIECES )
+		return 0;
+
+	return it->second->efst[d.upgrade][d.bookNumber];
+}
+
+/**
+ * Check the generated table against the loaded rune_db (called after every load/reload).
+ * A set whose scripts changed since generation keeps its effects but shows no icon.
+ */
+void rune_display_validate(){
+	size_t total = 0;
+
+	rune_display_enabled.clear();
+
+	for( const auto& def : rune_display_sets ){
+		std::shared_ptr<s_rune_db> rune = rune_db.find( def.tag );
+		std::shared_ptr<s_set_rune> set = rune != nullptr ? util::umap_find( rune->sets, def.setid ) : nullptr;
+
+		if( set == nullptr ){
+			ShowWarning( "rune tooltip: set %u (tag %u) is not in rune_db, its icon stays hidden.\n", def.setid, def.tag );
+			continue;
+		}
+		if( rune_display_set_hash( *set ) != def.script_hash ){
+			ShowWarning( "rune tooltip: set %u (%s) scripts changed since the tooltip table was generated, its icon stays hidden. Run tools/need_rune_tooltip/generate.py.\n", def.setid, set->name.c_str() );
+			continue;
+		}
+		rune_display_enabled[def.setid] = &def;
+	}
+
+	for( const auto& rune : rune_db ){
+		for( const auto& set : rune.second->sets ){
+			total++;
+			bool known = false;
+
+			for( const auto& def : rune_display_sets ){
+				if( def.setid == set.first ){
+					known = true;
+					break;
+				}
+			}
+			if( !known )
+				ShowWarning( "rune tooltip: set %u (%s) has no tooltip states, its icon stays hidden. Run tools/need_rune_tooltip/generate.py.\n", set.first, set.second->name.c_str() );
+		}
+	}
+
+	ShowStatus( "rune tooltip: %" PRIuPTR "/%" PRIuPTR " rune sets show a buff icon.\n", rune_display_enabled.size(), total );
+}
+
+/**
+ * Show, swap or remove the rune icon after status_calc_pc. Sends nothing while the state is unchanged.
+ * Before the player is on a map nothing is sent; clif_parse_LoadEndAck sets resend and recalculates.
+ */
+void rune_display_refresh( map_session_data* sd ){
+	nullpo_retv( sd );
+
+	auto& rd = sd->rune_display;
+
+	if( rd.checking || sd->state.autotrade || sd->prev == nullptr )
+		return;
+	if( rd.want == rd.sent && !rd.resend )
+		return;
+
+	if( rd.sent != 0 && rd.sent != rd.want )
+		clif_status_change_sub( sd, sd->id, rd.sent, 0, 0, 0, 0, 0, SELF );
+	if( rd.want != 0 )
+		clif_status_change_sub( sd, sd->id, rd.want, 1, INFINITE_TICK, 0, 0, 0, SELF );
+
+	rd.sent = rd.want;
+	rd.resend = false;
+}
+
+/**
+ * @runetooltipcheck: run every (set, grade, pieces) through the real status_calc_pc and compare
+ * the icon chosen and the bonuses the rune scripts passed to pc_bonus/pc_bonus2 with the table.
+ * The player's rune state is restored afterwards. Current HP/SP may be clamped by MaxHP/SP changes.
+ */
+bool rune_display_check( map_session_data* sd, std::vector<std::string>& report ){
+	nullpo_retr( false, sd );
+
+	const auto saved = sd->runeactivated_data;
+	std::vector<s_rune_display_bonus> log;
+	size_t states = 0, shown = 0, fails = 0, skipped = 0;
+	char buf[256];
+
+	sd->rune_display.checking = true;
+	sd->rune_display.check_log = &log;
+	sd->runeactivated_data.loaded = false;	// keeps rune_active_bonus from sending its rune UI refresh on every pass
+
+	for( const auto& def : rune_display_sets ){
+		if( rune_display_enabled.find( def.setid ) == rune_display_enabled.end() ){
+			skipped++;
+			fails++;
+			safesnprintf( buf, sizeof( buf ), "set %u: disabled (not in rune_db or script hash mismatch)", def.setid );
+			report.push_back( buf );
+			continue;
+		}
+
+		for( uint16 g = 0; g < NEED_RUNE_DISPLAY_GRADES; g++ ){
+			for( uint8 p = 0; p < NEED_RUNE_DISPLAY_PIECES; p++ ){
+				sd->runeactivated_data.tagID = def.tag;
+				sd->runeactivated_data.runesetid = def.setid;
+				sd->runeactivated_data.upgrade = g;
+				sd->runeactivated_data.bookNumber = p;
+				log.clear();
+				status_calc_pc( sd, SCO_FORCE );
+				states++;
+
+				int32 want = def.efst[g][p];
+				std::map<std::pair<int32, int32>, int32> got, expect;
+
+				for( const auto& b : log )
+					got[std::make_pair( b.type, b.type2 )] += b.val;
+				for( auto it = got.begin(); it != got.end(); ){
+					if( it->second == 0 )
+						it = got.erase( it );
+					else
+						++it;
+				}
+
+				if( want != 0 ){
+					const s_rune_display_state* st = rune_display_state_find( want );
+
+					shown++;
+					if( st == nullptr || st->setid != def.setid ){
+						fails++;
+						safesnprintf( buf, sizeof( buf ), "set %u +%u %u pcs: EFST %d has no state row", def.setid, g, p, want );
+						report.push_back( buf );
+						continue;
+					}
+					for( uint8 i = 0; i < st->count; i++ )
+						expect[std::make_pair( st->bonus[i].type, st->bonus[i].type2 )] += st->bonus[i].val;
+				}
+
+				if( sd->rune_display.want != want || got != expect ){
+					fails++;
+					if( report.size() < 20 ){
+						safesnprintf( buf, sizeof( buf ), "set %u +%u %u pcs: icon %d (table %d), bonuses %" PRIuPTR " (table %" PRIuPTR ")%s",
+							def.setid, g, p, sd->rune_display.want, want, got.size(), expect.size(), got != expect ? " VALUES DIFFER" : "" );
+						report.push_back( buf );
+					}
+				}
+			}
+		}
+	}
+
+	sd->runeactivated_data = saved;
+	sd->rune_display.check_log = nullptr;
+	sd->rune_display.checking = false;
+	sd->rune_display.resend = true;
+	status_calc_pc( sd, SCO_FORCE );
+
+	safesnprintf( buf, sizeof( buf ), "rune tooltip check: %" PRIuPTR " sets, %" PRIuPTR " states (%" PRIuPTR " with icon), %" PRIuPTR " disabled sets, %" PRIuPTR " failures -> %s",
+		sizeof( rune_display_sets ) / sizeof( rune_display_sets[0] ), states, shown, skipped, fails, fails == 0 ? "PASS" : "FAIL" );
+	report.push_back( buf );
+
+	return fails == 0;
+}
+
 /**
  * Get location of rune decomposition database
  * @author [Shakto]
@@ -461,6 +712,7 @@ uint64 RuneDatabase::parseBodyNode( const ryml::NodeRef &node ){
 						}
 
 						script_data->script = parse_script(script.c_str(), this->getCurrentFile().c_str(), this->getLineNumber(scriptNode["Script"]), SCRIPT_IGNORE_EXTERNAL_BRACKETS);
+						set->display_script_hash[amount] = rune_display_script_hash(script);
 					}
 
 					if( !script_exists )
@@ -1143,6 +1395,9 @@ void rune_active_bonus(map_session_data *sd) {
 
 	//ShowError("rune_active_bonus found in database \n");
 
+	// Rune tooltip check: record what the scripts pass to pc_bonus/pc_bonus2 (null outside @runetooltipcheck)
+	sd->rune_display.capture = sd->rune_display.check_log;
+
 	// Now let's iterate through slots and check if each slot's id exists in the books vector
 	for (const auto& script_pair : runeset_data->scripts) {
 		 const std::shared_ptr<s_script_rune> script_data = script_pair.second;
@@ -1153,6 +1408,10 @@ void rune_active_bonus(map_session_data *sd) {
 			run_script(script_data->script, 0, sd->id, 0);
 		}
 	}
+
+	sd->rune_display.capture = nullptr;
+	// Rune tooltip: the icon for the state these scripts were just run with (sent by rune_display_refresh)
+	sd->rune_display.want = rune_display_efst(sd);
 
 	if(sd->runeactivated_data.tagID && sd->runeactivated_data.loaded){
 		clif_enablerefresh_rune2(sd,0,0);
@@ -1169,6 +1428,7 @@ void do_init_rune(){
 	runedecompo_db.load();
 	runebook_db.load();
 	rune_db.load();
+	rune_display_validate();
 }
 
 void do_final_rune(){

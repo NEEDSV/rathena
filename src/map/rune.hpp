@@ -7,6 +7,7 @@
 #define RUNE_HPP
 
 #include <map>
+#include <string>
 #include <vector>
 
 #include "itemdb.hpp"
@@ -137,6 +138,7 @@ struct s_set_rune {
 	std::unordered_map<t_itemid, uint16> activation_materials;
 	std::unordered_map<uint16, std::shared_ptr<s_script_rune>> scripts;
 	std::unordered_map<uint16, std::shared_ptr<s_upgrade_rune>> upgrades;
+	std::map<uint16, uint64> display_script_hash; // amount -> hash of the normalized script (rune tooltip table check)
 };
 
 struct s_rune_db {
@@ -175,5 +177,22 @@ void rune_load(map_session_data* sd);
 void rune_db_reload();
 void do_init_rune();
 void do_final_rune();
+
+// NEED rune tablet buff tooltip (display only).
+// The client prints no server values in a status tooltip, so every rune display state has its own
+// EFST whose tooltip already holds the exact sums (tools/need_rune_tooltip/generate.py writes the
+// table and the client lub files from db/rune_db.yml).
+#define RUNE_DISPLAY_NO_TYPE2 INT32_MIN	///< s_rune_display_bonus::type2 of a one-argument bonus
+
+/// One bonus call as the rune scripts pass it to pc_bonus / pc_bonus2
+struct s_rune_display_bonus {
+	int32 type;
+	int32 type2;
+	int32 val;
+};
+
+void rune_display_refresh(map_session_data* sd);
+void rune_display_validate();
+bool rune_display_check(map_session_data* sd, std::vector<std::string>& report);
 
 #endif /* RUNE_HPP */

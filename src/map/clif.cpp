@@ -11721,6 +11721,7 @@ void clif_parse_LoadEndAck(int32 fd,map_session_data *sd)
 
 		status_change_clear_onChangeMap(sd, &sd->sc);
 		map_iwall_get(sd); // Updates Walls Info on this Map to Client
+		sd->rune_display.resend = true; // NEED rune tooltip: (re)send the rune icon after every map load
 		status_calc_pc(sd, sd->state.autotrade ? SCO_FIRST : SCO_NONE); // Some conditions are map-dependent so we must recalculate
 
 #ifdef VIP_ENABLE

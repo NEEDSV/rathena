@@ -13417,6 +13417,26 @@ ACMD_FUNC(reloadrunedb)
 	return 0;
 }
 
+/*==========================================
+ * @runetooltipcheck - NEED rune tooltip: compare every rune state's icon and the bonuses the
+ * rune scripts really pass with the generated table (tools/need_rune_tooltip). Use a test character:
+ * it recalculates the status ~1,100 times and current HP/SP may be clamped.
+ *------------------------------------------*/
+ACMD_FUNC(runetooltipcheck)
+{
+	nullpo_retr(-1, sd);
+
+	std::vector<std::string> report;
+	bool ok = rune_display_check(sd, report);
+
+	for (const auto& line : report) {
+		clif_displaymessage(fd, line.c_str());
+		ShowInfo("%s\n", line.c_str());
+	}
+
+	return ok ? 0 : -1;
+}
+
 #include <custom/atcommand.inc>
 
 /**
@@ -13766,6 +13786,7 @@ void atcommand_basecommands(void) {
 		ACMD_DEF(setcard),
 		ACMD_DEF(macrochecker),
 		ACMD_DEF(reloadrunedb),
+		ACMD_DEF(runetooltipcheck),
 	};
 	AtCommandInfo* atcommand;
 	int32 i;

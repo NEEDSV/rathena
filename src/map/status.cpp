@@ -4301,8 +4301,10 @@ int32 status_calc_pc_sub(map_session_data* sd, uint8 opt)
 
 	pc_bonus_script(sd);
 
+	sd->rune_display.want = 0;
 	if(sd->runeactivated_data.tagID)
 		rune_active_bonus(sd);
+	rune_display_refresh(sd); // NEED rune tooltip: show/swap/remove the rune icon (only on change)
 
 	if( sd->pd ) { // Pet Bonus
 		pet_data *pd = sd->pd;
