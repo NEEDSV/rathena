@@ -37,7 +37,7 @@ constexpr uint16 NEED_CHUSEOK_DOUGH_AMOUNT = 4;
 constexpr int32 NEED_CHUSEOK_PINE_RATE = 400;    // 4.00%
 constexpr uint16 NEED_CHUSEOK_PINE_AMOUNT = 1;
 constexpr int32 NEED_CHUSEOK_HONEY_RATE = 10;     // 0.05%
-constexpr int32 NEED_CHUSEOK_LEVEL_DIFFERENCE = 15;
+constexpr int32 NEED_CHUSEOK_LEVEL_DIFFERENCE = 30;		// 2026-10-19 간담회: ±15 -> ±30 (추석 드롭 전용, 경계 포함)
 constexpr uint32 NEED_CHUSEOK_EVENT_ID = 202609;
 
 constexpr int32 MSG_CHUSEOK_ITEM_UNAVAILABLE = 1546;

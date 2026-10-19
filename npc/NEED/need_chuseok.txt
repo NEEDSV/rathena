@@ -377,6 +377,7 @@ function	script	F_NEED_Chuseok_LimitFailMes	{
 //
 // 소비품 8종 : 교환 횟수 제한 없음 (바터 상점 need_chuseok_exchange)
 // 대축       : 송편 100개, 계정·IP 각각 주 10개 (토요일 22:00 초기화)
+// 환생 티켓   : 송편 100개(대축과 같은 값), 계정·IP 각각 주 5장 (대축과 따로 계산, 같은 초기화)
 // 아리아 상자 : 송편 300개, 계정·IP 각각 이벤트 기간 1개
 //------------------------------------------------------------
 payo2,111,101,4	script	한가위 교환상 달이#chuseok2026	4_M_ORIENT01,{
@@ -395,6 +396,7 @@ payo2,111,101,4	script	한가위 교환상 달이#chuseok2026	4_M_ORIENT01,{
 	switch (select(
 		needtr("일반 교환품 (횟수 제한 없음)", "Regular items (no limit)"),
 		needtr("대축 교환 (송편 100개 / 주 10개)", "Blacksmith's Blessing (100 cakes / 10 per week)"),
+		needtr("환생 티켓 교환 (송편 100개 / 주 5장)", "Rebirth Ticket (100 cakes / 5 per week)"),
 		needtr("아리아 의상 선택 상자 (송편 300개 / 1회)", "Aria Costume Selection Box (300 cakes / once)"),
 		needtr("교환 목록을 듣는다", "Hear the exchange list"),
 		needtr("다음에 오겠소", "I'll come back later"))) {
@@ -409,10 +411,14 @@ payo2,111,101,4	script	한가위 교환상 달이#chuseok2026	4_M_ORIENT01,{
 		end;
 
 	case 3:
-		callsub S_Aria;
+		callsub S_Rebirth;
 		end;
 
 	case 4:
+		callsub S_Aria;
+		end;
+
+	case 5:
 		mes needtr("[한가위 교환상 달이]", "[Chuseok Trader Dali]");
 		mes needtr("송편 4개 - 빛나는 방어 스크롤", "4 Korean Rice Cakes - Brilliant Protection Scroll");
 		mes needtr("송편 6개 - 레드 부스터", "6 Korean Rice Cakes - Red Booster");
@@ -425,13 +431,14 @@ payo2,111,101,4	script	한가위 교환상 달이#chuseok2026	4_M_ORIENT01,{
 		mes needtr("송편 40개 - 진 레드 부스터", "40 Korean Rice Cakes - True Red Booster");
 		mes needtr("송편 50개 - 진 소형 마나수", "50 Korean Rice Cakes - True Small Mana Potion");
 		mes needtr("^0055FF송편 100개 - 대축 (계정·IP당 주 10개)^000000", "^0055FF100 Korean Rice Cakes - Blacksmith's Blessing (10 per week per account/IP)^000000");
+		mes needtr("^0055FF송편 100개 - 환생 티켓 (계정·IP당 주 5장)^000000", "^0055FF100 Korean Rice Cakes - Rebirth Ticket (5 per week per account/IP)^000000");
 		mes needtr("^0055FF송편 300개 - 아리아 의상 선택 상자 (계정·IP당 1회)^000000", "^0055FF300 Korean Rice Cakes - Aria Costume Selection Box (once per account/IP)^000000");
 		next;
 		mes needtr("[한가위 교환상 달이]", "[Chuseok Trader Dali]");
-		mes needtr("대축과 아리아 의상 상자를 뺀 나머지는", "Everything except the Blacksmith's Blessing and the Aria box");
+		mes needtr("대축, 환생 티켓, 아리아 의상 상자를 뺀 나머지는", "Everything except the Blacksmith's Blessing, the Rebirth Ticket and the Aria box");
 		mes needtr("가진 송편만큼 얼마든지 바꾸실 수 있어요.", "can be traded as many times as your rice cakes allow.");
 		mes " ";
-		mes needtr("대축 주간 횟수는 ^0055FF매주 토요일 22:00^000000 에 초기화되고,", "The weekly Blacksmith's Blessing count resets ^0055FFevery Saturday at 22:00^000000,");
+		mes needtr("대축과 환생 티켓 주간 횟수는 ^0055FF매주 토요일 22:00^000000 에 초기화되고,", "The weekly Blessing and Rebirth Ticket counts reset ^0055FFevery Saturday at 22:00^000000,");
 		mes needtr("^FF0000계정과 접속 IP 를 함께 확인^000000 합니다.", "and ^FF0000both your account and your connection IP are checked^000000.");
 		mes needtr("같은 IP 에서 다른 계정을 쓰셔도 횟수를 함께 씁니다.", "Other accounts on the same IP share the same count.");
 		mes " ";
@@ -517,6 +524,87 @@ S_Daechuk:
 	mes needtr("[한가위 교환상 달이]", "[Chuseok Trader Dali]");
 	if (.@result == 1) {
 		mes needtr("대축 ^0055FF", "Here you go: ^0055FF") + .@want + needtr("개^000000 를 드렸습니다.", "^000000 Blacksmith's Blessing(s).");
+		mes needtr("송편 ", "I took ") + (.@cost * .@want) + needtr("개를 받았습니다.", " Korean Rice Cakes.");
+		mes " ";
+		mes needtr("이번 주 교환 : ^0055FF", "This week : ^0055FF") + (.@used + .@want) + " / " + .@cap + "^000000";
+	}
+	else
+		callfunc "F_NEED_Chuseok_LimitFailMes", .@result, 1;
+	close;
+
+//------------------------------------------------------------
+// 환생 티켓 : 송편 100개(대축 1개와 같은 값), 계정·IP 각각 주 5장
+//   (2026-10-19 간담회) 대축과 다른 product 키(REBIRTH)라 한도는 따로 센다.
+//   주간 키·초기화(토 22:00)·가족 IP 면제·원장 테이블은 대축과 같다.
+//------------------------------------------------------------
+S_Rebirth:
+	.@period = callfunc("F_NEED_Chuseok_WeekKey");
+	.@cap = 5;
+	.@cost = 100;		// 대축(S_Daechuk .@cost)과 같은 값을 유지할 것
+	.@ip$ = getcharip();
+	.@family = callfunc("F_NEED_Chuseok_FamilyGroup");
+	.@used_acc = callfunc("F_NEED_Chuseok_LimitUsed", "ACCOUNT", "" + getcharid(3), "REBIRTH", .@period);
+	.@used_ip = (.@family) ? 0 : callfunc("F_NEED_Chuseok_LimitUsed", "IP", .@ip$, "REBIRTH", .@period);
+
+	mes needtr("[한가위 교환상 달이]", "[Chuseok Trader Dali]");
+	if (.@ip$ == "" || .@used_acc < 0 || .@used_ip < 0) {
+		mes needtr("지금은 교환 기록을 확인할 수 없습니다.", "The exchange record cannot be checked right now.");
+		mes needtr("잠시 후 다시 찾아와 주세요.", "Please come back in a moment.");
+		close;
+	}
+
+	.@used = (.@used_acc > .@used_ip) ? .@used_acc : .@used_ip;
+	if (.@used > .@cap)
+		.@used = .@cap;
+
+	mes needtr("^FFCC00환생 티켓 주간 교환 가능 횟수^000000", "^FFCC00Weekly Rebirth Ticket exchanges^000000");
+	mes "^0055FF" + .@used + " / " + .@cap + needtr("^000000  (남은 횟수 ", "^000000  (") + (.@cap - .@used) + needtr("장)", " left)");
+	if (.@family)
+		mes needtr("^999999- 이 계정 ", "^999999- This account ") + .@used_acc + " / " + .@cap + needtr("   ^009900(가족 승인: IP 제한 면제)^000000", "   ^009900(approved family: IP limit waived)^000000");
+	else
+		mes needtr("^999999- 이 계정 ", "^999999- This account ") + .@used_acc + " / " + .@cap + needtr("   - 접속 IP ", "   - Connection IP ") + .@used_ip + " / " + .@cap + "^000000";
+	mes needtr("다음 초기화 : ^0055FF", "Next reset : ^0055FF") + callfunc("F_NEED_Chuseok_WeekResetStr$") + "^000000";
+	mes " ";
+	mes needtr("환생 티켓 1장당 송편 ", "Each Rebirth Ticket costs ") + .@cost + needtr("개가 필요합니다.", " Korean Rice Cakes.");
+	mes needtr("현재 보유 송편 : ^0055FF", "Korean Rice Cakes held : ^0055FF") + countitem(663) + needtr("^000000 개", "^000000");
+
+	if (.@used >= .@cap) {
+		mes " ";
+		if (.@used_ip >= .@cap && .@used_acc < .@cap)
+			mes needtr("^FF0000현재 접속 IP의 이번 주 환생 티켓 교환 한도를 모두 사용했습니다.^000000", "^FF0000Your current IP has used up this week's Rebirth Ticket limit.^000000");
+		else
+			mes needtr("^FF0000이번 주 환생 티켓 교환 한도(5장)를 모두 사용했습니다.^000000", "^FF0000You have used up this week's Rebirth Ticket limit (5).^000000");
+		close;
+	}
+
+	.@left = .@cap - .@used;
+	.@can = countitem(663) / .@cost;
+	if (.@can > .@left)
+		.@can = .@left;
+
+	if (.@can < 1) {
+		mes " ";
+		mes needtr("^FF0000송편이 ", "^FF0000You need ") + (.@cost - countitem(663)) + needtr("개 더 필요합니다.^000000", " more Korean Rice Cakes.^000000");
+		close;
+	}
+
+	next;
+	mes needtr("[한가위 교환상 달이]", "[Chuseok Trader Dali]");
+	mes needtr("몇 장을 교환하시겠습니까?", "How many would you like to exchange?");
+	mes "1 ~ ^0055FF" + .@can + needtr("^000000 장 (0 입력 시 취소)", "^000000 (enter 0 to cancel)");
+	input .@want, 0, .@can;
+
+	if (.@want < 1) {
+		mes needtr("[한가위 교환상 달이]", "[Chuseok Trader Dali]");
+		mes needtr("그럼 다음에 오시지요.", "Then come back another time.");
+		close;
+	}
+
+	.@result = callfunc("F_NEED_Chuseok_LimitedExchange", "REBIRTH", .@period, .@cap, 399992, .@cost, .@want);
+
+	mes needtr("[한가위 교환상 달이]", "[Chuseok Trader Dali]");
+	if (.@result == 1) {
+		mes needtr("환생 티켓 ^0055FF", "Here you go: ^0055FF") + .@want + needtr("장^000000 을 드렸습니다.", "^000000 Rebirth Ticket(s).");
 		mes needtr("송편 ", "I took ") + (.@cost * .@want) + needtr("개를 받았습니다.", " Korean Rice Cakes.");
 		mes " ";
 		mes needtr("이번 주 교환 : ^0055FF", "This week : ^0055FF") + (.@used + .@want) + " / " + .@cap + "^000000";

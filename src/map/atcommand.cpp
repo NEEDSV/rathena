@@ -7746,8 +7746,14 @@ ACMD_FUNC(autotrade) {
 		return -1;
 	}
 
-	if( !sd->state.vending && !sd->state.buyingstore ) { //check if player is vending or buying
-		clif_displaymessage(fd, msg_txt(sd,549)); // "You should have a shop open to use @autotrade."
+	// NEED (2026-10-19 간담회): 노점/구매상점이 없는 일반 캐릭터도 @접속유지를 쓸 수 있다.
+	// 대상만 넓히고 맵 제한(at_mapflag)·사망·캐시 노점 검사와 EXP 규칙은 그대로 둔다.
+	// 상점 없는 접속 유지는 재시작 때 복원되지 않으며(복원은 vendings/buyingstores 기준)
+	// 같은 계정이 다시 접속하면 chrif 중복 접속 처리로 정리된다.
+	// 노점 캐릭터는 대화·거래·창고 등을 열 수 없지만 일반 캐릭터는 열 수 있으므로,
+	// 그런 창이 열린 채 연결만 끊겨 상대/스크립트가 멈추지 않도록 먼저 막는다.
+	if( !sd->state.vending && !sd->state.buyingstore && pc_cant_act(sd) ) {
+		clif_displaymessage(fd, msg_txt(sd,673)); // "This action can't be performed at the moment. Please try again later."
 		return -1;
 	}
 	if (sd->state.vending && sd->vending_currency == e_vending_currency::CASH && !battle_config.cash_vending_autotrade) {
