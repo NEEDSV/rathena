@@ -330,7 +330,7 @@ def gen_server(cfg, sets_states, grids, db_sha):
         o.append('\t{ %d, %u, 0x%016xULL, // %s' % (s['tag'], s['id'], set_script_hash(s['scripts']), s['name']))
         o.append('\t\t{ ' + rows + ' } },')
     o.append('};')
-    return ('\n'.join(o) + '\n').encode('ascii')
+    return ('\n'.join(o) + '\n').replace('\n', '\r\n').encode('ascii')   # CRLF like the other src files (autocrlf checkouts)
 
 
 def generate(cfg, kr, en, icon_root=None):
