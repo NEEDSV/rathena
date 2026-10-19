@@ -8814,6 +8814,11 @@ bool skill_check_condition_castbegin( map_session_data& sd, uint16 skill_id, uin
 			else
 				sd.spiritball_old = require.spiritball;
 			break;
+		case SR_RAMPAGEBLASTER:
+			// NEED: the restored 2017 damage formula multiplies by spiritball_old (rampageblaster.cpp), which
+			// nothing set for this skill, so it dealt 0 damage. Record the DB sphere cost; the 3-sphere requirement stays.
+			sd.spiritball_old = skill_get_spiritball(skill_id, skill_lv);
+			break;
 		case MO_CHAINCOMBO:
 			if(!sc)
 				return false;
