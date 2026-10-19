@@ -1,0 +1,180 @@
+// NEED MARBLE v1.1 - GM movement-only prototype.
+// Target: confirmed need_marbl v1.0 art + v0.6 GAT coordinates.
+// Safe scope: NO rewards, NO costs, NO DB schema changes, NO map resource changes.
+// GM test commands: @mbroll / @mbdice 4 / @mbstatus / @mbreset
+// Remove/disable older NEED Marble test scripts before enabling this one.
+
+-	script	NEED_MarbleMotion	-1,{
+OnInit:
+    setarray .x[0], 82, 86, 90, 94, 98, 102, 106, 110, 114, 118, 118, 118, 118, 118, 118, 118, 118, 118, 114, 110, 106, 102, 98, 94, 90, 86, 82, 82, 82, 82, 82, 82, 82;
+    setarray .y[0], 84, 84, 84, 84, 84, 84, 84, 84, 84, 84, 88, 92, 96, 100, 104, 108, 112, 116, 116, 116, 116, 116, 116, 116, 116, 116, 116, 112, 108, 104, 96, 92, 88;
+    setarray .tile$[0], "START", "Prontera", "Event", "Poring", "Payon", "Treasure", "Geffen", "Warp", "BONUS", "Morroc", "Monster", "Izlude", "Event", "Hugel", "Tax", "Amatsu", "BOSS", "Dungeon", "Treasure", "Comodo", "Event", "Niflheim", "Warp", "Monster", "Glast Heim", "JAIL", "Alberta", "Event", "Juno", "Treasure", "Rachel", "Monster", "Lutie";
+    .n = 33;
+    bindatcmd "mbroll", strnpcinfo(3)+"::OnRoll", 0, 99;
+    bindatcmd "mbdice", strnpcinfo(3)+"::OnDice", 0, 99;
+    bindatcmd "mbstatus", strnpcinfo(3)+"::OnStatus", 0, 99;
+    bindatcmd "mbreset", strnpcinfo(3)+"::OnReset", 0, 99;
+    end;
+
+OnRoll:
+    callsub S_Roll, 0;
+    end;
+
+OnDice:
+    if (.@atcmd_numparameters < 1) {
+        dispbottom "[MARBLE TEST] Usage: @mbdice 1..6";
+        end;
+    }
+    .@die = atoi(.@atcmd_parameters$[0]);
+    if (.@die < 1 || .@die > 6) {
+        dispbottom "[MARBLE TEST] Dice must be 1..6.";
+        end;
+    }
+    callsub S_Roll, .@die;
+    end;
+
+S_Roll:
+    .@forced = getarg(0);
+    if (strcharinfo(3) != "need_marbl") {
+        dispbottom "[MARBLE TEST] Enter need_marbl first.";
+        return;
+    }
+    if (#NMB_READY != 1) {
+        #NMB_READY = 1;
+        #NMB_POS = 0;
+        #NMB_PENDING = 0;
+        #NMB_LEFT = 0;
+        #NMB_ROLLS = 0;
+        #NMB_LAPS = 0;
+        #NMB_EXPECT = 0;
+        @NMB_BUSY = 0;
+        dispbottom "[MARBLE TEST] Initialized at START. Roll again.";
+        warp "need_marbl", .x[0], .y[0];
+        return;
+    }
+    if (@NMB_BUSY == 1) {
+        // A 10-second recovery window prevents orphaned timer locks after a reload.
+        if (gettimetick(2) - #NMB_STARTED < 10) {
+            dispbottom "[MARBLE TEST] Character is still walking.";
+            return;
+        }
+        @NMB_BUSY = 0;
+        dispbottom "[MARBLE TEST] Previous walk timed out; recovering.";
+    }
+    if (getmapxy(.@map$, .@px, .@py, BL_PC) != 0) {
+        dispbottom "[MARBLE TEST] Cannot read current position.";
+        return;
+    }
+    // Never trust a partial/manual move: recover to the last committed tile.
+    if (.@map$ != "need_marbl" || .@px != .x[#NMB_POS] || .@py != .y[#NMB_POS]) {
+        dispbottom "[MARBLE TEST] Resync to last completed tile; repeat command.";
+        unitstopwalk getcharid(3), 8;
+        warp "need_marbl", .x[#NMB_POS], .y[#NMB_POS];
+        return;
+    }
+    if (#NMB_PENDING == 1) {
+        dispbottom "[MARBLE TEST] Resume pending roll; remaining: "+#NMB_LEFT;
+        callsub S_BeginStep;
+        return;
+    }
+    .@die = (.@forced > 0 ? .@forced : rand(1,6));
+    #NMB_DIE = .@die;
+    #NMB_LEFT = .@die;
+    #NMB_EXPECT = #NMB_POS;
+    #NMB_PENDING = 1;
+    #NMB_ROLLS++;
+    dispbottom "[MARBLE TEST] Dice: "+.@die+". Moving one tile at a time.";
+    callsub S_BeginStep;
+    return;
+
+S_BeginStep:
+    if (#NMB_PENDING != 1) return;
+    if (#NMB_LEFT <= 0) {
+        #NMB_LEFT = 0;
+        #NMB_PENDING = 0;
+        @NMB_BUSY = 0;
+        dispbottom "[MARBLE TEST] Arrived at tile "+#NMB_POS+" ("+.tile$[#NMB_POS]+"). No reward.";
+        return;
+    }
+    if (strcharinfo(3) != "need_marbl") return;
+    .@next = (#NMB_POS + 1) % .n;
+    if (!checkcell("need_marbl",.x[.@next],.y[.@next],cell_chkpass)) {
+        @NMB_BUSY = 0;
+        dispbottom "[MARBLE TEST] Next tile is not passable: "+.@next;
+        return;
+    }
+    #NMB_EXPECT = .@next;
+    @NMB_CHECKS = 0;
+    #NMB_STARTED = gettimetick(2);
+    // Event-free unitwalk + delayed coordinate verification avoids duplicate
+    // OnReach callbacks on older rAthena branches.
+    if (unitwalk(getcharid(3),.x[.@next],.y[.@next])) {
+        @NMB_BUSY = 1;
+        addtimer 1500, strnpcinfo(3)+"::OnStepCheck";
+    } else {
+        @NMB_BUSY = 0;
+        dispbottom "[MARBLE TEST] unitwalk failed. Use @mbroll to retry.";
+    }
+    return;
+
+OnStepCheck:
+    if (!playerattached()) end;
+    if (#NMB_PENDING != 1 || @NMB_BUSY != 1) end;
+    if (strcharinfo(3) != "need_marbl") {
+        @NMB_BUSY = 0;
+        end;
+    }
+    if (getmapxy(.@map$, .@px, .@py, BL_PC) != 0) {
+        @NMB_BUSY = 0;
+        end;
+    }
+    if (.@map$ == "need_marbl" && .@px == .x[#NMB_EXPECT] && .@py == .y[#NMB_EXPECT]) {
+        #NMB_POS = #NMB_EXPECT;
+        #NMB_LEFT--;
+        if (#NMB_POS == 0) #NMB_LAPS++;
+        @NMB_BUSY = 0;
+        dispbottom "[MARBLE TEST] Tile "+#NMB_POS+" ("+.tile$[#NMB_POS]+"), left "+#NMB_LEFT;
+        callsub S_BeginStep;
+        end;
+    }
+    if (@NMB_CHECKS < 2) {
+        @NMB_CHECKS++;
+        addtimer 1500, strnpcinfo(3)+"::OnStepCheck";
+        end;
+    }
+    // Do not auto-warp or advance progress if an interrupted movement never arrived.
+    @NMB_BUSY = 0;
+    dispbottom "[MARBLE TEST] Walk interrupted. @mbroll to resync and resume.";
+    end;
+
+OnStatus:
+    if (#NMB_READY != 1) {
+        dispbottom "[MARBLE TEST] Not initialized. @warp need_marbl 82 84, then @mbroll.";
+        end;
+    }
+    dispbottom "[MARBLE TEST] Tile "+#NMB_POS+" ("+.tile$[#NMB_POS]+") / rolls "+#NMB_ROLLS+" / laps "+#NMB_LAPS;
+    dispbottom "[MARBLE TEST] Pending="+#NMB_PENDING+" left="+#NMB_LEFT+" expected="+#NMB_EXPECT+" busy="+@NMB_BUSY;
+    end;
+
+OnReset:
+    if (strcharinfo(3) != "need_marbl") {
+        dispbottom "[MARBLE TEST] Enter need_marbl first.";
+        end;
+    }
+    unitstopwalk getcharid(3), 8;
+    if (@NMB_BUSY == 1) deltimer strnpcinfo(3)+"::OnStepCheck";
+    @NMB_BUSY = 0;
+    @NMB_CHECKS = 0;
+    #NMB_READY = 1;
+    #NMB_POS = 0;
+    #NMB_LEFT = 0;
+    #NMB_PENDING = 0;
+    #NMB_EXPECT = 0;
+    #NMB_DIE = 0;
+    #NMB_ROLLS = 0;
+    #NMB_LAPS = 0;
+    #NMB_STARTED = 0;
+    dispbottom "[MARBLE TEST] Reset to START; zero rewards.";
+    warp "need_marbl", .x[0], .y[0];
+    end;
+}
