@@ -1,0 +1,523 @@
+//===== NEED MARBLE board v2 - Phase B/C (account shared ledger) =====
+// Branch : feature/need-marble-phase-bc-v1 (NOT for the live server yet)
+// Load   : npc/NEED/marble/scripts_marble.conf only. It is NOT in npc/scripts_need.conf,
+//          so merging this branch loads nothing by itself.
+// Ledger : src/map/need_marble.cpp. Score, dice, board tile, open roll, steps and the
+//          33-step bonus are per ACCOUNT in SQL. @MB_* are only per-call outputs.
+// Command: @marble (every player). Separate from the GM v1.2 core (@mbroll / @mbdice /
+//          @mbstatus / @mbreset), which keeps its own per-character test data.
+// Rewards: CP results are recorded as pending (DECIDED). Nothing here pays cash points.
+// Switch : nothing works until need_marble_policy key 1 = 1 (default 0) and the schema exists.
+//==============================================================
+
+-	script	NEED_MarbleBoard	-1,{
+OnInit:
+	setarray .x[0], 82, 86, 90, 94, 98, 102, 106, 110, 114, 118, 118, 118, 118, 118, 118, 118, 118, 118, 114, 110, 106, 102, 98, 94, 90, 86, 82, 82, 82, 82, 82, 82, 82;
+	setarray .y[0], 84, 84, 84, 84, 84, 84, 84, 84, 84, 84, 88, 92, 96, 100, 104, 108, 112, 116, 116, 116, 116, 116, 116, 116, 116, 116, 116, 112, 108, 104, 96, 92, 88;
+	setarray .tile$[0], "START", "Prontera", "Event", "Poring", "Payon", "Treasure", "Geffen", "Warp", "BONUS", "Morroc", "Monster", "Izlude", "Event", "Hugel", "Tax", "Amatsu", "BOSS", "Dungeon", "Treasure", "Comodo", "Event", "Niflheim", "Warp", "Monster", "Glast Heim", "JAIL", "Alberta", "Event", "Juno", "Treasure", "Rachel", "Monster", "Lutie";
+	setarray .tile_ko$[0], "출발", "프론테라", "이벤트", "포링", "페이욘", "보물", "게펜", "워프", "보너스", "모로크", "몬스터", "이즈루드", "이벤트", "휘겔", "세금", "아마츠", "보스", "던전", "보물", "코모도", "이벤트", "니플헤임", "워프", "몬스터", "글래스트헤임", "감옥", "알베르타", "이벤트", "주노", "보물", "라헬", "몬스터", "루티에";
+	// Tile kind per index. Must equal need_marble::BOARD in src/map/need_marble_logic.hpp (checked by tests/need_marble).
+	setarray .kind[0], 10, 1, 2, 6, 1, 3, 1, 11, 7, 1, 4, 1, 2, 1, 8, 1, 5, 12, 3, 1, 2, 1, 11, 4, 1, 9, 1, 2, 1, 3, 1, 4, 1;
+	.n = 33;
+	.map$ = "need_marbl";
+	.poll_ms = 300;
+	.stall_ms = 1500;
+	.cell_cap_ms = 1000;
+	.log = 1;
+
+	.broken = 0;
+	for (.@i = 0; .@i < .n; .@i++) {
+		.@j = (.@i + 1) % .n;
+		if (!checkcell(.map$, .x[.@i], .y[.@i], CELL_CHKPASS))
+			.broken = 1;
+		if (.x[.@i] != .x[.@j] && .y[.@i] != .y[.@j])
+			.broken = 1;
+	}
+	if (getarraysize(.x) != .n || getarraysize(.y) != .n || getarraysize(.tile$) != .n || getarraysize(.tile_ko$) != .n || getarraysize(.kind) != .n)
+		.broken = 1;
+	if (.broken)
+		debugmes "NEED_MARBLE v2: board check failed on '" + .map$ + "', @marble refuses.";
+	else
+		debugmes "NEED_MARBLE v2: board ok, ledger ready=" + need_marble_policy(0) + ".";
+
+	// Every player may use @marble; level2 100 = nobody can use the #marble form on others.
+	bindatcmd "marble", strnpcinfo(3) + "::OnMenu", 0, 100;
+	end;
+
+//------------------------------------------------------------------ menu
+OnMenu:
+	if (.broken) {
+		dispbottom needtr("[라그 마블] 게임판 확인에 실패해 사용할 수 없습니다.", "[RO Marble] The board check failed on this server.");
+		end;
+	}
+	.@rc = need_marble_view();
+	if (.@rc != 0 || @MB_READY != 1) {
+		mes needtr("[라그 마블]", "[RO Marble]");
+		mes needtr("지금은 라그 마블 이벤트가 열려 있지 않습니다.", "The RO Marble event is not open right now.");
+		close;
+	}
+	callsub S_Expire;
+	mes needtr("[라그 마블]", "[RO Marble]");
+	mes needtr("활동 점수: ", "Activity score: ") + @MB_SCORE + needtr("점", "") + "  /  " + needtr("주사위: ", "Dice: ") + @MB_DICE + " / " + @MB_HOLD;
+	mes needtr("오늘 획득: ", "Earned today: ") + @MB_TODAY_TOTAL + " / " + @MB_CAP_TOTAL;
+	mes needtr(" - 사냥 ", " - Hunting ") + @MB_TODAY_HUNT + "/" + @MB_CAP_HUNT + "  (" + @MB_HUNT_KILLS + needtr("마리", " kills") + ")";
+	mes needtr(" - 인던 ", " - Instances ") + @MB_TODAY_INST + "/" + @MB_CAP_INST;
+	mes needtr(" - 전장 ", " - Battlegrounds ") + @MB_TODAY_BG + "/" + @MB_CAP_BG + (@MB_BG_ON ? "" : needtr(" (준비 중)", " (not yet)"));
+	mes needtr("위치: ", "Tile: ") + @MB_POS + " " + needtr(.tile_ko$[@MB_POS], .tile$[@MB_POS]) + callsub(S_StateText);
+	mes needtr("CP 보상 대기: ", "CP pending: ") + callfunc("F_InsertComma", @MB_CP_PENDING) + " (" + @MB_CP_COUNT + needtr("건, 운영 승인 후 지급", ", paid after operator approval") + ")";
+	next;
+	.@on_board = (strcharinfo(3) == .map$);
+	.@m = select(
+		needtr("게임 규칙", "Rules"),
+		needtr("점수 → 주사위 교환", "Exchange score for dice"),
+		(.@on_board ? (@MB_STATE == 0 ? needtr("주사위 굴리기", "Roll the dice") : (@MB_STATE == 4 ? "" : needtr("이동 이어가기", "Continue moving"))) : ""),
+		(@MB_STATE == 4 ? needtr("던전 칸: 안전 / 도전 선택", "Dungeon tile: choose safe / challenge") : ""),
+		(.@on_board ? "" : needtr("게임판으로 이동", "Go to the board")),
+		(.@on_board ? needtr("확정 칸으로 위치 복구", "Return to my committed tile") : ""),
+		(.@on_board ? needtr("게임판에서 나가기", "Leave the board") : ""),
+		needtr("닫기", "Close"));
+	switch (.@m) {
+	case 1:
+		callsub S_Rules;
+		close;
+	case 2:
+		callsub S_Exchange;
+		close;
+	case 3:
+		close2;
+		callsub S_Roll;
+		end;
+	case 4:
+		callsub S_Dungeon;
+		close;
+	case 5:
+		callsub S_Enter;
+		end;
+	case 6:
+		close2;
+		callsub S_Recover;
+		end;
+	case 7:
+		close2;
+		callsub S_Leave;
+		end;
+	default:
+		close;
+	}
+
+S_StateText:
+	if (@MB_STATE == 1)
+		return needtr(" (이동 중, 남은 ", " (moving, ") + @MB_LEFT + needtr("칸)", " left)");
+	if (@MB_STATE == 2 || @MB_STATE == 3)
+		return needtr(" (멈춤, 남은 ", " (paused, ") + @MB_LEFT + needtr("칸 - 이어가기 가능)", " left - you can continue)");
+	if (@MB_STATE == 4)
+		return needtr(" (던전 칸 선택 대기)", " (dungeon choice open)");
+	return "";
+
+S_Rules:
+	mes needtr("[라그 마블 규칙]", "[RO Marble rules]");
+	mes needtr("사냥·인던·전장으로 활동 점수를 모으고, ", "Collect activity score from hunting, instances and battlegrounds, ");
+	mes needtr(@MB_COST + "점마다 주사위 1개로 교환해 33칸 게임판을 돕니다.", "exchange " + @MB_COST + " points for one die and walk the 33 tile board.");
+	mes needtr("마지막으로 멈춘 칸에서만 보상이 결정되고,", "Only the tile you stop on decides a reward,");
+	mes needtr("실제로 걸은 33걸음마다 '33걸음 누적 보너스'가 있습니다.", "and every 33 walked steps gives the 33-step bonus.");
+	mes needtr("점수·주사위·위치는 계정의 모든 캐릭터가 함께 씁니다.", "Score, dice and position are shared by every character of the account.");
+	mes needtr("하루 획득 한도는 매일 04:00(한국 시간)에 초기화됩니다.", "The daily limit resets every day at 04:00 KST.");
+	return;
+
+// Shows a request whose result was never confirmed, before anything new.
+S_Expire:
+	if (@MB_PACK > 0) {
+		.@rc = need_marble_exchange(5, 1);   // read only: never issues a request
+		if (.@rc == -7)
+			callsub S_ShowRequest;
+		need_marble_view();
+	}
+	return;
+
+S_ShowRequest:
+	mes needtr("[라그 마블] 이전 교환 요청 #", "[RO Marble] Previous exchange request #") + @MB_REQ;
+	if (@MB_REQ_STATUS == 1) {
+		mes needtr("주사위 ", "Dice ") + @MB_REQ_BUNDLES + needtr("개 / 점수 ", " / score ") + @MB_REQ_COST + needtr(" 요청이 아직 확정되지 않았습니다.", " has not been confirmed yet.");
+		next;
+		if (select(needtr("이 요청으로 교환 확정", "Confirm this request"), needtr("요청 취소", "Cancel the request")) == 1) {
+			callsub S_Commit, @MB_REQ;
+			return;
+		}
+		need_marble_exchange(4, @MB_REQ);
+		mes needtr("요청을 취소했습니다. 점수와 주사위는 바뀌지 않았습니다.", "Request cancelled. Score and dice did not change.");
+		next;
+		return;
+	}
+	callsub S_ResultText;
+	next;
+	need_marble_exchange(3, @MB_REQ);
+	return;
+
+S_ResultText:
+	if (@MB_REQ_STATUS == 2)
+		mes needtr("교환 완료: 점수 ", "Exchange done: score ") + @MB_REQ_COST + needtr(" → 주사위 ", " -> dice ") + @MB_REQ_BUNDLES + needtr("개", "");
+	else if (@MB_REQ_STATUS == 3) {
+		if (@MB_REQ_REJECT == 1)
+			mes needtr("교환 실패: 점수가 부족합니다.", "Exchange refused: not enough score.");
+		else if (@MB_REQ_REJECT == 2)
+			mes needtr("교환 실패: 주사위는 최대 ", "Exchange refused: you can hold at most ") + @MB_HOLD + needtr("개까지 보관할 수 있습니다. 점수는 그대로입니다.", " dice. Your score is unchanged.");
+		else if (@MB_REQ_REJECT == 5)
+			mes needtr("교환 실패: 오늘 교환 한도에 도달했습니다.", "Exchange refused: today's exchange limit is reached.");
+		else
+			mes needtr("교환 실패: 계정이 점검 대기 상태입니다. 운영자에게 문의하세요.", "Exchange refused: the account is locked for review.");
+	} else
+		mes needtr("요청이 만료되었습니다. 점수와 주사위는 바뀌지 않았습니다.", "The request expired. Score and dice did not change.");
+	return;
+
+S_Commit:
+	.@req = getarg(0);
+	.@rc = need_marble_exchange(2, .@req);
+	if (.@rc == 0 || .@rc == -20 || .@rc == -8 || .@rc == -4) {
+		callsub S_ResultText;
+		next;
+		need_marble_exchange(3, .@req);
+		return;
+	}
+	// Unknown outcome: keep the request open, it is shown again next time.
+	mes needtr("처리 결과를 확인하지 못했습니다. 다시 메뉴를 열면 같은 요청의 결과를 보여 드립니다.", "The result could not be confirmed. Open the menu again to see this same request.");
+	next;
+	return;
+
+S_Exchange:
+	need_marble_view();
+	mes needtr("[교환] ", "[Exchange] ") + @MB_COST + needtr("점 = 주사위 1개", " points = 1 die");
+	mes needtr("보유 점수 ", "Score ") + @MB_SCORE + needtr(", 주사위 ", ", dice ") + @MB_DICE + " / " + @MB_HOLD;
+	.@max = @MB_SCORE / @MB_COST;
+	if (.@max > @MB_HOLD - @MB_DICE)
+		.@max = @MB_HOLD - @MB_DICE;
+	if (.@max > @MB_MAXBUNDLE)
+		.@max = @MB_MAXBUNDLE;
+	if (.@max < 1) {
+		mes needtr("지금은 교환할 수 없습니다 (점수 부족 또는 보관 한도).", "Nothing to exchange now (not enough score or the hold limit).");
+		return;
+	}
+	mes needtr("몇 개로 교환할까요? (1~", "How many dice? (1-") + .@max + ")";
+	next;
+	if (input(.@n, 1, .@max) != 0) {
+		mes needtr("교환을 그만두었습니다.", "Exchange cancelled.");
+		return;
+	}
+	.@rc = need_marble_exchange(1, .@n);
+	if (.@rc == -7) {
+		callsub S_ShowRequest;
+		return;
+	}
+	if (.@rc != 0) {
+		mes needtr("교환 요청을 만들지 못했습니다. (", "Could not create the request. (") + .@rc + ")";
+		return;
+	}
+	.@req = @MB_REQ;
+	mes needtr("점수 ", "Spend ") + @MB_REQ_COST + needtr("점을 주사위 ", " points for ") + @MB_REQ_BUNDLES + needtr("개로 교환합니다.", " dice.");
+	next;
+	if (select(needtr("교환", "Exchange"), needtr("취소", "Cancel")) == 2) {
+		need_marble_exchange(4, .@req);
+		mes needtr("교환을 취소했습니다.", "Exchange cancelled.");
+		return;
+	}
+	callsub S_Commit, .@req;
+	need_marble_view();
+	mes needtr("현재 점수 ", "Score ") + @MB_SCORE + needtr(", 주사위 ", ", dice ") + @MB_DICE;
+	return;
+
+S_Dungeon:
+	need_marble_view();
+	if (@MB_STATE != 4) {
+		mes needtr("선택할 던전 칸이 없습니다.", "There is no open dungeon tile.");
+		return;
+	}
+	mes needtr("[던전 칸]", "[Dungeon tile]");
+	mes needtr("안전: ", "Safe: ") + callfunc("F_InsertComma", need_marble_policy(56)) + " CP";
+	mes needtr("도전: ", "Challenge: ") + (need_marble_policy(57) / 100) + "% " + callfunc("F_InsertComma", need_marble_policy(58)) + " CP";
+	next;
+	.@c = select(needtr("안전", "Safe"), needtr("도전", "Challenge"), needtr("나중에", "Later"));
+	if (.@c == 3)
+		return;
+	.@rc = need_marble_choice(@MB_ROLL, .@c);
+	if (.@rc != 0) {
+		mes needtr("이미 처리된 칸입니다.", "This tile was already resolved.");
+		return;
+	}
+	if (@MB_CP > 0)
+		mes needtr("결과: ", "Result: ") + callfunc("F_InsertComma", @MB_CP) + needtr(" CP (지급 대기)", " CP (pending)");
+	else
+		mes needtr("결과: 아쉽게도 보상이 없습니다.", "Result: no reward this time.");
+	return;
+
+S_Enter:
+	getmapxy(.@m$, .@px, .@py);
+	if (isdead() || getmapflag(.@m$, MF_BATTLEGROUND) || getmapflag(.@m$, MF_PVP) || getmapflag(.@m$, MF_GVG) || getmapflag(.@m$, MF_NOWARP) || charat(.@m$, 1) == "@") {
+		mes needtr("이곳에서는 게임판으로 이동할 수 없습니다.", "You cannot go to the board from here.");
+		close;
+	}
+	MB_RET_MAP$ = .@m$;
+	MB_RET_X = .@px;
+	MB_RET_Y = .@py;
+	close2;
+	callsub S_Log, "enter";
+	warp .map$, .x[@MB_POS], .y[@MB_POS];
+	end;
+
+S_Leave:
+	callsub S_StopLocal, 10;
+	callsub S_Log, "leave";
+	if (MB_RET_MAP$ != "" && MB_RET_MAP$ != .map$)
+		warp MB_RET_MAP$, MB_RET_X, MB_RET_Y;
+	else
+		warp "SavePoint", 0, 0;
+	return;
+
+S_Recover:
+	callsub S_StopLocal, 11;
+	need_marble_view();
+	unitstopwalk getcharid(3), USW_FIXPOS|USW_FORCE_STOP;
+	warp .map$, .x[@MB_POS], .y[@MB_POS];
+	dispbottom needtr("[라그 마블] 확정 칸 ", "[RO Marble] Back on committed tile ") + @MB_POS + needtr("으로 이동했습니다.", ".");
+	return;
+
+// Stops the walk this login is driving (if any) and pauses it in the ledger.
+S_StopLocal:
+	deltimer strnpcinfo(3) + "::OnPoll";
+	@MB_ARMED = 0;
+	if (@MB_DRV > 0)
+		need_marble_move(4, @MB_DRV, getarg(0));
+	@MB_DRV = 0;
+	return;
+
+//------------------------------------------------------------------ movement
+S_Roll:
+	if (strcharinfo(3) != .map$) {
+		dispbottom needtr("[라그 마블] 게임판에서만 굴릴 수 있습니다.", "[RO Marble] You can roll only on the board.");
+		return;
+	}
+	if (isdead() || Sitting) {
+		dispbottom needtr("[라그 마블] 일어선 상태에서 굴려 주세요.", "[RO Marble] Stand up first.");
+		return;
+	}
+	// A walk this login thinks it drives, but whose timer is long gone.
+	if (@MB_DRV > 0 && gettimetick(0) > @MB_DEADLINE + 3000)
+		callsub S_StopLocal, 8;
+	.@rc = need_marble_roll(@MB_DRV);
+	if (.@rc == -12) {
+		dispbottom needtr("[라그 마블] 던전 칸 선택이 남아 있습니다. @marble 메뉴에서 선택해 주세요.", "[RO Marble] A dungeon tile is waiting for your choice in @marble.");
+		return;
+	}
+	if (.@rc == -3) {
+		dispbottom needtr("[라그 마블] 이동 중입니다.", "[RO Marble] Still moving.");
+		return;
+	}
+	if (.@rc == -11) {
+		dispbottom needtr("[라그 마블] 주사위가 없습니다. 활동 점수를 교환해 주세요.", "[RO Marble] No dice. Exchange activity score first.");
+		return;
+	}
+	if (.@rc < 0) {
+		dispbottom needtr("[라그 마블] 지금은 굴릴 수 없습니다. (", "[RO Marble] Cannot roll now. (") + .@rc + ")";
+		return;
+	}
+	@MB_DRV = @MB_RUN;
+	getmapxy(.@m$, .@px, .@py);
+	if (.@px != .x[@MB_POS] || .@py != .y[@MB_POS]) {
+		// Never take over a manual position: back to the committed tile, nothing spent twice.
+		need_marble_move(3, @MB_DRV, 12);
+		@MB_DRV = 0;
+		unitstopwalk getcharid(3), USW_FIXPOS|USW_FORCE_STOP;
+		warp .map$, .x[@MB_POS], .y[@MB_POS];
+		dispbottom needtr("[라그 마블] 확정 칸으로 돌아왔습니다. 다시 굴리기를 누르면 이어서 이동합니다.", "[RO Marble] Back on the committed tile. Roll again to continue the same roll.");
+		return;
+	}
+	if (.@rc == 0)
+		dispbottom needtr("[라그 마블] 주사위 ", "[RO Marble] Dice ") + @MB_DIE + needtr("! 한 칸씩 이동합니다.", "! Moving one tile at a time.");
+	else
+		dispbottom needtr("[라그 마블] 이전 주사위를 이어서 이동합니다. 남은 칸 ", "[RO Marble] Continuing the previous roll, steps left ") + @MB_LEFT;
+	callsub S_Log, "roll";
+	if (.@rc == 2 || @MB_LEFT <= 0) {
+		callsub S_Arrive;
+		return;
+	}
+	callsub S_Step;
+	return;
+
+S_Step:
+	@MB_FROM = @MB_POS;
+	@MB_EXPECT = (@MB_POS + 1) % .n;
+	if (!checkcell(.map$, .x[@MB_EXPECT], .y[@MB_EXPECT], CELL_CHKPASS)) {
+		callsub S_Pause, 6;
+		return;
+	}
+	unitstopwalk getcharid(3), USW_FORCE_STOP;
+	if (!unitwalk(getcharid(3), .x[@MB_EXPECT], .y[@MB_EXPECT])) {
+		callsub S_Pause, 7;
+		return;
+	}
+	.@cells = (.x[@MB_EXPECT] - .x[@MB_FROM]) + (.y[@MB_EXPECT] - .y[@MB_FROM]);
+	if (.@cells < 0)
+		.@cells = -.@cells;
+	@MB_STEP++;
+	@MB_DIST = .@cells;
+	@MB_MOVED_AT = gettimetick(0);
+	@MB_DEADLINE = gettimetick(0) + .@cells * .cell_cap_ms + 2000;
+	@MB_ARMED = @MB_STEP;
+	deltimer strnpcinfo(3) + "::OnPoll";
+	addtimer .poll_ms, strnpcinfo(3) + "::OnPoll";
+	return;
+
+OnPoll:
+	if (@MB_ARMED == 0 || @MB_ARMED != @MB_STEP)
+		end;
+	@MB_ARMED = 0;
+	if (@MB_DRV <= 0)
+		end;
+	if (strcharinfo(3) != .map$) {
+		callsub S_Pause, 1;
+		end;
+	}
+	if (isdead()) {
+		callsub S_Pause, 2;
+		end;
+	}
+	getmapxy(.@m$, .@px, .@py);
+	.@tx = .x[@MB_EXPECT];
+	.@ty = .y[@MB_EXPECT];
+	if (.@px == .@tx && .@py == .@ty) {
+		callsub S_Commit_Step;
+		end;
+	}
+	.@fx = .x[@MB_FROM];
+	.@fy = .y[@MB_FROM];
+	.@on = 0;
+	if (.@fx == .@tx && .@px == .@fx && ((.@py - .@fy) * (.@py - .@ty)) <= 0)
+		.@on = 1;
+	if (.@fy == .@ty && .@py == .@fy && ((.@px - .@fx) * (.@px - .@tx)) <= 0)
+		.@on = 1;
+	.@dist = (.@tx > .@px ? .@tx - .@px : .@px - .@tx) + (.@ty > .@py ? .@ty - .@py : .@py - .@ty);
+	if (!.@on || .@dist > @MB_DIST) {
+		callsub S_Pause, 3;
+		end;
+	}
+	.@now = gettimetick(0);
+	if (.@dist < @MB_DIST) {
+		@MB_DIST = .@dist;
+		@MB_MOVED_AT = .@now;
+	} else if (.@now - @MB_MOVED_AT > .stall_ms) {
+		callsub S_Pause, 4;
+		end;
+	}
+	if (.@now > @MB_DEADLINE) {
+		callsub S_Pause, 5;
+		end;
+	}
+	@MB_ARMED = @MB_STEP;
+	addtimer .poll_ms, strnpcinfo(3) + "::OnPoll";
+	end;
+
+// The ledger commits the step only if this run is still current and the tile matches.
+S_Commit_Step:
+	.@rc = need_marble_move(1, @MB_DRV, @MB_FROM);
+	if (.@rc != 0) {
+		@MB_DRV = 0;
+		dispbottom needtr("[라그 마블] 이동이 다른 접속에서 이어졌거나 상태가 바뀌어 멈췄습니다. (", "[RO Marble] Stopped: the roll is driven elsewhere or changed. (") + .@rc + ")";
+		callsub S_Log, "step_refused";
+		return;
+	}
+	if (@MB_LAP > 0)
+		dispbottom needtr("[라그 마블] 33걸음 누적 보너스 #", "[RO Marble] 33-step bonus #") + @MB_LAP + ": " + callfunc("F_InsertComma", @MB_LAPCP) + needtr(" CP (지급 대기)", " CP (pending)");
+	if (@MB_LEFT > 0) {
+		dispbottom needtr("[라그 마블] ", "[RO Marble] ") + @MB_POS + " " + needtr(.tile_ko$[@MB_POS], .tile$[@MB_POS]) + needtr(", 남은 칸 ", ", left ") + @MB_LEFT;
+		callsub S_Step;
+		return;
+	}
+	callsub S_Arrive;
+	return;
+
+S_Arrive:
+	.@rc = need_marble_move(2, @MB_DRV);
+	@MB_DRV = 0;
+	if (.@rc != 0) {
+		dispbottom needtr("[라그 마블] 도착 처리를 하지 못했습니다. @marble 에서 이동 이어가기를 눌러 주세요. (", "[RO Marble] Arrival not processed. Use Continue moving in @marble. (") + .@rc + ")";
+		callsub S_Log, "arrive_refused";
+		return;
+	}
+	callsub S_Log, "arrive";
+	if (@MB_KIND == 11) {
+		dispbottom needtr("[라그 마블] 워프! ", "[RO Marble] Warp! To tile ") + @MB_WARP + " " + needtr(.tile_ko$[@MB_WARP], .tile$[@MB_WARP]) + needtr(" 칸으로 이동합니다.", ".");
+		warp .map$, .x[@MB_WARP], .y[@MB_WARP];
+		return;
+	}
+	if (@MB_KIND == 12) {
+		@MB_AROLL = @MB_ROLL;
+		dispbottom needtr("[라그 마블] 던전 칸! @marble 메뉴에서 안전 또는 도전을 선택해 주세요.", "[RO Marble] Dungeon tile! Choose safe or challenge in @marble.");
+		if (@MB_AUTO_SAFE == 1) {
+			deltimer strnpcinfo(3) + "::OnDungeonAuto";
+			addtimer @MB_AUTO_SEC * 1000 + 500, strnpcinfo(3) + "::OnDungeonAuto";
+		}
+		return;
+	}
+	.@name$ = needtr(.tile_ko$[@MB_POS], .tile$[@MB_POS]);
+	if (@MB_KIND == 1)
+		.@head$ = .@name$ + needtr("에 도착했습니다! ", " reached! ");
+	else if (@MB_KIND == 4 || @MB_KIND == 5)
+		.@head$ = .@name$ + (@MB_CP > 0 ? needtr(" 승리! ", " won! ") : needtr(" 패배... ", " lost... "));
+	else if (@MB_KIND == 8 || @MB_KIND == 9)
+		.@head$ = .@name$ + needtr(" 칸입니다. (차감 없음) ", " tile. (nothing is taken) ");
+	else
+		.@head$ = .@name$ + needtr(" 칸! ", " tile! ");
+	if (@MB_CP > 0)
+		dispbottom needtr("[라그 마블] ", "[RO Marble] ") + .@head$ + callfunc("F_InsertComma", @MB_CP) + needtr(" CP (지급 대기)", " CP (pending)");
+	else
+		dispbottom needtr("[라그 마블] ", "[RO Marble] ") + .@head$;
+	return;
+
+// getarg(0): reason code. The ledger keeps the committed tile and the remaining steps.
+S_Pause:
+	deltimer strnpcinfo(3) + "::OnPoll";
+	@MB_ARMED = 0;
+	.@on_tile = 0;
+	if (strcharinfo(3) == .map$) {
+		unitstopwalk getcharid(3), USW_FIXPOS|USW_FORCE_STOP;
+		getmapxy(.@m$, .@px, .@py);
+		if (.@px == .x[@MB_FROM] && .@py == .y[@MB_FROM])
+			.@on_tile = 1;
+	}
+	if (@MB_DRV > 0)
+		need_marble_move(.@on_tile ? 3 : 4, @MB_DRV, getarg(0));
+	@MB_DRV = 0;
+	dispbottom needtr("[라그 마블] 이동이 멈췄습니다. @marble 에서 이동 이어가기를 누르면 같은 주사위로 계속합니다. (", "[RO Marble] Movement stopped. Use Continue moving in @marble to resume the same roll. (") + getarg(0) + ")";
+	callsub S_Log, "pause";
+	return;
+
+OnDungeonAuto:
+	if (@MB_AROLL > 0 && need_marble_choice(@MB_AROLL, 1, 1) == 0)
+		dispbottom needtr("[라그 마블] 던전 칸: 시간이 지나 '안전'으로 확정되었습니다. ", "[RO Marble] Dungeon tile: time is up, 'safe' was chosen. ") + callfunc("F_InsertComma", @MB_CP) + needtr(" CP (지급 대기)", " CP (pending)");
+	@MB_AROLL = 0;
+	end;
+
+// Activity credit notice from the C++ ledger (hunt checkpoint, instance clear, battleground).
+OnNotify:
+	if (@MB_NOTE_PTS <= 0)
+		end;
+	if (@MB_NOTE_ACT == 1)
+		.@what$ = needtr("사냥", "Hunting");
+	else if (@MB_NOTE_ACT == 2)
+		.@what$ = needtr("인던 클리어", "Instance clear");
+	else
+		.@what$ = needtr("전장", "Battleground");
+	dispbottom needtr("[라그 마블] ", "[RO Marble] ") + .@what$ + needtr(" 활동 점수 +", " activity score +") + @MB_NOTE_PTS;
+	@MB_NOTE_PTS = 0;
+	end;
+
+S_Log:
+	if (.log)
+		debugmes "NEED_MARBLE2 " + getarg(0) + " cid=" + getcharid(0) + " roll=" + @MB_ROLL + " run=" + @MB_RUN + " drv=" + @MB_DRV + " pos=" + @MB_POS + " left=" + @MB_LEFT + " state=" + @MB_STATE;
+	return;
+}
+
+// Board-only map: no teleport / memo / branch / ice wall that could break or skip a walk.
+// (Same flags as need_marble_motion_v1_2.txt, repeated so this file also works alone.)
+need_marbl	mapflag	noteleport
+need_marbl	mapflag	nomemo
+need_marbl	mapflag	nobranch
+need_marbl	mapflag	noicewall
