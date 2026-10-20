@@ -16,8 +16,8 @@
 | G1-5 | 정적 검사 | `python -I tests/need_marble/static_check.py <worktree>` | **PASS 64 / FAIL 0** | 아래 1.2. 첫 실행 FAIL 2건은 검사기 오탐(헤더 주석의 단어, 기존 v1.2 로드 줄)으로 확인 후 검사 조건을 정확히 함 |
 | G1-6 | GM v1.2 코어 훼손 여부 | `git diff 373dcfe27..HEAD -- npc/NEED/need_marble_motion_v1_2.txt npc/scripts_need.conf` | **PASS** | 변경 0줄 |
 | G1-7 | 하드코딩 비밀값·호스트·절대경로 | 정적 검사 8절 | **PASS** | 신규 파일 8개 0건 |
-| G1-8 | 불변식 점검 SQL | `sql-files/need_marble_phase_bc_v1_invariants.sql` | **NOT RUN** | DB 실행 금지. 문법도 DB 로 확인하지 않음 |
-| G1-9 | NPC 스크립트 구문 | map-server 파싱 | **NOT RUN** | 서버 기동 금지(G2) |
+| G1-8 | 불변식 점검 SQL | `sql-files/need_marble_phase_bc_v1_invariants.sql` | NOT RUN (G1) → G2 에서 실행, 위반 0 | 격리 DB 12회 |
+| G1-9 | NPC 스크립트 구문 | map-server 파싱 | NOT RUN (G1) → G2 에서 **PASS** | 격리 map-server 로그 오류 0 |
 
 ### 1.1 단위 시험 내용 (113개)
 
@@ -36,38 +36,38 @@
 
 NPC 가 CP949 로 읽힘 / NPC·v1.2 좌표·칸 이름 일치 / NPC 칸 종류 = C++ `BOARD` / NPC 가 쓰는 정책 키 번호 = 열거값 / 스키마 테이블 = C++ 설치 확인 목록 / 전부 InnoDB / 17개 테이블 숫자 PK / 되돌리기 SQL = 생성 테이블 / 스키마에 ALTER·DROP 없음 / 사냥 배치 키에 기간 포함 / 던전 일일 자격 키 / `next_tier` SMALLINT / 마스터 스위치 OFF 시드 / 마블 코드에 `#CASHPOINTS`·`pc_getcash`·`acc_reg_num` 없음 / CP 행은 DECIDED 로만 INSERT, UPDATE 없음 / CP 스위치 검증 / START·COMMIT·ROLLBACK 문자열이 `ledger_tx` 에만 1번씩 / `*_in_tx` 7개가 트랜잭션을 요구하고 열지 않음 / 스크립트 명령 8개 본문=정의 / NPC 는 정의된 명령만 호출 / 기본 로드 목록에 v2 없음 / v2 는 GM 명령을 바인딩하지 않고 `@marble` 하나만 / 신규 파일에 호스트·비밀번호·절대경로 없음.
 
-## 2. G2 — 격리 DB/서버 실행 시험 (별도 승인 전 실행 금지)
+## 2. G2 — 격리 DB/서버 실행 시험 (2026-10-20 승인 후 실행)
 
-V01~V24 전부 **NOT RUN**. 아래 "구현 대응"은 시험할 코드가 어디 있는지를 적은 것이지 통과했다는 뜻이 아니다.
+상세: `NEED_MARBLE_G2_EXECUTION_REPORT_v1_0.md`, 증거 `g2_evidence/`.
 
-| ID | 시나리오 (검증 계획 v0.3) | 구현 대응 | 결과 |
-|---|---|---|---|
-| V01 | 시즌 정산 | 미구현(v1.0 시즌 초기화 없음) | BLOCKED |
-| V02 | 키 길이·충돌 | 스키마 숫자 PK | NOT RUN |
-| V03 | 사냥 누계 기본 | `hunt_checkpoint` | NOT RUN |
-| V04 | 상한 우회 | `credit_in_tx`(EARN 기준) | NOT RUN |
-| V05 | COMMIT 응답 유실(롤) | `ledger_tx::commit` fail-closed, `run_session` CAS | NOT RUN |
-| V06 | 롤 중 강제 종료 | `need_marble_roll` 한 트랜잭션 | NOT RUN |
-| V07 | 캐릭터 전환 재개 | 재개 시 새 `run_session`, 옛 세션 step 거부 | NOT RUN |
-| V08 | 도착 이벤트 1회 | 이벤트 PK, 도착 CAS | NOT RUN |
-| V09 | 동시 접속 | `FOR UPDATE` + CAS | NOT RUN |
-| V10 | 인던·전장 실행 키 | `instance_credit`, `bg_credit` | NOT RUN |
-| V11 | 난수·워프·START | `rnd_value`, W1, `start_pass` | NOT RUN |
-| V12 | 오류·롤백 | `fault()` | NOT RUN |
-| V13 | 같은 던전 다른 인스턴스 | `need_marble_dungeon_daily` | NOT RUN |
-| V14 | 수집 세션·배치(A40→B10) | `hunt_buf`, 수집 세션 | NOT RUN |
-| V15 | 교환 재접속 이중 방지 | 요청 행·ack·peek | NOT RUN |
-| V16 | 체크포인트 중간 오류·중첩 | `ledger_tx` 가드 | NOT RUN (고장 주입 빌드 없음) |
-| V17 | 시즌 종료 동시 연산 | 시즌 행 공유 잠금만 | BLOCKED (정산 미구현) |
-| V18 | 파티 지원·AFK·캡차 | `hunt_member_ok`, `idle_for` | NOT RUN |
-| V19 | 워프·리셋 후 불변식 | jump 저널(WARP), GM 리셋은 v2 에 없음 | NOT RUN |
-| V20 | CP 2단계·UNCERTAIN | DECIDED 기록만, 적용 경로 없음 | BLOCKED (적용 경로 미구현·미승인) |
-| V21 | 배치에 기간 3개 이상 | PK 에 `period_day` | NOT RUN |
-| V22 | max_tiers·오버플로 | `hunt_next_tier`, `done_day` | NOT RUN (규칙 자체는 G1-4 PASS) |
-| V23 | 워프·던전 칸 | `need_marble_arrive`, `need_marble_choice` | NOT RUN |
-| V24 | 04:00 KST·정책 적용일 | `logical_day`, `policy_refresh` | NOT RUN (계산 자체는 G1-4 PASS) |
-
-G2 전제: 운영자 실행 승인, 격리 MariaDB·서버 포트, 합성 계정, 격리 복사본의 `need_marbl` 맵 등록, `npc/NEED/marble/scripts_marble.conf` import, 격리 DB 에서만 마스터 스위치 ON. 절차는 `NEED_MARBLE_DEPLOYMENT_AND_CP_GATE_v1_0.md` 4절.
+| ID | 시나리오 | 결과 |
+|---|---|---|
+| V01 | 시즌 정산 | BLOCKED (미구현) |
+| V02 | 키 길이·충돌 | **PASS** |
+| V03 | 사냥 누계 | BLOCKED (G-1(a) 더미 클라이언트 처치 불가) |
+| V04 | 상한 우회 | **PASS** (인던 범위) |
+| V05 | 재기동 후 이어가기 차감 없음 | **PASS** |
+| V06 | 롤 직후 강제 종료 | **PASS** (종료 시점 1회) |
+| V07 | 캐릭터 전환 재개 | **PASS** |
+| V08 | 도착 이벤트 1회 | **PASS** (부분: 58롤 중복 0, 중복 도착 주입 없음) |
+| V09 | 동시 연결 | **PASS** (SQL 모형) |
+| V10 | 인던 실행 키·재기동 | **PASS** (인던 범위, 전장 제외) |
+| V11 | 난수 1,000롤 | NOT RUN (58롤만) |
+| V12 | 잠금 대기 초과 | **PASS** (단, map-server 스레드 대기 = 운영 위험 F2) |
+| V13 | 같은 던전 다른 인스턴스 | **PASS** |
+| V14 | 수집 세션·배치 | BLOCKED |
+| V15 | 교환 응답 유실 → 다른 캐릭터 | **PASS** |
+| V16 | 중간 오류·중첩 | NOT RUN (고장 주입 빌드 미승인) |
+| V17 | 시즌 종료 동시 연산 | BLOCKED |
+| V18 | 파티 지원·AFK·캡차 | BLOCKED |
+| V19 | 워프·교체 후 불변식 | **PASS** (부분: GM 리셋 없음) |
+| V20 | CP | **PASS** (DECIDED 단계만), 반영 단계 BLOCKED |
+| V21 | 배치 기간 3개 이상 | BLOCKED |
+| V22 | max_tiers·오버플로 | BLOCKED (규칙은 G1-4 PASS) |
+| V23 | 워프·던전 칸 | **PASS** (메뉴 중 끊김·자동 안전 NOT RUN) |
+| V24 | 04:00 KST | NOT RUN |
+| 추가 | 교환 X-E1~X-E4, 33걸음 L1, NPC 실서버 파싱, 불변식 SQL 12회 | **PASS** |
+| G-1(a) | 프로토콜 클라이언트 몹 처치 | **FAIL** (시험 수단) |
 
 ## 3. QA 사용자 가이드 (G2 이후 사용)
 
