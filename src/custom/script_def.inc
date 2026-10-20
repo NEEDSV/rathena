@@ -64,3 +64,13 @@ BUILDIN_DEF(storageshoptarget, ""),
 BUILDIN_DEF(storageshopsettarget, "i"),
 BUILDIN_DEF(storageshopunlocked, "i"),
 BUILDIN_DEF(storageshopprepare, "?"),
+
+// NEED marble board (need_marble.cpp)
+BUILDIN_DEF(need_marble_view,""),
+BUILDIN_DEF(need_marble_exchange,"ii"),
+BUILDIN_DEF(need_marble_roll,"i?"),
+BUILDIN_DEF(need_marble_move,"ii?"),
+BUILDIN_DEF(need_marble_choice,"ii?"),
+BUILDIN_DEF(need_marble_instance_clear,"ss"),
+BUILDIN_DEF(need_marble_bg_match,"ssi"),
+BUILDIN_DEF(need_marble_policy,"i"),

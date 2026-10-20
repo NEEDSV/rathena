@@ -54,6 +54,7 @@
 #include "need_summer_attendance.hpp"
 #include "need_summer_fishing_reward.hpp"
 #include "need_summer_hunt.hpp"
+#include "need_marble.hpp"
 #include "need_chuseok_hunt.hpp"
 #ifndef MAP_GENERATOR
 #include "needwiki.hpp"
@@ -2254,6 +2255,7 @@ int32 map_quit(map_session_data *sd) {
 	need_autopot_logout(sd);
 	need_storage_shop_session_end(*sd);
 	need_fishing_free(sd); // clear fishing session AND last result on logout/disconnect
+	need_marble_on_logout(sd); // flush the marble hunt batch of this login
 	pc_bg_strip_clear_saved_equipment(sd);
 	costume_collection_db_clear(sd);
 
@@ -5106,6 +5108,7 @@ void MapServer::finalize(){
 	do_final_atcommand();
 	need_summer_hunt_final();
 	need_chuseok_hunt_final();
+	need_marble_final();
 	need_summer_attendance_final();
 	need_summer_fishing_reward_final();
 	need_autopot_final();
@@ -5602,6 +5605,7 @@ bool MapServer::initialize( int32 argc, char *argv[] ){
 	do_init_pc();
 	need_summer_hunt_init();
 	need_chuseok_hunt_init();
+	need_marble_init();
 	need_summer_attendance_init();
 	need_summer_fishing_reward_init();
 	need_autopot_init();

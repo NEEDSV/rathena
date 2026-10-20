@@ -1192,3 +1192,124 @@ BUILDIN_FUNC(needstylistcolor)
 	script_pushint(st, 1);
 	return SCRIPT_CMD_SUCCESS;
 }
+
+// ---------------------------------------------------------------------------
+// NEED marble board (need_marble.cpp). Every command returns an e_need_marble_rc
+// code and writes its details to @MB_* temporary character variables.
+// ---------------------------------------------------------------------------
+
+/// need_marble_view();
+BUILDIN_FUNC(need_marble_view)
+{
+	map_session_data* sd = nullptr;
+	if (!script_rid2sd(sd)) {
+		script_pushint(st, NEED_MARBLE_BAD_ARG);
+		return SCRIPT_CMD_SUCCESS;
+	}
+	script_pushint(st, need_marble_view(sd));
+	return SCRIPT_CMD_SUCCESS;
+}
+
+/// need_marble_exchange(<mode>,<value>);
+/// mode 1 = issue (value = dice), 2 = commit (value = request no), 3 = ack, 4 = cancel,
+/// 5 = peek at the unacknowledged request (value ignored, read only).
+BUILDIN_FUNC(need_marble_exchange)
+{
+	map_session_data* sd = nullptr;
+	if (!script_rid2sd(sd)) {
+		script_pushint(st, NEED_MARBLE_BAD_ARG);
+		return SCRIPT_CMD_SUCCESS;
+	}
+	int32 mode = script_getnum(st, 2);
+	int64 value = script_getnum64(st, 3);
+	int32 rc = NEED_MARBLE_BAD_ARG;
+	if (mode == 5) {
+		rc = need_marble_exchange_peek(sd);
+	} else if (value > 0) {
+		switch (mode) {
+			case 1: rc = need_marble_exchange_issue(sd, static_cast<int32>(value)); break;
+			case 2: rc = need_marble_exchange_commit(sd, static_cast<uint64>(value)); break;
+			case 3: rc = need_marble_exchange_ack(sd, static_cast<uint64>(value), false); break;
+			case 4: rc = need_marble_exchange_ack(sd, static_cast<uint64>(value), true); break;
+		}
+	}
+	script_pushint(st, rc);
+	return SCRIPT_CMD_SUCCESS;
+}
+
+/// need_marble_roll(<driving run>{,<forced die>});
+/// forced die is honoured only for a GM (group level 99) on a TEST season (>= 900000).
+BUILDIN_FUNC(need_marble_roll)
+{
+	map_session_data* sd = nullptr;
+	if (!script_rid2sd(sd)) {
+		script_pushint(st, NEED_MARBLE_BAD_ARG);
+		return SCRIPT_CMD_SUCCESS;
+	}
+	int64 run = script_getnum64(st, 2);
+	int32 forced = script_hasdata(st, 3) ? script_getnum(st, 3) : 0;
+	script_pushint(st, need_marble_roll(sd, run > 0 ? static_cast<uint64>(run) : 0, forced));
+	return SCRIPT_CMD_SUCCESS;
+}
+
+/// need_marble_move(<mode>,<run>{,<arg>});
+/// mode 1 = step (arg = committed tile), 2 = arrive, 3 = pause on tile (arg = reason), 4 = pause off tile.
+BUILDIN_FUNC(need_marble_move)
+{
+	map_session_data* sd = nullptr;
+	if (!script_rid2sd(sd)) {
+		script_pushint(st, NEED_MARBLE_BAD_ARG);
+		return SCRIPT_CMD_SUCCESS;
+	}
+	int32 mode = script_getnum(st, 2);
+	int64 run = script_getnum64(st, 3);
+	int32 arg = script_hasdata(st, 4) ? script_getnum(st, 4) : 0;
+	int32 rc = NEED_MARBLE_BAD_ARG;
+	if (run > 0) {
+		switch (mode) {
+			case 1: rc = need_marble_step(sd, static_cast<uint64>(run), arg); break;
+			case 2: rc = need_marble_arrive(sd, static_cast<uint64>(run)); break;
+			case 3: rc = need_marble_pause(sd, static_cast<uint64>(run), true, arg); break;
+			case 4: rc = need_marble_pause(sd, static_cast<uint64>(run), false, arg); break;
+		}
+	}
+	script_pushint(st, rc);
+	return SCRIPT_CMD_SUCCESS;
+}
+
+/// need_marble_choice(<roll seq>,<choice>{,<automatic>});  choice 1 = safe, 2 = challenge
+BUILDIN_FUNC(need_marble_choice)
+{
+	map_session_data* sd = nullptr;
+	if (!script_rid2sd(sd)) {
+		script_pushint(st, NEED_MARBLE_BAD_ARG);
+		return SCRIPT_CMD_SUCCESS;
+	}
+	int64 roll = script_getnum64(st, 2);
+	int32 choice = script_getnum(st, 3);
+	bool automatic = script_hasdata(st, 4) && script_getnum(st, 4) != 0;
+	script_pushint(st, roll > 0 ? need_marble_choice(sd, static_cast<uint64>(roll), choice, automatic) : NEED_MARBLE_BAD_ARG);
+	return SCRIPT_CMD_SUCCESS;
+}
+
+/// need_marble_instance_clear("<dungeon key>","<boss map>");  returns the number of accounts credited
+BUILDIN_FUNC(need_marble_instance_clear)
+{
+	script_pushint(st, need_marble_instance_clear(script_getstr(st, 2), script_getstr(st, 3)));
+	return SCRIPT_CMD_SUCCESS;
+}
+
+/// need_marble_bg_match("<bg map>","<bg type>",<match token>);  returns the number of accounts credited
+BUILDIN_FUNC(need_marble_bg_match)
+{
+	script_pushint(st, need_marble_bg_match(script_getstr(st, 2), script_getstr(st, 3), script_getnum(st, 4)));
+	return SCRIPT_CMD_SUCCESS;
+}
+
+/// need_marble_policy(<key>);  today's policy value; need_marble_policy(0) = 1 when the board is ready
+BUILDIN_FUNC(need_marble_policy)
+{
+	int32 key = script_getnum(st, 2);
+	script_pushint(st, key == 0 ? need_marble_is_ready() : need_marble_policy_value(key));
+	return SCRIPT_CMD_SUCCESS;
+}
