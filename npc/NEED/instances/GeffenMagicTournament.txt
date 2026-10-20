@@ -3776,6 +3776,14 @@ OnActivate:
     enablenpc instance_npcname("#fenrirtalk");
     end;
 OnDefeat:
+	// NEED 2026-10-20 (커뮤니티 요청): 결승 처치 직후 처치자 순간이동(109,50)과 시상 연출로
+	// 펜릴·참가자 NPC가 경기장 중앙에 모여 바닥 전리품을 줍기 어려웠다.
+	// 의식의 방과 같이 30초 동안 전리품을 챙길 시간을 준 뒤 기존 연출을 시작한다.
+	// sleep 은 플레이어를 떼고 기다리며, 인스턴스가 사라지면 함께 정리된다.
+	mapannouncelang instance_mapname("1@ge_st"), "<마법 대회 방송>: 30초 동안 바닥의 전리품을 챙겨 주세요!", "<Magic Tournament Broadcast>: You have 30 seconds to pick up the loot on the floor!", bc_blue;
+	sleep 20000;
+	mapannouncelang instance_mapname("1@ge_st"), "<마법 대회 방송>: 10초 후 시상식이 시작됩니다.", "<Magic Tournament Broadcast>: The award ceremony begins in 10 seconds.", bc_blue;
+	sleep 10000;
     hideoffnpc instance_npcname("펜릴#f");
     enablenpc instance_npcname("#fenrirtalk2");
     end;
