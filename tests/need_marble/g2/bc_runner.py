@@ -12,14 +12,17 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import bcclient  # noqa: E402
 import bcdb  # noqa: E402
+import v22_model  # noqa: E402
 
 OUT = None
 LOG = []
 ACC = {'gm': ('mbqa_gm', 'gm'), 'user': ('mbqa_user', 'user'), 'p2': ('mbqa_p2', 'user'), 'p3': ('mbqa_p3', 'user'),
-       'p4': ('mbqa_p4', 'user'), 'cap': ('mbqa_cap', 'user')}
+       'p4': ('mbqa_p4', 'user'), 'cap': ('mbqa_cap', 'user'), 'v22a': ('mbqa_v22a', 'user'), 'v22b': ('mbqa_v22b', 'user')}
 NAMES = {('gm', 0): 'MBQA_GM1', ('gm', 1): 'MBQA_GM2', ('user', 0): 'MBQA_U1', ('user', 1): 'MBQA_U2',
-         ('p2', 0): 'MBQA_P2', ('p3', 0): 'MBQA_P3', ('p4', 0): 'MBQA_P4', ('cap', 0): 'MBQA_CAP'}
-AID = {'gm': 2000901, 'user': 2000902, 'p2': 2000903, 'p3': 2000904, 'p4': 2000905, 'cap': 2000906}
+         ('p2', 0): 'MBQA_P2', ('p3', 0): 'MBQA_P3', ('p4', 0): 'MBQA_P4', ('cap', 0): 'MBQA_CAP',
+         ('v22a', 0): 'MBQA_V22A', ('v22b', 0): 'MBQA_V22B'}
+AID = {'gm': 2000901, 'user': 2000902, 'p2': 2000903, 'p3': 2000904, 'p4': 2000905, 'cap': 2000906,
+       'v22a': 2000907, 'v22b': 2000908}   # v22a / v22b: V22 only (bc_synth_v22.sql)
 
 
 def log(*a):
@@ -1016,23 +1019,141 @@ def cmd_v18(a):
     record('INV after V18', 'PASS' if not inv else 'FAIL', f'{len(inv)} violating rows: {inv[:6]}')
 
 
-def cmd_v22(a):
-    """V22: ledger-level feed of 30,000 kills: 4 tiers, next_tier 5, checkpoints stop after the cap."""
-    aid = AID['cap']
-    c = login('cap')
+def logical_day(t=None):
+    """need_marble::logical_day: 04:00 KST boundary, yyyymmdd."""
+    t = time.time() if t is None else t
+    return int(time.strftime('%Y%m%d', time.gmtime(t + 9 * 3600 - 4 * 3600)))
+
+
+def secs_to_reset(t=None):
+    t = time.time() if t is None else t
+    return 86400 - int(t + 9 * 3600 - 4 * 3600) % 86400
+
+
+def v22_policy(day):
+    """Effective hunt policy of the day: latest row per key with effective_day <= day, else the v1.0 default."""
+    pol = dict(v22_model.DEFAULT_POLICY)
+    keys = ','.join(str(k) for k in v22_model.POLICY_KEYS.values())
+    rows = sql(f'SELECT policy_key,value FROM need_marble_policy WHERE policy_key IN ({keys}) AND effective_day<={day} ORDER BY effective_day')
+    by_key = {v: k for k, v in v22_model.POLICY_KEYS.items()}
+    for k, v in rows:
+        pol[by_key[int(k)]] = int(v)
+    return pol
+
+
+def v22_snapshot(aid, day, season=1):
+    """Everything V22 compares, read in one go (see v22_model module doc)."""
+    q = lambda s: [[int(x) for x in r] for r in sql(s)]
+    w = wallet(aid, season) or {'score': 0, 'dice': 0}
+    return {
+        'day': day,
+        'progress': {r[0]: (r[1], r[2]) for r in q(f'SELECT period_day,kills,next_tier FROM need_marble_hunt_progress WHERE account_id={aid} AND season_id={season}')},
+        'batches': [tuple(r) for r in q(f'SELECT collect_session,batch_no,period_day,kills FROM need_marble_hunt_batch WHERE account_id={aid} AND season_id={season}')],
+        'milestones': [tuple(r) for r in q(f'SELECT key_a,key_b,requested,credited,outcome FROM need_marble_activity WHERE account_id={aid} AND season_id={season} AND activity=1')],
+        'earn': [tuple(r) for r in q(f'SELECT ref_b,ref_c,d_score FROM need_marble_wallet_tx WHERE account_id={aid} AND season_id={season} AND kind=1 AND ref_a=1')],
+        'tx_count': q(f'SELECT COUNT(*) FROM need_marble_wallet_tx WHERE account_id={aid}')[0][0],
+        'period': {(r[0], r[1]): r[2] for r in q(f'SELECT period_day,activity,earned FROM need_marble_period WHERE account_id={aid} AND season_id={season}')},
+        'score': w['score'], 'dice': w['dice'],
+    }
+
+
+def alive(c):
+    """The caller must be alive before kills are fed: a dead top damager credits nobody (R3 first run)."""
+    c.command('@alive', settle=0.8)
+    c.command('@heal', settle=0.8)
+    t = harness(c, '@mbqastate', needle='[MBQA] state', wait=3)
+    try:
+        return t is not None and int(t.split('hp=')[1].split()[0]) > 0, t
+    except (IndexError, ValueError):
+        return False, t
+
+
+def v22_feed(c, model, n, wait):
+    t = harness(c, f'@mbqafeed {n}', needle='[MBQA] feed', wait=wait)
+    got, counted = v22_model.parse_feed(t)
+    want = model.feed(n)
+    return [(f'feed {n} reply', got == n and counted == want, f'{t!r}, expected n={n} counted={want}')]
+
+
+def v22_fixture(label, who, fixture, day, pol, feeds):
+    """One V22 case on a dedicated account. Returns (status, checks). BLOCKED = the precondition did not hold."""
+    aid = AID[who]
+    s0 = v22_snapshot(aid, day)
+    got = v22_model.fixture_state(s0, pol)
+    if got != fixture:
+        return 'BLOCKED', [(f'{label} precondition', False, f'fixture {fixture} expected, account is {got}: progress {s0["progress"].get(day)}, '
+                                                                f'{len(s0["batches"])} batches')]
+    checks = [(f'{label} precondition', True, f'fixture {fixture}: progress {s0["progress"].get(day)}, {len(s0["batches"])} batches, '
+                                                f'hunt earned {s0["period"].get((day, 1), 0)}, score {s0["score"]}')]
+    c = login(who)
     to_field(c)
-    t = harness(c, '@mbqafeed 30000', needle='[MBQA] feed', wait=60)
-    h1, r1, b1 = hunt(aid), hunt_rows(aid), len(batches(aid))
-    t2 = harness(c, '@mbqafeed 5000', needle='[MBQA] feed', wait=30)
-    h2, r2, b2 = hunt(aid), hunt_rows(aid), len(batches(aid))
+    ok, t = alive(c)
+    checks.append((f'{label} caller alive', ok, repr(t)))
+    if not ok:
+        c.logout()
+        return 'BLOCKED', checks
+    m = v22_model.Login(s0, pol)
+    prev = s0
+    for kind, n in feeds:
+        if kind == 'kill':
+            k = kill_total(c, n)
+            want = m.feed(k)
+            checks.append((f'{label} real kills {n}', k == n, f'killed {k}, model counted {want}'))
+        else:
+            checks += [(f'{label} {x}', ok, d) for x, ok, d in v22_feed(c, m, n, 60 if n > 10000 else 30)]
+        cur = v22_snapshot(aid, day)
+        checks += v22_model.compare(s0, cur, v22_model.expected(s0, m), pol, f'{label} after {kind} {n}')
+        if prev['progress'].get(day, (0, 1))[1] > pol['max_tiers']:
+            checks += v22_model.unchanged(prev, cur, f'{label} after {kind} {n}')
+        prev = cur
     c.logout()
     wait_offline(aid)
-    h3, b3 = hunt(aid), len(batches(aid))
-    per = sql(f'SELECT activity,earned FROM need_marble_period WHERE account_id={aid} ORDER BY activity')
-    ok = (t and 'n=30000' in t and h1 and h1[0][2] == 5 and h1[0][1] == 400 and len(r1) == 4 and b1 == 20 and
-          h2 == h1 and r2 == r1 and b2 == b1 and h3 == h1 and b3 == b1 and per == [['0', '100'], ['1', '100']])
-    record('V22 30,000 fed kills: 4 tiers, next_tier 5, no rows after the cap', 'PASS' if ok else 'FAIL',
-           f'{t} / {t2}; progress {h1} -> {h2} -> {h3}; milestones {len(r1)} -> {len(r2)}; batches {b1} -> {b2} -> {b3}; period {per}')
+    m.logout()
+    s_end = v22_snapshot(aid, day)
+    checks += v22_model.compare(s0, s_end, v22_model.expected(s0, m), pol, f'{label} after logout')
+    if prev['progress'].get(day, (0, 1))[1] > pol['max_tiers']:
+        checks += v22_model.unchanged(prev, s_end, f'{label} after logout')
+    return ('PASS' if all(x[1] for x in checks) else 'FAIL'), checks
+
+
+def cmd_v22(a):
+    """V22 (R2) max_tiers and overflow on dedicated accounts (bc_synth_v22.sql), expected rows derived from a
+    snapshot taken right before each case (v22_model), never from absolute counts:
+      V22-1 mbqa_v22a clean day: feed 30,000 -> 4 tiers, hunt 100, then 5,000 more and logout write nothing
+      V22-2 mbqa_v22b one real kill + one batch first: the same feed, every count relative to that row
+      V22-3 mbqa_v22a again (capped): relog, 10 real kills + 5,000 fed write nothing
+    """
+    day = logical_day()
+    if secs_to_reset() < 900:
+        record('V22 precondition: logical day boundary', 'BLOCKED', f'{secs_to_reset()} s to 04:00 KST, needs 900 s')
+        return
+    pol = v22_policy(day)
+    log(f'   V22 day {day}, policy {pol}')
+    allchecks = []
+    cases = []
+    st, ch = v22_fixture('V22-1', 'v22a', 'clean', day, pol, [('feed', 30000), ('feed', 5000)])
+    cases.append(('V22-1 clean account: 30,000 fed -> 4 tiers, nothing after the cap', st, ch))
+    # fixture 2 setup: exactly one real kill flushed at logout = one batch of one kill
+    sb = v22_snapshot(AID['v22b'], day)
+    if v22_model.fixture_state(sb, pol) == 'clean':
+        c = login('v22b')
+        to_field(c)
+        ok, t = alive(c)
+        k = kill(c, 0, 1) if ok else None
+        c.logout()
+        wait_offline(AID['v22b'])
+        log(f'   V22-2 setup: alive {ok} ({t!r}), killed {k}')
+    st, ch = v22_fixture('V22-2', 'v22b', 'prior1', day, pol, [('feed', 30000), ('feed', 5000)])
+    cases.append(('V22-2 one prior kill and batch: same feed, counts relative to the snapshot', st, ch))
+    st, ch = v22_fixture('V22-3', 'v22a', 'capped', day, pol, [('kill', 10), ('feed', 5000)])
+    cases.append(('V22-3 capped account relog: real kills and 5,000 fed write nothing', st, ch))
+    if logical_day() != day:
+        cases = [(n, 'BLOCKED', ch + [('logical day unchanged', False, f'{day} -> {logical_day()}')]) for n, _, ch in cases]
+    for name, st, ch in cases:
+        bad = [f'{x}: {d}' for x, ok, d in ch if not ok]
+        record(name, st, f'{sum(1 for x in ch if x[1])}/{len(ch)} checks; ' + ('; '.join(bad[:4]) if bad else 'all checks hold'))
+        allchecks += [{'case': name, 'check': x, 'ok': ok, 'detail': d} for x, ok, d in ch]
+    json.dump(allchecks, open(os.path.join(OUT, 'v22_checks.json'), 'w', encoding='utf-8'), indent=1, ensure_ascii=False)
     inv = invariants()
     record('INV after V22', 'PASS' if not inv else 'FAIL', f'{len(inv)} violating rows: {inv[:6]}')
 

@@ -174,6 +174,34 @@ check('hunt_checkpoint: progress FOR UPDATE before batch INSERT',
       cp.index('FOR UPDATE') < cp.index('need_marble_hunt_batch') and 'hunt_day_maxed(next_tier, max_tiers)' in cp)
 check('hunt_on_kill: one capped-day lookup per login and day', 'b.checked_day != day' in cpp and 'hunt_day_maxed_in_db(aid, day)' in cpp)
 
+# 12. Kill-path order inside mob_dead after F1: marble -> exp share -> rebirth test -> macro hunt -> summer -> chuseok
+dead_at = next(i for i, l in enumerate(mob_lines) if l.startswith('int32 mob_dead('))
+dead_end = next(i for i in range(dead_at + 1, len(mob_lines)) if mob_lines[i] == '}')
+first = lambda pat: next((i for i in range(dead_at, dead_end) if pat in mob_lines[i]), None)
+order = [('marble', first('need_marble_hunt_on_kill(')), ('exp share', first('if(!(type&2) &&')), ('gainexp', first('pc_gainexp(')),
+         ('rebirth', first('rebirth =')), ('macro hunt', first('pc_need_macro_hunt_on_mob_kill(')),
+         ('summer', first('need_summer_hunt_on_kill(')), ('chuseok', first('need_chuseok_hunt_on_kill('))]
+check('mob_dead kill-path order: marble, exp, rebirth, macro, summer, chuseok',
+      all(i is not None for _, i in order) and [i for _, i in order] == sorted(i for _, i in order), str(order))
+
+# 13. V22 runner (follow-up): expected rows from a snapshot on dedicated accounts, never absolute counts
+runner = read('tests/need_marble/g2/bc_runner.py')
+v22 = runner[runner.index('def cmd_v22('):]
+v22 = v22[:v22.index('\ndef ', 1)]
+check('V22 runner: no absolute kills / batch expectation', not re.search(r'==\s*400\b|\bb1\s*==\s*20\b|== \[\[\'0\', \'100\'\]', v22))
+check('V22 runner: compares through v22_model with a snapshot', 'v22_fixture(' in v22 and 'v22_model.compare(' in runner and 'v22_snapshot(' in runner)
+blocks = runner.split('\ndef ')[1:]
+users = [b.split('(', 1)[0] for b in blocks if re.search(r"'v22[ab]'", b)]
+check('V22 dedicated accounts used by V22 only', set(users) <= {'cmd_v22', 'v22_fixture'} and 'cmd_v22' in users, str(users))
+hook = read('tests/need_marble/g2/test_hooks/need_marble_test.cpp')
+feed = hook[hook.index('int32 need_marble_test_hunt_feed(map_session_data* sd, int32 count) {'):]
+check('test feed refuses a dead caller and reports counted', 'pc_isdead(sd)' in feed and '@MBQA_COUNTED' in feed)
+extras = read('tests/need_marble/g2/bc_stack_extras.py')
+check('harness prints counted= and binds @mbqastate', 'counted=' in extras and '"mbqastate"' in extras)
+synth = read('tests/need_marble/g2/bc_synth_v22.sql')
+check('bc_synth_v22.sql: no literal secret, ids outside the other fixtures',
+      "'{{user}}'" in synth and not re.search(r'password|[A-Za-z]:[\\/]', synth, re.I) and '2000906' not in synth)
+
 failed = [r for r in results if not r[1]]
 for name, ok, detail in results:
     print(('PASS ' if ok else 'FAIL ') + name + (f'  [{detail}]' if detail and not ok else ''))

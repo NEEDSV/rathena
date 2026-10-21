@@ -145,11 +145,13 @@ harness = b'\r\n'.join([
 if a.kill_hooks:
     # G-1(b): needs the TEST BUILD map-server (need_marble_test_* commands exist only there)
     harness += b'\r\n'.join([
-        b'// G-1(b) test build only: @mbqakill <radius 0=map> <max>, @mbqafeed <count>',
+        b'// G-1(b) test build only: @mbqakill <radius 0=map> <max>, @mbqafeed <count>, @mbqastate',
+        b'// n=-2: the caller is dead (refused). counted = growth of the marble count over the feed.',
         b'-\tscript\tMBQA_KillHarness\t-1,{',
         b'OnInit:',
         b'\tbindatcmd "mbqakill", strnpcinfo(3) + "::OnKill", 99, 100;',
         b'\tbindatcmd "mbqafeed", strnpcinfo(3) + "::OnFeed", 99, 100;',
+        b'\tbindatcmd "mbqastate", strnpcinfo(3) + "::OnState", 99, 100;',
         b'\tend;',
         b'OnKill:',
         b'\t.@n = need_marble_test_kill(atoi(.@atcmd_parameters$[0]), atoi(.@atcmd_parameters$[1]));',
@@ -157,7 +159,10 @@ if a.kill_hooks:
         b'\tend;',
         b'OnFeed:',
         b'\t.@n = need_marble_test_hunt_feed(atoi(.@atcmd_parameters$[0]));',
-        b'\tdispbottom "[MBQA] feed n=" + .@n;',
+        b'\tdispbottom "[MBQA] feed n=" + .@n + " counted=" + @MBQA_COUNTED;',
+        b'\tend;',
+        b'OnState:',
+        b'\tdispbottom "[MBQA] state hp=" + Hp + " lv=" + BaseLevel + " map=" + strcharinfo(3);',
         b'\tend;',
         b'}',
         b''])

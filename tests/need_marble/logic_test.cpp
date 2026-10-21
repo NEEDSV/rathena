@@ -211,6 +211,85 @@ static void test_hunt_tiers() {
 	CHECK(hunt_day_maxed(1, 0));   // max_tiers 0 = hunting gives nothing that day
 }
 
+// V22 fixtures: one login feeding kills through the flush / checkpoint order of need_marble.cpp
+// (layer 1 lookup at the first kill, a batch every flush_kills, layer 2 refusal on a capped day).
+struct hunt_day_sim {
+	uint32_t kills;
+	int32_t next_tier;
+	int32_t earned_hunt;
+	int32_t earned_total;
+	uint32_t batches = 0;
+	int32_t credited = 0;
+	int32_t tier_rows = 0;
+	uint32_t pending = 0;
+	int32_t done = -1;
+
+	hunt_day_sim(uint32_t k, int32_t nt, int32_t eh, int32_t et) : kills(k), next_tier(nt), earned_hunt(eh), earned_total(et) {}
+
+	void checkpoint(const policy_values& v) {
+		if (hunt_day_maxed(next_tier, v[P_HUNT_MAX_TIERS])) {
+			pending = 0;
+			done = 1;
+			return;
+		}
+		kills += pending;
+		pending = 0;
+		batches++;
+		const int32_t nn = hunt_next_tier(kills, next_tier, v[P_HUNT_TIER_KILLS], v[P_HUNT_MAX_TIERS]);
+		for (int32_t t = next_tier; t < nn; t++) {
+			const int32_t c = credit_amount(v[P_HUNT_TIER_POINTS], earned_hunt, v[P_DAILY_HUNT_CAP], earned_total, v[P_DAILY_TOTAL_CAP]);
+			earned_hunt += c;
+			earned_total += c;
+			credited += c;
+			tier_rows++;
+		}
+		next_tier = nn;
+		if (hunt_day_maxed(next_tier, v[P_HUNT_MAX_TIERS]))
+			done = 1;
+	}
+
+	void feed(const policy_values& v, uint32_t n) {
+		for (uint32_t i = 0; i < n; i++) {
+			if (done < 0)
+				done = hunt_day_maxed(next_tier, v[P_HUNT_MAX_TIERS]) ? 1 : 0;
+			if (done == 1)
+				continue;
+			if (++pending >= static_cast<uint32_t>(v[P_HUNT_FLUSH_KILLS]))
+				checkpoint(v);
+		}
+	}
+};
+
+static void test_hunt_v22_fixtures() {
+	const policy_values v = policy_defaults();
+	// 1 clean account and day: 30,000 -> 20 batches, kills 400, 4 tier rows, 100 points, then nothing
+	hunt_day_sim a(0, 1, 0, 0);
+	a.feed(v, 30000);
+	CHECK(a.kills == 400 && a.next_tier == 5 && a.batches == 20 && a.tier_rows == 4 && a.credited == 100);
+	a.feed(v, 5000);
+	a.checkpoint(v);   // logout flush
+	CHECK(a.kills == 400 && a.batches == 20 && a.tier_rows == 4 && a.credited == 100);
+	// 2 one kill and one batch first: 20 new batches, kills 401, the same 100 points
+	hunt_day_sim b(1, 1, 0, 0);
+	b.feed(v, 30000);
+	CHECK(b.kills == 401 && b.next_tier == 5 && b.batches == 20 && b.tier_rows == 4 && b.credited == 100);
+	b.feed(v, 5000);
+	CHECK(b.kills == 401 && b.batches == 20);
+	// 3 capped day after a relog: layer 1 stops every kill, layer 2 alone would still write nothing
+	hunt_day_sim c(401, 5, 100, 100);
+	c.feed(v, 5010);
+	c.checkpoint(v);
+	CHECK(c.kills == 401 && c.batches == 0 && c.tier_rows == 0 && c.credited == 0);
+	hunt_day_sim d(401, 5, 100, 100);
+	d.done = 0;   // layer 1 lookup failed
+	d.feed(v, 25);
+	CHECK(d.kills == 401 && d.batches == 0 && d.tier_rows == 0);
+	// total cap already 150: tiers 3 and 4 still get rows but credit 0
+	hunt_day_sim e(0, 1, 0, 150);
+	e.feed(v, 30000);
+	CHECK(e.tier_rows == 4 && e.credited == 50 && e.earned_total == 200 && e.next_tier == 5);
+}
+
 static void test_laps() {
 	CHECK(lap_reached(32, 33) == 0);
 	CHECK(lap_reached(33, 33) == 1);
@@ -228,6 +307,7 @@ int main() {
 	test_logical_day();
 	test_credit();
 	test_hunt_tiers();
+	test_hunt_v22_fixtures();
 	test_laps();
 	std::printf("need_marble logic: %d passed, %d failed\n", g_pass, g_fail);
 	return g_fail == 0 ? EXIT_SUCCESS : EXIT_FAILURE;

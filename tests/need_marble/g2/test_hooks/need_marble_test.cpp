@@ -92,6 +92,11 @@ bool eligible(map_session_data* sd, mob_data* md) {
 int32 need_marble_test_kill(map_session_data* sd, int32 radius, int32 max_count) {
 	if (!test_guard(sd))
 		return -1;
+	if (pc_isdead(sd)) {
+		// A dead top damager credits nobody: refuse instead of reporting kills that cannot count.
+		ShowWarning("need_marble_test: kill refused - caller is dead.\n");
+		return -2;
+	}
 	int32 killed = 0;
 	const int64 reg = add_str("@MB_HUNT_KILLS");
 	for (int32 id : mobs_around(sd, radius)) {
@@ -117,16 +122,28 @@ int32 need_marble_test_kill(map_session_data* sd, int32 radius, int32 max_count)
 
 /// Ledger-level feed: calls need_marble_hunt_on_kill count times with one live eligible mob as the
 /// template. The mob does not die; mob_dead, the damage log and the party rule are skipped.
-/// Returns the number fed, 0 when no eligible mob is on the map, -1 when refused.
+/// Returns the number fed, 0 when no eligible mob is on the map, -1 when refused, -2 when the caller is dead.
+/// @MBQA_COUNTED = growth of the marble count (DB + in-memory batch) over the feed, read by the harness.
 int32 need_marble_test_hunt_feed(map_session_data* sd, int32 count) {
 	if (!test_guard(sd))
 		return -1;
+	const int64 counted_reg = add_str("@MBQA_COUNTED");
+	pc_setreg(sd, counted_reg, -1);
+	if (pc_isdead(sd)) {
+		ShowWarning("need_marble_test: feed refused - caller is dead.\n");
+		return -2;
+	}
+	const int64 reg = add_str("@MB_HUNT_KILLS");
 	for (int32 id : mobs_around(sd, 0)) {
 		mob_data* md = map_id2md(id);
 		if (!eligible(sd, md))
 			continue;
+		need_marble_view(sd);
+		const int64 before = pc_readreg(sd, reg);
 		for (int32 i = 0; i < count; i++)
 			need_marble_hunt_on_kill(sd, md, 0);
+		need_marble_view(sd);
+		pc_setreg(sd, counted_reg, pc_readreg(sd, reg) - before);
 		return count;
 	}
 	return 0;

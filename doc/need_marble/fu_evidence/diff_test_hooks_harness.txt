@@ -1,0 +1,77 @@
+﻿diff --git a/tests/need_marble/g2/bc_stack_extras.py b/tests/need_marble/g2/bc_stack_extras.py
+index 92c97d54f..c52019c6b 100644
+--- a/tests/need_marble/g2/bc_stack_extras.py
++++ b/tests/need_marble/g2/bc_stack_extras.py
+@@ -145,11 +145,13 @@ harness = b'\r\n'.join([
+ if a.kill_hooks:
+     # G-1(b): needs the TEST BUILD map-server (need_marble_test_* commands exist only there)
+     harness += b'\r\n'.join([
+-        b'// G-1(b) test build only: @mbqakill <radius 0=map> <max>, @mbqafeed <count>',
++        b'// G-1(b) test build only: @mbqakill <radius 0=map> <max>, @mbqafeed <count>, @mbqastate',
++        b'// n=-2: the caller is dead (refused). counted = growth of the marble count over the feed.',
+         b'-\tscript\tMBQA_KillHarness\t-1,{',
+         b'OnInit:',
+         b'\tbindatcmd "mbqakill", strnpcinfo(3) + "::OnKill", 99, 100;',
+         b'\tbindatcmd "mbqafeed", strnpcinfo(3) + "::OnFeed", 99, 100;',
++        b'\tbindatcmd "mbqastate", strnpcinfo(3) + "::OnState", 99, 100;',
+         b'\tend;',
+         b'OnKill:',
+         b'\t.@n = need_marble_test_kill(atoi(.@atcmd_parameters$[0]), atoi(.@atcmd_parameters$[1]));',
+@@ -157,7 +159,10 @@ if a.kill_hooks:
+         b'\tend;',
+         b'OnFeed:',
+         b'\t.@n = need_marble_test_hunt_feed(atoi(.@atcmd_parameters$[0]));',
+-        b'\tdispbottom "[MBQA] feed n=" + .@n;',
++        b'\tdispbottom "[MBQA] feed n=" + .@n + " counted=" + @MBQA_COUNTED;',
++        b'\tend;',
++        b'OnState:',
++        b'\tdispbottom "[MBQA] state hp=" + Hp + " lv=" + BaseLevel + " map=" + strcharinfo(3);',
+         b'\tend;',
+         b'}',
+         b''])
+diff --git a/tests/need_marble/g2/test_hooks/need_marble_test.cpp b/tests/need_marble/g2/test_hooks/need_marble_test.cpp
+index ac1df0291..2bd4f1bde 100644
+--- a/tests/need_marble/g2/test_hooks/need_marble_test.cpp
++++ b/tests/need_marble/g2/test_hooks/need_marble_test.cpp
+@@ -92,6 +92,11 @@ bool eligible(map_session_data* sd, mob_data* md) {
+ int32 need_marble_test_kill(map_session_data* sd, int32 radius, int32 max_count) {
+ 	if (!test_guard(sd))
+ 		return -1;
++	if (pc_isdead(sd)) {
++		// A dead top damager credits nobody: refuse instead of reporting kills that cannot count.
++		ShowWarning("need_marble_test: kill refused - caller is dead.\n");
++		return -2;
++	}
+ 	int32 killed = 0;
+ 	const int64 reg = add_str("@MB_HUNT_KILLS");
+ 	for (int32 id : mobs_around(sd, radius)) {
+@@ -117,16 +122,28 @@ int32 need_marble_test_kill(map_session_data* sd, int32 radius, int32 max_count)
+ 
+ /// Ledger-level feed: calls need_marble_hunt_on_kill count times with one live eligible mob as the
+ /// template. The mob does not die; mob_dead, the damage log and the party rule are skipped.
+-/// Returns the number fed, 0 when no eligible mob is on the map, -1 when refused.
++/// Returns the number fed, 0 when no eligible mob is on the map, -1 when refused, -2 when the caller is dead.
++/// @MBQA_COUNTED = growth of the marble count (DB + in-memory batch) over the feed, read by the harness.
+ int32 need_marble_test_hunt_feed(map_session_data* sd, int32 count) {
+ 	if (!test_guard(sd))
+ 		return -1;
++	const int64 counted_reg = add_str("@MBQA_COUNTED");
++	pc_setreg(sd, counted_reg, -1);
++	if (pc_isdead(sd)) {
++		ShowWarning("need_marble_test: feed refused - caller is dead.\n");
++		return -2;
++	}
++	const int64 reg = add_str("@MB_HUNT_KILLS");
+ 	for (int32 id : mobs_around(sd, 0)) {
+ 		mob_data* md = map_id2md(id);
+ 		if (!eligible(sd, md))
+ 			continue;
++		need_marble_view(sd);
++		const int64 before = pc_readreg(sd, reg);
+ 		for (int32 i = 0; i < count; i++)
+ 			need_marble_hunt_on_kill(sd, md, 0);
++		need_marble_view(sd);
++		pc_setreg(sd, counted_reg, pc_readreg(sd, reg) - before);
+ 		return count;
+ 	}
+ 	return 0;
