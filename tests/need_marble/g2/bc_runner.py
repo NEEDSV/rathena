@@ -831,6 +831,242 @@ def cmd_sqlmodel(a):
     record('INV after SQL model', 'PASS' if not inv else 'FAIL', f'{len(inv)} violating rows: {inv[:6]}')
 
 
+def hunt(aid):
+    r = sql(f'SELECT period_day,kills,next_tier FROM need_marble_hunt_progress WHERE account_id={aid}')
+    return [[int(x) for x in row] for row in r]
+
+
+def hunt_rows(aid):
+    return sql(f'SELECT key_a,key_b,credited,outcome FROM need_marble_activity WHERE account_id={aid} AND activity=1 ORDER BY key_a,key_b')
+
+
+def batches(aid):
+    return sql(f'SELECT collect_session,batch_no,period_day,kills,char_id FROM need_marble_hunt_batch WHERE account_id={aid} ORDER BY collect_session,batch_no')
+
+
+def kill(c, radius, n, wait=6):
+    t = harness(c, f'@mbqakill {radius} {n}', needle='[MBQA] kill', wait=wait)
+    try:
+        return int(t.split('n=')[1]) if t else None
+    except Exception:
+        return None
+
+
+def to_field(c):
+    c.command('@warp yuno_fild02')
+    time.sleep(2)
+    c.command('@alive')
+    c.command('@heal')
+
+
+def kill_total(c, total, radius=0, step=60):
+    done = 0
+    for _ in range(40):
+        if done >= total:
+            break
+        k = kill(c, radius, min(step, total - done))
+        done += max(k or 0, 0)
+        if (k or 0) == 0:
+            time.sleep(6)   # wait for respawns
+    return done
+
+
+def cmd_v14(a):
+    """V14: A 70 kills -> logout -> same account B 40 kills: exactly one tier at the crossing, separate collect sessions."""
+    who = a.rest[0] if a.rest else 'user'
+    aid = AID[who]
+    c = login(who)
+    to_field(c)
+    ka = kill_total(c, 70)
+    c.logout()
+    wait_offline(aid)
+    h1, b1 = hunt(aid), batches(aid)
+    c2 = login(who, 1)
+    to_field(c2)
+    kb = kill_total(c2, 40)
+    c2.logout()
+    wait_offline(aid)
+    h2, b2, r2 = hunt(aid), batches(aid), hunt_rows(aid)
+    sessions = sorted({x[0] for x in b2})
+    chars = {x[0]: x[4] for x in b2}
+    ok = (ka == 70 and kb == 40 and h1 and h1[0][1] == 70 and h1[0][2] == 1 and h2[0][1] == 110 and h2[0][2] == 2 and
+          len(r2) == 1 and r2[0][1] == '1' and r2[0][2] == '25' and len(sessions) == 2 and
+          sum(int(x[3]) for x in b2) == 110 and len(set(chars.values())) == 2)
+    record('V14 collect sessions: A 70 -> B 40 = one tier', 'PASS' if ok else 'FAIL',
+           f'killed A={ka} B={kb}; after A {h1}; after B {h2}; milestones {r2}; sessions {sessions} chars {chars}; batches {len(b2)}')
+    inv = invariants()
+    record('INV after V14', 'PASS' if not inv else 'FAIL', f'{len(inv)} violating rows: {inv[:6]}')
+
+
+def cmd_v14_crash_kill(a):
+    """V14 loss bound part 1: 15 kills (below the 20-kill checkpoint, within 60 s), then the map-server is killed."""
+    aid = AID['gm']
+    json.dump({'hunt': hunt(aid), 'batches': len(batches(aid))}, open(os.path.join(OUT, 'v14_before.json'), 'w'))
+    c = login('gm')
+    to_field(c)
+    k = kill(c, 0, 15)
+    log('   killed', k, 'pending in memory, no checkpoint yet')
+    open(os.path.join(OUT, 'v14_killed.flag'), 'w').write(str(k))
+    time.sleep(40)
+
+
+def cmd_v14_crash_check(a):
+    aid = AID['gm']
+    b = json.load(open(os.path.join(OUT, 'v14_before.json')))
+    k = int(open(os.path.join(OUT, 'v14_killed.flag')).read())
+    h, nb = hunt(aid), len(batches(aid))
+    lost = k - (h[0][1] - b['hunt'][0][1])
+    ok = h[0][1] == b['hunt'][0][1] and nb == b['batches'] and 0 <= lost <= 20
+    record('V14 crash before checkpoint: loss bounded, no duplicate', 'PASS' if ok else 'FAIL',
+           f'killed {k}, kills {b["hunt"][0][1]} -> {h[0][1]}, batches {b["batches"]} -> {nb}, lost {lost} (bound: flush 20 kills / 60 s)')
+
+
+def cmd_v03(a):
+    """V03: tiers at 100/200/300/400 kills, 25 points each, nothing after the 4th; checkpoints stop after the cap."""
+    aid = AID['gm']
+    c = login('gm')
+    to_field(c)
+    h0 = hunt(aid)
+    need = 400 - h0[0][1] + 5
+    k = kill_total(c, need)
+    time.sleep(2)
+    c.logout()
+    wait_offline(aid)
+    h1, r1, nb1 = hunt(aid), hunt_rows(aid), len(batches(aid))
+    w1 = wallet(aid)
+    per = sql(f'SELECT activity,earned FROM need_marble_period WHERE account_id={aid} AND activity IN (0,1) ORDER BY activity')
+    c = login('gm')
+    to_field(c)
+    k2 = kill_total(c, 40)
+    c.logout()
+    wait_offline(aid)
+    h2, r2, nb2 = hunt(aid), hunt_rows(aid), len(batches(aid))
+    ok = (h1[0][2] == 5 and h1[0][1] >= 400 and [x[1] for x in r1] == ['1', '2', '3', '4'] and all(x[2] == '25' for x in r1) and
+          per == [['0', '100'], ['1', '100']] and w1['score'] == 100 and r2 == r1 and h2 == h1 and nb2 == nb1 and k2 == 40)
+    record('V03 hunt tiers 100/200/300/400 x 25, nothing after the cap', 'PASS' if ok else 'FAIL',
+           f'killed {k} then {k2} more; progress {h1} -> {h2}; milestones {r1}; period {per}; score {w1["score"]}; batches {nb1} -> {nb2}')
+    inv = invariants()
+    record('INV after V03', 'PASS' if not inv else 'FAIL', f'{len(inv)} violating rows: {inv[:6]}')
+
+
+def dist(p, q):
+    return max(abs(p[1] - q[1]), abs(p[2] - q[2])) if p and q else None
+
+
+def cmd_v18(a):
+    """V18 (captcha excluded): party P2-active. GM deals, P2 near and active, P3 near and idle > 60 s, P4 far."""
+    gm, p2, p3, p4 = AID['gm'], AID['p2'], AID['p3'], AID['p4']
+    g = login('gm')
+    to_field(g)
+    g.command('@monsterignore')
+    m2, m3, m4 = login('p2'), login('p3'), login('p4')
+    t_login = time.time()
+    for c in (m2, m3, m4):
+        c.command('@monsterignore')   # atcommands do not refresh idletime (0x7C1F has no ATCOMMAND bit)
+    for name in ('MBQA_P2', 'MBQA_P3', 'MBQA_P4'):
+        g.command(f'@recall {name}')
+    time.sleep(2)
+    spot_a = m4.pos
+    for tries in range(6):
+        g.command('@warp yuno_fild02')
+        time.sleep(2)
+        g.command('@recall MBQA_P2')
+        g.command('@recall MBQA_P3')
+        time.sleep(2)
+        if dist(m2.pos, spot_a) and dist(m2.pos, spot_a) >= 40:
+            break
+    log('   positions: P2', m2.pos, 'P3', m3.pos, 'P4', m4.pos, 'dist(P2,P4)=', dist(m2.pos, m4.pos))
+    # P3 must be idle for more than 60 s; P2 stays active by walking one cell now and then
+    while time.time() - t_login < 70:
+        if m2.pos:
+            m2.walk(m2.pos[1] + (1 if int(time.time()) % 2 else 0), m2.pos[2])
+        time.sleep(15)
+    m2.walk(m2.pos[1], m2.pos[2])
+    time.sleep(1)
+    g.command('@alive')
+    g.command('@heal')
+    base = {x: hunt(x) for x in (p2, p3, p4)}
+    k = 0
+    step = 0
+    for _ in range(20):
+        if k >= 8:
+            break
+        got = kill(g, 13, 8 - k) or 0
+        k += got
+        step += 1
+        m2.walk(m2.pos[1] + (step % 2), m2.pos[2])   # P2 keeps acting (walk refreshes idletime)
+        g.command('@heal')
+        if got == 0:
+            time.sleep(6)
+    for c in (m2, m3, m4, g):
+        c.logout()
+    for x in (gm, p2, p3, p4):
+        wait_offline(x)
+    after = {x: hunt(x) for x in (p2, p3, p4)}
+    d = lambda x: (after[x][0][1] if after[x] else 0) - (base[x][0][1] if base[x] else 0)
+    far = dist(m2.pos, m4.pos)
+    ok = k > 0 and d(p2) == k and d(p3) == 0 and d(p4) == 0 and far is not None and far > 24
+    record('V18 party P2-active: near+active credited, idle and far not', 'PASS' if ok else 'FAIL',
+           f'GM kills {k} (radius 13); P2 +{d(p2)}, P3(idle>60s) +{d(p3)}, P4(distance {far}) +{d(p4)}')
+    inv = invariants()
+    record('INV after V18', 'PASS' if not inv else 'FAIL', f'{len(inv)} violating rows: {inv[:6]}')
+
+
+def cmd_v22(a):
+    """V22: ledger-level feed of 30,000 kills: 4 tiers, next_tier 5, checkpoints stop after the cap."""
+    aid = AID['cap']
+    c = login('cap')
+    to_field(c)
+    t = harness(c, '@mbqafeed 30000', needle='[MBQA] feed', wait=60)
+    h1, r1, b1 = hunt(aid), hunt_rows(aid), len(batches(aid))
+    t2 = harness(c, '@mbqafeed 5000', needle='[MBQA] feed', wait=30)
+    h2, r2, b2 = hunt(aid), hunt_rows(aid), len(batches(aid))
+    c.logout()
+    wait_offline(aid)
+    h3, b3 = hunt(aid), len(batches(aid))
+    per = sql(f'SELECT activity,earned FROM need_marble_period WHERE account_id={aid} ORDER BY activity')
+    ok = (t and 'n=30000' in t and h1 and h1[0][2] == 5 and h1[0][1] == 400 and len(r1) == 4 and b1 == 20 and
+          h2 == h1 and r2 == r1 and b2 == b1 and h3 == h1 and b3 == b1 and per == [['0', '100'], ['1', '100']])
+    record('V22 30,000 fed kills: 4 tiers, next_tier 5, no rows after the cap', 'PASS' if ok else 'FAIL',
+           f'{t} / {t2}; progress {h1} -> {h2} -> {h3}; milestones {len(r1)} -> {len(r2)}; batches {b1} -> {b2} -> {b3}; period {per}')
+    inv = invariants()
+    record('INV after V22', 'PASS' if not inv else 'FAIL', f'{len(inv)} violating rows: {inv[:6]}')
+
+
+def cmd_guard(a):
+    """Guard: the same test map-server started WITHOUT NEED_MARBLE_TEST_HOOKS=1 refuses the commands."""
+    aid = AID['gm']
+    c = login('gm')
+    to_field(c)
+    h0 = hunt(aid)
+    t = harness(c, '@mbqakill 0 5', needle='[MBQA] kill', wait=6)
+    t2 = harness(c, '@mbqafeed 50', needle='[MBQA] feed', wait=6)
+    c.logout()
+    lines = [l for l in open(os.path.join(OUT, 'stack', 'log', 'map-msg_log.log'), encoding='cp949', errors='replace').read().splitlines()
+             if 'need_marble_test' in l]
+    ok = t and 'n=-1' in t and t2 and 'n=-1' in t2 and hunt(aid) == h0 and any('refused' in l for l in lines)
+    record('Guard: no env -> test commands refused', 'PASS' if ok else 'FAIL', f'{t} / {t2}; log {lines[-2:]}')
+
+
+def cmd_probe_kill(a):
+    """Diagnostic: who / how many kills and whether a captcha (0x0A57 / 0x0A5B family) reached the client."""
+    who = a.rest[0] if a.rest else 'gm'
+    slot = int(a.rest[1]) if len(a.rest) > 1 else 0
+    n = int(a.rest[2]) if len(a.rest) > 2 else 5
+    aid = AID[who]
+    h0 = hunt(aid)
+    c = login(who, slot)
+    to_field(c)
+    k = kill(c, 0, n)
+    time.sleep(1)
+    raw = bytes(c.buf)
+    cap = {hex(x): raw.count(bytes([x & 0xFF, x >> 8])) for x in (0x0A53, 0x0A55, 0x0A57, 0x0A58, 0x0A5B)}
+    c.logout()
+    wait_offline(aid)
+    h1 = hunt(aid)
+    log(f'   probe {who}{slot}: killed {k}, progress {h0} -> {h1}, captcha-like packet ids seen {cap}')
+
+
 def main():
     global OUT
     ap = argparse.ArgumentParser()

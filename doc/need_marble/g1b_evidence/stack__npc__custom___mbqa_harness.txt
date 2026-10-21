@@ -1,0 +1,49 @@
+//===== G2 isolated test harness (stack copy only, never in the repository load lists) =====
+// @mbqainst <1|2> creates a solo (IM_CHAR) instance and enters it: 1 = LASTROOM 1@uns, 2 = CENTRALLAB 1@lab.
+// @mbqaclear <1|2> calls need_marble_instance_clear() for the boss map of the caller's instance.
+// @mbqaleave destroys the caller's instance and warps to prontera.
+-	script	MBQA_Harness	-1,{
+OnInit:
+	setarray .key$[1], "LASTROOM", "CENTRALLAB";
+	setarray .name$[1], "마지막 방", "중앙 실험실";
+	setarray .map$[1], "1@uns", "1@lab";
+	bindatcmd "mbqainst", strnpcinfo(3) + "::OnInst", 99, 100;
+	bindatcmd "mbqaclear", strnpcinfo(3) + "::OnClear", 99, 100;
+	bindatcmd "mbqaleave", strnpcinfo(3) + "::OnLeave", 99, 100;
+	end;
+OnInst:
+	.@k = atoi(.@atcmd_parameters$[0]);
+	if (.@k < 1 || .@k > 2) end;
+	.@id = instance_create(.name$[.@k], IM_CHAR);
+	if (.@id > 0) @MBQA_IID = .@id;
+	.@e = instance_enter(.name$[.@k], -1, -1, getcharid(0), @MBQA_IID);
+	dispbottom "[MBQA] inst k=" + .@k + " create=" + .@id + " iid=" + @MBQA_IID + " enter=" + .@e + " map=" + instance_mapname(.map$[.@k], @MBQA_IID);
+	end;
+OnClear:
+	.@k = atoi(.@atcmd_parameters$[0]);
+	if (.@k < 1 || .@k > 2) end;
+	.@m$ = instance_mapname(.map$[.@k], @MBQA_IID);
+	.@n = need_marble_instance_clear(.key$[.@k], .@m$);
+	dispbottom "[MBQA] clear k=" + .@k + " map=" + .@m$ + " iid=" + @MBQA_IID + " credited=" + .@n;
+	end;
+OnLeave:
+	if (@MBQA_IID > 0) instance_destroy @MBQA_IID;
+	@MBQA_IID = 0;
+	warp "prontera", 156, 191;
+	end;
+}
+// G-1(b) test build only: @mbqakill <radius 0=map> <max>, @mbqafeed <count>
+-	script	MBQA_KillHarness	-1,{
+OnInit:
+	bindatcmd "mbqakill", strnpcinfo(3) + "::OnKill", 99, 100;
+	bindatcmd "mbqafeed", strnpcinfo(3) + "::OnFeed", 99, 100;
+	end;
+OnKill:
+	.@n = need_marble_test_kill(atoi(.@atcmd_parameters$[0]), atoi(.@atcmd_parameters$[1]));
+	dispbottom "[MBQA] kill n=" + .@n;
+	end;
+OnFeed:
+	.@n = need_marble_test_hunt_feed(atoi(.@atcmd_parameters$[0]));
+	dispbottom "[MBQA] feed n=" + .@n;
+	end;
+}

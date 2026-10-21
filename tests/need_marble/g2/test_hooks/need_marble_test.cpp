@@ -10,6 +10,7 @@
 
 #ifdef NEED_MARBLE_TEST_HOOKS
 
+#include <cinttypes>
 #include <cstdarg>
 #include <cstdlib>
 #include <cstring>
@@ -24,6 +25,7 @@
 #include "need_marble.hpp"
 #include "need_marble_logic.hpp"
 #include "pc.hpp"
+#include "script.hpp"
 #include "status.hpp"
 
 int32 need_marble_test_kill(map_session_data* sd, int32 radius, int32 max_count);
@@ -91,13 +93,23 @@ int32 need_marble_test_kill(map_session_data* sd, int32 radius, int32 max_count)
 	if (!test_guard(sd))
 		return -1;
 	int32 killed = 0;
+	const int64 reg = add_str("@MB_HUNT_KILLS");
 	for (int32 id : mobs_around(sd, radius)) {
 		if (killed >= max_count)
 			break;
 		mob_data* md = map_id2md(id);   // re-resolved: an earlier kill may have changed the map
 		if (!eligible(sd, md))
 			continue;
+		// Diagnostic: the marble count (DB + in-memory batch) must grow by exactly one per kill.
+		need_marble_view(sd);
+		const int64 before = pc_readreg(sd, reg);
+		const int32 mob_id = md->mob_id, lv = md->level, x = md->x, y = md->y, hp = md->status.hp;
 		status_damage(sd, md, md->status.hp, 0, 0, 0, 0, 0);
+		need_marble_view(sd);
+		const int64 after = pc_readreg(sd, reg);
+		if (after - before != 1)
+			ShowWarning("need_marble_test: kill #%d not counted once (delta %" PRId64 ") mob_id=%d lv=%d at %d,%d hp=%d char_lv=%d dead=%d\n",
+				killed + 1, after - before, mob_id, lv, x, y, hp, sd->status.base_level, pc_isdead(sd) ? 1 : 0);
 		killed++;
 	}
 	return killed;

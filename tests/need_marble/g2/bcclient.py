@@ -157,6 +157,13 @@ class Client:
                         if gid >= NPC_MIN:
                             self.mobs[gid] = time.time()
                             self.dead.discard(gid)
+            elif pid == 0x0091:
+                # ZC_NPCACK_MAPMOVE: mapname[16] x y (sent on every warp / recall, also within one map)
+                if i + 22 <= n and i not in self.seen:
+                    name = bytes(b[i + 2:i + 18]).split(b'\0')[0]
+                    if name.endswith(b'.gat') and 4 < len(name) <= 16:
+                        self.seen.add(i)
+                        self.pos = (name.decode('latin1'),) + struct.unpack_from('<HH', b, i + 18)
             elif pid == 0x0080:
                 if i + 7 <= n:
                     gid = struct.unpack_from('<I', b, i + 2)[0]
@@ -173,6 +180,7 @@ class Client:
 
     expect_close = False
     drop_after = False
+    pos = None
 
     # ------------------------------------------------------------------ actions
     def raw(self, data):

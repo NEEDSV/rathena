@@ -38,13 +38,13 @@ NPC 가 CP949 로 읽힘 / NPC·v1.2 좌표·칸 이름 일치 / NPC 칸 종류 
 
 ## 2. G2 — 격리 DB/서버 실행 시험 (2026-10-20 승인 후 실행)
 
-상세: `NEED_MARBLE_G2_EXECUTION_REPORT_v1_0.md`, 증거 `g2_evidence/`.
+상세: `NEED_MARBLE_G2_EXECUTION_REPORT_v1_0.md`(증거 `g2_evidence/`), G-1(b) 사냥 시나리오는 `NEED_MARBLE_G1B_EXECUTION_REPORT_v1_0.md`(증거 `g1b_evidence/`).
 
 | ID | 시나리오 | 결과 |
 |---|---|---|
 | V01 | 시즌 정산 | BLOCKED (미구현) |
 | V02 | 키 길이·충돌 | **PASS** |
-| V03 | 사냥 누계 | BLOCKED (G-1(a) 더미 클라이언트 처치 불가) |
+| V03 | 사냥 누계 | **PASS** (G-1(b), 구간·점수. 상한 뒤 재접속 배치 증가 F2) |
 | V04 | 상한 우회 | **PASS** (인던 범위) |
 | V05 | 재기동 후 이어가기 차감 없음 | **PASS** |
 | V06 | 롤 직후 강제 종료 | **PASS** (종료 시점 1회) |
@@ -55,15 +55,15 @@ NPC 가 CP949 로 읽힘 / NPC·v1.2 좌표·칸 이름 일치 / NPC 칸 종류 
 | V11 | 난수 1,000롤 | NOT RUN (58롤만) |
 | V12 | 잠금 대기 초과 | **PASS** (단, map-server 스레드 대기 = 운영 위험 F2) |
 | V13 | 같은 던전 다른 인스턴스 | **PASS** |
-| V14 | 수집 세션·배치 | BLOCKED |
+| V14 | 수집 세션·배치 | **PASS** (G-1(b), A70→B40 1구간, 강제 종료 손실 15≤20) |
 | V15 | 교환 응답 유실 → 다른 캐릭터 | **PASS** |
 | V16 | 중간 오류·중첩 | NOT RUN (고장 주입 빌드 미승인) |
 | V17 | 시즌 종료 동시 연산 | BLOCKED |
-| V18 | 파티 지원·AFK·캡차 | BLOCKED |
+| V18 | 파티 지원·AFK·캡차 | **PASS** (G-1(b), 캡차 항목 제외) |
 | V19 | 워프·교체 후 불변식 | **PASS** (부분: GM 리셋 없음) |
 | V20 | CP | **PASS** (DECIDED 단계만), 반영 단계 BLOCKED |
 | V21 | 배치 기간 3개 이상 | BLOCKED |
-| V22 | max_tiers·오버플로 | BLOCKED (규칙은 G1-4 PASS) |
+| V22 | max_tiers·오버플로 | **PASS** (G-1(b) feed 30,000, 같은 세션) |
 | V23 | 워프·던전 칸 | **PASS** (메뉴 중 끊김·자동 안전 NOT RUN) |
 | V24 | 04:00 KST | NOT RUN |
 | 추가 | 교환 X-E1~X-E4, 33걸음 L1, NPC 실서버 파싱, 불변식 SQL 12회 | **PASS** |
