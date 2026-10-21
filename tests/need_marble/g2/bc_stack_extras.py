@@ -17,6 +17,8 @@ ap = argparse.ArgumentParser()
 ap.add_argument('--out', required=True)
 ap.add_argument('--orig', required=True)
 ap.add_argument('--harness-only', action='store_true', help='rewrite only npc/custom/_mbqa_harness.txt')
+ap.add_argument('--kill-hooks', action='store_true', help='G-1(b): add @mbqakill / @mbqafeed (test build only)')
+ap.add_argument('--bind-local', action='store_true', help='add bind_ip: 127.0.0.1 to the login/char/map import conf')
 a = ap.parse_args()
 S = os.path.join(os.path.abspath(a.out), 'stack')
 O = os.path.abspath(a.orig)
@@ -76,8 +78,22 @@ def apply_d1_e2():
     report.append('npc/scripts_custom.conf: + need_marble_board_v2.txt, + _mbqa_harness.txt')
 
 
+def bind_local():
+    for f in ('login_conf.txt', 'char_conf.txt', 'map_conf.txt'):
+        p = os.path.join(S, 'conf', 'import', f)
+        raw = open(p, 'rb').read()
+        if b'bind_ip:' in raw:
+            raise SystemExit(f'{f}: bind_ip already present')
+        if not raw.endswith(b'\n'):
+            raw += b'\r\n'      # these files end without a newline: never glue onto the last setting
+        open(p, 'wb').write(raw + b'bind_ip: 127.0.0.1\r\n')
+        report.append(f'conf/import/{f}: + bind_ip: 127.0.0.1')
+
+
 if not a.harness_only:
     apply_d1_e2()
+    if a.bind_local:
+        bind_local()
 
 
 def instance_name(rel, needle):
@@ -126,6 +142,25 @@ harness = b'\r\n'.join([
     b'\tend;',
     b'}',
     b''])
+if a.kill_hooks:
+    # G-1(b): needs the TEST BUILD map-server (need_marble_test_* commands exist only there)
+    harness += b'\r\n'.join([
+        b'// G-1(b) test build only: @mbqakill <radius 0=map> <max>, @mbqafeed <count>',
+        b'-\tscript\tMBQA_KillHarness\t-1,{',
+        b'OnInit:',
+        b'\tbindatcmd "mbqakill", strnpcinfo(3) + "::OnKill", 99, 100;',
+        b'\tbindatcmd "mbqafeed", strnpcinfo(3) + "::OnFeed", 99, 100;',
+        b'\tend;',
+        b'OnKill:',
+        b'\t.@n = need_marble_test_kill(atoi(.@atcmd_parameters$[0]), atoi(.@atcmd_parameters$[1]));',
+        b'\tdispbottom "[MBQA] kill n=" + .@n;',
+        b'\tend;',
+        b'OnFeed:',
+        b'\t.@n = need_marble_test_hunt_feed(atoi(.@atcmd_parameters$[0]));',
+        b'\tdispbottom "[MBQA] feed n=" + .@n;',
+        b'\tend;',
+        b'}',
+        b''])
 hp = os.path.join(S, 'npc', 'custom', '_mbqa_harness.txt')
 open(hp, 'wb').write(harness)
 report.append(f'npc/custom/_mbqa_harness.txt written ({len(harness)} bytes, instance names copied as CP949 bytes)')

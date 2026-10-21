@@ -3,6 +3,7 @@
 Usage: python -I tests/need_marble/static_check.py <worktree root>
 Exit code 0 = every check passed.
 """
+import os
 import re
 import sys
 from pathlib import Path
@@ -136,6 +137,19 @@ for rel in new_files:
     hits = [m.group(0) for m in pattern.finditer(text)]
     check(f'{rel}: no host / password / absolute path', not hits, str(hits[:3]))
 check('board_v2 NPC: no host / password / absolute path', not pattern.search(npc))
+
+# 9. G-1(b) test hooks never reach the repository sources or build files
+leak = []
+for base, _, fs in os.walk(ROOT / 'src'):
+    for fn in fs:
+        if fn.endswith(('.cpp', '.hpp', '.inc', '.vcxproj', '.filters', '.txt', '.in')):
+            t = (Path(base) / fn).read_bytes()
+            if b'need_marble_test' in t or b'NEED_MARBLE_TEST_HOOKS' in t:
+                leak.append(str(Path(base, fn).relative_to(ROOT)))
+check('src/ has no G-1(b) test hook code', not leak, str(leak[:5]))
+build_files = [p for p in ('CMakeLists.txt', 'configure', 'configure.ac', 'Makefile.in', 'rAthena.sln') if (ROOT / p).exists()]
+check('build files never define NEED_MARBLE_TEST_HOOKS',
+      not any(b'NEED_MARBLE_TEST_HOOKS' in (ROOT / p).read_bytes() for p in build_files), str(build_files))
 
 failed = [r for r in results if not r[1]]
 for name, ok, detail in results:
