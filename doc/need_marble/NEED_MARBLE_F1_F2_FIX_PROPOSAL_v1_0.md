@@ -1,7 +1,8 @@
 # NEED 라그 마블 — F1·F2 제품 코드 개선안 v1.0
 
 - 작성일: 2026-10-21
-- 상태: **개선안만. 코드는 바꾸지 않았다.** 대상 브랜치 `feature/need-marble-phase-bc-v1` (현재 `57cfda18b`)
+- 상태: 2026-10-21 승인·구현 완료(커밋 `f6e620f3a`, 결과 `NEED_MARBLE_F1_F2_EXECUTION_REPORT_v1_0.md`). 아래는 승인 당시 개선안 원문.
+- 원래 상태: **개선안만. 코드는 바꾸지 않았다.** 대상 브랜치 `feature/need-marble-phase-bc-v1` (현재 `57cfda18b`)
 - 출처: `NEED_MARBLE_G1B_EXECUTION_REPORT_v1_0.md` 4절 F1·F2
 
 ## F1 — 레벨 판정 시점 (그 처치로 레벨이 오르면 그 처치가 빠짐)

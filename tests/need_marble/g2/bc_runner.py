@@ -845,6 +845,8 @@ def batches(aid):
 
 
 def kill(c, radius, n, wait=6):
+    c.command('@alive', settle=0.8)   # the dealer must be alive at the kill (a dead top damager credits nobody)
+    c.command('@heal', settle=0.8)
     t = harness(c, f'@mbqakill {radius} {n}', needle='[MBQA] kill', wait=wait)
     try:
         return int(t.split('n=')[1]) if t else None
@@ -857,6 +859,7 @@ def to_field(c):
     time.sleep(2)
     c.command('@alive')
     c.command('@heal')
+    c.command('@monsterignore')   # no deaths mixed into the result (does not refresh idletime)
 
 
 def kill_total(c, total, radius=0, step=60):
@@ -923,8 +926,9 @@ def cmd_v14_crash_check(a):
 
 def cmd_v03(a):
     """V03: tiers at 100/200/300/400 kills, 25 points each, nothing after the 4th; checkpoints stop after the cap."""
-    aid = AID['gm']
-    c = login('gm')
+    who = a.rest[0] if a.rest else 'gm'
+    aid = AID[who]
+    c = login(who)
     to_field(c)
     h0 = hunt(aid)
     need = 400 - h0[0][1] + 5
@@ -935,7 +939,7 @@ def cmd_v03(a):
     h1, r1, nb1 = hunt(aid), hunt_rows(aid), len(batches(aid))
     w1 = wallet(aid)
     per = sql(f'SELECT activity,earned FROM need_marble_period WHERE account_id={aid} AND activity IN (0,1) ORDER BY activity')
-    c = login('gm')
+    c = login(who)
     to_field(c)
     k2 = kill_total(c, 40)
     c.logout()
@@ -1065,6 +1069,108 @@ def cmd_probe_kill(a):
     wait_offline(aid)
     h1 = hunt(aid)
     log(f'   probe {who}{slot}: killed {k}, progress {h0} -> {h1}, captcha-like packet ids seen {cap}')
+
+
+def char_level(cid):
+    return [int(x) for x in sql(f'SELECT base_level,base_exp FROM `char` WHERE char_id={cid}')[0]]
+
+
+def kills_of(aid):
+    h = hunt(aid)
+    return h[0][1] if h else 0
+
+
+def cmd_r1(a):
+    """F1 R1: one kill levels the dealer from 41 to 42 (hornet lv 11: difference 30 -> 31)."""
+    label = a.rest[0] if a.rest else 'run'
+    aid, cid = AID['cap'], 150908
+    lv0, k0 = char_level(cid), kills_of(aid)
+    c = login('cap')
+    c.command('@warp prt_fild05')
+    time.sleep(3)
+    c.command('@monsterignore')
+    n = kill(c, 0, 1)
+    time.sleep(1)
+    c.logout()
+    wait_offline(aid)
+    lv1, k1 = char_level(cid), kills_of(aid)
+    record(f'R1 F1 dealer level-up kill ({label})', 'INFO', f'killed {n}; level {lv0} -> {lv1}; marble kills {k0} -> {k1} (+{k1 - k0})')
+    return lv1, k1 - k0
+
+
+def cmd_r2(a):
+    """F1 R2: the dealer's kill levels the party member P2 from 41 to 42 through the even exp share."""
+    label = a.rest[0] if a.rest else 'run'
+    gm, p2 = AID['gm'], AID['p2']
+    lv0, k0 = char_level(150905), kills_of(p2)
+    g = login('gm')
+    g.command('@warp prt_fild05')
+    time.sleep(3)
+    g.command('@monsterignore')
+    m2 = login('p2')
+    m2.command('@monsterignore')
+    g.command('@recall MBQA_P2')
+    time.sleep(2)
+    if m2.pos:
+        m2.walk(m2.pos[1] + 1, m2.pos[2])
+    time.sleep(1.5)
+    n = 0
+    for _ in range(12):
+        n = kill(g, 13, 1) or 0
+        if n:
+            break
+        if m2.pos:
+            m2.walk(m2.pos[1], m2.pos[2])
+        time.sleep(5)
+    time.sleep(1)
+    for c in (m2, g):
+        c.logout()
+    wait_offline(gm)
+    wait_offline(p2)
+    lv1, k1 = char_level(150905), kills_of(p2)
+    record(f'R2 F1 party member level-up kill ({label})', 'INFO', f'dealer killed {n}; P2 level {lv0} -> {lv1}; P2 marble kills {k0} -> {k1} (+{k1 - k0})')
+
+
+def cmd_r3(a):
+    """F2 R3: a capped account relogs; 10 real kills and 5,000 fed kills write nothing."""
+    who = a.rest[0] if a.rest else 'user'
+    aid = AID[who]
+    h0, b0, r0 = hunt(aid), batches(aid), hunt_rows(aid)
+    c = login(who)
+    to_field(c)
+    k = kill_total(c, 10)
+    c.command('@alive', settle=0.8)
+    t = harness(c, '@mbqafeed 5000', needle='[MBQA] feed', wait=30)
+    c.logout()
+    wait_offline(aid)
+    h1, b1, r1 = hunt(aid), batches(aid), hunt_rows(aid)
+    ok = h0 and h0[0][2] == 5 and k == 10 and t and 'n=5000' in t and h1 == h0 and len(b1) == len(b0) and r1 == r0
+    record('R3 F2 capped account relog: no batch / kill count written', 'PASS' if ok else 'FAIL',
+           f'progress {h0} -> {h1}; batches {len(b0)} -> {len(b1)}; milestones {len(r0)} -> {len(r1)}; real kills {k}; {t}')
+    inv = invariants()
+    record('INV after R3', 'PASS' if not inv else 'FAIL', f'{len(inv)} violating rows: {inv[:6]}')
+
+
+def cmd_smoke_board(a):
+    """R4 regression smoke: exchange 1 die, enter the board, roll twice (any account with >= 50 score)."""
+    who = a.rest[0] if a.rest else 'user'
+    aid = AID[who]
+    c = login(who)
+    w0 = wallet(aid)
+    marble(c, ['점수 → 주사위 교환', 1, '교환'])
+    w1 = wallet(aid)
+    adjust(aid, dice=1, ticket=int(time.time()))
+    if not c.mapname.startswith('need_marbl'):
+        marble(c, ['게임판으로 이동'])
+        time.sleep(3)
+        c.mapname = 'need_marbl.gat'
+    rows = [one_roll(c, aid, i) for i in range(2)]
+    c.logout()
+    ok = (w1['score'] == w0['score'] - 50 and w1['dice'] == w0['dice'] + 1 and
+          all(r['event'] and len(r['event']) == 1 and r['steps'] == r['die'] for r in rows))
+    record('R4 smoke: exchange + 2 rolls', 'PASS' if ok else 'FAIL', f'wallet {w0} -> {w1}; rolls {[(r["from"], r["die"], r["to"], r["event"]) for r in rows]}')
+    inv = invariants()
+    record('INV after smoke', 'PASS' if not inv else 'FAIL', f'{len(inv)} violating rows: {inv[:6]}')
 
 
 def main():
