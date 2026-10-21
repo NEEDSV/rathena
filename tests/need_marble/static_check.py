@@ -151,6 +151,29 @@ build_files = [p for p in ('CMakeLists.txt', 'configure', 'configure.ac', 'Makef
 check('build files never define NEED_MARBLE_TEST_HOOKS',
       not any(b'NEED_MARBLE_TEST_HOOKS' in (ROOT / p).read_bytes() for p in build_files), str(build_files))
 
+# 10. F1: marble hunt hook runs before the experience share, with the same final-kill test as `rebirth`
+mob = (ROOT / 'src/map/mob.cpp').read_bytes().decode('utf-8', 'replace')
+mob_lines = mob.splitlines()
+hook_at = [i for i, l in enumerate(mob_lines) if 'need_marble_hunt_on_kill(' in l]
+exp_at = [i for i, l in enumerate(mob_lines) if l.strip().startswith('if(!(type&2) &&')]
+check('mob.cpp calls the marble hunt hook exactly once', len(hook_at) == 1, str(hook_at))
+check('marble hunt hook is before the experience share block', hook_at and exp_at and hook_at[0] < exp_at[0], f'{hook_at} vs {exp_at}')
+reb = re.search(r'rebirth =\s*\((.*?)\);', mob)
+fin = re.search(r'need_marble_final_kill = !\((.*?)\);', mob)
+norm = lambda s: re.sub(r'\s+', '', s)
+check('marble final-kill test equals the rebirth expression', reb and fin and norm(reb.group(1)) == norm(fin.group(1)),
+      f'{reb.group(1) if reb else None} / {fin.group(1) if fin else None}')
+rebirth_at = [i for i, l in enumerate(mob_lines) if l.strip().startswith('rebirth =')]
+other = [i for i, l in enumerate(mob_lines) if 'need_summer_hunt_on_kill(' in l or 'need_chuseok_hunt_on_kill(' in l]
+check('summer / chuseok hooks stay after the rebirth test (unchanged rule)', len(other) == 2 and all(i > rebirth_at[0] for i in other), str(other))
+
+# 11. F2: the checkpoint locks the progress row before writing a batch row
+cp = cpp[cpp.index('int32 hunt_checkpoint('):]
+cp = cp[:cp.index('\n}\n')]
+check('hunt_checkpoint: progress FOR UPDATE before batch INSERT',
+      cp.index('FOR UPDATE') < cp.index('need_marble_hunt_batch') and 'hunt_day_maxed(next_tier, max_tiers)' in cp)
+check('hunt_on_kill: one capped-day lookup per login and day', 'b.checked_day != day' in cpp and 'hunt_day_maxed_in_db(aid, day)' in cpp)
+
 failed = [r for r in results if not r[1]]
 for name, ok, detail in results:
     print(('PASS ' if ok else 'FAIL ') + name + (f'  [{detail}]' if detail and not ok else ''))

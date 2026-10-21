@@ -113,6 +113,7 @@ struct hunt_buf {
 	std::map<uint32, uint32> frozen;    // batch sent at least once, resent unchanged until acknowledged
 	t_tick last_flush = 0;
 	uint32 done_day = 0;                // every tier of this day is already reached
+	uint32 checked_day = 0;             // day whose progress row was looked up once for this login
 };
 std::unordered_map<uint32, hunt_buf> g_hunt;
 
@@ -494,11 +495,8 @@ int32 hunt_checkpoint(uint32 aid, uint32 cid, uint64 collect_session, uint32 bat
 	const int32 tier_kills = P(P_HUNT_TIER_KILLS), tier_points = P(P_HUNT_TIER_POINTS), max_tiers = P(P_HUNT_MAX_TIERS);
 	for (const auto& entry : batch) {
 		const uint32 day = entry.first, kills = entry.second;
-		if (!sq("INSERT IGNORE INTO `need_marble_hunt_batch` (`account_id`,`collect_session`,`batch_no`,`period_day`,`season_id`,`kills`,`char_id`,`created_at`) "
-			"VALUES ('%u','%" PRIu64 "','%u','%u','%u','%u','%u',NOW())", aid, collect_session, batch_no, day, season_id, kills, cid))
-			return NEED_MARBLE_DB_ERROR;
-		if (affected() == 0)
-			return NEED_MARBLE_ALREADY;   // the whole batch was applied before (it is all or nothing)
+		// The progress row is locked first: a day whose tiers are all credited writes no batch row and no
+		// kill count any more (F2 second layer; the first layer is the per-login lookup in hunt_on_kill).
 		if (!sq("INSERT IGNORE INTO `need_marble_hunt_progress` (`account_id`,`season_id`,`period_day`,`updated_at`) VALUES ('%u','%u','%u',NOW())",
 			aid, season_id, day))
 			return NEED_MARBLE_DB_ERROR;
@@ -510,6 +508,15 @@ int32 hunt_checkpoint(uint32 aid, uint32 cid, uint64 collect_session, uint32 bat
 		uint64 total = col_u64(0) + kills;
 		int32 next_tier = static_cast<int32>(col_i64(1));
 		free_result();
+		if (hunt_day_maxed(next_tier, max_tiers)) {
+			maxed_day = day;
+			continue;
+		}
+		if (!sq("INSERT IGNORE INTO `need_marble_hunt_batch` (`account_id`,`collect_session`,`batch_no`,`period_day`,`season_id`,`kills`,`char_id`,`created_at`) "
+			"VALUES ('%u','%" PRIu64 "','%u','%u','%u','%u','%u',NOW())", aid, collect_session, batch_no, day, season_id, kills, cid))
+			return NEED_MARBLE_DB_ERROR;
+		if (affected() == 0)
+			return NEED_MARBLE_ALREADY;   // the whole batch was applied before (it is all or nothing)
 		if (total > 0xFFFFFFFFull)
 			total = 0xFFFFFFFFull;
 		int32 new_next = hunt_next_tier(static_cast<uint32>(total), next_tier, tier_kills, max_tiers);
@@ -532,6 +539,19 @@ int32 hunt_checkpoint(uint32 aid, uint32 cid, uint64 collect_session, uint32 bat
 	if (!tx.commit())
 		return NEED_MARBLE_DB_ERROR;
 	return NEED_MARBLE_OK;
+}
+
+// Plain read outside any transaction. A failed lookup returns false: kills keep counting and the
+// checkpoint (which locks the same row) still refuses to write a capped day.
+bool hunt_day_maxed_in_db(uint32 aid, uint32 day) {
+	if (g_in_tx)
+		return false;
+	if (!sq("SELECT `next_tier` FROM `need_marble_hunt_progress` WHERE `account_id`='%u' AND `season_id`='%u' AND `period_day`='%u'",
+		aid, season(), day))
+		return false;
+	const bool maxed = next_row() && hunt_day_maxed(static_cast<int32>(col_i64(0)), P(P_HUNT_MAX_TIERS));
+	free_result();
+	return maxed;
 }
 
 bool hunt_issue_session(uint32 aid, uint64& out) {
@@ -777,6 +797,12 @@ void need_marble_hunt_on_kill(map_session_data* top, mob_data* md, int32 type) {
 			b = hunt_buf();
 			b.char_id = sd->status.char_id;
 			b.last_flush = gettick();
+		}
+		if (b.checked_day != day) {
+			// F2 first layer: once per login and logical day, so a capped day stops at the first kill after a relog.
+			b.checked_day = day;
+			if (hunt_day_maxed_in_db(aid, day))
+				b.done_day = day;
 		}
 		if (b.done_day == day)
 			continue;

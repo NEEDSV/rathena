@@ -3387,6 +3387,13 @@ int32 mob_dead(mob_data *md, block_list *src, int32 type)
 			third_sd = lootdmg[2].sd;
 	}
 
+	// NEED marble board: judged BEFORE the experience share below, so the level filter uses the level
+	// the player had when the monster died (a kill that levels the player up out of range still counts).
+	// Same final-kill test as the `rebirth` assignment further down (it only reads monster status changes).
+	const bool need_marble_final_kill = !( md->sc.getSCE(SC_KAIZEL) || md->sc.getSCE(SC_ULTIMATE_S) || (md->sc.getSCE(SC_REBIRTH) && !md->state.rebirth) );
+	if (need_marble_final_kill && need_summer_highest_damage_sd != nullptr && src != nullptr && !md->state.npc_killmonster)
+		need_marble_hunt_on_kill(need_summer_highest_damage_sd, md, type);
+
 	// determines, if the monster was killed by homunculus' damage only
 	homkillonly = (bool)( ( dmgbltypes&BL_HOM ) && !( dmgbltypes&~BL_HOM ) );
 	// determines if the monster was killed by mercenary damage only
@@ -3989,9 +3996,6 @@ int32 mob_dead(mob_data *md, block_list *src, int32 type)
 
 		if (need_summer_highest_damage_sd != nullptr && src != nullptr && !md->state.npc_killmonster)
 			need_chuseok_hunt_on_kill(need_summer_highest_damage_sd, md, type);
-
-		if (need_summer_highest_damage_sd != nullptr && src != nullptr && !md->state.npc_killmonster)
-			need_marble_hunt_on_kill(need_summer_highest_damage_sd, md, type);
 
 		if( md->npc_event[0] && !md->state.npc_killmonster ) {
 			if( sd && battle_config.mob_npc_event_type ) {

@@ -356,6 +356,11 @@ inline uint64_t lap_reached(uint64_t step_seq_after, int32_t lap_steps) {
 	return (step_seq_after % static_cast<uint64_t>(lap_steps)) == 0 ? step_seq_after / static_cast<uint64_t>(lap_steps) : 0;
 }
 
+// True when every hunt tier of the day is already credited (next_tier is the first tier not credited yet).
+inline bool hunt_day_maxed(int32_t next_tier, int32_t max_tiers) {
+	return next_tier > max_tiers;
+}
+
 // Hunt tiers newly reached when the period count goes from kills to kills + add.
 // next_tier is the first tier not yet credited (1-based); the result is the new next_tier.
 inline int32_t hunt_next_tier(uint32_t kills_after, int32_t next_tier, int32_t tier_kills, int32_t max_tiers) {

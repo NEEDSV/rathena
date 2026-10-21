@@ -202,6 +202,13 @@ static void test_hunt_tiers() {
 	CHECK(hunt_next_tier(4000000000u, 1, 100, 4) == 5);   // no runaway tier count (v0.4 TINYINT overflow)
 	CHECK(hunt_next_tier(500, 5, 100, 4) == 5);
 	CHECK(hunt_next_tier(250, 2, 100, 4) == 3);
+	// F2: a day is capped once next_tier passed max_tiers
+	CHECK(!hunt_day_maxed(1, 4));
+	CHECK(!hunt_day_maxed(4, 4));
+	CHECK(hunt_day_maxed(5, 4));
+	CHECK(hunt_day_maxed(hunt_next_tier(400, 1, 100, 4), 4));
+	CHECK(!hunt_day_maxed(hunt_next_tier(399, 1, 100, 4), 4));
+	CHECK(hunt_day_maxed(1, 0));   // max_tiers 0 = hunting gives nothing that day
 }
 
 static void test_laps() {
