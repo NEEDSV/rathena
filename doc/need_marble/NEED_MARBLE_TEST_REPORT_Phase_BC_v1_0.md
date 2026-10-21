@@ -59,11 +59,11 @@ NPC 가 CP949 로 읽힘 / NPC·v1.2 좌표·칸 이름 일치 / NPC 칸 종류 
 | V15 | 교환 응답 유실 → 다른 캐릭터 | **PASS** |
 | V16 | 중간 오류·중첩 | NOT RUN (고장 주입 빌드 미승인) |
 | V17 | 시즌 종료 동시 연산 | BLOCKED |
-| V18 | 파티 지원·AFK·캡차 | **PASS** (G-1(b), 캡차 항목 제외) |
+| V18 | 파티 지원·AFK·캡차 | **PARTIAL**: P2-active 근접·자리비움·원거리 PASS(G-1(b) 처치 8, F1/F2 재시험 처치 1). 캡차·지원 스킬 적립 NOT RUN (2026-10-21 후속 정정) |
 | V19 | 워프·교체 후 불변식 | **PASS** (부분: GM 리셋 없음) |
 | V20 | CP | **PASS** (DECIDED 단계만), 반영 단계 BLOCKED |
 | V21 | 배치 기간 3개 이상 | BLOCKED |
-| V22 | max_tiers·오버플로 | **PASS** (G-1(b) feed 30,000, 같은 세션) |
+| V22 | max_tiers·오버플로 | G-1(b) **PASS**(F2 이전 빌드, 깨끗한 계정, 같은 세션) → F1/F2 재시험 러너 **FAIL**(잔여 처치 1건, 원장 동작은 정상) → 러너 수정(`NEED_MARBLE_V22_RUNNER_FIX_REPORT_v1_0.md`), 새 러너 **NOT RUN** |
 | V23 | 워프·던전 칸 | **PASS** (메뉴 중 끊김·자동 안전 NOT RUN) |
 | V24 | 04:00 KST | NOT RUN |
 | 추가 | 교환 X-E1~X-E4, 33걸음 L1, NPC 실서버 파싱, 불변식 SQL 12회 | **PASS** |
