@@ -36,8 +36,8 @@ MAPS = {
     'prt_prison': ('지하 감옥', 'Prontera Prison'),
     'gl_cas02_': ('고성 2층 회랑', 'Glast Heim Castle 2 (N)'),
     'ver_eju': ('유페로스 동쪽폐허', 'Eastern Ruins of Juperos'),
-    'sp_rudus2': ('루두스 2층', 'Rudus 2F'),
-    'ba_lost': ('사육장 로스트밸리', 'Lost Valley'),
+    'verus02': ('베루스 연구동-WISH', 'Verus R&D-WISH'),
+    'ra_fild10': ('라헬 필드 10', 'Rachel Field 10'),
 }
 # monster display names for the navi links (AegisName -> KR, EN)
 MOBS = {
@@ -52,11 +52,9 @@ MOBS = {
     'FROZENWOLF': ('프로즌 울프', 'Frozen Wolf'), 'TAFFY': ('태피', 'Taffy'), 'WATCHER': ('와처', 'Watcher'),
     'NG_WANDER_MAN': ('방랑자', 'Wanderer'), 'NG_RIDEWORD': ('라이드 워드', 'Rideword'),
     'RECON_ROBOT': ('정찰 로봇', 'Recon Robot'), 'EXCAVATOR_ROBOT': ('굴착 로봇', 'Excavator Robot'),
-    'EP17_1_BELLARE2': ('벨라레', 'Bellare'), 'EP17_1_SANARE2': ('사나레', 'Sanare'),
-    'EP17_1_PLAGA1': ('플라가', 'Plaga'), 'EP17_1_DOLOR2': ('돌로르', 'Dolor'),
-    'EP17_2_PITAYA_R': ('피타야', 'Pitaya'), 'EP17_2_PITAYA_Y': ('피타야', 'Pitaya'),
-    'EP17_2_PITAYA_B': ('피타야', 'Pitaya'), 'EP17_2_PITAYA_V': ('피타야', 'Pitaya'),
-    'EP17_2_PITAYA_G': ('피타야', 'Pitaya'),
+    'REPAIR_ROBOT_T': ('수리로봇 터보', 'Repair Robot Turbo'),
+    'EXPLORATION_ROVER_T': ('탐사로봇 터보', 'Exploration Rover Turbo'),
+    'EP18_GREY_GOAT': ('잿빛 고우트', 'Ashen Goat'), 'EP18_GREY_WOLF_BABY': ('새끼 회색 늑대', 'Baby Gray Wolf'),
 }
 MOBS.update({
     'EXPLOSION': ('익스플로젼', 'Explosion'), 'LAVA_GOLEM': ('라바 골렘', 'Lava Golem'), 'BLAZZER': ('블레이저', 'Blazer'),
