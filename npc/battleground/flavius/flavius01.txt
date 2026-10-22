@@ -457,6 +457,8 @@ OnTimer30000:
 	bg_warp $@FlaviusBG1_id2,"bat_b01",311,224;
 
 	mapannouncelang "bat_b01","플라비우스 전투가 시작되었습니다!","The Flavius battle has begun!",bc_map,"0x66CCFF";
+	// NEED 일일 퀘스트: 전투 시작 기록 (참가자·IP·시작 시각)
+	needdq_bg_start "Flavius", $@FlaviusBG1_id1, $@FlaviusBG1_id2, "bat_b01";
 	donpcevent "countdown#bat_b01::OnEnable";
 	donpcevent "#bat_b01_timer::OnEnable";
 	end;
@@ -548,6 +550,8 @@ OnMyMobDead:
 
 		if ($@Croix_ScoreBG1 > 0) {
 			$@FlaviusBG1_Victory = 2;
+			// NEED 일일 퀘스트: 공식 경기 종료 판정 (D2, 보상 수령과 무관)
+			needdq_bg_finish "Flavius";
 			$@Croix_ScoreBG1 = $@Croix_ScoreBG1 + 1;
 			enablenpc "기욤 빈테나르#b01_a";
 			enablenpc "크루아 빈테나르#b01_b";
@@ -586,6 +590,8 @@ OnMyMobDead:
 
 		if ($@Guill_ScoreBG1 > 0) {
 			$@FlaviusBG1_Victory = 1;
+			// NEED 일일 퀘스트: 공식 경기 종료 판정 (D2, 보상 수령과 무관)
+			needdq_bg_finish "Flavius";
 			$@Guill_ScoreBG1 = $@Guill_ScoreBG1 + 1;
 			enablenpc "기욤 빈테나르#b01_a";
 			enablenpc "크루아 빈테나르#b01_b";
@@ -863,6 +869,8 @@ OnTimer1825000:
 	end;
 
 OnTimer1830000:
+	// NEED 일일 퀘스트: 공식 경기 종료 판정 (D2, 시간 초과)
+	needdq_bg_finish "Flavius";
 	donpcevent "time#bat_b01::OnStop";
 	bg_warp $@FlaviusBG1_id1,"bat_b01",10,290;
 	bg_warp $@FlaviusBG1_id2,"bat_b01",390,10;

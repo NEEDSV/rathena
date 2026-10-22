@@ -1,0 +1,111 @@
+//============================================================
+//= NEED [!] 버튼 NPC  (캐시샵 아래 [!] 버튼 -> @needbtn -> 이 NPC)
+//=
+//= 클라이언트는 버튼을 누르면 항상 "@needbtn" 하나만 보냅니다.
+//= 어떤 대화를 열지는 이 서버 스크립트가 정합니다.
+//=   - .Func$ 에 적힌 함수(function script)를 callfunc 로 실행합니다.
+//=   - 대화를 바꾸려면 .Func$ 값이나 그 함수 내용만 고치면 되고,
+//=     클라이언트(exe)는 다시 패치할 필요가 없습니다.
+//=   - GM(99)은 실행 중에 바꿀 수 있습니다: @needbtn set <함수이름>
+//=     허용 목록(.Allow$)에 있는 함수만 받고, 바꿀 때마다 logmes 로 남깁니다.
+//=     (서버 메모리에만 적용, 재시작/리로드하면 OnInit 값으로 돌아감)
+//=
+//= 보상  : 없음. 아이템/캐시/포인트 지급, 영구 변수 저장을 하지 않습니다.
+//= 등록  : npc/scripts_need.conf (일일 퀘스트 NPC 보다 먼저)
+//= 출처  : dqtest/dqbtn_poc/need_notice_button.txt (2026-10-21 [!] 버튼 PoC 인수인계)
+//============================================================
+
+-	script	NEED_NOTICE_BTN	-1,{
+	end;
+
+OnInit:
+	// [!] 버튼이 여는 대화. 다른 NPC(예: 일일 퀘스트)가 OnInit 에서 먼저 정했으면 그대로 둔다.
+	if (.Func$ == "")
+		.Func$ = "F_NeedBtn_Menu";
+	// @needbtn set 으로 고를 수 있는 함수 (그 밖의 이름은 거부, 현재 연결 유지)
+	setarray .Allow$[0], "F_NEED_DQ_Talk", "F_NeedBtn_Menu", "F_NeedBtn_Alt";
+	bindatcmd "needbtn", "NEED_NOTICE_BTN::OnBtn", 0, 99;
+	end;
+
+OnBtn:
+	if (.@atcmd_numparameters >= 1 && .@atcmd_parameters$[0] == "set") {
+		if (getgmlevel() < 99)
+			end;
+		if (.@atcmd_numparameters < 2) {
+			dispbottom "[!] 버튼 연결: " + .Func$ + "  (변경: @needbtn set <함수이름>)";
+			dispbottom "[!] 허용: " + implode(.Allow$, ", ");
+			end;
+		}
+		.@want$ = .@atcmd_parameters$[1];
+		if (inarray(.Allow$, .@want$) < 0) {
+			dispbottom "[!] 허용되지 않은 함수라 바꾸지 않았습니다: " + .@want$ + " (현재 " + .Func$ + ")";
+			logmes "[NEEDBTN] set refused: " + .@want$ + " (kept " + .Func$ + ")";
+			end;
+		}
+		logmes "[NEEDBTN] set: " + .Func$ + " -> " + .@want$;
+		.Func$ = .@want$;
+		dispbottom "[!] 버튼 연결을 " + .Func$ + " 로 바꿨습니다.";
+		end;
+	}
+	// 연타 방지 (1초)
+	if (@needbtn_tick && gettimetick(0) - @needbtn_tick < 1000)
+		end;
+	@needbtn_tick = gettimetick(0);
+	// 다른 NPC 가 OnInit 에서 허용 목록 밖의 이름을 넣었으면 기본 메뉴로 (스크립트 오류 방지)
+	if (inarray(.Allow$, .Func$) < 0)
+		.Func$ = "F_NeedBtn_Menu";
+	callfunc .Func$;
+	end;
+}
+
+//------------------------------------------------------------
+// 기본 대화: 메뉴에서 다른 대화(함수)로 이어 줍니다.
+//------------------------------------------------------------
+function	script	F_NeedBtn_Menu	{
+	mes "[NEED 알림]";
+	mes "캐시샵 아래 [!] 버튼으로 연 대화입니다.";
+	mes "이 대화는 서버 스크립트에서 언제든 바꿀 수 있습니다.";
+	next;
+	while (1) {
+		clear;
+		mes "[NEED 알림]";
+		mes "원하는 항목을 선택해 주세요.";
+		.@sel = select("오늘의 안내 (예시):캐릭터 정보:닫기");
+		clear;
+		if (.@sel == 1)
+			callfunc "F_NeedBtn_Today";
+		else if (.@sel == 2)
+			callfunc "F_NeedBtn_CharInfo";
+		else
+			break;
+	}
+	mes "[NEED 알림]";
+	mes "대화를 종료합니다.";
+	close;
+}
+
+function	script	F_NeedBtn_Today	{
+	mes "[NEED 알림]";
+	mes "오늘의 안내 예시 화면입니다.";
+	mes "일일 퀘스트, 이벤트 안내 등으로 바꿔 쓸 수 있습니다.";
+	next;
+	return;
+}
+
+function	script	F_NeedBtn_CharInfo	{
+	mes "[NEED 알림]";
+	mes "캐릭터 : " + strcharinfo(0);
+	mes "맵 : " + strcharinfo(3);
+	next;
+	return;
+}
+
+//------------------------------------------------------------
+// 연결 대상 교체 테스트용: @needbtn set F_NeedBtn_Alt
+//------------------------------------------------------------
+function	script	F_NeedBtn_Alt	{
+	mes "[NEED 알림]";
+	mes "다른 대화로 연결된 상태입니다.";
+	mes "클라이언트는 그대로이고 서버 연결만 바꿨습니다.";
+	close;
+}

@@ -9072,6 +9072,8 @@ static const struct _battle_data {
 	{ "need_newbie_party_exp_bonus_enable", &battle_config.need_newbie_party_exp_bonus_enable, 1,   0,      1,              },
 	{ "need_newbie_party_exp_bonus",        &battle_config.need_newbie_party_exp_bonus,     100,    0,      INT_MAX,        },
 	{ "need_newbie_party_exp_bonus_max_members", &battle_config.need_newbie_party_exp_bonus_max_members, 6, 1, MAX_PARTY,   },
+	{ "need_daily_quest_enable",             &battle_config.need_daily_quest_enable,          0,      0,      1,              },
+	{ "need_daily_quest_debug",              &battle_config.need_daily_quest_debug,           0,      0,      1,              },
 
 	{ "feature.dynamicnpc_timeout",         &battle_config.feature_dynamicnpc_timeout,      1000,   60000,  INT_MAX,        },
 	{ "feature.dynamicnpc_rangex",          &battle_config.feature_dynamicnpc_rangex,       2,      0,      INT_MAX,        },

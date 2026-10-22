@@ -57,6 +57,7 @@
 #include "mercenary.hpp"
 #include "mob.hpp"
 #include "need_autopot.hpp"
+#include "need_daily_quest.hpp"
 #include "need_equipment_build.hpp"
 #include "need_jf_pattern.hpp"
 #include "need_summer_attendance.hpp"
@@ -9186,6 +9187,76 @@ ACMD_FUNC(mute)
 	return 0;
 }
 
+#ifdef NEED_DQ_TEST
+/*==========================================
+ * NEED test only: @dqtest (daily quest probes, test build only)
+ * @dqtest                    state of the logical day, session cache and rows
+ * @dqtest rate <-1|0..10000> roll override (-1 = configured rate)
+ * @dqtest offset <seconds>   clock offset for the logical day
+ * @dqtest fail <0|1|2>       fault injection point
+ * @dqtest gm <0|1>           count GM characters in real kills (default 0 = spec: GMs excluded)
+ * @dqtest bgip <-1|0..100>   battleground distinct-IP percent (-1 = 75, spec U9)
+ * @dqtest inst <KIND>        as if this character were on the boss map at a clear (OGH_HARD|OGH|SKY_FORTRESS)
+ * @dqtest credit <mob_id> [n] n qualifying kills of mob_id on this map (party rules apply)
+ * @dqtest flush              write the pending count now
+ * @dqtest accept|reaccept|submit|status   the NPC commands
+ *------------------------------------------*/
+ACMD_FUNC(dqtest)
+{
+	char sub[32] = {};
+	long long value = 0;
+	int32 count = 1;
+	char msg[CHAT_SIZE_MAX];
+
+	nullpo_retr(-1, sd);
+	int32 n = message != nullptr ? sscanf(message, "%31s %lld %d", sub, &value, &count) : 0;
+	if (n < 1) {
+		need_dq_test_dump(sd);
+		return 0;
+	}
+	if (strcmp(sub, "rate") == 0 && n >= 2 && value >= -1 && value <= 10000) {
+		need_dq_test_rate = static_cast<int32>(value);
+	} else if (strcmp(sub, "offset") == 0 && n >= 2) {
+		need_dq_test_offset = static_cast<int64>(value);
+	} else if (strcmp(sub, "gm") == 0 && n >= 2 && (value == 0 || value == 1)) {
+		need_dq_test_allow_gm = static_cast<int32>(value);
+	} else if (strcmp(sub, "bgip") == 0 && n >= 2 && value >= -1 && value <= 100) {
+		need_dq_test_bg_ip_percent = static_cast<int32>(value);
+	} else if (strcmp(sub, "fail") == 0 && n >= 2 && value >= 0 && value <= 2) {
+		need_dq_test_fail_point = static_cast<int32>(value);
+	} else if (strcmp(sub, "credit") == 0 && n >= 2) {
+		need_dq_test_credit(sd, static_cast<int32>(value), n >= 3 ? cap_value(count, 1, 1000) : 1);
+	} else if (strcmp(sub, "inst") == 0) {
+		char kind[24] = {};
+		if (sscanf(message, "%*s %23s", kind) < 1) {
+			clif_displaymessage(fd, "dqtest: inst <OGH_HARD|OGH|SKY_FORTRESS>");
+			return -1;
+		}
+		safesnprintf(msg, sizeof(msg), "dqtest: inst %s -> %d", kind, need_daily_quest_script_inst_clear(sd, kind, 0));
+		clif_displaymessage(fd, msg);
+	} else if (strcmp(sub, "flush") == 0) {
+		need_dq_test_flush(sd);
+	} else if (strcmp(sub, "accept") == 0) {
+		safesnprintf(msg, sizeof(msg), "dqtest: accept -> %d", need_daily_quest_script_accept(sd));
+		clif_displaymessage(fd, msg);
+	} else if (strcmp(sub, "reaccept") == 0) {
+		safesnprintf(msg, sizeof(msg), "dqtest: reaccept -> %d", need_daily_quest_script_reaccept(sd));
+		clif_displaymessage(fd, msg);
+	} else if (strcmp(sub, "submit") == 0) {
+		safesnprintf(msg, sizeof(msg), "dqtest: submit -> %d", need_daily_quest_script_submit(sd));
+		clif_displaymessage(fd, msg);
+	} else if (strcmp(sub, "status") == 0) {
+		safesnprintf(msg, sizeof(msg), "dqtest: status -> %d", need_daily_quest_script_status(sd));
+		clif_displaymessage(fd, msg);
+	} else {
+		clif_displaymessage(fd, "dqtest: rate|offset|fail|gm|bgip|credit|inst|flush|accept|reaccept|submit|status");
+		return -1;
+	}
+	need_dq_test_dump(sd);
+	return 0;
+}
+#endif
+
 #ifdef NEED_ENCHANT_TEST
 /*==========================================
  * NEED test only: @enchanttest (item enchant engine probes, GM 99)
@@ -13655,6 +13726,9 @@ void atcommand_basecommands(void) {
 		ACMD_DEF(changecharsex),
 		ACMD_DEF(mute),
 		ACMD_DEF(refresh),
+#ifdef NEED_DQ_TEST
+		ACMD_DEF(dqtest),
+#endif
 #ifdef NEED_ENCHANT_TEST
 		ACMD_DEF(enchanttest),
 		ACMD_DEF(v2try),
