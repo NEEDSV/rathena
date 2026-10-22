@@ -888,6 +888,9 @@ struct Battle_Config
 	int32 need_newbie_party_exp_bonus_enable;
 	int32 need_newbie_party_exp_bonus;
 	int32 need_newbie_party_exp_bonus_max_members;
+	// NEED daily quest
+	int32 need_daily_quest_enable;
+	int32 need_daily_quest_debug;
 	int32 feature_dynamicnpc_timeout;
 	int32 feature_dynamicnpc_rangex;
 	int32 feature_dynamicnpc_rangey;

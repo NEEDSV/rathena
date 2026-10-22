@@ -24,6 +24,7 @@
 #include "map.hpp"
 #include "mob.hpp"
 #include "party.hpp"
+#include "need_daily_quest.hpp"
 #include "pc.hpp"
 
 using namespace rathena;
@@ -760,6 +761,10 @@ void quest_update_objective(map_session_data *sd, mob_data* md)
 
 	for (int32 i = 0; i < sd->avail_quests; i++) {
 		if (sd->quest_log[i].state == Q_COMPLETE) // Skip complete quests
+			continue;
+
+		// NEED daily quest: 99000-99999 only display the ledger (need_daily_quest.cpp)
+		if (need_dq_managed_quest(sd->quest_log[i].quest_id))
 			continue;
 
 		std::shared_ptr<s_quest_db> qi = quest_search(sd->quest_log[i].quest_id);

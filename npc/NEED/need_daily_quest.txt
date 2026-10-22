@@ -1,0 +1,605 @@
+//============================================================
+// NEED 일일 퀘스트 - 일일 보급 납품 (1단계)
+//============================================================
+//= 명세: md/daily_quest_20261019/NEED_Daily_Quest_Delivery_Final_Technical_Spec_v0_7.md (개정 2)
+//=
+//= 수집·점수·트랙 고정은 모두 C++ (need_daily_quest.cpp) 와 SQL 이 담당한다.
+//= 이 NPC 는 상태를 보여 주고, 스크립트 명령 1회 = 트랜잭션 1회 로만 바꾼다.
+//=   needdq_status()   @dq_* 표시 변수 채움 (0 미수락 1 수락 2 목표 달성 3 계정 고정 4 레벨 구간 변경 5 Lv100 미만 -8 꺼짐)
+//=   needdq_accept()   1 수락(계정 같은 트랙 고정) 2 수락(계정 미고정, 경고) -2 다른 트랙 고정 -3 구간 바뀜 -4 Lv100 미만 -5 이미 수락
+//=   needdq_reaccept() 1 새 구간으로 수락 -2 계정이 이전 구간으로 고정 -6 필요 없음
+//=   needdq_submit()   1 점수 +@dq_gained 0 추가 점수 없음 -1 미수락 -2 계정 고정(기록만) -3 구간 바뀜 -4 Lv100 미만
+//=
+//= 대화창 (2026-10-21 운영자 피드백): 단계마다 한 화면, 창 크기는 줄 수에 맞춘다.
+//=   클라이언트 PACKETVER 20250604 (src/custom/defines_pre.hpp) 라 setdialogsize 가 동작한다.
+//=   모든 출력은 F_NEED_DQ_M (줄 수 @dq_ln 증가), 화면 전환(next/select/close) 직전에 F_NEED_DQ_Fit.
+//=   setdialogsize 는 그 화면의 글을 다 쓴 뒤에만 부른다 (중간에 부르면 줄이 겹쳐 그려짐).
+//=   메뉴(select) 다음에는 clear 로 앞 화면 글을 지운다 (남은 글은 줄 수에 안 잡혀 창이 작아짐).
+//=   한 줄: KR 44바이트 / EN 50자, 한 화면 18줄 이하.
+//=
+//= [!] 버튼: npc/NEED/need_notice_button.txt 의 NEED_NOTICE_BTN 이 F_NEED_DQ_Talk 를 연다.
+//= 퀘스트 창: 수락하면 그날 맵의 납품 미션(99101~99173)이 "일일" 분류에 보인다. 표시 전용이며
+//=   진행 수치는 need_daily_quest.cpp 가 원장 값으로 채운다 (처치로 직접 오르지 않음).
+//= 4단계: 인던 (Lv175, 선택, 상급 고성 40 / 일반 고성 15 / 공중요새 15, 합 40, 판정은 C++ needdq_inst_clear).
+//= 3단계: 전장 (Lv150 이상, 선택, 유효 경기 1판 30점 / 2판 50점, 판정은 C++ needdq_bg_*).
+//= 2단계: 사냥 (보급관 수락 한 번으로 납품과 함께 시작, 단계마다 점수 즉시 확정).
+//= v1.5 Phase 5-Lite: 보상 받기 = 20/40/60/80점마다 10,000캐시 (계정·구간당 1번, 꿀송편과 같은 IP 규칙). 증표는 아직 없다.
+//= 가상 재료 이름과 NPC 위치는 임시값이다 (격리 시험용).
+//============================================================
+
+// 한 줄 출력 + 줄 수 세기
+function	script	F_NEED_DQ_M	{
+	mes getarg(0);
+	@dq_ln++;
+	return;
+}
+
+// 지금 화면의 줄 수에 맞춰 대화창 크기를 바꾼다 (글을 다 쓴 뒤에만 호출).
+// 너비 320px, 높이 = 여백 65px + 줄 수 x 18px (2026-10-21 스크린샷 기준), 최소 4줄.
+function	script	F_NEED_DQ_Fit	{
+	setdialogsize(320, 65 + max(@dq_ln, 4) * 18);
+	@dq_ln = 0;
+	return;
+}
+
+function	script	F_NEED_DQ_MapName	{
+	.@m$ = getarg(0);
+	if (.@m$ == "juperos_02") return needtr("유페로스 폐허 내부", "Juperos 2");
+	if (.@m$ == "ice_dun03")  return needtr("얼음 동굴 3층", "Ice Dungeon 3");
+	if (.@m$ == "ra_fild05")  return needtr("라헬 필드 5", "Rachel Field 5");
+	if (.@m$ == "dic_dun02")  return needtr("스카라바 홀", "Scaraba Hole 2");
+	if (.@m$ == "dic_dun01")  return needtr("카디널 터널", "Scaraba Hole 1");
+	if (.@m$ == "bif_fild01") return needtr("비프로스트 필드", "Bifrost Field");
+	if (.@m$ == "prt_prison") return needtr("지하 감옥", "Prontera Prison");
+	if (.@m$ == "gl_cas02_")  return needtr("고성 2층 회랑", "Glast Heim Castle 2 (N)");
+	if (.@m$ == "ver_eju")    return needtr("유페로스 동쪽폐허", "Eastern Ruins of Juperos");
+	if (.@m$ == "sp_rudus2")  return needtr("루두스 2층", "Rudus 2F");
+	if (.@m$ == "ba_lost")    return needtr("사육장 로스트밸리", "Lost Valley");
+	return .@m$;
+}
+
+// 대상 몬스터 (최대 2줄)
+function	script	F_NEED_DQ_ShowTargets	{
+	.@m$ = getarg(0);
+	if (.@m$ == "juperos_02") {
+		callfunc "F_NEED_DQ_M", needtr("- 베나투 1~4", "- Venatu 1-4");
+		callfunc "F_NEED_DQ_M", needtr("- 아포칼립스", "- Apocalips");
+	} else if (.@m$ == "ice_dun03") {
+		callfunc "F_NEED_DQ_M", needtr("- 아이스 타이탄, 가제티", "- Ice Titan, Gazeti");
+		callfunc "F_NEED_DQ_M", needtr("- 스노우어 (아이시클 제외)", "- Snowier (not Iceicle)");
+	} else if (.@m$ == "ra_fild05") {
+		callfunc "F_NEED_DQ_M", needtr("- 코볼트 1~3", "- Kobold 1-3");
+	} else if (.@m$ == "dic_dun02") {
+		callfunc "F_NEED_DQ_M", needtr("- 앤틀러 스카라바", "- Antler Scaraba");
+		callfunc "F_NEED_DQ_M", needtr("- 레이크 스카라바 (알 제외)", "- Rake Scaraba (not eggs)");
+	} else if (.@m$ == "dic_dun01") {
+		callfunc "F_NEED_DQ_M", needtr("- 혼 스카라바 2종 (알 제외)", "- Horn Scaraba x2 (not eggs)");
+	} else if (.@m$ == "bif_fild01") {
+		callfunc "F_NEED_DQ_M", needtr("- 미밍, 리틀 파툼", "- Miming, Little Fatum");
+		callfunc "F_NEED_DQ_M", needtr("- 앙그라 맨티스, 폼 스파이더", "- Angra Mantis, Pom Spider");
+	} else if (.@m$ == "prt_prison") {
+		callfunc "F_NEED_DQ_M", needtr("- 프로즌 울프, 태피, 와처", "- Frozen Wolf, Taffy, Watcher");
+	} else if (.@m$ == "gl_cas02_") {
+		callfunc "F_NEED_DQ_M", needtr("- 방랑자, 라이드 워드 (Lv145+)", "- Wanderer, Rideword (Lv145+)");
+	} else if (.@m$ == "ver_eju") {
+		callfunc "F_NEED_DQ_M", needtr("- 정찰 로봇, 굴착 로봇", "- Recon Robot, Excavator Robot");
+	} else if (.@m$ == "sp_rudus2") {
+		callfunc "F_NEED_DQ_M", needtr("- 벨라레, 사나레", "- Bellare, Sanare");
+		callfunc "F_NEED_DQ_M", needtr("- 플라가, 돌로르", "- Plaga, Dolor");
+	} else if (.@m$ == "ba_lost") {
+		callfunc "F_NEED_DQ_M", needtr("- 피타야 5종 (보스 제외)", "- Pitaya x5 (not the boss)");
+	}
+	return;
+}
+
+// 트랙 하한값 -> 사냥터 (2단계)
+function	script	F_NEED_DQ_HuntArea	{
+	switch (getarg(0)) {
+	case 100: return needtr("노그로드 1·2층", "Magma Dungeon 1-2");
+	case 130: return needtr("용의 둥지 2·3층", "Dragon's Nest 2-3");
+	case 150:
+	case 175: return needtr("뒤틀린 시간의 시계탑 3층", "Twisted Clock Tower 3F");
+	}
+	return "";
+}
+
+// 트랙 하한값 -> 가상 재료 이름 (임시)
+function	script	F_NEED_DQ_Material	{
+	switch (getarg(0)) {
+	case 100: return needtr("고장 난 동력핵", "Broken Power Core");
+	case 130: return needtr("스카라바 껍질 조각", "Scaraba Shell Shard");
+	case 150: return needtr("오염된 보급품", "Tainted Supplies");
+	case 175: return needtr("고대 기계 부품", "Ancient Machine Part");
+	}
+	return needtr("보급 재료", "Supply Material");
+}
+
+// Lv{min}~{max} 표기
+function	script	F_NEED_DQ_Range	{
+	if (getarg(0) == getarg(1))
+		return "Lv" + getarg(0);
+	return "Lv" + getarg(0) + "~" + getarg(1);
+}
+
+// 구간 끝 레벨 경고 (129 / 149 / 174)
+function	script	F_NEED_DQ_EdgeWarning	{
+	if (BaseLevel != 129 && BaseLevel != 149 && BaseLevel != 174)
+		return;
+	callfunc "F_NEED_DQ_M", needtr("^FF0000레벨업으로 구간이 바뀌면", "^FF0000If you level into a new range,");
+	callfunc "F_NEED_DQ_M", needtr("납품 안 한 재료는 점수가 안 됩니다.", "undelivered materials will not score.");
+	callfunc "F_NEED_DQ_M", needtr("단계마다 먼저 납품하세요.^000000", "Deliver at each goal first.^000000");
+	return;
+}
+
+// 요약판 한 화면: 날짜·트랙·점수 막대·보상 구간·활동별 점수
+// 활동 상한: 사냥 50(Lv175 40), 납품 30(Lv175 20), 전장 50(Lv150 이상, 선택), 인던 40(Lv175, 선택). 합계 80.
+// 1단계에는 사냥·전장·인던 연동이 없어 "준비 중"으로 보인다.
+function	script	F_NEED_DQ_Board	{
+	.@n$ = getarg(0);
+	.@wday$ = getarg(1);
+	.@t = @dq_locked_track ? @dq_locked_track : @dq_band;
+	.@tot = @dq_acc_total;
+
+	callfunc "F_NEED_DQ_M", .@n$;
+	if (@dq_locked_track)
+		callfunc "F_NEED_DQ_M", @dq_day$ + " (" + .@wday$ + ") " + callfunc("F_NEED_DQ_Range", @dq_locked_min, @dq_locked_max) + needtr(" 고정", " locked");
+	else
+		callfunc "F_NEED_DQ_M", @dq_day$ + " (" + .@wday$ + ") " + callfunc("F_NEED_DQ_Range", @dq_band_min, @dq_band_max) + needtr(" 미고정", " open");
+	callfunc "F_NEED_DQ_M", needtr("오늘 점수 ^0055FF", "Today ^0055FF") + .@tot + "^000000 / 80  (" + (.@tot * 100 / 80) + "%)";
+	.@fill = .@tot * 12 / 80;
+	.@bar$ = "^00AA00";
+	for (.@i = 0; .@i < 12; .@i++) {
+		if (.@i == .@fill)
+			.@bar$ += "^BBBBBB";
+		.@bar$ += needtr("■", "#");
+	}
+	callfunc "F_NEED_DQ_M", .@bar$ + "^000000";
+	.@line$ = needtr("보상 ", "Rewards ");
+	for (.@k = 20; .@k <= 80; .@k += 20)
+		.@line$ += (.@tot >= .@k ? "^00AA00" + needtr("★", "*") : "^BBBBBB" + needtr("○", "o")) + .@k + "^000000 ";
+	callfunc "F_NEED_DQ_M", .@line$;
+	callfunc "F_NEED_DQ_M", needtr("────────────────", "--------------------------------");
+
+	.@c = 0;
+	.@L$[.@c] = needtr("몬스터 사냥  ", "Hunting     ") + @dq_acc_hunt + " / " + (.@t == 175 ? 40 : 50) + needtr("점", " pts"); .@c++;
+	if (@dq_hunt_track)
+		{ .@L$[.@c] = needtr("^999999 └ 내 사냥 ", "^999999  mine ") + @dq_hunt_count + " / " + @dq_hunt_goal + needtr("마리^000000", "^000000"); .@c++; }
+	else
+		{ .@L$[.@c] = needtr("^999999 └ 아직 수락하지 않음^000000", "^999999  not accepted yet^000000"); .@c++; }
+	.@L$[.@c] = needtr("보급품 납품  ", "Delivery    ") + @dq_acc_delivery + " / " + (.@t == 175 ? 20 : 30) + needtr("점", " pts"); .@c++;
+	if (@dq_track)
+		{ .@L$[.@c] = needtr("^999999 └ 내 납품 ", "^999999  mine ") + @dq_submitted + " / " + @dq_goal + (@dq_collected ? " (+" + @dq_collected + ")" : "") + "^000000"; .@c++; }
+	else
+		{ .@L$[.@c] = needtr("^999999 └ 아직 수락하지 않음^000000", "^999999  not accepted yet^000000"); .@c++; }
+	if (.@t >= 150) {
+		{ .@L$[.@c] = needtr("전장 (선택)  ", "Battleground ") + @dq_acc_bg + needtr(" / 50점", " / 50 pts"); .@c++; }
+		if (@dq_track)
+			{ .@L$[.@c] = needtr("^999999 └ 계정 ", "^999999  account ") + @dq_bg_acc_games + " / " + @dq_bg_goal + needtr("판, 이 캐릭터 ", " games, this char ") + @dq_bg_games + needtr("판^000000", "^000000"); .@c++; }
+	}
+	if (@dq_inst_cap) {
+		{ .@L$[.@c] = needtr("인던 (선택)  ", "Instances   ") + @dq_acc_inst + " / " + @dq_inst_cap + needtr("점", " pts"); .@c++; }
+		if (@dq_track)
+			{ .@L$[.@c] = needtr("^999999 └ 이 캐릭터 클리어 ", "^999999  this char cleared ") + @dq_inst_pts + " / " + @dq_inst_cap + needtr("점^000000", " pts^000000"); .@c++; }
+	}
+	if (getgmlevel())
+		{ .@L$[.@c] = needtr("^777777GM 처치는 집계되지 않음^000000", "^777777GM kills do not count^000000"); .@c++; }
+	if (@dq_reset_soon)
+		{ .@L$[.@c] = needtr("^FF0000곧 04:00 초기화: 납품·보상은 지금!^000000", "^FF0000Reset at 04:00 soon: deliver and claim now!^000000"); .@c++; }
+		{ .@L$[.@c] = needtr("^FF0000(04:00 뒤 끝난 전장·인던은 새날 수락)^000000", "^FF0000(BG/instance ends after 04:00: accept again)^000000"); .@c++; }
+	for (.@i = 0; .@i < .@c; .@i++)
+		callfunc "F_NEED_DQ_M", .@L$[.@i];
+	return;
+}
+
+// 일일 보급 납품 대화. 보급관 NPC 와 [!] 버튼(NEED_NOTICE_BTN)이 같은 대화를 연다.
+function	script	F_NEED_DQ_Talk	{
+	@dq_ln = 0;
+	.@n$ = needtr("[일일 보급관]", "[Supply Officer]");
+	setarray .@wd$[0], needtr("일", "Sun"), needtr("월", "Mon"), needtr("화", "Tue"), needtr("수", "Wed"), needtr("목", "Thu"), needtr("금", "Fri"), needtr("토", "Sat");
+
+	.@s = needdq_status();
+	if (.@s == -8 || .@s == -7) {
+		callfunc "F_NEED_DQ_M", .@n$;
+		callfunc "F_NEED_DQ_M", needtr("지금은 일일 퀘스트를", "The daily quest");
+		callfunc "F_NEED_DQ_M", needtr("받지 않습니다.", "is closed right now.");
+		callfunc "F_NEED_DQ_Fit";
+		close;
+	}
+	if (.@s == 5) {
+		callfunc "F_NEED_DQ_M", .@n$;
+		callfunc "F_NEED_DQ_M", needtr("Lv100 이상만", "The daily quest requires");
+		callfunc "F_NEED_DQ_M", needtr("일일 퀘스트에 참여할 수 있습니다.", "Lv100 or higher.");
+		callfunc "F_NEED_DQ_Fit";
+		close;
+	}
+
+	// 첫 화면: 요약판 (2026-10-21 운영자 요청, UI 콘셉트의 텍스트판)
+	callfunc "F_NEED_DQ_Board", .@n$, .@wd$[@dq_wday];
+
+	switch (.@s) {
+	case 0:
+		goto L_Offer;
+	case 3:
+		goto L_LockedOut;
+	case 4:
+		goto L_LevelChanged;
+	}
+	goto L_Progress;
+
+L_Offer:
+	callfunc "F_NEED_DQ_Fit";
+	next;
+	if (@dq_locked_track && @dq_locked_track != @dq_band) {
+		callfunc "F_NEED_DQ_M", .@n$;
+		callfunc "F_NEED_DQ_M", needtr("오늘 이 계정은 ", "Account locked today to ") + callfunc("F_NEED_DQ_Range", @dq_locked_min, @dq_locked_max);
+		callfunc "F_NEED_DQ_M", needtr("구간으로 고정되어", "and this character is in");
+		callfunc "F_NEED_DQ_M", needtr("이 캐릭터는 수락할 수 없습니다.", "another range: cannot accept.");
+		callfunc "F_NEED_DQ_M", needtr("(04:00 초기화)", "(Resets at 04:00)");
+		callfunc "F_NEED_DQ_Fit";
+		close;
+	}
+	callfunc "F_NEED_DQ_M", .@n$;
+	callfunc "F_NEED_DQ_M", needtr("납품: ^0055FF", "Delivery: ^0055FF") + callfunc("F_NEED_DQ_MapName", @dq_today_map$) + "^000000";
+	callfunc "F_NEED_DQ_M", needtr("재료: ", "Material: ") + callfunc("F_NEED_DQ_Material", @dq_band) + needtr(" (가상)", " (virtual)");
+	callfunc "F_NEED_DQ_ShowTargets", @dq_today_map$;
+	.@g$ = "";
+	for (.@i = 0; .@i < @dq_stage_count; .@i++)
+		.@g$ += (.@i ? " / " : "- ") + @dq_stage_amount[.@i] + needtr("개 ", "=") + @dq_stage_points[.@i] + needtr("점", "");
+	callfunc "F_NEED_DQ_M", .@g$;
+	callfunc "F_NEED_DQ_M", needtr("사냥: ^0055FF", "Hunting: ^0055FF") + callfunc("F_NEED_DQ_HuntArea", @dq_band) + "^000000";
+	if (@dq_inst_kind_count) {
+		callfunc "F_NEED_DQ_M", needtr("인던(선택): 합계 최대 ", "Instances (optional): up to ") + @dq_inst_cap + needtr("점", " pts");
+		callfunc "F_NEED_DQ_M", "- " + callfunc("F_NEED_DQ_InstList");
+	}
+	if (@dq_bg_stage_count)
+		callfunc "F_NEED_DQ_M", needtr("전장(선택): 유효 경기 ", "BG (optional): ") + @dq_bg_stage_amount[0] + needtr("판 ", " game = ") + @dq_bg_stage_points[0] + needtr("점 / ", " / ") + @dq_bg_stage_amount[@dq_bg_stage_count - 1] + needtr("판 ", " games = ") + @dq_bg_stage_points[@dq_bg_stage_count - 1] + needtr("점", "");
+	callfunc "F_NEED_DQ_M", "- " + @dq_hunt_stage_amount[0] + needtr("마리 ", " = ") + @dq_hunt_stage_points[0] + needtr("점 ~ ", " pts ... ") + @dq_hunt_stage_amount[@dq_hunt_stage_count - 1] + needtr("마리 ", " = ") + @dq_hunt_stage_points[@dq_hunt_stage_count - 1] + needtr("점", " pts");
+	if (!@dq_locked_track) {
+		callfunc "F_NEED_DQ_M", needtr("^777777가장 먼저 점수를 얻은 캐릭터의", "^777777The first character to score locks");
+		callfunc "F_NEED_DQ_M", needtr("레벨 구간으로 오늘 계정이 고정되며,", "your account to its level range;");
+		callfunc "F_NEED_DQ_M", needtr("다른 구간 진행은 점수가 안 됩니다.^000000", "other ranges will not score today.^000000");
+	}
+	callfunc "F_NEED_DQ_EdgeWarning", .@n$;
+	callfunc "F_NEED_DQ_Fit";
+	.@sel = select(needtr("오늘 일일 퀘스트 수락하기", "Accept today's daily quest"), needtr("보상 받기", "Claim rewards"), needtr("나중에", "Later"));
+	clear;
+	switch (.@sel) {
+	case 2:
+		goto L_Reward;
+	case 1:
+		.@r = needdq_accept();
+		callfunc "F_NEED_DQ_M", .@n$;
+		if (.@r == 1 || .@r == 2) {
+			needdq_status();
+			callfunc "F_NEED_DQ_M", needtr("수락했습니다.", "Accepted.");
+			callfunc "F_NEED_DQ_M", needtr("납품: ^0055FF", "Delivery: ^0055FF") + callfunc("F_NEED_DQ_MapName", @dq_map$) + "^000000";
+			callfunc "F_NEED_DQ_M", needtr("사냥: ^0055FF", "Hunting: ^0055FF") + callfunc("F_NEED_DQ_HuntArea", @dq_hunt_track) + "^000000";
+			callfunc "F_NEED_DQ_M", needtr("진행은 퀘스트 창(Alt+U) '일일'에서도", "Progress also shows in the quest");
+			callfunc "F_NEED_DQ_M", needtr("볼 수 있습니다.", "window (Alt+U), Daily tab.");
+			callfunc "F_NEED_DQ_M", needtr("파티원도 같은 맵, 가까운 거리,", "Party members on the same map,");
+			callfunc "F_NEED_DQ_M", needtr("최근 60초 안에 활동했다면", "nearby and active in the last");
+			callfunc "F_NEED_DQ_M", needtr("각자 따로 진행됩니다.", "60 seconds progress on their own.");
+		} else if (.@r == -2) {
+			callfunc "F_NEED_DQ_M", needtr("오늘 계정 트랙이 다른 구간으로", "Your account is locked to");
+			callfunc "F_NEED_DQ_M", needtr("고정되어 수락할 수 없습니다.", "another range today.");
+		} else if (.@r == -5) {
+			callfunc "F_NEED_DQ_M", needtr("이미 오늘 일일 퀘스트를 수락했습니다.", "You already accepted today.");
+		} else if (.@r == -3) {
+			callfunc "F_NEED_DQ_M", needtr("레벨 구간이 바뀌었습니다.", "Your level range changed.");
+			callfunc "F_NEED_DQ_M", needtr("다시 말을 걸어 주세요.", "Talk to me again.");
+		} else {
+			callfunc "F_NEED_DQ_M", needtr("지금은 수락할 수 없습니다.", "Cannot accept right now.");
+			callfunc "F_NEED_DQ_M", "(" + .@r + ")";
+		}
+		callfunc "F_NEED_DQ_Fit";
+		close;
+	}
+	callfunc "F_NEED_DQ_Fit";
+	close;
+
+L_Progress:
+	.@next = 0;
+	for (.@i = 0; .@i < @dq_stage_count; .@i++) {
+		if (@dq_stage_amount[.@i] > @dq_submitted) {
+			.@next = @dq_stage_amount[.@i];
+			break;
+		}
+	}
+	callfunc "F_NEED_DQ_Fit";
+	next;
+	callfunc "F_NEED_DQ_M", .@n$;
+	callfunc "F_NEED_DQ_M", needtr("납품 지역:", "Area:");
+	callfunc "F_NEED_DQ_M", "^0055FF" + callfunc("F_NEED_DQ_MapName", @dq_map$) + "^000000";
+	callfunc "F_NEED_DQ_M", callfunc("F_NEED_DQ_Material", @dq_track) + " " + @dq_collected + needtr("개 보유", " held");
+	if (.@next)
+		callfunc "F_NEED_DQ_M", needtr("다음 납품 목표 ", "Next delivery ") + .@next + needtr("개 (", " (") + (.@next - @dq_submitted) + needtr("개 더)", " more)");
+	else
+		callfunc "F_NEED_DQ_M", needtr("^0055FF납품 목표를 모두 채웠습니다.^000000", "^0055FFDelivery goal complete.^000000");
+	.@hnext = 0;
+	for (.@i = 0; .@i < @dq_hunt_stage_count; .@i++) {
+		if (@dq_hunt_stage_amount[.@i] > @dq_hunt_count) {
+			.@hnext = @dq_hunt_stage_amount[.@i];
+			break;
+		}
+	}
+	callfunc "F_NEED_DQ_M", needtr("사냥: ^0055FF", "Hunting: ^0055FF") + callfunc("F_NEED_DQ_HuntArea", @dq_hunt_track) + "^000000";
+	if (.@hnext)
+		callfunc "F_NEED_DQ_M", needtr("처치 ", "Defeated ") + @dq_hunt_count + needtr("마리 (다음 ", " (next ") + .@hnext + needtr("마리)", ")");
+	else
+		callfunc "F_NEED_DQ_M", needtr("^0055FF사냥 목표를 모두 채웠습니다.^000000", "^0055FFHunting goal complete.^000000");
+	if (@dq_bg_goal)
+		callfunc "F_NEED_DQ_M", needtr("전장(선택): 계정 ", "Battleground: account ") + @dq_bg_acc_games + " / " + @dq_bg_goal + needtr("판 (이 캐릭터 ", " (this char ") + @dq_bg_games + needtr("판)", ")");
+	if (@dq_inst_cap) {
+		callfunc "F_NEED_DQ_M", needtr("인던(선택): ", "Instances: ") + @dq_inst_pts + " / " + @dq_inst_cap + needtr("점", " pts");
+		.@done$ = callfunc("F_NEED_DQ_InstDone");
+		if (.@done$ != "")
+			callfunc "F_NEED_DQ_M", needtr("^999999 └ 클리어: ", "^999999  cleared: ") + .@done$ + "^000000";
+	}
+	callfunc "F_NEED_DQ_EdgeWarning", .@n$;
+	callfunc "F_NEED_DQ_Fit";
+	.@sel = select(needtr("수집한 재료 납품하기", "Deliver collected"), needtr("대상 몬스터 보기", "Target monsters"), needtr("보상 받기", "Claim rewards"), needtr("나중에", "Later"));
+	clear;
+	switch (.@sel) {
+	case 1:
+		goto L_Submit;
+	case 2:
+		callfunc "F_NEED_DQ_M", .@n$;
+		callfunc "F_NEED_DQ_M", needtr("납품 대상 몬스터:", "Delivery targets:");
+		callfunc "F_NEED_DQ_ShowTargets", @dq_map$;
+		callfunc "F_NEED_DQ_M", needtr("사냥: ", "Hunting: ") + callfunc("F_NEED_DQ_HuntArea", @dq_hunt_track);
+		callfunc "F_NEED_DQ_M", needtr("(그 맵의 일반 몬스터, 보스 제외)", "(regular monsters there, no bosses)");
+		callfunc "F_NEED_DQ_Fit";
+		close;
+	case 3:
+		goto L_Reward;
+	}
+	callfunc "F_NEED_DQ_Fit";
+	close;
+
+L_Submit:
+	.@before = @dq_collected;
+	.@r = needdq_submit();
+	.@gained = @dq_gained;
+	needdq_status();
+	callfunc "F_NEED_DQ_M", .@n$;
+	switch (.@r) {
+	case 1:
+		callfunc "F_NEED_DQ_M", needtr("납품을 받았습니다.", "Delivery received.");
+		callfunc "F_NEED_DQ_M", needtr("계정 납품 ^0055FF+", "Account delivery ^0055FF+") + .@gained + needtr("점^000000", " pts^000000");
+		callfunc "F_NEED_DQ_M", needtr("오늘 합계 ", "Today total ") + @dq_acc_total + " / 80";
+		break;
+	case 0:
+		if (.@before == 0) {
+			callfunc "F_NEED_DQ_M", needtr("납품할 재료가 없습니다.", "You have nothing to deliver.");
+			break;
+		}
+		callfunc "F_NEED_DQ_M", needtr("납품을 받았지만", "Delivered, but there are");
+		callfunc "F_NEED_DQ_M", needtr("추가 점수는 없습니다.", "no new points.");
+		callfunc "F_NEED_DQ_M", needtr("(제출 누적 ", "(") + @dq_submitted + needtr("개)", " delivered)");
+		callfunc "F_NEED_DQ_M", needtr("같은 계정의 다른 캐릭터가", "If another character on this");
+		callfunc "F_NEED_DQ_M", needtr("이미 이 단계를 인정받았다면,", "account already earned this");
+		callfunc "F_NEED_DQ_M", needtr("이 캐릭터가 다음 단계에", "stage, this character must");
+		callfunc "F_NEED_DQ_M", needtr("도달해야 점수가 오릅니다.", "reach the next stage for more.");
+		break;
+	case -1:
+		callfunc "F_NEED_DQ_M", needtr("오늘 수락 기록이 없습니다.", "No delivery accepted today.");
+		callfunc "F_NEED_DQ_M", needtr("날짜가 바뀌었다면", "If the day changed,");
+		callfunc "F_NEED_DQ_M", needtr("다시 수락해 주세요.", "please accept again.");
+		break;
+	case -2:
+		callfunc "F_NEED_DQ_M", needtr("계정 트랙이 ", "Account locked to ") + callfunc("F_NEED_DQ_Range", @dq_locked_min, @dq_locked_max) + needtr("(으)로", ".");
+		callfunc "F_NEED_DQ_M", needtr("고정되어 이 캐릭터의 납품은", "This character's delivery is");
+		callfunc "F_NEED_DQ_M", needtr("기록만 하고 점수는 없습니다.", "recorded but does not score.");
+		break;
+	case -3:
+		callfunc "F_NEED_DQ_Fit";
+		next;
+		goto L_LevelChangedBody;
+	default:
+		callfunc "F_NEED_DQ_M", needtr("지금은 납품을 받을 수 없습니다.", "Cannot deliver right now.");
+		callfunc "F_NEED_DQ_M", "(" + .@r + ")";
+		break;
+	}
+	callfunc "F_NEED_DQ_Fit";
+	close;
+
+L_Reward:
+	// v1.5 Phase 5-Lite: 20/40/60/80점마다 10,000캐시, 계정당 구간마다 1번 (needdq_claim, C++)
+	callfunc "F_NEED_DQ_M", .@n$;
+	callfunc "F_NEED_DQ_M", needtr("오늘 계정 점수 ^0055FF", "Account today ^0055FF") + @dq_acc_total + "^000000 / 80";
+	callfunc "F_NEED_DQ_M", needtr("구간마다 10,000캐시 (계정당 1번)", "10,000 Cash per tier (once/account)");
+	.@c = 0;
+	for (.@i = 0; .@i < 4; .@i++) {
+		.@t = (.@i + 1) * 20;
+		if (@dq_claim_st[.@i] == 1)
+			.@st$ = needtr("^999999받음^000000", "^999999claimed^000000");
+		else if (@dq_claim_st[.@i] == 2)
+			.@st$ = needtr("^FF0000GM 확인 중^000000", "^FF0000under GM check^000000");
+		else if (@dq_acc_total < .@t)
+			.@st$ = needtr("^999999점수 부족^000000", "^999999not reached^000000");
+		else {
+			.@st$ = needtr("^0055FF받기 가능^000000", "^0055FFready^000000");
+			.@can[.@c] = .@t;
+			.@c++;
+		}
+		callfunc "F_NEED_DQ_M", "- " + .@t + needtr("점: ", " pts: ") + .@st$;
+	}
+	callfunc "F_NEED_DQ_M", needtr("^777777오늘 보상은 04:00 전에 받으세요.^000000", "^777777Claim today's rewards before 04:00.^000000");
+	callfunc "F_NEED_DQ_Fit";
+	if (.@c == 0)
+		close;
+	.@m$ = "";
+	for (.@i = 0; .@i < .@c; .@i++)
+		// select() splits items at ":", so no ":" inside an item (the EN text once had one)
+		.@m$ += needtr("", "Claim ") + .@can[.@i] + needtr("점 보상 받기", " pts") + ":";
+	.@m$ += needtr("나중에", "Later");
+	.@sel = select(.@m$);
+	clear;
+	if (.@sel > .@c)
+		close;
+	.@tier = .@can[.@sel - 1];
+	.@r = needdq_claim(.@tier);
+	needdq_status();
+	callfunc "F_NEED_DQ_M", .@n$;
+	switch (.@r) {
+	case 1:
+		callfunc "F_NEED_DQ_M", needtr("^0055FF", "^0055FF") + .@tier + needtr("점 보상: 10,000캐시를", " pts reward: 10,000 Cash");
+		callfunc "F_NEED_DQ_M", needtr("지급했습니다.^000000", "has been given.^000000");
+		break;
+	case -5:
+		callfunc "F_NEED_DQ_M", needtr("이 구간은 이 계정이 이미 받았습니다.", "This account already claimed it.");
+		break;
+	case -9:
+		callfunc "F_NEED_DQ_M", needtr("오늘 계정 점수가 부족합니다.", "Not enough account points today.");
+		break;
+	case -10:
+		callfunc "F_NEED_DQ_M", needtr("오늘 이 IP에서 다른 계정이", "Another account already claimed");
+		callfunc "F_NEED_DQ_M", needtr("이미 보상을 받았습니다.", "from this IP today.");
+		callfunc "F_NEED_DQ_M", needtr("^777777(가족 승인은 GM에게 문의)^000000", "^777777(family approval: ask a GM)^000000");
+		break;
+	case -11:
+		callfunc "F_NEED_DQ_M", needtr("이 구간은 GM 확인 중입니다.", "This tier is under GM check.");
+		callfunc "F_NEED_DQ_M", needtr("^777777자동으로 다시 지급하지 않습니다.^000000", "^777777It is not paid again by itself.^000000");
+		break;
+	case -12:
+		callfunc "F_NEED_DQ_M", needtr("캐시 보유 한도라 받을 수 없습니다.", "Your Cash is at the limit.");
+		break;
+	case -13:
+		callfunc "F_NEED_DQ_M", needtr("잠시 뒤 다시 시도해 주세요.", "Please try again shortly.");
+		break;
+	default:
+		callfunc "F_NEED_DQ_M", needtr("지금은 받을 수 없습니다.", "Cannot claim right now.");
+		callfunc "F_NEED_DQ_M", "(" + .@r + ")";
+		break;
+	}
+	callfunc "F_NEED_DQ_M", needtr("오늘 계정 점수 ", "Account today ") + @dq_acc_total + " / 80";
+	callfunc "F_NEED_DQ_Fit";
+	close;
+
+L_LockedOut:
+	callfunc "F_NEED_DQ_Fit";
+	next;
+	callfunc "F_NEED_DQ_M", .@n$;
+	callfunc "F_NEED_DQ_M", needtr("계정 트랙이 ", "Account locked to ") + callfunc("F_NEED_DQ_Range", @dq_locked_min, @dq_locked_max) + needtr("(으)로", ".");
+	callfunc "F_NEED_DQ_M", needtr("고정되어 이 캐릭터의 수집량은", "This character's collection");
+	callfunc "F_NEED_DQ_M", needtr("오늘 점수가 되지 않습니다.", "will not score today.");
+	callfunc "F_NEED_DQ_Fit";
+	.@sel = select(needtr("납품 기록만 남기기", "Deliver for the record only"), needtr("나중에", "Later"));
+	clear;
+	switch (.@sel) {
+	case 1:
+		goto L_Submit;
+	}
+	callfunc "F_NEED_DQ_Fit";
+	close;
+
+L_LevelChanged:
+	callfunc "F_NEED_DQ_Fit";
+	next;
+L_LevelChangedBody:
+	callfunc "F_NEED_DQ_M", .@n$;
+	callfunc "F_NEED_DQ_M", needtr("수락 ", "Accepted ") + callfunc("F_NEED_DQ_Range", @dq_track_min, @dq_track_max) + needtr(" → 지금 ", " -> now ") + callfunc("F_NEED_DQ_Range", @dq_band_min, @dq_band_max);
+	callfunc "F_NEED_DQ_M", needtr("레벨 구간이 바뀌어", "Your level range changed,");
+	callfunc "F_NEED_DQ_M", needtr("이 납품은 받을 수 없습니다.", "so this delivery cannot be taken.");
+	if (@dq_collected)
+		callfunc "F_NEED_DQ_M", needtr("모은 ", "The ") + @dq_collected + needtr("개는 점수가 되지 않습니다.", " collected will not score.");
+	if (@dq_locked_track && @dq_locked_track != @dq_band) {
+		// 명세 4.6 L2: 첫 점수로 계정이 이전 구간에 고정됨 -> 재수락 불가
+		callfunc "F_NEED_DQ_M", needtr("오늘 이 계정은 ", "First score today was in ") + callfunc("F_NEED_DQ_Range", @dq_locked_min, @dq_locked_max);
+		callfunc "F_NEED_DQ_M", needtr("구간에서 첫 점수를 얻어 고정되어", "and your account is locked to it,");
+		callfunc "F_NEED_DQ_M", needtr("새 구간 재수락이 안 됩니다.", "so you cannot re-accept now.");
+		callfunc "F_NEED_DQ_M", needtr("(04:00 초기화 후 새 구간 가능)", "(New range after the 04:00 reset)");
+		callfunc "F_NEED_DQ_Fit";
+		close;
+	}
+	callfunc "F_NEED_DQ_M", needtr("새 구간 ", "You can re-accept for ") + callfunc("F_NEED_DQ_Range", @dq_band_min, @dq_band_max) + needtr("(으)로", "");
+	callfunc "F_NEED_DQ_M", needtr("다시 수락할 수 있습니다.", "the new range.");
+	callfunc "F_NEED_DQ_M", needtr("재료와 처치 수는 0부터 다시 셉니다.", "Materials and kills restart from 0.");
+	callfunc "F_NEED_DQ_Fit";
+	.@sel = select(needtr("새 구간으로 다시 수락하기", "Re-accept for the new range"), needtr("나중에", "Later"));
+	clear;
+	switch (.@sel) {
+	case 1:
+		.@r = needdq_reaccept();
+		callfunc "F_NEED_DQ_M", .@n$;
+		if (.@r == 1) {
+			needdq_status();
+			callfunc "F_NEED_DQ_M", needtr("새 구간으로 수락했습니다.", "Re-accepted for the new range.");
+			callfunc "F_NEED_DQ_M", needtr("오늘 지역:", "Today's area:");
+			callfunc "F_NEED_DQ_M", "^0055FF" + callfunc("F_NEED_DQ_MapName", @dq_map$) + "^000000";
+		} else if (.@r == -2) {
+			callfunc "F_NEED_DQ_M", needtr("오늘 계정이 이전 구간으로", "Your account is locked to the");
+			callfunc "F_NEED_DQ_M", needtr("고정되어 다시 수락할 수 없습니다.", "previous range today.");
+			callfunc "F_NEED_DQ_M", needtr("(04:00 초기화)", "(Resets at 04:00)");
+		} else {
+			callfunc "F_NEED_DQ_M", needtr("지금은 다시 수락할 수 없습니다.", "Cannot re-accept right now.");
+			callfunc "F_NEED_DQ_M", "(" + .@r + ")";
+		}
+		callfunc "F_NEED_DQ_Fit";
+		close;
+	}
+	callfunc "F_NEED_DQ_Fit";
+	close;
+
+}
+
+// 인던 이름 (점수 표시용 짧은 이름). kind 1 상급 고성, 2 일반 고성, 3 공중요새.
+function	script	F_NEED_DQ_InstName	{
+	switch (getarg(0)) {
+	case 1: return needtr("상급 고성", "OGH Hard");
+	case 2: return needtr("고성", "OGH");
+	case 3: return needtr("공중요새", "Sky Fortress");
+	}
+	return "?";
+}
+
+// "상급 고성 40 / 고성 15 / 공중요새 15"
+function	script	F_NEED_DQ_InstList	{
+	.@s$ = "";
+	for (.@i = 0; .@i < @dq_inst_kind_count; .@i++)
+		.@s$ += (.@i ? " / " : "") + callfunc("F_NEED_DQ_InstName", @dq_inst_kind_id[.@i]) + " " + @dq_inst_kind_points[.@i];
+	return .@s$;
+}
+
+// 오늘 이 캐릭터가 클리어한 인던: "상급 고성, 공중요새" 또는 ""
+function	script	F_NEED_DQ_InstDone	{
+	.@s$ = "";
+	for (.@i = 0; .@i < @dq_inst_kind_count; .@i++) {
+		if (@dq_inst_kind_done[.@i])
+			.@s$ += (.@s$ != "" ? ", " : "") + callfunc("F_NEED_DQ_InstName", @dq_inst_kind_id[.@i]);
+	}
+	return .@s$;
+}
+
+// 인던 최종 보스 처치 지점에서 호출: 보스 맵의 플레이어 각자를 attach 해서 needdq_inst_clear.
+//   callfunc "F_NEED_DQ_InstClear", "<OGH_HARD|OGH|SKY_FORTRESS>", <보스 맵>;
+// 같은 판 중복은 호출하는 쪽의 'NEED_DQ_INST_DONE, 같은 날 중복은 C++(캐릭터·종류당 1행)이 막는다.
+function	script	F_NEED_DQ_InstClear	{
+	.@kind$ = getarg(0);
+	.@map$ = getarg(1);
+	.@inst = instance_id();
+	.@orig = playerattached();
+	.@n = getmapunits(BL_PC, .@map$, .@aids);
+	for (.@i = 0; .@i < .@n; .@i++) {
+		if (.@aids[.@i] > 0 && attachrid(.@aids[.@i]))
+			needdq_inst_clear .@kind$, .@inst;
+	}
+	detachrid;
+	if (.@orig)
+		attachrid .@orig;
+	return .@n;
+}
+
+prontera,141,180,6	script	일일 보급관#needdq	4_M_JOB_KNIGHT1,{
+	callfunc "F_NEED_DQ_Talk";
+	end;
+
+OnInit:
+	// EN 세션에 보이는 이름 (need_npcname_en.txt 생성 목록 밖, need_enchant_v2.txt 와 같은 방식)
+	setnpcnameen "Daily Supply Officer";
+	// [!] 버튼(캐시샵 아래) -> @needbtn -> NEED_NOTICE_BTN::.Func$ 이 이 대화를 연다.
+	// OnInit 순서는 보장되지 않으므로 라우터는 .Func$ 가 비어 있을 때만 기본값을 넣는다.
+	if (getnpcid(0, "NEED_NOTICE_BTN"))
+		set getvariableofnpc(.Func$, "NEED_NOTICE_BTN"), "F_NEED_DQ_Talk";
+	end;
+}

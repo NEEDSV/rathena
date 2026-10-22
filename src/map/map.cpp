@@ -55,6 +55,7 @@
 #include "need_summer_fishing_reward.hpp"
 #include "need_summer_hunt.hpp"
 #include "need_chuseok_hunt.hpp"
+#include "need_daily_quest.hpp"
 #ifndef MAP_GENERATOR
 #include "needwiki.hpp"
 #endif
@@ -80,6 +81,9 @@ std::string map_server_id = "ragnarok";
 std::string map_server_pw = "";
 std::string map_server_db = "ragnarok";
 Sql* mmysql_handle;
+#ifdef NEED_DQ_TEST
+static const char* need_dq_selftest_out = nullptr;
+#endif
 Sql* qsmysql_handle; /// For query_sql
 
 int32 db_use_sqldbs = 0;
@@ -5106,6 +5110,7 @@ void MapServer::finalize(){
 	do_final_atcommand();
 	need_summer_hunt_final();
 	need_chuseok_hunt_final();
+	need_daily_quest_final();
 	need_summer_attendance_final();
 	need_summer_fishing_reward_final();
 	need_autopot_final();
@@ -5472,6 +5477,16 @@ bool MapServer::initialize( int32 argc, char *argv[] ){
 #ifdef MAP_GENERATOR
 	mapgenerator_get_options(argc, argv);
 #endif
+#ifdef NEED_DQ_TEST
+	// NEED test only: --need-dq-selftest <out> runs the daily quest ledger scenarios on the test database, then exits
+	for( int32 i = 1; i + 1 < argc; i++ ){
+		if( argv[i] != nullptr && strcmp( argv[i], "--need-dq-selftest" ) == 0 ){
+			argv[i] = nullptr;
+			need_dq_selftest_out = argv[++i];
+			argv[i] = nullptr;
+		}
+	}
+#endif
 #ifdef NEED_ENCHANT_TEST
 	// NEED test only: --need-enchant-selftest [dumpfile] runs the item enchant self test after the item databases are loaded, then exits
 	bool need_enchant_selftest_run = false;
@@ -5614,6 +5629,13 @@ bool MapServer::initialize( int32 argc, char *argv[] ){
 	do_init_mercenary();
 	do_init_elemental();
 	do_init_quest();
+	// after do_init_quest: the daily quest checks its quest window entries in quest_db
+	need_daily_quest_init();
+#ifdef NEED_DQ_TEST
+	if( need_dq_selftest_out != nullptr ){
+		exit( need_dq_selftest( need_dq_selftest_out ) ? EXIT_SUCCESS : EXIT_FAILURE );
+	}
+#endif
 	do_init_achievement();
 	do_init_battleground();
 	do_init_npc();

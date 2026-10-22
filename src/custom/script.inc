@@ -1082,6 +1082,103 @@ BUILDIN_FUNC(needchuseokhoney)
 	return SCRIPT_CMD_SUCCESS;
 }
 
+// NEED daily quest (phase 1): one command = one SQL transaction (spec 4.3).
+// needdq_status() fills the @dq_* display variables and returns the state
+//   (0 not accepted, 1 accepted, 2 capped, 3 locked out, 4 level changed, 5 not eligible, -8 disabled).
+// needdq_accept() / needdq_reaccept() / needdq_submit() return e_need_dq_result;
+// needdq_submit() also sets @dq_gained.
+BUILDIN_FUNC(needdq_status)
+{
+	map_session_data* sd = nullptr;
+
+	if (!script_rid2sd(sd)) {
+		script_pushint(st, NEED_DQ_ERROR);
+		return SCRIPT_CMD_SUCCESS;
+	}
+	script_pushint(st, need_daily_quest_script_status(sd));
+	return SCRIPT_CMD_SUCCESS;
+}
+
+BUILDIN_FUNC(needdq_accept)
+{
+	map_session_data* sd = nullptr;
+
+	if (!script_rid2sd(sd)) {
+		script_pushint(st, NEED_DQ_ERROR);
+		return SCRIPT_CMD_SUCCESS;
+	}
+	script_pushint(st, need_daily_quest_script_accept(sd));
+	return SCRIPT_CMD_SUCCESS;
+}
+
+BUILDIN_FUNC(needdq_reaccept)
+{
+	map_session_data* sd = nullptr;
+
+	if (!script_rid2sd(sd)) {
+		script_pushint(st, NEED_DQ_ERROR);
+		return SCRIPT_CMD_SUCCESS;
+	}
+	script_pushint(st, need_daily_quest_script_reaccept(sd));
+	return SCRIPT_CMD_SUCCESS;
+}
+
+BUILDIN_FUNC(needdq_submit)
+{
+	map_session_data* sd = nullptr;
+
+	if (!script_rid2sd(sd)) {
+		script_pushint(st, NEED_DQ_ERROR);
+		return SCRIPT_CMD_SUCCESS;
+	}
+	script_pushint(st, need_daily_quest_script_submit(sd));
+	return SCRIPT_CMD_SUCCESS;
+}
+
+// NEED daily quest phase 3: battleground games.
+// needdq_bg_start("<Tierra|Flavius|KVM>", <team1 bg id>, <team2 bg id>, "<battle map>") at the battle start.
+// needdq_bg_finish("<type>") at the official end judges every player on the battle map (D2, below).
+BUILDIN_FUNC(needdq_bg_start)
+{
+	script_pushint(st, need_daily_quest_script_bg_start(script_getstr(st, 2), script_getnum(st, 3), script_getnum(st, 4), script_getstr(st, 5)));
+	return SCRIPT_CMD_SUCCESS;
+}
+
+// needdq_claim(<20|40|60|80>) for the attached player: 10,000 cash of that tier (v1.5 Phase 5-Lite).
+BUILDIN_FUNC(needdq_claim)
+{
+	map_session_data* sd = nullptr;
+
+	if (!script_rid2sd(sd)) {
+		script_pushint(st, NEED_DQ_ERROR);
+		return SCRIPT_CMD_SUCCESS;
+	}
+	script_pushint(st, need_daily_quest_script_claim(sd, script_getnum(st, 2)));
+	return SCRIPT_CMD_SUCCESS;
+}
+
+// needdq_bg_finish "<Tierra|Flavius|KVM>"; at the official end of a battle (no player needs to be attached).
+BUILDIN_FUNC(needdq_bg_finish)
+{
+	script_pushint(st, need_daily_quest_script_bg_finish(script_getstr(st, 2)));
+	return SCRIPT_CMD_SUCCESS;
+}
+
+// NEED daily quest (phase 4): needdq_inst_clear "<OGH_HARD|OGH|SKY_FORTRESS>"{,<instance id>};
+// Call with each player on the boss map attached (F_NEED_DQ_InstClear).
+BUILDIN_FUNC(needdq_inst_clear)
+{
+	map_session_data* sd = nullptr;
+
+	if (!script_rid2sd(sd)) {
+		script_pushint(st, NEED_DQ_ERROR);
+		return SCRIPT_CMD_SUCCESS;
+	}
+	int32 instance_id = script_hasdata(st, 3) ? script_getnum(st, 3) : 0;
+	script_pushint(st, need_daily_quest_script_inst_clear(sd, script_getstr(st, 2), instance_id));
+	return SCRIPT_CMD_SUCCESS;
+}
+
 // NEED stylist: change only the hair color by palette number from the NPC menu.
 // needstylistcolor(<palette>{,<mode>})
 // The purchase goes through clif_parse_stylist_buy_sub with the matching Hair_Color entry index,

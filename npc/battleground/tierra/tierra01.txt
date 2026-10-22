@@ -498,6 +498,8 @@ OnTimer45000:
 	bg_warp $@TierraBG1_id2,"bat_a01",353,52;
 
 	mapannouncelang "bat_a01","티에라 협곡 전투가 시작되었습니다!","The Tierra Valley battle has begun!",bc_map,"0x33CCFF";
+	// NEED 일일 퀘스트: 전투 시작 기록 (참가자·IP·시작 시각)
+	needdq_bg_start "Tierra", $@TierraBG1_id1, $@TierraBG1_id2, "bat_a01";
 	donpcevent "티에라 정리 타이머#bat_a01::OnEnable";
 	end;
 }
@@ -522,6 +524,8 @@ OnMyMobDead:
 		donpcevent "전투 치료사#a01_b::OnStop";
 
 		$@TierraBG1_Victory = 2;
+		// NEED 일일 퀘스트: 공식 경기 종료 판정 (D2, 보상 수령과 무관)
+		needdq_bg_finish "Tierra";
 
 		enablenpc "기욤 보상관#a01_a";
 		enablenpc "크루아 보상관#a01_b";
@@ -553,6 +557,8 @@ OnMyMobDead:
 		donpcevent "전투 치료사#a01_b::OnStop";
 
 		$@TierraBG1_Victory = 1;
+		// NEED 일일 퀘스트: 공식 경기 종료 판정 (D2, 보상 수령과 무관)
+		needdq_bg_finish "Tierra";
 
 		enablenpc "기욤 보상관#a01_a";
 		enablenpc "크루아 보상관#a01_b";
@@ -1170,6 +1176,8 @@ OnTimer1825000:
 
 OnTimer1830000:
 	mapannouncelang "bat_a01","티에라 협곡 전투가 시간 초과로 종료되었습니다.","The Tierra Valley battle has ended on time-out.",bc_map,"0x99CC00";
+	// NEED 일일 퀘스트: 공식 경기 종료 판정 (D2, 시간 초과 = 무승부)
+	needdq_bg_finish "Tierra";
 	mapwarp "bat_a01","bat_room",154,150;
 
 	if ($@TierraBG1_id1) {

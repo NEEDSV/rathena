@@ -46,6 +46,7 @@
 #include "map.hpp"
 #include "mercenary.hpp"
 #include "mob.hpp"
+#include "need_daily_quest.hpp"
 #include "need_enchant.hpp"
 #include "npc.hpp"
 #include "party.hpp"
@@ -18633,7 +18634,10 @@ void clif_quest_send_list( const map_session_data* sd )
 				offset += 2;
 				WFIFOW(fd, offset) = qi->objectives[j]->count;
 				offset += 2;
-				if (mob && qi->objectives[j]->mob_id > 0)
+				char need_label[NAME_LENGTH];
+				if (need_daily_quest_objective_label(sd, sd->quest_log[i].quest_id, j, need_label))
+					safestrncpy(WFIFOCP(fd,offset), need_label, NAME_LENGTH);
+				else if (mob && qi->objectives[j]->mob_id > 0)
 					safestrncpy(WFIFOCP(fd,offset), mob->jname.c_str(), NAME_LENGTH);
 				else
 					safestrncpy(WFIFOCP(fd,offset), clif_quest_string(qi->objectives[j]).c_str(), NAME_LENGTH);
@@ -18751,7 +18755,10 @@ void clif_quest_add ( const map_session_data* sd, const quest *qd )
 #endif
 		WFIFOW(fd, offset) = qd->count[i];
 		offset += 2;
-		if (mob && qi->objectives[i]->mob_id > 0)
+		char need_label[NAME_LENGTH];
+		if (need_daily_quest_objective_label(sd, qd->quest_id, i, need_label))
+			safestrncpy(WFIFOCP(fd,offset), need_label, NAME_LENGTH);
+		else if (mob && qi->objectives[i]->mob_id > 0)
 			safestrncpy(WFIFOCP(fd,offset), mob->jname.c_str(), NAME_LENGTH);
 		else
 			safestrncpy(WFIFOCP(fd,offset), clif_quest_string(qi->objectives[i]).c_str(), NAME_LENGTH);

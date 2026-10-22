@@ -1584,6 +1584,12 @@ OnStart:
 	initnpctimer;
 	end;
 OnBossDead:
+	// NEED 일일 퀘스트: 최종 보스가 쓰러진 순간 보스 맵의 전원에게 인던 클리어 1회 (Lv175, 수락 필요)
+	// 타이머의 클리어 판정은 보스가 사라지기만 해도 진행되므로 여기서 센다.
+	if (!'NEED_DQ_INST_DONE) {
+		'NEED_DQ_INST_DONE = 1;
+		callfunc "F_NEED_DQ_InstClear", "SKY_FORTRESS", 'sthd_map$;
+	}
 	end;
 OnTimer1000:
 	if ('boss_id < 1 || mobcount( 'sthd_map$, instance_npcname("#Last_Boss") + "::OnBossDead" ) < 1) {
