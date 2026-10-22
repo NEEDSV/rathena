@@ -1,0 +1,26 @@
+//============================================================
+// TEST FIXTURE ONLY - never add to npc/scripts_*.conf.
+// Loaded only through a scratch --map-config against an isolated DB.
+// Runs the exact S_TakeStock statements inside the map-server script engine and
+// records the outcome to npclog so the test can read it back.
+//============================================================
+-	script	need_refine_take_test	-1,{
+OnInit:
+	// case A: weekly stock (PID 100) has units -> rc 1
+	.@a = callsub(S_T, 100, 20261017);
+	// case B: shared monthly stock (PID 102) already 0 -> rc 0 (blessing route PID 104 uses key 102)
+	.@b = callsub(S_T, 102, 202610);
+	// case C: stale period key -> rc 0
+	.@c = callsub(S_T, 100, 20261010);
+	logmes "[RefineTakeTest] A=" + .@a + " B=" + .@b + " C=" + .@c;
+	end;
+
+S_T:
+	.@pid = getarg(0);
+	.@key = getarg(1);
+	.@r = query_sql("UPDATE `need_lucky_ceiling_stock` SET `stock`=`stock`-1,`updated_at`=NOW() "
+		+ "WHERE `product_id`=" + .@pid + " AND `period_key`=" + .@key + " AND `stock`>=1");
+	.@rc = -1;
+	.@n = query_sql("SELECT ROW_COUNT()", .@rc);
+	return .@rc;
+}
