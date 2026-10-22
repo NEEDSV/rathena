@@ -6,23 +6,28 @@ usage: python -u -I bc_runner.py --out <scratch>/mbqa_bc <cmd> [args]
 import argparse
 import json
 import os
+import re
 import sys
 import time
+import zlib
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import bcclient  # noqa: E402
 import bcdb  # noqa: E402
+import v11_model  # noqa: E402
 import v22_model  # noqa: E402
 
 OUT = None
 LOG = []
 ACC = {'gm': ('mbqa_gm', 'gm'), 'user': ('mbqa_user', 'user'), 'p2': ('mbqa_p2', 'user'), 'p3': ('mbqa_p3', 'user'),
-       'p4': ('mbqa_p4', 'user'), 'cap': ('mbqa_cap', 'user'), 'v22a': ('mbqa_v22a', 'user'), 'v22b': ('mbqa_v22b', 'user')}
+       'p4': ('mbqa_p4', 'user'), 'cap': ('mbqa_cap', 'user'), 'v22a': ('mbqa_v22a', 'user'), 'v22b': ('mbqa_v22b', 'user'),
+       'v11': ('mbqa_v11', 'user'), 'heal': ('mbqa_heal', 'user')}
 NAMES = {('gm', 0): 'MBQA_GM1', ('gm', 1): 'MBQA_GM2', ('user', 0): 'MBQA_U1', ('user', 1): 'MBQA_U2',
          ('p2', 0): 'MBQA_P2', ('p3', 0): 'MBQA_P3', ('p4', 0): 'MBQA_P4', ('cap', 0): 'MBQA_CAP',
-         ('v22a', 0): 'MBQA_V22A', ('v22b', 0): 'MBQA_V22B'}
+         ('v22a', 0): 'MBQA_V22A', ('v22b', 0): 'MBQA_V22B', ('v11', 0): 'MBQA_V11', ('heal', 0): 'MBQA_HEAL'}
 AID = {'gm': 2000901, 'user': 2000902, 'p2': 2000903, 'p3': 2000904, 'p4': 2000905, 'cap': 2000906,
-       'v22a': 2000907, 'v22b': 2000908}   # v22a / v22b: V22 only (bc_synth_v22.sql)
+       'v22a': 2000907, 'v22b': 2000908,   # v22a / v22b: V22 only (bc_synth_v22.sql)
+       'v11': 2000909, 'heal': 2000910}     # v11: V11 only, heal: V18-C healer (bc_synth_g2a.sql)
 
 
 def log(*a):
@@ -414,7 +419,7 @@ def enter_board(c):
 
 def one_roll(c, aid, choice_mode):
     """Rolls (or continues) once and waits until the walk ends. Returns a dict of what changed."""
-    s0 = state(aid)
+    s0 = state(aid) or {'state': 0, 'pos': 0, 'left': 0, 'die': 0, 'roll': 0, 'steps': 0, 'run': 0, 'jump': 0, 'spass': 0, 'laps': 0, 'run_char': 0}   # no row before the first roll
     w0 = wallet(aid)
     label = '주사위 굴리기' if s0['state'] == 0 else '이동 이어가기'
     marble(c, [label])
@@ -851,8 +856,11 @@ def kill(c, radius, n, wait=6):
     c.command('@alive', settle=0.8)   # the dealer must be alive at the kill (a dead top damager credits nobody)
     c.command('@heal', settle=0.8)
     t = harness(c, f'@mbqakill {radius} {n}', needle='[MBQA] kill', wait=wait)
+    c.last_counted = None
     try:
-        return int(t.split('n=')[1]) if t else None
+        if t and 'counted=' in t:
+            c.last_counted = int(t.split('counted=')[1].split()[0])
+        return int(t.split('n=')[1].split()[0]) if t else None
     except Exception:
         return None
 
@@ -1086,6 +1094,12 @@ def v22_fixture(label, who, fixture, day, pol, feeds):
     checks = [(f'{label} precondition', True, f'fixture {fixture}: progress {s0["progress"].get(day)}, {len(s0["batches"])} batches, '
                                                 f'hunt earned {s0["period"].get((day, 1), 0)}, score {s0["score"]}')]
     c = login(who)
+    left = c.wait_event(0, 'captcha_image', 4)
+    if left is not None:
+        # a captcha left pending by an earlier login is shown again at login and blocks commands (to_field too)
+        asks, close = captcha_solve(c, left)
+        checks.append((f'{label} leftover captcha cleared before the case', close == 2, f'asks {asks}, close {close}'))
+        time.sleep(1.5)
     to_field(c)
     ok, t = alive(c)
     checks.append((f'{label} caller alive', ok, repr(t)))
@@ -1122,7 +1136,11 @@ def cmd_v22(a):
       V22-1 mbqa_v22a clean day: feed 30,000 -> 4 tiers, hunt 100, then 5,000 more and logout write nothing
       V22-2 mbqa_v22b one real kill + one batch first: the same feed, every count relative to that row
       V22-3 mbqa_v22a again (capped): relog, 10 real kills + 5,000 fed write nothing
+    args: case numbers to run (default 1 2 3), kills=<real kills in V22-3> (default 10; keep it below the
+    stack's captcha trigger when bc_stack_extras.py --captcha is on, or the captcha blocks the next command)
     """
+    sel = [x for x in a.rest if x in ('1', '2', '3')] or ['1', '2', '3']
+    real = next((int(x.split('=')[1]) for x in a.rest if x.startswith('kills=')), 10)
     day = logical_day()
     if secs_to_reset() < 900:
         record('V22 precondition: logical day boundary', 'BLOCKED', f'{secs_to_reset()} s to 04:00 KST, needs 900 s')
@@ -1131,29 +1149,33 @@ def cmd_v22(a):
     log(f'   V22 day {day}, policy {pol}')
     allchecks = []
     cases = []
-    st, ch = v22_fixture('V22-1', 'v22a', 'clean', day, pol, [('feed', 30000), ('feed', 5000)])
-    cases.append(('V22-1 clean account: 30,000 fed -> 4 tiers, nothing after the cap', st, ch))
-    # fixture 2 setup: exactly one real kill flushed at logout = one batch of one kill
-    sb = v22_snapshot(AID['v22b'], day)
-    if v22_model.fixture_state(sb, pol) == 'clean':
-        c = login('v22b')
-        to_field(c)
-        ok, t = alive(c)
-        k = kill(c, 0, 1) if ok else None
-        c.logout()
-        wait_offline(AID['v22b'])
-        log(f'   V22-2 setup: alive {ok} ({t!r}), killed {k}')
-    st, ch = v22_fixture('V22-2', 'v22b', 'prior1', day, pol, [('feed', 30000), ('feed', 5000)])
-    cases.append(('V22-2 one prior kill and batch: same feed, counts relative to the snapshot', st, ch))
-    st, ch = v22_fixture('V22-3', 'v22a', 'capped', day, pol, [('kill', 10), ('feed', 5000)])
-    cases.append(('V22-3 capped account relog: real kills and 5,000 fed write nothing', st, ch))
+    if '1' in sel:
+        st, ch = v22_fixture('V22-1', 'v22a', 'clean', day, pol, [('feed', 30000), ('feed', 5000)])
+        cases.append(('V22-1 clean account: 30,000 fed -> 4 tiers, nothing after the cap', st, ch))
+    if '2' in sel:
+        # fixture 2 setup: exactly one real kill flushed at logout = one batch of one kill
+        sb = v22_snapshot(AID['v22b'], day)
+        if v22_model.fixture_state(sb, pol) == 'clean':
+            c = login('v22b')
+            to_field(c)
+            ok, t = alive(c)
+            k = kill(c, 0, 1) if ok else None
+            c.logout()
+            wait_offline(AID['v22b'])
+            log(f'   V22-2 setup: alive {ok} ({t!r}), killed {k}')
+        st, ch = v22_fixture('V22-2', 'v22b', 'prior1', day, pol, [('feed', 30000), ('feed', 5000)])
+        cases.append(('V22-2 one prior kill and batch: same feed, counts relative to the snapshot', st, ch))
+    if '3' in sel:
+        st, ch = v22_fixture('V22-3', 'v22a', 'capped', day, pol, [('kill', real), ('feed', 5000)])
+        cases.append((f'V22-3 capped account relog: {real} real kills and 5,000 fed write nothing', st, ch))
     if logical_day() != day:
         cases = [(n, 'BLOCKED', ch + [('logical day unchanged', False, f'{day} -> {logical_day()}')]) for n, _, ch in cases]
     for name, st, ch in cases:
         bad = [f'{x}: {d}' for x, ok, d in ch if not ok]
         record(name, st, f'{sum(1 for x in ch if x[1])}/{len(ch)} checks; ' + ('; '.join(bad[:4]) if bad else 'all checks hold'))
         allchecks += [{'case': name, 'check': x, 'ok': ok, 'detail': d} for x, ok, d in ch]
-    json.dump(allchecks, open(os.path.join(OUT, 'v22_checks.json'), 'w', encoding='utf-8'), indent=1, ensure_ascii=False)
+    name = 'v22_checks.json' if sel == ['1', '2', '3'] else f'v22_checks_{"".join(sel)}_{time.strftime("%H%M%S")}.json'
+    json.dump(allchecks, open(os.path.join(OUT, name), 'w', encoding='utf-8'), indent=1, ensure_ascii=False)
     inv = invariants()
     record('INV after V22', 'PASS' if not inv else 'FAIL', f'{len(inv)} violating rows: {inv[:6]}')
 
@@ -1292,6 +1314,355 @@ def cmd_smoke_board(a):
     record('R4 smoke: exchange + 2 rolls', 'PASS' if ok else 'FAIL', f'wallet {w0} -> {w1}; rolls {[(r["from"], r["die"], r["to"], r["event"]) for r in rows]}')
     inv = invariants()
     record('INV after smoke', 'PASS' if not inv else 'FAIL', f'{len(inv)} violating rows: {inv[:6]}')
+
+
+def view_kills(c):
+    """Today's marble kill count of c's account (DB + in-memory batch). An atcommand: no idletime refresh."""
+    t = harness(c, '@mbqastate', needle='[MBQA] state', wait=3)
+    try:
+        return int(t.split('kills=')[1].split()[0])
+    except (AttributeError, IndexError, ValueError):
+        return None
+
+
+def captcha_answers():
+    """(bmp bytes, answer) pairs of the isolated stack's captcha DB (test data inside the stack copy)."""
+    stack = os.path.join(OUT, 'stack')
+    text = open(os.path.join(stack, 'db', 'import', 'captcha_db.yml'), encoding='utf-8', errors='replace').read()
+    out = []
+    for fn, ans in re.findall(r'Filename:\s*(\S+)\s*\n\s*Answer:\s*(\S+)', text):
+        p = os.path.join(stack, fn)
+        if os.path.exists(p):
+            out.append((open(p, 'rb').read(), ans))
+    return out
+
+
+def captcha_answer_for(image):
+    try:
+        bmp = zlib.decompress(image)
+    except (zlib.error, TypeError):
+        return None
+    hit = [a for b, a in captcha_answers() if b == bmp]
+    return hit[0] if len(hit) == 1 else None
+
+
+def captcha_solve(c, image, wrong_first=False):
+    """ack -> (wrong answer) -> right answer. Returns (asks, close status)."""
+    asks = []
+    m = c.mark()
+    c.captcha_ack()
+    asks.append(c.wait_event(m, 'captcha_ask', 8))
+    if wrong_first:
+        m = c.mark()
+        c.captcha_answer('ZZZZ')
+        asks.append(c.wait_event(m, 'captcha_ask', 8))
+    ans = captcha_answer_for(image)
+    if ans is None:
+        return asks, None
+    m = c.mark()
+    c.captcha_answer(ans)
+    return asks, c.wait_event(m, 'captcha_close', 8)
+
+
+def kill_exact(c, radius, n, between=None, tries=12):
+    """Up to n kills by c itself, one call at a time; `between` runs after every call (keeps party members active)."""
+    done = counted = 0
+    for _ in range(tries):
+        if done >= n:
+            break
+        k = kill(c, radius, n - done) or 0
+        done += max(k, 0)
+        counted += max(c.last_counted or 0, 0)
+        if between:
+            between()
+        if k <= 0:
+            time.sleep(5)
+    return done, counted
+
+
+def killas(g, name, radius, n):
+    """GM-driven kills with another character as the damage source (that character may have a captcha up)."""
+    g.command(f'#alive {name}', settle=0.6)   # the source must be alive (a dead top damager credits nobody)
+    g.command(f'#heal {name}', settle=0.6)
+    t = harness(g, f'@mbqakillas {name} {radius} {n}', needle='[MBQA] killas', wait=6)
+    try:
+        return int(t.split('n=')[1].split()[0]), int(t.split('counted=')[1].split()[0])
+    except (AttributeError, IndexError, ValueError):
+        return None, None
+
+
+def killas_exact(g, name, radius, n, tries=8):
+    done = counted = 0
+    for _ in range(tries):
+        if done >= n:
+            break
+        k, cnt = killas(g, name, radius, n - done)
+        done += max(k or 0, 0)
+        counted += max(cnt or 0, 0)
+        if not k or k <= 0:
+            time.sleep(5)
+    return done, counted
+
+
+def viewof(g, name):
+    t = harness(g, f'@mbqaviewof {name}', needle='[MBQA] viewof', wait=3)
+    try:
+        return int(t.split('kills=')[1].split()[0])
+    except (AttributeError, IndexError, ValueError):
+        return None
+
+
+def last_event(c, mark, kind):
+    hit = [e[2] for e in c.events[mark:] if e[1] == kind]
+    return hit[-1] if hit else None
+
+
+def find_spot(g, need, tries=12):
+    """GM warps around yuno_fild02 until at least `need` mobs are in view (about 14 cells). @monster spawns are
+    no hunt target (spawn == nullptr), so the party has to go where field mobs are."""
+    n = 0
+    for _ in range(tries):
+        g.mobs.clear()
+        g.command('@warp yuno_fild02')
+        time.sleep(3)
+        n = len([t for t in g.mobs.values() if time.time() - t < 5])
+        if n >= need:
+            break
+    return n
+
+
+def clear_leftover_captcha(c, res, label):
+    """A captcha left pending by an earlier login is shown again after login; answer it before the case."""
+    left = c.wait_event(0, 'captcha_image', 5)
+    if left is not None:
+        asks, close = captcha_solve(c, left)
+        res.append((f'{label} leftover captcha cleared first', close == 2, f'asks {asks}, close {close}'))
+        time.sleep(1.5)
+
+
+def cmd_v18c(a):
+    """V18-C (G2-A): hunt captcha and support members. Captcha at the 5th kill (bc_stack_extras.py --captcha).
+    A character with a captcha on screen cannot type commands, so MBQA_GM1 drives kills (@mbqakillas, damage
+    source = that character) and reads kill counts (@mbqaviewof); the captcha itself is answered by the
+    character's own client (0x0A5A ack, 0x0A5C answer).
+    Part A, dealer MBQA_U1: C1 the kill that raises the captcha (observed only: policy undecided), C2 kills while
+    the captcha is pending / the answer window is open, C4 after a wrong answer, C3 after the right answer.
+    Part B, party: dealer MBQA_GM1 (own captcha answered first, then on its 1 h cooldown), MBQA_P2 walks then
+    gets a captcha, MBQA_HEAL only heals the dealer, MBQA_P3 does nothing for more than 60 s."""
+    res = []
+    gm, uid = AID['gm'], AID['user']
+    g = login('gm')
+    clear_leftover_captcha(g, res, 'GM')   # first: a captcha on screen blocks to_field's commands
+    to_field(g)
+    # ------------------------------------------------------------ part A
+    u = login('user')
+    clear_leftover_captcha(u, res, 'U1')
+    to_field(u)
+    k0 = viewof(g, 'MBQA_U1')
+    m0 = u.mark()
+    first = [killas(g, 'MBQA_U1', 0, 1) for _ in range(4)]
+    early = u.wait_event(m0, 'captcha_image', 0.5)
+    k4 = viewof(g, 'MBQA_U1')
+    res.append(('C1a kills 1-4 counted, no captcha yet', first == [(1, 1)] * 4 and k4 == k0 + 4 and early is None,
+                f'kills {first}, view {k0} -> {k4}'))
+    n5, c5 = killas(g, 'MBQA_U1', 0, 1)
+    img = u.wait_event(m0, 'captcha_image', 10)
+    res.append(('C1b 5th kill raises the captcha', n5 == 1 and img is not None, f'kill {n5}, captcha image {len(img) if img else None} bytes'))
+    res.append(('C1c the raising kill is counted by the marble (policy undecided: observation only)', None, f'counted {c5}'))
+    if img is None:
+        for c in (u, g):
+            c.logout()
+        for x, ok, d in res:
+            record(f'V18-C {x}', 'INFO' if ok is None else ('PASS' if ok else 'FAIL'), d)
+        record('V18-C part A', 'BLOCKED', 'no captcha raised')
+        return
+    n_p, c_p = killas_exact(g, 'MBQA_U1', 0, 3)
+    res.append(('C2a captcha shown, not answered: kills not counted', n_p > 0 and c_p == 0, f'killed {n_p}, counted {c_p}'))
+    m = u.mark()
+    u.captcha_ack()
+    ask1 = u.wait_event(m, 'captcha_ask', 8)
+    n_a, c_a = killas_exact(g, 'MBQA_U1', 0, 2)
+    res.append(('C2b answer window open: kills not counted', ask1 is not None and n_a > 0 and c_a == 0, f'ask retry {ask1}, killed {n_a}, counted {c_a}'))
+    m = u.mark()
+    u.captcha_answer('ZZZZ')
+    ask2 = u.wait_event(m, 'captcha_ask', 8)
+    n_w, c_w = killas_exact(g, 'MBQA_U1', 0, 2)
+    res.append(('C4 after a wrong answer (retry left): kills not counted', ask2 is not None and ask2 < (ask1 or 99) and n_w > 0 and c_w == 0,
+                f'ask retry {ask1} -> {ask2}, killed {n_w}, counted {c_w}'))
+    ans = captcha_answer_for(img)
+    m = u.mark()
+    if ans:
+        u.captcha_answer(ans)
+    close = u.wait_event(m, 'captcha_close', 8)
+    time.sleep(1.5)   # macro_checker_success_immunity 1000 ms
+    n_r, c_r = killas_exact(g, 'MBQA_U1', 0, 3)
+    k_end = viewof(g, 'MBQA_U1')
+    res.append(('C3 right answer: counting resumes', ans is not None and close == 2 and n_r > 0 and c_r == n_r,
+                f'answer found {ans is not None}, close status {close}, killed {n_r}, counted {c_r}, view {k_end}'))
+    u.logout()
+    wait_offline(uid)
+    h = hunt(uid)
+    bsum = sum(int(x[3]) for x in batches(uid))
+    want = k0 + 4 + (c5 or 0) + c_r
+    res.append(('C-A ledger: kills = counted kills, batch sum = kills', h and h[0][1] == want == k_end and bsum == h[0][1],
+                f'progress {h}, batch sum {bsum}, expected {want} (start {k0} + 4 + raising {c5} + after answer {c_r})'))
+    # ------------------------------------------------------------ part B
+    p2, p3, hl = AID['p2'], AID['p3'], AID['heal']
+    mg = g.mark()
+    kw, _ = kill_exact(g, 0, 5)
+    gimg = g.wait_event(mg, 'captcha_image', 10)
+    gasks, gclose = captcha_solve(g, gimg) if gimg else ([], None)
+    res.append(('B0 dealer captcha answered first (then 1 h cooldown)', gimg is not None and gclose == 2, f'warm-up kills {kw}, asks {gasks}, close {gclose}'))
+    time.sleep(1.5)
+    m2, m3, mh = login('p2'), login('p3'), login('heal')
+    t_login = time.time()
+    for cl, label in ((m2, 'P2'), (m3, 'P3'), (mh, 'HEAL')):
+        clear_leftover_captcha(cl, res, label)
+        cl.command('@monsterignore')
+    for name in ('MBQA_P3', 'MBQA_HEAL'):
+        # group 0 characters cannot use @monsterignore themselves; without it they get killed and a dead member
+        # is excluded (a GM command on them is server side: no idletime refresh)
+        log(f'   #monsterignore {name} ->', g.command(f'#monsterignore {name}'))
+    for name in ('MBQA_P2', 'MBQA_P3', 'MBQA_HEAL'):
+        g.command(f'@recall {name}')
+    time.sleep(2)
+    step = [0]
+
+    def keep(p2_walks=True):
+        step[0] += 1
+        if p2_walks and m2.pos:
+            m2.walk(m2.pos[1] + (step[0] % 2), m2.pos[2])
+        mh.use_skill(28, 10, gm)
+
+    while time.time() - t_login < 70:   # P3 idle > 60 s; P2 and the healer stay active
+        keep()
+        time.sleep(10)
+    keep()
+    log('   positions: GM', g.pos, 'P2', m2.pos, 'P3', m3.pos, 'HEAL', mh.pos)
+    names = {'P2': 'MBQA_P2', 'P3': 'MBQA_P3', 'HEAL': 'MBQA_HEAL'}
+
+    def relocate(need):
+        """Never while P2 has a captcha up (moving it could cancel / requeue the captcha)."""
+        n = find_spot(g, need)
+        for name in names.values():
+            g.command(f'@recall {name}')
+            g.command(f'#alive {name}', settle=0.6)   # every member alive before the phase (dead = excluded)
+            g.command(f'#heal {name}', settle=0.6)
+        time.sleep(2)
+        keep()
+        log(f'   relocated: {n} mobs in view at', g.pos)
+        return n
+
+    def views():
+        return {k: viewof(g, v) for k, v in names.items()}
+
+    def diag(mark):
+        """Positions (last map move), healer HP (@mbqastate on its own client: no idletime refresh) and the
+        heal results the healer saw since `mark`."""
+        t = harness(mh, '@mbqastate', needle='[MBQA] state', wait=3)
+        heals = [e[2] for e in mh.events[mark:] if e[1] == 'skill']
+        return (f'pos GM {g.pos[1:] if g.pos else None} P2 {m2.pos[1:] if m2.pos else None} P3 {m3.pos[1:] if m3.pos else None} '
+                f'HEAL {mh.pos[1:] if mh.pos else None}; healer {t}; heals {len(heals)} {heals[-2:]}')
+
+    def delta(b, e):
+        return {k: (e[k] - b[k]) if e[k] is not None and b[k] is not None else None for k in b}
+
+    relocate(6)
+    ph = mh.mark()
+    b1 = views()
+    k1, _ = kill_exact(g, 13, 3, between=keep)
+    d1 = delta(b1, views())
+    res.append(('B1 healer (heal only) and walking P2 credited, idle P3 not', k1 > 0 and d1 == {'P2': k1, 'P3': 0, 'HEAL': k1},
+                f'GM kills {k1}, deltas {d1}; {diag(ph)}'))
+    ph = mh.mark()
+    relocate(8)
+    m2c = m2.mark()
+    kp, _ = killas_exact(g, 'MBQA_P2', 0, 5)
+    p2img = m2.wait_event(m2c, 'captcha_image', 10)
+    t_cap = time.time()
+    b2 = views()
+    k2, _ = kill_exact(g, 13, 3, between=lambda: keep(p2_walks=False), tries=4)
+    log(f'   C2c phase took {time.time() - t_cap:.0f} s (captcha ack timeout 60 s)')
+    d2 = delta(b2, views())
+    res.append(('C2c party member with a captcha (active < 60 s) not credited; healer still is', p2img is not None and k2 > 0 and
+                d2 == {'P2': 0, 'P3': 0, 'HEAL': k2}, f'P2 own kills {kp}, captcha {p2img is not None}, GM kills {k2}, deltas {d2}; {diag(ph)}'))
+    p2img = last_event(m2, m2c, 'captcha_image')   # a timed-out captcha comes back with another image
+    pasks, pclose = captcha_solve(m2, p2img) if p2img else ([], None)
+    time.sleep(1.5)
+    ph = mh.mark()
+    relocate(5)
+    b3 = views()
+    k3, _ = kill_exact(g, 13, 3, between=keep)
+    d3 = delta(b3, views())
+    res.append(('C3b party member after the right answer credited again', pclose == 2 and k3 > 0 and d3 == {'P2': k3, 'P3': 0, 'HEAL': k3},
+                f'asks {pasks}, close {pclose}, GM kills {k3}, deltas {d3}; {diag(ph)}'))
+    for cl in (m2, m3, mh, g):
+        cl.logout()
+    for x in (gm, p2, p3, hl):
+        wait_offline(x)
+    bad = []
+    for x in (uid, gm, p2, p3, hl):
+        hh = hunt(x)
+        bs = sum(int(r[3]) for r in batches(x))
+        if (hh[0][1] if hh else 0) != bs:
+            bad.append((x, hh, bs))
+    res.append(('C-B ledger: every account kills = batch sum (I11)', not bad, f'mismatch {bad}'))
+    json.dump([{'check': x, 'ok': ok, 'detail': d} for x, ok, d in res], open(os.path.join(OUT, 'v18c_checks.json'), 'w', encoding='utf-8'),
+              indent=1, ensure_ascii=False)
+    for x, ok, d in res:
+        record(f'V18-C {x}', 'INFO' if ok is None else ('PASS' if ok else 'FAIL'), d)
+    inv = invariants()
+    record('INV after V18-C', 'PASS' if not inv else 'FAIL', f'{len(inv)} violating rows: {inv[:6]}')
+
+
+def cmd_v11(a):
+    """V11 (G2-A): n rolls (default 1,000) on the dedicated account mbqa_v11; dice from operator adjustment rows (kind 5).
+    Analysis in v11_model against the policy the server ran with (source defaults + isolated DB policy rows)."""
+    n = int(a.rest[0]) if a.rest else 1000
+    aid = AID['v11']
+    day = logical_day()
+    over = {int(k): int(v) for k, v in sql(f'SELECT policy_key,value FROM need_marble_policy WHERE effective_day<={day} ORDER BY effective_day')}
+    pol = v11_model.policy_from_source(v11_model.default_logic_path(), over)
+    log(f'   V11 policy overrides {over}; warp {pol["warp"]}')
+    c = login('v11')
+    enter_board(c)
+    st0 = state(aid) or {'state': 0, 'pos': 0, 'left': 0, 'die': 0, 'roll': 0, 'steps': 0, 'run': 0, 'jump': 0, 'spass': 0, 'laps': 0, 'run_char': 0}   # the state row is created by the first roll
+    if st0['state'] != 0 or st0['roll'] != 0:
+        record('V11 precondition', 'BLOCKED', f'account not fresh: {st0}')
+        c.logout()
+        return
+    rows, t0 = [], time.time()
+    for i in range(n):
+        w = wallet(aid)
+        if not w or w['dice'] < 1:
+            adjust(aid, dice=25, ticket=900000 + i)
+        if not c.alive:
+            log('   connection lost, relogin')
+            c = login('v11')
+            enter_board(c)
+        r = one_roll(c, aid, i)
+        rows.append(r)
+        if r['state'] != 0:
+            log(f'   roll {i + 1} left state {r["state"]}, stop')
+            break
+        if (i + 1) % 50 == 0:
+            json.dump(rows, open(os.path.join(OUT, 'v11_rolls.json'), 'w'), ensure_ascii=False)
+            log(f'   {i + 1} rolls, {time.time() - t0:.0f} s')
+    c.logout()
+    wait_offline(aid)
+    json.dump(rows, open(os.path.join(OUT, 'v11_rolls.json'), 'w'), ensure_ascii=False)
+    st1 = state(aid)
+    laps = sql(f'SELECT src_a,amount,status FROM need_marble_cp_payout WHERE account_id={aid} AND src_type=2 ORDER BY src_a')
+    pays = sql(f'SELECT status,COUNT(*),SUM(amount) FROM need_marble_cp_payout WHERE account_id={aid} GROUP BY status')
+    cash = int(sql("SELECT COUNT(*) FROM acc_reg_num WHERE `key`='#CASHPOINTS'")[0][0])
+    res = v11_model.analyze(rows, pol, st1['spass'] - st0['spass'], st1['steps'], laps, pays, cash)
+    res.append(('V11-0 roll count', len(rows) == n, f'{len(rows)} of {n} rolls in {time.time() - t0:.0f} s'))
+    json.dump([{'check': x, 'ok': ok, 'detail': d} for x, ok, d in res], open(os.path.join(OUT, 'v11_checks.json'), 'w', encoding='utf-8'),
+              indent=1, ensure_ascii=False)
+    for x, ok, d in res:
+        record(x, 'PASS' if ok else 'FAIL', d)
+    inv = invariants()
+    record('INV after V11', 'PASS' if not inv else 'FAIL', f'{len(inv)} violating rows: {inv[:6]}')
 
 
 def main():

@@ -19,6 +19,7 @@ ap.add_argument('--orig', required=True)
 ap.add_argument('--harness-only', action='store_true', help='rewrite only npc/custom/_mbqa_harness.txt')
 ap.add_argument('--kill-hooks', action='store_true', help='G-1(b): add @mbqakill / @mbqafeed (test build only)')
 ap.add_argument('--bind-local', action='store_true', help='add bind_ip: 127.0.0.1 to the login/char/map import conf')
+ap.add_argument('--captcha', action='store_true', help='G2-A V18-C: hunt captcha at the 5th kill (stack battle import conf only)')
 a = ap.parse_args()
 S = os.path.join(os.path.abspath(a.out), 'stack')
 O = os.path.abspath(a.orig)
@@ -90,10 +91,28 @@ def bind_local():
         report.append(f'conf/import/{f}: + bind_ip: 127.0.0.1')
 
 
+def captcha_conf():
+    """V18-C: the NEED hunt captcha fires on the 5th kill instead of at random (rate 0); the 1 h cooldown
+    after a trigger (need_macro_hunt_delay) is left as configured."""
+    p = os.path.join(S, 'conf', 'import', 'battle_conf.txt')
+    raw = open(p, 'rb').read() if os.path.exists(p) else b''
+    if b'need_macro_hunt_force_kill_count' in raw:
+        raise SystemExit('battle_conf.txt: captcha settings already present')
+    if raw and not raw.endswith(b'\n'):
+        raw += b'\r\n'
+    add = (b'// --- G2-A V18-C isolated test only (bc_stack_extras.py --captcha) ---\r\n'
+           b'need_macro_hunt_force_kill_count: 5\r\nneed_macro_hunt_check_rate: 0\r\n'
+           b'need_macro_hunt_debug: yes\r\nmacro_checker_debug: yes\r\n')
+    open(p, 'wb').write(raw + add)
+    report.append('conf/import/battle_conf.txt: + need_macro_hunt_force_kill_count 5, check_rate 0, debug on')
+
+
 if not a.harness_only:
     apply_d1_e2()
     if a.bind_local:
         bind_local()
+    if a.captcha:
+        captcha_conf()
 
 
 def instance_name(rel, needle):
@@ -152,17 +171,28 @@ if a.kill_hooks:
         b'\tbindatcmd "mbqakill", strnpcinfo(3) + "::OnKill", 99, 100;',
         b'\tbindatcmd "mbqafeed", strnpcinfo(3) + "::OnFeed", 99, 100;',
         b'\tbindatcmd "mbqastate", strnpcinfo(3) + "::OnState", 99, 100;',
+        b'\tbindatcmd "mbqakillas", strnpcinfo(3) + "::OnKillAs", 99, 100;',
+        b'\tbindatcmd "mbqaviewof", strnpcinfo(3) + "::OnViewOf", 99, 100;',
+        b'\tend;',
+        b'// G2-A V18-C: @mbqakillas <char> <radius> <max>, @mbqaviewof <char> (a captcha blocks that character\'s own commands)',
+        b'OnKillAs:',
+        b'\t.@n = need_marble_test_kill_as(.@atcmd_parameters$[0], atoi(.@atcmd_parameters$[1]), atoi(.@atcmd_parameters$[2]));',
+        b'\tdispbottom "[MBQA] killas n=" + .@n + " counted=" + @MBQA_COUNTED;',
+        b'\tend;',
+        b'OnViewOf:',
+        b'\tdispbottom "[MBQA] viewof " + .@atcmd_parameters$[0] + " kills=" + need_marble_test_view_of(.@atcmd_parameters$[0]);',
         b'\tend;',
         b'OnKill:',
         b'\t.@n = need_marble_test_kill(atoi(.@atcmd_parameters$[0]), atoi(.@atcmd_parameters$[1]));',
-        b'\tdispbottom "[MBQA] kill n=" + .@n;',
+        b'\tdispbottom "[MBQA] kill n=" + .@n + " counted=" + @MBQA_COUNTED;',
         b'\tend;',
         b'OnFeed:',
         b'\t.@n = need_marble_test_hunt_feed(atoi(.@atcmd_parameters$[0]));',
         b'\tdispbottom "[MBQA] feed n=" + .@n + " counted=" + @MBQA_COUNTED;',
         b'\tend;',
         b'OnState:',
-        b'\tdispbottom "[MBQA] state hp=" + Hp + " lv=" + BaseLevel + " map=" + strcharinfo(3);',
+        b'\tneed_marble_view();',
+        b'\tdispbottom "[MBQA] state hp=" + Hp + " lv=" + BaseLevel + " map=" + strcharinfo(3) + " kills=" + @MB_HUNT_KILLS;',
         b'\tend;',
         b'}',
         b''])

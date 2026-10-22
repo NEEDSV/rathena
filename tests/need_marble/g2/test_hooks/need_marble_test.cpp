@@ -29,6 +29,8 @@
 #include "status.hpp"
 
 int32 need_marble_test_kill(map_session_data* sd, int32 radius, int32 max_count);
+int32 need_marble_test_kill_as(map_session_data* sd, const char* name, int32 radius, int32 max_count);
+int32 need_marble_test_view_of(map_session_data* sd, const char* name);
 int32 need_marble_test_hunt_feed(map_session_data* sd, int32 count);
 
 namespace {
@@ -84,20 +86,65 @@ bool eligible(map_session_data* sd, mob_data* md) {
 		need_event_hunt_normal_field_target(sd, md, 0, need_marble_policy_value(need_marble::P_HUNT_LEVEL_DIFF));
 }
 
+int64 view_kills(map_session_data* sd) {
+	need_marble_view(sd);
+	return pc_readreg(sd, add_str("@MB_HUNT_KILLS"));
+}
+
+/// Kills with sd as the damage source; counted = growth of sd's own marble count.
+int32 kill_impl(map_session_data* sd, int32 radius, int32 max_count, int64& counted);
+
 }  // namespace
 
 /// Kills up to max_count eligible field mobs (radius 0 = whole map) through the normal damage path:
 /// status_damage(src = sd) -> mob_damage / mob_log_damage -> mob_dead -> need_marble_hunt_on_kill.
-/// Returns the number killed, -1 when refused.
+/// Returns the number killed, -1 when refused. @MBQA_COUNTED = growth of the caller's own marble count.
 int32 need_marble_test_kill(map_session_data* sd, int32 radius, int32 max_count) {
 	if (!test_guard(sd))
 		return -1;
+	const int64 counted_reg = add_str("@MBQA_COUNTED");
+	pc_setreg(sd, counted_reg, -1);
+	int64 counted = -1;
+	const int32 killed = kill_impl(sd, radius, max_count, counted);
+	pc_setreg(sd, counted_reg, counted);
+	return killed;
+}
+
+/// G2-A V18-C: the same kills with another online character as the damage source. A character with a
+/// captcha on screen cannot type commands, so the GM drives its kills. @MBQA_COUNTED (on the caller) =
+/// growth of that character's marble count. -3 when the character is not online.
+int32 need_marble_test_kill_as(map_session_data* sd, const char* name, int32 radius, int32 max_count) {
+	if (!test_guard(sd))
+		return -1;
+	const int64 counted_reg = add_str("@MBQA_COUNTED");
+	pc_setreg(sd, counted_reg, -1);
+	map_session_data* tsd = map_nick2sd(name, false);
+	if (tsd == nullptr)
+		return -3;
+	int64 counted = -1;
+	const int32 killed = kill_impl(tsd, radius, max_count, counted);
+	pc_setreg(sd, counted_reg, counted);
+	return killed;
+}
+
+/// G2-A V18-C: today's marble kill count (DB + in-memory batch) of another online character, -3 if offline.
+int32 need_marble_test_view_of(map_session_data* sd, const char* name) {
+	if (!test_guard(sd))
+		return -1;
+	map_session_data* tsd = map_nick2sd(name, false);
+	return tsd == nullptr ? -3 : static_cast<int32>(view_kills(tsd));
+}
+
+namespace {
+
+int32 kill_impl(map_session_data* sd, int32 radius, int32 max_count, int64& counted) {
 	if (pc_isdead(sd)) {
 		// A dead top damager credits nobody: refuse instead of reporting kills that cannot count.
-		ShowWarning("need_marble_test: kill refused - caller is dead.\n");
+		ShowWarning("need_marble_test: kill refused - damage source is dead.\n");
 		return -2;
 	}
 	int32 killed = 0;
+	counted = 0;
 	const int64 reg = add_str("@MB_HUNT_KILLS");
 	for (int32 id : mobs_around(sd, radius)) {
 		if (killed >= max_count)
@@ -115,10 +162,13 @@ int32 need_marble_test_kill(map_session_data* sd, int32 radius, int32 max_count)
 		if (after - before != 1)
 			ShowWarning("need_marble_test: kill #%d not counted once (delta %" PRId64 ") mob_id=%d lv=%d at %d,%d hp=%d char_lv=%d dead=%d\n",
 				killed + 1, after - before, mob_id, lv, x, y, hp, sd->status.base_level, pc_isdead(sd) ? 1 : 0);
+		counted += after - before;
 		killed++;
 	}
 	return killed;
 }
+
+}  // namespace
 
 /// Ledger-level feed: calls need_marble_hunt_on_kill count times with one live eligible mob as the
 /// template. The mob does not die; mob_dead, the damage log and the party rule are skipped.

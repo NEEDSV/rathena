@@ -202,6 +202,22 @@ synth = read('tests/need_marble/g2/bc_synth_v22.sql')
 check('bc_synth_v22.sql: no literal secret, ids outside the other fixtures',
       "'{{user}}'" in synth and not re.search(r'password|[A-Za-z]:[\\/]', synth, re.I) and '2000906' not in synth)
 
+# 14. G2-A runners (V11, V18-C): dedicated accounts, isolated-only captcha settings, no secrets
+v11_users = [b.split('(', 1)[0] for b in blocks if re.search(r"'v11'", b)]
+check('V11 dedicated account used by V11 only', v11_users == ['cmd_v11'], str(v11_users))
+heal_users = [b.split('(', 1)[0] for b in blocks if re.search(r"'heal'", b)]
+check('V18-C healer used by V18-C only', heal_users == ['cmd_v18c'], str(heal_users))
+g2a = read('tests/need_marble/g2/bc_synth_g2a.sql')
+check('bc_synth_g2a.sql: no literal secret, new ids only for new accounts',
+      "'{{user}}'" in g2a and not re.search(r'password|[A-Za-z]:[\\/]', g2a, re.I) and
+      re.findall(r'^\s*\((\d{7}),', g2a, re.M) == ['2000909', '2000910'])
+repo_force = re.search(r'^need_macro_hunt_force_kill_count:\s*(\d+)', read('conf/battle/client.conf'), re.M)
+check('captcha settings only through the stack copy (bc_stack_extras.py --captcha), repo value stays 0',
+      'need_macro_hunt_force_kill_count: 5' in extras and "os.path.join(S, 'conf', 'import', 'battle_conf.txt')" in extras and
+      repo_force is not None and repo_force.group(1) == '0')
+v11m = read('tests/need_marble/g2/v11_model.py')
+check('V11 analysis reads the policy from need_marble_logic.hpp (no copied rate table)', 'policy_from_source' in v11m and '5000, 4000' not in v11m)
+
 failed = [r for r in results if not r[1]]
 for name, ok, detail in results:
     print(('PASS ' if ok else 'FAIL ') + name + (f'  [{detail}]' if detail and not ok else ''))

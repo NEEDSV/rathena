@@ -3,6 +3,8 @@
 Based on tools/need_marble/roclient.py. Adds: NPC dialog driver (mes/next/menu/input/close),
 dispbottom (0x02C1) collection decoded as CP949, monster tracking from unit packets and the
 attack request (0x0437). Server texts are parsed by scanning every offset with length/ID checks.
+G2-A: hunt captcha (0x0A58/0x0A59 image, 0x0A5A ack, 0x0A5B ask, 0x0A5C answer, 0x0A5D close) and
+skill use on a target (0x0438, heal seen back as 0x09CB).
 """
 import select
 import socket
@@ -171,6 +173,49 @@ class Client:
                         self.mobs.pop(gid, None)
                         if b[i + 6] == 1:
                             self.dead.add(gid)
+            elif pid == 0x0A58 and i not in self.seen:
+                # ZC_APPLY_MACRO_DETECTOR (8) is followed at once by the 0x0A59 image chunks
+                if i + 12 > n:
+                    return
+                size = struct.unpack_from('<H', b, i + 2)[0]
+                if 0 < size <= 20000 and b[i + 8] | (b[i + 9] << 8) == 0x0A59:
+                    j, data = i + 8, b''
+                    while len(data) < size:
+                        if j + 8 > n:
+                            return   # incomplete, retried with the next chunk
+                        if b[j] | (b[j + 1] << 8) != 0x0A59:
+                            break
+                        ln = struct.unpack_from('<H', b, j + 2)[0]
+                        if ln < 8 or j + ln > n:
+                            return
+                        data += bytes(b[j + 8:j + ln])
+                        j += ln
+                    if len(data) == size:
+                        self.seen.add(i)
+                        self.captcha_on = True
+                        self.events.append((i, 'captcha_image', data))
+            elif pid == 0x0A5B and self.captcha_on and i not in self.seen:
+                # ZC_REQ_ANSWER_MACRO_DETECTOR: retry(1) timeout(4)
+                if i + 7 > n:
+                    return
+                retry, timeout = b[i + 2], struct.unpack_from('<i', b, i + 3)[0]
+                if 1 <= retry <= 10 and 1000 <= timeout <= 3600000:
+                    self.seen.add(i)
+                    self.events.append((i, 'captcha_ask', retry))
+            elif pid == 0x0A5D and self.captcha_on and i not in self.seen:
+                # ZC_CLOSE_MACRO_DETECTOR: status(4), 2 = MCD_GOOD
+                if i + 6 > n:
+                    return
+                st = struct.unpack_from('<i', b, i + 2)[0]
+                if 0 <= st <= 8:
+                    self.seen.add(i)
+                    self.events.append((i, 'captcha_close', st))
+            elif pid == 0x09CB and i not in self.seen:
+                # ZC_USE_SKILL2: skill(2) amount(4) target(4) src(4) result(1)
+                if i + 17 <= n and struct.unpack_from('<I', b, i + 12)[0] == self.aid and \
+                        struct.unpack_from('<H', b, i + 2)[0] in (28,):
+                    self.seen.add(i)
+                    self.events.append((i, 'skill', struct.unpack_from('<HiI', b, i + 2)))
             i += 1
 
     def _near_dialog(self, npc):
@@ -181,6 +226,7 @@ class Client:
     expect_close = False
     drop_after = False
     pos = None
+    captcha_on = False
 
     # ------------------------------------------------------------------ actions
     def raw(self, data):
@@ -196,6 +242,27 @@ class Client:
 
     def attack(self, gid):
         self.sock.sendall(struct.pack('<HIB', 0x0437, gid, 7))
+
+    def use_skill(self, skill_id, level, target):
+        """CZ_USE_SKILL2 (0x0438): level, skill id, target id. Refreshes idletime (idletime_option 0x2)."""
+        self.sock.sendall(struct.pack('<HHHI', 0x0438, level, skill_id, target))
+
+    def captcha_ack(self):
+        """CZ_COMPLETE_APPLY_MACRO_DETECTOR_CAPTCHA (0x0A5A): image received, show the answer window."""
+        self.sock.sendall(struct.pack('<H', 0x0A5A))
+
+    def captcha_answer(self, text):
+        """CZ_ACK_ANSWER_MACRO_DETECTOR (0x0A5C): answer[16]."""
+        self.sock.sendall(struct.pack('<H16s', 0x0A5C, text.encode('latin1')))
+
+    def wait_event(self, mark, kind, timeout=10.0):
+        end = time.time() + timeout
+        while time.time() < end:
+            for e in self.events[mark:]:
+                if e[1] == kind:
+                    return e[2]
+            time.sleep(0.1)
+        return None
 
     def logout(self):
         try:

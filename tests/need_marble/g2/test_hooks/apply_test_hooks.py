@@ -50,12 +50,41 @@ BUILDIN_FUNC(need_marble_test_hunt_feed)
 	script_pushint(st, need_marble_test_hunt_feed(sd, script_getnum(st, 2)));
 	return SCRIPT_CMD_SUCCESS;
 }
+
+int32 need_marble_test_kill_as(map_session_data* sd, const char* name, int32 radius, int32 max_count);
+int32 need_marble_test_view_of(map_session_data* sd, const char* name);
+
+/// need_marble_test_kill_as("<char name>",<radius>,<max count>);  (G2-A: damage source = that character)
+BUILDIN_FUNC(need_marble_test_kill_as)
+{
+	map_session_data* sd = nullptr;
+	if (!script_rid2sd(sd)) {
+		script_pushint(st, -1);
+		return SCRIPT_CMD_SUCCESS;
+	}
+	script_pushint(st, need_marble_test_kill_as(sd, script_getstr(st, 2), script_getnum(st, 3), script_getnum(st, 4)));
+	return SCRIPT_CMD_SUCCESS;
+}
+
+/// need_marble_test_view_of("<char name>");  (G2-A: that character's marble kill count today)
+BUILDIN_FUNC(need_marble_test_view_of)
+{
+	map_session_data* sd = nullptr;
+	if (!script_rid2sd(sd)) {
+		script_pushint(st, -1);
+		return SCRIPT_CMD_SUCCESS;
+	}
+	script_pushint(st, need_marble_test_view_of(sd, script_getstr(st, 2)));
+	return SCRIPT_CMD_SUCCESS;
+}
 #endif
 '''
 DEF = '''
 #ifdef NEED_MARBLE_TEST_HOOKS
 BUILDIN_DEF(need_marble_test_kill,"ii"),
 BUILDIN_DEF(need_marble_test_hunt_feed,"i"),
+BUILDIN_DEF(need_marble_test_kill_as,"sii"),
+BUILDIN_DEF(need_marble_test_view_of,"s"),
 #endif
 '''
 
