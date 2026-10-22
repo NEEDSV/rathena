@@ -41,6 +41,7 @@
 #include "need_jf_pattern.hpp"
 #include "need_summer_hunt.hpp"
 #include "need_chuseok_hunt.hpp"
+#include "need_halloween.hpp"
 #include "need_daily_quest.hpp"
 #include "npc.hpp"
 #include "party.hpp"
@@ -3989,6 +3990,9 @@ int32 mob_dead(mob_data *md, block_list *src, int32 type)
 
 		if (need_summer_highest_damage_sd != nullptr && src != nullptr && !md->state.npc_killmonster)
 			need_chuseok_hunt_on_kill(need_summer_highest_damage_sd, md, type);
+
+		if (need_summer_highest_damage_sd != nullptr && src != nullptr && !md->state.npc_killmonster)
+			need_halloween_hunt_on_kill(need_summer_highest_damage_sd, md, type);
 
 		if (need_summer_highest_damage_sd != nullptr && src != nullptr && !md->state.npc_killmonster)
 			need_daily_quest_on_kill(need_summer_highest_damage_sd, md, type);

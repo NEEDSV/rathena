@@ -868,6 +868,7 @@ struct Battle_Config
 	int32 need_chuseok_hunt_enable;
 	int32 need_chuseok_hunt_material_enable;
 	int32 need_chuseok_hunt_honey_enable;
+	int32 need_halloween_hunt_enable;
 	// NEED summer event fishing system (stage 1: technical validation)
 	int32 need_summer_fishing_enable;
 	int32 need_summer_fishing_debug;

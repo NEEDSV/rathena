@@ -9052,6 +9052,9 @@ static const struct _battle_data {
 	{ "need_chuseok_hunt_material_enable",   &battle_config.need_chuseok_hunt_material_enable, 0,     0,      1,              },
 	{ "need_chuseok_hunt_honey_enable",      &battle_config.need_chuseok_hunt_honey_enable,   0,      0,      1,              },
 
+	// NEED 2026 halloween event field hunting coin drop. Off by default; @halloweengm re-applies it at script load.
+	{ "need_halloween_hunt_enable",          &battle_config.need_halloween_hunt_enable,       0,      0,      1,              },
+
 	// NEED summer event fishing system (stage 1: technical validation). Off by default.
 	{ "need_summer_fishing_enable",         &battle_config.need_summer_fishing_enable,      0,      0,      1,              },
 	{ "need_summer_fishing_debug",          &battle_config.need_summer_fishing_debug,       0,      0,      1,              },

@@ -234,8 +234,9 @@ function	script	F_NEED_Chuseok_FamilyGroup	{
 
 // 현재 주기에서 이 대상(scope+subject)이 사용한 횟수. 조회 실패 시 -1.
 // getarg(0) scope$ / getarg(1) subject$ / getarg(2) product$ / getarg(3) period_key
+// getarg(4) event_id (생략 시 202609 추석. 2026 할로윈은 202610 으로 같은 원장을 쓴다)
 function	script	F_NEED_Chuseok_LimitUsed	{
-	.@rows = query_sql("SELECT `used` FROM `need_chuseok_exchange_limit` WHERE `event_id`=202609 AND `scope`='" + escape_sql(getarg(0)) + "' AND `subject`='" + escape_sql(getarg(1)) + "' AND `product`='" + escape_sql(getarg(2)) + "' AND `period_key`=" + getarg(3), .@used);
+	.@rows = query_sql("SELECT `used` FROM `need_chuseok_exchange_limit` WHERE `event_id`=" + getarg(4, 202609) + " AND `scope`='" + escape_sql(getarg(0)) + "' AND `subject`='" + escape_sql(getarg(1)) + "' AND `product`='" + escape_sql(getarg(2)) + "' AND `period_key`=" + getarg(3), .@used);
 
 	if (.@rows < 0)
 		return -1;
@@ -247,7 +248,7 @@ function	script	F_NEED_Chuseok_LimitUsed	{
 
 // 한 쪽(scope) 한도를 예약한다. 성공하면 갱신된 사용량, 한도 초과면 -1.
 // getarg(0) scope$ / getarg(1) subject$ / getarg(2) product$
-// getarg(3) period_key / getarg(4) 한도 / getarg(5) 수량
+// getarg(3) period_key / getarg(4) 한도 / getarg(5) 수량 / getarg(6) event_id (생략 시 202609)
 function	script	F_NEED_Chuseok_LimitReserve	{
 	.@scope$ = getarg(0);
 	.@subject$ = getarg(1);
@@ -255,15 +256,16 @@ function	script	F_NEED_Chuseok_LimitReserve	{
 	.@period = getarg(3);
 	.@cap = getarg(4);
 	.@amount = getarg(5);
+	.@event = getarg(6, 202609);
 
-	.@before = callfunc("F_NEED_Chuseok_LimitUsed", .@scope$, .@subject$, .@product$, .@period);
+	.@before = callfunc("F_NEED_Chuseok_LimitUsed", .@scope$, .@subject$, .@product$, .@period, .@event);
 	if (.@before < 0 || .@before + .@amount > .@cap)
 		return -1;
 
 	// 한도를 넘기는 갱신은 SQL 쪽에서도 한 번 더 막는다.
-	query_sql("INSERT INTO `need_chuseok_exchange_limit` (`event_id`,`scope`,`subject`,`product`,`period_key`,`used`) VALUES (202609,'" + escape_sql(.@scope$) + "','" + escape_sql(.@subject$) + "','" + escape_sql(.@product$) + "'," + .@period + "," + .@amount + ") ON DUPLICATE KEY UPDATE `used` = IF(`used` + " + .@amount + " <= " + .@cap + ", `used` + " + .@amount + ", `used`)");
+	query_sql("INSERT INTO `need_chuseok_exchange_limit` (`event_id`,`scope`,`subject`,`product`,`period_key`,`used`) VALUES (" + .@event + ",'" + escape_sql(.@scope$) + "','" + escape_sql(.@subject$) + "','" + escape_sql(.@product$) + "'," + .@period + "," + .@amount + ") ON DUPLICATE KEY UPDATE `used` = IF(`used` + " + .@amount + " <= " + .@cap + ", `used` + " + .@amount + ", `used`)");
 
-	.@after = callfunc("F_NEED_Chuseok_LimitUsed", .@scope$, .@subject$, .@product$, .@period);
+	.@after = callfunc("F_NEED_Chuseok_LimitUsed", .@scope$, .@subject$, .@product$, .@period, .@event);
 	if (.@after != .@before + .@amount)
 		return -1;			// 예약되지 않았다.
 
@@ -271,8 +273,9 @@ function	script	F_NEED_Chuseok_LimitReserve	{
 }
 
 // 예약을 되돌린다. 한쪽만 예약된 채로 끝나는 일이 없도록 쓴다.
+// getarg(0) scope$ / getarg(1) subject$ / getarg(2) product$ / getarg(3) period_key / getarg(4) 수량 / getarg(5) event_id (생략 시 202609)
 function	script	F_NEED_Chuseok_LimitRelease	{
-	query_sql("UPDATE `need_chuseok_exchange_limit` SET `used` = IF(`used` >= " + getarg(4) + ", `used` - " + getarg(4) + ", 0) WHERE `event_id`=202609 AND `scope`='" + escape_sql(getarg(0)) + "' AND `subject`='" + escape_sql(getarg(1)) + "' AND `product`='" + escape_sql(getarg(2)) + "' AND `period_key`=" + getarg(3));
+	query_sql("UPDATE `need_chuseok_exchange_limit` SET `used` = IF(`used` >= " + getarg(4) + ", `used` - " + getarg(4) + ", 0) WHERE `event_id`=" + getarg(5, 202609) + " AND `scope`='" + escape_sql(getarg(0)) + "' AND `subject`='" + escape_sql(getarg(1)) + "' AND `product`='" + escape_sql(getarg(2)) + "' AND `period_key`=" + getarg(3));
 	return;
 }
 

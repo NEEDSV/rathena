@@ -55,6 +55,7 @@
 #include "need_summer_fishing_reward.hpp"
 #include "need_summer_hunt.hpp"
 #include "need_chuseok_hunt.hpp"
+#include "need_halloween.hpp"
 #include "need_daily_quest.hpp"
 #ifndef MAP_GENERATOR
 #include "needwiki.hpp"
@@ -5110,6 +5111,7 @@ void MapServer::finalize(){
 	do_final_atcommand();
 	need_summer_hunt_final();
 	need_chuseok_hunt_final();
+	need_halloween_final();
 	need_daily_quest_final();
 	need_summer_attendance_final();
 	need_summer_fishing_reward_final();
@@ -5617,6 +5619,7 @@ bool MapServer::initialize( int32 argc, char *argv[] ){
 	do_init_pc();
 	need_summer_hunt_init();
 	need_chuseok_hunt_init();
+	need_halloween_init();
 	need_summer_attendance_init();
 	need_summer_fishing_reward_init();
 	need_autopot_init();

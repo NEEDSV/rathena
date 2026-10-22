@@ -59,6 +59,7 @@
 #include "mercenary.hpp"
 #include "mob.hpp"
 #include "need_chuseok_hunt.hpp"
+#include "need_halloween.hpp"
 #include "need_daily_quest.hpp"
 #include "need_equipment_build.hpp"
 #include "need_fishing.hpp"

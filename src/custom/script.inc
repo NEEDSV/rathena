@@ -1082,6 +1082,26 @@ BUILDIN_FUNC(needchuseokhoney)
 	return SCRIPT_CMD_SUCCESS;
 }
 
+// NEED 2026 halloween event: jack game daily reward through the shared daily ledger.
+// needhalloweenjack(0) only checks: 1 already rewarded today (account or IP), 0 not yet, -1 ledger unavailable.
+// needhalloweenjack(1) pays 10 halloween coins: 1 delivered, 0 account daily limit, -1 ip daily limit,
+// -2 inventory unavailable, -3 database error, -4 feature disabled.
+BUILDIN_FUNC(needhalloweenjack)
+{
+	map_session_data* sd = nullptr;
+
+	if (!script_rid2sd(sd)) {
+		script_pushint(st, NEED_CHUSEOK_HONEY_ERROR);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	if (script_getnum(st, 2) == 0)
+		script_pushint(st, need_halloween_jack_claimed_today(sd));
+	else
+		script_pushint(st, need_halloween_jack_grant(sd));
+	return SCRIPT_CMD_SUCCESS;
+}
+
 // NEED daily quest (phase 1): one command = one SQL transaction (spec 4.3).
 // needdq_status() fills the @dq_* display variables and returns the state
 //   (0 not accepted, 1 accepted, 2 capped, 3 locked out, 4 level changed, 5 not eligible, -8 disabled).
