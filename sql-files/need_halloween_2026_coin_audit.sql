@@ -12,4 +12,4 @@ UNION ALL SELECT 'storage2', COUNT(*), COALESCE(SUM(`amount`), 0), COUNT(DISTINC
 UNION ALL SELECT 'storage3', COUNT(*), COALESCE(SUM(`amount`), 0), COUNT(DISTINCT `account_id`) FROM `storage3` WHERE `nameid` = 6658
 UNION ALL SELECT 'guild_storage', COUNT(*), COALESCE(SUM(`amount`), 0), COUNT(DISTINCT `guild_id`) FROM `guild_storage` WHERE `nameid` = 6658
 UNION ALL SELECT 'mail_attachments', COUNT(*), COALESCE(SUM(`amount`), 0), COUNT(DISTINCT `id`) FROM `mail_attachments` WHERE `nameid` = 6658
-UNION ALL SELECT 'auction', COUNT(*), COALESCE(SUM(`amount`), 0), COUNT(DISTINCT `seller_id`) FROM `auction` WHERE `nameid` = 6658;
+UNION ALL SELECT 'auction', COUNT(*), COUNT(*), COUNT(DISTINCT `seller_id`) FROM `auction` WHERE `nameid` = 6658;   -- one item per auction row

@@ -11,9 +11,13 @@
 --
 -- 6658 has no trade restriction, so it can sit in every item container:
 -- inventory, cart, account storage (+ premium storage2 / storage3), guild storage,
--- RODEX mail attachments and the auction table. Vending shops sell from the cart, so
--- their vending_items rows that point at a purged cart row are removed too.
--- Every removed row is copied into need_halloween_2026_coin_purge first (rollback source).
+-- RODEX mail attachments and the auction table (one item per row, no amount column).
+-- Vending shops sell from the cart, so their vending_items rows that point at a purged
+-- cart row are removed too.
+--
+-- Each table is handled as "copy into need_halloween_2026_coin_purge, then delete" right
+-- after each other. If the run stops half way, the tables already done are complete and
+-- the rest is untouched, so running the file again only picks up what is left.
 -- Ledger and exchange logs (need_chuseok_honey_*, need_chuseok_exchange_*, picklog) stay.
 
 CREATE TABLE IF NOT EXISTS `need_halloween_2026_coin_purge` (
@@ -28,36 +32,44 @@ CREATE TABLE IF NOT EXISTS `need_halloween_2026_coin_purge` (
   KEY `source_row` (`source_table`, `row_id`)
 ) ENGINE=InnoDB;
 
--- 1. Backup copies.
+-- inventory
 INSERT INTO `need_halloween_2026_coin_purge` (`source_table`, `row_id`, `owner_id`, `amount`)
   SELECT 'inventory', `id`, `char_id`, `amount` FROM `inventory` WHERE `nameid` = 6658;
+DELETE FROM `inventory` WHERE `nameid` = 6658;
+
+-- cart (vending rows first, while their cart rows still exist)
+DELETE `v` FROM `vending_items` `v` JOIN `cart_inventory` `c` ON `c`.`id` = `v`.`cartinventory_id` WHERE `c`.`nameid` = 6658;
 INSERT INTO `need_halloween_2026_coin_purge` (`source_table`, `row_id`, `owner_id`, `amount`)
   SELECT 'cart_inventory', `id`, `char_id`, `amount` FROM `cart_inventory` WHERE `nameid` = 6658;
+DELETE FROM `cart_inventory` WHERE `nameid` = 6658;
+
+-- account storage and premium storages
 INSERT INTO `need_halloween_2026_coin_purge` (`source_table`, `row_id`, `owner_id`, `amount`)
   SELECT 'storage', `id`, `account_id`, `amount` FROM `storage` WHERE `nameid` = 6658;
+DELETE FROM `storage` WHERE `nameid` = 6658;
 INSERT INTO `need_halloween_2026_coin_purge` (`source_table`, `row_id`, `owner_id`, `amount`)
   SELECT 'storage2', `id`, `account_id`, `amount` FROM `storage2` WHERE `nameid` = 6658;
+DELETE FROM `storage2` WHERE `nameid` = 6658;
 INSERT INTO `need_halloween_2026_coin_purge` (`source_table`, `row_id`, `owner_id`, `amount`)
   SELECT 'storage3', `id`, `account_id`, `amount` FROM `storage3` WHERE `nameid` = 6658;
+DELETE FROM `storage3` WHERE `nameid` = 6658;
+
+-- guild storage
 INSERT INTO `need_halloween_2026_coin_purge` (`source_table`, `row_id`, `owner_id`, `amount`)
   SELECT 'guild_storage', `id`, `guild_id`, `amount` FROM `guild_storage` WHERE `nameid` = 6658;
+DELETE FROM `guild_storage` WHERE `nameid` = 6658;
+
+-- RODEX mail attachments (the mail itself stays)
 INSERT INTO `need_halloween_2026_coin_purge` (`source_table`, `row_id`, `row_index`, `owner_id`, `amount`)
   SELECT 'mail_attachments', `id`, `index`, `id`, `amount` FROM `mail_attachments` WHERE `nameid` = 6658;
-INSERT INTO `need_halloween_2026_coin_purge` (`source_table`, `row_id`, `owner_id`, `amount`)
-  SELECT 'auction', `auction_id`, `seller_id`, `amount` FROM `auction` WHERE `nameid` = 6658;
-
--- 2. Removal. Vending rows first, while their cart rows still exist.
-DELETE `v` FROM `vending_items` `v` JOIN `cart_inventory` `c` ON `c`.`id` = `v`.`cartinventory_id` WHERE `c`.`nameid` = 6658;
-DELETE FROM `inventory` WHERE `nameid` = 6658;
-DELETE FROM `cart_inventory` WHERE `nameid` = 6658;
-DELETE FROM `storage` WHERE `nameid` = 6658;
-DELETE FROM `storage2` WHERE `nameid` = 6658;
-DELETE FROM `storage3` WHERE `nameid` = 6658;
-DELETE FROM `guild_storage` WHERE `nameid` = 6658;
 DELETE FROM `mail_attachments` WHERE `nameid` = 6658;
+
+-- auction (one item per row)
+INSERT INTO `need_halloween_2026_coin_purge` (`source_table`, `row_id`, `owner_id`, `amount`)
+  SELECT 'auction', `auction_id`, `seller_id`, 1 FROM `auction` WHERE `nameid` = 6658;
 DELETE FROM `auction` WHERE `nameid` = 6658;
 
--- 3. Check: every place must report 0 rows.
+-- Check: every place must report 0 rows.
 SELECT 'inventory' AS `place`, COUNT(*) AS `rows_left` FROM `inventory` WHERE `nameid` = 6658
 UNION ALL SELECT 'cart_inventory', COUNT(*) FROM `cart_inventory` WHERE `nameid` = 6658
 UNION ALL SELECT 'storage', COUNT(*) FROM `storage` WHERE `nameid` = 6658
