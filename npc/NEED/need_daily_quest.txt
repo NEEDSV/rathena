@@ -23,7 +23,9 @@
 //= 4단계: 인던 (Lv175, 선택, 상급 고성 40 / 일반 고성 15 / 공중요새 15, 합 40, 판정은 C++ needdq_inst_clear).
 //= 3단계: 전장 (Lv150 이상, 선택, 유효 경기 1판 30점 / 2판 50점, 판정은 C++ needdq_bg_*).
 //= 2단계: 사냥 (보급관 수락 한 번으로 납품과 함께 시작, 단계마다 점수 즉시 확정).
-//= v1.5 Phase 5-Lite: 보상 받기 = 20/40/60/80점마다 10,000캐시 (계정·구간당 1번, 꿀송편과 같은 IP 규칙). 증표는 아직 없다.
+//= v1.5 Phase 5-Lite: 보상 받기 = 20/40/60/80점마다 10,000캐시 (계정·구간당 1번, 꿀송편과 같은 IP 규칙).
+//= 증표 (2026-10-22): 80점 수령 때 받는 캐릭터에게 증표(1000235) 1개, 보상 화면에서 증표 2개 -> 대장장이의 축복(6635) 1개.
+//=   증표 거래 제한은 db/import/item_db.yml (같은 계정 개인 창고만).
 //= 가상 재료 이름과 NPC 위치는 임시값이다 (격리 시험용).
 //============================================================
 
@@ -53,9 +55,14 @@ function	script	F_NEED_DQ_MapName	{
 	if (.@m$ == "prt_prison") return needtr("지하 감옥", "Prontera Prison");
 	if (.@m$ == "gl_cas02_")  return needtr("고성 2층 회랑", "Glast Heim Castle 2 (N)");
 	if (.@m$ == "ver_eju")    return needtr("유페로스 동쪽폐허", "Eastern Ruins of Juperos");
-	if (.@m$ == "sp_rudus2")  return needtr("루두스 2층", "Rudus 2F");
-	if (.@m$ == "ba_lost")    return needtr("사육장 로스트밸리", "Lost Valley");
+	if (.@m$ == "verus02")    return needtr("베루스 연구동-WISH", "Verus R&D-WISH");
+	if (.@m$ == "ra_fild10")  return needtr("라헬 필드 10", "Rachel Field 10");
 	return .@m$;
+}
+
+// 80점 증표 아이템 (공식 "뛰어난 사냥꾼의 증표", 설명은 클라이언트 itemInfo_override 에서 일일 퀘스트용으로 바꿈)
+function	script	F_NEED_DQ_TokenId	{
+	return 1000235;
 }
 
 // 대상 몬스터 (최대 2줄)
@@ -83,11 +90,10 @@ function	script	F_NEED_DQ_ShowTargets	{
 		callfunc "F_NEED_DQ_M", needtr("- 방랑자, 라이드 워드 (Lv145+)", "- Wanderer, Rideword (Lv145+)");
 	} else if (.@m$ == "ver_eju") {
 		callfunc "F_NEED_DQ_M", needtr("- 정찰 로봇, 굴착 로봇", "- Recon Robot, Excavator Robot");
-	} else if (.@m$ == "sp_rudus2") {
-		callfunc "F_NEED_DQ_M", needtr("- 벨라레, 사나레", "- Bellare, Sanare");
-		callfunc "F_NEED_DQ_M", needtr("- 플라가, 돌로르", "- Plaga, Dolor");
-	} else if (.@m$ == "ba_lost") {
-		callfunc "F_NEED_DQ_M", needtr("- 피타야 5종 (보스 제외)", "- Pitaya x5 (not the boss)");
+	} else if (.@m$ == "verus02") {
+		callfunc "F_NEED_DQ_M", needtr("- 수리로봇 터보, 탐사로봇 터보", "- Repair Robot Turbo, Exploration Rover Turbo");
+	} else if (.@m$ == "ra_fild10") {
+		callfunc "F_NEED_DQ_M", needtr("- 잿빛 고우트, 새끼 회색 늑대", "- Ashen Goat, Baby Gray Wolf");
 	}
 	return;
 }
@@ -408,6 +414,9 @@ L_Reward:
 	callfunc "F_NEED_DQ_M", .@n$;
 	callfunc "F_NEED_DQ_M", needtr("오늘 계정 점수 ^0055FF", "Account today ^0055FF") + @dq_acc_total + "^000000 / 80";
 	callfunc "F_NEED_DQ_M", needtr("구간마다 10,000캐시 (계정당 1번)", "10,000 Cash per tier (once/account)");
+	callfunc "F_NEED_DQ_M", needtr("80점은 증표 1개 추가 (받는 캐릭터)", "80 pts also gives 1 token (this char)");
+	.@tok = callfunc("F_NEED_DQ_TokenId");
+	.@have = countitem(.@tok);
 	.@c = 0;
 	for (.@i = 0; .@i < 4; .@i++) {
 		.@t = (.@i + 1) * 20;
@@ -424,20 +433,34 @@ L_Reward:
 		}
 		callfunc "F_NEED_DQ_M", "- " + .@t + needtr("점: ", " pts: ") + .@st$;
 	}
+	callfunc "F_NEED_DQ_M", needtr("보유 증표 ", "Tokens held: ") + .@have + needtr("개 (2개 = 대장장이의 축복)", " (2 = 1 Blacksmith Blessing)");
 	callfunc "F_NEED_DQ_M", needtr("^777777오늘 보상은 04:00 전에 받으세요.^000000", "^777777Claim today's rewards before 04:00.^000000");
 	callfunc "F_NEED_DQ_Fit";
-	if (.@c == 0)
+	if (.@c == 0 && .@have < 2)
 		close;
 	.@m$ = "";
 	for (.@i = 0; .@i < .@c; .@i++)
 		// select() splits items at ":", so no ":" inside an item (the EN text once had one)
 		.@m$ += needtr("", "Claim ") + .@can[.@i] + needtr("점 보상 받기", " pts") + ":";
+	if (.@have >= 2)
+		.@m$ += needtr("증표 2개를 대장장이의 축복으로", "Trade 2 tokens for a Blacksmith Blessing") + ":";
 	.@m$ += needtr("나중에", "Later");
 	.@sel = select(.@m$);
 	clear;
+	if (.@sel == .@c + 1 && .@have >= 2)
+		goto L_TokenTrade;
 	if (.@sel > .@c)
 		close;
 	.@tier = .@can[.@sel - 1];
+	// 증표는 받는 캐릭터 인벤토리로 간다: 칸이 없으면 수령 기록(캐시)을 남기기 전에 멈춘다.
+	if (.@tier == 80 && !checkweight(.@tok, 1)) {
+		callfunc "F_NEED_DQ_M", .@n$;
+		callfunc "F_NEED_DQ_M", needtr("80점 보상의 증표를 받을", "Your inventory has no room");
+		callfunc "F_NEED_DQ_M", needtr("인벤토리 칸이 없습니다.", "for the 80 pts token.");
+		callfunc "F_NEED_DQ_M", needtr("칸을 비우고 다시 받아 주세요.", "Free a slot and claim again.");
+		callfunc "F_NEED_DQ_Fit";
+		close;
+	}
 	.@r = needdq_claim(.@tier);
 	needdq_status();
 	callfunc "F_NEED_DQ_M", .@n$;
@@ -445,6 +468,11 @@ L_Reward:
 	case 1:
 		callfunc "F_NEED_DQ_M", needtr("^0055FF", "^0055FF") + .@tier + needtr("점 보상: 10,000캐시를", " pts reward: 10,000 Cash");
 		callfunc "F_NEED_DQ_M", needtr("지급했습니다.^000000", "has been given.^000000");
+		if (.@tier == 80) {
+			getitem .@tok, 1;
+			callfunc "F_NEED_DQ_M", needtr("^0055FF증표 1개^000000를 이 캐릭터에게", "^0055FF1 token^000000 was given to");
+			callfunc "F_NEED_DQ_M", needtr("지급했습니다.", "this character.");
+		}
 		break;
 	case -5:
 		callfunc "F_NEED_DQ_M", needtr("이 구간은 이 계정이 이미 받았습니다.", "This account already claimed it.");
@@ -473,6 +501,27 @@ L_Reward:
 		break;
 	}
 	callfunc "F_NEED_DQ_M", needtr("오늘 계정 점수 ", "Account today ") + @dq_acc_total + " / 80";
+	callfunc "F_NEED_DQ_Fit";
+	close;
+
+L_TokenTrade:
+	// 증표 2개 -> 대장장이의 축복(6635, 거래 가능 그대로) 1개. 한 흐름 안에서 확인 -> delitem -> getitem.
+	callfunc "F_NEED_DQ_M", .@n$;
+	if (countitem(.@tok) < 2) {
+		callfunc "F_NEED_DQ_M", needtr("증표가 2개 필요합니다.", "You need 2 tokens.");
+		callfunc "F_NEED_DQ_Fit";
+		close;
+	}
+	if (!checkweight(6635, 1)) {
+		callfunc "F_NEED_DQ_M", needtr("인벤토리 칸이나 무게가 부족합니다.", "Not enough inventory room or weight.");
+		callfunc "F_NEED_DQ_Fit";
+		close;
+	}
+	delitem .@tok, 2;
+	getitem 6635, 1;
+	callfunc "F_NEED_DQ_M", needtr("증표 2개를 받고", "Took 2 tokens and gave");
+	callfunc "F_NEED_DQ_M", needtr("^0055FF대장장이의 축복^000000 1개를 드렸습니다.", "^0055FF1 Blacksmith Blessing^000000.");
+	callfunc "F_NEED_DQ_M", needtr("남은 증표 ", "Tokens left: ") + countitem(.@tok) + needtr("개", "");
 	callfunc "F_NEED_DQ_Fit";
 	close;
 
