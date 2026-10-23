@@ -1679,7 +1679,7 @@ G2B_TABLES = ['need_marble_account_seq', 'need_marble_wallet', 'need_marble_wall
               'need_marble_dungeon_daily', 'need_marble_hunt_progress', 'need_marble_hunt_batch', 'need_marble_exchange_req',
               'need_marble_state', 'need_marble_roll', 'need_marble_jump', 'need_marble_event', 'need_marble_cp_payout']
 G2B_GLOBAL = ['need_marble_season', 'need_marble_policy', 'need_marble_boot']
-RC = {'OK': 0, 'DB_ERROR': -2, 'ALREADY': -4, 'BAD_ARG': -16, 'INTERNAL': -19}
+RC = {'OK': 0, 'DB_ERROR': -2, 'ALREADY': -4, 'BAD_ARG': -16, 'INTERNAL': -19, 'CONFLICT': -21}
 
 
 def acct_snapshot(aid):
@@ -2078,21 +2078,24 @@ def cmd_v21a(a):
     rc2, _ = replay(c, S, 2, f'{D0}:6,{D1}:5,{D2}:10')
     s2 = acct_snapshot(aid)
     f2 = flags(c)
-    detected = rc2 not in (RC['OK'], RC['ALREADY']) or f2.get('fault') == 1
+    # G2-B2: the conflict must be named (CONFLICT -21) and logged; any other answer is still a FAIL
+    detected = rc2 == RC['CONFLICT'] and 'hunt batch conflict' in map_log_since(pos)
     res.append(('V21-3 same key, different kills: mismatch detected and fail-closed (request 4.3)', detected and s2 == s0,
                 f'rc {rc2}; flags fault={f2.get("fault")}; rows changed {diff_tables(s0, s2)}; log {map_log_since(pos)[-160:]!r}'))
+    pos = map_log_pos()
     rc3, _ = replay(c, S, 3, f'{D2}:20,{D3}:7')
     s3 = acct_snapshot(aid)
     f3 = flags(c)
-    detected = rc3 not in (RC['OK'], RC['ALREADY']) or f3.get('fault') == 1
+    detected = rc3 == RC['CONFLICT'] and 'hunt batch conflict' in map_log_since(pos)
     res.append(('V21-4 same key with an extra period: mismatch detected and fail-closed (request 4.3)', detected and s3 == s0,
                 f'rc {rc3}; flags fault={f3.get("fault")}; D3 progress {hunt_day(aid, D3)}; rows changed {diff_tables(s0, s3)}'))
     # V21-4b the new period sorts first: its row is written, then the duplicate period ends the batch as ALREADY
     # (the transaction rolls back, but the caller treats ALREADY as "applied" and would drop those kills)
+    pos = map_log_pos()
     rc4, _ = replay(c, S, 3, f'{D1}:4,{D2}:20')
     s4 = acct_snapshot(aid)
     f5 = flags(c)
-    detected = rc4 not in (RC['OK'], RC['ALREADY']) or f5.get('fault') == 1
+    detected = rc4 == RC['CONFLICT'] and 'hunt batch conflict' in map_log_since(pos)
     res.append(('V21-4b same key, new period first: mismatch detected and fail-closed (request 4.3)', detected and s4 == s0,
                 f'rc {rc4}; flags fault={f5.get("fault")}; D1 progress {hunt_day(aid, D1)}; rows changed {diff_tables(s0, s4)}'))
     if s2 != s0 or s3 != s0 or s4 != s0:

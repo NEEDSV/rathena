@@ -11,6 +11,8 @@
 #include <array>
 #include <cstdint>
 #include <ctime>
+#include <map>
+#include <set>
 
 namespace need_marble {
 
@@ -359,6 +361,27 @@ inline uint64_t lap_reached(uint64_t step_seq_after, int32_t lap_steps) {
 // True when every hunt tier of the day is already credited (next_tier is the first tier not credited yet).
 inline bool hunt_day_maxed(int32_t next_tier, int32_t max_tiers) {
 	return next_tier > max_tiers;
+}
+
+// V21: what a hunt batch (collect_session, batch_no) is, given the rows already stored under that key.
+// No stored row: a fresh batch. Otherwise ALREADY only when every stored row equals the batch and every batch
+// day without a stored row is a day capped now (the checkpoint skips capped days, F2 layer 2); anything else
+// is a CONFLICT (same key, other content).
+enum e_hunt_resend : int32_t { HUNT_RESEND_FRESH = 0, HUNT_RESEND_ALREADY = 1, HUNT_RESEND_CONFLICT = 2 };
+
+inline int32_t hunt_resend_check(const std::map<uint32_t, uint32_t>& stored, const std::map<uint32_t, uint32_t>& batch,
+	const std::set<uint32_t>& capped_days) {
+	if (stored.empty())
+		return HUNT_RESEND_FRESH;
+	for (const auto& s : stored) {
+		auto it = batch.find(s.first);
+		if (it == batch.end() || it->second != s.second)
+			return HUNT_RESEND_CONFLICT;
+	}
+	for (const auto& b : batch)
+		if (stored.find(b.first) == stored.end() && capped_days.find(b.first) == capped_days.end())
+			return HUNT_RESEND_CONFLICT;
+	return HUNT_RESEND_ALREADY;
 }
 
 // Hunt tiers newly reached when the period count goes from kills to kills + add.

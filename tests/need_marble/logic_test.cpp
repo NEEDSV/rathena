@@ -307,6 +307,27 @@ static void test_v24_boundaries() {
 	CHECK(logical_day(1835463600) == 20280301);
 }
 
+// V21 (G2-B2): a resend of a hunt batch key is ALREADY only for the very same content.
+static void test_hunt_resend() {
+	using M = std::map<uint32_t, uint32_t>;
+	const std::set<uint32_t> none;
+	const M b2 = {{20261120, 5}, {20261121, 5}, {20261122, 10}};   // batch 2 of the G2-B1 run
+	CHECK(hunt_resend_check(M{}, b2, none) == HUNT_RESEND_FRESH);                                  // key not used yet
+	CHECK(hunt_resend_check(b2, b2, none) == HUNT_RESEND_ALREADY);                                 // V21-2 exact resend
+	CHECK(hunt_resend_check(b2, M{{20261120, 6}, {20261121, 5}, {20261122, 10}}, none) == HUNT_RESEND_CONFLICT);   // V21-3 other kills
+	const M b3 = {{20261122, 20}};
+	CHECK(hunt_resend_check(b3, M{{20261122, 20}, {20261123, 7}}, none) == HUNT_RESEND_CONFLICT);  // V21-4 extra period after
+	CHECK(hunt_resend_check(b3, M{{20261121, 4}, {20261122, 20}}, none) == HUNT_RESEND_CONFLICT);  // V21-4b extra period first
+	CHECK(hunt_resend_check(b2, M{{20261120, 5}, {20261121, 5}}, none) == HUNT_RESEND_CONFLICT);   // a stored period missing
+	CHECK(hunt_resend_check(b3, M{}, none) == HUNT_RESEND_CONFLICT);                               // empty resend of a used key
+	// a period the checkpoint skipped because it was capped has no row: still the same batch
+	const M stored = {{20261122, 20}};
+	const M sent = {{20261121, 9}, {20261122, 20}};
+	CHECK(hunt_resend_check(stored, sent, std::set<uint32_t>{20261121}) == HUNT_RESEND_ALREADY);
+	CHECK(hunt_resend_check(stored, sent, none) == HUNT_RESEND_CONFLICT);                          // not capped: content differs
+	CHECK(hunt_resend_check(stored, M{{20261122, 21}}, std::set<uint32_t>{20261122}) == HUNT_RESEND_CONFLICT);   // capped day with a row must match
+}
+
 static void test_laps() {
 	CHECK(lap_reached(32, 33) == 0);
 	CHECK(lap_reached(33, 33) == 1);
@@ -326,6 +347,7 @@ int main() {
 	test_hunt_tiers();
 	test_hunt_v22_fixtures();
 	test_v24_boundaries();
+	test_hunt_resend();
 	test_laps();
 	std::printf("need_marble logic: %d passed, %d failed\n", g_pass, g_fail);
 	return g_fail == 0 ? EXIT_SUCCESS : EXIT_FAILURE;

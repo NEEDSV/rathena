@@ -41,6 +41,7 @@ enum e_need_marble_rc : int32 {
 	NEED_MARBLE_USED_TODAY = -18,
 	NEED_MARBLE_INTERNAL = -19,
 	NEED_MARBLE_REJECTED = -20,
+	NEED_MARBLE_CONFLICT = -21,      // a hunt batch key already holds other content (V21): nothing written
 };
 
 void need_marble_init();

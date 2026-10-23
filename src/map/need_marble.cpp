@@ -16,6 +16,7 @@
 #include <cstring>
 #include <ctime>
 #include <map>
+#include <set>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -114,6 +115,7 @@ struct hunt_buf {
 	t_tick last_flush = 0;
 	uint32 done_day = 0;                // every tier of this day is already reached
 	uint32 checked_day = 0;             // day whose progress row was looked up once for this login
+	bool conflict = false;              // a batch key held other content: no more hunt credit for this login (V21)
 };
 std::unordered_map<uint32, hunt_buf> g_hunt;
 
@@ -493,6 +495,34 @@ int32 hunt_checkpoint(uint32 aid, uint32 cid, uint64 collect_session, uint32 bat
 		return rc;
 
 	const int32 tier_kills = P(P_HUNT_TIER_KILLS), tier_points = P(P_HUNT_TIER_POINTS), max_tiers = P(P_HUNT_MAX_TIERS);
+	// V21: a key that already holds rows is a resend. It is judged against the rows stored before this
+	// transaction, before anything of this batch is written: same content -> ALREADY, other content -> CONFLICT.
+	// A plain read (no gap lock): a key taken between this read and the INSERT below ends as CONFLICT there.
+	if (!sq("SELECT `period_day`,`kills` FROM `need_marble_hunt_batch` WHERE `account_id`='%u' AND `collect_session`='%" PRIu64 "' "
+		"AND `batch_no`='%u'", aid, collect_session, batch_no))
+		return NEED_MARBLE_DB_ERROR;
+	std::map<uint32, uint32> stored;
+	while (next_row())
+		stored[static_cast<uint32>(col_i64(0))] = static_cast<uint32>(col_i64(1));
+	free_result();
+	if (!stored.empty()) {
+		std::set<uint32> capped;   // batch days without a stored row are fine only when capped (skipped, F2 layer 2)
+		for (const auto& entry : batch) {
+			if (stored.count(entry.first) != 0)
+				continue;
+			if (!sq("SELECT `next_tier` FROM `need_marble_hunt_progress` WHERE `account_id`='%u' AND `season_id`='%u' AND `period_day`='%u'",
+				aid, season_id, entry.first))
+				return NEED_MARBLE_DB_ERROR;
+			if (next_row() && hunt_day_maxed(static_cast<int32>(col_i64(0)), max_tiers))
+				capped.insert(entry.first);
+			free_result();
+		}
+		if (hunt_resend_check(stored, batch, capped) == HUNT_RESEND_ALREADY)
+			return NEED_MARBLE_ALREADY;
+		ShowError("need_marble: hunt batch conflict (account %u, session %" PRIu64 ", batch %u): the key holds other content, nothing written.\n",
+			aid, collect_session, batch_no);
+		return NEED_MARBLE_CONFLICT;
+	}
 	for (const auto& entry : batch) {
 		const uint32 day = entry.first, kills = entry.second;
 		// The progress row is locked first: a day whose tiers are all credited writes no batch row and no
@@ -516,7 +546,7 @@ int32 hunt_checkpoint(uint32 aid, uint32 cid, uint64 collect_session, uint32 bat
 			"VALUES ('%u','%" PRIu64 "','%u','%u','%u','%u','%u',NOW())", aid, collect_session, batch_no, day, season_id, kills, cid))
 			return NEED_MARBLE_DB_ERROR;
 		if (affected() == 0)
-			return NEED_MARBLE_ALREADY;   // the whole batch was applied before (it is all or nothing)
+			return NEED_MARBLE_CONFLICT;  // the key was free when this transaction started: never report it as applied
 		if (total > 0xFFFFFFFFull)
 			total = 0xFFFFFFFFull;
 		int32 new_next = hunt_next_tier(static_cast<uint32>(total), next_tier, tier_kills, max_tiers);
@@ -568,6 +598,8 @@ bool hunt_issue_session(uint32 aid, uint64& out) {
 }
 
 void hunt_flush(map_session_data* sd, uint32 aid, hunt_buf& b) {
+	if (b.conflict)
+		return;   // V21: the conflicting batch stays in memory unsent, nothing more is written for this login
 	if (b.session_failed) {
 		b.pending.clear();
 		b.frozen.clear();
@@ -590,6 +622,11 @@ void hunt_flush(map_session_data* sd, uint32 aid, hunt_buf& b) {
 		uint32 maxed_day = 0;
 		int32 rc = hunt_checkpoint(aid, b.char_id, b.collect_session, b.frozen_no, b.frozen, credited, maxed_day);
 		b.last_flush = gettick();
+		if (rc == NEED_MARBLE_CONFLICT) {
+			b.conflict = true;
+			ShowWarning("need_marble: hunt credit off for this login after a batch conflict (account %u).\n", aid);
+			break;
+		}
 		if (rc != NEED_MARBLE_OK && rc != NEED_MARBLE_ALREADY)
 			break;   // keep the frozen batch, resend it unchanged later
 		b.frozen.clear();
@@ -804,7 +841,7 @@ void need_marble_hunt_on_kill(map_session_data* top, mob_data* md, int32 type) {
 			if (hunt_day_maxed_in_db(aid, day))
 				b.done_day = day;
 		}
-		if (b.done_day == day)
+		if (b.done_day == day || b.conflict)
 			continue;
 		b.pending[day]++;
 		uint32 total = 0;

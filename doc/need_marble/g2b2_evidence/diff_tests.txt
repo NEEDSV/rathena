@@ -1,0 +1,114 @@
+﻿diff --git a/tests/need_marble/g2/bc_runner.py b/tests/need_marble/g2/bc_runner.py
+index 89164e346..bcca3493e 100644
+--- a/tests/need_marble/g2/bc_runner.py
++++ b/tests/need_marble/g2/bc_runner.py
+@@ -1679,7 +1679,7 @@ G2B_TABLES = ['need_marble_account_seq', 'need_marble_wallet', 'need_marble_wall
+               'need_marble_dungeon_daily', 'need_marble_hunt_progress', 'need_marble_hunt_batch', 'need_marble_exchange_req',
+               'need_marble_state', 'need_marble_roll', 'need_marble_jump', 'need_marble_event', 'need_marble_cp_payout']
+ G2B_GLOBAL = ['need_marble_season', 'need_marble_policy', 'need_marble_boot']
+-RC = {'OK': 0, 'DB_ERROR': -2, 'ALREADY': -4, 'BAD_ARG': -16, 'INTERNAL': -19}
++RC = {'OK': 0, 'DB_ERROR': -2, 'ALREADY': -4, 'BAD_ARG': -16, 'INTERNAL': -19, 'CONFLICT': -21}
+ 
+ 
+ def acct_snapshot(aid):
+@@ -2078,21 +2078,24 @@ def cmd_v21a(a):
+     rc2, _ = replay(c, S, 2, f'{D0}:6,{D1}:5,{D2}:10')
+     s2 = acct_snapshot(aid)
+     f2 = flags(c)
+-    detected = rc2 not in (RC['OK'], RC['ALREADY']) or f2.get('fault') == 1
++    # G2-B2: the conflict must be named (CONFLICT -21) and logged; any other answer is still a FAIL
++    detected = rc2 == RC['CONFLICT'] and 'hunt batch conflict' in map_log_since(pos)
+     res.append(('V21-3 same key, different kills: mismatch detected and fail-closed (request 4.3)', detected and s2 == s0,
+                 f'rc {rc2}; flags fault={f2.get("fault")}; rows changed {diff_tables(s0, s2)}; log {map_log_since(pos)[-160:]!r}'))
++    pos = map_log_pos()
+     rc3, _ = replay(c, S, 3, f'{D2}:20,{D3}:7')
+     s3 = acct_snapshot(aid)
+     f3 = flags(c)
+-    detected = rc3 not in (RC['OK'], RC['ALREADY']) or f3.get('fault') == 1
++    detected = rc3 == RC['CONFLICT'] and 'hunt batch conflict' in map_log_since(pos)
+     res.append(('V21-4 same key with an extra period: mismatch detected and fail-closed (request 4.3)', detected and s3 == s0,
+                 f'rc {rc3}; flags fault={f3.get("fault")}; D3 progress {hunt_day(aid, D3)}; rows changed {diff_tables(s0, s3)}'))
+     # V21-4b the new period sorts first: its row is written, then the duplicate period ends the batch as ALREADY
+     # (the transaction rolls back, but the caller treats ALREADY as "applied" and would drop those kills)
++    pos = map_log_pos()
+     rc4, _ = replay(c, S, 3, f'{D1}:4,{D2}:20')
+     s4 = acct_snapshot(aid)
+     f5 = flags(c)
+-    detected = rc4 not in (RC['OK'], RC['ALREADY']) or f5.get('fault') == 1
++    detected = rc4 == RC['CONFLICT'] and 'hunt batch conflict' in map_log_since(pos)
+     res.append(('V21-4b same key, new period first: mismatch detected and fail-closed (request 4.3)', detected and s4 == s0,
+                 f'rc {rc4}; flags fault={f5.get("fault")}; D1 progress {hunt_day(aid, D1)}; rows changed {diff_tables(s0, s4)}'))
+     if s2 != s0 or s3 != s0 or s4 != s0:
+diff --git a/tests/need_marble/logic_test.cpp b/tests/need_marble/logic_test.cpp
+index c02dd0d5b..8ce5182bb 100644
+--- a/tests/need_marble/logic_test.cpp
++++ b/tests/need_marble/logic_test.cpp
+@@ -307,6 +307,27 @@ static void test_v24_boundaries() {
+ 	CHECK(logical_day(1835463600) == 20280301);
+ }
+ 
++// V21 (G2-B2): a resend of a hunt batch key is ALREADY only for the very same content.
++static void test_hunt_resend() {
++	using M = std::map<uint32_t, uint32_t>;
++	const std::set<uint32_t> none;
++	const M b2 = {{20261120, 5}, {20261121, 5}, {20261122, 10}};   // batch 2 of the G2-B1 run
++	CHECK(hunt_resend_check(M{}, b2, none) == HUNT_RESEND_FRESH);                                  // key not used yet
++	CHECK(hunt_resend_check(b2, b2, none) == HUNT_RESEND_ALREADY);                                 // V21-2 exact resend
++	CHECK(hunt_resend_check(b2, M{{20261120, 6}, {20261121, 5}, {20261122, 10}}, none) == HUNT_RESEND_CONFLICT);   // V21-3 other kills
++	const M b3 = {{20261122, 20}};
++	CHECK(hunt_resend_check(b3, M{{20261122, 20}, {20261123, 7}}, none) == HUNT_RESEND_CONFLICT);  // V21-4 extra period after
++	CHECK(hunt_resend_check(b3, M{{20261121, 4}, {20261122, 20}}, none) == HUNT_RESEND_CONFLICT);  // V21-4b extra period first
++	CHECK(hunt_resend_check(b2, M{{20261120, 5}, {20261121, 5}}, none) == HUNT_RESEND_CONFLICT);   // a stored period missing
++	CHECK(hunt_resend_check(b3, M{}, none) == HUNT_RESEND_CONFLICT);                               // empty resend of a used key
++	// a period the checkpoint skipped because it was capped has no row: still the same batch
++	const M stored = {{20261122, 20}};
++	const M sent = {{20261121, 9}, {20261122, 20}};
++	CHECK(hunt_resend_check(stored, sent, std::set<uint32_t>{20261121}) == HUNT_RESEND_ALREADY);
++	CHECK(hunt_resend_check(stored, sent, none) == HUNT_RESEND_CONFLICT);                          // not capped: content differs
++	CHECK(hunt_resend_check(stored, M{{20261122, 21}}, std::set<uint32_t>{20261122}) == HUNT_RESEND_CONFLICT);   // capped day with a row must match
++}
++
+ static void test_laps() {
+ 	CHECK(lap_reached(32, 33) == 0);
+ 	CHECK(lap_reached(33, 33) == 1);
+@@ -326,6 +347,7 @@ int main() {
+ 	test_hunt_tiers();
+ 	test_hunt_v22_fixtures();
+ 	test_v24_boundaries();
++	test_hunt_resend();
+ 	test_laps();
+ 	std::printf("need_marble logic: %d passed, %d failed\n", g_pass, g_fail);
+ 	return g_fail == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
+diff --git a/tests/need_marble/static_check.py b/tests/need_marble/static_check.py
+index d14f4c38e..01739e7b3 100644
+--- a/tests/need_marble/static_check.py
++++ b/tests/need_marble/static_check.py
+@@ -170,8 +170,27 @@ check('summer / chuseok hooks stay after the rebirth test (unchanged rule)', len
+ # 11. F2: the checkpoint locks the progress row before writing a batch row
+ cp = cpp[cpp.index('int32 hunt_checkpoint('):]
+ cp = cp[:cp.index('\n}\n')]
++batch_insert = cp.find('INSERT IGNORE INTO `need_marble_hunt_batch`')
++progress_lock = cp.find("FROM `need_marble_hunt_progress` WHERE `account_id`='%u' AND `season_id`='%u' AND `period_day`='%u' FOR UPDATE")
+ check('hunt_checkpoint: progress FOR UPDATE before batch INSERT',
+-      cp.index('FOR UPDATE') < cp.index('need_marble_hunt_batch') and 'hunt_day_maxed(next_tier, max_tiers)' in cp)
++      -1 < progress_lock < batch_insert and 'hunt_day_maxed(next_tier, max_tiers)' in cp)
++
++# 11b. V21 (G2-B2): a used batch key is judged before anything of the batch is written (find(): a missing piece is a FAIL, not a crash)
++pre = cp.find('SELECT `period_day`,`kills` FROM `need_marble_hunt_batch`')
++first_write = cp.find('INSERT IGNORE INTO `need_marble_hunt_progress`')
++judge = cp.find('hunt_resend_check(stored, batch, capped)')
++loop = cp.find('const uint32 day = entry.first, kills = entry.second;')
++check('hunt_checkpoint: resend check (stored rows + hunt_resend_check) before any write of the batch',
++      -1 < pre < judge < loop and -1 < first_write < batch_insert and judge < first_write)
++check('hunt_checkpoint: a key taken during the batch is a CONFLICT, never ALREADY',
++      'return NEED_MARBLE_CONFLICT;  // the key was free' in cp and 'return NEED_MARBLE_ALREADY;   // the whole batch' not in cp)
++check('NEED_MARBLE_CONFLICT is a new code (-21), REJECTED keeps -20', 'NEED_MARBLE_CONFLICT = -21' in hpp and 'NEED_MARBLE_REJECTED = -20' in hpp)
++fl_at = cpp.find('void hunt_flush(')
++fl = cpp[fl_at:cpp.find('\n}\n', fl_at)] if fl_at >= 0 else ''
++check('hunt_flush: CONFLICT stops hunt credit for the login and keeps the batch unsent',
++      'if (b.conflict)\n\t\treturn;' in fl and 'rc == NEED_MARBLE_CONFLICT' in fl and 'b.conflict = true;' in fl and
++      'b.done_day == day || b.conflict' in cpp)
++check('resend rule is the pure function in need_marble_logic.hpp (unit-tested)', 'inline int32_t hunt_resend_check(' in logic)
+ check('hunt_on_kill: one capped-day lookup per login and day', 'b.checked_day != day' in cpp and 'hunt_day_maxed_in_db(aid, day)' in cpp)
+ 
+ # 12. Kill-path order inside mob_dead after F1: marble -> exp share -> rebirth test -> macro hunt -> summer -> chuseok

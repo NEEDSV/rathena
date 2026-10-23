@@ -170,8 +170,27 @@ check('summer / chuseok hooks stay after the rebirth test (unchanged rule)', len
 # 11. F2: the checkpoint locks the progress row before writing a batch row
 cp = cpp[cpp.index('int32 hunt_checkpoint('):]
 cp = cp[:cp.index('\n}\n')]
+batch_insert = cp.find('INSERT IGNORE INTO `need_marble_hunt_batch`')
+progress_lock = cp.find("FROM `need_marble_hunt_progress` WHERE `account_id`='%u' AND `season_id`='%u' AND `period_day`='%u' FOR UPDATE")
 check('hunt_checkpoint: progress FOR UPDATE before batch INSERT',
-      cp.index('FOR UPDATE') < cp.index('need_marble_hunt_batch') and 'hunt_day_maxed(next_tier, max_tiers)' in cp)
+      -1 < progress_lock < batch_insert and 'hunt_day_maxed(next_tier, max_tiers)' in cp)
+
+# 11b. V21 (G2-B2): a used batch key is judged before anything of the batch is written (find(): a missing piece is a FAIL, not a crash)
+pre = cp.find('SELECT `period_day`,`kills` FROM `need_marble_hunt_batch`')
+first_write = cp.find('INSERT IGNORE INTO `need_marble_hunt_progress`')
+judge = cp.find('hunt_resend_check(stored, batch, capped)')
+loop = cp.find('const uint32 day = entry.first, kills = entry.second;')
+check('hunt_checkpoint: resend check (stored rows + hunt_resend_check) before any write of the batch',
+      -1 < pre < judge < loop and -1 < first_write < batch_insert and judge < first_write)
+check('hunt_checkpoint: a key taken during the batch is a CONFLICT, never ALREADY',
+      'return NEED_MARBLE_CONFLICT;  // the key was free' in cp and 'return NEED_MARBLE_ALREADY;   // the whole batch' not in cp)
+check('NEED_MARBLE_CONFLICT is a new code (-21), REJECTED keeps -20', 'NEED_MARBLE_CONFLICT = -21' in hpp and 'NEED_MARBLE_REJECTED = -20' in hpp)
+fl_at = cpp.find('void hunt_flush(')
+fl = cpp[fl_at:cpp.find('\n}\n', fl_at)] if fl_at >= 0 else ''
+check('hunt_flush: CONFLICT stops hunt credit for the login and keeps the batch unsent',
+      'if (b.conflict)\n\t\treturn;' in fl and 'rc == NEED_MARBLE_CONFLICT' in fl and 'b.conflict = true;' in fl and
+      'b.done_day == day || b.conflict' in cpp)
+check('resend rule is the pure function in need_marble_logic.hpp (unit-tested)', 'inline int32_t hunt_resend_check(' in logic)
 check('hunt_on_kill: one capped-day lookup per login and day', 'b.checked_day != day' in cpp and 'hunt_day_maxed_in_db(aid, day)' in cpp)
 
 # 12. Kill-path order inside mob_dead after F1: marble -> exp share -> rebirth test -> macro hunt -> summer -> chuseok
