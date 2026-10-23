@@ -115,7 +115,7 @@ int32 need_marble_test_reentry(map_session_data* sd);
 int32 need_marble_test_out_of_tx(map_session_data* sd);
 void need_marble_test_flags(map_session_data* sd);
 
-/// need_marble_test_clock(<offset seconds>) -> logical day under the new offset, -1 when refused
+/// need_marble_test_clock(<unix time the server clock should read now>) -> logical day then, -1 when refused
 BUILDIN_FUNC(need_marble_test_clock)
 {
 	map_session_data* sd = nullptr;

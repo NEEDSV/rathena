@@ -11,6 +11,8 @@
 --   period_update   : after the wallet balance was raised
 --   progress_update : last statement before COMMIT (after the period counters when a tier was crossed)
 
+USE `ragnarok_mbqa`;   -- root has no default database (bcdb.py connects root without one)
+
 CREATE TABLE `mbqa_fault` (
   `point` VARCHAR(32) NOT NULL,
   `account_id` INT UNSIGNED NOT NULL,

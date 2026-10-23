@@ -200,7 +200,7 @@ if a.kill_hooks:
 if a.g2b:
     # G2-B: needs the map-server built from a scratch copy patched with apply_test_hooks.py --g2b
     harness += b'\r\n'.join([
-        b'// G2-B test build only: @mbqaclock <offset s>, @mbqacommitfault <0|1|2>, @mbqareplay <session> <batch> <day:kills,...>,',
+        b'// G2-B test build only: @mbqaclock <unix time>, @mbqacommitfault <0|1|2>, @mbqareplay <session> <batch> <day:kills,...>,',
         b'// @mbqareentry, @mbqaoutoftx, @mbqaflags',
         b'-\tscript\tMBQA_G2BHarness\t-1,{',
         b'OnInit:',

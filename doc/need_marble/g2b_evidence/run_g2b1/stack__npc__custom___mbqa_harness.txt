@@ -1,0 +1,97 @@
+//===== G2 isolated test harness (stack copy only, never in the repository load lists) =====
+// @mbqainst <1|2> creates a solo (IM_CHAR) instance and enters it: 1 = LASTROOM 1@uns, 2 = CENTRALLAB 1@lab.
+// @mbqaclear <1|2> calls need_marble_instance_clear() for the boss map of the caller's instance.
+// @mbqaleave destroys the caller's instance and warps to prontera.
+-	script	MBQA_Harness	-1,{
+OnInit:
+	setarray .key$[1], "LASTROOM", "CENTRALLAB";
+	setarray .name$[1], "마지막 방", "중앙 실험실";
+	setarray .map$[1], "1@uns", "1@lab";
+	bindatcmd "mbqainst", strnpcinfo(3) + "::OnInst", 99, 100;
+	bindatcmd "mbqaclear", strnpcinfo(3) + "::OnClear", 99, 100;
+	bindatcmd "mbqaleave", strnpcinfo(3) + "::OnLeave", 99, 100;
+	end;
+OnInst:
+	.@k = atoi(.@atcmd_parameters$[0]);
+	if (.@k < 1 || .@k > 2) end;
+	.@id = instance_create(.name$[.@k], IM_CHAR);
+	if (.@id > 0) @MBQA_IID = .@id;
+	.@e = instance_enter(.name$[.@k], -1, -1, getcharid(0), @MBQA_IID);
+	dispbottom "[MBQA] inst k=" + .@k + " create=" + .@id + " iid=" + @MBQA_IID + " enter=" + .@e + " map=" + instance_mapname(.map$[.@k], @MBQA_IID);
+	end;
+OnClear:
+	.@k = atoi(.@atcmd_parameters$[0]);
+	if (.@k < 1 || .@k > 2) end;
+	.@m$ = instance_mapname(.map$[.@k], @MBQA_IID);
+	.@n = need_marble_instance_clear(.key$[.@k], .@m$);
+	dispbottom "[MBQA] clear k=" + .@k + " map=" + .@m$ + " iid=" + @MBQA_IID + " credited=" + .@n;
+	end;
+OnLeave:
+	if (@MBQA_IID > 0) instance_destroy @MBQA_IID;
+	@MBQA_IID = 0;
+	warp "prontera", 156, 191;
+	end;
+}
+// G-1(b) test build only: @mbqakill <radius 0=map> <max>, @mbqafeed <count>, @mbqastate
+// n=-2: the caller is dead (refused). counted = growth of the marble count over the feed.
+-	script	MBQA_KillHarness	-1,{
+OnInit:
+	bindatcmd "mbqakill", strnpcinfo(3) + "::OnKill", 99, 100;
+	bindatcmd "mbqafeed", strnpcinfo(3) + "::OnFeed", 99, 100;
+	bindatcmd "mbqastate", strnpcinfo(3) + "::OnState", 99, 100;
+	bindatcmd "mbqakillas", strnpcinfo(3) + "::OnKillAs", 99, 100;
+	bindatcmd "mbqaviewof", strnpcinfo(3) + "::OnViewOf", 99, 100;
+	end;
+// G2-A V18-C: @mbqakillas <char> <radius> <max>, @mbqaviewof <char> (a captcha blocks that character's own commands)
+OnKillAs:
+	.@n = need_marble_test_kill_as(.@atcmd_parameters$[0], atoi(.@atcmd_parameters$[1]), atoi(.@atcmd_parameters$[2]));
+	dispbottom "[MBQA] killas n=" + .@n + " counted=" + @MBQA_COUNTED;
+	end;
+OnViewOf:
+	dispbottom "[MBQA] viewof " + .@atcmd_parameters$[0] + " kills=" + need_marble_test_view_of(.@atcmd_parameters$[0]);
+	end;
+OnKill:
+	.@n = need_marble_test_kill(atoi(.@atcmd_parameters$[0]), atoi(.@atcmd_parameters$[1]));
+	dispbottom "[MBQA] kill n=" + .@n + " counted=" + @MBQA_COUNTED;
+	end;
+OnFeed:
+	.@n = need_marble_test_hunt_feed(atoi(.@atcmd_parameters$[0]));
+	dispbottom "[MBQA] feed n=" + .@n + " counted=" + @MBQA_COUNTED;
+	end;
+OnState:
+	need_marble_view();
+	dispbottom "[MBQA] state hp=" + Hp + " lv=" + BaseLevel + " map=" + strcharinfo(3) + " kills=" + @MB_HUNT_KILLS;
+	end;
+}
+// G2-B test build only: @mbqaclock <unix time>, @mbqacommitfault <0|1|2>, @mbqareplay <session> <batch> <day:kills,...>,
+// @mbqareentry, @mbqaoutoftx, @mbqaflags
+-	script	MBQA_G2BHarness	-1,{
+OnInit:
+	bindatcmd "mbqaclock", strnpcinfo(3) + "::OnClock", 99, 100;
+	bindatcmd "mbqacommitfault", strnpcinfo(3) + "::OnCommitFault", 99, 100;
+	bindatcmd "mbqareplay", strnpcinfo(3) + "::OnReplay", 99, 100;
+	bindatcmd "mbqareentry", strnpcinfo(3) + "::OnReentry", 99, 100;
+	bindatcmd "mbqaoutoftx", strnpcinfo(3) + "::OnOutOfTx", 99, 100;
+	bindatcmd "mbqaflags", strnpcinfo(3) + "::OnFlags", 99, 100;
+	end;
+OnClock:
+	dispbottom "[MBQA] clock day=" + need_marble_test_clock(atoi(.@atcmd_parameters$[0]));
+	end;
+OnCommitFault:
+	dispbottom "[MBQA] commitfault mode=" + need_marble_test_commit_fault(atoi(.@atcmd_parameters$[0]));
+	end;
+OnReplay:
+	.@rc = need_marble_test_replay(atoi(.@atcmd_parameters$[0]), atoi(.@atcmd_parameters$[1]), .@atcmd_parameters$[2]);
+	dispbottom "[MBQA] replay rc=" + .@rc + " credited=" + @MBQA_CREDITED;
+	end;
+OnReentry:
+	dispbottom "[MBQA] reentry rc=" + need_marble_test_reentry();
+	end;
+OnOutOfTx:
+	dispbottom "[MBQA] outoftx rc=" + need_marble_test_out_of_tx();
+	end;
+OnFlags:
+	need_marble_test_flags();
+	dispbottom "[MBQA] flags in_tx=" + @MBQA_IN_TX + " fault=" + @MBQA_FAULT + " day=" + @MBQA_DAY + " polday=" + @MBQA_POL_DAY + " session=" + @MBQA_SESSION + " batch=" + @MBQA_BATCH + " frozen=" + @MBQA_FROZEN + " pending=" + @MBQA_PENDING + " pdays=" + @MBQA_PENDING_DAYS;
+	end;
+}

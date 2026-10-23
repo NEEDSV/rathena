@@ -25,10 +25,12 @@ bool need_marble_test_commit_fault(Sql* handle) {
 	return true;
 }
 
-/// Sets the test clock offset (seconds) and returns the logical day it gives now.
-uint32 need_marble_test_set_clock(int64 offset) {
-	g_mbqa_clock_offset = offset;
-	ShowWarning("need_marble_test: clock offset %" PRId64 " s, logical day %u.\n", offset, today());
+/// Moves the test clock so that "now" reads the given unix time (offset computed here, on the server, so the
+/// second requested is the second read: a client-side offset drifted below 04:00:00 in the first V24 run).
+/// Returns the logical day it gives now.
+uint32 need_marble_test_set_clock(int64 target_unix) {
+	g_mbqa_clock_offset = target_unix - static_cast<int64>(time(nullptr));
+	ShowWarning("need_marble_test: clock now %" PRId64 " (offset %" PRId64 " s), logical day %u.\n", target_unix, g_mbqa_clock_offset, today());
 	return today();
 }
 

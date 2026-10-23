@@ -22,15 +22,17 @@ LOG = []
 ACC = {'gm': ('mbqa_gm', 'gm'), 'user': ('mbqa_user', 'user'), 'p2': ('mbqa_p2', 'user'), 'p3': ('mbqa_p3', 'user'),
        'p4': ('mbqa_p4', 'user'), 'cap': ('mbqa_cap', 'user'), 'v22a': ('mbqa_v22a', 'user'), 'v22b': ('mbqa_v22b', 'user'),
        'v11': ('mbqa_v11', 'user'), 'heal': ('mbqa_heal', 'user'),
-       'v16': ('mbqa_v16', 'user'), 'v21': ('mbqa_v21', 'user'), 'v24': ('mbqa_v24', 'user')}
+       'v16': ('mbqa_v16', 'user'), 'v21': ('mbqa_v21', 'user'), 'v24': ('mbqa_v24', 'user'), 'v24r': ('mbqa_v24r', 'user'),
+       'v24s': ('mbqa_v24s', 'user')}
 NAMES = {('gm', 0): 'MBQA_GM1', ('gm', 1): 'MBQA_GM2', ('user', 0): 'MBQA_U1', ('user', 1): 'MBQA_U2',
          ('p2', 0): 'MBQA_P2', ('p3', 0): 'MBQA_P3', ('p4', 0): 'MBQA_P4', ('cap', 0): 'MBQA_CAP',
          ('v22a', 0): 'MBQA_V22A', ('v22b', 0): 'MBQA_V22B', ('v11', 0): 'MBQA_V11', ('heal', 0): 'MBQA_HEAL',
-         ('v16', 0): 'MBQA_V16', ('v21', 0): 'MBQA_V21A', ('v21', 1): 'MBQA_V21B', ('v24', 0): 'MBQA_V24A', ('v24', 1): 'MBQA_V24B'}
+         ('v16', 0): 'MBQA_V16', ('v21', 0): 'MBQA_V21A', ('v21', 1): 'MBQA_V21B', ('v24', 0): 'MBQA_V24A', ('v24', 1): 'MBQA_V24B',
+         ('v24r', 0): 'MBQA_V24RA', ('v24r', 1): 'MBQA_V24RB', ('v24s', 0): 'MBQA_V24SA', ('v24s', 1): 'MBQA_V24SB'}
 AID = {'gm': 2000901, 'user': 2000902, 'p2': 2000903, 'p3': 2000904, 'p4': 2000905, 'cap': 2000906,
        'v22a': 2000907, 'v22b': 2000908,   # v22a / v22b: V22 only (bc_synth_v22.sql)
        'v11': 2000909, 'heal': 2000910,     # v11: V11 only, heal: V18-C healer (bc_synth_g2a.sql)
-       'v16': 2000911, 'v21': 2000912, 'v24': 2000913}   # G2-B only (bc_synth_g2b.sql)
+       'v16': 2000911, 'v21': 2000912, 'v24': 2000913, 'v24r': 2000914, 'v24s': 2000915}   # G2-B only (bc_synth_g2b.sql)
 
 
 def log(*a):
@@ -1696,7 +1698,7 @@ def others_digest(aid):
         rows = sorted(tuple(r) for r in sql(f'SELECT * FROM {t}'))
         h[t] = (len(rows), hashlib.sha1(repr(rows).encode()).hexdigest()[:12])
     h['#CASHPOINTS'] = sql("SELECT COUNT(*) FROM acc_reg_num WHERE `key`='#CASHPOINTS'")[0][0]
-    return h
+    return json.loads(json.dumps(h))   # same shape as after a round trip through the phase state file
 
 
 def diff_tables(a, b):
@@ -1738,7 +1740,7 @@ def clock_to(c, kst):
     """Moves the test clock so that the server now reads `kst` ('2026-11-01 03:59:50', KST). Returns the logical day."""
     import calendar
     utc = calendar.timegm(time.strptime(kst, '%Y-%m-%d %H:%M:%S')) - 9 * 3600
-    t = harness(c, f'@mbqaclock {int(utc - time.time())}', needle='[MBQA] clock', wait=3)
+    t = harness(c, f'@mbqaclock {utc}', needle='[MBQA] clock', wait=3)   # absolute: the server computes the offset
     try:
         return int(t.split('day=')[1].split()[0])
     except (AttributeError, IndexError, ValueError):
@@ -1754,17 +1756,27 @@ def replay(c, session, batch, spec):
 
 
 def map_log_pos():
-    logs = sorted((p for p in os.listdir(os.path.join(OUT, 'logs')) if p.startswith('map-server.') and p.endswith('.out')),
-                  key=lambda p: os.path.getmtime(os.path.join(OUT, 'logs', p)))
-    p = os.path.join(OUT, 'logs', logs[-1])
-    return p, os.path.getsize(p)
+    """Sizes of the current map-server stdout (ShowWarning), stderr (ShowError / [SQL] errors) and map-msg_log.log.
+    SQL errors such as the fault SIGNALs, lock wait timeouts and deadlocks never reach stdout."""
+    files = []
+    for ext in ('.out', '.err'):
+        logs = sorted((p for p in os.listdir(os.path.join(OUT, 'logs')) if p.startswith('map-server.') and p.endswith(ext)),
+                      key=lambda p: os.path.getmtime(os.path.join(OUT, 'logs', p)))
+        if logs:
+            files.append(os.path.join(OUT, 'logs', logs[-1]))
+    msg = os.path.join(OUT, 'stack', 'log', 'map-msg_log.log')
+    if os.path.exists(msg):
+        files.append(msg)
+    return [(p, os.path.getsize(p)) for p in files]
 
 
 def map_log_since(pos):
-    p, n = pos
-    with open(p, 'rb') as f:
-        f.seek(n)
-        return f.read().decode('cp949', 'replace')
+    out = []
+    for p, n in pos:
+        with open(p, 'rb') as f:
+            f.seek(n)
+            out.append(f.read().decode('cp949', 'replace'))
+    return '\n'.join(out)
 
 
 def g2b_state(name, data=None):
@@ -1836,6 +1848,40 @@ def v16_fault_case(c, aid, day, st, label, point=None, holder=None):
     return res
 
 
+def v16_deadlock_case(c, aid, day, label):
+    """V16 deadlock attempt: the external transaction writes 2,000 pad rows, takes the next batch key, then asks for
+    the progress row the checkpoint holds; InnoDB rolls back the lighter transaction (expected: the checkpoint)."""
+    res = []
+    f = flags(c)
+    sess = bcdb.open_session(OUT)
+    sess.stdin.write((f'START TRANSACTION; INSERT INTO mbqa_pad (v) SELECT 1 FROM information_schema.columns LIMIT 2000; '
+                      f'INSERT INTO need_marble_hunt_batch (account_id,collect_session,batch_no,period_day,season_id,kills,char_id,created_at) '
+                      f'VALUES ({aid},{f.get("session")},{f.get("batch", 0) + 1},{day},1,0,0,NOW()); SELECT \'held\';\n').encode())
+    sess.stdin.flush()
+    for _ in range(5):
+        if b'held' in sess.stdout.readline():
+            break
+    s0, o0, pos = acct_snapshot(aid), others_digest(aid), map_log_pos()
+    import threading
+    th = threading.Thread(target=lambda: feed(c, 20, wait=16))
+    th.start()
+    time.sleep(2)
+    sess.stdin.write(f'SELECT kills FROM need_marble_hunt_progress WHERE account_id={aid} AND period_day={day} FOR UPDATE; SELECT \'second\';\n'.encode())
+    sess.stdin.flush()
+    th.join(30)
+    out_ext, err_ext = sess.communicate(input=b'ROLLBACK;\n', timeout=20)
+    txt = map_log_since(pos)
+    victim = 'checkpoint' if 'Deadlock' in txt else ('external' if b'Deadlock' in err_ext else 'none')
+    s1 = acct_snapshot(aid)
+    pad = sql('SELECT COUNT(*) FROM mbqa_pad')[0][0]
+    if victim == 'checkpoint':
+        res.append((f'{label} deadlock: checkpoint rolled back as a whole', s1 == s0 and others_digest(aid) == o0 and pad == '0' and open_trx() == 0,
+                    f'changed {diff_tables(s0, s1)}; pad rows {pad}'))
+    else:
+        res.append((f'{label} deadlock: checkpoint path not exercised (victim ' + victim + ')', None, f'external stderr {err_ext[-200:]!r}'))
+    return res
+
+
 def cmd_v16a(a):
     """V16 phase a (G2-B): fault points on one account, in the real order of hunt_checkpoint / credit_in_tx.
     kills: 0 -[progress_update]-> 40 -[lock wait]-> 80 -[activity_update, tier 1]-> 120 -> 180 -[wallet_update, tier 2]-> 220
@@ -1878,35 +1924,7 @@ def cmd_v16a(a):
     feed(c, 20)
     st['exp'] = 220
     res.append(ledger_check(aid, day, st['exp'], 'C3 resend applied once'))
-    # C9 deadlock attempt: the external transaction writes 2,000 pad rows, takes the next batch key, then asks for
-    # the progress row the checkpoint holds; InnoDB rolls back the lighter transaction (expected: the checkpoint)
-    f = flags(c)
-    sess = bcdb.open_session(OUT)
-    sess.stdin.write((f'START TRANSACTION; INSERT INTO mbqa_pad (v) SELECT 1 FROM information_schema.columns LIMIT 2000; '
-                      f'INSERT INTO need_marble_hunt_batch (account_id,collect_session,batch_no,period_day,season_id,kills,char_id,created_at) '
-                      f'VALUES ({aid},{f.get("session")},{f.get("batch", 0) + 1},{day},1,0,0,NOW()); SELECT \'held\';\n').encode())
-    sess.stdin.flush()
-    for _ in range(5):
-        if b'held' in sess.stdout.readline():
-            break
-    s0, o0, pos = acct_snapshot(aid), others_digest(aid), map_log_pos()
-    import threading
-    th = threading.Thread(target=lambda: feed(c, 20, wait=16))
-    th.start()
-    time.sleep(2)
-    sess.stdin.write(f'SELECT kills FROM need_marble_hunt_progress WHERE account_id={aid} AND period_day={day} FOR UPDATE; SELECT \'second\';\n'.encode())
-    sess.stdin.flush()
-    th.join(30)
-    out_ext, err_ext = sess.communicate(input=b'ROLLBACK;\n', timeout=20)
-    txt = map_log_since(pos)
-    victim = 'checkpoint' if 'Deadlock' in txt else ('external' if b'Deadlock' in err_ext else 'none')
-    s1 = acct_snapshot(aid)
-    pad = sql('SELECT COUNT(*) FROM mbqa_pad')[0][0]
-    if victim == 'checkpoint':
-        res.append(('C9 deadlock: checkpoint rolled back as a whole', s1 == s0 and others_digest(aid) == o0 and pad == '0' and open_trx() == 0,
-                    f'changed {diff_tables(s0, s1)}; pad rows {pad}'))
-    else:
-        res.append(('C9 deadlock: checkpoint path not exercised (victim ' + victim + ')', None, f'external stderr {err_ext[-200:]!r}'))
+    res += v16_deadlock_case(c, aid, day, 'C9')
     feed(c, 20)
     st['exp'] = 260
     res.append(ledger_check(aid, day, st['exp'], 'C9 after the deadlock attempt: applied once'))
@@ -1942,6 +1960,11 @@ def cmd_v16b(a):
     f = flags(c)
     res = [('C10 after restart: module up, kills = before the hidden COMMIT (lost 20, no duplicate)', f.get('fault') == 0, f'flags {f}'),
            ledger_check(aid, st['day'], st['exp'], 'C10 ledger after restart')]
+    # the first COMMIT of a login is the collect-session transaction (hunt_issue_session): one normal checkpoint first,
+    # so the armed hidden COMMIT lands on a hunt checkpoint (attempt 1 armed it too early, kept in v16_checks.json)
+    feed(c, 20)
+    st['exp'] += 20
+    res.append(ledger_check(aid, st['day'], st['exp'], 'C11 setup: one normal checkpoint issues the collect session'))
     pos = map_log_pos()
     harness(c, '@mbqacommitfault 2', needle='[MBQA] commitfault', wait=3)
     feed(c, 20)
@@ -1971,12 +1994,24 @@ def cmd_v16c(a):
     res = [('C11 same batch resent after the restart: ALREADY, nothing written', rc == RC['ALREADY'] and acct_snapshot(aid) == s0,
             f'replay {st["c11"]} -> rc {rc}, credited {cr}'),
            ledger_check(aid, day, st['exp'], 'C11 ledger after the resend')]
-    feed(c, 40)
-    st['exp'] += 40
-    res += v16_fault_case(c, aid, day, st, 'C5 progress_update (tier 4, after the period counters)', point='progress_update')
+    # C9r / C5 on the next logical day (test clock), so fresh tiers are left: the first feed issues this login's
+    # collect session (the deadlock needs the next batch key), 0 -> 20; 20 -> 40 is the deadlocked checkpoint, resent
+    # by the 60 s flush timer alone; 40 -> 80; 80 -> 100 fails at progress_update after the tier 1 period counters.
+    import datetime
+    nd = datetime.date(day // 10000, day // 100 % 100, day % 100) + datetime.timedelta(days=1)
+    day2 = clock_to(c, f'{nd.isoformat()} 12:00:00')
+    st['day2'] = day2
     feed(c, 20)
-    st['exp'] = 400
-    res.append(ledger_check(aid, day, st['exp'], 'C5 resend applied once, cap reached'))
+    res += v16_deadlock_case(c, aid, day2, 'C9r')
+    end = time.time() + 120
+    while time.time() < end and hunt_day(aid, day2)[0] < 40:
+        time.sleep(3)
+    res.append(ledger_check(aid, day2, 40, 'C9r frozen batch resent by the flush timer: applied once'))
+    feed(c, 40)
+    res += v16_fault_case(c, aid, day2, st, 'C5 progress_update (tier 1 of the next day, after the period counters)', point='progress_update')
+    feed(c, 20)
+    res.append(ledger_check(aid, day2, 120, 'C5 resend applied once'))
+    res.append(ledger_check(aid, day, st['exp'], 'first day unchanged by the next day'))
     s0, pos = acct_snapshot(aid), map_log_pos()
     t = harness(c, '@mbqareentry', needle='[MBQA] reentry', wait=3)
     t2 = harness(c, '@mbqaoutoftx', needle='[MBQA] outoftx', wait=3)
@@ -2052,6 +2087,21 @@ def cmd_v21a(a):
     detected = rc3 not in (RC['OK'], RC['ALREADY']) or f3.get('fault') == 1
     res.append(('V21-4 same key with an extra period: mismatch detected and fail-closed (request 4.3)', detected and s3 == s0,
                 f'rc {rc3}; flags fault={f3.get("fault")}; D3 progress {hunt_day(aid, D3)}; rows changed {diff_tables(s0, s3)}'))
+    # V21-4b the new period sorts first: its row is written, then the duplicate period ends the batch as ALREADY
+    # (the transaction rolls back, but the caller treats ALREADY as "applied" and would drop those kills)
+    rc4, _ = replay(c, S, 3, f'{D1}:4,{D2}:20')
+    s4 = acct_snapshot(aid)
+    f5 = flags(c)
+    detected = rc4 not in (RC['OK'], RC['ALREADY']) or f5.get('fault') == 1
+    res.append(('V21-4b same key, new period first: mismatch detected and fail-closed (request 4.3)', detected and s4 == s0,
+                f'rc {rc4}; flags fault={f5.get("fault")}; D1 progress {hunt_day(aid, D1)}; rows changed {diff_tables(s0, s4)}'))
+    if s2 != s0 or s3 != s0 or s4 != s0:
+        # a conflicting resend wrote ledger rows: stop here (G2-B1 instruction), keep the data for analysis
+        g2b_state('v21', st)
+        g2b_record('V21', res + [('STOP conflicting resend changed the ledger', False,
+                                  f'changed {diff_tables(s0, s2)} / {diff_tables(s0, s3)} / {diff_tables(s0, s4)}')], 'v21')
+        c.logout()
+        return
     harness(c, '@mbqacommitfault 2', needle='[MBQA] commitfault', wait=3)
     feed(c, 20)            # batch 4 {D2: 20} commits, the ledger is told it failed
     f4 = flags(c)
@@ -2146,41 +2196,55 @@ def cmd_v24(a):
     """V24 (G2-B): 04:00 KST logical day under the test clock (the OS clock and time zone are never touched).
     Boundaries: 2026-10-31 04:00 (Fri->Sat), calendar midnight 11-01 00:00, 11-01 04:00 (Sat->Sun, month end),
     11-02 04:00 (Sun->Mon). Policy row: exchange cost 50 -> 40 from 20261101 (isolated DB only)."""
-    aid = AID['v24']
+    # v24r / v24s: reruns on fresh accounts (earlier runs kept as recorded)
+    who = 'v24s' if 's' in a.rest else ('v24r' if 'r' in a.rest else 'v24')
+    aid = AID[who]
     st = {'others': None}
-    c = login('v24')
+    c = login(who)
     to_field(c)
     ok, t = alive(c)
     res = [('precondition: alive, clean account', ok and acct_snapshot(aid)['need_marble_wallet'] == [], repr(t))]
     days = [(kst, clock_to(c, kst), want) for kst, want in V24_TABLE]
     res.append(('V24-0 logical day at each wall clock instant (test clock)', all(d == w for _, d, w in days), f'{days}'))
-    sql("INSERT INTO need_marble_policy (policy_key,effective_day,value,changed_by,changed_at) VALUES (10,20261101,40,'g2b_v24',NOW())")
+    sql("INSERT IGNORE INTO need_marble_policy (policy_key,effective_day,value,changed_by,changed_at) VALUES (10,20261101,40,'g2b_v24',NOW())")
     st['others'] = others_digest(aid)
     # V24-1 kills on both sides of 04:00 are split by logical day in one batch
     clock_to(c, '2026-10-31 03:59:00')
     feed(c, 10)
     clock_to(c, '2026-10-31 04:00:05')
-    feed(c, 10)
+    feed(c, 9)             # 19 in memory: below the 20-kill flush, so the pending map shows both days
     f = flags(c)
-    S = f.get('session')
-    c.logout()
+    c.logout()             # the collect session is issued by this first flush (it is 0 in the flags above)
     wait_offline(aid)
-    res.append(('V24-1 one batch across 04:00 -> one row per logical day', f.get('pdays') == 2 and
-                [r for r in batch_rows(aid) if r[0] == S] == [(S, 1, 20261030, 10), (S, 1, 20261031, 10)], f'flags {f}; rows {batch_rows(aid)}'))
-    # V24-2 fill 20261031 to every cap
-    c = login('v24')
+    rows1 = batch_rows(aid)
+    S = rows1[0][0] if rows1 else None
+    res.append(('V24-1 one batch across 04:00 -> one row per logical day', f.get('pdays') == 2 and f.get('pending') == 19 and
+                rows1 == [(S, 1, 20261030, 10), (S, 1, 20261031, 9)], f'flags {f}; rows {rows1}'))
+    # V24-2 fill 20261031 to every cap; the logout flushes every kill before the day is fingerprinted
+    c = login(who)
     to_field(c)
     alive(c)
     clock_to(c, '2026-10-31 22:00:00')
-    feed(c, 390)
+    feed(c, 391)           # 9 + 391 = 400 kills on 20261031; 11 of them are still in memory
+    c.logout()             # flush them so the day is exactly 400 before the extra kills
+    wait_offline(aid)
+    c = login(who)
     for k in (1, 2, 3):
         inst_clear(c, k)
-    feed(c, 20)
+    to_field(c)            # the dungeon harness leaves the character in a town without field mobs
+    alive(c)
+    n_cap, cnt_cap = feed(c, 20)
+    c.logout()
+    wait_offline(aid)
     per31 = sql(f'SELECT activity,earned FROM need_marble_period WHERE account_id={aid} AND period_day=20261031 ORDER BY activity')
-    res.append(('V24-2 20261031 capped: hunt 100, dungeon 100, total 200 (third dungeon 0)', per31 == [['0', '200'], ['1', '100'], ['2', '100']],
-                f'period {per31}'))
+    res.append(('V24-2 20261031 capped: hunt 100, dungeon 100, total 200 (third dungeon 0), 20 more kills count 0',
+                per31 == [['0', '200'], ['1', '100'], ['2', '100']] and hunt_day(aid, 20261031) == (400, 5) and cnt_cap == 0,
+                f'period {per31}; progress {hunt_day(aid, 20261031)}; extra feed n={n_cap} counted={cnt_cap}'))
     day31 = {t_: [r for r in rows if str(20261031) in map(str, r)] for t_, rows in acct_snapshot(aid).items()}
     # V24-3 calendar midnight is not a boundary
+    c = login(who)
+    to_field(c)
+    alive(c)
     d_mid = clock_to(c, '2026-11-01 00:00:05')
     n, cnt = feed(c, 20)
     res.append(('V24-3 calendar midnight: still 20261031, capped day adds nothing', d_mid == 20261031 and cnt == 0, f'day {d_mid}, counted {cnt}'))
@@ -2200,7 +2264,7 @@ def cmd_v24(a):
         pass
     wait_offline(aid)
     req = sql(f'SELECT request_no,status,bundles,cost FROM need_marble_exchange_req WHERE account_id={aid} ORDER BY request_no DESC LIMIT 1')
-    c = login('v24', 1)
+    c = login(who, 1)
     clock_to(c, '2026-11-01 04:00:01')
     ch2 = menu_picker(['이 요청으로 교환 확정'])
 
@@ -2210,7 +2274,7 @@ def cmd_v24(a):
         return base(kind, items, mes)
     c.dialog('@marble', confirm_then_drop, 25)
     wait_offline(aid)
-    c = login('v24')
+    c = login(who)
     clock_to(c, '2026-11-01 04:00:20')
     marble(c, [])
     rq = int(req[0][0]) if req else -1
@@ -2252,7 +2316,7 @@ def cmd_v24(a):
     c.drop()
     wait_offline(aid)
     sd, wd = state(aid), wallet(aid)
-    b = login('v24', 1)
+    b = login(who, 1)
     d_b = clock_to(b, '2026-11-02 04:00:10')
     w_after = wallet(aid)
     enter_board(b)
@@ -2281,7 +2345,7 @@ def cmd_v24(a):
     res.append(('V24-9 other accounts / global tables (except the policy and boot rows) / #CASHPOINTS unchanged',
                 {k: v for k, v in others_digest(aid).items() if k not in skip} ==
                 {k: v for k, v in st['others'].items() if k not in skip}, ''))
-    g2b_record('V24', res, 'v24')
+    g2b_record('V24' + who[3:], res, who)
 
 
 def main():

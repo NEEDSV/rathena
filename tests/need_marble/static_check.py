@@ -237,7 +237,7 @@ check('fault SQL never drops / alters / deletes ledger data',
       not re.search(r'\b(DROP|ALTER|TRUNCATE|DELETE|UPDATE\s+`need_marble)', re.sub(r'BEFORE UPDATE ON|--[^\n]*', '', faults)))
 g2b = read('tests/need_marble/g2/bc_synth_g2b.sql')
 check('bc_synth_g2b.sql: no literal secret, new ids only', "'{{user}}'" in g2b and not re.search(r'password|[A-Za-z]:[\\/]', g2b, re.I) and
-      re.findall(r'^\s*\((\d{7}),', g2b, re.M) == ['2000911', '2000912', '2000913'])
+      re.findall(r'^\s*\((\d{7}),', g2b, re.M) == ['2000911', '2000912', '2000913', '2000914', '2000915'])
 for acc, cmds in (("'v16'", {'cmd_v16a', 'cmd_v16b', 'cmd_v16c'}), ("'v21'", {'cmd_v21a', 'cmd_v21b', 'cmd_v21c'}), ("'v24'", {'cmd_v24'})):
     users = {b.split('(', 1)[0] for b in blocks if acc in b}
     check(f'G2-B account {acc} used by its own scenario only', users == cmds, str(sorted(users)))
