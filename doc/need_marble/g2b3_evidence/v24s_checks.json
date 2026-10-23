@@ -1,0 +1,72 @@
+[
+ {
+  "check": "precondition: alive, clean account",
+  "ok": true,
+  "detail": "'[MBQA] state hp=800 lv=99 map=yuno_fild02 kills=0'"
+ },
+ {
+  "check": "V24-0 logical day at each wall clock instant (test clock)",
+  "ok": true,
+  "detail": "[('2026-10-31 03:59:59', 20261030, 20261030), ('2026-10-31 04:00:00', 20261031, 20261031), ('2026-11-01 00:00:00', 20261031, 20261031), ('2026-11-01 03:59:59', 20261031, 20261031), ('2026-11-01 04:00:00', 20261101, 20261101), ('2026-11-02 03:59:59', 20261101, 20261101), ('2026-11-02 04:00:00', 20261102, 20261102)]"
+ },
+ {
+  "check": "V24-1 one batch across 04:00 -> one row per logical day",
+  "ok": true,
+  "detail": "flags {'in_tx': 0, 'fault': 0, 'day': 20261031, 'polday': 20261031, 'session': 0, 'batch': 0, 'frozen': 0, 'pending': 19, 'pdays': 2}; rows [(1, 1, 20261030, 10), (1, 1, 20261031, 9)]"
+ },
+ {
+  "check": "V24-2 20261031 capped: hunt 100, dungeon 100, total 200 (third dungeon 0), 20 more kills count 0",
+  "ok": true,
+  "detail": "period [['0', '200'], ['1', '100'], ['2', '100']]; progress (400, 5); extra feed n=20 counted=0"
+ },
+ {
+  "check": "V24-3 calendar midnight: still 20261031, capped day adds nothing",
+  "ok": true,
+  "detail": "day 20261031, counted 0"
+ },
+ {
+  "check": "V24-4 exchange across 04:00 with the reply lost: applied once at the issue-time cost",
+  "ok": true,
+  "detail": "request [['1', '1', '2', '100']]; EXCHANGE rows [['-100', '2', '20261101']]; wallet {'score': 200, 'dice': 0, 'pack': 0} -> {'score': 100, 'dice': 2, 'pack': 0}; period exchanged [['20261101', '2']]"
+ },
+ {
+  "check": "V24-4 exchange period key (observation)",
+  "ok": null,
+  "detail": "EXCHANGE row period_day 20261101; period rows [['20261101', '2']]"
+ },
+ {
+  "check": "V24-5 after 04:00: kills and the same dungeon count on 20261101, 20261031 rows unchanged",
+  "ok": true,
+  "detail": "period 20261101 [['0', '50'], ['2', '50']]"
+ },
+ {
+  "check": "V24-6 policy from 20261101: exchange costs 40, the earlier row still -100 / +2",
+  "ok": true,
+  "detail": "{'score': 150, 'dice': 2, 'pack': 0} -> {'score': 110, 'dice': 3, 'pack': 0}; EXCHANGE rows [['1', '-100', '2'], ['2', '-40', '1']]"
+ },
+ {
+  "check": "V24-7 roll left mid-move before 04:00 resumes after it: same roll, one die, one event",
+  "ok": true,
+  "detail": "dropped {'state': 1, 'pos': 1, 'left': 1, 'die': 2, 'roll': 1, 'steps': 1, 'run': 1, 'jump': 0, 'spass': 0, 'laps': 0, 'run_char': 150920}; wallet across 04:00 {'score': 110, 'dice': 5, 'pack': 0} -> {'score': 110, 'dice': 5, 'pack': 0}; resumed {'state': 0, 'pos': 2, 'left': 0, 'die': 2, 'roll': 1, 'steps': 2, 'run': 2, 'jump': 0, 'spass': 0, 'laps': 0, 'run_char': 150921}; events 1"
+ },
+ {
+  "check": "V24-8 after 2026-11-02 04:00 kills go to 20261102",
+  "ok": true,
+  "detail": "(20, 1)"
+ },
+ {
+  "check": "V24-9 caps never exceeded on any day",
+  "ok": true,
+  "detail": "[['20261031', '0', '200'], ['20261031', '1', '100'], ['20261031', '2', '100'], ['20261101', '0', '50'], ['20261101', '2', '50']]"
+ },
+ {
+  "check": "V24-9 invariants",
+  "ok": true,
+  "detail": "0 violating rows: []"
+ },
+ {
+  "check": "V24-9 other accounts / global tables (except the policy and boot rows) / #CASHPOINTS unchanged",
+  "ok": true,
+  "detail": ""
+ }
+]

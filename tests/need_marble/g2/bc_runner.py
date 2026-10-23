@@ -1841,8 +1841,15 @@ def v16_fault_case(c, aid, day, st, label, point=None, holder=None):
     trx = open_trx()
     txt = map_log_since(pos)
     want = f'mbqa fault {point}' if point else 'Lock wait timeout'
-    res = [(f'{label} failed checkpoint writes nothing', s1 == s0 and others_digest(aid) == o0 and n == 20,
-            f'changed tables {diff_tables(s0, s1)}; feed n={n} counted={counted}; {took:.1f} s')]
+    # The first flush of a login issues the collect session in its own transaction before the checkpoint (design 7.1):
+    # need_marble_account_seq may change by exactly collect_session + 1 and nothing else; every other table is identical.
+    seq0, seq1 = s0['need_marble_account_seq'], s1['need_marble_account_seq']
+    seq_ok = seq1 == seq0 or (len(seq1) == 1 and len(seq0) <= 1 and
+                              int(seq1[0][1]) == (int(seq0[0][1]) if seq0 else 0) + 1 and
+                              seq1[0][2:] == (seq0[0][2:] if seq0 else ('0',) * len(seq1[0][2:])))
+    rest = [t for t in diff_tables(s0, s1) if t != 'need_marble_account_seq']
+    res = [(f'{label} failed checkpoint writes nothing', not rest and seq_ok and others_digest(aid) == o0 and n == 20,
+            f'changed tables {diff_tables(s0, s1)} (account_seq {seq0} -> {seq1}); feed n={n} counted={counted}; {took:.1f} s')]
     res.append((f'{label} no open transaction, module still up, batch kept', f.get('in_tx') == 0 and f.get('fault') == 0 and f.get('frozen', 0) > 0 and
                 (trx == 0 or holder is not None), f'flags {f}; open transactions {trx}; log has {want!r}: {want in txt}'))
     return res
@@ -2156,6 +2163,19 @@ def cmd_v21b(a):
     to_field(b)
     alive(b)
     clock_to(b, kst_noon(D2))
+    # V21-7b (G2-B3) the account-wide batch key keeps its identity after a restart, relogs and a character
+    # switch: character B resends A's three-day batch 2 and B's own batch 1
+    D0, D1 = v21_days()[0], v21_days()[1]
+    s7, pos = acct_snapshot(aid), map_log_pos()
+    rc_a, _ = replay(b, st['S'], 2, f'{D0}:5,{D1}:5,{D2}:10')
+    rc_b, _ = replay(b, st['S'], 2, f'{D0}:5,{D1}:6,{D2}:10')
+    rc_c, _ = replay(b, SB, 1, f'{D2}:21')
+    g2b_record('V21', [("V21-7b after restart, relog and character switch: A's batch 2 same content ALREADY, other content CONFLICT, "
+                        "B's batch 1 other content CONFLICT, nothing written",
+                        rc_a == RC['ALREADY'] and rc_b == RC['CONFLICT'] and rc_c == RC['CONFLICT'] and acct_snapshot(aid) == s7 and
+                        map_log_since(pos).count('hunt batch conflict') >= 2,   # each line is in .err and map-msg_log.log
+                        f'rc {rc_a} / {rc_b} / {rc_c}; rows changed {diff_tables(s7, acct_snapshot(aid))}')],
+               'v21')
     feed(b, 15)
     open(os.path.join(OUT, 'v21_killme.flag'), 'w').write('15')
     log('   V21: 15 kills only in memory - stop the map-server now (bc_servers.ps1 killmap), then startmap -TestHooks and run v21c')
