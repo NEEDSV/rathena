@@ -20,6 +20,7 @@ ap.add_argument('--harness-only', action='store_true', help='rewrite only npc/cu
 ap.add_argument('--kill-hooks', action='store_true', help='G-1(b): add @mbqakill / @mbqafeed (test build only)')
 ap.add_argument('--bind-local', action='store_true', help='add bind_ip: 127.0.0.1 to the login/char/map import conf')
 ap.add_argument('--captcha', action='store_true', help='G2-A V18-C: hunt captcha at the 5th kill (stack battle import conf only)')
+ap.add_argument('--g2b', action='store_true', help='G2-B: @mbqaclock / @mbqacommitfault / @mbqareplay / @mbqareentry / @mbqaoutoftx / @mbqaflags (apply_test_hooks.py --g2b build only)')
 a = ap.parse_args()
 S = os.path.join(os.path.abspath(a.out), 'stack')
 O = os.path.abspath(a.orig)
@@ -193,6 +194,44 @@ if a.kill_hooks:
         b'OnState:',
         b'\tneed_marble_view();',
         b'\tdispbottom "[MBQA] state hp=" + Hp + " lv=" + BaseLevel + " map=" + strcharinfo(3) + " kills=" + @MB_HUNT_KILLS;',
+        b'\tend;',
+        b'}',
+        b''])
+if a.g2b:
+    # G2-B: needs the map-server built from a scratch copy patched with apply_test_hooks.py --g2b
+    harness += b'\r\n'.join([
+        b'// G2-B test build only: @mbqaclock <offset s>, @mbqacommitfault <0|1|2>, @mbqareplay <session> <batch> <day:kills,...>,',
+        b'// @mbqareentry, @mbqaoutoftx, @mbqaflags',
+        b'-\tscript\tMBQA_G2BHarness\t-1,{',
+        b'OnInit:',
+        b'\tbindatcmd "mbqaclock", strnpcinfo(3) + "::OnClock", 99, 100;',
+        b'\tbindatcmd "mbqacommitfault", strnpcinfo(3) + "::OnCommitFault", 99, 100;',
+        b'\tbindatcmd "mbqareplay", strnpcinfo(3) + "::OnReplay", 99, 100;',
+        b'\tbindatcmd "mbqareentry", strnpcinfo(3) + "::OnReentry", 99, 100;',
+        b'\tbindatcmd "mbqaoutoftx", strnpcinfo(3) + "::OnOutOfTx", 99, 100;',
+        b'\tbindatcmd "mbqaflags", strnpcinfo(3) + "::OnFlags", 99, 100;',
+        b'\tend;',
+        b'OnClock:',
+        b'\tdispbottom "[MBQA] clock day=" + need_marble_test_clock(atoi(.@atcmd_parameters$[0]));',
+        b'\tend;',
+        b'OnCommitFault:',
+        b'\tdispbottom "[MBQA] commitfault mode=" + need_marble_test_commit_fault(atoi(.@atcmd_parameters$[0]));',
+        b'\tend;',
+        b'OnReplay:',
+        b'\t.@rc = need_marble_test_replay(atoi(.@atcmd_parameters$[0]), atoi(.@atcmd_parameters$[1]), .@atcmd_parameters$[2]);',
+        b'\tdispbottom "[MBQA] replay rc=" + .@rc + " credited=" + @MBQA_CREDITED;',
+        b'\tend;',
+        b'OnReentry:',
+        b'\tdispbottom "[MBQA] reentry rc=" + need_marble_test_reentry();',
+        b'\tend;',
+        b'OnOutOfTx:',
+        b'\tdispbottom "[MBQA] outoftx rc=" + need_marble_test_out_of_tx();',
+        b'\tend;',
+        b'OnFlags:',
+        b'\tneed_marble_test_flags();',
+        b'\tdispbottom "[MBQA] flags in_tx=" + @MBQA_IN_TX + " fault=" + @MBQA_FAULT + " day=" + @MBQA_DAY + " polday=" + @MBQA_POL_DAY'
+        b' + " session=" + @MBQA_SESSION + " batch=" + @MBQA_BATCH + " frozen=" + @MBQA_FROZEN + " pending=" + @MBQA_PENDING'
+        b' + " pdays=" + @MBQA_PENDING_DAYS;',
         b'\tend;',
         b'}',
         b''])

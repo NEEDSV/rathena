@@ -127,6 +127,11 @@ int32 need_marble_test_kill_as(map_session_data* sd, const char* name, int32 rad
 	return killed;
 }
 
+/// G2-B: the same environment / database / group 99 guard for the hooks appended to need_marble.cpp.
+bool need_marble_test_allowed(map_session_data* sd) {
+	return test_guard(sd);
+}
+
 /// G2-A V18-C: today's marble kill count (DB + in-memory batch) of another online character, -3 if offline.
 int32 need_marble_test_view_of(map_session_data* sd, const char* name) {
 	if (!test_guard(sd))

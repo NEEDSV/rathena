@@ -21,13 +21,16 @@ OUT = None
 LOG = []
 ACC = {'gm': ('mbqa_gm', 'gm'), 'user': ('mbqa_user', 'user'), 'p2': ('mbqa_p2', 'user'), 'p3': ('mbqa_p3', 'user'),
        'p4': ('mbqa_p4', 'user'), 'cap': ('mbqa_cap', 'user'), 'v22a': ('mbqa_v22a', 'user'), 'v22b': ('mbqa_v22b', 'user'),
-       'v11': ('mbqa_v11', 'user'), 'heal': ('mbqa_heal', 'user')}
+       'v11': ('mbqa_v11', 'user'), 'heal': ('mbqa_heal', 'user'),
+       'v16': ('mbqa_v16', 'user'), 'v21': ('mbqa_v21', 'user'), 'v24': ('mbqa_v24', 'user')}
 NAMES = {('gm', 0): 'MBQA_GM1', ('gm', 1): 'MBQA_GM2', ('user', 0): 'MBQA_U1', ('user', 1): 'MBQA_U2',
          ('p2', 0): 'MBQA_P2', ('p3', 0): 'MBQA_P3', ('p4', 0): 'MBQA_P4', ('cap', 0): 'MBQA_CAP',
-         ('v22a', 0): 'MBQA_V22A', ('v22b', 0): 'MBQA_V22B', ('v11', 0): 'MBQA_V11', ('heal', 0): 'MBQA_HEAL'}
+         ('v22a', 0): 'MBQA_V22A', ('v22b', 0): 'MBQA_V22B', ('v11', 0): 'MBQA_V11', ('heal', 0): 'MBQA_HEAL',
+         ('v16', 0): 'MBQA_V16', ('v21', 0): 'MBQA_V21A', ('v21', 1): 'MBQA_V21B', ('v24', 0): 'MBQA_V24A', ('v24', 1): 'MBQA_V24B'}
 AID = {'gm': 2000901, 'user': 2000902, 'p2': 2000903, 'p3': 2000904, 'p4': 2000905, 'cap': 2000906,
        'v22a': 2000907, 'v22b': 2000908,   # v22a / v22b: V22 only (bc_synth_v22.sql)
-       'v11': 2000909, 'heal': 2000910}     # v11: V11 only, heal: V18-C healer (bc_synth_g2a.sql)
+       'v11': 2000909, 'heal': 2000910,     # v11: V11 only, heal: V18-C healer (bc_synth_g2a.sql)
+       'v16': 2000911, 'v21': 2000912, 'v24': 2000913}   # G2-B only (bc_synth_g2b.sql)
 
 
 def log(*a):
@@ -1663,6 +1666,622 @@ def cmd_v11(a):
         record(x, 'PASS' if ok else 'FAIL', d)
     inv = invariants()
     record('INV after V11', 'PASS' if not inv else 'FAIL', f'{len(inv)} violating rows: {inv[:6]}')
+
+
+# ---------------------------------------------------------------------------- G2-B (V16 / V21 / V24)
+# Needs: map-server built with apply_test_hooks.py --g2b, harness bc_stack_extras.py --kill-hooks --g2b,
+# bc_faults_g2b.sql (root) and bc_synth_g2b.sql. Scenarios that need a map-server restart are split into
+# phases; the operator restarts with bc_servers.ps1 between phases (this runner never controls a process).
+
+G2B_TABLES = ['need_marble_account_seq', 'need_marble_wallet', 'need_marble_wallet_tx', 'need_marble_period', 'need_marble_activity',
+              'need_marble_dungeon_daily', 'need_marble_hunt_progress', 'need_marble_hunt_batch', 'need_marble_exchange_req',
+              'need_marble_state', 'need_marble_roll', 'need_marble_jump', 'need_marble_event', 'need_marble_cp_payout']
+G2B_GLOBAL = ['need_marble_season', 'need_marble_policy', 'need_marble_boot']
+RC = {'OK': 0, 'DB_ERROR': -2, 'ALREADY': -4, 'BAD_ARG': -16, 'INTERNAL': -19}
+
+
+def acct_snapshot(aid):
+    """Every ledger row of one account (all columns), table by table."""
+    return {t: sorted(tuple(r) for r in sql(f'SELECT * FROM {t} WHERE account_id={aid}')) for t in G2B_TABLES}
+
+
+def others_digest(aid):
+    """Fingerprint of every ledger row NOT of this account, plus the global tables and #CASHPOINTS rows."""
+    import hashlib
+    h = {}
+    for t in G2B_TABLES:
+        rows = sorted(tuple(r) for r in sql(f'SELECT * FROM {t} WHERE account_id<>{aid}'))
+        h[t] = (len(rows), hashlib.sha1(repr(rows).encode()).hexdigest()[:12])
+    for t in G2B_GLOBAL:
+        rows = sorted(tuple(r) for r in sql(f'SELECT * FROM {t}'))
+        h[t] = (len(rows), hashlib.sha1(repr(rows).encode()).hexdigest()[:12])
+    h['#CASHPOINTS'] = sql("SELECT COUNT(*) FROM acc_reg_num WHERE `key`='#CASHPOINTS'")[0][0]
+    return h
+
+
+def diff_tables(a, b):
+    return [t for t in a if a[t] != b.get(t)]
+
+
+def open_trx():
+    """Transactions open on the isolated server right now (map-server connection included)."""
+    return int(bcdb.query(OUT, 'SELECT COUNT(*) FROM information_schema.innodb_trx', who='root')[0][0])
+
+
+def arm(point, aid):
+    sql(f"INSERT IGNORE INTO mbqa_fault (point, account_id) VALUES ('{point}', {aid})")
+
+
+def disarm(aid):
+    sql(f'DELETE FROM mbqa_fault WHERE account_id={aid}')
+
+
+def flags(c):
+    t = harness(c, '@mbqaflags', needle='[MBQA] flags', wait=3)
+    out = {}
+    for part in (t or '').split()[2:]:
+        if '=' in part:
+            k, v = part.split('=', 1)
+            try:
+                out[k] = int(v)
+            except ValueError:
+                pass
+    return out
+
+
+def feed(c, n, wait=8):
+    t = harness(c, f'@mbqafeed {n}', needle='[MBQA] feed', wait=wait)
+    return v22_model.parse_feed(t)
+
+
+def clock_to(c, kst):
+    """Moves the test clock so that the server now reads `kst` ('2026-11-01 03:59:50', KST). Returns the logical day."""
+    import calendar
+    utc = calendar.timegm(time.strptime(kst, '%Y-%m-%d %H:%M:%S')) - 9 * 3600
+    t = harness(c, f'@mbqaclock {int(utc - time.time())}', needle='[MBQA] clock', wait=3)
+    try:
+        return int(t.split('day=')[1].split()[0])
+    except (AttributeError, IndexError, ValueError):
+        return None
+
+
+def replay(c, session, batch, spec):
+    t = harness(c, f'@mbqareplay {session} {batch} {spec}', needle='[MBQA] replay', wait=6)
+    try:
+        return int(t.split('rc=')[1].split()[0]), int(t.split('credited=')[1].split()[0])
+    except (AttributeError, IndexError, ValueError):
+        return None, None
+
+
+def map_log_pos():
+    logs = sorted((p for p in os.listdir(os.path.join(OUT, 'logs')) if p.startswith('map-server.') and p.endswith('.out')),
+                  key=lambda p: os.path.getmtime(os.path.join(OUT, 'logs', p)))
+    p = os.path.join(OUT, 'logs', logs[-1])
+    return p, os.path.getsize(p)
+
+
+def map_log_since(pos):
+    p, n = pos
+    with open(p, 'rb') as f:
+        f.seek(n)
+        return f.read().decode('cp949', 'replace')
+
+
+def g2b_state(name, data=None):
+    p = os.path.join(OUT, f'{name}_state.json')
+    if data is None:
+        return json.load(open(p, encoding='utf-8'))
+    json.dump(data, open(p, 'w', encoding='utf-8'), indent=1, ensure_ascii=False)
+
+
+def hunt_day(aid, day):
+    r = sql(f'SELECT kills,next_tier FROM need_marble_hunt_progress WHERE account_id={aid} AND period_day={day}')
+    return (int(r[0][0]), int(r[0][1])) if r else (0, 1)
+
+
+def batch_rows(aid):
+    return [tuple(int(x) for x in r) for r in
+            sql(f'SELECT collect_session,batch_no,period_day,kills FROM need_marble_hunt_batch WHERE account_id={aid} ORDER BY collect_session,batch_no,period_day')]
+
+
+def ledger_check(aid, day, kills, label):
+    """One day of hunting: progress = expected kills = batch sum (I11), tiers = min(kills // 100, 4) (I10),
+    hunt earned = 25 x tiers = EARN rows sum = wallet score part; plus the invariant SQL."""
+    k, nt = hunt_day(aid, day)
+    bsum = sum(r[3] for r in batch_rows(aid) if r[2] == day)
+    tiers = min(kills // 100, 4)
+    ms = sql(f'SELECT COUNT(*),COALESCE(SUM(credited),0) FROM need_marble_activity WHERE account_id={aid} AND activity=1 AND key_a={day}')[0]
+    earn = sql(f'SELECT COUNT(*),COALESCE(SUM(d_score),0) FROM need_marble_wallet_tx WHERE account_id={aid} AND kind=1 AND ref_a=1 AND ref_b={day}')[0]
+    per = sql(f'SELECT COALESCE(SUM(earned),0) FROM need_marble_period WHERE account_id={aid} AND period_day={day} AND activity=1')[0][0]
+    inv = invariants()
+    ok = (k == kills == bsum and nt == tiers + 1 and ms == [str(tiers), str(25 * tiers)] and earn == [str(tiers), str(25 * tiers)] and
+          int(per) == 25 * tiers and not inv)
+    return (label, ok, f'progress {k} (expected {kills}), batch sum {bsum}, next_tier {nt}, tiers rows {ms}, EARN {earn}, hunt earned {per}, '
+                       f'invariant rows {len(inv)}')
+
+
+def g2b_record(prefix, res, state_name=None):
+    for x, ok, d in res:
+        record(f'{prefix} {x}', 'INFO' if ok is None else ('PASS' if ok else 'FAIL'), d)
+    if state_name:
+        p = os.path.join(OUT, f'{state_name}_checks.json')
+        old = json.load(open(p, encoding='utf-8')) if os.path.exists(p) else []
+        json.dump(old + [{'check': x, 'ok': ok, 'detail': d} for x, ok, d in res], open(p, 'w', encoding='utf-8'), indent=1, ensure_ascii=False)
+
+
+def v16_fault_case(c, aid, day, st, label, point=None, holder=None):
+    """A checkpoint (20 fed kills) fails at `point` (trigger) or on a lock held by `holder`; every ledger row of the
+    account must stay as it was, nothing else may change, no transaction may stay open, the batch stays frozen in
+    memory. Then 20 more kills resend the frozen batch plus a new one: both applied exactly once."""
+    s0, o0 = acct_snapshot(aid), others_digest(aid)
+    pos = map_log_pos()
+    if point:
+        arm(point, aid)
+    if holder:
+        holder()
+    t0 = time.time()
+    n, counted = feed(c, 20, wait=16)
+    took = time.time() - t0
+    f = flags(c)
+    s1 = acct_snapshot(aid)
+    if point:
+        disarm(aid)
+    trx = open_trx()
+    txt = map_log_since(pos)
+    want = f'mbqa fault {point}' if point else 'Lock wait timeout'
+    res = [(f'{label} failed checkpoint writes nothing', s1 == s0 and others_digest(aid) == o0 and n == 20,
+            f'changed tables {diff_tables(s0, s1)}; feed n={n} counted={counted}; {took:.1f} s')]
+    res.append((f'{label} no open transaction, module still up, batch kept', f.get('in_tx') == 0 and f.get('fault') == 0 and f.get('frozen', 0) > 0 and
+                (trx == 0 or holder is not None), f'flags {f}; open transactions {trx}; log has {want!r}: {want in txt}'))
+    return res
+
+
+def cmd_v16a(a):
+    """V16 phase a (G2-B): fault points on one account, in the real order of hunt_checkpoint / credit_in_tx.
+    kills: 0 -[progress_update]-> 40 -[lock wait]-> 80 -[activity_update, tier 1]-> 120 -> 180 -[wallet_update, tier 2]-> 220
+           -[deadlock attempt]-> 260 -> 280 -[period_update, tier 3]-> 320, then the COMMIT case of phase b."""
+    aid = AID['v16']
+    c = login('v16')
+    to_field(c)
+    ok, t = alive(c)
+    day = flags(c).get('day')
+    st = {'day': day, 'exp': 0, 'others': others_digest(aid)}
+    res = [('precondition: alive, clean account', ok and acct_snapshot(aid)['need_marble_hunt_progress'] == [], repr(t))]
+    # C1 progress_update without a tier
+    res += v16_fault_case(c, aid, day, st, 'C1 progress_update', point='progress_update')
+    feed(c, 20)
+    st['exp'] = 40
+    res.append(ledger_check(aid, day, st['exp'], 'C1 resend applied once'))
+    # C8 lock wait timeout on the progress row (innodb_lock_wait_timeout 10 s, bc_faults_g2b.sql)
+    sess = bcdb.open_session(OUT)
+
+    def hold():
+        sess.stdin.write(f'START TRANSACTION; SELECT kills FROM need_marble_hunt_progress WHERE account_id={aid} AND period_day={day} FOR UPDATE; SELECT \'held\';\n'.encode())
+        sess.stdin.flush()
+        for _ in range(5):
+            if b'held' in sess.stdout.readline():
+                break
+    res += v16_fault_case(c, aid, day, st, 'C8 lock wait timeout', holder=hold)
+    sess.stdin.write(b'ROLLBACK;\n')
+    sess.stdin.close()
+    sess.wait(10)
+    feed(c, 20)
+    st['exp'] = 80
+    res.append(ledger_check(aid, day, st['exp'], 'C8 resend applied once'))
+    # C2 activity_update at tier 1, C3 wallet_update at tier 2
+    res += v16_fault_case(c, aid, day, st, 'C2 activity_update (tier 1)', point='activity_update')
+    feed(c, 20)
+    st['exp'] = 120
+    res.append(ledger_check(aid, day, st['exp'], 'C2 resend applied once'))
+    feed(c, 60)
+    res += v16_fault_case(c, aid, day, st, 'C3 wallet_update (tier 2)', point='wallet_update')
+    feed(c, 20)
+    st['exp'] = 220
+    res.append(ledger_check(aid, day, st['exp'], 'C3 resend applied once'))
+    # C9 deadlock attempt: the external transaction writes 2,000 pad rows, takes the next batch key, then asks for
+    # the progress row the checkpoint holds; InnoDB rolls back the lighter transaction (expected: the checkpoint)
+    f = flags(c)
+    sess = bcdb.open_session(OUT)
+    sess.stdin.write((f'START TRANSACTION; INSERT INTO mbqa_pad (v) SELECT 1 FROM information_schema.columns LIMIT 2000; '
+                      f'INSERT INTO need_marble_hunt_batch (account_id,collect_session,batch_no,period_day,season_id,kills,char_id,created_at) '
+                      f'VALUES ({aid},{f.get("session")},{f.get("batch", 0) + 1},{day},1,0,0,NOW()); SELECT \'held\';\n').encode())
+    sess.stdin.flush()
+    for _ in range(5):
+        if b'held' in sess.stdout.readline():
+            break
+    s0, o0, pos = acct_snapshot(aid), others_digest(aid), map_log_pos()
+    import threading
+    th = threading.Thread(target=lambda: feed(c, 20, wait=16))
+    th.start()
+    time.sleep(2)
+    sess.stdin.write(f'SELECT kills FROM need_marble_hunt_progress WHERE account_id={aid} AND period_day={day} FOR UPDATE; SELECT \'second\';\n'.encode())
+    sess.stdin.flush()
+    th.join(30)
+    out_ext, err_ext = sess.communicate(input=b'ROLLBACK;\n', timeout=20)
+    txt = map_log_since(pos)
+    victim = 'checkpoint' if 'Deadlock' in txt else ('external' if b'Deadlock' in err_ext else 'none')
+    s1 = acct_snapshot(aid)
+    pad = sql('SELECT COUNT(*) FROM mbqa_pad')[0][0]
+    if victim == 'checkpoint':
+        res.append(('C9 deadlock: checkpoint rolled back as a whole', s1 == s0 and others_digest(aid) == o0 and pad == '0' and open_trx() == 0,
+                    f'changed {diff_tables(s0, s1)}; pad rows {pad}'))
+    else:
+        res.append(('C9 deadlock: checkpoint path not exercised (victim ' + victim + ')', None, f'external stderr {err_ext[-200:]!r}'))
+    feed(c, 20)
+    st['exp'] = 260
+    res.append(ledger_check(aid, day, st['exp'], 'C9 after the deadlock attempt: applied once'))
+    # C4 period_update at tier 3
+    feed(c, 20)
+    res += v16_fault_case(c, aid, day, st, 'C4 period_update (tier 3)', point='period_update')
+    feed(c, 20)
+    st['exp'] = 320
+    res.append(ledger_check(aid, day, st['exp'], 'C4 resend applied once'))
+    # C10 COMMIT outcome hidden, really rolled back: the module must fail closed (every entry point refused)
+    s0, pos = acct_snapshot(aid), map_log_pos()
+    harness(c, '@mbqacommitfault 1', needle='[MBQA] commitfault', wait=3)
+    feed(c, 20)
+    f = flags(c)
+    n2, counted2 = feed(c, 20)
+    res.append(('C10 hidden COMMIT (rolled back): module fails closed, nothing written',
+                f.get('fault') == 1 and acct_snapshot(aid) == s0 and counted2 == 0 and 'COMMIT outcome hidden' in map_log_since(pos),
+                f'flags {f}; feed after fault counted={counted2}'))
+    g2b_state('v16', st)
+    g2b_record('V16', res, 'v16')
+    c.logout()
+    log('   V16 phase a done: restart the map-server (bc_servers.ps1 killmap / startmap -TestHooks), then run v16b')
+
+
+def cmd_v16b(a):
+    """V16 phase b: after the restart the fault flag is gone and the rolled-back batch is lost (bounded, design 7.5);
+    then a COMMIT that really committed is reported as failed (module fails closed again)."""
+    aid = AID['v16']
+    st = g2b_state('v16')
+    c = login('v16')
+    to_field(c)
+    alive(c)
+    f = flags(c)
+    res = [('C10 after restart: module up, kills = before the hidden COMMIT (lost 20, no duplicate)', f.get('fault') == 0, f'flags {f}'),
+           ledger_check(aid, st['day'], st['exp'], 'C10 ledger after restart')]
+    pos = map_log_pos()
+    harness(c, '@mbqacommitfault 2', needle='[MBQA] commitfault', wait=3)
+    feed(c, 20)
+    f = flags(c)
+    st['exp'] += 20
+    st['c11'] = {'session': f.get('session'), 'batch': f.get('frozen'), 'spec': f"{st['day']}:20"}
+    res.append(('C11 hidden COMMIT (committed): module fails closed, rows written once',
+                f.get('fault') == 1 and f.get('frozen', 0) > 0 and 'COMMIT outcome hidden' in map_log_since(pos), f'flags {f}'))
+    res.append(ledger_check(aid, st['day'], st['exp'], 'C11 ledger right after the committed batch'))
+    g2b_state('v16', st)
+    g2b_record('V16', res, 'v16')
+    c.logout()
+    log('   V16 phase b done: restart the map-server again, then run v16c')
+
+
+def cmd_v16c(a):
+    """V16 phase c: the same batch resent after the restart is ALREADY; tier 4 through progress_update; the
+    re-entry and out-of-transaction probes; nothing outside the account changed during the whole of V16."""
+    aid = AID['v16']
+    st = g2b_state('v16')
+    day = st['day']
+    c = login('v16')
+    to_field(c)
+    alive(c)
+    s0 = acct_snapshot(aid)
+    rc, cr = replay(c, st['c11']['session'], st['c11']['batch'], st['c11']['spec'])
+    res = [('C11 same batch resent after the restart: ALREADY, nothing written', rc == RC['ALREADY'] and acct_snapshot(aid) == s0,
+            f'replay {st["c11"]} -> rc {rc}, credited {cr}'),
+           ledger_check(aid, day, st['exp'], 'C11 ledger after the resend')]
+    feed(c, 40)
+    st['exp'] += 40
+    res += v16_fault_case(c, aid, day, st, 'C5 progress_update (tier 4, after the period counters)', point='progress_update')
+    feed(c, 20)
+    st['exp'] = 400
+    res.append(ledger_check(aid, day, st['exp'], 'C5 resend applied once, cap reached'))
+    s0, pos = acct_snapshot(aid), map_log_pos()
+    t = harness(c, '@mbqareentry', needle='[MBQA] reentry', wait=3)
+    t2 = harness(c, '@mbqaoutoftx', needle='[MBQA] outoftx', wait=3)
+    txt = map_log_since(pos)
+    f = flags(c)
+    res.append(('C6 entry point inside an open transaction refused, nothing written',
+                t is not None and f'rc={RC["DB_ERROR"]}' in t and 'nested transaction refused' in txt and acct_snapshot(aid) == s0 and f.get('in_tx') == 0,
+                f'{t}; log nested refused: {"nested transaction refused" in txt}; flags in_tx={f.get("in_tx")}'))
+    res.append(('C7 internal function outside a transaction refused, nothing written',
+                t2 is not None and f'rc={RC["INTERNAL"]}' in t2 and 'called outside a transaction' in txt and acct_snapshot(aid) == s0,
+                f'{t2}; log outside-tx: {"called outside a transaction" in txt}'))
+    res.append(('C-all other accounts / global tables / #CASHPOINTS unchanged over V16', others_digest(aid) == st['others'],
+                f'changed {diff_tables(st["others"], others_digest(aid))}'))
+    res.append(('C-all no open transaction at the end', open_trx() == 0, ''))
+    g2b_state('v16', st)
+    g2b_record('V16', res, 'v16')
+    c.logout()
+
+
+def v21_days():
+    """V21 runs on fixed future logical days so it never meets the V24 dates."""
+    return [20261120, 20261121, 20261122, 20261123]
+
+
+def kst_noon(day):
+    return f'{day // 10000}-{day // 100 % 100:02d}-{day % 100:02d} 12:00:00'
+
+
+def cmd_v21a(a):
+    """V21 phase a (G2-B): a batch over three logical days, the next batch, exact resend, resend with other content,
+    then a COMMIT reported as failed although it committed. Test clock: D0..D3 = 2026-11-20..23 noon KST."""
+    aid = AID['v21']
+    D0, D1, D2, D3 = v21_days()
+    c = login('v21')
+    to_field(c)
+    ok, t = alive(c)
+    st = {'others': others_digest(aid)}
+    res = [('precondition: alive, clean account', ok and batch_rows(aid) == [], repr(t))]
+    days = [clock_to(c, kst_noon(D0))]
+    arm('progress_update', aid)
+    feed(c, 20)            # batch 1 {D0: 20} fails, stays frozen
+    feed(c, 5)             # pending {D0: 5}
+    days.append(clock_to(c, kst_noon(D1)))
+    feed(c, 5)
+    days.append(clock_to(c, kst_noon(D2)))
+    feed(c, 5)
+    f = flags(c)
+    res.append(('setup: pending spans three logical days while batch 1 is frozen', days == [D0, D1, D2] and f.get('frozen') == 1 and
+                f.get('pending') == 15 and f.get('pdays') == 3, f'days {days}; flags {f}'))
+    disarm(aid)
+    feed(c, 5)             # resend batch 1, then batch 2 {D0: 5, D1: 5, D2: 10}
+    S = f.get('session')
+    feed(c, 20)            # batch 3 {D2: 20}
+    want = [(S, 1, D0, 20), (S, 2, D0, 5), (S, 2, D1, 5), (S, 2, D2, 10), (S, 3, D2, 20)]
+    got = batch_rows(aid)
+    res.append(('V21-1 batch over three periods + following batch: one row per (session, batch, period)', got == want,
+                f'rows {got}'))
+    res.append(('V21-1 progress per period = batch sum (I11)', [hunt_day(aid, d)[0] for d in (D0, D1, D2)] == [25, 5, 30],
+                f'progress {[hunt_day(aid, d) for d in (D0, D1, D2)]}'))
+    s0 = acct_snapshot(aid)
+    rc, _ = replay(c, S, 2, f'{D0}:5,{D1}:5,{D2}:10')
+    res.append(('V21-2 exact resend of batch 2: ALREADY, nothing written', rc == RC['ALREADY'] and acct_snapshot(aid) == s0, f'rc {rc}'))
+    pos = map_log_pos()
+    rc2, _ = replay(c, S, 2, f'{D0}:6,{D1}:5,{D2}:10')
+    s2 = acct_snapshot(aid)
+    f2 = flags(c)
+    detected = rc2 not in (RC['OK'], RC['ALREADY']) or f2.get('fault') == 1
+    res.append(('V21-3 same key, different kills: mismatch detected and fail-closed (request 4.3)', detected and s2 == s0,
+                f'rc {rc2}; flags fault={f2.get("fault")}; rows changed {diff_tables(s0, s2)}; log {map_log_since(pos)[-160:]!r}'))
+    rc3, _ = replay(c, S, 3, f'{D2}:20,{D3}:7')
+    s3 = acct_snapshot(aid)
+    f3 = flags(c)
+    detected = rc3 not in (RC['OK'], RC['ALREADY']) or f3.get('fault') == 1
+    res.append(('V21-4 same key with an extra period: mismatch detected and fail-closed (request 4.3)', detected and s3 == s0,
+                f'rc {rc3}; flags fault={f3.get("fault")}; D3 progress {hunt_day(aid, D3)}; rows changed {diff_tables(s0, s3)}'))
+    harness(c, '@mbqacommitfault 2', needle='[MBQA] commitfault', wait=3)
+    feed(c, 20)            # batch 4 {D2: 20} commits, the ledger is told it failed
+    f4 = flags(c)
+    st.update({'S': S, 'b4': f4.get('frozen'), 'D2': D2})
+    res.append(('V21-5 COMMIT reported failed although committed: module fails closed', f4.get('fault') == 1 and hunt_day(aid, D2)[0] == 50,
+                f'flags {f4}; D2 progress {hunt_day(aid, D2)}'))
+    g2b_state('v21', st)
+    g2b_record('V21', res, 'v21')
+    c.logout()
+    log('   V21 phase a done: restart the map-server, then run v21b')
+
+
+def cmd_v21b(a):
+    """V21 phase b: resend of the committed batch after the restart, a late batch of the old collect session,
+    character B (no dice ever rolled) with a new collect session, then kills left in memory for a forced stop."""
+    aid = AID['v21']
+    st = g2b_state('v21')
+    D2 = st['D2']
+    c = login('v21')
+    to_field(c)
+    alive(c)
+    clock_to(c, kst_noon(D2))
+    s0 = acct_snapshot(aid)
+    rc, _ = replay(c, st['S'], st['b4'], f'{D2}:20')
+    res = [('V21-5 committed batch resent after the restart: ALREADY, D2 = 50 once', rc == RC['ALREADY'] and acct_snapshot(aid) == s0 and
+            hunt_day(aid, D2)[0] == 50, f'rc {rc}; D2 {hunt_day(aid, D2)}')]
+    rc, _ = replay(c, st['S'], 99, f'{D2}:3')
+    res.append(('V21-6 late batch of the old collect session applied (design 7.4)', rc == RC['OK'] and hunt_day(aid, D2)[0] == 53,
+                f'rc {rc}; D2 {hunt_day(aid, D2)}'))
+    c.logout()
+    wait_offline(aid)
+    seq0 = int(sql(f'SELECT collect_session FROM need_marble_account_seq WHERE account_id={aid}')[0][0])
+    b = login('v21', 1)
+    to_field(b)
+    alive(b)
+    clock_to(b, kst_noon(D2))
+    feed(b, 25)
+    SB = flags(b).get('session')
+    b.logout()
+    wait_offline(aid)
+    rows_b = [r for r in batch_rows(aid) if r[0] == SB]
+    res.append(('V21-7 character B: new collect session, batches 1 (20) and 2 (5 at logout)', SB is not None and SB > st['S'] and SB >= seq0 and
+                rows_b == [(SB, 1, D2, 20), (SB, 2, D2, 5)] and hunt_day(aid, D2)[0] == 78, f'session {SB}; rows {rows_b}; D2 {hunt_day(aid, D2)}'))
+    res.append(('V21-7 no dice were ever rolled on this account', sql(f'SELECT COUNT(*) FROM need_marble_roll WHERE account_id={aid}')[0][0] == '0', ''))
+    st['before_kill'] = hunt_day(aid, D2)[0]
+    g2b_state('v21', st)
+    g2b_record('V21', res, 'v21')
+    b = login('v21', 1)
+    to_field(b)
+    alive(b)
+    clock_to(b, kst_noon(D2))
+    feed(b, 15)
+    open(os.path.join(OUT, 'v21_killme.flag'), 'w').write('15')
+    log('   V21: 15 kills only in memory - stop the map-server now (bc_servers.ps1 killmap), then startmap -TestHooks and run v21c')
+    time.sleep(45)
+
+
+def cmd_v21c(a):
+    """V21 phase c: after the forced stop the 15 kills are lost (bounded) and nothing is duplicated; retry reaches tier 1
+    on D2; every period keeps progress = batch sum; nothing outside the account changed."""
+    aid = AID['v21']
+    st = g2b_state('v21')
+    D0, D1, D2, D3 = v21_days()
+    res = [('V21-8 forced stop with 15 kills in memory: lost (bounded), no duplicate', hunt_day(aid, D2)[0] == st['before_kill'] == 78,
+            f'D2 {hunt_day(aid, D2)}')]
+    b = login('v21', 1)
+    to_field(b)
+    alive(b)
+    clock_to(b, kst_noon(D2))
+    feed(b, 22)
+    b.logout()
+    wait_offline(aid)
+    res.append(ledger_check(aid, D2, 100, 'V21-9 retry: D2 reaches 100 kills, tier 1 credited once'))
+    for d, k in ((D0, 25), (D1, 5), (D3, 0)):
+        res.append(ledger_check(aid, d, k, f'V21-9 period {d}'))
+    tot = sql(f'SELECT period_day,activity,earned FROM need_marble_period WHERE account_id={aid} ORDER BY period_day,activity')
+    res.append(('V21-10 daily caps (hunt 100 / total 200) never exceeded', all(int(r[2]) <= (200 if r[1] == '0' else 100) for r in tot), f'{tot}'))
+    res.append(('V21-10 other accounts / global tables / #CASHPOINTS unchanged over V21', others_digest(aid) == st['others'],
+                f'changed {diff_tables(st["others"], others_digest(aid))}'))
+    g2b_record('V21', res, 'v21')
+
+
+V24_TABLE = [
+    # (KST wall clock, expected logical day) - submitted before the run (G2-B preflight document 5.3)
+    ('2026-10-31 03:59:59', 20261030), ('2026-10-31 04:00:00', 20261031),
+    ('2026-11-01 00:00:00', 20261031), ('2026-11-01 03:59:59', 20261031), ('2026-11-01 04:00:00', 20261101),
+    ('2026-11-02 03:59:59', 20261101), ('2026-11-02 04:00:00', 20261102),
+]
+
+
+def cmd_v24(a):
+    """V24 (G2-B): 04:00 KST logical day under the test clock (the OS clock and time zone are never touched).
+    Boundaries: 2026-10-31 04:00 (Fri->Sat), calendar midnight 11-01 00:00, 11-01 04:00 (Sat->Sun, month end),
+    11-02 04:00 (Sun->Mon). Policy row: exchange cost 50 -> 40 from 20261101 (isolated DB only)."""
+    aid = AID['v24']
+    st = {'others': None}
+    c = login('v24')
+    to_field(c)
+    ok, t = alive(c)
+    res = [('precondition: alive, clean account', ok and acct_snapshot(aid)['need_marble_wallet'] == [], repr(t))]
+    days = [(kst, clock_to(c, kst), want) for kst, want in V24_TABLE]
+    res.append(('V24-0 logical day at each wall clock instant (test clock)', all(d == w for _, d, w in days), f'{days}'))
+    sql("INSERT INTO need_marble_policy (policy_key,effective_day,value,changed_by,changed_at) VALUES (10,20261101,40,'g2b_v24',NOW())")
+    st['others'] = others_digest(aid)
+    # V24-1 kills on both sides of 04:00 are split by logical day in one batch
+    clock_to(c, '2026-10-31 03:59:00')
+    feed(c, 10)
+    clock_to(c, '2026-10-31 04:00:05')
+    feed(c, 10)
+    f = flags(c)
+    S = f.get('session')
+    c.logout()
+    wait_offline(aid)
+    res.append(('V24-1 one batch across 04:00 -> one row per logical day', f.get('pdays') == 2 and
+                [r for r in batch_rows(aid) if r[0] == S] == [(S, 1, 20261030, 10), (S, 1, 20261031, 10)], f'flags {f}; rows {batch_rows(aid)}'))
+    # V24-2 fill 20261031 to every cap
+    c = login('v24')
+    to_field(c)
+    alive(c)
+    clock_to(c, '2026-10-31 22:00:00')
+    feed(c, 390)
+    for k in (1, 2, 3):
+        inst_clear(c, k)
+    feed(c, 20)
+    per31 = sql(f'SELECT activity,earned FROM need_marble_period WHERE account_id={aid} AND period_day=20261031 ORDER BY activity')
+    res.append(('V24-2 20261031 capped: hunt 100, dungeon 100, total 200 (third dungeon 0)', per31 == [['0', '200'], ['1', '100'], ['2', '100']],
+                f'period {per31}'))
+    day31 = {t_: [r for r in rows if str(20261031) in map(str, r)] for t_, rows in acct_snapshot(aid).items()}
+    # V24-3 calendar midnight is not a boundary
+    d_mid = clock_to(c, '2026-11-01 00:00:05')
+    n, cnt = feed(c, 20)
+    res.append(('V24-3 calendar midnight: still 20261031, capped day adds nothing', d_mid == 20261031 and cnt == 0, f'day {d_mid}, counted {cnt}'))
+    # V24-4 exchange issued before 04:00, confirmed after it with the reply lost
+    w0 = wallet(aid)
+    clock_to(c, '2026-11-01 03:59:50')
+    ch = menu_picker(['점수 → 주사위 교환', 2])
+
+    def drop_at_confirm(kind, items, mes, base=ch):
+        if kind == 'menu' and any(x == '교환' for x in items):
+            c.drop()
+            raise SystemExit
+        return base(kind, items, mes)
+    try:
+        c.dialog('@marble', drop_at_confirm, 25)
+    except SystemExit:
+        pass
+    wait_offline(aid)
+    req = sql(f'SELECT request_no,status,bundles,cost FROM need_marble_exchange_req WHERE account_id={aid} ORDER BY request_no DESC LIMIT 1')
+    c = login('v24', 1)
+    clock_to(c, '2026-11-01 04:00:01')
+    ch2 = menu_picker(['이 요청으로 교환 확정'])
+
+    def confirm_then_drop(kind, items, mes, base=ch2):
+        if kind == 'menu' and any('이 요청으로 교환 확정' in x for x in items):
+            c.drop_after = True
+        return base(kind, items, mes)
+    c.dialog('@marble', confirm_then_drop, 25)
+    wait_offline(aid)
+    c = login('v24')
+    clock_to(c, '2026-11-01 04:00:20')
+    marble(c, [])
+    rq = int(req[0][0]) if req else -1
+    ex = sql(f'SELECT d_score,d_dice,period_day FROM need_marble_wallet_tx WHERE account_id={aid} AND kind=2 AND ref_a={rq}')
+    w1 = wallet(aid)
+    pex = sql(f'SELECT period_day,exchanged FROM need_marble_period WHERE account_id={aid} AND activity=0 AND exchanged<>0')
+    res.append(('V24-4 exchange across 04:00 with the reply lost: applied once at the issue-time cost',
+                len(ex) == 1 and ex[0][0] == '-100' and ex[0][1] == '2' and w1['score'] == w0['score'] - 100 and w1['dice'] == w0['dice'] + 2 and w1['pack'] == 0,
+                f'request {req}; EXCHANGE rows {ex}; wallet {w0} -> {w1}; period exchanged {pex}'))
+    res.append(('V24-4 exchange period key (observation)', None, f'EXCHANGE row period_day {ex[0][2] if ex else None}; period rows {pex}'))
+    # V24-5 first activity after 04:00 goes to the new day, 20261031 rows untouched
+    to_field(c)
+    alive(c)
+    feed(c, 20)
+    inst_clear(c, 1)
+    after31 = {t_: [r for r in rows if str(20261031) in map(str, r)] for t_, rows in acct_snapshot(aid).items()}
+    per01 = sql(f'SELECT activity,earned FROM need_marble_period WHERE account_id={aid} AND period_day=20261101 ORDER BY activity')
+    res.append(('V24-5 after 04:00: kills and the same dungeon count on 20261101, 20261031 rows unchanged',
+                after31 == day31 and hunt_day(aid, 20261101)[0] == 20 and ['2', '50'] in per01, f'period 20261101 {per01}'))
+    # V24-6 new exchange uses the new policy (40), the old ledger row keeps 50 x 2
+    w2 = wallet(aid)
+    marble(c, ['점수 → 주사위 교환', 1, '교환'])
+    w3 = wallet(aid)
+    ex_all = sql(f'SELECT ref_a,d_score,d_dice FROM need_marble_wallet_tx WHERE account_id={aid} AND kind=2 ORDER BY ref_a')
+    res.append(('V24-6 policy from 20261101: exchange costs 40, the earlier row still -100 / +2', w3['score'] == w2['score'] - 40 and
+                ex_all[0][1:] == ['-100', '2'] and ex_all[-1][1:] == ['-40', '1'], f'{w2} -> {w3}; EXCHANGE rows {ex_all}'))
+    # V24-7 an unfinished roll survives 04:00 (Sun -> Mon), score / dice / position kept
+    adjust(aid, dice=3, ticket=924001)
+    clock_to(c, '2026-11-02 03:59:30')
+    enter_board(c)
+    s0 = state(aid) or {'steps': 0, 'state': 0}
+    for _ in range(6):
+        marble(c, ['주사위 굴리기'])
+        s1 = wait_state(aid, lambda s: s and s['steps'] >= s0['steps'] + 1, 15)
+        if s1 and s1['state'] == 1 and s1['left'] > 0:
+            break
+        wait_state(aid, lambda s: s and s['state'] != 1, 30)
+        s0 = state(aid)
+    c.drop()
+    wait_offline(aid)
+    sd, wd = state(aid), wallet(aid)
+    b = login('v24', 1)
+    d_b = clock_to(b, '2026-11-02 04:00:10')
+    w_after = wallet(aid)
+    enter_board(b)
+    marble(b, ['이동 이어가기'])
+    s2 = wait_state(aid, lambda s: s and s['state'] != 1, 40)
+    w4 = wallet(aid)
+    ev = sql(f'SELECT COUNT(*) FROM need_marble_event WHERE account_id={aid} AND roll_seq={sd["roll"]}')[0][0] if sd else None
+    res.append(('V24-7 roll left mid-move before 04:00 resumes after it: same roll, one die, one event',
+                sd and sd['state'] == 1 and sd['left'] > 0 and d_b == 20261102 and w_after == wd and s2['roll'] == sd['roll'] and
+                w4['dice'] == wd['dice'] and ev == '1' and s2['steps'] - s0['steps'] == sd['die'],
+                f'dropped {sd}; wallet across 04:00 {wd} -> {w_after}; resumed {s2}; events {ev}'))
+    # V24-8 first kill after the Sun -> Mon boundary
+    to_field(b)
+    alive(b)
+    feed(b, 20)
+    b.logout()
+    wait_offline(aid)
+    res.append(('V24-8 after 2026-11-02 04:00 kills go to 20261102', hunt_day(aid, 20261102)[0] == 20, f'{hunt_day(aid, 20261102)}'))
+    caps = sql(f'SELECT period_day,activity,earned FROM need_marble_period WHERE account_id={aid} ORDER BY period_day,activity')
+    cap_of = {'0': 200, '1': 100, '2': 100, '3': 100}
+    res.append(('V24-9 caps never exceeded on any day', all(int(r[2]) <= cap_of.get(r[1], 100) for r in caps), f'{caps}'))
+    inv = invariants()
+    res.append(('V24-9 invariants', not inv, f'{len(inv)} violating rows: {inv[:5]}'))
+    # need_marble_boot gets this map-server run's boot row at the first dungeon credit (instance run key, design 3.3)
+    skip = ('need_marble_policy', 'need_marble_boot')
+    res.append(('V24-9 other accounts / global tables (except the policy and boot rows) / #CASHPOINTS unchanged',
+                {k: v for k, v in others_digest(aid).items() if k not in skip} ==
+                {k: v for k, v in st['others'].items() if k not in skip}, ''))
+    g2b_record('V24', res, 'v24')
 
 
 def main():

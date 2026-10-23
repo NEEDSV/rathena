@@ -218,6 +218,34 @@ check('captcha settings only through the stack copy (bc_stack_extras.py --captch
 v11m = read('tests/need_marble/g2/v11_model.py')
 check('V11 analysis reads the policy from need_marble_logic.hpp (no copied rate table)', 'policy_from_source' in v11m and '5000, 4000' not in v11m)
 
+# 15. G2-B (V16 / V21 / V24): scratch-only patch anchors, fault triggers, accounts, time zone independence
+apply = read('tests/need_marble/g2/test_hooks/apply_test_hooks.py')
+anchors = re.findall(r"replace_once\('src/map/need_marble\.cpp', '((?:[^'\\]|\\.)*)'", apply)
+anchor_counts = [cpp.count(bytes(x, 'utf-8').decode('unicode_escape')) for x in anchors]
+check('G2-B patch anchors each match need_marble.cpp exactly once', len(anchors) == 3 and anchor_counts == [1, 1, 1], str(anchor_counts))
+g2b_inc = read('tests/need_marble/g2/test_hooks/need_marble_test_g2b.inc')
+inc_body = g2b_inc.strip()
+check('G2-B hook code is entirely inside #ifdef NEED_MARBLE_TEST_HOOKS', inc_body.startswith('#ifdef NEED_MARBLE_TEST_HOOKS') and
+      inc_body.endswith('#endif  // NEED_MARBLE_TEST_HOOKS') and inc_body.count('#ifdef') == 1)
+check('G2-B anchored edits are inside #ifdef NEED_MARBLE_TEST_HOOKS', apply.count("'#ifdef NEED_MARBLE_TEST_HOOKS\\n'") == 3)
+faults = read('tests/need_marble/g2/bc_faults_g2b.sql')
+trig = re.findall(r'CREATE TRIGGER `(\w+)` (BEFORE|AFTER) (\w+) ON `(\w+)`', faults)
+check('fault triggers: plain UPDATE only, one per fault point, armed per account',
+      len(trig) == 4 and all(t[1] == 'BEFORE' and t[2] == 'UPDATE' for t in trig) and faults.count('`account_id` = NEW.`account_id`') == 4,
+      str(trig))
+check('fault SQL never drops / alters / deletes ledger data',
+      not re.search(r'\b(DROP|ALTER|TRUNCATE|DELETE|UPDATE\s+`need_marble)', re.sub(r'BEFORE UPDATE ON|--[^\n]*', '', faults)))
+g2b = read('tests/need_marble/g2/bc_synth_g2b.sql')
+check('bc_synth_g2b.sql: no literal secret, new ids only', "'{{user}}'" in g2b and not re.search(r'password|[A-Za-z]:[\\/]', g2b, re.I) and
+      re.findall(r'^\s*\((\d{7}),', g2b, re.M) == ['2000911', '2000912', '2000913'])
+for acc, cmds in (("'v16'", {'cmd_v16a', 'cmd_v16b', 'cmd_v16c'}), ("'v21'", {'cmd_v21a', 'cmd_v21b', 'cmd_v21c'}), ("'v24'", {'cmd_v24'})):
+    users = {b.split('(', 1)[0] for b in blocks if acc in b}
+    check(f'G2-B account {acc} used by its own scenario only', users == cmds, str(sorted(users)))
+check('marble logical day ignores the OS time zone (no localtime / gmtime / mktime in marble code)',
+      not re.search(r'\b(localtime|gmtime|mktime|strftime)\s*\(', strip_comments(cpp) + strip_comments(logic)))
+check('runner never starts / stops a process for G2-B (restarts are operator steps)',
+      not re.search(r'subprocess|bc_servers\.ps1\s*-|os\.kill|taskkill', runner.split('# ---------------------------------------------------------------------------- G2-B')[1]))
+
 failed = [r for r in results if not r[1]]
 for name, ok, detail in results:
     print(('PASS ' if ok else 'FAIL ') + name + (f'  [{detail}]' if detail and not ok else ''))

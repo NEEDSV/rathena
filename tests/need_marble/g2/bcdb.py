@@ -42,6 +42,18 @@ def run(out, who, sql, table=False):
     return r.returncode, mask(r.stdout.decode('utf-8', 'replace'), s), mask(r.stderr.decode('utf-8', 'replace'), s)
 
 
+def open_session(out, who='rt'):
+    """G2-B V16: a mysql client kept open (statements written to stdin) so a transaction can hold row locks
+    while the map-server runs a checkpoint. The caller sends ROLLBACK and closes stdin."""
+    s = secrets(out)
+    args = [MYSQL, '--host=127.0.0.1', f'--port={PORT}', f'--user={USERS[who]}', '--default-character-set=utf8mb4',
+            '-N', '-B', '--unbuffered', '--force']
+    if who != 'root':
+        args.append(f'--database={DB}')
+    return subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                            env=dict(os.environ, MYSQL_PWD=s[who]))
+
+
 def query(out, sql, who='rt'):
     rc, o, e = run(out, who, sql)
     if rc:

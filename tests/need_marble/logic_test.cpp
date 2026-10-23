@@ -290,6 +290,23 @@ static void test_hunt_v22_fixtures() {
 	CHECK(e.tier_rows == 4 && e.credited == 50 && e.earned_total == 200 && e.next_tier == 5);
 }
 
+// V24 (G2-B): 04:00 KST boundaries as unix seconds. logical_day() only takes integer seconds, so
+// 03:59:59.999 is 03:59:59 (previous day) and 04:00:00.000 / .001 are 04:00:00 (new day); the OS time zone never enters.
+static void test_v24_boundaries() {
+	CHECK(logical_day(1793386799) == 20261030);   // 2026-10-31 03:59:59 KST (Sat)
+	CHECK(logical_day(1793386800) == 20261031);   // 2026-10-31 04:00:00
+	CHECK(logical_day(1793458800) == 20261031);   // 2026-11-01 00:00:00 calendar midnight is no boundary
+	CHECK(logical_day(1793473199) == 20261031);   // 2026-11-01 03:59:59 (Sun, month end)
+	CHECK(logical_day(1793473200) == 20261101);   // 2026-11-01 04:00:00
+	CHECK(logical_day(1793559599) == 20261101);   // 2026-11-02 03:59:59 (Mon)
+	CHECK(logical_day(1793559600) == 20261102);   // 2026-11-02 04:00:00
+	CHECK(logical_day(1798743599) == 20261231);   // 2027-01-01 03:59:59 (year end)
+	CHECK(logical_day(1798743600) == 20270101);
+	CHECK(logical_day(1835377200) == 20280229);   // 2028-02-29 04:00:00 (leap day)
+	CHECK(logical_day(1835463599) == 20280229);
+	CHECK(logical_day(1835463600) == 20280301);
+}
+
 static void test_laps() {
 	CHECK(lap_reached(32, 33) == 0);
 	CHECK(lap_reached(33, 33) == 1);
@@ -308,6 +325,7 @@ int main() {
 	test_credit();
 	test_hunt_tiers();
 	test_hunt_v22_fixtures();
+	test_v24_boundaries();
 	test_laps();
 	std::printf("need_marble logic: %d passed, %d failed\n", g_pass, g_fail);
 	return g_fail == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
