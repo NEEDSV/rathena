@@ -249,7 +249,7 @@ bool need_dq_selftest( const char* out_path ) {
 		{ "juperos_02", "juperos_02", "ice_dun03", "ra_fild05", "juperos_02", "ice_dun03", "ra_fild05" },
 		{ "dic_dun02", "dic_dun02", "dic_dun01", "bif_fild01", "dic_dun02", "dic_dun01", "bif_fild01" },
 		{ "prt_prison", "prt_prison", "gl_cas02_", "ver_eju", "prt_prison", "gl_cas02_", "ver_eju" },
-		{ "ver_eju", "ver_eju", "verus02", "ra_fild10", "ver_eju", "verus02", "ra_fild10" },
+		{ "ver_eju", "ver_eju", "verus02", "verus03", "ver_eju", "verus02", "verus03" },
 	};
 	static const uint16 tracks[4] = { 100, 130, 150, 175 };
 	static const uint16 levels[4] = { 110, 140, 160, 175 };
