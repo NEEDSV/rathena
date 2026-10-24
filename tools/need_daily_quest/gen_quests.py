@@ -37,7 +37,7 @@ MAPS = {
     'gl_cas02_': ('고성 2층 회랑', 'Glast Heim Castle 2 (N)'),
     'ver_eju': ('유페로스 동쪽폐허', 'Eastern Ruins of Juperos'),
     'verus02': ('베루스 연구동-WISH', 'Verus R&D-WISH'),
-    'ra_fild10': ('라헬 필드 10', 'Rachel Field 10'),
+    'verus03': ('베루스 중앙광장', 'Verus Center Square'),
 }
 # monster display names for the navi links (AegisName -> KR, EN)
 MOBS = {
@@ -54,7 +54,7 @@ MOBS = {
     'RECON_ROBOT': ('정찰 로봇', 'Recon Robot'), 'EXCAVATOR_ROBOT': ('굴착 로봇', 'Excavator Robot'),
     'REPAIR_ROBOT_T': ('수리로봇 터보', 'Repair Robot Turbo'),
     'EXPLORATION_ROVER_T': ('탐사로봇 터보', 'Exploration Rover Turbo'),
-    'EP18_GREY_GOAT': ('잿빛 고우트', 'Ashen Goat'), 'EP18_GREY_WOLF_BABY': ('새끼 회색 늑대', 'Baby Gray Wolf'),
+    'EXPLORATION_ROVER': ('탐사 로봇', 'Exploration Rover'), 'REPAIR_ROBOT': ('수리 로봇', 'Repair Robot'),
 }
 MOBS.update({
     'EXPLOSION': ('익스플로젼', 'Explosion'), 'LAVA_GOLEM': ('라바 골렘', 'Lava Golem'), 'BLAZZER': ('블레이저', 'Blazer'),
