@@ -66,8 +66,9 @@ int32 need_marble_pause(map_session_data* sd, uint64 run, bool on_tile, int32 re
 
 /// Instance final boss hook (F_NEED_MD_ClearBonus). Credits every eligible PC on the boss map.
 int32 need_marble_instance_clear(const char* dungeon_key, const char* map_name);
-/// Battleground end hook (F_BG_RM_AutoRewardBadge). Credits PCs on the bg map that pass the participation sample.
-int32 need_marble_bg_match(const char* map_name, const char* bg_type, int32 match_token);
+/// Battleground reward hook (F_BG_Badge / F_BG_RM_AutoRewardBadge / F_KvM_GrantReward, random match cycle): one finished match = BG points
+/// for this player's account, once per match. NEED_MARBLE_REJECTED = obviously AFK for the whole match.
+int32 need_marble_bg_credit(map_session_data* sd, const char* bg_type, int32 match_token);
 
 /// Current value of a policy key (today's effective value), -1 when unknown.
 int32 need_marble_policy_value(int32 key);

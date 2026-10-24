@@ -1299,10 +1299,16 @@ BUILDIN_FUNC(need_marble_instance_clear)
 	return SCRIPT_CMD_SUCCESS;
 }
 
-/// need_marble_bg_match("<bg map>","<bg type>",<match token>);  returns the number of accounts credited
-BUILDIN_FUNC(need_marble_bg_match)
+/// need_marble_bg_credit("<bg type>",<match token>);  attached player, called where the BG reward is paid.
+/// Returns 0 credited (points may be 0 at the daily cap), -4 same match already credited, -20 AFK, <0 not done.
+BUILDIN_FUNC(need_marble_bg_credit)
 {
-	script_pushint(st, need_marble_bg_match(script_getstr(st, 2), script_getstr(st, 3), script_getnum(st, 4)));
+	map_session_data* sd = nullptr;
+	if (!script_rid2sd(sd)) {
+		script_pushint(st, NEED_MARBLE_BAD_ARG);
+		return SCRIPT_CMD_SUCCESS;
+	}
+	script_pushint(st, need_marble_bg_credit(sd, script_getstr(st, 2), script_getnum(st, 3)));
 	return SCRIPT_CMD_SUCCESS;
 }
 

@@ -1483,42 +1483,32 @@ int32 need_marble_instance_clear(const char* dungeon_key, const char* map_name) 
 	return credited;
 }
 
-int32 need_marble_bg_match(const char* map_name, const char* bg_type, int32 match_token) {
-	if (map_name == nullptr || !ready() || P(P_BG_ENABLED) != 1)
-		return 0;
-	int32 type_code = 3;
+int32 need_marble_bg_credit(map_session_data* sd, const char* bg_type, int32 match_token) {
+	if (sd == nullptr || !ready() || P(P_BG_ENABLED) != 1)
+		return NEED_MARBLE_DISABLED;
+	if (match_token <= 0)
+		return NEED_MARBLE_BAD_ARG;
+	int32 type_code = 3;   // KVM and anything else
 	if (bg_type != nullptr && strcmp(bg_type, "Tierra") == 0)
 		type_code = 1;
 	else if (bg_type != nullptr && strcmp(bg_type, "Flavius") == 0)
 		type_code = 2;
-	int16 m = map_mapname2mapid(map_name);
-	if (m < 0 || match_token <= 0)
-		return 0;
 	const uint32 boot = boot_id();
 	if (boot == 0)
-		return 0;
-	std::vector<map_session_data*> pcs;
-	map_foreachinmap(collect_pc_sub, m, BL_PC, &pcs);
-	int32 credited = 0;
-	for (map_session_data* sd : pcs) {
-		if (sd->bg_id == 0)
-			continue;
-		auto it = g_bg.find(std::make_pair(sd->status.account_id, sd->bg_id));
-		if (it == g_bg.end())
-			continue;
-		const bg_sample s = it->second;
+		return NEED_MARBLE_DB_ERROR;
+	// Activity samples of this match's team (bg ids are not reused). The reward path runs once per character and match
+	// (F_BG_RM_TryClaimReward), so samples of a left-out player simply stay until logout.
+	const auto key = std::make_pair(sd->status.account_id, sd->bg_id);
+	auto it = sd->bg_id != 0 ? g_bg.find(key) : g_bg.end();
+	const uint32 samples = it != g_bg.end() ? it->second.total : 0, active = it != g_bg.end() ? it->second.active : 0;
+	if (bg_afk_excluded(samples, active, idle_for(sd, P(P_BG_ACTIVE_SEC))))
+		return NEED_MARBLE_REJECTED;
+	// One row per account and match: (boot, match token, mode) - a duplicate end call, a relog or another
+	// character of the same account ends as ALREADY inside credit_in_tx.
+	const int32 rc = bg_credit(sd, boot, match_token, type_code);
+	if ((rc == NEED_MARBLE_OK || rc == NEED_MARBLE_ALREADY) && it != g_bg.end())
 		g_bg.erase(it);
-		if (s.total < static_cast<uint32>(P(P_BG_MIN_SAMPLES)) ||
-			static_cast<int64>(s.active) * 1000 < static_cast<int64>(P(P_BG_MIN_ACTIVE_PERMIL)) * s.total)
-			continue;
-		if (idle_for(sd, P(P_BG_ACTIVE_SEC)))
-			continue;
-		if (bg_credit(sd, boot, match_token, type_code) == NEED_MARBLE_OK)
-			credited++;
-		if (g_fault)
-			break;
-	}
-	return credited;
+	return rc;
 }
 
 void need_marble_init() {

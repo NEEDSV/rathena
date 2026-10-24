@@ -312,13 +312,17 @@ class Client:
         return self.texts_since(m)
 
     def dialog(self, trigger, choose, timeout=20.0):
-        """Runs a whole NPC dialog. choose(kind, items_or_none, mes_lines) returns
+        """Runs a whole NPC dialog, started by a chat line (an @command) or, for an int trigger, by clicking that NPC id.
+        choose(kind, items_or_none, mes_lines) returns
         - for 'menu': the label (substring) to pick, or None for ESC (0xFF)
         - for 'input': an int
         Returns (mes lines, texts, finished)."""
         m = self.mark()
         self.expect_close = True
-        self.say(trigger)
+        if isinstance(trigger, int):
+            self.raw(struct.pack('<HIB', 0x0090, trigger, 1))   # CZ_CONTACTNPC: click the NPC with this game id
+        else:
+            self.say(trigger)
         pos = m
         mes = []
         end = time.time() + timeout

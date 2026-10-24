@@ -365,8 +365,26 @@ function	script	F_BG_RM_AutoRewardBadge	{
 	if (!$@BG_RM_CYCLE_ACTIVE)
 		return 0;
 
-	// NEED marble board: participation-sampled battleground credit (no-op unless switched on, off by default)
-	need_marble_bg_match(.@map$, .@bg_type$, $@BG_RM_TOKEN);
+	// NEED marble board: BG activity points for every member still on the map first. The reward loop below waits in
+	// each player's dialog (close2 in F_BG_Badge), so one AFK player would hold back the rest of the team.
+	for (.@team = 1; .@team <= 2; .@team++) {
+		.@count = (.@team == 1) ? $@BG_RM_G_COUNT : $@BG_RM_C_COUNT;
+		for (.@i = 0; .@i < .@count; .@i++) {
+			.@aid = (.@team == 1) ? $@BG_RM_G_AID[.@i] : $@BG_RM_C_AID[.@i];
+			.@cid = (.@team == 1) ? $@BG_RM_G_CID[.@i] : $@BG_RM_C_CID[.@i];
+			.@name$ = (.@team == 1) ? $@BG_RM_G_NAME$[.@i] : $@BG_RM_C_NAME$[.@i];
+			if (!isloggedin(.@aid,.@cid))
+				continue;   // script || does not short-circuit: getmapxy would log an error for a logged out member
+			if (getmapxy(.@current_map$,.@x,.@y,BL_PC,.@name$) != 0 || .@current_map$ != .@map$)
+				continue;
+			if (attachrid(.@aid) && getcharid(0) == .@cid)
+				need_marble_bg_credit(.@bg_type$, $@BG_RM_TOKEN);
+		}
+	}
+	if (.@caller_aid)
+		attachrid .@caller_aid;
+	else
+		detachrid;
 
 	for (.@team = 1; .@team <= 2; .@team++) {
 		.@count = (.@team == 1) ? $@BG_RM_G_COUNT : $@BG_RM_C_COUNT;
@@ -2945,6 +2963,11 @@ function	script	F_BG_Badge	{
 		set .@amount_lose_cash, 23;
 	} else
 		return;
+
+	// NEED marble board: one finished match = BG activity points for this account, once per match (random match cycle only).
+	// Decided before the dialog: close2 below waits for the player, and the AFK rule needs the state at reward time.
+	if ($@BG_RM_CYCLE_ACTIVE)
+		need_marble_bg_credit(.@bg_type$, $@BG_RM_TOKEN);
 
 	if (getarg(0) == 1) {
 		set .@amount, .@amount_win;

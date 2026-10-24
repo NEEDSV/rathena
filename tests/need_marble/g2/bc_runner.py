@@ -2371,6 +2371,452 @@ def cmd_v24(a):
     g2b_record('V24' + who[3:], res, who)
 
 
+# ---------------------------------------------------------------------------- G2-C battleground (v1.1 simplified)
+G2C_ACC = ['bga', 'bgb', 'bgheal', 'bgafk', 'bgleave', 'bgrelog', 'bgdef', 'bgdead', 'bgc', 'bgclk']
+for _i, _w in enumerate(G2C_ACC):
+    ACC[_w] = ('mbqa_' + _w, 'user')
+    AID[_w] = 2000921 + _i
+NAMES.update({('bga', 0): 'MBQA_BGA1', ('bga', 1): 'MBQA_BGA2', ('bgb', 0): 'MBQA_BGB', ('bgheal', 0): 'MBQA_BGHEAL',
+              ('bgafk', 0): 'MBQA_BGAFK', ('bgleave', 0): 'MBQA_BGLEAVE', ('bgrelog', 0): 'MBQA_BGRELOG', ('bgdef', 0): 'MBQA_BGDEF',
+              ('bgdead', 0): 'MBQA_BGDEAD', ('bgc', 0): 'MBQA_BGC', ('bgclk', 0): 'MBQA_BGCLK'})
+G2C_DAY_A = '2026-11-20 12:00:00'      # M1 Tierra / M2 Flavius / M3 KVM, one cycle token 101
+G2C_DAY_OFF = 20261122                 # M6: BG credit switched off by a policy row (existing rewards compared)
+ACT_BG = 3
+
+
+def g2c_state(name, data=None):
+    p = os.path.join(OUT, f'g2c_{name}.json')
+    if data is None:
+        return json.load(open(p, encoding='utf-8')) if os.path.exists(p) else {}
+    json.dump(data, open(p, 'w', encoding='utf-8'), indent=1, ensure_ascii=False)
+
+
+def g2c_record(cid, res):
+    ok = all(r[1] for r in res)
+    json.dump([{'check': n, 'pass': bool(p), 'detail': d} for n, p, d in res],
+              open(os.path.join(OUT, f'g2c_{cid}_checks.json'), 'w', encoding='utf-8'), indent=1, ensure_ascii=False)
+    for n, p, d in res:
+        log(f'   {"PASS" if p else "FAIL"} {n} | {d}')
+    record(cid, 'PASS' if ok else 'FAIL', f'{sum(1 for r in res if r[1])}/{len(res)} checks')
+
+
+def bg_rows(aid):
+    """BG activity rows of one account: (token, type, period_day, requested, credited, outcome, char_id)."""
+    return [tuple(int(x) for x in r) for r in
+            sql(f'SELECT key_b,key_c,period_day,requested,credited,outcome,char_id FROM need_marble_activity '
+                f'WHERE account_id={aid} AND activity={ACT_BG} ORDER BY created_at,key_b,key_c')]
+
+
+def earned(aid, day):
+    """{activity: earned} of one logical day (0 = total, 1 hunt, 2 instance, 3 BG)."""
+    return {int(a): int(e) for a, e in sql(f'SELECT activity,earned FROM need_marble_period WHERE account_id={aid} AND period_day={day}')}
+
+
+def score(aid):
+    w = wallet(aid)
+    return w['score'] if w else 0
+
+
+def bgcmd(g, text, needle, wait=6):
+    return harness(g, text, needle=needle, wait=wait)
+
+
+def kv(t):
+    out = {}
+    for part in (t or '').split():
+        if '=' in part:
+            k, v = part.split('=', 1)
+            try:
+                out[k] = int(v)
+            except ValueError:
+                out[k] = v
+    return out
+
+
+def items(g, name):
+    return kv(bgcmd(g, f'@mbqabgitems {name}', '[MBQA] bgitems', wait=3))
+
+
+def where(g, name):
+    return kv(bgcmd(g, f'@mbqabgwhere {name}', '[MBQA] bgwhere', wait=3))
+
+
+def delta(a, b):
+    return {k: b[k] - a[k] for k in a if isinstance(a[k], int) and k in b and k not in ('name',) and b[k] != a[k]}
+
+
+class Responder:
+    """Answers the NPC dialog buttons (next / close, ESC on menus) of one client in the background, like a player
+    who reads the reward dialog. The AFK character never gets one."""
+
+    def __init__(self, c, start=None):
+        import threading
+        self.c, self.stop, self.n, self.start = c, threading.Event(), 0, start
+        self.t = threading.Thread(target=self.run, daemon=True)
+        self.t.start()
+
+    def run(self):
+        import struct
+        pos = self.c.mark() if self.start is None else self.start
+        while not self.stop.is_set() and self.c.alive:
+            while pos < len(self.c.events):
+                _, kind, data = self.c.events[pos]
+                pos += 1
+                if kind == 'next':
+                    self.c.raw(struct.pack('<HI', 0x00B9, data))
+                elif kind == 'close':
+                    self.c.raw(struct.pack('<HI', 0x0146, data))
+                    self.n += 1
+                elif kind == 'menu':
+                    self.c.raw(struct.pack('<HIB', 0x00B8, data[0], 0xFF))
+            time.sleep(0.05)
+
+    def close(self):
+        self.stop.set()
+        self.t.join(2)
+
+
+def npc_claim(g, c, team):
+    """The player clicks the REAL reward NPC of the current mode and reads the dialog to the end."""
+    gid = kv(bgcmd(g, f'@mbqabgnpc {team}', '[MBQA] bgnpc', wait=3)).get('gid')
+    mes, texts, done = c.dialog(int(gid), lambda kind, items_, m: None if kind == 'menu' else 0, timeout=20)
+    log(f'   [{c.tag}] npc {gid} done={done} mes={len(mes)} texts={texts[-2:]}')
+    return done
+
+
+def bg_start(g, mode, token, gnames, cnames):
+    t = kv(bgcmd(g, f'@mbqabgstart {mode} {token} {",".join(gnames) or "-"} {",".join(cnames) or "-"}', '[MBQA] bgstart', wait=4))
+    return t
+
+
+def play(clients, seconds, heal=None, once=(), skip=()):
+    """Normal match activity: walking around the spawn (idletime_option WALK). heal = (healer, target aid): skill only.
+    once: characters that move only at the start (defenders). skip: AFK / gone."""
+    end = time.time() + seconds
+    first = True
+    while time.time() < end:
+        for tag, (c, x, y) in clients.items():
+            if tag in skip or not c.alive or (tag in once and not first):
+                continue
+            c.walk(x + (1 if int(time.time()) % 2 else 0), y)
+        if heal:
+            heal[0].use_skill(28, 10, heal[1])
+        first = False
+        time.sleep(2)
+
+
+def cmd_g2c(a):
+    """G2-C v1.1 (simplified): one normally finished battleground match = 50 marble points per account, through the REAL
+    reward NPCs and auto reward functions of Tierra / Flavius / KVM. Phases: m1 m2 m3 clk off (run in this order), cancel."""
+    ph = a.rest[0] if a.rest else 'm1'
+    globals()['g2c_' + ph]()
+
+
+def g2c_m1():
+    """M1 Tierra (token 101): C-01 win/loss, C-02 healer, C-03 AFK / leaver / short relog / defender / dead, C-04 duplicates."""
+    g = login('gm')
+    day = clock_to(g, G2C_DAY_A)
+    st = {'day': day}
+    afk = login('bgafk')                      # logs in first and never sends anything but keepalives from here on
+    cl = {w: login(w) for w in ('bga', 'bgb', 'bgheal', 'bgleave', 'bgrelog', 'bgdef', 'bgdead')}
+    time.sleep(9)                             # the AFK character is idle longer than the 8 s activity window before the match
+    before = {w: (score(AID[w]), bg_rows(AID[w])) for w in list(cl) + ['bgafk']}
+    st['items0'] = {n: items(g, n) for n in ('MBQA_BGA1', 'MBQA_BGB')}
+    # Croix order matters for the auto reward loop: the defender comes after the AFK character
+    t = bg_start(g, 1, 101, ['MBQA_BGA1', 'MBQA_BGHEAL', 'MBQA_BGDEAD'],
+                 ['MBQA_BGB', 'MBQA_BGRELOG', 'MBQA_BGLEAVE', 'MBQA_BGAFK', 'MBQA_BGDEF'])
+    res = [('M1 setup: 2 teams, 8 joined on bat_a01 (random match cycle, token 101)',
+            t.get('gcount') == 3 and t.get('ccount') == 5 and t.get('joined') == 8, repr(t))]
+    time.sleep(2)
+    pos = {'bga': (50, 374), 'bgheal': (50, 375), 'bgdef': (41, 16), 'bgdead': (51, 375),
+           'bgb': (42, 16), 'bgrelog': (42, 17), 'bgleave': (43, 16)}
+    clients = {w: (cl[w], x, y) for w, (x, y) in pos.items()}
+    heal = (cl['bgheal'], cl['bga'].aid)
+    play(clients, 6, heal=heal, once=('bgdef',))
+    cl['bgleave'].logout()                   # leaves in the middle of the match and does not come back
+    play(clients, 2, heal=heal, once=('bgdef',), skip=('bgleave',))
+    cl['bgrelog'].drop()                     # short disconnect
+    wait_offline(AID['bgrelog'])
+    play(clients, 2, heal=heal, once=('bgdef',), skip=('bgleave', 'bgrelog'))
+    cl['bgrelog'] = login('bgrelog')
+    w_relog = where(g, 'MBQA_BGRELOG')
+    clients['bgrelog'] = (cl['bgrelog'], w_relog.get('x', 42) or 42, w_relog.get('y', 17) or 17)
+    play(clients, 6, heal=heal, once=('bgdef',), skip=('bgleave',))
+    g.command('@kill MBQA_BGDEAD')            # dead at the end of the match (respawn wait)
+    play(clients, 4, heal=heal, once=('bgdef',), skip=('bgleave', 'bgdead'))
+    st['where_end'] = {n: where(g, n) for n in ('MBQA_BGRELOG', 'MBQA_BGDEAD', 'MBQA_BGAFK', 'MBQA_BGDEF')}
+    bgcmd(g, '@mbqabgend 1', '[MBQA] bgend')      # Guillaume wins
+    # NPC path: the winner and the loser click their reward NPC
+    npc_claim(g, cl['bga'], 1)
+    npc_claim(g, cl['bgb'], 2)
+    st['items1'] = {n: items(g, n) for n in ('MBQA_BGA1', 'MBQA_BGB')}
+    # auto path for everyone still on the map; the AFK character does not answer its dialog
+    resp = [Responder(cl[w]) for w in ('bgheal', 'bgdef', 'bgdead', 'bgrelog')]
+    m = g.mark()
+    afk_mark = afk.mark()
+    t0 = time.time()
+    g.say('@mbqabgauto')
+    auto = g.wait_text(m, '[MBQA] bgauto', 15)
+    st['auto_wait_s'] = round(time.time() - t0, 1)
+    st['afk_row_while_waiting'] = bg_rows(AID['bgafk'])
+    st['def_row_while_waiting'] = bg_rows(AID['bgdef'])   # the defender comes after the AFK character in the loop
+    st['auto_before_afk_answers'] = auto
+    if auto is None:
+        # the existing reward loop waits in close2 for the AFK character; the NPC secure timeout is 60 s
+        auto = g.wait_text(m, '[MBQA] bgauto', 75)
+    st['auto'] = auto
+    st['auto_after_90s'] = auto
+    st['gm_free_after_90s'] = where(g, 'MBQA_BGDEF')            # empty when the GM's first command is still running
+    st['def_items_after_first_auto'] = items(g, 'MBQA_BGDEF')
+    st['afk_items_after_first_auto'] = items(g, 'MBQA_BGAFK')
+    time.sleep(1)
+    after = {w: (score(AID[w]), bg_rows(AID[w])) for w in list(cl) + ['bgafk']}
+    st['rows'] = {w: after[w][1] for w in after}
+    st['scores'] = {w: [before[w][0], after[w][0]] for w in after}
+    gained = {w: after[w][0] - before[w][0] for w in after}
+
+    def one(w, char):
+        r = after[w][1]
+        return len(r) == 1 and r[0][:6] == (101, 1, day, 50, 50, 1) and r[0][6] == char
+    res.append(('C-01 winner (NPC path) +50, one row (token 101, Tierra, credited)', gained['bga'] == 50 and one('bga', 150931),
+                f"gained {gained['bga']} rows {after['bga'][1]}"))
+    res.append(('C-01 loser (NPC path) +50, same as the winner', gained['bgb'] == 50 and one('bgb', 150933),
+                f"gained {gained['bgb']} rows {after['bgb'][1]}"))
+    res.append(('C-02 healer: heal only, no attack, auto path +50', gained['bgheal'] == 50 and one('bgheal', 150934),
+                f"gained {gained['bgheal']} rows {after['bgheal'][1]}"))
+    res.append(('C-03 AFK the whole match: 0, no row', gained['bgafk'] == 0 and after['bgafk'][1] == [],
+                f"gained {gained['bgafk']} rows {after['bgafk'][1]}; auto wait {st['auto_wait_s']} s; {st.get('auto_before_afk_answers')!r}"))
+    res.append(('C-03 left the match and did not come back: 0, no row', gained['bgleave'] == 0 and after['bgleave'][1] == [],
+                f"gained {gained['bgleave']} rows {after['bgleave'][1]}"))
+    res.append(('C-03 defender standing still after one move: +50 (not treated as AFK)', gained['bgdef'] == 50 and one('bgdef', 150938),
+                f"gained {gained['bgdef']} rows {after['bgdef'][1]}"))
+    res.append(('C-03 dead at the end (respawn wait): +50', gained['bgdead'] == 50 and one('bgdead', 150939),
+                f"gained {gained['bgdead']} rows {after['bgdead'][1]}; where {st['where_end']['MBQA_BGDEAD']}"))
+    st['relog'] = {'where_after_relog': w_relog, 'gained': gained['bgrelog'], 'rows': after['bgrelog'][1]}
+    res.append(('C-03 short disconnect + relog during the match: measured (credited only when back on the map)',
+                (gained['bgrelog'] == 50 and one('bgrelog', 150937)) == (w_relog.get('map') == 'bat_a01'),
+                f"where after relog {w_relog}; gained {gained['bgrelog']} rows {after['bgrelog'][1]}"))
+    res.append(('C-03 member after the AFK character in the auto loop: credited while the loop still waits in the AFK dialog',
+                st['def_row_while_waiting'] == after['bgdef'][1] and len(after['bgdef'][1]) == 1, f"while waiting {st['def_row_while_waiting']}"))
+    # existing BG behaviour, not a marble check: how the reward loop ends behind the AFK character
+    record('G2C-M1-BG-AUTO', 'OBSERVED', f"auto reply after 15 s {st['auto_before_afk_answers']!r}, after 90 s {auto!r}; "
+           f"GM free {bool(st['gm_free_after_90s'])}; defender BG items {st['def_items_after_first_auto']}; AFK BG items {st['afk_items_after_first_auto']}")
+    # C-04 duplicates: second auto call, second end call by the account, character change, other character of the account
+    s0 = {w: acct_snapshot(AID[w]) for w in ('bga', 'bgb', 'bgheal', 'bgdef', 'bgafk')}
+    t2 = bgcmd(g, '@mbqabgauto', '[MBQA] bgauto', wait=12)
+    r1 = kv(bgcmd(cl['bga'], '@mbqabgcredit Tierra 101', '[MBQA] bgcredit', wait=3)).get('rc')
+    r2 = kv(bgcmd(cl['bgheal'], '@mbqabgcredit Tierra 101', '[MBQA] bgcredit', wait=3)).get('rc')
+    cl['bga'].logout()
+    wait_offline(AID['bga'])
+    a2 = login('bga', 1)
+    r3 = kv(bgcmd(a2, '@mbqabgcredit Tierra 101', '[MBQA] bgcredit', wait=3)).get('rc')
+    s1 = {w: acct_snapshot(AID[w]) for w in ('bga', 'bgb', 'bgheal', 'bgdef', 'bgafk')}
+    st['def_items_after_second_auto'] = items(g, 'MBQA_BGDEF')
+    for r in resp:
+        r.close()
+    st['dup'] = {'auto2': t2, 'rc_bga1': r1, 'rc_heal': r2, 'rc_bga2': r3}
+    res.append(('C-04 second auto reward call (duplicate end): marble ledger unchanged', t2 is not None and s1 == s0,
+                f"{t2!r} (existing BG reward of members the first loop never reached: defender items {st['def_items_after_second_auto']})"))
+    res.append(('C-04 second end call for the same match: ALREADY (-4), ledger unchanged',
+                r1 == RC['ALREADY'] and r2 == RC['ALREADY'] and s1 == s0, f'rc {r1} / {r2}'))
+    res.append(('C-04 character change (MBQA_BGA2, same account): ALREADY (-4), ledger unchanged', r3 == RC['ALREADY'] and s1 == s0, f'rc {r3}'))
+    bgcmd(g, '@mbqabgreset', '[MBQA] bgreset')
+    # the leaver logs back in after the match: still nothing
+    lv = login('bgleave')
+    time.sleep(2)
+    st['leaver_back'] = {'where': where(g, 'MBQA_BGLEAVE'), 'rows': bg_rows(AID['bgleave'])}
+    res.append(('C-03 leaver logging back in after the match: still 0', bg_rows(AID['bgleave']) == [], repr(st['leaver_back'])))
+    res.append(('M1 ledger invariants: 0 violations', invariants() == [], repr(invariants()[:3])))
+    st['items_delta_m1'] = {n: delta(st['items0'][n], st['items1'][n]) for n in st['items0']}
+    g2c_state('m1', st)
+    g2c_record('G2C-M1', res)
+    for c in [g, afk, a2, lv] + [cl[w] for w in cl if w != 'bga']:
+        if c.alive:
+            c.logout()
+
+
+def g2c_m2():
+    """M2 Flavius (same cycle token 101): account sharing with the second character, Croix win, NPC + auto path."""
+    g = login('gm')
+    day = clock_to(g, G2C_DAY_A)
+    a2, b, h = login('bga', 1), login('bgb'), login('bgheal')
+    before = {w: score(AID[w]) for w in ('bga', 'bgb', 'bgheal')}
+    t = bg_start(g, 2, 101, ['MBQA_BGA2', 'MBQA_BGHEAL'], ['MBQA_BGB'])
+    res = [('M2 setup: Flavius, 3 joined on bat_b01', t.get('joined') == 3, repr(t))]
+    time.sleep(2)
+    play({'bga': (a2, 10, 290), 'bgb': (b, 390, 10)}, 9, heal=(h, a2.aid))
+    bgcmd(g, '@mbqabgend 2', '[MBQA] bgend')      # Croix wins
+    npc_claim(g, b, 2)
+    resp = [Responder(a2), Responder(h)]
+    auto = bgcmd(g, '@mbqabgauto', '[MBQA] bgauto', wait=10)
+    for r in resp:
+        r.close()
+    bgcmd(g, '@mbqabgreset', '[MBQA] bgreset')
+    after = {w: score(AID[w]) for w in before}
+    rows = {w: bg_rows(AID[w]) for w in before}
+    res.append(('M2 auto reward: 2 rewarded (BGA2, healer)', kv(auto).get('rewarded') == 2, repr(auto)))
+    res.append(('C-05 account sharing: MBQA_BGA2 credits the same account, BG 50 + 50 = 100',
+                after['bga'] - before['bga'] == 50 and earned(AID['bga'], day).get(3) == 100 and
+                [r[:2] for r in rows['bga']] == [(101, 1), (101, 2)] and rows['bga'][1][6] == 150932, f"rows {rows['bga']}"))
+    res.append(('C-06 same cycle token, other mode: a new row per mode (Flavius type 2)',
+                all(len(rows[w]) == 2 and rows[w][1][:6] == (101, 2, day, 50, 50, 1) for w in before), repr(rows)))
+    res.append(('M2 ledger invariants: 0 violations', invariants() == [], repr(invariants()[:3])))
+    g2c_state('m2', {'day': day, 'auto': auto, 'rows': rows, 'scores': {w: [before[w], after[w]] for w in before}})
+    g2c_record('G2C-M2', res)
+    for c in (g, a2, b, h):
+        c.logout()
+
+
+def g2c_m3():
+    """M3 KVM (same cycle token 101, draw): BG daily cap (third match = 0), total cap 200 with hunt + instance first."""
+    g = login('gm')
+    day = clock_to(g, G2C_DAY_A)
+    c = login('bgc')
+    to_field(c)
+    alive(c)
+    feed(c, 200)
+    feed(c, 200)
+    time.sleep(2)
+    c.command('@warp prontera 156 191')
+    time.sleep(2)
+    i1 = inst_clear(c, 1)
+    i2 = inst_clear(c, 2)
+    pre_c = earned(AID['bgc'], day)
+    a1, b, h = login('bga'), login('bgb'), login('bgheal')
+    before = {w: (score(AID[w]), earned(AID[w], day)) for w in ('bga', 'bgb', 'bgheal', 'bgc')}
+    t = bg_start(g, 3, 101, ['MBQA_BGA1', 'MBQA_BGB'], ['MBQA_BGHEAL', 'MBQA_BGC'])
+    res = [('M3 setup: bgc hunt 100 + instance 100 = total 200 before the match', pre_c.get(0) == 200 and pre_c.get(1) == 100 and pre_c.get(2) == 100,
+            f'earned {pre_c}; inst {i1!r} / {i2!r}'),
+           ('M3 setup: KVM, 4 joined on bat_c01', t.get('joined') == 4, repr(t))]
+    time.sleep(2)
+    play({'bga': (a1, 52, 129), 'bgb': (b, 53, 129), 'bgc': (c, 147, 55)}, 9, heal=(h, c.aid))
+    bgcmd(g, '@mbqabgend 3', '[MBQA] bgend')      # draw
+    npc_claim(g, a1, 1)                           # KVM01A (Guillaume side)
+    auto = bgcmd(g, '@mbqabgauto', '[MBQA] bgauto', wait=8)
+    bgcmd(g, '@mbqabgreset', '[MBQA] bgreset')
+    after = {w: (score(AID[w]), earned(AID[w], day)) for w in before}
+    rows = {w: bg_rows(AID[w]) for w in before}
+    capped = lambda w: rows[w] and rows[w][-1][:6] == (101, 3, day, 50, 0, 2)
+    res.append(('M3 auto reward (F_KvM_AutoRewardRandom): 3 rewarded', kv(auto).get('rewarded') == 3, repr(auto)))
+    res.append(('C-05 third match of the day: BG 50 + 50 + 0 (row CAPPED, credited 0) for bga / bgb / healer',
+                all(capped(w) and after[w][0] == before[w][0] and after[w][1].get(3) == 100 for w in ('bga', 'bgb', 'bgheal')), repr(rows)))
+    res.append(('C-05 total cap: bgc at 200 gets 0 from the match (BG earned 0, total stays 200)',
+                capped('bgc') and after['bgc'][0] == before['bgc'][0] and after['bgc'][1].get(0) == 200 and after['bgc'][1].get(3, 0) == 0,
+                f"rows {rows['bgc']} earned {after['bgc'][1]}"))
+    over = sql('SELECT account_id,period_day,activity,earned FROM need_marble_period WHERE (activity=0 AND earned>200) OR (activity=3 AND earned>100)')
+    res.append(('C-05 no account / day over BG 100 or total 200', over == [], repr(over)))
+    res.append(('M3 ledger invariants: 0 violations', invariants() == [], repr(invariants()[:3])))
+    g2c_state('m3', {'day': day, 'auto': auto, 'rows': rows, 'before': before, 'after': after})
+    g2c_record('G2C-M3', res)
+    for x in (g, c, a1, b, h):
+        x.logout()
+
+
+def g2c_clk():
+    """C-06 04:00 KST: a match rewarded at 03:59:5x belongs to the old logical day, one that starts before 04:00 and
+    is rewarded after it belongs to the new day (reward time decides)."""
+    g = login('gm')
+    k = login('bgclk')
+    res = []
+    t = bg_start(g, 1, 201, ['MBQA_BGCLK'], [])
+    play({'k': (k, 50, 374)}, 4)
+    bgcmd(g, '@mbqabgend 1', '[MBQA] bgend')
+    d1 = clock_to(g, '2026-11-21 03:59:50')
+    npc_claim(g, k, 1)
+    r1 = bg_rows(AID['bgclk'])
+    bgcmd(g, '@mbqabgreset', '[MBQA] bgreset')
+    d_start = clock_to(g, '2026-11-21 03:59:52')
+    t2 = bg_start(g, 2, 201, ['MBQA_BGCLK'], [])
+    play({'k': (k, 10, 290)}, 9)
+    bgcmd(g, '@mbqabgend 1', '[MBQA] bgend')
+    d2 = kv(bgcmd(g, '@mbqaflags', '[MBQA] flags', wait=3)).get('day')
+    npc_claim(g, k, 1)
+    r2 = bg_rows(AID['bgclk'])
+    bgcmd(g, '@mbqabgreset', '[MBQA] bgreset')
+    res.append(('C-06 setup: both matches started', t.get('joined') == 1 and t2.get('joined') == 1, f'{t} / {t2}'))
+    res.append(('C-06 rewarded at 03:59:5x KST -> old logical day 20261120', d1 == 20261120 and r1 == [(201, 1, 20261120, 50, 50, 1, 150941)], f'day {d1} rows {r1}'))
+    res.append(('C-06 started 03:59:52, rewarded after 04:00 -> new logical day 20261121 (one row each, no duplicate)',
+                d_start == 20261120 and d2 == 20261121 and r2 == r1 + [(201, 2, 20261121, 50, 50, 1, 150941)], f'start day {d_start}, reward day {d2}, rows {r2}'))
+    res.append(('C-06 each day counts its own BG points', earned(AID['bgclk'], 20261120).get(3) == 50 and earned(AID['bgclk'], 20261121).get(3) == 50,
+                f'{earned(AID["bgclk"], 20261120)} / {earned(AID["bgclk"], 20261121)}'))
+    res.append(('C-06 ledger invariants: 0 violations', invariants() == [], repr(invariants()[:3])))
+    g2c_state('clk', {'rows': r2})
+    g2c_record('G2C-CLK', res)
+    g.logout()
+    k.logout()
+
+
+def g2c_off():
+    """C-07: the same Tierra rewards with BG credit switched off for the day (policy row, effective next logical day).
+    The existing BG rewards must not differ from M1, and no marble row is written."""
+    m1 = g2c_state('m1')
+    sql(f"INSERT IGNORE INTO need_marble_policy (policy_key,effective_day,value,changed_by,changed_at) VALUES (4,{G2C_DAY_OFF},0,'g2c_off',NOW())")
+    g = login('gm')
+    day = clock_to(g, '2026-11-22 12:00:00')
+    a1, b = login('bga'), login('bgb')
+    s0 = {w: acct_snapshot(AID[w]) for w in ('bga', 'bgb')}
+    i0 = {n: items(g, n) for n in ('MBQA_BGA1', 'MBQA_BGB')}
+    t = bg_start(g, 1, 301, ['MBQA_BGA1'], ['MBQA_BGB'])
+    play({'bga': (a1, 50, 374), 'bgb': (b, 42, 16)}, 6)
+    bgcmd(g, '@mbqabgend 1', '[MBQA] bgend')
+    npc_claim(g, a1, 1)
+    npc_claim(g, b, 2)
+    i1 = {n: items(g, n) for n in i0}
+    bgcmd(g, '@mbqabgreset', '[MBQA] bgreset')
+    s1 = {w: acct_snapshot(AID[w]) for w in ('bga', 'bgb')}
+    d_off = {n: delta(i0[n], i1[n]) for n in i0}
+    pol = kv(bgcmd(g, '@mbqaflags', '[MBQA] flags', wait=3))
+    res = [('C-07 setup: logical day 20261122 with BG credit off, match started', day == G2C_DAY_OFF and t.get('joined') == 2, f'day {day}; {t}'),
+           ('C-07 BG credit off: no marble row, ledger unchanged', s1 == s0, f'changed {[w for w in s0 if s0[w] != s1[w]]}'),
+           ('C-07 existing BG rewards (badges, 6378, 399990, #BATTLEGROUND_POINT) identical with marble on (M1) and off',
+            d_off == m1.get('items_delta_m1') and all(d_off.values()), f'off {d_off} / on {m1.get("items_delta_m1")}')]
+    allrows = sql('SELECT COUNT(*) FROM need_marble_cp_payout')[0][0]
+    cash = sql("SELECT COUNT(*) FROM acc_reg_num WHERE `key`='#CASHPOINTS'")[0][0]
+    res.append(('C-07 #CASHPOINTS rows 0, CP payout rows 0 (no CP decided or applied)', cash == '0' and allrows == '0', f'cash {cash} payout {allrows}'))
+    inv = invariants()
+    res.append(('C-07 ledger invariants over the whole DB: 0 violations', inv == [], repr(inv[:3])))
+    other = sql('SELECT COUNT(*) FROM need_marble_activity WHERE account_id NOT BETWEEN 2000921 AND 2000930')[0][0]
+    res.append(('C-07 no marble row for any account outside the G2-C test accounts', other == '0', f'rows {other}'))
+    g2c_state('off', {'day': day, 'delta_off': d_off, 'delta_on': m1.get('items_delta_m1'), 'flags': pol})
+    g2c_record('G2C-OFF', res)
+    for x in (g, a1, b):
+        x.logout()
+
+
+def g2c_cancel():
+    """C-03 cancelled match: the REAL admin force stop (NEED_BG_RM_Core::OnAdminForceStop) in the middle of a Tierra match,
+    then every end path is tried anyway (result, reward NPC click when still possible, auto reward). Expect 0 marble rows."""
+    g = login('gm')
+    day = clock_to(g, '2026-11-25 12:00:00')
+    b, h = login('bgb'), login('bgheal')
+    s0 = {w: acct_snapshot(AID[w]) for w in ('bgb', 'bgheal')}
+    t = bg_start(g, 1, 401, ['MBQA_BGHEAL'], ['MBQA_BGB'])
+    play({'bgb': (b, 42, 16)}, 6, heal=(h, h.aid))
+    stop = kv(bgcmd(g, '@mbqabgstop', '[MBQA] bgstop', wait=5))
+    w_after = {n: where(g, n) for n in ('MBQA_BGB', 'MBQA_BGHEAL')}
+    bgcmd(g, '@mbqabgend 1', '[MBQA] bgend')           # a late result after the cancel
+    clicked = []
+    for c, team, n in ((h, 1, 'MBQA_BGHEAL'), (b, 2, 'MBQA_BGB')):
+        if w_after[n].get('map') == 'bat_a01':          # still on the battle map: try the reward NPC anyway
+            r = Responder(c)
+            clicked.append((n, npc_claim(g, c, team)))
+            r.close()
+    auto = bgcmd(g, '@mbqabgauto', '[MBQA] bgauto', wait=8)
+    rows = {w: [r for r in bg_rows(AID[w]) if r[0] == 401] for w in ('bgb', 'bgheal')}
+    s1 = {w: acct_snapshot(AID[w]) for w in ('bgb', 'bgheal')}
+    res = [('cancel setup: Tierra token 401, 2 joined, then the real admin force stop ends the cycle',
+            t.get('joined') == 2 and stop.get('cycle') == 0, f'{t} / stop {stop}'),
+           ('C-03 cancelled match: auto reward gives nothing', kv(auto).get('rewarded') == 0, repr(auto)),
+           ('C-03 cancelled match: no marble row for token 401, ledger unchanged (every end path tried)',
+            rows == {'bgb': [], 'bgheal': []} and s1 == s0, f'rows {rows}; where after stop {w_after}; npc clicks {clicked}'),
+           ('cancel ledger invariants: 0 violations', invariants() == [], repr(invariants()[:3]))]
+    g2c_state('cancel', {'day': day, 'stop': stop, 'where_after_stop': w_after, 'clicked': clicked, 'auto': auto, 'rows': rows})
+    g2c_record('G2C-CANCEL', res)
+    bgcmd(g, '@mbqabgreset', '[MBQA] bgreset')
+    for x in (g, b, h):
+        x.logout()
+
+
 def main():
     global OUT
     ap = argparse.ArgumentParser()

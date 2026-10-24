@@ -1,0 +1,47 @@
+[
+ {
+  "check": "precondition: alive, clean account",
+  "ok": true,
+  "detail": "'[MBQA] state hp=800 lv=99 map=yuno_fild02 kills=0'"
+ },
+ {
+  "check": "setup: pending spans three logical days while batch 1 is frozen",
+  "ok": true,
+  "detail": "days [20261120, 20261121, 20261122]; flags {'in_tx': 0, 'fault': 0, 'day': 20261122, 'polday': 20261122, 'session': 1, 'batch': 1, 'frozen': 1, 'pending': 15, 'pdays': 3}"
+ },
+ {
+  "check": "V21-1 batch over three periods + following batch: one row per (session, batch, period)",
+  "ok": true,
+  "detail": "rows [(1, 1, 20261120, 20), (1, 2, 20261120, 5), (1, 2, 20261121, 5), (1, 2, 20261122, 10), (1, 3, 20261122, 20)]"
+ },
+ {
+  "check": "V21-1 progress per period = batch sum (I11)",
+  "ok": true,
+  "detail": "progress [(25, 1), (5, 1), (30, 1)]"
+ },
+ {
+  "check": "V21-2 exact resend of batch 2: ALREADY, nothing written",
+  "ok": true,
+  "detail": "rc -4"
+ },
+ {
+  "check": "V21-3 same key, different kills: mismatch detected and fail-closed (request 4.3)",
+  "ok": true,
+  "detail": "rc -21; flags fault=0; rows changed []; log 'tent, nothing written.\\r\\n(10/24/2026 08:52:34) [ Warning ] : need_marble_test: replay session 1 batch 2 (20261120:6,20261121:5,20261122:10) -> -21, credited 0.\\r\\n'"
+ },
+ {
+  "check": "V21-4 same key with an extra period: mismatch detected and fail-closed (request 4.3)",
+  "ok": true,
+  "detail": "rc -21; flags fault=0; D3 progress (0, 1); rows changed []"
+ },
+ {
+  "check": "V21-4b same key, new period first: mismatch detected and fail-closed (request 4.3)",
+  "ok": true,
+  "detail": "rc -21; flags fault=0; D1 progress (5, 1); rows changed []"
+ },
+ {
+  "check": "V21-5 COMMIT reported failed although committed: module fails closed",
+  "ok": true,
+  "detail": "flags {'in_tx': 0, 'fault': 1, 'day': 20261122, 'polday': 20261122, 'session': 1, 'batch': 4, 'frozen': 4, 'pending': 0, 'pdays': 0}; D2 progress (50, 1)"
+ }
+]

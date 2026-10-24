@@ -265,6 +265,57 @@ check('marble logical day ignores the OS time zone (no localtime / gmtime / mkti
 check('runner never starts / stops a process for G2-B (restarts are operator steps)',
       not re.search(r'subprocess|bc_servers\.ps1\s*-|os\.kill|taskkill', runner.split('# ---------------------------------------------------------------------------- G2-B')[1]))
 
+# 13. G2-C v1.1: one finished battleground match = BG points per account, credited from the reward functions
+bg_common = read('npc/battleground/bg_common.txt', 'cp949')
+kvm = read('npc/battleground/kvm/kvm01.txt', 'cp949')
+old_users = []
+for base, _, fs in os.walk(ROOT / 'src'):
+    for fn in fs:
+        if fn.endswith(('.cpp', '.hpp', '.inc')) and b'need_marble_bg_match' in (Path(base) / fn).read_bytes():
+            old_users.append(fn)
+for base, _, fs in os.walk(ROOT / 'npc'):
+    for fn in fs:
+        if fn.endswith('.txt') and b'need_marble_bg_match' in (Path(base) / fn).read_bytes():
+            old_users.append(fn)
+check('need_marble_bg_match (map-wide sample ratio) is gone from src/ and npc/', not old_users, str(old_users))
+
+
+def func_body(text, name):
+    at = text.find('function\tscript\t' + name + '\t{')
+    return text[at:text.find('\n}', at)] if at >= 0 else ''
+
+
+badge = func_body(bg_common, 'F_BG_Badge')
+grant = func_body(kvm, 'F_KvM_GrantReward')
+hook_badge = 'if ($@BG_RM_CYCLE_ACTIVE)\r\n\t\tneed_marble_bg_credit(.@bg_type$, $@BG_RM_TOKEN);'
+hook_kvm = 'if ($@BG_RM_CYCLE_ACTIVE)\r\n\t\tneed_marble_bg_credit("KVM", $@BG_RM_TOKEN);'
+check('F_BG_Badge credits the marble once the match type is known, before close2 waits for the player (random match cycle only)',
+      badge.count('need_marble_bg_credit(') == 1 and hook_badge in badge and
+      -1 < badge.find('else\r\n\t\treturn;') < badge.find(hook_badge) < badge.find('if (getarg(0) == 1)') < badge.find('close2;'))
+auto_rb = func_body(bg_common, 'F_BG_RM_AutoRewardBadge')
+check('F_BG_RM_AutoRewardBadge credits every member on the map before the reward loop that waits in close2 (G2-C M1)',
+      auto_rb.count('need_marble_bg_credit(.@bg_type$, $@BG_RM_TOKEN);') == 1 and
+      -1 < auto_rb.find('if (!$@BG_RM_CYCLE_ACTIVE)') < auto_rb.find('need_marble_bg_credit(') < auto_rb.find('F_BG_RM_TryClaimReward') <
+      auto_rb.find('callfunc "F_BG_Badge"'))
+check('F_KvM_GrantReward credits the marble after the existing rewards (random match cycle only)',
+      grant.count('need_marble_bg_credit(') == 1 and hook_kvm in grant and grant.find('F_NEED_Chuseok_BG_Reward') < grant.find(hook_kvm))
+other_npc = []
+for base, _, fs in os.walk(ROOT / 'npc'):
+    for fn in fs:
+        if fn.endswith('.txt') and b'need_marble_bg_credit' in (Path(base) / fn).read_bytes():
+            other_npc.append(fn)
+check('need_marble_bg_credit is called only from bg_common.txt (F_BG_Badge, F_BG_RM_AutoRewardBadge) and kvm01.txt',
+      sorted(other_npc) == ['bg_common.txt', 'kvm01.txt'] and bg_common.count('need_marble_bg_credit(') == 2, str(other_npc))
+check('script command need_marble_bg_credit is defined as "si"',
+      'BUILDIN_DEF(need_marble_bg_credit,"si"),' in inc_def and 'BUILDIN_FUNC(need_marble_bg_credit)' in inc)
+bgc_at = cpp.find('int32 need_marble_bg_credit(')
+bgc = cpp[bgc_at:cpp.find('\n}\n', bgc_at)] if bgc_at >= 0 else ''
+check('need_marble_bg_credit: switch off -> DISABLED, AFK rule from need_marble_logic.hpp, key (boot, token, type)',
+      'P(P_BG_ENABLED) != 1)\n\t\treturn NEED_MARBLE_DISABLED;' in bgc and 'bg_afk_excluded(' in bgc and
+      'bg_credit(sd, boot, match_token, type_code)' in bgc and 'inline bool bg_afk_excluded(' in logic)
+check('G2-C adds no participation / kill / heal count rule', 'P_BG_MIN_SAMPLES' not in bgc and 'P_BG_MIN_ACTIVE_PERMIL' not in bgc and
+      'kill' not in bgc.lower() and 'heal' not in bgc.lower())
+
 failed = [r for r in results if not r[1]]
 for name, ok, detail in results:
     print(('PASS ' if ok else 'FAIL ') + name + (f'  [{detail}]' if detail and not ok else ''))

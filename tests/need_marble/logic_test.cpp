@@ -48,7 +48,7 @@ static void test_policy_defaults() {
 	// switches default OFF
 	CHECK(v[P_ENABLED] == 0);
 	CHECK(v[P_CP_APPLY_ENABLED] == 0);
-	CHECK(v[P_BG_ENABLED] == 0);
+	CHECK(v[P_BG_ENABLED] == 1);   // G2-C v1.1: BG credit is part of the board (the master switch above stays off)
 	CHECK(v[P_DUNGEON_AUTO_SAFE] == 0);
 }
 
@@ -328,6 +328,18 @@ static void test_hunt_resend() {
 	CHECK(hunt_resend_check(stored, M{{20261122, 21}}, std::set<uint32_t>{20261122}) == HUNT_RESEND_CONFLICT);   // capped day with a row must match
 }
 
+// G2-C v1.1: a finished match is left out only when the player was obviously AFK the whole time.
+static void test_bg_afk() {
+	CHECK(!bg_afk_excluded(0, 0, true));     // no sample (short match, joined late): credited
+	CHECK(!bg_afk_excluded(0, 0, false));
+	CHECK(bg_afk_excluded(6, 0, true));      // idle at every sample and still idle at the reward
+	CHECK(!bg_afk_excluded(6, 0, false));    // idle samples but active at the reward: credited
+	CHECK(!bg_afk_excluded(6, 1, true));     // one active sample is enough, whatever the job
+	CHECK(!bg_afk_excluded(1, 1, true));
+	CHECK(bg_afk_excluded(1, 0, true));
+	CHECK(!bg_afk_excluded(100, 1, false));  // no ratio rule
+}
+
 static void test_laps() {
 	CHECK(lap_reached(32, 33) == 0);
 	CHECK(lap_reached(33, 33) == 1);
@@ -348,6 +360,7 @@ int main() {
 	test_hunt_v22_fixtures();
 	test_v24_boundaries();
 	test_hunt_resend();
+	test_bg_afk();
 	test_laps();
 	std::printf("need_marble logic: %d passed, %d failed\n", g_pass, g_fail);
 	return g_fail == 0 ? EXIT_SUCCESS : EXIT_FAILURE;

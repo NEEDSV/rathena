@@ -156,7 +156,7 @@ inline policy_values policy_defaults() {
 	v[P_ENABLED] = 0;
 	v[P_HUNT_ENABLED] = 1;
 	v[P_INSTANCE_ENABLED] = 1;
-	v[P_BG_ENABLED] = 0;            // participation rule not verified yet
+	v[P_BG_ENABLED] = 1;            // G2-C v1.1: 50 points per normally finished match (the master switch stays off)
 	v[P_CP_APPLY_ENABLED] = 0;
 	v[P_SEASON_ID] = 1;
 
@@ -188,8 +188,8 @@ inline policy_values policy_defaults() {
 	v[P_BG_POINTS] = 50;
 	v[P_BG_ACTIVE_SEC] = 60;
 	v[P_BG_SAMPLE_SEC] = 30;
-	v[P_BG_MIN_SAMPLES] = 10;
-	v[P_BG_MIN_ACTIVE_PERMIL] = 500;
+	v[P_BG_MIN_SAMPLES] = 10;          // unused since G2-C v1.1 (no sample count / ratio rule), kept for old policy rows
+	v[P_BG_MIN_ACTIVE_PERMIL] = 500;   // unused since G2-C v1.1
 
 	v[P_WARP_DEST_7] = 13;          // draft, operator confirmation pending (N10)
 	v[P_WARP_DEST_22] = 28;         // draft, operator confirmation pending (N10)
@@ -361,6 +361,14 @@ inline uint64_t lap_reached(uint64_t step_seq_after, int32_t lap_steps) {
 // True when every hunt tier of the day is already credited (next_tier is the first tier not credited yet).
 inline bool hunt_day_maxed(int32_t next_tier, int32_t max_tiers) {
 	return next_tier > max_tiers;
+}
+
+// G2-C v1.1: a battleground participant is left out only when obviously AFK for the whole match: every
+// activity sample of the match (taken every P_BG_SAMPLE_SEC on the team) was idle AND the player is idle
+// now. No sample at all (short match, a relog, a restart) never excludes anyone; support players who
+// heal, buff, guard or wait between deaths count as long as they acted once in a sample window.
+inline bool bg_afk_excluded(uint32_t samples, uint32_t active_samples, bool idle_now) {
+	return samples > 0 && active_samples == 0 && idle_now;
 }
 
 // V21: what a hunt batch (collect_session, batch_no) is, given the rows already stored under that key.
