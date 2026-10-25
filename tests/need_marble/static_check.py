@@ -97,10 +97,47 @@ def strip_comments(text):
 for rel, text in (('need_marble.cpp', cpp), ('need_marble.hpp', hpp), ('board_v2 NPC', npc)):
     check(f'{rel}: no CASHPOINTS / pc_getcash / pc_paycash in code',
           not re.search(r'CASHPOINT|cashPoints|pc_getcash|pc_paycash|SP_CASHPOINTS|acc_reg_num', strip_comments(text)))
-check('cp_payout rows only inserted with status 1 (DECIDED)',
-      re.search(r"INSERT INTO `need_marble_cp_payout`.*?'1','%u',NOW\(\)", cpp, re.S) is not None and
-      not re.search(r'UPDATE `need_marble_cp_payout`', cpp))
-check('CP apply switch must be 0 for a valid policy', "if (v[P_CP_APPLY_ENABLED] != 0)" in logic)
+def cpp_func(name):
+    at = cpp.find('\nint32 ' + name + '(')
+    return cpp[at:cpp.find('\n}\n', at)] if at >= 0 else ''
+
+
+apply_fn, resolve_fn = cpp_func('need_marble_cp_apply'), cpp_func('need_marble_cp_resolve')
+updates = [m.start() for m in re.finditer(r'UPDATE `need_marble_cp_payout`', cpp)]
+check('cp_payout rows only inserted with status 1 (DECIDED); status changed only by need_marble_cp_apply / need_marble_cp_resolve',
+      re.search(r"INSERT INTO `need_marble_cp_payout`.*?'1','%u',NOW\(\)", cpp, re.S) is not None and len(updates) == 3 and
+      apply_fn.count('UPDATE `need_marble_cp_payout`') == 2 and resolve_fn.count('UPDATE `need_marble_cp_payout`') == 1)
+check('CP switch: 1 is valid only with a registered writer, anything else stays invalid',
+      "if (v[P_CP_APPLY_ENABLED] != 0 && !(cp_writer && v[P_CP_APPLY_ENABLED] == 1))" in logic and
+      'validate_policy(v, &bad_key, g_cp_writer != nullptr)' in cpp)
+
+# 15. V20 prep: CP apply state machine (mock writer in the test build only)
+writer_calls = [m.start() for m in re.finditer(r'need_marble_cp_set_writer\(', cpp + hpp + inc + inc_def)]
+check('no CP writer is registered by the repository sources (only declaration + definition of need_marble_cp_set_writer)',
+      len(writer_calls) == 2 and 'g_cp_writer = writer;' in cpp and 'need_marble_cp_writer g_cp_writer = nullptr;' in cpp)
+check('need_marble_cp_apply: DISABLED without writer / audit table / key 5 = 1, before anything is read',
+      'if (!ready() || !g_cp_audit_ok || g_cp_writer == nullptr || P(P_CP_APPLY_ENABLED) != 1)\n\t\treturn NEED_MARBLE_DISABLED;' in apply_fn)
+claim = apply_fn.find("CPS_UNCERTAIN, aid, payout_no, CPS_DECIDED")
+check('need_marble_cp_apply: DECIDED -> UNCERTAIN committed (claim audit) before the writer runs, final record in a second transaction',
+      -1 < claim < apply_fn.find('cp_audit_in_tx(aid, payout_no, CPS_DECIDED, CPS_UNCERTAIN, 1') < apply_fn.find('if (!tx.commit())') <
+      apply_fn.find('g_cp_writer(aid, cid, payout_no, amount)') < apply_fn.rfind('ledger_tx tx;') and apply_fn.count('g_cp_writer(') == 1)
+check('need_marble_cp_apply: only DECIDED reaches the writer (UNCERTAIN -> -22, APPLIED / MANUAL_APPLIED -> ALREADY, VOID -> BAD_STATE)',
+      'if (status == CPS_APPLIED || status == CPS_MANUAL_APPLIED)\n\t\t\treturn NEED_MARBLE_ALREADY;' in apply_fn and
+      'if (status != CPS_DECIDED)\n\t\t\treturn status == CPS_UNCERTAIN ? NEED_MARBLE_UNCERTAIN : NEED_MARBLE_BAD_STATE;' in apply_fn)
+check('writer answer -> status only through cp_status_after_write (unknown -> UNCERTAIN), UNCERTAIN back to DECIDED only on CPW_NO_EFFECT',
+      'const int32 to = cp_status_after_write(written);' in apply_fn and 'return CPS_UNCERTAIN;' in logic and
+      'if (writer_result == CPW_NO_EFFECT)\n\t\treturn CPS_DECIDED;' in logic)
+check('need_marble_cp_resolve: UNCERTAIN -> MANUAL_APPLIED / MANUAL_VOID only, ticket required, audited',
+      '!cp_resolvable(CPS_UNCERTAIN, to_status)' in resolve_fn and 'ticket == 0' in resolve_fn and 'if (status != CPS_UNCERTAIN)' in resolve_fn and
+      'cp_audit_in_tx(account_id, payout_no, CPS_UNCERTAIN, to_status, 5' in resolve_fn and
+      'return from_status == CPS_UNCERTAIN && (to_status == CPS_MANUAL_APPLIED || to_status == CPS_MANUAL_VOID);' in logic)
+check('need_marble_cp_audit is not a ledger table: the module keeps working where the V20 migration is not applied',
+      'need_marble_cp_audit' not in cpp[cpp.find('LEDGER_TABLES[]'):cpp.find('};', cpp.find('LEDGER_TABLES[]'))] and 'cp_audit_check()' in cpp)
+hooks_v20 = read('tests/need_marble/g2/test_hooks/need_marble_test_v20.inc')
+check('mock CP writer lives only in the test hooks, under NEED_MARBLE_TEST_HOOKS, and refuses outside ragnarok_mbqa',
+      hooks_v20.startswith('#ifdef NEED_MARBLE_TEST_HOOKS') and hooks_v20.rstrip().endswith('#endif  // NEED_MARBLE_TEST_HOOKS') and
+      'strcmp(db, "ragnarok_mbqa") == 0' in hooks_v20 and 'need_marble_cp_set_writer(&need_marble_test_cp_writer)' in hooks_v20 and
+      'need_marble_test_cp_writer' not in cpp + inc + inc_def and not re.search(r'CASHPOINT|pc_getcash|acc_reg_num', strip_comments(hooks_v20)))
 
 # 5. Transaction ownership: START/COMMIT/ROLLBACK only inside ledger_tx
 for word in ('START TRANSACTION', 'COMMIT', 'ROLLBACK'):

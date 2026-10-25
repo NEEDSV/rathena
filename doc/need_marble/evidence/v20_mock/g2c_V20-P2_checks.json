@@ -1,0 +1,57 @@
+[
+ {
+  "check": "CP-5 after the restart: crashed row still UNCERTAIN with its one change, claim audit only (1 -> 3)",
+  "pass": true,
+  "detail": "row (1, 9, 0, 500, 0, 3, 0) changes [(500, 3)] audit [(6, 1, 3, 1, 0)]"
+ },
+ {
+  "check": "CP-5 relog + restart + the same requests again: UNCERTAIN stays blocked (-22), APPLIED stays ALREADY (-4), no change",
+  "pass": true,
+  "detail": "rc -22/-22/-4; balance 17000 -> 17000"
+ },
+ {
+  "check": "CP-5 reconciliation input checked: ticket 0 / back to DECIDED refused (BAD_ARG), APPLIED row not resolvable (BAD_STATE)",
+  "pass": true,
+  "detail": "rc -16/-16/-10"
+ },
+ {
+  "check": "CP-5 operator: crashed and answer-lost rows with a change -> MANUAL_APPLIED (4), granted = amount, ticket kept",
+  "pass": true,
+  "detail": "rc 0/0; U (1, 9, 0, 500, 500, 4, 7001) Z (1, 3, 0, 1500, 1500, 4, 7004)"
+ },
+ {
+  "check": "CP-5 operator: answer lost with no change -> MANUAL_VOID (5), granted 0",
+  "pass": true,
+  "detail": "rc 0; W (1, 4, 0, 500, 0, 5, 7002)"
+ },
+ {
+  "check": "CP-5 after reconciliation: MANUAL_APPLIED -> ALREADY, MANUAL_VOID -> BAD_STATE, still no change",
+  "pass": true,
+  "detail": "rc -4/-10"
+ },
+ {
+  "check": "CP-6 switch off again (key 5 = 0): DISABLED, the DECIDED row stays, balance unchanged",
+  "pass": true,
+  "detail": "rc -1"
+ },
+ {
+  "check": "CP-1/CP-6 no new decision and no re-draw over the whole run (same keys and amounts as after the rolls)",
+  "pass": true,
+  "detail": "16 payouts"
+ },
+ {
+  "check": "CP invariants at the end: 0 violations (one change per applied decision, balance = changes, audit chain)",
+  "pass": true,
+  "detail": "[]"
+ },
+ {
+  "check": "CP-6 real #CASHPOINTS rows 0, cashlog rows 0, other account untouched",
+  "pass": true,
+  "detail": "#CASHPOINTS 0 cashlog 0"
+ },
+ {
+  "check": "marble ledger invariants (sql-files) over the whole DB: 0 violations",
+  "pass": false,
+  "detail": "['CP3\\t2000941\\t1\\t2', 'CP3\\t2000941\\t2\\t2', 'CP3\\t2000941\\t3\\t4']"
+ }
+]

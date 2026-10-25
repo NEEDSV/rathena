@@ -3113,6 +3113,294 @@ def bga_a4():
         c.logout()
 
 
+# ---------------------------------------------------------------------------- V20-MOCK (CP-1..CP-6)
+# Needs: map-server built with apply_test_hooks.py --g2b --v20 (mock CP writer), harness bc_stack_extras.py --g2b --v20,
+# sql-files/need_marble_v20_cp_apply.sql and bc_synth_v20.sql (root). p1, then the operator restarts the map-server
+# (the mock writer stopped it in CP-5), then p2. The runner never controls a process.
+ACC.update({'cpa': ('mbqa_cpa', 'user'), 'cpb': ('mbqa_cpb', 'user')})
+AID.update({'cpa': 2000941, 'cpb': 2000942})
+NAMES.update({('cpa', 0): 'MBQA_CPA1', ('cpa', 1): 'MBQA_CPA2', ('cpb', 0): 'MBQA_CPB'})
+RC.update({'DISABLED': -1, 'NOT_FOUND': -9, 'BAD_STATE': -10, 'REJECTED': -20, 'UNCERTAIN': -22})
+CP_TRANSITIONS = {(1, 3, 1), (3, 2, 2), (3, 1, 3), (3, 3, 4), (3, 4, 5), (3, 5, 5)}   # (from, to, reason) the ledger may write
+
+
+def payouts(aid):
+    """{payout_no: (src_type, src_a, src_b, amount, granted, status, operator_ticket)}"""
+    return {int(r[0]): tuple(int(x) if x not in ('NULL', None) else 0 for x in r[1:]) for r in
+            sql(f'SELECT payout_no,src_type,src_a,src_b,amount,granted,status,COALESCE(operator_ticket,0) FROM need_marble_cp_payout '
+                f'WHERE account_id={aid} ORDER BY payout_no')}
+
+
+def mock_ops(aid):
+    ops = {}
+    for no, amount, mode in sql(f'SELECT payout_no,amount,mode FROM mbqa_cp_mock_op WHERE account_id={aid} ORDER BY op_id'):
+        ops.setdefault(int(no), []).append((int(amount), int(mode)))
+    return ops
+
+
+def mock_bal(aid):
+    r = sql(f'SELECT balance FROM mbqa_cp_mock_balance WHERE account_id={aid}')
+    return int(r[0][0]) if r else 0
+
+
+def cp_audit(aid):
+    return [tuple(int(x) for x in r) for r in
+            sql(f'SELECT payout_no,from_status,to_status,reason,COALESCE(operator_ticket,0) FROM need_marble_cp_audit '
+                f'WHERE account_id={aid} ORDER BY audit_id')]
+
+
+def cp_rc(t):
+    return kv(t).get('rc') if t else None
+
+
+def cpapply(g, name, no, wait=6):
+    return cp_rc(harness(g, f'@mbqacpapply {name} {no}', needle='[MBQA] cpapply', wait=wait))
+
+
+def cpmode(g, mode):
+    return kv(harness(g, f'@mbqacpmode {mode}', needle='[MBQA] cpmode', wait=3)).get('mode')
+
+
+def cpresolve(g, aid, no, to, ticket):
+    return cp_rc(harness(g, f'@mbqacpresolve {aid} {no} {to} {ticket}', needle='[MBQA] cpresolve', wait=4))
+
+
+def v20_inv(aid):
+    """Payout ledger vs mock balance: at most one balance change per decision, APPLIED / MANUAL_APPLIED exactly one,
+    DECIDED / MANUAL_VOID none, balance = sum of the changes, audit trail ends at the current status."""
+    bad = []
+    pays, ops, aud = payouts(aid), mock_ops(aid), cp_audit(aid)
+    last = {}
+    for no, f, t, reason, _ in aud:
+        if (f, t, reason) not in CP_TRANSITIONS:
+            bad.append(('transition', no, f, t, reason))
+        if no in last and last[no] != f:
+            bad.append(('audit chain', no, last[no], f))
+        last[no] = t
+    for no, (_, _, _, amount, granted, status, _) in pays.items():
+        o = ops.get(no, [])
+        if len(o) > 1:
+            bad.append(('applied twice', no, o))
+        if status in (2, 4) and (len(o) != 1 or granted != amount or o[0][0] != amount):
+            bad.append(('applied without one change', no, status, granted, o))
+        if status in (1, 5) and (o or granted != 0):
+            bad.append(('change without apply', no, status, granted, o))
+        if status == 3 and granted != 0:
+            bad.append(('uncertain with granted', no, granted))
+        if last.get(no, 1) != status:
+            bad.append(('audit end', no, last.get(no), status))
+    for no in ops:
+        if no not in pays:
+            bad.append(('change for no decision', no))
+    if mock_bal(aid) != sum(a for o in ops.values() for a, _ in o):
+        bad.append(('balance', mock_bal(aid), ops))
+    return bad
+
+
+def map_alive():
+    import socket
+    try:
+        socket.create_connection(('127.0.0.1', 25121), 2).close()
+        return True
+    except OSError:
+        return False
+
+
+def cmd_v20(a):
+    """V20-MOCK: DECIDED -> UNCERTAIN (before the writer) -> APPLIED / back to DECIDED (confirmed no effect) / stays
+    UNCERTAIN, with the mock writer of the test build only. Phases p1 (ends with the map-server stopped by the mock), p2."""
+    globals()['v20_' + (a.rest[0] if a.rest else 'p1')]()
+
+
+def v20_p1():
+    aid, bid = AID['cpa'], AID['cpb']
+    g = login('gm')
+    d1 = clock_to(g, '2026-12-01 12:00:00')
+    c = login('cpa')
+    enter_board(c)
+    res = []
+    # real decisions from the board (current draft policy): roll until one roll decides a tile CP AND the 33 step bonus
+    pair, rolls, bad = None, [], []
+    for i in range(80):
+        w = wallet(aid)
+        if not w or w['dice'] < 1:
+            adjust(aid, dice=25, ticket=920000 + i)
+        before = set(payouts(aid))
+        r = one_roll(c, aid, i)
+        new = {k: v for k, v in payouts(aid).items() if k not in before}
+        rolls.append({'roll': r['roll'], 'die': r['die'], 'to': r['to'], 'event': r['event'], 'new_payouts': new})
+        tile = [k for k, v in new.items() if v[0] == 1]
+        lap = [k for k, v in new.items() if v[0] == 2]
+        ev_cp = int(r['event'][0][3]) if r['event'] else 0
+        if (ev_cp > 0) != bool(tile) or (tile and new[tile[0]][3] != ev_cp) or (tile and new[tile[0]][1] != r['roll']):
+            bad.append(('tile', r['roll'], ev_cp, new))
+        if any(new[k][3] != 10000 for k in lap):
+            bad.append(('lap', r['roll'], new))
+        if tile and lap and pair is None:
+            pair = (tile[0], lap[0], r['roll'])
+        if r['state'] != 0:
+            bad.append(('state', r))
+            break
+        if pair and sum(1 for v in payouts(aid).values() if v[5] == 1) >= 9:
+            break
+    c.logout()
+    wait_offline(aid)
+    p0 = payouts(aid)
+    st = {'day1': d1, 'rolls': rolls, 'pair': pair, 'payouts_after_rolls': p0}
+    res.append(('V20 decisions from real rolls: tile CP = arrival event CP of that roll, 33 step bonus 10000, all DECIDED',
+                not bad and pair is not None and all(v[5] == 1 and v[4] == 0 for v in p0.values()),
+                f'{len(rolls)} rolls, {len(p0)} payouts, pair {pair}, bad {bad[:3]}'))
+    if pair is None:
+        g2c_state('v20p1', st)
+        g2c_record('V20-P1', res)
+        return
+    tile, lap, roll = pair
+    free = [k for k, v in p0.items() if v[5] == 1 and k not in (tile, lap)]
+    X, Y, Z, W, V, U = free[:6]
+    st['roles'] = {'tile': tile, 'lap': lap, 'X_double': X, 'Y_no_effect': Y, 'Z_lost_after_change': Z, 'W_lost_before_change': W,
+                   'V_left_decided': V, 'U_crash': U}
+    c = login('cpa')
+    # CP-6 switch off (policy key 5 = 0, the default): DECIDED stays, nothing changes
+    r_off = cpapply(g, 'MBQA_CPA1', tile)
+    res.append(('CP-6 switch off (key 5 default 0): DISABLED, row DECIDED, mock balance 0, no audit',
+                r_off == RC['DISABLED'] and payouts(aid)[tile][5] == 1 and mock_bal(aid) == 0 and cp_audit(aid) == [], f'rc {r_off}'))
+    sql("INSERT IGNORE INTO need_marble_policy (policy_key,effective_day,value,changed_by,changed_at) VALUES (5,20261202,1,'v20_mock_on',NOW())")
+    d2 = clock_to(g, '2026-12-02 12:00:00')
+    # CP-2 tile CP and 33 step bonus decided in the same roll: each applied once under its own key
+    r_t, r_l = cpapply(g, 'MBQA_CPA1', tile), cpapply(g, 'MBQA_CPA1', lap)
+    p, o = payouts(aid), mock_ops(aid)
+    res.append(('CP-2 same roll: tile CP (src 1) and 33 step bonus (src 2) each APPLIED once, balance = sum',
+                r_t == RC['OK'] and r_l == RC['OK'] and p[tile][5] == 2 and p[lap][5] == 2 and len(o.get(tile, [])) == 1 and
+                len(o.get(lap, [])) == 1 and mock_bal(aid) == p[tile][3] + p[lap][3] and p[tile][1] == roll,
+                f'rc {r_t}/{r_l}; tile {p[tile]} lap {p[lap]}; balance {mock_bal(aid)}'))
+    # CP-1 the same decision again, the same request delivered twice, the other character of the account
+    bal1, n1 = mock_bal(aid), len(p)
+    r_again = cpapply(g, 'MBQA_CPA1', tile)
+    m = g.mark()
+    g.say(f'@mbqacpapply MBQA_CPA1 {X}')
+    g.say(f'@mbqacpapply MBQA_CPA1 {X}')
+    end = time.time() + 8
+    while time.time() < end and sum(1 for t in g.texts_since(m) if '[MBQA] cpapply' in t) < 2:
+        time.sleep(0.1)
+    dbl = sorted(cp_rc(t) for t in g.texts_since(m) if '[MBQA] cpapply' in t)
+    c.logout()
+    wait_offline(aid)
+    c2 = login('cpa', 1)
+    r_c2t, r_c2x = cpapply(g, 'MBQA_CPA2', tile), cpapply(g, 'MBQA_CPA2', X)
+    p, o = payouts(aid), mock_ops(aid)
+    res.append(('CP-1 same decision again: ALREADY (-4), no second change', r_again == RC['ALREADY'], f'rc {r_again}'))
+    res.append(('CP-1 same request delivered twice: one OK, one ALREADY, one change', dbl == [RC['ALREADY'], RC['OK']] and len(o.get(X, [])) == 1,
+                f'replies {dbl}; changes {o.get(X)}'))
+    res.append(('CP-1 other character of the account (MBQA_CPA2): ALREADY for both, no change, no new decision, no re-draw',
+                r_c2t == RC['ALREADY'] and r_c2x == RC['ALREADY'] and mock_bal(aid) == bal1 + p[X][3] and len(p) == n1 and
+                all(p[k][:4] == p0[k][:4] for k in p0), f'rc {r_c2t}/{r_c2x}; balance {bal1} -> {mock_bal(aid)}; payouts {n1} -> {len(p)}'))
+    # CP-3 refused before any change: back to DECIDED, retry allowed
+    bal2 = mock_bal(aid)
+    cpmode(g, 1)
+    r_y1 = cpapply(g, 'MBQA_CPA2', Y)
+    py1, oy1, bal_y1 = payouts(aid)[Y], mock_ops(aid).get(Y, []), mock_bal(aid)
+    r_y2 = cpapply(g, 'MBQA_CPA2', Y)
+    res.append(('CP-3 writer refused before any change: REJECTED, row back to DECIDED, balance unchanged',
+                r_y1 == RC['REJECTED'] and py1[5] == 1 and oy1 == [] and bal_y1 == bal2, f'rc {r_y1}; row {py1}; changes {oy1}'))
+    res.append(('CP-3 retry after a confirmed no-effect: APPLIED once', r_y2 == RC['OK'] and payouts(aid)[Y][5] == 2 and len(mock_ops(aid).get(Y, [])) == 1,
+                f'rc {r_y2}; row {payouts(aid)[Y]}'))
+    # CP-4 balance changed, answer lost -> UNCERTAIN, blocked; answer lost before any change -> UNCERTAIN as well
+    cpmode(g, 2)
+    r_z1 = cpapply(g, 'MBQA_CPA2', Z)
+    bal_z = mock_bal(aid)
+    r_z2 = cpapply(g, 'MBQA_CPA2', Z)
+    cpmode(g, 4)
+    r_w1 = cpapply(g, 'MBQA_CPA2', W)
+    p, o = payouts(aid), mock_ops(aid)
+    res.append(('CP-4 balance changed but the answer lost: UNCERTAIN (-22), row 3, one change',
+                r_z1 == RC['UNCERTAIN'] and p[Z][5] == 3 and len(o.get(Z, [])) == 1, f'rc {r_z1}; row {p[Z]}; changes {o.get(Z)}'))
+    res.append(('CP-4 UNCERTAIN asked again: UNCERTAIN, never handed to the writer again (no second change)',
+                r_z2 == RC['UNCERTAIN'] and len(o.get(Z, [])) == 1 and mock_bal(aid) == bal_z, f'rc {r_z2}; balance {bal_z} -> {mock_bal(aid)}'))
+    res.append(('CP-4 answer lost before any change: UNCERTAIN too (the ledger cannot tell), no change',
+                r_w1 == RC['UNCERTAIN'] and p[W][5] == 3 and o.get(W) is None, f'rc {r_w1}; row {p[W]}'))
+    # CP-6 another account
+    b = login('cpb')
+    r_b = cpapply(g, 'MBQA_CPB', V)
+    res.append(('CP-6 other account (MBQA_CPB) with a payout_no of mbqa_cpa: NOT_FOUND, nothing changes for either account',
+                r_b == RC['NOT_FOUND'] and payouts(aid)[V][5] == 1 and mock_bal(bid) == 0 and payouts(bid) == {} and cp_audit(bid) == [], f'rc {r_b}'))
+    inv = v20_inv(aid)
+    res.append(('CP invariants before the stop: 0 violations', inv == [], repr(inv[:4])))
+    st.update({'day2': d2, 'payouts_before_stop': payouts(aid), 'ops_before_stop': mock_ops(aid), 'balance_before_stop': mock_bal(aid),
+               'audit_before_stop': cp_audit(aid)})
+    # CP-5 the map-server stops right after the mock changed the balance (before the final record)
+    cpmode(g, 3)
+    r_u = cpapply(g, 'MBQA_CPA2', U, wait=8)
+    time.sleep(3)
+    alive = map_alive()
+    pu, ou = payouts(aid)[U], mock_ops(aid).get(U, [])
+    res.append(('CP-5 map-server stopped between the balance change and the final record: no reply, row left UNCERTAIN, one change',
+                r_u is None and not alive and pu[5] == 3 and len(ou) == 1, f'reply {r_u}; map alive {alive}; row {pu}; changes {ou}'))
+    st['crash'] = {'reply': r_u, 'map_alive': alive, 'row': pu, 'changes': ou}
+    g2c_state('v20p1', st)
+    g2c_record('V20-P1', res)
+    for x in (g, c2, b):
+        x.drop()
+
+
+def v20_p2():
+    aid, bid = AID['cpa'], AID['cpb']
+    st = g2c_state('v20p1')
+    rl = st['roles']
+    tile, Z, W, V, U = rl['tile'], rl['Z_lost_after_change'], rl['W_lost_before_change'], rl['V_left_decided'], rl['U_crash']
+    g = login('gm')
+    d3 = clock_to(g, '2026-12-03 12:00:00')
+    c = login('cpa')   # relog after the restart
+    p0, o0, bal0 = payouts(aid), mock_ops(aid), mock_bal(aid)
+    res = [('CP-5 after the restart: crashed row still UNCERTAIN with its one change, claim audit only (1 -> 3)',
+            p0[U][5] == 3 and len(o0.get(U, [])) == 1 and [x for x in cp_audit(aid) if x[0] == U] == [(U, 1, 3, 1, 0)],
+            f'row {p0[U]} changes {o0.get(U)} audit {[x for x in cp_audit(aid) if x[0] == U]}')]
+    r_u, r_z, r_t = cpapply(g, 'MBQA_CPA1', U), cpapply(g, 'MBQA_CPA1', Z), cpapply(g, 'MBQA_CPA1', tile)
+    res.append(('CP-5 relog + restart + the same requests again: UNCERTAIN stays blocked (-22), APPLIED stays ALREADY (-4), no change',
+                r_u == RC['UNCERTAIN'] and r_z == RC['UNCERTAIN'] and r_t == RC['ALREADY'] and mock_ops(aid) == o0 and mock_bal(aid) == bal0,
+                f'rc {r_u}/{r_z}/{r_t}; balance {bal0} -> {mock_bal(aid)}'))
+    # operator reconciliation: the mock op rows play the role of the evidence an operator checks
+    r_bad0 = cpresolve(g, aid, Z, 4, 0)
+    r_bad1 = cpresolve(g, aid, Z, 1, 7000)
+    r_bad2 = cpresolve(g, aid, tile, 4, 7003)
+    r_res_u = cpresolve(g, aid, U, 4, 7001)      # change found -> applied after all
+    r_res_w = cpresolve(g, aid, W, 5, 7002)      # no change found -> void
+    r_res_z = cpresolve(g, aid, Z, 4, 7004)
+    r_after_u, r_after_w = cpapply(g, 'MBQA_CPA1', U), cpapply(g, 'MBQA_CPA1', W)
+    p = payouts(aid)
+    res.append(('CP-5 reconciliation input checked: ticket 0 / back to DECIDED refused (BAD_ARG), APPLIED row not resolvable (BAD_STATE)',
+                r_bad0 == RC['BAD_ARG'] and r_bad1 == RC['BAD_ARG'] and r_bad2 == RC['BAD_STATE'], f'rc {r_bad0}/{r_bad1}/{r_bad2}'))
+    res.append(('CP-5 operator: crashed and answer-lost rows with a change -> MANUAL_APPLIED (4), granted = amount, ticket kept',
+                r_res_u == RC['OK'] and r_res_z == RC['OK'] and p[U][5] == 4 and p[Z][5] == 4 and p[U][4] == p[U][3] and p[U][6] == 7001,
+                f'rc {r_res_u}/{r_res_z}; U {p[U]} Z {p[Z]}'))
+    res.append(('CP-5 operator: answer lost with no change -> MANUAL_VOID (5), granted 0', r_res_w == RC['OK'] and p[W][5] == 5 and p[W][4] == 0,
+                f'rc {r_res_w}; W {p[W]}'))
+    res.append(('CP-5 after reconciliation: MANUAL_APPLIED -> ALREADY, MANUAL_VOID -> BAD_STATE, still no change',
+                r_after_u == RC['ALREADY'] and r_after_w == RC['BAD_STATE'] and mock_ops(aid) == o0 and mock_bal(aid) == bal0,
+                f'rc {r_after_u}/{r_after_w}'))
+    # CP-6 switch off again
+    sql("INSERT IGNORE INTO need_marble_policy (policy_key,effective_day,value,changed_by,changed_at) VALUES (5,20261204,0,'v20_mock_off',NOW())")
+    d4 = clock_to(g, '2026-12-04 12:00:00')
+    r_v = cpapply(g, 'MBQA_CPA1', V)
+    res.append(('CP-6 switch off again (key 5 = 0): DISABLED, the DECIDED row stays, balance unchanged',
+                r_v == RC['DISABLED'] and payouts(aid)[V][5] == 1 and mock_bal(aid) == bal0, f'rc {r_v}'))
+    pf = payouts(aid)
+    res.append(('CP-1/CP-6 no new decision and no re-draw over the whole run (same keys and amounts as after the rolls)',
+                sorted(pf) == sorted(int(k) for k in st['payouts_after_rolls']) and
+                all(pf[int(k)][:4] == tuple(v[:4]) for k, v in st['payouts_after_rolls'].items()), f'{len(pf)} payouts'))
+    inv = v20_inv(aid)
+    res.append(('CP invariants at the end: 0 violations (one change per applied decision, balance = changes, audit chain)', inv == [], repr(inv[:4])))
+    cash = sql("SELECT COUNT(*) FROM acc_reg_num WHERE `key`='#CASHPOINTS'")[0][0]
+    cplog = sql('SELECT COUNT(*) FROM cashlog')[0][0]
+    res.append(('CP-6 real #CASHPOINTS rows 0, cashlog rows 0, other account untouched', cash == '0' and cplog == '0' and mock_bal(bid) == 0 and payouts(bid) == {},
+                f'#CASHPOINTS {cash} cashlog {cplog}'))
+    li = invariants()
+    res.append(('marble ledger invariants (sql-files) over the whole DB: 0 violations', li == [], repr(li[:3])))
+    g2c_state('v20p2', {'day3': d3, 'day4': d4, 'payouts': pf, 'ops': mock_ops(aid), 'balance': mock_bal(aid), 'audit': cp_audit(aid)})
+    g2c_record('V20-P2', res)
+    for x in (g, c):
+        x.logout()
+
+
 def main():
     global OUT
     ap = argparse.ArgumentParser()

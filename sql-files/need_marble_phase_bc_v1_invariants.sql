@@ -99,14 +99,20 @@ SELECT 'I14' AS inv, w.account_id, w.pending_ack FROM need_marble_wallet w
 LEFT JOIN need_marble_exchange_req r ON r.account_id = w.account_id AND r.request_no = w.pending_ack
 WHERE w.pending_ack <> 0 AND (r.account_id IS NULL OR r.acked = 1);
 
--- CP decisions: tile rows = events with CP, lap rows = laps, every row still DECIDED in this build
+-- CP decisions: tile rows = events with CP, lap rows = laps. CP3 (V20): status 1..5 only, applied rows (2 APPLIED,
+-- 4 MANUAL_APPLIED) carry granted = amount and applied_at, the others (1 DECIDED, 3 UNCERTAIN, 5 MANUAL_VOID) granted 0
+-- and no applied_at, operator rows (4, 5) a ticket. Without a CP writer every row stays 1.
 SELECT 'CP1' AS inv, e.account_id, e.roll_seq, e.cp_amount, p.amount FROM need_marble_event e
 LEFT JOIN need_marble_cp_payout p ON p.account_id = e.account_id AND p.src_type = 1 AND p.src_a = e.roll_seq AND p.src_b = e.hop
 WHERE (e.cp_amount > 0) <> (p.account_id IS NOT NULL) OR (p.account_id IS NOT NULL AND p.amount <> e.cp_amount);
 SELECT 'CP2' AS inv, s.account_id, s.laps, COUNT(p.account_id) AS lap_rows, FLOOR(s.step_seq / @lap_steps) AS expected
 FROM need_marble_state s LEFT JOIN need_marble_cp_payout p ON p.account_id = s.account_id AND p.src_type = 2
 GROUP BY s.account_id, s.laps, s.step_seq HAVING s.laps <> COUNT(p.account_id) OR s.laps <> FLOOR(s.step_seq / @lap_steps);
-SELECT 'CP3' AS inv, account_id, payout_no, status FROM need_marble_cp_payout WHERE status <> 1;
+SELECT 'CP3' AS inv, account_id, payout_no, status FROM need_marble_cp_payout
+WHERE status NOT IN (1, 2, 3, 4, 5)
+   OR (status IN (2, 4) AND (granted <> amount OR applied_at IS NULL))
+   OR (status IN (1, 3, 5) AND (granted <> 0 OR applied_at IS NOT NULL))
+   OR (status IN (4, 5) AND operator_ticket IS NULL);
 
 -- Hold limit
 SELECT 'HOLD' AS inv, account_id, dice FROM need_marble_wallet WHERE dice > @hold;

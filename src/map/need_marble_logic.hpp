@@ -87,7 +87,7 @@ enum e_policy_key : int32_t {
 	P_HUNT_ENABLED = 2,
 	P_INSTANCE_ENABLED = 3,
 	P_BG_ENABLED = 4,
-	P_CP_APPLY_ENABLED = 5,      // must stay 0: no code path applies CP in this build
+	P_CP_APPLY_ENABLED = 5,      // 0 = off. 1 is valid only with a registered CP writer (none in this build)
 	P_SEASON_ID = 6,
 
 	P_EXCHANGE_COST = 10,
@@ -236,7 +236,9 @@ enum e_policy_error : int32_t {
 
 constexpr int32_t CP_SANITY_MAX = 1000000;
 
-inline int32_t validate_policy(const policy_values& v, int32_t* bad_key = nullptr) {
+// cp_writer: a CP writer is registered (only the test build registers one, a mock). Without one the CP switch
+// must stay 0, so turning it on in the policy table disables the module instead of starting any payout.
+inline int32_t validate_policy(const policy_values& v, int32_t* bad_key = nullptr, bool cp_writer = false) {
 	auto fail = [bad_key](int32_t code, int32_t key) {
 		if (bad_key != nullptr)
 			*bad_key = key;
@@ -271,7 +273,7 @@ inline int32_t validate_policy(const policy_values& v, int32_t* bad_key = nullpt
 	if (v[P_EXCHANGE_COST] <= 0 || v[P_DICE_HOLD_MAX] <= 0 || v[P_EXCHANGE_DAILY_MAX] < 0 ||
 		v[P_EXCHANGE_TTL_SEC] <= 0 || v[P_EXCHANGE_MAX_BUNDLE] <= 0)
 		return fail(PE_EXCHANGE, P_EXCHANGE_COST);
-	if (v[P_CP_APPLY_ENABLED] != 0)
+	if (v[P_CP_APPLY_ENABLED] != 0 && !(cp_writer && v[P_CP_APPLY_ENABLED] == 1))
 		return fail(PE_CP_SWITCH, P_CP_APPLY_ENABLED);
 	if (v[P_LAP_STEPS] <= 0 || v[P_LAP_CP] < 0 || v[P_LAP_CP] > CP_SANITY_MAX)
 		return fail(PE_LAP, P_LAP_STEPS);
@@ -369,6 +371,36 @@ inline bool hunt_day_maxed(int32_t next_tier, int32_t max_tiers) {
 // heal, buff, guard or wait between deaths count as long as they acted once in a sample window.
 inline bool bg_afk_excluded(uint32_t samples, uint32_t active_samples, bool idle_now) {
 	return samples > 0 && active_samples == 0 && idle_now;
+}
+
+// V20 CP apply (need_marble_cp_payout.status). The row becomes UNCERTAIN before the writer runs, so a stop
+// anywhere between the writer and the final record leaves it UNCERTAIN: never retried automatically.
+enum e_cp_status : int32_t {
+	CPS_DECIDED = 1,
+	CPS_APPLIED = 2,
+	CPS_UNCERTAIN = 3,
+	CPS_MANUAL_APPLIED = 4,
+	CPS_MANUAL_VOID = 5,
+};
+
+// Answer of a CP writer.
+enum e_cp_write : int32_t {
+	CPW_APPLIED = 0,     // the balance changed, confirmed
+	CPW_NO_EFFECT = 1,   // refused before any change, confirmed
+	CPW_UNKNOWN = 2,     // no usable answer: the balance may have changed
+};
+
+inline int32_t cp_status_after_write(int32_t writer_result) {
+	if (writer_result == CPW_APPLIED)
+		return CPS_APPLIED;
+	if (writer_result == CPW_NO_EFFECT)
+		return CPS_DECIDED;
+	return CPS_UNCERTAIN;
+}
+
+// Only an operator closes an UNCERTAIN row, after reconciliation: applied after all, or void.
+inline bool cp_resolvable(int32_t from_status, int32_t to_status) {
+	return from_status == CPS_UNCERTAIN && (to_status == CPS_MANUAL_APPLIED || to_status == CPS_MANUAL_VOID);
 }
 
 // V21: what a hunt batch (collect_session, batch_no) is, given the rows already stored under that key.

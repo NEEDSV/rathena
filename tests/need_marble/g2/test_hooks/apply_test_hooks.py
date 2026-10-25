@@ -7,6 +7,8 @@ usage: python -I apply_test_hooks.py --src <scratch source copy root>
 - registers need_marble_test.cpp in <src>/src/map/map-server.vcxproj
 - --g2b: anchored edits of <src>/src/map/need_marble.cpp (test clock in today(), hidden COMMIT outcome in
   ledger_tx::commit) and appends need_marble_test_g2b.inc; every edit sits under #ifdef NEED_MARBLE_TEST_HOOKS
+- --v20: appends need_marble_test_v20.inc (mock CP writer, registered only with NEED_MARBLE_TEST_HOOKS=1) and the
+  CP buildins (arm a writer fault, apply one payout, operator resolve)
 Refuses to run on a path that is a git worktree of the repository (a .git entry at the root).
 """
 import argparse
@@ -17,6 +19,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ap = argparse.ArgumentParser()
 ap.add_argument('--src', required=True)
 ap.add_argument('--g2b', action='store_true', help='G2-B: test clock, hidden COMMIT outcome, re-entry probes (need_marble.cpp scratch copy)')
+ap.add_argument('--v20', action='store_true', help='V20-MOCK: mock CP writer + apply / resolve buildins (need_marble.cpp scratch copy)')
 a = ap.parse_args()
 R = os.path.abspath(a.src)
 if os.path.exists(os.path.join(R, '.git')):
@@ -247,6 +250,70 @@ if a.g2b:
     print('patched src/map/need_marble.cpp - appended need_marble_test_g2b.inc')
     INC += INC_G2B
     DEF += DEF_G2B
+
+INC_V20 = '''
+#ifdef NEED_MARBLE_TEST_HOOKS
+// V20-MOCK TEST BUILD ONLY: need_marble_test_cp_arm is defined in the scratch copy of need_marble.cpp (need_marble_test_v20.inc).
+bool need_marble_test_allowed(map_session_data* sd);
+void need_marble_test_cp_arm(int32 mode);
+
+/// need_marble_test_cp_mode(<0 normal | 1 refuse before any change | 2 change, answer lost | 3 change, map-server dies | 4 answer lost, no change>)
+BUILDIN_FUNC(need_marble_test_cp_mode)
+{
+	map_session_data* sd = nullptr;
+	if (!script_rid2sd(sd) || !need_marble_test_allowed(sd)) {
+		script_pushint(st, -1);
+		return SCRIPT_CMD_SUCCESS;
+	}
+	need_marble_test_cp_arm(script_getnum(st, 2));
+	script_pushint(st, script_getnum(st, 2));
+	return SCRIPT_CMD_SUCCESS;
+}
+
+/// need_marble_test_cp_apply("<online character>",<payout_no of its account>) -> need_marble_cp_apply result, -3 offline
+BUILDIN_FUNC(need_marble_test_cp_apply)
+{
+	map_session_data* sd = nullptr;
+	if (!script_rid2sd(sd) || !need_marble_test_allowed(sd)) {
+		script_pushint(st, -1);
+		return SCRIPT_CMD_SUCCESS;
+	}
+	// the payout account's own online character: the GM harness names it, the account stays a normal player
+	map_session_data* tsd = map_nick2sd(script_getstr(st, 2), false);
+	script_pushint(st, tsd == nullptr ? -3 : need_marble_cp_apply(tsd, static_cast<uint64>(script_getnum(st, 3))));
+	return SCRIPT_CMD_SUCCESS;
+}
+
+/// need_marble_test_cp_resolve(<account_id>,<payout_no>,<4 applied | 5 void>,<ticket>) -> need_marble_cp_resolve result
+BUILDIN_FUNC(need_marble_test_cp_resolve)
+{
+	map_session_data* sd = nullptr;
+	if (!script_rid2sd(sd) || !need_marble_test_allowed(sd)) {
+		script_pushint(st, -1);
+		return SCRIPT_CMD_SUCCESS;
+	}
+	script_pushint(st, need_marble_cp_resolve(static_cast<uint32>(script_getnum(st, 2)), static_cast<uint64>(script_getnum(st, 3)),
+		script_getnum(st, 4), static_cast<uint64>(script_getnum(st, 5))));
+	return SCRIPT_CMD_SUCCESS;
+}
+#endif
+'''
+DEF_V20 = '''
+#ifdef NEED_MARBLE_TEST_HOOKS
+BUILDIN_DEF(need_marble_test_cp_mode,"i"),
+BUILDIN_DEF(need_marble_test_cp_apply,"si"),
+BUILDIN_DEF(need_marble_test_cp_resolve,"iiii"),
+#endif
+'''
+if a.v20:
+    p = os.path.join(R, 'src', 'map', 'need_marble.cpp')
+    raw = open(p, 'rb').read()
+    eol = b'\r\n' if b'\r\n' in raw else b'\n'
+    add = open(os.path.join(HERE, 'need_marble_test_v20.inc'), 'rb').read().replace(b'\r\n', b'\n').replace(b'\n', eol)
+    open(p, 'wb').write(raw.rstrip(b'\r\n') + eol + add)
+    print('patched src/map/need_marble.cpp - appended need_marble_test_v20.inc')
+    INC += INC_V20
+    DEF += DEF_V20
 
 append('src/custom/script.inc', INC)
 append('src/custom/script_def.inc', DEF)

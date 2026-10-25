@@ -1,0 +1,123 @@
+﻿PASS npc is CP949
+PASS v2 .x equals v1.2 .x
+PASS v2 .y equals v1.2 .y
+PASS v2 .tile$ equals v1.2 .tile$
+PASS NPC .kind equals logic BOARD
+PASS logic BOARD matches v1.2 tile names
+PASS NPC tile_ko$ has 33 names
+PASS NPC need_marble_policy(56) is P_DUNGEON_SAFE_CP
+PASS NPC need_marble_policy(57) is P_DUNGEON_CHALLENGE_RATE
+PASS NPC need_marble_policy(58) is P_DUNGEON_CHALLENGE_CP
+PASS schema tables == C++ LEDGER_TABLES
+PASS every table InnoDB
+PASS need_marble_season: numeric primary key
+PASS need_marble_policy: numeric primary key
+PASS need_marble_boot: numeric primary key
+PASS need_marble_account_seq: numeric primary key
+PASS need_marble_wallet: numeric primary key
+PASS need_marble_wallet_tx: numeric primary key
+PASS need_marble_period: numeric primary key
+PASS need_marble_activity: numeric primary key
+PASS need_marble_dungeon_daily: numeric primary key
+PASS need_marble_hunt_progress: numeric primary key
+PASS need_marble_hunt_batch: numeric primary key
+PASS need_marble_exchange_req: numeric primary key
+PASS need_marble_state: numeric primary key
+PASS need_marble_roll: numeric primary key
+PASS need_marble_jump: numeric primary key
+PASS need_marble_event: numeric primary key
+PASS need_marble_cp_payout: numeric primary key
+PASS rollback drops exactly the created tables
+PASS schema alters no existing table
+PASS hunt batch key includes period_day
+PASS dungeon daily eligibility key
+PASS next_tier is SMALLINT
+PASS master switch seeded OFF
+PASS need_marble.cpp: no CASHPOINTS / pc_getcash / pc_paycash in code
+PASS need_marble.hpp: no CASHPOINTS / pc_getcash / pc_paycash in code
+PASS board_v2 NPC: no CASHPOINTS / pc_getcash / pc_paycash in code
+PASS cp_payout rows only inserted with status 1 (DECIDED); status changed only by need_marble_cp_apply / need_marble_cp_resolve
+PASS CP switch: 1 is valid only with a registered writer, anything else stays invalid
+PASS no CP writer is registered by the repository sources (only declaration + definition of need_marble_cp_set_writer)
+PASS need_marble_cp_apply: DISABLED without writer / audit table / key 5 = 1, before anything is read
+PASS need_marble_cp_apply: DECIDED -> UNCERTAIN committed (claim audit) before the writer runs, final record in a second transaction
+PASS need_marble_cp_apply: only DECIDED reaches the writer (UNCERTAIN -> -22, APPLIED / MANUAL_APPLIED -> ALREADY, VOID -> BAD_STATE)
+PASS writer answer -> status only through cp_status_after_write (unknown -> UNCERTAIN), UNCERTAIN back to DECIDED only on CPW_NO_EFFECT
+PASS need_marble_cp_resolve: UNCERTAIN -> MANUAL_APPLIED / MANUAL_VOID only, ticket required, audited
+PASS need_marble_cp_audit is not a ledger table: the module keeps working where the V20 migration is not applied
+PASS mock CP writer lives only in the test hooks, under NEED_MARBLE_TEST_HOOKS, and refuses outside ragnarok_mbqa
+PASS "START TRANSACTION" literal appears once (ledger_tx)
+PASS "COMMIT" literal appears once (ledger_tx)
+PASS "ROLLBACK" literal appears once (ledger_tx)
+PASS nested transaction refused
+PASS season_check_in_tx requires an open transaction and opens none
+PASS ensure_rows_in_tx requires an open transaction and opens none
+PASS load_state_in_tx requires an open transaction and opens none
+PASS load_wallet_in_tx requires an open transaction and opens none
+PASS credit_in_tx requires an open transaction and opens none
+PASS payout_decide_in_tx requires an open transaction and opens none
+PASS cp_audit_in_tx requires an open transaction and opens none
+PASS load_request_in_tx requires an open transaction and opens none
+PASS every marble BUILDIN_DEF has a body
+PASS NPC only calls defined marble commands
+PASS main load lists do not load the marble v2 NPC
+PASS v2 does not bind the GM commands
+PASS v2 binds @marble only
+PASS src/map/need_marble.cpp: no host / password / absolute path
+PASS src/map/need_marble.hpp: no host / password / absolute path
+PASS src/map/need_marble_logic.hpp: no host / password / absolute path
+PASS sql-files/need_marble_phase_bc_v1.sql: no host / password / absolute path
+PASS sql-files/need_marble_phase_bc_v1_revert.sql: no host / password / absolute path
+PASS npc/NEED/marble/scripts_marble.conf: no host / password / absolute path
+PASS tests/need_marble/logic_test.cpp: no host / password / absolute path
+PASS board_v2 NPC: no host / password / absolute path
+PASS src/ has no G-1(b) test hook code
+PASS build files never define NEED_MARBLE_TEST_HOOKS
+PASS mob.cpp calls the marble hunt hook exactly once
+PASS marble hunt hook is before the experience share block
+PASS marble final-kill test equals the rebirth expression
+PASS summer / chuseok hooks stay after the rebirth test (unchanged rule)
+PASS hunt_checkpoint: progress FOR UPDATE before batch INSERT
+PASS hunt_checkpoint: resend check (stored rows + hunt_resend_check) before any write of the batch
+PASS hunt_checkpoint: a key taken during the batch is a CONFLICT, never ALREADY
+PASS NEED_MARBLE_CONFLICT is a new code (-21), REJECTED keeps -20
+PASS hunt_flush: CONFLICT stops hunt credit for the login and keeps the batch unsent
+PASS resend rule is the pure function in need_marble_logic.hpp (unit-tested)
+PASS hunt_on_kill: one capped-day lookup per login and day
+PASS mob_dead kill-path order: marble, exp, rebirth, macro, summer, chuseok
+PASS V22 runner: no absolute kills / batch expectation
+PASS V22 runner: compares through v22_model with a snapshot
+PASS V22 dedicated accounts used by V22 only
+PASS test feed refuses a dead caller and reports counted
+PASS harness prints counted= and binds @mbqastate
+PASS bc_synth_v22.sql: no literal secret, ids outside the other fixtures
+PASS V11 dedicated account used by V11 only
+PASS V18-C healer used by V18-C only
+PASS bc_synth_g2a.sql: no literal secret, new ids only for new accounts
+PASS captcha settings only through the stack copy (bc_stack_extras.py --captcha), repo value stays 0
+PASS V11 analysis reads the policy from need_marble_logic.hpp (no copied rate table)
+PASS G2-B patch anchors each match need_marble.cpp exactly once
+PASS G2-B hook code is entirely inside #ifdef NEED_MARBLE_TEST_HOOKS
+PASS G2-B anchored edits are inside #ifdef NEED_MARBLE_TEST_HOOKS
+PASS fault triggers: plain UPDATE only, one per fault point, armed per account
+PASS fault SQL never drops / alters / deletes ledger data
+PASS bc_synth_g2b.sql: no literal secret, new ids only
+PASS G2-B account 'v16' used by its own scenario only
+PASS G2-B account 'v21' used by its own scenario only
+PASS G2-B account 'v24' used by its own scenario only
+PASS marble logical day ignores the OS time zone (no localtime / gmtime / mktime in marble code)
+PASS runner never starts / stops a process for G2-B (restarts are operator steps)
+PASS need_marble_bg_match (map-wide sample ratio) is gone from src/ and npc/
+PASS F_BG_Badge credits the marble once the match type is known, before close2 waits for the player (random match cycle only)
+PASS F_BG_RM_AutoRewardBadge credits every member on the map before the reward loop (G2-C M1)
+PASS F_KvM_GrantReward credits the marble after the existing rewards (random match cycle only)
+PASS need_marble_bg_credit is called only from bg_common.txt (F_BG_Badge, F_BG_RM_AutoRewardBadge) and kvm01.txt
+PASS script command need_marble_bg_credit is defined as "si"
+PASS need_marble_bg_credit: switch off -> DISABLED, AFK rule from need_marble_logic.hpp, key (boot, token, type)
+PASS G2-C adds no participation / kill / heal count rule
+PASS F_BG_Badge: every mes / close2 sits inside the dialog block skipped by the auto reward (getarg(3) = 1)
+PASS F_BG_Badge: amounts, the loser BG point and every getitem are outside the dialog block (auto and NPC pay the same)
+PASS F_BG_RM_AutoRewardBadge calls F_BG_Badge without the dialog, and has no dialog command itself
+PASS KVM auto reward path (F_KvM_AutoRewardRandom -> F_KvM_GrantReward) has no dialog command (left unchanged)
+PASS reward NPCs (tierra01 / flavius01) still call F_BG_Badge with 3 arguments: dialog shown as before
+static_check: 122 passed, 0 failed

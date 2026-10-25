@@ -22,6 +22,7 @@ ap.add_argument('--bind-local', action='store_true', help='add bind_ip: 127.0.0.
 ap.add_argument('--captcha', action='store_true', help='G2-A V18-C: hunt captcha at the 5th kill (stack battle import conf only)')
 ap.add_argument('--g2b', action='store_true', help='G2-B: @mbqaclock / @mbqacommitfault / @mbqareplay / @mbqareentry / @mbqaoutoftx / @mbqaflags (apply_test_hooks.py --g2b build only)')
 ap.add_argument('--g2c', action='store_true', help='G2-C: @mbqabg* battleground commands that drive the real reward NPCs / auto reward functions')
+ap.add_argument('--v20', action='store_true', help='V20-MOCK: @mbqacpmode / @mbqacpapply / @mbqacpresolve (apply_test_hooks.py --v20 build only)')
 a = ap.parse_args()
 S = os.path.join(os.path.abspath(a.out), 'stack')
 O = os.path.abspath(a.orig)
@@ -386,6 +387,30 @@ if a.g2c:
         b'\t\tattachrid .@gm;',
         b'\t}',
         b'\tdispbottom "[MBQA] bgwhere name=" + .@atcmd_parameters$[0] + " aid=" + .@aid + " cid=" + .@cid + " bg=" + .@bg + " map=" + .@m$ + " x=" + .@x + " y=" + .@y + " team=" + .@team;',
+        b'\tend;',
+        b'}',
+        b''])
+
+if a.v20:
+    # V20-MOCK: needs the map-server built from a scratch copy patched with apply_test_hooks.py --v20
+    harness += b'\r\n'.join([
+        b'// V20-MOCK test build only: @mbqacpmode <0|1|2|3> (one shot mock writer fault), @mbqacpapply <char> <payout_no>,',
+        b'// @mbqacpresolve <account_id> <payout_no> <4|5> <ticket>',
+        b'-\tscript\tMBQA_V20Harness\t-1,{',
+        b'OnInit:',
+        b'\tbindatcmd "mbqacpmode", strnpcinfo(3) + "::OnMode", 99, 100;',
+        b'\tbindatcmd "mbqacpapply", strnpcinfo(3) + "::OnApply", 99, 100;',
+        b'\tbindatcmd "mbqacpresolve", strnpcinfo(3) + "::OnResolve", 99, 100;',
+        b'\tend;',
+        b'OnMode:',
+        b'\tdispbottom "[MBQA] cpmode mode=" + need_marble_test_cp_mode(atoi(.@atcmd_parameters$[0]));',
+        b'\tend;',
+        b'OnApply:',
+        b'\tdispbottom "[MBQA] cpapply rc=" + need_marble_test_cp_apply(.@atcmd_parameters$[0], atoi(.@atcmd_parameters$[1]));',
+        b'\tend;',
+        b'OnResolve:',
+        b'\tdispbottom "[MBQA] cpresolve rc=" + need_marble_test_cp_resolve(atoi(.@atcmd_parameters$[0]), atoi(.@atcmd_parameters$[1]),'
+        b' atoi(.@atcmd_parameters$[2]), atoi(.@atcmd_parameters$[3]));',
         b'\tend;',
         b'}',
         b''])

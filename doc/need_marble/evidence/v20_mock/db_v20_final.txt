@@ -1,0 +1,67 @@
+== need_marble_cp_payout mbqa_cpa (payout_no, src_type, src_a, src_b, amount, granted, status, applied_at, ticket)
+payout_no	src_type	src_a	src_b	amount	granted	status	applied_at IS NOT NULL	COALESCE(operator_ticket,0)
+1	1	1	0	500	500	2	1	0
+2	1	2	0	1500	1500	2	1	0
+3	1	3	0	1500	1500	4	1	7004
+4	1	4	0	500	0	5	0	7002
+5	1	7	0	1000	0	1	0	0
+6	1	9	0	500	500	4	1	7001
+7	1	10	0	1000	0	1	0	0
+8	2	1	0	10000	0	1	0	0
+9	1	12	0	3000	0	1	0	0
+10	1	13	0	500	0	1	0	0
+11	1	14	0	500	0	1	0	0
+12	1	18	0	500	0	1	0	0
+13	1	19	0	1000	0	1	0	0
+14	1	20	0	1500	0	1	0	0
+15	2	2	0	10000	10000	2	1	0
+16	1	21	0	3000	3000	2	1	0
+== need_marble_cp_audit (payout_no, from, to, reason, char_id, boot_id, ticket)
+payout_no	from_status	to_status	reason	char_id	boot_id	COALESCE(operator_ticket,0)
+16	1	3	1	150951	3	0
+16	3	2	2	150951	3	0
+15	1	3	1	150951	3	0
+15	3	2	2	150951	3	0
+1	1	3	1	150951	3	0
+1	3	2	2	150951	3	0
+2	1	3	1	150952	3	0
+2	3	1	3	150952	3	0
+2	1	3	1	150952	3	0
+2	3	2	2	150952	3	0
+3	1	3	1	150952	3	0
+3	3	3	4	150952	3	0
+4	1	3	1	150952	3	0
+4	3	3	4	150952	3	0
+6	1	3	1	150952	3	0
+6	3	4	5	150951	4	7001
+4	3	5	5	150951	4	7002
+3	3	4	5	150951	4	7004
+== mbqa_cp_mock_op (payout_no, amount, mode, char_id)
+payout_no	amount	mode	char_id
+16	3000	0	150951
+15	10000	0	150951
+1	500	0	150951
+2	1500	0	150952
+3	1500	2	150952
+6	500	3	150952
+== mbqa_cp_mock_balance
+account_id	balance
+2000941	17000
+== policy rows (key 5 = CP apply switch)
+policy_key	effective_day	value	changed_by
+1	0	0	migration
+1	1	1	g2_isolated
+4	20261122	0	g2c_off
+4	20261126	1	bga_on
+4	20261128	0	bga_off
+5	20261202	1	v20_mock_on
+5	20261204	0	v20_mock_off
+41	1	8	g2c_isolated
+42	1	3	g2c_isolated
+== #CASHPOINTS rows / cashlog rows / CP rows of other accounts
+COUNT(*)
+0
+COUNT(*)
+0
+COUNT(*)
+0

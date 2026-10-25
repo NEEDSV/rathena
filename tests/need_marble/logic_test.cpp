@@ -56,6 +56,11 @@ static void test_policy_rejects() {
 	policy_values v = policy_defaults();
 	v[P_CP_APPLY_ENABLED] = 1;
 	CHECK(validate_policy(v) == PE_CP_SWITCH);
+	CHECK(validate_policy(v, nullptr, true) == PE_OK);           // V20: 1 only with a registered writer
+	v[P_CP_APPLY_ENABLED] = 2;
+	CHECK(validate_policy(v, nullptr, true) == PE_CP_SWITCH);
+	v[P_CP_APPLY_ENABLED] = -1;
+	CHECK(validate_policy(v, nullptr, true) == PE_CP_SWITCH);
 
 	v = policy_defaults();
 	v[tile_rate_key(TILE_CITY, 0)] = 4999;   // sum 9999
@@ -329,6 +334,19 @@ static void test_hunt_resend() {
 }
 
 // G2-C v1.1: a finished match is left out only when the player was obviously AFK the whole time.
+static void test_cp_apply() {
+	CHECK(cp_status_after_write(CPW_APPLIED) == CPS_APPLIED);
+	CHECK(cp_status_after_write(CPW_NO_EFFECT) == CPS_DECIDED);   // retry allowed: confirmed no change
+	CHECK(cp_status_after_write(CPW_UNKNOWN) == CPS_UNCERTAIN);
+	CHECK(cp_status_after_write(99) == CPS_UNCERTAIN);            // anything unexpected is treated as unknown
+	CHECK(cp_resolvable(CPS_UNCERTAIN, CPS_MANUAL_APPLIED));
+	CHECK(cp_resolvable(CPS_UNCERTAIN, CPS_MANUAL_VOID));
+	CHECK(!cp_resolvable(CPS_UNCERTAIN, CPS_DECIDED));            // no way back to an automatic retry
+	CHECK(!cp_resolvable(CPS_UNCERTAIN, CPS_APPLIED));
+	CHECK(!cp_resolvable(CPS_DECIDED, CPS_MANUAL_APPLIED));
+	CHECK(!cp_resolvable(CPS_APPLIED, CPS_MANUAL_VOID));
+}
+
 static void test_bg_afk() {
 	CHECK(!bg_afk_excluded(0, 0, true));     // no sample (short match, joined late): credited
 	CHECK(!bg_afk_excluded(0, 0, false));
@@ -361,6 +379,7 @@ int main() {
 	test_v24_boundaries();
 	test_hunt_resend();
 	test_bg_afk();
+	test_cp_apply();
 	test_laps();
 	std::printf("need_marble logic: %d passed, %d failed\n", g_pass, g_fail);
 	return g_fail == 0 ? EXIT_SUCCESS : EXIT_FAILURE;

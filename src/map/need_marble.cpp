@@ -103,6 +103,8 @@ uint32 g_pol_day = 0;
 bool g_pol_ok = false;
 int32 g_timer = INVALID_TIMER;
 t_tick g_last_bg_sample = 0;
+need_marble_cp_writer g_cp_writer = nullptr;   // V20: none in this build
+bool g_cp_audit_ok = false;                    // need_marble_cp_audit installed (sql-files/need_marble_v20_cp_apply.sql)
 
 struct hunt_buf {
 	uint32 char_id = 0;
@@ -258,7 +260,7 @@ void policy_refresh(bool force) {
 		}
 	}
 	int32 bad_key = 0;
-	int32 err = validate_policy(v, &bad_key);
+	int32 err = validate_policy(v, &bad_key, g_cp_writer != nullptr);
 	g_pol = v;
 	g_pol_day = day;
 	g_pol_ok = loaded && err == PE_OK;
@@ -455,7 +457,7 @@ int32 credit_in_tx(uint32 aid, uint32 cid, uint32 season_id, int32 act, uint64 k
 	return NEED_MARBLE_OK;
 }
 
-// CP decision row (design v0.5 sec.16). Status 1 = DECIDED; nothing applies it in this build.
+// CP decision row (design v0.5 sec.16). Status 1 = DECIDED; only need_marble_cp_apply moves it on, through a registered writer.
 int32 payout_decide_in_tx(uint32 aid, uint32 cid, int32 src_type, uint64 a, uint64 b, int32 amount) {
 	MARBLE_REQUIRE_TX();
 	if (amount <= 0)
@@ -474,6 +476,26 @@ int32 payout_decide_in_tx(uint32 aid, uint32 cid, int32 src_type, uint64 a, uint
 		aid, src_type, a, b, payout_no, amount, cid))
 		return NEED_MARBLE_DB_ERROR;
 	return NEED_MARBLE_OK;
+}
+
+// V20 audit row of one CP status change. reason: 1 claim before the writer, 2 writer applied, 3 writer no effect,
+// 4 writer unknown, 5 operator.
+int32 cp_audit_in_tx(uint32 aid, uint64 payout_no, int32 from, int32 to, int32 reason, int32 amount, uint32 cid, uint64 ticket) {
+	MARBLE_REQUIRE_TX();
+	if (!sq("INSERT INTO `need_marble_cp_audit` (`account_id`,`payout_no`,`from_status`,`to_status`,`reason`,`amount`,`char_id`,"
+		"`boot_id`,`operator_ticket`,`created_at`) VALUES ('%u','%" PRIu64 "','%d','%d','%d','%d','%u','%u',%s,NOW())",
+		aid, payout_no, from, to, reason, amount, cid, g_boot_id, ticket ? std::to_string(ticket).c_str() : "NULL"))
+		return NEED_MARBLE_DB_ERROR;
+	return NEED_MARBLE_OK;
+}
+
+bool cp_audit_check() {
+	if (!sq("SELECT COUNT(*) FROM `information_schema`.`TABLES` WHERE `TABLE_SCHEMA`=DATABASE() AND `ENGINE`='InnoDB' "
+		"AND `TABLE_NAME`='need_marble_cp_audit'"))
+		return false;
+	uint64 n = next_row() ? col_u64(0) : 0;
+	free_result();
+	return n == 1;
 }
 
 // ---------------------------------------------------------------------------
@@ -793,6 +815,106 @@ void dungeon_autoresolve(map_session_data* sd) {
 
 int32 need_marble_is_ready() {
 	return ready() ? 1 : 0;
+}
+
+void need_marble_cp_set_writer(need_marble_cp_writer writer) {
+	g_cp_writer = writer;
+	if (g_schema_ok)
+		policy_refresh(true);
+}
+
+// Two transactions around the writer, never one: the writer's system (char-server registry, mock) is not part of
+// the ledger transaction. The row is UNCERTAIN while the writer runs, so a stop between the writer and the second
+// commit can only leave it UNCERTAIN, and UNCERTAIN is never handed to the writer again.
+int32 need_marble_cp_apply(map_session_data* sd, uint64 payout_no) {
+	if (sd == nullptr || payout_no == 0)
+		return NEED_MARBLE_BAD_ARG;
+	if (!ready() || !g_cp_audit_ok || g_cp_writer == nullptr || P(P_CP_APPLY_ENABLED) != 1)
+		return NEED_MARBLE_DISABLED;
+	const uint32 aid = sd->status.account_id, cid = sd->status.char_id;
+	boot_id();
+	int32 amount = 0;
+	{
+		ledger_tx tx;
+		if (!tx.begin())
+			return NEED_MARBLE_DB_ERROR;
+		if (!sq("SELECT `status`,`amount` FROM `need_marble_cp_payout` WHERE `account_id`='%u' AND `payout_no`='%" PRIu64 "' FOR UPDATE",
+			aid, payout_no))
+			return NEED_MARBLE_DB_ERROR;
+		if (!next_row()) {
+			free_result();
+			return NEED_MARBLE_NOT_FOUND;
+		}
+		const int32 status = static_cast<int32>(col_i64(0));
+		amount = static_cast<int32>(col_i64(1));
+		free_result();
+		outv(sd, "@MB_CP_STATUS", status);
+		outv(sd, "@MB_CP_AMOUNT", amount);
+		if (status == CPS_APPLIED || status == CPS_MANUAL_APPLIED)
+			return NEED_MARBLE_ALREADY;
+		if (status != CPS_DECIDED)
+			return status == CPS_UNCERTAIN ? NEED_MARBLE_UNCERTAIN : NEED_MARBLE_BAD_STATE;
+		if (!sq("UPDATE `need_marble_cp_payout` SET `status`='%d' WHERE `account_id`='%u' AND `payout_no`='%" PRIu64 "' AND `status`='%d'",
+			CPS_UNCERTAIN, aid, payout_no, CPS_DECIDED) || affected() != 1)
+			return NEED_MARBLE_DB_ERROR;
+		int32 rc = cp_audit_in_tx(aid, payout_no, CPS_DECIDED, CPS_UNCERTAIN, 1, amount, cid, 0);
+		if (rc != NEED_MARBLE_OK)
+			return rc;
+		if (!tx.commit())
+			return NEED_MARBLE_DB_ERROR;   // the writer is not called: the row is DECIDED or UNCERTAIN, applied 0 times
+	}
+	outv(sd, "@MB_CP_STATUS", CPS_UNCERTAIN);
+	const int32 written = g_cp_writer(aid, cid, payout_no, amount);
+	const int32 to = cp_status_after_write(written);
+	ledger_tx tx;
+	if (!tx.begin())
+		return NEED_MARBLE_UNCERTAIN;
+	if (to != CPS_UNCERTAIN) {
+		if (!sq("UPDATE `need_marble_cp_payout` SET `status`='%d',`granted`='%d',`applied_at`=%s "
+			"WHERE `account_id`='%u' AND `payout_no`='%" PRIu64 "' AND `status`='%d'",
+			to, to == CPS_APPLIED ? amount : 0, to == CPS_APPLIED ? "NOW()" : "NULL", aid, payout_no, CPS_UNCERTAIN) || affected() != 1)
+			return NEED_MARBLE_UNCERTAIN;
+	}
+	if (cp_audit_in_tx(aid, payout_no, CPS_UNCERTAIN, to, to == CPS_APPLIED ? 2 : to == CPS_DECIDED ? 3 : 4, amount, cid, 0) != NEED_MARBLE_OK ||
+		!tx.commit())
+		return NEED_MARBLE_UNCERTAIN;   // the row stays UNCERTAIN in the ledger
+	outv(sd, "@MB_CP_STATUS", to);
+	if (to == CPS_APPLIED)
+		return NEED_MARBLE_OK;
+	return to == CPS_DECIDED ? NEED_MARBLE_REJECTED : NEED_MARBLE_UNCERTAIN;
+}
+
+// Works with the CP switch off: reconciliation of an UNCERTAIN row must not depend on applying new ones.
+int32 need_marble_cp_resolve(uint32 account_id, uint64 payout_no, int32 to_status, uint64 ticket) {
+	if (account_id == 0 || payout_no == 0 || ticket == 0 || !cp_resolvable(CPS_UNCERTAIN, to_status))
+		return NEED_MARBLE_BAD_ARG;
+	if (!g_schema_ok || g_fault || !g_cp_audit_ok || mmysql_handle == nullptr)
+		return NEED_MARBLE_DISABLED;
+	boot_id();
+	ledger_tx tx;
+	if (!tx.begin())
+		return NEED_MARBLE_DB_ERROR;
+	if (!sq("SELECT `status`,`amount`,`char_id` FROM `need_marble_cp_payout` WHERE `account_id`='%u' AND `payout_no`='%" PRIu64 "' FOR UPDATE",
+		account_id, payout_no))
+		return NEED_MARBLE_DB_ERROR;
+	if (!next_row()) {
+		free_result();
+		return NEED_MARBLE_NOT_FOUND;
+	}
+	const int32 status = static_cast<int32>(col_i64(0)), amount = static_cast<int32>(col_i64(1));
+	const uint32 cid = static_cast<uint32>(col_u64(2));
+	free_result();
+	if (status != CPS_UNCERTAIN)
+		return NEED_MARBLE_BAD_STATE;
+	if (!sq("UPDATE `need_marble_cp_payout` SET `status`='%d',`granted`='%d',`applied_at`=%s,`operator_ticket`='%" PRIu64 "' "
+		"WHERE `account_id`='%u' AND `payout_no`='%" PRIu64 "' AND `status`='%d'",
+		to_status, to_status == CPS_MANUAL_APPLIED ? amount : 0, to_status == CPS_MANUAL_APPLIED ? "NOW()" : "NULL", ticket,
+		account_id, payout_no, CPS_UNCERTAIN) || affected() != 1)
+		return NEED_MARBLE_DB_ERROR;
+	int32 rc = cp_audit_in_tx(account_id, payout_no, CPS_UNCERTAIN, to_status, 5, amount, cid, ticket);
+	if (rc != NEED_MARBLE_OK)
+		return rc;
+	return tx.commit() ? NEED_MARBLE_OK : NEED_MARBLE_DB_ERROR;
 }
 
 int32 need_marble_policy_value(int32 key) {
@@ -1518,6 +1640,7 @@ void need_marble_init() {
 	g_hunt.clear();
 	g_bg.clear();
 	g_schema_ok = schema_check();
+	g_cp_audit_ok = g_schema_ok && cp_audit_check();
 	policy_refresh(true);
 	if (!g_schema_ok)
 		ShowNotice("need_marble: ledger schema not installed, marble board disabled.\n");

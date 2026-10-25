@@ -6,8 +6,9 @@
 // never do (nested START TRANSACTION would implicitly commit on MariaDB).
 // Rules and policy defaults: need_marble_logic.hpp. Schema: sql-files/need_marble_phase_bc_v1.sql.
 //
-// Cash points are only DECIDED in need_marble_cp_payout. Nothing in this module
-// changes #CASHPOINTS or any other account registry value.
+// Cash points are DECIDED in need_marble_cp_payout. need_marble_cp_apply hands a decided row to a CP writer,
+// the only code allowed to change a balance; this build registers none (V20 prep: the test build registers a
+// mock). Nothing in this module changes #CASHPOINTS or any other account registry value.
 
 #ifndef MAP_NEED_MARBLE_HPP
 #define MAP_NEED_MARBLE_HPP
@@ -42,6 +43,7 @@ enum e_need_marble_rc : int32 {
 	NEED_MARBLE_INTERNAL = -19,
 	NEED_MARBLE_REJECTED = -20,
 	NEED_MARBLE_CONFLICT = -21,      // a hunt batch key already holds other content (V21): nothing written
+	NEED_MARBLE_UNCERTAIN = -22,     // CP payout UNCERTAIN: never retried automatically, operator reconciliation
 };
 
 void need_marble_init();
@@ -69,6 +71,17 @@ int32 need_marble_instance_clear(const char* dungeon_key, const char* map_name);
 /// Battleground reward hook (F_BG_Badge / F_BG_RM_AutoRewardBadge / F_KvM_GrantReward, random match cycle): one finished match = BG points
 /// for this player's account, once per match. NEED_MARBLE_REJECTED = obviously AFK for the whole match.
 int32 need_marble_bg_credit(map_session_data* sd, const char* bg_type, int32 match_token);
+
+/// V20 CP writer: changes the balance of one payout and answers need_marble::CPW_APPLIED / CPW_NO_EFFECT /
+/// CPW_UNKNOWN. It has no idempotency key of its own (like #CASHPOINTS): the ledger calls it at most once per row.
+using need_marble_cp_writer = int32 (*)(uint32 account_id, uint32 char_id, uint64 payout_no, int32 amount);
+void need_marble_cp_set_writer(need_marble_cp_writer writer);
+/// Applies one DECIDED payout of this account: DECIDED -> UNCERTAIN (committed before the writer runs) ->
+/// APPLIED, or back to DECIDED only when the writer confirms it changed nothing. DISABLED without a writer,
+/// without need_marble_cp_audit or with policy key 5 off. @MB_CP_STATUS / @MB_CP_AMOUNT.
+int32 need_marble_cp_apply(map_session_data* sd, uint64 payout_no);
+/// Operator reconciliation of one UNCERTAIN payout: MANUAL_APPLIED (4) or MANUAL_VOID (5) with a ticket.
+int32 need_marble_cp_resolve(uint32 account_id, uint64 payout_no, int32 to_status, uint64 ticket);
 
 /// Current value of a policy key (today's effective value), -1 when unknown.
 int32 need_marble_policy_value(int32 key);
