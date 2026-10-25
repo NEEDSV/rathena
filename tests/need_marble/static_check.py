@@ -293,7 +293,7 @@ check('F_BG_Badge credits the marble once the match type is known, before close2
       badge.count('need_marble_bg_credit(') == 1 and hook_badge in badge and
       -1 < badge.find('else\r\n\t\treturn;') < badge.find(hook_badge) < badge.find('if (getarg(0) == 1)') < badge.find('close2;'))
 auto_rb = func_body(bg_common, 'F_BG_RM_AutoRewardBadge')
-check('F_BG_RM_AutoRewardBadge credits every member on the map before the reward loop that waits in close2 (G2-C M1)',
+check('F_BG_RM_AutoRewardBadge credits every member on the map before the reward loop (G2-C M1)',
       auto_rb.count('need_marble_bg_credit(.@bg_type$, $@BG_RM_TOKEN);') == 1 and
       -1 < auto_rb.find('if (!$@BG_RM_CYCLE_ACTIVE)') < auto_rb.find('need_marble_bg_credit(') < auto_rb.find('F_BG_RM_TryClaimReward') <
       auto_rb.find('callfunc "F_BG_Badge"'))
@@ -315,6 +315,28 @@ check('need_marble_bg_credit: switch off -> DISABLED, AFK rule from need_marble_
       'bg_credit(sd, boot, match_token, type_code)' in bgc and 'inline bool bg_afk_excluded(' in logic)
 check('G2-C adds no participation / kill / heal count rule', 'P_BG_MIN_SAMPLES' not in bgc and 'P_BG_MIN_ACTIVE_PERMIL' not in bgc and
       'kill' not in bgc.lower() and 'heal' not in bgc.lower())
+
+# 14. BG auto reward fix: the auto reward never waits for a player (one AFK member held back the rest of the team)
+DIALOG_CMDS = ('mes ', 'close', 'next;', 'select(', 'input ', 'menu ')
+gate = badge.find('\tif (!getarg(3,0)) {')
+gate_end = badge.find('\r\n\t}\r\n', gate)
+in_gate = lambda s: all(gate < m.start() < gate_end for m in re.finditer(re.escape(s), badge))
+check('F_BG_Badge: every mes / close2 sits inside the dialog block skipped by the auto reward (getarg(3) = 1)',
+      gate > 0 and badge.count('close2;') == 1 and badge.count('mes ') > 0 and in_gate('mes ') and in_gate('close2;'))
+check('F_BG_Badge: amounts, the loser BG point and every getitem are outside the dialog block (auto and NPC pay the same)',
+      -1 < badge.find('set #BATTLEGROUND_POINT, #BATTLEGROUND_POINT + 3;') < gate and
+      all(m.start() > gate_end for m in re.finditer('getitem ', badge)) and badge.count('getitem ') == 3)
+auto_kvm = func_body(kvm, 'F_KvM_AutoRewardRandom')
+check('F_BG_RM_AutoRewardBadge calls F_BG_Badge without the dialog, and has no dialog command itself',
+      auto_rb.count('callfunc "F_BG_Badge", .@win, .@team$, .@bg_type$, 1;') == 1 and auto_rb.count('F_BG_Badge"') == 1 and
+      not any(c in strip_comments(auto_rb) for c in DIALOG_CMDS))
+check('KVM auto reward path (F_KvM_AutoRewardRandom -> F_KvM_GrantReward) has no dialog command (left unchanged)',
+      bool(auto_kvm) and not any(c in strip_comments(auto_kvm) + strip_comments(grant) for c in DIALOG_CMDS))
+manual = []
+for rel in ('npc/battleground/tierra/tierra01.txt', 'npc/battleground/flavius/flavius01.txt'):
+    manual += re.findall(r'callfunc "F_BG_Badge",[^;]*;', read(rel, 'cp949'))
+check('reward NPCs (tierra01 / flavius01) still call F_BG_Badge with 3 arguments: dialog shown as before',
+      len(manual) == 16 and all(re.fullmatch(r'callfunc "F_BG_Badge",[01],"(Guillaume|Croix)","(Tierra|Flavius)";', m) for m in manual), str(len(manual)))
 
 failed = [r for r in results if not r[1]]
 for name, ok, detail in results:

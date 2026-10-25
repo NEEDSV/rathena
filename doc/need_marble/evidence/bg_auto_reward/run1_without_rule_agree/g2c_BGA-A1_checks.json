@@ -1,0 +1,92 @@
+[
+ {
+  "check": "A1 setup: Tierra token 501, 8 joined, the AFK character first in the Guillaume list (first in the auto loop)",
+  "pass": true,
+  "detail": "{'mode': 1, 'token': 501, 'g': 1, 'c': 2, 'gcount': 4, 'ccount': 4, 'joined': 8}"
+ },
+ {
+  "check": "BG-A1 auto reward returned at once with nobody answering (AFK first in the loop): <= 5 s, 5 rewarded",
+  "pass": true,
+  "detail": "'[MBQA] bgauto mode=1 rewarded=5' in 0.1 s"
+ },
+ {
+  "check": "BG-A1 members behind the AFK character got the existing BG reward in the FIRST auto call (winners = NPC winner)",
+  "pass": true,
+  "detail": "heal {'7828': 2, '6378': 1, '399990': 30} def {'7828': 2, '6378': 1, '399990': 30} npc {'7828': 2, '6378': 1, '399990': 30}"
+ },
+ {
+  "check": "BG-A1 losers behind the AFK character got the existing loser reward in the first auto call",
+  "pass": true,
+  "detail": "b {'7828': 1, '6378': 1, '399990': 26, 'bgp': 3} dead {'7828': 1, '6378': 1, '399990': 26, 'bgp': 3} ref {'7828': 1, '6378': 1, '399990': 26, 'bgp': 3}"
+ },
+ {
+  "check": "BG-A1 the AFK character itself gets the existing reward as before (existing BG pays everyone on the map)",
+  "pass": true,
+  "detail": "afk {'7828': 2, '6378': 1, '399990': 30}"
+ },
+ {
+  "check": "BG-A1 auto reward sent no NPC dialog packet to any rewarded client",
+  "pass": false,
+  "detail": "{'bgheal': ['mes', 'mes', 'mes', 'mes', 'mes', 'mes', 'next'], 'bgdef': ['mes', 'mes', 'mes', 'mes', 'mes', 'mes', 'next'], 'bgb': ['mes', 'mes', 'mes', 'mes', 'mes', 'mes', 'next'], 'bgdead': ['mes', 'mes', 'mes', 'mes', 'mes', 'mes', 'next'], 'bgafk': ['mes', 'mes', 'mes', 'mes', 'mes', 'mes', 'next']}"
+ },
+ {
+  "check": "BG-A1 every auto-rewarded member left the BG and is in bat_room",
+  "pass": true,
+  "detail": "{'bgafk': {'name': 'MBQA_BGAFK', 'aid': 2000924, 'cid': 150935, 'bg': 0, 'map': 'bat_room', 'x': 154, 'y': 150, 'team': 0}, 'bgheal': {'name': 'MBQA_BGHEAL', 'aid': 2000923, 'cid': 150934, 'bg': 0, 'map': 'bat_room', 'x': 154, 'y': 150, 'team': 0}, 'bgdef': {'name': 'MBQA_BGDEF', 'aid': 2000927, 'cid': 150938, 'bg': 0, 'map': 'bat_room', 'x': 154, 'y': 150, 'team': 0}, 'bgb': {'name': 'MBQA_BGB', 'aid': 2000922, 'cid': 150933, 'bg': 0, 'map': 'bat_room', 'x': 154, 'y': 150, 'team': 0}, 'bgdead': {'name': 'MBQA_BGDEAD', 'aid': 2000928, 'cid': 150939, 'bg': 0, 'map': 'bat_room', 'x': 154, 'y': 150, 'team': 0}, 'bgc': {'name': 'MBQA_BGC', 'aid': 2000929, 'cid': 150940, 'bg': 2, 'map': 'bat_a01', 'x': 42, 'y': 17, 'team': 2}}"
+ },
+ {
+  "check": "BG-A2 NPC winner: dialog shown and closed as before, reward identical to G2-C (before the fix)",
+  "pass": true,
+  "detail": "mes 4 done True delta {'7828': 2, '6378': 1, '399990': 30}"
+ },
+ {
+  "check": "BG-A3 dialog held open during the auto reward: auto skips it (claim key), only the BG point set before close2 so far",
+  "pass": true,
+  "detail": "held {'bgp': 3} after auto {'bgp': 3} where {'name': 'MBQA_BGC', 'aid': 2000929, 'cid': 150940, 'bg': 2, 'map': 'bat_a01', 'x': 42, 'y': 17, 'team': 2}"
+ },
+ {
+  "check": "BG-A2/A3 the held loser closes the dialog: exactly one loser reward (= G2-C NPC loser), then bat_room",
+  "pass": true,
+  "detail": "final {'7828': 1, '6378': 1, '399990': 26, 'bgp': 3} where {'name': 'MBQA_BGC', 'aid': 2000929, 'cid': 150940, 'bg': 0, 'map': 'bat_room', 'x': 154, 'y': 150, 'team': 0}"
+ },
+ {
+  "check": "BG-A3 marble: +50 once for every non-AFK member still there (NPC, held dialog and auto paths alike)",
+  "pass": true,
+  "detail": "{'bgafk': 0, 'bga': 50, 'bgb': 50, 'bgheal': 50, 'bgdef': 50, 'bgdead': 50, 'bgc': 50, 'bgleave': 0} {'bgafk': [], 'bga': [(501, 1, 20261127, 50, 50, 1, 150931)], 'bgb': [(501, 1, 20261127, 50, 50, 1, 150933)], 'bgheal': [(501, 1, 20261127, 50, 50, 1, 150934)], 'bgdef': [(501, 1, 20261127, 50, 50, 1, 150938)], 'bgdead': [(501, 1, 20261127, 50, 50, 1, 150939)], 'bgc': [(501, 1, 20261127, 50, 50, 1, 150940)], 'bgleave': []}"
+ },
+ {
+  "check": "BG-A3 marble: AFK 0 and leaver 0, no row",
+  "pass": true,
+  "detail": "afk [] leaver []"
+ },
+ {
+  "check": "BG-A3 second auto call: 0 rewarded, existing rewards unchanged",
+  "pass": true,
+  "detail": "'[MBQA] bgauto mode=1 rewarded=0'; changed []"
+ },
+ {
+  "check": "BG-A3 reverse order: auto-rewarded member back at the NPC gets nothing, no dialog, sent to bat_room",
+  "pass": true,
+  "detail": "back {'name': 'MBQA_BGB', 'aid': 2000922, 'cid': 150933, 'bg': 0, 'map': 'bat_a01', 'x': 46, 'y': 20, 'team': 0} mes [] after {'name': 'MBQA_BGB', 'aid': 2000922, 'cid': 150933, 'bg': 0, 'map': 'bat_room', 'x': 154, 'y': 150, 'team': 0}"
+ },
+ {
+  "check": "BG-A3 character change (MBQA_BGA2): marble ALREADY (-4)",
+  "pass": false,
+  "detail": "rc None"
+ },
+ {
+  "check": "BG-A3 duplicates changed no marble row",
+  "pass": true,
+  "detail": "changed []"
+ },
+ {
+  "check": "BG-A4 leaver (did not come back): no existing BG reward, no marble row",
+  "pass": true,
+  "detail": "delta {}"
+ },
+ {
+  "check": "A1 ledger invariants: 0 violations",
+  "pass": true,
+  "detail": "[]"
+ }
+]
