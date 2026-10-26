@@ -2662,20 +2662,7 @@ L_StoneEnchant:
 		close;
 	}
 
-	delitem .@etc_id, 1;
-
-	if (.StoneEnchantCostZeny > 0)
-		set Zeny, Zeny - .StoneEnchantCostZeny;
-
-	if (rand(10000) >= .StoneEnchantRate) {
-		specialeffect2 EF_SUI_EXPLOSION;
-		mes needtr("[인챈트 스톤]", "[Enchant Stone]");
-		mes needtr("^FF0000스톤 부여에 실패했습니다.^000000", "^FF0000The stone could not be applied.^000000");
-		mes needtr("기존 스톤은 유지됩니다.", "The old stone stays.");
-		close;
-	}
-
-	// 성공 시: 기존 착용 옷장 의상 회수 후 카드 박힌 Bound 의상 재지급
+	// 스톤/제니 소모 전: 귀속 옷장 의상인지 확인하고 회수 (일반 의상이면 아무것도 소모하지 않고 중단)
 	unequip .@stone_equip_index;
 
 	// Bound 의상 보유 재확인
@@ -2693,6 +2680,20 @@ L_StoneEnchant:
 		mes needtr("[인챈트 스톤]", "[Enchant Stone]");
 		mes needtr("옷장 의상을 회수할 수 없습니다.", "The wardrobe costume could not be taken back.");
 		mes needtr("일반 의상 보호를 위해 진행을 중단합니다.", "Stopping here to protect your normal costume.");
+		close;
+	}
+
+	delitem .@etc_id, 1;
+
+	if (.StoneEnchantCostZeny > 0)
+		set Zeny, Zeny - .StoneEnchantCostZeny;
+
+	if (rand(10000) >= .StoneEnchantRate) {
+		specialeffect2 EF_SUI_EXPLOSION;
+		mes needtr("[인챈트 스톤]", "[Enchant Stone]");
+		mes needtr("^FF0000스톤 부여에 실패했습니다.^000000", "^FF0000The stone could not be applied.^000000");
+		mes needtr("기존 스톤은 유지됩니다.", "The old stone stays.");
+		mes needtr("의상이 해제되었으니 인벤토리에서 다시 착용해주세요.", "The costume was taken off. Please equip it again from your inventory.");
 		close;
 	}
 
