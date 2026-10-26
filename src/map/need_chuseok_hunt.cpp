@@ -1,14 +1,13 @@
 // Copyright (c) rAthena Dev Teams - Licensed under GNU GPL
-// NEED 2026 chuseok event - field hunting rewards and the shared honey songpyun ledger.
+// NEED 2026 chuseok event - field hunting materials, and the shared seasonal daily ledger.
 //
-// Mirrors the summer golden watermelon flow (need_summer_hunt.cpp) and shares
-// its world drop targeting through need_event_hunt.hpp. The difference is that
-// the honey songpyun ledger is reachable from script as well, so the hunting
-// drop and the battleground full-cycle roll consume the same daily allowance.
+// The chuseok materials share the summer world drop targeting through need_event_hunt.hpp.
 //
-// The ledger transaction itself takes a s_need_event_daily_spec, so the 2026
-// halloween jack game reward (need_halloween.cpp) runs through the same code
-// with its own event id, item and amount.
+// The daily ledger (need_chuseok_honey_* tables, account + IP once per logical day) was
+// built for the chuseok honey songpyun. That item (6532) is now the 2026 halloween Jack's
+// Candy for good, so chuseok no longer grants it from anywhere. The ledger transaction
+// takes a s_need_event_daily_spec, and the halloween jack game reward and Jack's Candy
+// (need_halloween.cpp) run through it with their own event id, item and amount.
 
 #include "need_chuseok_hunt.hpp"
 
@@ -33,35 +32,15 @@ namespace {
 
 constexpr t_itemid NEED_CHUSEOK_DOUGH_ITEM_ID = 7613;      // 작은 찹쌀반죽
 constexpr t_itemid NEED_CHUSEOK_PINE_ITEM_ID = 1001827;    // 솔잎
-constexpr t_itemid NEED_CHUSEOK_HONEY_ITEM_ID = 6532;      // 꿀송편
 
 constexpr int32 NEED_CHUSEOK_RATE_SCALE = 10000;
 constexpr int32 NEED_CHUSEOK_DOUGH_RATE = 400;   // 4.00%
 constexpr uint16 NEED_CHUSEOK_DOUGH_AMOUNT = 4;
 constexpr int32 NEED_CHUSEOK_PINE_RATE = 400;    // 4.00%
 constexpr uint16 NEED_CHUSEOK_PINE_AMOUNT = 1;
-constexpr int32 NEED_CHUSEOK_HONEY_RATE = 10;     // 0.10% (10 / 10000)
 constexpr int32 NEED_CHUSEOK_LEVEL_DIFFERENCE = 30;		// 2026-10-19 간담회: ±15 -> ±30 (추석 드롭 전용, 경계 포함)
-constexpr uint32 NEED_CHUSEOK_EVENT_ID = 202609;
 
 constexpr int32 MSG_CHUSEOK_ITEM_UNAVAILABLE = 1546;
-constexpr int32 MSG_CHUSEOK_SCHEMA_UNAVAILABLE = 1547;
-constexpr int32 MSG_CHUSEOK_INVENTORY_FULL = 1548;
-constexpr int32 MSG_CHUSEOK_ACCOUNT_LIMIT = 1549;
-constexpr int32 MSG_CHUSEOK_IP_LIMIT = 1550;
-constexpr int32 MSG_CHUSEOK_DATABASE_ERROR = 1551;
-constexpr int32 MSG_CHUSEOK_HONEY_SUCCESS = 1552;
-constexpr int32 MSG_CHUSEOK_HONEY_LOG = 1553;
-constexpr int32 MSG_CHUSEOK_FAIL_CLOSED = 1554;
-constexpr int32 MSG_CHUSEOK_FAMILY_UNAVAILABLE = 1555;
-
-constexpr s_need_event_daily_spec NEED_CHUSEOK_HONEY_SPEC = {
-	NEED_CHUSEOK_EVENT_ID, NEED_CHUSEOK_HONEY_ITEM_ID, 1, true, true,
-	MSG_CHUSEOK_ITEM_UNAVAILABLE, MSG_CHUSEOK_SCHEMA_UNAVAILABLE, MSG_CHUSEOK_FAIL_CLOSED,
-	MSG_CHUSEOK_HONEY_LOG, MSG_CHUSEOK_FAMILY_UNAVAILABLE,
-	MSG_CHUSEOK_INVENTORY_FULL, MSG_CHUSEOK_ACCOUNT_LIMIT, MSG_CHUSEOK_IP_LIMIT,
-	MSG_CHUSEOK_DATABASE_ERROR, MSG_CHUSEOK_HONEY_SUCCESS,
-};
 
 constexpr const char* RESULT_DELIVERED = "DELIVERED";
 constexpr const char* RESULT_REJECTED = "REJECTED";
@@ -77,7 +56,6 @@ constexpr const char* ERROR_COMMIT_UNCERTAIN = "COMMIT_UNCERTAIN";
 
 bool material_items_checked = false;
 bool material_items_ready = false;
-s_need_event_daily_state honey_state;
 
 bool need_chuseok_material_ready() {
 	if (material_items_checked)
@@ -133,7 +111,7 @@ void need_event_daily_fail_closed(const s_need_event_daily_spec& spec, s_need_ev
 // reused here with event_id = spec.event_id so no extra schema has to be
 // imported. Never fail-closed on this: when the tables are missing or the query
 // errors, the account is simply treated as "no family" and the ip limit applies
-// as usual. A broken family list must not take the whole honey songpyun down.
+// as usual. A broken family list must not take the whole daily reward down.
 uint32 need_event_daily_family_group(const s_need_event_daily_spec& spec, s_need_event_daily_state& state, uint32 account_id) {
 	if (!spec.family_exception || state.family_lookup_disabled || mmysql_handle == nullptr)
 		return 0;
@@ -404,8 +382,25 @@ e_need_chuseok_honey_result need_event_daily_grant(const s_need_event_daily_spec
 	return NEED_CHUSEOK_HONEY_DELIVERED;
 }
 
-e_need_chuseok_honey_result need_chuseok_honey_grant(map_session_data* sd, const char* source, const mob_data* md) {
-	return need_event_daily_grant(NEED_CHUSEOK_HONEY_SPEC, honey_state, sd, source, md);
+int32 need_event_daily_claimed_today(const s_need_event_daily_spec& spec, s_need_event_daily_state& state, map_session_data* sd) {
+	char ip[16] = {};
+	need_event_hunt_date logical_date;
+	if (sd == nullptr || state.fail_closed || !need_event_daily_schema_ready(spec, state) ||
+		!need_event_hunt_client_ip(sd, ip) || !need_event_hunt_logical_date(logical_date))
+		return -1;
+
+	if (SQL_ERROR == Sql_Query(mmysql_handle,
+		"SELECT 1 FROM `need_chuseok_honey_claim` WHERE `event_id`='%u' AND `logical_date`='%s' AND `account_id`='%u' "
+		"UNION ALL SELECT 1 FROM `need_chuseok_honey_ip_daily` WHERE `event_id`='%u' AND `logical_date`='%s' AND `ip`=INET6_ATON('%s') "
+		"LIMIT 1",
+		spec.event_id, logical_date.sql_date, sd->status.account_id,
+		spec.event_id, logical_date.sql_date, ip)) {
+		Sql_ShowDebug(mmysql_handle);
+		return -1;
+	}
+	int32 claimed = Sql_NumRows(mmysql_handle) > 0 ? 1 : 0;
+	Sql_FreeResult(mmysql_handle);
+	return claimed;
 }
 
 void need_chuseok_hunt_on_kill(map_session_data* sd, mob_data* md, int32 type) {
@@ -421,30 +416,16 @@ void need_chuseok_hunt_on_kill(map_session_data* sd, mob_data* md, int32 type) {
 		if (rnd_chance<int32>(NEED_CHUSEOK_PINE_RATE, NEED_CHUSEOK_RATE_SCALE))
 			need_event_hunt_add_item(sd, NEED_CHUSEOK_PINE_ITEM_ID, NEED_CHUSEOK_PINE_AMOUNT);
 	}
-
-	if (battle_config.need_chuseok_hunt_honey_enable != 0 && !honey_state.fail_closed &&
-		rnd_chance<int32>(NEED_CHUSEOK_HONEY_RATE, NEED_CHUSEOK_RATE_SCALE))
-		need_chuseok_honey_grant(sd, "HUNT", md);
 }
 
 void need_chuseok_hunt_init() {
 	material_items_checked = false;
 	material_items_ready = false;
-	honey_state = {};
 	if (battle_config.need_chuseok_hunt_enable != 0 && battle_config.need_chuseok_hunt_material_enable != 0)
 		need_chuseok_material_ready();
-	if (battle_config.need_chuseok_hunt_enable != 0 && battle_config.need_chuseok_hunt_honey_enable != 0) {
-		if (!item_db.exists(NEED_CHUSEOK_HONEY_ITEM_ID)) {
-			ShowError(msg_txt(nullptr, MSG_CHUSEOK_ITEM_UNAVAILABLE), NEED_CHUSEOK_HONEY_ITEM_ID);
-			honey_state.fail_closed = true;
-		} else {
-			need_event_daily_schema_ready(NEED_CHUSEOK_HONEY_SPEC, honey_state);
-		}
-	}
 }
 
 void need_chuseok_hunt_final() {
 	material_items_checked = false;
 	material_items_ready = false;
-	honey_state = {};
 }

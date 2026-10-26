@@ -75,6 +75,8 @@ S_Board:
 	.@day$ = gettimestr("%Y-%m-%d", 11, gettimetick(2) - 14400);
 	.@rows = query_sql("SELECT COUNT(*) FROM `need_chuseok_honey_claim` WHERE `event_id`=202610 AND `logical_date`='" + .@day$ + "' AND `status`=1", .@jack_today);
 	if (.@rows < 1) .@jack_today = -1;
+	.@rows = query_sql("SELECT COUNT(*) FROM `need_chuseok_honey_claim` WHERE `event_id`=202611 AND `logical_date`='" + .@day$ + "' AND `status`=1", .@candy_today);
+	if (.@rows < 1) .@candy_today = -1;
 
 	.@wc = 0;
 	if (.@flag != .@want) { .@warn$[.@wc] = "사냥 battle flag(" + .@flag + ")가 스위치(" + .@want + ")와 다릅니다. [다시 맞추기] 필요"; .@wc++; }
@@ -97,6 +99,8 @@ S_Board:
 	mes " [전역] 사냥 월드 드롭 : " + callfunc("F_NHGM_OO", $NEED_HALLOWEEN_HUNT_ON);
 	mes " [CONFIG] 실제 판정   : " + callfunc("F_NHGM_OO", .@flag);
 	mes "   ^999999할로윈 코인 4.00% x1, 플레이어 레벨 ±30^000000";
+	mes " [CONFIG] 잭의 사탕 : " + callfunc("F_NHGM_OO", getbattleflag("need_halloween_candy_enable")) + " / " + getbattleflag("need_halloween_candy_rate") + "/10000";
+	mes "   ^999999계정+IP 하루 1개, 오늘(" + .@day$ + ") 지급 : " + ((.@candy_today < 0) ? "조회 불가" : .@candy_today + "건") + "^000000";
 	mes "^FFCC00[전장]^000000";
 	mes " [전역] 전장 코인 : " + callfunc("F_NHGM_OO", $NEED_HALLOWEEN_BG_ON);
 	mes "   ^999999티에라 2 / 플라비우스 2 / KVM 3 (승패 무관)^000000";
@@ -166,6 +170,7 @@ S_Hunt:
 		mes "실제 판정   : " + callfunc("F_NHGM_OO", getbattleflag("need_halloween_hunt_enable"));
 		mes " ";
 		mes "^999999이벤트 전체가 ON 일 때만 실제로 켜집니다.^000000";
+		mes "^999999잭의 사탕(6532) 드롭도 이 스위치를 따릅니다.^000000";
 		next;
 		if (select("스위치 변경:돌아가기") == 2)
 			break;

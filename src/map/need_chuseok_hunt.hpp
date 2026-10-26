@@ -1,5 +1,5 @@
 // Copyright (c) rAthena Dev Teams - Licensed under GNU GPL
-// NEED 2026 chuseok event - field hunting rewards and the shared honey songpyun ledger.
+// NEED 2026 chuseok event - field hunting materials, and the shared seasonal daily ledger.
 
 #ifndef MAP_NEED_CHUSEOK_HUNT_HPP
 #define MAP_NEED_CHUSEOK_HUNT_HPP
@@ -10,7 +10,8 @@
 class map_session_data;
 struct mob_data;
 
-/// Result of a honey songpyun claim. Script side reads these values directly.
+/// Result of a daily ledger claim (the names date from the honey songpyun, the first user).
+/// Script side reads these values directly.
 enum e_need_chuseok_honey_result : int32 {
 	NEED_CHUSEOK_HONEY_DELIVERED = 1,
 	NEED_CHUSEOK_HONEY_ACCOUNT_LIMIT = 0,
@@ -49,18 +50,18 @@ struct s_need_event_daily_state {
 	bool family_lookup_disabled = false;
 };
 
-/// Field hunting hook: songpyun materials plus the honey songpyun roll.
+/// Field hunting hook: songpyun materials (6532 is no longer a chuseok item).
 void need_chuseok_hunt_on_kill(map_session_data* sd, mob_data* md, int32 type);
 
-/// Single entry point for the honey songpyun daily ledger.
-/// source is a short ascii tag recorded in the ledger, e.g. "HUNT" or "BG".
+/// The ledger transaction for one spec: account + IP once per logical day (04:00).
+/// source is a short ascii tag recorded in the ledger, e.g. "HUNT" or "JACK".
 /// md may be null when the claim does not come from a monster kill.
-/// The account + IP daily limit is shared by every source.
-e_need_chuseok_honey_result need_chuseok_honey_grant(map_session_data* sd, const char* source, const mob_data* md);
-
-/// The ledger transaction behind need_chuseok_honey_grant, for any spec.
 e_need_chuseok_honey_result need_event_daily_grant(const s_need_event_daily_spec& spec, s_need_event_daily_state& state,
 	map_session_data* sd, const char* source, const mob_data* md);
+
+/// Read only probe: 1 = the account or the current IP already has today's row of this spec,
+/// 0 = not yet, -1 = ledger unavailable.
+int32 need_event_daily_claimed_today(const s_need_event_daily_spec& spec, s_need_event_daily_state& state, map_session_data* sd);
 
 /// Checks the ledger tables once (InnoDB, columns). False closes the spec.
 bool need_event_daily_schema_ready(const s_need_event_daily_spec& spec, s_need_event_daily_state& state);

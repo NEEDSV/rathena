@@ -35,9 +35,9 @@ BUILDIN_DEF(need_claim_equipment_build_reward,"i"),
 
 BUILDIN_DEF(clearmapskillunits, "s"),
 
-// NEED 2026 chuseok event: shared honey songpyun daily ledger (hunt + battleground).
-BUILDIN_DEF(needchuseokhoney,"?"),
+// NEED 2026 halloween event: jack game reward and Jack's Candy (6532) through the shared daily ledger.
 BUILDIN_DEF(needhalloweenjack,"i"),
+BUILDIN_DEF(needhalloweencandy,""),
 BUILDIN_DEF(needeventhub_refresh,"?"),
 
 // NEED daily quest (phase 1): status / accept / re-accept / submit.

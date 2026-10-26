@@ -1,5 +1,5 @@
 // Copyright (c) rAthena Dev Teams - Licensed under GNU GPL
-// NEED 2026 halloween event - field hunting coin drop and the jack game daily reward.
+// NEED 2026 halloween event - field hunting coin drop, Jack's Candy and the jack game daily reward.
 
 #ifndef MAP_NEED_HALLOWEEN_HPP
 #define MAP_NEED_HALLOWEEN_HPP
@@ -11,7 +11,7 @@
 class map_session_data;
 struct mob_data;
 
-/// Field hunting hook: halloween coin world drop.
+/// Field hunting hook: halloween coin world drop and the Jack's Candy (6532) roll.
 void need_halloween_hunt_on_kill(map_session_data* sd, mob_data* md, int32 type);
 
 /// Jack game clear reward through the shared daily ledger (account + IP, 04:00).
@@ -21,6 +21,10 @@ e_need_chuseok_honey_result need_halloween_jack_grant(map_session_data* sd);
 /// Read only probe for the jack game NPC: 1 = account or IP already rewarded today,
 /// 0 = not yet, -1 = ledger unavailable.
 int32 need_halloween_jack_claimed_today(map_session_data* sd);
+
+/// Read only probe for the Event Hub: 1 = account or IP already got today's Jack's Candy,
+/// 0 = not yet, -1 = ledger unavailable.
+int32 need_halloween_candy_claimed_today(map_session_data* sd);
 
 void need_halloween_init();
 void need_halloween_final();

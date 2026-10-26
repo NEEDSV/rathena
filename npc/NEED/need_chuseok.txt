@@ -7,20 +7,20 @@
 //=   663     송편          (교환 재화)
 //=   6635    대축          (송편 100개 / 계정·IP 각 주 10개, 토요일 22:00 초기화)
 //=   399935  아리아 의상 선택 상자 (송편 300개 / 계정·IP 각 이벤트 기간 1개)
-//=   6532    꿀송편        (랜덤 제니/캐시, 계정+IP 하루 1개)
 //=
-//= 사냥 월드 드롭과 꿀송편 일일 제한은 C++ (need_chuseok_hunt.cpp) 가
-//= 담당하고, 여기에서는 전장 지급 / 제작 / 교환 / 아이템 사용을 처리한다.
+//= 6532(옛 꿀송편)는 2026-10-26 할로윈 '잭의 사탕'으로 영구 전환되었다.
+//= 추석은 6532 를 어디에서도 주지 않는다 (사냥 드롭 / 전장 풀사이클 / 보상 우편 모두 제거).
+//=
+//= 사냥 재료 월드 드롭은 C++ (need_chuseok_hunt.cpp) 가 담당하고,
+//= 여기에서는 전장 재료 지급 / 제작 / 교환을 처리한다.
 //=
 //= 운영 스위치
 //=   $NEED_CHUSEOK_EVENT_ON       추석 이벤트 전체
 //=   $NEED_CHUSEOK_BG_MATERIAL_ON 전장 송편 재료 지급
-//=   $NEED_CHUSEOK_BG_HONEY_ON    전장 꿀송편 판정
 //=   $NEED_CHUSEOK_CRAFT_ON       송편 제작 NPC
 //=   $NEED_CHUSEOK_SHOP_ON        송편 교환 NPC
 //=   need_chuseok_hunt_enable          (battle conf) 사냥 전체
 //=   need_chuseok_hunt_material_enable (battle conf) 재료 월드 드롭
-//=   need_chuseok_hunt_honey_enable    (battle conf) 꿀송편 사냥 드롭
 //============================================================
 
 //------------------------------------------------------------
@@ -31,15 +31,7 @@ function	script	F_NEED_Chuseok_Active	{
 }
 
 //------------------------------------------------------------
-// 꿀송편 사용 (item 6532)
-// 여름 황금 수박과 동일한 공통 보상 함수를 그대로 사용한다.
-//------------------------------------------------------------
-function	script	F_NEED_Chuseok_HoneySongpyun	{
-	return callfunc("F_NEED_Event_RandomCashReward", 6532, 202609, "추석 이벤트", "꿀송편", "Chuseok Event", "Honey Rice Cake");
-}
-
-//------------------------------------------------------------
-// 전장 종료 보상 - 송편 재료 지급 + 풀사이클 꿀송편 판정
+// 전장 종료 보상 - 송편 재료 지급
 //
 // getarg(0) 1=티에라 / 2=플라비우스 / 3=KVM
 //
@@ -64,36 +56,6 @@ function	script	F_NEED_Chuseok_BG_Reward	{
 		getitem 1001827, .@pine[.@stage];
 		dispbottom needtr("[추석 이벤트] 송편 재료를 받았습니다. (작은 찹쌀반죽 ", "[Chuseok Event] You received Korean Rice Cake ingredients. (Small Rice Cake Dough x") + .@dough[.@stage] + needtr("개 / 솔잎 ", " / Pine Needles x") + .@pine[.@stage] + needtr("개)", ")");
 	}
-
-	// 풀사이클 추적.
-	// 랜덤 매칭이면 사이클 토큰으로, 수동 진행이면 티에라 참여를 기준으로 초기화한다.
-	.@token = ($@BG_RM_CYCLE_ACTIVE) ? $@BG_RM_TOKEN : 0;
-	if (@NEED_CHUSEOK_BG_TOKEN != .@token || .@stage == 1) {
-		@NEED_CHUSEOK_BG_TOKEN = .@token;
-		@NEED_CHUSEOK_BG_MASK = 0;
-	}
-	@NEED_CHUSEOK_BG_MASK = @NEED_CHUSEOK_BG_MASK | (1 << (.@stage - 1));
-
-	// 꿀송편 판정은 KVM 까지 정상 완료한 캐릭터에 한해 사이클당 1회.
-	if (.@stage != 3)
-		return;
-
-	.@full = ((@NEED_CHUSEOK_BG_MASK & 7) == 7);
-	@NEED_CHUSEOK_BG_MASK = 0;
-
-	if (!.@full)
-		return;
-	if (!$NEED_CHUSEOK_BG_HONEY_ON)
-		return;
-	if (rand(10000) >= 500)		// 5%
-		return;
-
-	// 사냥 꿀송편과 계정 + IP 일일 제한을 공유한다.
-	// 1=지급 / 0=계정 제한 / -1=IP 제한 / -2=인벤토리 / -3=DB 오류 / -4=기능 정지
-	.@result = needchuseokhoney("BG");
-	if (.@result == 1)
-		dispbottom needtr("[추석 이벤트] 전장 풀사이클 보상으로 꿀송편 1개를 획득했습니다.", "[Chuseok Event] You obtained 1 Honey Rice Cake as a Battleground full-cycle reward.");
-
 	return;
 }
 

@@ -1,4 +1,5 @@
--- NEED 2026 halloween event - END OF EVENT: remove every remaining halloween coin (6658).
+-- NEED 2026 halloween event - END OF EVENT: remove every remaining halloween coin (6658)
+-- (section A below) and every remaining Jack's Candy (6532, section B at the end).
 --
 -- *** Do NOT run this during development. Written and tested on the isolated test DB only. ***
 -- Planned run: 2026-12-12 10:00 maintenance, by the operator, see
@@ -82,3 +83,69 @@ UNION ALL SELECT 'auction', COUNT(*) FROM `auction` WHERE `nameid` = 6658;
 -- Summary of what this run removed.
 SELECT `source_table`, COUNT(*) AS `rows`, SUM(`amount`) AS `coins`
 FROM `need_halloween_2026_coin_purge` WHERE `purged_at` >= NOW() - INTERVAL 1 HOUR GROUP BY `source_table`;
+
+-- ============================================================================================
+-- (B) Jack's Candy (6532) - END OF EVENT removal, same 2026-12-12 10:00 maintenance.
+--     6532 STAYS "잭의 사탕" in the item DB / ItemInfo afterwards; it is never turned back into
+--     the honey songpyun. Only the leftover candies are removed here.
+--     (The BEFORE-start removal of the old honey songpyun is a different file:
+--      sql-files/need_halloween_2026_jack_candy_cleanup.sql - never mix the two.)
+--     Jack's Candy can only be in a character inventory or the account storages
+--     (storage / storage2 / storage3); the other containers are cleaned too, to be sure.
+--     The daily ledger rows (need_chuseok_honey_*, event_id 202611) and the reward log stay.
+-- ============================================================================================
+CREATE TABLE IF NOT EXISTS `need_halloween_2026_candy_purge` (
+  `purge_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `source_table` varchar(32) CHARACTER SET ascii COLLATE ascii_general_ci NOT NULL,
+  `row_id` bigint unsigned NOT NULL COMMENT 'id / auction_id / mail id',
+  `row_index` smallint unsigned NOT NULL DEFAULT 0 COMMENT 'mail attachment index',
+  `owner_id` int unsigned NOT NULL DEFAULT 0 COMMENT 'char_id / account_id / guild_id / seller_id',
+  `amount` int unsigned NOT NULL,
+  `purged_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`purge_id`),
+  KEY `source_row` (`source_table`, `row_id`)
+) ENGINE=InnoDB;
+
+INSERT INTO `need_halloween_2026_candy_purge` (`source_table`, `row_id`, `owner_id`, `amount`)
+  SELECT 'inventory', `id`, `char_id`, `amount` FROM `inventory` WHERE `nameid` = 6532;
+DELETE FROM `inventory` WHERE `nameid` = 6532;
+DELETE `v` FROM `vending_items` `v` JOIN `cart_inventory` `c` ON `c`.`id` = `v`.`cartinventory_id` WHERE `c`.`nameid` = 6532;
+INSERT INTO `need_halloween_2026_candy_purge` (`source_table`, `row_id`, `owner_id`, `amount`)
+  SELECT 'cart_inventory', `id`, `char_id`, `amount` FROM `cart_inventory` WHERE `nameid` = 6532;
+DELETE FROM `cart_inventory` WHERE `nameid` = 6532;
+INSERT INTO `need_halloween_2026_candy_purge` (`source_table`, `row_id`, `owner_id`, `amount`)
+  SELECT 'storage', `id`, `account_id`, `amount` FROM `storage` WHERE `nameid` = 6532;
+DELETE FROM `storage` WHERE `nameid` = 6532;
+INSERT INTO `need_halloween_2026_candy_purge` (`source_table`, `row_id`, `owner_id`, `amount`)
+  SELECT 'storage2', `id`, `account_id`, `amount` FROM `storage2` WHERE `nameid` = 6532;
+DELETE FROM `storage2` WHERE `nameid` = 6532;
+INSERT INTO `need_halloween_2026_candy_purge` (`source_table`, `row_id`, `owner_id`, `amount`)
+  SELECT 'storage3', `id`, `account_id`, `amount` FROM `storage3` WHERE `nameid` = 6532;
+DELETE FROM `storage3` WHERE `nameid` = 6532;
+INSERT INTO `need_halloween_2026_candy_purge` (`source_table`, `row_id`, `owner_id`, `amount`)
+  SELECT 'guild_storage', `id`, `guild_id`, `amount` FROM `guild_storage` WHERE `nameid` = 6532;
+DELETE FROM `guild_storage` WHERE `nameid` = 6532;
+INSERT INTO `need_halloween_2026_candy_purge` (`source_table`, `row_id`, `row_index`, `owner_id`, `amount`)
+  SELECT 'mail_attachments', `id`, `index`, `id`, `amount` FROM `mail_attachments` WHERE `nameid` = 6532;
+DELETE FROM `mail_attachments` WHERE `nameid` = 6532;
+INSERT INTO `need_halloween_2026_candy_purge` (`source_table`, `row_id`, `owner_id`, `amount`)
+  SELECT 'auction', `auction_id`, `seller_id`, 1 FROM `auction` WHERE `nameid` = 6532;
+DELETE FROM `auction` WHERE `nameid` = 6532;
+-- buying store orders for 6532 (6532 has no BuyingStore flag; expected 0)
+INSERT INTO `need_halloween_2026_candy_purge` (`source_table`, `row_id`, `row_index`, `amount`)
+  SELECT 'buyingstore_items', `buyingstore_id`, `index`, `amount` FROM `buyingstore_items` WHERE `item_id` = 6532;
+DELETE FROM `buyingstore_items` WHERE `item_id` = 6532;
+
+-- Check: every place must report 0 rows.
+SELECT 'inventory' AS `place`, COUNT(*) AS `candy_rows_left` FROM `inventory` WHERE `nameid` = 6532
+UNION ALL SELECT 'cart_inventory', COUNT(*) FROM `cart_inventory` WHERE `nameid` = 6532
+UNION ALL SELECT 'storage', COUNT(*) FROM `storage` WHERE `nameid` = 6532
+UNION ALL SELECT 'storage2', COUNT(*) FROM `storage2` WHERE `nameid` = 6532
+UNION ALL SELECT 'storage3', COUNT(*) FROM `storage3` WHERE `nameid` = 6532
+UNION ALL SELECT 'guild_storage', COUNT(*) FROM `guild_storage` WHERE `nameid` = 6532
+UNION ALL SELECT 'mail_attachments', COUNT(*) FROM `mail_attachments` WHERE `nameid` = 6532
+UNION ALL SELECT 'auction', COUNT(*) FROM `auction` WHERE `nameid` = 6532
+UNION ALL SELECT 'buyingstore_items', COUNT(*) FROM `buyingstore_items` WHERE `item_id` = 6532;
+
+SELECT `source_table`, COUNT(*) AS `rows`, SUM(`amount`) AS `candies`
+FROM `need_halloween_2026_candy_purge` WHERE `purged_at` >= NOW() - INTERVAL 1 HOUR GROUP BY `source_table`;
