@@ -1,0 +1,704 @@
+//============================================================
+// NEED 2026 할로윈 이벤트 - 잭 러시 (Jack Rush) 60초 주간 랭킹전 (event_id 202610)
+//============================================================
+//= 일일 잭 잡기(need_halloween.txt)와 완전히 분리한 별도 모드. 일일 모드의 상태(@HW_JACK_*),
+//= 함수, NPC, 원장은 쓰지도 바꾸지도 않는다. 생성 규칙은 JACK FEVER 에서 검증한 구조를 복제했다.
+//=
+//= 규칙
+//=   60초 고정 (시작 전 3, 2, 1 카운트다운은 60초에 넣지 않음), 도전 무제한, 입장 비용 없음
+//=   잭 3마리 상시, 잡힌 슬롯만 바로 다시 생성, 거리 6~10칸, 황금 20%, 일반 +1 / 황금 +3
+//=   한 판 보상 없음. 계정 단위 주간 최고기록(같은 계정의 더 높은 기록이 덮어씀)
+//=   주간 = 매주 수요일 04:00 (논리일자 = 현지 시각 - 4시간, 일일 잭 원장과 같은 04:00 규칙)
+//=   순위 = 점수 높은 순 > 그 점수를 먼저 세운 순 > account_id 작은 순
+//=   주간 TOP 3 = 할로윈 코인 100 / 70 / 50, 정산 후 Event Hub 에서 직접 수령
+//=
+//= 진입: Event Hub(need_halloween_hub.txt) 의 '잭 러시' 메뉴. payo2 NPC 는 새로 두지 않는다.
+//= 원장: sql-files/need_halloween_2026_jack_rush.sql (rank / reward / settle).
+//=   query_sql 은 테이블이 없으면 스크립트를 끊으므로, 시작할 때 세 테이블을 확인하고
+//=   하나라도 없으면 잭 러시를 닫아 둔다 ($@HW26_RUSH_READY).
+//=
+//= 운영 변수
+//=   $NEED_HW26_RUSH_OFF            1 = 새 입장 막기 (기록/정산/수령은 그대로)
+//=   $NEED_HW26_RUSH_MIN_ACCOUNTS   주간 보상을 주는 최소 참가 계정 수 (0 = 1)
+//=   $NEED_HW26_RUSH_FINAL          최종 정산한 week_key. 0 이 아니면 잭 러시는 닫힌다
+//=   $NEED_HW26_RUSH_FINAL_LD       자동 최종 정산 논리일자 (0 = 20261212, 이날 04:05)
+//= GM(60+) : @jackrushgm  현황 / 입장 ON·OFF / 밀린 정산 / 최종 정산 / 최소 계정 수
+//============================================================
+
+//------------------------------------------------------------
+// 공통
+//------------------------------------------------------------
+// 잭 러시를 지금 할 수 있는가 (입장 기준)
+function	script	F_NEED_HW26_Rush_Open	{
+	return ($@HW26_RUSH_READY && callfunc("F_NEED_Halloween_Active") && !$NEED_HW26_RUSH_OFF && !$NEED_HW26_RUSH_FINAL);
+}
+
+// 기록을 남길 수 있는가 (게임 종료 기준). 입장 OFF 는 진행 중인 판의 기록을 막지 않는다.
+function	script	F_NEED_HW26_Rush_CanRecord	{
+	return ($@HW26_RUSH_READY && callfunc("F_NEED_Halloween_Active") && !$NEED_HW26_RUSH_FINAL);
+}
+
+// 이번 주 key: 논리일자(현지 - 4시간) 기준 직전 수요일의 YYYYMMDD
+function	script	F_NEED_HW26_Rush_WeekKey	{
+	.@t = gettimetick(2) - 14400;
+	.@dow = atoi(gettimestr("%w", 3, .@t));		// 0 = 일 ... 3 = 수 ... 6 = 토
+	.@back = (.@dow + 4) % 7;					// 직전 수요일까지 며칠
+	return atoi(gettimestr("%Y%m%d", 9, .@t - .@back * 86400));
+}
+
+// week_key -> "2026.10.28 (수) 04:00 ~ 11.04 (수) 04:00"
+function	script	F_NEED_HW26_Rush_WeekRange$	{
+	.@w = getarg(0);
+	.@y = .@w / 10000; .@m = (.@w / 100) % 100; .@d = .@w % 100;
+	// 이번 주 수요일(논리일자)의 tick 에서 ±12주 안에 같은 날짜를 찾아 그 주의 시작/끝 날짜를 만든다
+	.@t = gettimetick(2) - 14400;
+	.@dow = atoi(gettimestr("%w", 3, .@t));
+	.@back = (.@dow + 4) % 7;
+	.@curwed = .@t - .@back * 86400;
+	// 요청 주와 이번 주의 차이(주 단위)는 YYYYMMDD 로 바로 셀 수 없으므로 최대 12주 안에서 찾는다
+	.@base = .@curwed;
+	for (.@i = -12; .@i <= 12; .@i++) {
+		if (atoi(gettimestr("%Y%m%d", 9, .@curwed + .@i * 604800)) == .@w) {
+			.@base = .@curwed + .@i * 604800;
+			break;
+		}
+	}
+	return gettimestr("%Y.%m.%d", 11, .@base) + needtr(" (수) 04:00 ~ ", " (Wed) 04:00 ~ ") + gettimestr("%m.%d", 6, .@base + 604800) + needtr(" (수) 04:00", " (Wed) 04:00");
+}
+
+// 이 계정의 주간 기록을 @HW26R_BEST / _NORMAL / _GOLD / _RANK 에 넣는다 (기록 없음 = 0)
+function	script	F_NEED_HW26_Rush_Mine	{
+	.@w = getarg(0);
+	.@aid = getcharid(3);
+	@HW26R_BEST = 0; @HW26R_NORMAL = 0; @HW26R_GOLD = 0; @HW26R_RANK = 0;
+	if (!$@HW26_RUSH_READY)
+		return 0;
+	.@n = query_sql("SELECT `score`,`normal_count`,`gold_count` FROM `need_halloween_jack_rush_rank` WHERE `event_id`=202610 AND `week_key`=" + .@w + " AND `account_id`=" + .@aid, .@s, .@nc, .@gc);
+	if (.@n < 1)
+		return 0;
+	@HW26R_BEST = .@s; @HW26R_NORMAL = .@nc; @HW26R_GOLD = .@gc;
+	query_sql("SELECT COUNT(*) FROM `need_halloween_jack_rush_rank` b, (SELECT `score` s, `achieved_at` t, `account_id` a FROM `need_halloween_jack_rush_rank` WHERE `event_id`=202610 AND `week_key`=" + .@w + " AND `account_id`=" + .@aid + ") me WHERE b.`event_id`=202610 AND b.`week_key`=" + .@w + " AND (b.`score` > me.s OR (b.`score` = me.s AND b.`achieved_at` < me.t) OR (b.`score` = me.s AND b.`achieved_at` = me.t AND b.`account_id` < me.a))", .@ahead);
+	@HW26R_RANK = .@ahead + 1;
+	return 1;
+}
+
+// 이 계정의 수령 대기 보상 합계 (코인 수). 조회 불가 = -1
+function	script	F_NEED_HW26_Rush_Pending	{
+	if (!$@HW26_RUSH_READY)
+		return -1;
+	query_sql("SELECT COALESCE(SUM(`reward_coin`),0) FROM `need_halloween_jack_rush_reward` WHERE `event_id`=202610 AND `account_id`=" + getcharid(3) + " AND `claimed_at` IS NULL", .@sum);
+	return .@sum;
+}
+
+//------------------------------------------------------------
+// 게임 시작 / 정리
+//------------------------------------------------------------
+// 새 판을 만든다. 1 = 입장, 0 = 못 함(이유는 채팅으로 알림)
+function	script	F_NEED_HW26_Rush_Start	{
+	if (!callfunc("F_NEED_HW26_Rush_Open")) {
+		dispbottom needtr("[잭 러시] 지금은 잭 러시를 할 수 없습니다.", "[Jack Rush] Jack Rush is not available right now."), 0xFF6600;
+		return 0;
+	}
+	if (@HW_JACK_STATE || @HW_RUSH_STATE) {
+		dispbottom needtr("[잭 러시] 이미 잭 게임이 진행 중입니다.", "[Jack Rush] A Jack game is already in progress."), 0xFF6600;
+		return 0;
+	}
+	// 접속이 끊긴 뒤 남은 내 잭 인스턴스(일일/러시)는 정리한다. 다른 개인 던전이면 들어가지 않는다.
+	.@old = instance_id(IM_CHAR);
+	if (.@old > 0) {
+		if (instance_mapname("pvp_n_1-2", .@old) == "") {
+			dispbottom needtr("[잭 러시] 이미 진행 중인 개인 던전이 있어서 들어갈 수 없습니다.", "[Jack Rush] You already have a personal dungeon in progress."), 0xFF0000;
+			return 0;
+		}
+		instance_destroy .@old;
+	}
+
+	.@iid = instance_create("할로윈 잭 러시", IM_CHAR);
+	if (.@iid <= 0) {
+		dispbottom needtr("[잭 러시] 놀이터를 만들지 못했습니다. 잠시 후 다시 시도해 주세요.", "[Jack Rush] Could not open the playground. Please try again shortly.") + " (" + .@iid + ")", 0xFF0000;
+		return 0;
+	}
+	.@map$ = instance_mapname("pvp_n_1-2", .@iid);
+
+	// 일일 잭 잡기와 같은 맵 정책 (이 인스턴스 맵에서만)
+	removemapflag .@map$, mf_pvp;
+	removemapflag .@map$, mf_gvg;
+	removemapflag .@map$, mf_gvg_castle;
+	removemapflag .@map$, mf_gvg_te;
+	removemapflag .@map$, mf_battleground;
+	setmapflag .@map$, mf_nosave;
+	setmapflag .@map$, mf_noteleport;
+	setmapflag .@map$, mf_noreturn;
+	setmapflag .@map$, mf_nomemo;
+	setmapflag .@map$, mf_nowarp;
+	setmapflag .@map$, mf_nowarpto;
+	setmapflag .@map$, mf_nobranch;
+	setmapflag .@map$, mf_noicewall;
+	setmapflag .@map$, mf_nodrop;
+	setmapflag .@map$, mf_novending;
+	setmapflag .@map$, mf_nochat;
+	setmapflag .@map$, mf_nopenalty;
+
+	// 잭 슬롯 3개. START 전에는 모두 숨겨 둔다.
+	for (.@k = 0; .@k < 3; .@k++) {
+		.@npcs$[.@k] = duplicate("HalloweenRush#hw26rtpl", .@map$, 100, 106, "잭", 1130, 4);
+		if (.@npcs$[.@k] == "") {
+			instance_destroy .@iid;
+			dispbottom needtr("[잭 러시] 잭이 숨어 버렸습니다. 잠시 후 다시 시도해 주세요.", "[Jack Rush] The Jacks ran off. Please try again shortly."), 0xFF0000;
+			return 0;
+		}
+		disablenpc .@npcs$[.@k];
+	}
+
+	@HW_RUSH_IID = .@iid;
+	@HW_RUSH_MAP$ = .@map$;
+	copyarray @HW_RUSH_NPCS$[0], .@npcs$[0], 3;
+	setarray @HW_RUSH_ON[0], 0, 0, 0;
+	setarray @HW_RUSH_GOLDS[0], 0, 0, 0;
+	setarray @HW_RUSH_READY[0], 0, 0, 0;
+	@HW_RUSH_SCORE = 0;
+	@HW_RUSH_NORMAL = 0;
+	@HW_RUSH_GOLD = 0;
+	@HW_RUSH_START_MS = 0;
+	@HW_RUSH_END_MS = 0;
+	@HW_RUSH_CNT = 3;
+	@HW_RUSH_STATE = 1;
+
+	if (instance_enter("할로윈 잭 러시", 100, 100, getcharid(0), .@iid) != IE_OK) {
+		callfunc "F_NEED_HW26_Rush_Cleanup";
+		dispbottom needtr("[잭 러시] 입장하지 못했습니다. 잠시 후 다시 시도해 주세요.", "[Jack Rush] Could not enter. Please try again shortly."), 0xFF0000;
+		return 0;
+	}
+	addtimer 1200, "HalloweenRush#hw26rctl::OnCount";
+	dispbottom needtr("[잭 러시] 곧 시작합니다! 잭 3마리를 최대한 빨리 잡으세요.", "[Jack Rush] Get ready! Catch the three Jacks as fast as you can."), 0xFFA500;
+	return 1;
+}
+
+// 타이머/변수/인스턴스를 모두 정리하고 맵 밖으로 내보낸다.
+function	script	F_NEED_HW26_Rush_Cleanup	{
+	deltimer "HalloweenRush#hw26rctl::OnCount";
+	deltimer "HalloweenRush#hw26rctl::OnLeft30";
+	deltimer "HalloweenRush#hw26rctl::OnLeft10";
+	deltimer "HalloweenRush#hw26rctl::OnLast";
+	deltimer "HalloweenRush#hw26rctl::OnTimeUp";
+	deltimer "HalloweenRush#hw26rctl::OnIdleExit";
+
+	.@iid = @HW_RUSH_IID;
+	.@map$ = @HW_RUSH_MAP$;
+
+	@HW_RUSH_STATE = 0;
+	@HW_RUSH_IID = 0;
+	@HW_RUSH_MAP$ = "";
+	deletearray @HW_RUSH_NPCS$;
+	deletearray @HW_RUSH_ON;
+	deletearray @HW_RUSH_GOLDS;
+	deletearray @HW_RUSH_READY;
+	@HW_RUSH_SCORE = 0;
+	@HW_RUSH_NORMAL = 0;
+	@HW_RUSH_GOLD = 0;
+	@HW_RUSH_START_MS = 0;
+	@HW_RUSH_END_MS = 0;
+	@HW_RUSH_CNT = 0;
+	@HW_RUSH_LAST = 0;
+
+	if (.@map$ != "" && strcharinfo(3) == .@map$)
+		warp "payo2", 113, 98;
+	if (.@iid > 0)
+		instance_destroy .@iid;
+	return;
+}
+
+// getarg(0) 슬롯. 그 슬롯의 잭을 새 자리에 띄운다 (숨겨져 있었으면 켠다).
+// 거리: 6~10칸 80회 -> 6~14칸 80회 -> 통행 영역 아무 칸 200회 (플레이어 칸 제외), 다른 잭과 같은 칸 금지.
+// 숨긴 NPC 는 movenpc 하지 않는다: enablenpc 를 먼저, 그다음 movenpc.
+function	script	F_NEED_HW26_Rush_Spawn	{
+	.@slot = getarg(0, 0);
+	.@map$ = @HW_RUSH_MAP$;
+	.@npc$ = @HW_RUSH_NPCS$[.@slot];
+	if (.@map$ == "" || .@npc$ == "" || .@slot < 0 || .@slot > 2)
+		return 0;
+
+	getmapxy(.@pmap$, .@px, .@py, BL_PC);
+	.@min = 6;
+	.@max = 10;
+	.@found = 0;
+	for (.@pass = 0; .@pass < 3 && !.@found; .@pass++) {
+		if (.@pass == 1) {
+			.@min = 6;
+			.@max = 14;
+		}
+		.@tries = (.@pass < 2) ? 80 : 200;
+		for (.@i = 0; .@i < .@tries && !.@found; .@i++) {
+			if (.@pass < 2) {
+				.@x = .@px + rand(-.@max, .@max);
+				.@y = .@py + rand(-.@max, .@max);
+			}
+			else {
+				.@x = rand(61, 138);
+				.@y = rand(61, 138);
+			}
+			if (.@x < 61 || .@x > 138 || .@y < 61 || .@y > 138)
+				continue;
+			if (!checkcell(.@map$, .@x, .@y, cell_chkpass))
+				continue;
+			.@dx = (.@x > .@px) ? .@x - .@px : .@px - .@x;
+			.@dy = (.@y > .@py) ? .@y - .@py : .@py - .@y;
+			.@d = (.@dx > .@dy) ? .@dx : .@dy;
+			if (.@d == 0 || (.@pass < 2 && (.@d < .@min || .@d > .@max)))
+				continue;
+			.@dup = 0;
+			for (.@k = 0; .@k < 3; .@k++) {
+				if (.@k == .@slot || !@HW_RUSH_ON[.@k])
+					continue;
+				getmapxy(.@om$, .@ox, .@oy, BL_NPC, @HW_RUSH_NPCS$[.@k]);
+				if (.@ox == .@x && .@oy == .@y)
+					.@dup = 1;
+			}
+			if (!.@dup)
+				.@found = 1;
+		}
+	}
+	if (!.@found)
+		return 0;
+
+	// 황금 잭 20%. 60초 내내 잦으므로 등장 채팅은 내지 않고 이름과 빛 구슬 효과만 둔다.
+	.@gold = (rand(100) < 20) ? 1 : 0;
+	@HW_RUSH_GOLDS[.@slot] = .@gold;
+	if (.@gold) {
+		setnpcdisplay .@npc$, "황금 잭", 1130;
+		setnpcnameen "Golden Jack", .@npc$;
+	}
+	else {
+		setnpcdisplay .@npc$, "잭", 1130;
+		setnpcnameen "Jack", .@npc$;
+	}
+	if (!@HW_RUSH_ON[.@slot]) {
+		enablenpc .@npc$;
+		@HW_RUSH_ON[.@slot] = 1;
+	}
+	movenpc .@npc$, .@x, .@y;
+	// 같은 NPC(GID)를 다시 쓰므로, 막 옮긴 잭은 300ms 동안 잡히지 않는다 (한 잭을 두 번 누르는 중복 판정 방지).
+	@HW_RUSH_READY[.@slot] = gettimetick(0) + 300;
+	if (.@gold)
+		specialeffect EF_LIGHTSPHERE, AREA, .@npc$;
+	return 1;
+}
+
+//------------------------------------------------------------
+// 기록 / 랭킹
+//------------------------------------------------------------
+// 방금 끝난 판을 계정 주간 BEST 와 비교해 저장한다. 1 = 신기록, 0 = 아님, -1 = 기록하지 않음.
+// BEST 비교와 갱신은 한 문장(INSERT ... ON DUPLICATE KEY UPDATE)이라 같은 계정이 동시에 끝내도 섞이지 않는다.
+// score 는 마지막에 갱신한다 (앞의 IF 들이 옛 score 와 비교하도록).
+function	script	F_NEED_HW26_Rush_Record	{
+	.@s = @HW_RUSH_SCORE;
+	if (.@s <= 0 || !callfunc("F_NEED_HW26_Rush_CanRecord"))
+		return -1;
+	.@w = callfunc("F_NEED_HW26_Rush_WeekKey");
+	.@aid = getcharid(3);
+	.@old = -1;
+	if (query_sql("SELECT `score` FROM `need_halloween_jack_rush_rank` WHERE `event_id`=202610 AND `week_key`=" + .@w + " AND `account_id`=" + .@aid, .@o) > 0)
+		.@old = .@o;
+	query_sql("INSERT INTO `need_halloween_jack_rush_rank` (`event_id`,`week_key`,`account_id`,`char_id`,`char_name`,`score`,`normal_count`,`gold_count`,`achieved_at`) VALUES (202610," + .@w + "," + .@aid + "," + getcharid(0) + ",'" + escape_sql(strcharinfo(0)) + "'," + .@s + "," + @HW_RUSH_NORMAL + "," + @HW_RUSH_GOLD + ",NOW(3)) ON DUPLICATE KEY UPDATE "
+		+ "`char_id`=IF(VALUES(`score`)>`score`,VALUES(`char_id`),`char_id`),"
+		+ "`char_name`=IF(VALUES(`score`)>`score`,VALUES(`char_name`),`char_name`),"
+		+ "`normal_count`=IF(VALUES(`score`)>`score`,VALUES(`normal_count`),`normal_count`),"
+		+ "`gold_count`=IF(VALUES(`score`)>`score`,VALUES(`gold_count`),`gold_count`),"
+		+ "`achieved_at`=IF(VALUES(`score`)>`score`,VALUES(`achieved_at`),`achieved_at`),"
+		+ "`score`=GREATEST(`score`,VALUES(`score`))");
+	return (.@old < 0 || .@s > .@old) ? 1 : 0;
+}
+
+// 주간 랭킹 화면. getarg(0) 1 = 결과 화면에서 부름 (끝에 next 대신 돌아감)
+function	script	F_NEED_HW26_Rush_RankUI	{
+	.@w = callfunc("F_NEED_HW26_Rush_WeekKey");
+	mes needtr("^C05800[잭 러시 주간 랭킹]^000000", "^C05800[Jack Rush weekly ranking]^000000");
+	mes "^999999" + callfunc("F_NEED_HW26_Rush_WeekRange$", .@w) + "^000000";
+	if (!$@HW26_RUSH_READY) {
+		mes needtr("^FF0000랭킹을 불러올 수 없습니다.^000000", "^FF0000The ranking is unavailable.^000000");
+		next;
+		return;
+	}
+	.@n = query_sql("SELECT `char_name`,`score` FROM `need_halloween_jack_rush_rank` WHERE `event_id`=202610 AND `week_key`=" + .@w + " AND `score`>0 ORDER BY `score` DESC,`achieved_at` ASC,`account_id` ASC LIMIT 10", .@cn$, .@sc);
+	if (.@n < 1)
+		mes needtr("아직 이번 주 기록이 없습니다. 첫 기록에 도전하세요!", "No records this week yet. Be the first!");
+	for (.@i = 0; .@i < .@n; .@i++)
+		mes ((.@i < 3) ? "^FF6600" : "^000000") + (.@i + 1) + ". " + .@cn$[.@i] + " - " + .@sc[.@i] + needtr("점", " pts") + "^000000";
+	callfunc "F_NEED_HW26_Rush_Mine", .@w;
+	mes " ";
+	if (@HW26R_BEST > 0)
+		mes needtr("내 BEST : ^0055FF", "My BEST : ^0055FF") + @HW26R_BEST + needtr("점^000000  현재 순위 : ^0055FF", " pts^000000  rank : ^0055FF") + @HW26R_RANK + needtr("위^000000", "^000000");
+	else
+		mes needtr("내 BEST : 이번 주 기록 없음", "My BEST : no record this week");
+	mes needtr("^999999동점이면 그 점수를 먼저 세운 계정이 앞섭니다.^000000", "^999999On a tie, the account that reached the score first ranks higher.^000000");
+	mes needtr("^999999주간 TOP 3 : 할로윈 코인 100 / 70 / 50, 매주 수요일 04:00 정산^000000", "^999999Weekly TOP 3 : 100 / 70 / 50 Halloween Coins, settled every Wed 04:00^000000");
+
+	// 지난 정산 결과 (가장 최근 주)
+	.@lw = 0;
+	query_sql("SELECT COALESCE(MAX(`week_key`),0) FROM `need_halloween_jack_rush_settle` WHERE `event_id`=202610", .@lw);
+	if (.@lw > 0) {
+		.@m = query_sql("SELECT `rank_no`,`char_name`,`score`,`reward_coin` FROM `need_halloween_jack_rush_reward` WHERE `event_id`=202610 AND `week_key`=" + .@lw + " ORDER BY `rank_no`", .@rk, .@rn$, .@rs, .@rc);
+		mes " ";
+		mes needtr("^0055FF지난 정산 (", "^0055FFLast settlement (") + .@lw + ")^000000";
+		if (.@m < 1)
+			mes needtr(" 보상 대상 없음", " no rewards");
+		for (.@i = 0; .@i < .@m; .@i++)
+			mes " " + .@rk[.@i] + ". " + .@rn$[.@i] + " - " + .@rs[.@i] + needtr("점 (코인 ", " pts (") + .@rc[.@i] + needtr("개)", " coins)");
+	}
+	next;
+	return;
+}
+
+// 주간 보상 수령. 여러 주가 밀려 있으면 한 번에 합산해 받는다.
+// 1) 지금 받을 합계로 인벤토리 공간 확인 2) claim_token 으로 미수령 행을 한 번에 표시 3) 표시된 행만큼 지급.
+// 같은 행은 claimed_at IS NULL 조건으로 한 번만 표시되므로 두 창에서 동시에 눌러도 두 번 받지 않는다.
+function	script	F_NEED_HW26_Rush_ClaimUI	{
+	mes needtr("^C05800[잭 러시 주간 보상]^000000", "^C05800[Jack Rush weekly rewards]^000000");
+	if (!$@HW26_RUSH_READY) {
+		mes needtr("^FF0000보상 기록을 불러올 수 없습니다.^000000", "^FF0000The reward record is unavailable.^000000");
+		next;
+		return;
+	}
+	.@n = query_sql("SELECT `week_key`,`rank_no`,`reward_coin` FROM `need_halloween_jack_rush_reward` WHERE `event_id`=202610 AND `account_id`=" + getcharid(3) + " AND `claimed_at` IS NULL ORDER BY `week_key`", .@wk, .@rk, .@rc);
+	if (.@n < 1) {
+		mes needtr("받을 보상이 없습니다.", "You have no reward to claim.");
+		mes needtr("^999999주간 TOP 3 에 들면 수요일 04:00 정산 후 여기서 받을 수 있습니다.^000000", "^999999Finish in the weekly TOP 3 and claim it here after the Wed 04:00 settlement.^000000");
+		next;
+		return;
+	}
+	for (.@i = 0; .@i < .@n; .@i++) {
+		mes " " + .@wk[.@i] + needtr(" 주 ", " week ") + .@rk[.@i] + needtr("위 : 할로윈 코인 ", " place : ") + .@rc[.@i] + needtr("개", " Halloween Coins");
+		.@sum += .@rc[.@i];
+	}
+	mes needtr("합계 : ^0055FF", "Total : ^0055FF") + .@sum + needtr("개^000000", " coins^000000");
+	if (!callfunc("F_NEED_Halloween_Active")) {
+		mes needtr("^FF0000이벤트 기간이 끝나 수령할 수 없습니다.^000000", "^FF0000The event is over; rewards can no longer be claimed.^000000");
+		next;
+		return;
+	}
+	next;
+	if (select(needtr("지금 받기", "Claim now"), needtr("나중에", "Later")) != 1)
+		return;
+	if (!checkweight(6658, .@sum)) {
+		mes needtr("^FF0000인벤토리에 자리가 없어 받을 수 없습니다. 정리 후 다시 와 주세요. (보상은 그대로 남아 있습니다)^000000", "^FF0000No inventory space. Make room and come back. (The reward stays.)^000000");
+		next;
+		return;
+	}
+	.@tok$ = "" + getcharid(0) + "_" + gettimetick(2) + "_" + rand(100000);
+	query_sql("UPDATE `need_halloween_jack_rush_reward` SET `claimed_at`=NOW(),`claim_char_id`=" + getcharid(0) + ",`claim_token`='" + .@tok$ + "' WHERE `event_id`=202610 AND `account_id`=" + getcharid(3) + " AND `claimed_at` IS NULL");
+	query_sql("SELECT COALESCE(SUM(`reward_coin`),0), COUNT(*) FROM `need_halloween_jack_rush_reward` WHERE `claim_token`='" + .@tok$ + "'", .@got, .@rows);
+	if (.@got > 0)
+		getitem 6658, .@got;
+	mes needtr("할로윈 코인 ^0055FF", "Received ^0055FF") + .@got + needtr("개^000000 를 받았습니다.", "^000000 Halloween Coins.");
+	next;
+	return;
+}
+
+//------------------------------------------------------------
+// 진입 화면 (Event Hub 에서 부름). 대화는 이 안에서 끝난다.
+//------------------------------------------------------------
+function	script	F_NEED_HW26_Rush_Talk	{
+	.@w = callfunc("F_NEED_HW26_Rush_WeekKey");
+	callfunc "F_NEED_HW26_Rush_Mine", .@w;
+	mes needtr("^C05800[잭 러시]^000000", "^C05800[Jack Rush]^000000");
+	mes needtr("60초 동안 잭을 최대한 많이 잡아 최고 점수에 도전하세요.", "Catch as many Jacks as you can in 60 seconds and go for the best score.");
+	mes needtr("일반 잭 ^0055FF+1점^000000 / 황금 잭 ^FFAA00+3점^000000", "Jack ^0055FF+1^000000 / Golden Jack ^FFAA00+3^000000");
+	mes needtr("도전 횟수 제한 없음 / 입장 비용 없음 / ^FF0000한 판 보상 없음^000000", "Unlimited tries / free entry / ^FF0000no reward per game^000000");
+	mes needtr("매주 수요일 04:00 최고기록으로 주간 랭킹을 정산합니다.", "The weekly ranking is settled from the best scores every Wednesday 04:00.");
+	mes needtr("^999999주간 TOP 3 : 1위 100 / 2위 70 / 3위 50 코인^000000", "^999999Weekly TOP 3 : 1st 100 / 2nd 70 / 3rd 50 coins^000000");
+	mes " ";
+	if (@HW26R_BEST > 0)
+		mes needtr("이번 주 내 BEST : ^0055FF", "My BEST this week : ^0055FF") + @HW26R_BEST + needtr("점^000000 (", " pts^000000 (#") + @HW26R_RANK + needtr("위)", ")");
+	else
+		mes needtr("이번 주 내 BEST : 기록 없음", "My BEST this week : no record");
+	if (!callfunc("F_NEED_HW26_Rush_Open")) {
+		mes needtr("^FF0000지금은 잭 러시를 할 수 없습니다.^000000", "^FF0000Jack Rush is not available right now.^000000");
+		next;
+		return 1;
+	}
+	if (@HW_JACK_STATE || @HW_RUSH_STATE) {
+		mes needtr("^FF0000잭 게임이 진행 중입니다.^000000", "^FF0000A Jack game is in progress.^000000");
+		next;
+		return 1;
+	}
+	next;
+	switch (select(needtr("잭 러시 시작", "Start Jack Rush"), needtr("주간 랭킹 보기", "View the weekly ranking"), needtr("돌아가기", "Back"))) {
+	case 1:
+		close2;
+		callfunc "F_NEED_HW26_Rush_Start";
+		end;
+	case 2:
+		clear;
+		callfunc "F_NEED_HW26_Rush_RankUI", 0;
+		return 1;
+	}
+	return 1;
+}
+
+//------------------------------------------------------------
+// 잭 템플릿 (인스턴스 맵에 duplicate 로만 만든다)
+//------------------------------------------------------------
+-	script	HalloweenRush#hw26rtpl	-1,{
+	.@me$ = strnpcinfo(3);
+	if (@HW_RUSH_STATE != 2 || strcharinfo(3) != strnpcinfo(4) || instance_id(IM_CHAR) != @HW_RUSH_IID)
+		end;
+	.@now = gettimetick(0);
+	if (.@now >= @HW_RUSH_END_MS)		// 60초가 지난 뒤 들어온 클릭은 인정하지 않는다
+		end;
+	.@slot = -1;
+	for (.@k = 0; .@k < 3; .@k++)
+		if (@HW_RUSH_NPCS$[.@k] == .@me$ && @HW_RUSH_ON[.@k])
+			.@slot = .@k;
+	if (.@slot < 0 || .@now < @HW_RUSH_READY[.@slot])
+		end;
+
+	if (@HW_RUSH_GOLDS[.@slot]) {
+		@HW_RUSH_SCORE += 3;
+		@HW_RUSH_GOLD++;
+		specialeffect EF_LIGHTSPHERE, AREA, .@me$;
+		dispbottom needtr("[잭 러시] 황금 잭! +3  >>  ", "[Jack Rush] Golden Jack! +3  >>  ") + @HW_RUSH_SCORE, 0xFFD700;
+	}
+	else {
+		@HW_RUSH_SCORE += 1;
+		@HW_RUSH_NORMAL++;
+		dispbottom "+1  >>  " + @HW_RUSH_SCORE, 0xFFCC99;
+	}
+	callfunc "F_NEED_HW26_Rush_Spawn", .@slot;
+	end;
+}
+
+//------------------------------------------------------------
+// 진행 컨트롤러 (캐릭터 타이머 이벤트 전용)
+//------------------------------------------------------------
+-	script	HalloweenRush#hw26rctl	-1,{
+	end;
+
+// 3, 2, 1, START! (카운트다운은 60초에 넣지 않는다)
+OnCount:
+	if (@HW_RUSH_STATE != 1)
+		end;
+	if (@HW_RUSH_CNT > 0) {
+		announce "" + @HW_RUSH_CNT, bc_self, 0xFFCC00;
+		@HW_RUSH_CNT--;
+		addtimer 1000, "HalloweenRush#hw26rctl::OnCount";
+		end;
+	}
+	@HW_RUSH_START_MS = gettimetick(0);
+	@HW_RUSH_END_MS = @HW_RUSH_START_MS + 60000;
+	@HW_RUSH_STATE = 2;
+	for (.@k = 0; .@k < 3; .@k++)
+		callfunc "F_NEED_HW26_Rush_Spawn", .@k;
+	announce "START!", bc_self, 0xFF6600;
+	dispbottom needtr("[잭 러시] START! 60초!", "[Jack Rush] START! 60 seconds!"), 0xFF6600;
+	@HW_RUSH_LAST = 5;
+	addtimer 30000, "HalloweenRush#hw26rctl::OnLeft30";
+	addtimer 50000, "HalloweenRush#hw26rctl::OnLeft10";
+	addtimer 55000, "HalloweenRush#hw26rctl::OnLast";
+	addtimer 60000, "HalloweenRush#hw26rctl::OnTimeUp";
+	end;
+
+OnLeft30:
+	if (@HW_RUSH_STATE == 2)
+		dispbottom needtr("[잭 러시] 30초 남음! 현재 ", "[Jack Rush] 30 seconds left! Score ") + @HW_RUSH_SCORE, 0xFF9900;
+	end;
+
+OnLeft10:
+	if (@HW_RUSH_STATE == 2)
+		dispbottom needtr("[잭 러시] 10초 남음! 현재 ", "[Jack Rush] 10 seconds left! Score ") + @HW_RUSH_SCORE, 0xFF6600;
+	end;
+
+// 마지막 5, 4, 3, 2, 1
+OnLast:
+	if (@HW_RUSH_STATE != 2 || @HW_RUSH_LAST < 1)
+		end;
+	announce "" + @HW_RUSH_LAST, bc_self, 0xFF3300;
+	@HW_RUSH_LAST--;
+	if (@HW_RUSH_LAST > 0)
+		addtimer 1000, "HalloweenRush#hw26rctl::OnLast";
+	end;
+
+// 60초 종료: 판정을 먼저 닫고(상태 3), 잭을 모두 숨기고, 기록한 뒤 결과 화면.
+OnTimeUp:
+	if (@HW_RUSH_STATE != 2)
+		end;
+	@HW_RUSH_STATE = 3;
+	deltimer "HalloweenRush#hw26rctl::OnLeft30";
+	deltimer "HalloweenRush#hw26rctl::OnLeft10";
+	deltimer "HalloweenRush#hw26rctl::OnLast";
+	for (.@k = 0; .@k < 3; .@k++) {
+		if (@HW_RUSH_ON[.@k]) {
+			disablenpc @HW_RUSH_NPCS$[.@k];
+			@HW_RUSH_ON[.@k] = 0;
+		}
+	}
+	announce "TIME OVER", bc_self, 0xFF0000;
+	.@score = @HW_RUSH_SCORE;
+	.@nc = @HW_RUSH_NORMAL;
+	.@gc = @HW_RUSH_GOLD;
+	.@new = callfunc("F_NEED_HW26_Rush_Record");
+	callfunc "F_NEED_HW26_Rush_Mine", callfunc("F_NEED_HW26_Rush_WeekKey");
+	dispbottom needtr("[잭 러시] TIME OVER! 최종 점수 ", "[Jack Rush] TIME OVER! Final score ") + .@score + ((.@new == 1) ? "  NEW BEST!" : ""), 0xFF3300;
+	// 결과 화면을 닫지 않고 두면 30초 뒤 내보낸다 (화면이 열려 있는 동안에는 기다린다)
+	addtimer 30000, "HalloweenRush#hw26rctl::OnIdleExit";
+
+	while (1) {
+		mes "^FF3300JACK RUSH - TIME OVER^000000";
+		if (.@new == 1)
+			mes "^FF0000NEW BEST!^000000";
+		mes "SCORE : ^0055FF" + .@score + "^000000";
+		if (.@new < 0 && .@score > 0)
+			mes needtr("^999999(지금은 기록이 저장되지 않습니다)^000000", "^999999(records are not saved right now)^000000");
+		mes needtr("이번 주 BEST : ", "Best this week : ") + ((@HW26R_BEST > 0) ? "^0055FF" + @HW26R_BEST + "^000000" : "-");
+		mes needtr("주간 순위 : ", "Weekly rank : ") + ((@HW26R_RANK > 0) ? "^0055FF" + @HW26R_RANK + needtr("위", "") + "^000000" : "-");
+		mes needtr("일반 잭 : ", "Jacks : ") + .@nc + needtr("마리", "") + needtr(" / 황금 잭 : ", " / Golden Jacks : ") + .@gc + needtr("마리", "");
+		.@sel = select(needtr("다시 도전", "Try again"), needtr("주간 랭킹 보기", "View the weekly ranking"), needtr("나가기", "Leave"));
+		if (.@sel == 2) {
+			clear;
+			callfunc "F_NEED_HW26_Rush_RankUI", 1;
+			clear;
+			continue;
+		}
+		break;
+	}
+	close2;
+	callfunc "F_NEED_HW26_Rush_Cleanup";
+	if (.@sel == 1)
+		callfunc "F_NEED_HW26_Rush_Start";
+	end;
+
+OnIdleExit:
+	if (@HW_RUSH_STATE == 3)
+		callfunc "F_NEED_HW26_Rush_Cleanup";
+	end;
+}
+
+//------------------------------------------------------------
+// 주간 정산
+//------------------------------------------------------------
+// getarg(0) week_key, getarg(1) 1 = 최종 정산. 1 = 정산함, 0 = 이미 정산된 주, -1 = 준비 안 됨.
+// 보상 행을 먼저 넣고(INSERT IGNORE, 고유키로 멱등) 마지막에 정산 행을 넣는다.
+// 중간에 끊겨도 정산 행이 없으므로 다음 실행이 같은 순위로 다시 채운다.
+function	script	F_NEED_HW26_Rush_Settle	{
+	.@w = getarg(0);
+	.@final = getarg(1, 0);
+	if (!$@HW26_RUSH_READY || .@w <= 0)
+		return -1;
+	query_sql("SELECT COUNT(*) FROM `need_halloween_jack_rush_settle` WHERE `event_id`=202610 AND `week_key`=" + .@w, .@done);
+	if (.@done)
+		return 0;
+	.@min = ($NEED_HW26_RUSH_MIN_ACCOUNTS > 1) ? $NEED_HW26_RUSH_MIN_ACCOUNTS : 1;
+	query_sql("SELECT COUNT(*) FROM `need_halloween_jack_rush_rank` WHERE `event_id`=202610 AND `week_key`=" + .@w + " AND `score`>0", .@cnt);
+	.@n = 0;
+	if (.@cnt >= .@min) {
+		.@n = query_sql("SELECT `account_id`,`char_id`,`char_name`,`score` FROM `need_halloween_jack_rush_rank` WHERE `event_id`=202610 AND `week_key`=" + .@w + " AND `score`>0 ORDER BY `score` DESC,`achieved_at` ASC,`account_id` ASC LIMIT 3", .@a, .@c, .@cn$, .@s);
+		setarray .@coin[0], 100, 70, 50;
+		for (.@i = 0; .@i < .@n; .@i++)
+			query_sql("INSERT IGNORE INTO `need_halloween_jack_rush_reward` (`event_id`,`week_key`,`account_id`,`rank_no`,`char_id`,`char_name`,`score`,`reward_coin`,`settled_at`) VALUES (202610," + .@w + "," + .@a[.@i] + "," + (.@i + 1) + "," + .@c[.@i] + ",'" + escape_sql(.@cn$[.@i]) + "'," + .@s[.@i] + "," + .@coin[.@i] + ",NOW())");
+	}
+	query_sql("INSERT IGNORE INTO `need_halloween_jack_rush_settle` (`event_id`,`week_key`,`accounts`,`rewarded`,`is_final`,`settled_at`) VALUES (202610," + .@w + "," + .@cnt + "," + .@n + "," + .@final + ",NOW())");
+	debugmes "[HW26 Jack Rush] settled week " + .@w + " accounts=" + .@cnt + " rewarded=" + .@n + " final=" + .@final + " min=" + .@min;
+	return 1;
+}
+
+// 이번 주보다 앞선 주 중 아직 정산하지 않은 주를 모두 정산한다 (서버가 꺼져 있던 주 포함). 정산한 주 수.
+function	script	F_NEED_HW26_Rush_SettleDue	{
+	if (!$@HW26_RUSH_READY)
+		return -1;
+	.@cur = callfunc("F_NEED_HW26_Rush_WeekKey");
+	.@n = query_sql("SELECT DISTINCT r.`week_key` FROM `need_halloween_jack_rush_rank` r LEFT JOIN `need_halloween_jack_rush_settle` s ON s.`event_id`=r.`event_id` AND s.`week_key`=r.`week_key` WHERE r.`event_id`=202610 AND r.`week_key`<" + .@cur + " AND s.`week_key` IS NULL ORDER BY r.`week_key`", .@wk);
+	for (.@i = 0; .@i < .@n; .@i++)
+		.@done += (callfunc("F_NEED_HW26_Rush_Settle", .@wk[.@i], 0) == 1);
+	return .@done;
+}
+
+// 이벤트 종료용 최종 정산: 밀린 주를 먼저 정산하고 이번 주(덜 찬 마지막 주)를 정산한 뒤 잭 러시를 닫는다.
+function	script	F_NEED_HW26_Rush_SettleFinal	{
+	if (!$@HW26_RUSH_READY)
+		return -1;
+	if ($NEED_HW26_RUSH_FINAL)
+		return 0;
+	callfunc "F_NEED_HW26_Rush_SettleDue";
+	.@cur = callfunc("F_NEED_HW26_Rush_WeekKey");
+	callfunc "F_NEED_HW26_Rush_Settle", .@cur, 1;
+	$NEED_HW26_RUSH_FINAL = .@cur;
+	return 1;
+}
+
+-	script	HalloweenRush#hw26rset	-1,{
+	end;
+
+OnInit:
+	bindatcmd "jackrushgm", "HalloweenRush#hw26rset::OnGM", 60, 60;
+	// 세 테이블이 모두 있어야 연다 (없는 테이블에 query_sql 하면 스크립트가 끊긴다)
+	.@t = 0;
+	query_sql("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME IN ('need_halloween_jack_rush_rank','need_halloween_jack_rush_reward','need_halloween_jack_rush_settle')", .@t);
+	$@HW26_RUSH_READY = (.@t == 3);
+	if (!$@HW26_RUSH_READY) {
+		debugmes "[HW26 Jack Rush] tables missing (" + .@t + "/3): import sql-files/need_halloween_2026_jack_rush.sql. Jack Rush stays closed.";
+		end;
+	}
+	callfunc "F_NEED_HW26_Rush_SettleDue";
+	end;
+
+// 매일 04:05: 수요일 04:00 을 지난 주를 정산한다 (다른 요일에는 정산할 주가 없으면 아무것도 안 함).
+// 마지막 날(기본 2026-12-12) 04:05 에는 최종 정산을 하고 잭 러시를 닫는다.
+OnClock0405:
+	if (!$@HW26_RUSH_READY)
+		end;
+	callfunc "F_NEED_HW26_Rush_SettleDue";
+	.@fld = ($NEED_HW26_RUSH_FINAL_LD > 0) ? $NEED_HW26_RUSH_FINAL_LD : 20261212;
+	if (!$NEED_HW26_RUSH_FINAL && atoi(gettimestr("%Y%m%d", 9, gettimetick(2) - 14400)) >= .@fld)
+		callfunc "F_NEED_HW26_Rush_SettleFinal";
+	end;
+
+OnGM:
+	if (getgmlevel() < 60)
+		end;
+	if (!$@HW26_RUSH_READY) {
+		mes "[잭 러시 GM]";
+		mes "^FF0000잭 러시 테이블이 없어 닫혀 있습니다.^000000";
+		mes "sql-files/need_halloween_2026_jack_rush.sql 을 넣고 서버를 다시 시작하세요.";
+		close;
+	}
+	while (1) {
+		.@w = callfunc("F_NEED_HW26_Rush_WeekKey");
+		query_sql("SELECT COUNT(*) FROM `need_halloween_jack_rush_rank` WHERE `event_id`=202610 AND `week_key`=" + .@w + " AND `score`>0", .@cnt);
+		query_sql("SELECT COUNT(*), COALESCE(SUM(`reward_coin`),0) FROM `need_halloween_jack_rush_reward` WHERE `event_id`=202610 AND `claimed_at` IS NULL", .@pn, .@ps);
+		query_sql("SELECT COUNT(*) FROM `need_halloween_jack_rush_settle` WHERE `event_id`=202610", .@sn);
+		mes "[잭 러시 GM]";
+		mes "입장 : " + (callfunc("F_NEED_HW26_Rush_Open") ? "^009900가능^000000" : "^FF0000불가^000000") + " (이벤트 " + callfunc("F_NEED_Halloween_Active") + " / OFF " + $NEED_HW26_RUSH_OFF + " / 최종 " + $NEED_HW26_RUSH_FINAL + ")";
+		mes "이번 주 : " + .@w + " 참가 계정 " + .@cnt;
+		mes "정산된 주 : " + .@sn + " / 미수령 보상 " + .@pn + "건 " + .@ps + "코인";
+		mes "최소 참가 계정 : " + (($NEED_HW26_RUSH_MIN_ACCOUNTS > 1) ? $NEED_HW26_RUSH_MIN_ACCOUNTS : 1) + " / 자동 최종 정산 : " + (($NEED_HW26_RUSH_FINAL_LD > 0) ? $NEED_HW26_RUSH_FINAL_LD : 20261212) + " 04:05";
+		next;
+		switch (select("입장 ON/OFF 바꾸기:밀린 주간 정산 지금 실행:최종 정산 지금 실행 (이벤트 종료용):최소 참가 계정 수 바꾸기:닫기")) {
+		case 1:
+			$NEED_HW26_RUSH_OFF = !$NEED_HW26_RUSH_OFF;
+			mes "입장 OFF = " + $NEED_HW26_RUSH_OFF;
+			next;
+			break;
+		case 2:
+			mes "정산한 주 : " + callfunc("F_NEED_HW26_Rush_SettleDue");
+			next;
+			break;
+		case 3:
+			mes "^FF0000이번 주를 마지막 주로 정산하고 잭 러시를 닫습니다.^000000";
+			mes "이후 새 기록은 저장되지 않고 입장도 막힙니다. 보상 수령은 이벤트가 켜져 있는 동안 가능합니다.";
+			next;
+			if (select("최종 정산 실행:취소") == 1) {
+				mes "결과 : " + callfunc("F_NEED_HW26_Rush_SettleFinal") + " (1 = 정산, 0 = 이미 최종 정산됨)";
+				next;
+			}
+			break;
+		case 4:
+			input .@v, 1, 100;
+			$NEED_HW26_RUSH_MIN_ACCOUNTS = .@v;
+			mes "최소 참가 계정 = " + .@v;
+			next;
+			break;
+		default:
+			close;
+		}
+	}
+	end;
+}
