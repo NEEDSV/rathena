@@ -1,5 +1,5 @@
-- `V20-REAL: PASS` — the isolated `#CASHPOINTS` (acc_reg_num of 127.0.0.1:3327 ragnarok_mbqa) received grants exactly once, verified after save, relog, and server restart (R1~R8 all PASS on the final clean run).
-- `정합성: 중복 지급 0 / 온라인 덮어쓰기 0 / UNCERTAIN 자동 재시도 0` (measured scope: synthetic accounts MBQA_CPR·MBQA_CPS, 18 grant rows, 7 fault injections).
+- `V20-REAL: PASS` — 격리 `#CASHPOINTS`(127.0.0.1:3327 ragnarok_mbqa의 acc_reg_num)에 지급이 정확히 1회 반영됐고, 저장·재접속·서버 재기동 뒤에도 같은 값임을 확인했습니다(최종 깨끗한 실행에서 R1~R8 모두 PASS).
+- `정합성: 중복 지급 0 / 온라인 덮어쓰기 0 / UNCERTAIN 자동 재시도 0` (실측 범위: 합성 계정 MBQA_CPR·MBQA_CPS, 지급 행 18건, 장애 주입 7종).
 - `운영 영향: 원본/타 환경 변경 0 · push/merge/배포 0 · 운영 CP 지급 0`
 
 # NEED 라그 마블 — V20-REAL 실제 CP 지급 연결·격리 검증 보고서 v1.0
