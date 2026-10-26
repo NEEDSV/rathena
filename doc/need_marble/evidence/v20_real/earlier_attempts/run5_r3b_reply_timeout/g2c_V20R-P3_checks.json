@@ -1,0 +1,27 @@
+[
+ {
+  "check": "R5a char-server stopped after both writes, before COMMIT: request sent (3), ledger UNCERTAIN, InnoDB rolled back (no grant row, DB unchanged), online unchanged, saves still conditional",
+  "pass": true,
+  "detail": "rc 3; char up False; row (1, 13, 0, 1500, 0, 3, 0); grant None; db 23890; online 23890; inflight (11, 1)"
+ },
+ {
+  "check": "R5a spend 5 + conditional save after the restart: DB P-5 (nothing added: no grant row); operator MANUAL_VOID OK (answers of the lost connection are not awaited)",
+  "pass": true,
+  "detail": "online 23885; db 23885; rc 0"
+ },
+ {
+  "check": "R5b char-server stopped after COMMIT, before the answer: ledger UNCERTAIN, one grant row, DB Q+amount, online still Q",
+  "pass": true,
+  "detail": "rc 3; row (1, 14, 0, 1000, 0, 3, 0); grant (25769803778, 1000, 23885, 24885); db 24885; online 23885"
+ },
+ {
+  "check": "R5b spend 5 + conditional save: DB Q-5+amount (grant kept, not doubled); relog loads it; operator VOID refused, MANUAL_APPLIED OK",
+  "pass": true,
+  "detail": "online 23880; db 24880; relog 24880; rc -21/0"
+ },
+ {
+  "check": "p3 invariants: 0 violations; DB = online = 1000 + grant rows + ordinary changes",
+  "pass": true,
+  "detail": "inv []; db 24880 expected 24880"
+ }
+]

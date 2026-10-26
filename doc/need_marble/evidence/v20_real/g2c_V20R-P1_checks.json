@@ -1,0 +1,109 @@
+[
+ {
+  "check": "migration applied to ragnarok_mbqa only: acc_reg_num InnoDB, need_marble_cp_grant InnoDB, #CASHPOINTS rows kept",
+  "pass": true,
+  "detail": "rc 0 WARNING: option --ssl-verify-server-cert is disabled, because of an insecure passwordless login.; engines {'acc_reg_num': 'InnoDB', 'need_marble_cp_grant': 'InnoDB'}"
+ },
+ {
+  "check": "char-server after restart: \"CP grant writer ready\" (switch on, both tables InnoDB)",
+  "pass": true,
+  "detail": [
+   "[Notice]: need_marble: CP grant writer ready (need_marble_cp_grant and acc_reg_num are InnoDB)."
+  ]
+ },
+ {
+  "check": "R3b char-server down: writer sends nothing, REJECTED (-20), row back to DECIDED, no grant row, balance unchanged",
+  "pass": true,
+  "detail": "link lost True, char down True; rc -20; row (1, 2, 0, 1500, 0, 1, 0); audit [(1, 3, 1), (3, 1, 3)]"
+ },
+ {
+  "check": "R3b retry after the char-server is back (confirmed no effect before): APPLIED once, DB and online +amount",
+  "pass": true,
+  "detail": "online again True; rc 3; row (1, 2, 0, 1500, 1500, 2, 0); grant (17179869186, 1500, 1000, 2500); db 2500 online 2500"
+ },
+ {
+  "check": "R2 same roll: tile CP and 33 step bonus each APPLIED once under its own key, DB = online = before + both",
+  "pass": true,
+  "detail": "tile (1, 8, 0, 1500, 1500, 2, 0) lap (2, 1, 0, 10000, 10000, 2, 0); db 2500 -> 14000 online 14000"
+ },
+ {
+  "check": "R2 same key again: ledger ALREADY (-4); a second char request with the same key and amount -> ALREADY, other amount -> CONFLICT; balance and grant rows unchanged, ledger unchanged",
+  "pass": true,
+  "detail": "ledger rc -4; char 4/5; db 14000 -> 14000"
+ },
+ {
+  "check": "R2 other character (MBQA_CPR2): loads the granted balance, its own payout APPLIED once, tile again ALREADY",
+  "pass": true,
+  "detail": "login cash 14000; rc 3/-4; db 14500 online 14500"
+ },
+ {
+  "check": "R6 grant committed, answer held: char DB has it at once (B + h1), the online login not yet, its saves are conditional",
+  "pass": true,
+  "detail": "rc 3; db 14500 -> 15000; online 14500; inflight (4, 1)"
+ },
+ {
+  "check": "R7 operator resolve while the answer is pending: BUSY (-3), row stays UNCERTAIN",
+  "pass": true,
+  "detail": "rc -3"
+ },
+ {
+  "check": "R6 ordinary spend 100 + save, gain 50 + save during the grant: no #CASHPOINTS save undoes the grant (DB B-100+h1, then B-50+h1)",
+  "pass": true,
+  "detail": "online 14400/14450; db 14900/14950 (want 14900/14950)"
+ },
+ {
+  "check": "R6 held answer delivered: APPLIED, the online login gets h1 once (B-50+h1), plain save afterwards keeps it",
+  "pass": true,
+  "detail": "delivered 1; row (1, 4, 0, 500, 500, 2, 0); online 14950; db 14950"
+ },
+ {
+  "check": "R6 logout during the grant (unsaved -30 carried by the logout save) + switch to MBQA_CPR1: DB M-30+h2, held answer then APPLIED with no login to touch, MBQA_CPR1 loads M-30+h2",
+  "pass": true,
+  "detail": "rc 3; db 14950 -> 15950 -> 15920; delivered 1; row (1, 5, 0, 1000, 1000, 2, 0); MBQA_CPR1 15920"
+ },
+ {
+  "check": "R6 negative control (test hook: fence off): a plain #CASHPOINTS save during the grant overwrites it in the DB (N+h3 -> N-10) - the race the fence closes is real",
+  "pass": true,
+  "detail": "db 15920 -> 16420 -> 15910 (grant 500 gone from the DB)"
+ },
+ {
+  "check": "R6 negative control end state: fence back on, answer delivered, the login re-saves N-10+h3 (consistent again only because the map-server stayed up)",
+  "pass": true,
+  "detail": "row (1, 7, 0, 500, 500, 2, 0); db 16410; online 16410"
+ },
+ {
+  "check": "R4a committed, answer lost: ledger UNCERTAIN (no false APPLIED), one grant row, DB P+z, online P, saves conditional",
+  "pass": true,
+  "detail": "rc 3; row (1, 11, 0, 1500, 0, 3, 0); grant (17179869195, 1500, 16410, 17910); db 17910 online 16410"
+ },
+ {
+  "check": "R4a spend 20 + save with the answer lost: DB P-20+z (grant kept); asked again by the same login: BUSY (-3, one request per login), no second request, one grant row",
+  "pass": true,
+  "detail": "online 16390; db 17890; rc -3"
+ },
+ {
+  "check": "R4a new login asks for the UNCERTAIN row: UNCERTAIN (-22), never re-sent, still one grant row",
+  "pass": true,
+  "detail": "rc -22"
+ },
+ {
+  "check": "R4a relog: the login loads P-20+z from the char DB",
+  "pass": true,
+  "detail": "online 17890 db 17890"
+ },
+ {
+  "check": "R7 answer silent for less than 60 s: BUSY (-3); after 60 s the operator may reconcile",
+  "pass": true,
+  "detail": "rc -3"
+ },
+ {
+  "check": "R7 grant row found: MANUAL_VOID refused (CONFLICT -21), MANUAL_APPLIED OK with the ticket, apply again ALREADY, no new grant row",
+  "pass": true,
+  "detail": "rc -21/0/-4; row (1, 11, 0, 1500, 1500, 4, 7202)"
+ },
+ {
+  "check": "p1 invariants: ledger vs char rows 0 violations; DB = online = 1000 + grant rows + ordinary changes",
+  "pass": true,
+  "detail": "inv []; db 17890 expected 17890"
+ }
+]

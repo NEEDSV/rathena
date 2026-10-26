@@ -1,0 +1,42 @@
+[
+ {
+  "check": "R1 board view with key 5 = 1: every row decided earlier is paid automatically, each once (APPLIED, one grant row)",
+  "pass": true,
+  "detail": "4 rows [2, 2, 2, 2]"
+ },
+ {
+  "check": "R1 a roll that decides tile CP: paid by itself right after the arrival, DB and online +amount exactly once, audit 1->3 (claim), 3->3 (sent), 3->2 (applied)",
+  "pass": true,
+  "detail": "roll 21; +1500; db 42880 -> 44380; online 42880 -> 44380"
+ },
+ {
+  "check": "R1 account with no #CASHPOINTS row (MBQA_CPS): the first grant reads the balance as 0 (balance_before 0) and creates the row",
+  "pass": true,
+  "detail": "first grant (25769803784, 2000, 0, 2000); db 2000 online 2000; inv []"
+ },
+ {
+  "check": "R8 MBQA_CPR whole run: ledger vs char rows 0 violations, no UNCERTAIN left, DB = online = 1000 + grant rows + ordinary changes",
+  "pass": true,
+  "detail": "inv []; db 44380 online 44380 expected 44380; statuses [2, 4, 5]"
+ },
+ {
+  "check": "R8 no re-draw: every decision made in p0 keeps its key, source and amount",
+  "pass": true,
+  "detail": "16 decisions"
+ },
+ {
+  "check": "R8 other accounts: MBQA_CPT still 777, no other account has #CASHPOINTS or grant rows, voided/decided rows never granted",
+  "pass": true,
+  "detail": "others [['2000945', '777']]; grant accounts [2000943, 2000944]; void/decided with row 0"
+ },
+ {
+  "check": "marble ledger invariants (sql-files, incl. CP3 per status) over the whole DB: 0 violations",
+  "pass": true,
+  "detail": "[]"
+ },
+ {
+  "check": "policy key 5 rows exist only in ragnarok_mbqa (test switch), the product default stays 0 (need_marble_logic.hpp)",
+  "pass": true,
+  "detail": "[['20261202', '1', 'v20_mock_on'], ['20261204', '0', 'v20_mock_off'], ['20261205', '1', 'v20_real_on']]"
+ }
+]
