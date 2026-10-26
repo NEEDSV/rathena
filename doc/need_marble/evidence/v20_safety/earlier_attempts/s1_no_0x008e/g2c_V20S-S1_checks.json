@@ -1,0 +1,52 @@
+[
+ {
+  "check": "GM @mbcp info (group 99): ledger line, char row, pending, audit, next action; nothing changes",
+  "pass": false,
+  "detail": "0 lines"
+ },
+ {
+  "check": "normal player (group 0): @mbcp is not available (no [mbcp] answer)",
+  "pass": true,
+  "detail": "[]"
+ },
+ {
+  "check": "group 1 \"Super Player\" (level 0 but all_commands): refused by the level check, info and resolve alike, nothing changed",
+  "pass": false,
+  "detail": "[] / []"
+ },
+ {
+  "check": "L1 grant request delayed in the map-server: answer awaited < 60 s -> GM VOID refused BUSY (-3), ledger UNCERTAIN, no char row",
+  "pass": false,
+  "detail": "apply 3; void None; info []"
+ },
+ {
+  "check": "L1 after 60 s: VOID goes to the char-server, which commits a tombstone first; ledger MANUAL_VOID only after that answer; balance and online unchanged",
+  "pass": false,
+  "detail": "rc None; row (1, 1, 0, 2000, 0, 5, 8102); tombstone (2, 2000, 2000901, 8102); db 21390 -> 21390; online 21390; audit [(1, 3, 1, 0, 0), (3, 3, 6, 0, 0), (3, 1, 3, 0, 0), (1, 3, 1, 0, 0), (3, 3, 6, 0, 0), (3, 3, 10, 8102, 2000901), (3, 5, 5, 8102, 2000901)]"
+ },
+ {
+  "check": "L2a the delayed request arrives after the VOID: char-server answers VOIDED (7), nothing written, ledger stays MANUAL_VOID, late answer audited (5 -> 5 r9), #CASHPOINTS DB / online unchanged, no duplicate",
+  "pass": true,
+  "detail": "sent 1; char 7; db 21390 online 21390; audit end (5, 5, 9, 0, 0)"
+ },
+ {
+  "check": "L3 grant committed, answer still held: GM VOID refused (CONFLICT -21: applied row), GM APPLIED closes it as MANUAL_APPLIED (state only, DB +d once), repeated APPLIED BAD_STATE (-10), no second increase",
+  "pass": false,
+  "detail": "apply 3; db 21390 -> 22890; online 21390; busy None; void None; applied None; again None"
+ },
+ {
+  "check": "L2b the late 0x380A answer arrives after MANUAL_APPLIED: the login gets d once (online = DB = before + d), ledger stays MANUAL_APPLIED, late answer audited (4 -> 4 r9), no duplicate after a save",
+  "pass": true,
+  "detail": "delivered 1; online 22890; db 22890; audit end (4, 4, 9, 0, 0)"
+ },
+ {
+  "check": "GM @mbcp input checks: typo / bad target / ticket 0 / text ticket -> usage; unknown payout / other account -> NOT_FOUND; closed row -> BAD_STATE; nothing changed anywhere",
+  "pass": false,
+  "detail": "{\"typo\": [], \"bad target\": [], \"ticket 0\": [], \"ticket text\": [], \"no payout\": [], \"other account\": [], \"closed row void\": [], \"info no payout\": []}"
+ },
+ {
+  "check": "s1 invariants (tombstone aware): 0 violations; DB = online = 1000 + applied rows + ordinary changes",
+  "pass": true,
+  "detail": "inv []; db 22890 expected 22890"
+ }
+]

@@ -1,0 +1,52 @@
+[
+ {
+  "check": "GM @mbcp info (group 99): ledger line, char row, pending, audit, next action; nothing changes",
+  "pass": true,
+  "detail": "5 lines"
+ },
+ {
+  "check": "normal player (group 0): @mbcp is not available (no [mbcp] answer)",
+  "pass": true,
+  "detail": "[]"
+ },
+ {
+  "check": "group 1 \"Super Player\" (level 0 but all_commands): refused by the level check, info and resolve alike, nothing changed",
+  "pass": true,
+  "detail": "['[mbcp] GM level 99 only.'] / ['[mbcp] GM level 99 only.']"
+ },
+ {
+  "check": "L1 grant request delayed in the map-server: answer awaited < 60 s -> GM VOID refused BUSY (-3), ledger UNCERTAIN, no char row",
+  "pass": true,
+  "detail": "apply 3; void -3; info ['[mbcp] pending: grant answer awaited (< 60 s), VOID answer none']"
+ },
+ {
+  "check": "L1 after 60 s: VOID goes to the char-server, which commits a tombstone first; ledger MANUAL_VOID only after that answer; balance and online unchanged",
+  "pass": true,
+  "detail": "rc 3; row (1, 12, 0, 1000, 0, 5, 8102); tombstone (2, 1000, 2000901, 8102); db 22890 -> 22890; online 22890; audit [(1, 3, 1, 0, 0), (3, 3, 6, 0, 0), (3, 3, 10, 8102, 2000901), (3, 5, 5, 8102, 2000901)]"
+ },
+ {
+  "check": "L2a the delayed request arrives after the VOID: char-server answers VOIDED (7), nothing written, ledger stays MANUAL_VOID, late answer audited (5 -> 5 r9), #CASHPOINTS DB / online unchanged, no duplicate",
+  "pass": true,
+  "detail": "sent 1; char 7; db 22890 online 22890; audit end (5, 5, 9, 0, 0)"
+ },
+ {
+  "check": "L3 grant committed, answer still held: GM VOID refused (CONFLICT -21: applied row), GM APPLIED closes it as MANUAL_APPLIED (state only, DB +d once), repeated APPLIED BAD_STATE (-10), no second increase",
+  "pass": true,
+  "detail": "apply 3; db 22890 -> 23890; online 22890; busy -3; void -21; applied 0; again -10"
+ },
+ {
+  "check": "L2b the late 0x380A answer arrives after MANUAL_APPLIED: the login gets d once (online = DB = before + d), ledger stays MANUAL_APPLIED, late answer audited (4 -> 4 r9), no duplicate after a save",
+  "pass": true,
+  "detail": "delivered 1; online 23890; db 23890; audit end (4, 4, 9, 0, 0)"
+ },
+ {
+  "check": "GM @mbcp input checks: typo / bad target / ticket 0 / text ticket -> usage; unknown payout / other account -> NOT_FOUND; closed row -> BAD_STATE; nothing changed anywhere",
+  "pass": true,
+  "detail": "{\"typo\": [\"[mbcp] usage: @mbcp info <account_id> <payout_no> | @mbcp resolve <account_id> <payout_no> applied|void <ticket>\"], \"bad target\": [\"[mbcp] usage: @mbcp info <account_id> <payout_no> | @mbcp resolve <account_id> <payout_no> applied|void <ticket>\"], \"ticket 0\": [\"[mbcp] usage: @mbcp info <account_id> <payout_no> | @mbcp resolve <account_id> <payout_no> applied|void <ticket>\"], \"ticket text\": [\"[mbcp] usage: @mbcp info <account_id> <payout_no> | @mbcp resolve <account_id> <payout_no> applied|void <ticket>\"], \"no payout\": [\"[mbcp] resolve void aid 2000943 payout 99999: rc -9 - refused: "
+ },
+ {
+  "check": "s1 invariants (tombstone aware): 0 violations; DB = online = 1000 + applied rows + ordinary changes",
+  "pass": true,
+  "detail": "inv []; db 23890 expected 23890"
+ }
+]
