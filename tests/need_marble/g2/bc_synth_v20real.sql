@@ -4,12 +4,14 @@
 --   mbqa_cpr : normal player (group 0), two characters, #CASHPOINTS 1000 at the start - R1..R7 on the real char path
 --   mbqa_cps : normal player (group 0), no #CASHPOINTS row at all - a first grant must read the balance as 0
 --   mbqa_cpt : normal player (group 0), #CASHPOINTS 777, never logs in - must stay untouched
+--   mbqa_sp  : group 1 "Super Player" (level 0, but all_commands in conf/groups.yml) - @mbcp must still refuse it
 USE `ragnarok_mbqa`;
 
 INSERT INTO `login` (`account_id`, `userid`, `user_pass`, `sex`, `email`, `group_id`) VALUES
  (2000943, 'mbqa_cpr', '{{user}}', 'M', 'a@a.com', 0),
  (2000944, 'mbqa_cps', '{{user}}', 'M', 'a@a.com', 0),
- (2000945, 'mbqa_cpt', '{{user}}', 'M', 'a@a.com', 0);
+ (2000945, 'mbqa_cpt', '{{user}}', 'M', 'a@a.com', 0),
+ (2000946, 'mbqa_sp', '{{user}}', 'M', 'a@a.com', 1);
 
 INSERT INTO `char` (`char_id`, `account_id`, `char_num`, `name`, `class`, `base_level`, `job_level`,
                     `str`, `agi`, `vit`, `int`, `dex`, `luk`, `max_hp`, `hp`, `max_sp`, `sp`, `hair`, `sex`,
@@ -17,7 +19,8 @@ INSERT INTO `char` (`char_id`, `account_id`, `char_num`, `name`, `class`, `base_
  (150954, 2000943, 0, 'MBQA_CPR1', 0, 30, 10, 50, 50, 50, 1, 50, 1, 3000, 3000, 100, 100, 1, 'M', 0, 'prontera', 156, 191, 'prontera', 156, 191),
  (150955, 2000943, 1, 'MBQA_CPR2', 0, 30, 10, 50, 50, 50, 1, 50, 1, 3000, 3000, 100, 100, 1, 'M', 0, 'prontera', 156, 191, 'prontera', 156, 191),
  (150956, 2000944, 0, 'MBQA_CPS',  0, 30, 10, 50, 50, 50, 1, 50, 1, 3000, 3000, 100, 100, 1, 'M', 0, 'prontera', 156, 191, 'prontera', 156, 191),
- (150957, 2000945, 0, 'MBQA_CPT',  0, 30, 10, 50, 50, 50, 1, 50, 1, 3000, 3000, 100, 100, 1, 'M', 0, 'prontera', 156, 191, 'prontera', 156, 191);
+ (150957, 2000945, 0, 'MBQA_CPT',  0, 30, 10, 50, 50, 50, 1, 50, 1, 3000, 3000, 100, 100, 1, 'M', 0, 'prontera', 156, 191, 'prontera', 156, 191),
+ (150958, 2000946, 0, 'MBQA_SP',   0, 30, 10, 50, 50, 50, 1, 50, 1, 3000, 3000, 100, 100, 1, 'M', 0, 'prontera', 156, 191, 'prontera', 156, 191);
 
 INSERT INTO `acc_reg_num` (`account_id`, `key`, `index`, `value`) VALUES
  (2000943, '#CASHPOINTS', 0, 1000),

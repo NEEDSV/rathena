@@ -487,3 +487,10 @@ ACMD_FUNC(petautofeed)
 
 	return 0;
 }
+
+// NEED marble V20: CP payout lookup / operator reconciliation (need_marble.cpp). GM level 99 only, checked inside.
+ACMD_FUNC(mbcp)
+{
+	nullpo_retr(-1, sd);
+	return need_marble_cp_gm_command(fd, sd, message);
+}

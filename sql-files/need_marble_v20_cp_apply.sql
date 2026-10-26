@@ -17,10 +17,12 @@ CREATE TABLE IF NOT EXISTS `need_marble_cp_audit` (
   `from_status` TINYINT UNSIGNED NOT NULL,
   `to_status` TINYINT UNSIGNED NOT NULL,
   `reason` TINYINT UNSIGNED NOT NULL,              -- 1 CLAIM 2 WRITER_APPLIED 3 WRITER_NO_EFFECT 4 WRITER_UNKNOWN 5 OPERATOR
+                                                   -- 6 SENT_TO_CHAR 7 CHAR_UNPROVEN 8 OPERATOR_REFUSED 9 LATE_ANSWER 10 VOID_SENT
   `amount` INT UNSIGNED NOT NULL,
   `char_id` INT UNSIGNED NOT NULL,
   `boot_id` INT UNSIGNED NOT NULL,
   `operator_ticket` BIGINT UNSIGNED NULL,
+  `operator_aid` INT UNSIGNED NULL,                -- GM account of an operator row (reasons 5, 8, 10), else NULL
   `created_at` DATETIME NOT NULL,
   PRIMARY KEY (`audit_id`),
   KEY `k_payout` (`account_id`, `payout_no`)

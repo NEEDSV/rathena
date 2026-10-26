@@ -46,6 +46,7 @@ enum e_need_marble_rc : int32 {
 	NEED_MARBLE_REJECTED = -20,
 	NEED_MARBLE_CONFLICT = -21,      // a hunt batch key already holds other content (V21): nothing written
 	NEED_MARBLE_UNCERTAIN = -22,     // CP payout UNCERTAIN: never retried automatically, operator reconciliation
+	NEED_MARBLE_NO_CHAR = -23,       // the char-server is not connected: nothing sent, nothing changed
 };
 
 void need_marble_init();
@@ -84,10 +85,17 @@ void need_marble_cp_set_writer(need_marble_cp_writer writer, bool auto_apply = f
 /// APPLIED, or back to DECIDED only when the writer confirms it changed nothing. DISABLED without a writer,
 /// without need_marble_cp_audit or with policy key 5 off. @MB_CP_STATUS / @MB_CP_AMOUNT.
 int32 need_marble_cp_apply(map_session_data* sd, uint64 payout_no);
-/// Operator reconciliation of one UNCERTAIN payout: MANUAL_APPLIED (4) or MANUAL_VOID (5) with a ticket.
-/// When need_marble_cp_grant exists (char writer installed) the char-server's row decides: MANUAL_APPLIED needs the
-/// row with the same amount, MANUAL_VOID needs no row; anything else is refused (NEED_MARBLE_CONFLICT).
-int32 need_marble_cp_resolve(uint32 account_id, uint64 payout_no, int32 to_status, uint64 ticket);
+/// Operator reconciliation of one UNCERTAIN payout: MANUAL_APPLIED (4) or MANUAL_VOID (5) with a ticket; gm is the
+/// operator (audited, told the VOID outcome), may be nullptr. When need_marble_cp_grant is readable the char-server's
+/// row decides: MANUAL_APPLIED needs an applied row with the same amount (state change only, no CP). MANUAL_VOID is
+/// refused while an applied row exists; without one it is sent to the char-server (NEED_MARBLE_CP_SENT), which
+/// commits a tombstone under the key lock first, and the ledger closes the payout only on that answer. With the char
+/// writer built in and the table not readable, nothing is resolved (DISABLED).
+int32 need_marble_cp_resolve(uint32 account_id, uint64 payout_no, int32 to_status, uint64 ticket, map_session_data* gm);
+/// V20 safety: char-server answer to a VOID request (intif 0x380B). result: need_marble_cp::e_void_result.
+void need_marble_cp_void_result(uint32 account_id, uint64 payout_no, int32 amount, int32 result);
+/// GM @mbcp: info <account_id> <payout_no> | resolve <account_id> <payout_no> applied|void <ticket>. GM level 99 only.
+int32 need_marble_cp_gm_command(int32 fd, map_session_data* sd, const char* message);
 /// V20-REAL: true while a CP grant sent for this very login is unanswered. intif_saveregistry then saves
 /// #CASHPOINTS through intif_need_cp_condsave with this payout_no / req_id, never as a plain absolute value.
 bool need_marble_cp_fence(map_session_data* sd, uint64* payout_no, uint64* req_id);

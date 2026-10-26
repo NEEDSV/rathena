@@ -145,6 +145,18 @@ class Client:
                         npc = struct.unpack_from('<I', b, i + 4)[0]
                         t = dec(bytes(b[i + 8:i + ln]))
                         self.events.append((i, 'mes' if pid == 0x00B4 else 'menu', (npc, t)))
+            elif pid == 0x008E:
+                # ZC_NOTIFY_PLAYERCHAT: clif_displaymessage (GM / atcommand answers such as @mbcp). A whole, printable,
+                # NUL-terminated message only, so stray bytes of other packets are not taken for one.
+                ln = b[i + 2] | (b[i + 3] << 8)
+                if 5 <= ln <= 600 and i + ln > n:
+                    return
+                body = bytes(b[i + 4:i + ln]) if 5 <= ln <= 600 else b''
+                if body and body[-1] == 0 and 0 not in body[:-1] and all(c >= 0x20 for c in body[:-1]) and i not in self.seen:
+                    self.seen.add(i)
+                    t = dec(body)
+                    self.texts.append(t)
+                    self.events.append((i, 'text', t))
             elif pid in (0x00B5, 0x00B6, 0x0142):
                 npc = struct.unpack_from('<I', b, i + 2)[0]
                 if npc >= NPC_MIN and npc < 0x7FFFFFFF and i not in self.seen and self._near_dialog(npc):

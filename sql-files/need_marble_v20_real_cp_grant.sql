@@ -11,8 +11,10 @@
 --    value commit in ONE transaction; MyISAM (rAthena main.sql default) ignores transactions, so the char-server
 --    refuses every grant while acc_reg_num is not InnoDB. The ALTER copies the table and locks it while it runs:
 --    run it during maintenance with the servers stopped, after a backup.
--- 2) need_marble_cp_grant: one row per applied grant (refused requests write nothing). Its presence is the proof a
---    payout reached the balance; (account_id, payout_no) is the idempotency key, req_id the request that applied it.
+-- 2) need_marble_cp_grant: one row per key the char-server closed. state 1 = applied grant (its presence is the proof
+--    the payout reached the balance, req_id the request that applied it); state 2 = VOID tombstone written for an
+--    operator's @mbcp resolve void under the same key lock: every later request for that key is refused (GR_VOIDED).
+--    Refused requests write nothing. (account_id, payout_no) is the idempotency key.
 --
 -- Rollback: DROP TABLE `need_marble_cp_grant`;  ALTER TABLE `acc_reg_num` ENGINE=MyISAM;
 --           (only after every UNCERTAIN payout is reconciled: the rows are the evidence for MANUAL_APPLIED / VOID)
@@ -28,5 +30,8 @@ CREATE TABLE IF NOT EXISTS `need_marble_cp_grant` (
   `balance_before` BIGINT NOT NULL,              -- acc_reg_num #CASHPOINTS read FOR UPDATE in the same transaction
   `balance_after` BIGINT NOT NULL,
   `created_at` DATETIME NOT NULL,
+  `state` TINYINT UNSIGNED NOT NULL DEFAULT 1,     -- 1 APPLIED grant, 2 VOID tombstone (req_id 0, balances 0)
+  `operator_aid` INT UNSIGNED NULL,                -- VOID: the GM account that asked for it
+  `operator_ticket` BIGINT UNSIGNED NULL,          -- VOID: its ticket
   PRIMARY KEY (`account_id`, `payout_no`)
 ) ENGINE=InnoDB;

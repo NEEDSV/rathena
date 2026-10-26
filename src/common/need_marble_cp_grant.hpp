@@ -23,6 +23,17 @@ constexpr int32_t PKT_CONDSAVE_LEN = 34;
 // char -> map: W cmd, L account_id, Q payout_no, Q req_id, L amount, B result, Q balance after (0 unless applied)
 constexpr uint16_t PKT_GRANT_ACK = 0x380A;
 constexpr int32_t PKT_GRANT_ACK_LEN = 35;
+// map -> char: W cmd, L account_id, Q payout_no, L amount, Q ticket, L operator account_id (GM @mbcp resolve void)
+constexpr uint16_t PKT_VOID = 0x300C;
+constexpr int32_t PKT_VOID_LEN = 30;
+// char -> map: W cmd, L account_id, Q payout_no, L amount, B void result
+constexpr uint16_t PKT_VOID_ACK = 0x380B;
+constexpr int32_t PKT_VOID_ACK_LEN = 19;
+
+// need_marble_cp_grant.state. A VOID row is a tombstone written by the char-server under the same key lock as a
+// grant: once it is committed no request for that key can pay any more, however late it arrives.
+constexpr uint8_t GRANT_STATE_APPLIED = 1;
+constexpr uint8_t GRANT_STATE_VOID = 2;
 
 /// Largest single grant. Board rewards are 500..10,000 CP (policy draft); anything above is refused before any change.
 constexpr int32_t GRANT_MAX = 100000;
@@ -40,7 +51,22 @@ enum e_grant_result : uint8_t {
 	GR_ALREADY = 4,      // this key was applied before with the same amount: nothing added now
 	GR_CONFLICT = 5,     // this key was applied before with another amount: nothing added now
 	GR_DB_ERROR = 6,     // failed inside the transaction or at COMMIT: outcome not proven
+	GR_VOIDED = 7,       // an operator voided this key (tombstone): nothing written, the key never pays
 };
+
+// Answer of the char-server to a VOID request. Only VR_VOIDED lets the ledger close the payout as MANUAL_VOID.
+enum e_void_result : uint8_t {
+	VR_VOIDED = 0,          // tombstone committed now, or already there with the same amount
+	VR_APPLIED_EXISTS = 1,  // the grant was applied: VOID refused, nothing written
+	VR_DISABLED = 2,        // need_marble_cp_grant missing or without the state column: nothing written
+	VR_BAD_ARG = 3,         // nothing written
+	VR_CONFLICT = 4,        // a tombstone with another amount: nothing written
+	VR_DB_ERROR = 5,        // failed inside the transaction or at COMMIT: not proven either way
+};
+
+inline bool void_args_ok(uint32_t account_id, uint64_t payout_no, int32_t amount, uint64_t ticket) {
+	return account_id != 0 && payout_no != 0 && amount > 0 && amount <= GRANT_MAX && ticket != 0;
+}
 
 inline bool grant_args_ok(uint32_t account_id, uint64_t payout_no, uint64_t req_id, int32_t amount) {
 	return account_id != 0 && payout_no != 0 && req_id != 0 && amount > 0 && amount <= GRANT_MAX;

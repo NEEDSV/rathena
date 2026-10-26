@@ -59,6 +59,7 @@
 #include "need_autopot.hpp"
 #include "need_equipment_build.hpp"
 #include "need_jf_pattern.hpp"
+#include "need_marble.hpp"
 #include "need_summer_attendance.hpp"
 #include "needwiki.hpp"
 #include "npc.hpp"

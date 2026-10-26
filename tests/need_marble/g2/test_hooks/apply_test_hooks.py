@@ -297,7 +297,7 @@ BUILDIN_FUNC(need_marble_test_cp_resolve)
 		return SCRIPT_CMD_SUCCESS;
 	}
 	script_pushint(st, need_marble_cp_resolve(static_cast<uint32>(script_getnum(st, 2)), static_cast<uint64>(script_getnum(st, 3)),
-		script_getnum(st, 4), static_cast<uint64>(script_getnum(st, 5))));
+		script_getnum(st, 4), static_cast<uint64>(script_getnum(st, 5)), sd));
 	return SCRIPT_CMD_SUCCESS;
 }
 #endif
@@ -354,7 +354,7 @@ BUILDIN_FUNC(need_marble_test_cp_last)
 	return SCRIPT_CMD_SUCCESS;
 }
 
-/// need_marble_test_cp_real(<0 reset | 1 hold answers | 2 deliver held | 3 drop held | 4 stop after send | 5 stop before send | 6/7 fence off/on | 8/9 auto off/on>)
+/// need_marble_test_cp_real(<0 reset | 1 hold answers | 2 deliver held | 3 drop held | 4 stop after send | 5 stop before send | 6/7 fence off/on | 8/9 auto off/on | 10 hold requests | 11 send held requests>)
 BUILDIN_FUNC(need_marble_test_cp_real)
 {
 	map_session_data* sd = nullptr;
@@ -409,6 +409,7 @@ if a.v20real:
                  '#ifdef NEED_MARBLE_TEST_HOOKS\n'
                  'bool need_marble_test_cp_hold(uint32 aid, uint64 payout_no, uint64 req_id, int32 amount, int32 result, int64 balance);\n'
                  'void need_marble_test_cp_after_send();\n'
+                 'bool need_marble_test_cp_hold_request(uint32 aid, uint32 cid, uint64 payout_no, uint64 req_id, int32 amount);\n'
                  'bool need_marble_test_cp_fence_off();\n'
                  'bool need_marble_test_cp_no_kick();\n'
                  '#endif\n\n'
@@ -419,6 +420,12 @@ if a.v20real:
                  '\t\treturn;\n'
                  '#endif\n'
                  '\tauto sent = g_cp_sent.find({ aid, payout_no });\n')
+    replace_once(M, '\tif (intif_need_cp_grant(aid, cid, payout_no, req_id, amount) != 0) {\n',
+                 '#ifdef NEED_MARBLE_TEST_HOOKS\n'
+                 '\tif (need_marble_test_cp_hold_request(aid, cid, payout_no, req_id, amount))\n'
+                 '\t\treturn CPW_PENDING;   // test: the request waits in the map-server (delayed delivery)\n'
+                 '#endif\n'
+                 '\tif (intif_need_cp_grant(aid, cid, payout_no, req_id, amount) != 0) {\n')
     replace_once(M, '\treturn CPW_PENDING;\n',
                  '#ifdef NEED_MARBLE_TEST_HOOKS\n'
                  '\tneed_marble_test_cp_after_send();\n'

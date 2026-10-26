@@ -399,6 +399,18 @@ static void test_cp_grant() {
 	static_assert(PKT_CONDSAVE_LEN == 2 + 4 + 4 + 8 + 8 + 8, "conditional save packet layout");
 	static_assert(PKT_GRANT_ACK_LEN == 2 + 4 + 8 + 8 + 4 + 1 + 8, "grant answer packet layout");
 	static_assert(GRANT_MAX < CP_SANITY_MAX, "a grant never exceeds what the policy may decide");
+	// V20 safety: an operator VOID closes the key in the char-server
+	static_assert(PKT_VOID_LEN == 2 + 4 + 8 + 4 + 8 + 4, "void packet layout");
+	static_assert(PKT_VOID_ACK_LEN == 2 + 4 + 8 + 4 + 1, "void answer packet layout");
+	CHECK(cp_write_from_grant(GR_VOIDED) == CPW_UNKNOWN);   // a voided key: only the operator closes the row
+	CHECK(cp_status_after_write(cp_write_from_grant(GR_VOIDED)) == CPS_UNCERTAIN);
+	CHECK(void_args_ok(1, 1, 500, 7));
+	CHECK(!void_args_ok(1, 1, 500, 0));                     // ticket required
+	CHECK(!void_args_ok(0, 1, 500, 7));
+	CHECK(!void_args_ok(1, 0, 500, 7));
+	CHECK(!void_args_ok(1, 1, 0, 7));
+	CHECK(!void_args_ok(1, 1, GRANT_MAX + 1, 7));
+	CHECK(cp_reason_after_write(cp_write_from_grant(GR_VOIDED), true) == CPR_CHAR_UNPROVEN);
 }
 
 static void test_laps() {

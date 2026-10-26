@@ -405,7 +405,10 @@ enum e_cp_reason : int32_t {
 	CPR_UNKNOWN = 4,          // 3 -> 3 synchronous writer gave no usable answer
 	CPR_OPERATOR = 5,         // 3 -> 4 / 5 operator reconciliation
 	CPR_SENT = 6,             // 3 -> 3 grant request handed to the char-server
-	CPR_CHAR_UNPROVEN = 7,    // 3 -> 3 char-server answered ALREADY / CONFLICT / DB_ERROR: not proven for this request
+	CPR_CHAR_UNPROVEN = 7,    // 3 -> 3 char-server answered ALREADY / CONFLICT / DB_ERROR / VOIDED: not proven for this request
+	CPR_OPERATOR_REFUSED = 8, // 3 -> 3 operator reconciliation refused (evidence says otherwise, or char-server refused the VOID)
+	CPR_LATE_ANSWER = 9,      // s -> s a char-server answer for a row no longer UNCERTAIN: recorded, nothing changed
+	CPR_VOID_SENT = 10,       // 3 -> 3 operator VOID handed to the char-server (tombstone first, ledger after its answer)
 };
 
 /// Writer answer of a char-server grant result (src/common/need_marble_cp_grant.hpp). ALREADY and CONFLICT add
@@ -418,6 +421,7 @@ inline int32_t cp_write_from_grant(int32_t grant_result) {
 	case need_marble_cp::GR_BAD_ARG:
 	case need_marble_cp::GR_CAP:
 		return CPW_NO_EFFECT;
+	case need_marble_cp::GR_VOIDED:   // nothing written now, but the key is voided: only the operator closes the row
 	default:
 		return CPW_UNKNOWN;
 	}

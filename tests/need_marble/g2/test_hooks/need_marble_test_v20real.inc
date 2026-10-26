@@ -22,6 +22,21 @@ int32 g_mbqa_real_mode = 0;    // 1 hold char-server answers, 4 stop after the r
 bool g_mbqa_fence_off = false;  // negative control: #CASHPOINTS saves stay plain absolute values during a grant
 bool g_mbqa_no_kick = false;    // no automatic payout: rows wait for @mbqacpapply
 std::map<uint64, int32> g_mbqa_last;   // payout_no -> last char-server result seen (held or not)
+struct mbqa_held_request {
+	uint32 aid, cid;
+	uint64 payout_no, req_id;
+	int32 amount;
+};
+std::vector<mbqa_held_request> g_mbqa_held_req;
+bool g_mbqa_hold_req = false;   // grant requests wait in the map-server (a request that reaches the char-server late)
+
+bool need_marble_test_cp_hold_request(uint32 aid, uint32 cid, uint64 payout_no, uint64 req_id, int32 amount) {
+	if (!g_mbqa_hold_req)
+		return false;
+	g_mbqa_held_req.push_back({ aid, cid, payout_no, req_id, amount });
+	ShowWarning("need_marble_test: grant request held in the map-server (payout %" PRIu64 ").\n", payout_no);
+	return true;
+}
 
 bool need_marble_test_cp_hold(uint32 aid, uint64 payout_no, uint64 req_id, int32 amount, int32 result, int64 balance) {
 	g_mbqa_last[payout_no] = result;
@@ -54,15 +69,27 @@ bool need_marble_test_cp_no_kick() {
 }
 
 /// 0 reset, 1 hold answers, 2 deliver held answers, 3 drop held answers (lost), 4 / 5 stop the map-server after /
-/// before the next request leaves, 6 / 7 fence off / on, 8 / 9 automatic payout off / on. Returns the mode or the
-/// number of answers delivered / dropped.
+/// before the next request leaves, 6 / 7 fence off / on, 8 / 9 automatic payout off / on, 10 hold grant requests in
+/// the map-server, 11 send the held requests now. Returns the mode or the number of answers / requests handled.
 int32 need_marble_test_cp_real(int32 mode) {
 	switch (mode) {
 	case 0:
 		g_mbqa_real_mode = 0;
 		g_mbqa_fence_off = false;
 		g_mbqa_no_kick = false;
+		g_mbqa_hold_req = false;
 		return 0;
+	case 10:
+		g_mbqa_hold_req = true;
+		return 10;
+	case 11: {
+		g_mbqa_hold_req = false;
+		std::vector<mbqa_held_request> held;
+		held.swap(g_mbqa_held_req);
+		for (const auto& h : held)
+			intif_need_cp_grant(h.aid, h.cid, h.payout_no, h.req_id, h.amount);
+		return static_cast<int32>(held.size());
+	}
 	case 1:
 	case 4:
 	case 5:

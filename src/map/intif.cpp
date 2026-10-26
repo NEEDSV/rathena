@@ -38,7 +38,7 @@
 
 /// Received packet Lengths from inter-server
 static const int32 packet_len_table[] = {
-	-1,-1,27,-1, -1, 0,37,-1, 10+NAME_LENGTH,-1,35, 0,  0, 0,  0, 0, //0x3800-0x380f  0x380A NEED marble CP grant
+	-1,-1,27,-1, -1, 0,37,-1, 10+NAME_LENGTH,-1,35,19,  0, 0,  0, 0, //0x3800-0x380f  0x380A/0x380B NEED marble CP grant / void
 	 0, 0, 0, 0,  0, 0, 0, 0, -1,11, 0, 0,  0, 0,  0, 0, //0x3810
 	39,-1,15,15, 15+NAME_LENGTH,17+MAP_NAME_LENGTH_EXT, 7,-1,  0, 0, 0, 0,  0, 0,  0, 0, //0x3820
 	10,-1,15, 0, 79,19, 7,-1,  0,-1,-1,-1, 14,67,186,-1, //0x3830
@@ -555,6 +555,26 @@ int32 intif_need_cp_grant(uint32 account_id, uint32 char_id, uint64 payout_no, u
 	WFIFOQ(inter_fd, 18) = req_id;
 	WFIFOL(inter_fd, 26) = amount;
 	WFIFOSET(inter_fd, PKT_GRANT_LEN);
+	return 0;
+}
+
+/**
+ * NEED marble V20 safety: asks the char-server to void one key (tombstone under the grant key lock, GM @mbcp).
+ * @return 0=msg sent, -1=no char-server connection (nothing sent)
+ */
+int32 intif_need_cp_void(uint32 account_id, uint64 payout_no, int32 amount, uint64 ticket, uint32 operator_aid)
+{
+	using namespace need_marble_cp;
+	if (CheckForCharServer())
+		return -1;
+	WFIFOHEAD(inter_fd, PKT_VOID_LEN);
+	WFIFOW(inter_fd, 0) = PKT_VOID;
+	WFIFOL(inter_fd, 2) = account_id;
+	WFIFOQ(inter_fd, 6) = payout_no;
+	WFIFOL(inter_fd, 14) = amount;
+	WFIFOQ(inter_fd, 18) = ticket;
+	WFIFOL(inter_fd, 26) = operator_aid;
+	WFIFOSET(inter_fd, PKT_VOID_LEN);
 	return 0;
 }
 
@@ -3872,6 +3892,9 @@ int32 intif_parse(int32 fd)
 	case 0x3809:	intif_parse_broadcast_obtain_special_item(fd); break;
 	case need_marble_cp::PKT_GRANT_ACK:
 		need_marble_cp_char_result(RFIFOL(fd, 2), RFIFOQ(fd, 6), RFIFOQ(fd, 14), static_cast<int32>(RFIFOL(fd, 22)), RFIFOB(fd, 26), static_cast<int64>(RFIFOQ(fd, 27)));
+		break;
+	case need_marble_cp::PKT_VOID_ACK:
+		need_marble_cp_void_result(RFIFOL(fd, 2), RFIFOQ(fd, 6), static_cast<int32>(RFIFOL(fd, 14)), RFIFOB(fd, 18));
 		break;
 	case 0x3818:	intif_parse_LoadGuildStorage(fd); break;
 	case 0x3819:	intif_parse_SaveGuildStorage(fd); break;

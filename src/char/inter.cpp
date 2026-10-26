@@ -57,7 +57,7 @@ uint32 party_share_level = 10;
 
 /// Received packet Lengths from map-server
 int32 inter_recv_packet_length[] = {
-	-1,-1, 7,-1, -1,13,36, (2+4+4+4+NAME_LENGTH),  0,-1,30,34,  0, 0,  0, 0,	// 3000-  0x300A/0x300B NEED marble CP grant
+	-1,-1, 7,-1, -1,13,36, (2+4+4+4+NAME_LENGTH),  0,-1,30,34, 30, 0,  0, 0,	// 3000-  0x300A/0x300B/0x300C NEED marble CP grant / void
 	 6,-1, 0, 0,  0, 0, 0, 0, 10,-1, 0, 0,  0, 0,  0, 0,	// 3010-
 	-1,10,-1,14, 15+NAME_LENGTH,17+MAP_NAME_LENGTH_EXT, 6,-1, 14,14, 6, 0,  0, 0,  0, 0,	// 3020- Party
 	-1, 6,-1,-1, 55,19, 6,-1, 14,-1,-1,-1, 18,19,186,-1,	// 3030-
@@ -91,7 +91,7 @@ static std::unordered_map<int32, std::shared_ptr<struct WisData>> wis_db;
 void inter_savereg(uint32 account_id, uint32 char_id, const char *key, uint32 index, int64 int_value, const char* string_value, bool is_string);
 
 static bool need_cp_grant_enabled = false;   // inter_athena.conf need_marble_cp_grant (default off)
-static bool need_cp_grant_table = false;     // need_marble_cp_grant exists as InnoDB: grants may have been applied
+static bool need_cp_grant_table = false;     // need_marble_cp_grant exists as InnoDB with its state columns
 static bool need_cp_grant_ready = false;     // enabled, need_marble_cp_grant and acc_reg_num both InnoDB
 
 static int64 need_cp_count(const char* fmt, ...) {
@@ -111,7 +111,9 @@ static int64 need_cp_count(const char* fmt, ...) {
 
 static void need_cp_grant_check() {
 	need_cp_grant_table = need_cp_count("SELECT COUNT(*) FROM `information_schema`.`TABLES` WHERE `TABLE_SCHEMA`=DATABASE() "
-		"AND `ENGINE`='InnoDB' AND `TABLE_NAME`='need_marble_cp_grant'") == 1;
+		"AND `ENGINE`='InnoDB' AND `TABLE_NAME`='need_marble_cp_grant'") == 1 &&
+		need_cp_count("SELECT COUNT(*) FROM `information_schema`.`COLUMNS` WHERE `TABLE_SCHEMA`=DATABASE() "
+		"AND `TABLE_NAME`='need_marble_cp_grant' AND `COLUMN_NAME` IN ('state','operator_aid','operator_ticket')") == 3;
 	const bool accreg_innodb = need_cp_count("SELECT COUNT(*) FROM `information_schema`.`TABLES` WHERE `TABLE_SCHEMA`=DATABASE() "
 		"AND `ENGINE`='InnoDB' AND `TABLE_NAME`='%s'", schema_config.acc_reg_num_table) == 1;
 	need_cp_grant_ready = need_cp_grant_enabled && need_cp_grant_table && accreg_innodb;
@@ -141,12 +143,16 @@ static uint8 need_cp_grant_apply(uint32 aid, uint32 cid, uint64 payout_no, uint6
 	do {
 		if (SQL_ERROR == Sql_Query(sql_handle, "SET @need_cp_tx='%" PRIu64 "'", req_id))
 			break;
-		if (SQL_ERROR == Sql_Query(sql_handle, "SELECT `amount` FROM `need_marble_cp_grant` WHERE `account_id`='%" PRIu32 "' AND `payout_no`='%" PRIu64 "' FOR UPDATE", aid, payout_no))
+		if (SQL_ERROR == Sql_Query(sql_handle, "SELECT `amount`,`state` FROM `need_marble_cp_grant` WHERE `account_id`='%" PRIu32 "' AND `payout_no`='%" PRIu64 "' FOR UPDATE", aid, payout_no))
 			break;
 		if (SQL_SUCCESS == Sql_NextRow(sql_handle)) {
 			const int64 stored = (SQL_SUCCESS == Sql_GetData(sql_handle, 0, &data, nullptr) && data != nullptr) ? strtoll(data, nullptr, 10) : -1;
+			const int64 state = (SQL_SUCCESS == Sql_GetData(sql_handle, 1, &data, nullptr) && data != nullptr) ? strtoll(data, nullptr, 10) : 0;
 			Sql_FreeResult(sql_handle);
-			result = stored == amount ? GR_ALREADY : GR_CONFLICT;
+			if (state == GRANT_STATE_VOID)
+				result = GR_VOIDED;   // an operator closed this key: a late request never pays
+			else
+				result = stored == amount ? GR_ALREADY : GR_CONFLICT;
 			break;
 		}
 		Sql_FreeResult(sql_handle);
@@ -163,9 +169,9 @@ static uint8 need_cp_grant_apply(uint32 aid, uint32 cid, uint64 payout_no, uint6
 		if (SQL_ERROR == Sql_Query(sql_handle, "REPLACE INTO `%s` (`account_id`,`key`,`index`,`value`) SELECT '%" PRIu32 "','%s','0','%" PRId64 "' FROM DUAL WHERE @need_cp_tx='%" PRIu64 "'",
 			schema_config.acc_reg_num_table, aid, CASHPOINT_KEY, new_balance, req_id) || Sql_NumRowsAffected(sql_handle) == 0)
 			break;
-		if (SQL_ERROR == Sql_Query(sql_handle, "INSERT INTO `need_marble_cp_grant` (`account_id`,`payout_no`,`req_id`,`amount`,`char_id`,`balance_before`,`balance_after`,`created_at`) "
-			"SELECT '%" PRIu32 "','%" PRIu64 "','%" PRIu64 "','%d','%" PRIu32 "','%" PRId64 "','%" PRId64 "',NOW() FROM DUAL WHERE @need_cp_tx='%" PRIu64 "'",
-			aid, payout_no, req_id, amount, cid, old_balance, new_balance, req_id) || Sql_NumRowsAffected(sql_handle) != 1)
+		if (SQL_ERROR == Sql_Query(sql_handle, "INSERT INTO `need_marble_cp_grant` (`account_id`,`payout_no`,`req_id`,`amount`,`char_id`,`balance_before`,`balance_after`,`created_at`,`state`) "
+			"SELECT '%" PRIu32 "','%" PRIu64 "','%" PRIu64 "','%d','%" PRIu32 "','%" PRId64 "','%" PRId64 "',NOW(),'%d' FROM DUAL WHERE @need_cp_tx='%" PRIu64 "'",
+			aid, payout_no, req_id, amount, cid, old_balance, new_balance, GRANT_STATE_APPLIED, req_id) || Sql_NumRowsAffected(sql_handle) != 1)
 			break;
 		result = GR_APPLIED;
 	} while (false);
@@ -183,8 +189,8 @@ static uint8 need_cp_grant_apply(uint32 aid, uint32 cid, uint64 payout_no, uint6
 	}
 	Sql_QueryStr(sql_handle, "SET @need_cp_tx=NULL");
 	// A COMMIT sent on a reconnected session succeeds with nothing to commit: only the row proves the grant.
-	if (need_cp_count("SELECT COUNT(*) FROM `need_marble_cp_grant` WHERE `account_id`='%" PRIu32 "' AND `payout_no`='%" PRIu64 "' AND `req_id`='%" PRIu64 "'",
-		aid, payout_no, req_id) != 1)
+	if (need_cp_count("SELECT COUNT(*) FROM `need_marble_cp_grant` WHERE `account_id`='%" PRIu32 "' AND `payout_no`='%" PRIu64 "' AND `req_id`='%" PRIu64 "' AND `state`='%d'",
+		aid, payout_no, req_id, GRANT_STATE_APPLIED) != 1)
 		return GR_DB_ERROR;
 	*balance = new_balance;
 	return GR_APPLIED;
@@ -222,8 +228,8 @@ static void mapif_parse_need_cp_condsave(int32 fd) {
 	const int64 base = static_cast<int64>(RFIFOQ(fd, 26));
 	int64 amount = 0;
 	if (need_cp_grant_table) {
-		if (SQL_ERROR == Sql_Query(sql_handle, "SELECT `amount` FROM `need_marble_cp_grant` WHERE `account_id`='%" PRIu32 "' AND `payout_no`='%" PRIu64 "' AND `req_id`='%" PRIu64 "'",
-			aid, payout_no, req_id)) {
+		if (SQL_ERROR == Sql_Query(sql_handle, "SELECT `amount` FROM `need_marble_cp_grant` WHERE `account_id`='%" PRIu32 "' AND `payout_no`='%" PRIu64 "' AND `req_id`='%" PRIu64 "' AND `state`='%d'",
+			aid, payout_no, req_id, need_marble_cp::GRANT_STATE_APPLIED)) {
 			Sql_ShowDebug(sql_handle);
 			ShowError("need_marble: conditional #CASHPOINTS save of aid %" PRIu32 " skipped (grant lookup failed).\n", aid);
 			return;
@@ -235,6 +241,82 @@ static void mapif_parse_need_cp_condsave(int32 fd) {
 	}
 	const int64 value = need_marble_cp::condsave_value(base, amount > 0, static_cast<int32>(amount));
 	inter_savereg(aid, cid, need_marble_cp::CASHPOINT_KEY, 0, value, nullptr, false);
+}
+
+// Operator VOID of one key (GM @mbcp resolve void). One transaction under the same key lock as a grant: an applied
+// row refuses it; otherwise a tombstone is committed and every later request for the key answers GR_VOIDED. Works
+// with the grant switch off (closing a key never pays). The ledger closes the payout only after VR_VOIDED.
+static uint8 need_cp_void_apply(uint32 aid, uint64 payout_no, int32 amount, uint64 ticket, uint32 op) {
+	using namespace need_marble_cp;
+	if (!need_cp_grant_table)
+		return VR_DISABLED;
+	if (!void_args_ok(aid, payout_no, amount, ticket))
+		return VR_BAD_ARG;
+	if (SQL_ERROR == Sql_QueryStr(sql_handle, "START TRANSACTION")) {
+		Sql_ShowDebug(sql_handle);
+		return VR_DB_ERROR;
+	}
+	uint8 result = VR_DB_ERROR;
+	bool write = false;
+	char* data = nullptr;
+	do {
+		if (SQL_ERROR == Sql_Query(sql_handle, "SET @need_cp_tx='%" PRIu64 "'", ticket))
+			break;
+		if (SQL_ERROR == Sql_Query(sql_handle, "SELECT `amount`,`state` FROM `need_marble_cp_grant` WHERE `account_id`='%" PRIu32 "' AND `payout_no`='%" PRIu64 "' FOR UPDATE", aid, payout_no))
+			break;
+		if (SQL_SUCCESS == Sql_NextRow(sql_handle)) {
+			const int64 stored = (SQL_SUCCESS == Sql_GetData(sql_handle, 0, &data, nullptr) && data != nullptr) ? strtoll(data, nullptr, 10) : -1;
+			const int64 state = (SQL_SUCCESS == Sql_GetData(sql_handle, 1, &data, nullptr) && data != nullptr) ? strtoll(data, nullptr, 10) : 0;
+			Sql_FreeResult(sql_handle);
+			if (state == GRANT_STATE_VOID)
+				result = stored == amount ? VR_VOIDED : VR_CONFLICT;   // already closed: nothing written again
+			else
+				result = VR_APPLIED_EXISTS;
+			break;
+		}
+		Sql_FreeResult(sql_handle);
+		if (SQL_ERROR == Sql_Query(sql_handle, "INSERT INTO `need_marble_cp_grant` (`account_id`,`payout_no`,`req_id`,`amount`,`char_id`,`balance_before`,`balance_after`,`created_at`,`state`,`operator_aid`,`operator_ticket`) "
+			"SELECT '%" PRIu32 "','%" PRIu64 "','0','%d','0','0','0',NOW(),'%d','%" PRIu32 "','%" PRIu64 "' FROM DUAL WHERE @need_cp_tx='%" PRIu64 "'",
+			aid, payout_no, amount, GRANT_STATE_VOID, op, ticket, ticket) || Sql_NumRowsAffected(sql_handle) != 1)
+			break;
+		write = true;
+	} while (false);
+	if (!write) {
+		if (result == VR_DB_ERROR)
+			Sql_ShowDebug(sql_handle);
+		if (SQL_ERROR == Sql_QueryStr(sql_handle, "ROLLBACK"))
+			Sql_ShowDebug(sql_handle);
+		Sql_QueryStr(sql_handle, "SET @need_cp_tx=NULL");
+		return result;
+	}
+	if (SQL_ERROR == Sql_QueryStr(sql_handle, "COMMIT")) {
+		Sql_ShowDebug(sql_handle);
+		return VR_DB_ERROR;
+	}
+	Sql_QueryStr(sql_handle, "SET @need_cp_tx=NULL");
+	if (need_cp_count("SELECT COUNT(*) FROM `need_marble_cp_grant` WHERE `account_id`='%" PRIu32 "' AND `payout_no`='%" PRIu64 "' AND `state`='%d' AND `amount`='%d'",
+		aid, payout_no, GRANT_STATE_VOID, amount) != 1)
+		return VR_DB_ERROR;
+	return VR_VOIDED;
+}
+
+static void mapif_parse_need_cp_void(int32 fd) {
+	using namespace need_marble_cp;
+	const uint32 aid = RFIFOL(fd, 2);
+	const uint64 payout_no = RFIFOQ(fd, 6);
+	const int32 amount = static_cast<int32>(RFIFOL(fd, 14));
+	const uint64 ticket = RFIFOQ(fd, 18);
+	const uint32 op = RFIFOL(fd, 26);
+	const uint8 result = need_cp_void_apply(aid, payout_no, amount, ticket, op);
+	ShowNotice("need_marble: CP VOID of payout %" PRIu64 " (aid %" PRIu32 ", amount %d) by GM aid %" PRIu32 " ticket %" PRIu64 ": result %d.\n",
+		payout_no, aid, amount, op, ticket, result);
+	WFIFOHEAD(fd, PKT_VOID_ACK_LEN);
+	WFIFOW(fd, 0) = PKT_VOID_ACK;
+	WFIFOL(fd, 2) = aid;
+	WFIFOQ(fd, 6) = payout_no;
+	WFIFOL(fd, 14) = amount;
+	WFIFOB(fd, 18) = result;
+	WFIFOSET(fd, PKT_VOID_ACK_LEN);
 }
 
 /* from pc.cpp due to @accinfo. any ideas to replace this crap are more than welcome. */
@@ -1589,6 +1671,7 @@ int32 inter_parse_frommap(int32 fd)
 	case 0x3009: mapif_parse_broadcast_item(fd); break;
 	case need_marble_cp::PKT_GRANT: mapif_parse_need_cp_grant(fd); break;
 	case need_marble_cp::PKT_CONDSAVE: mapif_parse_need_cp_condsave(fd); break;
+	case need_marble_cp::PKT_VOID: mapif_parse_need_cp_void(fd); break;
 	default:
 		if(  inter_party_parse_frommap(fd)
 		  || inter_guild_parse_frommap(fd)

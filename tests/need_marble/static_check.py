@@ -115,8 +115,11 @@ check('V20-REAL: the only #CASHPOINTS code of the module mirrors a char-server A
 apply_fn, resolve_fn = cpp_func('need_marble_cp_apply'), cpp_func('need_marble_cp_resolve')
 updates = [m.start() for m in re.finditer(r'UPDATE `need_marble_cp_payout`', cpp)]
 settle_fn = cpp_func('cp_settle')
-check('cp_payout rows only inserted with status 1 (DECIDED); status changed only by need_marble_cp_apply (claim), cp_settle (answer), need_marble_cp_resolve',
-      re.search(r"INSERT INTO `need_marble_cp_payout`.*?'1','%u',NOW\(\)", cpp, re.S) is not None and len(updates) == 3 and
+void_result_fn = cpp_func('need_marble_cp_void_result', 'void')
+check('cp_payout rows only inserted with status 1 (DECIDED); status changed only by need_marble_cp_apply (claim), cp_settle (answer), '
+      'need_marble_cp_resolve, need_marble_cp_void_result (MANUAL_VOID after the char-server tombstone)',
+      re.search(r"INSERT INTO `need_marble_cp_payout`.*?'1','%u',NOW\(\)", cpp, re.S) is not None and len(updates) == 4 and
+      void_result_fn.count('UPDATE `need_marble_cp_payout`') == 1 and
       apply_fn.count('UPDATE `need_marble_cp_payout`') == 1 and settle_fn.count('UPDATE `need_marble_cp_payout`') == 1 and
       resolve_fn.count('UPDATE `need_marble_cp_payout`') == 1)
 check('CP switch: 1 is valid only with a registered writer, anything else stays invalid',
@@ -150,7 +153,7 @@ check('need_marble_cp_resolve: UNCERTAIN -> MANUAL_APPLIED / MANUAL_VOID only, t
       'return from_status == CPS_UNCERTAIN && (to_status == CPS_MANUAL_APPLIED || to_status == CPS_MANUAL_VOID);' in logic)
 check('need_marble_cp_audit is not a ledger table: the module keeps working where the V20 migration is not applied',
       'need_marble_cp_audit' not in cpp[cpp.find('LEDGER_TABLES[]'):cpp.find('};', cpp.find('LEDGER_TABLES[]'))] and
-      'cp_table_check("need_marble_cp_audit")' in cpp and 'need_marble_cp_grant' not in cpp[cpp.find('LEDGER_TABLES[]'):cpp.find('};', cpp.find('LEDGER_TABLES[]'))])
+      'cp_table_check("need_marble_cp_audit", "operator_aid")' in cpp and 'need_marble_cp_grant' not in cpp[cpp.find('LEDGER_TABLES[]'):cpp.find('};', cpp.find('LEDGER_TABLES[]'))])
 hooks_v20 = read('tests/need_marble/g2/test_hooks/need_marble_test_v20.inc')
 check('mock CP writer lives only in the test hooks, under NEED_MARBLE_TEST_HOOKS, and refuses outside ragnarok_mbqa',
       hooks_v20.startswith('#ifdef NEED_MARBLE_TEST_HOOKS') and hooks_v20.rstrip().endswith('#endif  // NEED_MARBLE_TEST_HOOKS') and
@@ -449,9 +452,10 @@ check('fence = same login (char_id + login ids), not only the account; lost conn
 check('automatic payout picks only DECIDED rows within GRANT_MAX, one request per login, only with key 5 = 1 and the char writer',
       "`status`='%d' AND `amount`<='%d'" in kick_fn and 'CPS_DECIDED, need_marble_cp::GRANT_MAX' in kick_fn and
       '!g_cp_auto' in kick_fn and 'P(P_CP_APPLY_ENABLED) != 1' in kick_fn and 'cp_busy(sd)' in kick_fn and 'CPS_UNCERTAIN' not in kick_fn)
-check('operator resolve: the char-server row decides (APPLIED needs it, VOID needs none), BUSY while an answer may still come',
-      'if ((to_status == CPS_MANUAL_APPLIED && !applied) || (to_status == CPS_MANUAL_VOID && !absent))\n\t\t\treturn NEED_MARBLE_CONFLICT;' in resolve_fn and
-      'DIFF_TICK(gettick(), sent->second.sent) < CP_ANSWER_WAIT_SEC * 1000' in resolve_fn and 'constexpr int32_t CP_ANSWER_WAIT_SEC = 60;' in logic)
+check('operator resolve: the char-server row decides (APPLIED needs its applied row, VOID refused while one exists), BUSY while an answer may still come',
+      'if ((to_status == CPS_MANUAL_APPLIED && !applied) || (to_status == CPS_MANUAL_VOID && state != 0 && !voided)) {' in resolve_fn and
+      'DIFF_TICK(gettick(), sent->second.sent) < CP_ANSWER_WAIT_SEC * 1000' in resolve_fn and 'constexpr int32_t CP_ANSWER_WAIT_SEC = 60;' in logic and
+      'if (!g_cp_grant_visible && g_cp_auto)\n\t\treturn NEED_MARBLE_DISABLED;' in resolve_fn)
 check('char answer: only a request this map-server sent (key, req_id, amount) is recorded, and only on a row still UNCERTAIN',
       'sent->second.req_id != req_id || sent->second.amount != amount' in char_result_fn and
       'if (status != CPS_UNCERTAIN || stored != amount) {' in settle_fn and 'cp_write_from_grant(result)' in char_result_fn)
@@ -464,9 +468,46 @@ hooks_char = read('tests/need_marble/g2/test_hooks/need_marble_test_char.inc')
 real_block = apply[apply.find('if a.v20real:'):apply.find("append('src/custom/script.inc', INC)")]
 check('V20-REAL test hooks: only in tests/, entirely under NEED_MARBLE_TEST_HOOKS, every anchored edit too; char faults only in ragnarok_mbqa',
       all(h.strip().startswith('#ifdef NEED_MARBLE_TEST_HOOKS') and h.strip().endswith('#endif  // NEED_MARBLE_TEST_HOOKS') for h in (hooks_real, hooks_char)) and
-      real_block.count("replace_once(") == 9 and real_block.count("'#ifdef NEED_MARBLE_TEST_HOOKS\\n'") == 10 and
+      real_block.count("replace_once(") == 10 and real_block.count("'#ifdef NEED_MARBLE_TEST_HOOKS\\n'") == 11 and
       "DATABASE()='ragnarok_mbqa'" in hooks_char and 'getenv("NEED_MARBLE_TEST_HOOKS")' in hooks_char and
       'need_cp_test' not in inter_c and 'need_marble_test' not in cpp + intif_c + chrif_c)
+
+# 17. V20 safety: a late request can never pay after an operator VOID; GM @mbcp
+vapply = inter_c[inter_c.find('static uint8 need_cp_void_apply('):inter_c.find('\n}\n', inter_c.find('static uint8 need_cp_void_apply('))]
+check('V20 safety packets: 0x300C (30) / 0x380B (19) were free and match the shared header',
+      num('PKT_VOID') == 0x300C and num('PKT_VOID_ACK') == 0x380B and int(row3000[12]) == num('PKT_VOID_LEN') == 30 and
+      int(row3800[11]) == num('PKT_VOID_ACK_LEN') == 19 and 'need_marble_cp::PKT_VOID: mapif_parse_need_cp_void(fd)' in inter_c and
+      'case need_marble_cp::PKT_VOID_ACK:' in intif_c)
+check('char grant: a VOID tombstone of the key refuses the request before any write (GR_VOIDED)',
+      gapply.find('if (state == GRANT_STATE_VOID)\n\t\t\t\tresult = GR_VOIDED;') > 0 and
+      gapply.find('if (state == GRANT_STATE_VOID)') < gapply.find('REPLACE INTO') and "`state`='%d'\"," in gapply.replace("`state`='%d'\",\n", "`state`='%d'\","))
+check('char VOID: same key lock (FOR UPDATE), an applied row refuses it, tombstone write guarded by @need_cp_tx, committed then read back',
+      'FOR UPDATE' in vapply and 'result = VR_APPLIED_EXISTS;' in vapply and vapply.count("WHERE @need_cp_tx='%\" PRIu64 \"'") == 1 and
+      vapply.find('"COMMIT"') < vapply.rfind('return VR_VOIDED;') and 'GRANT_STATE_VOID, amount) != 1)\n\t\treturn VR_DB_ERROR;' in vapply and
+      'if (!need_cp_grant_table)\n\t\treturn VR_DISABLED;' in vapply)
+check('char conditional save counts only an applied row of that very request (a tombstone never adds)',
+      "AND `req_id`='%\" PRIu64 \"' AND `state`='%d'\",\n\t\t\taid, payout_no, req_id, need_marble_cp::GRANT_STATE_APPLIED)" in cond)
+void_branch = resolve_fn[resolve_fn.find('if (to_status == CPS_MANUAL_VOID && state == 0) {'):resolve_fn.find('// MANUAL_APPLIED on its applied row')]
+check('map VOID without a row: only a request to the char-server (audit 10), never a ledger change; no char-server -> NO_CHAR, nothing kept',
+      'intif_need_cp_void(' in void_branch and 'UPDATE' not in void_branch and 'CPR_VOID_SENT' in void_branch and
+      'return NEED_MARBLE_NO_CHAR;' in void_branch and void_branch.find('return NEED_MARBLE_NO_CHAR;') < void_branch.find('tx.commit();'))
+check('MANUAL_VOID from a char answer only on VR_VOIDED of an UNCERTAIN row with the same amount; anything else audited, unchanged',
+      'if (result == need_marble_cp::VR_VOIDED && status == CPS_UNCERTAIN && stored == amount) {' in void_result_fn and
+      'const int32 reason = status == CPS_UNCERTAIN ? CPR_OPERATOR_REFUSED : CPR_LATE_ANSWER;' in void_result_fn and
+      'pc_setaccountreg' not in void_result_fn and 'intif_need_cp_grant' not in void_result_fn)
+check('late char answers on a closed row are audited (reason 9) and change nothing',
+      'CPR_LATE_ANSWER, amount, cid, 0) == NEED_MARBLE_OK)' in settle_fn and 'CPR_LATE_ANSWER = 9,' in logic)
+gm_fn = cpp_func('need_marble_cp_gm_command')
+info_fn = cpp_func('cp_gm_info', 'void')
+check('GM @mbcp: level 99 checked before anything (groups.yml all_commands also reaches level 0), registered as a custom atcommand',
+      gm_fn.find('if (pc_get_group_level(sd) < GM_FORCE_LEVEL) {') < gm_fn.find('sscanf(') and gm_fn.find('sscanf(') > 0 and
+      'ACMD_FUNC(mbcp)' in read('src/custom/atcommand.inc') and 'ACMD_DEF(mbcp),' in read('src/custom/atcommand_def.inc'))
+check('GM @mbcp info is read only (no INSERT / UPDATE / DELETE, no CP), resolve needs a ticket and goes through need_marble_cp_resolve',
+      bool(info_fn) and not re.search(r'INSERT|UPDATE|DELETE|pc_setaccountreg|intif_need', info_fn) and
+      'need_marble_cp_resolve(aid, payout_no, to, ticket, sd)' in gm_fn and 'ticket != 0' in gm_fn)
+check('migration drafts carry the new columns (grant state / operator, audit operator_aid)',
+      '`state` TINYINT UNSIGNED NOT NULL DEFAULT 1' in mig and '`operator_aid` INT UNSIGNED NULL' in mig and
+      '`operator_aid` INT UNSIGNED NULL' in read('sql-files/need_marble_v20_cp_apply.sql'))
 
 failed = [r for r in results if not r[1]]
 for name, ok, detail in results:

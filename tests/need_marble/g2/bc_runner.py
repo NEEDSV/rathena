@@ -3436,11 +3436,12 @@ def cash_db(aid):
 
 
 def grants(aid):
-    """{payout_no: (req_id, amount, balance_before, balance_after)} from the char-server's idempotency table."""
+    """{payout_no: (req_id, amount, balance_before, balance_after)} of the APPLIED rows (state 1) of the char-server's
+    idempotency table; VOID tombstones (state 2, V20 safety) are read with grant_rows()."""
     if not sql("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='need_marble_cp_grant'")[0][0] == '1':
         return {}
     return {int(r[0]): tuple(int(x) for x in r[1:]) for r in
-            sql(f'SELECT payout_no,req_id,amount,balance_before,balance_after FROM need_marble_cp_grant WHERE account_id={aid}')}
+            sql(f'SELECT payout_no,req_id,amount,balance_before,balance_after FROM need_marble_cp_grant WHERE account_id={aid} AND state=1')}
 
 
 def engines():
@@ -3942,8 +3943,9 @@ def v20r_p2():
     applied = gm1 is not None
     r_wrong = cpresolve(g, aid, M1, 5 if applied else 4, 7301)
     r_right = cpresolve(g, aid, M1, 4 if applied else 5, 7302)
+    wait_status(aid, M1, lambda x: x != 3, 10)
     res.append(('R4b after the restart: relogged login = char DB, UNCERTAIN was not retried; operator: the wrong side refused (CONFLICT), '
-                'the side the grant row proves OK', m_after == cash_db(aid) == db_m1 and r_wrong == RC['CONFLICT'] and r_right == RC['OK'] and
+                'the side the grant row proves OK', m_after == cash_db(aid) == db_m1 and r_wrong == RC['CONFLICT'] and r_right == (RC['OK'] if applied else RC['CP_SENT']) and
                 payouts(aid)[M1][5] == (4 if applied else 5) and grants(aid).get(M1) == gm1,
                 f'online {m_after}; applied {applied}; rc {r_wrong}/{r_right}'))
     Q = cash_db(aid)
@@ -3965,10 +3967,11 @@ def v20r_p2():
     m_after2 = cpcash(g, 'MBQA_CPR1')
     r_w2 = cpresolve(g, aid, M2, 4, 7401)
     r_r2 = cpresolve(g, aid, M2, 5, 7402)
+    wait_status(aid, M2, lambda x: x != 3, 10)
     r_m2b = cpapply(g, 'MBQA_CPR1', M2)
     s = snap(aid, g, 'MBQA_CPR1', 'p2 end')
     res.append(('R4c operator: MANUAL_APPLIED refused without a grant row (CONFLICT), MANUAL_VOID OK, apply again BAD_STATE (-10), never re-sent',
-                m_after2 == Q and r_w2 == RC['CONFLICT'] and r_r2 == RC['OK'] and r_m2b == RC['BAD_STATE'] and s['ledger'][M2][5] == 5 and
+                m_after2 == Q and r_w2 == RC['CONFLICT'] and r_r2 == RC['CP_SENT'] and r_m2b == RC['BAD_STATE'] and s['ledger'][M2][5] == 5 and
                 M2 not in s['grants'], f'online {m_after2}; rc {r_w2}/{r_r2}/{r_m2b}'))
     inv = real_inv(aid)
     exp = expected_cash(g2c_state('v20r'), aid)
@@ -4015,8 +4018,9 @@ def v20r_p3():
     st['deltas'] += [-5]
     g2c_state('v20r', st)
     r_c1v = cpresolve(g, aid, C1, 5, 7501)
+    wait_status(aid, C1, lambda x: x != 3, 10)
     res.append(('R5a spend 5 + conditional save after the restart: DB P-5 (nothing added: no grant row); operator MANUAL_VOID OK '
-                '(answers of the lost connection are not awaited)', m5 == P - 5 and db5 == P - 5 and r_c1v == RC['OK'] and payouts(aid)[C1][5] == 5,
+                '(answers of the lost connection are not awaited)', m5 == P - 5 and db5 == P - 5 and r_c1v == RC['CP_SENT'] and payouts(aid)[C1][5] == 5,
                 f'online {m5}; db {db5}; rc {r_c1v}'))
     c.logout()
     wait_offline(aid)
@@ -4160,6 +4164,294 @@ def v20r_p4():
     g2c_state('v20r', dict(g2c_state('v20r'), final={'payouts': pf, 'grants': grants(aid), 'db': cash_db(aid), 'online': m_end,
                                                      'cps': {'grants': gs, 'db': cash_db(sid)}, 'others': others}))
     g2c_record('V20R-P4', res)
+    c.logout()
+    wait_offline(aid)
+    g.logout()
+
+
+# ---------------------------------------------------------------------------------------------------- V20 safety (L1..L5, @mbcp)
+# A late request / answer against an operator reconciliation, and the GM command. Runs after v20r p0 + p1 on the same
+# isolated DB (migration applied, char writer map-server). Process control only through bc_servers.ps1.
+ACC.update({'sp': ('mbqa_sp', 'user')})
+AID.update({'sp': 2000946})
+NAMES.update({('sp', 0): 'MBQA_SP'})
+RC.update({'NO_CHAR': -23})
+GR.update({'VOIDED': 7})
+CP_TRANSITIONS_REAL |= {(3, 3, 8), (3, 3, 10), (2, 2, 9), (4, 4, 9), (5, 5, 9)}
+
+
+def grant_rows(aid):
+    """{payout_no: (state, amount, operator_aid, operator_ticket)} including VOID tombstones (state 2)."""
+    return {int(r[0]): tuple(int(x) for x in r[1:]) for r in
+            sql(f'SELECT payout_no,state,amount,COALESCE(operator_aid,0),COALESCE(operator_ticket,0) FROM need_marble_cp_grant WHERE account_id={aid}')}
+
+
+def audit_ops(aid, no):
+    return [tuple(int(x) for x in r) for r in
+            sql(f'SELECT from_status,to_status,reason,COALESCE(operator_ticket,0),COALESCE(operator_aid,0) FROM need_marble_cp_audit '
+                f'WHERE account_id={aid} AND payout_no={no} ORDER BY audit_id')]
+
+
+def mbcp(c, args, wait=4, needle='[mbcp]'):
+    """Product GM command; returns every [mbcp] line it answered with."""
+    m = c.mark()
+    c.command(f'@mbcp {args}', settle=wait)
+    end = time.time() + 2
+    while time.time() < end and not any(needle in t for t in c.texts_since(m)):
+        time.sleep(0.1)
+    lines = [t for t in c.texts_since(m) if '[mbcp]' in t]
+    log(f'   [{c.tag}] @mbcp {args} -> {lines}')
+    return lines
+
+
+def mbcp_rc(lines):
+    for t in lines:
+        if ': rc ' in t:
+            try:
+                return int(t.split(': rc ')[1].split()[0])
+            except (IndexError, ValueError):
+                return None
+    return None
+
+
+def safe_inv(aid):
+    """real_inv with tombstones: APPLIED / MANUAL_APPLIED = one applied row of the amount, MANUAL_VOID = no applied row
+    (a tombstone allowed), DECIDED none, a tombstone only on MANUAL_VOID / UNCERTAIN rows."""
+    bad = []
+    pays, rows = payouts(aid), grant_rows(aid)
+    last = {}
+    for no, f, t, reason, _ in cp_audit(aid):
+        if (f, t, reason) not in CP_TRANSITIONS_REAL:
+            bad.append(('transition', no, f, t, reason))
+        if no in last and last[no] != f:
+            bad.append(('audit chain', no, last[no], f))
+        last[no] = t
+    for no, (_, _, _, amount, granted, status, _) in pays.items():
+        r = rows.get(no)
+        if status in (2, 4) and (r is None or r[0] != 1 or r[1] != amount or granted != amount):
+            bad.append(('applied without its applied row', no, status, r))
+        if status == 5 and r is not None and r[0] == 1:
+            bad.append(('void with an applied row', no, r))
+        if status == 1 and r is not None:
+            bad.append(('decided with a row', no, r))
+        if status == 3 and granted != 0:
+            bad.append(('uncertain with granted', no, granted))
+        if last.get(no, 1) != status:
+            bad.append(('audit end', no, last.get(no), status))
+    for no in rows:
+        if no not in pays:
+            bad.append(('row for no decision', no))
+    return bad
+
+
+def applied_sum(aid):
+    return sum(r[1] for r in grant_rows(aid).values() if r[0] == 1)
+
+
+def cmd_v20s(a):
+    """V20 safety: s1 (L1, L2a, L2b + L3, GM permissions and input checks), s2 (L4 with restarts, persistence)."""
+    globals()['v20s_' + (a.rest[0] if a.rest else 's1')]()
+
+
+def wait_link_lost(timeout=30):
+    end = time.time() + timeout
+    while time.time() < end and map_char_link():
+        time.sleep(0.5)
+    return not map_char_link()
+
+
+def v20s_s1():
+    aid, gaid = AID['cpr'], AID['gm']
+    st = g2c_state('v20s')
+    res = []
+    g = login('gm')
+    clock_to(g, '2026-12-05 13:00:00')
+    cpreal(g, 8)
+    c = login('cpr')
+    enter_board(c)
+    roll_backlog(c, aid, need_pair=False, min_decided=4, limit=40, ticket=960000)
+    p0 = payouts(aid)
+    free = sorted(k for k, v in p0.items() if v[5] == 1)
+    A, D = free[0], free[1]
+    st.update({'A_late_request': A, 'D_late_answer': D, 'rest': free[2:]})
+    g2c_state('v20s', st)
+    gm_lines = mbcp(g, f'info {aid} {A}')
+    res.append(('GM @mbcp info (group 99): ledger line, char row, pending, audit, next action; nothing changes',
+                any('DECIDED(1)' in t for t in gm_lines) and any('next:' in t for t in gm_lines) and payouts(aid)[A] == p0[A],
+                f'{len(gm_lines)} lines'))
+    u_lines = mbcp(c, f'info {aid} {A}', wait=3)
+    sp = login('sp')
+    sp_lines = mbcp(sp, f'info {aid} {A}', wait=3)
+    sp_res = mbcp(sp, f'resolve {aid} {A} void 1', wait=3)
+    res.append(('normal player (group 0): @mbcp is not available (no [mbcp] answer)', u_lines == [], f'{u_lines}'))
+    res.append(('group 1 "Super Player" (level 0 but all_commands): refused by the level check, info and resolve alike, nothing changed',
+                sp_lines == ['[mbcp] GM level 99 only.'] and sp_res == ['[mbcp] GM level 99 only.'] and payouts(aid)[A] == p0[A],
+                f'{sp_lines} / {sp_res}'))
+    sp.logout()
+    # L1: the grant request of A waits in the map-server (reaches the char-server late)
+    db0, on0 = cash_db(aid), cpcash(g, 'MBQA_CPR1')
+    a_amt = p0[A][3]
+    cpreal(g, 10)
+    t_a = time.time()
+    r_a = cpapply(g, 'MBQA_CPR1', A)
+    r_busy = mbcp_rc(mbcp(g, f'resolve {aid} {A} void 8101'))
+    info_a = mbcp(g, f'info {aid} {A}')
+    time.sleep(max(0.0, 63 - (time.time() - t_a)))
+    s_before = snap(aid, g, 'MBQA_CPR1', 'L1 before VOID (request still held)')
+    r_void = mbcp_rc(mbcp(g, f'resolve {aid} {A} void 8102', wait=6))
+    pa = wait_status(aid, A, lambda s: s != 3, 10)
+    ra = grant_rows(aid).get(A)
+    s_void = snap(aid, g, 'MBQA_CPR1', 'L1 after VOID')
+    res.append(('L1 grant request delayed in the map-server: answer awaited < 60 s -> GM VOID refused BUSY (-3), ledger UNCERTAIN, no char row',
+                r_a == RC['CP_SENT'] and r_busy == RC['BUSY'] and s_before['ledger'][A][5] == 3 and A not in s_before['grants'] and
+                any('(< 60 s)' in t for t in info_a), f'apply {r_a}; void {r_busy}; info {[t for t in info_a if "pending" in t]}'))
+    res.append(('L1 after 60 s: VOID goes to the char-server, which commits a tombstone first; ledger MANUAL_VOID only after that answer; '
+                'balance and online unchanged',
+                r_void == RC['CP_SENT'] and pa[5] == 5 and ra is not None and ra[0] == 2 and ra[1] == a_amt and ra[2] == gaid and ra[3] == 8102 and
+                s_void['acc_reg_num'] == db0 and s_void['online'] == on0 and s_void['inflight'] == (0, 0) and
+                audit_ops(aid, A)[-2:] == [(3, 3, 10, 8102, gaid), (3, 5, 5, 8102, gaid)],
+                f'rc {r_void}; row {pa}; tombstone {ra}; db {db0} -> {s_void["acc_reg_num"]}; online {s_void["online"]}; audit {audit_ops(aid, A)}'))
+    # L2a: the held request reaches the char-server after the VOID
+    n_sent = cpreal(g, 11)
+    time.sleep(2)
+    last_a = cplast(g, A)
+    s_late = snap(aid, g, 'MBQA_CPR1', 'L2a late request after VOID')
+    res.append(('L2a the delayed request arrives after the VOID: char-server answers VOIDED (7), nothing written, ledger stays MANUAL_VOID, '
+                'late answer audited (5 -> 5 r9), #CASHPOINTS DB / online unchanged, no duplicate',
+                n_sent == 1 and last_a == GR['VOIDED'] and s_late['ledger'][A][5] == 5 and grant_rows(aid)[A][0] == 2 and
+                s_late['acc_reg_num'] == db0 and s_late['online'] == on0 and audit_ops(aid, A)[-1][:3] == (5, 5, 9),
+                f'sent {n_sent}; char {last_a}; db {s_late["acc_reg_num"]} online {s_late["online"]}; audit end {audit_ops(aid, A)[-1]}'))
+    # L2b + L3: the grant of D commits, its answer comes late; the operator closes it as MANUAL_APPLIED meanwhile
+    d_amt = p0[D][3]
+    cpreal(g, 1)
+    t_d = time.time()
+    r_d = cpapply(g, 'MBQA_CPR1', D)
+    db_d = wait_cash(aid, db0 + d_amt)
+    on_d = cpcash(g, 'MBQA_CPR1')
+    r_d_busy = mbcp_rc(mbcp(g, f'resolve {aid} {D} applied 8201'))
+    time.sleep(max(0.0, 63 - (time.time() - t_d)))
+    r_d_void = mbcp_rc(mbcp(g, f'resolve {aid} {D} void 8202'))
+    r_d_app = mbcp_rc(mbcp(g, f'resolve {aid} {D} applied 8203'))
+    db_after_app = cash_db(aid)
+    r_d_again = mbcp_rc(mbcp(g, f'resolve {aid} {D} applied 8204'))
+    res.append(('L3 grant committed, answer still held: GM VOID refused (CONFLICT -21: applied row), GM APPLIED closes it as MANUAL_APPLIED '
+                '(state only, DB +d once), repeated APPLIED BAD_STATE (-10), no second increase',
+                r_d == RC['CP_SENT'] and db_d == db0 + d_amt and on_d == on0 and r_d_busy == RC['BUSY'] and r_d_void == RC['CONFLICT'] and
+                r_d_app == RC['OK'] and payouts(aid)[D][5] == 4 and db_after_app == db0 + d_amt and r_d_again == RC['BAD_STATE'] and
+                cash_db(aid) == db0 + d_amt,
+                f'apply {r_d}; db {db0} -> {db_d}; online {on_d}; busy {r_d_busy}; void {r_d_void}; applied {r_d_app}; again {r_d_again}'))
+    n_rel = cpreal(g, 2)
+    time.sleep(1)
+    s_d = snap(aid, g, 'MBQA_CPR1', 'L2b late answer after MANUAL_APPLIED')
+    cpcash(g, 'MBQA_CPR1', 0, 1)
+    time.sleep(1)
+    res.append(('L2b the late 0x380A answer arrives after MANUAL_APPLIED: the login gets d once (online = DB = before + d), ledger stays '
+                'MANUAL_APPLIED, late answer audited (4 -> 4 r9), no duplicate after a save',
+                n_rel == 1 and s_d['online'] == db0 + d_amt and s_d['acc_reg_num'] == db0 + d_amt and s_d['ledger'][D][5] == 4 and
+                audit_ops(aid, D)[-1][:3] == (4, 4, 9) and cash_db(aid) == db0 + d_amt and s_d['inflight'] == (0, 0),
+                f'delivered {n_rel}; online {s_d["online"]}; db {s_d["acc_reg_num"]}; audit end {audit_ops(aid, D)[-1]}'))
+    # GM input checks: none of them changes a status or a balance
+    before = (payouts(aid), payouts(AID['cps']), grant_rows(aid), cash_db(aid), cash_db(AID['cps']))
+    bad = {'typo': mbcp(g, f'resolv {aid} {D} applied 1'), 'bad target': mbcp(g, f'resolve {aid} {D} maybe 1'),
+           'ticket 0': mbcp(g, f'resolve {aid} {D} applied 0'), 'ticket text': mbcp(g, f'resolve {aid} {D} applied abc'),
+           'no payout': mbcp(g, f'resolve {aid} 99999 void 9001'), 'other account': mbcp(g, f'resolve {AID["cpt"]} {D} applied 9002'),
+           'closed row void': mbcp(g, f'resolve {aid} {A} void 9003'), 'info no payout': mbcp(g, f'info {aid} 99999')}
+    after = (payouts(aid), payouts(AID['cps']), grant_rows(aid), cash_db(aid), cash_db(AID['cps']))
+    usage = lambda ls: any('usage:' in t for t in ls)
+    res.append(('GM @mbcp input checks: typo / bad target / ticket 0 / text ticket -> usage; unknown payout / other account -> NOT_FOUND; '
+                'closed row -> BAD_STATE; nothing changed anywhere',
+                usage(bad['typo']) and usage(bad['bad target']) and usage(bad['ticket 0']) and usage(bad['ticket text']) and
+                mbcp_rc(bad['no payout']) == RC['NOT_FOUND'] and mbcp_rc(bad['other account']) == RC['NOT_FOUND'] and
+                mbcp_rc(bad['closed row void']) == RC['BAD_STATE'] and any('no such payout' in t for t in bad['info no payout']) and before == after,
+                json.dumps({k: v[:1] for k, v in bad.items()}, ensure_ascii=False)[:600]))
+    inv = safe_inv(aid)
+    res.append(('s1 invariants (tombstone aware): 0 violations; DB = online = 1000 + applied rows + ordinary changes',
+                inv == [] and cash_db(aid) == st_cash(aid) == cpcash(g, 'MBQA_CPR1'), f'inv {inv[:3]}; db {cash_db(aid)} expected {st_cash(aid)}'))
+    g2c_state('v20s', st)
+    g2c_record('V20S-S1', res)
+    c.logout()
+    wait_offline(aid)
+    g.logout()
+
+
+def st_cash(aid):
+    return g2c_state('v20r')['start_cash'] + applied_sum(aid) + sum(g2c_state('v20r')['deltas'])
+
+
+def v20s_s2():
+    aid, gaid = AID['cpr'], AID['gm']
+    st = g2c_state('v20s')
+    F = st['rest'][0]
+    st['F_unpaid'] = F
+    g2c_state('v20s', st)
+    res = []
+    g = login('gm')
+    clock_to(g, '2026-12-05 13:20:00')
+    cpreal(g, 8)
+    c = login('cpr')
+    db0 = cash_db(aid)
+    f_amt = payouts(aid)[F][3]
+    cpreal(g, 5)
+    r_f = cpapply(g, 'MBQA_CPR1', F, wait=4)
+    time.sleep(3)
+    alive = map_alive()
+    st['startmap_f'] = servers('startmap')
+    g2c_state('v20s', st)
+    g = login('gm')
+    clock_to(g, '2026-12-05 13:25:00')
+    cpreal(g, 8)
+    c = login('cpr')
+    pf, rf = payouts(aid)[F], grant_rows(aid).get(F)
+    res.append(('L4 setup: map-server stopped before the request left -> UNCERTAIN, no char row, balance unchanged',
+                r_f is None and not alive and pf[5] == 3 and rf is None and cash_db(aid) == db0, f'reply {r_f}; row {pf}; char row {rf}'))
+    st['killchar_f'] = servers('killchar')
+    lost = wait_link_lost()
+    aud0 = audit_ops(aid, F)
+    r_nochar = mbcp_rc(mbcp(g, f'resolve {aid} {F} void 8301', wait=75))
+    pf2, aud1 = payouts(aid)[F], audit_ops(aid, F)
+    st['startchar_f'], back = startchar_linked(CID['MBQA_CPR1'])
+    g2c_state('v20s', st)
+    res.append(('L4 char-server down: GM VOID refused NO_CHAR (-23), nothing sent or recorded, ledger UNCERTAIN (fail-closed)',
+                lost and r_nochar == RC['NO_CHAR'] and pf2[5] == 3 and aud1 == aud0 and grant_rows(aid).get(F) is None,
+                f'link lost {lost}; rc {r_nochar}; row {pf2}; audit {aud1}'))
+    r_v = mbcp_rc(mbcp(g, f'resolve {aid} {F} void 8302', wait=6))
+    pv = wait_status(aid, F, lambda s: s != 3, 10)
+    rv = grant_rows(aid).get(F)
+    res.append(('L4 char-server back: VOID -> tombstone committed, then MANUAL_VOID (ticket 8302, GM recorded), balance unchanged',
+                back and r_v == RC['CP_SENT'] and pv[5] == 5 and pv[6] == 8302 and rv is not None and rv[0] == 2 and rv[1] == f_amt and
+                rv[2] == gaid and cash_db(aid) == db0, f'linked {back}; rc {r_v}; row {pv}; tombstone {rv}'))
+    r_raw1 = cpraw(g, 'MBQA_CPR1', F, f_amt)
+    time.sleep(2)
+    l1 = cplast(g, F)
+    st['restart_char'] = servers('killchar')
+    st['startchar_f2'], back2 = startchar_linked(CID['MBQA_CPR1'])
+    st['restart_map'] = servers('killmap') + ' / ' + servers('startmap')
+    g2c_state('v20s', st)
+    g = login('gm')
+    clock_to(g, '2026-12-05 13:30:00')
+    cpreal(g, 8)
+    c = login('cpr')
+    r_raw2 = cpraw(g, 'MBQA_CPR1', F, f_amt)
+    time.sleep(2)
+    l2 = cplast(g, F)
+    r_app = mbcp_rc(mbcp(g, f'resolve {aid} {F} applied 8303'))
+    s = snap(aid, g, 'MBQA_CPR1', 'L4 after restarts')
+    res.append(('L4 the same key requested again before and after a char-server + map-server restart: VOIDED (7) both times, no grant, '
+                'balance and online unchanged; resolve applied BAD_STATE',
+                r_raw1 == 0 and l1 == GR['VOIDED'] and back2 and r_raw2 == 0 and l2 == GR['VOIDED'] and s['acc_reg_num'] == db0 and
+                s['online'] == db0 and grant_rows(aid)[F][0] == 2 and s['ledger'][F][5] == 5 and r_app == RC['BAD_STATE'],
+                f'char {l1}/{l2}; db {s["acc_reg_num"]} online {s["online"]}; applied {r_app}'))
+    ops = [x for no in payouts(aid) for x in audit_ops(aid, no) if x[2] in (5, 8, 10)]
+    res.append(('every operator audit row (5 / 8 / 10) since the GM command carries the GM account and a ticket',
+                all(x[3] != 0 for x in ops) and all(x[4] == gaid for x in ops if x[3] >= 8000), f'{len(ops)} rows'))
+    inv = safe_inv(aid)
+    others = sql("SELECT account_id,value FROM acc_reg_num WHERE `key`='#CASHPOINTS' AND account_id NOT IN (2000943,2000944) ORDER BY account_id")
+    li = invariants()
+    res.append(('s2 invariants: tombstone aware 0 violations, DB = online = expected, MBQA_CPT 777 untouched, ledger invariants (sql-files) 0',
+                inv == [] and cash_db(aid) == st_cash(aid) == s['online'] and others == [[str(AID['cpt']), '777']] and li == [],
+                f'inv {inv[:3]}; db {cash_db(aid)} expected {st_cash(aid)}; others {others}; ledger {li[:2]}'))
+    g2c_state('v20s', dict(g2c_state('v20s'), final={'payouts': payouts(aid), 'grant_rows': grant_rows(aid), 'db': cash_db(aid)}))
+    g2c_record('V20S-S2', res)
     c.logout()
     wait_offline(aid)
     g.logout()

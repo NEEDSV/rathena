@@ -35,6 +35,7 @@ int32 intif_wis_message_to_gm(char *Wisp_name, int32 permission, char *mes);
 int32 intif_saveregistry(map_session_data *sd);
 int32 intif_need_cp_grant(uint32 account_id, uint32 char_id, uint64 payout_no, uint64 req_id, int32 amount);
 int32 intif_need_cp_condsave(uint32 account_id, uint32 char_id, uint64 payout_no, uint64 req_id, int64 base);
+int32 intif_need_cp_void(uint32 account_id, uint64 payout_no, int32 amount, uint64 ticket, uint32 operator_aid);
 int32 intif_request_registry(map_session_data *sd, int32 flag);
 
 bool intif_request_guild_storage(uint32 account_id, int32 guild_id);
