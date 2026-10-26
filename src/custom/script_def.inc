@@ -38,6 +38,7 @@ BUILDIN_DEF(clearmapskillunits, "s"),
 // NEED 2026 chuseok event: shared honey songpyun daily ledger (hunt + battleground).
 BUILDIN_DEF(needchuseokhoney,"?"),
 BUILDIN_DEF(needhalloweenjack,"i"),
+BUILDIN_DEF(needeventhub_refresh,"?"),
 
 // NEED daily quest (phase 1): status / accept / re-accept / submit.
 BUILDIN_DEF(needdq_status,""),
