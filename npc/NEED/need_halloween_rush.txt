@@ -7,10 +7,14 @@
 //= 규칙
 //=   60초 고정 (시작 전 3, 2, 1 카운트다운은 60초에 넣지 않음), 도전 무제한, 입장 비용 없음
 //=   잭 3마리 상시, 잡힌 슬롯만 바로 다시 생성, 거리 6~10칸, 황금 20%, 일반 +1 / 황금 +3
-//=   한 판 보상 없음. 계정 단위 주간 최고기록(같은 계정의 더 높은 기록이 덮어씀)
+//=   한 판 보상 없음.
+//=   주간 최고기록은 IP 단위 (2026-10-26 보완): 같은 IP 의 여러 계정/캐릭터 중 최고 기록 1개만 랭킹에 든다.
+//=     ip_key = INET6_ATON(getcharip()) - 일일 잭 원장 / 일일 퀘스트 IP 원장과 같은 값. 다른 IP 형태는 저장하지 않는다.
+//=     더 높은 기록이 나오면 그 계정/캐릭터가 대표로 바뀐다. 같은 점수는 먼저 세운 기록 유지.
+//=     보조 방어: 한 계정이 여러 IP 에서 대표면 그 계정의 최고 행 1개만 랭킹/정산에 쓴다.
 //=   주간 = 매주 수요일 04:00 (논리일자 = 현지 시각 - 4시간, 일일 잭 원장과 같은 04:00 규칙)
-//=   순위 = 점수 높은 순 > 그 점수를 먼저 세운 순 > account_id 작은 순
-//=   주간 TOP 3 = 할로윈 코인 100 / 70 / 50, 정산 후 Event Hub 에서 직접 수령
+//=   순위 = 점수 높은 순 > 그 점수를 먼저 세운 순 > ip_key 순 (안정 정렬)
+//=   주간 TOP 3 = 할로윈 코인 100 / 70 / 50, 정산 순간의 대표 계정에게만 생기고 그 계정이 Event Hub 에서 수령
 //=
 //= 진입: Event Hub(need_halloween_hub.txt) 의 '잭 러시' 메뉴. payo2 NPC 는 새로 두지 않는다.
 //= 원장: sql-files/need_halloween_2026_jack_rush.sql (rank / reward / settle).
@@ -19,10 +23,10 @@
 //=
 //= 운영 변수
 //=   $NEED_HW26_RUSH_OFF            1 = 새 입장 막기 (기록/정산/수령은 그대로)
-//=   $NEED_HW26_RUSH_MIN_ACCOUNTS   주간 보상을 주는 최소 참가 계정 수 (0 = 1)
+//=   $NEED_HW26_RUSH_MIN_IPS        주간 보상을 주는 최소 참가 IP 수 (0 = 1)
 //=   $NEED_HW26_RUSH_FINAL          최종 정산한 week_key. 0 이 아니면 잭 러시는 닫힌다
 //=   $NEED_HW26_RUSH_FINAL_LD       자동 최종 정산 논리일자 (0 = 20261212, 이날 04:05)
-//= GM(60+) : @jackrushgm  현황 / 입장 ON·OFF / 밀린 정산 / 최종 정산 / 최소 계정 수
+//= GM(60+) : @jackrushgm  현황 / 입장 ON·OFF / 밀린 정산 / 최종 정산 / 최소 참가 IP 수
 //============================================================
 
 //------------------------------------------------------------
@@ -66,18 +70,32 @@ function	script	F_NEED_HW26_Rush_WeekRange$	{
 	return gettimestr("%Y.%m.%d", 11, .@base) + needtr(" (수) 04:00 ~ ", " (Wed) 04:00 ~ ") + gettimestr("%m.%d", 6, .@base + 604800) + needtr(" (수) 04:00", " (Wed) 04:00");
 }
 
-// 이 계정의 주간 기록을 @HW26R_BEST / _NORMAL / _GOLD / _RANK 에 넣는다 (기록 없음 = 0)
+// 유효 랭킹 조건 (별칭 r). getarg(0) week_key.
+// IP 마다 1행인 rank 표에서, 한 계정이 여러 IP 의 대표면 그 계정의 최고 행(점수 > 먼저 > ip_key)만 남긴다.
+function	script	F_NEED_HW26_Rush_Eff$	{
+	.@w$ = "" + getarg(0);
+	return "r.`event_id`=202610 AND r.`week_key`=" + .@w$ + " AND r.`score`>0 AND NOT EXISTS (SELECT 1 FROM `need_halloween_jack_rush_rank` o WHERE o.`event_id`=202610 AND o.`week_key`=" + .@w$ + " AND o.`account_id`=r.`account_id` AND o.`ip_key`<>r.`ip_key` AND (o.`score`>r.`score` OR (o.`score`=r.`score` AND o.`achieved_at`<r.`achieved_at`) OR (o.`score`=r.`score` AND o.`achieved_at`=r.`achieved_at` AND o.`ip_key`<r.`ip_key`)))";
+}
+
+// 지금 접속 IP 의 주간 기록을 @HW26R_BEST / _NORMAL / _GOLD / _RANK 에 넣는다 (기록 없음 = 0).
+// 같은 IP 의 다른 계정이 대표여도 그 IP 의 기록을 보여 준다. _RANK 는 유효 랭킹에서의 순위
+// (그 행이 계정 보조 방어로 빠졌으면 0). @HW26R_REP = 대표가 지금 계정이면 1.
 function	script	F_NEED_HW26_Rush_Mine	{
 	.@w = getarg(0);
-	.@aid = getcharid(3);
-	@HW26R_BEST = 0; @HW26R_NORMAL = 0; @HW26R_GOLD = 0; @HW26R_RANK = 0;
-	if (!$@HW26_RUSH_READY)
+	@HW26R_BEST = 0; @HW26R_NORMAL = 0; @HW26R_GOLD = 0; @HW26R_RANK = 0; @HW26R_REP = 0;
+	.@ip$ = getcharip();
+	if (!$@HW26_RUSH_READY || .@ip$ == "")
 		return 0;
-	.@n = query_sql("SELECT `score`,`normal_count`,`gold_count` FROM `need_halloween_jack_rush_rank` WHERE `event_id`=202610 AND `week_key`=" + .@w + " AND `account_id`=" + .@aid, .@s, .@nc, .@gc);
+	.@k$ = "INET6_ATON('" + escape_sql(.@ip$) + "')";
+	.@n = query_sql("SELECT `score`,`normal_count`,`gold_count`,`account_id` FROM `need_halloween_jack_rush_rank` WHERE `event_id`=202610 AND `week_key`=" + .@w + " AND `ip_key`=" + .@k$, .@s, .@nc, .@gc, .@acc);
 	if (.@n < 1)
 		return 0;
-	@HW26R_BEST = .@s; @HW26R_NORMAL = .@nc; @HW26R_GOLD = .@gc;
-	query_sql("SELECT COUNT(*) FROM `need_halloween_jack_rush_rank` b, (SELECT `score` s, `achieved_at` t, `account_id` a FROM `need_halloween_jack_rush_rank` WHERE `event_id`=202610 AND `week_key`=" + .@w + " AND `account_id`=" + .@aid + ") me WHERE b.`event_id`=202610 AND b.`week_key`=" + .@w + " AND (b.`score` > me.s OR (b.`score` = me.s AND b.`achieved_at` < me.t) OR (b.`score` = me.s AND b.`achieved_at` = me.t AND b.`account_id` < me.a))", .@ahead);
+	@HW26R_BEST = .@s; @HW26R_NORMAL = .@nc; @HW26R_GOLD = .@gc; @HW26R_REP = (.@acc == getcharid(3));
+	.@eff$ = callfunc("F_NEED_HW26_Rush_Eff$", .@w);
+	query_sql("SELECT COUNT(*) FROM `need_halloween_jack_rush_rank` r WHERE " + .@eff$ + " AND r.`ip_key`=" + .@k$, .@in);
+	if (!.@in)
+		return 1;
+	query_sql("SELECT COUNT(*) FROM `need_halloween_jack_rush_rank` r, (SELECT `score` s, `achieved_at` t, `ip_key` k FROM `need_halloween_jack_rush_rank` WHERE `event_id`=202610 AND `week_key`=" + .@w + " AND `ip_key`=" + .@k$ + ") me WHERE " + .@eff$ + " AND (r.`score` > me.s OR (r.`score` = me.s AND r.`achieved_at` < me.t) OR (r.`score` = me.s AND r.`achieved_at` = me.t AND r.`ip_key` < me.k))", .@ahead);
 	@HW26R_RANK = .@ahead + 1;
 	return 1;
 }
@@ -287,19 +305,22 @@ function	script	F_NEED_HW26_Rush_Spawn	{
 //------------------------------------------------------------
 // 기록 / 랭킹
 //------------------------------------------------------------
-// 방금 끝난 판을 계정 주간 BEST 와 비교해 저장한다. 1 = 신기록, 0 = 아님, -1 = 기록하지 않음.
-// BEST 비교와 갱신은 한 문장(INSERT ... ON DUPLICATE KEY UPDATE)이라 같은 계정이 동시에 끝내도 섞이지 않는다.
+// 방금 끝난 판을 이 IP 의 주간 BEST 와 비교해 저장한다. 1 = 신기록(IP 기준), 0 = 아님, -1 = 기록하지 않음.
+// BEST 비교와 갱신은 한 문장(INSERT ... ON DUPLICATE KEY UPDATE, 키 = event / week / ip_key)이라
+// 같은 IP 의 여러 계정이 동시에 끝내도 섞이지 않는다. 더 높을 때만 대표(계정/캐릭터/수/시각)를 바꾸고
 // score 는 마지막에 갱신한다 (앞의 IF 들이 옛 score 와 비교하도록).
 function	script	F_NEED_HW26_Rush_Record	{
 	.@s = @HW_RUSH_SCORE;
-	if (.@s <= 0 || !callfunc("F_NEED_HW26_Rush_CanRecord"))
+	.@ip$ = getcharip();
+	if (.@s <= 0 || .@ip$ == "" || !callfunc("F_NEED_HW26_Rush_CanRecord"))
 		return -1;
 	.@w = callfunc("F_NEED_HW26_Rush_WeekKey");
-	.@aid = getcharid(3);
+	.@k$ = "INET6_ATON('" + escape_sql(.@ip$) + "')";
 	.@old = -1;
-	if (query_sql("SELECT `score` FROM `need_halloween_jack_rush_rank` WHERE `event_id`=202610 AND `week_key`=" + .@w + " AND `account_id`=" + .@aid, .@o) > 0)
+	if (query_sql("SELECT `score` FROM `need_halloween_jack_rush_rank` WHERE `event_id`=202610 AND `week_key`=" + .@w + " AND `ip_key`=" + .@k$, .@o) > 0)
 		.@old = .@o;
-	query_sql("INSERT INTO `need_halloween_jack_rush_rank` (`event_id`,`week_key`,`account_id`,`char_id`,`char_name`,`score`,`normal_count`,`gold_count`,`achieved_at`) VALUES (202610," + .@w + "," + .@aid + "," + getcharid(0) + ",'" + escape_sql(strcharinfo(0)) + "'," + .@s + "," + @HW_RUSH_NORMAL + "," + @HW_RUSH_GOLD + ",NOW(3)) ON DUPLICATE KEY UPDATE "
+	query_sql("INSERT INTO `need_halloween_jack_rush_rank` (`event_id`,`week_key`,`ip_key`,`account_id`,`char_id`,`char_name`,`score`,`normal_count`,`gold_count`,`achieved_at`) VALUES (202610," + .@w + "," + .@k$ + "," + getcharid(3) + "," + getcharid(0) + ",'" + escape_sql(strcharinfo(0)) + "'," + .@s + "," + @HW_RUSH_NORMAL + "," + @HW_RUSH_GOLD + ",NOW(3)) ON DUPLICATE KEY UPDATE "
+		+ "`account_id`=IF(VALUES(`score`)>`score`,VALUES(`account_id`),`account_id`),"
 		+ "`char_id`=IF(VALUES(`score`)>`score`,VALUES(`char_id`),`char_id`),"
 		+ "`char_name`=IF(VALUES(`score`)>`score`,VALUES(`char_name`),`char_name`),"
 		+ "`normal_count`=IF(VALUES(`score`)>`score`,VALUES(`normal_count`),`normal_count`),"
@@ -319,7 +340,8 @@ function	script	F_NEED_HW26_Rush_RankUI	{
 		next;
 		return;
 	}
-	.@n = query_sql("SELECT `char_name`,`score` FROM `need_halloween_jack_rush_rank` WHERE `event_id`=202610 AND `week_key`=" + .@w + " AND `score`>0 ORDER BY `score` DESC,`achieved_at` ASC,`account_id` ASC LIMIT 10", .@cn$, .@sc);
+	// 유효 랭킹: IP 마다 1행 + 계정 중복 제거. 따로 GROUP BY 하지 않는다 (rank 표가 이미 IP 당 1행).
+	.@n = query_sql("SELECT r.`char_name`,r.`score` FROM `need_halloween_jack_rush_rank` r WHERE " + callfunc("F_NEED_HW26_Rush_Eff$", .@w) + " ORDER BY r.`score` DESC,r.`achieved_at` ASC,r.`ip_key` ASC LIMIT 10", .@cn$, .@sc);
 	if (.@n < 1)
 		mes needtr("아직 이번 주 기록이 없습니다. 첫 기록에 도전하세요!", "No records this week yet. Be the first!");
 	for (.@i = 0; .@i < .@n; .@i++)
@@ -327,10 +349,11 @@ function	script	F_NEED_HW26_Rush_RankUI	{
 	callfunc "F_NEED_HW26_Rush_Mine", .@w;
 	mes " ";
 	if (@HW26R_BEST > 0)
-		mes needtr("내 BEST : ^0055FF", "My BEST : ^0055FF") + @HW26R_BEST + needtr("점^000000  현재 순위 : ^0055FF", " pts^000000  rank : ^0055FF") + @HW26R_RANK + needtr("위^000000", "^000000");
+		mes needtr("이번 주 최고 기록 : ^0055FF", "Weekly best : ^0055FF") + @HW26R_BEST + needtr("점^000000  현재 순위 : ", "^000000  rank : ") + ((@HW26R_RANK > 0) ? "^0055FF" + @HW26R_RANK + needtr("위^000000", "^000000") : "-");
 	else
-		mes needtr("내 BEST : 이번 주 기록 없음", "My BEST : no record this week");
-	mes needtr("^999999동점이면 그 점수를 먼저 세운 계정이 앞섭니다.^000000", "^999999On a tie, the account that reached the score first ranks higher.^000000");
+		mes needtr("이번 주 최고 기록 : 기록 없음", "Weekly best : no record this week");
+	mes needtr("^FF6600동일 IP에서는 최고 기록 1개만 주간 랭킹에 반영됩니다.^000000", "^FF6600Only the highest score from the same IP is counted in the ranking.^000000");
+	mes needtr("^999999동점이면 그 점수를 먼저 세운 기록이 앞섭니다.^000000", "^999999On a tie, the score reached first ranks higher.^000000");
 	mes needtr("^999999주간 TOP 3 : 할로윈 코인 100 / 70 / 50, 매주 수요일 04:00 정산^000000", "^999999Weekly TOP 3 : 100 / 70 / 50 Halloween Coins, settled every Wed 04:00^000000");
 
 	// 지난 정산 결과 (가장 최근 주)
@@ -405,12 +428,13 @@ function	script	F_NEED_HW26_Rush_Talk	{
 	mes needtr("일반 잭 ^0055FF+1점^000000 / 황금 잭 ^FFAA00+3점^000000", "Jack ^0055FF+1^000000 / Golden Jack ^FFAA00+3^000000");
 	mes needtr("도전 횟수 제한 없음 / 입장 비용 없음 / ^FF0000한 판 보상 없음^000000", "Unlimited tries / free entry / ^FF0000no reward per game^000000");
 	mes needtr("매주 수요일 04:00 최고기록으로 주간 랭킹을 정산합니다.", "The weekly ranking is settled from the best scores every Wednesday 04:00.");
+	mes needtr("^FF6600동일 IP에서는 최고 기록 1개만 랭킹에 반영됩니다.^000000", "^FF6600Only the highest score from the same IP is counted in the ranking.^000000");
 	mes needtr("^999999주간 TOP 3 : 1위 100 / 2위 70 / 3위 50 코인^000000", "^999999Weekly TOP 3 : 1st 100 / 2nd 70 / 3rd 50 coins^000000");
 	mes " ";
 	if (@HW26R_BEST > 0)
-		mes needtr("이번 주 내 BEST : ^0055FF", "My BEST this week : ^0055FF") + @HW26R_BEST + needtr("점^000000 (", " pts^000000 (#") + @HW26R_RANK + needtr("위)", ")");
+		mes needtr("이번 주 최고 기록 : ^0055FF", "Weekly best : ^0055FF") + @HW26R_BEST + needtr("점^000000", "^000000") + ((@HW26R_RANK > 0) ? needtr(" (", " (#") + @HW26R_RANK + needtr("위)", ")") : "");
 	else
-		mes needtr("이번 주 내 BEST : 기록 없음", "My BEST this week : no record");
+		mes needtr("이번 주 최고 기록 : 기록 없음", "Weekly best : no record");
 	if (!callfunc("F_NEED_HW26_Rush_Open")) {
 		mes needtr("^FF0000지금은 잭 러시를 할 수 없습니다.^000000", "^FF0000Jack Rush is not available right now.^000000");
 		next;
@@ -548,7 +572,7 @@ OnTimeUp:
 		mes "SCORE : ^0055FF" + .@score + "^000000";
 		if (.@new < 0 && .@score > 0)
 			mes needtr("^999999(지금은 기록이 저장되지 않습니다)^000000", "^999999(records are not saved right now)^000000");
-		mes needtr("이번 주 BEST : ", "Best this week : ") + ((@HW26R_BEST > 0) ? "^0055FF" + @HW26R_BEST + "^000000" : "-");
+		mes needtr("이번 주 최고 기록 : ", "Weekly best : ") + ((@HW26R_BEST > 0) ? "^0055FF" + @HW26R_BEST + "^000000" : "-");
 		mes needtr("주간 순위 : ", "Weekly rank : ") + ((@HW26R_RANK > 0) ? "^0055FF" + @HW26R_RANK + needtr("위", "") + "^000000" : "-");
 		mes needtr("일반 잭 : ", "Jacks : ") + .@nc + needtr("마리", "") + needtr(" / 황금 잭 : ", " / Golden Jacks : ") + .@gc + needtr("마리", "");
 		.@sel = select(needtr("다시 도전", "Try again"), needtr("주간 랭킹 보기", "View the weekly ranking"), needtr("나가기", "Leave"));
@@ -586,17 +610,18 @@ function	script	F_NEED_HW26_Rush_Settle	{
 	query_sql("SELECT COUNT(*) FROM `need_halloween_jack_rush_settle` WHERE `event_id`=202610 AND `week_key`=" + .@w, .@done);
 	if (.@done)
 		return 0;
-	.@min = ($NEED_HW26_RUSH_MIN_ACCOUNTS > 1) ? $NEED_HW26_RUSH_MIN_ACCOUNTS : 1;
+	.@min = ($NEED_HW26_RUSH_MIN_IPS > 1) ? $NEED_HW26_RUSH_MIN_IPS : 1;
 	query_sql("SELECT COUNT(*) FROM `need_halloween_jack_rush_rank` WHERE `event_id`=202610 AND `week_key`=" + .@w + " AND `score`>0", .@cnt);
 	.@n = 0;
 	if (.@cnt >= .@min) {
-		.@n = query_sql("SELECT `account_id`,`char_id`,`char_name`,`score` FROM `need_halloween_jack_rush_rank` WHERE `event_id`=202610 AND `week_key`=" + .@w + " AND `score`>0 ORDER BY `score` DESC,`achieved_at` ASC,`account_id` ASC LIMIT 3", .@a, .@c, .@cn$, .@s);
+		// 정산 순간의 rank 행을 그대로 보상 행에 복사한다: 대표 account_id 가 수령 계정으로 고정된다.
+		.@n = query_sql("SELECT HEX(r.`ip_key`),r.`account_id`,r.`char_id`,r.`char_name`,r.`score` FROM `need_halloween_jack_rush_rank` r WHERE " + callfunc("F_NEED_HW26_Rush_Eff$", .@w) + " ORDER BY r.`score` DESC,r.`achieved_at` ASC,r.`ip_key` ASC LIMIT 3", .@ip$, .@a, .@c, .@cn$, .@s);
 		setarray .@coin[0], 100, 70, 50;
 		for (.@i = 0; .@i < .@n; .@i++)
-			query_sql("INSERT IGNORE INTO `need_halloween_jack_rush_reward` (`event_id`,`week_key`,`account_id`,`rank_no`,`char_id`,`char_name`,`score`,`reward_coin`,`settled_at`) VALUES (202610," + .@w + "," + .@a[.@i] + "," + (.@i + 1) + "," + .@c[.@i] + ",'" + escape_sql(.@cn$[.@i]) + "'," + .@s[.@i] + "," + .@coin[.@i] + ",NOW())");
+			query_sql("INSERT IGNORE INTO `need_halloween_jack_rush_reward` (`event_id`,`week_key`,`ip_key`,`account_id`,`rank_no`,`char_id`,`char_name`,`score`,`reward_coin`,`settled_at`) VALUES (202610," + .@w + ",UNHEX('" + .@ip$[.@i] + "')," + .@a[.@i] + "," + (.@i + 1) + "," + .@c[.@i] + ",'" + escape_sql(.@cn$[.@i]) + "'," + .@s[.@i] + "," + .@coin[.@i] + ",NOW())");
 	}
-	query_sql("INSERT IGNORE INTO `need_halloween_jack_rush_settle` (`event_id`,`week_key`,`accounts`,`rewarded`,`is_final`,`settled_at`) VALUES (202610," + .@w + "," + .@cnt + "," + .@n + "," + .@final + ",NOW())");
-	debugmes "[HW26 Jack Rush] settled week " + .@w + " accounts=" + .@cnt + " rewarded=" + .@n + " final=" + .@final + " min=" + .@min;
+	query_sql("INSERT IGNORE INTO `need_halloween_jack_rush_settle` (`event_id`,`week_key`,`ips`,`rewarded`,`is_final`,`settled_at`) VALUES (202610," + .@w + "," + .@cnt + "," + .@n + "," + .@final + ",NOW())");
+	debugmes "[HW26 Jack Rush] settled week " + .@w + " ips=" + .@cnt + " rewarded=" + .@n + " final=" + .@final + " min=" + .@min;
 	return 1;
 }
 
@@ -667,11 +692,11 @@ OnGM:
 		query_sql("SELECT COUNT(*) FROM `need_halloween_jack_rush_settle` WHERE `event_id`=202610", .@sn);
 		mes "[잭 러시 GM]";
 		mes "입장 : " + (callfunc("F_NEED_HW26_Rush_Open") ? "^009900가능^000000" : "^FF0000불가^000000") + " (이벤트 " + callfunc("F_NEED_Halloween_Active") + " / OFF " + $NEED_HW26_RUSH_OFF + " / 최종 " + $NEED_HW26_RUSH_FINAL + ")";
-		mes "이번 주 : " + .@w + " 참가 계정 " + .@cnt;
+		mes "이번 주 : " + .@w + " 참가 IP " + .@cnt;
 		mes "정산된 주 : " + .@sn + " / 미수령 보상 " + .@pn + "건 " + .@ps + "코인";
-		mes "최소 참가 계정 : " + (($NEED_HW26_RUSH_MIN_ACCOUNTS > 1) ? $NEED_HW26_RUSH_MIN_ACCOUNTS : 1) + " / 자동 최종 정산 : " + (($NEED_HW26_RUSH_FINAL_LD > 0) ? $NEED_HW26_RUSH_FINAL_LD : 20261212) + " 04:05";
+		mes "최소 참가 IP : " + (($NEED_HW26_RUSH_MIN_IPS > 1) ? $NEED_HW26_RUSH_MIN_IPS : 1) + " / 자동 최종 정산 : " + (($NEED_HW26_RUSH_FINAL_LD > 0) ? $NEED_HW26_RUSH_FINAL_LD : 20261212) + " 04:05";
 		next;
-		switch (select("입장 ON/OFF 바꾸기:밀린 주간 정산 지금 실행:최종 정산 지금 실행 (이벤트 종료용):최소 참가 계정 수 바꾸기:닫기")) {
+		switch (select("입장 ON/OFF 바꾸기:밀린 주간 정산 지금 실행:최종 정산 지금 실행 (이벤트 종료용):최소 참가 IP 수 바꾸기:닫기")) {
 		case 1:
 			$NEED_HW26_RUSH_OFF = !$NEED_HW26_RUSH_OFF;
 			mes "입장 OFF = " + $NEED_HW26_RUSH_OFF;
@@ -692,8 +717,8 @@ OnGM:
 			break;
 		case 4:
 			input .@v, 1, 100;
-			$NEED_HW26_RUSH_MIN_ACCOUNTS = .@v;
-			mes "최소 참가 계정 = " + .@v;
+			$NEED_HW26_RUSH_MIN_IPS = .@v;
+			mes "최소 참가 IP = " + .@v;
 			next;
 			break;
 		default:
