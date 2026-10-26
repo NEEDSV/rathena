@@ -91,50 +91,88 @@ function	script	F_NEED_Halloween_BG_Reward	{
 //   맵플래그는 원본에서 복사된 뒤, 입장 NPC 가 PvP/GvG/전장 플래그를 인스턴스 맵에서만 끈다.
 //   (NoMapFlag 는 쓰지 않는다: 이 rAthena 에서는 처음 쓰는 인스턴스 슬롯의 플래그 배열이
 //    비어 있어 그 맵에 setmapflag 를 하면 맵서버가 죽는다. 2026-10-22 격리 서버에서 확인.)
-// 잭은 떠 있는 템플릿 NPC 를 인스턴스 맵에 duplicate 로 1개 만들고,
-// 잡힐 때마다 movenpc + setnpcdisplay 로 새 위치/외형(일반/황금)으로 바꾼다.
+// 잭은 떠 있는 템플릿 NPC 를 인스턴스 맵에 duplicate 로 3개(슬롯 0~2) 만들어 두고,
+// 평소에는 슬롯 0 하나만 보이게 한다. 잡힐 때마다 그 슬롯을 movenpc + setnpcdisplay 로
+// 새 위치/외형(일반/황금)으로 바꾼다.
+//
+// JACK FEVER (2026-10-26 보완): 판마다 처음으로 10점 이상이 되는 순간 10초 동안 한 번.
+//   숨겨 둔 슬롯 1, 2 를 켜서 잭 3마리를 동시에 띄우고, 잡힌 슬롯만 바로 다시 띄운다.
+//   피버 중 생성 거리 6~10칸, 황금 잭 20%. 3분 제한 타이머와 별개라 전체 시간은 그대로 흐른다.
+//   피버가 끝나면 보이는 잭 중 번호가 가장 작은 1마리만 남기고 나머지는 숨긴다.
+//   숨긴 NPC 는 movenpc 하지 않는다 (movenpc 의 시야 갱신이 숨긴 NPC 를 다시 보낼 수 있음).
+//   켤 때는 enablenpc 를 먼저 하고 그다음 movenpc 한다.
 //
 // 상태 (캐릭터 임시 변수, 로그아웃 시 자동 소멸)
 //   @HW_JACK_STATE  0 없음 / 1 진행 중 / 2 성공 처리 대기
 //   @HW_JACK_IID    인스턴스 ID     @HW_JACK_MAP$  인스턴스 맵 이름
-//   @HW_JACK_NPC$   잭 NPC 고유 이름 @HW_JACK_GOLD  현재 잭이 황금 잭이면 1
+//   @HW_JACK_NPCS$[0..2]  슬롯별 잭 NPC 고유 이름
+//   @HW_JACK_ON[0..2]     슬롯의 잭이 지금 보이고 잡을 수 있으면 1
+//   @HW_JACK_GOLDS[0..2]  슬롯의 잭이 황금 잭이면 1
 //   @HW_JACK_SCORE  점수            @HW_JACK_CATCH  잡은 수
 //   @HW_JACK_START / @HW_JACK_END   시작 / 종료 시각 (gettimetick(2))
+//   @HW_JACK_FEVER  피버 중이면 1   @HW_JACK_FEVER_USED  이번 판에 피버가 이미 나왔으면 1
+//   @HW_JACK_FEVER_END  피버 종료 시각
 //------------------------------------------------------------
+// getarg(0) 슬롯 (0~2). 그 슬롯의 잭을 새 자리에 띄운다 (숨겨져 있었으면 켠다).
 function	script	F_NEED_Halloween_JackSpawn	{
+	.@slot = getarg(0, 0);
 	.@map$ = @HW_JACK_MAP$;
-	.@npc$ = @HW_JACK_NPC$;
-	if (.@map$ == "" || .@npc$ == "")
+	.@npc$ = @HW_JACK_NPCS$[.@slot];
+	if (.@map$ == "" || .@npc$ == "" || .@slot < 0 || .@slot > 2)
 		return 0;
 
 	getmapxy(.@pmap$, .@px, .@py, BL_PC);
 
-	// 플레이어에게서 6~28칸 떨어진 통행 가능 칸. 맵 안쪽 통행 영역은 x,y 61~138.
+	// 거리는 가로/세로 차이 중 큰 쪽(칸). 맵 안쪽 통행 영역은 x,y 61~138.
+	//   1단계 평상시 8~12칸 / 피버 6~10칸 (80회), 2단계 6~14칸 (80회),
+	//   3단계 통행 영역 아무 칸 (200회, 플레이어 칸 제외). 모두 실패하면 그대로 둔다.
+	.@min = (@HW_JACK_FEVER) ? 6 : 8;
+	.@max = (@HW_JACK_FEVER) ? 10 : 12;
 	.@found = 0;
-	for (.@i = 0; .@i < 80 && !.@found; .@i++) {
-		.@x = rand(61, 138);
-		.@y = rand(61, 138);
-		if (!checkcell(.@map$, .@x, .@y, cell_chkpass))
-			continue;
-		.@dx = (.@x > .@px) ? .@x - .@px : .@px - .@x;
-		.@dy = (.@y > .@py) ? .@y - .@py : .@py - .@y;
-		.@d = (.@dx > .@dy) ? .@dx : .@dy;
-		if (.@d >= 6 && .@d <= 28)
-			.@found = 1;
-	}
-	// 거리 조건을 못 맞추면 아무 통행 가능 칸.
-	for (.@i = 0; .@i < 200 && !.@found; .@i++) {
-		.@x = rand(61, 138);
-		.@y = rand(61, 138);
-		if (checkcell(.@map$, .@x, .@y, cell_chkpass))
-			.@found = 1;
+	for (.@pass = 0; .@pass < 3 && !.@found; .@pass++) {
+		if (.@pass == 1) {
+			.@min = 6;
+			.@max = 14;
+		}
+		.@tries = (.@pass < 2) ? 80 : 200;
+		for (.@i = 0; .@i < .@tries && !.@found; .@i++) {
+			if (.@pass < 2) {
+				.@x = .@px + rand(-.@max, .@max);
+				.@y = .@py + rand(-.@max, .@max);
+			}
+			else {
+				.@x = rand(61, 138);
+				.@y = rand(61, 138);
+			}
+			if (.@x < 61 || .@x > 138 || .@y < 61 || .@y > 138)
+				continue;
+			if (!checkcell(.@map$, .@x, .@y, cell_chkpass))
+				continue;
+			.@dx = (.@x > .@px) ? .@x - .@px : .@px - .@x;
+			.@dy = (.@y > .@py) ? .@y - .@py : .@py - .@y;
+			.@d = (.@dx > .@dy) ? .@dx : .@dy;
+			if (.@d == 0 || (.@pass < 2 && (.@d < .@min || .@d > .@max)))
+				continue;
+			// 다른 잭과 같은 칸에는 띄우지 않는다.
+			.@dup = 0;
+			for (.@k = 0; .@k < 3; .@k++) {
+				if (.@k == .@slot || !@HW_JACK_ON[.@k])
+					continue;
+				getmapxy(.@om$, .@ox, .@oy, BL_NPC, @HW_JACK_NPCS$[.@k]);
+				if (.@ox == .@x && .@oy == .@y)
+					.@dup = 1;
+			}
+			if (!.@dup)
+				.@found = 1;
+		}
 	}
 	if (!.@found)
 		return 0;
 
-	// 잭이 나타날 때마다 10% 확률로 황금 잭.
-	@HW_JACK_GOLD = (rand(100) < 10) ? 1 : 0;
-	if (@HW_JACK_GOLD) {
+	// 황금 잭: 평상시 10%, 피버 중 20%.
+	.@gold = (rand(100) < ((@HW_JACK_FEVER) ? 20 : 10)) ? 1 : 0;
+	@HW_JACK_GOLDS[.@slot] = .@gold;
+	if (.@gold) {
 		setnpcdisplay .@npc$, "황금 잭", 1130;
 		setnpcnameen "Golden Jack", .@npc$;
 	}
@@ -142,12 +180,32 @@ function	script	F_NEED_Halloween_JackSpawn	{
 		setnpcdisplay .@npc$, "잭", 1130;
 		setnpcnameen "Jack", .@npc$;
 	}
+	if (!@HW_JACK_ON[.@slot]) {
+		enablenpc .@npc$;
+		@HW_JACK_ON[.@slot] = 1;
+	}
 	movenpc .@npc$, .@x, .@y;
-	if (@HW_JACK_GOLD) {
+	if (.@gold) {
 		specialeffect EF_LIGHTSPHERE, AREA, .@npc$;
 		dispbottom needtr("[잭 잡기] 반짝! 황금 잭이 나타났다! (+3점)", "[Jack Catch] Sparkle! A Golden Jack appeared! (+3 pts)"), 0xFFD700;
 	}
 	return 1;
+}
+
+// JACK FEVER 시작 (잡기 처리 중 10점을 처음 넘었을 때). 잡힌 슬롯을 포함해 세 슬롯을 모두 띄운다.
+function	script	F_NEED_Halloween_JackFever	{
+	@HW_JACK_FEVER = 1;
+	@HW_JACK_FEVER_USED = 1;
+	@HW_JACK_FEVER_END = gettimetick(2) + 10;
+	deltimer "HalloweenJack#hw26ctl::OnFeverEnd";
+	addtimer 10000, "HalloweenJack#hw26ctl::OnFeverEnd";
+
+	announce "JACK FEVER!", bc_self, 0xFF6600;
+	specialeffect2 EF_POTION_BERSERK;
+	dispbottom needtr("[잭 잡기] JACK FEVER! 10초 동안 잭들이 몰려옵니다!", "[Jack Catch] JACK FEVER! Jacks swarm in for 10 seconds!"), 0xFF3300;
+	for (.@k = 0; .@k < 3; .@k++)
+		callfunc "F_NEED_Halloween_JackSpawn", .@k;
+	return;
 }
 
 // 남은 시간 "m:ss"
@@ -166,6 +224,7 @@ function	script	F_NEED_Halloween_JackCleanup	{
 	deltimer "HalloweenJack#hw26ctl::OnWarn10";
 	deltimer "HalloweenJack#hw26ctl::OnTimeUp";
 	deltimer "HalloweenJack#hw26ctl::OnFinish";
+	deltimer "HalloweenJack#hw26ctl::OnFeverEnd";
 
 	.@iid = @HW_JACK_IID;
 	.@map$ = @HW_JACK_MAP$;
@@ -173,14 +232,19 @@ function	script	F_NEED_Halloween_JackCleanup	{
 	@HW_JACK_STATE = 0;
 	@HW_JACK_IID = 0;
 	@HW_JACK_MAP$ = "";
-	@HW_JACK_NPC$ = "";
-	@HW_JACK_GOLD = 0;
+	deletearray @HW_JACK_NPCS$;
+	deletearray @HW_JACK_ON;
+	deletearray @HW_JACK_GOLDS;
 	@HW_JACK_SCORE = 0;
 	@HW_JACK_CATCH = 0;
 	@HW_JACK_START = 0;
 	@HW_JACK_END = 0;
+	@HW_JACK_FEVER = 0;
+	@HW_JACK_FEVER_USED = 0;
+	@HW_JACK_FEVER_END = 0;
 
 	// 먼저 내보내고 나서 인스턴스를 없앤다 (없애면 남은 사람은 세이브 포인트로 간다).
+	// 인스턴스를 없애면 그 맵의 잭 NPC 3개도 함께 사라진다.
 	if (.@map$ != "" && strcharinfo(3) == .@map$)
 		warp "payo2", 113, 98;
 	if (.@iid > 0)
@@ -190,29 +254,44 @@ function	script	F_NEED_Halloween_JackCleanup	{
 
 // 잭 템플릿. 직접 배치하지 않고 인스턴스 맵에 duplicate 로만 만든다.
 -	script	HalloweenJack#hw26tpl	-1,{
-	if (@HW_JACK_STATE != 1 || @HW_JACK_NPC$ != strnpcinfo(3) || strcharinfo(3) != strnpcinfo(4) || instance_id(IM_CHAR) != @HW_JACK_IID)
+	.@me$ = strnpcinfo(3);
+	if (@HW_JACK_STATE != 1 || strcharinfo(3) != strnpcinfo(4) || instance_id(IM_CHAR) != @HW_JACK_IID)
+		end;
+	.@slot = -1;
+	for (.@k = 0; .@k < 3; .@k++)
+		if (@HW_JACK_NPCS$[.@k] == .@me$ && @HW_JACK_ON[.@k])
+			.@slot = .@k;
+	if (.@slot < 0)
 		end;
 	if (gettimetick(2) > @HW_JACK_END) {
 		dispbottom needtr("[잭 잡기] 시간이 다 되었습니다.", "[Jack Catch] Time is up."), 0xFF6600;
 		end;
 	}
 
-	.@pt = (@HW_JACK_GOLD) ? 3 : 1;
+	.@gold = @HW_JACK_GOLDS[.@slot];
+	.@pt = (.@gold) ? 3 : 1;
 	@HW_JACK_SCORE += .@pt;
 	@HW_JACK_CATCH++;
 
 	if (@HW_JACK_SCORE >= 15) {
 		// 성공. 보상과 정리는 이 NPC 밖(컨트롤러)에서 한다: 이 NPC 는 인스턴스와 함께 사라진다.
+		// 피버 중이어도 끝나기를 기다리지 않는다. 피버 타이머는 정리 함수가 지운다.
 		@HW_JACK_STATE = 2;
-		specialeffect EF_LIGHTSPHERE, AREA, strnpcinfo(3);
-		dispbottom needtr("[잭 잡기] ", "[Jack Catch] ") + ((@HW_JACK_GOLD) ? needtr("황금 잭 포획! +3점", "Golden Jack caught! +3 pts") : needtr("잭 포획! +1점", "Jack caught! +1 pt")) + " (" + @HW_JACK_SCORE + " / 15)", 0xFFA500;
+		specialeffect EF_LIGHTSPHERE, AREA, .@me$;
+		dispbottom needtr("[잭 잡기] ", "[Jack Catch] ") + ((.@gold) ? needtr("황금 잭 포획! +3점", "Golden Jack caught! +3 pts") : needtr("잭 포획! +1점", "Jack caught! +1 pt")) + " (" + @HW_JACK_SCORE + " / 15)", 0xFFA500;
 		deltimer "HalloweenJack#hw26ctl::OnFinish";
 		addtimer 100, "HalloweenJack#hw26ctl::OnFinish";
 		end;
 	}
 
-	dispbottom needtr("[잭 잡기] ", "[Jack Catch] ") + ((@HW_JACK_GOLD) ? needtr("황금 잭 포획! +3점", "Golden Jack caught! +3 pts") : needtr("잭 포획! +1점", "Jack caught! +1 pt")) + " (" + @HW_JACK_SCORE + " / 15" + needtr(", 남은 시간 ", ", time left ") + callfunc("F_NEED_Halloween_JackLeft$") + ")", 0xFFA500;
-	callfunc "F_NEED_Halloween_JackSpawn";
+	dispbottom needtr("[잭 잡기] ", "[Jack Catch] ") + ((.@gold) ? needtr("황금 잭 포획! +3점", "Golden Jack caught! +3 pts") : needtr("잭 포획! +1점", "Jack caught! +1 pt")) + " (" + @HW_JACK_SCORE + " / 15" + needtr(", 남은 시간 ", ", time left ") + callfunc("F_NEED_Halloween_JackLeft$") + ")", 0xFFA500;
+
+	// 처음으로 10점 이상이 되면 JACK FEVER (판당 1번). 아니면 잡힌 슬롯만 다시 띄운다.
+	if (!@HW_JACK_FEVER_USED && @HW_JACK_SCORE >= 10) {
+		callfunc "F_NEED_Halloween_JackFever";
+		end;
+	}
+	callfunc "F_NEED_Halloween_JackSpawn", .@slot;
 	end;
 }
 
@@ -233,6 +312,29 @@ OnWarn30:
 OnWarn10:
 	if (@HW_JACK_STATE == 1)
 		dispbottom needtr("[잭 잡기] 남은 시간 10초! 현재 ", "[Jack Catch] 10 seconds left! Score ") + @HW_JACK_SCORE + " / 15", 0xFF6600;
+	end;
+
+// JACK FEVER 종료: 보이는 잭 중 번호가 가장 작은 1마리만 남기고 숨긴다 (평상시 규칙으로 복귀).
+OnFeverEnd:
+	if (@HW_JACK_STATE != 1 || !@HW_JACK_FEVER)
+		end;
+	@HW_JACK_FEVER = 0;
+	@HW_JACK_FEVER_END = 0;
+	.@keep = -1;
+	for (.@k = 0; .@k < 3; .@k++) {
+		if (!@HW_JACK_ON[.@k])
+			continue;
+		if (.@keep < 0) {
+			.@keep = .@k;
+			continue;
+		}
+		disablenpc @HW_JACK_NPCS$[.@k];
+		@HW_JACK_ON[.@k] = 0;
+		@HW_JACK_GOLDS[.@k] = 0;
+	}
+	if (.@keep < 0)
+		callfunc "F_NEED_Halloween_JackSpawn", 0;
+	dispbottom needtr("[잭 잡기] JACK FEVER 종료! 남은 잭을 잡아 15점을 채우세요!", "[Jack Catch] JACK FEVER is over! Catch the remaining Jacks to reach 15 points!"), 0xFF6600;
 	end;
 
 // 시간 초과: 기록을 남기지 않으므로 다시 도전할 수 있다.
@@ -319,6 +421,7 @@ payo2,113,101,4	script	꼬마 호박 잭#hw26j	4_JACK,{
 		mes needtr("- 잭이 한 마리씩 나타나. ^0055FF클릭^000000하면 잡혀!", "- One Jack appears at a time. ^0055FFClick^000000 it to catch it!");
 		mes needtr("- 일반 잭 ^0055FF+1점^000000, 가끔(10%) 나오는 ^FFAA00황금 잭 +3점^000000.", "- Jack ^0055FF+1^000000, the rare (10%) ^FFAA00Golden Jack +3^000000.");
 		mes needtr("- 잡으면 다른 곳에 새 잭이 나타나.", "- After a catch, a new Jack appears somewhere else.");
+		mes needtr("- ^FF660010점^000000 이 되면 ^FF660010초 동안 JACK FEVER!^000000 잭이 3마리씩 나와.", "- At ^FF660010 points^000000 comes a ^FF660010-second JACK FEVER!^000000 Three Jacks at once.");
 		mes needtr("- 공격력이나 장비는 상관없어. 빨리 찾는 게 중요해!", "- Attack power and gear don't matter. Speed does!");
 		next;
 		mes .@n$;
@@ -391,20 +494,29 @@ payo2,113,101,4	script	꼬마 호박 잭#hw26j	4_JACK,{
 	setmapflag .@map$, mf_nochat;
 	setmapflag .@map$, mf_nopenalty;
 
-	.@npc$ = duplicate("HalloweenJack#hw26tpl", .@map$, 100, 106, "잭", 1130, 4);
-	if (.@npc$ == "") {
-		instance_destroy .@iid;
-		mes .@n$;
-		mes needtr("^FF0000잭이 숨어 버렸어. 잠시 후 다시 해 줘.^000000", "^FF0000The Jacks ran off. Please try again shortly.^000000");
-		close;
+	// 잭 슬롯 3개를 만들고 1, 2 번은 숨겨 둔다 (JACK FEVER 때만 켠다). 아직 아무도 맵에 없다.
+	for (.@k = 0; .@k < 3; .@k++) {
+		.@npcs$[.@k] = duplicate("HalloweenJack#hw26tpl", .@map$, 100, 106, "잭", 1130, 4);
+		if (.@npcs$[.@k] == "") {
+			instance_destroy .@iid;
+			mes .@n$;
+			mes needtr("^FF0000잭이 숨어 버렸어. 잠시 후 다시 해 줘.^000000", "^FF0000The Jacks ran off. Please try again shortly.^000000");
+			close;
+		}
+		if (.@k > 0)
+			disablenpc .@npcs$[.@k];
 	}
 
 	@HW_JACK_IID = .@iid;
 	@HW_JACK_MAP$ = .@map$;
-	@HW_JACK_NPC$ = .@npc$;
+	copyarray @HW_JACK_NPCS$[0], .@npcs$[0], 3;
+	setarray @HW_JACK_ON[0], 1, 0, 0;
+	setarray @HW_JACK_GOLDS[0], 0, 0, 0;
 	@HW_JACK_SCORE = 0;
 	@HW_JACK_CATCH = 0;
-	@HW_JACK_GOLD = 0;
+	@HW_JACK_FEVER = 0;
+	@HW_JACK_FEVER_USED = 0;
+	@HW_JACK_FEVER_END = 0;
 
 	mes .@n$;
 	mes needtr("좋아, 출발! 3분 안에 15점이야!", "Alright, go! 15 points in 3 minutes!");
@@ -424,7 +536,7 @@ payo2,113,101,4	script	꼬마 호박 잭#hw26j	4_JACK,{
 	addtimer 170000, "HalloweenJack#hw26ctl::OnWarn10";
 	addtimer 180000, "HalloweenJack#hw26ctl::OnTimeUp";
 
-	callfunc "F_NEED_Halloween_JackSpawn";
+	callfunc "F_NEED_Halloween_JackSpawn", 0;
 	dispbottom needtr("[잭 잡기] 시작! 잭을 클릭해서 잡으세요. 3분 안에 15점!", "[Jack Catch] Start! Click the Jacks. 15 points in 3 minutes!"), 0xFFA500;
 	end;
 
