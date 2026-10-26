@@ -10,6 +10,12 @@
 //=   $NEED_HALLOWEEN_JACK_ENTRY_ON   잭 잡기 입장
 //=   $NEED_HALLOWEEN_JACK_REWARD_ON  잭 잡기 보상
 //=   $NEED_HALLOWEEN_SHOP_ON         할로윈 교환 NPC
+//=   $NEED_HALLOWEEN_LEGACY_NPC_ON   Event Hub 가 켜져 있어도 payo2 할로윈 NPC 표시 (운영/복구용)
+//=
+//= Event Hub (need_event_hub.txt) - 공통 Event 버튼
+//=   [Event Hub 버튼 관리] 에서 할로윈 모듈(F_NEED_HW26_Hub, 202610)로 연결하고 버튼을 켠다.
+//=   전체 ON 은 Hub 를 켜지 않는다: Event 버튼 exe 가 배포되기 전에 켜면 payo2 NPC 만 숨어 버린다.
+//=   전체 OFF / 종료 처리 때 Hub 가 할로윈에 연결돼 있으면 버튼을 끈다.
 //=
 //= battle conf (conf/battle/need_world_drop.conf)
 //=   need_halloween_hunt_enable = 실제 드롭 판정. 이 스크립트가 로드될 때(OnInit)와
@@ -46,6 +52,7 @@ S_Main:
 			"[전장 코인 관리]",
 			"[잭 잡기 관리]",
 			"[교환 NPC 관리]",
+			"[Event Hub 버튼 관리]",
 			"[이벤트 종료 처리]",
 			"[닫기]" );
 		if (.@sel == 1) callsub S_Board;
@@ -54,7 +61,8 @@ S_Main:
 		else if (.@sel == 4) callsub S_BG;
 		else if (.@sel == 5) callsub S_Jack;
 		else if (.@sel == 6) callsub S_Shop;
-		else if (.@sel == 7) callsub S_End;
+		else if (.@sel == 7) callsub S_Hub;
+		else if (.@sel == 8) callsub S_End;
 		else break;
 	}
 	return;
@@ -98,6 +106,9 @@ S_Board:
 	mes " [전역] 교환 NPC : " + callfunc("F_NHGM_OO", $NEED_HALLOWEEN_SHOP_ON);
 	mes "   ^999999망치 주 5 (현재 주기 " + callfunc("F_NEED_Chuseok_WeekKey") + ", 초기화 " + callfunc("F_NEED_Chuseok_WeekResetStr$") + ")^000000";
 	mes "   ^999999아리아 1 / +9 보장권 1 (계정 기준, event_id 202610)^000000";
+	mes "^FFCC00[Event Hub]^000000";
+	mes " 버튼 : " + callfunc("F_NHGM_OO", $NEED_EVHUB_ON) + " / 연결 : " + (($NEED_EVHUB_MOD$ == "") ? "(없음)" : $NEED_EVHUB_MOD$) + " " + $NEED_EVHUB_ID;
+	mes " payo2 NPC 강제 표시 : " + callfunc("F_NHGM_OO", $NEED_HALLOWEEN_LEGACY_NPC_ON);
 	if (.@wc > 0) {
 		mes "^999999----------------------------^000000";
 		mes "^FF9900[경고 목록]^000000";
@@ -118,6 +129,7 @@ S_Board:
 S_Master:
 	mes "[할로윈 이벤트 전체]";
 	mes "현재 상태 : " + callfunc("F_NHGM_OO", $NEED_HALLOWEEN_EVENT_ON);
+	mes "^999999(OFF 로 바꾸면 할로윈에 연결된 Event 버튼도 숨깁니다)^000000";
 	mes " ";
 	mes "전체 스위치를 바꾸면 아래 항목이 한 번에 같은 값으로 설정됩니다.";
 	mes "- 사냥 월드 드롭 / 전장 코인";
@@ -135,9 +147,13 @@ S_Master:
 		$NEED_HALLOWEEN_JACK_REWARD_ON = .@on;
 		$NEED_HALLOWEEN_SHOP_ON = .@on;
 		callfunc "F_NEED_Halloween_Sync";
+		.@hub = callsub(S_HubOff);
 		mes "[할로윈 이벤트 전체]";
 		mes "변경됨 : " + callfunc("F_NHGM_OO", .@on);
 		mes "사냥 battle flag : " + getbattleflag("need_halloween_hunt_enable");
+		mes "Event Hub 버튼 : " + callfunc("F_NHGM_OO", $NEED_EVHUB_ON) + ((.@hub >= 0) ? " (접속자 " + .@hub + "명에게 전송)" : "");
+		if (.@on && !$NEED_EVHUB_ON)
+			mes "^999999Event 버튼은 [Event Hub 버튼 관리] 에서 따로 켭니다.^000000";
 		next;
 	}
 	return;
@@ -201,9 +217,51 @@ S_Shop:
 	}
 	return;
 
+// 할로윈이 꺼지면 할로윈에 연결된 Event 버튼도 끈다. 반환 = 전송한 접속자 수 (-1 = Hub 를 건드리지 않음)
+S_HubOff:
+	if (!$NEED_HALLOWEEN_EVENT_ON && callfunc("F_NEED_EventHub_IsLive", "F_NEED_HW26_Hub"))
+		return callfunc("F_NEED_EventHub_Set", 0, "", 0);
+	return -1;
+
+S_Hub:
+	while (1) {
+		mes "[Event Hub 버튼]";
+		mes "버튼 표시 : " + callfunc("F_NHGM_OO", $NEED_EVHUB_ON);
+		mes "연결 : " + (($NEED_EVHUB_MOD$ == "") ? "(없음)" : $NEED_EVHUB_MOD$) + " / 번호 " + $NEED_EVHUB_ID;
+		mes "payo2 NPC 강제 표시 : " + callfunc("F_NHGM_OO", $NEED_HALLOWEEN_LEGACY_NPC_ON);
+		mes " ";
+		mes "^999999할로윈으로 켜면 [!] 왼쪽 Event 버튼이 접속자 전원에게 바로 보이고,^000000";
+		mes "^999999payo2 의 꼬마 호박 잭 / 할로윈 상인 잭은 숨깁니다.^000000";
+		mes "^999999강제 표시를 켜면 Hub 와 상관없이 두 NPC 가 다시 보입니다.^000000";
+		mes "^999999다른 이벤트 연결은 @eventhub 에서 합니다.^000000";
+		next;
+		.@sel = select("할로윈으로 연결 + 버튼 ON:버튼 OFF:payo2 NPC 강제 표시 바꾸기:돌아가기");
+		if (.@sel == 4)
+			break;
+		if (.@sel == 1)
+			.@n = callfunc("F_NEED_EventHub_Set", 1, "F_NEED_HW26_Hub", 202610);
+		else if (.@sel == 2)
+			.@n = callfunc("F_NEED_EventHub_Set", 0, "", 0);
+		else {
+			$NEED_HALLOWEEN_LEGACY_NPC_ON = !$NEED_HALLOWEEN_LEGACY_NPC_ON;
+			callfunc "F_NEED_Halloween_Sync";
+			.@n = -2;
+		}
+		mes "[Event Hub 버튼]";
+		if (.@n == -1)
+			mes "^FF0000바꾸지 못했습니다. (할로윈 모듈이 등록되지 않음)^000000";
+		else if (.@n >= 0)
+			mes "버튼 " + callfunc("F_NHGM_OO", $NEED_EVHUB_ON) + ", 접속자 " + .@n + "명에게 전송했습니다.";
+		else
+			mes "payo2 NPC 강제 표시 : " + callfunc("F_NHGM_OO", $NEED_HALLOWEEN_LEGACY_NPC_ON);
+		next;
+	}
+	return;
+
 S_End:
 	mes "[이벤트 종료 처리]";
 	mes "모든 할로윈 스위치를 OFF 로 하고 할로윈 NPC 를 숨깁니다.";
+	mes "Event Hub 가 할로윈에 연결돼 있으면 Event 버튼도 숨깁니다.";
 	mes "(추석 NPC 표시는 원래대로 돌아갑니다.)";
 	mes " ";
 	mes "^FF0000잔여 할로윈 코인 삭제는 이 메뉴가 하지 않습니다.^000000";
@@ -218,6 +276,7 @@ S_End:
 		$NEED_HALLOWEEN_JACK_REWARD_ON = 0;
 		$NEED_HALLOWEEN_SHOP_ON = 0;
 		callfunc "F_NEED_Halloween_Sync";
+		callsub S_HubOff;
 		mes "[이벤트 종료 처리]";
 		mes "모든 스위치 OFF, 사냥 battle flag : " + getbattleflag("need_halloween_hunt_enable");
 		next;

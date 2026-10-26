@@ -932,6 +932,9 @@ void clif_dropitem( const map_session_data& sd, int32 index, int32 amount );
 void clif_delitem( const map_session_data& sd, int32 index, int32 amount, int16 reason );
 void clif_update_hp( const map_session_data& sd );
 void clif_updatestatus( map_session_data& sd, _sp type );
+// NEED Event Hub button state (ZC_PAR_CHANGE var id read by the NeedEventButton exe patch).
+#define NEED_EVHUB_VAR_ID 0x4556
+void clif_need_eventhub_state( map_session_data& sd );
 void clif_changemanner( const map_session_data& sd );
 void clif_damage( block_list& src, block_list& dst, t_tick tick, int32 sdelay, int32 ddelay, int64 sdamage, int16 div, enum e_damage_type type, int64 sdamage2, bool spdamage);	// area
 void clif_takeitem( const block_list& src, const block_list& dst);

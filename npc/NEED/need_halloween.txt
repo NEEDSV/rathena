@@ -20,6 +20,12 @@
 //=   교환 한도          need_chuseok_exchange_*   (F_NEED_Chuseok_Limit* 에 event_id 전달)
 //=
 //= 운영 스위치는 need_halloween_gm.txt (@halloweengm) 참고. 배포 기본값은 모두 OFF.
+//=
+//= Event Hub (need_event_hub.txt + need_halloween_hub.txt)
+//=   두 NPC 의 대화는 F_NEED_Halloween_JackTalk / F_NEED_Halloween_ShopTalk 함수로 옮겼다.
+//=   payo2 NPC 와 Event 버튼이 같은 함수를 부른다 (한도/원장 로직은 그대로).
+//=   Event Hub 가 할로윈으로 켜져 있으면 두 NPC 는 숨긴다.
+//=   $NEED_HALLOWEEN_LEGACY_NPC_ON = 1 이면 Hub 와 상관없이 다시 보인다 (운영/복구용).
 //============================================================
 
 //------------------------------------------------------------
@@ -40,9 +46,18 @@ function	script	F_NEED_Halloween_Active	{
 function	script	F_NEED_Halloween_Sync	{
 	setbattleflag("need_halloween_hunt_enable", ($NEED_HALLOWEEN_EVENT_ON && $NEED_HALLOWEEN_HUNT_ON) ? 1 : 0);
 
+	// Event Hub 가 할로윈으로 켜져 있으면 같은 대화를 버튼으로 열 수 있으므로 NPC 는 숨긴다.
+	.@legacy = ($NEED_HALLOWEEN_LEGACY_NPC_ON || !callfunc("F_NEED_EventHub_IsLive", "F_NEED_HW26_Hub"));
+
 	if ($NEED_HALLOWEEN_EVENT_ON) {
-		enablenpc "꼬마 호박 잭#hw26j";
-		enablenpc "할로윈 상인 잭#hw26s";
+		if (.@legacy) {
+			enablenpc "꼬마 호박 잭#hw26j";
+			enablenpc "할로윈 상인 잭#hw26s";
+		}
+		else {
+			disablenpc "꼬마 호박 잭#hw26j";
+			disablenpc "할로윈 상인 잭#hw26s";
+		}
 		if (!$NEED_CHUSEOK_EVENT_ON) {
 			disablenpc "송편 빚는 아낙#chuseok2026";
 			disablenpc "한가위 교환상 달이#chuseok2026";
@@ -380,7 +395,7 @@ OnFinish:
 //------------------------------------------------------------
 // 잭 잡기 입장 NPC (추석 송편 제작 NPC 자리)
 //------------------------------------------------------------
-payo2,113,101,4	script	꼬마 호박 잭#hw26j	4_JACK,{
+function	script	F_NEED_Halloween_JackTalk	{
 	.@n$ = needtr("[꼬마 호박 잭]", "[Little Pumpkin Jack]");
 	mes .@n$;
 
@@ -539,6 +554,12 @@ payo2,113,101,4	script	꼬마 호박 잭#hw26j	4_JACK,{
 	callfunc "F_NEED_Halloween_JackSpawn", 0;
 	dispbottom needtr("[잭 잡기] 시작! 잭을 클릭해서 잡으세요. 3분 안에 15점!", "[Jack Catch] Start! Click the Jacks. 15 points in 3 minutes!"), 0xFFA500;
 	end;
+}
+
+// 잭 잡기 입장 NPC. 대화는 Event Hub 와 같은 F_NEED_Halloween_JackTalk.
+payo2,113,101,4	script	꼬마 호박 잭#hw26j	4_JACK,{
+	callfunc "F_NEED_Halloween_JackTalk";
+	end;
 
 OnInit:
 	setnpcnameen "Little Pumpkin Jack";
@@ -616,7 +637,7 @@ function	script	F_NEED_Halloween_LimitFailMes	{
 //------------------------------------------------------------
 // 할로윈 교환 NPC (추석 송편 교환 NPC 자리)
 //------------------------------------------------------------
-payo2,111,101,4	script	할로윈 상인 잭#hw26s	4_JACK,{
+function	script	F_NEED_Halloween_ShopTalk	{
 	.@n$ = needtr("[할로윈 상인 잭]", "[Halloween Merchant Jack]");
 	mes .@n$;
 
@@ -872,6 +893,12 @@ S_Refine:
 	else
 		callfunc "F_NEED_Halloween_LimitFailMes", .@result, 0;
 	close;
+}
+
+// 할로윈 교환 NPC. 대화는 Event Hub 와 같은 F_NEED_Halloween_ShopTalk.
+payo2,111,101,4	script	할로윈 상인 잭#hw26s	4_JACK,{
+	callfunc "F_NEED_Halloween_ShopTalk";
+	end;
 
 OnInit:
 	setnpcnameen "Halloween Merchant Jack";
