@@ -24,7 +24,8 @@
 //= Event Hub (need_event_hub.txt + need_halloween_hub.txt)
 //=   두 NPC 의 대화는 F_NEED_Halloween_JackTalk / F_NEED_Halloween_ShopTalk 함수로 옮겼다.
 //=   payo2 NPC 와 Event 버튼이 같은 함수를 부른다 (한도/원장 로직은 그대로).
-//=   Event Hub 가 할로윈으로 켜져 있으면 두 NPC 는 숨긴다.
+//=   할로윈이 켜지면 Hub 를 할로윈 모듈로 연결하고 Event 버튼이 밝아진다(자동), 꺼지면 흐려진다.
+//=   버튼이 할로윈으로 ON 이면 두 NPC 는 숨긴다.
 //=   $NEED_HALLOWEEN_LEGACY_NPC_ON = 1 이면 Hub 와 상관없이 다시 보인다 (운영/복구용).
 //============================================================
 
@@ -46,7 +47,12 @@ function	script	F_NEED_Halloween_Active	{
 function	script	F_NEED_Halloween_Sync	{
 	setbattleflag("need_halloween_hunt_enable", ($NEED_HALLOWEEN_EVENT_ON && $NEED_HALLOWEEN_HUNT_ON) ? 1 : 0);
 
-	// Event Hub 가 할로윈으로 켜져 있으면 같은 대화를 버튼으로 열 수 있으므로 NPC 는 숨긴다.
+	// Event Hub : 할로윈이 진행 중이면 Hub 를 할로윈으로 연결하고, 버튼 상태(밝음/흐림)를 다시 계산한다.
+	if ($NEED_HALLOWEEN_EVENT_ON)
+		callfunc "F_NEED_EventHub_Claim", "F_NEED_HW26_Hub", 202610;
+	callfunc "F_NEED_EventHub_Update";
+
+	// 버튼이 할로윈으로 ON 이면 같은 대화를 버튼으로 열 수 있으므로 NPC 는 숨긴다.
 	.@legacy = ($NEED_HALLOWEEN_LEGACY_NPC_ON || !callfunc("F_NEED_EventHub_IsLive", "F_NEED_HW26_Hub"));
 
 	if ($NEED_HALLOWEEN_EVENT_ON) {

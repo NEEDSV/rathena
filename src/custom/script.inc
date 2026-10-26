@@ -1103,7 +1103,7 @@ BUILDIN_FUNC(needhalloweenjack)
 }
 
 // NEED Event Hub: resend the Event button state (clif_need_eventhub_state) after the script
-// changed $NEED_EVHUB_ON / $NEED_EVHUB_ID / #NEED_EVHUB_SEEN.
+// changed $NEED_EVHUB_ON (F_NEED_EventHub_Update in need_event_hub.txt).
 // needeventhub_refresh()  -> the attached player only, returns 1 (0 without a player)
 // needeventhub_refresh(1) -> every online player, returns how many were sent
 BUILDIN_FUNC(needeventhub_refresh)
