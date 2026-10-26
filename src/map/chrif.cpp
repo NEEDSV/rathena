@@ -27,6 +27,7 @@
 #include "log.hpp"
 #include "map.hpp"
 #include "mercenary.hpp"
+#include "need_marble.hpp"
 #include "need_summer_attendance.hpp"
 #include "needwiki.hpp"
 #include "npc.hpp"
@@ -1526,6 +1527,7 @@ void chrif_on_disconnect(void) {
 	if( chrif_connected != 1 )
 		ShowWarning("Connection to Char Server lost.\n\n");
 	chrif_connected = 0;
+	need_marble_cp_char_lost(); // NEED marble V20-REAL: answers to requests of this connection can no longer come
 
 	other_mapserver_count = 0; //Reset counter. We receive ALL maps from all map-servers on reconnect.
 	map_eraseallipport();

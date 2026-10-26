@@ -52,11 +52,13 @@ void need_marble_test_cp_arm(int32 mode) {
 	g_mbqa_cp_mode = mode >= 1 && mode <= 4 ? mode : 0;
 }
 
-// Registered before need_marble_init() only when the map-server runs with NEED_MARBLE_TEST_HOOKS=1 (bc_servers.ps1).
+// Registered before need_marble_init() only when the map-server runs with NEED_MARBLE_TEST_HOOKS=1 (bc_servers.ps1),
+// and not with NEED_MARBLE_TEST_CP=char: then a NEED_MARBLE_CP_CHAR_WRITER build registers its char writer (V20-REAL).
 struct mbqa_cp_register {
 	mbqa_cp_register() {
 		const char* e = getenv("NEED_MARBLE_TEST_HOOKS");
-		if (e != nullptr && strcmp(e, "1") == 0)
+		const char* w = getenv("NEED_MARBLE_TEST_CP");
+		if (e != nullptr && strcmp(e, "1") == 0 && (w == nullptr || strcmp(w, "char") != 0))
 			need_marble_cp_set_writer(&need_marble_test_cp_writer);
 	}
 } g_mbqa_cp_register;

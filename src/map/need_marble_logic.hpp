@@ -14,6 +14,8 @@
 #include <map>
 #include <set>
 
+#include <common/need_marble_cp_grant.hpp>
+
 namespace need_marble {
 
 constexpr int32_t BOARD_TILES = 33;
@@ -87,7 +89,7 @@ enum e_policy_key : int32_t {
 	P_HUNT_ENABLED = 2,
 	P_INSTANCE_ENABLED = 3,
 	P_BG_ENABLED = 4,
-	P_CP_APPLY_ENABLED = 5,      // 0 = off. 1 is valid only with a registered CP writer (none in this build)
+	P_CP_APPLY_ENABLED = 5,      // 0 = off. 1 is valid only with a registered CP writer (none in the default build)
 	P_SEASON_ID = 6,
 
 	P_EXCHANGE_COST = 10,
@@ -236,7 +238,7 @@ enum e_policy_error : int32_t {
 
 constexpr int32_t CP_SANITY_MAX = 1000000;
 
-// cp_writer: a CP writer is registered (only the test build registers one, a mock). Without one the CP switch
+// cp_writer: a CP writer is registered (the char writer of a NEED_MARBLE_CP_CHAR_WRITER build, or the test mock). Without one the CP switch
 // must stay 0, so turning it on in the policy table disables the module instead of starting any payout.
 inline int32_t validate_policy(const policy_values& v, int32_t* bad_key = nullptr, bool cp_writer = false) {
 	auto fail = [bad_key](int32_t code, int32_t key) {
@@ -388,7 +390,48 @@ enum e_cp_write : int32_t {
 	CPW_APPLIED = 0,     // the balance changed, confirmed
 	CPW_NO_EFFECT = 1,   // refused before any change, confirmed
 	CPW_UNKNOWN = 2,     // no usable answer: the balance may have changed
+	CPW_PENDING = 3,     // handed to an asynchronous writer (char-server): the answer comes later, row stays UNCERTAIN
 };
+
+/// An operator may reconcile a row whose char-server answer is still awaited only after this long: the char-server
+/// answers in milliseconds, so a longer silence means the answer is lost (char writer, V20-REAL).
+constexpr int32_t CP_ANSWER_WAIT_SEC = 60;
+
+// need_marble_cp_audit.reason
+enum e_cp_reason : int32_t {
+	CPR_CLAIM = 1,            // 1 -> 3 before the writer runs
+	CPR_APPLIED = 2,          // 3 -> 2 writer / char-server applied
+	CPR_NO_EFFECT = 3,        // 3 -> 1 writer / char-server confirmed nothing changed
+	CPR_UNKNOWN = 4,          // 3 -> 3 synchronous writer gave no usable answer
+	CPR_OPERATOR = 5,         // 3 -> 4 / 5 operator reconciliation
+	CPR_SENT = 6,             // 3 -> 3 grant request handed to the char-server
+	CPR_CHAR_UNPROVEN = 7,    // 3 -> 3 char-server answered ALREADY / CONFLICT / DB_ERROR: not proven for this request
+};
+
+/// Writer answer of a char-server grant result (src/common/need_marble_cp_grant.hpp). ALREADY and CONFLICT add
+/// nothing now but say the key was applied before, so the row needs an operator, like DB_ERROR.
+inline int32_t cp_write_from_grant(int32_t grant_result) {
+	switch (grant_result) {
+	case need_marble_cp::GR_APPLIED:
+		return CPW_APPLIED;
+	case need_marble_cp::GR_DISABLED:
+	case need_marble_cp::GR_BAD_ARG:
+	case need_marble_cp::GR_CAP:
+		return CPW_NO_EFFECT;
+	default:
+		return CPW_UNKNOWN;
+	}
+}
+
+inline int32_t cp_reason_after_write(int32_t writer_result, bool from_char) {
+	if (writer_result == CPW_APPLIED)
+		return CPR_APPLIED;
+	if (writer_result == CPW_NO_EFFECT)
+		return CPR_NO_EFFECT;
+	if (writer_result == CPW_PENDING)
+		return CPR_SENT;
+	return from_char ? CPR_CHAR_UNPROVEN : CPR_UNKNOWN;
+}
 
 inline int32_t cp_status_after_write(int32_t writer_result) {
 	if (writer_result == CPW_APPLIED)

@@ -358,6 +358,49 @@ static void test_bg_afk() {
 	CHECK(!bg_afk_excluded(100, 1, false));  // no ratio rule
 }
 
+// V20-REAL char-server grant (src/common/need_marble_cp_grant.hpp)
+static void test_cp_grant() {
+	using namespace need_marble_cp;
+	CHECK(cp_status_after_write(CPW_PENDING) == CPS_UNCERTAIN);   // sent to the char-server: never DECIDED again by itself
+	CHECK(grant_args_ok(1, 1, 1, 1));
+	CHECK(grant_args_ok(1, 1, 1, GRANT_MAX));
+	CHECK(!grant_args_ok(1, 1, 1, GRANT_MAX + 1));
+	CHECK(!grant_args_ok(1, 1, 1, 0));
+	CHECK(!grant_args_ok(1, 1, 1, -500));
+	CHECK(!grant_args_ok(0, 1, 1, 500));
+	CHECK(!grant_args_ok(1, 0, 1, 500));
+	CHECK(!grant_args_ok(1, 1, 0, 500));
+	int64_t nb = -1;
+	CHECK(grant_new_balance(0, 500, &nb) == GR_APPLIED && nb == 500);    // no acc_reg_num row reads as 0
+	CHECK(grant_new_balance(1000, 3000, &nb) == GR_APPLIED && nb == 4000);
+	nb = -1;
+	CHECK(grant_new_balance(BALANCE_MAX - 499, 500, &nb) == GR_CAP && nb == -1);
+	CHECK(grant_new_balance(BALANCE_MAX - 500, 500, &nb) == GR_APPLIED && nb == BALANCE_MAX);
+	CHECK(grant_new_balance(-1, 500, &nb) == GR_CAP);                  // a negative stored balance is never repaired here
+	CHECK(grant_new_balance(0, 0, &nb) == GR_CAP);
+	CHECK(condsave_value(900, true, 500) == 1400);
+	CHECK(condsave_value(900, false, 500) == 900);
+	CHECK(condsave_value(0, true, 500) == 500);
+	CHECK(condsave_value(BALANCE_MAX - 10, true, 500) == BALANCE_MAX);
+	CHECK(cp_write_from_grant(GR_APPLIED) == CPW_APPLIED);
+	CHECK(cp_write_from_grant(GR_DISABLED) == CPW_NO_EFFECT);
+	CHECK(cp_write_from_grant(GR_BAD_ARG) == CPW_NO_EFFECT);
+	CHECK(cp_write_from_grant(GR_CAP) == CPW_NO_EFFECT);
+	CHECK(cp_write_from_grant(GR_ALREADY) == CPW_UNKNOWN);     // applied before, maybe by this payout: operator
+	CHECK(cp_write_from_grant(GR_CONFLICT) == CPW_UNKNOWN);
+	CHECK(cp_write_from_grant(GR_DB_ERROR) == CPW_UNKNOWN);
+	CHECK(cp_write_from_grant(200) == CPW_UNKNOWN);
+	CHECK(cp_reason_after_write(CPW_PENDING, false) == CPR_SENT);
+	CHECK(cp_reason_after_write(CPW_APPLIED, true) == CPR_APPLIED);
+	CHECK(cp_reason_after_write(CPW_NO_EFFECT, true) == CPR_NO_EFFECT);
+	CHECK(cp_reason_after_write(CPW_UNKNOWN, true) == CPR_CHAR_UNPROVEN);
+	CHECK(cp_reason_after_write(CPW_UNKNOWN, false) == CPR_UNKNOWN);
+	static_assert(PKT_GRANT_LEN == 2 + 4 + 4 + 8 + 8 + 4, "grant packet layout");
+	static_assert(PKT_CONDSAVE_LEN == 2 + 4 + 4 + 8 + 8 + 8, "conditional save packet layout");
+	static_assert(PKT_GRANT_ACK_LEN == 2 + 4 + 8 + 8 + 4 + 1 + 8, "grant answer packet layout");
+	static_assert(GRANT_MAX < CP_SANITY_MAX, "a grant never exceeds what the policy may decide");
+}
+
 static void test_laps() {
 	CHECK(lap_reached(32, 33) == 0);
 	CHECK(lap_reached(33, 33) == 1);
@@ -380,6 +423,7 @@ int main() {
 	test_hunt_resend();
 	test_bg_afk();
 	test_cp_apply();
+	test_cp_grant();
 	test_laps();
 	std::printf("need_marble logic: %d passed, %d failed\n", g_pass, g_fail);
 	return g_fail == 0 ? EXIT_SUCCESS : EXIT_FAILURE;

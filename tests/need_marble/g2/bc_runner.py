@@ -1,5 +1,6 @@
 """G2 scenario runner for the isolated stack only (login 26901 / char 26121 / map 25121, DB 127.0.0.1:3327).
-Never starts, stops or kills a process (bc_servers.ps1 does that) and writes only to <out>.
+Never starts, stops or kills a process itself: bc_servers.ps1 does that (V20-REAL phases call it, owned processes
+only) and the runner writes only to <out>.
 
 usage: python -u -I bc_runner.py --out <scratch>/mbqa_bc <cmd> [args]
 """
@@ -3389,7 +3390,8 @@ def v20_p2():
                 all(pf[int(k)][:4] == tuple(v[:4]) for k, v in st['payouts_after_rolls'].items()), f'{len(pf)} payouts'))
     inv = v20_inv(aid)
     res.append(('CP invariants at the end: 0 violations (one change per applied decision, balance = changes, audit chain)', inv == [], repr(inv[:4])))
-    cash = sql("SELECT COUNT(*) FROM acc_reg_num WHERE `key`='#CASHPOINTS'")[0][0]
+    # bc_synth_v20real.sql seeds #CASHPOINTS for its own accounts 2000943 / 2000945 (V20-REAL start balances): not counted here
+    cash = sql("SELECT COUNT(*) FROM acc_reg_num WHERE `key`='#CASHPOINTS' AND account_id NOT IN (2000943,2000945)")[0][0]
     cplog = sql('SELECT COUNT(*) FROM cashlog')[0][0]
     res.append(('CP-6 real #CASHPOINTS rows 0, cashlog rows 0, other account untouched', cash == '0' and cplog == '0' and mock_bal(bid) == 0 and payouts(bid) == {},
                 f'#CASHPOINTS {cash} cashlog {cplog}'))
@@ -3399,6 +3401,768 @@ def v20_p2():
     g2c_record('V20-P2', res)
     for x in (g, c):
         x.logout()
+
+
+# ---------------------------------------------------------------------------------------------------- V20-REAL
+# Real #CASHPOINTS of the isolated ragnarok_mbqa through the product char writer (NEED_MARBLE_CP_CHAR_WRITER=1 test build,
+# map-server started with -Cp char). Process control only through bc_servers.ps1, which touches owned processes only.
+ACC.update({'cpr': ('mbqa_cpr', 'user'), 'cps': ('mbqa_cps', 'user')})
+AID.update({'cpr': 2000943, 'cps': 2000944, 'cpt': 2000945})
+NAMES.update({('cpr', 0): 'MBQA_CPR1', ('cpr', 1): 'MBQA_CPR2', ('cps', 0): 'MBQA_CPS'})
+RC.update({'BUSY': -3, 'CP_SENT': 3})
+CP_TRANSITIONS_REAL = CP_TRANSITIONS | {(3, 3, 6), (3, 3, 7)}   # 6 sent to the char-server, 7 char answer not proven
+GR = {'APPLIED': 0, 'DISABLED': 1, 'BAD_ARG': 2, 'CAP': 3, 'ALREADY': 4, 'CONFLICT': 5, 'DB_ERROR': 6}
+CID = {'MBQA_CPR1': 150954, 'MBQA_CPR2': 150955, 'MBQA_CPS': 150956}
+REPO = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..')
+
+
+def servers(action):
+    """Owned isolated processes only (bc_servers.ps1 checks the executable path of every PID it touches)."""
+    import subprocess
+    ps = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'bc_servers.ps1')
+    # output through a file, never a pipe: the started servers inherit the handles and would keep a pipe open forever
+    path = os.path.join(OUT, 'servers_call.txt')
+    with open(path, 'w', encoding='utf-8') as f:
+        subprocess.run(['powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', ps, '-Out', OUT, '-Action', action,
+                        '-TestHooks', '-Cp', 'char'], stdout=f, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL, timeout=900)
+    out = open(path, encoding='utf-8', errors='replace').read().strip()
+    log(f'   servers {action}: {out[-300:]}')
+    return out
+
+
+def cash_db(aid):
+    r = sql(f"SELECT value FROM acc_reg_num WHERE account_id={aid} AND `key`='#CASHPOINTS' AND `index`=0")
+    return int(r[0][0]) if r else None
+
+
+def grants(aid):
+    """{payout_no: (req_id, amount, balance_before, balance_after)} from the char-server's idempotency table."""
+    if not sql("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='need_marble_cp_grant'")[0][0] == '1':
+        return {}
+    return {int(r[0]): tuple(int(x) for x in r[1:]) for r in
+            sql(f'SELECT payout_no,req_id,amount,balance_before,balance_after FROM need_marble_cp_grant WHERE account_id={aid}')}
+
+
+def engines():
+    return dict(sql("SELECT TABLE_NAME,ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() "
+                    "AND TABLE_NAME IN ('acc_reg_num','need_marble_cp_grant')"))
+
+
+def cashlog(cid):
+    return [(r[0], int(r[1])) for r in sql(f"SELECT type,amount FROM cashlog WHERE char_id={cid} AND cash_type='C' ORDER BY id")]
+
+
+def cpreal(g, mode):
+    return kv(harness(g, f'@mbqacpreal {mode}', needle='[MBQA] cpreal', wait=3)).get('r')
+
+
+def cpcash(g, name, delta=0, save=0):
+    return kv(harness(g, f'@mbqacpcash {name} {delta} {save}', needle='[MBQA] cpcash', wait=3)).get('cash')
+
+
+def cpinfl(g, name):
+    v = kv(harness(g, f'@mbqacpinfl {name}', needle='[MBQA] cpinfl', wait=3)).get('v')
+    return (v // 2, v % 2) if isinstance(v, int) and v >= 0 else (None, None)
+
+
+def cpraw(g, name, no, amount):
+    return cp_rc(harness(g, f'@mbqacpraw {name} {no} {amount}', needle='[MBQA] cpraw', wait=3))
+
+
+def cplast(g, no):
+    return kv(harness(g, f'@mbqacplast {no}', needle='[MBQA] cplast', wait=3)).get('r')
+
+
+def fault_char(mode):
+    sql(f'UPDATE mbqa_cp_fault SET mode={mode} WHERE id=1')
+
+
+def wait_status(aid, no, done, timeout=8):
+    end = time.time() + timeout
+    p = payouts(aid).get(no)
+    while time.time() < end:
+        p = payouts(aid).get(no)
+        if p and done(p[5]):
+            return p
+        time.sleep(0.3)
+    return p
+
+
+def wait_cash(aid, want, timeout=6):
+    end = time.time() + timeout
+    v = cash_db(aid)
+    while time.time() < end:
+        v = cash_db(aid)
+        if v == want:
+            return v
+        time.sleep(0.3)
+    return v
+
+
+def wait_online(cid, timeout=90):
+    end = time.time() + timeout
+    while time.time() < end:
+        r = sql(f'SELECT online FROM `char` WHERE char_id={cid}')
+        if r and r[0][0] == '1':
+            return True
+        time.sleep(1)
+    return False
+
+
+def map_char_link():
+    """True when the owned map-server PID holds an ESTABLISHED TCP connection to the isolated char port 26121."""
+    import subprocess
+    mpid = str(json.load(open(os.path.join(OUT, 'pids.json'))).get('map-server'))
+    out = subprocess.run(['netstat', '-ano', '-p', 'TCP'], capture_output=True, text=True).stdout
+    return any(l.split()[2] == '127.0.0.1:26121' and l.split()[3] == 'ESTABLISHED' and l.split()[4] == mpid
+               for l in out.splitlines() if len(l.split()) == 5)
+
+
+def startchar_linked(cid):
+    """startchar, then wait until the map-server is connected to the new char-server (the map-server blocks up to 10 s in
+    each reconnect attempt, so this can take a while; ShowStatus lines are not logged with console_silent).
+    Returns (servers output, linked)."""
+    out = servers('startchar')
+    end, linked = time.time() + 120, False
+    while time.time() < end and not linked:
+        linked = map_char_link()
+        time.sleep(1)
+    time.sleep(4)   # char-server login + map list of the reconnect
+    log(f'   char link: established {linked}, online flag {wait_online(cid, 5)}')
+    return out, linked
+
+
+def port_open(port):
+    import socket
+    try:
+        socket.create_connection(('127.0.0.1', port), 2).close()
+        return True
+    except OSError:
+        return False
+
+
+def audit_of(aid, no):
+    return [x[1:4] for x in cp_audit(aid) if x[0] == no]
+
+
+def snap(aid, g=None, name=None, label=''):
+    """(ledger, char idempotency rows, acc_reg_num, online cash, audit) of one account at one moment - kept as evidence."""
+    s = {'label': label, 'ledger': payouts(aid), 'grants': grants(aid), 'acc_reg_num': cash_db(aid), 'audit': cp_audit(aid)}
+    if g is not None and name:
+        s['online'] = cpcash(g, name)
+        s['inflight'] = cpinfl(g, name)
+    st = g2c_state('v20r')
+    st.setdefault('snaps', []).append(s)
+    g2c_state('v20r', st)
+    return s
+
+
+def real_inv(aid):
+    """Ledger vs the char-server's rows: APPLIED / MANUAL_APPLIED exactly one grant row of the same amount, DECIDED /
+    MANUAL_VOID none, UNCERTAIN at most one, no grant row without a decision, before + amount = after, audit chain."""
+    bad = []
+    pays, gr, last = payouts(aid), grants(aid), {}
+    for no, f, t, reason, _ in cp_audit(aid):
+        if (f, t, reason) not in CP_TRANSITIONS_REAL:
+            bad.append(('transition', no, f, t, reason))
+        if no in last and last[no] != f:
+            bad.append(('audit chain', no, last[no], f))
+        last[no] = t
+    for no, (_, _, _, amount, granted, status, _) in pays.items():
+        row = gr.get(no)
+        if status in (2, 4) and (row is None or row[1] != amount or granted != amount):
+            bad.append(('applied without its grant row', no, status, row))
+        if status in (1, 5) and (row is not None or granted != 0):
+            bad.append(('grant row without apply', no, status, row))
+        if status == 3 and granted != 0:
+            bad.append(('uncertain with granted', no, granted))
+        if last.get(no, 1) != status:
+            bad.append(('audit end', no, last.get(no), status))
+    for no, (_, amount, before, after) in gr.items():
+        if no not in pays:
+            bad.append(('grant row for no decision', no))
+        if after - before != amount:
+            bad.append(('grant arithmetic', no, before, amount, after))
+    return bad
+
+
+def expected_cash(st, aid):
+    """1000 at the start + every grant row of the account + every ordinary change the test made."""
+    return st['start_cash'] + sum(r[1] for r in grants(aid).values()) + sum(st['deltas'])
+
+
+def cmd_v20r(a):
+    """V20-REAL phases: p0 (before the migration), p1 (migration, restart, R3b R2 R6 R4a R7), p2 (R4b R4c map stops),
+    p3 (R5 char stops), p4 (R1 automatic payout, first grant without a row, final checks)."""
+    globals()['v20r_' + (a.rest[0] if a.rest else 'p0')]()
+
+
+def roll_backlog(c, aid, need_pair=True, min_decided=16, limit=70, ticket=930000):
+    pair, rolls = None, []
+    for i in range(limit):
+        w = wallet(aid)
+        if not w or w['dice'] < 1:
+            adjust(aid, dice=25, ticket=ticket + i)
+        before = set(payouts(aid))
+        r = one_roll(c, aid, i)
+        new = {k: v for k, v in payouts(aid).items() if k not in before}
+        rolls.append({'roll': r['roll'], 'die': r['die'], 'to': r['to'], 'event': r['event'], 'new_payouts': new})
+        tile = [k for k, v in new.items() if v[0] == 1]
+        lap = [k for k, v in new.items() if v[0] == 2]
+        if tile and lap and pair is None:
+            pair = (tile[0], lap[0], r['roll'])
+        if r['state'] != 0:
+            break
+        if (pair or not need_pair) and sum(1 for v in payouts(aid).values() if v[5] == 1) >= min_decided:
+            break
+    return pair, rolls
+
+
+def v20r_p0():
+    aid = AID['cpr']
+    st = {'start_cash': 1000, 'deltas': [], 'snaps': []}
+    g2c_state('v20r', st)
+    g = login('gm')
+    d4 = clock_to(g, '2026-12-04 12:30:00')   # V20-MOCK p2 left policy key 5 = 0 from 20261204
+    cpreal(g, 0)
+    c = login('cpr')
+    res = []
+    s0 = snap(aid, g, 'MBQA_CPR1', 'p0 start')
+    res.append(('R0 start: #CASHPOINTS 1000 in acc_reg_num and in the online login, acc_reg_num MyISAM, no need_marble_cp_grant',
+                s0['acc_reg_num'] == 1000 and s0['online'] == 1000 and engines().get('acc_reg_num') == 'MyISAM' and
+                'need_marble_cp_grant' not in engines(), f"db {s0['acc_reg_num']} online {s0['online']} engines {engines()}"))
+    enter_board(c)
+    pair, rolls = roll_backlog(c, aid)
+    p0 = payouts(aid)
+    st = g2c_state('v20r')
+    st.update({'day4': d4, 'rolls': rolls, 'pair': pair, 'payouts_after_rolls': p0})
+    g2c_state('v20r', st)
+    s1 = snap(aid, g, 'MBQA_CPR1', 'p0 after rolls (key 5 = 0)')
+    res.append(('R3a rolls with policy key 5 = 0: every CP decision DECIDED, granted 0, no audit, balance unchanged (DB 1000, online 1000)',
+                pair is not None and len(p0) >= 16 and all(v[5] == 1 and v[4] == 0 for v in p0.values()) and cp_audit(aid) == [] and
+                s1['acc_reg_num'] == 1000 and s1['online'] == 1000,
+                f'{len(rolls)} rolls, {len(p0)} payouts, pair {pair}, db {s1["acc_reg_num"]} online {s1["online"]}'))
+    first = min(p0)
+    r_off = cpapply(g, 'MBQA_CPR1', first)
+    res.append(('R3a explicit apply with key 5 = 0: DISABLED (-1), row DECIDED, no audit, no grant table touched',
+                r_off == RC['DISABLED'] and payouts(aid)[first][5] == 1 and cp_audit(aid) == [] and cash_db(aid) == 1000, f'rc {r_off}'))
+    sql("INSERT IGNORE INTO need_marble_policy (policy_key,effective_day,value,changed_by,changed_at) VALUES (5,20261205,1,'v20_real_on',NOW())")
+    cpreal(g, 8)   # explicit applies only from here: the automatic payout is checked last (p4)
+    d5 = clock_to(g, '2026-12-05 12:00:00')
+    r_nr = cpapply(g, 'MBQA_CPR1', first)
+    p = wait_status(aid, first, lambda s: s != 3)
+    last = cplast(g, first)
+    s2 = snap(aid, g, 'MBQA_CPR1', 'p0 R3c char tables not ready')
+    res.append(('R3c key 5 = 1 but the char DB is not ready (acc_reg_num MyISAM, no need_marble_cp_grant): request sent (3), '
+                'char-server answers DISABLED (1), row back to DECIDED, balance unchanged',
+                r_nr == RC['CP_SENT'] and p[5] == 1 and last == GR['DISABLED'] and s2['acc_reg_num'] == 1000 and s2['online'] == 1000 and
+                audit_of(aid, first) == [(1, 3, 1), (3, 3, 6), (3, 1, 3)] and s2['inflight'] == (0, 0),
+                f'rc {r_nr}; row {p}; char result {last}; audit {audit_of(aid, first)}; inflight {s2["inflight"]}'))
+    st = g2c_state('v20r')
+    st.update({'day5': d5, 'first': first})
+    g2c_state('v20r', st)
+    g2c_record('V20R-P0', res)
+    c.logout()
+    wait_offline(aid)
+    g.logout()
+
+
+def v20r_p1():
+    aid = AID['cpr']
+    st = g2c_state('v20r')
+    res = []
+    mig = open(os.path.join(REPO, 'sql-files', 'need_marble_v20_real_cp_grant.sql'), encoding='utf-8').read()
+    rc, o, e = bcdb.run(OUT, 'root', 'USE `ragnarok_mbqa`;\n' + mig)   # ALTER needs the isolated instance's root
+    eng = engines()
+    res.append(('migration applied to ragnarok_mbqa only: acc_reg_num InnoDB, need_marble_cp_grant InnoDB, #CASHPOINTS rows kept',
+                rc == 0 and eng == {'acc_reg_num': 'InnoDB', 'need_marble_cp_grant': 'InnoDB'} and cash_db(aid) == 1000 and cash_db(AID['cpt']) == 777,
+                f'rc {rc} {e.strip()[-200:]}; engines {eng}'))
+    st['stop1'] = servers('stopall')
+    st['start1'] = servers('start')
+    g2c_state('v20r', st)
+    clog = open(sorted(f for f in (os.path.join(OUT, 'logs', x) for x in os.listdir(os.path.join(OUT, 'logs')))
+                       if os.path.basename(f).startswith('char-server') and f.endswith('.out'))[-1], encoding='utf-8', errors='replace').read()
+    res.append(('char-server after restart: "CP grant writer ready" (switch on, both tables InnoDB)', 'CP grant writer ready' in clog,
+                [l for l in clog.splitlines() if 'need_marble' in l][-2:]))
+    g = login('gm')
+    clock_to(g, '2026-12-05 12:10:00')
+    cpreal(g, 8)
+    c = login('cpr')
+    p0 = payouts(aid)
+    tile, lap, roll = st['pair']
+    # rows no earlier phase touched (p0 used st['first'] for R3a / R3c): every role starts from an empty audit trail
+    free = [k for k, v in sorted(p0.items()) if v[5] == 1 and k not in (tile, lap, st.get('first'))]
+    B3, X, H1, H2, H3, Z = free[:6]
+    st['roles'] = {'tile': tile, 'lap': lap, 'R3b': B3, 'X_other_char': X, 'H1_hold': H1, 'H2_logout': H2, 'H3_control': H3, 'Z_lost_answer': Z,
+                   'rest': free[6:]}
+    g2c_state('v20r', st)
+    # R3b no char-server connection
+    st['killchar_r3b'] = servers('killchar')
+    time.sleep(2)
+    end = time.time() + 30
+    while time.time() < end and map_char_link():   # the map-server must have noticed the lost connection
+        time.sleep(0.5)
+    lost = not map_char_link()
+    # the map-server blocks up to 10 s per reconnect attempt: the command is answered between two attempts, char still down
+    # back-to-back 10 s reconnect attempts also hold the reply packet: wait long enough for one flush
+    r_b1 = cpapply(g, 'MBQA_CPR1', B3, wait=75)
+    pb1 = payouts(aid)[B3]
+    st['r3b_link_lost_before_apply'] = lost
+    st['r3b_char_down_after_apply'] = not port_open(26121)
+    st['startchar_r3b'], back = startchar_linked(CID['MBQA_CPR1'])
+    g2c_state('v20r', st)
+    res.append(('R3b char-server down: writer sends nothing, REJECTED (-20), row back to DECIDED, no grant row, balance unchanged',
+                st['r3b_link_lost_before_apply'] and st['r3b_char_down_after_apply'] and
+                r_b1 == RC['REJECTED'] and pb1[5] == 1 and grants(aid) == {} and cash_db(aid) == 1000 and
+                audit_of(aid, B3) == [(1, 3, 1), (3, 1, 3)],
+                f'link lost {st["r3b_link_lost_before_apply"]}, char down {st["r3b_char_down_after_apply"]}; rc {r_b1}; row {pb1}; audit {audit_of(aid, B3)}'))
+    r_b2 = cpapply(g, 'MBQA_CPR1', B3)
+    pb2 = wait_status(aid, B3, lambda s: s != 3)
+    amt = p0[B3][3]
+    s_b = snap(aid, g, 'MBQA_CPR1', 'p1 R3b retry')
+    res.append(('R3b retry after the char-server is back (confirmed no effect before): APPLIED once, DB and online +amount',
+                back and r_b2 == RC['CP_SENT'] and pb2[5] == 2 and list(s_b['grants']) == [B3] and s_b['grants'][B3][1:] == (amt, 1000, 1000 + amt) and
+                s_b['acc_reg_num'] == 1000 + amt and s_b['online'] == 1000 + amt and s_b['inflight'] == (0, 0),
+                f'online again {back}; rc {r_b2}; row {pb2}; grant {s_b["grants"].get(B3)}; db {s_b["acc_reg_num"]} online {s_b["online"]}'))
+    # R2 same roll: tile CP + 33 step bonus, each its own key
+    base = cash_db(aid)
+    r_t = cpapply(g, 'MBQA_CPR1', tile)
+    pt = wait_status(aid, tile, lambda s: s != 3)
+    r_l = cpapply(g, 'MBQA_CPR1', lap)
+    pl = wait_status(aid, lap, lambda s: s != 3)
+    s_2 = snap(aid, g, 'MBQA_CPR1', 'p1 R2 tile + lap')
+    t_amt, l_amt = p0[tile][3], p0[lap][3]
+    res.append(('R2 same roll: tile CP and 33 step bonus each APPLIED once under its own key, DB = online = before + both',
+                r_t == RC['CP_SENT'] and r_l == RC['CP_SENT'] and pt[5] == 2 and pl[5] == 2 and p0[lap][0] == 2 and l_amt == 10000 and
+                p0[tile][1] == roll and s_2['grants'][tile][1] == t_amt and s_2['grants'][lap][1] == l_amt and
+                s_2['acc_reg_num'] == base + t_amt + l_amt and s_2['online'] == base + t_amt + l_amt,
+                f'tile {pt} lap {pl}; db {base} -> {s_2["acc_reg_num"]} online {s_2["online"]}'))
+    # same key again: the ledger refuses, the char-server refuses (same amount ALREADY, other amount CONFLICT)
+    nb, gb = cash_db(aid), grants(aid)
+    r_again = cpapply(g, 'MBQA_CPR1', tile)
+    r_raw1 = cpraw(g, 'MBQA_CPR1', tile, t_amt)
+    time.sleep(1.5)
+    l1 = cplast(g, tile)
+    r_raw2 = cpraw(g, 'MBQA_CPR1', tile, t_amt + 1)
+    time.sleep(1.5)
+    l2 = cplast(g, tile)
+    res.append(('R2 same key again: ledger ALREADY (-4); a second char request with the same key and amount -> ALREADY, '
+                'other amount -> CONFLICT; balance and grant rows unchanged, ledger unchanged',
+                r_again == RC['ALREADY'] and r_raw1 == 0 and r_raw2 == 0 and l1 == GR['ALREADY'] and l2 == GR['CONFLICT'] and
+                cash_db(aid) == nb and grants(aid) == gb and payouts(aid)[tile][5] == 2 and cpcash(g, 'MBQA_CPR1') == nb,
+                f'ledger rc {r_again}; char {l1}/{l2}; db {nb} -> {cash_db(aid)}'))
+    # R2 other character of the account
+    c.logout()
+    wait_offline(aid)
+    c2 = login('cpr', 1)
+    m2 = cpcash(g, 'MBQA_CPR2')
+    r_x = cpapply(g, 'MBQA_CPR2', X)
+    px = wait_status(aid, X, lambda s: s != 3)
+    r_t2 = cpapply(g, 'MBQA_CPR2', tile)
+    s_x = snap(aid, g, 'MBQA_CPR2', 'p1 R2 other character')
+    res.append(('R2 other character (MBQA_CPR2): loads the granted balance, its own payout APPLIED once, tile again ALREADY',
+                m2 == nb and r_x == RC['CP_SENT'] and px[5] == 2 and r_t2 == RC['ALREADY'] and
+                s_x['acc_reg_num'] == nb + p0[X][3] and s_x['online'] == nb + p0[X][3] and s_x['grants'][X][1] == p0[X][3],
+                f'login cash {m2}; rc {r_x}/{r_t2}; db {s_x["acc_reg_num"]} online {s_x["online"]}'))
+    # R6 answer held: ordinary spend / gain and saves while the grant is unanswered
+    B = cash_db(aid)
+    h1 = p0[H1][3]
+    cpreal(g, 1)
+    r_h1 = cpapply(g, 'MBQA_CPR2', H1)
+    db_h1 = wait_cash(aid, B + h1)
+    infl = cpinfl(g, 'MBQA_CPR2')
+    mem_h1 = cpcash(g, 'MBQA_CPR2')
+    r_busy = cpresolve(g, aid, H1, 4, 7101)
+    m_spend = cpcash(g, 'MBQA_CPR2', -100, 1)
+    db_spend = wait_cash(aid, B - 100 + h1)
+    m_gain = cpcash(g, 'MBQA_CPR2', 50, 1)
+    db_gain = wait_cash(aid, B - 50 + h1)
+    st = g2c_state('v20r')
+    st['deltas'] += [-100, 50]
+    g2c_state('v20r', st)
+    n_rel = cpreal(g, 2)
+    ph1 = wait_status(aid, H1, lambda s: s != 3)
+    mem_rel = cpcash(g, 'MBQA_CPR2')
+    cpcash(g, 'MBQA_CPR2', 0, 1)
+    time.sleep(1)
+    s_h = snap(aid, g, 'MBQA_CPR2', 'p1 R6 hold')
+    res.append(('R6 grant committed, answer held: char DB has it at once (B + h1), the online login not yet, its saves are conditional',
+                r_h1 == RC['CP_SENT'] and db_h1 == B + h1 and mem_h1 == B and infl == (H1, 1),
+                f'rc {r_h1}; db {B} -> {db_h1}; online {mem_h1}; inflight {infl}'))
+    res.append(('R7 operator resolve while the answer is pending: BUSY (-3), row stays UNCERTAIN', r_busy == RC['BUSY'] and
+                payouts(aid)[H1][5] in (2, 3), f'rc {r_busy}'))
+    res.append(('R6 ordinary spend 100 + save, gain 50 + save during the grant: no #CASHPOINTS save undoes the grant '
+                '(DB B-100+h1, then B-50+h1)', m_spend == B - 100 and db_spend == B - 100 + h1 and m_gain == B - 50 and db_gain == B - 50 + h1,
+                f'online {m_spend}/{m_gain}; db {db_spend}/{db_gain} (want {B - 100 + h1}/{B - 50 + h1})'))
+    res.append(('R6 held answer delivered: APPLIED, the online login gets h1 once (B-50+h1), plain save afterwards keeps it',
+                n_rel == 1 and ph1[5] == 2 and mem_rel == B - 50 + h1 and s_h['acc_reg_num'] == B - 50 + h1 and s_h['online'] == B - 50 + h1 and
+                s_h['inflight'] == (0, 0) and len([1 for x in s_h['grants'] if x == H1]) == 1,
+                f'delivered {n_rel}; row {ph1}; online {mem_rel}; db {s_h["acc_reg_num"]}'))
+    cl = cashlog(CID['MBQA_CPR2'])
+    st = g2c_state('v20r')
+    st['cashlog_cpr2_after_h1'] = cl
+    g2c_state('v20r', st)
+    # R6 logout while the answer is held, then the other character
+    M = cash_db(aid)
+    h2 = p0[H2][3]
+    cpreal(g, 1)
+    r_h2 = cpapply(g, 'MBQA_CPR2', H2)
+    db_h2 = wait_cash(aid, M + h2)
+    m_h2 = cpcash(g, 'MBQA_CPR2', -30, 0)   # unsaved change: only the logout save carries it
+    st = g2c_state('v20r')
+    st['deltas'] += [-30]
+    g2c_state('v20r', st)
+    c2.logout()
+    off = wait_offline(aid)
+    db_out = wait_cash(aid, M - 30 + h2)
+    n_rel2 = cpreal(g, 2)
+    ph2 = wait_status(aid, H2, lambda s: s != 3)
+    c = login('cpr', 0)
+    s_o = snap(aid, g, 'MBQA_CPR1', 'p1 R6 logout + character switch')
+    res.append(('R6 logout during the grant (unsaved -30 carried by the logout save) + switch to MBQA_CPR1: DB M-30+h2, '
+                'held answer then APPLIED with no login to touch, MBQA_CPR1 loads M-30+h2',
+                r_h2 == RC['CP_SENT'] and db_h2 == M + h2 and m_h2 == M - 30 and off and db_out == M - 30 + h2 and n_rel2 == 1 and ph2[5] == 2 and
+                s_o['online'] == M - 30 + h2 and s_o['acc_reg_num'] == M - 30 + h2,
+                f'rc {r_h2}; db {M} -> {db_h2} -> {db_out}; delivered {n_rel2}; row {ph2}; MBQA_CPR1 {s_o["online"]}'))
+    # R6 negative control: the same race with plain saves (fence off) loses the grant in the DB
+    N = cash_db(aid)
+    h3 = p0[H3][3]
+    cpreal(g, 1)
+    cpreal(g, 6)
+    r_h3 = cpapply(g, 'MBQA_CPR1', H3)
+    db_h3 = wait_cash(aid, N + h3)
+    m_c = cpcash(g, 'MBQA_CPR1', -10, 1)
+    db_c = wait_cash(aid, N - 10, timeout=4)
+    st = g2c_state('v20r')
+    st['deltas'] += [-10]
+    g2c_state('v20r', st)
+    cpreal(g, 7)
+    n_rel3 = cpreal(g, 2)
+    ph3 = wait_status(aid, H3, lambda s: s != 3)
+    cpcash(g, 'MBQA_CPR1', 0, 1)
+    db_fix = wait_cash(aid, N - 10 + h3)
+    s_c = snap(aid, g, 'MBQA_CPR1', 'p1 R6 negative control')
+    st = g2c_state('v20r')
+    st['control'] = {'N': N, 'h3': h3, 'db_after_grant': db_h3, 'db_after_plain_save': db_c, 'db_after_answer': db_fix}
+    g2c_state('v20r', st)
+    res.append(('R6 negative control (test hook: fence off): a plain #CASHPOINTS save during the grant overwrites it in the DB '
+                '(N+h3 -> N-10) - the race the fence closes is real',
+                r_h3 == RC['CP_SENT'] and db_h3 == N + h3 and m_c == N - 10 and db_c == N - 10,
+                f'db {N} -> {db_h3} -> {db_c} (grant {h3} gone from the DB)'))
+    res.append(('R6 negative control end state: fence back on, answer delivered, the login re-saves N-10+h3 (consistent again only '
+                'because the map-server stayed up)', n_rel3 == 1 and ph3[5] == 2 and db_fix == N - 10 + h3 and s_c['online'] == N - 10 + h3,
+                f'row {ph3}; db {db_fix}; online {s_c["online"]}'))
+    # R4a the char-server commits but never answers
+    P = cash_db(aid)
+    z = p0[Z][3]
+    fault_char(3)
+    t_z = time.time()
+    r_z = cpapply(g, 'MBQA_CPR1', Z)
+    time.sleep(2)
+    pz = payouts(aid)[Z]
+    infl_z = cpinfl(g, 'MBQA_CPR1')
+    s_z = snap(aid, g, 'MBQA_CPR1', 'p1 R4a answer lost after commit')
+    res.append(('R4a committed, answer lost: ledger UNCERTAIN (no false APPLIED), one grant row, DB P+z, online P, saves conditional',
+                r_z == RC['CP_SENT'] and pz[5] == 3 and pz[4] == 0 and Z in s_z['grants'] and s_z['acc_reg_num'] == P + z and
+                s_z['online'] == P and infl_z == (Z, 1), f'rc {r_z}; row {pz}; grant {s_z["grants"].get(Z)}; db {s_z["acc_reg_num"]} online {s_z["online"]}'))
+    m_z = cpcash(g, 'MBQA_CPR1', -20, 1)
+    db_z = wait_cash(aid, P - 20 + z)
+    st = g2c_state('v20r')
+    st['deltas'] += [-20]
+    g2c_state('v20r', st)
+    r_z2 = cpapply(g, 'MBQA_CPR1', Z)
+    gz = grants(aid)
+    res.append(('R4a spend 20 + save with the answer lost: DB P-20+z (grant kept); asked again by the same login: BUSY (-3, one '
+                'request per login), no second request, one grant row',
+                m_z == P - 20 and db_z == P - 20 + z and r_z2 == RC['BUSY'] and list(gz).count(Z) == 1 and gz[Z] == s_z['grants'][Z],
+                f'online {m_z}; db {db_z}; rc {r_z2}'))
+    c.logout()
+    wait_offline(aid)
+    c = login('cpr', 0)
+    m_rl = cpcash(g, 'MBQA_CPR1')
+    r_z4 = cpapply(g, 'MBQA_CPR1', Z)
+    res.append(('R4a new login asks for the UNCERTAIN row: UNCERTAIN (-22), never re-sent, still one grant row',
+                r_z4 == RC['UNCERTAIN'] and grants(aid) == gz, f'rc {r_z4}'))
+    r_wait = cpresolve(g, aid, Z, 4, 7200)   # the request is younger than CP_ANSWER_WAIT_SEC: the answer may still come
+    time.sleep(max(0.0, 63 - (time.time() - t_z)))
+    r_v = cpresolve(g, aid, Z, 5, 7201)
+    r_a = cpresolve(g, aid, Z, 4, 7202)
+    r_z3 = cpapply(g, 'MBQA_CPR1', Z)
+    s_r = snap(aid, g, 'MBQA_CPR1', 'p1 R7 after reconciliation')
+    res.append(('R4a relog: the login loads P-20+z from the char DB', m_rl == P - 20 + z == cash_db(aid), f'online {m_rl} db {cash_db(aid)}'))
+    res.append(('R7 answer silent for less than 60 s: BUSY (-3); after 60 s the operator may reconcile', r_wait == RC['BUSY'], f'rc {r_wait}'))
+    res.append(('R7 grant row found: MANUAL_VOID refused (CONFLICT -21), MANUAL_APPLIED OK with the ticket, apply again ALREADY, no new grant row',
+                r_v == RC['CONFLICT'] and r_a == RC['OK'] and r_z3 == RC['ALREADY'] and s_r['ledger'][Z][5] == 4 and s_r['ledger'][Z][6] == 7202 and
+                s_r['grants'] == gz and audit_of(aid, Z)[-1] == (3, 4, 5), f'rc {r_v}/{r_a}/{r_z3}; row {s_r["ledger"][Z]}'))
+    st = g2c_state('v20r')
+    inv = real_inv(aid)
+    exp = expected_cash(st, aid)
+    res.append(('p1 invariants: ledger vs char rows 0 violations; DB = online = 1000 + grant rows + ordinary changes',
+                inv == [] and cash_db(aid) == exp and cpcash(g, 'MBQA_CPR1') == exp, f'inv {inv[:3]}; db {cash_db(aid)} expected {exp}'))
+    g2c_record('V20R-P1', res)
+    c.logout()
+    wait_offline(aid)
+    g.logout()
+
+
+def v20r_p2():
+    aid = AID['cpr']
+    st = g2c_state('v20r')
+    rest = st['roles']['rest']
+    M1, M2 = rest[0], rest[1]
+    st['roles'].update({'M1_map_stop_after_send': M1, 'M2_map_stop_before_send': M2})
+    g2c_state('v20r', st)
+    p0 = payouts(aid)
+    res = []
+    g = login('gm')
+    clock_to(g, '2026-12-05 12:20:00')
+    cpreal(g, 8)
+    c = login('cpr')
+    P = cash_db(aid)
+    cpreal(g, 4)
+    r_m1 = cpapply(g, 'MBQA_CPR1', M1, wait=4)
+    time.sleep(3)
+    alive = map_alive()
+    pm1, gm1 = payouts(aid)[M1], grants(aid).get(M1)
+    db_m1 = cash_db(aid)
+    st = g2c_state('v20r')
+    st['m1'] = {'reply': r_m1, 'alive': alive, 'row': pm1, 'grant': gm1, 'db': db_m1}
+    st['startmap_m1'] = servers('startmap')
+    g2c_state('v20r', st)
+    m1 = p0[M1][3]
+    res.append(('R4b map-server stopped right after the grant request left: no reply, ledger UNCERTAIN, char applied it 0 or 1 time '
+                'and the row says which', r_m1 is None and not alive and pm1[5] == 3 and
+                ((gm1 is None and db_m1 == P) or (gm1 is not None and gm1[1] == m1 and db_m1 == P + m1)),
+                f'reply {r_m1}; alive {alive}; row {pm1}; grant {gm1}; db {P} -> {db_m1}'))
+    g = login('gm')
+    clock_to(g, '2026-12-05 12:25:00')
+    cpreal(g, 8)
+    c = login('cpr')
+    m_after = cpcash(g, 'MBQA_CPR1')
+    applied = gm1 is not None
+    r_wrong = cpresolve(g, aid, M1, 5 if applied else 4, 7301)
+    r_right = cpresolve(g, aid, M1, 4 if applied else 5, 7302)
+    res.append(('R4b after the restart: relogged login = char DB, UNCERTAIN was not retried; operator: the wrong side refused (CONFLICT), '
+                'the side the grant row proves OK', m_after == cash_db(aid) == db_m1 and r_wrong == RC['CONFLICT'] and r_right == RC['OK'] and
+                payouts(aid)[M1][5] == (4 if applied else 5) and grants(aid).get(M1) == gm1,
+                f'online {m_after}; applied {applied}; rc {r_wrong}/{r_right}'))
+    Q = cash_db(aid)
+    cpreal(g, 5)
+    r_m2 = cpapply(g, 'MBQA_CPR1', M2, wait=4)
+    time.sleep(3)
+    alive2 = map_alive()
+    pm2, gm2 = payouts(aid)[M2], grants(aid).get(M2)
+    st = g2c_state('v20r')
+    st['m2'] = {'reply': r_m2, 'alive': alive2, 'row': pm2, 'grant': gm2, 'db': cash_db(aid)}
+    st['startmap_m2'] = servers('startmap')
+    g2c_state('v20r', st)
+    res.append(('R4c map-server stopped before the request left: no reply, UNCERTAIN, no grant row, balance unchanged',
+                r_m2 is None and not alive2 and pm2[5] == 3 and gm2 is None and cash_db(aid) == Q, f'reply {r_m2}; row {pm2}; grant {gm2}'))
+    g = login('gm')
+    clock_to(g, '2026-12-05 12:30:00')
+    cpreal(g, 8)
+    c = login('cpr')
+    m_after2 = cpcash(g, 'MBQA_CPR1')
+    r_w2 = cpresolve(g, aid, M2, 4, 7401)
+    r_r2 = cpresolve(g, aid, M2, 5, 7402)
+    r_m2b = cpapply(g, 'MBQA_CPR1', M2)
+    s = snap(aid, g, 'MBQA_CPR1', 'p2 end')
+    res.append(('R4c operator: MANUAL_APPLIED refused without a grant row (CONFLICT), MANUAL_VOID OK, apply again BAD_STATE (-10), never re-sent',
+                m_after2 == Q and r_w2 == RC['CONFLICT'] and r_r2 == RC['OK'] and r_m2b == RC['BAD_STATE'] and s['ledger'][M2][5] == 5 and
+                M2 not in s['grants'], f'online {m_after2}; rc {r_w2}/{r_r2}/{r_m2b}'))
+    inv = real_inv(aid)
+    exp = expected_cash(g2c_state('v20r'), aid)
+    res.append(('p2 invariants: 0 violations; DB = online = 1000 + grant rows + ordinary changes', inv == [] and s['acc_reg_num'] == exp and s['online'] == exp,
+                f'inv {inv[:3]}; db {s["acc_reg_num"]} expected {exp}'))
+    g2c_record('V20R-P2', res)
+    c.logout()
+    wait_offline(aid)
+    g.logout()
+
+
+def v20r_p3():
+    aid = AID['cpr']
+    st = g2c_state('v20r')
+    rest = st['roles']['rest']
+    C1, C2 = rest[2], rest[3]
+    st['roles'].update({'C1_char_stop_before_commit': C1, 'C2_char_stop_after_commit': C2})
+    g2c_state('v20r', st)
+    p0 = payouts(aid)
+    res = []
+    g = login('gm')
+    clock_to(g, '2026-12-05 12:40:00')
+    cpreal(g, 8)
+    c = login('cpr')
+    P = cash_db(aid)
+    fault_char(1)
+    r_c1 = cpapply(g, 'MBQA_CPR1', C1)
+    time.sleep(3)
+    up = port_open(26121)
+    pc1, gc1, db_c1 = payouts(aid)[C1], grants(aid).get(C1), cash_db(aid)
+    st = g2c_state('v20r')
+    st['c1'] = {'reply': r_c1, 'char_up': up, 'row': pc1, 'grant': gc1, 'db': db_c1}
+    st['startchar_c1'], back = startchar_linked(CID['MBQA_CPR1'])
+    g2c_state('v20r', st)
+    m_c1 = cpcash(g, 'MBQA_CPR1')
+    infl1 = cpinfl(g, 'MBQA_CPR1')
+    res.append(('R5a char-server stopped after both writes, before COMMIT: request sent (3), ledger UNCERTAIN, InnoDB rolled back '
+                '(no grant row, DB unchanged), online unchanged, saves still conditional', r_c1 == RC['CP_SENT'] and not up and pc1[5] == 3 and
+                gc1 is None and db_c1 == P and back and m_c1 == P and infl1 == (C1, 1),
+                f'rc {r_c1}; char up {up}; row {pc1}; grant {gc1}; db {db_c1}; online {m_c1}; inflight {infl1}'))
+    m5 = cpcash(g, 'MBQA_CPR1', -5, 1)
+    db5 = wait_cash(aid, P - 5)
+    st = g2c_state('v20r')
+    st['deltas'] += [-5]
+    g2c_state('v20r', st)
+    r_c1v = cpresolve(g, aid, C1, 5, 7501)
+    res.append(('R5a spend 5 + conditional save after the restart: DB P-5 (nothing added: no grant row); operator MANUAL_VOID OK '
+                '(answers of the lost connection are not awaited)', m5 == P - 5 and db5 == P - 5 and r_c1v == RC['OK'] and payouts(aid)[C1][5] == 5,
+                f'online {m5}; db {db5}; rc {r_c1v}'))
+    c.logout()
+    wait_offline(aid)
+    c = login('cpr', 0)
+    Q = cash_db(aid)
+    c2a = p0[C2][3]
+    fault_char(2)
+    r_c2 = cpapply(g, 'MBQA_CPR1', C2)
+    time.sleep(3)
+    up2 = port_open(26121)
+    pc2, gc2, db_c2 = payouts(aid)[C2], grants(aid).get(C2), cash_db(aid)
+    st = g2c_state('v20r')
+    st['c2'] = {'reply': r_c2, 'char_up': up2, 'row': pc2, 'grant': gc2, 'db': db_c2}
+    st['startchar_c2'], back2 = startchar_linked(CID['MBQA_CPR1'])
+    g2c_state('v20r', st)
+    m_c2 = cpcash(g, 'MBQA_CPR1')
+    res.append(('R5b char-server stopped after COMMIT, before the answer: ledger UNCERTAIN, one grant row, DB Q+amount, online still Q',
+                r_c2 == RC['CP_SENT'] and not up2 and pc2[5] == 3 and gc2 is not None and gc2[1] == c2a and db_c2 == Q + c2a and back2 and m_c2 == Q,
+                f'rc {r_c2}; row {pc2}; grant {gc2}; db {db_c2}; online {m_c2}'))
+    m6 = cpcash(g, 'MBQA_CPR1', -5, 1)
+    db6 = wait_cash(aid, Q - 5 + c2a)
+    st = g2c_state('v20r')
+    st['deltas'] += [-5]
+    g2c_state('v20r', st)
+    c.logout()
+    wait_offline(aid)
+    c = login('cpr', 0)
+    m_rl = cpcash(g, 'MBQA_CPR1')
+    r_c2v = cpresolve(g, aid, C2, 5, 7601)
+    r_c2a = cpresolve(g, aid, C2, 4, 7602)
+    s = snap(aid, g, 'MBQA_CPR1', 'p3 end')
+    res.append(('R5b spend 5 + conditional save: DB Q-5+amount (grant kept, not doubled); relog loads it; operator VOID refused, MANUAL_APPLIED OK',
+                m6 == Q - 5 and db6 == Q - 5 + c2a and m_rl == Q - 5 + c2a and r_c2v == RC['CONFLICT'] and r_c2a == RC['OK'] and
+                s['ledger'][C2][5] == 4 and list(s['grants']).count(C2) == 1, f'online {m6}; db {db6}; relog {m_rl}; rc {r_c2v}/{r_c2a}'))
+    inv = real_inv(aid)
+    exp = expected_cash(g2c_state('v20r'), aid)
+    res.append(('p3 invariants: 0 violations; DB = online = 1000 + grant rows + ordinary changes', inv == [] and s['acc_reg_num'] == exp and s['online'] == exp,
+                f'inv {inv[:3]}; db {s["acc_reg_num"]} expected {exp}'))
+    g2c_record('V20R-P3', res)
+    c.logout()
+    wait_offline(aid)
+    g.logout()
+
+
+def v20r_p4():
+    aid, sid, tid = AID['cpr'], AID['cps'], AID['cpt']
+    st = g2c_state('v20r')
+    res = []
+    g = login('gm')
+    clock_to(g, '2026-12-05 12:50:00')
+    cpreal(g, 9)   # automatic payout on (the product default of the char writer)
+    c = login('cpr')
+    before = payouts(aid)
+    waiting = sorted(k for k, v in before.items() if v[5] == 1)
+    enter_board(c)
+    marble(c, [])   # opening the board pays rows decided earlier, one request after the other
+    end = time.time() + 30
+    while time.time() < end and any(v[5] in (1, 3) for k, v in payouts(aid).items() if k in waiting):
+        time.sleep(0.5)
+    pw = payouts(aid)
+    res.append(('R1 board view with key 5 = 1: every row decided earlier is paid automatically, each once (APPLIED, one grant row)',
+                waiting and all(pw[k][5] == 2 for k in waiting) and all(k in grants(aid) for k in waiting),
+                f'{len(waiting)} rows {[pw[k][5] for k in waiting]}'))
+    # R1 one roll with a tile CP, paid by itself
+    tile_paid = None
+    for i in range(30):
+        w = wallet(aid)
+        if not w or w['dice'] < 1:
+            adjust(aid, dice=10, ticket=940000 + i)
+        b0 = set(payouts(aid))
+        db0, m0 = cash_db(aid), cpcash(g, 'MBQA_CPR1')
+        r = one_roll(c, aid, 0)
+        new = {k: v for k, v in payouts(aid).items() if k not in b0}
+        if any(v[0] == 1 for v in new.values()):
+            end = time.time() + 10
+            while time.time() < end and any(payouts(aid)[k][5] != 2 for k in new):
+                time.sleep(0.3)
+            tile_paid = {'roll': r['roll'], 'new': new, 'db_before': db0, 'online_before': m0, 'db_after': cash_db(aid),
+                         'online_after': cpcash(g, 'MBQA_CPR1'), 'rows': {k: payouts(aid)[k] for k in new}}
+            break
+    st = g2c_state('v20r')
+    st['r1_roll'] = tile_paid
+    g2c_state('v20r', st)
+    if tile_paid:
+        add = sum(v[3] for v in tile_paid['new'].values())
+        res.append(('R1 a roll that decides tile CP: paid by itself right after the arrival, DB and online +amount exactly once, '
+                    'audit 1->3 (claim), 3->3 (sent), 3->2 (applied)',
+                    all(v[5] == 2 for v in tile_paid['rows'].values()) and tile_paid['db_after'] == tile_paid['db_before'] + add and
+                    tile_paid['online_after'] == tile_paid['online_before'] + add and
+                    all(audit_of(aid, k) == [(1, 3, 1), (3, 3, 6), (3, 2, 2)] for k in tile_paid['new']),
+                    f'roll {tile_paid["roll"]}; +{add}; db {tile_paid["db_before"]} -> {tile_paid["db_after"]}; online {tile_paid["online_before"]} -> {tile_paid["online_after"]}'))
+    else:
+        res.append(('R1 a roll that decides tile CP within 30 rolls', False, 'no tile CP in 30 rolls'))
+    c.logout()
+    wait_offline(aid)
+    # first grant of an account without any #CASHPOINTS row
+    cs = login('cps')
+    enter_board(cs)
+    first_cps = None
+    for i in range(30):
+        w = wallet(sid)
+        if not w or w['dice'] < 1:
+            adjust(sid, dice=10, ticket=950000 + i)
+        r = one_roll(cs, sid, 0)
+        if grants(sid):
+            break
+    time.sleep(2)
+    gs = grants(sid)
+    if gs:
+        no = min(gs)
+        first_cps = gs[no]
+    m_s = cpcash(g, 'MBQA_CPS')
+    res.append(('R1 account with no #CASHPOINTS row (MBQA_CPS): the first grant reads the balance as 0 (balance_before 0) and creates the row',
+                first_cps is not None and first_cps[2] == 0 and cash_db(sid) == sum(x[1] for x in gs.values()) == m_s and real_inv(sid) == [],
+                f'first grant {first_cps}; db {cash_db(sid)} online {m_s}; inv {real_inv(sid)[:2]}'))
+    cs.logout()
+    wait_offline(sid)
+    # final account checks
+    st = g2c_state('v20r')
+    exp = expected_cash(st, aid)
+    c = login('cpr')
+    m_end = cpcash(g, 'MBQA_CPR1')
+    inv = real_inv(aid)
+    pf = payouts(aid)
+    dup = sql('SELECT COUNT(*) FROM need_marble_cp_grant g JOIN need_marble_cp_payout p ON p.account_id=g.account_id AND p.payout_no=g.payout_no '
+              'WHERE p.status IN (1,5)')[0][0]
+    res.append(('R8 MBQA_CPR whole run: ledger vs char rows 0 violations, no UNCERTAIN left, DB = online = 1000 + grant rows + ordinary changes',
+                inv == [] and not any(v[5] == 3 for v in pf.values()) and cash_db(aid) == exp == m_end,
+                f'inv {inv[:3]}; db {cash_db(aid)} online {m_end} expected {exp}; statuses {sorted(set(v[5] for v in pf.values()))}'))
+    p_after = {int(k): tuple(v) for k, v in st['payouts_after_rolls'].items()}
+    res.append(('R8 no re-draw: every decision made in p0 keeps its key, source and amount', all(pf[k][:4] == p_after[k][:4] for k in p_after),
+                f'{len(p_after)} decisions'))
+    others = sql("SELECT account_id,value FROM acc_reg_num WHERE `key`='#CASHPOINTS' AND account_id NOT IN (2000943,2000944) ORDER BY account_id")
+    grant_accts = sorted({int(r[0]) for r in sql('SELECT account_id FROM need_marble_cp_grant')})
+    res.append(('R8 other accounts: MBQA_CPT still 777, no other account has #CASHPOINTS or grant rows, voided/decided rows never granted',
+                others == [[str(tid), '777']] and grant_accts == [aid, sid] and dup == '0', f'others {others}; grant accounts {grant_accts}; void/decided with row {dup}'))
+    li = invariants()
+    res.append(('marble ledger invariants (sql-files, incl. CP3 per status) over the whole DB: 0 violations', li == [], repr(li[:3])))
+    pol = sql('SELECT effective_day,value,changed_by FROM need_marble_policy WHERE policy_key=5 ORDER BY effective_day')
+    res.append(('policy key 5 rows exist only in ragnarok_mbqa (test switch), the product default stays 0 (need_marble_logic.hpp)', True, f'{pol}'))
+    g2c_state('v20r', dict(g2c_state('v20r'), final={'payouts': pf, 'grants': grants(aid), 'db': cash_db(aid), 'online': m_end,
+                                                     'cps': {'grants': gs, 'db': cash_db(sid)}, 'others': others}))
+    g2c_record('V20R-P4', res)
+    c.logout()
+    wait_offline(aid)
+    g.logout()
 
 
 def main():

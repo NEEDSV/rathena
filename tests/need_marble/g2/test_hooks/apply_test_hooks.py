@@ -7,8 +7,11 @@ usage: python -I apply_test_hooks.py --src <scratch source copy root>
 - registers need_marble_test.cpp in <src>/src/map/map-server.vcxproj
 - --g2b: anchored edits of <src>/src/map/need_marble.cpp (test clock in today(), hidden COMMIT outcome in
   ledger_tx::commit) and appends need_marble_test_g2b.inc; every edit sits under #ifdef NEED_MARBLE_TEST_HOOKS
-- --v20: appends need_marble_test_v20.inc (mock CP writer, registered only with NEED_MARBLE_TEST_HOOKS=1) and the
-  CP buildins (arm a writer fault, apply one payout, operator resolve)
+- --v20: appends need_marble_test_v20.inc (mock CP writer, registered only with NEED_MARBLE_TEST_HOOKS=1 and
+  NEED_MARBLE_TEST_CP other than "char") and the CP buildins (arm a writer fault, apply one payout, operator resolve)
+- --v20real: anchored edits of the scratch need_marble.cpp (answer hold, stop after / before the grant request,
+  fence off, no automatic payout) + need_marble_test_v20real.inc, and of the scratch src/char/inter.cpp (char-server
+  stop before / after COMMIT, lost answer) + need_marble_test_char.inc. Build it with NEED_MARBLE_CP_CHAR_WRITER=1.
 Refuses to run on a path that is a git worktree of the repository (a .git entry at the root).
 """
 import argparse
@@ -20,6 +23,7 @@ ap = argparse.ArgumentParser()
 ap.add_argument('--src', required=True)
 ap.add_argument('--g2b', action='store_true', help='G2-B: test clock, hidden COMMIT outcome, re-entry probes (need_marble.cpp scratch copy)')
 ap.add_argument('--v20', action='store_true', help='V20-MOCK: mock CP writer + apply / resolve buildins (need_marble.cpp scratch copy)')
+ap.add_argument('--v20real', action='store_true', help='V20-REAL: char writer fault points (need_marble.cpp and char/inter.cpp scratch copies)')
 a = ap.parse_args()
 R = os.path.abspath(a.src)
 if os.path.exists(os.path.join(R, '.git')):
@@ -314,6 +318,166 @@ if a.v20:
     print('patched src/map/need_marble.cpp - appended need_marble_test_v20.inc')
     INC += INC_V20
     DEF += DEF_V20
+
+INC_V20REAL = '''
+#ifdef NEED_MARBLE_TEST_HOOKS
+// V20-REAL TEST BUILD ONLY: defined in the scratch copy of need_marble.cpp (need_marble_test_v20real.inc).
+bool need_marble_test_allowed(map_session_data* sd);
+int32 need_marble_test_cp_real(int32 mode);
+int64 need_marble_test_cp_cash(map_session_data* tsd, int32 delta, int32 save);
+int64 need_marble_test_cp_inflight(map_session_data* tsd, int32* fence);
+int32 need_marble_test_cp_raw(map_session_data* tsd, uint64 payout_no, int32 amount);
+int32 need_marble_test_cp_last(uint64 payout_no);
+
+/// need_marble_test_cp_raw("<online character>",<payout_no>,<amount>) -> 0 sent, -1 no char-server, -3 offline
+BUILDIN_FUNC(need_marble_test_cp_raw)
+{
+	map_session_data* sd = nullptr;
+	if (!script_rid2sd(sd) || !need_marble_test_allowed(sd)) {
+		script_pushint(st, -1);
+		return SCRIPT_CMD_SUCCESS;
+	}
+	map_session_data* tsd = map_nick2sd(script_getstr(st, 2), false);
+	script_pushint(st, tsd == nullptr ? -3 : need_marble_test_cp_raw(tsd, static_cast<uint64>(script_getnum(st, 3)), script_getnum(st, 4)));
+	return SCRIPT_CMD_SUCCESS;
+}
+
+/// need_marble_test_cp_last(<payout_no>) -> last char-server result seen for it, -1 none
+BUILDIN_FUNC(need_marble_test_cp_last)
+{
+	map_session_data* sd = nullptr;
+	if (!script_rid2sd(sd) || !need_marble_test_allowed(sd)) {
+		script_pushint(st, -1);
+		return SCRIPT_CMD_SUCCESS;
+	}
+	script_pushint(st, need_marble_test_cp_last(static_cast<uint64>(script_getnum(st, 2))));
+	return SCRIPT_CMD_SUCCESS;
+}
+
+/// need_marble_test_cp_real(<0 reset | 1 hold answers | 2 deliver held | 3 drop held | 4 stop after send | 5 stop before send | 6/7 fence off/on | 8/9 auto off/on>)
+BUILDIN_FUNC(need_marble_test_cp_real)
+{
+	map_session_data* sd = nullptr;
+	if (!script_rid2sd(sd) || !need_marble_test_allowed(sd)) {
+		script_pushint(st, -1);
+		return SCRIPT_CMD_SUCCESS;
+	}
+	script_pushint(st, need_marble_test_cp_real(script_getnum(st, 2)));
+	return SCRIPT_CMD_SUCCESS;
+}
+
+/// need_marble_test_cp_cash("<online character>",<delta>,<save 0|1>) -> its cashPoints after pc_getcash / pc_paycash, -3 offline
+BUILDIN_FUNC(need_marble_test_cp_cash)
+{
+	map_session_data* sd = nullptr;
+	if (!script_rid2sd(sd) || !need_marble_test_allowed(sd)) {
+		script_pushint(st, -1);
+		return SCRIPT_CMD_SUCCESS;
+	}
+	map_session_data* tsd = map_nick2sd(script_getstr(st, 2), false);
+	script_pushint(st, tsd == nullptr ? -3 : need_marble_test_cp_cash(tsd, script_getnum(st, 3), script_getnum(st, 4)));
+	return SCRIPT_CMD_SUCCESS;
+}
+
+/// need_marble_test_cp_inflight("<online character>") -> payout_no * 2 + (1 when it is this login's unanswered grant), -3 offline
+BUILDIN_FUNC(need_marble_test_cp_inflight)
+{
+	map_session_data* sd = nullptr;
+	if (!script_rid2sd(sd) || !need_marble_test_allowed(sd)) {
+		script_pushint(st, -1);
+		return SCRIPT_CMD_SUCCESS;
+	}
+	map_session_data* tsd = map_nick2sd(script_getstr(st, 2), false);
+	int32 fence = 0;
+	script_pushint(st, tsd == nullptr ? -3 : need_marble_test_cp_inflight(tsd, &fence) * 2 + fence);
+	return SCRIPT_CMD_SUCCESS;
+}
+#endif
+'''
+DEF_V20REAL = '''
+#ifdef NEED_MARBLE_TEST_HOOKS
+BUILDIN_DEF(need_marble_test_cp_real,"i"),
+BUILDIN_DEF(need_marble_test_cp_cash,"sii"),
+BUILDIN_DEF(need_marble_test_cp_inflight,"s"),
+BUILDIN_DEF(need_marble_test_cp_raw,"sii"),
+BUILDIN_DEF(need_marble_test_cp_last,"i"),
+#endif
+'''
+if a.v20real:
+    M = 'src/map/need_marble.cpp'
+    replace_once(M, 'namespace {\n\nconstexpr int32 ACT_HUNT = 1;\n',
+                 '#ifdef NEED_MARBLE_TEST_HOOKS\n'
+                 'bool need_marble_test_cp_hold(uint32 aid, uint64 payout_no, uint64 req_id, int32 amount, int32 result, int64 balance);\n'
+                 'void need_marble_test_cp_after_send();\n'
+                 'bool need_marble_test_cp_fence_off();\n'
+                 'bool need_marble_test_cp_no_kick();\n'
+                 '#endif\n\n'
+                 'namespace {\n\nconstexpr int32 ACT_HUNT = 1;\n')
+    replace_once(M, '\tauto sent = g_cp_sent.find({ aid, payout_no });\n',
+                 '#ifdef NEED_MARBLE_TEST_HOOKS\n'
+                 '\tif (need_marble_test_cp_hold(aid, payout_no, req_id, amount, result, balance))\n'
+                 '\t\treturn;\n'
+                 '#endif\n'
+                 '\tauto sent = g_cp_sent.find({ aid, payout_no });\n')
+    replace_once(M, '\treturn CPW_PENDING;\n',
+                 '#ifdef NEED_MARBLE_TEST_HOOKS\n'
+                 '\tneed_marble_test_cp_after_send();\n'
+                 '#endif\n'
+                 '\treturn CPW_PENDING;\n')
+    replace_once(M, 'bool need_marble_cp_fence(map_session_data* sd, uint64* payout_no, uint64* req_id) {\n\tif (sd == nullptr)\n\t\treturn false;\n',
+                 'bool need_marble_cp_fence(map_session_data* sd, uint64* payout_no, uint64* req_id) {\n\tif (sd == nullptr)\n\t\treturn false;\n'
+                 '#ifdef NEED_MARBLE_TEST_HOOKS\n'
+                 '\tif (need_marble_test_cp_fence_off())\n'
+                 '\t\treturn false;\n'
+                 '#endif\n')
+    replace_once(M, 'void cp_kick(map_session_data* sd) {\n',
+                 'void cp_kick(map_session_data* sd) {\n'
+                 '#ifdef NEED_MARBLE_TEST_HOOKS\n'
+                 '\tif (need_marble_test_cp_no_kick())\n'
+                 '\t\treturn;\n'
+                 '#endif\n')
+    p = os.path.join(R, 'src', 'map', 'need_marble.cpp')
+    raw = open(p, 'rb').read()
+    eol = b'\r\n' if b'\r\n' in raw else b'\n'
+    add = open(os.path.join(HERE, 'need_marble_test_v20real.inc'), 'rb').read().replace(b'\r\n', b'\n').replace(b'\n', eol)
+    open(p, 'wb').write(raw.rstrip(b'\r\n') + eol + add)
+    print('patched src/map/need_marble.cpp - appended need_marble_test_v20real.inc')
+    C = 'src/char/inter.cpp'
+    replace_once(C, '// Every write runs only while @need_cp_tx holds this request:',
+                 '#ifdef NEED_MARBLE_TEST_HOOKS\n'
+                 'static void need_cp_test_take_mode();\n'
+                 'static void need_cp_test_point(int32 point);\n'
+                 'static bool need_cp_test_drop_answer();\n'
+                 '#endif\n\n'
+                 '// Every write runs only while @need_cp_tx holds this request:')
+    replace_once(C, '\tif (SQL_ERROR == Sql_QueryStr(sql_handle, "COMMIT")) {\n\t\tSql_ShowDebug(sql_handle);\n\t\treturn GR_DB_ERROR;   // outcome unknown\n\t}\n',
+                 '#ifdef NEED_MARBLE_TEST_HOOKS\n'
+                 '\tneed_cp_test_point(1);\n'
+                 '#endif\n'
+                 '\tif (SQL_ERROR == Sql_QueryStr(sql_handle, "COMMIT")) {\n\t\tSql_ShowDebug(sql_handle);\n\t\treturn GR_DB_ERROR;   // outcome unknown\n\t}\n'
+                 '#ifdef NEED_MARBLE_TEST_HOOKS\n'
+                 '\tneed_cp_test_point(2);\n'
+                 '#endif\n')
+    replace_once(C, '\tint64 balance = 0;\n\tconst uint8 result = need_cp_grant_apply(aid, cid, payout_no, req_id, amount, &balance);\n',
+                 '\tint64 balance = 0;\n'
+                 '#ifdef NEED_MARBLE_TEST_HOOKS\n'
+                 '\tneed_cp_test_take_mode();\n'
+                 '#endif\n'
+                 '\tconst uint8 result = need_cp_grant_apply(aid, cid, payout_no, req_id, amount, &balance);\n')
+    replace_once(C, '\tneed_cp_grant_answer(fd, aid, payout_no, req_id, amount, result, balance);\n}\n',
+                 '#ifdef NEED_MARBLE_TEST_HOOKS\n'
+                 '\tif (need_cp_test_drop_answer())\n'
+                 '\t\treturn;\n'
+                 '#endif\n'
+                 '\tneed_cp_grant_answer(fd, aid, payout_no, req_id, amount, result, balance);\n}\n')
+    p = os.path.join(R, 'src', 'char', 'inter.cpp')
+    raw = open(p, 'rb').read()
+    eol = b'\r\n' if b'\r\n' in raw else b'\n'
+    add = open(os.path.join(HERE, 'need_marble_test_char.inc'), 'rb').read().replace(b'\r\n', b'\n').replace(b'\n', eol)
+    open(p, 'wb').write(raw.rstrip(b'\r\n') + eol + add)
+    print('patched src/char/inter.cpp - appended need_marble_test_char.inc')
+    INC += INC_V20REAL
+    DEF += DEF_V20REAL
 
 append('src/custom/script.inc', INC)
 append('src/custom/script_def.inc', DEF)

@@ -1,6 +1,8 @@
 # G2 isolated server control. Touches ONLY processes whose executable path is inside <out>\stack.
-# usage: bc_servers.ps1 -Out <scratch>\mbqa_bc -Action start|startmap|killmap|killchar|startchar|stopall|status
-param([Parameter(Mandatory)] [string]$Out, [Parameter(Mandatory)] [string]$Action, [switch]$TestHooks)
+# usage: bc_servers.ps1 -Out <scratch>\mbqa_bc -Action start|startmap|killmap|killchar|startchar|stopall|status [-TestHooks] [-Cp mock|char]
+# -TestHooks sets NEED_MARBLE_TEST_HOOKS=1 for the map-server and the char-server (test builds read it; operating
+# builds ignore it). -Cp char: the V20-REAL test map-server registers its char writer instead of the V20-MOCK writer.
+param([Parameter(Mandatory)] [string]$Out, [Parameter(Mandatory)] [string]$Action, [switch]$TestHooks, [string]$Cp = 'mock')
 $ErrorActionPreference = 'Stop'
 $stack = Join-Path $Out 'stack'
 $logs = Join-Path $Out 'logs'
@@ -38,7 +40,8 @@ function Start-One($name) {
     $busy = Get-NetTCPConnection -State Listen -LocalPort $ports[$name] -ErrorAction SilentlyContinue
     if ($busy) { throw "port $($ports[$name]) busy" }
     $env:NEED_WIKI_PORT = '26906'
-    if ($TestHooks -and $name -eq 'map-server') { $env:NEED_MARBLE_TEST_HOOKS = '1' } else { $env:NEED_MARBLE_TEST_HOOKS = '' }
+    if ($TestHooks -and $name -ne 'login-server') { $env:NEED_MARBLE_TEST_HOOKS = '1' } else { $env:NEED_MARBLE_TEST_HOOKS = '' }
+    $env:NEED_MARBLE_TEST_CP = $Cp
     $stamp = Get-Date -Format 'HHmmss'
     $p = Start-Process -FilePath (Join-Path $stack "$name.exe") -WorkingDirectory $stack -WindowStyle Hidden -PassThru `
         -RedirectStandardOutput (Join-Path $logs "$name.$stamp.out") -RedirectStandardError (Join-Path $logs "$name.$stamp.err")

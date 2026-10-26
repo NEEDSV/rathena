@@ -23,6 +23,8 @@ ap.add_argument('--captcha', action='store_true', help='G2-A V18-C: hunt captcha
 ap.add_argument('--g2b', action='store_true', help='G2-B: @mbqaclock / @mbqacommitfault / @mbqareplay / @mbqareentry / @mbqaoutoftx / @mbqaflags (apply_test_hooks.py --g2b build only)')
 ap.add_argument('--g2c', action='store_true', help='G2-C: @mbqabg* battleground commands that drive the real reward NPCs / auto reward functions')
 ap.add_argument('--v20', action='store_true', help='V20-MOCK: @mbqacpmode / @mbqacpapply / @mbqacpresolve (apply_test_hooks.py --v20 build only)')
+ap.add_argument('--v20real', action='store_true', help='V20-REAL: @mbqacpreal / @mbqacpcash / @mbqacpinfl / @mbqacpraw / @mbqacplast (apply_test_hooks.py --v20real build only)')
+ap.add_argument('--cp-grant', action='store_true', help='V20-REAL: need_marble_cp_grant: yes in the stack inter import conf (char-server switch)')
 a = ap.parse_args()
 S = os.path.join(os.path.abspath(a.out), 'stack')
 O = os.path.abspath(a.orig)
@@ -110,10 +112,24 @@ def captcha_conf():
     report.append('conf/import/battle_conf.txt: + need_macro_hunt_force_kill_count 5, check_rate 0, debug on')
 
 
+def cp_grant_conf():
+    """V20-REAL: the char-server grants CP only with this switch (default off) and both tables InnoDB."""
+    p = os.path.join(S, 'conf', 'import', 'inter_conf.txt')
+    raw = open(p, 'rb').read()
+    if b'need_marble_cp_grant' in raw:
+        raise SystemExit('inter_conf.txt: need_marble_cp_grant already present')
+    if not raw.endswith(b'\n'):
+        raw += b'\r\n'
+    open(p, 'wb').write(raw + b'// --- V20-REAL isolated test only (bc_stack_extras.py --cp-grant) ---\r\nneed_marble_cp_grant: yes\r\n')
+    report.append('conf/import/inter_conf.txt: + need_marble_cp_grant: yes')
+
+
 if not a.harness_only:
     apply_d1_e2()
     if a.bind_local:
         bind_local()
+    if a.cp_grant:
+        cp_grant_conf()
     if a.captcha:
         captcha_conf()
 
@@ -411,6 +427,37 @@ if a.v20:
         b'OnResolve:',
         b'\tdispbottom "[MBQA] cpresolve rc=" + need_marble_test_cp_resolve(atoi(.@atcmd_parameters$[0]), atoi(.@atcmd_parameters$[1]),'
         b' atoi(.@atcmd_parameters$[2]), atoi(.@atcmd_parameters$[3]));',
+        b'\tend;',
+        b'}',
+        b''])
+
+if a.v20real:
+    # V20-REAL: needs the map-server built from a scratch copy patched with apply_test_hooks.py --v20real
+    harness += b'\r\n'.join([
+        b'// V20-REAL test build only: @mbqacpreal <mode>, @mbqacpcash <char> <delta> <save>, @mbqacpinfl <char>,',
+        b'// @mbqacpraw <char> <payout_no> <amount>, @mbqacplast <payout_no>',
+        b'-\tscript\tMBQA_V20RealHarness\t-1,{',
+        b'OnInit:',
+        b'\tbindatcmd "mbqacpreal", strnpcinfo(3) + "::OnReal", 99, 100;',
+        b'\tbindatcmd "mbqacpcash", strnpcinfo(3) + "::OnCash", 99, 100;',
+        b'\tbindatcmd "mbqacpinfl", strnpcinfo(3) + "::OnInfl", 99, 100;',
+        b'\tbindatcmd "mbqacpraw", strnpcinfo(3) + "::OnRaw", 99, 100;',
+        b'\tbindatcmd "mbqacplast", strnpcinfo(3) + "::OnLast", 99, 100;',
+        b'\tend;',
+        b'OnReal:',
+        b'\tdispbottom "[MBQA] cpreal r=" + need_marble_test_cp_real(atoi(.@atcmd_parameters$[0]));',
+        b'\tend;',
+        b'OnCash:',
+        b'\tdispbottom "[MBQA] cpcash cash=" + need_marble_test_cp_cash(.@atcmd_parameters$[0], atoi(.@atcmd_parameters$[1]), atoi(.@atcmd_parameters$[2]));',
+        b'\tend;',
+        b'OnInfl:',
+        b'\tdispbottom "[MBQA] cpinfl v=" + need_marble_test_cp_inflight(.@atcmd_parameters$[0]);',
+        b'\tend;',
+        b'OnRaw:',
+        b'\tdispbottom "[MBQA] cpraw rc=" + need_marble_test_cp_raw(.@atcmd_parameters$[0], atoi(.@atcmd_parameters$[1]), atoi(.@atcmd_parameters$[2]));',
+        b'\tend;',
+        b'OnLast:',
+        b'\tdispbottom "[MBQA] cplast r=" + need_marble_test_cp_last(atoi(.@atcmd_parameters$[0]));',
         b'\tend;',
         b'}',
         b''])

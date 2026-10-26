@@ -21,6 +21,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include <common/need_marble_cp_grant.hpp>
 #include <common/random.hpp>
 #include <common/showmsg.hpp>
 #include <common/socket.hpp>
@@ -28,6 +29,9 @@
 #include <common/timer.hpp>
 
 #include "battle.hpp"
+#include "clif.hpp"
+#include "intif.hpp"
+#include "log.hpp"
 #include "map.hpp"
 #include "mob.hpp"
 #include "need_event_hunt.hpp"
@@ -103,8 +107,29 @@ uint32 g_pol_day = 0;
 bool g_pol_ok = false;
 int32 g_timer = INVALID_TIMER;
 t_tick g_last_bg_sample = 0;
-need_marble_cp_writer g_cp_writer = nullptr;   // V20: none in this build
+need_marble_cp_writer g_cp_writer = nullptr;   // V20: none in the default build
+bool g_cp_auto = false;                        // the writer pays DECIDED rows by itself (char writer)
 bool g_cp_audit_ok = false;                    // need_marble_cp_audit installed (sql-files/need_marble_v20_cp_apply.sql)
+bool g_cp_grant_visible = false;               // need_marble_cp_grant (char DB) readable here: operator evidence
+
+// V20-REAL char writer requests of this boot. g_cp_sent holds a request until the char-server answers it;
+// g_cp_inflight holds the login that sent it, whose #CASHPOINTS saves stay conditional meanwhile.
+struct cp_request {
+	uint64 req_id = 0;
+	int32 amount = 0;
+	t_tick sent = 0;
+};
+struct cp_inflight {
+	uint64 payout_no = 0;
+	uint64 req_id = 0;
+	int32 amount = 0;
+	uint32 char_id = 0;
+	uint32 login1 = 0;
+	uint32 login2 = 0;
+};
+std::map<std::pair<uint32, uint64>, cp_request> g_cp_sent;   // (account_id, payout_no)
+std::unordered_map<uint32, cp_inflight> g_cp_inflight;       // account_id -> last request of a login
+uint32 g_cp_req_seq = 0;
 
 struct hunt_buf {
 	uint32 char_id = 0;
@@ -489,13 +514,94 @@ int32 cp_audit_in_tx(uint32 aid, uint64 payout_no, int32 from, int32 to, int32 r
 	return NEED_MARBLE_OK;
 }
 
-bool cp_audit_check() {
+bool cp_table_check(const char* table) {
 	if (!sq("SELECT COUNT(*) FROM `information_schema`.`TABLES` WHERE `TABLE_SCHEMA`=DATABASE() AND `ENGINE`='InnoDB' "
-		"AND `TABLE_NAME`='need_marble_cp_audit'"))
+		"AND `TABLE_NAME`='%s'", table))
 		return false;
 	uint64 n = next_row() ? col_u64(0) : 0;
 	free_result();
 	return n == 1;
+}
+
+// The same login (not only the same account): a relog loads #CASHPOINTS again from the char DB after the grant.
+bool cp_same_login(const map_session_data* sd, const cp_inflight& f) {
+	return sd->status.char_id == f.char_id && sd->login_id1 == f.login1 && sd->login_id2 == f.login2;
+}
+
+bool cp_busy(const map_session_data* sd) {
+	auto it = g_cp_inflight.find(sd->status.account_id);
+	return it != g_cp_inflight.end() && cp_same_login(sd, it->second);
+}
+
+// Records a writer's answer on an UNCERTAIN row: APPLIED / back to DECIDED, or UNCERTAIN with an audit row.
+// Returns the status the row has afterwards (CPS_UNCERTAIN also when the record itself failed).
+int32 cp_settle(uint32 aid, uint32 cid, uint64 payout_no, int32 amount, int32 written, bool from_char) {
+	const int32 to = cp_status_after_write(written);
+	ledger_tx tx;
+	if (!tx.begin())
+		return CPS_UNCERTAIN;
+	if (from_char) {
+		// the answer may come long after the claim: the row must still be this UNCERTAIN payout
+		if (!sq("SELECT `status`,`amount` FROM `need_marble_cp_payout` WHERE `account_id`='%u' AND `payout_no`='%" PRIu64 "' FOR UPDATE",
+			aid, payout_no))
+			return CPS_UNCERTAIN;
+		const bool row = next_row();
+		const int64 status = row ? col_i64(0) : 0, stored = row ? col_i64(1) : 0;
+		free_result();
+		if (status != CPS_UNCERTAIN || stored != amount) {
+			ShowWarning("need_marble: char-server answer %d for payout %" PRIu64 " of aid %u not recorded, ledger status %" PRId64 ".\n",
+				written, payout_no, aid, status);
+			return static_cast<int32>(status);
+		}
+	}
+	if (to != CPS_UNCERTAIN) {
+		if (!sq("UPDATE `need_marble_cp_payout` SET `status`='%d',`granted`='%d',`applied_at`=%s "
+			"WHERE `account_id`='%u' AND `payout_no`='%" PRIu64 "' AND `status`='%d'",
+			to, to == CPS_APPLIED ? amount : 0, to == CPS_APPLIED ? "NOW()" : "NULL", aid, payout_no, CPS_UNCERTAIN) || affected() != 1)
+			return CPS_UNCERTAIN;
+	}
+	if (cp_audit_in_tx(aid, payout_no, CPS_UNCERTAIN, to, cp_reason_after_write(written, from_char), amount, cid, 0) != NEED_MARBLE_OK ||
+		!tx.commit())
+		return CPS_UNCERTAIN;   // the row stays UNCERTAIN in the ledger
+	return to;
+}
+
+#if defined(NEED_MARBLE_CP_CHAR_WRITER) && NEED_MARBLE_CP_CHAR_WRITER
+// V20-REAL: hands one payout to the char-server (src/common/need_marble_cp_grant.hpp). The answer comes through
+// need_marble_cp_char_result, so this only says whether the request left: CPW_PENDING, or CPW_NO_EFFECT when
+// nothing was sent.
+int32 cp_char_writer(uint32 aid, uint32 cid, uint64 payout_no, int32 amount) {
+	map_session_data* sd = map_id2sd(aid);
+	if (sd == nullptr || sd->status.char_id != cid || cp_busy(sd))
+		return CPW_NO_EFFECT;
+	const uint64 req_id = (static_cast<uint64>(g_boot_id) << 32) | ++g_cp_req_seq;
+	if (!need_marble_cp::grant_args_ok(aid, payout_no, req_id, amount))
+		return CPW_NO_EFFECT;
+	// recorded first: from the moment the request can reach the char-server, #CASHPOINTS saves are conditional
+	g_cp_sent[{ aid, payout_no }] = { req_id, amount, gettick() };
+	g_cp_inflight[aid] = { payout_no, req_id, amount, cid, sd->login_id1, sd->login_id2 };
+	if (intif_need_cp_grant(aid, cid, payout_no, req_id, amount) != 0) {
+		g_cp_sent.erase({ aid, payout_no });
+		g_cp_inflight.erase(aid);
+		return CPW_NO_EFFECT;   // no char-server connection: nothing left this map-server
+	}
+	return CPW_PENDING;
+}
+#endif
+
+// Pays the oldest DECIDED row of this login's account when the writer does that by itself. One request at a time
+// per login: the next one starts from the answer of the previous one. UNCERTAIN rows are never picked.
+void cp_kick(map_session_data* sd) {
+	if (sd == nullptr || !g_cp_auto || g_cp_writer == nullptr || g_in_tx || !ready() || !g_cp_audit_ok ||
+		P(P_CP_APPLY_ENABLED) != 1 || cp_busy(sd))
+		return;
+	if (!sq("SELECT MIN(`payout_no`) FROM `need_marble_cp_payout` WHERE `account_id`='%u' AND `status`='%d' AND `amount`<='%d'",
+		sd->status.account_id, CPS_DECIDED, need_marble_cp::GRANT_MAX))
+		return;
+	const uint64 payout_no = next_row() ? col_u64(0) : 0;
+	free_result();
+	if (payout_no != 0)
+		need_marble_cp_apply(sd, payout_no);
 }
 
 // ---------------------------------------------------------------------------
@@ -817,10 +923,75 @@ int32 need_marble_is_ready() {
 	return ready() ? 1 : 0;
 }
 
-void need_marble_cp_set_writer(need_marble_cp_writer writer) {
+void need_marble_cp_set_writer(need_marble_cp_writer writer, bool auto_apply) {
 	g_cp_writer = writer;
+	g_cp_auto = writer != nullptr && auto_apply;
 	if (g_schema_ok)
 		policy_refresh(true);
+}
+
+void need_marble_cp_char_lost() {
+	if (g_cp_sent.empty())
+		return;
+	ShowWarning("need_marble: char-server connection lost with %zu CP grant(s) unanswered - they stay UNCERTAIN for the operator.\n",
+		g_cp_sent.size());
+	g_cp_sent.clear();   // g_cp_inflight stays: those logins still save #CASHPOINTS conditionally
+}
+
+bool need_marble_cp_fence(map_session_data* sd, uint64* payout_no, uint64* req_id) {
+	if (sd == nullptr)
+		return false;
+	auto it = g_cp_inflight.find(sd->status.account_id);
+	if (it == g_cp_inflight.end() || !cp_same_login(sd, it->second))
+		return false;
+	*payout_no = it->second.payout_no;
+	*req_id = it->second.req_id;
+	return true;
+}
+
+// The char-server's row is the truth of a grant. The online login gets the amount only when this map-server sent
+// the request from that very login; its #CASHPOINTS saves were conditional until now, so none of them undid it.
+void need_marble_cp_char_result(uint32 aid, uint64 payout_no, uint64 req_id, int32 amount, int32 result, int64 balance) {
+	auto sent = g_cp_sent.find({ aid, payout_no });
+	if (sent == g_cp_sent.end() || sent->second.req_id != req_id || sent->second.amount != amount) {
+		ShowWarning("need_marble: unexpected CP grant answer ignored (aid %u, payout %" PRIu64 ", result %d).\n", aid, payout_no, result);
+		return;
+	}
+	g_cp_sent.erase(sent);
+	const int32 written = cp_write_from_grant(result);
+	map_session_data* sd = nullptr;
+	auto f = g_cp_inflight.find(aid);
+	if (f != g_cp_inflight.end() && f->second.payout_no == payout_no && f->second.req_id == req_id) {
+		sd = map_id2sd(aid);
+		if (sd != nullptr && !cp_same_login(sd, f->second))
+			sd = nullptr;   // a later login loaded #CASHPOINTS after the grant: it holds the amount already
+		g_cp_inflight.erase(f);
+	}
+	if (sd != nullptr && written == CPW_APPLIED) {
+		const int32 cash = sd->cashPoints > MAX_CASHPOINT - amount ? MAX_CASHPOINT : sd->cashPoints + amount;
+		pc_setaccountreg(sd, add_str(CASHPOINT_VAR), cash);
+		sd->cashPoints = cash;
+		log_cash(sd, LOG_TYPE_SCRIPT, LOG_CASH_TYPE_CASH, amount);
+		if (battle_config.cashshop_show_points) {
+			char output[CHAT_SIZE_MAX];
+			sprintf(output, msg_txt(sd, 505), amount, sd->cashPoints);   // Gained %d cash points. Total %d points.
+			clif_messagecolor(sd, color_table[COLOR_LIGHT_GREEN], output, false, SELF);
+		}
+	}
+	if (result != need_marble_cp::GR_APPLIED)
+		ShowWarning("need_marble: CP grant of payout %" PRIu64 " (aid %u) answered %d.\n", payout_no, aid, result);
+	if (!g_schema_ok || g_fault || !g_cp_audit_ok || mmysql_handle == nullptr || g_in_tx) {
+		ShowWarning("need_marble: char-server answer %d for payout %" PRIu64 " of aid %u not recorded, ledger unavailable.\n", result, payout_no, aid);
+		return;
+	}
+	boot_id();
+	const int32 to = cp_settle(aid, sd != nullptr ? sd->status.char_id : 0, payout_no, amount, written, true);
+	if (sd != nullptr) {
+		outv(sd, "@MB_CP_STATUS", to);
+		if (to == CPS_APPLIED)
+			cp_kick(sd);
+	}
+	(void)balance;
 }
 
 // Two transactions around the writer, never one: the writer's system (char-server registry, mock) is not part of
@@ -831,6 +1002,8 @@ int32 need_marble_cp_apply(map_session_data* sd, uint64 payout_no) {
 		return NEED_MARBLE_BAD_ARG;
 	if (!ready() || !g_cp_audit_ok || g_cp_writer == nullptr || P(P_CP_APPLY_ENABLED) != 1)
 		return NEED_MARBLE_DISABLED;
+	if (cp_busy(sd))
+		return NEED_MARBLE_BUSY;   // one char-server request per login at a time
 	const uint32 aid = sd->status.account_id, cid = sd->status.char_id;
 	boot_id();
 	int32 amount = 0;
@@ -857,7 +1030,7 @@ int32 need_marble_cp_apply(map_session_data* sd, uint64 payout_no) {
 		if (!sq("UPDATE `need_marble_cp_payout` SET `status`='%d' WHERE `account_id`='%u' AND `payout_no`='%" PRIu64 "' AND `status`='%d'",
 			CPS_UNCERTAIN, aid, payout_no, CPS_DECIDED) || affected() != 1)
 			return NEED_MARBLE_DB_ERROR;
-		int32 rc = cp_audit_in_tx(aid, payout_no, CPS_DECIDED, CPS_UNCERTAIN, 1, amount, cid, 0);
+		int32 rc = cp_audit_in_tx(aid, payout_no, CPS_DECIDED, CPS_UNCERTAIN, CPR_CLAIM, amount, cid, 0);
 		if (rc != NEED_MARBLE_OK)
 			return rc;
 		if (!tx.commit())
@@ -865,20 +1038,10 @@ int32 need_marble_cp_apply(map_session_data* sd, uint64 payout_no) {
 	}
 	outv(sd, "@MB_CP_STATUS", CPS_UNCERTAIN);
 	const int32 written = g_cp_writer(aid, cid, payout_no, amount);
-	const int32 to = cp_status_after_write(written);
-	ledger_tx tx;
-	if (!tx.begin())
-		return NEED_MARBLE_UNCERTAIN;
-	if (to != CPS_UNCERTAIN) {
-		if (!sq("UPDATE `need_marble_cp_payout` SET `status`='%d',`granted`='%d',`applied_at`=%s "
-			"WHERE `account_id`='%u' AND `payout_no`='%" PRIu64 "' AND `status`='%d'",
-			to, to == CPS_APPLIED ? amount : 0, to == CPS_APPLIED ? "NOW()" : "NULL", aid, payout_no, CPS_UNCERTAIN) || affected() != 1)
-			return NEED_MARBLE_UNCERTAIN;
-	}
-	if (cp_audit_in_tx(aid, payout_no, CPS_UNCERTAIN, to, to == CPS_APPLIED ? 2 : to == CPS_DECIDED ? 3 : 4, amount, cid, 0) != NEED_MARBLE_OK ||
-		!tx.commit())
-		return NEED_MARBLE_UNCERTAIN;   // the row stays UNCERTAIN in the ledger
+	const int32 to = cp_settle(aid, cid, payout_no, amount, written, false);
 	outv(sd, "@MB_CP_STATUS", to);
+	if (written == CPW_PENDING)
+		return NEED_MARBLE_CP_SENT;   // UNCERTAIN until need_marble_cp_char_result
 	if (to == CPS_APPLIED)
 		return NEED_MARBLE_OK;
 	return to == CPS_DECIDED ? NEED_MARBLE_REJECTED : NEED_MARBLE_UNCERTAIN;
@@ -906,12 +1069,27 @@ int32 need_marble_cp_resolve(uint32 account_id, uint64 payout_no, int32 to_statu
 	free_result();
 	if (status != CPS_UNCERTAIN)
 		return NEED_MARBLE_BAD_STATE;
+	auto sent = g_cp_sent.find({ account_id, payout_no });
+	if (sent != g_cp_sent.end() && DIFF_TICK(gettick(), sent->second.sent) < CP_ANSWER_WAIT_SEC * 1000)
+		return NEED_MARBLE_BUSY;   // the char-server may still answer this request
+	if (g_cp_grant_visible) {
+		// V20-REAL: the char-server's idempotency row decides; an operator cannot override it either way
+		if (!sq("SELECT COUNT(*),COALESCE(MAX(`amount`),0) FROM `need_marble_cp_grant` WHERE `account_id`='%u' AND `payout_no`='%" PRIu64 "'",
+			account_id, payout_no))
+			return NEED_MARBLE_DB_ERROR;
+		const bool row = next_row();
+		const int64 rows = row ? col_i64(0) : -1, granted = row ? col_i64(1) : 0;
+		free_result();
+		const bool applied = rows == 1 && granted == amount, absent = rows == 0;
+		if ((to_status == CPS_MANUAL_APPLIED && !applied) || (to_status == CPS_MANUAL_VOID && !absent))
+			return NEED_MARBLE_CONFLICT;
+	}
 	if (!sq("UPDATE `need_marble_cp_payout` SET `status`='%d',`granted`='%d',`applied_at`=%s,`operator_ticket`='%" PRIu64 "' "
 		"WHERE `account_id`='%u' AND `payout_no`='%" PRIu64 "' AND `status`='%d'",
 		to_status, to_status == CPS_MANUAL_APPLIED ? amount : 0, to_status == CPS_MANUAL_APPLIED ? "NOW()" : "NULL", ticket,
 		account_id, payout_no, CPS_UNCERTAIN) || affected() != 1)
 		return NEED_MARBLE_DB_ERROR;
-	int32 rc = cp_audit_in_tx(account_id, payout_no, CPS_UNCERTAIN, to_status, 5, amount, cid, ticket);
+	int32 rc = cp_audit_in_tx(account_id, payout_no, CPS_UNCERTAIN, to_status, CPR_OPERATOR, amount, cid, ticket);
 	if (rc != NEED_MARBLE_OK)
 		return rc;
 	return tx.commit() ? NEED_MARBLE_OK : NEED_MARBLE_DB_ERROR;
@@ -1084,6 +1262,8 @@ int32 need_marble_view(map_session_data* sd) {
 	outv(sd, "@MB_TIER_MAX", P(P_HUNT_MAX_TIERS));
 	outv(sd, "@MB_BG_ON", P(P_BG_ENABLED));
 	outv(sd, "@MB_DAY", day);
+	if (cp_count > 0)
+		cp_kick(sd);   // rows decided while the switch was off or a login ended before its answer
 	return NEED_MARBLE_OK;
 }
 
@@ -1426,6 +1606,8 @@ int32 need_marble_step(map_session_data* sd, uint64 run, int32 from_pos) {
 	out_state(sd, s);
 	outv(sd, "@MB_LAP", static_cast<int64>(lap));
 	outv(sd, "@MB_LAPCP", lap != 0 ? P(P_LAP_CP) : 0);
+	if (lap != 0)
+		cp_kick(sd);
 	return NEED_MARBLE_OK;
 }
 
@@ -1498,6 +1680,8 @@ int32 need_marble_arrive(map_session_data* sd, uint64 run) {
 	outv(sd, "@MB_WARP", dest);
 	outv(sd, "@MB_AUTO_SAFE", P(P_DUNGEON_AUTO_SAFE));
 	outv(sd, "@MB_AUTO_SEC", P(P_DUNGEON_AUTO_SEC));
+	if (cp > 0)
+		cp_kick(sd);
 	return NEED_MARBLE_OK;
 }
 
@@ -1552,6 +1736,8 @@ int32 need_marble_choice(map_session_data* sd, uint64 roll_seq, int32 choice, bo
 	out_state(sd, s);
 	outv(sd, "@MB_CHOICE", choice);
 	outv(sd, "@MB_CP", cp);
+	if (cp > 0)
+		cp_kick(sd);
 	return NEED_MARBLE_OK;
 }
 
@@ -1640,7 +1826,16 @@ void need_marble_init() {
 	g_hunt.clear();
 	g_bg.clear();
 	g_schema_ok = schema_check();
-	g_cp_audit_ok = g_schema_ok && cp_audit_check();
+	g_cp_audit_ok = g_schema_ok && cp_table_check("need_marble_cp_audit");
+	g_cp_grant_visible = g_schema_ok && cp_table_check("need_marble_cp_grant");
+	g_cp_sent.clear();
+	g_cp_inflight.clear();
+#if defined(NEED_MARBLE_CP_CHAR_WRITER) && NEED_MARBLE_CP_CHAR_WRITER
+	if (g_cp_writer == nullptr) {
+		need_marble_cp_set_writer(&cp_char_writer, true);
+		ShowNotice("need_marble: V20 CP char writer built in; it pays only with policy key 5 = 1 and need_marble_cp_grant on the char-server.\n");
+	}
+#endif
 	policy_refresh(true);
 	if (!g_schema_ok)
 		ShowNotice("need_marble: ledger schema not installed, marble board disabled.\n");

@@ -94,45 +94,63 @@ def strip_comments(text):
     return re.sub(r'//[^\n]*', '', text)
 
 
-for rel, text in (('need_marble.cpp', cpp), ('need_marble.hpp', hpp), ('board_v2 NPC', npc)):
-    check(f'{rel}: no CASHPOINTS / pc_getcash / pc_paycash in code',
-          not re.search(r'CASHPOINT|cashPoints|pc_getcash|pc_paycash|SP_CASHPOINTS|acc_reg_num', strip_comments(text)))
-def cpp_func(name):
-    at = cpp.find('\nint32 ' + name + '(')
+def cpp_func(name, ret='int32'):
+    at = cpp.find('\n' + ret + ' ' + name + '(')
     return cpp[at:cpp.find('\n}\n', at)] if at >= 0 else ''
+
+
+char_result_fn = cpp_func('need_marble_cp_char_result', 'void')
+cpp_rest = cpp.replace(char_result_fn, '') if char_result_fn else cpp
+for rel, text in (('need_marble.cpp outside need_marble_cp_char_result', cpp_rest), ('need_marble.hpp', hpp), ('board_v2 NPC', npc)):
+    check(f'{rel}: no CASHPOINTS / pc_getcash / pc_paycash in code',
+          not re.search(r'CASHPOINT|cashPoints|pc_getcash|pc_paycash|SP_CASHPOINTS|acc_reg_num|pc_setaccountreg', strip_comments(text)))
+check('V20-REAL: the only #CASHPOINTS code of the module mirrors a char-server APPLIED answer into the login that sent it',
+      bool(char_result_fn) and re.findall(r'pc_setaccountreg\(sd, add_str\(CASHPOINT_VAR\), cash\)', char_result_fn) != [] and
+      char_result_fn.count('pc_setaccountreg(') == 1 and
+      char_result_fn.find('if (sd != nullptr && written == CPW_APPLIED) {') < char_result_fn.find('pc_setaccountreg(') and
+      'if (sd != nullptr && !cp_same_login(sd, f->second))\n\t\t\tsd = nullptr;' in char_result_fn and
+      not re.search(r'pc_getcash|pc_paycash|acc_reg_num', strip_comments(char_result_fn)))
 
 
 apply_fn, resolve_fn = cpp_func('need_marble_cp_apply'), cpp_func('need_marble_cp_resolve')
 updates = [m.start() for m in re.finditer(r'UPDATE `need_marble_cp_payout`', cpp)]
-check('cp_payout rows only inserted with status 1 (DECIDED); status changed only by need_marble_cp_apply / need_marble_cp_resolve',
+settle_fn = cpp_func('cp_settle')
+check('cp_payout rows only inserted with status 1 (DECIDED); status changed only by need_marble_cp_apply (claim), cp_settle (answer), need_marble_cp_resolve',
       re.search(r"INSERT INTO `need_marble_cp_payout`.*?'1','%u',NOW\(\)", cpp, re.S) is not None and len(updates) == 3 and
-      apply_fn.count('UPDATE `need_marble_cp_payout`') == 2 and resolve_fn.count('UPDATE `need_marble_cp_payout`') == 1)
+      apply_fn.count('UPDATE `need_marble_cp_payout`') == 1 and settle_fn.count('UPDATE `need_marble_cp_payout`') == 1 and
+      resolve_fn.count('UPDATE `need_marble_cp_payout`') == 1)
 check('CP switch: 1 is valid only with a registered writer, anything else stays invalid',
       "if (v[P_CP_APPLY_ENABLED] != 0 && !(cp_writer && v[P_CP_APPLY_ENABLED] == 1))" in logic and
       'validate_policy(v, &bad_key, g_cp_writer != nullptr)' in cpp)
 
 # 15. V20 prep: CP apply state machine (mock writer in the test build only)
 writer_calls = [m.start() for m in re.finditer(r'need_marble_cp_set_writer\(', cpp + hpp + inc + inc_def)]
-check('no CP writer is registered by the repository sources (only declaration + definition of need_marble_cp_set_writer)',
-      len(writer_calls) == 2 and 'g_cp_writer = writer;' in cpp and 'need_marble_cp_writer g_cp_writer = nullptr;' in cpp)
+macro_blocks = re.findall(r'#if defined\(NEED_MARBLE_CP_CHAR_WRITER\) && NEED_MARBLE_CP_CHAR_WRITER\n(.*?)\n#endif', cpp, re.S)
+check('the repository registers only the char writer, only in a NEED_MARBLE_CP_CHAR_WRITER build (default build: no writer)',
+      len(writer_calls) == 3 and 'g_cp_writer = writer;' in cpp and 'need_marble_cp_writer g_cp_writer = nullptr;' in cpp and
+      len(macro_blocks) == 2 and any('need_marble_cp_set_writer(&cp_char_writer, true);' in b for b in macro_blocks) and
+      any(b.lstrip().startswith('// V20-REAL: hands one payout') and 'int32 cp_char_writer(' in b for b in macro_blocks) and
+      cpp.count('cp_char_writer') == sum(b.count('cp_char_writer') for b in macro_blocks))
 check('need_marble_cp_apply: DISABLED without writer / audit table / key 5 = 1, before anything is read',
       'if (!ready() || !g_cp_audit_ok || g_cp_writer == nullptr || P(P_CP_APPLY_ENABLED) != 1)\n\t\treturn NEED_MARBLE_DISABLED;' in apply_fn)
 claim = apply_fn.find("CPS_UNCERTAIN, aid, payout_no, CPS_DECIDED")
 check('need_marble_cp_apply: DECIDED -> UNCERTAIN committed (claim audit) before the writer runs, final record in a second transaction',
-      -1 < claim < apply_fn.find('cp_audit_in_tx(aid, payout_no, CPS_DECIDED, CPS_UNCERTAIN, 1') < apply_fn.find('if (!tx.commit())') <
-      apply_fn.find('g_cp_writer(aid, cid, payout_no, amount)') < apply_fn.rfind('ledger_tx tx;') and apply_fn.count('g_cp_writer(') == 1)
+      -1 < claim < apply_fn.find('cp_audit_in_tx(aid, payout_no, CPS_DECIDED, CPS_UNCERTAIN, CPR_CLAIM') < apply_fn.find('if (!tx.commit())') <
+      apply_fn.find('g_cp_writer(aid, cid, payout_no, amount)') < apply_fn.find('cp_settle(aid, cid, payout_no, amount, written, false)') and
+      apply_fn.count('g_cp_writer(') == 1 and settle_fn.count('ledger_tx tx;') == 1)
 check('need_marble_cp_apply: only DECIDED reaches the writer (UNCERTAIN -> -22, APPLIED / MANUAL_APPLIED -> ALREADY, VOID -> BAD_STATE)',
       'if (status == CPS_APPLIED || status == CPS_MANUAL_APPLIED)\n\t\t\treturn NEED_MARBLE_ALREADY;' in apply_fn and
       'if (status != CPS_DECIDED)\n\t\t\treturn status == CPS_UNCERTAIN ? NEED_MARBLE_UNCERTAIN : NEED_MARBLE_BAD_STATE;' in apply_fn)
-check('writer answer -> status only through cp_status_after_write (unknown -> UNCERTAIN), UNCERTAIN back to DECIDED only on CPW_NO_EFFECT',
-      'const int32 to = cp_status_after_write(written);' in apply_fn and 'return CPS_UNCERTAIN;' in logic and
+check('writer answer -> status only through cp_status_after_write (unknown / pending -> UNCERTAIN), UNCERTAIN back to DECIDED only on CPW_NO_EFFECT',
+      'const int32 to = cp_status_after_write(written);' in settle_fn and 'return CPS_UNCERTAIN;' in logic and
       'if (writer_result == CPW_NO_EFFECT)\n\t\treturn CPS_DECIDED;' in logic)
 check('need_marble_cp_resolve: UNCERTAIN -> MANUAL_APPLIED / MANUAL_VOID only, ticket required, audited',
       '!cp_resolvable(CPS_UNCERTAIN, to_status)' in resolve_fn and 'ticket == 0' in resolve_fn and 'if (status != CPS_UNCERTAIN)' in resolve_fn and
-      'cp_audit_in_tx(account_id, payout_no, CPS_UNCERTAIN, to_status, 5' in resolve_fn and
+      'cp_audit_in_tx(account_id, payout_no, CPS_UNCERTAIN, to_status, CPR_OPERATOR' in resolve_fn and
       'return from_status == CPS_UNCERTAIN && (to_status == CPS_MANUAL_APPLIED || to_status == CPS_MANUAL_VOID);' in logic)
 check('need_marble_cp_audit is not a ledger table: the module keeps working where the V20 migration is not applied',
-      'need_marble_cp_audit' not in cpp[cpp.find('LEDGER_TABLES[]'):cpp.find('};', cpp.find('LEDGER_TABLES[]'))] and 'cp_audit_check()' in cpp)
+      'need_marble_cp_audit' not in cpp[cpp.find('LEDGER_TABLES[]'):cpp.find('};', cpp.find('LEDGER_TABLES[]'))] and
+      'cp_table_check("need_marble_cp_audit")' in cpp and 'need_marble_cp_grant' not in cpp[cpp.find('LEDGER_TABLES[]'):cpp.find('};', cpp.find('LEDGER_TABLES[]'))])
 hooks_v20 = read('tests/need_marble/g2/test_hooks/need_marble_test_v20.inc')
 check('mock CP writer lives only in the test hooks, under NEED_MARBLE_TEST_HOOKS, and refuses outside ragnarok_mbqa',
       hooks_v20.startswith('#ifdef NEED_MARBLE_TEST_HOOKS') and hooks_v20.rstrip().endswith('#endif  // NEED_MARBLE_TEST_HOOKS') and
@@ -283,7 +301,8 @@ g2b_inc = read('tests/need_marble/g2/test_hooks/need_marble_test_g2b.inc')
 inc_body = g2b_inc.strip()
 check('G2-B hook code is entirely inside #ifdef NEED_MARBLE_TEST_HOOKS', inc_body.startswith('#ifdef NEED_MARBLE_TEST_HOOKS') and
       inc_body.endswith('#endif  // NEED_MARBLE_TEST_HOOKS') and inc_body.count('#ifdef') == 1)
-check('G2-B anchored edits are inside #ifdef NEED_MARBLE_TEST_HOOKS', apply.count("'#ifdef NEED_MARBLE_TEST_HOOKS\\n'") == 3)
+g2b_block = apply[apply.find('if a.g2b:'):apply.find('INC_V20 = ')]
+check('G2-B anchored edits are inside #ifdef NEED_MARBLE_TEST_HOOKS', g2b_block.count("'#ifdef NEED_MARBLE_TEST_HOOKS\\n'") == 3)
 faults = read('tests/need_marble/g2/bc_faults_g2b.sql')
 trig = re.findall(r'CREATE TRIGGER `(\w+)` (BEFORE|AFTER) (\w+) ON `(\w+)`', faults)
 check('fault triggers: plain UPDATE only, one per fault point, armed per account',
@@ -300,7 +319,8 @@ for acc, cmds in (("'v16'", {'cmd_v16a', 'cmd_v16b', 'cmd_v16c'}), ("'v21'", {'c
 check('marble logical day ignores the OS time zone (no localtime / gmtime / mktime in marble code)',
       not re.search(r'\b(localtime|gmtime|mktime|strftime)\s*\(', strip_comments(cpp) + strip_comments(logic)))
 check('runner never starts / stops a process for G2-B (restarts are operator steps)',
-      not re.search(r'subprocess|bc_servers\.ps1\s*-|os\.kill|taskkill', runner.split('# ---------------------------------------------------------------------------- G2-B')[1]))
+      not re.search(r'subprocess|bc_servers\.ps1\s*-|os\.kill|taskkill',
+                    runner.split('# ---------------------------------------------------------------------------- G2-B')[1].split('# ' + '-' * 100 + ' V20-REAL')[0]))
 
 # 13. G2-C v1.1: one finished battleground match = BG points per account, credited from the reward functions
 bg_common = read('npc/battleground/bg_common.txt', 'cp949')
@@ -374,6 +394,79 @@ for rel in ('npc/battleground/tierra/tierra01.txt', 'npc/battleground/flavius/fl
     manual += re.findall(r'callfunc "F_BG_Badge",[^;]*;', read(rel, 'cp949'))
 check('reward NPCs (tierra01 / flavius01) still call F_BG_Badge with 3 arguments: dialog shown as before',
       len(manual) == 16 and all(re.fullmatch(r'callfunc "F_BG_Badge",[01],"(Guillaume|Croix)","(Tierra|Flavius)";', m) for m in manual), str(len(manual)))
+
+# 16. V20-REAL: char-server grant (idempotency row + #CASHPOINTS in one transaction), conditional saves, gates
+grant_h = read('src/common/need_marble_cp_grant.hpp')
+inter_c = read('src/char/inter.cpp').replace('\r\n', '\n')
+intif_c = read('src/map/intif.cpp').replace('\r\n', '\n')
+chrif_c = read('src/map/chrif.cpp').replace('\r\n', '\n')
+mig = read('sql-files/need_marble_v20_real_cp_grant.sql')
+num = lambda name: int(re.search(name + r' = (0x[0-9A-Fa-f]+|\d+);', grant_h).group(1), 0)
+row3000 = re.search(r'\n\t(-1,-1, 7,-1, -1,13,36, \(2\+4\+4\+4\+NAME_LENGTH\),[^\n]*)', inter_c).group(1).split(',')
+row3800 = re.search(r'\n\t(-1,-1,27,-1, -1, 0,37,-1, 10\+NAME_LENGTH,[^\n]*)', intif_c).group(1).split(',')
+check('V20-REAL packets: 0x300A / 0x300B / 0x380A free before, lengths in the shared header = inter / intif length tables',
+      num('PKT_GRANT') == 0x300A and num('PKT_CONDSAVE') == 0x300B and num('PKT_GRANT_ACK') == 0x380A and
+      int(row3000[10]) == num('PKT_GRANT_LEN') == 30 and int(row3000[11]) == num('PKT_CONDSAVE_LEN') == 34 and
+      int(row3800[10]) == num('PKT_GRANT_ACK_LEN') == 35 and 'need_marble_cp::PKT_GRANT: mapif_parse_need_cp_grant(fd)' in inter_c and
+      'need_marble_cp::PKT_CONDSAVE: mapif_parse_need_cp_condsave(fd)' in inter_c and 'case need_marble_cp::PKT_GRANT_ACK:' in intif_c)
+gapply = inter_c[inter_c.find('static uint8 need_cp_grant_apply('):inter_c.find('\n}\n', inter_c.find('static uint8 need_cp_grant_apply('))]
+writes = re.findall(r'"(REPLACE INTO|INSERT INTO|UPDATE|DELETE)[^"]*', gapply)
+check('char grant: switch off by default, ready only with the switch and need_marble_cp_grant + acc_reg_num both InnoDB',
+      'static bool need_cp_grant_enabled = false;' in inter_c and 'need_cp_grant_enabled = config_switch(w2) != 0;' in inter_c and
+      'need_cp_grant_ready = need_cp_grant_enabled && need_cp_grant_table && accreg_innodb;' in inter_c and
+      gapply.find('if (!need_cp_grant_ready)\n\t\treturn GR_DISABLED;') < gapply.find('START TRANSACTION'))
+check('char grant: one transaction, both writes guarded by @need_cp_tx (silent reconnect), idempotency row read FOR UPDATE first',
+      gapply.count('"START TRANSACTION"') == 1 and gapply.count('"COMMIT"') == 1 and len(writes) == 2 and
+      gapply.count("WHERE @need_cp_tx='%\" PRIu64 \"'") == 2 and
+      gapply.find('FROM `need_marble_cp_grant` WHERE') < gapply.find('FROM `%s` WHERE `account_id`') < gapply.find('REPLACE INTO') <
+      gapply.find('INSERT INTO `need_marble_cp_grant`') < gapply.find('"COMMIT"'))
+check('char grant: APPLIED only after COMMIT and a read-back of this request\'s row; same key -> ALREADY / CONFLICT with no write',
+      gapply.rfind('return GR_APPLIED;') > gapply.find('AND `req_id`=') > gapply.find('"COMMIT"') and
+      'result = stored == amount ? GR_ALREADY : GR_CONFLICT;' in gapply and 'grant_new_balance(old_balance, amount, &new_balance)' in gapply)
+cond = inter_c[inter_c.find('static void mapif_parse_need_cp_condsave('):inter_c.find('\n}\n', inter_c.find('static void mapif_parse_need_cp_condsave('))]
+check('char conditional save: adds the grant only when the row of this very request exists; lookup error writes nothing',
+      'AND `req_id`=' in cond and 'condsave_value(base, amount > 0, static_cast<int32>(amount))' in cond and
+      cond.find('return;') < cond.find('inter_savereg(') and 'inter_savereg(aid, cid, need_marble_cp::CASHPOINT_KEY, 0, value, nullptr, false);' in cond)
+sreg = intif_c[intif_c.find('int32 intif_saveregistry(map_session_data *sd)'):intif_c.find('\n}\n', intif_c.find('int32 intif_saveregistry(map_session_data *sd)'))]
+check('map registry save: while a grant of this login is unanswered #CASHPOINTS leaves 0x3004 and goes as a conditional save after it',
+      'const bool cp_fence = need_marble_cp_fence(sd, &cp_payout, &cp_req);' in sreg and
+      'if( cp_fence && !src->type && script_getvaridx(key.i64) == 0 && strcmp(varname, CASHPOINT_VAR) == 0 ) {' in sreg and
+      sreg.rfind('WFIFOSET(inter_fd, plen);') < sreg.find('intif_need_cp_condsave(') and sreg.count('intif_need_cp_condsave(') == 1)
+map_src = ''
+for fn in sorted(os.listdir(ROOT / 'src' / 'map')):
+    if fn.endswith(('.cpp', '.hpp')):
+        map_src += (ROOT / 'src' / 'map' / fn).read_bytes().decode('utf-8', 'replace')
+check('map-server never writes acc_reg_num itself (no direct UPDATE / REPLACE of the char registry table)',
+      not re.search(r'(UPDATE|REPLACE INTO|INSERT INTO)\s+`?acc_reg_num', map_src))
+fence_fn = cpp_func('need_marble_cp_fence', 'bool')
+lost_fn = cpp_func('need_marble_cp_char_lost', 'void')
+kick_fn = cpp_func('cp_kick', 'void')
+check('fence = same login (char_id + login ids), not only the account; lost connection clears awaited answers, keeps the fences',
+      'if (it == g_cp_inflight.end() || !cp_same_login(sd, it->second))' in fence_fn and
+      'return sd->status.char_id == f.char_id && sd->login_id1 == f.login1 && sd->login_id2 == f.login2;' in cpp and
+      'g_cp_sent.clear();' in lost_fn and 'g_cp_inflight' not in lost_fn.replace('// g_cp_inflight stays', '') and
+      'need_marble_cp_char_lost(); // NEED marble V20-REAL' in chrif_c[chrif_c.find('void chrif_on_disconnect(void) {'):])
+check('automatic payout picks only DECIDED rows within GRANT_MAX, one request per login, only with key 5 = 1 and the char writer',
+      "`status`='%d' AND `amount`<='%d'" in kick_fn and 'CPS_DECIDED, need_marble_cp::GRANT_MAX' in kick_fn and
+      '!g_cp_auto' in kick_fn and 'P(P_CP_APPLY_ENABLED) != 1' in kick_fn and 'cp_busy(sd)' in kick_fn and 'CPS_UNCERTAIN' not in kick_fn)
+check('operator resolve: the char-server row decides (APPLIED needs it, VOID needs none), BUSY while an answer may still come',
+      'if ((to_status == CPS_MANUAL_APPLIED && !applied) || (to_status == CPS_MANUAL_VOID && !absent))\n\t\t\treturn NEED_MARBLE_CONFLICT;' in resolve_fn and
+      'DIFF_TICK(gettick(), sent->second.sent) < CP_ANSWER_WAIT_SEC * 1000' in resolve_fn and 'constexpr int32_t CP_ANSWER_WAIT_SEC = 60;' in logic)
+check('char answer: only a request this map-server sent (key, req_id, amount) is recorded, and only on a row still UNCERTAIN',
+      'sent->second.req_id != req_id || sent->second.amount != amount' in char_result_fn and
+      'if (status != CPS_UNCERTAIN || stored != amount) {' in settle_fn and 'cp_write_from_grant(result)' in char_result_fn)
+check('migration: acc_reg_num -> InnoDB, need_marble_cp_grant InnoDB keyed (account_id, payout_no), rollback written down',
+      'ALTER TABLE `acc_reg_num` ENGINE=InnoDB;' in mig and 'PRIMARY KEY (`account_id`, `payout_no`)' in mig and
+      mig.count('ENGINE=InnoDB') == 2 and 'Rollback: DROP TABLE `need_marble_cp_grant`;' in mig)
+check('policy key 5 (CP switch) still defaults to 0', 'v[P_CP_APPLY_ENABLED] = 0;' in logic)
+hooks_real = read('tests/need_marble/g2/test_hooks/need_marble_test_v20real.inc')
+hooks_char = read('tests/need_marble/g2/test_hooks/need_marble_test_char.inc')
+real_block = apply[apply.find('if a.v20real:'):apply.find("append('src/custom/script.inc', INC)")]
+check('V20-REAL test hooks: only in tests/, entirely under NEED_MARBLE_TEST_HOOKS, every anchored edit too; char faults only in ragnarok_mbqa',
+      all(h.strip().startswith('#ifdef NEED_MARBLE_TEST_HOOKS') and h.strip().endswith('#endif  // NEED_MARBLE_TEST_HOOKS') for h in (hooks_real, hooks_char)) and
+      real_block.count("replace_once(") == 9 and real_block.count("'#ifdef NEED_MARBLE_TEST_HOOKS\\n'") == 10 and
+      "DATABASE()='ragnarok_mbqa'" in hooks_char and 'getenv("NEED_MARBLE_TEST_HOOKS")' in hooks_char and
+      'need_cp_test' not in inter_c and 'need_marble_test' not in cpp + intif_c + chrif_c)
 
 failed = [r for r in results if not r[1]]
 for name, ok, detail in results:

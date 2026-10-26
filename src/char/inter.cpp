@@ -15,6 +15,7 @@
 #include <common/cbasetypes.hpp>
 #include <common/database.hpp>
 #include <common/malloc.hpp>
+#include <common/need_marble_cp_grant.hpp>
 #include <common/showmsg.hpp>
 #include <common/socket.hpp>
 #include <common/strlib.hpp>
@@ -56,7 +57,7 @@ uint32 party_share_level = 10;
 
 /// Received packet Lengths from map-server
 int32 inter_recv_packet_length[] = {
-	-1,-1, 7,-1, -1,13,36, (2+4+4+4+NAME_LENGTH),  0,-1, 0, 0,  0, 0,  0, 0,	// 3000-
+	-1,-1, 7,-1, -1,13,36, (2+4+4+4+NAME_LENGTH),  0,-1,30,34,  0, 0,  0, 0,	// 3000-  0x300A/0x300B NEED marble CP grant
 	 6,-1, 0, 0,  0, 0, 0, 0, 10,-1, 0, 0,  0, 0,  0, 0,	// 3010-
 	-1,10,-1,14, 15+NAME_LENGTH,17+MAP_NAME_LENGTH_EXT, 6,-1, 14,14, 6, 0,  0, 0,  0, 0,	// 3020- Party
 	-1, 6,-1,-1, 55,19, 6,-1, 14,-1,-1,-1, 18,19,186,-1,	// 3030-
@@ -81,6 +82,160 @@ struct WisData {
 
 // int32 wis_id -> struct WisData*
 static std::unordered_map<int32, std::shared_ptr<struct WisData>> wis_db;
+
+/*==========================================
+ * NEED marble V20-REAL CP grant (src/common/need_marble_cp_grant.hpp, sql-files/need_marble_v20_real_cp_grant.sql).
+ * One map request = one transaction on the char DB: the idempotency row and the new #CASHPOINTS value commit
+ * together or not at all. Off unless inter_athena.conf need_marble_cp_grant: yes and both tables are InnoDB.
+ *------------------------------------------*/
+void inter_savereg(uint32 account_id, uint32 char_id, const char *key, uint32 index, int64 int_value, const char* string_value, bool is_string);
+
+static bool need_cp_grant_enabled = false;   // inter_athena.conf need_marble_cp_grant (default off)
+static bool need_cp_grant_table = false;     // need_marble_cp_grant exists as InnoDB: grants may have been applied
+static bool need_cp_grant_ready = false;     // enabled, need_marble_cp_grant and acc_reg_num both InnoDB
+
+static int64 need_cp_count(const char* fmt, ...) {
+	va_list ap;
+	va_start(ap, fmt);
+	int32 r = Sql_QueryV(sql_handle, fmt, ap);
+	va_end(ap);
+	if (r == SQL_ERROR) {
+		Sql_ShowDebug(sql_handle);
+		return -1;
+	}
+	char* data = nullptr;
+	int64 n = (SQL_SUCCESS == Sql_NextRow(sql_handle) && SQL_SUCCESS == Sql_GetData(sql_handle, 0, &data, nullptr) && data != nullptr) ? strtoll(data, nullptr, 10) : -1;
+	Sql_FreeResult(sql_handle);
+	return n;
+}
+
+static void need_cp_grant_check() {
+	need_cp_grant_table = need_cp_count("SELECT COUNT(*) FROM `information_schema`.`TABLES` WHERE `TABLE_SCHEMA`=DATABASE() "
+		"AND `ENGINE`='InnoDB' AND `TABLE_NAME`='need_marble_cp_grant'") == 1;
+	const bool accreg_innodb = need_cp_count("SELECT COUNT(*) FROM `information_schema`.`TABLES` WHERE `TABLE_SCHEMA`=DATABASE() "
+		"AND `ENGINE`='InnoDB' AND `TABLE_NAME`='%s'", schema_config.acc_reg_num_table) == 1;
+	need_cp_grant_ready = need_cp_grant_enabled && need_cp_grant_table && accreg_innodb;
+	if (need_cp_grant_ready)
+		ShowNotice("need_marble: CP grant writer ready (need_marble_cp_grant and %s are InnoDB).\n", schema_config.acc_reg_num_table);
+	else if (need_cp_grant_enabled)
+		ShowWarning("need_marble: need_marble_cp_grant is on but need_marble_cp_grant=%d / %s InnoDB=%d - every CP grant is refused.\n",
+			need_cp_grant_table ? 1 : 0, schema_config.acc_reg_num_table, accreg_innodb ? 1 : 0);
+}
+
+// Every write runs only while @need_cp_tx holds this request: the SQL layer reconnects silently, and a statement
+// sent on a new connection would autocommit outside the transaction. A guarded statement writes nothing there.
+static uint8 need_cp_grant_apply(uint32 aid, uint32 cid, uint64 payout_no, uint64 req_id, int32 amount, int64* balance) {
+	using namespace need_marble_cp;
+	*balance = 0;
+	if (!need_cp_grant_ready)
+		return GR_DISABLED;
+	if (!grant_args_ok(aid, payout_no, req_id, amount))
+		return GR_BAD_ARG;
+	if (SQL_ERROR == Sql_QueryStr(sql_handle, "START TRANSACTION")) {
+		Sql_ShowDebug(sql_handle);
+		return GR_DB_ERROR;
+	}
+	uint8 result = GR_DB_ERROR;
+	int64 old_balance = 0, new_balance = 0;
+	char* data = nullptr;
+	do {
+		if (SQL_ERROR == Sql_Query(sql_handle, "SET @need_cp_tx='%" PRIu64 "'", req_id))
+			break;
+		if (SQL_ERROR == Sql_Query(sql_handle, "SELECT `amount` FROM `need_marble_cp_grant` WHERE `account_id`='%" PRIu32 "' AND `payout_no`='%" PRIu64 "' FOR UPDATE", aid, payout_no))
+			break;
+		if (SQL_SUCCESS == Sql_NextRow(sql_handle)) {
+			const int64 stored = (SQL_SUCCESS == Sql_GetData(sql_handle, 0, &data, nullptr) && data != nullptr) ? strtoll(data, nullptr, 10) : -1;
+			Sql_FreeResult(sql_handle);
+			result = stored == amount ? GR_ALREADY : GR_CONFLICT;
+			break;
+		}
+		Sql_FreeResult(sql_handle);
+		if (SQL_ERROR == Sql_Query(sql_handle, "SELECT `value` FROM `%s` WHERE `account_id`='%" PRIu32 "' AND `key`='%s' AND `index`='0' FOR UPDATE",
+			schema_config.acc_reg_num_table, aid, CASHPOINT_KEY))
+			break;
+		if (SQL_SUCCESS == Sql_NextRow(sql_handle) && SQL_SUCCESS == Sql_GetData(sql_handle, 0, &data, nullptr) && data != nullptr)
+			old_balance = strtoll(data, nullptr, 10);
+		Sql_FreeResult(sql_handle);
+		if (grant_new_balance(old_balance, amount, &new_balance) != GR_APPLIED) {
+			result = GR_CAP;
+			break;
+		}
+		if (SQL_ERROR == Sql_Query(sql_handle, "REPLACE INTO `%s` (`account_id`,`key`,`index`,`value`) SELECT '%" PRIu32 "','%s','0','%" PRId64 "' FROM DUAL WHERE @need_cp_tx='%" PRIu64 "'",
+			schema_config.acc_reg_num_table, aid, CASHPOINT_KEY, new_balance, req_id) || Sql_NumRowsAffected(sql_handle) == 0)
+			break;
+		if (SQL_ERROR == Sql_Query(sql_handle, "INSERT INTO `need_marble_cp_grant` (`account_id`,`payout_no`,`req_id`,`amount`,`char_id`,`balance_before`,`balance_after`,`created_at`) "
+			"SELECT '%" PRIu32 "','%" PRIu64 "','%" PRIu64 "','%d','%" PRIu32 "','%" PRId64 "','%" PRId64 "',NOW() FROM DUAL WHERE @need_cp_tx='%" PRIu64 "'",
+			aid, payout_no, req_id, amount, cid, old_balance, new_balance, req_id) || Sql_NumRowsAffected(sql_handle) != 1)
+			break;
+		result = GR_APPLIED;
+	} while (false);
+	if (result != GR_APPLIED) {
+		if (result == GR_DB_ERROR)
+			Sql_ShowDebug(sql_handle);
+		if (SQL_ERROR == Sql_QueryStr(sql_handle, "ROLLBACK"))
+			Sql_ShowDebug(sql_handle);
+		Sql_QueryStr(sql_handle, "SET @need_cp_tx=NULL");
+		return result;
+	}
+	if (SQL_ERROR == Sql_QueryStr(sql_handle, "COMMIT")) {
+		Sql_ShowDebug(sql_handle);
+		return GR_DB_ERROR;   // outcome unknown
+	}
+	Sql_QueryStr(sql_handle, "SET @need_cp_tx=NULL");
+	// A COMMIT sent on a reconnected session succeeds with nothing to commit: only the row proves the grant.
+	if (need_cp_count("SELECT COUNT(*) FROM `need_marble_cp_grant` WHERE `account_id`='%" PRIu32 "' AND `payout_no`='%" PRIu64 "' AND `req_id`='%" PRIu64 "'",
+		aid, payout_no, req_id) != 1)
+		return GR_DB_ERROR;
+	*balance = new_balance;
+	return GR_APPLIED;
+}
+
+static void need_cp_grant_answer(int32 fd, uint32 aid, uint64 payout_no, uint64 req_id, int32 amount, uint8 result, int64 balance) {
+	using namespace need_marble_cp;
+	WFIFOHEAD(fd, PKT_GRANT_ACK_LEN);
+	WFIFOW(fd, 0) = PKT_GRANT_ACK;
+	WFIFOL(fd, 2) = aid;
+	WFIFOQ(fd, 6) = payout_no;
+	WFIFOQ(fd, 14) = req_id;
+	WFIFOL(fd, 22) = amount;
+	WFIFOB(fd, 26) = result;
+	WFIFOQ(fd, 27) = balance;
+	WFIFOSET(fd, PKT_GRANT_ACK_LEN);
+}
+
+static void mapif_parse_need_cp_grant(int32 fd) {
+	const uint32 aid = RFIFOL(fd, 2), cid = RFIFOL(fd, 6);
+	const uint64 payout_no = RFIFOQ(fd, 10), req_id = RFIFOQ(fd, 18);
+	const int32 amount = static_cast<int32>(RFIFOL(fd, 26));
+	int64 balance = 0;
+	const uint8 result = need_cp_grant_apply(aid, cid, payout_no, req_id, amount, &balance);
+	if (result != need_marble_cp::GR_APPLIED)
+		ShowWarning("need_marble: CP grant refused (aid %" PRIu32 ", payout %" PRIu64 ", amount %d, result %d).\n", aid, payout_no, amount, result);
+	need_cp_grant_answer(fd, aid, payout_no, req_id, amount, result, balance);
+}
+
+// #CASHPOINTS save of a login whose grant is unanswered: the map value plus the grant only when this very request
+// was applied. On a lookup error nothing is written: the map keeps the value and the grant stays in the balance.
+static void mapif_parse_need_cp_condsave(int32 fd) {
+	const uint32 aid = RFIFOL(fd, 2), cid = RFIFOL(fd, 6);
+	const uint64 payout_no = RFIFOQ(fd, 10), req_id = RFIFOQ(fd, 18);
+	const int64 base = static_cast<int64>(RFIFOQ(fd, 26));
+	int64 amount = 0;
+	if (need_cp_grant_table) {
+		if (SQL_ERROR == Sql_Query(sql_handle, "SELECT `amount` FROM `need_marble_cp_grant` WHERE `account_id`='%" PRIu32 "' AND `payout_no`='%" PRIu64 "' AND `req_id`='%" PRIu64 "'",
+			aid, payout_no, req_id)) {
+			Sql_ShowDebug(sql_handle);
+			ShowError("need_marble: conditional #CASHPOINTS save of aid %" PRIu32 " skipped (grant lookup failed).\n", aid);
+			return;
+		}
+		char* data = nullptr;
+		if (SQL_SUCCESS == Sql_NextRow(sql_handle) && SQL_SUCCESS == Sql_GetData(sql_handle, 0, &data, nullptr) && data != nullptr)
+			amount = strtoll(data, nullptr, 10);
+		Sql_FreeResult(sql_handle);
+	}
+	const int64 value = need_marble_cp::condsave_value(base, amount > 0, static_cast<int32>(amount));
+	inter_savereg(aid, cid, need_marble_cp::CASHPOINT_KEY, 0, value, nullptr, false);
+}
 
 /* from pc.cpp due to @accinfo. any ideas to replace this crap are more than welcome. */
 const char* job_name(int32 class_) {
@@ -860,6 +1015,8 @@ int32 inter_config_read(const char* cfgName)
 			charserv_config.log_inter = atoi(w2);
 		else if(!strcmpi(w1,"inter_server_conf"))
 			cfgFile = w2;
+		else if(!strcmpi(w1,"need_marble_cp_grant"))
+			need_cp_grant_enabled = config_switch(w2) != 0;
 		else if(!strcmpi(w1,"import"))
 			inter_config_read(w2);
 	}
@@ -991,6 +1148,7 @@ int32 inter_init_sql(const char *file)
 	inter_mail_sql_init();
 	inter_auction_sql_init();
 	inter_clan_init();
+	need_cp_grant_check();
 
 	geoip_readdb();
 	return 0;
@@ -1429,6 +1587,8 @@ int32 inter_parse_frommap(int32 fd)
 	case 0x3007: mapif_parse_accinfo(fd); break;
 	/* 0x3008 unused */
 	case 0x3009: mapif_parse_broadcast_item(fd); break;
+	case need_marble_cp::PKT_GRANT: mapif_parse_need_cp_grant(fd); break;
+	case need_marble_cp::PKT_CONDSAVE: mapif_parse_need_cp_condsave(fd); break;
 	default:
 		if(  inter_party_parse_frommap(fd)
 		  || inter_guild_parse_frommap(fd)

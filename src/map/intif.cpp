@@ -6,6 +6,7 @@
 #include <cstdlib>
 
 #include <common/malloc.hpp>
+#include <common/need_marble_cp_grant.hpp>
 #include <common/mmo.hpp>
 #include <common/nullpo.hpp>
 #include <common/showmsg.hpp>
@@ -25,6 +26,7 @@
 #include "mail.hpp"
 #include "map.hpp"
 #include "mercenary.hpp"
+#include "need_marble.hpp"
 #include "need_storage_shop.hpp"
 #include "party.hpp"
 #include "pc.hpp"
@@ -36,7 +38,7 @@
 
 /// Received packet Lengths from inter-server
 static const int32 packet_len_table[] = {
-	-1,-1,27,-1, -1, 0,37,-1, 10+NAME_LENGTH,-1, 0, 0,  0, 0,  0, 0, //0x3800-0x380f
+	-1,-1,27,-1, -1, 0,37,-1, 10+NAME_LENGTH,-1,35, 0,  0, 0,  0, 0, //0x3800-0x380f  0x380A NEED marble CP grant
 	 0, 0, 0, 0,  0, 0, 0, 0, -1,11, 0, 0,  0, 0,  0, 0, //0x3810
 	39,-1,15,15, 15+NAME_LENGTH,17+MAP_NAME_LENGTH_EXT, 7,-1,  0, 0, 0, 0,  0, 0,  0, 0, //0x3820
 	10,-1,15, 0, 79,19, 7,-1,  0,-1,-1,-1, 14,67,186,-1, //0x3830
@@ -405,6 +407,14 @@ int32 intif_saveregistry(map_session_data *sd)
 	if (CheckForCharServer() || !sd->regs.vars)
 		return -1;
 
+	// NEED marble V20-REAL: while a CP grant of this login is unanswered, #CASHPOINTS leaves this packet and goes as
+	// a conditional save: the char-server adds the grant to it only when it applied that request, so no save of a
+	// value read before the grant can undo it.
+	uint64 cp_payout = 0, cp_req = 0;
+	const bool cp_fence = need_marble_cp_fence(sd, &cp_payout, &cp_req);
+	bool cp_cond = false;
+	int64 cp_base = 0;
+
 	WFIFOHEAD(inter_fd, 60000 + 300);
 	WFIFOW(inter_fd,0)  = 0x3004;
 	// 0x2 = length (set later)
@@ -434,6 +444,15 @@ int32 intif_saveregistry(map_session_data *sd)
 			continue;
 
 		src->update = false;
+		if( cp_fence && !src->type && script_getvaridx(key.i64) == 0 && strcmp(varname, CASHPOINT_VAR) == 0 ) {
+			struct script_reg_num *p = (struct script_reg_num *)src;
+
+			cp_cond = true;
+			cp_base = p->value;
+			if( !p->value )
+				script_reg_destroy_single(sd,key.i64,&p->flag);
+			continue;
+		}
 		lValid = script_check_RegistryVariableLength(0,varname,&len);
 		++len;
 
@@ -511,8 +530,52 @@ int32 intif_saveregistry(map_session_data *sd)
 	WFIFOW(inter_fd, 2) = plen;
 	WFIFOSET(inter_fd, plen);
 
+	if( cp_cond )
+		intif_need_cp_condsave(sd->status.account_id, sd->status.char_id, cp_payout, cp_req, cp_base);
+
 	sd->vars_dirty = false;
 
+	return 0;
+}
+
+/**
+ * NEED marble V20-REAL: asks the char-server to grant one decided CP payout (src/common/need_marble_cp_grant.hpp).
+ * @return 0=msg sent, -1=no char-server connection (nothing sent)
+ */
+int32 intif_need_cp_grant(uint32 account_id, uint32 char_id, uint64 payout_no, uint64 req_id, int32 amount)
+{
+	using namespace need_marble_cp;
+	if (CheckForCharServer())
+		return -1;
+	WFIFOHEAD(inter_fd, PKT_GRANT_LEN);
+	WFIFOW(inter_fd, 0) = PKT_GRANT;
+	WFIFOL(inter_fd, 2) = account_id;
+	WFIFOL(inter_fd, 6) = char_id;
+	WFIFOQ(inter_fd, 10) = payout_no;
+	WFIFOQ(inter_fd, 18) = req_id;
+	WFIFOL(inter_fd, 26) = amount;
+	WFIFOSET(inter_fd, PKT_GRANT_LEN);
+	return 0;
+}
+
+/**
+ * NEED marble V20-REAL: #CASHPOINTS save of a login whose grant is unanswered.
+ * @param base : #CASHPOINTS of the map-server, which never holds that grant yet
+ * @return 0=msg sent, -1=no char-server connection
+ */
+int32 intif_need_cp_condsave(uint32 account_id, uint32 char_id, uint64 payout_no, uint64 req_id, int64 base)
+{
+	using namespace need_marble_cp;
+	if (CheckForCharServer())
+		return -1;
+	WFIFOHEAD(inter_fd, PKT_CONDSAVE_LEN);
+	WFIFOW(inter_fd, 0) = PKT_CONDSAVE;
+	WFIFOL(inter_fd, 2) = account_id;
+	WFIFOL(inter_fd, 6) = char_id;
+	WFIFOQ(inter_fd, 10) = payout_no;
+	WFIFOQ(inter_fd, 18) = req_id;
+	WFIFOQ(inter_fd, 26) = base;
+	WFIFOSET(inter_fd, PKT_CONDSAVE_LEN);
 	return 0;
 }
 
@@ -3807,6 +3870,9 @@ int32 intif_parse(int32 fd)
 	case 0x3807:	intif_parse_MessageToFD(fd); break;
 	case 0x3808:	intif_parse_accinfo_ack(fd); break;
 	case 0x3809:	intif_parse_broadcast_obtain_special_item(fd); break;
+	case need_marble_cp::PKT_GRANT_ACK:
+		need_marble_cp_char_result(RFIFOL(fd, 2), RFIFOQ(fd, 6), RFIFOQ(fd, 14), static_cast<int32>(RFIFOL(fd, 22)), RFIFOB(fd, 26), static_cast<int64>(RFIFOQ(fd, 27)));
+		break;
 	case 0x3818:	intif_parse_LoadGuildStorage(fd); break;
 	case 0x3819:	intif_parse_SaveGuildStorage(fd); break;
 	case 0x3820:	intif_parse_PartyCreated(fd); break;
