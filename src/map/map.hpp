@@ -698,6 +698,9 @@ enum e_mapflag : int16 {
 	MF_INVINCIBLE_TIME,
 	MF_BATTLE_GEAR_DISABLED,
 	MF_GVG_NOGUILD,
+	MF_NEED_EQUIP_BREAK_RATE,	// NEED BG phase 1: players' equipment break chance on this map, in percent of the normal final chance (value)
+	MF_NEED_BG_SHADOW_ALLOW,	// NEED BG phase 1: on battle_gear_disabled maps, keep the whitelisted general shadow gear (status.cpp)
+	MF_NEED_BG_STONE_ALLOW,	// NEED BG phase 1: on battle_gear_disabled maps, keep the whitelisted costume enchant stones (status.cpp)
 	MF_MAX
 };
 

@@ -538,6 +538,9 @@
 	export_constant(MF_NOMACROCHECKER);
 	export_constant(MF_INVINCIBLE_TIME);
 	export_constant(MF_BATTLE_GEAR_DISABLED);
+	export_constant(MF_NEED_EQUIP_BREAK_RATE);
+	export_constant(MF_NEED_BG_SHADOW_ALLOW);
+	export_constant(MF_NEED_BG_STONE_ALLOW);
 
 	/* setcell types */
 	export_constant(CELL_WALKABLE);

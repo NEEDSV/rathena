@@ -4977,6 +4977,7 @@ bool map_setmapflag_sub(int16 m, enum e_mapflag mapflag, bool status, union u_ma
 			break;
 		case MF_SPECIALPOPUP:
 		case MF_INVINCIBLE_TIME:
+		case MF_NEED_EQUIP_BREAK_RATE:
 			if (status) {
 				nullpo_retr(false, args);
 
@@ -4985,6 +4986,8 @@ bool map_setmapflag_sub(int16 m, enum e_mapflag mapflag, bool status, union u_ma
 				mapdata->setMapFlag(mapflag, false);
 			break;
 		case MF_BATTLE_GEAR_DISABLED:
+		case MF_NEED_BG_SHADOW_ALLOW:
+		case MF_NEED_BG_STONE_ALLOW:
 			mapdata->setMapFlag(mapflag, status);
 			map_foreachinmap(map_mapflag_status_recalc_sub, m, BL_PC);
 			break;
