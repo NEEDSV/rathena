@@ -337,6 +337,7 @@ function	script	F_NEED_HW26_Rush_RankUI	{
 	mes "^999999" + callfunc("F_NEED_HW26_Rush_WeekRange$", .@w) + "^000000";
 	if (!$@HW26_RUSH_READY) {
 		mes needtr("^FF0000랭킹을 불러올 수 없습니다.^000000", "^FF0000The ranking is unavailable.^000000");
+		callfunc "F_NEED_EventHub_Size";
 		next;
 		return;
 	}
@@ -352,6 +353,9 @@ function	script	F_NEED_HW26_Rush_RankUI	{
 		mes needtr("이번 주 최고 기록 : ^0055FF", "Weekly best : ^0055FF") + @HW26R_BEST + needtr("점^000000  현재 순위 : ", "^000000  rank : ") + ((@HW26R_RANK > 0) ? "^0055FF" + @HW26R_RANK + needtr("위^000000", "^000000") : "-");
 	else
 		mes needtr("이번 주 최고 기록 : 기록 없음", "Weekly best : no record this week");
+	// 한 쪽 15줄 (Event Hub 대화창 340 = 15줄): 제목 2 + TOP 10 + 빈 줄 + 내 기록. 안내와 지난 정산은 다음 쪽.
+	callfunc "F_NEED_EventHub_Size";
+	next;
 	mes needtr("^FF6600동일 IP에서는 최고 기록 1개만 주간 랭킹에 반영됩니다.^000000", "^FF6600Only the highest score from the same IP is counted in the ranking.^000000");
 	mes needtr("^999999동점이면 그 점수를 먼저 세운 기록이 앞섭니다.^000000", "^999999On a tie, the score reached first ranks higher.^000000");
 	mes needtr("^999999주간 TOP 3 : 할로윈 코인 100 / 70 / 50, 매주 수요일 04:00 정산^000000", "^999999Weekly TOP 3 : 100 / 70 / 50 Halloween Coins, settled every Wed 04:00^000000");
@@ -368,6 +372,7 @@ function	script	F_NEED_HW26_Rush_RankUI	{
 		for (.@i = 0; .@i < .@m; .@i++)
 			mes " " + .@rk[.@i] + ". " + .@rn$[.@i] + " - " + .@rs[.@i] + needtr("점 (코인 ", " pts (") + .@rc[.@i] + needtr("개)", " coins)");
 	}
+	callfunc "F_NEED_EventHub_Size";
 	next;
 	return;
 }
@@ -379,6 +384,7 @@ function	script	F_NEED_HW26_Rush_ClaimUI	{
 	mes needtr("^C05800[잭 러시 주간 보상]^000000", "^C05800[Jack Rush weekly rewards]^000000");
 	if (!$@HW26_RUSH_READY) {
 		mes needtr("^FF0000보상 기록을 불러올 수 없습니다.^000000", "^FF0000The reward record is unavailable.^000000");
+		callfunc "F_NEED_EventHub_Size";
 		next;
 		return;
 	}
@@ -386,6 +392,7 @@ function	script	F_NEED_HW26_Rush_ClaimUI	{
 	if (.@n < 1) {
 		mes needtr("받을 보상이 없습니다.", "You have no reward to claim.");
 		mes needtr("^999999주간 TOP 3 에 들면 수요일 04:00 정산 후 여기서 받을 수 있습니다.^000000", "^999999Finish in the weekly TOP 3 and claim it here after the Wed 04:00 settlement.^000000");
+		callfunc "F_NEED_EventHub_Size";
 		next;
 		return;
 	}
@@ -396,14 +403,17 @@ function	script	F_NEED_HW26_Rush_ClaimUI	{
 	mes needtr("합계 : ^0055FF", "Total : ^0055FF") + .@sum + needtr("개^000000", " coins^000000");
 	if (!callfunc("F_NEED_Halloween_Active")) {
 		mes needtr("^FF0000이벤트 기간이 끝나 수령할 수 없습니다.^000000", "^FF0000The event is over; rewards can no longer be claimed.^000000");
+		callfunc "F_NEED_EventHub_Size";
 		next;
 		return;
 	}
+	callfunc "F_NEED_EventHub_Size";
 	next;
 	if (select(needtr("지금 받기", "Claim now"), needtr("나중에", "Later")) != 1)
 		return;
 	if (!checkweight(6658, .@sum)) {
 		mes needtr("^FF0000인벤토리에 자리가 없어 받을 수 없습니다. 정리 후 다시 와 주세요. (보상은 그대로 남아 있습니다)^000000", "^FF0000No inventory space. Make room and come back. (The reward stays.)^000000");
+		callfunc "F_NEED_EventHub_Size";
 		next;
 		return;
 	}
@@ -413,6 +423,7 @@ function	script	F_NEED_HW26_Rush_ClaimUI	{
 	if (.@got > 0)
 		getitem 6658, .@got;
 	mes needtr("할로윈 코인 ^0055FF", "Received ^0055FF") + .@got + needtr("개^000000 를 받았습니다.", "^000000 Halloween Coins.");
+	callfunc "F_NEED_EventHub_Size";
 	next;
 	return;
 }
@@ -437,14 +448,17 @@ function	script	F_NEED_HW26_Rush_Talk	{
 		mes needtr("이번 주 최고 기록 : 기록 없음", "Weekly best : no record");
 	if (!callfunc("F_NEED_HW26_Rush_Open")) {
 		mes needtr("^FF0000지금은 잭 러시를 할 수 없습니다.^000000", "^FF0000Jack Rush is not available right now.^000000");
+		callfunc "F_NEED_EventHub_Size";
 		next;
 		return 1;
 	}
 	if (@HW_JACK_STATE || @HW_RUSH_STATE) {
 		mes needtr("^FF0000잭 게임이 진행 중입니다.^000000", "^FF0000A Jack game is in progress.^000000");
+		callfunc "F_NEED_EventHub_Size";
 		next;
 		return 1;
 	}
+	callfunc "F_NEED_EventHub_Size";
 	next;
 	switch (select(needtr("잭 러시 시작", "Start Jack Rush"), needtr("주간 랭킹 보기", "View the weekly ranking"), needtr("돌아가기", "Back"))) {
 	case 1:

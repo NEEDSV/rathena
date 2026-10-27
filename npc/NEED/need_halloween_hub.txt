@@ -151,6 +151,7 @@ S_Guide:
 	mes needtr(" - 동점이면 그 점수를 먼저 세운 기록이 앞섬", " - On a tie, the score reached first ranks higher");
 	mes needtr(" - 매주 수요일 04:00 정산, ^0055FFTOP 3 : 100 / 70 / 50 코인^000000", " - Settled every Wed 04:00, ^0055FFTOP 3 : 100 / 70 / 50 coins^000000");
 	mes needtr("   ^999999보상은 그 기록을 세운 계정만 '잭 러시 랭킹 / 보상' 에서 직접 수령 (받기 전까지 남아 있음)^000000", "   ^999999Only the account that set the record claims it in 'Jack Rush ranking / rewards' (it stays until claimed)^000000");
+	callfunc "F_NEED_EventHub_Size";
 	next;
 	mes needtr("^C05800[이벤트 안내] 할로윈 코인 규칙^000000", "^C05800[Guide] Halloween Coin rules^000000");
 	mes needtr(" - 거래 / 드롭 / 판매 불가", " - Cannot be traded, dropped or sold");
@@ -207,7 +208,10 @@ S_Status:
 			mes needtr(" 이번 주 기록 없음", " no record this week");
 		mes needtr(" 수령 대기 보상 : 코인 ", " Reward to claim : ") + callfunc("F_NEED_HW26_Rush_Pending") + needtr("개", " coins");
 	}
-	mes " ";
+	// 한 쪽 15줄 (Event Hub 대화창 340): 여기까지 14줄. 교환 한도는 다음 쪽.
+	callfunc "F_NEED_EventHub_Size";
+	next;
+	mes needtr("^C05800[내 이벤트 현황]^000000", "^C05800[My event status]^000000");
 	mes needtr("^0055FF교환 한도 (계정 기준)^000000", "^0055FFExchange limits (per account)^000000");
 	if (.@ham < 0)
 		mes needtr(" 홀그렌의 쉐도우 제련망치 : ", " Shadow Refine Hammer : ") + .@unk$;
