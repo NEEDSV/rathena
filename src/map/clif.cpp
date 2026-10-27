@@ -44,6 +44,7 @@
 #include "log.hpp"
 #include "mail.hpp"
 #include "map.hpp"
+#include "mapreg.hpp"
 #include "mercenary.hpp"
 #include "mob.hpp"
 #include "need_daily_quest.hpp"
@@ -3910,6 +3911,21 @@ static void clif_par_change( const map_session_data& sd, uint16 varId, int32 cou
 	packet.count = count;
 
 	clif_send( &packet, sizeof( packet ), &sd, SELF );
+}
+
+/// NEED Event Hub button state for the patched NEEDClient (WARP NeedEventButton).
+/// Sent as ZC_PAR_CHANGE with var id NEED_EVHUB_VAR_ID. The stock client handler ignores every
+/// var id above 0xE9, so an unpatched client drops it; the patched one reads it before the
+/// packet switch. The button is always shown, the state only picks its bitmap:
+///   1 : an event is running (bright bitmap)   $NEED_EVHUB_ON, kept by need_event_hub.txt
+///   0 : no event running   (dim bitmap)
+void clif_need_eventhub_state( map_session_data& sd ){
+	if( !session_isActive( sd.fd ) )
+		return;
+
+	static const int64 uid_on = reference_uid( add_str( "$NEED_EVHUB_ON" ), 0 );
+
+	clif_par_change( sd, NEED_EVHUB_VAR_ID, mapreg_readreg( uid_on ) != 0 ? 1 : 0 );
 }
 
 /// Notifies client of a character parameter change.
@@ -11812,6 +11828,9 @@ void clif_parse_LoadEndAck(int32 fd,map_session_data *sd)
 		clif_Mail_new(sd, 0, nullptr, nullptr);
 	}
 #endif
+
+	// NEED Event Hub button: every map load, so relog / char select / map-server change all resync.
+	clif_need_eventhub_state( *sd );
 
 	sd->state.connect_new = 0;
 	sd->state.changemap = false;

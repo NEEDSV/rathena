@@ -2736,26 +2736,47 @@ Body:
       NoMail: true
       NoAuction: true
 
-# 6532 꿀송편 : 여름 황금 수박과 동일한 랜덤 제니/캐시 보상을 공통 함수로 사용한다.
-#               계정+IP 하루 1개 제한 아이템이므로 거래/보관 제한도 황금 수박과 동일.
+# 6532 잭의 사탕 : 2026 할로윈 필드 희귀 드롭 (need_halloween.cpp, 레벨 ±30, 계정+IP 하루 1개, 04:00).
+#               옛 추석 꿀송편을 영구 전환했다 (추석은 더 이상 6532 를 주지 않고, 꿀송편으로 되돌리지 않는다).
+#               AegisName 은 내부 식별자라 그대로 둔다 (Honey_Songpyun). 표시 이름만 바꾼다.
+#               사용 효과 = 공통 랜덤 제니/캐시(F_NEED_Event_RandomCashReward), 분포 그대로, 로그 event_id 202611.
+#               거래 제한은 6658 할로윈 코인과 같다: 같은 계정 개인 창고(storage / storage2 / storage3)만 허용,
+#               드롭 / 거래 / NPC 판매 / 카트 / 길드 창고 / 우편 / 경매 금지, TradePartner / BuyingStore 없음.
   - Id: 6532
     AegisName: Honey_Songpyun
-    Name: 꿀송편
+    Name: 잭의 사탕
     Type: Delayconsume
     Weight: 10
     Trade:
       Override: 100
       NoDrop: true
       NoTrade: true
-      TradePartner: true
       NoSell: true
       NoCart: true
-      NoStorage: true
       NoGuildStorage: true
       NoMail: true
       NoAuction: true
     Script: |
-      callfunc "F_NEED_Chuseok_HoneySongpyun";
+      callfunc "F_NEED_Halloween_JackCandy";
+
+# 6658 할로윈 코인 : 2026 할로윈 이벤트 재화 (npc/NEED/need_halloween.txt, need_halloween.cpp).
+#               캐릭터 인벤토리 <-> 같은 계정 개인 창고(storage / storage2 / storage3)만 허용.
+#               드롭 / 거래 / NPC 판매 / 카트(노점) / 길드 창고 / 우편 / 경매 금지, 구매 노점 불가(BuyingStore 없음).
+#               송편(663) 패턴과 같되 TradePartner 는 넣지 않는다: 배우자(다른 계정) 거래도 막는다.
+#               이벤트 지급(getitem / pc_additem)은 이 제한과 무관하다. 잔여 코인은 종료 SQL 로 제거.
+  - Id: 6658
+    AegisName: Halloween_Coin
+    Name: 할로윈 코인
+    Type: Etc
+    Trade:
+      Override: 100
+      NoDrop: true
+      NoTrade: true
+      NoSell: true
+      NoCart: true
+      NoGuildStorage: true
+      NoMail: true
+      NoAuction: true
 
 #===== NEED Tomb of the Fallen 2015 - special enchant options ==========
 # 패기 / 마정 / 예기 / 선궁 / 금강 / 자애 Lv1~10 (29061~29120) 를

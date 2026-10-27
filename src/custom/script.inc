@@ -1063,11 +1063,11 @@ BUILDIN_FUNC(storageshopprepare)
 	return SCRIPT_CMD_SUCCESS;
 }
 
-// NEED 2026 chuseok event: claim the honey songpyun through the shared daily ledger.
-// needchuseokhoney({"<source>"}) - source defaults to "BG".
-// Returns 1 delivered, 0 account daily limit, -1 ip daily limit,
+// NEED 2026 halloween event: jack game daily reward through the shared daily ledger.
+// needhalloweenjack(0) only checks: 1 already rewarded today (account or IP), 0 not yet, -1 ledger unavailable.
+// needhalloweenjack(1) pays 10 halloween coins: 1 delivered, 0 account daily limit, -1 ip daily limit,
 // -2 inventory unavailable, -3 database error, -4 feature disabled.
-BUILDIN_FUNC(needchuseokhoney)
+BUILDIN_FUNC(needhalloweenjack)
 {
 	map_session_data* sd = nullptr;
 
@@ -1076,9 +1076,55 @@ BUILDIN_FUNC(needchuseokhoney)
 		return SCRIPT_CMD_SUCCESS;
 	}
 
-	const char* source = script_hasdata(st, 2) ? script_getstr(st, 2) : "BG";
+	if (script_getnum(st, 2) == 0)
+		script_pushint(st, need_halloween_jack_claimed_today(sd));
+	else
+		script_pushint(st, need_halloween_jack_grant(sd));
+	return SCRIPT_CMD_SUCCESS;
+}
 
-	script_pushint(st, need_chuseok_honey_grant(sd, source, nullptr));
+// NEED 2026 halloween event: Jack's Candy (6532) daily state for the Event Hub.
+// needhalloweencandy() : 1 the account or the current IP already got today's candy, 0 not yet, -1 ledger unavailable.
+BUILDIN_FUNC(needhalloweencandy)
+{
+	map_session_data* sd = nullptr;
+
+	if (!script_rid2sd(sd)) {
+		script_pushint(st, -1);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	script_pushint(st, need_halloween_candy_claimed_today(sd));
+	return SCRIPT_CMD_SUCCESS;
+}
+
+// NEED Event Hub: resend the Event button state (clif_need_eventhub_state) after the script
+// changed $NEED_EVHUB_ON (F_NEED_EventHub_Update in need_event_hub.txt).
+// needeventhub_refresh()  -> the attached player only, returns 1 (0 without a player)
+// needeventhub_refresh(1) -> every online player, returns how many were sent
+BUILDIN_FUNC(needeventhub_refresh)
+{
+	if (script_hasdata(st, 2) && script_getnum(st, 2) != 0) {
+		int32 count = 0;
+		s_mapiterator* iter = mapit_getallusers();
+
+		for (map_session_data* pl_sd = (map_session_data*)mapit_first(iter); mapit_exists(iter); pl_sd = (map_session_data*)mapit_next(iter)) {
+			clif_need_eventhub_state(*pl_sd);
+			count++;
+		}
+		mapit_free(iter);
+		script_pushint(st, count);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	map_session_data* sd = nullptr;
+
+	if (!script_rid2sd(sd)) {
+		script_pushint(st, 0);
+		return SCRIPT_CMD_SUCCESS;
+	}
+	clif_need_eventhub_state(*sd);
+	script_pushint(st, 1);
 	return SCRIPT_CMD_SUCCESS;
 }
 
