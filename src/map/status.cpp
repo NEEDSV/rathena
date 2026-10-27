@@ -3797,6 +3797,52 @@ static bool status_battle_gear_is_costume_equip_index(int32 equip_idx)
 	return equip_idx >= EQI_COSTUME_HEAD_TOP && equip_idx <= EQI_COSTUME_GARMENT;
 }
 
+// NEED BG phase 1 whitelists (CM approval 2026-10-26). They only apply on battle_gear_disabled maps that also carry
+// need_bg_shadow_allow / need_bg_stone_allow (the three legacy battlegrounds); anything unlisted stays blocked.
+// Audit and reasons: md/NEED_BG_Phase1_Improvement_Claude_Request_v1.0_report.md
+
+// General shadow gear: the item's own script only. Random options on shadows stay blocked, and a shadow set
+// only applies when every shadow member is listed (e.g. Infinity Earring is not, so the Infinity set's NoSizeFix stays off).
+static const t_itemid need_bg_shadow_allow_ids[] = {
+	24073,	// S_Medium_Armor		damage from medium size -2/3/5% (+7/+9), MaxHP +10/refine
+	24076,	// S_Medium_Weapon		ATK/MATK +refine, physical/magic damage to medium size +2/3/5%
+	24052,	// S_Cranial_Shield		damage from human players -1/2/3%, MaxHP +10/refine
+	24062,	// S_Bloody_Shoes		physical/magic damage to human players +2/3/5%, MaxHP +10/refine
+	24151,	// S_Infinity_Pendant	damage from all sizes -1/2/3%, MaxHP +10/refine
+	// v1.1: S_Boned_Earring / S_Boned_Pendant (24236/24237) removed - too much stacked damage with their set
+};
+
+// Costume enchant stones, by the card ID stored in the costume slot (not the Etc material item). 32 IDs.
+// Costume stone sets stay blocked (status_battle_gear_combo_has_card_in_pos).
+static const t_itemid need_bg_stone_allow_ids[] = {
+	4807, 310654,							// ASPD +1 (upper / garment, garment dual)
+	4700, 4710, 4720, 4730, 4740, 4750,		// STR/INT/DEX/AGI/VIT/LUK +1 (upper / middle)
+	29028, 4882, 29029,						// ATK +1% (upper / middle / lower)
+	29030, 4883, 29031,						// MATK +1% (upper / middle / lower)
+	4936, 4937, 4938,						// physical damage to large / medium / small size +1% (upper)
+	310325, 29048, 310326,					// ranged physical damage +3% (upper / middle / lower)
+	310327, 310328, 310329,					// melee physical damage +3% (upper / middle / lower)
+	310664, 310665, 310666,					// magic damage, all elements +3% (upper / middle / lower)
+	314662, 314663, 314664,					// non-critical physical damage +3% (upper / middle / lower)
+	29359, 29047, 29360,					// critical damage +3% (upper / middle / lower)
+};
+
+template <size_t N>
+static bool status_battle_gear_is_listed(const t_itemid (&list)[N], t_itemid nameid)
+{
+	return std::find(std::begin(list), std::end(list), nameid) != std::end(list);
+}
+
+static bool status_battle_gear_combo_shadows_allowed(const s_item_combo& item_combo)
+{
+	for (const t_itemid nameid : item_combo.nameid) {
+		if (itemdb_type(nameid) == IT_SHADOWGEAR && !status_battle_gear_is_listed(need_bg_shadow_allow_ids, nameid))
+			return false;
+	}
+
+	return true;
+}
+
 static bool status_battle_gear_combo_has_card_in_pos(map_session_data* sd, const s_item_combo& item_combo, uint32 equip_pos)
 {
 	for (const t_itemid nameid : item_combo.nameid) {
@@ -3987,6 +4033,8 @@ int32 status_calc_pc_sub(map_session_data* sd, uint8 opt)
 	}
 
 	const bool battle_gear_disabled = map_getmapflag(sd->m, MF_BATTLE_GEAR_DISABLED) != 0;
+	const bool battle_gear_shadow_allow = battle_gear_disabled && map_getmapflag(sd->m, MF_NEED_BG_SHADOW_ALLOW) != 0;
+	const bool battle_gear_stone_allow = battle_gear_disabled && map_getmapflag(sd->m, MF_NEED_BG_STONE_ALLOW) != 0;
 
 	// Parse equipment
 	for (i = 0; i < EQI_MAX; i++) {
@@ -4000,7 +4048,8 @@ int32 status_calc_pc_sub(map_session_data* sd, uint8 opt)
 			continue;
 		if (!sd->inventory_data[index])
 			continue;
-		if (battle_gear_disabled && status_battle_gear_is_shadow_equip_index(i))
+		if (battle_gear_disabled && status_battle_gear_is_shadow_equip_index(i)
+			&& !(battle_gear_shadow_allow && status_battle_gear_is_listed(need_bg_shadow_allow_ids, sd->inventory_data[index]->nameid)))
 			continue;
 
 		base_status->def += sd->inventory_data[index]->def;
@@ -4152,7 +4201,7 @@ int32 status_calc_pc_sub(map_session_data* sd, uint8 opt)
 			if (combo->bonus == nullptr || !(item_combo = itemdb_combo.find(combo->id)))
 				continue;
 			if (battle_gear_disabled) {
-				if (combo->pos & EQP_SHADOW_GEAR)
+				if ((combo->pos & EQP_SHADOW_GEAR) && !(battle_gear_shadow_allow && status_battle_gear_combo_shadows_allowed(*item_combo)))
 					continue;
 				if ((combo->pos & EQP_COSTUME) && status_battle_gear_combo_has_card_in_pos(sd, *item_combo, EQP_COSTUME))
 					continue;
@@ -4200,7 +4249,11 @@ int32 status_calc_pc_sub(map_session_data* sd, uint8 opt)
 			continue;
 		if (pc_is_same_equip_index((enum equip_index)i, sd->equip_index, index))
 			continue;
-		if (battle_gear_disabled && (status_battle_gear_is_shadow_equip_index(i) || status_battle_gear_is_costume_equip_index(i)))
+		if (battle_gear_disabled && status_battle_gear_is_shadow_equip_index(i))
+			continue;
+		// Costume stones: only the whitelisted ones run (checked per slot below), none without need_bg_stone_allow
+		const bool costume_stone_filter = battle_gear_disabled && status_battle_gear_is_costume_equip_index(i);
+		if (costume_stone_filter && !battle_gear_stone_allow)
 			continue;
 
 		if (sd->inventory_data[index]) {
@@ -4213,6 +4266,8 @@ int32 status_calc_pc_sub(map_session_data* sd, uint8 opt)
 				int32 c = sd->inventory.u.items_inventory[index].card[j];
 				current_equip_card_id= c;
 				if(!c)
+					continue;
+				if (costume_stone_filter && !status_battle_gear_is_listed(need_bg_stone_allow_ids, c))
 					continue;
 
 				std::shared_ptr<item_data> data = item_db.find(c);

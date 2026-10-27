@@ -4444,7 +4444,7 @@ static int32 battle_calc_attack_skill_ratio(struct Damage* wd, block_list *src,b
 							100 * sd->inventory_data[index]->weapon_level * (sd->inventory.u.items_inventory[index].refine + 6);
 				}
 				status_change_end(src,SC_CRUSHSTRIKE);
-				skill_break_equip(src,src,EQP_WEAPON,2000,BCT_SELF);
+				skill_break_equip(src,src,EQP_WEAPON,2000,BCT_SELF,true);
 			} else {
 				if (sc->getSCE(SC_GIANTGROWTH) && (sd->class_&MAPID_THIRDMASK) == MAPID_RUNE_KNIGHT) { // Increase damage again if Crush Strike is not active
 					if (map_flag_vs(src->m)) // Only half of the 2.5x increase on versus-type maps

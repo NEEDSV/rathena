@@ -5717,6 +5717,18 @@ static const char* npc_parse_mapflag(char* w1, char* w2, char* w3, char* w4, con
 			}
 			break;
 
+		case MF_NEED_EQUIP_BREAK_RATE: {
+				union u_mapflag_args args = {};
+
+				if (state && (sscanf(w4, "%11d", &args.flag_val) != 1 || args.flag_val < 1 || args.flag_val > 100)) {
+					ShowError("npc_parse_mapflag: need_equip_break_rate: Invalid rate '%s' (1~100). Skipping (file '%s', line '%d')\n", w4, filepath, strline(buffer, start - buffer));
+					break;
+				}
+
+				map_setmapflag_sub(m, mapflag, state, &args);
+			}
+			break;
+
 		// All others do not need special treatment
 		default:
 			map_setmapflag(m, mapflag, state);

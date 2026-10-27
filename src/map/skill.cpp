@@ -1485,7 +1485,7 @@ int32 skill_additional_effect( block_list* src, block_list *bl, uint16 skill_id,
 			}
 #endif
 			if( rate )
-				skill_break_equip(src,src, EQP_WEAPON, rate, BCT_SELF);
+				skill_break_equip(src,src, EQP_WEAPON, rate, BCT_SELF, true);
 		}
 		if( battle_config.equip_skill_break_rate && skill_id != WS_CARTTERMINATION && skill_id != ITM_TOMAHAWK )
 		{	// Cart Termination/Tomahawk won't trigger breaking data. Why? No idea, go ask Gravity.
@@ -1999,8 +1999,11 @@ int32 skill_counter_additional_effect (block_list* src, block_list *bl, uint16 s
  - rate goes from 0 to 10000 (100.00%)
  - flag is a BCT_ flag to indicate which type of adjustment should be used
    (BCT_ENEMY/BCT_PARTY/BCT_SELF) are the valid values.
+ - self_penalty: the unit breaks its own gear as the cost of its own skill/buff
+   (Crush Strike, Earth Drive, natural/Overthrust wear). Not set for Hagalaz,
+   where the attacker's weapon breaks because of the target's buff.
 --------------------------------------------------------------------------*/
-int32 skill_break_equip(block_list *src, block_list *bl, uint16 where, int32 rate, int32 flag)
+int32 skill_break_equip(block_list *src, block_list *bl, uint16 where, int32 rate, int32 flag, bool self_penalty)
 {
 	status_change *src_sc = status_get_sc(src);
 
@@ -2048,6 +2051,14 @@ int32 skill_break_equip(block_list *src, block_list *bl, uint16 where, int32 rat
 	} else if (flag&(BCT_PARTY|BCT_SELF)) {
 		if (battle_config.equip_self_break_rate != 100)
 			rate = rate*battle_config.equip_self_break_rate/100;
+	}
+	// NEED BG phase 1: on need_equip_break_rate maps (the three legacy battlegrounds) a player's final break chance
+	// is scaled relatively (30% x 80 = 24%, not 30% - 20%p). Capped at 100% first so a guaranteed break becomes 80%.
+	// Breaks caused by an opponent go through here (Pinpoint Attack, Acid Terror, Hagalaz, Melt Down, ...); a unit's
+	// own self_penalty break (Crush Strike, Earth Drive, natural wear) keeps the normal chance (v1.1).
+	if (sd != nullptr && rate > 0 && !self_penalty) {
+		if (int32 map_rate = map_getmapflag(bl->m, MF_NEED_EQUIP_BREAK_RATE); map_rate > 0 && map_rate < 100)
+			rate = i32min(rate, 10000) * map_rate / 100;
 	}
 
 	for (i = 0; i < 6; i++) {

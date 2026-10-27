@@ -39,7 +39,7 @@ void SkillEarthDrive::calculateSkillRatio(const Damage* wd, const block_list* sr
 
 void SkillEarthDrive::applyAdditionalEffects(block_list* src, block_list* target, uint16 skill_lv, t_tick tick, int32 attack_type, enum damage_lv dmg_lv) const {
 	// 2017: caster's own shield is damaged and the target gets Earth Drive (DEF/MDEF down).
-	skill_break_equip(src, src, EQP_SHIELD, 100 * skill_lv, BCT_SELF);
+	skill_break_equip(src, src, EQP_SHIELD, 100 * skill_lv, BCT_SELF, true);
 	sc_start(src, target, SC_EARTHDRIVE, 100, skill_lv, skill_get_time(getSkillId(), skill_lv));
 }
 
