@@ -698,6 +698,8 @@ enum e_mapflag : int16 {
 	MF_INVINCIBLE_TIME,
 	MF_BATTLE_GEAR_DISABLED,
 	MF_GVG_NOGUILD,
+	MF_NEED_NOAUTOREVIVE,	// NEED Duo Survival 2v2: no automatic revive (Kaizel, Ultimate Sacrifice, Super Novice angel, revive items, Valley of Death)
+	MF_NEED_PREPLOCK,	// NEED Duo Survival 2v2: preparation time - no ground-unit or summon skills (toggled by the 2v2 script)
 	MF_MAX
 };
 

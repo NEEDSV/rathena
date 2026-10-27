@@ -10153,7 +10153,8 @@ int32 pc_dead(map_session_data *sd,block_list *src)
 
 	// Activate Steel body if a super novice dies at 99+% exp [celest]
 	// Super Novices have no kill or die functions attached when saved by their angel
-	if (!sd->state.snovice_dead_flag && (sd->class_&MAPID_SECONDMASK) == MAPID_SUPER_NOVICE) {
+	// NEED Duo Survival 2v2: the angel does not save a Super Novice on the arena.
+	if (!sd->state.snovice_dead_flag && (sd->class_&MAPID_SECONDMASK) == MAPID_SUPER_NOVICE && !mapdata->getMapFlag(MF_NEED_NOAUTOREVIVE)) {
 		t_exp exp = pc_nextbaseexp(sd);
 
 		if( exp && get_percentage_exp(sd->status.base_exp, exp) >= 99 ) {
@@ -10563,6 +10564,9 @@ bool pc_revive_item(map_session_data *sd) {
 	nullpo_retr(false, sd);
 
 	if (!pc_isdead(sd) || sd->respawn_tid != INVALID_TIMER)
+		return false;
+
+	if (map_getmapflag(sd->m, MF_NEED_NOAUTOREVIVE)) // NEED Duo Survival 2v2: no Token of Siegfried / Light of Regene revive on the arena
 		return false;
 
 	if (sd->sc.getSCE(SC_HELLPOWER)) // Cannot resurrect while under the effect of SC_HELLPOWER.

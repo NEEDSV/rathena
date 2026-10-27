@@ -827,6 +827,37 @@ int8 skill_isCopyable(map_session_data *sd, uint16 skill_id) {
 }
 
 /**
+ * NEED Duo Survival 2v2: skills refused on the arena during the preparation time
+ * (mapflag MF_NEED_PREPLOCK, set by the 2v2 script) - every skill that places ground
+ * units (attack, defence and support alike) and every skill that summons monsters.
+ */
+static bool skill_need_preplocked( uint16 skill_id ){
+	if( skill_get_unit_id( skill_id ) != 0 || skill_get_unit_id2( skill_id ) != 0 )
+		return true;
+
+	switch( skill_id ){
+		case AM_CANNIBALIZE:
+		case AM_SPHEREMINE:
+		case CR_CULTIVATION:
+		case NC_SILVERSNIPER:
+		case NC_MAGICDECOY:
+		case KO_ZANZOU:
+		case MT_SUMMON_ABR_BATTLE_WARIOR:
+		case MT_SUMMON_ABR_DUAL_CANNON:
+		case MT_SUMMON_ABR_MOTHER_NET:
+		case MT_SUMMON_ABR_INFINITY:
+		case BO_CREEPER:
+		case BO_HELLTREE:
+		case BO_WOODEN_FAIRY:
+		case BO_WOODENWARRIOR:
+		case MH_SUMMON_LEGION:
+			return true;
+	}
+
+	return false;
+}
+
+/**
  * Check if the skill is ok to cast and when.
  * Done before skill_check_condition_castbegin, requirement
  * @param skill_id: Skill ID that casted
@@ -845,6 +876,12 @@ bool skill_isNotOk( uint16 skill_id, map_session_data& sd ){
 
 	if (mapdata->getMapFlag(MF_NOSKILL) && skill_id != ALL_EQSWITCH && !sd.skillitem) //Item skills bypass noskill
 		return true;
+
+	// NEED Duo Survival 2v2: checked before the item-skill bypass below, so scrolls cannot place units either.
+	if (mapdata->getMapFlag(MF_NEED_PREPLOCK) && skill_need_preplocked(skill_id)) {
+		clif_msg_color( sd, MSI_IMPOSSIBLE_SKILL_AREA, color_table[COLOR_CYAN] ); // This skill cannot be used within this area.
+		return true;
+	}
 
 	// Epoque:
 	// This code will compare the player's attack motion value which is influenced by ASPD before
@@ -1015,6 +1052,11 @@ bool skill_isNotOk_hom(homun_data *hd, uint16 skill_id, uint16 skill_lv)
 
 	if (!sd)
 		return true;
+
+	if (map_getmapflag(hd->m, MF_NEED_PREPLOCK) && skill_need_preplocked(skill_id)) { // NEED Duo Survival 2v2 preparation time
+		clif_msg_color( *sd, MSI_IMPOSSIBLE_SKILL_AREA, color_table[COLOR_CYAN] );
+		return true;
+	}
 
 	if (sc != nullptr && sc->empty())
 		sc = nullptr;

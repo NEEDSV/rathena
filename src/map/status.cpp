@@ -1735,7 +1735,8 @@ int32 status_damage(block_list *src,block_list *target,int64 dhp, int64 dsp, int
 		}
 	}
 
-	if( sc && sc->getSCE(SC_KAIZEL) && !map_flag_gvg2(target->m) ) { // flag&8 = disable Kaizel
+	// NEED Duo Survival 2v2: no automatic revive on the arena (the death counts for the round).
+	if( sc && sc->getSCE(SC_KAIZEL) && !map_flag_gvg2(target->m) && !map_getmapflag(target->m, MF_NEED_NOAUTOREVIVE) ) { // flag&8 = disable Kaizel
 		int32 time = skill_get_time2(SL_KAIZEL,sc->getSCE(SC_KAIZEL)->val1);
 		// Look for Osiris Card's bonus effect on the character and revive 100% or revive normally
 		if ( target->type == BL_PC && BL_CAST(BL_PC,target)->special_state.restart_full_recover )
@@ -1753,7 +1754,7 @@ int32 status_damage(block_list *src,block_list *target,int64 dhp, int64 dsp, int
 	}
 
 	// Disable Ultimate Sacrifice on GVG maps
-	if (sc && sc->getSCE(SC_ULTIMATE_S) && !map_flag_gvg2(target->m)) {
+	if (sc && sc->getSCE(SC_ULTIMATE_S) && !map_flag_gvg2(target->m) && !map_getmapflag(target->m, MF_NEED_NOAUTOREVIVE)) {
 		status_revive(target, 100, 100);
 		status_change_clear(target, 0);
 		clif_skill_nodamage(target, *target, ALL_RESURRECTION, 1);
@@ -10356,6 +10357,10 @@ bool status_change_start(block_list* src, block_list* bl, sc_type type, int32 ra
 		return false;
 
 	if (status_change_isDisabledOnMap(type, map_getmapdata(bl->m)))
+		return false;
+
+	// NEED Duo Survival 2v2: automatic revive statuses cannot be gained on the arena.
+	if ((type == SC_KAIZEL || type == SC_ULTIMATE_S || type == SC_LIGHT_OF_REGENE) && map_getmapflag(bl->m, MF_NEED_NOAUTOREVIVE))
 		return false;
 
 	if (sc->getSCE(SC_GRAVITYCONTROL))
