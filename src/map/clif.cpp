@@ -3916,29 +3916,16 @@ static void clif_par_change( const map_session_data& sd, uint16 varId, int32 cou
 /// NEED Event Hub button state for the patched NEEDClient (WARP NeedEventButton).
 /// Sent as ZC_PAR_CHANGE with var id NEED_EVHUB_VAR_ID. The stock client handler ignores every
 /// var id above 0xE9, so an unpatched client drops it; the patched one reads it before the
-/// packet switch and shows / hides the Event button at once.
-///   bit 0 : show the Event button       ($NEED_EVHUB_ON != 0)
-///   bit 1 : highlight (bright bitmap)   the account has not opened hub $NEED_EVHUB_ID yet (#NEED_EVHUB_SEEN)
+/// packet switch. The button is always shown, the state only picks its bitmap:
+///   1 : an event is running (bright bitmap)   $NEED_EVHUB_ON, kept by need_event_hub.txt
+///   0 : no event running   (dim bitmap)
 void clif_need_eventhub_state( map_session_data& sd ){
 	if( !session_isActive( sd.fd ) )
 		return;
 
 	static const int64 uid_on = reference_uid( add_str( "$NEED_EVHUB_ON" ), 0 );
-	static const int64 uid_id = reference_uid( add_str( "$NEED_EVHUB_ID" ), 0 );
-	static const int64 uid_seen = reference_uid( add_str( "#NEED_EVHUB_SEEN" ), 0 );
 
-	int32 state = 0;
-
-	if( mapreg_readreg( uid_on ) != 0 ){
-		state |= 1;
-
-		int64 hub_id = mapreg_readreg( uid_id );
-
-		if( hub_id != 0 && pc_readaccountreg( &sd, uid_seen ) != hub_id )
-			state |= 2;
-	}
-
-	clif_par_change( sd, NEED_EVHUB_VAR_ID, state );
+	clif_par_change( sd, NEED_EVHUB_VAR_ID, mapreg_readreg( uid_on ) != 0 ? 1 : 0 );
 }
 
 /// Notifies client of a character parameter change.

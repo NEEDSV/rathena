@@ -1063,25 +1063,6 @@ BUILDIN_FUNC(storageshopprepare)
 	return SCRIPT_CMD_SUCCESS;
 }
 
-// NEED 2026 chuseok event: claim the honey songpyun through the shared daily ledger.
-// needchuseokhoney({"<source>"}) - source defaults to "BG".
-// Returns 1 delivered, 0 account daily limit, -1 ip daily limit,
-// -2 inventory unavailable, -3 database error, -4 feature disabled.
-BUILDIN_FUNC(needchuseokhoney)
-{
-	map_session_data* sd = nullptr;
-
-	if (!script_rid2sd(sd)) {
-		script_pushint(st, NEED_CHUSEOK_HONEY_ERROR);
-		return SCRIPT_CMD_SUCCESS;
-	}
-
-	const char* source = script_hasdata(st, 2) ? script_getstr(st, 2) : "BG";
-
-	script_pushint(st, need_chuseok_honey_grant(sd, source, nullptr));
-	return SCRIPT_CMD_SUCCESS;
-}
-
 // NEED 2026 halloween event: jack game daily reward through the shared daily ledger.
 // needhalloweenjack(0) only checks: 1 already rewarded today (account or IP), 0 not yet, -1 ledger unavailable.
 // needhalloweenjack(1) pays 10 halloween coins: 1 delivered, 0 account daily limit, -1 ip daily limit,
@@ -1102,8 +1083,23 @@ BUILDIN_FUNC(needhalloweenjack)
 	return SCRIPT_CMD_SUCCESS;
 }
 
+// NEED 2026 halloween event: Jack's Candy (6532) daily state for the Event Hub.
+// needhalloweencandy() : 1 the account or the current IP already got today's candy, 0 not yet, -1 ledger unavailable.
+BUILDIN_FUNC(needhalloweencandy)
+{
+	map_session_data* sd = nullptr;
+
+	if (!script_rid2sd(sd)) {
+		script_pushint(st, -1);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	script_pushint(st, need_halloween_candy_claimed_today(sd));
+	return SCRIPT_CMD_SUCCESS;
+}
+
 // NEED Event Hub: resend the Event button state (clif_need_eventhub_state) after the script
-// changed $NEED_EVHUB_ON / $NEED_EVHUB_ID / #NEED_EVHUB_SEEN.
+// changed $NEED_EVHUB_ON (F_NEED_EventHub_Update in need_event_hub.txt).
 // needeventhub_refresh()  -> the attached player only, returns 1 (0 without a player)
 // needeventhub_refresh(1) -> every online player, returns how many were sent
 BUILDIN_FUNC(needeventhub_refresh)

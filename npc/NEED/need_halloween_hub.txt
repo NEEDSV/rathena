@@ -9,8 +9,7 @@
 //=   현황        needhalloweenjack(0) / F_NEED_Chuseok_LimitUsed(..., 202610) 원장 조회
 //= 클라이언트는 아무것도 계산하지 않는다. 화면을 열 때마다 서버 원장을 다시 읽는다.
 //=
-//= 오늘의 특별 아이템(6532 재사용 '잭의 사탕')은 감사에서 위험이 확인되어 넣지 않았다.
-//= (md/NEED_Halloween_2026_Event_Hub_Report.md 6532 항목)
+//= 오늘의 잭의 사탕(6532, 옛 꿀송편을 영구 전환): needhalloweencandy() 로 계정 + IP 오늘 획득 여부를 읽는다.
 //============================================================
 
 -	script	NEED_HW26_HUB	-1,{
@@ -18,6 +17,9 @@
 
 OnInit:
 	callfunc "F_NEED_EventHub_Register", "F_NEED_HW26_Hub";
+	// 등록이 끝났으니 할로윈 상태로 Hub 연결 / 버튼 상태 / NPC 표시를 다시 맞춘다
+	// (@halloweengm 의 OnInit 은 이 등록보다 먼저 돈다).
+	callfunc "F_NEED_Halloween_Sync";
 	end;
 }
 
@@ -89,6 +91,7 @@ function	script	F_NEED_HW26_Hub	{
 //------------------------------------------------------------
 S_Lines:
 	.@jack = needhalloweenjack(0);
+	.@candy = needhalloweencandy();
 	.@acc$ = "" + getcharid(3);
 	.@ham = callfunc("F_NEED_Chuseok_LimitUsed", "ACCOUNT", .@acc$, "SHADOW_HAMMER", callfunc("F_NEED_Chuseok_WeekKey"), 202610);
 	.@aria = callfunc("F_NEED_Chuseok_LimitUsed", "ACCOUNT", .@acc$, "ARIA", 0, 202610);
@@ -97,6 +100,7 @@ S_Lines:
 
 	mes needtr("보유 할로윈 코인 : ", "Halloween Coins held : ") + "^0055FF" + countitem(6658) + "^000000" + needtr("개", "");
 	mes needtr("오늘 잭 잡기 보상 : ", "Jack Catch reward today : ") + ((.@jack < 0) ? .@unk$ : ((.@jack) ? needtr("^999999완료^000000", "^999999done^000000") : needtr("^009900도전 가능^000000", "^009900available^000000")));
+	mes needtr("오늘의 잭의 사탕 : ", "Today's Jack's Candy : ") + ((.@candy < 0) ? .@unk$ : ((.@candy) ? needtr("^999999획득 완료^000000", "^999999obtained^000000") : needtr("^009900획득 가능^000000", "^009900still available^000000")));
 	mes needtr("홀그렌의 쉐도우 제련망치 : ", "Shadow Refine Hammer : ") + ((.@ham < 0) ? .@unk$ : needtr("이번 주 ", "this week ") + ((.@ham > 5) ? 5 : .@ham) + " / 5");
 	mes needtr("아리아 의상 선택 상자 : ", "Aria Costume Selection Box : ") + ((.@aria < 0) ? .@unk$ : ((.@aria) ? needtr("^999999수령^000000", "^999999received^000000") : needtr("미수령", "not yet")));
 	mes needtr("+9 무기·방어구 보장권 : ", "+9 Weapon/Armor Certificate : ") + ((.@ref < 0) ? .@unk$ : ((.@ref) ? needtr("^999999수령^000000", "^999999received^000000") : needtr("미수령", "not yet")));
@@ -131,6 +135,12 @@ S_Guide:
 	mes needtr(" - 일반 잭 +1점, 가끔 나오는 황금 잭 +3점", " - Jack +1 point, the rare Golden Jack +3 points");
 	mes needtr(" - 보상은 계정 + 접속 IP 기준 하루 1회", " - Reward once a day per account and per IP");
 	mes needtr(" - 매일 04:00 초기화, 실패하면 다시 도전 가능", " - Resets daily at 04:00; a failed try can be retried");
+	// 확률은 코인(4%)처럼 공개한다. 값은 battle conf 에서 읽는다 (need_halloween_candy_rate / 10000).
+	.@r = getbattleflag("need_halloween_candy_rate");
+	.@pct$ = (.@r / 100) + "." + ((.@r % 100 < 10) ? "0" : "") + (.@r % 100) + "%";
+	mes needtr("^0055FF잭의 사탕^000000 : 레벨 ±30 일반 필드 몬스터에게서 " + .@pct$ + " 확률로 등장,", "^0055FFJack's Candy^000000 : " + .@pct$ + " from field monsters within ±30 levels,");
+	mes needtr("   계정+IP당 하루 1개 (04:00 초기화). 사용하면 랜덤 제니/캐시", "   1 a day per account and IP (resets 04:00). Use it for random Zeny/Cash");
+	callfunc "F_NEED_EventHub_Size";
 	next;
 	mes needtr("^C05800[이벤트 안내] 잭 러시 (60초 랭킹전)^000000", "^C05800[Guide] Jack Rush (60 s ranking)^000000");
 	mes needtr(" - 60초 동안 잭을 최대한 많이 잡아 최고 점수에 도전", " - Catch as many Jacks as you can in 60 seconds");
@@ -155,6 +165,7 @@ S_Guide:
 	mes needtr("      ^999999계정당 주 5개, 매주 토요일 22:00 초기화^000000", "      ^9999995 per account per week, resets Sat 22:00^000000");
 	mes needtr(" 300 - 아리아 의상 선택 상자 ^999999(계정당 1개)^000000", " 300 - Aria Costume Selection Box ^999999(1 per account)^000000");
 	mes needtr(" 1000 - +9 무기 / 방어구 보장권 택1 ^999999(계정당 1개)^000000", " 1000 - +9 Weapon or Armor Certificate ^999999(1 per account)^000000");
+	callfunc "F_NEED_EventHub_Size";
 	next;
 	return;
 
@@ -163,6 +174,7 @@ S_Guide:
 //------------------------------------------------------------
 S_Status:
 	.@jack = needhalloweenjack(0);
+	.@candy = needhalloweencandy();
 	.@acc$ = "" + getcharid(3);
 	.@ham = callfunc("F_NEED_Chuseok_LimitUsed", "ACCOUNT", .@acc$, "SHADOW_HAMMER", callfunc("F_NEED_Chuseok_WeekKey"), 202610);
 	.@aria = callfunc("F_NEED_Chuseok_LimitUsed", "ACCOUNT", .@acc$, "ARIA", 0, 202610);
@@ -182,6 +194,7 @@ S_Status:
 	else
 		mes needtr(" ^009900도전 가능^000000 - 성공 시 코인 10개", " ^009900Available^000000 - win 10 coins");
 	mes needtr(" ^999999다음 초기화 : 매일 04:00^000000", " ^999999Next reset : daily at 04:00^000000");
+	mes needtr("^0055FF오늘의 잭의 사탕^000000 : ", "^0055FFToday's Jack's Candy^000000 : ") + ((.@candy < 0) ? .@unk$ : ((.@candy) ? needtr("^999999획득 완료^000000 (계정 또는 IP)", "^999999obtained^000000 (account or IP)") : needtr("^009900획득 가능^000000", "^009900still available^000000")));
 	mes " ";
 	mes needtr("^0055FF잭 러시 (이번 주)^000000", "^0055FFJack Rush (this week)^000000");
 	if (!$@HW26_RUSH_READY)
@@ -203,6 +216,7 @@ S_Status:
 	mes needtr("   ^999999다음 초기화 : ", "   ^999999Next reset : ") + callfunc("F_NEED_Chuseok_WeekResetStr$") + "^000000";
 	mes needtr(" 아리아 의상 선택 상자 : ", " Aria Costume Selection Box : ") + ((.@aria < 0) ? .@unk$ : ((.@aria) ? needtr("수령 (1 / 1)", "received (1 / 1)") : needtr("미수령 (0 / 1)", "not yet (0 / 1)")));
 	mes needtr(" +9 무기·방어구 보장권 : ", " +9 Weapon/Armor Certificate : ") + ((.@ref < 0) ? .@unk$ : ((.@ref) ? needtr("수령 (1 / 1)", "received (1 / 1)") : needtr("미수령 (0 / 1)", "not yet (0 / 1)")));
+	callfunc "F_NEED_EventHub_Size";
 	next;
 	return;
 }

@@ -15,7 +15,12 @@
 //=   300  아리아 의상 선택 상자 (399935)     계정당 이벤트 기간 1개
 //=   1000 +9 무기(6228) / 방어구(6232) 보장권 택1, 계정당 이벤트 기간 총 1개
 //=
-//= 원장은 새로 만들지 않고 추석 테이블을 event_id 202610 으로 재사용한다.
+//= 잭의 사탕 (6532, 옛 꿀송편을 영구 전환)
+//=   사냥 0.05% (need_halloween_candy_rate), 레벨 ±30, 계정 + 접속 IP 하루 1개 (04:00)
+//=   지급은 C++ need_halloween.cpp, 사용은 F_NEED_Halloween_JackCandy (공통 랜덤 제니/캐시, event_id 202611)
+//=   사냥 스위치($NEED_HALLOWEEN_HUNT_ON)를 코인과 같이 따른다.
+//=
+//= 원장은 새로 만들지 않고 추석 테이블을 event_id 202610 (잭 잡기) / 202611 (잭의 사탕) 으로 재사용한다.
 //=   잭 잡기 일일 보상  need_chuseok_honey_*      (C++ needhalloweenjack)
 //=   교환 한도          need_chuseok_exchange_*   (F_NEED_Chuseok_Limit* 에 event_id 전달)
 //=
@@ -24,7 +29,8 @@
 //= Event Hub (need_event_hub.txt + need_halloween_hub.txt)
 //=   두 NPC 의 대화는 F_NEED_Halloween_JackTalk / F_NEED_Halloween_ShopTalk 함수로 옮겼다.
 //=   payo2 NPC 와 Event 버튼이 같은 함수를 부른다 (한도/원장 로직은 그대로).
-//=   Event Hub 가 할로윈으로 켜져 있으면 두 NPC 는 숨긴다.
+//=   할로윈이 켜지면 Hub 를 할로윈 모듈로 연결하고 Event 버튼이 밝아진다(자동), 꺼지면 흐려진다.
+//=   버튼이 할로윈으로 ON 이면 두 NPC 는 숨긴다.
 //=   $NEED_HALLOWEEN_LEGACY_NPC_ON = 1 이면 Hub 와 상관없이 다시 보인다 (운영/복구용).
 //============================================================
 
@@ -45,8 +51,14 @@ function	script	F_NEED_Halloween_Active	{
 //------------------------------------------------------------
 function	script	F_NEED_Halloween_Sync	{
 	setbattleflag("need_halloween_hunt_enable", ($NEED_HALLOWEEN_EVENT_ON && $NEED_HALLOWEEN_HUNT_ON) ? 1 : 0);
+	setbattleflag("need_halloween_candy_enable", ($NEED_HALLOWEEN_EVENT_ON && $NEED_HALLOWEEN_HUNT_ON) ? 1 : 0);
 
-	// Event Hub 가 할로윈으로 켜져 있으면 같은 대화를 버튼으로 열 수 있으므로 NPC 는 숨긴다.
+	// Event Hub : 할로윈이 진행 중이면 Hub 를 할로윈으로 연결하고, 버튼 상태(밝음/흐림)를 다시 계산한다.
+	if ($NEED_HALLOWEEN_EVENT_ON)
+		callfunc "F_NEED_EventHub_Claim", "F_NEED_HW26_Hub", 202610;
+	callfunc "F_NEED_EventHub_Update";
+
+	// 버튼이 할로윈으로 ON 이면 같은 대화를 버튼으로 열 수 있으므로 NPC 는 숨긴다.
 	.@legacy = ($NEED_HALLOWEEN_LEGACY_NPC_ON || !callfunc("F_NEED_EventHub_IsLive", "F_NEED_HW26_Hub"));
 
 	if ($NEED_HALLOWEEN_EVENT_ON) {
@@ -70,6 +82,17 @@ function	script	F_NEED_Halloween_Sync	{
 		enablenpc "한가위 교환상 달이#chuseok2026";
 	}
 	return;
+}
+
+//------------------------------------------------------------
+// 잭의 사탕 사용 (item 6532, 옛 꿀송편을 2026-10-26 영구 전환)
+//
+// 보상 분포는 꿀송편 때와 같은 공통 함수 그대로 (변경 없음). 로그는 event_id 202611.
+// 사용 횟수 제한은 없다 (가진 수량만큼). 이벤트가 끝나도 남은 사탕은 쓸 수 있고,
+// 잔여분은 종료 SQL(need_halloween_2026_end.sql)이 지운다.
+//------------------------------------------------------------
+function	script	F_NEED_Halloween_JackCandy	{
+	return callfunc("F_NEED_Event_RandomCashReward", 6532, 202611, "할로윈 이벤트", "잭의 사탕", "Halloween Event", "Jack's Candy");
 }
 
 //------------------------------------------------------------
