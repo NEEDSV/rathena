@@ -18,6 +18,7 @@
 #include "achievement.hpp"
 #include "atcommand.hpp"	//msg_txt()
 #include "battle.hpp"
+#include "battleground.hpp"
 #include "chrif.hpp" // charserver_name
 #include "clif.hpp"
 #include "instance.hpp"
@@ -1163,6 +1164,9 @@ int32 party_skill_check(map_session_data *sd, int32 party_id, uint16 skill_id, u
 		if (sd->m != p_sd->m)
 			continue;
 
+		if (party_need_bgsplit(sd, p_sd)) // NEED Duo Survival 2v2: other battleground team
+			continue;
+
 		switch(skill_id) {
 			case TK_COUNTER: //Increase Triple Attack rate of Monks.
 				if((p_sd->class_&MAPID_SECONDMASK) == MAPID_MONK
@@ -1467,6 +1471,21 @@ int32 party_sub_count_class(block_list *bl, va_list ap)
 	return 1;
 }
 
+/**
+ * NEED Duo Survival 2v2: on a map with MF_NEED_BGPARTYSPLIT, two party members on different
+ * battleground teams are not party members for skills (party buffs, member counts, ensemble partners).
+ * battle_check_target already does this for BCT_PARTY; this covers the paths that read the party directly.
+ */
+bool party_need_bgsplit( const block_list* a, const block_list* b ){
+	if( a == nullptr || b == nullptr || a == b || a->m != b->m )
+		return false;
+
+	if( !map_getmapflag( a->m, MF_NEED_BGPARTYSPLIT ) )
+		return false;
+
+	return bg_team_get_id( a ) != bg_team_get_id( b );
+}
+
 /// Executes 'func' for each party member on the same map and in range (0:whole map)
 int32 party_foreachsamemap(int32 (*func)(block_list*,va_list),const map_session_data* sd,int32 range,...)
 {
@@ -1494,6 +1513,9 @@ int32 party_foreachsamemap(int32 (*func)(block_list*,va_list),const map_session_
 			continue;
 
 		if(psd->m!=sd->m || !psd->prev)
+			continue;
+
+		if(party_need_bgsplit(sd, psd)) // NEED Duo Survival 2v2: other battleground team
 			continue;
 
 		if(range &&

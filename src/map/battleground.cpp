@@ -947,6 +947,11 @@ bool bg_queue_check_joinable(std::shared_ptr<s_battleground_type> bg, map_sessio
 	if (!bg_queue_check_status(sd, name)) // Check status blocks
 		return false;
 
+	if (pc_readreg2(sd, "@NEED_BG2_BUSY") > 0) { // NEED Duo Survival 2v2: queued for, confirming or playing a 2v2 match
+		clif_bg_queue_apply_result(BG_APPLY_DUPLICATE, name, sd);
+		return false;
+	}
+
 	if (bg_player_is_in_bg_map(sd)) { // Is the player currently in a battleground map? Reject them.
 		clif_bg_queue_apply_result(BG_APPLY_NONE, name, sd);
 		clif_messagecolor(sd, color_table[COLOR_LIGHT_GREEN], msg_txt(sd, 337), false, SELF); // You can't apply to a battleground queue from this map.

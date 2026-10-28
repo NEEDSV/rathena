@@ -22633,6 +22633,30 @@ BUILDIN_FUNC(need_bg2_clearunits)
 	return SCRIPT_CMD_SUCCESS;
 }
 
+/**
+ * NEED Duo Survival 2v2: player states the 2v2 queue has to check and scripts cannot read otherwise.
+ * need_bg2_pcstate <type>{,<char id>};
+ *   type 0: engine battleground queue id (packet 0x08D7 path), 0 when in no queue
+ *   type 1: 1 while trading, otherwise 0
+ * Returns 0 when the player is not found.
+ */
+BUILDIN_FUNC(need_bg2_pcstate)
+{
+	map_session_data* sd;
+
+	if (!script_charid2sd(3, sd)) {
+		script_pushint(st, 0);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	switch (script_getnum(st, 2)) {
+		case 0: script_pushint(st, sd->bg_queue_id); break;
+		case 1: script_pushint(st, sd->state.trading ? 1 : 0); break;
+		default: script_pushint(st, 0); break;
+	}
+	return SCRIPT_CMD_SUCCESS;
+}
+
 /*==========================================
  * Instancing System
  *------------------------------------------*/
@@ -29940,6 +29964,7 @@ struct script_function buildin_func[] = {
 	BUILDIN_DEF(bg_unbook,"s"),
 	BUILDIN_DEF(bg_info,"si"),
 	BUILDIN_DEF(need_bg2_clearunits,"?"),	// NEED Duo Survival 2v2: clear a player's ground skill units between rounds
+	BUILDIN_DEF(need_bg2_pcstate,"i?"),	// NEED Duo Survival 2v2: engine battleground queue / trading state of a player
 
 	// Instancing
 	BUILDIN_DEF(instance_create,"s??"),

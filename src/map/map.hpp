@@ -700,6 +700,7 @@ enum e_mapflag : int16 {
 	MF_GVG_NOGUILD,
 	MF_NEED_NOAUTOREVIVE,	// NEED Duo Survival 2v2: no automatic revive (Kaizel, Ultimate Sacrifice, Super Novice angel, revive items, Valley of Death)
 	MF_NEED_PREPLOCK,	// NEED Duo Survival 2v2: preparation time - no ground-unit or summon skills (toggled by the 2v2 script)
+	MF_NEED_BGPARTYSPLIT,	// NEED Duo Survival 2v2: party members on different battleground teams are not party members for skills
 	MF_MAX
 };
 

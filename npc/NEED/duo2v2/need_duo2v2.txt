@@ -1,24 +1,30 @@
 //============================================================
-// NEED 2:2 듀오 서바이벌 - 1단계 (GM 통제 4인 실전 테스트 전용)
+// NEED 2:2 듀오 서바이벌 - 2단계 (공개 개인 대기열 + 참가 확인 + 직업 균형 + 중앙 거점, 개발 서버 검증용)
 //============================================================
-//= 범위  : 개발 서버 GM 테스트. 상시 대기열/자동 매칭/파티 매칭/보상은 없다.
 //= 맵    : need_bg2 (pvp_2vs2 지형 복제, npc/NEED/duo2v2/need_bg2_mapflag.txt).
-//=         내부 미로(180도 회전 대칭)만 쓰고, 중앙 6x6 밀폐 박스(37..42)는 탈락자 관전석이다.
-//= 팀    : rAthena 엔진 BG 팀 2개(블루/레드). 아군/적군은 bg_id 로만 판정한다
-//=         (battle.cpp battle_check_target). 파티/길드는 팀을 정하지 않고, 파티를 만들거나
-//=         해산하지도 않는다. 같은 파티원 두 명이 함께 신청하면 거절한다(합주/파티 카운트 스킬).
-//= 편성  : 정확히 4명. 신청 순서와 무관하게 Fisher-Yates 셔플 후 앞 2명 블루, 뒤 2명 레드.
+//=         내부 미로만 쓰고, 중앙 6x6 밀폐 박스(37..42)는 탈락자 관전석이다.
+//=         중앙 거점 = 관전석을 둘러싼 2칸 폭 고리(x/y 34..45 에서 36..43 제외, 80칸). 양 팀 시작점에서 최단 40칸.
+//= 팀    : rAthena 엔진 BG 팀 2개(블루/레드). 아군/적군은 bg_id 로만 판정한다(battle.cpp battle_check_target).
+//=         파티/길드는 팀을 정하지 않고, 파티를 만들거나 해산하지도 않는다. 같은 파티원이 서로 다른 팀이 되어도
+//=         맵플래그 need_bgpartysplit 이 파티 스킬/인원 계산/합주 상대에서 다른 BG 팀을 뺀다(party.cpp 등).
+//= 신청  : 공개 개인 FIFO 대기열($NEED_BG2_QUEUE_OPEN, GM 이 @duo2v2 queue on/off). 계정당 1건, 다른 NEED 전장
+//=         신청/대기와 양방향 중복 금지(@NEED_BG2_BUSY). 경기장이 비고 4명이 모이면 맨 앞 4명에게 30초 참가 확인.
+//=         GM 수동 4인 테스트(@duo2v2 open/start)는 그대로 있고, 경기장/참가 확인과 겹치지 않는다.
+//= 편성  : 확정된 4명 안에서만. 지원 점수(아크비숍 2, 소서러/민스트럴/원더러 1) 합 차이 최소 → 같은 직업 집중 최소
+//=         → 무작위. 팀 색 무작위.
+//= 라운드: 준비 45초(첫 라운드)/15초, 90초 라운드, 2선승(최대 5라운드). 60초부터 중앙 거점, 단독 점유 10초 = 승리.
+//=         90초 종료 시 생존 인원 → 단독 점유 시간 → 무승부.
 //= 보상  : 없음. 이 파일은 보상/전적/일일퀘스트/마블/이벤트 함수를 하나도 호출하지 않는다.
-//= 명령  : @duo2v2 (@듀오관리)  GM 60+ : 모집 열기/신청 현황/시작/상태/강제 중단/고립자 복구/설정
-//=         @duojoin (@듀오참가)        : 모집 중 참가 신청
-//=         @duocancel (@듀오취소)      : 신청 취소 (경기 시작 전)
-//=         @duostatus (@듀오현황)      : 현재 상태
-//= 상태  : 0 IDLE  1 RECRUITING  2 PREPARING  3 ROUND_READY  4 ROUND_ACTIVE  5 ROUND_RESULT
+//= 명령  : @duo2v2 (@듀오관리)  GM 60+ : 대기열 열기/닫기, GM 테스트 모집/시작, 상태, 강제 중단, 고립자 복구, 설정
+//=         @duojoin (@듀오참가) / @duocancel (@듀오취소) / @duostatus (@듀오현황)
+//=         @duoaccept (@듀오수락) / @duodecline (@듀오거절) : 참가 확인 응답
+//= 상태  : 0 IDLE  1 RECRUITING(GM 테스트)  2 PREPARING  3 ROUND_READY  4 ROUND_ACTIVE  5 ROUND_RESULT
 //=         6 MATCH_FINISHED  7 CLEANUP.  ABORTED 는 결과 VOID/CANCELLED 로 6을 거쳐 7로 간다.
+//=         참가 확인($@NBG2_RC)은 경기장이 IDLE 일 때만 열린다.
 //= 판정  : 사망 = BG 팀 die 이벤트(status_damage), 접속 종료 = BG 팀 quit 이벤트(map_quit),
 //=         맵/팀 이탈 = 0.5초 감시. 전이 함수는 sleep 없이 상태를 먼저 바꾼 뒤 처리하므로
 //=         같은 결과가 두 번 확정되지 않는다.
-//= 보완  : (2026-10-26 확정 정책)
+//= 보완  : (2026-10-26 확정 정책, 2단계에서도 유지)
 //=         - 자동 부활 금지: 맵플래그 need_noautorevive(엔진) + 입장/라운드마다 자동 부활 상태 해제.
 //=         - 준비시간: 자기 팀 준비구역 안 이동 허용, 경계 셀 차단(setcell), 벗어나면 시작점 복귀,
 //=           공격 불가/피해 면역, 지면 설치·소환 스킬은 맵플래그 need_preplock 으로 엔진이 거부.
@@ -28,11 +34,13 @@
 //=         - 접속 종료: 경기당 개인 누적 15초 재접속 유예(돌아오면 원래 팀으로 재합류).
 //= 로그  : debugmes "[NEED_BG2] ..." -> log/map-msg_log.log. 계정/캐릭터 ID만 남긴다.
 //=         $NEED_BG2_LOG_OFF = 1 이면 끈다.
-//= 변수  : $@NBG2_*                        임시. 리로드/재시작 시 사라지므로 그 경기는 무효.
+//= 변수  : $@NBG2_*                        임시. 리로드/재시작 시 사라지므로 그 경기는 무효, 대기열은 재신청.
 //=         NEED_BG2_MID   캐릭터. 재접속 시 재합류/정리 판단용(복귀 지점은 항상 저장 지점).
 //=         (NEED_BG2_RMAP$ / RX / RY 는 이전 버전 값 정리용으로 비우기만 한다)
 //=         @NEED_BG2_BGID / @NEED_BG2_PB   세션. 리로드 후 정리용.
-//=         $NEED_BG2_SEQ (참고 순번), $NEED_BG2_LVBYPASS (GM 테스트 옵션), $NEED_BG2_LOG_OFF,
+//=         @NEED_BG2_BUSY  세션. 1 대기/GM 명단, 2 참가 확인, 3 경기. 기존 전장 신청 검사가 읽는다.
+//=         $NEED_BG2_SEQ (참고 순번), $NEED_BG2_LVBYPASS (GM 테스트 옵션, 공개 대기열에는 적용 안 함), $NEED_BG2_LOG_OFF,
+//=         $NEED_BG2_QUEUE_OPEN (공개 대기열 스위치, 기본 0), $NEED_BG2_LASTMID (마지막 매치 ID - 같은 초 충돌 방지),
 //=         $NEED_BG2_NP[32] / $NEED_BG2_NP_POS (최근 무효·취소 경기 번호 - 재접속 시 탈주 제재 해제용)
 //============================================================
 
@@ -54,6 +62,11 @@ function	script	F_NEED_BG2_Init	{
 	$@NBG2_C_MAXROUND = 5;		// 기본 3라운드 + 연장 최대 2라운드
 	$@NBG2_C_MINLV = 150;		// NEED 기본 전장 참가 레벨
 	$@NBG2_C_RECONNECT = 15000;	// 경기당 개인별 누적 재접속 유예
+	$@NBG2_C_RC = 30000;		// 공개 대기열 참가 확인 시간
+	$@NBG2_C_CAP_ACTIVE = 60000;	// 라운드 시작 후 중앙 거점이 열리는 시점
+	$@NBG2_C_CAP_WIN = 10000;	// 단독 점유 게이지가 이만큼 차면 그 팀 라운드 승리
+	$@NBG2_C_CAP_IDLE = 2000;	// 아무도 없는 상태가 이 시간을 넘기면 게이지가 실제 1초당 2초분씩 준다
+	$@NBG2_C_CAP_ANN = 2000;	// 점령 상태 공지의 최소 간격(도배 방지)
 	// 준비시간: 자기 팀 준비구역 안에서는 이동 가능, 공격 불가, 피해 면역. 스킬/아이템은 허용하되
 	// 지면 설치·소환 스킬은 맵플래그 need_preplock 으로 엔진이 거부한다.
 	$@NBG2_C_FREEZE = PCBLOCK_ATTACK | PCBLOCK_IMMUNE;
@@ -176,11 +189,11 @@ function	script	F_NEED_BG2_Reason$	{
 	case 4: return needtr("전장/PvP/GvG/인스턴스/이동 금지 맵에서는 신청할 수 없습니다.", "cannot sign up from a battleground, PvP, GvG, instance or no-warp map.");
 	case 5: return needtr("BaseLevel " + $@NBG2_C_MINLV + " 이상만 참가할 수 있습니다.", "BaseLevel " + $@NBG2_C_MINLV + " or higher is required.");
 	case 6: return needtr("노점/자동 판매 중에는 참가할 수 없습니다.", "cannot join while vending.");
-	case 7: return needtr("같은 파티원이 이미 신청했습니다. 파티 단위 참가는 지원하지 않습니다.", "a member of the same party already signed up. Party entry is not supported.");
-	case 8: return needtr("전장 랜덤 매칭에 참가 중입니다.", "already in the battleground random match.");
-	case 9: return needtr("이미 신청했습니다.", "already signed up.");
+	case 8: return needtr("다른 전장(랜덤 매칭/전장 대기열/파티 입장 등록/전장 신청)에 신청 중입니다. 그쪽을 먼저 취소하세요.", "you are signed up for another battleground (random match, battleground queue, party entry or battleground application). Cancel it first.");
+	case 9: return needtr("이 계정은 이미 2:2 대기열/참가 확인/경기에 있습니다.", "this account is already in the 2v2 queue, a ready check or a match.");
 	case 10: return needtr("지금은 참가 신청을 받지 않습니다.", "sign-ups are not open now.");
 	case 11: return needtr("정원 4명이 모두 찼습니다.", "all 4 places are taken.");
+	case 12: return needtr("거래 중에는 참가할 수 없습니다.", "cannot join while trading.");
 	}
 	return "?";
 }
@@ -200,6 +213,9 @@ function	script	F_NEED_BG2_ReturnOk	{
 	return 1;
 }
 
+// 첨부된 플레이어가 기존 NEED 전장에 신청/등록되어 있는지(계정 기준). 읽기만 하고 아무것도 바꾸지 않는다.
+// 랜덤 매칭 모집·사이클 팀, 전장 대기열(@전장대기), 전장 관리인 파티 입장 등록(파티 단위),
+// 엔진 전장 대기열(패킷 신청), 전장 팀 소속.
 function	script	F_NEED_BG2_InRandomMatch	{
 	.@aid = getarg(0);
 	for (.@i = 0; .@i < $@BG_RM_COUNT; .@i++)
@@ -208,10 +224,19 @@ function	script	F_NEED_BG2_InRandomMatch	{
 		if ($@BG_RM_G_AID[.@i] == .@aid) return 1;
 	for (.@i = 0; .@i < $@BG_RM_C_COUNT; .@i++)
 		if ($@BG_RM_C_AID[.@i] == .@aid) return 1;
+	for (.@i = 0; .@i < $@BG_RM_QUEUE_COUNT; .@i++)
+		if ($@BG_RM_QUEUE_AID[.@i] == .@aid) return 1;
+	.@pid = getcharid(1);
+	if (.@pid && ((.@pid == $BG_GUILLAUME_PARTY_ID) || (.@pid == $BG_CROIX_PARTY_ID)))
+		return 1;
+	if (need_bg2_pcstate(0))
+		return 1;
 	return 0;
 }
 
 // 첨부된 플레이어의 참가 조건 검사. 0 = 통과, 그 밖에는 F_NEED_BG2_Reason$ 코드.
+// getarg(0) = 1 이면 공개 대기열: GM 테스트 옵션(레벨 우회)을 적용하지 않는다.
+// 사냥 중 이동/스킬 사용은 거절 사유가 아니다. 신청 때와 입장 직전에 같은 검사를 다시 한다.
 function	script	F_NEED_BG2_CheckSelf	{
 	if (Hp < 1)
 		return 2;
@@ -221,10 +246,12 @@ function	script	F_NEED_BG2_CheckSelf	{
 		return 1;
 	if (!callfunc("F_NEED_BG2_ReturnOk", .@m$, .@x, .@y) || getmapflag(.@m$, mf_nowarp))
 		return 4;
-	if (!$NEED_BG2_LVBYPASS && BaseLevel < $@NBG2_C_MINLV)
+	if ((getarg(0, 0) || !$NEED_BG2_LVBYPASS) && BaseLevel < $@NBG2_C_MINLV)
 		return 5;
 	if (checkvending())
 		return 6;
+	if (need_bg2_pcstate(1))
+		return 12;
 	if (callfunc("F_NEED_BG2_InRandomMatch", getcharid(3)))
 		return 8;
 	return 0;
@@ -343,6 +370,8 @@ function	script	F_NEED_BG2_RestoreSelf	{
 	NEED_BG2_RY = 0;
 	@NEED_BG2_BGID = 0;
 	@NEED_BG2_PB = 0;
+	@NEED_BG2_BUSY = 0;
+	viewpoint 2, 39, 39, 1, 0xFFCC00;
 	return;
 }
 
@@ -358,20 +387,6 @@ function	script	F_NEED_BG2_IsNoPenalty	{
 	for (.@k = 0; .@k < 32; .@k++)
 		if ($NEED_BG2_NP[.@k] && $NEED_BG2_NP[.@k] == getarg(0)) return 1;
 	return 0;
-}
-
-function	script	F_NEED_BG2_Shuffle	{
-	.@n = getarg(0);
-	cleararray $@NBG2_ORD[0], 0, 8;
-	for (.@i = 0; .@i < .@n; .@i++)
-		$@NBG2_ORD[.@i] = .@i;
-	for (.@i = .@n - 1; .@i > 0; .@i--) {
-		.@j = rand(.@i + 1);
-		.@t = $@NBG2_ORD[.@i];
-		$@NBG2_ORD[.@i] = $@NBG2_ORD[.@j];
-		$@NBG2_ORD[.@j] = .@t;
-	}
-	return;
 }
 
 function	script	F_NEED_BG2_ClearMatch	{
@@ -400,6 +415,8 @@ function	script	F_NEED_BG2_ClearMatch	{
 }
 
 function	script	F_NEED_BG2_ClearRecruit	{
+	for (.@i = 0; .@i < $@NBG2_REG_N; .@i++)
+		callfunc "F_NEED_BG2_SetBusy", $@NBG2_REG_AID[.@i], $@NBG2_REG_CID[.@i], 0;
 	cleararray $@NBG2_REG_AID[0], 0, 8;
 	cleararray $@NBG2_REG_CID[0], 0, 8;
 	$@NBG2_REG_N = 0;
@@ -408,6 +425,7 @@ function	script	F_NEED_BG2_ClearRecruit	{
 
 function	script	F_NEED_BG2_RemoveReg	{
 	.@k = getarg(0);
+	callfunc "F_NEED_BG2_SetBusy", $@NBG2_REG_AID[.@k], $@NBG2_REG_CID[.@k], 0;
 	for (.@i = .@k; .@i < $@NBG2_REG_N - 1; .@i++) {
 		$@NBG2_REG_AID[.@i] = $@NBG2_REG_AID[.@i + 1];
 		$@NBG2_REG_CID[.@i] = $@NBG2_REG_CID[.@i + 1];
@@ -416,19 +434,6 @@ function	script	F_NEED_BG2_RemoveReg	{
 	$@NBG2_REG_AID[$@NBG2_REG_N] = 0;
 	$@NBG2_REG_CID[$@NBG2_REG_N] = 0;
 	return;
-}
-
-// 등록된 다른 신청자와 같은 파티인지 (첨부된 플레이어 기준).
-function	script	F_NEED_BG2_PartyClash	{
-	.@pid = getcharid(1);
-	if (!.@pid)
-		return 0;
-	for (.@i = 0; .@i < $@NBG2_REG_N; .@i++) {
-		.@n$ = convertpcinfo($@NBG2_REG_CID[.@i], CPC_NAME);
-		if (.@n$ != "" && getcharid(1, .@n$) == .@pid)
-			return 1;
-	}
-	return 0;
 }
 
 // 신청자 전원에게 짧은 안내.
@@ -444,7 +449,7 @@ function	script	F_NEED_BG2_TellRegs	{
 	return;
 }
 
-// GM 이 첨부된 상태에서 호출. 성공 1, 거절 0. 거절 시 모집 상태와 명단은 그대로다.
+// GM 이 첨부된 상태에서 호출(GM 수동 4인 테스트). 성공 1, 거절 0. 거절 시 모집 상태와 명단은 그대로다.
 function	script	F_NEED_BG2_Start	{
 	.@gm = playerattached();
 	if ($@NBG2_STATE != 1) {
@@ -464,8 +469,8 @@ function	script	F_NEED_BG2_Start	{
 		else if (getcharid(0) != $@NBG2_REG_CID[.@i])
 			.@code = 1;
 		else {
-			.@code = callfunc("F_NEED_BG2_CheckSelf");
-			.@party[.@i] = getcharid(1);
+			.@code = callfunc("F_NEED_BG2_CheckSelf", 0);
+			$@NBG2_CAND_CLS[.@i] = Class;
 		}
 		detachrid;
 		if (.@code) {
@@ -474,45 +479,130 @@ function	script	F_NEED_BG2_Start	{
 			break;
 		}
 	}
-	if (!.@bad) {
-		for (.@i = 0; .@i < 4 && !.@bad; .@i++)
-			for (.@j = .@i + 1; .@j < 4; .@j++)
-				if (.@party[.@i] && .@party[.@i] == .@party[.@j]) {
-					.@bad = .@j + 1;
-					.@badcode = 7;
-					break;
-				}
-	}
 	callfunc "F_NEED_BG2_Reattach", .@gm;
 	if (.@bad) {
 		dispbottom "[2:2 듀오] 시작 거절: 신청 #" + .@bad + " (cid " + $@NBG2_REG_CID[.@bad - 1] + ") - " + callfunc("F_NEED_BG2_Reason$", .@badcode);
 		callfunc "F_NEED_BG2_Log", "START_REFUSED reason=" + .@badcode + " slot=" + .@bad + " cid=" + $@NBG2_REG_CID[.@bad - 1];
 		return 0;
 	}
+	for (.@i = 0; .@i < 4; .@i++) {
+		$@NBG2_CAND_AID[.@i] = $@NBG2_REG_AID[.@i];
+		$@NBG2_CAND_CID[.@i] = $@NBG2_REG_CID[.@i];
+		$@NBG2_CAND_SEQ[.@i] = 0;
+	}
+	.@ok = callfunc("F_NEED_BG2_Launch", 1);
+	callfunc "F_NEED_BG2_Reattach", .@gm;
+	if (.@ok)
+		dispbottom "[2:2 듀오] 매치 " + $@NBG2_MATCH + " 시작 (준비 45초).";
+	else
+		dispbottom "[2:2 듀오] 시작 실패: 이동/팀 합류 실패. 경기장에 들어간 사람은 저장 지점으로 보냈고 모집은 유지됩니다.";
+	return .@ok;
+}
 
-	// 무작위 2:2 편성. 파티/길드/신청 순서/GM 선택은 쓰지 않는다.
-	callfunc "F_NEED_BG2_Shuffle", 4;
+// 직업 지원 점수: 아크비숍 계열 2, 소서러/민스트럴/원더러 계열 1, 그 외 0.
+// eaclass & EAJ_THIRDMASK 로 보므로 전생·베이비·4차(카디널/엘리멘탈 마스터/트루바두르/트루베르)도 같은 계열이다.
+function	script	F_NEED_BG2_Support	{
+	.@m = eaclass(getarg(0)) & EAJ_THIRDMASK;
+	if (.@m == EAJ_ARCH_BISHOP)
+		return 2;
+	if (.@m == EAJ_SORCERER || .@m == EAJ_MINSTRELWANDERER)
+		return 1;
+	return 0;
+}
+
+// 확정된 4명($@NBG2_CAND_*) 안에서만 2:2 를 나눈다. 3가지 분할 중
+// (1) 지원 점수 합 차이 최소 (2) 같은 직업 2명이 한 팀에 몰리는 수 최소 (3) 그래도 같으면 무작위.
+// 팀 색도 무작위로 정해 한쪽으로 치우치지 않게 한다. 결과: $@NBG2_ORD[0..1] 블루, [2..3] 레드 (CAND 인덱스).
+// MMR/승률/레벨/장비/길드/IP/파티는 보지 않는다.
+function	script	F_NEED_BG2_Balance	{
+	for (.@i = 0; .@i < 4; .@i++) {
+		.@s[.@i] = callfunc("F_NEED_BG2_Support", $@NBG2_CAND_CLS[.@i]);
+		.@j[.@i] = eaclass($@NBG2_CAND_CLS[.@i]) & EAJ_FOURTHMASK;	// 같은 직업 판정(전생/베이비 구분 없음)
+	}
+	setarray .@a1[0], 0, 0, 0;
+	setarray .@a2[0], 1, 2, 3;
+	setarray .@b1[0], 2, 1, 1;
+	setarray .@b2[0], 3, 3, 2;
+	.@best = -1;
+	for (.@p = 0; .@p < 3; .@p++) {
+		.@d = (.@s[.@a1[.@p]] + .@s[.@a2[.@p]]) - (.@s[.@b1[.@p]] + .@s[.@b2[.@p]]);
+		if (.@d < 0)
+			.@d = -.@d;
+		.@c = 0;
+		if (.@j[.@a1[.@p]] == .@j[.@a2[.@p]])
+			.@c++;
+		if (.@j[.@b1[.@p]] == .@j[.@b2[.@p]])
+			.@c++;
+		.@key[.@p] = .@d * 10 + .@c;
+		if (.@best < 0 || .@key[.@p] < .@best)
+			.@best = .@key[.@p];
+	}
+	.@n = 0;
+	for (.@p = 0; .@p < 3; .@p++) {
+		if (.@key[.@p] != .@best)
+			continue;
+		.@pick[.@n] = .@p;
+		.@n++;
+	}
+	.@p = .@pick[0];
+	if (.@n > 1)	// rand(1) 은 오류다(범위 0). 후보가 하나면 그대로 쓴다.
+		.@p = .@pick[rand(.@n)];
+	.@swap = rand(2);
+	if (.@swap) {
+		setarray .@t1[0], .@b1[.@p], .@b2[.@p];
+		setarray .@t2[0], .@a1[.@p], .@a2[.@p];
+	} else {
+		setarray .@t1[0], .@a1[.@p], .@a2[.@p];
+		setarray .@t2[0], .@b1[.@p], .@b2[.@p];
+	}
+	.@r = rand(2);
+	$@NBG2_ORD[0] = .@t1[.@r];
+	$@NBG2_ORD[1] = .@t1[1 - .@r];
+	.@r = rand(2);
+	$@NBG2_ORD[2] = .@t2[.@r];
+	$@NBG2_ORD[3] = .@t2[1 - .@r];
+	callfunc "F_NEED_BG2_Log", "TEAM_ASSIGN classes=" + $@NBG2_CAND_CLS[0] + "/" + $@NBG2_CAND_CLS[1] + "/" + $@NBG2_CAND_CLS[2] + "/" + $@NBG2_CAND_CLS[3]
+		+ " support=" + .@s[0] + .@s[1] + .@s[2] + .@s[3] + " keys=" + .@key[0] + "," + .@key[1] + "," + .@key[2]
+		+ " tied=" + .@n + " split=" + .@p + " swap=" + .@swap
+		+ " blue_sum=" + (.@s[$@NBG2_ORD[0]] + .@s[$@NBG2_ORD[1]]) + " red_sum=" + (.@s[$@NBG2_ORD[2]] + .@s[$@NBG2_ORD[3]]);
+	return;
+}
+
+// 확정된 4명($@NBG2_CAND_AID/CID/CLS)으로 경기를 연다. origin: 1 GM 수동 / 2 공개 대기열.
+// 실패하면 경기장에 들어간 사람을 저장 지점으로 돌리고 0 (GM: 모집 명단 유지, 대기열: 호출한 쪽이 순번 복원).
+function	script	F_NEED_BG2_Launch	{
+	.@caller = playerattached();
+	.@origin = getarg(0);
+	callfunc "F_NEED_BG2_Balance";
 	callfunc "F_NEED_BG2_ClearMatch";
-	// 매치 ID = 시작 시각(유닉스 초). $NEED_BG2_SEQ 는 주기 저장이라 비정상 종료 뒤 같은 값이
-	// 다시 나올 수 있어 참고용 순번으로만 쓴다. 시작은 RECRUITING 에서만 되므로 같은 초에 두 번 없다.
+	$@NBG2_ORIGIN = .@origin;
+	// 매치 ID = 시작 시각(유닉스 초). 같은 초에 다음 경기가 열려도(빠른 연속 경기) 겹치지 않게 직전 값보다 크게 한다.
+	// $NEED_BG2_SEQ 는 주기 저장이라 비정상 종료 뒤 같은 값이 다시 나올 수 있어 참고용 순번으로만 쓴다.
 	$NEED_BG2_SEQ++;
-	$@NBG2_MATCH = gettimetick(2);
+	.@mid = gettimetick(2);
+	if (.@mid <= $@NBG2_LASTMID)
+		.@mid = $@NBG2_LASTMID + 1;
+	if (.@mid <= $NEED_BG2_LASTMID)
+		.@mid = $NEED_BG2_LASTMID + 1;
+	$@NBG2_LASTMID = .@mid;
+	$NEED_BG2_LASTMID = .@mid;
+	$@NBG2_MATCH = .@mid;
 	$@NBG2_N = 4;
 	.@reglog$ = "";
 	for (.@i = 0; .@i < 4; .@i++)
-		.@reglog$ += (.@i ? "," : "") + $@NBG2_REG_AID[.@i] + "/" + $@NBG2_REG_CID[.@i];
+		.@reglog$ += (.@i ? "," : "") + $@NBG2_CAND_AID[.@i] + "/" + $@NBG2_CAND_CID[.@i];
 	for (.@k = 0; .@k < 4; .@k++) {
 		.@r = $@NBG2_ORD[.@k];
-		$@NBG2_AID[.@k] = $@NBG2_REG_AID[.@r];
-		$@NBG2_CID[.@k] = $@NBG2_REG_CID[.@r];
+		$@NBG2_AID[.@k] = $@NBG2_CAND_AID[.@r];
+		$@NBG2_CID[.@k] = $@NBG2_CAND_CID[.@r];
 		$@NBG2_TEAM[.@k] = (.@k < 2) ? 1 : 2;
 		$@NBG2_SLOT[.@k] = .@k % 2;
 	}
-	callfunc "F_NEED_BG2_Log", "MATCH_START match=" + $@NBG2_MATCH + " seq=" + $NEED_BG2_SEQ + " reg=" + .@reglog$
+	callfunc "F_NEED_BG2_Log", "MATCH_START match=" + $@NBG2_MATCH + " seq=" + $NEED_BG2_SEQ + " origin=" + (.@origin == 2 ? "queue" : "gm") + " reg=" + .@reglog$
 		+ " order=" + $@NBG2_ORD[0] + $@NBG2_ORD[1] + $@NBG2_ORD[2] + $@NBG2_ORD[3]
 		+ " blue=" + $@NBG2_AID[0] + "/" + $@NBG2_CID[0] + "," + $@NBG2_AID[1] + "/" + $@NBG2_CID[1]
 		+ " red=" + $@NBG2_AID[2] + "/" + $@NBG2_CID[2] + "," + $@NBG2_AID[3] + "/" + $@NBG2_CID[3]
-		+ " lvbypass=" + $NEED_BG2_LVBYPASS;
+		+ " lvbypass=" + (.@origin == 1 ? $NEED_BG2_LVBYPASS : 0);
 
 	$@NBG2_BG[1] = bg_create($@NBG2_MAP$, $@NBG2_BOXX[1], $@NBG2_BOXY[1], "NEED_BG2::OnQuitB", "NEED_BG2::OnDieB");
 	$@NBG2_BG[2] = bg_create($@NBG2_MAP$, $@NBG2_BOXX[2], $@NBG2_BOXY[2], "NEED_BG2::OnQuitR", "NEED_BG2::OnDieR");
@@ -531,34 +621,35 @@ function	script	F_NEED_BG2_Start	{
 		NEED_BG2_MID = $@NBG2_MATCH;	// 재접속 시 복귀/재합류 판단용. 복귀 지점은 항상 저장 지점이다.
 		@NEED_BG2_PB = getpcblock() & $@NBG2_C_OURS;
 		@NEED_BG2_BGID = $@NBG2_BG[.@t];
+		@NEED_BG2_BUSY = 3;
 		detachrid;
 		if (!bg_join($@NBG2_BG[.@t], $@NBG2_MAP$, $@NBG2_SPX[.@p], $@NBG2_SPY[.@p], $@NBG2_CID[.@k]))
 			.@fail = .@k + 1;
 	}
 	if (.@fail) {
-		callfunc "F_NEED_BG2_Log", "START_FAILED match=" + $@NBG2_MATCH + " at=" + .@fail;
+		callfunc "F_NEED_BG2_Log", "START_FAILED match=" + $@NBG2_MATCH + " at=" + .@fail + " origin=" + .@origin;
 		$@NBG2_STATE = 6;
 		$@NBG2_RESULT = 4;
-		callfunc "F_NEED_BG2_Cleanup", "start_failed", 1, 0;
-		callfunc "F_NEED_BG2_Reattach", .@gm;
-		dispbottom "[2:2 듀오] 시작 실패: 입장 #" + .@fail + " 이동/팀 합류 실패. 경기장에 들어간 사람은 저장 지점으로 보냈고 모집은 유지됩니다.";
+		callfunc "F_NEED_BG2_Cleanup", "start_failed", (.@origin == 1), 0;
+		callfunc "F_NEED_BG2_Reattach", .@caller;
 		return 0;
 	}
+	if (.@origin == 1)
+		callfunc "F_NEED_BG2_ClearRecruit";
 	for (.@k = 0; .@k < 4; .@k++) {
 		if (!attachrid($@NBG2_AID[.@k]))
 			continue;
+		@NEED_BG2_BUSY = 3;
 		callfunc "F_NEED_BG2_ResetSelf", $@NBG2_TEAM[.@k], $@NBG2_SLOT[.@k], 0;
 		dispbottom needtr("[2:2 듀오] 당신은 " + callfunc("F_NEED_BG2_TeamName$", $@NBG2_TEAM[.@k]) + " 팀입니다. 45초 준비 후 1라운드가 시작됩니다. (테스트 경기, 보상 없음)",
 			"[2v2 Duo] You are on the " + callfunc("F_NEED_BG2_TeamName$", $@NBG2_TEAM[.@k]) + " team. Round 1 starts after 45 seconds of preparation. (Test match, no rewards)"), 0x66CCFF;
 		detachrid;
 	}
 	callfunc "F_NEED_BG2_PrepLock", 1;
-	callfunc "F_NEED_BG2_ClearRecruit";
 	bg_updatescore $@NBG2_MAP$, 0, 0;
-	mapannouncelang $@NBG2_MAP$, "[2:2 듀오] 매치 " + $@NBG2_MATCH + " 준비 45초. 자기 팀 준비구역 안에서만 움직일 수 있고, 공격과 지면 설치·소환 스킬은 막히며 피해를 받지 않습니다.",
-		"[2v2 Duo] Match " + $@NBG2_MATCH + ": 45 seconds of preparation. Move inside your team's zone only; attacks and ground/summon skills are blocked and you take no damage.", bc_map, "0x66CCFF";
-	callfunc "F_NEED_BG2_Reattach", .@gm;
-	dispbottom "[2:2 듀오] 매치 " + $@NBG2_MATCH + " 시작 (준비 45초).";
+	mapannouncelang $@NBG2_MAP$, "[2:2 듀오] 매치 " + $@NBG2_MATCH + " 준비 45초. 자기 팀 준비구역 안에서만 움직일 수 있고, 공격과 지면 설치·소환 스킬은 막히며 피해를 받지 않습니다. 라운드 시작 60초 뒤 중앙 거점이 열립니다.",
+		"[2v2 Duo] Match " + $@NBG2_MATCH + ": 45 seconds of preparation. Move inside your team's zone only; attacks and ground/summon skills are blocked and you take no damage. The centre point opens 60 seconds into each round.", bc_map, "0x66CCFF";
+	callfunc "F_NEED_BG2_Reattach", .@caller;
 	return 1;
 }
 
@@ -586,7 +677,9 @@ function	script	F_NEED_BG2_BeginRound	{
 	$@NBG2_ROUND++;
 	$@NBG2_STATE = 4;
 	$@NBG2_JUDGE_AT = 0;
-	$@NBG2_DEADLINE = gettimetick(0) + $@NBG2_C_ROUND;
+	$@NBG2_ROUND_AT = gettimetick(0);
+	$@NBG2_DEADLINE = $@NBG2_ROUND_AT + $@NBG2_C_ROUND;
+	callfunc "F_NEED_BG2_CapReset";
 	for (.@i = 0; .@i < $@NBG2_N; .@i++) {
 		$@NBG2_ALIVE[.@i] = !$@NBG2_GONE[.@i];
 		if ($@NBG2_GONE[.@i] || !attachrid($@NBG2_AID[.@i]))
@@ -601,8 +694,8 @@ function	script	F_NEED_BG2_BeginRound	{
 		detachrid;
 	}
 	callfunc "F_NEED_BG2_Log", "ROUND_START match=" + $@NBG2_MATCH + " round=" + $@NBG2_ROUND + " score=" + $@NBG2_WIN_B + ":" + $@NBG2_WIN_R;
-	mapannouncelang $@NBG2_MAP$, "[2:2 듀오] " + $@NBG2_ROUND + "라운드 시작! (90초, 블루 " + $@NBG2_WIN_B + " : " + $@NBG2_WIN_R + " 레드)",
-		"[2v2 Duo] Round " + $@NBG2_ROUND + " - fight! (90 seconds, Blue " + $@NBG2_WIN_B + " : " + $@NBG2_WIN_R + " Red)", bc_map, "0xFFCC33";
+	mapannouncelang $@NBG2_MAP$, "[2:2 듀오] " + $@NBG2_ROUND + "라운드 시작! (90초, 60초 뒤 중앙 거점 개방, 블루 " + $@NBG2_WIN_B + " : " + $@NBG2_WIN_R + " 레드)",
+		"[2v2 Duo] Round " + $@NBG2_ROUND + " - fight! (90 seconds, centre point opens at 60 s, Blue " + $@NBG2_WIN_B + " : " + $@NBG2_WIN_R + " Red)", bc_map, "0xFFCC33";
 	return 1;
 }
 
@@ -631,6 +724,18 @@ function	script	F_NEED_BG2_EndRound	{
 		.@kr$ = (getarg(1) == "timeout") ? "시간 종료 무승부" : "동시 전멸 무승부";
 		.@en$ = (getarg(1) == "timeout") ? "draw (time up)" : "draw (both teams fell)";
 	}
+	if (getarg(1) == "capture") {
+		.@kr$ += " (중앙 거점 점령)";
+		.@en$ += " (centre point captured)";
+	} else if (getarg(1) == "timeout_alive") {
+		.@kr$ += " (시간 종료 - 생존 인원 우세)";
+		.@en$ += " (time up - more players alive)";
+	} else if (getarg(1) == "timeout_capture") {
+		.@kr$ += " (시간 종료 - 중앙 거점 점유 시간 우세)";
+		.@en$ += " (time up - held the centre point longer)";
+	}
+	if ($@NBG2_CAP_ON)
+		callfunc "F_NEED_BG2_CapMarker", 0;
 	mapannouncelang $@NBG2_MAP$, "[2:2 듀오] " + $@NBG2_ROUND + "라운드 " + .@kr$ + ". 점수 블루 " + $@NBG2_WIN_B + " : " + $@NBG2_WIN_R + " 레드",
 		"[2v2 Duo] Round " + $@NBG2_ROUND + ": " + .@en$ + ". Score Blue " + $@NBG2_WIN_B + " : " + $@NBG2_WIN_R + " Red", bc_map, "0xFFCC33";
 
@@ -731,10 +836,13 @@ function	script	F_NEED_BG2_Cleanup	{
 	callfunc "F_NEED_BG2_ClearMatch";
 	if (getarg(1, 0)) {
 		$@NBG2_STATE = 1;
+		for (.@i = 0; .@i < $@NBG2_REG_N; .@i++)
+			callfunc "F_NEED_BG2_SetBusy", $@NBG2_REG_AID[.@i], $@NBG2_REG_CID[.@i], 1;
 	} else {
 		callfunc "F_NEED_BG2_ClearRecruit";
 		$@NBG2_STATE = 0;
-		stopnpctimer "NEED_BG2";
+		if (!$@NBG2_Q_N)
+			stopnpctimer "NEED_BG2";
 	}
 	callfunc "F_NEED_BG2_Reattach", .@caller;
 	return 1;
@@ -756,7 +864,7 @@ function	script	F_NEED_BG2_Depart	{
 		$@NBG2_AWAY_AT[.@i] = .@now;
 		.@left = ($@NBG2_C_RECONNECT - $@NBG2_GRACE_USED[.@i]) / 1000;
 		callfunc "F_NEED_BG2_Log", "AWAY match=" + $@NBG2_MATCH + " cid=" + $@NBG2_CID[.@i] + " team=" + $@NBG2_TEAM[.@i]
-			+ " state=" + .@s + " round=" + $@NBG2_ROUND + " grace_used=" + $@NBG2_GRACE_USED[.@i];
+			+ " state=" + .@s + " round=" + $@NBG2_ROUND + " grace_used=" + $@NBG2_GRACE_USED[.@i] + " at=" + .@now;
 		mapannouncelang $@NBG2_MAP$, "[2:2 듀오] 참가자 접속이 끊겼습니다. " + .@left + "초 안에 돌아오면 경기에 복귀합니다.",
 			"[2v2 Duo] A player disconnected. If they return within " + .@left + " seconds, they rejoin the match.", bc_map, "0xFF7777";
 		if (.@s == 4 && $@NBG2_ALIVE[.@i]) {
@@ -883,7 +991,6 @@ function	script	F_NEED_BG2_Watch	{
 			continue;
 		}
 		.@code = 0;
-		.@pty[.@i] = getcharid(1);
 		if (getcharid(0) != .@cid)
 			.@code = 1;
 		else if (strcharinfo(3) != $@NBG2_MAP$)
@@ -919,21 +1026,8 @@ function	script	F_NEED_BG2_Watch	{
 		if (.@code)
 			callfunc "F_NEED_BG2_Depart", .@i, .@code;
 	}
-	// partylock 은 경기장 안의 파티 생성/초대/탈퇴만 막는다. 마을의 파티장이 참가자 둘을
-	// 초대하면 경기 중에도 같은 파티가 될 수 있어(합주/파티 인원 스킬) 그 경기는 무효로 한다.
-	if ($@NBG2_STATE >= 2 && $@NBG2_STATE <= 5 && !$@NBG2_DEPART_AT) {
-		for (.@i = 0; .@i < $@NBG2_N; .@i++) {
-			for (.@j = .@i + 1; .@j < $@NBG2_N; .@j++) {
-				if ($@NBG2_GONE[.@i] || $@NBG2_GONE[.@j] || !.@pty[.@i] || .@pty[.@i] != .@pty[.@j])
-					continue;
-				callfunc "F_NEED_BG2_Log", "PARTY_FORMED match=" + $@NBG2_MATCH + " party=" + .@pty[.@i] + " cids=" + $@NBG2_CID[.@i] + "," + $@NBG2_CID[.@j];
-				mapannouncelang $@NBG2_MAP$, "[2:2 듀오] 경기 중 참가자 두 명이 같은 파티에 들어가 경기를 무효로 합니다.",
-					"[2v2 Duo] Two players joined the same party during the match, so the match is void.", bc_map, "0xFF7777";
-				callfunc "F_NEED_BG2_Finish", 3, "party_formed_mid_match";
-				return;
-			}
-		}
-	}
+	// (Phase 1 의 "경기 중 같은 파티가 되면 무효" 는 없앴다. need_bg2 는 맵플래그 need_bgpartysplit 으로
+	//  다른 BG 팀의 파티원을 파티 스킬/인원 계산/합주 상대에서 제외하므로, 파티 상태와 상관없이 경기를 이어간다.)
 	// 탈락자의 호문클루스/용병도 관전석으로 (주인 사망 시 엔진이 지우지 않는 경우).
 	if ($@NBG2_STATE == 4) {
 		setarray .@types[0], BL_HOM, BL_MER;
@@ -971,6 +1065,10 @@ function	script	F_NEED_BG2_RecruitWatch	{
 
 function	script	F_NEED_BG2_Tick	{
 	.@s = $@NBG2_STATE;
+	if (.@s == 0) {
+		callfunc "F_NEED_BG2_QueueTick";
+		return;
+	}
 	if (.@s == 1) {
 		callfunc "F_NEED_BG2_RecruitWatch";
 		return;
@@ -988,8 +1086,9 @@ function	script	F_NEED_BG2_Tick	{
 		if (!$@NBG2_AWAY[.@i] || .@now - $@NBG2_AWAY_AT[.@i] + $@NBG2_GRACE_USED[.@i] < $@NBG2_C_RECONNECT)
 			continue;
 		$@NBG2_AWAY[.@i] = 0;
+		callfunc "F_NEED_BG2_Log", "AWAY_EXPIRED match=" + $@NBG2_MATCH + " cid=" + $@NBG2_CID[.@i] + " away_at=" + $@NBG2_AWAY_AT[.@i] + " at=" + .@now
+			+ " used_before=" + $@NBG2_GRACE_USED[.@i];
 		$@NBG2_GRACE_USED[.@i] = $@NBG2_C_RECONNECT;
-		callfunc "F_NEED_BG2_Log", "AWAY_EXPIRED match=" + $@NBG2_MATCH + " cid=" + $@NBG2_CID[.@i];
 		callfunc "F_NEED_BG2_Depart", .@i, 1;
 		if ($@NBG2_STATE < 2 || $@NBG2_STATE > 5)
 			return;
@@ -1004,17 +1103,20 @@ function	script	F_NEED_BG2_Tick	{
 		return;
 	}
 	if (.@s == 4 && $@NBG2_JUDGE_AT) {
-		// 전멸이 먼저 일어났으면 시간 종료보다 전멸 판정이 우선한다.
+		// 전멸이 먼저 일어났으면 시간 종료/점령보다 전멸 판정이 우선한다(판정 대기 중에는 점령을 세지 않는다).
 		if (.@now >= $@NBG2_JUDGE_AT)
 			callfunc "F_NEED_BG2_Judge";
 		return;
 	}
+	// 중앙 거점: 마감 시각까지의 시간만 센다. 점령 승리로 라운드가 끝나면 시간 종료 판정은 하지 않는다.
+	if (.@s == 4 && callfunc("F_NEED_BG2_Capture", .@now))
+		return;
 	if (.@now < $@NBG2_DEADLINE)
 		return;
 	if (.@s == 2 || .@s == 3)
 		callfunc "F_NEED_BG2_BeginRound";
 	else if (.@s == 4)
-		callfunc "F_NEED_BG2_EndRound", 0, "timeout";
+		callfunc "F_NEED_BG2_TimeoutDecide";
 	return;
 }
 
@@ -1025,7 +1127,8 @@ function	script	F_NEED_BG2_Rejoin	{
 	.@cid = getcharid(0);
 	.@t = $@NBG2_TEAM[.@i];
 	.@p = (.@t - 1) * 2 + $@NBG2_SLOT[.@i];
-	$@NBG2_GRACE_USED[.@i] += gettimetick(0) - $@NBG2_AWAY_AT[.@i];
+	.@now = gettimetick(0);
+	$@NBG2_GRACE_USED[.@i] += .@now - $@NBG2_AWAY_AT[.@i];
 	$@NBG2_AWAY[.@i] = 0;
 	if (getstatus(SC_ENTRY_QUEUE_NOTIFY_ADMISSION_TIME_OUT))
 		sc_end SC_ENTRY_QUEUE_NOTIFY_ADMISSION_TIME_OUT;	// 유예 안 복귀는 탈주가 아니다
@@ -1049,10 +1152,513 @@ function	script	F_NEED_BG2_Rejoin	{
 		callfunc "F_NEED_BG2_SetMode", $@NBG2_C_LOCK;
 	else
 		callfunc "F_NEED_BG2_ResetSelf", .@t, $@NBG2_SLOT[.@i], 0;
-	callfunc "F_NEED_BG2_Log", "REJOIN match=" + $@NBG2_MATCH + " cid=" + .@cid + " state=" + $@NBG2_STATE + " grace_used=" + $@NBG2_GRACE_USED[.@i];
+	callfunc "F_NEED_BG2_Log", "REJOIN match=" + $@NBG2_MATCH + " cid=" + .@cid + " state=" + $@NBG2_STATE + " grace_used=" + $@NBG2_GRACE_USED[.@i] + " at=" + .@now;
+	@NEED_BG2_BUSY = 3;
 	dispbottom needtr("[2:2 듀오] 경기에 복귀했습니다." + (.@inround ? " 이번 라운드는 관전석에서 기다립니다." : ""),
 		"[2v2 Duo] You are back in the match." + (.@inround ? " You wait in the spectator box for this round." : "")), 0x66CCFF;
 	return 1;
+}
+
+//============================================================
+// Phase 2 - 공개 개인 FIFO 대기열 + 30초 참가 확인
+//============================================================
+// 대기열 : $@NBG2_Q_AID[] / $@NBG2_Q_CID[] / $@NBG2_Q_SEQ[] (서버가 주는 증가 순번, 배열은 항상 순번 오름차순), $@NBG2_Q_N.
+//          계정당 1건. 접속 종료(캐릭터 선택 포함)하면 빠진다(기존 @전장대기와 같은 방식).
+// 참가 확인: 경기장이 비고($@NBG2_STATE == 0) 대기자 4명 이상이면 맨 앞 4명만 예약한다($@NBG2_RC_*).
+//          4명 모두 30초 안에 수락해야 입장 직전 자격 재검사 → 팀 편성 → 입장. 거절/미응답자만 빠지고
+//          나머지는 원래 순번을 지킨 채 다음 확인에서 처음부터 다시 수락한다(수락 이월 없음). 불이익 없음.
+// 세대 번호: $@NBG2_RC_GEN (확인 회차), 매치 ID, 라운드 번호. 늦은 응답은 현재 회차/마감 시각으로 거른다.
+// 다른 전장 연동: 세션 변수 @NEED_BG2_BUSY (1 대기/GM 명단, 2 참가 확인, 3 경기) 를 기존 전장 신청 검사와
+//          엔진 전장 대기열(battleground.cpp) 이 읽는다. 이 스크립트가 없어도 변수가 0 이라 기존 동작 그대로다.
+
+// 첨부된 플레이어 또는 접속 중인 다른 플레이어에게 안내.
+function	script	F_NEED_BG2_Tell	{
+	.@caller = playerattached();
+	if (isloggedin(getarg(0), getarg(1)) && attachrid(getarg(0))) {
+		if (getcharid(0) == getarg(1)) {
+			if (getarg(5, 0))
+				announce needtr(getarg(2), getarg(3)), bc_self, getarg(4, "0x66CCFF");
+			dispbottom needtr(getarg(2), getarg(3)), 0x66CCFF;
+		}
+		detachrid;
+	}
+	callfunc "F_NEED_BG2_Reattach", .@caller;
+	return;
+}
+
+function	script	F_NEED_BG2_SetBusy	{
+	.@caller = playerattached();
+	if (isloggedin(getarg(0), getarg(1)) && attachrid(getarg(0))) {
+		if (getcharid(0) == getarg(1))
+			@NEED_BG2_BUSY = getarg(2);
+		detachrid;
+	}
+	callfunc "F_NEED_BG2_Reattach", .@caller;
+	return;
+}
+
+function	script	F_NEED_BG2_QIndex	{
+	for (.@i = 0; .@i < $@NBG2_Q_N; .@i++)
+		if ($@NBG2_Q_AID[.@i] == getarg(0)) return .@i;
+	return -1;
+}
+
+function	script	F_NEED_BG2_RcIndex	{
+	if (!$@NBG2_RC)
+		return -1;
+	for (.@k = 0; .@k < 4; .@k++)
+		if ($@NBG2_RC_AID[.@k] == getarg(0)) return .@k;
+	return -1;
+}
+
+// 이 계정이 2:2 대기열/참가 확인/진행 중 경기/GM 모집 명단 어디에든 있으면 1.
+function	script	F_NEED_BG2_AidBusy	{
+	.@aid = getarg(0);
+	if (callfunc("F_NEED_BG2_QIndex", .@aid) >= 0 || callfunc("F_NEED_BG2_RcIndex", .@aid) >= 0)
+		return 1;
+	for (.@i = 0; .@i < $@NBG2_REG_N; .@i++)
+		if ($@NBG2_REG_AID[.@i] == .@aid) return 1;
+	if ($@NBG2_STATE >= 2 && $@NBG2_STATE <= 6) {
+		for (.@i = 0; .@i < $@NBG2_N; .@i++)
+			if ($@NBG2_AID[.@i] == .@aid && !$@NBG2_GONE[.@i]) return 1;
+	}
+	return 0;
+}
+
+// 대기열에서 i 번째를 뺀다(뒤 사람의 순서는 그대로). getarg(1) = 로그 태그와 사유.
+function	script	F_NEED_BG2_QRemove	{
+	.@i = getarg(0);
+	if (.@i < 0 || .@i >= $@NBG2_Q_N)
+		return 0;
+	.@aid = $@NBG2_Q_AID[.@i];
+	.@cid = $@NBG2_Q_CID[.@i];
+	.@seq = $@NBG2_Q_SEQ[.@i];
+	for (.@k = .@i; .@k < $@NBG2_Q_N - 1; .@k++) {
+		$@NBG2_Q_AID[.@k] = $@NBG2_Q_AID[.@k + 1];
+		$@NBG2_Q_CID[.@k] = $@NBG2_Q_CID[.@k + 1];
+		$@NBG2_Q_SEQ[.@k] = $@NBG2_Q_SEQ[.@k + 1];
+	}
+	$@NBG2_Q_N--;
+	$@NBG2_Q_AID[$@NBG2_Q_N] = 0;
+	$@NBG2_Q_CID[$@NBG2_Q_N] = 0;
+	$@NBG2_Q_SEQ[$@NBG2_Q_N] = 0;
+	callfunc "F_NEED_BG2_Log", getarg(1) + " aid=" + .@aid + " cid=" + .@cid + " seq=" + .@seq + " queue=" + $@NBG2_Q_N;
+	if (getarg(2, 1))
+		callfunc "F_NEED_BG2_SetBusy", .@aid, .@cid, 0;
+	return 1;
+}
+
+// 원래 순번 그대로 대기열에 되돌린다(입장 실패 복원용). 이미 있으면 아무것도 하지 않는다.
+function	script	F_NEED_BG2_QInsert	{
+	.@aid = getarg(0);
+	.@cid = getarg(1);
+	.@seq = getarg(2);
+	if (callfunc("F_NEED_BG2_QIndex", .@aid) >= 0)
+		return 0;
+	for (.@at = 0; .@at < $@NBG2_Q_N; .@at++)
+		if ($@NBG2_Q_SEQ[.@at] > .@seq) break;
+	for (.@k = $@NBG2_Q_N; .@k > .@at; .@k--) {
+		$@NBG2_Q_AID[.@k] = $@NBG2_Q_AID[.@k - 1];
+		$@NBG2_Q_CID[.@k] = $@NBG2_Q_CID[.@k - 1];
+		$@NBG2_Q_SEQ[.@k] = $@NBG2_Q_SEQ[.@k - 1];
+	}
+	$@NBG2_Q_AID[.@at] = .@aid;
+	$@NBG2_Q_CID[.@at] = .@cid;
+	$@NBG2_Q_SEQ[.@at] = .@seq;
+	$@NBG2_Q_N++;
+	callfunc "F_NEED_BG2_SetBusy", .@aid, .@cid, 1;
+	return 1;
+}
+
+function	script	F_NEED_BG2_TimerOn	{
+	if (!getnpctimer(1, "NEED_BG2"))
+		initnpctimer "NEED_BG2";
+	return;
+}
+
+// 첨부된 플레이어의 공개 대기열 신청. 0 = 등록, 그 밖에는 거절 사유 코드.
+function	script	F_NEED_BG2_QJoin	{
+	.@aid = getcharid(3);
+	.@cid = getcharid(0);
+	.@code = 0;
+	if (!$NEED_BG2_QUEUE_OPEN)
+		.@code = 10;
+	else if (callfunc("F_NEED_BG2_AidBusy", .@aid))
+		.@code = 9;
+	else
+		.@code = callfunc("F_NEED_BG2_CheckSelf", 1);
+	if (.@code) {
+		callfunc "F_NEED_BG2_Log", "QUEUE_REFUSED aid=" + .@aid + " cid=" + .@cid + " code=" + .@code;
+		return .@code;
+	}
+	$@NBG2_QSEQ++;
+	$@NBG2_Q_AID[$@NBG2_Q_N] = .@aid;
+	$@NBG2_Q_CID[$@NBG2_Q_N] = .@cid;
+	$@NBG2_Q_SEQ[$@NBG2_Q_N] = $@NBG2_QSEQ;
+	$@NBG2_Q_N++;
+	@NEED_BG2_BUSY = 1;
+	callfunc "F_NEED_BG2_Log", "QUEUE_JOIN aid=" + .@aid + " cid=" + .@cid + " seq=" + $@NBG2_QSEQ + " pos=" + $@NBG2_Q_N + " class=" + Class;
+	callfunc "F_NEED_BG2_TimerOn";
+	return 0;
+}
+
+// 참가 확인을 연다(경기장이 비고 대기자 4명 이상일 때). 맨 앞 4명만, 순번 그대로.
+function	script	F_NEED_BG2_RcOpen	{
+	for (.@i = $@NBG2_Q_N - 1; .@i >= 0; .@i--)
+		if (!isloggedin($@NBG2_Q_AID[.@i], $@NBG2_Q_CID[.@i]))
+			callfunc "F_NEED_BG2_QRemove", .@i, "QUEUE_CANCEL why=offline", 0;
+	if ($@NBG2_Q_N < 4)
+		return 0;
+	$@NBG2_RC_GEN++;
+	$@NBG2_RC = 1;
+	$@NBG2_RC_END = gettimetick(0) + $@NBG2_C_RC;
+	$@NBG2_RC_NOTE = $@NBG2_C_RC / 1000;
+	.@who$ = "";
+	for (.@k = 0; .@k < 4; .@k++) {
+		$@NBG2_RC_AID[.@k] = $@NBG2_Q_AID[.@k];
+		$@NBG2_RC_CID[.@k] = $@NBG2_Q_CID[.@k];
+		$@NBG2_RC_SEQ[.@k] = $@NBG2_Q_SEQ[.@k];
+		$@NBG2_RC_ACC[.@k] = 0;
+		.@who$ += (.@k ? "," : "") + $@NBG2_RC_AID[.@k] + "/" + $@NBG2_RC_CID[.@k] + "#" + $@NBG2_RC_SEQ[.@k];
+		callfunc "F_NEED_BG2_SetBusy", $@NBG2_RC_AID[.@k], $@NBG2_RC_CID[.@k], 2;
+		callfunc "F_NEED_BG2_Tell", $@NBG2_RC_AID[.@k], $@NBG2_RC_CID[.@k],
+			"[2:2 듀오] 경기 준비 완료! 30초 안에 @듀오수락 (거절: @듀오거절). 4명 모두 수락하면 입장합니다.",
+			"[2v2 Duo] A match is ready! Type @duoaccept within 30 seconds (decline: @duodecline). You enter when all 4 accept.", "0xFFFF66", 1;
+	}
+	callfunc "F_NEED_BG2_Log", (($@NBG2_RC_RESTART) ? "READY_RESTART" : "READY_OPEN") + " gen=" + $@NBG2_RC_GEN + " members=" + .@who$ + " queue=" + $@NBG2_Q_N;
+	$@NBG2_RC_RESTART = 0;
+	return 1;
+}
+
+// 참가 확인을 닫는다. 대기열에 남은 예약자는 대기(1)로 돌아가고 다음 확인에서 다시 수락해야 한다.
+function	script	F_NEED_BG2_RcClose	{
+	if (!$@NBG2_RC)
+		return 0;
+	$@NBG2_RC = 0;
+	for (.@k = 0; .@k < 4; .@k++) {
+		if (callfunc("F_NEED_BG2_QIndex", $@NBG2_RC_AID[.@k]) < 0)
+			continue;
+		callfunc "F_NEED_BG2_SetBusy", $@NBG2_RC_AID[.@k], $@NBG2_RC_CID[.@k], 1;
+		if (getarg(0, "") != "")
+			callfunc "F_NEED_BG2_Tell", $@NBG2_RC_AID[.@k], $@NBG2_RC_CID[.@k], getarg(0), getarg(1);
+	}
+	cleararray $@NBG2_RC_AID[0], 0, 4;
+	cleararray $@NBG2_RC_CID[0], 0, 4;
+	cleararray $@NBG2_RC_SEQ[0], 0, 4;
+	cleararray $@NBG2_RC_ACC[0], 0, 4;
+	$@NBG2_RC_RESTART = getarg(2, 1);
+	return 1;
+}
+
+// 예약자 k 를 대기열에서 뺀다(거절/미응답/입장 조건 불충족). 불이익 없음.
+function	script	F_NEED_BG2_RcDrop	{
+	.@k = getarg(0);
+	.@q = callfunc("F_NEED_BG2_QIndex", $@NBG2_RC_AID[.@k]);
+	if (.@q >= 0)
+		callfunc "F_NEED_BG2_QRemove", .@q, getarg(1) + " gen=" + $@NBG2_RC_GEN;
+	if (getarg(2, "") != "")
+		callfunc "F_NEED_BG2_Tell", $@NBG2_RC_AID[.@k], $@NBG2_RC_CID[.@k], getarg(2), getarg(3), "0xFF7777", 1;
+	$@NBG2_RC_AID[.@k] = 0;
+	return 1;
+}
+
+// 4명 전원 수락: 입장 직전 자격 재검사. 실패한 사람만 빼고 나머지는 순번 그대로 다시 확인한다.
+function	script	F_NEED_BG2_RcConfirm	{
+	.@caller = playerattached();
+	for (.@k = 0; .@k < 4; .@k++) {
+		.@code[.@k] = 1;
+		if (!isloggedin($@NBG2_RC_AID[.@k], $@NBG2_RC_CID[.@k]) || !attachrid($@NBG2_RC_AID[.@k]))
+			continue;
+		if (getcharid(0) == $@NBG2_RC_CID[.@k]) {
+			.@code[.@k] = callfunc("F_NEED_BG2_CheckSelf", 1);
+			$@NBG2_CAND_CLS[.@k] = Class;
+		}
+		detachrid;
+	}
+	callfunc "F_NEED_BG2_Reattach", .@caller;
+	.@bad = 0;
+	for (.@k = 0; .@k < 4; .@k++) {
+		if (!.@code[.@k])
+			continue;
+		.@bad++;
+		callfunc "F_NEED_BG2_Log", "ADMISSION_FAIL gen=" + $@NBG2_RC_GEN + " aid=" + $@NBG2_RC_AID[.@k] + " cid=" + $@NBG2_RC_CID[.@k] + " code=" + .@code[.@k];
+		.@r$ = callfunc("F_NEED_BG2_Reason$", .@code[.@k]);
+		callfunc "F_NEED_BG2_RcDrop", .@k, "QUEUE_CANCEL why=admission_fail",
+			"[2:2 듀오] 입장 조건이 맞지 않아 대기열에서 빠졌습니다(불이익 없음): " + .@r$,
+			"[2v2 Duo] You were removed from the queue because you cannot enter now (no penalty): " + .@r$;
+	}
+	if (.@bad) {
+		callfunc "F_NEED_BG2_RcClose", "[2:2 듀오] 다른 참가자가 입장할 수 없어 다시 참가 확인을 진행합니다. 순번은 그대로입니다.",
+			"[2v2 Duo] Another player cannot enter, so the ready check starts again. Your place in the queue is kept.";
+		return 0;
+	}
+	for (.@k = 0; .@k < 4; .@k++) {
+		$@NBG2_CAND_AID[.@k] = $@NBG2_RC_AID[.@k];
+		$@NBG2_CAND_CID[.@k] = $@NBG2_RC_CID[.@k];
+		$@NBG2_CAND_SEQ[.@k] = $@NBG2_RC_SEQ[.@k];
+		callfunc "F_NEED_BG2_QRemove", callfunc("F_NEED_BG2_QIndex", $@NBG2_RC_AID[.@k]), "QUEUE_MATCHED gen=" + $@NBG2_RC_GEN, 0;
+	}
+	callfunc "F_NEED_BG2_Log", "READY_CONFIRMED gen=" + $@NBG2_RC_GEN;
+	$@NBG2_RC = 0;
+	cleararray $@NBG2_RC_AID[0], 0, 4;
+	cleararray $@NBG2_RC_CID[0], 0, 4;
+	cleararray $@NBG2_RC_ACC[0], 0, 4;
+	if (callfunc("F_NEED_BG2_Launch", 2)) {
+		callfunc "F_NEED_BG2_Reattach", .@caller;
+		return 1;
+	}
+	// 입장 실패: 경기장에 들어간 사람은 Cleanup 이 저장 지점으로 보냈다. 원래 순번으로 되돌리고 다시 확인한다.
+	for (.@k = 0; .@k < 4; .@k++) {
+		if (!isloggedin($@NBG2_CAND_AID[.@k], $@NBG2_CAND_CID[.@k]))
+			continue;
+		callfunc "F_NEED_BG2_QInsert", $@NBG2_CAND_AID[.@k], $@NBG2_CAND_CID[.@k], $@NBG2_CAND_SEQ[.@k];
+		callfunc "F_NEED_BG2_Tell", $@NBG2_CAND_AID[.@k], $@NBG2_CAND_CID[.@k],
+			"[2:2 듀오] 입장에 실패해 저장 지점으로 돌아왔습니다. 대기 순번은 그대로이며 곧 다시 참가 확인을 합니다.",
+			"[2v2 Duo] Entering the arena failed and you are back at your save point. Your place in the queue is kept and a new ready check follows.";
+	}
+	callfunc "F_NEED_BG2_Log", "READY_RESTORE after=start_failed queue=" + $@NBG2_Q_N;
+	$@NBG2_RC_RESTART = 1;
+	callfunc "F_NEED_BG2_Reattach", .@caller;
+	return 0;
+}
+
+// 0.5초마다 (경기장 IDLE 일 때): 참가 확인 진행/마감, 또는 새 참가 확인 열기.
+function	script	F_NEED_BG2_QueueTick	{
+	if (!$@NBG2_RC) {
+		if ($NEED_BG2_QUEUE_OPEN && $@NBG2_Q_N >= 4)
+			callfunc "F_NEED_BG2_RcOpen";
+		return;
+	}
+	.@acc = 0;
+	for (.@k = 0; .@k < 4; .@k++)
+		if ($@NBG2_RC_ACC[.@k]) .@acc++;
+	if (.@acc == 4) {
+		callfunc "F_NEED_BG2_RcConfirm";
+		return;
+	}
+	.@left = $@NBG2_RC_END - gettimetick(0);
+	if (.@left <= 0) {
+		for (.@k = 0; .@k < 4; .@k++) {
+			if ($@NBG2_RC_ACC[.@k])
+				continue;
+			callfunc "F_NEED_BG2_Log", "READY_TIMEOUT gen=" + $@NBG2_RC_GEN + " aid=" + $@NBG2_RC_AID[.@k] + " cid=" + $@NBG2_RC_CID[.@k];
+			callfunc "F_NEED_BG2_RcDrop", .@k, "QUEUE_CANCEL why=ready_timeout",
+				"[2:2 듀오] 30초 안에 수락하지 않아 대기열에서 빠졌습니다(불이익 없음). 다시 참가하려면 @듀오참가.",
+				"[2v2 Duo] You did not accept within 30 seconds and left the queue (no penalty). To queue again: @duojoin.";
+		}
+		callfunc "F_NEED_BG2_RcClose", "[2:2 듀오] 수락하지 않은 참가자가 있어 다시 참가 확인을 진행합니다. 순번은 그대로입니다.",
+			"[2v2 Duo] Someone did not accept, so the ready check starts again. Your place in the queue is kept.";
+		return;
+	}
+	// 남은 20초/10초에 아직 수락하지 않은 사람에게만 다시 알린다.
+	.@sec = (.@left + 999) / 1000;
+	if (.@sec <= $@NBG2_RC_NOTE - 10) {
+		$@NBG2_RC_NOTE -= 10;
+		for (.@k = 0; .@k < 4; .@k++) {
+			if ($@NBG2_RC_ACC[.@k])
+				continue;
+			callfunc "F_NEED_BG2_Tell", $@NBG2_RC_AID[.@k], $@NBG2_RC_CID[.@k],
+				"[2:2 듀오] 참가 확인 " + $@NBG2_RC_NOTE + "초 남음: @듀오수락 / @듀오거절",
+				"[2v2 Duo] Ready check: " + $@NBG2_RC_NOTE + " seconds left - @duoaccept / @duodecline", "0xFFFF66", 1;
+		}
+	}
+	return;
+}
+
+// 공개 대기열 닫기: 참가 확인을 취소하고 대기자 전원을 뺀다(불이익 없음).
+function	script	F_NEED_BG2_QueueClose	{
+	if ($@NBG2_RC)
+		callfunc "F_NEED_BG2_RcClose", "", "", 0;
+	for (.@i = $@NBG2_Q_N - 1; .@i >= 0; .@i--) {
+		callfunc "F_NEED_BG2_Tell", $@NBG2_Q_AID[.@i], $@NBG2_Q_CID[.@i],
+			"[2:2 듀오] 운영자가 2:2 대기열을 닫아 신청이 취소되었습니다.", "[2v2 Duo] The GM closed the 2v2 queue and your entry was cancelled.";
+		callfunc "F_NEED_BG2_QRemove", .@i, "QUEUE_CANCEL why=" + getarg(0);
+	}
+	return;
+}
+
+//============================================================
+// Phase 2 - 중앙 거점 점령 (관전석을 둘러싼 2칸 폭 고리, x/y 34..45 에서 36..43 제외 = 80칸)
+//============================================================
+// 라운드 시작 60초 뒤 활성화. 한 팀만(살아 있고 은신하지 않은 참가자) 고리 안에 있으면 게이지가 실제 시간만큼 오른다.
+// 같은 팀 2명도 1명과 같은 속도. 양 팀이 함께 있으면 경합(정지). 아무도 없이 2초를 넘기면 실제 1초당 2초분씩 준다.
+// 상대 팀이 혼자 점유하면 먼저 그 팀 게이지를 같은 속도로 깎고(상쇄), 0 이 되면 소유가 넘어간다. 10초에 그 팀 라운드 승리.
+// 90초 시간 종료 판정용으로 팀별 단독 점유 누적 시간($@NBG2_CAP_T[1..2])을 따로 센다(활성화 이후, 게이지와 별개).
+// 0.5초 틱마다 실제 경과 시간(dt)으로 계산하고, 라운드 마감 시각 뒤의 시간은 세지 않는다.
+
+function	script	F_NEED_BG2_InRing	{
+	.@x = getarg(0);
+	.@y = getarg(1);
+	return (.@x >= 34 && .@x <= 45 && .@y >= 34 && .@y <= 45 && !(.@x >= 36 && .@x <= 43 && .@y >= 36 && .@y <= 43));
+}
+
+function	script	F_NEED_BG2_CapReset	{
+	$@NBG2_CAP_ON = 0;
+	$@NBG2_CAP_OWNER = 0;
+	$@NBG2_CAP_G = 0;
+	$@NBG2_CAP_EMPTY = 0;
+	$@NBG2_CAP_T[1] = 0;
+	$@NBG2_CAP_T[2] = 0;
+	$@NBG2_CAP_LAST = 0;
+	$@NBG2_CAP_STATE = 0;
+	$@NBG2_CAP_MILE = 0;
+	$@NBG2_CAP_ANN_AT = 0;
+	return;
+}
+
+// 첨부된 참가자가 점령 인원으로 세어지는지(점유 위치/생존/은신 아님).
+function	script	F_NEED_BG2_CapCounts	{
+	if (Hp < 1 || strcharinfo(3) != $@NBG2_MAP$)
+		return 0;
+	getmapxy(.@m$, .@x, .@y);
+	if (!callfunc("F_NEED_BG2_InRing", .@x, .@y))
+		return 0;
+	if (checkoption(OPTION_HIDE | OPTION_CLOAK | OPTION_CHASEWALK | OPTION_INVISIBLE))
+		return 0;
+	if (getstatus(SC_CAMOUFLAGE) || getstatus(SC__INVISIBILITY) || getstatus(SC_STEALTHFIELD) || getstatus(SC_SUHIDE) || getstatus(SC_NEWMOON))
+		return 0;
+	return 1;
+}
+
+// 미니맵 표시(참가자 전원). on = 1 표시, 0 지우기.
+function	script	F_NEED_BG2_CapMarker	{
+	.@caller = playerattached();
+	for (.@i = 0; .@i < $@NBG2_N; .@i++) {
+		if ($@NBG2_GONE[.@i] || !isloggedin($@NBG2_AID[.@i], $@NBG2_CID[.@i]) || !attachrid($@NBG2_AID[.@i]))
+			continue;
+		if (getcharid(0) == $@NBG2_CID[.@i] && strcharinfo(3) == $@NBG2_MAP$)
+			viewpoint getarg(0) ? 1 : 2, 39, 39, 1, 0xFFCC00;
+		detachrid;
+	}
+	callfunc "F_NEED_BG2_Reattach", .@caller;
+	return;
+}
+
+function	script	F_NEED_BG2_CapAnnounce	{
+	.@now = gettimetick(0);
+	if (!getarg(2, 0) && .@now < $@NBG2_CAP_ANN_AT)
+		return;
+	$@NBG2_CAP_ANN_AT = .@now + $@NBG2_C_CAP_ANN;
+	mapannouncelang $@NBG2_MAP$, getarg(0), getarg(1), bc_map, "0xFFCC33";
+	return;
+}
+
+// 라운드 중 0.5초마다. 점령 승리로 라운드가 끝나면 1.
+function	script	F_NEED_BG2_Capture	{
+	if ($@NBG2_STATE != 4)
+		return 0;
+	.@now = getarg(0);
+	if (.@now > $@NBG2_DEADLINE)
+		.@now = $@NBG2_DEADLINE;
+	if (!$@NBG2_CAP_ON) {
+		if (.@now - $@NBG2_ROUND_AT < $@NBG2_C_CAP_ACTIVE)
+			return 0;
+		$@NBG2_CAP_ON = 1;
+		$@NBG2_CAP_LAST = $@NBG2_ROUND_AT + $@NBG2_C_CAP_ACTIVE;
+		callfunc "F_NEED_BG2_Log", "CAPTURE_ACTIVE match=" + $@NBG2_MATCH + " round=" + $@NBG2_ROUND + " at=" + $@NBG2_CAP_LAST;
+		callfunc "F_NEED_BG2_CapMarker", 1;
+		callfunc "F_NEED_BG2_CapAnnounce", "[2:2 듀오] 중앙 거점 활성화! 가운데 관전석을 둘러싼 고리에 혼자 10초 머문 팀이 라운드 승리.",
+			"[2v2 Duo] Centre point is open! The team that alone holds the ring around the central box for 10 seconds wins the round.", 1;
+	}
+	.@dt = .@now - $@NBG2_CAP_LAST;
+	if (.@dt <= 0)
+		return 0;
+	$@NBG2_CAP_LAST = .@now;
+	.@caller = playerattached();
+	.@n[1] = 0;
+	.@n[2] = 0;
+	for (.@i = 0; .@i < $@NBG2_N; .@i++) {
+		if (!$@NBG2_ALIVE[.@i] || $@NBG2_GONE[.@i] || $@NBG2_AWAY[.@i])
+			continue;
+		if (!isloggedin($@NBG2_AID[.@i], $@NBG2_CID[.@i]) || !attachrid($@NBG2_AID[.@i]))
+			continue;
+		if (getcharid(0) == $@NBG2_CID[.@i] && callfunc("F_NEED_BG2_CapCounts"))
+			.@n[$@NBG2_TEAM[.@i]] += 1;
+		detachrid;
+	}
+	callfunc "F_NEED_BG2_Reattach", .@caller;
+	.@prev = $@NBG2_CAP_STATE;
+	if (.@n[1] && .@n[2]) {
+		$@NBG2_CAP_STATE = 3;
+		$@NBG2_CAP_EMPTY = 0;
+	} else if (.@n[1] || .@n[2]) {
+		.@t = .@n[1] ? 1 : 2;
+		$@NBG2_CAP_STATE = .@t;
+		$@NBG2_CAP_EMPTY = 0;
+		$@NBG2_CAP_T[.@t] += .@dt;
+		if (!$@NBG2_CAP_OWNER || $@NBG2_CAP_OWNER == .@t) {
+			if ($@NBG2_CAP_OWNER != .@t)
+				$@NBG2_CAP_MILE = 0;
+			$@NBG2_CAP_OWNER = .@t;
+			$@NBG2_CAP_G += .@dt;
+		} else {
+			// 상대 팀 진행량을 먼저 상쇄한다. 넘친 시간은 새 소유 팀 게이지가 된다.
+			$@NBG2_CAP_G -= .@dt;
+			if ($@NBG2_CAP_G <= 0) {
+				$@NBG2_CAP_G = -$@NBG2_CAP_G;
+				$@NBG2_CAP_OWNER = ($@NBG2_CAP_G > 0) ? .@t : 0;
+				$@NBG2_CAP_MILE = 0;
+			}
+		}
+	} else {
+		$@NBG2_CAP_EMPTY += .@dt;
+		$@NBG2_CAP_STATE = 0;
+		if ($@NBG2_CAP_EMPTY > $@NBG2_C_CAP_IDLE && $@NBG2_CAP_G > 0) {
+			.@over = $@NBG2_CAP_EMPTY - $@NBG2_C_CAP_IDLE;
+			if (.@over > .@dt)
+				.@over = .@dt;
+			$@NBG2_CAP_G -= .@over * 2;
+			if ($@NBG2_CAP_G <= 0) {
+				$@NBG2_CAP_G = 0;
+				$@NBG2_CAP_OWNER = 0;
+				$@NBG2_CAP_MILE = 0;
+			}
+		}
+	}
+	if ($@NBG2_CAP_STATE != .@prev) {
+		callfunc "F_NEED_BG2_Log", "CAPTURE_" + ($@NBG2_CAP_STATE == 3 ? "CONTEST" : "PROGRESS") + " match=" + $@NBG2_MATCH + " round=" + $@NBG2_ROUND
+			+ " state=" + $@NBG2_CAP_STATE + " owner=" + $@NBG2_CAP_OWNER + " gauge=" + $@NBG2_CAP_G + " held=" + $@NBG2_CAP_T[1] + ":" + $@NBG2_CAP_T[2];
+		if ($@NBG2_CAP_STATE == 3)
+			callfunc "F_NEED_BG2_CapAnnounce", "[2:2 듀오] 중앙 거점 경합 중 - 게이지 정지", "[2v2 Duo] Centre point contested - gauge paused";
+		else if ($@NBG2_CAP_STATE)
+			callfunc "F_NEED_BG2_CapAnnounce", "[2:2 듀오] " + callfunc("F_NEED_BG2_TeamName$", $@NBG2_CAP_STATE) + " 팀 중앙 거점 점유 중",
+				"[2v2 Duo] " + callfunc("F_NEED_BG2_TeamName$", $@NBG2_CAP_STATE) + " team is holding the centre point";
+	}
+	if ($@NBG2_CAP_OWNER && $@NBG2_CAP_G >= $@NBG2_C_CAP_WIN) {
+		callfunc "F_NEED_BG2_Log", "CAPTURE_WIN match=" + $@NBG2_MATCH + " round=" + $@NBG2_ROUND + " team=" + $@NBG2_CAP_OWNER + " gauge=" + $@NBG2_CAP_G
+			+ " held=" + $@NBG2_CAP_T[1] + ":" + $@NBG2_CAP_T[2];
+		callfunc "F_NEED_BG2_EndRound", $@NBG2_CAP_OWNER, "capture";
+		return 1;
+	}
+	// 진행 안내: 소유 팀 게이지 5초, 8초에 한 번씩.
+	if ($@NBG2_CAP_OWNER && $@NBG2_CAP_STATE == $@NBG2_CAP_OWNER) {
+		.@m = ($@NBG2_CAP_G >= 8000) ? 2 : (($@NBG2_CAP_G >= 5000) ? 1 : 0);
+		if (.@m > $@NBG2_CAP_MILE) {
+			$@NBG2_CAP_MILE = .@m;
+			callfunc "F_NEED_BG2_CapAnnounce", "[2:2 듀오] " + callfunc("F_NEED_BG2_TeamName$", $@NBG2_CAP_OWNER) + " 팀 점령 " + ($@NBG2_CAP_G / 1000) + "/10초",
+				"[2v2 Duo] " + callfunc("F_NEED_BG2_TeamName$", $@NBG2_CAP_OWNER) + " team capture " + ($@NBG2_CAP_G / 1000) + "/10 s", 1;
+		}
+	}
+	return 0;
+}
+
+// 90초 시간 종료: 생존 인원 많은 팀 → 단독 점유 누적 시간 긴 팀 → 무승부.
+function	script	F_NEED_BG2_TimeoutDecide	{
+	.@b = callfunc("F_NEED_BG2_AliveCount", 1);
+	.@r = callfunc("F_NEED_BG2_AliveCount", 2);
+	.@why$ = "timeout";
+	.@res = 0;
+	if (.@b != .@r) {
+		.@res = (.@b > .@r) ? 1 : 2;
+		.@why$ = "timeout_alive";
+	} else if ($@NBG2_CAP_T[1] != $@NBG2_CAP_T[2]) {
+		.@res = ($@NBG2_CAP_T[1] > $@NBG2_CAP_T[2]) ? 1 : 2;
+		.@why$ = "timeout_capture";
+	}
+	callfunc "F_NEED_BG2_Log", "ROUND_TIMEOUT_DECISION match=" + $@NBG2_MATCH + " round=" + $@NBG2_ROUND + " alive=" + .@b + ":" + .@r
+		+ " held=" + $@NBG2_CAP_T[1] + ":" + $@NBG2_CAP_T[2] + " res=" + .@res + " why=" + .@why$;
+	callfunc "F_NEED_BG2_EndRound", .@res, .@why$;
+	return;
 }
 
 // GM 이 첨부된 상태에서 상태 출력.
@@ -1070,6 +1676,13 @@ function	script	F_NEED_BG2_StatusLines	{
 		dispbottom "[NEED_BG2] p#" + .@i + " team=" + ($@NBG2_TEAM[.@i] == 1 ? "BLUE" : "RED") + " aid=" + $@NBG2_AID[.@i] + " cid=" + $@NBG2_CID[.@i]
 			+ " name=" + convertpcinfo($@NBG2_CID[.@i], CPC_NAME) + " alive=" + $@NBG2_ALIVE[.@i] + " gone=" + $@NBG2_GONE[.@i]
 			+ " away=" + $@NBG2_AWAY[.@i] + " grace_used=" + $@NBG2_GRACE_USED[.@i];
+	dispbottom "[NEED_BG2] queue=" + ($NEED_BG2_QUEUE_OPEN ? "OPEN" : "CLOSED") + " waiting=" + $@NBG2_Q_N + " ready_check=" + $@NBG2_RC + " gen=" + $@NBG2_RC_GEN
+		+ ($@NBG2_RC ? " left=" + (($@NBG2_RC_END - gettimetick(0)) / 1000) + "s acc=" + $@NBG2_RC_ACC[0] + $@NBG2_RC_ACC[1] + $@NBG2_RC_ACC[2] + $@NBG2_RC_ACC[3] : "");
+	for (.@i = 0; .@i < $@NBG2_Q_N; .@i++)
+		dispbottom "[NEED_BG2] q#" + (.@i + 1) + " seq=" + $@NBG2_Q_SEQ[.@i] + " aid=" + $@NBG2_Q_AID[.@i] + " cid=" + $@NBG2_Q_CID[.@i] + " name=" + convertpcinfo($@NBG2_Q_CID[.@i], CPC_NAME)
+			+ (callfunc("F_NEED_BG2_RcIndex", $@NBG2_Q_AID[.@i]) >= 0 ? " [ready check]" : "");
+	if ($@NBG2_STATE == 4 && $@NBG2_CAP_ON)
+		dispbottom "[NEED_BG2] capture owner=" + $@NBG2_CAP_OWNER + " gauge=" + $@NBG2_CAP_G + " state=" + $@NBG2_CAP_STATE + " held=" + $@NBG2_CAP_T[1] + ":" + $@NBG2_CAP_T[2];
 	if ($@NBG2_LAST$ != "")
 		dispbottom "[NEED_BG2] last=" + $@NBG2_LAST$;
 	return;
@@ -1078,6 +1691,13 @@ function	script	F_NEED_BG2_StatusLines	{
 // GM 강제 중단(무효). 어떤 상태에서 불러도 한 번만 정리된다.
 function	script	F_NEED_BG2_GmStop	{
 	.@s = $@NBG2_STATE;
+	if (.@s == 0 && $@NBG2_RC) {
+		callfunc "F_NEED_BG2_Log", "READY_CANCEL gen=" + $@NBG2_RC_GEN + " by=gm";
+		callfunc "F_NEED_BG2_RcClose", "[2:2 듀오] 운영자가 참가 확인을 취소했습니다. 대기 순번은 그대로입니다.",
+			"[2v2 Duo] The GM cancelled the ready check. Your place in the queue is kept.";
+		dispbottom "[2:2 듀오] 참가 확인을 취소했습니다(대기열은 유지, 대기열이 열려 있으면 곧 다시 확인합니다).";
+		return 1;
+	}
 	if (.@s == 0 || .@s == 7) {
 		dispbottom "[2:2 듀오] 진행 중인 모집/경기가 없습니다.";
 		return 0;
@@ -1086,7 +1706,8 @@ function	script	F_NEED_BG2_GmStop	{
 		callfunc "F_NEED_BG2_TellRegs", "[2:2 듀오] 운영자가 모집을 닫았습니다.", "[2v2 Duo] The GM closed sign-ups.";
 		callfunc "F_NEED_BG2_ClearRecruit";
 		$@NBG2_STATE = 0;
-		stopnpctimer "NEED_BG2";
+		if (!$@NBG2_Q_N)
+			stopnpctimer "NEED_BG2";
 		callfunc "F_NEED_BG2_Log", "RECRUIT_CLOSED by=gm";
 		dispbottom "[2:2 듀오] 모집을 닫았습니다.";
 		return 1;
@@ -1139,6 +1760,10 @@ OnInit:
 	bindatcmd "듀오취소", "NEED_BG2::OnCmdCancel", 0, 99;
 	bindatcmd "duostatus", "NEED_BG2::OnCmdStatus", 0, 99;
 	bindatcmd "듀오현황", "NEED_BG2::OnCmdStatus", 0, 99;
+	bindatcmd "duoaccept", "NEED_BG2::OnCmdAccept", 0, 99;
+	bindatcmd "듀오수락", "NEED_BG2::OnCmdAccept", 0, 99;
+	bindatcmd "duodecline", "NEED_BG2::OnCmdDecline", 0, 99;
+	bindatcmd "듀오거절", "NEED_BG2::OnCmdDecline", 0, 99;
 
 	// 스크립트 리로드: 진행 중이던 경기 상태($@)는 이미 사라졌다. 경기장에 남은 참가자를
 	// 정리하고 그 경기는 무효로 남긴다. 맵서버 재시작이면 경기장이 비어 있어 할 일이 없다.
@@ -1167,12 +1792,48 @@ OnInit:
 		bg_destroy .@bgs[.@j];
 	if (.@cleaned || .@nb)
 		callfunc "F_NEED_BG2_Log", "RELOAD_VOID cleaned=" + .@cleaned + " teams=" + .@nb;
+	// 대기열/참가 확인($@)도 사라졌다. 기다리던 사람에게 재신청을 안내하고 다른 전장 차단 표시(@NEED_BG2_BUSY)를 지운다.
+	donpcevent "NEED_BG2::OnBusySweep";
+	if ($NEED_BG2_QUEUE_OPEN)
+		initnpctimer;
+	end;
+
+OnBusySweep:
+	addrid 0;
+	if (!@NEED_BG2_BUSY)
+		end;
+	if (@NEED_BG2_BUSY < 3)
+		dispbottom needtr("[2:2 듀오] 서버 스크립트가 다시 읽혀 2:2 대기열이 초기화되었습니다. 다시 신청해 주세요: @듀오참가",
+			"[2v2 Duo] The server reloaded its scripts and the 2v2 queue was reset. Please queue again: @duojoin"), 0xFF7777;
+	callfunc "F_NEED_BG2_Log", "QUEUE_RESET why=reload aid=" + getcharid(3) + " cid=" + getcharid(0) + " busy=" + @NEED_BG2_BUSY;
+	@NEED_BG2_BUSY = 0;
 	end;
 
 OnTimer500:
 	callfunc "F_NEED_BG2_Tick";
-	if ($@NBG2_STATE)
+	if ($@NBG2_STATE || $@NBG2_Q_N || $@NBG2_RC)
 		initnpctimer;
+	end;
+
+// 접속 종료(캐릭터 선택 포함): 대기열에서 빠진다. 참가 확인 중이었으면 거절과 같다(불이익 없음).
+OnPCLogoutEvent:
+	.@aid = getcharid(3);
+	.@cid = getcharid(0);
+	.@k = callfunc("F_NEED_BG2_RcIndex", .@aid);
+	if (.@k >= 0) {
+		if ($@NBG2_RC_CID[.@k] == .@cid) {
+			callfunc "F_NEED_BG2_Log", "READY_DECLINE gen=" + $@NBG2_RC_GEN + " aid=" + .@aid + " cid=" + .@cid + " why=logout";
+			callfunc "F_NEED_BG2_RcDrop", .@k, "QUEUE_CANCEL why=logout";
+			callfunc "F_NEED_BG2_RcClose", "[2:2 듀오] 참가자 한 명이 접속을 종료해 다시 참가 확인을 진행합니다. 순번은 그대로입니다.",
+				"[2v2 Duo] A player logged out, so the ready check starts again. Your place in the queue is kept.";
+		}
+		end;
+	}
+	.@q = callfunc("F_NEED_BG2_QIndex", .@aid);
+	if (.@q >= 0) {
+		if ($@NBG2_Q_CID[.@q] == .@cid)
+			callfunc "F_NEED_BG2_QRemove", .@q, "QUEUE_CANCEL why=logout", 0;
+	}
 	end;
 
 OnDieB:
@@ -1210,50 +1871,122 @@ OnPCLoginEvent:
 	end;
 
 OnCmdJoin:
-	if ($@NBG2_STATE != 1) {
-		dispbottom needtr("[2:2 듀오] ", "[2v2 Duo] ") + callfunc("F_NEED_BG2_Reason$", 10), 0xFF7777;
-		end;
-	}
 	.@aid = getcharid(3);
-	.@code = 0;
-	for (.@i = 0; .@i < $@NBG2_REG_N; .@i++)
-		if ($@NBG2_REG_AID[.@i] == .@aid) .@code = 9;
-	if (!.@code && $@NBG2_REG_N >= 4)
-		.@code = 11;
-	if (!.@code)
-		.@code = callfunc("F_NEED_BG2_CheckSelf");
-	if (!.@code && callfunc("F_NEED_BG2_PartyClash"))
-		.@code = 7;
-	if (.@code) {
-		callfunc "F_NEED_BG2_Log", "JOIN_REFUSED aid=" + .@aid + " cid=" + getcharid(0) + " code=" + .@code + " regs=" + $@NBG2_REG_N;
-		dispbottom needtr("[2:2 듀오] 신청할 수 없습니다: ", "[2v2 Duo] You cannot sign up: ") + callfunc("F_NEED_BG2_Reason$", .@code), 0xFF7777;
+	if ($@NBG2_STATE == 1) {
+		// GM 수동 4인 테스트 모집 중: 1단계 방식 그대로(공개 대기열과 겹칠 수 없다).
+		.@code = 0;
+		if (callfunc("F_NEED_BG2_AidBusy", .@aid))
+			.@code = 9;
+		if (!.@code && $@NBG2_REG_N >= 4)
+			.@code = 11;
+		if (!.@code)
+			.@code = callfunc("F_NEED_BG2_CheckSelf", 0);
+		if (.@code) {
+			callfunc "F_NEED_BG2_Log", "JOIN_REFUSED aid=" + .@aid + " cid=" + getcharid(0) + " code=" + .@code + " regs=" + $@NBG2_REG_N;
+			dispbottom needtr("[2:2 듀오] 신청할 수 없습니다: ", "[2v2 Duo] You cannot sign up: ") + callfunc("F_NEED_BG2_Reason$", .@code), 0xFF7777;
+			end;
+		}
+		$@NBG2_REG_AID[$@NBG2_REG_N] = .@aid;
+		$@NBG2_REG_CID[$@NBG2_REG_N] = getcharid(0);
+		$@NBG2_REG_N++;
+		@NEED_BG2_BUSY = 1;
+		callfunc "F_NEED_BG2_Log", "JOIN aid=" + .@aid + " cid=" + getcharid(0) + " regs=" + $@NBG2_REG_N;
+		dispbottom needtr("[2:2 듀오] GM 테스트 신청 완료 (" + $@NBG2_REG_N + "/4). 팀은 시작할 때 정해집니다. 취소: @듀오취소",
+			"[2v2 Duo] GM test sign-up done (" + $@NBG2_REG_N + "/4). Teams are set at the start. To cancel: @duocancel"), 0x66CCFF;
 		end;
 	}
-	$@NBG2_REG_AID[$@NBG2_REG_N] = .@aid;
-	$@NBG2_REG_CID[$@NBG2_REG_N] = getcharid(0);
-	$@NBG2_REG_N++;
-	callfunc "F_NEED_BG2_Log", "JOIN aid=" + .@aid + " cid=" + getcharid(0) + " regs=" + $@NBG2_REG_N;
-	dispbottom needtr("[2:2 듀오] 신청 완료 (" + $@NBG2_REG_N + "/4). 팀은 시작할 때 무작위로 정해집니다. 취소: @듀오취소",
-		"[2v2 Duo] Signed up (" + $@NBG2_REG_N + "/4). Teams are drawn at random at the start. To cancel: @duocancel"), 0x66CCFF;
+	.@code = callfunc("F_NEED_BG2_QJoin");
+	if (.@code) {
+		dispbottom needtr("[2:2 듀오] 대기열에 신청할 수 없습니다: ", "[2v2 Duo] You cannot join the queue: ") + callfunc("F_NEED_BG2_Reason$", .@code), 0xFF7777;
+		end;
+	}
+	.@pos = callfunc("F_NEED_BG2_QIndex", .@aid) + 1;
+	dispbottom needtr("[2:2 듀오] 개인 대기열 신청 완료. 순번 " + .@pos + " / 대기 " + $@NBG2_Q_N + "명. 다른 맵에서 사냥해도 대기가 유지됩니다.",
+		"[2v2 Duo] You joined the solo queue. Position " + .@pos + " / " + $@NBG2_Q_N + " waiting. You stay queued while playing on other maps."), 0x66CCFF;
+	dispbottom needtr("[2:2 듀오] 경기장이 비고 4명이 모이면 30초 참가 확인(@듀오수락)을 요청합니다. 취소: @듀오취소 / 현황: @듀오현황",
+		"[2v2 Duo] When the arena is free and 4 players are waiting you get a 30-second ready check (@duoaccept). Cancel: @duocancel / status: @duostatus"), 0x66CCFF;
 	end;
 
 OnCmdCancel:
 	.@aid = getcharid(3);
+	.@cid = getcharid(0);
+	.@k = callfunc("F_NEED_BG2_RcIndex", .@aid);
+	if (.@k >= 0) {
+		callfunc "F_NEED_BG2_Log", "READY_DECLINE gen=" + $@NBG2_RC_GEN + " aid=" + .@aid + " cid=" + .@cid + " why=cancel";
+		callfunc "F_NEED_BG2_RcDrop", .@k, "QUEUE_CANCEL why=cancel";
+		callfunc "F_NEED_BG2_RcClose", "[2:2 듀오] 참가자 한 명이 취소해 다시 참가 확인을 진행합니다. 순번은 그대로입니다.",
+			"[2v2 Duo] A player cancelled, so the ready check starts again. Your place in the queue is kept.";
+		dispbottom needtr("[2:2 듀오] 대기열 신청을 취소했습니다.", "[2v2 Duo] You left the queue."), 0x66CCFF;
+		end;
+	}
+	.@q = callfunc("F_NEED_BG2_QIndex", .@aid);
+	if (.@q >= 0) {
+		callfunc "F_NEED_BG2_QRemove", .@q, "QUEUE_CANCEL why=cancel";
+		dispbottom needtr("[2:2 듀오] 대기열 신청을 취소했습니다.", "[2v2 Duo] You left the queue."), 0x66CCFF;
+		end;
+	}
 	if ($@NBG2_STATE == 1) {
 		for (.@i = 0; .@i < $@NBG2_REG_N; .@i++) {
 			if ($@NBG2_REG_AID[.@i] != .@aid) continue;
 			callfunc "F_NEED_BG2_RemoveReg", .@i;
-			callfunc "F_NEED_BG2_Log", "UNREGISTER cid=" + getcharid(0) + " why=cancel regs=" + $@NBG2_REG_N;
+			callfunc "F_NEED_BG2_Log", "UNREGISTER cid=" + .@cid + " why=cancel regs=" + $@NBG2_REG_N;
 			dispbottom needtr("[2:2 듀오] 신청을 취소했습니다.", "[2v2 Duo] Your sign-up was cancelled."), 0x66CCFF;
 			end;
 		}
 	}
-	if (callfunc("F_NEED_BG2_IndexOf", getcharid(0)) >= 0 && $@NBG2_STATE >= 2 && $@NBG2_STATE <= 5) {
+	if (callfunc("F_NEED_BG2_IndexOf", .@cid) >= 0 && $@NBG2_STATE >= 2 && $@NBG2_STATE <= 5) {
 		dispbottom needtr("[2:2 듀오] 경기 중에는 취소할 수 없습니다. 경기장을 떠나면 소속 팀의 몰수패가 됩니다.",
 			"[2v2 Duo] You cannot cancel during a match. Leaving the arena forfeits the match for your team."), 0xFF7777;
 		end;
 	}
 	dispbottom needtr("[2:2 듀오] 취소할 신청이 없습니다.", "[2v2 Duo] You have no sign-up to cancel."), 0xFF7777;
+	end;
+
+OnCmdAccept:
+	.@aid = getcharid(3);
+	.@k = callfunc("F_NEED_BG2_RcIndex", .@aid);
+	if (.@k >= 0) {	// || 는 단락 평가가 아니므로 음수 인덱스로 배열을 읽지 않게 나눈다
+		if ($@NBG2_RC_CID[.@k] != getcharid(0))
+			.@k = -1;
+	}
+	if (.@k < 0) {
+		dispbottom needtr("[2:2 듀오] 지금 수락할 참가 확인이 없습니다.", "[2v2 Duo] There is no ready check for you right now."), 0xFF7777;
+		end;
+	}
+	if (gettimetick(0) >= $@NBG2_RC_END) {
+		callfunc "F_NEED_BG2_Log", "READY_LATE gen=" + $@NBG2_RC_GEN + " aid=" + .@aid + " cid=" + getcharid(0);
+		dispbottom needtr("[2:2 듀오] 참가 확인 시간이 지났습니다.", "[2v2 Duo] The ready check time is over."), 0xFF7777;
+		end;
+	}
+	if ($@NBG2_RC_ACC[.@k]) {
+		dispbottom needtr("[2:2 듀오] 이미 수락했습니다. 다른 참가자를 기다립니다.", "[2v2 Duo] You already accepted. Waiting for the others."), 0x66CCFF;
+		end;
+	}
+	$@NBG2_RC_ACC[.@k] = 1;
+	.@acc = 0;
+	for (.@j = 0; .@j < 4; .@j++)
+		if ($@NBG2_RC_ACC[.@j]) .@acc++;
+	callfunc "F_NEED_BG2_Log", "READY_ACCEPT gen=" + $@NBG2_RC_GEN + " aid=" + .@aid + " cid=" + getcharid(0) + " accepted=" + .@acc + "/4";
+	dispbottom needtr("[2:2 듀오] 수락했습니다 (" + .@acc + "/4). 4명이 모두 수락하면 바로 입장합니다.",
+		"[2v2 Duo] Accepted (" + .@acc + "/4). You enter as soon as all 4 accept."), 0x66CCFF;
+	end;
+
+OnCmdDecline:
+	.@aid = getcharid(3);
+	.@k = callfunc("F_NEED_BG2_RcIndex", .@aid);
+	if (.@k >= 0) {
+		if ($@NBG2_RC_CID[.@k] != getcharid(0))
+			.@k = -1;
+	}
+	if (.@k < 0) {
+		dispbottom needtr("[2:2 듀오] 지금 거절할 참가 확인이 없습니다. 대기 취소는 @듀오취소.", "[2v2 Duo] There is no ready check for you right now. To leave the queue: @duocancel."), 0xFF7777;
+		end;
+	}
+	callfunc "F_NEED_BG2_Log", "READY_DECLINE gen=" + $@NBG2_RC_GEN + " aid=" + .@aid + " cid=" + getcharid(0) + " why=decline";
+	callfunc "F_NEED_BG2_RcDrop", .@k, "QUEUE_CANCEL why=decline";
+	callfunc "F_NEED_BG2_RcClose", "[2:2 듀오] 참가자 한 명이 거절해 다시 참가 확인을 진행합니다. 순번은 그대로입니다.",
+		"[2v2 Duo] A player declined, so the ready check starts again. Your place in the queue is kept.";
+	dispbottom needtr("[2:2 듀오] 거절했습니다. 대기열에서 빠졌습니다(불이익 없음).", "[2v2 Duo] Declined. You left the queue (no penalty)."), 0x66CCFF;
 	end;
 
 OnCmdStatus:
@@ -1263,6 +1996,12 @@ OnCmdStatus:
 	if (.@left < 0) .@left = 0;
 	.@i = callfunc("F_NEED_BG2_IndexOf", getcharid(0));
 	.@mine$ = (.@i >= 0) ? needtr(" / 내 팀 ", " / my team ") + callfunc("F_NEED_BG2_TeamName$", $@NBG2_TEAM[.@i]) : "";
+	.@q = callfunc("F_NEED_BG2_QIndex", getcharid(3));
+	.@k = callfunc("F_NEED_BG2_RcIndex", getcharid(3));
+	dispbottom needtr("[2:2 듀오] 대기열 ", "[2v2 Duo] queue ") + ($NEED_BG2_QUEUE_OPEN ? needtr("열림", "open") : needtr("닫힘", "closed"))
+		+ needtr(" / 대기 ", " / waiting ") + $@NBG2_Q_N
+		+ ((.@q >= 0) ? needtr(" / 내 순번 ", " / my position ") + (.@q + 1) : "")
+		+ ((.@k >= 0) ? needtr(" / 참가 확인 중 ", " / ready check ") + (($@NBG2_RC_END - gettimetick(0)) / 1000) + needtr("초 남음 (@듀오수락)", "s left (@duoaccept)") : ""), 0x66CCFF;
 	dispbottom needtr("[2:2 듀오] 상태 ", "[2v2 Duo] state ") + callfunc("F_NEED_BG2_StateName$", $@NBG2_STATE)
 		+ needtr(" / 신청 ", " / sign-ups ") + $@NBG2_REG_N + "/4"
 		+ needtr(" / 라운드 ", " / round ") + $@NBG2_ROUND
@@ -1281,7 +2020,8 @@ OnCmdGM:
 	else if (.@sub$ == "recover") callfunc "F_NEED_BG2_GmRecover", .@atcmd_parameters$[1];
 	else if (.@sub$ == "lvbypass") callsub S_LvBypass, atoi(.@atcmd_parameters$[1]);
 	else if (.@sub$ == "log") callsub S_Log, atoi(.@atcmd_parameters$[1]);
-	else if (.@sub$ != "") dispbottom "[2:2 듀오] 사용법: @duo2v2 [open|start|status|stop|recover <이름>|lvbypass 0/1|log 0/1]";
+	else if (.@sub$ == "queue") callsub S_Queue, .@atcmd_parameters$[1];
+	else if (.@sub$ != "") dispbottom "[2:2 듀오] 사용법: @duo2v2 [open|start|status|stop|recover <이름>|lvbypass 0/1|log 0/1|queue on/off]";
 	else callsub S_Menu;
 	end;
 
@@ -1291,12 +2031,13 @@ S_Menu:
 	if ($@NBG2_N)
 		mes "매치 " + $@NBG2_MATCH + " / " + $@NBG2_ROUND + "라운드 / 블루 " + $@NBG2_WIN_B + " : " + $@NBG2_WIN_R + " 레드";
 	mes "레벨 제한: " + ($NEED_BG2_LVBYPASS ? "^FF0000우회 중(GM 테스트)^000000" : $@NBG2_C_MINLV + " 이상");
-	switch (select("모집 열기", "신청 현황 / 상태 / 점수", "4인 랜덤 편성 후 시작", "강제 중단 (무효)", "고립 참가자 복구", "설정", "닫기")) {
+	mes "공개 대기열: " + ($NEED_BG2_QUEUE_OPEN ? "열림" : "닫힘") + " / 대기 " + $@NBG2_Q_N + "명";
+	switch (select("GM 테스트 모집 열기", "신청 현황 / 상태 / 점수", "4인 편성 후 시작 (직업 균형)", "강제 중단 (무효)", "고립 참가자 복구", "설정", "닫기")) {
 	case 1: close2; callsub S_Open; end;
 	case 2: close2; callfunc "F_NEED_BG2_StatusLines"; end;
 	case 3: close2; callfunc "F_NEED_BG2_Start"; end;
 	case 4:
-		mes "진행 중인 모집/경기를 무효로 끝내고 전원을 원래 위치로 돌려보냅니다.";
+		mes "진행 중인 모집/경기를 무효로 끝내고 전원을 저장 지점으로 돌려보냅니다. 참가 확인 중이면 그 확인만 취소합니다.";
 		if (select("중단", "취소") == 1) {
 			close2;
 			callfunc "F_NEED_BG2_GmStop";
@@ -1311,17 +2052,34 @@ S_Menu:
 	case 6:
 		mes "레벨 제한 우회(GM 테스트 옵션): " + ($NEED_BG2_LVBYPASS ? "ON" : "OFF");
 		mes "디버그 로그: " + ($NEED_BG2_LOG_OFF ? "OFF" : "ON");
-		switch (select("레벨 제한 우회 전환", "디버그 로그 전환", "닫기")) {
+		mes "공개 대기열: " + ($NEED_BG2_QUEUE_OPEN ? "열림" : "닫힘");
+		switch (select("레벨 제한 우회 전환", "디버그 로그 전환", "공개 대기열 열기/닫기", "닫기")) {
 		case 1: close2; callsub S_LvBypass, !$NEED_BG2_LVBYPASS; end;
 		case 2: close2; callsub S_Log, $NEED_BG2_LOG_OFF; end;
+		case 3: close2; callsub S_Queue, ($NEED_BG2_QUEUE_OPEN ? "off" : "on"); end;
 		}
 		close;
 	}
 	close;
 
+S_Queue:
+	if (getarg(0) == "on") {
+		$NEED_BG2_QUEUE_OPEN = 1;
+		callfunc "F_NEED_BG2_TimerOn";
+		callfunc "F_NEED_BG2_Log", "QUEUE_OPEN by_aid=" + getcharid(3);
+		dispbottom "[2:2 듀오] 공개 개인 대기열을 열었습니다. 일반 유저가 @듀오참가 로 신청합니다.";
+	} else if (getarg(0) == "off") {
+		$NEED_BG2_QUEUE_OPEN = 0;
+		callfunc "F_NEED_BG2_QueueClose", "queue_closed";
+		callfunc "F_NEED_BG2_Log", "QUEUE_CLOSE by_aid=" + getcharid(3);
+		dispbottom "[2:2 듀오] 공개 대기열을 닫았습니다(대기자 신청 취소, 진행 중인 경기는 그대로).";
+	} else
+		dispbottom "[2:2 듀오] 공개 대기열: " + ($NEED_BG2_QUEUE_OPEN ? "열림" : "닫힘") + " / 대기 " + $@NBG2_Q_N + "명 / 참가 확인 " + ($@NBG2_RC ? "진행 중" : "없음") + " (@duo2v2 queue on|off)";
+	return;
+
 S_Open:
-	if ($@NBG2_STATE != 0) {
-		dispbottom "[2:2 듀오] 이미 진행 중입니다. (상태 " + callfunc("F_NEED_BG2_StateName$", $@NBG2_STATE) + ")";
+	if ($@NBG2_STATE != 0 || $@NBG2_RC) {
+		dispbottom "[2:2 듀오] 경기장이 사용 중이거나 공개 대기열 참가 확인이 진행 중입니다. (상태 " + callfunc("F_NEED_BG2_StateName$", $@NBG2_STATE) + ", 참가 확인 " + $@NBG2_RC + ")";
 		return;
 	}
 	callfunc "F_NEED_BG2_ClearRecruit";

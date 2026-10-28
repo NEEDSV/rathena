@@ -30,6 +30,7 @@
 #include "mercenary.hpp"
 #include "mob.hpp"
 #include "npc.hpp"
+#include "party.hpp"
 #include "path.hpp"
 #include "pc.hpp"
 #include "pc_groups.hpp"
@@ -15711,7 +15712,7 @@ TIMER_FUNC(status_change_timer){
 
 			// If the caster is offline, dead, on another map or
 			// if the target is not a player or is in another party
-			if( ssd == nullptr || status_isdead(*ssd) || ssd->m != bl->m || sd == nullptr || ssd->status.party_id != sd->status.party_id ){
+			if( ssd == nullptr || status_isdead(*ssd) || ssd->m != bl->m || sd == nullptr || ssd->status.party_id != sd->status.party_id || party_need_bgsplit(ssd, sd) ){
 				// End the status change
 				sce->val4 = 0;
 				break;

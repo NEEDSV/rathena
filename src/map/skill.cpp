@@ -8369,6 +8369,9 @@ int32 skill_check_condition_char_sub (block_list *bl, va_list ap)
 	if(pc_isdead(tsd))
 		return 0;
 
+	if (party_need_bgsplit(sd, tsd)) // NEED Duo Survival 2v2: no partner from the other battleground team
+		return 0;
+
 	if (tsd->sc.cant.cast)
 		return 0;
 
@@ -12122,7 +12125,7 @@ int32 skill_getareachar_skillunit_visibilty_sub(block_list *bl, va_list ap) {
 
 	if (src != bl) {
 		uint32 party2 = status_get_party_id(bl);
-		if (!party1 || !party2 || party1 != party2)
+		if (!party1 || !party2 || party1 != party2 || party_need_bgsplit(battle_get_master(su), bl))
 			visible = false;
 	}
 
@@ -12167,7 +12170,7 @@ void skill_getareachar_skillunit_visibilty_single(skill_unit *su, block_list *bl
 	if (su->hidden && src != bl) {
 		uint32 party1 = status_get_party_id(src);
 		uint32 party2 = status_get_party_id(bl);
-		if (!party1 || !party2 || party1 != party2)
+		if (!party1 || !party2 || party1 != party2 || party_need_bgsplit(src, bl))
 			visible = false;
 	}
 
