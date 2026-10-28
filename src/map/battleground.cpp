@@ -24,6 +24,7 @@
 #include "npc.hpp"
 #include "party.hpp"
 #include "pc.hpp"
+#include "script.hpp"
 #include "pet.hpp"
 
 using namespace rathena;
@@ -685,6 +686,42 @@ int32 bg_create(uint16 mapindex, s_battleground_team* team)
  * @param bl: Object
  * @return Battleground ID
  */
+/**
+ * NEED Duo Survival 2v2 (phase 3): counts real interactions between the players of the two
+ * battleground teams on a map with MF_NEED_COMBATLOG, in session variables the 2v2 script reads.
+ *   kind 0 = damage, 1 = debuff that took hold: @NEED_BG2_CB_HOST +1 on the acting player (or the
+ *            owner of the acting summon / homunculus / mercenary / elemental), @NEED_BG2_CB_HIT +1 on the target
+ *   kind 2 = skill on a team mate other than oneself: @NEED_BG2_CB_SUP +1 on the caster
+ * Self-damage, own team damage, self buffs and anything off such a map are ignored.
+ */
+void bg_need_combat_note( block_list* src, block_list* target, int32 kind )
+{
+	if( src == nullptr || target == nullptr || target->type != BL_PC )
+		return;
+	if( !map_getmapflag( target->m, MF_NEED_COMBATLOG ) )
+		return;
+
+	map_session_data* tsd = reinterpret_cast<map_session_data*>( target );
+	map_session_data* ssd = BL_CAST( BL_PC, battle_get_master( src ) );
+
+	if( ssd == nullptr || ssd == tsd || ssd->m != tsd->m || ssd->bg_id == 0 || tsd->bg_id == 0 )
+		return;
+
+	static const int64 reg_host = reference_uid( add_str( "@NEED_BG2_CB_HOST" ), 0 );
+	static const int64 reg_hit = reference_uid( add_str( "@NEED_BG2_CB_HIT" ), 0 );
+	static const int64 reg_sup = reference_uid( add_str( "@NEED_BG2_CB_SUP" ), 0 );
+
+	if( kind == 2 ) {
+		if( ssd->bg_id == tsd->bg_id )
+			pc_setreg( ssd, reg_sup, pc_readreg( ssd, reg_sup ) + 1 );
+		return;
+	}
+	if( ssd->bg_id == tsd->bg_id )
+		return;
+	pc_setreg( ssd, reg_host, pc_readreg( ssd, reg_host ) + 1 );
+	pc_setreg( tsd, reg_hit, pc_readreg( tsd, reg_hit ) + 1 );
+}
+
 int32 bg_team_get_id( const block_list* bl )
 {
 	nullpo_ret(bl);

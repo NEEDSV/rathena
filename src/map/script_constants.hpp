@@ -470,6 +470,7 @@
 	export_constant(MF_NEED_NOAUTOREVIVE);
 	export_constant(MF_NEED_PREPLOCK);
 	export_constant(MF_NEED_BGPARTYSPLIT);
+	export_constant(MF_NEED_COMBATLOG);
 	export_constant(MF_NOTRADE);
 	export_constant(MF_NOSKILL);
 	export_constant(MF_NOWARP);

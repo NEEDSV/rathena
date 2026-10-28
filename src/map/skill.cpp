@@ -4719,6 +4719,9 @@ int32 skill_castend_nodamage_id (block_list *src, block_list *bl, uint16 skill_i
 	if(status_isdead(*src))
 		return 1;
 
+	if( dstsd != nullptr && src != bl && skill_id > 0 )
+		bg_need_combat_note( src, bl, 2 );	// NEED Duo Survival 2v2: skill on a team mate (the note ignores the other team)
+
 	if( src != bl && status_isdead(*bl) ) {
 		switch( skill_id ) { // Skills that may be cast on dead targets
 			case NPC_WIDESOULDRAIN:

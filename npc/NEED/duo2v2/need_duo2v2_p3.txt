@@ -1,0 +1,1281 @@
+//============================================================
+// NEED 2:2 듀오 서바이벌 - 3단계 (주간 점수 원장 / 계정 단계 보상 / 캐릭터 주간 랭킹 / 탈주 제재 / 검토)
+//============================================================
+//= 이 파일은 need_duo2v2.txt (Phase 2) 뒤에 로드한다. Phase 2 는 $@NBG2P3_LOADED 일 때만 이 파일의 함수를 부른다
+//= (이 파일을 빼도 Phase 2 경기는 그대로 돈다).
+//= 스위치 (서버 영구, 기본 모두 0 = 꺼짐. GM 60+ 가 @duo2v2p3 set ... 으로 바꾼다):
+//=   $NEED_BG2_P3_ON    원장/점수/단계 보상권 생성/2:2 탈주 제재. 경기 시작(Launch) 때 켜져 있던 경기만 정산한다.
+//=   $NEED_BG2_P3_RANK  수요일 04:00 KST 지난 주 랭킹 자동 확정(+ GM 수동 확정).
+//=   $NEED_BG2_P3_CLAIM 보상 NPC 캐시 수령.
+//= 원장  : DB 테이블 need_bg2_* (NEED_Duo_Survival_Phase3_DB_Migration.sql). 스크립트 변수로 보상 원장을 관리하지 않는다.
+//= 시간  : 유닉스 초(UTC). 주차 = 월요일 04:00 KST 시작 [start, start+7일). KST = UTC+9 를 상수로 쓴다(서버 시간대 무관).
+//=         경기는 종료 시각의 주차에 들어간다. 랭킹 확정 = 주차 시작 + 9일(다음 주 수요일 04:00 KST).
+//= 정산  : F_NEED_BG2_Finish (서버 권위, 경기당 한 번) → F_NEED_BG2P3_Settle → F_NEED_BG2P3_Apply (트랜잭션, match_key 유니크).
+//=         DB 실패 시 경기 결과를 영구 서버 변수 $NEED_BG2_PEND_H$/P$ 에 남기고(PENDING_RECONCILIATION) 60초마다 재시도한다.
+//= 캐시  : #CASHPOINTS (pc_setparam SP_CASHPOINTS → cashlog). 지급 영수증 #NEED_BG2_PAIDSEQ 를 같은 스크립트에서 함께 바꾼다.
+//=         두 계정 변수는 스크립트 종료 시 같은 저장 패킷으로 char-server 에 간다. 보상권은 0 PENDING → 1 RESERVED → 2 CLAIMED,
+//=         다음 로그인 때 #NEED_BG2_PAIDSEQ 로 RESERVED 를 확정(2)하거나 미지급(0)으로 되돌린다.
+//= 변수  : $@NBG2P3_*  임시(리로드 시 다시 만든다).  $@NBG2_P3ARMED / $@NBG2_CB_* / $@NBG2_IP$ / $@NBG2_CLS / $@NBG2_T0 /
+//=         $@NBG2_TICK0 / $@NBG2_ACT_MS / $@NBG2_RACT  경기 중 기록(Phase 2 경기 변수 옆).
+//=         @NEED_BG2_CB_HOST / HIT / SUP  세션. C++ bg_need_combat_note 가 올린다(맵플래그 need_combatlog).
+//=         NEED_BG2_P3 / NEED_BG2_PREDES  캐릭터. 경기 전부터 있던 엔진 탈주자 상태(다른 전장)의 만료 시각.
+//=         #NEED_BG2_PAIDSEQ  계정. 마지막으로 지급된 보상권 순번(영수증).
+//=         $NEED_BG2_RV_*  검토 신호 기준(운영 결정 전 임시값, 비어 있으면 기본값).
+//============================================================
+
+function	script	F_NEED_BG2P3_Init	{
+	$@NBG2P3_MODE = 2;
+	setarray $@NBG2P3_TIER_PT[0], 10, 30, 60;
+	setarray $@NBG2P3_TIER_CASH[0], 10000, 20000, 40000;
+	setarray $@NBG2P3_RANK_CASH[1], 50000, 30000, 20000;
+	$@NBG2P3_MINGAMES = 20;		// 랭킹 후보: 그 주 유효 경기 20 이상
+	$@NBG2P3_MINACC = 6;		// 순위 보상 개설: 그 주 유효 경기 참가 계정 6 이상
+	$@NBG2P3_WEEK = 604800;
+	$@NBG2P3_FINAL_AT = 777600;	// 주차 시작 + 9일 = 다음 주 수요일 04:00 KST
+	// 검토 신호(독립 신호 2개 이상이면 잠정 HOLD). 수치는 운영 확정값이 아니다(보고서 결정 항목).
+	$@NBG2P3_RV_MINHOST = $NEED_BG2_RV_MINHOST ? $NEED_BG2_RV_MINHOST : 3;		// 경기 전체 적대 상호작용 수가 이보다 적음
+	$@NBG2P3_RV_SHORTMS = $NEED_BG2_RV_SHORTMS ? $NEED_BG2_RV_SHORTMS : 15000;	// 라운드 평균 진행 시간이 이보다 짧음
+	$@NBG2P3_RV_REPEAT = $NEED_BG2_RV_REPEAT ? $NEED_BG2_RV_REPEAT : 4;			// 같은 4계정 경기가 창 안에 이 수 이상
+	$@NBG2P3_RV_WINDOW = $NEED_BG2_RV_WINDOW ? $NEED_BG2_RV_WINDOW : 3600;
+	$@NBG2P3_RV_NEED = $NEED_BG2_RV_NEED ? $NEED_BG2_RV_NEED : 2;
+	$@NBG2P3_PEND_MAX = 64;
+	$@NBG2P3_LOADED = 1;
+	return;
+}
+
+// 주차 시작(월요일 04:00 KST)의 유닉스 초. t + 9시간 - 4시간 = t + 18000 을 하루 단위로 나누면 1970-01-01(목) 기준 일수.
+function	script	F_NEED_BG2P3_WeekStart	{
+	.@d = (getarg(0) + 18000) / 86400;
+	.@wd = (.@d + 3) % 7;	// 월 0 .. 일 6
+	return (.@d - .@wd) * 86400 - 18000;
+}
+
+// 유닉스 초 → "YYYY-MM-DD HH:MM" (KST).
+function	script	F_NEED_BG2P3_Date$	{
+	.@t = getarg(0) + 32400;
+	.@days = .@t / 86400;
+	.@sec = .@t % 86400;
+	.@z = .@days + 719468;
+	.@era = .@z / 146097;
+	.@doe = .@z - .@era * 146097;
+	.@yoe = (.@doe - .@doe / 1460 + .@doe / 36524 - .@doe / 146096) / 365;
+	.@y = .@yoe + .@era * 400;
+	.@doy = .@doe - (365 * .@yoe + .@yoe / 4 - .@yoe / 100);
+	.@mp = (5 * .@doy + 2) / 153;
+	.@dd = .@doy - (153 * .@mp + 2) / 5 + 1;
+	.@m = (.@mp < 10) ? .@mp + 3 : .@mp - 9;
+	if (.@m <= 2)
+		.@y++;
+	.@hh = .@sec / 3600;
+	.@mi = (.@sec % 3600) / 60;
+	return "" + .@y + "-" + (.@m < 10 ? "0" : "") + .@m + "-" + (.@dd < 10 ? "0" : "") + .@dd + " " + (.@hh < 10 ? "0" : "") + .@hh + ":" + (.@mi < 10 ? "0" : "") + .@mi;
+}
+
+// 결과 없는 SQL. 실패하면 -1 과 로그.
+function	script	F_NEED_BG2P3_Exec	{
+	.@r = query_sql(getarg(0));
+	if (.@r < 0)
+		callfunc "F_NEED_BG2_Log", "P3_SQL_ERROR at=" + getarg(1, "?");
+	return .@r;
+}
+
+// 지급·정산 기록용 로그: $NEED_BG2_LOG_OFF 와 상관없이 항상 남긴다(수동 재처리·대조 근거).
+function	script	F_NEED_BG2P3_Log	{
+	debugmes "[NEED_BG2] " + getarg(0);
+	return;
+}
+
+function	script	F_NEED_BG2P3_Rollback	{
+	query_sql "ROLLBACK";
+	callfunc "F_NEED_BG2_Log", "P3_ROLLBACK at=" + getarg(0);
+	return -1;
+}
+
+function	script	F_NEED_BG2P3_Audit	{
+	query_sql "INSERT INTO need_bg2_audit (`at`, actor_aid, action, target, detail) VALUES (" + gettimetick(2) + ", " + getarg(0) + ", '"
+		+ escape_sql(getarg(1)) + "', '" + escape_sql(getarg(2)) + "', '" + escape_sql(getarg(3, "")) + "')";
+	return;
+}
+
+//------------------------------------------------------------
+// Phase 2 경기 흐름 연결 (Phase 2 가 $@NBG2P3_LOADED 일 때만 부른다)
+//------------------------------------------------------------
+
+// Launch: 경기 기록 초기화. P3 가 켜져 있을 때 시작한 경기만 정산한다(경기 중 스위치를 켜도 그 경기는 정산하지 않는다).
+function	script	F_NEED_BG2P3_Arm	{
+	$@NBG2_P3ARMED = $NEED_BG2_P3_ON ? 1 : 0;
+	$@NBG2_P3SRC$ = (getarg(0) == 2) ? "queue" : "gm";
+	$@NBG2_T0 = gettimetick(2);
+	$@NBG2_TICK0 = gettimetick(0);
+	$@NBG2_ACT_MS = 0;
+	$@NBG2_RACT = 0;
+	cleararray $@NBG2_CB_H[0], 0, 4;
+	cleararray $@NBG2_CB_HT[0], 0, 4;
+	cleararray $@NBG2_CB_S[0], 0, 4;
+	cleararray $@NBG2_CLS[0], 0, 4;
+	cleararray $@NBG2_IP$[0], "", 4;
+	return;
+}
+
+// Launch: 첨부된 참가자 k. 교전 카운터 초기화, 직업/IP(경기 중 메모리에만) 기록, 기존 엔진 탈주자 상태 보존.
+function	script	F_NEED_BG2P3_LaunchSelf	{
+	.@k = getarg(0);
+	@NEED_BG2_CB_HOST = 0;
+	@NEED_BG2_CB_HIT = 0;
+	@NEED_BG2_CB_SUP = 0;
+	$@NBG2_CLS[.@k] = Class;
+	$@NBG2_IP$[.@k] = getcharip();
+	if (!$@NBG2_P3ARMED)
+		return;
+	NEED_BG2_P3 = 1;
+	NEED_BG2_PREDES = 0;
+	if (getstatus(SC_ENTRY_QUEUE_NOTIFY_ADMISSION_TIME_OUT))
+		NEED_BG2_PREDES = gettimetick(2) + getstatus(SC_ENTRY_QUEUE_NOTIFY_ADMISSION_TIME_OUT, 5) / 1000;
+	return;
+}
+
+// 첨부된 참가자 i 의 세션 교전 카운터를 경기 기록으로 옮긴다(감시 0.5초마다, 접속 종료 직전, 정산 직전).
+function	script	F_NEED_BG2P3_SyncSelf	{
+	.@i = getarg(0);
+	if (getcharid(0) != $@NBG2_CID[.@i])
+		return;
+	$@NBG2_CB_H[.@i] = @NEED_BG2_CB_HOST;
+	$@NBG2_CB_HT[.@i] = @NEED_BG2_CB_HIT;
+	$@NBG2_CB_S[.@i] = @NEED_BG2_CB_SUP;
+	return;
+}
+
+// 재접속 유예 안 복귀: 새 세션에 경기 카운터를 되돌린다.
+function	script	F_NEED_BG2P3_RejoinSelf	{
+	.@i = getarg(0);
+	@NEED_BG2_CB_HOST = $@NBG2_CB_H[.@i];
+	@NEED_BG2_CB_HIT = $@NBG2_CB_HT[.@i];
+	@NEED_BG2_CB_SUP = $@NBG2_CB_S[.@i];
+	return;
+}
+
+// 라운드 진행 시간 누적(라운드 종료/매치 종료에서). 마감 시각 뒤는 세지 않는다.
+function	script	F_NEED_BG2P3_CloseActive	{
+	if (!$@NBG2_RACT)
+		return;
+	$@NBG2_RACT = 0;
+	.@end = gettimetick(0);
+	if ($@NBG2_DEADLINE && .@end > $@NBG2_DEADLINE)
+		.@end = $@NBG2_DEADLINE;
+	if (.@end > $@NBG2_ROUND_AT)
+		$@NBG2_ACT_MS += .@end - $@NBG2_ROUND_AT;
+	return;
+}
+
+// RestoreSelf(첨부): 정산된 경기에서는 2:2 탈주를 2:2 제재(원장)로만 처리한다. 엔진이 건 탈주자 상태
+// (다른 전장 대기열을 막는다)는 지우고, 경기 전부터 있던 다른 전장 탈주자 상태는 남은 시간만큼 되돌린다.
+function	script	F_NEED_BG2P3_EngineDeserter	{
+	.@now = gettimetick(2);
+	.@had = getstatus(SC_ENTRY_QUEUE_NOTIFY_ADMISSION_TIME_OUT);
+	if (.@had)
+		sc_end SC_ENTRY_QUEUE_NOTIFY_ADMISSION_TIME_OUT;
+	.@back = 0;
+	if (NEED_BG2_PREDES > .@now) {
+		.@back = NEED_BG2_PREDES - .@now;
+		sc_start SC_ENTRY_QUEUE_NOTIFY_ADMISSION_TIME_OUT, .@back * 1000, 1, 10000, SCSTART_NOAVOID | SCSTART_NOTICKDEF;
+	}
+	if (.@had || .@back)
+		callfunc "F_NEED_BG2_Log", "P3_ENGINE_DESERTER cid=" + getcharid(0) + " cleared=" + .@had + " restored_sec=" + .@back;
+	NEED_BG2_P3 = 0;
+	NEED_BG2_PREDES = 0;
+	return;
+}
+
+//------------------------------------------------------------
+// 정산 (P3-A / P3-B)
+//------------------------------------------------------------
+
+// Finish 직후(상태 6, 경기 변수가 아직 있음). 경기 결과를 고정해 원장에 넣는다. 경기당 한 번.
+function	script	F_NEED_BG2P3_Settle	{
+	.@kind = getarg(0);
+	.@why$ = getarg(1);
+	if (!$@NBG2_P3ARMED)
+		return 0;
+	$@NBG2_P3ARMED = 0;	// 같은 경기를 두 번 정산하지 않는다(원장 match_key 유니크가 2차 방어)
+	.@caller = playerattached();
+	for (.@i = 0; .@i < $@NBG2_N; .@i++) {
+		if ($@NBG2_GONE[.@i] || !isloggedin($@NBG2_AID[.@i], $@NBG2_CID[.@i]) || !attachrid($@NBG2_AID[.@i]))
+			continue;
+		callfunc "F_NEED_BG2P3_SyncSelf", .@i;
+		detachrid;
+	}
+	callfunc "F_NEED_BG2_Reattach", .@caller;
+	// 다른 팀끼리 같은 접속 IP(경기 시작 때 기록, 원장에는 0/1 신호만 남긴다).
+	.@sigip = 0;
+	for (.@b = 0; .@b < 2; .@b++)
+		for (.@r = 2; .@r < 4; .@r++)
+			if ($@NBG2_IP$[.@b] != "" && $@NBG2_IP$[.@b] == $@NBG2_IP$[.@r])
+				.@sigip = 1;
+	.@key$ = $@NBG2_MATCH + "-" + $@NBG2_TICK0;
+	.@h$ = .@key$ + "|" + $@NBG2_MATCH + "|" + $@NBG2_P3SRC$ + "|" + $@NBG2_T0 + "|" + gettimetick(2) + "|" + .@kind + "|" + .@why$
+		+ "|" + $@NBG2_ROUND + "|" + $@NBG2_ACT_MS + "|" + $@NBG2_WIN_B + "|" + $@NBG2_WIN_R + "|" + .@sigip;
+	.@p$ = "";
+	for (.@i = 0; .@i < 4; .@i++)
+		.@p$ += (.@i ? ";" : "") + $@NBG2_AID[.@i] + "," + $@NBG2_CID[.@i] + "," + $@NBG2_TEAM[.@i] + "," + $@NBG2_CLS[.@i] + "," + $@NBG2_GONE[.@i]
+			+ "," + $@NBG2_CB_H[.@i] + "," + $@NBG2_CB_HT[.@i] + "," + $@NBG2_CB_S[.@i];
+	.@r = callfunc("F_NEED_BG2P3_Apply", .@h$, .@p$, 1);
+	callfunc "F_NEED_BG2P3_Log", "P3_SETTLE match=" + $@NBG2_MATCH + " key=" + .@key$ + " result=" + .@r + " head=" + .@h$ + " players=" + .@p$;
+	if (.@r == -1)
+		callfunc "F_NEED_BG2P3_PendPush", .@h$, .@p$;
+	return .@r;
+}
+
+// DB 실패한 정산 결과를 영구 서버 변수에 보관한다(재시도 대상). 로그에도 같은 내용이 있다.
+function	script	F_NEED_BG2P3_PendPush	{
+	.@n = getarraysize($NEED_BG2_PEND_H$);
+	if (.@n >= $@NBG2P3_PEND_MAX) {
+		callfunc "F_NEED_BG2P3_Log", "P3_PENDING_OVERFLOW head=" + getarg(0) + " players=" + getarg(1) + " (manual replay from this log line)";
+		return 0;
+	}
+	$NEED_BG2_PEND_H$[.@n] = getarg(0);
+	$NEED_BG2_PEND_P$[.@n] = getarg(1);
+	callfunc "F_NEED_BG2P3_Log", "P3_PENDING_RECONCILIATION slot=" + .@n + " head=" + getarg(0);
+	return 1;
+}
+
+// 보관된 정산을 다시 넣는다. 성공/중복/형식 오류는 목록에서 빼고, DB 실패면 다음 번으로 미룬다.
+function	script	F_NEED_BG2P3_PendRetry	{
+	.@done = 0;
+	while (getarraysize($NEED_BG2_PEND_H$) > 0) {
+		.@r = callfunc("F_NEED_BG2P3_Apply", $NEED_BG2_PEND_H$[0], $NEED_BG2_PEND_P$[0], 1);
+		if (.@r == -1)
+			break;
+		callfunc "F_NEED_BG2P3_Log", "P3_PENDING_DONE result=" + .@r + " head=" + $NEED_BG2_PEND_H$[0];
+		deletearray $NEED_BG2_PEND_H$[0], 1;
+		deletearray $NEED_BG2_PEND_P$[0], 1;
+		.@done++;
+	}
+	return .@done;
+}
+
+// 경기 결과 → 원장. 1 기록, 0 이미 기록됨(중복), -1 DB 실패(롤백), -2 형식 오류.
+// head = key|ext_mid|source|started|ended|kind|why|rounds|active_ms|win_b|win_r|sig_ip
+// players = aid,cid,team,class,gone,hostile,hit,support ; x4 (팀 1 블루 2 레드, gone 1 = 유예 만료 이탈)
+function	script	F_NEED_BG2P3_Apply	{
+	.@notify = getarg(2, 0);
+	explode(.@h$, getarg(0), "|");
+	if (getarraysize(.@h$) != 12)
+		return -2;
+	.@key$ = .@h$[0];
+	.@mid = atoi(.@h$[1]);
+	.@src$ = .@h$[2];
+	.@t0 = atoi(.@h$[3]);
+	.@te = atoi(.@h$[4]);
+	.@kind = atoi(.@h$[5]);
+	.@why$ = .@h$[6];
+	.@rounds = atoi(.@h$[7]);
+	.@act = atoi(.@h$[8]);
+	.@wb = atoi(.@h$[9]);
+	.@wr = atoi(.@h$[10]);
+	.@sigip = atoi(.@h$[11]);
+	explode(.@pl$, getarg(1), ";");
+	if (getarraysize(.@pl$) != 4 || .@key$ == "" || .@te <= 0)
+		return -2;
+	.@hostile = 0;
+	for (.@k = 0; .@k < 4; .@k++) {
+		deletearray .@f$;
+		explode(.@f$, .@pl$[.@k], ",");
+		if (getarraysize(.@f$) != 8)
+			return -2;
+		.@aid[.@k] = atoi(.@f$[0]);
+		.@cid[.@k] = atoi(.@f$[1]);
+		.@team[.@k] = atoi(.@f$[2]);
+		.@cls[.@k] = atoi(.@f$[3]);
+		.@gone[.@k] = atoi(.@f$[4]);
+		.@hs[.@k] = atoi(.@f$[5]);
+		.@ht[.@k] = atoi(.@f$[6]);
+		.@sp[.@k] = atoi(.@f$[7]);
+		.@hostile += .@hs[.@k];
+	}
+	.@ws = callfunc("F_NEED_BG2P3_WeekStart", .@te);
+	.@queue = (.@src$ == "queue");
+	.@engaged = (.@hostile > 0);
+	// 개인 정산. 공개 대기열 + 실교전 + 정상 결과(무/블루/레드)만 점수가 있다. 탈주자(gone 1)는 0점·불인정.
+	.@valid = 0;
+	for (.@k = 0; .@k < 4; .@k++) {
+		.@out[.@k] = 0;
+		if (.@kind == 0)
+			.@out[.@k] = 3;
+		else if (.@kind == 1 || .@kind == 2)
+			.@out[.@k] = (.@team[.@k] == .@kind) ? 1 : 2;
+		.@des[.@k] = (.@gone[.@k] == 1) ? 1 : 0;
+		.@pts[.@k] = 0;
+		.@val[.@k] = 0;
+		.@win[.@k] = 0;
+		if (!.@queue || !.@engaged || .@kind > 2 || .@des[.@k])
+			continue;
+		.@val[.@k] = 1;
+		.@valid = 1;
+		if (.@out[.@k] == 1) {
+			.@pts[.@k] = 2;
+			.@win[.@k] = 1;
+		} else
+			.@pts[.@k] = 1;
+	}
+	// 탈주 기록(제재 대상): 공개 대기열 경기의 유예 만료 이탈만. 준비 취소/GM 중단/강제 이동/리로드/시작 실패는 면제.
+	.@desert = (.@queue && (.@why$ == "forfeit_blue" || .@why$ == "forfeit_red" || .@why$ == "both_teams_departed"));
+	if (.@why$ == "both_teams_departed")
+		.@dkind$ = "both_left";
+	else
+		.@dkind$ = .@engaged ? "forfeit" : "no_combat";
+	// 4계정 정렬 키(반복 매칭 신호).
+	copyarray .@sa[0], .@aid[0], 4;
+	for (.@a = 0; .@a < 3; .@a++)
+		for (.@b = 0; .@b < 3 - .@a; .@b++)
+			if (.@sa[.@b] > .@sa[.@b + 1]) {
+				.@tmp = .@sa[.@b];
+				.@sa[.@b] = .@sa[.@b + 1];
+				.@sa[.@b + 1] = .@tmp;
+			}
+	.@akey$ = .@sa[0] + "-" + .@sa[1] + "-" + .@sa[2] + "-" + .@sa[3];
+
+	if (callfunc("F_NEED_BG2P3_Exec", "START TRANSACTION", "apply_begin") < 0)
+		return -1;
+	deletearray .@dup;
+	.@n = query_sql("SELECT match_pk FROM need_bg2_match WHERE match_key = '" + escape_sql(.@key$) + "'", .@dup);
+	if (.@n < 0)
+		return callfunc("F_NEED_BG2P3_Rollback", "apply_dupcheck");
+	if (.@n > 0) {
+		query_sql "ROLLBACK";
+		callfunc "F_NEED_BG2_Log", "P3_DUPLICATE key=" + .@key$ + " match_pk=" + .@dup;
+		return 0;
+	}
+	if (query_sql("INSERT INTO need_bg2_match (match_key, ext_match_id, `mode`, `source`, started_at, ended_at, week_start, result, end_reason, engaged, hostile_total, rounds, active_ms, win_b, win_r, valid, account_key) VALUES ('"
+		+ escape_sql(.@key$) + "', " + .@mid + ", " + $@NBG2P3_MODE + ", '" + escape_sql(.@src$) + "', " + .@t0 + ", " + .@te + ", " + .@ws + ", " + .@kind + ", '" + escape_sql(.@why$) + "', "
+		+ .@engaged + ", " + .@hostile + ", " + .@rounds + ", " + .@act + ", " + .@wb + ", " + .@wr + ", " + .@valid + ", '" + .@akey$ + "')") < 0)
+		return callfunc("F_NEED_BG2P3_Rollback", "apply_match");
+	.@pk = 0;
+	query_sql "SELECT LAST_INSERT_ID()", .@pk;
+	if (.@pk <= 0)
+		return callfunc("F_NEED_BG2P3_Rollback", "apply_pk");
+	// 검토 신호: 점수가 생기는 경기만. 독립 신호 RV_NEED 개 이상이면 잠정 HOLD(점수는 기록하되 보상·랭킹에서 빠짐).
+	.@sig$ = "";
+	.@nsig = 0;
+	if (.@valid) {
+		if (.@hostile < $@NBG2P3_RV_MINHOST) {
+			.@sig$ += "low_hostile:" + .@hostile + " ";
+			.@nsig++;
+		}
+		if (.@rounds > 0 && .@act / .@rounds < $@NBG2P3_RV_SHORTMS) {
+			.@sig$ += "short_rounds:" + (.@act / .@rounds) + " ";
+			.@nsig++;
+		}
+		.@rep = 0;
+		if (query_sql("SELECT COUNT(*) FROM need_bg2_match WHERE account_key = '" + .@akey$ + "' AND `source` = 'queue' AND ended_at > " + (.@te - $@NBG2P3_RV_WINDOW) + " AND ended_at <= " + .@te, .@rep) < 0)
+			return callfunc("F_NEED_BG2P3_Rollback", "apply_repeat");
+		if (.@rep >= $@NBG2P3_RV_REPEAT) {
+			.@sig$ += "repeat_group:" + .@rep + " ";
+			.@nsig++;
+		}
+		if (.@sigip) {
+			.@sig$ += "shared_ip ";
+			.@nsig++;
+		}
+		if (.@desert && .@engaged && .@kind <= 2) {
+			.@sig$ += "desert_gift ";
+			.@nsig++;
+		}
+	}
+	.@review = (.@valid && .@nsig >= $@NBG2P3_RV_NEED) ? 1 : 0;
+	if (.@sig$ != "") {
+		if (query_sql("UPDATE need_bg2_match SET review = " + .@review + ", signals = '" + escape_sql(.@sig$) + "' WHERE match_pk = " + .@pk) < 0)
+			return callfunc("F_NEED_BG2P3_Rollback", "apply_signals");
+	}
+	if (.@review) {
+		if (query_sql("INSERT INTO need_bg2_review (match_pk, signals, state, created_at) VALUES (" + .@pk + ", '" + escape_sql(.@sig$) + "', 'HOLD', " + .@te + ")") < 0)
+			return callfunc("F_NEED_BG2P3_Rollback", "apply_review");
+	}
+	.@vals$ = "";
+	for (.@k = 0; .@k < 4; .@k++)
+		.@vals$ += (.@k ? ", " : "") + "(" + .@pk + ", " + .@aid[.@k] + ", " + .@cid[.@k] + ", " + .@team[.@k] + ", " + .@cls[.@k] + ", " + .@out[.@k] + ", " + .@des[.@k]
+			+ ", " + .@pts[.@k] + ", " + .@val[.@k] + ", " + .@win[.@k] + ", " + .@hs[.@k] + ", " + .@ht[.@k] + ", " + .@sp[.@k] + ")";
+	if (query_sql("INSERT INTO need_bg2_match_player (match_pk, account_id, char_id, team, class, outcome, deserter, points, valid, win, hostile, hit, support) VALUES " + .@vals$) < 0)
+		return callfunc("F_NEED_BG2P3_Rollback", "apply_players");
+	if (.@desert) {
+		for (.@k = 0; .@k < 4; .@k++) {
+			if (!.@des[.@k])
+				continue;
+			if (query_sql("INSERT IGNORE INTO need_bg2_desertion (account_id, char_id, match_pk, `at`, kind) VALUES (" + .@aid[.@k] + ", " + .@cid[.@k] + ", " + .@pk + ", " + .@te + ", '" + .@dkind$ + "')") < 0)
+				return callfunc("F_NEED_BG2P3_Rollback", "apply_desertion");
+		}
+	}
+	// 계정 단계 보상권(검토 보류 경기는 승인 뒤 소급).
+	if (.@valid && !.@review) {
+		for (.@k = 0; .@k < 4; .@k++) {
+			.@acc_new[.@k] = -1;
+			if (!.@val[.@k])
+				continue;
+			.@acc_new[.@k] = callfunc("F_NEED_BG2P3_TierSync", .@aid[.@k], .@ws);
+			if (.@acc_new[.@k] < 0)
+				return callfunc("F_NEED_BG2P3_Rollback", "apply_tier");
+			.@acc_pts[.@k] = $@NBG2P3_LASTPTS;
+		}
+	}
+	if (callfunc("F_NEED_BG2P3_Exec", "COMMIT", "apply_commit") < 0)
+		return callfunc("F_NEED_BG2P3_Rollback", "apply_commit");
+	callfunc "F_NEED_BG2_Log", "P3_LEDGER match=" + .@mid + " match_pk=" + .@pk + " src=" + .@src$ + " kind=" + .@kind + " why=" + .@why$ + " week=" + .@ws
+		+ " engaged=" + .@engaged + " hostile=" + .@hostile + " valid=" + .@valid + " review=" + .@review + " signals=" + .@sig$
+		+ " pts=" + .@pts[0] + "/" + .@pts[1] + "/" + .@pts[2] + "/" + .@pts[3] + " deserters=" + .@des[0] + .@des[1] + .@des[2] + .@des[3] + " desert_rec=" + .@desert;
+	if (!.@notify)
+		return 1;
+	// 안내(접속 중인 사람만).
+	for (.@k = 0; .@k < 4; .@k++) {
+		if (!.@queue)
+			break;
+		if (.@des[.@k]) {
+			if (.@desert)
+				callfunc "F_NEED_BG2P3_TellSanction", .@aid[.@k], .@cid[.@k], .@te;
+			continue;
+		}
+		if (!.@valid) {
+			if (.@kind <= 2 && !.@engaged)
+				callfunc "F_NEED_BG2_Tell", .@aid[.@k], .@cid[.@k], "[2:2 듀오] 실제 교전이 없어 유효 경기로 인정되지 않았습니다(0점).",
+					"[2v2 Duo] No real combat took place, so this is not a valid match (0 points).";
+			continue;
+		}
+		if (.@review) {
+			callfunc "F_NEED_BG2_Tell", .@aid[.@k], .@cid[.@k], "[2:2 듀오] 이 경기는 운영 검토 대기 중입니다. 점수 +" + .@pts[.@k] + "점은 검토 후 반영됩니다.",
+				"[2v2 Duo] This match is waiting for a GM review. Your +" + .@pts[.@k] + " points count after the review.";
+			continue;
+		}
+		callfunc "F_NEED_BG2_Tell", .@aid[.@k], .@cid[.@k], "[2:2 듀오] 주간 점수 +" + .@pts[.@k] + "점 (이번 주 계정 합계 " + .@acc_pts[.@k] + "점)"
+			+ (.@acc_new[.@k] > 0 ? " - 새 보상 " + .@acc_new[.@k] + "개! 파요 2:2 듀오 보상관에서 받으세요." : ""),
+			"[2v2 Duo] Weekly points +" + .@pts[.@k] + " (account total this week " + .@acc_pts[.@k] + ")"
+			+ (.@acc_new[.@k] > 0 ? " - " + .@acc_new[.@k] + " new reward(s)! Claim them from the 2v2 Duo reward NPC in Payon." : "");
+	}
+	return 1;
+}
+
+// 계정의 주간 점수(보류 경기 제외)로 단계 보상권을 만든다(이미 있으면 그대로). 트랜잭션 안에서 부른다.
+// 새로 만든 보상권 수, DB 실패 -1. $@NBG2P3_LASTPTS = 계정 주간 점수.
+function	script	F_NEED_BG2P3_TierSync	{
+	.@aid = getarg(0);
+	.@ws = getarg(1);
+	.@pts = 0;
+	if (query_sql("SELECT COALESCE(SUM(p.points), 0) FROM need_bg2_match_player p JOIN need_bg2_match m ON m.match_pk = p.match_pk WHERE p.account_id = " + .@aid
+		+ " AND m.`mode` = " + $@NBG2P3_MODE + " AND m.week_start = " + .@ws + " AND p.valid = 1 AND m.review IN (0, 2)", .@pts) < 0)
+		return -1;
+	$@NBG2P3_LASTPTS = .@pts;
+	.@new = 0;
+	for (.@t = 0; .@t < 3; .@t++) {
+		if (.@pts < $@NBG2P3_TIER_PT[.@t])
+			break;
+		if (query_sql("INSERT IGNORE INTO need_bg2_reward (`mode`, week_start, account_id, reward_kind, reward_key, amount, status, created_at) VALUES ("
+			+ $@NBG2P3_MODE + ", " + .@ws + ", " + .@aid + ", 'TIER', '" + $@NBG2P3_TIER_PT[.@t] + "', " + $@NBG2P3_TIER_CASH[.@t] + ", 0, " + gettimetick(2) + ")") < 0)
+			return -1;
+		.@rc = 0;
+		query_sql "SELECT ROW_COUNT()", .@rc;
+		if (.@rc > 0) {
+			.@new++;
+			callfunc "F_NEED_BG2_Log", "P3_TICKET kind=TIER key=" + $@NBG2P3_TIER_PT[.@t] + " aid=" + .@aid + " week=" + .@ws + " amount=" + $@NBG2P3_TIER_CASH[.@t] + " pts=" + .@pts;
+		}
+	}
+	return .@new;
+}
+
+// 경기 무효 뒤: 계정 점수가 단계 아래로 내려가면 미수령 보상권은 회수(8), 지급된 것은 수동 정산(9)으로 표시만 한다.
+function	script	F_NEED_BG2P3_TierRevoke	{
+	.@aid = getarg(0);
+	.@ws = getarg(1);
+	.@pts = 0;
+	if (query_sql("SELECT COALESCE(SUM(p.points), 0) FROM need_bg2_match_player p JOIN need_bg2_match m ON m.match_pk = p.match_pk WHERE p.account_id = " + .@aid
+		+ " AND m.`mode` = " + $@NBG2P3_MODE + " AND m.week_start = " + .@ws + " AND p.valid = 1 AND m.review IN (0, 2)", .@pts) < 0)
+		return -1;
+	.@cnt = 0;
+	for (.@t = 0; .@t < 3; .@t++) {
+		if (.@pts >= $@NBG2P3_TIER_PT[.@t])
+			continue;
+		.@base$ = " WHERE `mode` = " + $@NBG2P3_MODE + " AND week_start = " + .@ws + " AND account_id = " + .@aid + " AND reward_kind = 'TIER' AND reward_key = '" + $@NBG2P3_TIER_PT[.@t] + "'";
+		if (query_sql("UPDATE need_bg2_reward SET status = 8, note = 'revoked: match voided, never paid'" + .@base$ + " AND status = 0") < 0)
+			return -1;
+		.@rc = 0;
+		query_sql "SELECT ROW_COUNT()", .@rc;
+		.@cnt += .@rc;
+		if (query_sql("UPDATE need_bg2_reward SET note = CONCAT('MANUAL: paid or reserved (status ', status, '), match voided'), status = 9" + .@base$ + " AND status IN (1, 2)") < 0)
+			return -1;
+		.@rc = 0;
+		query_sql "SELECT ROW_COUNT()", .@rc;
+		.@cnt += .@rc;
+		if (.@rc)
+			callfunc "F_NEED_BG2_Log", "P3_TICKET_MANUAL aid=" + .@aid + " week=" + .@ws + " tier=" + $@NBG2P3_TIER_PT[.@t] + " (paid cash is never charged back automatically)";
+	}
+	return .@cnt;
+}
+
+// 계정 주간 점수. held = 1 이면 검토 보류 중인 점수만.
+function	script	F_NEED_BG2P3_AccPoints	{
+	.@pts = 0;
+	query_sql "SELECT COALESCE(SUM(p.points), 0) FROM need_bg2_match_player p JOIN need_bg2_match m ON m.match_pk = p.match_pk WHERE p.account_id = " + getarg(0)
+		+ " AND m.`mode` = " + $@NBG2P3_MODE + " AND m.week_start = " + getarg(1) + " AND p.valid = 1 AND m.review " + (getarg(2, 0) ? "= 1" : "IN (0, 2)"), .@pts;
+	return .@pts;
+}
+
+//------------------------------------------------------------
+// 탈주 제재 (P3-D)
+//------------------------------------------------------------
+
+// 최근 24시간 확정 탈주(면제 제외). 가장 최근 탈주 시점까지 24시간 안의 횟수로 단계를 정하고, 그 시점부터 제한한다.
+// 1회 경고, 2회 10분, 3회 30분, 4회 이상 2시간. 남은 제한(초)을 돌려주고 $@NBG2P3_SC_CNT 에 횟수를 둔다.
+function	script	F_NEED_BG2P3_Sanction	{
+	.@aid = getarg(0);
+	.@now = getarg(1);
+	$@NBG2P3_SC_CNT = 0;
+	.@last = 0;
+	if (query_sql("SELECT COALESCE(MAX(`at`), 0) FROM need_bg2_desertion WHERE account_id = " + .@aid + " AND exempt = 0 AND `at` > " + (.@now - 86400) + " AND `at` <= " + .@now, .@last) < 0) {
+		callfunc "F_NEED_BG2_Log", "P3_SANCTION_CHECK_FAILED aid=" + .@aid + " (sign-up allowed)";
+		return 0;
+	}
+	if (!.@last)
+		return 0;
+	.@cnt = 0;
+	query_sql "SELECT COUNT(*) FROM need_bg2_desertion WHERE account_id = " + .@aid + " AND exempt = 0 AND `at` > " + (.@last - 86400) + " AND `at` <= " + .@last, .@cnt;
+	$@NBG2P3_SC_CNT = .@cnt;
+	.@dur = 0;
+	if (.@cnt >= 4) .@dur = 7200;
+	else if (.@cnt == 3) .@dur = 1800;
+	else if (.@cnt == 2) .@dur = 600;
+	.@left = .@last + .@dur - .@now;
+	return (.@left > 0) ? .@left : 0;
+}
+
+function	script	F_NEED_BG2P3_Left$	{
+	.@s = getarg(0);
+	if (.@s >= 3600)
+		return needtr((.@s / 3600) + "시간 " + ((.@s % 3600) / 60) + "분", (.@s / 3600) + " h " + ((.@s % 3600) / 60) + " min");
+	if (.@s >= 60)
+		return needtr((.@s / 60) + "분 " + (.@s % 60) + "초", (.@s / 60) + " min " + (.@s % 60) + " s");
+	return needtr(.@s + "초", .@s + " s");
+}
+
+// Phase 2 QJoin (첨부): 0 통과, 13 제재 중. 남은 시간은 @NEED_BG2_SANC_LEFT (F_NEED_BG2_Reason$ 13 이 읽는다).
+function	script	F_NEED_BG2P3_JoinCheck	{
+	@NEED_BG2_SANC_LEFT = 0;
+	if (!$NEED_BG2_P3_ON)
+		return 0;
+	.@left = callfunc("F_NEED_BG2P3_Sanction", getcharid(3), gettimetick(2));
+	if (.@left > 0) {
+		@NEED_BG2_SANC_LEFT = .@left;
+		return 13;
+	}
+	if ($@NBG2P3_SC_CNT == 1)
+		dispbottom needtr("[2:2 듀오] 경고: 최근 24시간 안에 경기 이탈 1회가 있습니다. 2회부터 2:2 신청이 제한됩니다(10분/30분/2시간).",
+			"[2v2 Duo] Warning: you left a match once in the last 24 hours. From the 2nd time, 2v2 sign-ups are restricted (10 min / 30 min / 2 h)."), 0xFF7777;
+	return 0;
+}
+
+// 탈주자에게(접속 중이면) 제재 안내.
+function	script	F_NEED_BG2P3_TellSanction	{
+	.@left = callfunc("F_NEED_BG2P3_Sanction", getarg(0), getarg(2));
+	.@cnt = $@NBG2P3_SC_CNT;
+	.@caller = playerattached();
+	if (isloggedin(getarg(0), getarg(1)) && attachrid(getarg(0))) {
+		if (getcharid(0) == getarg(1)) {
+			if (.@left > 0)
+				dispbottom needtr("[2:2 듀오] 경기 이탈이 확정되었습니다(최근 24시간 " + .@cnt + "회). 2:2 신청 제한: " + callfunc("F_NEED_BG2P3_Left$", .@left),
+					"[2v2 Duo] Your departure counts as leaving the match (" + .@cnt + " in the last 24 hours). 2v2 sign-ups are blocked for " + callfunc("F_NEED_BG2P3_Left$", .@left)), 0xFF7777;
+			else
+				dispbottom needtr("[2:2 듀오] 경기 이탈이 확정되었습니다(최근 24시간 " + .@cnt + "회, 경고). 2회부터 2:2 신청이 제한됩니다.",
+					"[2v2 Duo] Your departure counts as leaving the match (" + .@cnt + " in the last 24 hours, warning). From the 2nd time, 2v2 sign-ups are restricted."), 0xFF7777;
+		}
+		detachrid;
+	}
+	callfunc "F_NEED_BG2_Reattach", .@caller;
+	return;
+}
+
+//------------------------------------------------------------
+// 랭킹·주간 확정 (P3-C)
+//------------------------------------------------------------
+
+// 주차 ws 의 캐릭터 순위. incl_hold = 1 이면 검토 보류 경기도 포함. min_games 미만은 뺀다.
+// 결과: $@NBG2P3_R_CID/AID/PTS/W/G/REACH[], $@NBG2P3_R_NAME$[], 반환 행 수(-1 DB 실패).
+// 정렬: 점수↓ 승리↓ 승률↓ 최종 점수 도달 시각↑ (동시각이면 그 경기 PK↑, 캐릭터 ID↑: 공개 우선순위를 바꾸지 않는 결정론 정렬).
+function	script	F_NEED_BG2P3_RankRows	{
+	deletearray $@NBG2P3_R_CID;
+	deletearray $@NBG2P3_R_AID;
+	deletearray $@NBG2P3_R_PTS;
+	deletearray $@NBG2P3_R_W;
+	deletearray $@NBG2P3_R_G;
+	deletearray $@NBG2P3_R_REACH;
+	deletearray $@NBG2P3_R_NAME$;
+	.@n = query_sql("SELECT x.char_id, x.account_id, x.pts, x.w, x.g, x.reach, COALESCE(c.name, '?') FROM (SELECT p.char_id, p.account_id, SUM(p.points) AS pts, SUM(p.win) AS w, SUM(p.valid) AS g,"
+		+ " MAX(m.ended_at) AS reach, MAX(m.match_pk) AS reachpk FROM need_bg2_match_player p JOIN need_bg2_match m ON m.match_pk = p.match_pk"
+		+ " WHERE m.`mode` = " + $@NBG2P3_MODE + " AND m.week_start = " + getarg(0) + " AND p.valid = 1 AND m.review IN (0, 2" + (getarg(1) ? ", 1" : "") + ")"
+		+ " GROUP BY p.char_id, p.account_id HAVING g >= " + getarg(2, $@NBG2P3_MINGAMES) + ") x LEFT JOIN `char` c ON c.char_id = x.char_id"
+		+ " ORDER BY x.pts DESC, x.w DESC, (x.w * 1.000000000000 / x.g) DESC, x.reach ASC, x.reachpk ASC, x.char_id ASC LIMIT " + getarg(3, 200),
+		$@NBG2P3_R_CID, $@NBG2P3_R_AID, $@NBG2P3_R_PTS, $@NBG2P3_R_W, $@NBG2P3_R_G, $@NBG2P3_R_REACH, $@NBG2P3_R_NAME$);
+	return .@n;
+}
+
+// 주차 ws 의 순위 보상 대상(계정당 1자리, 빈자리 채우지 않음). 결과 $@NBG2P3_AW_CID/AID[1..3], $@NBG2P3_AW_N, $@NBG2P3_AW_ACC.
+// 반환: 비교용 서명 문자열. "NA:<계정수>" = 6계정 미만(순위 보상 없음), "ERR" = DB 실패.
+function	script	F_NEED_BG2P3_Award$	{
+	.@ws = getarg(0);
+	.@incl = getarg(1);
+	$@NBG2P3_AW_N = 0;
+	cleararray $@NBG2P3_AW_CID[0], 0, 4;
+	cleararray $@NBG2P3_AW_AID[0], 0, 4;
+	.@acc = 0;
+	if (query_sql("SELECT COUNT(DISTINCT p.account_id) FROM need_bg2_match_player p JOIN need_bg2_match m ON m.match_pk = p.match_pk WHERE m.`mode` = " + $@NBG2P3_MODE
+		+ " AND m.week_start = " + .@ws + " AND p.valid = 1 AND m.review IN (0, 2" + (.@incl ? ", 1" : "") + ")", .@acc) < 0)
+		return "ERR";
+	$@NBG2P3_AW_ACC = .@acc;
+	if (.@acc < $@NBG2P3_MINACC)
+		return "NA:" + .@acc;
+	.@n = callfunc("F_NEED_BG2P3_RankRows", .@ws, .@incl);
+	if (.@n < 0)
+		return "ERR";
+	.@sig$ = "AW";
+	for (.@i = 0; .@i < .@n && $@NBG2P3_AW_N < 3; .@i++) {
+		.@dup = 0;
+		for (.@j = 1; .@j <= $@NBG2P3_AW_N; .@j++)
+			if ($@NBG2P3_AW_AID[.@j] == $@NBG2P3_R_AID[.@i]) .@dup = 1;
+		if (.@dup)
+			continue;
+		$@NBG2P3_AW_N++;
+		$@NBG2P3_AW_AID[$@NBG2P3_AW_N] = $@NBG2P3_R_AID[.@i];
+		$@NBG2P3_AW_CID[$@NBG2P3_AW_N] = $@NBG2P3_R_CID[.@i];
+		.@sig$ += " " + $@NBG2P3_AW_N + ":" + $@NBG2P3_R_AID[.@i] + ":" + $@NBG2P3_R_CID[.@i];
+	}
+	return .@sig$;
+}
+
+// 주차 ws 확정. commit 0 = 드라이런(첨부된 GM 에게 출력), 1 = 실제 기록.
+// 반환 0 확정(보상권 생성), 1 순위 보상 없음(6계정 미만/후보 없음), 2 보류(HOLD), 3 이미 확정됨, 4 아직 마감 전, -1 DB 실패.
+function	script	F_NEED_BG2P3_Finalize	{
+	.@ws = getarg(0);
+	.@commit = getarg(1);
+	.@actor = getarg(2, 0);
+	.@reason$ = getarg(3, "scheduled");
+	.@now = gettimetick(2);
+	.@out = (.@commit == 0);
+	if (.@ws != callfunc("F_NEED_BG2P3_WeekStart", .@ws) || .@now < .@ws + $@NBG2P3_WEEK) {
+		if (.@out) dispbottom "[2:2 정산] 주차 " + callfunc("F_NEED_BG2P3_Date$", .@ws) + " 는 올바른 주차 시작이 아니거나 아직 마감 전입니다.";
+		return 4;
+	}
+	.@st$ = "";
+	if (query_sql("SELECT state FROM need_bg2_week WHERE `mode` = " + $@NBG2P3_MODE + " AND week_start = " + .@ws, .@st$) < 0)
+		return -1;
+	if (.@st$ == "FINALIZED" || .@st$ == "NO_AWARD") {
+		if (.@out) dispbottom "[2:2 정산] 주차 " + callfunc("F_NEED_BG2P3_Date$", .@ws) + " 는 이미 " + .@st$ + " 입니다. 다시 확정하지 않습니다.";
+		return 3;
+	}
+	.@sigB$ = callfunc("F_NEED_BG2P3_Award$", .@ws, 1);
+	.@sigA$ = callfunc("F_NEED_BG2P3_Award$", .@ws, 0);	// 마지막 호출 결과($@NBG2P3_AW_*)가 보류 제외 기준이다
+	if (.@sigA$ == "ERR" || .@sigB$ == "ERR")
+		return -1;
+	.@held = 0;
+	query_sql "SELECT COUNT(*) FROM need_bg2_match WHERE `mode` = " + $@NBG2P3_MODE + " AND week_start = " + .@ws + " AND review = 1", .@held;
+	if (.@sigA$ != .@sigB$) {
+		.@detail$ = "held=" + .@held + " excl[" + .@sigA$ + "] incl[" + .@sigB$ + "]";
+		if (.@out) {
+			dispbottom "[2:2 정산] 보류(HOLD): 검토 중인 경기 " + .@held + "개가 순위 결과를 바꿉니다. 검토를 끝낸 뒤 다시 확정됩니다.";
+			dispbottom "[2:2 정산] " + .@detail$;
+			return 2;
+		}
+		if (.@st$ != "HOLD") {
+			query_sql "INSERT INTO need_bg2_week (`mode`, week_start, state, accounts, detail, attempts, decided_at) VALUES (" + $@NBG2P3_MODE + ", " + .@ws + ", 'HOLD', " + $@NBG2P3_AW_ACC
+				+ ", '" + escape_sql(.@detail$) + "', 1, 0) ON DUPLICATE KEY UPDATE state = 'HOLD', detail = VALUES(detail), attempts = attempts + 1";
+			callfunc "F_NEED_BG2P3_Audit", .@actor, "WEEK_HOLD", "week=" + .@ws, .@detail$;
+			callfunc "F_NEED_BG2_Log", "P3_WEEK_HOLD week=" + .@ws + " " + .@detail$;
+		}
+		return 2;
+	}
+	.@award = (compare(.@sigA$, "NA:") == 0 && $@NBG2P3_AW_N > 0);
+	.@state$ = .@award ? "FINALIZED" : "NO_AWARD";
+	.@detail$ = "accounts=" + $@NBG2P3_AW_ACC + " held=" + .@held + " " + .@sigA$ + (.@reason$ != "" ? " reason=" + .@reason$ : "");
+	if (.@out) {
+		dispbottom "[2:2 정산] 드라이런 주차 " + callfunc("F_NEED_BG2P3_Date$", .@ws) + " → " + .@state$ + " (참가 계정 " + $@NBG2P3_AW_ACC + ", 보류 경기 " + .@held + ")";
+		for (.@s = 1; .@s <= $@NBG2P3_AW_N; .@s++)
+			dispbottom "[2:2 정산]   " + .@s + "위 aid=" + $@NBG2P3_AW_AID[.@s] + " cid=" + $@NBG2P3_AW_CID[.@s] + " " + $@NBG2P3_RANK_CASH[.@s] + " 캐시";
+		return .@award ? 0 : 1;
+	}
+	if (callfunc("F_NEED_BG2P3_Exec", "START TRANSACTION", "final_begin") < 0)
+		return -1;
+	.@st2$ = "";
+	if (query_sql("SELECT state FROM need_bg2_week WHERE `mode` = " + $@NBG2P3_MODE + " AND week_start = " + .@ws + " FOR UPDATE", .@st2$) < 0)
+		return callfunc("F_NEED_BG2P3_Rollback", "final_lock");
+	if (.@st2$ == "FINALIZED" || .@st2$ == "NO_AWARD") {
+		query_sql "ROLLBACK";
+		return 3;
+	}
+	for (.@s = 1; .@s <= $@NBG2P3_AW_N; .@s++) {
+		if (query_sql("INSERT IGNORE INTO need_bg2_reward (`mode`, week_start, account_id, reward_kind, reward_key, rank_slot, char_id, amount, status, created_at) VALUES ("
+			+ $@NBG2P3_MODE + ", " + .@ws + ", " + $@NBG2P3_AW_AID[.@s] + ", 'RANK', '" + .@s + "', " + .@s + ", " + $@NBG2P3_AW_CID[.@s] + ", " + $@NBG2P3_RANK_CASH[.@s] + ", 0, " + .@now + ")") < 0)
+			return callfunc("F_NEED_BG2P3_Rollback", "final_ticket");
+	}
+	if (query_sql("INSERT INTO need_bg2_week (`mode`, week_start, state, accounts, detail, attempts, decided_at) VALUES (" + $@NBG2P3_MODE + ", " + .@ws + ", '" + .@state$ + "', "
+		+ $@NBG2P3_AW_ACC + ", '" + escape_sql(.@detail$) + "', 1, " + .@now + ") ON DUPLICATE KEY UPDATE state = VALUES(state), accounts = VALUES(accounts), detail = VALUES(detail), attempts = attempts + 1, decided_at = VALUES(decided_at)") < 0)
+		return callfunc("F_NEED_BG2P3_Rollback", "final_week");
+	callfunc "F_NEED_BG2P3_Audit", .@actor, "WEEK_" + .@state$, "week=" + .@ws, .@detail$;
+	if (callfunc("F_NEED_BG2P3_Exec", "COMMIT", "final_commit") < 0)
+		return callfunc("F_NEED_BG2P3_Rollback", "final_commit");
+	callfunc "F_NEED_BG2_Log", "P3_WEEK_" + .@state$ + " week=" + .@ws + " " + .@detail$;
+	return .@award ? 0 : 1;
+}
+
+// 확정 시각(주차 시작 + 9일)이 지난, 아직 확정되지 않은 주차를 오래된 것부터 처리한다(누락 주차 복원).
+function	script	F_NEED_BG2P3_FinalizeDue	{
+	.@now = getarg(0, gettimetick(2));
+	deletearray .@w;
+	.@n = query_sql("SELECT DISTINCT m.week_start FROM need_bg2_match m LEFT JOIN need_bg2_week w ON w.`mode` = m.`mode` AND w.week_start = m.week_start WHERE m.`mode` = "
+		+ $@NBG2P3_MODE + " AND m.valid = 1 AND m.week_start <= " + (.@now - $@NBG2P3_FINAL_AT) + " AND (w.state IS NULL OR w.state NOT IN ('FINALIZED', 'NO_AWARD')) ORDER BY m.week_start LIMIT 8", .@w);
+	if (.@n < 0)
+		return -1;
+	for (.@i = 0; .@i < .@n; .@i++)
+		callfunc "F_NEED_BG2P3_Finalize", .@w[.@i], 1, 0, "scheduled";
+	return .@n;
+}
+
+//------------------------------------------------------------
+// GM 검토 결정 / 탈주 면제 / 보상권 회수
+//------------------------------------------------------------
+
+// act: "approve" / "release" / "void". 성공 1, 거절 0, DB 실패 -1. 결과는 첨부된 GM 에게 출력.
+function	script	F_NEED_BG2P3_Decide	{
+	.@pk = getarg(0);
+	.@act$ = getarg(1);
+	.@gm = getcharid(3);
+	.@reason$ = getarg(2);
+	.@now = gettimetick(2);
+	if (callfunc("F_NEED_BG2P3_Exec", "START TRANSACTION", "decide_begin") < 0)
+		return -1;
+	.@rv = -1;
+	.@ws = 0;
+	.@valid = 0;
+	if (query_sql("SELECT review, week_start, valid FROM need_bg2_match WHERE match_pk = " + .@pk + " FOR UPDATE", .@rv, .@ws, .@valid) < 0)
+		return callfunc("F_NEED_BG2P3_Rollback", "decide_lock");
+	.@ok = 0;
+	if (.@rv < 0)
+		.@msg$ = "경기를 찾지 못했습니다.";
+	else if ((.@act$ == "approve" || .@act$ == "release") && .@rv != 1)
+		.@msg$ = "검토 보류(HOLD) 상태가 아닙니다 (review=" + .@rv + ").";
+	else if (.@act$ == "void" && .@rv == 3)
+		.@msg$ = "이미 무효 처리된 경기입니다.";
+	else
+		.@ok = 1;
+	if (!.@ok) {
+		query_sql "ROLLBACK";
+		dispbottom "[2:2 정산] " + .@msg$;
+		return 0;
+	}
+	.@newrv = (.@act$ == "approve") ? 2 : ((.@act$ == "release") ? 0 : 3);
+	.@state$ = (.@act$ == "approve") ? "APPROVED" : ((.@act$ == "release") ? "RELEASED" : "VOIDED");
+	if (query_sql("UPDATE need_bg2_match SET review = " + .@newrv + " WHERE match_pk = " + .@pk) < 0)
+		return callfunc("F_NEED_BG2P3_Rollback", "decide_match");
+	if (query_sql("INSERT INTO need_bg2_review (match_pk, signals, state, gm_aid, reason, created_at, decided_at) VALUES (" + .@pk + ", 'gm', '" + .@state$ + "', " + .@gm + ", '"
+		+ escape_sql(.@reason$) + "', " + .@now + ", " + .@now + ") ON DUPLICATE KEY UPDATE state = VALUES(state), gm_aid = VALUES(gm_aid), reason = VALUES(reason), decided_at = VALUES(decided_at)") < 0)
+		return callfunc("F_NEED_BG2P3_Rollback", "decide_review");
+	deletearray .@acc;
+	.@n = query_sql("SELECT DISTINCT account_id FROM need_bg2_match_player WHERE match_pk = " + .@pk + " AND valid = 1", .@acc);
+	if (.@n < 0)
+		return callfunc("F_NEED_BG2P3_Rollback", "decide_accounts");
+	.@chg = 0;
+	for (.@i = 0; .@i < .@n; .@i++) {
+		if (.@newrv == 3)
+			.@r = callfunc("F_NEED_BG2P3_TierRevoke", .@acc[.@i], .@ws);
+		else
+			.@r = callfunc("F_NEED_BG2P3_TierSync", .@acc[.@i], .@ws);
+		if (.@r < 0)
+			return callfunc("F_NEED_BG2P3_Rollback", "decide_tier");
+		.@chg += .@r;
+	}
+	.@wst$ = "";
+	query_sql "SELECT state FROM need_bg2_week WHERE `mode` = " + $@NBG2P3_MODE + " AND week_start = " + .@ws, .@wst$;
+	.@detail$ = "review " + .@rv + "->" + .@newrv + " tickets_changed=" + .@chg + " week_state=" + .@wst$ + " reason=" + .@reason$;
+	callfunc "F_NEED_BG2P3_Audit", .@gm, "REVIEW_" + .@state$, "match_pk=" + .@pk, .@detail$;
+	if (callfunc("F_NEED_BG2P3_Exec", "COMMIT", "decide_commit") < 0)
+		return callfunc("F_NEED_BG2P3_Rollback", "decide_commit");
+	callfunc "F_NEED_BG2_Log", "P3_REVIEW_" + .@state$ + " match_pk=" + .@pk + " by_aid=" + .@gm + " " + .@detail$;
+	dispbottom "[2:2 정산] 경기 " + .@pk + " → " + .@state$ + " (보상권 변경 " + .@chg + "건)";
+	if (.@wst$ == "FINALIZED" || .@wst$ == "NO_AWARD")
+		dispbottom "[2:2 정산] 주의: 이 주차 랭킹은 이미 " + .@wst$ + " 입니다. 순위 보상은 자동으로 다시 쓰지 않습니다(감사 로그 확인 후 수동 정산).";
+	return 1;
+}
+
+//------------------------------------------------------------
+// 보상 수령 (P3-B)
+//------------------------------------------------------------
+
+// 첨부된 플레이어가 보상권 id 를 받는다. 1 지급, 0 거절.
+// 순서: 보상권 0 → 1 (조건부 UPDATE + ROW_COUNT, 순번 claim_seq) → #CASHPOINTS 증가 + 영수증 #NEED_BG2_PAIDSEQ = claim_seq.
+// 두 계정 변수는 이 스크립트가 끝날 때 함께 저장된다. 다음 로그인 때 F_NEED_BG2P3_Reconcile 이 1 을 2(지급) 또는 0(미지급)으로 정리한다.
+function	script	F_NEED_BG2P3_Claim	{
+	.@id = getarg(0);
+	.@aid = getcharid(3);
+	.@cid = getcharid(0);
+	.@now = gettimetick(2);
+	if (!$NEED_BG2_P3_CLAIM) {
+		dispbottom needtr("[2:2 듀오] 지금은 보상 수령을 받지 않습니다.", "[2v2 Duo] Reward claiming is not open now."), 0xFF7777;
+		return 0;
+	}
+	.@amt = 0;
+	.@st = -1;
+	if (query_sql("SELECT amount, status FROM need_bg2_reward WHERE id = " + .@id + " AND account_id = " + .@aid, .@amt, .@st) < 1 || .@st != 0) {
+		dispbottom needtr("[2:2 듀오] 받을 수 있는 보상이 아닙니다(이미 받았거나 없음).", "[2v2 Duo] This reward cannot be claimed (already claimed or not found)."), 0xFF7777;
+		return 0;
+	}
+	if (#CASHPOINTS > 2147483647 - .@amt) {
+		dispbottom needtr("[2:2 듀오] 캐시 보유 한도를 넘어 지급할 수 없습니다.", "[2v2 Duo] Your cash points would exceed the limit."), 0xFF7777;
+		return 0;
+	}
+	.@mx = 0;
+	if (query_sql("SELECT COALESCE(MAX(claim_seq), 0) FROM need_bg2_reward WHERE account_id = " + .@aid, .@mx) < 0) {
+		dispbottom needtr("[2:2 듀오] 지금은 처리할 수 없습니다. 잠시 후 다시 시도하세요.", "[2v2 Duo] Cannot process now. Please try again later."), 0xFF7777;
+		return 0;
+	}
+	.@seq = ((.@mx > #NEED_BG2_PAIDSEQ) ? .@mx : #NEED_BG2_PAIDSEQ) + 1;
+	if (query_sql("UPDATE need_bg2_reward SET status = 1, claim_seq = " + .@seq + ", claim_char = " + .@cid + ", claimed_at = " + .@now + " WHERE id = " + .@id + " AND account_id = " + .@aid + " AND status = 0") < 0) {
+		dispbottom needtr("[2:2 듀오] 지금은 처리할 수 없습니다. 잠시 후 다시 시도하세요.", "[2v2 Duo] Cannot process now. Please try again later."), 0xFF7777;
+		return 0;
+	}
+	.@rc = 0;
+	query_sql "SELECT ROW_COUNT()", .@rc;
+	if (.@rc != 1) {
+		callfunc "F_NEED_BG2P3_Log", "P3_CLAIM_RACE id=" + .@id + " aid=" + .@aid + " cid=" + .@cid;
+		dispbottom needtr("[2:2 듀오] 이미 처리된 보상입니다.", "[2v2 Duo] This reward was already processed."), 0xFF7777;
+		return 0;
+	}
+	$NEED_BG2_P3_CLAIMUSED = 1;
+	#CASHPOINTS += .@amt;
+	#NEED_BG2_PAIDSEQ = .@seq;
+	callfunc "F_NEED_BG2P3_Audit", .@aid, "CLAIM_PAID", "id=" + .@id, "cid=" + .@cid + " amount=" + .@amt + " seq=" + .@seq + " cash_after=" + #CASHPOINTS;
+	callfunc "F_NEED_BG2P3_Log", "P3_CLAIM id=" + .@id + " aid=" + .@aid + " cid=" + .@cid + " amount=" + .@amt + " seq=" + .@seq + " cash_after=" + #CASHPOINTS;
+	dispbottom needtr("[2:2 듀오] " + .@amt + " 캐시를 받았습니다. (보유 " + #CASHPOINTS + ")", "[2v2 Duo] You received " + .@amt + " cash points. (Now " + #CASHPOINTS + ")"), 0x66FF66;
+	return 1;
+}
+
+// 로그인(첨부): RESERVED 보상권을 영수증으로 확정/복원한다.
+function	script	F_NEED_BG2P3_Reconcile	{
+	.@aid = getcharid(3);
+	deletearray .@id;
+	deletearray .@seq;
+	.@n = query_sql("SELECT id, claim_seq FROM need_bg2_reward WHERE account_id = " + .@aid + " AND status = 1", .@id, .@seq);
+	for (.@i = 0; .@i < .@n; .@i++) {
+		if (.@seq[.@i] <= #NEED_BG2_PAIDSEQ) {
+			query_sql "UPDATE need_bg2_reward SET status = 2 WHERE id = " + .@id[.@i] + " AND status = 1";
+			.@what$ = "CLAIMED";
+		} else {
+			query_sql "UPDATE need_bg2_reward SET status = 0, claim_seq = 0, claim_char = 0, claimed_at = 0, note = 'reserved but not paid: restored' WHERE id = " + .@id[.@i] + " AND status = 1";
+			.@what$ = "RESTORED";
+		}
+		callfunc "F_NEED_BG2P3_Audit", 0, "CLAIM_" + .@what$, "id=" + .@id[.@i], "aid=" + .@aid + " seq=" + .@seq[.@i] + " paidseq=" + #NEED_BG2_PAIDSEQ;
+		callfunc "F_NEED_BG2P3_Log", "P3_RECONCILE id=" + .@id[.@i] + " aid=" + .@aid + " seq=" + .@seq[.@i] + " paidseq=" + #NEED_BG2_PAIDSEQ + " -> " + .@what$;
+	}
+	return .@n;
+}
+
+function	script	F_NEED_BG2P3_TicketName$	{
+	if (getarg(0) == "RANK")
+		return needtr("주간 랭킹 " + getarg(1) + "위", "Weekly rank " + getarg(1));
+	return needtr(getarg(1) + "점 단계", getarg(1) + "-point tier");
+}
+
+//------------------------------------------------------------
+// 보상 NPC (KO/EN)
+//------------------------------------------------------------
+function	script	F_NEED_BG2P3_Npc	{
+	.@n$ = "[" + needtr("2:2 듀오 보상관", "2v2 Duo Reward Officer") + "]";
+	mes .@n$;
+	if (!$NEED_BG2_P3_ON && !$NEED_BG2_P3_CLAIM) {
+		mes needtr("2:2 듀오 주간 보상은 아직 운영 준비 중입니다.", "Weekly 2v2 Duo rewards are not open yet.");
+		close;
+	}
+	.@aid = getcharid(3);
+	.@cid = getcharid(0);
+	while (1) {
+		.@now = gettimetick(2);
+		.@ws = callfunc("F_NEED_BG2P3_WeekStart", .@now);
+		.@pts = callfunc("F_NEED_BG2P3_AccPoints", .@aid, .@ws, 0);
+		.@held = callfunc("F_NEED_BG2P3_AccPoints", .@aid, .@ws, 1);
+		mes needtr("이번 주(", "This week (") + callfunc("F_NEED_BG2P3_Date$", .@ws) + " ~ " + callfunc("F_NEED_BG2P3_Date$", .@ws + $@NBG2P3_WEEK) + " KST)";
+		mes needtr("계정 2:2 점수: ^0055FF", "Account 2v2 points: ^0055FF") + .@pts + "^000000" + (.@held ? needtr(" (검토 중 " + .@held + "점 보류)", " (" + .@held + " on review hold)") : "");
+		.@m = select(needtr("이번 주 내 점수·전적", "My points & record this week") + ":" + needtr("보상 단계 현황", "Reward tiers") + ":" + needtr("미수령 보상 목록", "Unclaimed rewards")
+			+ ":" + needtr("보상 하나 받기", "Claim one reward") + ":" + needtr("미수령 보상 모두 받기", "Claim all rewards") + ":" + needtr("주간 랭킹", "Weekly ranking")
+			+ ":" + needtr("탈주 제재 현황", "Departure restriction") + ":" + needtr("닫기", "Close"));
+		next;
+		mes .@n$;
+		switch (.@m) {
+		case 1:
+			.@cp = 0; .@cw = 0; .@cg = 0;
+			query_sql "SELECT COALESCE(SUM(p.points), 0), COALESCE(SUM(p.win), 0), COUNT(*) FROM need_bg2_match_player p JOIN need_bg2_match m ON m.match_pk = p.match_pk WHERE p.char_id = " + .@cid
+				+ " AND m.`mode` = " + $@NBG2P3_MODE + " AND m.week_start = " + .@ws + " AND p.valid = 1 AND m.review IN (0, 2)", .@cp, .@cw, .@cg;
+			mes needtr("이 캐릭터의 이번 주 기록", "This character's week");
+			mes needtr("점수 ", "Points ") + .@cp + needtr(" / 유효 경기 ", " / valid matches ") + .@cg + needtr(" / 승리 ", " / wins ") + .@cw
+				+ (.@cg ? needtr(" / 승률 ", " / win rate ") + (.@cw * 100 / .@cg) + "%" : "");
+			mes needtr("랭킹 후보 조건: 유효 경기 " + $@NBG2P3_MINGAMES + "회 이상 (남은 " + (.@cg < $@NBG2P3_MINGAMES ? $@NBG2P3_MINGAMES - .@cg : 0) + "회)",
+				"Ranking needs " + $@NBG2P3_MINGAMES + " valid matches (" + (.@cg < $@NBG2P3_MINGAMES ? $@NBG2P3_MINGAMES - .@cg : 0) + " to go)");
+			mes needtr("점수: 승리 +2, 패배 +1, 무승부 +1. 실제 교전이 없거나 무효·취소된 경기는 0점입니다.", "Points: win +2, loss +1, draw +1. No real combat, void or cancelled matches give 0.");
+			next;
+			break;
+		case 2:
+			for (.@t = 0; .@t < 3; .@t++) {
+				.@st = -1;
+				query_sql "SELECT status FROM need_bg2_reward WHERE `mode` = " + $@NBG2P3_MODE + " AND week_start = " + .@ws + " AND account_id = " + .@aid
+					+ " AND reward_kind = 'TIER' AND reward_key = '" + $@NBG2P3_TIER_PT[.@t] + "'", .@st;
+				if (.@st < 0)
+					.@s$ = (.@pts >= $@NBG2P3_TIER_PT[.@t]) ? needtr("^FF7700생성 대기^000000", "^FF7700pending^000000") : needtr("미달성", "not reached");
+				else if (.@st == 0)
+					.@s$ = needtr("^0055FF받을 수 있음^000000", "^0055FFclaimable^000000");
+				else if (.@st == 1 || .@st == 2)
+					.@s$ = needtr("받음", "claimed");
+				else
+					.@s$ = needtr("운영 확인 중", "under GM check");
+				mes $@NBG2P3_TIER_PT[.@t] + needtr("점: ", " points: ") + $@NBG2P3_TIER_CASH[.@t] + needtr(" 캐시 - ", " cash - ") + .@s$;
+			}
+			mes needtr("한 주 최대 70,000 캐시. 받지 않은 보상은 주가 바뀌어도 사라지지 않습니다.", "Up to 70,000 cash a week. Unclaimed rewards never expire.");
+			next;
+			break;
+		case 3:
+			deletearray .@id; deletearray .@w; deletearray .@k$; deletearray .@key$; deletearray .@amt; deletearray .@st;
+			.@c = query_sql("SELECT id, week_start, reward_kind, reward_key, amount, status FROM need_bg2_reward WHERE account_id = " + .@aid + " AND status IN (0, 1) ORDER BY id LIMIT 30",
+				.@id, .@w, .@k$, .@key$, .@amt, .@st);
+			if (.@c <= 0)
+				mes needtr("받지 않은 보상이 없습니다.", "You have no unclaimed rewards.");
+			for (.@i = 0; .@i < .@c; .@i++)
+				mes callfunc("F_NEED_BG2P3_Date$", .@w[.@i]) + needtr(" 주 ", " week ") + callfunc("F_NEED_BG2P3_TicketName$", .@k$[.@i], .@key$[.@i]) + " " + .@amt[.@i]
+					+ needtr(" 캐시", " cash") + (.@st[.@i] == 1 ? needtr(" (지급 처리됨, 다음 접속 때 확인)", " (paid, confirmed at next login)") : "");
+			next;
+			break;
+		case 4:
+		case 5:
+			if (!$NEED_BG2_P3_CLAIM) {
+				mes needtr("지금은 보상 수령을 받지 않습니다.", "Reward claiming is not open now.");
+				next;
+				break;
+			}
+			deletearray .@id; deletearray .@w; deletearray .@k$; deletearray .@key$; deletearray .@amt;
+			.@c = query_sql("SELECT id, week_start, reward_kind, reward_key, amount FROM need_bg2_reward WHERE account_id = " + .@aid + " AND status = 0 ORDER BY id LIMIT 20",
+				.@id, .@w, .@k$, .@key$, .@amt);
+			if (.@c <= 0) {
+				mes needtr("받을 보상이 없습니다.", "Nothing to claim.");
+				next;
+				break;
+			}
+			if (.@m == 4) {
+				.@menu$ = "";
+				for (.@i = 0; .@i < .@c; .@i++)
+					.@menu$ += callfunc("F_NEED_BG2P3_Date$", .@w[.@i]) + " " + callfunc("F_NEED_BG2P3_TicketName$", .@k$[.@i], .@key$[.@i]) + " " + .@amt[.@i] + ":";
+				.@menu$ += needtr("취소", "Cancel");
+				mes needtr("받을 보상을 고르세요. 이 계정의 어느 캐릭터로든 받을 수 있습니다.", "Choose a reward. Any character of this account can claim it.");
+				.@s = select(.@menu$) - 1;
+				if (.@s >= .@c)
+					break;
+				callfunc "F_NEED_BG2P3_Claim", .@id[.@s];
+				close;
+			}
+			.@sum = 0;
+			for (.@i = 0; .@i < .@c; .@i++)
+				.@sum += .@amt[.@i];
+			mes needtr("보상 " + .@c + "개, 합계 " + .@sum + " 캐시를 받습니다.", "Claim " + .@c + " rewards, " + .@sum + " cash in total.");
+			if (select(needtr("받기", "Claim") + ":" + needtr("취소", "Cancel")) != 1)
+				break;
+			for (.@i = 0; .@i < .@c; .@i++)
+				callfunc "F_NEED_BG2P3_Claim", .@id[.@i];
+			close;
+		case 6:
+			.@r = callfunc("F_NEED_BG2P3_RankRows", .@ws, 0, 1, 10);
+			mes needtr("이번 주 순위(잠정, 상위 10)", "This week (provisional, top 10)");
+			if (.@r <= 0)
+				mes needtr("아직 기록이 없습니다.", "No records yet.");
+			for (.@i = 0; .@i < .@r; .@i++)
+				mes (.@i + 1) + ". " + $@NBG2P3_R_NAME$[.@i] + " - " + $@NBG2P3_R_PTS[.@i] + needtr("점 ", " pts ") + $@NBG2P3_R_W[.@i] + needtr("승 ", "W ") + $@NBG2P3_R_G[.@i]
+					+ needtr("경기", " games") + ($@NBG2P3_R_G[.@i] < $@NBG2P3_MINGAMES ? needtr(" (후보 미달)", " (not eligible)") : "");
+			mes needtr("후보 = 유효 경기 20회 이상. 참가 계정 6개 이상인 주만 1~3위 보상(50,000/30,000/20,000 캐시, 계정당 1자리). 다음 주 수요일 04:00 확정.",
+				"Eligible = 20+ valid matches. Rank rewards (50,000/30,000/20,000 cash, one per account) only when 6+ accounts played. Settled next Wednesday 04:00 KST.");
+			next;
+			mes .@n$;
+			.@pw = .@ws - $@NBG2P3_WEEK;
+			.@pst$ = "";
+			query_sql "SELECT state FROM need_bg2_week WHERE `mode` = " + $@NBG2P3_MODE + " AND week_start = " + .@pw, .@pst$;
+			mes needtr("지난 주(", "Last week (") + callfunc("F_NEED_BG2P3_Date$", .@pw) + "): " + (.@pst$ == "" ? needtr("확정 전", "not settled yet") : .@pst$);
+			deletearray .@rs; deletearray .@rn$; deletearray .@ra;
+			.@c = query_sql("SELECT r.rank_slot, COALESCE(c.name, '?'), r.amount FROM need_bg2_reward r LEFT JOIN `char` c ON c.char_id = r.char_id WHERE r.`mode` = " + $@NBG2P3_MODE
+				+ " AND r.week_start = " + .@pw + " AND r.reward_kind = 'RANK' ORDER BY r.rank_slot", .@rs, .@rn$, .@ra);
+			for (.@i = 0; .@i < .@c; .@i++)
+				mes .@rs[.@i] + needtr("위 ", ". ") + .@rn$[.@i] + " - " + .@ra[.@i] + needtr(" 캐시", " cash");
+			next;
+			break;
+		case 7:
+			.@left = callfunc("F_NEED_BG2P3_Sanction", .@aid, .@now);
+			mes needtr("최근 24시간 경기 이탈: " + $@NBG2P3_SC_CNT + "회", "Matches left in the last 24 hours: " + $@NBG2P3_SC_CNT);
+			mes (.@left > 0) ? needtr("2:2 신청 제한 남은 시간: ", "2v2 sign-up restriction left: ") + callfunc("F_NEED_BG2P3_Left$", .@left) : needtr("현재 신청 제한 없음", "No restriction now");
+			mes needtr("1회 경고, 2회 10분, 3회 30분, 4회 이상 2시간. 재접속 15초 유예 뒤 이탈만 셉니다.", "1 = warning, 2 = 10 min, 3 = 30 min, 4+ = 2 h. Only departures after the 15-second reconnect grace count.");
+			next;
+			break;
+		default:
+			close;
+		}
+		mes .@n$;
+	}
+	close;
+}
+
+//------------------------------------------------------------
+// GM 명령 (GM 60+) @duo2v2p3 / @듀오정산
+//------------------------------------------------------------
+function	script	F_NEED_BG2P3_GmAid	{
+	.@v$ = getarg(0);
+	if (atoi(.@v$) > 0)
+		return atoi(.@v$);
+	return getcharid(3, .@v$);
+}
+
+-	script	NEED_BG2P3	-1,{
+	end;
+
+OnInit:
+	callfunc "F_NEED_BG2P3_Init";
+	bindatcmd "duo2v2p3", "NEED_BG2P3::OnCmdGM", 60, 60;
+	bindatcmd "듀오정산", "NEED_BG2P3::OnCmdGM", 60, 60;
+	bindatcmd "duopoints", "NEED_BG2P3::OnCmdPoints", 0, 99;
+	bindatcmd "듀오점수", "NEED_BG2P3::OnCmdPoints", 0, 99;
+	initnpctimer;
+	end;
+
+// 1분마다: 보관된 정산 재시도, 수요일 04:00 KST 지난 주 확정(스위치 켜짐일 때만, 이미 확정된 주는 건너뜀).
+OnTimer60000:
+	if (getarraysize($NEED_BG2_PEND_H$))
+		callfunc "F_NEED_BG2P3_PendRetry";
+	if ($NEED_BG2_P3_RANK)
+		callfunc "F_NEED_BG2P3_FinalizeDue";
+	initnpctimer;
+	end;
+
+OnPCLoginEvent:
+	if ($NEED_BG2_P3_CLAIMUSED)
+		callfunc "F_NEED_BG2P3_Reconcile";
+	end;
+
+OnCmdPoints:
+	.@now = gettimetick(2);
+	.@ws = callfunc("F_NEED_BG2P3_WeekStart", .@now);
+	if (!$NEED_BG2_P3_ON) {
+		dispbottom needtr("[2:2 듀오] 주간 점수 기능은 아직 운영 준비 중입니다.", "[2v2 Duo] Weekly points are not open yet."), 0xFF7777;
+		end;
+	}
+	.@pts = callfunc("F_NEED_BG2P3_AccPoints", getcharid(3), .@ws, 0);
+	.@held = callfunc("F_NEED_BG2P3_AccPoints", getcharid(3), .@ws, 1);
+	.@un = 0;
+	query_sql "SELECT COUNT(*) FROM need_bg2_reward WHERE account_id = " + getcharid(3) + " AND status = 0", .@un;
+	dispbottom needtr("[2:2 듀오] 이번 주 계정 점수 " + .@pts + "점" + (.@held ? " (검토 중 " + .@held + "점)" : "") + " / 받지 않은 보상 " + .@un + "개",
+		"[2v2 Duo] Account points this week: " + .@pts + (.@held ? " (" + .@held + " on hold)" : "") + " / unclaimed rewards: " + .@un), 0x66CCFF;
+	.@left = callfunc("F_NEED_BG2P3_Sanction", getcharid(3), .@now);
+	if (.@left > 0)
+		dispbottom needtr("[2:2 듀오] 2:2 신청 제한 남은 시간: ", "[2v2 Duo] 2v2 sign-up restriction left: ") + callfunc("F_NEED_BG2P3_Left$", .@left), 0xFF7777;
+	end;
+
+OnCmdGM:
+	if (getgmlevel() < 60)
+		end;
+	.@np = .@atcmd_numparameters;
+	.@sub$ = (.@np > 0) ? .@atcmd_parameters$[0] : "";
+	.@a1$ = (.@np > 1) ? .@atcmd_parameters$[1] : "";
+	.@a2$ = (.@np > 2) ? .@atcmd_parameters$[2] : "";
+	// 사유 = 3번째 인자부터 끝까지(set/decide 는 2번째 인자 뒤).
+	.@why$ = "";
+	for (.@k = 2; .@k < .@np; .@k++)
+		.@why$ += (.@k > 2 ? " " : "") + .@atcmd_parameters$[.@k];
+	.@why3$ = "";
+	for (.@k = 3; .@k < .@np; .@k++)
+		.@why3$ += (.@k > 3 ? " " : "") + .@atcmd_parameters$[.@k];
+	.@gm = getcharid(3);
+	.@now = gettimetick(2);
+	.@ws = callfunc("F_NEED_BG2P3_WeekStart", .@now);
+
+	if (.@sub$ == "status") {
+		dispbottom "[2:2 정산] 원장(ledger)=" + $NEED_BG2_P3_ON + " 랭킹확정(rank)=" + $NEED_BG2_P3_RANK + " 수령(claim)=" + $NEED_BG2_P3_CLAIM + " 공개대기열=" + $NEED_BG2_QUEUE_OPEN
+			+ " 보관정산=" + getarraysize($NEED_BG2_PEND_H$);
+		dispbottom "[2:2 정산] 이번 주 " + callfunc("F_NEED_BG2P3_Date$", .@ws) + " ~ " + callfunc("F_NEED_BG2P3_Date$", .@ws + $@NBG2P3_WEEK) + " KST, 지난 주 확정 시각 "
+			+ callfunc("F_NEED_BG2P3_Date$", .@ws - $@NBG2P3_WEEK + $@NBG2P3_FINAL_AT) + " KST";
+		.@h = 0; .@m = 0; .@tk = 0; .@rs = 0;
+		query_sql "SELECT COUNT(*) FROM need_bg2_review WHERE state = 'HOLD'", .@h;
+		query_sql "SELECT COUNT(*) FROM need_bg2_match WHERE `mode` = " + $@NBG2P3_MODE + " AND week_start = " + .@ws, .@m;
+		query_sql "SELECT COUNT(*) FROM need_bg2_reward WHERE status = 0", .@tk;
+		query_sql "SELECT COUNT(*) FROM need_bg2_reward WHERE status = 1", .@rs;
+		dispbottom "[2:2 정산] 이번 주 기록 경기 " + .@m + " / 검토 보류 " + .@h + " / 미수령 보상권 " + .@tk + " / 지급 확인 대기(RESERVED) " + .@rs;
+		deletearray .@w; deletearray .@s$;
+		.@c = query_sql("SELECT week_start, state FROM need_bg2_week WHERE `mode` = " + $@NBG2P3_MODE + " ORDER BY week_start DESC LIMIT 4", .@w, .@s$);
+		for (.@i = 0; .@i < .@c; .@i++)
+			dispbottom "[2:2 정산] 주차 " + .@w[.@i] + " (" + callfunc("F_NEED_BG2P3_Date$", .@w[.@i]) + ") " + .@s$[.@i];
+		end;
+	}
+	if (.@sub$ == "set") {
+		if ((.@a1$ != "ledger" && .@a1$ != "rank" && .@a1$ != "claim") || (.@a2$ != "on" && .@a2$ != "off") || .@why3$ == "") {
+			dispbottom "[2:2 정산] 사용법: @duo2v2p3 set <ledger|rank|claim> <on|off> <사유>";
+			end;
+		}
+		.@v = (.@a2$ == "on") ? 1 : 0;
+		if (.@a1$ == "ledger") $NEED_BG2_P3_ON = .@v;
+		else if (.@a1$ == "rank") $NEED_BG2_P3_RANK = .@v;
+		else $NEED_BG2_P3_CLAIM = .@v;
+		callfunc "F_NEED_BG2P3_Audit", .@gm, "SWITCH", .@a1$ + "=" + .@v, .@why3$;
+		callfunc "F_NEED_BG2_Log", "P3_SWITCH " + .@a1$ + "=" + .@v + " by_aid=" + .@gm;
+		dispbottom "[2:2 정산] " + .@a1$ + " = " + (.@v ? "ON" : "OFF") + (.@a1$ == "ledger" ? " (다음에 시작하는 경기부터 적용)" : "");
+		end;
+	}
+	if (.@sub$ == "week") {
+		.@t = (.@a1$ != "") ? atoi(.@a1$) : .@now;
+		.@w = callfunc("F_NEED_BG2P3_WeekStart", .@t);
+		dispbottom "[2:2 정산] 시각 " + .@t + " (" + callfunc("F_NEED_BG2P3_Date$", .@t) + " KST) → 주차 " + .@w + " [" + callfunc("F_NEED_BG2P3_Date$", .@w) + ", "
+			+ callfunc("F_NEED_BG2P3_Date$", .@w + $@NBG2P3_WEEK) + ") 확정 " + callfunc("F_NEED_BG2P3_Date$", .@w + $@NBG2P3_FINAL_AT);
+		end;
+	}
+	if (.@sub$ == "points") {
+		.@aid = callfunc("F_NEED_BG2P3_GmAid", .@a1$);
+		.@w = (.@a2$ != "") ? atoi(.@a2$) : .@ws;
+		dispbottom "[2:2 정산] aid " + .@aid + " 주차 " + callfunc("F_NEED_BG2P3_Date$", .@w) + ": 점수 " + callfunc("F_NEED_BG2P3_AccPoints", .@aid, .@w, 0) + " (보류 " + callfunc("F_NEED_BG2P3_AccPoints", .@aid, .@w, 1) + ")";
+		callsub S_Tickets, .@aid;
+		end;
+	}
+	if (.@sub$ == "tickets") {
+		callsub S_Tickets, callfunc("F_NEED_BG2P3_GmAid", .@a1$);
+		end;
+	}
+	if (.@sub$ == "rank") {
+		.@w = .@ws - $@NBG2P3_WEEK;
+		if (.@a1$ == "cur") .@w = .@ws;
+		else if (atoi(.@a1$) > 0) .@w = atoi(.@a1$);
+		.@r = callfunc("F_NEED_BG2P3_RankRows", .@w, 0, 1, 10);
+		dispbottom "[2:2 정산] 주차 " + .@w + " (" + callfunc("F_NEED_BG2P3_Date$", .@w) + ") 순위 상위 10 (보류 제외, 20경기 미만 포함 표시)";
+		for (.@i = 0; .@i < .@r; .@i++)
+			dispbottom "[2:2 정산] " + (.@i + 1) + ". " + $@NBG2P3_R_NAME$[.@i] + " cid=" + $@NBG2P3_R_CID[.@i] + " aid=" + $@NBG2P3_R_AID[.@i] + " pts=" + $@NBG2P3_R_PTS[.@i]
+				+ " w=" + $@NBG2P3_R_W[.@i] + " g=" + $@NBG2P3_R_G[.@i] + " reach=" + $@NBG2P3_R_REACH[.@i];
+		callfunc "F_NEED_BG2P3_Finalize", .@w, 0, .@gm, "dry";
+		end;
+	}
+	if (.@sub$ == "finalize") {
+		.@w = atoi(.@a1$);
+		if (.@w <= 0 || (.@a2$ != "dry" && .@a2$ != "commit")) {
+			dispbottom "[2:2 정산] 사용법: @duo2v2p3 finalize <주차시작 유닉스초> dry | commit <사유>   (지난 주 = " + (.@ws - $@NBG2P3_WEEK) + ")";
+			end;
+		}
+		if (.@a2$ == "dry") {
+			callfunc "F_NEED_BG2P3_Finalize", .@w, 0, .@gm, "dry";
+			end;
+		}
+		if (!$NEED_BG2_P3_RANK || .@why3$ == "") {
+			dispbottom "[2:2 정산] 실제 확정은 랭킹 스위치(rank)가 켜져 있고 사유가 있을 때만 합니다.";
+			end;
+		}
+		.@r = callfunc("F_NEED_BG2P3_Finalize", .@w, 1, .@gm, .@why3$);
+		dispbottom "[2:2 정산] 확정 결과 " + .@r + " (0 확정, 1 순위 보상 없음, 2 보류, 3 이미 확정, 4 마감 전, -1 DB 실패)";
+		end;
+	}
+	if (.@sub$ == "due") {
+		if (!$NEED_BG2_P3_RANK) {
+			dispbottom "[2:2 정산] 랭킹 스위치(rank)가 꺼져 있습니다.";
+			end;
+		}
+		dispbottom "[2:2 정산] 확정 대상 주차 처리: " + callfunc("F_NEED_BG2P3_FinalizeDue", .@now);
+		end;
+	}
+	if (.@sub$ == "reviews") {
+		deletearray .@pk; deletearray .@sg$; deletearray .@ct;
+		.@c = query_sql("SELECT match_pk, signals, created_at FROM need_bg2_review WHERE state = 'HOLD' ORDER BY match_pk LIMIT 20", .@pk, .@sg$, .@ct);
+		dispbottom "[2:2 정산] 검토 보류 " + .@c + "건 (최대 20). 처리: @duo2v2p3 approve|release|void <match_pk> <사유>";
+		for (.@i = 0; .@i < .@c; .@i++)
+			dispbottom "[2:2 정산] match_pk=" + .@pk[.@i] + " " + callfunc("F_NEED_BG2P3_Date$", .@ct[.@i]) + " " + .@sg$[.@i];
+		end;
+	}
+	if (.@sub$ == "match") {
+		.@pk = atoi(.@a1$);
+		.@key$ = ""; .@src$ = ""; .@res = 0; .@why$ = ""; .@eng = 0; .@hos = 0; .@rv = 0; .@sig$ = ""; .@w = 0; .@te = 0;
+		if (query_sql("SELECT match_key, `source`, result, end_reason, engaged, hostile_total, review, signals, week_start, ended_at FROM need_bg2_match WHERE match_pk = " + .@pk,
+			.@key$, .@src$, .@res, .@why$, .@eng, .@hos, .@rv, .@sig$, .@w, .@te) < 1) {
+			dispbottom "[2:2 정산] 경기를 찾지 못했습니다.";
+			end;
+		}
+		dispbottom "[2:2 정산] match_pk=" + .@pk + " key=" + .@key$ + " src=" + .@src$ + " result=" + .@res + " (" + .@why$ + ") engaged=" + .@eng + " hostile=" + .@hos
+			+ " review=" + .@rv + " week=" + .@w + " ended=" + callfunc("F_NEED_BG2P3_Date$", .@te) + " signals=" + .@sig$;
+		deletearray .@pa; deletearray .@pc; deletearray .@pt; deletearray .@po; deletearray .@pd; deletearray .@pp; deletearray .@pv; deletearray .@ph; deletearray .@pi; deletearray .@ps;
+		.@c = query_sql("SELECT account_id, char_id, team, outcome, deserter, points, valid, hostile, hit, support FROM need_bg2_match_player WHERE match_pk = " + .@pk + " ORDER BY team, char_id",
+			.@pa, .@pc, .@pt, .@po, .@pd, .@pp, .@pv, .@ph, .@pi, .@ps);
+		for (.@i = 0; .@i < .@c; .@i++)
+			dispbottom "[2:2 정산]  aid=" + .@pa[.@i] + " cid=" + .@pc[.@i] + " team=" + .@pt[.@i] + " out=" + .@po[.@i] + " deserter=" + .@pd[.@i] + " pts=" + .@pp[.@i] + " valid=" + .@pv[.@i]
+				+ " hostile=" + .@ph[.@i] + " hit=" + .@pi[.@i] + " support=" + .@ps[.@i];
+		end;
+	}
+	if (.@sub$ == "approve" || .@sub$ == "release" || .@sub$ == "void") {
+		if (atoi(.@a1$) <= 0 || .@why$ == "") {
+			dispbottom "[2:2 정산] 사용법: @duo2v2p3 " + .@sub$ + " <match_pk> <사유>";
+			end;
+		}
+		callfunc "F_NEED_BG2P3_Decide", atoi(.@a1$), .@sub$, .@why$;
+		end;
+	}
+	if (.@sub$ == "deserts") {
+		.@aid = callfunc("F_NEED_BG2P3_GmAid", .@a1$);
+		.@left = callfunc("F_NEED_BG2P3_Sanction", .@aid, .@now);
+		dispbottom "[2:2 정산] aid " + .@aid + ": 최근 이탈 " + $@NBG2P3_SC_CNT + "회, 남은 제한 " + .@left + "초";
+		deletearray .@id; deletearray .@at; deletearray .@pk; deletearray .@k$; deletearray .@ex; deletearray .@er$;
+		.@c = query_sql("SELECT id, `at`, match_pk, kind, exempt, exempt_reason FROM need_bg2_desertion WHERE account_id = " + .@aid + " ORDER BY id DESC LIMIT 10", .@id, .@at, .@pk, .@k$, .@ex, .@er$);
+		for (.@i = 0; .@i < .@c; .@i++)
+			dispbottom "[2:2 정산]  id=" + .@id[.@i] + " " + callfunc("F_NEED_BG2P3_Date$", .@at[.@i]) + " match_pk=" + .@pk[.@i] + " " + .@k$[.@i] + (.@ex[.@i] ? " 면제(" + .@er$[.@i] + ")" : "");
+		end;
+	}
+	if (.@sub$ == "exempt") {
+		if (atoi(.@a1$) <= 0 || .@why$ == "") {
+			dispbottom "[2:2 정산] 사용법: @duo2v2p3 exempt <탈주 id> <사유(서버 문제 증빙)>";
+			end;
+		}
+		query_sql "UPDATE need_bg2_desertion SET exempt = 1, exempt_by = " + .@gm + ", exempt_reason = '" + escape_sql(.@why$) + "', exempt_at = " + .@now + " WHERE id = " + atoi(.@a1$) + " AND exempt = 0";
+		.@rc = 0;
+		query_sql "SELECT ROW_COUNT()", .@rc;
+		if (.@rc)
+			callfunc "F_NEED_BG2P3_Audit", .@gm, "DESERT_EXEMPT", "id=" + atoi(.@a1$), .@why$;
+		dispbottom "[2:2 정산] 탈주 id " + atoi(.@a1$) + (.@rc ? " 면제 처리(제재 계산에서 빠짐). 경기 점수 정정이 필요하면 해당 경기를 void 하세요." : " : 대상 없음 또는 이미 면제");
+		end;
+	}
+	if (.@sub$ == "revoke") {
+		if (atoi(.@a1$) <= 0 || .@why$ == "") {
+			dispbottom "[2:2 정산] 사용법: @duo2v2p3 revoke <보상권 id> <사유>  (받지 않은 보상권만)";
+			end;
+		}
+		query_sql "UPDATE need_bg2_reward SET status = 8, note = '" + escape_sql("revoked by " + .@gm + ": " + .@why$) + "' WHERE id = " + atoi(.@a1$) + " AND status = 0";
+		.@rc = 0;
+		query_sql "SELECT ROW_COUNT()", .@rc;
+		if (.@rc)
+			callfunc "F_NEED_BG2P3_Audit", .@gm, "TICKET_REVOKE", "id=" + atoi(.@a1$), .@why$;
+		dispbottom "[2:2 정산] 보상권 " + atoi(.@a1$) + (.@rc ? " 회수" : " : 미수령(0) 상태가 아니라 회수하지 않음");
+		end;
+	}
+	if (.@sub$ == "pending") {
+		.@n = getarraysize($NEED_BG2_PEND_H$);
+		dispbottom "[2:2 정산] 보관 정산 " + .@n + "건";
+		for (.@i = 0; .@i < .@n && .@i < 10; .@i++)
+			dispbottom "[2:2 정산]  " + .@i + ": " + $NEED_BG2_PEND_H$[.@i];
+		end;
+	}
+	if (.@sub$ == "retry") {
+		dispbottom "[2:2 정산] 재시도 처리 " + callfunc("F_NEED_BG2P3_PendRetry") + "건, 남음 " + getarraysize($NEED_BG2_PEND_H$) + "건";
+		end;
+	}
+	dispbottom "[2:2 정산] @duo2v2p3 status | set <ledger|rank|claim> <on|off> <사유> | week [유닉스초] | points <aid|이름> [주차] | tickets <aid|이름>";
+	dispbottom "[2:2 정산] rank [cur|주차] | finalize <주차> dry|commit <사유> | due | reviews | match <pk> | approve|release|void <pk> <사유>";
+	dispbottom "[2:2 정산] deserts <aid|이름> | exempt <id> <사유> | revoke <보상권 id> <사유> | pending | retry";
+	end;
+
+S_Tickets:
+	deletearray .@id; deletearray .@w; deletearray .@k$; deletearray .@key$; deletearray .@amt; deletearray .@st; deletearray .@sq; deletearray .@nt$;
+	.@c = query_sql("SELECT id, week_start, reward_kind, reward_key, amount, status, claim_seq, note FROM need_bg2_reward WHERE account_id = " + getarg(0) + " ORDER BY id DESC LIMIT 12",
+		.@id, .@w, .@k$, .@key$, .@amt, .@st, .@sq, .@nt$);
+	dispbottom "[2:2 정산] aid " + getarg(0) + " 보상권 최근 " + .@c + "건 (status 0 미수령 1 지급확인대기 2 지급 8 회수 9 수동정산)";
+	for (.@i = 0; .@i < .@c; .@i++)
+		dispbottom "[2:2 정산]  id=" + .@id[.@i] + " week=" + .@w[.@i] + " " + .@k$[.@i] + ":" + .@key$[.@i] + " " + .@amt[.@i] + " status=" + .@st[.@i] + " seq=" + .@sq[.@i] + " " + .@nt$[.@i];
+	return;
+}
+
+// 보상 NPC: 파요 2:2 듀오 보상관.
+payo2,90,130,4	script	2:2 듀오 보상관#need_bg2p3	4_M_KNIGHT_GOLD,{
+	callfunc "F_NEED_BG2P3_Npc";
+	end;
+OnInit:
+	setnpcnameen "2v2 Duo Reward Officer";
+	end;
+}

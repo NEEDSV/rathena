@@ -14,7 +14,8 @@
 //=         → 무작위. 팀 색 무작위.
 //= 라운드: 준비 45초(첫 라운드)/15초, 90초 라운드, 2선승(최대 5라운드). 60초부터 중앙 거점, 단독 점유 10초 = 승리.
 //=         90초 종료 시 생존 인원 → 단독 점유 시간 → 무승부.
-//= 보상  : 없음. 이 파일은 보상/전적/일일퀘스트/마블/이벤트 함수를 하나도 호출하지 않는다.
+//= 보상  : 이 파일은 보상/전적/일일퀘스트/마블/이벤트 함수를 호출하지 않는다. 주간 점수·캐시 보상은 Phase 3
+//=         (need_duo2v2_p3.txt) 가 로드되고 $NEED_BG2_P3_ON 일 때 F_NEED_BG2_Finish 에서 한 번 정산한다.
 //= 명령  : @duo2v2 (@듀오관리)  GM 60+ : 대기열 열기/닫기, GM 테스트 모집/시작, 상태, 강제 중단, 고립자 복구, 설정
 //=         @duojoin (@듀오참가) / @duocancel (@듀오취소) / @duostatus (@듀오현황)
 //=         @duoaccept (@듀오수락) / @duodecline (@듀오거절) : 참가 확인 응답
@@ -194,6 +195,8 @@ function	script	F_NEED_BG2_Reason$	{
 	case 10: return needtr("지금은 참가 신청을 받지 않습니다.", "sign-ups are not open now.");
 	case 11: return needtr("정원 4명이 모두 찼습니다.", "all 4 places are taken.");
 	case 12: return needtr("거래 중에는 참가할 수 없습니다.", "cannot join while trading.");
+	case 13: return needtr("최근 24시간 경기 이탈 누적으로 2:2 신청이 제한되었습니다. 남은 시간 " + callfunc("F_NEED_BG2P3_Left$", @NEED_BG2_SANC_LEFT),
+			"2v2 sign-ups are restricted for leaving matches in the last 24 hours. Time left: " + callfunc("F_NEED_BG2P3_Left$", @NEED_BG2_SANC_LEFT));
 	}
 	return "?";
 }
@@ -363,6 +366,8 @@ function	script	F_NEED_BG2_RestoreSelf	{
 		sc_end SC_ENTRY_QUEUE_NOTIFY_ADMISSION_TIME_OUT;
 		.@to$ += " deserter_cleared";
 	}
+	if (NEED_BG2_P3 && $@NBG2P3_LOADED)	// Phase 3: 2:2 탈주는 2:2 제재로만. 경기 전부터 있던 다른 전장 탈주자 상태는 되돌린다
+		callfunc "F_NEED_BG2P3_EngineDeserter";
 	callfunc "F_NEED_BG2_Log", "RESTORE match=" + NEED_BG2_MID + " aid=" + getcharid(3) + " cid=" + .@cid + " why=" + getarg(0) + " to=" + .@to$;
 	NEED_BG2_MID = 0;
 	NEED_BG2_RMAP$ = "";
@@ -588,6 +593,8 @@ function	script	F_NEED_BG2_Launch	{
 	$NEED_BG2_LASTMID = .@mid;
 	$@NBG2_MATCH = .@mid;
 	$@NBG2_N = 4;
+	if ($@NBG2P3_LOADED)
+		callfunc "F_NEED_BG2P3_Arm", .@origin;	// Phase 3: 이 경기 정산 여부/교전 기록 초기화
 	.@reglog$ = "";
 	for (.@i = 0; .@i < 4; .@i++)
 		.@reglog$ += (.@i ? "," : "") + $@NBG2_CAND_AID[.@i] + "/" + $@NBG2_CAND_CID[.@i];
@@ -640,9 +647,15 @@ function	script	F_NEED_BG2_Launch	{
 		if (!attachrid($@NBG2_AID[.@k]))
 			continue;
 		@NEED_BG2_BUSY = 3;
+		if ($@NBG2P3_LOADED)
+			callfunc "F_NEED_BG2P3_LaunchSelf", .@k;
 		callfunc "F_NEED_BG2_ResetSelf", $@NBG2_TEAM[.@k], $@NBG2_SLOT[.@k], 0;
-		dispbottom needtr("[2:2 듀오] 당신은 " + callfunc("F_NEED_BG2_TeamName$", $@NBG2_TEAM[.@k]) + " 팀입니다. 45초 준비 후 1라운드가 시작됩니다. (테스트 경기, 보상 없음)",
-			"[2v2 Duo] You are on the " + callfunc("F_NEED_BG2_TeamName$", $@NBG2_TEAM[.@k]) + " team. Round 1 starts after 45 seconds of preparation. (Test match, no rewards)"), 0x66CCFF;
+		if ($@NBG2_P3ARMED && .@origin == 2)
+			dispbottom needtr("[2:2 듀오] 당신은 " + callfunc("F_NEED_BG2_TeamName$", $@NBG2_TEAM[.@k]) + " 팀입니다. 45초 준비 후 1라운드가 시작됩니다. (주간 2:2 점수 정산 경기)",
+				"[2v2 Duo] You are on the " + callfunc("F_NEED_BG2_TeamName$", $@NBG2_TEAM[.@k]) + " team. Round 1 starts after 45 seconds of preparation. (Weekly 2v2 points match)"), 0x66CCFF;
+		else
+			dispbottom needtr("[2:2 듀오] 당신은 " + callfunc("F_NEED_BG2_TeamName$", $@NBG2_TEAM[.@k]) + " 팀입니다. 45초 준비 후 1라운드가 시작됩니다. (테스트 경기, 보상 없음)",
+				"[2v2 Duo] You are on the " + callfunc("F_NEED_BG2_TeamName$", $@NBG2_TEAM[.@k]) + " team. Round 1 starts after 45 seconds of preparation. (Test match, no rewards)"), 0x66CCFF;
 		detachrid;
 	}
 	callfunc "F_NEED_BG2_PrepLock", 1;
@@ -679,6 +692,7 @@ function	script	F_NEED_BG2_BeginRound	{
 	$@NBG2_JUDGE_AT = 0;
 	$@NBG2_ROUND_AT = gettimetick(0);
 	$@NBG2_DEADLINE = $@NBG2_ROUND_AT + $@NBG2_C_ROUND;
+	$@NBG2_RACT = 1;	// Phase 3: 라운드 진행 시간 누적(검토 신호)
 	callfunc "F_NEED_BG2_CapReset";
 	for (.@i = 0; .@i < $@NBG2_N; .@i++) {
 		$@NBG2_ALIVE[.@i] = !$@NBG2_GONE[.@i];
@@ -708,6 +722,8 @@ function	script	F_NEED_BG2_EndRound	{
 	}
 	$@NBG2_STATE = 5;
 	$@NBG2_JUDGE_AT = 0;
+	if ($@NBG2P3_LOADED)
+		callfunc "F_NEED_BG2P3_CloseActive";
 	if (.@res == 1) $@NBG2_WIN_B++;
 	else if (.@res == 2) $@NBG2_WIN_R++;
 	else $@NBG2_DRAWS++;
@@ -786,6 +802,9 @@ function	script	F_NEED_BG2_Finish	{
 	$@NBG2_JUDGE_AT = 0;
 	$@NBG2_DEPART_AT = 0;
 	$@NBG2_RESULT = .@kind;
+	if ($@NBG2P3_LOADED)
+		callfunc "F_NEED_BG2P3_CloseActive";
+	.@p3 = ($@NBG2_P3ARMED && $@NBG2_ORIGIN == 2);
 	$@NBG2_DEADLINE = gettimetick(0) + $@NBG2_C_SHOW;
 	if (.@kind == 3 || .@kind == 4)
 		callfunc "F_NEED_BG2_RememberNoPenalty";	// 무효/취소: 전원 0점, 유효 경기 아님, 탈주 제재 없음
@@ -799,9 +818,16 @@ function	script	F_NEED_BG2_Finish	{
 	$@NBG2_LAST$ = "match " + $@NBG2_MATCH + " " + .@name$[.@kind] + " (" + getarg(1) + ") B" + $@NBG2_WIN_B + ":R" + $@NBG2_WIN_R
 		+ " draws " + $@NBG2_DRAWS + " rounds " + $@NBG2_ROUND + (.@gone$ == "" ? "" : " gone " + .@gone$);
 	callfunc "F_NEED_BG2_Log", "MATCH_END match=" + $@NBG2_MATCH + " result=" + .@name$[.@kind] + " why=" + getarg(1)
-		+ " score=" + $@NBG2_WIN_B + ":" + $@NBG2_WIN_R + " draws=" + $@NBG2_DRAWS + " rounds=" + $@NBG2_ROUND + " gone=" + .@gone$ + " reward=none";
-	mapannouncelang $@NBG2_MAP$, "[2:2 듀오] 매치 종료: " + .@kr$[.@kind] + " (블루 " + $@NBG2_WIN_B + " : " + $@NBG2_WIN_R + " 레드). 테스트 경기라 보상은 없습니다. 5초 후 저장 지점으로 돌아갑니다.",
-		"[2v2 Duo] Match over: " + .@en$[.@kind] + " (Blue " + $@NBG2_WIN_B + " : " + $@NBG2_WIN_R + " Red). Test match, no rewards. You return to your save point in 5 seconds.", bc_map, "0x99FF99";
+		+ " score=" + $@NBG2_WIN_B + ":" + $@NBG2_WIN_R + " draws=" + $@NBG2_DRAWS + " rounds=" + $@NBG2_ROUND + " gone=" + .@gone$ + " reward=" + ($@NBG2_P3ARMED ? "p3_ledger" : "none");
+	if (.@p3)
+		mapannouncelang $@NBG2_MAP$, "[2:2 듀오] 매치 종료: " + .@kr$[.@kind] + " (블루 " + $@NBG2_WIN_B + " : " + $@NBG2_WIN_R + " 레드). 주간 점수는 개인 메시지로 안내합니다. 5초 후 저장 지점으로 돌아갑니다.",
+			"[2v2 Duo] Match over: " + .@en$[.@kind] + " (Blue " + $@NBG2_WIN_B + " : " + $@NBG2_WIN_R + " Red). Your weekly points follow in a private message. You return to your save point in 5 seconds.", bc_map, "0x99FF99";
+	else
+		mapannouncelang $@NBG2_MAP$, "[2:2 듀오] 매치 종료: " + .@kr$[.@kind] + " (블루 " + $@NBG2_WIN_B + " : " + $@NBG2_WIN_R + " 레드). 테스트 경기라 보상은 없습니다. 5초 후 저장 지점으로 돌아갑니다.",
+			"[2v2 Duo] Match over: " + .@en$[.@kind] + " (Blue " + $@NBG2_WIN_B + " : " + $@NBG2_WIN_R + " Red). Test match, no rewards. You return to your save point in 5 seconds.", bc_map, "0x99FF99";
+	// Phase 3 정산: 서버 권위 종료 지점(경기당 한 번). 로그 파싱이 아니라 이 시점의 경기 상태로 원장에 넣는다.
+	if ($@NBG2_P3ARMED && $@NBG2P3_LOADED)
+		callfunc "F_NEED_BG2P3_Settle", .@kind, getarg(1);
 	callfunc "F_NEED_BG2_ModeAll", $@NBG2_C_LOCK;
 	return 1;
 }
@@ -1022,6 +1048,8 @@ function	script	F_NEED_BG2_Watch	{
 				callfunc "F_NEED_BG2_Log", "SPECTATOR_MOVED match=" + $@NBG2_MATCH + " round=" + $@NBG2_ROUND + " cid=" + .@cid + " from=" + .@x + "," + .@y;
 			}
 		}
+		if ($@NBG2P3_LOADED)
+			callfunc "F_NEED_BG2P3_SyncSelf", .@i;	// Phase 3: 교전 카운터를 경기 기록으로(접속이 끊겨도 남게)
 		detachrid;
 		if (.@code)
 			callfunc "F_NEED_BG2_Depart", .@i, .@code;
@@ -1152,6 +1180,8 @@ function	script	F_NEED_BG2_Rejoin	{
 		callfunc "F_NEED_BG2_SetMode", $@NBG2_C_LOCK;
 	else
 		callfunc "F_NEED_BG2_ResetSelf", .@t, $@NBG2_SLOT[.@i], 0;
+	if ($@NBG2P3_LOADED)
+		callfunc "F_NEED_BG2P3_RejoinSelf", .@i;
 	callfunc "F_NEED_BG2_Log", "REJOIN match=" + $@NBG2_MATCH + " cid=" + .@cid + " state=" + $@NBG2_STATE + " grace_used=" + $@NBG2_GRACE_USED[.@i] + " at=" + .@now;
 	@NEED_BG2_BUSY = 3;
 	dispbottom needtr("[2:2 듀오] 경기에 복귀했습니다." + (.@inround ? " 이번 라운드는 관전석에서 기다립니다." : ""),
@@ -1287,6 +1317,8 @@ function	script	F_NEED_BG2_QJoin	{
 		.@code = 9;
 	else
 		.@code = callfunc("F_NEED_BG2_CheckSelf", 1);
+	if (!.@code && $@NBG2P3_LOADED)
+		.@code = callfunc("F_NEED_BG2P3_JoinCheck");	// Phase 3: 최근 24시간 탈주 누적 제재(13)
 	if (.@code) {
 		callfunc "F_NEED_BG2_Log", "QUEUE_REFUSED aid=" + .@aid + " cid=" + .@cid + " code=" + .@code;
 		return .@code;
@@ -1844,8 +1876,11 @@ OnDieR:
 OnQuitB:
 OnQuitR:
 	.@i = callfunc("F_NEED_BG2_IndexOf", getcharid(0));
-	if (.@i >= 0)
+	if (.@i >= 0) {
+		if ($@NBG2P3_LOADED)
+			callfunc "F_NEED_BG2P3_SyncSelf", .@i;
 		callfunc "F_NEED_BG2_Depart", .@i, 1;
+	}
 	end;
 
 OnPCLoginEvent:

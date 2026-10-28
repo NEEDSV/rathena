@@ -1515,6 +1515,9 @@ int32 status_damage(block_list *src,block_list *target,int64 dhp, int64 dsp, int
 
 	nullpo_ret(target);
 
+	if( hp > 0 && src != nullptr && src != target )
+		bg_need_combat_note( src, target, 0 );	// NEED Duo Survival 2v2: real damage between the two teams
+
 	if(sp && !(target->type&BL_CONSUME))
 		sp = 0; // Not a valid SP target.
 
@@ -13745,6 +13748,9 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 
 	if( opt_flag[SCF_ONTOUCH] && sd && !sd->npc_ontouch_.empty() )
 		npc_touchnext_areanpc(sd,false); // Run OnTouch_ on next char in range
+
+	if( src != nullptr && src != bl && scdb->flag[SCF_DEBUFF] )
+		bg_need_combat_note( src, bl, 1 );	// NEED Duo Survival 2v2: a debuff from the other team took hold
 
 	return true;
 }

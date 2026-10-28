@@ -132,6 +132,7 @@ std::shared_ptr<s_battleground_type> bg_search_name(const char *name);
 std::shared_ptr<s_battleground_queue> bg_search_queue(int32 queue_id);
 void bg_send_dot_remove(map_session_data *sd);
 int32 bg_team_get_id( const block_list* bl );
+void bg_need_combat_note( block_list* src, block_list* target, int32 kind );
 map_session_data* bg_getavailablesd(s_battleground_data *bg);
 const map_session_data* bg_getavailablesd( const s_battleground_data* bg );
 
