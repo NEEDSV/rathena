@@ -36,11 +36,18 @@ ein_fild04,275,342,5	script	스트라이커 부대 지휘관#::Striker Unit Commander#	4_M
 		mes needtr("이곳은 위험하니 빨리 떠나라. 여긴 적 기지 근처다.","This place is dangerous and you must leave quickly. We are near the enemy base.");
 		close;
 	}
+	// NEED: 12375 는 입장 쿨타임(다음 04:00)입니다. NEED 는 스토리 전에도 반복용을 열어 두었으므로,
+	//       반복용을 먼저 들어간 메인 19 캐릭터가 그날 스토리를 못 하게 되는 일이 생깁니다.
+	//       파티가 만든 인던이 스토리용이고 본인이 메인 19 스토리 대기(12374 진행 중)이면 쿨타임을 무시합니다.
+	.@need_iid = instance_id(IM_PARTY);
+	.@need_story_pass = (terra_gloria_main == 19 && isbegin_quest(12374) == 1 && .@need_iid > 0 && instance_live_info(ILI_NAME, .@need_iid) == "하트헌터 기지 외곽 [스토리]");
 	switch( checkquest(12375,PLAYTIME) ) {
 	case -1:
 		break;
 	case 0:
 	case 1:
+		if (.@need_story_pass)
+			break;
 		mes needtr("[스트라이커 부대 지휘관]","[Striker Unit Commander]");
 		mes needtr("기지 내부 상황을 정리하는 중이다. 아직 들여보낼 수 없어.","We are arranging the situation inside the base. We cannot let you in yet.");
 		close;
@@ -122,11 +129,18 @@ ein_fild04,281,337,3	script	줄리안#ep16.2::Julian#ep16.2	4_M_REBELLION2,{
 		mes needtr("^ff0000파티장만 줄리안과 자세한 대화를 할 수 있습니다.^000000","^ff0000Only the party leader can talk to Julian in detail.^000000");
 		close;
 	}
+	// NEED: 반복용 입장 쿨타임(12375) 중이라도 메인 19 스토리 대기 캐릭터는 스토리용(기지 점령 작전)만 준비할 수 있습니다.
+	//       12374 가 아직 없는 캐릭터는 아래 브리핑에서 받으므로 함께 허용합니다 (완료(2)면 스토리는 이미 끝남).
+	.@need_cd = 0;
 	switch( checkquest(12375,PLAYTIME) ) {
 	case -1:
 		break;
 	case 0:
 	case 1:
+		if (terra_gloria_main == 19 && isbegin_quest(12374) != 2) {
+			.@need_cd = 1;
+			break;
+		}
 		mes needtr("[줄리안]","[Julian]");
 		mes needtr("기지 내부 상황을 정리하는 중이다. 아직 입장할 수 없다.","We are arranging the situation inside the base. You cannot enter yet.");
 		close;
@@ -228,7 +242,12 @@ ein_fild04,281,337,3	script	줄리안#ep16.2::Julian#ep16.2	4_M_REBELLION2,{
 	// NEED: 메인 19 캐릭터는 스토리(기지 점령 작전) / 반복(방어 훈련)을 고를 수 있습니다.
 	//       반복용은 최초 클리어 이후 간소화 진행을 고를 수 있습니다 (파티 전원 클리어 필요).
 	.@story = (terra_gloria_main == 19);
-	if (.@story && callfunc("F_NEED_EP162_CanUseArea")) {
+	if (.@story && .@need_cd) {
+		mes needtr("[줄리안]","[Julian]");
+		mes needtr("오늘은 이미 기지에 다녀왔군. 방어 훈련은 내일 다시 할 수 있지만, 기지 점령 작전(스토리)은 바로 준비할 수 있다.","You have already been to the base today. Defense training can be done again tomorrow, but the base occupation (story) can be prepared right away.");
+		next;
+	}
+	else if (.@story && callfunc("F_NEED_EP162_CanUseArea")) {
 		mes needtr("[줄리안]","[Julian]");
 		mes needtr("어느 작전으로 준비할까?","Which operation should I prepare?");
 		next;
