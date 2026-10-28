@@ -1063,11 +1063,11 @@ BUILDIN_FUNC(storageshopprepare)
 	return SCRIPT_CMD_SUCCESS;
 }
 
-// NEED 2026 chuseok event: claim the honey songpyun through the shared daily ledger.
-// needchuseokhoney({"<source>"}) - source defaults to "BG".
-// Returns 1 delivered, 0 account daily limit, -1 ip daily limit,
+// NEED 2026 halloween event: jack game daily reward through the shared daily ledger.
+// needhalloweenjack(0) only checks: 1 already rewarded today (account or IP), 0 not yet, -1 ledger unavailable.
+// needhalloweenjack(1) pays 10 halloween coins: 1 delivered, 0 account daily limit, -1 ip daily limit,
 // -2 inventory unavailable, -3 database error, -4 feature disabled.
-BUILDIN_FUNC(needchuseokhoney)
+BUILDIN_FUNC(needhalloweenjack)
 {
 	map_session_data* sd = nullptr;
 
@@ -1076,8 +1076,262 @@ BUILDIN_FUNC(needchuseokhoney)
 		return SCRIPT_CMD_SUCCESS;
 	}
 
-	const char* source = script_hasdata(st, 2) ? script_getstr(st, 2) : "BG";
+	if (script_getnum(st, 2) == 0)
+		script_pushint(st, need_halloween_jack_claimed_today(sd));
+	else
+		script_pushint(st, need_halloween_jack_grant(sd));
+	return SCRIPT_CMD_SUCCESS;
+}
 
-	script_pushint(st, need_chuseok_honey_grant(sd, source, nullptr));
+// NEED 2026 halloween event: Jack's Candy (6532) daily state for the Event Hub.
+// needhalloweencandy() : 1 the account or the current IP already got today's candy, 0 not yet, -1 ledger unavailable.
+BUILDIN_FUNC(needhalloweencandy)
+{
+	map_session_data* sd = nullptr;
+
+	if (!script_rid2sd(sd)) {
+		script_pushint(st, -1);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	script_pushint(st, need_halloween_candy_claimed_today(sd));
+	return SCRIPT_CMD_SUCCESS;
+}
+
+// NEED Event Hub: resend the Event button state (clif_need_eventhub_state) after the script
+// changed $NEED_EVHUB_ON (F_NEED_EventHub_Update in need_event_hub.txt).
+// needeventhub_refresh()  -> the attached player only, returns 1 (0 without a player)
+// needeventhub_refresh(1) -> every online player, returns how many were sent
+BUILDIN_FUNC(needeventhub_refresh)
+{
+	if (script_hasdata(st, 2) && script_getnum(st, 2) != 0) {
+		int32 count = 0;
+		s_mapiterator* iter = mapit_getallusers();
+
+		for (map_session_data* pl_sd = (map_session_data*)mapit_first(iter); mapit_exists(iter); pl_sd = (map_session_data*)mapit_next(iter)) {
+			clif_need_eventhub_state(*pl_sd);
+			count++;
+		}
+		mapit_free(iter);
+		script_pushint(st, count);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	map_session_data* sd = nullptr;
+
+	if (!script_rid2sd(sd)) {
+		script_pushint(st, 0);
+		return SCRIPT_CMD_SUCCESS;
+	}
+	clif_need_eventhub_state(*sd);
+	script_pushint(st, 1);
+	return SCRIPT_CMD_SUCCESS;
+}
+
+// NEED daily quest (phase 1): one command = one SQL transaction (spec 4.3).
+// needdq_status() fills the @dq_* display variables and returns the state
+//   (0 not accepted, 1 accepted, 2 capped, 3 locked out, 4 level changed, 5 not eligible, -8 disabled).
+// needdq_accept() / needdq_reaccept() / needdq_submit() return e_need_dq_result;
+// needdq_submit() also sets @dq_gained.
+BUILDIN_FUNC(needdq_status)
+{
+	map_session_data* sd = nullptr;
+
+	if (!script_rid2sd(sd)) {
+		script_pushint(st, NEED_DQ_ERROR);
+		return SCRIPT_CMD_SUCCESS;
+	}
+	script_pushint(st, need_daily_quest_script_status(sd));
+	return SCRIPT_CMD_SUCCESS;
+}
+
+BUILDIN_FUNC(needdq_accept)
+{
+	map_session_data* sd = nullptr;
+
+	if (!script_rid2sd(sd)) {
+		script_pushint(st, NEED_DQ_ERROR);
+		return SCRIPT_CMD_SUCCESS;
+	}
+	script_pushint(st, need_daily_quest_script_accept(sd));
+	return SCRIPT_CMD_SUCCESS;
+}
+
+BUILDIN_FUNC(needdq_reaccept)
+{
+	map_session_data* sd = nullptr;
+
+	if (!script_rid2sd(sd)) {
+		script_pushint(st, NEED_DQ_ERROR);
+		return SCRIPT_CMD_SUCCESS;
+	}
+	script_pushint(st, need_daily_quest_script_reaccept(sd));
+	return SCRIPT_CMD_SUCCESS;
+}
+
+BUILDIN_FUNC(needdq_submit)
+{
+	map_session_data* sd = nullptr;
+
+	if (!script_rid2sd(sd)) {
+		script_pushint(st, NEED_DQ_ERROR);
+		return SCRIPT_CMD_SUCCESS;
+	}
+	script_pushint(st, need_daily_quest_script_submit(sd));
+	return SCRIPT_CMD_SUCCESS;
+}
+
+// NEED daily quest phase 3: battleground games.
+// needdq_bg_start("<Tierra|Flavius|KVM>", <team1 bg id>, <team2 bg id>, "<battle map>") at the battle start.
+// needdq_bg_finish("<type>") at the official end judges every player on the battle map (D2, below).
+BUILDIN_FUNC(needdq_bg_start)
+{
+	script_pushint(st, need_daily_quest_script_bg_start(script_getstr(st, 2), script_getnum(st, 3), script_getnum(st, 4), script_getstr(st, 5)));
+	return SCRIPT_CMD_SUCCESS;
+}
+
+// needdq_claim(<20|40|60|80>) for the attached player: 10,000 cash of that tier (v1.5 Phase 5-Lite).
+BUILDIN_FUNC(needdq_claim)
+{
+	map_session_data* sd = nullptr;
+
+	if (!script_rid2sd(sd)) {
+		script_pushint(st, NEED_DQ_ERROR);
+		return SCRIPT_CMD_SUCCESS;
+	}
+	script_pushint(st, need_daily_quest_script_claim(sd, script_getnum(st, 2)));
+	return SCRIPT_CMD_SUCCESS;
+}
+
+// needdq_bg_finish "<Tierra|Flavius|KVM>"; at the official end of a battle (no player needs to be attached).
+BUILDIN_FUNC(needdq_bg_finish)
+{
+	script_pushint(st, need_daily_quest_script_bg_finish(script_getstr(st, 2)));
+	return SCRIPT_CMD_SUCCESS;
+}
+
+// NEED daily quest (phase 4): needdq_inst_clear "<OGH_HARD|OGH|SKY_FORTRESS>"{,<instance id>};
+// Call with each player on the boss map attached (F_NEED_DQ_InstClear).
+BUILDIN_FUNC(needdq_inst_clear)
+{
+	map_session_data* sd = nullptr;
+
+	if (!script_rid2sd(sd)) {
+		script_pushint(st, NEED_DQ_ERROR);
+		return SCRIPT_CMD_SUCCESS;
+	}
+	int32 instance_id = script_hasdata(st, 3) ? script_getnum(st, 3) : 0;
+	script_pushint(st, need_daily_quest_script_inst_clear(sd, script_getstr(st, 2), instance_id));
+	return SCRIPT_CMD_SUCCESS;
+}
+
+// NEED stylist: change only the hair color by palette number from the NPC menu.
+// needstylistcolor(<palette>{,<mode>})
+// The purchase goes through clif_parse_stylist_buy_sub with the matching Hair_Color entry index,
+// so costs, checks and pay order are the same as the stylist UI (db/re/stylist.yml).
+// mode 0 (default): validate only, cost goes to @need_stylist_price/@need_stylist_item/@need_stylist_box.
+// mode 1: purchase.
+// mode 2: validate, then show the palette on the player's own client only (nothing saved or charged).
+//         With the current color it sends the real color back, so
+//         needstylistcolor(getlook(LOOK_HAIR_COLOR),2) clears a preview.
+// Returns 1 ok, 0 same as the current color (nothing charged), -1 stylist disabled or no player,
+// -2 outside 0~263, -3 outside min/max_hair_color, -4 not in the stylist db, -5 job not allowed,
+// -6 several stylist entries share the palette, -7 player busy, -8 purchase failed (zeny/item).
+BUILDIN_FUNC(needstylistcolor)
+{
+	constexpr int32 NEED_STYLIST_HAIR_COLOR_LIMIT = 263;
+	map_session_data* sd = nullptr;
+
+	if (!script_rid2sd(sd) || !battle_config.feature_stylist) {
+		script_pushint(st, -1);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	int32 palette = script_getnum(st, 2);
+	int32 mode = script_hasdata(st, 3) ? script_getnum(st, 3) : 0;
+
+	pc_setreg(sd, add_str("@need_stylist_price"), 0);
+	pc_setreg(sd, add_str("@need_stylist_item"), 0);
+	pc_setreg(sd, add_str("@need_stylist_box"), 0);
+
+	if (palette < 0 || palette > NEED_STYLIST_HAIR_COLOR_LIMIT) {
+		script_pushint(st, -2);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	if (palette < MIN_HAIR_COLOR || palette > MAX_HAIR_COLOR) {
+		script_pushint(st, -3);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	if (sd->status.hair_color == palette) {
+		if (mode == 2)
+			clif_sprite_change(sd, sd->id, LOOK_HAIR_COLOR, palette, 0, SELF);
+		script_pushint(st, 0);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	// Index is the client option id, Value is the palette (e.g. Index -1 = Value 0)
+	std::shared_ptr<s_stylist_list> list = stylist_db.find(LOOK_HAIR_COLOR);
+	std::shared_ptr<s_stylist_entry> entry = nullptr;
+	int32 matches = 0;
+
+	if (list != nullptr) {
+		for (const auto& it : list->entries) {
+			if (it.second->value == static_cast<uint32>(palette)) {
+				entry = it.second;
+				matches++;
+			}
+		}
+	}
+
+	if (entry == nullptr) {
+		script_pushint(st, -4);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	// The UI lets the player pick one of them, here we cannot tell which cost applies
+	if (matches > 1) {
+		ShowWarning("buildin_needstylistcolor: Hair_Color value %d is used by %d stylist entries, refused.\n", palette, matches);
+		script_pushint(st, -6);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	if (!entry->required_jobs.empty() && !util::vector_exists(entry->required_jobs, sd->status.class_)) {
+		script_pushint(st, -5);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	std::shared_ptr<s_stylist_costs> costs = ((sd->class_ & MAPID_FIRSTMASK) == MAPID_SUMMONER) ? entry->doram : entry->human;
+
+	if (costs != nullptr) {
+		pc_setreg(sd, add_str("@need_stylist_price"), costs->price);
+		pc_setreg(sd, add_str("@need_stylist_item"), costs->requiredItem);
+		pc_setreg(sd, add_str("@need_stylist_box"), costs->requiredItemBox);
+	}
+
+	if (pc_cant_act2(sd)) {
+		script_pushint(st, -7);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	if (mode == 2) {
+		// Client side only, sd->status.hair_color stays as it is
+		clif_sprite_change(sd, sd->id, LOOK_HAIR_COLOR, palette, 0, SELF);
+		script_pushint(st, 1);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	if (mode != 1) {
+		script_pushint(st, 1);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	if (!clif_parse_stylist_buy_sub(sd, LOOK_HAIR_COLOR, entry->index)) {
+		script_pushint(st, -8);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	script_pushint(st, 1);
 	return SCRIPT_CMD_SUCCESS;
 }

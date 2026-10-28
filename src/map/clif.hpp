@@ -674,6 +674,9 @@ enum e_clif_messages : uint16 {
 	// Currently there is no attendance check event.
 	MSI_CHECK_ATTENDANCE_NOT_EVENT = 3474,
 
+	// NEED: Equipment has been destroyed. (enchant destroy result)
+	MSI_ITEM_GRADE_ENCHANT_FAIL_BREAK = 3705,
+
 	// The total amount of items to sell exceeds the amount of Zeny you can have. \nPlease modify the quantity and price.
 	MSI_MERCHANTSHOP_TOTA_LOVER_ZENY_ERR = 3826,
 
@@ -685,6 +688,12 @@ enum e_clif_messages : uint16 {
 
 	// Enchantment failed!
 	MSI_ENCHANT_FAILED = 3858,
+
+	// NEED: The RODEX cannot be used during an enchant.
+	MSI_CANNOT_OPEN_RODEX_DURING_ENCHANT = 3843,
+
+	// NEED: The enchant conditions are not met. (request refused before anything was paid)
+	MSI_NOT_SATISFIED_ENCHANT_CONDITION = 3860,
 
 	MSI_GENDER_CHANGE_FAILED_CAUSE_JOB = 4130,
 	MSI_GENDER_CHANGE_FAILED_CAUSE_GROUP = 4131,
@@ -923,6 +932,9 @@ void clif_dropitem( const map_session_data& sd, int32 index, int32 amount );
 void clif_delitem( const map_session_data& sd, int32 index, int32 amount, int16 reason );
 void clif_update_hp( const map_session_data& sd );
 void clif_updatestatus( map_session_data& sd, _sp type );
+// NEED Event Hub button state (ZC_PAR_CHANGE var id read by the NeedEventButton exe patch).
+#define NEED_EVHUB_VAR_ID 0x4556
+void clif_need_eventhub_state( map_session_data& sd );
 void clif_changemanner( const map_session_data& sd );
 void clif_damage( block_list& src, block_list& dst, t_tick tick, int32 sdelay, int32 ddelay, int64 sdamage, int16 div, enum e_damage_type type, int64 sdamage2, bool spdamage);	// area
 void clif_takeitem( const block_list& src, const block_list& dst);
@@ -1476,6 +1488,8 @@ enum out_ui_type : int8 {
 };
 
 void clif_ui_open( map_session_data& sd, enum out_ui_type ui_type, int32 data );
+// NEED: also used by buildin_needstylistcolor so the NPC hair color input pays exactly like the stylist UI.
+bool clif_parse_stylist_buy_sub( map_session_data* sd, enum _look look, int16 index );
 void clif_attendence_response( const map_session_data* sd, int32 data );
 
 void clif_weight_limit( const map_session_data* sd );
@@ -1518,6 +1532,11 @@ void clif_item_reform_open( map_session_data& sd, t_itemid item );
 
 // Item Enchant UI
 void clif_enchantwindow_open( map_session_data& sd, uint64 clientLuaIndex );
+void clif_enchantwindow_result_message( map_session_data& sd, int32 msgId, t_itemid enchant = 0 );
+#ifdef NEED_ENCHANT_TEST
+void clif_enchantwindow_result_probe( map_session_data& sd, int32 msgId, t_itemid itid );
+int32 clif_enchantwindow_test_request( map_session_data& sd, char op, uint64 group, uint16 index, uint32 arg );
+#endif
 
 // Enchanting Shadow / Shadow Scar Spirit
 void clif_enchantingshadow_spirit(const unit_data &ud);

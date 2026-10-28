@@ -1579,11 +1579,20 @@ OnMobDead:
 1@sthd,96,127,0	script	#Last_Boss	HIDDEN_WARP_NPC,{
 	end;
 OnStart:
+	// NEED 일일 퀘스트 (2026-10-26): 인던 생성 때 꺼 둔 이 NPC는 몬스터 사망 이벤트를 받지 못한다
+	// (npc_event_sub: 비활성 NPC의 이벤트는 버림). 보스를 부를 때 켜야 OnBossDead 가 실행된다.
+	enablenpc instance_npcname("#Last_Boss");
 	monster 'sthd_map$,103,115,"스테판 잭 어니스트 울프",3473,1, instance_npcname("#Last_Boss") + "::OnBossDead";		// AS_RAGGED_GOLEM
 	'boss_id = $@mobid[0];
 	initnpctimer;
 	end;
 OnBossDead:
+	// NEED 일일 퀘스트: 최종 보스가 쓰러진 순간 보스 맵의 전원에게 인던 클리어 1회 (Lv175, 수락 필요)
+	// 타이머의 클리어 판정은 보스가 사라지기만 해도 진행되므로 여기서 센다.
+	if (!'NEED_DQ_INST_DONE) {
+		'NEED_DQ_INST_DONE = 1;
+		callfunc "F_NEED_DQ_InstClear", "SKY_FORTRESS", 'sthd_map$;
+	}
 	end;
 OnTimer1000:
 	if ('boss_id < 1 || mobcount( 'sthd_map$, instance_npcname("#Last_Boss") + "::OnBossDead" ) < 1) {

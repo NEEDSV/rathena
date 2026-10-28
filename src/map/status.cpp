@@ -3797,6 +3797,52 @@ static bool status_battle_gear_is_costume_equip_index(int32 equip_idx)
 	return equip_idx >= EQI_COSTUME_HEAD_TOP && equip_idx <= EQI_COSTUME_GARMENT;
 }
 
+// NEED BG phase 1 whitelists (CM approval 2026-10-26). They only apply on battle_gear_disabled maps that also carry
+// need_bg_shadow_allow / need_bg_stone_allow (the three legacy battlegrounds); anything unlisted stays blocked.
+// Audit and reasons: md/NEED_BG_Phase1_Improvement_Claude_Request_v1.0_report.md
+
+// General shadow gear: the item's own script only. Random options on shadows stay blocked, and a shadow set
+// only applies when every shadow member is listed (e.g. Infinity Earring is not, so the Infinity set's NoSizeFix stays off).
+static const t_itemid need_bg_shadow_allow_ids[] = {
+	24073,	// S_Medium_Armor		damage from medium size -2/3/5% (+7/+9), MaxHP +10/refine
+	24076,	// S_Medium_Weapon		ATK/MATK +refine, physical/magic damage to medium size +2/3/5%
+	24052,	// S_Cranial_Shield		damage from human players -1/2/3%, MaxHP +10/refine
+	24062,	// S_Bloody_Shoes		physical/magic damage to human players +2/3/5%, MaxHP +10/refine
+	24151,	// S_Infinity_Pendant	damage from all sizes -1/2/3%, MaxHP +10/refine
+	// v1.1: S_Boned_Earring / S_Boned_Pendant (24236/24237) removed - too much stacked damage with their set
+};
+
+// Costume enchant stones, by the card ID stored in the costume slot (not the Etc material item). 32 IDs.
+// Costume stone sets stay blocked (status_battle_gear_combo_has_card_in_pos).
+static const t_itemid need_bg_stone_allow_ids[] = {
+	4807, 310654,							// ASPD +1 (upper / garment, garment dual)
+	4700, 4710, 4720, 4730, 4740, 4750,		// STR/INT/DEX/AGI/VIT/LUK +1 (upper / middle)
+	29028, 4882, 29029,						// ATK +1% (upper / middle / lower)
+	29030, 4883, 29031,						// MATK +1% (upper / middle / lower)
+	4936, 4937, 4938,						// physical damage to large / medium / small size +1% (upper)
+	310325, 29048, 310326,					// ranged physical damage +3% (upper / middle / lower)
+	310327, 310328, 310329,					// melee physical damage +3% (upper / middle / lower)
+	310664, 310665, 310666,					// magic damage, all elements +3% (upper / middle / lower)
+	314662, 314663, 314664,					// non-critical physical damage +3% (upper / middle / lower)
+	29359, 29047, 29360,					// critical damage +3% (upper / middle / lower)
+};
+
+template <size_t N>
+static bool status_battle_gear_is_listed(const t_itemid (&list)[N], t_itemid nameid)
+{
+	return std::find(std::begin(list), std::end(list), nameid) != std::end(list);
+}
+
+static bool status_battle_gear_combo_shadows_allowed(const s_item_combo& item_combo)
+{
+	for (const t_itemid nameid : item_combo.nameid) {
+		if (itemdb_type(nameid) == IT_SHADOWGEAR && !status_battle_gear_is_listed(need_bg_shadow_allow_ids, nameid))
+			return false;
+	}
+
+	return true;
+}
+
 static bool status_battle_gear_combo_has_card_in_pos(map_session_data* sd, const s_item_combo& item_combo, uint32 equip_pos)
 {
 	for (const t_itemid nameid : item_combo.nameid) {
@@ -3987,6 +4033,8 @@ int32 status_calc_pc_sub(map_session_data* sd, uint8 opt)
 	}
 
 	const bool battle_gear_disabled = map_getmapflag(sd->m, MF_BATTLE_GEAR_DISABLED) != 0;
+	const bool battle_gear_shadow_allow = battle_gear_disabled && map_getmapflag(sd->m, MF_NEED_BG_SHADOW_ALLOW) != 0;
+	const bool battle_gear_stone_allow = battle_gear_disabled && map_getmapflag(sd->m, MF_NEED_BG_STONE_ALLOW) != 0;
 
 	// Parse equipment
 	for (i = 0; i < EQI_MAX; i++) {
@@ -4000,7 +4048,8 @@ int32 status_calc_pc_sub(map_session_data* sd, uint8 opt)
 			continue;
 		if (!sd->inventory_data[index])
 			continue;
-		if (battle_gear_disabled && status_battle_gear_is_shadow_equip_index(i))
+		if (battle_gear_disabled && status_battle_gear_is_shadow_equip_index(i)
+			&& !(battle_gear_shadow_allow && status_battle_gear_is_listed(need_bg_shadow_allow_ids, sd->inventory_data[index]->nameid)))
 			continue;
 
 		base_status->def += sd->inventory_data[index]->def;
@@ -4152,7 +4201,7 @@ int32 status_calc_pc_sub(map_session_data* sd, uint8 opt)
 			if (combo->bonus == nullptr || !(item_combo = itemdb_combo.find(combo->id)))
 				continue;
 			if (battle_gear_disabled) {
-				if (combo->pos & EQP_SHADOW_GEAR)
+				if ((combo->pos & EQP_SHADOW_GEAR) && !(battle_gear_shadow_allow && status_battle_gear_combo_shadows_allowed(*item_combo)))
 					continue;
 				if ((combo->pos & EQP_COSTUME) && status_battle_gear_combo_has_card_in_pos(sd, *item_combo, EQP_COSTUME))
 					continue;
@@ -4200,7 +4249,11 @@ int32 status_calc_pc_sub(map_session_data* sd, uint8 opt)
 			continue;
 		if (pc_is_same_equip_index((enum equip_index)i, sd->equip_index, index))
 			continue;
-		if (battle_gear_disabled && (status_battle_gear_is_shadow_equip_index(i) || status_battle_gear_is_costume_equip_index(i)))
+		if (battle_gear_disabled && status_battle_gear_is_shadow_equip_index(i))
+			continue;
+		// Costume stones: only the whitelisted ones run (checked per slot below), none without need_bg_stone_allow
+		const bool costume_stone_filter = battle_gear_disabled && status_battle_gear_is_costume_equip_index(i);
+		if (costume_stone_filter && !battle_gear_stone_allow)
 			continue;
 
 		if (sd->inventory_data[index]) {
@@ -4213,6 +4266,8 @@ int32 status_calc_pc_sub(map_session_data* sd, uint8 opt)
 				int32 c = sd->inventory.u.items_inventory[index].card[j];
 				current_equip_card_id= c;
 				if(!c)
+					continue;
+				if (costume_stone_filter && !status_battle_gear_is_listed(need_bg_stone_allow_ids, c))
 					continue;
 
 				std::shared_ptr<item_data> data = item_db.find(c);
@@ -4301,8 +4356,10 @@ int32 status_calc_pc_sub(map_session_data* sd, uint8 opt)
 
 	pc_bonus_script(sd);
 
+	sd->rune_display.want = 0;
 	if(sd->runeactivated_data.tagID)
 		rune_active_bonus(sd);
+	rune_display_refresh(sd); // NEED rune tooltip: show/swap/remove the rune icon (only on change)
 
 	if( sd->pd ) { // Pet Bonus
 		pet_data *pd = sd->pd;
@@ -7744,6 +7801,10 @@ static int16 status_calc_flee(block_list *bl, status_change *sc, int32 flee)
 		return 0;
 	if(sc->getSCE(SC_OVERED_BOOST)) //Should be final and unmodifiable by any means
 		return sc->getSCE(SC_OVERED_BOOST)->val2;
+#ifdef NEED_2017_HOMUNCULUS_S
+	if(sc->getSCE(SC_TINDER_BREAKER) || sc->getSCE(SC_TINDER_BREAKER2))
+		return 1; // 1 = min flee (2017)
+#endif
 
 	// Fixed value
 	if(sc->getSCE(SC_INCFLEE))
@@ -7812,8 +7873,10 @@ static int16 status_calc_flee(block_list *bl, status_change *sc, int32 flee)
 		flee -= 20 + 30 * sc->getSCE(SC_SATURDAYNIGHTFEVER)->val1;
 	if( sc->getSCE(SC_WIND_STEP_OPTION) )
 		flee += flee * sc->getSCE(SC_WIND_STEP_OPTION)->val2 / 100;
+#ifndef NEED_2017_HOMUNCULUS_S
 	if( sc->getSCE(SC_TINDER_BREAKER) || sc->getSCE(SC_TINDER_BREAKER2) )
 		flee -= flee * 50 / 100;
+#endif
 	if( sc->getSCE(SC_ZEPHYR) )
 		flee += sc->getSCE(SC_ZEPHYR)->val2;
 	if(sc->getSCE(SC_ASH))
@@ -7904,7 +7967,11 @@ static defType status_calc_def(block_list *bl, status_change *sc, int32 def)
 	if(sc->getSCE(SC_ODINS_POWER))
 		def -= 20 * sc->getSCE(SC_ODINS_POWER)->val1;
 	if( sc->getSCE(SC_ANGRIFFS_MODUS) )
+#ifdef NEED_2017_HOMUNCULUS_S
+		def -= 30 + 20 * sc->getSCE(SC_ANGRIFFS_MODUS)->val1;
+#else
 		def -= 20 + 10 * sc->getSCE(SC_ANGRIFFS_MODUS)->val1;
+#endif
 	if(sc->getSCE(SC_STONEHARDSKIN))
 		def += sc->getSCE(SC_STONEHARDSKIN)->val1;
 	if(sc->getSCE(SC_STONE))
@@ -8450,6 +8517,10 @@ static int16 status_calc_aspd(block_list *bl, status_change *sc, bool fixed)
 			bonus -= sc->getSCE(SC_MELON_BOMB)->val3;
 		if (sc->getSCE(SC_GOLDENE_FERSE))
 			bonus += sc->getSCE(SC_GOLDENE_FERSE)->val3;
+#ifdef NEED_2017_HOMUNCULUS_S
+		if (sc->getSCE(SC_PAIN_KILLER))
+			bonus -= sc->getSCE(SC_PAIN_KILLER)->val3;
+#endif
 		if (sc->getSCE(SC_INCASPDRATE))
 			bonus += sc->getSCE(SC_INCASPDRATE)->val1;
 		if (sc->getSCE(SC_GATLINGFEVER))
@@ -8646,6 +8717,10 @@ static int16 status_calc_aspd_rate(block_list *bl, status_change *sc, int32 aspd
 		aspd_rate -= sc->getSCE(SC_INCASPDRATE)->val1 * 10;
 	if( sc->getSCE(SC_GOLDENE_FERSE))
 		aspd_rate -= sc->getSCE(SC_GOLDENE_FERSE)->val3 * 10;
+#ifdef NEED_2017_HOMUNCULUS_S
+	if( sc->getSCE(SC_PAIN_KILLER))
+		aspd_rate += sc->getSCE(SC_PAIN_KILLER)->val3 * 10;
+#endif
 	if (sc->getSCE(SC_WIND_INSIGNIA) && sc->getSCE(SC_WIND_INSIGNIA)->val1 == 2)
 		aspd_rate -= 100;
 	if (sc->getSCE(SC_STARSTANCE))
@@ -8977,6 +9052,10 @@ unsigned char status_calc_attack_element(const block_list* bl, const status_chan
 		return ELE_GHOST;
 	if(sc->getSCE(SC_TIDAL_WEAPON_OPTION) || sc->getSCE(SC_TIDAL_WEAPON) )
 		return ELE_WATER;
+#ifdef NEED_2017_HOMUNCULUS_S
+	if(sc->getSCE(SC_PYROCLASTIC))
+		return ELE_FIRE;
+#endif
 	return (unsigned char)cap_value(element,0,UCHAR_MAX);
 }
 
@@ -11760,6 +11839,26 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 			status_zap(bl, status->hp-1, val2?0:status->sp-1);
 			return true;
 			break;
+#ifdef NEED_2017_HOMUNCULUS_S
+		case SC_TINDER_BREAKER2: // 2017: the homunculus is locked together with its target (same as Close Confine)
+		{
+			block_list *src2 = val2?map_id2bl(val2):nullptr;
+			status_change *sc2 = src2?status_get_sc(src2):nullptr;
+			struct status_change_entry *sce2 = sc2?sc2->getSCE(SC_TINDER_BREAKER):nullptr;
+
+			if (src2 && sc2) {
+				if (!sce2) // Start lock on caster.
+					sc_start4(src2,src2,SC_TINDER_BREAKER,100,val1,1,0,0,tick+1000);
+				else { // Increase count of locked enemies and refresh time.
+					(sce2->val2)++;
+					delete_timer(sce2->timer, status_change_timer);
+					sce2->timer = add_timer(gettick()+tick+1000, status_change_timer, src2->id, SC_TINDER_BREAKER);
+				}
+			} else // Status failed.
+				return false;
+		}
+			break;
+#endif
 		case SC_CLOSECONFINE2:
 		{
 			block_list *src2 = val2?map_id2bl(val2):nullptr;
@@ -12665,7 +12764,11 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 			break;
 		case SC_ANGRIFFS_MODUS:
 			val2 = 50 + 20 * val1; // atk bonus
+#ifdef NEED_2017_HOMUNCULUS_S
+			val3 = 40 + 20 * val1; // Flee reduction. (2017)
+#else
 			val3 = 25 + 10 * val1; // Flee reduction.
+#endif
 			val4 = tick/1000; // hp/sp reduction timer
 			tick_time = 1000;
 			break;
@@ -12679,8 +12782,13 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 			val3 = 30 * val1; // MDEF bonus
 			break;
 		case SC_OVERED_BOOST:
+#ifdef NEED_2017_HOMUNCULUS_S
+			val2 = 300 + 40 * val1; // flee bonus (2017)
+			val3 = 179 + 2 * val1; // aspd bonus (2017)
+#else
 			val2 = 400 + 40 * val1; // flee bonus
 			val3 = 180 + 2 * val1; // aspd bonus
+#endif
 			val4 = 50; // def reduc %
 			break;
 		case SC_GRANITIC_ARMOR:
@@ -12692,7 +12800,12 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 			val2 = 3*val1; // Activation chance
 			break;
 		case SC_PYROCLASTIC:
+#ifdef NEED_2017_HOMUNCULUS_S
+			val2 += 10*val1; // atk bonus (2017: homunculus level + 10 * skill level)
+			val3 = 2*val1; // Chance To AutoCast Hammer Fall %
+#else
 			val2 += 100 + 10*val1; // atk bonus // !TODO: Confirm formula
+#endif
 			break;
 		case SC_TEMPERING:
 			val2 += 5 + val1; // patk bonus
@@ -12712,6 +12825,9 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 			break;
 		case SC_PAIN_KILLER: // Yommy leak need confirm
 			val2 = min((( 200 * val1 ) * status_get_lv(src)) / 150, 1000); // dmg reduction linear. upto a maximum of 1000 [iRO Wiki]
+#ifdef NEED_2017_HOMUNCULUS_S
+			val3 = 10 * val1; // aspd reduction % (2017)
+#endif
 			if(sc->getSCE(SC_PARALYSIS))
 				sc_start(src,bl, SC_ENDURE, 100, val1, tick); // Start endure for same duration
 			break;
@@ -13890,6 +14006,9 @@ int32 status_change_end( block_list* bl, enum sc_type type, int32 tid ){
 				status_damage(nullptr,bl,damage,0,0,1,0);
 			}
 			break;
+		// NEED: SC_PYROCLASTIC no longer breaks the master's weapon when it ends. 2017 broke it at 100%, and
+		// on death status_change_clear ends SC_CP_WEAPON first (lower enum), so even a coated weapon broke.
+		// kRO later removed the break as well (rAthena 652d77eb0, kRO update seq=218).
 		case SC_RUN:
 		{
 			struct unit_data *ud = unit_bl2ud(bl);
@@ -14027,6 +14146,26 @@ int32 status_change_end( block_list* bl, enum sc_type type, int32 tid ){
 					skill_castend_damage_id(src, bl, val2, val1, gettick(), SD_LEVEL );
 			}
 			break;
+#ifdef NEED_2017_HOMUNCULUS_S
+		case SC_TINDER_BREAKER2:
+			{
+				block_list *src = val2?map_id2bl(val2):nullptr;
+				status_change *sc2 = src?status_get_sc(src):nullptr;
+				if (src && sc2 && sc2->getSCE(SC_TINDER_BREAKER)) // Target released, free the homunculus too.
+					status_change_end(src, SC_TINDER_BREAKER);
+			}
+			[[fallthrough]];
+		case SC_TINDER_BREAKER:
+			if (val2 > 0) {
+				// Homunculus has been unlocked... nearby chars need to be unlocked.
+				int32 range = 1
+					+ skill_get_range2(bl, scdb->skill_id, val1, true)
+					+ skill_get_range2(bl, TF_BACKSLIDING, 1, true);
+				map_foreachinallarea(status_change_timer_sub,
+					bl->m, bl->x-range, bl->y-range, bl->x+range,bl->y+range,BL_CHAR,bl,nullptr,type,gettick());
+			}
+			break;
+#endif
 		case SC_CLOSECONFINE2:
 			{
 				block_list *src = val2?map_id2bl(val2):nullptr;
@@ -15740,6 +15879,15 @@ int32 status_change_timer_sub(block_list* bl, va_list ap)
 			status_change_end(bl, SC_CLOSECONFINE2);
 		}
 		break;
+#ifdef NEED_2017_HOMUNCULUS_S
+	case SC_TINDER_BREAKER:
+		// Homunculus has released the hold on everyone...
+		if (tsc && tsc->getSCE(SC_TINDER_BREAKER2) && tsc->getSCE(SC_TINDER_BREAKER2)->val2 == src->id) {
+			tsc->getSCE(SC_TINDER_BREAKER2)->val2 = 0;
+			status_change_end(bl, SC_TINDER_BREAKER2);
+		}
+		break;
+#endif
 	case SC_CURSEDCIRCLE_TARGET:
 		if( tsc && tsc->getSCE(SC_CURSEDCIRCLE_TARGET) && tsc->getSCE(SC_CURSEDCIRCLE_TARGET)->val2 == src->id ) {
 			clif_bladestop( *bl, tsc->getSCE(SC_CURSEDCIRCLE_TARGET)->val2, false );

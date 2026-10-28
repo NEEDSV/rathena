@@ -1,0 +1,694 @@
+diff --git a/npc/NEED/need_barters.yml b/npc/NEED/need_barters.yml
+index d28ad0279..581d527aa 100644
+--- a/npc/NEED/need_barters.yml
++++ b/npc/NEED/need_barters.yml
+@@ -8,22 +8,24 @@ Body:
+       #------------------------------------------------------
+       # ì œë ¨ ë³´ì¡°
+       # +7 ì œë ¨ ë³´ìž¥ê¶Œ
+-      # ì¶”ì²œì•ˆ: 300P + 10,000,000 Zeny
++      # 2026-10-21 ìš´ì˜ìž í™•ì •: 200P + 0 Zeny (ê¸°ì¡´ 1,000P + 10,000,000 Zeny)
++      # Zeny 0 ì€ í‚¤ë¥¼ ì§€ìš°ì§€ ì•Šê³  ëª…ì‹œí•œë‹¤. í‚¤ê°€ ì—†ìœ¼ë©´ ìž¬ì ìž¬(@reloadnpc) ì‹œ
++      # ì´ë¯¸ ë¡œë“œëœ í•­ëª©ì˜ ì´ì „ ê°€ê²©ì´ ìœ ì§€ëœë‹¤(npc.cpp barter_parseBodyNode).
+       #------------------------------------------------------
+       - Index: 0
+         Item: Guarantee_Weapon_7Up
+-        Zeny: 10000000
++        Zeny: 0
+         RequiredItems:
+           - Index: 0
+             Item: Lucky_Egg_Point
+-            Amount: 1000
++            Amount: 200
+       - Index: 1
+         Item: Guarantee_Armor_7Up
+-        Zeny: 10000000
++        Zeny: 0
+         RequiredItems:
+           - Index: 0
+             Item: Lucky_Egg_Point
+-            Amount: 1000
++            Amount: 200
+ 
+       #------------------------------------------------------
+       # NEEDì˜ ì€ì´ ê³¨ë“œ ì½”ì¸
+diff --git a/npc/NEED/need_lucky_ceiling.txt b/npc/NEED/need_lucky_ceiling.txt
+index 7e628db36..25de3afd4 100644
+--- a/npc/NEED/need_lucky_ceiling.txt
++++ b/npc/NEED/need_lucky_ceiling.txt
+@@ -37,7 +37,10 @@
+ //   $NeedLPMode[»óÇ°ID]   0=¼³Á¤°ª »ç¿ë / 1=°­Á¦ ÆÇ¸ÅÁßÁö / 2=°­Á¦ ÆÇ¸Å
+ //
+ // [»óÇ° ±¸¼º]
+-// °ø¿ë Èñ±Í 3Á¾ (PID 100~102) + ½ÃÁð ÃµÀå 44Á¾ (PID 200, 202~244)
++// °ø¿ë Èñ±Í 5Á¾ (PID 100~104) + ½ÃÁð ÃµÀå (PID 200, 202~)
++//   103 ´ëÃà 1°³ -> +7 º¸Àå±Ç / 104 ´ëÃà 15°³ -> +9 º¸Àå±Ç (2026-10-21 ¿î¿µÀÚ È®Á¤)
++//   104 ´Â 102(+9 Æ÷ÀÎÆ® ÃµÀå)ÀÇ ¼­¹ö ¿ù°£ Àç°í¸¦ ÇÔ²² ¾´´Ù. ([Àç°í °øÀ¯] Âü°í)
++// (¾Æ·¡ 44Á¾ ¼³¸íÀº ÃÖÃÊ µî·Ï ´ç½Ã ±âÁØ)
+ // ½ÃÁð 44Á¾Àº 4Â÷ °ËÁõ(md/lucky_egg_ceiling_season_final.csv)À» Åë°úÇÑ
+ // ÀÏ¹Ý Àåºñ 18Á¾ + ½¦µµ¿ì 26Á¾ÀÌ¸ç ÀüºÎ ±âº» OFF ·Î µî·ÏµÇ¾î ÀÖ´Ù.
+ //
+@@ -325,6 +328,7 @@ S_Detail:
+ 	.@pid = .Pid[.@i];
+ 
+ 	callsub S_Normalize, .@i;
++	.@skey = callsub(S_SKey, .@i);
+ 
+ 	.@nparts = 0;
+ 	if (.Choice$[.@i] != "") {
+@@ -354,8 +358,10 @@ S_Detail:
+ 		mes needtr("Çà¾Ë µîÀå È®·ü : ^0055FF", "Egg drop chance : ^0055FF") + .RateText$[.@i] + "^000000";
+ 
+ 	mes needtr("^FF0000[ÇÊ¿ä Àç·á]^000000", "^FF0000[Materials Needed]^000000");
+-	mes "- " + getitemname(.PointItem) + " : " + .Point[.@i] + " P"
+-		+ needtr("  (º¸À¯ ", "  (have ") + countitem(.PointItem) + ")";
++	// Æ÷ÀÎÆ®/Zeny °¡ 0 ÀÎ »óÇ°(´ëÃà ±³È¯)Àº ÇØ´ç ÁÙÀ» Ç¥½ÃÇÏÁö ¾Ê´Â´Ù.
++	if (.Point[.@i] > 0)
++		mes "- " + getitemname(.PointItem) + " : " + .Point[.@i] + " P"
++			+ needtr("  (º¸À¯ ", "  (have ") + countitem(.PointItem) + ")";
+ 
+ 	if (.EggId[.@i] > 0)
+ 		mes "- " + mesitemlink(.EggId[.@i]) + " : " + .EggAmt[.@i] + needtr("°³", "")
+@@ -363,8 +369,9 @@ S_Detail:
+ 	else
+ 		mes needtr("- Çà¿îÀÇ ¾Ë : ÇÊ¿ä ¾øÀ½", "- Lucky Egg : not required");
+ 
+-	mes "- Zeny : " + callfunc("F_InsertComma", .Zeny[.@i])
+-		+ needtr("  (º¸À¯ ", "  (have ") + callfunc("F_InsertComma", Zeny) + ")";
++	if (.Zeny[.@i] > 0)
++		mes "- Zeny : " + callfunc("F_InsertComma", .Zeny[.@i])
++			+ needtr("  (º¸À¯ ", "  (have ") + callfunc("F_InsertComma", Zeny) + ")";
+ 	mes " ";
+ 
+ 	mes needtr("^0055FF[¼­¹ö Àç°í]^000000", "^0055FF[Server Stock]^000000");
+@@ -375,9 +382,10 @@ S_Detail:
+ 		mes needtr("- ^FF0000Àç°í ½Ã½ºÅÛ Á¡°Ë Áß^000000", "- ^FF0000stock system under maintenance^000000");
+ 	}
+ 	else {
+-		mes needtr("- ³²Àº ¼ö·® : ", "- stock left : ") + $NeedLPStock[.@pid] + " / " + .Stock[.@i]
++		mes needtr("- ³²Àº ¼ö·® : ", "- stock left : ") + $NeedLPStock[.@skey] + " / " + .Stock[.@i]
+ 			+ " (" + ((.Cycle[.@i] == 1) ? needtr("ÁÖ°£", "weekly") : needtr("¿ù°£", "monthly")) + ")";
+ 		mes needtr("- ´ÙÀ½ ÀçÀÔ°í : ", "- next restock : ") + callsub(S_NextResetStr, .@i);
++		callsub S_ShareNote, .@i;
+ 	}
+ 	mes " ";
+ 
+@@ -401,7 +409,7 @@ S_Detail:
+ 		return;
+ 	}
+ 
+-	if (.Cycle[.@i] != 0 && $NeedLPStock[.@pid] <= 0) {
++	if (.Cycle[.@i] != 0 && $NeedLPStock[.@skey] <= 0) {
+ 		mes needtr("[Çà¿îÀÇ ¾Ë ±³È¯¼Ò]", "[Lucky Egg Exchange]");
+ 		mes needtr("^FF0000ÀÌ¹ø ", "^FF0000All of this ") + ((.Cycle[.@i] == 1) ? needtr("ÁÖ", "week") : needtr("´Þ", "month")) + needtr(" ÁØºñµÈ ¼ö·®ÀÌ", "'s prepared stock");
+ 		mes needtr("¸ðµÎ ¼ÒÁøµÇ¾ú½À´Ï´Ù.^000000", "has been used up.^000000");
+@@ -443,10 +451,13 @@ S_Detail:
+ 	mes needtr("Áö±Þ : ^0055FF", "You get : ^0055FF") + mesitemlink(.@reward) + " x " + .RewardAmt[.@i] + "^000000";
+ 	mes " ";
+ 	mes needtr("¼Ò¸ð :", "You pay :");
+-	mes "- " + getitemname(.PointItem) + " " + .Point[.@i] + " P";
++	if (.Point[.@i] > 0)
++		mes "- " + getitemname(.PointItem) + " " + .Point[.@i] + " P";
+ 	if (.EggId[.@i] > 0)
+ 		mes "- " + mesitemlink(.EggId[.@i]) + " " + .EggAmt[.@i] + needtr("°³", "");
+-	mes "- Zeny " + callfunc("F_InsertComma", .Zeny[.@i]);
++	if (.Zeny[.@i] > 0)
++		mes "- Zeny " + callfunc("F_InsertComma", .Zeny[.@i]);
++	callsub S_ShareNote, .@i;
+ 	mes " ";
+ 	mes needtr("^999999¡Ø ¾ÆÀÌÅÛ¸íÀ» Å¬¸¯ÇØ ¿É¼ÇÀ» È®ÀÎÇÑ µÚ °áÁ¤ÇÏ¼¼¿ä.^000000", "^999999* Click the item name to check its options before deciding.^000000");
+ 	mes needtr("^FF0000±³È¯ÇÑ Àç·á´Â µÇµ¹¸± ¼ö ¾ø½À´Ï´Ù.^000000", "^FF0000Spent materials cannot be recovered.^000000");
+@@ -464,7 +475,7 @@ S_Detail:
+ 		mes needtr("±³È¯Çß½À´Ï´Ù.", "Exchange complete.");
+ 		mes " ";
+ 		if (.Cycle[.@i] != 0)
+-			mes needtr("¼­¹ö ³²Àº ¼ö·® : ", "Server stock left : ") + $NeedLPStock[.@pid] + " / " + .Stock[.@i];
++			mes needtr("¼­¹ö ³²Àº ¼ö·® : ", "Server stock left : ") + $NeedLPStock[.@skey] + " / " + .Stock[.@i];
+ 		if (.Bound[.@i])
+ 			mes needtr("^FF0000°èÁ¤ ±Í¼Ó »óÅÂ·Î Áö±ÞµÇ¾ú½À´Ï´Ù.^000000", "^FF0000Delivered account bound.^000000");
+ 		break;
+@@ -558,6 +569,11 @@ S_Buy:
+ 
+ 	callsub S_Normalize, .@i;
+ 
++	// Àç°í Å°: °øÀ¯ »óÇ°(104)Àº 102 ÀÇ Àç°í¸¦ ¾´´Ù. °øÀ¯ ¼³Á¤ÀÌ ±úÁ³À¸¸é 0 -> ÆÇ¸Å °ÅºÎ
++	.@skey = callsub(S_SKey, .@i);
++	if (.@skey <= 0)
++		return 7;
++
+ 	if (.Choice$[.@i] != "") {
+ 		explode(.@parts$, .Choice$[.@i], ",");
+ 		.@nparts = getarraysize(.@parts$);
+@@ -576,7 +592,7 @@ S_Buy:
+ 	if (.@amount <= 0)
+ 		return 7;
+ 
+-	if (.Cycle[.@i] != 0 && $NeedLPStock[.@pid] <= 0)
++	if (.Cycle[.@i] != 0 && $NeedLPStock[.@skey] <= 0)
+ 		return 2;
+ 
+ 	if (.Point[.@i] > 0 && countitem(.PointItem) < .Point[.@i])
+@@ -598,13 +614,15 @@ S_Buy:
+ 
+ 	// (1) ¼­¹ö Àç°í Â÷°¨À» SQL ¿¡ ¸ÕÀú È®Á¤ÇÑ´Ù.
+ 	//     ÀúÀå/°ËÁõ¿¡ ½ÇÆÐÇÏ¸é ¿©±â¼­ ³¡³»¹Ç·Î À¯Àú ÀçÈ­´Â ±×´ë·Î ³²´Â´Ù.
++	//     2026-10-21: ¸Þ¸ð¸® °ªÀ¸·Î Àý´ë°ªÀ» µ¤¾î¾²´ø ¹æ½ÄÀ» DB Á¶°ÇºÎ Â÷°¨
++	//     (stock >= 1 ÀÏ ¶§¸¸ -1, ROW_COUNT È®ÀÎ)À¸·Î ¹Ù²å´Ù. ¸Ê¼­¹ö°¡ ¿©·¯ °³ÀÌ°Å³ª
++	//     °øÀ¯ Àç°í(102/104)¸¦ µÎ °æ·Î°¡ µ¿½Ã¿¡ ³ë·Áµµ DB Àç°í ¾Æ·¡·Î´Â ÆÈ ¼ö ¾ø´Ù.
+ 	if (.Cycle[.@i] != 0) {
+-		.@newstock = $NeedLPStock[.@pid] - 1;
+-
+-		if (!callsub(S_SaveStock, .@i, $NeedLPCyc[.@pid], .@newstock))
++		.@took = callsub(S_TakeStock, .@i);
++		if (.@took == 2)
++			return 2;
++		if (.@took != 1)
+ 			return 9;
+-
+-		$NeedLPStock[.@pid] = .@newstock;
+ 	}
+ 
+ 	// (2) Àç·á Â÷°¨
+@@ -633,7 +651,8 @@ S_Buy:
+ 		+ " point=" + .Point[.@i]
+ 		+ " egg=" + .EggId[.@i] + "x" + .EggAmt[.@i]
+ 		+ " zeny=" + .Zeny[.@i]
+-		+ " left=" + ((.Cycle[.@i] != 0) ? $NeedLPStock[.@pid] : -1);
++		+ " left=" + ((.Cycle[.@i] != 0) ? $NeedLPStock[.@skey] : -1)
++		+ ((.@skey != .@pid) ? " skey=" + .@skey : "");
+ 	// ---------- ¿øÀÚÀû ±¸°£ ³¡ ----------
+ 
+ 	return 0;
+@@ -656,7 +675,9 @@ S_Rules:
+ 	mes needtr("[±³È¯ ±ÔÄ¢ ¾È³»]", "[Exchange Rules]");
+ 	mes needtr("^0055FF2. °ø¿ë Èñ±Í ¾ÆÀÌÅÛ^000000", "^0055FF2. Shared Rare Items^000000");
+ 	mes needtr("- ¿©·¯ Çà¿îÀÇ ¾Ë¿¡¼­ ¹Ýº¹ µîÀåÇÏ´Â »óÇ°ÀÔ´Ï´Ù.", "- Items that show up in several Lucky Eggs.");
+-	mes needtr("- Çà¿îÀÇ ¾Ë ¾øÀÌ Æ÷ÀÎÆ®¿Í Zeny·Î¸¸ ±³È¯ÇÕ´Ï´Ù.", "- Traded with points and Zeny only - no egg needed.");
++	mes needtr("- Çà¿îÀÇ ¾Ë ¾øÀÌ Æ÷ÀÎÆ®¡¤Zeny ¶Ç´Â ´ëÀåÀåÀÌÀÇ Ãàº¹À¸·Î ±³È¯ÇÕ´Ï´Ù.", "- Traded with points and Zeny, or with Blacksmith's Blessings - no egg needed.");
++	mes needtr("- +9 º¸Àå±ÇÀº Æ÷ÀÎÆ® ±³È¯°ú ´ëÃà 15°³ ±³È¯À» ÇÕÃÄ", "- The +9 certificate stock is shared by the point trade");
++	mes needtr("  ^FF0000¼­¹ö ÀüÃ¼ ¿ù 1°³^000000ÀÔ´Ï´Ù.", "  and the 15-Blessing trade: ^FF00001 per month server-wide^000000.");
+ 	next;
+ 
+ 	mes needtr("[±³È¯ ±ÔÄ¢ ¾È³»]", "[Exchange Rules]");
+@@ -713,14 +734,121 @@ S_StockTag:
+ 	if (!.SqlReady)
+ 		return needtr(" (Á¡°ËÁß)", " (maintenance)");
+ 
+-	.@pid = .Pid[.@i];
++	.@pid = callsub(S_SKey, .@i);
+ 
+-	if ($NeedLPStock[.@pid] <= 0)
++	if (.@pid <= 0 || $NeedLPStock[.@pid] <= 0)
+ 		return needtr(" (Ç°Àý)", " (sold out)");
+ 
+ 	return " (" + $NeedLPStock[.@pid] + "/" + .Stock[.@i] + ")";
+ 
+ 
++//============================================================
++// [Àç°í °øÀ¯] Àç°í Å°
++// getarg(0) : »óÇ° ½½·Ô index
++// ¹ÝÈ¯ : ¼­¹ö Àç°í¸¦ ÀúÀå/Â÷°¨ÇÏ´Â PID. °øÀ¯ ¼³Á¤ÀÌ ±úÁø »óÇ°Àº 0.
++//
++// .StockShareSrc[] ÀÇ PID ´Â °°Àº À§Ä¡ .StockShareKey[] PID ÀÇ Àç°í¸¦ ÇÔ²² ¾´´Ù.
++//   104 (´ëÃà 15°³ -> +9 º¸Àå±Ç) -> 102 (+9 Æ÷ÀÎÆ® ÃµÀå) : ¼­¹ö ¿ù°£ 1°³¸¦ °øÀ¯
++// °øÀ¯ »óÇ°Àº ÀÚ±â PID ·Î Àç°í ÇàÀ» ¸¸µéÁö ¾ÊÀ¸¹Ç·Î ¿ù Àç°í°¡ ´Ã¾î³ªÁö ¾Ê´Â´Ù.
++//============================================================
++S_SKey:
++	.@i = getarg(0);
++	.@pos = inarray(.StockShareSrc[0], .Pid[.@i]);
++	if (.@pos < 0)
++		return .Pid[.@i];
++	if (!.StockShareOK[.@pos])
++		return 0;
++	return .StockShareKey[.@pos];
++
++
++//============================================================
++// [Àç°í °øÀ¯] ¾È³» ¹®±¸ (Àç°í¸¦ °øÀ¯ÇÏ´Â »óÇ°¿¡¼­¸¸ Ãâ·Â)
++//============================================================
++S_ShareNote:
++	.@i = getarg(0);
++	.@key = callsub(S_SKey, .@i);
++	.@shared = (inarray(.StockShareSrc[0], .Pid[.@i]) >= 0 || inarray(.StockShareKey[0], .Pid[.@i]) >= 0);
++	if (!.@shared || .@key <= 0)
++		return;
++	mes needtr("^FF0000¡Ø ¼­¹ö ÀüÃ¼ °øÀ¯ Àç°í^000000", "^FF0000* Server-wide shared stock^000000");
++	mes needtr("Æ÷ÀÎÆ® ±³È¯°ú ´ëÃà ±³È¯ÀÌ °°Àº Àç°í¸¦ ¾¹´Ï´Ù.", "The point trade and the Blessing trade use the same stock.");
++	mes needtr("¾î´À ÂÊÀÌµç ¸ÕÀú ±³È¯ÇÏ¸é ³ª¸ÓÁö´Â Ç°ÀýµË´Ï´Ù.", "Whichever is traded first sells the other out too.");
++	return;
++
++
++//============================================================
++// [Àç°í °øÀ¯] DB Á¶°ÇºÎ Àç°í Â÷°¨
++// getarg(0) : »óÇ° ½½·Ô index
++// ¹ÝÈ¯ 1 = Â÷°¨ ¼º°ø / 2 = Àç°í ¾øÀ½ / 9 = DB ¿À·ù ¶Ç´Â ÁÖ±â ºÒÀÏÄ¡
++//
++// UPDATE ... WHERE stock >= 1 Àº DB ¾È¿¡¼­ ¿øÀÚÀûÀÌ´Ù. ¹Ù·Î ´ÙÀ½ SELECT ROW_COUNT()
++// ´Â °°Àº ¿¬°á¿¡¼­ ½ÇÇàµÇ¸ç, ±× »çÀÌ¿¡ ÀÌ ¸Ê¼­¹öÀÇ ´Ù¸¥ ½ºÅ©¸³Æ®°¡ ³¢¾îµé ¼ö ¾ø´Ù.
++// Â÷°¨ °á°ú¿Í »ó°ü¾øÀÌ DB °ªÀ» ´Ù½Ã ÀÐ¾î ÀÎ¸Þ¸ð¸® »çº»À» ¸ÂÃá´Ù.
++// [Áß¿ä] ÀÌ ¶óº§ ¾È¿¡ next / select / input / sleep À» ³ÖÁö ¸» °Í.
++//============================================================
++S_TakeStock:
++	.@i = getarg(0);
++	.@pid = callsub(S_SKey, .@i);
++	if (.@pid <= 0 || !.SqlReady)
++		return 9;
++	.@key = $NeedLPCyc[.@pid];
++
++	.@r = query_sql(
++		"UPDATE `need_lucky_ceiling_stock` SET `stock`=`stock`-1,`updated_at`=NOW() "
++		+ "WHERE `product_id`=" + .@pid + " AND `period_key`=" + .@key + " AND `stock`>=1");
++	if (.@r < 0) {
++		logmes "[LuckyCeil] SQL TAKE FAILED pid=" + .@pid + " key=" + .@key;
++		return 9;
++	}
++
++	.@rc = -1;
++	.@n = query_sql("SELECT ROW_COUNT()", .@rc);
++
++	.@dbstock = -1;
++	.@dbkey = 0;
++	.@m = query_sql(
++		"SELECT `stock`,`period_key` FROM `need_lucky_ceiling_stock` WHERE `product_id`=" + .@pid,
++		.@dbstock, .@dbkey);
++	if (.@m >= 1 && .@dbkey == .@key)
++		$NeedLPStock[.@pid] = .@dbstock;
++
++	if (.@n >= 1 && .@rc == 1)
++		return 1;
++
++	logmes "[LuckyCeil] TAKE REJECTED pid=" + .@pid + " key=" + .@key + " rc=" + .@rc
++		+ " db_stock=" + .@dbstock + " db_key=" + .@dbkey;
++	if (.@n >= 1 && .@rc == 0 && .@m >= 1 && .@dbkey == .@key)
++		return 2;
++	return 9;
++
++
++//============================================================
++// [Àç°í °øÀ¯] °øÀ¯ ¼³Á¤ °Ë»ç (OnInit)
++// °øÀ¯ »óÇ°°ú ¿øº» »óÇ°ÀÇ .Cycle / .Stock ÀÌ ´Ù¸£°Å³ª ¿øº»ÀÌ ¾øÀ¸¸é
++// °øÀ¯ »óÇ°À» ÆÇ¸Å °ÅºÎ(S_SKey = 0) »óÅÂ·Î µÐ´Ù.
++//============================================================
++S_CheckShare:
++	for (.@s = 0; .@s < getarraysize(.StockShareSrc); .@s++) {
++		.@a = inarray(.Pid[0], .StockShareSrc[.@s]);
++		.@b = inarray(.Pid[0], .StockShareKey[.@s]);
++		.StockShareOK[.@s] = 0;
++		if (.@a < 0 || .@b < 0 || .@a == .@b) {
++			debugmes "[LuckyCeil] share config: PID " + .StockShareSrc[.@s] + " -> " + .StockShareKey[.@s] + " not found. sale blocked.";
++			continue;
++		}
++		if (inarray(.StockShareSrc[0], .StockShareKey[.@s]) >= 0) {
++			debugmes "[LuckyCeil] share config: PID " + .StockShareKey[.@s] + " is itself shared. sale blocked.";
++			continue;
++		}
++		if (.Cycle[.@a] != .Cycle[.@b] || .Stock[.@a] != .Stock[.@b] || .Cycle[.@b] == 0) {
++			debugmes "[LuckyCeil] share config: PID " + .StockShareSrc[.@s] + " cycle/stock differs from " + .StockShareKey[.@s] + ". sale blocked.";
++			continue;
++		}
++		.StockShareOK[.@s] = 1;
++	}
++	return;
++
++
+ //============================================================
+ // [¿µ¼ÓÈ­] SQL Àç°í ÀûÀç
+ //
+@@ -784,7 +912,9 @@ S_SaveStock:
+ 		return 0;
+ 
+ 	.@i = getarg(0);
+-	.@pid = .Pid[.@i];
++	.@pid = callsub(S_SKey, .@i);
++	if (.@pid <= 0)
++		return 0;
+ 	.@key = getarg(1);
+ 	.@val = getarg(2);
+ 
+@@ -879,7 +1009,9 @@ S_NormalizeAll:
+ //============================================================
+ S_Normalize:
+ 	.@i = getarg(0);
+-	.@pid = .Pid[.@i];
++	.@pid = callsub(S_SKey, .@i);
++	if (.@pid <= 0)
++		return 0;
+ 
+ 	if (.Cycle[.@i] == 0)
+ 		return 0;
+@@ -890,13 +1022,37 @@ S_Normalize:
+ 		.@key = callsub(S_MonthKey);
+ 
+ 	if ($NeedLPCyc[.@pid] != .@key) {
+-		if (!callsub(S_SaveStock, .@i, .@key, .Stock[.@i]))
++		// 2026-10-21: DB ÇàÀÇ ÁÖ±â°¡ ´Ù¸¦ ¶§¸¸ ±âº» Àç°í·Î µÇµ¹¸°´Ù.
++		// (´Ù¸¥ ¸Ê¼­¹ö°¡ ÀÌ¹Ì »õ ÁÖ±â·Î ¸®¼ÂÇÏ°í ÆÇ¸ÅÇß´Ù¸é ±× °ªÀ» À¯ÁöÇÑ´Ù)
++		if (!.SqlReady)
++			return 0;
++		.@r = query_sql(
++			"INSERT INTO `need_lucky_ceiling_stock` "
++			+ "(`product_id`,`period_type`,`period_key`,`stock`,`base_stock`,`updated_at`) VALUES ("
++			+ .@pid + "," + .Cycle[.@i] + "," + .@key + "," + .Stock[.@i] + "," + .Stock[.@i] + ",NOW()) "
++			+ "ON DUPLICATE KEY UPDATE "
++			+ "`stock`=IF(`period_key`=VALUES(`period_key`),`stock`,VALUES(`stock`)),"
++			+ "`updated_at`=IF(`period_key`=VALUES(`period_key`),`updated_at`,NOW()),"
++			+ "`period_type`=VALUES(`period_type`),`base_stock`=VALUES(`base_stock`),"
++			+ "`period_key`=VALUES(`period_key`)");
++		if (.@r < 0) {
++			logmes "[LuckyCeil] SQL SAVE FAILED pid=" + .@pid + " key=" + .@key + " stock=" + .Stock[.@i];
+ 			return 0;
++		}
++		.@chk = -999999;
++		.@ck = 0;
++		.@n = query_sql(
++			"SELECT `stock`,`period_key` FROM `need_lucky_ceiling_stock` WHERE `product_id`=" + .@pid,
++			.@chk, .@ck);
++		if (.@n < 1 || .@ck != .@key) {
++			logmes "[LuckyCeil] SQL VERIFY FAILED pid=" + .@pid + " expect_key=" + .@key + " got_key=" + .@ck;
++			return 0;
++		}
+ 
+ 		$NeedLPCyc[.@pid] = .@key;
+-		$NeedLPStock[.@pid] = .Stock[.@i];
++		$NeedLPStock[.@pid] = .@chk;
+ 
+-		logmes "[LuckyCeil] CYCLE RESET pid=" + .@pid + " key=" + .@key + " stock=" + .Stock[.@i];
++		logmes "[LuckyCeil] CYCLE RESET pid=" + .@pid + " key=" + .@key + " stock=" + .@chk;
+ 	}
+ 
+ 	return .@key;
+@@ -1109,11 +1265,14 @@ OnAdmin:
+ S_AdminItem:
+ 	.@i = getarg(0);
+ 	.@pid = .Pid[.@i];
++	.@skey = callsub(S_SKey, .@i);
+ 
+ 	while (1) {
+ 		callsub S_Normalize, .@i;
+ 
+ 		mes "[" + needtr(.Name$[.@i], .Name_en$[.@i]) + "]";
++		if (.@skey != .@pid)
++			mes needtr("^FF0000Àç°í °øÀ¯ : PID ", "^FF0000Stock shared with PID ") + .@skey + needtr(" (0 = °øÀ¯ ¼³Á¤ ¿À·ù)^000000", " (0 = share config error)^000000");
+ 		mes needtr("»óÇ° ID : ", "Item ID : ") + .@pid + " (" + .Code$[.@i] + ")";
+ 		mes needtr("ºÐ·ù : ", "Category : ") + ((.Cat[.@i] == 1) ? needtr("½ÃÁð ÃµÀå", "Season Ceiling") : needtr("°ø¿ë Èñ±Í", "Shared Rare"));
+ 		mes needtr("½ºÅ©¸³Æ® ¼³Á¤ : ", "Script setting : ") + ((.Enabled[.@i]) ? needtr("ÆÇ¸Å", "on sale") : needtr("ÁßÁö", "stopped"));
+@@ -1141,9 +1300,9 @@ S_AdminItem:
+ 			mes needtr("Àç°í : Á¦ÇÑ ¾øÀ½", "Stock : no limit");
+ 		}
+ 		else {
+-			mes needtr("Àç°í : ", "Stock : ") + $NeedLPStock[.@pid] + " / " + .Stock[.@i]
++			mes needtr("Àç°í : ", "Stock : ") + $NeedLPStock[.@skey] + " / " + .Stock[.@i]
+ 				+ " (" + ((.Cycle[.@i] == 1) ? needtr("ÁÖ°£", "weekly") : needtr("¿ù°£", "monthly")) + ")";
+-			mes needtr("ÁÖ±â °ª : ", "Cycle value : ") + $NeedLPCyc[.@pid];
++			mes needtr("ÁÖ±â °ª : ", "Cycle value : ") + $NeedLPCyc[.@skey];
+ 			mes needtr("´ÙÀ½ ÀçÀÔ°í : ", "Next restock : ") + callsub(S_NextResetStr, .@i);
+ 		}
+ 		next;
+@@ -1165,15 +1324,15 @@ S_AdminItem:
+ 			}
+ 			mes needtr("[Àç°í Á÷Á¢ ¼öÁ¤]", "[Set Stock Directly]");
+ 			mes needtr("º¯°æÇÒ ÃÖÁ¾ Àç°í¸¦ ÀÔ·ÂÇØÁÖ¼¼¿ä.", "Please enter the new stock value.");
+-			mes needtr("ÇöÀç : ", "Now : ") + $NeedLPStock[.@pid];
++			mes needtr("ÇöÀç : ", "Now : ") + $NeedLPStock[.@skey];
+ 			next;
+ 
+ 			input .@new, 0, 100000;
+ 
+-			.@old = $NeedLPStock[.@pid];
++			.@old = $NeedLPStock[.@skey];
+ 
+ 			// SQL ¿¡ ¸ÕÀú È®Á¤ÇÏ°í ¼º°øÇßÀ» ¶§¸¸ ÀÎ¸Þ¸ð¸® °ªÀ» ¹Ù²Û´Ù
+-			if (!callsub(S_SaveStock, .@i, $NeedLPCyc[.@pid], .@new)) {
++			if (!callsub(S_SaveStock, .@i, $NeedLPCyc[.@skey], .@new)) {
+ 				mes needtr("[Àç°í Á÷Á¢ ¼öÁ¤]", "[Set Stock Directly]");
+ 				mes needtr("^FF0000Àç°í ÀúÀå¿¡ ½ÇÆÐÇß½À´Ï´Ù. º¯°æÇÏÁö ¾Ê¾Ò½À´Ï´Ù.^000000", "^FF0000Saving the stock failed - nothing was changed.^000000");
+ 				mes needtr("ÇöÀç Àç°í : ", "Current stock : ") + .@old;
+@@ -1181,12 +1340,12 @@ S_AdminItem:
+ 				break;
+ 			}
+ 
+-			$NeedLPStock[.@pid] = .@new;
++			$NeedLPStock[.@skey] = .@new;
+ 
+ 			logmes "[LuckyCeilAdmin] pid=" + .@pid + " stock " + .@old + " -> " + .@new + " (saved)";
+ 
+ 			mes needtr("[Àç°í Á÷Á¢ ¼öÁ¤]", "[Set Stock Directly]");
+-			mes .@old + needtr("°³ -> ^009900", " -> ^009900") + $NeedLPStock[.@pid] + needtr("°³^000000", "^000000");
++			mes .@old + needtr("°³ -> ^009900", " -> ^009900") + $NeedLPStock[.@skey] + needtr("°³^000000", "^000000");
+ 			mes needtr("^0055FFÁï½Ã ¿µ±¸ ÀúÀåµÇ¾ú½À´Ï´Ù.^000000", "^0055FFSaved permanently right away.^000000");
+ 			next;
+ 			break;
+@@ -1197,9 +1356,9 @@ S_AdminItem:
+ 				next;
+ 				break;
+ 			}
+-			.@old = $NeedLPStock[.@pid];
++			.@old = $NeedLPStock[.@skey];
+ 
+-			if (!callsub(S_SaveStock, .@i, $NeedLPCyc[.@pid], .Stock[.@i])) {
++			if (!callsub(S_SaveStock, .@i, $NeedLPCyc[.@skey], .Stock[.@i])) {
+ 				mes needtr("[Àç°í ÃÊ±âÈ­]", "[Reset Stock]");
+ 				mes needtr("^FF0000Àç°í ÀúÀå¿¡ ½ÇÆÐÇß½À´Ï´Ù. º¯°æÇÏÁö ¾Ê¾Ò½À´Ï´Ù.^000000", "^FF0000Saving the stock failed - nothing was changed.^000000");
+ 				mes needtr("ÇöÀç Àç°í : ", "Current stock : ") + .@old;
+@@ -1207,12 +1366,12 @@ S_AdminItem:
+ 				break;
+ 			}
+ 
+-			$NeedLPStock[.@pid] = .Stock[.@i];
++			$NeedLPStock[.@skey] = .Stock[.@i];
+ 
+ 			logmes "[LuckyCeilAdmin] pid=" + .@pid + " reset " + .@old + " -> " + .Stock[.@i] + " (saved)";
+ 
+ 			mes needtr("[Àç°í ÃÊ±âÈ­]", "[Reset Stock]");
+-			mes .@old + needtr("°³ -> ^009900", " -> ^009900") + $NeedLPStock[.@pid] + needtr("°³^000000", "^000000");
++			mes .@old + needtr("°³ -> ^009900", " -> ^009900") + $NeedLPStock[.@skey] + needtr("°³^000000", "^000000");
+ 			mes needtr("^0055FFÁï½Ã ¿µ±¸ ÀúÀåµÇ¾ú½À´Ï´Ù.^000000", "^0055FFSaved permanently right away.^000000");
+ 			next;
+ 			break;
+@@ -1321,14 +1480,17 @@ OnClock2200:
+ //                 0.6~0.75% 50 / 0.5% 60 / 0.1% 100
+ //   Zeny        : ±âÁ¸ÀÇ 1/10 (1Ãµ¸¸ / 2Ãµ¸¸ / °­¾ÆÁö Ç® 1¾ï)
+ //   °ø¿ë Èñ±Í(PID 100~102) ´Â ÀÌ¹ø °³Æí ´ë»óÀÌ ¾Æ´Ï´Ù.
++//   2026-10-21 ¿î¿µÀÚ È®Á¤ °ø¿ë Èñ±Í º¯°æ:
++//     100 ´ëÃà 200P + 1Ãµ¸¸ Zeny (±âÁ¸ 1¾ï) / 102 +9 2000P + 1¾ï Zeny (±âÁ¸ 5000P + 5¾ï)
++//     103 ´ëÃà 1°³ -> +7 º¸Àå±Ç (¹«Á¦ÇÑ) / 104 ´ëÃà 15°³ -> +9 º¸Àå±Ç (102 ¿Í ¿ù 1°³ °øÀ¯)
+ //
+ // ¼­¹ö ÀüÃ¼ ÁÖ°£ ±³È¯·® ±âÁØ
+ //   1 ~ 1.5% -> 5°³ / 0.5% -> 3°³ / 0.2% -> 2°³ / 0.1% -> 1°³
+ //
+ // [PID Á¤Ã¥]
+ //   PID ´Â Àç°í ÀúÀå Å°´Ù. ÇÑ ¹ø ºÎ¿©ÇÏ¸é »óÇ°À» »èÁ¦ÇØµµ Àç»ç¿ëÇÏÁö ¾Ê´Â´Ù.
+-//   ÇöÀç »ç¿ë : 100 ~ 102 (°ø¿ë) / 200, 202 ~ 244 (½ÃÁð)
+-//   ´ÙÀ½ ½Å±Ô »óÇ°Àº 245 ºÎÅÍ ½ÃÀÛÇÑ´Ù.
++//   ÇöÀç »ç¿ë : 100 ~ 104 (°ø¿ë) / 200, 202 ~ 328 (½ÃÁð, 2026-10-21 ±âÁØ)
++//   ½ÃÁð ½Å±Ô PID ´Â Çà¾Ë Ãâ½Ã µµ±¸ Á¤Ã¥(last_assigned_pid)À» µû¸¥´Ù. °ø¿ë ½Å±Ô´Â 105 ºÎÅÍ.
+ //
+ //   *** PID 201 Àº ¿µ±¸ ¿¹¾à(Æó±â) »óÅÂ´Ù. ***
+ //   201 Àº °ú°Å "º£¾î·¯Áî ½¦µµ¿ì »óÀÚ" ¿¡ ¾²¿´À¸³ª 4Â÷ °ËÁõ¿¡¼­
+@@ -1478,7 +1640,9 @@ OnInit:
+ 		325,	// 325 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
+ 		326,	// 326 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
+ 		327,	// 327 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
+-		328;	// 328 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
++		328,	// 328 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
++		103,	// 103 ´ëÃà 1°³ ¡æ +7 º¸Àå±Ç (2026-10-21)
++		104;	// 104 ´ëÃà 15°³ ¡æ +9 º¸Àå±Ç / 102 Àç°í °øÀ¯ (2026-10-21)
+ 
+ 	setarray .Code$[0],
+ 		"BS_BLESSING",	// 100 ´ëÀåÀåÀÌÀÇ Ãàº¹
+@@ -1611,7 +1775,9 @@ OnInit:
+ 		"SEASON_SH_24310",	// 325 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
+ 		"SEASON_SH_24311",	// 326 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
+ 		"SEASON_SH_24312",	// 327 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
+-		"SEASON_SH_24313";	// 328 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
++		"SEASON_SH_24313",	// 328 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
++		"BS_TO_REFINE7",	// 103 ´ëÃà 1°³ ¡æ +7 º¸Àå±Ç (2026-10-21)
++		"BS_TO_REFINE9";	// 104 ´ëÃà 15°³ ¡æ +9 º¸Àå±Ç / 102 Àç°í °øÀ¯ (2026-10-21)
+ 
+ 	setarray .Name$[0],
+ 		"´ëÀåÀåÀÌÀÇ Ãàº¹",	// 100 ´ëÀåÀåÀÌÀÇ Ãàº¹
+@@ -1744,7 +1910,9 @@ OnInit:
+ 		"¼Ò¼­·¯ ½¯µå ½¦µµ¿ì",	// 325 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
+ 		"·¹ÀÎÀú ½¯µå ½¦µµ¿ì",	// 326 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
+ 		"¹Î½ºÆ®·² ½¯µå ½¦µµ¿ì",	// 327 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
+-		"¿ø´õ·¯ ½¯µå ½¦µµ¿ì";	// 328 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
++		"¿ø´õ·¯ ½¯µå ½¦µµ¿ì",	// 328 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
++		"´ëÃà 1°³ ¡æ +7 º¸Àå±Ç",	// 103 ´ëÃà 1°³ ¡æ +7 º¸Àå±Ç (2026-10-21)
++		"´ëÃà 15°³ ¡æ +9 º¸Àå±Ç";	// 104 ´ëÃà 15°³ ¡æ +9 º¸Àå±Ç / 102 Àç°í °øÀ¯ (2026-10-21)
+ 	setarray .Name_en$[0],
+ 		"Blacksmith's Blessing",	// 100 ´ëÀåÀåÀÌÀÇ Ãàº¹
+ 		"Sealed Seal Card",	// 101 ºÀÀÎµÈÀÎÀå Ä«µå
+@@ -1876,7 +2044,9 @@ OnInit:
+ 		"Sorcerer Shadow Shield",	// 325 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
+ 		"Ranger Shadow Shield",	// 326 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
+ 		"Minstrel Shadow Shield",	// 327 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
+-		"Wanderer Shadow Shield";	// 328 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
++		"Wanderer Shadow Shield",	// 328 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
++		"Blessing x1 -> +7 Certificate",	// 103 ´ëÃà 1°³ ¡æ +7 º¸Àå±Ç (2026-10-21)
++		"Blessing x15 -> +9 Certificate";	// 104 ´ëÃà 15°³ ¡æ +9 º¸Àå±Ç / 102 Àç°í °øÀ¯ (2026-10-21)
+ 
+ 	// °ø¿ë 3Á¾¸¸ ÆÇ¸Å(ON). ½ÃÁð ÃµÀå 44Á¾Àº ÀüºÎ ±âº» OFF ·Î µî·ÏÇÑ´Ù.
+ 	// ShowRate:true ¸¸À¸·Î´Â ÇöÀç ÆÇ¸Å ÁßÀÎÁö Á¾·áµÆ´ÂÁö ¾Ë ¼ö ¾øÀ¸¹Ç·Î,
+@@ -2012,7 +2182,9 @@ OnInit:
+ 		0,	// 325 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
+ 		0,	// 326 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
+ 		0,	// 327 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
+-		0;	// 328 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
++		0,	// 328 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
++		1,	// 103 ´ëÃà 1°³ ¡æ +7 º¸Àå±Ç (2026-10-21)
++		1;	// 104 ´ëÃà 15°³ ¡æ +9 º¸Àå±Ç / 102 Àç°í °øÀ¯ (2026-10-21)
+ 
+ 	setarray .Cat[0],
+ 		2,	// 100 ´ëÀåÀåÀÌÀÇ Ãàº¹
+@@ -2145,12 +2317,14 @@ OnInit:
+ 		1,	// 325 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
+ 		1,	// 326 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
+ 		1,	// 327 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
+-		1;	// 328 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
++		1,	// 328 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
++		2,	// 103 ´ëÃà 1°³ ¡æ +7 º¸Àå±Ç (2026-10-21)
++		2;	// 104 ´ëÃà 15°³ ¡æ +9 º¸Àå±Ç / 102 Àç°í °øÀ¯ (2026-10-21)
+ 
+ 	setarray .Point[0],
+ 		200,	// 100 ´ëÀåÀåÀÌÀÇ Ãàº¹
+ 		3000,	// 101 ºÀÀÎµÈÀÎÀå Ä«µå
+-		5000,	// 102 +9 Á¦·Ã ±³È¯±Ç
++		2000,	// 102 +9 Á¦·Ã ±³È¯±Ç (2026-10-21 5000 -> 2000)
+ 		200,	// 200 ¼Ò³àÀÇ ¸¶À½ / EQUIPMENT 1%
+ 		100,	// 202 Çà¿îÀÇ ¾Ë¥¸ / EQUIPMENT 3.5%
+ 		100,	// 203 Çà¿îÀÇ ¾Ë¥¹ / EQUIPMENT 1.838384%
+@@ -2278,12 +2452,14 @@ OnInit:
+ 		100,	// 325 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
+ 		100,	// 326 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
+ 		100,	// 327 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
+-		100;	// 328 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
++		100,	// 328 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
++		0,	// 103 ´ëÃà 1°³ ¡æ +7 º¸Àå±Ç (2026-10-21)
++		0;	// 104 ´ëÃà 15°³ ¡æ +9 º¸Àå±Ç / 102 Àç°í °øÀ¯ (2026-10-21)
+ 
+ 	setarray .Zeny[0],
+-		100000000,	// 100 ´ëÀåÀåÀÌÀÇ Ãàº¹
++		10000000,	// 100 ´ëÀåÀåÀÌÀÇ Ãàº¹ (2026-10-21 1¾ï -> 1Ãµ¸¸)
+ 		300000000,	// 101 ºÀÀÎµÈÀÎÀå Ä«µå
+-		500000000,	// 102 +9 Á¦·Ã ±³È¯±Ç
++		100000000,	// 102 +9 Á¦·Ã ±³È¯±Ç (2026-10-21 5¾ï -> 1¾ï)
+ 		20000000,	// 200 ¼Ò³àÀÇ ¸¶À½ / EQUIPMENT 1%
+ 		10000000,	// 202 Çà¿îÀÇ ¾Ë¥¸ / EQUIPMENT 3.5%
+ 		10000000,	// 203 Çà¿îÀÇ ¾Ë¥¹ / EQUIPMENT 1.838384%
+@@ -2411,7 +2587,9 @@ OnInit:
+ 		10000000,	// 325 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
+ 		10000000,	// 326 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
+ 		10000000,	// 327 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
+-		10000000;	// 328 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
++		10000000,	// 328 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
++		0,	// 103 ´ëÃà 1°³ ¡æ +7 º¸Àå±Ç (2026-10-21)
++		0;	// 104 ´ëÃà 15°³ ¡æ +9 º¸Àå±Ç / 102 Àç°í °øÀ¯ (2026-10-21)
+ 
+ 	setarray .EggId[0],
+ 		0,	// 100 ´ëÀåÀåÀÌÀÇ Ãàº¹
+@@ -2544,7 +2722,9 @@ OnInit:
+ 		23116,	// 325 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
+ 		23116,	// 326 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
+ 		23116,	// 327 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
+-		23116;	// 328 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
++		23116,	// 328 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
++		6635,	// 103 ´ëÃà 1°³ ¡æ +7 º¸Àå±Ç (2026-10-21)
++		6635;	// 104 ´ëÃà 15°³ ¡æ +9 º¸Àå±Ç / 102 Àç°í °øÀ¯ (2026-10-21)
+ 
+ 	setarray .EggAmt[0],
+ 		0,	// 100 ´ëÀåÀåÀÌÀÇ Ãàº¹
+@@ -2677,7 +2857,9 @@ OnInit:
+ 		20,	// 325 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
+ 		20,	// 326 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
+ 		20,	// 327 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
+-		20;	// 328 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
++		20,	// 328 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
++		1,	// 103 ´ëÃà 1°³ ¡æ +7 º¸Àå±Ç (2026-10-21)
++		15;	// 104 ´ëÃà 15°³ ¡æ +9 º¸Àå±Ç / 102 Àç°í °øÀ¯ (2026-10-21)
+ 
+ 	setarray .Stock[0],
+ 		100,	// 100 ´ëÀåÀåÀÌÀÇ Ãàº¹
+@@ -2810,7 +2992,9 @@ OnInit:
+ 		5,	// 325 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
+ 		5,	// 326 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
+ 		5,	// 327 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
+-		5;	// 328 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
++		5,	// 328 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
++		0,	// 103 ´ëÃà 1°³ ¡æ +7 º¸Àå±Ç (2026-10-21)
++		1;	// 104 ´ëÃà 15°³ ¡æ +9 º¸Àå±Ç / 102 Àç°í °øÀ¯ (2026-10-21)
+ 
+ 	setarray .Cycle[0],
+ 		1,	// 100 ´ëÀåÀåÀÌÀÇ Ãàº¹
+@@ -2943,7 +3127,9 @@ OnInit:
+ 		1,	// 325 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
+ 		1,	// 326 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
+ 		1,	// 327 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
+-		1;	// 328 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
++		1,	// 328 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
++		0,	// 103 ´ëÃà 1°³ ¡æ +7 º¸Àå±Ç (2026-10-21)
++		2;	// 104 ´ëÃà 15°³ ¡æ +9 º¸Àå±Ç / 102 Àç°í °øÀ¯ (2026-10-21)
+ 
+ 	setarray .Bound[0],
+ 		0,	// 100 ´ëÀåÀåÀÌÀÇ Ãàº¹
+@@ -3076,7 +3262,9 @@ OnInit:
+ 		1,	// 325 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
+ 		1,	// 326 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
+ 		1,	// 327 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
+-		1;	// 328 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
++		1,	// 328 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
++		0,	// 103 ´ëÃà 1°³ ¡æ +7 º¸Àå±Ç (2026-10-21)
++		0;	// 104 ´ëÃà 15°³ ¡æ +9 º¸Àå±Ç / 102 Àç°í °øÀ¯ (2026-10-21)
+ 
+ 	setarray .Reward[0],
+ 		6635,	// 100 ´ëÀåÀåÀÌÀÇ Ãàº¹
+@@ -3209,7 +3397,9 @@ OnInit:
+ 		24310,	// 325 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
+ 		24311,	// 326 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
+ 		24312,	// 327 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
+-		24313;	// 328 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
++		24313,	// 328 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
++		0,	// 103 ´ëÃà 1°³ ¡æ +7 º¸Àå±Ç (2026-10-21)
++		0;	// 104 ´ëÃà 15°³ ¡æ +9 º¸Àå±Ç / 102 Àç°í °øÀ¯ (2026-10-21)
+ 
+ 	setarray .RewardAmt[0],
+ 		1,	// 100 ´ëÀåÀåÀÌÀÇ Ãàº¹
+@@ -3342,7 +3532,9 @@ OnInit:
+ 		1,	// 325 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
+ 		1,	// 326 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
+ 		1,	// 327 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
+-		1;	// 328 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
++		1,	// 328 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
++		1,	// 103 ´ëÃà 1°³ ¡æ +7 º¸Àå±Ç (2026-10-21)
++		1;	// 104 ´ëÃà 15°³ ¡æ +9 º¸Àå±Ç / 102 Àç°í °øÀ¯ (2026-10-21)
+ 
+ 	setarray .Choice$[0],
+ 		"",	// 100 ´ëÀåÀåÀÌÀÇ Ãàº¹
+@@ -3475,7 +3667,9 @@ OnInit:
+ 		"",	// 325 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
+ 		"",	// 326 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
+ 		"",	// 327 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
+-		"";	// 328 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
++		"",	// 328 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
++		"6230,6234",	// 103 ´ëÃà 1°³ ¡æ +7 º¸Àå±Ç (2026-10-21)
++		"6228,6232";	// 104 ´ëÃà 15°³ ¡æ +9 º¸Àå±Ç / 102 Àç°í °øÀ¯ (2026-10-21)
+ 
+ 	// Ç¥½Ã¿ë È®·ü ¹®ÀÚ¿­. ±¸¸Å ·ÎÁ÷¿¡´Â ¾²Áö ¾Ê´Â´Ù(Ç¥½Ã Àü¿ë).
+ 	setarray .RateText$[0],
+@@ -3609,7 +3803,16 @@ OnInit:
+ 		"1.7%",	// 325 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
+ 		"1.7%",	// 326 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
+ 		"1.7%",	// 327 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
+-		"1.7%";	// 328 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
++		"1.7%",	// 328 ½¦µµ¿ì ½ºÅ©·Ñ / SHADOW 1.7%
++		"",	// 103 ´ëÃà 1°³ ¡æ +7 º¸Àå±Ç (2026-10-21)
++		"";	// 104 ´ëÃà 15°³ ¡æ +9 º¸Àå±Ç / 102 Àç°í °øÀ¯ (2026-10-21)
++
++	// [Àç°í °øÀ¯] (2026-10-21 ¿î¿µÀÚ È®Á¤)
++	// 104 ´ëÃà 15°³ -> +9 º¸Àå±ÇÀº 102 +9 Æ÷ÀÎÆ® ÃµÀåÀÇ ¼­¹ö ¿ù°£ Àç°í 1°³¸¦ ÇÔ²² ¾´´Ù.
++	// °øÀ¯ »óÇ°ÀÇ .Cycle / .Stock Àº ¿øº»°ú °°¾Æ¾ß ÇÑ´Ù. ´Ù¸£¸é S_CheckShare °¡ ÆÇ¸Å¸¦ ¸·´Â´Ù.
++	setarray .StockShareSrc[0], 104;
++	setarray .StockShareKey[0], 102;
++	callsub S_CheckShare;
+ 
+ 	callsub S_SqlLoad;
+ 

@@ -2736,18 +2736,413 @@ Body:
       NoMail: true
       NoAuction: true
 
-# 6532 꿀송편 : 여름 황금 수박과 동일한 랜덤 제니/캐시 보상을 공통 함수로 사용한다.
-#               계정+IP 하루 1개 제한 아이템이므로 거래/보관 제한도 황금 수박과 동일.
+# 6532 잭의 사탕 : 2026 할로윈 필드 희귀 드롭 (need_halloween.cpp, 레벨 ±30, 계정+IP 하루 1개, 04:00).
+#               옛 추석 꿀송편을 영구 전환했다 (추석은 더 이상 6532 를 주지 않고, 꿀송편으로 되돌리지 않는다).
+#               AegisName 은 내부 식별자라 그대로 둔다 (Honey_Songpyun). 표시 이름만 바꾼다.
+#               사용 효과 = 공통 랜덤 제니/캐시(F_NEED_Event_RandomCashReward), 분포 그대로, 로그 event_id 202611.
+#               거래 제한은 6658 할로윈 코인과 같다: 같은 계정 개인 창고(storage / storage2 / storage3)만 허용,
+#               드롭 / 거래 / NPC 판매 / 카트 / 길드 창고 / 우편 / 경매 금지, TradePartner / BuyingStore 없음.
   - Id: 6532
     AegisName: Honey_Songpyun
-    Name: 꿀송편
+    Name: 잭의 사탕
     Type: Delayconsume
     Weight: 10
     Trade:
       Override: 100
       NoDrop: true
       NoTrade: true
-      TradePartner: true
+      NoSell: true
+      NoCart: true
+      NoGuildStorage: true
+      NoMail: true
+      NoAuction: true
+    Script: |
+      callfunc "F_NEED_Halloween_JackCandy";
+
+# 6658 할로윈 코인 : 2026 할로윈 이벤트 재화 (npc/NEED/need_halloween.txt, need_halloween.cpp).
+#               캐릭터 인벤토리 <-> 같은 계정 개인 창고(storage / storage2 / storage3)만 허용.
+#               드롭 / 거래 / NPC 판매 / 카트(노점) / 길드 창고 / 우편 / 경매 금지, 구매 노점 불가(BuyingStore 없음).
+#               송편(663) 패턴과 같되 TradePartner 는 넣지 않는다: 배우자(다른 계정) 거래도 막는다.
+#               이벤트 지급(getitem / pc_additem)은 이 제한과 무관하다. 잔여 코인은 종료 SQL 로 제거.
+  - Id: 6658
+    AegisName: Halloween_Coin
+    Name: 할로윈 코인
+    Type: Etc
+    Trade:
+      Override: 100
+      NoDrop: true
+      NoTrade: true
+      NoSell: true
+      NoCart: true
+      NoGuildStorage: true
+      NoMail: true
+      NoAuction: true
+
+#===== NEED Tomb of the Fallen 2015 - special enchant options ==========
+# 패기 / 마정 / 예기 / 선궁 / 금강 / 자애 Lv1~10 (29061~29120) 를
+# kRO 2020-08-19 옵션 변경 이전(2015 대개편 당시) 값으로 되돌린다.
+# 근거:
+#   - rAthena upstream 5e9a1b4ce(#5858, 2021-04) 직전판 item_db_etc.yml 스크립트
+#   - 2020-08-16 kRO 클라이언트 itemInfo (ROenglishRE a2574cfa) 설명 - 60개 수치 일치
+# 패기: 원래 표기 bonus2 bAddClass,Class_All,N -> 현재 코드 관례(#6997)의 bonus bAtkRate,N
+# 선궁: 2015 / 현재 스크립트 동일 (원거리 물리 데미지 기준 유지)
+# Script 만 덮어쓴다. 이름/무게/타입 등 나머지 필드는 base(db/re/item_db_etc.yml) 그대로.
+# 효과는 아이템 ID 단위라 인챈트 UI(item_enchant.yml)의 Lv1~3 에도 같이 적용된다.
+#=====================================================================
+  - Id: 29061
+    Script: |
+      bonus bAtkRate,3;
+      bonus bHit,3;
+  - Id: 29062
+    Script: |
+      bonus bAtkRate,6;
+      bonus bHit,6;
+  - Id: 29063
+    Script: |
+      bonus bAtkRate,9;
+      bonus bHit,9;
+  - Id: 29064
+    Script: |
+      bonus bAtkRate,12;
+      bonus bHit,12;
+  - Id: 29065
+    Script: |
+      bonus bAtkRate,15;
+      bonus bHit,15;
+  - Id: 29066
+    Script: |
+      bonus bAtkRate,18;
+      bonus bHit,18;
+  - Id: 29067
+    Script: |
+      bonus bAtkRate,21;
+      bonus bHit,21;
+  - Id: 29068
+    Script: |
+      bonus bAtkRate,24;
+      bonus bHit,24;
+  - Id: 29069
+    Script: |
+      bonus bAtkRate,27;
+      bonus bHit,27;
+  - Id: 29070
+    Script: |
+      bonus bAtkRate,33;
+      bonus bHit,30;
+  - Id: 29071
+    Script: |
+      bonus bMatkRate,3;
+      bonus bFixedCast,-100;
+  - Id: 29072
+    Script: |
+      bonus bMatkRate,6;
+      bonus bFixedCast,-200;
+  - Id: 29073
+    Script: |
+      bonus bMatkRate,9;
+      bonus bFixedCast,-300;
+  - Id: 29074
+    Script: |
+      bonus bMatkRate,12;
+      bonus bFixedCast,-400;
+  - Id: 29075
+    Script: |
+      bonus bMatkRate,15;
+      bonus bFixedCast,-500;
+  - Id: 29076
+    Script: |
+      bonus bMatkRate,18;
+      bonus bFixedCast,-600;
+  - Id: 29077
+    Script: |
+      bonus bMatkRate,21;
+      bonus bFixedCast,-700;
+  - Id: 29078
+    Script: |
+      bonus bMatkRate,24;
+      bonus bFixedCast,-800;
+  - Id: 29079
+    Script: |
+      bonus bMatkRate,27;
+      bonus bFixedCast,-900;
+  - Id: 29080
+    Script: |
+      bonus bMatkRate,33;
+      bonus bFixedCast,-1000;
+  - Id: 29081
+    Script: |
+      bonus bCritAtkRate,10;
+      bonus bCritical,3;
+  - Id: 29082
+    Script: |
+      bonus bCritAtkRate,20;
+      bonus bCritical,6;
+  - Id: 29083
+    Script: |
+      bonus bCritAtkRate,30;
+      bonus bCritical,9;
+  - Id: 29084
+    Script: |
+      bonus bCritAtkRate,40;
+      bonus bCritical,12;
+  - Id: 29085
+    Script: |
+      bonus bCritAtkRate,50;
+      bonus bCritical,15;
+  - Id: 29086
+    Script: |
+      bonus bCritAtkRate,60;
+      bonus bCritical,18;
+  - Id: 29087
+    Script: |
+      bonus bCritAtkRate,70;
+      bonus bCritical,21;
+  - Id: 29088
+    Script: |
+      bonus bCritAtkRate,80;
+      bonus bCritical,24;
+  - Id: 29089
+    Script: |
+      bonus bCritAtkRate,90;
+      bonus bCritical,27;
+  - Id: 29090
+    Script: |
+      bonus bCritAtkRate,110;
+      bonus bCritical,30;
+  - Id: 29091
+    Script: |
+      bonus bLongAtkRate,4;
+      bonus bAspdRate,1;
+  - Id: 29092
+    Script: |
+      bonus bLongAtkRate,8;
+      bonus bAspdRate,2;
+  - Id: 29093
+    Script: |
+      bonus bLongAtkRate,12;
+      bonus bAspdRate,3;
+  - Id: 29094
+    Script: |
+      bonus bLongAtkRate,16;
+      bonus bAspdRate,4;
+  - Id: 29095
+    Script: |
+      bonus bLongAtkRate,20;
+      bonus bAspdRate,5;
+  - Id: 29096
+    Script: |
+      bonus bLongAtkRate,24;
+      bonus bAspdRate,6;
+  - Id: 29097
+    Script: |
+      bonus bLongAtkRate,28;
+      bonus bAspdRate,7;
+  - Id: 29098
+    Script: |
+      bonus bLongAtkRate,32;
+      bonus bAspdRate,8;
+  - Id: 29099
+    Script: |
+      bonus bLongAtkRate,36;
+      bonus bAspdRate,9;
+  - Id: 29100
+    Script: |
+      bonus bLongAtkRate,44;
+      bonus bAspdRate,10;
+  - Id: 29101
+    Script: |
+      bonus bMaxHPrate,5;
+      bonus bDef,15;
+  - Id: 29102
+    Script: |
+      bonus bMaxHPrate,10;
+      bonus bDef,30;
+  - Id: 29103
+    Script: |
+      bonus bMaxHPrate,15;
+      bonus bDef,45;
+  - Id: 29104
+    Script: |
+      bonus bMaxHPrate,20;
+      bonus bDef,60;
+  - Id: 29105
+    Script: |
+      bonus bMaxHPrate,25;
+      bonus bDef,75;
+  - Id: 29106
+    Script: |
+      bonus bMaxHPrate,30;
+      bonus bDef,90;
+  - Id: 29107
+    Script: |
+      bonus bMaxHPrate,35;
+      bonus bDef,105;
+  - Id: 29108
+    Script: |
+      bonus bMaxHPrate,40;
+      bonus bDef,120;
+  - Id: 29109
+    Script: |
+      bonus bMaxHPrate,45;
+      bonus bDef,135;
+  - Id: 29110
+    Script: |
+      bonus bMaxHPrate,55;
+      bonus bDef,150;
+  - Id: 29111
+    Script: |
+      bonus bHealPower,5;
+      bonus bMdef,3;
+  - Id: 29112
+    Script: |
+      bonus bHealPower,10;
+      bonus bMdef,6;
+  - Id: 29113
+    Script: |
+      bonus bHealPower,15;
+      bonus bMdef,9;
+  - Id: 29114
+    Script: |
+      bonus bHealPower,20;
+      bonus bMdef,12;
+  - Id: 29115
+    Script: |
+      bonus bHealPower,25;
+      bonus bMdef,15;
+  - Id: 29116
+    Script: |
+      bonus bHealPower,30;
+      bonus bMdef,18;
+  - Id: 29117
+    Script: |
+      bonus bHealPower,35;
+      bonus bMdef,21;
+  - Id: 29118
+    Script: |
+      bonus bHealPower,40;
+      bonus bMdef,24;
+  - Id: 29119
+    Script: |
+      bonus bHealPower,45;
+      bonus bMdef,27;
+  - Id: 29120
+    Script: |
+      bonus bHealPower,55;
+      bonus bMdef,30;
+  # NEED 2026-10-07: 대전 승리의 증표 - 전장 화폐. 계정 창고 허용, 거래/길드창고 등은 기존대로 불가
+  - Id: 6378
+    Trade:
+      NoStorage: false
+
+#===== NEED 2026-10-12: 의상 인챈트 스톤(재료) 창고 탭 통일 =================
+# 창고 탭은 서버가 보내는 item type 으로 갈린다(clif itemtype). 재료 스톤 399종 중
+# 376종은 Etc(기타 탭)인데 아래 23종만 kRO 원본이 Card 라 카드 탭에 섞여 보였다.
+# 이 23종은 재료일 뿐 슬롯에 박히는 ID(4700, 29030 등)와 별개라 Type 만 Etc 로 맞춘다.
+#   - 슬롯용 인챈트(Card)는 건드리지 않음: 세트(item_combos)가 IT_CARD 로 판정
+#   - item_combos / item_enchant / NPC 스크립트에서 이 23종 참조 0건
+#   - 몹 드랍은 WA_TREASURE(3075) 뿐이고 WaveMode 인스턴스는 미로드
+# 목록 출처: npc/NEED/Costume.txt StoneData 의 EtcID 열 중 Type: Card 인 것
+#=====================================================================
+  - Id: 6716
+    AegisName: Cri_Stone
+    Type: Etc
+  - Id: 6717
+    AegisName: MaxHP_Stone
+    Type: Etc
+  - Id: 6718
+    AegisName: MaxSP_Stone
+    Type: Etc
+  - Id: 6740
+    AegisName: HealStone_Top
+    Type: Etc
+  - Id: 6741
+    AegisName: HealStone2_Top
+    Type: Etc
+  - Id: 6742
+    AegisName: HealStone_Middle
+    Type: Etc
+  - Id: 6743
+    AegisName: HPStone_Middle
+    Type: Etc
+  - Id: 6744
+    AegisName: SPStone_Middle
+    Type: Etc
+  - Id: 6745
+    AegisName: HealStone_Bottom
+    Type: Etc
+  - Id: 6790
+    AegisName: BigStone_Top
+    Type: Etc
+  - Id: 6791
+    AegisName: MediumStone_Top
+    Type: Etc
+  - Id: 6792
+    AegisName: SmallStone_Top
+    Type: Etc
+  - Id: 6908
+    AegisName: ASPDStone_Robe
+    Type: Etc
+  - Id: 6943
+    AegisName: ATKStone_Top
+    Type: Etc
+  - Id: 6944
+    AegisName: MATKStone_Top
+    Type: Etc
+  - Id: 6945
+    AegisName: STRStone_Middle
+    Type: Etc
+  - Id: 6946
+    AegisName: INTStone_Middle
+    Type: Etc
+  - Id: 6947
+    AegisName: AGIStone_Middle
+    Type: Etc
+  - Id: 6948
+    AegisName: DEXStone_Middle
+    Type: Etc
+  - Id: 6949
+    AegisName: VITStone_Middle
+    Type: Etc
+  - Id: 6950
+    AegisName: LUKStone_Middle
+    Type: Etc
+  - Id: 6951
+    AegisName: HPStone_Bottom
+    Type: Etc
+  - Id: 25066
+    AegisName: Recovery_Stone
+    Type: Etc
+
+#===== NEED 2026-10-13: 초보자 장비 상향 (CM 개선안) =====================
+  - Id: 15250
+    Script: |
+      bonus bAllStats,3;
+      bonus bMaxHP,500;
+      bonus bMaxSP,200;
+      bonus bAtkRate,3;
+      bonus bMatkRate,3;
+  - Id: 22173
+    Script: |
+      bonus bMaxHP,300;
+      bonus bMaxSP,100;
+      bonus bFlee,20;
+      bonus bHPrecovRate,15;
+      bonus bSPrecovRate,15;
+      if (readparam(bDex) >= 120)
+         bonus bFixedCast,-500;
+  - Id: 20906
+    Script: |
+      bonus2 bSubEle,Ele_Neutral,20;
+      bonus bVariableCastrate,-15;
+  - Id: 399932
+    AegisName: Need_Beginner_Growth
+    Name: 초심자의 성장
+    Type: Card
+    SubType: Enchant
+    Weight: 0
+    Trade:
+      NoDrop: true
+      NoTrade: true
       NoSell: true
       NoCart: true
       NoStorage: true
@@ -2755,7 +3150,34 @@ Body:
       NoMail: true
       NoAuction: true
     Script: |
-      callfunc "F_NEED_Chuseok_HoneySongpyun";
+      bonus bAtkRate,2;
+      bonus bMatkRate,2;
+
+#===== NEED 2026-10-16: 초심자의 캡 소켓 0 -> 1 (유저 문의) =====================
+  - Id: 19310
+    Slots: 1
+
+#===== NEED 2026-10-22: 일일 퀘스트 80점 증표 (npc/NEED/need_daily_quest.txt F_NEED_DQ_TokenId) ======
+# 1000235 뛰어난 사냥꾼의 증표 : 80점 보상 수령 때 받는 캐릭터에게 1개, 2개 -> 대장장이의 축복(6635) 1개.
+#               할로윈 코인(6658)과 같은 정책: 같은 계정 개인 창고(storage / storage2 / storage3)만 허용.
+#               드롭 / 거래 / NPC 판매 / 카트 / 길드 창고 / 우편 / 경매 불가, 구매 노점 판매 불가(BuyingStore false).
+  - Id: 1000235
+    AegisName: Elite_Hunter_Token
+    Name: 뛰어난 사냥꾼의 증표
+    Type: Etc
+    Weight: 0
+    Flags:
+      BuyingStore: false
+    Trade:
+      Override: 100
+      NoDrop: true
+      NoTrade: true
+      NoSell: true
+      NoCart: true
+      NoGuildStorage: true
+      NoMail: true
+      NoAuction: true
+
 # NEED EP16.2: prevent accidental NPC sale (0z). Trade restrictions of the base entry are kept.
   - Id: 25155
     AegisName: Swz_Honor_Token

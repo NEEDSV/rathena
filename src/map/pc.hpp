@@ -423,6 +423,8 @@ struct s_qi_display {
 	e_questinfo_markcolor color;
 };
 
+struct s_rune_display_bonus; // rune.hpp
+
 struct s_runebook_data {
 	uint16 tagId;
 	uint32 bookId;
@@ -1001,6 +1003,16 @@ public:
 		uint8 bookNumber;
 		bool loaded;
 	} runeactivated_data;
+
+	/// NEED rune tablet buff tooltip (display only, never saved; see rune_display_refresh)
+	struct s_rune_display {
+		int32 want = 0;		///< EFST for the rune state the last status_calc_pc applied (0 = no icon)
+		int32 sent = 0;		///< EFST currently shown on the client
+		bool resend = false;	///< the client may have dropped the icon (map load, revive): send it again
+		bool checking = false;	///< @runetooltipcheck is running: send nothing
+		std::vector<s_rune_display_bonus>* check_log = nullptr;	///< @runetooltipcheck log
+		std::vector<s_rune_display_bonus>* capture = nullptr;	///< set only while rune scripts run during a check
+	} rune_display;
 
 #ifdef SECURE_NPCTIMEOUT
 	/**

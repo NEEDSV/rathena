@@ -1,0 +1,48 @@
+//===== NEED Zone Helper / Warper shared routing =====================
+// Seven destinations (Eden Group removed 2026-10-16) and destination-map policies.
+// This check also protects Last Warp and account-shared Favorites.
+function	script	F_NEED_CanZoneWarp	{
+	.@map$ = strtolower(getarg(0));
+	if ((.@map$ == "pvp_n_2-5" || .@map$ == "pvp_n_2-5.gat") && BaseLevel >= 40) {
+		message strcharinfo(0), needtr("초보존은 40레벨 미만만 입장할 수 있습니다.", "The Novice Zone is only available below level 40.");
+		return 0;
+	}
+	return 1;
+}
+
+function	script	F_NEED_ZoneMenu	{
+	.@choice = select(
+		needtr("- 초보존", "- Novice Zone"),
+		needtr("- 노점존", "- Vending Zone"),
+		needtr("- 허수아비(데미지 테스트)", "- Scarecrow (Damage Test)"),
+		"- PVP", "- GVG",
+		needtr("- 고목존", "- Old Tree Zone"),
+		needtr("- 버프존", "- Buff Zone"),
+		needtr("돌아가기", "Back"));
+	return callfunc("F_NEED_ZoneWarp", .@choice, getarg(0, 0));
+}
+
+function	script	F_NEED_ZoneWarp	{
+	// 0 = Back/invalid; 1 = selection handled (including denied entry).
+	switch (getarg(0)) {
+	// 2026-10-16: Eden Group (moc_para01) entry removed; keep these indices in menu order.
+	case 1: .@map$ = "pvp_n_2-5"; .@x = 99; .@y = 132; break;
+	case 2: .@map$ = "payon.gat"; .@x = 137; .@y = 232; break;
+	case 3: .@map$ = "hero_tra"; .@x = 70; .@y = 150; break;
+	case 4: .@map$ = "guild_vs1"; .@x = 0; .@y = 0; break;
+	case 5: .@map$ = "guild_vs2"; .@x = 0; .@y = 0; break;
+	case 6: .@map$ = "pvp_n_5-3"; .@x = 99; .@y = 95; break;
+	case 7: .@map$ = "turbo_room"; .@x = 100; .@y = 111; break;
+	default: return 0;
+	}
+	if (!callfunc("F_NEED_CanZoneWarp", .@map$))
+		return 1;
+	// The independent helper retains its original no-history behavior.
+	if (getarg(1, 0)) {
+		lastwarp$ = .@map$;
+		lastwarpx = .@x;
+		lastwarpy = .@y;
+	}
+	warp .@map$, .@x, .@y;
+	return 1;
+}

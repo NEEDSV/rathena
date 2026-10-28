@@ -901,7 +901,7 @@ OnMobDead:
 	disablenpc instance_npcname("eq#mir5");
 
 	if ('simple_mode) {
-		// NEED: 반복 클리어는 별도 스토리 연출 없이 즉시 종료.
+		// NEED: 반복 클리어는 별도 스토리 연출 없이 끝낸다. (전리품 유예 30초 후 이동)
 		mapannouncelang 'map_name$, "의식의 방을 클리어했습니다.", "The Room of Consciousness has been cleared.", bc_map,0x00FF00,FW_NORMAL,14;
 		// 안전장치: 간소화 모드로 들어왔더라도 메인 스토리 진행 중인 파티원이 있으면
 		// 클리어 기록과 스토리 진행도(7700 -> 7701 / ep16_royal = 20)를 보정한다.
@@ -909,6 +909,14 @@ OnMobDead:
 			callfunc "F_RoomConsciousnessMarkClear";
 			callfunc "F_RoomConsciousnessFinishStory";
 		}
+		// 2026-10-19 간담회: 처치 즉시 이동하면 보스가 바닥에 떨어뜨린 전리품(카드 등)이
+		// 이동 뒤에 생겨 줍지 못한다. 30초(2026-10-20 커뮤니티 요청으로 60 -> 30, MVP 아이템
+		// 우선권 10+10초 포함, 바닥 아이템 수명 60초 이내)를 기다린 뒤 이동한다. 'step = 8 이라 보스 재소환/중복 처치는 없다.
+		// sleep 은 플레이어를 떼고 기다리며, 그 사이 인스턴스가 사라지면 함께 정리된다.
+		mapannouncelang 'map_name$, "30초 후 도서관으로 이동합니다. 바닥의 전리품을 챙겨 주세요.", "You will be moved to the library in 30 seconds. Pick up the loot on the floor.", bc_map,0x00FF00,FW_NORMAL,14;
+		sleep 20000;
+		mapannouncelang 'map_name$, "10초 후 도서관으로 이동합니다.", "You will be moved to the library in 10 seconds.", bc_map,0x00FF00,FW_NORMAL,14;
+		sleep 10000;
 		mapwarp 'map_name$, "prt_lib_q",88,83;
 		end;
 	}

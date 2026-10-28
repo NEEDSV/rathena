@@ -1,0 +1,929 @@
+//============================================================
+// NEED 2026 할로윈 이벤트 (2026.10.31 ~ 2026.12.12 10:00 업데이트 전)
+//============================================================
+//= 이벤트 재화 6658 할로윈 코인 (Halloween_Coin, 기존 아이템 그대로)
+//=
+//= 획득
+//=   사냥     4.00% x1, 플레이어 레벨 ±30 (C++ need_halloween.cpp)
+//=   전장     티에라 2 / 플라비우스 2 / KVM 3 (기존 정상 보상 대상자, 승패 무관)
+//=   잭 잡기  성공 시 10개, 계정 + 접속 IP 하루 1회 (04:00 초기화)
+//=
+//= 교환 (할로윈 상인 잭)
+//=   10   올인원 힐링 포션 (102129)          제한 없음 (바터 need_halloween_exchange)
+//=   20   뭔가 있는 캔디 홀더 (22838)        제한 없음 (바터 need_halloween_exchange)
+//=   100  홀그렌의 쉐도우 제련망치 (23436)   계정당 주 5개 (매주 토요일 22:00 초기화)
+//=   300  아리아 의상 선택 상자 (399935)     계정당 이벤트 기간 1개
+//=   1000 +9 무기(6228) / 방어구(6232) 보장권 택1, 계정당 이벤트 기간 총 1개
+//=
+//= 잭의 사탕 (6532, 옛 꿀송편을 영구 전환)
+//=   사냥 0.05% (need_halloween_candy_rate), 레벨 ±30, 계정 + 접속 IP 하루 1개 (04:00)
+//=   지급은 C++ need_halloween.cpp, 사용은 F_NEED_Halloween_JackCandy (공통 랜덤 제니/캐시, event_id 202611)
+//=   사냥 스위치($NEED_HALLOWEEN_HUNT_ON)를 코인과 같이 따른다.
+//=
+//= 원장은 새로 만들지 않고 추석 테이블을 event_id 202610 (잭 잡기) / 202611 (잭의 사탕) 으로 재사용한다.
+//=   잭 잡기 일일 보상  need_chuseok_honey_*      (C++ needhalloweenjack)
+//=   교환 한도          need_chuseok_exchange_*   (F_NEED_Chuseok_Limit* 에 event_id 전달)
+//=
+//= 운영 스위치는 need_halloween_gm.txt (@halloweengm) 참고. 배포 기본값은 모두 OFF.
+//=
+//= Event Hub (need_event_hub.txt + need_halloween_hub.txt)
+//=   두 NPC 의 대화는 F_NEED_Halloween_JackTalk / F_NEED_Halloween_ShopTalk 함수로 옮겼다.
+//=   payo2 NPC 와 Event 버튼이 같은 함수를 부른다 (한도/원장 로직은 그대로).
+//=   할로윈이 켜지면 Hub 를 할로윈 모듈로 연결하고 Event 버튼이 밝아진다(자동), 꺼지면 흐려진다.
+//=   버튼이 할로윈으로 ON 이면 두 NPC 는 숨긴다.
+//=   $NEED_HALLOWEEN_LEGACY_NPC_ON = 1 이면 Hub 와 상관없이 다시 보인다 (운영/복구용).
+//============================================================
+
+//------------------------------------------------------------
+// 진행 여부
+//------------------------------------------------------------
+function	script	F_NEED_Halloween_Active	{
+	return ($NEED_HALLOWEEN_EVENT_ON != 0);
+}
+
+//------------------------------------------------------------
+// 스위치를 실제 상태에 반영한다 (OnInit / GM 변경 시).
+//
+// - 사냥 battle flag 는 conf 값 대신 GM 이 저장한 값으로 맞춘다 (재시작 후에도 유지).
+// - 할로윈 NPC 는 이벤트가 켜져 있을 때만 보인다.
+// - 잭 NPC 두 개는 추석 NPC 와 같은 칸을 쓴다. 할로윈이 켜져 있고 추석이 끝났으면
+//   추석 NPC 를 숨기고, 할로윈이 꺼지면 다시 보이게 한다.
+//------------------------------------------------------------
+function	script	F_NEED_Halloween_Sync	{
+	setbattleflag("need_halloween_hunt_enable", ($NEED_HALLOWEEN_EVENT_ON && $NEED_HALLOWEEN_HUNT_ON) ? 1 : 0);
+	setbattleflag("need_halloween_candy_enable", ($NEED_HALLOWEEN_EVENT_ON && $NEED_HALLOWEEN_HUNT_ON) ? 1 : 0);
+
+	// Event Hub : 할로윈이 진행 중이면 Hub 를 할로윈으로 연결하고, 버튼 상태(밝음/흐림)를 다시 계산한다.
+	if ($NEED_HALLOWEEN_EVENT_ON)
+		callfunc "F_NEED_EventHub_Claim", "F_NEED_HW26_Hub", 202610;
+	callfunc "F_NEED_EventHub_Update";
+
+	// 버튼이 할로윈으로 ON 이면 같은 대화를 버튼으로 열 수 있으므로 NPC 는 숨긴다.
+	.@legacy = ($NEED_HALLOWEEN_LEGACY_NPC_ON || !callfunc("F_NEED_EventHub_IsLive", "F_NEED_HW26_Hub"));
+
+	if ($NEED_HALLOWEEN_EVENT_ON) {
+		if (.@legacy) {
+			enablenpc "꼬마 호박 잭#hw26j";
+			enablenpc "할로윈 상인 잭#hw26s";
+		}
+		else {
+			disablenpc "꼬마 호박 잭#hw26j";
+			disablenpc "할로윈 상인 잭#hw26s";
+		}
+		if (!$NEED_CHUSEOK_EVENT_ON) {
+			disablenpc "송편 빚는 아낙#chuseok2026";
+			disablenpc "한가위 교환상 달이#chuseok2026";
+		}
+	}
+	else {
+		disablenpc "꼬마 호박 잭#hw26j";
+		disablenpc "할로윈 상인 잭#hw26s";
+		enablenpc "송편 빚는 아낙#chuseok2026";
+		enablenpc "한가위 교환상 달이#chuseok2026";
+	}
+	return;
+}
+
+//------------------------------------------------------------
+// 잭의 사탕 사용 (item 6532, 옛 꿀송편을 2026-10-26 영구 전환)
+//
+// 보상 분포는 꿀송편 때와 같은 공통 함수 그대로 (변경 없음). 로그는 event_id 202611.
+// 사용 횟수 제한은 없다 (가진 수량만큼). 이벤트가 끝나도 남은 사탕은 쓸 수 있고,
+// 잔여분은 종료 SQL(need_halloween_2026_end.sql)이 지운다.
+//------------------------------------------------------------
+function	script	F_NEED_Halloween_JackCandy	{
+	return callfunc("F_NEED_Event_RandomCashReward", 6532, 202611, "할로윈 이벤트", "잭의 사탕", "Halloween Event", "Jack's Candy");
+}
+
+//------------------------------------------------------------
+// 전장 할로윈 코인
+//
+// getarg(0) 1=티에라 / 2=플라비우스 / 3=KVM
+//
+// 추석 F_NEED_Chuseok_BG_Reward 와 같은 자리(bg_common.txt F_BG_Badge,
+// kvm01.txt F_KvM_GrantReward 끝)에서 호출되므로, 기존 전장 보상 자격과
+// 랜덤 매칭 중복 수령 방지(F_BG_RM_TryClaimReward)를 그대로 따른다.
+// 승패 분기 바깥이라 승리/패배/무승부 모두 같은 수량이다.
+//------------------------------------------------------------
+function	script	F_NEED_Halloween_BG_Reward	{
+	.@stage = getarg(0);
+
+	if (.@stage < 1 || .@stage > 3)
+		return;
+	if (!$NEED_HALLOWEEN_EVENT_ON || !$NEED_HALLOWEEN_BG_ON)
+		return;
+
+	// 티에라 2 / 플라비우스 2 / KVM 3 = 한 사이클 7개
+	setarray .@coin[1], 2, 2, 3;
+
+	getitem 6658, .@coin[.@stage];
+	dispbottom needtr("[할로윈 이벤트] 전장 보상으로 할로윈 코인 ", "[Halloween Event] Battleground reward: Halloween Coin x") + .@coin[.@stage] + needtr("개를 받았습니다.", ".");
+	return;
+}
+
+//------------------------------------------------------------
+// 잭 잡기
+//
+// 개인 인스턴스 '할로윈 잭 잡기' (db/import/instance_db.yml Id 1031)
+//   기반 맵 pvp_n_1-2 (80x80, 통행 셀 전체가 한 영역). NoNpc 라 공용 맵 NPC 는 복사되지 않는다.
+//   맵플래그는 원본에서 복사된 뒤, 입장 NPC 가 PvP/GvG/전장 플래그를 인스턴스 맵에서만 끈다.
+//   (NoMapFlag 는 쓰지 않는다: 이 rAthena 에서는 처음 쓰는 인스턴스 슬롯의 플래그 배열이
+//    비어 있어 그 맵에 setmapflag 를 하면 맵서버가 죽는다. 2026-10-22 격리 서버에서 확인.)
+// 잭은 떠 있는 템플릿 NPC 를 인스턴스 맵에 duplicate 로 3개(슬롯 0~2) 만들어 두고,
+// 평소에는 슬롯 0 하나만 보이게 한다. 잡힐 때마다 그 슬롯을 movenpc + setnpcdisplay 로
+// 새 위치/외형(일반/황금)으로 바꾼다.
+//
+// JACK FEVER (2026-10-26 보완): 판마다 처음으로 10점 이상이 되는 순간 10초 동안 한 번.
+//   숨겨 둔 슬롯 1, 2 를 켜서 잭 3마리를 동시에 띄우고, 잡힌 슬롯만 바로 다시 띄운다.
+//   피버 중 생성 거리 6~10칸, 황금 잭 20%. 3분 제한 타이머와 별개라 전체 시간은 그대로 흐른다.
+//   피버가 끝나면 보이는 잭 중 번호가 가장 작은 1마리만 남기고 나머지는 숨긴다.
+//   숨긴 NPC 는 movenpc 하지 않는다 (movenpc 의 시야 갱신이 숨긴 NPC 를 다시 보낼 수 있음).
+//   켤 때는 enablenpc 를 먼저 하고 그다음 movenpc 한다.
+//
+// 상태 (캐릭터 임시 변수, 로그아웃 시 자동 소멸)
+//   @HW_JACK_STATE  0 없음 / 1 진행 중 / 2 성공 처리 대기
+//   @HW_JACK_IID    인스턴스 ID     @HW_JACK_MAP$  인스턴스 맵 이름
+//   @HW_JACK_NPCS$[0..2]  슬롯별 잭 NPC 고유 이름
+//   @HW_JACK_ON[0..2]     슬롯의 잭이 지금 보이고 잡을 수 있으면 1
+//   @HW_JACK_GOLDS[0..2]  슬롯의 잭이 황금 잭이면 1
+//   @HW_JACK_SCORE  점수            @HW_JACK_CATCH  잡은 수
+//   @HW_JACK_START / @HW_JACK_END   시작 / 종료 시각 (gettimetick(2))
+//   @HW_JACK_FEVER  피버 중이면 1   @HW_JACK_FEVER_USED  이번 판에 피버가 이미 나왔으면 1
+//   @HW_JACK_FEVER_END  피버 종료 시각
+//------------------------------------------------------------
+// getarg(0) 슬롯 (0~2). 그 슬롯의 잭을 새 자리에 띄운다 (숨겨져 있었으면 켠다).
+function	script	F_NEED_Halloween_JackSpawn	{
+	.@slot = getarg(0, 0);
+	.@map$ = @HW_JACK_MAP$;
+	.@npc$ = @HW_JACK_NPCS$[.@slot];
+	if (.@map$ == "" || .@npc$ == "" || .@slot < 0 || .@slot > 2)
+		return 0;
+
+	getmapxy(.@pmap$, .@px, .@py, BL_PC);
+
+	// 거리는 가로/세로 차이 중 큰 쪽(칸). 맵 안쪽 통행 영역은 x,y 61~138.
+	//   1단계 평상시 8~12칸 / 피버 6~10칸 (80회), 2단계 6~14칸 (80회),
+	//   3단계 통행 영역 아무 칸 (200회, 플레이어 칸 제외). 모두 실패하면 그대로 둔다.
+	.@min = (@HW_JACK_FEVER) ? 6 : 8;
+	.@max = (@HW_JACK_FEVER) ? 10 : 12;
+	.@found = 0;
+	for (.@pass = 0; .@pass < 3 && !.@found; .@pass++) {
+		if (.@pass == 1) {
+			.@min = 6;
+			.@max = 14;
+		}
+		.@tries = (.@pass < 2) ? 80 : 200;
+		for (.@i = 0; .@i < .@tries && !.@found; .@i++) {
+			if (.@pass < 2) {
+				.@x = .@px + rand(-.@max, .@max);
+				.@y = .@py + rand(-.@max, .@max);
+			}
+			else {
+				.@x = rand(61, 138);
+				.@y = rand(61, 138);
+			}
+			if (.@x < 61 || .@x > 138 || .@y < 61 || .@y > 138)
+				continue;
+			if (!checkcell(.@map$, .@x, .@y, cell_chkpass))
+				continue;
+			.@dx = (.@x > .@px) ? .@x - .@px : .@px - .@x;
+			.@dy = (.@y > .@py) ? .@y - .@py : .@py - .@y;
+			.@d = (.@dx > .@dy) ? .@dx : .@dy;
+			if (.@d == 0 || (.@pass < 2 && (.@d < .@min || .@d > .@max)))
+				continue;
+			// 다른 잭과 같은 칸에는 띄우지 않는다.
+			.@dup = 0;
+			for (.@k = 0; .@k < 3; .@k++) {
+				if (.@k == .@slot || !@HW_JACK_ON[.@k])
+					continue;
+				getmapxy(.@om$, .@ox, .@oy, BL_NPC, @HW_JACK_NPCS$[.@k]);
+				if (.@ox == .@x && .@oy == .@y)
+					.@dup = 1;
+			}
+			if (!.@dup)
+				.@found = 1;
+		}
+	}
+	if (!.@found)
+		return 0;
+
+	// 황금 잭: 평상시 10%, 피버 중 20%.
+	.@gold = (rand(100) < ((@HW_JACK_FEVER) ? 20 : 10)) ? 1 : 0;
+	@HW_JACK_GOLDS[.@slot] = .@gold;
+	if (.@gold) {
+		setnpcdisplay .@npc$, "황금 잭", 1130;
+		setnpcnameen "Golden Jack", .@npc$;
+	}
+	else {
+		setnpcdisplay .@npc$, "잭", 1130;
+		setnpcnameen "Jack", .@npc$;
+	}
+	if (!@HW_JACK_ON[.@slot]) {
+		enablenpc .@npc$;
+		@HW_JACK_ON[.@slot] = 1;
+	}
+	movenpc .@npc$, .@x, .@y;
+	if (.@gold) {
+		specialeffect EF_LIGHTSPHERE, AREA, .@npc$;
+		dispbottom needtr("[잭 잡기] 반짝! 황금 잭이 나타났다! (+3점)", "[Jack Catch] Sparkle! A Golden Jack appeared! (+3 pts)"), 0xFFD700;
+	}
+	return 1;
+}
+
+// JACK FEVER 시작 (잡기 처리 중 10점을 처음 넘었을 때). 잡힌 슬롯을 포함해 세 슬롯을 모두 띄운다.
+function	script	F_NEED_Halloween_JackFever	{
+	@HW_JACK_FEVER = 1;
+	@HW_JACK_FEVER_USED = 1;
+	@HW_JACK_FEVER_END = gettimetick(2) + 10;
+	deltimer "HalloweenJack#hw26ctl::OnFeverEnd";
+	addtimer 10000, "HalloweenJack#hw26ctl::OnFeverEnd";
+
+	announce "JACK FEVER!", bc_self, 0xFF6600;
+	specialeffect2 EF_POTION_BERSERK;
+	dispbottom needtr("[잭 잡기] JACK FEVER! 10초 동안 잭들이 몰려옵니다!", "[Jack Catch] JACK FEVER! Jacks swarm in for 10 seconds!"), 0xFF3300;
+	for (.@k = 0; .@k < 3; .@k++)
+		callfunc "F_NEED_Halloween_JackSpawn", .@k;
+	return;
+}
+
+// 남은 시간 "m:ss"
+function	script	F_NEED_Halloween_JackLeft$	{
+	.@left = @HW_JACK_END - gettimetick(2);
+	if (.@left < 0)
+		.@left = 0;
+	return (.@left / 60) + ":" + ((.@left % 60 < 10) ? "0" : "") + (.@left % 60);
+}
+
+// 타이머/인스턴스/임시 변수를 모두 정리하고 맵 밖으로 내보낸다.
+// 인스턴스 안 NPC 의 스크립트 실행 중에는 부르지 않는다 (OnFinish / OnTimeUp 에서만).
+function	script	F_NEED_Halloween_JackCleanup	{
+	deltimer "HalloweenJack#hw26ctl::OnWarn60";
+	deltimer "HalloweenJack#hw26ctl::OnWarn30";
+	deltimer "HalloweenJack#hw26ctl::OnWarn10";
+	deltimer "HalloweenJack#hw26ctl::OnTimeUp";
+	deltimer "HalloweenJack#hw26ctl::OnFinish";
+	deltimer "HalloweenJack#hw26ctl::OnFeverEnd";
+
+	.@iid = @HW_JACK_IID;
+	.@map$ = @HW_JACK_MAP$;
+
+	@HW_JACK_STATE = 0;
+	@HW_JACK_IID = 0;
+	@HW_JACK_MAP$ = "";
+	deletearray @HW_JACK_NPCS$;
+	deletearray @HW_JACK_ON;
+	deletearray @HW_JACK_GOLDS;
+	@HW_JACK_SCORE = 0;
+	@HW_JACK_CATCH = 0;
+	@HW_JACK_START = 0;
+	@HW_JACK_END = 0;
+	@HW_JACK_FEVER = 0;
+	@HW_JACK_FEVER_USED = 0;
+	@HW_JACK_FEVER_END = 0;
+
+	// 먼저 내보내고 나서 인스턴스를 없앤다 (없애면 남은 사람은 세이브 포인트로 간다).
+	// 인스턴스를 없애면 그 맵의 잭 NPC 3개도 함께 사라진다.
+	if (.@map$ != "" && strcharinfo(3) == .@map$)
+		warp "payo2", 113, 98;
+	if (.@iid > 0)
+		instance_destroy .@iid;
+	return;
+}
+
+// 잭 템플릿. 직접 배치하지 않고 인스턴스 맵에 duplicate 로만 만든다.
+-	script	HalloweenJack#hw26tpl	-1,{
+	.@me$ = strnpcinfo(3);
+	if (@HW_JACK_STATE != 1 || strcharinfo(3) != strnpcinfo(4) || instance_id(IM_CHAR) != @HW_JACK_IID)
+		end;
+	.@slot = -1;
+	for (.@k = 0; .@k < 3; .@k++)
+		if (@HW_JACK_NPCS$[.@k] == .@me$ && @HW_JACK_ON[.@k])
+			.@slot = .@k;
+	if (.@slot < 0)
+		end;
+	if (gettimetick(2) > @HW_JACK_END) {
+		dispbottom needtr("[잭 잡기] 시간이 다 되었습니다.", "[Jack Catch] Time is up."), 0xFF6600;
+		end;
+	}
+
+	.@gold = @HW_JACK_GOLDS[.@slot];
+	.@pt = (.@gold) ? 3 : 1;
+	@HW_JACK_SCORE += .@pt;
+	@HW_JACK_CATCH++;
+
+	if (@HW_JACK_SCORE >= 15) {
+		// 성공. 보상과 정리는 이 NPC 밖(컨트롤러)에서 한다: 이 NPC 는 인스턴스와 함께 사라진다.
+		// 피버 중이어도 끝나기를 기다리지 않는다. 피버 타이머는 정리 함수가 지운다.
+		@HW_JACK_STATE = 2;
+		specialeffect EF_LIGHTSPHERE, AREA, .@me$;
+		dispbottom needtr("[잭 잡기] ", "[Jack Catch] ") + ((.@gold) ? needtr("황금 잭 포획! +3점", "Golden Jack caught! +3 pts") : needtr("잭 포획! +1점", "Jack caught! +1 pt")) + " (" + @HW_JACK_SCORE + " / 15)", 0xFFA500;
+		deltimer "HalloweenJack#hw26ctl::OnFinish";
+		addtimer 100, "HalloweenJack#hw26ctl::OnFinish";
+		end;
+	}
+
+	dispbottom needtr("[잭 잡기] ", "[Jack Catch] ") + ((.@gold) ? needtr("황금 잭 포획! +3점", "Golden Jack caught! +3 pts") : needtr("잭 포획! +1점", "Jack caught! +1 pt")) + " (" + @HW_JACK_SCORE + " / 15" + needtr(", 남은 시간 ", ", time left ") + callfunc("F_NEED_Halloween_JackLeft$") + ")", 0xFFA500;
+
+	// 처음으로 10점 이상이 되면 JACK FEVER (판당 1번). 아니면 잡힌 슬롯만 다시 띄운다.
+	if (!@HW_JACK_FEVER_USED && @HW_JACK_SCORE >= 10) {
+		callfunc "F_NEED_Halloween_JackFever";
+		end;
+	}
+	callfunc "F_NEED_Halloween_JackSpawn", .@slot;
+	end;
+}
+
+// 잭 잡기 컨트롤러 (캐릭터 타이머 이벤트 전용, 맵에 없음)
+-	script	HalloweenJack#hw26ctl	-1,{
+	end;
+
+OnWarn60:
+	if (@HW_JACK_STATE == 1)
+		dispbottom needtr("[잭 잡기] 남은 시간 1분! 현재 ", "[Jack Catch] 1 minute left! Score ") + @HW_JACK_SCORE + " / 15", 0xFF6600;
+	end;
+
+OnWarn30:
+	if (@HW_JACK_STATE == 1)
+		dispbottom needtr("[잭 잡기] 남은 시간 30초! 현재 ", "[Jack Catch] 30 seconds left! Score ") + @HW_JACK_SCORE + " / 15", 0xFF6600;
+	end;
+
+OnWarn10:
+	if (@HW_JACK_STATE == 1)
+		dispbottom needtr("[잭 잡기] 남은 시간 10초! 현재 ", "[Jack Catch] 10 seconds left! Score ") + @HW_JACK_SCORE + " / 15", 0xFF6600;
+	end;
+
+// JACK FEVER 종료: 보이는 잭 중 번호가 가장 작은 1마리만 남기고 숨긴다 (평상시 규칙으로 복귀).
+OnFeverEnd:
+	if (@HW_JACK_STATE != 1 || !@HW_JACK_FEVER)
+		end;
+	@HW_JACK_FEVER = 0;
+	@HW_JACK_FEVER_END = 0;
+	.@keep = -1;
+	for (.@k = 0; .@k < 3; .@k++) {
+		if (!@HW_JACK_ON[.@k])
+			continue;
+		if (.@keep < 0) {
+			.@keep = .@k;
+			continue;
+		}
+		disablenpc @HW_JACK_NPCS$[.@k];
+		@HW_JACK_ON[.@k] = 0;
+		@HW_JACK_GOLDS[.@k] = 0;
+	}
+	if (.@keep < 0)
+		callfunc "F_NEED_Halloween_JackSpawn", 0;
+	dispbottom needtr("[잭 잡기] JACK FEVER 종료! 남은 잭을 잡아 15점을 채우세요!", "[Jack Catch] JACK FEVER is over! Catch the remaining Jacks to reach 15 points!"), 0xFF6600;
+	end;
+
+// 시간 초과: 기록을 남기지 않으므로 다시 도전할 수 있다.
+OnTimeUp:
+	if (@HW_JACK_STATE != 1)
+		end;
+	.@score = @HW_JACK_SCORE;
+	callfunc "F_NEED_Halloween_JackCleanup";
+	dispbottom needtr("[잭 잡기] 시간 초과! ", "[Jack Catch] Time over! ") + .@score + needtr(" / 15점. 보상 기록은 남지 않았으니 다시 도전할 수 있어요.", " / 15 pts. Nothing was recorded, so you can try again."), 0xFF6600;
+	end;
+
+// 성공: 맵 밖으로 내보낸 뒤 일일 원장(계정 + IP)을 한 트랜잭션으로 확인하고 지급한다.
+OnFinish:
+	if (@HW_JACK_STATE != 2)
+		end;
+	.@score = @HW_JACK_SCORE;
+	.@catch = @HW_JACK_CATCH;
+	.@sec = gettimetick(2) - @HW_JACK_START;
+	callfunc "F_NEED_Halloween_JackCleanup";
+
+	dispbottom needtr("[잭 잡기] 성공! 잭 ", "[Jack Catch] Clear! ") + .@catch + needtr("마리 / ", " jacks / ") + .@score + needtr("점 / ", " pts / ") + .@sec + needtr("초", " sec"), 0x00CC66;
+
+	if (!$NEED_HALLOWEEN_EVENT_ON || !$NEED_HALLOWEEN_JACK_REWARD_ON) {
+		dispbottom needtr("[잭 잡기] 지금은 보상 지급이 중지되어 있어 보상이 없습니다. (기록도 남지 않음)", "[Jack Catch] Rewards are paused right now, so nothing was given. (Nothing was recorded.)"), 0xFF6600;
+		end;
+	}
+
+	// 1 지급 / 0 계정 / -1 IP / -2 인벤토리 / -3 DB 오류 / -4 기능 중지
+	.@r = needhalloweenjack(1);
+	if (.@r == 1)
+		dispbottom needtr("[잭 잡기] 보상으로 할로윈 코인 10개를 받았습니다! 내일 04:00 이후 다시 도전하세요.", "[Jack Catch] You received 10 Halloween Coins! Come back after 04:00 tomorrow."), 0x00CC66;
+	else if (.@r == 0)
+		dispbottom needtr("[잭 잡기] 이 계정은 오늘 이미 보상을 받았습니다.", "[Jack Catch] This account has already been rewarded today."), 0xFF6600;
+	else if (.@r == -1)
+		dispbottom needtr("[잭 잡기] 현재 접속 IP에서 오늘 이미 보상을 받았습니다.", "[Jack Catch] A reward was already given to your current IP today."), 0xFF6600;
+	else if (.@r == -2)
+		dispbottom needtr("[잭 잡기] 인벤토리 공간이 없어 보상을 받지 못했습니다. 정리 후 다시 도전하세요. (기록은 남지 않음)", "[Jack Catch] No inventory space for the reward. Make room and try again. (Nothing was recorded.)"), 0xFF6600;
+	else
+		dispbottom needtr("[잭 잡기] 보상 처리 중 오류가 발생했습니다. 운영자에게 문의해 주세요.", "[Jack Catch] An error occurred while giving the reward. Please contact an administrator."), 0xFF0000;
+	end;
+}
+
+//------------------------------------------------------------
+// 잭 잡기 입장 NPC (추석 송편 제작 NPC 자리)
+//------------------------------------------------------------
+function	script	F_NEED_Halloween_JackTalk	{
+	.@n$ = needtr("[꼬마 호박 잭]", "[Little Pumpkin Jack]");
+	mes .@n$;
+
+	if (!callfunc("F_NEED_Halloween_Active") || !$NEED_HALLOWEEN_JACK_ENTRY_ON) {
+		mes needtr("히히, 지금은 숨바꼭질 쉬는 시간이야.", "Hehe, hide-and-seek is on a break right now.");
+		mes needtr("조금 뒤에 다시 와 줘.", "Come back a little later.");
+		close;
+	}
+
+	// 오늘 이미 보상을 받은 계정/IP 는 입장부터 막는다 (불필요한 인스턴스 생성 방지).
+	.@claimed = needhalloweenjack(0);
+	if (.@claimed == 1) {
+		mes needtr("오늘은 이미 나를 다 잡았잖아!", "You already caught all of us today!");
+		mes needtr("^FF0000이 계정 또는 현재 접속 IP는 오늘 보상을 받았어.^000000", "^FF0000This account or your current IP was already rewarded today.^000000");
+		mes needtr("내일 ^0055FF04:00^000000 이후에 다시 놀자.", "Let's play again after ^0055FF04:00^000000 tomorrow.");
+		close;
+	}
+	if (.@claimed < 0) {
+		mes needtr("^FF0000지금은 기록을 확인할 수 없어. 잠시 후 다시 와 줘.^000000", "^FF0000I can't check the records right now. Please come back shortly.^000000");
+		close;
+	}
+
+	mes needtr("할로윈이다! 나랑 친구들을 잡아 볼래?", "It's Halloween! Want to catch me and my friends?");
+	mes needtr("^0055FF3분^000000 안에 ^0055FF15점^000000 을 모으면 성공이야.", "Get ^0055FF15 points^000000 within ^0055FF3 minutes^000000 to win.");
+	mes needtr("성공하면 ^0055FF할로윈 코인 10개^000000! (하루 1번)", "Win and get ^0055FF10 Halloween Coins^000000! (once a day)");
+	if (!$NEED_HALLOWEEN_JACK_REWARD_ON)
+		mes needtr("^FF0000※ 지금은 보상 지급이 잠시 중지되어 있어.^000000", "^FF0000* Rewards are paused right now.^000000");
+	next;
+
+	switch (select(
+		needtr("잭 잡으러 가기", "Go catch Jacks"),
+		needtr("규칙 듣기", "Hear the rules"),
+		needtr("그만두기", "Maybe later"))) {
+
+	case 2:
+		mes .@n$;
+		mes needtr("- 혼자 들어가는 ^0055FF개인 놀이터^000000야. 싸움은 안 돼.", "- It's your ^0055FFown private playground^000000. No fighting.");
+		mes needtr("- 잭이 한 마리씩 나타나. ^0055FF클릭^000000하면 잡혀!", "- One Jack appears at a time. ^0055FFClick^000000 it to catch it!");
+		mes needtr("- 일반 잭 ^0055FF+1점^000000, 가끔(10%) 나오는 ^FFAA00황금 잭 +3점^000000.", "- Jack ^0055FF+1^000000, the rare (10%) ^FFAA00Golden Jack +3^000000.");
+		mes needtr("- 잡으면 다른 곳에 새 잭이 나타나.", "- After a catch, a new Jack appears somewhere else.");
+		mes needtr("- ^FF660010점^000000 이 되면 ^FF660010초 동안 JACK FEVER!^000000 잭이 3마리씩 나와.", "- At ^FF660010 points^000000 comes a ^FF660010-second JACK FEVER!^000000 Three Jacks at once.");
+		mes needtr("- 공격력이나 장비는 상관없어. 빨리 찾는 게 중요해!", "- Attack power and gear don't matter. Speed does!");
+		next;
+		mes .@n$;
+		mes needtr("- 성공 보상: 할로윈 코인 10개", "- Reward: 10 Halloween Coins");
+		mes needtr("- ^FF0000계정 1개 + 접속 IP 1개 기준 하루 1번^000000 (04:00 초기화)", "- ^FF0000Once a day per account and per connection IP^000000 (resets 04:00)");
+		mes needtr("  다른 캐릭터나 같은 IP의 다른 계정도 함께 셉니다.", "  Other characters and other accounts on the same IP share it.");
+		mes needtr("- 시간이 지나 실패하면 기록이 남지 않아 다시 도전할 수 있어.", "- If time runs out nothing is recorded, so you can retry.");
+		mes needtr("- 도중에 나가거나 접속이 끊기면 그 판은 끝나.", "- Leaving or disconnecting ends that round.");
+		close;
+
+	case 3:
+		mes .@n$;
+		mes needtr("심심해지면 또 와!", "Come back when you're bored!");
+		close;
+	}
+
+	// 대화 중 스위치나 기록이 바뀌었을 수 있으니 다시 확인한다.
+	if (!callfunc("F_NEED_Halloween_Active") || !$NEED_HALLOWEEN_JACK_ENTRY_ON) {
+		mes .@n$;
+		mes needtr("앗, 방금 숨바꼭질이 끝났어.", "Oops, hide-and-seek just ended.");
+		close;
+	}
+	if (needhalloweenjack(0) != 0) {
+		mes .@n$;
+		mes needtr("^FF0000오늘은 더 이상 보상을 받을 수 없어.^000000", "^FF0000No more rewards today.^000000");
+		close;
+	}
+	if (@HW_JACK_STATE) {
+		mes .@n$;
+		mes needtr("이미 놀이 중이잖아!", "You're already playing!");
+		close;
+	}
+
+	// 접속이 끊긴 뒤 남아 있는 내 잭 잡기 인스턴스는 정리한다. 다른 개인 던전이면 들여보내지 않는다.
+	.@old = instance_id(IM_CHAR);
+	if (.@old > 0) {
+		if (instance_mapname("pvp_n_1-2", .@old) == "") {
+			mes .@n$;
+			mes needtr("^FF0000이미 진행 중인 개인 던전이 있어서 들어갈 수 없어.^000000", "^FF0000You already have a personal dungeon in progress.^000000");
+			close;
+		}
+		instance_destroy .@old;
+	}
+
+	.@iid = instance_create("할로윈 잭 잡기", IM_CHAR);
+	if (.@iid <= 0) {
+		mes .@n$;
+		mes needtr("^FF0000놀이터를 만들지 못했어. 잠시 후 다시 해 줘.^000000", "^FF0000I couldn't open the playground. Please try again shortly.^000000") + " (" + .@iid + ")";
+		close;
+	}
+	.@map$ = instance_mapname("pvp_n_1-2", .@iid);
+
+	// 이 인스턴스 맵에서만: 싸움은 확실히 끄고, 잭 잡기에 필요한 제한을 건다.
+	// (공용 pvp_n_1-2 는 건드리지 않는다. 원본에 PvP 가 켜져 있어도 여기서 꺼진다.)
+	removemapflag .@map$, mf_pvp;
+	removemapflag .@map$, mf_gvg;
+	removemapflag .@map$, mf_gvg_castle;
+	removemapflag .@map$, mf_gvg_te;
+	removemapflag .@map$, mf_battleground;
+	setmapflag .@map$, mf_nosave;
+	setmapflag .@map$, mf_noteleport;
+	setmapflag .@map$, mf_noreturn;
+	setmapflag .@map$, mf_nomemo;
+	setmapflag .@map$, mf_nowarp;
+	setmapflag .@map$, mf_nowarpto;
+	setmapflag .@map$, mf_nobranch;
+	setmapflag .@map$, mf_noicewall;
+	setmapflag .@map$, mf_nodrop;
+	setmapflag .@map$, mf_novending;
+	setmapflag .@map$, mf_nochat;
+	setmapflag .@map$, mf_nopenalty;
+
+	// 잭 슬롯 3개를 만들고 1, 2 번은 숨겨 둔다 (JACK FEVER 때만 켠다). 아직 아무도 맵에 없다.
+	for (.@k = 0; .@k < 3; .@k++) {
+		.@npcs$[.@k] = duplicate("HalloweenJack#hw26tpl", .@map$, 100, 106, "잭", 1130, 4);
+		if (.@npcs$[.@k] == "") {
+			instance_destroy .@iid;
+			mes .@n$;
+			mes needtr("^FF0000잭이 숨어 버렸어. 잠시 후 다시 해 줘.^000000", "^FF0000The Jacks ran off. Please try again shortly.^000000");
+			close;
+		}
+		if (.@k > 0)
+			disablenpc .@npcs$[.@k];
+	}
+
+	@HW_JACK_IID = .@iid;
+	@HW_JACK_MAP$ = .@map$;
+	copyarray @HW_JACK_NPCS$[0], .@npcs$[0], 3;
+	setarray @HW_JACK_ON[0], 1, 0, 0;
+	setarray @HW_JACK_GOLDS[0], 0, 0, 0;
+	@HW_JACK_SCORE = 0;
+	@HW_JACK_CATCH = 0;
+	@HW_JACK_FEVER = 0;
+	@HW_JACK_FEVER_USED = 0;
+	@HW_JACK_FEVER_END = 0;
+
+	mes .@n$;
+	mes needtr("좋아, 출발! 3분 안에 15점이야!", "Alright, go! 15 points in 3 minutes!");
+	close2;
+
+	if (instance_enter("할로윈 잭 잡기", 100, 100, getcharid(0), .@iid) != IE_OK) {
+		callfunc "F_NEED_Halloween_JackCleanup";
+		dispbottom needtr("[잭 잡기] 입장하지 못했습니다. 잠시 후 다시 시도해 주세요.", "[Jack Catch] Could not enter. Please try again shortly."), 0xFF0000;
+		end;
+	}
+
+	@HW_JACK_START = gettimetick(2);
+	@HW_JACK_END = @HW_JACK_START + 180;
+	@HW_JACK_STATE = 1;
+	addtimer 120000, "HalloweenJack#hw26ctl::OnWarn60";
+	addtimer 150000, "HalloweenJack#hw26ctl::OnWarn30";
+	addtimer 170000, "HalloweenJack#hw26ctl::OnWarn10";
+	addtimer 180000, "HalloweenJack#hw26ctl::OnTimeUp";
+
+	callfunc "F_NEED_Halloween_JackSpawn", 0;
+	dispbottom needtr("[잭 잡기] 시작! 잭을 클릭해서 잡으세요. 3분 안에 15점!", "[Jack Catch] Start! Click the Jacks. 15 points in 3 minutes!"), 0xFFA500;
+	end;
+}
+
+// 잭 잡기 입장 NPC. 대화는 Event Hub 와 같은 F_NEED_Halloween_JackTalk.
+payo2,113,101,4	script	꼬마 호박 잭#hw26j	4_JACK,{
+	callfunc "F_NEED_Halloween_JackTalk";
+	end;
+
+OnInit:
+	setnpcnameen "Little Pumpkin Jack";
+	end;
+}
+
+//------------------------------------------------------------
+// 할로윈 교환 한도 (계정 단독)
+//
+// 추석 원장 함수 F_NEED_Chuseok_LimitUsed / LimitReserve 에 event_id 202610 을 넘겨
+// need_chuseok_exchange_limit 을 그대로 쓴다. scope 는 ACCOUNT 만 사용한다.
+//   SHADOW_HAMMER  period_key = 주간 키 (토요일 22:00, F_NEED_Chuseok_WeekKey)
+//   ARIA           period_key = 0 (이벤트 기간)
+//   REFINE9        period_key = 0, 무기/방어구 공용 키 -> 둘 중 하나만 총 1회
+//
+// getarg(0) product / getarg(1) period_key / getarg(2) 한도
+// getarg(3) 지급 아이템 / getarg(4) 개당 코인 / getarg(5) 수량
+//
+// 반환  1 성공 / 0 계정 한도 초과 / -1 코인 부족 / -2 무게·공간 부족 / -4 기록 조회 실패
+//
+// 검사와 차감·지급 사이에 next / input / select 가 없다. 같은 계정의 다른 캐릭터가
+// 동시에 와도 한도 예약(INSERT ... ON DUPLICATE KEY UPDATE)이 먼저 된 쪽만 통과한다.
+//------------------------------------------------------------
+function	script	F_NEED_Halloween_LimitedExchange	{
+	.@product$ = getarg(0);
+	.@period = getarg(1);
+	.@cap = getarg(2);
+	.@item = getarg(3);
+	.@cost = getarg(4);
+	.@amount = getarg(5);
+
+	if (.@amount < 1 || .@amount > .@cap)
+		return 0;
+
+	.@acc$ = "" + getcharid(3);
+	.@used = callfunc("F_NEED_Chuseok_LimitUsed", "ACCOUNT", .@acc$, .@product$, .@period, 202610);
+	if (.@used < 0)
+		return -4;
+	if (.@used + .@amount > .@cap)
+		return 0;
+
+	.@need = .@cost * .@amount;
+	if (countitem(6658) < .@need)
+		return -1;
+	if (!checkweight(.@item, .@amount))
+		return -2;
+
+	.@after = callfunc("F_NEED_Chuseok_LimitReserve", "ACCOUNT", .@acc$, .@product$, .@period, .@cap, .@amount, 202610);
+	if (.@after < 0)
+		return 0;
+
+	delitem 6658, .@need;
+	getitem .@item, .@amount;
+
+	query_sql("INSERT INTO `need_chuseok_exchange_log` (`event_id`,`account_id`,`char_id`,`char_name`,`ip`,`product`,`period_key`,`family_group_id`,`amount`,`songpyun_spent`,`used_after`,`ip_used_after`,`created_at`) VALUES (202610," + getcharid(3) + "," + getcharid(0) + ",'" + escape_sql(strcharinfo(0)) + "','" + escape_sql(getcharip()) + "','" + escape_sql(.@product$) + "'," + .@period + ",0," + .@amount + "," + .@need + "," + .@after + ",0,NOW())");
+
+	return 1;
+}
+
+// 한도 교환 실패 안내. getarg(0) 반환값, getarg(1) 1=주간 한도
+function	script	F_NEED_Halloween_LimitFailMes	{
+	.@r = getarg(0);
+
+	if (.@r == -1)
+		mes needtr("^FF0000할로윈 코인이 모자라.^000000", "^FF0000You don't have enough Halloween Coins.^000000");
+	else if (.@r == -2)
+		mes needtr("^FF0000짐이 너무 많아서 줄 수가 없어.^000000", "^FF0000You're carrying too much to receive it.^000000");
+	else if (.@r == -4)
+		mes needtr("^FF0000교환 기록을 확인할 수 없어. 잠시 후 다시 해 줘.^000000", "^FF0000The exchange record could not be checked. Please try again shortly.^000000");
+	else
+		mes needtr("^FF0000이 계정은 ", "^FF0000This account has used up its ") + ((getarg(1)) ? needtr("이번 주 ", "weekly ") : "") + needtr("교환 한도를 모두 썼어.^000000", "exchange limit.^000000");
+	return;
+}
+
+//------------------------------------------------------------
+// 할로윈 교환 NPC (추석 송편 교환 NPC 자리)
+//------------------------------------------------------------
+function	script	F_NEED_Halloween_ShopTalk	{
+	.@n$ = needtr("[할로윈 상인 잭]", "[Halloween Merchant Jack]");
+	mes .@n$;
+
+	if (!callfunc("F_NEED_Halloween_Active") || !$NEED_HALLOWEEN_SHOP_ON) {
+		mes needtr("지금은 가게 문을 닫았어.", "The shop is closed right now.");
+		close;
+	}
+
+	mes needtr("할로윈 코인을 가져오면 좋은 걸로 바꿔 줄게!", "Bring me Halloween Coins and I'll trade you something nice!");
+	mes needtr("가진 할로윈 코인 : ^0055FF", "Halloween Coins held : ^0055FF") + countitem(6658) + needtr("^000000 개", "^000000");
+	next;
+
+	switch (select(
+		needtr("일반 교환 (포션 / 캔디 홀더)", "Regular items (potion / candy holder)"),
+		needtr("홀그렌의 쉐도우 제련망치 (100개 / 주 5개)", "Hollgrehenn's Shadow Refine Hammer (100 / 5 per week)"),
+		needtr("아리아 의상 선택 상자 (300개 / 1회)", "Aria Costume Selection Box (300 / once)"),
+		needtr("+9 무기·방어구 보장권 택1 (1000개 / 1회)", "+9 Weapon or Armor Certificate (1000 / once)"),
+		needtr("교환 목록 듣기", "Hear the exchange list"),
+		needtr("다음에 올게", "I'll come back later"))) {
+
+	case 1:
+		close2;
+		callshop "need_halloween_exchange", 1;
+		end;
+
+	case 2:
+		callsub S_Hammer;
+		end;
+
+	case 3:
+		callsub S_Aria;
+		end;
+
+	case 4:
+		callsub S_Refine;
+		end;
+
+	case 5:
+		mes .@n$;
+		mes needtr("코인 10개 - 올인원 힐링 포션", "10 coins - All-in-One Healing Potion");
+		mes needtr("코인 20개 - 뭔가 있는 캔디 홀더", "20 coins - Pumpkin Candy Holder");
+		mes needtr("^0055FF코인 100개 - 홀그렌의 쉐도우 제련망치 (계정당 주 5개)^000000", "^0055FF100 coins - Hollgrehenn's Shadow Refine Hammer (5 per week per account)^000000");
+		mes needtr("^0055FF코인 300개 - 아리아 의상 선택 상자 (계정당 1개)^000000", "^0055FF300 coins - Aria Costume Selection Box (1 per account)^000000");
+		mes needtr("^0055FF코인 1000개 - +9 무기 또는 방어구 보장권 (계정당 1개)^000000", "^0055FF1000 coins - +9 Weapon or Armor Certificate (1 per account)^000000");
+		next;
+		mes .@n$;
+		mes needtr("포션과 캔디 홀더는 몇 번이든 바꿀 수 있어.", "Potions and candy holders can be traded any number of times.");
+		mes needtr("망치는 ^0055FF매주 토요일 22:00^000000 에 횟수가 초기화돼.", "The hammer count resets ^0055FFevery Saturday at 22:00^000000.");
+		mes needtr("아리아 상자와 +9 보장권은 ^FF0000이벤트 기간에 계정당 1번^000000이야.", "The Aria box and the +9 certificate are ^FF0000once per account for the event^000000.");
+		mes needtr("+9 보장권은 무기나 방어구 ^FF0000둘 중 하나만^000000 고를 수 있어.", "For the +9 certificate you pick ^FF0000either^000000 weapon or armor, not both.");
+		mes needtr("모든 한도는 같은 계정의 캐릭터끼리 함께 세.", "All limits are shared by the characters of one account.");
+		mes " ";
+		mes needtr("^FF0000할로윈 코인은 2026.12.12 10:00 업데이트 때 삭제돼.^000000", "^FF0000Halloween Coins are deleted at the 2026.12.12 10:00 update.^000000");
+		close;
+
+	default:
+		mes .@n$;
+		mes needtr("또 와!", "Come again!");
+		close;
+	}
+
+//------------------------------------------------------------
+// 홀그렌의 쉐도우 제련망치 : 코인 100개, 계정당 주 5개
+//------------------------------------------------------------
+S_Hammer:
+	.@period = callfunc("F_NEED_Chuseok_WeekKey");
+	.@cap = 5;
+	.@cost = 100;
+	.@used = callfunc("F_NEED_Chuseok_LimitUsed", "ACCOUNT", "" + getcharid(3), "SHADOW_HAMMER", .@period, 202610);
+
+	mes .@n$;
+	if (.@used < 0) {
+		mes needtr("^FF0000교환 기록을 확인할 수 없어. 잠시 후 다시 와 줘.^000000", "^FF0000The exchange record cannot be checked right now. Please come back shortly.^000000");
+		close;
+	}
+	if (.@used > .@cap)
+		.@used = .@cap;
+
+	mes needtr("^FFCC00홀그렌의 쉐도우 제련망치 주간 교환^000000", "^FFCC00Weekly Shadow Refine Hammer exchanges^000000");
+	mes needtr("이번 주 사용 : ^0055FF", "Used this week : ^0055FF") + .@used + " / " + .@cap + needtr("^000000  (남은 수량 ", "^000000  (") + (.@cap - .@used) + needtr("개)", " left)");
+	mes needtr("다음 초기화 : ^0055FF", "Next reset : ^0055FF") + callfunc("F_NEED_Chuseok_WeekResetStr$") + "^000000";
+	mes needtr("^999999계정 기준이라 다른 캐릭터와 함께 셉니다.^000000", "^999999Counted per account, shared by all your characters.^000000");
+	mes " ";
+	mes needtr("1개에 할로윈 코인 ", "Each costs ") + .@cost + needtr("개가 필요해.", " Halloween Coins.");
+	mes needtr("가진 할로윈 코인 : ^0055FF", "Halloween Coins held : ^0055FF") + countitem(6658) + needtr("^000000 개", "^000000");
+
+	if (.@used >= .@cap) {
+		mes " ";
+		mes needtr("^FF0000이번 주 교환 한도를 모두 썼어.^000000", "^FF0000You have used up this week's exchange limit.^000000");
+		close;
+	}
+
+	.@can = countitem(6658) / .@cost;
+	if (.@can > .@cap - .@used)
+		.@can = .@cap - .@used;
+	if (.@can < 1) {
+		mes " ";
+		mes needtr("^FF0000할로윈 코인이 ", "^FF0000You need ") + (.@cost - countitem(6658)) + needtr("개 더 필요해.^000000", " more Halloween Coins.^000000");
+		close;
+	}
+
+	next;
+	mes .@n$;
+	mes needtr("몇 개 바꿀래?", "How many would you like?");
+	mes "1 ~ ^0055FF" + .@can + needtr("^000000 개 (0 입력 시 취소)", "^000000 (enter 0 to cancel)");
+	input .@want, 0, .@can;
+
+	mes .@n$;
+	if (.@want < 1) {
+		mes needtr("그럼 다음에 와.", "Then come back another time.");
+		close;
+	}
+	if (!callfunc("F_NEED_Halloween_Active") || !$NEED_HALLOWEEN_SHOP_ON) {
+		mes needtr("앗, 방금 가게 문을 닫았어.", "Oops, the shop just closed.");
+		close;
+	}
+
+	// 대화 중 주가 바뀌었을 수 있으니 주간 키를 다시 구한다.
+	.@result = callfunc("F_NEED_Halloween_LimitedExchange", "SHADOW_HAMMER", callfunc("F_NEED_Chuseok_WeekKey"), .@cap, 23436, .@cost, .@want);
+	if (.@result == 1) {
+		mes needtr("홀그렌의 쉐도우 제련망치 ^0055FF", "Here you go: ^0055FF") + .@want + needtr("개^000000 여기 있어.", "^000000 Shadow Refine Hammer(s).");
+		mes needtr("할로윈 코인 ", "I took ") + (.@cost * .@want) + needtr("개를 받았어.", " Halloween Coins.");
+	}
+	else
+		callfunc "F_NEED_Halloween_LimitFailMes", .@result, 1;
+	close;
+
+//------------------------------------------------------------
+// 아리아 의상 선택 상자 : 코인 300개, 계정당 이벤트 기간 1개
+//------------------------------------------------------------
+S_Aria:
+	.@cap = 1;
+	.@cost = 300;
+	.@used = callfunc("F_NEED_Chuseok_LimitUsed", "ACCOUNT", "" + getcharid(3), "ARIA", 0, 202610);
+
+	mes .@n$;
+	if (.@used < 0) {
+		mes needtr("^FF0000교환 기록을 확인할 수 없어. 잠시 후 다시 와 줘.^000000", "^FF0000The exchange record cannot be checked right now. Please come back shortly.^000000");
+		close;
+	}
+	if (.@used > .@cap)
+		.@used = .@cap;
+
+	mes needtr("^FFCC00아리아 의상 선택 상자^000000", "^FFCC00Aria Costume Selection Box^000000");
+	mes needtr("이벤트 기간 교환 : ^0055FF", "Exchanged this event : ^0055FF") + .@used + " / " + .@cap + "^000000";
+	mes needtr("필요 코인 : ", "Coins needed : ") + .@cost + needtr("개", "");
+	mes needtr("가진 할로윈 코인 : ^0055FF", "Halloween Coins held : ^0055FF") + countitem(6658) + needtr("^000000 개", "^000000");
+
+	if (.@used >= .@cap) {
+		mes " ";
+		mes needtr("^FF0000이미 바꿨어. 이벤트 기간에 계정당 1개야.^000000", "^FF0000You already have one. The limit is 1 per account for the event.^000000");
+		close;
+	}
+	if (countitem(6658) < .@cost) {
+		mes " ";
+		mes needtr("^FF0000할로윈 코인이 ", "^FF0000You need ") + (.@cost - countitem(6658)) + needtr("개 더 필요해.^000000", " more Halloween Coins.^000000");
+		close;
+	}
+
+	next;
+	mes .@n$;
+	mes needtr("코인 ", "Trade ") + .@cost + needtr("개로 아리아 의상 선택 상자를 바꿀래?", " coins for the Aria Costume Selection Box?");
+	mes needtr("^FF0000이벤트 기간에 계정당 1번만 바꿀 수 있어.^000000", "^FF0000Only once per account during the event.^000000");
+	next;
+
+	if (select(needtr("바꾼다", "Trade"), needtr("그만둔다", "Cancel")) == 2) {
+		mes .@n$;
+		mes needtr("그럼 다음에 와.", "Then come back another time.");
+		close;
+	}
+
+	mes .@n$;
+	if (!callfunc("F_NEED_Halloween_Active") || !$NEED_HALLOWEEN_SHOP_ON) {
+		mes needtr("앗, 방금 가게 문을 닫았어.", "Oops, the shop just closed.");
+		close;
+	}
+	.@result = callfunc("F_NEED_Halloween_LimitedExchange", "ARIA", 0, .@cap, 399935, .@cost, 1);
+	if (.@result == 1) {
+		mes needtr("아리아 의상 선택 상자 여기 있어.", "Here is your Aria Costume Selection Box.");
+		mes needtr("할로윈 코인 ", "I took ") + .@cost + needtr("개를 받았어.", " Halloween Coins.");
+	}
+	else
+		callfunc "F_NEED_Halloween_LimitFailMes", .@result, 0;
+	close;
+
+//------------------------------------------------------------
+// +9 무기 / 방어구 보장권 택1 : 코인 1000개, 계정당 이벤트 기간 총 1개
+//   두 아이템이 같은 product 키(REFINE9)를 쓰므로 하나를 받으면 다른 하나도 막힌다.
+//------------------------------------------------------------
+S_Refine:
+	.@cap = 1;
+	.@cost = 1000;
+	.@used = callfunc("F_NEED_Chuseok_LimitUsed", "ACCOUNT", "" + getcharid(3), "REFINE9", 0, 202610);
+
+	mes .@n$;
+	if (.@used < 0) {
+		mes needtr("^FF0000교환 기록을 확인할 수 없어. 잠시 후 다시 와 줘.^000000", "^FF0000The exchange record cannot be checked right now. Please come back shortly.^000000");
+		close;
+	}
+	if (.@used > .@cap)
+		.@used = .@cap;
+
+	mes needtr("^FFCC00+9 무기 · 방어구 보장권 (택1)^000000", "^FFCC00+9 Weapon / Armor Certificate (pick one)^000000");
+	mes needtr("이벤트 기간 교환 : ^0055FF", "Exchanged this event : ^0055FF") + .@used + " / " + .@cap + "^000000";
+	mes needtr("필요 코인 : ", "Coins needed : ") + .@cost + needtr("개", "");
+	mes needtr("가진 할로윈 코인 : ^0055FF", "Halloween Coins held : ^0055FF") + countitem(6658) + needtr("^000000 개", "^000000");
+
+	if (.@used >= .@cap) {
+		mes " ";
+		mes needtr("^FF0000이미 바꿨어. 무기·방어구 합쳐 계정당 1개야.^000000", "^FF0000You already have one. The limit is 1 per account, weapon and armor combined.^000000");
+		close;
+	}
+	if (countitem(6658) < .@cost) {
+		mes " ";
+		mes needtr("^FF0000할로윈 코인이 ", "^FF0000You need ") + (.@cost - countitem(6658)) + needtr("개 더 필요해.^000000", " more Halloween Coins.^000000");
+		close;
+	}
+
+	next;
+	mes .@n$;
+	mes needtr("어떤 보장권으로 할래?", "Which certificate would you like?");
+	mes needtr("^FF0000하나를 고르면 다른 하나는 이번 이벤트에서 더 받을 수 없어.^000000", "^FF0000Once you pick one, you can't get the other during this event.^000000");
+	next;
+
+	.@sel = select(needtr("+9 무기 보장권", "+9 Weapon Certificate"), needtr("+9 방어구 보장권", "+9 Armor Certificate"), needtr("그만둔다", "Cancel"));
+	if (.@sel == 3) {
+		mes .@n$;
+		mes needtr("천천히 골라.", "Take your time.");
+		close;
+	}
+	.@item = (.@sel == 1) ? 6228 : 6232;
+
+	mes .@n$;
+	mes "^0055FF" + getitemname(.@item) + needtr("^000000 (으)로 바꿀래?", "^000000 - trade for this?");
+	mes needtr("할로윈 코인 ", "It costs ") + .@cost + needtr("개가 들어.", " Halloween Coins.");
+	next;
+	if (select(needtr("바꾼다", "Trade"), needtr("그만둔다", "Cancel")) == 2) {
+		mes .@n$;
+		mes needtr("천천히 골라.", "Take your time.");
+		close;
+	}
+
+	mes .@n$;
+	if (!callfunc("F_NEED_Halloween_Active") || !$NEED_HALLOWEEN_SHOP_ON) {
+		mes needtr("앗, 방금 가게 문을 닫았어.", "Oops, the shop just closed.");
+		close;
+	}
+	.@result = callfunc("F_NEED_Halloween_LimitedExchange", "REFINE9", 0, .@cap, .@item, .@cost, 1);
+	if (.@result == 1) {
+		mes "^0055FF" + getitemname(.@item) + needtr("^000000 여기 있어.", "^000000 - here you go.");
+		mes needtr("할로윈 코인 ", "I took ") + .@cost + needtr("개를 받았어.", " Halloween Coins.");
+	}
+	else
+		callfunc "F_NEED_Halloween_LimitFailMes", .@result, 0;
+	close;
+}
+
+// 할로윈 교환 NPC. 대화는 Event Hub 와 같은 F_NEED_Halloween_ShopTalk.
+payo2,111,101,4	script	할로윈 상인 잭#hw26s	4_JACK,{
+	callfunc "F_NEED_Halloween_ShopTalk";
+	end;
+
+OnInit:
+	setnpcnameen "Halloween Merchant Jack";
+	end;
+}

@@ -1107,8 +1107,11 @@ OnStart:
 	monster 'map_air2$,247,51,"폭주한 펠록 선장",3181,1, instance_npcname("callb#air2") + "::OnMyMobDead";// E1_FELOCK
 	end;
 OnMyMobDead:
-	if (mobcount( 'map_air2$, instance_npcname("callb#air2") + "::OnMyMobDead" ) < 1)
+	if (mobcount( 'map_air2$, instance_npcname("callb#air2") + "::OnMyMobDead" ) < 1) {
+		// NEED 2026-10-08: 클리어 보너스 (행운 금화 주머니, 던전별 IP당 하루 3회)
+		callfunc "F_NEED_MD_ClearBonus", "AIRSHIP", 'map_air2$;
 		initnpctimer;
+	}
 	end;
 OnTimer6000:
 	enablenpc instance_npcname("케이아스#air2");

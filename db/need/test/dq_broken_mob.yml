@@ -1,0 +1,319 @@
+# TEST FIXTURE (NEED_DQ_TEST self test T7-1): must be REFUSED.
+# NEED daily quest - level tracks and the virtual delivery (phase 1).
+# Spec: md/daily_quest_20261019/NEED_Daily_Quest_Delivery_Final_Technical_Spec_v0_7.md
+# Whitelist and rotation: NEED_Daily_Quest_Delivery_Monster_Whitelist_v0_7.md (sections 1 and 3).
+#
+# Track        Lower bound of the level range; must equal MinLevel. The account locks the
+#              range of the character's REAL level at its first score of the day.
+# Delivery.Stages    Amount delivered by one character -> cumulative points. Stage keys are
+#                    d1, d2, ... in this order.
+# Delivery.Maps      Map + whitelisted monsters (AegisName) + Rate (per 10000, one independent
+#                    roll per candidate). Anything not listed never counts.
+# Delivery.Maps.QuestId  Quest window entry of that track + map (99100-99199, unique). The quest
+#                    window only shows the ledger: kills never count for 99000-99999 by themselves.
+# Delivery.Rotation  Map of each logical weekday (the 04:00 day). A map may not serve two
+#                    tracks on the same weekday (decision D10, ver_eju).
+# Hunt               Accepted together with the delivery at the NPC (decision 2026-10-21). Every
+#                    qualifying kill (same party rule as the delivery) counts 1 for each candidate; a
+#                    stage scores the moment its Amount is reached (spec 4.5). Maps + Monsters are the
+#                    regular spawns of the hunting ground; bosses, champions, events and mobs whose level
+#                    does not fit the track are excluded. Hunt maps may not be delivery maps.
+#                    QuestId: quest window entry (99200-99299).
+# Battleground       Optional, Lv150 and up only (phase 3). Accepted with the daily quest. A game counts
+#                    when the player was in the battle from its start, is on the map at the reward, the
+#                    battle lasted 6 min (Tierra, Flavius) / 3 min (KVM), the player acted at least once,
+#                    and 75% of the participants have distinct IPs (U9). QuestId: 99300-99399.
+# Every track must load; any error disables the daily quest.
+
+Header:
+  Type: NEED_DAILY_QUEST_DB
+  Version: 1
+
+Body:
+  - Track: 100
+    MinLevel: 100
+    MaxLevel: 129
+    Delivery:
+      Stages:
+        - Amount: 15
+          Points: 10
+        - Amount: 30
+          Points: 20
+        - Amount: 45
+          Points: 30
+      Maps:
+        - Map: juperos_02
+          QuestId: 99101
+          Rate: 3000
+          Monsters:
+            - APOCALIPS
+            - VENATU_1
+            - VENATU_2
+            - VENATU_3
+            - VENATU_4
+        - Map: ice_dun03
+          QuestId: 99102
+          Rate: 3000
+          Monsters:
+            - ICE_TITAN
+            - NOT_A_MONSTER_DQ
+            - SNOWIER
+        - Map: ra_fild05
+          QuestId: 99103
+          Rate: 3000
+          Monsters:
+            - KOBOLD_1
+            - KOBOLD_2
+            - KOBOLD_3
+      Rotation:
+        Sunday: juperos_02
+        Monday: juperos_02
+        Tuesday: ice_dun03
+        Wednesday: ra_fild05
+        Thursday: juperos_02
+        Friday: ice_dun03
+        Saturday: ra_fild05
+    Hunt:
+      # Nogrod 1-2 (Magma Dungeon). GRIZZLY (Lv66) excluded: level does not fit.
+      QuestId: 99201
+      Stages:
+        - Amount: 400
+          Points: 10
+        - Amount: 800
+          Points: 20
+        - Amount: 1200
+          Points: 30
+        - Amount: 1600
+          Points: 40
+        - Amount: 2000
+          Points: 50
+      Maps:
+        - Map: mag_dun01
+          Monsters:
+            - EXPLOSION
+            - LAVA_GOLEM
+            - BLAZZER
+            - KAHO
+        - Map: mag_dun02
+          Monsters:
+            - NIGHTMARE_TERROR
+            - DELETER_
+            - DELETER
+            - BLAZZER
+            - DIABOLIC
+            - GIG
+  - Track: 130
+    MinLevel: 130
+    MaxLevel: 149
+    Delivery:
+      Stages:
+        - Amount: 15
+          Points: 10
+        - Amount: 30
+          Points: 20
+        - Amount: 45
+          Points: 30
+      Maps:
+        - Map: dic_dun02
+          QuestId: 99131
+          Rate: 5000
+          Monsters:
+            - ANTLER_SCARABA
+            - RAKE_SCARABA
+        - Map: dic_dun01
+          QuestId: 99132
+          Rate: 5000
+          Monsters:
+            - HORN_SCARABA
+            - HORN_SCARABA2
+        - Map: bif_fild01
+          QuestId: 99133
+          Rate: 5000
+          Monsters:
+            # Decision U1: monster level 140-145 only.
+            - MIMING
+            - LITTLE_FATUM
+            - ANGRA_MANTIS
+            - POM_SPIDER
+      Rotation:
+        Sunday: dic_dun02
+        Monday: dic_dun02
+        Tuesday: dic_dun01
+        Wednesday: bif_fild01
+        Thursday: dic_dun02
+        Friday: dic_dun01
+        Saturday: bif_fild01
+    Hunt:
+      # Dragon's Nest 2-3. Floor 1 (DR_SPORE Lv18, DR_BASILISK1 Lv20) excluded: level does not fit.
+      QuestId: 99231
+      Stages:
+        - Amount: 110
+          Points: 10
+        - Amount: 220
+          Points: 20
+        - Amount: 330
+          Points: 30
+        - Amount: 440
+          Points: 40
+        - Amount: 550
+          Points: 50
+      Maps:
+        - Map: lasa_dun02
+          Monsters:
+            - DR_BASILISK2
+            - DR_MANDRAGORA
+        - Map: lasa_dun03
+          Monsters:
+            - DR_BASILISK3
+            - DR_POM_SPIDER
+  - Track: 150
+    MinLevel: 150
+    MaxLevel: 174
+    Delivery:
+      Stages:
+        - Amount: 10
+          Points: 10
+        - Amount: 20
+          Points: 20
+        - Amount: 30
+          Points: 30
+      Maps:
+        - Map: prt_prison
+          QuestId: 99151
+          Rate: 3000
+          Monsters:
+            - FROZENWOLF
+            - TAFFY
+            - WATCHER
+        - Map: gl_cas02_
+          QuestId: 99152
+          Rate: 3000
+          Monsters:
+            # Monster level 145 or higher only.
+            - NG_WANDER_MAN
+            - NG_RIDEWORD
+        - Map: ver_eju
+          QuestId: 99153
+          Rate: 3000
+          Monsters:
+            - RECON_ROBOT
+            - EXCAVATOR_ROBOT
+      Rotation:
+        Sunday: prt_prison
+        Monday: prt_prison
+        Tuesday: gl_cas02_
+        Wednesday: ver_eju
+        Thursday: prt_prison
+        Friday: gl_cas02_
+        Saturday: ver_eju
+    Hunt:
+      # Big Bell (c_tower3_). TIMEHOLDER (boss) excluded.
+      QuestId: 99251
+      Stages:
+        - Amount: 120
+          Points: 10
+        - Amount: 240
+          Points: 20
+        - Amount: 360
+          Points: 30
+        - Amount: 480
+          Points: 40
+        - Amount: 600
+          Points: 50
+      Maps:
+        - Map: c_tower3_
+          Monsters:
+            - BIG_BELL
+            - TIME_KEEPER
+            - OWL_VISCOUNT
+            - OWL_MARQUEES
+            - NG_RIDEWORD
+            - NG_MIMIC
+    Battleground:
+      # Optional: 1 valid game 30, 2 games 50 (decision v0.4 #1). Win, loss and draw all count.
+      QuestId: 99351
+      Stages:
+        - Amount: 1
+          Points: 30
+        - Amount: 2
+          Points: 50
+  - Track: 175
+    MinLevel: 175
+    MaxLevel: 175
+    Delivery:
+      Stages:
+        - Amount: 15
+          Points: 10
+        - Amount: 30
+          Points: 20
+      Maps:
+        - Map: ver_eju
+          QuestId: 99171
+          Rate: 3000
+          Monsters:
+            - RECON_ROBOT
+            - EXCAVATOR_ROBOT
+        # Rudus 2F / Lost Valley are not open in NEED -> Verus R&D-WISH (2026-10-22) / Verus Center Square (2026-10-24,
+        # Rachel Field 10 had EP18 mobs: HP ~955k, DEF ~400). All three Lv175 maps are Verus robots near Big Bell strength.
+        # Rates from the v0.5 time model: verus02 HP 252k, 7.8 cells -> 30% ~5.9 min; verus03 HP 224k, 8.2 cells -> 30% ~5.7 min.
+        - Map: verus02
+          QuestId: 99172
+          Rate: 3000
+          Monsters:
+            - REPAIR_ROBOT_T
+            - EXPLORATION_ROVER_T
+        - Map: verus03
+          QuestId: 99173
+          Rate: 3000
+          Monsters:
+            - EXPLORATION_ROVER
+            - REPAIR_ROBOT
+      Rotation:
+        Sunday: ver_eju
+        Monday: ver_eju
+        Tuesday: verus02
+        Wednesday: verus03
+        Thursday: ver_eju
+        Friday: verus02
+        Saturday: verus03
+    Hunt:
+      # Big Bell (c_tower3_), 4 stages up to 40 points (decision v0.4 #2).
+      QuestId: 99271
+      Stages:
+        - Amount: 150
+          Points: 10
+        - Amount: 300
+          Points: 20
+        - Amount: 450
+          Points: 30
+        - Amount: 600
+          Points: 40
+      Maps:
+        - Map: c_tower3_
+          Monsters:
+            - BIG_BELL
+            - TIME_KEEPER
+            - OWL_VISCOUNT
+            - OWL_MARQUEES
+            - NG_RIDEWORD
+            - NG_MIMIC
+    Battleground:
+      # Optional: 1 valid game 30, 2 games 50 (decision v0.4 #1). Win, loss and draw all count.
+      QuestId: 99371
+      Stages:
+        - Amount: 1
+          Points: 30
+        - Amount: 2
+          Points: 50
+    Instance:
+      # Optional, Lv175 only (decisions v0.4 #4-5, 2026-10-21). Every player on the boss map at the clear counts once per
+      # kind; each kind scores once per account; the sum is capped. Kind names are fixed (stage keys i1..i3).
+      QuestId: 99471
+      Cap: 40
+      Kinds:
+        - Name: OGH_HARD
+          Points: 40
+        - Name: OGH
+          Points: 15
+        - Name: SKY_FORTRESS
+          Points: 15

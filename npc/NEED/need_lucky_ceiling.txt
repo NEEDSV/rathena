@@ -37,7 +37,10 @@
 //   $NeedLPMode[상품ID]   0=설정값 사용 / 1=강제 판매중지 / 2=강제 판매
 //
 // [상품 구성]
-// 공용 희귀 3종 (PID 100~102) + 시즌 천장 44종 (PID 200, 202~244)
+// 공용 희귀 5종 (PID 100~104) + 시즌 천장 (PID 200, 202~)
+//   103 대축 1개 -> +7 보장권 / 104 대축 15개 -> +9 보장권 (2026-10-21 운영자 확정)
+//   104 는 102(+9 포인트 천장)의 서버 월간 재고를 함께 쓴다. ([재고 공유] 참고)
+// (아래 44종 설명은 최초 등록 당시 기준)
 // 시즌 44종은 4차 검증(md/lucky_egg_ceiling_season_final.csv)을 통과한
 // 일반 장비 18종 + 쉐도우 26종이며 전부 기본 OFF 로 등록되어 있다.
 //
@@ -52,7 +55,7 @@
 // 상품 추가/수정은 파일 맨 아래 [상품 설정] 블록만 편집하면 된다.
 //============================================================
 
-lasagna,167,195,4	script	행운의 알 교환소#need_lucky_ceil	4_F_KAFRA6,{
+payo2,116,118,4	script	행운의 알 교환소#need_lucky_ceil	4_F_KAFRA6,{
 
 	callsub S_NormalizeAll;
 
@@ -183,7 +186,8 @@ S_SeasonEggList:
 		mes needtr("확정 교환을 원하는", "First choose the");
 		mes needtr("^0055FF행운의 알^000000을 먼저 선택해주세요.", "^0055FFLucky Egg^000000 you want to trade for.");
 		mes " ";
-		mes needtr("해당 시즌 행운의 알 ^FF0000실물 100개^000000가 필요하며", "It costs ^FF0000100 actual eggs^000000 of that season and");
+		mes needtr("해당 시즌 행운의 알 ^FF0000실물^000000이 필요하며", "It costs ^FF0000actual eggs^000000 of that season and");
+		mes needtr("필요 수량은 ^0055FF상품 등장 확률^000000에 따라 다릅니다.", "the amount ^0055FFdepends on the item's drop chance^000000.");
 		mes needtr("지급품은 ^FF0000계정 귀속^000000으로 처리됩니다.", "the item is delivered ^FF0000account bound^000000.");
 		next;
 
@@ -324,6 +328,7 @@ S_Detail:
 	.@pid = .Pid[.@i];
 
 	callsub S_Normalize, .@i;
+	.@skey = callsub(S_SKey, .@i);
 
 	.@nparts = 0;
 	if (.Choice$[.@i] != "") {
@@ -353,8 +358,10 @@ S_Detail:
 		mes needtr("행알 등장 확률 : ^0055FF", "Egg drop chance : ^0055FF") + .RateText$[.@i] + "^000000";
 
 	mes needtr("^FF0000[필요 재료]^000000", "^FF0000[Materials Needed]^000000");
-	mes "- " + getitemname(.PointItem) + " : " + .Point[.@i] + " P"
-		+ needtr("  (보유 ", "  (have ") + countitem(.PointItem) + ")";
+	// 포인트/Zeny 가 0 인 상품(대축 교환)은 해당 줄을 표시하지 않는다.
+	if (.Point[.@i] > 0)
+		mes "- " + getitemname(.PointItem) + " : " + .Point[.@i] + " P"
+			+ needtr("  (보유 ", "  (have ") + countitem(.PointItem) + ")";
 
 	if (.EggId[.@i] > 0)
 		mes "- " + mesitemlink(.EggId[.@i]) + " : " + .EggAmt[.@i] + needtr("개", "")
@@ -362,8 +369,9 @@ S_Detail:
 	else
 		mes needtr("- 행운의 알 : 필요 없음", "- Lucky Egg : not required");
 
-	mes "- Zeny : " + callfunc("F_InsertComma", .Zeny[.@i])
-		+ needtr("  (보유 ", "  (have ") + callfunc("F_InsertComma", Zeny) + ")";
+	if (.Zeny[.@i] > 0)
+		mes "- Zeny : " + callfunc("F_InsertComma", .Zeny[.@i])
+			+ needtr("  (보유 ", "  (have ") + callfunc("F_InsertComma", Zeny) + ")";
 	mes " ";
 
 	mes needtr("^0055FF[서버 재고]^000000", "^0055FF[Server Stock]^000000");
@@ -374,9 +382,10 @@ S_Detail:
 		mes needtr("- ^FF0000재고 시스템 점검 중^000000", "- ^FF0000stock system under maintenance^000000");
 	}
 	else {
-		mes needtr("- 남은 수량 : ", "- stock left : ") + $NeedLPStock[.@pid] + " / " + .Stock[.@i]
+		mes needtr("- 남은 수량 : ", "- stock left : ") + $NeedLPStock[.@skey] + " / " + .Stock[.@i]
 			+ " (" + ((.Cycle[.@i] == 1) ? needtr("주간", "weekly") : needtr("월간", "monthly")) + ")";
 		mes needtr("- 다음 재입고 : ", "- next restock : ") + callsub(S_NextResetStr, .@i);
+		callsub S_ShareNote, .@i;
 	}
 	mes " ";
 
@@ -400,7 +409,7 @@ S_Detail:
 		return;
 	}
 
-	if (.Cycle[.@i] != 0 && $NeedLPStock[.@pid] <= 0) {
+	if (.Cycle[.@i] != 0 && $NeedLPStock[.@skey] <= 0) {
 		mes needtr("[행운의 알 교환소]", "[Lucky Egg Exchange]");
 		mes needtr("^FF0000이번 ", "^FF0000All of this ") + ((.Cycle[.@i] == 1) ? needtr("주", "week") : needtr("달", "month")) + needtr(" 준비된 수량이", "'s prepared stock");
 		mes needtr("모두 소진되었습니다.^000000", "has been used up.^000000");
@@ -442,10 +451,13 @@ S_Detail:
 	mes needtr("지급 : ^0055FF", "You get : ^0055FF") + mesitemlink(.@reward) + " x " + .RewardAmt[.@i] + "^000000";
 	mes " ";
 	mes needtr("소모 :", "You pay :");
-	mes "- " + getitemname(.PointItem) + " " + .Point[.@i] + " P";
+	if (.Point[.@i] > 0)
+		mes "- " + getitemname(.PointItem) + " " + .Point[.@i] + " P";
 	if (.EggId[.@i] > 0)
 		mes "- " + mesitemlink(.EggId[.@i]) + " " + .EggAmt[.@i] + needtr("개", "");
-	mes "- Zeny " + callfunc("F_InsertComma", .Zeny[.@i]);
+	if (.Zeny[.@i] > 0)
+		mes "- Zeny " + callfunc("F_InsertComma", .Zeny[.@i]);
+	callsub S_ShareNote, .@i;
 	mes " ";
 	mes needtr("^999999※ 아이템명을 클릭해 옵션을 확인한 뒤 결정하세요.^000000", "^999999* Click the item name to check its options before deciding.^000000");
 	mes needtr("^FF0000교환한 재료는 되돌릴 수 없습니다.^000000", "^FF0000Spent materials cannot be recovered.^000000");
@@ -463,7 +475,7 @@ S_Detail:
 		mes needtr("교환했습니다.", "Exchange complete.");
 		mes " ";
 		if (.Cycle[.@i] != 0)
-			mes needtr("서버 남은 수량 : ", "Server stock left : ") + $NeedLPStock[.@pid] + " / " + .Stock[.@i];
+			mes needtr("서버 남은 수량 : ", "Server stock left : ") + $NeedLPStock[.@skey] + " / " + .Stock[.@i];
 		if (.Bound[.@i])
 			mes needtr("^FF0000계정 귀속 상태로 지급되었습니다.^000000", "^FF0000Delivered account bound.^000000");
 		break;
@@ -557,6 +569,11 @@ S_Buy:
 
 	callsub S_Normalize, .@i;
 
+	// 재고 키: 공유 상품(104)은 102 의 재고를 쓴다. 공유 설정이 깨졌으면 0 -> 판매 거부
+	.@skey = callsub(S_SKey, .@i);
+	if (.@skey <= 0)
+		return 7;
+
 	if (.Choice$[.@i] != "") {
 		explode(.@parts$, .Choice$[.@i], ",");
 		.@nparts = getarraysize(.@parts$);
@@ -575,7 +592,7 @@ S_Buy:
 	if (.@amount <= 0)
 		return 7;
 
-	if (.Cycle[.@i] != 0 && $NeedLPStock[.@pid] <= 0)
+	if (.Cycle[.@i] != 0 && $NeedLPStock[.@skey] <= 0)
 		return 2;
 
 	if (.Point[.@i] > 0 && countitem(.PointItem) < .Point[.@i])
@@ -597,13 +614,15 @@ S_Buy:
 
 	// (1) 서버 재고 차감을 SQL 에 먼저 확정한다.
 	//     저장/검증에 실패하면 여기서 끝내므로 유저 재화는 그대로 남는다.
+	//     2026-10-21: 메모리 값으로 절대값을 덮어쓰던 방식을 DB 조건부 차감
+	//     (stock >= 1 일 때만 -1, ROW_COUNT 확인)으로 바꿨다. 맵서버가 여러 개이거나
+	//     공유 재고(102/104)를 두 경로가 동시에 노려도 DB 재고 아래로는 팔 수 없다.
 	if (.Cycle[.@i] != 0) {
-		.@newstock = $NeedLPStock[.@pid] - 1;
-
-		if (!callsub(S_SaveStock, .@i, $NeedLPCyc[.@pid], .@newstock))
+		.@took = callsub(S_TakeStock, .@i);
+		if (.@took == 2)
+			return 2;
+		if (.@took != 1)
 			return 9;
-
-		$NeedLPStock[.@pid] = .@newstock;
 	}
 
 	// (2) 재료 차감
@@ -632,7 +651,8 @@ S_Buy:
 		+ " point=" + .Point[.@i]
 		+ " egg=" + .EggId[.@i] + "x" + .EggAmt[.@i]
 		+ " zeny=" + .Zeny[.@i]
-		+ " left=" + ((.Cycle[.@i] != 0) ? $NeedLPStock[.@pid] : -1);
+		+ " left=" + ((.Cycle[.@i] != 0) ? $NeedLPStock[.@skey] : -1)
+		+ ((.@skey != .@pid) ? " skey=" + .@skey : "");
 	// ---------- 원자적 구간 끝 ----------
 
 	return 0;
@@ -646,6 +666,8 @@ S_Rules:
 	mes needtr("^FF88001. 시즌 한정 아이템 천장^000000", "^FF88001. Season Limited Ceiling^000000");
 	mes needtr("- 해당 시즌 행운의 알 ^FF0000미개봉 실물^000000이 필요합니다.", "- Requires ^FF0000unopened actual eggs^000000 of that season.");
 	mes needtr("- 개봉 횟수가 아니라 아이템을 직접 소모합니다.", "- It consumes the items themselves - not your open count.");
+	mes needtr("- 필요 수량 : 등장 확률 ^0055FF2% 내외 20개 / 1.5% 25개^000000", "- Eggs needed : drop chance ^0055FFabout 2% 20 / 1.5% 25^000000");
+	mes needtr("  ^0055FF1% 30개 / 0.75% 50개 / 0.5% 60개 / 0.1% 100개^000000", "  ^0055FF1% 30 / 0.75% 50 / 0.5% 60 / 0.1% 100^000000");
 	mes needtr("- 시즌 천장은 ^0055FF행운의 알 판매 시작 7일 후^000000부터 이용할 수 있습니다.", "- A season ceiling opens ^0055FF7 days after that egg goes on sale^000000.");
 	mes needtr("- 즉, ^0055FF판매 2주차부터^000000 천장 교환이 개방됩니다.", "- In other words it opens ^0055FFin the second week of the sale^000000.");
 	next;
@@ -653,7 +675,9 @@ S_Rules:
 	mes needtr("[교환 규칙 안내]", "[Exchange Rules]");
 	mes needtr("^0055FF2. 공용 희귀 아이템^000000", "^0055FF2. Shared Rare Items^000000");
 	mes needtr("- 여러 행운의 알에서 반복 등장하는 상품입니다.", "- Items that show up in several Lucky Eggs.");
-	mes needtr("- 행운의 알 없이 포인트와 Zeny로만 교환합니다.", "- Traded with points and Zeny only - no egg needed.");
+	mes needtr("- 행운의 알 없이 포인트·Zeny 또는 대장장이의 축복으로 교환합니다.", "- Traded with points and Zeny, or with Blacksmith's Blessings - no egg needed.");
+	mes needtr("- +9 보장권은 포인트 교환과 대축 15개 교환을 합쳐", "- The +9 certificate stock is shared by the point trade");
+	mes needtr("  ^FF0000서버 전체 월 1개^000000입니다.", "  and the 15-Blessing trade: ^FF00001 per month server-wide^000000.");
 	next;
 
 	mes needtr("[교환 규칙 안내]", "[Exchange Rules]");
@@ -710,12 +734,119 @@ S_StockTag:
 	if (!.SqlReady)
 		return needtr(" (점검중)", " (maintenance)");
 
-	.@pid = .Pid[.@i];
+	.@pid = callsub(S_SKey, .@i);
 
-	if ($NeedLPStock[.@pid] <= 0)
+	if (.@pid <= 0 || $NeedLPStock[.@pid] <= 0)
 		return needtr(" (품절)", " (sold out)");
 
 	return " (" + $NeedLPStock[.@pid] + "/" + .Stock[.@i] + ")";
+
+
+//============================================================
+// [재고 공유] 재고 키
+// getarg(0) : 상품 슬롯 index
+// 반환 : 서버 재고를 저장/차감하는 PID. 공유 설정이 깨진 상품은 0.
+//
+// .StockShareSrc[] 의 PID 는 같은 위치 .StockShareKey[] PID 의 재고를 함께 쓴다.
+//   104 (대축 15개 -> +9 보장권) -> 102 (+9 포인트 천장) : 서버 월간 1개를 공유
+// 공유 상품은 자기 PID 로 재고 행을 만들지 않으므로 월 재고가 늘어나지 않는다.
+//============================================================
+S_SKey:
+	.@i = getarg(0);
+	.@pos = inarray(.StockShareSrc[0], .Pid[.@i]);
+	if (.@pos < 0)
+		return .Pid[.@i];
+	if (!.StockShareOK[.@pos])
+		return 0;
+	return .StockShareKey[.@pos];
+
+
+//============================================================
+// [재고 공유] 안내 문구 (재고를 공유하는 상품에서만 출력)
+//============================================================
+S_ShareNote:
+	.@i = getarg(0);
+	.@key = callsub(S_SKey, .@i);
+	.@shared = (inarray(.StockShareSrc[0], .Pid[.@i]) >= 0 || inarray(.StockShareKey[0], .Pid[.@i]) >= 0);
+	if (!.@shared || .@key <= 0)
+		return;
+	mes needtr("^FF0000※ 서버 전체 공유 재고^000000", "^FF0000* Server-wide shared stock^000000");
+	mes needtr("포인트 교환과 대축 교환이 같은 재고를 씁니다.", "The point trade and the Blessing trade use the same stock.");
+	mes needtr("어느 쪽이든 먼저 교환하면 나머지는 품절됩니다.", "Whichever is traded first sells the other out too.");
+	return;
+
+
+//============================================================
+// [재고 공유] DB 조건부 재고 차감
+// getarg(0) : 상품 슬롯 index
+// 반환 1 = 차감 성공 / 2 = 재고 없음 / 9 = DB 오류 또는 주기 불일치
+//
+// UPDATE ... WHERE stock >= 1 은 DB 안에서 원자적이다. 바로 다음 SELECT ROW_COUNT()
+// 는 같은 연결에서 실행되며, 그 사이에 이 맵서버의 다른 스크립트가 끼어들 수 없다.
+// 차감 결과와 상관없이 DB 값을 다시 읽어 인메모리 사본을 맞춘다.
+// [중요] 이 라벨 안에 next / select / input / sleep 을 넣지 말 것.
+//============================================================
+S_TakeStock:
+	.@i = getarg(0);
+	.@pid = callsub(S_SKey, .@i);
+	if (.@pid <= 0 || !.SqlReady)
+		return 9;
+	.@key = $NeedLPCyc[.@pid];
+
+	.@r = query_sql(
+		"UPDATE `need_lucky_ceiling_stock` SET `stock`=`stock`-1,`updated_at`=NOW() "
+		+ "WHERE `product_id`=" + .@pid + " AND `period_key`=" + .@key + " AND `stock`>=1");
+	if (.@r < 0) {
+		logmes "[LuckyCeil] SQL TAKE FAILED pid=" + .@pid + " key=" + .@key;
+		return 9;
+	}
+
+	.@rc = -1;
+	.@n = query_sql("SELECT ROW_COUNT()", .@rc);
+
+	.@dbstock = -1;
+	.@dbkey = 0;
+	.@m = query_sql(
+		"SELECT `stock`,`period_key` FROM `need_lucky_ceiling_stock` WHERE `product_id`=" + .@pid,
+		.@dbstock, .@dbkey);
+	if (.@m >= 1 && .@dbkey == .@key)
+		$NeedLPStock[.@pid] = .@dbstock;
+
+	if (.@n >= 1 && .@rc == 1)
+		return 1;
+
+	logmes "[LuckyCeil] TAKE REJECTED pid=" + .@pid + " key=" + .@key + " rc=" + .@rc
+		+ " db_stock=" + .@dbstock + " db_key=" + .@dbkey;
+	if (.@n >= 1 && .@rc == 0 && .@m >= 1 && .@dbkey == .@key)
+		return 2;
+	return 9;
+
+
+//============================================================
+// [재고 공유] 공유 설정 검사 (OnInit)
+// 공유 상품과 원본 상품의 .Cycle / .Stock 이 다르거나 원본이 없으면
+// 공유 상품을 판매 거부(S_SKey = 0) 상태로 둔다.
+//============================================================
+S_CheckShare:
+	for (.@s = 0; .@s < getarraysize(.StockShareSrc); .@s++) {
+		.@a = inarray(.Pid[0], .StockShareSrc[.@s]);
+		.@b = inarray(.Pid[0], .StockShareKey[.@s]);
+		.StockShareOK[.@s] = 0;
+		if (.@a < 0 || .@b < 0 || .@a == .@b) {
+			debugmes "[LuckyCeil] share config: PID " + .StockShareSrc[.@s] + " -> " + .StockShareKey[.@s] + " not found. sale blocked.";
+			continue;
+		}
+		if (inarray(.StockShareSrc[0], .StockShareKey[.@s]) >= 0) {
+			debugmes "[LuckyCeil] share config: PID " + .StockShareKey[.@s] + " is itself shared. sale blocked.";
+			continue;
+		}
+		if (.Cycle[.@a] != .Cycle[.@b] || .Stock[.@a] != .Stock[.@b] || .Cycle[.@b] == 0) {
+			debugmes "[LuckyCeil] share config: PID " + .StockShareSrc[.@s] + " cycle/stock differs from " + .StockShareKey[.@s] + ". sale blocked.";
+			continue;
+		}
+		.StockShareOK[.@s] = 1;
+	}
+	return;
 
 
 //============================================================
@@ -743,6 +874,9 @@ S_SqlLoad:
 	// mapreg 에 남아 있던 이전 값이 이기지 못하도록 인메모리 사본을 먼저 비운다.
 	// 이렇게 해야 SQL 행이 없는 상품이 S_Normalize 에서 반드시 리셋되면서
 	// 첫 행이 생성된다. (안 그러면 주기가 바뀔 때까지 SQL 에 아무것도 안 남는다)
+	// 상품 수 + SQL 행 수만큼 도는 반복 (S_NormalizeAll 과 같은 이유로 보호를 잠시 끈다)
+	.@freeloop = freeloop();
+	freeloop(1);
 	for (.@i = 0; .@i < getarraysize(.Pid); .@i++) {
 		$NeedLPCyc[.Pid[.@i]]   = 0;
 		$NeedLPStock[.Pid[.@i]] = 0;
@@ -755,6 +889,7 @@ S_SqlLoad:
 		$NeedLPMode[.@qpid[.@i]]  = .@qmode[.@i];
 	}
 
+	freeloop(.@freeloop);
 	.SqlReady = 1;
 	logmes "[LuckyCeil] SQL LOAD OK rows=" + .@n;
 	return 1;
@@ -777,7 +912,9 @@ S_SaveStock:
 		return 0;
 
 	.@i = getarg(0);
-	.@pid = .Pid[.@i];
+	.@pid = callsub(S_SKey, .@i);
+	if (.@pid <= 0)
+		return 0;
 	.@key = getarg(1);
 	.@val = getarg(2);
 
@@ -848,8 +985,14 @@ S_SaveMode:
 // 전체 상품 재고 주기 점검
 //============================================================
 S_NormalizeAll:
+	// 상품이 늘면(2026-10-13 131종) 전체 점검 반복이 infinity loop 보호 한도
+	// (check_gotocount 2048)를 넘는다. 신규 PID 의 첫 주기 리셋(SQL 저장+재확인)이
+	// 겹치는 OnInit 에서 실제로 끊겼다. 이 반복 동안만 보호를 끄고 원래 상태로 되돌린다.
+	.@freeloop = freeloop();
+	freeloop(1);
 	for (.@i = 0; .@i < getarraysize(.Pid); .@i++)
 		callsub S_Normalize, .@i;
+	freeloop(.@freeloop);
 	return;
 
 
@@ -866,7 +1009,9 @@ S_NormalizeAll:
 //============================================================
 S_Normalize:
 	.@i = getarg(0);
-	.@pid = .Pid[.@i];
+	.@pid = callsub(S_SKey, .@i);
+	if (.@pid <= 0)
+		return 0;
 
 	if (.Cycle[.@i] == 0)
 		return 0;
@@ -877,13 +1022,37 @@ S_Normalize:
 		.@key = callsub(S_MonthKey);
 
 	if ($NeedLPCyc[.@pid] != .@key) {
-		if (!callsub(S_SaveStock, .@i, .@key, .Stock[.@i]))
+		// 2026-10-21: DB 행의 주기가 다를 때만 기본 재고로 되돌린다.
+		// (다른 맵서버가 이미 새 주기로 리셋하고 판매했다면 그 값을 유지한다)
+		if (!.SqlReady)
 			return 0;
+		.@r = query_sql(
+			"INSERT INTO `need_lucky_ceiling_stock` "
+			+ "(`product_id`,`period_type`,`period_key`,`stock`,`base_stock`,`updated_at`) VALUES ("
+			+ .@pid + "," + .Cycle[.@i] + "," + .@key + "," + .Stock[.@i] + "," + .Stock[.@i] + ",NOW()) "
+			+ "ON DUPLICATE KEY UPDATE "
+			+ "`stock`=IF(`period_key`=VALUES(`period_key`),`stock`,VALUES(`stock`)),"
+			+ "`updated_at`=IF(`period_key`=VALUES(`period_key`),`updated_at`,NOW()),"
+			+ "`period_type`=VALUES(`period_type`),`base_stock`=VALUES(`base_stock`),"
+			+ "`period_key`=VALUES(`period_key`)");
+		if (.@r < 0) {
+			logmes "[LuckyCeil] SQL SAVE FAILED pid=" + .@pid + " key=" + .@key + " stock=" + .Stock[.@i];
+			return 0;
+		}
+		.@chk = -999999;
+		.@ck = 0;
+		.@n = query_sql(
+			"SELECT `stock`,`period_key` FROM `need_lucky_ceiling_stock` WHERE `product_id`=" + .@pid,
+			.@chk, .@ck);
+		if (.@n < 1 || .@ck != .@key) {
+			logmes "[LuckyCeil] SQL VERIFY FAILED pid=" + .@pid + " expect_key=" + .@key + " got_key=" + .@ck;
+			return 0;
+		}
 
 		$NeedLPCyc[.@pid] = .@key;
-		$NeedLPStock[.@pid] = .Stock[.@i];
+		$NeedLPStock[.@pid] = .@chk;
 
-		logmes "[LuckyCeil] CYCLE RESET pid=" + .@pid + " key=" + .@key + " stock=" + .Stock[.@i];
+		logmes "[LuckyCeil] CYCLE RESET pid=" + .@pid + " key=" + .@key + " stock=" + .@chk;
 	}
 
 	return .@key;
@@ -1096,11 +1265,14 @@ OnAdmin:
 S_AdminItem:
 	.@i = getarg(0);
 	.@pid = .Pid[.@i];
+	.@skey = callsub(S_SKey, .@i);
 
 	while (1) {
 		callsub S_Normalize, .@i;
 
 		mes "[" + needtr(.Name$[.@i], .Name_en$[.@i]) + "]";
+		if (.@skey != .@pid)
+			mes needtr("^FF0000재고 공유 : PID ", "^FF0000Stock shared with PID ") + .@skey + needtr(" (0 = 공유 설정 오류)^000000", " (0 = share config error)^000000");
 		mes needtr("상품 ID : ", "Item ID : ") + .@pid + " (" + .Code$[.@i] + ")";
 		mes needtr("분류 : ", "Category : ") + ((.Cat[.@i] == 1) ? needtr("시즌 천장", "Season Ceiling") : needtr("공용 희귀", "Shared Rare"));
 		mes needtr("스크립트 설정 : ", "Script setting : ") + ((.Enabled[.@i]) ? needtr("판매", "on sale") : needtr("중지", "stopped"));
@@ -1128,9 +1300,9 @@ S_AdminItem:
 			mes needtr("재고 : 제한 없음", "Stock : no limit");
 		}
 		else {
-			mes needtr("재고 : ", "Stock : ") + $NeedLPStock[.@pid] + " / " + .Stock[.@i]
+			mes needtr("재고 : ", "Stock : ") + $NeedLPStock[.@skey] + " / " + .Stock[.@i]
 				+ " (" + ((.Cycle[.@i] == 1) ? needtr("주간", "weekly") : needtr("월간", "monthly")) + ")";
-			mes needtr("주기 값 : ", "Cycle value : ") + $NeedLPCyc[.@pid];
+			mes needtr("주기 값 : ", "Cycle value : ") + $NeedLPCyc[.@skey];
 			mes needtr("다음 재입고 : ", "Next restock : ") + callsub(S_NextResetStr, .@i);
 		}
 		next;
@@ -1152,15 +1324,15 @@ S_AdminItem:
 			}
 			mes needtr("[재고 직접 수정]", "[Set Stock Directly]");
 			mes needtr("변경할 최종 재고를 입력해주세요.", "Please enter the new stock value.");
-			mes needtr("현재 : ", "Now : ") + $NeedLPStock[.@pid];
+			mes needtr("현재 : ", "Now : ") + $NeedLPStock[.@skey];
 			next;
 
 			input .@new, 0, 100000;
 
-			.@old = $NeedLPStock[.@pid];
+			.@old = $NeedLPStock[.@skey];
 
 			// SQL 에 먼저 확정하고 성공했을 때만 인메모리 값을 바꾼다
-			if (!callsub(S_SaveStock, .@i, $NeedLPCyc[.@pid], .@new)) {
+			if (!callsub(S_SaveStock, .@i, $NeedLPCyc[.@skey], .@new)) {
 				mes needtr("[재고 직접 수정]", "[Set Stock Directly]");
 				mes needtr("^FF0000재고 저장에 실패했습니다. 변경하지 않았습니다.^000000", "^FF0000Saving the stock failed - nothing was changed.^000000");
 				mes needtr("현재 재고 : ", "Current stock : ") + .@old;
@@ -1168,12 +1340,12 @@ S_AdminItem:
 				break;
 			}
 
-			$NeedLPStock[.@pid] = .@new;
+			$NeedLPStock[.@skey] = .@new;
 
 			logmes "[LuckyCeilAdmin] pid=" + .@pid + " stock " + .@old + " -> " + .@new + " (saved)";
 
 			mes needtr("[재고 직접 수정]", "[Set Stock Directly]");
-			mes .@old + needtr("개 -> ^009900", " -> ^009900") + $NeedLPStock[.@pid] + needtr("개^000000", "^000000");
+			mes .@old + needtr("개 -> ^009900", " -> ^009900") + $NeedLPStock[.@skey] + needtr("개^000000", "^000000");
 			mes needtr("^0055FF즉시 영구 저장되었습니다.^000000", "^0055FFSaved permanently right away.^000000");
 			next;
 			break;
@@ -1184,9 +1356,9 @@ S_AdminItem:
 				next;
 				break;
 			}
-			.@old = $NeedLPStock[.@pid];
+			.@old = $NeedLPStock[.@skey];
 
-			if (!callsub(S_SaveStock, .@i, $NeedLPCyc[.@pid], .Stock[.@i])) {
+			if (!callsub(S_SaveStock, .@i, $NeedLPCyc[.@skey], .Stock[.@i])) {
 				mes needtr("[재고 초기화]", "[Reset Stock]");
 				mes needtr("^FF0000재고 저장에 실패했습니다. 변경하지 않았습니다.^000000", "^FF0000Saving the stock failed - nothing was changed.^000000");
 				mes needtr("현재 재고 : ", "Current stock : ") + .@old;
@@ -1194,12 +1366,12 @@ S_AdminItem:
 				break;
 			}
 
-			$NeedLPStock[.@pid] = .Stock[.@i];
+			$NeedLPStock[.@skey] = .Stock[.@i];
 
 			logmes "[LuckyCeilAdmin] pid=" + .@pid + " reset " + .@old + " -> " + .Stock[.@i] + " (saved)";
 
 			mes needtr("[재고 초기화]", "[Reset Stock]");
-			mes .@old + needtr("개 -> ^009900", " -> ^009900") + $NeedLPStock[.@pid] + needtr("개^000000", "^000000");
+			mes .@old + needtr("개 -> ^009900", " -> ^009900") + $NeedLPStock[.@skey] + needtr("개^000000", "^000000");
 			mes needtr("^0055FF즉시 영구 저장되었습니다.^000000", "^0055FFSaved permanently right away.^000000");
 			next;
 			break;
@@ -1301,20 +1473,24 @@ OnClock2200:
 //            예) "24180,24181,24182"
 // .RateText$ 상세 화면에 보여줄 행알 등장 확률 문자열 (표시 전용, 구매 로직 미사용)
 //
-// 기본 가격 기준 (등장 확률 -> 포인트 / 해당 행알 / Zeny)
-//   1.5%  ->    300P / 100개 /   100,000,000
-//   1.0%  ->    400P / 100개 /   200,000,000
-//   0.5%  ->    800P / 100개 /   300,000,000
-//   0.2%  ->  2,000P / 100개 /   500,000,000
-//   0.1%  ->  4,000P / 100개 / 1,000,000,000
+// 시즌 천장 가격 기준 (2026-10 유저 의견 반영 개편)
+//   행운 포인트 : 기존 값 유지 (행운의 알 1개 개봉 = 1P)
+//   해당 행알   : 등장 확률별 차등 (기존 일괄 100개)
+//                 1.8% 이상 20 / 1.4~1.5% 25 / 1~1.1% 30
+//                 0.6~0.75% 50 / 0.5% 60 / 0.1% 100
+//   Zeny        : 기존의 1/10 (1천만 / 2천만 / 강아지 풀 1억)
+//   공용 희귀(PID 100~102) 는 이번 개편 대상이 아니다.
+//   2026-10-21 운영자 확정 공용 희귀 변경:
+//     100 대축 200P + 1천만 Zeny (기존 1억) / 102 +9 2000P + 1억 Zeny (기존 5000P + 5억)
+//     103 대축 1개 -> +7 보장권 (무제한) / 104 대축 15개 -> +9 보장권 (102 와 월 1개 공유)
 //
 // 서버 전체 주간 교환량 기준
 //   1 ~ 1.5% -> 5개 / 0.5% -> 3개 / 0.2% -> 2개 / 0.1% -> 1개
 //
 // [PID 정책]
 //   PID 는 재고 저장 키다. 한 번 부여하면 상품을 삭제해도 재사용하지 않는다.
-//   현재 사용 : 100 ~ 102 (공용) / 200, 202 ~ 244 (시즌)
-//   다음 신규 상품은 245 부터 시작한다.
+//   현재 사용 : 100 ~ 104 (공용) / 200, 202 ~ 328 (시즌, 2026-10-21 기준)
+//   시즌 신규 PID 는 행알 출시 도구 정책(last_assigned_pid)을 따른다. 공용 신규는 105 부터.
 //
 //   *** PID 201 은 영구 예약(폐기) 상태다. ***
 //   201 은 과거 "베어러즈 쉐도우 상자" 에 쓰였으나 4차 검증에서
@@ -1391,7 +1567,83 @@ OnInit:
 		252,	// 252 해피벌룬 스크롤 / EQUIPMENT 1%
 		253,	// 253 피아멧트 스크롤 / EQUIPMENT 1%
 		254,	// 254 피아멧트 스크롤 / EQUIPMENT 2%
-		255;	// 255 매드바니 스크롤 / EQUIPMENT 1%
+		255,	// 255 매드바니 스크롤 / EQUIPMENT 1%
+		256,	// 256 인비지블 스크롤 / SHADOW 1.5%
+		257,	// 257 인비지블 스크롤 / SHADOW 1.5%
+		258,	// 258 인비지블 스크롤 / SHADOW 1.5%
+		259,	// 259 인비지블 스크롤 / SHADOW 1.5%
+		260,	// 260 인비지블 스크롤 / SHADOW 1.5%
+		261,	// 261 인비지블 스크롤 / SHADOW 1.5%
+		262,	// 262 인비지블 스크롤 / SHADOW 1.5%
+		263,	// 263 인비지블 스크롤 / SHADOW 1.5%
+		264,	// 264 인비지블 스크롤 / SHADOW 1.5%
+		265,	// 265 인비지블 스크롤 / SHADOW 1.5%
+		266,	// 266 인비지블 스크롤 / SHADOW 1.5%
+		267,	// 267 인비지블 스크롤 / SHADOW 1.5%
+		268,	// 268 신상 모자 스크롤 / SHADOW 1.5%
+		269,	// 269 신상 모자 스크롤 / SHADOW 1.5%
+		270,	// 270 신상 모자 스크롤 / SHADOW 1.5%
+		271,	// 271 신상 모자 스크롤 / SHADOW 1.5%
+		272,	// 272 신상 모자 스크롤 / SHADOW 1.5%
+		273,	// 273 신상 모자 스크롤 / SHADOW 1.5%
+		274,	// 274 신상 모자 스크롤 / SHADOW 1.5%
+		275,	// 275 신상 모자 스크롤 / SHADOW 1.5%
+		276,	// 276 신상 모자 스크롤 / SHADOW 1.5%
+		277,	// 277 신상 모자 스크롤 / SHADOW 1.5%
+		278,	// 278 신상 모자 스크롤 / SHADOW 1.5%
+		279,	// 279 신상 모자 스크롤 / SHADOW 1.5%
+		280,	// 280 신상 모자 스크롤 / SHADOW 1.5%
+		281,	// 281 신상 모자 스크롤 / EQUIPMENT 0.5%
+		282,	// 282 2015 스페셜 스크롤 / SHADOW 1.5%
+		283,	// 283 2015 스페셜 스크롤 / SHADOW 1.5%
+		284,	// 284 2015 스페셜 스크롤 / SHADOW 1.5%
+		285,	// 285 2015 스페셜 스크롤 / SHADOW 1.5%
+		286,	// 286 2015 스페셜 스크롤 / SHADOW 1.5%
+		287,	// 287 2015 스페셜 스크롤 / SHADOW 1.5%
+		288,	// 288 2015 스페셜 스크롤 / SHADOW 1.5%
+		289,	// 289 2015 스페셜 스크롤 / SHADOW 1.5%
+		290,	// 290 2015 스페셜 스크롤 / SHADOW 1.5%
+		291,	// 291 2015 스페셜 스크롤 / SHADOW 1.5%
+		292,	// 292 2015 스페셜 스크롤 / SHADOW 1.5%
+		293,	// 293 2015 스페셜 스크롤 / SHADOW 1.5%
+		294,	// 294 2015 스페셜 스크롤 / SHADOW 1.5%
+		295,	// 295 천사 스크롤 / SHADOW 1.5%
+		296,	// 296 천사 스크롤 / SHADOW 1.5%
+		297,	// 297 천사 스크롤 / SHADOW 1.5%
+		298,	// 298 천사 스크롤 / SHADOW 1.5%
+		299,	// 299 천사 스크롤 / SHADOW 1.5%
+		300,	// 300 천사 스크롤 / SHADOW 1.5%
+		301,	// 301 포링 스크롤 / EQUIPMENT 0.15%
+		302,	// 302 포링 스크롤 / EQUIPMENT 1%
+		303,	// 303 아미스트르 스크롤 / SHADOW 1.5%
+		304,	// 304 아미스트르 스크롤 / SHADOW 1.5%
+		305,	// 305 아미스트르 스크롤 / SHADOW 1.5%
+		306,	// 306 아미스트르 스크롤 / SHADOW 1.5%
+		307,	// 307 아미스트르 스크롤 / SHADOW 1.5%
+		308,	// 308 아미스트르 스크롤 / SHADOW 1.5%
+		309,	// 309 아미스트르 스크롤 / SHADOW 1.5%
+		310,	// 310 아미스트르 스크롤 / SHADOW 1.5%
+		311,	// 311 아미스트르 스크롤 / SHADOW 1.5%
+		312,	// 312 아미스트르 스크롤 / SHADOW 1.5%
+		313,	// 313 아미스트르 스크롤 / SHADOW 1.5%
+		314,	// 314 아미스트르 스크롤 / SHADOW 1.5%
+		315,	// 315 아미스트르 스크롤 / SHADOW 1.5%
+		316,	// 316 쉐도우 스크롤 / SHADOW 1.7%
+		317,	// 317 쉐도우 스크롤 / SHADOW 1.7%
+		318,	// 318 쉐도우 스크롤 / SHADOW 1.7%
+		319,	// 319 쉐도우 스크롤 / SHADOW 1.7%
+		320,	// 320 쉐도우 스크롤 / SHADOW 1.7%
+		321,	// 321 쉐도우 스크롤 / SHADOW 1.7%
+		322,	// 322 쉐도우 스크롤 / SHADOW 1.7%
+		323,	// 323 쉐도우 스크롤 / SHADOW 1.7%
+		324,	// 324 쉐도우 스크롤 / SHADOW 1.7%
+		325,	// 325 쉐도우 스크롤 / SHADOW 1.7%
+		326,	// 326 쉐도우 스크롤 / SHADOW 1.7%
+		327,	// 327 쉐도우 스크롤 / SHADOW 1.7%
+		328,	// 328 쉐도우 스크롤 / SHADOW 1.7%
+		103,	// 103 대축 1개 → +7 보장권 (2026-10-21)
+		104,	// 104 대축 15개 → +9 보장권 / 102 재고 공유 (2026-10-21)
+		329;	// 329 영혼의 스크롤 / EQUIPMENT 1%
 
 	setarray .Code$[0],
 		"BS_BLESSING",	// 100 대장장이의 축복
@@ -1451,7 +1703,83 @@ OnInit:
 		"SEASON_EQ_19095",	// 252 해피벌룬 스크롤 / EQUIPMENT 1%
 		"SEASON_EQ_19097",	// 253 피아멧트 스크롤 / EQUIPMENT 1%
 		"SEASON_EQ_19098",	// 254 피아멧트 스크롤 / EQUIPMENT 2%
-		"SEASON_EQ_28902";	// 255 매드바니 스크롤 / EQUIPMENT 1%
+		"SEASON_EQ_28902",	// 255 매드바니 스크롤 / EQUIPMENT 1%
+		"SEASON_SH_24246",	// 256 인비지블 스크롤 / SHADOW 1.5%
+		"SEASON_SH_24247",	// 257 인비지블 스크롤 / SHADOW 1.5%
+		"SEASON_SH_24248",	// 258 인비지블 스크롤 / SHADOW 1.5%
+		"SEASON_SH_24249",	// 259 인비지블 스크롤 / SHADOW 1.5%
+		"SEASON_SH_24250",	// 260 인비지블 스크롤 / SHADOW 1.5%
+		"SEASON_SH_24251",	// 261 인비지블 스크롤 / SHADOW 1.5%
+		"SEASON_SH_24252",	// 262 인비지블 스크롤 / SHADOW 1.5%
+		"SEASON_SH_24253",	// 263 인비지블 스크롤 / SHADOW 1.5%
+		"SEASON_SH_24254",	// 264 인비지블 스크롤 / SHADOW 1.5%
+		"SEASON_SH_24255",	// 265 인비지블 스크롤 / SHADOW 1.5%
+		"SEASON_SH_28391",	// 266 인비지블 스크롤 / SHADOW 1.5%
+		"SEASON_SH_28392",	// 267 인비지블 스크롤 / SHADOW 1.5%
+		"SEASON_SH_24256",	// 268 신상 모자 스크롤 / SHADOW 1.5%
+		"SEASON_SH_24257",	// 269 신상 모자 스크롤 / SHADOW 1.5%
+		"SEASON_SH_24258",	// 270 신상 모자 스크롤 / SHADOW 1.5%
+		"SEASON_SH_24259",	// 271 신상 모자 스크롤 / SHADOW 1.5%
+		"SEASON_SH_24260",	// 272 신상 모자 스크롤 / SHADOW 1.5%
+		"SEASON_SH_24261",	// 273 신상 모자 스크롤 / SHADOW 1.5%
+		"SEASON_SH_24262",	// 274 신상 모자 스크롤 / SHADOW 1.5%
+		"SEASON_SH_24263",	// 275 신상 모자 스크롤 / SHADOW 1.5%
+		"SEASON_SH_24264",	// 276 신상 모자 스크롤 / SHADOW 1.5%
+		"SEASON_SH_24265",	// 277 신상 모자 스크롤 / SHADOW 1.5%
+		"SEASON_SH_24266",	// 278 신상 모자 스크롤 / SHADOW 1.5%
+		"SEASON_SH_24267",	// 279 신상 모자 스크롤 / SHADOW 1.5%
+		"SEASON_SH_24268",	// 280 신상 모자 스크롤 / SHADOW 1.5%
+		"SEASON_EQ_23052",	// 281 신상 모자 스크롤 / EQUIPMENT 0.5%
+		"SEASON_SH_24269",	// 282 2015 스페셜 스크롤 / SHADOW 1.5%
+		"SEASON_SH_24270",	// 283 2015 스페셜 스크롤 / SHADOW 1.5%
+		"SEASON_SH_24271",	// 284 2015 스페셜 스크롤 / SHADOW 1.5%
+		"SEASON_SH_24272",	// 285 2015 스페셜 스크롤 / SHADOW 1.5%
+		"SEASON_SH_24273",	// 286 2015 스페셜 스크롤 / SHADOW 1.5%
+		"SEASON_SH_24274",	// 287 2015 스페셜 스크롤 / SHADOW 1.5%
+		"SEASON_SH_24275",	// 288 2015 스페셜 스크롤 / SHADOW 1.5%
+		"SEASON_SH_24276",	// 289 2015 스페셜 스크롤 / SHADOW 1.5%
+		"SEASON_SH_24277",	// 290 2015 스페셜 스크롤 / SHADOW 1.5%
+		"SEASON_SH_24278",	// 291 2015 스페셜 스크롤 / SHADOW 1.5%
+		"SEASON_SH_24279",	// 292 2015 스페셜 스크롤 / SHADOW 1.5%
+		"SEASON_SH_24280",	// 293 2015 스페셜 스크롤 / SHADOW 1.5%
+		"SEASON_SH_24281",	// 294 2015 스페셜 스크롤 / SHADOW 1.5%
+		"SEASON_SH_24282",	// 295 천사 스크롤 / SHADOW 1.5%
+		"SEASON_SH_24283",	// 296 천사 스크롤 / SHADOW 1.5%
+		"SEASON_SH_24284",	// 297 천사 스크롤 / SHADOW 1.5%
+		"SEASON_SH_24285",	// 298 천사 스크롤 / SHADOW 1.5%
+		"SEASON_SH_24286",	// 299 천사 스크롤 / SHADOW 1.5%
+		"SEASON_SH_24287",	// 300 천사 스크롤 / SHADOW 1.5%
+		"SEASON_EQ_19118",	// 301 포링 스크롤 / EQUIPMENT 0.15%
+		"SEASON_EQ_19117",	// 302 포링 스크롤 / EQUIPMENT 1%
+		"SEASON_SH_24288",	// 303 아미스트르 스크롤 / SHADOW 1.5%
+		"SEASON_SH_24289",	// 304 아미스트르 스크롤 / SHADOW 1.5%
+		"SEASON_SH_24290",	// 305 아미스트르 스크롤 / SHADOW 1.5%
+		"SEASON_SH_24291",	// 306 아미스트르 스크롤 / SHADOW 1.5%
+		"SEASON_SH_24292",	// 307 아미스트르 스크롤 / SHADOW 1.5%
+		"SEASON_SH_24293",	// 308 아미스트르 스크롤 / SHADOW 1.5%
+		"SEASON_SH_24294",	// 309 아미스트르 스크롤 / SHADOW 1.5%
+		"SEASON_SH_24295",	// 310 아미스트르 스크롤 / SHADOW 1.5%
+		"SEASON_SH_24296",	// 311 아미스트르 스크롤 / SHADOW 1.5%
+		"SEASON_SH_24297",	// 312 아미스트르 스크롤 / SHADOW 1.5%
+		"SEASON_SH_24298",	// 313 아미스트르 스크롤 / SHADOW 1.5%
+		"SEASON_SH_24299",	// 314 아미스트르 스크롤 / SHADOW 1.5%
+		"SEASON_SH_24300",	// 315 아미스트르 스크롤 / SHADOW 1.5%
+		"SEASON_SH_24301",	// 316 쉐도우 스크롤 / SHADOW 1.7%
+		"SEASON_SH_24302",	// 317 쉐도우 스크롤 / SHADOW 1.7%
+		"SEASON_SH_24303",	// 318 쉐도우 스크롤 / SHADOW 1.7%
+		"SEASON_SH_24304",	// 319 쉐도우 스크롤 / SHADOW 1.7%
+		"SEASON_SH_24305",	// 320 쉐도우 스크롤 / SHADOW 1.7%
+		"SEASON_SH_24306",	// 321 쉐도우 스크롤 / SHADOW 1.7%
+		"SEASON_SH_24307",	// 322 쉐도우 스크롤 / SHADOW 1.7%
+		"SEASON_SH_24308",	// 323 쉐도우 스크롤 / SHADOW 1.7%
+		"SEASON_SH_24309",	// 324 쉐도우 스크롤 / SHADOW 1.7%
+		"SEASON_SH_24310",	// 325 쉐도우 스크롤 / SHADOW 1.7%
+		"SEASON_SH_24311",	// 326 쉐도우 스크롤 / SHADOW 1.7%
+		"SEASON_SH_24312",	// 327 쉐도우 스크롤 / SHADOW 1.7%
+		"SEASON_SH_24313",	// 328 쉐도우 스크롤 / SHADOW 1.7%
+		"BS_TO_REFINE7",	// 103 대축 1개 → +7 보장권 (2026-10-21)
+		"BS_TO_REFINE9",	// 104 대축 15개 → +9 보장권 / 102 재고 공유 (2026-10-21)
+		"SEASON_EQ_19135";	// 329 영혼의 스크롤 / EQUIPMENT 1%
 
 	setarray .Name$[0],
 		"대장장이의 축복",	// 100 대장장이의 축복
@@ -1511,7 +1839,83 @@ OnInit:
 		"해피 벌룬",	// 252 해피벌룬 스크롤 / EQUIPMENT 1%
 		"피아멧트의 리본",	// 253 피아멧트 스크롤 / EQUIPMENT 1%
 		"피아멧트의 두건",	// 254 피아멧트 스크롤 / EQUIPMENT 2%
-		"매드바니";	// 255 매드바니 스크롤 / EQUIPMENT 1%
+		"매드바니",	// 255 매드바니 스크롤 / EQUIPMENT 1%
+		"소드맨 이어링 쉐도우",	// 256 인비지블 스크롤 / SHADOW 1.5%
+		"머천트 이어링 쉐도우",	// 257 인비지블 스크롤 / SHADOW 1.5%
+		"어콜라이트 이어링 쉐도우",	// 258 인비지블 스크롤 / SHADOW 1.5%
+		"매지션 이어링 쉐도우",	// 259 인비지블 스크롤 / SHADOW 1.5%
+		"소드맨 펜던트 쉐도우",	// 260 인비지블 스크롤 / SHADOW 1.5%
+		"머천트 펜던트 쉐도우",	// 261 인비지블 스크롤 / SHADOW 1.5%
+		"어콜라이트 펜던트 쉐도우",	// 262 인비지블 스크롤 / SHADOW 1.5%
+		"씨프 펜던트 쉐도우",	// 263 인비지블 스크롤 / SHADOW 1.5%
+		"매지션 펜던트 쉐도우",	// 264 인비지블 스크롤 / SHADOW 1.5%
+		"아처 펜던트 쉐도우",	// 265 인비지블 스크롤 / SHADOW 1.5%
+		"씨프 이어링 쉐도우",	// 266 인비지블 스크롤 / SHADOW 1.5%
+		"아처 이어링 쉐도우",	// 267 인비지블 스크롤 / SHADOW 1.5%
+		"나이트 슈즈 쉐도우",	// 268 신상 모자 스크롤 / SHADOW 1.5%
+		"크루세이더 슈즈 쉐도우",	// 269 신상 모자 스크롤 / SHADOW 1.5%
+		"블랙스미스 슈즈 쉐도우",	// 270 신상 모자 스크롤 / SHADOW 1.5%
+		"알케미스트 슈즈 쉐도우",	// 271 신상 모자 스크롤 / SHADOW 1.5%
+		"프리스트 슈즈 쉐도우",	// 272 신상 모자 스크롤 / SHADOW 1.5%
+		"몽크 슈즈 쉐도우",	// 273 신상 모자 스크롤 / SHADOW 1.5%
+		"어쌔신 슈즈 쉐도우",	// 274 신상 모자 스크롤 / SHADOW 1.5%
+		"로그 슈즈 쉐도우",	// 275 신상 모자 스크롤 / SHADOW 1.5%
+		"위저드 슈즈 쉐도우",	// 276 신상 모자 스크롤 / SHADOW 1.5%
+		"세이지 슈즈 쉐도우",	// 277 신상 모자 스크롤 / SHADOW 1.5%
+		"헌터 슈즈 쉐도우",	// 278 신상 모자 스크롤 / SHADOW 1.5%
+		"바드 슈즈 쉐도우",	// 279 신상 모자 스크롤 / SHADOW 1.5%
+		"댄서 슈즈 쉐도우",	// 280 신상 모자 스크롤 / SHADOW 1.5%
+		"신상 모자 상자",	// 281 신상 모자 스크롤 / EQUIPMENT 0.5%
+		"나이트 아머 쉐도우",	// 282 2015 스페셜 스크롤 / SHADOW 1.5%
+		"크루세이더 아머 쉐도우",	// 283 2015 스페셜 스크롤 / SHADOW 1.5%
+		"블랙스미스 아머 쉐도우",	// 284 2015 스페셜 스크롤 / SHADOW 1.5%
+		"알케미스트 아머 쉐도우",	// 285 2015 스페셜 스크롤 / SHADOW 1.5%
+		"프리스트 아머 쉐도우",	// 286 2015 스페셜 스크롤 / SHADOW 1.5%
+		"몽크 아머 쉐도우",	// 287 2015 스페셜 스크롤 / SHADOW 1.5%
+		"어쌔신 아머 쉐도우",	// 288 2015 스페셜 스크롤 / SHADOW 1.5%
+		"로그 아머 쉐도우",	// 289 2015 스페셜 스크롤 / SHADOW 1.5%
+		"위저드 아머 쉐도우",	// 290 2015 스페셜 스크롤 / SHADOW 1.5%
+		"세이지 아머 쉐도우",	// 291 2015 스페셜 스크롤 / SHADOW 1.5%
+		"헌터 아머 쉐도우",	// 292 2015 스페셜 스크롤 / SHADOW 1.5%
+		"바드 아머 쉐도우",	// 293 2015 스페셜 스크롤 / SHADOW 1.5%
+		"댄서 아머 쉐도우",	// 294 2015 스페셜 스크롤 / SHADOW 1.5%
+		"슈퍼노비스 웨폰 쉐도우",	// 295 천사 스크롤 / SHADOW 1.5%
+		"건슬링거 웨폰 쉐도우",	// 296 천사 스크롤 / SHADOW 1.5%
+		"태권 웨폰 쉐도우",	// 297 천사 스크롤 / SHADOW 1.5%
+		"닌자 웨폰 쉐도우",	// 298 천사 스크롤 / SHADOW 1.5%
+		"도람 매지컬 웨폰 쉐도우",	// 299 천사 스크롤 / SHADOW 1.5%
+		"도람 피지컬 웨폰 쉐도우",	// 300 천사 스크롤 / SHADOW 1.5%
+		"포링 선글래스+",	// 301 포링 스크롤 / EQUIPMENT 0.15%
+		"포링 선글래스",	// 302 포링 스크롤 / EQUIPMENT 1%
+		"룬나이트 웨폰 쉐도우",	// 303 아미스트르 스크롤 / SHADOW 1.5%
+		"로얄가드 웨폰 쉐도우",	// 304 아미스트르 스크롤 / SHADOW 1.5%
+		"미케닉 웨폰 쉐도우",	// 305 아미스트르 스크롤 / SHADOW 1.5%
+		"제네릭 웨폰 쉐도우",	// 306 아미스트르 스크롤 / SHADOW 1.5%
+		"아크비숍 웨폰 쉐도우",	// 307 아미스트르 스크롤 / SHADOW 1.5%
+		"수라 웨폰 쉐도우",	// 308 아미스트르 스크롤 / SHADOW 1.5%
+		"길로틴크로스 웨폰 쉐도우",	// 309 아미스트르 스크롤 / SHADOW 1.5%
+		"쉐도우체이서 웨폰 쉐도우",	// 310 아미스트르 스크롤 / SHADOW 1.5%
+		"워록 웨폰 쉐도우",	// 311 아미스트르 스크롤 / SHADOW 1.5%
+		"소서러 웨폰 쉐도우",	// 312 아미스트르 스크롤 / SHADOW 1.5%
+		"레인저 웨폰 쉐도우",	// 313 아미스트르 스크롤 / SHADOW 1.5%
+		"민스트럴 웨폰 쉐도우",	// 314 아미스트르 스크롤 / SHADOW 1.5%
+		"원더러 웨폰 쉐도우",	// 315 아미스트르 스크롤 / SHADOW 1.5%
+		"룬나이트 쉴드 쉐도우",	// 316 쉐도우 스크롤 / SHADOW 1.7%
+		"로얄가드 쉴드 쉐도우",	// 317 쉐도우 스크롤 / SHADOW 1.7%
+		"미케닉 쉴드 쉐도우",	// 318 쉐도우 스크롤 / SHADOW 1.7%
+		"제네릭 쉴드 쉐도우",	// 319 쉐도우 스크롤 / SHADOW 1.7%
+		"아크비숍 쉴드 쉐도우",	// 320 쉐도우 스크롤 / SHADOW 1.7%
+		"수라 쉴드 쉐도우",	// 321 쉐도우 스크롤 / SHADOW 1.7%
+		"길로틴크로스 쉴드 쉐도우",	// 322 쉐도우 스크롤 / SHADOW 1.7%
+		"쉐도우체이서 쉴드 쉐도우",	// 323 쉐도우 스크롤 / SHADOW 1.7%
+		"워록 쉴드 쉐도우",	// 324 쉐도우 스크롤 / SHADOW 1.7%
+		"소서러 쉴드 쉐도우",	// 325 쉐도우 스크롤 / SHADOW 1.7%
+		"레인저 쉴드 쉐도우",	// 326 쉐도우 스크롤 / SHADOW 1.7%
+		"민스트럴 쉴드 쉐도우",	// 327 쉐도우 스크롤 / SHADOW 1.7%
+		"원더러 쉴드 쉐도우",	// 328 쉐도우 스크롤 / SHADOW 1.7%
+		"대축 1개 → +7 보장권",	// 103 대축 1개 → +7 보장권 (2026-10-21)
+		"대축 15개 → +9 보장권",	// 104 대축 15개 → +9 보장권 / 102 재고 공유 (2026-10-21)
+		"청이의 영혼";	// 329 영혼의 스크롤 / EQUIPMENT 1%
 	setarray .Name_en$[0],
 		"Blacksmith's Blessing",	// 100 대장장이의 축복
 		"Sealed Seal Card",	// 101 봉인된인장 카드
@@ -1570,7 +1974,83 @@ OnInit:
 		"Happy Balloon",	// 252 해피벌룬 스크롤 / EQUIPMENT 1%
 		"Piamette Ribbon",	// 253 피아멧트 스크롤 / EQUIPMENT 1%
 		"Piamette Hood",	// 254 피아멧트 스크롤 / EQUIPMENT 2%
-		"Mad Bunny";	// 255 매드바니 스크롤 / EQUIPMENT 1%
+		"Mad Bunny",	// 255 매드바니 스크롤 / EQUIPMENT 1%
+		"Swordman Shadow Earring",	// 256 인비지블 스크롤 / SHADOW 1.5%
+		"Merchant Shadow Earring",	// 257 인비지블 스크롤 / SHADOW 1.5%
+		"Acolyte Shadow Earring",	// 258 인비지블 스크롤 / SHADOW 1.5%
+		"Magician Shadow Earring",	// 259 인비지블 스크롤 / SHADOW 1.5%
+		"Swordman Shadow Pendant",	// 260 인비지블 스크롤 / SHADOW 1.5%
+		"Merchant Shadow Pendant",	// 261 인비지블 스크롤 / SHADOW 1.5%
+		"Acolyte Shadow Pendant",	// 262 인비지블 스크롤 / SHADOW 1.5%
+		"Thief Shadow Pendant",	// 263 인비지블 스크롤 / SHADOW 1.5%
+		"Magician Shadow Pendant",	// 264 인비지블 스크롤 / SHADOW 1.5%
+		"Archer Shadow Pendant",	// 265 인비지블 스크롤 / SHADOW 1.5%
+		"Thief Shadow Earring",	// 266 인비지블 스크롤 / SHADOW 1.5%
+		"Archer Shadow Earring",	// 267 인비지블 스크롤 / SHADOW 1.5%
+		"Knight Shadow Shoes",	// 268 신상 모자 스크롤 / SHADOW 1.5%
+		"Crusader Shadow Shoes",	// 269 신상 모자 스크롤 / SHADOW 1.5%
+		"Blacksmith Shadow Shoes",	// 270 신상 모자 스크롤 / SHADOW 1.5%
+		"Alchemist Shadow Shoes",	// 271 신상 모자 스크롤 / SHADOW 1.5%
+		"Priest Shadow Shoes",	// 272 신상 모자 스크롤 / SHADOW 1.5%
+		"Monk Shadow Shoes",	// 273 신상 모자 스크롤 / SHADOW 1.5%
+		"Assassin Shadow Shoes",	// 274 신상 모자 스크롤 / SHADOW 1.5%
+		"Rogue Shadow Shoes",	// 275 신상 모자 스크롤 / SHADOW 1.5%
+		"Wizard Shadow Shoes",	// 276 신상 모자 스크롤 / SHADOW 1.5%
+		"Sage Shadow Shoes",	// 277 신상 모자 스크롤 / SHADOW 1.5%
+		"Hunter Shadow Shoes",	// 278 신상 모자 스크롤 / SHADOW 1.5%
+		"Bard Shadow Shoes",	// 279 신상 모자 스크롤 / SHADOW 1.5%
+		"Dancer Shadow Shoes",	// 280 신상 모자 스크롤 / SHADOW 1.5%
+		"Liberty Statue Hat Box",	// 281 신상 모자 스크롤 / EQUIPMENT 0.5%
+		"Knight Shadow Armor",	// 282 2015 스페셜 스크롤 / SHADOW 1.5%
+		"Crusader Shadow Armor",	// 283 2015 스페셜 스크롤 / SHADOW 1.5%
+		"Blacksmith Shadow Armor",	// 284 2015 스페셜 스크롤 / SHADOW 1.5%
+		"Alchemist Shadow Armor",	// 285 2015 스페셜 스크롤 / SHADOW 1.5%
+		"Priest Shadow Armor",	// 286 2015 스페셜 스크롤 / SHADOW 1.5%
+		"Monk Shadow Armor",	// 287 2015 스페셜 스크롤 / SHADOW 1.5%
+		"Assassin Shadow Armor",	// 288 2015 스페셜 스크롤 / SHADOW 1.5%
+		"Rogue Shadow Armor",	// 289 2015 스페셜 스크롤 / SHADOW 1.5%
+		"Wizard Shadow Armor",	// 290 2015 스페셜 스크롤 / SHADOW 1.5%
+		"Sage Shadow Armor",	// 291 2015 스페셜 스크롤 / SHADOW 1.5%
+		"Hunter Shadow Armor",	// 292 2015 스페셜 스크롤 / SHADOW 1.5%
+		"Bard Shadow Armor",	// 293 2015 스페셜 스크롤 / SHADOW 1.5%
+		"Dancer Shadow Armor",	// 294 2015 스페셜 스크롤 / SHADOW 1.5%
+		"Super Novice Shadow Weapon",	// 295 천사 스크롤 / SHADOW 1.5%
+		"Gunslinger Shadow Weapon",	// 296 천사 스크롤 / SHADOW 1.5%
+		"Taekwondo Shadow Weapon",	// 297 천사 스크롤 / SHADOW 1.5%
+		"Ninja Shadow Weapon",	// 298 천사 스크롤 / SHADOW 1.5%
+		"Doram Magical Shadow Weapon",	// 299 천사 스크롤 / SHADOW 1.5%
+		"Doram Physical Shadow Weapon",	// 300 천사 스크롤 / SHADOW 1.5%
+		"Poring Sunglasses+",	// 301 포링 스크롤 / EQUIPMENT 0.15%
+		"Poring Sunglasses",	// 302 포링 스크롤 / EQUIPMENT 1%
+		"Rune Knight Shadow Weapon",	// 303 아미스트르 스크롤 / SHADOW 1.5%
+		"Royal Guard Shadow Weapon",	// 304 아미스트르 스크롤 / SHADOW 1.5%
+		"Mechanic Shadow Weapon",	// 305 아미스트르 스크롤 / SHADOW 1.5%
+		"Genetic Shadow Weapon",	// 306 아미스트르 스크롤 / SHADOW 1.5%
+		"Archbishop Shadow Weapon",	// 307 아미스트르 스크롤 / SHADOW 1.5%
+		"Sura Shadow Weapon",	// 308 아미스트르 스크롤 / SHADOW 1.5%
+		"Guillotine Cross Shadow Weapon",	// 309 아미스트르 스크롤 / SHADOW 1.5%
+		"Shadow Chaser Shadow Weapon",	// 310 아미스트르 스크롤 / SHADOW 1.5%
+		"Warlock Shadow Weapon",	// 311 아미스트르 스크롤 / SHADOW 1.5%
+		"Sorcerer Shadow Weapon",	// 312 아미스트르 스크롤 / SHADOW 1.5%
+		"Ranger Shadow Weapon",	// 313 아미스트르 스크롤 / SHADOW 1.5%
+		"Minstrel Shadow Weapon",	// 314 아미스트르 스크롤 / SHADOW 1.5%
+		"Wanderer Shadow Weapon",	// 315 아미스트르 스크롤 / SHADOW 1.5%
+		"Rune Knight Shadow Shield",	// 316 쉐도우 스크롤 / SHADOW 1.7%
+		"Royal Guard Shadow Shield",	// 317 쉐도우 스크롤 / SHADOW 1.7%
+		"Mechanic Shadow Shield",	// 318 쉐도우 스크롤 / SHADOW 1.7%
+		"Genetic Shadow Shield",	// 319 쉐도우 스크롤 / SHADOW 1.7%
+		"Archbishop Shadow Shield",	// 320 쉐도우 스크롤 / SHADOW 1.7%
+		"Sura Shadow Shield",	// 321 쉐도우 스크롤 / SHADOW 1.7%
+		"Guillotine Cross Shadow Shield",	// 322 쉐도우 스크롤 / SHADOW 1.7%
+		"Shadow Chaser Shadow Shield",	// 323 쉐도우 스크롤 / SHADOW 1.7%
+		"Warlock Shadow Shield",	// 324 쉐도우 스크롤 / SHADOW 1.7%
+		"Sorcerer Shadow Shield",	// 325 쉐도우 스크롤 / SHADOW 1.7%
+		"Ranger Shadow Shield",	// 326 쉐도우 스크롤 / SHADOW 1.7%
+		"Minstrel Shadow Shield",	// 327 쉐도우 스크롤 / SHADOW 1.7%
+		"Wanderer Shadow Shield",	// 328 쉐도우 스크롤 / SHADOW 1.7%
+		"Blessing x1 -> +7 Certificate",	// 103 대축 1개 → +7 보장권 (2026-10-21)
+		"Blessing x15 -> +9 Certificate",	// 104 대축 15개 → +9 보장권 / 102 재고 공유 (2026-10-21)
+		"Spirit of Green Maiden";	// 329 영혼의 스크롤 / EQUIPMENT 1%
 
 	// 공용 3종만 판매(ON). 시즌 천장 44종은 전부 기본 OFF 로 등록한다.
 	// ShowRate:true 만으로는 현재 판매 중인지 종료됐는지 알 수 없으므로,
@@ -1633,7 +2113,83 @@ OnInit:
 		1,	// 252 해피벌룬 스크롤 / EQUIPMENT 1%
 		1,	// 253 피아멧트 스크롤 / EQUIPMENT 1%
 		1,	// 254 피아멧트 스크롤 / EQUIPMENT 2%
-		1;	// 255 매드바니 스크롤 / EQUIPMENT 1%
+		1,	// 255 매드바니 스크롤 / EQUIPMENT 1%
+		0,	// 256 인비지블 스크롤 / SHADOW 1.5%
+		0,	// 257 인비지블 스크롤 / SHADOW 1.5%
+		0,	// 258 인비지블 스크롤 / SHADOW 1.5%
+		0,	// 259 인비지블 스크롤 / SHADOW 1.5%
+		0,	// 260 인비지블 스크롤 / SHADOW 1.5%
+		0,	// 261 인비지블 스크롤 / SHADOW 1.5%
+		0,	// 262 인비지블 스크롤 / SHADOW 1.5%
+		0,	// 263 인비지블 스크롤 / SHADOW 1.5%
+		0,	// 264 인비지블 스크롤 / SHADOW 1.5%
+		0,	// 265 인비지블 스크롤 / SHADOW 1.5%
+		0,	// 266 인비지블 스크롤 / SHADOW 1.5%
+		0,	// 267 인비지블 스크롤 / SHADOW 1.5%
+		0,	// 268 신상 모자 스크롤 / SHADOW 1.5%
+		0,	// 269 신상 모자 스크롤 / SHADOW 1.5%
+		0,	// 270 신상 모자 스크롤 / SHADOW 1.5%
+		0,	// 271 신상 모자 스크롤 / SHADOW 1.5%
+		0,	// 272 신상 모자 스크롤 / SHADOW 1.5%
+		0,	// 273 신상 모자 스크롤 / SHADOW 1.5%
+		0,	// 274 신상 모자 스크롤 / SHADOW 1.5%
+		0,	// 275 신상 모자 스크롤 / SHADOW 1.5%
+		0,	// 276 신상 모자 스크롤 / SHADOW 1.5%
+		0,	// 277 신상 모자 스크롤 / SHADOW 1.5%
+		0,	// 278 신상 모자 스크롤 / SHADOW 1.5%
+		0,	// 279 신상 모자 스크롤 / SHADOW 1.5%
+		0,	// 280 신상 모자 스크롤 / SHADOW 1.5%
+		0,	// 281 신상 모자 스크롤 / EQUIPMENT 0.5%
+		0,	// 282 2015 스페셜 스크롤 / SHADOW 1.5%
+		0,	// 283 2015 스페셜 스크롤 / SHADOW 1.5%
+		0,	// 284 2015 스페셜 스크롤 / SHADOW 1.5%
+		0,	// 285 2015 스페셜 스크롤 / SHADOW 1.5%
+		0,	// 286 2015 스페셜 스크롤 / SHADOW 1.5%
+		0,	// 287 2015 스페셜 스크롤 / SHADOW 1.5%
+		0,	// 288 2015 스페셜 스크롤 / SHADOW 1.5%
+		0,	// 289 2015 스페셜 스크롤 / SHADOW 1.5%
+		0,	// 290 2015 스페셜 스크롤 / SHADOW 1.5%
+		0,	// 291 2015 스페셜 스크롤 / SHADOW 1.5%
+		0,	// 292 2015 스페셜 스크롤 / SHADOW 1.5%
+		0,	// 293 2015 스페셜 스크롤 / SHADOW 1.5%
+		0,	// 294 2015 스페셜 스크롤 / SHADOW 1.5%
+		0,	// 295 천사 스크롤 / SHADOW 1.5%
+		0,	// 296 천사 스크롤 / SHADOW 1.5%
+		0,	// 297 천사 스크롤 / SHADOW 1.5%
+		0,	// 298 천사 스크롤 / SHADOW 1.5%
+		0,	// 299 천사 스크롤 / SHADOW 1.5%
+		0,	// 300 천사 스크롤 / SHADOW 1.5%
+		0,	// 301 포링 스크롤 / EQUIPMENT 0.15%
+		0,	// 302 포링 스크롤 / EQUIPMENT 1%
+		0,	// 303 아미스트르 스크롤 / SHADOW 1.5%
+		0,	// 304 아미스트르 스크롤 / SHADOW 1.5%
+		0,	// 305 아미스트르 스크롤 / SHADOW 1.5%
+		0,	// 306 아미스트르 스크롤 / SHADOW 1.5%
+		0,	// 307 아미스트르 스크롤 / SHADOW 1.5%
+		0,	// 308 아미스트르 스크롤 / SHADOW 1.5%
+		0,	// 309 아미스트르 스크롤 / SHADOW 1.5%
+		0,	// 310 아미스트르 스크롤 / SHADOW 1.5%
+		0,	// 311 아미스트르 스크롤 / SHADOW 1.5%
+		0,	// 312 아미스트르 스크롤 / SHADOW 1.5%
+		0,	// 313 아미스트르 스크롤 / SHADOW 1.5%
+		0,	// 314 아미스트르 스크롤 / SHADOW 1.5%
+		0,	// 315 아미스트르 스크롤 / SHADOW 1.5%
+		0,	// 316 쉐도우 스크롤 / SHADOW 1.7%
+		0,	// 317 쉐도우 스크롤 / SHADOW 1.7%
+		0,	// 318 쉐도우 스크롤 / SHADOW 1.7%
+		0,	// 319 쉐도우 스크롤 / SHADOW 1.7%
+		0,	// 320 쉐도우 스크롤 / SHADOW 1.7%
+		0,	// 321 쉐도우 스크롤 / SHADOW 1.7%
+		0,	// 322 쉐도우 스크롤 / SHADOW 1.7%
+		0,	// 323 쉐도우 스크롤 / SHADOW 1.7%
+		0,	// 324 쉐도우 스크롤 / SHADOW 1.7%
+		0,	// 325 쉐도우 스크롤 / SHADOW 1.7%
+		0,	// 326 쉐도우 스크롤 / SHADOW 1.7%
+		0,	// 327 쉐도우 스크롤 / SHADOW 1.7%
+		0,	// 328 쉐도우 스크롤 / SHADOW 1.7%
+		1,	// 103 대축 1개 → +7 보장권 (2026-10-21)
+		1,	// 104 대축 15개 → +9 보장권 / 102 재고 공유 (2026-10-21)
+		0;	// 329 영혼의 스크롤 / EQUIPMENT 1%
 
 	setarray .Cat[0],
 		2,	// 100 대장장이의 축복
@@ -1693,12 +2249,88 @@ OnInit:
 		1,	// 252 해피벌룬 스크롤 / EQUIPMENT 1%
 		1,	// 253 피아멧트 스크롤 / EQUIPMENT 1%
 		1,	// 254 피아멧트 스크롤 / EQUIPMENT 2%
-		1;	// 255 매드바니 스크롤 / EQUIPMENT 1%
+		1,	// 255 매드바니 스크롤 / EQUIPMENT 1%
+		1,	// 256 인비지블 스크롤 / SHADOW 1.5%
+		1,	// 257 인비지블 스크롤 / SHADOW 1.5%
+		1,	// 258 인비지블 스크롤 / SHADOW 1.5%
+		1,	// 259 인비지블 스크롤 / SHADOW 1.5%
+		1,	// 260 인비지블 스크롤 / SHADOW 1.5%
+		1,	// 261 인비지블 스크롤 / SHADOW 1.5%
+		1,	// 262 인비지블 스크롤 / SHADOW 1.5%
+		1,	// 263 인비지블 스크롤 / SHADOW 1.5%
+		1,	// 264 인비지블 스크롤 / SHADOW 1.5%
+		1,	// 265 인비지블 스크롤 / SHADOW 1.5%
+		1,	// 266 인비지블 스크롤 / SHADOW 1.5%
+		1,	// 267 인비지블 스크롤 / SHADOW 1.5%
+		1,	// 268 신상 모자 스크롤 / SHADOW 1.5%
+		1,	// 269 신상 모자 스크롤 / SHADOW 1.5%
+		1,	// 270 신상 모자 스크롤 / SHADOW 1.5%
+		1,	// 271 신상 모자 스크롤 / SHADOW 1.5%
+		1,	// 272 신상 모자 스크롤 / SHADOW 1.5%
+		1,	// 273 신상 모자 스크롤 / SHADOW 1.5%
+		1,	// 274 신상 모자 스크롤 / SHADOW 1.5%
+		1,	// 275 신상 모자 스크롤 / SHADOW 1.5%
+		1,	// 276 신상 모자 스크롤 / SHADOW 1.5%
+		1,	// 277 신상 모자 스크롤 / SHADOW 1.5%
+		1,	// 278 신상 모자 스크롤 / SHADOW 1.5%
+		1,	// 279 신상 모자 스크롤 / SHADOW 1.5%
+		1,	// 280 신상 모자 스크롤 / SHADOW 1.5%
+		1,	// 281 신상 모자 스크롤 / EQUIPMENT 0.5%
+		1,	// 282 2015 스페셜 스크롤 / SHADOW 1.5%
+		1,	// 283 2015 스페셜 스크롤 / SHADOW 1.5%
+		1,	// 284 2015 스페셜 스크롤 / SHADOW 1.5%
+		1,	// 285 2015 스페셜 스크롤 / SHADOW 1.5%
+		1,	// 286 2015 스페셜 스크롤 / SHADOW 1.5%
+		1,	// 287 2015 스페셜 스크롤 / SHADOW 1.5%
+		1,	// 288 2015 스페셜 스크롤 / SHADOW 1.5%
+		1,	// 289 2015 스페셜 스크롤 / SHADOW 1.5%
+		1,	// 290 2015 스페셜 스크롤 / SHADOW 1.5%
+		1,	// 291 2015 스페셜 스크롤 / SHADOW 1.5%
+		1,	// 292 2015 스페셜 스크롤 / SHADOW 1.5%
+		1,	// 293 2015 스페셜 스크롤 / SHADOW 1.5%
+		1,	// 294 2015 스페셜 스크롤 / SHADOW 1.5%
+		1,	// 295 천사 스크롤 / SHADOW 1.5%
+		1,	// 296 천사 스크롤 / SHADOW 1.5%
+		1,	// 297 천사 스크롤 / SHADOW 1.5%
+		1,	// 298 천사 스크롤 / SHADOW 1.5%
+		1,	// 299 천사 스크롤 / SHADOW 1.5%
+		1,	// 300 천사 스크롤 / SHADOW 1.5%
+		1,	// 301 포링 스크롤 / EQUIPMENT 0.15%
+		1,	// 302 포링 스크롤 / EQUIPMENT 1%
+		1,	// 303 아미스트르 스크롤 / SHADOW 1.5%
+		1,	// 304 아미스트르 스크롤 / SHADOW 1.5%
+		1,	// 305 아미스트르 스크롤 / SHADOW 1.5%
+		1,	// 306 아미스트르 스크롤 / SHADOW 1.5%
+		1,	// 307 아미스트르 스크롤 / SHADOW 1.5%
+		1,	// 308 아미스트르 스크롤 / SHADOW 1.5%
+		1,	// 309 아미스트르 스크롤 / SHADOW 1.5%
+		1,	// 310 아미스트르 스크롤 / SHADOW 1.5%
+		1,	// 311 아미스트르 스크롤 / SHADOW 1.5%
+		1,	// 312 아미스트르 스크롤 / SHADOW 1.5%
+		1,	// 313 아미스트르 스크롤 / SHADOW 1.5%
+		1,	// 314 아미스트르 스크롤 / SHADOW 1.5%
+		1,	// 315 아미스트르 스크롤 / SHADOW 1.5%
+		1,	// 316 쉐도우 스크롤 / SHADOW 1.7%
+		1,	// 317 쉐도우 스크롤 / SHADOW 1.7%
+		1,	// 318 쉐도우 스크롤 / SHADOW 1.7%
+		1,	// 319 쉐도우 스크롤 / SHADOW 1.7%
+		1,	// 320 쉐도우 스크롤 / SHADOW 1.7%
+		1,	// 321 쉐도우 스크롤 / SHADOW 1.7%
+		1,	// 322 쉐도우 스크롤 / SHADOW 1.7%
+		1,	// 323 쉐도우 스크롤 / SHADOW 1.7%
+		1,	// 324 쉐도우 스크롤 / SHADOW 1.7%
+		1,	// 325 쉐도우 스크롤 / SHADOW 1.7%
+		1,	// 326 쉐도우 스크롤 / SHADOW 1.7%
+		1,	// 327 쉐도우 스크롤 / SHADOW 1.7%
+		1,	// 328 쉐도우 스크롤 / SHADOW 1.7%
+		2,	// 103 대축 1개 → +7 보장권 (2026-10-21)
+		2,	// 104 대축 15개 → +9 보장권 / 102 재고 공유 (2026-10-21)
+		1;	// 329 영혼의 스크롤 / EQUIPMENT 1%
 
 	setarray .Point[0],
 		200,	// 100 대장장이의 축복
 		3000,	// 101 봉인된인장 카드
-		5000,	// 102 +9 제련 교환권
+		2000,	// 102 +9 제련 교환권 (2026-10-21 5000 -> 2000)
 		200,	// 200 소녀의 마음 / EQUIPMENT 1%
 		100,	// 202 행운의 알Ⅸ / EQUIPMENT 3.5%
 		100,	// 203 행운의 알Ⅹ / EQUIPMENT 1.838384%
@@ -1753,67 +2385,219 @@ OnInit:
 		200,	// 252 해피벌룬 스크롤 / EQUIPMENT 1%
 		200,	// 253 피아멧트 스크롤 / EQUIPMENT 1%
 		100,	// 254 피아멧트 스크롤 / EQUIPMENT 2%
-		200;	// 255 매드바니 스크롤 / EQUIPMENT 1%
+		200,	// 255 매드바니 스크롤 / EQUIPMENT 1%
+		150,	// 256 인비지블 스크롤 / SHADOW 1.5%
+		150,	// 257 인비지블 스크롤 / SHADOW 1.5%
+		150,	// 258 인비지블 스크롤 / SHADOW 1.5%
+		150,	// 259 인비지블 스크롤 / SHADOW 1.5%
+		150,	// 260 인비지블 스크롤 / SHADOW 1.5%
+		150,	// 261 인비지블 스크롤 / SHADOW 1.5%
+		150,	// 262 인비지블 스크롤 / SHADOW 1.5%
+		150,	// 263 인비지블 스크롤 / SHADOW 1.5%
+		150,	// 264 인비지블 스크롤 / SHADOW 1.5%
+		150,	// 265 인비지블 스크롤 / SHADOW 1.5%
+		150,	// 266 인비지블 스크롤 / SHADOW 1.5%
+		150,	// 267 인비지블 스크롤 / SHADOW 1.5%
+		150,	// 268 신상 모자 스크롤 / SHADOW 1.5%
+		150,	// 269 신상 모자 스크롤 / SHADOW 1.5%
+		150,	// 270 신상 모자 스크롤 / SHADOW 1.5%
+		150,	// 271 신상 모자 스크롤 / SHADOW 1.5%
+		150,	// 272 신상 모자 스크롤 / SHADOW 1.5%
+		150,	// 273 신상 모자 스크롤 / SHADOW 1.5%
+		150,	// 274 신상 모자 스크롤 / SHADOW 1.5%
+		150,	// 275 신상 모자 스크롤 / SHADOW 1.5%
+		150,	// 276 신상 모자 스크롤 / SHADOW 1.5%
+		150,	// 277 신상 모자 스크롤 / SHADOW 1.5%
+		150,	// 278 신상 모자 스크롤 / SHADOW 1.5%
+		150,	// 279 신상 모자 스크롤 / SHADOW 1.5%
+		150,	// 280 신상 모자 스크롤 / SHADOW 1.5%
+		400,	// 281 신상 모자 스크롤 / EQUIPMENT 0.5%
+		150,	// 282 2015 스페셜 스크롤 / SHADOW 1.5%
+		150,	// 283 2015 스페셜 스크롤 / SHADOW 1.5%
+		150,	// 284 2015 스페셜 스크롤 / SHADOW 1.5%
+		150,	// 285 2015 스페셜 스크롤 / SHADOW 1.5%
+		150,	// 286 2015 스페셜 스크롤 / SHADOW 1.5%
+		150,	// 287 2015 스페셜 스크롤 / SHADOW 1.5%
+		150,	// 288 2015 스페셜 스크롤 / SHADOW 1.5%
+		150,	// 289 2015 스페셜 스크롤 / SHADOW 1.5%
+		150,	// 290 2015 스페셜 스크롤 / SHADOW 1.5%
+		150,	// 291 2015 스페셜 스크롤 / SHADOW 1.5%
+		150,	// 292 2015 스페셜 스크롤 / SHADOW 1.5%
+		150,	// 293 2015 스페셜 스크롤 / SHADOW 1.5%
+		150,	// 294 2015 스페셜 스크롤 / SHADOW 1.5%
+		150,	// 295 천사 스크롤 / SHADOW 1.5%
+		150,	// 296 천사 스크롤 / SHADOW 1.5%
+		150,	// 297 천사 스크롤 / SHADOW 1.5%
+		150,	// 298 천사 스크롤 / SHADOW 1.5%
+		150,	// 299 천사 스크롤 / SHADOW 1.5%
+		150,	// 300 천사 스크롤 / SHADOW 1.5%
+		1000,	// 301 포링 스크롤 / EQUIPMENT 0.15%
+		200,	// 302 포링 스크롤 / EQUIPMENT 1%
+		150,	// 303 아미스트르 스크롤 / SHADOW 1.5%
+		150,	// 304 아미스트르 스크롤 / SHADOW 1.5%
+		150,	// 305 아미스트르 스크롤 / SHADOW 1.5%
+		150,	// 306 아미스트르 스크롤 / SHADOW 1.5%
+		150,	// 307 아미스트르 스크롤 / SHADOW 1.5%
+		150,	// 308 아미스트르 스크롤 / SHADOW 1.5%
+		150,	// 309 아미스트르 스크롤 / SHADOW 1.5%
+		150,	// 310 아미스트르 스크롤 / SHADOW 1.5%
+		150,	// 311 아미스트르 스크롤 / SHADOW 1.5%
+		150,	// 312 아미스트르 스크롤 / SHADOW 1.5%
+		150,	// 313 아미스트르 스크롤 / SHADOW 1.5%
+		150,	// 314 아미스트르 스크롤 / SHADOW 1.5%
+		150,	// 315 아미스트르 스크롤 / SHADOW 1.5%
+		100,	// 316 쉐도우 스크롤 / SHADOW 1.7%
+		100,	// 317 쉐도우 스크롤 / SHADOW 1.7%
+		100,	// 318 쉐도우 스크롤 / SHADOW 1.7%
+		100,	// 319 쉐도우 스크롤 / SHADOW 1.7%
+		100,	// 320 쉐도우 스크롤 / SHADOW 1.7%
+		100,	// 321 쉐도우 스크롤 / SHADOW 1.7%
+		100,	// 322 쉐도우 스크롤 / SHADOW 1.7%
+		100,	// 323 쉐도우 스크롤 / SHADOW 1.7%
+		100,	// 324 쉐도우 스크롤 / SHADOW 1.7%
+		100,	// 325 쉐도우 스크롤 / SHADOW 1.7%
+		100,	// 326 쉐도우 스크롤 / SHADOW 1.7%
+		100,	// 327 쉐도우 스크롤 / SHADOW 1.7%
+		100,	// 328 쉐도우 스크롤 / SHADOW 1.7%
+		0,	// 103 대축 1개 → +7 보장권 (2026-10-21)
+		0,	// 104 대축 15개 → +9 보장권 / 102 재고 공유 (2026-10-21)
+		200;	// 329 영혼의 스크롤 / EQUIPMENT 1%
 
 	setarray .Zeny[0],
-		100000000,	// 100 대장장이의 축복
+		10000000,	// 100 대장장이의 축복 (2026-10-21 1억 -> 1천만)
 		300000000,	// 101 봉인된인장 카드
-		500000000,	// 102 +9 제련 교환권
-		200000000,	// 200 소녀의 마음 / EQUIPMENT 1%
-		100000000,	// 202 행운의 알Ⅸ / EQUIPMENT 3.5%
-		100000000,	// 203 행운의 알Ⅹ / EQUIPMENT 1.838384%
-		100000000,	// 204 그리폰의 알 / EQUIPMENT 1.4%
-		100000000,	// 205 2011 RWC 스크롤 / EQUIPMENT 1.5%
-		100000000,	// 206 2011 RWC 스크롤 / EQUIPMENT 1.5%
-		100000000,	// 207 크루 스크롤 / EQUIPMENT 1.5%
-		200000000,	// 208 언데드의 핵 / EQUIPMENT 1%
-		200000000,	// 209 교황스크롤 / EQUIPMENT 0.6%
-		100000000,	// 210 2012 RWC 스크롤 / EQUIPMENT 1.4%
-		100000000,	// 211 2012 RWC 스크롤 / EQUIPMENT 1.5%
-		100000000,	// 212 2012 RWC 스크롤 / EQUIPMENT 1.5%
-		100000000,	// 213 2012 RWC 스크롤 / EQUIPMENT 1.5%
-		200000000,	// 214 황금 보물상자 / EQUIPMENT 0.75015%
-		100000000,	// 215 황금 보물상자 / EQUIPMENT 2.0004%
-		100000000,	// 216 크리스마스 스크롤 / EQUIPMENT 1.5%
-		100000000,	// 217 봉인된 다크로드 스크롤 / SHADOW 1.5%
-		200000000,	// 218 봉인된 베르제브브 스크롤 / SHADOW 1%
-		100000000,	// 219 봉인된 베르제브브 스크롤 / SHADOW 1.5%
-		200000000,	// 220 봉인된 키엘-D-01 스크롤 / SHADOW 1%
-		100000000,	// 221 봉인된 키엘-D-01 스크롤 / SHADOW 1.5%
-		100000000,	// 222 봉인된 이프리트 스크롤 / SHADOW 1.5%
-		100000000,	// 223 2013 RWC 스크롤 / SHADOW 1.5%
-		100000000,	// 224 봉인된 터틀 제네럴 스크롤 / SHADOW 1.5%
-		200000000,	// 225 봉인된 보스이그니젬 스크롤 / SHADOW 1%
-		200000000,	// 226 봉인된 보스이그니젬 스크롤 / SHADOW 1%
-		200000000,	// 227 봉인된 보스이그니젬 스크롤 / SHADOW 1%
-		200000000,	// 228 봉인된 보스이그니젬 스크롤 / SHADOW 1%
-		200000000,	// 229 봉인된 베스퍼 스크롤 / SHADOW 1%
-		200000000,	// 230 봉인된 베스퍼 스크롤 / SHADOW 1%
-		200000000,	// 231 봉인된 베스퍼 스크롤 / SHADOW 1%
-		200000000,	// 232 봉인된 베스퍼 스크롤 / SHADOW 1%
-		200000000,	// 233 안심제련 스크롤 / SHADOW 0.5%
-		200000000,	// 234 늑대왕 스크롤 / EQUIPMENT 0.75%
-		200000000,	// 235 늑대왕 스크롤 / EQUIPMENT 0.75%
-		100000000,	// 236 봉인된 월야화 스크롤 / SHADOW 1.5%
-		100000000,	// 237 봉인된 스나이퍼 스크롤 / SHADOW 1.5%
-		100000000,	// 238 봉인된 스나이퍼 스크롤 / SHADOW 1.5%
-		100000000,	// 239 봉인된인장 스크롤 / SHADOW 1.1%
-		100000000,	// 240 봉인된인장 스크롤 / SHADOW 1.1%
-		200000000,	// 241 봉인된 드라큐라 스크롤Ⅱ / SHADOW 0.5%
-		200000000,	// 242 봉인된 드라큐라 스크롤Ⅱ / SHADOW 0.5%
-		200000000,	// 243 봉인된 베르제브브 스크롤Ⅱ / SHADOW 0.5%
-		200000000,	// 244 봉인된 베르제브브 스크롤Ⅱ / SHADOW 0.5%
-		200000000,	// 245 신년 스크롤 / SHADOW 1%
-		200000000,	// 246 신년 스크롤 / SHADOW 1%
-		200000000,	// 247 신년 스크롤 / SHADOW 1%
-		200000000,	// 248 봉인된 인장 스크롤 II / SHADOW 1%
-		200000000,	// 249 봉인된 인장 스크롤 II / SHADOW 1%
-		200000000,	// 250 봉인된 인장 스크롤 II / SHADOW 1%
-		1000000000,	// 251 봉인된인장 스크롤 III / EQUIPMENT 0.1%
-		100000000,	// 252 해피벌룬 스크롤 / EQUIPMENT 1%
-		100000000,	// 253 피아멧트 스크롤 / EQUIPMENT 1%
-		100000000,	// 254 피아멧트 스크롤 / EQUIPMENT 2%
-		100000000;	// 255 매드바니 스크롤 / EQUIPMENT 1%
+		100000000,	// 102 +9 제련 교환권 (2026-10-21 5억 -> 1억)
+		20000000,	// 200 소녀의 마음 / EQUIPMENT 1%
+		10000000,	// 202 행운의 알Ⅸ / EQUIPMENT 3.5%
+		10000000,	// 203 행운의 알Ⅹ / EQUIPMENT 1.838384%
+		10000000,	// 204 그리폰의 알 / EQUIPMENT 1.4%
+		10000000,	// 205 2011 RWC 스크롤 / EQUIPMENT 1.5%
+		10000000,	// 206 2011 RWC 스크롤 / EQUIPMENT 1.5%
+		10000000,	// 207 크루 스크롤 / EQUIPMENT 1.5%
+		20000000,	// 208 언데드의 핵 / EQUIPMENT 1%
+		20000000,	// 209 교황스크롤 / EQUIPMENT 0.6%
+		10000000,	// 210 2012 RWC 스크롤 / EQUIPMENT 1.4%
+		10000000,	// 211 2012 RWC 스크롤 / EQUIPMENT 1.5%
+		10000000,	// 212 2012 RWC 스크롤 / EQUIPMENT 1.5%
+		10000000,	// 213 2012 RWC 스크롤 / EQUIPMENT 1.5%
+		20000000,	// 214 황금 보물상자 / EQUIPMENT 0.75015%
+		10000000,	// 215 황금 보물상자 / EQUIPMENT 2.0004%
+		10000000,	// 216 크리스마스 스크롤 / EQUIPMENT 1.5%
+		10000000,	// 217 봉인된 다크로드 스크롤 / SHADOW 1.5%
+		20000000,	// 218 봉인된 베르제브브 스크롤 / SHADOW 1%
+		10000000,	// 219 봉인된 베르제브브 스크롤 / SHADOW 1.5%
+		20000000,	// 220 봉인된 키엘-D-01 스크롤 / SHADOW 1%
+		10000000,	// 221 봉인된 키엘-D-01 스크롤 / SHADOW 1.5%
+		10000000,	// 222 봉인된 이프리트 스크롤 / SHADOW 1.5%
+		10000000,	// 223 2013 RWC 스크롤 / SHADOW 1.5%
+		10000000,	// 224 봉인된 터틀 제네럴 스크롤 / SHADOW 1.5%
+		20000000,	// 225 봉인된 보스이그니젬 스크롤 / SHADOW 1%
+		20000000,	// 226 봉인된 보스이그니젬 스크롤 / SHADOW 1%
+		20000000,	// 227 봉인된 보스이그니젬 스크롤 / SHADOW 1%
+		20000000,	// 228 봉인된 보스이그니젬 스크롤 / SHADOW 1%
+		20000000,	// 229 봉인된 베스퍼 스크롤 / SHADOW 1%
+		20000000,	// 230 봉인된 베스퍼 스크롤 / SHADOW 1%
+		20000000,	// 231 봉인된 베스퍼 스크롤 / SHADOW 1%
+		20000000,	// 232 봉인된 베스퍼 스크롤 / SHADOW 1%
+		20000000,	// 233 안심제련 스크롤 / SHADOW 0.5%
+		20000000,	// 234 늑대왕 스크롤 / EQUIPMENT 0.75%
+		20000000,	// 235 늑대왕 스크롤 / EQUIPMENT 0.75%
+		10000000,	// 236 봉인된 월야화 스크롤 / SHADOW 1.5%
+		10000000,	// 237 봉인된 스나이퍼 스크롤 / SHADOW 1.5%
+		10000000,	// 238 봉인된 스나이퍼 스크롤 / SHADOW 1.5%
+		10000000,	// 239 봉인된인장 스크롤 / SHADOW 1.1%
+		10000000,	// 240 봉인된인장 스크롤 / SHADOW 1.1%
+		20000000,	// 241 봉인된 드라큐라 스크롤Ⅱ / SHADOW 0.5%
+		20000000,	// 242 봉인된 드라큐라 스크롤Ⅱ / SHADOW 0.5%
+		20000000,	// 243 봉인된 베르제브브 스크롤Ⅱ / SHADOW 0.5%
+		20000000,	// 244 봉인된 베르제브브 스크롤Ⅱ / SHADOW 0.5%
+		20000000,	// 245 신년 스크롤 / SHADOW 1%
+		20000000,	// 246 신년 스크롤 / SHADOW 1%
+		20000000,	// 247 신년 스크롤 / SHADOW 1%
+		20000000,	// 248 봉인된 인장 스크롤 II / SHADOW 1%
+		20000000,	// 249 봉인된 인장 스크롤 II / SHADOW 1%
+		20000000,	// 250 봉인된 인장 스크롤 II / SHADOW 1%
+		100000000,	// 251 봉인된인장 스크롤 III / EQUIPMENT 0.1%
+		20000000,	// 252 해피벌룬 스크롤 / EQUIPMENT 1%
+		20000000,	// 253 피아멧트 스크롤 / EQUIPMENT 1%
+		10000000,	// 254 피아멧트 스크롤 / EQUIPMENT 2%
+		20000000,	// 255 매드바니 스크롤 / EQUIPMENT 1%
+		10000000,	// 256 인비지블 스크롤 / SHADOW 1.5%
+		10000000,	// 257 인비지블 스크롤 / SHADOW 1.5%
+		10000000,	// 258 인비지블 스크롤 / SHADOW 1.5%
+		10000000,	// 259 인비지블 스크롤 / SHADOW 1.5%
+		10000000,	// 260 인비지블 스크롤 / SHADOW 1.5%
+		10000000,	// 261 인비지블 스크롤 / SHADOW 1.5%
+		10000000,	// 262 인비지블 스크롤 / SHADOW 1.5%
+		10000000,	// 263 인비지블 스크롤 / SHADOW 1.5%
+		10000000,	// 264 인비지블 스크롤 / SHADOW 1.5%
+		10000000,	// 265 인비지블 스크롤 / SHADOW 1.5%
+		10000000,	// 266 인비지블 스크롤 / SHADOW 1.5%
+		10000000,	// 267 인비지블 스크롤 / SHADOW 1.5%
+		10000000,	// 268 신상 모자 스크롤 / SHADOW 1.5%
+		10000000,	// 269 신상 모자 스크롤 / SHADOW 1.5%
+		10000000,	// 270 신상 모자 스크롤 / SHADOW 1.5%
+		10000000,	// 271 신상 모자 스크롤 / SHADOW 1.5%
+		10000000,	// 272 신상 모자 스크롤 / SHADOW 1.5%
+		10000000,	// 273 신상 모자 스크롤 / SHADOW 1.5%
+		10000000,	// 274 신상 모자 스크롤 / SHADOW 1.5%
+		10000000,	// 275 신상 모자 스크롤 / SHADOW 1.5%
+		10000000,	// 276 신상 모자 스크롤 / SHADOW 1.5%
+		10000000,	// 277 신상 모자 스크롤 / SHADOW 1.5%
+		10000000,	// 278 신상 모자 스크롤 / SHADOW 1.5%
+		10000000,	// 279 신상 모자 스크롤 / SHADOW 1.5%
+		10000000,	// 280 신상 모자 스크롤 / SHADOW 1.5%
+		20000000,	// 281 신상 모자 스크롤 / EQUIPMENT 0.5%
+		10000000,	// 282 2015 스페셜 스크롤 / SHADOW 1.5%
+		10000000,	// 283 2015 스페셜 스크롤 / SHADOW 1.5%
+		10000000,	// 284 2015 스페셜 스크롤 / SHADOW 1.5%
+		10000000,	// 285 2015 스페셜 스크롤 / SHADOW 1.5%
+		10000000,	// 286 2015 스페셜 스크롤 / SHADOW 1.5%
+		10000000,	// 287 2015 스페셜 스크롤 / SHADOW 1.5%
+		10000000,	// 288 2015 스페셜 스크롤 / SHADOW 1.5%
+		10000000,	// 289 2015 스페셜 스크롤 / SHADOW 1.5%
+		10000000,	// 290 2015 스페셜 스크롤 / SHADOW 1.5%
+		10000000,	// 291 2015 스페셜 스크롤 / SHADOW 1.5%
+		10000000,	// 292 2015 스페셜 스크롤 / SHADOW 1.5%
+		10000000,	// 293 2015 스페셜 스크롤 / SHADOW 1.5%
+		10000000,	// 294 2015 스페셜 스크롤 / SHADOW 1.5%
+		10000000,	// 295 천사 스크롤 / SHADOW 1.5%
+		10000000,	// 296 천사 스크롤 / SHADOW 1.5%
+		10000000,	// 297 천사 스크롤 / SHADOW 1.5%
+		10000000,	// 298 천사 스크롤 / SHADOW 1.5%
+		10000000,	// 299 천사 스크롤 / SHADOW 1.5%
+		10000000,	// 300 천사 스크롤 / SHADOW 1.5%
+		50000000,	// 301 포링 스크롤 / EQUIPMENT 0.15%
+		20000000,	// 302 포링 스크롤 / EQUIPMENT 1%
+		10000000,	// 303 아미스트르 스크롤 / SHADOW 1.5%
+		10000000,	// 304 아미스트르 스크롤 / SHADOW 1.5%
+		10000000,	// 305 아미스트르 스크롤 / SHADOW 1.5%
+		10000000,	// 306 아미스트르 스크롤 / SHADOW 1.5%
+		10000000,	// 307 아미스트르 스크롤 / SHADOW 1.5%
+		10000000,	// 308 아미스트르 스크롤 / SHADOW 1.5%
+		10000000,	// 309 아미스트르 스크롤 / SHADOW 1.5%
+		10000000,	// 310 아미스트르 스크롤 / SHADOW 1.5%
+		10000000,	// 311 아미스트르 스크롤 / SHADOW 1.5%
+		10000000,	// 312 아미스트르 스크롤 / SHADOW 1.5%
+		10000000,	// 313 아미스트르 스크롤 / SHADOW 1.5%
+		10000000,	// 314 아미스트르 스크롤 / SHADOW 1.5%
+		10000000,	// 315 아미스트르 스크롤 / SHADOW 1.5%
+		10000000,	// 316 쉐도우 스크롤 / SHADOW 1.7%
+		10000000,	// 317 쉐도우 스크롤 / SHADOW 1.7%
+		10000000,	// 318 쉐도우 스크롤 / SHADOW 1.7%
+		10000000,	// 319 쉐도우 스크롤 / SHADOW 1.7%
+		10000000,	// 320 쉐도우 스크롤 / SHADOW 1.7%
+		10000000,	// 321 쉐도우 스크롤 / SHADOW 1.7%
+		10000000,	// 322 쉐도우 스크롤 / SHADOW 1.7%
+		10000000,	// 323 쉐도우 스크롤 / SHADOW 1.7%
+		10000000,	// 324 쉐도우 스크롤 / SHADOW 1.7%
+		10000000,	// 325 쉐도우 스크롤 / SHADOW 1.7%
+		10000000,	// 326 쉐도우 스크롤 / SHADOW 1.7%
+		10000000,	// 327 쉐도우 스크롤 / SHADOW 1.7%
+		10000000,	// 328 쉐도우 스크롤 / SHADOW 1.7%
+		0,	// 103 대축 1개 → +7 보장권 (2026-10-21)
+		0,	// 104 대축 15개 → +9 보장권 / 102 재고 공유 (2026-10-21)
+		20000000;	// 329 영혼의 스크롤 / EQUIPMENT 1%
 
 	setarray .EggId[0],
 		0,	// 100 대장장이의 축복
@@ -1873,67 +2657,219 @@ OnInit:
 		14781,	// 252 해피벌룬 스크롤 / EQUIPMENT 1%
 		23024,	// 253 피아멧트 스크롤 / EQUIPMENT 1%
 		23024,	// 254 피아멧트 스크롤 / EQUIPMENT 2%
-		22971;	// 255 매드바니 스크롤 / EQUIPMENT 1%
+		22971,	// 255 매드바니 스크롤 / EQUIPMENT 1%
+		23034,	// 256 인비지블 스크롤 / SHADOW 1.5%
+		23034,	// 257 인비지블 스크롤 / SHADOW 1.5%
+		23034,	// 258 인비지블 스크롤 / SHADOW 1.5%
+		23034,	// 259 인비지블 스크롤 / SHADOW 1.5%
+		23034,	// 260 인비지블 스크롤 / SHADOW 1.5%
+		23034,	// 261 인비지블 스크롤 / SHADOW 1.5%
+		23034,	// 262 인비지블 스크롤 / SHADOW 1.5%
+		23034,	// 263 인비지블 스크롤 / SHADOW 1.5%
+		23034,	// 264 인비지블 스크롤 / SHADOW 1.5%
+		23034,	// 265 인비지블 스크롤 / SHADOW 1.5%
+		23034,	// 266 인비지블 스크롤 / SHADOW 1.5%
+		23034,	// 267 인비지블 스크롤 / SHADOW 1.5%
+		23051,	// 268 신상 모자 스크롤 / SHADOW 1.5%
+		23051,	// 269 신상 모자 스크롤 / SHADOW 1.5%
+		23051,	// 270 신상 모자 스크롤 / SHADOW 1.5%
+		23051,	// 271 신상 모자 스크롤 / SHADOW 1.5%
+		23051,	// 272 신상 모자 스크롤 / SHADOW 1.5%
+		23051,	// 273 신상 모자 스크롤 / SHADOW 1.5%
+		23051,	// 274 신상 모자 스크롤 / SHADOW 1.5%
+		23051,	// 275 신상 모자 스크롤 / SHADOW 1.5%
+		23051,	// 276 신상 모자 스크롤 / SHADOW 1.5%
+		23051,	// 277 신상 모자 스크롤 / SHADOW 1.5%
+		23051,	// 278 신상 모자 스크롤 / SHADOW 1.5%
+		23051,	// 279 신상 모자 스크롤 / SHADOW 1.5%
+		23051,	// 280 신상 모자 스크롤 / SHADOW 1.5%
+		23051,	// 281 신상 모자 스크롤 / EQUIPMENT 0.5%
+		23069,	// 282 2015 스페셜 스크롤 / SHADOW 1.5%
+		23069,	// 283 2015 스페셜 스크롤 / SHADOW 1.5%
+		23069,	// 284 2015 스페셜 스크롤 / SHADOW 1.5%
+		23069,	// 285 2015 스페셜 스크롤 / SHADOW 1.5%
+		23069,	// 286 2015 스페셜 스크롤 / SHADOW 1.5%
+		23069,	// 287 2015 스페셜 스크롤 / SHADOW 1.5%
+		23069,	// 288 2015 스페셜 스크롤 / SHADOW 1.5%
+		23069,	// 289 2015 스페셜 스크롤 / SHADOW 1.5%
+		23069,	// 290 2015 스페셜 스크롤 / SHADOW 1.5%
+		23069,	// 291 2015 스페셜 스크롤 / SHADOW 1.5%
+		23069,	// 292 2015 스페셜 스크롤 / SHADOW 1.5%
+		23069,	// 293 2015 스페셜 스크롤 / SHADOW 1.5%
+		23069,	// 294 2015 스페셜 스크롤 / SHADOW 1.5%
+		23072,	// 295 천사 스크롤 / SHADOW 1.5%
+		23072,	// 296 천사 스크롤 / SHADOW 1.5%
+		23072,	// 297 천사 스크롤 / SHADOW 1.5%
+		23072,	// 298 천사 스크롤 / SHADOW 1.5%
+		23072,	// 299 천사 스크롤 / SHADOW 1.5%
+		23072,	// 300 천사 스크롤 / SHADOW 1.5%
+		23095,	// 301 포링 스크롤 / EQUIPMENT 0.15%
+		23095,	// 302 포링 스크롤 / EQUIPMENT 1%
+		23106,	// 303 아미스트르 스크롤 / SHADOW 1.5%
+		23106,	// 304 아미스트르 스크롤 / SHADOW 1.5%
+		23106,	// 305 아미스트르 스크롤 / SHADOW 1.5%
+		23106,	// 306 아미스트르 스크롤 / SHADOW 1.5%
+		23106,	// 307 아미스트르 스크롤 / SHADOW 1.5%
+		23106,	// 308 아미스트르 스크롤 / SHADOW 1.5%
+		23106,	// 309 아미스트르 스크롤 / SHADOW 1.5%
+		23106,	// 310 아미스트르 스크롤 / SHADOW 1.5%
+		23106,	// 311 아미스트르 스크롤 / SHADOW 1.5%
+		23106,	// 312 아미스트르 스크롤 / SHADOW 1.5%
+		23106,	// 313 아미스트르 스크롤 / SHADOW 1.5%
+		23106,	// 314 아미스트르 스크롤 / SHADOW 1.5%
+		23106,	// 315 아미스트르 스크롤 / SHADOW 1.5%
+		23116,	// 316 쉐도우 스크롤 / SHADOW 1.7%
+		23116,	// 317 쉐도우 스크롤 / SHADOW 1.7%
+		23116,	// 318 쉐도우 스크롤 / SHADOW 1.7%
+		23116,	// 319 쉐도우 스크롤 / SHADOW 1.7%
+		23116,	// 320 쉐도우 스크롤 / SHADOW 1.7%
+		23116,	// 321 쉐도우 스크롤 / SHADOW 1.7%
+		23116,	// 322 쉐도우 스크롤 / SHADOW 1.7%
+		23116,	// 323 쉐도우 스크롤 / SHADOW 1.7%
+		23116,	// 324 쉐도우 스크롤 / SHADOW 1.7%
+		23116,	// 325 쉐도우 스크롤 / SHADOW 1.7%
+		23116,	// 326 쉐도우 스크롤 / SHADOW 1.7%
+		23116,	// 327 쉐도우 스크롤 / SHADOW 1.7%
+		23116,	// 328 쉐도우 스크롤 / SHADOW 1.7%
+		6635,	// 103 대축 1개 → +7 보장권 (2026-10-21)
+		6635,	// 104 대축 15개 → +9 보장권 / 102 재고 공유 (2026-10-21)
+		23119;	// 329 영혼의 스크롤 / EQUIPMENT 1%
 
 	setarray .EggAmt[0],
 		0,	// 100 대장장이의 축복
 		0,	// 101 봉인된인장 카드
 		0,	// 102 +9 제련 교환권
-		100,	// 200 소녀의 마음 / EQUIPMENT 1%
-		100,	// 202 행운의 알Ⅸ / EQUIPMENT 3.5%
-		100,	// 203 행운의 알Ⅹ / EQUIPMENT 1.838384%
-		100,	// 204 그리폰의 알 / EQUIPMENT 1.4%
-		100,	// 205 2011 RWC 스크롤 / EQUIPMENT 1.5%
-		100,	// 206 2011 RWC 스크롤 / EQUIPMENT 1.5%
-		100,	// 207 크루 스크롤 / EQUIPMENT 1.5%
-		100,	// 208 언데드의 핵 / EQUIPMENT 1%
-		100,	// 209 교황스크롤 / EQUIPMENT 0.6%
-		100,	// 210 2012 RWC 스크롤 / EQUIPMENT 1.4%
-		100,	// 211 2012 RWC 스크롤 / EQUIPMENT 1.5%
-		100,	// 212 2012 RWC 스크롤 / EQUIPMENT 1.5%
-		100,	// 213 2012 RWC 스크롤 / EQUIPMENT 1.5%
-		100,	// 214 황금 보물상자 / EQUIPMENT 0.75015%
-		100,	// 215 황금 보물상자 / EQUIPMENT 2.0004%
-		100,	// 216 크리스마스 스크롤 / EQUIPMENT 1.5%
-		100,	// 217 봉인된 다크로드 스크롤 / SHADOW 1.5%
-		100,	// 218 봉인된 베르제브브 스크롤 / SHADOW 1%
-		100,	// 219 봉인된 베르제브브 스크롤 / SHADOW 1.5%
-		100,	// 220 봉인된 키엘-D-01 스크롤 / SHADOW 1%
-		100,	// 221 봉인된 키엘-D-01 스크롤 / SHADOW 1.5%
-		100,	// 222 봉인된 이프리트 스크롤 / SHADOW 1.5%
-		100,	// 223 2013 RWC 스크롤 / SHADOW 1.5%
-		100,	// 224 봉인된 터틀 제네럴 스크롤 / SHADOW 1.5%
-		100,	// 225 봉인된 보스이그니젬 스크롤 / SHADOW 1%
-		100,	// 226 봉인된 보스이그니젬 스크롤 / SHADOW 1%
-		100,	// 227 봉인된 보스이그니젬 스크롤 / SHADOW 1%
-		100,	// 228 봉인된 보스이그니젬 스크롤 / SHADOW 1%
-		100,	// 229 봉인된 베스퍼 스크롤 / SHADOW 1%
-		100,	// 230 봉인된 베스퍼 스크롤 / SHADOW 1%
-		100,	// 231 봉인된 베스퍼 스크롤 / SHADOW 1%
-		100,	// 232 봉인된 베스퍼 스크롤 / SHADOW 1%
-		100,	// 233 안심제련 스크롤 / SHADOW 0.5%
-		100,	// 234 늑대왕 스크롤 / EQUIPMENT 0.75%
-		100,	// 235 늑대왕 스크롤 / EQUIPMENT 0.75%
-		100,	// 236 봉인된 월야화 스크롤 / SHADOW 1.5%
-		100,	// 237 봉인된 스나이퍼 스크롤 / SHADOW 1.5%
-		100,	// 238 봉인된 스나이퍼 스크롤 / SHADOW 1.5%
-		100,	// 239 봉인된인장 스크롤 / SHADOW 1.1%
-		100,	// 240 봉인된인장 스크롤 / SHADOW 1.1%
-		100,	// 241 봉인된 드라큐라 스크롤Ⅱ / SHADOW 0.5%
-		100,	// 242 봉인된 드라큐라 스크롤Ⅱ / SHADOW 0.5%
-		100,	// 243 봉인된 베르제브브 스크롤Ⅱ / SHADOW 0.5%
-		100,	// 244 봉인된 베르제브브 스크롤Ⅱ / SHADOW 0.5%
-		100,	// 245 신년 스크롤 / SHADOW 1%
-		100,	// 246 신년 스크롤 / SHADOW 1%
-		100,	// 247 신년 스크롤 / SHADOW 1%
-		100,	// 248 봉인된 인장 스크롤 II / SHADOW 1%
-		100,	// 249 봉인된 인장 스크롤 II / SHADOW 1%
-		100,	// 250 봉인된 인장 스크롤 II / SHADOW 1%
+		30,	// 200 소녀의 마음 / EQUIPMENT 1%
+		20,	// 202 행운의 알Ⅸ / EQUIPMENT 3.5%
+		20,	// 203 행운의 알Ⅹ / EQUIPMENT 1.838384%
+		25,	// 204 그리폰의 알 / EQUIPMENT 1.4%
+		25,	// 205 2011 RWC 스크롤 / EQUIPMENT 1.5%
+		25,	// 206 2011 RWC 스크롤 / EQUIPMENT 1.5%
+		25,	// 207 크루 스크롤 / EQUIPMENT 1.5%
+		30,	// 208 언데드의 핵 / EQUIPMENT 1%
+		50,	// 209 교황스크롤 / EQUIPMENT 0.6%
+		25,	// 210 2012 RWC 스크롤 / EQUIPMENT 1.4%
+		25,	// 211 2012 RWC 스크롤 / EQUIPMENT 1.5%
+		25,	// 212 2012 RWC 스크롤 / EQUIPMENT 1.5%
+		25,	// 213 2012 RWC 스크롤 / EQUIPMENT 1.5%
+		50,	// 214 황금 보물상자 / EQUIPMENT 0.75015%
+		20,	// 215 황금 보물상자 / EQUIPMENT 2.0004%
+		25,	// 216 크리스마스 스크롤 / EQUIPMENT 1.5%
+		25,	// 217 봉인된 다크로드 스크롤 / SHADOW 1.5%
+		30,	// 218 봉인된 베르제브브 스크롤 / SHADOW 1%
+		25,	// 219 봉인된 베르제브브 스크롤 / SHADOW 1.5%
+		30,	// 220 봉인된 키엘-D-01 스크롤 / SHADOW 1%
+		25,	// 221 봉인된 키엘-D-01 스크롤 / SHADOW 1.5%
+		25,	// 222 봉인된 이프리트 스크롤 / SHADOW 1.5%
+		25,	// 223 2013 RWC 스크롤 / SHADOW 1.5%
+		25,	// 224 봉인된 터틀 제네럴 스크롤 / SHADOW 1.5%
+		30,	// 225 봉인된 보스이그니젬 스크롤 / SHADOW 1%
+		30,	// 226 봉인된 보스이그니젬 스크롤 / SHADOW 1%
+		30,	// 227 봉인된 보스이그니젬 스크롤 / SHADOW 1%
+		30,	// 228 봉인된 보스이그니젬 스크롤 / SHADOW 1%
+		30,	// 229 봉인된 베스퍼 스크롤 / SHADOW 1%
+		30,	// 230 봉인된 베스퍼 스크롤 / SHADOW 1%
+		30,	// 231 봉인된 베스퍼 스크롤 / SHADOW 1%
+		30,	// 232 봉인된 베스퍼 스크롤 / SHADOW 1%
+		60,	// 233 안심제련 스크롤 / SHADOW 0.5%
+		50,	// 234 늑대왕 스크롤 / EQUIPMENT 0.75%
+		50,	// 235 늑대왕 스크롤 / EQUIPMENT 0.75%
+		25,	// 236 봉인된 월야화 스크롤 / SHADOW 1.5%
+		25,	// 237 봉인된 스나이퍼 스크롤 / SHADOW 1.5%
+		25,	// 238 봉인된 스나이퍼 스크롤 / SHADOW 1.5%
+		30,	// 239 봉인된인장 스크롤 / SHADOW 1.1%
+		30,	// 240 봉인된인장 스크롤 / SHADOW 1.1%
+		60,	// 241 봉인된 드라큐라 스크롤Ⅱ / SHADOW 0.5%
+		60,	// 242 봉인된 드라큐라 스크롤Ⅱ / SHADOW 0.5%
+		60,	// 243 봉인된 베르제브브 스크롤Ⅱ / SHADOW 0.5%
+		60,	// 244 봉인된 베르제브브 스크롤Ⅱ / SHADOW 0.5%
+		30,	// 245 신년 스크롤 / SHADOW 1%
+		30,	// 246 신년 스크롤 / SHADOW 1%
+		30,	// 247 신년 스크롤 / SHADOW 1%
+		30,	// 248 봉인된 인장 스크롤 II / SHADOW 1%
+		30,	// 249 봉인된 인장 스크롤 II / SHADOW 1%
+		30,	// 250 봉인된 인장 스크롤 II / SHADOW 1%
 		100,	// 251 봉인된인장 스크롤 III / EQUIPMENT 0.1%
-		100,	// 252 해피벌룬 스크롤 / EQUIPMENT 1%
-		100,	// 253 피아멧트 스크롤 / EQUIPMENT 1%
-		100,	// 254 피아멧트 스크롤 / EQUIPMENT 2%
-		100;	// 255 매드바니 스크롤 / EQUIPMENT 1%
+		30,	// 252 해피벌룬 스크롤 / EQUIPMENT 1%
+		30,	// 253 피아멧트 스크롤 / EQUIPMENT 1%
+		20,	// 254 피아멧트 스크롤 / EQUIPMENT 2%
+		30,	// 255 매드바니 스크롤 / EQUIPMENT 1%
+		25,	// 256 인비지블 스크롤 / SHADOW 1.5%
+		25,	// 257 인비지블 스크롤 / SHADOW 1.5%
+		25,	// 258 인비지블 스크롤 / SHADOW 1.5%
+		25,	// 259 인비지블 스크롤 / SHADOW 1.5%
+		25,	// 260 인비지블 스크롤 / SHADOW 1.5%
+		25,	// 261 인비지블 스크롤 / SHADOW 1.5%
+		25,	// 262 인비지블 스크롤 / SHADOW 1.5%
+		25,	// 263 인비지블 스크롤 / SHADOW 1.5%
+		25,	// 264 인비지블 스크롤 / SHADOW 1.5%
+		25,	// 265 인비지블 스크롤 / SHADOW 1.5%
+		25,	// 266 인비지블 스크롤 / SHADOW 1.5%
+		25,	// 267 인비지블 스크롤 / SHADOW 1.5%
+		25,	// 268 신상 모자 스크롤 / SHADOW 1.5%
+		25,	// 269 신상 모자 스크롤 / SHADOW 1.5%
+		25,	// 270 신상 모자 스크롤 / SHADOW 1.5%
+		25,	// 271 신상 모자 스크롤 / SHADOW 1.5%
+		25,	// 272 신상 모자 스크롤 / SHADOW 1.5%
+		25,	// 273 신상 모자 스크롤 / SHADOW 1.5%
+		25,	// 274 신상 모자 스크롤 / SHADOW 1.5%
+		25,	// 275 신상 모자 스크롤 / SHADOW 1.5%
+		25,	// 276 신상 모자 스크롤 / SHADOW 1.5%
+		25,	// 277 신상 모자 스크롤 / SHADOW 1.5%
+		25,	// 278 신상 모자 스크롤 / SHADOW 1.5%
+		25,	// 279 신상 모자 스크롤 / SHADOW 1.5%
+		25,	// 280 신상 모자 스크롤 / SHADOW 1.5%
+		60,	// 281 신상 모자 스크롤 / EQUIPMENT 0.5%
+		25,	// 282 2015 스페셜 스크롤 / SHADOW 1.5%
+		25,	// 283 2015 스페셜 스크롤 / SHADOW 1.5%
+		25,	// 284 2015 스페셜 스크롤 / SHADOW 1.5%
+		25,	// 285 2015 스페셜 스크롤 / SHADOW 1.5%
+		25,	// 286 2015 스페셜 스크롤 / SHADOW 1.5%
+		25,	// 287 2015 스페셜 스크롤 / SHADOW 1.5%
+		25,	// 288 2015 스페셜 스크롤 / SHADOW 1.5%
+		25,	// 289 2015 스페셜 스크롤 / SHADOW 1.5%
+		25,	// 290 2015 스페셜 스크롤 / SHADOW 1.5%
+		25,	// 291 2015 스페셜 스크롤 / SHADOW 1.5%
+		25,	// 292 2015 스페셜 스크롤 / SHADOW 1.5%
+		25,	// 293 2015 스페셜 스크롤 / SHADOW 1.5%
+		25,	// 294 2015 스페셜 스크롤 / SHADOW 1.5%
+		25,	// 295 천사 스크롤 / SHADOW 1.5%
+		25,	// 296 천사 스크롤 / SHADOW 1.5%
+		25,	// 297 천사 스크롤 / SHADOW 1.5%
+		25,	// 298 천사 스크롤 / SHADOW 1.5%
+		25,	// 299 천사 스크롤 / SHADOW 1.5%
+		25,	// 300 천사 스크롤 / SHADOW 1.5%
+		80,	// 301 포링 스크롤 / EQUIPMENT 0.15%
+		30,	// 302 포링 스크롤 / EQUIPMENT 1%
+		25,	// 303 아미스트르 스크롤 / SHADOW 1.5%
+		25,	// 304 아미스트르 스크롤 / SHADOW 1.5%
+		25,	// 305 아미스트르 스크롤 / SHADOW 1.5%
+		25,	// 306 아미스트르 스크롤 / SHADOW 1.5%
+		25,	// 307 아미스트르 스크롤 / SHADOW 1.5%
+		25,	// 308 아미스트르 스크롤 / SHADOW 1.5%
+		25,	// 309 아미스트르 스크롤 / SHADOW 1.5%
+		25,	// 310 아미스트르 스크롤 / SHADOW 1.5%
+		25,	// 311 아미스트르 스크롤 / SHADOW 1.5%
+		25,	// 312 아미스트르 스크롤 / SHADOW 1.5%
+		25,	// 313 아미스트르 스크롤 / SHADOW 1.5%
+		25,	// 314 아미스트르 스크롤 / SHADOW 1.5%
+		25,	// 315 아미스트르 스크롤 / SHADOW 1.5%
+		20,	// 316 쉐도우 스크롤 / SHADOW 1.7%
+		20,	// 317 쉐도우 스크롤 / SHADOW 1.7%
+		20,	// 318 쉐도우 스크롤 / SHADOW 1.7%
+		20,	// 319 쉐도우 스크롤 / SHADOW 1.7%
+		20,	// 320 쉐도우 스크롤 / SHADOW 1.7%
+		20,	// 321 쉐도우 스크롤 / SHADOW 1.7%
+		20,	// 322 쉐도우 스크롤 / SHADOW 1.7%
+		20,	// 323 쉐도우 스크롤 / SHADOW 1.7%
+		20,	// 324 쉐도우 스크롤 / SHADOW 1.7%
+		20,	// 325 쉐도우 스크롤 / SHADOW 1.7%
+		20,	// 326 쉐도우 스크롤 / SHADOW 1.7%
+		20,	// 327 쉐도우 스크롤 / SHADOW 1.7%
+		20,	// 328 쉐도우 스크롤 / SHADOW 1.7%
+		1,	// 103 대축 1개 → +7 보장권 (2026-10-21)
+		15,	// 104 대축 15개 → +9 보장권 / 102 재고 공유 (2026-10-21)
+		30;	// 329 영혼의 스크롤 / EQUIPMENT 1%
 
 	setarray .Stock[0],
 		100,	// 100 대장장이의 축복
@@ -1993,7 +2929,83 @@ OnInit:
 		5,	// 252 해피벌룬 스크롤 / EQUIPMENT 1%
 		5,	// 253 피아멧트 스크롤 / EQUIPMENT 1%
 		5,	// 254 피아멧트 스크롤 / EQUIPMENT 2%
-		5;	// 255 매드바니 스크롤 / EQUIPMENT 1%
+		5,	// 255 매드바니 스크롤 / EQUIPMENT 1%
+		5,	// 256 인비지블 스크롤 / SHADOW 1.5%
+		5,	// 257 인비지블 스크롤 / SHADOW 1.5%
+		5,	// 258 인비지블 스크롤 / SHADOW 1.5%
+		5,	// 259 인비지블 스크롤 / SHADOW 1.5%
+		5,	// 260 인비지블 스크롤 / SHADOW 1.5%
+		5,	// 261 인비지블 스크롤 / SHADOW 1.5%
+		5,	// 262 인비지블 스크롤 / SHADOW 1.5%
+		5,	// 263 인비지블 스크롤 / SHADOW 1.5%
+		5,	// 264 인비지블 스크롤 / SHADOW 1.5%
+		5,	// 265 인비지블 스크롤 / SHADOW 1.5%
+		5,	// 266 인비지블 스크롤 / SHADOW 1.5%
+		5,	// 267 인비지블 스크롤 / SHADOW 1.5%
+		5,	// 268 신상 모자 스크롤 / SHADOW 1.5%
+		5,	// 269 신상 모자 스크롤 / SHADOW 1.5%
+		5,	// 270 신상 모자 스크롤 / SHADOW 1.5%
+		5,	// 271 신상 모자 스크롤 / SHADOW 1.5%
+		5,	// 272 신상 모자 스크롤 / SHADOW 1.5%
+		5,	// 273 신상 모자 스크롤 / SHADOW 1.5%
+		5,	// 274 신상 모자 스크롤 / SHADOW 1.5%
+		5,	// 275 신상 모자 스크롤 / SHADOW 1.5%
+		5,	// 276 신상 모자 스크롤 / SHADOW 1.5%
+		5,	// 277 신상 모자 스크롤 / SHADOW 1.5%
+		5,	// 278 신상 모자 스크롤 / SHADOW 1.5%
+		5,	// 279 신상 모자 스크롤 / SHADOW 1.5%
+		5,	// 280 신상 모자 스크롤 / SHADOW 1.5%
+		3,	// 281 신상 모자 스크롤 / EQUIPMENT 0.5%
+		5,	// 282 2015 스페셜 스크롤 / SHADOW 1.5%
+		5,	// 283 2015 스페셜 스크롤 / SHADOW 1.5%
+		5,	// 284 2015 스페셜 스크롤 / SHADOW 1.5%
+		5,	// 285 2015 스페셜 스크롤 / SHADOW 1.5%
+		5,	// 286 2015 스페셜 스크롤 / SHADOW 1.5%
+		5,	// 287 2015 스페셜 스크롤 / SHADOW 1.5%
+		5,	// 288 2015 스페셜 스크롤 / SHADOW 1.5%
+		5,	// 289 2015 스페셜 스크롤 / SHADOW 1.5%
+		5,	// 290 2015 스페셜 스크롤 / SHADOW 1.5%
+		5,	// 291 2015 스페셜 스크롤 / SHADOW 1.5%
+		5,	// 292 2015 스페셜 스크롤 / SHADOW 1.5%
+		5,	// 293 2015 스페셜 스크롤 / SHADOW 1.5%
+		5,	// 294 2015 스페셜 스크롤 / SHADOW 1.5%
+		5,	// 295 천사 스크롤 / SHADOW 1.5%
+		5,	// 296 천사 스크롤 / SHADOW 1.5%
+		5,	// 297 천사 스크롤 / SHADOW 1.5%
+		5,	// 298 천사 스크롤 / SHADOW 1.5%
+		5,	// 299 천사 스크롤 / SHADOW 1.5%
+		5,	// 300 천사 스크롤 / SHADOW 1.5%
+		2,	// 301 포링 스크롤 / EQUIPMENT 0.15%
+		5,	// 302 포링 스크롤 / EQUIPMENT 1%
+		5,	// 303 아미스트르 스크롤 / SHADOW 1.5%
+		5,	// 304 아미스트르 스크롤 / SHADOW 1.5%
+		5,	// 305 아미스트르 스크롤 / SHADOW 1.5%
+		5,	// 306 아미스트르 스크롤 / SHADOW 1.5%
+		5,	// 307 아미스트르 스크롤 / SHADOW 1.5%
+		5,	// 308 아미스트르 스크롤 / SHADOW 1.5%
+		5,	// 309 아미스트르 스크롤 / SHADOW 1.5%
+		5,	// 310 아미스트르 스크롤 / SHADOW 1.5%
+		5,	// 311 아미스트르 스크롤 / SHADOW 1.5%
+		5,	// 312 아미스트르 스크롤 / SHADOW 1.5%
+		5,	// 313 아미스트르 스크롤 / SHADOW 1.5%
+		5,	// 314 아미스트르 스크롤 / SHADOW 1.5%
+		5,	// 315 아미스트르 스크롤 / SHADOW 1.5%
+		5,	// 316 쉐도우 스크롤 / SHADOW 1.7%
+		5,	// 317 쉐도우 스크롤 / SHADOW 1.7%
+		5,	// 318 쉐도우 스크롤 / SHADOW 1.7%
+		5,	// 319 쉐도우 스크롤 / SHADOW 1.7%
+		5,	// 320 쉐도우 스크롤 / SHADOW 1.7%
+		5,	// 321 쉐도우 스크롤 / SHADOW 1.7%
+		5,	// 322 쉐도우 스크롤 / SHADOW 1.7%
+		5,	// 323 쉐도우 스크롤 / SHADOW 1.7%
+		5,	// 324 쉐도우 스크롤 / SHADOW 1.7%
+		5,	// 325 쉐도우 스크롤 / SHADOW 1.7%
+		5,	// 326 쉐도우 스크롤 / SHADOW 1.7%
+		5,	// 327 쉐도우 스크롤 / SHADOW 1.7%
+		5,	// 328 쉐도우 스크롤 / SHADOW 1.7%
+		0,	// 103 대축 1개 → +7 보장권 (2026-10-21)
+		1,	// 104 대축 15개 → +9 보장권 / 102 재고 공유 (2026-10-21)
+		5;	// 329 영혼의 스크롤 / EQUIPMENT 1%
 
 	setarray .Cycle[0],
 		1,	// 100 대장장이의 축복
@@ -2053,7 +3065,83 @@ OnInit:
 		1,	// 252 해피벌룬 스크롤 / EQUIPMENT 1%
 		1,	// 253 피아멧트 스크롤 / EQUIPMENT 1%
 		1,	// 254 피아멧트 스크롤 / EQUIPMENT 2%
-		1;	// 255 매드바니 스크롤 / EQUIPMENT 1%
+		1,	// 255 매드바니 스크롤 / EQUIPMENT 1%
+		1,	// 256 인비지블 스크롤 / SHADOW 1.5%
+		1,	// 257 인비지블 스크롤 / SHADOW 1.5%
+		1,	// 258 인비지블 스크롤 / SHADOW 1.5%
+		1,	// 259 인비지블 스크롤 / SHADOW 1.5%
+		1,	// 260 인비지블 스크롤 / SHADOW 1.5%
+		1,	// 261 인비지블 스크롤 / SHADOW 1.5%
+		1,	// 262 인비지블 스크롤 / SHADOW 1.5%
+		1,	// 263 인비지블 스크롤 / SHADOW 1.5%
+		1,	// 264 인비지블 스크롤 / SHADOW 1.5%
+		1,	// 265 인비지블 스크롤 / SHADOW 1.5%
+		1,	// 266 인비지블 스크롤 / SHADOW 1.5%
+		1,	// 267 인비지블 스크롤 / SHADOW 1.5%
+		1,	// 268 신상 모자 스크롤 / SHADOW 1.5%
+		1,	// 269 신상 모자 스크롤 / SHADOW 1.5%
+		1,	// 270 신상 모자 스크롤 / SHADOW 1.5%
+		1,	// 271 신상 모자 스크롤 / SHADOW 1.5%
+		1,	// 272 신상 모자 스크롤 / SHADOW 1.5%
+		1,	// 273 신상 모자 스크롤 / SHADOW 1.5%
+		1,	// 274 신상 모자 스크롤 / SHADOW 1.5%
+		1,	// 275 신상 모자 스크롤 / SHADOW 1.5%
+		1,	// 276 신상 모자 스크롤 / SHADOW 1.5%
+		1,	// 277 신상 모자 스크롤 / SHADOW 1.5%
+		1,	// 278 신상 모자 스크롤 / SHADOW 1.5%
+		1,	// 279 신상 모자 스크롤 / SHADOW 1.5%
+		1,	// 280 신상 모자 스크롤 / SHADOW 1.5%
+		1,	// 281 신상 모자 스크롤 / EQUIPMENT 0.5%
+		1,	// 282 2015 스페셜 스크롤 / SHADOW 1.5%
+		1,	// 283 2015 스페셜 스크롤 / SHADOW 1.5%
+		1,	// 284 2015 스페셜 스크롤 / SHADOW 1.5%
+		1,	// 285 2015 스페셜 스크롤 / SHADOW 1.5%
+		1,	// 286 2015 스페셜 스크롤 / SHADOW 1.5%
+		1,	// 287 2015 스페셜 스크롤 / SHADOW 1.5%
+		1,	// 288 2015 스페셜 스크롤 / SHADOW 1.5%
+		1,	// 289 2015 스페셜 스크롤 / SHADOW 1.5%
+		1,	// 290 2015 스페셜 스크롤 / SHADOW 1.5%
+		1,	// 291 2015 스페셜 스크롤 / SHADOW 1.5%
+		1,	// 292 2015 스페셜 스크롤 / SHADOW 1.5%
+		1,	// 293 2015 스페셜 스크롤 / SHADOW 1.5%
+		1,	// 294 2015 스페셜 스크롤 / SHADOW 1.5%
+		1,	// 295 천사 스크롤 / SHADOW 1.5%
+		1,	// 296 천사 스크롤 / SHADOW 1.5%
+		1,	// 297 천사 스크롤 / SHADOW 1.5%
+		1,	// 298 천사 스크롤 / SHADOW 1.5%
+		1,	// 299 천사 스크롤 / SHADOW 1.5%
+		1,	// 300 천사 스크롤 / SHADOW 1.5%
+		1,	// 301 포링 스크롤 / EQUIPMENT 0.15%
+		1,	// 302 포링 스크롤 / EQUIPMENT 1%
+		1,	// 303 아미스트르 스크롤 / SHADOW 1.5%
+		1,	// 304 아미스트르 스크롤 / SHADOW 1.5%
+		1,	// 305 아미스트르 스크롤 / SHADOW 1.5%
+		1,	// 306 아미스트르 스크롤 / SHADOW 1.5%
+		1,	// 307 아미스트르 스크롤 / SHADOW 1.5%
+		1,	// 308 아미스트르 스크롤 / SHADOW 1.5%
+		1,	// 309 아미스트르 스크롤 / SHADOW 1.5%
+		1,	// 310 아미스트르 스크롤 / SHADOW 1.5%
+		1,	// 311 아미스트르 스크롤 / SHADOW 1.5%
+		1,	// 312 아미스트르 스크롤 / SHADOW 1.5%
+		1,	// 313 아미스트르 스크롤 / SHADOW 1.5%
+		1,	// 314 아미스트르 스크롤 / SHADOW 1.5%
+		1,	// 315 아미스트르 스크롤 / SHADOW 1.5%
+		1,	// 316 쉐도우 스크롤 / SHADOW 1.7%
+		1,	// 317 쉐도우 스크롤 / SHADOW 1.7%
+		1,	// 318 쉐도우 스크롤 / SHADOW 1.7%
+		1,	// 319 쉐도우 스크롤 / SHADOW 1.7%
+		1,	// 320 쉐도우 스크롤 / SHADOW 1.7%
+		1,	// 321 쉐도우 스크롤 / SHADOW 1.7%
+		1,	// 322 쉐도우 스크롤 / SHADOW 1.7%
+		1,	// 323 쉐도우 스크롤 / SHADOW 1.7%
+		1,	// 324 쉐도우 스크롤 / SHADOW 1.7%
+		1,	// 325 쉐도우 스크롤 / SHADOW 1.7%
+		1,	// 326 쉐도우 스크롤 / SHADOW 1.7%
+		1,	// 327 쉐도우 스크롤 / SHADOW 1.7%
+		1,	// 328 쉐도우 스크롤 / SHADOW 1.7%
+		0,	// 103 대축 1개 → +7 보장권 (2026-10-21)
+		2,	// 104 대축 15개 → +9 보장권 / 102 재고 공유 (2026-10-21)
+		1;	// 329 영혼의 스크롤 / EQUIPMENT 1%
 
 	setarray .Bound[0],
 		0,	// 100 대장장이의 축복
@@ -2113,7 +3201,83 @@ OnInit:
 		1,	// 252 해피벌룬 스크롤 / EQUIPMENT 1%
 		1,	// 253 피아멧트 스크롤 / EQUIPMENT 1%
 		1,	// 254 피아멧트 스크롤 / EQUIPMENT 2%
-		1;	// 255 매드바니 스크롤 / EQUIPMENT 1%
+		1,	// 255 매드바니 스크롤 / EQUIPMENT 1%
+		1,	// 256 인비지블 스크롤 / SHADOW 1.5%
+		1,	// 257 인비지블 스크롤 / SHADOW 1.5%
+		1,	// 258 인비지블 스크롤 / SHADOW 1.5%
+		1,	// 259 인비지블 스크롤 / SHADOW 1.5%
+		1,	// 260 인비지블 스크롤 / SHADOW 1.5%
+		1,	// 261 인비지블 스크롤 / SHADOW 1.5%
+		1,	// 262 인비지블 스크롤 / SHADOW 1.5%
+		1,	// 263 인비지블 스크롤 / SHADOW 1.5%
+		1,	// 264 인비지블 스크롤 / SHADOW 1.5%
+		1,	// 265 인비지블 스크롤 / SHADOW 1.5%
+		1,	// 266 인비지블 스크롤 / SHADOW 1.5%
+		1,	// 267 인비지블 스크롤 / SHADOW 1.5%
+		1,	// 268 신상 모자 스크롤 / SHADOW 1.5%
+		1,	// 269 신상 모자 스크롤 / SHADOW 1.5%
+		1,	// 270 신상 모자 스크롤 / SHADOW 1.5%
+		1,	// 271 신상 모자 스크롤 / SHADOW 1.5%
+		1,	// 272 신상 모자 스크롤 / SHADOW 1.5%
+		1,	// 273 신상 모자 스크롤 / SHADOW 1.5%
+		1,	// 274 신상 모자 스크롤 / SHADOW 1.5%
+		1,	// 275 신상 모자 스크롤 / SHADOW 1.5%
+		1,	// 276 신상 모자 스크롤 / SHADOW 1.5%
+		1,	// 277 신상 모자 스크롤 / SHADOW 1.5%
+		1,	// 278 신상 모자 스크롤 / SHADOW 1.5%
+		1,	// 279 신상 모자 스크롤 / SHADOW 1.5%
+		1,	// 280 신상 모자 스크롤 / SHADOW 1.5%
+		1,	// 281 신상 모자 스크롤 / EQUIPMENT 0.5%
+		1,	// 282 2015 스페셜 스크롤 / SHADOW 1.5%
+		1,	// 283 2015 스페셜 스크롤 / SHADOW 1.5%
+		1,	// 284 2015 스페셜 스크롤 / SHADOW 1.5%
+		1,	// 285 2015 스페셜 스크롤 / SHADOW 1.5%
+		1,	// 286 2015 스페셜 스크롤 / SHADOW 1.5%
+		1,	// 287 2015 스페셜 스크롤 / SHADOW 1.5%
+		1,	// 288 2015 스페셜 스크롤 / SHADOW 1.5%
+		1,	// 289 2015 스페셜 스크롤 / SHADOW 1.5%
+		1,	// 290 2015 스페셜 스크롤 / SHADOW 1.5%
+		1,	// 291 2015 스페셜 스크롤 / SHADOW 1.5%
+		1,	// 292 2015 스페셜 스크롤 / SHADOW 1.5%
+		1,	// 293 2015 스페셜 스크롤 / SHADOW 1.5%
+		1,	// 294 2015 스페셜 스크롤 / SHADOW 1.5%
+		1,	// 295 천사 스크롤 / SHADOW 1.5%
+		1,	// 296 천사 스크롤 / SHADOW 1.5%
+		1,	// 297 천사 스크롤 / SHADOW 1.5%
+		1,	// 298 천사 스크롤 / SHADOW 1.5%
+		1,	// 299 천사 스크롤 / SHADOW 1.5%
+		1,	// 300 천사 스크롤 / SHADOW 1.5%
+		1,	// 301 포링 스크롤 / EQUIPMENT 0.15%
+		1,	// 302 포링 스크롤 / EQUIPMENT 1%
+		1,	// 303 아미스트르 스크롤 / SHADOW 1.5%
+		1,	// 304 아미스트르 스크롤 / SHADOW 1.5%
+		1,	// 305 아미스트르 스크롤 / SHADOW 1.5%
+		1,	// 306 아미스트르 스크롤 / SHADOW 1.5%
+		1,	// 307 아미스트르 스크롤 / SHADOW 1.5%
+		1,	// 308 아미스트르 스크롤 / SHADOW 1.5%
+		1,	// 309 아미스트르 스크롤 / SHADOW 1.5%
+		1,	// 310 아미스트르 스크롤 / SHADOW 1.5%
+		1,	// 311 아미스트르 스크롤 / SHADOW 1.5%
+		1,	// 312 아미스트르 스크롤 / SHADOW 1.5%
+		1,	// 313 아미스트르 스크롤 / SHADOW 1.5%
+		1,	// 314 아미스트르 스크롤 / SHADOW 1.5%
+		1,	// 315 아미스트르 스크롤 / SHADOW 1.5%
+		1,	// 316 쉐도우 스크롤 / SHADOW 1.7%
+		1,	// 317 쉐도우 스크롤 / SHADOW 1.7%
+		1,	// 318 쉐도우 스크롤 / SHADOW 1.7%
+		1,	// 319 쉐도우 스크롤 / SHADOW 1.7%
+		1,	// 320 쉐도우 스크롤 / SHADOW 1.7%
+		1,	// 321 쉐도우 스크롤 / SHADOW 1.7%
+		1,	// 322 쉐도우 스크롤 / SHADOW 1.7%
+		1,	// 323 쉐도우 스크롤 / SHADOW 1.7%
+		1,	// 324 쉐도우 스크롤 / SHADOW 1.7%
+		1,	// 325 쉐도우 스크롤 / SHADOW 1.7%
+		1,	// 326 쉐도우 스크롤 / SHADOW 1.7%
+		1,	// 327 쉐도우 스크롤 / SHADOW 1.7%
+		1,	// 328 쉐도우 스크롤 / SHADOW 1.7%
+		0,	// 103 대축 1개 → +7 보장권 (2026-10-21)
+		0,	// 104 대축 15개 → +9 보장권 / 102 재고 공유 (2026-10-21)
+		1;	// 329 영혼의 스크롤 / EQUIPMENT 1%
 
 	setarray .Reward[0],
 		6635,	// 100 대장장이의 축복
@@ -2173,7 +3337,83 @@ OnInit:
 		19095,	// 252 해피벌룬 스크롤 / EQUIPMENT 1%
 		19097,	// 253 피아멧트 스크롤 / EQUIPMENT 1%
 		19098,	// 254 피아멧트 스크롤 / EQUIPMENT 2%
-		28902;	// 255 매드바니 스크롤 / EQUIPMENT 1%
+		28902,	// 255 매드바니 스크롤 / EQUIPMENT 1%
+		24246,	// 256 인비지블 스크롤 / SHADOW 1.5%
+		24247,	// 257 인비지블 스크롤 / SHADOW 1.5%
+		24248,	// 258 인비지블 스크롤 / SHADOW 1.5%
+		24249,	// 259 인비지블 스크롤 / SHADOW 1.5%
+		24250,	// 260 인비지블 스크롤 / SHADOW 1.5%
+		24251,	// 261 인비지블 스크롤 / SHADOW 1.5%
+		24252,	// 262 인비지블 스크롤 / SHADOW 1.5%
+		24253,	// 263 인비지블 스크롤 / SHADOW 1.5%
+		24254,	// 264 인비지블 스크롤 / SHADOW 1.5%
+		24255,	// 265 인비지블 스크롤 / SHADOW 1.5%
+		28391,	// 266 인비지블 스크롤 / SHADOW 1.5%
+		28392,	// 267 인비지블 스크롤 / SHADOW 1.5%
+		24256,	// 268 신상 모자 스크롤 / SHADOW 1.5%
+		24257,	// 269 신상 모자 스크롤 / SHADOW 1.5%
+		24258,	// 270 신상 모자 스크롤 / SHADOW 1.5%
+		24259,	// 271 신상 모자 스크롤 / SHADOW 1.5%
+		24260,	// 272 신상 모자 스크롤 / SHADOW 1.5%
+		24261,	// 273 신상 모자 스크롤 / SHADOW 1.5%
+		24262,	// 274 신상 모자 스크롤 / SHADOW 1.5%
+		24263,	// 275 신상 모자 스크롤 / SHADOW 1.5%
+		24264,	// 276 신상 모자 스크롤 / SHADOW 1.5%
+		24265,	// 277 신상 모자 스크롤 / SHADOW 1.5%
+		24266,	// 278 신상 모자 스크롤 / SHADOW 1.5%
+		24267,	// 279 신상 모자 스크롤 / SHADOW 1.5%
+		24268,	// 280 신상 모자 스크롤 / SHADOW 1.5%
+		23052,	// 281 신상 모자 스크롤 / EQUIPMENT 0.5%
+		24269,	// 282 2015 스페셜 스크롤 / SHADOW 1.5%
+		24270,	// 283 2015 스페셜 스크롤 / SHADOW 1.5%
+		24271,	// 284 2015 스페셜 스크롤 / SHADOW 1.5%
+		24272,	// 285 2015 스페셜 스크롤 / SHADOW 1.5%
+		24273,	// 286 2015 스페셜 스크롤 / SHADOW 1.5%
+		24274,	// 287 2015 스페셜 스크롤 / SHADOW 1.5%
+		24275,	// 288 2015 스페셜 스크롤 / SHADOW 1.5%
+		24276,	// 289 2015 스페셜 스크롤 / SHADOW 1.5%
+		24277,	// 290 2015 스페셜 스크롤 / SHADOW 1.5%
+		24278,	// 291 2015 스페셜 스크롤 / SHADOW 1.5%
+		24279,	// 292 2015 스페셜 스크롤 / SHADOW 1.5%
+		24280,	// 293 2015 스페셜 스크롤 / SHADOW 1.5%
+		24281,	// 294 2015 스페셜 스크롤 / SHADOW 1.5%
+		24282,	// 295 천사 스크롤 / SHADOW 1.5%
+		24283,	// 296 천사 스크롤 / SHADOW 1.5%
+		24284,	// 297 천사 스크롤 / SHADOW 1.5%
+		24285,	// 298 천사 스크롤 / SHADOW 1.5%
+		24286,	// 299 천사 스크롤 / SHADOW 1.5%
+		24287,	// 300 천사 스크롤 / SHADOW 1.5%
+		19118,	// 301 포링 스크롤 / EQUIPMENT 0.15%
+		19117,	// 302 포링 스크롤 / EQUIPMENT 1%
+		24288,	// 303 아미스트르 스크롤 / SHADOW 1.5%
+		24289,	// 304 아미스트르 스크롤 / SHADOW 1.5%
+		24290,	// 305 아미스트르 스크롤 / SHADOW 1.5%
+		24291,	// 306 아미스트르 스크롤 / SHADOW 1.5%
+		24292,	// 307 아미스트르 스크롤 / SHADOW 1.5%
+		24293,	// 308 아미스트르 스크롤 / SHADOW 1.5%
+		24294,	// 309 아미스트르 스크롤 / SHADOW 1.5%
+		24295,	// 310 아미스트르 스크롤 / SHADOW 1.5%
+		24296,	// 311 아미스트르 스크롤 / SHADOW 1.5%
+		24297,	// 312 아미스트르 스크롤 / SHADOW 1.5%
+		24298,	// 313 아미스트르 스크롤 / SHADOW 1.5%
+		24299,	// 314 아미스트르 스크롤 / SHADOW 1.5%
+		24300,	// 315 아미스트르 스크롤 / SHADOW 1.5%
+		24301,	// 316 쉐도우 스크롤 / SHADOW 1.7%
+		24302,	// 317 쉐도우 스크롤 / SHADOW 1.7%
+		24303,	// 318 쉐도우 스크롤 / SHADOW 1.7%
+		24304,	// 319 쉐도우 스크롤 / SHADOW 1.7%
+		24305,	// 320 쉐도우 스크롤 / SHADOW 1.7%
+		24306,	// 321 쉐도우 스크롤 / SHADOW 1.7%
+		24307,	// 322 쉐도우 스크롤 / SHADOW 1.7%
+		24308,	// 323 쉐도우 스크롤 / SHADOW 1.7%
+		24309,	// 324 쉐도우 스크롤 / SHADOW 1.7%
+		24310,	// 325 쉐도우 스크롤 / SHADOW 1.7%
+		24311,	// 326 쉐도우 스크롤 / SHADOW 1.7%
+		24312,	// 327 쉐도우 스크롤 / SHADOW 1.7%
+		24313,	// 328 쉐도우 스크롤 / SHADOW 1.7%
+		0,	// 103 대축 1개 → +7 보장권 (2026-10-21)
+		0,	// 104 대축 15개 → +9 보장권 / 102 재고 공유 (2026-10-21)
+		19135;	// 329 영혼의 스크롤 / EQUIPMENT 1%
 
 	setarray .RewardAmt[0],
 		1,	// 100 대장장이의 축복
@@ -2233,7 +3473,83 @@ OnInit:
 		1,	// 252 해피벌룬 스크롤 / EQUIPMENT 1%
 		1,	// 253 피아멧트 스크롤 / EQUIPMENT 1%
 		1,	// 254 피아멧트 스크롤 / EQUIPMENT 2%
-		1;	// 255 매드바니 스크롤 / EQUIPMENT 1%
+		1,	// 255 매드바니 스크롤 / EQUIPMENT 1%
+		1,	// 256 인비지블 스크롤 / SHADOW 1.5%
+		1,	// 257 인비지블 스크롤 / SHADOW 1.5%
+		1,	// 258 인비지블 스크롤 / SHADOW 1.5%
+		1,	// 259 인비지블 스크롤 / SHADOW 1.5%
+		1,	// 260 인비지블 스크롤 / SHADOW 1.5%
+		1,	// 261 인비지블 스크롤 / SHADOW 1.5%
+		1,	// 262 인비지블 스크롤 / SHADOW 1.5%
+		1,	// 263 인비지블 스크롤 / SHADOW 1.5%
+		1,	// 264 인비지블 스크롤 / SHADOW 1.5%
+		1,	// 265 인비지블 스크롤 / SHADOW 1.5%
+		1,	// 266 인비지블 스크롤 / SHADOW 1.5%
+		1,	// 267 인비지블 스크롤 / SHADOW 1.5%
+		1,	// 268 신상 모자 스크롤 / SHADOW 1.5%
+		1,	// 269 신상 모자 스크롤 / SHADOW 1.5%
+		1,	// 270 신상 모자 스크롤 / SHADOW 1.5%
+		1,	// 271 신상 모자 스크롤 / SHADOW 1.5%
+		1,	// 272 신상 모자 스크롤 / SHADOW 1.5%
+		1,	// 273 신상 모자 스크롤 / SHADOW 1.5%
+		1,	// 274 신상 모자 스크롤 / SHADOW 1.5%
+		1,	// 275 신상 모자 스크롤 / SHADOW 1.5%
+		1,	// 276 신상 모자 스크롤 / SHADOW 1.5%
+		1,	// 277 신상 모자 스크롤 / SHADOW 1.5%
+		1,	// 278 신상 모자 스크롤 / SHADOW 1.5%
+		1,	// 279 신상 모자 스크롤 / SHADOW 1.5%
+		1,	// 280 신상 모자 스크롤 / SHADOW 1.5%
+		1,	// 281 신상 모자 스크롤 / EQUIPMENT 0.5%
+		1,	// 282 2015 스페셜 스크롤 / SHADOW 1.5%
+		1,	// 283 2015 스페셜 스크롤 / SHADOW 1.5%
+		1,	// 284 2015 스페셜 스크롤 / SHADOW 1.5%
+		1,	// 285 2015 스페셜 스크롤 / SHADOW 1.5%
+		1,	// 286 2015 스페셜 스크롤 / SHADOW 1.5%
+		1,	// 287 2015 스페셜 스크롤 / SHADOW 1.5%
+		1,	// 288 2015 스페셜 스크롤 / SHADOW 1.5%
+		1,	// 289 2015 스페셜 스크롤 / SHADOW 1.5%
+		1,	// 290 2015 스페셜 스크롤 / SHADOW 1.5%
+		1,	// 291 2015 스페셜 스크롤 / SHADOW 1.5%
+		1,	// 292 2015 스페셜 스크롤 / SHADOW 1.5%
+		1,	// 293 2015 스페셜 스크롤 / SHADOW 1.5%
+		1,	// 294 2015 스페셜 스크롤 / SHADOW 1.5%
+		1,	// 295 천사 스크롤 / SHADOW 1.5%
+		1,	// 296 천사 스크롤 / SHADOW 1.5%
+		1,	// 297 천사 스크롤 / SHADOW 1.5%
+		1,	// 298 천사 스크롤 / SHADOW 1.5%
+		1,	// 299 천사 스크롤 / SHADOW 1.5%
+		1,	// 300 천사 스크롤 / SHADOW 1.5%
+		1,	// 301 포링 스크롤 / EQUIPMENT 0.15%
+		1,	// 302 포링 스크롤 / EQUIPMENT 1%
+		1,	// 303 아미스트르 스크롤 / SHADOW 1.5%
+		1,	// 304 아미스트르 스크롤 / SHADOW 1.5%
+		1,	// 305 아미스트르 스크롤 / SHADOW 1.5%
+		1,	// 306 아미스트르 스크롤 / SHADOW 1.5%
+		1,	// 307 아미스트르 스크롤 / SHADOW 1.5%
+		1,	// 308 아미스트르 스크롤 / SHADOW 1.5%
+		1,	// 309 아미스트르 스크롤 / SHADOW 1.5%
+		1,	// 310 아미스트르 스크롤 / SHADOW 1.5%
+		1,	// 311 아미스트르 스크롤 / SHADOW 1.5%
+		1,	// 312 아미스트르 스크롤 / SHADOW 1.5%
+		1,	// 313 아미스트르 스크롤 / SHADOW 1.5%
+		1,	// 314 아미스트르 스크롤 / SHADOW 1.5%
+		1,	// 315 아미스트르 스크롤 / SHADOW 1.5%
+		1,	// 316 쉐도우 스크롤 / SHADOW 1.7%
+		1,	// 317 쉐도우 스크롤 / SHADOW 1.7%
+		1,	// 318 쉐도우 스크롤 / SHADOW 1.7%
+		1,	// 319 쉐도우 스크롤 / SHADOW 1.7%
+		1,	// 320 쉐도우 스크롤 / SHADOW 1.7%
+		1,	// 321 쉐도우 스크롤 / SHADOW 1.7%
+		1,	// 322 쉐도우 스크롤 / SHADOW 1.7%
+		1,	// 323 쉐도우 스크롤 / SHADOW 1.7%
+		1,	// 324 쉐도우 스크롤 / SHADOW 1.7%
+		1,	// 325 쉐도우 스크롤 / SHADOW 1.7%
+		1,	// 326 쉐도우 스크롤 / SHADOW 1.7%
+		1,	// 327 쉐도우 스크롤 / SHADOW 1.7%
+		1,	// 328 쉐도우 스크롤 / SHADOW 1.7%
+		1,	// 103 대축 1개 → +7 보장권 (2026-10-21)
+		1,	// 104 대축 15개 → +9 보장권 / 102 재고 공유 (2026-10-21)
+		1;	// 329 영혼의 스크롤 / EQUIPMENT 1%
 
 	setarray .Choice$[0],
 		"",	// 100 대장장이의 축복
@@ -2293,7 +3609,83 @@ OnInit:
 		"",	// 252 해피벌룬 스크롤 / EQUIPMENT 1%
 		"",	// 253 피아멧트 스크롤 / EQUIPMENT 1%
 		"",	// 254 피아멧트 스크롤 / EQUIPMENT 2%
-		"";	// 255 매드바니 스크롤 / EQUIPMENT 1%
+		"",	// 255 매드바니 스크롤 / EQUIPMENT 1%
+		"",	// 256 인비지블 스크롤 / SHADOW 1.5%
+		"",	// 257 인비지블 스크롤 / SHADOW 1.5%
+		"",	// 258 인비지블 스크롤 / SHADOW 1.5%
+		"",	// 259 인비지블 스크롤 / SHADOW 1.5%
+		"",	// 260 인비지블 스크롤 / SHADOW 1.5%
+		"",	// 261 인비지블 스크롤 / SHADOW 1.5%
+		"",	// 262 인비지블 스크롤 / SHADOW 1.5%
+		"",	// 263 인비지블 스크롤 / SHADOW 1.5%
+		"",	// 264 인비지블 스크롤 / SHADOW 1.5%
+		"",	// 265 인비지블 스크롤 / SHADOW 1.5%
+		"",	// 266 인비지블 스크롤 / SHADOW 1.5%
+		"",	// 267 인비지블 스크롤 / SHADOW 1.5%
+		"",	// 268 신상 모자 스크롤 / SHADOW 1.5%
+		"",	// 269 신상 모자 스크롤 / SHADOW 1.5%
+		"",	// 270 신상 모자 스크롤 / SHADOW 1.5%
+		"",	// 271 신상 모자 스크롤 / SHADOW 1.5%
+		"",	// 272 신상 모자 스크롤 / SHADOW 1.5%
+		"",	// 273 신상 모자 스크롤 / SHADOW 1.5%
+		"",	// 274 신상 모자 스크롤 / SHADOW 1.5%
+		"",	// 275 신상 모자 스크롤 / SHADOW 1.5%
+		"",	// 276 신상 모자 스크롤 / SHADOW 1.5%
+		"",	// 277 신상 모자 스크롤 / SHADOW 1.5%
+		"",	// 278 신상 모자 스크롤 / SHADOW 1.5%
+		"",	// 279 신상 모자 스크롤 / SHADOW 1.5%
+		"",	// 280 신상 모자 스크롤 / SHADOW 1.5%
+		"",	// 281 신상 모자 스크롤 / EQUIPMENT 0.5%
+		"",	// 282 2015 스페셜 스크롤 / SHADOW 1.5%
+		"",	// 283 2015 스페셜 스크롤 / SHADOW 1.5%
+		"",	// 284 2015 스페셜 스크롤 / SHADOW 1.5%
+		"",	// 285 2015 스페셜 스크롤 / SHADOW 1.5%
+		"",	// 286 2015 스페셜 스크롤 / SHADOW 1.5%
+		"",	// 287 2015 스페셜 스크롤 / SHADOW 1.5%
+		"",	// 288 2015 스페셜 스크롤 / SHADOW 1.5%
+		"",	// 289 2015 스페셜 스크롤 / SHADOW 1.5%
+		"",	// 290 2015 스페셜 스크롤 / SHADOW 1.5%
+		"",	// 291 2015 스페셜 스크롤 / SHADOW 1.5%
+		"",	// 292 2015 스페셜 스크롤 / SHADOW 1.5%
+		"",	// 293 2015 스페셜 스크롤 / SHADOW 1.5%
+		"",	// 294 2015 스페셜 스크롤 / SHADOW 1.5%
+		"",	// 295 천사 스크롤 / SHADOW 1.5%
+		"",	// 296 천사 스크롤 / SHADOW 1.5%
+		"",	// 297 천사 스크롤 / SHADOW 1.5%
+		"",	// 298 천사 스크롤 / SHADOW 1.5%
+		"",	// 299 천사 스크롤 / SHADOW 1.5%
+		"",	// 300 천사 스크롤 / SHADOW 1.5%
+		"",	// 301 포링 스크롤 / EQUIPMENT 0.15%
+		"",	// 302 포링 스크롤 / EQUIPMENT 1%
+		"",	// 303 아미스트르 스크롤 / SHADOW 1.5%
+		"",	// 304 아미스트르 스크롤 / SHADOW 1.5%
+		"",	// 305 아미스트르 스크롤 / SHADOW 1.5%
+		"",	// 306 아미스트르 스크롤 / SHADOW 1.5%
+		"",	// 307 아미스트르 스크롤 / SHADOW 1.5%
+		"",	// 308 아미스트르 스크롤 / SHADOW 1.5%
+		"",	// 309 아미스트르 스크롤 / SHADOW 1.5%
+		"",	// 310 아미스트르 스크롤 / SHADOW 1.5%
+		"",	// 311 아미스트르 스크롤 / SHADOW 1.5%
+		"",	// 312 아미스트르 스크롤 / SHADOW 1.5%
+		"",	// 313 아미스트르 스크롤 / SHADOW 1.5%
+		"",	// 314 아미스트르 스크롤 / SHADOW 1.5%
+		"",	// 315 아미스트르 스크롤 / SHADOW 1.5%
+		"",	// 316 쉐도우 스크롤 / SHADOW 1.7%
+		"",	// 317 쉐도우 스크롤 / SHADOW 1.7%
+		"",	// 318 쉐도우 스크롤 / SHADOW 1.7%
+		"",	// 319 쉐도우 스크롤 / SHADOW 1.7%
+		"",	// 320 쉐도우 스크롤 / SHADOW 1.7%
+		"",	// 321 쉐도우 스크롤 / SHADOW 1.7%
+		"",	// 322 쉐도우 스크롤 / SHADOW 1.7%
+		"",	// 323 쉐도우 스크롤 / SHADOW 1.7%
+		"",	// 324 쉐도우 스크롤 / SHADOW 1.7%
+		"",	// 325 쉐도우 스크롤 / SHADOW 1.7%
+		"",	// 326 쉐도우 스크롤 / SHADOW 1.7%
+		"",	// 327 쉐도우 스크롤 / SHADOW 1.7%
+		"",	// 328 쉐도우 스크롤 / SHADOW 1.7%
+		"6230,6234",	// 103 대축 1개 → +7 보장권 (2026-10-21)
+		"6228,6232",	// 104 대축 15개 → +9 보장권 / 102 재고 공유 (2026-10-21)
+		"";	// 329 영혼의 스크롤 / EQUIPMENT 1%
 
 	// 표시용 확률 문자열. 구매 로직에는 쓰지 않는다(표시 전용).
 	setarray .RateText$[0],
@@ -2354,7 +3746,90 @@ OnInit:
 		"1%",	// 252 해피벌룬 스크롤 / EQUIPMENT 1%
 		"1%",	// 253 피아멧트 스크롤 / EQUIPMENT 1%
 		"2%",	// 254 피아멧트 스크롤 / EQUIPMENT 2%
-		"1%";	// 255 매드바니 스크롤 / EQUIPMENT 1%
+		"1%",	// 255 매드바니 스크롤 / EQUIPMENT 1%
+		"1.5%",	// 256 인비지블 스크롤 / SHADOW 1.5%
+		"1.5%",	// 257 인비지블 스크롤 / SHADOW 1.5%
+		"1.5%",	// 258 인비지블 스크롤 / SHADOW 1.5%
+		"1.5%",	// 259 인비지블 스크롤 / SHADOW 1.5%
+		"1.5%",	// 260 인비지블 스크롤 / SHADOW 1.5%
+		"1.5%",	// 261 인비지블 스크롤 / SHADOW 1.5%
+		"1.5%",	// 262 인비지블 스크롤 / SHADOW 1.5%
+		"1.5%",	// 263 인비지블 스크롤 / SHADOW 1.5%
+		"1.5%",	// 264 인비지블 스크롤 / SHADOW 1.5%
+		"1.5%",	// 265 인비지블 스크롤 / SHADOW 1.5%
+		"1.5%",	// 266 인비지블 스크롤 / SHADOW 1.5%
+		"1.5%",	// 267 인비지블 스크롤 / SHADOW 1.5%
+		"1.5%",	// 268 신상 모자 스크롤 / SHADOW 1.5%
+		"1.5%",	// 269 신상 모자 스크롤 / SHADOW 1.5%
+		"1.5%",	// 270 신상 모자 스크롤 / SHADOW 1.5%
+		"1.5%",	// 271 신상 모자 스크롤 / SHADOW 1.5%
+		"1.5%",	// 272 신상 모자 스크롤 / SHADOW 1.5%
+		"1.5%",	// 273 신상 모자 스크롤 / SHADOW 1.5%
+		"1.5%",	// 274 신상 모자 스크롤 / SHADOW 1.5%
+		"1.5%",	// 275 신상 모자 스크롤 / SHADOW 1.5%
+		"1.5%",	// 276 신상 모자 스크롤 / SHADOW 1.5%
+		"1.5%",	// 277 신상 모자 스크롤 / SHADOW 1.5%
+		"1.5%",	// 278 신상 모자 스크롤 / SHADOW 1.5%
+		"1.5%",	// 279 신상 모자 스크롤 / SHADOW 1.5%
+		"1.5%",	// 280 신상 모자 스크롤 / SHADOW 1.5%
+		"0.5%",	// 281 신상 모자 스크롤 / EQUIPMENT 0.5%
+		"1.5%",	// 282 2015 스페셜 스크롤 / SHADOW 1.5%
+		"1.5%",	// 283 2015 스페셜 스크롤 / SHADOW 1.5%
+		"1.5%",	// 284 2015 스페셜 스크롤 / SHADOW 1.5%
+		"1.5%",	// 285 2015 스페셜 스크롤 / SHADOW 1.5%
+		"1.5%",	// 286 2015 스페셜 스크롤 / SHADOW 1.5%
+		"1.5%",	// 287 2015 스페셜 스크롤 / SHADOW 1.5%
+		"1.5%",	// 288 2015 스페셜 스크롤 / SHADOW 1.5%
+		"1.5%",	// 289 2015 스페셜 스크롤 / SHADOW 1.5%
+		"1.5%",	// 290 2015 스페셜 스크롤 / SHADOW 1.5%
+		"1.5%",	// 291 2015 스페셜 스크롤 / SHADOW 1.5%
+		"1.5%",	// 292 2015 스페셜 스크롤 / SHADOW 1.5%
+		"1.5%",	// 293 2015 스페셜 스크롤 / SHADOW 1.5%
+		"1.5%",	// 294 2015 스페셜 스크롤 / SHADOW 1.5%
+		"1.5%",	// 295 천사 스크롤 / SHADOW 1.5%
+		"1.5%",	// 296 천사 스크롤 / SHADOW 1.5%
+		"1.5%",	// 297 천사 스크롤 / SHADOW 1.5%
+		"1.5%",	// 298 천사 스크롤 / SHADOW 1.5%
+		"1.5%",	// 299 천사 스크롤 / SHADOW 1.5%
+		"1.5%",	// 300 천사 스크롤 / SHADOW 1.5%
+		"0.15%",	// 301 포링 스크롤 / EQUIPMENT 0.15%
+		"1%",	// 302 포링 스크롤 / EQUIPMENT 1%
+		"1.5%",	// 303 아미스트르 스크롤 / SHADOW 1.5%
+		"1.5%",	// 304 아미스트르 스크롤 / SHADOW 1.5%
+		"1.5%",	// 305 아미스트르 스크롤 / SHADOW 1.5%
+		"1.5%",	// 306 아미스트르 스크롤 / SHADOW 1.5%
+		"1.5%",	// 307 아미스트르 스크롤 / SHADOW 1.5%
+		"1.5%",	// 308 아미스트르 스크롤 / SHADOW 1.5%
+		"1.5%",	// 309 아미스트르 스크롤 / SHADOW 1.5%
+		"1.5%",	// 310 아미스트르 스크롤 / SHADOW 1.5%
+		"1.5%",	// 311 아미스트르 스크롤 / SHADOW 1.5%
+		"1.5%",	// 312 아미스트르 스크롤 / SHADOW 1.5%
+		"1.5%",	// 313 아미스트르 스크롤 / SHADOW 1.5%
+		"1.5%",	// 314 아미스트르 스크롤 / SHADOW 1.5%
+		"1.5%",	// 315 아미스트르 스크롤 / SHADOW 1.5%
+		"1.7%",	// 316 쉐도우 스크롤 / SHADOW 1.7%
+		"1.7%",	// 317 쉐도우 스크롤 / SHADOW 1.7%
+		"1.7%",	// 318 쉐도우 스크롤 / SHADOW 1.7%
+		"1.7%",	// 319 쉐도우 스크롤 / SHADOW 1.7%
+		"1.7%",	// 320 쉐도우 스크롤 / SHADOW 1.7%
+		"1.7%",	// 321 쉐도우 스크롤 / SHADOW 1.7%
+		"1.7%",	// 322 쉐도우 스크롤 / SHADOW 1.7%
+		"1.7%",	// 323 쉐도우 스크롤 / SHADOW 1.7%
+		"1.7%",	// 324 쉐도우 스크롤 / SHADOW 1.7%
+		"1.7%",	// 325 쉐도우 스크롤 / SHADOW 1.7%
+		"1.7%",	// 326 쉐도우 스크롤 / SHADOW 1.7%
+		"1.7%",	// 327 쉐도우 스크롤 / SHADOW 1.7%
+		"1.7%",	// 328 쉐도우 스크롤 / SHADOW 1.7%
+		"",	// 103 대축 1개 → +7 보장권 (2026-10-21)
+		"",	// 104 대축 15개 → +9 보장권 / 102 재고 공유 (2026-10-21)
+		"1%";	// 329 영혼의 스크롤 / EQUIPMENT 1%
+
+	// [재고 공유] (2026-10-21 운영자 확정)
+	// 104 대축 15개 -> +9 보장권은 102 +9 포인트 천장의 서버 월간 재고 1개를 함께 쓴다.
+	// 공유 상품의 .Cycle / .Stock 은 원본과 같아야 한다. 다르면 S_CheckShare 가 판매를 막는다.
+	setarray .StockShareSrc[0], 104;
+	setarray .StockShareKey[0], 102;
+	callsub S_CheckShare;
 
 	callsub S_SqlLoad;
 

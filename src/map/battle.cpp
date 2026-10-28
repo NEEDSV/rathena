@@ -4444,7 +4444,7 @@ static int32 battle_calc_attack_skill_ratio(struct Damage* wd, block_list *src,b
 							100 * sd->inventory_data[index]->weapon_level * (sd->inventory.u.items_inventory[index].refine + 6);
 				}
 				status_change_end(src,SC_CRUSHSTRIKE);
-				skill_break_equip(src,src,EQP_WEAPON,2000,BCT_SELF);
+				skill_break_equip(src,src,EQP_WEAPON,2000,BCT_SELF,true);
 			} else {
 				if (sc->getSCE(SC_GIANTGROWTH) && (sd->class_&MAPID_THIRDMASK) == MAPID_RUNE_KNIGHT) { // Increase damage again if Crush Strike is not active
 					if (map_flag_vs(src->m)) // Only half of the 2.5x increase on versus-type maps
@@ -5714,6 +5714,7 @@ static struct Damage battle_calc_weapon_attack(block_list *src, block_list *targ
 				ATK_ADD(wd.damage, wd.damage2, static_cast<int64>(sstatus->sp * bonus) + 10 * status_get_lv(src));
 		}
 			break;
+#ifndef NEED_2017_HOMUNCULUS_S // 2017: Tinder Breaker/C.B.C use a skill ratio, E.Q.C is misc damage
 		case MH_TINDER_BREAKER:
 			ATK_ADD(wd.damage, wd.damage2, 2500 * skill_lv + status_get_lv(src)); // !TODO: Confirm base level bonus
 			break;
@@ -5723,6 +5724,7 @@ static struct Damage battle_calc_weapon_attack(block_list *src, block_list *targ
 		case MH_EQC:
 			ATK_ADD(wd.damage, wd.damage2, 6000 * skill_lv + status_get_lv(src)); // !TODO: Confirm base level bonus
 			break;
+#endif
 		case NPC_MAXPAIN_ATK:
 			if (sc) {
 				auto * sce = sc->getSCE(SC_MAXPAIN);
@@ -6614,6 +6616,11 @@ struct Damage battle_calc_misc_attack(block_list *src,block_list *target,uint16 
 			if (status_bl_has_mode(target, MD_STATUSIMMUNE))
 				md.damage /= 10;
 			break;
+#ifdef NEED_2017_HOMUNCULUS_S
+		case MH_EQC: // 2017: target HP - own HP (signed, hp is unsigned)
+			md.damage = i64max(static_cast<int64>(tstatus->hp) - static_cast<int64>(sstatus->hp), 0);
+			break;
+#endif
 		case NPC_WIDESUCK:
 			md.damage = tstatus->max_hp * 15 / 100;
 			break;
@@ -8958,6 +8965,8 @@ static const struct _battle_data {
 	{ "need_jf_pattern_skill_id",           &battle_config.need_jf_pattern_skill_id,        2204,   0,      INT_MAX,        },
 	{ "need_jf_teleport_window",            &battle_config.need_jf_teleport_window,         3000,   0,      INT_MAX,        },
 	{ "need_jf_pattern_window",             &battle_config.need_jf_pattern_window,          300000, 0,      INT_MAX,        },
+	{ "need_privateairship_free",           &battle_config.need_privateairship_free,        0,      0,      1,              },
+	{ "need_enchant_keep_window",           &battle_config.need_enchant_keep_window,        0,      0,      10000,          },
 	{ "need_jf_pattern_min_count",          &battle_config.need_jf_pattern_min_count,       5,      0,      INT_MAX,        },
 	{ "need_jf_pattern_max_avg_interval",   &battle_config.need_jf_pattern_max_avg_interval, 15000, 0,      INT_MAX,        },
 	{ "need_jf_pattern_min_duration",       &battle_config.need_jf_pattern_min_duration,    60000,  0,      INT_MAX,        },
@@ -9041,7 +9050,11 @@ static const struct _battle_data {
 	// NEED 2026 chuseok event field hunting rewards. All switches are fail-safe off by default.
 	{ "need_chuseok_hunt_enable",            &battle_config.need_chuseok_hunt_enable,         0,      0,      1,              },
 	{ "need_chuseok_hunt_material_enable",   &battle_config.need_chuseok_hunt_material_enable, 0,     0,      1,              },
-	{ "need_chuseok_hunt_honey_enable",      &battle_config.need_chuseok_hunt_honey_enable,   0,      0,      1,              },
+
+	// NEED 2026 halloween event field hunting coin drop. Off by default; @halloweengm re-applies it at script load.
+	{ "need_halloween_hunt_enable",          &battle_config.need_halloween_hunt_enable,       0,      0,      1,              },
+	{ "need_halloween_candy_enable",         &battle_config.need_halloween_candy_enable,      0,      0,      1,              },
+	{ "need_halloween_candy_rate",           &battle_config.need_halloween_candy_rate,        5,      0,      10000,          },
 
 	// NEED summer event fishing system (stage 1: technical validation). Off by default.
 	{ "need_summer_fishing_enable",         &battle_config.need_summer_fishing_enable,      0,      0,      1,              },
@@ -9063,6 +9076,8 @@ static const struct _battle_data {
 	{ "need_newbie_party_exp_bonus_enable", &battle_config.need_newbie_party_exp_bonus_enable, 1,   0,      1,              },
 	{ "need_newbie_party_exp_bonus",        &battle_config.need_newbie_party_exp_bonus,     100,    0,      INT_MAX,        },
 	{ "need_newbie_party_exp_bonus_max_members", &battle_config.need_newbie_party_exp_bonus_max_members, 6, 1, MAX_PARTY,   },
+	{ "need_daily_quest_enable",             &battle_config.need_daily_quest_enable,          0,      0,      1,              },
+	{ "need_daily_quest_debug",              &battle_config.need_daily_quest_debug,           0,      0,      1,              },
 
 	{ "feature.dynamicnpc_timeout",         &battle_config.feature_dynamicnpc_timeout,      1000,   60000,  INT_MAX,        },
 	{ "feature.dynamicnpc_rangex",          &battle_config.feature_dynamicnpc_rangex,       2,      0,      INT_MAX,        },

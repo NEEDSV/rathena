@@ -1,0 +1,65 @@
+# NEED rune tablet buff tooltip - generator configuration (display only)
+#
+# Values never come from here: every number shown in a tooltip is evaluated from db/rune_db.yml.
+# This file only says WHERE each set's states live (EFST block), WHICH icon a set uses and HOW a
+# bonus is worded (KR wording follows system/Rune/runeset_desc.lub, EN follows its EN copy).
+
+# Reserved EFST block. The server refuses to build if official EFSTs ever reach it (static_assert).
+EfstFirst: 1700
+EfstLast: 1859
+StatesPerSet: 16          # each set owns base .. base+15; a set with more states fails the generator
+
+Grades: 16                # getupgrade_rune() 0..15
+Pieces: 7                 # bookNumber 0..6
+
+Sets:
+  # Id: { Key: efst symbol part, Base: first EFST, Icon: rune_icon bmp (texture/유저인터페이스/runesystem/rune_icon), Kr/En: set display name }
+  1261000: { Key: BATTLE,   Base: 1700, Icon: rp_need_battle,   Kr: 전투, En: Battle }
+  1261010: { Key: SNIPER,   Base: 1716, Icon: rp_need_sniper,   Kr: 저격, En: Sniper }
+  1261020: { Key: ASSAULT,  Base: 1732, Icon: rp_need_assault,  Kr: 맹공, En: Assault }
+  1261030: { Key: CRITICAL, Base: 1748, Icon: rp_need_critical, Kr: 치명, En: Critical }
+  1261040: { Key: MAGIC,    Base: 1764, Icon: rp_need_magic,    Kr: 마력, En: Magic }
+  1261050: { Key: SPELL,    Base: 1780, Icon: rp_need_spell,    Kr: 주문, En: Spell }
+  1261060: { Key: GUARDIAN, Base: 1796, Icon: rp_need_guardian, Kr: 수호, En: Guardian }
+  1261070: { Key: RECOVERY, Base: 1812, Icon: rp_need_healing,  Kr: 회복, En: Recovery }
+  1261080: { Key: SEARCH,   Base: 1828, Icon: rp_need_explore,  Kr: 탐색, En: Search }
+  1261090: { Key: GROWTH,   Base: 1844, Icon: rp_need_growth,   Kr: 성장, En: Growth }
+
+Title:
+  Kr: "룬 타블렛 - {name}"
+  En: "Rune Tablet - {name}"
+Tiers:                    # active 2/4/6-piece set bonuses of the state
+  Kr: "적용 중인 세트 효과: {tiers}조각"
+  En: "Active set bonus: {tiers} pieces"
+  Join: " / "
+
+# Bonus wording. {v} = absolute value. Pos/Neg = template for a positive/negative summed value.
+# Sp/Type2 = the C++ constants the server check compares against (pc_bonus / pc_bonus2 arguments).
+Bonus:
+  bBaseAtk:          { Sp: SP_BASE_ATK,  KrPos: "ATK + {v}",  KrNeg: "ATK - {v}",  EnPos: "ATK + {v}",  EnNeg: "ATK - {v}" }
+  bMatk:             { Sp: SP_EMATK,     KrPos: "MATK + {v}", KrNeg: "MATK - {v}", EnPos: "MATK + {v}", EnNeg: "MATK - {v}" }
+  bHit:              { Sp: SP_HIT,       KrPos: "HIT + {v}",  KrNeg: "HIT - {v}",  EnPos: "HIT + {v}",  EnNeg: "HIT - {v}" }
+  bCritical:         { Sp: SP_CRITICAL,  KrPos: "CRI + {v}",  KrNeg: "CRI - {v}",  EnPos: "CRI + {v}",  EnNeg: "CRI - {v}" }
+  bLuk:              { Sp: SP_LUK,       KrPos: "LUK + {v}",  KrNeg: "LUK - {v}",  EnPos: "LUK + {v}",  EnNeg: "LUK - {v}" }
+  bDef:              { Sp: SP_DEF1,      KrPos: "DEF + {v}",  KrNeg: "DEF - {v}",  EnPos: "DEF + {v}",  EnNeg: "DEF - {v}" }
+  bMdef:             { Sp: SP_MDEF1,     KrPos: "MDEF + {v}", KrNeg: "MDEF - {v}", EnPos: "MDEF + {v}", EnNeg: "MDEF - {v}" }
+  bAspdRate:         { Sp: SP_ASPD_RATE, KrPos: "ASPD + {v}%", KrNeg: "ASPD - {v}%", EnPos: "ASPD + {v}%", EnNeg: "ASPD - {v}%" }
+  bMaxHPrate:        { Sp: SP_MAXHPRATE, KrPos: "MaxHP + {v}%", KrNeg: "MaxHP - {v}%", EnPos: "MaxHP + {v}%", EnNeg: "MaxHP - {v}%" }
+  bMaxSPrate:        { Sp: SP_MAXSPRATE, KrPos: "MaxSP + {v}%", KrNeg: "MaxSP - {v}%", EnPos: "MaxSP + {v}%", EnNeg: "MaxSP - {v}%" }
+  bAddClass,Class_Normal:      { Sp: SP_ADDCLASS, Type2: CLASS_NORMAL, KrPos: "일반 몬스터에게 주는 물리 데미지 {v}% 증가", KrNeg: "일반 몬스터에게 주는 물리 데미지 {v}% 감소", EnPos: "Physical damage to Normal monsters + {v}%", EnNeg: "Physical damage to Normal monsters - {v}%" }
+  bAddClass,Class_Boss:        { Sp: SP_ADDCLASS, Type2: CLASS_BOSS,   KrPos: "보스 몬스터에게 주는 물리 데미지 {v}% 증가", KrNeg: "보스 몬스터에게 주는 물리 데미지 {v}% 감소", EnPos: "Physical damage to Boss monsters + {v}%", EnNeg: "Physical damage to Boss monsters - {v}%" }
+  bMagicAddClass,Class_Normal: { Sp: SP_MAGIC_ADDCLASS, Type2: CLASS_NORMAL, KrPos: "일반 몬스터에게 주는 마법 데미지 {v}% 증가", KrNeg: "일반 몬스터에게 주는 마법 데미지 {v}% 감소", EnPos: "Magic damage to Normal monsters + {v}%", EnNeg: "Magic damage to Normal monsters - {v}%" }
+  bMagicAddClass,Class_Boss:   { Sp: SP_MAGIC_ADDCLASS, Type2: CLASS_BOSS,   KrPos: "보스 몬스터에게 주는 마법 데미지 {v}% 증가", KrNeg: "보스 몬스터에게 주는 마법 데미지 {v}% 감소", EnPos: "Magic damage to Boss monsters + {v}%", EnNeg: "Magic damage to Boss monsters - {v}%" }
+  bSubClass,Class_Normal:      { Sp: SP_SUBCLASS, Type2: CLASS_NORMAL, KrPos: "일반 몬스터에게 받는 데미지 {v}% 감소", KrNeg: "일반 몬스터에게 받는 데미지 {v}% 증가", EnPos: "Damage taken from Normal monsters - {v}%", EnNeg: "Damage taken from Normal monsters + {v}%" }
+  bSubClass,Class_Boss:        { Sp: SP_SUBCLASS, Type2: CLASS_BOSS,   KrPos: "보스 몬스터에게 받는 데미지 {v}% 감소", KrNeg: "보스 몬스터에게 받는 데미지 {v}% 증가", EnPos: "Damage taken from Boss monsters - {v}%", EnNeg: "Damage taken from Boss monsters + {v}%" }
+  bLongAtkRate:      { Sp: SP_LONG_ATK_RATE,  KrPos: "원거리 물리 데미지 {v}% 증가", KrNeg: "원거리 물리 데미지 {v}% 감소", EnPos: "Ranged physical damage + {v}%", EnNeg: "Ranged physical damage - {v}%" }
+  bShortAtkRate:     { Sp: SP_SHORT_ATK_RATE, KrPos: "근거리 물리 데미지 {v}% 증가", KrNeg: "근거리 물리 데미지 {v}% 감소", EnPos: "Melee physical damage + {v}%", EnNeg: "Melee physical damage - {v}%" }
+  bCritAtkRate:      { Sp: SP_CRIT_ATK_RATE,  KrPos: "크리티컬 데미지 {v}% 증가", KrNeg: "크리티컬 데미지 {v}% 감소", EnPos: "Critical damage + {v}%", EnNeg: "Critical damage - {v}%" }
+  bVariableCastrate: { Sp: SP_VARCASTRATE,    KrPos: "변동 캐스팅 {v}% 증가", KrNeg: "변동 캐스팅 {v}% 감소", EnPos: "Variable Casting Time + {v}%", EnNeg: "Variable Casting Time - {v}%" }
+  bFixedCast:        { Sp: SP_ADD_FIXEDCAST, Unit: ms_to_sec, KrPos: "고정 캐스팅 {v}초 증가", KrNeg: "고정 캐스팅 {v}초 감소", EnPos: "Fixed Casting Time + {v} sec", EnNeg: "Fixed Casting Time - {v} sec" }
+  bHealPower:        { Sp: SP_ADD_HEAL_RATE,  KrPos: "힐 스킬 회복량 {v}% 증가", KrNeg: "힐 스킬 회복량 {v}% 감소", EnPos: "Heal skill recovery + {v}%", EnNeg: "Heal skill recovery - {v}%" }
+  bHPrecovRate:      { Sp: SP_HP_RECOV_RATE,  KrPos: "HP 자연 회복량 {v}% 증가", KrNeg: "HP 자연 회복량 {v}% 감소", EnPos: "HP natural recovery + {v}%", EnNeg: "HP natural recovery - {v}%" }
+  bSPrecovRate:      { Sp: SP_SP_RECOV_RATE,  KrPos: "SP 자연 회복량 {v}% 증가", KrNeg: "SP 자연 회복량 {v}% 감소", EnPos: "SP natural recovery + {v}%", EnNeg: "SP natural recovery - {v}%" }
+  bAddItemHealRate:  { Sp: SP_ADD_ITEM_HEAL_RATE, KrPos: "회복 아이템 효과 {v}% 증가", KrNeg: "회복 아이템 효과 {v}% 감소", EnPos: "Recovery item effect + {v}%", EnNeg: "Recovery item effect - {v}%" }
+  bDropAddRace,RC_All:         { Sp: SP_DROP_ADDRACE, Type2: RC_ALL,    KrPos: "몬스터 처치 시 아이템 드랍률 {v}% 증가", KrNeg: "몬스터 처치 시 아이템 드랍률 {v}% 감소", EnPos: "Item drop rate on monster kill + {v}%", EnNeg: "Item drop rate on monster kill - {v}%" }
+  bExpAddClass,Class_All:      { Sp: SP_EXP_ADDCLASS, Type2: CLASS_ALL, KrPos: "몬스터 처치 시 획득 경험치 {v}% 증가", KrNeg: "몬스터 처치 시 획득 경험치 {v}% 감소", EnPos: "EXP gained on monster kill + {v}%", EnNeg: "EXP gained on monster kill - {v}%" }

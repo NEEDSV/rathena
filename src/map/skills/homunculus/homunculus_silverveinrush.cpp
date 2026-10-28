@@ -21,3 +21,10 @@ void SkillSilverVeinRush::calculateSkillRatio(const Damage* wd, const block_list
 	base_skillratio += -100 + 250 * skill_lv * status_get_lv(src) / 100 + sstatus->str; // !TODO: Confirm STR bonus
 #endif
 }
+
+#ifdef NEED_2017_HOMUNCULUS_S
+void SkillSilverVeinRush::applyAdditionalEffects(block_list* src, block_list* target, uint16 skill_lv, t_tick tick, int32 attack_type, enum damage_lv dmg_lv) const {
+	// 2017: stun chance 20 + 5 * skill level %
+	sc_start4(src, target, SC_STUN, 20 + 5 * skill_lv, skill_lv, src->id, 0, 0, skill_get_time(getSkillId(), skill_lv));
+}
+#endif

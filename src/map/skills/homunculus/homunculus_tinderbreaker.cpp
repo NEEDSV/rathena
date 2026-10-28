@@ -21,3 +21,10 @@ void SkillTinderBreaker::castendDamageId(block_list* src, block_list* target, ui
 	clif_skill_nodamage(src, *target, getSkillId(), skill_lv, sc_start4(src, target, SC_TINDER_BREAKER2, 100, skill_lv, src->id, 0, 0, duration));
 	skill_attack(skill_get_type(getSkillId()), src, src, target, getSkillId(), skill_lv, tick, flag);
 }
+
+#ifdef NEED_2017_HOMUNCULUS_S
+void SkillTinderBreaker::calculateSkillRatio(const Damage* wd, const block_list* src, const block_list* target, uint16 skill_lv, int32& base_skillratio, int32 mflag) const {
+	// 2017 (replaces the flat ATK +2500*lv bonus in battle.cpp)
+	base_skillratio += -100 + (100 * skill_lv + 3 * status_get_str(src)) * status_get_lv(src) / 120;
+}
+#endif

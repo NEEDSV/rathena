@@ -1,0 +1,24 @@
+//===== NEED Script ==========================================
+//= 구 페이욘 이동 안내 (낙원단 moc_para01 -> payo2)
+//===== Description: =========================================
+//= 2026-10-16 낙원단 거점 제거. 성장 지원관과 편의 NPC 가 구 페이욘으로 옮겨졌다.
+//= 예전 낙원단 성장 지원관 자리(27,35)에서 구 페이욘 start point 로 이동하고
+//= 저장 위치도 함께 바꾼다. (need_payo2_mover.txt 의 라자냐 안내와 같은 방식)
+//= 저장 위치가 아직 낙원단인 캐릭터는 부활하면 바로 앞(28,30)에 서게 되므로
+//= 별도의 저장 위치 일괄 이전(SQL)은 하지 않는다.
+//= moc_para01 은 악몽의 지터벅 입구 때문에 맵과 워프 도우미#para 를 유지한다.
+//============================================================
+moc_para01,27,35,4	script	구 페이욘 이동 안내#eden	4_M_PAY_SOLDIER,{
+	mes needtr("[구 페이욘 이동 안내]", "[Old Payon Guide]");
+	mes needtr("낙원단 성장 지원관이 ^FF9900구 페이욘^000000으로 옮겨졌습니다.", "The Eden Growth Supporter has moved to ^FF9900Old Payon^000000.");
+	mes needtr("이동하면 저장 위치도 구 페이욘으로 바뀝니다.", "Your save point will also be set to Old Payon.");
+	if (select(needtr("^00AAFF구 페이욘으로 이동^000000:취소", "^00AAFFGo to Old Payon^000000:Cancel")) != 1)
+		close;
+	savepoint "payo2",86,126;
+	warp "payo2",86,126;
+	end;
+
+OnInit:
+	setnpcnameen "Old Payon Guide";
+	end;
+}

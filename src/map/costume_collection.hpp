@@ -16,6 +16,10 @@ struct s_costume_collection
 	t_itemid item_id;
 	std::string name;
 	bool enabled;
+	// Wardrobe-only entry (e.g. rebirth reward costumes): it can be registered and
+	// stored in the wardrobe, but is excluded from the album totals, the register
+	// count, bulk registration and the coin exchange.
+	bool closet_only;
 };
 
 class CostumeCollectionDatabase
@@ -45,6 +49,7 @@ const s_costume_collection* costume_collection_search_itemid(t_itemid item_id);
 const s_costume_collection* costume_collection_search_collectionid(uint32 collection_id);
 uint32 costume_collection_get_last_collection_id();
 uint32 costume_collection_get_active_count();
+bool costume_collection_is_closet_only(const s_costume_collection* costume);
 bool costume_collection_reload();
 
 void do_init_costume_collection(void);

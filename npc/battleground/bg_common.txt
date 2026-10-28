@@ -33,9 +33,9 @@ bat_room,154,161,4	script	전장 관리인#2	953,{
 bat_room,184,164,4	script	전장 관리인	953,{
 	// 모집/편성 중 일반 유저는 홍보 메뉴만, GM 60 이상은 운영 메뉴도 표시
 	if ($@BG_RM_MANAGER_MENU_LOCK) {
-		.@menu$ = "전장 홍보하기";
+		.@menu$ = needtr("전장 홍보하기", "Battleground Shout");
 		if (getgmlevel() >= 60)
-			.@menu$ += ":랜덤 매칭 운영";
+			.@menu$ += needtr(":랜덤 매칭 운영", ":Random Match Operations");
 
 		.@sel = select(.@menu$);
 		if (.@sel == 1) {
@@ -49,17 +49,17 @@ bat_room,184,164,4	script	전장 관리인	953,{
 		close;
 	}
 
-	.@menu$ = "주사위 굴리기:전장 파티장 등록:전장 입장 준비:전장 홍보하기:전장 인원 조정:인원 부족 완화 신청:전장 보상 설명";
+	.@menu$ = needtr("주사위 굴리기:전장 파티장 등록:전장 입장 준비:전장 홍보하기:전장 인원 조정:인원 부족 완화 신청:전장 보상 설명", "Roll the Dice:Register Battleground Party Leader:Battleground Entry Preparation:Battleground Shout:Adjust Battleground Headcount:Request Headcount Relief:Battleground Rewards");
 	.@leader_menu = 0;
 	.@admin_menu = 0;
 
 	if ($@BG_RM_CYCLE_ACTIVE) {
-		.@menu$ += ":랜덤 매칭 파티장 승계";
+		.@menu$ += needtr(":랜덤 매칭 파티장 승계", ":Take Over as Random Match Party Leader");
 		.@leader_menu = 8;
 	}
 
 	if (getgmlevel() >= 60) {
-		.@menu$ += ":랜덤 매칭 운영";
+		.@menu$ += needtr(":랜덤 매칭 운영", ":Random Match Operations");
 		.@admin_menu = ($@BG_RM_CYCLE_ACTIVE ? 9 : 8);
 	}
 
@@ -636,16 +636,19 @@ function	script	F_BG_Reward	{
 	mes needtr("[전장 관리인]","[Battleground Manager]");
 	mes needtr("티에라/플라비우스/KvM 참여 시 전장 포인트 + 9","Battleground Points + 9 for joining Tierra / Flavius / KvM");
 	mes " ";
-	mes needtr("티에라 승 : 금화 10개, 용맹휘장 2개","Tierra win : 10 Gold, 2 Bravery Badges");
-	mes needtr("티에라 패 : 금화 7개, 용맹휘장 1개","Tierra loss : 7 Gold, 1 Bravery Badge");
+	mes needtr("티에라 승 : 금화 15개, 용맹휘장 2개","Tierra win : 15 Gold, 2 Bravery Badges");
+	mes needtr("티에라 패 : 금화 11개, 용맹휘장 1개","Tierra loss : 11 Gold, 1 Bravery Badge");
 	mes " ";
-	mes needtr("플라비우스 승 : 금화 20개, 특공휘장 3개","Flavius win : 20 Gold, 3 Valor Badges");
-	mes needtr("플라비우스 패 : 금화 15개, 특공휘장 2개","Flavius loss : 15 Gold, 2 Valor Badges");
+	mes needtr("플라비우스 승 : 금화 30개, 특공휘장 3개","Flavius win : 30 Gold, 3 Valor Badges");
+	mes needtr("플라비우스 패 : 금화 23개, 특공휘장 2개","Flavius loss : 23 Gold, 2 Valor Badges");
 	mes " ";
-	mes needtr("KvM 승 : 금화 20개, 전투휘장 3개","KvM win : 20 Gold, 3 War Badges");
-	mes needtr("KvM 패 : 금화 15개, 전투휘장 2개","KvM loss : 15 Gold, 2 War Badges");
+	mes needtr("KvM 승 : 금화 30개, 전투휘장 3개","KvM win : 30 Gold, 3 War Badges");
+	mes needtr("KvM 패 : 금화 23개, 전투휘장 2개","KvM loss : 23 Gold, 2 War Badges");
 	mes " ";
-	mes needtr("6명부터는 1명당 금화 2개씩 추가 지급.","From 6 players on, 2 extra Gold are paid per player.");
+	mes needtr("^0055FF대전 승리의 증표 : 티에라/플라비우스 1개, KvM 2개 (승패 무관)^000000","^0055FFToken of Victory War : 1 in Tierra / Flavius, 2 in KvM (win or lose)^000000");
+	mes needtr("^0055FF전장 장비 담당관에서 대축(50개) / +9 보장권(500개)으로 교환^000000","^0055FFTrade them at the Battleground Equipment Officer for a Blacksmith's Blessing (50) / +9 certificate (500)^000000");
+	mes " ";
+	mes needtr("6명부터는 1명당 금화 3개씩 추가 지급.","From 6 players on, 3 extra Gold are paid per player.");
 	mes needtr("^FF0000파티장이 되어 진행할 경우 모든 휘장 3개, 전장 포인트 +5 추가 지급^000000","^FF0000Run it as the party leader for 3 of every badge and +5 extra Battleground Points^000000");
 	setdialogsize(400,400);
 	close;
@@ -2734,7 +2737,7 @@ function	script	F_BG_GetMyTeamName$	{
 	end;
 }
 
-lasagna,194,155,3	duplicate(BatRecruit)	마롤 전투 모집관::BatRecruit1	728
+payo2,96,138,3	duplicate(BatRecruit)	마롤 전투 모집관::BatRecruit1	728
 
 // Additional warps
 // Empty
@@ -2976,13 +2979,19 @@ function	script	F_BG_Badge	{
 	.@bonusmount = ($BG_User_Count - 5) * 3;
 	getitem .@badge,.@amount + .@partyleaderbonus;
 
+	// NEED 2026-10-07: 대전 승리의 증표(6378) - 승패 무관 1개. 전장 장비 담당관에서 대축/+9 보장권 교환
+	getitem 6378, 1;
+
 	.@gold_amount = .@cashamount + .@bonusmount;
 	.@gold_amount = callfunc("F_NEED_GoldEvent_BGAmount", .@gold_amount);
 	getitem 399990, .@gold_amount;
 
-	// NEED 2026 추석 이벤트 : 송편 재료 지급 + 풀사이클 진행 기록
+	// NEED 2026 추석 이벤트 : 송편 재료 지급 (풀사이클 꿀송편 판정은 2026-10-26 제거)
 	.@chuseok_stage = (.@bg_type$ == "Tierra") ? 1 : 2;
 	callfunc "F_NEED_Chuseok_BG_Reward", .@chuseok_stage;
+
+	// NEED 2026 할로윈 이벤트 : 할로윈 코인 (티에라 2 / 플라비우스 2, 승패 무관)
+	callfunc "F_NEED_Halloween_BG_Reward", .@chuseok_stage;
 
 	return;
 }

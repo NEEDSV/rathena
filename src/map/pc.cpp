@@ -3759,6 +3759,9 @@ void pc_bonus(map_session_data *sd,int32 type,int32 val)
 	int32 bonus;
 	nullpo_retv(sd);
 
+	if (sd->rune_display.capture != nullptr) // NEED rune tooltip check (@runetooltipcheck only)
+		sd->rune_display.capture->push_back({ type, RUNE_DISPLAY_NO_TYPE2, val });
+
 	status = &sd->base_status;
 
 	switch(type){
@@ -4529,6 +4532,9 @@ void pc_bonus(map_session_data *sd,int32 type,int32 val)
 void pc_bonus2(map_session_data *sd,int32 type,int32 type2,int32 val)
 {
 	nullpo_retv(sd);
+
+	if (sd->rune_display.capture != nullptr) // NEED rune tooltip check (@runetooltipcheck only)
+		sd->rune_display.capture->push_back({ type, type2, val });
 
 	switch(type){
 	case SP_ADDELE: // bonus2 bAddEle,e,x;
@@ -10547,6 +10553,10 @@ void pc_revive(map_session_data *sd,uint32 hp, uint32 sp, uint32 ap) {
 
 	if (sd->bg_strip_requip_pending)
 		pc_bg_strip_try_reequip_all(sd);
+
+	// NEED rune tooltip: send the rune icon again in case the client dropped it on death
+	sd->rune_display.resend = true;
+	rune_display_refresh(sd);
 }
 
 bool pc_revive_item(map_session_data *sd) {

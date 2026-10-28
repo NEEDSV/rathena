@@ -1440,6 +1440,11 @@ int32 skill_additional_effect( block_list* src, block_list *bl, uint16 skill_id,
 						else
 							clif_skill_fail( *sd, RG_SNATCHER );
 					}
+#ifdef NEED_2017_HOMUNCULUS_S
+					// 2017: Pyroclastic on the master autocasts Hammer Fall
+					if(sc && sc->getSCE(SC_PYROCLASTIC) && ((rnd()%100)<=sc->getSCE(SC_PYROCLASTIC)->val3) )
+						skill_castend_pos2(src, bl->x, bl->y, BS_HAMMERFALL,sc->getSCE(SC_PYROCLASTIC)->val1, tick, 0);
+#endif
 				}
 
 				if (sc) {
@@ -1480,7 +1485,7 @@ int32 skill_additional_effect( block_list* src, block_list *bl, uint16 skill_id,
 			}
 #endif
 			if( rate )
-				skill_break_equip(src,src, EQP_WEAPON, rate, BCT_SELF);
+				skill_break_equip(src,src, EQP_WEAPON, rate, BCT_SELF, true);
 		}
 		if( battle_config.equip_skill_break_rate && skill_id != WS_CARTTERMINATION && skill_id != ITM_TOMAHAWK )
 		{	// Cart Termination/Tomahawk won't trigger breaking data. Why? No idea, go ask Gravity.
@@ -1994,8 +1999,11 @@ int32 skill_counter_additional_effect (block_list* src, block_list *bl, uint16 s
  - rate goes from 0 to 10000 (100.00%)
  - flag is a BCT_ flag to indicate which type of adjustment should be used
    (BCT_ENEMY/BCT_PARTY/BCT_SELF) are the valid values.
+ - self_penalty: the unit breaks its own gear as the cost of its own skill/buff
+   (Crush Strike, Earth Drive, natural/Overthrust wear). Not set for Hagalaz,
+   where the attacker's weapon breaks because of the target's buff.
 --------------------------------------------------------------------------*/
-int32 skill_break_equip(block_list *src, block_list *bl, uint16 where, int32 rate, int32 flag)
+int32 skill_break_equip(block_list *src, block_list *bl, uint16 where, int32 rate, int32 flag, bool self_penalty)
 {
 	status_change *src_sc = status_get_sc(src);
 
@@ -2043,6 +2051,14 @@ int32 skill_break_equip(block_list *src, block_list *bl, uint16 where, int32 rat
 	} else if (flag&(BCT_PARTY|BCT_SELF)) {
 		if (battle_config.equip_self_break_rate != 100)
 			rate = rate*battle_config.equip_self_break_rate/100;
+	}
+	// NEED BG phase 1: on need_equip_break_rate maps (the three legacy battlegrounds) a player's final break chance
+	// is scaled relatively (30% x 80 = 24%, not 30% - 20%p). Capped at 100% first so a guaranteed break becomes 80%.
+	// Breaks caused by an opponent go through here (Pinpoint Attack, Acid Terror, Hagalaz, Melt Down, ...); a unit's
+	// own self_penalty break (Crush Strike, Earth Drive, natural wear) keeps the normal chance (v1.1).
+	if (sd != nullptr && rate > 0 && !self_penalty) {
+		if (int32 map_rate = map_getmapflag(bl->m, MF_NEED_EQUIP_BREAK_RATE); map_rate > 0 && map_rate < 100)
+			rate = i32min(rate, 10000) * map_rate / 100;
 	}
 
 	for (i = 0; i < 6; i++) {
@@ -6446,9 +6462,11 @@ std::shared_ptr<s_skill_unit_group> skill_unitsetting(block_list *src, uint16 sk
 		val2 = y;
 		val3 = 0; // Suck target at n seconds.
 		break;
+#ifndef NEED_2017_HOMUNCULUS_S // 2017: a new Poison Mist / Lava Slide did not remove the previous one
 	case MH_POISON_MIST:
-	case MH_BLAST_FORGE:
 	case MH_LAVA_SLIDE:
+#endif
+	case MH_BLAST_FORGE:
 		skill_clear_group(src, 1);
 		break;
 	case MH_VOLCANIC_ASH:
@@ -7138,7 +7156,9 @@ int32 skill_unit_onplace_timer(skill_unit *unit, block_list *bl, t_tick tick)
 		case UNT_FIREWALK:
 		case UNT_ELECTRICWALK:
 		case UNT_PSYCHIC_WAVE:
+#ifndef NEED_2017_HOMUNCULUS_S
 		case UNT_LAVA_SLIDE:
+#endif
 		case UNT_MAKIBISHI:
 		case UNT_VENOMFOG:
 		case UNT_ICEMINE:
@@ -7873,9 +7893,20 @@ int32 skill_unit_onplace_timer(skill_unit *unit, block_list *bl, t_tick tick)
 				sc_start2(ss, bl,type,100,sg->val1,sg->val2,skill_get_time2(sg->skill_id, sg->skill_lv));
 			break;
 
+#ifdef NEED_2017_HOMUNCULUS_S
+		case UNT_LAVA_SLIDE:
+			skill_attack(BF_WEAPON, ss, unit, bl, sg->skill_id, sg->skill_lv, tick, 0);
+			if(++sg->val1 > 4) //after 5 stop hit and destroy me (2017)
+				sg->limit = DIFF_TICK(tick, sg->tick);
+			break;
+#endif
 		case UNT_POISON_MIST:
 			skill_attack(BF_MAGIC, ss, unit, bl, sg->skill_id, sg->skill_lv, tick, 0);
+#ifdef NEED_2017_HOMUNCULUS_S
+			status_change_start(ss, bl, SC_BLIND, (10 + 10 * sg->skill_lv)*100, sg->skill_lv, sg->skill_id, 0, 0, skill_get_time2(sg->skill_id, sg->skill_lv), SCSTART_NOTICKDEF|SCSTART_NORATEDEF);
+#else
 			status_change_start(ss, bl, SC_POISON_MIST, (10 + 10 * sg->skill_lv)*100, sg->skill_lv, sg->skill_id, 0, 0, skill_get_time2(sg->skill_id, sg->skill_lv), SCSTART_NOTICKDEF|SCSTART_NORATEDEF);
+#endif
 			break;
 
 		case UNT_CHAOSPANIC:
@@ -8793,6 +8824,11 @@ bool skill_check_condition_castbegin( map_session_data& sd, uint16 skill_id, uin
 				sd.spiritball_old = require.spiritball = sd.spiritball;
 			else
 				sd.spiritball_old = require.spiritball;
+			break;
+		case SR_RAMPAGEBLASTER:
+			// NEED: the restored 2017 damage formula multiplies by spiritball_old (rampageblaster.cpp), which
+			// nothing set for this skill, so it dealt 0 damage. Record the DB sphere cost; the 3-sphere requirement stays.
+			sd.spiritball_old = skill_get_spiritball(skill_id, skill_lv);
 			break;
 		case MO_CHAINCOMBO:
 			if(!sc)

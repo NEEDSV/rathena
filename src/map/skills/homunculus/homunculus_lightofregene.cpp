@@ -4,6 +4,7 @@
 #include "homunculus_lightofregene.hpp"
 
 #include "map/battle.hpp"
+#include "map/clif.hpp"
 #include "map/homunculus.hpp"
 #include "map/status.hpp"
 
@@ -23,4 +24,9 @@ void SkillLightOfRegene::castendNoDamageId(block_list* src, block_list* target, 
 		sc_start(src, s_bl, type, 100, skill_lv, skill_get_time(getSkillId(), skill_lv));
 	}
 	sc_start2(src, src, type, 100, skill_lv, hd->homunculus.level, skill_get_time(getSkillId(), skill_lv));
+#ifdef NEED_2017_HOMUNCULUS_S
+	// 2017: using Light of Regene drops intimacy to Neutral
+	hd->homunculus.intimacy = hom_intimacy_grade2intimacy(HOMGRADE_NEUTRAL);
+	clif_send_homdata(*hd, SP_INTIMATE);
+#endif
 }

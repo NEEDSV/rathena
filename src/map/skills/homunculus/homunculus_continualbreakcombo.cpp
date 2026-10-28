@@ -15,3 +15,10 @@ void SkillContinualBreakCombo::castendDamageId(block_list* src, block_list* targ
 	clif_skill_nodamage(src, *target, getSkillId(), skill_lv, sc_start4(src, target, SC_CBC, 100, skill_lv, src->id, 0, 0, duration));
 	skill_attack(skill_get_type(getSkillId()), src, src, target, getSkillId(), skill_lv, tick, flag);
 }
+
+#ifdef NEED_2017_HOMUNCULUS_S
+void SkillContinualBreakCombo::calculateSkillRatio(const Damage* wd, const block_list* src, const block_list* target, uint16 skill_lv, int32& base_skillratio, int32 mflag) const {
+	// 2017 (replaces the flat ATK +4000*lv bonus in battle.cpp)
+	base_skillratio += 300 * skill_lv + 4 * status_get_lv(src);
+}
+#endif

@@ -48,6 +48,7 @@
 #include "instance.hpp"
 #include "intif.hpp"
 #include "itemdb.hpp" // MAX_ITEMGROUP
+#include "need_enchant.hpp"
 #include "cashshop.hpp"
 #include "log.hpp"
 #include "mail.hpp"
@@ -56,6 +57,7 @@
 #include "mercenary.hpp"
 #include "mob.hpp"
 #include "need_autopot.hpp"
+#include "need_daily_quest.hpp"
 #include "need_equipment_build.hpp"
 #include "need_jf_pattern.hpp"
 #include "need_summer_attendance.hpp"
@@ -812,7 +814,7 @@ ACMD_FUNC(who) {
 	if( *command_name == atcommand_symbol || *command_name == charcommand_symbol )
 		command_name++;
 	if( strcmpi(command_name, "who3") == 0 ) {
-		excluded_map_id = map_mapname2mapid("lasagna");
+		excluded_map_id = map_mapname2mapid("payo2");
 		excluded_map_id2 = map_mapname2mapid("payon");
 	}
 
@@ -1064,7 +1066,8 @@ ACMD_FUNC(storage)
 {
 	nullpo_retr(-1, sd);
 
-	if (sd->npc_id || sd->state.vending || sd->state.buyingstore || sd->state.trading || sd->state.storage_flag)
+	// NEED: also blocked while the item enchant window is open (it could move the selected item away)
+	if (sd->npc_id || sd->state.vending || sd->state.buyingstore || sd->state.trading || sd->state.storage_flag || sd->state.item_enchant_index)
 		return -1;
 
 	if (storage_storageopen(sd) == 1)
@@ -7744,8 +7747,14 @@ ACMD_FUNC(autotrade) {
 		return -1;
 	}
 
-	if( !sd->state.vending && !sd->state.buyingstore ) { //check if player is vending or buying
-		clif_displaymessage(fd, msg_txt(sd,549)); // "You should have a shop open to use @autotrade."
+	// NEED (2026-10-19 간담회): 노점/구매상점이 없는 일반 캐릭터도 @접속유지를 쓸 수 있다.
+	// 대상만 넓히고 맵 제한(at_mapflag)·사망·캐시 노점 검사와 EXP 규칙은 그대로 둔다.
+	// 상점 없는 접속 유지는 재시작 때 복원되지 않으며(복원은 vendings/buyingstores 기준)
+	// 같은 계정이 다시 접속하면 chrif 중복 접속 처리로 정리된다.
+	// 노점 캐릭터는 대화·거래·창고 등을 열 수 없지만 일반 캐릭터는 열 수 있으므로,
+	// 그런 창이 열린 채 연결만 끊겨 상대/스크립트가 멈추지 않도록 먼저 막는다.
+	if( !sd->state.vending && !sd->state.buyingstore && pc_cant_act(sd) ) {
+		clif_displaymessage(fd, msg_txt(sd,673)); // "This action can't be performed at the moment. Please try again later."
 		return -1;
 	}
 	if (sd->state.vending && sd->vending_currency == e_vending_currency::CASH && !battle_config.cash_vending_autotrade) {
@@ -9177,6 +9186,209 @@ ACMD_FUNC(mute)
 
 	return 0;
 }
+
+#ifdef NEED_DQ_TEST
+/*==========================================
+ * NEED test only: @dqtest (daily quest probes, test build only)
+ * @dqtest                    state of the logical day, session cache and rows
+ * @dqtest rate <-1|0..10000> roll override (-1 = configured rate)
+ * @dqtest offset <seconds>   clock offset for the logical day
+ * @dqtest fail <0|1|2>       fault injection point
+ * @dqtest gm <0|1>           count GM characters in real kills (default 0 = spec: GMs excluded)
+ * @dqtest bgip <-1|0..100>   battleground distinct-IP percent (-1 = 75, spec U9)
+ * @dqtest inst <KIND>        as if this character were on the boss map at a clear (OGH_HARD|OGH|SKY_FORTRESS)
+ * @dqtest credit <mob_id> [n] n qualifying kills of mob_id on this map (party rules apply)
+ * @dqtest flush              write the pending count now
+ * @dqtest accept|reaccept|submit|status   the NPC commands
+ *------------------------------------------*/
+ACMD_FUNC(dqtest)
+{
+	char sub[32] = {};
+	long long value = 0;
+	int32 count = 1;
+	char msg[CHAT_SIZE_MAX];
+
+	nullpo_retr(-1, sd);
+	int32 n = message != nullptr ? sscanf(message, "%31s %lld %d", sub, &value, &count) : 0;
+	if (n < 1) {
+		need_dq_test_dump(sd);
+		return 0;
+	}
+	if (strcmp(sub, "rate") == 0 && n >= 2 && value >= -1 && value <= 10000) {
+		need_dq_test_rate = static_cast<int32>(value);
+	} else if (strcmp(sub, "offset") == 0 && n >= 2) {
+		need_dq_test_offset = static_cast<int64>(value);
+	} else if (strcmp(sub, "gm") == 0 && n >= 2 && (value == 0 || value == 1)) {
+		need_dq_test_allow_gm = static_cast<int32>(value);
+	} else if (strcmp(sub, "bgip") == 0 && n >= 2 && value >= -1 && value <= 100) {
+		need_dq_test_bg_ip_percent = static_cast<int32>(value);
+	} else if (strcmp(sub, "fail") == 0 && n >= 2 && value >= 0 && value <= 2) {
+		need_dq_test_fail_point = static_cast<int32>(value);
+	} else if (strcmp(sub, "credit") == 0 && n >= 2) {
+		need_dq_test_credit(sd, static_cast<int32>(value), n >= 3 ? cap_value(count, 1, 1000) : 1);
+	} else if (strcmp(sub, "inst") == 0) {
+		char kind[24] = {};
+		if (sscanf(message, "%*s %23s", kind) < 1) {
+			clif_displaymessage(fd, "dqtest: inst <OGH_HARD|OGH|SKY_FORTRESS>");
+			return -1;
+		}
+		safesnprintf(msg, sizeof(msg), "dqtest: inst %s -> %d", kind, need_daily_quest_script_inst_clear(sd, kind, 0));
+		clif_displaymessage(fd, msg);
+	} else if (strcmp(sub, "flush") == 0) {
+		need_dq_test_flush(sd);
+	} else if (strcmp(sub, "accept") == 0) {
+		safesnprintf(msg, sizeof(msg), "dqtest: accept -> %d", need_daily_quest_script_accept(sd));
+		clif_displaymessage(fd, msg);
+	} else if (strcmp(sub, "reaccept") == 0) {
+		safesnprintf(msg, sizeof(msg), "dqtest: reaccept -> %d", need_daily_quest_script_reaccept(sd));
+		clif_displaymessage(fd, msg);
+	} else if (strcmp(sub, "submit") == 0) {
+		safesnprintf(msg, sizeof(msg), "dqtest: submit -> %d", need_daily_quest_script_submit(sd));
+		clif_displaymessage(fd, msg);
+	} else if (strcmp(sub, "status") == 0) {
+		safesnprintf(msg, sizeof(msg), "dqtest: status -> %d", need_daily_quest_script_status(sd));
+		clif_displaymessage(fd, msg);
+	} else {
+		clif_displaymessage(fd, "dqtest: rate|offset|fail|gm|bgip|credit|inst|flush|accept|reaccept|submit|status");
+		return -1;
+	}
+	need_dq_test_dump(sd);
+	return 0;
+}
+#endif
+
+#ifdef NEED_ENCHANT_TEST
+/*==========================================
+ * NEED test only: @enchanttest (item enchant engine probes, GM 99)
+ *------------------------------------------*/
+ACMD_FUNC(enchanttest)
+{
+	char sub[32] = {};
+	uint64 group_id = 0;
+	uint32 a = 0, b = 0, c = 0;
+
+	nullpo_retr(-1, sd);
+
+	if( pc_get_group_level( sd ) < 99 ){
+		return -1;
+	}
+
+	if( !message || !*message || sscanf( message, "%31s", sub ) < 1 ){
+		clif_displaymessage( fd, "Usage: @enchanttest msg <msgId> [itid] | slotchance <group> <slot> <chance> | resetchance <group> <chance> | gradebonus <group> <slot> <grade> <chance> | rules <file> | restore" );
+		return -1;
+	}
+
+	if( strcmpi( sub, "msg" ) == 0 ){
+		if( sscanf( message, "%31s %u %u", sub, &a, &b ) < 2 ){
+			clif_displaymessage( fd, "Usage: @enchanttest msg <msgId> [itid]" );
+			return -1;
+		}
+
+		clif_enchantwindow_result_probe( *sd, static_cast<int32>( a ), b );
+		sprintf( atcmd_output, "[enchanttest] sent ZC_RESPONSE_ENCHANT msgId=%u ITID=%u", a, b );
+		clif_displaymessage( fd, atcmd_output );
+		return 0;
+	}
+
+	if( strcmpi( sub, "restore" ) == 0 ){
+		item_enchant_db.reload();
+		need_enchant_rules_db.reload();
+		clif_displaymessage( fd, "[enchanttest] item_enchant.yml and NEED enchant rules reloaded" );
+		return 0;
+	}
+
+	if( strcmpi( sub, "rules" ) == 0 ){
+		char path[256] = {};
+
+		if( sscanf( message, "%31s %255s", sub, path ) < 2 ){
+			clif_displaymessage( fd, "Usage: @enchanttest rules <file> (memory only, @enchanttest restore)" );
+			return -1;
+		}
+
+		bool ok = need_enchant_load_test_rules( path );
+
+		sprintf( atcmd_output, "[enchanttest] rules '%s' %s (%zu groups with rules)", path, ok ? "loaded" : "loaded WITH ERRORS (see map-server console)", need_enchant_rules_db.size() );
+		clif_displaymessage( fd, atcmd_output );
+		return ok ? 0 : -1;
+	}
+
+	if( sscanf( message, "%31s %" SCNu64 " %u %u %u", sub, &group_id, &a, &b, &c ) < 3 ){
+		clif_displaymessage( fd, "[enchanttest] missing arguments" );
+		return -1;
+	}
+
+	std::shared_ptr<s_item_enchant> group = item_enchant_db.find( group_id );
+
+	if( group == nullptr ){
+		clif_displaymessage( fd, "[enchanttest] unknown group" );
+		return -1;
+	}
+
+	if( strcmpi( sub, "resetchance" ) == 0 ){
+		group->reset.chance = a;
+		sprintf( atcmd_output, "[enchanttest] group %" PRIu64 " reset chance = %u (memory only, @enchanttest restore)", group_id, a );
+		clif_displaymessage( fd, atcmd_output );
+		return 0;
+	}
+
+	std::shared_ptr<s_item_enchant_slot> slot = util::umap_find( group->slots, static_cast<uint16>( a ) );
+
+	if( slot == nullptr ){
+		clif_displaymessage( fd, "[enchanttest] unknown slot" );
+		return -1;
+	}
+
+	if( strcmpi( sub, "slotchance" ) == 0 ){
+		slot->normal.chance = b;
+		sprintf( atcmd_output, "[enchanttest] group %" PRIu64 " slot %u chance = %u (memory only, @enchanttest restore)", group_id, a, b );
+		clif_displaymessage( fd, atcmd_output );
+		return 0;
+	}
+
+	if( strcmpi( sub, "gradebonus" ) == 0 ){
+		slot->normal.enchantgradeChanceIncrease[static_cast<uint16>( b )] = c;
+		sprintf( atcmd_output, "[enchanttest] group %" PRIu64 " slot %u grade %u bonus = %u (memory only, @enchanttest restore)", group_id, a, b, c );
+		clif_displaymessage( fd, atcmd_output );
+		return 0;
+	}
+
+	clif_displaymessage( fd, "[enchanttest] unknown subcommand" );
+	return -1;
+}
+
+/*==========================================
+ * NEED test only: @v2try <plan> <out> (GM 99)
+ * Runs an enchant test plan (tools/need_enchant/tc_plan.py) on this character through the real request handlers
+ * and writes one JSON line per request to <out> (checked by tools/need_enchant/tc_verify.py).
+ * The plan deletes and creates items and sets zeny: use a test character only.
+ *------------------------------------------*/
+ACMD_FUNC(v2try)
+{
+	char plan[256] = {}, out[256] = {};
+
+	nullpo_retr(-1, sd);
+
+	if( pc_get_group_level( sd ) < 99 ){
+		return -1;
+	}
+
+	if( !message || !*message || sscanf( message, "%255s %255s", plan, out ) < 2 ){
+		clif_displaymessage( fd, "Usage: @v2try <plan file> <output file>  (test character only: items and zeny are replaced)" );
+		return -1;
+	}
+
+	int32 tries = 0, errors = 0;
+
+	if( !need_enchant_plan_run( *sd, plan, out, tries, errors ) ){
+		clif_displaymessage( fd, "[v2try] cannot open the plan / output file, or a plan is already running" );
+		return -1;
+	}
+
+	sprintf( atcmd_output, "[v2try] started: %s -> %s (a message follows when it is done)", plan, out );
+	clif_displaymessage( fd, atcmd_output );
+	return 0;
+}
+#endif
 
 /*==========================================
  * @refresh (like @jumpto <<yourself>>)
@@ -13276,6 +13488,26 @@ ACMD_FUNC(reloadrunedb)
 	return 0;
 }
 
+/*==========================================
+ * @runetooltipcheck - NEED rune tooltip: compare every rune state's icon and the bonuses the
+ * rune scripts really pass with the generated table (tools/need_rune_tooltip). Use a test character:
+ * it recalculates the status ~1,100 times and current HP/SP may be clamped.
+ *------------------------------------------*/
+ACMD_FUNC(runetooltipcheck)
+{
+	nullpo_retr(-1, sd);
+
+	std::vector<std::string> report;
+	bool ok = rune_display_check(sd, report);
+
+	for (const auto& line : report) {
+		clif_displaymessage(fd, line.c_str());
+		ShowInfo("%s\n", line.c_str());
+	}
+
+	return ok ? 0 : -1;
+}
+
 #include <custom/atcommand.inc>
 
 /**
@@ -13494,6 +13726,13 @@ void atcommand_basecommands(void) {
 		ACMD_DEF(changecharsex),
 		ACMD_DEF(mute),
 		ACMD_DEF(refresh),
+#ifdef NEED_DQ_TEST
+		ACMD_DEF(dqtest),
+#endif
+#ifdef NEED_ENCHANT_TEST
+		ACMD_DEF(enchanttest),
+		ACMD_DEF(v2try),
+#endif
 		ACMD_DEF(refreshall),
 		ACMD_DEF(identify),
 		ACMD_DEF(identifyall),
@@ -13621,6 +13860,7 @@ void atcommand_basecommands(void) {
 		ACMD_DEF(setcard),
 		ACMD_DEF(macrochecker),
 		ACMD_DEF(reloadrunedb),
+		ACMD_DEF(runetooltipcheck),
 	};
 	AtCommandInfo* atcommand;
 	int32 i;

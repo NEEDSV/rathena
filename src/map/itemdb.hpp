@@ -4029,6 +4029,17 @@ public:
 
 extern ItemEnchantDatabase item_enchant_db;
 
+// NEED: item enchant chances are on a 100000 base (0 = 0%, 100000 = 100%)
+const uint32 ITEM_ENCHANT_CHANCE_BASE = 100000;
+
+uint32 itemdb_enchant_success_chance( const s_item_enchant_slot& slot, uint16 enchantgrade );
+bool itemdb_enchant_roll( uint32 chance );
+uint64 itemdb_enchant_total_weight( const s_item_enchant_normal& pool );
+std::shared_ptr<s_item_enchant_normal_sub> itemdb_enchant_pick( const s_item_enchant_normal& pool );
+#ifdef NEED_ENCHANT_TEST
+bool itemdb_enchant_selftest( const char* dump_path );
+#endif
+
 struct s_item_package_item{
 	t_itemid item_id;
 	uint16 amount;
