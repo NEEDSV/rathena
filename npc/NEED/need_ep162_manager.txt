@@ -387,6 +387,8 @@ function	script	F_NEED_EP162_WernerStoryReward	{
 }
 
 // NEED: 직업별 Imperial 교환 상점 키를 돌려줍니다 (원본 Imperial Operator 와 동일한 매핑).
+//   2026-10-28: 임페리얼 직업 특화 장비는 EP16.2 에서 열지 않으므로 현재 호출하는 곳이 없습니다.
+//   shop_ext162_* barter 정의(npc/re/merchants/barters/quests_16_2.yml)와 함께 추후 임페리얼 업데이트용으로 보존합니다.
 //   "" : 교환 대상 직업이 아님 (3차 직업 / 확장 직업만 가능)
 // 반환값은 barter 상점 이름(내부 키)이므로 절대 번역하지 않습니다.
 function	script	F_NEED_EP162_ImperialShop	{
@@ -441,18 +443,10 @@ function	script	F_NEED_EP162_ImperialShop	{
 
 // NEED: 구 페이욘 교환 자판기(shop.txt) "EP16.2" 메뉴.
 function	script	F_NEED_EP162_ExchangeMenu	{
-	switch( select( needtr("슈발츠 명예의 증표 교환", "Schwartz Honor Token Exchange"), needtr("임페리얼 장비 (직업별)", "Imperial Gear (by job)"), needtr("취소", "Cancel") ) ) {
+	// NEED 2026-10-28: 임페리얼 장비(직업별) 메뉴 제거 - EP16.2 에서는 임페리얼 직업 특화 장비를 열지 않습니다.
+	switch( select( needtr("슈발츠 명예의 증표 교환", "Schwartz Honor Token Exchange"), needtr("취소", "Cancel") ) ) {
 	case 1:
 		callshop "ep162_swz_exchange";
-		end;
-	case 2:
-		.@shop$ = callfunc("F_NEED_EP162_ImperialShop");
-		if (.@shop$ == "") {
-			mes needtr("[교환 자판기]", "[Exchange Machine]");
-			mes needtr("임페리얼 장비는 3차 직업과 확장 직업만 교환할 수 있습니다.", "Imperial gear can only be exchanged by 3rd classes and expanded classes.");
-			close;
-		}
-		callshop .@shop$;
 		end;
 	}
 	end;
@@ -666,7 +660,6 @@ L_Exchange:
 	mes needtr("의제의 로브 / 협의의 로브 : ^FF0000700개^000000", "Agenda Robe / Consultation Robe : ^FF0000700^000000");
 	mes needtr("공화국의 모자 : ^FF00001,500개^000000", "Republic Hat : ^FF00001,500^000000");
 	mes needtr("용병의 반지 A/B, 의상 전투의 흔적 : ^FF00001,050개^000000", "Mercenary Ring A/B, Costume Combat Vestige : ^FF00001,050^000000");
-	mes needtr("임페리얼 장비는 직업별로 교환할 수 있습니다.", "Imperial gear can be exchanged by job.");
 	next;
 	mes needtr("[슈발츠 명예의 증표 교환]", "[Schwartz Honor Token Exchange]");
 	mes needtr("교환은 구 페이욘 ^4d4dff교환 자판기^000000의 'EP16.2' 메뉴에서도 할 수 있습니다.", "You can also exchange at the Old Payon ^4d4dffExchange Machine^000000 ('EP16.2').");
