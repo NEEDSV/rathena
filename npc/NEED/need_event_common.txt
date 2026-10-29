@@ -1,0 +1,133 @@
+//============================================================
+// NEED 이벤트 공용 함수
+//============================================================
+//= 2026-10-29 need_chuseok.txt 에서 분리했다. 추석 이벤트 NPC 는 내리고(미로드),
+//= 아래 함수만 계속 로드한다.
+//=   - F_NEED_Chuseok_BG_Reward : bg_common.txt F_BG_Badge, kvm01.txt 전장 보상에서 호출.
+//=       없으면 callfunc 실패로 보상 스크립트가 끊겨 뒤의 할로윈 코인이 지급되지 않는다.
+//=       $NEED_CHUSEOK_EVENT_ON 이 0 이면 아무것도 주지 않는다.
+//=   - F_NEED_Chuseok_WeekKey / WeekResetStr$ / LimitUsed / LimitReserve / LimitRelease :
+//=       교환 한도 원장(need_chuseok_exchange_limit). 2026 할로윈(event_id 202610)이 같은 원장을 쓴다.
+//= 함수 이름은 호출처가 많아 그대로 둔다.
+//============================================================
+
+//------------------------------------------------------------
+// 공통 상수 / 상태
+//------------------------------------------------------------
+function	script	F_NEED_Chuseok_Active	{
+	return ($NEED_CHUSEOK_EVENT_ON != 0);
+}
+
+//------------------------------------------------------------
+// 전장 종료 보상 - 송편 재료 지급
+//
+// getarg(0) 1=티에라 / 2=플라비우스 / 3=KVM
+//
+// 기존 전장 정상 보상 지급 대상자 판정을 그대로 사용한다.
+// (bg_common.txt F_BG_Badge, kvm01.txt F_KvM_GrantReward 에서 호출)
+// 승리팀 / 패배팀 지급량 차이는 두지 않는다.
+//------------------------------------------------------------
+function	script	F_NEED_Chuseok_BG_Reward	{
+	.@stage = getarg(0);
+
+	if (.@stage < 1 || .@stage > 3)
+		return;
+	if (!$NEED_CHUSEOK_EVENT_ON)
+		return;
+
+	// 송편 2개분 / 2개분 / 3개분 = 한 사이클 송편 7개분
+	setarray .@dough[1], 8, 8, 12;
+	setarray .@pine[1], 2, 2, 3;
+
+	if ($NEED_CHUSEOK_BG_MATERIAL_ON) {
+		getitem 7613, .@dough[.@stage];
+		getitem 1001827, .@pine[.@stage];
+		dispbottom needtr("[추석 이벤트] 송편 재료를 받았습니다. (작은 찹쌀반죽 ", "[Chuseok Event] You received Korean Rice Cake ingredients. (Small Rice Cake Dough x") + .@dough[.@stage] + needtr("개 / 솔잎 ", " / Pine Needles x") + .@pine[.@stage] + needtr("개)", ")");
+	}
+	return;
+}
+
+
+//------------------------------------------------------------
+// 계정 + IP 단위 교환 한도
+//
+// 주간 주기 기준은 행운의 알 천장(need_lucky_ceiling.txt S_WeekKey)과 동일하게
+// 매주 토요일 22:00 이다.
+//
+// 꿀송편 일일 제한과 같은 방식으로 계정과 접속 IP 를 모두 본다. 둘 중 하나라도
+// 한도에 걸리면 교환되지 않으므로, 다중 계정으로 우회할 수 없다.
+//
+//   scope      : 'ACCOUNT' 또는 'IP'
+//   subject    : ACCOUNT 는 account_id, IP 는 접속 IP 문자열
+//   product    : 'DAECHUK' 대축(6635) / 'ARIA' 아리아 의상 선택 상자(399935)
+//   period_key : 주간 상품은 직전 토요일 22:00 의 YYYYMMDD, 시즌 상품은 0
+//------------------------------------------------------------
+
+// 매주 토요일 22:00 기준 주기 키 (YYYYMMDD)
+function	script	F_NEED_Chuseok_WeekKey	{
+	.@dow = gettime(DT_DAYOFWEEK);		// 0 = 일 ... 6 = 토
+	.@back = (.@dow + 1) % 7;			// 직전 토요일까지 며칠 전인가
+
+	if (.@back == 0 && gettime(DT_HOUR) < 22)
+		.@back = 7;						// 토요일 21:59 까지는 지난 주기
+
+	return atoi(gettimestr("%Y%m%d", 11, gettimetick(2) - .@back * 86400));
+}
+
+// 다음 주간 초기화 시점 안내 문자열
+function	script	F_NEED_Chuseok_WeekResetStr$	{
+	.@dow = gettime(DT_DAYOFWEEK);
+	.@fwd = (6 - .@dow + 7) % 7;
+
+	if (.@fwd == 0 && gettime(DT_HOUR) >= 22)
+		.@fwd = 7;
+
+	return gettimestr("%Y-%m-%d", 11, gettimetick(2) + .@fwd * 86400) + needtr(" (토) 22:00", " (Sat) 22:00");
+}
+
+// 현재 주기에서 이 대상(scope+subject)이 사용한 횟수. 조회 실패 시 -1.
+// getarg(0) scope$ / getarg(1) subject$ / getarg(2) product$ / getarg(3) period_key
+// getarg(4) event_id (생략 시 202609 추석. 2026 할로윈은 202610 으로 같은 원장을 쓴다)
+function	script	F_NEED_Chuseok_LimitUsed	{
+	.@rows = query_sql("SELECT `used` FROM `need_chuseok_exchange_limit` WHERE `event_id`=" + getarg(4, 202609) + " AND `scope`='" + escape_sql(getarg(0)) + "' AND `subject`='" + escape_sql(getarg(1)) + "' AND `product`='" + escape_sql(getarg(2)) + "' AND `period_key`=" + getarg(3), .@used);
+
+	if (.@rows < 0)
+		return -1;
+	if (.@rows < 1)
+		return 0;
+
+	return .@used;
+}
+
+// 한 쪽(scope) 한도를 예약한다. 성공하면 갱신된 사용량, 한도 초과면 -1.
+// getarg(0) scope$ / getarg(1) subject$ / getarg(2) product$
+// getarg(3) period_key / getarg(4) 한도 / getarg(5) 수량 / getarg(6) event_id (생략 시 202609)
+function	script	F_NEED_Chuseok_LimitReserve	{
+	.@scope$ = getarg(0);
+	.@subject$ = getarg(1);
+	.@product$ = getarg(2);
+	.@period = getarg(3);
+	.@cap = getarg(4);
+	.@amount = getarg(5);
+	.@event = getarg(6, 202609);
+
+	.@before = callfunc("F_NEED_Chuseok_LimitUsed", .@scope$, .@subject$, .@product$, .@period, .@event);
+	if (.@before < 0 || .@before + .@amount > .@cap)
+		return -1;
+
+	// 한도를 넘기는 갱신은 SQL 쪽에서도 한 번 더 막는다.
+	query_sql("INSERT INTO `need_chuseok_exchange_limit` (`event_id`,`scope`,`subject`,`product`,`period_key`,`used`) VALUES (" + .@event + ",'" + escape_sql(.@scope$) + "','" + escape_sql(.@subject$) + "','" + escape_sql(.@product$) + "'," + .@period + "," + .@amount + ") ON DUPLICATE KEY UPDATE `used` = IF(`used` + " + .@amount + " <= " + .@cap + ", `used` + " + .@amount + ", `used`)");
+
+	.@after = callfunc("F_NEED_Chuseok_LimitUsed", .@scope$, .@subject$, .@product$, .@period, .@event);
+	if (.@after != .@before + .@amount)
+		return -1;			// 예약되지 않았다.
+
+	return .@after;
+}
+
+// 예약을 되돌린다. 한쪽만 예약된 채로 끝나는 일이 없도록 쓴다.
+// getarg(0) scope$ / getarg(1) subject$ / getarg(2) product$ / getarg(3) period_key / getarg(4) 수량 / getarg(5) event_id (생략 시 202609)
+function	script	F_NEED_Chuseok_LimitRelease	{
+	query_sql("UPDATE `need_chuseok_exchange_limit` SET `used` = IF(`used` >= " + getarg(4) + ", `used` - " + getarg(4) + ", 0) WHERE `event_id`=" + getarg(5, 202609) + " AND `scope`='" + escape_sql(getarg(0)) + "' AND `subject`='" + escape_sql(getarg(1)) + "' AND `product`='" + escape_sql(getarg(2)) + "' AND `period_key`=" + getarg(3));
+	return;
+}
