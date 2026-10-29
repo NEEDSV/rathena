@@ -8691,8 +8691,19 @@ rebel_in,90,51,5	script	레이첼 스미스#16.2rm::Rachel Smith#16.2rm	4_F_GUNSLINGER
 		next;
 		if (select( needtr("부탁을 들어준다.","Grant her favor."), needtr("부탁을 거절한다.","Reject her favor.") ) == 1) {
 			// note: always iron
+			// NEED: 오늘 재료 수집 쿨타임(16037)이 이미 있으면(오늘 납품했거나 캐시 즉시완료) 철 의뢰를 내일로 미룹니다.
+			//       원본은 여기서 16040 을 바로 줘서, 쿨타임 중에는 다음 04:00 까지 납품할 수 없는 퀘스트가 남았습니다.
+			.@need_cd = checkquest(16037,PLAYTIME);
 			mes needtr("[레이첼 스미스]","[Rachel Smith]");
 			mes needtr("감사합니다, 모험가님.","Thank you, adventurer.");
+			if (.@need_cd == 0 || .@need_cd == 1) {
+				mes needtr("오늘 필요한 재료는 이미 충분해요. 내일부터 하루 한 번 부탁드릴게요.","I already have enough materials for today. Please help me once a day starting tomorrow.");
+				next;
+				completequest 16036;// Expert's keen eye
+				getitem 25155,7;// Swz_Honor_Token
+				rachel_quest_16_2 = 3;
+				close;
+			}
 			mes needtr("음... 가장 중요한 건.. 어디 보자. 오늘은.. 철이 좀 필요하네요.","Hmm... The most important item is.. Let me see. Today.. I need some Iron.");
 			mes needtr("철 5개요. 가져다주실 수 있을까요?","Five Iron. Could you please bring them to me?");
 			next;
