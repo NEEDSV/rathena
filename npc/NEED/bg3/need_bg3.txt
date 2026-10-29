@@ -1,0 +1,1907 @@
+//============================================================
+// NEED 3:3 룬 거점전 - 경기 코어 (A단계, 개발 서버 검증용, 보상/원장 없음)
+//============================================================
+//= 기획 : NEED_BG3_Rune_Control GDD v0.6 + v0.7 결정안 (2026-10-29)
+//= 맵   : need_bg3 (pvp_2vs2 지형 복제 = need_bg2 와 같은 셀, npc/NEED/bg3/need_bg3_mapflag.txt).
+//=        중앙 6x6 밀폐 박스(37..42)는 부활 대기실(BG 묘지), 그 안에 룬 크리스탈(표시용 NPC).
+//=        점령 범위 = 박스를 둘러싼 2칸 폭 고리(x/y 34..45 에서 36..43 제외, 80칸, 2:2 중앙 거점과 같은 칸).
+//=        본진 = 2:2 준비구역과 같은 사각형(블루 14..21 x 36..43, 레드 58..65 x 36..43).
+//= 팀   : 엔진 BG 팀 2개(블루/레드), 3명씩. 아군/적군은 bg_id 로만 판정. 같은 파티가 갈려도 need_bgpartysplit.
+//= 신청 : 공개 개인 FIFO(@룬참가), 경기장이 비고 6명이 모이면 맨 앞 6명에게 30초 참가 확인(@룬수락).
+//=        GM 수동 6인 테스트(@bg3 open/start)도 있다. 2:2·기존 전장과 양방향 중복 신청 금지.
+//= 편성 : 지원 점수(아크비숍 2, 소서러/민스트럴/원더러 1) 합 차이 최소 → 같은 직업 집중 최소 → 무작위.
+//= 경기 : 준비 45초 → 단판 5분. 시작과 동시에 점령 가능.
+//=        한 팀만(살아 있고 은신하지 않은 참가자) 고리 안에 5초 → 점령. 소유 팀이 혼자 있는 동안 연속 2초마다 +1점.
+//=        경합(양 팀)이면 시도·득점 정지(시도 누적은 보존), 무인이면 시도 누적 0. 상대만 남으면 그 팀 0초부터.
+//=        소유 팀만 다시 남으면 상대 탈환 누적 0, 득점 2초는 새로 센다. 100점 선취 즉시 승리.
+//=        5분 종료 시 높은 점수 승리, 동점은 무승부(연장 없음).
+//= 사망 : 엔진이 1초 뒤 부활 대기실(박스)로 옮기고, 사망 10초 뒤 이 스크립트가 자기 본진 시작점에서 부활시킨다.
+//=        일반 자동 부활은 need_noautorevive 로 막는다. 대기 중에는 공격/스킬/아이템 불가, 피해 면역.
+//= 본진 : 자기 본진 안에서는 공격/스킬 불가 + 피해 면역(안→밖, 밖→안 모두 차단). 상대 본진에 들어가면 입구 밖으로 밀어낸다.
+//=        위치 감시는 0.5초 간격이다.
+//= 탈주 : 접속 종료는 경기당 개인 누적 15초 재접속 유예. 만료 = 확정 탈주(그 사람만 0점), 경기는 계속.
+//=        한 팀 3명이 모두 확정 탈주하면: 실제 교전이 없었으면 무효, 있었으면 그 팀 몰수패. 양 팀 모두면 무효.
+//=        접속 중 경기장/팀 이탈(시스템/GM 이동)은 경기 무효. 준비시간 이탈 확정은 경기 취소(제재 없음).
+//= 판정 : 종료 사유 → 실제 적대 교전 여부(없으면 VOID) → 몰수 → 점수. 경기 결과는 한 번만 확정한다.
+//= 점수 : 승 +2 / 패 +1 / 유효 무승부 +1 / 확정 탈주자·무효·취소 0. A단계는 로그와 개인 안내만 하고 저장하지 않는다.
+//= 명령 : @bg3 (@룬관리) GM 60+ / @bg3join(@룬참가) @bg3cancel(@룬취소) @bg3status(@룬현황) @bg3accept(@룬수락) @bg3decline(@룬거절)
+//= 상태 : 0 IDLE  1 RECRUITING(GM 테스트)  2 PREPARING  4 ACTIVE  6 MATCH_FINISHED  7 CLEANUP
+//= 로그 : debugmes "[NEED_BG3] ..." -> log/map-msg_log.log. $NEED_BG3_LOG_OFF = 1 이면 끈다.
+//= 변수 : $@NBG3_*  임시(리로드/재시작 시 그 경기는 무효, 대기열은 재신청).
+//=        NEED_BG3_MID 캐릭터(재접속 정리용). @NEED_BG3_BGID / @NEED_BG3_PB 세션.
+//=        @NEED_BG3_BUSY 세션(1 대기/GM 명단, 2 참가 확인, 3 경기). 같은 값을 @NEED_BG2_BUSY 에도 둔다:
+//=        기존 전장(엔진 대기열, 티에라/플라비우스/KVM 파티 입장, 랜덤 매칭)이 그 변수로 신청을 막는다.
+//=        2:2 는 F_NEED_BG2_InRandomMatch 에서 @NEED_BG3_BUSY 를 본다. 3:3 은 2:2 쪽 값(@NEED_BG3_BUSY 없이 켜진
+//=        @NEED_BG2_BUSY)과 2:2 계정 상태(F_NEED_BG2_AidBusy)를 본다. 두 상태는 동시에 켜지지 않는다.
+//=        $NEED_BG3_QUEUE_OPEN(기본 0), $NEED_BG3_LVBYPASS(GM 테스트만), $NEED_BG3_LASTMID, $NEED_BG3_NP[32]/_POS.
+//= 재사용: 2:2 의 일반 함수 F_NEED_BG2_Support / F_NEED_BG2_TeamName$ / F_NEED_BG2_Reattach / F_NEED_BG2_Companions /
+//=        F_NEED_BG2_EndNoRevive / F_NEED_BG2_ReturnOk / F_NEED_BG2_AidBusy 와 2:2 상태 목록($@NBG2_SC_NOREV). 2:2 파일이 먼저 로드된다.
+//============================================================
+
+function	script	F_NEED_BG3_Init	{
+	$@NBG3_MAP$ = "need_bg3";
+	$@NBG3_LOADED = 1;
+	// 시작점 = 본진 안. 인덱스 = (팀-1)*3 + 슬롯. 블루 좌측, 레드 우측, (x,y) <-> (79-x,79-y) 대칭.
+	setarray $@NBG3_SPX[0], 15, 16, 15, 64, 63, 64;
+	setarray $@NBG3_SPY[0], 39, 40, 40, 40, 39, 39;
+	// 부활 대기실 = BG 팀 묘지(중앙 밀폐 박스). 엔진이 사망 1초 후 이곳에서 일으킨다.
+	setarray $@NBG3_BOXX[1], 38, 41;
+	setarray $@NBG3_BOXY[1], 41, 38;
+	// 본진(사각형, [1]=블루 [2]=레드). 2:2 준비구역과 같다.
+	setarray $@NBG3_ZX1[1], 14, 58;
+	setarray $@NBG3_ZY1[1], 36, 36;
+	setarray $@NBG3_ZX2[1], 21, 65;
+	setarray $@NBG3_ZY2[1], 43, 43;
+	// 상대 본진에 들어간 참가자를 내보낼 칸(그 본진 입구 바깥).
+	setarray $@NBG3_PUSHX[1], 15, 64;
+	setarray $@NBG3_PUSHY[1], 46, 33;
+	// 준비시간에만 막는 본진 경계 셀(본진 바로 바깥 테두리 중 원래 걸을 수 있는 셀, 블루 18 + 레드 18).
+	// need_bg3 셀(=pvp_2vs2)에서 계산한 고정 목록(2:2 와 같은 칸). 리로드 중에도 원상 복구할 수 있게 상수로 둔다.
+	setarray $@NBG3_WX[0],
+		14, 14, 15, 15, 16, 16, 17, 17, 18, 19, 19, 20, 20, 21, 21, 22, 22, 22,
+		65, 65, 64, 64, 63, 63, 62, 62, 61, 60, 60, 59, 59, 58, 58, 57, 57, 57;
+	setarray $@NBG3_WY[0],
+		35, 44, 35, 44, 35, 44, 35, 44, 35, 35, 44, 35, 44, 35, 44, 37, 42, 43,
+		44, 35, 44, 35, 44, 35, 44, 35, 44, 44, 35, 44, 35, 44, 35, 42, 37, 36;
+	$@NBG3_C_PREP = 45000;
+	$@NBG3_C_MATCH = 300000;	// 본 경기 5분
+	$@NBG3_C_RESPAWN = 10000;	// 사망 후 본진 부활까지
+	$@NBG3_C_SHOW = 5000;
+	$@NBG3_C_GRACE = 1000;		// 한 팀 전원 이탈 판정 전 동시 이탈을 기다리는 시간
+	$@NBG3_C_MINLV = 150;
+	$@NBG3_C_RECONNECT = 15000;	// 경기당 개인별 누적 재접속 유예
+	$@NBG3_C_RC = 30000;		// 참가 확인 시간
+	$@NBG3_C_CAP = 5000;		// 단독 확보 → 점령
+	$@NBG3_C_SCORE = 2000;		// 소유 팀 단독 유지 → +1점
+	$@NBG3_C_GOAL = 100;		// 선취 승리 점수
+	$@NBG3_C_ANN = 2000;		// 점령 상태 공지 최소 간격(도배 방지)
+	$@NBG3_C_FREEZE = PCBLOCK_ATTACK | PCBLOCK_IMMUNE;					// 준비시간(스킬은 허용, 지면/소환은 preplock)
+	$@NBG3_C_BASE = PCBLOCK_ATTACK | PCBLOCK_SKILL | PCBLOCK_IMMUNE;			// 경기 중 자기 본진 안
+	$@NBG3_C_SPEC = PCBLOCK_ATTACK | PCBLOCK_SKILL | PCBLOCK_USEITEM | PCBLOCK_IMMUNE;	// 부활 대기
+	$@NBG3_C_LOCK = PCBLOCK_MOVE | PCBLOCK_ATTACK | PCBLOCK_SKILL | PCBLOCK_USEITEM | PCBLOCK_IMMUNE;
+	$@NBG3_C_OURS = $@NBG3_C_LOCK;
+	return;
+}
+
+function	script	F_NEED_BG3_Log	{
+	if (!$NEED_BG3_LOG_OFF)
+		debugmes "[NEED_BG3] " + getarg(0);
+	return;
+}
+
+function	script	F_NEED_BG3_StateName$	{
+	switch (getarg(0)) {
+	case 0: return "IDLE";
+	case 1: return "RECRUITING";
+	case 2: return "PREPARING";
+	case 4: return "ACTIVE";
+	case 6: return "MATCH_FINISHED";
+	case 7: return "CLEANUP";
+	}
+	return "UNKNOWN";
+}
+
+// 첨부된 플레이어에게 거절 사유를 보여 줄 문장.
+function	script	F_NEED_BG3_Reason$	{
+	switch (getarg(0)) {
+	case 1: return needtr("접속 중이 아닙니다.", "not online.");
+	case 2: return needtr("사망 상태입니다.", "dead.");
+	case 3: return needtr("이미 전장 팀에 소속되어 있습니다.", "already in a battleground team.");
+	case 4: return needtr("전장/PvP/GvG/인스턴스/이동 금지 맵에서는 신청할 수 없습니다.", "cannot sign up from a battleground, PvP, GvG, instance or no-warp map.");
+	case 5: return needtr("BaseLevel " + $@NBG3_C_MINLV + " 이상만 참가할 수 있습니다.", "BaseLevel " + $@NBG3_C_MINLV + " or higher is required.");
+	case 6: return needtr("노점/자동 판매 중에는 참가할 수 없습니다.", "cannot join while vending.");
+	case 8: return needtr("다른 전장(2:2 듀오/랜덤 매칭/전장 대기열/파티 입장 등록/전장 신청)에 신청 중입니다. 그쪽을 먼저 취소하세요.", "you are signed up for another battleground (2v2 Duo, random match, battleground queue, party entry or battleground application). Cancel it first.");
+	case 9: return needtr("이 계정은 이미 3:3 대기열/참가 확인/경기에 있습니다.", "this account is already in the 3v3 queue, a ready check or a match.");
+	case 10: return needtr("지금은 참가 신청을 받지 않습니다.", "sign-ups are not open now.");
+	case 11: return needtr("정원 6명이 모두 찼습니다.", "all 6 places are taken.");
+	case 12: return needtr("거래 중에는 참가할 수 없습니다.", "cannot join while trading.");
+	case 13: return needtr("최근 24시간 경기 이탈 누적으로 전장 신청이 제한되었습니다. 남은 시간 " + (@NEED_BG3_SANC_LEFT / 60 + 1) + "분",
+			"battleground sign-ups are restricted for leaving matches in the last 24 hours. Time left: " + (@NEED_BG3_SANC_LEFT / 60 + 1) + " min");
+	}
+	return "?";
+}
+
+// 첨부된 플레이어의 3:3 상태 표시. 같은 값을 @NEED_BG2_BUSY 에 두어 기존 전장 신청 검사가 막게 한다.
+function	script	F_NEED_BG3_BusySelf	{
+	@NEED_BG3_BUSY = getarg(0);
+	@NEED_BG2_BUSY = getarg(0);
+	return;
+}
+
+function	script	F_NEED_BG3_SetBusy	{
+	.@caller = playerattached();
+	if (isloggedin(getarg(0), getarg(1)) && attachrid(getarg(0))) {
+		if (getcharid(0) == getarg(1))
+			callfunc "F_NEED_BG3_BusySelf", getarg(2);
+		detachrid;
+	}
+	callfunc "F_NEED_BG2_Reattach", .@caller;
+	return;
+}
+
+// 첨부된 플레이어가 다른 전장에 신청/등록되어 있는지(3:3 자신 제외). 읽기만 한다.
+// 2:2 의 F_NEED_BG2_InRandomMatch 와 같은 항목 + 2:2 대기/경기(@NEED_BG2_BUSY 를 3:3 이 켜지 않은 경우, 또는 계정 단위 2:2 상태).
+function	script	F_NEED_BG3_InOther	{
+	.@aid = getarg(0);
+	for (.@i = 0; .@i < $@BG_RM_COUNT; .@i++)
+		if ($@BG_RM_AID[.@i] == .@aid) return 1;
+	for (.@i = 0; .@i < $@BG_RM_G_COUNT; .@i++)
+		if ($@BG_RM_G_AID[.@i] == .@aid) return 1;
+	for (.@i = 0; .@i < $@BG_RM_C_COUNT; .@i++)
+		if ($@BG_RM_C_AID[.@i] == .@aid) return 1;
+	for (.@i = 0; .@i < $@BG_RM_QUEUE_COUNT; .@i++)
+		if ($@BG_RM_QUEUE_AID[.@i] == .@aid) return 1;
+	.@pid = getcharid(1);
+	if (.@pid && ((.@pid == $BG_GUILLAUME_PARTY_ID) || (.@pid == $BG_CROIX_PARTY_ID)))
+		return 1;
+	if (need_bg2_pcstate(0))
+		return 1;
+	if (@NEED_BG2_BUSY && !@NEED_BG3_BUSY)
+		return 1;
+	if (callfunc("F_NEED_BG2_AidBusy", .@aid))
+		return 1;
+	return 0;
+}
+
+// 첨부된 플레이어의 참가 조건 검사. 0 = 통과, 그 밖에는 F_NEED_BG3_Reason$ 코드.
+// getarg(0) = 1 이면 공개 대기열(GM 테스트 레벨 우회 미적용).
+function	script	F_NEED_BG3_CheckSelf	{
+	if (Hp < 1)
+		return 2;
+	if (getcharid(4))
+		return 3;
+	if (getmapxy(.@m$, .@x, .@y) != 0)
+		return 1;
+	if (.@m$ == $@NBG3_MAP$ || !callfunc("F_NEED_BG2_ReturnOk", .@m$, .@x, .@y) || getmapflag(.@m$, mf_nowarp))
+		return 4;
+	if ((getarg(0, 0) || !$NEED_BG3_LVBYPASS) && BaseLevel < $@NBG3_C_MINLV)
+		return 5;
+	if (checkvending())
+		return 6;
+	if (need_bg2_pcstate(1))
+		return 12;
+	if (callfunc("F_NEED_BG3_InOther", getcharid(3)))
+		return 8;
+	return 0;
+}
+
+// 최근 24시간 탈주 제재(2:2 Phase 3 원장 기준, 2:2·3:3 합산 정책). 2:2 Phase 3 가 꺼져 있으면 검사하지 않는다.
+// A단계의 3:3 경기는 아직 원장에 탈주를 쓰지 않는다(B단계).
+function	script	F_NEED_BG3_SanctionCheck	{
+	@NEED_BG3_SANC_LEFT = 0;
+	if (!$@NBG2P3_LOADED || !$NEED_BG2_P3_ON)
+		return 0;
+	.@left = callfunc("F_NEED_BG2P3_Sanction", getcharid(3), gettimetick(2));
+	if (.@left > 0) {
+		@NEED_BG3_SANC_LEFT = .@left;
+		return 13;
+	}
+	return 0;
+}
+
+function	script	F_NEED_BG3_IndexOf	{
+	for (.@i = 0; .@i < $@NBG3_N; .@i++)
+		if ($@NBG3_CID[.@i] == getarg(0)) return .@i;
+	return -1;
+}
+
+function	script	F_NEED_BG3_InZone	{
+	.@t = getarg(0);
+	return (getarg(1) >= $@NBG3_ZX1[.@t] && getarg(1) <= $@NBG3_ZX2[.@t] && getarg(2) >= $@NBG3_ZY1[.@t] && getarg(2) <= $@NBG3_ZY2[.@t]);
+}
+
+function	script	F_NEED_BG3_InBox	{
+	return (getarg(0) >= 37 && getarg(0) <= 42 && getarg(1) >= 37 && getarg(1) <= 42);
+}
+
+function	script	F_NEED_BG3_InRing	{
+	.@x = getarg(0);
+	.@y = getarg(1);
+	return (.@x >= 34 && .@x <= 45 && .@y >= 34 && .@y <= 45 && !(.@x >= 36 && .@x <= 43 && .@y >= 36 && .@y <= 43));
+}
+
+// 첨부된 참가자의 행동 제한을 mode 로 맞춘다. 이 시스템이 걸지 않은 기존 제한 비트(@NEED_BG3_PB)는 건드리지 않는다.
+function	script	F_NEED_BG3_SetMode	{
+	.@mine = $@NBG3_C_OURS & ~@NEED_BG3_PB;
+	setpcblock .@mine, 0;
+	if (getarg(0) & .@mine)
+		setpcblock getarg(0) & .@mine, 1;
+	@NEED_BG3_MODE = getarg(0);
+	return;
+}
+
+function	script	F_NEED_BG3_ModeAll	{
+	.@caller = playerattached();
+	for (.@i = 0; .@i < $@NBG3_N; .@i++) {
+		if ($@NBG3_GONE[.@i] || !isloggedin($@NBG3_AID[.@i], $@NBG3_CID[.@i]))
+			continue;
+		if (!attachrid($@NBG3_AID[.@i]))
+			continue;
+		if (getcharid(0) == $@NBG3_CID[.@i] && strcharinfo(3) == $@NBG3_MAP$)
+			callfunc "F_NEED_BG3_SetMode", getarg(0);
+		detachrid;
+	}
+	callfunc "F_NEED_BG2_Reattach", .@caller;
+	return;
+}
+
+// 준비시간 경계: on = 1 이면 본진 경계 셀을 막고 지면 설치·소환 스킬을 잠근다. 0 이면 둘 다 푼다.
+function	script	F_NEED_BG3_PrepLock	{
+	.@on = getarg(0);
+	for (.@k = 0; .@k < getarraysize($@NBG3_WX); .@k++)
+		setcell $@NBG3_MAP$, $@NBG3_WX[.@k], $@NBG3_WY[.@k], $@NBG3_WX[.@k], $@NBG3_WY[.@k], cell_walkable, !.@on;
+	if (.@on)
+		setmapflag $@NBG3_MAP$, mf_need_preplock;
+	else
+		removemapflag $@NBG3_MAP$, mf_need_preplock;
+	return;
+}
+
+// 참가자가 소환한 임시 몬스터를 모두 없앤다(종료/정리 때).
+function	script	F_NEED_BG3_KillSummons	{
+	.@n = getmapunits(BL_MOB, $@NBG3_MAP$, .@g);
+	for (.@k = 0; .@k < .@n; .@k++) {
+		deletearray .@d;
+		getunitdata .@g[.@k], .@d;
+		for (.@i = 0; .@i < $@NBG3_N; .@i++) {
+			if (.@d[UMOB_MASTERAID] != $@NBG3_AID[.@i])
+				continue;
+			unitkill .@g[.@k];
+			.@cnt++;
+			break;
+		}
+	}
+	return .@cnt;
+}
+
+// 첨부된 참가자를 시작점 상태로: 부활/HP·SP 100%/자동 부활 효과 제거/설치물 제거/동반 유닛 회복/시작점 이동.
+function	script	F_NEED_BG3_SpawnSelf	{
+	.@cid = getcharid(0);
+	.@p = (getarg(0) - 1) * 3 + getarg(1);
+	recovery 0, .@cid, 1;
+	callfunc "F_NEED_BG2_EndNoRevive";
+	need_bg2_clearunits .@cid;
+	callfunc "F_NEED_BG2_Companions";
+	if (getarg(2, 1))
+		warp $@NBG3_MAP$, $@NBG3_SPX[.@p], $@NBG3_SPY[.@p];
+	return;
+}
+
+// 첨부된 (전) 참가자를 정리하고 저장 지점으로 보낸다. 여러 번 불려도 결과가 같다.
+// getarg(1) = 1 이면 탈주 제재 없음(무효/취소/시스템 이동): 엔진이 건 탈주자 상태를 지운다.
+function	script	F_NEED_BG3_RestoreSelf	{
+	.@cid = getcharid(0);
+	.@on = (strcharinfo(3) == $@NBG3_MAP$);
+	if (.@on || Hp < 1)
+		recovery 0, .@cid, 1;
+	.@mine = $@NBG3_C_OURS & ~@NEED_BG3_PB;
+	setpcblock .@mine, 0;
+	.@bg = getcharid(4);
+	if (.@bg && (.@bg == @NEED_BG3_BGID || .@bg == $@NBG3_BG[1] || .@bg == $@NBG3_BG[2]))
+		bg_leave;
+	.@to$ = "stay";
+	if (strcharinfo(3) == $@NBG3_MAP$) {
+		.@to$ = "SavePoint";
+		warp "SavePoint", 0, 0;
+	} else if (.@on)
+		.@to$ = "SavePoint(bg_leave)";
+	else if (getarg(2, 0) && NEED_BG3_MID) {
+		.@to$ = "SavePoint(off_arena)";
+		warp "SavePoint", 0, 0;
+	}
+	if (getarg(1, 0) && getstatus(SC_ENTRY_QUEUE_NOTIFY_ADMISSION_TIME_OUT)) {
+		sc_end SC_ENTRY_QUEUE_NOTIFY_ADMISSION_TIME_OUT;
+		.@to$ += " deserter_cleared";
+	}
+	callfunc "F_NEED_BG3_Log", "RESTORE match=" + NEED_BG3_MID + " aid=" + getcharid(3) + " cid=" + .@cid + " why=" + getarg(0) + " to=" + .@to$;
+	NEED_BG3_MID = 0;
+	@NEED_BG3_BGID = 0;
+	@NEED_BG3_PB = 0;
+	@NEED_BG3_MODE = 0;
+	@NEED_BG2_CB_HOST = 0;
+	@NEED_BG2_CB_HIT = 0;
+	@NEED_BG2_CB_SUP = 0;
+	callfunc "F_NEED_BG3_BusySelf", 0;
+	viewpoint 2, 39, 39, 1, 0xFFFFFF;
+	return;
+}
+
+// 제재 없이 끝난 경기(무효/취소) 번호. 그때 접속이 끊겨 있던 사람은 재접속 때 확인한다.
+function	script	F_NEED_BG3_RememberNoPenalty	{
+	.@slot = $NEED_BG3_NP_POS % 32;
+	$NEED_BG3_NP[.@slot] = $@NBG3_MATCH;
+	$NEED_BG3_NP_POS = .@slot + 1;
+	return;
+}
+
+function	script	F_NEED_BG3_IsNoPenalty	{
+	for (.@k = 0; .@k < 32; .@k++)
+		if ($NEED_BG3_NP[.@k] && $NEED_BG3_NP[.@k] == getarg(0)) return 1;
+	return 0;
+}
+
+function	script	F_NEED_BG3_ClearMatch	{
+	cleararray $@NBG3_AID[0], 0, 6;
+	cleararray $@NBG3_CID[0], 0, 6;
+	cleararray $@NBG3_TEAM[0], 0, 6;
+	cleararray $@NBG3_SLOT[0], 0, 6;
+	cleararray $@NBG3_DEAD[0], 0, 6;
+	cleararray $@NBG3_DEAD_AT[0], 0, 6;
+	cleararray $@NBG3_GONE[0], 0, 6;
+	cleararray $@NBG3_AWAY[0], 0, 6;
+	cleararray $@NBG3_AWAY_AT[0], 0, 6;
+	cleararray $@NBG3_GRACE_USED[0], 0, 6;
+	cleararray $@NBG3_HOST[0], 0, 6;
+	cleararray $@NBG3_HIT[0], 0, 6;
+	cleararray $@NBG3_DEATHS[0], 0, 6;
+	cleararray $@NBG3_PTS[0], 0, 6;
+	$@NBG3_N = 0;
+	$@NBG3_BG[1] = 0;
+	$@NBG3_BG[2] = 0;
+	$@NBG3_SCORE[1] = 0;
+	$@NBG3_SCORE[2] = 0;
+	$@NBG3_RESULT = -1;
+	$@NBG3_DEADLINE = 0;
+	$@NBG3_START_AT = 0;
+	$@NBG3_DEPART_AT = 0;
+	$@NBG3_WARNED = 0;
+	callfunc "F_NEED_BG3_CapReset";
+	return;
+}
+
+function	script	F_NEED_BG3_ClearRecruit	{
+	for (.@i = 0; .@i < $@NBG3_REG_N; .@i++)
+		callfunc "F_NEED_BG3_SetBusy", $@NBG3_REG_AID[.@i], $@NBG3_REG_CID[.@i], 0;
+	cleararray $@NBG3_REG_AID[0], 0, 12;
+	cleararray $@NBG3_REG_CID[0], 0, 12;
+	$@NBG3_REG_N = 0;
+	return;
+}
+
+function	script	F_NEED_BG3_RemoveReg	{
+	.@k = getarg(0);
+	callfunc "F_NEED_BG3_SetBusy", $@NBG3_REG_AID[.@k], $@NBG3_REG_CID[.@k], 0;
+	for (.@i = .@k; .@i < $@NBG3_REG_N - 1; .@i++) {
+		$@NBG3_REG_AID[.@i] = $@NBG3_REG_AID[.@i + 1];
+		$@NBG3_REG_CID[.@i] = $@NBG3_REG_CID[.@i + 1];
+	}
+	$@NBG3_REG_N--;
+	$@NBG3_REG_AID[$@NBG3_REG_N] = 0;
+	$@NBG3_REG_CID[$@NBG3_REG_N] = 0;
+	return;
+}
+
+function	script	F_NEED_BG3_Tell	{
+	.@caller = playerattached();
+	if (isloggedin(getarg(0), getarg(1)) && attachrid(getarg(0))) {
+		if (getcharid(0) == getarg(1)) {
+			if (getarg(5, 0))
+				announce needtr(getarg(2), getarg(3)), bc_self, getarg(4, "0x66CCFF");
+			dispbottom needtr(getarg(2), getarg(3)), 0x66CCFF;
+		}
+		detachrid;
+	}
+	callfunc "F_NEED_BG2_Reattach", .@caller;
+	return;
+}
+
+//------------------------------------------------------------
+// 편성 / 입장
+//------------------------------------------------------------
+
+// 확정된 6명($@NBG3_CAND_*) 안에서만 3:3 으로 나눈다. 10가지 분할 중
+// (1) 지원 점수 합 차이 최소 (2) 같은 직업이 한 팀에 몰린 쌍의 수 최소 (3) 그래도 같으면 무작위.
+// 팀 색과 팀 안의 시작점 순서도 무작위. 결과: $@NBG3_ORD[0..2] 블루, [3..5] 레드 (CAND 인덱스).
+function	script	F_NEED_BG3_Balance	{
+	for (.@i = 0; .@i < 6; .@i++) {
+		.@s[.@i] = callfunc("F_NEED_BG2_Support", $@NBG3_CAND_CLS[.@i]);
+		.@j[.@i] = eaclass($@NBG3_CAND_CLS[.@i]) & EAJ_FOURTHMASK;
+		.@tot += .@s[.@i];
+	}
+	// 0번은 항상 A팀(거울 분할 중복 제거). A = {0, a, b}, 1 <= a < b <= 5.
+	.@n = 0;
+	.@best = -1;
+	for (.@a = 1; .@a <= 4; .@a++) {
+		for (.@b = .@a + 1; .@b <= 5; .@b++) {
+			.@sa = .@s[0] + .@s[.@a] + .@s[.@b];
+			.@d = .@sa * 2 - .@tot;
+			if (.@d < 0)
+				.@d = -.@d;
+			// B 팀 = 나머지 셋
+			.@m = 0;
+			for (.@x = 1; .@x <= 5; .@x++) {
+				if (.@x == .@a || .@x == .@b)
+					continue;
+				.@bm[.@m] = .@x;
+				.@m++;
+			}
+			.@c = 0;
+			if (.@j[0] == .@j[.@a]) .@c++;
+			if (.@j[0] == .@j[.@b]) .@c++;
+			if (.@j[.@a] == .@j[.@b]) .@c++;
+			if (.@j[.@bm[0]] == .@j[.@bm[1]]) .@c++;
+			if (.@j[.@bm[0]] == .@j[.@bm[2]]) .@c++;
+			if (.@j[.@bm[1]] == .@j[.@bm[2]]) .@c++;
+			.@key = .@d * 10 + .@c;
+			.@ka[.@n] = .@a;
+			.@kb[.@n] = .@b;
+			.@kk[.@n] = .@key;
+			.@n++;
+			if (.@best < 0 || .@key < .@best)
+				.@best = .@key;
+		}
+	}
+	.@np = 0;
+	for (.@p = 0; .@p < .@n; .@p++) {
+		if (.@kk[.@p] != .@best)
+			continue;
+		.@pick[.@np] = .@p;
+		.@np++;
+	}
+	.@p = .@pick[0];
+	if (.@np > 1)	// rand(1) 은 오류다
+		.@p = .@pick[rand(.@np)];
+	setarray .@ta[0], 0, .@ka[.@p], .@kb[.@p];
+	.@m = 0;
+	for (.@x = 1; .@x <= 5; .@x++) {
+		if (.@x == .@ka[.@p] || .@x == .@kb[.@p])
+			continue;
+		.@tb[.@m] = .@x;
+		.@m++;
+	}
+	.@swap = rand(2);
+	for (.@k = 0; .@k < 3; .@k++) {
+		.@blue[.@k] = .@swap ? .@tb[.@k] : .@ta[.@k];
+		.@red[.@k] = .@swap ? .@ta[.@k] : .@tb[.@k];
+	}
+	// 팀 안 순서 섞기(시작점 슬롯)
+	for (.@k = 2; .@k > 0; .@k--) {
+		.@r = rand(.@k + 1);
+		.@t = .@blue[.@k]; .@blue[.@k] = .@blue[.@r]; .@blue[.@r] = .@t;
+		.@r = rand(.@k + 1);
+		.@t = .@red[.@k]; .@red[.@k] = .@red[.@r]; .@red[.@r] = .@t;
+	}
+	for (.@k = 0; .@k < 3; .@k++) {
+		$@NBG3_ORD[.@k] = .@blue[.@k];
+		$@NBG3_ORD[.@k + 3] = .@red[.@k];
+	}
+	callfunc "F_NEED_BG3_Log", "TEAM_ASSIGN classes=" + $@NBG3_CAND_CLS[0] + "/" + $@NBG3_CAND_CLS[1] + "/" + $@NBG3_CAND_CLS[2] + "/" + $@NBG3_CAND_CLS[3] + "/" + $@NBG3_CAND_CLS[4] + "/" + $@NBG3_CAND_CLS[5]
+		+ " support=" + .@s[0] + .@s[1] + .@s[2] + .@s[3] + .@s[4] + .@s[5] + " best=" + .@best + " tied=" + .@np + " split=" + .@p + " swap=" + .@swap
+		+ " blue_sum=" + (.@s[.@blue[0]] + .@s[.@blue[1]] + .@s[.@blue[2]]) + " red_sum=" + (.@s[.@red[0]] + .@s[.@red[1]] + .@s[.@red[2]]);
+	return;
+}
+
+// 확정된 6명($@NBG3_CAND_AID/CID/CLS)으로 경기를 연다. origin: 1 GM 수동 / 2 공개 대기열.
+// 실패하면 경기장에 들어간 사람을 저장 지점으로 돌리고 0.
+function	script	F_NEED_BG3_Launch	{
+	.@caller = playerattached();
+	.@origin = getarg(0);
+	callfunc "F_NEED_BG3_Balance";
+	callfunc "F_NEED_BG3_ClearMatch";
+	$@NBG3_ORIGIN = .@origin;
+	.@mid = gettimetick(2);
+	if (.@mid <= $@NBG3_LASTMID)
+		.@mid = $@NBG3_LASTMID + 1;
+	if (.@mid <= $NEED_BG3_LASTMID)
+		.@mid = $NEED_BG3_LASTMID + 1;
+	$@NBG3_LASTMID = .@mid;
+	$NEED_BG3_LASTMID = .@mid;
+	$@NBG3_MATCH = .@mid;
+	$@NBG3_N = 6;
+	for (.@k = 0; .@k < 6; .@k++) {
+		.@r = $@NBG3_ORD[.@k];
+		$@NBG3_AID[.@k] = $@NBG3_CAND_AID[.@r];
+		$@NBG3_CID[.@k] = $@NBG3_CAND_CID[.@r];
+		$@NBG3_TEAM[.@k] = (.@k < 3) ? 1 : 2;
+		$@NBG3_SLOT[.@k] = .@k % 3;
+	}
+	callfunc "F_NEED_BG3_Log", "MATCH_START match=" + $@NBG3_MATCH + " origin=" + (.@origin == 2 ? "queue" : "gm")
+		+ " blue=" + $@NBG3_AID[0] + "/" + $@NBG3_CID[0] + "," + $@NBG3_AID[1] + "/" + $@NBG3_CID[1] + "," + $@NBG3_AID[2] + "/" + $@NBG3_CID[2]
+		+ " red=" + $@NBG3_AID[3] + "/" + $@NBG3_CID[3] + "," + $@NBG3_AID[4] + "/" + $@NBG3_CID[4] + "," + $@NBG3_AID[5] + "/" + $@NBG3_CID[5]
+		+ " lvbypass=" + (.@origin == 1 ? $NEED_BG3_LVBYPASS : 0);
+
+	$@NBG3_BG[1] = bg_create($@NBG3_MAP$, $@NBG3_BOXX[1], $@NBG3_BOXY[1], "NEED_BG3::OnQuitB", "NEED_BG3::OnDieB");
+	$@NBG3_BG[2] = bg_create($@NBG3_MAP$, $@NBG3_BOXX[2], $@NBG3_BOXY[2], "NEED_BG3::OnQuitR", "NEED_BG3::OnDieR");
+	$@NBG3_STATE = 2;
+	$@NBG3_DEADLINE = gettimetick(0) + $@NBG3_C_PREP;
+	.@fail = 0;
+	if (!$@NBG3_BG[1] || !$@NBG3_BG[2])
+		.@fail = -1;
+	for (.@k = 0; .@k < 6 && !.@fail; .@k++) {
+		.@t = $@NBG3_TEAM[.@k];
+		.@p = (.@t - 1) * 3 + $@NBG3_SLOT[.@k];
+		if (!attachrid($@NBG3_AID[.@k])) {
+			.@fail = .@k + 1;
+			break;
+		}
+		NEED_BG3_MID = $@NBG3_MATCH;
+		@NEED_BG3_PB = getpcblock() & $@NBG3_C_OURS;
+		@NEED_BG3_BGID = $@NBG3_BG[.@t];
+		@NEED_BG3_MODE = -1;
+		callfunc "F_NEED_BG3_BusySelf", 3;
+		detachrid;
+		if (!bg_join($@NBG3_BG[.@t], $@NBG3_MAP$, $@NBG3_SPX[.@p], $@NBG3_SPY[.@p], $@NBG3_CID[.@k]))
+			.@fail = .@k + 1;
+	}
+	if (.@fail) {
+		callfunc "F_NEED_BG3_Log", "START_FAILED match=" + $@NBG3_MATCH + " at=" + .@fail + " origin=" + .@origin;
+		$@NBG3_STATE = 6;
+		$@NBG3_RESULT = 4;
+		callfunc "F_NEED_BG3_Cleanup", "start_failed", (.@origin == 1), 0;
+		callfunc "F_NEED_BG2_Reattach", .@caller;
+		return 0;
+	}
+	if (.@origin == 1)
+		callfunc "F_NEED_BG3_ClearRecruit";
+	for (.@k = 0; .@k < 6; .@k++) {
+		if (!attachrid($@NBG3_AID[.@k]))
+			continue;
+		callfunc "F_NEED_BG3_BusySelf", 3;
+		@NEED_BG2_CB_HOST = 0;	// 교전 카운터(엔진 need_combatlog)는 이 경기부터 센다
+		@NEED_BG2_CB_HIT = 0;
+		@NEED_BG2_CB_SUP = 0;
+		callfunc "F_NEED_BG3_SpawnSelf", $@NBG3_TEAM[.@k], $@NBG3_SLOT[.@k], 0;
+		callfunc "F_NEED_BG3_SetMode", $@NBG3_C_FREEZE;
+		viewpoint 1, 39, 39, 1, 0xFFFFFF;
+		dispbottom needtr("[3:3 룬 거점전] 당신은 " + callfunc("F_NEED_BG2_TeamName$", $@NBG3_TEAM[.@k]) + " 팀입니다. 45초 준비 후 5분 경기가 시작됩니다. (테스트 경기, 보상 없음)",
+			"[3v3 Rune Control] You are on the " + callfunc("F_NEED_BG2_TeamName$", $@NBG3_TEAM[.@k]) + " team. The 5-minute match starts after 45 seconds of preparation. (Test match, no rewards)"), 0x66CCFF;
+		detachrid;
+	}
+	callfunc "F_NEED_BG3_PrepLock", 1;
+	callfunc "F_NEED_BG3_Crystal", 0;
+	bg_updatescore $@NBG3_MAP$, 0, 0;
+	mapannouncelang $@NBG3_MAP$, "[3:3 룬 거점전] 매치 " + $@NBG3_MATCH + " 준비 45초. 자기 본진 안에서만 움직일 수 있고 공격·지면 설치·소환 스킬은 막힙니다.",
+		"[3v3 Rune Control] Match " + $@NBG3_MATCH + ": 45 seconds of preparation. Stay inside your base; attacks and ground/summon skills are blocked.", bc_map, "0x66CCFF";
+	callfunc "F_NEED_BG2_Reattach", .@caller;
+	return 1;
+}
+
+function	script	F_NEED_BG3_Begin	{
+	if ($@NBG3_STATE != 2)
+		return 0;
+	callfunc "F_NEED_BG3_PrepLock", 0;
+	$@NBG3_STATE = 4;
+	$@NBG3_START_AT = gettimetick(0);
+	$@NBG3_DEADLINE = $@NBG3_START_AT + $@NBG3_C_MATCH;
+	callfunc "F_NEED_BG3_CapReset";
+	$@NBG3_CAP_LAST = $@NBG3_START_AT;
+	.@caller = playerattached();
+	for (.@i = 0; .@i < $@NBG3_N; .@i++) {
+		$@NBG3_DEAD[.@i] = 0;
+		if ($@NBG3_GONE[.@i] || $@NBG3_AWAY[.@i] || !attachrid($@NBG3_AID[.@i]))
+			continue;
+		if (getcharid(0) == $@NBG3_CID[.@i] && strcharinfo(3) == $@NBG3_MAP$) {
+			if (Hp < 1)
+				callfunc "F_NEED_BG3_SpawnSelf", $@NBG3_TEAM[.@i], $@NBG3_SLOT[.@i], 1;
+			callfunc "F_NEED_BG3_SetMode", $@NBG3_C_BASE;	// 시작점 = 본진 안
+		}
+		detachrid;
+	}
+	callfunc "F_NEED_BG2_Reattach", .@caller;
+	callfunc "F_NEED_BG3_Log", "MATCH_ACTIVE match=" + $@NBG3_MATCH + " deadline=" + $@NBG3_DEADLINE;
+	mapannouncelang $@NBG3_MAP$, "[3:3 룬 거점전] 경기 시작! 룬 크리스탈 주변 고리를 5초간 혼자 확보하면 점령, 점령 상태에서 2초마다 1점, 100점 선취 승리. (5분)",
+		"[3v3 Rune Control] Fight! Hold the ring around the Rune Crystal alone for 5 seconds to capture it, then score 1 point every 2 seconds. First to 100 wins. (5 minutes)", bc_map, "0xFFCC33";
+	return 1;
+}
+
+//------------------------------------------------------------
+// 룬 크리스탈 점령 / 득점
+//------------------------------------------------------------
+// $@NBG3_CAP_OWNER   소유 팀(0 중립/1 블루/2 레드)
+// $@NBG3_CAP_TRY     현재 점령 시도 팀(0 없음), $@NBG3_CAP_TRY_MS 시도 누적(0~5000)
+// $@NBG3_CAP_SCORE_MS 소유 팀 연속 단독 유지 시간(2000 마다 +1점)
+// $@NBG3_CAP_STATE   표시용 0 무인 / 1 블루만 / 2 레드만 / 3 경합
+
+function	script	F_NEED_BG3_CapReset	{
+	$@NBG3_CAP_OWNER = 0;
+	$@NBG3_CAP_TRY = 0;
+	$@NBG3_CAP_TRY_MS = 0;
+	$@NBG3_CAP_SCORE_MS = 0;
+	$@NBG3_CAP_STATE = 0;
+	$@NBG3_CAP_LAST = 0;
+	$@NBG3_CAP_ANN_AT = 0;
+	return;
+}
+
+// 크리스탈 모양: 0 중립(흰색) / 1 블루 / 2 레드.
+// 4_ENERGY_WHITE 10046 / 4_ENERGY_BLUE 10043 / 4_ENERGY_RED 10042 (npc.hpp). 숫자로 시작하는 상수 이름은 식에서 읽을 수 없다.
+function	script	F_NEED_BG3_Crystal	{
+	setarray .@cls[0], 10046, 10043, 10042;
+	setnpcdisplay "NBG3_Crystal", .@cls[getarg(0)];
+	return;
+}
+
+// 첨부된 참가자가 점령 인원으로 세어지는지(고리 안/생존/은신 아님).
+function	script	F_NEED_BG3_CapCounts	{
+	if (Hp < 1 || strcharinfo(3) != $@NBG3_MAP$)
+		return 0;
+	getmapxy(.@m$, .@x, .@y);
+	if (!callfunc("F_NEED_BG3_InRing", .@x, .@y))
+		return 0;
+	if (checkoption(OPTION_HIDE | OPTION_CLOAK | OPTION_CHASEWALK | OPTION_INVISIBLE))
+		return 0;
+	if (getstatus(SC_CAMOUFLAGE) || getstatus(SC__INVISIBILITY) || getstatus(SC_STEALTHFIELD) || getstatus(SC_SUHIDE) || getstatus(SC_NEWMOON))
+		return 0;
+	return 1;
+}
+
+function	script	F_NEED_BG3_CapAnnounce	{
+	.@now = gettimetick(0);
+	if (!getarg(2, 0) && .@now < $@NBG3_CAP_ANN_AT)
+		return;
+	$@NBG3_CAP_ANN_AT = .@now + $@NBG3_C_ANN;
+	mapannouncelang $@NBG3_MAP$, getarg(0), getarg(1), bc_map, "0xFFCC33";
+	return;
+}
+
+// 경기 중 0.5초마다. 100점으로 경기가 끝나면 1.
+function	script	F_NEED_BG3_Capture	{
+	if ($@NBG3_STATE != 4)
+		return 0;
+	.@now = getarg(0);
+	if (.@now > $@NBG3_DEADLINE)
+		.@now = $@NBG3_DEADLINE;
+	.@dt = .@now - $@NBG3_CAP_LAST;
+	if (.@dt <= 0)
+		return 0;
+	$@NBG3_CAP_LAST = .@now;
+	.@caller = playerattached();
+	.@n[1] = 0;
+	.@n[2] = 0;
+	for (.@i = 0; .@i < $@NBG3_N; .@i++) {
+		if ($@NBG3_DEAD[.@i] || $@NBG3_GONE[.@i] || $@NBG3_AWAY[.@i])
+			continue;
+		if (!isloggedin($@NBG3_AID[.@i], $@NBG3_CID[.@i]) || !attachrid($@NBG3_AID[.@i]))
+			continue;
+		if (getcharid(0) == $@NBG3_CID[.@i] && callfunc("F_NEED_BG3_CapCounts"))
+			.@n[$@NBG3_TEAM[.@i]] += 1;
+		detachrid;
+	}
+	callfunc "F_NEED_BG2_Reattach", .@caller;
+	.@prev = $@NBG3_CAP_STATE;
+	.@owner0 = $@NBG3_CAP_OWNER;
+	if (.@n[1] && .@n[2]) {
+		// 경합: 시도 팀과 누적은 그대로 멈추고, 득점 주기는 끊긴다.
+		$@NBG3_CAP_STATE = 3;
+		$@NBG3_CAP_SCORE_MS = 0;
+	} else if (.@n[1] || .@n[2]) {
+		.@t = .@n[1] ? 1 : 2;
+		$@NBG3_CAP_STATE = .@t;
+		if (.@t == $@NBG3_CAP_OWNER) {
+			// 소유 팀만 있음: 상대의 미완성 탈환 누적 제거, 연속 2초마다 +1점.
+			if ($@NBG3_CAP_TRY) {
+				callfunc "F_NEED_BG3_Log", "CAPTURE_TRY_CLEARED match=" + $@NBG3_MATCH + " team=" + $@NBG3_CAP_TRY + " ms=" + $@NBG3_CAP_TRY_MS + " by_owner=" + .@t;
+				$@NBG3_CAP_TRY = 0;
+				$@NBG3_CAP_TRY_MS = 0;
+			}
+			$@NBG3_CAP_SCORE_MS += .@dt;
+			while ($@NBG3_CAP_SCORE_MS >= $@NBG3_C_SCORE) {
+				$@NBG3_CAP_SCORE_MS -= $@NBG3_C_SCORE;
+				$@NBG3_SCORE[.@t]++;
+				.@scored = 1;
+				if ($@NBG3_SCORE[.@t] >= $@NBG3_C_GOAL)
+					break;
+			}
+		} else {
+			// 소유 팀이 아닌 팀만 있음: 소유 팀 득점 주기는 끊기고, 이 팀의 5초 점령이 진행된다.
+			$@NBG3_CAP_SCORE_MS = 0;
+			if ($@NBG3_CAP_TRY != .@t) {
+				if ($@NBG3_CAP_TRY)
+					callfunc "F_NEED_BG3_Log", "CAPTURE_TRY_CLEARED match=" + $@NBG3_MATCH + " team=" + $@NBG3_CAP_TRY + " ms=" + $@NBG3_CAP_TRY_MS + " by_other=" + .@t;
+				$@NBG3_CAP_TRY = .@t;
+				$@NBG3_CAP_TRY_MS = 0;
+			}
+			$@NBG3_CAP_TRY_MS += .@dt;
+			if ($@NBG3_CAP_TRY_MS >= $@NBG3_C_CAP) {
+				// 점령 완료 순간부터 득점 주기를 센다(넘친 시간은 그 뒤 유지 시간).
+				$@NBG3_CAP_SCORE_MS = $@NBG3_CAP_TRY_MS - $@NBG3_C_CAP;
+				$@NBG3_CAP_OWNER = .@t;
+				$@NBG3_CAP_TRY = 0;
+				$@NBG3_CAP_TRY_MS = 0;
+			}
+		}
+	} else {
+		// 무인: 소유권 유지, 득점 정지, 미완성 점령 누적 0.
+		$@NBG3_CAP_STATE = 0;
+		$@NBG3_CAP_SCORE_MS = 0;
+		if ($@NBG3_CAP_TRY) {
+			callfunc "F_NEED_BG3_Log", "CAPTURE_TRY_CLEARED match=" + $@NBG3_MATCH + " team=" + $@NBG3_CAP_TRY + " ms=" + $@NBG3_CAP_TRY_MS + " by=empty";
+			$@NBG3_CAP_TRY = 0;
+			$@NBG3_CAP_TRY_MS = 0;
+		}
+	}
+	if ($@NBG3_CAP_OWNER != .@owner0) {
+		callfunc "F_NEED_BG3_Crystal", $@NBG3_CAP_OWNER;
+		callfunc "F_NEED_BG3_Log", "CAPTURE match=" + $@NBG3_MATCH + " owner=" + .@owner0 + "->" + $@NBG3_CAP_OWNER + " score=" + $@NBG3_SCORE[1] + ":" + $@NBG3_SCORE[2]
+			+ " t=" + (.@now - $@NBG3_START_AT);
+		if (.@owner0)
+			callfunc "F_NEED_BG3_CapAnnounce", "[3:3 룬 거점전] " + callfunc("F_NEED_BG2_TeamName$", $@NBG3_CAP_OWNER) + " 팀이 룬 크리스탈을 탈환했습니다!",
+				"[3v3 Rune Control] The " + callfunc("F_NEED_BG2_TeamName$", $@NBG3_CAP_OWNER) + " team recaptured the Rune Crystal!", 1;
+		else
+			callfunc "F_NEED_BG3_CapAnnounce", "[3:3 룬 거점전] " + callfunc("F_NEED_BG2_TeamName$", $@NBG3_CAP_OWNER) + " 팀이 룬 크리스탈을 점령했습니다!",
+				"[3v3 Rune Control] The " + callfunc("F_NEED_BG2_TeamName$", $@NBG3_CAP_OWNER) + " team captured the Rune Crystal!", 1;
+	} else if ($@NBG3_CAP_STATE != .@prev) {
+		callfunc "F_NEED_BG3_Log", "CAPTURE_STATE match=" + $@NBG3_MATCH + " state=" + .@prev + "->" + $@NBG3_CAP_STATE + " owner=" + $@NBG3_CAP_OWNER
+			+ " try=" + $@NBG3_CAP_TRY + ":" + $@NBG3_CAP_TRY_MS + " score=" + $@NBG3_SCORE[1] + ":" + $@NBG3_SCORE[2];
+		if ($@NBG3_CAP_STATE == 3)
+			callfunc "F_NEED_BG3_CapAnnounce", "[3:3 룬 거점전] 룬 크리스탈 경합 중 - 점령·득점 정지", "[3v3 Rune Control] Rune Crystal contested - capture and scoring paused";
+		else if ($@NBG3_CAP_STATE && $@NBG3_CAP_STATE != $@NBG3_CAP_OWNER)
+			callfunc "F_NEED_BG3_CapAnnounce", "[3:3 룬 거점전] " + callfunc("F_NEED_BG2_TeamName$", $@NBG3_CAP_STATE) + " 팀이 룬 크리스탈 점령 중 (5초)",
+				"[3v3 Rune Control] The " + callfunc("F_NEED_BG2_TeamName$", $@NBG3_CAP_STATE) + " team is capturing the Rune Crystal (5 s)";
+	}
+	if (.@scored)
+		bg_updatescore $@NBG3_MAP$, $@NBG3_SCORE[1], $@NBG3_SCORE[2];
+	for (.@t = 1; .@t <= 2; .@t++) {
+		if ($@NBG3_SCORE[.@t] < $@NBG3_C_GOAL)
+			continue;
+		callfunc "F_NEED_BG3_Log", "GOAL match=" + $@NBG3_MATCH + " team=" + .@t + " score=" + $@NBG3_SCORE[1] + ":" + $@NBG3_SCORE[2] + " t=" + (.@now - $@NBG3_START_AT);
+		callfunc "F_NEED_BG3_Finish", .@t, "goal";
+		return 1;
+	}
+	return 0;
+}
+
+//------------------------------------------------------------
+// 사망 / 부활 / 본진
+//------------------------------------------------------------
+
+// 사망 이벤트 (첨부 = 사망자). 한 번 죽으면 부활할 때까지 다시 세지 않는다.
+function	script	F_NEED_BG3_OnDeath	{
+	.@cid = getcharid(0);
+	.@i = callfunc("F_NEED_BG3_IndexOf", .@cid);
+	if (.@i < 0) {
+		callfunc "F_NEED_BG3_Log", "DEATH_UNKNOWN cid=" + .@cid;
+		return;
+	}
+	if ($@NBG3_STATE != 4 || $@NBG3_GONE[.@i] || $@NBG3_DEAD[.@i]) {
+		callfunc "F_NEED_BG3_Log", "DEATH_IGNORED match=" + $@NBG3_MATCH + " cid=" + .@cid + " state=" + $@NBG3_STATE + " dead=" + $@NBG3_DEAD[.@i];
+		return;
+	}
+	$@NBG3_DEAD[.@i] = 1;
+	$@NBG3_DEAD_AT[.@i] = gettimetick(0);
+	$@NBG3_DEATHS[.@i]++;
+	callfunc "F_NEED_BG3_SetMode", $@NBG3_C_SPEC;
+	callfunc "F_NEED_BG3_Log", "DEATH match=" + $@NBG3_MATCH + " cid=" + .@cid + " team=" + $@NBG3_TEAM[.@i] + " killer=" + killerrid + " via=" + getarg(0, "event")
+		+ " t=" + ($@NBG3_DEAD_AT[.@i] - $@NBG3_START_AT);
+	dispbottom needtr("[3:3 룬 거점전] 쓰러졌습니다. 10초 뒤 본진에서 부활합니다.", "[3v3 Rune Control] You fell. You respawn at your base in 10 seconds."), 0xFF7777;
+	return;
+}
+
+// 첨부된 사망 참가자를 본진 시작점에서 부활시킨다.
+function	script	F_NEED_BG3_Respawn	{
+	.@i = getarg(0);
+	callfunc "F_NEED_BG3_SpawnSelf", $@NBG3_TEAM[.@i], $@NBG3_SLOT[.@i], 1;
+	$@NBG3_DEAD[.@i] = 0;
+	callfunc "F_NEED_BG3_SetMode", $@NBG3_C_BASE;
+	callfunc "F_NEED_BG3_Log", "RESPAWN match=" + $@NBG3_MATCH + " cid=" + $@NBG3_CID[.@i] + " team=" + $@NBG3_TEAM[.@i] + " after=" + (gettimetick(0) - $@NBG3_DEAD_AT[.@i]);
+	return;
+}
+
+// 첨부된 참가자의 교전 카운터(엔진 need_combatlog, 세션 변수)를 경기 기록으로 옮긴다(접속이 끊겨도 남게).
+function	script	F_NEED_BG3_SyncSelf	{
+	.@i = getarg(0);
+	if (@NEED_BG2_CB_HOST) {
+		$@NBG3_HOST[.@i] += @NEED_BG2_CB_HOST;
+		@NEED_BG2_CB_HOST = 0;
+	}
+	if (@NEED_BG2_CB_HIT) {
+		$@NBG3_HIT[.@i] += @NEED_BG2_CB_HIT;
+		@NEED_BG2_CB_HIT = 0;
+	}
+	@NEED_BG2_CB_SUP = 0;
+	return;
+}
+
+function	script	F_NEED_BG3_Engaged	{
+	for (.@i = 0; .@i < $@NBG3_N; .@i++)
+		if ($@NBG3_HOST[.@i] > 0) return 1;
+	return 0;
+}
+
+// 감시(0.5초): 접속/맵/팀 이탈, 준비구역, 사망 안전망, 부활 시각, 본진 보호, 교전 카운터.
+function	script	F_NEED_BG3_Watch	{
+	.@now = gettimetick(0);
+	for (.@i = 0; .@i < $@NBG3_N; .@i++) {
+		if ($@NBG3_STATE != 2 && $@NBG3_STATE != 4)
+			break;
+		if ($@NBG3_GONE[.@i] || $@NBG3_AWAY[.@i])
+			continue;
+		.@aid = $@NBG3_AID[.@i];
+		.@cid = $@NBG3_CID[.@i];
+		if (!isloggedin(.@aid, .@cid) || !attachrid(.@aid)) {
+			callfunc "F_NEED_BG3_Depart", .@i, 1;
+			continue;
+		}
+		.@code = 0;
+		.@t = $@NBG3_TEAM[.@i];
+		if (getcharid(0) != .@cid)
+			.@code = 1;
+		else if (strcharinfo(3) != $@NBG3_MAP$)
+			.@code = 2;
+		else if (getcharid(4) != $@NBG3_BG[.@t])
+			.@code = 3;
+		else if ($@NBG3_STATE == 2) {
+			if (Hp > 0) {
+				getmapxy(.@m$, .@x, .@y);
+				if (!callfunc("F_NEED_BG3_InZone", .@t, .@x, .@y)) {
+					.@p = (.@t - 1) * 3 + $@NBG3_SLOT[.@i];
+					warp $@NBG3_MAP$, $@NBG3_SPX[.@p], $@NBG3_SPY[.@p];
+					callfunc "F_NEED_BG3_Log", "ZONE_RESET match=" + $@NBG3_MATCH + " cid=" + .@cid + " from=" + .@x + "," + .@y;
+				}
+			}
+		} else if ($@NBG3_DEAD[.@i]) {
+			if (.@now - $@NBG3_DEAD_AT[.@i] >= $@NBG3_C_RESPAWN)
+				callfunc "F_NEED_BG3_Respawn", .@i;
+			else if (Hp > 0) {
+				// 부활 대기 중: 대기실 밖에 일어나 있으면(부활 스킬 등) 대기실로.
+				getmapxy(.@m$, .@x, .@y);
+				if (!callfunc("F_NEED_BG3_InBox", .@x, .@y)) {
+					warp $@NBG3_MAP$, $@NBG3_BOXX[.@t], $@NBG3_BOXY[.@t];
+					callfunc "F_NEED_BG3_Log", "WAIT_MOVED match=" + $@NBG3_MATCH + " cid=" + .@cid + " from=" + .@x + "," + .@y;
+				}
+				if (@NEED_BG3_MODE != $@NBG3_C_SPEC)
+					callfunc "F_NEED_BG3_SetMode", $@NBG3_C_SPEC;
+			}
+		} else if (Hp < 1) {
+			// 안전망: 사망 이벤트가 아직 안 왔지만 실제로 쓰러짐.
+			callfunc "F_NEED_BG3_OnDeath", "watch";
+		} else {
+			getmapxy(.@m$, .@x, .@y);
+			.@o = 3 - .@t;
+			if (callfunc("F_NEED_BG3_InZone", .@o, .@x, .@y)) {
+				warp $@NBG3_MAP$, $@NBG3_PUSHX[.@o], $@NBG3_PUSHY[.@o];
+				callfunc "F_NEED_BG3_Log", "BASE_PUSH match=" + $@NBG3_MATCH + " cid=" + .@cid + " team=" + .@t + " from=" + .@x + "," + .@y;
+				dispbottom needtr("[3:3 룬 거점전] 상대 본진에는 들어갈 수 없습니다.", "[3v3 Rune Control] You cannot enter the enemy base."), 0xFF7777;
+				.@want = 0;
+			} else if (callfunc("F_NEED_BG3_InBox", .@x, .@y)) {
+				// 살아 있는데 대기실 안(엔진 부활 직후 등): 본진으로.
+				callfunc "F_NEED_BG3_SpawnSelf", .@t, $@NBG3_SLOT[.@i], 1;
+				callfunc "F_NEED_BG3_Log", "BOX_EXIT match=" + $@NBG3_MATCH + " cid=" + .@cid;
+				.@want = $@NBG3_C_BASE;
+			} else
+				.@want = callfunc("F_NEED_BG3_InZone", .@t, .@x, .@y) ? $@NBG3_C_BASE : 0;
+			if (@NEED_BG3_MODE != .@want)
+				callfunc "F_NEED_BG3_SetMode", .@want;
+		}
+		callfunc "F_NEED_BG3_SyncSelf", .@i;
+		detachrid;
+		if (.@code)
+			callfunc "F_NEED_BG3_Depart", .@i, .@code;
+	}
+	return;
+}
+
+//------------------------------------------------------------
+// 탈주 / 재접속 / 종료
+//------------------------------------------------------------
+
+function	script	F_NEED_BG3_GoneCount	{
+	.@c = 0;
+	for (.@i = 0; .@i < $@NBG3_N; .@i++)
+		if ($@NBG3_TEAM[.@i] == getarg(0) && $@NBG3_GONE[.@i]) .@c++;
+	return .@c;
+}
+
+// 참가자 이탈. code: 1 접속 종료/캐릭터 선택, 2 맵 이탈, 3 BG 팀 이탈.
+function	script	F_NEED_BG3_Depart	{
+	.@i = getarg(0);
+	.@code = getarg(1);
+	.@s = $@NBG3_STATE;
+	if ($@NBG3_GONE[.@i] || (.@s != 2 && .@s != 4 && .@s != 6))
+		return 0;
+	.@now = gettimetick(0);
+	if (.@code == 1 && .@s != 6 && !$@NBG3_AWAY[.@i] && $@NBG3_GRACE_USED[.@i] < $@NBG3_C_RECONNECT) {
+		$@NBG3_AWAY[.@i] = 1;
+		$@NBG3_AWAY_AT[.@i] = .@now;
+		.@left = ($@NBG3_C_RECONNECT - $@NBG3_GRACE_USED[.@i]) / 1000;
+		callfunc "F_NEED_BG3_Log", "AWAY match=" + $@NBG3_MATCH + " cid=" + $@NBG3_CID[.@i] + " team=" + $@NBG3_TEAM[.@i] + " state=" + .@s + " grace_used=" + $@NBG3_GRACE_USED[.@i];
+		mapannouncelang $@NBG3_MAP$, "[3:3 룬 거점전] 참가자 접속이 끊겼습니다. " + .@left + "초 안에 돌아오면 경기에 복귀합니다.",
+			"[3v3 Rune Control] A player disconnected. If they return within " + .@left + " seconds, they rejoin the match.", bc_map, "0xFF7777";
+		return 1;
+	}
+	$@NBG3_GONE[.@i] = .@code;
+	$@NBG3_AWAY[.@i] = 0;
+	callfunc "F_NEED_BG3_Log", "DEPART match=" + $@NBG3_MATCH + " aid=" + $@NBG3_AID[.@i] + " cid=" + $@NBG3_CID[.@i]
+		+ " team=" + $@NBG3_TEAM[.@i] + " code=" + .@code + " state=" + .@s + " grace_used=" + $@NBG3_GRACE_USED[.@i];
+	if (.@s == 6)
+		return 1;
+	if (.@code != 1) {
+		callfunc "F_NEED_BG3_Log", "ERROR forced_move match=" + $@NBG3_MATCH + " cid=" + $@NBG3_CID[.@i] + " code=" + .@code + " (left the arena while online: GM/system move) -> VOID";
+		mapannouncelang $@NBG3_MAP$, "[3:3 룬 거점전] 참가자가 시스템/운영자 이동으로 경기장을 벗어나 경기를 무효로 합니다.",
+			"[3v3 Rune Control] A player was moved out of the arena by the system or a GM, so the match is void.", bc_map, "0xFF7777";
+		callfunc "F_NEED_BG3_Finish", 3, "forced_move";
+		return 1;
+	}
+	if (.@s == 2) {
+		// 준비시간에 이탈 확정 = 경기 미개시 취소. 전원 0점, 제재 없음.
+		callfunc "F_NEED_BG3_Finish", 4, "depart_in_preparation";
+		callfunc "F_NEED_BG3_Cleanup", "depart_in_preparation", 0;
+		return 1;
+	}
+	.@g = callfunc("F_NEED_BG3_GoneCount", $@NBG3_TEAM[.@i]);
+	mapannouncelang $@NBG3_MAP$, "[3:3 룬 거점전] " + callfunc("F_NEED_BG2_TeamName$", $@NBG3_TEAM[.@i]) + " 팀 참가자가 경기를 이탈했습니다." + (.@g < 3 ? " 경기는 계속됩니다." : ""),
+		"[3v3 Rune Control] A " + callfunc("F_NEED_BG2_TeamName$", $@NBG3_TEAM[.@i]) + " player left the match." + (.@g < 3 ? " The match goes on." : ""), bc_map, "0xFF7777";
+	if (.@g >= 3 && !$@NBG3_DEPART_AT)
+		$@NBG3_DEPART_AT = .@now + $@NBG3_C_GRACE;	// 상대 팀의 동시 이탈을 잠깐 기다린 뒤 판정
+	return 1;
+}
+
+// 한 팀 전원 이탈 판정: 양 팀 모두 → 무효, 교전 없음 → 무효, 그 밖에는 이탈한 팀 몰수패.
+function	script	F_NEED_BG3_DepartVerdict	{
+	$@NBG3_DEPART_AT = 0;
+	.@gb = callfunc("F_NEED_BG3_GoneCount", 1);
+	.@gr = callfunc("F_NEED_BG3_GoneCount", 2);
+	if (.@gb >= 3 && .@gr >= 3)
+		callfunc "F_NEED_BG3_Finish", 3, "both_teams_departed";
+	else if (.@gb >= 3)
+		callfunc "F_NEED_BG3_Finish", 2, "forfeit_blue";
+	else if (.@gr >= 3)
+		callfunc "F_NEED_BG3_Finish", 1, "forfeit_red";
+	return;
+}
+
+// 경기 결과 확정. kind: 0 무승부 / 1 블루 승 / 2 레드 승 / 3 무효(VOID) / 4 취소(CANCELLED). 한 번만 통과한다.
+// 승패/무승부는 실제 적대 교전이 없으면 무효로 바뀐다(몰수 포함).
+function	script	F_NEED_BG3_Finish	{
+	.@kind = getarg(0);
+	.@why$ = getarg(1);
+	if ($@NBG3_STATE != 2 && $@NBG3_STATE != 4) {
+		callfunc "F_NEED_BG3_Log", "FINISH_IGNORED match=" + $@NBG3_MATCH + " state=" + $@NBG3_STATE + " kind=" + .@kind + " why=" + .@why$;
+		return 0;
+	}
+	.@prev = $@NBG3_STATE;
+	$@NBG3_STATE = 6;
+	$@NBG3_DEPART_AT = 0;
+	// 교전 카운터 마지막 동기화
+	.@caller = playerattached();
+	for (.@i = 0; .@i < $@NBG3_N; .@i++) {
+		if ($@NBG3_GONE[.@i] || !isloggedin($@NBG3_AID[.@i], $@NBG3_CID[.@i]) || !attachrid($@NBG3_AID[.@i]))
+			continue;
+		if (getcharid(0) == $@NBG3_CID[.@i])
+			callfunc "F_NEED_BG3_SyncSelf", .@i;
+		detachrid;
+	}
+	callfunc "F_NEED_BG2_Reattach", .@caller;
+	.@engaged = callfunc("F_NEED_BG3_Engaged");
+	if (.@kind <= 2 && !.@engaged) {
+		.@why$ += "+no_combat";
+		.@kind = 3;
+	}
+	$@NBG3_RESULT = .@kind;
+	$@NBG3_DEADLINE = gettimetick(0) + $@NBG3_C_SHOW;
+	if (.@kind == 3 || .@kind == 4)
+		callfunc "F_NEED_BG3_RememberNoPenalty";
+	// 개인 점수: 확정 탈주자/무효/취소 0, 승 2, 패 1, 무 1.
+	.@pts$ = "";
+	.@host$ = "";
+	for (.@i = 0; .@i < $@NBG3_N; .@i++) {
+		.@p = 0;
+		if (.@kind <= 2 && !$@NBG3_GONE[.@i])
+			.@p = (.@kind == 0) ? 1 : (($@NBG3_TEAM[.@i] == .@kind) ? 2 : 1);
+		$@NBG3_PTS[.@i] = .@p;
+		.@pts$ += (.@i ? "," : "") + $@NBG3_CID[.@i] + ":" + .@p + ($@NBG3_GONE[.@i] ? "(gone" + $@NBG3_GONE[.@i] + ")" : "");
+		.@host$ += (.@i ? "," : "") + $@NBG3_HOST[.@i] + "/" + $@NBG3_HIT[.@i] + "/" + $@NBG3_DEATHS[.@i];
+	}
+	setarray .@name$[0], "DRAW", "BLUE_WIN", "RED_WIN", "VOID", "CANCELLED";
+	setarray .@kr$[0], "무승부", "블루 팀 승리", "레드 팀 승리", "무효 경기", "경기 취소";
+	setarray .@en$[0], "draw", "Blue team wins", "Red team wins", "void match", "match cancelled";
+	.@len = ($@NBG3_START_AT ? gettimetick(0) - $@NBG3_START_AT : 0);
+	$@NBG3_LAST$ = "match " + $@NBG3_MATCH + " " + .@name$[.@kind] + " (" + .@why$ + ") B" + $@NBG3_SCORE[1] + ":R" + $@NBG3_SCORE[2] + " t=" + .@len + " pts " + .@pts$;
+	callfunc "F_NEED_BG3_Log", "MATCH_END match=" + $@NBG3_MATCH + " result=" + .@name$[.@kind] + " why=" + .@why$ + " score=" + $@NBG3_SCORE[1] + ":" + $@NBG3_SCORE[2]
+		+ " engaged=" + .@engaged + " state_before=" + .@prev + " t=" + .@len + " points=" + .@pts$ + " host/hit/deaths=" + .@host$;
+	mapannouncelang $@NBG3_MAP$, "[3:3 룬 거점전] 경기 종료: " + .@kr$[.@kind] + " (블루 " + $@NBG3_SCORE[1] + " : " + $@NBG3_SCORE[2] + " 레드). 테스트 경기라 보상은 없습니다. 5초 후 저장 지점으로 돌아갑니다.",
+		"[3v3 Rune Control] Match over: " + .@en$[.@kind] + " (Blue " + $@NBG3_SCORE[1] + " : " + $@NBG3_SCORE[2] + " Red). Test match, no rewards. You return to your save point in 5 seconds.", bc_map, "0x99FF99";
+	for (.@i = 0; .@i < $@NBG3_N; .@i++)
+		if (!$@NBG3_GONE[.@i])
+			callfunc "F_NEED_BG3_Tell", $@NBG3_AID[.@i], $@NBG3_CID[.@i], "[3:3 룬 거점전] 이 경기 점수(기록 전 단계): " + $@NBG3_PTS[.@i] + "점",
+				"[3v3 Rune Control] Points for this match (not recorded yet): " + $@NBG3_PTS[.@i];
+	callfunc "F_NEED_BG3_ModeAll", $@NBG3_C_LOCK;
+	return 1;
+}
+
+// 5분 종료: 높은 점수 승리, 동점 무승부.
+function	script	F_NEED_BG3_TimeUp	{
+	.@res = 0;
+	if ($@NBG3_SCORE[1] != $@NBG3_SCORE[2])
+		.@res = ($@NBG3_SCORE[1] > $@NBG3_SCORE[2]) ? 1 : 2;
+	callfunc "F_NEED_BG3_Log", "TIME_UP match=" + $@NBG3_MATCH + " score=" + $@NBG3_SCORE[1] + ":" + $@NBG3_SCORE[2] + " res=" + .@res;
+	callfunc "F_NEED_BG3_Finish", .@res, "time_up";
+	return;
+}
+
+// 매치 정리. keep_recruit = 1 이면 모집 명단을 남기고 RECRUITING 으로(시작 실패).
+function	script	F_NEED_BG3_Cleanup	{
+	.@caller = playerattached();
+	if ($@NBG3_STATE != 6) {
+		callfunc "F_NEED_BG3_Log", "CLEANUP_IGNORED state=" + $@NBG3_STATE + " why=" + getarg(0);
+		return 0;
+	}
+	$@NBG3_STATE = 7;
+	callfunc "F_NEED_BG3_PrepLock", 0;
+	callfunc "F_NEED_BG3_KillSummons";
+	.@nopen = ($@NBG3_RESULT == 3 || $@NBG3_RESULT == 4);
+	for (.@i = 0; .@i < $@NBG3_N; .@i++) {
+		.@aid = $@NBG3_AID[.@i];
+		.@cid = $@NBG3_CID[.@i];
+		if ($@NBG3_GONE[.@i] == 1 || !isloggedin(.@aid, .@cid) || !attachrid(.@aid)) {
+			callfunc "F_NEED_BG3_Log", "RESTORE_DEFERRED match=" + $@NBG3_MATCH + " cid=" + .@cid + " (restored at next login)";
+			continue;
+		}
+		if (getcharid(0) == .@cid)
+			callfunc "F_NEED_BG3_RestoreSelf", getarg(0), .@nopen, getarg(2, 1);
+		detachrid;
+	}
+	if ($@NBG3_BG[1]) bg_destroy $@NBG3_BG[1];
+	if ($@NBG3_BG[2]) bg_destroy $@NBG3_BG[2];
+	bg_updatescore $@NBG3_MAP$, 0, 0;
+	callfunc "F_NEED_BG3_Crystal", 0;
+	callfunc "F_NEED_BG3_Log", "CLEANUP_DONE match=" + $@NBG3_MATCH + " why=" + getarg(0);
+	callfunc "F_NEED_BG3_ClearMatch";
+	if (getarg(1, 0)) {
+		$@NBG3_STATE = 1;
+		for (.@i = 0; .@i < $@NBG3_REG_N; .@i++)
+			callfunc "F_NEED_BG3_SetBusy", $@NBG3_REG_AID[.@i], $@NBG3_REG_CID[.@i], 1;
+	} else {
+		callfunc "F_NEED_BG3_ClearRecruit";
+		$@NBG3_STATE = 0;
+		if (!$@NBG3_Q_N)
+			stopnpctimer "NEED_BG3";
+	}
+	callfunc "F_NEED_BG2_Reattach", .@caller;
+	return 1;
+}
+
+// 재접속 유예 안에 돌아온 참가자(첨부)를 원래 팀으로. 경기 중이면 본진 시작점에서 바로 참가한다.
+function	script	F_NEED_BG3_Rejoin	{
+	.@i = getarg(0);
+	.@cid = getcharid(0);
+	.@t = $@NBG3_TEAM[.@i];
+	.@p = (.@t - 1) * 3 + $@NBG3_SLOT[.@i];
+	.@now = gettimetick(0);
+	$@NBG3_GRACE_USED[.@i] += .@now - $@NBG3_AWAY_AT[.@i];
+	$@NBG3_AWAY[.@i] = 0;
+	if (getstatus(SC_ENTRY_QUEUE_NOTIFY_ADMISSION_TIME_OUT))
+		sc_end SC_ENTRY_QUEUE_NOTIFY_ADMISSION_TIME_OUT;	// 유예 안 복귀는 탈주가 아니다
+	if (Hp < 1)
+		recovery 0, .@cid, 4;
+	@NEED_BG3_PB = getpcblock() & $@NBG3_C_OURS;
+	@NEED_BG3_BGID = $@NBG3_BG[.@t];
+	@NEED_BG3_MODE = -1;
+	if (!bg_join($@NBG3_BG[.@t], $@NBG3_MAP$, $@NBG3_SPX[.@p], $@NBG3_SPY[.@p], .@cid)) {
+		callfunc "F_NEED_BG3_Log", "REJOIN_FAILED match=" + $@NBG3_MATCH + " cid=" + .@cid;
+		$@NBG3_GRACE_USED[.@i] = $@NBG3_C_RECONNECT;
+		callfunc "F_NEED_BG3_Depart", .@i, 1;
+		return 0;
+	}
+	callfunc "F_NEED_BG3_BusySelf", 3;
+	callfunc "F_NEED_BG3_SpawnSelf", .@t, $@NBG3_SLOT[.@i], 0;
+	$@NBG3_DEAD[.@i] = 0;
+	callfunc "F_NEED_BG3_SetMode", ($@NBG3_STATE == 2) ? $@NBG3_C_FREEZE : $@NBG3_C_BASE;
+	viewpoint 1, 39, 39, 1, 0xFFFFFF;
+	callfunc "F_NEED_BG3_Log", "REJOIN match=" + $@NBG3_MATCH + " cid=" + .@cid + " state=" + $@NBG3_STATE + " grace_used=" + $@NBG3_GRACE_USED[.@i];
+	dispbottom needtr("[3:3 룬 거점전] 경기에 복귀했습니다.", "[3v3 Rune Control] You are back in the match."), 0x66CCFF;
+	return 1;
+}
+
+function	script	F_NEED_BG3_Tick	{
+	.@s = $@NBG3_STATE;
+	if (.@s == 0) {
+		callfunc "F_NEED_BG3_QueueTick";
+		return;
+	}
+	if (.@s == 1) {
+		for (.@i = $@NBG3_REG_N - 1; .@i >= 0; .@i--) {
+			if (isloggedin($@NBG3_REG_AID[.@i], $@NBG3_REG_CID[.@i]))
+				continue;
+			callfunc "F_NEED_BG3_Log", "UNREGISTER cid=" + $@NBG3_REG_CID[.@i] + " why=offline";
+			callfunc "F_NEED_BG3_RemoveReg", .@i;
+		}
+		return;
+	}
+	.@now = gettimetick(0);
+	if (.@s == 6) {
+		if (.@now >= $@NBG3_DEADLINE)
+			callfunc "F_NEED_BG3_Cleanup", "finished", 0;
+		return;
+	}
+	if (.@s != 2 && .@s != 4)
+		return;
+	// 재접속 유예 만료 = 이탈 확정.
+	for (.@i = 0; .@i < $@NBG3_N; .@i++) {
+		if (!$@NBG3_AWAY[.@i] || .@now - $@NBG3_AWAY_AT[.@i] + $@NBG3_GRACE_USED[.@i] < $@NBG3_C_RECONNECT)
+			continue;
+		$@NBG3_AWAY[.@i] = 0;
+		callfunc "F_NEED_BG3_Log", "AWAY_EXPIRED match=" + $@NBG3_MATCH + " cid=" + $@NBG3_CID[.@i] + " used_before=" + $@NBG3_GRACE_USED[.@i];
+		$@NBG3_GRACE_USED[.@i] = $@NBG3_C_RECONNECT;
+		callfunc "F_NEED_BG3_Depart", .@i, 1;
+		if ($@NBG3_STATE != 2 && $@NBG3_STATE != 4)
+			return;
+	}
+	callfunc "F_NEED_BG3_Watch";
+	.@s = $@NBG3_STATE;
+	if (.@s != 2 && .@s != 4)
+		return;
+	if ($@NBG3_DEPART_AT && .@now >= $@NBG3_DEPART_AT) {
+		callfunc "F_NEED_BG3_DepartVerdict";
+		if ($@NBG3_STATE != 4)
+			return;
+	}
+	if (.@s == 4) {
+		if (callfunc("F_NEED_BG3_Capture", .@now))
+			return;
+		if (!$@NBG3_WARNED && $@NBG3_DEADLINE - .@now <= 60000) {
+			$@NBG3_WARNED = 1;
+			mapannouncelang $@NBG3_MAP$, "[3:3 룬 거점전] 종료 1분 전! 블루 " + $@NBG3_SCORE[1] + " : " + $@NBG3_SCORE[2] + " 레드",
+				"[3v3 Rune Control] 1 minute left! Blue " + $@NBG3_SCORE[1] + " : " + $@NBG3_SCORE[2] + " Red", bc_map, "0xFFCC33";
+		}
+	}
+	if (.@now < $@NBG3_DEADLINE)
+		return;
+	if (.@s == 2)
+		callfunc "F_NEED_BG3_Begin";
+	else
+		callfunc "F_NEED_BG3_TimeUp";
+	return;
+}
+
+//============================================================
+// 공개 개인 FIFO 대기열 + 30초 참가 확인 (2:2 와 같은 방식, 6명)
+//============================================================
+
+function	script	F_NEED_BG3_QIndex	{
+	for (.@i = 0; .@i < $@NBG3_Q_N; .@i++)
+		if ($@NBG3_Q_AID[.@i] == getarg(0)) return .@i;
+	return -1;
+}
+
+function	script	F_NEED_BG3_RcIndex	{
+	if (!$@NBG3_RC)
+		return -1;
+	for (.@k = 0; .@k < 6; .@k++)
+		if ($@NBG3_RC_AID[.@k] == getarg(0)) return .@k;
+	return -1;
+}
+
+// 이 계정이 3:3 대기열/참가 확인/진행 중 경기/GM 모집 명단 어디에든 있으면 1. (2:2 도 이 함수를 부른다)
+function	script	F_NEED_BG3_AidBusy	{
+	.@aid = getarg(0);
+	if (callfunc("F_NEED_BG3_QIndex", .@aid) >= 0 || callfunc("F_NEED_BG3_RcIndex", .@aid) >= 0)
+		return 1;
+	for (.@i = 0; .@i < $@NBG3_REG_N; .@i++)
+		if ($@NBG3_REG_AID[.@i] == .@aid) return 1;
+	if ($@NBG3_STATE >= 2 && $@NBG3_STATE <= 6) {
+		for (.@i = 0; .@i < $@NBG3_N; .@i++)
+			if ($@NBG3_AID[.@i] == .@aid && !$@NBG3_GONE[.@i]) return 1;
+	}
+	return 0;
+}
+
+function	script	F_NEED_BG3_QRemove	{
+	.@i = getarg(0);
+	if (.@i < 0 || .@i >= $@NBG3_Q_N)
+		return 0;
+	.@aid = $@NBG3_Q_AID[.@i];
+	.@cid = $@NBG3_Q_CID[.@i];
+	.@seq = $@NBG3_Q_SEQ[.@i];
+	for (.@k = .@i; .@k < $@NBG3_Q_N - 1; .@k++) {
+		$@NBG3_Q_AID[.@k] = $@NBG3_Q_AID[.@k + 1];
+		$@NBG3_Q_CID[.@k] = $@NBG3_Q_CID[.@k + 1];
+		$@NBG3_Q_SEQ[.@k] = $@NBG3_Q_SEQ[.@k + 1];
+	}
+	$@NBG3_Q_N--;
+	$@NBG3_Q_AID[$@NBG3_Q_N] = 0;
+	$@NBG3_Q_CID[$@NBG3_Q_N] = 0;
+	$@NBG3_Q_SEQ[$@NBG3_Q_N] = 0;
+	callfunc "F_NEED_BG3_Log", getarg(1) + " aid=" + .@aid + " cid=" + .@cid + " seq=" + .@seq + " queue=" + $@NBG3_Q_N;
+	if (getarg(2, 1))
+		callfunc "F_NEED_BG3_SetBusy", .@aid, .@cid, 0;
+	return 1;
+}
+
+function	script	F_NEED_BG3_QInsert	{
+	.@aid = getarg(0);
+	.@cid = getarg(1);
+	.@seq = getarg(2);
+	if (callfunc("F_NEED_BG3_QIndex", .@aid) >= 0)
+		return 0;
+	for (.@at = 0; .@at < $@NBG3_Q_N; .@at++)
+		if ($@NBG3_Q_SEQ[.@at] > .@seq) break;
+	for (.@k = $@NBG3_Q_N; .@k > .@at; .@k--) {
+		$@NBG3_Q_AID[.@k] = $@NBG3_Q_AID[.@k - 1];
+		$@NBG3_Q_CID[.@k] = $@NBG3_Q_CID[.@k - 1];
+		$@NBG3_Q_SEQ[.@k] = $@NBG3_Q_SEQ[.@k - 1];
+	}
+	$@NBG3_Q_AID[.@at] = .@aid;
+	$@NBG3_Q_CID[.@at] = .@cid;
+	$@NBG3_Q_SEQ[.@at] = .@seq;
+	$@NBG3_Q_N++;
+	callfunc "F_NEED_BG3_SetBusy", .@aid, .@cid, 1;
+	return 1;
+}
+
+function	script	F_NEED_BG3_TimerOn	{
+	if (!getnpctimer(1, "NEED_BG3"))
+		initnpctimer "NEED_BG3";
+	return;
+}
+
+// 첨부된 플레이어의 공개 대기열 신청. 0 = 등록, 그 밖에는 거절 사유 코드.
+function	script	F_NEED_BG3_QJoin	{
+	.@aid = getcharid(3);
+	.@cid = getcharid(0);
+	.@code = 0;
+	if (!$NEED_BG3_QUEUE_OPEN)
+		.@code = 10;
+	else if (callfunc("F_NEED_BG3_AidBusy", .@aid))
+		.@code = 9;
+	else
+		.@code = callfunc("F_NEED_BG3_CheckSelf", 1);
+	if (!.@code)
+		.@code = callfunc("F_NEED_BG3_SanctionCheck");
+	if (.@code) {
+		callfunc "F_NEED_BG3_Log", "QUEUE_REFUSED aid=" + .@aid + " cid=" + .@cid + " code=" + .@code;
+		return .@code;
+	}
+	$@NBG3_QSEQ++;
+	$@NBG3_Q_AID[$@NBG3_Q_N] = .@aid;
+	$@NBG3_Q_CID[$@NBG3_Q_N] = .@cid;
+	$@NBG3_Q_SEQ[$@NBG3_Q_N] = $@NBG3_QSEQ;
+	$@NBG3_Q_N++;
+	callfunc "F_NEED_BG3_BusySelf", 1;
+	callfunc "F_NEED_BG3_Log", "QUEUE_JOIN aid=" + .@aid + " cid=" + .@cid + " seq=" + $@NBG3_QSEQ + " pos=" + $@NBG3_Q_N + " class=" + Class;
+	callfunc "F_NEED_BG3_TimerOn";
+	return 0;
+}
+
+function	script	F_NEED_BG3_RcOpen	{
+	for (.@i = $@NBG3_Q_N - 1; .@i >= 0; .@i--)
+		if (!isloggedin($@NBG3_Q_AID[.@i], $@NBG3_Q_CID[.@i]))
+			callfunc "F_NEED_BG3_QRemove", .@i, "QUEUE_CANCEL why=offline", 0;
+	if ($@NBG3_Q_N < 6)
+		return 0;
+	$@NBG3_RC_GEN++;
+	$@NBG3_RC = 1;
+	$@NBG3_RC_END = gettimetick(0) + $@NBG3_C_RC;
+	$@NBG3_RC_NOTE = $@NBG3_C_RC / 1000;
+	.@who$ = "";
+	for (.@k = 0; .@k < 6; .@k++) {
+		$@NBG3_RC_AID[.@k] = $@NBG3_Q_AID[.@k];
+		$@NBG3_RC_CID[.@k] = $@NBG3_Q_CID[.@k];
+		$@NBG3_RC_SEQ[.@k] = $@NBG3_Q_SEQ[.@k];
+		$@NBG3_RC_ACC[.@k] = 0;
+		.@who$ += (.@k ? "," : "") + $@NBG3_RC_AID[.@k] + "/" + $@NBG3_RC_CID[.@k] + "#" + $@NBG3_RC_SEQ[.@k];
+		callfunc "F_NEED_BG3_SetBusy", $@NBG3_RC_AID[.@k], $@NBG3_RC_CID[.@k], 2;
+		callfunc "F_NEED_BG3_Tell", $@NBG3_RC_AID[.@k], $@NBG3_RC_CID[.@k],
+			"[3:3 룬 거점전] 경기 준비 완료! 30초 안에 @룬수락 (거절: @룬거절). 6명 모두 수락하면 입장합니다.",
+			"[3v3 Rune Control] A match is ready! Type @bg3accept within 30 seconds (decline: @bg3decline). You enter when all 6 accept.", "0xFFFF66", 1;
+	}
+	callfunc "F_NEED_BG3_Log", (($@NBG3_RC_RESTART) ? "READY_RESTART" : "READY_OPEN") + " gen=" + $@NBG3_RC_GEN + " members=" + .@who$ + " queue=" + $@NBG3_Q_N;
+	$@NBG3_RC_RESTART = 0;
+	return 1;
+}
+
+function	script	F_NEED_BG3_RcClose	{
+	if (!$@NBG3_RC)
+		return 0;
+	$@NBG3_RC = 0;
+	for (.@k = 0; .@k < 6; .@k++) {
+		if (callfunc("F_NEED_BG3_QIndex", $@NBG3_RC_AID[.@k]) < 0)
+			continue;
+		callfunc "F_NEED_BG3_SetBusy", $@NBG3_RC_AID[.@k], $@NBG3_RC_CID[.@k], 1;
+		if (getarg(0, "") != "")
+			callfunc "F_NEED_BG3_Tell", $@NBG3_RC_AID[.@k], $@NBG3_RC_CID[.@k], getarg(0), getarg(1);
+	}
+	cleararray $@NBG3_RC_AID[0], 0, 6;
+	cleararray $@NBG3_RC_CID[0], 0, 6;
+	cleararray $@NBG3_RC_SEQ[0], 0, 6;
+	cleararray $@NBG3_RC_ACC[0], 0, 6;
+	$@NBG3_RC_RESTART = getarg(2, 1);
+	return 1;
+}
+
+function	script	F_NEED_BG3_RcDrop	{
+	.@k = getarg(0);
+	.@q = callfunc("F_NEED_BG3_QIndex", $@NBG3_RC_AID[.@k]);
+	if (.@q >= 0)
+		callfunc "F_NEED_BG3_QRemove", .@q, getarg(1) + " gen=" + $@NBG3_RC_GEN;
+	if (getarg(2, "") != "")
+		callfunc "F_NEED_BG3_Tell", $@NBG3_RC_AID[.@k], $@NBG3_RC_CID[.@k], getarg(2), getarg(3), "0xFF7777", 1;
+	$@NBG3_RC_AID[.@k] = 0;
+	return 1;
+}
+
+// 6명 전원 수락: 입장 직전 자격 재검사. 실패한 사람만 빼고 나머지는 순번 그대로 다시 확인한다.
+function	script	F_NEED_BG3_RcConfirm	{
+	.@caller = playerattached();
+	for (.@k = 0; .@k < 6; .@k++) {
+		.@code[.@k] = 1;
+		if (!isloggedin($@NBG3_RC_AID[.@k], $@NBG3_RC_CID[.@k]) || !attachrid($@NBG3_RC_AID[.@k]))
+			continue;
+		if (getcharid(0) == $@NBG3_RC_CID[.@k]) {
+			.@code[.@k] = callfunc("F_NEED_BG3_CheckSelf", 1);
+			$@NBG3_CAND_CLS[.@k] = Class;
+		}
+		detachrid;
+	}
+	callfunc "F_NEED_BG2_Reattach", .@caller;
+	.@bad = 0;
+	for (.@k = 0; .@k < 6; .@k++) {
+		if (!.@code[.@k])
+			continue;
+		.@bad++;
+		callfunc "F_NEED_BG3_Log", "ADMISSION_FAIL gen=" + $@NBG3_RC_GEN + " aid=" + $@NBG3_RC_AID[.@k] + " cid=" + $@NBG3_RC_CID[.@k] + " code=" + .@code[.@k];
+		.@r$ = callfunc("F_NEED_BG3_Reason$", .@code[.@k]);
+		callfunc "F_NEED_BG3_RcDrop", .@k, "QUEUE_CANCEL why=admission_fail",
+			"[3:3 룬 거점전] 입장 조건이 맞지 않아 대기열에서 빠졌습니다(불이익 없음): " + .@r$,
+			"[3v3 Rune Control] You were removed from the queue because you cannot enter now (no penalty): " + .@r$;
+	}
+	if (.@bad) {
+		callfunc "F_NEED_BG3_RcClose", "[3:3 룬 거점전] 다른 참가자가 입장할 수 없어 다시 참가 확인을 진행합니다. 순번은 그대로입니다.",
+			"[3v3 Rune Control] Another player cannot enter, so the ready check starts again. Your place in the queue is kept.";
+		return 0;
+	}
+	for (.@k = 0; .@k < 6; .@k++) {
+		$@NBG3_CAND_AID[.@k] = $@NBG3_RC_AID[.@k];
+		$@NBG3_CAND_CID[.@k] = $@NBG3_RC_CID[.@k];
+		$@NBG3_CAND_SEQ[.@k] = $@NBG3_RC_SEQ[.@k];
+		callfunc "F_NEED_BG3_QRemove", callfunc("F_NEED_BG3_QIndex", $@NBG3_RC_AID[.@k]), "QUEUE_MATCHED gen=" + $@NBG3_RC_GEN, 0;
+	}
+	callfunc "F_NEED_BG3_Log", "READY_CONFIRMED gen=" + $@NBG3_RC_GEN;
+	$@NBG3_RC = 0;
+	cleararray $@NBG3_RC_AID[0], 0, 6;
+	cleararray $@NBG3_RC_CID[0], 0, 6;
+	cleararray $@NBG3_RC_ACC[0], 0, 6;
+	if (callfunc("F_NEED_BG3_Launch", 2)) {
+		callfunc "F_NEED_BG2_Reattach", .@caller;
+		return 1;
+	}
+	for (.@k = 0; .@k < 6; .@k++) {
+		if (!isloggedin($@NBG3_CAND_AID[.@k], $@NBG3_CAND_CID[.@k]))
+			continue;
+		callfunc "F_NEED_BG3_QInsert", $@NBG3_CAND_AID[.@k], $@NBG3_CAND_CID[.@k], $@NBG3_CAND_SEQ[.@k];
+		callfunc "F_NEED_BG3_Tell", $@NBG3_CAND_AID[.@k], $@NBG3_CAND_CID[.@k],
+			"[3:3 룬 거점전] 입장에 실패해 저장 지점으로 돌아왔습니다. 대기 순번은 그대로이며 곧 다시 참가 확인을 합니다.",
+			"[3v3 Rune Control] Entering the arena failed and you are back at your save point. Your place in the queue is kept and a new ready check follows.";
+	}
+	callfunc "F_NEED_BG3_Log", "READY_RESTORE after=start_failed queue=" + $@NBG3_Q_N;
+	$@NBG3_RC_RESTART = 1;
+	callfunc "F_NEED_BG2_Reattach", .@caller;
+	return 0;
+}
+
+function	script	F_NEED_BG3_QueueTick	{
+	// 그 사이 2:2 에 들어간 계정은 3:3 대기열에서 뺀다(2:2 쪽이 먼저 받은 경우의 안전망).
+	for (.@i = $@NBG3_Q_N - 1; .@i >= 0; .@i--) {
+		if (!callfunc("F_NEED_BG2_AidBusy", $@NBG3_Q_AID[.@i]))
+			continue;
+		.@k = callfunc("F_NEED_BG3_RcIndex", $@NBG3_Q_AID[.@i]);
+		if (.@k >= 0) {
+			callfunc "F_NEED_BG3_RcDrop", .@k, "QUEUE_CANCEL why=in_2v2";
+			callfunc "F_NEED_BG3_RcClose", "[3:3 룬 거점전] 참가자 한 명이 빠져 다시 참가 확인을 진행합니다. 순번은 그대로입니다.",
+				"[3v3 Rune Control] A player left, so the ready check starts again. Your place in the queue is kept.";
+		} else
+			callfunc "F_NEED_BG3_QRemove", .@i, "QUEUE_CANCEL why=in_2v2", 0;
+	}
+	if (!$@NBG3_RC) {
+		if ($NEED_BG3_QUEUE_OPEN && $@NBG3_Q_N >= 6)
+			callfunc "F_NEED_BG3_RcOpen";
+		return;
+	}
+	.@acc = 0;
+	for (.@k = 0; .@k < 6; .@k++)
+		if ($@NBG3_RC_ACC[.@k]) .@acc++;
+	if (.@acc == 6) {
+		callfunc "F_NEED_BG3_RcConfirm";
+		return;
+	}
+	.@left = $@NBG3_RC_END - gettimetick(0);
+	if (.@left <= 0) {
+		for (.@k = 0; .@k < 6; .@k++) {
+			if ($@NBG3_RC_ACC[.@k])
+				continue;
+			callfunc "F_NEED_BG3_Log", "READY_TIMEOUT gen=" + $@NBG3_RC_GEN + " aid=" + $@NBG3_RC_AID[.@k] + " cid=" + $@NBG3_RC_CID[.@k];
+			callfunc "F_NEED_BG3_RcDrop", .@k, "QUEUE_CANCEL why=ready_timeout",
+				"[3:3 룬 거점전] 30초 안에 수락하지 않아 대기열에서 빠졌습니다(불이익 없음). 다시 참가하려면 @룬참가.",
+				"[3v3 Rune Control] You did not accept within 30 seconds and left the queue (no penalty). To queue again: @bg3join.";
+		}
+		callfunc "F_NEED_BG3_RcClose", "[3:3 룬 거점전] 수락하지 않은 참가자가 있어 다시 참가 확인을 진행합니다. 순번은 그대로입니다.",
+			"[3v3 Rune Control] Someone did not accept, so the ready check starts again. Your place in the queue is kept.";
+		return;
+	}
+	.@sec = (.@left + 999) / 1000;
+	if (.@sec <= $@NBG3_RC_NOTE - 10) {
+		$@NBG3_RC_NOTE -= 10;
+		for (.@k = 0; .@k < 6; .@k++) {
+			if ($@NBG3_RC_ACC[.@k])
+				continue;
+			callfunc "F_NEED_BG3_Tell", $@NBG3_RC_AID[.@k], $@NBG3_RC_CID[.@k],
+				"[3:3 룬 거점전] 참가 확인 " + $@NBG3_RC_NOTE + "초 남음: @룬수락 / @룬거절",
+				"[3v3 Rune Control] Ready check: " + $@NBG3_RC_NOTE + " seconds left - @bg3accept / @bg3decline", "0xFFFF66", 1;
+		}
+	}
+	return;
+}
+
+function	script	F_NEED_BG3_QueueClose	{
+	if ($@NBG3_RC)
+		callfunc "F_NEED_BG3_RcClose", "", "", 0;
+	for (.@i = $@NBG3_Q_N - 1; .@i >= 0; .@i--) {
+		callfunc "F_NEED_BG3_Tell", $@NBG3_Q_AID[.@i], $@NBG3_Q_CID[.@i],
+			"[3:3 룬 거점전] 운영자가 3:3 대기열을 닫아 신청이 취소되었습니다.", "[3v3 Rune Control] The GM closed the 3v3 queue and your entry was cancelled.";
+		callfunc "F_NEED_BG3_QRemove", .@i, "QUEUE_CANCEL why=" + getarg(0);
+	}
+	return;
+}
+
+//============================================================
+// GM
+//============================================================
+
+// GM 수동 6인 테스트 시작. 성공 1, 거절 0.
+function	script	F_NEED_BG3_Start	{
+	.@gm = playerattached();
+	if ($@NBG3_STATE != 1) {
+		dispbottom "[3:3 룬] 모집 중이 아니어서 시작할 수 없습니다. (상태 " + callfunc("F_NEED_BG3_StateName$", $@NBG3_STATE) + ")";
+		return 0;
+	}
+	if ($@NBG3_REG_N != 6) {
+		dispbottom "[3:3 룬] 정확히 6명이 필요합니다. 현재 " + $@NBG3_REG_N + "명";
+		return 0;
+	}
+	.@bad = 0;
+	for (.@i = 0; .@i < 6; .@i++) {
+		.@code = 0;
+		if (!isloggedin($@NBG3_REG_AID[.@i], $@NBG3_REG_CID[.@i]) || !attachrid($@NBG3_REG_AID[.@i]))
+			.@code = 1;
+		else if (getcharid(0) != $@NBG3_REG_CID[.@i])
+			.@code = 1;
+		else {
+			.@code = callfunc("F_NEED_BG3_CheckSelf", 0);
+			$@NBG3_CAND_CLS[.@i] = Class;
+		}
+		detachrid;
+		if (.@code) {
+			.@bad = .@i + 1;
+			.@badcode = .@code;
+			break;
+		}
+	}
+	callfunc "F_NEED_BG2_Reattach", .@gm;
+	if (.@bad) {
+		dispbottom "[3:3 룬] 시작 거절: 신청 #" + .@bad + " (cid " + $@NBG3_REG_CID[.@bad - 1] + ") - " + callfunc("F_NEED_BG3_Reason$", .@badcode);
+		callfunc "F_NEED_BG3_Log", "START_REFUSED reason=" + .@badcode + " slot=" + .@bad;
+		return 0;
+	}
+	for (.@i = 0; .@i < 6; .@i++) {
+		$@NBG3_CAND_AID[.@i] = $@NBG3_REG_AID[.@i];
+		$@NBG3_CAND_CID[.@i] = $@NBG3_REG_CID[.@i];
+		$@NBG3_CAND_SEQ[.@i] = 0;
+	}
+	.@ok = callfunc("F_NEED_BG3_Launch", 1);
+	callfunc "F_NEED_BG2_Reattach", .@gm;
+	if (.@ok)
+		dispbottom "[3:3 룬] 매치 " + $@NBG3_MATCH + " 시작 (준비 45초).";
+	else
+		dispbottom "[3:3 룬] 시작 실패: 이동/팀 합류 실패. 모집은 유지됩니다.";
+	return .@ok;
+}
+
+function	script	F_NEED_BG3_StatusLines	{
+	.@now = gettimetick(0);
+	.@left = $@NBG3_DEADLINE ? ($@NBG3_DEADLINE - .@now) / 1000 : 0;
+	if (.@left < 0) .@left = 0;
+	dispbottom "[NEED_BG3] state=" + callfunc("F_NEED_BG3_StateName$", $@NBG3_STATE) + " match=" + $@NBG3_MATCH + " score=B" + $@NBG3_SCORE[1] + ":R" + $@NBG3_SCORE[2]
+		+ " left=" + .@left + "s regs=" + $@NBG3_REG_N + " depart=" + ($@NBG3_DEPART_AT ? 1 : 0) + " lvbypass=" + $NEED_BG3_LVBYPASS;
+	if ($@NBG3_STATE == 4)
+		dispbottom "[NEED_BG3] crystal owner=" + $@NBG3_CAP_OWNER + " state=" + $@NBG3_CAP_STATE + " try=" + $@NBG3_CAP_TRY + ":" + $@NBG3_CAP_TRY_MS + " score_ms=" + $@NBG3_CAP_SCORE_MS;
+	for (.@i = 0; .@i < $@NBG3_REG_N; .@i++)
+		dispbottom "[NEED_BG3] reg#" + (.@i + 1) + " aid=" + $@NBG3_REG_AID[.@i] + " cid=" + $@NBG3_REG_CID[.@i] + " name=" + convertpcinfo($@NBG3_REG_CID[.@i], CPC_NAME);
+	for (.@i = 0; .@i < $@NBG3_N; .@i++)
+		dispbottom "[NEED_BG3] p#" + .@i + " team=" + ($@NBG3_TEAM[.@i] == 1 ? "BLUE" : "RED") + " slot=" + $@NBG3_SLOT[.@i] + " aid=" + $@NBG3_AID[.@i] + " cid=" + $@NBG3_CID[.@i]
+			+ " dead=" + $@NBG3_DEAD[.@i] + " gone=" + $@NBG3_GONE[.@i] + " away=" + $@NBG3_AWAY[.@i] + " grace_used=" + $@NBG3_GRACE_USED[.@i]
+			+ " host=" + $@NBG3_HOST[.@i] + " deaths=" + $@NBG3_DEATHS[.@i];
+	dispbottom "[NEED_BG3] queue=" + ($NEED_BG3_QUEUE_OPEN ? "OPEN" : "CLOSED") + " waiting=" + $@NBG3_Q_N + " ready_check=" + $@NBG3_RC + " gen=" + $@NBG3_RC_GEN
+		+ ($@NBG3_RC ? " left=" + (($@NBG3_RC_END - .@now) / 1000) + "s acc=" + $@NBG3_RC_ACC[0] + $@NBG3_RC_ACC[1] + $@NBG3_RC_ACC[2] + $@NBG3_RC_ACC[3] + $@NBG3_RC_ACC[4] + $@NBG3_RC_ACC[5] : "");
+	for (.@i = 0; .@i < $@NBG3_Q_N; .@i++)
+		dispbottom "[NEED_BG3] q#" + (.@i + 1) + " seq=" + $@NBG3_Q_SEQ[.@i] + " aid=" + $@NBG3_Q_AID[.@i] + " cid=" + $@NBG3_Q_CID[.@i] + " name=" + convertpcinfo($@NBG3_Q_CID[.@i], CPC_NAME);
+	if ($@NBG3_LAST$ != "")
+		dispbottom "[NEED_BG3] last=" + $@NBG3_LAST$;
+	return;
+}
+
+function	script	F_NEED_BG3_GmStop	{
+	.@s = $@NBG3_STATE;
+	if (.@s == 0 && $@NBG3_RC) {
+		callfunc "F_NEED_BG3_Log", "READY_CANCEL gen=" + $@NBG3_RC_GEN + " by=gm";
+		callfunc "F_NEED_BG3_RcClose", "[3:3 룬 거점전] 운영자가 참가 확인을 취소했습니다. 대기 순번은 그대로입니다.",
+			"[3v3 Rune Control] The GM cancelled the ready check. Your place in the queue is kept.";
+		dispbottom "[3:3 룬] 참가 확인을 취소했습니다(대기열은 유지).";
+		return 1;
+	}
+	if (.@s == 0 || .@s == 7) {
+		dispbottom "[3:3 룬] 진행 중인 모집/경기가 없습니다.";
+		return 0;
+	}
+	if (.@s == 1) {
+		for (.@i = 0; .@i < $@NBG3_REG_N; .@i++)
+			callfunc "F_NEED_BG3_Tell", $@NBG3_REG_AID[.@i], $@NBG3_REG_CID[.@i], "[3:3 룬 거점전] 운영자가 모집을 닫았습니다.", "[3v3 Rune Control] The GM closed sign-ups.";
+		callfunc "F_NEED_BG3_ClearRecruit";
+		$@NBG3_STATE = 0;
+		if (!$@NBG3_Q_N)
+			stopnpctimer "NEED_BG3";
+		callfunc "F_NEED_BG3_Log", "RECRUIT_CLOSED by=gm";
+		dispbottom "[3:3 룬] 모집을 닫았습니다.";
+		return 1;
+	}
+	if (.@s == 2 || .@s == 4)
+		callfunc "F_NEED_BG3_Finish", 3, "gm_stop";
+	callfunc "F_NEED_BG3_Cleanup", "gm_stop", 0;
+	dispbottom "[3:3 룬] 강제 중단(무효) 처리했습니다.";
+	return 1;
+}
+
+function	script	F_NEED_BG3_GmRecover	{
+	.@gm = playerattached();
+	.@name$ = getarg(0);
+	.@aid = getcharid(3, .@name$);
+	if (!.@aid || !attachrid(.@aid)) {
+		callfunc "F_NEED_BG2_Reattach", .@gm;
+		dispbottom "[3:3 룬] 접속 중인 캐릭터를 찾지 못했습니다: " + .@name$ + " (접속 종료 상태면 다음 접속 때 자동 복구됩니다)";
+		return 0;
+	}
+	.@i = callfunc("F_NEED_BG3_IndexOf", getcharid(0));
+	.@live = 0;
+	if (.@i >= 0 && $@NBG3_STATE >= 2 && $@NBG3_STATE <= 6)
+		.@live = !$@NBG3_GONE[.@i];
+	if (.@live) {
+		callfunc "F_NEED_BG2_Reattach", .@gm;
+		dispbottom "[3:3 룬] 진행 중인 경기 참가자입니다. 강제 중단을 먼저 사용하세요.";
+		return 0;
+	}
+	.@had = (NEED_BG3_MID || @NEED_BG3_BGID || strcharinfo(3) == $@NBG3_MAP$);
+	if (.@had)
+		callfunc "F_NEED_BG3_RestoreSelf", "gm_recover", 1, 1;
+	callfunc "F_NEED_BG2_Reattach", .@gm;
+	dispbottom "[3:3 룬] " + .@name$ + (.@had ? " 복구 완료." : ": 정리할 3:3 상태가 없습니다.");
+	return 1;
+}
+
+-	script	NEED_BG3	-1,{
+	end;
+
+OnInit:
+	callfunc "F_NEED_BG3_Init";
+	bindatcmd "bg3", "NEED_BG3::OnCmdGM", 60, 60;
+	bindatcmd "룬관리", "NEED_BG3::OnCmdGM", 60, 60;
+	bindatcmd "bg3join", "NEED_BG3::OnCmdJoin", 0, 99;
+	bindatcmd "룬참가", "NEED_BG3::OnCmdJoin", 0, 99;
+	bindatcmd "bg3cancel", "NEED_BG3::OnCmdCancel", 0, 99;
+	bindatcmd "룬취소", "NEED_BG3::OnCmdCancel", 0, 99;
+	bindatcmd "bg3status", "NEED_BG3::OnCmdStatus", 0, 99;
+	bindatcmd "룬현황", "NEED_BG3::OnCmdStatus", 0, 99;
+	bindatcmd "bg3accept", "NEED_BG3::OnCmdAccept", 0, 99;
+	bindatcmd "룬수락", "NEED_BG3::OnCmdAccept", 0, 99;
+	bindatcmd "bg3decline", "NEED_BG3::OnCmdDecline", 0, 99;
+	bindatcmd "룬거절", "NEED_BG3::OnCmdDecline", 0, 99;
+
+	// 스크립트 리로드: 진행 중이던 경기 상태($@)는 사라졌다. 경기장에 남은 참가자를 정리하고 그 경기는 무효.
+	.@n = getmapunits(BL_PC, $@NBG3_MAP$, .@pcs);
+	.@nb = 0;
+	.@cleaned = 0;
+	for (.@k = 0; .@k < .@n; .@k++) {
+		if (!attachrid(.@pcs[.@k]))
+			continue;
+		if (@NEED_BG3_BGID || NEED_BG3_MID) {
+			if (@NEED_BG3_BGID) {
+				for (.@j = 0; .@j < .@nb; .@j++)
+					if (.@bgs[.@j] == @NEED_BG3_BGID) break;
+				if (.@j == .@nb) {
+					.@bgs[.@nb] = @NEED_BG3_BGID;
+					.@nb++;
+				}
+			}
+			callfunc "F_NEED_BG3_RestoreSelf", "reload_void", 1, 1;
+			.@cleaned++;
+		}
+		detachrid;
+	}
+	callfunc "F_NEED_BG3_PrepLock", 0;
+	for (.@j = 0; .@j < .@nb; .@j++)
+		bg_destroy .@bgs[.@j];
+	if (.@cleaned || .@nb)
+		callfunc "F_NEED_BG3_Log", "RELOAD_VOID cleaned=" + .@cleaned + " teams=" + .@nb;
+	donpcevent "NEED_BG3::OnBusySweep";
+	if ($NEED_BG3_QUEUE_OPEN)
+		initnpctimer;
+	end;
+
+OnBusySweep:
+	addrid 0;
+	if (!@NEED_BG3_BUSY)
+		end;
+	if (@NEED_BG3_BUSY < 3)
+		dispbottom needtr("[3:3 룬 거점전] 서버 스크립트가 다시 읽혀 3:3 대기열이 초기화되었습니다. 다시 신청해 주세요: @룬참가",
+			"[3v3 Rune Control] The server reloaded its scripts and the 3v3 queue was reset. Please queue again: @bg3join"), 0xFF7777;
+	callfunc "F_NEED_BG3_Log", "QUEUE_RESET why=reload aid=" + getcharid(3) + " cid=" + getcharid(0) + " busy=" + @NEED_BG3_BUSY;
+	callfunc "F_NEED_BG3_BusySelf", 0;
+	end;
+
+OnTimer500:
+	// 타이머를 먼저 다시 건다: 이 틱의 스크립트가 중간에 멈춰도 다음 틱은 온다(2:2 ISSUE-01 교훈).
+	initnpctimer;
+	callfunc "F_NEED_BG3_Tick";
+	if (!$@NBG3_STATE && !$@NBG3_Q_N && !$@NBG3_RC)
+		stopnpctimer;
+	end;
+
+OnPCLogoutEvent:
+	.@aid = getcharid(3);
+	.@cid = getcharid(0);
+	.@k = callfunc("F_NEED_BG3_RcIndex", .@aid);
+	if (.@k >= 0) {
+		if ($@NBG3_RC_CID[.@k] == .@cid) {
+			callfunc "F_NEED_BG3_Log", "READY_DECLINE gen=" + $@NBG3_RC_GEN + " aid=" + .@aid + " cid=" + .@cid + " why=logout";
+			callfunc "F_NEED_BG3_RcDrop", .@k, "QUEUE_CANCEL why=logout";
+			callfunc "F_NEED_BG3_RcClose", "[3:3 룬 거점전] 참가자 한 명이 접속을 종료해 다시 참가 확인을 진행합니다. 순번은 그대로입니다.",
+				"[3v3 Rune Control] A player logged out, so the ready check starts again. Your place in the queue is kept.";
+		}
+		end;
+	}
+	.@q = callfunc("F_NEED_BG3_QIndex", .@aid);
+	if (.@q >= 0) {
+		if ($@NBG3_Q_CID[.@q] == .@cid)
+			callfunc "F_NEED_BG3_QRemove", .@q, "QUEUE_CANCEL why=logout", 0;
+	}
+	end;
+
+OnDieB:
+OnDieR:
+	callfunc "F_NEED_BG3_OnDeath";
+	end;
+
+OnQuitB:
+OnQuitR:
+	.@i = callfunc("F_NEED_BG3_IndexOf", getcharid(0));
+	if (.@i >= 0) {
+		callfunc "F_NEED_BG3_SyncSelf", .@i;
+		callfunc "F_NEED_BG3_Depart", .@i, 1;
+	}
+	end;
+
+OnPCLoginEvent:
+	if (!NEED_BG3_MID && strcharinfo(3) != $@NBG3_MAP$)
+		end;
+	.@cid = getcharid(0);
+	.@i = callfunc("F_NEED_BG3_IndexOf", .@cid);
+	if (NEED_BG3_MID && NEED_BG3_MID == $@NBG3_MATCH && .@i >= 0 && ($@NBG3_STATE == 2 || $@NBG3_STATE == 4)) {
+		if ($@NBG3_AWAY[.@i]) {
+			callfunc "F_NEED_BG3_Rejoin", .@i;
+			end;
+		}
+	}
+	if (Hp < 1)
+		recovery 0, .@cid, 4;
+	.@np = callfunc("F_NEED_BG3_IsNoPenalty", NEED_BG3_MID);
+	callfunc "F_NEED_BG3_Log", "LOGIN_RESTORE match=" + NEED_BG3_MID + " aid=" + getcharid(3) + " cid=" + .@cid + " no_penalty=" + .@np;
+	callfunc "F_NEED_BG3_RestoreSelf", "login", .@np, 0;
+	dispbottom needtr("[3:3 룬 거점전] 지난 경기 상태를 정리했습니다. 저장 지점에서 시작합니다.", "[3v3 Rune Control] Your last match was cleaned up. You start at your save point."), 0x66CCFF;
+	end;
+
+OnCmdJoin:
+	.@aid = getcharid(3);
+	if ($@NBG3_STATE == 1) {
+		.@code = 0;
+		if (callfunc("F_NEED_BG3_AidBusy", .@aid))
+			.@code = 9;
+		if (!.@code && $@NBG3_REG_N >= 6)
+			.@code = 11;
+		if (!.@code)
+			.@code = callfunc("F_NEED_BG3_CheckSelf", 0);
+		if (.@code) {
+			callfunc "F_NEED_BG3_Log", "JOIN_REFUSED aid=" + .@aid + " cid=" + getcharid(0) + " code=" + .@code + " regs=" + $@NBG3_REG_N;
+			dispbottom needtr("[3:3 룬 거점전] 신청할 수 없습니다: ", "[3v3 Rune Control] You cannot sign up: ") + callfunc("F_NEED_BG3_Reason$", .@code), 0xFF7777;
+			end;
+		}
+		$@NBG3_REG_AID[$@NBG3_REG_N] = .@aid;
+		$@NBG3_REG_CID[$@NBG3_REG_N] = getcharid(0);
+		$@NBG3_REG_N++;
+		callfunc "F_NEED_BG3_BusySelf", 1;
+		callfunc "F_NEED_BG3_Log", "JOIN aid=" + .@aid + " cid=" + getcharid(0) + " regs=" + $@NBG3_REG_N;
+		dispbottom needtr("[3:3 룬 거점전] GM 테스트 신청 완료 (" + $@NBG3_REG_N + "/6). 팀은 시작할 때 정해집니다. 취소: @룬취소",
+			"[3v3 Rune Control] GM test sign-up done (" + $@NBG3_REG_N + "/6). Teams are set at the start. To cancel: @bg3cancel"), 0x66CCFF;
+		end;
+	}
+	.@code = callfunc("F_NEED_BG3_QJoin");
+	if (.@code) {
+		dispbottom needtr("[3:3 룬 거점전] 대기열에 신청할 수 없습니다: ", "[3v3 Rune Control] You cannot join the queue: ") + callfunc("F_NEED_BG3_Reason$", .@code), 0xFF7777;
+		end;
+	}
+	.@pos = callfunc("F_NEED_BG3_QIndex", .@aid) + 1;
+	dispbottom needtr("[3:3 룬 거점전] 개인 대기열 신청 완료. 순번 " + .@pos + " / 대기 " + $@NBG3_Q_N + "명. 경기장이 비고 6명이 모이면 30초 참가 확인(@룬수락)을 요청합니다.",
+		"[3v3 Rune Control] You joined the solo queue. Position " + .@pos + " / " + $@NBG3_Q_N + " waiting. When the arena is free and 6 players are waiting you get a 30-second ready check (@bg3accept)."), 0x66CCFF;
+	end;
+
+OnCmdCancel:
+	.@aid = getcharid(3);
+	.@cid = getcharid(0);
+	.@k = callfunc("F_NEED_BG3_RcIndex", .@aid);
+	if (.@k >= 0) {
+		callfunc "F_NEED_BG3_Log", "READY_DECLINE gen=" + $@NBG3_RC_GEN + " aid=" + .@aid + " cid=" + .@cid + " why=cancel";
+		callfunc "F_NEED_BG3_RcDrop", .@k, "QUEUE_CANCEL why=cancel";
+		callfunc "F_NEED_BG3_RcClose", "[3:3 룬 거점전] 참가자 한 명이 취소해 다시 참가 확인을 진행합니다. 순번은 그대로입니다.",
+			"[3v3 Rune Control] A player cancelled, so the ready check starts again. Your place in the queue is kept.";
+		dispbottom needtr("[3:3 룬 거점전] 대기열 신청을 취소했습니다.", "[3v3 Rune Control] You left the queue."), 0x66CCFF;
+		end;
+	}
+	.@q = callfunc("F_NEED_BG3_QIndex", .@aid);
+	if (.@q >= 0) {
+		callfunc "F_NEED_BG3_QRemove", .@q, "QUEUE_CANCEL why=cancel";
+		dispbottom needtr("[3:3 룬 거점전] 대기열 신청을 취소했습니다.", "[3v3 Rune Control] You left the queue."), 0x66CCFF;
+		end;
+	}
+	if ($@NBG3_STATE == 1) {
+		for (.@i = 0; .@i < $@NBG3_REG_N; .@i++) {
+			if ($@NBG3_REG_AID[.@i] != .@aid) continue;
+			callfunc "F_NEED_BG3_RemoveReg", .@i;
+			callfunc "F_NEED_BG3_Log", "UNREGISTER cid=" + .@cid + " why=cancel regs=" + $@NBG3_REG_N;
+			dispbottom needtr("[3:3 룬 거점전] 신청을 취소했습니다.", "[3v3 Rune Control] Your sign-up was cancelled."), 0x66CCFF;
+			end;
+		}
+	}
+	if (callfunc("F_NEED_BG3_IndexOf", .@cid) >= 0 && ($@NBG3_STATE == 2 || $@NBG3_STATE == 4)) {
+		dispbottom needtr("[3:3 룬 거점전] 경기 중에는 취소할 수 없습니다. 접속을 끊고 돌아오지 않으면 탈주(0점, 제재)로 처리됩니다.",
+			"[3v3 Rune Control] You cannot cancel during a match. Disconnecting without coming back counts as leaving (0 points, sanction)."), 0xFF7777;
+		end;
+	}
+	dispbottom needtr("[3:3 룬 거점전] 취소할 신청이 없습니다.", "[3v3 Rune Control] You have no sign-up to cancel."), 0xFF7777;
+	end;
+
+OnCmdAccept:
+	.@aid = getcharid(3);
+	.@k = callfunc("F_NEED_BG3_RcIndex", .@aid);
+	if (.@k >= 0) {	// || 는 단락 평가가 아니므로 음수 인덱스로 배열을 읽지 않게 나눈다
+		if ($@NBG3_RC_CID[.@k] != getcharid(0))
+			.@k = -1;
+	}
+	if (.@k < 0) {
+		dispbottom needtr("[3:3 룬 거점전] 지금 수락할 참가 확인이 없습니다.", "[3v3 Rune Control] There is no ready check for you right now."), 0xFF7777;
+		end;
+	}
+	if (gettimetick(0) >= $@NBG3_RC_END) {
+		dispbottom needtr("[3:3 룬 거점전] 참가 확인 시간이 지났습니다.", "[3v3 Rune Control] The ready check time is over."), 0xFF7777;
+		end;
+	}
+	if ($@NBG3_RC_ACC[.@k]) {
+		dispbottom needtr("[3:3 룬 거점전] 이미 수락했습니다. 다른 참가자를 기다립니다.", "[3v3 Rune Control] You already accepted. Waiting for the others."), 0x66CCFF;
+		end;
+	}
+	$@NBG3_RC_ACC[.@k] = 1;
+	.@acc = 0;
+	for (.@j = 0; .@j < 6; .@j++)
+		if ($@NBG3_RC_ACC[.@j]) .@acc++;
+	callfunc "F_NEED_BG3_Log", "READY_ACCEPT gen=" + $@NBG3_RC_GEN + " aid=" + .@aid + " cid=" + getcharid(0) + " accepted=" + .@acc + "/6";
+	dispbottom needtr("[3:3 룬 거점전] 수락했습니다 (" + .@acc + "/6). 6명이 모두 수락하면 바로 입장합니다.",
+		"[3v3 Rune Control] Accepted (" + .@acc + "/6). You enter as soon as all 6 accept."), 0x66CCFF;
+	end;
+
+OnCmdDecline:
+	.@aid = getcharid(3);
+	.@k = callfunc("F_NEED_BG3_RcIndex", .@aid);
+	if (.@k >= 0) {
+		if ($@NBG3_RC_CID[.@k] != getcharid(0))
+			.@k = -1;
+	}
+	if (.@k < 0) {
+		dispbottom needtr("[3:3 룬 거점전] 지금 거절할 참가 확인이 없습니다. 대기 취소는 @룬취소.", "[3v3 Rune Control] There is no ready check for you right now. To leave the queue: @bg3cancel."), 0xFF7777;
+		end;
+	}
+	callfunc "F_NEED_BG3_Log", "READY_DECLINE gen=" + $@NBG3_RC_GEN + " aid=" + .@aid + " cid=" + getcharid(0) + " why=decline";
+	callfunc "F_NEED_BG3_RcDrop", .@k, "QUEUE_CANCEL why=decline";
+	callfunc "F_NEED_BG3_RcClose", "[3:3 룬 거점전] 참가자 한 명이 거절해 다시 참가 확인을 진행합니다. 순번은 그대로입니다.",
+		"[3v3 Rune Control] A player declined, so the ready check starts again. Your place in the queue is kept.";
+	dispbottom needtr("[3:3 룬 거점전] 거절했습니다. 대기열에서 빠졌습니다(불이익 없음).", "[3v3 Rune Control] Declined. You left the queue (no penalty)."), 0x66CCFF;
+	end;
+
+OnCmdStatus:
+	.@now = gettimetick(0);
+	.@left = $@NBG3_DEADLINE ? ($@NBG3_DEADLINE - .@now) / 1000 : 0;
+	if (.@left < 0) .@left = 0;
+	.@i = callfunc("F_NEED_BG3_IndexOf", getcharid(0));
+	.@mine$ = (.@i >= 0) ? needtr(" / 내 팀 ", " / my team ") + callfunc("F_NEED_BG2_TeamName$", $@NBG3_TEAM[.@i]) : "";
+	.@q = callfunc("F_NEED_BG3_QIndex", getcharid(3));
+	.@k = callfunc("F_NEED_BG3_RcIndex", getcharid(3));
+	dispbottom needtr("[3:3 룬 거점전] 대기열 ", "[3v3 Rune Control] queue ") + ($NEED_BG3_QUEUE_OPEN ? needtr("열림", "open") : needtr("닫힘", "closed"))
+		+ needtr(" / 대기 ", " / waiting ") + $@NBG3_Q_N
+		+ ((.@q >= 0) ? needtr(" / 내 순번 ", " / my position ") + (.@q + 1) : "")
+		+ ((.@k >= 0) ? needtr(" / 참가 확인 중 ", " / ready check ") + (($@NBG3_RC_END - .@now) / 1000) + needtr("초 남음 (@룬수락)", "s left (@bg3accept)") : ""), 0x66CCFF;
+	setarray .@own$[0], needtr("중립", "neutral"), needtr("블루", "Blue"), needtr("레드", "Red");
+	dispbottom needtr("[3:3 룬 거점전] 상태 ", "[3v3 Rune Control] state ") + callfunc("F_NEED_BG3_StateName$", $@NBG3_STATE)
+		+ needtr(" / 블루 ", " / Blue ") + $@NBG3_SCORE[1] + " : " + $@NBG3_SCORE[2] + needtr(" 레드", " Red")
+		+ needtr(" / 크리스탈 ", " / crystal ") + .@own$[$@NBG3_CAP_OWNER]
+		+ needtr(" / 남은 시간 ", " / time left ") + .@left + needtr("초", "s") + .@mine$, 0x66CCFF;
+	end;
+
+OnCmdGM:
+	if (getgmlevel() < 60)
+		end;
+	.@sub$ = (.@atcmd_numparameters > 0) ? .@atcmd_parameters$[0] : "";
+	if (.@sub$ == "open") callsub S_Open;
+	else if (.@sub$ == "start") callfunc "F_NEED_BG3_Start";
+	else if (.@sub$ == "status") callfunc "F_NEED_BG3_StatusLines";
+	else if (.@sub$ == "stop") callfunc "F_NEED_BG3_GmStop";
+	else if (.@sub$ == "recover") callfunc "F_NEED_BG3_GmRecover", .@atcmd_parameters$[1];
+	else if (.@sub$ == "lvbypass") callsub S_LvBypass, atoi(.@atcmd_parameters$[1]);
+	else if (.@sub$ == "log") callsub S_Log, atoi(.@atcmd_parameters$[1]);
+	else if (.@sub$ == "queue") callsub S_Queue, .@atcmd_parameters$[1];
+	else dispbottom "[3:3 룬] 사용법: @bg3 open|start|status|stop|recover <이름>|lvbypass 0/1|log 0/1|queue on/off";
+	end;
+
+S_Queue:
+	if (getarg(0) == "on") {
+		$NEED_BG3_QUEUE_OPEN = 1;
+		callfunc "F_NEED_BG3_TimerOn";
+		callfunc "F_NEED_BG3_Log", "QUEUE_OPEN by_aid=" + getcharid(3);
+		dispbottom "[3:3 룬] 공개 개인 대기열을 열었습니다. 일반 유저가 @룬참가 로 신청합니다.";
+	} else if (getarg(0) == "off") {
+		$NEED_BG3_QUEUE_OPEN = 0;
+		callfunc "F_NEED_BG3_QueueClose", "queue_closed";
+		callfunc "F_NEED_BG3_Log", "QUEUE_CLOSE by_aid=" + getcharid(3);
+		dispbottom "[3:3 룬] 공개 대기열을 닫았습니다(대기자 신청 취소, 진행 중인 경기는 그대로).";
+	} else
+		dispbottom "[3:3 룬] 공개 대기열: " + ($NEED_BG3_QUEUE_OPEN ? "열림" : "닫힘") + " / 대기 " + $@NBG3_Q_N + "명 (@bg3 queue on|off)";
+	return;
+
+S_Open:
+	if ($@NBG3_STATE != 0 || $@NBG3_RC) {
+		dispbottom "[3:3 룬] 경기장이 사용 중이거나 참가 확인이 진행 중입니다. (상태 " + callfunc("F_NEED_BG3_StateName$", $@NBG3_STATE) + ", 참가 확인 " + $@NBG3_RC + ")";
+		return;
+	}
+	callfunc "F_NEED_BG3_ClearRecruit";
+	callfunc "F_NEED_BG3_ClearMatch";
+	$@NBG3_STATE = 1;
+	initnpctimer "NEED_BG3";
+	callfunc "F_NEED_BG3_Log", "RECRUIT_OPEN by_aid=" + getcharid(3) + " lvbypass=" + $NEED_BG3_LVBYPASS;
+	dispbottom "[3:3 룬] 모집을 열었습니다. 참가자는 @bg3join (@룬참가) 로 신청합니다.";
+	return;
+
+S_LvBypass:
+	if ($@NBG3_STATE >= 2 && $@NBG3_STATE <= 6) {
+		dispbottom "[3:3 룬] 경기 중에는 바꿀 수 없습니다.";
+		return;
+	}
+	$NEED_BG3_LVBYPASS = getarg(0) ? 1 : 0;
+	callfunc "F_NEED_BG3_Log", "LVBYPASS=" + $NEED_BG3_LVBYPASS + " by_aid=" + getcharid(3);
+	dispbottom "[3:3 룬] 레벨 제한 우회: " + ($NEED_BG3_LVBYPASS ? "ON (GM 테스트 옵션)" : "OFF (BaseLevel " + $@NBG3_C_MINLV + " 이상)");
+	return;
+
+S_Log:
+	$NEED_BG3_LOG_OFF = getarg(0) ? 0 : 1;
+	dispbottom "[3:3 룬] 디버그 로그: " + ($NEED_BG3_LOG_OFF ? "OFF" : "ON");
+	return;
+}
+
+// 룬 크리스탈(표시용). 중앙 밀폐 박스 안. 모양은 F_NEED_BG3_Crystal 이 소유 팀에 맞춰 바꾼다.
+// 고유 이름 NBG3_Crystal 은 setnpcdisplay 가 찾는 이름이다.
+need_bg3,40,39,0	script	룬 크리스탈::NBG3_Crystal	4_ENERGY_WHITE,{
+	end;
+}
