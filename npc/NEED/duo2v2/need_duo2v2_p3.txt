@@ -1283,16 +1283,18 @@ function	script	F_NEED_BG2P3_Finalize	{
 		if (.@out) dispbottom "[2:2 정산] 주차 " + callfunc("F_NEED_BG2P3_Date$", .@ws) + " 는 이미 " + .@st$ + " 입니다. 다시 확정하지 않습니다.";
 		return 3;
 	}
-	.@sigB$ = callfunc("F_NEED_BG2P3_Award$", .@ws, 1);
-	.@sigA$ = callfunc("F_NEED_BG2P3_Award$", .@ws, 0);	// 마지막 호출 결과($@NBG2P3_AW_*)가 보류 제외 기준이다
-	if (.@sigA$ == "ERR" || .@sigB$ == "ERR")
+	.@sigA$ = callfunc("F_NEED_BG2P3_Award$", .@ws, 0);	// 보류 제외 순위($@NBG2P3_AW_*)
+	if (.@sigA$ == "ERR")
 		return -1;
-	.@held = 0;
-	query_sql "SELECT COUNT(*) FROM need_bg2_match WHERE `mode` = " + $@NBG2P3_MODE + " AND week_start = " + .@ws + " AND review = 1", .@held;
-	if (.@sigA$ != .@sigB$) {
-		.@detail$ = "held=" + .@held + " excl[" + .@sigA$ + "] incl[" + .@sigB$ + "]";
+	// ISSUE-02: 그 주차에 미처리 검토 보류(review = 1) 경기가 1건이라도 있으면 순위를 확정하지 않는다(영향도 계산 없음).
+	// GM 이 모두 approve / release / void 해 0건이 되면 다음 자동 확정(FinalizeDue) 또는 GM due / finalize 에서 확정된다.
+	.@held = -1;
+	if (query_sql("SELECT COUNT(*) FROM need_bg2_match WHERE `mode` = " + $@NBG2P3_MODE + " AND week_start = " + .@ws + " AND review = 1", .@held) < 0 || .@held < 0)
+		return -1;
+	if (.@held > 0) {
+		.@detail$ = "held=" + .@held + " (unresolved review hold: ranking waits) excl[" + .@sigA$ + "]";
 		if (.@out) {
-			dispbottom "[2:2 정산] 보류(HOLD): 검토 중인 경기 " + .@held + "개가 순위 결과를 바꿉니다. 검토를 끝낸 뒤 다시 확정됩니다.";
+			dispbottom "[2:2 정산] 보류(HOLD): 해당 주 HOLD 미처리 " + .@held + "건, 확정 보류. 모두 approve / release / void 하면 다음 확정 때 순위가 정해집니다.";
 			dispbottom "[2:2 정산] " + .@detail$;
 			return 2;
 		}
