@@ -1750,8 +1750,9 @@ uint32 need_dq_family_group( uint32 account_id ) {
 		"SELECT `m`.`family_group_id` FROM `need_summer_attendance_family_member` `m` "
 		"JOIN `need_summer_attendance_family_group` `g` "
 		"ON `g`.`event_id`=`m`.`event_id` AND `g`.`family_group_id`=`m`.`family_group_id` "
-		"WHERE `m`.`event_id`='%u' AND `m`.`account_id`='%u' AND `m`.`active`='1' AND `g`.`active`='1' LIMIT 1",
-		NEED_DQ_FAMILY_EVENT_ID, account_id ) ) {
+		"WHERE `m`.`event_id` IN ('%u','%u') AND `m`.`account_id`='%u' AND `m`.`active`='1' AND `g`.`active`='1' "
+		"ORDER BY `m`.`event_id` DESC LIMIT 1",
+		NEED_DQ_FAMILY_EVENT_ID, NEED_FAMILY_GLOBAL_EVENT_ID, account_id ) ) {   // own list first, then the global list (2026-10-30)
 		Sql_ShowDebug( mmysql_handle );
 		return 0;   // like the honey songpyun: a broken family list means "no family", the IP rule applies
 	}

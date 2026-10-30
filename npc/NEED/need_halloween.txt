@@ -7,11 +7,13 @@
 //=   사냥     4.00% x1, 플레이어 레벨 ±30 (C++ need_halloween.cpp)
 //=   전장     티에라 2 / 플라비우스 2 / KVM 3 (기존 정상 보상 대상자, 승패 무관)
 //=   잭 잡기  성공 시 10개, 계정 + 접속 IP 하루 1회 (04:00 초기화)
+//=            @hwfamily 로 승인된 가족 계정은 IP 제한 없이 계정당 하루 1회 (잭의 사탕도 같음, 2026-10-30)
 //=
 //= 교환 (할로윈 상인 잭)
 //=   10   올인원 힐링 포션 (102129)          제한 없음 (바터 need_halloween_exchange)
 //=   20   뭔가 있는 캔디 홀더 (22838)        제한 없음 (바터 need_halloween_exchange)
 //=   100  홀그렌의 쉐도우 제련망치 (23436)   계정당 주 5개 (매주 토요일 22:00 초기화)
+//=   100  대장장이의 축복 (6635)            계정당 주 3개 (같은 초기화, 망치와 따로 센다) (2026-10-30)
 //=   300  아리아 의상 선택 상자 (399935)     계정당 이벤트 기간 1개
 //=   1000 +9 무기(6228) / 방어구(6232) 보장권 택1, 계정당 이벤트 기간 총 1개
 //=
@@ -460,6 +462,7 @@ function	script	F_NEED_Halloween_JackTalk	{
 		mes needtr("- 성공 보상: 할로윈 코인 10개", "- Reward: 10 Halloween Coins");
 		mes needtr("- ^FF0000계정 1개 + 접속 IP 1개 기준 하루 1번^000000 (04:00 초기화)", "- ^FF0000Once a day per account and per connection IP^000000 (resets 04:00)");
 		mes needtr("  다른 캐릭터나 같은 IP의 다른 계정도 함께 셉니다.", "  Other characters and other accounts on the same IP share it.");
+		mes needtr("  ^999999운영자가 승인한 가족 계정은 계정당 하루 1번 (IP 제한 없음)^000000", "  ^999999Approved family accounts: once a day per account (no IP limit)^000000");
 		mes needtr("- 시간이 지나 실패하면 기록이 남지 않아 다시 도전할 수 있어.", "- If time runs out nothing is recorded, so you can retry.");
 		mes needtr("- 도중에 나가거나 접속이 끊기면 그 판은 끝나.", "- Leaving or disconnecting ends that round.");
 		close;
@@ -670,6 +673,7 @@ function	script	F_NEED_Halloween_ShopTalk	{
 	switch (select(
 		needtr("일반 교환 (포션 / 캔디 홀더)", "Regular items (potion / candy holder)"),
 		needtr("홀그렌의 쉐도우 제련망치 (100개 / 주 5개)", "Hollgrehenn's Shadow Refine Hammer (100 / 5 per week)"),
+		needtr("대장장이의 축복 (100개 / 주 3개)", "Blacksmith's Blessing (100 / 3 per week)"),
 		needtr("아리아 의상 선택 상자 (300개 / 1회)", "Aria Costume Selection Box (300 / once)"),
 		needtr("+9 무기·방어구 보장권 택1 (1000개 / 1회)", "+9 Weapon or Armor Certificate (1000 / once)"),
 		needtr("교환 목록 듣기", "Hear the exchange list"),
@@ -681,28 +685,33 @@ function	script	F_NEED_Halloween_ShopTalk	{
 		end;
 
 	case 2:
-		callsub S_Hammer;
+		callsub S_Weekly, "SHADOW_HAMMER", 5, 100, 23436, "홀그렌의 쉐도우 제련망치", "Shadow Refine Hammer";
 		end;
 
 	case 3:
-		callsub S_Aria;
+		callsub S_Weekly, "DAECHUK", 3, 100, 6635, "대장장이의 축복", "Blacksmith's Blessing";
 		end;
 
 	case 4:
-		callsub S_Refine;
+		callsub S_Aria;
 		end;
 
 	case 5:
+		callsub S_Refine;
+		end;
+
+	case 6:
 		mes .@n$;
 		mes needtr("코인 10개 - 올인원 힐링 포션", "10 coins - All-in-One Healing Potion");
 		mes needtr("코인 20개 - 뭔가 있는 캔디 홀더", "20 coins - Pumpkin Candy Holder");
 		mes needtr("^0055FF코인 100개 - 홀그렌의 쉐도우 제련망치 (계정당 주 5개)^000000", "^0055FF100 coins - Hollgrehenn's Shadow Refine Hammer (5 per week per account)^000000");
+		mes needtr("^0055FF코인 100개 - 대장장이의 축복 (계정당 주 3개)^000000", "^0055FF100 coins - Blacksmith's Blessing (3 per week per account)^000000");
 		mes needtr("^0055FF코인 300개 - 아리아 의상 선택 상자 (계정당 1개)^000000", "^0055FF300 coins - Aria Costume Selection Box (1 per account)^000000");
 		mes needtr("^0055FF코인 1000개 - +9 무기 또는 방어구 보장권 (계정당 1개)^000000", "^0055FF1000 coins - +9 Weapon or Armor Certificate (1 per account)^000000");
 		next;
 		mes .@n$;
 		mes needtr("포션과 캔디 홀더는 몇 번이든 바꿀 수 있어.", "Potions and candy holders can be traded any number of times.");
-		mes needtr("망치는 ^0055FF매주 토요일 22:00^000000 에 횟수가 초기화돼.", "The hammer count resets ^0055FFevery Saturday at 22:00^000000.");
+		mes needtr("망치와 대장장이의 축복은 ^0055FF매주 토요일 22:00^000000 에 횟수가 초기화돼.", "The hammer and blessing counts reset ^0055FFevery Saturday at 22:00^000000.");
 		mes needtr("아리아 상자와 +9 보장권은 ^FF0000이벤트 기간에 계정당 1번^000000이야.", "The Aria box and the +9 certificate are ^FF0000once per account for the event^000000.");
 		mes needtr("+9 보장권은 무기나 방어구 ^FF0000둘 중 하나만^000000 고를 수 있어.", "For the +9 certificate you pick ^FF0000either^000000 weapon or armor, not both.");
 		mes needtr("모든 한도는 같은 계정의 캐릭터끼리 함께 세.", "All limits are shared by the characters of one account.");
@@ -717,13 +726,20 @@ function	script	F_NEED_Halloween_ShopTalk	{
 	}
 
 //------------------------------------------------------------
-// 홀그렌의 쉐도우 제련망치 : 코인 100개, 계정당 주 5개
+// 주간 한도 교환 (토요일 22:00 초기화, 계정 기준)
+//   홀그렌의 쉐도우 제련망치 SHADOW_HAMMER : 코인 100개, 주 5개
+//   대장장이의 축복 DAECHUK              : 코인 100개, 주 3개 (2026-10-30)
+//   product 키가 달라 한도는 따로 센다. 원장 event_id 202610 이라 추석 DAECHUK(202609)와 섞이지 않는다.
+// getarg: 0 product 키, 1 주간 한도, 2 코인 가격, 3 아이템, 4 이름(KR), 5 이름(EN)
 //------------------------------------------------------------
-S_Hammer:
+S_Weekly:
+	.@product$ = getarg(0);
+	.@cap = getarg(1);
+	.@cost = getarg(2);
+	.@item = getarg(3);
+	.@iname$ = needtr(getarg(4), getarg(5));
 	.@period = callfunc("F_NEED_Chuseok_WeekKey");
-	.@cap = 5;
-	.@cost = 100;
-	.@used = callfunc("F_NEED_Chuseok_LimitUsed", "ACCOUNT", "" + getcharid(3), "SHADOW_HAMMER", .@period, 202610);
+	.@used = callfunc("F_NEED_Chuseok_LimitUsed", "ACCOUNT", "" + getcharid(3), .@product$, .@period, 202610);
 
 	mes .@n$;
 	if (.@used < 0) {
@@ -733,7 +749,7 @@ S_Hammer:
 	if (.@used > .@cap)
 		.@used = .@cap;
 
-	mes needtr("^FFCC00홀그렌의 쉐도우 제련망치 주간 교환^000000", "^FFCC00Weekly Shadow Refine Hammer exchanges^000000");
+	mes "^FFCC00" + .@iname$ + needtr(" 주간 교환^000000", " - weekly exchanges^000000");
 	mes needtr("이번 주 사용 : ^0055FF", "Used this week : ^0055FF") + .@used + " / " + .@cap + needtr("^000000  (남은 수량 ", "^000000  (") + (.@cap - .@used) + needtr("개)", " left)");
 	mes needtr("다음 초기화 : ^0055FF", "Next reset : ^0055FF") + callfunc("F_NEED_Chuseok_WeekResetStr$") + "^000000";
 	mes needtr("^999999계정 기준이라 다른 캐릭터와 함께 셉니다.^000000", "^999999Counted per account, shared by all your characters.^000000");
@@ -773,9 +789,9 @@ S_Hammer:
 	}
 
 	// 대화 중 주가 바뀌었을 수 있으니 주간 키를 다시 구한다.
-	.@result = callfunc("F_NEED_Halloween_LimitedExchange", "SHADOW_HAMMER", callfunc("F_NEED_Chuseok_WeekKey"), .@cap, 23436, .@cost, .@want);
+	.@result = callfunc("F_NEED_Halloween_LimitedExchange", .@product$, callfunc("F_NEED_Chuseok_WeekKey"), .@cap, .@item, .@cost, .@want);
 	if (.@result == 1) {
-		mes needtr("홀그렌의 쉐도우 제련망치 ^0055FF", "Here you go: ^0055FF") + .@want + needtr("개^000000 여기 있어.", "^000000 Shadow Refine Hammer(s).");
+		mes needtr(.@iname$ + " ^0055FF", "Here you go: ^0055FF") + .@want + needtr("개^000000 여기 있어.", "^000000 x " + .@iname$ + ".");
 		mes needtr("할로윈 코인 ", "I took ") + (.@cost * .@want) + needtr("개를 받았어.", " Halloween Coins.");
 	}
 	else

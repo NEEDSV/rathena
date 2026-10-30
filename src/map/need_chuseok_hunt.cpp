@@ -108,7 +108,8 @@ void need_event_daily_fail_closed(const s_need_event_daily_spec& spec, s_need_ev
 // Operator approved family group for this account, or 0 when there is none.
 //
 // The list lives in the summer event tables (need_summer_attendance_family_*),
-// reused here with event_id = spec.event_id so no extra schema has to be
+// reused here with event_id = spec.family_event_id (or spec.event_id), plus the global list
+// (NEED_FAMILY_GLOBAL_EVENT_ID, own list first), so no extra schema has to be
 // imported. Never fail-closed on this: when the tables are missing or the query
 // errors, the account is simply treated as "no family" and the ip limit applies
 // as usual. A broken family list must not take the whole daily reward down.
@@ -120,8 +121,9 @@ uint32 need_event_daily_family_group(const s_need_event_daily_spec& spec, s_need
 		"SELECT `m`.`family_group_id` FROM `need_summer_attendance_family_member` `m` "
 		"JOIN `need_summer_attendance_family_group` `g` "
 		"ON `g`.`event_id`=`m`.`event_id` AND `g`.`family_group_id`=`m`.`family_group_id` "
-		"WHERE `m`.`event_id`='%u' AND `m`.`account_id`='%u' AND `m`.`active`='1' AND `g`.`active`='1' LIMIT 1",
-		spec.event_id, account_id)) {
+		"WHERE `m`.`event_id` IN ('%u','%u') AND `m`.`account_id`='%u' AND `m`.`active`='1' AND `g`.`active`='1' "
+		"ORDER BY `m`.`event_id` DESC LIMIT 1",
+		spec.family_event_id != 0 ? spec.family_event_id : spec.event_id, NEED_FAMILY_GLOBAL_EVENT_ID, account_id)) {
 		Sql_ShowDebug(mmysql_handle);
 		state.family_lookup_disabled = true;
 		ShowWarning("%s\n", msg_txt(nullptr, spec.msg_family_unavailable));
@@ -388,6 +390,19 @@ int32 need_event_daily_claimed_today(const s_need_event_daily_spec& spec, s_need
 	if (sd == nullptr || state.fail_closed || !need_event_daily_schema_ready(spec, state) ||
 		!need_event_hunt_client_ip(sd, ip) || !need_event_hunt_logical_date(logical_date))
 		return -1;
+
+	// An approved family member is limited by its own account only, like the grant above.
+	if (need_event_daily_family_group(spec, state, sd->status.account_id) != 0) {
+		if (SQL_ERROR == Sql_Query(mmysql_handle,
+			"SELECT 1 FROM `need_chuseok_honey_claim` WHERE `event_id`='%u' AND `logical_date`='%s' AND `account_id`='%u' LIMIT 1",
+			spec.event_id, logical_date.sql_date, sd->status.account_id)) {
+			Sql_ShowDebug(mmysql_handle);
+			return -1;
+		}
+		int32 claimed = Sql_NumRows(mmysql_handle) > 0 ? 1 : 0;
+		Sql_FreeResult(mmysql_handle);
+		return claimed;
+	}
 
 	if (SQL_ERROR == Sql_Query(mmysql_handle,
 		"SELECT 1 FROM `need_chuseok_honey_claim` WHERE `event_id`='%u' AND `logical_date`='%s' AND `account_id`='%u' "
