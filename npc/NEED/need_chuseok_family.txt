@@ -7,11 +7,19 @@
 //=
 //= 명단은 여름 이벤트 테이블을 event_id 202609 로 재사용합니다.
 //= @dqfamily 는 같은 화면으로 일일 퀘스트 가족(event_id 202699)을 관리합니다 (2026-10-22).
+//= @hwfamily 는 같은 화면으로 2026 할로윈 가족(event_id 202610)을 관리합니다 (2026-10-30).
+//=   승인된 계정은 잭 잡기 보상과 잭의 사탕의 IP 제한을 면제받고 계정당 하루 1회만 적용됩니다.
+//=   (need_halloween.cpp 의 두 원장이 202610 명단 하나를 같이 본다.)
+//= @needfamily 는 공용 가족 명단(event_id 0)을 관리합니다 (2026-10-30).
+//=   공용 명단에 한 번 등록하면 가족 IP 예외를 쓰는 모든 콘텐츠에 적용됩니다.
+//=   (C++ NEED_FAMILY_GLOBAL_EVENT_ID: 할로윈 잭 잡기 / 잭의 사탕, 일일 퀘스트. 콘텐츠 자체 명단도 계속 읽는다.)
+//=   잭 러시 랭킹처럼 IP 당 1개가 규칙인 콘텐츠에는 적용되지 않습니다.
 //=   need_summer_attendance_family_group   그룹
 //=   need_summer_attendance_family_member  그룹 <-> 계정
 //=   need_summer_attendance_family_audit   승인/해제 이력
 //=
 //= 테이블이 없으면 메뉴가 열리지 않고 안내만 합니다.
+//= 테이블 확인($NEED_CHUSEOK_FAMILY_READY)은 이 파일 OnInit 에서도 한다 (need_chuseok.txt 미로드 대비).
 //= sql-files/need_chuseok_family_upgrade.sql 을 임포트하세요.
 //============================================================
 
@@ -42,9 +50,32 @@ OnDqCommand:
 	callsub S_Main;
 	end;
 
+// NEED 2026 할로윈 (2026-10-30): 잭 잡기 보상 / 잭의 사탕 가족 명단.
+// event_id 202610 = need_halloween.cpp NEED_HALLOWEEN_EVENT_ID (추석·일일 퀘스트 승인은 넘어가지 않음)
+OnHwCommand:
+	if (getgmlevel() < 99) end;
+	@NEED_FAM_EV = 202610;
+	@NEED_FAM_T$ = "[할로윈 가족 관리]";
+	callsub S_Main;
+	end;
+
+// 공용 가족 명단 (2026-10-30): event_id 0 = NEED_FAMILY_GLOBAL_EVENT_ID (need_event_hunt.hpp)
+OnGlobalCommand:
+	if (getgmlevel() < 99) end;
+	@NEED_FAM_EV = 0;
+	@NEED_FAM_T$ = "[공용 가족 관리]";
+	callsub S_Main;
+	end;
+
 OnInit:
+	bindatcmd "needfamily", "need_chuseok_family::OnGlobalCommand", 99, 99;
 	bindatcmd "chuseokfamily", "need_chuseok_family::OnCommand", 99, 99;
 	bindatcmd "dqfamily", "need_chuseok_family::OnDqCommand", 99, 99;
+	bindatcmd "hwfamily", "need_chuseok_family::OnHwCommand", 99, 99;
+	.@rows = query_sql("SELECT COUNT(*) FROM `information_schema`.`TABLES` WHERE `TABLE_SCHEMA`=DATABASE() AND `TABLE_NAME` IN ('need_summer_attendance_family_group','need_summer_attendance_family_member')", .@found);
+	$NEED_CHUSEOK_FAMILY_READY = (.@rows > 0 && .@found == 2);
+	if (!$NEED_CHUSEOK_FAMILY_READY)
+		debugmes "[NEED Family] family group tables missing - @needfamily / @chuseokfamily / @dqfamily / @hwfamily menus stay closed.";
 	end;
 
 S_Main:
@@ -70,6 +101,8 @@ S_Main:
 		mes " ";
 		mes "^999999가족으로 승인된 계정은 IP 제한을 면제받고";
 		mes "계정 한도만 적용됩니다.^000000";
+		if (@NEED_FAM_EV == 0)
+			mes "^0055FF공용 명단: 가족 예외를 쓰는 모든 콘텐츠에 적용^000000";
 		next;
 
 		.@sel = select(

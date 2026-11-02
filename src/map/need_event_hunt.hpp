@@ -14,6 +14,11 @@
 class map_session_data;
 struct mob_data;
 
+/// Global family (household) list (2026-10-30): rows under this event_id in need_summer_attendance_family_*
+/// apply to every content that honours the family IP exception (@needfamily). A content's own list
+/// (its event_id) is still read too and wins when an account is in both.
+constexpr uint32 NEED_FAMILY_GLOBAL_EVENT_ID = 0;
+
 // Logical date buffer for the 04:00 daily boundary ("YYYY-MM-DD").
 struct need_event_hunt_date {
 	char sql_date[11] = {};

@@ -32,7 +32,8 @@ constexpr uint32 NEED_HALLOWEEN_EVENT_ID = 202610;
 constexpr uint16 NEED_HALLOWEEN_JACK_REWARD_AMOUNT = 10;
 
 // Jack's Candy: item 6532, formerly the chuseok honey songpyun, converted for good.
-// Rate is need_halloween_candy_rate / 10000 (conf 5 = 0.05%), one per account and per IP a day.
+// Rate is need_halloween_candy_rate / 10000 (conf 5 = 0.05%), one per account and per IP a day
+// (approved family: per account only).
 constexpr t_itemid NEED_HALLOWEEN_CANDY_ITEM_ID = 6532;
 constexpr uint32 NEED_HALLOWEEN_CANDY_EVENT_ID = 202611;
 
@@ -49,23 +50,30 @@ constexpr int32 MSG_CANDY_SUCCESS = 1552;
 constexpr int32 MSG_CANDY_LOG = 1553;
 constexpr int32 MSG_CANDY_FAIL_CLOSED = 1554;
 
-// No family exception: the jack game reward is one per account and one per IP, strictly.
+constexpr int32 MSG_HALLOWEEN_FAMILY_UNAVAILABLE = 1555;
+
+// Family exception (2026-10-30): accounts in an operator approved halloween family (@hwfamily,
+// family list event_id 202610, or the global list of @needfamily) skip the IP side and keep the
+// one per account a day.
+// The jack reward and Jack's Candy share that one list.
 // No player messages from here either: need_halloween.txt explains every result itself.
 constexpr s_need_event_daily_spec NEED_HALLOWEEN_JACK_SPEC = {
-	NEED_HALLOWEEN_EVENT_ID, NEED_HALLOWEEN_COIN_ITEM_ID, NEED_HALLOWEEN_JACK_REWARD_AMOUNT, false, false,
+	NEED_HALLOWEEN_EVENT_ID, NEED_HALLOWEEN_COIN_ITEM_ID, NEED_HALLOWEEN_JACK_REWARD_AMOUNT, true, false,
 	MSG_HALLOWEEN_ITEM_UNAVAILABLE, MSG_HALLOWEEN_SCHEMA_UNAVAILABLE, MSG_HALLOWEEN_FAIL_CLOSED,
-	MSG_HALLOWEEN_LOG, 0,
+	MSG_HALLOWEEN_LOG, MSG_HALLOWEEN_FAMILY_UNAVAILABLE,
 	0, 0, 0, 0, 0,
+	NEED_HALLOWEEN_EVENT_ID,
 };
 
-// No family exception and no messages from the ledger: need_halloween_candy_try below sends only
-// the found / inventory / error lines, a daily limit hit stays silent (it is a world drop).
+// No messages from the ledger: need_halloween_candy_try below sends only the found / inventory /
+// error lines, a daily limit hit stays silent (it is a world drop).
 constexpr s_need_event_daily_spec NEED_HALLOWEEN_CANDY_SPEC = {
-	NEED_HALLOWEEN_CANDY_EVENT_ID, NEED_HALLOWEEN_CANDY_ITEM_ID, 1, false, false,
+	NEED_HALLOWEEN_CANDY_EVENT_ID, NEED_HALLOWEEN_CANDY_ITEM_ID, 1, true, false,
 	MSG_HALLOWEEN_ITEM_UNAVAILABLE, MSG_CANDY_SCHEMA_UNAVAILABLE, MSG_CANDY_FAIL_CLOSED,
-	MSG_CANDY_LOG, 0,
+	MSG_CANDY_LOG, MSG_HALLOWEEN_FAMILY_UNAVAILABLE,
 	MSG_CANDY_INVENTORY_FULL, MSG_CANDY_ACCOUNT_LIMIT, MSG_CANDY_IP_LIMIT,
 	MSG_CANDY_DATABASE_ERROR, MSG_CANDY_SUCCESS,
+	NEED_HALLOWEEN_EVENT_ID,
 };
 
 bool coin_item_checked = false;

@@ -40,6 +40,7 @@ struct s_need_event_daily_spec {
 	int32 msg_ip_limit;             // player (notify only)
 	int32 msg_database_error;       // player (notify only)
 	int32 msg_success;              // player (notify only)
+	uint32 family_event_id;         // event id of the family list, 0 = event_id (lets two products share one list)
 };
 
 /// Runtime flags of one spec. The owner resets them in its init / final.
