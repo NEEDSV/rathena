@@ -1,5 +1,5 @@
 //============================================================
-// NEED 3:3 룬 거점전 - 경기 코어 (A단계, 개발 서버 검증용, 보상/원장 없음)
+// NEED 3:3 룬 거점전 - 경기 코어 (원장·보상은 need_bg3_p3.txt, 스위치 기본 꺼짐)
 //============================================================
 //= 기획 : NEED_BG3_Rune_Control GDD v0.6 + v0.7 결정안 (2026-10-29)
 //= 맵   : need_bg3 (pvp_2vs2 지형 복제 = need_bg2 와 같은 셀, npc/NEED/bg3/need_bg3_mapflag.txt).
@@ -23,7 +23,8 @@
 //=        한 팀 3명이 모두 확정 탈주하면: 실제 교전이 없었으면 무효, 있었으면 그 팀 몰수패. 양 팀 모두면 무효.
 //=        접속 중 경기장/팀 이탈(시스템/GM 이동)은 경기 무효. 준비시간 이탈 확정은 경기 취소(제재 없음).
 //= 판정 : 종료 사유 → 실제 적대 교전 여부(없으면 VOID) → 몰수 → 점수. 경기 결과는 한 번만 확정한다.
-//= 점수 : 승 +2 / 패 +1 / 유효 무승부 +1 / 확정 탈주자·무효·취소 0. A단계는 로그와 개인 안내만 하고 저장하지 않는다.
+//= 점수 : 승 +2 / 패 +1 / 유효 무승부 +1 / 확정 탈주자·무효·취소 0. 원장 스위치($NEED_BG3_P3_ON)가 시작 때 켜져 있던
+//=        경기만 need_bg3_p3.txt 가 원장(mode 3)에 넣는다. 꺼져 있으면 로그와 개인 안내만.
 //= 명령 : @bg3 (@룬관리) GM 60+ / @bg3join(@룬참가) @bg3cancel(@룬취소) @bg3status(@룬현황) @bg3accept(@룬수락) @bg3decline(@룬거절)
 //= 상태 : 0 IDLE  1 RECRUITING(GM 테스트)  2 PREPARING  4 ACTIVE  6 MATCH_FINISHED  7 CLEANUP
 //= 로그 : debugmes "[NEED_BG3] ..." -> log/map-msg_log.log. $NEED_BG3_LOG_OFF = 1 이면 끈다.
@@ -185,11 +186,12 @@ function	script	F_NEED_BG3_CheckSelf	{
 	return 0;
 }
 
-// 최근 24시간 탈주 제재(2:2 Phase 3 원장 기준, 2:2·3:3 합산 정책). 2:2 Phase 3 가 꺼져 있으면 검사하지 않는다.
-// A단계의 3:3 경기는 아직 원장에 탈주를 쓰지 않는다(B단계).
+// 최근 24시간 탈주 제재(공용 원장 need_bg2_desertion, 2:2·3:3 합산). 2:2·3:3 원장 스위치가 모두 꺼져 있으면 검사하지 않는다.
 function	script	F_NEED_BG3_SanctionCheck	{
 	@NEED_BG3_SANC_LEFT = 0;
-	if (!$@NBG2P3_LOADED || !$NEED_BG2_P3_ON)
+	if (!$@NBG2P3_LOADED)
+		return 0;
+	if (!$NEED_BG2_P3_ON && !$NEED_BG3_P3_ON)
 		return 0;
 	.@left = callfunc("F_NEED_BG2P3_Sanction", getcharid(3), gettimetick(2));
 	if (.@left > 0) {
@@ -313,6 +315,8 @@ function	script	F_NEED_BG3_RestoreSelf	{
 		sc_end SC_ENTRY_QUEUE_NOTIFY_ADMISSION_TIME_OUT;
 		.@to$ += " deserter_cleared";
 	}
+	if (NEED_BG3_P3 && $@NBG3P3_LOADED)	// B단계: 정산 경기의 탈주는 원장 제재로만. 경기 전부터 있던 다른 전장 탈주자 상태는 되돌린다
+		callfunc "F_NEED_BG3P3_EngineDeserter";
 	callfunc "F_NEED_BG3_Log", "RESTORE match=" + NEED_BG3_MID + " aid=" + getcharid(3) + " cid=" + .@cid + " why=" + getarg(0) + " to=" + .@to$;
 	NEED_BG3_MID = 0;
 	@NEED_BG3_BGID = 0;
@@ -353,6 +357,7 @@ function	script	F_NEED_BG3_ClearMatch	{
 	cleararray $@NBG3_GRACE_USED[0], 0, 6;
 	cleararray $@NBG3_HOST[0], 0, 6;
 	cleararray $@NBG3_HIT[0], 0, 6;
+	cleararray $@NBG3_SUP[0], 0, 6;
 	cleararray $@NBG3_DEATHS[0], 0, 6;
 	cleararray $@NBG3_PTS[0], 0, 6;
 	$@NBG3_N = 0;
@@ -515,6 +520,8 @@ function	script	F_NEED_BG3_Launch	{
 		$@NBG3_TEAM[.@k] = (.@k < 3) ? 1 : 2;
 		$@NBG3_SLOT[.@k] = .@k % 3;
 	}
+	if ($@NBG3P3_LOADED)
+		callfunc "F_NEED_BG3P3_Arm", .@origin;	// B단계: 이 경기 정산 여부와 시작 때 값 고정
 	callfunc "F_NEED_BG3_Log", "MATCH_START match=" + $@NBG3_MATCH + " origin=" + (.@origin == 2 ? "queue" : "gm")
 		+ " blue=" + $@NBG3_AID[0] + "/" + $@NBG3_CID[0] + "," + $@NBG3_AID[1] + "/" + $@NBG3_CID[1] + "," + $@NBG3_AID[2] + "/" + $@NBG3_CID[2]
 		+ " red=" + $@NBG3_AID[3] + "/" + $@NBG3_CID[3] + "," + $@NBG3_AID[4] + "/" + $@NBG3_CID[4] + "," + $@NBG3_AID[5] + "/" + $@NBG3_CID[5]
@@ -560,11 +567,17 @@ function	script	F_NEED_BG3_Launch	{
 		@NEED_BG2_CB_HOST = 0;	// 교전 카운터(엔진 need_combatlog)는 이 경기부터 센다
 		@NEED_BG2_CB_HIT = 0;
 		@NEED_BG2_CB_SUP = 0;
+		if ($@NBG3P3_LOADED)
+			callfunc "F_NEED_BG3P3_LaunchSelf", .@k;
 		callfunc "F_NEED_BG3_SpawnSelf", $@NBG3_TEAM[.@k], $@NBG3_SLOT[.@k], 0;
 		callfunc "F_NEED_BG3_SetMode", $@NBG3_C_FREEZE;
 		viewpoint 1, 39, 39, 1, 0xFFFFFF;
-		dispbottom needtr("[3:3 룬 거점전] 당신은 " + callfunc("F_NEED_BG2_TeamName$", $@NBG3_TEAM[.@k]) + " 팀입니다. 45초 준비 후 5분 경기가 시작됩니다. (테스트 경기, 보상 없음)",
-			"[3v3 Rune Control] You are on the " + callfunc("F_NEED_BG2_TeamName$", $@NBG3_TEAM[.@k]) + " team. The 5-minute match starts after 45 seconds of preparation. (Test match, no rewards)"), 0x66CCFF;
+		if ($@NBG3_P3ARMED && .@origin == 2)
+			dispbottom needtr("[3:3 룬 거점전] 당신은 " + callfunc("F_NEED_BG2_TeamName$", $@NBG3_TEAM[.@k]) + " 팀입니다. 45초 준비 후 5분 경기가 시작됩니다. (주간 3:3 점수 정산 경기)",
+				"[3v3 Rune Control] You are on the " + callfunc("F_NEED_BG2_TeamName$", $@NBG3_TEAM[.@k]) + " team. The 5-minute match starts after 45 seconds of preparation. (Weekly 3v3 points match)"), 0x66CCFF;
+		else
+			dispbottom needtr("[3:3 룬 거점전] 당신은 " + callfunc("F_NEED_BG2_TeamName$", $@NBG3_TEAM[.@k]) + " 팀입니다. 45초 준비 후 5분 경기가 시작됩니다. (테스트 경기, 보상 없음)",
+				"[3v3 Rune Control] You are on the " + callfunc("F_NEED_BG2_TeamName$", $@NBG3_TEAM[.@k]) + " team. The 5-minute match starts after 45 seconds of preparation. (Test match, no rewards)"), 0x66CCFF;
 		detachrid;
 	}
 	callfunc "F_NEED_BG3_PrepLock", 1;
@@ -808,7 +821,10 @@ function	script	F_NEED_BG3_SyncSelf	{
 		$@NBG3_HIT[.@i] += @NEED_BG2_CB_HIT;
 		@NEED_BG2_CB_HIT = 0;
 	}
-	@NEED_BG2_CB_SUP = 0;
+	if (@NEED_BG2_CB_SUP) {
+		$@NBG3_SUP[.@i] += @NEED_BG2_CB_SUP;
+		@NEED_BG2_CB_SUP = 0;
+	}
 	return;
 }
 
@@ -1009,12 +1025,21 @@ function	script	F_NEED_BG3_Finish	{
 	$@NBG3_LAST$ = "match " + $@NBG3_MATCH + " " + .@name$[.@kind] + " (" + .@why$ + ") B" + $@NBG3_SCORE[1] + ":R" + $@NBG3_SCORE[2] + " t=" + .@len + " pts " + .@pts$;
 	callfunc "F_NEED_BG3_Log", "MATCH_END match=" + $@NBG3_MATCH + " result=" + .@name$[.@kind] + " why=" + .@why$ + " score=" + $@NBG3_SCORE[1] + ":" + $@NBG3_SCORE[2]
 		+ " engaged=" + .@engaged + " state_before=" + .@prev + " t=" + .@len + " points=" + .@pts$ + " host/hit/deaths=" + .@host$;
-	mapannouncelang $@NBG3_MAP$, "[3:3 룬 거점전] 경기 종료: " + .@kr$[.@kind] + " (블루 " + $@NBG3_SCORE[1] + " : " + $@NBG3_SCORE[2] + " 레드). 테스트 경기라 보상은 없습니다. 5초 후 저장 지점으로 돌아갑니다.",
-		"[3v3 Rune Control] Match over: " + .@en$[.@kind] + " (Blue " + $@NBG3_SCORE[1] + " : " + $@NBG3_SCORE[2] + " Red). Test match, no rewards. You return to your save point in 5 seconds.", bc_map, "0x99FF99";
-	for (.@i = 0; .@i < $@NBG3_N; .@i++)
-		if (!$@NBG3_GONE[.@i])
-			callfunc "F_NEED_BG3_Tell", $@NBG3_AID[.@i], $@NBG3_CID[.@i], "[3:3 룬 거점전] 이 경기 점수(기록 전 단계): " + $@NBG3_PTS[.@i] + "점",
-				"[3v3 Rune Control] Points for this match (not recorded yet): " + $@NBG3_PTS[.@i];
+	.@p3 = ($@NBG3_P3ARMED && $@NBG3P3_LOADED);
+	if (.@p3 && $@NBG3_ORIGIN == 2)
+		mapannouncelang $@NBG3_MAP$, "[3:3 룬 거점전] 경기 종료: " + .@kr$[.@kind] + " (블루 " + $@NBG3_SCORE[1] + " : " + $@NBG3_SCORE[2] + " 레드). 주간 점수는 개인 메시지로 안내합니다. 5초 후 저장 지점으로 돌아갑니다.",
+			"[3v3 Rune Control] Match over: " + .@en$[.@kind] + " (Blue " + $@NBG3_SCORE[1] + " : " + $@NBG3_SCORE[2] + " Red). Your weekly points follow in a private message. You return to your save point in 5 seconds.", bc_map, "0x99FF99";
+	else {
+		mapannouncelang $@NBG3_MAP$, "[3:3 룬 거점전] 경기 종료: " + .@kr$[.@kind] + " (블루 " + $@NBG3_SCORE[1] + " : " + $@NBG3_SCORE[2] + " 레드). 테스트 경기라 보상은 없습니다. 5초 후 저장 지점으로 돌아갑니다.",
+			"[3v3 Rune Control] Match over: " + .@en$[.@kind] + " (Blue " + $@NBG3_SCORE[1] + " : " + $@NBG3_SCORE[2] + " Red). Test match, no rewards. You return to your save point in 5 seconds.", bc_map, "0x99FF99";
+		for (.@i = 0; .@i < $@NBG3_N; .@i++)
+			if (!$@NBG3_GONE[.@i])
+				callfunc "F_NEED_BG3_Tell", $@NBG3_AID[.@i], $@NBG3_CID[.@i], "[3:3 룬 거점전] 이 경기 점수(기록하지 않는 경기): " + $@NBG3_PTS[.@i] + "점",
+					"[3v3 Rune Control] Points for this match (not recorded): " + $@NBG3_PTS[.@i];
+	}
+	// B단계 정산: 서버 권위 종료 지점(경기당 한 번). 시작 때 원장 스위치가 켜져 있던 경기만.
+	if (.@p3)
+		callfunc "F_NEED_BG3P3_Settle", .@kind, .@why$;
 	callfunc "F_NEED_BG3_ModeAll", $@NBG3_C_LOCK;
 	return 1;
 }
