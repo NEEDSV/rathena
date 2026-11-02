@@ -313,6 +313,18 @@ function	script	F_NEED_BG2P3_ItemTicket	{
 	return 1;
 }
 
+// 직접 캐시 한도 키 (2:2·3:3 공용). 보통은 경기 시작 IP. 공용 가족 명단(@needfamily, event_id 0)에 승인된 계정은
+// "FAM:<계정 ID>": IP 한도 검사를 면제받고 같은 한도를 계정별로 쓴다(2026-11-02 운영 결정, 다른 IP 제한 콘텐츠와 같은 규칙).
+// 시작 IP 를 모르면 "" 그대로(캐시 보류 규칙). 명단 테이블이 없으면($NEED_CHUSEOK_FAMILY_READY 0) 조회하지 않고 IP.
+function	script	F_NEED_BG2P3_CashKey$	{
+	.@ip$ = getarg(1);
+	if (.@ip$ == "" || !$NEED_CHUSEOK_FAMILY_READY)
+		return .@ip$;
+	if (query_sql("SELECT m.`family_group_id` FROM `need_summer_attendance_family_member` m JOIN `need_summer_attendance_family_group` g ON g.`event_id` = m.`event_id` AND g.`family_group_id` = m.`family_group_id` WHERE m.`event_id` = 0 AND m.`account_id` = " + getarg(0) + " AND m.`active` = 1 AND g.`active` = 1 LIMIT 1", .@gid) > 0)
+		return "FAM:" + getarg(0);
+	return .@ip$;
+}
+
 // 승패 보상(트랜잭션 안, Apply 가 부른다). 경기 시작 때 고정한 버전 ver / 스위치 flags(1 직접 캐시, 2 아이템).
 // 참가자: $@NBG2P3_MR_AID/CID/OUT/VAL[], $@NBG2P3_MR_IP$[] (OUT 1 승 2 패 3 무, VAL 1 유효).
 // 직접 캐시: 경기 시작 때 IP 별로 하루(04:00 KST, 경기 종료 시각 기준) 한도 안에서 할당한다. 같은 경기에서 같은 IP 가 한도를 넘으면
@@ -356,12 +368,16 @@ function	script	F_NEED_BG2P3_MatchRewards	{
 		.@req[.@k] = !$@NBG2P3_MR_VAL[.@k] ? 0 : ((.@out == 1) ? $@NBG2R_CW[.@ver] : ((.@out == 2) ? $@NBG2R_CL[.@ver] : $@NBG2R_CD[.@ver]));
 		.@alloc[.@k] = 0;
 		.@done[.@k] = 0;
+		.@key$[.@k] = $@NBG2P3_MR_IP$[.@k];
+		if (.@req[.@k] > 0)
+			.@key$[.@k] = callfunc("F_NEED_BG2P3_CashKey$", $@NBG2P3_MR_AID[.@k], .@key$[.@k]);
 	}
 	for (.@x = 0; .@x < 4; .@x++) {
 		.@k = .@o[.@x];
 		if (.@done[.@k] || .@req[.@k] <= 0)
 			continue;
 		.@ip$ = $@NBG2P3_MR_IP$[.@k];
+		.@gk$ = .@key$[.@k];
 		if (.@ip$ == "") {
 			// 시작 IP 를 모르면 캐시만 보류(지급 없음). 점수·아이템은 그대로.
 			.@done[.@k] = 1;
@@ -377,7 +393,7 @@ function	script	F_NEED_BG2P3_MatchRewards	{
 		.@tot = 0;
 		for (.@y = .@x; .@y < 4; .@y++) {
 			.@j = .@o[.@y];
-			if (.@done[.@j] || .@req[.@j] <= 0 || $@NBG2P3_MR_IP$[.@j] != .@ip$)
+			if (.@done[.@j] || .@req[.@j] <= 0 || .@key$[.@j] != .@gk$)
 				continue;
 			.@g[.@gn] = .@j;
 			.@gn++;
@@ -385,7 +401,11 @@ function	script	F_NEED_BG2P3_MatchRewards	{
 			.@done[.@j] = 1;
 		}
 		.@used = 0;
-		if (query_sql("SELECT used FROM need_bg2_ipcash_day WHERE ip = '" + escape_sql(.@ip$) + "' AND day_key = " + .@day + " FOR UPDATE", .@used) < 0)
+		// 공용 가족 명단 계정: IP 한도 검사 대신 같은 한도를 계정별로 적용(그날 이 계정의 할당 합, 상태 0/1). IP 사용량에는 그대로 더한다.
+		if (.@gk$ != .@ip$) {
+			if (query_sql("SELECT COALESCE(SUM(allocated), 0) FROM need_bg2_ipcash_alloc WHERE account_id = " + $@NBG2P3_MR_AID[.@k] + " AND day_key = " + .@day + " AND state IN (0, 1)", .@used) < 0)
+				return -1;
+		} else if (query_sql("SELECT used FROM need_bg2_ipcash_day WHERE ip = '" + escape_sql(.@ip$) + "' AND day_key = " + .@day + " FOR UPDATE", .@used) < 0)
 			return -1;
 		.@rem = .@cap - .@used;
 		if (.@rem < 0)
@@ -422,7 +442,7 @@ function	script	F_NEED_BG2P3_MatchRewards	{
 					return -1;
 			}
 		}
-		callfunc "F_NEED_BG2P3_Log", "P3_MCASH_ALLOC match_pk=" + .@pk + " day=" + .@day + " ip_used_before=" + .@used + " cap=" + .@cap + " requested=" + .@tot + " granted=" + .@sum
+		callfunc "F_NEED_BG2P3_Log", "P3_MCASH_ALLOC match_pk=" + .@pk + " day=" + .@day + ((.@gk$ != .@ip$) ? " family_aid=" + $@NBG2P3_MR_AID[.@k] + " acct_used_before=" : " ip_used_before=") + .@used + " cap=" + .@cap + " requested=" + .@tot + " granted=" + .@sum
 			+ " accounts=" + .@gn + (.@st ? " held" : "");
 	}
 	return 0;
@@ -1380,11 +1400,14 @@ function	script	F_NEED_BG2P3_Decide	{
 	.@rv = -1;
 	.@ws = 0;
 	.@valid = 0;
-	if (query_sql("SELECT review, week_start, valid FROM need_bg2_match WHERE match_pk = " + .@pk + " FOR UPDATE", .@rv, .@ws, .@valid) < 0)
+	.@md = 0;
+	if (query_sql("SELECT review, week_start, valid, `mode` FROM need_bg2_match WHERE match_pk = " + .@pk + " FOR UPDATE", .@rv, .@ws, .@valid, .@md) < 0)
 		return callfunc("F_NEED_BG2P3_Rollback", "decide_lock");
 	.@ok = 0;
 	if (.@rv < 0)
 		.@msg$ = "경기를 찾지 못했습니다.";
+	else if (.@md != $@NBG2P3_MODE)	// 다른 모드(3:3 등) 경기는 이 명령으로 바꾸지 않는다
+		.@msg$ = "2:2 경기가 아닙니다 (mode=" + .@md + "). 3:3 경기는 @bg3p3 로 처리하세요.";
 	else if ((.@act$ == "approve" || .@act$ == "release") && .@rv != 1)
 		.@msg$ = "검토 보류(HOLD) 상태가 아닙니다 (review=" + .@rv + ").";
 	else if (.@act$ == "void" && .@rv == 3)
@@ -1552,11 +1575,19 @@ function	script	F_NEED_BG2P3_TicketName$	{
 //------------------------------------------------------------
 // 보상 NPC (KO/EN)
 //------------------------------------------------------------
+// 보상권 행의 종목 표시: mode 2 [2:2], 3 [3:3], 그 밖은 값 그대로(어느 종목으로도 단정하지 않는다).
+// getarg(1) = 1: select 메뉴용. 메뉴는 ":" 로 항목을 나누므로 콜론 없는 표시([2대2] / [2v2])를 쓴다.
+function	script	F_NEED_BG2P3_ModeTag$	{
+	if (getarg(0) == 2) return getarg(1, 0) ? needtr("[2대2]", "[2v2]") : "[2:2]";
+	if (getarg(0) == 3) return getarg(1, 0) ? needtr("[3대3]", "[3v3]") : "[3:3]";
+	return "[mode " + getarg(0) + "]";
+}
+
 function	script	F_NEED_BG2P3_Npc	{
-	.@n$ = "[" + needtr("2:2 듀오 보상관", "2v2 Duo Reward Officer") + "]";
+	.@n$ = "[" + needtr("전장 보상관", "Battleground Reward Officer") + "]";
 	mes .@n$;
 	if (!$NEED_BG2_P3_ON && !$NEED_BG2_P3_CLAIM && !$NEED_BG2_P3_MCASH && !$NEED_BG2_P3_MITEM && !$NEED_BG2_P3_WITEM) {
-		mes needtr("2:2 듀오 주간 보상은 아직 운영 준비 중입니다.", "Weekly 2v2 Duo rewards are not open yet.");
+		mes needtr("전장 보상(2:2 듀오·3:3 룬 거점전)은 아직 운영 준비 중입니다.", "Battleground rewards (2v2 Duo / 3v3 Rune Control) are not open yet.");
 		close;
 	}
 	.@aid = getcharid(3);
@@ -1568,8 +1599,8 @@ function	script	F_NEED_BG2P3_Npc	{
 		.@held = callfunc("F_NEED_BG2P3_AccPoints", .@aid, .@ws, 1);
 		mes needtr("이번 주(", "This week (") + callfunc("F_NEED_BG2P3_Date$", .@ws) + " ~ " + callfunc("F_NEED_BG2P3_Date$", .@ws + $@NBG2P3_WEEK) + " KST)";
 		mes needtr("계정 2:2 점수: ^0055FF", "Account 2v2 points: ^0055FF") + .@pts + "^000000" + (.@held ? needtr(" (검토 중 " + .@held + "점 보류)", " (" + .@held + " on review hold)") : "");
-		.@m = select(needtr("이번 주 내 점수·전적", "My points & record this week") + ":" + needtr("보상 단계 현황", "Reward tiers") + ":" + needtr("미수령 보상 목록", "Unclaimed rewards")
-			+ ":" + needtr("보상 하나 받기", "Claim one reward") + ":" + needtr("미수령 보상 모두 받기", "Claim all rewards") + ":" + needtr("주간 랭킹", "Weekly ranking")
+		.@m = select(needtr("이번 주 내 2:2 점수·전적", "My 2v2 points & record this week") + ":" + needtr("2:2 보상 단계 현황", "2v2 reward tiers") + ":" + needtr("미수령 보상 목록", "Unclaimed rewards")
+			+ ":" + needtr("보상 하나 받기", "Claim one reward") + ":" + needtr("미수령 보상 모두 받기", "Claim all rewards") + ":" + needtr("2:2 주간 랭킹", "2v2 weekly ranking")
 			+ ":" + needtr("탈주 제재 현황", "Departure restriction") + ":" + needtr("닫기", "Close"));
 		next;
 		mes .@n$;
@@ -1626,28 +1657,28 @@ function	script	F_NEED_BG2P3_Npc	{
 			next;
 			break;
 		case 3:
-			deletearray .@id; deletearray .@w; deletearray .@k$; deletearray .@key$; deletearray .@amt; deletearray .@st;
-			.@c = query_sql("SELECT id, week_start, reward_kind, reward_key, amount, status FROM need_bg2_reward WHERE account_id = " + .@aid + " AND status IN (0, 1, 7) ORDER BY id LIMIT 30",
-				.@id, .@w, .@k$, .@key$, .@amt, .@st);
+			deletearray .@id; deletearray .@w; deletearray .@k$; deletearray .@key$; deletearray .@amt; deletearray .@st; deletearray .@md;
+			.@c = query_sql("SELECT id, week_start, reward_kind, reward_key, amount, status, `mode` FROM need_bg2_reward WHERE account_id = " + .@aid + " AND status IN (0, 1, 7) ORDER BY id LIMIT 30",
+				.@id, .@w, .@k$, .@key$, .@amt, .@st, .@md);
 			if (.@c <= 0)
 				mes needtr("받지 않은 보상이 없습니다.", "You have no unclaimed rewards.");
 			for (.@i = 0; .@i < .@c; .@i++)
-				mes callfunc("F_NEED_BG2P3_Date$", .@w[.@i]) + needtr(" 주 ", " week ") + callfunc("F_NEED_BG2P3_TicketName$", .@k$[.@i], .@key$[.@i]) + " " + callfunc("F_NEED_BG2P3_TicketText$", .@id[.@i], .@k$[.@i], .@amt[.@i])
+				mes callfunc("F_NEED_BG2P3_ModeTag$", .@md[.@i]) + " " + callfunc("F_NEED_BG2P3_Date$", .@w[.@i]) + needtr(" 주 ", " week ") + callfunc("F_NEED_BG2P3_TicketName$", .@k$[.@i], .@key$[.@i]) + " " + callfunc("F_NEED_BG2P3_TicketText$", .@id[.@i], .@k$[.@i], .@amt[.@i])
 					+ (.@st[.@i] == 1 ? needtr(" (지급 처리됨, 다음 접속 때 확인)", " (paid, confirmed at next login)") : (.@st[.@i] == 7 ? needtr(" (경기 검토 대기)", " (match under review)") : ""));
 			next;
 			break;
 		case 4:
 		case 5:
-			deletearray .@id; deletearray .@w; deletearray .@k$; deletearray .@key$; deletearray .@amt;
-			deletearray .@qid; deletearray .@qw; deletearray .@qk$; deletearray .@qkey$; deletearray .@qamt;
-			.@q = query_sql("SELECT id, week_start, reward_kind, reward_key, amount FROM need_bg2_reward WHERE account_id = " + .@aid + " AND status = 0 ORDER BY id LIMIT 20",
-				.@qid, .@qw, .@qk$, .@qkey$, .@qamt);
+			deletearray .@id; deletearray .@w; deletearray .@k$; deletearray .@key$; deletearray .@amt; deletearray .@md;
+			deletearray .@qid; deletearray .@qw; deletearray .@qk$; deletearray .@qkey$; deletearray .@qamt; deletearray .@qmd;
+			.@q = query_sql("SELECT id, week_start, reward_kind, reward_key, amount, `mode` FROM need_bg2_reward WHERE account_id = " + .@aid + " AND status = 0 ORDER BY id LIMIT 20",
+				.@qid, .@qw, .@qk$, .@qkey$, .@qamt, .@qmd);
 			// 수령 스위치가 켜진 종류만
 			.@c = 0;
 			for (.@i = 0; .@i < .@q; .@i++) {
 				if (!callfunc("F_NEED_BG2P3_KindOpen", .@qk$[.@i]))
 					continue;
-				.@id[.@c] = .@qid[.@i]; .@w[.@c] = .@qw[.@i]; .@k$[.@c] = .@qk$[.@i]; .@key$[.@c] = .@qkey$[.@i]; .@amt[.@c] = .@qamt[.@i];
+				.@id[.@c] = .@qid[.@i]; .@w[.@c] = .@qw[.@i]; .@k$[.@c] = .@qk$[.@i]; .@key$[.@c] = .@qkey$[.@i]; .@amt[.@c] = .@qamt[.@i]; .@md[.@c] = .@qmd[.@i];
 				.@c++;
 			}
 			if (.@c <= 0) {
@@ -1658,7 +1689,8 @@ function	script	F_NEED_BG2P3_Npc	{
 			if (.@m == 4) {
 				.@menu$ = "";
 				for (.@i = 0; .@i < .@c; .@i++)
-					.@menu$ += callfunc("F_NEED_BG2P3_Date$", .@w[.@i]) + " " + callfunc("F_NEED_BG2P3_TicketName$", .@k$[.@i], .@key$[.@i]) + " " + callfunc("F_NEED_BG2P3_TicketText$", .@id[.@i], .@k$[.@i], .@amt[.@i]) + ":";
+					// 한 보상권 = 메뉴 한 칸: select 는 ":" 로 나누므로 날짜는 일자만, 항목 안의 ":" 는 공백으로(예전에는 시각 04:00 이 한 줄을 두 칸으로 나눠 다음 보상권이 골라졌다).
+					.@menu$ += callfunc("F_NEED_BG2P3_ModeTag$", .@md[.@i], 1) + " " + replacestr(substr(callfunc("F_NEED_BG2P3_Date$", .@w[.@i]), 0, 9) + " " + callfunc("F_NEED_BG2P3_TicketName$", .@k$[.@i], .@key$[.@i]) + " " + callfunc("F_NEED_BG2P3_TicketText$", .@id[.@i], .@k$[.@i], .@amt[.@i]), ":", " ") + ":";
 				.@menu$ += needtr("취소", "Cancel");
 				mes needtr("받을 보상을 고르세요. 이 계정의 어느 캐릭터로든 받을 수 있습니다.", "Choose a reward. Any character of this account can claim it.");
 				.@s = select(.@menu$) - 1;
@@ -1711,7 +1743,7 @@ function	script	F_NEED_BG2P3_Npc	{
 		case 7:
 			.@left = callfunc("F_NEED_BG2P3_Sanction", .@aid, .@now);
 			mes needtr("최근 24시간 경기 이탈: " + $@NBG2P3_SC_CNT + "회", "Matches left in the last 24 hours: " + $@NBG2P3_SC_CNT);
-			mes (.@left > 0) ? needtr("2:2 신청 제한 남은 시간: ", "2v2 sign-up restriction left: ") + callfunc("F_NEED_BG2P3_Left$", .@left) : needtr("현재 신청 제한 없음", "No restriction now");
+			mes (.@left > 0) ? needtr("2:2·3:3 신청 제한 남은 시간: ", "2v2 / 3v3 sign-up restriction left: ") + callfunc("F_NEED_BG2P3_Left$", .@left) : needtr("현재 신청 제한 없음", "No restriction now");
 			mes needtr("1회 경고, 2회 10분, 3회 30분, 4회 이상 2시간. 재접속 15초 유예 뒤 이탈만 셉니다.", "1 = warning, 2 = 10 min, 3 = 30 min, 4+ = 2 h. Only departures after the 15-second reconnect grace count.");
 			next;
 			break;
@@ -1898,21 +1930,22 @@ OnCmdGM:
 	}
 	if (.@sub$ == "reviews") {
 		deletearray .@pk; deletearray .@sg$; deletearray .@ct;
-		.@c = query_sql("SELECT match_pk, signals, created_at FROM need_bg2_review WHERE state = 'HOLD' ORDER BY match_pk LIMIT 20", .@pk, .@sg$, .@ct);
+		deletearray .@md;
+		.@c = query_sql("SELECT r.match_pk, r.signals, r.created_at, COALESCE(m.`mode`, 0) FROM need_bg2_review r LEFT JOIN need_bg2_match m ON m.match_pk = r.match_pk WHERE r.state = 'HOLD' ORDER BY r.match_pk LIMIT 20", .@pk, .@sg$, .@ct, .@md);
 		dispbottom "[2:2 정산] 검토 보류 " + .@c + "건 (최대 20). 처리: @duo2v2p3 approve|release|void <match_pk> <사유>";
 		for (.@i = 0; .@i < .@c; .@i++)
-			dispbottom "[2:2 정산] match_pk=" + .@pk[.@i] + " " + callfunc("F_NEED_BG2P3_Date$", .@ct[.@i]) + " " + .@sg$[.@i];
+			dispbottom "[2:2 정산] [" + (.@md[.@i] == 3 ? "3:3" : (.@md[.@i] == 2 ? "2:2" : "mode " + .@md[.@i])) + "] match_pk=" + .@pk[.@i] + " " + callfunc("F_NEED_BG2P3_Date$", .@ct[.@i]) + " " + .@sg$[.@i];
 		end;
 	}
 	if (.@sub$ == "match") {
 		.@pk = atoi(.@a1$);
-		.@key$ = ""; .@src$ = ""; .@res = 0; .@why$ = ""; .@eng = 0; .@hos = 0; .@rv = 0; .@sig$ = ""; .@w = 0; .@te = 0;
-		if (query_sql("SELECT match_key, `source`, result, end_reason, engaged, hostile_total, review, signals, week_start, ended_at FROM need_bg2_match WHERE match_pk = " + .@pk,
-			.@key$, .@src$, .@res, .@why$, .@eng, .@hos, .@rv, .@sig$, .@w, .@te) < 1) {
+		.@key$ = ""; .@src$ = ""; .@res = 0; .@why$ = ""; .@eng = 0; .@hos = 0; .@rv = 0; .@sig$ = ""; .@w = 0; .@te = 0; .@md = 0;
+		if (query_sql("SELECT match_key, `source`, result, end_reason, engaged, hostile_total, review, signals, week_start, ended_at, `mode` FROM need_bg2_match WHERE match_pk = " + .@pk,
+			.@key$, .@src$, .@res, .@why$, .@eng, .@hos, .@rv, .@sig$, .@w, .@te, .@md) < 1) {
 			dispbottom "[2:2 정산] 경기를 찾지 못했습니다.";
 			end;
 		}
-		dispbottom "[2:2 정산] match_pk=" + .@pk + " key=" + .@key$ + " src=" + .@src$ + " result=" + .@res + " (" + .@why$ + ") engaged=" + .@eng + " hostile=" + .@hos
+		dispbottom "[2:2 정산] [" + (.@md == 3 ? "3:3" : (.@md == 2 ? "2:2" : "mode " + .@md)) + "] match_pk=" + .@pk + " key=" + .@key$ + " src=" + .@src$ + " result=" + .@res + " (" + .@why$ + ") engaged=" + .@eng + " hostile=" + .@hos
 			+ " review=" + .@rv + " week=" + .@w + " ended=" + callfunc("F_NEED_BG2P3_Date$", .@te) + " signals=" + .@sig$;
 		deletearray .@pa; deletearray .@pc; deletearray .@pt; deletearray .@po; deletearray .@pd; deletearray .@pp; deletearray .@pv; deletearray .@ph; deletearray .@pi; deletearray .@ps;
 		.@c = query_sql("SELECT account_id, char_id, team, outcome, deserter, points, valid, hostile, hit, support FROM need_bg2_match_player WHERE match_pk = " + .@pk + " ORDER BY team, char_id",
@@ -1961,7 +1994,12 @@ OnCmdGM:
 		.@rk$ = "";
 		.@rkey$ = "";
 		.@raid = 0;
-		query_sql "SELECT reward_kind, reward_key, account_id FROM need_bg2_reward WHERE id = " + atoi(.@a1$), .@rk$, .@rkey$, .@raid;
+		.@rmd = -1;
+		query_sql "SELECT reward_kind, reward_key, account_id, `mode` FROM need_bg2_reward WHERE id = " + atoi(.@a1$), .@rk$, .@rkey$, .@raid, .@rmd;
+		if (.@rmd != $@NBG2P3_MODE) {	// 다른 모드(3:3 등) 보상권은 상태도 IP 한도도 건드리지 않는다
+			dispbottom "[2:2 정산] 보상권 " + atoi(.@a1$) + " : 2:2 보상권이 아닙니다 (mode=" + .@rmd + "). 3:3 보상권은 @bg3p3 로 처리하세요.";
+			end;
+		}
 		query_sql "UPDATE need_bg2_reward SET status = 8, note = '" + escape_sql("revoked by " + .@gm + ": " + .@why$) + "' WHERE id = " + atoi(.@a1$) + " AND status IN (0, 7)";
 		.@rc = 0;
 		query_sql "SELECT ROW_COUNT()", .@rc;
@@ -2083,11 +2121,11 @@ S_Tickets:
 	return;
 }
 
-// 보상 NPC: 파요 2:2 듀오 보상관.
-payo2,90,130,4	script	2:2 듀오 보상관#need_bg2p3	4_M_KNIGHT_GOLD,{
+// 보상 NPC: 파요 전장 보상관(2:2 듀오·3:3 룬 거점전 보상권 공용 수령). 내부 이름 need_bg2p3 는 그대로.
+payo2,90,130,4	script	전장 보상관#need_bg2p3	4_M_KNIGHT_GOLD,{
 	callfunc "F_NEED_BG2P3_Npc";
 	end;
 OnInit:
-	setnpcnameen "2v2 Duo Reward Officer";
+	setnpcnameen "Battleground Reward Officer";
 	end;
 }
