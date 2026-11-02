@@ -36,7 +36,7 @@ void SkillConvenio::castendNoDamageId(block_list *src, block_list *target, uint1
 			map_session_data *pl_sd = p->data[i].sd;
 
 			if (pl_sd == nullptr || pl_sd == sd || pl_sd->status.party_id != p->party.party_id || pc_isdead(pl_sd) ||
-				sd->m != pl_sd->m)
+				sd->m != pl_sd->m || party_need_bgsplit(sd, pl_sd))	// NEED Duo Survival 2v2: not the other battleground team
 				continue;
 
 			// Respect /call configuration

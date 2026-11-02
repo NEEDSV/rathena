@@ -21,6 +21,10 @@ void SkillValleyOfDeath::castendNoDamageId(block_list *src, block_list *target, 
 		if( !status_isdead(*target) )
 			return;
 
+		// NEED Duo Survival 2v2: no revive on the arena during a round.
+		if( map_getmapflag(target->m, MF_NEED_NOAUTOREVIVE) )
+			return;
+
 		// 2017: Valley of Death revives with chance 88 + 2 * skill_lv %.
 		if( rnd()%100 >= 88 + 2 * skill_lv )
 			return;

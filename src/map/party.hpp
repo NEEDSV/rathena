@@ -98,6 +98,7 @@ int32 party_send_dot_remove(map_session_data *sd);
 int32 party_sub_count(block_list *bl, va_list ap);
 int32 party_sub_count_class(block_list *bl, va_list ap);
 int32 party_foreachsamemap(int32 (*func)(block_list *,va_list),const map_session_data* sd,int32 range,...);
+bool party_need_bgsplit( const block_list* a, const block_list* b );
 
 /*==========================================
  * Party Booking in KRO [Spiria]

@@ -701,6 +701,10 @@ enum e_mapflag : int16 {
 	MF_NEED_EQUIP_BREAK_RATE,	// NEED BG phase 1: players' equipment break chance on this map, in percent of the normal final chance (value)
 	MF_NEED_BG_SHADOW_ALLOW,	// NEED BG phase 1: on battle_gear_disabled maps, keep the whitelisted general shadow gear (status.cpp)
 	MF_NEED_BG_STONE_ALLOW,	// NEED BG phase 1: on battle_gear_disabled maps, keep the whitelisted costume enchant stones (status.cpp)
+	MF_NEED_NOAUTOREVIVE,	// NEED Duo Survival 2v2: no automatic revive (Kaizel, Ultimate Sacrifice, Super Novice angel, revive items, Valley of Death)
+	MF_NEED_PREPLOCK,	// NEED Duo Survival 2v2: preparation time - no ground-unit or summon skills (toggled by the 2v2 script)
+	MF_NEED_BGPARTYSPLIT,	// NEED Duo Survival 2v2: party members on different battleground teams are not party members for skills
+	MF_NEED_COMBATLOG,	// NEED Duo Survival 2v2 (phase 3): count real hostile / support interactions between the two teams
 	MF_MAX
 };
 

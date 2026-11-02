@@ -1367,7 +1367,7 @@ OnQueueLaunch:
 			detachrid;
 			continue;
 		}
-		if (BaseLevel < .MinJoinLevel || getcharid(1) || getcharid(4)) {
+		if (BaseLevel < .MinJoinLevel || getcharid(1) || getcharid(4) || @NEED_BG2_BUSY) {	// NEED 2:2: 2:2 대기/경기 중이면 데려가지 않는다
 			detachrid;
 			continue;
 		}
@@ -1446,6 +1446,11 @@ OnCommandStart:
 
 	if (getcharid(1) || getcharid(4)) {
 		dispbottom needtr("[전장] 파티 또는 전장 팀에 가입되지 않은 상태에서 신청해 주세요.","[Battleground] Apply while you are not in a party or a battleground team.");
+		end;
+	}
+
+	if (@NEED_BG2_BUSY) {	// NEED 2:2 듀오 서바이벌: 2:2 대기열/참가 확인/경기와 동시에 신청할 수 없다(양방향)
+		dispbottom needtr("[전장] 2:2 듀오 대기열/참가 확인/경기에 있는 동안에는 신청할 수 없습니다. 먼저 @듀오취소 로 취소해 주세요.","[Battleground] You cannot apply while you are in the 2v2 Duo queue, ready check or match. Cancel it first with @duocancel.");
 		end;
 	}
 
@@ -1542,6 +1547,11 @@ OnCommandJoin:
 
 	if (getcharid(1) || getcharid(4)) {
 		dispbottom needtr("[전장] 파티 또는 전장 팀에 가입된 상태에서는 참가할 수 없습니다.","[Battleground] You cannot join while you are in a party or a battleground team.");
+		end;
+	}
+
+	if (@NEED_BG2_BUSY) {	// NEED 2:2 듀오 서바이벌: 2:2 대기열/참가 확인/경기와 동시에 신청할 수 없다(양방향)
+		dispbottom needtr("[전장] 2:2 듀오 대기열/참가 확인/경기에 있는 동안에는 신청할 수 없습니다. 먼저 @듀오취소 로 취소해 주세요.","[Battleground] You cannot apply while you are in the 2v2 Duo queue, ready check or match. Cancel it first with @duocancel.");
 		end;
 	}
 
@@ -3352,6 +3362,11 @@ OnCommandQueue:
 
 	if (getcharid(1) || getcharid(4)) {
 		dispbottom needtr("[전장] 파티 또는 전장 팀에 가입된 상태에서는 전장 대기를 신청할 수 없습니다.", "[Battleground] You cannot queue while in a party or a Battleground team.");
+		end;
+	}
+
+	if (@NEED_BG2_BUSY) {	// NEED 2:2 듀오 서바이벌: 2:2 대기열/참가 확인/경기와 동시에 신청할 수 없다(양방향)
+		dispbottom needtr("[전장] 2:2 듀오 대기열/참가 확인/경기에 있는 동안에는 신청할 수 없습니다. 먼저 @듀오취소 로 취소해 주세요.","[Battleground] You cannot apply while you are in the 2v2 Duo queue, ready check or match. Cancel it first with @duocancel.");
 		end;
 	}
 
