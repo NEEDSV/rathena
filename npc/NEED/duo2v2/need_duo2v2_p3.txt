@@ -152,6 +152,8 @@ function	script	F_NEED_BG2P3_RuleSet	{
 	$@NBG2R_R1$[.@v] = getarg(16);
 	$@NBG2R_R2$[.@v] = getarg(17);
 	$@NBG2R_R3$[.@v] = getarg(18);
+	$@NBG2R_SOFT[.@v] = getarg(19, 0);	// 소프트캡(0 = 없음). 하루 사용량이 이 값을 넘은 몫은 SRATE% 로 지급, 하드캡은 CAP
+	$@NBG2R_SRATE[.@v] = getarg(20, 100);
 	$@NBG2R_N++;
 	return;
 }
@@ -161,7 +163,8 @@ function	script	F_NEED_BG2P3_RuleSig$	{
 	.@v = getarg(0);
 	return $@NBG2R_EFF[.@v] + "|" + $@NBG2R_PW[.@v] + "/" + $@NBG2R_PL[.@v] + "/" + $@NBG2R_PD[.@v] + "|" + $@NBG2R_CW[.@v] + "/" + $@NBG2R_CL[.@v] + "/" + $@NBG2R_CD[.@v]
 		+ "|" + $@NBG2R_IW$[.@v] + "/" + $@NBG2R_IL$[.@v] + "/" + $@NBG2R_ID$[.@v] + "|" + $@NBG2R_CAP[.@v] + "|" + $@NBG2R_WM[.@v]
-		+ "|" + $@NBG2R_T10$[.@v] + "/" + $@NBG2R_T30$[.@v] + "/" + $@NBG2R_T60$[.@v] + "|" + $@NBG2R_R1$[.@v] + "/" + $@NBG2R_R2$[.@v] + "/" + $@NBG2R_R3$[.@v];
+		+ "|" + $@NBG2R_T10$[.@v] + "/" + $@NBG2R_T30$[.@v] + "/" + $@NBG2R_T60$[.@v] + "|" + $@NBG2R_R1$[.@v] + "/" + $@NBG2R_R2$[.@v] + "/" + $@NBG2R_R3$[.@v]
+		+ (($@NBG2R_SOFT[.@v] > 0) ? "|S" + $@NBG2R_SOFT[.@v] + "/" + $@NBG2R_SRATE[.@v] : "");	// 소프트캡이 없는 버전(버전 0 포함)의 지문은 그대로
 }
 
 // 아이템 목록 "id:수량,id:수량" → $@NBG2P3_IT_ID[] / $@NBG2P3_IT_N[]. 반환 종류 수(빈 문자열 0), 잘못되면 -1($@NBG2P3_IT_ERR$).
@@ -206,7 +209,7 @@ function	script	F_NEED_BG2P3_RulesLoad	{
 	deletearray $@NBG2R_EFF; deletearray $@NBG2R_PW; deletearray $@NBG2R_PL; deletearray $@NBG2R_PD;
 	deletearray $@NBG2R_CW; deletearray $@NBG2R_CL; deletearray $@NBG2R_CD;
 	deletearray $@NBG2R_IW$; deletearray $@NBG2R_IL$; deletearray $@NBG2R_ID$;
-	deletearray $@NBG2R_CAP; deletearray $@NBG2R_WM;
+	deletearray $@NBG2R_CAP; deletearray $@NBG2R_WM; deletearray $@NBG2R_SOFT; deletearray $@NBG2R_SRATE;
 	deletearray $@NBG2R_T10$; deletearray $@NBG2R_T30$; deletearray $@NBG2R_T60$;
 	deletearray $@NBG2R_R1$; deletearray $@NBG2R_R2$; deletearray $@NBG2R_R3$;
 	deletearray $@NBG2R_F$;
@@ -228,6 +231,8 @@ function	script	F_NEED_BG2P3_RulesLoad	{
 			$@NBG2R_ERR$ += "v" + .@v + " match cash not 0..1000000; ";
 		if ($@NBG2R_CAP[.@v] < 0 || $@NBG2R_CAP[.@v] > 100000000)
 			$@NBG2R_ERR$ += "v" + .@v + " IP daily cap not 0..100000000; ";
+		if ($@NBG2R_SOFT[.@v] < 0 || $@NBG2R_SOFT[.@v] > $@NBG2R_CAP[.@v] || $@NBG2R_SRATE[.@v] < 0 || $@NBG2R_SRATE[.@v] > 100)
+			$@NBG2R_ERR$ += "v" + .@v + " soft cap not 0..cap or soft rate not 0..100; ";
 		if ($@NBG2R_WM[.@v] != 0 && $@NBG2R_WM[.@v] != 1)
 			$@NBG2R_ERR$ += "v" + .@v + " weekly mode not 0/1; ";
 		setarray .@l$[0], $@NBG2R_IW$[.@v], $@NBG2R_IL$[.@v], $@NBG2R_ID$[.@v], $@NBG2R_T10$[.@v], $@NBG2R_T30$[.@v], $@NBG2R_T60$[.@v], $@NBG2R_R1$[.@v], $@NBG2R_R2$[.@v], $@NBG2R_R3$[.@v];
@@ -313,6 +318,27 @@ function	script	F_NEED_BG2P3_ItemTicket	{
 	return 1;
 }
 
+// 직접 캐시 지급액 (2:2·3:3 공용). 한 한도 키 무리(같은 IP, 또는 가족 계정 하나)의 그날 사용량 used 와 이번 경기 요청 합 tot 에서
+// 소프트캡 soft 까지 남은 몫은 전액, 그 위는 rate%(내림), 하드캡 cap 을 넘는 몫은 잘라 지급 총액을 돌려준다. soft 0 = 소프트캡 없음(cap 까지 전액).
+function	script	F_NEED_BG2P3_CashPay	{
+	.@used = getarg(0);
+	.@tot = getarg(1);
+	.@soft = getarg(2);
+	.@cap = getarg(3);
+	.@room = .@cap - .@used;
+	if (.@room <= 0 || .@tot <= 0)
+		return 0;
+	.@pay = .@tot;
+	if (.@soft > 0 && .@soft < .@cap) {
+		.@full = .@soft - .@used;
+		if (.@full < 0)
+			.@full = 0;
+		if (.@full < .@tot)
+			.@pay = .@full + (.@tot - .@full) * getarg(4) / 100;
+	}
+	return (.@pay < .@room) ? .@pay : .@room;
+}
+
 // 직접 캐시 한도 키 (2:2·3:3 공용). 보통은 경기 시작 IP. 공용 가족 명단(@needfamily, event_id 0)에 승인된 계정은
 // "FAM:<계정 ID>": IP 한도 검사를 면제받고 같은 한도를 계정별로 쓴다(2026-11-02 운영 결정, 다른 IP 제한 콘텐츠와 같은 규칙).
 // 시작 IP 를 모르면 "" 그대로(캐시 보류 규칙). 명단 테이블이 없으면($NEED_CHUSEOK_FAMILY_READY 0) 조회하지 않고 IP.
@@ -360,6 +386,8 @@ function	script	F_NEED_BG2P3_MatchRewards	{
 		}
 	}
 	.@cap = $@NBG2R_CAP[.@ver];
+	.@soft = $@NBG2R_SOFT[.@ver];
+	.@rate = $@NBG2R_SRATE[.@ver];
 	if (!(.@flags & 1) || .@cap <= 0)
 		return 0;
 	.@day = (.@te + 18000) / 86400;
@@ -407,9 +435,7 @@ function	script	F_NEED_BG2P3_MatchRewards	{
 				return -1;
 		} else if (query_sql("SELECT used FROM need_bg2_ipcash_day WHERE ip = '" + escape_sql(.@ip$) + "' AND day_key = " + .@day + " FOR UPDATE", .@used) < 0)
 			return -1;
-		.@rem = .@cap - .@used;
-		if (.@rem < 0)
-			.@rem = 0;
+		.@rem = callfunc("F_NEED_BG2P3_CashPay", .@used, .@tot, .@soft, .@cap, .@rate);
 		.@sum = 0;
 		for (.@y = 0; .@y < .@gn; .@y++) {
 			.@j = .@g[.@y];
@@ -442,7 +468,7 @@ function	script	F_NEED_BG2P3_MatchRewards	{
 					return -1;
 			}
 		}
-		callfunc "F_NEED_BG2P3_Log", "P3_MCASH_ALLOC match_pk=" + .@pk + " day=" + .@day + ((.@gk$ != .@ip$) ? " family_aid=" + $@NBG2P3_MR_AID[.@k] + " acct_used_before=" : " ip_used_before=") + .@used + " cap=" + .@cap + " requested=" + .@tot + " granted=" + .@sum
+		callfunc "F_NEED_BG2P3_Log", "P3_MCASH_ALLOC match_pk=" + .@pk + " day=" + .@day + ((.@gk$ != .@ip$) ? " family_aid=" + $@NBG2P3_MR_AID[.@k] + " acct_used_before=" : " ip_used_before=") + .@used + " cap=" + .@cap + " soft=" + .@soft + "/" + .@rate + "%" + " requested=" + .@tot + " granted=" + .@sum
 			+ " accounts=" + .@gn + (.@st ? " held" : "");
 	}
 	return 0;
@@ -2023,7 +2049,7 @@ OnCmdGM:
 			+ " / 다음 주(" + callfunc("F_NEED_BG2P3_Date$", .@ws + $@NBG2P3_WEEK) + ") v" + callfunc("F_NEED_BG2P3_RuleVer", .@ws + $@NBG2P3_WEEK);
 		for (.@v = 0; .@v < $@NBG2R_N; .@v++) {
 			dispbottom "[2:2 정산] v" + .@v + " 시작 " + ($@NBG2R_EFF[.@v] ? callfunc("F_NEED_BG2P3_Date$", $@NBG2R_EFF[.@v]) : "처음") + " 점수 " + $@NBG2R_PW[.@v] + "/" + $@NBG2R_PL[.@v] + "/" + $@NBG2R_PD[.@v]
-				+ " 캐시 " + $@NBG2R_CW[.@v] + "/" + $@NBG2R_CL[.@v] + "/" + $@NBG2R_CD[.@v] + " IP하루 " + $@NBG2R_CAP[.@v] + " 주간 " + ($@NBG2R_WM[.@v] ? "아이템" : "캐시(기존)");
+				+ " 캐시 " + $@NBG2R_CW[.@v] + "/" + $@NBG2R_CL[.@v] + "/" + $@NBG2R_CD[.@v] + " IP하루 " + $@NBG2R_CAP[.@v] + (($@NBG2R_SOFT[.@v] > 0) ? " (소프트 " + $@NBG2R_SOFT[.@v] + " 이후 " + $@NBG2R_SRATE[.@v] + "%)" : "") + " 주간 " + ($@NBG2R_WM[.@v] ? "아이템" : "캐시(기존)");
 			dispbottom "[2:2 정산]   아이템 승[" + $@NBG2R_IW$[.@v] + "] 패[" + $@NBG2R_IL$[.@v] + "] 무[" + $@NBG2R_ID$[.@v] + "] 10/30/60[" + $@NBG2R_T10$[.@v] + "|" + $@NBG2R_T30$[.@v] + "|" + $@NBG2R_T60$[.@v]
 				+ "] 1/2/3위[" + $@NBG2R_R1$[.@v] + "|" + $@NBG2R_R2$[.@v] + "|" + $@NBG2R_R3$[.@v] + "]";
 		}

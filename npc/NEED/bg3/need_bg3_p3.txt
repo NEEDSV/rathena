@@ -278,6 +278,8 @@ function	script	F_NEED_BG3P3_MatchRewards	{
 		}
 	}
 	.@cap = $@NBG2R_CAP[.@v2];
+	.@soft = $@NBG2R_SOFT[.@v2];
+	.@rate = $@NBG2R_SRATE[.@v2];
 	if (!(.@flags & 1) || .@cap <= 0)
 		return 0;
 	.@day = (.@te + 18000) / 86400;
@@ -322,9 +324,7 @@ function	script	F_NEED_BG3P3_MatchRewards	{
 				return -1;
 		} else if (query_sql("SELECT used FROM need_bg2_ipcash_day WHERE ip = '" + escape_sql(.@ip$) + "' AND day_key = " + .@day + " FOR UPDATE", .@used) < 0)
 			return -1;
-		.@rem = .@cap - .@used;
-		if (.@rem < 0)
-			.@rem = 0;
+		.@rem = callfunc("F_NEED_BG2P3_CashPay", .@used, .@tot, .@soft, .@cap, .@rate);
 		.@sum = 0;
 		for (.@y = 0; .@y < .@gn; .@y++) {
 			.@j = .@g[.@y];
@@ -357,7 +357,7 @@ function	script	F_NEED_BG3P3_MatchRewards	{
 					return -1;
 			}
 		}
-		callfunc "F_NEED_BG3P3_Log", "P3_MCASH_ALLOC match_pk=" + .@pk + " day=" + .@day + ((.@gk$ != .@ip$) ? " family_aid=" + $@NBG3P3_MR_AID[.@k] + " acct_used_before=" : " ip_used_before=") + .@used + " cap=" + .@cap + " requested=" + .@tot + " granted=" + .@sum
+		callfunc "F_NEED_BG3P3_Log", "P3_MCASH_ALLOC match_pk=" + .@pk + " day=" + .@day + ((.@gk$ != .@ip$) ? " family_aid=" + $@NBG3P3_MR_AID[.@k] + " acct_used_before=" : " ip_used_before=") + .@used + " cap=" + .@cap + " soft=" + .@soft + "/" + .@rate + "%" + " requested=" + .@tot + " granted=" + .@sum
 			+ " accounts=" + .@gn + (.@held ? " held" : "");
 	}
 	return 0;
@@ -1083,7 +1083,7 @@ OnCmdGM:
 	if (.@sub$ == "status") {
 		dispbottom "[3:3 정산] 원장(ledger)=" + $NEED_BG3_P3_ON + " 랭킹확정(rank)=" + $NEED_BG3_P3_RANK + " 승패캐시 생성(mcash)=" + $NEED_BG3_P3_MCASH + " 승패아이템 생성(mitem)=" + $NEED_BG3_P3_MITEM
 			+ " / 수령 스위치(2:2 공용) mcash=" + $NEED_BG2_P3_MCASH + " mitem=" + $NEED_BG2_P3_MITEM + " witem=" + $NEED_BG2_P3_WITEM;
-		dispbottom "[3:3 정산] 규칙 3:3=" + ($@NBG3P3_RULES_OK ? "OK" : "^FF0000오류^000000") + " v" + callfunc("F_NEED_BG3P3_RuleVer", .@now) + " / IP 한도(2:2 규칙) " + $@NBG2R_CAP[callfunc("F_NEED_BG2P3_RuleVer", .@now)]
+		dispbottom "[3:3 정산] 규칙 3:3=" + ($@NBG3P3_RULES_OK ? "OK" : "^FF0000오류^000000") + " v" + callfunc("F_NEED_BG3P3_RuleVer", .@now) + " / IP 한도(2:2 규칙) " + $@NBG2R_CAP[callfunc("F_NEED_BG2P3_RuleVer", .@now)] + " 소프트 " + $@NBG2R_SOFT[callfunc("F_NEED_BG2P3_RuleVer", .@now)]
 			+ " / 보관 정산 " + getarraysize($NEED_BG3_PEND_H$) + " / 검토 보관 " + callfunc("F_NEED_BG3P3_PartCount");
 		.@h = 0; .@m = 0; .@tk = 0;
 		query_sql "SELECT COUNT(*) FROM need_bg2_review r JOIN need_bg2_match m ON m.match_pk = r.match_pk WHERE r.state = 'HOLD' AND m.`mode` = " + $@NBG3P3_MODE, .@h;
