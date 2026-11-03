@@ -89,13 +89,12 @@ function	script	F_NEED_BG3P3_RulesLoad	{
 	$@NBG3R_ERR$ = "";
 	callfunc "F_NEED_BG3P3_RulesDef";
 	.@now = gettimetick(2);
-	.@next = callfunc("F_NEED_BG2P3_WeekStart", .@now) + $@NBG3P3_WEEK;
 	if ($@NBG3R_N < 1 || $@NBG3R_EFF[0] != 0)
 		$@NBG3R_ERR$ += "version 0 (effective 0) missing; ";
 	for (.@v = 0; .@v < $@NBG3R_N; .@v++) {
 		if (.@v > 0) {	// && 는 뒤도 계산하므로 [.@v - 1] 은 블록 안에서만 읽는다
-			if ($@NBG3R_EFF[.@v] != callfunc("F_NEED_BG2P3_WeekStart", $@NBG3R_EFF[.@v]) || $@NBG3R_EFF[.@v] <= $@NBG3R_EFF[.@v - 1])
-				$@NBG3R_ERR$ += "v" + .@v + " start is not a later Monday 04:00 KST; ";
+			if ($@NBG3R_EFF[.@v] <= $@NBG3R_EFF[.@v - 1])
+				$@NBG3R_ERR$ += "v" + .@v + " start is not later than v" + (.@v - 1) + "; ";
 		}
 		if ($@NBG3R_PW[.@v] < 0 || $@NBG3R_PW[.@v] > 10 || $@NBG3R_PL[.@v] < 0 || $@NBG3R_PL[.@v] > 10 || $@NBG3R_PD[.@v] < 0 || $@NBG3R_PD[.@v] > 10)
 			$@NBG3R_ERR$ += "v" + .@v + " points not 0..10; ";
@@ -116,10 +115,13 @@ function	script	F_NEED_BG3P3_RulesLoad	{
 		}
 		.@sig$ = callfunc("F_NEED_BG3P3_RuleSig$", .@v);
 		.@old$ = $NEED_BG3_RVSIG$[.@v];
-		if (.@old$ != "" && .@old$ != .@sig$ && $@NBG3R_EFF[.@v] <= .@now)
-			$@NBG3R_ERR$ += "v" + .@v + " already started and was changed; ";
-		if (.@old$ == "" && .@v > 0 && $@NBG3R_EFF[.@v] < .@next)
-			$@NBG3R_ERR$ += "v" + .@v + " is new but starts before next Monday 04:00 KST; ";
+		if (.@old$ != "" && .@old$ != .@sig$) {	// 저장된 시작 시각이나 새 시작 시각 중 하나라도 지났으면 이미 시작된 버전
+			explode(.@of$, .@old$, "|");
+			if ($@NBG3R_EFF[.@v] <= .@now || atoi(.@of$[0]) <= .@now)
+				$@NBG3R_ERR$ += "v" + .@v + " already started and was changed; ";
+		}
+		if (.@old$ == "" && .@v > 0 && $@NBG3R_EFF[.@v] <= .@now)	// 새 버전은 아직 오지 않은 시각부터만(지난 경기 소급 금지)
+			$@NBG3R_ERR$ += "v" + .@v + " is new but its start is not in the future; ";
 	}
 	.@n = getarraysize($NEED_BG3_RVSIG$);
 	for (.@v = $@NBG3R_N; .@v < .@n; .@v++) {
@@ -144,11 +146,10 @@ function	script	F_NEED_BG3P3_RulesLoad	{
 	return 1;
 }
 
-// 시각 t 가 속한 주차의 3:3 규칙 버전.
+// 시각 t 에 적용되는 3:3 규칙 버전(2:2 와 같은 방식: 경기는 시작 시각, 주간 단계·랭킹은 주차 시작).
 function	script	F_NEED_BG3P3_RuleVer	{
-	.@ws = callfunc("F_NEED_BG2P3_WeekStart", getarg(0));
 	for (.@v = $@NBG3R_N - 1; .@v > 0; .@v--)
-		if ($@NBG3R_EFF[.@v] <= .@ws)
+		if ($@NBG3R_EFF[.@v] <= getarg(0))
 			return .@v;
 	return 0;
 }
@@ -248,7 +249,7 @@ function	script	F_NEED_BG3P3_TierRevoke	{
 // 승패 보상 (트랜잭션 안, Apply 가 부른다)
 //------------------------------------------------------------
 // 참가자: $@NBG3P3_MR_AID/CID/OUT/VAL[0..5], $@NBG3P3_MR_IP$[]. flags 1 직접 캐시 / 2 아이템(경기 시작 때 고정).
-// 직접 캐시 금액은 3:3 규칙(v3), IP 하루 한도는 2:2 규칙(v2, 같은 시작 주차)의 값을 쓴다. 할당 방식은 2:2 와 같다
+// 직접 캐시 금액은 3:3 규칙(v3), IP 하루 한도는 2:2 규칙(v2, 같은 시작 시각)의 값을 쓴다. 할당 방식은 2:2 와 같다
 // (같은 경기·같은 IP 무리는 요청액 비율, 남는 금액은 계정 ID 오름차순 1씩, 할당은 need_bg2_ipcash_day/alloc 공용).
 // 보상권은 상태 6 으로 넣는다(Apply 끝에서 0/7 로 바꾼다). IP 할당 상태는 검토 경기 1, 그 밖 0 (2:2 와 같은 의미).
 function	script	F_NEED_BG3P3_MatchRewards	{
@@ -545,7 +546,11 @@ function	script	F_NEED_BG3P3_Apply	{
 		return -1;
 	}
 	.@v3 = callfunc("F_NEED_BG3P3_RuleVer", .@t0);
-	.@v2 = callfunc("F_NEED_BG2P3_RuleVer", .@t0);	// IP 하루 한도(2:2 규칙, 같은 시작 주차)
+	.@v2 = callfunc("F_NEED_BG2P3_RuleVer", .@t0);	// IP 하루 한도·소프트캡(2:2 규칙, 같은 시작 시각)
+	if ($@NBG3R_EFF[.@v3] != $@NBG2R_EFF[.@v2]) {	// 3:3 과 2:2 버전의 시작 시각이 다르면 금액과 한도가 어긋난다: 규칙을 고칠 때까지 보관
+		callfunc "F_NEED_BG3P3_Log", "P3_RULES_BLOCKED key=" + .@key$ + " (3v3 v" + .@v3 + " and 2v2 v" + .@v2 + " start at different times: kept for retry)";
+		return -1;
+	}
 	explode(.@pl$, getarg(1), ";");
 	if (getarraysize(.@pl$) != 6 || .@key$ == "" || .@te <= 0)
 		return -2;
@@ -1083,7 +1088,7 @@ OnCmdGM:
 	if (.@sub$ == "status") {
 		dispbottom "[3:3 정산] 원장(ledger)=" + $NEED_BG3_P3_ON + " 랭킹확정(rank)=" + $NEED_BG3_P3_RANK + " 승패캐시 생성(mcash)=" + $NEED_BG3_P3_MCASH + " 승패아이템 생성(mitem)=" + $NEED_BG3_P3_MITEM
 			+ " / 수령 스위치(2:2 공용) mcash=" + $NEED_BG2_P3_MCASH + " mitem=" + $NEED_BG2_P3_MITEM + " witem=" + $NEED_BG2_P3_WITEM;
-		dispbottom "[3:3 정산] 규칙 3:3=" + ($@NBG3P3_RULES_OK ? "OK" : "^FF0000오류^000000") + " v" + callfunc("F_NEED_BG3P3_RuleVer", .@now) + " / IP 한도(2:2 규칙) " + $@NBG2R_CAP[callfunc("F_NEED_BG2P3_RuleVer", .@now)] + " 소프트 " + $@NBG2R_SOFT[callfunc("F_NEED_BG2P3_RuleVer", .@now)]
+		dispbottom "[3:3 정산] 규칙 3:3=" + ($@NBG3P3_RULES_OK ? "OK" : "^FF0000오류^000000") + " 지금 v" + callfunc("F_NEED_BG3P3_RuleVer", .@now) + "(2:2 v" + callfunc("F_NEED_BG2P3_RuleVer", .@now) + ")" + " / IP 한도(2:2 규칙) " + $@NBG2R_CAP[callfunc("F_NEED_BG2P3_RuleVer", .@now)] + " 소프트 " + $@NBG2R_SOFT[callfunc("F_NEED_BG2P3_RuleVer", .@now)]
 			+ " / 보관 정산 " + getarraysize($NEED_BG3_PEND_H$) + " / 검토 보관 " + callfunc("F_NEED_BG3P3_PartCount");
 		.@h = 0; .@m = 0; .@tk = 0;
 		query_sql "SELECT COUNT(*) FROM need_bg2_review r JOIN need_bg2_match m ON m.match_pk = r.match_pk WHERE r.state = 'HOLD' AND m.`mode` = " + $@NBG3P3_MODE, .@h;
@@ -1108,9 +1113,14 @@ OnCmdGM:
 		end;
 	}
 	if (.@sub$ == "rules") {
-		dispbottom "[3:3 정산] 보상 규칙 " + ($@NBG3P3_RULES_OK ? "OK" : "오류: " + $@NBG3R_ERR$) + " / 버전 " + $@NBG3R_N + "개 / 이번 주 v" + callfunc("F_NEED_BG3P3_RuleVer", .@now);
+		dispbottom "[3:3 정산] 보상 규칙 " + ($@NBG3P3_RULES_OK ? "OK" : "오류: " + $@NBG3R_ERR$) + " / 버전 " + $@NBG3R_N + "개 / 지금 v" + callfunc("F_NEED_BG3P3_RuleVer", .@now) + " / 이번 주 주간·랭킹 v" + callfunc("F_NEED_BG3P3_RuleVer", .@ws);
+		.@mm = ($@NBG3R_N != $@NBG2R_N);
+		for (.@v = 1; .@v < $@NBG3R_N; .@v++)
+			if ($@NBG3R_EFF[.@v] != $@NBG2R_EFF[.@v])
+				.@mm = 1;
+		dispbottom "[3:3 정산] 2:2 규칙과 버전 시작 시각 " + (.@mm ? "^FF0000불일치^000000 (3:3 " + $@NBG3R_N + "개 / 2:2 " + $@NBG2R_N + "개: 어긋난 동안 시작한 3:3 경기는 정산 보관)" : "일치 (버전 " + $@NBG3R_N + "개)");
 		for (.@v = 0; .@v < $@NBG3R_N; .@v++)
-			dispbottom "[3:3 정산] v" + .@v + " 시작 " + ($@NBG3R_EFF[.@v] ? callfunc("F_NEED_BG2P3_Date$", $@NBG3R_EFF[.@v]) : "처음") + " 점수 " + $@NBG3R_PW[.@v] + "/" + $@NBG3R_PL[.@v] + "/" + $@NBG3R_PD[.@v]
+			dispbottom "[3:3 정산] v" + .@v + " 시작 " + ($@NBG3R_EFF[.@v] ? callfunc("F_NEED_BG2P3_Date$", $@NBG3R_EFF[.@v]) + " KST (" + $@NBG3R_EFF[.@v] + ")" : "처음") + " 점수 " + $@NBG3R_PW[.@v] + "/" + $@NBG3R_PL[.@v] + "/" + $@NBG3R_PD[.@v]
 				+ " 캐시 " + $@NBG3R_CW[.@v] + "/" + $@NBG3R_CL[.@v] + "/" + $@NBG3R_CD[.@v] + " 아이템 승[" + $@NBG3R_IW$[.@v] + "] 패[" + $@NBG3R_IL$[.@v] + "] 무[" + $@NBG3R_ID$[.@v]
 				+ "] 10/30/60[" + $@NBG3R_T10$[.@v] + "|" + $@NBG3R_T30$[.@v] + "|" + $@NBG3R_T60$[.@v] + "] 1/2/3위[" + $@NBG3R_R1$[.@v] + "|" + $@NBG3R_R2$[.@v] + "|" + $@NBG3R_R3$[.@v] + "]";
 		end;

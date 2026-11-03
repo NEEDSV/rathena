@@ -10,7 +10,7 @@
 //=   $NEED_BG2_P3_MCASH 승패 직접 캐시: 경기 시작 때 켜져 있던 경기만 할당, 지급(접속 중 즉시 / 다음 로그인 / NPC)도 이 스위치.
 //=   $NEED_BG2_P3_MITEM 승패 아이템 보상권: 경기 시작 때 켜져 있던 경기만 생성, NPC 수령도 이 스위치.
 //=   $NEED_BG2_P3_WITEM 주간 단계·랭킹 아이템 보상권 NPC 수령(생성은 그 주차 규칙 버전이 아이템 방식일 때).
-//= 규칙  : need_duo2v2_p3_rules.txt (점수·승패 캐시/아이템·IP 하루 한도·주간 아이템). 버전 = 적용 주차, 다음 주부터만 추가.
+//= 규칙  : need_duo2v2_p3_rules.txt (점수·승패 캐시/아이템·IP 하루 한도·주간 아이템). 버전 = 적용 시작 시각, 아직 오지 않은 시각으로만 추가.
 //= 원장  : DB 테이블 need_bg2_* (NEED_Duo_Survival_Phase3_DB_Migration.sql). 스크립트 변수로 보상 원장을 관리하지 않는다.
 //= 시간  : 유닉스 초(UTC). 주차 = 월요일 04:00 KST 시작 [start, start+7일). KST = UTC+9 를 상수로 쓴다(서버 시간대 무관).
 //=         경기는 종료 시각의 주차에 들어간다. 랭킹 확정 = 주차 시작 + 9일(다음 주 수요일 04:00 KST).
@@ -158,7 +158,7 @@ function	script	F_NEED_BG2P3_RuleSet	{
 	return;
 }
 
-// 한 버전의 지문(바뀌었는지 비교). 첫 칸은 적용 주차.
+// 한 버전의 지문(바뀌었는지 비교). 첫 칸은 적용 시작 시각.
 function	script	F_NEED_BG2P3_RuleSig$	{
 	.@v = getarg(0);
 	return $@NBG2R_EFF[.@v] + "|" + $@NBG2R_PW[.@v] + "/" + $@NBG2R_PL[.@v] + "/" + $@NBG2R_PD[.@v] + "|" + $@NBG2R_CW[.@v] + "/" + $@NBG2R_CL[.@v] + "/" + $@NBG2R_CD[.@v]
@@ -204,7 +204,7 @@ function	script	F_NEED_BG2P3_ParseItems	{
 }
 
 // 규칙을 읽고 검사한다(Init / 리로드). 실패하면 $@NBG2P3_RULES_OK = 0: 새 정산·보상권 생성을 멈춘다(경기 결과는 보관 정산).
-// 이미 시작된 버전이 바뀌거나 사라졌는지, 새 버전이 다음 주 월요일 이후 시작인지를 영구 변수 $NEED_BG2_RVSIG$[] 와 비교한다.
+// 이미 시작된 버전이 바뀌거나 사라졌는지, 새 버전의 시작 시각이 아직 오지 않았는지를 영구 변수 $NEED_BG2_RVSIG$[] 와 비교한다.
 function	script	F_NEED_BG2P3_RulesLoad	{
 	deletearray $@NBG2R_EFF; deletearray $@NBG2R_PW; deletearray $@NBG2R_PL; deletearray $@NBG2R_PD;
 	deletearray $@NBG2R_CW; deletearray $@NBG2R_CL; deletearray $@NBG2R_CD;
@@ -217,13 +217,12 @@ function	script	F_NEED_BG2P3_RulesLoad	{
 	$@NBG2R_ERR$ = "";
 	callfunc "F_NEED_BG2P3_RulesDef";
 	.@now = gettimetick(2);
-	.@next = callfunc("F_NEED_BG2P3_WeekStart", .@now) + $@NBG2P3_WEEK;
 	if ($@NBG2R_N < 1 || $@NBG2R_EFF[0] != 0)
 		$@NBG2R_ERR$ += "version 0 (effective 0) missing; ";
 	for (.@v = 0; .@v < $@NBG2R_N; .@v++) {
 		if (.@v > 0) {	// rAthena 의 && 는 뒤도 계산하므로 [.@v - 1] 은 블록 안에서만 읽는다
-			if ($@NBG2R_EFF[.@v] != callfunc("F_NEED_BG2P3_WeekStart", $@NBG2R_EFF[.@v]) || $@NBG2R_EFF[.@v] <= $@NBG2R_EFF[.@v - 1])
-				$@NBG2R_ERR$ += "v" + .@v + " start is not a later Monday 04:00 KST; ";
+			if ($@NBG2R_EFF[.@v] <= $@NBG2R_EFF[.@v - 1])
+				$@NBG2R_ERR$ += "v" + .@v + " start is not later than v" + (.@v - 1) + "; ";
 		}
 		if ($@NBG2R_PW[.@v] < 0 || $@NBG2R_PW[.@v] > 10 || $@NBG2R_PL[.@v] < 0 || $@NBG2R_PL[.@v] > 10 || $@NBG2R_PD[.@v] < 0 || $@NBG2R_PD[.@v] > 10)
 			$@NBG2R_ERR$ += "v" + .@v + " points not 0..10; ";
@@ -251,10 +250,13 @@ function	script	F_NEED_BG2P3_RulesLoad	{
 		}
 		.@sig$ = callfunc("F_NEED_BG2P3_RuleSig$", .@v);
 		.@old$ = $NEED_BG2_RVSIG$[.@v];
-		if (.@old$ != "" && .@old$ != .@sig$ && $@NBG2R_EFF[.@v] <= .@now)
-			$@NBG2R_ERR$ += "v" + .@v + " already started and was changed; ";
-		if (.@old$ == "" && .@v > 0 && $@NBG2R_EFF[.@v] < .@next)
-			$@NBG2R_ERR$ += "v" + .@v + " is new but starts before next Monday 04:00 KST; ";
+		if (.@old$ != "" && .@old$ != .@sig$) {	// 저장된 시작 시각이나 새 시작 시각 중 하나라도 지났으면 이미 시작된 버전
+			explode(.@of$, .@old$, "|");
+			if ($@NBG2R_EFF[.@v] <= .@now || atoi(.@of$[0]) <= .@now)
+				$@NBG2R_ERR$ += "v" + .@v + " already started and was changed; ";
+		}
+		if (.@old$ == "" && .@v > 0 && $@NBG2R_EFF[.@v] <= .@now)	// 새 버전은 아직 오지 않은 시각부터만(지난 경기 소급 금지)
+			$@NBG2R_ERR$ += "v" + .@v + " is new but its start is not in the future; ";
 	}
 	// 지워진 버전: 이미 시작된 것이면 거부.
 	.@n = getarraysize($NEED_BG2_RVSIG$);
@@ -280,11 +282,10 @@ function	script	F_NEED_BG2P3_RulesLoad	{
 	return 1;
 }
 
-// 시각 t 가 속한 주차의 규칙 버전.
+// 시각 t 에 적용되는 규칙 버전(시작 시각이 t 이하인 마지막 버전). 경기는 시작 시각으로, 주간 단계·랭킹은 주차 시작(월요일 04:00)으로 부른다.
 function	script	F_NEED_BG2P3_RuleVer	{
-	.@ws = callfunc("F_NEED_BG2P3_WeekStart", getarg(0));
 	for (.@v = $@NBG2R_N - 1; .@v > 0; .@v--)
-		if ($@NBG2R_EFF[.@v] <= .@ws)
+		if ($@NBG2R_EFF[.@v] <= getarg(0))
 			return .@v;
 	return 0;
 }
@@ -864,11 +865,11 @@ function	script	F_NEED_BG2P3_Apply	{
 		callfunc "F_NEED_BG2P3_Log", "P3_RULES_BLOCKED key=" + .@h$[0] + " (rules file invalid: kept for retry)";
 		return -1;
 	}
-	// 규칙 버전 = 경기 시작 시각 주차의 버전. 이미 시작된 버전은 바꿀 수 없으므로 시작 때와 같다. 시작 때 규칙이 잘못 로드돼
-	// 있었다면 payload 의 버전이 지금은 없을 수 있다: 그때도 시작 주차의 (지금 올바른) 버전을 쓰고 기록만 남긴다(보관 정산이 막히지 않게).
+	// 규칙 버전 = 경기 시작 시각에 적용되던 버전. 이미 시작된 버전은 바꿀 수 없으므로 시작 때와 같다. 시작 때 규칙이 잘못 로드돼
+	// 있었다면 payload 의 버전이 지금은 없을 수 있다: 그때도 시작 시각의 (지금 올바른) 버전을 쓰고 기록만 남긴다(보관 정산이 막히지 않게).
 	.@ver = callfunc("F_NEED_BG2P3_RuleVer", .@t0);
 	if (getarraysize(.@h$) == 14 && atoi(.@h$[13]) != .@ver)
-		callfunc "F_NEED_BG2P3_Log", "P3_RULES_VER_NOTE key=" + .@h$[0] + " launch_ver=" + .@h$[13] + " used_ver=" + .@ver + " (version in force for the launch week)";
+		callfunc "F_NEED_BG2P3_Log", "P3_RULES_VER_NOTE key=" + .@h$[0] + " launch_ver=" + .@h$[13] + " used_ver=" + .@ver + " (version in force at the match start)";
 	explode(.@pl$, getarg(1), ";");
 	if (getarraysize(.@pl$) != 4 || .@key$ == "" || .@te <= 0)
 		return -2;
@@ -1866,7 +1867,7 @@ OnCmdGM:
 		dispbottom "[2:2 정산] 원장(ledger)=" + $NEED_BG2_P3_ON + " 랭킹확정(rank)=" + $NEED_BG2_P3_RANK + " 수령(claim)=" + $NEED_BG2_P3_CLAIM + " 공개대기열=" + $NEED_BG2_QUEUE_OPEN
 			+ " 보관정산=" + getarraysize($NEED_BG2_PEND_H$) + " 검토보관=" + callfunc("F_NEED_BG2P3_PartCount");
 		dispbottom "[2:2 정산] 승패캐시(mcash)=" + $NEED_BG2_P3_MCASH + " 승패아이템(mitem)=" + $NEED_BG2_P3_MITEM + " 주간아이템(witem)=" + $NEED_BG2_P3_WITEM
-			+ " 규칙=" + ($@NBG2P3_RULES_OK ? "OK" : "^FF0000오류^000000") + " 이번주 버전 " + callfunc("F_NEED_BG2P3_RuleVer", .@now) + " / 다음주 버전 " + callfunc("F_NEED_BG2P3_RuleVer", .@ws + $@NBG2P3_WEEK);
+			+ " 규칙=" + ($@NBG2P3_RULES_OK ? "OK" : "^FF0000오류^000000") + " 지금 버전 " + callfunc("F_NEED_BG2P3_RuleVer", .@now) + " / 이번주 주간보상 버전 " + callfunc("F_NEED_BG2P3_RuleVer", .@ws) + " / 다음주 버전 " + callfunc("F_NEED_BG2P3_RuleVer", .@ws + $@NBG2P3_WEEK);
 		dispbottom "[2:2 정산] 이번 주 " + callfunc("F_NEED_BG2P3_Date$", .@ws) + " ~ " + callfunc("F_NEED_BG2P3_Date$", .@ws + $@NBG2P3_WEEK) + " KST, 지난 주 확정 시각 "
 			+ callfunc("F_NEED_BG2P3_Date$", .@ws - $@NBG2P3_WEEK + $@NBG2P3_FINAL_AT) + " KST";
 		.@h = 0; .@m = 0; .@tk = 0; .@rs = 0;
@@ -2045,10 +2046,10 @@ OnCmdGM:
 	}
 	// 보상 규칙 버전 목록과 검사 결과.
 	if (.@sub$ == "rules") {
-		dispbottom "[2:2 정산] 보상 규칙 " + ($@NBG2P3_RULES_OK ? "OK" : "오류: " + $@NBG2R_ERR$) + " / 버전 " + $@NBG2R_N + "개 / 이번 주 v" + callfunc("F_NEED_BG2P3_RuleVer", .@now)
+		dispbottom "[2:2 정산] 보상 규칙 " + ($@NBG2P3_RULES_OK ? "OK" : "오류: " + $@NBG2R_ERR$) + " / 버전 " + $@NBG2R_N + "개 / 지금 v" + callfunc("F_NEED_BG2P3_RuleVer", .@now) + " / 이번 주 주간·랭킹 v" + callfunc("F_NEED_BG2P3_RuleVer", .@ws)
 			+ " / 다음 주(" + callfunc("F_NEED_BG2P3_Date$", .@ws + $@NBG2P3_WEEK) + ") v" + callfunc("F_NEED_BG2P3_RuleVer", .@ws + $@NBG2P3_WEEK);
 		for (.@v = 0; .@v < $@NBG2R_N; .@v++) {
-			dispbottom "[2:2 정산] v" + .@v + " 시작 " + ($@NBG2R_EFF[.@v] ? callfunc("F_NEED_BG2P3_Date$", $@NBG2R_EFF[.@v]) : "처음") + " 점수 " + $@NBG2R_PW[.@v] + "/" + $@NBG2R_PL[.@v] + "/" + $@NBG2R_PD[.@v]
+			dispbottom "[2:2 정산] v" + .@v + " 시작 " + ($@NBG2R_EFF[.@v] ? callfunc("F_NEED_BG2P3_Date$", $@NBG2R_EFF[.@v]) + " KST (" + $@NBG2R_EFF[.@v] + ")" : "처음") + " 점수 " + $@NBG2R_PW[.@v] + "/" + $@NBG2R_PL[.@v] + "/" + $@NBG2R_PD[.@v]
 				+ " 캐시 " + $@NBG2R_CW[.@v] + "/" + $@NBG2R_CL[.@v] + "/" + $@NBG2R_CD[.@v] + " IP하루 " + $@NBG2R_CAP[.@v] + (($@NBG2R_SOFT[.@v] > 0) ? " (소프트 " + $@NBG2R_SOFT[.@v] + " 이후 " + $@NBG2R_SRATE[.@v] + "%)" : "") + " 주간 " + ($@NBG2R_WM[.@v] ? "아이템" : "캐시(기존)");
 			dispbottom "[2:2 정산]   아이템 승[" + $@NBG2R_IW$[.@v] + "] 패[" + $@NBG2R_IL$[.@v] + "] 무[" + $@NBG2R_ID$[.@v] + "] 10/30/60[" + $@NBG2R_T10$[.@v] + "|" + $@NBG2R_T30$[.@v] + "|" + $@NBG2R_T60$[.@v]
 				+ "] 1/2/3위[" + $@NBG2R_R1$[.@v] + "|" + $@NBG2R_R2$[.@v] + "|" + $@NBG2R_R3$[.@v] + "]";
