@@ -8875,8 +8875,9 @@ bool skill_check_condition_castbegin( map_session_data& sd, uint16 skill_id, uin
 			break;
 		case SR_RAMPAGEBLASTER:
 			// NEED: the restored 2017 damage formula multiplies by spiritball_old (rampageblaster.cpp), which
-			// nothing set for this skill, so it dealt 0 damage. Record the DB sphere cost; the 3-sphere requirement stays.
-			sd.spiritball_old = skill_get_spiritball(skill_id, skill_lv);
+			// nothing set for this skill, so it dealt 0 damage. Record the spheres consumed: every sphere held
+			// (skill_get_requirement), the DB cost when Massive F Blaster waives them. The 3-sphere requirement stays.
+			sd.spiritball_old = (require.spiritball > 0) ? require.spiritball : skill_get_spiritball(skill_id, skill_lv);
 			break;
 		case MO_CHAINCOMBO:
 			if(!sc)
@@ -10483,6 +10484,11 @@ struct s_skill_condition skill_get_requirement(map_session_data* sd, uint16 skil
 				req.spiritball = 0;
 			break;
 		case SR_RAMPAGEBLASTER:
+			if (sc && sc->getSCE(SC_MASSIVE_F_BLASTER))
+				req.spiritball = 0;
+			else if (sd->spiritball > req.spiritball)
+				req.spiritball = sd->spiritball; // NEED 2017: consumes all spheres held (at least the DB cost)
+			break;
 		case SR_RIDEINLIGHTNING:
 			if (sc && sc->getSCE(SC_MASSIVE_F_BLASTER))
 				req.spiritball = 0;
