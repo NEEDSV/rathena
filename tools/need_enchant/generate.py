@@ -612,7 +612,7 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('--master', default=os.path.join(REPO, 'db', 'need', 'enchant_master.yml'))
     ap.add_argument('--registry', default=os.path.join(REPO, 'db', 'need', 'enchant_clientid_registry.yml'))
-    ap.add_argument('--client-grf', default=r'E:\ttt\NEED_LIVE_0821\data.grf', help='official data.grf (KR base, EnchantList_f, ItemDBNameTbl)')
+    ap.add_argument('--client-grf', default=r'E:\ttt\NEED_LIVE_1031\data.grf', help='official data.grf (KR base, EnchantList_f, ItemDBNameTbl)')
     # The EN base is the Phase 4.18 file pinned in the EN repo, never the repo's live enchantlist.lub:
     # that one is this generator's own output since Phase 2.1b and would feed NEED groups back in.
     ap.add_argument('--en-enchantlist', default=EN_BASE)
