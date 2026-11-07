@@ -206,6 +206,8 @@ function	script	F_NEED_BG3P3_TierSync	{
 		return -1;
 	.@v = callfunc("F_NEED_BG3P3_RuleVer", .@ws);
 	.@new = 0;
+	if (.@ws < $@NBG2P3_WREW_FROM)	// 테스트 주차: 단계 보상권 없음(2:2 와 같은 첫 주차 값)
+		return 0;
 	for (.@t = 0; .@t < 3; .@t++) {
 		if (.@pts < $@NBG3P3_TIER_PT[.@t])
 			break;
@@ -848,6 +850,10 @@ function	script	F_NEED_BG3P3_Finalize	{
 	.@reason$ = getarg(3, "scheduled");
 	.@now = gettimetick(2);
 	.@out = (.@commit == 0);
+	if (.@ws < $@NBG2P3_WREW_FROM) {	// 테스트 주차: 확정·보상권·상태 기록 없음(재시도·수동 확정 포함)
+		if (.@out) dispbottom "[3:3 정산] 주차 " + callfunc("F_NEED_BG2P3_Date$", .@ws) + " 는 테스트 주차입니다. 주간·랭킹 보상 없음.";
+		return 1;
+	}
 	if (.@ws != callfunc("F_NEED_BG2P3_WeekStart", .@ws) || .@now < .@ws + $@NBG3P3_WEEK) {
 		if (.@out) dispbottom "[3:3 정산] 주차 " + callfunc("F_NEED_BG2P3_Date$", .@ws) + " 는 올바른 주차 시작이 아니거나 아직 마감 전입니다.";
 		return 4;
@@ -918,7 +924,7 @@ function	script	F_NEED_BG3P3_FinalizeDue	{
 	.@now = getarg(0, gettimetick(2));
 	deletearray .@w;
 	.@n = query_sql("SELECT DISTINCT m.week_start FROM need_bg2_match m LEFT JOIN need_bg2_week w ON w.`mode` = m.`mode` AND w.week_start = m.week_start WHERE m.`mode` = "
-		+ $@NBG3P3_MODE + " AND m.valid = 1 AND m.week_start <= " + (.@now - $@NBG3P3_FINAL_AT) + " AND (w.state IS NULL OR w.state NOT IN ('FINALIZED', 'NO_AWARD')) ORDER BY m.week_start LIMIT 8", .@w);
+		+ $@NBG3P3_MODE + " AND m.valid = 1 AND m.week_start >= " + $@NBG2P3_WREW_FROM + " AND m.week_start <= " + (.@now - $@NBG3P3_FINAL_AT) + " AND (w.state IS NULL OR w.state NOT IN ('FINALIZED', 'NO_AWARD')) ORDER BY m.week_start LIMIT 8", .@w);
 	if (.@n < 0)
 		return -1;
 	for (.@i = 0; .@i < .@n; .@i++)

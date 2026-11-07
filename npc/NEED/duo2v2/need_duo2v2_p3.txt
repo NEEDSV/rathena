@@ -6,10 +6,11 @@
 //= 스위치 (서버 영구, 기본 모두 0 = 꺼짐. GM 60+ 가 @duo2v2p3 set ... 으로 바꾼다):
 //=   $NEED_BG2_P3_ON    원장/점수/단계 보상권 생성/2:2 탈주 제재. 경기 시작(Launch) 때 켜져 있던 경기만 정산한다.
 //=   $NEED_BG2_P3_RANK  수요일 04:00 KST 지난 주 랭킹 자동 확정(+ GM 수동 확정).
-//=   $NEED_BG2_P3_CLAIM 보상 NPC 캐시 수령(주간 단계·랭킹 캐시 보상권, 규칙 버전 0 방식).
+//=   $NEED_BG2_P3_CLAIM 폐지(2026-11-07). 구형 주간 단계·랭킹 캐시 보상권(TIER/RANK)은 새로 만들지 않고, 켜도 수령되지 않는다. 명령만 남긴다.
 //=   $NEED_BG2_P3_MCASH 승패 직접 캐시: 경기 시작 때 켜져 있던 경기만 할당, 지급(접속 중 즉시 / 다음 로그인 / NPC)도 이 스위치.
 //=   $NEED_BG2_P3_MITEM 승패 아이템 보상권: 경기 시작 때 켜져 있던 경기만 생성, NPC 수령도 이 스위치.
 //=   $NEED_BG2_P3_WITEM 주간 단계·랭킹 아이템 보상권 NPC 수령(생성은 그 주차 규칙 버전이 아이템 방식일 때).
+//= 주간·랭킹 : 캐시 없음, 아이템 보상권만. $@NBG2P3_WREW_FROM 이전 주차(테스트 2주)는 2:2·3:3 모두 스위치와 무관하게 생성·확정·수령 0, 소급 없음.
 //= 규칙  : need_duo2v2_p3_rules.txt (점수·승패 캐시/아이템·IP 하루 한도·주간 아이템). 버전 = 적용 시작 시각, 아직 오지 않은 시각으로만 추가.
 //= 원장  : DB 테이블 need_bg2_* (NEED_Duo_Survival_Phase3_DB_Migration.sql). 스크립트 변수로 보상 원장을 관리하지 않는다.
 //= 시간  : 유닉스 초(UTC). 주차 = 월요일 04:00 KST 시작 [start, start+7일). KST = UTC+9 를 상수로 쓴다(서버 시간대 무관).
@@ -32,8 +33,9 @@
 function	script	F_NEED_BG2P3_Init	{
 	$@NBG2P3_MODE = 2;
 	setarray $@NBG2P3_TIER_PT[0], 10, 30, 60;
-	setarray $@NBG2P3_TIER_CASH[0], 10000, 20000, 40000;
-	setarray $@NBG2P3_RANK_CASH[1], 50000, 30000, 20000;
+	// 주간·랭킹 보상 첫 주차(2026-11-16 04:00 KST). 그 전 주차(11/02, 11/09 시작 테스트 주차)는 2:2·3:3 모두 보상권 생성·확정·수령 없음.
+	// 경기 직접 캐시·점수·전적·검토는 이 값과 무관하다.
+	$@NBG2P3_WREW_FROM = 1794769200;
 	$@NBG2P3_MINGAMES = 20;		// 랭킹 후보: 그 주 유효 경기 20 이상
 	$@NBG2P3_MINACC = 6;		// 순위 보상 개설: 그 주 유효 경기 참가 계정 6 이상
 	$@NBG2P3_WEEK = 604800;
@@ -523,11 +525,12 @@ function	script	F_NEED_BG2P3_ClaimItems	{
 	.@cid = getcharid(0);
 	.@k$ = "";
 	.@st = -1;
-	if (query_sql("SELECT reward_kind, status FROM need_bg2_reward WHERE id = " + .@id + " AND account_id = " + .@aid, .@k$, .@st) < 1 || .@st != 0) {
+	.@wk = 0;
+	if (query_sql("SELECT reward_kind, status, week_start FROM need_bg2_reward WHERE id = " + .@id + " AND account_id = " + .@aid, .@k$, .@st, .@wk) < 1 || .@st != 0) {
 		dispbottom needtr("[2:2 듀오] 받을 수 있는 보상이 아닙니다(이미 받았거나 없음).", "[2v2 Duo] This reward cannot be claimed (already claimed or not found)."), 0xFF7777;
 		return 0;
 	}
-	if ((.@k$ == "MITEM" && !$NEED_BG2_P3_MITEM) || (.@k$ != "MITEM" && !$NEED_BG2_P3_WITEM)) {
+	if ((.@k$ == "MITEM" && !$NEED_BG2_P3_MITEM) || (.@k$ != "MITEM" && (!$NEED_BG2_P3_WITEM || .@wk < $@NBG2P3_WREW_FROM))) {
 		dispbottom needtr("[2:2 듀오] 지금은 이 보상의 수령을 받지 않습니다.", "[2v2 Duo] This reward cannot be claimed now."), 0xFF7777;
 		return 0;
 	}
@@ -618,7 +621,7 @@ function	script	F_NEED_BG2P3_KindOpen	{
 	if (.@k$ == "MCASH") return $NEED_BG2_P3_MCASH;
 	if (.@k$ == "MITEM") return $NEED_BG2_P3_MITEM;
 	if (.@k$ == "TIERI" || .@k$ == "RANKI") return $NEED_BG2_P3_WITEM;
-	return $NEED_BG2_P3_CLAIM;
+	return 0;	// 구형 주간·랭킹 캐시(TIER/RANK)는 폐지
 }
 
 //------------------------------------------------------------
@@ -1114,31 +1117,18 @@ function	script	F_NEED_BG2P3_TierSync	{
 	if (!$@NBG2P3_RULES_OK)
 		return -1;
 	.@v = callfunc("F_NEED_BG2P3_RuleVer", .@ws);
-	if ($@NBG2R_WM[.@v]) {
-		// 아이템 방식 주차: 구간별 아이템 목록을 스냅샷으로(빈 목록 = 그 구간 보상 없음). 계정·주차·구간 1회(uk_ticket).
-		setarray .@l$[0], $@NBG2R_T10$[.@v], $@NBG2R_T30$[.@v], $@NBG2R_T60$[.@v];
-		for (.@t = 0; .@t < 3; .@t++) {
-			if (.@pts < $@NBG2P3_TIER_PT[.@t])
-				break;
-			.@r = callfunc("F_NEED_BG2P3_ItemTicket", .@ws, .@aid, "TIERI", "" + $@NBG2P3_TIER_PT[.@t], 0, 0, 0, .@l$[.@t], $@NBG2R_F$[.@v * 9 + 3 + .@t]);
-			if (.@r < 0)
-				return -1;
-			.@new += .@r;
-		}
-		return .@new;
-	}
+	// 테스트 주차이거나 아이템 방식이 아닌 버전(주간 보상 미정): 보상권 없음. 구형 캐시 보상권은 폐지.
+	if (.@ws < $@NBG2P3_WREW_FROM || !$@NBG2R_WM[.@v])
+		return 0;
+	// 구간별 아이템 목록을 스냅샷으로(빈 목록 = 그 구간 보상 없음). 계정·주차·구간 1회(uk_ticket).
+	setarray .@l$[0], $@NBG2R_T10$[.@v], $@NBG2R_T30$[.@v], $@NBG2R_T60$[.@v];
 	for (.@t = 0; .@t < 3; .@t++) {
 		if (.@pts < $@NBG2P3_TIER_PT[.@t])
 			break;
-		if (query_sql("INSERT IGNORE INTO need_bg2_reward (`mode`, week_start, account_id, reward_kind, reward_key, amount, status, created_at) VALUES ("
-			+ $@NBG2P3_MODE + ", " + .@ws + ", " + .@aid + ", 'TIER', '" + $@NBG2P3_TIER_PT[.@t] + "', " + $@NBG2P3_TIER_CASH[.@t] + ", 0, " + gettimetick(2) + ")") < 0)
+		.@r = callfunc("F_NEED_BG2P3_ItemTicket", .@ws, .@aid, "TIERI", "" + $@NBG2P3_TIER_PT[.@t], 0, 0, 0, .@l$[.@t], $@NBG2R_F$[.@v * 9 + 3 + .@t]);
+		if (.@r < 0)
 			return -1;
-		.@rc = 0;
-		query_sql "SELECT ROW_COUNT()", .@rc;
-		if (.@rc > 0) {
-			.@new++;
-			callfunc "F_NEED_BG2_Log", "P3_TICKET kind=TIER key=" + $@NBG2P3_TIER_PT[.@t] + " aid=" + .@aid + " week=" + .@ws + " amount=" + $@NBG2P3_TIER_CASH[.@t] + " pts=" + .@pts;
-		}
+		.@new += .@r;
 	}
 	return .@new;
 }
@@ -1319,6 +1309,10 @@ function	script	F_NEED_BG2P3_Finalize	{
 	.@reason$ = getarg(3, "scheduled");
 	.@now = gettimetick(2);
 	.@out = (.@commit == 0);
+	if (.@ws < $@NBG2P3_WREW_FROM) {	// 테스트 주차: 확정·보상권·상태 기록 없음(재시도·수동 확정 포함)
+		if (.@out) dispbottom "[2:2 정산] 주차 " + callfunc("F_NEED_BG2P3_Date$", .@ws) + " 는 테스트 주차입니다. 주간·랭킹 보상 없음.";
+		return 1;
+	}
 	if (.@ws != callfunc("F_NEED_BG2P3_WeekStart", .@ws) || .@now < .@ws + $@NBG2P3_WEEK) {
 		if (.@out) dispbottom "[2:2 정산] 주차 " + callfunc("F_NEED_BG2P3_Date$", .@ws) + " 는 올바른 주차 시작이 아니거나 아직 마감 전입니다.";
 		return 4;
@@ -1353,13 +1347,14 @@ function	script	F_NEED_BG2P3_Finalize	{
 		}
 		return 2;
 	}
-	.@award = (compare(.@sigA$, "NA:") == 0 && $@NBG2P3_AW_N > 0);
+	.@rv = callfunc("F_NEED_BG2P3_RuleVer", .@ws);
+	.@award = (compare(.@sigA$, "NA:") == 0 && $@NBG2P3_AW_N > 0 && $@NBG2R_WM[.@rv]);	// 아이템 방식이 아닌 버전은 순위 보상 없음(구형 캐시 폐지)
 	.@state$ = .@award ? "FINALIZED" : "NO_AWARD";
 	.@detail$ = "accounts=" + $@NBG2P3_AW_ACC + " held=" + .@held + " " + .@sigA$ + (.@reason$ != "" ? " reason=" + .@reason$ : "");
 	if (.@out) {
 		dispbottom "[2:2 정산] 드라이런 주차 " + callfunc("F_NEED_BG2P3_Date$", .@ws) + " → " + .@state$ + " (참가 계정 " + $@NBG2P3_AW_ACC + ", 보류 경기 " + .@held + ")";
 		for (.@s = 1; .@s <= $@NBG2P3_AW_N; .@s++)
-			dispbottom "[2:2 정산]   " + .@s + "위 aid=" + $@NBG2P3_AW_AID[.@s] + " cid=" + $@NBG2P3_AW_CID[.@s] + " " + $@NBG2P3_RANK_CASH[.@s] + " 캐시";
+			dispbottom "[2:2 정산]   " + .@s + "위 aid=" + $@NBG2P3_AW_AID[.@s] + " cid=" + $@NBG2P3_AW_CID[.@s] + (.@award ? "" : " (보상 없음)");
 		return .@award ? 0 : 1;
 	}
 	if (!$@NBG2P3_RULES_OK) {
@@ -1375,17 +1370,10 @@ function	script	F_NEED_BG2P3_Finalize	{
 		query_sql "ROLLBACK";
 		return 3;
 	}
-	.@rv = callfunc("F_NEED_BG2P3_RuleVer", .@ws);
 	setarray .@rl$[1], $@NBG2R_R1$[.@rv], $@NBG2R_R2$[.@rv], $@NBG2R_R3$[.@rv];
-	for (.@s = 1; .@s <= $@NBG2P3_AW_N; .@s++) {
-		if ($@NBG2R_WM[.@rv]) {
-			// 아이템 방식 주차: 순위별 아이템 목록 스냅샷(빈 목록 = 그 순위 보상 없음). 순위·계정 1자리 규칙은 그대로.
-			if (callfunc("F_NEED_BG2P3_ItemTicket", .@ws, $@NBG2P3_AW_AID[.@s], "RANKI", "" + .@s, .@s, $@NBG2P3_AW_CID[.@s], 0, .@rl$[.@s], $@NBG2R_F$[.@rv * 9 + 5 + .@s]) < 0)
-				return callfunc("F_NEED_BG2P3_Rollback", "final_ticket");
-			continue;
-		}
-		if (query_sql("INSERT IGNORE INTO need_bg2_reward (`mode`, week_start, account_id, reward_kind, reward_key, rank_slot, char_id, amount, status, created_at) VALUES ("
-			+ $@NBG2P3_MODE + ", " + .@ws + ", " + $@NBG2P3_AW_AID[.@s] + ", 'RANK', '" + .@s + "', " + .@s + ", " + $@NBG2P3_AW_CID[.@s] + ", " + $@NBG2P3_RANK_CASH[.@s] + ", 0, " + .@now + ")") < 0)
+	// 순위별 아이템 목록 스냅샷(빈 목록 = 그 순위 보상 없음). 순위·계정 1자리 규칙은 그대로. 구형 캐시 보상권은 폐지.
+	for (.@s = 1; .@award && .@s <= $@NBG2P3_AW_N; .@s++) {
+		if (callfunc("F_NEED_BG2P3_ItemTicket", .@ws, $@NBG2P3_AW_AID[.@s], "RANKI", "" + .@s, .@s, $@NBG2P3_AW_CID[.@s], 0, .@rl$[.@s], $@NBG2R_F$[.@rv * 9 + 5 + .@s]) < 0)
 			return callfunc("F_NEED_BG2P3_Rollback", "final_ticket");
 	}
 	if (query_sql("INSERT INTO need_bg2_week (`mode`, week_start, state, accounts, detail, attempts, decided_at) VALUES (" + $@NBG2P3_MODE + ", " + .@ws + ", '" + .@state$ + "', "
@@ -1403,7 +1391,7 @@ function	script	F_NEED_BG2P3_FinalizeDue	{
 	.@now = getarg(0, gettimetick(2));
 	deletearray .@w;
 	.@n = query_sql("SELECT DISTINCT m.week_start FROM need_bg2_match m LEFT JOIN need_bg2_week w ON w.`mode` = m.`mode` AND w.week_start = m.week_start WHERE m.`mode` = "
-		+ $@NBG2P3_MODE + " AND m.valid = 1 AND m.week_start <= " + (.@now - $@NBG2P3_FINAL_AT) + " AND (w.state IS NULL OR w.state NOT IN ('FINALIZED', 'NO_AWARD')) ORDER BY m.week_start LIMIT 8", .@w);
+		+ $@NBG2P3_MODE + " AND m.valid = 1 AND m.week_start >= " + $@NBG2P3_WREW_FROM + " AND m.week_start <= " + (.@now - $@NBG2P3_FINAL_AT) + " AND (w.state IS NULL OR w.state NOT IN ('FINALIZED', 'NO_AWARD')) ORDER BY m.week_start LIMIT 8", .@w);
 	if (.@n < 0)
 		return -1;
 	for (.@i = 0; .@i < .@n; .@i++)
@@ -1500,7 +1488,7 @@ function	script	F_NEED_BG2P3_Claim	{
 	.@st = -1;
 	.@k$ = "";
 	if (query_sql("SELECT amount, status, reward_kind FROM need_bg2_reward WHERE id = " + .@id + " AND account_id = " + .@aid, .@amt, .@st, .@k$) < 1 || .@st != 0
-		|| (.@k$ != "TIER" && .@k$ != "RANK" && .@k$ != "MCASH")) {
+		|| .@k$ != "MCASH") {	// 캐시 수령은 경기 직접 캐시만. 구형 주간·랭킹 캐시(TIER/RANK)는 폐지
 		dispbottom needtr("[2:2 듀오] 받을 수 있는 보상이 아닙니다(이미 받았거나 없음).", "[2v2 Duo] This reward cannot be claimed (already claimed or not found)."), 0xFF7777;
 		return 0;
 	}
@@ -1646,6 +1634,12 @@ function	script	F_NEED_BG2P3_Npc	{
 			break;
 		case 2:
 			.@rv = callfunc("F_NEED_BG2P3_RuleVer", .@ws);
+			if (.@ws < $@NBG2P3_WREW_FROM) {
+				mes needtr("이번 주는 ^FF0000테스트 주간^000000입니다. 주간 단계·랭킹 보상은 없습니다.", "This is a ^FF0000test week^000000. There are no weekly tier or ranking rewards.");
+				mes needtr("경기 보상 캐시는 그대로 지급됩니다.", "Match cash rewards are paid as usual.");
+				next;
+				break;
+			}
 			if ($@NBG2R_WM[.@rv]) {
 				setarray .@tl$[0], $@NBG2R_T10$[.@rv], $@NBG2R_T30$[.@rv], $@NBG2R_T60$[.@rv];
 				for (.@t = 0; .@t < 3; .@t++) {
@@ -1666,21 +1660,7 @@ function	script	F_NEED_BG2P3_Npc	{
 				next;
 				break;
 			}
-			for (.@t = 0; .@t < 3; .@t++) {
-				.@st = -1;
-				query_sql "SELECT status FROM need_bg2_reward WHERE `mode` = " + $@NBG2P3_MODE + " AND week_start = " + .@ws + " AND account_id = " + .@aid
-					+ " AND reward_kind = 'TIER' AND reward_key = '" + $@NBG2P3_TIER_PT[.@t] + "'", .@st;
-				if (.@st < 0)
-					.@s$ = (.@pts >= $@NBG2P3_TIER_PT[.@t]) ? needtr("^FF7700생성 대기^000000", "^FF7700pending^000000") : needtr("미달성", "not reached");
-				else if (.@st == 0)
-					.@s$ = needtr("^0055FF받을 수 있음^000000", "^0055FFclaimable^000000");
-				else if (.@st == 1 || .@st == 2)
-					.@s$ = needtr("받음", "claimed");
-				else
-					.@s$ = needtr("운영 확인 중", "under GM check");
-				mes $@NBG2P3_TIER_PT[.@t] + needtr("점: ", " points: ") + $@NBG2P3_TIER_CASH[.@t] + needtr(" 캐시 - ", " cash - ") + .@s$;
-			}
-			mes needtr("한 주 최대 70,000 캐시. 받지 않은 보상은 주가 바뀌어도 사라지지 않습니다.", "Up to 70,000 cash a week. Unclaimed rewards never expire.");
+			mes needtr("이번 주 주간 단계 보상은 없습니다.", "There are no weekly tier rewards this week.");
 			next;
 			break;
 		case 3:
@@ -1748,12 +1728,11 @@ function	script	F_NEED_BG2P3_Npc	{
 			for (.@i = 0; .@i < .@r; .@i++)
 				mes (.@i + 1) + ". " + $@NBG2P3_R_NAME$[.@i] + " - " + $@NBG2P3_R_PTS[.@i] + needtr("점 ", " pts ") + $@NBG2P3_R_W[.@i] + needtr("승 ", "W ") + $@NBG2P3_R_G[.@i]
 					+ needtr("경기", " games") + ($@NBG2P3_R_G[.@i] < $@NBG2P3_MINGAMES ? needtr(" (후보 미달)", " (not eligible)") : "");
-			if ($@NBG2R_WM[callfunc("F_NEED_BG2P3_RuleVer", .@ws)])
+			if (.@ws >= $@NBG2P3_WREW_FROM && $@NBG2R_WM[callfunc("F_NEED_BG2P3_RuleVer", .@ws)])
 				mes needtr("후보 = 유효 경기 20회 이상. 참가 계정 6개 이상인 주만 1~3위 아이템 보상(계정당 1자리). 다음 주 수요일 04:00 확정.",
 					"Eligible = 20+ valid matches. Rank item rewards (one per account) only when 6+ accounts played. Settled next Wednesday 04:00 KST.");
 			else
-				mes needtr("후보 = 유효 경기 20회 이상. 참가 계정 6개 이상인 주만 1~3위 보상(50,000/30,000/20,000 캐시, 계정당 1자리). 다음 주 수요일 04:00 확정.",
-					"Eligible = 20+ valid matches. Rank rewards (50,000/30,000/20,000 cash, one per account) only when 6+ accounts played. Settled next Wednesday 04:00 KST.");
+				mes needtr("순위는 참고용입니다. 이번 주는 랭킹 보상이 없습니다.", "Rankings are for reference only. There are no ranking rewards this week.");
 			next;
 			mes .@n$;
 			.@pw = .@ws - $@NBG2P3_WEEK;
@@ -1864,10 +1843,11 @@ OnCmdGM:
 	.@ws = callfunc("F_NEED_BG2P3_WeekStart", .@now);
 
 	if (.@sub$ == "status") {
-		dispbottom "[2:2 정산] 원장(ledger)=" + $NEED_BG2_P3_ON + " 랭킹확정(rank)=" + $NEED_BG2_P3_RANK + " 수령(claim)=" + $NEED_BG2_P3_CLAIM + " 공개대기열=" + $NEED_BG2_QUEUE_OPEN
+		dispbottom "[2:2 정산] 원장(ledger)=" + $NEED_BG2_P3_ON + " 랭킹확정(rank)=" + $NEED_BG2_P3_RANK + " 구형캐시수령(claim, 폐지)=" + $NEED_BG2_P3_CLAIM + " 공개대기열=" + $NEED_BG2_QUEUE_OPEN
 			+ " 보관정산=" + getarraysize($NEED_BG2_PEND_H$) + " 검토보관=" + callfunc("F_NEED_BG2P3_PartCount");
 		dispbottom "[2:2 정산] 승패캐시(mcash)=" + $NEED_BG2_P3_MCASH + " 승패아이템(mitem)=" + $NEED_BG2_P3_MITEM + " 주간아이템(witem)=" + $NEED_BG2_P3_WITEM
 			+ " 규칙=" + ($@NBG2P3_RULES_OK ? "OK" : "^FF0000오류^000000") + " 지금 버전 " + callfunc("F_NEED_BG2P3_RuleVer", .@now) + " / 이번주 주간보상 버전 " + callfunc("F_NEED_BG2P3_RuleVer", .@ws) + " / 다음주 버전 " + callfunc("F_NEED_BG2P3_RuleVer", .@ws + $@NBG2P3_WEEK);
+		dispbottom "[2:2 정산] 주간·랭킹 보상 첫 주차 " + callfunc("F_NEED_BG2P3_Date$", $@NBG2P3_WREW_FROM) + " KST (" + $@NBG2P3_WREW_FROM + "), 이번 주 " + (.@ws < $@NBG2P3_WREW_FROM ? "테스트 주차: 보상권 생성 없음" : "대상");
 		dispbottom "[2:2 정산] 이번 주 " + callfunc("F_NEED_BG2P3_Date$", .@ws) + " ~ " + callfunc("F_NEED_BG2P3_Date$", .@ws + $@NBG2P3_WEEK) + " KST, 지난 주 확정 시각 "
 			+ callfunc("F_NEED_BG2P3_Date$", .@ws - $@NBG2P3_WEEK + $@NBG2P3_FINAL_AT) + " KST";
 		.@h = 0; .@m = 0; .@tk = 0; .@rs = 0;
@@ -1896,7 +1876,7 @@ OnCmdGM:
 		else $NEED_BG2_P3_CLAIM = .@v;
 		callfunc "F_NEED_BG2P3_Audit", .@gm, "SWITCH", .@a1$ + "=" + .@v, .@why3$;
 		callfunc "F_NEED_BG2_Log", "P3_SWITCH " + .@a1$ + "=" + .@v + " by_aid=" + .@gm;
-		dispbottom "[2:2 정산] " + .@a1$ + " = " + (.@v ? "ON" : "OFF") + ((.@a1$ == "ledger" || .@a1$ == "mcash" || .@a1$ == "mitem") ? " (다음에 시작하는 경기부터 적용, 이미 만든 보상권 수령도 이 스위치)" : "");
+		dispbottom "[2:2 정산] " + .@a1$ + " = " + (.@v ? "ON" : "OFF") + ((.@a1$ == "ledger" || .@a1$ == "mcash" || .@a1$ == "mitem") ? " (다음에 시작하는 경기부터 적용, 이미 만든 보상권 수령도 이 스위치)" : "") + ((.@a1$ == "claim") ? " (폐지: 구형 주간 캐시는 켜도 수령되지 않음)" : "");
 		end;
 	}
 	if (.@sub$ == "week") {
@@ -2050,7 +2030,7 @@ OnCmdGM:
 			+ " / 다음 주(" + callfunc("F_NEED_BG2P3_Date$", .@ws + $@NBG2P3_WEEK) + ") v" + callfunc("F_NEED_BG2P3_RuleVer", .@ws + $@NBG2P3_WEEK);
 		for (.@v = 0; .@v < $@NBG2R_N; .@v++) {
 			dispbottom "[2:2 정산] v" + .@v + " 시작 " + ($@NBG2R_EFF[.@v] ? callfunc("F_NEED_BG2P3_Date$", $@NBG2R_EFF[.@v]) + " KST (" + $@NBG2R_EFF[.@v] + ")" : "처음") + " 점수 " + $@NBG2R_PW[.@v] + "/" + $@NBG2R_PL[.@v] + "/" + $@NBG2R_PD[.@v]
-				+ " 캐시 " + $@NBG2R_CW[.@v] + "/" + $@NBG2R_CL[.@v] + "/" + $@NBG2R_CD[.@v] + " IP하루 " + $@NBG2R_CAP[.@v] + (($@NBG2R_SOFT[.@v] > 0) ? " (소프트 " + $@NBG2R_SOFT[.@v] + " 이후 " + $@NBG2R_SRATE[.@v] + "%)" : "") + " 주간 " + ($@NBG2R_WM[.@v] ? "아이템" : "캐시(기존)");
+				+ " 캐시 " + $@NBG2R_CW[.@v] + "/" + $@NBG2R_CL[.@v] + "/" + $@NBG2R_CD[.@v] + " IP하루 " + $@NBG2R_CAP[.@v] + (($@NBG2R_SOFT[.@v] > 0) ? " (소프트 " + $@NBG2R_SOFT[.@v] + " 이후 " + $@NBG2R_SRATE[.@v] + "%)" : "") + " 주간 " + ($@NBG2R_WM[.@v] ? "아이템" : "없음(구형 캐시 폐지)");
 			dispbottom "[2:2 정산]   아이템 승[" + $@NBG2R_IW$[.@v] + "] 패[" + $@NBG2R_IL$[.@v] + "] 무[" + $@NBG2R_ID$[.@v] + "] 10/30/60[" + $@NBG2R_T10$[.@v] + "|" + $@NBG2R_T30$[.@v] + "|" + $@NBG2R_T60$[.@v]
 				+ "] 1/2/3위[" + $@NBG2R_R1$[.@v] + "|" + $@NBG2R_R2$[.@v] + "|" + $@NBG2R_R3$[.@v] + "]";
 		}
