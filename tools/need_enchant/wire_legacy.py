@@ -26,6 +26,7 @@ MARK = '// NEED Enchant V2 hook'
 HOOKS = [
     ('CHARLESTON', 'npc/re/merchants/enchan_verus.txt', '양산형 찰스턴#2', []),
     ('EP161_HONOR', 'npc/re/quests/quests_16_1.txt', '딜런#pa0829', [r'completequest 12369;', r'^\s*}\s*$']),
+    ('EP162_HONOR', 'npc/re/quests/quests_16_2.txt', '호가르#pa0829', [r'completequest 12376;', r'^\s*}\s*$']),
     ('MORA_ARTIFACT', 'npc/re/merchants/enchan_mora.txt', '유물 연구원#new', []),
     ('SARAH_EARRING', 'npc/NEED/instances/SarahAndFenrir.txt', '수석 조교#a1', [r'if \(sarah_fenrir == 0\)', r'^\s*end;\s*$']),
     ('HORROR_TOY_FACTORY', 'npc/re/merchants/HorrorToyFactory_merchants.txt', '검은 수염 죠#pa0829', []),

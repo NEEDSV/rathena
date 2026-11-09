@@ -345,7 +345,11 @@ def main(argv=None):
             spec = reset.get('Parity')
             if spec and script:
                 lines = parity.read_lines(os.path.join(REPO, script))
-                hits, total = parity.inline_rand_cmp(lines, int(spec['SuccessLine']), spec.get('Vars'))
+                if 'DestroyLine' in spec:   # the roll is written as the destroy check: `if (rand(100) < 20)`
+                    hits, total = parity.inline_rand_cmp(lines, int(spec['DestroyLine']), spec.get('Vars'))
+                    hits = total - hits
+                else:
+                    hits, total = parity.inline_rand_cmp(lines, int(spec['SuccessLine']), spec.get('Vars'))
                 outcomes = reset.get('Outcomes') or []
                 ok_w = sum(int(o['Weight']) for o in outcomes if o['Result'] == 'SUCCESS')
                 all_w = sum(int(o['Weight']) for o in outcomes)
