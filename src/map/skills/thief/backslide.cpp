@@ -3,6 +3,8 @@
 
 #include "backslide.hpp"
 
+#include <config/core.hpp>
+
 #include "map/clif.hpp"
 #include "map/status.hpp"
 #include "map/unit.hpp"
@@ -17,15 +19,22 @@ void SkillBackSlide::castendNoDamageId(block_list *src, block_list *bl, uint16 s
 	if (unit_data *ud = unit_bl2ud(bl); ud != nullptr && !status_isendure(*bl, tick, true))
 		ud->endure_tick = tick + 200;
 
+#ifdef NEED_2017_SKILL_BEHAVIOR
+	// NEED: Back Slide keeps the Rolling Cutter counter (behavior before the 2019 Guillotine Cross rework)
+	const int32 need_keep_flag = BLOWN_NEED_KEEP_ROLLINGCUTTER;
+#else
+	const int32 need_keep_flag = BLOWN_NONE;
+#endif
+
 #ifdef RENEWAL
 	int16 blew_count = skill_blown(src, bl, skill_get_blewcount(getSkillId(), skill_lv), unit_getdir(bl),
-	                               static_cast<enum e_skill_blown>(BLOWN_IGNORE_NO_KNOCKBACK | BLOWN_DONT_SEND_PACKET));
+	                               static_cast<enum e_skill_blown>(BLOWN_IGNORE_NO_KNOCKBACK | BLOWN_DONT_SEND_PACKET | need_keep_flag));
 	clif_skill_nodamage(src, *bl, getSkillId(), skill_lv);
 
 	if (blew_count > 0)
 		clif_blown(src); // Always blow, otherwise it shows a casting animation. [Lemongrass]
 #else
-	int16 blew_count = skill_blown(src, bl, skill_get_blewcount(getSkillId(), skill_lv), unit_getdir(bl), BLOWN_IGNORE_NO_KNOCKBACK);
+	int16 blew_count = skill_blown(src, bl, skill_get_blewcount(getSkillId(), skill_lv), unit_getdir(bl), static_cast<enum e_skill_blown>(BLOWN_IGNORE_NO_KNOCKBACK | need_keep_flag));
 	clif_skill_nodamage(src, *bl, getSkillId(), skill_lv);
 	clif_slide(*bl, bl->x, bl->y); //Show the casting animation on pre-re
 #endif

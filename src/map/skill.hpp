@@ -456,6 +456,8 @@ enum e_skill_blown	{
 	BLOWN_MD_KNOCKBACK_IMMUNE	= 0x08, // If target is MD_KNOCKBACK_IMMUNE
 	BLOWN_TARGET_NO_KNOCKBACK	= 0x10, // If target has 'special_state.no_knockback'
 	BLOWN_TARGET_BASILICA		= 0x20, // If target is in Basilica area
+	// NEED: keep SC_ROLLINGCUTTER on this knockback (Back Slide). The reset came from the 2019 Guillotine Cross rework that NEED did not adopt.
+	BLOWN_NEED_KEEP_ROLLINGCUTTER	= 0x40,
 };
 
 // Enum for skill_dance_overlap flag parameter

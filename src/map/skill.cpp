@@ -2390,7 +2390,7 @@ int16 skill_blown(block_list* src, block_list* target, char count, int8 dir, enu
 	if (tsc) {
 		if (tsc->getSCE(SC_SU_STOOP)) // Any knockback will cancel it.
 			status_change_end(target, SC_SU_STOOP);
-		if (tsc->getSCE(SC_ROLLINGCUTTER))
+		if (tsc->getSCE(SC_ROLLINGCUTTER) && !(flag&BLOWN_NEED_KEEP_ROLLINGCUTTER))
 			status_change_end(target, SC_ROLLINGCUTTER);
 		if (tsc->getSCE(SC_CRESCIVEBOLT))
 			status_change_end(target, SC_CRESCIVEBOLT);
