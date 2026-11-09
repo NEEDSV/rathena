@@ -2484,6 +2484,21 @@ uint64 LaphineSynthesisDatabase::parseBodyNode( const ryml::NodeRef& node ){
 				}
 			}
 
+			// NEED: 묶음 재료 (기본 false = 기존 동작)
+			if( this->nodeExists( requirementNode, "MultiSlot" ) ){
+				bool multiSlot;
+
+				if( !this->asBool( requirementNode, "MultiSlot", multiSlot ) ){
+					return 0;
+				}
+
+				requirement->multiSlot = multiSlot;
+			}else{
+				if( !requirement_exists ){
+					requirement->multiSlot = false;
+				}
+			}
+
 			if( !requirement_exists ){
 				entry->requirements[id->nameid] = requirement;
 			}

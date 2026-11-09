@@ -1335,3 +1335,69 @@ BUILDIN_FUNC(needstylistcolor)
 	script_pushint(st, 1);
 	return SCRIPT_CMD_SUCCESS;
 }
+
+// NEED: 라피네 합성을 스크립트에서 실행한다 (쉐도우 뚝딱상자 + 쉐도우 재활용 코인 메뉴용).
+// need_laphine_combine(<상자 아이템 ID>, <인벤 idx>, <수량>{, <인벤 idx>, <수량>...})
+// 합성 창 패킷과 같은 need_laphine_synthesis_execute 를 타므로 검사·소비·보상·로그가 같다.
+// 반환: 0 성공, 5 수량 오류, 7 재료 오류, -1 요청 무시(형식 오류·칸 수 불일치·상자 스크립트 밖 호출)
+BUILDIN_FUNC(need_laphine_combine)
+{
+	map_session_data* sd = nullptr;
+	if (!script_rid2sd(sd)) {
+		script_pushint(st, -1);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	t_itemid box_id = static_cast<t_itemid>(script_getnum(st, 2));
+
+	// 그 상자의 아이템 스크립트 안에서만 (상자 1개 소비 조건이 sd->itemid == 상자)
+	if (sd->itemid != box_id) {
+		ShowError("buildin_need_laphine_combine: called outside of item %u script (itemid %u).\n", box_id, sd->itemid);
+		script_pushint(st, -1);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	// 합성 창이 열려 있으면 섞지 않는다
+	if (sd->state.laphine_synthesis != 0) {
+		script_pushint(st, -1);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	int32 last = script_lastdata(st);
+
+	if (last < 4 || ((last - 2) % 2) != 0) {
+		ShowError("buildin_need_laphine_combine: arguments must be <box>, <idx>, <count> pairs.\n");
+		script_pushint(st, -1);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	std::vector<s_need_laphine_entry> entries;
+
+	for (int32 i = 3; i < last; i += 2) {
+		int32 index = script_getnum(st, i);
+		int32 count = script_getnum(st, i + 1);
+
+		if (index < 0 || index >= MAX_INVENTORY || count <= 0 || count > MAX_AMOUNT) {
+			script_pushint(st, -1);
+			return SCRIPT_CMD_SUCCESS;
+		}
+
+		entries.push_back({ static_cast<int16>(index), static_cast<int16>(count) });
+	}
+
+	script_pushint(st, need_laphine_synthesis_execute(*sd, box_id, entries));
+	return SCRIPT_CMD_SUCCESS;
+}
+
+// NEED: need_laphine_accepts(<상자 아이템 ID>, <인벤 idx>) -> 그 칸이 재료 조건을 만족하면 Amount, 아니면 0
+BUILDIN_FUNC(need_laphine_accepts)
+{
+	map_session_data* sd = nullptr;
+	if (!script_rid2sd(sd)) {
+		script_pushint(st, 0);
+		return SCRIPT_CMD_SUCCESS;
+	}
+
+	script_pushint(st, need_laphine_synthesis_accepts(*sd, static_cast<t_itemid>(script_getnum(st, 2)), static_cast<int16>(script_getnum(st, 3))));
+	return SCRIPT_CMD_SUCCESS;
+}

@@ -1520,6 +1520,13 @@ void clif_summon_hp_bar(const mob_data& md);
 
 // Laphine System
 void clif_laphine_synthesis_open( map_session_data *sd, const std::shared_ptr<const s_laphine_synthesis> synthesis );
+// NEED: 라피네 합성 공용 처리 (합성 창 패킷과 스크립트 명령 need_laphine_combine 이 같이 쓴다)
+struct s_need_laphine_entry{
+	int16 index; // 서버 인벤토리 index
+	int16 count;
+};
+int32 need_laphine_synthesis_execute( map_session_data& sd, t_itemid box_id, const std::vector<s_need_laphine_entry>& entries );
+int32 need_laphine_synthesis_accepts( map_session_data& sd, t_itemid box_id, int16 index );
 void clif_laphine_upgrade_open( map_session_data* sd, const std::shared_ptr<const s_laphine_upgrade> upgrade );
 
 // Reputation System

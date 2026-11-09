@@ -1,0 +1,243 @@
+//============================================================
+// NEED 쉐도우 뚝딱상자 + 쉐도우 재활용 코인 연동
+//
+// 쉐도우 재활용 코인(399920) 1개 = 쉐도우 장비 1개.
+// 클라이언트 합성 창은 인벤토리 칸 하나를 재료 칸 하나로만 쓴다.
+// 그래서 한 묶음인 코인은 상자 1회에 1칸만 올릴 수 있다(쉐도우 2 + 코인 1).
+// 코인 2~3개를 쓰는 조합은 이 메뉴에서 need_laphine_combine 으로 처리한다.
+// 이 명령은 합성 창 패킷과 같은 서버 함수(need_laphine_synthesis_execute)를 쓴다.
+// 그래서 재료 검사·소비·LOG_TYPE_LAPHINE 로그·보상 그룹(SHADOW_EXCHANGE_BOX)·확률이 같다.
+//
+// 연결: db/import/item_db.yml 의 22529(Shadow_Mix_Recipe) Script
+//       -> callfunc "F_NEED_ShadowMixBox";
+// 코인이 없으면 기존과 똑같이 바로 합성 창을 연다.
+// 코인이 있으면 메뉴 NPC 이벤트로 넘긴다. 이 서버의 pc_useitem 은 아이템 스크립트가 끝나면
+// 상태를 해제하므로(script_free_state) 아이템 스크립트 안에서는 next/menu 대화를 이어갈 수 없다.
+//============================================================
+
+function	script	F_NEED_ShadowMixBox	{
+	// 코인이 없으면 기존 동작 그대로 (Shadow_Mix_Recipe 원래 스크립트: laphine_synthesis();)
+	if (countitem(399920) <= 0) {
+		laphine_synthesis();
+		end;
+	}
+
+	doevent "NEED_ShadowMixBox::OnUse";
+	end;
+}
+
+-	script	NEED_ShadowMixBox	-1,{
+	end;
+
+OnUse:
+	.@box = 22529;
+	.@coin = 399920;
+	.@page_size = 15;
+
+	// 상자를 사용한 직후의 이벤트만 처리 (상자 소비는 sd->itemid == 상자 일 때만 일어난다)
+	if (countitem(.@box) <= 0 || countitem(.@coin) <= 0)
+		end;
+
+	.@coins = countitem(.@coin);
+
+	mes needtr("[쉐도우 뚝딱상자]", "[Shadow Crafting Box]");
+	mes needtr("쉐도우 장비 3개를 합성합니다.", "Combines 3 pieces of Shadow Gear.");
+	mes needtr("^0055FF쉐도우 재활용 코인 1개^000000는", "^0055FFOne Shadow Recycling Coin^000000");
+	mes needtr("쉐도우 장비 1개로 쓸 수 있습니다.", "counts as one piece of Shadow Gear.");
+	mes " ";
+	mes needtr("보유 코인: ^0055FF", "Coins owned: ^0055FF") + .@coins + needtr("개^000000", "^000000");
+	mes needtr("합성 창에는 코인을 1개까지만 올릴 수 있어,", "The crafting window takes only one Coin,");
+	mes needtr("코인 2개 이상은 아래 메뉴로 합성합니다.", "so use the menu below for 2 or more Coins.");
+	next;
+
+	switch (select(
+		needtr("합성 창 열기 (쉐도우 3개 / 쉐도우 2개 + 코인 1개)", "Open crafting window (3 Gear / 2 Gear + 1 Coin)") + ":" +
+		(.@coins >= 2 ? needtr("쉐도우 1개 + 코인 2개", "1 Shadow Gear + 2 Coins") : "") + ":" +
+		(.@coins >= 3 ? needtr("코인 3개", "3 Coins") : "") + ":" +
+		needtr("취소", "Cancel")
+	)) {
+		case 1:
+			close2;
+			laphine_synthesis(.@box);
+			end;
+		case 2:
+			.@use_coins = 2;
+			break;
+		case 3:
+			.@use_coins = 3;
+			break;
+		default:
+			close;
+	}
+
+	//--------------------------------------------------------
+	// 쉐도우 1개 + 코인 2개: 재료로 쓸 쉐도우 장비 고르기
+	//--------------------------------------------------------
+	if (.@use_coins == 2) {
+		getinventorylist;
+		.@n = 0;
+
+		for (.@i = 0; .@i < @inventorylist_count; ++.@i) {
+			if (@inventorylist_id[.@i] == .@coin)
+				continue;
+
+			// 개인탭(잠금) 장비는 실수 방지를 위해 목록에서 뺀다
+			if (@inventorylist_favorite[.@i] != 0)
+				continue;
+
+			// 이 상자의 재료 목록·제련 범위·미착용 조건 (서버 합성 DB 기준)
+			.@amt = need_laphine_accepts(.@box, @inventorylist_idx[.@i]);
+
+			if (.@amt <= 0)
+				continue;
+
+			.@cand_idx[.@n] = @inventorylist_idx[.@i];
+			.@cand_id[.@n] = @inventorylist_id[.@i];
+			.@cand_ref[.@n] = @inventorylist_refine[.@i];
+			.@cand_amt[.@n] = .@amt;
+			.@n++;
+		}
+
+		if (.@n <= 0) {
+			mes needtr("[쉐도우 뚝딱상자]", "[Shadow Crafting Box]");
+			mes needtr("재료로 쓸 수 있는 쉐도우 장비가 없습니다.", "You have no Shadow Gear that can be used.");
+			mes needtr("^00AA00착용 중·개인탭(잠금) 장비는 제외됩니다.^000000", "^00AA00Equipped gear and gear in the Favorites tab are excluded.^000000");
+			close;
+		}
+
+		.@page = 0;
+
+		while (1) {
+			mes needtr("[쉐도우 뚝딱상자]", "[Shadow Crafting Box]");
+			mes needtr("코인 2개와 함께 쓸", "Choose the Shadow Gear to use");
+			mes needtr("쉐도우 장비 1개를 고르세요.", "together with 2 Coins.");
+
+			.@from = .@page * .@page_size;
+			.@m$ = "";
+
+			// 항목 위치를 고정하려고 빈 칸까지 채운다 (빈 항목은 화면에 안 보인다)
+			for (.@j = .@from; .@j < .@from + .@page_size; ++.@j) {
+				if (.@j < .@n)
+					.@m$ += (.@cand_ref[.@j] > 0 ? "+" + .@cand_ref[.@j] + " " : "") + replacestr(getitemname(.@cand_id[.@j]), ":", " ");
+				.@m$ += ":";
+			}
+
+			.@m$ += (.@from + .@page_size < .@n ? needtr("다음 목록", "Next page") : "") + ":";
+			.@m$ += (.@page > 0 ? needtr("이전 목록", "Previous page") : "") + ":";
+			.@m$ += needtr("취소", "Cancel");
+
+			.@s = select(.@m$);
+			clear;
+
+			if (.@s <= .@page_size) {
+				.@pick = .@from + .@s - 1;
+				break;
+			}
+
+			if (.@s == .@page_size + 1)
+				.@page++;
+			else if (.@s == .@page_size + 2)
+				.@page--;
+			else
+				close;
+		}
+	}
+
+	//--------------------------------------------------------
+	// 최종 확인
+	//--------------------------------------------------------
+	mes needtr("[쉐도우 뚝딱상자]", "[Shadow Crafting Box]");
+	mes needtr("아래 재료로 합성합니다.", "You will combine the following.");
+	mes " ";
+
+	if (.@use_coins == 2)
+		mes "^0055FF" + (.@cand_ref[.@pick] > 0 ? "+" + .@cand_ref[.@pick] + " " : "") + getitemname(.@cand_id[.@pick]) + needtr(" 1개^000000", " x1^000000");
+
+	mes "^0055FF" + getitemname(.@coin) + " " + .@use_coins + needtr("개^000000", "^000000");
+	mes getitemname(.@box) + needtr(" 1개가 소모됩니다.", " x1 will be consumed.");
+	mes " ";
+	mes needtr("보상은 합성 창과 같습니다.", "The reward is the same as the crafting window.");
+	mes needtr("^FF0000재료로 쓴 장비는 카드·옵션과 함께 사라집니다.^000000", "^FF0000The gear used is lost with its cards and options.^000000");
+	next;
+
+	if (select(needtr("합성한다:취소한다", "Combine:Cancel")) != 1)
+		close;
+
+	//--------------------------------------------------------
+	// 인벤토리를 다시 읽어 재료 칸을 확정 (확인 도중 변경 대비)
+	//--------------------------------------------------------
+	getinventorylist;
+
+	if (.@use_coins == 2) {
+		.@ok = 0;
+
+		for (.@i = 0; .@i < @inventorylist_count; ++.@i) {
+			if (@inventorylist_idx[.@i] == .@cand_idx[.@pick] && @inventorylist_id[.@i] == .@cand_id[.@pick] && @inventorylist_refine[.@i] == .@cand_ref[.@pick]) {
+				.@ok = 1;
+				break;
+			}
+		}
+
+		if (!.@ok) {
+			mes needtr("[쉐도우 뚝딱상자]", "[Shadow Crafting Box]");
+			mes needtr("선택한 장비가 바뀌었습니다.", "The selected gear has changed.");
+			mes needtr("처음부터 다시 진행해 주세요.", "Please start again from the beginning.");
+			close;
+		}
+	}
+
+	// 코인 칸 모으기 (귀속/비귀속 등으로 여러 칸일 수 있다)
+	.@need = .@use_coins;
+	.@k = 0;
+
+	for (.@i = 0; .@i < @inventorylist_count && .@need > 0; ++.@i) {
+		if (@inventorylist_id[.@i] != .@coin)
+			continue;
+
+		.@take = (@inventorylist_amount[.@i] < .@need) ? @inventorylist_amount[.@i] : .@need;
+		.@coin_idx[.@k] = @inventorylist_idx[.@i];
+		.@coin_cnt[.@k] = .@take;
+		.@need -= .@take;
+		.@k++;
+	}
+
+	if (.@need > 0) {
+		mes needtr("[쉐도우 뚝딱상자]", "[Shadow Crafting Box]");
+		mes needtr("쉐도우 재활용 코인이 부족합니다.", "You do not have enough Shadow Recycling Coins.");
+		close;
+	}
+
+	//--------------------------------------------------------
+	// 합성 (합성 창과 같은 서버 처리)
+	//--------------------------------------------------------
+	if (.@use_coins == 2) {
+		if (.@k == 1)
+			.@r = need_laphine_combine(.@box, .@cand_idx[.@pick], .@cand_amt[.@pick], .@coin_idx[0], .@coin_cnt[0]);
+		else
+			.@r = need_laphine_combine(.@box, .@cand_idx[.@pick], .@cand_amt[.@pick], .@coin_idx[0], .@coin_cnt[0], .@coin_idx[1], .@coin_cnt[1]);
+	} else {
+		if (.@k == 1)
+			.@r = need_laphine_combine(.@box, .@coin_idx[0], .@coin_cnt[0]);
+		else if (.@k == 2)
+			.@r = need_laphine_combine(.@box, .@coin_idx[0], .@coin_cnt[0], .@coin_idx[1], .@coin_cnt[1]);
+		else
+			.@r = need_laphine_combine(.@box, .@coin_idx[0], .@coin_cnt[0], .@coin_idx[1], .@coin_cnt[1], .@coin_idx[2], .@coin_cnt[2]);
+	}
+
+	logmes "[ShadowMixCoin] AID:" + getcharid(3)
+		+ " CID:" + getcharid(0)
+		+ " coins:" + .@use_coins
+		+ " gear:" + (.@use_coins == 2 ? .@cand_id[.@pick] : 0)
+		+ " result:" + .@r;
+
+	mes needtr("[쉐도우 뚝딱상자]", "[Shadow Crafting Box]");
+
+	if (.@r == 0) {
+		mes needtr("합성이 완료되었습니다.", "Crafting is complete.");
+		mes needtr("인벤토리를 확인해 주세요.", "Please check your inventory.");
+	} else {
+		mes needtr("합성할 수 없습니다.", "Crafting could not be done.");
+		mes needtr("재료 상태가 바뀌었거나 조건이 맞지 않습니다.", "Your materials changed or do not meet the conditions.");
+	}
+	close;
+}

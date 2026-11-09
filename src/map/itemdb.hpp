@@ -3357,6 +3357,7 @@ enum e_random_item_group {
 	IG_NEED_MALANGDO_22L,
 	IG_NEED_MALANGDO_22M,
 	IG_NEED_MALANGDO_22N,
+	IG_NEED_SHADOW_MIX_2016,	// NEED: 쉐도우 뚝딱상자 2016-06-08 기준 보상 (db/re/item_group_db.yml 끝)
 
 	IG_MAX
 };
@@ -3880,6 +3881,9 @@ extern ItemGroupDatabase itemdb_group;
 struct s_laphine_synthesis_requirement{
 	t_itemid item_id;
 	uint16 amount;
+	// NEED: true 이면 한 묶음(같은 인벤토리 칸)이 Amount 단위마다 재료 칸 1개를 채운다.
+	// 예) 쉐도우 재활용 코인 3개 = 쉐도우 장비 3개. 기본값 false 는 기존 동작과 같다.
+	bool multiSlot;
 };
 
 struct s_laphine_synthesis{

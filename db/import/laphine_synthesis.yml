@@ -30,8 +30,20 @@
 #   Requirements:              List of possible requirement items.
 #     - Item                   Item name of the required item
 #       Amount                 Amount of specific required item. (Default: 1)
+#       MultiSlot              (NEED) true = one stack fills one requirement slot per Amount. (Default: false)
 ###########################################################################
 
 Header:
   Type: LAPHINE_SYNTHESIS_DB
   Version: 1
+
+Body:
+  # NEED: 쉐도우 뚝딱상자(22529)에 쉐도우 재활용 코인(399920)을 재료로 추가한다.
+  # 기존 요구 수량 3, 보상 그룹, 쉐도우 재료 목록은 db/re 그대로 두고 재료 1종만 덧붙인다.
+  # MultiSlot: 코인 묶음은 1개당 재료 칸 1개 (코인 1개 = 쉐도우 장비 1개, 혼합 가능).
+  - Item: Shadow_Mix_Recipe
+    # NEED: 2016-06-08 기준 보상 162종 전용 그룹 (SHADOW_EXCHANGE_BOX 대체, db/re/item_group_db.yml 끝)
+    RewardGroup: NEED_SHADOW_MIX_2016
+    Requirements:
+      - Item: NEED_Shadow_Recycle_Coin
+        MultiSlot: true

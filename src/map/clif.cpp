@@ -24496,6 +24496,176 @@ void clif_laphine_synthesis_result( map_session_data* sd, enum e_laphine_synthes
 #endif
 }
 
+// NEED: 라피네 합성의 검사·소비·보상 공용 처리.
+// 합성 창 패킷(clif_parse_laphine_synthesis)과 NEED 스크립트 명령(need_laphine_combine)이 같이 쓴다.
+// entries 의 index 는 서버 인벤토리 index.
+// 반환: LAPHINE_SYNTHESIS_SUCCESS / LAPHINE_SYNTHESIS_AMOUNT / LAPHINE_SYNTHESIS_ITEM,
+//       결과 패킷 없이 무시해야 하는 요청이면 -1 (기존 return 경로와 같음)
+int32 need_laphine_synthesis_execute( map_session_data& sd, t_itemid box_id, const std::vector<s_need_laphine_entry>& entries ){
+	std::shared_ptr<s_laphine_synthesis> synthesis = laphine_synthesis_db.find( box_id );
+
+	if( synthesis == nullptr ){
+		return -1;
+	}
+
+	size_t count = entries.size();
+
+	// NEED: 묶음 재료(MultiSlot)는 한 줄이 재료 칸 여러 개를 채울 수 있으므로
+	// 줄 수가 필요 개수보다 적을 수 있다. 칸 수의 최종 일치는 아래 units 로 확인한다.
+	// MultiSlot 재료가 없는 레시피는 units == 줄 수 이므로 기존 검사(count != required)와 같다.
+	if( count == 0 || count > synthesis->requiredRequirements ){
+		return -1;
+	}
+
+	// Check for duplicates
+	// NEED: 같은 인벤토리 칸이 여러 줄에 나오는 것은 MultiSlot 재료만 허용한다(아래 루프에서 확인).
+	bool duplicated[MAX_INVENTORY] = {};
+
+	for( size_t i = 0; i < count; i++ ){
+		for( size_t j = i + 1; j < count; j++ ){
+			if( entries[i].index == entries[j].index ){
+				int16 dup_index = entries[i].index;
+
+				if( dup_index < 0 || dup_index >= MAX_INVENTORY ){
+					return -1;
+				}
+
+				duplicated[dup_index] = true;
+			}
+		}
+	}
+
+	// NEED: 칸별로 요청된 총 수량 (같은 칸이 여러 줄에 나오면 합산해서 보유 수량과 비교)
+	int32 requested_amount[MAX_INVENTORY] = {};
+	size_t units = 0;
+
+	for( size_t i = 0; i < count; i++ ){
+		int16 index = entries[i].index;
+
+		if( index < 0 || index >= MAX_INVENTORY ){
+			return -1;
+		}
+
+		if( sd.inventory_data[index] == nullptr ){
+			return -1;
+		}
+
+		struct item* item = &sd.inventory.u.items_inventory[index];
+
+		std::shared_ptr<s_laphine_synthesis_requirement> requirement = util::umap_find( synthesis->requirements, item->nameid );
+
+		if( requirement == nullptr ){
+			return LAPHINE_SYNTHESIS_ITEM;
+		}
+
+		if( requirement->multiSlot ){
+			// Amount 의 양의 배수만 허용, 배수만큼 재료 칸을 채운다
+			if( entries[i].count <= 0 || requirement->amount == 0 || ( entries[i].count % requirement->amount ) != 0 ){
+				return LAPHINE_SYNTHESIS_AMOUNT;
+			}
+
+			units += entries[i].count / requirement->amount;
+		}else{
+			// 기존 동작: 같은 칸 중복 금지, 한 줄 = 재료 칸 1개 = 정확히 Amount 개
+			if( duplicated[index] ){
+				return -1;
+			}
+
+			if( entries[i].count != requirement->amount ){
+				return LAPHINE_SYNTHESIS_AMOUNT;
+			}
+
+			units += 1;
+		}
+
+		requested_amount[index] += entries[i].count;
+
+		if( item->amount < requested_amount[index] ){
+			return LAPHINE_SYNTHESIS_AMOUNT;
+		}
+
+		if( item->refine < synthesis->minimumRefine ){
+			return LAPHINE_SYNTHESIS_ITEM;
+		}
+
+		if( item->refine > synthesis->maximumRefine ){
+			return LAPHINE_SYNTHESIS_ITEM;
+		}
+
+		if( item->equip != 0 ){
+			return LAPHINE_SYNTHESIS_ITEM;
+		}
+
+		if( item->equipSwitch != 0 ){
+			return LAPHINE_SYNTHESIS_ITEM;
+		}
+	}
+
+	// Player sent more or less than actually required
+	// NEED: 재료 칸 수(MultiSlot 묶음은 Amount 단위로 환산)가 정확히 맞아야 한다
+	// (기존과 같이 결과 패킷 없이 무시한다)
+	if( units != synthesis->requiredRequirements ){
+		return -1;
+	}
+
+	// If triggered from item
+	if( sd.itemid == box_id ){
+		int16 index = pc_search_inventory( &sd, box_id );
+
+		if( index < 0 ){
+			return LAPHINE_SYNTHESIS_ITEM;
+		}
+
+		if( ( sd.inventory_data[index]->flag.delay_consume & DELAYCONSUME_NOCONSUME ) == 0 ){
+			if( pc_delitem( &sd, index, 1, 0, 0, LOG_TYPE_LAPHINE ) != 0 ){
+				return -1;
+			}
+		}
+	}
+
+	for( size_t i = 0; i < count; i++ ){
+		if( pc_delitem( &sd, entries[i].index, entries[i].count, 0, 0, LOG_TYPE_LAPHINE ) != 0 ){
+			return -1;
+		}
+	}
+
+	itemdb_group.pc_get_itemgroup( synthesis->rewardGroupId, true, sd );
+
+	return LAPHINE_SYNTHESIS_SUCCESS;
+}
+
+// NEED: 인벤토리 칸 하나가 이 합성 상자의 재료 조건(목록·제련·미착용)을 만족하면 그 재료의 Amount, 아니면 0.
+// 스크립트 메뉴에 고를 수 있는 재료만 보여 주기 위한 용도 (최종 판정은 need_laphine_synthesis_execute).
+int32 need_laphine_synthesis_accepts( map_session_data& sd, t_itemid box_id, int16 index ){
+	std::shared_ptr<s_laphine_synthesis> synthesis = laphine_synthesis_db.find( box_id );
+
+	if( synthesis == nullptr || index < 0 || index >= MAX_INVENTORY || sd.inventory_data[index] == nullptr ){
+		return 0;
+	}
+
+	struct item* item = &sd.inventory.u.items_inventory[index];
+
+	std::shared_ptr<s_laphine_synthesis_requirement> requirement = util::umap_find( synthesis->requirements, item->nameid );
+
+	if( requirement == nullptr ){
+		return 0;
+	}
+
+	if( item->refine < synthesis->minimumRefine || item->refine > synthesis->maximumRefine ){
+		return 0;
+	}
+
+	if( item->equip != 0 || item->equipSwitch != 0 ){
+		return 0;
+	}
+
+	if( item->amount < requirement->amount ){
+		return 0;
+	}
+
+	return requirement->amount;
+}
+
 void clif_parse_laphine_synthesis( int32 fd, map_session_data* sd ){
 #if PACKETVER_MAIN_NUM >= 20160601 || PACKETVER_RE_NUM >= 20160525 || defined(PACKETVER_ZERO)
 	if( sd->state.laphine_synthesis == 0 ){
@@ -24508,106 +24678,25 @@ void clif_parse_laphine_synthesis( int32 fd, map_session_data* sd ){
 		return;
 	}
 
-	std::shared_ptr<s_laphine_synthesis> synthesis = laphine_synthesis_db.find( sd->state.laphine_synthesis );
-
-	if( synthesis == nullptr ){
+	// NEED: 길이 필드가 머리보다 짧으면 count 가 언더플로하므로 먼저 거른다 (기존에도 count 불일치로 무시되던 요청)
+	if( p->packetLength < sizeof( PACKET_CZ_REQ_RANDOM_COMBINE_ITEM ) ){
 		return;
 	}
 
 	size_t count = ( p->packetLength - sizeof( PACKET_CZ_REQ_RANDOM_COMBINE_ITEM ) ) / sizeof( PACKET_CZ_REQ_RANDOM_COMBINE_ITEM_sub );
 
-	// Player sent more or less than actually required
-	if( count != synthesis->requiredRequirements ){
-		return;
-	}
-
-	// Check for duplicates
-	for( size_t i = 0; i < count; i++ ){
-		for( size_t j = i + 1; j < count; j++ ){
-			if( p->items[i].index == p->items[j].index ){
-				return;
-			}
-		}
-	}
+	std::vector<s_need_laphine_entry> entries( count );
 
 	for( size_t i = 0; i < count; i++ ){
-		int16 index = server_index( p->items[i].index );
-
-		if( index >= MAX_INVENTORY ){
-			return;
-		}
-
-		if( sd->inventory_data[index] == nullptr ){
-			return;
-		}
-
-		struct item* item = &sd->inventory.u.items_inventory[index];
-
-		std::shared_ptr<s_laphine_synthesis_requirement> requirement = util::umap_find( synthesis->requirements, item->nameid );
-
-		if( requirement == nullptr ){
-			clif_laphine_synthesis_result( sd, LAPHINE_SYNTHESIS_ITEM );
-			return;
-		}
-
-		if( p->items[i].count != requirement->amount ){
-			clif_laphine_synthesis_result( sd, LAPHINE_SYNTHESIS_AMOUNT );
-			return;
-		}
-
-		if( item->amount < requirement->amount ){
-			clif_laphine_synthesis_result( sd, LAPHINE_SYNTHESIS_AMOUNT );
-			return;
-		}
-
-		if( item->refine < synthesis->minimumRefine ){
-			clif_laphine_synthesis_result( sd, LAPHINE_SYNTHESIS_ITEM );
-			return;
-		}
-
-		if( item->refine > synthesis->maximumRefine ){
-			clif_laphine_synthesis_result( sd, LAPHINE_SYNTHESIS_ITEM );
-			return;
-		}
-
-		if( item->equip != 0 ){
-			clif_laphine_synthesis_result( sd, LAPHINE_SYNTHESIS_ITEM );
-			return;
-		}
-
-		if( item->equipSwitch != 0 ){
-			clif_laphine_synthesis_result( sd, LAPHINE_SYNTHESIS_ITEM );
-			return;
-		}
+		entries[i].index = static_cast<int16>( server_index( p->items[i].index ) );
+		entries[i].count = p->items[i].count;
 	}
 
-	// If triggered from item
-	if( sd->itemid == sd->state.laphine_synthesis ){
-		int16 index = pc_search_inventory( sd, sd->state.laphine_synthesis );
+	int32 result = need_laphine_synthesis_execute( *sd, sd->state.laphine_synthesis, entries );
 
-		if( index < 0 ){
-			clif_laphine_synthesis_result( sd, LAPHINE_SYNTHESIS_ITEM );
-			return;
-		}
-
-		if( ( sd->inventory_data[index]->flag.delay_consume & DELAYCONSUME_NOCONSUME ) == 0 ){
-			if( pc_delitem( sd, index, 1, 0, 0, LOG_TYPE_LAPHINE ) != 0 ){
-				return;
-			}
-		}
+	if( result >= 0 ){
+		clif_laphine_synthesis_result( sd, static_cast<e_laphine_synthesis_result>( result ) );
 	}
-
-	for( size_t i = 0; i < count; i++ ){
-		int16 index = server_index( p->items[i].index );
-
-		if( pc_delitem( sd, index, p->items[i].count, 0, 0, LOG_TYPE_LAPHINE ) != 0 ){
-			return;
-		}
-	}
-
-	itemdb_group.pc_get_itemgroup( synthesis->rewardGroupId, true, *sd );
-
-	clif_laphine_synthesis_result( sd, LAPHINE_SYNTHESIS_SUCCESS );
 #endif
 }
 
