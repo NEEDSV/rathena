@@ -29,6 +29,7 @@ OUT = os.path.join(REPO, 'npc', 'NEED', 'need_enchant_v2.txt')
 # server roadmap (wiki roadmap_main); inside one episode the roadmap's own listing order. Families older than
 # the roadmap (before 14.2) follow the kRO release order, newest first. Every master family must be listed.
 FAMILY_ORDER = [
+    ('EP162_HONOR', '16.2'),           # 테라 글로리아
     ('EP161_HONOR', '16.1'),           # 영웅을 위한 연회
     ('OLD_HELM', '16.1'),              # 전사자의 무덤 대개편 (2015 overhaul)
     ('EXCELION', '15.2'),              # 베루스 / 중앙 실험실
