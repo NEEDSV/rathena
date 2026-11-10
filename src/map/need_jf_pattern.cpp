@@ -182,6 +182,12 @@ void need_jf_pattern_decay( map_session_data& sd, t_tick now ) {
 	need_jf_pattern_sync_stage( jf );
 }
 
+/// Warlock, Warlock (trans), Baby Warlock and Arch Mage. The third job mask drops the
+/// trans/baby/fourth bits, so all of them collapse onto MAPID_WARLOCK.
+bool need_jf_pattern_is_warlock( const map_session_data& sd ) {
+	return ( sd.class_ & MAPID_THIRDMASK ) == MAPID_WARLOCK;
+}
+
 /**
  * Is this monster already being fought by somebody outside the caster's party?
  *
@@ -210,8 +216,11 @@ bool need_jf_pattern_mob_contested( const map_session_data& sd, const mob_data& 
 		if( other == nullptr )
 			continue;
 
-		// Same party is cooperation, not stealing.
-		if( sd.status.party_id != 0 && other->status.party_id == sd.status.party_id )
+		// Same party is cooperation, not stealing - unless the party member is another
+		// Warlock line character. Several Jack Frost casters grouped together is the
+		// multi client steal setup this guard targets, so the party does not shield it.
+		if( sd.status.party_id != 0 && other->status.party_id == sd.status.party_id &&
+			!( battle_config.need_jf_steal_party_warlock != 0 && need_jf_pattern_is_warlock( *other ) ) )
 			continue;
 
 		// Stale entry: the attacker left the map or the area, so this is not an

@@ -5512,6 +5512,13 @@ TIMER_FUNC(skill_castend_id){
 
 		// NEED custom: any skill use releases the caster's Cursed Circle before the skill runs.
 		skill_release_cursedcircle_on_skilluse(src, ud->skill_id);
+
+		// NEED JF pattern: Jack Frost is a Self target splash skill, so it never reaches
+		// skill_castend_pos2(). Mark the cast here, once, before the splash recursion
+		// (skill_castend_damage_id with flag|1) reports the individual monster hits.
+		if (sd != nullptr)
+			need_jf_pattern_record_skill(*sd, ud->skill_id);
+
 		if (skill_get_casttype(ud->skill_id) == CAST_NODAMAGE)
 			skill_castend_nodamage_id(src,target,ud->skill_id,ud->skill_lv,tick,flag);
 		else

@@ -795,6 +795,7 @@ struct Battle_Config
 	int32 need_jf_steal_min_foreign_mobs;
 	int32 need_jf_steal_min_patterns;
 	int32 need_jf_steal_owner_range;
+	int32 need_jf_steal_party_warlock;
 	int32 need_jf_warn_score;
 	int32 need_jf_captcha_score;
 	int32 need_jf_penalty_score;

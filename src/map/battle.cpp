@@ -8976,6 +8976,7 @@ static const struct _battle_data {
 	{ "need_jf_steal_min_foreign_mobs",     &battle_config.need_jf_steal_min_foreign_mobs,  3,      0,      INT_MAX,        },
 	{ "need_jf_steal_min_patterns",         &battle_config.need_jf_steal_min_patterns,      3,      0,      INT_MAX,        },
 	{ "need_jf_steal_owner_range",          &battle_config.need_jf_steal_owner_range,       14,     0,      INT_MAX,        },
+	{ "need_jf_steal_party_warlock",        &battle_config.need_jf_steal_party_warlock,     1,      0,      1,              },
 	{ "need_jf_warn_score",                 &battle_config.need_jf_warn_score,              50,     0,      INT_MAX,        },
 	{ "need_jf_captcha_score",              &battle_config.need_jf_captcha_score,           100,    0,      INT_MAX,        },
 	{ "need_jf_penalty_score",              &battle_config.need_jf_penalty_score,           150,    0,      INT_MAX,        },
