@@ -8678,6 +8678,47 @@ int32 skill_check_bl_sc(block_list *target, va_list ap) {
 
 }
 
+/**
+ * NEED (Episode 16.1): party_foreachsamemap sub-function for the Banding partner check of
+ * Ray of Genesis / Hesperus Lit. Counts a party member only when it is a third-class Royal Guard
+ * (normal, transcendent or baby; the 4th class Imperial Guard did not exist in 16.1 and is NOT counted)
+ * that is alive and in Banding. Same party, same map and Banding range come from party_foreachsamemap.
+ * skill_banding_count (SC_BANDING val2, Banding's own bonus) is deliberately not used nor changed.
+ */
+static int32 skill_need_banding_rg_sub(block_list *bl, va_list ap)
+{
+	map_session_data *sd = reinterpret_cast<map_session_data*>(bl);
+
+	if (sd->state.autotrade)
+		return 0;
+	if (battle_config.idle_no_share && pc_isidle_party(sd))
+		return 0;
+	if ((sd->class_ & MAPID_THIRDMASK) != MAPID_ROYAL_GUARD || (sd->class_ & JOBL_FOURTH))
+		return 0;
+	if (pc_isdead(sd) || !sd->sc.getSCE(SC_BANDING))
+		return 0;
+
+	return 1;
+}
+
+/**
+ * NEED (Episode 16.1): Banding partner requirement of Ray of Genesis (2) / Hesperus Lit (3).
+ * The caster must be in Banding and at least `required` Banding Royal Guards (caster included) of the
+ * same party must be in Banding range. Inspiration is handled by the caller. Cast-begin only, like the
+ * pre-2018 implementation.
+ * @return true when the condition passes; on failure a skill-fail packet has been sent.
+ */
+static bool skill_need_banding_partner_check(map_session_data& sd, uint16 skill_id, int32 required)
+{
+	if (!sd.sc.getSCE(SC_BANDING)
+		|| party_foreachsamemap(skill_need_banding_rg_sub, &sd, skill_get_splash(LG_BANDING, 1)) < required) {
+		clif_skill_fail( sd, skill_id );
+		return false;
+	}
+
+	return true;
+}
+
 /** 
  * Check skill condition when cast begin
  * For ammo, only check if the skill need ammo
@@ -9276,6 +9317,17 @@ bool skill_check_condition_castbegin( map_session_data& sd, uint16 skill_id, uin
 			}
 			break;
 		case LG_RAYOFGENESIS:
+			if( sc && sc->getSCE(SC_INSPIRATION) )
+				return true; // Don't check for partner.
+			if( !skill_need_banding_partner_check(sd, skill_id, 2) ) // NEED (Episode 16.1): 2 Banding Royal Guards.
+				return false;
+			break;
+		case LG_HESPERUSLIT:
+			// NEED (Episode 16.1): Inspiration, or 3 Banding Royal Guards. No early return under Inspiration:
+			// the spear / SP / state checks below must still apply.
+			if( !(sc && sc->getSCE(SC_INSPIRATION)) && !skill_need_banding_partner_check(sd, skill_id, 3) )
+				return false;
+			break;
 		case LG_BANDING:
 			if( sc && sc->getSCE(SC_INSPIRATION) )
 				return true; // Don't check for partner.
