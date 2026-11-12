@@ -8685,6 +8685,48 @@ int32 skill_check_bl_sc(block_list *target, va_list ap) {
 
 }
 
+/**
+ * NEED (Episode 16.1): party_foreachsamemap sub-function of skill_banding_count (the Banding count used by
+ * SC_BANDING val2 and by the Ray of Genesis / Hesperus Lit partner check). Counts a party member only when it
+ * is a third-class Royal Guard (normal, transcendent or baby; the 4th class Imperial Guard did not exist in
+ * 16.1 and is NOT counted) that is alive and in Banding. Same party, same map and Banding range come from
+ * party_foreachsamemap. The member doing the count (va_arg: map_session_data* self) counts while its own
+ * SC_BANDING is still being started (status_change_start computes val2 before the status exists).
+ */
+static int32 skill_need_banding_rg_sub(block_list *bl, va_list ap)
+{
+	map_session_data *sd = reinterpret_cast<map_session_data*>(bl);
+	const map_session_data *self = va_arg(ap, map_session_data*);
+
+	if (sd->state.autotrade)
+		return 0;
+	if (battle_config.idle_no_share && pc_isidle_party(sd))
+		return 0;
+	if ((sd->class_ & MAPID_THIRDMASK) != MAPID_ROYAL_GUARD || (sd->class_ & JOBL_FOURTH))
+		return 0;
+	if (pc_isdead(sd) || (sd != self && !sd->sc.getSCE(SC_BANDING)))
+		return 0;
+
+	return 1;
+}
+
+/**
+ * NEED (Episode 16.1): Banding partner requirement of Ray of Genesis (2) / Hesperus Lit (3).
+ * The caster must be in Banding and at least `required` Banding Royal Guards (caster included) of the
+ * same party must be in Banding range (skill_banding_count, counted live - not the 5 s val2). Inspiration
+ * is handled by the caller. Cast-begin only, like the pre-2018 implementation.
+ * @return true when the condition passes; on failure a skill-fail packet has been sent.
+ */
+static bool skill_need_banding_partner_check(map_session_data& sd, uint16 skill_id, int32 required)
+{
+	if (!sd.sc.getSCE(SC_BANDING) || skill_banding_count(&sd) < required) {
+		clif_skill_fail( sd, skill_id );
+		return false;
+	}
+
+	return true;
+}
+
 /** 
  * Check skill condition when cast begin
  * For ammo, only check if the skill need ammo
@@ -9283,6 +9325,17 @@ bool skill_check_condition_castbegin( map_session_data& sd, uint16 skill_id, uin
 			}
 			break;
 		case LG_RAYOFGENESIS:
+			if( sc && sc->getSCE(SC_INSPIRATION) )
+				return true; // Don't check for partner.
+			if( !skill_need_banding_partner_check(sd, skill_id, 2) ) // NEED (Episode 16.1): 2 Banding Royal Guards.
+				return false;
+			break;
+		case LG_HESPERUSLIT:
+			// NEED (Episode 16.1): Inspiration, or 3 Banding Royal Guards. No early return under Inspiration:
+			// the spear / SP / state checks below must still apply.
+			if( !(sc && sc->getSCE(SC_INSPIRATION)) && !skill_need_banding_partner_check(sd, skill_id, 3) )
+				return false;
+			break;
 		case LG_BANDING:
 			if( sc && sc->getSCE(SC_INSPIRATION) )
 				return true; // Don't check for partner.
@@ -11650,14 +11703,19 @@ int32 skill_detonator(block_list *bl, va_list ap)
 
 /**
  * Calculate Royal Guard's Banding bonus
+ * NEED (Episode 16.1): counts only third-class Royal Guards in Banding (skill_need_banding_rg_sub), and
+ * returns 0 below 2 - the pre-2018 meaning. The 2021 Job Improvement Bundle had changed it to "every party
+ * member in range". The HP averaging of the old Banding is deliberately NOT restored.
  * @param sd: Player data
- * @return Number of Royal Guard
+ * @return Number of Royal Guard (0 when fewer than 2)
  */
 int32 skill_banding_count(map_session_data *sd)
 {
  	nullpo_ret(sd);
 
- 	return cap_value(party_foreachsamemap(party_sub_count, sd, skill_get_splash(LG_BANDING, 1)), 0, MAX_PARTY);
+	int32 count = party_foreachsamemap(skill_need_banding_rg_sub, sd, skill_get_splash(LG_BANDING, 1), sd);
+
+	return (count < 2) ? 0 : cap_value(count, 0, MAX_PARTY);
 }
 
 /**
