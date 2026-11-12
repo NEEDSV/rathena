@@ -30,6 +30,13 @@ function	script	F_NEED_Chuseok_Active	{
 function	script	F_NEED_Chuseok_BG_Reward	{
 	.@stage = getarg(0);
 
+	// 2026-11-12 종료 처리: 추석 제작/교환 NPC 는 2026-10-29 부터 내려가 있어 재료(7613 작은 찹쌀반죽 /
+	// 1001827 솔잎)를 쓸 곳이 없는데, 지급은 영구 스위치($NEED_CHUSEOK_EVENT_ON / $NEED_CHUSEOK_BG_MATERIAL_ON)에만
+	// 묶여 있었다(스위치를 바꾸는 GM 도구 need_chuseok_gm.txt 도 미로드). 스위치 값과 관계없이 더 이상 주지 않는다.
+	// 함수는 남긴다: bg_common.txt F_BG_Badge / kvm01.txt 가 부르고, 없으면 뒤의 할로윈 코인 지급까지 끊긴다.
+	// 추석을 다시 열 때는 이 return 을 지우고 스위치를 켠다.
+	return;
+
 	if (.@stage < 1 || .@stage > 3)
 		return;
 	if (!$NEED_CHUSEOK_EVENT_ON)

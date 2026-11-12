@@ -6,6 +6,8 @@
 //= $BG_User_Count 기준으로 기욤/크루아 필요 인원을 설정합니다.
 //= 부족 인원 완화가 적용된 경우 $BG_Guillaume_Count / $BG_Croix_Count를 따릅니다.
 //= 기존 전멸/생존자 수 방식이 아니라 제한시간 킬카운트 방식으로 진행합니다.
+//= NEED 2026-11-12: 보상은 경기 키($@KvM01BG_Key)당 캐릭터 1회(NEED_KVM_CLAIM_KEY),
+//=   종료 확정(state 3) 뒤 이 경기 BG 팀 소속일 때만 지급. 사망 3초 처리는 BG 팀에 남아 있을 때만 되돌림.
 //============================================================
 
 //============================================================
@@ -262,6 +264,10 @@ OnGuillaumeDie:
 
 		// 종료 직전 사망한 경우에도 부활시켜 보상 구역으로 이동합니다.
 		sleep2 3000;
+		// NEED 2026-11-12: 3초 사이 보상을 받고 나간(bg_leave) 사람·다른 경기로 바뀐 경우는 되돌리지 않는다.
+		// (예전: 묘지 부활 → 종료 직후 수령 → 이 처리로 보상 구역에 되돌아와 다시 수령)
+		if (!$@KvM01BG_id1 || getcharid(4) != $@KvM01BG_id1 || strcharinfo(3) != "bat_c01")
+			end;
 		if ($@KvM01BG == 2 || $@KvM01BG == 3) {
 			Bat_Team = 1;
 			if (HP == 0)
@@ -298,6 +304,10 @@ OnCroixDie:
 
 		// 종료 직전 사망한 경우에도 부활시켜 보상 구역으로 이동합니다.
 		sleep2 3000;
+		// NEED 2026-11-12: 3초 사이 보상을 받고 나간(bg_leave) 사람·다른 경기로 바뀐 경우는 되돌리지 않는다.
+		// (예전: 묘지 부활 → 종료 직후 수령 → 이 처리로 보상 구역에 되돌아와 다시 수령)
+		if (!$@KvM01BG_id2 || getcharid(4) != $@KvM01BG_id2 || strcharinfo(3) != "bat_c01")
+			end;
 		if ($@KvM01BG == 2 || $@KvM01BG == 3) {
 			Bat_Team = 2;
 			if (HP == 0)
@@ -441,6 +451,9 @@ OnStart:
 	disablenpc "KVM 담당관#KVM01A";
 	disablenpc "KVM 담당관#KVM01B";
 
+	// NEED 2026-11-12: 경기 키(보상 1회 판정). 수동 입장(OnPartyReady)과 랜덤 매칭 직접 시작(F_BG_RM_StartBattle 모드 3)이
+	// 모두 여기를 지나므로 경기마다 한 번 새로 정한다. 경기는 몇 분 간격이라 초 단위 시각이면 겹치지 않고, 재시작 뒤에도 줄어들지 않는다.
+	$@KvM01BG_Key = gettimetick(2);
 	$@KvM01BG_Victory = 0;
 	.Guillaume_Kill = 0;
 	.Croix_Kill = 0;
@@ -723,7 +736,19 @@ OnCroixJoin:
 function	script	F_KvM_GrantReward	{
 	.@victory = getarg(0);
 	.@team = getarg(1);
+	.@key = getarg(2, 0);
+	.@via$ = getarg(3, "npc");
 	.@char_id = getcharid(0);
+
+	// NEED 2026-11-12: 같은 경기(.@key)에서 캐릭터당 1회. 확인과 기록이 아이템 지급보다 먼저이고
+	// 그 사이에 대기(sleep/대화)가 없어 다른 호출이 끼어들 수 없다. 기록은 캐릭터 영구 변수라 재접속·리로드 뒤에도 남는다.
+	if (.@key <= 0 || .@key != $@KvM01BG_Key || !.@victory || NEED_KVM_CLAIM_KEY == .@key) {
+		.@why$ = (.@key <= 0) ? "no_key" : ((.@key != $@KvM01BG_Key) ? "stale_key" : ((!.@victory) ? "not_final" : "already_claimed"));
+		debugmes "[NEED_KVM] REWARD_DENY key=" + .@key + " aid=" + getcharid(3) + " cid=" + .@char_id + " via=" + .@via$ + " reason=" + .@why$ + " state=" + $@KvM01BG + " victory=" + .@victory;
+		return 0;
+	}
+	NEED_KVM_CLAIM_KEY = .@key;
+
 	// NEED: 전장 캐시 1.5배. 기본 금화 상수와 인원 보정을 함께 1.5배로 올린다.
 	.@bonusmount = ($BG_User_Count - 5) * 3;
 	.@partyleaderbonus = 0;
@@ -772,7 +797,8 @@ function	script	F_KvM_GrantReward	{
 	// NEED 2026 할로윈 이벤트 : 할로윈 코인 3개 (승패 무관)
 	callfunc "F_NEED_Halloween_BG_Reward", 3;
 
-	return;
+	debugmes "[NEED_KVM] REWARD_GRANT key=" + .@key + " aid=" + getcharid(3) + " cid=" + .@char_id + " via=" + .@via$ + " victory=" + .@victory + " team=" + .@team + " result=" + ((.@victory == 3) ? "draw" : ((.@victory == .@team) ? "win" : "lose")) + " state=" + $@KvM01BG;
+	return 1;
 }
 
 function	script	F_KvM_AutoRewardRandom	{
@@ -808,7 +834,10 @@ function	script	F_KvM_AutoRewardRandom	{
 				continue;
 			}
 
-			callfunc "F_KvM_GrantReward", .@victory, .@team;
+			if (!callfunc("F_KvM_GrantReward", .@victory, .@team, $@KvM01BG_Key, "auto")) {
+				detachrid;
+				continue;
+			}
 
 			if (getcharid(4))
 				bg_leave;
@@ -839,10 +868,38 @@ bat_c01,51,130,5	script	KVM 담당관#KVM01A	419,{
 	if (!$@BG_RM_CYCLE_ACTIVE && ($BG_CROIX_LEADER_CID == .@char_id || $BG_GUILLAUME_LEADER_CID == .@char_id))
 		.@partyleaderbonus = 3;
 
-	if ($@KvM01BG_Victory) {
+	// NEED 2026-11-12: 종료 확정(state 3) 뒤, 이 경기 BG 팀 소속이고 이 경기 보상을 아직 안 받은 캐릭터만.
+	// 진영은 Bat_Team(사망 처리가 다시 쓰는 캐릭터 변수)이 아니라 실제 BG 팀으로 판정한다.
+	.@victory = $@KvM01BG_Victory;
+	.@key = $@KvM01BG_Key;
+	.@bg = getcharid(4);
+	.@team = 0;
+	if (.@bg && .@bg == $@KvM01BG_id1)
+		.@team = 1;
+	else if (.@bg && .@bg == $@KvM01BG_id2)
+		.@team = 2;
+
+	if ($@KvM01BG != 3 || !.@victory)
+		end;
+
+	if (!.@team || .@key <= 0 || NEED_KVM_CLAIM_KEY == .@key) {
+		debugmes "[NEED_KVM] REWARD_DENY key=" + .@key + " aid=" + getcharid(3) + " cid=" + .@char_id + " via=npc reason=" + ((!.@team) ? "not_in_match_team" : "already_claimed") + " state=" + $@KvM01BG + " victory=" + .@victory;
+		mes needtr("[KVM 담당관]", "[KVM Officer]");
+		mes needtr("이번 KVM 경기 보상은 이미 받았거나, 이번 경기 팀원이 아니어서 받을 수 없습니다.", "You have already received this KVM match's reward, or you are not on a team in this match.");
+		close2;
+		if (strcharinfo(3) == "bat_c01") {
+			if (getcharid(4))
+				bg_leave;
+			Bat_Team = 0;
+			warp "bat_room",154,150;
+		}
+		end;
+	}
+
+	if (.@team) {
 		mes needtr("[KVM 담당관]", "[KVM Officer]");
 
-		if ($@KvM01BG_Victory == Bat_Team) {
+		if (.@victory == .@team) {
 			mes needtr("멋진 경기였습니다.", "That was a fine match.");
 			mes needtr("KVM의 영광이 함께하길 바랍니다.", "May the glory of KVM be with you.");
 			mes needtr("승리 보상으로 전투휘장 3개를 획득했습니다.", "You received 3 War Badges as the victory reward.");
@@ -850,7 +907,7 @@ bat_c01,51,130,5	script	KVM 담당관#KVM01A	419,{
 				mes needtr("파티장 보너스로 3개를 추가 획득했습니다.", "You received 3 more as the party leader bonus.");
 			close2;
 		}
-		else if ($@KvM01BG_Victory == 3) {
+		else if (.@victory == 3) {
 			mes needtr("이번 경기는 무승부로 종료되었습니다.", "This match has ended in a draw.");
 			mes needtr("참여 보상으로 전투휘장 3개를 획득했습니다.", "You received 3 War Badges as the participation reward.");
 			if (.@partyleaderbonus > 0)
@@ -873,9 +930,11 @@ bat_c01,51,130,5	script	KVM 담당관#KVM01A	419,{
 			end;
 		}
 
-		callfunc "F_KvM_GrantReward", $@KvM01BG_Victory, Bat_Team;
+		if (!callfunc("F_KvM_GrantReward", .@victory, .@team, .@key, "npc"))
+			dispbottom needtr("[KVM] 이번 경기 보상은 이미 지급되어 다시 받을 수 없습니다.", "[KVM] This match's reward has already been paid and cannot be received again.");
 
-		bg_leave;
+		if (getcharid(4))
+			bg_leave;
 		Bat_Team = 0;
 		warp "bat_room",154,150;
 

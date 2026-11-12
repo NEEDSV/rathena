@@ -7734,10 +7734,30 @@ ACMD_FUNC(changelook)
  * @autotrade by durf [Lupus] [Paradox924X]
  * Turns on/off Autotrade for a specific player
  *------------------------------------------*/
+/// NEED (2026-11-12 CM 제보): 노점·구매상점이 없는 단순 @접속유지는 일반 마을에서도 허용한다.
+/// at_mapflag: yes 일 때 원래 허용 지역은 autotrade 맵플래그 맵(payon)뿐이다. 노점/구매상점 접속유지는
+/// 그 지역만 그대로 두고(시장 위치 정책), 마을이어도 PvP·GvG·공성·전장·인스턴스 맵은 제외한다.
+static bool need_autotrade_town_keepalive(const map_session_data* sd) {
+	if (!battle_config.autotrade_mapflag || sd->state.vending || sd->state.buyingstore)
+		return false;
+
+	const map_data* mapdata = map_getmapdata(sd->m);
+
+	if (mapdata == nullptr || !mapdata->getMapFlag(MF_TOWN) || mapdata->instance_id > 0)
+		return false;
+
+	if (mapdata->getMapFlag(MF_PVP) || mapdata->getMapFlag(MF_GVG) || mapdata->getMapFlag(MF_GVG_CASTLE) ||
+		mapdata->getMapFlag(MF_GVG_DUNGEON) || mapdata->getMapFlag(MF_GVG_TE) || mapdata->getMapFlag(MF_GVG_TE_CASTLE) ||
+		mapdata->getMapFlag(MF_BATTLEGROUND))
+		return false;
+
+	return true;
+}
+
 ACMD_FUNC(autotrade) {
 	nullpo_retr(-1, sd);
 
-	if( map_getmapflag(sd->m, MF_AUTOTRADE) != battle_config.autotrade_mapflag ) {
+	if( map_getmapflag(sd->m, MF_AUTOTRADE) != battle_config.autotrade_mapflag && !need_autotrade_town_keepalive(sd) ) {
 		clif_displaymessage(fd, msg_txt(sd,1179)); // Autotrade is not allowed on this map.
 		return -1;
 	}

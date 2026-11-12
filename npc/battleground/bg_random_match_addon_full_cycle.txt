@@ -3,11 +3,11 @@
 // - 한 번의 매칭으로 티에라 -> 플라비우스 -> KVM 전체 사이클 진행
 // - 최초 티에라는 자동 입장, 이후 전장은 양 팀 파티장의 입장 준비로 진행
 // - 티에라/플라비우스 종료 후 파티 유지, KVM 종료 후에만 자동 해체
-// - 명령어는 bat_room에서만 사용 가능
-//   @전장매칭 : 설정된 시간 동안 모집 시작 (신청자는 자동 참가)
-//   @전장참가 : 진행 중인 모집 참가
-//   @전장취소 : 참가 신청 철회
-//   @전장현황 : 모집/진행 상태 확인
+// - 2026-11-12 통합 모집(NEED_BGUX): 참가 경로는 @전장대기 하나다. 어느 맵에서나 신청한다.
+//   대기 8명 -> 이동 전 안내 20초($@BG_RM_PREWARP_SECONDS) -> 전장 대기실 소환 -> 추가 모집 120초(.RecruitSeconds)
+//   -> 마감(신청 잠금) -> 팀 편성 -> 티에라 입장(원래 준비 45초). 추가 모집 중 @전장대기 = 같은 모집에 등록 + 즉시 소환.
+//   @전장매칭 / @전장참가 = @전장대기 별칭, @전장현황 = @전장대기현황, @전장취소 = @전장대기취소(사이클 중 파티장 종료는 그대로).
+//   예전 bat_room 전용 5분 모집(@전장매칭)은 없앴다.
 // - 테스트본: 최소 4명 / 최대 4명 (2 vs 2)
 // - 동일 직업(Class)을 가능한 한 양 팀으로 분산
 // - 모집 중 전장 관리인은 유지하고 홍보 외 메뉴만 잠금
@@ -237,9 +237,14 @@ function	script	F_BG_RM_QueueClear	{
 
 function	script	F_BG_RM_QueueNotifyAll	{
 	.@msg$ = getarg(0);
+	.@msg_en$ = getarg(1, "");	// 2026-11-12: 영어 문구(없으면 한국어 그대로)
 
 	for (.@i = 0; .@i < $@BG_RM_QUEUE_COUNT; .@i++) {
-		if ($@BG_RM_QUEUE_NAME$[.@i] != "")
+		if ($@BG_RM_QUEUE_NAME$[.@i] == "")
+			continue;
+		if (.@msg_en$ != "")
+			messagelang $@BG_RM_QUEUE_NAME$[.@i], .@msg$, .@msg_en$;
+		else
 			message $@BG_RM_QUEUE_NAME$[.@i], .@msg$;
 	}
 
@@ -376,7 +381,7 @@ function	script	F_BG_RM_NotifyAutoCancel	{
 
 	announce needtr("[전장] 랜덤 매칭 참가 신청이 자동 취소되었습니다.", "[Battleground] Your random match application was cancelled automatically."), bc_self, "0xFF5555";
 	dispbottom needtr("[전장] 취소 사유: ", "[Battleground] Cancellation reason: ") + callfunc("F_BG_RM_CancelReasonLang$", .@reason, getneedlang());
-	dispbottom needtr("[전장] 다시 참가하려면 bat_room에서 @전장참가를 입력해 주세요.","[Battleground] To join again, type @bgjoin in bat_room.");
+	dispbottom needtr("[전장] 모집이 아직 진행 중이면 어디서든 @전장대기로 다시 참가할 수 있습니다.","[Battleground] If recruitment is still open you can rejoin from anywhere with @bgqueue.");
 	detachrid;
 	return 1;
 }
@@ -473,8 +478,8 @@ function	script	F_BG_RM_AnnounceMissingApplicants	{
 		.@message_en$ += " and " + (.@missing_count - .@show_count) + " players";
 	}
 
-	.@message$ += " / 참가: @전장참가";
-	.@message_en$ += " / Join: @bgjoin";
+	.@message$ += " / 참가: @전장대기";
+	.@message_en$ += " / Join: @bgqueue";
 	npctalklang .@message$, .@message_en$, "전장 관리인";
 
 	$@BG_RM_MISSING_CURSOR = (.@start + .@show_count) % .@missing_count;
@@ -886,6 +891,7 @@ function	script	F_BG_RM_RestoreCounts	{
 	$@BG_RM_SAVED_USER_COUNT = 0;
 	$@BG_RM_SAVED_G_COUNT = 0;
 	$@BG_RM_SAVED_C_COUNT = 0;
+	callfunc "F_NEED_BGUX_RmMarkClear", "restore_counts";	// 2026-11-12: 정상 종료·취소 경로 = 재시작 복구 표식 제거
 	return;
 }
 
@@ -938,12 +944,17 @@ function	script	F_BG_RM_ClearLeaders	{
 	$BG_SHORT_TARGET_TEAM$ = "";
 	$BG_SHORT_REQ_NAME$ = "";
 	$BG_SHORT_REQ_TIME = 0;
+	callfunc "F_NEED_BGUX_RmMarkClear", "clear_leaders";	// 2026-11-12: 재시작 복구 표식 제거
 	return;
 }
 
 function	script	F_BG_RM_CancelRecruit	{
 	.@reason$ = getarg(0, "랜덤 매칭 모집이 취소되었습니다.");
 	.@reason_en$ = getarg(1, "Random match recruitment was cancelled.");
+
+	// 2026-11-12 통합 모집: 원격 소환된 참가자는 원래 위치(안 되면 저장 지점)로 돌려보내고 재신청을 안내한다.
+	if ($@BG_RM_STATE == 1 || $@BG_RM_STATE == 2)
+		callfunc "F_NEED_BGUX_RecruitReturnAll", .@reason$, .@reason_en$;
 
 	stopnpctimer "NEED_BG_RM_Core";
 	stopnpctimer "NEED_BG_RM_RecruitMonitor";
@@ -1267,10 +1278,14 @@ OnInit:
 	.MinPlayers = 8;
 	.MaxPartyMembers = MAX_PARTY;
 	.MaxPlayers = .MaxPartyMembers * 2;
-	.RecruitSeconds = 300;
+	// 2026-11-12 통합 모집: 전장 대기실 소환이 끝난 시점부터 고정 120초 추가 모집(늦게 들어온 신청으로 늘지 않음).
+	// 이동 전 안내 20초도 여기 한 곳에서 정한다(NEED_BG_RM_GlobalQueue 가 $@BG_RM_PREWARP_SECONDS 를 읽음).
+	.RecruitSeconds = 120;
+	$@BG_RM_RECRUIT_SECONDS = .RecruitSeconds;
+	$@BG_RM_PREWARP_SECONDS = 20;
 
 	// 랜덤 매칭 참가 BaseLevel 제한
-	// 운영 상황에 따라 이 값만 변경하면 @전장매칭 / @전장참가에 공통 적용됩니다.
+	// 운영 상황에 따라 이 값만 변경하면 @전장대기(별칭 @전장매칭 / @전장참가)에 공통 적용됩니다.
 	.MinJoinLevel = 150;
 	.MaxBaseLevel = 175;
 
@@ -1347,7 +1362,7 @@ OnQueueLaunch:
 	$@BG_RM_TOKEN++;
 	$@BG_RM_STATE = 1;
 	$@BG_RM_MODE = 1;
-	$@BG_RM_END_TICK = gettimetick(2) + 5;
+	$@BG_RM_END_TICK = 0;	// 2026-11-12: 소환이 끝난 뒤 now + .RecruitSeconds 로 고정한다
 
 	.@count = 0;
 	.@queue_count = $@BG_RM_QUEUE_COUNT;
@@ -1381,9 +1396,15 @@ OnQueueLaunch:
 		$@BG_RM_CLASS[.@count] = Class;
 		$@BG_RM_NAME$[.@count] = strcharinfo(0);
 		.@count++;
+		BG_RM_LAST_CANCEL_REASON = 0;
+		BG_RM_LAST_CANCEL_TOKEN = 0;
+		BG_RM_LAST_CANCEL_TICK = 0;
 
-		announce needtr("[전장] 전장 대기 인원이 충족되어 자동매칭 대기실로 이동합니다.", "[Battleground] Enough players are queued. Moving you to the auto-match waiting room."), bc_self, "0x66FF66";
-		warp "bat_room",154,150;
+		announce needtr("[전장] 전장 대기 인원이 충족되어 추가 모집이 열리는 전장 대기실로 이동합니다.", "[Battleground] Enough players are queued. Moving you to the Battleground waiting room, where extra recruitment opens."), bc_self, "0x66FF66";
+		if (strcharinfo(3) != "bat_room") {
+			callfunc "F_NEED_BGUX_MarkSummon";	// 모집이 취소되면 돌려보낼 원래 위치
+			warp "bat_room",154,150;
+		}
 		detachrid;
 	}
 
@@ -1399,203 +1420,47 @@ OnQueueLaunch:
 	callfunc "F_BG_RM_SetWaitingRooms", 0;
 	callfunc "F_BG_RM_SetManager", 0;
 
+	// 2026-11-12 통합 모집: 소환 완료 시점부터 고정 .RecruitSeconds 동안 추가 모집.
+	// 마감 판정은 NEED_BG_RM_RecruitMonitor 가 1초마다 $@BG_RM_END_TICK 으로 한 번만 한다(OnFinalize 첫 줄이 STATE 2 로 잠금).
+	$@BG_RM_END_TICK = gettimetick(2) + .RecruitSeconds;
+	donpcevent "NEED_BG_RM_RecruitMonitor::OnStart";
+	debugmes "[NEED_BGUX] RECRUIT_OPEN token=" + $@BG_RM_TOKEN + " count=" + $@BG_RM_COUNT + " seconds=" + .RecruitSeconds + " end=" + $@BG_RM_END_TICK;
+
 	mapannouncelang "bat_room",
-		"[전장 대기열] 최소 인원이 충족되어 " + $@BG_RM_COUNT + "명이 입장했습니다. 5초 후 팀 편성을 시작합니다.", "[BG Queue] The minimum was reached and " + $@BG_RM_COUNT + " players have entered. Team assignment starts in 5 seconds.",
+		"[전장 대기열] 최소 인원이 충족되어 " + $@BG_RM_COUNT + "명이 입장했습니다. " + .RecruitSeconds + "초 동안 추가 모집 후 팀 편성을 시작합니다.",
+		"[BG Queue] The minimum was reached and " + $@BG_RM_COUNT + " players have entered. Extra recruitment runs for " + .RecruitSeconds + " seconds, then teams are formed.",
 		bc_map, "0x66FF99";
 	mapannouncelang "bat_room",
-		"[전장 대기열] 추가 참가를 원하는 유저는 5초 이내에 @전장참가를 사용할 수 있습니다.", "[BG Queue] Anyone else who wants to join can use @bgjoin within 5 seconds.",
+		"[전장 대기열] 참가 취소: @전장대기취소 / 현황: @전장대기현황", "[BG Queue] Leave: @bgqueuecancel / Status: @bgqueuestatus",
 		bc_map, "0x99DDFF";
-
-	sleep 5000;
-
-	if ($@BG_RM_STATE != 1)
-		end;
-
-	goto OnFinalize;
-
-OnCommandStart:
-	if (strcharinfo(3) != "bat_room") {
-		dispbottom needtr("[전장] @전장매칭 명령어는 전장 대기존에서만 사용할 수 있습니다.","[Battleground] The @bgmatch command only works in the battleground waiting zone.");
-		end;
-	}
-
-	if (!#NEED_BG_RULE_AGREE) {
-		dispbottom needtr("[전장] 전장 이용 규칙 동의 후 사용할 수 있습니다.","[Battleground] You must agree to the battleground rules first.");
-		end;
-	}
-
-	if (BaseLevel < .MinJoinLevel) {
-		dispbottom needtr("[전장] 랜덤 매칭은 BaseLevel ","[Battleground] Random match needs BaseLevel ") + .MinJoinLevel + needtr(" 이상부터 신청할 수 있습니다. (현재 "," or higher to apply. (current ") + BaseLevel + ")";
-		end;
-	}
-
-	if ($@BG_RM_STATE || $@BG_RM_ACTIVE || $@BG_RM_CYCLE_ACTIVE) {
-		dispbottom needtr("[전장] 랜덤 매칭 모집 또는 티에라/플라비우스/KVM 사이클이 이미 진행 중입니다.","[Battleground] A random match recruitment or a Tierra/Flavian/KVM cycle is already running.");
-		end;
-	}
-
-	if ($@TierraBG1 || $@FlaviusBG1 || $@KvM01BG) {
-		dispbottom needtr("[전장] 현재 진행 중인 전장이 있어 랜덤 매칭을 시작할 수 없습니다.","[Battleground] A battleground is already running, so a random match cannot start.");
-		end;
-	}
-
-	if (callfunc("F_BG_RM_ManualReadyActive")) {
-		dispbottom needtr("[전장] 파티장 전장 입장 준비가 진행 중이어서 랜덤 매칭을 시작할 수 없습니다.","[Battleground] A party leader is preparing to enter, so a random match cannot start.");
-		end;
-	}
-
-	if (getcharid(1) || getcharid(4)) {
-		dispbottom needtr("[전장] 파티 또는 전장 팀에 가입되지 않은 상태에서 신청해 주세요.","[Battleground] Apply while you are not in a party or a battleground team.");
-		end;
-	}
-
-	if (@NEED_BG2_BUSY) {	// NEED 2:2 듀오 서바이벌: 2:2 대기열/참가 확인/경기와 동시에 신청할 수 없다(양방향)
-		dispbottom needtr("[전장] 2:2 듀오 대기열/참가 확인/경기에 있는 동안에는 신청할 수 없습니다. 먼저 @듀오취소 로 취소해 주세요.","[Battleground] You cannot apply while you are in the 2v2 Duo queue, ready check or match. Cancel it first with @duocancel.");
-		end;
-	}
-
-	if ($BG_GUILLAUME_PARTY_ID || $BG_CROIX_PARTY_ID) {
-		dispbottom needtr("[전장] 수동 전장 파티장 등록이 존재하여 랜덤 매칭을 시작할 수 없습니다.","[Battleground] A manual battleground party leader is registered, so a random match cannot start.");
-		end;
-	}
-
-	if (callfunc("F_BG_RM_ManualWaitingCount") > 0) {
-		dispbottom needtr("[전장] 기존 전장 대기실에 참가 중인 인원이 있어 랜덤 매칭을 시작할 수 없습니다.","[Battleground] Someone is still in an existing waiting room, so a random match cannot start.");
-		end;
-	}
-
-	// 현재 bat_room에서 참가 가능한 인원이 최소 인원 이상인지 사전 확인
-	.@unit_count = getmapunits(BL_PC,"bat_room",.@unit_aid[0]);
-	.@eligible = 0;
-
-	for (.@i = 0; .@i < .@unit_count; .@i++) {
-		.@aid = .@unit_aid[.@i];
-		.@cid = convertpcinfo(.@aid,CPC_CHAR);
-		.@name$ = convertpcinfo(.@aid,CPC_NAME);
-
-		if (.@aid <= 0 || .@cid <= 0 || .@name$ == "")
-			continue;
-		if (readparam(BaseLevel,.@cid) < .MinJoinLevel)
-			continue;
-		if (getcharid(1,.@name$) || getcharid(4,.@name$))
-			continue;
-
-		.@eligible++;
-	}
-
-	if (.@eligible < .MinPlayers) {
-		dispbottom needtr("[전장] BaseLevel ","[Battleground] Eligible players at BaseLevel ") + .MinJoinLevel + needtr(" 이상 참가 가능 인원이 "," or higher are fewer than ") + .MinPlayers + needtr("명 미만입니다. (현재 ",". (current ") + .@eligible + needtr("명)",")");
-		end;
-	}
-
-	callfunc "F_BG_RM_ClearArrays";
-	$@BG_RM_KVM_PARTY_DESTROYED = 0;
-	$@BG_RM_MISSING_CURSOR = 0;
-
-	$@BG_RM_TOKEN++;
-	$@BG_RM_STATE = 1;
-	$@BG_RM_MODE = 1;
-	$@BG_RM_END_TICK = gettimetick(2) + .RecruitSeconds;
-
-	// 신청자는 자동 참가
-	$@BG_RM_AID[0] = getcharid(3);
-	$@BG_RM_CID[0] = getcharid(0);
-	$@BG_RM_CLASS[0] = Class;
-	$@BG_RM_NAME$[0] = strcharinfo(0);
-	$@BG_RM_COUNT = 1;
-
-	BG_RM_LAST_CANCEL_REASON = 0;
-	BG_RM_LAST_CANCEL_TOKEN = 0;
-	BG_RM_LAST_CANCEL_TICK = 0;
-
-	announce needtr("[전장] 랜덤 매칭 참가 신청이 완료되었습니다.", "[Battleground] Your random match application is complete."), bc_self, "0x66FF66";
-	dispbottom needtr("[전장] 모집 종료까지 bat_room에 머물러야 참가가 유지됩니다.","[Battleground] Stay in bat_room until recruitment ends to keep your place.");
-	dispbottom needtr("[전장] 내 참가 상태 확인: @전장현황","[Battleground] Check status: @bgstatus");
-
-	callfunc "F_BG_RM_SetWaitingRooms", 0;
-	callfunc "F_BG_RM_SetManager", 0;
-
-	stopnpctimer;
-	initnpctimer;
-	donpcevent "NEED_BG_RM_RecruitMonitor::OnStart";
-
-	mapannouncelang "bat_room", "[전장 랜덤 매칭] " + strcharinfo(0) + "님이 티에라 → 플라비우스 → KVM 풀사이클 매칭을 신청했습니다.", "[Battleground Random Match] " + strcharinfo(0) + " has applied for the Tierra → Flavius → KVM full cycle match.", bc_map, "0x66CCFF";
-	mapannouncelang "bat_room", "[전장 랜덤 매칭] 참가자는 " + .RecruitSeconds + "초 이내에 @전장참가를 입력해 주세요. 신청 취소: @전장취소", "[Battleground Random Match] To take part, type @bgjoin within " + .RecruitSeconds + " seconds. To cancel: @bgcancel", bc_map, "0x66CCFF";
-	mapannouncelang "bat_room", "[전장 랜덤 매칭] 참가 조건: BaseLevel " + .MinJoinLevel + " 이상 / 현재 참가 1명 / 최소 " + .MinPlayers + "명", "[Battleground Random Match] Requirement: BaseLevel " + .MinJoinLevel + " or higher / currently 1 joined / minimum " + .MinPlayers + " players", bc_map, "0x66CCFF";
+	announcelang "[전장 대기열] 기존 전장 추가 모집 시작: 현재 " + $@BG_RM_COUNT + "/" + .MaxPlayers + "명, " + .RecruitSeconds + "초 후 마감. 마을에서도 @전장대기 로 바로 합류할 수 있습니다.",
+		"[BG Queue] Classic BG extra recruitment is open: " + $@BG_RM_COUNT + "/" + .MaxPlayers + " players, closes in " + .RecruitSeconds + " seconds. Join from town with @bgqueue.",
+		bc_all, "0x66FF99";
 	end;
 
+//------------------------------------------------------------
+// 2026-11-12 NEED_BGUX 통합 모집: @전장매칭 / @전장참가 는 @전장대기 와 같은 참가 흐름이다(별칭).
+// @전장현황 = @전장대기현황, @전장취소 = @전장대기취소. 예전 bat_room 전용 5분 모집(.RecruitSeconds 300,
+// OnTimer60000~OnTimer300000 공지·마감)은 없앴다. 대화 중 doevent 는 엔진이 이 스크립트가 끝난 뒤 실행한다.
+//------------------------------------------------------------
+OnCommandStart:
 OnCommandJoin:
-	if (strcharinfo(3) != "bat_room") {
-		dispbottom needtr("[전장] @전장참가 명령어는 전장 대기존에서만 사용할 수 있습니다.","[Battleground] The @bgjoin command only works in the battleground waiting zone.");
-		end;
-	}
+	doevent "NEED_BG_RM_GlobalQueue::OnCommandQueue";
+	end;
 
-	if ($@BG_RM_STATE != 1) {
-		dispbottom needtr("[전장] 현재 참가자를 모집 중인 랜덤 매칭이 없습니다.","[Battleground] No random match recruitment is open right now.");
-		end;
-	}
-
-	if (!#NEED_BG_RULE_AGREE) {
-		dispbottom needtr("[전장] 전장 이용 규칙 동의 후 참가할 수 있습니다.","[Battleground] You must agree to the battleground rules before joining.");
-		end;
-	}
-
-	if (BaseLevel < .MinJoinLevel) {
-		dispbottom needtr("[전장] 랜덤 매칭은 BaseLevel ","[Battleground] Random match needs BaseLevel ") + .MinJoinLevel + needtr(" 이상부터 참가할 수 있습니다. (현재 "," or higher to join. (current ") + BaseLevel + ")";
-		end;
-	}
-
-	if (getcharid(1) || getcharid(4)) {
-		dispbottom needtr("[전장] 파티 또는 전장 팀에 가입된 상태에서는 참가할 수 없습니다.","[Battleground] You cannot join while you are in a party or a battleground team.");
-		end;
-	}
-
-	if (@NEED_BG2_BUSY) {	// NEED 2:2 듀오 서바이벌: 2:2 대기열/참가 확인/경기와 동시에 신청할 수 없다(양방향)
-		dispbottom needtr("[전장] 2:2 듀오 대기열/참가 확인/경기에 있는 동안에는 신청할 수 없습니다. 먼저 @듀오취소 로 취소해 주세요.","[Battleground] You cannot apply while you are in the 2v2 Duo queue, ready check or match. Cancel it first with @duocancel.");
-		end;
-	}
-
-	for (.@i = 0; .@i < $@BG_RM_COUNT; .@i++) {
-		if ($@BG_RM_AID[.@i] == getcharid(3) && $@BG_RM_CID[.@i] == getcharid(0)) {
-			.@remain = $@BG_RM_END_TICK - gettimetick(2);
-			if (.@remain < 0)
-				.@remain = 0;
-			announce needtr("[전장] 현재 랜덤 매칭 참가 신청이 유지 중입니다.", "[Battleground] Your random match application is still active."), bc_self, "0x66FF66";
-			dispbottom needtr("[전장] 내 상태: 참가 중 / 남은 시간 ","[Battleground] My status: In queue / Time remaining ") + .@remain + needtr("초 / 현재 ","s / Currently ") + $@BG_RM_COUNT + needtr("명"," players");
-			end;
-		}
-	}
-
-	if ($@BG_RM_COUNT >= .MaxPlayers) {
-		dispbottom needtr("[전장] 랜덤 매칭 참가 정원 ","[Battleground] The random match is full at ") + .MaxPlayers + needtr("명이 모두 찼습니다."," players.");
-		end;
-	}
-
-	.@slot = $@BG_RM_COUNT;
-	$@BG_RM_AID[.@slot] = getcharid(3);
-	$@BG_RM_CID[.@slot] = getcharid(0);
-	$@BG_RM_CLASS[.@slot] = Class;
-	$@BG_RM_NAME$[.@slot] = strcharinfo(0);
-	$@BG_RM_COUNT++;
-
-	BG_RM_LAST_CANCEL_REASON = 0;
-	BG_RM_LAST_CANCEL_TOKEN = 0;
-	BG_RM_LAST_CANCEL_TICK = 0;
-
-	announce needtr("[전장] 랜덤 매칭 참가 신청이 완료되었습니다.", "[Battleground] Your random match application is complete."), bc_self, "0x66FF66";
-	dispbottom needtr("[전장] 모집 종료까지 bat_room에 머물러야 참가가 유지됩니다.","[Battleground] Stay in bat_room until recruitment ends to keep your place.");
-	dispbottom needtr("[전장] 내 참가 상태 확인: @전장현황","[Battleground] Check status: @bgstatus");
-
-	mapannouncelang "bat_room", "[전장 랜덤 매칭] " + strcharinfo(0) + "님 참가. 현재 " + $@BG_RM_COUNT + "명 / 최소 " + .MinPlayers + "명", "[Battleground Random Match] " + strcharinfo(0) + " joined. Currently " + $@BG_RM_COUNT + " / minimum " + .MinPlayers + " players", bc_map, "0x99DDFF";
+OnCommandStatus:
+	doevent "NEED_BG_RM_GlobalQueue::OnCommandQueueStatus";
 	end;
 
 OnCommandCancel:
-	if (strcharinfo(3) != "bat_room") {
-		dispbottom needtr("[전장] @전장취소 명령어는 전장 대기존에서만 사용할 수 있습니다.","[Battleground] The @bgcancel command only works in the battleground waiting zone.");
-		end;
+	// 전장 사이의 준비 대기 단계에서는 자동 선정 파티장만 전체 사이클을 종료할 수 있습니다(기존 그대로, bat_room 에서).
+	if ($@BG_RM_CYCLE_ACTIVE && $@BG_RM_STATE == 4 && strcharinfo(3) == "bat_room" && (getcharid(0) == $BG_GUILLAUME_LEADER_CID || getcharid(0) == $BG_CROIX_LEADER_CID)) {
+		goto L_LeaderEndCycle;
 	}
+	doevent "NEED_BG_RM_GlobalQueue::OnCommandQueueCancel";
+	end;
 
-	// 전장 사이의 준비 대기 단계에서는 자동 선정 파티장만 전체 사이클을 종료할 수 있습니다.
+L_LeaderEndCycle:
 	if ($@BG_RM_CYCLE_ACTIVE && $@BG_RM_STATE == 4) {
 		if (getcharid(0) != $BG_GUILLAUME_LEADER_CID && getcharid(0) != $BG_CROIX_LEADER_CID) {
 			dispbottom needtr("[전장] 랜덤 매칭 사이클 종료는 자동 선정된 양 팀 파티장만 가능합니다.","[Battleground] Only the two automatically chosen party leaders can end the cycle.");
@@ -1615,144 +1480,7 @@ OnCommandCancel:
 		end;
 	}
 
-	if ($@BG_RM_STATE != 1) {
-		dispbottom needtr("[전장] 현재 취소할 랜덤 매칭 참가 신청이 없습니다.","[Battleground] You have no random match application to cancel.");
-		end;
-	}
-
-	.@slot = -1;
-	for (.@i = 0; .@i < $@BG_RM_COUNT; .@i++) {
-		if ($@BG_RM_AID[.@i] == getcharid(3) && $@BG_RM_CID[.@i] == getcharid(0)) {
-			.@slot = .@i;
-			break;
-		}
-	}
-
-	if (.@slot < 0) {
-		dispbottom needtr("[전장] 랜덤 매칭에 참가 신청한 상태가 아닙니다.","[Battleground] You have not applied to the random match.");
-		end;
-	}
-
-	callfunc "F_BG_RM_RemoveRecruitSlot", .@slot;
-
-	BG_RM_LAST_CANCEL_REASON = 5;
-	BG_RM_LAST_CANCEL_TOKEN = $@BG_RM_TOKEN;
-	BG_RM_LAST_CANCEL_TICK = gettimetick(2);
-
-	announce needtr("[전장] 랜덤 매칭 참가 신청을 취소했습니다.", "[Battleground] You cancelled your random match application."), bc_self, "0xFFAA55";
-	dispbottom needtr("[전장] 다시 참가하려면 모집 종료 전 @전장참가를 입력해 주세요.","[Battleground] To join again, type @bgjoin before recruitment ends.");
-
-	mapannouncelang "bat_room", "[전장 랜덤 매칭] " + strcharinfo(0) + "님이 참가를 취소했습니다. 현재 " + $@BG_RM_COUNT + "명", "[Battleground Random Match] " + strcharinfo(0) + " cancelled their application. Currently " + $@BG_RM_COUNT + " players", bc_map, "0xFFCC99";
-
-	if ($@BG_RM_COUNT <= 0) {
-		callfunc "F_BG_RM_CancelRecruit", "모든 참가자가 신청을 취소하여 랜덤 매칭 모집이 종료되었습니다.",
-			"All participants cancelled their applications, so random match recruitment has ended.";
-		end;
-	}
 	end;
-
-OnCommandStatus:
-	if (strcharinfo(3) != "bat_room") {
-		dispbottom needtr("[전장] @전장현황 명령어는 전장 대기존에서만 사용할 수 있습니다.","[Battleground] The @bgstatus command only works in the battleground waiting zone.");
-		end;
-	}
-
-	if ($@BG_RM_STATE == 1) {
-		.@remain = $@BG_RM_END_TICK - gettimetick(2);
-		if (.@remain < 0)
-			.@remain = 0;
-
-		.@slot = callfunc("F_BG_RM_FindRecruitSlot", getcharid(3), getcharid(0));
-		if (.@slot >= 0) {
-			announce needtr("[전장] 내 상태: 랜덤 매칭 참가 중", "[Battleground] My status: in the random match queue"), bc_self, "0x66FF66";
-			dispbottom needtr("[전장] 참가 유지 중 / 현재 ","[Battleground] In queue / Currently ") + $@BG_RM_COUNT + needtr("명 / 남은 시간 "," players / Time remaining ") + .@remain + needtr("초","s");
-			dispbottom needtr("[전장] bat_room 이탈·로그아웃·파티 가입 시 자동 취소됩니다.","[Battleground] You are dropped automatically if you leave bat_room, log out, or join a party.");
-		}
-		else if (BG_RM_LAST_CANCEL_TOKEN == $@BG_RM_TOKEN && BG_RM_LAST_CANCEL_REASON > 0) {
-			announce needtr("[전장] 내 상태: 참가 신청 취소됨", "[Battleground] My status: application cancelled"), bc_self, "0xFF5555";
-			dispbottom needtr("[전장] 취소 사유: ", "[Battleground] Cancellation reason: ") + callfunc("F_BG_RM_CancelReasonLang$", BG_RM_LAST_CANCEL_REASON, getneedlang());
-			dispbottom needtr("[전장] 현재 모집에 다시 참가하려면 @전장참가를 입력해 주세요.","[Battleground] To rejoin the current recruitment, type @bgjoin.");
-		}
-		else {
-			announce needtr("[전장] 내 상태: 현재 모집 미참가", "[Battleground] My status: not in the current recruitment"), bc_self, "0xFFCC66";
-			if (BaseLevel < .MinJoinLevel)
-				dispbottom needtr("[전장] 참가 조건: BaseLevel ","[Battleground] Requirement: BaseLevel ") + .MinJoinLevel + needtr(" 이상 / 현재 "," or higher / current ") + BaseLevel;
-			else
-				dispbottom needtr("[전장] 참가하려면 @전장참가를 입력해 주세요.","[Battleground] To join, type @bgjoin.");
-		}
-
-		dispbottom needtr("[전장] 모집 현황: ", "[Battleground] Recruitment status: ") + callfunc("F_BG_RM_ModeNameLang$",$@BG_RM_MODE,getneedlang())
-			+ needtr(" / 참가 ", " / joined ") + $@BG_RM_COUNT + needtr("명 / 남은 시간 ", " players / Time remaining ") + .@remain + needtr("초", "s");
-		end;
-	}
-
-	if ($@BG_RM_CYCLE_ACTIVE) {
-		if ($@BG_RM_STATE == 4)
-			dispbottom needtr("[전장] 사이클 유지 중 / 다음 전장: ", "[Battleground] Cycle held / next battleground: ") + callfunc("F_BG_RM_ModeNameLang$",$@BG_RM_MODE,getneedlang()) + needtr(" / 양 팀 파티장 입장 준비 대기", " / waiting for both party leaders to get ready");
-		else
-			dispbottom needtr("[전장] 진행 중: ", "[Battleground] In progress: ") + callfunc("F_BG_RM_ModeNameLang$",$@BG_RM_MODE,getneedlang()) + needtr(" / 기욤 ", " / Guillaume ") + $@BG_RM_G_COUNT + needtr("명 vs 크루아 ", " players vs Croix ") + $@BG_RM_C_COUNT + needtr("명 / 단계 ", " players / stage ") + $@BG_RM_CYCLE_STAGE + "/3";
-		end;
-	}
-
-	dispbottom needtr("[전장] 현재 랜덤 매칭 없음 / 시작 전장: 티에라 협곡 / 시작: @전장매칭","[Battleground] No random match / First battleground: Tierra Valley / Start: @bgmatch");
-	end;
-
-OnTimer60000:
-	if ($@BG_RM_STATE == 1) {
-		mapannouncelang "bat_room", "[전장 랜덤 매칭] 모집 종료까지 4분. 현재 참가 " + $@BG_RM_COUNT + "명", "[Battleground Random Match] 4 minutes until recruitment closes. Currently " + $@BG_RM_COUNT + " joined", bc_map, "0x66CCFF";
-		callfunc "F_BG_RM_NotifyApplicants", needtr("4분","4m");
-	}
-	end;
-
-OnTimer120000:
-	if ($@BG_RM_STATE == 1) {
-		mapannouncelang "bat_room", "[전장 랜덤 매칭] 모집 종료까지 3분. 현재 참가 " + $@BG_RM_COUNT + "명", "[Battleground Random Match] 3 minutes until recruitment closes. Currently " + $@BG_RM_COUNT + " joined", bc_map, "0x66CCFF";
-		callfunc "F_BG_RM_NotifyApplicants", needtr("3분","3m");
-	}
-	end;
-
-OnTimer180000:
-	if ($@BG_RM_STATE == 1) {
-		mapannouncelang "bat_room", "[전장 랜덤 매칭] 모집 종료까지 2분. 현재 참가 " + $@BG_RM_COUNT + "명", "[Battleground Random Match] 2 minutes until recruitment closes. Currently " + $@BG_RM_COUNT + " joined", bc_map, "0x66CCFF";
-		callfunc "F_BG_RM_NotifyApplicants", needtr("2분","2m");
-	}
-	end;
-
-OnTimer240000:
-	if ($@BG_RM_STATE == 1) {
-		mapannouncelang "bat_room", "[전장 랜덤 매칭] 모집 종료까지 1분. 현재 참가 " + $@BG_RM_COUNT + "명", "[Battleground Random Match] 1 minute until recruitment closes. Currently " + $@BG_RM_COUNT + " joined", bc_map, "0x66CCFF";
-		callfunc "F_BG_RM_NotifyApplicants", needtr("1분","1m");
-	}
-	end;
-
-OnTimer270000:
-	if ($@BG_RM_STATE == 1)
-		mapannouncelang "bat_room", "[전장 랜덤 매칭] 모집 종료까지 30초. 현재 참가 " + $@BG_RM_COUNT + "명", "[Battleground Random Match] 30 seconds until recruitment closes. Currently " + $@BG_RM_COUNT + " joined", bc_map, "0x66CCFF";
-	end;
-
-OnTimer285000:
-	if ($@BG_RM_STATE == 1)
-		mapannouncelang "bat_room", "[전장 랜덤 매칭] 모집 종료까지 15초. 현재 참가 " + $@BG_RM_COUNT + "명", "[Battleground Random Match] 15 seconds until recruitment closes. Currently " + $@BG_RM_COUNT + " joined", bc_map, "0x66CCFF";
-	end;
-
-OnTimer290000:
-	if ($@BG_RM_STATE == 1)
-		mapannouncelang "bat_room", "[전장 랜덤 매칭] 모집 종료까지 10초. 현재 참가 " + $@BG_RM_COUNT + "명", "[Battleground Random Match] 10 seconds until recruitment closes. Currently " + $@BG_RM_COUNT + " joined", bc_map, "0x66CCFF";
-	end;
-
-OnTimer295000:
-	if ($@BG_RM_STATE == 1)
-		mapannouncelang "bat_room", "[전장 랜덤 매칭] 모집 종료까지 5초 남았습니다. 현재 참가 " + $@BG_RM_COUNT + "명", "[Battleground Random Match] 5 seconds left until recruitment closes. Currently " + $@BG_RM_COUNT + " joined", bc_map, "0xFFCC66";
-	end;
-
-OnTimer300000:
-	stopnpctimer;
-	if ($@BG_RM_STATE != 1)
-		end;
-
-	// 같은 NPC의 OnFinalize를 다시 이벤트로 예약하지 않고
-	// 현재 타이머 실행 흐름에서 바로 마감 처리합니다.
-	goto OnFinalize;
 
 OnFinalize:
 	if ($@BG_RM_STATE != 1)
@@ -3078,6 +2806,10 @@ OnFinalize:
 	$BG_Guillaume_Count = .@count_g;
 	$BG_Croix_Count = .@count_c;
 
+	// 2026-11-12 NEED_BGUX: 여기부터 사이클 종료까지의 영구 변수(인원 설정·자동 파티장 등록)는 랜덤 매칭 소유라는 표식.
+	// 맵서버 재시작으로 $@ 가 사라져도 NEED_BGUX_RmRecovery 가 이 표식으로 고아 상태만 골라 복구한다.
+	callfunc "F_NEED_BGUX_RmMarkSet";
+
 	debugmes "[BG RM] parties ready G_party=" + $@BG_RM_PARTY_G
 		+ " C_party=" + $@BG_RM_PARTY_C
 		+ " mode=" + $@BG_RM_MODE;
@@ -3313,13 +3045,12 @@ OnPCLoginEvent:
 
 
 //============================================================
-// 전장 글로벌 대기열
+// 전장 글로벌 대기열 = 기존 전장의 유일한 참가 입구 (2026-11-12 통합 모집)
 //
-// @전장대기       : 어느 맵에서든 다음 자동매칭 대기
-// @전장대기취소   : 대기열 취소
-// @전장대기현황   : 현재 대기 인원 확인
-//
-// 기존 @전장참가는 변경하지 않습니다.
+// @전장대기       : 어느 맵에서든 신청. 대기 중이면 대기열, 추가 모집 중이면 같은 모집에 등록 + 즉시 소환
+// @전장대기취소   : 대기열 또는 추가 모집 참가 취소
+// @전장대기현황   : 대기 / 출발 준비 / 추가 모집 / 마감 / 경기 상태
+// (@전장매칭 · @전장참가 · @전장취소 · @전장현황 은 NEED_BG_RM_Core 에서 여기로 연결되는 별칭)
 //============================================================
 -	script	NEED_BG_RM_GlobalQueue	-1,{
 	end;
@@ -3343,9 +3074,12 @@ OnInit:
 	end;
 
 OnCommandQueue:
-	if (!#NEED_BG_RULE_AGREE) {
-		dispbottom needtr("[전장] 전장 이용 규칙 동의 후 대기 신청할 수 있습니다.", "[Battleground] You can queue after agreeing to the Battleground rules.");
-		end;
+	if (!#NEED_BG_RULE_AGREE) {	// 2026-11-12: 첫 이용자가 동의 경로를 몰라 막히던 문제 - 여기서 바로 동의/거부를 고른다
+		.@agree = callfunc("F_NEED_BG_RuleAgree", 1);
+		if (!.@agree)
+			end;
+		if (.@agree == 2)
+			close2;
 	}
 
 	if ($@BG_RM_MIN_JOIN_LEVEL <= 0)
@@ -3370,8 +3104,13 @@ OnCommandQueue:
 		end;
 	}
 
-	if ($@BG_RM_STATE == 1 || $@BG_RM_STATE == 2) {
-		dispbottom needtr("[전장] 현재 랜덤 매칭 모집이 진행 중입니다. bat_room에서 @전장참가를 이용해 주세요.", "[Battleground] Random match recruitment is in progress. Please use @bgjoin in bat_room.");
+	if ($@BG_RM_STATE == 1) {	// 2026-11-12: 추가 모집 중 = 같은 모집에 등록하고 바로 전장 대기실로 소환
+		callfunc "F_NEED_BGUX_RecruitAdd";
+		end;
+	}
+	if ($@BG_RM_STATE == 2) {
+		dispbottom needtr("[전장] 이번 모집은 마감되어 팀을 편성하는 중입니다. 경기가 시작된 뒤 @전장대기 를 다시 쓰면 다음 모집 대기열에 등록됩니다.",
+			"[Battleground] This recruitment has closed and teams are being formed. Use @bgqueue again after the match starts to queue for the next one.");
 		end;
 	}
 
@@ -3382,11 +3121,7 @@ OnCommandQueue:
 		end;
 	}
 
-	if ($@BG_RM_QUEUE_LOCK) {
-		dispbottom needtr("[전장] 현재 대기 인원이 충족되어 출발 준비 중입니다. 잠시 후 다시 시도해주세요.", "[Battleground] The queue is full and getting ready to depart. Please try again shortly.");
-		end;
-	}
-
+	// 2026-11-12: 출발 준비(이동 전 안내) 중에도 신청을 받는다. 출발 때 함께 소환된다.
 	if ($@BG_RM_QUEUE_COUNT >= $@BG_RM_MAX_PLAYERS) {
 		dispbottom needtr("[전장] 전장 대기열 정원 ", "[Battleground] The queue is full (") + $@BG_RM_MAX_PLAYERS + needtr("명이 모두 찼습니다.", " players).");
 		end;
@@ -3401,7 +3136,16 @@ OnCommandQueue:
 
 	announce needtr("[전장] 다음 자동매칭 대기 신청이 완료되었습니다.", "[Battleground] You are queued for the next auto-match."), bc_self, "0x66FF66";
 	dispbottom needtr("[전장] 다른 맵에서 플레이해도 대기가 유지됩니다.", "[Battleground] You stay queued even while playing on other maps.");
-	dispbottom needtr("[전장] 최소 ", "[Battleground] Once ") + $@BG_RM_MIN_PLAYERS + needtr("명 충족 시 10초 전에 안내 후 전장 대기실로 자동 이동합니다.", " players are queued, you get a 10-second notice and are moved to the Battleground waiting room automatically.");
+	.@pre = ($@BG_RM_PREWARP_SECONDS > 0) ? $@BG_RM_PREWARP_SECONDS : 20;
+	.@rec = ($@BG_RM_RECRUIT_SECONDS > 0) ? $@BG_RM_RECRUIT_SECONDS : 120;
+	if ($@BG_RM_QUEUE_LOCK && $@BG_RM_QUEUE_READY_TICK > 0) {
+		.@remain = $@BG_RM_QUEUE_READY_TICK - gettimetick(2);
+		if (.@remain < 0)
+			.@remain = 0;
+		dispbottom needtr("[전장] 출발 준비 중인 이번 모집에 포함되었습니다. 약 ", "[Battleground] You are in the recruitment that is about to depart. You move with it in about ") + .@remain + needtr("초 후 함께 전장 대기실로 이동합니다.", " seconds.");
+	}
+	else
+		dispbottom needtr("[전장] 최소 ", "[Battleground] Once ") + $@BG_RM_MIN_PLAYERS + needtr("명 충족 시 " + .@pre + "초 전에 안내 후 전장 대기실로 자동 이동하고, " + .@rec + "초 동안 추가 모집합니다.", " players are queued, you get a " + .@pre + "-second notice, move to the Battleground waiting room automatically, and extra recruitment runs for " + .@rec + " seconds.");
 	dispbottom needtr("[전장] 대기 취소: @전장대기취소 / 현황: @전장대기현황", "[Battleground] Cancel: @bgqueuecancel / Status: @bgqueuestatus");
 
 	announcelang "[전장 대기열] " + strcharinfo(0) + "님 대기 등록. 현재 "
@@ -3409,17 +3153,34 @@ OnCommandQueue:
 	end;
 
 OnCommandQueueCancel:
+	// 2026-11-12 통합 모집: 추가 모집 참가자의 취소(예전 @전장취소)
+	if ($@BG_RM_STATE == 1) {
+		.@rslot = callfunc("F_BG_RM_FindRecruitSlot", getcharid(3), getcharid(0));
+		if (.@rslot >= 0) {
+			callfunc "F_BG_RM_RemoveRecruitSlot", .@rslot;
+			BG_RM_LAST_CANCEL_REASON = 5;
+			BG_RM_LAST_CANCEL_TOKEN = $@BG_RM_TOKEN;
+			BG_RM_LAST_CANCEL_TICK = gettimetick(2);
+			debugmes "[NEED_BGUX] RECRUIT_CANCEL aid=" + getcharid(3) + " cid=" + getcharid(0) + " count=" + $@BG_RM_COUNT;
+			announce needtr("[전장] 추가 모집 참가를 취소했습니다.", "[Battleground] You left the extra recruitment."), bc_self, "0xFFAA55";
+			mapannouncelang "bat_room", "[전장 대기열] " + strcharinfo(0) + "님이 참가를 취소했습니다. 현재 " + $@BG_RM_COUNT + "명",
+				"[Battleground Queue] " + strcharinfo(0) + " left. Currently " + $@BG_RM_COUNT + " players", bc_map, "0xFFCC99";
+			callfunc "F_NEED_BGUX_ReturnSelf", "cancel";
+			if ($@BG_RM_COUNT <= 0)
+				callfunc "F_BG_RM_CancelRecruit", "모든 참가자가 신청을 취소하여 모집이 종료되었습니다.", "All participants cancelled, so recruitment has ended.";
+			end;
+		}
+	}
+
 	.@slot = callfunc("F_BG_RM_QueueFind", getcharid(3), getcharid(0));
 
 	if (.@slot < 0) {
-		dispbottom needtr("[전장] 현재 전장 대기열에 등록되어 있지 않습니다.", "[Battleground] You are not in the Battleground queue.");
+		dispbottom needtr("[전장] 현재 전장 대기열이나 추가 모집에 등록되어 있지 않습니다.", "[Battleground] You are not in the Battleground queue or the extra recruitment.");
 		end;
 	}
 
 	callfunc "F_BG_RM_QueueRemoveSlot", .@slot;
-
-	$@BG_RM_QUEUE_LOCK = 0;
-	$@BG_RM_QUEUE_READY_TICK = 0;
+	callfunc "F_NEED_BGUX_QueueLockCheck";	// 2026-11-12: 출발 준비는 최소 인원 미만이 될 때만 취소
 
 	announce needtr("[전장] 자동매칭 대기 신청을 취소했습니다.", "[Battleground] You left the auto-match queue."), bc_self, "0xFFAA55";
 	announcelang "[전장 대기열] 현재 대기 " + $@BG_RM_QUEUE_COUNT + "/" + $@BG_RM_MIN_PLAYERS + "명", "[BG Queue] Now queued: " + $@BG_RM_QUEUE_COUNT + "/" + $@BG_RM_MIN_PLAYERS,
@@ -3428,20 +3189,19 @@ OnCommandQueueCancel:
 
 OnCommandQueueStatus:
 	.@slot = callfunc("F_BG_RM_QueueFind", getcharid(3), getcharid(0));
+	.@rslot = ($@BG_RM_STATE == 1 || $@BG_RM_STATE == 2) ? callfunc("F_BG_RM_FindRecruitSlot", getcharid(3), getcharid(0)) : -1;
 
-	if (.@slot >= 0)
+	if (.@rslot >= 0)
+		announce needtr("[전장] 내 상태: 추가 모집 참가 중", "[Battleground] My status: in the extra recruitment"), bc_self, "0x66FF66";
+	else if (.@slot >= 0)
 		announce needtr("[전장] 내 상태: 자동매칭 대기 중", "[Battleground] My status: queued for auto-match"), bc_self, "0x66FF66";
 	else
 		announce needtr("[전장] 내 상태: 전장 대기 미신청", "[Battleground] My status: not queued"), bc_self, "0xFFCC66";
 
-	dispbottom needtr("[전장] 현재 대기 ", "[Battleground] Queued: ") + $@BG_RM_QUEUE_COUNT + needtr("명 / 시작 ", " / Starts at: ") + $@BG_RM_MIN_PLAYERS + needtr("명", "");
-
-	if ($@BG_RM_QUEUE_LOCK && $@BG_RM_QUEUE_READY_TICK > 0) {
-		.@remain = $@BG_RM_QUEUE_READY_TICK - gettimetick(2);
-		if (.@remain < 0)
-			.@remain = 0;
-		dispbottom needtr("[전장] 출발 준비 중 / 자동 이동까지 약 ", "[Battleground] Getting ready to depart / moving in about ") + .@remain + needtr("초", " seconds");
-	}
+	// 2026-11-12 통합 모집: 대기 / 출발 준비 / 추가 모집 / 마감 / 경기 를 한 줄로(안내 NPC 와 같은 함수)
+	dispbottom "[" + needtr("전장", "Battleground") + "] " + callfunc("F_NEED_BGUX_RmStateLine$");
+	if ($@BG_RM_STATE == 1 && BG_RM_LAST_CANCEL_TOKEN == $@BG_RM_TOKEN && BG_RM_LAST_CANCEL_REASON > 0 && .@rslot < 0)
+		dispbottom needtr("[전장] 최근 취소 사유: ", "[Battleground] Last cancellation: ") + callfunc("F_BG_RM_CancelReasonLang$", BG_RM_LAST_CANCEL_REASON, getneedlang());
 	end;
 
 OnPCLogoutEvent:
@@ -3452,9 +3212,7 @@ OnPCLogoutEvent:
 
 	.@name$ = strcharinfo(0);
 	callfunc "F_BG_RM_QueueRemoveSlot", .@slot;
-
-	$@BG_RM_QUEUE_LOCK = 0;
-	$@BG_RM_QUEUE_READY_TICK = 0;
+	callfunc "F_NEED_BGUX_QueueLockCheck";	// 2026-11-12: 출발 준비는 최소 인원 미만이 될 때만 취소
 
 	announcelang "[전장 대기열] " + .@name$ + "님이 로그아웃하여 대기에서 제외되었습니다. 현재 "
 		+ $@BG_RM_QUEUE_COUNT + "/" + $@BG_RM_MIN_PLAYERS + "명", "[BG Queue] " + .@name$ + " logged out and was removed from the queue. Now " + $@BG_RM_QUEUE_COUNT + "/" + $@BG_RM_MIN_PLAYERS,
@@ -3510,8 +3268,7 @@ OnTimer1000:
 		if (isloggedin(.@aid,.@cid))
 			messagelang .@name$, "[전장] " + .@reason$ + " 상태로 자동매칭 대기열에서 제외되었습니다.", "[Battleground] You were removed from the auto-match queue (" + .@reason_en$ + ").";
 
-		$@BG_RM_QUEUE_LOCK = 0;
-		$@BG_RM_QUEUE_READY_TICK = 0;
+		callfunc "F_NEED_BGUX_QueueLockCheck";	// 2026-11-12: 출발 준비는 최소 인원 미만이 될 때만 취소
 	}
 
 	if ($@BG_RM_STATE == 1 || $@BG_RM_STATE == 2) {
@@ -3538,14 +3295,17 @@ OnTimer1000:
 
 	if (!$@BG_RM_QUEUE_LOCK && $@BG_RM_QUEUE_COUNT >= $@BG_RM_MIN_PLAYERS) {
 		$@BG_RM_QUEUE_LOCK = 1;
-		$@BG_RM_QUEUE_READY_TICK = gettimetick(2) + 10;
+		.@pre = ($@BG_RM_PREWARP_SECONDS > 0) ? $@BG_RM_PREWARP_SECONDS : 20;	// 2026-11-12: 출발 전 안내 10 -> 20초 (운영자 결정). 값은 NEED_BG_RM_Core OnInit 한 곳
+		$@BG_RM_QUEUE_READY_TICK = gettimetick(2) + .@pre;
 		$@BG_RM_QUEUE_TOKEN++;
 
 		callfunc "F_BG_RM_QueueNotifyAll",
-			"[전장] 전장 최소 인원이 충족되었습니다. 10초 후 전장 대기실로 자동 이동합니다.";
+			"[전장] 전장 최소 인원이 충족되었습니다. " + .@pre + "초 후 전장 대기실로 자동 이동합니다.",
+			"[Battleground] The minimum number of players was reached. You will be moved to the Battleground waiting room in " + .@pre + " seconds.";
 
 		announcelang "[전장 대기열] 최소 인원 " + $@BG_RM_MIN_PLAYERS
-			+ "명이 충족되었습니다. 10초 후 자동매칭을 시작합니다.", "[BG Queue] The minimum of " + $@BG_RM_MIN_PLAYERS + " players was reached. Auto-match starts in 10 seconds.",
+			+ "명이 충족되었습니다. " + .@pre + "초 후 전장 대기실로 이동해 추가 모집을 시작합니다. 지금 @전장대기 하면 함께 이동합니다.",
+			"[BG Queue] The minimum of " + $@BG_RM_MIN_PLAYERS + " players was reached. In " + .@pre + " seconds everyone moves to the waiting room and extra recruitment starts. Use @bgqueue now to go along.",
 			bc_all, "0x66FF99";
 	}
 
@@ -3555,7 +3315,8 @@ OnTimer1000:
 				$@BG_RM_QUEUE_LOCK = 0;
 				$@BG_RM_QUEUE_READY_TICK = 0;
 				callfunc "F_BG_RM_QueueNotifyAll",
-					"[전장] 출발 전 대기 인원이 부족해져 자동 이동이 취소되었습니다. 대기는 그대로 유지됩니다.";
+					"[전장] 출발 전 대기 인원이 부족해져 자동 이동이 취소되었습니다. 대기는 그대로 유지됩니다.",
+					"[Battleground] Too few players were left before departure, so the automatic move was cancelled. You are still in the queue.";
 			}
 			else
 				donpcevent "NEED_BG_RM_Core::OnQueueLaunch";
@@ -3582,6 +3343,7 @@ OnInit:
 
 OnStart:
 	.NextMissingNoticeTick = gettimetick(2) + 30;
+	.AnnMask = 0;	// 2026-11-12: 마감 60/30/10초 전 안내를 한 번씩만
 	stopnpctimer;
 	initnpctimer;
 	end;
@@ -3596,7 +3358,7 @@ OnPCLoginEvent:
 		end;
 
 	announce needtr("[전장] 이전 랜덤 매칭 참가 신청은 게임 종료로 자동 취소되었습니다.", "[Battleground] Your previous random match application was cancelled automatically because you logged out."), bc_self, "0xFF5555";
-	dispbottom needtr("[전장] 모집이 아직 진행 중이라면 bat_room에서 @전장참가로 다시 신청해 주세요.","[Battleground] If recruitment is still open, apply again with @bgjoin in bat_room.");
+	dispbottom needtr("[전장] 모집이 아직 진행 중이라면 어디서든 @전장대기로 다시 신청해 주세요.","[Battleground] If recruitment is still open, apply again from anywhere with @bgqueue.");
 	end;
 
 OnPCLogoutEvent:
@@ -3697,6 +3459,36 @@ OnTimer1000:
 		callfunc "F_BG_RM_CancelRecruit", "모든 참가자가 이탈하여 랜덤 매칭 모집이 취소되었습니다.",
 			"All participants left, so random match recruitment was cancelled.";
 		end;
+	}
+
+	// 2026-11-12 통합 모집: 마감은 여기 한 곳에서만 판정한다(서버 시각 기준, 늦은 신청으로 늘지 않음).
+	// OnFinalize 는 첫 줄에서 STATE 를 2 로 바꿔 신청을 잠그고, 스크립트는 한 번에 하나씩 실행되므로 같은 틱의 신청과 겹치지 않는다.
+	if ($@BG_RM_STATE == 1 && $@BG_RM_END_TICK > 0) {
+		.@left = $@BG_RM_END_TICK - gettimetick(2);
+		if (.@left <= 0) {
+			stopnpctimer;
+			debugmes "[NEED_BGUX] RECRUIT_CLOSE token=" + $@BG_RM_TOKEN + " count=" + $@BG_RM_COUNT;
+			mapannouncelang "bat_room", "[전장 대기열] 추가 모집이 마감되었습니다. 참가자 확인 후 팀을 편성합니다. (" + $@BG_RM_COUNT + "명)",
+				"[BG Queue] Extra recruitment has closed. Checking participants and forming teams. (" + $@BG_RM_COUNT + " players)", bc_map, "0xFFCC66";
+			donpcevent "NEED_BG_RM_Core::OnFinalize";
+			end;
+		}
+		.@max = ($@BG_RM_MAX_PLAYERS > 0) ? $@BG_RM_MAX_PLAYERS : 48;
+		if (.@left <= 10 && !(.AnnMask & 4)) {
+			.AnnMask = .AnnMask | 7;
+			mapannouncelang "bat_room", "[전장 대기열] 추가 모집 마감 10초 전. 현재 " + $@BG_RM_COUNT + "/" + .@max + "명",
+				"[BG Queue] Extra recruitment closes in 10 seconds. " + $@BG_RM_COUNT + "/" + .@max + " players", bc_map, "0xFFCC66";
+		}
+		else if (.@left <= 30 && !(.AnnMask & 2)) {
+			.AnnMask = .AnnMask | 3;
+			mapannouncelang "bat_room", "[전장 대기열] 추가 모집 마감 30초 전. 현재 " + $@BG_RM_COUNT + "/" + .@max + "명",
+				"[BG Queue] Extra recruitment closes in 30 seconds. " + $@BG_RM_COUNT + "/" + .@max + " players", bc_map, "0x66CCFF";
+		}
+		else if (.@left <= 60 && !(.AnnMask & 1)) {
+			.AnnMask = .AnnMask | 1;
+			announcelang "[전장 대기열] 기존 전장 추가 모집 마감 60초 전: 현재 " + $@BG_RM_COUNT + "/" + .@max + "명. 마을에서도 @전장대기 로 바로 합류할 수 있습니다.",
+				"[BG Queue] Classic BG extra recruitment closes in 60 seconds: " + $@BG_RM_COUNT + "/" + .@max + " players. Join from town with @bgqueue.", bc_all, "0x66CCFF";
+		}
 	}
 
 	if ($@BG_RM_STATE == 1)
@@ -3816,4 +3608,454 @@ OnTimer1000:
 	if ($@BG_RM_CYCLE_ACTIVE)
 		initnpctimer;
 	end;
+}
+
+
+//============================================================
+// 2026-11-12 NEED_BGUX: 맵서버 재시작/비정상 종료 뒤 남은 "고아" 랜덤 매칭 상태 복구
+//
+// 문제: 랜덤 매칭은 자동 파티장 등록을 영구 변수($BG_GUILLAUME_* / $BG_CROIX_*)에 쓰고, 기존 인원 설정
+//       ($BG_User_Count / $BG_Guillaume_Count / $BG_Croix_Count)을 덮어쓴 뒤 원래 값을 임시 변수($@)에만 둔다.
+//       사이클 도중 맵서버가 재시작되면 $@ 는 사라지고 영구 변수만 남아, @전장대기 대기열이 "수동 파티장 등록 있음"으로
+//       판단해 영원히 출발하지 못하고(2026-11-12 격리 재현), 인원 설정도 랜덤 매칭 값으로 남는다.
+// 소유 표식: 랜덤 매칭이 인원 설정을 덮어쓰는 순간(파티 2개 생성·검증 직후, 파티장 등록과 같은 실행 흐름)에
+//       $NEED_BGUX_RM_PG / PC (자동 생성 파티 ID), $NEED_BGUX_RM_SAVED + _U/_G/_C (원래 인원 설정) 를 남기고,
+//       정상 종료·취소 경로(F_BG_RM_RestoreCounts / F_BG_RM_ClearLeaders)에서 지운다.
+// 복구: 진행 중인 랜덤 매칭·전장·입장 준비가 하나도 없고(재시작 직후가 이 상태) 표식이 남아 있을 때만.
+//       - 파티장 등록은 등록된 파티 ID 가 표식과 같은 팀만 지운다(수동 등록은 표식과 다르므로 그대로 둔다).
+//       - 인원 설정은 표식에 보관한 원래 값으로 되돌린다.
+//       - 자동 생성 파티는 재시작 직후에는 맵서버에 파티 정보가 없어 지울 수 없으므로 ID 를 보관했다가,
+//         그 파티 구성원이 접속해 파티 정보가 올라오면 이름이 자동 파티 형식("[기욤]" / "[크루아]")일 때만 해체한다.
+//       보상·전투 결과·BG 팀은 건드리지 않는다(재시작으로 이미 사라졌고 보상 지급 경로를 부르지 않는다).
+// 진입: OnInit(맵서버 시작·@reloadscript) + GM @전장복구 / @bgrecover (GM 60, status / run / destroy).
+//       주의: 이 엔진의 @reloadscript 는 mapreg_reload() 로 $@ 임시 변수를 모두 지운다. 그래서 사이클 도중 리로드도
+//       재시작과 같은 고아 상태를 만들고(NEED_BG_RM_Core OnInit 의 "리로드 시 사이클 유지" 분기는 실제로 타지 않는다),
+//       이 복구가 그때도 실행된다. 리로드·재시작은 기존 전장이 비어 있을 때 한다.
+// 로그: debugmes "[NEED_BGUX] RM_ORPHAN_* ..." -> map-msg_log.log
+//============================================================
+
+// 랜덤 매칭 소유 표식 기록 (OnFinalize 에서 인원 설정을 덮어쓰기 직전에 부른다)
+function	script	F_NEED_BGUX_RmMarkSet	{
+	$NEED_BGUX_RM_PG = $@BG_RM_PARTY_G;
+	$NEED_BGUX_RM_PC = $@BG_RM_PARTY_C;
+	$NEED_BGUX_RM_SAVED = 1;
+	$NEED_BGUX_RM_SAVED_U = $@BG_RM_SAVED_USER_COUNT;
+	$NEED_BGUX_RM_SAVED_G = $@BG_RM_SAVED_G_COUNT;
+	$NEED_BGUX_RM_SAVED_C = $@BG_RM_SAVED_C_COUNT;
+	$NEED_BGUX_RM_MARK_AT = gettimetick(2);
+	debugmes "[NEED_BGUX] RM_MARK_SET pg=" + $NEED_BGUX_RM_PG + " pc=" + $NEED_BGUX_RM_PC + " saved_u=" + $NEED_BGUX_RM_SAVED_U + " saved_g=" + $NEED_BGUX_RM_SAVED_G + " saved_c=" + $NEED_BGUX_RM_SAVED_C;
+	return;
+}
+
+// 인원 설정 3개를 DB 에 즉시 남긴다. mapreg 는 0 -> 즉시 DELETE, 새 값 -> 즉시 INSERT 이지만 기존 값 덮어쓰기는
+// 300초 자동저장까지 미뤄진다(src/map/mapreg.cpp). 표식(즉시 지워짐)보다 복원값이 늦게 저장되면, 그 사이 강제 종료 때
+// 표식 없이 랜덤 매칭 값이 남는다. 그래서 0 을 거쳐 새 값으로 쓴다.
+function	script	F_NEED_BGUX_PersistCounts	{
+	.@u = $BG_User_Count; .@g = $BG_Guillaume_Count; .@c = $BG_Croix_Count;
+	$BG_User_Count = 0; $BG_Guillaume_Count = 0; $BG_Croix_Count = 0;
+	$BG_User_Count = .@u; $BG_Guillaume_Count = .@g; $BG_Croix_Count = .@c;
+	return;
+}
+
+// 정상 종료·취소 경로에서 표식 제거
+function	script	F_NEED_BGUX_RmMarkClear	{
+	if (!$NEED_BGUX_RM_PG && !$NEED_BGUX_RM_PC && !$NEED_BGUX_RM_SAVED)
+		return;
+	if ($NEED_BGUX_RM_SAVED)
+		callfunc "F_NEED_BGUX_PersistCounts";	// 되돌린 인원 설정을 표식보다 먼저 DB 에 남긴다
+	debugmes "[NEED_BGUX] RM_MARK_CLEAR why=" + getarg(0, "normal") + " pg=" + $NEED_BGUX_RM_PG + " pc=" + $NEED_BGUX_RM_PC;
+	$NEED_BGUX_RM_PG = 0;
+	$NEED_BGUX_RM_PC = 0;
+	$NEED_BGUX_RM_SAVED = 0;
+	$NEED_BGUX_RM_SAVED_U = 0;
+	$NEED_BGUX_RM_SAVED_G = 0;
+	$NEED_BGUX_RM_SAVED_C = 0;
+	$NEED_BGUX_RM_MARK_AT = 0;
+	return;
+}
+
+// 지금 랜덤 매칭·전장·입장 준비 중 하나라도 진행 중이면 1 (이때는 절대 복구하지 않는다)
+function	script	F_NEED_BGUX_RmLive	{
+	if ($@BG_RM_CYCLE_ACTIVE || $@BG_RM_ACTIVE || $@BG_RM_STATE)
+		return 1;
+	if ($@TierraBG1 || $@FlaviusBG1 || $@KvM01BG)
+		return 1;
+	if (callfunc("F_BG_RM_ManualReadyActive"))
+		return 1;
+	return 0;
+}
+
+// 자동 생성 파티 이름 형식인지("[기욤]..." / "[크루아]...")
+function	script	F_NEED_BGUX_RmAutoPartyName	{
+	.@n$ = getarg(0);
+	if (.@n$ == "" || .@n$ == "null")
+		return 0;
+	if (strpos(.@n$, "[기욤]") == 0 || strpos(.@n$, "[크루아]") == 0)
+		return 1;
+	return 0;
+}
+
+// 해체 대기 파티 목록에 추가(중복 없음, 최대 8건; 넘치면 가장 오래된 것부터 버린다)
+function	script	F_NEED_BGUX_RmOrphanPush	{
+	.@pid = getarg(0);
+	if (.@pid <= 0)
+		return;
+	.@n = getarraysize($NEED_BGUX_ORPHAN_PID);
+	for (.@i = 0; .@i < .@n; .@i++)
+		if ($NEED_BGUX_ORPHAN_PID[.@i] == .@pid) return;
+	if (.@n >= 8) {
+		debugmes "[NEED_BGUX] RM_ORPHAN_PARTY_DROP pid=" + $NEED_BGUX_ORPHAN_PID[0] + " why=list_full";
+		deletearray $NEED_BGUX_ORPHAN_PID[0], 1;
+		deletearray $NEED_BGUX_ORPHAN_T[0], 1;
+		.@n--;
+	}
+	$NEED_BGUX_ORPHAN_PID[.@n] = .@pid;
+	$NEED_BGUX_ORPHAN_T[.@n] = gettimetick(2);
+	return;
+}
+
+function	script	F_NEED_BGUX_RmOrphanRemove	{
+	.@n = getarraysize($NEED_BGUX_ORPHAN_PID);
+	for (.@i = 0; .@i < .@n; .@i++) {
+		if ($NEED_BGUX_ORPHAN_PID[.@i] == getarg(0)) {
+			deletearray $NEED_BGUX_ORPHAN_PID[.@i], 1;
+			deletearray $NEED_BGUX_ORPHAN_T[.@i], 1;
+			return 1;
+		}
+	}
+	return 0;
+}
+
+// 해체 대기 파티 하나를 지금 해체해 본다. 1 = 해체함 / 0 = 파티 정보 없음(나중에 다시) / -1 = 자동 파티 아님(목록에서만 뺌)
+function	script	F_NEED_BGUX_RmOrphanTryDestroy	{
+	.@pid = getarg(0);
+	.@name$ = getpartyname(.@pid);
+	if (.@name$ == "null")
+		return 0;
+	if (!callfunc("F_NEED_BGUX_RmAutoPartyName", .@name$)) {
+		debugmes "[NEED_BGUX] RM_ORPHAN_PARTY_KEEP pid=" + .@pid + " why=not_auto_name";
+		callfunc "F_NEED_BGUX_RmOrphanRemove", .@pid;
+		return -1;
+	}
+	.@r = party_destroy(.@pid);
+	debugmes "[NEED_BGUX] RM_ORPHAN_PARTY_DESTROY pid=" + .@pid + " result=" + .@r + " via=" + getarg(1, "");
+	callfunc "F_NEED_BGUX_RmOrphanRemove", .@pid;
+	return 1;
+}
+
+// 고아 상태 복구. getarg(0) = 호출 경로(init / gm). 반환: 0 = 할 일 없음 / 1 = 복구함 / -1 = 진행 중이라 건너뜀
+function	script	F_NEED_BGUX_RmOrphanRecover	{
+	.@src$ = getarg(0, "init");
+	if (!$NEED_BGUX_RM_PG && !$NEED_BGUX_RM_PC && !$NEED_BGUX_RM_SAVED)
+		return 0;
+	if (callfunc("F_NEED_BGUX_RmLive")) {
+		debugmes "[NEED_BGUX] RM_ORPHAN_SKIP src=" + .@src$ + " why=live cycle=" + $@BG_RM_CYCLE_ACTIVE + " state=" + $@BG_RM_STATE + " tierra=" + $@TierraBG1 + " flavius=" + $@FlaviusBG1 + " kvm=" + $@KvM01BG;
+		return -1;
+	}
+	.@pg = $NEED_BGUX_RM_PG;
+	.@pc = $NEED_BGUX_RM_PC;
+	debugmes "[NEED_BGUX] RM_ORPHAN_FOUND src=" + .@src$ + " mark_pg=" + .@pg + " mark_pc=" + .@pc + " reg_g=" + $BG_GUILLAUME_PARTY_ID + "/" + $BG_GUILLAUME_LEADER_CID
+		+ " reg_c=" + $BG_CROIX_PARTY_ID + "/" + $BG_CROIX_LEADER_CID + " counts=" + $BG_User_Count + "/" + $BG_Guillaume_Count + "/" + $BG_Croix_Count + " marked_at=" + $NEED_BGUX_RM_MARK_AT;
+
+	.@cleared = 0;
+	.@cg = 0;
+	.@cc = 0;
+	if (.@pg > 0 && $BG_GUILLAUME_PARTY_ID == .@pg) {
+		debugmes "[NEED_BGUX] RM_ORPHAN_CLEAR team=G party=" + $BG_GUILLAUME_PARTY_ID + " leader_cid=" + $BG_GUILLAUME_LEADER_CID + " leader_aid=" + $BG_GUILLAUME_LEADER_AID;
+		$BG_GUILLAUME_LEADER_CID = 0;
+		$BG_GUILLAUME_LEADER_AID = 0;
+		$BG_GUILLAUME_PARTY_ID = 0;
+		$BG_GUILLAUME_LEADER_NAME$ = "";
+		.@cleared++;
+		.@cg = 1;
+	}
+	else if ($BG_GUILLAUME_PARTY_ID)
+		debugmes "[NEED_BGUX] RM_ORPHAN_KEEP team=G party=" + $BG_GUILLAUME_PARTY_ID + " why=not_marked_auto";
+	if (.@pc > 0 && $BG_CROIX_PARTY_ID == .@pc) {
+		debugmes "[NEED_BGUX] RM_ORPHAN_CLEAR team=C party=" + $BG_CROIX_PARTY_ID + " leader_cid=" + $BG_CROIX_LEADER_CID + " leader_aid=" + $BG_CROIX_LEADER_AID;
+		$BG_CROIX_LEADER_CID = 0;
+		$BG_CROIX_LEADER_AID = 0;
+		$BG_CROIX_PARTY_ID = 0;
+		$BG_CROIX_LEADER_NAME$ = "";
+		.@cleared++;
+		.@cc = 1;
+	}
+	else if ($BG_CROIX_PARTY_ID)
+		debugmes "[NEED_BGUX] RM_ORPHAN_KEEP team=C party=" + $BG_CROIX_PARTY_ID + " why=not_marked_auto";
+	// 인원 부족 완화 신청은 파티장 등록에 딸린 상태라, 남은 등록이 하나도 없을 때만 지운다
+	if (.@cleared && !$BG_GUILLAUME_PARTY_ID && !$BG_CROIX_PARTY_ID) {
+		$BG_SHORT_PENDING = 0;
+		$BG_SHORT_REQ_TEAM$ = "";
+		$BG_SHORT_TARGET_TEAM$ = "";
+		$BG_SHORT_REQ_NAME$ = "";
+		$BG_SHORT_REQ_TIME = 0;
+	}
+
+	if ($NEED_BGUX_RM_SAVED) {
+		debugmes "[NEED_BGUX] RM_ORPHAN_COUNTS restore " + $BG_User_Count + "/" + $BG_Guillaume_Count + "/" + $BG_Croix_Count
+			+ " -> " + $NEED_BGUX_RM_SAVED_U + "/" + $NEED_BGUX_RM_SAVED_G + "/" + $NEED_BGUX_RM_SAVED_C;
+		$BG_User_Count = $NEED_BGUX_RM_SAVED_U;
+		$BG_Guillaume_Count = $NEED_BGUX_RM_SAVED_G;
+		$BG_Croix_Count = $NEED_BGUX_RM_SAVED_C;
+	}
+
+	// 자동 생성 파티: 등록을 실제로 지운 팀의 파티만. 지금 해체할 수 있으면 해체, 아니면(재시작 직후) 구성원 접속 때 해체하도록 보관.
+	// 등록과 맞지 않는 표식(이미 끝났거나 다른 등록)은 파티를 건드리지 않는다.
+	if (.@cg) {
+		callfunc "F_NEED_BGUX_RmOrphanPush", .@pg;
+		callfunc "F_NEED_BGUX_RmOrphanTryDestroy", .@pg, .@src$;
+	}
+	if (.@cc) {
+		callfunc "F_NEED_BGUX_RmOrphanPush", .@pc;
+		callfunc "F_NEED_BGUX_RmOrphanTryDestroy", .@pc, .@src$;
+	}
+
+	callfunc "F_NEED_BGUX_RmMarkClear", "orphan_" + .@src$;
+	debugmes "[NEED_BGUX] RM_ORPHAN_DONE src=" + .@src$ + " cleared_teams=" + .@cleared + " pending_parties=" + getarraysize($NEED_BGUX_ORPHAN_PID);
+	return 1;
+}
+
+-	script	NEED_BGUX_RmRecovery	-1,{
+	end;
+
+OnInit:
+	bindatcmd "전장복구", strnpcinfo(3) + "::OnCmd", 60, 60;
+	bindatcmd "bgrecover", strnpcinfo(3) + "::OnCmd", 60, 60;	// NEED EN: English name of @전장복구
+	// 14일 지난 해체 대기 파티는 목록에서만 뺀다(구성원이 오래 접속하지 않은 경우)
+	for (.@i = getarraysize($NEED_BGUX_ORPHAN_PID) - 1; .@i >= 0; .@i--) {
+		if ($NEED_BGUX_ORPHAN_T[.@i] + 1209600 < gettimetick(2)) {
+			debugmes "[NEED_BGUX] RM_ORPHAN_PARTY_EXPIRE pid=" + $NEED_BGUX_ORPHAN_PID[.@i];
+			deletearray $NEED_BGUX_ORPHAN_PID[.@i], 1;
+			deletearray $NEED_BGUX_ORPHAN_T[.@i], 1;
+		}
+	}
+	callfunc "F_NEED_BGUX_RmOrphanRecover", "init";
+	end;
+
+// 해체 대기 파티 구성원이 접속하면, 파티 정보가 올라온 뒤(3초) 해체한다
+OnPCLoginEvent:
+	if (!getarraysize($NEED_BGUX_ORPHAN_PID) || !getcharid(1))
+		end;
+	addtimer 3000, strnpcinfo(3) + "::OnLoginCheck";
+	end;
+
+OnLoginCheck:
+	.@pid = getcharid(1);
+	if (!.@pid)
+		end;
+	.@n = getarraysize($NEED_BGUX_ORPHAN_PID);
+	for (.@i = 0; .@i < .@n; .@i++) {
+		if ($NEED_BGUX_ORPHAN_PID[.@i] != .@pid)
+			continue;
+		if (callfunc("F_NEED_BGUX_RmLive")) {	// 새 사이클이 같은 ID 를 쓸 일은 없지만, 진행 중에는 손대지 않는다
+			debugmes "[NEED_BGUX] RM_ORPHAN_PARTY_WAIT pid=" + .@pid + " why=live";
+			end;
+		}
+		if (callfunc("F_NEED_BGUX_RmOrphanTryDestroy", .@pid, "login aid=" + getcharid(3)) == 1)
+			dispbottom needtr("[전장] 서버 점검 전 랜덤 매칭에서 자동으로 만들어진 파티를 정리했습니다. 이제 @전장대기를 다시 이용할 수 있습니다.",
+				"[Battleground] The party created automatically by a random match before the server restart was disbanded. You can use @bgqueue again."), 0x99DDFF;
+		end;
+	}
+	end;
+
+OnCmd:
+	if (getgmlevel() < 60)
+		end;
+	.@sub$ = (.@atcmd_numparameters > 0) ? .@atcmd_parameters$[0] : "status";
+	if (.@sub$ == "run") {
+		.@r = callfunc("F_NEED_BGUX_RmOrphanRecover", "gm aid=" + getcharid(3));
+		dispbottom "[BG recover] run result=" + .@r + " (1 = recovered, 0 = nothing marked, -1 = a match/cycle is live, skipped)";
+	}
+	else if (.@sub$ == "destroy") {	// 해체 대기 파티를 지금 다시 시도(구성원 접속 중일 때만 가능)
+		for (.@i = getarraysize($NEED_BGUX_ORPHAN_PID) - 1; .@i >= 0; .@i--)
+			dispbottom "[BG recover] destroy pid=" + $NEED_BGUX_ORPHAN_PID[.@i] + " result=" + callfunc("F_NEED_BGUX_RmOrphanTryDestroy", $NEED_BGUX_ORPHAN_PID[.@i], "gm");
+	}
+	else if (.@sub$ != "status") {
+		dispbottom "[BG recover] usage: @bgrecover [status|run|destroy]";
+		end;
+	}
+	dispbottom "[BG recover] live=" + callfunc("F_NEED_BGUX_RmLive") + " cycle=" + $@BG_RM_CYCLE_ACTIVE + " state=" + $@BG_RM_STATE + " stage=" + $@BG_RM_CYCLE_STAGE
+		+ " tierra=" + $@TierraBG1 + " flavius=" + $@FlaviusBG1 + " kvm=" + $@KvM01BG + " queue=" + $@BG_RM_QUEUE_COUNT + " lock=" + $@BG_RM_QUEUE_LOCK;
+	dispbottom "[BG recover] leader G party=" + $BG_GUILLAUME_PARTY_ID + " cid=" + $BG_GUILLAUME_LEADER_CID + " name=" + $BG_GUILLAUME_LEADER_NAME$
+		+ " / C party=" + $BG_CROIX_PARTY_ID + " cid=" + $BG_CROIX_LEADER_CID + " name=" + $BG_CROIX_LEADER_NAME$;
+	dispbottom "[BG recover] mark pg=" + $NEED_BGUX_RM_PG + " pc=" + $NEED_BGUX_RM_PC + " saved=" + $NEED_BGUX_RM_SAVED + " (" + $NEED_BGUX_RM_SAVED_U + "/" + $NEED_BGUX_RM_SAVED_G + "/" + $NEED_BGUX_RM_SAVED_C + ")"
+		+ " counts=" + $BG_User_Count + "/" + $BG_Guillaume_Count + "/" + $BG_Croix_Count + " pending_parties=" + getarraysize($NEED_BGUX_ORPHAN_PID);
+	if (!$NEED_BGUX_RM_PG && !$NEED_BGUX_RM_PC && ($BG_GUILLAUME_PARTY_ID || $BG_CROIX_PARTY_ID) && !callfunc("F_NEED_BGUX_RmLive"))
+		dispbottom "[BG recover] leaders are registered without an auto-match mark: a manual registration, or one left from before this fix. Reset it at the bat_room Battleground Manager > Administrator reset if it is stale.";
+	end;
+}
+
+
+//============================================================
+// 2026-11-12 NEED_BGUX 기존 전장 통합 모집 보조 함수
+//
+// 상태(기존 변수 재사용, 새 큐·타이머 없음):
+//   WAITING    $@BG_RM_STATE 0, 대기열 $@BG_RM_QUEUE_* < 최소 인원
+//   PRE_WARP   $@BG_RM_QUEUE_LOCK 1, $@BG_RM_QUEUE_READY_TICK (이동 전 안내 $@BG_RM_PREWARP_SECONDS)
+//   RECRUITING $@BG_RM_STATE 1, 모집 명단 $@BG_RM_AID/CID/..., 마감 $@BG_RM_END_TICK = 소환 완료 + .RecruitSeconds
+//   LOCKED → TEAM_ASSIGN  $@BG_RM_STATE 2 (OnFinalize 첫 줄), 이후 원래 팀 편성·경기·정리 그대로
+// 원격 소환된 참가자: 세션 변수 @NEED_BGUX_SUM_TOKEN(= 그 모집의 $@BG_RM_TOKEN) / _MAP$ / _X / _Y.
+// 모집이 취소되면 그 사람만 원래 위치로(안 되면 저장 지점) 돌려보낸다. 걸어 들어온 사람은 그대로 둔다.
+// 영구 변수는 쓰지 않는다: 재시작·리로드 때 모집은 사라지고(P0 복구 대상 아님), 소환된 사람은 bat_room 에 남는다.
+//============================================================
+
+// 첨부된 플레이어의 현재 위치를 이번 모집의 "돌아갈 곳"으로 기록
+function	script	F_NEED_BGUX_MarkSummon	{
+	getmapxy(.@m$, .@x, .@y, BL_PC);
+	@NEED_BGUX_SUM_MAP$ = .@m$;
+	@NEED_BGUX_SUM_X = .@x;
+	@NEED_BGUX_SUM_Y = .@y;
+	@NEED_BGUX_SUM_TOKEN = $@BG_RM_TOKEN;
+	return;
+}
+
+// 첨부된 플레이어가 이번 모집으로 원격 소환된 사람이고 아직 bat_room 에 있으면 원래 위치(안 되면 저장 지점)로 보낸다.
+// 반환 1 = 보냄 / 0 = 해당 없음
+function	script	F_NEED_BGUX_ReturnSelf	{
+	if (@NEED_BGUX_SUM_TOKEN == 0 || @NEED_BGUX_SUM_TOKEN != $@BG_RM_TOKEN || strcharinfo(3) != "bat_room") {
+		@NEED_BGUX_SUM_TOKEN = 0;
+		return 0;
+	}
+	.@m$ = @NEED_BGUX_SUM_MAP$;
+	.@x = @NEED_BGUX_SUM_X;
+	.@y = @NEED_BGUX_SUM_Y;
+	@NEED_BGUX_SUM_TOKEN = 0;
+	@NEED_BGUX_SUM_MAP$ = "";
+	.@ok = 0;
+	if (.@m$ != "" && .@m$ != "bat_room" && .@m$ != "bat_a01" && .@m$ != "bat_b01" && .@m$ != "bat_c01" && !compare(.@m$, "@")) {
+		if (getmapusers(.@m$) >= 0) {
+			if (!getmapflag(.@m$, mf_battleground) && !getmapflag(.@m$, mf_pvp) && !getmapflag(.@m$, mf_gvg)) {
+				if (checkcell(.@m$, .@x, .@y, cell_chkpass))
+					.@ok = 1;
+			}
+		}
+	}
+	debugmes "[NEED_BGUX] RECRUIT_RETURN aid=" + getcharid(3) + " cid=" + getcharid(0) + " why=" + getarg(0, "") + " to=" + (.@ok ? .@m$ + "," + .@x + "," + .@y : "SavePoint");
+	if (.@ok)
+		warp .@m$, .@x, .@y;
+	else
+		warp "SavePoint", 0, 0;
+	return 1;
+}
+
+// 모집 취소 때(F_BG_RM_CancelRecruit 시작): 명단의 접속자 전원에게 재신청 안내, 원격 소환된 사람은 원래 위치로.
+function	script	F_NEED_BGUX_RecruitReturnAll	{
+	.@caller = playerattached();
+	.@back = 0;
+	for (.@i = 0; .@i < $@BG_RM_COUNT; .@i++) {
+		.@aid = $@BG_RM_AID[.@i];
+		.@cid = $@BG_RM_CID[.@i];
+		if (.@aid <= 0 || !isloggedin(.@aid, .@cid))
+			continue;
+		if (!attachrid(.@aid))
+			continue;
+		if (getcharid(0) == .@cid) {
+			announce needtr("[전장] 이번 모집이 취소되었습니다: ", "[Battleground] This recruitment was cancelled: ") + needtr(getarg(0, ""), getarg(1, "")), bc_self, "0xFF7777";
+			dispbottom needtr("[전장] 다시 참가하려면 @전장대기 를 신청해 주세요. (자동으로 다시 등록되지 않습니다)", "[Battleground] To take part again, apply with @bgqueue. (You are not re-registered automatically.)");
+			if (callfunc("F_NEED_BGUX_ReturnSelf", "recruit_cancel")) {
+				dispbottom needtr("[전장] 전장 대기실로 이동하기 전 위치(또는 저장 지점)로 돌려보냈습니다.", "[Battleground] You were sent back to where you were before the move (or your save point).");
+				.@back++;
+			}
+		}
+		detachrid;
+	}
+	if (.@caller)
+		attachrid .@caller;
+	debugmes "[NEED_BGUX] RECRUIT_CANCELLED token=" + $@BG_RM_TOKEN + " count=" + $@BG_RM_COUNT + " returned=" + .@back;
+	return;
+}
+
+// 출발 준비(이동 전 안내) 중 대기열이 최소 인원 미만이 되면 출발을 취소하고 대기로 돌린다(대기는 유지).
+// 최소 인원 이상이면 그대로 둔다(예전에는 한 명만 빠져도 20초가 처음부터 다시 시작됐다).
+function	script	F_NEED_BGUX_QueueLockCheck	{
+	.@min = ($@BG_RM_MIN_PLAYERS > 0) ? $@BG_RM_MIN_PLAYERS : 8;
+	if ($@BG_RM_QUEUE_LOCK && $@BG_RM_QUEUE_COUNT < .@min) {
+		$@BG_RM_QUEUE_LOCK = 0;
+		$@BG_RM_QUEUE_READY_TICK = 0;
+		debugmes "[NEED_BGUX] PREWARP_CANCEL count=" + $@BG_RM_QUEUE_COUNT + " min=" + .@min;
+		callfunc "F_BG_RM_QueueNotifyAll",
+			"[전장] 출발 전 대기 인원이 최소 인원보다 적어져 자동 이동이 취소되었습니다. 대기는 그대로 유지됩니다.",
+			"[Battleground] The queue fell below the minimum before departure, so the automatic move was cancelled. You are still in the queue.";
+	}
+	return;
+}
+
+// 추가 모집(RECRUITING) 중 첨부된 플레이어의 신청: 같은 모집 명단에 넣고, bat_room 밖이면 바로 소환한다.
+// 자격 검사(동의·레벨·파티/전장 팀·2:2/3:3 신청 중)는 부른 쪽(OnCommandQueue)이 원래대로 먼저 한다.
+// 반환 1 = 등록 / 2 = 이미 참가 중 / 0 = 거절
+function	script	F_NEED_BGUX_RecruitAdd	{
+	.@aid = getcharid(3);
+	.@cid = getcharid(0);
+	.@max = ($@BG_RM_MAX_PLAYERS > 0) ? $@BG_RM_MAX_PLAYERS : 48;
+	.@left = $@BG_RM_END_TICK - gettimetick(2);
+	if (.@left < 0)
+		.@left = 0;
+	if ($@BG_RM_STATE != 1) {
+		dispbottom needtr("[전장] 지금은 추가 모집 중이 아닙니다.", "[Battleground] Extra recruitment is not open right now.");
+		return 0;
+	}
+	for (.@i = 0; .@i < $@BG_RM_COUNT; .@i++) {
+		if ($@BG_RM_AID[.@i] == .@aid) {
+			announce needtr("[전장] 이미 이번 추가 모집에 참가 중입니다.", "[Battleground] You are already in this extra recruitment."), bc_self, "0x66FF66";
+			dispbottom needtr("[전장] 현재 " + $@BG_RM_COUNT + "/" + .@max + "명 / 마감까지 " + .@left + "초", "[Battleground] " + $@BG_RM_COUNT + "/" + .@max + " players / closes in " + .@left + "s");
+			return 2;
+		}
+	}
+	if ($@BG_RM_COUNT >= .@max) {
+		dispbottom needtr("[전장] 이번 모집은 정원 " + .@max + "명이 모두 찼습니다. 경기가 시작된 뒤 @전장대기 하면 다음 모집 대기열에 등록됩니다.",
+			"[Battleground] This recruitment is full (" + .@max + " players). Use @bgqueue after the match starts to queue for the next one.");
+		return 0;
+	}
+	.@slot = $@BG_RM_COUNT;
+	$@BG_RM_AID[.@slot] = .@aid;
+	$@BG_RM_CID[.@slot] = .@cid;
+	$@BG_RM_CLASS[.@slot] = Class;
+	$@BG_RM_NAME$[.@slot] = strcharinfo(0);
+	$@BG_RM_COUNT++;
+	BG_RM_LAST_CANCEL_REASON = 0;
+	BG_RM_LAST_CANCEL_TOKEN = 0;
+	BG_RM_LAST_CANCEL_TICK = 0;
+	.@moved = 0;
+	if (strcharinfo(3) != "bat_room") {
+		callfunc "F_NEED_BGUX_MarkSummon";
+		.@moved = 1;
+	}
+	debugmes "[NEED_BGUX] RECRUIT_JOIN aid=" + .@aid + " cid=" + .@cid + " count=" + $@BG_RM_COUNT + " left=" + .@left + " summoned=" + .@moved;
+	announce needtr("[전장] 기존 전장 추가 모집에 참가했습니다.", "[Battleground] You joined the classic BG extra recruitment."), bc_self, "0x66FF66";
+	dispbottom needtr("[전장] 현재 " + $@BG_RM_COUNT + "/" + .@max + "명 / 마감까지 " + .@left + "초. 마감 후 팀을 편성합니다. 취소: @전장대기취소",
+		"[Battleground] " + $@BG_RM_COUNT + "/" + .@max + " players / closes in " + .@left + "s. Teams are formed after it closes. Leave: @bgqueuecancel");
+	mapannouncelang "bat_room", "[전장 대기열] " + strcharinfo(0) + "님 참가. 현재 " + $@BG_RM_COUNT + "/" + .@max + "명, 마감까지 " + .@left + "초",
+		"[BG Queue] " + strcharinfo(0) + " joined. " + $@BG_RM_COUNT + "/" + .@max + " players, closes in " + .@left + "s", bc_map, "0x99DDFF";
+	if (.@moved)
+		warp "bat_room", 154, 150;
+	return 1;
+}
+
+// 기존 전장 통합 상태 한 줄(@전장대기현황 / @전장현황 / 전장 안내 NPC 공용). 첨부된 플레이어의 언어로.
+function	script	F_NEED_BGUX_RmStateLine$	{
+	.@min = ($@BG_RM_MIN_PLAYERS > 0) ? $@BG_RM_MIN_PLAYERS : 8;
+	.@max = ($@BG_RM_MAX_PLAYERS > 0) ? $@BG_RM_MAX_PLAYERS : 48;
+	.@now = gettimetick(2);
+	if ($@BG_RM_CYCLE_ACTIVE)
+		return needtr("경기 진행 중: ", "Match running: ") + callfunc("F_BG_RM_ModeNameLang$", $@BG_RM_MODE, getneedlang())
+			+ needtr(" (" + $@BG_RM_CYCLE_STAGE + "/3 단계) / 다음 모집 대기 " + $@BG_RM_QUEUE_COUNT + "명", " (stage " + $@BG_RM_CYCLE_STAGE + "/3) / queued for the next: " + $@BG_RM_QUEUE_COUNT);
+	if ($@BG_RM_STATE == 2)
+		return needtr("추가 모집 마감 - 팀 편성 중 (" + $@BG_RM_COUNT + "명)", "Extra recruitment closed - forming teams (" + $@BG_RM_COUNT + " players)");
+	if ($@BG_RM_STATE == 1) {
+		.@left = $@BG_RM_END_TICK - .@now;
+		if (.@left < 0)
+			.@left = 0;
+		return needtr("추가 모집 중 " + $@BG_RM_COUNT + "/" + .@max + "명, 남은 " + .@left + "초 - 마을에서도 @전장대기 로 바로 합류",
+			"Extra recruitment " + $@BG_RM_COUNT + "/" + .@max + " players, " + .@left + "s left - join from town with @bgqueue");
+	}
+	if ($@BG_RM_QUEUE_LOCK && $@BG_RM_QUEUE_READY_TICK > 0) {
+		.@left = $@BG_RM_QUEUE_READY_TICK - .@now;
+		if (.@left < 0)
+			.@left = 0;
+		return needtr(.@left + "초 후 전장 대기실 이동 (대기 " + $@BG_RM_QUEUE_COUNT + "명) - 지금 신청하면 함께 이동",
+			"Moving to the waiting room in " + .@left + "s (" + $@BG_RM_QUEUE_COUNT + " queued) - apply now to go along");
+	}
+	if ($@TierraBG1 || $@FlaviusBG1 || $@KvM01BG)
+		return needtr("수동(파티장) 전장 진행 중 / 대기 " + $@BG_RM_QUEUE_COUNT + "/" + .@min + "명", "A party-leader battleground is running / queued " + $@BG_RM_QUEUE_COUNT + "/" + .@min);
+	return needtr("기존 전장 대기 " + $@BG_RM_QUEUE_COUNT + "/" + .@min + "명", "Classic BG queue " + $@BG_RM_QUEUE_COUNT + "/" + .@min);
 }
