@@ -3803,7 +3803,8 @@ static bool status_battle_gear_is_costume_equip_index(int32 equip_idx)
 }
 
 // NEED BG phase 1 whitelists (CM approval 2026-10-26). They only apply on battle_gear_disabled maps that also carry
-// need_bg_shadow_allow / need_bg_stone_allow (the three legacy battlegrounds); anything unlisted stays blocked.
+// need_bg_shadow_allow / need_bg_stone_allow; anything unlisted stays blocked. need_bg_shadow_allow: the three legacy
+// battlegrounds, and since 2026-11-12 also need_bg2 (2v2) / need_bg3 (3v3). need_bg_stone_allow: legacy three only.
 // Audit and reasons: md/NEED_BG_Phase1_Improvement_Claude_Request_v1.0_report.md
 
 // General shadow gear: the item's own script only. Random options on shadows stay blocked, and a shadow set
@@ -3815,6 +3816,99 @@ static const t_itemid need_bg_shadow_allow_ids[] = {
 	24062,	// S_Bloody_Shoes		physical/magic damage to human players +2/3/5%, MaxHP +10/refine
 	24151,	// S_Infinity_Pendant	damage from all sizes -1/2/3%, MaxHP +10/refine
 	// v1.1: S_Boned_Earring / S_Boned_Pendant (24236/24237) removed - too much stacked damage with their set
+};
+
+// NEED BG job (class) shadow gear (operator decision 2026-11-12): the job shadows released on NEED, under the same rule
+// as the general list above - item script and refine bonus only, random options stay blocked, and a set only applies
+// when every shadow member is listed (sets with an unlisted general shadow, e.g. S_Strain_Weapon + S_Warlock_Shield,
+// stay off). Released = sold in a NEED lucky egg; 24314-24319 go on sale with Gunslinger_Scroll on 2026-11-14.
+// Not listed (not on sale): 24402-24415 (Pump_Of_Spirit_Scroll2 / StarSoul_Scroll). 24309 S_Warlock_Shield keeps its
+// WL_EARTHSTRAIN bonus here by operator choice; the skill itself is unchanged.
+// Report: md/NEED_BG_Job_Shadow_Enable_Earth_Strain_Keep_Report.md
+static const t_itemid need_bg_class_shadow_allow_ids[] = {
+	// egg 23034 Invisible
+	24246,	// S_Swordman_earring
+	24247,	// S_Merchant_earring
+	24248,	// S_Acolyte_earring
+	24249,	// S_Magician_earring
+	24250,	// S_Swordman_Pendant
+	24251,	// S_Merchant_Pendant
+	24252,	// S_Acolyte_Pendant
+	24253,	// S_Thief_Pendant
+	24254,	// S_Magician_Pendant
+	24255,	// S_Archer_Pendant
+	28391,	// S_Thief_earring
+	28392,	// S_Archer_earring
+	// egg 23051 New Hat
+	24256,	// S_Knight_Shoes
+	24257,	// S_Crusader_Shoes
+	24258,	// S_Blacksmith_Shoes
+	24259,	// S_Alchemist_Shoes
+	24260,	// S_Priest_Shoes
+	24261,	// S_Monk_Shoes
+	24262,	// S_Assassin_Shoes
+	24263,	// S_Rogue_Shoes
+	24264,	// S_Wizard_Shoes
+	24265,	// S_Sage_Shoes
+	24266,	// S_Hunter_Shoes
+	24267,	// S_Bard_Shoes
+	24268,	// S_Dancer_Shoes
+	// egg 23069 2015 Special
+	24269,	// S_Knight_Armor
+	24270,	// S_Crusader_Armor
+	24271,	// S_Blacksmith_Armor
+	24272,	// S_Alchemist_Armor
+	24273,	// S_Priest_Armor
+	24274,	// S_Monk_Armor
+	24275,	// S_Assassin_Armor
+	24276,	// S_Rogue_Armor
+	24277,	// S_Wizard_Armor
+	24278,	// S_Sage_Armor
+	24279,	// S_Hunter_Armor
+	24280,	// S_Bard_Armor
+	24281,	// S_Dancer_Armor
+	// egg 23072 2015 Angel
+	24282,	// S_SuperNovice_Weapon
+	24283,	// S_Gunslinger_Weapon
+	24284,	// S_Taekwon_Weapon
+	24285,	// S_Ninja_Weapon
+	24286,	// S_DoramMagical_Weapon
+	24287,	// S_DoramPhysical_Weapon
+	// egg 23106 Amistr
+	24288,	// S_Runeknight_Weapon
+	24289,	// S_Royalguard_Weapon
+	24290,	// S_Mechanic_weapon
+	24291,	// S_Genetic_Weapon
+	24292,	// S_Archbishop_Weapon
+	24293,	// S_Sura_weapon
+	24294,	// S_Guillotine_Weapon
+	24295,	// S_Shadowchaser_Weapon
+	24296,	// S_Warlock_Weapon
+	24297,	// S_Sorcerer_Weapon
+	24298,	// S_Ranger_Weapon
+	24299,	// S_Minstrel_Weapon
+	24300,	// S_Wanderer_Weapon
+	// egg 23116 Shadow
+	24301,	// S_Runeknight_Shield
+	24302,	// S_Royalguard_Shield
+	24303,	// S_Mechanic_Shield
+	24304,	// S_Genetic_Shield
+	24305,	// S_Archbishop_Shield
+	24306,	// S_Sura_Shield
+	24307,	// S_Guillotine_Shield
+	24308,	// S_Shadowchaser_Shield
+	24309,	// S_Warlock_Shield
+	24310,	// S_Sorcerer_Shield
+	24311,	// S_Ranger_Shield
+	24312,	// S_Minstrel_Shield
+	24313,	// S_Wanderer_Shield
+	// egg 23162 Gunslinger (on sale 2026-11-14)
+	24314,	// S_Ninja_Shield
+	24315,	// S_Taekwon_Shield
+	24316,	// S_DoramPhysical_Shield
+	24317,	// S_DoramMagical_Shield
+	24318,	// S_SuperNovice_Shield
+	24319,	// S_Gunslinger_Shield
 };
 
 // Costume enchant stones, by the card ID stored in the costume slot (not the Etc material item). 32 IDs.
@@ -3838,10 +3932,16 @@ static bool status_battle_gear_is_listed(const t_itemid (&list)[N], t_itemid nam
 	return std::find(std::begin(list), std::end(list), nameid) != std::end(list);
 }
 
+// Shadow gear that keeps its own script on need_bg_shadow_allow maps: the general and the job shadow lists.
+static bool status_battle_gear_shadow_allowed(t_itemid nameid)
+{
+	return status_battle_gear_is_listed(need_bg_shadow_allow_ids, nameid) || status_battle_gear_is_listed(need_bg_class_shadow_allow_ids, nameid);
+}
+
 static bool status_battle_gear_combo_shadows_allowed(const s_item_combo& item_combo)
 {
 	for (const t_itemid nameid : item_combo.nameid) {
-		if (itemdb_type(nameid) == IT_SHADOWGEAR && !status_battle_gear_is_listed(need_bg_shadow_allow_ids, nameid))
+		if (itemdb_type(nameid) == IT_SHADOWGEAR && !status_battle_gear_shadow_allowed(nameid))
 			return false;
 	}
 
@@ -4054,7 +4154,7 @@ int32 status_calc_pc_sub(map_session_data* sd, uint8 opt)
 		if (!sd->inventory_data[index])
 			continue;
 		if (battle_gear_disabled && status_battle_gear_is_shadow_equip_index(i)
-			&& !(battle_gear_shadow_allow && status_battle_gear_is_listed(need_bg_shadow_allow_ids, sd->inventory_data[index]->nameid)))
+			&& !(battle_gear_shadow_allow && status_battle_gear_shadow_allowed(sd->inventory_data[index]->nameid)))
 			continue;
 
 		base_status->def += sd->inventory_data[index]->def;
