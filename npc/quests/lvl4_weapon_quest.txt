@@ -520,6 +520,7 @@ lasa_in01,161,71,7	script	히빌라이탄#lv4	785,{
 			next;
 			mes needtr("[히빌라이탄]", "[Hibilaithan]");
 			mes needtr("내 창조물에 힘을 불어넣으려면 희귀 광석도 좀 필요해. 백운모, 흑운모, 아니면 휘석 말이야. 이 세 가지 광석 중 하나를 30개만 가져다주면 돼.", "I'll also need some rare ore to endow my creation with power. Muscovite, Biotite or Pyroxene. Just bring me 30 of one of those kinds of ores.");
+			callsub L_OreGuide;
 			next;
 			mes needtr("[히빌라이탄]", "[Hibilaithan]");
 			mes needtr("좋아요, 행운을 빌어요! 저는 여기서 편히 쉬면서 당신이 돌아오기를 기다리겠습니다.", "Okay, I wish you good luck! In the meantime, I shall relax here and wait for your return.");
@@ -561,17 +562,17 @@ lasa_in01,161,71,7	script	히빌라이탄#lv4	785,{
 		next;
 		mes needtr("[히빌라이탄]", "[Hibilaithan]");
 		if (lv4_weapon == 12) {
-			mes needtr("와, 이거 대성공이군! 물론 내 작품이니 당연한 결과겠지만. 어, 이거 무기 같은데... 일종의... 우편물 파괴기인가 봐!", "Ooh, this is a huge success! But of course, since it's my handiwork, that goes without saying. Hey, this is a weapon... Some sort of... Mailbreaker!");
+			mes needtr("와, 이거 대성공이군! 물론 내 작품이니 당연한 결과겠지만. 어, 이거 무기 같은데... 일종의... 메일 브레이커로군!", "Ooh, this is a huge success! But of course, since it's my handiwork, that goes without saying. Hey, this is a weapon... Some sort of... Mailbreaker!");
 			set lv4_weapon,0;
 			getitem 1225,1; //Mail_Breaker
 		}
 		else if (lv4_weapon == 13) {
-			mes needtr("와, 이거 대성공이네! 물론 내 작품이니 당연한 결과겠지만. 어, 이거 무기인데… 뭐랄까… 검 파괴기 같은 거군!", "Ooh, this is a huge success! But of course, since it's my handiwork, that goes without saying. Hey, this is a weapon... Some sort of... Swordbreaker!");
+			mes needtr("와, 이거 대성공이네! 물론 내 작품이니 당연한 결과겠지만. 어, 이거 무기인데… 뭐랄까… 소드 브레이커로군!", "Ooh, this is a huge success! But of course, since it's my handiwork, that goes without saying. Hey, this is a weapon... Some sort of... Swordbreaker!");
 			set lv4_weapon,0;
 			getitem 1224,1; //Sword_Breaker
 		}
 		else if (lv4_weapon == 14) {
-			mes needtr("오, 이거 대성공이군! 물론 내 작품이니 당연한 결과겠지만. 어, 이거 무기인데… 뭐랄까… 학살 도구인가 보군!", "Ooh, this is a huge success! But of course, since it's my handiwork, that goes without saying. Hey, this is a weapon... Some sort of... Slaughter!");
+			mes needtr("오, 이거 대성공이군! 물론 내 작품이니 당연한 결과겠지만. 어, 이거 무기인데… 뭐랄까… 슬러터로군!", "Ooh, this is a huge success! But of course, since it's my handiwork, that goes without saying. Hey, this is a weapon... Some sort of... Slaughter!");
 			set lv4_weapon,0;
 			getitem 1367,1; //Slaughter
 		}
@@ -654,6 +655,13 @@ lasa_in01,161,71,7	script	히빌라이탄#lv4	785,{
 				mes needtr("이시스", "Isis");
 			}
 		}
+		// [NEED] the ore was counted before the 5 menus; re-check before consuming it
+		if (countitem(.@itemreq) < ((.@dap > 0) ? 30 : 10)) {
+			next;
+			mes needtr("[히빌라이탄]", "[Hibilaithan]");
+			mes needtr("어라, 광석이 모자라네요. 다시 확인하고 와 주세요. 이번 시험은 없던 걸로 할게요.", "Hm, you don't have enough ore now. Please check and come back. This test doesn't count.");
+			close;
+		}
 		if (.@dap > 0) {
 			delitem .@itemreq,30;
 			set lv4_weapon,lv4_weapon+3;
@@ -695,6 +703,10 @@ lasa_in01,161,71,7	script	히빌라이탄#lv4	785,{
 		mes needtr("느낌이 좋아. 뭔가 빠진 게 분명해.", "feel right. We must be missing");
 		mes needtr("뭔가요. 확인해 주시겠어요?", "something. Would you check the");
 		mes needtr("또 가져오신 물건들인가요?", "materials you've brought again?");
+		// [NEED] tell which ore the chosen weapon still needs
+		setarray .@ore[9],7292,7297,7296;
+		setarray .@wpn[9],1225,1224,1367;
+		mes getitemname(.@wpn[lv4_weapon]) + needtr(" 제작에는 ", " needs 30 ") + getitemname(.@ore[lv4_weapon]) + needtr(" 30개가 필요해요.", ".");
 		close;
 	}
 	if ((lv4_weapon == 8) && (countitem(969) > 9) && (countitem(999) > 49) && (countitem(714) > 9)) {
@@ -702,72 +714,37 @@ lasa_in01,161,71,7	script	히빌라이탄#lv4	785,{
 		mes needtr("어머, 예상보다 일찍 돌아왔네. 기본적인 재료는 다 챙겨온 것 같은데, 제일 중요한 건 가져왔나…?", "Ooh, you're back earlier than I expected. I see that you have all the basic materials, but did you bring the most important thing...?");
 		next;
 		if ((countitem(7292) > 29) || (countitem(7297) > 29) || (countitem(7296) > 29)) {
-			if ((countitem(7292) > 29) && (countitem(7297) > 29) && (countitem(7296) > 29)) {
+			// [NEED 2026-11-12] choose the weapon (Mail Breaker / Sword Breaker / Slaughter) up front.
+			// Upstream only asked for the ore and never said which weapon it makes; it also
+			// ignored the ore picked here when setting lv4_weapon (fixed below). Ore -> weapon
+			// mapping, materials, quiz and costs are unchanged from upstream.
+			setarray .@ore[0],7292,7297,7296; // Muscovite, Biotite, Pyroxene
+			setarray .@wpn[0],1225,1224,1367; // Mail_Breaker, Sword_Breaker, Slaughter
+			mes needtr("[히빌라이탄]", "[Hibilaithan]");
+			mes needtr("어떤 무기를 만들어 드릴까요? 가져온 광석에 따라 완성되는 무기가 달라요.", "Which weapon shall I make for you? The ore you bring decides the weapon.");
+			callsub L_OreGuide;
+			next;
+			.@menu$ = "";
+			for (.@i = 0; .@i < 3; .@i++) {
+				if (countitem(.@ore[.@i]) > 29)
+					.@menu$ += getitemname(.@wpn[.@i]) + needtr(" 제작 (", " (") + getitemname(.@ore[.@i]) + " 30)";
+				else
+					.@menu$ += getitemname(.@wpn[.@i]) + needtr(" 제작 - 재료 부족 (", " - not enough (") + getitemname(.@ore[.@i]) + " 30)";
+				.@menu$ += ":";
+			}
+			.@menu$ += needtr("다음에 할게요", "Maybe later");
+			.@sel = select(.@menu$) - 1;
+			if (.@sel < 0 || .@sel > 2) {
 				mes needtr("[히빌라이탄]", "[Hibilaithan]");
-				mes needtr("와, 내가 부탁한 광석 세 종류를 다 가져왔네? 하하, 그중 하나만 쓸 수 있으니까, 골라봐.", "Whoa, you brought all three kinds of those ores I asked for? Haha, we can only use one of them, so go ahead and choose.");
-				next;
-				switch(select("Muscovite:Biotite:Pyroxene")) {
-				case 1:
-					set .@itemreq,7292; //Muscovite
-					break;
-				case 2:
-					set .@itemreq,7297; // Biotite
-					break;
-				case 3:
-					set .@itemreq,7296; // Pyroxene
-					break;
-				}
+				mes needtr("마음이 정해지면 다시 오세요. 아무 재료도 받지 않았어요.", "Come back when you have decided. I haven't taken any of your materials.");
+				close;
 			}
-			else if ((countitem(7292) > 29) && (countitem(7297) > 29)) {
+			if (countitem(.@ore[.@sel]) < 30) {
 				mes needtr("[히빌라이탄]", "[Hibilaithan]");
-				mes needtr("하하하, 광석은 두 종류가 아니라 한 종류만 가져오면 됐어요. 자, 어떤 광석을 사용하시겠어요?", "Hahaha, you only needed to bring one kind of ore, not two. Now, which ore would you like to use?");
-				next;
-				switch(select("Muscovite:Biotite")) {
-				case 1:
-					set .@itemreq,7292; //Muscovite
-					break;
-				case 2:
-					set .@itemreq,7297; // Biotite
-					break;
-				}
+				mes getitemname(.@wpn[.@sel]) + needtr(" 제작에는 ", " needs 30 ") + getitemname(.@ore[.@sel]) + needtr(" 30개가 필요해요. 모아서 다시 오세요.", ". Come back when you have them.");
+				close;
 			}
-			else if ((countitem(7292) > 29) && (countitem(7296) > 29)) {
-				mes needtr("[히빌라이탄]", "[Hibilaithan]");
-				mes needtr("하하하, 광석은 두 종류가 아니라 한 종류만 가져오면 됐어요. 자, 어떤 광석을 사용하시겠어요?", "Hahaha, you only needed to bring one kind of ore, not two. Now, which ore would you like to use?");
-				next;
-				switch(select("Muscovite:Pyroxene")) {
-				case 1:
-					set .@itemreq,7292; //Muscovite
-					break;
-				case 2:
-					set .@itemreq,7296; // Pyroxene
-					break;
-				}
-			}
-			else if ((countitem(7297) > 29) && (countitem(7296) > 29)) {
-				mes needtr("[히빌라이탄]", "[Hibilaithan]");
-				mes needtr("하하하, 광석은 두 종류가 아니라 한 종류만 가져오면 됐어요. 자, 어떤 광석을 사용하시겠어요?", "Hahaha, you only needed to bring one kind of ore, not two. Now, which ore would you like to use?");
-				next;
-				switch(select("Biotite:Pyroxene")) {
-				case 1:
-					set .@itemreq,7297; // Biotite
-					break;
-				case 2:
-					set .@itemreq,7296; // Pyroxene
-					break;
-				}
-			}
-			else {
-				if (countitem(7292) > 29) {
-					set .@itemreq,7292; //Muscovite
-				}
-				else if (countitem(7297) > 29) {
-					set .@itemreq,7297; // Biotite
-				}
-				else if (countitem(7296) > 29) {
-					set .@itemreq,7296; // Pyroxene
-				}
-			}
+			set .@itemreq, .@ore[.@sel];
 			mes needtr("[히빌라이탄]", "[Hibilaithan]");
 			mes getitemname(.@itemreq)+needtr("그렇죠?", ", eh?");
 			mes needtr("자, 시작하기 전에, 여러분의 불운을 최대한 줄여야 합니다.", "Alright, before we start, we need to minimize as much of your negative fortune as we can.");
@@ -788,21 +765,32 @@ lasa_in01,161,71,7	script	히빌라이탄#lv4	785,{
 			mes needtr("물론, 안 좋게 들릴 수도 있겠죠.", "Sure, that might sound bad,");
 			mes needtr("하지만 특별한 아이템 제작에 성공하기 위해 지불해야 할 작은 대가 아닐까요?", "but it's a small price to pay for insuring success in crafting your special item, right?");
 			next;
+			// [NEED] confirmation window: product + exact materials, cancel consumes nothing
 			mes needtr("[히빌라이탄]", "[Hibilaithan]");
-			mes needtr("네, 준비하는 데 시간이 좀 걸릴 것 같습니다. 조금 있다가 다시 오시면 제가 평가해 드리겠습니다.", "Okay, I'll need some time to get ready. Come back to me a little later so that I can judge your");
-			mes needtr("오늘 운이 좋네요~", "luck today~");
+			mes needtr("의뢰 내용을 확인해 주세요.", "Please check your order.");
+			mes needtr("완성품: ", "Weapon: ") + "^0000FF" + getitemname(.@wpn[.@sel]) + " x1^000000";
+			mes needtr("지금 받는 재료: ", "Taken now: ") + getitemname(969) + " 10, " + getitemname(999) + " 50, " + getitemname(714) + " 10";
+			mes needtr("운 시험 성공 시: ", "Luck test passed: ") + getitemname(.@itemreq) + " 30";
+			mes needtr("5번 모두 실패 시: ", "All 5 guesses wrong: ") + getitemname(.@itemreq) + needtr(" 10 (다시 도전)", " 10 (try again)");
+			next;
+			if (select(needtr("이대로 의뢰한다:그만둔다", "Place the order:Cancel")) != 1) {
+				mes needtr("[히빌라이탄]", "[Hibilaithan]");
+				mes needtr("알겠어요. 아무 재료도 받지 않았어요. 마음이 바뀌면 다시 오세요.", "Alright. I haven't taken any of your materials. Come back if you change your mind.");
+				close;
+			}
+			// re-check right before consuming (materials could have moved during the dialog)
+			if (lv4_weapon != 8 || countitem(969) < 10 || countitem(999) < 50 || countitem(714) < 10 || countitem(.@itemreq) < 30) {
+				mes needtr("[히빌라이탄]", "[Hibilaithan]");
+				mes needtr("어라, 재료가 모자라네요. 다시 확인하고 와 주세요. 아무 재료도 받지 않았어요.", "Hm, some materials are missing. Please check and come back. I haven't taken anything.");
+				close;
+			}
 			delitem 969,10; //Gold
 			delitem 999,50; //Steel
 			delitem 714,10; //Emperium
-			if (countitem(7292) > 29) {
-				set lv4_weapon,9;
-			}
-			else if (countitem(7297) > 29) {
-				set lv4_weapon,10;
-			}
-			else if (countitem(7296) > 29) {
-				set lv4_weapon,11;
-			}
+			set lv4_weapon, 9 + .@sel; // 9 Muscovite/Mail Breaker, 10 Biotite/Sword Breaker, 11 Pyroxene/Slaughter
+			mes needtr("[히빌라이탄]", "[Hibilaithan]");
+			mes needtr("네, 준비하는 데 시간이 좀 걸릴 것 같습니다. 조금 있다가 다시 오시면 제가 평가해 드리겠습니다.", "Okay, I'll need some time to get ready. Come back to me a little later so that I can judge your");
+			mes needtr("오늘 운이 좋네요~", "luck today~");
 			close;
 		}
 		else {
@@ -831,6 +819,7 @@ lasa_in01,161,71,7	script	히빌라이탄#lv4	785,{
 		next;
 		mes needtr("[히빌라이탄]", "[Hibilaithan]");
 		mes needtr("내 창조물에 힘을 불어넣으려면 희귀 광석도 좀 필요해. 백운모, 흑운모, 아니면 휘석 말이야. 이 세 가지 광석 중 하나를 30개만 가져다주면 돼.", "I'll also need some rare ore to endow my creation with power. Muscovite, Biotite or Pyroxene. Just bring me 30 of one of those kinds of ores.");
+		callsub L_OreGuide;
 		next;
 		mes needtr("[히빌라이탄]", "[Hibilaithan]");
 		mes needtr("좋아요, 행운을 빌어요! 저는 여기서 편히 쉬면서 당신이 돌아오기를 기다리겠습니다.", "Okay, I wish you good luck! In the meantime, I shall relax here and wait for your return.");
@@ -887,6 +876,7 @@ lasa_in01,161,71,7	script	히빌라이탄#lv4	785,{
 		next;
 		mes needtr("[히빌라이탄]", "[Hibilaithan]");
 		mes needtr("내 창조물에 힘을 불어넣으려면 희귀 광석도 좀 필요해. 백운모, 흑운모, 아니면 휘석 말이야. 이 세 가지 광석 중 하나를 30개만 가져다주면 돼.", "I'll also need some rare ore to endow my creation with power. Muscovite, Biotite or Pyroxene. Just bring me 30 of one of those kinds of ores.");
+		callsub L_OreGuide;
 		next;
 		mes needtr("[히빌라이탄]", "[Hibilaithan]");
 		mes needtr("좋아요, 행운을 빌어요! 저는 여기서 편히 쉬면서 당신이 돌아오기를 기다리겠습니다.", "Okay, I wish you good luck! In the meantime, I shall relax here and wait for your return.");
@@ -904,8 +894,14 @@ lasa_in01,161,71,7	script	히빌라이탄#lv4	785,{
 		mes needtr("음, 만약 당신이 용기를 내어 제게 이 부탁을 하게 된다면, 언제든 다시 찾아오세요. 제 천재성을 보여줄 기회를 주세요!", "Well, if you ever muster up the courage to ask me of this favor, come back anytime. Give me the chance to show you my genius!");
 		close;
 	}
+L_OreGuide:
+	mes needtr("^0000FF[광석별 완성 무기]^000000", "^0000FF[Ore -> Weapon]^000000");
+	mes getitemname(7292) + " 30 -> " + getitemname(1225);
+	mes getitemname(7297) + " 30 -> " + getitemname(1224);
+	mes getitemname(7296) + " 30 -> " + getitemname(1367);
+	return;
 OnInit:
-		waitingroom "소드브레이커 제작",0;
+		waitingroom "소드/메일 브레이커 제작",0;
 		end;
 }
 
