@@ -3069,6 +3069,98 @@ static void need_world_drop_debug_log(const need_world_drop_owner& owner, mob_da
 		MAX_EVENTQUEUE);
 }
 
+// NEED: the only world drop rewards that follow the party Even Share setting
+// (gold coin 399990, mythril coin 674, white gold coin 677). Everything else keeps the owner.
+static bool need_world_drop_party_share_item(int32 item_id) {
+	return item_id == 399990 || item_id == 674 || item_id == 677;
+}
+
+/// NEED: gives one won world drop coin the way party_share_loot() (party.cpp) gives a looted item.
+/// Same candidates: online party members on the OWNER's map, alive, and not idle when
+/// idle_no_share is set. Same order: party_item_share_type&2 is round robin on the party's own
+/// p->itemc, anything else is random. A candidate whose pc_additem fails is dropped and the next
+/// one is tried; the owner is the last resort. No distance, level or activity check is added.
+/// Differences, on purpose: the item log type stays LOG_TYPE_SCRIPT (party_share_loot logs
+/// LOG_TYPE_PICKDROP_PLAYER), and an owner who already failed as a candidate is not asked again.
+/// The party_share_type&1 gate of party_share_loot (no share for non-mob drops) never applies:
+/// a world drop is always a mob drop with an owner.
+/// @return ADDITEM_SUCCESS with recipient set, otherwise the owner's failure code.
+static e_additem_result need_world_drop_party_share_give(party_data& p, map_session_data& sd, item& it, int32 amount, map_session_data*& recipient, int32& candidates, const char*& mode) {
+	bool owner_tried = false;
+	e_additem_result owner_flag = ADDITEM_INVALID;
+
+	recipient = nullptr;
+	candidates = 0;
+
+	auto try_give = [&](map_session_data* psd) -> bool {
+		e_additem_result flag = pc_additem(psd, &it, amount, LOG_TYPE_SCRIPT);
+
+		if (psd == &sd) {
+			owner_tried = true;
+			owner_flag = flag;
+		}
+		if (flag != ADDITEM_SUCCESS)
+			return false;
+		recipient = psd;
+		return true;
+	};
+
+	if (battle_config.party_share_type & 2) { // Round Robin, as party_share_loot
+		int32 i = p.itemc;
+
+		mode = "round_robin";
+		do {
+			i++;
+			if (i >= MAX_PARTY)
+				i = 0;
+
+			map_session_data* psd = p.data[i].sd;
+
+			if (psd == nullptr || sd.m != psd->m || pc_isdead(psd) || (battle_config.idle_no_share && pc_isidle_party(psd)))
+				continue;
+
+			candidates++;
+			if (!try_give(psd))
+				continue;
+
+			p.itemc = i;
+			break;
+		} while (i != p.itemc);
+	} else { // Random pick, as party_share_loot
+		map_session_data* psd[MAX_PARTY];
+		int32 count = 0;
+
+		mode = "random";
+		for (int32 i = 0; i < MAX_PARTY; i++) {
+			if ((psd[count] = p.data[i].sd) == nullptr || psd[count]->m != sd.m || pc_isdead(psd[count]) || (battle_config.idle_no_share && pc_isidle_party(psd[count])))
+				continue;
+			count++;
+		}
+
+		candidates = count;
+		while (count > 0) {
+			int32 i = rnd_value(0, count - 1);
+
+			if (try_give(psd[i]))
+				break;
+			psd[i] = psd[count - 1];
+			count--;
+		}
+	}
+
+	if (recipient == nullptr) {
+		if (owner_tried)
+			return owner_flag; // The owner already failed above; asking again cannot succeed.
+		if (!try_give(&sd))
+			return owner_flag;
+	}
+
+	if (battle_config.party_show_share_picker && battle_config.show_picker_item_type&(1<<itemdb_type(it.nameid)))
+		clif_party_show_picker(recipient, &it);
+
+	return ADDITEM_SUCCESS;
+}
+
 static bool need_world_drop_give_item(const need_world_drop_owner& owner, mob_data *md, int32 item_id, int32 amount, const char *tier, int32 final_rate, int32 roll) {
 	map_session_data *sd = owner.selected;
 	std::shared_ptr<item_data> id = item_db.find(static_cast<t_itemid>(item_id));
@@ -3086,15 +3178,47 @@ static bool need_world_drop_give_item(const need_world_drop_owner& owner, mob_da
 
 	int32 get_count = itemdb_isstackable2(id.get()) ? amount : 1;
 
+	auto report_failure = [&](e_additem_result flag, int32 count) {
+		clif_additem(sd, 0, 0, flag);
+		ShowWarning("NeedWorldDrop: failed to add item. result=%d aid=%d cid=%d item_id=%d amount=%d tier=%s map=%s,%d,%d weight=%u/%u\n",
+			flag, sd->status.account_id, sd->status.char_id, item_id, count, tier != nullptr ? tier : "unknown",
+			map_getmapdata(sd->m)->name, sd->x, sd->y, sd->weight, sd->max_weight);
+		need_world_drop_debug_log(owner, md, tier, 0, 0, 0, need_world_drop_event_active(), final_rate, roll, item_id, count, "fail", flag == ADDITEM_OVERWEIGHT || flag == ADDITEM_OVERAMOUNT || flag == ADDITEM_OVERITEM ? "inventory_full" : "reward_failed");
+	};
+
+	// NEED: party Even Share for the three coins. The roll already happened for the owner; this
+	// only picks who receives the one won stack. Solo, Each Take and switch off keep the loop below.
+	if (battle_config.need_world_drop_party_share_enable != 0 && need_world_drop_party_share_item(item_id) &&
+		get_count == amount && sd->status.party_id != 0) {
+		party_data* p = party_search(sd->status.party_id);
+
+		if (p != nullptr && (p->party.item & 2)) {
+			map_session_data* recipient = nullptr;
+			int32 candidates = 0;
+			const char* mode = "none";
+			e_additem_result flag = need_world_drop_party_share_give(*p, *sd, it, amount, recipient, candidates, mode);
+
+			if (battle_config.need_world_drop_debug != 0)
+				ShowInfo("NeedWorldDropPartyShare: party_id=%d mode=%s candidates=%d owner_account_id=%d owner_char_id=%d recipient_account_id=%d recipient_char_id=%d item_id=%d amount=%d tier=%s map=%s result=%s\n",
+					sd->status.party_id, mode, candidates, sd->status.account_id, sd->status.char_id,
+					recipient != nullptr ? recipient->status.account_id : 0, recipient != nullptr ? recipient->status.char_id : 0,
+					item_id, amount, tier != nullptr ? tier : "unknown", map_getmapdata(sd->m)->name, flag == ADDITEM_SUCCESS ? "success" : "fail");
+
+			if (flag != ADDITEM_SUCCESS) {
+				report_failure(flag, amount);
+				return false;
+			}
+
+			need_world_drop_debug_log(owner, md, tier, 0, 0, 0, need_world_drop_event_active(), final_rate, roll, item_id, amount, "success", "reward_success");
+			return true;
+		}
+	}
+
 	for (int32 i = 0; i < amount; i += get_count) {
 		e_additem_result flag = pc_additem(sd, &it, get_count, LOG_TYPE_SCRIPT);
 
 		if (flag != ADDITEM_SUCCESS) {
-			clif_additem(sd, 0, 0, flag);
-			ShowWarning("NeedWorldDrop: failed to add item. result=%d aid=%d cid=%d item_id=%d amount=%d tier=%s map=%s,%d,%d weight=%u/%u\n",
-				flag, sd->status.account_id, sd->status.char_id, item_id, get_count, tier != nullptr ? tier : "unknown",
-				map_getmapdata(sd->m)->name, sd->x, sd->y, sd->weight, sd->max_weight);
-			need_world_drop_debug_log(owner, md, tier, 0, 0, 0, need_world_drop_event_active(), final_rate, roll, item_id, get_count, "fail", flag == ADDITEM_OVERWEIGHT || flag == ADDITEM_OVERAMOUNT || flag == ADDITEM_OVERITEM ? "inventory_full" : "reward_failed");
+			report_failure(flag, get_count);
 			return false;
 		}
 	}

@@ -9040,6 +9040,7 @@ static const struct _battle_data {
 	{ "need_world_drop_event_target_item_id", &battle_config.need_world_drop_event_target_item_id, 399990, 0, INT_MAX,       },
 	{ "need_world_drop_event_debug_message", &battle_config.need_world_drop_event_debug_message, 0, 0,      1,              },
 	{ "need_world_drop_event_debug_gm_level", &battle_config.need_world_drop_event_debug_gm_level, 60, 0,   INT_MAX,        },
+	{ "need_world_drop_party_share_enable", &battle_config.need_world_drop_party_share_enable, 0,  0,      1,              },
 	{ "need_lucky_egg_bonus_enable",        &battle_config.need_lucky_egg_bonus_enable,     1,      0,      1,              },
 	{ "need_lucky_egg_bonus_rate",          &battle_config.need_lucky_egg_bonus_rate,       1000,   0,      10000,          },
 	{ "need_lucky_egg_bonus_item_id",       &battle_config.need_lucky_egg_bonus_item_id,    900124, 0,      INT_MAX,        },
