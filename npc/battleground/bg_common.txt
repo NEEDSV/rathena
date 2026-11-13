@@ -687,7 +687,6 @@ function	script	F_BG_Menu_DiceRoll	{
 // 파티ID + 캐릭터ID + 계정ID 기준으로 등록/검증
 //============================================================
 function	script	F_BG_Menu_RegisterLeader	{
-	.@party_id = getcharid(1);
 
 	if ($@BG_RM_CYCLE_ACTIVE) {
 		mes needtr("[전장 관리인]","[Battleground Manager]");
@@ -708,17 +707,8 @@ function	script	F_BG_Menu_RegisterLeader	{
 		close;
 	}
 	
-	if (.@party_id <= 0) {
-		mes needtr("[전장 관리인]","[Battleground Manager]");
-		mes needtr("파티에 가입된 상태에서만 등록할 수 있습니다.","You can only register while you are in a party.");
-		close;
-	}
-
-	if (getpartyleader(.@party_id, 0) != strcharinfo(0)) {
-		mes needtr("[전장 관리인]","[Battleground Manager]");
-		mes needtr("전장 파티장 등록은 현재 파티의 파티장만 가능합니다.","Only the leader of your current party can register as a battleground leader.");
-		close;
-	}
+	// QA-07: 등록 자격은 F_BG_RegisterLeader에서 검사한다.
+	// 파티를 떠난 기존 등록자의 해제와 파티 미가입 유저의 등록 초기화도 메뉴에 접근해야 한다.
 
 	mes needtr("[전장 관리인]","[Battleground Manager]");
 	mes needtr("전장 팀 파티장을 등록합니다.","Registering a battleground team party leader.");
@@ -731,7 +721,7 @@ function	script	F_BG_Menu_RegisterLeader	{
 	mes needtr("크루아 파티장: " + (($BG_CROIX_LEADER_NAME$ == "") ? "^777777미등록^000000" : "^0055FF" + $BG_CROIX_LEADER_NAME$ + "^000000"), "Croix leader: " + (($BG_CROIX_LEADER_NAME$ == "") ? "^777777Not registered^000000" : "^0055FF" + $BG_CROIX_LEADER_NAME$ + "^000000"));
 	next;
 
-	switch(select(needtr("기욤 파티장으로 등록:크루아 파티장으로 등록:내 등록 해제:관리자 초기화:취소","Register as Guillaume leader:Register as Croix leader:Release my registration:Administrator reset:Cancel"))) {
+	switch(select(needtr("기욤 파티장으로 등록:크루아 파티장으로 등록:내 등록 해제:파티장 등록 초기화:취소","Register as Guillaume leader:Register as Croix leader:Release my registration:Reset leader registrations:Cancel"))) {
 	case 1:
 		callfunc "F_BG_RegisterLeader", "기욤";
 		close;
@@ -745,12 +735,7 @@ function	script	F_BG_Menu_RegisterLeader	{
 		close;
 
 	case 4:
-		if (getgmlevel() < 60) {
-			mes needtr("[전장 관리인]","[Battleground Manager]");
-			mes needtr("관리자만 사용할 수 있습니다.","Only an administrator can use this.");
-			close;
-		}
-
+		// 운영자 요청: 일반 유저도 확인 후 파티장 등록을 초기화할 수 있다.
 		mes needtr("[전장 관리인]","[Battleground Manager]");
 		mes needtr("전장 파티장 등록 정보를 모두 초기화하시겠습니까?","Do you want to reset every battleground party leader registration?");
 		next;
@@ -761,7 +746,11 @@ function	script	F_BG_Menu_RegisterLeader	{
 			close;
 		}
 
-		callfunc "F_BG_ClearLeaderRegister";
+		if (!callfunc("F_BG_ClearLeaderRegister")) {
+			mes needtr("[전장 관리인]","[Battleground Manager]");
+			mes needtr("진행 중인 경기 또는 입장 준비가 있어 초기화하지 않았습니다.","Nothing was reset because a match or entry preparation is in progress.");
+			close;
+		}
 
 		mes needtr("[전장 관리인]","[Battleground Manager]");
 		mes needtr("전장 파티장 등록 정보가 초기화되었습니다.","The battleground party leader registrations have been reset.");
@@ -902,8 +891,10 @@ function	script	F_BG_UnregisterMyLeader	{
 // 전장 파티장 등록 전체 초기화
 //============================================================
 function	script	F_BG_ClearLeaderRegister	{
-	if ($@BG_RM_CYCLE_ACTIVE)
-		return;
+	// QA-07: 확인 대화 도중 시작된 경기/모집/수동 준비도 초기화하지 않는다.
+	if ($@BG_RM_STATE || $@BG_RM_ACTIVE || $@BG_RM_CYCLE_ACTIVE ||
+		$@TierraBG1 || $@FlaviusBG1 || $@KvM01BG || callfunc("F_BG_RM_ManualReadyActive"))
+		return 0;
 
 	callfunc "F_BG_ClearAllReadyState";
 
@@ -923,7 +914,7 @@ function	script	F_BG_ClearLeaderRegister	{
 	$BG_SHORT_REQ_NAME$ = "";
 	$BG_SHORT_REQ_TIME = 0;
 
-	return;
+	return 1;
 }
 
 //============================================================

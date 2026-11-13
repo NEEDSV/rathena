@@ -3147,6 +3147,9 @@ OnCommandQueue:
 	else
 		dispbottom needtr("[전장] 최소 ", "[Battleground] Once ") + $@BG_RM_MIN_PLAYERS + needtr("명 충족 시 " + .@pre + "초 전에 안내 후 전장 대기실로 자동 이동하고, " + .@rec + "초 동안 추가 모집합니다.", " players are queued, you get a " + .@pre + "-second notice, move to the Battleground waiting room automatically, and extra recruitment runs for " + .@rec + " seconds.");
 	dispbottom needtr("[전장] 대기 취소: @전장대기취소 / 현황: @전장대기현황", "[Battleground] Cancel: @bgqueuecancel / Status: @bgqueuestatus");
+	// QA-07: 8명 이상인데도 수동 등록 때문에 출발하지 않는 이유를 신청자에게 표시한다.
+	if (!$@BG_RM_CYCLE_ACTIVE && (callfunc("F_BG_RM_ManualReadyActive") || $BG_GUILLAUME_PARTY_ID || $BG_CROIX_PARTY_ID))
+		dispbottom "[" + needtr("전장", "Battleground") + "] " + callfunc("F_NEED_BGUX_RmStateLine$");
 
 	announcelang "[전장 대기열] " + strcharinfo(0) + "님 대기 등록. 현재 "
 		+ $@BG_RM_QUEUE_COUNT + "/" + $@BG_RM_MIN_PLAYERS + "명", "[BG Queue] " + strcharinfo(0) + " joined the queue. Now " + $@BG_RM_QUEUE_COUNT + "/" + $@BG_RM_MIN_PLAYERS, bc_all, "0x99DDFF";
@@ -3881,7 +3884,7 @@ OnCmd:
 	dispbottom "[BG recover] mark pg=" + $NEED_BGUX_RM_PG + " pc=" + $NEED_BGUX_RM_PC + " saved=" + $NEED_BGUX_RM_SAVED + " (" + $NEED_BGUX_RM_SAVED_U + "/" + $NEED_BGUX_RM_SAVED_G + "/" + $NEED_BGUX_RM_SAVED_C + ")"
 		+ " counts=" + $BG_User_Count + "/" + $BG_Guillaume_Count + "/" + $BG_Croix_Count + " pending_parties=" + getarraysize($NEED_BGUX_ORPHAN_PID);
 	if (!$NEED_BGUX_RM_PG && !$NEED_BGUX_RM_PC && ($BG_GUILLAUME_PARTY_ID || $BG_CROIX_PARTY_ID) && !callfunc("F_NEED_BGUX_RmLive"))
-		dispbottom "[BG recover] leaders are registered without an auto-match mark: a manual registration, or one left from before this fix. Reset it at the bat_room Battleground Manager > Administrator reset if it is stale.";
+		dispbottom "[BG recover] leaders are registered without an auto-match mark: a manual registration, or one left from before this fix. Reset it at the bat_room Battleground Manager > Reset leader registrations if it is stale.";
 	end;
 }
 
@@ -4057,5 +4060,9 @@ function	script	F_NEED_BGUX_RmStateLine$	{
 	}
 	if ($@TierraBG1 || $@FlaviusBG1 || $@KvM01BG)
 		return needtr("수동(파티장) 전장 진행 중 / 대기 " + $@BG_RM_QUEUE_COUNT + "/" + .@min + "명", "A party-leader battleground is running / queued " + $@BG_RM_QUEUE_COUNT + "/" + .@min);
+	if (callfunc("F_BG_RM_ManualReadyActive"))
+		return needtr("수동 전장 입장 준비 중 - 자동매칭 출발 보류 / 대기 " + $@BG_RM_QUEUE_COUNT + "/" + .@min + "명", "Manual BG entry preparation is active - auto-match departure is on hold / queued " + $@BG_RM_QUEUE_COUNT + "/" + .@min);
+	if ($BG_GUILLAUME_PARTY_ID || $BG_CROIX_PARTY_ID)
+		return needtr("수동 전장 파티장 등록으로 자동매칭 출발 보류 / 대기 " + $@BG_RM_QUEUE_COUNT + "/" + .@min + "명. 수동 준비가 아니라면 전장 관리인에서 등록을 해제하거나 '파티장 등록 초기화'를 이용해 주세요.", "Manual BG team leaders are registered, so auto-match departure is on hold / queued " + $@BG_RM_QUEUE_COUNT + "/" + .@min + ". If no manual match is planned, release it or use 'Reset leader registrations' at the Battleground Manager.");
 	return needtr("기존 전장 대기 " + $@BG_RM_QUEUE_COUNT + "/" + .@min + "명", "Classic BG queue " + $@BG_RM_QUEUE_COUNT + "/" + .@min);
 }

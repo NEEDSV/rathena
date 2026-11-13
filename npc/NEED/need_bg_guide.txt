@@ -5,7 +5,7 @@
 //= 통합하는 것은 "안내 / 대기 현황 / 보상 메뉴 진입" 뿐이다. 세 모드의 매칭 큐·타이머·경기·정산·랭킹 원장은
 //= 각자의 원래 스크립트가 그대로 처리한다. 이 파일은 그 상태를 읽기만 하고 값을 바꾸지 않는다.
 //=
-//= 진입 : 구 페이욘(payo2) 99,134 NPC "전장 안내 및 대기 현황" (마롤 전투 모집관 96,138 / 워퍼 96,131 사이)
+//= 진입 : 구 페이욘(payo2) 96,135 NPC "전장 안내 및 대기 현황" (마롤 전투 모집관 96,138 / 워퍼 96,131 사이)
 //=        @전장안내 / @bginfo : 같은 메뉴. 마을(mf_town) 에서만 열린다. 기존 전장 명령어의 사용 장소는 바꾸지 않는다.
 //= 참가 : 메뉴의 "바로 신청"은 기존 명령어 이벤트를 그대로 예약한다(대화창이 닫힌 뒤 실행 = 명령어를 직접 친 것과 같다).
 //=        NEED_BG_RM_GlobalQueue::OnCommandQueue (@전장대기) / NEED_BG3::OnCmdJoin (@룬참가) / NEED_BG2::OnCmdJoin (@듀오참가)
@@ -85,11 +85,11 @@ function	script	F_NEED_BGUX_WeekPolicy$	{
 		return "";
 	.@ws = callfunc("F_NEED_BG2P3_WeekStart", gettimetick(2));
 	if (.@ws < $@NBG2P3_WREW_FROM)
-		return needtr("^FF0000테스트 기간^000000: 2:2·3:3 주간 단계·랭킹 보상은 집계·지급하지 않습니다. 첫 보상 주차 ",
-			"^FF0000Test period^000000: no weekly tier or ranking rewards for 2v2 / 3v3. First reward week starts ")
+		return needtr("^FF0000테스트 주간^000000 · 주간 달성·순위 보상 없음. 시작: ",
+			"^FF0000Test week^000000 · no weekly tier or rank rewards. Starts: ")
 			+ callfunc("F_NEED_BG2P3_Date$", $@NBG2P3_WREW_FROM) + " KST";
-	return needtr("주간 단계·랭킹 보상: 이번 주차부터 운영 규칙에 따라 집계됩니다(수령은 운영 스위치가 켜졌을 때).",
-		"Weekly tier / ranking rewards: counted from this week under the live rules (claims open when the GM switch is on).");
+	return needtr("이번 주부터 주간 달성·순위 보상을 집계합니다.",
+		"Weekly tier and ranking rewards count from this week.");
 }
 
 // 메뉴의 "바로 신청": 원래 명령어 이벤트를 예약하고 대화창을 닫는다.
@@ -126,134 +126,128 @@ function	script	F_NEED_BGUX_GoBatRoom	{
 //------------------------------------------------------------
 // 1. 참가 방법 안내
 //------------------------------------------------------------
+// getarg(1): 1 기존 전장 / 2 룬 / 3 듀오. 각 종목 화면에서 바로 신청한다.
 function	script	F_NEED_BGUX_HowTo	{
 	.@n$ = getarg(0);
+	.@mode = getarg(1, 1);
 	while (1) {
-		mes .@n$;
-		mes needtr("어느 전장의 참가 방법을 볼까요?", "Which battleground would you like to read about?");
-		.@m = select(needtr("기존 전장 (티에라 > 플라비우스 > KVM)", "Classic BG (Tierra > Flavius > KVM)")
-			+ ":" + needtr("3대3 룬 거점전", "3v3 Rune Control")
-			+ ":" + needtr("2대2 듀오 서바이벌", "2v2 Duo Survival")
-			+ ":" + needtr("이전 메뉴", "Back"));
 		clear;
-		switch (.@m) {
-		case 1:
+		mes .@n$;
+		if (.@mode == 1) {
 			.@lv = ($@BG_RM_MIN_JOIN_LEVEL > 0) ? $@BG_RM_MIN_JOIN_LEVEL : 150;
 			.@min = ($@BG_RM_MIN_PLAYERS > 0) ? $@BG_RM_MIN_PLAYERS : 8;
-			.@max = ($@BG_RM_MAX_PLAYERS > 0) ? $@BG_RM_MAX_PLAYERS : 48;
-			mes .@n$;
-			mes needtr("^0055FF기존 전장^000000 (자동 매칭 대기열)", "^0055FFClassic BG^000000 (auto-match queue)");
-			mes needtr("신청 @전장대기 / 취소 @전장대기취소 / 현황 @전장대기현황", "Join @bgqueue / leave @bgqueuecancel / status @bgqueuestatus");
-			mes needtr("- 어느 맵에서든 신청, 다른 맵에서 사냥해도 대기 유지", "- Apply from any map; you stay queued while playing elsewhere");
-			mes needtr("- BaseLevel " + .@lv + " 이상, 파티·전장 팀 미가입", "- BaseLevel " + .@lv + "+, not in a party or BG team");
-			mes needtr("- 최소 " + .@min + "명(4대4)부터, 최대 " + .@max + "명", "- From " + .@min + " players (4 vs 4), up to " + .@max);
-			mes needtr("- 처음 한 번 전장 이용 규칙 동의(계정당 1회)", "- Agree to the BG rules once (per account)");
-			mes needtr("  내 동의 상태: ", "  My agreement: ") + (#NEED_BG_RULE_AGREE ? needtr("^009900동의 완료^000000", "^009900done^000000") : needtr("^FF0000아직 안 함^000000", "^FF0000not yet^000000"));
-			next;
-			mes .@n$;
-			mes needtr("^0055FF진행^000000", "^0055FFHow a match runs^000000");
 			.@pre = ($@BG_RM_PREWARP_SECONDS > 0) ? $@BG_RM_PREWARP_SECONDS : 20;
 			.@rec = ($@BG_RM_RECRUIT_SECONDS > 0) ? $@BG_RM_RECRUIT_SECONDS : 120;
-			mes needtr("1. 대기 " + .@min + "명이 되면 " + .@pre + "초 뒤 전장 대기실(bat_room)로 자동 이동", "1. At " + .@min + " queued, everyone moves to the BG waiting room (bat_room) " + .@pre + " s later");
-			mes needtr("2. 대기실에서 " + .@rec + "초 추가 모집 - 이때 마을에서 @전장대기 하면 바로 대기실로 소환되어 합류", "2. " + .@rec + " s of extra recruitment there - @bgqueue from town then takes you straight in");
-			mes needtr("3. 마감 후 팀 편성(기욤/크루아 파티 자동 생성), 티에라 > 플라비우스 > KVM 순서, 파티는 KVM 종료까지 유지", "3. Teams (Guillaume / Croix parties) after it closes; Tierra > Flavius > KVM, party kept until KVM ends");
-			mes needtr("4. 전장 입장 후 준비 시간: 티에라 45초 / 플라비우스·KVM 30초", "4. Preparation after entering: Tierra 45 s / Flavius and KVM 30 s");
-			mes needtr("@전장매칭 / @전장참가 도 @전장대기 와 같은 모집으로 처리됩니다(따로 열리는 모집 없음).", "@bgmatch / @bgjoin do the same as @bgqueue (no separate recruitment).");
-			mes needtr("^FF0000주의^000000: 2:2·3:3 에 신청 중이면 신청할 수 없고, 로그아웃·파티 가입 시 대기에서 빠집니다.", "^FF0000Note^000000: you cannot apply while in a 2v2 / 3v3 queue; logging out or joining a party removes you from the queue.");
-			next;
-			mes .@n$;
-			// 빈 선택지("")는 쓰지 않는다: 이 엔진은 빈 항목을 개수에서 빼서, 뒤 항목을 고르면 잘못된 선택으로 접속을 끊는다.
-			.@s = select(needtr("지금 대기 신청 (@전장대기)", "Queue now (@bgqueue)")
-				+ ":" + (#NEED_BG_RULE_AGREE ? needtr("전장 이용 규칙 (동의 완료)", "BG rules (agreed)") : needtr("전장 이용 규칙 동의하기", "Agree to the BG rules"))
-				+ ":" + needtr("전장 대기실로 이동 (교환 상점·직접 모집)", "Go to the BG waiting room (shops / direct recruit)")
-				+ ":" + needtr("이전 메뉴", "Back"));
+			mes needtr("^0055FF기존 전장 · 4대4 이상^000000", "^0055FFClassic BG · 4v4 and up^000000");
+			mes needtr("참가: " + .@lv + "레벨 이상, 파티·전장 팀 미가입", "Entry: Level " + .@lv + "+, no party or BG team");
+			mes needtr("어느 맵에서나 신청할 수 있고, 사냥 중에도 대기가 유지됩니다.", "Queue from any map and keep playing while you wait.");
+			mes needtr(.@min + "명 충족 → " + .@pre + "초 뒤 대기실 이동 → " + .@rec + "초 추가 모집", .@min + " queued → move after " + .@pre + " s → " + .@rec + " s extra recruitment");
+			mes " ";
+			mes callfunc("F_NEED_BGUX_RmStateLine$");
+			.@s = select(needtr("참가 신청:경기 규칙:이용 규칙 확인·동의:대기실로 이동:뒤로", "Join queue:Match rules:Review or accept BG rules:Go to waiting room:Back"));
 			if (.@s == 1)
 				callfunc "F_NEED_BGUX_Apply", "NEED_BG_RM_GlobalQueue::OnCommandQueue", needtr("@전장대기", "@bgqueue");
-			if (.@s == 2 && #NEED_BG_RULE_AGREE) {
-				clear;
-				mes .@n$;
-				mes needtr("이 계정은 이미 전장 이용 규칙에 동의했습니다. 다시 동의할 필요가 없습니다.", "This account has already agreed to the BG rules. You do not need to agree again.");
-				next;
-				clear;
-				break;
-			}
 			if (.@s == 2) {
+				callfunc "F_NEED_BGUX_MatchRules", .@n$, .@mode;
+				continue;
+			}
+			if (.@s == 3) {
 				clear;
-				.@ag = callfunc("F_NEED_BG_RuleAgree", 1);
-				if (!.@ag)
-					end;	// 동의하지 않음: 안내 후 대화창이 이미 닫혔다
-				if (.@ag == 2)
+				if (#NEED_BG_RULE_AGREE) {
+					mes .@n$;
+					mes needtr("이 계정은 전장 이용 규칙에 동의했습니다.", "This account has already accepted the BG rules.");
 					next;
-				clear;
-				break;
+				}
+				else {
+					.@ag = callfunc("F_NEED_BG_RuleAgree", 1);
+					if (!.@ag) end;
+					if (.@ag == 2) next;
+				}
+				continue;
 			}
-			if (.@s == 3)
-				callfunc "F_NEED_BGUX_GoBatRoom";
-			clear;
-			break;
-		case 2:
-			mes .@n$;
-			if (!$@NBG3_LOADED) {
-				mes needtr("3대3 룬 거점전은 현재 운영하지 않습니다.", "3v3 Rune Control is not running now.");
-				next;
-				clear;
-				break;
-			}
-			mes needtr("^0055FF3:3 룬 거점전^000000 (개인 대기열)", "^0055FF3v3 Rune Control^000000 (solo queue)");
-			mes needtr("신청 @룬참가 / 취소 @룬취소 / 현황 @룬현황", "Join @bg3join / leave @bg3cancel / status @bg3status");
-			mes needtr("참가 확인 @룬수락 / @룬거절, 점수 @룬점수", "Ready check @bg3accept / @bg3decline, points @bg3points");
-			mes needtr("- 대기열: ", "- Queue: ") + ($NEED_BG3_QUEUE_OPEN ? needtr("^009900열림^000000", "^009900open^000000") : needtr("^FF0000닫힘(신청 불가)^000000", "^FF0000closed (no sign-ups)^000000"));
-			mes needtr("- BaseLevel " + $@NBG3_C_MINLV + " 이상, 전장·PvP·인스턴스 맵에서는 신청 불가", "- BaseLevel " + $@NBG3_C_MINLV + "+, not from BG / PvP / instance maps");
-			mes needtr("- 6명이 모이면 30초 참가 확인 후 3대3 입장", "- When 6 are waiting: 30-second ready check, then 3 vs 3");
-			next;
-			mes .@n$;
-			mes needtr("^0055FF진행^000000", "^0055FFHow a match runs^000000");
-			mes needtr("준비 45초 > 단판 5분. 중앙 룬 크리스탈 고리를 혼자 5초 지키면 점령,", "45 s preparation > one 5-minute game. Hold the crystal ring alone for 5 s to capture;");
-			mes needtr("점령 중 2초마다 1점, 100점 선취 또는 5분 뒤 높은 점수가 승리(동점 무승부).", "1 point every 2 s while holding; first to 100 or the higher score after 5 min wins (tie = draw).");
-			mes needtr("사망하면 10초 뒤 본진에서 부활합니다.", "Fallen players respawn at base after 10 s.");
-			mes needtr("^FF0000주의^000000: 접속 종료는 15초 재접속 유예, 넘기면 탈주 처리. 최근 24시간 탈주 누적 시 신청 제한.", "^FF0000Note^000000: a 15 s reconnect grace applies; past it you count as a deserter. Repeated desertion in 24 h restricts sign-ups.");
-			mes needtr("기존 전장·2대2 에 신청 중이면 신청할 수 없습니다.", "You cannot apply while queued for the classic BG or 2v2.");
-			next;
-			mes .@n$;
-			.@s = select(needtr("지금 신청 (@룬참가)", "Sign up now (@bg3join)") + ":" + needtr("이전 메뉴", "Back"));
-			if (.@s == 1)
-				callfunc "F_NEED_BGUX_Apply", "NEED_BG3::OnCmdJoin", needtr("@룬참가", "@bg3join");
-			clear;
-			break;
-		case 3:
-			mes .@n$;
-			if ($@NBG2_MAP$ == "") {
-				mes needtr("2대2 듀오 서바이벌은 현재 운영하지 않습니다.", "2v2 Duo Survival is not running now.");
-				next;
-				clear;
-				break;
-			}
-			mes needtr("^0055FF2:2 듀오 서바이벌^000000 (개인 대기열)", "^0055FF2v2 Duo Survival^000000 (solo queue)");
-			mes needtr("신청 @듀오참가 / 취소 @듀오취소 / 현황 @듀오현황", "Join @duojoin / leave @duocancel / status @duostatus");
-			mes needtr("참가 확인 @듀오수락 / @듀오거절, 점수 @듀오점수", "Ready check @duoaccept / @duodecline, points @duopoints");
-			mes needtr("- 대기열: ", "- Queue: ") + ($NEED_BG2_QUEUE_OPEN ? needtr("^009900열림^000000", "^009900open^000000") : needtr("^FF0000닫힘(신청 불가)^000000", "^FF0000closed (no sign-ups)^000000"));
-			mes needtr("- BaseLevel " + $@NBG2_C_MINLV + " 이상, 전장·PvP·인스턴스 맵에서는 신청 불가", "- BaseLevel " + $@NBG2_C_MINLV + "+, not from BG / PvP / instance maps");
-			mes needtr("- 4명이 모이면 30초 참가 확인 후 2대2 입장(팀은 자동 편성)", "- When 4 are waiting: 30-second ready check, then 2 vs 2 (teams are set automatically)");
-			next;
-			mes .@n$;
-			mes needtr("^0055FF진행^000000", "^0055FFHow a match runs^000000");
-			mes needtr("준비 45초(첫 라운드)/15초 > 라운드 90초, 2선승(최대 5라운드).", "45 s preparation (first round) / 15 s > 90 s rounds, best of 3 (up to 5 rounds).");
-			mes needtr("상대 팀 전멸 또는 60초 뒤 열리는 중앙 거점을 혼자 10초 점유하면 라운드 승리.", "Win a round by wiping the other team or holding the centre (opens at 60 s) alone for 10 s.");
-			mes needtr("사망하면 그 라운드는 관전석에서 관전합니다(자동 부활 없음).", "Fallen players watch the rest of the round from the stands (no auto-revive).");
-			mes needtr("^FF0000주의^000000: 접속 종료는 경기당 15초 재접속 유예. 경기장 이탈은 몰수패.", "^FF0000Note^000000: 15 s reconnect grace per match. Leaving the arena forfeits the match.");
-			mes needtr("기존 전장·3대3 에 신청 중이면 신청할 수 없습니다.", "You cannot apply while queued for the classic BG or 3v3.");
-			next;
-			mes .@n$;
-			.@s = select(needtr("지금 신청 (@듀오참가)", "Sign up now (@duojoin)") + ":" + needtr("이전 메뉴", "Back"));
-			if (.@s == 1)
-				callfunc "F_NEED_BGUX_Apply", "NEED_BG2::OnCmdJoin", needtr("@듀오참가", "@duojoin");
-			clear;
-			break;
-		default:
+			if (.@s == 4) callfunc "F_NEED_BGUX_GoBatRoom";
 			clear;
 			return;
 		}
+		if (.@mode == 2) {
+			if (!$@NBG3_LOADED) {
+				mes needtr("3대3 룬 거점전은 현재 이용할 수 없습니다.", "3v3 Rune Control is currently unavailable.");
+				next;
+				clear;
+				return;
+			}
+			mes needtr("^0055FF3대3 · 룬 거점전^000000", "^0055FF3v3 · Rune Control^000000");
+			mes needtr("참가: " + $@NBG3_C_MINLV + "레벨 이상, 개인 신청", "Entry: Level " + $@NBG3_C_MINLV + "+, solo sign-up");
+			mes needtr("6명 모집 → 30초 참가 확인 → 팀 자동 편성", "6 queued → 30 s ready check → automatic teams");
+			mes needtr("룬을 점령해 점수를 얻는 5분 단판 경기입니다.", "Capture the rune to score in a single 5-minute match.");
+			mes needtr("신청 상태: ", "Sign-ups: ") + ($NEED_BG3_QUEUE_OPEN ? needtr("^009900접수 중^000000", "^009900open^000000") : needtr("^FF0000접수 중지^000000", "^FF0000closed^000000"));
+			.@s = select(needtr("참가 신청:경기 규칙:뒤로", "Join queue:Match rules:Back"));
+			if (.@s == 1) callfunc "F_NEED_BGUX_Apply", "NEED_BG3::OnCmdJoin", needtr("@룬참가", "@bg3join");
+		}
+		else if (.@mode == 3) {
+			if ($@NBG2_MAP$ == "") {
+				mes needtr("2대2 듀오 서바이벌은 현재 이용할 수 없습니다.", "2v2 Duo Survival is currently unavailable.");
+				next;
+				clear;
+				return;
+			}
+			mes needtr("^0055FF2대2 · 듀오 서바이벌^000000", "^0055FF2v2 · Duo Survival^000000");
+			mes needtr("참가: " + $@NBG2_C_MINLV + "레벨 이상, 개인 신청", "Entry: Level " + $@NBG2_C_MINLV + "+, solo sign-up");
+			mes needtr("4명 모집 → 30초 참가 확인 → 팀 자동 편성", "4 queued → 30 s ready check → automatic teams");
+			mes needtr("라운드에서 먼저 2승을 거두는 팀이 승리합니다.", "The first team to win 2 rounds wins the match.");
+			mes needtr("신청 상태: ", "Sign-ups: ") + ($NEED_BG2_QUEUE_OPEN ? needtr("^009900접수 중^000000", "^009900open^000000") : needtr("^FF0000접수 중지^000000", "^FF0000closed^000000"));
+			.@s = select(needtr("참가 신청:경기 규칙:뒤로", "Join queue:Match rules:Back"));
+			if (.@s == 1) callfunc "F_NEED_BGUX_Apply", "NEED_BG2::OnCmdJoin", needtr("@듀오참가", "@duojoin");
+		}
+		else return;
+		if (.@s == 2) {
+			callfunc "F_NEED_BGUX_MatchRules", .@n$, .@mode;
+			continue;
+		}
+		clear;
+		return;
 	}
+}
+
+// 경기 설명만 표시한다. 실제 참가 조건과 경기 설정은 원래 참가 이벤트에서 검사한다.
+function	script	F_NEED_BGUX_MatchRules	{
+	.@n$ = getarg(0);
+	.@mode = getarg(1);
+	clear;
+	mes .@n$;
+	if (.@mode == 1) {
+		mes needtr("^0055FF기존 전장 경기 규칙^000000", "^0055FFClassic BG rules^000000");
+		mes needtr("티에라 → 플라비우스 → KVM 순서로 진행합니다.", "Play Tierra → Flavius → KVM in order.");
+		mes needtr("팀과 파티는 자동 편성되며, KVM 종료까지 유지됩니다.", "Teams and parties are assigned automatically and stay together until KVM ends.");
+		mes needtr("팀 편성에는 175레벨 참가자가 최소 2명 필요합니다.", "At least two Level 175 players are needed to select team leaders.");
+		mes needtr("입장 후 준비 시간은 티에라 45초, 플라비우스·KVM 30초입니다.", "Preparation: 45 s for Tierra, 30 s for Flavius and KVM.");
+		mes needtr("수동 팀 등록이나 다른 전장 준비가 있으면 자동 출발을 기다립니다.", "Automatic departure waits while manual teams or another BG preparation are registered.");
+		mes needtr("로그아웃하거나 파티에 가입하면 대기가 취소됩니다.", "Logging out or joining a party cancels your queue entry.");
+		mes needtr("신청 @전장대기 · 취소 @전장대기취소 · 현황 @전장대기현황", "Join @bgqueue · cancel @bgqueuecancel · status @bgqueuestatus");
+	}
+	else {
+		mes needtr("^0055FF경기 규칙^000000", "^0055FFMatch rules^000000");
+		mes needtr("전장·PvP·인스턴스 맵에서는 신청할 수 없습니다.", "You cannot queue from BG, PvP or instance maps.");
+		mes needtr("다른 전장에 신청했거나 참가 중이면 중복 신청할 수 없습니다.", "You cannot queue for multiple battlegrounds at once.");
+		if (.@mode == 2) {
+			mes needtr("준비 45초 후 5분 단판을 진행합니다.", "After 45 s preparation, play one 5-minute match.");
+			mes needtr("룬 고리를 혼자 5초 지키면 점령하며, 점령 중 2초마다 1점을 얻습니다.", "Hold the rune ring alone for 5 s to capture it; score 1 point every 2 s while holding it.");
+			mes needtr("100점 선취 또는 종료 시 높은 점수가 승리합니다. 동점은 무승부입니다.", "First to 100 points, or the higher score at time, wins. A tie is a draw.");
+			mes needtr("사망하면 10초 뒤 본진에서 부활합니다.", "Fallen players respawn at base after 10 s.");
+			mes needtr("신청 @룬참가 · 취소 @룬취소 · 현황 @룬현황", "Join @bg3join · cancel @bg3cancel · status @bg3status");
+		}
+		else {
+			mes needtr("준비 시간은 첫 라운드 45초, 이후 15초이며 라운드는 90초입니다.", "Preparation: 45 s before round one, then 15 s. Each round lasts 90 s.");
+			mes needtr("상대 팀 전멸 또는 중앙 거점 점령으로 라운드에서 승리합니다.", "Win a round by wiping the opposing team or capturing the central objective.");
+			mes needtr("거점은 60초 후 열리며 혼자 10초 점유하면 됩니다.", "The objective opens at 60 s; hold it alone for 10 s.");
+			mes needtr("먼저 2승하면 승리하며 최대 5라운드까지 진행합니다. 사망 후에는 해당 라운드를 관전합니다.", "First to 2 wins, up to 5 rounds. Fallen players spectate the rest of the round.");
+			mes needtr("신청 @듀오참가 · 취소 @듀오취소 · 현황 @듀오현황", "Join @duojoin · cancel @duocancel · status @duostatus");
+		}
+		mes needtr("접속 종료 시 15초 재접속 유예가 있으며, 탈주가 누적되면 참가가 제한됩니다.", "Disconnects have a 15 s reconnect grace. Repeated desertion restricts entry.");
+	}
+	next;
+	clear;
+	return;
 }
 
 //------------------------------------------------------------
@@ -262,7 +256,7 @@ function	script	F_NEED_BGUX_HowTo	{
 function	script	F_NEED_BGUX_Queues	{
 	.@n$ = getarg(0);
 	mes .@n$;
-	mes needtr("^0055FF현재 대기 인원^000000 (접속 중인 유효 대기자, 단위: 명)", "^0055FFCurrent queues^000000 (valid online players)");
+	mes needtr("^0055FF대기 현황^000000", "^0055FFQueue status^000000");
 
 	// 기존 전장
 	// 2026-11-12 통합 모집: 추가 모집·마감 중에는 모집 명단 인원(감시 NPC 가 1초마다 이탈자를 뺀 값), 그 밖에는 대기열 유효 인원
@@ -310,7 +304,7 @@ function	script	F_NEED_BGUX_Queues	{
 	else
 		mes needtr("2:2 듀오: 운영하지 않음", "2v2 Duo: not running");
 
-	mes needtr("^777777경기에 입장했거나 참가가 확정된 인원, 접속 종료자는 세지 않습니다.^000000", "^777777Players already in a match or confirmed, and offline players, are not counted.^000000");
+	mes needtr("^777777접속 중인 대기자만 표시합니다. 입장·참가 확정 인원은 제외합니다.^000000", "^777777Online queued players only. Confirmed and in-match players are excluded.^000000");
 	next;
 	clear;
 	return;
@@ -323,75 +317,56 @@ function	script	F_NEED_BGUX_Rewards	{
 	.@n$ = getarg(0);
 	while (1) {
 		mes .@n$;
-		mes needtr("모드마다 점수와 보상 방식이 다릅니다. 각 모드의 원래 창구로 연결합니다.", "Each mode keeps its own points and rewards. Each menu opens that mode's own counter.");
+		mes needtr("^0055FF점수·보상^000000", "^0055FFPoints & rewards^000000");
+		mes needtr("보상 수령은 아래 '보상 받기'에서 진행합니다.", "Use 'Claim rewards' to collect available rewards.");
 		.@pol$ = callfunc("F_NEED_BGUX_WeekPolicy$");
-		if (.@pol$ != "")
-			mes .@pol$;
-		.@m = select(needtr("기존 전장 보상·전장 포인트", "Classic BG rewards / BG points")
-			+ ":" + needtr("2대2·3대3 보상관 (점수·전적·랭킹·보상 수령)", "2v2 / 3v3 Reward Officer (points, record, ranking, claims)")
-			+ ":" + needtr("3대3 내 점수 (@룬점수)", "My 3v3 points (@bg3points)")
-			+ ":" + needtr("2대2 내 점수 (@듀오점수)", "My 2v2 points (@duopoints)")
-			+ ":" + needtr("지난 이벤트 재료 정리 (반죽·솔잎)", "Clear old event materials (dough / pine needles)")
-			+ ":" + needtr("3대3 주간 순위 (조회)", "3v3 weekly ranking (view)")
-			+ ":" + needtr("이전 메뉴", "Back"));
+		if (.@pol$ != "") mes .@pol$;
+		.@m = select(needtr("내 점수 확인:보상 받기:주간 순위:기존 전장 보상:이벤트 재료 정리:뒤로", "My points:Claim rewards:Weekly rankings:Classic BG rewards:Clear event materials:Back"));
 		clear;
 		switch (.@m) {
 		case 1:
+			.@s = select(needtr("2대2 점수:3대3 점수:뒤로", "2v2 points:3v3 points:Back"));
+			if (.@s == 3) break;
+			if ((.@s == 1 && !$@NBG2P3_LOADED) || (.@s == 2 && !$@NBG3P3_LOADED)) {
+				mes needtr("현재 이 종목의 점수를 조회할 수 없습니다.", "Points for this mode are currently unavailable.");
+				next;
+				clear;
+				break;
+			}
 			mes .@n$;
-			mes needtr("^0055FF기존 전장^000000", "^0055FFClassic BG^000000");
-			mes needtr("보상은 각 전장 종료 때 바로 지급됩니다(휘장·금화·대전 승리의 증표).", "Rewards are paid when each battleground ends (badges, gold coins, Tokens of Victory War).");
-			mes needtr("보유 전장 포인트: ^0055FF", "BG points held: ^0055FF") + #BATTLEGROUND_POINT + needtr("^000000점", "^000000");
-			mes needtr("교환: 전장 대기실(bat_room)의 전장 장비·교환·소비 담당관", "Exchange: Equipment / Exchange / Supply Officers in the BG waiting room (bat_room)");
-			mes needtr("기존 전장은 주간 랭킹이 없습니다.", "The classic BG has no weekly ranking.");
-			next;
-			.@s = select(needtr("기존 전장 보상표 보기", "View the classic BG reward table") + ":" + needtr("전장 대기실로 이동", "Go to the BG waiting room") + ":" + needtr("이전 메뉴", "Back"));
-			clear;
-			if (.@s == 1)
-				callfunc "F_BG_Reward";	// 원본 보상표(끝에서 대화창을 닫는다)
-			if (.@s == 2)
-				callfunc "F_NEED_BGUX_GoBatRoom";
-			break;
+			mes needtr("창을 닫으면 채팅창에 점수를 표시합니다.", "Your points will appear in chat when this window closes.");
+			close2;
+			if (.@s == 1) doevent "NEED_BG2P3::OnCmdPoints";
+			else doevent "NEED_BG3P3::OnCmdPoints";
+			end;
 		case 2:
 			if (!$@NBG2P3_LOADED) {
-				mes .@n$;
-				mes needtr("2대2·3대3 보상 기능은 현재 운영하지 않습니다.", "2v2 / 3v3 rewards are not running now.");
+				mes needtr("현재 보상관을 이용할 수 없습니다.", "The reward officer is currently unavailable.");
 				next;
 				clear;
 				break;
 			}
-			callfunc "F_NEED_BG2P3_Npc";	// 전장 보상관 원본 메뉴(수령·중복 방지·주간 정책 모두 원본 그대로, 끝에서 대화창을 닫는다)
+			callfunc "F_NEED_BG2P3_Npc";
 			end;
 		case 3:
-			if (!$@NBG3P3_LOADED) {
-				mes .@n$;
-				mes needtr("3대3 점수 기능은 현재 운영하지 않습니다.", "3v3 points are not running now.");
-				next;
-				clear;
-				break;
-			}
-			mes .@n$;
-			mes needtr("대화창을 닫으면 채팅창에 3대3 점수를 표시합니다(@룬점수).", "Your 3v3 points appear in the chat window when this closes (@bg3points).");
-			close2;
-			doevent "NEED_BG3P3::OnCmdPoints";
-			end;
+			.@s = select(needtr("2대2 순위:3대3 순위:뒤로", "2v2 ranking:3v3 ranking:Back"));
+			if (.@s == 1) callfunc "F_NEED_BGUX_Ranking", .@n$, 2;
+			else if (.@s == 2) callfunc "F_NEED_BGUX_Ranking", .@n$, 3;
+			break;
 		case 4:
-			if (!$@NBG2P3_LOADED) {
-				mes .@n$;
-				mes needtr("2대2 점수 기능은 현재 운영하지 않습니다.", "2v2 points are not running now.");
-				next;
-				clear;
-				break;
-			}
 			mes .@n$;
-			mes needtr("대화창을 닫으면 채팅창에 2대2 점수를 표시합니다(@듀오점수).", "Your 2v2 points appear in the chat window when this closes (@duopoints).");
-			close2;
-			doevent "NEED_BG2P3::OnCmdPoints";
-			end;
+			mes needtr("^0055FF기존 전장 보상^000000", "^0055FFClassic BG rewards^000000");
+			mes needtr("경기 종료 후 휘장·금화·대전 승리의 증표를 받습니다.", "Receive badges, gold coins and Tokens of Victory War after the match.");
+			mes needtr("보유 전장 포인트: ", "Your BG points: ") + #BATTLEGROUND_POINT;
+			mes needtr("교환 상점은 전장 대기실에 있습니다. 기존 전장은 주간 순위 보상이 없습니다.", "Exchange shops are in the waiting room. Classic BG has no weekly ranking rewards.");
+			next;
+			.@s = select(needtr("보상표 보기:대기실로 이동:뒤로", "Reward table:Go to waiting room:Back"));
+			clear;
+			if (.@s == 1) callfunc "F_BG_Reward";
+			if (.@s == 2) callfunc "F_NEED_BGUX_GoBatRoom";
+			break;
 		case 5:
 			callfunc "F_NEED_BGUX_EventMaterial", .@n$;
-			break;
-		case 6:
-			callfunc "F_NEED_BGUX_Rank3", .@n$;
 			break;
 		default:
 			return;
@@ -406,41 +381,62 @@ function	script	F_NEED_BGUX_Rewards	{
 // 를 그대로 부른다. 지난 주 확정 상태·순위 보상권은 need_bg2_week / need_bg2_reward 를 SELECT 만 한다.
 // 정산·확정·보상권 생성은 하지 않는다. "조회 순위"와 "보상 대상 순위"를 문구로 나눈다.
 //------------------------------------------------------------
+// 이전 호출과의 호환. 순위 계산/보상 확정은 변경하지 않는다.
 function	script	F_NEED_BGUX_Rank3	{
+	callfunc "F_NEED_BGUX_Ranking", getarg(0), 3;
+	return;
+}
+
+function	script	F_NEED_BGUX_Ranking	{
 	.@n$ = getarg(0);
+	.@mode = getarg(1);
 	mes .@n$;
-	if (!$@NBG3P3_LOADED || !$@NBG2P3_LOADED) {
-		mes needtr("3대3 점수 기능은 현재 운영하지 않습니다.", "3v3 points are not running now.");
+	if (!$@NBG2P3_LOADED || (.@mode == 3 && !$@NBG3P3_LOADED)) {
+		mes needtr("현재 순위를 조회할 수 없습니다.", "Rankings are currently unavailable.");
 		next;
 		clear;
 		return;
 	}
 	.@ws = callfunc("F_NEED_BG2P3_WeekStart", gettimetick(2));
-	.@r = callfunc("F_NEED_BG3P3_RankRows", .@ws, 0, 1, 10);
-	mes needtr("^0055FF3:3 룬 거점전 이번 주 순위^000000 (조회용 잠정 순위, 상위 10)", "^0055FF3v3 Rune Control this week^000000 (provisional, for reference, top 10)");
-	mes "(" + callfunc("F_NEED_BG2P3_Date$", .@ws) + " ~ " + callfunc("F_NEED_BG2P3_Date$", .@ws + $@NBG3P3_WEEK) + " KST)";
-	if (.@r <= 0)
-		mes needtr("아직 기록이 없습니다.", "No records yet.");
-	for (.@i = 0; .@i < .@r; .@i++)
-		mes (.@i + 1) + ". " + $@NBG3P3_R_NAME$[.@i] + " - " + $@NBG3P3_R_PTS[.@i] + needtr("점 ", " pts ") + $@NBG3P3_R_W[.@i] + needtr("승 ", "W ") + $@NBG3P3_R_G[.@i]
-			+ needtr("경기", " games") + ($@NBG3P3_R_G[.@i] < $@NBG3P3_MINGAMES ? needtr(" (후보 미달)", " (not eligible)") : "");
+	if (.@mode == 3) {
+		.@r = callfunc("F_NEED_BG3P3_RankRows", .@ws, 0, 1, 10);
+		.@week = $@NBG3P3_WEEK;
+		.@min = $@NBG3P3_MINGAMES;
+		.@minacc = $@NBG3P3_MINACC;
+	}
+	else {
+		.@r = callfunc("F_NEED_BG2P3_RankRows", .@ws, 0, 1, 10);
+		.@week = $@NBG2P3_WEEK;
+		.@min = $@NBG2P3_MINGAMES;
+		.@minacc = $@NBG2P3_MINACC;
+	}
+	mes needtr("^0055FF" + .@mode + "대" + .@mode + " 이번 주 순위^000000", "^0055FF" + .@mode + "v" + .@mode + " weekly ranking^000000");
+	mes needtr("현재 점수 기준 상위 10명입니다. 최종 보상 순위와 다를 수 있습니다.", "Top 10 by current points. Final reward ranks may differ.");
+	if (.@r <= 0) mes needtr("아직 기록이 없습니다.", "No records yet.");
+	for (.@i = 0; .@i < .@r; .@i++) {
+		.@name$ = (.@mode == 3) ? $@NBG3P3_R_NAME$[.@i] : $@NBG2P3_R_NAME$[.@i];
+		.@pts = (.@mode == 3) ? $@NBG3P3_R_PTS[.@i] : $@NBG2P3_R_PTS[.@i];
+		.@games = (.@mode == 3) ? $@NBG3P3_R_G[.@i] : $@NBG2P3_R_G[.@i];
+		mes (.@i + 1) + ". " + .@name$ + "  " + .@pts + needtr("점", " pts") + (.@games < .@min ? needtr(" (경기 수 미달)", " (not enough matches)") : "");
+	}
 	if (.@ws < $@NBG2P3_WREW_FROM)
-		mes needtr("^FF0000테스트 주간^000000: 이 순위는 조회용이며 3:3 랭킹 보상은 집계·지급하지 않습니다.", "^FF0000Test week^000000: this ranking is for reference only; no 3v3 ranking rewards are counted or paid.");
+		mes needtr("^FF0000테스트 주간에는 순위 보상이 없습니다.^000000", "^FF0000No ranking rewards during test weeks.^000000");
 	else
-		mes needtr("조회용 순위입니다. 보상 대상 순위는 다음 주 수요일 04:00(KST) 확정 때 정해집니다: 유효 경기 " + $@NBG3P3_MINGAMES + "회 이상, 그 주 참가 계정 " + $@NBG3P3_MINACC + "개 이상일 때 1~3위(계정당 1자리).",
-			"This ranking is for reference. The reward ranking is settled next Wednesday 04:00 KST: " + $@NBG3P3_MINGAMES + "+ valid matches, ranks 1-3 (one per account) only when " + $@NBG3P3_MINACC + "+ accounts played that week.");
+		mes needtr("보상 조건: 유효 " + .@min + "경기, 주간 참가 계정 " + .@minacc + "개 이상. 다음 주 수요일 오전 4시 확정 후 1~3위가 대상입니다.", "Reward eligibility: " + .@min + " valid games and " + .@minacc + " participating accounts. Ranks 1-3 are settled next Wednesday at 04:00 KST.");
 	next;
 	mes .@n$;
-	.@pw = .@ws - $@NBG3P3_WEEK;
+	.@pw = .@ws - .@week;
 	.@pst$ = "";
-	query_sql "SELECT state FROM need_bg2_week WHERE `mode` = " + $@NBG3P3_MODE + " AND week_start = " + .@pw, .@pst$;
-	mes needtr("지난 주(", "Last week (") + callfunc("F_NEED_BG2P3_Date$", .@pw) + "): "
-		+ ((.@pw < $@NBG2P3_WREW_FROM) ? needtr("테스트 주간 - 순위 보상 없음", "test week - no ranking rewards") : (.@pst$ == "" ? needtr("확정 전", "not settled yet") : .@pst$));
-	.@c = query_sql("SELECT r.rank_slot, COALESCE(c.name, '?'), r.amount, r.id, r.reward_kind FROM need_bg2_reward r LEFT JOIN `char` c ON c.char_id = r.char_id WHERE r.`mode` = " + $@NBG3P3_MODE
+	query_sql "SELECT state FROM need_bg2_week WHERE `mode` = " + .@mode + " AND week_start = " + .@pw, .@pst$;
+	mes needtr("^0055FF지난주 확정 보상^000000", "^0055FFLast week's settled rewards^000000");
+	mes callfunc("F_NEED_BG2P3_Date$", .@pw) + " KST";
+	if (.@pw < $@NBG2P3_WREW_FROM) mes needtr("테스트 주간 · 순위 보상 없음", "Test week · no ranking rewards");
+	else mes (.@pst$ == "" ? needtr("아직 확정되지 않았습니다.", "Not settled yet.") : .@pst$);
+	.@c = query_sql("SELECT r.rank_slot, COALESCE(c.name, '?'), r.amount, r.id, r.reward_kind FROM need_bg2_reward r LEFT JOIN `char` c ON c.char_id = r.char_id WHERE r.`mode` = " + .@mode
 		+ " AND r.week_start = " + .@pw + " AND r.reward_kind IN ('RANK', 'RANKI') ORDER BY r.rank_slot", .@rs, .@rn$, .@ra, .@ri, .@rk$);
 	for (.@i = 0; .@i < .@c; .@i++)
 		mes .@rs[.@i] + needtr("위 ", ". ") + .@rn$[.@i] + " - " + callfunc("F_NEED_BG2P3_TicketText$", .@ri[.@i], .@rk$[.@i], .@ra[.@i]);
-	mes needtr("^777777보상권 수령은 '2대2·3대3 보상관'에서 합니다.^000000", "^777777Claim reward tickets at the '2v2 / 3v3 Reward Officer'.^000000");
+	mes needtr("받을 보상이 있으면 점수·보상의 '보상 받기'를 이용하세요.", "Use 'Claim rewards' under Points & rewards to collect available rewards.");
 	next;
 	clear;
 	return;
@@ -495,23 +491,20 @@ function	script	F_NEED_BGUX_EventMaterial	{
 //------------------------------------------------------------
 function	script	F_NEED_BGUX_Menu	{
 	.@n$ = "[" + needtr("전장 안내", "Battleground Guide") + "]";
+	setdialogsize(400,500);
 	while (1) {
 		mes .@n$;
-		mes needtr("기존 전장 / 3:3 룬 거점전 / 2:2 듀오 서바이벌", "Classic BG / 3v3 Rune Control / 2v2 Duo Survival");
-		mes needtr("참가 방법, 대기 현황, 보상 창구를 한곳에서 안내합니다.", "How to join, current queues and reward counters in one place.");
-		.@m = select(needtr("참가 방법 안내", "How to join")
-			+ ":" + needtr("현재 대기 인원", "Current queues")
-			+ ":" + needtr("점수·랭킹·보상 안내 및 수령", "Points, ranking and rewards")
-			+ ":" + needtr("나가기", "Leave"));
+		mes needtr("참가할 전장을 선택해 주세요.", "Choose a battleground to join.");
+		.@m = select(needtr("기존 전장 · 4대4 이상:2대2 · 듀오 서바이벌:3대3 · 룬 거점전:대기 현황:점수·보상:닫기", "Classic BG · 4v4 and up:2v2 · Duo Survival:3v3 · Rune Control:Queue status:Points & rewards:Close"));
 		clear;
+		setdialogsize(400,400);
 		switch (.@m) {
-		case 1: callfunc "F_NEED_BGUX_HowTo", .@n$; break;
-		case 2: callfunc "F_NEED_BGUX_Queues", .@n$; break;
-		case 3: callfunc "F_NEED_BGUX_Rewards", .@n$; break;
-		default:
-			mes .@n$;
-			mes needtr("즐거운 전장 되세요.", "Good luck on the battlefield.");
-			close;
+		case 1: callfunc "F_NEED_BGUX_HowTo", .@n$, 1; break;
+		case 2: callfunc "F_NEED_BGUX_HowTo", .@n$, 3; break;
+		case 3: callfunc "F_NEED_BGUX_HowTo", .@n$, 2; break;
+		case 4: callfunc "F_NEED_BGUX_Queues", .@n$; break;
+		case 5: callfunc "F_NEED_BGUX_Rewards", .@n$; break;
+		default: close;
 		}
 	}
 }
@@ -519,7 +512,7 @@ function	script	F_NEED_BGUX_Menu	{
 //------------------------------------------------------------
 // NPC + 편의 명령어 (마을에서만)
 //------------------------------------------------------------
-payo2,99,134,4	script	전장 안내 및 대기 현황#need_bgux	4_M_KNIGHT_SILVER,{
+payo2,96,135,4	script	전장 안내 및 대기 현황#need_bgux	4_M_KNIGHT_SILVER,{
 	callfunc "F_NEED_BGUX_Menu";
 	end;
 
@@ -532,8 +525,8 @@ OnInit:
 OnCmdGuide:
 	getmapxy(.@m$, .@x, .@y, BL_PC);
 	if (!getmapflag(.@m$, mf_town)) {
-		dispbottom needtr("[전장 안내] @전장안내 는 마을에서만 열 수 있습니다. 구 페이욘 99, 134 의 '전장 안내 및 대기 현황' NPC 도 같은 메뉴입니다.",
-			"[Battleground Guide] @bginfo only opens in towns. The 'BG Guide & Queue Status' NPC at Old Payon 99, 134 has the same menu."), 0xFFCC66;
+		dispbottom needtr("[전장 안내] @전장안내 는 마을에서만 열 수 있습니다. 구 페이욘 96, 135 의 '전장 안내 및 대기 현황' NPC 도 같은 메뉴입니다.",
+			"[Battleground Guide] @bginfo only opens in towns. The 'BG Guide & Queue Status' NPC at Old Payon 96, 135 has the same menu."), 0xFFCC66;
 		end;
 	}
 	callfunc "F_NEED_BGUX_Menu";
