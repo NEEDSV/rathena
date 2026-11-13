@@ -7287,6 +7287,10 @@ enum e_setpos pc_setpos(map_session_data* sd, uint16 mapindex, int32 x, int32 y,
 	status_change *sc = status_get_sc(sd);
 
 	sd->state.changemap = (sd->mapindex != mapindex);
+	// NEED: the battleground Illusion Doping repeat decay never follows a player to another map
+	// (leaving or re-entering a battleground starts a fresh chain).
+	if (sd->state.changemap)
+		sd->need_illusiondoping_decay = {};
 	sd->state.warping = 1;
 	// Market shops reuse the trade state until the client sends CZ_NPC_MARKET_CLOSE.
 	// A warp can make the client skip that packet, so end only the NPC market state here.
@@ -10176,6 +10180,8 @@ int32 pc_dead(map_session_data *sd,block_list *src)
 	pc_macro_detector_cancel_success_immunity(*sd, "success_immunity_cancel_death");
 	// Reset here so immediate resurrection/respawn paths cannot retain Earth Strain resistance.
 	sd->earthstrain_strip_resist = 0;
+	// Same for the battleground Illusion Doping repeat decay: death ends the chain.
+	sd->need_illusiondoping_decay = {};
 	if (pc_bg_strip_has_saved_equipment(sd))
 		sd->bg_strip_requip_pending = true;
 

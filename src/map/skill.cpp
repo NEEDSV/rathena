@@ -7413,10 +7413,12 @@ int32 skill_unit_onplace_timer(skill_unit *unit, block_list *bl, t_tick tick)
 				t_tick sec = skill_get_time2(sg->skill_id,sg->skill_lv);
 
 				// NEED: battleground only - cap the Ankle Snare hold at 10s (players only, target's map).
-				// Scoped to HT_ANKLESNARE so the SC_ANKLE applied by Spiral Pierce / Glacier Fist / Tarot
-				// Card, and the snare unit created by SC_ESCAPE, keep their own durations. sg->limit below
-				// is derived from sec, so the trap object expires together with the shortened hold.
-				if (skill_id == HT_ANKLESNARE && bl->type == BL_PC &&
+				// Keyed on the unit group's skill id, never on the caster's job or skill tree, so every caster
+				// of these units gets the same cap. SC_ESCAPE (Shadow Chaser Emergency Escape) drops the very
+				// same Ankle Snare unit with a 20s hold, so it is capped too (2026-11-13 BG balance request).
+				// The SC_ANKLE applied by Spiral Pierce / Glacier Fist / Tarot Card keeps its own duration.
+				// sg->limit below is derived from sec, so the trap object expires together with the shortened hold.
+				if ((skill_id == HT_ANKLESNARE || skill_id == SC_ESCAPE) && bl->type == BL_PC &&
 					map_getmapflag(bl->m, MF_BATTLEGROUND) && sec > 10000)
 					sec = 10000;
 

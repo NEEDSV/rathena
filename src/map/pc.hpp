@@ -21,6 +21,7 @@
 #include "itemdb.hpp" // MAX_ITEMGROUP
 #include "map.hpp" // RC_ALL
 #include "mob.hpp" //e_size
+#include "need_illusiondoping_decay.hpp" // s_need_illusiondoping_decay
 #include "need_jf_pattern.hpp" // s_need_jf_pattern
 #include "pc_groups.hpp" // s_player_group
 #include "script.hpp" // struct script_reg, struct script_regstr
@@ -649,6 +650,9 @@ public:
 	uint16 mapindex;
 	// NEED: Runtime-only resistance shared by all WL_EARTHSTRAIN casters. Reset on death/login.
 	uint8 earthstrain_strip_resist = 0;
+	// NEED: battleground Illusion Doping repeat decay shared by all casters (need_illusiondoping_decay.hpp).
+	// Runtime only. Reset on death and on every map change; a new session starts empty.
+	s_need_illusiondoping_decay need_illusiondoping_decay;
 	unsigned char head_dir; //0: Look forward. 1: Look right, 2: Look left.
 	t_tick client_tick;
 	int32 npc_id,npc_shopid; //for script follow scriptoid;   ,npcid
