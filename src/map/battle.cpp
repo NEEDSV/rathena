@@ -29,6 +29,7 @@
 #include "map.hpp"
 #include "mercenary.hpp"
 #include "mob.hpp"
+#include "need_pvp_dummy.hpp"
 #include "party.hpp"
 #include "path.hpp"
 #include "pc.hpp"
@@ -937,13 +938,14 @@ int32 battle_calc_cardfix(int32 attack_type, block_list *src, block_list *target
 			}
 			break;
 
-		case BF_WEAPON:
+		case BF_WEAPON: {
+			const uint8 attack_race = need_pvp_dummy_attack_race(target, tstatus->race);
 			// Affected by attacker ATK bonuses
 			if( sd && !nk[NK_IGNOREATKCARD] && (left&2) ) {
 				int16 cardfix_ = 1000;
 
 				if( sd->state.arrow_atk ) { // Ranged attack
-					cardfix = cardfix * (100 + sd->right_weapon.addrace[tstatus->race] + sd->indexed_bonus.arrow_addrace[tstatus->race] +
+					cardfix = cardfix * (100 + sd->right_weapon.addrace[attack_race] + sd->indexed_bonus.arrow_addrace[attack_race] +
 						sd->right_weapon.addrace[RC_ALL] + sd->indexed_bonus.arrow_addrace[RC_ALL]) / 100;
 					if( !nk[NK_IGNOREELEMENT] ) { // Affected by Element modifier bonuses
 						int32 ele_fix = sd->right_weapon.addele[tstatus->def_ele] + sd->indexed_bonus.arrow_addele[tstatus->def_ele] +
@@ -976,7 +978,7 @@ int32 battle_calc_cardfix(int32 attack_type, block_list *src, block_list *target
 					// Calculates each right & left hand weapon bonuses separatedly
 					if( !battle_config.left_cardfix_to_right ) {
 						// Right-handed weapon
-						cardfix = cardfix * (100 + sd->right_weapon.addrace[tstatus->race] + sd->right_weapon.addrace[RC_ALL]) / 100;
+						cardfix = cardfix * (100 + sd->right_weapon.addrace[attack_race] + sd->right_weapon.addrace[RC_ALL]) / 100;
 						if( !nk[NK_IGNOREELEMENT] ) { // Affected by Element modifier bonuses
 							int32 ele_fix = sd->right_weapon.addele[tstatus->def_ele] + sd->right_weapon.addele[ELE_ALL];
 
@@ -997,7 +999,7 @@ int32 battle_calc_cardfix(int32 attack_type, block_list *src, block_list *target
 						cardfix = cardfix * (100 + sd->right_weapon.addclass[tstatus->class_] + sd->right_weapon.addclass[CLASS_ALL]) / 100;
 
 						if( left&1 ) { // Left-handed weapon
-							cardfix_ = cardfix_ * (100 + sd->left_weapon.addrace[tstatus->race] + sd->left_weapon.addrace[RC_ALL]) / 100;
+							cardfix_ = cardfix_ * (100 + sd->left_weapon.addrace[attack_race] + sd->left_weapon.addrace[RC_ALL]) / 100;
 							if( !nk[NK_IGNOREELEMENT] ) { // Affected by Element modifier bonuses
 								int32 ele_fix_lh = sd->left_weapon.addele[tstatus->def_ele] + sd->left_weapon.addele[ELE_ALL];
 
@@ -1045,7 +1047,7 @@ int32 battle_calc_cardfix(int32 attack_type, block_list *src, block_list *target
 							}
 							cardfix = cardfix * (100 + ele_fix) / 100;
 						//}
-						cardfix = cardfix * (100 + sd->right_weapon.addrace[tstatus->race] + sd->left_weapon.addrace[tstatus->race] +
+						cardfix = cardfix * (100 + sd->right_weapon.addrace[attack_race] + sd->left_weapon.addrace[attack_race] +
 							sd->right_weapon.addrace[RC_ALL] + sd->left_weapon.addrace[RC_ALL]) / 100;
 						cardfix = cardfix * (100 + sd->right_weapon.addsize[tstatus->size] + sd->left_weapon.addsize[tstatus->size] +
 							sd->right_weapon.addsize[SZ_ALL] + sd->left_weapon.addsize[SZ_ALL]) / 100;
@@ -1161,6 +1163,7 @@ int32 battle_calc_cardfix(int32 attack_type, block_list *src, block_list *target
 				APPLY_CARDFIX(damage, cardfix);
 			}
 			break;
+		}
 
 		case BF_MISC:
 			// Affected by target DEF bonuses
@@ -4737,7 +4740,9 @@ static void battle_calc_defense_reduction( Damage* wd, block_list* src, block_li
 	int16 def2 = tstatus->def2;
 
 	if (sd) {
-		int32 i = sd->indexed_bonus.ignore_def_by_race[tstatus->race] + sd->indexed_bonus.ignore_def_by_race[RC_ALL];
+		// This function is also used by hybrid magic skills; opt in only for weapon damage.
+		const uint8 attack_race = (wd->flag & BF_WEAPON) ? need_pvp_dummy_attack_race(target, tstatus->race) : tstatus->race;
+		int32 i = sd->indexed_bonus.ignore_def_by_race[attack_race] + sd->indexed_bonus.ignore_def_by_race[RC_ALL];
 		i += sd->indexed_bonus.ignore_def_by_class[tstatus->class_] + sd->indexed_bonus.ignore_def_by_class[CLASS_ALL];
 		if (i) {
 			i = min(i,100); //cap it to 100 for 0 def min
