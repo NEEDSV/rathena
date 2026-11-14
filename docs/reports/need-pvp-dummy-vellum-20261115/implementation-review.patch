@@ -1,0 +1,214 @@
+--- a/src/map/battle.cpp
++++ b/src/map/battle.cpp
+@@ -29,6 +29,7 @@
+ #include "map.hpp"
+ #include "mercenary.hpp"
+ #include "mob.hpp"
++#include "need_pvp_dummy.hpp"
+ #include "party.hpp"
+ #include "path.hpp"
+ #include "pc.hpp"
+@@ -937,13 +938,14 @@
+ 			}
+ 			break;
+ 
+-		case BF_WEAPON:
++		case BF_WEAPON: {
++			const uint8 attack_race = need_pvp_dummy_attack_race(target, tstatus->race);
+ 			// Affected by attacker ATK bonuses
+ 			if( sd && !nk[NK_IGNOREATKCARD] && (left&2) ) {
+ 				int16 cardfix_ = 1000;
+ 
+ 				if( sd->state.arrow_atk ) { // Ranged attack
+-					cardfix = cardfix * (100 + sd->right_weapon.addrace[tstatus->race] + sd->indexed_bonus.arrow_addrace[tstatus->race] +
++					cardfix = cardfix * (100 + sd->right_weapon.addrace[attack_race] + sd->indexed_bonus.arrow_addrace[attack_race] +
+ 						sd->right_weapon.addrace[RC_ALL] + sd->indexed_bonus.arrow_addrace[RC_ALL]) / 100;
+ 					if( !nk[NK_IGNOREELEMENT] ) { // Affected by Element modifier bonuses
+ 						int32 ele_fix = sd->right_weapon.addele[tstatus->def_ele] + sd->indexed_bonus.arrow_addele[tstatus->def_ele] +
+@@ -976,7 +978,7 @@
+ 					// Calculates each right & left hand weapon bonuses separatedly
+ 					if( !battle_config.left_cardfix_to_right ) {
+ 						// Right-handed weapon
+-						cardfix = cardfix * (100 + sd->right_weapon.addrace[tstatus->race] + sd->right_weapon.addrace[RC_ALL]) / 100;
++						cardfix = cardfix * (100 + sd->right_weapon.addrace[attack_race] + sd->right_weapon.addrace[RC_ALL]) / 100;
+ 						if( !nk[NK_IGNOREELEMENT] ) { // Affected by Element modifier bonuses
+ 							int32 ele_fix = sd->right_weapon.addele[tstatus->def_ele] + sd->right_weapon.addele[ELE_ALL];
+ 
+@@ -997,7 +999,7 @@
+ 						cardfix = cardfix * (100 + sd->right_weapon.addclass[tstatus->class_] + sd->right_weapon.addclass[CLASS_ALL]) / 100;
+ 
+ 						if( left&1 ) { // Left-handed weapon
+-							cardfix_ = cardfix_ * (100 + sd->left_weapon.addrace[tstatus->race] + sd->left_weapon.addrace[RC_ALL]) / 100;
++							cardfix_ = cardfix_ * (100 + sd->left_weapon.addrace[attack_race] + sd->left_weapon.addrace[RC_ALL]) / 100;
+ 							if( !nk[NK_IGNOREELEMENT] ) { // Affected by Element modifier bonuses
+ 								int32 ele_fix_lh = sd->left_weapon.addele[tstatus->def_ele] + sd->left_weapon.addele[ELE_ALL];
+ 
+@@ -1045,7 +1047,7 @@
+ 							}
+ 							cardfix = cardfix * (100 + ele_fix) / 100;
+ 						//}
+-						cardfix = cardfix * (100 + sd->right_weapon.addrace[tstatus->race] + sd->left_weapon.addrace[tstatus->race] +
++						cardfix = cardfix * (100 + sd->right_weapon.addrace[attack_race] + sd->left_weapon.addrace[attack_race] +
+ 							sd->right_weapon.addrace[RC_ALL] + sd->left_weapon.addrace[RC_ALL]) / 100;
+ 						cardfix = cardfix * (100 + sd->right_weapon.addsize[tstatus->size] + sd->left_weapon.addsize[tstatus->size] +
+ 							sd->right_weapon.addsize[SZ_ALL] + sd->left_weapon.addsize[SZ_ALL]) / 100;
+@@ -1161,6 +1163,7 @@
+ 				APPLY_CARDFIX(damage, cardfix);
+ 			}
+ 			break;
++		}
+ 
+ 		case BF_MISC:
+ 			// Affected by target DEF bonuses
+@@ -4737,7 +4740,9 @@
+ 	int16 def2 = tstatus->def2;
+ 
+ 	if (sd) {
+-		int32 i = sd->indexed_bonus.ignore_def_by_race[tstatus->race] + sd->indexed_bonus.ignore_def_by_race[RC_ALL];
++		// This function is also used by hybrid magic skills; opt in only for weapon damage.
++		const uint8 attack_race = (wd->flag & BF_WEAPON) ? need_pvp_dummy_attack_race(target, tstatus->race) : tstatus->race;
++		int32 i = sd->indexed_bonus.ignore_def_by_race[attack_race] + sd->indexed_bonus.ignore_def_by_race[RC_ALL];
+ 		i += sd->indexed_bonus.ignore_def_by_class[tstatus->class_] + sd->indexed_bonus.ignore_def_by_class[CLASS_ALL];
+ 		if (i) {
+ 			i = min(i,100); //cap it to 100 for 0 def min
+--- a/src/map/mob.cpp
++++ b/src/map/mob.cpp
+@@ -2,6 +2,7 @@
+ // For more information, see LICENCE in the main folder
+ 
+ #include "mob.hpp"
++#include "need_pvp_dummy.hpp"
+ 
+ #include <algorithm>
+ #include <cmath>
+@@ -3377,6 +3378,13 @@
+  *------------------------------------------*/
+ int32 mob_dead(mob_data *md, block_list *src, int32 type)
+ {
++	// Cancel test-target death before every EXP/drop/quest/kill-event path.
++	if (mob_is_need_pvp_dummy(md)) {
++		md->status.hp = md->status.max_hp;
++		md->dmglog.clear();
++		return 0;
++	}
++
+ 	struct status_data *status;
+ 	map_session_data *sd = nullptr, *tmpsd[DAMAGELOG_SIZE];
+ 	map_session_data *first_sd = nullptr, *second_sd = nullptr, *third_sd = nullptr;
+--- a/src/map/need_pvp_dummy.hpp
++++ b/src/map/need_pvp_dummy.hpp
+@@ -0,0 +1,28 @@
++// Copyright (c) rAthena Dev Teams - Licensed under GNU GPL
++#ifndef NEED_PVP_DUMMY_HPP
++#define NEED_PVP_DUMMY_HPP
++
++#include <cstring>
++
++#include "map.hpp"
++#include "mob.hpp"
++
++// Dedicated test target, never a player. Do not use this for BL_PC/PK checks.
++constexpr int16 NEED_PVP_DUMMY_ID = 31900;
++
++inline bool mob_is_need_pvp_dummy(const block_list* target) {
++	if (target == nullptr || target->type != BL_MOB)
++		return false;
++	const auto* md = static_cast<const mob_data*>(target);
++	if (md->mob_id != NEED_PVP_DUMMY_ID || md->master_id != 0 || md->bg_id != 0)
++		return false;
++	const auto* mapdata = map_getmapdata(target->m);
++	return mapdata != nullptr && std::strcmp(mapdata->name, "hero_tra") == 0 && !mapdata_flag_vs2(mapdata);
++}
++
++// Only bAddRace and bIgnoreDefRaceRate opt in to this race substitution.
++inline uint8 need_pvp_dummy_attack_race(const block_list* target, uint8 race) {
++	return mob_is_need_pvp_dummy(target) ? static_cast<uint8>(RC_PLAYER_HUMAN) : race;
++}
++
++#endif
+--- a/db/import/mob_db.yml
++++ b/db/import/mob_db.yml
+@@ -2472,4 +2472,33 @@
+     AegisName: MG_BLOODY_KNIGHT_H
+     Drops:
+       - Item: Polluted_Spell
+-        Rate: 50+        Rate: 50
++  # NEED physical player-option test target. Race stays Formless intentionally.
++  - Id: 31900
++    AegisName: NEED_PVP_TEST_DUMMY
++    Name: PvP Test Dummy
++    Level: 100
++    Hp: 2000000000
++    BaseExp: 0
++    JobExp: 0
++    MvpExp: 0
++    Defense: 100
++    Str: 0
++    Agi: 0
++    Vit: 0
++    Int: 0
++    Dex: 0
++    Luk: 0
++    Size: Medium
++    Race: Formless
++    Element: Neutral
++    ElementLevel: 1
++    WalkSpeed: 1000
++    ClientAttackMotion: 0
++    Ai: 06
++    Class: Boss
++    Modes:
++      CanMove: false
++      CanAttack: false
++      TeleportBlock: true
++      KnockBackImmune: true
+--- a/db/import/mob_avail.yml
++++ b/db/import/mob_avail.yml
+@@ -123,3 +123,7 @@
+ #    Sprite: WHISPER
+ #  - Mob: EP14_3_DEATH_B_MOB3
+ #    Sprite: DARK_LORD
++
++Body:
++  - Mob: NEED_PVP_TEST_DUMMY
++    Sprite: S_DUMMY_100_MEDIUM
+--- a/npc/NEED/need_pvp_dummy.txt
++++ b/npc/NEED/need_pvp_dummy.txt
+@@ -0,0 +1,28 @@
++// NEED: physical player-option test target. Not a real player/PvP simulator.
++hero_tra,95,147,4	script	PvP Dummy Guide::NEED_PVP_DUMMY	4_M_SAGE_C,{
++	mes needtr("[PvP 테스트 허수아비]", "[PvP Test Dummy]");
++	mes needtr("위쪽 허수아비는 실제 플레이어가 아닌 테스트 몬스터입니다.", "The dummy above is a test monster, not a real player.");
++	mes needtr("플레이어(인간) 대상 물리 추가 대미지와 DEF 무시율만 비교합니다.", "Tests physical damage vs human players and percentage DEF ignore only.");
++	mes needtr("벨룸의 소실/마법/상태이상 등 다른 옵션은 지원 범위가 아닙니다.", "Vanish, magic, status effects and other Vellum options are outside this test.");
++	mes needtr("중형/무속성1, DEF 100. 실제 PvP/BG/GvG 대미지와 다릅니다.", "Medium / Neutral 1, DEF 100. This does not reproduce real PvP/BG/GvG damage.");
++	mes needtr("기존 인간형 허수아비는 DEF 0이므로 절대 수치를 직접 비교하지 마세요.", "Existing human dummies have DEF 0; compare equipment changes per target.");
++	next;
++	if (select(needtr("닫기:HP 회복", "Close:Restore HP")) == 2 && unitexists(.gid)) {
++		setunitdata .gid, UMOB_HP, 2000000000;
++		mes needtr("허수아비 HP를 회복했습니다.", "Dummy HP restored.");
++	}
++	close;
++OnInit:
++	// Reuse the live unit on a single-file reload; temporary globals never save to SQL.
++	if (unitexists($@NEED_PVP_DUMMY_GID)) {
++		.gid = $@NEED_PVP_DUMMY_GID;
++		end;
++	}
++	monster "hero_tra",95,144,"PvP Test Dummy",31900,1,strnpcinfo(3)+"::OnDummyDead";
++	.gid = $@mobid[0];
++	$@NEED_PVP_DUMMY_GID = .gid;
++	end;
++OnDummyDead:
++	// Combat death is cancelled by mob_dead before kill events or rewards.
++	end;
++}
+--- a/npc/scripts_need.conf
++++ b/npc/scripts_need.conf
+@@ -153,3 +153,6 @@
+ npc: npc/NEED/bg3/need_bg3_p3_rules.txt	// 3v3 reward rules (points, match cash/items, weekly items); the IP daily cap is the 2v2 one
+ // NEED BG guide & queue status (2026-11-12): one entry menu for classic BG / 3v3 Rune / 2v2 Duo - reads their state only. payo2,99,134 + @bginfo (towns). Load after the BG files.
+ npc: npc/NEED/need_bg_guide.txt
++
++// NEED isolated physical player-option training target (hero_tra only).
++npc: npc/NEED/need_pvp_dummy.txt

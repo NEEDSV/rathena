@@ -1,0 +1,28 @@
+// NEED: physical player-option test target. Not a real player/PvP simulator.
+hero_tra,95,147,4	script	PvP Dummy Guide::NEED_PVP_DUMMY	4_M_SAGE_C,{
+	mes needtr("[PvP 테스트 허수아비]", "[PvP Test Dummy]");
+	mes needtr("위쪽 허수아비는 실제 플레이어가 아닌 테스트 몬스터입니다.", "The dummy above is a test monster, not a real player.");
+	mes needtr("플레이어(인간) 대상 물리 추가 대미지와 DEF 무시율만 비교합니다.", "Tests physical damage vs human players and percentage DEF ignore only.");
+	mes needtr("벨룸의 소실/마법/상태이상 등 다른 옵션은 지원 범위가 아닙니다.", "Vanish, magic, status effects and other Vellum options are outside this test.");
+	mes needtr("중형/무속성1, DEF 100. 실제 PvP/BG/GvG 대미지와 다릅니다.", "Medium / Neutral 1, DEF 100. This does not reproduce real PvP/BG/GvG damage.");
+	mes needtr("기존 인간형 허수아비는 DEF 0이므로 절대 수치를 직접 비교하지 마세요.", "Existing human dummies have DEF 0; compare equipment changes per target.");
+	next;
+	if (select(needtr("닫기:HP 회복", "Close:Restore HP")) == 2 && unitexists(.gid)) {
+		setunitdata .gid, UMOB_HP, 2000000000;
+		mes needtr("허수아비 HP를 회복했습니다.", "Dummy HP restored.");
+	}
+	close;
+OnInit:
+	// Reuse the live unit on a single-file reload; temporary globals never save to SQL.
+	if (unitexists($@NEED_PVP_DUMMY_GID)) {
+		.gid = $@NEED_PVP_DUMMY_GID;
+		end;
+	}
+	monster "hero_tra",95,144,"PvP Test Dummy",31900,1,strnpcinfo(3)+"::OnDummyDead";
+	.gid = $@mobid[0];
+	$@NEED_PVP_DUMMY_GID = .gid;
+	end;
+OnDummyDead:
+	// Combat death is cancelled by mob_dead before kill events or rewards.
+	end;
+}

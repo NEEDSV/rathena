@@ -2,6 +2,7 @@
 // For more information, see LICENCE in the main folder
 
 #include "mob.hpp"
+#include "need_pvp_dummy.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -3377,6 +3378,13 @@ static void need_world_drop_on_kill(const need_world_drop_owner& owner, mob_data
  *------------------------------------------*/
 int32 mob_dead(mob_data *md, block_list *src, int32 type)
 {
+	// Cancel test-target death before every EXP/drop/quest/kill-event path.
+	if (mob_is_need_pvp_dummy(md)) {
+		md->status.hp = md->status.max_hp;
+		md->dmglog.clear();
+		return 0;
+	}
+
 	struct status_data *status;
 	map_session_data *sd = nullptr, *tmpsd[DAMAGELOG_SIZE];
 	map_session_data *first_sd = nullptr, *second_sd = nullptr, *third_sd = nullptr;
