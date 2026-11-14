@@ -24459,6 +24459,9 @@ void clif_summon_hp_bar(const mob_data& md) {
 void clif_laphine_synthesis_open( map_session_data *sd, const std::shared_ptr<const s_laphine_synthesis> synthesis ){
 #if PACKETVER_MAIN_NUM >= 20160601 || PACKETVER_RE_NUM >= 20160525 || defined(PACKETVER_ZERO)
 	nullpo_retv( sd );
+	if( !synthesis->enabled ){
+		return;
+	}
 
 	sd->state.laphine_synthesis = synthesis->item_id;
 
@@ -24507,6 +24510,9 @@ int32 need_laphine_synthesis_execute( map_session_data& sd, t_itemid box_id, con
 	if( synthesis == nullptr ){
 		return -1;
 	}
+	if( !synthesis->enabled ){
+		return LAPHINE_SYNTHESIS_ITEM;
+	}
 
 	size_t count = entries.size();
 
@@ -24538,6 +24544,8 @@ int32 need_laphine_synthesis_execute( map_session_data& sd, t_itemid box_id, con
 	// NEED: 칸별로 요청된 총 수량 (같은 칸이 여러 줄에 나오면 합산해서 보유 수량과 비교)
 	int32 requested_amount[MAX_INVENTORY] = {};
 	size_t units = 0;
+	const bool distinct_types = box_id == 23151 || box_id == 23152;
+	std::unordered_set<t_itemid> selected_types;
 
 	for( size_t i = 0; i < count; i++ ){
 		int16 index = entries[i].index;
@@ -24555,6 +24563,9 @@ int32 need_laphine_synthesis_execute( map_session_data& sd, t_itemid box_id, con
 		std::shared_ptr<s_laphine_synthesis_requirement> requirement = util::umap_find( synthesis->requirements, item->nameid );
 
 		if( requirement == nullptr ){
+			return LAPHINE_SYNTHESIS_ITEM;
+		}
+		if( distinct_types && !selected_types.insert( item->nameid ).second ){
 			return LAPHINE_SYNTHESIS_ITEM;
 		}
 
@@ -24640,6 +24651,9 @@ int32 need_laphine_synthesis_accepts( map_session_data& sd, t_itemid box_id, int
 	std::shared_ptr<s_laphine_synthesis> synthesis = laphine_synthesis_db.find( box_id );
 
 	if( synthesis == nullptr || index < 0 || index >= MAX_INVENTORY || sd.inventory_data[index] == nullptr ){
+		return 0;
+	}
+	if( !synthesis->enabled ){
 		return 0;
 	}
 

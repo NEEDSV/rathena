@@ -2402,6 +2402,14 @@ uint64 LaphineSynthesisDatabase::parseBodyNode( const ryml::NodeRef& node ){
 		entry->item_id = item_id;
 	}
 
+	if( this->nodeExists( node, "Enabled" ) ){
+		bool enabled;
+		if( !this->asBool( node, "Enabled", enabled ) ){
+			return 0;
+		}
+		entry->enabled = enabled;
+	}
+
 	if( this->nodeExists( node, "RewardGroup" ) ){
 		std::string name;
 

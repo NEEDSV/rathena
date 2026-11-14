@@ -28109,6 +28109,11 @@ BUILDIN_FUNC( laphine_synthesis ){
 		return SCRIPT_CMD_FAILURE;
 	}
 
+	if( !synthesis->enabled ){
+		clif_displaymessage( sd->fd, "This synthesis is temporarily unavailable." );
+		return SCRIPT_CMD_SUCCESS;
+	}
+
 	clif_laphine_synthesis_open( sd, synthesis );
 
 	return SCRIPT_CMD_SUCCESS;

@@ -3358,6 +3358,9 @@ enum e_random_item_group {
 	IG_NEED_MALANGDO_22M,
 	IG_NEED_MALANGDO_22N,
 	IG_NEED_SHADOW_MIX_2016,	// NEED: 쉐도우 뚝딱상자 2016-06-08 기준 보상 (db/re/item_group_db.yml 끝)
+	IG_NEED_LAPHINE_PET_GIFT_2016,
+	IG_NEED_LAPHINE_TAMING_2016,
+	IG_NEED_LAPHINE_STONE_2016,
 
 	IG_MAX
 };
@@ -3888,6 +3891,7 @@ struct s_laphine_synthesis_requirement{
 
 struct s_laphine_synthesis{
 	t_itemid item_id;
+	bool enabled = true; // A disabled recipe must never open or consume any materials.
 	uint16 minimumRefine;
 	uint16 maximumRefine;
 	uint16 requiredRequirements;

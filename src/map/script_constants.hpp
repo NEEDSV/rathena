@@ -7557,6 +7557,9 @@
 	export_constant(IG_NEED_MALANGDO_22M);
 	export_constant(IG_NEED_MALANGDO_22N);
 	export_constant(IG_NEED_SHADOW_MIX_2016);
+	export_constant(IG_NEED_LAPHINE_PET_GIFT_2016);
+	export_constant(IG_NEED_LAPHINE_TAMING_2016);
+	export_constant(IG_NEED_LAPHINE_STONE_2016);
 
 	/* unit stop walking */
 	export_constant(USW_NONE);
