@@ -3804,7 +3804,8 @@ static bool status_battle_gear_is_costume_equip_index(int32 equip_idx)
 
 // NEED BG phase 1 whitelists (CM approval 2026-10-26). They only apply on battle_gear_disabled maps that also carry
 // need_bg_shadow_allow / need_bg_stone_allow; anything unlisted stays blocked. need_bg_shadow_allow: the three legacy
-// battlegrounds, and since 2026-11-12 also need_bg2 (2v2) / need_bg3 (3v3). need_bg_stone_allow: legacy three only.
+// battlegrounds, and since 2026-11-12 also need_bg2 (2v2) / need_bg3 (3v3). need_bg_stone_allow: the three legacy
+// battlegrounds, and since 2026-11-16 also need_bg2 / need_bg3.
 // Audit and reasons: md/NEED_BG_Phase1_Improvement_Claude_Request_v1.0_report.md
 
 // General shadow gear: the item's own script only. Random options on shadows stay blocked, and a shadow set
@@ -3911,8 +3912,14 @@ static const t_itemid need_bg_class_shadow_allow_ids[] = {
 	24319,	// S_Gunslinger_Shield
 };
 
-// Costume enchant stones, by the card ID stored in the costume slot (not the Etc material item). 32 IDs.
+// Costume enchant stones, by the card ID stored in the costume slot (not the Etc material item). 32 + 45 = 77 IDs.
 // Costume stone sets stay blocked (status_battle_gear_combo_has_card_in_pos).
+// 2026-11-16 operator policy: every RELEASED costume stone applies in battlegrounds except the casting stones.
+//   Released = a real acquisition path in this tree (Malangdo Heidam costume -> Enchant_Stone_Box4..21, 50x rebirth
+//   reward, KvM point shop). Still blocked although released: 29056 Casting Stone (garment, fixed cast -0.5 s) and
+//   29156/29157/29158 Variable Casting Stone (upper/middle/lower, -3%). 29154 Minor Casting Stone (garment, fixed cast
+//   -0.3 s) applies by operator decision. Unreleased stones stay unlisted (blocked). The first 32 IDs (2026-10-26 CM
+//   list) stay as they were. Report: md/NEED_BG_Emergency_Escape_Costume_Stone_Audit_Report.md
 static const t_itemid need_bg_stone_allow_ids[] = {
 	4807, 310654,							// ASPD +1 (upper / garment, garment dual)
 	4700, 4710, 4720, 4730, 4740, 4750,		// STR/INT/DEX/AGI/VIT/LUK +1 (upper / middle)
@@ -3924,6 +3931,59 @@ static const t_itemid need_bg_stone_allow_ids[] = {
 	310664, 310665, 310666,					// magic damage, all elements +3% (upper / middle / lower)
 	314662, 314663, 314664,					// non-critical physical damage +3% (upper / middle / lower)
 	29359, 29047, 29360,					// critical damage +3% (upper / middle / lower)
+	// --- 2026-11-16: released stones (see above) ---
+	// stat / defence / recovery
+	4805,	// upper: bonus bHealPower,3;
+	4930,	// upper: bonus bHealPower2,2;
+	29013,	// upper: bonus2 bHPDrainRate,10,3;
+	29032,	// upper: bonus2 bSPDrainRate,10,1;
+	4861,	// middle: bonus bMaxHPrate,1;
+	4929,	// middle: bonus bMaxSPrate,1;
+	4931,	// middle: bonus2 bHPRegenRate,10,10000;
+	29014,	// middle: bonus bStr,3; bonus bInt,-3;
+	29016,	// middle: bonus bInt,3; bonus bDex,-3;
+	29018,	// middle: bonus bDex,3; bonus bVit,-3;
+	29020,	// middle: bonus bVit,3; bonus bAgi,-3;
+	29022,	// middle: bonus bAgi,3; bonus bLuk,-3;
+	29024,	// middle: bonus bLuk,3; bonus bStr,-3;
+	29026,	// middle: bonus bDef,20;
+	4859,	// lower: bonus bFlee,1;
+	4884,	// lower: bonus bHit,1;
+	4932,	// lower: bonus bSPGainValue,1; bonus bLongSPGainValue,1; bonus bMagicSPGainV...
+	29015,	// lower: bonus bStr,3; bonus bDex,-3;
+	29017,	// lower: bonus bInt,3; bonus bVit,-3;
+	29019,	// lower: bonus bDex,3; bonus bAgi,-3;
+	29021,	// lower: bonus bVit,3; bonus bLuk,-3;
+	29023,	// lower: bonus bAgi,3; bonus bStr,-3;
+	29025,	// lower: bonus bLuk,3; bonus bInt,-3;
+	29033,	// lower: bonus bMdef,4;
+	29049,	// lower: bonus bMaxHP,100; if (BaseLevel>=120) { bonus bMaxHPrate,2; }
+	29050,	// lower: bonus bMaxSP,50; if (BaseLevel>=120) { bonus bMaxSPrate,2; }
+	4992,	// garment: bonus2 bHPDrainRate,10,1;
+	4993,	// garment: bonus2 bSPDrainRate,10,1;
+	// after-cast delay (Reload)
+	29053,	// upper: bonus bDelayrate,-1;
+	29054,	// middle: bonus bDelayrate,-1;
+	29055,	// lower: bonus bDelayrate,-1;
+	// grants a skill
+	29046,	// lower: skill "BS_GREED",1;
+	29051,	// lower: skill "TF_DETOXIFY",1;
+	29052,	// lower: skill "PR_STRECOVERY",1;
+	29057,	// lower: skill "PR_KYRIE",1;
+	29146,	// lower: skill "MC_IDENTIFY",1;
+	// autocast
+	29155,	// middle: bonus3 bAutoSpell,"PR_LEXAETERNA",1,10;
+	// Minor Casting only (operator 2026-11-16)
+	29154,	// garment: bonus bFixedCast,-300;
+	// EXP (no effect in BG)
+	29159,	// upper: bonus2 bExpAddRace,RC_All,2;
+	29145,	// middle: bonus2 bExpAddRace,RC_All,2;
+	29027,	// lower: bonus2 bExpAddRace,RC_All,2;
+	// effect stones (card[3], hateffect only)
+	29142,	// middle: hateffect HAT_EF_ELECTRIC,true;
+	29226,	// middle: hateffect HAT_EF_DOUBLEGUMGANG,true;
+	313067,	// garment: hateffect FOOTPRINT_EF_PURPLESTAR,true;
+	313068,	// garment: hateffect FOOTPRINT_EF_YELLOWSTAR,true;
 };
 
 template <size_t N>
