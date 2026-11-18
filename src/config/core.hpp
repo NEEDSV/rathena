@@ -13,7 +13,7 @@
 #include <custom/defines_pre.hpp>
 
  /// @autolootid 리스트에 들어갈 수 있는 최대 아이템 개수
-#define AUTOLOOTITEM_SIZE 10
+#define AUTOLOOTITEM_SIZE 20
 
 /// atcommand 및 @warp 자동완성(추천) 최대 개수
 #define MAX_SUGGESTIONS 10
