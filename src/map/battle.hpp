@@ -785,6 +785,19 @@ struct Battle_Config
 	int32 need_jf_teleport_window;
 	int32 need_jf_pattern_window;
 	int32 need_privateairship_free;
+	// NEED Chat Translate v1 (need_chat_translate.cpp)
+	int32 need_chat_translate;
+	int32 need_chat_translate_port;
+	int32 need_chat_translate_channels;
+	int32 need_chat_translate_default_on;
+	int32 need_chat_translate_min_level;
+	int32 need_chat_translate_timeout;
+	int32 need_chat_translate_max_inflight;
+	int32 need_chat_translate_sender_per_min;
+	int32 need_chat_translate_sender_per_hour;
+	int32 need_chat_translate_global_per_min;
+	int32 need_chat_translate_color;
+	int32 need_chat_translate_alert_level;
 	int32 need_enchant_keep_window;
 	int32 need_jf_pattern_min_count;
 	int32 need_jf_pattern_max_avg_interval;

@@ -49,6 +49,7 @@
 #include "mob.hpp"
 #include "need_daily_quest.hpp"
 #include "need_enchant.hpp"
+#include "need_chat_translate.hpp"
 #include "npc.hpp"
 #include "party.hpp"
 #include "pc.hpp"
@@ -12193,6 +12194,7 @@ void clif_parse_GlobalMessage(int32 fd, map_session_data* sd)
 		);
 
 		clan_send_message(*sd, output, strlen(output));
+		need_ct_on_chat( sd, NCT_CLAN, name, message + 1 );	// NEED Chat Translate: after delivery + log
 		return;
 	}
 
@@ -12220,6 +12222,8 @@ void clif_parse_GlobalMessage(int32 fd, map_session_data* sd)
 
 	// Chat logging type 'O' / Global Chat
 	log_chat(LOG_CHAT_GLOBAL, 0, sd->status.char_id, sd->status.account_id, mapindex_id2name(sd->mapindex), sd->x, sd->y, nullptr, message);
+	// NEED Chat Translate: only after the original line was sent, echoed, heard by NPCs and logged
+	need_ct_on_chat( sd, sd->chatID ? NCT_CHATROOM : NCT_SAY, name, message );
 	//achievement_update_objective(sd, AG_CHAT, 1, sd->m); //! TODO: What's the official use of this achievement type?
 }
 
@@ -14667,6 +14671,8 @@ void clif_parse_PartyMessage(int32 fd, map_session_data* sd){
 		return;
 
 	party_send_message(sd, output, strlen(output) + 1 );
+	if( sd->status.party_id )
+		need_ct_on_chat( sd, NCT_PARTY, name, message );	// NEED Chat Translate: after delivery + log
 }
 
 
@@ -15287,10 +15293,14 @@ void clif_parse_GuildMessage(int32 fd, map_session_data* sd){
 	if( !clif_process_message( sd, false, name, message, output ) )
 		return;
 
-	if( sd->bg_id )
+	if( sd->bg_id ){
 		bg_send_message(sd, output, strlen(output) );
-	else
+		need_ct_on_chat( sd, NCT_BG, name, message );	// NEED Chat Translate: after delivery
+	}else{
 		guild_send_message(sd, output, strlen(output) );
+		if( sd->status.guild_id )
+			need_ct_on_chat( sd, NCT_GUILD, name, message );	// NEED Chat Translate: after delivery + log
+	}
 }
 
 
@@ -19228,6 +19238,8 @@ void clif_parse_BattleChat(int32 fd, map_session_data* sd){
 		return;
 
 	bg_send_message(sd, output, strlen(output) );
+	if( sd->bg_id )
+		need_ct_on_chat( sd, NCT_BG, name, message );	// NEED Chat Translate: after delivery
 }
 
 

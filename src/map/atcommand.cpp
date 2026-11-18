@@ -49,6 +49,7 @@
 #include "intif.hpp"
 #include "itemdb.hpp" // MAX_ITEMGROUP
 #include "need_enchant.hpp"
+#include "need_chat_translate.hpp"
 #include "cashshop.hpp"
 #include "log.hpp"
 #include "mail.hpp"
@@ -5094,6 +5095,21 @@ ACMD_FUNC(needlang){
 	clif_displaymessage(fd, output);
 
 	return 0;
+}
+
+/// NEED Chat Translate v1: @translate on|off|status|ko|en|auto (Korean alias @¹ø¿ª via npc/need/need_chat_translate.txt)
+ACMD_FUNC(translate){
+	return need_ct_cmd_translate( fd, sd, message );
+}
+
+/// NEED Chat Translate v1: @translateblock on|off|status - the speaker's own opt-out
+ACMD_FUNC(translateblock){
+	return need_ct_cmd_block( fd, sd, message );
+}
+
+/// NEED Chat Translate v1: @translateadm - operator status readout
+ACMD_FUNC(translateadm){
+	return need_ct_cmd_admin( fd, sd, message );
 }
 
 ACMD_FUNC(reloadinstancedb){
@@ -13674,6 +13690,9 @@ void atcommand_basecommands(void) {
 		ACMD_DEF(reloadmsgconf),
 		// NEED Phase 0.32 : TEST ONLY session language override - keep at group 99
 		ACMD_DEF(needlang),
+		ACMD_DEF(translate),
+		ACMD_DEF(translateblock),
+		ACMD_DEF(translateadm),
 		ACMD_DEF(reloadinstancedb),
 		ACMD_DEF(reloadachievementdb),
 		ACMD_DEF(reloadattendancedb),

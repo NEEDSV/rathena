@@ -19,6 +19,7 @@
 #include "guild.hpp"
 #include "map.hpp" //msg_conf
 #include "pc.hpp"
+#include "need_chat_translate.hpp"
 #include "pc_groups.hpp"
 
 static DBMap* channel_db; // channels
@@ -461,6 +462,7 @@ int32 channel_send(struct Channel *channel, map_session_data *sd, const char *ms
 		safesnprintf(output, CHAT_SIZE_MAX, "%s %s : %s", channel->alias, sd->status.name, msg);
 		clif_channel_msg(channel,output,color);
 		sd->channel_tick[idx] = gettick();
+		need_ct_on_chat( sd, NCT_CHANNEL, sd->status.name, msg, channel );	// NEED Chat Translate: after delivery
 	}
 	return 0;
 }

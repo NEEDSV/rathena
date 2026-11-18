@@ -1,0 +1,37 @@
+//===== NEED Chat Translate v1 : Korean command aliases =======================
+//= @번역 켜기|끄기|상태|한국어|영어|자동   -> @translate on|off|status|ko|en|auto
+//= @번역거부 켜기|끄기|상태               -> @translateblock on|off|status
+//=
+//= The commands themselves live in the map-server (src/map/need_chat_translate.cpp,
+//= ACMD translate / translateblock); this file only maps the Korean words, the same way
+//= the BG commands keep a Korean bindatcmd beside the English name. Both run through
+//= is_atcommand(), so a command line is never delivered as chat and never translated.
+//============================================================================
+-	script	NEED Chat Translate	-1,{
+	end;
+
+OnInit:
+	bindatcmd "번역", strnpcinfo(3) + "::OnTranslate", 0, 99;
+	bindatcmd "번역거부", strnpcinfo(3) + "::OnBlock", 0, 99;
+	end;
+
+OnTranslate:
+	.@a$ = callsub(L_Word, .@atcmd_parameters$[0]);
+	atcommand "@translate " + .@a$;
+	end;
+
+OnBlock:
+	.@a$ = callsub(L_Word, .@atcmd_parameters$[0]);
+	atcommand "@translateblock " + .@a$;
+	end;
+
+L_Word:
+	.@w$ = getarg(0);
+	if (.@w$ == "켜기" || .@w$ == "켬" || .@w$ == "켜") return "on";
+	if (.@w$ == "끄기" || .@w$ == "끔" || .@w$ == "꺼") return "off";
+	if (.@w$ == "상태" || .@w$ == "확인") return "status";
+	if (.@w$ == "한국어" || .@w$ == "한글") return "ko";
+	if (.@w$ == "영어") return "en";
+	if (.@w$ == "자동") return "auto";
+	return .@w$;	// on / off / status / ko / en / auto typed in English, or "" for the usage text
+}

@@ -48,6 +48,7 @@
 #include "need_enchant.hpp"
 #include "navi.hpp"
 #include "need_autopot.hpp"
+#include "need_chat_translate.hpp"
 #include "need_fishing.hpp"
 #include "need_jf_pattern.hpp"
 #include "need_storage_shop.hpp"
@@ -5123,6 +5124,7 @@ void MapServer::finalize(){
 	do_final_battle();
 	do_final_chrif();
 #ifndef MAP_GENERATOR
+	do_final_need_chat_translate();
 	do_final_needwiki();
 #endif
 	do_final_clan();
@@ -5651,6 +5653,7 @@ bool MapServer::initialize( int32 argc, char *argv[] ){
 	do_init_buyingstore();
 #ifndef MAP_GENERATOR
 	do_init_needwiki();
+	do_init_need_chat_translate();
 #endif
 	do_init_rune();
 
