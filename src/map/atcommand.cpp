@@ -7975,6 +7975,8 @@ ACMD_FUNC(autoloot)
 	}else
 		clif_displaymessage(fd, msg_txt(sd,1188)); // Autoloot is now off.
 
+	pc_autoloot_settings_save(sd);
+
 	return 0;
 }
 
@@ -8001,7 +8003,7 @@ ACMD_FUNC(autolootitem)
 			message++;
 			action = 2;
 		}
-		else if (!strcmp(message,"리셋"))
+		else if (!strcmp(message,"reset") || !strcmp(message,"\270\256\274\302") || !strcmp(message,"리셋")) // "reset", Korean reset word as the client sends it (cp949), legacy UTF-8 literal
 			action = 4;
 	}
 
@@ -8036,6 +8038,7 @@ ACMD_FUNC(autolootitem)
 		sprintf(atcmd_output, msg_txt(sd,1192), item_data->name.c_str(), item_db.create_item_link( item_data ).c_str(), item_data->nameid); // Autolooting item: '%s'/'%s' {%u}
 		clif_displaymessage(fd, atcmd_output);
 		sd->state.autolooting = 1;
+		pc_autoloot_settings_save(sd);
 		break;
 	case 2:
 		ARR_FIND(0, AUTOLOOTITEM_SIZE, i, sd->state.autolootid[i] == item_data->nameid);
@@ -8050,6 +8053,7 @@ ACMD_FUNC(autolootitem)
 		if (i == AUTOLOOTITEM_SIZE) {
 			sd->state.autolooting = 0;
 		}
+		pc_autoloot_settings_save(sd);
 		break;
 	case 3:
 		sprintf(atcmd_output, msg_txt(sd,1195), AUTOLOOTITEM_SIZE); // You can have %d items on your autolootitem list.
@@ -8081,6 +8085,7 @@ ACMD_FUNC(autolootitem)
 		memset(sd->state.autolootid, 0, sizeof(sd->state.autolootid));
 		clif_displaymessage(fd, msg_txt(sd,1200)); // Your autolootitem list has been reset.
 		sd->state.autolooting = 0;
+		pc_autoloot_settings_save(sd);
 		break;
 	}
 	return 0;
@@ -8160,6 +8165,7 @@ ACMD_FUNC(autoloottype)
 			sd->state.autoloottype |= (1<<type); // Stores the type
 			sprintf(atcmd_output, msg_txt(sd,1483), itemdb_typename(type), type); // Autolooting item type: '%s' {%u}
 			clif_displaymessage(fd, atcmd_output);
+			pc_autoloot_settings_save(sd);
 			break;
 		case 2:
 			if (!(sd->state.autoloottype&(1<<type))) {
@@ -8169,6 +8175,7 @@ ACMD_FUNC(autoloottype)
 			sd->state.autoloottype &= ~(1<<type);
 			sprintf(atcmd_output, msg_txt(sd,1485), itemdb_typename(type), type); // Removed item type: '%s' {%u} from your autoloottype list.
 			clif_displaymessage(fd, atcmd_output);
+			pc_autoloot_settings_save(sd);
 			break;
 		case 3:
 			clif_displaymessage(fd, msg_txt(sd,1486)); // To add an item type to the list, use "@aloottype +<type name or ID>". To remove an item type, use "@aloottype -<type name or ID>".
@@ -8191,6 +8198,7 @@ ACMD_FUNC(autoloottype)
 		case 4:
 			sd->state.autoloottype = 0;
 			clif_displaymessage(fd, msg_txt(sd,1491)); // Your autoloottype list has been reset.
+			pc_autoloot_settings_save(sd);
 			break;
 	}
 	return 0;

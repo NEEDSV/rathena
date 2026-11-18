@@ -2416,6 +2416,10 @@ void pc_reg_received(map_session_data *sd)
 	if (pc_readglobalreg(sd, add_str(need_macro_detect_pending_var)) > 0)
 		add_timer(gettick() + 1000, pc_macro_detector_pending_timer, sd->id, 0);
 
+	// Restore the character's saved autoloot settings first, so a running pattern
+	// penalty below still switches them off for this session.
+	pc_autoloot_settings_restore(sd);
+
 	// Restore an account scoped autoloot penalty before the character can act.
 	need_jf_pattern_on_login(*sd);
 
@@ -13953,6 +13957,125 @@ bool pc_isautolooting(map_session_data *sd, t_itemid nameid)
 		ARR_FIND(0, AUTOLOOTITEM_SIZE, i, sd->state.autolootid[i] == nameid);
 
 	return (i != AUTOLOOTITEM_SIZE);
+}
+
+// NEED: per-character persistence of @autoloot / @alootid / @autoloottype.
+// The values live in the existing permanent character registry (char_reg_num),
+// so no new table is needed. NeedAutoLootSaved tells "never saved" (server
+// default applies) apart from "saved as off / empty".
+static const char* NEED_AUTOLOOT_SAVED_VAR = "NeedAutoLootSaved";	// 1 = format version 1
+static const char* NEED_AUTOLOOT_RATE_VAR = "NeedAutoLootRate";		// @autoloot, 0..10000 (1/100 %)
+static const char* NEED_AUTOLOOT_TYPE_VAR = "NeedAutoLootType";		// @autoloottype bit mask
+static const char* NEED_AUTOLOOT_ID_VAR = "NeedAutoLootId";			// @alootid, array [0..AUTOLOOTITEM_SIZE-1], slot order kept
+static constexpr int64 NEED_AUTOLOOT_FORMAT = 1;
+// Item types @autoloottype can select: healing 0, usable 2, etc 3, armor 4, weapon 5,
+// card 6, petegg 7, petarmor 8, ammo 10 (same value as ITEM_MAX in atcommand.cpp).
+static constexpr int32 NEED_AUTOLOOT_TYPE_MASK = 1533;
+
+static void pc_autoloot_setreg_if_changed(map_session_data *sd, int64 reg, int64 val)
+{
+	if (pc_readglobalreg(sd, reg) != val)
+		pc_setglobalreg(sd, reg, val);
+}
+
+/**
+ * Store the current autoloot settings of the character. Called only after a
+ * command changed them successfully, and flushes just the changed registry rows.
+ * @param sd: Player data
+ */
+void pc_autoloot_settings_save(map_session_data *sd)
+{
+	nullpo_retv(sd);
+
+	if (!sd->vars_ok)
+		return;
+
+	pc_autoloot_setreg_if_changed(sd, add_str(NEED_AUTOLOOT_RATE_VAR), sd->state.autoloot);
+	pc_autoloot_setreg_if_changed(sd, add_str(NEED_AUTOLOOT_TYPE_VAR), sd->state.autoloottype);
+
+	int32 id_var = add_str(NEED_AUTOLOOT_ID_VAR);
+
+	for (int32 i = 0; i < AUTOLOOTITEM_SIZE; i++)
+		pc_autoloot_setreg_if_changed(sd, reference_uid(id_var, i), sd->state.autolootid[i]);
+
+	pc_autoloot_setreg_if_changed(sd, add_str(NEED_AUTOLOOT_SAVED_VAR), NEED_AUTOLOOT_FORMAT);
+
+	// Persist now instead of waiting for the next autosave, so a crash or a
+	// restart right after the command cannot lose it. Only rows that changed are sent.
+	if (sd->vars_dirty)
+		intif_saveregistry(sd);
+}
+
+/**
+ * Restore the stored autoloot settings when the character registry arrives.
+ * Without stored data the server default is left untouched.
+ * @param sd: Player data
+ */
+void pc_autoloot_settings_restore(map_session_data *sd)
+{
+	nullpo_retv(sd);
+
+	const int64 format = pc_readglobalreg(sd, add_str(NEED_AUTOLOOT_SAVED_VAR));
+
+	if (format == 0)
+		return;
+
+	if (format != NEED_AUTOLOOT_FORMAT) {
+		ShowWarning("pc_autoloot_settings_restore: Unknown format %" PRId64 " (account_id: %d, char_id: %d). Keeping server defaults.\n", format, sd->status.account_id, sd->status.char_id);
+		return;
+	}
+
+	int64 rate = pc_readglobalreg(sd, add_str(NEED_AUTOLOOT_RATE_VAR));
+
+	if (rate < 0 || rate > 10000) {
+		ShowWarning("pc_autoloot_settings_restore: Invalid rate %" PRId64 " (account_id: %d, char_id: %d). Clamped.\n", rate, sd->status.account_id, sd->status.char_id);
+		rate = cap_value(rate, 0, 10000);
+	}
+
+	int64 type = pc_readglobalreg(sd, add_str(NEED_AUTOLOOT_TYPE_VAR));
+
+	if (type < 0 || (type & ~static_cast<int64>(NEED_AUTOLOOT_TYPE_MASK)) != 0) {
+		ShowWarning("pc_autoloot_settings_restore: Invalid type mask %" PRId64 " (account_id: %d, char_id: %d). Unknown bits dropped.\n", type, sd->status.account_id, sd->status.char_id);
+		type = type < 0 ? 0 : (type & NEED_AUTOLOOT_TYPE_MASK);
+	}
+
+	t_itemid ids[AUTOLOOTITEM_SIZE] = {};
+	bool any_id = false;
+	int32 id_var = add_str(NEED_AUTOLOOT_ID_VAR);
+
+	for (int32 i = 0; i < AUTOLOOTITEM_SIZE; i++) {
+		int64 id = pc_readglobalreg(sd, reference_uid(id_var, i));
+
+		if (id == 0)
+			continue;
+
+		if (id < 0 || id > UINT32_MAX || !item_db.exists(static_cast<t_itemid>(id))) {
+			ShowWarning("pc_autoloot_settings_restore: Dropping unknown item %" PRId64 " in slot %d (account_id: %d, char_id: %d).\n", id, i, sd->status.account_id, sd->status.char_id);
+			continue;
+		}
+
+		bool duplicate = false;
+
+		for (int32 j = 0; j < i; j++) {
+			if (ids[j] == static_cast<t_itemid>(id)) {
+				duplicate = true;
+				break;
+			}
+		}
+
+		if (duplicate) {
+			ShowWarning("pc_autoloot_settings_restore: Dropping duplicate item %" PRId64 " in slot %d (account_id: %d, char_id: %d).\n", id, i, sd->status.account_id, sd->status.char_id);
+			continue;
+		}
+
+		ids[i] = static_cast<t_itemid>(id);
+		any_id = true;
+	}
+
+	sd->state.autoloot = static_cast<uint16>(rate);
+	sd->state.autoloottype = static_cast<uint16>(type);
+	memcpy(sd->state.autolootid, ids, sizeof(sd->state.autolootid));
+	sd->state.autolooting = any_id ? 1 : 0;
 }
 
 /**
