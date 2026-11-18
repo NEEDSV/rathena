@@ -1,0 +1,253 @@
+//===== NEED Script ==========================================
+//= 진 도핑 제작 (구 페이욘 냥타임 요리사)
+//===== Description: =========================================
+//= 2026-11-18. 같은 도핑을 모아 60분 '진' 아이템 1개로 바꾼다.
+//=   기존 +20 요리(5분) 12개   -> 진 +20 요리(60분) 1개   900156~900161
+//=   올마이티 12883(30분) 2개 -> 진 올마이티 22819(60분) 1개 (공식 아이템)
+//=   풍선껌 12210(30분) 2개   -> 진 풍선껌 900162(60분) 1개
+//= 성공률 100%, 수수료 없음, 1회 1개. 재료 총 지속시간 = 결과 지속시간.
+//=
+//= 진 요리 / 진 풍선껌은 원본과 같은 SC 를 같은 값으로 60분 건다(db/import/item_db.yml).
+//= 진 올마이티 22819 는 db/re 공식 정의(60분 올스탯 +10, ATK/MATK +30, 10분 이동속도) 그대로.
+//=   운영자 결정(2026-11-18): 일반 재료만 쓰면 결과도 일반(22819 는 db/re 정의상 거래 제한 없음),
+//=   귀속 재료(예: 낙원단 지원 계정 귀속 12883)가 하나라도 들어가면 결과는 귀속(getitembound).
+//=
+//= 지급 안전:
+//=  - 마지막 확인(select) 뒤에는 대화 대기 없이 한 번에 실행한다.
+//=    재료 재검사(일반/귀속 따로) -> 결과 아이템 DB 확인 -> 지울 묶음 계획 -> 칸/무게 확인 -> delitemidx -> getitem(bound)
+//=  - delitem 은 귀속을 가리지 않으므로 계획한 묶음만 delitemidx 로 지운다(같은 틱, 계획 직후라 실패 경로 없음).
+//=  - NEED getitem 은 실패하면 바닥에 떨구지 않고 실패만 기록하므로, 칸/무게는 반드시 먼저 확인한다.
+//=  - 한 캐릭터는 NPC 대화를 하나만 열 수 있어 중복 클릭은 새 대화를 만들지 않는다.
+//============================================================
+payo2,106,118,4	script	냥타임 요리사#need_true20	4_CAT_CHEF,{
+	.@title$ = needtr("[냥타임 요리사]", "[Nyan Time Chef]");
+	mes .@title$;
+	mes needtr("냐옹~ 같은 도핑을 모아 오면", "Meow~ Bring me the same buff item");
+	mes needtr("효과가 ^FF660060분^000000 동안 이어지는", "and I will make one ^0055FFTrue^000000 item");
+	mes needtr("^0055FF진^000000 아이템 1개로 만들어 줄게냥.", "that lasts ^FF660060 minutes^000000.");
+	mes needtr("성공률 100%, 수수료는 없어요.", "100% success, no fee.");
+	next;
+	switch (select(needtr("[진 +20 요리 제작]:[진 올마이티 제작]:[진 풍선껌 제작]:제작 안내:그만두기",
+	                      "[Craft True +20 Food]:[Craft True Almighty]:[Craft True Bubble Gum]:About crafting:Leave"))) {
+	case 1:
+		break;
+	case 2:
+		callsub S_Craft, 12883, 22819, 2, needtr("올스탯 +10, ATK/MATK +30, 60분 (이동속도 10분)", "All stats +10, ATK/MATK +30, 60 min (move speed 10 min)");
+		end;
+	case 3:
+		callsub S_Craft, 12210, 900162, 2, needtr("아이템 드롭률 +100%, 60분", "Item drop rate +100%, 60 min");
+		end;
+	case 4:
+		mes .@title$;
+		mes needtr("^0055FF+20 요리 12개^000000 -> 진 +20 요리 1개 (5분 x12 = 60분)", "^0055FF12 x +20 dish^000000 -> 1 True +20 dish (5 min x12 = 60 min)");
+		mes needtr("^0055FF올마이티 2개^000000 -> 진 올마이티 1개 (30분 x2 = 60분)", "^0055FF2 x Almighty^000000 -> 1 True Almighty (30 min x2 = 60 min)");
+		mes needtr("^0055FF풍선껌 2개^000000 -> 진 풍선껌 1개 (30분 x2 = 60분)", "^0055FF2 x Bubble Gum^000000 -> 1 True Bubble Gum (30 min x2 = 60 min)");
+		mes needtr("성공률 100%, 수수료 없음, 한 번에 1개씩.", "100% success, no fee, one at a time.");
+		next;
+		mes .@title$;
+		mes needtr("진 아이템은 원래 아이템과 ^0055FF같은 효과^000000예요.", "A True item has ^0055FFthe same effect^000000 as the original.");
+		mes needtr("^FF0000함께 먹어도 효과가 두 배가 되지 않아요.^000000", "^FF0000Using both never doubles the effect.^000000");
+		mes needtr("효과가 더 길게 남아 있을 때 원래 아이템을 쓰면", "If a longer copy is still running, the original item");
+		mes needtr("효과 없이 ^0055FF그대로 돌려받아요^000000. 시간이 줄지 않아요.", "is ^0055FFreturned unused^000000, so your time never shrinks.");
+		mes needtr("죽어도 효과는 사라지지 않고, 디스펠로도 지워지지 않아요.", "The effect stays when you die and cannot be dispelled.");
+		mes needtr("진 +20 요리는 수성 공성(WoE:TE) 성 안에서 쓸 수 없어요.", "True +20 dishes cannot be used inside WoE:TE castles.");
+		next;
+		mes .@title$;
+		mes needtr("^FF0000귀속 재료가 하나라도 들어가면^000000", "^FF0000If any bound material is used,^000000");
+		mes needtr("^FF0000결과도 귀속으로 드려요.^000000", "^FF0000the result is bound as well.^000000");
+		mes needtr("일반 재료만 쓰면 결과도 일반이에요.", "Normal materials only make a normal result.");
+		close;
+	default:
+		mes .@title$;
+		mes needtr("배고프면 또 와라냥~", "Come back when you are hungry, meow~");
+		close;
+	}
+
+	// 진 +20 요리: 스탯 고르기 (보유 수량 표시)
+	.@menu$ = "";
+	for (.@i = 0; .@i < getarraysize(.Src); ++.@i)
+		.@menu$ += .Stat$[.@i] + " : " + replacestr(getitemname(.Src[.@i]), ":", " ") + needtr(" (보유 ", " (owned ") + countitem(.Src[.@i]) + needtr("개)", ")") + ":";
+	.@menu$ += needtr("그만두기", "Leave");
+	mes .@title$;
+	mes needtr("어떤 요리를 진 요리로 만들까냥?", "Which dish shall I make into a True dish?");
+	.@sel = select(.@menu$) - 1;
+	if (.@sel < 0 || .@sel >= getarraysize(.Src)) {
+		mes .@title$;
+		mes needtr("배고프면 또 와라냥~", "Come back when you are hungry, meow~");
+		close;
+	}
+	next;
+	callsub S_Craft, .Src[.@sel], .Dst[.@sel], .Need, .Stat$[.@sel] + needtr(" +20, 60분", " +20, 60 minutes");
+	end;
+
+// S_Craft <재료>, <결과>, <재료 수>, <효과 설명$>
+// 귀속 정책 (운영자 결정 2026-11-18): 일반 재료만 쓰면 결과도 일반, 귀속 재료가 하나라도 들어가면 결과는 귀속.
+//   (낙원단 지원 계정 귀속 올마이티 -> 거래 가능한 진 올마이티 로 바뀌는 것을 막는다)
+//   rAthena delitem 은 귀속을 가리지 않으므로, 계획한 묶음만 delitemidx 로 지운다.
+S_Craft:
+	.@src = getarg(0);
+	.@dst = getarg(1);
+	.@need = getarg(2);
+	.@title$ = needtr("[냥타임 요리사]", "[Nyan Time Chef]");
+	getinventorylist;
+	.@u = 0;
+	.@b = 0;
+	for (.@i = 0; .@i < @inventorylist_count; ++.@i) {
+		if (@inventorylist_id[.@i] != .@src)
+			continue;
+		if (@inventorylist_bound[.@i])
+			.@b += @inventorylist_amount[.@i];
+		else
+			.@u += @inventorylist_amount[.@i];
+	}
+	mes .@title$;
+	mes needtr("재료 : ^0055FF", "Material : ^0055FF") + getitemname(.@src) + " " + .@need + needtr("개^000000", "^000000");
+	mes needtr("결과 : ^0055FF", "Result : ^0055FF") + getitemname(.@dst) + needtr(" 1개^000000", " x1^000000");
+	mes needtr("효과 : ", "Effect : ") + getarg(3);
+	mes needtr("보유 : 일반 ", "Owned : normal ") + .@u + needtr("개 / 귀속 ", " / bound ") + .@b + needtr("개", "");
+	if (.@u + .@b < .@need) {
+		mes " ";
+		mes needtr("^FF0000재료가 부족해요.^000000", "^FF0000Not enough materials.^000000");
+		mes needtr("같은 아이템 ", "You need ") + .@need + needtr("개가 필요해냥.", " of the same item, meow.");
+		close;
+	}
+	// .@mode 0 = 일반 재료만 -> 일반 결과 / 1 = 귀속 재료 먼저 사용 -> 귀속 결과
+	.@mode = (.@u >= .@need) ? 0 : 1;
+	if (.@u >= .@need && .@b > 0) {
+		next;
+		mes .@title$;
+		mes needtr("일반 재료로 만들면 결과도 일반이고,", "Normal materials make a normal result;");
+		mes needtr("귀속 재료를 쓰면 결과는 ^FF0000귀속^000000이에요.", "bound materials make a ^FF0000bound^000000 result.");
+		.@m = select(needtr("일반 재료로 만들기:귀속 재료로 만들기:그만두기", "Use normal materials:Use bound materials:Leave"));
+		if (.@m == 3) {
+			mes .@title$;
+			mes needtr("배고프면 또 와라냥~", "Come back when you are hungry, meow~");
+			close;
+		}
+		.@mode = .@m - 1;
+	}
+	.@tb = (.@mode == 1) ? ((.@b < .@need) ? .@b : .@need) : 0;
+	.@tu = .@need - .@tb;
+	mes " ";
+	mes needtr("사용 : 일반 ", "Uses : normal ") + .@tu + needtr("개 / 귀속 ", " / bound ") + .@tb + needtr("개", "");
+	if (.@tb > 0)
+		mes needtr("^FF0000귀속 재료가 들어가므로 결과도 귀속이에요.^000000", "^FF0000Bound materials are used, so the result is bound.^000000");
+	mes needtr("성공률 100%, 수수료는 없어요.", "100% success, no fee.");
+	mes needtr("^FF0000개인탭에 둔 것도 재료로 쓰여요.^000000", "^FF0000Items in the Favorites tab are used too.^000000");
+	next;
+	if (select(needtr("만들기:그만두기", "Make it:Leave")) != 1) {
+		mes .@title$;
+		mes needtr("배고프면 또 와라냥~", "Come back when you are hungry, meow~");
+		close;
+	}
+
+	// ---- 이 아래는 대화 대기 없이 한 번에 실행한다 ----
+	mes .@title$;
+	getinventorylist;
+	.@u = 0;
+	.@b = 0;
+	.@rb = 0;
+	.@same = 0;
+	.@other = 0;
+	for (.@i = 0; .@i < @inventorylist_count; ++.@i) {
+		if (@inventorylist_id[.@i] != .@src)
+			continue;
+		if (@inventorylist_bound[.@i])
+			.@b += @inventorylist_amount[.@i];
+		else
+			.@u += @inventorylist_amount[.@i];
+	}
+	if (.@u < .@tu || .@b < .@tb) {
+		mes needtr("^FF0000재료가 부족해요.^000000", "^FF0000Not enough materials.^000000");
+		mes needtr("재료가 바뀌었어요. 다시 확인해 줘냥.", "Your materials changed. Please check again.");
+		close;
+	}
+	if (getitemname(.@dst) == "null") {
+		mes needtr("^FF0000지금은 만들 수 없어요.^000000", "^FF0000Crafting is not available right now.^000000");
+		mes needtr("운영진에게 알려 줘냥.", "Please tell the staff.");
+		debugmes "[need_true20] result item " + .@dst + " is not in the item DB; nothing was taken";
+		close;
+	}
+	// 지울 묶음 계획 (귀속 몫은 귀속 묶음에서만, 일반 몫은 일반 묶음에서만)
+	.@n = 0;
+	.@lu = .@tu;
+	.@lb = .@tb;
+	for (.@i = 0; .@i < @inventorylist_count && (.@lu > 0 || .@lb > 0); ++.@i) {
+		if (@inventorylist_id[.@i] != .@src)
+			continue;
+		if (@inventorylist_bound[.@i]) {
+			if (.@lb <= 0)
+				continue;
+			.@take = (@inventorylist_amount[.@i] < .@lb) ? @inventorylist_amount[.@i] : .@lb;
+			.@lb -= .@take;
+			// 결과 귀속: 캐릭터 귀속 재료가 있으면 캐릭터 귀속, 아니면 계정 귀속
+			if (@inventorylist_bound[.@i] == BOUND_CHAR)
+				.@rb = BOUND_CHAR;
+			else if (.@rb == 0)
+				.@rb = BOUND_ACCOUNT;
+		} else {
+			if (.@lu <= 0)
+				continue;
+			.@take = (@inventorylist_amount[.@i] < .@lu) ? @inventorylist_amount[.@i] : .@lu;
+			.@lu -= .@take;
+		}
+		.@del_idx[.@n] = @inventorylist_idx[.@i];
+		.@del_amt[.@n] = .@take;
+		++.@n;
+	}
+	if (.@lu > 0 || .@lb > 0) {
+		mes needtr("^FF0000재료가 부족해요.^000000", "^FF0000Not enough materials.^000000");
+		close;
+	}
+	// 결과가 쌓일 묶음: 같은 귀속의 결과 묶음이 없고 다른 귀속 묶음만 있으면 checkweight 가 칸을 보지 않는다.
+	for (.@i = 0; .@i < @inventorylist_count; ++.@i) {
+		if (@inventorylist_id[.@i] != .@dst)
+			continue;
+		if (@inventorylist_bound[.@i] == .@rb)
+			.@same = 1;
+		else
+			.@other = 1;
+	}
+	if (.@other && !.@same) {
+		// 빈 칸 확인: 가지고 있지 않은 쌓이는 아이템 하나로 checkweight (새 칸이 있어야 1)
+		.@probe = 0;
+		for (.@i = 0; .@i < getarraysize(.Probe); ++.@i) {
+			if (countitem(.Probe[.@i]) == 0) {
+				.@probe = .Probe[.@i];
+				break;
+			}
+		}
+		if (!.@probe || !checkweight(.@probe, 1)) {
+			mes needtr("^FF0000인벤토리 칸이 부족해요.^000000", "^FF0000Your inventory is full.^000000");
+			mes needtr("정리하고 다시 와라냥. 재료는 그대로예요.", "Make room and come back. Your materials are untouched.");
+			close;
+		}
+	}
+	if (!checkweight(.@dst, 1)) {
+		mes needtr("^FF0000무게가 무겁거나 인벤토리 칸이 부족해요.^000000", "^FF0000You are too heavy or your inventory is full.^000000");
+		mes needtr("정리하고 다시 와라냥. 재료는 그대로예요.", "Make room and come back. Your materials are untouched.");
+		close;
+	}
+	for (.@i = 0; .@i < .@n; ++.@i)
+		delitemidx .@del_idx[.@i], .@del_amt[.@i];
+	if (.@rb)
+		getitembound .@dst, 1, .@rb;
+	else
+		getitem .@dst, 1;
+	mes needtr("완성! ^0055FF", "Done! ^0055FF") + getitemname(.@dst) + needtr("^000000 1개를 줬어요.", "^000000 x1 is yours.");
+	if (.@rb)
+		mes needtr("^FF0000귀속 재료로 만들어 귀속으로 드렸어요.^000000", "^FF0000Made from bound materials, so it is bound.^000000");
+	mes needtr("맛있게 먹어라냥~", "Enjoy your meal, meow~");
+	close;
+
+OnInit:
+	// 진 +20 요리. 순서 = 메뉴 순서. 원본(5분 +20) / 진 요리(60분) / 스탯 표시
+	setarray .Src[0], 12429, 12433, 12431, 12430, 12432, 12434;
+	setarray .Dst[0], 900156, 900157, 900158, 900159, 900160, 900161;
+	setarray .Stat$[0], "STR", "AGI", "VIT", "INT", "DEX", "LUK";
+	.Need = 12;
+	// 빈 칸 확인용 쌓이는 아이템 후보(가지고 있지 않은 것 하나만 쓴다): 젤로피, 동물의 피, 클로버, 돌, 끈적끈적한 점액
+	setarray .Probe[0], 909, 702, 705, 7049, 938;
+	setnpcnameen "Nyan Time Chef";
+	end;
+}

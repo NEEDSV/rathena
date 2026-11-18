@@ -2712,6 +2712,168 @@ Body:
       bonus bMatk,60;
 
 # ============================================================
+# NEED 진 +20 요리 (2026-11-18) : 기존 +20 요리 12개 -> 같은 스탯 60분 요리 1개
+#   제작 NPC: npc/NEED/need_true20_food.txt (payo2,106,118 진 요리 연구가)
+#   효과는 원본 요리와 같은 SC 를 같은 값(20)으로 60분 건다. 새 상태를 만들지 않으므로
+#   원본과 스탯이 겹치지 않고, 사망/디스펠/저장 처리는 원본 SC 정의(db/re/status.yml)를 따른다.
+#   무게 / 플래그 / 거래는 원본(db/re/item_db_usable.yml 12429~12434)과 같다.
+#   WoE:TE 제한(item_noequip 16)도 원본과 같게 db/import/item_noequip.txt 에 둔다.
+# ============================================================
+  - Id: 900156
+    AegisName: True_Savage_BBQ
+    Name: 진 세비지 통구이
+    Type: Usable
+    Weight: 50
+    Flags:
+      BuyingStore: true
+    Script: |
+      sc_start SC_SAVAGE_STEAK,3600000,20;   // STR +20, 60분 (원본 12429 Savage_BBQ 와 같은 상태)
+  - Id: 900157
+    AegisName: True_Drocera_Herb_Stew
+    Name: 진 드로세라 허브 찜
+    Type: Usable
+    Weight: 50
+    Flags:
+      BuyingStore: true
+    Script: |
+      sc_start SC_DROCERA_HERB_STEAMED,3600000,20;   // AGI +20, 60분 (원본 12433 Drocera_Herb_Stew 와 같은 상태)
+  - Id: 900158
+    AegisName: True_Minor_Brisket
+    Name: 진 마이너 양지머리
+    Type: Usable
+    Weight: 50
+    Flags:
+      BuyingStore: true
+    Script: |
+      sc_start SC_MINOR_BBQ,3600000,20;   // VIT +20, 60분 (원본 12431 Minor_Brisket 와 같은 상태)
+  - Id: 900159
+    AegisName: True_Wug_Blood_Cocktail
+    Name: 진 칵테일 워그 블러드
+    Type: Usable
+    Weight: 50
+    Flags:
+      BuyingStore: true
+    Script: |
+      sc_start SC_COCKTAIL_WARG_BLOOD,3600000,20;   // INT +20, 60분 (원본 12430 Wug_Blood_Cocktail 와 같은 상태)
+  - Id: 900160
+    AegisName: True_Siroma_Icetea
+    Name: 진 시로마 아이스티
+    Type: Usable
+    Weight: 50
+    Flags:
+      BuyingStore: true
+    Script: |
+      sc_start SC_SIROMA_ICE_TEA,3600000,20;   // DEX +20, 60분 (원본 12432 Siroma_Icetea 와 같은 상태)
+  - Id: 900161
+    AegisName: True_Petti_Tail_Noodle
+    Name: 진 쁘띠 꼬리 국수
+    Type: Usable
+    Weight: 50
+    Flags:
+      BuyingStore: true
+    Script: |
+      sc_start SC_PUTTI_TAILS_NOODLES,3600000,20;   // LUK +20, 60분 (원본 12434 Petti_Tail_Noodle 와 같은 상태)
+
+# ============================================================
+# NEED 진 도핑 확장 (2026-11-18) : 진 풍선껌 + 짧은 원본의 덮어쓰기 보호
+#   제작 NPC: npc/NEED/need_true20_food.txt (payo2,106,118 냥타임 요리사)
+#     풍선껌 12210 x2 -> 진 풍선껌 900162 x1 / 올마이티 12883 x2 -> 진 올마이티 22819 x1 (공식 아이템. 일반 재료 -> 일반, 귀속 재료가 섞이면 귀속 지급 - 운영자 결정 2026-11-18)
+#   진 풍선껌: 원본 12210 Bubble_Gum 과 같은 상태(SC_ITEMBOOST)와 값(100)을 60분 건다.
+#     드롭 보너스는 mob.cpp mob_getdroprate 에서 SC_ITEMBOOST val1 을 한 번만 더하므로 겹쳐도 +200 이 되지 않는다.
+#     무게 / 판매가 / 재사용 대기(60초, Reuse_Limit_D) / 거래 제한 없음 / 구매노점 아님 = 12210 과 같다.
+#
+#   덮어쓰기 보호 (아래 12429~12434, 12210, 12883 의 Script 만 덮어씀. 다른 필드는 db/re 그대로):
+#     rAthena pc_useitem 은 아이템을 먼저 지우고(pc.cpp pc_delitem) 그 뒤에 스크립트를 실행한다.
+#     그래서 스크립트에서 그냥 end 하면 아이템만 사라진다. 같은 상태가 같은 값으로 원본 지속시간보다
+#     길게 남아 있으면 효과를 걸지 않고, 방금 소모된 1개를 getitem 으로 바로 돌려준다.
+#     (방금 1개가 빠졌으므로 무게와 칸은 항상 남는다. 원본에 귀속 지급처가 없거나(요리/풍선껌),
+#      돌려받는 12883 은 아이템 자체가 거래/카트 불가라 귀속보다 느슨해지지 않는다.)
+#     남은 시간이 원본보다 짧으면 지금처럼 그대로 사용된다(시간이 늘어나는 경우만 허용).
+# ============================================================
+  - Id: 900162
+    AegisName: True_Bubble_Gum
+    Name: 진 풍선껌
+    Type: Usable
+    Buy: 2
+    Weight: 10
+    Delay:
+      Duration: 60000
+      Status: Reuse_Limit_D
+    Script: |
+      sc_start SC_ITEMBOOST,3600000,100;   // 드롭률 +100%, 60분 (원본 12210 Bubble_Gum 과 같은 상태)
+  - Id: 12429
+    Script: |
+      if (getstatus(SC_SAVAGE_STEAK, 1) == 20 && getstatus(SC_SAVAGE_STEAK, 5) > 300000) {
+        getitem 12429, 1;
+        dispbottom needtr("같은 효과가 더 길게 남아 있어 사용하지 않았습니다. (남은 시간 ", "A longer copy of this effect is active, so it was not used. (") + (getstatus(SC_SAVAGE_STEAK, 5) / 60000 + 1) + needtr("분, 아이템 반환)", " min left, item returned)"), 0xFF8800;
+        end;
+      }
+      sc_start SC_SAVAGE_STEAK,300000,20;
+  - Id: 12430
+    Script: |
+      if (getstatus(SC_COCKTAIL_WARG_BLOOD, 1) == 20 && getstatus(SC_COCKTAIL_WARG_BLOOD, 5) > 300000) {
+        getitem 12430, 1;
+        dispbottom needtr("같은 효과가 더 길게 남아 있어 사용하지 않았습니다. (남은 시간 ", "A longer copy of this effect is active, so it was not used. (") + (getstatus(SC_COCKTAIL_WARG_BLOOD, 5) / 60000 + 1) + needtr("분, 아이템 반환)", " min left, item returned)"), 0xFF8800;
+        end;
+      }
+      sc_start SC_COCKTAIL_WARG_BLOOD,300000,20;
+  - Id: 12431
+    Script: |
+      if (getstatus(SC_MINOR_BBQ, 1) == 20 && getstatus(SC_MINOR_BBQ, 5) > 300000) {
+        getitem 12431, 1;
+        dispbottom needtr("같은 효과가 더 길게 남아 있어 사용하지 않았습니다. (남은 시간 ", "A longer copy of this effect is active, so it was not used. (") + (getstatus(SC_MINOR_BBQ, 5) / 60000 + 1) + needtr("분, 아이템 반환)", " min left, item returned)"), 0xFF8800;
+        end;
+      }
+      sc_start SC_MINOR_BBQ,300000,20;
+  - Id: 12432
+    Script: |
+      if (getstatus(SC_SIROMA_ICE_TEA, 1) == 20 && getstatus(SC_SIROMA_ICE_TEA, 5) > 300000) {
+        getitem 12432, 1;
+        dispbottom needtr("같은 효과가 더 길게 남아 있어 사용하지 않았습니다. (남은 시간 ", "A longer copy of this effect is active, so it was not used. (") + (getstatus(SC_SIROMA_ICE_TEA, 5) / 60000 + 1) + needtr("분, 아이템 반환)", " min left, item returned)"), 0xFF8800;
+        end;
+      }
+      sc_start SC_SIROMA_ICE_TEA,300000,20;
+  - Id: 12433
+    Script: |
+      if (getstatus(SC_DROCERA_HERB_STEAMED, 1) == 20 && getstatus(SC_DROCERA_HERB_STEAMED, 5) > 300000) {
+        getitem 12433, 1;
+        dispbottom needtr("같은 효과가 더 길게 남아 있어 사용하지 않았습니다. (남은 시간 ", "A longer copy of this effect is active, so it was not used. (") + (getstatus(SC_DROCERA_HERB_STEAMED, 5) / 60000 + 1) + needtr("분, 아이템 반환)", " min left, item returned)"), 0xFF8800;
+        end;
+      }
+      sc_start SC_DROCERA_HERB_STEAMED,300000,20;
+  - Id: 12434
+    Script: |
+      if (getstatus(SC_PUTTI_TAILS_NOODLES, 1) == 20 && getstatus(SC_PUTTI_TAILS_NOODLES, 5) > 300000) {
+        getitem 12434, 1;
+        dispbottom needtr("같은 효과가 더 길게 남아 있어 사용하지 않았습니다. (남은 시간 ", "A longer copy of this effect is active, so it was not used. (") + (getstatus(SC_PUTTI_TAILS_NOODLES, 5) / 60000 + 1) + needtr("분, 아이템 반환)", " min left, item returned)"), 0xFF8800;
+        end;
+      }
+      sc_start SC_PUTTI_TAILS_NOODLES,300000,20;
+  - Id: 12210
+    Script: |
+      if (getstatus(SC_ITEMBOOST, 1) == 100 && getstatus(SC_ITEMBOOST, 5) > 1800000) {
+        getitem 12210, 1;
+        dispbottom needtr("같은 효과가 더 길게 남아 있어 사용하지 않았습니다. (남은 시간 ", "A longer copy of this effect is active, so it was not used. (") + (getstatus(SC_ITEMBOOST, 5) / 60000 + 1) + needtr("분, 아이템 반환)", " min left, item returned)"), 0xFF8800;
+        end;
+      }
+      sc_start SC_ITEMBOOST,1800000,100;
+  - Id: 12883
+    Script: |
+      if (getstatus(SC_ALMIGHTY, 1) == 30 && getstatus(SC_ALMIGHTY, 5) > 1800000) {
+        getitem 12883, 1;
+        dispbottom needtr("같은 효과가 더 길게 남아 있어 사용하지 않았습니다. (남은 시간 ", "A longer copy of this effect is active, so it was not used. (") + (getstatus(SC_ALMIGHTY, 5) / 60000 + 1) + needtr("분, 아이템 반환)", " min left, item returned)"), 0xFF8800;
+        end;
+      }
+      specialeffect2 EF_BASH3D;
+      sc_start SC_ALMIGHTY,1800000,30;
+      sc_start4 SC_FOOD_STR_CASH,1800000,10,0,0,12883;
+      sc_start4 SC_FOOD_AGI_CASH,1800000,10,0,0,12883;
+      sc_start4 SC_FOOD_INT_CASH,1800000,10,0,0,12883;
+      sc_start4 SC_FOOD_DEX_CASH,1800000,10,0,0,12883;
+      sc_start4 SC_FOOD_LUK_CASH,1800000,10,0,0,12883;
+      sc_start4 SC_FOOD_VIT_CASH,1800000,10,0,0,12883;
+
+# ============================================================
 # NEED 2026 추석 송편 이벤트
 # ============================================================
 
