@@ -1,0 +1,29 @@
+# NEED Chat Translate v1 - systemd unit (copy to /etc/systemd/system/need-translate-relay.service)
+# The relay only connects OUT to 127.0.0.1:<need_chat_translate_port> (map-server) and to
+# api.anthropic.com:443 (backend = claude). It opens no listening socket.
+[Unit]
+Description=NEED Chat Translate relay (Claude API, KR<->EN chat)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=need-translate
+Group=need-translate
+WorkingDirectory=/opt/need-translate-relay
+EnvironmentFile=/etc/need-translate-relay/secrets.env
+ExecStart=/opt/need-translate-relay/venv/bin/python -I /opt/need-translate-relay/relay.py --config /etc/need-translate-relay/relay.conf run
+Restart=on-failure
+RestartSec=5
+UMask=0077
+StateDirectory=need-translate-relay
+StateDirectoryMode=0700
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/lib/need-translate-relay
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+
+[Install]
+WantedBy=multi-user.target

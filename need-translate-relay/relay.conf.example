@@ -1,0 +1,56 @@
+# NEED Chat Translate v1 - need-translate-relay configuration (copy to /etc/need-translate-relay/relay.conf)
+# Secrets are NOT here: ANTHROPIC_API_KEY and NEED_CHAT_TRANSLATE_TOKEN come from the systemd
+# EnvironmentFile /etc/need-translate-relay/secrets.env (mode 600, never in git).
+
+[relay]
+# the map-server listener (battle conf need_chat_translate_port); always loopback
+map_host = 127.0.0.1
+map_port = 6906
+db_path = /var/lib/need-translate-relay/relay.sqlite
+report_dir = /var/lib/need-translate-relay/reports
+# mock = no API, no cost (default). claude = live API (only after the operator's approval)
+backend = mock
+log_level = INFO
+# test-clock command; keep 0 in production
+allow_test_clock = 0
+
+[claude]
+model = claude-haiku-5-5
+max_tokens = 200
+effort = low
+# one API call never waits longer than this; the map-server drops answers after need_chat_translate_timeout
+api_timeout_s = 3.5
+max_concurrency = 8
+# $ per million tokens (Haiku 5.5, prompts <= 100K, checked 2026-11-18). Verify against the Console
+# billing page before the pilot; the report uses these to estimate cost from response.usage.
+price_input = 0.10
+price_output = 0.50
+price_cache_write = 0.125
+price_cache_read = 0.01
+
+[budget]
+# hard caps: a call is only made if its worst case still fits under every cap
+pilot_total_usd = 20
+daily_usd = 3
+month_usd = 80
+alert_pcts = 50,80,100
+# worst-case input tokens used for the reservation (system prompt + line)
+reserve_input_tokens = 1200
+
+[limits]
+speaker_per_min = 6
+speaker_per_hour = 60
+global_per_min = 120
+max_queue = 64
+# translated line in CP949 bytes (the map-server adds "[TL] Name : ")
+max_out_bytes = 180
+cache_days = 30
+# alert when one minute has more translation requests than this
+spike_per_min = 90
+error_alert_streak = 10
+
+[pilot]
+hours = 168
+
+[mock]
+delay_ms = 150
