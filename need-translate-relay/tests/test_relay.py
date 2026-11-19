@@ -247,6 +247,22 @@ class RelayTests(unittest.TestCase):
         self.assertEqual(r2.store.pilot()["ends"], ends)
         self.assertEqual(r2.reason(), R.R_OK)
 
+    def test_heartbeat_mark(self):
+        import json
+        r = self.mk()
+        r.heartbeat(True)
+        hb = json.loads(r.store.get("hb"))
+        self.assertEqual(set(hb), {"v", "ts", "connected", "code", "reason", "backend", "queue"})	# 원문·ID·금액 없음
+        self.assertEqual((hb["connected"], hb["reason"], hb["backend"]), (1, "pilot not started", "mock"))
+        self.start_pilot()
+        r.heartbeat(False)
+        hb = json.loads(r.store.get("hb"))
+        self.assertEqual((hb["connected"], hb["code"]), (0, R.R_OK))
+        # 표시 기록이 실패해도 번역은 계속된다
+        r.store.set = lambda *a, **k: (_ for _ in ()).throw(RuntimeError("disk full"))
+        r.heartbeat(True)
+        self.assertEqual(self.proc("같이 사냥 가실 분")[0], R.ST_OK)
+
     def test_cost_formula(self):
         prices = {"input": 0.10, "output": 0.50, "cache_write": 0.125, "cache_read": 0.01}
         # 45 in, 15 out, 800 cache read -> 4.5 + 7.5 + 8 = 20 micro-USD (report 6.2 short chat)
@@ -300,11 +316,13 @@ class ProtocolTests(unittest.TestCase):
             relay.store.pilot_start(relay.clock.now(), 168)
             task = asyncio.create_task(relay.session())
             await asyncio.wait_for(done.wait(), 10)
+            await asyncio.sleep(0.05)		# 상태 루프 첫 회차가 끝나도록 잠깐 대기
             task.cancel()
             server.close()
             relay.flush_counters()
             day = nct_store.day_kst(relay.clock.now())
             st = relay.store.stats_by_day().get(day, {})
+            st["_hb"] = relay.store.get("hb")
             relay.store.db.close()
             return got, st
 
@@ -319,6 +337,9 @@ class ProtocolTests(unittest.TestCase):
         self.assertTrue(text.decode("cp949").startswith("(EN) "))
         self.assertEqual(st.get("map_msg_say"), 5)
         self.assertEqual(st.get("map_msg_chatroom"), 1)
+        import json
+        hb = json.loads(st["_hb"])			# 링크 연결 중 관리 콘솔 생존 표시
+        self.assertEqual((hb["connected"], hb["reason"]), (1, "ok"))
 
 
 if __name__ == "__main__":
