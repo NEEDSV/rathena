@@ -19,6 +19,7 @@ Failure policy: anything unexpected => no translation line; the game chat never 
 import argparse
 import asyncio
 import configparser
+import json
 import logging
 import os
 import signal
@@ -205,6 +206,23 @@ class Relay:
             return False
         self.global_win[1] += 1
         return True
+
+    def heartbeat(self, connected, r=None):
+        """읽기 전용 관리 콘솔용 생존 표시: state 키 'hb' (JSON, 같은 키를 덮어씀).
+
+        번역 가능 여부 사유·백엔드 이름·대기열 길이만 기록한다 - 채팅 원문, ID, 금액 없음.
+        시각은 실제 시계(테스트 시계 오프셋은 파일럿 기간용이지 생존 판정용이 아님).
+        map-server 링크가 살아 있으면 5초마다, 끊겨 있으면 재접속 시도 앞뒤로 기록한다.
+        예외를 밖으로 내지 않는다: 표시 실패가 번역에 영향을 주면 안 된다."""
+        try:
+            if r is None:
+                r = self.reason()
+            self.store.set("hb", json.dumps({
+                "v": 1, "ts": nct_store.iso(datetime.now(timezone.utc)), "connected": 1 if connected else 0,
+                "code": r, "reason": R_NAMES[r], "backend": self.backend_name, "queue": self.queue},
+                separators=(",", ":")))
+        except Exception:
+            log.debug("heartbeat mark failed", exc_info=True)
 
     def count(self, k, n=1):
         self.counters[k] = self.counters.get(k, 0) + n
@@ -424,6 +442,7 @@ class Relay:
             self.flush_counters()
             self.check_budget_alerts()
             self.check_pilot_end()
+            self.heartbeat(True)
             await asyncio.sleep(5)
 
     def check_pilot_end(self):
@@ -503,12 +522,14 @@ class Relay:
             log.info("backend: %s", self.backend_name)
         delay = 1
         while not self.stopping:
+            self.heartbeat(False)		# 프로세스는 살아 있고 map-server 링크는 아직 없음
             try:
                 await self.session()
                 delay = 1
             except (ConnectionError, OSError, asyncio.IncompleteReadError, asyncio.TimeoutError, RuntimeError) as e:
                 log.warning("map-server link: %s (retry in %ds)", e, delay)
             self.flush_counters()
+            self.heartbeat(False)
             await asyncio.sleep(delay)
             delay = min(delay * 2, 30)
 
