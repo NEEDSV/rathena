@@ -46,6 +46,7 @@
 #include "mercenary.hpp"
 #include "mob.hpp"
 #include "need_enchant.hpp"
+#include "need_equipment_build.hpp"
 #include "navi.hpp"
 #include "need_autopot.hpp"
 #include "need_chat_translate.hpp"
@@ -4373,6 +4374,7 @@ int32 inter_config_read(const char *cfgName)
 		else if (strcmpi(w1, "guild_storage_log") == 0)
 			safestrncpy(guild_storage_log_table, w2, sizeof(guild_storage_log_table));
 		else if (strcmpi(w1, "char_db") == 0) {
+			need_equipment_build_set_char_table(w2);
 			need_summer_attendance_set_char_table(w2);
 			need_summer_fishing_reward_set_char_table(w2);
 		}

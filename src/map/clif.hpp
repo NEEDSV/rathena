@@ -1253,7 +1253,7 @@ void clif_homunculus_updatestatus( const map_session_data& sd, _sp type );
 
 void clif_configuration( const map_session_data* sd, enum e_config_type type, bool enabled );
 void clif_viewequip_ack( const map_session_data& sd, const map_session_data& tsd );
-bool clif_viewequip_snapshot( const map_session_data& sd, const char* display_name, int32 job_id, const std::vector<s_clif_viewequip_snapshot_item>& items );
+bool clif_viewequip_snapshot( const map_session_data& sd, const char* display_name, int32 job_id, const std::vector<s_clif_viewequip_snapshot_item>& items, bool show_details );
 void clif_equipcheckbox( const map_session_data& sd );
 
 void clif_msg( const map_session_data& sd, e_clif_messages msg_id );
