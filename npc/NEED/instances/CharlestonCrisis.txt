@@ -267,29 +267,63 @@ function	script	F_CharlestonSkipMenu	{
 // 파티 내 온라인 구성원 모두가 최초 클리어를 완료했는지 확인합니다.
 function	script	F_CharlestonCanEnableFast	{
 	.@caller_aid = getcharid(3);
+	.@caller_cid = getcharid(0);
 	.@party_id = getcharid(1);
-	if (.@party_id < 1)
+	// Recheck leadership after the mode-selection menu.
+	if (.@party_id < 1 || is_party_leader() == false) {
+		debugmes "[Charleston Fast] aid=" + .@caller_aid + " quest13186=" + isbegin_quest(13186) + " clear=" + #NEED_MD_CHARLESTON_CLEAR + " attached=1";
 		return 0;
+	}
 
-	getpartymember .@party_id,1;
+	getpartymember .@party_id,2;
 	.@member_count = $@partymembercount;
-	copyarray .@member_aid[0],$@partymemberaid[0],.@member_count;
-	.@allowed = 1;
+	if (.@member_count > 0)
+		copyarray .@member_aid[0],$@partymemberaid[0],.@member_count;
+	// Another character on the same account may be online instead of this member.
+	getpartymember .@party_id,1;
+	.@cid_count = $@partymembercount;
+	.@allowed = .@member_count > 0 && .@member_count == .@cid_count;
+	if (.@allowed)
+		copyarray .@member_cid[0],$@partymembercid[0],.@member_count;
 
-	for (.@i = 0; .@i < .@member_count; .@i++) {
-		if (attachrid(.@member_aid[.@i]) == 0)
+	for (.@i = 0; .@allowed && .@i < .@member_count; .@i++) {
+		if (isloggedin(.@member_aid[.@i],.@member_cid[.@i]) == 0)
 			continue;
 
-		if (#NEED_MD_CHARLESTON_CLEAR == 0 && isbegin_quest(13186) == 2)
+		if (attachrid(.@member_aid[.@i]) == 0) {
+			// -1 means unavailable: never read quest/flag values from the previous RID.
+			debugmes "[Charleston Fast] aid=" + .@member_aid[.@i] + " quest13186=-1 clear=-1 attached=0";
+			.@allowed = 0;
+			break;
+		}
+
+		.@checked_count++;
+		if (.@member_aid[.@i] == .@caller_aid && .@member_cid[.@i] == .@caller_cid)
+			.@caller_checked = 1;
+		.@quest_state = isbegin_quest(13186);
+		if (#NEED_MD_CHARLESTON_CLEAR == 0 && .@quest_state == 2)
 			#NEED_MD_CHARLESTON_CLEAR = 1;
 
 		if (#NEED_MD_CHARLESTON_CLEAR == 0) {
+			debugmes "[Charleston Fast] aid=" + .@member_aid[.@i] + " quest13186=" + .@quest_state + " clear=" + #NEED_MD_CHARLESTON_CLEAR + " attached=1";
 			.@allowed = 0;
 			break;
 		}
 	}
 
-	attachrid(.@caller_aid);
+	// Stop the whole dialogue if the original leader's RID cannot be restored.
+	if (attachrid(.@caller_aid) == 0) {
+		debugmes "[Charleston Fast] aid=" + .@caller_aid + " quest13186=-1 clear=-1 attached=0";
+		end;
+	}
+	if (getcharid(0) != .@caller_cid) {
+		debugmes "[Charleston Fast] aid=" + .@caller_aid + " quest13186=" + isbegin_quest(13186) + " clear=" + #NEED_MD_CHARLESTON_CLEAR + " attached=1";
+		end;
+	}
+	if (.@checked_count < 1 || .@caller_checked == 0 || .@member_count != .@cid_count) {
+		debugmes "[Charleston Fast] aid=" + .@caller_aid + " quest13186=" + isbegin_quest(13186) + " clear=" + #NEED_MD_CHARLESTON_CLEAR + " attached=1";
+		return 0;
+	}
 	return .@allowed;
 }
 
@@ -343,7 +377,7 @@ function	script	F_CharlestonEnableFast	{
 	case 2:
 		if (callfunc("F_CharlestonCanEnableFast") == 0) {
 			mes needtr("[빠른 진행 안내]", "[Fast Progress Notice]");
-			mes needtr("파티 내 온라인 구성원 중 최초 클리어를 완료하지 않은 계정이 있습니다.", "Some accounts among the party members online have not finished a first clear.");
+			mes needtr("온라인 파티원의 최초 클리어를 확인하지 못했습니다. 미완료 파티원이 있거나 확인 중 오류가 발생했습니다.", "Could not verify a first clear for every online party member. A member may be uncleared, or verification may have failed.");
 			mes needtr("모든 구성원이 최초 진행을 완료한 뒤 이용해 주세요.", "Please use it once every member has finished the run once.");
 			close;
 		}
@@ -570,7 +604,7 @@ OnTouch_:
 		if (select( needtr("일반 진행으로 시작한다.", "Start on the normal run."), needtr("빠른 진행을 활성화한다.", "Turn on fast progress.") ) == 2) {
 			if (callfunc("F_CharlestonCanEnableFast") == 0) {
 				mes needtr("[빠른 진행 안내]", "[Fast Progress Notice]");
-				mes needtr("파티 내 온라인 구성원 중 최초 클리어를 완료하지 않은 계정이 있습니다.", "Some accounts among the party members online have not finished a first clear.");
+				mes needtr("온라인 파티원의 최초 클리어를 확인하지 못했습니다. 미완료 파티원이 있거나 확인 중 오류가 발생했습니다.", "Could not verify a first clear for every online party member. A member may be uncleared, or verification may have failed.");
 				mes needtr("이번 입장은 일반 진행으로 시작합니다.", "This entry starts on the normal run.");
 				next;
 			}
@@ -2031,6 +2065,7 @@ OnTimer300:
 		next;
 		mes needtr("[베 박사]", "[Dr. Ve]");
 		mes needtr("아무것도 아니야. 네가 여기 있을 이유는 없어. 찰스턴 2호를 망가뜨린 자에게 돌아가.", "Never mind. You have no business in here. Just go back to whoever broke Charleston 2.");
+		mes needtr("마지막 대화가 끝났습니다. 이제 샬로쉬에게 돌아가 귀환하고 완료 보상을 받으세요.", "The final conversation is complete. Return to Shalosh to leave and receive your completion reward.");
 		close2;
 		if ('ep15_1_mcd01 == 16)
 			'ep15_1_mcd01 = 17;
@@ -2076,6 +2111,7 @@ OnTimer300:
 		mes needtr("기계는 너무 위험하다는 사실이 증명됐어. 대신 살아 있는 생물이 필요하겠군. 흐흐.", "This proves that machines are too dangerous. I need live creatures instead. *Chuckle*");
 		if ('ep15_1_mcd01 == 15)
 			'ep15_1_mcd01 = 16;
+		mes needtr("아직 마지막 대화가 남아 있습니다. 베 박사에게 한 번 더 말을 걸어 끝까지 들은 뒤 샬로쉬에게 돌아가세요.", "One final conversation remains. Speak with Dr. Ve once more and finish his dialogue before returning to Shalosh.");
 		close;
 	}
 	if ('ep15_1_mcd01 == 14) {
@@ -2190,7 +2226,24 @@ OnTimer300:
 			end;
 		}
 		mes needtr("[샬로쉬]", "[Shalosh]");
-		mes needtr("시도는 할 수 있지만 아무것도 바꾸지 못해. 정말 덧없는 일이야!", "You can try, but you can't change anything. How futile that is!");
+		switch ('ep15_1_mcd01) {
+		case 12:
+		case 13:
+			mes needtr("찰스턴 3호와의 전투를 마친 뒤 전투 구역의 찰스턴 2호와 남은 대화를 진행하세요.", "After finishing the fight with Charleston 3, finish the remaining conversations with Charleston 2 in the battle area.");
+			break;
+		case 14:
+			mes needtr("연구실의 찰스턴 2호와 대화하세요. 이후 베 박사와 마지막 대화를 마쳐야 귀환할 수 있습니다.", "Speak with Charleston 2 in the research lab, then finish the final conversations with Dr. Ve before returning here.");
+			break;
+		case 15:
+			mes needtr("연구실의 베 박사와 남은 대화를 진행하세요. 일반 진행에서는 두 번 말을 걸어 두 대화를 모두 마쳐야 합니다.", "Finish the remaining dialogue with Dr. Ve in the research lab. On a normal run, speak to him twice and finish both conversations.");
+			break;
+		case 16:
+			mes needtr("연구실의 베 박사에게 한 번 더 말을 걸어 마지막 대화를 끝까지 들은 뒤 돌아오세요.", "Speak with Dr. Ve in the research lab once more, finish the final conversation, then return here.");
+			break;
+		default:
+			mes needtr("아직 공장 조사가 끝나지 않았습니다. 찰스턴 1호와 2호의 안내에 따라 남은 전투와 조사를 마쳐 주세요.", "The factory investigation is not complete. Follow Charleston 1 and Charleston 2's instructions to finish the remaining battles and investigation.");
+			break;
+		}
 		close3;
 	}
 	end;
