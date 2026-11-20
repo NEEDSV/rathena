@@ -1,0 +1,164 @@
+// NEED Doram: function-only integration for existing Old Payon NPCs.
+// Recipes retained from lasagna_npcs.txt; no map NPC or quest handlers here.
+// getinventorylist indices are refreshed after every dialogue/confirmation.
+function	script	F_NEED_DoramPlainIndex	{
+	.@id = getarg(0);
+	getinventorylist;
+	for (.@i = 0; .@i < @inventorylist_count; ++.@i) {
+		if (@inventorylist_id[.@i] != .@id || @inventorylist_equip[.@i] ||
+			!@inventorylist_identify[.@i] || @inventorylist_refine[.@i] ||
+			@inventorylist_attribute[.@i] || @inventorylist_expire[.@i] ||
+			@inventorylist_bound[.@i] || @inventorylist_favorite[.@i] ||
+			@inventorylist_enchantgrade[.@i] ||
+			@inventorylist_card1[.@i] || @inventorylist_card2[.@i] ||
+			@inventorylist_card3[.@i] || @inventorylist_card4[.@i] ||
+			@inventorylist_option_id1[.@i] || @inventorylist_option_id2[.@i] ||
+			@inventorylist_option_id3[.@i] || @inventorylist_option_id4[.@i] ||
+			@inventorylist_option_id5[.@i])
+			continue;
+		return @inventorylist_idx[.@i];
+	}
+	return -1;
+}
+
+function	script	F_NEED_DoramExchange	{
+	.@input = getarg(0);
+	.@coins = getarg(1);
+	.@output = getarg(2);
+	.@amount = getarg(3);
+	// No next/select/sleep between these checks and the inventory mutation.
+	if (countitem(25142) < .@coins || !checkweight(.@output, .@amount)) {
+		mes needtr("교환 취소: 토큰 수량과 소지 공간·무게를 확인해 주세요.", "Exchange cancelled: check your tokens, inventory space and weight.");
+		return 0;
+	}
+	if (.@input) {
+		.@index = callfunc("F_NEED_DoramPlainIndex", .@input);
+		if (.@index < 0 || !delitemidx(.@index, 1)) {
+			mes needtr("교환 취소: 조건에 맞는 일반 장비가 없습니다.", "Exchange cancelled: no eligible plain equipment was found.");
+			return 0;
+		}
+	}
+	if (.@coins)
+		delitem 25142, .@coins;
+	getitem .@output, .@amount;
+	return 1;
+}
+
+
+// Entry: payo2 Exchange Machine -> Doram Equipment/Charms.
+function	script	F_NEED_DoramMenu	{
+	mes needtr("[도람 장비/부적 교환]", "[Doram Equipment/Charms]");
+	mes needtr("도람 장비를 토큰으로 바꾸거나, 토큰으로 부적을 교환·승급할 수 있습니다.", "Exchange Doram equipment for tokens, or use tokens to obtain and upgrade charms.");
+	mes needtr("반납·승급은 미착용·미제련·카드/옵션 없는 일반 장비만 가능합니다. 귀속·기간제·즐겨찾기 장비는 제외합니다.", "Turn-ins and upgrades accept only unequipped, unrefined, plain equipment. Bound, rental and favorite items are excluded.");
+	next;
+	switch (select(needtr("무기 → 도람 토큰:방어구/악세서리 → 도람 토큰:토큰 → 부적:부적 승급:취소", "Weapons to Doram Tokens:Armor/Accessories to Doram Tokens:Tokens to Charms:Upgrade a Charm:Cancel"))) {
+	case 1: callfunc "F_NEED_DoramDonate", 0; break;
+	case 2: callfunc "F_NEED_DoramDonate", 1; break;
+	case 3: callfunc "F_NEED_DoramBuyCharm"; break;
+	case 4: callfunc "F_NEED_DoramUpgrade"; break;
+	}
+	return;
+}
+
+function	script	F_NEED_DoramDonate	{
+	if (getarg(0) == 0) {
+		setarray .@data[0],
+			1690,1, 1691,2, 1692,3, 1693,4,
+			1694,1, 1695,2, 1696,3, 1697,4;
+	} else {
+		// Retain existing quantities, including 3 tokens for the level-100 armor.
+		setarray .@data[0],
+			15156,4, 20790,4, 22085,4,
+			28415,4, 28418,4, 28421,4,
+			28414,3, 28417,3, 28420,3,
+			15129,3, 20789,3, 22084,3,
+			15126,3, 20788,3, 22083,3,
+			28380,2, 28381,2, 28382,2,
+			28422,2, 28423,2, 28424,2,
+			28413,2, 28416,2, 28419,2;
+	}
+	.@count = getarraysize(.@data) / 2;
+	.@menu$ = "";
+	for (.@i = 0; .@i < .@count; ++.@i)
+		.@menu$ += getitemname(.@data[.@i*2]) + " -> " + .@data[.@i*2+1] + needtr(" 토큰:", " tokens:");
+	mes needtr("반납할 장비를 선택하세요. 장비 1개당 표시된 수량의 토큰을 받습니다.", "Choose equipment to turn in. The displayed token amount is paid per item.");
+	.@pick = select(.@menu$ + needtr("취소", "Cancel")) - 1;
+	if (.@pick >= .@count)
+		return;
+	.@item = .@data[.@pick*2];
+	.@tokens = .@data[.@pick*2+1];
+	if (callfunc("F_NEED_DoramPlainIndex", .@item) < 0) {
+		mes needtr("조건에 맞는 일반 장비가 없습니다. 장착·제련·카드·옵션·귀속·기간·즐겨찾기 상태를 확인하세요.", "No eligible plain equipment found. Check equipped, refine, card, option, bound, rental and favorite status.");
+		return;
+	}
+	mes getitemname(.@item) + " x1 -> " + getitemname(25142) + " x" + .@tokens;
+	mes needtr("반납한 장비는 사라집니다.", "The equipment you turn in will be consumed.");
+	next;
+	if (select(needtr("교환:취소", "Exchange:Cancel")) != 1)
+		return;
+	if (callfunc("F_NEED_DoramExchange", .@item, 0, 25142, .@tokens))
+		mes needtr("도람 토큰으로 교환했습니다.", "Exchanged for Doram Tokens.");
+	return;
+}
+
+function	script	F_NEED_DoramBuyCharm	{
+	setarray .@ids[0], 28413,28416,28419,28422,28423,28424;
+	.@menu$ = "";
+	for (.@i = 0; .@i < 6; ++.@i)
+		.@menu$ += getitemname(.@ids[.@i]) + " (" + ((.@i < 3) ? 10 : 30) + needtr(" 토큰):", " tokens):");
+	mes needtr("교환할 부적을 선택하세요.", "Choose a charm to obtain.");
+	.@pick = select(.@menu$ + needtr("취소", "Cancel")) - 1;
+	if (.@pick >= 6)
+		return;
+	.@item = .@ids[.@pick];
+	.@cost = (.@pick < 3) ? 10 : 30;
+	mes getitemname(25142) + " x" + .@cost + " -> " + getitemname(.@item) + " x1";
+	next;
+	if (select(needtr("교환:취소", "Exchange:Cancel")) != 1)
+		return;
+	if (callfunc("F_NEED_DoramExchange", 0, .@cost, .@item, 1))
+		mes needtr("부적으로 교환했습니다.", "Exchanged for a charm.");
+	return;
+}
+
+function	script	F_NEED_DoramUpgrade	{
+	mes needtr("승급할 부적 계열을 선택하세요. 조건에 맞는 하급 부적이 있으면 하급부터 승급합니다.", "Choose a charm branch. An eligible basic charm is upgraded first when available.");
+	.@pick = select(needtr("전갱이 부적:잎부적:토끼부적:취소", "Saurel Charm:Leaf Charm:Bunny Charm:Cancel"));
+	if (.@pick == 4)
+		return;
+	.@base = 28413 + (.@pick - 1) * 3;
+	if (callfunc("F_NEED_DoramPlainIndex", .@base) >= 0) {
+		.@item = .@base;
+		.@cost = 30;
+	} else if (callfunc("F_NEED_DoramPlainIndex", .@base+1) >= 0) {
+		.@item = .@base+1;
+		.@cost = 90;
+	} else {
+		mes needtr("승급 가능한 일반 하급·중급 부적이 없습니다. 상급 부적은 더 승급할 수 없습니다.", "No eligible plain basic or intermediate charm found. Advanced charms cannot be upgraded further.");
+		return;
+	}
+	mes getitemname(.@item) + " x1 + " + getitemname(25142) + " x" + .@cost + " -> " + getitemname(.@item+1) + " x1";
+	next;
+	if (select(needtr("승급:취소", "Upgrade:Cancel")) != 1)
+		return;
+	if (callfunc("F_NEED_DoramExchange", .@item, .@cost, .@item+1, 1))
+		mes needtr("부적을 승급했습니다.", "Upgraded your charm.");
+	return;
+}
+
+// Only the useful skill is retained from Haru/quest 7722. No tutorial rewards.
+function	script	F_NEED_DoramFirstAid	{
+	if (Class != Job_Summoner && Class != Job_Baby_Summoner)
+		return;
+	if (getskilllv("NV_FIRSTAID") > 0)
+		return;
+	mes needtr("응급치료 스킬을 배우시겠습니까? 스킬 포인트나 재료는 필요하지 않습니다.", "Learn First Aid? No skill points or materials are required.");
+	next;
+	if (select(needtr("배우기:취소", "Learn:Cancel")) != 1)
+		return;
+	// Recheck after the confirmation without resetting or awarding quest 7722.
+	if (getskilllv("NV_FIRSTAID") == 0)
+		skill "NV_FIRSTAID",1,SKILL_PERM_GRANT;
+	mes needtr("응급치료를 배웠습니다.", "You learned First Aid.");
+	return;
+}

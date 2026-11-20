@@ -649,6 +649,17 @@ function	script	F_NEED_CourseGift	{
 }
 
 payo2,96,123,3	script	낙원단 성장 지원관#need_beginner	4_M_ZONDAOYAJI,{
+	// Preserve Doram First Aid without enabling the Lasagna tutorial (quest 7722).
+	// Available before account eligibility checks; no EXP, items or quest flags.
+	if ((Class == Job_Summoner || Class == Job_Baby_Summoner) && getskilllv("NV_FIRSTAID") == 0) {
+		switch (select(needtr("성장 지원 이용:도람 응급치료 배우기:취소", "Growth Support:Learn Doram First Aid:Cancel"))) {
+		case 2:
+			callfunc "F_NEED_DoramFirstAid";
+			close;
+		case 3:
+			close;
+		}
+	}
 	setdialogsize(440,320);
 
 	if (!callfunc("F_NEED_IsBeginnerAccount")) {
