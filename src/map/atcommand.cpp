@@ -1005,6 +1005,19 @@ ACMD_FUNC(save)
 ACMD_FUNC(load){
 	nullpo_retr(-1, sd);
 
+	// Berserk permits only literal @load in ordinary PvE; keep all normal warp checks below.
+	if (sd->sc.getSCE(SC_BERSERK)) {
+		const map_data* mapdata = map_getmapdata(sd->m);
+
+		// bat_room is the shared BG/KvM lobby and has no battleground flag.
+		if (strcmp(command, "@load") != 0 || (message && *message) || mapdata == nullptr ||
+			sd->bg_id || mapdata_flag_vs2(mapdata) || mapdata->instance_id ||
+			mapdata->getMapFlag(MF_NOTELEPORT) || strcmp(mapdata->name, "bat_room") == 0) {
+			clif_displaymessage(fd, msg_txt(sd,248)); // You are not authorized to warp from your current map.
+			return -1;
+		}
+	}
+
 	uint16 mapindex = mapindex_name2id( sd->status.save_point.map );
 
 	int16 m = map_mapindex2mapid( mapindex );
