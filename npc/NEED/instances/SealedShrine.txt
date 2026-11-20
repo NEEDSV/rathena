@@ -1238,6 +1238,7 @@ OnTimer17000:
 2@cata,3,3,0	script	control_baphomet	-1,{
 OnInstanceInit:
 OnDisable:
+	stopnpctimer;
 	disablenpc instance_npcname("control_baphomet");
 	end;
 
@@ -1247,8 +1248,16 @@ OnEnable:
 	donpcevent instance_npcname("2f_callmon_pattern_c")+"::OnEnable";
 	monster .@map$,79,64,"바포메트#",1929,1,instance_npcname("control_baphomet")+"::OnMyMobDead";
 
-	// mob_skill_db에서 자동 NPC_INVINCIBLE을 제거하므로 등장 시 스크립트가 직접 무적을 적용한다.
-	areamobuseskill .@map$,79,64,10,1929,"NPC_INVINCIBLE",1,0,0,ET_HELP,0;
+	// 최초 3초는 피해를 허용하고 이후 인스턴스 안에서만 무적을 적용한다.
+	initnpctimer;
+	end;
+
+OnTimer3000:
+	stopnpctimer;
+	set .@map$,instance_mapname("2@cata");
+	if (mobcount(.@map$,instance_npcname("control_baphomet")+"::OnMyMobDead") < 1) end;
+	// 등장 위치에서 이동한 보스도 이후 재무적과 같은 맵 범위로 처리한다.
+	areamobuseskill .@map$,79,64,150,1929,"NPC_INVINCIBLE",1,0,0,ET_HELP,0;
 	end;
 
 OnMyMobDead:
