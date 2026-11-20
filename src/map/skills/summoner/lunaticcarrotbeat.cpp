@@ -5,6 +5,7 @@
 
 #include <config/core.hpp>
 
+#include "map/log.hpp"
 #include "map/pc.hpp"
 #include "map/status.hpp"
 
@@ -24,14 +25,19 @@ void SkillLunaticCarrotBeat::castendDamageId(block_list* src, block_list* target
 	if (!(flag & 1)) {
 		map_session_data* sd = BL_CAST(BL_PC, src);
 
-		// FIX ME: missing check of required item
-		if (sd && pc_search_inventory(sd, skill_db.find(getSkillId())->require.itemid[0]) >= 0) {
+		// Carrot is optional; only the secondary skill declares its ItemCost.
+		const auto carrot_skill = skill_db.find(SU_LUNATICCARROTBEAT2);
+		int16 index = sd && carrot_skill ? pc_search_inventory(sd, carrot_skill->require.itemid[0]) : -1;
+		if (index >= 0 && pc_delitem(sd, index, carrot_skill->require.amount[0], 0, 1, LOG_TYPE_CONSUME) == 0) {
 			SkillLunaticCarrotBeat2 lunatic2;
 			lunatic2.castendDamageId(src, target, skill_lv, tick, flag);
 		}
 		else {
 			SkillImplRecursiveDamageSplash::castendDamageId(src, target, skill_lv, tick, flag);
 		}
+	} else {
+		// The splash dispatcher re-enters this skill for every victim.
+		SkillImplRecursiveDamageSplash::castendDamageId(src, target, skill_lv, tick, flag);
 	}
 }
 

@@ -13224,45 +13224,12 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 		case SC_SHRIMP:
 			val2 = 10; // BATK%, MATK%
 			break;
-		case SC_FRESHSHRIMP: {
-				int32 min = 0, max = 0;
-				map_session_data* ssd = BL_CAST( BL_PC, src );
-
-#ifdef RENEWAL
-				status_data* sstatus = status_get_status_data(*src);
-				min = status_base_matk_min(src, sstatus, status_get_lv(src));
-				max = status_base_matk_max(src, sstatus, status_get_lv(src));
-				if (sstatus->rhw.matk > 0) {
-					int32 wMatk, variance;
-
-					wMatk = sstatus->rhw.matk;
-					variance = wMatk * sstatus->rhw.wlv / 10;
-					min += wMatk - variance;
-					max += wMatk + variance;
-				}
-#endif
-
-				if (ssd != nullptr && ssd->right_weapon.overrefine > 0) {
-					min++;
-					max += ssd->right_weapon.overrefine - 1;
-				}
-
-				val2 += min + 178; // Heal
-				if (max > min)
-					val2 += rnd() % (max - min); // Heal
-
-				if (ssd != nullptr) {
-					if (pc_checkskill(ssd, SU_POWEROFSEA) > 0) {
-						val2 += val2 * 10 / 100;
-						if (pc_checkskill_summoner(ssd, SUMMONER_POWER_SEA) >= 20)
-							val2 += val2 * 20 / 100;
-					}
-					if (pc_checkskill(ssd, SU_SPIRITOFSEA) > 0)
-						val2 *= 2; // Doubles HP
-				}
-				tick_time = 10000 - ((val1 - 1) * 1000);
-				val4 = tick / tick_time;
-			}
+		case SC_FRESHSHRIMP:
+			// kRO 2016-04-14: 1% -> 4% of the recipient's maximum HP per tick.
+			// NEED retains the later Spirit of Sea skill and its healing multiplier.
+			val3 = pc_checkskill(BL_CAST(BL_PC, src), SU_SPIRITOFSEA) > 0 ? 1 : 0;
+			tick_time = 10000 - ((val1 - 1) * 1000);
+			val4 = tick / tick_time;
 			break;
 		case SC_TUNAPARTY:
 			val2 = status_get_max_hp(src) * (val1 * 10) / 100; // Shield according to the Caster's MaxHP%
@@ -15809,7 +15776,7 @@ TIMER_FUNC(status_change_timer){
 		break;
 	case SC_FRESHSHRIMP:
 		if (--(sce->val4) >= 0) {
-			status_heal(bl, sce->val2, 0, 2);
+			status_heal(bl, static_cast<int64>(status->max_hp) * (sce->val3 == 1 ? 8 : 4) / 100, 0, 2);
 			sc_timer_next((10000 - ((sce->val1 - 1) * 1000)) + tick);
 			return 0;
 		}
