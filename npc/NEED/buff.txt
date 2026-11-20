@@ -28,6 +28,20 @@ payo2,94,134,3	script	버프 도우미	485,{
 	}
 	#BUFF_CD_END = gettimetick(2) + .CD; // 성공 사용: 30초 쿨타임 시작
 
+	// Berserk removal is limited to the original Old Payon healer, after approval.
+	// BG/GM-room duplicates keep their existing behavior and recovery amounts.
+	if (getstatus(SC_BERSERK) && Hp > 0 && .@map$ == "payo2" &&
+		strnpcinfo(3) == "버프 도우미" && strnpcinfo(4) == "payo2" &&
+		!instance_id() && !getcharid(4) && getmapflag(.@map$, mf_town) &&
+		!getmapflag(.@map$, mf_battleground) && !getmapflag(.@map$, mf_pvp) &&
+		!getmapflag(.@map$, mf_gvg) && !getmapflag(.@map$, mf_gvg_dungeon) &&
+		!getmapflag(.@map$, mf_gvg_castle) && !getmapflag(.@map$, mf_gvg_te) &&
+		!getmapflag(.@map$, mf_gvg_te_castle) && !getmapflag(.@map$, mf_nocommand) &&
+		!getmapflag(.@map$, mf_nowarp) && !getmapflag(.@map$, mf_nowarpto) &&
+		!getmapflag(.@map$, mf_noteleport) &&
+		!getstatus(SC_NORECOVER_STATE) && !getstatus(SC_BITESCAR))
+		sc_end SC_BERSERK;
+
 	if (BaseLevel < 150) {
 	sc_end SC_STUN;
 	sc_end SC_SILENCE;
