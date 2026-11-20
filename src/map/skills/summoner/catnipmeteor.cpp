@@ -5,6 +5,7 @@
 
 #include <config/core.hpp>
 
+#include "map/log.hpp"
 #include "map/pc.hpp"
 #include "map/status.hpp"
 
@@ -22,8 +23,11 @@ void SkillCatnipMeteor::castendPos2(block_list* src, int32 x, int32 y, uint16 sk
 	e_skill skill_id = getSkillId();
 
 	if (sd) {
-		// FIX ME: missing check of required item
-		if (pc_search_inventory(sd, skill_db.find(SU_CN_METEOR)->require.itemid[0]) >= 0)
+		// Fruit is optional; the base skill deliberately has no ItemCost.
+		// Consume once per cast, before creating any of the meteor units.
+		const auto fruit_skill = skill_db.find(SU_CN_METEOR2);
+		int16 index = fruit_skill ? pc_search_inventory(sd, fruit_skill->require.itemid[0]) : -1;
+		if (index >= 0 && pc_delitem(sd, index, fruit_skill->require.amount[0], 0, 1, LOG_TYPE_CONSUME) == 0)
 			skill_id = SU_CN_METEOR2;
 		if (pc_checkskill(sd, SU_SPIRITOFLAND))
 			sc_start(src, src, SC_DORAM_SVSP, 100, 100, skill_get_time(SU_SPIRITOFLAND, 1));

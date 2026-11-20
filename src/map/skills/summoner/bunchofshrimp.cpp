@@ -20,6 +20,8 @@ void SkillBunchofShrimp::castendNoDamageId(block_list *src, block_list *target, 
 		if (pc_checkskill(sd, SU_SPIRITOFSEA))
 			duration += skill_get_time2(SU_BUNCHOFSHRIMP, skill_lv);
 		clif_skill_nodamage(target, *target, getSkillId(), skill_lv, sc_start(src, target, skill_get_sc(getSkillId()), 100, skill_lv, duration));
+		// kRO main server 2016-04-14: heal each affected party member once.
+		status_heal(target, skill_calc_heal(src, target, getSkillId(), skill_lv, true), 0, 0);
 	} else if (sd) {
 		party_foreachsamemap(skill_area_sub, sd, skill_get_splash(getSkillId(), skill_lv), src, getSkillId(), skill_lv, tick, flag|BCT_PARTY|1, skill_castend_nodamage_id);
 	}
