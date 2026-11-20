@@ -10943,13 +10943,23 @@ static PACKET_ZC_EQUIPWIN_MICROSCOPE* clif_viewequip_start( const char* display_
 	return p;
 }
 
-static bool clif_viewequip_add_item( PACKET_ZC_EQUIPWIN_MICROSCOPE* p, int16 index, const item& equipped_item, const item_data& id, int32 equip_position ){
+static bool clif_viewequip_add_item( PACKET_ZC_EQUIPWIN_MICROSCOPE* p, int16 index, const item& equipped_item, const item_data& id, int32 equip_position, bool show_details ){
 	if( p == nullptr || static_cast<size_t>( p->PacketLength ) + sizeof( p->list[0] ) > INT16_MAX )
 		return false;
 
 	const size_t equip = ( static_cast<size_t>( p->PacketLength ) - sizeof( *p ) ) / sizeof( p->list[0] );
 	memset( &p->list[equip], 0, sizeof( p->list[equip] ) );
-	clif_item_equip( index, &p->list[equip], &equipped_item, &id, equip_position );
+	if( show_details ){
+		clif_item_equip( index, &p->list[equip], &equipped_item, &id, equip_position );
+	}else{
+		// Allowlist base identity only. Never serialize the private instance first:
+		// cards also contain enchants/forging data, and new instance fields must stay private.
+		item base_item{};
+		base_item.nameid = equipped_item.nameid;
+		base_item.equip = equipped_item.equip;
+		base_item.identify = 1;
+		clif_item_equip( index, &p->list[equip], &base_item, &id, equip_position );
+	}
 	p->PacketLength += static_cast<decltype(p->PacketLength)>( sizeof( p->list[0] ) );
 	return true;
 }
@@ -10957,6 +10967,8 @@ static bool clif_viewequip_add_item( PACKET_ZC_EQUIPWIN_MICROSCOPE* p, int16 ind
 
 void clif_viewequip_ack( const map_session_data& sd, const map_session_data& tsd ){
 #if PACKETVER_AD_NUM >= 20071211 || PACKETVER_SAK_NUM >= 20071127 || PACKETVER_MAIN_NUM >= 20071211 || defined(PACKETVER_RE)
+	// Enforce privacy at the response boundary, including direct/privileged callers.
+	const bool show_details = &sd == &tsd || tsd.status.show_equip;
 	PACKET_ZC_EQUIPWIN_MICROSCOPE* p = clif_viewequip_start( tsd.status.name, tsd.vd.look[LOOK_BASE], tsd.vd.look[LOOK_HAIR], tsd.vd.look[LOOK_HEAD_BOTTOM],
 		tsd.vd.look[LOOK_HEAD_MID], tsd.vd.look[LOOK_HEAD_TOP], tsd.vd.look[LOOK_ROBE], tsd.vd.look[LOOK_HAIR_COLOR], tsd.vd.look[LOOK_CLOTHES_COLOR],
 		tsd.vd.look[LOOK_BODY2], tsd.vd.sex );
@@ -10977,16 +10989,19 @@ void clif_viewequip_ack( const map_session_data& sd, const map_session_data& tsd
 				continue;
 			}
 
-			if( !clif_viewequip_add_item( p, client_index( k ), tsd.inventory.u.items_inventory[k], *tsd.inventory_data[k], pc_equippoint( &tsd, k ) ) )
+			// A private inventory index is unnecessary for a read-only base preview.
+			if( !clif_viewequip_add_item( p, client_index( show_details ? k : i ), tsd.inventory.u.items_inventory[k], *tsd.inventory_data[k], pc_equippoint( &tsd, k ), show_details ) )
 				break;
 		}
 	}
 
 	clif_send( p, p->PacketLength, &sd, SELF );
+	if( !show_details )
+		clif_displaymessage( sd.fd, msg_txt( &sd, 1559 ) );
 #endif
 }
 
-bool clif_viewequip_snapshot( const map_session_data& sd, const char* display_name, int32 job_id, const std::vector<s_clif_viewequip_snapshot_item>& items ){
+bool clif_viewequip_snapshot( const map_session_data& sd, const char* display_name, int32 job_id, const std::vector<s_clif_viewequip_snapshot_item>& items, bool show_details ){
 #if PACKETVER_AD_NUM >= 20071211 || PACKETVER_SAK_NUM >= 20071127 || PACKETVER_MAIN_NUM >= 20071211 || defined(PACKETVER_RE)
 	if( display_name == nullptr || *display_name == '\0' )
 		return false;
@@ -11014,11 +11029,13 @@ bool clif_viewequip_snapshot( const map_session_data& sd, const char* display_na
 		const s_clif_viewequip_snapshot_item& snapshot = items[index];
 		std::shared_ptr<item_data> id = item_db.find( snapshot.data.nameid );
 		if( id == nullptr || !itemdb_isequip2( id.get() ) ||
-			!clif_viewequip_add_item( p, client_index( static_cast<int32>( index ) ), snapshot.data, *id, snapshot.equip_position ) )
+			!clif_viewequip_add_item( p, client_index( static_cast<int32>( index ) ), snapshot.data, *id, snapshot.equip_position, show_details ) )
 			return false;
 	}
 
 	clif_send( p, p->PacketLength, &sd, SELF );
+	if( !show_details )
+		clif_displaymessage( sd.fd, msg_txt( &sd, 1559 ) );
 	return true;
 #else
 	return false;
@@ -18415,11 +18432,8 @@ void clif_parse_ViewPlayerEquip(int32 fd, map_session_data* sd)
 
 	if (sd->m != tsd->m)
 		return;
-	else if( tsd->status.show_equip || pc_has_permission(sd, PC_PERM_VIEW_EQUIPMENT) ) {
-		clif_viewequip_ack( *sd, *tsd );
-	}
-	else
-		clif_msg( *sd, MSI_OPEN_EQUIPEDITEM_REFUSED );
+
+	clif_viewequip_ack( *sd, *tsd );
 }
 
 
@@ -18437,6 +18451,7 @@ void clif_parse_configuration( int32 fd, map_session_data* sd ){
 	switch( type ){
 		case CONFIG_OPEN_EQUIPMENT_WINDOW:
 			sd->status.show_equip = flag;
+			clif_displaymessage( sd->fd, msg_txt( sd, flag ? 1558 : 1557 ) );
 			break;
 		case CONFIG_CALL:
 			sd->status.disable_call = flag;

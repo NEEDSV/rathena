@@ -27,6 +27,8 @@
 
 namespace {
 
+char need_build_char_table[64] = "char";
+
 constexpr int32 NEED_BUILD_CATEGORY_ALL = 0;
 constexpr int32 NEED_BUILD_CATEGORY_MIN = 1;
 constexpr int32 NEED_BUILD_CATEGORY_MAX = 6;
@@ -421,6 +423,18 @@ static bool need_build_insert_admin_log(map_session_data* sd, uint64 build_id, c
 }
 
 } // namespace
+
+void need_equipment_build_set_char_table(const char* table)
+{
+	if (table == nullptr || *table == '\0')
+		return;
+	// This value is used as an SQL identifier, never as a query fragment.
+	for (const char* p = table; *p; ++p) {
+		if (!((*p >= 'a' && *p <= 'z') || (*p >= 'A' && *p <= 'Z') || (*p >= '0' && *p <= '9') || *p == '_'))
+			return;
+	}
+	safestrncpy(need_build_char_table, table, sizeof(need_build_char_table));
+}
 
 int64 need_equipment_build_register(map_session_data* sd, int32 category, const char* title, const char* description)
 {
@@ -949,7 +963,9 @@ static int64 need_build_process_view_window(map_session_data* sd, uint64 build_i
 	}
 
 	if (SQL_ERROR == Sql_Query(mmysql_handle,
-		"SELECT `account_id`,`char_id`,`job_id`,`status` FROM `need_equipment_build` WHERE `build_id`='%" PRIu64 "' LIMIT 1", build_id)) {
+		"SELECT b.`account_id`,b.`char_id`,b.`job_id`,b.`status`,COALESCE(c.`show_equip`,0),COALESCE(c.`online`,1) "
+		"FROM `need_equipment_build` b LEFT JOIN `%s` c ON c.`char_id`=b.`char_id` AND c.`account_id`=b.`account_id` "
+		"WHERE b.`build_id`='%" PRIu64 "' LIMIT 1", need_build_char_table, build_id)) {
 		Sql_ShowDebug(mmysql_handle);
 		clif_displaymessage(sd->fd, msg_txt(sd, NEED_BUILD_MSG_VIEW_FAILED));
 		return NEED_BUILD_VIEW_FAILED;
@@ -963,7 +979,14 @@ static int64 need_build_process_view_window(map_session_data* sd, uint64 build_i
 	const uint32 owner_char_id = static_cast<uint32>(need_build_column_uint64(mmysql_handle, 1));
 	const int32 job_id = need_build_column_int(mmysql_handle, 2);
 	const int32 status = need_build_column_int(mmysql_handle, 3);
+	const bool saved_show_details = need_build_column_int(mmysql_handle, 4) != 0;
+	const bool owner_online = need_build_column_int(mmysql_handle, 5) != 0;
 	Sql_FreeResult(mmysql_handle);
+	const map_session_data* owner = map_charid2sd(owner_char_id);
+	// Prefer the live setting (autosave can lag). If another map-server owns the
+	// online character, fail closed rather than trust a stale SQL public flag.
+	const bool show_details = (owner_account_id == sd->status.account_id && owner_char_id == sd->status.char_id) ||
+		(owner != nullptr ? owner->status.show_equip : saved_show_details && !owner_online);
 
 	if (view_mode == NEED_BUILD_VIEW_PUBLIC && status != 1) {
 		clif_displaymessage(sd->fd, msg_txt(sd, NEED_BUILD_MSG_VIEW_NOT_PUBLIC));
@@ -1000,7 +1023,7 @@ static int64 need_build_process_view_window(map_session_data* sd, uint64 build_i
 	char display_name[NAME_LENGTH] = {};
 	if (safesnprintf(display_name, sizeof(display_name), msg_txt(sd, NEED_BUILD_MSG_VIEW_NAME), static_cast<unsigned long long>(build_id)) >= static_cast<int32>(sizeof(display_name)))
 		safesnprintf(display_name, sizeof(display_name), "#%llu", static_cast<unsigned long long>(build_id));
-	if (!clif_viewequip_snapshot(*sd, display_name, job_id, items)) {
+	if (!clif_viewequip_snapshot(*sd, display_name, job_id, items, show_details)) {
 		clif_displaymessage(sd->fd, msg_txt(sd, NEED_BUILD_MSG_VIEW_FAILED));
 		return NEED_BUILD_VIEW_UNAVAILABLE;
 	}

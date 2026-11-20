@@ -252,6 +252,7 @@ struct need_equipment_build_reward_page {
 	bool has_more = false;
 };
 
+void need_equipment_build_set_char_table(const char* table);
 int64 need_equipment_build_register(map_session_data* sd, int32 category, const char* title, const char* description);
 int64 need_equipment_build_count(uint32 account_id);
 int64 need_equipment_build_last_id(uint32 account_id);
