@@ -7814,24 +7814,32 @@ int32 skill_unit_onplace_timer(skill_unit *unit, block_list *bl, t_tick tick)
 				}
 			}
 			break;
-		case UNT_THORNS_TRAP:
+		case UNT_THORNS_TRAP: {
 			if( tsc ) {
 				if( !sg->val2 ) {
-					t_tick sec = skill_get_time2(sg->skill_id, sg->skill_lv);
-					if( sc_start(ss, bl, type, 100, sg->skill_lv, sec) ) {
-						const struct TimerData* td = tsc->getSCE(type)?get_timer(tsc->getSCE(type)->timer):nullptr;
-						if( td )
-							sec = DIFF_TICK(td->tick, tick);
-						///map_moveblock(bl, src->x, src->y, tick); // in official server it doesn't behave like this. [malufett]
-						clif_fixpos( *bl );
-						sg->val2 = bl->id;
-					} else
-						sec = 3000;	// Couldn't trap it?
-					sg->limit = DIFF_TICK(tick, sg->tick) + sec;
-				} else if( tsc->getSCE(SC_THORNSTRAP) && bl->id == sg->val2 )
+					// Catching a target cannot extend the trap past its installation deadline.
+					t_tick elapsed = DIFF_TICK(gettick(), sg->tick);
+					t_tick duration = std::min<t_tick>(skill_get_time2(sg->skill_id, sg->skill_lv), sg->limit - elapsed);
+					if( duration <= 0 )
+						break;
+					if( !sc_start2(ss, bl, type, 100, sg->skill_lv, sg->group_id, duration) ) {
+						sg->limit = std::min(sg->limit, elapsed + 3000); // Failed catch.
+						break;
+					}
+					// Status start can report success while keeping a higher-level application.
+					const auto* sce = tsc->getSCE(type);
+					if( sce == nullptr || sce->val2 != sg->group_id )
+						break;
+					if( const TimerData* timer = get_timer(sce->timer); timer != nullptr )
+						sg->limit = std::min(sg->limit, DIFF_TICK(timer->tick, sg->tick));
+					clif_fixpos(*bl);
+					sg->val2 = bl->id;
+				} else if( const auto* sce = tsc->getSCE(SC_THORNSTRAP);
+					bl->id == sg->val2 && sce != nullptr && sce->val2 == sg->group_id )
 					skill_attack(skill_get_type(GN_THORNS_TRAP), ss, ss, bl, sg->skill_id, sg->skill_lv, tick, SD_LEVEL|SD_ANIMATION);
 			}
 			break;
+		}
 		case UNT_HELLS_PLANT:
 			// 2017: hell plant unit attacks enemies in range from the unit's position (not the caster).
 			// 2017 skill_unit_onplace_timer restores: skip manhole/immune targets, re-check BCT_ENEMY, and
@@ -12366,6 +12374,14 @@ int32 skill_delunit(skill_unit* unit)
 
 	// perform ondelete actions
 	switch (group->skill_id) {
+		case GN_THORNS_TRAP: {
+			block_list* target = map_id2bl(group->val2);
+			status_change* sc = status_get_sc(target);
+			const auto* sce = sc != nullptr ? sc->getSCE(SC_THORNSTRAP) : nullptr;
+			if( sce != nullptr && sce->val2 == group->group_id )
+				status_change_end(target, SC_THORNSTRAP);
+			break;
+		}
 		case HT_ANKLESNARE:
 		case SC_ESCAPE:
 			{
