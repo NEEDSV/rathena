@@ -166,6 +166,61 @@ ACMD_FUNC(needbuildaudit)
 	return -1;
 }
 
+static void need_alootlist_items(int32 fd, e_need_lang lang, const char* label, const t_itemid* ids, size_t count)
+{
+	std::set<t_itemid> items(ids, ids + count);
+	items.erase(0);
+
+	char output[CHAT_SIZE_MAX];
+	if (items.empty()) {
+		safesnprintf(output, sizeof(output), "%s: None", label);
+		clif_displaymessage(fd, output);
+		return;
+	}
+
+	safesnprintf(output, sizeof(output), "%s: %zu", label, items.size());
+	clif_displaymessage(fd, output);
+	for (const t_itemid id : items) {
+		const char* name = item_display_name(id, lang);
+		safesnprintf(output, sizeof(output), "  %u: %s", id, *name ? name : "Unknown item");
+		clif_displaymessage(fd, output);
+	}
+}
+
+ACMD_FUNC(alootlist)
+{
+	nullpo_retr(-1, sd);
+	if (command[0] != atcommand_symbol)
+		return -1; // Only show the caller's own settings.
+
+	const auto& state = sd->state;
+	char output[CHAT_SIZE_MAX];
+	clif_displaymessage(fd, "[Autoloot Settings]");
+	if (need_jf_pattern_penalty_active(*sd))
+		clif_displaymessage(fd, "Automatic loot is temporarily restricted.");
+
+	if (state.autoloot == 0) {
+		clif_displaymessage(fd, "@autoloot: OFF");
+	} else {
+		safesnprintf(output, sizeof(output), "@autoloot: ON (%.2f%%)", state.autoloot / 100.0);
+		clif_displaymessage(fd, output);
+	}
+
+	const size_t excluded_count = std::min<size_t>(state.noloot_count, ARRAYLENGTH(state.noloot_itemid));
+	need_alootlist_items(fd, sd->need_lang, "@noloot (excluded)", state.noloot_itemid, excluded_count);
+
+	clif_displaymessage(fd, state.autoloottype ? "@autoloottype:" : "@autoloottype: None");
+	for (int32 type = 0; type < IT_MAX; ++type) {
+		if (state.autoloottype & (1u << type)) {
+			safesnprintf(output, sizeof(output), "  %d: %s", type, itemdb_typename(static_cast<item_types>(type)));
+			clif_displaymessage(fd, output);
+		}
+	}
+
+	need_alootlist_items(fd, sd->need_lang, "@alootid (included)", state.autolootid, ARRAYLENGTH(state.autolootid));
+	return 0;
+}
+
 static bool need_noloot_token_equals(const std::string& token, const char* value)
 {
 	return token == value;
