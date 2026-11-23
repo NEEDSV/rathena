@@ -19,7 +19,7 @@
 
 저장 대상인 세 설정은 `src/map/pc.cpp`의 `pc_autoloot_settings_save`를 통해 기존 `char_reg_num` 레지스트리에 반영됩니다. 접속 시 `pc_reg_received`에서 `NeedAutoLootSaved`로 저장 여부와 형식을 확인한 뒤 캐릭터별로 복원합니다. `@alootlist`는 호출 시점의 세션 상태를 읽으며 저장 함수를 호출하지 않습니다.
 
-JF 패턴 제한 중에는 기존 정책에 따라 저장값이 남아 있어도 접속 세션의 자동 루팅률·유형·선택 ID가 초기화될 수 있습니다. 조회 결과는 이때의 세션 상태와 제한 안내를 표시합니다. 기존 `@alootid`, `@autoloottype`, `@noloot list`의 개별 조회를 확인했으며, 구현 전 소스·별칭·NPC 바인딩에 `alootlist` 이름 충돌은 없었습니다. 기존 `@autoloottype` YAML 도움말의 4·5 설명 순서는 구현과 다르므로 새 조회는 실제 유형 이름과 코드를 사용합니다.
+JF 패턴 제한 중에는 기존 정책에 따라 저장값이 남아 있어도 접속 세션의 자동 루팅률·유형·선택 ID가 초기화될 수 있습니다. 조회 결과는 이때의 세션 상태와 제한 안내를 표시합니다. 기존 `@alootid`, `@autoloottype`, `@noloot list`의 개별 조회를 확인했으며, 구현 전 소스·별칭·NPC 바인딩에 `alootlist` 이름 충돌은 없었습니다. `@autoloottype` 도움말과 문서의 4·5 표기를 실제 유형 코드에 맞춰 `Armor = 4`, `Weapon = 5`로 수정했습니다.
 
 ## 변경 파일
 
