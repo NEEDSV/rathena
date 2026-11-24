@@ -10531,9 +10531,7 @@ static bool need_bg_status_duration_cap(sc_type type) {
 		case SC_MARSHOFABYSS:
 		case SC_BANANA_BOMB:
 		case SC_BANANA_BOMB_SITDOWN:
-		// Thorn Trap hold (Duration2 20s -> 10s, 2026-11-13 BG balance request). Only GN_THORNS_TRAP starts
-		// this status. The trap object's own lifetime (Duration1 10-18s), damage interval and damage are
-		// untouched; after a catch the unit's limit is derived from this status timer, as before.
+		// Preserve the BG cap for Thorn Trap even if its skill DB duration is overridden.
 		case SC_THORNSTRAP:
 			return true;
 		default:
