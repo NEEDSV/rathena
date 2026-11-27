@@ -7458,7 +7458,7 @@ int32 skill_unit_onplace_timer(skill_unit *unit, block_list *bl, t_tick tick)
 
 		case UNT_ELECTRICSHOCKER:
 			if( bl->id != ss->id ) {
-				if( status_bl_has_mode(bl,MD_STATUSIMMUNE) )
+				if (status_bl_has_mode(bl, MD_STATUSIMMUNE) && status_get_class_(bl) != CLASS_BOSS)
 					break;
 				if( status_change_start(ss, bl,type,10000,sg->skill_lv,sg->group_id,0,0,skill_get_time2(sg->skill_id, sg->skill_lv), SCSTART_NORATEDEF) ) {
 					map_moveblock(bl, unit->x, unit->y, tick);
@@ -11968,7 +11968,7 @@ int32 skill_trap_splash(block_list *bl, va_list ap)
 			break;
 		case UNT_ELECTRICSHOCKER:
 			if (bl->id != ss->id) {
-				if (status_bl_has_mode(bl,MD_STATUSIMMUNE))
+				if (status_bl_has_mode(bl, MD_STATUSIMMUNE) && status_get_class_(bl) != CLASS_BOSS)
 					break;
 				if (status_change_start(ss, bl, SC_ELECTRICSHOCKER, 10000, sg->skill_lv, sg->group_id, 0, 0, skill_get_time2(sg->skill_id, sg->skill_lv), SCSTART_NORATEDEF)) {
 					map_moveblock(bl, unit->x, unit->y, tick);
