@@ -12494,14 +12494,24 @@ void clif_parse_ActionRequest_sub( map_session_data& sd, uint8 action_type, int3
 			break;
 		}
 
-		if (pc_setstand(&sd, false)) {
+		const bool banana_sitdown = sd.sc.getSCE(SC_BANANA_BOMB_SITDOWN) != nullptr;
+		if (banana_sitdown && sd.sc.getSCE(SC_SITDOWN_FORCE))
+			break;
+
+		// Ending the sit-down status stands the player up and clears sitting skill effects.
+		const bool stood_up = banana_sitdown
+			? status_change_end(&sd, SC_BANANA_BOMB_SITDOWN) != 0
+			: pc_setstand(&sd, false);
+
+		if (stood_up) {
 			if (battle_config.idletime_option&IDLE_SIT)
 				sd.idletime = last_tick;
 			if (battle_config.hom_idle_no_share && sd.hd && battle_config.idletime_hom_option&IDLE_SIT)
 				sd.idletime_hom = last_tick;
 			if (battle_config.mer_idle_no_share && sd.md && battle_config.idletime_mer_option&IDLE_SIT)
 				sd.idletime_mer = last_tick;
-			skill_sit(&sd, false);
+			if (!banana_sitdown)
+				skill_sit(&sd, false);
 			clif_standing(sd);
 		}
 		break;

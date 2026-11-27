@@ -136,6 +136,10 @@ static uint32 status_calc_maxap_pc( map_session_data& sd );
 static int32 status_get_sc_interval(enum sc_type type);
 static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_type type, int32 val1, int32 val2, int32 val3, int32 val4, int32 tick, uint8 flag);
 
+static constexpr int32 BG_ROOT_TWIST_MAX_DURATION = 5000;
+static constexpr int32 BG_ROOT_TWIST_DAMAGE_INTERVAL = 1000;
+static TIMER_FUNC(need_bg_root_twist_damage_timer);
+
 static bool status_change_isDisabledOnMap_(sc_type type, bool mapIsVS, bool mapIsPVP, bool mapIsGVG, bool mapIsBG, uint32 mapZone, bool mapIsTE);
 #define status_change_isDisabledOnMap(type, m) ( status_change_isDisabledOnMap_((type), mapdata_flag_vs2((m)), m->getMapFlag(MF_PVP) != 0, mapdata_flag_gvg2_no_te((m)), m->getMapFlag(MF_BATTLEGROUND) != 0, (m->zone << 3) != 0, mapdata_flag_gvg2_te((m))) )
 
@@ -4122,7 +4126,9 @@ int32 status_calc_pc_sub(map_session_data* sd, uint8 opt)
 	// Give them all modes except these (useful for clones)
 	base_status->mode = static_cast<e_mode>(MD_MASK&~(MD_STATUSIMMUNE|MD_IGNOREMELEE|MD_IGNOREMAGIC|MD_IGNORERANGED|MD_IGNOREMISC|MD_DETECTOR|MD_ANGRY|MD_TARGETWEAK));
 
-	base_status->size = (sd->class_&JOBL_BABY) ? SZ_SMALL : (((sd->class_&MAPID_FIRSTMASK) == MAPID_SUMMONER) ? battle_config.summoner_size : SZ_MEDIUM);
+	const bool is_summoner = (sd->class_ & MAPID_FIRSTMASK) == MAPID_SUMMONER;
+	const bool bg_doram = is_summoner && sd->m >= 0 && map_getmapflag(sd->m, MF_BATTLEGROUND) > 0;
+	base_status->size = (sd->class_&JOBL_BABY) ? SZ_SMALL : (is_summoner ? battle_config.summoner_size : SZ_MEDIUM);
 	if (battle_config.character_size && pc_isriding(sd)) { // [Lupus]
 		if (sd->class_&JOBL_BABY) {
 			if (battle_config.character_size&SZ_BIG)
@@ -4131,9 +4137,11 @@ int32 status_calc_pc_sub(map_session_data* sd, uint8 opt)
 		if(battle_config.character_size&SZ_MEDIUM)
 			base_status->size++;
 	}
+	if (bg_doram)
+		base_status->size = SZ_MEDIUM;
 	base_status->aspd_rate = 1000;
 	base_status->ele_lv = 1;
-	base_status->race = ((sd->class_&MAPID_FIRSTMASK) == MAPID_SUMMONER) ? battle_config.summoner_race : RC_PLAYER_HUMAN;
+	base_status->race = is_summoner && !bg_doram ? battle_config.summoner_race : RC_PLAYER_HUMAN;
 	base_status->class_ = CLASS_NORMAL;
 
 	sd->autospell.clear();
@@ -13205,6 +13213,12 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 			if (bl->type == BL_PC && pc_checkskill(sd, SU_SPIRITOFLAND))
 				val4 = status_get_lv(src) / 12;
 			break;
+		case SC_SV_ROOTTWIST:
+			if (val2 > 0) { // Battleground cast: caster ID, damage timer ID, and damage flags in val2–4.
+				tick = tick < 0 ? BG_ROOT_TWIST_MAX_DURATION : std::min(tick, BG_ROOT_TWIST_MAX_DURATION);
+				val3 = INVALID_TIMER;
+			}
+			break;
 		case SC_BITESCAR: {
 				const struct status_data *b_status = status_get_base_status(src); // Base Status
 
@@ -13780,6 +13794,8 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 	if (sce != nullptr) {
 		if( sce->timer != INVALID_TIMER )
 			delete_timer(sce->timer, status_change_timer);
+		if (type == SC_SV_ROOTTWIST && sce->val2 > 0 && sce->val3 != INVALID_TIMER)
+			delete_timer(sce->val3, need_bg_root_twist_damage_timer);
 		sc_isnew = false;
 	} else {
 		// New sc
@@ -13789,9 +13805,12 @@ static bool status_change_start_post_delay(block_list* src, block_list* bl, sc_t
 	sce->val2 = val2;
 	sce->val3 = val3;
 	sce->val4 = val4;
-	if (tick >= 0)
-		sce->timer = add_timer(gettick() + tick, status_change_timer, bl->id, type);
-	else
+	if (tick >= 0) {
+		const t_tick now = gettick();
+		sce->timer = add_timer(now + tick, status_change_timer, bl->id, type);
+		if (type == SC_SV_ROOTTWIST && val2 > 0 && tick > BG_ROOT_TWIST_DAMAGE_INTERVAL)
+			sce->val3 = add_timer(now + BG_ROOT_TWIST_DAMAGE_INTERVAL, need_bg_root_twist_damage_timer, bl->id, 0);
+	} else
 		sce->timer = INVALID_TIMER; // Infinite duration
 
 	// NEED: The full accessory strip supersedes Earth Strain's one-slot state. Create/send the full
@@ -14079,6 +14098,8 @@ int32 status_change_end( block_list* bl, enum sc_type type, int32 tid ){
 		val2 = sce->val2;
 		val3 = sce->val3;
 		val4 = sce->val4;
+		if (type == SC_SV_ROOTTWIST && val2 > 0 && val3 != INVALID_TIMER)
+			delete_timer(val3, need_bg_root_twist_damage_timer);
 
 		sc->deleteSCE( type );
 	}else{
@@ -15946,6 +15967,30 @@ TIMER_FUNC(status_change_timer){
 	return status_change_end( bl,type,tid );
 }
 
+// Tie damage to this application while the status timer tracks the full root duration.
+static TIMER_FUNC(need_bg_root_twist_damage_timer) {
+	block_list* target = map_id2bl(id);
+	status_change* sc = status_get_sc(target);
+	status_change_entry* root = sc != nullptr ? sc->getSCE(SC_SV_ROOTTWIST) : nullptr;
+	if (root == nullptr || root->val2 <= 0 || root->val3 != tid)
+		return 0;
+	root->val3 = INVALID_TIMER;
+
+	block_list* caster = map_id2bl(root->val2);
+	if (caster == nullptr || caster->prev == nullptr || target->prev == nullptr || caster->m != target->m ||
+		status_isdead(*caster) || status_isdead(*target))
+		return 0;
+	const TimerData* expiration = get_timer(root->timer);
+	if (expiration == nullptr || expiration->tick <= tick)
+		return 0;
+	const t_tick next = tick + BG_ROOT_TWIST_DAMAGE_INTERVAL;
+	if (next < expiration->tick)
+		root->val3 = add_timer(next, need_bg_root_twist_damage_timer, id, 0);
+	if (check_distance_bl(caster, target, 32))
+		skill_attack(skill_get_type(SU_SV_ROOTTWIST_ATK), caster, target, target, SU_SV_ROOTTWIST_ATK, root->val1, tick, root->val4);
+	return 0;
+}
+
 /**
  * For each iteration of repetitive status
  * @param bl: Object [PC|MOB|HOM|MER|ELEM]
@@ -17221,6 +17266,7 @@ void do_init_status(void) {
 	add_timer_func_list(status_change_start_timer, "status_change_start_timer");
 
 	add_timer_func_list(status_change_timer,"status_change_timer");
+	add_timer_func_list(need_bg_root_twist_damage_timer, "need_bg_root_twist_damage_timer");
 	add_timer_func_list(status_natural_heal_timer,"status_natural_heal_timer");
 	add_timer_func_list(status_clear_lastEffect_timer, "status_clear_lastEffect_timer");
 	initDummyData();

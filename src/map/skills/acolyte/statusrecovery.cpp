@@ -4,6 +4,7 @@
 #include "statusrecovery.hpp"
 
 #include "map/clif.hpp"
+#include "map/map.hpp"
 #include "map/mob.hpp"
 #include "map/status.hpp"
 
@@ -41,6 +42,8 @@ void SkillStatusRecovery::castendNoDamageId(block_list* src, block_list* target,
 		// Ends SC_NETHERWORLD and SC_NORECOVER_STATE (even on undead)
 		status_change_end(target, SC_NETHERWORLD);
 		status_change_end(target, SC_NORECOVER_STATE);
+		if (target->type == BL_PC && map_getmapflag(target->m, MF_BATTLEGROUND))
+			status_change_end(target, SC_SV_ROOTTWIST);
 	}
 	clif_skill_nodamage(src,*target, getSkillId(),skill_lv);
 }

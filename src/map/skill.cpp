@@ -4116,8 +4116,9 @@ TIMER_FUNC(skill_timerskill){
 
 				case SU_SV_ROOTTWIST_ATK: {
 						status_change *tsc = status_get_sc(target);
+						const status_change_entry* root = tsc != nullptr ? tsc->getSCE(SC_SV_ROOTTWIST) : nullptr;
 
-						if (tsc && tsc->getSCE(SC_SV_ROOTTWIST)) {
+						if (root != nullptr && root->val2 == 0) { // Battleground applications own their damage timer.
 							if (check_distance_bl(src, target, 32)) // Only damage if caster is within 32x32 area
 								skill_attack(skl->type, src, target, target, skl->skill_id, skl->skill_lv, tick, skl->flag);
 							skill_addtimerskill(src, tick + 1000, target->id, 0, 0, skl->skill_id, skl->skill_lv, skl->type, skl->flag);
@@ -7458,7 +7459,7 @@ int32 skill_unit_onplace_timer(skill_unit *unit, block_list *bl, t_tick tick)
 
 		case UNT_ELECTRICSHOCKER:
 			if( bl->id != ss->id ) {
-				if( status_bl_has_mode(bl,MD_STATUSIMMUNE) )
+				if (status_bl_has_mode(bl, MD_STATUSIMMUNE) && status_get_class_(bl) != CLASS_BOSS)
 					break;
 				if( status_change_start(ss, bl,type,10000,sg->skill_lv,sg->group_id,0,0,skill_get_time2(sg->skill_id, sg->skill_lv), SCSTART_NORATEDEF) ) {
 					map_moveblock(bl, unit->x, unit->y, tick);
@@ -11976,7 +11977,7 @@ int32 skill_trap_splash(block_list *bl, va_list ap)
 			break;
 		case UNT_ELECTRICSHOCKER:
 			if (bl->id != ss->id) {
-				if (status_bl_has_mode(bl,MD_STATUSIMMUNE))
+				if (status_bl_has_mode(bl, MD_STATUSIMMUNE) && status_get_class_(bl) != CLASS_BOSS)
 					break;
 				if (status_change_start(ss, bl, SC_ELECTRICSHOCKER, 10000, sg->skill_lv, sg->group_id, 0, 0, skill_get_time2(sg->skill_id, sg->skill_lv), SCSTART_NORATEDEF)) {
 					map_moveblock(bl, unit->x, unit->y, tick);

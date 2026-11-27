@@ -653,6 +653,8 @@ public:
 	// NEED: battleground Illusion Doping repeat decay shared by all casters (need_illusiondoping_decay.hpp).
 	// Runtime only. Reset on death and on every map change; a new session starts empty.
 	s_need_illusiondoping_decay need_illusiondoping_decay;
+	// Battleground Root Twist reapplication window, shared by all casters.
+	t_tick need_bg_root_twist_repeat_until = 0;
 	unsigned char head_dir; //0: Look forward. 1: Look right, 2: Look left.
 	t_tick client_tick;
 	int32 npc_id,npc_shopid; //for script follow scriptoid;   ,npcid
@@ -1908,6 +1910,7 @@ int32 pc_disguise(map_session_data *sd, int32 class_);
 bool pc_isautolooting(map_session_data *sd, t_itemid nameid);
 void pc_autoloot_settings_save(map_session_data *sd);
 void pc_autoloot_settings_restore(map_session_data *sd);
+void pc_noloot_settings_save(map_session_data *sd);
 bool pc_is_noloot(const map_session_data *sd, t_itemid nameid);
 
 void pc_overheat(map_session_data &sd, int16 heat);
