@@ -11,6 +11,7 @@ static const char* const NCT_S_CH_PARTY[2] = { "(\306\304\306\274) ", "(Party) "
 static const char* const NCT_S_CH_GUILD[2] = { "(\261\346\265\345) ", "(Guild) " };
 static const char* const NCT_S_CH_BG[2] = { "(\300\374\300\345) ", "(BG) " };
 static const char* const NCT_S_CH_CLAN[2] = { "(\305\254\267\243) ", "(Clan) " };
+static const char* const NCT_S_CH_WHISPER[2] = { "(\261\323\274\323\270\273) ", "(Whisper) " };
 static const char* const NCT_S_LANG_AUTO[2] = { "\300\332\265\277(\305\254\266\363\300\314\276\360\306\256 \276\360\276\356)", "auto (client language)" };
 static const char* const NCT_S_LANG_KO[2] = { "\307\321\261\271\276\356", "Korean" };
 static const char* const NCT_S_LANG_EN[2] = { "\277\265\276\356", "English" };
@@ -22,7 +23,7 @@ static const char* const NCT_S_BLOCK_OFF[2] = { "[\271\370\277\252] \263\273 \30
 static const char* const NCT_S_SERVICE_ON[2] = { "[\271\370\277\252] \271\370\277\252 \274\255\272\361\275\272: \277\356\277\265 \301\337", "[TL] Translation service: running" };
 static const char* const NCT_S_SERVICE_OFF[2] = { "[\271\370\277\252] \271\370\277\252 \274\255\272\361\275\272: \300\317\275\303 \301\337\301\366 (%s)", "[TL] Translation service: paused (%s)" };
 static const char* const NCT_S_CHANNELS[2] = { "[\271\370\277\252] \271\370\277\252 \264\353\273\363 \303\244\306\303: %s", "[TL] Translated chats: %s" };
-static const char* const NCT_S_NOTICE[2] = { "[\271\370\277\252] \276\310\263\273: \300\332\265\277\271\370\277\252\300\314 \304\321\301\366\270\351 \301\326\272\257\300\307 \264\331\270\245 \276\360\276\356 \303\244\306\303 \277\370\271\256\300\314 \277\334\272\316 \271\370\277\252 \274\255\272\361\275\272\267\316 \300\374\274\333\265\307\276\356 \271\370\277\252\265\313\264\317\264\331. \300\314\270\247\260\372 \260\350\301\244 \301\244\272\270\264\302 \300\374\274\333\265\307\301\366 \276\312\275\300\264\317\264\331.", "[TL] Notice: with auto-translate on, chat text in the other language is sent to an external translation service. Names and account data are never sent." };
+static const char* const NCT_S_NOTICE[2] = { "[\271\370\277\252] \276\310\263\273: \300\332\265\277\271\370\277\252\300\314 \304\321\301\366\270\351 \263\273\260\241 \271\336\264\302 \264\331\270\245 \276\360\276\356 \303\244\306\303 \277\370\271\256\300\314 \277\334\272\316 \271\370\277\252 \274\255\272\361\275\272\267\316 \300\374\274\333\265\307\276\356 \271\370\277\252\265\313\264\317\264\331. \300\314\270\247\260\372 \260\350\301\244 \301\244\272\270\264\302 \300\374\274\333\265\307\301\366 \276\312\275\300\264\317\264\331.", "[TL] Notice: with auto-translate on, chat you receive in the other language is sent to an external translation service. Names and account data are never sent." };
 static const char* const NCT_S_NOTICE_BLOCK[2] = { "[\271\370\277\252] \263\273 \303\244\306\303\300\314 \271\370\277\252\265\307\301\366 \276\312\260\324 \307\317\267\301\270\351: @\271\370\277\252\260\305\272\316 \304\321\261\342", "[TL] To keep your own chat from being translated: @translateblock on" };
 static const char* const NCT_S_USAGE[2] = { "[\271\370\277\252] \273\347\277\353\271\375: @\271\370\277\252 \304\321\261\342 | \262\364\261\342 | \273\363\305\302 | \307\321\261\271\276\356 | \277\265\276\356 | \300\332\265\277", "[TL] Usage: @translate on | off | status | ko | en | auto" };
 static const char* const NCT_S_USAGE_BLOCK[2] = { "[\271\370\277\252] \273\347\277\353\271\375: @\271\370\277\252\260\305\272\316 \304\321\261\342 | \262\364\261\342 | \273\363\305\302", "[TL] Usage: @translateblock on | off | status" };
@@ -37,6 +38,7 @@ static const char* const NCT_S_CHN_PARTY[2] = { "\306\304\306\274", "party" };
 static const char* const NCT_S_CHN_GUILD[2] = { "\261\346\265\345", "guild" };
 static const char* const NCT_S_CHN_BG[2] = { "\300\374\300\345", "battleground" };
 static const char* const NCT_S_CHN_CLAN[2] = { "\305\254\267\243", "clan" };
+static const char* const NCT_S_CHN_WHISPER[2] = { "\261\323\274\323\270\273", "whisper" };
 static const char* const NCT_S_CHN_NONE[2] = { "\276\370\300\275", "none" };
 
 #endif // NEED_CHAT_TRANSLATE_STRINGS_INC

@@ -74,7 +74,7 @@ struct s_nct_pending {
 	uint32 speaker_cid;
 	char name[NAME_LENGTH];
 	int16 m, x, y;
-	int32 group_id;			// party / guild / bg / clan / chat room id
+	int32 group_id;			// party / guild / bg / clan / chat room id, whisper: receiver char_id
 	uint8 channel_type;
 	char channel_name[CHAN_NAME_LENGTH];
 	char channel_alias[CHAN_NAME_LENGTH];
@@ -118,6 +118,24 @@ static bool nct_warned_no_token = false;
 
 static inline void nct_stat( e_need_ct_stat s, uint32 v = 1 ){
 	nct_stats[s] += v;
+}
+
+/// per-chat-type message counter (whisper was added after the protocol order was fixed)
+static inline e_need_ct_stat nct_msg_stat( e_need_ct_chan chan ){
+	if( chan == NCT_WHISPER )
+		return NCT_STAT_MSG_WHISPER;
+	return static_cast<e_need_ct_stat>( NCT_STAT_MSG_SAY + chan );
+}
+
+/// does `tsd` refuse whispers from `name` right now (ignore all / ignore list, see clif_parse_WisMessage)?
+static bool nct_whisper_ignored( const map_session_data* tsd, const char* name ){
+	if( tsd->state.ignoreAll )
+		return true;
+	for( int32 i = 0; i < MAX_IGNORE_LIST && tsd->ignore[i].name[0] != '\0'; i++ ){
+		if( strcmp( tsd->ignore[i].name, name ) == 0 )
+			return true;
+	}
+	return false;
 }
 
 static int32 nct_lang_of( const map_session_data* sd ){
@@ -368,6 +386,14 @@ static void nct_candidates( const s_nct_pending& p, std::vector<map_session_data
 			}
 			break;
 		}
+		case NCT_WHISPER: {
+			// only the receiver, only while still online here and not ignoring the speaker since
+			map_session_data* u = map_charid2sd( p.group_id );
+
+			if( u != nullptr && !nct_whisper_ignored( u, p.name ) )
+				out.push_back( u );
+			break;
+		}
 	}
 }
 
@@ -472,6 +498,7 @@ static void nct_deliver( const s_nct_pending& p, const char* text, size_t len ){
 		case NCT_GUILD: chtag = NCT_S_CH_GUILD; break;
 		case NCT_BG: chtag = NCT_S_CH_BG; break;
 		case NCT_CLAN: chtag = NCT_S_CH_CLAN; break;
+		case NCT_WHISPER: chtag = NCT_S_CH_WHISPER; break;
 		default: chtag = NCT_S_CH_SAY; break;
 	}
 
@@ -824,7 +851,7 @@ static bool nct_global_take( t_tick now ){
 
 // ---------------------------------------------------------------- the hook
 
-void need_ct_on_chat( map_session_data* sd, e_need_ct_chan chan, const char* name, const char* body, const Channel* channel ){
+static void nct_on_line( map_session_data* sd, e_need_ct_chan chan, const char* name, const char* body, const Channel* channel, uint32 target_cid ){
 	if( sd == nullptr || name == nullptr || body == nullptr || chan >= NCT_CHAN_MAX )
 		return;
 	if( battle_config.need_chat_translate == 0 )
@@ -832,7 +859,7 @@ void need_ct_on_chat( map_session_data* sd, e_need_ct_chan chan, const char* nam
 
 	auto t0 = std::chrono::steady_clock::now();
 
-	nct_stat( static_cast<e_need_ct_stat>( NCT_STAT_MSG_SAY + chan ) );
+	nct_stat( nct_msg_stat( chan ) );
 
 	do{
 		if( ( battle_config.need_chat_translate_channels & ( 1 << chan ) ) == 0 )
@@ -877,6 +904,11 @@ void need_ct_on_chat( map_session_data* sd, e_need_ct_chan chan, const char* nam
 			case NCT_GUILD: p.group_id = sd->status.guild_id; break;
 			case NCT_BG: p.group_id = sd->bg_id; break;
 			case NCT_CLAN: p.group_id = sd->status.clan_id; break;
+			case NCT_WHISPER:
+				if( target_cid == 0 )
+					return;
+				p.group_id = static_cast<int32>( target_cid );
+				break;
 			case NCT_CHANNEL:
 				if( channel == nullptr )
 					return;
@@ -947,10 +979,22 @@ void need_ct_on_chat( map_session_data* sd, e_need_ct_chan chan, const char* nam
 		nct_stats[NCT_STAT_HOOK_US_MAX] = us;
 }
 
+void need_ct_on_chat( map_session_data* sd, e_need_ct_chan chan, const char* name, const char* body, const Channel* channel ){
+	if( chan == NCT_WHISPER )
+		return;	// whispers come through need_ct_on_whisper (they need the receiver)
+	nct_on_line( sd, chan, name, body, channel, 0 );
+}
+
+void need_ct_on_whisper( map_session_data* sd, map_session_data* dstsd, const char* body ){
+	if( sd == nullptr || dstsd == nullptr || sd == dstsd )
+		return;
+	nct_on_line( sd, NCT_WHISPER, sd->status.name, body, nullptr, static_cast<uint32>( dstsd->status.char_id ) );
+}
+
 // ---------------------------------------------------------------- commands
 
 static void nct_show_channels( int32 fd, int32 l ){
-	static const char* const* names[NCT_CHAN_MAX] = { NCT_S_CHN_SAY, NCT_S_CHN_CHATROOM, NCT_S_CHN_CHANNEL, NCT_S_CHN_PARTY, NCT_S_CHN_GUILD, NCT_S_CHN_BG, NCT_S_CHN_CLAN };
+	static const char* const* names[NCT_CHAN_MAX] = { NCT_S_CHN_SAY, NCT_S_CHN_CHATROOM, NCT_S_CHN_CHANNEL, NCT_S_CHN_PARTY, NCT_S_CHN_GUILD, NCT_S_CHN_BG, NCT_S_CHN_CLAN, NCT_S_CHN_WHISPER };
 	std::string list;
 
 	for( int32 i = 0; i < NCT_CHAN_MAX; i++ ){

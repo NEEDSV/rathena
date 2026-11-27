@@ -8974,7 +8974,7 @@ static const struct _battle_data {
 	// NEED Chat Translate v1 - everything off until the operator turns it on
 	{ "need_chat_translate",                &battle_config.need_chat_translate,             0,      0,      1,              },
 	{ "need_chat_translate_port",           &battle_config.need_chat_translate_port,        6906,   1,      65535,          },
-	{ "need_chat_translate_channels",       &battle_config.need_chat_translate_channels,    0x05,   0,      0x7F,           },
+	{ "need_chat_translate_channels",       &battle_config.need_chat_translate_channels,    0x05,   0,      0xFF,           },
 	{ "need_chat_translate_default_on",     &battle_config.need_chat_translate_default_on,  0,      0,      1,              },
 	{ "need_chat_translate_min_level",      &battle_config.need_chat_translate_min_level,   0,      0,      99,             },
 	{ "need_chat_translate_timeout",        &battle_config.need_chat_translate_timeout,     4000,   500,    30000,          },

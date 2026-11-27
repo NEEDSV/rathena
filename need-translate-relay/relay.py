@@ -54,7 +54,8 @@ MAP_STATS = ["msg_say", "msg_chatroom", "msg_channel", "msg_party", "msg_guild",
              "skip_command", "skip_inflight", "skip_service_off", "requests", "res_ok", "res_other",
              "expired", "lines", "delivery_empty", "toggle_on", "toggle_off", "block_on", "block_off",
              "hook_us_total", "hook_us_max", "hook_calls", "recipients_kr", "recipients_en",
-             "subscribers_kr", "subscribers_en", "online", "rtt_ms_total", "rtt_count"]
+             "subscribers_kr", "subscribers_en", "online", "rtt_ms_total", "rtt_count",
+             "msg_whisper"]	# appended later (map-server NCT_STAT_MSG_WHISPER): keep the order above
 MAP_STATS_MAX_KEYS = {"hook_us_max", "recipients_kr", "recipients_en", "subscribers_kr", "subscribers_en", "online"}
 
 LANG = {0: "ko", 1: "en"}
