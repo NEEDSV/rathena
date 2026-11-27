@@ -80,7 +80,7 @@ def write_report(store, report_dir, cfg, final=False, now=None):
     # ---- daily table
     lines.append("## 1. 일별 지표 (Asia/Seoul)")
     lines.append("")
-    hdr = ["날짜", "원문(주변/채널/파티/길드/전장/클랜/채팅방)", "적격", "수신자없음", "거부", "과다차단", "필터", "정형구문", "캐시", "API 호출", "성공", "실패", "시간초과", "거절", "표시 줄", "고유 수신 KR/EN", "구독 KR/EN(최대)", "ON/OFF", "p50/p95 ms", "입력/출력/캐시읽기/캐시쓰기 tok", "금액 USD"]
+    hdr = ["날짜", "원문(주변/채널/파티/길드/전장/클랜/채팅방/귓속말)", "적격", "수신자없음", "거부", "과다차단", "필터", "정형구문", "캐시", "API 호출", "성공", "실패", "시간초과", "거절", "표시 줄", "고유 수신 KR/EN", "구독 KR/EN(최대)", "ON/OFF", "p50/p95 ms", "입력/출력/캐시읽기/캐시쓰기 tok", "금액 USD"]
     lines.append("| " + " | ".join(hdr) + " |")
     lines.append("|" + "---|" * len(hdr))
     tot = {}
@@ -90,7 +90,7 @@ def write_report(store, report_dir, cfg, final=False, now=None):
 
     all_lat = []
     for d in days:
-        msgs = [S(d, "map_msg_say"), S(d, "map_msg_channel"), S(d, "map_msg_party"), S(d, "map_msg_guild"), S(d, "map_msg_bg"), S(d, "map_msg_clan"), S(d, "map_msg_chatroom")]
+        msgs = [S(d, "map_msg_say"), S(d, "map_msg_channel"), S(d, "map_msg_party"), S(d, "map_msg_guild"), S(d, "map_msg_bg"), S(d, "map_msg_clan"), S(d, "map_msg_chatroom"), S(d, "map_msg_whisper")]
         api = sum(L(d, s) for s in API_STATUSES)
         ok = L(d, "api_ok")
         fail = L(d, "api_error") + L(d, "invalid_output") + L(d, "api_auth") + L(d, "api_spend_limit") + L(d, "api_rate_limited")

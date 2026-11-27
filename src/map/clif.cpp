@@ -12689,6 +12689,7 @@ void clif_parse_WisMessage(int32 fd, map_session_data* sd)
 
 	// Normal message
 	clif_wis_message(dstsd, sd->status.name, message, strlen(message)+1, 0);
+	need_ct_on_whisper( sd, dstsd, message );	// NEED Chat Translate: after delivery + log, receiver only
 }
 
 

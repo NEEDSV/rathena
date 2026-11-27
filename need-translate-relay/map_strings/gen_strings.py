@@ -23,6 +23,7 @@ STRINGS = [
     ("CH_GUILD", "(길드) ", "(Guild) "),
     ("CH_BG", "(전장) ", "(BG) "),
     ("CH_CLAN", "(클랜) ", "(Clan) "),
+    ("CH_WHISPER", "(귓속말) ", "(Whisper) "),
     # language names
     ("LANG_AUTO", "자동(클라이언트 언어)", "auto (client language)"),
     ("LANG_KO", "한국어", "Korean"),
@@ -36,8 +37,8 @@ STRINGS = [
     ("SERVICE_ON", "[번역] 번역 서비스: 운영 중", "[TL] Translation service: running"),
     ("SERVICE_OFF", "[번역] 번역 서비스: 일시 중지 (%s)", "[TL] Translation service: paused (%s)"),
     ("CHANNELS", "[번역] 번역 대상 채팅: %s", "[TL] Translated chats: %s"),
-    ("NOTICE", "[번역] 안내: 자동번역이 켜지면 주변의 다른 언어 채팅 원문이 외부 번역 서비스(Anthropic Claude)로 전송되어 번역됩니다. 이름과 계정 정보는 전송되지 않습니다.",
-               "[TL] Notice: with auto-translate on, chat text in the other language is sent to an external translation service (Anthropic Claude). Names and account data are never sent."),
+    ("NOTICE", "[번역] 안내: 자동번역이 켜지면 내가 받는 다른 언어 채팅 원문이 외부 번역 서비스로 전송되어 번역됩니다. 이름과 계정 정보는 전송되지 않습니다.",
+               "[TL] Notice: with auto-translate on, chat you receive in the other language is sent to an external translation service. Names and account data are never sent."),
     ("NOTICE_BLOCK", "[번역] 내 채팅이 번역되지 않게 하려면: @번역거부 켜기", "[TL] To keep your own chat from being translated: @translateblock on"),
     ("USAGE", "[번역] 사용법: @번역 켜기 | 끄기 | 상태 | 한국어 | 영어 | 자동", "[TL] Usage: @translate on | off | status | ko | en | auto"),
     ("USAGE_BLOCK", "[번역] 사용법: @번역거부 켜기 | 끄기 | 상태", "[TL] Usage: @translateblock on | off | status"),
@@ -52,6 +53,7 @@ STRINGS = [
     ("CHN_GUILD", "길드", "guild"),
     ("CHN_BG", "전장", "battleground"),
     ("CHN_CLAN", "클랜", "clan"),
+    ("CHN_WHISPER", "귓속말", "whisper"),
     ("CHN_NONE", "없음", "none"),
 ]
 

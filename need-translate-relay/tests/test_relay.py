@@ -341,6 +341,66 @@ class ProtocolTests(unittest.TestCase):
         hb = json.loads(st["_hb"])			# 링크 연결 중 관리 콘솔 생존 표시
         self.assertEqual((hb["connected"], hb["reason"]), (1, "ok"))
 
+    def test_whisper_channel_and_appended_stat(self):
+        """귓속말(chan 7) 요청 번역, 원장 chan=7 기록, 뒤에 붙인 msg_whisper 통계(36번째), 그 뒤 미지 값은 무시."""
+        async def scenario():
+            got = []
+            done = asyncio.Event()
+
+            async def fake_map(reader, writer):
+                hdr = await reader.readexactly(4)
+                await reader.readexactly(struct.unpack("<HH", hdr)[1] - 4)
+                writer.write(struct.pack("<HHHHI", R.CMD_HELLO_ACK, 12, R.PROTO, 0, 0))
+                text = cp("내일 같이 레이드 가요")
+                writer.write(struct.pack("<HHIBBBBII", R.CMD_REQ, 20 + len(text), 77, 7, 0, 1, 0, 2002, 4000) + text)
+                n = len(R.MAP_STATS) + 1			# 새 map-server 가 나중에 값을 더 붙여도 relay 는 무시
+                vals = [0] * n
+                vals[R.MAP_STATS.index("msg_whisper")] = 3
+                vals[-1] = 999
+                stats = struct.pack("<HH", 1, n) + struct.pack("<%dI" % n, *vals)
+                writer.write(struct.pack("<HH", R.CMD_STATS, 4 + len(stats)) + stats)
+                await writer.drain()
+                while not done.is_set():
+                    hdr = await reader.readexactly(4)
+                    cmd, ln = struct.unpack("<HH", hdr)
+                    body = await reader.readexactly(ln - 4)
+                    if cmd == R.CMD_RES:
+                        got.append((struct.unpack_from("<I", body, 0)[0], body[4], body[8:]))
+                        done.set()
+                writer.close()
+
+            server = await asyncio.start_server(fake_map, "127.0.0.1", 0)
+            cfg = make_cfg(self.tmp)
+            cfg["relay"]["map_port"] = str(server.sockets[0].getsockname()[1])
+            os.environ.pop("NEED_CHAT_TRANSLATE_PORT", None)
+            relay = R.Relay(cfg)
+            relay.make_backend()
+            relay.store.pilot_start(relay.clock.now(), 168)
+            task = asyncio.create_task(relay.session())
+            await asyncio.wait_for(done.wait(), 10)
+            await asyncio.sleep(0.05)
+            task.cancel()
+            server.close()
+            relay.flush_counters()
+            day = nct_store.day_kst(relay.clock.now())
+            st = relay.store.stats_by_day().get(day, {})
+            chans = [r[0] for r in relay.store.db.execute("SELECT chan FROM ledger")]
+            relay.store.db.close()
+            return got, st, chans
+
+        loop = asyncio.new_event_loop()
+        try:
+            got, st, chans = loop.run_until_complete(scenario())
+        finally:
+            loop.close()
+        req_id, status, text = got[0]
+        self.assertEqual((req_id, status), (77, R.ST_OK))
+        self.assertTrue(text.decode("cp949").startswith("(EN) "))
+        self.assertIn(7, chans)
+        self.assertEqual(st.get("map_msg_whisper"), 3)
+        self.assertEqual(st.get("map_msg_say", 0), 0)
+        self.assertFalse(any(k.startswith("map_") and v == 999 for k, v in st.items()))
+
 
 if __name__ == "__main__":
     unittest.main()

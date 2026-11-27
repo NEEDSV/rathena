@@ -6,7 +6,7 @@
 //   2. after a chat line was already delivered and logged the normal way, decides whether any
 //      online recipient wants a translation of it, and if so writes one small request frame,
 //   3. when the relay answers, re-checks who may still see that chat (same map area / party /
-//      guild / battleground / clan / channel / chat room) and sends each of them one extra
+//      guild / battleground / clan / channel / chat room / whisper receiver) and sends each of them one extra
 //      0x2C1 line with id 0, "[TL] Speaker : ..." (EN) or its Korean form (KR).
 // Everything runs on the map-server main loop (no threads, no blocking sockets). Any failure
 // on the relay side only means "no translation line"; the original chat is never touched.
@@ -27,6 +27,7 @@ enum e_need_ct_chan : uint8 {
 	NCT_GUILD,
 	NCT_BG,				// battleground team chat
 	NCT_CLAN,			// NEED '~' clan chat
+	NCT_WHISPER,		// 1:1 whisper, only to the one receiver on this map-server
 	NCT_CHAN_MAX
 };
 
@@ -97,6 +98,7 @@ enum e_need_ct_stat : uint16 {
 	NCT_STAT_ONLINE,			// snapshot: online chars
 	NCT_STAT_RTT_MS_TOTAL,		// map-observed request -> answer time
 	NCT_STAT_RTT_COUNT,
+	NCT_STAT_MSG_WHISPER,		// appended: the order above is the protocol, an older relay ignores extra values
 	NCT_STAT_MAX
 };
 
@@ -110,6 +112,12 @@ void do_final_need_chat_translate( void );
  * @param channel: only for NCT_CHANNEL
  */
 void need_ct_on_chat( map_session_data* sd, e_need_ct_chan chan, const char* name, const char* body, const Channel* channel = nullptr );
+
+/**
+ * Called AFTER a whisper was delivered to `dstsd` on this map-server (clif_parse_WisMessage).
+ * Only the receiver can get the translation line; the speaker's @translateblock is respected.
+ */
+void need_ct_on_whisper( map_session_data* sd, map_session_data* dstsd, const char* body );
 
 // command bodies (registered as ACMD wrappers in atcommand.cpp)
 int32 need_ct_cmd_translate( int32 fd, map_session_data* sd, const char* message );
