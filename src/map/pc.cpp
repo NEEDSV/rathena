@@ -13967,6 +13967,7 @@ static const char* NEED_AUTOLOOT_SAVED_VAR = "NeedAutoLootSaved";	// 1 = format 
 static const char* NEED_AUTOLOOT_RATE_VAR = "NeedAutoLootRate";		// @autoloot, 0..10000 (1/100 %)
 static const char* NEED_AUTOLOOT_TYPE_VAR = "NeedAutoLootType";		// @autoloottype bit mask
 static const char* NEED_AUTOLOOT_ID_VAR = "NeedAutoLootId";			// @alootid, array [0..AUTOLOOTITEM_SIZE-1], slot order kept
+static const char* NEED_NOLOOT_ID_VAR = "NeedNoLootId";			// @noloot, array [0..NEED_NOLOOT_MAX-1]
 static constexpr int64 NEED_AUTOLOOT_FORMAT = 1;
 // Item types @autoloottype can select: healing 0, usable 2, etc 3, armor 4, weapon 5,
 // card 6, petegg 7, petarmor 8, ammo 10 (same value as ITEM_MAX in atcommand.cpp).
@@ -14006,6 +14007,40 @@ void pc_autoloot_settings_save(map_session_data *sd)
 		intif_saveregistry(sd);
 }
 
+void pc_noloot_settings_save(map_session_data *sd)
+{
+	nullpo_retv(sd);
+
+	if (!sd->vars_ok)
+		return;
+
+	const int32 id_var = add_str(NEED_NOLOOT_ID_VAR);
+	for (int32 i = 0; i < NEED_NOLOOT_MAX; i++) {
+		const t_itemid id = i < sd->state.noloot_count ? sd->state.noloot_itemid[i] : 0;
+		pc_autoloot_setreg_if_changed(sd, reference_uid(id_var, i), id);
+	}
+
+	if (sd->vars_dirty)
+		intif_saveregistry(sd);
+}
+
+static void pc_noloot_settings_restore(map_session_data *sd)
+{
+	const int32 id_var = add_str(NEED_NOLOOT_ID_VAR);
+	sd->state.noloot_count = 0;
+	memset(sd->state.noloot_itemid, 0, sizeof(sd->state.noloot_itemid));
+
+	for (int32 i = 0; i < NEED_NOLOOT_MAX; i++) {
+		const int64 id = pc_readglobalreg(sd, reference_uid(id_var, i));
+		if (id <= 0 || id > UINT32_MAX)
+			continue;
+
+		const t_itemid item_id = static_cast<t_itemid>(id);
+		if (item_db.exists(item_id) && !pc_is_noloot(sd, item_id))
+			sd->state.noloot_itemid[sd->state.noloot_count++] = item_id;
+	}
+}
+
 /**
  * Restore the stored autoloot settings when the character registry arrives.
  * Without stored data the server default is left untouched.
@@ -14014,6 +14049,8 @@ void pc_autoloot_settings_save(map_session_data *sd)
 void pc_autoloot_settings_restore(map_session_data *sd)
 {
 	nullpo_retv(sd);
+
+	pc_noloot_settings_restore(sd);
 
 	const int64 format = pc_readglobalreg(sd, add_str(NEED_AUTOLOOT_SAVED_VAR));
 

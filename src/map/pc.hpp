@@ -1908,6 +1908,7 @@ int32 pc_disguise(map_session_data *sd, int32 class_);
 bool pc_isautolooting(map_session_data *sd, t_itemid nameid);
 void pc_autoloot_settings_save(map_session_data *sd);
 void pc_autoloot_settings_restore(map_session_data *sd);
+void pc_noloot_settings_save(map_session_data *sd);
 bool pc_is_noloot(const map_session_data *sd, t_itemid nameid);
 
 void pc_overheat(map_session_data &sd, int16 heat);

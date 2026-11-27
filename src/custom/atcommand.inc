@@ -318,6 +318,7 @@ ACMD_FUNC(noloot)
 	if (need_noloot_is_clear(token)) {
 		memset(sd->state.noloot_itemid, 0, sizeof(sd->state.noloot_itemid));
 		sd->state.noloot_count = 0;
+		pc_noloot_settings_save(sd);
 		clif_displaymessage(fd, "\276\310\301\335\261\342\040\270\361\267\317\300\273\040\303\312\261\342\310\255\307\337\275\300\264\317\264\331\056");
 		return 0;
 	}
@@ -362,6 +363,7 @@ ACMD_FUNC(noloot)
 			sd->state.noloot_count--;
 			sd->state.noloot_itemid[sd->state.noloot_count] = 0;
 		}
+		pc_noloot_settings_save(sd);
 
 		snprintf(atcmd_output, sizeof(atcmd_output), "\276\310\301\335\261\342\040\270\361\267\317\277\241\274\255\040\301\246\260\305\307\337\275\300\264\317\264\331\072\040\047\045\163\047\057\047\045\163\047\040\173\045\165\175", item_data->name.c_str(), item_db.create_item_link(item_data).c_str(), item_data->nameid);
 		clif_displaymessage(fd, atcmd_output);
@@ -380,6 +382,7 @@ ACMD_FUNC(noloot)
 	}
 
 	sd->state.noloot_itemid[sd->state.noloot_count++] = item_data->nameid;
+	pc_noloot_settings_save(sd);
 	snprintf(atcmd_output, sizeof(atcmd_output), "\276\310\301\335\261\342\040\270\361\267\317\277\241\040\265\356\267\317\307\337\275\300\264\317\264\331\072\040\047\045\163\047\057\047\045\163\047\040\173\045\165\175", item_data->name.c_str(), item_db.create_item_link(item_data).c_str(), item_data->nameid);
 	clif_displaymessage(fd, atcmd_output);
 	return 0;
