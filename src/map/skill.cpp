@@ -4116,8 +4116,9 @@ TIMER_FUNC(skill_timerskill){
 
 				case SU_SV_ROOTTWIST_ATK: {
 						status_change *tsc = status_get_sc(target);
+						const status_change_entry* root = tsc != nullptr ? tsc->getSCE(SC_SV_ROOTTWIST) : nullptr;
 
-						if (tsc && tsc->getSCE(SC_SV_ROOTTWIST)) {
+						if (root != nullptr && root->val2 == 0) { // Battleground applications own their damage timer.
 							if (check_distance_bl(src, target, 32)) // Only damage if caster is within 32x32 area
 								skill_attack(skl->type, src, target, target, skl->skill_id, skl->skill_lv, tick, skl->flag);
 							skill_addtimerskill(src, tick + 1000, target->id, 0, 0, skl->skill_id, skl->skill_lv, skl->type, skl->flag);

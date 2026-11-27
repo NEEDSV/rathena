@@ -7466,6 +7466,12 @@ enum e_setpos pc_setpos(map_session_data* sd, uint16 mapindex, int32 x, int32 y,
 		buyingstore_close(sd);
 	}
 
+	if (sd->state.changemap) {
+		sd->need_bg_root_twist_repeat_until = 0;
+		if (sc != nullptr && sc->hasSCE(SC_SV_ROOTTWIST) &&
+			(map_getmapflag(sd->m, MF_BATTLEGROUND) > 0 || mapdata->getMapFlag(MF_BATTLEGROUND)))
+			status_change_end(sd, SC_SV_ROOTTWIST);
+	}
 	if(sd->prev != nullptr){
 		unit_remove_map_pc(sd,clrtype);
 		clif_changemap( *sd, m, x, y );
@@ -10186,6 +10192,7 @@ int32 pc_dead(map_session_data *sd,block_list *src)
 	sd->earthstrain_strip_resist = 0;
 	// Same for the battleground Illusion Doping repeat decay: death ends the chain.
 	sd->need_illusiondoping_decay = {};
+	sd->need_bg_root_twist_repeat_until = 0;
 	if (pc_bg_strip_has_saved_equipment(sd))
 		sd->bg_strip_requip_pending = true;
 
