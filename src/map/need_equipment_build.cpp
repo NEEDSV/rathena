@@ -986,6 +986,7 @@ static int64 need_build_process_view_window(map_session_data* sd, uint64 build_i
 	// Prefer the live setting (autosave can lag). If another map-server owns the
 	// online character, fail closed rather than trust a stale SQL public flag.
 	const bool show_details = (owner_account_id == sd->status.account_id && owner_char_id == sd->status.char_id) ||
+		pc_has_permission(sd, PC_PERM_VIEW_EQUIPMENT) || need_equipment_build_is_admin(sd) ||
 		(owner != nullptr ? owner->status.show_equip : saved_show_details && !owner_online);
 
 	if (view_mode == NEED_BUILD_VIEW_PUBLIC && status != 1) {

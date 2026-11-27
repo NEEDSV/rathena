@@ -10968,8 +10968,8 @@ static bool clif_viewequip_add_item( PACKET_ZC_EQUIPWIN_MICROSCOPE* p, int16 ind
 
 void clif_viewequip_ack( const map_session_data& sd, const map_session_data& tsd ){
 #if PACKETVER_AD_NUM >= 20071211 || PACKETVER_SAK_NUM >= 20071127 || PACKETVER_MAIN_NUM >= 20071211 || defined(PACKETVER_RE)
-	// Enforce privacy at the response boundary, including direct/privileged callers.
-	const bool show_details = &sd == &tsd || tsd.status.show_equip;
+	// Enforce privacy at the response boundary: self, public owners and GMs with view_equipment see full details.
+	const bool show_details = &sd == &tsd || tsd.status.show_equip || pc_has_permission( &sd, PC_PERM_VIEW_EQUIPMENT );
 	PACKET_ZC_EQUIPWIN_MICROSCOPE* p = clif_viewequip_start( tsd.status.name, tsd.vd.look[LOOK_BASE], tsd.vd.look[LOOK_HAIR], tsd.vd.look[LOOK_HEAD_BOTTOM],
 		tsd.vd.look[LOOK_HEAD_MID], tsd.vd.look[LOOK_HEAD_TOP], tsd.vd.look[LOOK_ROBE], tsd.vd.look[LOOK_HAIR_COLOR], tsd.vd.look[LOOK_CLOTHES_COLOR],
 		tsd.vd.look[LOOK_BODY2], tsd.vd.sex );
